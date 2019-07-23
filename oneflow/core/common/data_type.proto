@@ -11,4 +11,5 @@ enum DataType {
   kInt64 = 6;
   kUInt8 = 7;
   kOFRecord = 8;
+  kFloat16 = 9;
 }

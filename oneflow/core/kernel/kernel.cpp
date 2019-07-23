@@ -315,17 +315,6 @@ void KernelIf<device_type>::BackwardColNum(
             op_attribute().input_diff_bns(), &Blob::CopyColNumFrom);
 }
 
-template<DeviceType device_type, typename T>
-void KernelIfWithModel<device_type, T>::SetTotalInstanceNumDiffBlob(
-    const KernelCtx& ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
-  CHECK_GE(this->op_attribute().model_bns().size(), 2);
-  const float loss_instance_num =
-      BnInOp2Blob(this->op_attribute().output_diff_bns(0))->loss_instance_num();
-  Blob* total_instance_num_diff_blob = BnInOp2Blob("total_instance_num_diff");
-  KernelUtil<device_type, T>::Set(ctx.device_ctx, static_cast<T>(loss_instance_num),
-                                  total_instance_num_diff_blob->mut_dptr<T>());
-}
-
 template<DeviceType device_type>
 void KernelIf<device_type>::CopyField(DeviceCtx* ctx,
                                       std::function<Blob*(const std::string&)> BnInOp2Blob,
@@ -362,51 +351,6 @@ std::unique_ptr<const Kernel> ConstructKernel(const ParallelContext* parallel_ct
   Kernel* rptr = NewObj<Kernel>(conf.op_attribute().op_conf().op_type_case(), conf);
   rptr->Init(parallel_ctx, conf, device_ctx);
   return std::unique_ptr<const Kernel>(rptr);
-}
-
-template<DeviceType device_type, typename T>
-ActivationType KernelIfWithActivation<device_type, T>::GetActivationType() const {
-  return static_cast<ActivationType>(this->GetEnumFromCustomizedOpConf("activation"));
-}
-
-template<DeviceType device_type, typename T>
-void KernelIfWithActivation<device_type, T>::ForwardActivation(const KernelCtx& ctx,
-                                                               Blob* out_blob) const {
-  T* out_dptr = out_blob->mut_dptr<T>();
-  int64_t elem_cnt = out_blob->shape().elem_cnt();
-
-  switch (GetActivationType()) {
-#define DEFINE_ONE_CASE(activation_type)                                                       \
-  case ActivationType::k##activation_type:                                                     \
-    KernelUtil<device_type, T>::activation_type(ctx.device_ctx, elem_cnt, out_dptr, out_dptr); \
-    break;
-    DEFINE_ONE_CASE(TanH)
-    DEFINE_ONE_CASE(Sigmoid)
-    DEFINE_ONE_CASE(Relu)
-#undef DEFINE_ONE_CASE
-    default: UNIMPLEMENTED();
-  }
-}
-
-template<DeviceType device_type, typename T>
-void KernelIfWithActivation<device_type, T>::BackwardActivation(const KernelCtx& ctx,
-                                                                const Blob* out_blob,
-                                                                const Blob* out_diff_blob,
-                                                                Blob* bw_activation_blob) const {
-  int64_t elem_cnt = out_blob->shape().elem_cnt();
-  switch (GetActivationType()) {
-#define DEFINE_ONE_CASE(activation_type)                                    \
-  case ActivationType::k##activation_type:                                  \
-    KernelUtil<device_type, T>::activation_type##Backward(                  \
-        ctx.device_ctx, elem_cnt, out_blob->dptr<T>(), out_blob->dptr<T>(), \
-        out_diff_blob->dptr<T>(), bw_activation_blob->mut_dptr<T>());       \
-    break
-    DEFINE_ONE_CASE(TanH);
-    DEFINE_ONE_CASE(Sigmoid);
-    DEFINE_ONE_CASE(Relu);
-#undef DEFINE_ONE_CASE
-    default: UNIMPLEMENTED();
-  }
 }
 
 #define INSTANTIATE_KERNEL_IF(device_type) template class KernelIf<device_type>;

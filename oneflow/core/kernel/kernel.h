@@ -202,11 +202,6 @@ class KernelIfWithModel : virtual public KernelIf<device_type> {
   OF_DISALLOW_COPY_AND_MOVE(KernelIfWithModel);
   virtual ~KernelIfWithModel() = default;
 
- private:
-  void SetTotalInstanceNumDiffBlob(
-      const KernelCtx& ctx,
-      const std::function<Blob*(const std::string&)>& BnInOp2Blob) const override;
-
  protected:
   KernelIfWithModel() = default;
 };
@@ -219,11 +214,6 @@ class KernelIfWithActivation : virtual public KernelIf<device_type> {
 
  protected:
   KernelIfWithActivation() = default;
-
-  ActivationType GetActivationType() const override;
-  void ForwardActivation(const KernelCtx& ctx, Blob* out_blob) const override;
-  void BackwardActivation(const KernelCtx& ctx, const Blob* out_blob, const Blob* out_diff_blob,
-                          Blob* bw_activation_blob) const override;
 };
 
 #define REGISTER_KERNEL(k, KernelType) \
@@ -284,6 +274,22 @@ std::unique_ptr<const Kernel> ConstructKernel(const ParallelContext*, const Kern
   }                                                                                     \
                                                                                         \
   REGISTER_KERNEL_CREATOR(op_type_case, CreateKernel);                                  \
+  }
+
+#define ADD_DEFAULT_KERNEL_CREATOR_WITH_GPU_HALF(op_type_case, kernel_class, data_type_seq) \
+  namespace {                                                                               \
+                                                                                            \
+  Kernel* OF_PP_CAT(CreateKernel, __LINE__)(const KernelConf& kernel_conf) {                \
+    static const HashMap<std::string, std::function<Kernel*()>> creators = {                \
+        OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_KERNEL_CREATOR_ENTRY, (kernel_class),         \
+                                         DEVICE_TYPE_SEQ, data_type_seq)                    \
+            MAKE_KERNEL_CREATOR_ENTRY(kernel_class, DeviceType::kGPU,                       \
+                                      (float16, DataType::kFloat16))};                      \
+    return creators.at(GetHashKey(kernel_conf.op_attribute().op_conf().device_type(),       \
+                                  kernel_conf.data_type()))();                              \
+  }                                                                                         \
+                                                                                            \
+  REGISTER_KERNEL_CREATOR(op_type_case, OF_PP_CAT(CreateKernel, __LINE__));                 \
   }
 
 #endif  // ONEFLOW_CORE_KERNEL_KERNEL_H_

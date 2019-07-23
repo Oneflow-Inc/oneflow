@@ -9,6 +9,7 @@
 #include "oneflow/core/job_completer/all_reduce_add_pass.h"
 #include "oneflow/core/job_completer/freeze_sbp_signature.h"
 #include "oneflow/core/job_completer/group_boxing_by_dst_parallel.h"
+#include "oneflow/core/job_completer/auto_mixed_precision.h"
 
 namespace oneflow {
 
@@ -223,7 +224,7 @@ void FixTickOpIfExists(Job* job) {
   tick_log_counter->set_name("tick_log_counter_" + NewUniqueId());
   LogCounterOpConf* tick_log_counter_conf = tick_log_counter->mutable_log_counter_conf();
   tick_log_counter_conf->set_in(tick_op_conf->name() + "/" + tick_op_conf->tick_conf().out());
-  tick_log_counter_conf->set_interval(MaxVal<int32_t>::value);
+  tick_log_counter_conf->set_interval(GetMaxVal<int32_t>());
   // add placement of tick_log_counter op
   PlacementGroup* p_group = job->mutable_placement()->add_placement_group();
   *(p_group->mutable_op_set()->add_op_name()) = tick_log_counter->name();
@@ -427,6 +428,13 @@ void RewriteBoxingWithAllReduce(const OpGraph& op_graph, Job* job) {
   AllReduceAddPass().Apply(op_graph, job);
 }
 
+void EnableAutoMixedPrecision(const OpGraph& op_graph, Job* job) {
+  if (!Global<JobDesc>::Get()->enable_auto_mixed_precision()) { return; }
+  AutoMixedPrecision(AutoMixedPrecisionLists::WhiteList(), AutoMixedPrecisionLists::BlackList(),
+                     AutoMixedPrecisionLists::GrayList(), AutoMixedPrecisionLists::ClearList())
+      .Apply(op_graph, job);
+}
+
 }  // namespace
 
 void JobCompleter::Complete(Job* job) const {
@@ -437,6 +445,7 @@ void JobCompleter::Complete(Job* job) const {
     // complete variable ops
     WithOpGraphAndMutJob(job, &AutoVar);
     WithOpGraphAndMutJob(job, &TieUpChainHeadersUnReachableFromAnyVariableOps);
+    WithOpGraphAndMutJob(job, &EnableAutoMixedPrecision);
     // complete ops for trainning
     WithOpGraphAndMutJob(job, &GenerateOpConf4Trainning);
     WithOpGraphAndMutJob(job, &AddSaver);

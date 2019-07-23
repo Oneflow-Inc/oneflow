@@ -3,9 +3,9 @@
 
 namespace oneflow {
 
-template<typename T, const T (*unary_func)(const T), typename X>
+template<typename T, template<typename> class unary_func, typename X>
 class XpuUnaryFuncNdarray;
-template<typename T, const T (*binary_func)(const T, const T), typename A, typename B>
+template<typename T, template<typename> class binary_func, typename A, typename B>
 class XpuBinaryFuncNdarray;
 template<typename T>
 class XpuBroadcastNdarray;
@@ -20,11 +20,11 @@ class XpuNdarrayBase {
   OF_DEVICE_FUNC XpuNdarrayBase() = default;
   OF_DEVICE_FUNC ~XpuNdarrayBase() = default;
 
-  template<const T (*unary_func)(const T)>
+  template<template<typename> class unary_func>
   OF_DEVICE_FUNC XpuUnaryFuncNdarray<T, unary_func, DerivedT> UnaryFunc() const {
     return XpuUnaryFuncNdarray<T, unary_func, DerivedT>(*static_cast<const DerivedT*>(this));
   }
-  template<const T (*binary_func)(const T, const T), typename X>
+  template<template<typename> class binary_func, typename X>
   OF_DEVICE_FUNC XpuBinaryFuncNdarray<T, binary_func, DerivedT, X> BinaryFunc(const X& x) const {
     return XpuBinaryFuncNdarray<T, binary_func, DerivedT, X>(*static_cast<const DerivedT*>(this),
                                                              x);
