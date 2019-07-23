@@ -119,18 +119,19 @@ void TopologyVisit(GraphType &graph, UserFunc func) {
   typedef typename GraphTrait<GraphType>::pNodeType pNodeType;
   typedef typename GraphTrait<GraphType>::pEdgeType pEdgeType;
 
-  std::unordered_set<int64_t> visited;
+  std::unordered_set<pNodeType> visited;
   std::queue<pNodeType> visit_queue;
   for (pNodeType node : graph.Nodes()) {
     if (node->IsSourceNode()) {
       visit_queue.push(node);
+      visited.insert(node);
     }
   }
 
   auto IsAllInputsVisited = [&](pNodeType node) -> bool {
     for (pEdgeType edge : node->in_edges()) {
-      pNodeType node = edge->start();
-      if (visited.count(node->unique_id()) == 0) {
+      pNodeType start = edge->start();
+      if (visited.count(start) == 0) {
         return false;
       }
     }
@@ -140,13 +141,13 @@ void TopologyVisit(GraphType &graph, UserFunc func) {
   while (!visit_queue.empty()) {
     pNodeType node = visit_queue.front();
     visit_queue.pop();
-    // Run user function
-    func(node);
-
-    visited.insert(node->unique_id());
+    { // Run user function
+      func(node);
+    }
     for (pEdgeType edge : node->out_edges()) {
       pNodeType end = edge->end();
-      if (IsAllInputsVisited(end)) {
+      if (IsAllInputsVisited(end) &&
+          visited.insert(end).second) {
         visit_queue.push(end);
       }
     }

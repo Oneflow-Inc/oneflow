@@ -24,6 +24,11 @@ class XlaEdge {
   void UpdateEndNode(XlaNode *end) { end_ = end; }
   void UpdateArgument(const Argument &arg) { arg_ = arg; }
 
+  const SbpParallel &sbp_policy(int index) const;
+  const Shape &time_shape(int index) const;
+  void set_sbp_policy(int index, const SbpParallel &policy);
+  void set_time_shape(int index, const Shape &shape);
+
  private:
   friend class XlaGraph;
 
@@ -35,6 +40,10 @@ class XlaEdge {
   XlaNode *end_;
   //
   Argument arg_;
+
+  SbpParallel sbp_policy_[2];
+  Shape time_shape_[2];
+
   int64_t unique_id_ = -1;
   bool control_edge_ = false;
 };

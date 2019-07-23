@@ -28,12 +28,12 @@ XlaCompiler::XlaCompiler(xla::LocalClient *client, xla::XlaBuilder *builder,
 
   std::unordered_map<std::string, BlobDesc> blob_descs;
   for (int i = 0; i < entry_blobs.size(); ++i) {
-    const RtBlobDesc &rt_desc = entry_blobs[i]->blob_desc();
-    BlobDesc blob_desc(rt_desc.shape(),
-                       rt_desc.data_type(),
-                       rt_desc.has_data_id_field(),
-                       rt_desc.has_col_num_field(),
-                       rt_desc.max_col_num());
+    const RtBlobDesc &runtime_desc = entry_blobs[i]->blob_desc();
+    BlobDesc blob_desc(runtime_desc.shape(),
+                       runtime_desc.data_type(),
+                       runtime_desc.has_data_id_field(),
+                       runtime_desc.has_col_num_field(),
+                       runtime_desc.max_col_num());
     blob_descs.emplace(entry_blob_names[i], blob_desc);
   }
   graph_->InferBlobDescs(&blob_descs, &parallel_ctx);

@@ -6,9 +6,45 @@
 namespace oneflow {
 namespace mola {
 
+const BlobDesc &LbiBlobDesc(const XlaNode *node, const LogicalBlobId &lbi) {
+  CHECK_NOTNULL(node->node());
+  return node->node()->LogicalBlobDesc4Lbi(lbi);
+}
+
+const Shape &InputTimeShape(const XlaNode *node) {
+  CHECK_NOTNULL(node->node());
+  return *(node->node()->GetInputBlobFastestTimeShape());
+}
+
+const Shape &OutputTimeShape(const XlaNode *node) {
+  CHECK_NOTNULL(node->node());
+  return *(node->node()->out_blob_time_shape());
+}
+
+const SbpParallel &LbiSbpPolicy(const XlaNode *node,
+                                const LogicalBlobId &lbi) {
+  CHECK_NOTNULL(node->node());
+  return node->node()->SbpParallel4Lbi(lbi);
+}
+
+void SetupEdgeTimeShape(XlaEdge *edge) {
+  Shape start_time_shape = OutputTimeShape(edge->start());
+  Shape end_time_shape = InputTimeShape(edge->end());
+  edge->set_time_shape(0, start_time_shape);
+  edge->set_time_shape(1, end_time_shape);
+}
+
+void SetupEdgeSbpPolicy(XlaEdge *edge, const LogicalBlobId &lbi) {
+  SbpParallel start_sbp_policy = LbiSbpPolicy(edge->start(), lbi);
+  SbpParallel end_sbp_policy = LbiSbpPolicy(edge->end(), lbi);
+  edge->set_sbp_policy(0, start_sbp_policy);
+  edge->set_sbp_policy(1, end_sbp_policy);
+}
+
 XlaGraph::XlaGraph(const OpGraph *op_graph) {
-  CHECK_NOTNULL(op_graph); 
-  op_graph->TopoForEachNode([&](OpNode *op_node) -> void {
+  CHECK_NOTNULL(op_graph);
+
+  op_graph->TopoForEachNode([this](OpNode *op_node) -> void {
     AddNode(op_node);
   });
 
@@ -16,21 +52,25 @@ XlaGraph::XlaGraph(const OpGraph *op_graph) {
 }
 
 void XlaGraph::BuildEdges() {
-  std::unordered_map<LogicalBlobId, XlaNode *> lbi2producer;
-
+  std::unordered_map<LogicalBlobId, XlaNode *> lbi_producer;
   for (XlaNode *node : Nodes()) {
     for (const std::string &bn  : node->output_bns()) {
-      lbi2producer.emplace(node->Output(bn), node);
+      lbi_producer.emplace(node->Output(bn), node);
     }
   }
 
   for (XlaNode *node : Nodes()) {
     for (const std::string &bn : node->input_bns()) {
       const LogicalBlobId &lbi = node->Input(bn);
-      const auto &it = lbi2producer.find(lbi);
-      if (it != lbi2producer.end()) {
-        Argument argument(lbi, node->node()->LogicalBlobDesc4Lbi(lbi));
-        Connect(it->second, node, argument);
+      const auto &it = lbi_producer.find(lbi);
+      if (it != lbi_producer.end()) {
+        Argument argument(lbi, LbiBlobDesc(node, lbi));
+        XlaEdge *edge = Connect(it->second, node, argument);
+
+        CHECK_NOTNULL(edge);
+
+        SetupEdgeTimeShape(edge);
+        SetupEdgeSbpPolicy(edge, lbi);
       }
     }
   }

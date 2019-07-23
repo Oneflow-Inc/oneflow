@@ -13,7 +13,10 @@ struct OptimizeOptions {
   // If the number of nodes contained by a cluster is less than
   // `minimum_nodes_in_cluster`, then this cluster will be given up and
   // not compiled.
-  int32_t minimum_nodes_in_cluster; 
+  int32_t minimum_nodes_in_cluster;
+
+  bool ignore_sbp_policy = false;
+  bool ignore_time_shape = false;
 };
 
 class XlaOptimizePass {

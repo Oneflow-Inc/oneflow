@@ -7,6 +7,26 @@
 namespace oneflow {
 namespace mola {
 
+const SbpParallel &XlaEdge::sbp_policy(int index) const {
+  CHECK_LT(index, 2);
+  return sbp_policy_[index];
+}
+
+const Shape &XlaEdge::time_shape(int index) const {
+  CHECK_LT(index, 2);
+  return time_shape_[index];
+}
+
+void XlaEdge::set_sbp_policy(int index, const SbpParallel &policy) {
+  CHECK_LT(index, 2);
+  sbp_policy_[index] = policy;
+}
+
+void XlaEdge::set_time_shape(int index, const Shape &shape) {
+  CHECK_LT(index, 2);
+  time_shape_[index] = shape;
+}
+
 extern const std::string _XlaArgumentOpType;
 extern const std::string _XlaInArgumentPrefix;
 extern const std::string _XlaOutArgumentPrefix;
