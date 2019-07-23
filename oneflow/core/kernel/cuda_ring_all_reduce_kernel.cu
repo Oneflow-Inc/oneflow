@@ -21,8 +21,8 @@ namespace {
 template<typename T>
 __device__ __forceinline__ void ReduceLine(ulong2* out, const ulong2* in_0, const ulong2* in_1) {
   T* out_ptr = reinterpret_cast<T*>(out);
-  T* in_0_ptr = reinterpret_cast<T*>(in_0);
-  T* in_1_ptr = reinterpret_cast<T*>(in_1);
+  const T* in_0_ptr = reinterpret_cast<const T*>(in_0);
+  const T* in_1_ptr = reinterpret_cast<const T*>(in_1);
   for (int32_t i = 0; i < NUM_PACK_PER_LINE * PACK_SIZE / sizeof(T); ++i) {
     out_ptr[i] = in_0_ptr[i] + in_1_ptr[i];
   }
