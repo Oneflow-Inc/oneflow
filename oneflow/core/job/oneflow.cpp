@@ -995,10 +995,10 @@ GlobalObjectsScope4JobSet::~GlobalObjectsScope4JobSet() {
   Global<IDMgr>::Delete();
   Global<MachineCtx>::Delete();
   Global<CtrlClient>::Delete();
+  ctrl_server_.reset();
   Global<const ProfilerConf>::Delete();
   Global<const IOConf>::Delete();
   Global<ResourceDesc>::Delete();
-  ctrl_server_.reset();
 }
 
 GlobalObjectsScope4JobConf::GlobalObjectsScope4JobConf(const JobSet& job_set) {
