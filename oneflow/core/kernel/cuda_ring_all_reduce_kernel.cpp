@@ -5,13 +5,11 @@
 namespace oneflow {
 
 template<DeviceType device_type, typename T>
-void CudaRingAllReduceKernel<device_type, T>::VirtualKernelInit(const ParallelContext* ctx) {
-}
+void CudaRingAllReduceKernel<device_type, T>::VirtualKernelInit(const ParallelContext* ctx) {}
 
 template<DeviceType device_type, typename T>
 void CudaRingAllReduceKernel<device_type, T>::ForwardDataContent(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-}
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
 
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kCudaRingAllReduceConf, CudaRingAllReduceKernel,
                            FLOATING_DATA_TYPE_SEQ)

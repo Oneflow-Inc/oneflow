@@ -13,9 +13,10 @@ void CudaRingAllReduceCompActor::VirtualActorInit(const TaskProto& task_proto) {
   out_regst_desc_id_ = task_proto.produced_regst_desc().at("out").regst_desc_id();
   in_regst_desc_id_ = task_proto.consumed_regst_desc_id().at("in").regst_desc_id(0);
   FOR_RANGE(int64_t, i, 0, num_rings_) {
-    const int64_t send_regst_desc_id = task_proto.produced_regst_desc().at("send").regst_desc_id();
+    const int64_t send_regst_desc_id =
+        task_proto.produced_regst_desc().at("send_" + std::to_string(i)).regst_desc_id();
     const int64_t recv_regst_desc_id =
-        task_proto.consumed_regst_desc_id().at("recv").regst_desc_id(0);
+        task_proto.consumed_regst_desc_id().at("recv_" + std::to_string(i)).regst_desc_id(0);
     send_regst_desc_ids_.emplace(send_regst_desc_id);
     recv_regst_desc_ids_.emplace(recv_regst_desc_id);
     consumed_rs_.InsertRegstDescId(recv_regst_desc_id);
