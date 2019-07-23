@@ -13,6 +13,7 @@ void CudaRingAllReduceKernel<T>::ForwardDataContent(
   const MultiRingAllReduceKernelConf& conf = kernel_conf().multi_ring_all_reduce_conf();
   CudaRingAllReduceArg<T> arg{};
   arg.num_rings = conf.ring_conf_size();
+  CHECK_GT(arg.num_rings, 0);
   CHECK_LE(arg.num_rings, CUDA_RING_ALL_REDUCE_MAX_NUM_RINGS);
   const Blob* in = BnInOp2Blob("in");
   Blob* out = BnInOp2Blob("out");
@@ -26,7 +27,11 @@ void CudaRingAllReduceKernel<T>::ForwardDataContent(
     arg.dst[i] = out != nullptr ? out->mut_dptr<T>() + range.begin() : nullptr;
     arg.num_elem[i] = range.size();
   }
-  if (step == 0) { CudaRingAllReduceKernelUtil<T>::Send(ctx.device_ctx, arg); }
+  if (step == 0) {
+    CudaRingAllReduceKernelUtil<T>::Send(ctx.device_ctx, arg);
+  } else if (step < conf.num_rank() - 1) {
+    CudaRingAllReduceKernelUtil<T>::RecvReduceSend(ctx.device_ctx, arg);
+  }
 }
 
 ADD_CPU_DEFAULT_KERNEL_CREATOR(OperatorConf::kCudaRingAllReduceConf, CudaRingAllReduceKernel,

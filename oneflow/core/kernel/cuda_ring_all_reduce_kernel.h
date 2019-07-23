@@ -34,6 +34,7 @@ template<typename T>
 struct CudaRingAllReduceKernelUtil {
   static void AllReduce(DeviceCtx* ctx, CudaRingAllReduceArg<T> arg);
   static void Send(DeviceCtx* ctx, CudaRingAllReduceArg<T> arg);
+  static void RecvReduceSend(DeviceCtx* ctx, CudaRingAllReduceArg<T> arg);
 };
 
 }  // namespace oneflow
