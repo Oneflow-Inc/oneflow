@@ -15,9 +15,7 @@ class MatmulKernel final : public KernelIfWithModel<device_type, T> {
   void ForwardDataContent(const KernelCtx&,
                           std::function<Blob*(const std::string&)>) const override;
   void Calc2DMatMul(DeviceCtx* ctx, const Blob* a, bool trans_a, const Blob* b, bool trans_b,
-                    Blob* c, bool swap_in) const;
-  void CalcBatchMatMul(DeviceCtx* ctx, const Blob* a, bool trans_a, const Blob* b, bool trans_b,
-                       Blob* c, Blob* buf, bool swap_in) const;
+                    Blob* c) const;
   void CalcBatchMatMul(DeviceCtx* ctx, const Blob* a, bool trans_a, const Blob* b, bool trans_b,
                        Blob* c, Blob* buf) const;
   const PbMessage& GetCustomizedOpConf() const override;

@@ -25,7 +25,7 @@ void PoolingGradOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> 
   const BlobDesc* x_blob_desc = GetBlobDesc4BnInOp("x");
   CHECK_GE(x_blob_desc->shape().NumAxes(), 3);
   CHECK_LE(x_blob_desc->shape().NumAxes(), 5);
-  CHECK_EQ(x_blob_desc->data_type(), Global<JobDesc>::Get()->DefaultDataType());
+  // CHECK_EQ(x_blob_desc->data_type(), Global<JobDesc>::Get()->DefaultDataType());
   // out
   *GetBlobDesc4BnInOp("dx") = *x_blob_desc;
 }

@@ -75,6 +75,7 @@ class CudnnActivationDesc final {
 // SP for scaling parameter
 template<typename T>
 const void* CudnnSPOnePtr();
+
 template<typename T>
 const void* CudnnSPZeroPtr();
 

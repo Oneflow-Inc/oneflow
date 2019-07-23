@@ -12,7 +12,7 @@ struct ConvFilterGradKernelUtil<DeviceType::kGPU, T> final {
     CudnnTensorDesc dy_desc(dy->data_type(), dy->shape(), conf.data_format());
     CudnnFilterDesc filter_diff_desc(filter_diff->data_type(), filter_diff->shape(),
                                      conf.data_format());
-    CudnnConvDesc conv_desc(x->data_type(), x->shape(), conf);
+    CudnnConvDesc conv_desc(GetConvDescDataType(x->data_type()), x->shape(), conf);
     CudaCheck(cudnnConvolutionBackwardFilter(
         ctx->cudnn_handle(), CudnnSPOnePtr<T>(), x_desc.Get(), x->dptr<T>(), dy_desc.Get(),
         dy->dptr<T>(), conv_desc.Get(),
@@ -24,6 +24,7 @@ struct ConvFilterGradKernelUtil<DeviceType::kGPU, T> final {
 
 #define INSTANTIATE_CONV_FILTER_GRAD_KERNEL_UTIL(type_cpp, type_proto) \
   template struct ConvFilterGradKernelUtil<DeviceType::kGPU, type_cpp>;
-OF_PP_FOR_EACH_TUPLE(INSTANTIATE_CONV_FILTER_GRAD_KERNEL_UTIL, FLOATING_DATA_TYPE_SEQ)
+OF_PP_FOR_EACH_TUPLE(INSTANTIATE_CONV_FILTER_GRAD_KERNEL_UTIL,
+                     FLOATING_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ)
 
 }  // namespace oneflow

@@ -37,13 +37,13 @@ void MaxPoolingKernel<DeviceType::kCPU, T>::NDHWCProcessGrad(
       * (in_arr.col(in_col).cwiseEqual(out_arr.col(out_col)).template cast<T>());
 }
 
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kMaxPooling1DConf, MaxPoolingKernel,
-                           FLOATING_DATA_TYPE_SEQ);
+ADD_DEFAULT_KERNEL_CREATOR_WITH_GPU_HALF(OperatorConf::kMaxPooling1DConf, MaxPoolingKernel,
+                                         FLOATING_DATA_TYPE_SEQ);
 
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kMaxPooling2DConf, MaxPoolingKernel,
-                           FLOATING_DATA_TYPE_SEQ);
+ADD_DEFAULT_KERNEL_CREATOR_WITH_GPU_HALF(OperatorConf::kMaxPooling2DConf, MaxPoolingKernel,
+                                         FLOATING_DATA_TYPE_SEQ);
 
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kMaxPooling3DConf, MaxPoolingKernel,
-                           FLOATING_DATA_TYPE_SEQ);
+ADD_DEFAULT_KERNEL_CREATOR_WITH_GPU_HALF(OperatorConf::kMaxPooling3DConf, MaxPoolingKernel,
+                                         FLOATING_DATA_TYPE_SEQ);
 
 }  // namespace oneflow

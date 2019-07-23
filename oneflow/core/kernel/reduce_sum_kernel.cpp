@@ -20,6 +20,7 @@ void ReduceSumKernel<device_type, T>::ForwardDataContent(
       XpuVarNdarray<T>(fw_tmp_blob, in_blob->shape().NumAxes()));
 }
 
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kReduceSumConf, ReduceSumKernel, ARITHMETIC_DATA_TYPE_SEQ);
+ADD_DEFAULT_KERNEL_CREATOR_WITH_GPU_HALF(OperatorConf::kReduceSumConf, ReduceSumKernel,
+                                         ARITHMETIC_DATA_TYPE_SEQ);
 
 }  // namespace oneflow

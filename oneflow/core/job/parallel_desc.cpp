@@ -67,6 +67,11 @@ bool ParallelDesc::EqualsIgnoringPolicy(const ParallelDesc& rhs) const {
          && machine_id2sorted_dev_phy_ids_ == rhs.machine_id2sorted_dev_phy_ids_;
 }
 
+bool ParallelDesc::EqualsIgnoringPolicyAndDeviceType(const ParallelDesc& rhs) const {
+  return sorted_machine_ids_ == rhs.sorted_machine_ids_
+         && machine_id2sorted_dev_phy_ids_ == rhs.machine_id2sorted_dev_phy_ids_;
+}
+
 void ParallelDesc::ClearUp() {
   EraseIf<int64_t, std::vector<int64_t>>(
       &machine_id2sorted_dev_phy_ids_,
