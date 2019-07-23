@@ -161,7 +161,7 @@ bool IsInterfaceOpConf(const OperatorConf& op_conf) {
   return IsClassRegistered<IsInterfaceOpConf4OpTypeCase>(op_conf.op_type_case());
 }
 
-void WithGlobalJobId(int64_t job_id, const std::function<void()>& Handler) {
+void WithJobIdGlobal(int64_t job_id, const std::function<void()>& Handler) {
   Global<JobId>::New(job_id);
   Handler();
   Global<JobId>::Delete();

@@ -628,7 +628,7 @@ void ConnectCriticalSectionEndToReentrantLockEnd(Plan* main_plan,
 void CompileMainJob(Job* main_job, const LogicalBlobId& critical_section_sink_lbi, int32_t job_id,
                     Plan* main_plan) {
   CHECK(Global<MachineCtx>::Get()->IsThisMachineMaster());
-  WithGlobalJobId(job_id, [&]() { CompileCurJobOnMaster(main_job, main_plan, false); });
+  WithJobIdGlobal(job_id, [&]() { CompileCurJobOnMaster(main_job, main_plan, false); });
   ConnectCriticalSectionEndToReentrantLockEnd(main_plan, critical_section_sink_lbi);
 }
 
@@ -882,7 +882,7 @@ void CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan) {
   std::vector<Plan> sub_plans(conf_jobs.size());
   FOR_RANGE(int32_t, i, 0, sub_plans.size()) {
     jobs.at(i) = conf_jobs.Get(i);
-    WithGlobalJobId(i, [&]() { CompileCurJobOnMaster(&jobs.at(i), &sub_plans.at(i), true); });
+    WithJobIdGlobal(i, [&]() { CompileCurJobOnMaster(&jobs.at(i), &sub_plans.at(i), true); });
   }
   HashMap<std::string, ParallelBlobConf> push_op_name2parallel_blob_conf;
   FilterOpName2ParallelBlobConf({OperatorConf::kInputConf, OperatorConf::kVariableConf}, &jobs,
@@ -909,7 +909,7 @@ void CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan) {
     jobs.at(job_id) = *job;
     AddGlobalJobDesc(*job, job_id);
     if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
-      WithGlobalJobId(job_id, [&]() { CompileCurJobOnMaster(job, &sub_plans.at(job_id), true); });
+      WithJobIdGlobal(job_id, [&]() { CompileCurJobOnMaster(job, &sub_plans.at(job_id), true); });
     }
     ++job_id;
   };
@@ -955,7 +955,7 @@ void CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan) {
 
 }  // namespace
 
-GlobalObjectsScope::GlobalObjectsScope(const JobSet& job_set) {
+GlobalObjectsScope4JobSet::GlobalObjectsScope4JobSet(const JobSet& job_set) {
   Global<JobSet>::New(job_set);
   Global<ResourceDesc>::New(job_set.config().resource());
   Global<const IOConf>::New(job_set.config().io_conf());
@@ -973,13 +973,6 @@ GlobalObjectsScope::GlobalObjectsScope(const JobSet& job_set) {
     Global<Profiler>::New();
   }
   PushAvailableMemDescOfThisMachine();
-  Global<JobName2JobId>::New();
-  Global<std::vector<std::unique_ptr<JobDesc>>>::New();
-  FOR_RANGE(int32_t, i, 0, job_set.job_size()) {
-    auto* job_desc = new JobDesc(job_set.job(i), i);
-    Global<std::vector<std::unique_ptr<JobDesc>>>::Get()->emplace_back(job_desc);
-    CHECK(Global<JobName2JobId>::Get()->emplace(job_desc->job_name(), job_desc->job_id()).second);
-  }
   if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
     Global<AvailableMemDesc>::New();
     *Global<AvailableMemDesc>::Get() = PullAvailableMemDesc();
@@ -990,7 +983,7 @@ GlobalObjectsScope::GlobalObjectsScope(const JobSet& job_set) {
   }
 }
 
-GlobalObjectsScope::~GlobalObjectsScope() {
+GlobalObjectsScope4JobSet::~GlobalObjectsScope4JobSet() {
   if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
     Global<InterUserJobInfo>::Delete();
     Global<BufferMgr<std::shared_ptr<ForeignJobInstance>>>::Delete();
@@ -998,8 +991,6 @@ GlobalObjectsScope::~GlobalObjectsScope() {
     Global<CriticalSectionDesc>::Delete();
     Global<AvailableMemDesc>::Delete();
   }
-  Global<std::vector<std::unique_ptr<JobDesc>>>::Delete();
-  Global<JobName2JobId>::Delete();
   if (Global<Profiler>::Get() != nullptr) { Global<Profiler>::Delete(); }
   Global<IDMgr>::Delete();
   Global<MachineCtx>::Delete();
@@ -1008,6 +999,21 @@ GlobalObjectsScope::~GlobalObjectsScope() {
   Global<const ProfilerConf>::Delete();
   Global<const IOConf>::Delete();
   Global<ResourceDesc>::Delete();
+}
+
+GlobalObjectsScope4JobConf::GlobalObjectsScope4JobConf(const JobSet& job_set) {
+  Global<JobName2JobId>::New();
+  Global<std::vector<std::unique_ptr<JobDesc>>>::New();
+  FOR_RANGE(int32_t, job_id, 0, job_set.job_size()) {
+    auto* job_desc = new JobDesc(job_set.job(job_id), job_id);
+    Global<std::vector<std::unique_ptr<JobDesc>>>::Get()->emplace_back(job_desc);
+    CHECK(Global<JobName2JobId>::Get()->emplace(job_desc->job_name(), job_desc->job_id()).second);
+  }
+}
+
+GlobalObjectsScope4JobConf::~GlobalObjectsScope4JobConf() {
+  Global<JobName2JobId>::Delete();
+  Global<std::vector<std::unique_ptr<JobDesc>>>::Delete();
 }
 
 RuntimeBuffersScope::RuntimeBuffersScope() {
@@ -1047,8 +1053,16 @@ void Oneflow::NaiveSequentialRun() const {
   }
 }
 
-Oneflow::Oneflow(const oneflow::JobSet& job_set) {
-  global_objects_scope_.reset(new GlobalObjectsScope(job_set));
+Oneflow::Oneflow(const oneflow::JobSet& original_job_set) {
+  JobSet job_set(original_job_set);
+  global_objects_scope4job_set_.reset(new GlobalObjectsScope4JobSet(job_set));
+  if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
+    Global<CtrlClient>::Get()->PushKV("compiled_job_set", job_set);
+  } else {
+    Global<CtrlClient>::Get()->PullKV("compiled_job_set", &job_set);
+    CHECK(PbMd().Equals(original_job_set.config(), job_set.config()));
+  }
+  global_objects_scope4job_conf_.reset(new GlobalObjectsScope4JobConf(job_set));
   // Runtime
   CompileAndMergePlanOnMaster(job_set.job(), &plan_);
   if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
@@ -1069,7 +1083,8 @@ Oneflow::~Oneflow() {
     Global<Profiler>::Get()->Profile(
         plan_, JoinPath(FLAGS_log_dir, ActEventLogger::act_event_bin_filename()));
   }
-  global_objects_scope_.reset();
+  global_objects_scope4job_set_.reset();
+  global_objects_scope4job_conf_.reset();
 }
 
 int Main(const oneflow::JobSet& job_set, const char* binary_name) {
