@@ -68,8 +68,7 @@ struct TopKKernelUtil<DeviceType::kGPU, T> {
                       const int32_t instance_size, const int32_t k, const bool sorted,
                       int32_t* fw_buf, int32_t* out) {
     CHECK(fw_buf == nullptr);
-    // if (instance_size <= 1000 || k == instance_size || k > 512) {
-    if (false) {
+    if (instance_size <= 1000 || k == instance_size || k > 512) {
       TODO();
     } else {
       // Use as many heaps as possible (# of heaps == # of threads in thread block).

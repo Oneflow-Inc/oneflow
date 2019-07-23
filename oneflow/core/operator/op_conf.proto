@@ -1619,12 +1619,6 @@ message ContiguousInstanceStackOpConf {
   required string out = 2;
 }
 
-// only for test, remove later
-message BitonicSortOpConf {
-  required string in = 1;
-  required string out = 2;
-}
-
 message OperatorConf {
   required string name = 1;
   optional string model_load_dir = 2;
