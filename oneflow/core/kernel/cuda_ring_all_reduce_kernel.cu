@@ -6,17 +6,14 @@ namespace oneflow {
 namespace {
 
 template<typename T>
-__global__ void AllReduce(CudaRingAllReduceArg<T> arg) {
+__global__ void AllReduceGpu(CudaRingAllReduceArg<T> arg) {}
 
-}
-
-}
+}  // namespace
 
 template<typename T>
 void CudaRingAllReduceKernelUtil<T>::AllReduce(DeviceCtx* ctx, CudaRingAllReduceArg<T> arg) {
-  AllReduce<<<arg.num_rings, 256, 0, ctx->cuda_stream()>>>(arg);
+  AllReduceGpu<<<arg.num_rings, 256, 0, ctx->cuda_stream()>>>(arg);
 }
-
 
 #define INSTANTIATE_CUDA_RING_ALL_REDUCE_KERNEL_UTIL(type_cpp, type_proto) \
   template struct CudaRingAllReduceKernelUtil<type_cpp>;

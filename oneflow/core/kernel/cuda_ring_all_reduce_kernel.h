@@ -29,7 +29,7 @@ class CudaRingAllReduceKernel final : public KernelIf<DeviceType::kGPU> {
 
 template<typename T>
 struct CudaRingAllReduceKernelUtil {
-  void AllReduce(DeviceCtx* ctx, CudaRingAllReduceArg<T> arg);
+  static void AllReduce(DeviceCtx* ctx, CudaRingAllReduceArg<T> arg);
 };
 
 }  // namespace oneflow

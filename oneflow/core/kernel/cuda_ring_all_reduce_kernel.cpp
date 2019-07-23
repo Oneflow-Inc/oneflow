@@ -17,6 +17,7 @@ void CudaRingAllReduceKernel<T>::ForwardDataContent(
     arg.send[i] = BnInOp2Blob(GenRepeatedBn("send", i))->mut_dptr<T>();
     arg.recv[i] = BnInOp2Blob(GenRepeatedBn("recv", i))->mut_dptr<T>();
   }
+  CudaRingAllReduceKernelUtil<T>::AllReduce(ctx.device_ctx, arg);
 }
 
 ADD_CPU_DEFAULT_KERNEL_CREATOR(OperatorConf::kCudaRingAllReduceConf, CudaRingAllReduceKernel,
