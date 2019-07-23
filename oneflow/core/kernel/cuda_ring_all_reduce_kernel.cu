@@ -19,6 +19,31 @@ constexpr int32_t CHUNK_SIZE = LINE_SIZE * NUM_LINE_PER_CHUNK;
 namespace {
 
 template<typename T>
+struct PackReducer {
+  __device__ __forceinline__ ulong2 Reduce(const ulong2 x, const ulong2 y);
+};
+
+template<>
+struct PackReducer<float> {
+  union u {
+    ulong2 p;
+    struct {
+      float a, b;
+    };
+  };
+  __device__ __forceinline__ ulong2 Reduce(const ulong2 x, const ulong2 y) {
+    u ux;
+    u uy;
+    u ur;
+    ux.p = x;
+    uy.p = y;
+    ur.a = ux.a + uy.a;
+    ur.b = ux.a + uy.b;
+    return ur.p;
+  }
+};
+
+template<typename T>
 __device__ __forceinline__ void ReduceLine(ulong2* out, const ulong2* in_0, const ulong2* in_1) {
   T* out_ptr = reinterpret_cast<T*>(out);
   const T* in_0_ptr = reinterpret_cast<const T*>(in_0);
@@ -89,7 +114,10 @@ __global__ void RecvReduceSendGpu(CudaRingAllReduceArg<T> arg) {
     for (int32_t p = 0; p < NUM_PACK_PER_LINE_PER_THREAD; ++p) {
       line_src[p] = *(src_pack_ptr + p * NUM_THREAD_PER_WARP);
     }
-    ReduceLine<T>(line_recv, line_recv, line_src);
+#pragma unroll
+    for (int32_t p = 0; p < NUM_PACK_PER_LINE_PER_THREAD; ++p) {
+      line_recv[p] = PackReducer<T>().Reduce(line_recv[p], line_src[p]);
+    }
 #pragma unroll
     for (int32_t p = 0; p < NUM_PACK_PER_LINE_PER_THREAD; ++p) {
       *(send_pack_ptr + p * NUM_THREAD_PER_WARP) = line_recv[p];
