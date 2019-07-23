@@ -15,12 +15,23 @@ class GlobalObjectsScope final {
   OF_DISALLOW_COPY_AND_MOVE(GlobalObjectsScope);
   GlobalObjectsScope() = default;
   ~GlobalObjectsScope();
+};
 
-  void GlobalObjectsScope4JobSet(const JobSet& job_set);
-  void GlobalObjectsScope4JobConf(const JobSet& job_set);
+class GlobalObjectsScope4JobSet final {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(GlobalObjectsScope4JobSet);
+  GlobalObjectsScope4JobSet(const JobSet& job_set);
+  ~GlobalObjectsScope4JobSet();
 
  private:
   std::unique_ptr<CtrlServer> ctrl_server_;
+};
+
+class GlobalObjectsScope4JobConf final {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(GlobalObjectsScope4JobConf);
+  GlobalObjectsScope4JobConf(const JobSet& job_set);
+  ~GlobalObjectsScope4JobConf() = default;
 };
 
 class RuntimeBuffersScope final {
@@ -40,6 +51,8 @@ class Oneflow final {
 
  private:
   std::unique_ptr<GlobalObjectsScope> global_objects_scope_;
+  std::unique_ptr<GlobalObjectsScope4JobSet> global_objects_scope4job_set_;
+  std::unique_ptr<GlobalObjectsScope4JobConf> global_objects_scope4job_conf_;
   Plan plan_;
   std::unique_ptr<Runtime> runtime_;
   std::unique_ptr<RuntimeBuffersScope> runtime_buffers_scope_;

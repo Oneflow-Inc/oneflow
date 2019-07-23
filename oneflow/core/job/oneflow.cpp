@@ -955,7 +955,7 @@ void CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan) {
 
 }  // namespace
 
-void GlobalObjectsScope::GlobalObjectsScope4JobSet(const JobSet& job_set) {
+GlobalObjectsScope4JobSet::GlobalObjectsScope4JobSet(const JobSet& job_set) {
   Global<JobSet>::New(job_set);
   Global<ResourceDesc>::New(job_set.config().resource());
   Global<const IOConf>::New(job_set.config().io_conf());
@@ -990,9 +990,11 @@ void GlobalObjectsScope::GlobalObjectsScope4JobSet(const JobSet& job_set) {
   }
 }
 
-void GlobalObjectsScope::GlobalObjectsScope4JobConf(const JobSet& job_set) {
-  FOR_RANGE(int32_t, i, 0, job_set.job_conf_size()) {
-    auto* job_desc = new JobDesc(job_set.job_conf(i), i);
+GlobalObjectsScope4JobSet::~GlobalObjectsScope4JobSet() { ctrl_server_.reset(); }
+
+GlobalObjectsScope4JobConf::GlobalObjectsScope4JobConf(const JobSet& job_set) {
+  FOR_RANGE(int32_t, job_id, 0, job_set.job_size()) {
+    auto* job_desc = new JobDesc(job_set.job(job_id), job_id);
     Global<std::vector<std::unique_ptr<JobDesc>>>::Get()->emplace_back(job_desc);
     CHECK(Global<JobName2JobId>::Get()->emplace(job_desc->job_name(), job_desc->job_id()).second);
   }
@@ -1012,7 +1014,6 @@ GlobalObjectsScope::~GlobalObjectsScope() {
   Global<IDMgr>::Delete();
   Global<MachineCtx>::Delete();
   Global<CtrlClient>::Delete();
-  ctrl_server_.reset();
   Global<const ProfilerConf>::Delete();
   Global<const IOConf>::Delete();
   Global<ResourceDesc>::Delete();
@@ -1058,17 +1059,14 @@ void Oneflow::NaiveSequentialRun() const {
 Oneflow::Oneflow(const oneflow::JobSet& original_job_set) {
   JobSet job_set(original_job_set);
   global_objects_scope_.reset(new GlobalObjectsScope());
-  global_objects_scope_->GlobalObjectsScope4JobSet(job_set);
+  global_objects_scope4job_set_.reset(new GlobalObjectsScope4JobSet(job_set));
   if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
     Global<CtrlClient>::Get()->PushKV("compiled_job_set", job_set);
   } else {
     Global<CtrlClient>::Get()->PullKV("compiled_job_set", &job_set);
-    CHECK(PbMd().Equals(original_job_set.resource(), job_set.resource()));
-    CHECK(PbMd().Equals(original_job_set.io_conf(), job_set.io_conf()));
-    CHECK(PbMd().Equals(original_job_set.cpp_flags_conf(), job_set.cpp_flags_conf()));
-    CHECK(PbMd().Equals(original_job_set.profile_conf(), job_set.profile_conf()));
+    CHECK(PbMd().Equals(original_job_set.config(), job_set.config()));
   }
-  global_objects_scope_->GlobalObjectsScope4JobConf(job_set);
+  global_objects_scope4job_conf_.reset(new GlobalObjectsScope4JobConf(job_set));
   // Runtime
   CompileAndMergePlanOnMaster(job_set.job(), &plan_);
   if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
@@ -1090,6 +1088,8 @@ Oneflow::~Oneflow() {
         plan_, JoinPath(FLAGS_log_dir, ActEventLogger::act_event_bin_filename()));
   }
   global_objects_scope_.reset();
+  global_objects_scope4job_set_.reset();
+  global_objects_scope4job_conf_.reset();
 }
 
 int Main(const oneflow::JobSet& job_set, const char* binary_name) {
