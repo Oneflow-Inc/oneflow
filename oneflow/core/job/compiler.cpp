@@ -94,7 +94,7 @@ void Compiler::Compile(Job* job, Plan* plan, bool need_job_complete) const {
 #endif
   const JobDesc& job_desc = GlobalJobDesc();
   if (need_job_complete) { JobCompleter().Complete(job); }
-  TeePersistentLogStream::Create("optimized_job")->Write(*job);
+  TeePersistentLogStream::Create(StrCat("optimized_job", job_desc.job_id()))->Write(*job);
   Global<OpGraph>::New(*job);
   Global<OpGraph>::Get()->ToDotWithFilePath("optimized_dlnet_op_graph.dot");
   auto logical_gph = std::make_unique<LogicalGraph>(*job);
@@ -105,7 +105,7 @@ void Compiler::Compile(Job* job, Plan* plan, bool need_job_complete) const {
   task_gph->ForEachNode(std::bind(&TaskNode::ConsumeAllRegsts, _1));
   task_gph->ForEachNode(std::bind(&TaskNode::PinConsumedRegst, _1));
   task_gph->MdUpdtDelayedTopoForEachNode(&TaskNode::Build);
-  if (job_desc.other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
+  if (job_desc.job_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
     task_gph->AddReduceSequenceCtrlEdges();
     // TODO: update method for fw bw split
     // task_gph->AddMdUpdtCtrlEdgesWithinReduceSplitNode();

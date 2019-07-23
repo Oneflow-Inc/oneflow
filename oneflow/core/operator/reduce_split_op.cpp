@@ -18,7 +18,7 @@ void ReduceSplitOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> 
                                    const ParallelContext* parallel_ctx) const {
   const auto& conf = op_conf().reduce_split_conf();
   if (GlobalJobDesc().IsPredict()
-      && GlobalJobDesc().other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
+      && GlobalJobDesc().job_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
     FOR_RANGE(int32_t, i, 0, conf.out_num()) {
       BlobDesc* blob_desc = GetBlobDesc4BnInOp(output_bns().Get(i));
       Shape shape(conf.out_shape(i));
@@ -48,7 +48,7 @@ void ReduceSplitOp::VirtualGenKernelConf(
 
 LogicalBlobId ReduceSplitOp::ibn2lbi(const std::string& input_bn) const {
   if (GlobalJobDesc().IsPredict()
-      && GlobalJobDesc().other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
+      && GlobalJobDesc().job_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
     return this->Operator::ibn2lbi(input_bn);
   } else {
     return GenPackedLbi();
@@ -57,7 +57,7 @@ LogicalBlobId ReduceSplitOp::ibn2lbi(const std::string& input_bn) const {
 
 LogicalBlobId ReduceSplitOp::obn2lbi(const std::string& output_bn) const {
   if (GlobalJobDesc().IsPredict()
-      && GlobalJobDesc().other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
+      && GlobalJobDesc().job_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
     return this->Operator::obn2lbi(output_bn);
   } else {
     return GenPackedLbi();

@@ -10,7 +10,7 @@ namespace oneflow {
 void NormalModelUpdtOp::InitFromOpConf() {
   EnrollInputBn("model_diff", false);
   EnrollInputBn("total_instance_num_diff", false);
-  if (GlobalJobDesc().other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
+  if (GlobalJobDesc().job_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
     EnrollInputBn("model", false)->set_is_mutable(true);
   } else {
     UNIMPLEMENTED();

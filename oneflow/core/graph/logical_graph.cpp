@@ -61,7 +61,7 @@ void LogicalGraph::NaiveBuildFwStruct(
     std::shared_ptr<Operator> cur_op = ConstructOp(cur_op_conf);
     LogicalNode* cur_node = cur_op->NewProperLogicalNode();
     if (cur_node->TypeName() == "PackForward" || cur_node->TypeName() == "UnpackForward") {
-      CHECK_EQ(0, GlobalJobDesc().other_conf().piece_size() % parallel_desc_ptr->parallel_num());
+      CHECK_EQ(0, GlobalJobDesc().job_conf().piece_size() % parallel_desc_ptr->parallel_num());
     }
     AddAllocatedNode(cur_node);
     cur_node->mut_op_vec() = {cur_op};
@@ -469,8 +469,8 @@ NormalMdUpdtLogicalNode* LogicalGraph::BuildNormalMdUpdtAndMdSaveStruct(
   // for model
   BuildMdSaveStructIfNeed(md_updt_logical);
   // TODO: remove the following ugly hard coded `if'
-  if (GlobalJobDesc().other_conf().train_conf().model_update_conf().has_momentum_conf()
-      || GlobalJobDesc().other_conf().train_conf().model_update_conf().has_adam_conf()) {
+  if (GlobalJobDesc().job_conf().train_conf().model_update_conf().has_momentum_conf()
+      || GlobalJobDesc().job_conf().train_conf().model_update_conf().has_adam_conf()) {
     // for forward_model
     BuildMdSaveStructIfNeed(md_updt_logical);
   }

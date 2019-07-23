@@ -1,7 +1,7 @@
 from __future__ import absolute_import
 
 import oneflow.python.framework.blob_desc as blob_desc
-import oneflow.python.framework.inter_user_job as inter_user_job
+import oneflow.python.framework.inter_user_job_util as inter_user_job_util
 import oneflow.core.common.data_type_pb2 as data_type_util
 
 class RemoteBlob(blob_desc.BlobDesc):
@@ -25,4 +25,4 @@ class RemoteBlob(blob_desc.BlobDesc):
         return "%s/%s" % (self.lbi_.op_name, self.lbi_.blob_name)
 
     def pull(self):
-        return inter_user_job.pull(self)
+        return inter_user_job_util.pull(self)

@@ -320,11 +320,11 @@ void SetCtrlInOpName4VariableOp(const OpGraph& op_graph, Job* job) {
     for (const auto* fw_bw_op : naive_consumers) {
       mut_mutable_consumer_op_conf.add_ctrl_in_op_name(fw_bw_op->name());
     }
-    job_builder.MutOps({mut_mutable_consumer_op_conf});
+    job_builder.MutOpsOnlyOnce({mut_mutable_consumer_op_conf});
     if (model_save_every_nth_op_conf != nullptr) {
       OperatorConf mut_model_save_every_nth_op_conf(*model_save_every_nth_op_conf);
       mut_model_save_every_nth_op_conf.add_ctrl_in_op_name(mutable_consumer->name());
-      job_builder.MutOps({mut_model_save_every_nth_op_conf});
+      job_builder.MutOpsOnlyOnce({mut_model_save_every_nth_op_conf});
     }
   });
 }
@@ -468,7 +468,7 @@ void JobCompleter::Complete(Job* job) const {
   // complete variable ops
   WithOpGraphAndMutJob(job, &AutoVar);
   if (GlobalJobDesc().IsPredict()
-      && GlobalJobDesc().other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
+      && GlobalJobDesc().job_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
     WithOpGraphAndMutJob(job, &TieUpChainHeadersUnReachableFromAnyVariableOps);
     // complete ops for trainning
     WithOpGraphAndMutJob(job, &GenerateOpConf4Trainning);
@@ -484,7 +484,8 @@ void JobCompleter::Complete(Job* job) const {
   WithOpGraphAndMutJob(job, &AddTickForTimeShape);
   WithOpGraphAndMutJob(job, &AutoSinkTick);
   AddGlobalTotalJobCriticalSection(*job);
-  WithOpGraphAndMutJob(job, &AddGlobalInputOutputCriticalSections);
+  WithOpGraphAndMutJob(job, &AddGlobalInputCriticalSections);
+  WithOpGraphAndMutJob(job, &AddGlobalOutputCriticalSections);
   WithOpGraphAndMutJob(job, &OpGraph::DumpLogicalBlobDescAndSbpSignature);
   WithOpGraphAndMutJob(job, &SetOpTimeShape7ModelLbis);
   CheckOpGraph(OpGraph(*job));

@@ -3,15 +3,15 @@
 
 namespace oneflow {
 
-void AddSaver(const OpGraph& op_graph, Job* job_conf) {
+void AddSaver(const OpGraph& op_graph, Job* job) {
   if (!Global<const IOConf>::Get()->enable_write_snapshot()) { return; }
   const int64_t num_of_batches_in_snapshot = GlobalJobDesc()
-                                                 .other_conf()
+                                                 .job_conf()
                                                  .predict_conf()
                                                  .tmp_split_fw_bw_train_conf()
                                                  .num_of_batches_in_snapshot();
   if (GlobalJobDesc().TotalBatchNum() < num_of_batches_in_snapshot) { return; }
-  JobBuilder builder(job_conf);
+  JobBuilder builder(job);
   ParallelConf md_save_parallel_conf;
   // only save on master
   md_save_parallel_conf.add_device_name("0:cpu:0");

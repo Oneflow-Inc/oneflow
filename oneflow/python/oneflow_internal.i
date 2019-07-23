@@ -14,6 +14,9 @@
 
 %shared_ptr(oneflow::ForeignJobInstance);
 %feature("director") oneflow::ForeignJobInstance;
+%feature("director:except") {
+  if ($error != NULL) { LOG(FATAL) << "Swig::DirectorMethodException"; }
+}
 %include "oneflow/core/job/foreign_job_instance.h"
 %include "oneflow/python/oneflow_internal.h"
 %include "oneflow/python/oneflow_internal.e.h.expanded.h"
