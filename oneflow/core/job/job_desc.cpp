@@ -136,6 +136,11 @@ float JobDesc::weight_l1() const { return GetTrainConf(job_conf_).weight_l1(); }
 float JobDesc::bias_l1() const { return GetTrainConf(job_conf_).bias_l1(); }
 float JobDesc::weight_l2() const { return GetTrainConf(job_conf_).weight_l2(); }
 float JobDesc::bias_l2() const { return GetTrainConf(job_conf_).bias_l2(); }
+int32_t JobDesc::loss_scale_factor() const {
+  int32_t loss_scale_factor = GetTrainConf(job_conf_).loss_scale_factor();
+  CHECK_GE(loss_scale_factor, 1);
+  return loss_scale_factor;
+}
 
 int32_t JobDesc::DataPartNum() const { return job_conf_.other().data_part_num(); }
 

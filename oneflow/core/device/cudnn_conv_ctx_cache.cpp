@@ -47,7 +47,7 @@ bool CudnnConvCtxCache::InferCudnnConvAlgoCtxWithConfig(
   CudnnTensorDesc in_desc(data_type, in_blob_desc.shape(), format);
   CudnnTensorDesc out_desc(data_type, out_blob_desc.shape(), format);
   CudnnFilterDesc filter_desc(data_type, filter_blob_desc.shape(), format);
-  CudnnConvDesc conv_desc(data_type, in_blob_desc.shape(), conf);
+  CudnnConvDesc conv_desc(GetConvDescDataType(data_type), in_blob_desc.shape(), conf);
   cudnnHandle_t cudnn_handle;
   CudaCheck(cudnnCreate(&cudnn_handle));
   void* in_dptr = nullptr;
@@ -143,6 +143,15 @@ void CudnnConvCtxCache::AddCudnnConvAlgoCtxWithConfig(
     const PbMessage& conf, const size_t max_buf_size, const CudnnConvAlgoCtx& conv_algo_ctx) {
   std::string key = GetKey(in_blob_desc, out_blob_desc, filter_blob_desc, conf, max_buf_size);
   CHECK(conv_config2algo_ctx_.emplace(key, conv_algo_ctx).second);
+}
+
+DataType GetConvDescDataType(DataType blob_data_type) {
+  DataType conv_desc_data_type =
+      blob_data_type == DataType::kFloat16
+              && !Global<JobDesc>::Get()->enable_true_half_config_when_conv()
+          ? DataType::kFloat
+          : blob_data_type;
+  return conv_desc_data_type;
 }
 
 }  // namespace oneflow

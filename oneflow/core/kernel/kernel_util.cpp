@@ -213,18 +213,6 @@ void MatrixRowReduce(const int64_t row_num, const int64_t col_num, const T* x, T
 
 }  // namespace
 
-template<>
-void Memcpy<DeviceType::kCPU>(DeviceCtx* ctx, void* dst, const void* src, size_t sz
-#ifdef WITH_CUDA
-                              ,
-                              cudaMemcpyKind kind
-#endif
-
-) {
-  if (dst == src) { return; }
-  memcpy(dst, src, sz);
-}
-
 void AutoMemcpy(DeviceCtx* ctx, void* dst, const void* src, size_t sz,
                 const MemoryCase& dst_mem_case, const MemoryCase& src_mem_case) {
   void (*func)(DeviceCtx*, void* dst, const void* src, size_t sz, cudaMemcpyKind);

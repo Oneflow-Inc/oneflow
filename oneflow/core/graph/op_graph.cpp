@@ -1,4 +1,5 @@
 #include "oneflow/core/graph/op_graph.h"
+#include "oneflow/core/operator/normal_model_update_op.h"
 
 namespace oneflow {
 
@@ -411,7 +412,6 @@ void OpGraph::InferOpNodeSbpSignature(OpNode* op_node, const SbpSignature& sbp_s
   }
   op_node->op().InferSbpSignatureIf(sbp_signature, sbp_sig_conf, CalcOrderValue4SbpSig,
                                     SbpInferHint4Ibn, op_node->parallel_desc());
-  op_node->op().FixSbpSignature(SbpInferHint4Ibn, sbp_signature);
 }
 
 void OpGraph::InferOpNodeLogicalBlobDesc(OpNode* op_node) const {
@@ -464,6 +464,22 @@ void OpGraph::InferLogicalBlobDesc(const Job& job) const {
     // infer logical_blob_desc
     InferOpNodeLogicalBlobDesc(op_node);
   });
+  // fix sbp_signature
+  {
+    TopoForEachNode([&](OpNode* op_node) {
+      if (op_node->op().op_conf().op_type_case() == OperatorConf::kCastConf) {
+        if (op_node->out_edges().size() > 1) { return; }
+        if (dynamic_cast<const NormalModelUpdtOp*>(&(op_node->SoleOutEdge()->dst_node()->op()))) {
+          auto* bn2sbp = op_node->mut_sbp_signature()->mutable_bn_in_op2sbp_parallel();
+          if (bn2sbp->at("out").has_partial_sum_parallel()
+              && Global<JobDesc>::Get()->all_reduce_fp16()) {
+            bn2sbp->at("in").mutable_broadcast_parallel();
+            bn2sbp->at("out").mutable_broadcast_parallel();
+          }
+        }
+      }
+    });
+  }
 }
 
 BalancedSplitter OpGraph::GetBalancedSplitter(const std::string& op_name,
