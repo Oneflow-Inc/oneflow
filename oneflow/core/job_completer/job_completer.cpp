@@ -1,3 +1,4 @@
+#include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/job_completer/job_completer.h"
 #include "oneflow/core/job_completer/autovar.h"
 #include "oneflow/core/job_completer/autograd.h"
@@ -430,6 +431,7 @@ void RewriteBoxingWithAllReduce(const OpGraph& op_graph, Job* job) {
 
 void EnableAutoMixedPrecision(const OpGraph& op_graph, Job* job) {
   if (!Global<JobDesc>::Get()->enable_auto_mixed_precision()) { return; }
+  CHECK_GE(CUDA_VERSION, 10000);
   AutoMixedPrecision(AutoMixedPrecisionLists::WhiteList(), AutoMixedPrecisionLists::BlackList(),
                      AutoMixedPrecisionLists::GrayList(), AutoMixedPrecisionLists::ClearList())
       .Apply(op_graph, job);
