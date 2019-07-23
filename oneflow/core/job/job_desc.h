@@ -75,7 +75,7 @@ class JobDesc final {
 
 typedef HashMap<std::string, int64_t> JobName2JobId;
 
-void WithGlobalJobId(int64_t job_id, const std::function<void()>& Handler);
+void WithJobIdGlobal(int64_t job_id, const std::function<void()>& Handler);
 const JobDesc& GlobalJobDesc();
 const JobDesc& GlobalJobDesc(int64_t job_id);
 
