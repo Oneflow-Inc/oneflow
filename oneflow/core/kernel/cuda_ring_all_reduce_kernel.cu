@@ -28,7 +28,7 @@ struct PackReducer<float> {
   union u {
     ulong2 p;
     struct {
-      float a, b;
+      float a, b, c, d;
     };
   };
   __device__ __forceinline__ ulong2 Reduce(const ulong2 x, const ulong2 y) {
@@ -38,9 +38,22 @@ struct PackReducer<float> {
     ux.p = x;
     uy.p = y;
     ur.a = ux.a + uy.a;
-    ur.b = ux.a + uy.b;
+    ur.b = ux.b + uy.b;
+    ur.c = ux.c + uy.c;
+    ur.d = ux.d + uy.d;
     return ur.p;
   }
+};
+
+template<>
+struct PackReducer<double> {
+  union u {
+    ulong2 p;
+    struct {
+      double a, b;
+    };
+  };
+  __device__ __forceinline__ ulong2 Reduce(const ulong2 x, const ulong2 y) { return x; }
 };
 
 template<typename T>
