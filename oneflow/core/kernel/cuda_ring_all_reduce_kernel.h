@@ -11,7 +11,10 @@ template<typename T>
 struct CudaRingAllReduceArg {
   int32_t num_rings;
   T* send[CUDA_RING_ALL_REDUCE_MAX_NUM_RINGS];
-  T* recv[CUDA_RING_ALL_REDUCE_MAX_NUM_RINGS];
+  const T* recv[CUDA_RING_ALL_REDUCE_MAX_NUM_RINGS];
+  T* dst[CUDA_RING_ALL_REDUCE_MAX_NUM_RINGS];
+  const T* src[CUDA_RING_ALL_REDUCE_MAX_NUM_RINGS];
+  int64_t num_elem[CUDA_RING_ALL_REDUCE_MAX_NUM_RINGS];
 };
 
 template<typename T>
@@ -30,6 +33,7 @@ class CudaRingAllReduceKernel final : public KernelIf<DeviceType::kGPU> {
 template<typename T>
 struct CudaRingAllReduceKernelUtil {
   static void AllReduce(DeviceCtx* ctx, CudaRingAllReduceArg<T> arg);
+  static void Send(DeviceCtx* ctx, CudaRingAllReduceArg<T> arg);
 };
 
 }  // namespace oneflow
