@@ -23,7 +23,7 @@ __device__ __forceinline__ void ReduceLine(ulong2* out, const ulong2* in_0, cons
   T* out_ptr = reinterpret_cast<T*>(out);
   const T* in_0_ptr = reinterpret_cast<const T*>(in_0);
   const T* in_1_ptr = reinterpret_cast<const T*>(in_1);
-  for (int32_t i = 0; i < NUM_PACK_PER_LINE * PACK_SIZE / sizeof(T); ++i) {
+  for (int32_t i = 0; i < NUM_PACK_PER_LINE_PER_THREAD * PACK_SIZE / sizeof(T); ++i) {
     out_ptr[i] = in_0_ptr[i] + in_1_ptr[i];
   }
 }
