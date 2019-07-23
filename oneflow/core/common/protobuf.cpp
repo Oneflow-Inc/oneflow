@@ -46,6 +46,12 @@ int32_t GetEnumFromPbMessage(const PbMessage& msg, const std::string& field_name
   return r->GetEnumValue(msg, fd);
 }
 
+template <>
+ShapeProto GetValFromPbMessage<ShapeProto>(const PbMessage& msg, const std::string& field_name) {
+  PROTOBUF_REFLECTION(msg, field_name);
+  return *dynamic_cast<const ShapeProto *>(&r->GetMessage(msg, fd));
+}
+
 #define DEFINE_SET_VAL_IN_PBMESSAGE(cpp_type, pb_type_name)                                    \
   template<>                                                                                   \
   void SetValInPbMessage(PbMessage* msg, const std::string& field_name, const cpp_type& val) { \
@@ -54,6 +60,13 @@ int32_t GetEnumFromPbMessage(const PbMessage& msg, const std::string& field_name
   }
 
 OF_PP_FOR_EACH_TUPLE(DEFINE_SET_VAL_IN_PBMESSAGE, PROTOBUF_BASIC_DATA_TYPE_SEQ)
+
+template <>
+void SetValInPbMessage<ShapeProto>(PbMessage* msg, const std::string& field_name,
+                                   const ShapeProto& val) {
+  PROTOBUF_REFLECTION((*msg), field_name);
+  r->MutableMessage(msg, fd)->CopyFrom(val);
+}
 
 PbMessage* MutableMessageInPbMessage(PbMessage* msg, const std::string& field_name) {
   PROTOBUF_REFLECTION((*msg), field_name);

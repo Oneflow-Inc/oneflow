@@ -94,5 +94,20 @@ Argument XlaOpContext::ArgumentFromString(const std::string &name) const {
   return param_.arguments.at(name);
 }
 
+template <>
+Shape XlaOpContext::GetAttr<Shape>(const std::string &attr_name) const {
+  DCHECK(HasFieldInPbMessage(*param_.op_conf, attr_name));
+  return Shape(GetValFromPbMessage<ShapeProto>(*param_.op_conf, attr_name));
+}
+
+template <>
+void XlaOpContext::SetAttr<Shape>(const std::string &attr_name,
+                                  const Shape &value) {
+  ShapeProto shape;
+  value.ToProto(&shape);
+  SetValInPbMessage<ShapeProto>(const_cast<PbMessage *>(param_.op_conf),
+                                attr_name, shape);
+}
+
 }  // namespace mola
 }  // namespace oneflow

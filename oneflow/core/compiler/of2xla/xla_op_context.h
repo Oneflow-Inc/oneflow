@@ -112,6 +112,12 @@ void XlaOpContext::SetAttr(const std::string &attr_name, const T &value) {
   SetValInPbMessage(const_cast<PbMessage *>(param_.op_conf), attr_name, value);
 }
 
+template <>
+Shape XlaOpContext::GetAttr<Shape>(const std::string &attr_name) const;
+
+template <>
+void XlaOpContext::SetAttr<Shape>(const std::string &attr_name,
+                                  const Shape &value);
 }  // namespace mola
 }  // namespace oneflow
 
