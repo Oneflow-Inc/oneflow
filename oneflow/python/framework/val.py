@@ -3,7 +3,9 @@ from __future__ import absolute_import
 import oneflow.python.framework.blob_desc as blob_desc
 import oneflow.core.common.data_type_pb2 as data_type_util
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
+from oneflow.python.oneflow_export import oneflow_export
 
+@oneflow_export('val')
 class val(blob_desc.BlobDesc):
     def __init__(self, shape,
                  dtype = data_type_util.kFloat,

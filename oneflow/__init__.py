@@ -1,22 +1,21 @@
 from __future__ import absolute_import
 
-from oneflow.python.framework.session import Session
-from oneflow.python.framework.val import val
-from oneflow.python.framework.config_util import placement
-from oneflow.python.framework.config_util import ConfigProtoBuilder
-from oneflow.python.framework.compiler import get_cur_job_conf_builder
-from oneflow.python.lib.core.decorator_util import append_func_to_list
-from oneflow.python.lib.core.box import Box
 from oneflow.core.job.job_set_pb2 import ConfigProto
 from oneflow.core.job.job_pb2 import JobConfigProto
-from oneflow.python import keras
 
 import oneflow.python.framework.dtype as dtype
 for x in dir(dtype):
     if x.startswith('_') == False: locals()[x] = getattr(dtype, x)
 del x
+del dtype
+
+import oneflow.python.__export_symbols__
+import oneflow.python.oneflow_export as oneflow_export
+for object_name in oneflow_export.exported_object_names:
+    locals()[object_name] = getattr(oneflow_export.exported_objects, object_name)
+if 'object_name' in locals(): del object_name
+del oneflow_export
 
 del absolute_import
 del python
 #del core
-del dtype

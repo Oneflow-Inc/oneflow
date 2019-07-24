@@ -1,13 +1,12 @@
 import oneflow as flow
 import numpy as np
-from oneflow.python.keras.activations import relu
 
 jobs = []
 @flow.append_func_to_list(jobs)
 def ReluJob(x = flow.val((10,))):
     job_conf = flow.get_cur_job_conf_builder()
     job_conf.batch_size(10).data_part_num(1).default_data_type(flow.float)
-    return relu(x)
+    return flow.keras.activations.relu(x)
 
 config = flow.ConfigProtoBuilder()
 config.gpu_device_num(1)
