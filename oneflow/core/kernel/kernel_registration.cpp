@@ -1,10 +1,29 @@
 #include "oneflow/core/kernel/kernel_registration.h"
 
+namespace std {
+template<>
+struct hash<::oneflow::OperatorConf::OpTypeCase> {
+  std::size_t operator()(const ::oneflow::OperatorConf::OpTypeCase& op_type) const {
+    return static_cast<size_t>(op_type);
+  }
+};
+}  // namespace std
+
 namespace oneflow {
 
 namespace kernel_registration {
 
 namespace {
+
+struct KernelRegistryVal final {
+  CreateFn func;
+  std::shared_ptr<constraint::KernelConstraint> cons;
+
+  KernelRegistryVal(CreateFn f, const std::shared_ptr<constraint::KernelConstraint>& c)
+      : func(f), cons(c) {}
+};
+
+using KernelRegMap = HashMap<OperatorConf::OpTypeCase, std::vector<KernelRegistryVal>>;
 
 KernelRegMap* MutKernelRegistry() {
   static KernelRegMap creators;

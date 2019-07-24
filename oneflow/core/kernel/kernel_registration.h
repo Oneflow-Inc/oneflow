@@ -5,26 +5,16 @@
 #include "oneflow/core/common/device_type.pb.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/str_util.h"
+#include "oneflow/core/common/data_type.h"
 #include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/core/kernel/kernel.pb.h"
 
-namespace std {
-template<>
-struct hash<::oneflow::OperatorConf::OpTypeCase> {
-  std::size_t operator()(const ::oneflow::OperatorConf::OpTypeCase& op_type) const {
-    return static_cast<size_t>(op_type);
-  }
-};
-}  // namespace std
-
 namespace oneflow {
+
+class Kernel;
 
 namespace kernel_registration {
 
-class Kernel;
-class KernelRegistryVal;
-
-using KernelRegMap = HashMap<OperatorConf::OpTypeCase, std::vector<KernelRegistryVal>>;
 using CreateFn = std::function<Kernel*()>;
 
 namespace constraint {
@@ -59,14 +49,6 @@ class DeviceConstraint final : public KernelConstraint {
 
 }  // namespace constraint
 
-struct KernelRegistryVal {
-  CreateFn func;
-  std::shared_ptr<constraint::KernelConstraint> cons;
-
-  KernelRegistryVal(CreateFn f, const std::shared_ptr<constraint::KernelConstraint>& c)
-      : func(f), cons(c) {}
-};
-
 struct KernelRegistrar final {
   KernelRegistrar(const OperatorConf::OpTypeCase& op_type, constraint::KernelConstraint* cons,
                   CreateFn f);
@@ -74,12 +56,20 @@ struct KernelRegistrar final {
 
 }  // namespace kernel_registration
 
-#define KERNEL_REGISTER_WITH_DEVICE_AND_DTYPE(op_type, device, dtype, ...)                        \
-  namespace {                                                                                     \
-  static kernel_registration::KernelRegistrar(                                                    \
-      op_type,                                                                                    \
-      kernel_registration::constraint::DeviceAndDTypeConstraint(device, GetDataType<dtype>::val), \
-      []() { return __VA_ARGS__; });                                                              \
+#define REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(op_type, device, dtype, ...)                      \
+  namespace {                                                                                   \
+  static kernel_registration::KernelRegistrar OF_PP_CAT(g_registrar, __LINE__)(                 \
+      op_type,                                                                                  \
+      new kernel_registration::constraint::DeviceAndDTypeConstraint(device,                     \
+                                                                    GetDataType<dtype>::value), \
+      []() { return new __VA_ARGS__(); });                                                      \
+  }  // namespace
+
+#define REGISTER_KERNEL_WITH_DEVICE(op_type, device, ...)                       \
+  namespace {                                                                   \
+  static kernel_registration::KernelRegistrar OF_PP_CAT(g_registrar, __LINE__)( \
+      op_type, new kernel_registration::constraint::DeviceConstraint(device),   \
+      []() { return new __VA_ARGS__(); });                                      \
   }  // namespace
 
 }  // namespace oneflow
