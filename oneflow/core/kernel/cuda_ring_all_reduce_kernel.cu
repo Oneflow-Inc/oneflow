@@ -18,9 +18,20 @@ constexpr int32_t CHUNK_SIZE = LINE_SIZE * NUM_LINE_PER_CHUNK;
 
 namespace {
 
+__device__ __forceinline__ void Fetch(ulong2& v, const ulong2* p) {
+  asm volatile("ld.volatile.global.v2.u64 {%0,%1}, [%2];"
+               : "=l"(v.x), "=l"(v.y)
+               : "l"(p)
+               : "memory");
+}
+
+__device__ __forceinline__ void Store(ulong2* p, ulong2& v) {
+  asm volatile("st.volatile.global.v2.u64 [%0], {%1,%2};" ::"l"(p), "l"(v.x), "l"(v.y) : "memory");
+}
+
 template<typename T>
 struct PackReducer {
-  __device__ __forceinline__ ulong2 Reduce(const ulong2 x, const ulong2 y);
+  __device__ __forceinline__ ulong2 Reduce(const ulong2& x, const ulong2& y);
 };
 
 template<>
@@ -31,7 +42,7 @@ struct PackReducer<float> {
       float a, b, c, d;
     };
   };
-  __device__ __forceinline__ ulong2 Reduce(const ulong2 x, const ulong2 y) {
+  __device__ __forceinline__ ulong2 Reduce(const ulong2& x, const ulong2& y) {
     u ux;
     u uy;
     u ur;
@@ -55,16 +66,6 @@ struct PackReducer<double> {
   };
   __device__ __forceinline__ ulong2 Reduce(const ulong2 x, const ulong2 y) { return x; }
 };
-
-template<typename T>
-__device__ __forceinline__ void ReduceLine(ulong2* out, const ulong2* in_0, const ulong2* in_1) {
-  T* out_ptr = reinterpret_cast<T*>(out);
-  const T* in_0_ptr = reinterpret_cast<const T*>(in_0);
-  const T* in_1_ptr = reinterpret_cast<const T*>(in_1);
-  for (int32_t i = 0; i < NUM_PACK_PER_LINE_PER_THREAD * PACK_SIZE / sizeof(T); ++i) {
-    out_ptr[i] = in_0_ptr[i] + in_1_ptr[i];
-  }
-}
 
 template<typename T>
 __global__ void AllReduceGpu(CudaRingAllReduceArg<T> arg) {}
@@ -121,11 +122,11 @@ __global__ void RecvReduceSendGpu(CudaRingAllReduceArg<T> arg) {
   for (int64_t l = 0; l < num_line; ++l) {
 #pragma unroll
     for (int32_t p = 0; p < NUM_PACK_PER_LINE_PER_THREAD; ++p) {
-      line_recv[p] = *(recv_pack_ptr + p * NUM_THREAD_PER_WARP);
+      Fetch(line_recv[p], recv_pack_ptr + p * NUM_THREAD_PER_WARP);
     }
 #pragma unroll
     for (int32_t p = 0; p < NUM_PACK_PER_LINE_PER_THREAD; ++p) {
-      line_src[p] = *(src_pack_ptr + p * NUM_THREAD_PER_WARP);
+      Fetch(line_src[p], src_pack_ptr + p * NUM_THREAD_PER_WARP);
     }
 #pragma unroll
     for (int32_t p = 0; p < NUM_PACK_PER_LINE_PER_THREAD; ++p) {
@@ -133,7 +134,7 @@ __global__ void RecvReduceSendGpu(CudaRingAllReduceArg<T> arg) {
     }
 #pragma unroll
     for (int32_t p = 0; p < NUM_PACK_PER_LINE_PER_THREAD; ++p) {
-      *(send_pack_ptr + p * NUM_THREAD_PER_WARP) = line_recv[p];
+      Store(send_pack_ptr + p * NUM_THREAD_PER_WARP, line_recv[p]);
     }
     send_pack_ptr += NUM_PACK_PER_LINE;
     src_pack_ptr += NUM_PACK_PER_LINE;
