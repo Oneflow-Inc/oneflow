@@ -9,9 +9,7 @@ SnapshotMgr::SnapshotMgr(const Plan& plan) {
   if (Global<JobDesc>::Get()->enable_write_snapshot()) {
     model_save_snapshots_path_ = Global<JobDesc>::Get()->MdSaveSnapshotsPath();
     if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
-      SnapshotFS()->CreateDirIfNotExist(model_save_snapshots_path_);
-      CHECK(SnapshotFS()->IsDirEmpty(model_save_snapshots_path_))
-          << "Error: model save snapshots path directory need to be emtpy!";
+      SnapshotFS()->MakeEmptyDir(model_save_snapshots_path_);
     }
   }
   const std::string& load_path = Global<JobDesc>::Get()->MdLoadSnapshotPath();
