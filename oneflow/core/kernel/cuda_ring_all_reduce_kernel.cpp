@@ -17,6 +17,7 @@ void CudaRingAllReduceKernel<T>::ForwardDataContent(
   CHECK_LE(arg.num_rings, CUDA_RING_ALL_REDUCE_MAX_NUM_RINGS);
   const Blob* in = BnInOp2Blob("in");
   Blob* out = BnInOp2Blob("out");
+  const int32_t num_step = conf.ring_conf(0).step_conf_size();
   FOR_RANGE(int32_t, i, 0, arg.num_rings) {
     Blob* send = BnInOp2Blob(GenRepeatedBn("send", i));
     arg.send[i] = send != nullptr ? send->mut_dptr<T>() : nullptr;
@@ -33,6 +34,8 @@ void CudaRingAllReduceKernel<T>::ForwardDataContent(
     CudaRingAllReduceKernelUtil<T>::RecvReduceSend(ctx.device_ctx, arg);
   } else if (step == conf.num_rank() - 1) {
     CudaRingAllReduceKernelUtil<T>::RecvReduceSendCopy(ctx.device_ctx, arg);
+  } else if (step < num_step - 1) {
+    CudaRingAllReduceKernelUtil<T>::RecvSendCopy(ctx.device_ctx, arg);
   }
 }
 
