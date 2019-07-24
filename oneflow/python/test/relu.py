@@ -1,10 +1,20 @@
-import numpy as np
 import oneflow as flow
+import numpy as np
+from oneflow.python.keras.activations import relu
 
-def relu(x, alpha=0., max_value=None, thrshold=0.)
-    if max_value is not None:
-        x = np.where(x>max_value, max_value, x)
-    x[x<thrshold] = alpha * (x - thrshold)
-    return x
+jobs = []
+@flow.append_func_to_list(jobs)
+def ReluJob(x = flow.val((10,))):
+    job_conf = flow.get_cur_job_conf_builder()
+    job_conf.batch_size(10).data_part_num(1).default_data_type(flow.float)
+    return relu(x)
 
-        
+config = flow.ConfigProtoBuilder()
+config.gpu_device_num(1)
+
+with flow.Session(jobs, config) as sess:
+    index = [-2, -1, 0, 1, 2]
+    data = []
+    for i in index: data.append(np.ones((10,), dtype=np.float32) * i)
+    for x in data:  print(sess.run(ReluJob, x).get())
+    

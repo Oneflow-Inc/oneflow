@@ -6,13 +6,13 @@ import oneflow.python.framework.id_util as id_util
 import oneflow.python.framwork.op_conf_pb2 as op_conf_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 
-def relu(remote_blob, alpha=0., max_value=None, threshold=0.)
+def relu(x, alpha=0., max_value=None, threshold=0.)
     assert alpha == 0.
     assert max_value == None
     assert threshold == 0.
     op_conf = op_conf_util.OperatorConf()
     op_conf.name = id_util.UniqueStr('Relu_')
-    setattr(op_conf.relu_conf, 'in', remote_blob.lbn)
+    setattr(op_conf.relu_conf, 'in', x.lbn)
     op_conf.relu_conf.out = "out"
     compile_context.CurJobAddOp(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()

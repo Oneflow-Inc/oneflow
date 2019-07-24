@@ -9,6 +9,7 @@ from oneflow.python.lib.core.decorator_util import append_func_to_list
 from oneflow.python.lib.core.box import Box
 from oneflow.core.job.job_set_pb2 import ConfigProto
 from oneflow.core.job.job_pb2 import JobConfigProto
+from oneflow.python import keras
 
 import oneflow.python.framework.dtype as dtype
 for x in dir(dtype):
