@@ -1619,6 +1619,14 @@ message ContiguousInstanceStackOpConf {
   required string out = 2;
 }
 
+message SortOpConf {
+  required string key = 1;
+  required string value = 2;
+  required string sorted_key = 3;
+  required string sorted_value = 4;
+  optional int32 temp_storage_bytes = 5;
+}
+
 message OperatorConf {
   required string name = 1;
   optional string model_load_dir = 2;
@@ -1753,7 +1761,7 @@ message OperatorConf {
     PieceSliceV2OpConf piece_slice_v2_conf = 308;
     UncontiguousInstanceStackOpConf uncontiguous_instance_stack_conf = 309;
     ContiguousInstanceStackOpConf contiguous_instance_stack_conf = 310;
-    BitonicSortOpConf bitonic_sort_conf = 311;
+    SortOpConf sort_conf = 311;
 
     // Maybe not needed
     RedefineDim0OpConf redefine_dim0_conf = 400;
