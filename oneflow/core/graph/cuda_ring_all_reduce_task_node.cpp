@@ -101,4 +101,8 @@ void CudaRingAllReduceTaskNode::ToProto(TaskProto* task_proto) {
   *(task_proto->mutable_parallel_ctx()) = parallel_ctx_;
 }
 
+void CudaRingAllReduceTaskNode::PinConsumedRegstMemCase(MemoryCase* mem_case) {
+  if (mem_case->has_host_mem()) { mem_case->mutable_host_mem()->set_used_by_device_id(GpuPhyId()); }
+}
+
 }  // namespace oneflow

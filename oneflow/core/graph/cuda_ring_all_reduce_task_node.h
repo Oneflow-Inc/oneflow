@@ -25,6 +25,7 @@ class CudaRingAllReduceTaskNode final : public TaskNode {
   OperatorConf GenOpConf() const;
   const ParallelContext* parallel_ctx() const override { return &parallel_ctx_; }
   void ToProto(TaskProto*) override;
+  void PinConsumedRegstMemCase(MemoryCase*) override;
 
   LogicalBlobId lbi_;
   ParallelContext parallel_ctx_;
