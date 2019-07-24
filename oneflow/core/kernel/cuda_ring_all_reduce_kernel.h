@@ -36,6 +36,7 @@ struct CudaRingAllReduceKernelUtil {
   static void RecvReduceSend(DeviceCtx* ctx, CudaRingAllReduceArg<T> arg);
   static void RecvReduceSendCopy(DeviceCtx* ctx, CudaRingAllReduceArg<T> arg);
   static void RecvSendCopy(DeviceCtx* ctx, CudaRingAllReduceArg<T> arg);
+  static void RecvCopy(DeviceCtx* ctx, CudaRingAllReduceArg<T> arg);
 };
 
 }  // namespace oneflow

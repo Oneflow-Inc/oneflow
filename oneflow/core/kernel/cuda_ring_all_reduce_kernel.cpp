@@ -36,6 +36,8 @@ void CudaRingAllReduceKernel<T>::ForwardDataContent(
     CudaRingAllReduceKernelUtil<T>::RecvReduceSendCopy(ctx.device_ctx, arg);
   } else if (step < num_step - 1) {
     CudaRingAllReduceKernelUtil<T>::RecvSendCopy(ctx.device_ctx, arg);
+  } else if (step == num_step - 1) {
+    CudaRingAllReduceKernelUtil<T>::RecvCopy(ctx.device_ctx, arg);
   }
 }
 
