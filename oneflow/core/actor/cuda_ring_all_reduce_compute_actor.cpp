@@ -21,8 +21,9 @@ void CudaRingAllReduceCompActor::VirtualActorInit(const TaskProto& task_proto) {
     recv_regst_desc_ids_.emplace(recv_regst_desc_id);
     consumed_rs_.InsertRegstDescId(recv_regst_desc_id);
   }
-  total_num_steps_ = conf.rings(0).next_size();
-  FOR_RANGE(int64_t, i, 1, num_rings_) { CHECK_EQ(conf.rings(i).next_size(), total_num_steps_); }
+  const int32_t num_rank = conf.rings(0).next_size();
+  FOR_RANGE(int64_t, i, 1, num_rings_) { CHECK_EQ(conf.rings(i).next_size(), num_rank); }
+  total_num_steps_ = num_rank * 2 - 1;
   current_step_ = 0;
   send_regst_piece_id_ = 0;
   consumed_rs_.InsertRegstDescId(in_regst_desc_id_);
