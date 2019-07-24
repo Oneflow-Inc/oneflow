@@ -133,40 +133,52 @@ void BuildSubGraphPass::DivideArgumentNodes(XlaGraph *sub_graph) {
   std::unordered_map<Argument, XlaNode *> divided_nodes;
   int argument_id = 0;
   for (XlaNode *node : argument_nodes) {
+    std::list<XlaEdge *> in_edges = node->in_edges();
+    std::list<XlaEdge *> out_edges = node->out_edges();
     // Argument node should has either inputs or outputs
-    CHECK(node->in_edges().size() == 0 || node->out_edges().size() == 0);
+    CHECK(in_edges.size() == 0 || out_edges.size() == 0);
 
     bool first_edge = true;
-    for (XlaEdge *edge : node->in_edges()) {
+    for (XlaEdge *edge : in_edges) {
       const Argument &arg = edge->argument();
       if (first_edge) {
         first_edge = false;
         node->set_op_name(absl::StrCat(_XlaOutArgumentPrefix, argument_id++));
+        node->ClearInEdges();
+        node->AddInEdge(edge);
         divided_nodes.emplace(arg, node);
       }
       auto it = divided_nodes.find(arg);
       if (it == divided_nodes.end()) {
         XlaNode *argument = sub_graph->AddNode();
+        argument->set_op_type(_XlaArgumentOpType);
         argument->set_op_name(absl::StrCat(_XlaOutArgumentPrefix,
                                            argument_id++));
+        argument->set_backend(node->backend());
+        argument->AddInEdge(edge);
         edge->UpdateEndNode(argument);
         node->EraseInEdge(edge);
         divided_nodes.emplace(arg, argument);
       }
     }
 
-    for (XlaEdge *edge : node->out_edges()) {
+    for (XlaEdge *edge : out_edges) {
       const Argument &arg = edge->argument();
       if (first_edge) {
         first_edge = false;
         node->set_op_name(absl::StrCat(_XlaInArgumentPrefix, argument_id++));
+        node->ClearOutEdges();
+        node->AddOutEdge(edge);
         divided_nodes.emplace(arg, node);
       }
       auto it = divided_nodes.find(arg);
       if (it == divided_nodes.end()) {
         XlaNode *argument = sub_graph->AddNode();
+        argument->set_op_type(_XlaArgumentOpType);
         argument->set_op_name(absl::StrCat(_XlaInArgumentPrefix,
                                            argument_id++));
+        argument->set_backend(node->backend());
+        argument->AddOutEdge(edge);
         edge->UpdateStartNode(argument);
         node->EraseOutEdge(edge);
         divided_nodes.emplace(arg, argument);

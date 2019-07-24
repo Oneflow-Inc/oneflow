@@ -49,7 +49,6 @@ XlaNode::XlaNode(const OpNode *op_node) : node_(op_node), unique_id_(-1),
   backend_ = DeviceTypeToBackend(op_node->op().device_type());
   op_name_ = op_node->op().op_name();
   op_type_ = ExtractOpTypeAsString(op_node->op().op_conf());
-  compiled_ = IsOpCompilerRegistered(backend_, op_type_);
   // Setup input and output logical blob ids
   for (const std::string &bn : op_node->op().input_bns()) {
     const LogicalBlobId &lbi = op_node->op().BnInOp2Lbi(bn);
@@ -61,6 +60,10 @@ XlaNode::XlaNode(const OpNode *op_node) : node_(op_node), unique_id_(-1),
   }
 }
 
+bool XlaNode::IsCompiled() const {
+  return IsOpCompilerRegistered(backend_, op_type_);
+}
+
 void XlaNode::AddInEdge(const XlaEdge *edge) {
   in_edges_.push_back(const_cast<XlaEdge *>(edge));
 }
@@ -70,21 +73,17 @@ void XlaNode::AddOutEdge(const XlaEdge *edge) {
 }
 
 void XlaNode::EraseInEdge(const XlaEdge *edge) {
-  for (auto it = in_edges_.begin(); it != in_edges_.end(); ++it) {
-    if ((*it)->unique_id() == edge->unique_id() &&
-        (*it)->argument() == edge->argument()) {
-      in_edges_.erase(it);
-    }
-  }
+  in_edges_.remove_if([&](const XlaEdge *e) -> bool {
+    return e->unique_id() == edge->unique_id() &&
+           e->argument() == edge->argument();
+  });
 }
 
 void XlaNode::EraseOutEdge(const XlaEdge *edge) {
-  for (auto it = out_edges_.begin(); it != out_edges_.end(); ++it) {
-    if ((*it)->unique_id() == edge->unique_id() &&
-        (*it)->argument() == edge->argument()) {
-      out_edges_.erase(it);
-    }
-  }
+  out_edges_.remove_if([&](const XlaEdge *e) -> bool {
+    return e->unique_id() == edge->unique_id() &&
+           e->argument() == edge->argument();
+  });
 }
 
 void XlaNode::InferBlobDescs(GetBlobDescFunc func,
@@ -139,7 +138,6 @@ XlaArgumentNode::XlaArgumentNode(const XlaLaunchOpConf::Argument &arg_conf,
     : XlaNode(), arg_conf_(arg_conf) {
   this->op_type_ = _XlaArgumentOpType;
   this->op_name_ = arg_conf.name();
-  this->compiled_ = true;
   this->backend_ = DeviceTypeToBackend(device_type);
   this->inputs_.emplace("in", BlobId(arg_conf.in()));
   this->outputs_.emplace("out", BlobId(arg_conf.out()));

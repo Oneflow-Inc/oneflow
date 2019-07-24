@@ -60,6 +60,8 @@ class XlaNode {
   void AddOutEdge(const XlaEdge *edge);
   void EraseInEdge(const XlaEdge *edge);
   void EraseOutEdge(const XlaEdge *edge);
+  void ClearInEdges() { in_edges_.clear(); };
+  void ClearOutEdges() { out_edges_.clear(); };
 
   const OpNode *node() const { return node_; }
   const Operator *op() const { return &node_->op(); }
@@ -89,7 +91,7 @@ class XlaNode {
   void set_op_type(const std::string &type) { op_type_ = type; }
   void set_op_name(const std::string &name) { op_name_ = name; }
 
-  bool IsCompiled() const { return compiled_; }
+  bool IsCompiled() const;
   bool IsSourceNode() const;
   bool IsFinishNode() const;
   bool IsArgumentNode() const;
@@ -104,7 +106,7 @@ class XlaNode {
   friend class XlaGraph;
   // XlaNode only can be created by XlaGraph
   XlaNode() : node_(nullptr), unique_id_(-1), cluster_id_(-1),
-              compiled_(false), sub_graph_(nullptr) {}
+              sub_graph_(nullptr) {}
   explicit XlaNode(const OpNode *op_node);
   virtual ~XlaNode() {}
 
@@ -117,9 +119,6 @@ class XlaNode {
   // Each compiled node has a cluster id if the cluster it belongs is valid.
   // A valid cluster must contain more than `minimum_nodes_in_cluster` nodes
   int64_t cluster_id_;
-  // Whether the node can be compiled or not. If the node operator backend and
-  // type has been registered by an operator compiler, then `compiled_` is true
-  bool compiled_;
   // String device type, such as "CPU" or "CUDA"
   std::string backend_;
   // String operator type, such as "Conv2d", "Matmul" or other else

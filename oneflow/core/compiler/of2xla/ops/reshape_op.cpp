@@ -14,8 +14,6 @@ class ReshapeOp : public XlaOpCompiler {
 
     bool has_batch_dim = ctx->GetAttr<bool>("has_dim0_in_shape");
     if (!has_batch_dim) {
-      CHECK_EQ(shape.NumAxes(), in_shape.NumAxes() - 1);
-
       std::vector<int64_t> dim_vec;
       dim_vec.push_back(in_shape.At(0));
       dim_vec.insert(dim_vec.end(), shape.dim_vec().begin(),

@@ -22,8 +22,8 @@ class MarkClusterIdPass : public XlaOptimizePass {
     virtual ~Cluster() { Clear(); }
 
     void Merge(const Cluster &other);
-    void InsertNode(const XlaNode *node);
-    void EraseNode(const XlaNode *node);
+    bool InsertNode(const XlaNode *node);
+    bool EraseNode(const XlaNode *node);
     void Clear();
 
     bool TryInsertNode(const XlaNode *node); 
@@ -49,8 +49,8 @@ class MarkClusterIdPass : public XlaOptimizePass {
   bool SatisfySbpPolicy(const XlaEdge *edge) const;
   bool SatisfyTimeShape(const XlaEdge *edge) const;
 
-  bool TryPushToParentCluster(const XlaNode *node, int64_t cluster_id,
-                              const std::vector<XlaEdge *> &in_edges);
+  bool TryToFuseWithParentCluster(const XlaNode *node, int64_t cluster_id,
+                                  const std::vector<XlaEdge *> &in_edges);
 
   // void RerankClusterId();
 
@@ -60,9 +60,9 @@ class MarkClusterIdPass : public XlaOptimizePass {
   std::unordered_map<XlaNode *, int64_t> node_cluster_ids_;
 };
 
-void MarkClusterIdPass::Cluster::InsertNode(const XlaNode *node) {
+bool MarkClusterIdPass::Cluster::InsertNode(const XlaNode *node) {
   if (!nodes_.insert(node).second) {
-    return;
+    return false;
   }
   for (const XlaEdge *edge : node->in_edges()) {
     if (HasNode(edge->start())) {
@@ -78,11 +78,12 @@ void MarkClusterIdPass::Cluster::InsertNode(const XlaNode *node) {
       output_edges_.insert(edge);
     }
   }
+  return true;
 }
 
-void MarkClusterIdPass::Cluster::EraseNode(const XlaNode *node) {
+bool MarkClusterIdPass::Cluster::EraseNode(const XlaNode *node) {
   if (nodes_.erase(node) == 0) {
-    return;
+    return false;
   }
   for (const XlaEdge *edge : node->in_edges()) {
     if (HasNode(edge->start())) {
@@ -94,6 +95,7 @@ void MarkClusterIdPass::Cluster::EraseNode(const XlaNode *node) {
       input_edges_.insert(edge);
     }
   }
+  return true;
 }
 
 void MarkClusterIdPass::Cluster::Clear() {
@@ -126,8 +128,7 @@ bool MarkClusterIdPass::Cluster::IsReachable(const Cluster &target) {
 }
 
 bool MarkClusterIdPass::Cluster::TryInsertNode(const XlaNode *node) {
-  InsertNode(node);
-  if (IsReachable(*this)) {
+  if (InsertNode(node) && IsReachable(*this)) {
     EraseNode(node);
     return false;
   }
@@ -136,21 +137,24 @@ bool MarkClusterIdPass::Cluster::TryInsertNode(const XlaNode *node) {
 
 bool MarkClusterIdPass::SatisfySbpPolicy(const XlaEdge *edge) const {
   return this->optimize_options_.ignore_sbp_policy ||
-         edge->sbp_policy(0) == edge->sbp_policy(1);
+         edge->IsControlEdge() ||
+         (edge->sbp_policy(0) == edge->sbp_policy(1));
 }
 
 bool MarkClusterIdPass::SatisfyTimeShape(const XlaEdge *edge) const {
   return this->optimize_options_.ignore_time_shape ||
-         edge->time_shape(0) == edge->time_shape(1);
+         edge->IsControlEdge() ||
+         (edge->time_shape(0) == edge->time_shape(1));
 }
 
-bool MarkClusterIdPass::TryPushToParentCluster(
+bool MarkClusterIdPass::TryToFuseWithParentCluster(
     const XlaNode *node, int64_t cluster_id,
     const std::vector<XlaEdge *> &in_edges) {
   bool status = true;
   for (const XlaEdge *edge : in_edges) {
     status = status && edge->start()->backend() == node->backend() &&
-             SatisfySbpPolicy(edge) && SatisfyTimeShape(edge);
+             (edge->IsControlEdge() ||
+             (SatisfySbpPolicy(edge) && SatisfyTimeShape(edge)));
   }
 
   Cluster &cluster = clusters_[cluster_id];
@@ -181,7 +185,7 @@ void MarkClusterIdPass::Run() {
       for (const auto &it : candidate_edges) {
         int64_t cluster_id = it.first;
         const std::vector<XlaEdge *> &edges = it.second;
-        if (TryPushToParentCluster(node, cluster_id, edges)) {
+        if (TryToFuseWithParentCluster(node, cluster_id, edges)) {
           node_cluster_ids_[node] = cluster_id;
           return true;
         }
