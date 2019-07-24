@@ -95,6 +95,13 @@ struct LayerNormKernelUtil<DeviceType::kCPU, T> {
 OF_PP_FOR_EACH_TUPLE(INSTANTIATE_LAYER_NORM_KERNEL_UTIL_CPU, FLOATING_DATA_TYPE_SEQ)
 #undef INSTANTIATE_LAYER_NORM_KERNEL_UTIL_CPU
 
+#define INSTANTIATE_LAYER_NORM_CONST_BUF_INIT_UTIL(device_type, data_type_pair) \
+  template class LayerNormConstBufInitUtil<device_type, OF_PP_PAIR_FIRST(data_type_pair)>;
+
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_LAYER_NORM_CONST_BUF_INIT_UTIL, DEVICE_TYPE_SEQ,
+                                 FLOATING_DATA_TYPE_SEQ);
+template struct LayerNormConstBufInitUtil<DeviceType::kGPU, float16>;
+
 ADD_DEFAULT_KERNEL_CREATOR_WITH_GPU_HALF(OperatorConf::kLayerNormConf, LayerNormKernel,
                                          FLOATING_DATA_TYPE_SEQ);
 
