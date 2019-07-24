@@ -8,7 +8,9 @@ import oneflow.python.framework.runtime as runtime
 import oneflow.python.framework.runtime_context as runtime_ctx
 import oneflow.python.framework.config_util as config_util
 from oneflow.python.framework.out_remote_blobs_result_box import OutRemoteBlobsResultBox
+from oneflow.python.oneflow_export import oneflow_export
 
+@oneflow_export('Session')
 class Session(object):
     def __init__(self, job_funcs, config_proto):
         if (isinstance(config_proto, config_util.ConfigProtoBuilder)):
