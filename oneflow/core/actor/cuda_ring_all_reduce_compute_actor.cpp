@@ -141,6 +141,4 @@ bool CudaRingAllReduceCompActor::ProducedCtrlRegstValid(int64_t regst_desc_id) c
   return true;
 }
 
-REGISTER_ACTOR(kCudaRingAllReduce, CudaRingAllReduceCompActor);
-
 }  // namespace oneflow
