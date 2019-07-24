@@ -1361,7 +1361,7 @@ message AxpyOpConf {
 
 message AssignOpConf {
   required string x = 1;
-  required string y = 2;
+  required string value = 2;
 }
 
 message TotalLossInstanceNumOpConf {
@@ -1434,10 +1434,8 @@ message ModelSaveV2OpConf {
 
 message ModelInitOpConf {
   required string out = 1;
-  required string lbn = 2;
-  required ShapeProto shape = 3;
-  optional DataType data_type = 4;
-  optional InitializerConf initializer = 5;
+  required string variable_op_name = 2;
+  required VariableOpConf variable_conf = 3;
 }
 
 message AllReduceFacadeOpConf {

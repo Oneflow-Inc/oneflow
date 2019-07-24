@@ -12,8 +12,6 @@ class ModelInitOp : public Operator {
 
   const PbMessage& GetCustomizedConf() const override;
 
-  LogicalNode* NewProperLogicalNode() const override { return new MdInitLogicalNode; }
-
   void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                       const ParallelContext* parallel_ctx) const override;
 

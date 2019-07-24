@@ -55,7 +55,6 @@ enum TaskType {
   kCallbackNotify = 47;
   kForeignInput = 48;
   kForeignOutput = 49;
-  kMdInit = 50;
 };
 
 enum AreaType {
@@ -67,7 +66,6 @@ enum AreaType {
   kMdSaveArea = 5;
   kPrintArea = 6;
   kBoundaryArea = 7;
-  kMdInitArea = 8;
 }
 
 message RegstDescIdSet {

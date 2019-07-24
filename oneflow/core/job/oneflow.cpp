@@ -22,6 +22,7 @@
 #include "oneflow/core/graph/plan_task_graph.h"
 #include "oneflow/core/graph/task_node.h"
 #include "oneflow/core/job/oneflow.h"
+#include "oneflow/core/job/model_init_job.h"
 
 DECLARE_bool(grpc_use_no_signal);
 
@@ -930,6 +931,15 @@ void CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan) {
       MakeArgPassingJob("ArgPassing-" + pair.first, parallel_blob_conf, pair.first, pair.second,
                         &arg_passing_job);
       CompileHelperJob(&arg_passing_job);
+    }
+  }
+  {
+    Job model_init_job;
+    std::vector<std::pair<OperatorConf, ParallelConf>> variable_op_confs_and_parallel_confs;
+    FilterVariableOps(jobs, &variable_op_confs_and_parallel_confs);
+    if (variable_op_confs_and_parallel_confs.empty() == false) {
+      MakeModelInitJob(&model_init_job, variable_op_confs_and_parallel_confs);
+      CompileHelperJob(&model_init_job);
     }
   }
   if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {

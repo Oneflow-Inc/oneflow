@@ -24,7 +24,6 @@
 #include "oneflow/core/graph/accuracy_print_compute_task_node.h"
 #include "oneflow/core/graph/task_graph.h"
 #include "oneflow/core/graph/reduce_identity_task_node.h"
-#include "oneflow/core/graph/model_init_compute_task_node.h"
 #include "oneflow/core/graph/op_graph.h"
 
 namespace oneflow {
@@ -472,8 +471,7 @@ REGISTER_BLD_BOXING_OP_CONF_MTHD("NormalBackward"
   OF_PP_MAKE_TUPLE_SEQ(NcclAllGather, kMdUpdtArea)        \
   OF_PP_MAKE_TUPLE_SEQ(Accuracy, kDataForwardArea)        \
   OF_PP_MAKE_TUPLE_SEQ(AccuracyAcc, kDataForwardArea)     \
-  OF_PP_MAKE_TUPLE_SEQ(AccuracyPrint, kPrintArea)         \
-  OF_PP_MAKE_TUPLE_SEQ(MdInit, kMdInitArea)
+  OF_PP_MAKE_TUPLE_SEQ(AccuracyPrint, kPrintArea)
 
 #define DEFINE_VIRTUAL_METHOD(x, area_type)                                             \
   std::string x##LogicalNode::TypeName() const { return #x; }                           \
