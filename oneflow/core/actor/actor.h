@@ -125,6 +125,8 @@ class Actor {
     return GetNaiveOrInplaceCurWriteable(Name2SoleRegstDescId(name));
   }
   Regst* GetSoleProducedRegst4RegstDescId(int64_t regst_desc_id) const;
+  Regst* ForEachProducedRegst4RegstDescId(int64_t regst_desc_id,
+                                          const std::function<void(Regst*)>& Handler) const;
   int64_t HandleRegstToConsumer(Regst* regst, std::function<bool(int64_t)> IsAllowedActor);
 
  private:

@@ -213,7 +213,9 @@ void Actor::InitDeviceCtx(const ThreadCtx& thread_ctx) {
       device_ctx_.reset(new CudaDeviceCtx(cuda_handle));
       break;
     }
-    default: { UNIMPLEMENTED(); }
+    default: {
+      UNIMPLEMENTED();
+    }
   }
 }
 
@@ -575,6 +577,15 @@ Regst* Actor::GetSoleProducedRegst4RegstDescId(int64_t regst_desc_id) const {
   auto it = produced_regsts_.find(regst_desc_id);
   CHECK(it != produced_regsts_.end());
   CHECK_EQ(it->second.size(), 1);
+  return it->second.front().get();
+}
+
+Regst* Actor::ForEachProducedRegst4RegstDescId(int64_t regst_desc_id,
+                                               const std::function<void(Regst*)>& Handler) const {
+  auto it = produced_regsts_.find(regst_desc_id);
+  CHECK(it != produced_regsts_.end());
+  CHECK_GT(it->second.size(), 0);
+  for (const auto& regst : it->second) { Handler(regst.get()); }
   return it->second.front().get();
 }
 

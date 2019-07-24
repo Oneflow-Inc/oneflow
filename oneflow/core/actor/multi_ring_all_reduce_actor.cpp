@@ -26,12 +26,9 @@ int MultiRingAllReduceActor::HandlerAllReduce(const ActorMsg& msg) {
       const bool is_send = it->second.first;
       const bool ring_id = it->second.second;
       if (is_send) {
-        CHECK(!send_regst_ready_.at(ring_id));
-        send_regst_ready_[ring_id] = true;
+        CHECK_EQ(send_rs_.TryPushBackRegst(msg.regst()), 0);
       } else {
-        CHECK(!recv_regst_ready_.at(ring_id));
-        recv_regst_[ring_id] = msg.regst();
-        recv_regst_ready_[ring_id] = true;
+        CHECK_EQ(recv_rs_.TryPushBackRegst(msg.regst()), 0);
       }
     }
   } else {
@@ -39,18 +36,24 @@ int MultiRingAllReduceActor::HandlerAllReduce(const ActorMsg& msg) {
   }
   const MultiRingAllReduceKernelStepConf& step_conf =
       multi_ring_all_reduce_kernel_conf_.ring_conf(current_ring_id_).step_conf(current_step_id_);
-  while (!in_regst_deque_.empty() && out_regst_reading_cnt_ == 0
-         && (!step_conf.send() || send_regst_ready_.at(current_ring_id_))
-         && (!step_conf.recv() || recv_regst_ready_.at(current_ring_id_))) {
+  while (
+      !in_regst_deque_.empty() && out_regst_reading_cnt_ == 0
+      && (!step_conf.send() || send_rs_.Front(send_regst_desc_id_.at(current_ring_id_)) != nullptr)
+      && (!step_conf.recv()
+          || recv_rs_.Front(recv_regst_desc_id_.at(current_ring_id_)) != nullptr)) {
     std::vector<ActorMsg> actor_msgs_;
     Regst* current_in_regst = in_regst_deque_.front();
     Blob* in_blob = current_in_regst->GetBlobByLbi(lbi_);
     Blob* out_blob = out_regst_->GetBlobByLbi(lbi_);
     Blob* send_blob =
-        step_conf.send() ? send_regst_.at(current_ring_id_)->GetBlobByLbi(lbi_) : nullptr;
+        step_conf.send()
+            ? send_rs_.Front(send_regst_desc_id_.at(current_ring_id_))->GetBlobByLbi(lbi_)
+            : nullptr;
     const std::string send_blob_name = "send_" + std::to_string(current_ring_id_);
     Blob* recv_blob =
-        step_conf.recv() ? recv_regst_.at(current_ring_id_)->GetBlobByLbi(lbi_) : nullptr;
+        step_conf.recv()
+            ? recv_rs_.Front(recv_regst_desc_id_.at(current_ring_id_))->GetBlobByLbi(lbi_)
+            : nullptr;
     const std::string recv_blob_name = "recv_" + std::to_string(current_ring_id_);
     other_ctx_.first = current_ring_id_;
     other_ctx_.second = current_step_id_;
@@ -68,22 +71,19 @@ int MultiRingAllReduceActor::HandlerAllReduce(const ActorMsg& msg) {
       }
     });
     if (step_conf.send()) {
-      Regst* send = send_regst_.at(current_ring_id_);
+      Regst* send = send_rs_.Front(send_regst_desc_id_.at(current_ring_id_));
       send->set_piece_id(send_regst_piece_id_.at(current_ring_id_));
       send_regst_piece_id_[current_ring_id_] += 1;
-      for (const int64_t consumer : send_regst_.at(current_ring_id_)->consumers_actor_id()) {
+      for (const int64_t consumer : send->consumers_actor_id()) {
         actor_msgs_.push_back(ActorMsg::BuildRegstMsgToConsumer(actor_id(), consumer, send));
       }
-      CHECK(send_regst_ready_.at(current_ring_id_));
-      send_regst_ready_[current_ring_id_] = false;
+      CHECK_EQ(send_rs_.TryPopFrontRegst(send_regst_desc_id_.at(current_ring_id_)), 0);
     }
     if (step_conf.recv()) {
-      Regst* recv = recv_regst_.at(current_ring_id_);
+      Regst* recv = recv_rs_.Front(recv_regst_desc_id_.at(current_ring_id_));
       actor_msgs_.push_back(
           ActorMsg::BuildRegstMsgToProducer(actor_id(), recv->producer_actor_id(), recv));
-      CHECK(recv_regst_ready_.at(current_ring_id_));
-      recv_regst_ready_[current_ring_id_] = false;
-      recv_regst_[current_ring_id_] = nullptr;
+      CHECK_EQ(recv_rs_.TryPopFrontRegst(recv_regst_desc_id_.at(current_ring_id_)), 0);
     }
     if (current_step_id_ == num_steps_ - 1 && current_ring_id_ == num_rings_ - 1) {
       out_regst_->set_piece_id(current_in_regst->piece_id());
@@ -107,9 +107,10 @@ int MultiRingAllReduceActor::HandlerAllReduce(const ActorMsg& msg) {
       for (const int64_t consumer : out_regst_->consumers_actor_id()) {
         actor_msgs_.push_back(ActorMsg::BuildEordMsg(consumer, out_regst_->regst_desc_id()));
       }
-      for (Regst* send_regst : send_regst_) {
-        for (const int64_t consumer : send_regst->consumers_actor_id()) {
-          actor_msgs_.push_back(ActorMsg::BuildEordMsg(consumer, send_regst->regst_desc_id()));
+      for (const int64_t send_regst_desc_id : send_regst_desc_id_) {
+        const auto& desc = Global<RegstMgr>::Get()->RegstDesc4RegstDescId(send_regst_desc_id);
+        for (const int64_t consumer : desc.consumers_actor_id()) {
+          actor_msgs_.push_back(ActorMsg::BuildEordMsg(consumer, send_regst_desc_id));
         }
       }
       AsyncDo([actor_msgs_]() {
@@ -146,19 +147,25 @@ void MultiRingAllReduceActor::VirtualActorInit(const TaskProto& task_proto) {
     const int64_t send_regst_desc_id =
         task_proto.produced_regst_desc().at(send_name).regst_desc_id();
     send_regst_piece_id_.push_back(0);
-    send_regst_.push_back(GetSoleProducedRegst4RegstDescId(send_regst_desc_id));
-    send_regst_ready_.push_back(true);
+    send_regst_desc_id_.push_back(send_regst_desc_id);
+    send_rs_.InsertRegstDescId(send_regst_desc_id);
     CHECK(regst_desc_id2send_or_recv7ring_id_
               .emplace(send_regst_desc_id, std::make_pair(true, ring_id))
               .second);
     CHECK_EQ(task_proto.consumed_regst_desc_id().at(recv_name).regst_desc_id_size(), 1);
     const int64_t recv_regst_desc_id =
         task_proto.consumed_regst_desc_id().at(recv_name).regst_desc_id(0);
-    recv_regst_.push_back(nullptr);
-    recv_regst_ready_.push_back(false);
+    recv_regst_desc_id_.push_back(recv_regst_desc_id);
+    recv_rs_.InsertRegstDescId(recv_regst_desc_id);
     CHECK(regst_desc_id2send_or_recv7ring_id_
               .emplace(recv_regst_desc_id, std::make_pair(false, ring_id))
               .second);
+  }
+  send_rs_.InitedDone();
+  recv_rs_.InitedDone();
+  for (const int64_t send_regst_desc_id : send_regst_desc_id_) {
+    ForEachProducedRegst4RegstDescId(send_regst_desc_id,
+                                     [&](Regst* regst) { send_rs_.TryPushBackRegst(regst); });
   }
   in_regst_eord_ = false;
   recv_regst_eord_cnt_ = 0;
