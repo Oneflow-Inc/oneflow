@@ -21,7 +21,7 @@ void CudaRingAllReduceTaskNode::ProduceAllRegstsAndBindEdges() {
   FOR_RANGE(int64_t, i, 0, send_to_.size()) {
     std::shared_ptr<RegstDesc> send_regst_desc =
         ProduceRegst("send_" + std::to_string(i), false, 2, 2);
-    send_regst_desc->mut_mem_case()->mutable_host_mem()->set_used_by_device(true);
+    send_regst_desc->mut_mem_case()->mutable_host_mem()->set_used_by_device_id(GpuPhyId());
     send_to_nodes.emplace(send_to_.at(i));
   }
   this->ForEachOutDataEdge([&](TaskEdge* edge) {

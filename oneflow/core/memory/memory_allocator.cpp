@@ -12,8 +12,9 @@ char* MemoryAllocator::Allocate(MemoryCase mem_case, std::size_t size) {
   const int memset_val = 0;
   char* dptr = nullptr;
   if (mem_case.has_host_mem()) {
-    if (mem_case.host_mem().used_by_device()) {
-      CudaCheck(cudaMallocHost(&dptr, size));
+    if (mem_case.host_mem().used_by_device_id() != -1) {
+      NumaAwareCudaMallocHost(mem_case.host_mem().used_by_device_id(),
+                              reinterpret_cast<void**>(&dptr), size);
     } else {
       dptr = reinterpret_cast<char*>(malloc(size));
       CHECK_NOTNULL(dptr);
@@ -32,7 +33,7 @@ char* MemoryAllocator::Allocate(MemoryCase mem_case, std::size_t size) {
 
 void MemoryAllocator::Deallocate(char* dptr, MemoryCase mem_case) {
   if (mem_case.has_host_mem()) {
-    if (mem_case.host_mem().used_by_device()) {
+    if (mem_case.host_mem().used_by_device_id() != -1) {
       CudaCheck(cudaFreeHost(dptr));
     } else {
       free(dptr);
