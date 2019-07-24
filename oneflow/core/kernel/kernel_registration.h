@@ -54,6 +54,8 @@ struct KernelRegistrar final {
                   CreateFn f);
 };
 
+Kernel* CreateKernel(const KernelConf& kernel_conf);
+
 }  // namespace kernel_registration
 
 #define REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(op_type, device, dtype, ...)                      \

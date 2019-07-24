@@ -6,13 +6,7 @@
 
 namespace oneflow {
 
-struct OpTypeCaseHash {
-  std::size_t operator()(const OperatorConf::OpTypeCase& a) const {
-    return std::hash<int>()(static_cast<int>(a));
-  }
-};
-
-typedef HashSet<OperatorConf::OpTypeCase, OpTypeCaseHash> AMPList;
+typedef HashSet<OperatorConf::OpTypeCase> AMPList;
 
 class AutoMixedPrecisionLists final {
  public:

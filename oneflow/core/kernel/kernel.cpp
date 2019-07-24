@@ -346,9 +346,24 @@ void KernelIf<device_type>::CopyField(DeviceCtx* ctx,
   }
 }
 
+namespace {
+const HashSet<OperatorConf::OpTypeCase>& OpsWithNewKernelRegistry() {
+  static HashSet<OperatorConf::OpTypeCase> ops = {OperatorConf::kMatmulConf};
+  return ops;
+}
+}  // namespace
+
 std::unique_ptr<const Kernel> ConstructKernel(const ParallelContext* parallel_ctx,
                                               const KernelConf& conf, DeviceCtx* device_ctx) {
-  Kernel* rptr = NewObj<Kernel>(conf.op_attribute().op_conf().op_type_case(), conf);
+  const auto& ops = OpsWithNewKernelRegistry();
+  auto op_type = conf.op_attribute().op_conf().op_type_case();
+  Kernel* rptr = nullptr;
+  if (ops.find(op_type) != ops.end()) {
+    rptr = kernel_registration::CreateKernel(conf);
+  } else {
+    rptr = NewObj<Kernel>(op_type, conf);
+  }
+  CHECK_NOTNULL(rptr);
   rptr->Init(parallel_ctx, conf, device_ctx);
   return std::unique_ptr<const Kernel>(rptr);
 }
