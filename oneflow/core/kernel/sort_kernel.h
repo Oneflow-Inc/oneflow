@@ -22,8 +22,7 @@ template<DeviceType device_type, typename T>
 struct SortUtil {
   static void Forward(DeviceCtx* ctx, const T* key_ptr, const int32_t* value_ptr,
                       void* temp_storage_ptr, size_t temp_storage_bytes, int32_t num_row,
-                      int32_t num_col, int32_t* begin_offsets_ptr, int32_t* end_offsets_ptr,
-                      T* sorted_key_ptr, int32_t* sorted_value_ptr);
+                      int32_t num_col, T* sorted_key_ptr, int32_t* sorted_value_ptr);
 };
 
 }  // namespace oneflow

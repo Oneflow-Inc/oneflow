@@ -18,17 +18,14 @@ void SortKernel<device_type, T>::ForwardDataContent(
       ctx.device_ctx, key_blob->dptr<T>(), value_blob->dptr<int32_t>(),
       BnInOp2Blob("temp_storage")->mut_dptr<void>(),
       this->op_conf().sort_conf().temp_storage_bytes(), shape.At(0), shape.At(1),
-      BnInOp2Blob("begin_offsets")->mut_dptr<int32_t>(),
-      BnInOp2Blob("end_offsets")->mut_dptr<int32_t>(), sorted_key_blob->mut_dptr<T>(),
-      sorted_value_blob->mut_dptr<int32_t>());
+      sorted_key_blob->mut_dptr<T>(), sorted_value_blob->mut_dptr<int32_t>());
 }
 
 template<typename T>
 struct SortUtil<DeviceType::kCPU, T> {
   static void Forward(DeviceCtx* ctx, const T* key_ptr, const int32_t* value_ptr,
                       void* temp_storage_ptr, size_t temp_storage_bytes, int32_t num_row,
-                      int32_t num_col, int32_t* begin_offsets_ptr, int32_t* end_offsets_ptr,
-                      T* sorted_key_ptr, int32_t* sorted_value_ptr) {
+                      int32_t num_col, T* sorted_key_ptr, int32_t* sorted_value_ptr) {
     UNIMPLEMENTED();
   }
 };

@@ -5,13 +5,14 @@ namespace oneflow {
 
 namespace {
 
-__global__ void SetOffset(int32_t* begin_offsets_ptr, int32_t* end_offsets_ptr, int32_t num_row,
-                          int32_t num_col) {
-  CUDA_1D_KERNEL_LOOP(i, num_row) {
-    begin_offsets_ptr[i] = i * num_col;
-    end_offsets_ptr[i] = (i + 1) * num_col;
-  }
-}
+class SegmentOffsetCreator {
+ public:
+  SegmentOffsetCreator(int32_t num_col) : num_col_(num_col) {}
+  __device__ int32_t operator()(int32_t idx) const { return idx * num_col_; }
+
+ private:
+  int32_t num_col_;
+};
 
 }  // namespace
 
@@ -19,17 +20,16 @@ template<typename T>
 struct SortUtil<DeviceType::kGPU, T> {
   static void Forward(DeviceCtx* ctx, const T* key_ptr, const int32_t* value_ptr,
                       void* temp_storage_ptr, size_t temp_storage_bytes, int32_t num_row,
-                      int32_t num_col, int32_t* begin_offsets_ptr, int32_t* end_offsets_ptr,
-                      T* sorted_key_ptr, int32_t* sorted_value_ptr) {
-    size_t infered_temp_storage_byte_size = -1;
-
-    SetOffset<<<1, kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-        begin_offsets_ptr, end_offsets_ptr, num_row, num_col);
+                      int32_t num_col, T* sorted_key_ptr, int32_t* sorted_value_ptr) {
+    cub::CountingInputIterator<int32_t> counting_iter(0);
+    cub::TransformInputIterator<int32_t, SegmentOffsetCreator, cub::CountingInputIterator<int32_t>>
+        segment_offsets_t(counting_iter, SegmentOffsetCreator(num_col));
 
     cudaStream_t cuda_stream = ctx->cuda_stream();
 
     // When d_temp_storage is NULL, no work is done and the required allocation size is returned in
     // temp_storage_bytes.
+    size_t infered_temp_storage_byte_size = -1;
     auto err = cub::DeviceSegmentedRadixSort::SortPairsDescending(
         /* d_temp_storage */ nullptr,
         /* temp_storage_bytes */ infered_temp_storage_byte_size,
@@ -39,8 +39,8 @@ struct SortUtil<DeviceType::kGPU, T> {
         /* d_values_out */ sorted_value_ptr,
         /* num_items */ num_row * num_col,
         /* num_segments */ num_row,
-        /* d_begin_offsets */ begin_offsets_ptr,
-        /* d_end_offsets */ end_offsets_ptr,
+        /* d_begin_offsets */ segment_offsets_t,
+        /* d_end_offsets */ segment_offsets_t + 1,
         /* begin_bit */ 0,
         /* end_bit */ sizeof(T) * 8,
         /* stream */ cuda_stream);
@@ -56,8 +56,8 @@ struct SortUtil<DeviceType::kGPU, T> {
         /* d_values_out */ sorted_value_ptr,
         /* num_items */ num_row * num_col,
         /* num_segments */ num_row,
-        /* d_begin_offsets */ begin_offsets_ptr,
-        /* d_end_offsets */ end_offsets_ptr,
+        /* d_begin_offsets */ segment_offsets_t,
+        /* d_end_offsets */ segment_offsets_t + 1,
         /* begin_bit */ 0,
         /* end_bit */ sizeof(T) * 8,
         /* stream */ cuda_stream);
