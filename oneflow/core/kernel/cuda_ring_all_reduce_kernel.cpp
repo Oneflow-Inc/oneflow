@@ -7,7 +7,7 @@ template<typename T>
 void CudaRingAllReduceKernel<T>::VirtualKernelInit(const ParallelContext* ctx) {}
 
 template<typename T>
-void CudaRingAllReduceKernel<T>::ForwardDataContent(
+void CudaRingAllReduceKernel<T>::Forward(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const int64_t step = *static_cast<int64_t*>(ctx.other);
   const MultiRingAllReduceKernelConf& conf = kernel_conf().multi_ring_all_reduce_conf();

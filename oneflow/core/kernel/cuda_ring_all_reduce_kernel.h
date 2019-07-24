@@ -26,8 +26,7 @@ class CudaRingAllReduceKernel final : public KernelIf<DeviceType::kGPU> {
 
  private:
   void VirtualKernelInit(const ParallelContext*) override;
-  void ForwardDataContent(const KernelCtx&,
-                          std::function<Blob*(const std::string&)>) const override;
+  void Forward(const KernelCtx&, std::function<Blob*(const std::string&)>) const override;
 };
 
 template<typename T>
