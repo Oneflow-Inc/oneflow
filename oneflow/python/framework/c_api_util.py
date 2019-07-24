@@ -1,9 +1,9 @@
 from __future__ import absolute_import
 
-import oneflow_internal
-from google.protobuf import text_format
 from oneflow.core.job.inter_user_job_info_pb2 import InterUserJobInfo
 from oneflow.core.job.job_set_pb2 import JobSet
+from google.protobuf import text_format
+import oneflow_internal
 import oneflow.python.framework.runtime_context as runtime_ctx
 
 def NaiveSequentialRunJobSet(job_set):
