@@ -898,6 +898,8 @@ void CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan) {
   {
     size_t helper_job_size =
         push_op_name2parallel_blob_conf.size() + pull_op_name2parallel_blob_conf.size();
+    // + 1 for init model job
+    helper_job_size = helper_job_size + 1;
     for (const auto& pair : parallel_blob_conf2input_op_name2output_op_name) {
       helper_job_size += pair.second.size();
     }
@@ -937,10 +939,8 @@ void CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan) {
     Job model_init_job;
     std::vector<std::pair<OperatorConf, ParallelConf>> variable_op_confs_and_parallel_confs;
     FilterVariableOps(jobs, &variable_op_confs_and_parallel_confs);
-    if (variable_op_confs_and_parallel_confs.empty() == false) {
-      MakeModelInitJob(&model_init_job, variable_op_confs_and_parallel_confs);
-      CompileHelperJob(&model_init_job);
-    }
+    MakeModelInitJob(&model_init_job, variable_op_confs_and_parallel_confs);
+    CompileHelperJob(&model_init_job);
   }
   if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
     BindInterfaceMemBlockId(jobs, &sub_plans);

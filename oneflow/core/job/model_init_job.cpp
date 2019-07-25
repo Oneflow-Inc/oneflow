@@ -19,6 +19,7 @@ void FilterVariableOps(
 void MakeModelInitJob(Job* job, const std::vector<std::pair<OperatorConf, ParallelConf>>&
                                     variable_op_confs_and_parallel_confs) {
   JobBuilder job_builder(job);
+  auto* job_conf = job->mutable_job_conf();
   ParallelConf master_parallel_conf;
   master_parallel_conf.set_policy(kDataParallel);
   master_parallel_conf.add_device_name("0:cpu:0");
@@ -26,6 +27,7 @@ void MakeModelInitJob(Job* job, const std::vector<std::pair<OperatorConf, Parall
     OperatorConf variable_op_conf;
     ParallelConf variable_op_parallel_conf;
     std::tie(variable_op_conf, variable_op_parallel_conf) = variable_op_conf_tuple;
+    job_conf->add_arg_op_name(variable_op_conf.name());
 
     OperatorConf model_init_op_conf;
     const std::string model_init_op_name = variable_op_conf.name() + "_model_init";
@@ -44,7 +46,6 @@ void MakeModelInitJob(Job* job, const std::vector<std::pair<OperatorConf, Parall
     job_builder.AddOps(variable_op_parallel_conf, {assign_op_conf});
   }
   const std::string model_init_job_name = "ModelInitJob";
-  auto* job_conf = job->mutable_job_conf();
   job_conf->set_job_name(model_init_job_name);
   job_conf->mutable_predict_conf();
   job_conf->set_piece_size(1);

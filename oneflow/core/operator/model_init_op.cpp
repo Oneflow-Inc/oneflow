@@ -4,7 +4,7 @@ namespace oneflow {
 
 void ModelInitOp::InitFromOpConf() {
   CHECK(op_conf().has_model_init_conf());
-  EnrollInputBn("out", false);
+  EnrollOutputBn("out", false);
 }
 
 const PbMessage& ModelInitOp::GetCustomizedConf() const { return op_conf().model_init_conf(); }
