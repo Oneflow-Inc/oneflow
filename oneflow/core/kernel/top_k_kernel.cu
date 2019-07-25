@@ -1,4 +1,4 @@
-#include "oneflow/core/kernel/top_k_kernel.h"
+// #include "oneflow/core/kernel/top_k_kernel.h"
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/device/cuda_util.h"
@@ -6,8 +6,12 @@
 #include "oneflow/core/kernel/kernel_util.cuh"
 #include "oneflow/core/kernel/top_k_kernel.cuh"
 #include "oneflow/core/kernel/bitonic_sort.cuh"
+#include "oneflow/core/kernel/radix_sort_util.cuh"
+// #include <cub/cub.cuh>
 
 namespace oneflow {
+
+namespace {
 
 #define MAX_POWER 16
 
@@ -62,39 +66,91 @@ __global__ void HeapTopKKernel(const T* in, const int32_t instance_num, const in
   }
 }
 
-template<typename T>
-struct TopKKernelUtil<DeviceType::kGPU, T> {
-  static void Forward(DeviceCtx* ctx, const T* in, const int32_t instance_num,
-                      const int32_t instance_size, const int32_t k, const bool sorted,
-                      int32_t* fw_buf, int32_t* out) {
-    CHECK(fw_buf == nullptr);
-    if (instance_size <= 1000 || k == instance_size || k > 512) {
-      TODO();
-    } else {
-      // Use as many heaps as possible (# of heaps == # of threads in thread block).
-      // Limitation 1, max shared memory: 48KB
-      // We also need heap_size * num_heap to be pow-of-2 which is necessary for bitonic sort
-      // implemented in our system
-      const int32_t heap_size = PowOf2Ceil(k);
-      const int32_t heap_byte_size = heap_size * sizeof(Entry<T>);
-      int32_t num_heap = PowOf2Floor(kCudaMaxSharedMemoryByteSize / heap_byte_size);
-      CHECK_GT(num_heap, 0);
-      // Limitation 2: # of threads in a thread block
-      if (num_heap > kCudaThreadsNumPerBlock) { num_heap = kCudaThreadsNumPerBlock; }
-
-      // Calculate shared memory size in thread block
-      const int64_t smem_size = num_heap * heap_byte_size;
-      CHECK_LE(smem_size, kCudaMaxSharedMemoryByteSize);
-
-      HeapTopKKernel<T><<<instance_num, num_heap, smem_size, ctx->cuda_stream()>>>(
-          in, instance_num, instance_size, k, heap_size, GetMaxVal<int32_t>(), GetMinVal<T>(), out);
-    }
+__global__ void RadixSortTopKInitializeKernel(int32_t* indices_ptr, int32_t instance_size) {
+  for (int32_t i = threadIdx.x; i < instance_size; i += blockDim.x) {
+    indices_ptr[instance_size * blockDim.x + i] = i;
   }
-};
+}
 
-#define INSTANTIATE_TOP_K_KERNEL_UTIL(type_cpp, type_proto) \
-  template struct TopKKernelUtil<DeviceType::kGPU, type_cpp>;
-OF_PP_FOR_EACH_TUPLE(INSTANTIATE_TOP_K_KERNEL_UTIL, FLOATING_DATA_TYPE_SEQ)
-#undef INSTANTIATE_TOP_K_KERNEL_UTIL
+__global__ void RadixSortTopKWriteToOutputKernel(const int32_t* sorted_indices_ptr,
+                                                 int32_t instance_size, int32_t k,
+                                                 int32_t* output_ptr) {
+  for (int32_t i = threadIdx.x; i < k; i += blockDim.x) {
+    output_ptr[k * blockDim.x + i] = sorted_indices_ptr[instance_size * blockDim.x + i];
+  }
+}
+
+}  // namespace
+
+template<typename T>
+void GpuHeapSelectionTopK(DeviceCtx* ctx, const T* in, const int32_t instance_num,
+                          const int32_t instance_size, const int32_t k, int32_t* out) {
+  // Use as many heaps as possible (# of heaps == # of threads in thread block).
+  // Limitation 1, max shared memory: 48KB
+  // We also need heap_size * num_heap to be pow-of-2 which is necessary for bitonic sort
+  // implemented in our system
+  const int32_t heap_size = PowOf2Ceil(k);
+  const int32_t heap_byte_size = heap_size * sizeof(Entry<T>);
+  int32_t num_heap = PowOf2Floor(kCudaMaxSharedMemoryByteSize / heap_byte_size);
+  CHECK_GT(num_heap, 0);
+  // Limitation 2: # of threads in a thread block
+  if (num_heap > kCudaThreadsNumPerBlock) { num_heap = kCudaThreadsNumPerBlock; }
+
+  // Calculate shared memory size in thread block
+  const int64_t smem_size = num_heap * heap_byte_size;
+  CHECK_LE(smem_size, kCudaMaxSharedMemoryByteSize);
+
+  HeapTopKKernel<T><<<instance_num, num_heap, smem_size, ctx->cuda_stream()>>>(
+      in, instance_num, instance_size, k, heap_size, GetMaxVal<int32_t>(), GetMinVal<T>(), out);
+}
+
+#define INSTANTIATE_GPU_HEAP_SELECTION_TOP_K(T, type_proto)                                       \
+  template void GpuHeapSelectionTopK<T>(DeviceCtx * ctx, const T* in, const int32_t instance_num, \
+                                        const int32_t instance_size, const int32_t k,             \
+                                        int32_t* out);
+OF_PP_FOR_EACH_TUPLE(INSTANTIATE_GPU_HEAP_SELECTION_TOP_K, ARITHMETIC_DATA_TYPE_SEQ)
+#undef INSTANTIATE_GPU_HEAP_SELECTION_TOP_K
+
+template<typename T>
+void GpuRadixSortTopK(DeviceCtx* ctx, const T* in, int32_t instance_num, int32_t instance_size,
+                      const int32_t k, int32_t* indices, T* sorted_in, int32_t* sorted_indices,
+                      void* temp_storage, size_t temp_storage_bytes, int32_t* out) {
+  int32_t num_thread =
+      instance_size <= kCudaThreadsNumPerBlock ? instance_size : kCudaThreadsNumPerBlock;
+  RadixSortTopKInitializeKernel<<<instance_num, kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+      indices, instance_size);
+
+  cub::CountingInputIterator<int32_t> counting_iter(0);
+  cub::TransformInputIterator<int32_t, SegmentOffsetCreator, cub::CountingInputIterator<int32_t>>
+      segment_offsets_t(counting_iter, SegmentOffsetCreator(instance_size));
+  cudaStream_t cuda_stream = ctx->cuda_stream();
+  auto err = cub::DeviceSegmentedRadixSort::SortPairsDescending(
+      /* d_temp_storage */ temp_storage,
+      /* temp_storage_bytes */ temp_storage_bytes,
+      /* d_keys_in */ in,
+      /* d_keys_out */ sorted_in,
+      /* d_values_in */ indices,
+      /* d_values_out */ sorted_indices,
+      /* num_items */ instance_num * instance_size,
+      /* num_segments */ instance_num,
+      /* d_begin_offsets */ segment_offsets_t,
+      /* d_end_offsets */ segment_offsets_t + 1,
+      /* begin_bit */ 0,
+      /* end_bit */ sizeof(T) * 8,
+      /* stream */ cuda_stream);
+  CudaCheck(err);
+
+  num_thread = k <= kCudaThreadsNumPerBlock ? k : kCudaThreadsNumPerBlock;
+  RadixSortTopKWriteToOutputKernel<<<instance_num, num_thread, 0, ctx->cuda_stream()>>>(
+      sorted_indices, instance_size, k, out);
+}
+
+#define INSTANTIATE_GPU_RADIX_SORT_TOP_K(T, type_proto)                                        \
+  template void GpuRadixSortTopK<T>(DeviceCtx * ctx, const T* in, int32_t instance_num,        \
+                                    int32_t instance_size, const int32_t k, int32_t* indices,  \
+                                    T* sorted_in, int32_t* sorted_indices, void* temp_storage, \
+                                    size_t temp_storage_bytes, int32_t* out);
+OF_PP_FOR_EACH_TUPLE(INSTANTIATE_GPU_RADIX_SORT_TOP_K, ARITHMETIC_DATA_TYPE_SEQ)
+#undef INSTANTIATE_GPU_RADIX_SORT_TOP_K
 
 }  // namespace oneflow

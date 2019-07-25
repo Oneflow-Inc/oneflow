@@ -18,12 +18,18 @@ class TopKKernel final : public KernelIf<device_type> {
                           std::function<Blob*(const std::string&)>) const override;
 };
 
-template<DeviceType device_type, typename T>
-struct TopKKernelUtil {
-  static void Forward(DeviceCtx* ctx, const T* in, const int32_t instance_num,
-                      const int32_t instance_size, const int32_t k, const bool sorted,
-                      int32_t* fw_buf, int32_t* out);
-};
+template<typename T>
+void CpuTopK(DeviceCtx* ctx, const T* in, const int32_t instance_num, const int32_t instance_size,
+             const int32_t k, const bool sorted, int32_t* indices, int32_t* out);
+
+template<typename T>
+void GpuHeapSelectionTopK(DeviceCtx* ctx, const T* in, const int32_t instance_num,
+                          const int32_t instance_size, const int32_t k, int32_t* out);
+
+template<typename T>
+void GpuRadixSortTopK(DeviceCtx* ctx, const T* in, int32_t instance_num, int32_t instance_size,
+                      const int32_t k, int32_t* indices, T* sorted_in, int32_t* sorted_indices,
+                      void* temp_storage, size_t temp_storage_bytes, int32_t* out);
 
 }  // namespace oneflow
 

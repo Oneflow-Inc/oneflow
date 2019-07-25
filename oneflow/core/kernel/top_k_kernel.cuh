@@ -1,6 +1,10 @@
 #ifndef ONEFLOW_CORE_KERNEL_TOP_K_KERNEL_CUH_
 #define ONEFLOW_CORE_KERNEL_TOP_K_KERNEL_CUH_
 
+#include "oneflow/core/kernel/top_k_kernel.h"
+#include "oneflow/core/kernel/radix_sort_util.cuh"
+#include <cub/cub.cuh>
+
 namespace oneflow {
 
 template<typename T>

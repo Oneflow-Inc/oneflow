@@ -213,6 +213,10 @@ message SortConf {
   required int32 temp_storage_bytes = 1;
 }
 
+message TopKConf {
+  required int32 temp_storage_bytes = 1;
+}
+
 message KernelConf {
   required OpAttribute op_attribute = 1;
   required bool is_forward = 2;
@@ -263,5 +267,6 @@ message KernelConf {
     WhereKernelConf where_conf = 425;
     LocalScatterNdUpdateConf local_scatter_nd_update_conf = 426;
     SortConf sort_conf = 427;
+    TopKConf top_k_conf = 428;
   }
 }

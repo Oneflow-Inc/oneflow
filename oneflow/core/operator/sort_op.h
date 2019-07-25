@@ -24,12 +24,12 @@ class SortOp final : public Operator {
   void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                       const ParallelContext*, int64_t record_piece_size,
                       std::function<void(OpContext*)> EnrollOpCtx) const override;
-  virtual void VirtualGenKernelConf(
-      std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*,
-      KernelConf*, const OpContext*) const override;
 
  private:
   bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { return false; }
+  virtual void VirtualGenKernelConf(
+      std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*,
+      KernelConf*, const OpContext*) const override;
 };
 
 }  // namespace oneflow

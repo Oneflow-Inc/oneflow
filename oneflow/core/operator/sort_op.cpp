@@ -40,9 +40,8 @@ void SortOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlob
 void SortOp::VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)>,
                                   const ParallelContext*, KernelConf* kernel_conf,
                                   const OpContext* op_ctx) const {
-  auto* conf = kernel_conf->mutable_sort_conf();
   auto* sort_op_ctx = static_cast<const SortOpCtx*>(op_ctx);
-  conf->set_temp_storage_bytes(sort_op_ctx->GetTempStorageBytes());
+  kernel_conf->mutable_sort_conf()->set_temp_storage_bytes(sort_op_ctx->GetTempStorageBytes());
 }
 
 REGISTER_OP(OperatorConf::kSortConf, SortOp);
