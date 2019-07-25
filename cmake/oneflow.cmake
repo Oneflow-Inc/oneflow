@@ -170,6 +170,7 @@ RELATIVE_SWIG_GENERATE_CPP(SWIG_SRCS SWIG_HDRS
                               ${PROJECT_SOURCE_DIR}
                               ${of_all_rel_swigs})
 find_package(PythonLibs)
+message("-- Python Version: " ${PYTHONLIBS_VERSION_STRING})
 include_directories(${PYTHON_INCLUDE_DIRS} ${Python_NumPy_INCLUDE_DIRS})
 oneflow_add_library(oneflow_internal SHARED ${SWIG_SRCS} ${SWIG_HDRS} ${of_main_cc})
 SET_TARGET_PROPERTIES(oneflow_internal PROPERTIES PREFIX "_")
@@ -193,9 +194,6 @@ foreach(oneflow_python_file ${oneflow_all_python_file})
     "${oneflow_python_file}"
     "${of_pyscript_dir}/${oneflow_python_rel_file_path}")
 endforeach()
-add_custom_command(TARGET of_pyscript_copy POST_BUILD
-    COMMAND python -c "import oneflow"
-    COMMENT "python -c \"import oneflow\"")
 
 # build main
 set(RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/bin)
