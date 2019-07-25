@@ -7,10 +7,7 @@ import oneflow.python.framework.inter_user_job_util as inter_user_job_util
 import numpy as np
 
 def GetMachineRuntimeEnv(job_set):
-    if len(job_set.config.resource.machine) == 1:
-        return MasterRuntimeEnv(job_set)
-    else:
-        TODO()
+    return MasterRuntimeEnv(job_set)
 
 class MasterRuntimeEnv(object):
     def __init__(self, job_set):
@@ -18,27 +15,12 @@ class MasterRuntimeEnv(object):
 
     def __enter__(self):
         assert len(self.job_set_.job) > 0, "no job in job_set found"
-        c_api_util.InitGlobalEnvironmentByConfigProto(self.job_set_.config)
         c_api_util.InitGlobalOneflowByJobSet(self.job_set_)
         runtime_ctx.InitInterUserJobInfo(c_api_util.GetInterUserJobInfo())
         
     def __exit__(self, *args):
         runtime_ctx.DestroyInterUserJobInfo()
         c_api_util.DestroyGlobalOneflow()
-
-class WorkerRuntimeEnv(object):
-    def __init__(self, job_set):
-        pass
-
-    def __enter__(self):
-        TODO()
-        raise ThisIsNotAnError
-
-    def __exit__(self, *args):
-        TODO()
-
-class ThisIsNotAnError(Exception):
-    pass
 
 def LaunchJob(job_func, *arg):
     job_name = job_func.__name__

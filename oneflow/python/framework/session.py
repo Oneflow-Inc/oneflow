@@ -5,19 +5,25 @@ import oneflow.core.job.job_set_pb2 as job_set_util
 import oneflow.core.job.job_pb2 as job_util
 import oneflow.python.framework.compiler as compiler
 import oneflow.python.framework.runtime as runtime
+import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.runtime_context as runtime_ctx
 import oneflow.python.framework.config_util as config_util
 from oneflow.python.framework.out_remote_blobs_result_box import OutRemoteBlobsResultBox
 from oneflow.python.oneflow_export import oneflow_export
 
+@oneflow_export('init')
+def init(config_proto):
+    if (isinstance(config_proto, config_util.ConfigProtoBuilder)):
+        config_proto = config_proto.config_proto
+    assert isinstance(config_proto, job_set_util.ConfigProto)
+    config_util.TryCompleteDefaultConfigProto(config_proto)
+    config_util.inited_config_proto = config_proto
+    c_api_util.Init(config_proto)
+    
 @oneflow_export('Session')
 class Session(object):
-    def __init__(self, job_funcs, config_proto):
-        if (isinstance(config_proto, config_util.ConfigProtoBuilder)):
-            config_proto = config_proto.config_proto
-        assert isinstance(config_proto, job_set_util.ConfigProto)
+    def __init__(self, job_funcs):
         self.job_set_ = job_set_util.JobSet()
-        self.job_set_.config.CopyFrom(config_proto)
         compiler.Compile(self.job_set_, job_funcs)
         self.job_name2job_func_ = {}
         for job_func in job_funcs: self.job_name2job_func_[job_func.__name__] = job_func

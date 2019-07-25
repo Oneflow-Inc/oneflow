@@ -17,6 +17,13 @@ void InitBySerializedConfigProto(const std::string& config_proto_str) {
   using namespace oneflow;
   ConfigProto config_proto;
   CHECK(google::protobuf::TextFormat::ParseFromString(config_proto_str, &config_proto));
+  if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
+    Global<CtrlClient>::Get()->PushKV("master_config_proto", config_proto);
+  } else {
+    ConfigProto master_config_proto;
+    Global<CtrlClient>::Get()->PullKV("master_config_proto", &master_config_proto);
+    CHECK(PbMd().Equals(config_proto, master_config_proto));
+  }
   CHECK_ISNULL(Global<EnvironmentObjectsScope>::Get());
   // Global<T>::New is not allowed to be called here
   // because glog is not constructed yet and LOG(INFO) has bad bahavior

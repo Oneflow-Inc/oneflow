@@ -15,12 +15,11 @@ def get_cur_job_conf_builder():
     return config_util.JobConfigProtoBuilder(compile_context.cur_job.job_conf)
 
 def Compile(job_set, job_funcs):
-    config_util.TryCompleteDefaultConfigProto(job_set.config)
     check_unique_job_func_name = set()
     for job_func in job_funcs:
         job = job_set.job.add()
         compile_context.cur_job = job
-        _CompileJob(job, job_func, job_set.config)
+        _CompileJob(job, job_func, config_util.inited_config_proto)
         config_util.TryCompleteDefaultJobConfigProto(job.job_conf)
         assert job.job_conf.job_name not in check_unique_job_func_name
         check_unique_job_func_name.add(job.job_conf.job_name)
