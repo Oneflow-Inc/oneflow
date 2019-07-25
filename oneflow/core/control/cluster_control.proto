@@ -1,0 +1,13 @@
+syntax = "proto2";
+package oneflow;
+
+enum ClusterControlCmd {
+  kInvalidClusterCtrlCmd = 0;
+  kClusterCtrlCmdSessionStart = 1;
+  kClusterCtrlCmdSessionEnd = 2;
+  kClusterCtrlCmdHalt = 3;
+}
+
+message ClusterControlProto {
+  required ClusterControlCmd cmd = 1;
+}

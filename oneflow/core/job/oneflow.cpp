@@ -942,14 +942,7 @@ RuntimeBuffersScope::~RuntimeBuffersScope() {
   Global<BufferMgr<int64_t>>::Get()->Get(kBufferNameGlobalWaitJobId)->Close();
 }
 
-Oneflow::Oneflow(const oneflow::JobSet& original_job_set) {
-  JobSet job_set(original_job_set);
-  if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
-    Global<CtrlClient>::Get()->PushKV("compiled_job_set", job_set);
-  } else {
-    Global<CtrlClient>::Get()->PullKV("compiled_job_set", &job_set);
-    CHECK(PbMd().Equals(original_job_set.config(), job_set.config()));
-  }
+Oneflow::Oneflow(const oneflow::JobSet& job_set) {
   global_objects_scope4job_conf_.reset(new GlobalObjectsScope4JobConf(job_set));
   // Runtime
   CompileAndMergePlanOnMaster(job_set.job(), &plan_);
