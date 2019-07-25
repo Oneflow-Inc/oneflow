@@ -31,12 +31,12 @@ struct SortUtil<DeviceType::kGPU, T> {
     // temp_storage_bytes.
     size_t infered_temp_storage_byte_size = -1;
     auto err = cub::DeviceSegmentedRadixSort::SortPairsDescending(
-        /* d_temp_storage */ nullptr,
+        /* d_temp_storage */ static_cast<void*>(NULL),
         /* temp_storage_bytes */ infered_temp_storage_byte_size,
-        /* d_keys_in */ key_ptr,
-        /* d_keys_out */ sorted_key_ptr,
-        /* d_values_in */ value_ptr,
-        /* d_values_out */ sorted_value_ptr,
+        /* d_keys_in */ static_cast<T*>(NULL),
+        /* d_keys_out */ static_cast<T*>(NULL),
+        /* d_values_in */ static_cast<int32_t*>(NULL),
+        /* d_values_out */ static_cast<int32_t*>(NULL),
         /* num_items */ num_row * num_col,
         /* num_segments */ num_row,
         /* d_begin_offsets */ segment_offsets_t,
