@@ -61,7 +61,7 @@ struct PackReduceFunctor {
     vb.p = b;
 #pragma unroll
     for (size_t i = 0; i < sizeof(Pack) / sizeof(T); ++i) {
-      vc.t[i] = ReduceFunctor<method, T>(va.t[i], vb.t[i]);
+      vc.t[i] = ReduceFunctor<method, T>()(va.t[i], vb.t[i]);
     }
     return vc.p;
   }
@@ -94,6 +94,64 @@ struct StoreFunctor<Pack> {
                  : "memory");
   }
 };
+
+template<ReduceMethod method, typename T, bool RECV, bool SRC, bool SEND, bool DST>
+__device__ void AlignedReduceOrCopy(const int64_t num_elem, const T* recv, const T* src, T* send,
+                                    T* dst) {
+  const int32_t thread_id = threadIdx.x;
+  const int32_t num_elem_per_line = LINE_SIZE / sizeof(T);
+  const int64_t num_line = num_elem / num_elem_per_line;
+  const int32_t warp_id = thread_id / NUM_THREAD_PER_WARP;
+  const int32_t lane_id = thread_id % NUM_THREAD_PER_WARP;
+  const int32_t offset = warp_id * NUM_PACK_PER_LINE_PER_WARP + lane_id;
+  const Pack* recv_pack_ptr = RECV ? reinterpret_cast<const Pack*>(recv) + offset : nullptr;
+  const Pack* src_pack_ptr = SRC ? reinterpret_cast<const Pack*>(src) + offset : nullptr;
+  Pack* send_pack_ptr = SEND ? reinterpret_cast<Pack*>(send) + offset : nullptr;
+  Pack* dst_pack_ptr = DST ? reinterpret_cast<Pack*>(dst) + offset : nullptr;
+  Pack line_recv[NUM_PACK_PER_LINE_PER_THREAD];
+  for (int64_t l = 0; l < num_line; ++l) {
+    if (RECV) {
+#pragma unroll
+      for (int32_t p = 0; p < NUM_PACK_PER_LINE_PER_THREAD; ++p) {
+        FetchFunctor<Pack>()(line_recv[p], recv_pack_ptr + p * NUM_THREAD_PER_WARP);
+      }
+    }
+    if (SRC) {
+      if (!RECV) {
+#pragma unroll
+        for (int32_t p = 0; p < NUM_PACK_PER_LINE_PER_THREAD; ++p) {
+          FetchFunctor<Pack>()(line_recv[p], src_pack_ptr + p * NUM_THREAD_PER_WARP);
+        }
+      } else {
+        Pack line_src[NUM_PACK_PER_LINE_PER_THREAD];
+#pragma unroll
+        for (int32_t p = 0; p < NUM_PACK_PER_LINE_PER_THREAD; ++p) {
+          FetchFunctor<Pack>()(line_src[p], src_pack_ptr + p * NUM_THREAD_PER_WARP);
+        }
+#pragma unroll
+        for (int32_t p = 0; p < NUM_PACK_PER_LINE_PER_THREAD; ++p) {
+          line_recv[p] = PackReduceFunctor<method, T>()(line_recv[p], line_src[p]);
+        }
+      }
+    }
+    if (SEND) {
+#pragma unroll
+      for (int32_t p = 0; p < NUM_PACK_PER_LINE_PER_THREAD; ++p) {
+        StoreFunctor<Pack>()(send_pack_ptr + p * NUM_THREAD_PER_WARP, line_recv[p]);
+      }
+    }
+    if (DST) {
+#pragma unroll
+      for (int32_t p = 0; p < NUM_PACK_PER_LINE_PER_THREAD; ++p) {
+        StoreFunctor<Pack>()(dst_pack_ptr + p * NUM_THREAD_PER_WARP, line_recv[p]);
+      }
+    }
+    if (RECV) { recv_pack_ptr += NUM_PACK_PER_LINE; }
+    if (SRC) { src_pack_ptr += NUM_PACK_PER_LINE; }
+    if (SEND) { send_pack_ptr += NUM_PACK_PER_LINE; }
+    if (DST) { dst_pack_ptr += NUM_PACK_PER_LINE; }
+  }
+}
 
 template<typename T>
 __global__ void SendGpu(CudaRingAllReduceArg<T> arg) {
