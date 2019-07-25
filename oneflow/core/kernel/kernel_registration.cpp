@@ -14,10 +14,8 @@ struct KernelRegistryVal final {
       : func(f), cons(c) {}
 };
 
-using KernelRegMap = HashMap<OperatorConf::OpTypeCase, std::vector<KernelRegistryVal>>;
-
-KernelRegMap* MutKernelRegistry() {
-  static KernelRegMap creators;
+HashMap<OperatorConf::OpTypeCase, std::vector<KernelRegistryVal>>* MutKernelRegistry() {
+  static HashMap<OperatorConf::OpTypeCase, std::vector<KernelRegistryVal>> creators;
   return &creators;
 }
 
