@@ -9,7 +9,7 @@
 
 namespace oneflow {
 
-template <DeviceType device_type, typename T>
+template <DeviceType device_type>
 class XlaLaunchKernel : public KernelIf<device_type> {
  public:
   XlaLaunchKernel() = default;

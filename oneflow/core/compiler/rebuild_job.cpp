@@ -395,9 +395,9 @@ void FoldSubgraphBuilder::FixupSbpSignatures() {
       blob_names.emplace(blob_name, bn);
     }
 
-    // Append sbp signatures to xla launch operator
+    SbpSignature sbp_conf;
+    auto *sbp_signatures = sbp_conf.mutable_bn_in_op2sbp_parallel();
     auto *attr_proto = op_conf->mutable_xla_launch_conf()->mutable_attr();
-    auto *sbp_signatures = attr_proto->mutable_sbp_signature();
     for (const auto &argument : attr_proto->argument()) {
       // Input argument
       if (absl::StartsWith(argument.name(), mola::_XlaInArgumentPrefix)) {
@@ -410,6 +410,10 @@ void FoldSubgraphBuilder::FixupSbpSignatures() {
         (*sbp_signatures)[bn] = GetSbpSignature(argument.in());
       }
     }
+    // Append sbp signatures to xla launch operator
+    *(attr_proto->mutable_sbp_signature()) = *sbp_signatures;
+    // Append sbp signatures to helper
+    builder_->AddSbpSignature(node->op_name(), sbp_conf);
   }
 }
 

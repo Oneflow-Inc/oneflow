@@ -10,8 +10,8 @@
 
 namespace oneflow {
 
-template <DeviceType device_type, typename T>
-void XlaLaunchKernel<device_type, T>::BuildLocalExecutable(
+template <DeviceType device_type>
+void XlaLaunchKernel<device_type>::BuildLocalExecutable(
     mola::XlaLaunchContext *launch_ctx,
     const std::vector<Blob *> &entry_blobs,
     const std::vector<std::string> &entry_blob_names,
@@ -52,8 +52,8 @@ void XlaLaunchKernel<device_type, T>::BuildLocalExecutable(
   }
 }
 
-template <DeviceType device_type, typename T>
-void XlaLaunchKernel<device_type, T>::RunExecutable(
+template <DeviceType device_type>
+void XlaLaunchKernel<device_type>::RunExecutable(
     mola::XlaLaunchContext *launch_ctx,
     xla::LocalExecutable *executable,
     const std::vector<Blob *> &entry_blobs,
@@ -115,8 +115,8 @@ void XlaLaunchKernel<device_type, T>::RunExecutable(
   }
 }
 
-template <DeviceType device_type, typename T>
-void XlaLaunchKernel<device_type, T>::ForwardDataContent(
+template <DeviceType device_type>
+void XlaLaunchKernel<device_type>::ForwardDataContent(
                 const KernelCtx &ctx,
                 std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   // Prepare input and output buffers and their names
@@ -150,7 +150,8 @@ void XlaLaunchKernel<device_type, T>::ForwardDataContent(
                 compile_result->xla_output_shape);
 }
 
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kXlaLaunchConf, XlaLaunchKernel,
-                           FLOATING_DATA_TYPE_SEQ);
+// ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kXlaLaunchConf, XlaLaunchKernel,
+//                            FLOATING_DATA_TYPE_SEQ);
+ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kXlaLaunchConf, XlaLaunchKernel);
 
 }  // namespace oneflow
