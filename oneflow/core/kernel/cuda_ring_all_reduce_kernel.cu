@@ -5,20 +5,19 @@
 
 namespace oneflow {
 
-constexpr int32_t PACK_SIZE = sizeof(ulong2);
-constexpr int32_t PACK_ALIGN = alignof(ulong2);
+namespace {
+
+using Pack = ulong2;
+
+constexpr int32_t PACK_SIZE = sizeof(Pack);
+constexpr int32_t PACK_ALIGN = alignof(Pack);
 constexpr int32_t NUM_WARP = 8;
 constexpr int32_t NUM_THREAD_PER_WARP = 32;
 constexpr int32_t NUM_THREAD = NUM_THREAD_PER_WARP * NUM_WARP;
-constexpr int32_t NUM_LINE_PER_CHUNK = 32;
 constexpr int32_t NUM_PACK_PER_LINE_PER_THREAD = 8;
 constexpr int32_t NUM_PACK_PER_LINE_PER_WARP = NUM_PACK_PER_LINE_PER_THREAD * NUM_THREAD_PER_WARP;
 constexpr int32_t NUM_PACK_PER_LINE = NUM_PACK_PER_LINE_PER_WARP * NUM_WARP;
 constexpr int32_t LINE_SIZE = NUM_PACK_PER_LINE * PACK_SIZE;
-
-namespace {
-
-using Pack = ulong2;
 
 template<ReduceMethod method, typename T>
 struct ReduceFunctor {
@@ -150,6 +149,24 @@ __device__ void AlignedReduceOrCopy(const int64_t num_elem, const T* recv, const
     if (SRC) { src_pack_ptr += NUM_PACK_PER_LINE; }
     if (SEND) { send_pack_ptr += NUM_PACK_PER_LINE; }
     if (DST) { dst_pack_ptr += NUM_PACK_PER_LINE; }
+    const int64_t processed = num_line * num_elem_per_line;
+    const int64_t remaining = num_elem - processed;
+    if (thread_id < remaining) {
+      int64_t idx = processed + thread_id;
+      T v0;
+      if (RECV) { FetchFunctor<T>()(v0, recv + idx); }
+      if (SRC) {
+        if (!RECV) {
+          FetchFunctor<T>()(v0, src + idx);
+        } else {
+          T v1;
+          FetchFunctor<T>()(v1, src + idx);
+          v0 = ReduceFunctor<method, T>(v0, v1);
+        }
+      }
+      if (SEND) { StoreFunctor<T>(send + idx, v0); }
+      if (DST) { StoreFunctor<T>(dst + idx, v0); }
+    }
   }
 }
 
