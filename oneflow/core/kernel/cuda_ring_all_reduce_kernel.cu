@@ -18,7 +18,7 @@ constexpr int32_t LINE_SIZE = NUM_PACK_PER_LINE * PACK_SIZE;
 
 namespace {
 
-using Pack = ulonglong2;
+using Pack = ulong2;
 
 template<ReduceMethod method, typename T>
 struct ReduceFunctor {
