@@ -1,6 +1,7 @@
 #include "oneflow/core/kernel/cuda_ring_all_reduce_kernel.h"
 #include "oneflow/core/kernel/kernel_util.cuh"
 #include <device_launch_parameters.h>
+#include "oneflow/core/common/reduce_method.pb.h"
 
 namespace oneflow {
 
@@ -14,9 +15,54 @@ constexpr int32_t NUM_PACK_PER_LINE_PER_THREAD = 8;
 constexpr int32_t NUM_PACK_PER_LINE_PER_WARP = NUM_PACK_PER_LINE_PER_THREAD * NUM_THREAD_PER_WARP;
 constexpr int32_t NUM_PACK_PER_LINE = NUM_PACK_PER_LINE_PER_WARP * NUM_WARP;
 constexpr int32_t LINE_SIZE = NUM_PACK_PER_LINE * PACK_SIZE;
-constexpr int32_t CHUNK_SIZE = LINE_SIZE * NUM_LINE_PER_CHUNK;
 
 namespace {
+
+using Pack = ulonglong2;
+
+template<ReduceMethod, typename T>
+struct ReduceFunctor {
+  __device__ __forceinline__ T operator()(const T& a, const T& b) const;
+};
+
+template<typename T>
+struct ReduceFunctor<ReduceMethod::kSum, T> {
+  __device__ __forceinline__ T operator()(const T& a, const T& b) const { return a + b; }
+};
+
+template<typename T>
+struct ReduceFunctor<ReduceMethod::kProd, T> {
+  __device__ __forceinline__ T operator()(const T& a, const T& b) const { return a * b; }
+};
+
+template<typename T>
+struct ReduceFunctor<ReduceMethod::kMax, T> {
+  __device__ __forceinline__ T operator()(const T& a, const T& b) const { return max(a, b); }
+};
+
+template<typename T>
+struct ReduceFunctor<ReduceMethod::kMin, T> {
+  __device__ __forceinline__ T operator()(const T& a, const T& b) const { return min(a, b); }
+};
+
+template<ReduceMethod, typename T>
+struct PackReduceFunctor {
+  static_assert(sizeof(Pack) % sizeof(T) == 0,
+                "The size of the Pack must be a multiple of the size of T");
+  union View {
+    Pack p;
+    T t[sizeof(Pack) / sizeof(T)];
+  };
+  __device__ __forceinline__ Pack operator()(const Pack& a, const Pack& b) const {
+    View va;
+    View vb;
+    va.p = a;
+    vb.p = b;
+#pragma unroll
+    for (size_t i = 0; i < sizeof(Pack) / sizeof(T); ++i) { va.t[i] += vb.t[i]; }
+    return va.p;
+  }
+};
 
 __device__ __forceinline__ void Fetch(ulong2& v, const ulong2* p) {
   asm volatile("ld.volatile.global.v2.u64 {%0,%1}, [%2];"
@@ -127,7 +173,7 @@ __global__ void RecvReduceSendGpu(CudaRingAllReduceArg<T> arg) {
     }
 #pragma unroll
     for (int32_t p = 0; p < NUM_PACK_PER_LINE_PER_THREAD; ++p) {
-      line_recv[p] = PackReducer<T>().Reduce(line_recv[p], line_src[p]);
+      line_recv[p] = PackReduceFunctor<ReduceMethod::kSum, T>()(line_recv[p], line_src[p]);
     }
 #pragma unroll
     for (int32_t p = 0; p < NUM_PACK_PER_LINE_PER_THREAD; ++p) {
@@ -171,7 +217,7 @@ __global__ void RecvReduceSendCopyGpu(CudaRingAllReduceArg<T> arg) {
     }
 #pragma unroll
     for (int32_t p = 0; p < NUM_PACK_PER_LINE_PER_THREAD; ++p) {
-      line_recv[p] = PackReducer<T>().Reduce(line_recv[p], line_src[p]);
+      line_recv[p] = PackReduceFunctor<ReduceMethod::kSum, T>()(line_recv[p], line_src[p]);
     }
 #pragma unroll
     for (int32_t p = 0; p < NUM_PACK_PER_LINE_PER_THREAD; ++p) {
