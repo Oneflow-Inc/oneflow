@@ -20,7 +20,7 @@ namespace {
 
 using Pack = ulonglong2;
 
-template<ReduceMethod, typename T>
+template<ReduceMethod method, typename T>
 struct ReduceFunctor {
   __device__ __forceinline__ T operator()(const T& a, const T& b) const;
 };
@@ -45,7 +45,7 @@ struct ReduceFunctor<ReduceMethod::kMin, T> {
   __device__ __forceinline__ T operator()(const T& a, const T& b) const { return min(a, b); }
 };
 
-template<ReduceMethod, typename T>
+template<ReduceMethod method, typename T>
 struct PackReduceFunctor {
   static_assert(sizeof(Pack) % sizeof(T) == 0,
                 "The size of the Pack must be a multiple of the size of T");
@@ -56,11 +56,12 @@ struct PackReduceFunctor {
   __device__ __forceinline__ Pack operator()(const Pack& a, const Pack& b) const {
     View va;
     View vb;
+    View vc;
     va.p = a;
     vb.p = b;
 #pragma unroll
-    for (size_t i = 0; i < sizeof(Pack) / sizeof(T); ++i) { va.t[i] += vb.t[i]; }
-    return va.p;
+    for (size_t i = 0; i < sizeof(Pack) / sizeof(T); ++i) { vc.t[i] = va.t[i] + vb.t[i]; }
+    return vc.p;
   }
 };
 
