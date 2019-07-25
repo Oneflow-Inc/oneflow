@@ -5,19 +5,18 @@
 #include "oneflow/core/job/job_set.pb.h"
 #include "oneflow/core/job/oneflow.h"
 #include "oneflow/core/job/foreign_job_instance.h"
-#include "oneflow/core/job/global_environment_objects_scope.h"
+#include "oneflow/core/job/environment_objects_scope.h"
 #include "oneflow/core/job/machine_context.h"
 
 bool InitGlobalEnvironmentBySerializedConfigProto(const std::string& config_proto_str) {
   using namespace oneflow;
   ConfigProto config_proto;
   CHECK(google::protobuf::TextFormat::ParseFromString(config_proto_str, &config_proto));
-  CHECK_ISNULL(Global<GlobalEnvironmentObjectsScope>::Get());
+  CHECK_ISNULL(Global<EnvironmentObjectsScope>::Get());
   // Global<T>::New is not allowed to be called here
   // because glog is not constructed yet and LOG(INFO) has bad bahavior
-  Global<GlobalEnvironmentObjectsScope>::SetAllocated(
-      new GlobalEnvironmentObjectsScope(config_proto));
-  LOG(INFO) << "NewGlobal " << typeid(GlobalEnvironmentObjectsScope).name();
+  Global<EnvironmentObjectsScope>::SetAllocated(new EnvironmentObjectsScope(config_proto));
+  LOG(INFO) << "NewGlobal " << typeid(EnvironmentObjectsScope).name();
   return Global<MachineCtx>::Get()->IsThisMachineMaster();
 }
 
@@ -59,8 +58,8 @@ void DestroyGlobalOneflow() {
 
 void DestroyGlobalEnvironment() {
   using namespace oneflow;
-  CHECK_NOTNULL(Global<Oneflow>::Get());
-  Global<GlobalEnvironmentObjectsScope>::Delete();
+  CHECK_NOTNULL(Global<EnvironmentObjectsScope>::Get());
+  Global<EnvironmentObjectsScope>::Delete();
 }
 
 int Ofblob_GetDataType(uint64_t of_blob_ptr) {
@@ -88,7 +87,7 @@ struct GlobalChecker final {
   ~GlobalChecker() {
     using namespace oneflow;
     if (Global<Oneflow>::Get() != nullptr) { LOG(FATAL) << "global oneflow is not destroyed yet"; }
-    if (Global<GlobalEnvironmentObjectsScope>::Get() != nullptr) {
+    if (Global<EnvironmentObjectsScope>::Get() != nullptr) {
       LOG(FATAL) << "global environment is not destroyed yet";
     }
   }

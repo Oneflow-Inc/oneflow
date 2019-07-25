@@ -9,7 +9,7 @@ import oneflow.python.framework.runtime_context as runtime_ctx
 def InitGlobalEnvironmentByConfigProto(config_proto):
     assert(type(config_proto) is job_set_util.ConfigProto)
     config_proto_str = text_format.MessageToString(config_proto)
-    oneflow_internal.InitGlobalEnrivonmentBySerializedConfigProto(config_proto_str)
+    oneflow_internal.InitGlobalEnvironmentBySerializedConfigProto(config_proto_str)
 
 def InitGlobalOneflowByJobSet(job_set):
     assert(type(job_set) is job_set_util.JobSet)

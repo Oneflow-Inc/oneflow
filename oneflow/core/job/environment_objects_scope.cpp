@@ -1,4 +1,4 @@
-#include "oneflow/core/job/global_environment_objects_scope.h"
+#include "oneflow/core/job/environment_objects_scope.h"
 #include "oneflow/core/common/buffer_manager.h"
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/control/ctrl_server.h"
@@ -61,7 +61,7 @@ void FixCpuDeviceNum() {
 
 }  // namespace
 
-GlobalEnvironmentObjectsScope::GlobalEnvironmentObjectsScope(const ConfigProto& config_proto) {
+EnvironmentObjectsScope::EnvironmentObjectsScope(const ConfigProto& config_proto) {
   flags_and_log_scope_.reset(new FlagsAndLogScope(config_proto, "oneflow"));
   Global<ResourceDesc>::New(config_proto.resource());
   Global<const IOConf>::New(config_proto.io_conf());
@@ -89,7 +89,7 @@ GlobalEnvironmentObjectsScope::GlobalEnvironmentObjectsScope(const ConfigProto& 
   }
 }
 
-GlobalEnvironmentObjectsScope::~GlobalEnvironmentObjectsScope() {
+EnvironmentObjectsScope::~EnvironmentObjectsScope() {
   if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
     Global<InterUserJobInfo>::Delete();
     Global<BufferMgr<std::shared_ptr<ForeignJobInstance>>>::Delete();
