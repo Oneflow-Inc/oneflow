@@ -18,12 +18,14 @@ class MasterRuntimeEnv(object):
 
     def __enter__(self):
         assert len(self.job_set_.job) > 0, "no job in job_set found"
+        c_api_util.InitGlobalEnvironmentByConfigProto(self.job_set_.config)
         c_api_util.InitGlobalOneflowByJobSet(self.job_set_)
         runtime_ctx.InitInterUserJobInfo(c_api_util.GetInterUserJobInfo())
         
     def __exit__(self, *args):
         runtime_ctx.DestroyInterUserJobInfo()
         c_api_util.DestroyGlobalOneflow()
+        c_api_util.DestroyGlobalEnvironment()
 
 class WorkerRuntimeEnv(object):
     def __init__(self, job_set):
