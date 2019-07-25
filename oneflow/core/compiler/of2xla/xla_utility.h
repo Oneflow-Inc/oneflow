@@ -37,7 +37,7 @@ LogicalBlobId BlobId(const std::string &blob_name);
       OF_STATUS_MACROS_CONCAT_NAME(_status_or_value, __COUNTER__), lhs, rexpr)
 
 #define OF_CHECK_AND_ASSIGN_IMPL(statusor, lhs, rexpr) \
-  auto statusor = (rexpr);                             \
+  auto &&statusor = (rexpr);                           \
   CHECK(statusor.ok());                                \
   lhs = std::move(statusor.ValueOrDie());              \
 

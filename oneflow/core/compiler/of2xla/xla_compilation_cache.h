@@ -10,7 +10,7 @@
 
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/register/blob.h"
-#include "oneflow/core/compiler/of2xla/xla_compiler.h"
+#include "oneflow/core/compiler/of2xla/xla_graph_compiler.h"
 
 namespace oneflow {
 namespace mola {

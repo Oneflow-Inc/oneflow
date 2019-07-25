@@ -327,12 +327,15 @@ void FoldSubgraphBuilder::FixupInOutBlobNames() {
         builder_->AddBatchDimLbi(lbi);
       }
     }
-    // Infect changes to the next operators
+
+    // Infect changes to the next operators only once
+    std::unordered_set<const XlaNode *> changed_nodes;
+
     for (const XlaEdge *edge : node->out_edges()) {
-      if (edge->IsControlEdge()) {
+      const XlaNode *end = edge->end();
+      if (edge->IsControlEdge() || !changed_nodes.insert(end).second) {
         continue;
       }
-      const XlaNode *end = edge->end();
       if (end->op_type() == mola::_XlaLaunchOpType) {
         auto *launch_conf = builder_->MutableOpConf(end->op_name())
                                     ->mutable_xla_launch_conf();

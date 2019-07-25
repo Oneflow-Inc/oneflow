@@ -22,13 +22,13 @@ struct CompilationResult {
   std::unique_ptr<xla::LocalExecutable> executable;
 };
 
-class XlaCompiler {
+class XlaGraphCompiler {
  public:
-  XlaCompiler(xla::LocalClient *client, xla::XlaBuilder *builder,
-              XlaGraph *graph, ParallelContext parallel_ctx,
-              const std::vector<Blob *> &entry_blobs,
-              const std::vector<std::string> &entry_blob_names,
-              const std::vector<std::string> &return_blob_names);
+  XlaGraphCompiler(xla::LocalClient *client, xla::XlaBuilder *builder,
+                   XlaGraph *graph, ParallelContext parallel_ctx,
+                   const std::vector<Blob *> &entry_blobs,
+                   const std::vector<std::string> &entry_blob_names,
+                   const std::vector<std::string> &return_blob_names);
 
   CompilationResult Compile();
 

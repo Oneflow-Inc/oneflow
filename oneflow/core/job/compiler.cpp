@@ -5,7 +5,6 @@
 #include "oneflow/core/job_completer/job_completer.h"
 
 #include "oneflow/core/compiler/of2xla/xla_graph.h"
-#include "oneflow/core/compiler/of2xla/xla_compiler.h"
 #include "oneflow/core/compiler/of2xla/pass/xla_optimize_pass.h"
 #include "oneflow/core/compiler/rebuild_job.h"
 #include <fstream>

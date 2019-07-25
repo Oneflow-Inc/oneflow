@@ -6,8 +6,10 @@
 #include "unsupported/Eigen/CXX11/Tensor"
 #include "unsupported/Eigen/CXX11/ThreadPool"
 
+#include "tensorflow/stream_executor/stream.h"
 #include "tensorflow/compiler/xla/client/xla_builder.h"
 #include "tensorflow/compiler/xla/client/local_client.h"
+#include "tensorflow/compiler/xla/service/stream_pool.h"
 #include "oneflow/core/job/resource.pb.h"  // DeviceType
 #include "oneflow/core/job/placement.pb.h"  // ParallelContext
 #include "oneflow/core/device/device_context.h"
@@ -16,7 +18,7 @@
 namespace oneflow {
 namespace mola {
 
-class CompilationResourceMgr {
+class XlaLaunchResourceMgr {
  public:
   static xla::LocalClient *GetOrCreateLocalClient(
       const se::Platform *platform, int intra_op_num_threads);
@@ -27,13 +29,12 @@ class CompilationResourceMgr {
   static Eigen::ThreadPoolDevice *GetOrCreateEigenHostDevice();
 };
 
-class CompilationContext {
+class XlaLaunchContext {
  public:
-  explicit CompilationContext(const std::string &builder_name,
-                              DeviceCtx *device_ctx, 
-                              DeviceType device_type,
-                              int intra_op_num_threads);
-
+  explicit XlaLaunchContext(const std::string &builder_name,
+                            DeviceCtx *device_ctx, 
+                            DeviceType device_type,
+                            int intra_op_num_threads);
   xla::LocalClient *client() const { return client_; }
   xla::XlaBuilder *builder() const { return builder_.get(); }
   mola::XlaAllocator *allocator() const { return allocator_; }
@@ -41,26 +42,28 @@ class CompilationContext {
   Eigen::ThreadPoolDevice *host_device() const { return host_device_; }
 
   DeviceCtx *device_ctx() const { return device_ctx_; }
+  DeviceType device_type() const { return device_type_; }
+  int device_ordinal() const { return device_ordinal_; }
 
   const ParallelContext &parallel_ctx() const { return parallel_ctx_; }
 
-  void **stream() const { return stream_; }
-
-  int device_ordinal() const { return device_ordinal_; }
+  se::Stream *stream() const { return stream_.get(); }
 
  private:
   xla::LocalClient *client_;
   std::shared_ptr<xla::XlaBuilder> builder_;
+
+  xla::StreamPool::Ptr stream_;
 
   mola::XlaAllocator *allocator_;
 
   Eigen::ThreadPoolDevice *host_device_;
 
   DeviceCtx *device_ctx_;
-  ParallelContext parallel_ctx_;
-
+  DeviceType device_type_;
   int device_ordinal_ = -1;
-  void **stream_ = nullptr;
+
+  ParallelContext parallel_ctx_;
 };
 
 }  // namespace mola

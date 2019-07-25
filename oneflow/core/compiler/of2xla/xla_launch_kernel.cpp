@@ -3,16 +3,16 @@
 #include "tensorflow/compiler/xla/client/local_client.h"
 #include "tensorflow/compiler/tf2xla/tf2xla_util.h"  // GetXLARandomSeed
 #include "oneflow/core/compiler/of2xla/xla_utility.h"
-#include "oneflow/core/compiler/of2xla/xla_stream.h"
-#include "oneflow/core/compiler/of2xla/xla_compiler.h"
+#include "oneflow/core/compiler/of2xla/xla_runtime_scope.h"
+#include "oneflow/core/compiler/of2xla/xla_graph_compiler.h"
 #include "oneflow/core/compiler/of2xla/xla_compilation_cache.h"
-#include "oneflow/core/compiler/of2xla/xla_compilation_context.h"
+#include "oneflow/core/compiler/of2xla/xla_launch_context.h"
 
 namespace oneflow {
 
 template <DeviceType device_type, typename T>
 void XlaLaunchKernel<device_type, T>::BuildLocalExecutable(
-    const mola::CompilationContext &compile_ctx,
+    mola::XlaLaunchContext *launch_ctx,
     const std::vector<Blob *> &entry_blobs,
     const std::vector<std::string> &entry_blob_names,
     const std::vector<std::string> &return_blob_names,
@@ -20,15 +20,15 @@ void XlaLaunchKernel<device_type, T>::BuildLocalExecutable(
   CHECK(this->op_conf().has_xla_launch_conf())
       << "BuildLocalExecutable need a `XlaLaunchOpConf`.";
   const auto &launch_conf = this->op_conf().xla_launch_conf();
-  const auto &parallel_ctx = compile_ctx.parallel_ctx();
+  const auto &parallel_ctx = launch_ctx->parallel_ctx();
 
   if (!compilation_cache_) {
     compilation_cache_.reset(new mola::XlaCompilationCache);
   }
 
-  const int device_ordinal = compile_ctx.device_ordinal();
+  const int device_ordinal = launch_ctx->device_ordinal();
   const mola::Signature signature = mola::ComputeSignature(
-      compile_ctx.builder()->name(), device_ordinal, entry_blobs);
+      launch_ctx->builder()->name(), device_ordinal, entry_blobs);
   bool force_compile = false;
   if (!force_compile) {
     *compile_result = compilation_cache_->GetRecord(signature);
@@ -39,9 +39,9 @@ void XlaLaunchKernel<device_type, T>::BuildLocalExecutable(
 
     // Pass a fake local `ParallelContext` to the compiler in order to get
     // the shape of arguments by `InferBlobDescs`
-    mola::XlaCompiler compiler(compile_ctx.client(), compile_ctx.builder(),
-                               &graph, parallel_ctx, entry_blobs,
-                               entry_blob_names, return_blob_names);
+    mola::XlaGraphCompiler compiler(launch_ctx->client(), launch_ctx->builder(),
+                                    &graph, parallel_ctx, entry_blobs,
+                                    entry_blob_names, return_blob_names);
 
     auto result = std::make_shared<mola::CompilationResult>();
     *result = compiler.Compile();
@@ -54,7 +54,7 @@ void XlaLaunchKernel<device_type, T>::BuildLocalExecutable(
 
 template <DeviceType device_type, typename T>
 void XlaLaunchKernel<device_type, T>::RunExecutable(
-    const mola::CompilationContext &compile_ctx,
+    mola::XlaLaunchContext *launch_ctx,
     xla::LocalExecutable *executable,
     const std::vector<Blob *> &entry_blobs,
     const std::vector<xla::Shape> &input_shapes,
@@ -62,16 +62,8 @@ void XlaLaunchKernel<device_type, T>::RunExecutable(
   namespace se = tensorflow::se;
   CHECK_EQ(entry_blobs.size(), input_shapes.size())
       << "Size mismatch between entry blobs and input shapes.";
-  const int device_ordinal = compile_ctx.device_ordinal();
-
-  xla::LocalClient *client = compile_ctx.client();
-
-  // Swap cuda stream between the backend stream and device context, so XLA
-  // could launch kernel on the specified cuda stream of device context. Note
-  // that it should do nothing for CPU mode in `SwapStreamHandle`
-  OF_CHECK_AND_ASSIGN(auto stream,
-                      client->mutable_backend()->BorrowStream(device_ordinal));
-  mola::SwapStreamHandle<device_type>(stream.get(), compile_ctx.stream());
+  const int device_ordinal = launch_ctx->device_ordinal();
+  xla::LocalClient *client = launch_ctx->client();
 
   // Translate input blobs to xla ShapedBuffer suitable running the executable
   int argument_size = input_shapes.size();
@@ -94,15 +86,20 @@ void XlaLaunchKernel<device_type, T>::RunExecutable(
     arguments[i] = shaped_buffers[i].get();
   }
 
-  xla::ExecutableRunOptions run_options;
-  run_options.set_stream(stream.get());
-  run_options.set_allocator(compile_ctx.allocator());
-  run_options.set_intra_op_thread_pool(compile_ctx.host_device());
-  run_options.set_rng_seed(tensorflow::GetXLARandomSeed());
-  OF_CHECK_AND_ASSIGN(auto run_result, executable->Run(arguments, run_options));
+  xla::StatusOr<xla::ScopedShapedBuffer> result_status;
+  {
+    mola::XlaRuntimeScope scope(launch_ctx);
 
-  // Swap again to let the subsequent cuda kernels use the original stream
-  mola::SwapStreamHandle<device_type>(stream.get(), compile_ctx.stream());
+    xla::ExecutableRunOptions run_options;
+    run_options.set_stream(launch_ctx->stream());
+    run_options.set_allocator(launch_ctx->allocator());
+    run_options.set_intra_op_thread_pool(launch_ctx->host_device());
+    run_options.set_rng_seed(tensorflow::GetXLARandomSeed());
+    result_status = executable->Run(arguments, run_options);
+  }
+
+  CHECK(result_status.ok());
+  auto run_result = std::move(result_status.ValueOrDie());
   // Result shape should be tuple
   CHECK(run_result.on_host_shape().IsTuple());
 
@@ -111,7 +108,7 @@ void XlaLaunchKernel<device_type, T>::RunExecutable(
   for (int i = 0; i < output_blobs.size(); ++i) {
     Blob *output = output_blobs[i];
     se::DeviceMemoryBase buffer = run_result.buffer({i});
-    Memcpy<device_type>(compile_ctx.device_ctx(), output->mut_dptr(),
+    Memcpy<device_type>(launch_ctx->device_ctx(), output->mut_dptr(),
                         buffer.opaque(), output->ByteSizeOfDataContentField());
     // Maybe release result buffer
     // run_result.set_buffer(se::OwningDeviceMemory(), {i});
@@ -138,17 +135,17 @@ void XlaLaunchKernel<device_type, T>::ForwardDataContent(
     return_blob_names.push_back(output_bn);
   }
   
-  mola::CompilationContext compile_ctx(this->op_conf().name(), ctx.device_ctx,
-                                       device_type, 1 /*intra_op_num_threads*/);
+  mola::XlaLaunchContext launch_ctx(this->op_conf().name(), ctx.device_ctx,
+                                    device_type, 1 /*intra_op_num_threads*/);
   mola::CompilationResult *compile_result = nullptr;
-  BuildLocalExecutable(compile_ctx, entry_blobs, entry_blob_names,
+  BuildLocalExecutable(&launch_ctx, entry_blobs, entry_blob_names,
                        return_blob_names, &compile_result);
 
   CHECK(compile_result) << "Executable built failed.";
   auto *executable = compile_result->executable.get();
 
   // Run executable in synchronous mode for CPU, or asynchronous for GPU.
-  RunExecutable(compile_ctx, executable, entry_blobs,
+  RunExecutable(&launch_ctx, executable, entry_blobs,
                 compile_result->xla_input_shapes, output_blobs,
                 compile_result->xla_output_shape);
 }

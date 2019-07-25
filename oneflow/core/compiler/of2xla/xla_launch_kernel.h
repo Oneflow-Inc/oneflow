@@ -4,8 +4,8 @@
 #include "oneflow/core/kernel/kernel.h"
 
 #include "oneflow/core/compiler/of2xla/xla_compilation_cache.h"
-#include "oneflow/core/compiler/of2xla/xla_compilation_context.h"
-#include "oneflow/core/compiler/of2xla/xla_compiler.h"
+#include "oneflow/core/compiler/of2xla/xla_launch_context.h"
+#include "oneflow/core/compiler/of2xla/xla_graph_compiler.h"
 
 namespace oneflow {
 
@@ -19,13 +19,13 @@ class XlaLaunchKernel : public KernelIf<device_type> {
   void ForwardDataContent(const KernelCtx&,
                           std::function<Blob*(const std::string&)>) const override;
 
-  void BuildLocalExecutable(const mola::CompilationContext &launch_ctx,
+  void BuildLocalExecutable(mola::XlaLaunchContext *launch_ctx,
                             const std::vector<Blob *> &entry_blobs,
                             const std::vector<std::string> &entry_blob_names,
                             const std::vector<std::string> &return_blob_names,
                             mola::CompilationResult **compile_result) const;
 
-  void RunExecutable(const mola::CompilationContext &launch_ctx,
+  void RunExecutable(mola::XlaLaunchContext *launch_ctx,
                      xla::LocalExecutable *executable,
                      const std::vector<Blob *> &entry_blobs,
                      const std::vector<xla::Shape> &input_shapes,

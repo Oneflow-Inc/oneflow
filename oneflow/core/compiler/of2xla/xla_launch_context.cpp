@@ -1,7 +1,7 @@
 #include "tensorflow/compiler/xla/client/client_library.h"
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/compiler/of2xla/xla_utility.h"
-#include "oneflow/core/compiler/of2xla/xla_compilation_context.h"
+#include "oneflow/core/compiler/of2xla/xla_launch_context.h"
 
 namespace oneflow {
 
@@ -15,7 +15,7 @@ static ParallelContext LocalParallelContext(int device_ordinal) {
 
 namespace mola {
 
-xla::LocalClient* CompilationResourceMgr::GetOrCreateLocalClient(
+xla::LocalClient* XlaLaunchResourceMgr::GetOrCreateLocalClient(
     const se::Platform *platform, int intra_op_num_threads) {
   xla::LocalClientOptions client_options;
   client_options.set_platform(const_cast<se::Platform *>(platform));
@@ -28,7 +28,7 @@ xla::LocalClient* CompilationResourceMgr::GetOrCreateLocalClient(
   return client;
 }
 
-mola::XlaAllocator* CompilationResourceMgr::GetOrCreateAllocator(
+mola::XlaAllocator* XlaLaunchResourceMgr::GetOrCreateAllocator(
     const se::Platform *platform) {
   static std::unordered_map<se::Platform::Id,
                             std::shared_ptr<mola::XlaAllocator>> allocators;
@@ -40,7 +40,7 @@ mola::XlaAllocator* CompilationResourceMgr::GetOrCreateAllocator(
   return allocators[platform_id].get();
 }
 
-Eigen::ThreadPoolDevice* CompilationResourceMgr::GetOrCreateEigenHostDevice() {
+Eigen::ThreadPoolDevice* XlaLaunchResourceMgr::GetOrCreateEigenHostDevice() {
   static int default_num_threads = 1;
   static Eigen::ThreadPool threadpool(default_num_threads);
   static Eigen::ThreadPoolDevice host_device(&threadpool,
@@ -48,12 +48,12 @@ Eigen::ThreadPoolDevice* CompilationResourceMgr::GetOrCreateEigenHostDevice() {
   return &host_device;
 }
 
-CompilationContext::CompilationContext(const std::string &builder_name,
-                                       DeviceCtx *device_ctx,
-                                       DeviceType device_type,
-                                       int intra_op_num_threads)
-    : device_ctx_(device_ctx) {
-  typedef CompilationResourceMgr ResourceMgr;
+XlaLaunchContext::XlaLaunchContext(const std::string &builder_name,
+                                   DeviceCtx *device_ctx,
+                                   DeviceType device_type,
+                                   int intra_op_num_threads)
+    : device_ctx_(device_ctx), device_type_(device_type) {
+  typedef XlaLaunchResourceMgr ResourceMgr;
   se::Platform::Id platform_id = nullptr;
 
   if (device_type == DeviceType::kCPU) {
@@ -63,8 +63,6 @@ CompilationContext::CompilationContext(const std::string &builder_name,
     platform_id = se::cuda::kCudaPlatformId;
 #ifdef WITH_CUDA
     CudaCheck(cudaGetDevice(&device_ordinal_));
-    stream_ = const_cast<void **>(
-        reinterpret_cast<void * const*>(&(device_ctx->cuda_stream())));
 #endif
   }
   CHECK(platform_id) << "Platform Id should not be nullptr. Please check "
@@ -75,9 +73,13 @@ CompilationContext::CompilationContext(const std::string &builder_name,
   client_ = ResourceMgr::GetOrCreateLocalClient(platform, intra_op_num_threads);
   builder_ = std::make_shared<xla::XlaBuilder>(
       absl::StrCat("XlaBuilder_", builder_name));
-
+  OF_CHECK_AND_ASSIGN(stream_,
+                      client_->mutable_backend()
+                             ->BorrowStream(device_ordinal_));
   allocator_ = ResourceMgr::GetOrCreateAllocator(platform);
+
   host_device_ = ResourceMgr::GetOrCreateEigenHostDevice();
+
   parallel_ctx_ = LocalParallelContext(device_ordinal_);
 }
 

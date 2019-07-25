@@ -12,16 +12,16 @@
 #include "oneflow/core/compiler/of2xla/xla_op_context.h"
 #include "oneflow/core/compiler/of2xla/xla_op_compiler.h"
 #include "oneflow/core/compiler/of2xla/xla_graph.h"
-#include "oneflow/core/compiler/of2xla/xla_compiler.h"
+#include "oneflow/core/compiler/of2xla/xla_graph_compiler.h"
 
 namespace oneflow {
 namespace mola {
 
-XlaCompiler::XlaCompiler(xla::LocalClient *client, xla::XlaBuilder *builder,
-                         XlaGraph *graph, ParallelContext parallel_ctx,
-                         const std::vector<Blob *> &entry_blobs,
-                         const std::vector<std::string> &entry_blob_names,
-                         const std::vector<std::string> &return_blob_names)
+XlaGraphCompiler::XlaGraphCompiler(
+    xla::LocalClient *client, xla::XlaBuilder *builder, XlaGraph *graph,
+    ParallelContext parallel_ctx, const std::vector<Blob *> &entry_blobs,
+    const std::vector<std::string> &entry_blob_names,
+    const std::vector<std::string> &return_blob_names)
     : client_(client), builder_(builder), graph_(graph),
       entry_names_(entry_blob_names), return_names_(return_blob_names) {
   CHECK_EQ(entry_blobs.size(), entry_blob_names.size());
@@ -44,7 +44,7 @@ XlaCompiler::XlaCompiler(xla::LocalClient *client, xla::XlaBuilder *builder,
   }
 }
 
-void XlaCompiler::BuildComputation(
+void XlaGraphCompiler::BuildComputation(
     const std::unordered_map<Argument, XlaOprand> &entry_oprands,
     const std::vector<Argument> &return_arguments,
     xla::Shape *output_shape, xla::XlaComputation *computation) {
@@ -55,7 +55,7 @@ void XlaCompiler::BuildComputation(
     const std::string &backend = node->backend();
     const std::string &op_type = node->op_type();
     // Create operator compiler
-    auto compiler = CreateXlaOpCompiler(backend, op_type);
+    auto op_compiler = CreateXlaOpCompiler(backend, op_type);
 
     // Setup input oprands from outputs of previous nodes
     auto input_oprands = entry_oprands;
@@ -76,7 +76,7 @@ void XlaCompiler::BuildComputation(
 
     // Do compile and lower the operator computation to HLO instructions
     XlaOpContext op_context(param);
-    compiler->Compile(&op_context);
+    op_compiler->Compile(&op_context);
 
     const auto &outputs = op_context.outputs();
     all_outputs.insert(outputs.begin(), outputs.end());
@@ -103,7 +103,7 @@ void XlaCompiler::BuildComputation(
   *output_shape = program_shape.result();
 }
 
-void XlaCompiler::BuildExecutable(
+void XlaGraphCompiler::BuildExecutable(
     const CompilationResult &result,
     std::unique_ptr<xla::LocalExecutable> *executable) {
   std::vector<const xla::Shape*> argument_layouts(
@@ -122,7 +122,7 @@ void XlaCompiler::BuildExecutable(
   DLOG(INFO) << "BuildExecutable done";
 }
 
-CompilationResult XlaCompiler::Compile() {
+CompilationResult XlaGraphCompiler::Compile() {
   CHECK_NOTNULL(graph_);
 
   CompilationResult result;
@@ -142,7 +142,7 @@ CompilationResult XlaCompiler::Compile() {
   return std::move(result);
 }
 
-void XlaCompiler::SetupEntryOprands(
+void XlaGraphCompiler::SetupEntryOprands(
     std::unordered_map<Argument, XlaOprand> *entry_oprands,
     std::vector<xla::Shape> *input_shapes) {
   for (int i = 0; i < entry_names_.size(); ++i) {
@@ -157,7 +157,7 @@ void XlaCompiler::SetupEntryOprands(
   }
 }
 
-void XlaCompiler::SetupParamArguments(
+void XlaGraphCompiler::SetupParamArguments(
     const XlaNode *node,
     const std::unordered_map<std::string, Argument> &arguments,
     XlaOpContext::Param *param) {
