@@ -47,3 +47,15 @@ def tanh(x):
     lbi.blob_name = "out"
     return remote_blob_util.RemoteBlob(lbi)
 
+@oneflow_export('keras.activations.sigmoid')
+def sigmoid(x):
+    op_conf = op_conf_util.OperatorConf()
+    op_conf.name = id_util.UniqueStr('Sigmoid_')
+    setattr(op_conf.sigmoid_conf, 'in', x.lbn)
+    op_conf.sigmoid_conf.out = "out"
+    compile_context.CurJobAddOp(op_conf)
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = "out"
+    return remote_blob_util.RemoteBlob(lbi)
+
