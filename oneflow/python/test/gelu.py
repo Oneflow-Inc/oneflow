@@ -1,6 +1,5 @@
 import oneflow as flow
 import numpy as np
-from oneflow.python.keras.activations import gelu
 import torch
 import math
 
@@ -9,7 +8,7 @@ jobs = []
 def GeluJob(x = flow.val((10,))):
     job_conf = flow.get_cur_job_conf_builder()
     job_conf.batch_size(10).data_part_num(1).default_data_type(flow.float)
-    return gelu(x)
+    return flow.keras.activatios.gelu(x)
 
 config = flow.ConfigProtoBuilder()
 config.gpu_device_num(1)
