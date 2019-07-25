@@ -74,7 +74,6 @@ template<DeviceType device_type, typename T>
 void TopKKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* in_blob = BnInOp2Blob("in");
-
   Blob* out_blob = BnInOp2Blob("out");
 
   CHECK_LE(in_blob->shape().elem_cnt(), GetMaxVal<int32_t>());
@@ -85,23 +84,28 @@ void TopKKernel<device_type, T>::ForwardDataContent(
   auto& top_k_op_conf = this->op_conf().top_k_conf();
 
   if (this->op_conf().device_type() == DeviceType::kCPU) {
-    Blob* indices_blob = BnInOp2Blob("indices");
-    int32_t* indices = indices_blob->mut_dptr<int32_t>();
+    Blob* cpu_indices_blob = BnInOp2Blob("cpu_indices");
+    CHECK_NOTNULL(cpu_indices_blob);
+    int32_t* cpu_indices = cpu_indices_blob->mut_dptr<int32_t>();
     CpuTopK<T>(ctx.device_ctx, in, instance_num, instance_size, top_k_op_conf.k(),
-               top_k_op_conf.sorted(), indices, out);
+               top_k_op_conf.sorted(), cpu_indices, out);
   } else if (this->op_conf().device_type() == DeviceType::kGPU) {
     if (instance_size <= 1000 || top_k_op_conf.k() == instance_size || top_k_op_conf.k() > 512) {
-      Blob* indices_blob = BnInOp2Blob("indices");
+      Blob* gpu_indices_blob = BnInOp2Blob("gpu_indices");
+      CHECK_NOTNULL(gpu_indices_blob);
       Blob* sorted_in_blob = BnInOp2Blob("sorted_in");
+      CHECK_NOTNULL(sorted_in_blob);
       Blob* sorted_indices_blob = BnInOp2Blob("sorted_indices");
+      CHECK_NOTNULL(sorted_indices_blob);
       Blob* temp_storage_blob = BnInOp2Blob("temp_storage");
+      CHECK_NOTNULL(temp_storage_blob);
 
-      int32_t* indices = indices_blob->mut_dptr<int32_t>();
+      int32_t* gpu_indices = gpu_indices_blob->mut_dptr<int32_t>();
       T* sorted_in = sorted_in_blob->mut_dptr<T>();
       int32_t* sorted_indices = sorted_indices_blob->mut_dptr<int32_t>();
       void* temp_storage = temp_storage_blob->mut_dptr<void>();
-      GpuRadixSortTopK(ctx.device_ctx, in, instance_num, instance_size, top_k_op_conf.k(), indices,
-                       sorted_in, sorted_indices, temp_storage,
+      GpuRadixSortTopK(ctx.device_ctx, in, instance_num, instance_size, top_k_op_conf.k(),
+                       gpu_indices, sorted_in, sorted_indices, temp_storage,
                        this->kernel_conf().top_k_conf().temp_storage_bytes(), out);
     } else {
       GpuHeapSelectionTopK<T>(ctx.device_ctx, in, instance_num, instance_size, top_k_op_conf.k(),

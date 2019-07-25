@@ -7,10 +7,10 @@ void TopKOp::InitFromOpConf() {
   CHECK(op_conf().has_top_k_conf());
   EnrollInputBn("in", false);
   if (device_type() == DeviceType::kCPU && op_conf().top_k_conf().k() > 1) {
-    if (op_conf().top_k_conf().k() > 1) { EnrollFwBufBn("indices"); }
+    if (op_conf().top_k_conf().k() > 1) { EnrollFwBufBn("cpu_indices"); }
   } else if (device_type() == DeviceType::kGPU) {
     EnrollFwBufBn("temp_storage");
-    EnrollFwBufBn("indices");
+    EnrollFwBufBn("gpu_indices");
     EnrollFwBufBn("sorted_in");
     EnrollFwBufBn("sorted_indices");
   }
@@ -22,7 +22,7 @@ void TopKOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlob
                             std::function<void(OpContext*)> EnrollOpCtx) const {
   // input
   const BlobDesc* in = GetBlobDesc4BnInOp("in");
-  const Shape& in_shape = in->shape();
+  const Shape in_shape = in->shape();
   CHECK_LE(in_shape.elem_cnt(), GetMaxVal<int32_t>());
   const int32_t instance_size = in_shape.dim_vec().back();
   const TopKOpConf& conf = op_conf().top_k_conf();
@@ -30,23 +30,23 @@ void TopKOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlob
   CHECK_LE(conf.k(), instance_size);
 
   if (device_type() == DeviceType::kCPU && conf.k() > 1) {
-    // fw_buf: indices
-    BlobDesc* indices = GetBlobDesc4BnInOp("indices");
-    indices->mut_shape() = Shape({in_shape});
-    indices->set_data_type(DataType::kInt32);
+    // fw_buf: cpu_indices
+    BlobDesc* cpu_indices = GetBlobDesc4BnInOp("cpu_indices");
+    cpu_indices->mut_shape() = Shape(in_shape);
+    cpu_indices->set_data_type(DataType::kInt32);
   }
   if (device_type() == DeviceType::kGPU
       && (instance_size <= 1000 || conf.k() == instance_size || conf.k() > 512)) {
-    // fw_buf: indices
-    BlobDesc* indices = GetBlobDesc4BnInOp("indices");
-    indices->mut_shape() = in->shape();
-    indices->set_data_type(DataType::kInt32);
+    // fw_buf: gpu_indices
+    BlobDesc* gpu_indices = GetBlobDesc4BnInOp("gpu_indices");
+    gpu_indices->mut_shape() = Shape(in_shape);
+    gpu_indices->set_data_type(DataType::kInt32);
 
     // fw_buf: sorted_in
     *GetBlobDesc4BnInOp("sorted_in") = *in;
 
     // fw_buf: sorted_indices
-    *GetBlobDesc4BnInOp("sorted_indices") = *indices;
+    *GetBlobDesc4BnInOp("sorted_indices") = *gpu_indices;
 
     // fw_buf: temp_storage
     int64_t temp_storage_bytes = InferTempStorageForRadixSort(

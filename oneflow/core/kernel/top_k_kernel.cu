@@ -9,6 +9,8 @@
 #include "oneflow/core/kernel/radix_sort_util.cuh"
 // #include <cub/cub.cuh>
 
+#include <iostream>
+
 namespace oneflow {
 
 namespace {
@@ -68,7 +70,7 @@ __global__ void HeapTopKKernel(const T* in, const int32_t instance_num, const in
 
 __global__ void RadixSortTopKInitializeKernel(int32_t* indices_ptr, int32_t instance_size) {
   for (int32_t i = threadIdx.x; i < instance_size; i += blockDim.x) {
-    indices_ptr[instance_size * blockDim.x + i] = i;
+    indices_ptr[blockIdx.x * instance_size + i] = i;
   }
 }
 
@@ -76,7 +78,7 @@ __global__ void RadixSortTopKWriteToOutputKernel(const int32_t* sorted_indices_p
                                                  int32_t instance_size, int32_t k,
                                                  int32_t* output_ptr) {
   for (int32_t i = threadIdx.x; i < k; i += blockDim.x) {
-    output_ptr[k * blockDim.x + i] = sorted_indices_ptr[instance_size * blockDim.x + i];
+    output_ptr[blockIdx.x * k + i] = sorted_indices_ptr[blockIdx.x * instance_size + i];
   }
 }
 
@@ -117,8 +119,8 @@ void GpuRadixSortTopK(DeviceCtx* ctx, const T* in, int32_t instance_num, int32_t
                       void* temp_storage, size_t temp_storage_bytes, int32_t* out) {
   int32_t num_thread =
       instance_size <= kCudaThreadsNumPerBlock ? instance_size : kCudaThreadsNumPerBlock;
-  RadixSortTopKInitializeKernel<<<instance_num, kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-      indices, instance_size);
+  RadixSortTopKInitializeKernel<<<instance_num, num_thread, 0, ctx->cuda_stream()>>>(indices,
+                                                                                     instance_size);
 
   cub::CountingInputIterator<int32_t> counting_iter(0);
   cub::TransformInputIterator<int32_t, SegmentOffsetCreator, cub::CountingInputIterator<int32_t>>
