@@ -2,22 +2,35 @@ import oneflow.core.job.job_set_pb2
 import oneflow.core.job.job_pb2
 # import other pyprotos here
 
+import os
+
 TRACE_TEMPLATE_BASE = '''
-'''
-TRACE_TEMPLATE = '''
+template<typename T>
+class Trace{
+};
 '''
 
-def get_all_proto_type(path='../build/pyproto'):
-    '''
-    Return a list of all proto types(*.pb.h)
-    '''
-    raise NotImplementedError
+TRACE_TEMPLATE = '''
+template<>
+class Trace<{}> {
+public:
+    std::string path;
+    {}
+};
+'''
+
+def first_letter_captain(name):
+    name = name.split('_')
+    for each in name:
+        each[0] = each[0] + 'A' - 'a'
+    return ''.join(name)
 
 def get_instance(typename):
     '''
     Return a instance of a typename
     '''
-    raise NotImplementedError
+    ctor = first_letter_captain(typename)
+    return getattr(globals()['oneflow.core.{}'.format(typename+'_pb2')], ctor)
 
 def get_children_list(instance):
     '''
@@ -35,16 +48,19 @@ def generate_output(typename, children_list):
     '''
     raise NotImplementedError
 
+def handle(pb_file_name, pb_file_path):
+    typename = pb_file_name.split('.')[0]
+    trace_pb_file_name = typename + '.trace.pb.h'
+
+    inst = get_instance(typename)
+    chd_lst = get_children_list(inst)
+    gen_output_str = generate_output(typename, chd_lst)
+
+    with open(trace_pb_file_name, 'w') as f:
+        f.write(gen_output_str)
 
 if __name__ == '__main__':
-    import os
-    output_prefix = '../../xxx/'
-    typenames = get_all_proto_type()
-    
-    for each_type in typenames:
-        inst = get_instance(each_type)
-        chd_lst = get_children_list(inst)
-        gen_output_str = generate_output(each_type, chd_lst)
-        output_filename = os.path.join(output_prefix, each_type + '.trace.pb.h')
-        with open(output_filename, 'w') as f:
-            f.write(gen_output_str)
+    for rt, ps, fs in os.walk('../build/oneflow/core'):
+        for f in fs:
+            if f.endswith('.pb.h'):
+                handle(f[:-5], rt)
