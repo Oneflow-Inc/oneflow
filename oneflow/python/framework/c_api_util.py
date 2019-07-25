@@ -12,7 +12,8 @@ def NaiveSequentialRunJobSet(job_set):
 
 def InitGlobalOneflowByJobSet(job_set):
     assert(type(job_set) is JobSet)
-    oneflow_internal.InitGlobalOneflowBySerializedJobSet(job_set.SerializeToString())
+    job_set_str = text_format.MessageToString(job_set)
+    oneflow_internal.InitGlobalOneflowBySerializedJobSet(job_set_str)
 
 def GetInterUserJobInfo():
     return text_format.Parse(oneflow_internal.GetSerializedInterUserJobInfo(), InterUserJobInfo())
