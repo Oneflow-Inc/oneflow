@@ -25,7 +25,6 @@ class MasterRuntimeEnv(object):
     def __exit__(self, *args):
         runtime_ctx.DestroyInterUserJobInfo()
         c_api_util.DestroyGlobalOneflow()
-        c_api_util.DestroyGlobalEnvironment()
 
 class WorkerRuntimeEnv(object):
     def __init__(self, job_set):
