@@ -26,4 +26,4 @@ def gelu(x):
     return 0.5 * x * (1 + troch.tanh(math.sqrt(2/math.pi) * (x + 0.044715 * torch.pow(x, 3))))
 x = torch.tensor(data)
 print("the result of pytorch is:")
-print(x)
+print(gelu(x))
