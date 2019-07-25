@@ -17,9 +17,6 @@ def InputOpByBlobDesc(blob_desc):
     lbi.blob_name = "out"
     return remote_blob_util.RemoteBlob(lbi)
 
-def VariableOpByBlobDesc(blob_desc):
-    TODO()
-
 def OutputOpByRemoteBlob(remote_blob):
     op_conf = op_conf_util.OperatorConf()
     op_conf.name = id_util.UniqueStr('Output_')

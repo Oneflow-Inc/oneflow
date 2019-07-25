@@ -1,8 +1,8 @@
 from __future__ import absolute_import
 
-import oneflow_internal
-from oneflow.python.framework.dtype import convert_of_dtype_to_numpy_dtype
 import oneflow.core.common.data_type_pb2 as dtype_util
+from oneflow.python.framework.dtype import convert_of_dtype_to_numpy_dtype
+import oneflow_internal
 import numpy as np
 
 class OfBlob(object):
