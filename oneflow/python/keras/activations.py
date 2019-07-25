@@ -35,7 +35,7 @@ def gelu(x):
     lbi.blob_name = "out"
     return remote_blob_util.RemoteBlob(lbi)
 
-@oneflow_export('keras.ativations.tanh')
+@oneflow_export('keras.activations.tanh')
 def tanh(x):
     op_conf = op_conf_util.OperatorConf()
     op_conf.name = id_util.UniqueStr('Tanh_')
