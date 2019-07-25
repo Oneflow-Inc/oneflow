@@ -17,7 +17,7 @@ void SortKernel<device_type, T>::ForwardDataContent(
   SortUtil<device_type, T>::Forward(
       ctx.device_ctx, key_blob->dptr<T>(), value_blob->dptr<int32_t>(),
       BnInOp2Blob("temp_storage")->mut_dptr<void>(),
-      this->kernel_conf().sort_conf().temp_storage_byte_size(), shape.At(0), shape.At(1),
+      this->kernel_conf().sort_conf().temp_storage_bytes(), shape.At(0), shape.At(1),
       sorted_key_blob->mut_dptr<T>(), sorted_value_blob->mut_dptr<int32_t>());
 }
 

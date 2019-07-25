@@ -7,9 +7,9 @@ namespace oneflow {
 
 struct SortOpCtx : public OpContext {
 #ifdef WITH_CUDA
-  SortOpCtx(int32_t temp_storage_byte_size) : temp_storage_byte_size_(temp_storage_byte_size) {}
-  int32_t GetTempStorageByteSize() const { return temp_storage_byte_size_; }
-  int32_t temp_storage_byte_size_;
+  SortOpCtx(int32_t temp_storage_bytes) : temp_storage_bytes_(temp_storage_bytes) {}
+  int32_t GetTempStorageBytes() const { return temp_storage_bytes_; }
+  int32_t temp_storage_bytes_;
 #endif
 };
 

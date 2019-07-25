@@ -24,12 +24,12 @@ void SortOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlob
   CHECK_EQ(value->data_type(), DataType::kInt32);
 
   // data_tmp: temp_storage
-  int32_t temp_storage_byte_size = static_cast<int32_t>(
-      InferTempStorageForRadixSort(key->shape().At(0), key->shape().At(1), key->data_type()));
+  int64_t temp_storage_bytes =
+      InferTempStorageForRadixSort(key->shape().At(0), key->shape().At(1), key->data_type());
   BlobDesc* temp_storage = GetBlobDesc4BnInOp("temp_storage");
   temp_storage->set_data_type(DataType::kChar);
-  temp_storage->mut_shape() = Shape({temp_storage_byte_size});
-  SortOpCtx* sort_op_ctx = new SortOpCtx(temp_storage_byte_size);
+  temp_storage->mut_shape() = Shape({temp_storage_bytes});
+  SortOpCtx* sort_op_ctx = new SortOpCtx(temp_storage_bytes);
   EnrollOpCtx(sort_op_ctx);
 
   // output
@@ -42,7 +42,7 @@ void SortOp::VirtualGenKernelConf(std::function<const BlobDesc*(const std::strin
                                   const OpContext* op_ctx) const {
   auto* conf = kernel_conf->mutable_sort_conf();
   auto* sort_op_ctx = static_cast<const SortOpCtx*>(op_ctx);
-  conf->set_temp_storage_byte_size(sort_op_ctx->GetTempStorageByteSize());
+  conf->set_temp_storage_bytes(sort_op_ctx->GetTempStorageBytes());
 }
 
 REGISTER_OP(OperatorConf::kSortConf, SortOp);

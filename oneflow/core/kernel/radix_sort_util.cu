@@ -10,7 +10,7 @@ namespace {
 
 template<typename T>
 size_t InferTempStorage(int32_t num_row, int32_t num_col) {
-  size_t temp_storage_byte_size = -1;
+  size_t temp_storage_bytes = -1;
 
   cub::CountingInputIterator<int32_t> counting_iter(0);
   cub::TransformInputIterator<int32_t, SegmentOffsetCreator, cub::CountingInputIterator<int32_t>>
@@ -21,7 +21,7 @@ size_t InferTempStorage(int32_t num_row, int32_t num_col) {
 
   auto err = cub::DeviceSegmentedRadixSort::SortPairsDescending(
       /* d_temp_storage */ static_cast<void*>(NULL),
-      /* temp_storage_bytes */ temp_storage_byte_size,
+      /* temp_storage_bytes */ temp_storage_bytes,
       /* d_keys_in */ static_cast<T*>(NULL),
       /* d_keys_out */ static_cast<T*>(NULL),
       /* d_values_in */ static_cast<int32_t*>(NULL),
@@ -34,9 +34,10 @@ size_t InferTempStorage(int32_t num_row, int32_t num_col) {
       /* end_bit */ sizeof(T) * 8,
       /* stream */ cuda_stream);
   CudaCheck(err);
+
   CudaCheck(cudaStreamDestroy(cuda_stream));
 
-  return temp_storage_byte_size;
+  return temp_storage_bytes;
 }
 
 struct InferTempStorageSwitchUtil final {

@@ -6,6 +6,7 @@
 namespace oneflow {
 
 size_t InferTempStorageForRadixSort(int32_t num_row, int32_t num_col, DataType data_type);
-}
+
+}  // namespace oneflow
 
 #endif

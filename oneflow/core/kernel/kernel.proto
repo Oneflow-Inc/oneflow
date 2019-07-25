@@ -210,7 +210,7 @@ message LocalScatterNdUpdateConf {
 }
 
 message SortConf {
-  required int32 temp_storage_byte_size = 1;
+  required int32 temp_storage_bytes = 1;
 }
 
 message KernelConf {
