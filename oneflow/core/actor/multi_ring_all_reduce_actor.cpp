@@ -24,7 +24,6 @@ int MultiRingAllReduceActor::HandlerAllReduce(const ActorMsg& msg) {
       const auto it = regst_desc_id2send_or_recv7ring_id_.find(regst_desc_id);
       CHECK(it != regst_desc_id2send_or_recv7ring_id_.cend());
       const bool is_send = it->second.first;
-      const bool ring_id = it->second.second;
       if (is_send) {
         CHECK_EQ(send_rs_.TryPushBackRegst(msg.regst()), 0);
       } else {
@@ -34,13 +33,17 @@ int MultiRingAllReduceActor::HandlerAllReduce(const ActorMsg& msg) {
   } else {
     UNIMPLEMENTED();
   }
-  const MultiRingAllReduceKernelStepConf& step_conf =
-      multi_ring_all_reduce_kernel_conf_.ring_conf(current_ring_id_).step_conf(current_step_id_);
-  while (
-      !in_regst_deque_.empty() && out_regst_reading_cnt_ == 0
-      && (!step_conf.send() || send_rs_.Front(send_regst_desc_id_.at(current_ring_id_)) != nullptr)
-      && (!step_conf.recv()
-          || recv_rs_.Front(recv_regst_desc_id_.at(current_ring_id_)) != nullptr)) {
+
+  while (true) {
+    const MultiRingAllReduceKernelStepConf& step_conf =
+        multi_ring_all_reduce_kernel_conf_.ring_conf(current_ring_id_).step_conf(current_step_id_);
+    if (!(!in_regst_deque_.empty() && out_regst_reading_cnt_ == 0
+          && (!step_conf.send()
+              || send_rs_.Front(send_regst_desc_id_.at(current_ring_id_)) != nullptr)
+          && (!step_conf.recv()
+              || recv_rs_.Front(recv_regst_desc_id_.at(current_ring_id_)) != nullptr))) {
+      break;
+    }
     std::vector<ActorMsg> actor_msgs_;
     Regst* current_in_regst = in_regst_deque_.front();
     Blob* in_blob = current_in_regst->GetBlobByLbi(lbi_);
@@ -139,7 +142,7 @@ void MultiRingAllReduceActor::VirtualActorInit(const TaskProto& task_proto) {
   CHECK_GE(num_rings_, 1);
   num_steps_ = multi_ring_all_reduce_kernel_conf_.ring_conf(0).step_conf_size();
   FOR_RANGE(int64_t, ring_id, 1, num_rings_) {
-    CHECK_EQ(multi_ring_all_reduce_kernel_conf_.ring_conf(1).step_conf_size(), num_steps_);
+    CHECK_EQ(multi_ring_all_reduce_kernel_conf_.ring_conf(ring_id).step_conf_size(), num_steps_);
   }
   FOR_RANGE(int64_t, ring_id, 0, num_rings_) {
     const std::string send_name = "send_" + std::to_string(ring_id);
