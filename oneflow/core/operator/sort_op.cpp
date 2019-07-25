@@ -15,7 +15,8 @@ void SortOp::InitFromOpConf() {
 const PbMessage& SortOp::GetCustomizedConf() const { return this->op_conf().sort_conf(); }
 
 void SortOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                            const ParallelContext* parallel_ctx) const {
+                            const ParallelContext*, int64_t record_piece_size,
+                            std::function<void(OpContext*)> EnrollOpCtx) const {
   // input
   const BlobDesc* key = GetBlobDesc4BnInOp("key");
   const BlobDesc* value = GetBlobDesc4BnInOp("value");
@@ -28,10 +29,20 @@ void SortOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlob
   BlobDesc* temp_storage = GetBlobDesc4BnInOp("temp_storage");
   temp_storage->set_data_type(DataType::kChar);
   temp_storage->mut_shape() = Shape({temp_storage_byte_size});
+  SortOpCtx* sort_op_ctx = new SortOpCtx(temp_storage_byte_size);
+  EnrollOpCtx(sort_op_ctx);
 
   // output
   *GetBlobDesc4BnInOp("sorted_key") = *key;
   *GetBlobDesc4BnInOp("sorted_value") = *value;
+}
+
+void SortOp::VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)>,
+                                  const ParallelContext*, KernelConf* kernel_conf,
+                                  const OpContext* op_ctx) const {
+  auto* conf = kernel_conf->mutable_sort_conf();
+  auto* sort_op_ctx = static_cast<const SortOpCtx*>(op_ctx);
+  conf->set_temp_storage_byte_size(sort_op_ctx->GetTempStorageByteSize());
 }
 
 REGISTER_OP(OperatorConf::kSortConf, SortOp);

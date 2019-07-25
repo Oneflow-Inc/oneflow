@@ -209,6 +209,10 @@ message LocalScatterNdUpdateConf {
  required DataType indices_type = 2; 
 }
 
+message SortConf {
+  required int32 temp_storage_byte_size = 1;
+}
+
 message KernelConf {
   required OpAttribute op_attribute = 1;
   required bool is_forward = 2;
@@ -258,5 +262,6 @@ message KernelConf {
     SmoothL1LossKernelConf smooth_l1_loss_conf = 424;
     WhereKernelConf where_conf = 425;
     LocalScatterNdUpdateConf local_scatter_nd_update_conf = 426;
+    SortConf sort_conf = 427;
   }
 }

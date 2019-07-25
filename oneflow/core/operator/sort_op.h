@@ -5,6 +5,14 @@
 
 namespace oneflow {
 
+struct SortOpCtx : public OpContext {
+#ifdef WITH_CUDA
+  SortOpCtx(int32_t temp_storage_byte_size) : temp_storage_byte_size_(temp_storage_byte_size) {}
+  int32_t GetTempStorageByteSize() const { return temp_storage_byte_size_; }
+  int32_t temp_storage_byte_size_;
+#endif
+};
+
 class SortOp final : public Operator {
  public:
   OF_DISALLOW_COPY_AND_MOVE(SortOp);
@@ -14,7 +22,11 @@ class SortOp final : public Operator {
   void InitFromOpConf() override;
   const PbMessage& GetCustomizedConf() const override;
   void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                      const ParallelContext* parallel_ctx) const override;
+                      const ParallelContext*, int64_t record_piece_size,
+                      std::function<void(OpContext*)> EnrollOpCtx) const override;
+  virtual void VirtualGenKernelConf(
+      std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*,
+      KernelConf*, const OpContext*) const override;
 
  private:
   bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { return false; }

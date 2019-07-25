@@ -1624,7 +1624,6 @@ message SortOpConf {
   required string value = 2;
   required string sorted_key = 3;
   required string sorted_value = 4;
-  optional int32 temp_storage_bytes = 5;
 }
 
 message OperatorConf {
