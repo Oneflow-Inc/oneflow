@@ -60,58 +60,39 @@ struct PackReduceFunctor {
     va.p = a;
     vb.p = b;
 #pragma unroll
-    for (size_t i = 0; i < sizeof(Pack) / sizeof(T); ++i) { vc.t[i] = va.t[i] + vb.t[i]; }
+    for (size_t i = 0; i < sizeof(Pack) / sizeof(T); ++i) {
+      vc.t[i] = ReduceFunctor<method, T>(va.t[i], vb.t[i]);
+    }
     return vc.p;
   }
 };
 
-__device__ __forceinline__ void Fetch(ulong2& v, const ulong2* p) {
-  asm volatile("ld.volatile.global.v2.u64 {%0,%1}, [%2];"
-               : "=l"(v.x), "=l"(v.y)
-               : "l"(p)
-               : "memory");
-}
-
-__device__ __forceinline__ void Store(ulong2* p, ulong2& v) {
-  asm volatile("st.volatile.global.v2.u64 [%0], {%1,%2};" ::"l"(p), "l"(v.x), "l"(v.y) : "memory");
-}
+template<typename T>
+struct FetchFunctor {
+  __device__ __forceinline__ void operator()(T& v, const T* p) { v = *p; }
+};
 
 template<typename T>
-struct PackReducer {
-  __device__ __forceinline__ ulong2 Reduce(const ulong2& x, const ulong2& y);
+struct StoreFunctor {
+  __device__ __forceinline__ void operator()(T* p, const T& v) { *p = v; }
 };
 
 template<>
-struct PackReducer<float> {
-  union u {
-    ulong2 p;
-    struct {
-      float a, b, c, d;
-    };
-  };
-  __device__ __forceinline__ ulong2 Reduce(const ulong2& x, const ulong2& y) {
-    u ux;
-    u uy;
-    u ur;
-    ux.p = x;
-    uy.p = y;
-    ur.a = ux.a + uy.a;
-    ur.b = ux.b + uy.b;
-    ur.c = ux.c + uy.c;
-    ur.d = ux.d + uy.d;
-    return ur.p;
+struct FetchFunctor<Pack> {
+  __device__ __forceinline__ void operator()(Pack& v, const Pack* p) {
+    asm volatile("ld.volatile.global.v2.u64 {%0,%1}, [%2];"
+                 : "=l"(v.x), "=l"(v.y)
+                 : "l"(p)
+                 : "memory");
   }
 };
 
 template<>
-struct PackReducer<double> {
-  union u {
-    ulong2 p;
-    struct {
-      double a, b;
-    };
-  };
-  __device__ __forceinline__ ulong2 Reduce(const ulong2 x, const ulong2 y) { return x; }
+struct StoreFunctor<Pack> {
+  __device__ __forceinline__ void operator()(Pack* p, const Pack& v) {
+    asm volatile("st.volatile.global.v2.u64 [%0], {%1,%2};" ::"l"(p), "l"(v.x), "l"(v.y)
+                 : "memory");
+  }
 };
 
 template<typename T>
@@ -166,11 +147,11 @@ __global__ void RecvReduceSendGpu(CudaRingAllReduceArg<T> arg) {
   for (int64_t l = 0; l < num_line; ++l) {
 #pragma unroll
     for (int32_t p = 0; p < NUM_PACK_PER_LINE_PER_THREAD; ++p) {
-      Fetch(line_recv[p], recv_pack_ptr + p * NUM_THREAD_PER_WARP);
+      FetchFunctor<Pack>()(line_recv[p], recv_pack_ptr + p * NUM_THREAD_PER_WARP);
     }
 #pragma unroll
     for (int32_t p = 0; p < NUM_PACK_PER_LINE_PER_THREAD; ++p) {
-      Fetch(line_src[p], src_pack_ptr + p * NUM_THREAD_PER_WARP);
+      FetchFunctor<Pack>()(line_src[p], src_pack_ptr + p * NUM_THREAD_PER_WARP);
     }
 #pragma unroll
     for (int32_t p = 0; p < NUM_PACK_PER_LINE_PER_THREAD; ++p) {
@@ -178,7 +159,7 @@ __global__ void RecvReduceSendGpu(CudaRingAllReduceArg<T> arg) {
     }
 #pragma unroll
     for (int32_t p = 0; p < NUM_PACK_PER_LINE_PER_THREAD; ++p) {
-      Store(send_pack_ptr + p * NUM_THREAD_PER_WARP, line_recv[p]);
+      StoreFunctor<Pack>()(send_pack_ptr + p * NUM_THREAD_PER_WARP, line_recv[p]);
     }
     send_pack_ptr += NUM_PACK_PER_LINE;
     src_pack_ptr += NUM_PACK_PER_LINE;
@@ -210,11 +191,11 @@ __global__ void RecvReduceSendCopyGpu(CudaRingAllReduceArg<T> arg) {
   for (int64_t l = 0; l < num_line; ++l) {
 #pragma unroll
     for (int32_t p = 0; p < NUM_PACK_PER_LINE_PER_THREAD; ++p) {
-      Fetch(line_recv[p], recv_pack_ptr + p * NUM_THREAD_PER_WARP);
+      FetchFunctor<Pack>()(line_recv[p], recv_pack_ptr + p * NUM_THREAD_PER_WARP);
     }
 #pragma unroll
     for (int32_t p = 0; p < NUM_PACK_PER_LINE_PER_THREAD; ++p) {
-      Fetch(line_src[p], src_pack_ptr + p * NUM_THREAD_PER_WARP);
+      FetchFunctor<Pack>()(line_src[p], src_pack_ptr + p * NUM_THREAD_PER_WARP);
     }
 #pragma unroll
     for (int32_t p = 0; p < NUM_PACK_PER_LINE_PER_THREAD; ++p) {
@@ -222,11 +203,11 @@ __global__ void RecvReduceSendCopyGpu(CudaRingAllReduceArg<T> arg) {
     }
 #pragma unroll
     for (int32_t p = 0; p < NUM_PACK_PER_LINE_PER_THREAD; ++p) {
-      Store(send_pack_ptr + p * NUM_THREAD_PER_WARP, line_recv[p]);
+      StoreFunctor<Pack>()(send_pack_ptr + p * NUM_THREAD_PER_WARP, line_recv[p]);
     }
 #pragma unroll
     for (int32_t p = 0; p < NUM_PACK_PER_LINE_PER_THREAD; ++p) {
-      Store(dst_pack_ptr + p * NUM_THREAD_PER_WARP, line_recv[p]);
+      StoreFunctor<Pack>()(dst_pack_ptr + p * NUM_THREAD_PER_WARP, line_recv[p]);
     }
     send_pack_ptr += NUM_PACK_PER_LINE;
     dst_pack_ptr += NUM_PACK_PER_LINE;
@@ -256,15 +237,15 @@ __global__ void RecvSendCopyGpu(CudaRingAllReduceArg<T> arg) {
   for (int64_t l = 0; l < num_line; ++l) {
 #pragma unroll
     for (int32_t p = 0; p < NUM_PACK_PER_LINE_PER_THREAD; ++p) {
-      Fetch(line_recv[p], recv_pack_ptr + p * NUM_THREAD_PER_WARP);
+      FetchFunctor<Pack>()(line_recv[p], recv_pack_ptr + p * NUM_THREAD_PER_WARP);
     }
 #pragma unroll
     for (int32_t p = 0; p < NUM_PACK_PER_LINE_PER_THREAD; ++p) {
-      Store(send_pack_ptr + p * NUM_THREAD_PER_WARP, line_recv[p]);
+      StoreFunctor<Pack>()(send_pack_ptr + p * NUM_THREAD_PER_WARP, line_recv[p]);
     }
 #pragma unroll
     for (int32_t p = 0; p < NUM_PACK_PER_LINE_PER_THREAD; ++p) {
-      Store(dst_pack_ptr + p * NUM_THREAD_PER_WARP, line_recv[p]);
+      StoreFunctor<Pack>()(dst_pack_ptr + p * NUM_THREAD_PER_WARP, line_recv[p]);
     }
     send_pack_ptr += NUM_PACK_PER_LINE;
     dst_pack_ptr += NUM_PACK_PER_LINE;
@@ -291,11 +272,11 @@ __global__ void RecvCopyGpu(CudaRingAllReduceArg<T> arg) {
   for (int64_t l = 0; l < num_line; ++l) {
 #pragma unroll
     for (int32_t p = 0; p < NUM_PACK_PER_LINE_PER_THREAD; ++p) {
-      Fetch(line_recv[p], recv_pack_ptr + p * NUM_THREAD_PER_WARP);
+      FetchFunctor<Pack>()(line_recv[p], recv_pack_ptr + p * NUM_THREAD_PER_WARP);
     }
 #pragma unroll
     for (int32_t p = 0; p < NUM_PACK_PER_LINE_PER_THREAD; ++p) {
-      Store(dst_pack_ptr + p * NUM_THREAD_PER_WARP, line_recv[p]);
+      StoreFunctor<Pack>()(dst_pack_ptr + p * NUM_THREAD_PER_WARP, line_recv[p]);
     }
     dst_pack_ptr += NUM_PACK_PER_LINE;
     recv_pack_ptr += NUM_PACK_PER_LINE;
