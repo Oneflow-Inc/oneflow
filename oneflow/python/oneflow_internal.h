@@ -4,6 +4,7 @@
 #include "oneflow/core/register/ofblob.h"
 #include "oneflow/core/job/foreign_job_instance.h"
 #include "oneflow/core/common/buffer_manager.h"
+#include "oneflow/core/common/protobuf.h"
 
 namespace {
 
@@ -29,14 +30,10 @@ class GlobalFlagsAndLogScope final {
 
 }  // namespace
 
-void NaiveSequentialRunSerializedJobSet(const oneflow::JobSet& job_set) {
+void InitGlobalOneflowBySerializedJobSet(const std::string& job_set_str) {
   using namespace oneflow;
-  CHECK_ISNULL(Global<Oneflow>::Get());
-  Main(job_set);
-}
-
-void InitGlobalOneflowBySerializedJobSet(const oneflow::JobSet& job_set) {
-  using namespace oneflow;
+  JobSet job_set;
+  CHECK(google::protobuf::TextFormat::ParseFromString(job_set_str, &job_set));
   CHECK_ISNULL(Global<Oneflow>::Get());
   GlobalFlagsAndLogScope::New(job_set);
   Global<Oneflow>::New(job_set);
