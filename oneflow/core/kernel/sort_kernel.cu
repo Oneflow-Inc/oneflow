@@ -1,20 +1,8 @@
 #include "oneflow/core/kernel/sort_kernel.h"
+#include "oneflow/core/kernel/radix_sort_util.cuh"
 #include <cub/cub.cuh>
 
 namespace oneflow {
-
-namespace {
-
-class SegmentOffsetCreator {
- public:
-  SegmentOffsetCreator(int32_t num_col) : num_col_(num_col) {}
-  __device__ int32_t operator()(int32_t idx) const { return idx * num_col_; }
-
- private:
-  int32_t num_col_;
-};
-
-}  // namespace
 
 template<typename T>
 struct SortUtil<DeviceType::kGPU, T> {
