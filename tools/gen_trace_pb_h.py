@@ -19,18 +19,12 @@ public:
 };
 '''
 
-def first_letter_captain(name):
-    name = name.split('_')
-    for each in name:
-        each[0] = each[0] + 'A' - 'a'
-    return ''.join(name)
-
 def get_instance(typename):
     '''
     Return a instance of a typename
     '''
-    ctor = first_letter_captain(typename)
-    return getattr(globals()['oneflow.core.{}'.format(typename+'_pb2')], ctor)
+    ctor = ''.join(map(lambda x: x.capitalize(), typename.split('_')))
+    return getattr(globals()['oneflow.core.{}'.format(typename+'_pb2')], ctor)()
 
 def get_children_list(instance):
     '''
