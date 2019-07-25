@@ -1,8 +1,8 @@
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/common/protobuf.h"
-#include "oneflow/core/common/buffer_manager.h"
 #include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/control/ctrl_server.h"
+#include "oneflow/core/common/buffer_manager.h"
 #include "oneflow/core/job/compiler.h"
 #include "oneflow/core/job/improver.h"
 #include "oneflow/core/job/job_desc.h"
@@ -917,31 +917,6 @@ GlobalObjectsScope4JobConf::~GlobalObjectsScope4JobConf() {
   Global<std::vector<std::unique_ptr<JobDesc>>>::Delete();
 }
 
-RuntimeBuffersScope::RuntimeBuffersScope() {
-  const auto& job_descs = *Global<std::vector<std::unique_ptr<JobDesc>>>::Get();
-  Global<BufferMgr<int64_t>>::Get()->NewBuffer(kBufferNameGlobalWaitJobId, job_descs.size());
-  auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<ForeignJobInstance>>>::Get();
-  FOR_RANGE(int64_t, job_id, 0, job_descs.size()) {
-    const auto& job_name = GlobalJobDesc(job_id).job_name();
-    buffer_mgr->NewBuffer(GetForeignInputBufferName(job_name), 2);
-    buffer_mgr->NewBuffer(GetForeignOutputBufferName(job_name), 2);
-    buffer_mgr->NewBuffer(GetCallbackNotifierBufferName(job_name),
-                          job_descs.at(0)->concurrency_width());
-  }
-}
-
-RuntimeBuffersScope::~RuntimeBuffersScope() {
-  auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<ForeignJobInstance>>>::Get();
-  const auto& job_descs = *Global<std::vector<std::unique_ptr<JobDesc>>>::Get();
-  FOR_RANGE(int64_t, job_id, 0, job_descs.size()) {
-    const auto& job_name = GlobalJobDesc(job_id).job_name();
-    buffer_mgr->Get(GetCallbackNotifierBufferName(job_name))->Close();
-    buffer_mgr->Get(GetForeignOutputBufferName(job_name))->Close();
-    buffer_mgr->Get(GetForeignInputBufferName(job_name))->Close();
-  }
-  Global<BufferMgr<int64_t>>::Get()->Get(kBufferNameGlobalWaitJobId)->Close();
-}
-
 Oneflow::Oneflow(const oneflow::JobSet& job_set) {
   global_objects_scope4job_conf_.reset(new GlobalObjectsScope4JobConf(job_set));
   // Runtime
@@ -952,13 +927,9 @@ Oneflow::Oneflow(const oneflow::JobSet& job_set) {
     PullPlan("plan", &plan_);
   }
   runtime_.reset(new Runtime(plan_, ComputeTotalPieceNum(), false));
-  if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
-    runtime_buffers_scope_.reset(new RuntimeBuffersScope());
-  }
 }
 
 Oneflow::~Oneflow() {
-  runtime_buffers_scope_.reset();
   runtime_.reset();
   if (Global<Profiler>::Get() != nullptr) {
     Global<Profiler>::Get()->Profile(

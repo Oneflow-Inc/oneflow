@@ -10,6 +10,8 @@
 #include "oneflow/core/job/oneflow.h"
 #include "oneflow/core/control/cluster_control.pb.h"
 #include "oneflow/core/control/ctrl_client.h"
+#include "oneflow/core/job/runtime_buffers_scope.h"
+#include "oneflow/core/control/cluster_control.h"
 
 void InitBySerializedConfigProto(const std::string& config_proto_str) {
   using namespace oneflow;
@@ -22,35 +24,23 @@ void InitBySerializedConfigProto(const std::string& config_proto_str) {
   LOG(INFO) << "NewGlobal " << typeid(EnvironmentObjectsScope).name();
   if (Global<MachineCtx>::Get()->IsThisMachineMaster()) { return; }
   while (true) {
-    {
-      ClusterControlProto cluster_control;
-      Global<CtrlClient>::Get()->PullKV("halt_or_session_start", &cluster_control);
-      if (cluster_control.cmd() == kClusterCtrlCmdHalt) { exit(0); }
-      CHECK_EQ(cluster_control.cmd(), kClusterCtrlCmdSessionStart);
-    }
+    ClusterControl::WorkerSendAckAndExitIfReceiveHalt();
     JobSet job_set;
     Global<CtrlClient>::Get()->PullKV("session_job_set", &job_set);
-    Global<Oneflow>::New(job_set);
-    {
-      ClusterControlProto cluster_control;
-      Global<CtrlClient>::Get()->PullKV("session_end", &cluster_control);
-      CHECK_EQ(cluster_control.cmd(), kClusterCtrlCmdSessionEnd);
-      Global<Oneflow>::Delete();
-    }
+    { Oneflow oneflow(job_set); }
   }
 }
 
 void InitGlobalOneflowBySerializedJobSet(const std::string& job_set_str) {
   using namespace oneflow;
   CHECK(Global<MachineCtx>::Get()->IsThisMachineMaster());
-  ClusterControlProto cluster_control;
-  cluster_control.set_cmd(kClusterCtrlCmdSessionStart);
-  Global<CtrlClient>::Get()->PushKV("halt_or_session_start", cluster_control);
+  ClusterControl::MasterSendSessionStart();
   JobSet job_set;
   CHECK(google::protobuf::TextFormat::ParseFromString(job_set_str, &job_set));
   CHECK_ISNULL(Global<Oneflow>::Get());
   Global<CtrlClient>::Get()->PushKV("session_job_set", job_set);
   Global<Oneflow>::New(job_set);
+  Global<RuntimeBuffersScope>::New();
 }
 
 std::string GetSerializedInterUserJobInfo() {
@@ -80,10 +70,9 @@ void LaunchJob(const std::shared_ptr<oneflow::ForeignJobInstance>& cb) {
 void DestroyGlobalOneflow() {
   using namespace oneflow;
   CHECK(Global<MachineCtx>::Get()->IsThisMachineMaster());
+  CHECK_NOTNULL(Global<RuntimeBuffersScope>::Get());
+  Global<RuntimeBuffersScope>::Delete();
   CHECK_NOTNULL(Global<Oneflow>::Get());
-  ClusterControlProto cluster_control;
-  cluster_control.set_cmd(kClusterCtrlCmdSessionEnd);
-  Global<CtrlClient>::Get()->PushKV("session_end", cluster_control);
   Global<Oneflow>::Delete();
 }
 
@@ -114,11 +103,8 @@ struct GlobalChecker final {
   ~GlobalChecker() {
     if (Global<Oneflow>::Get() != nullptr) { LOG(FATAL) << "global oneflow is not destroyed yet"; }
     if (Global<EnvironmentObjectsScope>::Get() != nullptr) {
-      if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
-	ClusterControlProto cluster_control;
-	cluster_control.set_cmd(kClusterCtrlCmdHalt);
-	Global<CtrlClient>::Get()->PushKV("session_end", cluster_control);
-      }
+      bool is_master = Global<MachineCtx>::Get()->IsThisMachineMaster();
+      if (is_master) { ClusterControl::MasterSendHaltAndWaitAck(); }
       Global<EnvironmentObjectsScope>::Delete();
     }
   }
@@ -128,4 +114,4 @@ GlobalChecker checker;
 
 }  // namespace
 
-}
+}  // namespace oneflow

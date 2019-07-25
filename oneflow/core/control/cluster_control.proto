@@ -4,8 +4,8 @@ package oneflow;
 enum ClusterControlCmd {
   kInvalidClusterCtrlCmd = 0;
   kClusterCtrlCmdSessionStart = 1;
-  kClusterCtrlCmdSessionEnd = 2;
-  kClusterCtrlCmdHalt = 3;
+  kClusterCtrlCmdHalt = 2;
+  kClusterCtrlCmdHaltAck = 3;
 }
 
 message ClusterControlProto {
