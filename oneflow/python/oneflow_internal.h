@@ -1,41 +1,31 @@
 #include <google/protobuf/text_format.h>
-#include "oneflow/core/job/job_set.pb.h"
-#include "oneflow/core/job/oneflow.h"
-#include "oneflow/core/register/ofblob.h"
-#include "oneflow/core/job/foreign_job_instance.h"
 #include "oneflow/core/common/buffer_manager.h"
 #include "oneflow/core/common/protobuf.h"
+#include "oneflow/core/register/ofblob.h"
+#include "oneflow/core/job/job_set.pb.h"
+#include "oneflow/core/job/oneflow.h"
+#include "oneflow/core/job/foreign_job_instance.h"
+#include "oneflow/core/job/global_environment_objects_scope.h"
+#include "oneflow/core/job/machine_context.h"
 
-namespace {
-
-class GlobalFlagsAndLogScope final {
- public:
-  static void New(const oneflow::JobSet& job_set) {
-    *GetPPtr() = new oneflow::FlagsAndLogScope(job_set.config(), "oneflow");
-  }
-  static void Delete() {
-    if (Get() != nullptr) {
-      delete Get();
-      *GetPPtr() = nullptr;
-    }
-  }
-
- private:
-  static oneflow::FlagsAndLogScope* Get() { return *GetPPtr(); }
-  static oneflow::FlagsAndLogScope** GetPPtr() {
-    static oneflow::FlagsAndLogScope* ptr = nullptr;
-    return &ptr;
-  }
-};
-
-}  // namespace
+bool InitGlobalEnvironmentBySerializedConfigProto(const std::string& config_proto_str) {
+  using namespace oneflow;
+  ConfigProto config_proto;
+  CHECK(google::protobuf::TextFormat::ParseFromString(config_proto_str, &config_proto));
+  CHECK_ISNULL(Global<GlobalEnvironmentObjectsScope>::Get());
+  // Global<T>::New is not allowed to be called here
+  // because glog is not constructed yet and LOG(INFO) has bad bahavior
+  Global<GlobalEnvironmentObjectsScope>::SetAllocated(
+      new GlobalEnvironmentObjectsScope(config_proto));
+  LOG(INFO) << "NewGlobal " << typeid(GlobalEnvironmentObjectsScope).name();
+  return Global<MachineCtx>::Get()->IsThisMachineMaster();
+}
 
 void InitGlobalOneflowBySerializedJobSet(const std::string& job_set_str) {
   using namespace oneflow;
   JobSet job_set;
   CHECK(google::protobuf::TextFormat::ParseFromString(job_set_str, &job_set));
   CHECK_ISNULL(Global<Oneflow>::Get());
-  GlobalFlagsAndLogScope::New(job_set);
   Global<Oneflow>::New(job_set);
 }
 
@@ -65,7 +55,12 @@ void DestroyGlobalOneflow() {
   using namespace oneflow;
   CHECK_NOTNULL(Global<Oneflow>::Get());
   Global<Oneflow>::Delete();
-  GlobalFlagsAndLogScope::Delete();
+}
+
+void DestroyGlobalEnvironment() {
+  using namespace oneflow;
+  CHECK_NOTNULL(Global<Oneflow>::Get());
+  Global<GlobalEnvironmentObjectsScope>::Delete();
 }
 
 int Ofblob_GetDataType(uint64_t of_blob_ptr) {
@@ -88,14 +83,17 @@ void OfBlob_CopyShapeToNumpy(uint64_t of_blob_ptr, int64_t* array, int size) {
 
 namespace {
 
-struct GlobalOneflowChecker final {
-  GlobalOneflowChecker() = default;
-  ~GlobalOneflowChecker() {
+struct GlobalChecker final {
+  GlobalChecker() = default;
+  ~GlobalChecker() {
     using namespace oneflow;
     if (Global<Oneflow>::Get() != nullptr) { LOG(FATAL) << "global oneflow is not destroyed yet"; }
+    if (Global<GlobalEnvironmentObjectsScope>::Get() != nullptr) {
+      LOG(FATAL) << "global environment is not destroyed yet";
+    }
   }
 };
 
-GlobalOneflowChecker checker;
+GlobalChecker checker;
 
 }  // namespace
