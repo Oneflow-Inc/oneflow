@@ -8,6 +8,8 @@ import oneflow.python.framework.placement_context as placement_context
 import oneflow.python.framework.placement_util as placement_util
 from oneflow.python.oneflow_export import oneflow_export
 
+inited_config_proto = None
+
 @oneflow_export('placement')
 def placement(device_names):
     return placement_util.PlacementScope(placement_util.MakeParallelConf(device_names))
