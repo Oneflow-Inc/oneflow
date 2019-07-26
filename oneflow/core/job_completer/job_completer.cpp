@@ -270,20 +270,6 @@ void TieUpChainHeadersUnReachableFromAnyVariableOps(const OpGraph& op_graph, Job
   });
 }
 
-void SetOpTimeShape(const OpGraph& op_graph, Job* job) {
-  op_graph.ForEachNode([&](OpNode* op_node) {
-    auto* op_time_shape =
-        &(*job->mutable_helper()->mutable_op_name2op_time_shape())[op_node->op().op_name()];
-    if (op_node->out_blob_time_shape() != nullptr) {
-      op_node->out_blob_time_shape()->ToProto(op_time_shape->mutable_out_blob_time_shape());
-    }
-    const auto* in_blob_fastest_time_shape = op_node->GetInputBlobFastestTimeShape();
-    if (in_blob_fastest_time_shape != nullptr) {
-      in_blob_fastest_time_shape->ToProto(op_time_shape->mutable_in_blob_fastest_time_shape());
-    }
-  });
-}
-
 void SetCtrlInOpName4VariableOp(const OpGraph& op_graph, Job* job) {
   auto IsMutableConsumedLbi = [](const Operator& op, const LogicalBlobId& lbi) -> bool {
     for (const std::string& bn : op.input_bns()) {
@@ -329,24 +315,18 @@ void SetCtrlInOpName4VariableOp(const OpGraph& op_graph, Job* job) {
   });
 }
 
-void SetBatchDimLbis(const OpGraph& op_graph, Job* job) {
-  op_graph.ForEachNode([&](OpNode* op_node) {
-    for (const auto& obn : op_node->op().output_bns()) {
-      const LogicalBlobId& lbi = op_node->op().BnInOp2Lbi(obn);
-      if (op_node->HasBatchDim4Lbi(lbi)) {
-        *job->mutable_helper()->mutable_batch_dim_lbis()->Add() = lbi;
-      }
-    }
-  });
-}
-
-void SetOpTimeShape7ModelLbis(const OpGraph& op_graph, Job* job) {
-  SetOpTimeShape(op_graph, job);
-  SetBatchDimLbis(op_graph, job);
+void SetOpTimeShape7BatchDimLbis(const OpGraph& op_graph, Job* job) {
+  op_graph.DumpOpTimeShape(job);
+  op_graph.DumpBatchDimLbi(job);
 }
 
 void RewriteBoxingWithAllReduce(const OpGraph& op_graph, Job* job) {
   AllReduceAddPass().Apply(op_graph, job);
+}
+
+void DumpLogicalBlobDescAndSbpSignature(const OpGraph& op_graph, Job* job) {
+  op_graph.DumpLogicalBlobDesc(job);
+  op_graph.DumpSbpSignature(job);
 }
 
 void SplitDecodeOps(Job* job) {
@@ -475,7 +455,7 @@ void JobCompleter::Complete(Job* job) const {
     WithOpGraphAndMutJob(job, &AddSaver);
     WithOpGraphAndMutJob(job, &RewriteBoxingWithAllReduce);
   }
-  WithOpGraphAndMutJob(job, &OpGraph::DumpLogicalBlobDescAndSbpSignature);
+  WithOpGraphAndMutJob(job, &DumpLogicalBlobDescAndSbpSignature);
   WithOpGraphAndMutJob(job, &GroupBoxingByDstParallel);
   WithOpGraphAndMutJob(job, &AddKeepHeaderOnlyOp);
   WithOpGraphAndMutJob(job, &SetCtrlInOpName4VariableOp);
@@ -486,8 +466,8 @@ void JobCompleter::Complete(Job* job) const {
   AddGlobalTotalJobCriticalSection(*job);
   WithOpGraphAndMutJob(job, &AddGlobalInputCriticalSections);
   WithOpGraphAndMutJob(job, &AddGlobalOutputCriticalSections);
-  WithOpGraphAndMutJob(job, &OpGraph::DumpLogicalBlobDescAndSbpSignature);
-  WithOpGraphAndMutJob(job, &SetOpTimeShape7ModelLbis);
+  WithOpGraphAndMutJob(job, &DumpLogicalBlobDescAndSbpSignature);
+  WithOpGraphAndMutJob(job, &SetOpTimeShape7BatchDimLbis);
   CheckOpGraph(OpGraph(*job));
 }
 

@@ -1,6 +1,6 @@
 #include "oneflow/core/job/compiler.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
-#include "oneflow/core/device/cudnn_conv_ctx_cache.h"
+#include "oneflow/core/job/cudnn_conv_ctx_cache_scope.h"
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/job_completer/job_completer.h"
 
@@ -89,9 +89,7 @@ void Compiler::GenNetTopo(Plan* plan) const {
 }
 
 void Compiler::Compile(Job* job, Plan* plan, bool need_job_complete) const {
-#ifdef WITH_CUDA
-  Global<CudnnConvCtxCache>::New();
-#endif
+  CudnnConvCtxCacheScope cudnn_conv_ctx_cache_scope();
   const JobDesc& job_desc = GlobalJobDesc();
   if (need_job_complete) { JobCompleter().Complete(job); }
   TeePersistentLogStream::Create(StrCat("optimized_job", job_desc.job_id()))->Write(*job);
@@ -140,9 +138,6 @@ void Compiler::Compile(Job* job, Plan* plan, bool need_job_complete) const {
   // GenNetTopo(plan);
   // ToDotFile(*plan, "/dot/plan.dot");
   Global<OpGraph>::Delete();
-#ifdef WITH_CUDA
-  Global<CudnnConvCtxCache>::Delete();
-#endif
 }
 
 }  // namespace oneflow
