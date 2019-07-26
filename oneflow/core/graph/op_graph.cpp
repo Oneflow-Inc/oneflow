@@ -776,7 +776,7 @@ std::list<OpNode*> OpGraph::DataOrCtrlSourceNodes() const {
   return ret;
 }
 
-void OpGraph::DumpLogicalBlobDescAndSbpSignature(Job* job) const {
+void OpGraph::DumpLogicalBlobDesc(Job* job) const {
   auto* helper = job->mutable_helper();
   ForEachNode([&](const OpNode* node) {
     for (const auto& obn : node->op().output_bns()) {
@@ -784,8 +784,38 @@ void OpGraph::DumpLogicalBlobDescAndSbpSignature(Job* job) const {
       node->LogicalBlobDesc4Lbi(lbi).ToProto(
           &(*helper->mutable_lbn2logical_blob_desc())[GenLogicalBlobName(lbi)]);
     }
+  });
+}
+
+void OpGraph::DumpSbpSignature(Job* job) const {
+  ForEachNode([&](const OpNode* node) {
     (*job->mutable_sbp_conf()->mutable_op_name2sbp_signature_conf())[node->op().op_name()] =
         node->sbp_signature();
+  });
+}
+
+void OpGraph::DumpOpTimeShape(Job* job) const {
+  ForEachNode([&](OpNode* op_node) {
+    auto* op_time_shape =
+        &(*job->mutable_helper()->mutable_op_name2op_time_shape())[op_node->op().op_name()];
+    if (op_node->out_blob_time_shape() != nullptr) {
+      op_node->out_blob_time_shape()->ToProto(op_time_shape->mutable_out_blob_time_shape());
+    }
+    const auto* in_blob_fastest_time_shape = op_node->GetInputBlobFastestTimeShape();
+    if (in_blob_fastest_time_shape != nullptr) {
+      in_blob_fastest_time_shape->ToProto(op_time_shape->mutable_in_blob_fastest_time_shape());
+    }
+  });
+}
+
+void OpGraph::DumpBatchDimLbi(Job* job) const {
+  ForEachNode([&](OpNode* op_node) {
+    for (const auto& obn : op_node->op().output_bns()) {
+      const LogicalBlobId& lbi = op_node->op().BnInOp2Lbi(obn);
+      if (op_node->HasBatchDim4Lbi(lbi)) {
+        *job->mutable_helper()->mutable_batch_dim_lbis()->Add() = lbi;
+      }
+    }
   });
 }
 
