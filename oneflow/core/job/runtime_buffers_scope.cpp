@@ -6,8 +6,6 @@
 namespace oneflow {
 
 RuntimeBuffersScope::RuntimeBuffersScope() {
-  Global<BufferMgr<int64_t>>::New();
-  Global<BufferMgr<std::shared_ptr<ForeignJobInstance>>>::New();
   const auto& job_descs = *Global<std::vector<std::unique_ptr<JobDesc>>>::Get();
   Global<BufferMgr<int64_t>>::Get()->NewBuffer(kBufferNameGlobalWaitJobId, job_descs.size());
   auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<ForeignJobInstance>>>::Get();
@@ -30,8 +28,6 @@ RuntimeBuffersScope::~RuntimeBuffersScope() {
     buffer_mgr->Get(GetForeignInputBufferName(job_name))->Close();
   }
   Global<BufferMgr<int64_t>>::Get()->Get(kBufferNameGlobalWaitJobId)->Close();
-  Global<BufferMgr<std::shared_ptr<ForeignJobInstance>>>::Delete();
-  Global<BufferMgr<int64_t>>::Delete();
 }
 
 }  // namespace oneflow

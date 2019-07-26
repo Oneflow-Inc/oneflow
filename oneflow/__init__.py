@@ -16,6 +16,11 @@ for object_name in oneflow_export.exported_object_names:
 if 'object_name' in locals(): del object_name
 del oneflow_export
 
+import atexit
+import oneflow.python.framework.c_api_util
+atexit.register(oneflow.python.framework.c_api_util.DestroyGlobalEnvironment)
+del atexit
+
 del absolute_import
 del python
 #del core

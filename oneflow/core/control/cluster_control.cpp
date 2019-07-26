@@ -13,8 +13,16 @@ std::string GetHaltAckCtrlKey(int64_t machine_id) {
   return "HaltAckCtrlKey/" + std::to_string(machine_id);
 }
 
+// return unique sequential key
+// because ctrl key is not allowed to push/pull twice
+std::string GetHaltOrSessionStartCtrlKey() {
+  static int64_t seq = 0;
+  return "HaltOrSessionStart/" + std::to_string(seq++);
+}
+
 void MasterWaitHaltAck() {
   FOR_RANGE(int64_t, i, 0, Global<ResourceDesc>::Get()->TotalMachineNum()) {
+    if (i == Global<MachineCtx>::Get()->this_machine_id()) { continue; }
     ClusterControlProto cluster_control_proto;
     Global<CtrlClient>::Get()->PullKV(GetHaltAckCtrlKey(i), &cluster_control_proto);
   }
@@ -33,19 +41,19 @@ void WorkerSendAckAndExit() {
 void ClusterControl::MasterSendSessionStart() {
   ClusterControlProto cluster_control;
   cluster_control.set_cmd(kClusterCtrlCmdSessionStart);
-  Global<CtrlClient>::Get()->PushKV("halt_or_session_start", cluster_control);
+  Global<CtrlClient>::Get()->PushKV(GetHaltOrSessionStartCtrlKey(), cluster_control);
 }
 
 void ClusterControl::MasterSendHaltAndWaitAck() {
   ClusterControlProto cluster_control;
   cluster_control.set_cmd(kClusterCtrlCmdHalt);
-  Global<CtrlClient>::Get()->PushKV("session_end", cluster_control);
+  Global<CtrlClient>::Get()->PushKV(GetHaltOrSessionStartCtrlKey(), cluster_control);
   MasterWaitHaltAck();
 }
 
 void ClusterControl::WorkerSendAckAndExitIfReceiveHalt() {
   ClusterControlProto cluster_control;
-  Global<CtrlClient>::Get()->PullKV("halt_or_session_start", &cluster_control);
+  Global<CtrlClient>::Get()->PullKV(GetHaltOrSessionStartCtrlKey(), &cluster_control);
   if (cluster_control.cmd() == kClusterCtrlCmdHalt) { WorkerSendAckAndExit(); }
   CHECK_EQ(cluster_control.cmd(), kClusterCtrlCmdSessionStart);
 }
