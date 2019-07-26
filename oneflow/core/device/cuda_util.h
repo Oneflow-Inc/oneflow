@@ -84,7 +84,15 @@ struct CudaDataType;
 OF_PP_FOR_EACH_TUPLE(SPECIALIZE_CUDA_DATA_TYPE, CUDA_DATA_TYPE_SEQ);
 #undef SPECIALIZE_CUDA_DATA_TYPE
 
-void WithCudaDevice(int32_t dev_id, const std::function<void()>& func);
+class CudaDeviceGuard final {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(CudaDeviceGuard)
+  explicit CudaDeviceGuard(int32_t dev_id);
+  ~CudaDeviceGuard();
+
+ private:
+  int32_t saved_dev_id_ = -1;
+};
 
 }  // namespace oneflow
 

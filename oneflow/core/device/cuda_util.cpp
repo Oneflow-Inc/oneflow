@@ -149,13 +149,12 @@ cudaDataType_t GetCudaDataType(DataType val) {
   UNIMPLEMENTED();
 }
 
-void WithCudaDevice(int32_t dev_id, const std::function<void()>& func) {
-  int32_t saved_dev_id;
-  CudaCheck(cudaGetDevice(&saved_dev_id));
+CudaDeviceGuard::CudaDeviceGuard(int32_t dev_id) {
+  CudaCheck(cudaGetDevice(&saved_dev_id_));
   CudaCheck(cudaSetDevice(dev_id));
-  func();
-  CudaCheck(cudaSetDevice(saved_dev_id));
 }
+
+CudaDeviceGuard::~CudaDeviceGuard() { CudaCheck(cudaSetDevice(saved_dev_id_)); }
 
 #endif  // WITH_CUDA
 

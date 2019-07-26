@@ -192,7 +192,8 @@ void CudaCopyPeerKernelUtil::CtxCreate(CudaCopyPeerCtx** ctx, int32_t dst_dev_id
   (*ctx)->src_dev_id = src_dev_id;
   (*ctx)->recv_stream = recv_stream;
 
-  WithCudaDevice(dst_dev_id, [ctx]() {
+  {
+    CudaDeviceGuard guard(dst_dev_id);
     int32_t can_access;
     CudaCheck(cudaDeviceCanAccessPeer(&can_access, (*ctx)->dst_dev_id, (*ctx)->src_dev_id));
     if (can_access && false) {
@@ -202,13 +203,17 @@ void CudaCopyPeerKernelUtil::CtxCreate(CudaCopyPeerCtx** ctx, int32_t dst_dev_id
     } else {
       (*ctx)->p2p_enabled = false;
     }
-  });
+  }
   if (!(*ctx)->p2p_enabled) {
-    WithCudaDevice(src_dev_id, [ctx]() { CudaCheck(cudaStreamCreate(&((*ctx)->send_stream))); });
-    WithCudaDevice(dst_dev_id, [ctx]() {
+    {
+      CudaDeviceGuard guard(src_dev_id);
+      CudaCheck(cudaStreamCreate(&((*ctx)->send_stream)));
+    }
+    {
+      CudaDeviceGuard guard(dst_dev_id);
       CudaCheck(cudaEventCreateWithFlags(&((*ctx)->sync_event),
                                          cudaEventBlockingSync | cudaEventDisableTiming));
-    });
+    }
     (*ctx)->num_block = MAX_NUM_BLOCK;
     NumaAwareCudaMallocHost((*ctx)->dst_dev_id, reinterpret_cast<void**>(&((*ctx)->recv_cnt_ptr)),
                             sizeof(int32_t) * (*ctx)->num_block);
@@ -225,11 +230,15 @@ void CudaCopyPeerKernelUtil::CtxCreate(CudaCopyPeerCtx** ctx, int32_t dst_dev_id
 
 void CudaCopyPeerKernelUtil::CtxDestroy(CudaCopyPeerCtx* ctx) {
   if (!ctx->p2p_enabled) {
-    WithCudaDevice(ctx->src_dev_id, [ctx]() {
+    {
+      CudaDeviceGuard guard(ctx->src_dev_id);
       CudaCheck(cudaStreamSynchronize(ctx->send_stream));
       CudaCheck(cudaStreamDestroy(ctx->send_stream));
-    });
-    WithCudaDevice(ctx->dst_dev_id, [ctx]() { CudaCheck(cudaEventDestroy(ctx->sync_event)); });
+    }
+    {
+      CudaDeviceGuard guard(ctx->dst_dev_id);
+      CudaCheck(cudaEventDestroy(ctx->sync_event));
+    }
     CudaCheck(cudaFreeHost(ctx->recv_cnt_ptr));
     CudaCheck(cudaFreeHost(ctx->send_cnt_ptr));
     CudaCheck(cudaFreeHost(ctx->buf_ptr));
@@ -245,16 +254,18 @@ void CudaCopyPeerKernelUtil::CopyAsync(CudaCopyPeerCtx* ctx, void* dst, const vo
     CHECK_EQ(size % PACK_SIZE, 0);
     CHECK_EQ(reinterpret_cast<std::uintptr_t>(dst) % PACK_ALIGN, 0);
     CHECK_EQ(reinterpret_cast<std::uintptr_t>(src) % PACK_ALIGN, 0);
-    WithCudaDevice(ctx->dst_dev_id, [&]() {
+    {
+      CudaDeviceGuard guard(ctx->dst_dev_id);
       CudaCheck(cudaEventRecord(ctx->sync_event, ctx->recv_stream));
       Copy<<<ctx->num_block, NUM_THREAD, 0, ctx->recv_stream>>>(
           dst, src, size, ctx->buf_ptr, ctx->buf_cap, ctx->send_cnt_ptr, ctx->recv_cnt_ptr, false);
-    });
-    WithCudaDevice(ctx->src_dev_id, [&]() {
+    }
+    {
+      CudaDeviceGuard guard(ctx->src_dev_id);
       CudaCheck(cudaStreamWaitEvent(ctx->send_stream, ctx->sync_event, 0));
       Copy<<<ctx->num_block, NUM_THREAD, 0, ctx->send_stream>>>(
           dst, src, size, ctx->buf_ptr, ctx->buf_cap, ctx->send_cnt_ptr, ctx->recv_cnt_ptr, true);
-    });
+    }
   }
 }
 
