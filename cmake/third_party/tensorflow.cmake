@@ -9,8 +9,8 @@ set(TENSORFLOW_SOURCES_DIR ${THIRD_PARTY_DIR}/tensorflow)
 set(TENSORFLOW_SRCS_DIR ${TENSORFLOW_SOURCES_DIR}/src/tensorflow)
 set(TENSORFLOW_INC_DIR  ${TENSORFLOW_SOURCES_DIR}/src/tensorflow)
 
-set(XLA_BUILD_PATH  ${PROJECT_SOURCE_DIR}/oneflow/core/compiler/BUILD)
-set(TENSORFLOW_DEST_DIR ${TENSORFLOW_SRCS_DIR}/tensorflow/compiler/lib)
+set(XLA_BUILD_PATH  ${PROJECT_SOURCE_DIR}/oneflow/xla/xla_lib)
+set(TENSORFLOW_DEST_DIR ${TENSORFLOW_SRCS_DIR}/tensorflow/compiler/jit)
 
 set(TENSORFLOW_GEN_DIR ${TENSORFLOW_SRCS_DIR}/bazel-out/k8-opt/genfiles)
 set(TENSORFLOW_EXTERNAL_DIR ${TENSORFLOW_SRCS_DIR}/bazel-tensorflow/external)
@@ -24,7 +24,7 @@ list(APPEND TENSORFLOW_XLA_LIBRARIES libtensorflow_framework.so.1)
 list(APPEND TENSORFLOW_XLA_LIBRARIES libxla_core.so)
 link_directories(
   ${TENSORFLOW_SRCS_DIR}/bazel-bin/tensorflow
-  ${TENSORFLOW_SRCS_DIR}/bazel-bin/tensorflow/compiler/lib
+  ${TENSORFLOW_SRCS_DIR}/bazel-bin/tensorflow/compiler/jit/xla_lib
 )
 
 list(APPEND TENSORFLOW_XLA_INCLUDE_DIR
@@ -42,10 +42,11 @@ ExternalProject_Add(
   PREFIX ${TENSORFLOW_SOURCES_DIR}
   GIT_REPOSITORY ${TENSORFLOW_GIT_URL}
   GIT_TAG ${TENSORFLOW_GIT_TAG}
-  CONFIGURE_COMMAND mkdir -p ${TENSORFLOW_DEST_DIR} && cp ${XLA_BUILD_PATH} ${TENSORFLOW_DEST_DIR}
+  CONFIGURE_COMMAND cp -r ${XLA_BUILD_PATH} ${TENSORFLOW_DEST_DIR}
   BUILD_COMMAND cd ${TENSORFLOW_SRCS_DIR} &&
                 bazel build -c opt --define with_xla_support=true --action_env TF_NEED_CUDA=1
-                    --config=cuda -j 10 //tensorflow/compiler/lib:libxla_core.so
+#                bazel build --copt=-g -c dbg --define with_xla_support=true --action_env TF_NEED_CUDA=1
+                    --config=cuda -j 20 //tensorflow/compiler/jit/xla_lib:libxla_core.so
   INSTALL_COMMAND ""
 )
 endif(THIRD_PARTY)

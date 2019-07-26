@@ -4,12 +4,13 @@
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/job_completer/job_completer.h"
 
-#include "oneflow/core/compiler/of2xla/xla_graph.h"
-#include "oneflow/core/compiler/of2xla/pass/xla_optimize_pass.h"
-#include "oneflow/core/compiler/rebuild_job.h"
-#include <fstream>
+#ifdef WITH_XLA
+#include "oneflow/xla/rebuild_job.h"
+#include "oneflow/xla/of2xla/xla_graph.h"
+#include "oneflow/xla/of2xla/pass/xla_optimize_pass.h"
 
 DEFINE_bool(use_xla_jit, true, "Option to use xla jit");
+#endif  // WITH_XLA
 
 namespace oneflow {
 
@@ -121,6 +122,7 @@ Plan Compiler::DoCompile() {
   Global<OpGraph>::New(job);
   Global<OpGraph>::Get()->ToDotWithFilePath("optimized_dlnet_op_graph.dot");
 
+#ifdef WITH_XLA
   // TODO(hjchen2): For debug
   std::string job_string = job.DebugString();
   std::ofstream ost("./job_string_without_xla.prototxt");
@@ -148,6 +150,7 @@ Plan Compiler::DoCompile() {
     Global<OpGraph>::Delete();
     Global<OpGraph>::New(job);
   }
+#endif  // WITH_XLA
 
   auto logical_gph = std::make_unique<LogicalGraph>(job);
   int64_t total_mbn_num = logical_gph->total_mbn_num();
