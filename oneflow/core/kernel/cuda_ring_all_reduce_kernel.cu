@@ -132,8 +132,9 @@ __device__ void AlignedReduceOrCopy(const int64_t num_elem, const T* recv, const
   Pack line_recv[NUM_PACK_PER_LINE_PER_THREAD];
   using PackBatchFetch =
       BatchFetchFunctor<Pack, NUM_PACK_PER_LINE_PER_THREAD, NUM_THREAD_PER_WARP, false>;
-  using PackBatchStore = BatchStoreFunctor<Pack, NUM_PACK_PER_LINE_PER_THREAD, NUM_THREAD_PER_WARP,
-                                           false> for (int64_t l = 0; l < num_line; ++l) {
+  using PackBatchStore =
+      BatchStoreFunctor<Pack, NUM_PACK_PER_LINE_PER_THREAD, NUM_THREAD_PER_WARP, false>;
+  for (int64_t l = 0; l < num_line; ++l) {
     if (RECV) { PackBatchFetch()(line_recv, recv_pack_ptr, nullptr); }
     if (SRC) {
       if (!RECV) {
