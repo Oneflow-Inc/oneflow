@@ -1,5 +1,4 @@
 #include "oneflow/core/job/environment_objects_scope.h"
-#include "oneflow/core/common/buffer_manager.h"
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/control/ctrl_server.h"
 #include "oneflow/core/control/ctrl_client.h"
@@ -83,8 +82,6 @@ EnvironmentObjectsScope::EnvironmentObjectsScope(const ConfigProto& config_proto
     Global<AvailableMemDesc>::New();
     *Global<AvailableMemDesc>::Get() = PullAvailableMemDesc();
     Global<CriticalSectionDesc>::New();
-    Global<BufferMgr<int64_t>>::New();
-    Global<BufferMgr<std::shared_ptr<ForeignJobInstance>>>::New();
     Global<InterUserJobInfo>::New();
   }
 }
@@ -92,8 +89,6 @@ EnvironmentObjectsScope::EnvironmentObjectsScope(const ConfigProto& config_proto
 EnvironmentObjectsScope::~EnvironmentObjectsScope() {
   if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
     Global<InterUserJobInfo>::Delete();
-    Global<BufferMgr<std::shared_ptr<ForeignJobInstance>>>::Delete();
-    Global<BufferMgr<int64_t>>::Delete();
     Global<CriticalSectionDesc>::Delete();
     Global<AvailableMemDesc>::Delete();
   }

@@ -3,6 +3,10 @@ import numpy as np
 import torch
 import math
 
+config = flow.ConfigProtoBuilder()
+config.gpu_device_num(1)
+flow.init(config)
+
 jobs = []
 @flow.append_func_to_list(jobs)
 def GeluJob(x = flow.val((10,))):
@@ -10,13 +14,9 @@ def GeluJob(x = flow.val((10,))):
     job_conf.batch_size(10).data_part_num(1).default_data_type(flow.float)
     return flow.keras.activations.gelu(x)
 
-config = flow.ConfigProtoBuilder()
-config.gpu_device_num(1)
-
-
 x = np.ones((10,), dtype=np.float32)
 
-with flow.Session(jobs, config) as sess:
+with flow.Session(jobs) as sess:
     a = sess.run(GeluJob, x).get()
 
 def gelu(x):
