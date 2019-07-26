@@ -64,6 +64,7 @@ void CpuTopK(DeviceCtx* ctx, const T* in, int32_t* indices, int32_t instance_num
   bc.WaitUntilCntEqualZero();
 }
 
+// Do not need instantiation here ,remove later
 #define INSTANTIATE_CPU_TOP_K(T, type_proto)                                                     \
   template void CpuTopK<T>(DeviceCtx * ctx, const T* in, int32_t* indices, int32_t instance_num, \
                            int32_t instance_size, int32_t k, bool sorted, int32_t* out);

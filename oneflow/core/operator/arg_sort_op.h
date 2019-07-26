@@ -1,23 +1,22 @@
-#ifndef ONEFLOW_CORE_OPERATOR_SORT_OP_H_
-#define ONEFLOW_CORE_OPERATOR_SORT_OP_H_
+#ifndef ONEFLOW_CORE_OPERATOR_ARG_SORT_OP_H_
+#define ONEFLOW_CORE_OPERATOR_ARG_SORT_OP_H_
 
 #include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
 
-struct SortOpCtx : public OpContext {
+struct ArgSortOpCtx : public OpContext {
 #ifdef WITH_CUDA
-  SortOpCtx(int32_t temp_storage_bytes) : temp_storage_bytes_(temp_storage_bytes) {}
-  int32_t GetTempStorageBytes() const { return temp_storage_bytes_; }
+  ArgSortOpCtx(int32_t temp_storage_bytes) : temp_storage_bytes_(temp_storage_bytes) {}
   int32_t temp_storage_bytes_;
 #endif
 };
 
-class SortOp final : public Operator {
+class ArgSortOp final : public Operator {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(SortOp);
-  SortOp() = default;
-  ~SortOp() = default;
+  OF_DISALLOW_COPY_AND_MOVE(ArgSortOp);
+  ArgSortOp() = default;
+  ~ArgSortOp() = default;
 
   void InitFromOpConf() override;
   const PbMessage& GetCustomizedConf() const override;
@@ -34,4 +33,4 @@ class SortOp final : public Operator {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_OPERATOR_SORT_OP_H_
+#endif  // ONEFLOW_CORE_OPERATOR_ARG_SORT_OP_H_
