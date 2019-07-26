@@ -110,7 +110,7 @@ struct BatchStoreFunctor {
   __device__ __forceinline__ void operator()(T* start, T (&a)[NUM], const T* bound) {
 #pragma unroll
     for (int32_t p = 0; p < NUM; ++p) {
-      const T* ptr = start + p * STRIDE;
+      T* ptr = start + p * STRIDE;
       if (BOUND && ptr < bound) { StoreFunctor<T>()(ptr, a[p]); }
     }
   }
