@@ -51,7 +51,7 @@ void ReduceConcatOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)>
       static_cast<int64_t>(GetSizeOfDataType(first_in_blob->data_type()));
   CHECK_EQ(in_blob_body_size_sum % data_type_byte_size, 0);
   const int64_t out_blob_elem_cnt =
-      RoundUp(in_blob_body_size_sum / data_type_byte_size, parallel_ctx->parallel_num());
+      RoundUp(in_blob_body_size_sum / data_type_byte_size, parallel_ctx->parallel_num() * 2 * 16);
   out_blob->mut_shape() = Shape({out_blob_elem_cnt});
 
   // construct reduce_concat_op_ctx for later CHECK in ReduceConcatOp::VirtualGenKernelConf
@@ -72,7 +72,7 @@ void ReduceConcatOp::VirtualGenKernelConf(
       static_cast<int64_t>(GetSizeOfDataType(GetBlobDesc4BnInOp(input_bns().Get(0))->data_type()));
   CHECK_EQ(offset % data_type_byte_size, 0);
   const int64_t out_blob_elem_cnt =
-      RoundUp(offset / data_type_byte_size, parallel_ctx->parallel_num());
+      RoundUp(offset / data_type_byte_size, parallel_ctx->parallel_num() * 2 * 16);
   const ReduceConcatOpCtx* reduce_concat_op_ctx = static_cast<const ReduceConcatOpCtx*>(op_ctx);
   CHECK_EQ(reduce_concat_op_ctx->out_blob_elem_cnt, out_blob_elem_cnt);
 }
