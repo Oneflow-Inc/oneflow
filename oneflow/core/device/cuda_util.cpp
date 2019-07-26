@@ -149,12 +149,12 @@ cudaDataType_t GetCudaDataType(DataType val) {
   UNIMPLEMENTED();
 }
 
-CudaDeviceGuard::CudaDeviceGuard(int32_t dev_id) {
+CudaCurrentDeviceGuard::CudaCurrentDeviceGuard(int32_t dev_id) {
   CudaCheck(cudaGetDevice(&saved_dev_id_));
   CudaCheck(cudaSetDevice(dev_id));
 }
 
-CudaDeviceGuard::~CudaDeviceGuard() { CudaCheck(cudaSetDevice(saved_dev_id_)); }
+CudaCurrentDeviceGuard::~CudaCurrentDeviceGuard() { CudaCheck(cudaSetDevice(saved_dev_id_)); }
 
 #endif  // WITH_CUDA
 

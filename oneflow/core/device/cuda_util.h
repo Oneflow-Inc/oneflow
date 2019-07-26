@@ -84,11 +84,11 @@ struct CudaDataType;
 OF_PP_FOR_EACH_TUPLE(SPECIALIZE_CUDA_DATA_TYPE, CUDA_DATA_TYPE_SEQ);
 #undef SPECIALIZE_CUDA_DATA_TYPE
 
-class CudaDeviceGuard final {
+class CudaCurrentDeviceGuard final {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(CudaDeviceGuard)
-  explicit CudaDeviceGuard(int32_t dev_id);
-  ~CudaDeviceGuard();
+  OF_DISALLOW_COPY_AND_MOVE(CudaCurrentDeviceGuard)
+  explicit CudaCurrentDeviceGuard(int32_t dev_id);
+  ~CudaCurrentDeviceGuard();
 
  private:
   int32_t saved_dev_id_ = -1;

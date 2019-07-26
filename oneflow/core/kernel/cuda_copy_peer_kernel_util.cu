@@ -193,7 +193,7 @@ void CudaCopyPeerKernelUtil::CtxCreate(CudaCopyPeerCtx** ctx, int32_t dst_dev_id
   (*ctx)->recv_stream = recv_stream;
 
   {
-    CudaDeviceGuard guard(dst_dev_id);
+    CudaCurrentDeviceGuard guard(dst_dev_id);
     int32_t can_access;
     CudaCheck(cudaDeviceCanAccessPeer(&can_access, (*ctx)->dst_dev_id, (*ctx)->src_dev_id));
     if (can_access && false) {
@@ -206,11 +206,11 @@ void CudaCopyPeerKernelUtil::CtxCreate(CudaCopyPeerCtx** ctx, int32_t dst_dev_id
   }
   if (!(*ctx)->p2p_enabled) {
     {
-      CudaDeviceGuard guard(src_dev_id);
+      CudaCurrentDeviceGuard guard(src_dev_id);
       CudaCheck(cudaStreamCreate(&((*ctx)->send_stream)));
     }
     {
-      CudaDeviceGuard guard(dst_dev_id);
+      CudaCurrentDeviceGuard guard(dst_dev_id);
       CudaCheck(cudaEventCreateWithFlags(&((*ctx)->sync_event),
                                          cudaEventBlockingSync | cudaEventDisableTiming));
     }
@@ -231,12 +231,12 @@ void CudaCopyPeerKernelUtil::CtxCreate(CudaCopyPeerCtx** ctx, int32_t dst_dev_id
 void CudaCopyPeerKernelUtil::CtxDestroy(CudaCopyPeerCtx* ctx) {
   if (!ctx->p2p_enabled) {
     {
-      CudaDeviceGuard guard(ctx->src_dev_id);
+      CudaCurrentDeviceGuard guard(ctx->src_dev_id);
       CudaCheck(cudaStreamSynchronize(ctx->send_stream));
       CudaCheck(cudaStreamDestroy(ctx->send_stream));
     }
     {
-      CudaDeviceGuard guard(ctx->dst_dev_id);
+      CudaCurrentDeviceGuard guard(ctx->dst_dev_id);
       CudaCheck(cudaEventDestroy(ctx->sync_event));
     }
     CudaCheck(cudaFreeHost(ctx->recv_cnt_ptr));
@@ -255,13 +255,13 @@ void CudaCopyPeerKernelUtil::CopyAsync(CudaCopyPeerCtx* ctx, void* dst, const vo
     CHECK_EQ(reinterpret_cast<std::uintptr_t>(dst) % PACK_ALIGN, 0);
     CHECK_EQ(reinterpret_cast<std::uintptr_t>(src) % PACK_ALIGN, 0);
     {
-      CudaDeviceGuard guard(ctx->dst_dev_id);
+      CudaCurrentDeviceGuard guard(ctx->dst_dev_id);
       CudaCheck(cudaEventRecord(ctx->sync_event, ctx->recv_stream));
       Copy<<<ctx->num_block, NUM_THREAD, 0, ctx->recv_stream>>>(
           dst, src, size, ctx->buf_ptr, ctx->buf_cap, ctx->send_cnt_ptr, ctx->recv_cnt_ptr, false);
     }
     {
-      CudaDeviceGuard guard(ctx->src_dev_id);
+      CudaCurrentDeviceGuard guard(ctx->src_dev_id);
       CudaCheck(cudaStreamWaitEvent(ctx->send_stream, ctx->sync_event, 0));
       Copy<<<ctx->num_block, NUM_THREAD, 0, ctx->send_stream>>>(
           dst, src, size, ctx->buf_ptr, ctx->buf_cap, ctx->send_cnt_ptr, ctx->recv_cnt_ptr, true);
