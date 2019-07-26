@@ -7,10 +7,7 @@ namespace oneflow {
 
 struct TopKOpCtx : public OpContext {
 #ifdef WITH_CUDA
-  TopKOpCtx(int32_t instance_size, int32_t k, int32_t temp_storage_bytes)
-      : instance_size_(instance_size), k_(k), temp_storage_bytes_(temp_storage_bytes) {}
-  int32_t instance_size_;
-  int32_t k_;
+  TopKOpCtx(int32_t temp_storage_bytes) : temp_storage_bytes_(temp_storage_bytes) {}
   int32_t temp_storage_bytes_;
 #endif
 };

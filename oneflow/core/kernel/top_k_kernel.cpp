@@ -17,12 +17,12 @@ void ForwardPartDataContentTopOne(const T* in, const Range& range, const int32_t
 
 template<typename T>
 void ForwardPartDataContentTopK(const T* in, const Range& range, const int32_t instance_size,
-                                const int32_t k, const bool sorted, int32_t* indices,
+                                const int32_t k, const bool sorted, int32_t* indices_ptr,
                                 int32_t* out) {
-  CHECK_NOTNULL(indices);
+  CHECK_NOTNULL(indices_ptr);
   FOR_RANGE(int32_t, i, range.begin(), range.end()) {
     const int32_t offset = i * instance_size;
-    int32_t* indices = indices + offset;
+    int32_t* indices = indices_ptr + offset;
     const T* values = in + offset;
     std::iota(indices, indices + instance_size, 0);
     auto comp = [&](const int32_t lhs, const int32_t rhs) {
@@ -47,6 +47,7 @@ void CpuTopK(DeviceCtx* ctx, const T* in, int32_t* indices, int32_t instance_num
              int32_t instance_size, int32_t k, bool sorted, int32_t* out) {
   const int32_t part_num =
       std::min(instance_num, Global<ThreadMgr>::Get()->compute_thread_pool()->thread_num());
+
   const BalancedSplitter bs(instance_num, part_num);
   BlockingCounter bc(part_num);
   FOR_RANGE(int32_t, part_id, 0, part_num) {
@@ -81,8 +82,10 @@ void TopKKernel<device_type, T>::ForwardDataContent(
   int32_t* out = out_blob->mut_dptr<int32_t>();
 
   if (this->op_conf().device_type() == DeviceType::kCPU) {
-    CpuTopK(ctx.device_ctx, in, BnInOp2Blob("indices")->mut_dptr<int32_t>(), instance_num,
-            instance_size, k, this->op_conf().top_k_conf().sorted(), out);
+    Blob* indices_blob = BnInOp2Blob("indices");
+    int32_t* indices = indices_blob ? indices_blob->mut_dptr<int32_t>() : nullptr;
+    CpuTopK(ctx.device_ctx, in, indices, instance_num, instance_size, k,
+            this->op_conf().top_k_conf().sorted(), out);
   } else if (this->op_conf().device_type() == DeviceType::kGPU) {
     if (instance_size <= 1024 || k == instance_size || k > 128) {
       GpuRadixSortTopK(ctx.device_ctx, in, BnInOp2Blob("indices")->mut_dptr<int32_t>(),

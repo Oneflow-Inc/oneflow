@@ -1,5 +1,5 @@
-#ifndef BITONIC_SORT_CUH_
-#define BITONIC_SORT_CUH_
+#ifndef GPU_BITONIC_SORT_CUH_
+#define GPU_BITONIC_SORT_CUH_
 
 #include <assert.h>
 

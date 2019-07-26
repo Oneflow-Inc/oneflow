@@ -2,8 +2,8 @@
 #define ONEFLOW_CORE_KERNEL_TOP_K_KERNEL_CUH_
 
 #include "oneflow/core/kernel/top_k_kernel.h"
-#include "oneflow/core/kernel/radix_sort_util.cuh"
-#include "oneflow/core/kernel/bitonic_sort.cuh"
+#include "oneflow/core/kernel/gpu_radix_sort.cuh"
+#include "oneflow/core/kernel/gpu_bitonic_sort.cuh"
 
 namespace oneflow {
 
@@ -74,4 +74,4 @@ class Heap {
 
 }  // namespace oneflow
 
-#endif
+#endif  // ONEFLOW_CORE_KERNEL_TOP_K_KERNEL_CUH_

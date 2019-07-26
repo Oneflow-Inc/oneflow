@@ -1,5 +1,5 @@
 #include "oneflow/core/operator/top_k_op.h"
-#include "oneflow/core/kernel/radix_sort_util.h"
+#include "oneflow/core/operator/radix_sort_op_util.h"
 
 namespace oneflow {
 
@@ -36,6 +36,7 @@ void TopKOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlob
       indices->set_data_type(DataType::kInt32);
     }
   } else if (device_type() == DeviceType::kGPU) {
+    int32_t temp_storage_bytes = -1;
     if (instance_size <= 1024 || k == instance_size || k > 128) {
       // fw_buf: indices
       BlobDesc* indices = GetBlobDesc4BnInOp("indices");
@@ -51,9 +52,9 @@ void TopKOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlob
       BlobDesc* temp_storage = GetBlobDesc4BnInOp("temp_storage");
       temp_storage->mut_shape() = Shape({temp_storage_bytes});
       temp_storage->set_data_type(DataType::kChar);
-      TopKOpCtx* top_k_op_ctx = new TopKOpCtx(instance_size, k, temp_storage_bytes);
-      EnrollOpCtx(top_k_op_ctx);
     }
+    TopKOpCtx* top_k_op_ctx = new TopKOpCtx(temp_storage_bytes);
+    EnrollOpCtx(top_k_op_ctx);
   } else {
     UNIMPLEMENTED();
   }
@@ -68,17 +69,10 @@ void TopKOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlob
 void TopKOp::VirtualGenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*,
     KernelConf* kernel_conf, const OpContext* op_ctx) const {
-  auto* top_k_op_ctx = static_cast<const TopKOpCtx*>(op_ctx);
-  int32_t instance_size = top_k_op_ctx->instance_size_;
-  int32_t k = top_k_op_ctx->k_;
-
   kernel_conf->set_data_type(GetBlobDesc4BnInOp("in")->data_type());
-  auto* top_k_kernel_conf = kernel_conf->mutable_top_k_conf();
-  if (device_type() == DeviceType::kGPU
-      && (instance_size <= 1024 || k == instance_size || k > 128)) {
-    top_k_kernel_conf->set_temp_storage_bytes(top_k_op_ctx->temp_storage_bytes_);
-  } else {
-    top_k_kernel_conf->set_temp_storage_bytes(-1);
+  if (device_type() == DeviceType::kGPU) {
+    auto* top_k_op_ctx = static_cast<const TopKOpCtx*>(op_ctx);
+    kernel_conf->mutable_top_k_conf()->set_temp_storage_bytes(top_k_op_ctx->temp_storage_bytes_);
   }
 }
 

@@ -9,10 +9,6 @@ size_t InferTempStorageForSortingPairsAscendingAtCompile(int32_t num_row, int32_
                                                          DataType key_data_type);
 size_t InferTempStorageForSortingPairsDescendingAtCompile(int32_t num_row, int32_t num_col,
                                                           DataType key_data_type);
-// size_t InferTempStorageForSortingKeysAscendingAtCompile(int32_t num_row, int32_t num_col,
-//                                                         DataType key_data_type);
-// size_t InferTempStorageForSortingKeysDescendingAtCompile(int32_t num_row, int32_t num_col,
-//                                                          DataType key_data_type);
 
 }  // namespace oneflow
 
