@@ -108,7 +108,14 @@ void MatmulKernel<device_type, T>::CalcBatchMatMul(DeviceCtx* ctx, const Blob* a
                                         a_dptr, b_dptr, c_dptr, buf_dptr);
 }
 
-ADD_DEFAULT_KERNEL_CREATOR_WITH_GPU_HALF(OperatorConf::kMatmulConf, MatmulKernel,
-                                         FLOATING_DATA_TYPE_SEQ);
+#define REGISTER_MATMUL_KERNEL(dev, dtype)                                     \
+  REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kMatmulConf, dev, dtype, \
+                                        MatmulKernel<dev, dtype>)
+
+REGISTER_MATMUL_KERNEL(DeviceType::kGPU, float);
+REGISTER_MATMUL_KERNEL(DeviceType::kGPU, double);
+REGISTER_MATMUL_KERNEL(DeviceType::kCPU, float);
+REGISTER_MATMUL_KERNEL(DeviceType::kCPU, double);
+REGISTER_MATMUL_KERNEL(DeviceType::kGPU, float16);
 
 }  // namespace oneflow

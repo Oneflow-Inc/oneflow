@@ -1,17 +1,13 @@
 syntax = "proto2";
 package oneflow;
 
+import public "oneflow/core/common/device_type.proto";
+
 message Machine {
   required int64 id = 1;
   required string addr = 2; // domain name or ip
   optional int32 ctrl_port_agent = 3 [default = -1];
   optional int32 data_port_agent = 4 [default = -1];
-}
-
-enum DeviceType {
-  kInvalidDevice = 0;
-  kCPU = 1;
-  kGPU = 2;
 }
 
 message Resource {
