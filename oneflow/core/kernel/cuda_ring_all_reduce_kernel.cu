@@ -94,6 +94,28 @@ struct StoreFunctor<Pack> {
   }
 };
 
+template<typename T, int32_t NUM, int32_t STRIDE, bool BOUND>
+struct BatchFetchFunctor {
+  __device__ __forceinline__ void operator()(T (&a)[NUM], const T* start, const T* bound) {
+#pragma unroll
+    for (int32_t p = 0; p < NUM; ++p) {
+      const T* ptr = start + p * STRIDE;
+      if (BOUND && ptr < bound) { FetchFunctor<T>()(a[p], ptr); }
+    }
+  }
+};
+
+template<typename T, int32_t NUM, int32_t STRIDE, bool BOUND>
+struct BatchStoreFunctor {
+  __device__ __forceinline__ void operator()(T* start, T (&a)[NUM], const T* bound) {
+#pragma unroll
+    for (int32_t p = 0; p < NUM; ++p) {
+      const T* ptr = start + p * STRIDE;
+      if (BOUND && ptr < bound) { StoreFunctor<T>()(ptr, a[p]); }
+    }
+  }
+};
+
 template<ReduceMethod method, typename T, bool RECV, bool SRC, bool SEND, bool DST>
 __device__ void AlignedReduceOrCopy(const int64_t num_elem, const T* recv, const T* src, T* send,
                                     T* dst) {
@@ -108,43 +130,25 @@ __device__ void AlignedReduceOrCopy(const int64_t num_elem, const T* recv, const
   Pack* send_pack_ptr = SEND ? reinterpret_cast<Pack*>(send) + offset : nullptr;
   Pack* dst_pack_ptr = DST ? reinterpret_cast<Pack*>(dst) + offset : nullptr;
   Pack line_recv[NUM_PACK_PER_LINE_PER_THREAD];
-  for (int64_t l = 0; l < num_line; ++l) {
-    if (RECV) {
-#pragma unroll
-      for (int32_t p = 0; p < NUM_PACK_PER_LINE_PER_THREAD; ++p) {
-        FetchFunctor<Pack>()(line_recv[p], recv_pack_ptr + p * NUM_THREAD_PER_WARP);
-      }
-    }
+  using PackBatchFetch =
+      BatchFetchFunctor<Pack, NUM_PACK_PER_LINE_PER_THREAD, NUM_THREAD_PER_WARP, false>;
+  using PackBatchStore = BatchStoreFunctor<Pack, NUM_PACK_PER_LINE_PER_THREAD, NUM_THREAD_PER_WARP,
+                                           false> for (int64_t l = 0; l < num_line; ++l) {
+    if (RECV) { PackBatchFetch()(line_recv, recv_pack_ptr, nullptr); }
     if (SRC) {
       if (!RECV) {
-#pragma unroll
-        for (int32_t p = 0; p < NUM_PACK_PER_LINE_PER_THREAD; ++p) {
-          FetchFunctor<Pack>()(line_recv[p], src_pack_ptr + p * NUM_THREAD_PER_WARP);
-        }
+        PackBatchFetch()(line_recv, src_pack_ptr, nullptr);
       } else {
         Pack line_src[NUM_PACK_PER_LINE_PER_THREAD];
-#pragma unroll
-        for (int32_t p = 0; p < NUM_PACK_PER_LINE_PER_THREAD; ++p) {
-          FetchFunctor<Pack>()(line_src[p], src_pack_ptr + p * NUM_THREAD_PER_WARP);
-        }
+        PackBatchFetch()(line_src, src_pack_ptr, nullptr);
 #pragma unroll
         for (int32_t p = 0; p < NUM_PACK_PER_LINE_PER_THREAD; ++p) {
           line_recv[p] = PackReduceFunctor<method, T>()(line_recv[p], line_src[p]);
         }
       }
     }
-    if (SEND) {
-#pragma unroll
-      for (int32_t p = 0; p < NUM_PACK_PER_LINE_PER_THREAD; ++p) {
-        StoreFunctor<Pack>()(send_pack_ptr + p * NUM_THREAD_PER_WARP, line_recv[p]);
-      }
-    }
-    if (DST) {
-#pragma unroll
-      for (int32_t p = 0; p < NUM_PACK_PER_LINE_PER_THREAD; ++p) {
-        StoreFunctor<Pack>()(dst_pack_ptr + p * NUM_THREAD_PER_WARP, line_recv[p]);
-      }
-    }
+    if (SEND) { PackBatchStore()(send_pack_ptr, line_recv, nullptr); }
+    if (DST) { PackBatchStore()(dst_pack_ptr, line_recv, nullptr); }
     if (RECV) { recv_pack_ptr += NUM_PACK_PER_LINE; }
     if (SRC) { src_pack_ptr += NUM_PACK_PER_LINE; }
     if (SEND) { send_pack_ptr += NUM_PACK_PER_LINE; }
