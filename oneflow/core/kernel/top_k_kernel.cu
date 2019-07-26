@@ -1,15 +1,9 @@
-// #include "oneflow/core/kernel/top_k_kernel.h"
+#include "oneflow/core/kernel/top_k_kernel.cuh"
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/kernel/kernel_util.cuh"
-#include "oneflow/core/kernel/top_k_kernel.cuh"
-#include "oneflow/core/kernel/bitonic_sort.cuh"
-#include "oneflow/core/kernel/radix_sort_util.cuh"
-// #include <cub/cub.cuh>
-
-#include <iostream>
 
 namespace oneflow {
 
@@ -121,27 +115,8 @@ void GpuRadixSortTopK(DeviceCtx* ctx, const T* in, int32_t* indices, int32_t ins
       instance_size <= kCudaThreadsNumPerBlock ? instance_size : kCudaThreadsNumPerBlock;
   RadixSortTopKInitializeKernel<<<instance_num, num_thread, 0, ctx->cuda_stream()>>>(indices,
                                                                                      instance_size);
-
-  cub::CountingInputIterator<int32_t> counting_iter(0);
-  cub::TransformInputIterator<int32_t, SegmentOffsetCreator, cub::CountingInputIterator<int32_t>>
-      segment_offsets_t(counting_iter, SegmentOffsetCreator(instance_size));
-  cudaStream_t cuda_stream = ctx->cuda_stream();
-  auto err = cub::DeviceSegmentedRadixSort::SortPairsDescending(
-      /* d_temp_storage */ temp_storage,
-      /* temp_storage_bytes */ temp_storage_bytes,
-      /* d_keys_in */ in,
-      /* d_keys_out */ sorted_in,
-      /* d_values_in */ indices,
-      /* d_values_out */ sorted_indices,
-      /* num_items */ instance_num * instance_size,
-      /* num_segments */ instance_num,
-      /* d_begin_offsets */ segment_offsets_t,
-      /* d_end_offsets */ segment_offsets_t + 1,
-      /* begin_bit */ 0,
-      /* end_bit */ sizeof(T) * 8,
-      /* stream */ cuda_stream);
-  CudaCheck(err);
-
+  SortPairsDescending(in, indices, instance_num, instance_size, temp_storage, temp_storage_bytes,
+                      sorted_in, sorted_indices, ctx->cuda_stream());
   num_thread = k <= kCudaThreadsNumPerBlock ? k : kCudaThreadsNumPerBlock;
   RadixSortTopKWriteToOutputKernel<<<instance_num, num_thread, 0, ctx->cuda_stream()>>>(
       sorted_indices, instance_size, k, out);

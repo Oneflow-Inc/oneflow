@@ -24,8 +24,8 @@ void SortOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlob
   CHECK_EQ(value->data_type(), DataType::kInt32);
 
   // data_tmp: temp_storage
-  int64_t temp_storage_bytes =
-      InferTempStorageForRadixSort(key->shape().At(0), key->shape().At(1), key->data_type());
+  int64_t temp_storage_bytes = InferTempStorageForSortingPairsDescendingAtCompile(
+      key->shape().At(0), key->shape().At(1), key->data_type());
   BlobDesc* temp_storage = GetBlobDesc4BnInOp("temp_storage");
   temp_storage->set_data_type(DataType::kChar);
   temp_storage->mut_shape() = Shape({temp_storage_bytes});

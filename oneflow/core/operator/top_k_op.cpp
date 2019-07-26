@@ -46,8 +46,8 @@ void TopKOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlob
       // fw_buf: sorted_indices
       *GetBlobDesc4BnInOp("sorted_indices") = *indices;
       // fw_buf: temp_storage
-      int64_t temp_storage_bytes = InferTempStorageForRadixSort(in_shape.elem_cnt() / instance_size,
-                                                                instance_size, in->data_type());
+      int64_t temp_storage_bytes = InferTempStorageForSortingPairsDescendingAtCompile(
+          in_shape.elem_cnt() / instance_size, instance_size, in->data_type());
       BlobDesc* temp_storage = GetBlobDesc4BnInOp("temp_storage");
       temp_storage->mut_shape() = Shape({temp_storage_bytes});
       temp_storage->set_data_type(DataType::kChar);

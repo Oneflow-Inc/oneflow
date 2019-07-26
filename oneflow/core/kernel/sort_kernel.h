@@ -2,7 +2,6 @@
 #define ONEFLOW_CORE_OPERATOR_SORT_KERNEL_OP_H_
 
 #include "oneflow/core/kernel/kernel.h"
-#include "oneflow/core/kernel/bbox_util.h"
 
 namespace oneflow {
 

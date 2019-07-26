@@ -5,7 +5,14 @@
 
 namespace oneflow {
 
-size_t InferTempStorageForRadixSort(int32_t num_row, int32_t num_col, DataType data_type);
+size_t InferTempStorageForSortingPairsAscendingAtCompile(int32_t num_row, int32_t num_col,
+                                                         DataType key_data_type);
+size_t InferTempStorageForSortingPairsDescendingAtCompile(int32_t num_row, int32_t num_col,
+                                                          DataType key_data_type);
+// size_t InferTempStorageForSortingKeysAscendingAtCompile(int32_t num_row, int32_t num_col,
+//                                                         DataType key_data_type);
+// size_t InferTempStorageForSortingKeysDescendingAtCompile(int32_t num_row, int32_t num_col,
+//                                                          DataType key_data_type);
 
 }  // namespace oneflow
 

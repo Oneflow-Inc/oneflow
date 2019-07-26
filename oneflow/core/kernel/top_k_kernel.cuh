@@ -3,7 +3,7 @@
 
 #include "oneflow/core/kernel/top_k_kernel.h"
 #include "oneflow/core/kernel/radix_sort_util.cuh"
-#include <cub/cub.cuh>
+#include "oneflow/core/kernel/bitonic_sort.cuh"
 
 namespace oneflow {
 
