@@ -3,6 +3,10 @@ import numpy as np
 import torch
 import math
 
+config = flow.ConfigProtoBuilder()
+config.gpu_device_num(1)
+flow.init(config)
+
 jobs = []
 @flow.append_func_to_list(jobs)
 def SigmoidJob(x = flow.val((10,))):
@@ -12,10 +16,7 @@ def SigmoidJob(x = flow.val((10,))):
 
 x = np.array(range(-5,5), dtype=np.float32)
 
-config = flow.ConfigProtoBuilder()
-config.gpu_device_num(1)
-
-with flow.Session(jobs, config) as sess:
+with flow.Session(jobs) as sess:
     a = sess.run(SigmoidJob, x).get()
 
 b = torch.sigmoid(torch.Tensor(x))
