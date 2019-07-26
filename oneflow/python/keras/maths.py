@@ -23,7 +23,6 @@ def matmul( a,
     assert adjoint_b == False
     assert a_is_sparse == False
     assert b_is_sparse == False
-    assert name == None
 
     op_conf = op_conf_util.OperatorConf()
     op_conf.name = id_util.UniqueStr('Relu_')
