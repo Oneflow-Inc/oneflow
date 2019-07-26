@@ -10,6 +10,7 @@
 #include "oneflow/core/job/oneflow.h"
 #include "oneflow/core/control/cluster_control.pb.h"
 #include "oneflow/core/control/ctrl_client.h"
+#include "oneflow/core/job/runtime_buffer_managers_scope.h"
 #include "oneflow/core/job/runtime_buffers_scope.h"
 #include "oneflow/core/control/cluster_control.h"
 
@@ -17,24 +18,24 @@ void InitBySerializedConfigProto(const std::string& config_proto_str) {
   using namespace oneflow;
   ConfigProto config_proto;
   CHECK(google::protobuf::TextFormat::ParseFromString(config_proto_str, &config_proto));
+  CHECK_ISNULL(Global<EnvironmentObjectsScope>::Get());
+  // Global<T>::New is not allowed to be called here
+  // because glog is not constructed yet and LOG(INFO) has bad bahavior
+  Global<EnvironmentObjectsScope>::SetAllocated(new EnvironmentObjectsScope(config_proto));
+  LOG(INFO) << "NewGlobal " << typeid(EnvironmentObjectsScope).name();
   if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
     Global<CtrlClient>::Get()->PushKV("master_config_proto", config_proto);
   } else {
     ConfigProto master_config_proto;
     Global<CtrlClient>::Get()->PullKV("master_config_proto", &master_config_proto);
     CHECK(PbMd().Equals(config_proto, master_config_proto));
-  }
-  CHECK_ISNULL(Global<EnvironmentObjectsScope>::Get());
-  // Global<T>::New is not allowed to be called here
-  // because glog is not constructed yet and LOG(INFO) has bad bahavior
-  Global<EnvironmentObjectsScope>::SetAllocated(new EnvironmentObjectsScope(config_proto));
-  LOG(INFO) << "NewGlobal " << typeid(EnvironmentObjectsScope).name();
-  if (Global<MachineCtx>::Get()->IsThisMachineMaster()) { return; }
-  while (true) {
-    ClusterControl::WorkerSendAckAndExitIfReceiveHalt();
-    JobSet job_set;
-    Global<CtrlClient>::Get()->PullKV("session_job_set", &job_set);
-    { Oneflow oneflow(job_set); }
+
+    while (true) {
+      ClusterControl::WorkerSendAckAndExitIfReceiveHalt();
+      JobSet job_set;
+      Global<CtrlClient>::Get()->PullKV("session_job_set", &job_set);
+      { Oneflow oneflow(job_set); }
+    }
   }
 }
 
@@ -46,6 +47,7 @@ void InitGlobalOneflowBySerializedJobSet(const std::string& job_set_str) {
   CHECK(google::protobuf::TextFormat::ParseFromString(job_set_str, &job_set));
   CHECK_ISNULL(Global<Oneflow>::Get());
   Global<CtrlClient>::Get()->PushKV("session_job_set", job_set);
+  Global<RuntimeBufferManagersScope>::New();
   Global<Oneflow>::New(job_set);
   Global<RuntimeBuffersScope>::New();
 }
@@ -81,6 +83,15 @@ void DestroyGlobalOneflow() {
   Global<RuntimeBuffersScope>::Delete();
   CHECK_NOTNULL(Global<Oneflow>::Get());
   Global<Oneflow>::Delete();
+  Global<RuntimeBufferManagersScope>::Delete();
+}
+
+void DestroyGlobalEnvironment() {
+  using namespace oneflow;
+  CHECK_NOTNULL(Global<EnvironmentObjectsScope>::Get());
+  bool is_master = Global<MachineCtx>::Get()->IsThisMachineMaster();
+  if (is_master) { ClusterControl::MasterSendHaltAndWaitAck(); }
+  Global<EnvironmentObjectsScope>::Delete();
 }
 
 int Ofblob_GetDataType(uint64_t of_blob_ptr) {
@@ -110,9 +121,7 @@ struct GlobalChecker final {
   ~GlobalChecker() {
     if (Global<Oneflow>::Get() != nullptr) { LOG(FATAL) << "global oneflow is not destroyed yet"; }
     if (Global<EnvironmentObjectsScope>::Get() != nullptr) {
-      bool is_master = Global<MachineCtx>::Get()->IsThisMachineMaster();
-      if (is_master) { ClusterControl::MasterSendHaltAndWaitAck(); }
-      Global<EnvironmentObjectsScope>::Delete();
+      LOG(FATAL) << "global environment is not destroyed yet";
     }
   }
 };
