@@ -7,10 +7,10 @@ void TopKOp::InitFromOpConf() {
   CHECK(op_conf().has_top_k_conf());
   EnrollInputBn("in", false);
   if (device_type() == DeviceType::kCPU && op_conf().top_k_conf().k() > 1) {
-    if (op_conf().top_k_conf().k() > 1) { EnrollFwBufBn("cpu_indices"); }
+    if (op_conf().top_k_conf().k() > 1) { EnrollFwBufBn("indices"); }
   } else if (device_type() == DeviceType::kGPU) {
     EnrollFwBufBn("temp_storage");
-    EnrollFwBufBn("gpu_indices");
+    EnrollFwBufBn("indices");
     EnrollFwBufBn("sorted_in");
     EnrollFwBufBn("sorted_indices");
   }
@@ -23,61 +23,60 @@ void TopKOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlob
   // input
   const BlobDesc* in = GetBlobDesc4BnInOp("in");
   const Shape in_shape = in->shape();
-  CHECK_LE(in_shape.elem_cnt(), GetMaxVal<int32_t>());
   const int32_t instance_size = in_shape.dim_vec().back();
-  const TopKOpConf& conf = op_conf().top_k_conf();
-  CHECK_GE(conf.k(), 1);
-  CHECK_LE(conf.k(), instance_size);
+  const int32_t k = op_conf().top_k_conf().k();
+  CHECK_GE(k, 1);
+  CHECK_LE(k, instance_size);
 
-  if (device_type() == DeviceType::kCPU && conf.k() > 1) {
-    // fw_buf: cpu_indices
-    BlobDesc* cpu_indices = GetBlobDesc4BnInOp("cpu_indices");
-    cpu_indices->mut_shape() = Shape(in_shape);
-    cpu_indices->set_data_type(DataType::kInt32);
-  }
-  if (device_type() == DeviceType::kGPU
-      && (instance_size <= 1000 || conf.k() == instance_size || conf.k() > 512)) {
-    // fw_buf: gpu_indices
-    BlobDesc* gpu_indices = GetBlobDesc4BnInOp("gpu_indices");
-    gpu_indices->mut_shape() = Shape(in_shape);
-    gpu_indices->set_data_type(DataType::kInt32);
-
-    // fw_buf: sorted_in
-    *GetBlobDesc4BnInOp("sorted_in") = *in;
-
-    // fw_buf: sorted_indices
-    *GetBlobDesc4BnInOp("sorted_indices") = *gpu_indices;
-
-    // fw_buf: temp_storage
-    int64_t temp_storage_bytes = InferTempStorageForRadixSort(
-        in_shape.Count(0, in_shape.NumAxes() - 1), in_shape.At(1), in->data_type());
-    BlobDesc* temp_storage = GetBlobDesc4BnInOp("temp_storage");
-    temp_storage->set_data_type(DataType::kChar);
-    temp_storage->mut_shape() = Shape({temp_storage_bytes});
-    TopKOpCtx* top_k_op_ctx = new TopKOpCtx(temp_storage_bytes);
-    EnrollOpCtx(top_k_op_ctx);
+  if (device_type() == DeviceType::kCPU) {
+    if (k > 1) {
+      // fw_buf: indices
+      BlobDesc* indices = GetBlobDesc4BnInOp("indices");
+      indices->mut_shape() = in_shape;
+      indices->set_data_type(DataType::kInt32);
+    }
+  } else if (device_type() == DeviceType::kGPU) {
+    if (instance_size <= 1024 || k == instance_size || k > 128) {
+      // fw_buf: indices
+      BlobDesc* indices = GetBlobDesc4BnInOp("indices");
+      indices->mut_shape() = in_shape;
+      indices->set_data_type(DataType::kInt32);
+      // fw_buf: sorted_in
+      *GetBlobDesc4BnInOp("sorted_in") = *in;
+      // fw_buf: sorted_indices
+      *GetBlobDesc4BnInOp("sorted_indices") = *indices;
+      // fw_buf: temp_storage
+      int64_t temp_storage_bytes = InferTempStorageForRadixSort(in_shape.elem_cnt() / instance_size,
+                                                                instance_size, in->data_type());
+      BlobDesc* temp_storage = GetBlobDesc4BnInOp("temp_storage");
+      temp_storage->mut_shape() = Shape({temp_storage_bytes});
+      temp_storage->set_data_type(DataType::kChar);
+      TopKOpCtx* top_k_op_ctx = new TopKOpCtx(instance_size, k, temp_storage_bytes);
+      EnrollOpCtx(top_k_op_ctx);
+    }
+  } else {
+    UNIMPLEMENTED();
   }
 
   // output
   BlobDesc* out = GetBlobDesc4BnInOp("out");
   *out = *in;
-  out->mut_shape().Set(in_shape.NumAxes() - 1, conf.k());
+  out->mut_shape().Set(in_shape.NumAxes() - 1, k);
   out->set_data_type(DataType::kInt32);
 }
 
 void TopKOp::VirtualGenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*,
     KernelConf* kernel_conf, const OpContext* op_ctx) const {
-  const BlobDesc* in = GetBlobDesc4BnInOp("in");
-  const TopKOpConf& top_k_op_conf = op_conf().top_k_conf();
-  auto* top_k_kernel_conf = kernel_conf->mutable_top_k_conf();
-  const int32_t instance_size = in->shape().dim_vec().back();
+  auto* top_k_op_ctx = static_cast<const TopKOpCtx*>(op_ctx);
+  int32_t instance_size = top_k_op_ctx->instance_size_;
+  int32_t k = top_k_op_ctx->k_;
 
-  kernel_conf->set_data_type(in->data_type());
+  kernel_conf->set_data_type(GetBlobDesc4BnInOp("in")->data_type());
+  auto* top_k_kernel_conf = kernel_conf->mutable_top_k_conf();
   if (device_type() == DeviceType::kGPU
-      && (instance_size <= 1000 || top_k_op_conf.k() == instance_size || top_k_op_conf.k() > 512)) {
-    auto* top_k_op_ctx = static_cast<const TopKOpCtx*>(op_ctx);
-    top_k_kernel_conf->set_temp_storage_bytes(top_k_op_ctx->GetTempStorageBytes());
+      && (instance_size <= 1024 || k == instance_size || k > 128)) {
+    top_k_kernel_conf->set_temp_storage_bytes(top_k_op_ctx->temp_storage_bytes_);
   } else {
     top_k_kernel_conf->set_temp_storage_bytes(-1);
   }

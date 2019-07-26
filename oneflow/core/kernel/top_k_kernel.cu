@@ -85,8 +85,8 @@ __global__ void RadixSortTopKWriteToOutputKernel(const int32_t* sorted_indices_p
 }  // namespace
 
 template<typename T>
-void GpuHeapSelectionTopK(DeviceCtx* ctx, const T* in, const int32_t instance_num,
-                          const int32_t instance_size, const int32_t k, int32_t* out) {
+void GpuHeapSelectionTopK(DeviceCtx* ctx, const T* in, int32_t instance_num, int32_t instance_size,
+                          int32_t k, int32_t* out) {
   // Use as many heaps as possible (# of heaps == # of threads in thread block).
   // Limitation 1, max shared memory: 48KB
   // We also need heap_size * num_heap to be pow-of-2 which is necessary for bitonic sort
@@ -106,17 +106,17 @@ void GpuHeapSelectionTopK(DeviceCtx* ctx, const T* in, const int32_t instance_nu
       in, instance_num, instance_size, k, heap_size, GetMaxVal<int32_t>(), GetMinVal<T>(), out);
 }
 
-#define INSTANTIATE_GPU_HEAP_SELECTION_TOP_K(T, type_proto)                                       \
-  template void GpuHeapSelectionTopK<T>(DeviceCtx * ctx, const T* in, const int32_t instance_num, \
-                                        const int32_t instance_size, const int32_t k,             \
-                                        int32_t* out);
+#define INSTANTIATE_GPU_HEAP_SELECTION_TOP_K(T, type_proto)                                 \
+  template void GpuHeapSelectionTopK<T>(DeviceCtx * ctx, const T* in, int32_t instance_num, \
+                                        int32_t instance_size, int32_t k, int32_t* out);
 OF_PP_FOR_EACH_TUPLE(INSTANTIATE_GPU_HEAP_SELECTION_TOP_K, ARITHMETIC_DATA_TYPE_SEQ)
 #undef INSTANTIATE_GPU_HEAP_SELECTION_TOP_K
 
 template<typename T>
-void GpuRadixSortTopK(DeviceCtx* ctx, const T* in, int32_t instance_num, int32_t instance_size,
-                      const int32_t k, int32_t* indices, T* sorted_in, int32_t* sorted_indices,
-                      void* temp_storage, size_t temp_storage_bytes, int32_t* out) {
+void GpuRadixSortTopK(DeviceCtx* ctx, const T* in, int32_t* indices, int32_t instance_num,
+                      int32_t instance_size, int32_t k, void* temp_storage,
+                      size_t temp_storage_bytes, T* sorted_in, int32_t* sorted_indices,
+                      int32_t* out) {
   int32_t num_thread =
       instance_size <= kCudaThreadsNumPerBlock ? instance_size : kCudaThreadsNumPerBlock;
   RadixSortTopKInitializeKernel<<<instance_num, num_thread, 0, ctx->cuda_stream()>>>(indices,
@@ -147,11 +147,11 @@ void GpuRadixSortTopK(DeviceCtx* ctx, const T* in, int32_t instance_num, int32_t
       sorted_indices, instance_size, k, out);
 }
 
-#define INSTANTIATE_GPU_RADIX_SORT_TOP_K(T, type_proto)                                        \
-  template void GpuRadixSortTopK<T>(DeviceCtx * ctx, const T* in, int32_t instance_num,        \
-                                    int32_t instance_size, const int32_t k, int32_t* indices,  \
-                                    T* sorted_in, int32_t* sorted_indices, void* temp_storage, \
-                                    size_t temp_storage_bytes, int32_t* out);
+#define INSTANTIATE_GPU_RADIX_SORT_TOP_K(T, type_proto)                                          \
+  template void GpuRadixSortTopK<T>(DeviceCtx * ctx, const T* in, int32_t* indices,              \
+                                    int32_t instance_num, int32_t instance_size, int32_t k,      \
+                                    void* temp_storage, size_t temp_storage_bytes, T* sorted_in, \
+                                    int32_t* sorted_indices, int32_t* out);
 OF_PP_FOR_EACH_TUPLE(INSTANTIATE_GPU_RADIX_SORT_TOP_K, ARITHMETIC_DATA_TYPE_SEQ)
 #undef INSTANTIATE_GPU_RADIX_SORT_TOP_K
 
