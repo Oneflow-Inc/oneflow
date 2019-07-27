@@ -14,9 +14,9 @@ void CudaRingAllReduceKernel<T>::Forward(
   const int64_t step_id = other_ctx.second;
   const MultiRingAllReduceKernelConf& conf = kernel_conf().multi_ring_all_reduce_conf();
   CudaRingAllReduceArg<T> arg{};
-  arg.num_rings = 2;
-  CHECK_GT(arg.num_rings, 0);
-  CHECK_LE(arg.num_rings, CUDA_RING_ALL_REDUCE_MAX_NUM_RINGS);
+  arg.num_links = 2;
+  CHECK_GT(arg.num_links, 0);
+  CHECK_LE(arg.num_links, CUDA_RING_ALL_REDUCE_MAX_NUM_RINGS);
   const Blob* in = BnInOp2Blob("in");
   Blob* out = BnInOp2Blob("out");
   const int32_t num_step = conf.ring_conf(ring_id).step_conf_size();

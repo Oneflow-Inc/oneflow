@@ -9,7 +9,7 @@ constexpr int32_t CUDA_RING_ALL_REDUCE_MAX_NUM_RINGS = 8;
 
 template<typename T>
 struct CudaRingAllReduceArg {
-  int32_t num_rings;
+  int32_t num_links;
   T* send[CUDA_RING_ALL_REDUCE_MAX_NUM_RINGS];
   const T* recv[CUDA_RING_ALL_REDUCE_MAX_NUM_RINGS];
   T* dst[CUDA_RING_ALL_REDUCE_MAX_NUM_RINGS];

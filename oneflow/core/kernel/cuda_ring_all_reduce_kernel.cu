@@ -15,14 +15,9 @@ constexpr int32_t NUM_WARP_PER_BLOCK = 8;
 constexpr int32_t NUM_THREAD_PER_WARP = 32;
 constexpr int32_t NUM_THREAD = NUM_THREAD_PER_WARP * NUM_WARP_PER_BLOCK;
 constexpr int32_t NUM_PACK_PER_LINE_PER_THREAD = 8;
-constexpr int32_t NUM_PACK_PER_LINE_PER_WARP = NUM_PACK_PER_LINE_PER_THREAD * NUM_THREAD_PER_WARP;
-constexpr int32_t NUM_PACK_PER_LINE = NUM_PACK_PER_LINE_PER_WARP * NUM_WARP_PER_BLOCK;
-constexpr int32_t LINE_SIZE = NUM_PACK_PER_LINE * PACK_SIZE;
+constexpr int32_t NUM_BLOCK_PER_LINK = 2;
 
-template<typename T>
-__forceinline__ __device__ T DivUp(const T n, const T val) {
-  return (n + val - 1) / val;
-}
+__forceinline__ __device__ int64_t DivUp(int64_t n, int64_t val) { return (n + val - 1) / val; }
 
 template<ReduceMethod method, typename T>
 struct ReduceFunctor {
@@ -148,8 +143,8 @@ __device__ __forceinline__ T* PtrOffsetOrNull(T* ptr, const size_t offset) {
 
 template<ReduceMethod method, typename T, typename P, int32_t BATCH, bool BOUND, bool RECV,
          bool SRC, bool SEND, bool DST>
-__device__ void BatchPackReduceOrCopy(const int64_t num_elem, const T* recv, const T* src, T* send,
-                                      T* dst) {
+__device__ __forceinline__ void BatchPackReduceOrCopy(const int64_t num_elem, const T* recv,
+                                                      const T* src, T* send, T* dst) {
   constexpr int32_t NUM_PACK_PER_BATCH_PER_WARP = BATCH * NUM_THREAD_PER_WARP;
   constexpr int32_t NUM_ELEM_PER_PACK = sizeof(P) / sizeof(T);
   constexpr int32_t NUM_PACK_PER_BATCH_PER_BLOCK = NUM_PACK_PER_BATCH_PER_WARP * NUM_WARP_PER_BLOCK;
@@ -160,7 +155,7 @@ __device__ void BatchPackReduceOrCopy(const int64_t num_elem, const T* recv, con
   assert(num_elem % NUM_ELEM_PER_PACK == 0);
   const int64_t num_pack = num_elem / NUM_ELEM_PER_PACK;
   if (!BOUND) { assert(num_pack % NUM_PACK_PER_BATCH_PER_BLOCK == 0); }
-  const int64_t num_batch = DivUp<int64_t>(num_pack, NUM_PACK_PER_BATCH_PER_BLOCK);
+  const int64_t num_batch = DivUp(num_pack, NUM_PACK_PER_BATCH_PER_BLOCK);
   const P* recv_bound = PtrOffsetOrNull<const P, RECV>(reinterpret_cast<const P*>(recv), num_pack);
   const P* src_bound = PtrOffsetOrNull<const P, SRC>(reinterpret_cast<const P*>(src), num_pack);
   const P* send_bound = PtrOffsetOrNull<P, SEND>(reinterpret_cast<P*>(send), num_pack);
@@ -194,74 +189,62 @@ __device__ void BatchPackReduceOrCopy(const int64_t num_elem, const T* recv, con
 }
 
 template<ReduceMethod method, typename T, bool RECV, bool SRC, bool SEND, bool DST>
-__device__ void AlignedReduceOrCopy(const int64_t num_elem, const T* recv, const T* src, T* send,
-                                    T* dst) {
+__device__ __forceinline__ void ReduceOrCopy(const int64_t num_elem, const T* recv, const T* src,
+                                             T* send, T* dst) {
   BatchPackReduceOrCopy<method, T, Pack, NUM_PACK_PER_LINE_PER_THREAD, false, RECV, SRC, SEND, DST>(
       num_elem, recv, src, send, dst);
 }
 
-template<typename T>
-__global__ void SendGpu(CudaRingAllReduceArg<T> arg) {
+template<ReduceMethod method, typename T, bool RECV, bool SRC, bool SEND, bool DST>
+__global__ void GenericOp(CudaRingAllReduceArg<T> arg) {
   const int32_t block_id = blockIdx.x;
-  AlignedReduceOrCopy<ReduceMethod::kSum, T, false, true, true, false>(
-      arg.num_elem[block_id], nullptr, arg.src[block_id], arg.send[block_id], nullptr);
+  const int32_t link_id = block_id / NUM_BLOCK_PER_LINK;
+  const int32_t block_id_in_link = block_id % NUM_BLOCK_PER_LINK;
+  const int64_t num_elem_per_block = DivUp(arg.num_elem[link_id], NUM_BLOCK_PER_LINK);
+  const int64_t block_offset = block_id_in_link * num_elem_per_block;
+  const int64_t block_num_elem =
+      min(num_elem_per_block, max(0, arg.num_elem[link_id] - block_offset));
+  if (block_num_elem > 0) {
+    ReduceOrCopy<method, T, RECV, SRC, SEND, DST>(
+        block_num_elem, PtrOffsetOrNull<const T, RECV>(arg.recv[link_id], block_offset),
+        PtrOffsetOrNull<const T, SRC>(arg.src[link_id], block_offset),
+        PtrOffsetOrNull<T, SEND>(arg.send[link_id], block_offset),
+        PtrOffsetOrNull<T, DST>(arg.dst[link_id], block_offset));
+  }
 }
 
-template<typename T>
-__global__ void RecvReduceSendGpu(CudaRingAllReduceArg<T> arg) {
-  const int32_t block_id = blockIdx.x;
-  AlignedReduceOrCopy<ReduceMethod::kSum, T, true, true, true, false>(
-      arg.num_elem[block_id], arg.recv[block_id], arg.src[block_id], arg.send[block_id], nullptr);
-}
-
-template<typename T>
-__global__ void RecvReduceSendCopyGpu(CudaRingAllReduceArg<T> arg) {
-  const int32_t block_id = blockIdx.x;
-  AlignedReduceOrCopy<ReduceMethod::kSum, T, true, true, true, true>(
-      arg.num_elem[block_id], arg.recv[block_id], arg.src[block_id], arg.send[block_id],
-      arg.dst[block_id]);
-}
-
-template<typename T>
-__global__ void RecvSendCopyGpu(CudaRingAllReduceArg<T> arg) {
-  const int32_t block_id = blockIdx.x;
-  AlignedReduceOrCopy<ReduceMethod::kSum, T, true, false, true, true>(
-      arg.num_elem[block_id], arg.recv[block_id], nullptr, arg.send[block_id], arg.dst[block_id]);
-}
-
-template<typename T>
-__global__ void RecvCopyGpu(CudaRingAllReduceArg<T> arg) {
-  const int32_t block_id = blockIdx.x;
-  AlignedReduceOrCopy<ReduceMethod::kSum, T, true, false, false, true>(
-      arg.num_elem[block_id], arg.recv[block_id], nullptr, nullptr, arg.dst[block_id]);
+template<ReduceMethod method, typename T, bool RECV, bool SRC, bool SEND, bool DST>
+void LaunchGenericOp(DeviceCtx* ctx, const CudaRingAllReduceArg<T>& arg) {
+  GenericOp<method, T, RECV, SRC, SEND, DST>
+      <<<arg.num_links * NUM_BLOCK_PER_LINK, NUM_THREAD, 0, ctx->cuda_stream()>>>(arg);
 }
 
 }  // namespace
 
 template<typename T>
 void CudaRingAllReduceKernelUtil<T>::Send(DeviceCtx* ctx, CudaRingAllReduceArg<T> arg) {
-  SendGpu<<<arg.num_rings, NUM_THREAD, 0, ctx->cuda_stream()>>>(arg);
+  LaunchGenericOp<ReduceMethod::kSum, T, false, true, true, false>(ctx, arg);
 }
 
 template<typename T>
 void CudaRingAllReduceKernelUtil<T>::RecvReduceSend(DeviceCtx* ctx, CudaRingAllReduceArg<T> arg) {
-  RecvReduceSendGpu<<<arg.num_rings, NUM_THREAD, 0, ctx->cuda_stream()>>>(arg);
+  LaunchGenericOp<ReduceMethod::kSum, T, true, true, true, false>(ctx, arg);
 }
 
 template<typename T>
 void CudaRingAllReduceKernelUtil<T>::RecvReduceSendCopy(DeviceCtx* ctx,
                                                         CudaRingAllReduceArg<T> arg) {
-  RecvReduceSendCopyGpu<<<arg.num_rings, NUM_THREAD, 0, ctx->cuda_stream()>>>(arg);
+  LaunchGenericOp<ReduceMethod::kSum, T, true, true, true, true>(ctx, arg);
 }
 
 template<typename T>
 void CudaRingAllReduceKernelUtil<T>::RecvSendCopy(DeviceCtx* ctx, CudaRingAllReduceArg<T> arg) {
-  RecvSendCopyGpu<<<arg.num_rings, NUM_THREAD, 0, ctx->cuda_stream()>>>(arg);
+  LaunchGenericOp<ReduceMethod::kSum, T, true, false, true, true>(ctx, arg);
 }
 
 template<typename T>
 void CudaRingAllReduceKernelUtil<T>::RecvCopy(DeviceCtx* ctx, CudaRingAllReduceArg<T> arg) {
-  RecvCopyGpu<<<arg.num_rings, NUM_THREAD, 0, ctx->cuda_stream()>>>(arg);
+  LaunchGenericOp<ReduceMethod::kSum, T, true, false, false, true>(ctx, arg);
 }
 
 #define INSTANTIATE_CUDA_RING_ALL_REDUCE_KERNEL_UTIL(type_cpp, type_proto) \
