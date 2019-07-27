@@ -193,16 +193,16 @@ template<ReduceMethod method, typename T, int32_t NUM_IN, int32_t NUM_OUT>
 __device__ __forceinline__ void ReduceOrCopy(const int64_t num_elem, const T* in[NUM_IN],
                                              T* out[NUM_OUT]) {
   bool all_same_aligned = true;
-  int32_t align = static_cast<uintptr_t>(in[0]) % sizeof(Pack);
+  int32_t align = reinterpret_cast<uintptr_t>(in[0]) % sizeof(Pack);
   for (int32_t i = 1; i < NUM_IN; ++i) {
-    if (static_cast<uintptr_t>(in[i]) % sizeof(Pack) != align) {
+    if (reinterpret_cast<uintptr_t>(in[i]) % sizeof(Pack) != align) {
       all_same_aligned = false;
       break;
     }
   }
   if (all_same_aligned) {
     for (int32_t i = 0; i < NUM_OUT; ++i) {
-      if (static_cast<uintptr_t>(out[i]) % sizeof(Pack) != align) {
+      if (reinterpret_cast<uintptr_t>(out[i]) % sizeof(Pack) != align) {
         all_same_aligned = false;
         break;
       }
