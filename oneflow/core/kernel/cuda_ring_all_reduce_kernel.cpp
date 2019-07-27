@@ -21,7 +21,7 @@ void CudaRingAllReduceKernel<T>::Forward(
   Blob* out = BnInOp2Blob("out");
   const int32_t num_step = conf.ring_conf(ring_id).step_conf_size();
   const Range range = Range(conf.ring_conf(ring_id).step_conf(step_id).data_range());
-  params.links[0].num_elem = range.size() / 2;
+  params.links[0].num_elem = range.size();
   Blob* send = BnInOp2Blob(GenRepeatedBn("send", ring_id));
   params.links[0].send = send != nullptr ? send->mut_dptr<T>() : nullptr;
   const Blob* recv = BnInOp2Blob(GenRepeatedBn("recv", ring_id));
