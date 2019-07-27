@@ -159,14 +159,14 @@ __device__ __forceinline__ void BatchPackReduceOrCopy(const int64_t num_elem, co
   const P* in_pack[NUM_IN];
   const P* in_bound[NUM_IN];
   for (int32_t i = 0; i < NUM_IN; ++i) {
-    in_pack[i] = in[i] + offset;
-    in_bound[i] = in[i] + num_pack;
+    in_pack[i] = reinterpret_cast<const P*>(in[i]) + offset;
+    in_bound[i] = reinterpret_cast<const P*>(in[i]) + num_pack;
   }
   P* out_pack[NUM_OUT];
   const P* out_bound[NUM_OUT];
   for (int32_t i = 0; i < NUM_OUT; ++i) {
-    out_pack[i] = out[i] + offset;
-    out_bound[i] = out[i] + num_pack;
+    out_pack[i] = reinterpret_cast<P*>(out[i]) + offset;
+    out_bound[i] = reinterpret_cast<const P*>(out[i]) + num_pack;
   }
   P batch[BATCH];
   using PackBatchFetch = BatchFetchFunctor<P, BATCH, NUM_THREAD_PER_WARP, BOUND>;
