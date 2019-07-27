@@ -32,27 +32,28 @@ void TopKOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlob
     if (k > 1) {
       // fw_buf: indices
       BlobDesc* indices = GetBlobDesc4BnInOp("indices");
-      indices->mut_shape() = in_shape;
+      *indices = *in;
       indices->set_data_type(DataType::kInt32);
     }
   } else if (device_type() == DeviceType::kGPU) {
-    int32_t temp_storage_bytes = -1;
-    if (instance_size <= 1024 || k == instance_size || k > 128) {
-      // fw_buf: indices
-      BlobDesc* indices = GetBlobDesc4BnInOp("indices");
-      indices->mut_shape() = in_shape;
-      indices->set_data_type(DataType::kInt32);
-      // fw_buf: sorted_in
-      *GetBlobDesc4BnInOp("sorted_in") = *in;
-      // fw_buf: sorted_indices
-      *GetBlobDesc4BnInOp("sorted_indices") = *indices;
-      // fw_buf: temp_storage
-      int64_t temp_storage_bytes = InferTempStorageForSortingPairsDescendingAtCompile(
-          in_shape.elem_cnt() / instance_size, instance_size, in->data_type());
-      BlobDesc* temp_storage = GetBlobDesc4BnInOp("temp_storage");
-      temp_storage->mut_shape() = Shape({temp_storage_bytes});
-      temp_storage->set_data_type(DataType::kChar);
-    }
+    // indices, sorted_in, sorted_indices, temp_storage blobs are only used in radix sort but not
+    // heap selection sort. Because we can't choose between these two algorithms at compile stage,
+    // so always allocate memory for these blob.
+
+    // fw_buf: indices
+    BlobDesc* indices = GetBlobDesc4BnInOp("indices");
+    *indices = *in;
+    indices->set_data_type(DataType::kInt32);
+    // fw_buf: sorted_in
+    *GetBlobDesc4BnInOp("sorted_in") = *in;
+    // fw_buf: sorted_indices
+    *GetBlobDesc4BnInOp("sorted_indices") = *indices;
+    // fw_buf: temp_storage
+    int64_t temp_storage_bytes = InferTempStorageForSortingPairsDescendingAtCompile(
+        in_shape.elem_cnt() / instance_size, instance_size, in->data_type());
+    BlobDesc* temp_storage = GetBlobDesc4BnInOp("temp_storage");
+    temp_storage->mut_shape() = Shape({temp_storage_bytes});
+    temp_storage->set_data_type(DataType::kChar);
     TopKOpCtx* top_k_op_ctx = new TopKOpCtx(temp_storage_bytes);
     EnrollOpCtx(top_k_op_ctx);
   } else {

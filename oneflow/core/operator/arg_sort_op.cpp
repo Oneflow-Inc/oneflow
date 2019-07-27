@@ -29,6 +29,9 @@ void ArgSortOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetB
     BlobDesc* indices = GetBlobDesc4BnInOp("indices");
     *indices = *in;
     indices->set_data_type(DataType::kInt32);
+    indices->set_has_dim0_valid_num_field(in->has_dim0_valid_num_field());
+    indices->mut_dim0_inner_shape() = Shape({1, in->shape().At(0)});
+    indices->set_has_instance_shape_field(in->has_instance_shape_field());
 
     // fw_buf: temp_storage
     int32_t temp_storage_bytes = -1;

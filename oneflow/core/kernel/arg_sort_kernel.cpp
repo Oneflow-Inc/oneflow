@@ -2,6 +2,32 @@
 
 namespace oneflow {
 
+template<DeviceType device_type, typename T>
+void ArgSortKernel<device_type, T>::ForwardDim0ValidNum(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  const Blob* in_blob = BnInOp2Blob("in");
+  CHECK(in_blob->has_dim0_valid_num_field());
+  const int32_t dim0_valid_num = in_blob->dim0_valid_num(0);
+  if (device_type == DeviceType::kGPU) {
+    BnInOp2Blob("indices")->set_dim0_valid_num(0, dim0_valid_num);
+    BnInOp2Blob("sorted_in")->set_dim0_valid_num(0, dim0_valid_num);
+  }
+  BnInOp2Blob("out")->set_dim0_valid_num(0, dim0_valid_num);
+}
+
+template<DeviceType device_type, typename T>
+void ArgSortKernel<device_type, T>::ForwardInstanceShape(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  const Blob* in_blob = BnInOp2Blob("in");
+  CHECK(in_blob->has_instance_shape_field());
+  const Shape instance_shape = in_blob->instance_shape();
+  if (device_type == DeviceType::kGPU) {
+    BnInOp2Blob("indices")->set_instance_shape(instance_shape);
+    BnInOp2Blob("sorted_in")->set_instance_shape(instance_shape);
+  }
+  BnInOp2Blob("out")->set_instance_shape(instance_shape);
+}
+
 template<typename T>
 void CpuArgSort(DeviceCtx* ctx, const T* in_ptr, int32_t instance_num, int32_t instance_size,
                 std::string dir, int32_t* out_ptr) {

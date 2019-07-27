@@ -42,6 +42,52 @@ void ForwardPartDataContentTopK(const T* in, const Range& range, const int32_t i
 
 }  // namespace
 
+template<DeviceType device_type, typename T>
+void TopKKernel<device_type, T>::ForwardDim0ValidNum(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  const Blob* in_blob = BnInOp2Blob("in");
+  CHECK(in_blob->has_dim0_valid_num_field());
+  const int32_t dim0_valid_num = in_blob->dim0_valid_num(0);
+  int32_t instance_size = in_blob->shape().dim_vec().back();
+  int32_t k = this->op_conf().top_k_conf().k();
+  if (device_type == DeviceType::kCPU) {
+    if (k > 1) { BnInOp2Blob("indices")->set_dim0_valid_num(0, dim0_valid_num); }
+  } else if (device_type == DeviceType::kGPU) {
+    if (instance_size <= 1024 || k == instance_size || k > 128) {
+      BnInOp2Blob("indices")->set_dim0_valid_num(0, dim0_valid_num);
+      BnInOp2Blob("sorted_in")->set_dim0_valid_num(0, dim0_valid_num);
+      BnInOp2Blob("sorted_indices")->set_dim0_valid_num(0, dim0_valid_num);
+    }
+  } else {
+    UNIMPLEMENTED();
+  }
+  BnInOp2Blob("out")->set_dim0_valid_num(0, dim0_valid_num);
+}
+
+template<DeviceType device_type, typename T>
+void TopKKernel<device_type, T>::ForwardInstanceShape(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  const Blob* in_blob = BnInOp2Blob("in");
+  CHECK(in_blob->has_instance_shape_field());
+  std::vector<int64_t> dim_vec = in_blob->instance_shape().dim_vec();
+  int32_t instance_size = dim_vec.back();
+  dim_vec.back() = this->op_conf().top_k_conf().k();
+  const Shape instance_shape = Shape(dim_vec);
+  int32_t k = this->op_conf().top_k_conf().k();
+  if (device_type == DeviceType::kCPU) {
+    if (k > 1) { BnInOp2Blob("indices")->set_instance_shape(instance_shape); }
+  } else if (device_type == DeviceType::kGPU) {
+    if (instance_size <= 1024 || k == instance_size || k > 128) {
+      BnInOp2Blob("indices")->set_instance_shape(instance_shape);
+      BnInOp2Blob("sorted_in")->set_instance_shape(instance_shape);
+      BnInOp2Blob("sorted_indices")->set_instance_shape(instance_shape);
+    }
+  } else {
+    UNIMPLEMENTED();
+  }
+  BnInOp2Blob("out")->set_instance_shape(instance_shape);
+}
+
 template<typename T>
 void CpuTopK(DeviceCtx* ctx, const T* in, int32_t* indices, int32_t instance_num,
              int32_t instance_size, int32_t k, bool sorted, int32_t* out) {
@@ -63,13 +109,6 @@ void CpuTopK(DeviceCtx* ctx, const T* in, int32_t* indices, int32_t instance_num
   }
   bc.WaitUntilCntEqualZero();
 }
-
-// Do not need instantiation here ,remove later
-#define INSTANTIATE_CPU_TOP_K(T, type_proto)                                                     \
-  template void CpuTopK<T>(DeviceCtx * ctx, const T* in, int32_t* indices, int32_t instance_num, \
-                           int32_t instance_size, int32_t k, bool sorted, int32_t* out);
-OF_PP_FOR_EACH_TUPLE(INSTANTIATE_CPU_TOP_K, ARITHMETIC_DATA_TYPE_SEQ)
-#undef INSTANTIATE_CPU_TOP_K
 
 template<DeviceType device_type, typename T>
 void TopKKernel<device_type, T>::ForwardDataContent(

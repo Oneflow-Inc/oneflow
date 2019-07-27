@@ -15,6 +15,7 @@ class SortKernel final : public KernelIf<device_type> {
  private:
   void ForwardDataContent(const KernelCtx&,
                           std::function<Blob*(const std::string&)>) const override;
+  bool HasSameShapeBetweenInOut() const { return true; }
 };
 
 template<typename T>
