@@ -161,12 +161,12 @@ __device__ void BatchPackReduceOrCopy(const int64_t num_elem, const T* recv, con
   const int64_t num_pack = num_elem / NUM_ELEM_PER_PACK;
   if (!BOUND) { assert(num_pack % NUM_PACK_PER_BATCH_PER_BLOCK == 0); }
   const int64_t num_batch = DivUp<int64_t>(num_pack, NUM_PACK_PER_BATCH_PER_BLOCK);
-  const P* recv_bound = PtrOffsetOrNull<P, RECV>(reinterpret_cast<const P*>(recv), num_pack);
-  const P* src_bound = PtrOffsetOrNull<P, SRC>(reinterpret_cast<const P*>(src), num_pack);
+  const P* recv_bound = PtrOffsetOrNull<const P, RECV>(reinterpret_cast<const P*>(recv), num_pack);
+  const P* src_bound = PtrOffsetOrNull<const P, SRC>(reinterpret_cast<const P*>(src), num_pack);
   const P* send_bound = PtrOffsetOrNull<P, SEND>(reinterpret_cast<P*>(send), num_pack);
   const P* dst_bound = PtrOffsetOrNull<P, DST>(reinterpret_cast<P*>(dst), num_pack);
-  const P* recv_pack = PtrOffsetOrNull<P, RECV>(reinterpret_cast<const P*>(recv), offset);
-  const P* src_pack = PtrOffsetOrNull<P, SRC>(reinterpret_cast<const P*>(src), offset);
+  const P* recv_pack = PtrOffsetOrNull<const P, RECV>(reinterpret_cast<const P*>(recv), offset);
+  const P* src_pack = PtrOffsetOrNull<const P, SRC>(reinterpret_cast<const P*>(src), offset);
   P* send_pack = PtrOffsetOrNull<P, SEND>(reinterpret_cast<P*>(send), offset);
   P* dst_pack = PtrOffsetOrNull<P, DST>(reinterpret_cast<P*>(dst), offset);
   P batch[BATCH];
