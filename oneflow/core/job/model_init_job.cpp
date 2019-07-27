@@ -26,13 +26,15 @@ void MakeModelInitJob(Job* job, const std::vector<std::pair<OperatorConf, Parall
     OperatorConf variable_op_conf;
     ParallelConf variable_op_parallel_conf;
     std::tie(variable_op_conf, variable_op_parallel_conf) = variable_op_conf_tuple;
+    CHECK_NE(variable_op_conf.variable_conf().data_type(), DataType::kInvalidDataType);
+    CHECK(variable_op_conf.variable_conf().has_initializer());
 
     OperatorConf model_init_op_conf;
     const std::string model_init_op_name = variable_op_conf.name() + "_model_init";
     model_init_op_conf.set_name(model_init_op_name);
     ModelInitOpConf* model_init_conf = model_init_op_conf.mutable_model_init_conf();
     model_init_conf->set_variable_op_name(variable_op_conf.name());
-    *model_init_conf->mutable_variable_conf() = variable_op_conf.variable_conf();
+    *model_init_conf->mutable_original_variable_conf() = variable_op_conf.variable_conf();
     model_init_conf->set_out("out");
     job_builder.AddOps(master_parallel_conf, {model_init_op_conf});
 
@@ -41,7 +43,12 @@ void MakeModelInitJob(Job* job, const std::vector<std::pair<OperatorConf, Parall
     AssignOpConf* assign_conf = assign_op_conf.mutable_assign_conf();
     assign_conf->set_x(variable_op_conf.name() + "/" + variable_op_conf.variable_conf().out());
     assign_conf->set_value(model_init_op_name + "/out");
-    job_builder.AddOps(variable_op_parallel_conf, {assign_op_conf, variable_op_conf});
+    job_builder.AddOps(variable_op_parallel_conf, {assign_op_conf});
+
+    OperatorConf mirror_variable_op_conf(variable_op_conf);
+    mirror_variable_op_conf.mutable_variable_conf()->clear_tick();
+    mirror_variable_op_conf.clear_ctrl_in_op_name();
+    job_builder.AddOps(variable_op_parallel_conf, {mirror_variable_op_conf});
   }
   auto* job_conf = job->mutable_job_conf();
   const std::string model_init_job_name = "ModelInitJob";

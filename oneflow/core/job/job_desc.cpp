@@ -100,7 +100,7 @@ int32_t JobDesc::NumOfBatchesInSnapshot() const {
 }
 int64_t JobDesc::TotalBatchNum() const { return job_.job_conf().total_batch_num(); }
 const InitializerConf* JobDesc::DefaultInitializerConf() const {
-  return GetMsgPtrFromPbMessage<InitializerConf>(GetTrainConf(job_), "default_initializer_conf");
+  return GetMsgPtrFromPbMessage<InitializerConf>(job_.job_conf(), "default_initializer_conf");
 }
 int32_t JobDesc::PieceNumOfPrintLoss() const {
   return job_.job_conf().train_conf().piece_num_of_print_loss();

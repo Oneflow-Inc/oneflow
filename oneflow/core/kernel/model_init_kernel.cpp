@@ -17,11 +17,12 @@ void ModelInitKernel<device_type, T>::Forward(
   if (snapshot_path == "") {
     std::mt19937* random_seed_gen = static_cast<std::mt19937*>(ctx.other);
     KernelUtil<device_type, T>::InitializeWithProperConf(
-        ctx.device_ctx, this->GetInitializerFromPbMessage(op_conf.variable_conf(), "initializer"),
+        ctx.device_ctx,
+        this->GetInitializerFromPbMessage(op_conf.original_variable_conf(), "initializer"),
         (*random_seed_gen)(), out_blob);
   } else {
     std::string load_path = JoinPath(snapshot_path, op_conf.variable_op_name());
-    std::string model_name = op_conf.variable_conf().model_name();
+    std::string model_name = op_conf.original_variable_conf().model_name();
     KernelUtil<device_type, T>::InitializeWithDir(ctx.device_ctx, part_id_, part_num_, load_path,
                                                   out_blob, model_name, out_blob->shape().At(0),
                                                   out_blob->shape().Count(1));

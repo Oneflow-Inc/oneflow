@@ -8,6 +8,7 @@
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job_completer/all_reduce_add_pass.h"
 #include "oneflow/core/job_completer/group_boxing_by_dst_parallel.h"
+#include "oneflow/core/job_completer/fill_variable_conf.h"
 
 namespace oneflow {
 
@@ -17,7 +18,10 @@ void CheckOpGraph(const OpGraph& op_graph) {
   op_graph.ForEachNode([&](OpNode* op_node) {
     size_t in_cnt = 0;
     op_graph.ForEachDataAndCtrlInNode(op_node, [&](OpNode*) { ++in_cnt; });
-    if (in_cnt == 0) { CHECK(op_node->op().op_conf().has_source_tick_conf()); }
+    if (in_cnt == 0) {
+      CHECK(op_node->op().op_conf().has_source_tick_conf()
+            || op_node->op().op_conf().has_model_init_conf());
+    }
     size_t out_cnt = 0;
     op_graph.ForEachDataAndCtrlOutNode(op_node, [&](OpNode*) { ++out_cnt; });
     if (out_cnt == 0) { CHECK(op_node->op().op_conf().has_sink_tick_conf()); }
@@ -467,6 +471,7 @@ void JobCompleter::Complete(Job* job) const {
   WithOpGraphAndMutJob(job, &ReplaceFacade);
   // complete variable ops
   WithOpGraphAndMutJob(job, &AutoVar);
+  WithOpGraphAndMutJob(job, &FillVariableConf);
   if (GlobalJobDesc().IsPredict()
       && GlobalJobDesc().job_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
     WithOpGraphAndMutJob(job, &TieUpChainHeadersUnReachableFromAnyVariableOps);
