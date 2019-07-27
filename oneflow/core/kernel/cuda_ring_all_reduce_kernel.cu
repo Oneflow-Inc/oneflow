@@ -202,8 +202,7 @@ __global__ void GenericOp(CudaRingAllReduceArg<T> arg) {
   const int32_t block_id_in_link = block_id % NUM_BLOCK_PER_LINK;
   const int64_t num_elem_per_block = DivUp(arg.num_elem[link_id], NUM_BLOCK_PER_LINK);
   const int64_t block_offset = block_id_in_link * num_elem_per_block;
-  const int64_t block_num_elem =
-      min(num_elem_per_block, max(0, arg.num_elem[link_id] - block_offset));
+  const int64_t block_num_elem = min(num_elem_per_block, arg.num_elem[link_id] - block_offset);
   if (block_num_elem > 0) {
     ReduceOrCopy<method, T, RECV, SRC, SEND, DST>(
         block_num_elem, PtrOffsetOrNull<const T, RECV>(arg.recv[link_id], block_offset),
