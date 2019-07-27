@@ -5,8 +5,16 @@ namespace oneflow {
 template<typename T>
 void CpuSort(DeviceCtx* ctx, const T* in_ptr, int32_t instance_num, int32_t instance_size,
              std::string dir, T* out_ptr) {
+  Memcpy<DeviceType::kCPU>(ctx, out_ptr, in_ptr, instance_num * instance_size * sizeof(T));
   FOR_RANGE(int32_t, i, 0, instance_num) {
-    // TODO
+    T* out_ptr_i = out_ptr + i * instance_size;
+    if (dir == "ASCENDING") {
+      std::sort(out_ptr_i, out_ptr_i + instance_size, std::less<T>());
+    } else if (dir == "DESCENDING") {
+      std::sort(out_ptr_i, out_ptr_i + instance_size, std::greater<T>());
+    } else {
+      UNIMPLEMENTED();
+    }
   }
 }
 
