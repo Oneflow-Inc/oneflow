@@ -181,7 +181,7 @@ __device__ void BatchPackReduceOrCopy(const int64_t num_elem, const T* recv, con
       } else {
         P tmp[BATCH];
         PackBatchFetch()(tmp, src_pack, src_bound);
-        BatchPackReduce(batch, batch, tmp);
+        BatchPackReduce()(batch, batch, tmp);
       }
     }
     if (SEND) { PackBatchStore()(send_pack, batch, send_bound); }
@@ -220,7 +220,7 @@ __device__ void AlignedReduceOrCopy(const int64_t num_elem, const T* recv, const
       } else {
         Pack line_src[NUM_PACK_PER_LINE_PER_THREAD];
         PackBatchFetch()(line_src, src_pack_ptr, nullptr);
-        BatchPackReduce(line_recv, line_recv, line_src);
+        BatchPackReduce()(line_recv, line_recv, line_src);
       }
     }
     if (SEND) { PackBatchStore()(send_pack_ptr, line_recv, nullptr); }
