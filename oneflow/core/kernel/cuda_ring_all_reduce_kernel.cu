@@ -100,7 +100,7 @@ struct BatchFetchFunctor {
 #pragma unroll
     for (int32_t p = 0; p < NUM; ++p) {
       const T* ptr = start + p * STRIDE;
-      if (BOUND && ptr < bound) { FetchFunctor<T>()(a[p], ptr); }
+      if (!BOUND || ptr < bound) { FetchFunctor<T>()(a[p], ptr); }
     }
   }
 };
@@ -111,7 +111,7 @@ struct BatchStoreFunctor {
 #pragma unroll
     for (int32_t p = 0; p < NUM; ++p) {
       T* ptr = start + p * STRIDE;
-      if (BOUND && ptr < bound) { StoreFunctor<T>()(ptr, a[p]); }
+      if (!BOUND || ptr < bound) { StoreFunctor<T>()(ptr, a[p]); }
     }
   }
 };
