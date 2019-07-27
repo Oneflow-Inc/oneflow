@@ -196,40 +196,8 @@ __device__ void BatchPackReduceOrCopy(const int64_t num_elem, const T* recv, con
 template<ReduceMethod method, typename T, bool RECV, bool SRC, bool SEND, bool DST>
 __device__ void AlignedReduceOrCopy(const int64_t num_elem, const T* recv, const T* src, T* send,
                                     T* dst) {
-  const int32_t thread_id = threadIdx.x;
-  const int32_t num_elem_per_line = LINE_SIZE / sizeof(T);
-  const int64_t num_line = num_elem / num_elem_per_line;
-  const int32_t warp_id = thread_id / NUM_THREAD_PER_WARP;
-  const int32_t lane_id = thread_id % NUM_THREAD_PER_WARP;
-  const int32_t offset = warp_id * NUM_PACK_PER_LINE_PER_WARP + lane_id;
-  const Pack* recv_pack_ptr = RECV ? reinterpret_cast<const Pack*>(recv) + offset : nullptr;
-  const Pack* src_pack_ptr = SRC ? reinterpret_cast<const Pack*>(src) + offset : nullptr;
-  Pack* send_pack_ptr = SEND ? reinterpret_cast<Pack*>(send) + offset : nullptr;
-  Pack* dst_pack_ptr = DST ? reinterpret_cast<Pack*>(dst) + offset : nullptr;
-  Pack line_recv[NUM_PACK_PER_LINE_PER_THREAD];
-  using PackBatchFetch =
-      BatchFetchFunctor<Pack, NUM_PACK_PER_LINE_PER_THREAD, NUM_THREAD_PER_WARP, false>;
-  using PackBatchStore =
-      BatchStoreFunctor<Pack, NUM_PACK_PER_LINE_PER_THREAD, NUM_THREAD_PER_WARP, false>;
-  using BatchPackReduce = BatchPackReduceFunctor<method, T, Pack, NUM_PACK_PER_LINE_PER_THREAD>;
-  for (int64_t l = 0; l < num_line; ++l) {
-    if (RECV) { PackBatchFetch()(line_recv, recv_pack_ptr, nullptr); }
-    if (SRC) {
-      if (!RECV) {
-        PackBatchFetch()(line_recv, src_pack_ptr, nullptr);
-      } else {
-        Pack line_src[NUM_PACK_PER_LINE_PER_THREAD];
-        PackBatchFetch()(line_src, src_pack_ptr, nullptr);
-        BatchPackReduce()(line_recv, line_recv, line_src);
-      }
-    }
-    if (SEND) { PackBatchStore()(send_pack_ptr, line_recv, nullptr); }
-    if (DST) { PackBatchStore()(dst_pack_ptr, line_recv, nullptr); }
-    if (RECV) { recv_pack_ptr += NUM_PACK_PER_LINE; }
-    if (SRC) { src_pack_ptr += NUM_PACK_PER_LINE; }
-    if (SEND) { send_pack_ptr += NUM_PACK_PER_LINE; }
-    if (DST) { dst_pack_ptr += NUM_PACK_PER_LINE; }
-  }
+  BatchPackReduceOrCopy<method, T, Pack, NUM_PACK_PER_LINE_PER_THREAD, false, RECV, SRC, SEND, DST>(
+      num_elem, recv, src, send, dst);
 }
 
 template<typename T>
