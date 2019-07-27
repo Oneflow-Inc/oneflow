@@ -141,10 +141,10 @@ __device__ __forceinline__ T* PtrOffsetOrNull(T* ptr, const size_t offset) {
   }
 }
 
-template<ReduceMethod method, typename T, typename P, int32_t BATCH, bool BOUND, bool RECV,
-         bool SRC, bool SEND, bool DST>
-__device__ __forceinline__ void BatchPackReduceOrCopy(const int64_t num_elem, const T* recv,
-                                                      const T* src, T* send, T* dst) {
+template<ReduceMethod method, typename T, typename P, int32_t BATCH, bool BOUND, int32_t NUM_IN,
+         int32_t NUM_OUT>
+__device__ __forceinline__ void BatchPackReduceOrCopy(const int64_t num_elem, const T* in[NUM_IN],
+                                                      T* out[NUM_OUT]) {
   constexpr int32_t NUM_PACK_PER_BATCH_PER_WARP = BATCH * NUM_THREAD_PER_WARP;
   constexpr int32_t NUM_ELEM_PER_PACK = sizeof(P) / sizeof(T);
   constexpr int32_t NUM_PACK_PER_BATCH_PER_BLOCK = NUM_PACK_PER_BATCH_PER_WARP * NUM_WARP_PER_BLOCK;
@@ -156,43 +156,44 @@ __device__ __forceinline__ void BatchPackReduceOrCopy(const int64_t num_elem, co
   const int64_t num_pack = num_elem / NUM_ELEM_PER_PACK;
   if (!BOUND) { assert(num_pack % NUM_PACK_PER_BATCH_PER_BLOCK == 0); }
   const int64_t num_batch = DivUp(num_pack, NUM_PACK_PER_BATCH_PER_BLOCK);
-  const P* recv_bound = PtrOffsetOrNull<const P, RECV>(reinterpret_cast<const P*>(recv), num_pack);
-  const P* src_bound = PtrOffsetOrNull<const P, SRC>(reinterpret_cast<const P*>(src), num_pack);
-  const P* send_bound = PtrOffsetOrNull<P, SEND>(reinterpret_cast<P*>(send), num_pack);
-  const P* dst_bound = PtrOffsetOrNull<P, DST>(reinterpret_cast<P*>(dst), num_pack);
-  const P* recv_pack = PtrOffsetOrNull<const P, RECV>(reinterpret_cast<const P*>(recv), offset);
-  const P* src_pack = PtrOffsetOrNull<const P, SRC>(reinterpret_cast<const P*>(src), offset);
-  P* send_pack = PtrOffsetOrNull<P, SEND>(reinterpret_cast<P*>(send), offset);
-  P* dst_pack = PtrOffsetOrNull<P, DST>(reinterpret_cast<P*>(dst), offset);
+  const P* in_pack[NUM_IN];
+  const P* in_bound[NUM_IN];
+  for (int32_t i = 0; i < NUM_IN; ++i) {
+    in_pack[i] = in[i] + offset;
+    in_bound[i] = in[i] + num_pack;
+  }
+  P* out_pack[NUM_OUT];
+  const P* out_bound[NUM_OUT];
+  for (int32_t i = 0; i < NUM_OUT; ++i) {
+    out_pack[i] = out[i] + offset;
+    out_bound[i] = out[i] + num_pack;
+  }
   P batch[BATCH];
   using PackBatchFetch = BatchFetchFunctor<P, BATCH, NUM_THREAD_PER_WARP, BOUND>;
   using PackBatchStore = BatchStoreFunctor<P, BATCH, NUM_THREAD_PER_WARP, BOUND>;
   using BatchPackReduce = BatchPackReduceFunctor<method, T, P, BATCH>;
   for (int64_t b = 0; b < num_batch; ++b) {
-    if (RECV) { PackBatchFetch()(batch, recv_pack, recv_bound); }
-    if (SRC) {
-      if (!RECV) {
-        PackBatchFetch()(batch, src_pack, src_bound);
-      } else {
-        P tmp[BATCH];
-        PackBatchFetch()(tmp, src_pack, src_bound);
-        BatchPackReduce()(batch, batch, tmp);
-      }
+    PackBatchFetch()(batch, in_pack[0], in_bound[0]);
+#pragma unroll
+    for (int32_t i = 1; i < NUM_IN; ++i) {
+      P tmp[BATCH];
+      PackBatchFetch()(tmp, in_pack[i], in_bound[i]);
+      BatchPackReduce()(batch, batch, tmp);
     }
-    if (SEND) { PackBatchStore()(send_pack, batch, send_bound); }
-    if (DST) { PackBatchStore()(dst_pack, batch, dst_bound); }
-    if (RECV) { recv_pack += NUM_PACK_PER_BATCH_PER_BLOCK; }
-    if (SRC) { src_pack += NUM_PACK_PER_BATCH_PER_BLOCK; }
-    if (SEND) { send_pack += NUM_PACK_PER_BATCH_PER_BLOCK; }
-    if (DST) { dst_pack += NUM_PACK_PER_BATCH_PER_BLOCK; }
+#pragma unroll
+    for (int32_t i = 0; i < NUM_OUT; ++i) { PackBatchStore()(out_pack[i], batch, out_bound[i]); }
+#pragma unroll
+    for (int32_t i = 0; i < NUM_IN; ++i) { in_pack[i] += NUM_PACK_PER_BATCH_PER_BLOCK; }
+#pragma unroll
+    for (int32_t i = 0; i < NUM_OUT; ++i) { out_pack[i] += NUM_PACK_PER_BATCH_PER_BLOCK; }
   }
 }
 
-template<ReduceMethod method, typename T, bool RECV, bool SRC, bool SEND, bool DST>
-__device__ __forceinline__ void ReduceOrCopy(const int64_t num_elem, const T* recv, const T* src,
-                                             T* send, T* dst) {
-  BatchPackReduceOrCopy<method, T, Pack, NUM_PACK_PER_LINE_PER_THREAD, false, RECV, SRC, SEND, DST>(
-      num_elem, recv, src, send, dst);
+template<ReduceMethod method, typename T, int32_t NUM_IN, int32_t NUM_OUT>
+__device__ __forceinline__ void ReduceOrCopy(const int64_t num_elem, const T* in[NUM_IN],
+                                             T* out[NUM_OUT]) {
+  BatchPackReduceOrCopy<method, T, Pack, NUM_PACK_PER_LINE_PER_THREAD, false, NUM_IN, NUM_OUT>(
+      num_elem, in, out);
 }
 
 template<ReduceMethod method, typename T, bool RECV, bool SRC, bool SEND, bool DST>
@@ -204,13 +205,23 @@ __global__ void GenericOp(CudaRingAllReduceParams<T> params) {
   const int64_t num_elem_per_block = DivUp(link_params.num_elem, NUM_BLOCK_PER_LINK);
   const int64_t block_offset = block_id_in_link * num_elem_per_block;
   const int64_t block_num_elem = min(num_elem_per_block, link_params.num_elem - block_offset);
-  if (block_num_elem > 0) {
-    ReduceOrCopy<method, T, RECV, SRC, SEND, DST>(
-        block_num_elem, PtrOffsetOrNull<const T, RECV>(link_params.recv, block_offset),
-        PtrOffsetOrNull<const T, SRC>(link_params.src, block_offset),
-        PtrOffsetOrNull<T, SEND>(link_params.send, block_offset),
-        PtrOffsetOrNull<T, DST>(link_params.dst, block_offset));
+  constexpr int32_t NUM_IN = RECV + SRC;
+  const T* in[NUM_IN];
+  if (RECV) {
+    in[0] = link_params.recv + block_offset;
+    if (SRC) { in[1] = link_params.src + block_offset; }
+  } else {
+    in[0] = link_params.src + block_offset;
   }
+  constexpr int32_t NUM_OUT = SEND + DST;
+  T* out[NUM_OUT];
+  if (SEND) {
+    out[0] = link_params.send + block_offset;
+    if (DST) { out[1] = link_params.dst + block_offset; }
+  } else {
+    out[0] = link_params.dst + block_offset;
+  }
+  if (block_num_elem > 0) { ReduceOrCopy<method, T, NUM_IN, NUM_OUT>(block_num_elem, in, out); }
 }
 
 template<ReduceMethod method, typename T, bool RECV, bool SRC, bool SEND, bool DST>
