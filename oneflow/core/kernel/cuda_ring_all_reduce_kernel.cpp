@@ -13,39 +13,31 @@ void CudaRingAllReduceKernel<T>::Forward(
   const int64_t ring_id = other_ctx.first;
   const int64_t step_id = other_ctx.second;
   const MultiRingAllReduceKernelConf& conf = kernel_conf().multi_ring_all_reduce_conf();
-  CudaRingAllReduceArg<T> arg{};
-  arg.num_links = 2;
-  CHECK_GT(arg.num_links, 0);
-  CHECK_LE(arg.num_links, CUDA_RING_ALL_REDUCE_MAX_NUM_RINGS);
+  CudaRingAllReduceParams<T> params{};
+  params.num_links = 1;
+  CHECK_GT(params.num_links, 0);
+  CHECK_LE(params.num_links, CUDA_RING_ALL_REDUCE_MAX_NUM_LINK);
   const Blob* in = BnInOp2Blob("in");
   Blob* out = BnInOp2Blob("out");
   const int32_t num_step = conf.ring_conf(ring_id).step_conf_size();
   const Range range = Range(conf.ring_conf(ring_id).step_conf(step_id).data_range());
-
-  arg.num_elem[0] = range.size() / 2;
-  arg.num_elem[1] = range.size() / 2;
-
+  params.links[0].num_elem = range.size() / 2;
   Blob* send = BnInOp2Blob(GenRepeatedBn("send", ring_id));
-  arg.send[0] = send != nullptr ? send->mut_dptr<T>() : nullptr;
-  arg.send[1] = send != nullptr ? send->mut_dptr<T>() + arg.num_elem[0] : nullptr;
+  params.links[0].send = send->mut_dptr<T>();
   const Blob* recv = BnInOp2Blob(GenRepeatedBn("recv", ring_id));
-  arg.recv[0] = recv != nullptr ? recv->dptr<T>() : nullptr;
-  arg.recv[1] = recv != nullptr ? recv->dptr<T>() + arg.num_elem[0] : nullptr;
-  arg.src[0] = in != nullptr ? in->dptr<T>() + range.begin() : nullptr;
-  arg.src[1] = in != nullptr ? in->dptr<T>() + range.begin() + arg.num_elem[0] : nullptr;
-  arg.dst[0] = out != nullptr ? out->mut_dptr<T>() + range.begin() : nullptr;
-  arg.dst[1] = out != nullptr ? out->mut_dptr<T>() + range.begin() + arg.num_elem[0] : nullptr;
-
+  params.links[0].recv = recv->dptr<T>();
+  params.links[0].src = in->dptr<T>();
+  params.links[0].dst = out->mut_dptr<T>();
   if (step_id == 0) {
-    CudaRingAllReduceKernelUtil<T>::Send(ctx.device_ctx, arg);
+    CudaRingAllReduceKernelUtil<T>::Send(ctx.device_ctx, params);
   } else if (step_id < conf.num_rank() - 1) {
-    CudaRingAllReduceKernelUtil<T>::RecvReduceSend(ctx.device_ctx, arg);
+    CudaRingAllReduceKernelUtil<T>::RecvReduceSend(ctx.device_ctx, params);
   } else if (step_id == conf.num_rank() - 1) {
-    CudaRingAllReduceKernelUtil<T>::RecvReduceSendCopy(ctx.device_ctx, arg);
+    CudaRingAllReduceKernelUtil<T>::RecvReduceSendCopy(ctx.device_ctx, params);
   } else if (step_id < num_step - 1) {
-    CudaRingAllReduceKernelUtil<T>::RecvSendCopy(ctx.device_ctx, arg);
+    CudaRingAllReduceKernelUtil<T>::RecvSendCopy(ctx.device_ctx, params);
   } else if (step_id == num_step - 1) {
-    CudaRingAllReduceKernelUtil<T>::RecvCopy(ctx.device_ctx, arg);
+    CudaRingAllReduceKernelUtil<T>::RecvCopy(ctx.device_ctx, params);
   }
 }
 

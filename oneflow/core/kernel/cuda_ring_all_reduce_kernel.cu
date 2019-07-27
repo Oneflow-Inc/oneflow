@@ -196,54 +196,57 @@ __device__ __forceinline__ void ReduceOrCopy(const int64_t num_elem, const T* re
 }
 
 template<ReduceMethod method, typename T, bool RECV, bool SRC, bool SEND, bool DST>
-__global__ void GenericOp(CudaRingAllReduceArg<T> arg) {
+__global__ void GenericOp(CudaRingAllReduceParams<T> params) {
   const int32_t block_id = blockIdx.x;
   const int32_t link_id = block_id / NUM_BLOCK_PER_LINK;
+  const CudaRingAllReduceLinkParams<T>& link_params = params.links[link_id];
   const int32_t block_id_in_link = block_id % NUM_BLOCK_PER_LINK;
-  const int64_t num_elem_per_block = DivUp(arg.num_elem[link_id], NUM_BLOCK_PER_LINK);
+  const int64_t num_elem_per_block = DivUp(link_params.num_elem, NUM_BLOCK_PER_LINK);
   const int64_t block_offset = block_id_in_link * num_elem_per_block;
-  const int64_t block_num_elem = min(num_elem_per_block, arg.num_elem[link_id] - block_offset);
+  const int64_t block_num_elem = min(num_elem_per_block, link_params.num_elem - block_offset);
   if (block_num_elem > 0) {
     ReduceOrCopy<method, T, RECV, SRC, SEND, DST>(
-        block_num_elem, PtrOffsetOrNull<const T, RECV>(arg.recv[link_id], block_offset),
-        PtrOffsetOrNull<const T, SRC>(arg.src[link_id], block_offset),
-        PtrOffsetOrNull<T, SEND>(arg.send[link_id], block_offset),
-        PtrOffsetOrNull<T, DST>(arg.dst[link_id], block_offset));
+        block_num_elem, PtrOffsetOrNull<const T, RECV>(link_params.recv, block_offset),
+        PtrOffsetOrNull<const T, SRC>(link_params.src, block_offset),
+        PtrOffsetOrNull<T, SEND>(link_params.send, block_offset),
+        PtrOffsetOrNull<T, DST>(link_params.dst, block_offset));
   }
 }
 
 template<ReduceMethod method, typename T, bool RECV, bool SRC, bool SEND, bool DST>
-void LaunchGenericOp(DeviceCtx* ctx, const CudaRingAllReduceArg<T>& arg) {
+void LaunchGenericOp(DeviceCtx* ctx, const CudaRingAllReduceParams<T>& params) {
   GenericOp<method, T, RECV, SRC, SEND, DST>
-      <<<arg.num_links * NUM_BLOCK_PER_LINK, NUM_THREAD, 0, ctx->cuda_stream()>>>(arg);
+      <<<params.num_links * NUM_BLOCK_PER_LINK, NUM_THREAD, 0, ctx->cuda_stream()>>>(params);
 }
 
 }  // namespace
 
 template<typename T>
-void CudaRingAllReduceKernelUtil<T>::Send(DeviceCtx* ctx, CudaRingAllReduceArg<T> arg) {
-  LaunchGenericOp<ReduceMethod::kSum, T, false, true, true, false>(ctx, arg);
+void CudaRingAllReduceKernelUtil<T>::Send(DeviceCtx* ctx, CudaRingAllReduceParams<T> params) {
+  LaunchGenericOp<ReduceMethod::kSum, T, false, true, true, false>(ctx, params);
 }
 
 template<typename T>
-void CudaRingAllReduceKernelUtil<T>::RecvReduceSend(DeviceCtx* ctx, CudaRingAllReduceArg<T> arg) {
-  LaunchGenericOp<ReduceMethod::kSum, T, true, true, true, false>(ctx, arg);
+void CudaRingAllReduceKernelUtil<T>::RecvReduceSend(DeviceCtx* ctx,
+                                                    CudaRingAllReduceParams<T> params) {
+  LaunchGenericOp<ReduceMethod::kSum, T, true, true, true, false>(ctx, params);
 }
 
 template<typename T>
 void CudaRingAllReduceKernelUtil<T>::RecvReduceSendCopy(DeviceCtx* ctx,
-                                                        CudaRingAllReduceArg<T> arg) {
-  LaunchGenericOp<ReduceMethod::kSum, T, true, true, true, true>(ctx, arg);
+                                                        CudaRingAllReduceParams<T> params) {
+  LaunchGenericOp<ReduceMethod::kSum, T, true, true, true, true>(ctx, params);
 }
 
 template<typename T>
-void CudaRingAllReduceKernelUtil<T>::RecvSendCopy(DeviceCtx* ctx, CudaRingAllReduceArg<T> arg) {
-  LaunchGenericOp<ReduceMethod::kSum, T, true, false, true, true>(ctx, arg);
+void CudaRingAllReduceKernelUtil<T>::RecvSendCopy(DeviceCtx* ctx,
+                                                  CudaRingAllReduceParams<T> params) {
+  LaunchGenericOp<ReduceMethod::kSum, T, true, false, true, true>(ctx, params);
 }
 
 template<typename T>
-void CudaRingAllReduceKernelUtil<T>::RecvCopy(DeviceCtx* ctx, CudaRingAllReduceArg<T> arg) {
-  LaunchGenericOp<ReduceMethod::kSum, T, true, false, false, true>(ctx, arg);
+void CudaRingAllReduceKernelUtil<T>::RecvCopy(DeviceCtx* ctx, CudaRingAllReduceParams<T> params) {
+  LaunchGenericOp<ReduceMethod::kSum, T, true, false, false, true>(ctx, params);
 }
 
 #define INSTANTIATE_CUDA_RING_ALL_REDUCE_KERNEL_UTIL(type_cpp, type_proto) \

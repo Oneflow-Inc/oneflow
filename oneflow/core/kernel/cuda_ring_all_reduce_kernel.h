@@ -5,16 +5,21 @@
 
 namespace oneflow {
 
-constexpr int32_t CUDA_RING_ALL_REDUCE_MAX_NUM_RINGS = 8;
+constexpr int32_t CUDA_RING_ALL_REDUCE_MAX_NUM_LINK = 8;
 
 template<typename T>
-struct CudaRingAllReduceArg {
+struct CudaRingAllReduceLinkParams {
+  const T* recv;
+  const T* src;
+  T* send;
+  T* dst;
+  int64_t num_elem;
+};
+
+template<typename T>
+struct CudaRingAllReduceParams {
   int32_t num_links;
-  T* send[CUDA_RING_ALL_REDUCE_MAX_NUM_RINGS];
-  const T* recv[CUDA_RING_ALL_REDUCE_MAX_NUM_RINGS];
-  T* dst[CUDA_RING_ALL_REDUCE_MAX_NUM_RINGS];
-  const T* src[CUDA_RING_ALL_REDUCE_MAX_NUM_RINGS];
-  int64_t num_elem[CUDA_RING_ALL_REDUCE_MAX_NUM_RINGS];
+  CudaRingAllReduceLinkParams<T> links[CUDA_RING_ALL_REDUCE_MAX_NUM_LINK];
 };
 
 template<typename T>
@@ -31,11 +36,11 @@ class CudaRingAllReduceKernel final : public KernelIf<DeviceType::kGPU> {
 
 template<typename T>
 struct CudaRingAllReduceKernelUtil {
-  static void Send(DeviceCtx* ctx, CudaRingAllReduceArg<T> arg);
-  static void RecvReduceSend(DeviceCtx* ctx, CudaRingAllReduceArg<T> arg);
-  static void RecvReduceSendCopy(DeviceCtx* ctx, CudaRingAllReduceArg<T> arg);
-  static void RecvSendCopy(DeviceCtx* ctx, CudaRingAllReduceArg<T> arg);
-  static void RecvCopy(DeviceCtx* ctx, CudaRingAllReduceArg<T> arg);
+  static void Send(DeviceCtx* ctx, CudaRingAllReduceParams<T> params);
+  static void RecvReduceSend(DeviceCtx* ctx, CudaRingAllReduceParams<T> params);
+  static void RecvReduceSendCopy(DeviceCtx* ctx, CudaRingAllReduceParams<T> params);
+  static void RecvSendCopy(DeviceCtx* ctx, CudaRingAllReduceParams<T> params);
+  static void RecvCopy(DeviceCtx* ctx, CudaRingAllReduceParams<T> params);
 };
 
 }  // namespace oneflow
