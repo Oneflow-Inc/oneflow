@@ -23,11 +23,11 @@ void CudaRingAllReduceKernel<T>::Forward(
   const Range range = Range(conf.ring_conf(ring_id).step_conf(step_id).data_range());
   params.links[0].num_elem = range.size() / 2;
   Blob* send = BnInOp2Blob(GenRepeatedBn("send", ring_id));
-  params.links[0].send = send->mut_dptr<T>();
+  params.links[0].send = send != nullptr ? send->mut_dptr<T>() : nullptr;
   const Blob* recv = BnInOp2Blob(GenRepeatedBn("recv", ring_id));
-  params.links[0].recv = recv->dptr<T>();
-  params.links[0].src = in->dptr<T>();
-  params.links[0].dst = out->mut_dptr<T>();
+  params.links[0].recv = recv != nullptr ? recv->dptr<T>() : nullptr;
+  params.links[0].src = in != nullptr ? in->dptr<T>() + range.begin() : nullptr;
+  params.links[0].dst = out != nullptr ? out->mut_dptr<T>() + range.begin() : nullptr;
   if (step_id == 0) {
     CudaRingAllReduceKernelUtil<T>::Send(ctx.device_ctx, params);
   } else if (step_id < conf.num_rank() - 1) {
