@@ -189,6 +189,16 @@ __device__ __forceinline__ void BatchPackReduceOrCopy(const int64_t num_elem, co
   }
 }
 
+template<ReduceMethod method, typename T, typename P, int32_t BATCH, bool BOUND, int32_t NUM_IN,
+         int32_t NUM_OUT>
+__device__ __forceinline__ void DoBatchPackReduceOrCopy(const int64_t num_elem,
+                                                        const T* (&in)[NUM_IN],
+                                                        T* (&out)[NUM_OUT]) {
+  BatchPackReduceOrCopy<method, T, P, BATCH, BOUND, NUM_IN, NUM_OUT>(num_elem, in, out);
+  for (int32_t i = 0; i < NUM_IN; ++i) { in[i] += num_elem; }
+  for (int32_t i = 0; i < NUM_OUT; ++i) { out[i] += num_elem; }
+}
+
 template<ReduceMethod method, typename T, int32_t NUM_IN, int32_t NUM_OUT>
 __device__ __forceinline__ void ReduceOrCopy(const int64_t num_elem, const T* in[NUM_IN],
                                              T* out[NUM_OUT]) {
@@ -212,24 +222,20 @@ __device__ __forceinline__ void ReduceOrCopy(const int64_t num_elem, const T* in
     int64_t remaining = num_elem;
     if (align > 0) {
       const int32_t num_align_elem = align / sizeof(T);
-      BatchPackReduceOrCopy<method, T, T, BATCH_SIZE, true, NUM_IN, NUM_OUT>(num_align_elem, in,
-                                                                             out);
+      DoBatchPackReduceOrCopy<method, T, T, BATCH_SIZE, true, NUM_IN, NUM_OUT>(num_align_elem, in,
+                                                                               out);
       remaining -= num_align_elem;
-      for (int32_t i = 0; i < NUM_IN; ++i) { in[i] += num_align_elem; }
-      for (int32_t i = 0; i < NUM_OUT; ++i) { out[i] += num_align_elem; }
     }
     constexpr int32_t NUM_ELEM_PER_BATCH = sizeof(Pack) / sizeof(T) * BATCH_SIZE * NUM_THREAD;
     const int64_t num_batch = remaining / NUM_ELEM_PER_BATCH;
     if (num_batch > 0) {
       const int64_t total_batch_elem = num_batch * NUM_ELEM_PER_BATCH;
-      BatchPackReduceOrCopy<method, T, Pack, BATCH_SIZE, false, NUM_IN, NUM_OUT>(total_batch_elem,
-                                                                                 in, out);
+      DoBatchPackReduceOrCopy<method, T, Pack, BATCH_SIZE, false, NUM_IN, NUM_OUT>(total_batch_elem,
+                                                                                   in, out);
       remaining -= total_batch_elem;
-      for (int32_t i = 0; i < NUM_IN; ++i) { in[i] += total_batch_elem; }
-      for (int32_t i = 0; i < NUM_OUT; ++i) { out[i] += total_batch_elem; }
     }
     if (remaining > 0) {
-      BatchPackReduceOrCopy<method, T, T, BATCH_SIZE, true, NUM_IN, NUM_OUT>(remaining, in, out);
+      DoBatchPackReduceOrCopy<method, T, T, BATCH_SIZE, true, NUM_IN, NUM_OUT>(remaining, in, out);
     }
   } else {
     int64_t remaining = num_elem;
@@ -237,13 +243,11 @@ __device__ __forceinline__ void ReduceOrCopy(const int64_t num_elem, const T* in
     const int64_t num_batch = remaining / NUM_ELEM_PER_BATCH;
     if (num_batch > 0) {
       const int64_t total_batch_elem = num_batch * NUM_ELEM_PER_BATCH;
-      BatchPackReduceOrCopy<method, T, T, BATCH_SIZE, false, NUM_IN, NUM_OUT>(total_batch_elem, in,
-                                                                              out);
+      DoBatchPackReduceOrCopy<method, T, T, BATCH_SIZE, false, NUM_IN, NUM_OUT>(total_batch_elem,
+                                                                                in, out);
       remaining -= total_batch_elem;
-      for (int32_t i = 0; i < NUM_IN; ++i) { in[i] += total_batch_elem; }
-      for (int32_t i = 0; i < NUM_OUT; ++i) { out[i] += total_batch_elem; }
     } else {
-      BatchPackReduceOrCopy<method, T, T, BATCH_SIZE, true, NUM_IN, NUM_OUT>(remaining, in, out);
+      DoBatchPackReduceOrCopy<method, T, T, BATCH_SIZE, true, NUM_IN, NUM_OUT>(remaining, in, out);
     }
   }
 }
