@@ -21,10 +21,10 @@ void GpuArgSort(DeviceCtx* ctx, const T* in_ptr, int32_t* indices_ptr, int32_t i
       instance_size <= kCudaThreadsNumPerBlock ? instance_size : kCudaThreadsNumPerBlock;
   RadixSortTopKInitializeKernel<<<instance_num, num_thread, 0, ctx->cuda_stream()>>>(indices_ptr,
                                                                                      instance_size);
-  if (dir == "Ascending") {
+  if (dir == "ASCENDING") {
     SortPairsAscending(in_ptr, indices_ptr, instance_num, instance_size, temp_storage_ptr,
                        temp_storage_bytes, sorted_in_ptr, out_ptr, ctx->cuda_stream());
-  } else if (dir == "Descending") {
+  } else if (dir == "DESCENDING") {
     SortPairsDescending(in_ptr, indices_ptr, instance_num, instance_size, temp_storage_ptr,
                         temp_storage_bytes, sorted_in_ptr, out_ptr, ctx->cuda_stream());
   } else {

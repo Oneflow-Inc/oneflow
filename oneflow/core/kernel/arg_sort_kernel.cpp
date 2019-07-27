@@ -12,15 +12,15 @@ void CpuArgSort(DeviceCtx* ctx, const T* in_ptr, int32_t instance_num, int32_t i
     auto comp = [&](const int32_t lhs, const int32_t rhs) {
       const T l = in_ptr_i[lhs];
       const T r = in_ptr_i[rhs];
-      if (dir == "Ascending") {
-        return (l < r) || (l == r && lhs > rhs);
-      } else if (dir == "Descending") {
-        return (l > r) || (l == r && lhs < rhs);
+      if (dir == "ASCENDING") {
+        return l < r;
+      } else if (dir == "DESCENDING") {
+        return l > r;
       } else {
         UNIMPLEMENTED();
       }
     };
-    std::sort(out_ptr_i, out_ptr_i + instance_size, comp);
+    std::stable_sort(out_ptr_i, out_ptr_i + instance_size, comp);
   }
 }
 
@@ -30,7 +30,7 @@ void ArgSortKernel<device_type, T>::ForwardDataContent(
   const Blob* in_blob = BnInOp2Blob("in");
   Blob* out_blob = BnInOp2Blob("out");
 
-  int32_t instance_size = in_blob->shape().At(0);
+  int32_t instance_size = in_blob->shape().dim_vec().back();
   int32_t instance_num = in_blob->shape().elem_cnt() / instance_size;
   const T* in_ptr = in_blob->dptr<T>();
   int32_t* out_ptr = out_blob->mut_dptr<int32_t>();

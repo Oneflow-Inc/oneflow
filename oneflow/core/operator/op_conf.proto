@@ -1622,15 +1622,15 @@ message ContiguousInstanceStackOpConf {
 message SortOpConf {
   required string in = 1;
   required string out = 2;
-  // "Ascending" or "Descending"
-  optional string dir = 3 [default = "Ascending"];
+  // "ASCENDING" or "DESCENDING"
+  optional string dir = 3 [default = "ASCENDING"];
 }
 
 message ArgSortOpConf {
   required string in = 1;
   required string out = 2;
-  // "Ascending" or "Descending"
-  optional string dir = 3 [default = "Ascending"];
+  // "ASCENDING" or "DESCENDING"
+  optional string dir = 3 [default = "ASCENDING"];
 }
 
 message OperatorConf {

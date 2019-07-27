@@ -21,34 +21,40 @@ void ArgSortOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetB
                                std::function<void(OpContext*)> EnrollOpCtx) const {
   // input
   const BlobDesc* in = GetBlobDesc4BnInOp("in");
+  const int32_t instance_size = in->shape().dim_vec().back();
+  const int32_t instance_num = in->shape().elem_cnt() / instance_size;
 
-  // fw_buf: indices
-  BlobDesc* indices = GetBlobDesc4BnInOp("indices");
-  *indices = *in;
-  indices->set_data_type(DataType::kInt32);
+  if (device_type() == DeviceType::kGPU) {
+    // fw_buf: indices
+    BlobDesc* indices = GetBlobDesc4BnInOp("indices");
+    *indices = *in;
+    indices->set_data_type(DataType::kInt32);
 
-  // fw_buf: temp_storage
-  int32_t temp_storage_bytes = -1;
-  if (op_conf().arg_sort_conf().dir() == "Ascending") {
-    temp_storage_bytes = InferTempStorageForSortingPairsAscendingAtCompile(
-        in->shape().At(0), in->shape().At(1), in->data_type());
-  } else if (op_conf().arg_sort_conf().dir() == "Descending") {
-    temp_storage_bytes = InferTempStorageForSortingPairsDescendingAtCompile(
-        in->shape().At(0), in->shape().At(1), in->data_type());
-  } else {
-    UNIMPLEMENTED();
+    // fw_buf: temp_storage
+    int32_t temp_storage_bytes = -1;
+    if (op_conf().arg_sort_conf().dir() == "ASCENDING") {
+      temp_storage_bytes = InferTempStorageForSortingPairsAscendingAtCompile(
+          instance_num, instance_size, in->data_type());
+    } else if (op_conf().arg_sort_conf().dir() == "DESCENDING") {
+      temp_storage_bytes = InferTempStorageForSortingPairsDescendingAtCompile(
+          instance_num, instance_size, in->data_type());
+    } else {
+      UNIMPLEMENTED();
+    }
+    BlobDesc* temp_storage = GetBlobDesc4BnInOp("temp_storage");
+    temp_storage->set_data_type(DataType::kChar);
+    temp_storage->mut_shape() = Shape({temp_storage_bytes});
+    ArgSortOpCtx* arg_sort_op_ctx = new ArgSortOpCtx(temp_storage_bytes);
+    EnrollOpCtx(arg_sort_op_ctx);
+
+    // fw_buf: sorted_in
+    *GetBlobDesc4BnInOp("sorted_in") = *in;
   }
-  BlobDesc* temp_storage = GetBlobDesc4BnInOp("temp_storage");
-  temp_storage->set_data_type(DataType::kChar);
-  temp_storage->mut_shape() = Shape({temp_storage_bytes});
-  ArgSortOpCtx* arg_sort_op_ctx = new ArgSortOpCtx(temp_storage_bytes);
-  EnrollOpCtx(arg_sort_op_ctx);
-
-  // fw_buf: sorted_in
-  *GetBlobDesc4BnInOp("sorted_in") = *in;
 
   // output
-  *GetBlobDesc4BnInOp("out") = *indices;
+  BlobDesc* out = GetBlobDesc4BnInOp("out");
+  *out = *in;
+  out->set_data_type(DataType::kInt32);
 }
 
 void ArgSortOp::VirtualGenKernelConf(

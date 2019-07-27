@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_CORE_OPERATOR_ARG_SORT_KERNEL_OP_H_
-#define ONEFLOW_CORE_OPERATOR_ARG_SORT_KERNEL_OP_H_
+#ifndef ONEFLOW_CORE_OPERATOR_SORT_KERNEL_OP_H_
+#define ONEFLOW_CORE_OPERATOR_SORT_KERNEL_OP_H_
 
 #include "oneflow/core/kernel/kernel.h"
 
@@ -28,4 +28,4 @@ void GpuArgSort(DeviceCtx* ctx, const T* in_ptr, int32_t* indices_ptr, int32_t i
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_OPERATOR_ARG_SORT_KERNEL_OP_H_
+#endif  // ONEFLOW_CORE_OPERATOR_SORT_KERNEL_OP_H_
