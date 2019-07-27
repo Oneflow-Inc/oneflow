@@ -83,7 +83,7 @@ struct BatchPackReduceFunctor {
   __device__ __forceinline__ void operator()(P (&res)[BATCH], const P (&a)[BATCH],
                                              const P (&b)[BATCH]) {
 #pragma unroll
-    for (int32_t i = 0; i < BATCH; ++i) { res[i] = PackReduceFunctor<method, T, P>(a[i], b[i]); }
+    for (int32_t i = 0; i < BATCH; ++i) { res[i] = PackReduceFunctor<method, T, P>()(a[i], b[i]); }
   }
 };
 
