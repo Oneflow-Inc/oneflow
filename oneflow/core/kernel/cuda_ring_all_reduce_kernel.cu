@@ -205,23 +205,25 @@ __global__ void GenericOp(CudaRingAllReduceParams<T> params) {
   const int64_t num_elem_per_block = DivUp(link_params.num_elem, NUM_BLOCK_PER_LINK);
   const int64_t block_offset = block_id_in_link * num_elem_per_block;
   const int64_t block_num_elem = min(num_elem_per_block, link_params.num_elem - block_offset);
-  constexpr int32_t NUM_IN = RECV + SRC;
-  const T* in[NUM_IN];
-  if (RECV) {
-    in[0] = link_params.recv + block_offset;
-    if (SRC) { in[1] = link_params.src + block_offset; }
-  } else {
-    in[0] = link_params.src + block_offset;
+  if (block_num_elem > 0) {
+    constexpr int32_t NUM_IN = RECV + SRC;
+    const T* in[NUM_IN];
+    if (RECV) {
+      in[0] = link_params.recv + block_offset;
+      if (SRC) { in[1] = link_params.src + block_offset; }
+    } else {
+      in[0] = link_params.src + block_offset;
+    }
+    constexpr int32_t NUM_OUT = SEND + DST;
+    T* out[NUM_OUT];
+    if (SEND) {
+      out[0] = link_params.send + block_offset;
+      if (DST) { out[1] = link_params.dst + block_offset; }
+    } else {
+      out[0] = link_params.dst + block_offset;
+    }
+    ReduceOrCopy<method, T, NUM_IN, NUM_OUT>(block_num_elem, in, out);
   }
-  constexpr int32_t NUM_OUT = SEND + DST;
-  T* out[NUM_OUT];
-  if (SEND) {
-    out[0] = link_params.send + block_offset;
-    if (DST) { out[1] = link_params.dst + block_offset; }
-  } else {
-    out[0] = link_params.dst + block_offset;
-  }
-  if (block_num_elem > 0) { ReduceOrCopy<method, T, NUM_IN, NUM_OUT>(block_num_elem, in, out); }
 }
 
 template<ReduceMethod method, typename T, bool RECV, bool SRC, bool SEND, bool DST>
