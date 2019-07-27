@@ -9,10 +9,13 @@ void TopKOp::InitFromOpConf() {
   if (device_type() == DeviceType::kCPU && op_conf().top_k_conf().k() > 1) {
     if (op_conf().top_k_conf().k() > 1) { EnrollFwBufBn("indices"); }
   } else if (device_type() == DeviceType::kGPU) {
-    EnrollFwBufBn("temp_storage");
+    // indices, sorted_in, sorted_indices, temp_storage blobs are only used in radix sort but not
+    // heap selection. We can't choose between these two algorithms at compile stage,
+    // so always allocate memory for all these blobs for GPU device.
     EnrollFwBufBn("indices");
     EnrollFwBufBn("sorted_in");
     EnrollFwBufBn("sorted_indices");
+    EnrollFwBufBn("temp_storage");
   }
   EnrollOutputBn("out", false);
 }
@@ -22,8 +25,7 @@ void TopKOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlob
                             std::function<void(OpContext*)> EnrollOpCtx) const {
   // input
   const BlobDesc* in = GetBlobDesc4BnInOp("in");
-  const Shape in_shape = in->shape();
-  const int32_t instance_size = in_shape.dim_vec().back();
+  const int32_t instance_size = in->shape().dim_vec().back();
   const int32_t k = op_conf().top_k_conf().k();
   CHECK_GE(k, 1);
   CHECK_LE(k, instance_size);
@@ -36,10 +38,6 @@ void TopKOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlob
       indices->set_data_type(DataType::kInt32);
     }
   } else if (device_type() == DeviceType::kGPU) {
-    // indices, sorted_in, sorted_indices, temp_storage blobs are only used in radix sort but not
-    // heap selection sort. Because we can't choose between these two algorithms at compile stage,
-    // so always allocate memory for these blob.
-
     // fw_buf: indices
     BlobDesc* indices = GetBlobDesc4BnInOp("indices");
     *indices = *in;
@@ -50,7 +48,7 @@ void TopKOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlob
     *GetBlobDesc4BnInOp("sorted_indices") = *indices;
     // fw_buf: temp_storage
     int64_t temp_storage_bytes = InferTempStorageForSortingPairsDescendingAtCompile(
-        in_shape.elem_cnt() / instance_size, instance_size, in->data_type());
+        in->shape().elem_cnt() / instance_size, instance_size, in->data_type());
     BlobDesc* temp_storage = GetBlobDesc4BnInOp("temp_storage");
     temp_storage->mut_shape() = Shape({temp_storage_bytes});
     temp_storage->set_data_type(DataType::kChar);
@@ -63,7 +61,7 @@ void TopKOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlob
   // output
   BlobDesc* out = GetBlobDesc4BnInOp("out");
   *out = *in;
-  out->mut_shape().Set(in_shape.NumAxes() - 1, k);
+  out->mut_shape().Set(in->shape().NumAxes() - 1, k);
   out->set_data_type(DataType::kInt32);
 }
 

@@ -23,18 +23,18 @@ class TopKKernel final : public KernelIf<device_type> {
 };
 
 template<typename T>
-void CpuTopK(DeviceCtx* ctx, const T* in, int32_t* indices, int32_t instance_num,
-             int32_t instance_size, int32_t k, bool sorted, int32_t* out);
+void CpuTopK(DeviceCtx* ctx, const T* in_ptr, int32_t* indices_ptr, int32_t instance_num,
+             int32_t instance_size, int32_t k, bool sorted, int32_t* out_ptr);
 
 template<typename T>
-void GpuHeapSelectionTopK(DeviceCtx* ctx, const T* in, int32_t instance_num, int32_t instance_size,
-                          int32_t k, int32_t* out);
+void GpuHeapSelectionTopK(DeviceCtx* ctx, const T* in_ptr, int32_t instance_num,
+                          int32_t instance_size, int32_t k, int32_t* out_ptr);
 
 template<typename T>
-void GpuRadixSortTopK(DeviceCtx* ctx, const T* in, int32_t* indices, int32_t instance_num,
-                      int32_t instance_size, int32_t k, void* temp_storage,
-                      size_t temp_storage_bytes, T* sorted_in, int32_t* sorted_indices,
-                      int32_t* out);
+void GpuRadixSortTopK(DeviceCtx* ctx, const T* in_ptr, int32_t* indices_ptr, int32_t instance_num,
+                      int32_t instance_size, int32_t k, void* temp_storage_ptr,
+                      size_t temp_storage_bytes, T* sorted_in_ptr, int32_t* sorted_indices_ptr,
+                      int32_t* out_ptr);
 
 }  // namespace oneflow
 

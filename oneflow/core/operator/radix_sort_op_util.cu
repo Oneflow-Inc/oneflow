@@ -6,17 +6,6 @@
 
 namespace oneflow {
 
-namespace {
-
-class SegmentOffsetCreator final {
- public:
-  SegmentOffsetCreator(int32_t num_col) : num_col_(num_col) {}
-  __device__ int32_t operator()(int32_t idx) const { return idx * num_col_; }
-
- private:
-  int32_t num_col_;
-};
-
 // FIX ME: should also has a template param for ValueType, use int64_t for now
 template<typename KeyType>
 size_t InferTempStorageForSortingPairsAscending(int32_t num_row, int32_t num_col) {
@@ -194,8 +183,6 @@ struct InferTempStorageForSortingKeysDescendingSwitchUtil final {
 #undef DEFINE_INFER_TEMP_STORAGE_FOR_SORTING_KEYS_DESCENDING_STATIC_SWITCH_FUNC
 #undef MAKE_INFER_TEMP_STORAGE_FOR_SORTING_KEYS_DESCENDING_SWITCH_ENTRY
 };
-
-}  // namespace
 
 // Infer temp storage for sorting key-value pairs in ascending order at compile stage
 // FIX ME: should also pass value_data_type param here, use int64_t for now

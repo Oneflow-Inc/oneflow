@@ -33,8 +33,8 @@ void SortOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlob
       UNIMPLEMENTED();
     }
     BlobDesc* temp_storage = GetBlobDesc4BnInOp("temp_storage");
-    temp_storage->set_data_type(DataType::kChar);
     temp_storage->mut_shape() = Shape({temp_storage_bytes});
+    temp_storage->set_data_type(DataType::kChar);
     SortOpCtx* sort_op_ctx = new SortOpCtx(temp_storage_bytes);
     EnrollOpCtx(sort_op_ctx);
   }

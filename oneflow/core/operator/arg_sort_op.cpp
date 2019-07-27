@@ -11,7 +11,7 @@ void ArgSortOp::InitFromOpConf() {
     EnrollFwBufBn("sorted_in");
     EnrollFwBufBn("temp_storage");
   }
-  EnrollOutputBn("out" /*sorted_indices */, false);
+  EnrollOutputBn("out", false);
 }
 
 const PbMessage& ArgSortOp::GetCustomizedConf() const { return this->op_conf().arg_sort_conf(); }
@@ -29,9 +29,6 @@ void ArgSortOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetB
     BlobDesc* indices = GetBlobDesc4BnInOp("indices");
     *indices = *in;
     indices->set_data_type(DataType::kInt32);
-    indices->set_has_dim0_valid_num_field(in->has_dim0_valid_num_field());
-    indices->mut_dim0_inner_shape() = Shape({1, in->shape().At(0)});
-    indices->set_has_instance_shape_field(in->has_instance_shape_field());
 
     // fw_buf: temp_storage
     int32_t temp_storage_bytes = -1;
@@ -45,8 +42,8 @@ void ArgSortOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetB
       UNIMPLEMENTED();
     }
     BlobDesc* temp_storage = GetBlobDesc4BnInOp("temp_storage");
-    temp_storage->set_data_type(DataType::kChar);
     temp_storage->mut_shape() = Shape({temp_storage_bytes});
+    temp_storage->set_data_type(DataType::kChar);
     ArgSortOpCtx* arg_sort_op_ctx = new ArgSortOpCtx(temp_storage_bytes);
     EnrollOpCtx(arg_sort_op_ctx);
 

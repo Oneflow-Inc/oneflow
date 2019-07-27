@@ -1,5 +1,5 @@
-#ifndef RADIX_SORT_UTIL_H_
-#define RADIX_SORT_UTIL_H_
+#ifndef ONEFLOW_CORE_OPERATOR_RADIX_SORT_OP_UTIL_H_
+#define ONEFLOW_CORE_OPERATOR_RADIX_SORT_OP_UTIL_H_
 
 #include "oneflow/core/common/data_type.pb.h"
 
@@ -16,4 +16,4 @@ size_t InferTempStorageForSortingKeysDescendingAtCompile(int32_t num_row, int32_
 
 }  // namespace oneflow
 
-#endif
+#endif  // ONEFLOW_CORE_OPERATOR_RADIX_SORT_OP_UTIL_H_

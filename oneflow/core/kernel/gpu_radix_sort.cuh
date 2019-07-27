@@ -1,8 +1,10 @@
-#ifndef GPU_RADIX_SORT_CUH_
-#define GPU_RADIX_SORT_CUH_
+#ifndef ONEFLOW_CORE_KERNEL_GPU_RADIX_SORT_CUH_
+#define ONEFLOW_CORE_KERNEL_GPU_RADIX_SORT_CUH_
 
 #include <cub/cub.cuh>
 #include <glog/logging.h>
+
+namespace oneflow {
 
 namespace {
 
@@ -16,8 +18,6 @@ class SegmentOffsetCreator final {
 };
 
 }  // namespace
-
-namespace oneflow {
 
 // Sort key-value pairs in ascending order
 template<typename KeyType, typename ValueType>
@@ -191,4 +191,4 @@ void SortKeysDescending(const KeyType* keys_ptr, int32_t num_row, int32_t num_co
 
 }  // namespace oneflow
 
-#endif  // GPU_RADIX_SORT_CUH_
+#endif  // ONEFLOW_CORE_KERNEL_GPU_RADIX_SORT_CUH_

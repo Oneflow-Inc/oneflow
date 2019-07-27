@@ -1,7 +1,11 @@
-#ifndef GPU_BITONIC_SORT_CUH_
-#define GPU_BITONIC_SORT_CUH_
+#ifndef ONEFLOW_CORE_KERNEL_GPU_BITONIC_SORT_CUH_
+#define ONEFLOW_CORE_KERNEL_GPU_BITONIC_SORT_CUH_
 
 #include <assert.h>
+
+namespace oneflow {
+
+namespace {
 
 template<typename T>
 __device__ bool IsIntegerPowerOf2(const T v) {
@@ -17,6 +21,8 @@ __device__ void bitonicSwap(T* data, const int32_t i, const int32_t j, const boo
     data[j] = tmp;
   }
 }
+
+}  // namespace
 
 template<typename T, typename Compare>
 __device__ void bitonicSort(T* data, const int32_t elem_cnt, const Compare& comp) {
@@ -53,4 +59,6 @@ __device__ void bitonicSort(T* data, const int32_t elem_cnt, const Compare& comp
   }
 }
 
-#endif
+}  // namespace oneflow
+
+#endif  // ONEFLOW_CORE_KERNEL_GPU_BITONIC_SORT_CUH_
