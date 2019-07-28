@@ -37,3 +37,36 @@ def matmul( a,
     lbi.blob_name = "out"
     return remote_blob_util.RemoteBlob(lbi)
 
+
+dict_activations = {'sigmoid': op_conf_util.kSigmoid,
+                    'relu': op_conf_util.kRelu,
+                    'tanh': op_conf_util.kTanH}
+@oneflow_export('keras.maths.add')
+def add(x,
+        y,
+        activation=None,
+        name=None):
+
+    allowed_activations = { 'sigmoid',
+                            'tanh',
+                            'relu'}
+    op_conf = op_conf_util.OperatorConf()
+    op_conf.name = id_util.UniqueStr('Add_')
+    getattr(op_conf.add_conf, 'in').append(x.lbn)
+    getattr(op_conf.add_conf, 'in').append(y.lbn)
+    if activation is not None:
+        if activation not in allowed_activations:
+            raise TypeError('Activation argument not understood!')
+        else:
+            op_conf.add_conf.activation = dict_activations[activation]
+    else:
+        op_conf.add_conf.activation = op_conf_util.kNone
+    op_conf.add_conf.out = "out"
+    compile_context.CurJobAddOp(op_conf)
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = "out"
+    return remote_blob_util.RemoteBlob(lbi)
+
+
+
