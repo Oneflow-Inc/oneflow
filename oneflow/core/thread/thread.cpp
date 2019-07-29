@@ -30,6 +30,9 @@ void Thread::PollMsgChannel(const ThreadCtx& thread_ctx) {
     }
     int64_t actor_id = msg.dst_actor_id();
     auto actor_it = id2actor_ptr_.find(actor_id);
+    if (actor_it == id2actor_ptr_.end()) {
+      LOG(ERROR) << "SRC " << msg.src_actor_id() << " DST " << msg.dst_actor_id();
+    }
     CHECK(actor_it != id2actor_ptr_.end());
     int process_msg_ret = actor_it->second->ProcessMsg(msg);
     if (process_msg_ret == 1) {
