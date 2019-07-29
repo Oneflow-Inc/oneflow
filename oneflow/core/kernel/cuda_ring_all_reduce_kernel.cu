@@ -66,30 +66,6 @@ struct PackReduceFunctor {
   }
 };
 
-template<ReduceMethod method>
-struct PackReduceFunctor<method, Pack, float> {
-  union View64 {
-    ulong p;
-    float2 f2;
-  };
-  __device__ __forceinline__ Pack operator()(const Pack& a, const Pack& b) const {
-    Pack res;
-    View64 va;
-    View64 vb;
-    va.p = a.x;
-    vb.p = b.x;
-    va.f2.x += vb.f2.x;
-    va.f2.y += vb.f2.y;
-    res.x = va.p;
-    va.p = a.y;
-    vb.p = b.y;
-    va.f2.x += vb.f2.x;
-    va.f2.y += vb.f2.y;
-    res.y = va.p;
-    return res;
-  }
-};
-
 template<ReduceMethod method, typename T>
 struct PackReduceFunctor<method, T, T> {
   __device__ __forceinline__ T operator()(const T& a, const T& b) const {
