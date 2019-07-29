@@ -25,6 +25,8 @@ int MultiRingAllReduceActor::HandlerAllReduce(const ActorMsg& msg) {
       CHECK(it != regst_desc_id2send_or_recv7ring_id_.cend());
       const bool is_send = it->second.first;
       if (is_send) {
+        CHECK_GT(send_regst_reading_cnt_, 0);
+        send_regst_reading_cnt_ -= 1;
         CHECK_EQ(send_rs_.TryPushBackRegst(msg.regst()), 0);
       } else {
         CHECK_EQ(recv_rs_.TryPushBackRegst(msg.regst()), 0);
@@ -79,6 +81,7 @@ int MultiRingAllReduceActor::HandlerAllReduce(const ActorMsg& msg) {
       send_regst_piece_id_[current_ring_id_] += 1;
       for (const int64_t consumer : send->consumers_actor_id()) {
         actor_msgs_.push_back(ActorMsg::BuildRegstMsgToConsumer(actor_id(), consumer, send));
+        send_regst_reading_cnt_ += 1;
       }
       CHECK_EQ(send_rs_.TryPopFrontRegst(send_regst_desc_id_.at(current_ring_id_)), 0);
     }
@@ -122,7 +125,7 @@ int MultiRingAllReduceActor::HandlerAllReduce(const ActorMsg& msg) {
       eord_sent_ = true;
     }
     if (eord_sent_ && out_regst_reading_cnt_ == 0 && recv_regst_eord_cnt_ == num_rings_
-        && send_rs_.total_regst_desc_cnt() == send_rs_.available_regst_desc_cnt()) {
+        && send_regst_reading_cnt_ == 0) {
       OF_SET_MSG_HANDLER(nullptr);
       return 1;
     }
@@ -135,6 +138,7 @@ void MultiRingAllReduceActor::VirtualActorInit(const TaskProto& task_proto) {
   out_regst_desc_id_ = task_proto.produced_regst_desc().at("out").regst_desc_id();
   out_regst_ = GetSoleProducedRegst4RegstDescId(out_regst_desc_id_);
   out_regst_reading_cnt_ = 0;
+  send_regst_reading_cnt_ = 0;
   CHECK_EQ(task_proto.consumed_regst_desc_id().at("in").regst_desc_id_size(), 1);
   in_regst_desc_id_ = task_proto.consumed_regst_desc_id().at("in").regst_desc_id(0);
   multi_ring_all_reduce_kernel_conf_ =
