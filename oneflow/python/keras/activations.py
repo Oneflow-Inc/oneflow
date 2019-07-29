@@ -9,12 +9,17 @@ import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 from oneflow.python.oneflow_export import oneflow_export
 
 @oneflow_export('keras.activations.relu')
-def relu(x, alpha=0., max_value=None, threshold=0.):
+def relu(x, alpha=0., max_value=None, threshold=0., name=None):
+
     assert alpha == 0.
     assert max_value == None
     assert threshold == 0.
+
     op_conf = op_conf_util.OperatorConf()
-    op_conf.name = id_util.UniqueStr('Relu_')
+    if name is None:
+        op_conf.name = id_util.UniqueStr('Relu_')
+    else:
+        op_conf.name = name
     setattr(op_conf.relu_conf, 'in', x.lbn)
     op_conf.relu_conf.out = "out"
     compile_context.CurJobAddOp(op_conf)
@@ -24,9 +29,13 @@ def relu(x, alpha=0., max_value=None, threshold=0.):
     return remote_blob_util.RemoteBlob(lbi)
 
 @oneflow_export('keras.activations.gelu')
-def gelu(x):
+def gelu(x, name=None):
+
     op_conf = op_conf_util.OperatorConf()
-    op_conf.name = id_util.UniqueStr('Gelu_')
+    if name is None:
+        op_conf.name = id_util.UniqueStr('Gelu_')
+    else:
+        op_conf.name = name
     setattr(op_conf.gelu_conf, 'in', x.lbn)
     op_conf.gelu_conf.out = "out"
     compile_context.CurJobAddOp(op_conf)
@@ -36,9 +45,13 @@ def gelu(x):
     return remote_blob_util.RemoteBlob(lbi)
 
 @oneflow_export('keras.activations.tanh')
-def tanh(x):
+def tanh(x, name=None):
+
     op_conf = op_conf_util.OperatorConf()
-    op_conf.name = id_util.UniqueStr('Tanh_')
+    if name is None:
+        op_conf.name = id_util.UniqueStr('Tanh_')
+    else:
+        op_conf.name = name
     setattr(op_conf.tanh_conf, 'in', x.lbn)
     op_conf.tanh_conf.out = "out"
     compile_context.CurJobAddOp(op_conf)
@@ -48,9 +61,13 @@ def tanh(x):
     return remote_blob_util.RemoteBlob(lbi)
 
 @oneflow_export('keras.activations.sigmoid')
-def sigmoid(x):
+def sigmoid(x, name=None):
+
     op_conf = op_conf_util.OperatorConf()
-    op_conf.name = id_util.UniqueStr('Sigmoid_')
+    if name is None:
+        op_conf.name = id_util.UniqueStr('Sigmoid_')
+    else:
+        op_conf.name = name
     setattr(op_conf.sigmoid_conf, 'in', x.lbn)
     op_conf.sigmoid_conf.out = "out"
     compile_context.CurJobAddOp(op_conf)

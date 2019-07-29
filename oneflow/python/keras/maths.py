@@ -25,7 +25,10 @@ def matmul( a,
     assert b_is_sparse == False
 
     op_conf = op_conf_util.OperatorConf()
-    op_conf.name = id_util.UniqueStr('Relu_')
+    if name is None:
+        op_conf.name = id_util.UniqueStr('Matmul_')
+    else:
+        op_conf.name = name
     op_conf.matmul_conf.a = a.lbn
     op_conf.matmul_conf.b = b.lbn
     op_conf.matmul_conf.transpose_a = transpose_a
@@ -51,7 +54,10 @@ def add(x,
                             'tanh',
                             'relu'}
     op_conf = op_conf_util.OperatorConf()
-    op_conf.name = id_util.UniqueStr('Add_')
+    if name is None:
+        op_conf.name = id_util.UniqueStr('Add_')
+    else:
+        op_conf.name = name
     getattr(op_conf.add_conf, 'in').append(x.lbn)
     getattr(op_conf.add_conf, 'in').append(y.lbn)
     if activation is not None:
