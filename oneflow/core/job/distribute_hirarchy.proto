@@ -16,5 +16,5 @@ message DistributeDim {
 }
 
 message DistributeHirarchy {
-  repeated DistributeDim = 1;
+  repeated DistributeDim dim = 1;
 }

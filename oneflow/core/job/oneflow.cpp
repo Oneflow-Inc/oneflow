@@ -824,6 +824,51 @@ void MakeArgPassingJob(const std::string& job_name, const ParallelBlobConf& para
   job_conf->set_total_batch_num(1);
 }
 
+void MakeModelSaveJob(const std::string& job_name,
+                      const HashMap<std::string, ParallelBlobConf>& var_op_name2parallel_blob_conf,
+                      Job* job) {
+  Global<InterUserJobInfo>::Get()->set_global_model_save_job_name(job_name);
+  JobBuilder job_builder(job);
+  ParallelConf md_save_parallel_conf;
+  // only save on master
+  md_save_parallel_conf.add_device_name("0:cpu:0");
+  md_save_parallel_conf.set_policy(ParallelPolicy::kDataParallel);
+  {
+    // there is always a tick op in model save job, so we can ignore the case with no variable
+    OperatorConf tick_op_conf;
+    tick_op_conf.mutable_tick_conf()->set_out("out");
+    job_builder.AddOps(md_save_parallel_conf, {tick_op_conf});
+  }
+  for (const auto& pair : var_op_name2parallel_blob_conf) {
+    const auto& var_op_name = pair.first;
+    OperatorConf input_op_conf;
+    {
+      const auto& parallel_blob_conf = pair.second;
+      input_op_conf.set_name(var_op_name);
+      auto* input_conf = input_op_conf.mutable_input_conf();
+      input_conf->set_out("out");
+      auto* blob_conf = input_conf->mutable_blob_conf();
+      InitBlobConf(blob_conf, parallel_blob_conf);
+      CHECK(blob_conf->has_data_type());
+      job_builder.AddOps(parallel_blob_conf.parallel_conf(), {input_op_conf});
+    }
+    OperatorConf model_save_op_conf;
+    {
+      model_save_op_conf.set_name("System-Saver-" + var_op_name + "-MdSave");
+      ModelSaveV2OpConf* model_save_conf = model_save_op_conf.mutable_model_save_v2_conf();
+      model_save_conf->set_in(input_op_conf.name() + "/out");
+      model_save_conf->set_lbn(input_op_conf.name() + "/out");
+      job_builder.AddOps(md_save_parallel_conf, {model_save_op_conf});
+    }
+  }
+  auto* job_conf = job->mutable_job_conf();
+  job_conf->set_job_name(job_name);
+  job_conf->mutable_predict_conf();
+  job_conf->set_piece_size(1);
+  job_conf->set_data_part_num(1);
+  job_conf->set_total_batch_num(1);
+}
+
 void CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan) {
   std::vector<Job> jobs(conf_jobs.size());
   std::vector<Plan> sub_plans(conf_jobs.size());
@@ -832,11 +877,14 @@ void CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan) {
     WithJobIdGlobal(i, [&]() { CompileCurJobOnMaster(&jobs.at(i), &sub_plans.at(i), true); });
   }
   HashMap<std::string, ParallelBlobConf> push_op_name2parallel_blob_conf;
-  FilterOpName2ParallelBlobConf({OperatorConf::kInputConf, OperatorConf::kVariableConf}, &jobs,
+  FilterOpName2ParallelBlobConf({OperatorConf::kInputConf}, &jobs,
                                 &push_op_name2parallel_blob_conf);
   HashMap<std::string, ParallelBlobConf> pull_op_name2parallel_blob_conf;
-  FilterOpName2ParallelBlobConf({OperatorConf::kOutputConf, OperatorConf::kVariableConf}, &jobs,
+  FilterOpName2ParallelBlobConf({OperatorConf::kOutputConf}, &jobs,
                                 &pull_op_name2parallel_blob_conf);
+  HashMap<std::string, ParallelBlobConf> var_op_name2parallel_blob_conf;
+  FilterOpName2ParallelBlobConf({OperatorConf::kVariableConf}, &jobs,
+                                &var_op_name2parallel_blob_conf);
   HashMap<ParallelBlobConf, HashMap<std::string, std::vector<std::string>>>
       parallel_blob_conf2input_op_name2output_op_name;
   FilterArgPassingJobGroupInfo(&jobs, &parallel_blob_conf2input_op_name2output_op_name);
@@ -862,22 +910,27 @@ void CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan) {
   };
   for (const auto& pair : push_op_name2parallel_blob_conf) {
     Job push_job;
-    MakePushJob(std::string("Push-") + pair.first, pair.first, pair.second, &push_job);
+    MakePushJob(std::string("System-Push-") + pair.first, pair.first, pair.second, &push_job);
     CompileHelperJob(&push_job);
   }
   for (const auto& pair : pull_op_name2parallel_blob_conf) {
     Job pull_job;
-    MakePullJob(std::string("Pull-") + pair.first, pair.first, pair.second, &pull_job);
+    MakePullJob(std::string("System-Pull-") + pair.first, pair.first, pair.second, &pull_job);
     CompileHelperJob(&pull_job);
   }
   for (const auto& outer_pair : parallel_blob_conf2input_op_name2output_op_name) {
     const auto parallel_blob_conf = outer_pair.first;
     for (const auto& pair : outer_pair.second) {
       Job arg_passing_job;
-      MakeArgPassingJob("ArgPassing-" + pair.first, parallel_blob_conf, pair.first, pair.second,
-                        &arg_passing_job);
+      MakeArgPassingJob("System-ArgPassing-" + pair.first, parallel_blob_conf, pair.first,
+                        pair.second, &arg_passing_job);
       CompileHelperJob(&arg_passing_job);
     }
+  }
+  {
+    Job model_save_job;
+    MakeModelSaveJob("System-ModelSave", var_op_name2parallel_blob_conf, &model_save_job);
+    CompileHelperJob(&model_save_job);
   }
   if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
     BindInterfaceMemBlockId(jobs, &sub_plans);

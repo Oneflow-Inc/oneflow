@@ -28,6 +28,7 @@ void AddSaver(const OpGraph& op_graph, Job* job) {
     CHECK_EQ(variable_time_shape.At(0), GlobalJobDesc().TotalBatchNum());
     every_nth_conf->set_n(num_of_batches_in_snapshot * variable_time_shape.Count(1));
     builder.AddOps(node->parallel_desc().parallel_conf(), {every_nth_op_conf});
+
     OperatorConf model_save_op_conf;
     model_save_op_conf.set_name("System-Saver-" + node->op().op_name() + "-MdSave");
     ModelSaveV2OpConf* model_save_conf = model_save_op_conf.mutable_model_save_v2_conf();
