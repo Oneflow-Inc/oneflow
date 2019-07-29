@@ -68,22 +68,25 @@ struct PackReduceFunctor {
 
 template<ReduceMethod method>
 struct PackReduceFunctor<method, Pack, float> {
-  static_assert(sizeof(Pack) % sizeof(float) == 0,
-                "The size of the Pack must be a multiple of the size of float");
-  union View {
-    Pack p;
-    float a, b, c, d;
+  union View64 {
+    ulong p;
+    float2 f2;
   };
   __device__ __forceinline__ Pack operator()(const Pack& a, const Pack& b) const {
-    View va;
-    View vb;
-    va.p = a;
-    vb.p = b;
-    va.a += vb.a;
-    va.b += vb.b;
-    va.c += vb.c;
-    va.d += vb.d;
-    return va.p;
+    Pack res;
+    View64 va;
+    View64 vb;
+    va.p = a.x;
+    vb.p = b.x;
+    va.f2.x += vb.f2.x;
+    va.f2.y += vb.f2.y;
+    res.x = va.p;
+    va.p = a.y;
+    vb.p = b.y;
+    va.f2.x += vb.f2.x;
+    va.f2.y += vb.f2.y;
+    res.y = va.p;
+    return res;
   }
 };
 
