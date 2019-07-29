@@ -35,11 +35,12 @@ class CudaRingAllReduceCompActor : public CompActor {
 
   HashSet<int64_t> send_regst_desc_ids_;
   HashSet<int64_t> recv_regst_desc_ids_;
-  int64_t num_rings_ = -1;
-
+  int64_t num_link_ = -1;
+  int64_t num_link_dup = -1;
   RegstSlot consumed_rs_;
-  int64_t total_num_steps_ = -1;
-  int64_t current_step_ = -1;
+  int64_t num_step_ = -1;
+  int64_t current_step_id_ = -1;
+  int64_t current_link_dup_id_ = -1;
   int64_t in_regst_desc_id_ = -1;
   int64_t out_regst_desc_id_ = -1;
   int64_t send_regst_piece_id_ = -1;

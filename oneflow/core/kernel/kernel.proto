@@ -175,16 +175,22 @@ message MultiRingAllReduceKernelConf {
   repeated MultiRingAllReduceKernelRingConf ring_conf = 2;
 }
 
+message CudaRingAllReduceStepLinkConf {
+  repeated RangeProto link_data_range = 5;
+}
+
 message CudaRingAllReduceStepConf {
   required bool send = 1;
   required bool recv = 2;
   required bool reduce = 3;
   required bool copy = 4;
-  repeated RangeProto link_data_range = 5;
+  repeated CudaRingAllReduceStepLinkConf link_conf = 5;
 }
 
 message CudaRingAllReduceKernelConf {
-  repeated CudaRingAllReduceStepConf step_conf = 1;
+  required int64 num_step = 1;
+  required int64 num_link_dup = 2;
+  repeated CudaRingAllReduceStepConf step_conf = 3;
 }
 
 message KernelConf {

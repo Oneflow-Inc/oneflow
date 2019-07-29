@@ -130,40 +130,41 @@ void CudaRingAllReduceOp::VirtualGenKernelConf(
     }
   }
   FOR_RANGE(int64_t, step_id, 0, num_step) {
+    CudaRingAllReduceStepConf* step_conf =
+        multi_cuda_ring_all_reduce_kernel_conf->mutable_step_conf()->Add();
+    if (step_id == 0) {
+      step_conf->set_send(true);
+      step_conf->set_recv(false);
+      step_conf->set_reduce(false);
+      step_conf->set_copy(false);
+    } else if (step_id < num_rank - 1) {
+      step_conf->set_send(true);
+      step_conf->set_recv(true);
+      step_conf->set_reduce(true);
+      step_conf->set_copy(false);
+    } else if (step_id == num_rank - 1) {
+      step_conf->set_send(true);
+      step_conf->set_recv(true);
+      step_conf->set_reduce(true);
+      step_conf->set_copy(true);
+    } else if (step_id < num_step - 1) {
+      step_conf->set_send(true);
+      step_conf->set_recv(true);
+      step_conf->set_reduce(false);
+      step_conf->set_copy(true);
+    } else if (step_id == num_step - 1) {
+      step_conf->set_send(false);
+      step_conf->set_recv(true);
+      step_conf->set_reduce(false);
+      step_conf->set_copy(true);
+    } else {
+      UNIMPLEMENTED();
+    }
     FOR_RANGE(int64_t, link_dup_id, 0, num_link_dup) {
-      CudaRingAllReduceStepConf* step_conf =
-          multi_cuda_ring_all_reduce_kernel_conf->mutable_step_conf()->Add();
-      if (step_id == 0) {
-        step_conf->set_send(true);
-        step_conf->set_recv(false);
-        step_conf->set_reduce(false);
-        step_conf->set_copy(false);
-      } else if (step_id < num_rank - 1) {
-        step_conf->set_send(true);
-        step_conf->set_recv(true);
-        step_conf->set_reduce(true);
-        step_conf->set_copy(false);
-      } else if (step_id == num_rank - 1) {
-        step_conf->set_send(true);
-        step_conf->set_recv(true);
-        step_conf->set_reduce(true);
-        step_conf->set_copy(true);
-      } else if (step_id < num_step - 1) {
-        step_conf->set_send(true);
-        step_conf->set_recv(true);
-        step_conf->set_reduce(false);
-        step_conf->set_copy(true);
-      } else if (step_id == num_step - 1) {
-        step_conf->set_send(false);
-        step_conf->set_recv(true);
-        step_conf->set_reduce(false);
-        step_conf->set_copy(true);
-      } else {
-        UNIMPLEMENTED();
-      }
+      CudaRingAllReduceStepLinkConf* link_conf = step_conf->mutable_link_conf()->Add();
       FOR_RANGE(int64_t, link_id, 0, num_link) {
         helper.GetSplit(link_id, link_dup_id, step_rank_id.at(link_id).at(step_id))
-            .ToProto(step_conf->mutable_link_data_range()->Add());
+            .ToProto(link_conf->mutable_link_data_range()->Add());
       }
     }
   }
