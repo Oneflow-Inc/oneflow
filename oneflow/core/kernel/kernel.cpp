@@ -75,7 +75,6 @@ void Kernel::Init(const JobDesc* job_desc, const ParallelContext* parallel_ctx,
 const InitializerConf* Kernel::GetInitializerFromPbMessage(const PbMessage& msg,
                                                            const std::string& field) const {
   auto ret = dynamic_cast<const InitializerConf*>(GetMsgPtrFromPbMessage(msg, field));
-  if (ret == nullptr) { return job_desc().DefaultInitializerConf(); }
   return ret;
 }
 
