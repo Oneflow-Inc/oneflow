@@ -14,7 +14,7 @@ constexpr int32_t PACK_ALIGN = alignof(Pack);
 constexpr int32_t NUM_WARP_PER_BLOCK = 8;
 constexpr int32_t NUM_THREAD_PER_WARP = 32;
 constexpr int32_t NUM_THREAD = NUM_THREAD_PER_WARP * NUM_WARP_PER_BLOCK;
-constexpr int32_t BATCH_SIZE = 8;
+constexpr int32_t NUM_PACK_PER_BATCH_PER_THREAD = 8;
 constexpr int32_t NUM_BLOCK_PER_LINK = 2;
 
 __forceinline__ __device__ int64_t DivUp(int64_t n, int64_t val) { return (n + val - 1) / val; }
@@ -63,6 +63,27 @@ struct PackReduceFunctor {
       vc.t[i] = ReduceFunctor<method, T>()(va.t[i], vb.t[i]);
     }
     return vc.p;
+  }
+};
+
+template<ReduceMethod method>
+struct PackReduceFunctor<method, Pack, float> {
+  static_assert(sizeof(Pack) % sizeof(float) == 0,
+                "The size of the Pack must be a multiple of the size of float");
+  union View {
+    Pack p;
+    float a, b, c, d;
+  };
+  __device__ __forceinline__ Pack operator()(const Pack& a, const Pack& b) const {
+    View va;
+    View vb;
+    va.p = a;
+    vb.p = b;
+    va.a += vb.a;
+    va.b += vb.b;
+    va.c += vb.c;
+    va.d += vb.d;
+    return va.p;
   }
 };
 
@@ -160,19 +181,19 @@ __device__ __forceinline__ void BatchPackReduceOrCopy(const int64_t num_elem,
     out_bound[i] = reinterpret_cast<const P*>(out[i]) + num_pack;
   }
   P batch[BATCH];
-  using PackBatchFetch = BatchFetchFunctor<P, BATCH, NUM_THREAD_PER_WARP, BOUND>;
-  using PackBatchStore = BatchStoreFunctor<P, BATCH, NUM_THREAD_PER_WARP, BOUND>;
+  using BatchPackFetch = BatchFetchFunctor<P, BATCH, NUM_THREAD_PER_WARP, BOUND>;
+  using BatchPackStore = BatchStoreFunctor<P, BATCH, NUM_THREAD_PER_WARP, BOUND>;
   using BatchPackReduce = BatchPackReduceFunctor<method, T, P, BATCH>;
   for (int64_t b = 0; b < num_batch; ++b) {
-    PackBatchFetch()(batch, in_pack[0], in_bound[0]);
+    BatchPackFetch()(batch, in_pack[0], in_bound[0]);
 #pragma unroll
     for (int32_t i = 1; i < NUM_IN; ++i) {
       P tmp[BATCH];
-      PackBatchFetch()(tmp, in_pack[i], in_bound[i]);
+      BatchPackFetch()(tmp, in_pack[i], in_bound[i]);
       BatchPackReduce()(batch, batch, tmp);
     }
 #pragma unroll
-    for (int32_t i = 0; i < NUM_OUT; ++i) { PackBatchStore()(out_pack[i], batch, out_bound[i]); }
+    for (int32_t i = 0; i < NUM_OUT; ++i) { BatchPackStore()(out_pack[i], batch, out_bound[i]); }
 #pragma unroll
     for (int32_t i = 0; i < NUM_IN; ++i) { in_pack[i] += NUM_PACK_PER_BATCH_PER_BLOCK; }
 #pragma unroll
@@ -213,32 +234,35 @@ __device__ __forceinline__ void ReduceOrCopy(const int64_t num_elem, const T* (&
     int64_t remaining = num_elem;
     if (align > 0) {
       const int32_t num_align_elem = align / sizeof(T);
-      DoBatchPackReduceOrCopy<method, T, T, BATCH_SIZE, true, NUM_IN, NUM_OUT>(num_align_elem, in,
-                                                                               out);
+      DoBatchPackReduceOrCopy<method, T, T, NUM_PACK_PER_BATCH_PER_THREAD, true, NUM_IN, NUM_OUT>(
+          num_align_elem, in, out);
       remaining -= num_align_elem;
     }
-    constexpr int32_t NUM_ELEM_PER_BATCH = sizeof(Pack) / sizeof(T) * BATCH_SIZE * NUM_THREAD;
+    constexpr int32_t NUM_ELEM_PER_BATCH =
+        sizeof(Pack) / sizeof(T) * NUM_PACK_PER_BATCH_PER_THREAD * NUM_THREAD;
     const int64_t num_batch = remaining / NUM_ELEM_PER_BATCH;
     if (num_batch > 0) {
       const int64_t total_batch_elem = num_batch * NUM_ELEM_PER_BATCH;
-      DoBatchPackReduceOrCopy<method, T, Pack, BATCH_SIZE, false, NUM_IN, NUM_OUT>(total_batch_elem,
-                                                                                   in, out);
+      DoBatchPackReduceOrCopy<method, T, Pack, NUM_PACK_PER_BATCH_PER_THREAD, false, NUM_IN,
+                              NUM_OUT>(total_batch_elem, in, out);
       remaining -= total_batch_elem;
     }
     if (remaining > 0) {
-      DoBatchPackReduceOrCopy<method, T, T, BATCH_SIZE, true, NUM_IN, NUM_OUT>(remaining, in, out);
+      DoBatchPackReduceOrCopy<method, T, T, NUM_PACK_PER_BATCH_PER_THREAD, true, NUM_IN, NUM_OUT>(
+          remaining, in, out);
     }
   } else {
     int64_t remaining = num_elem;
-    constexpr int32_t NUM_ELEM_PER_BATCH = BATCH_SIZE * NUM_THREAD;
+    constexpr int32_t NUM_ELEM_PER_BATCH = NUM_PACK_PER_BATCH_PER_THREAD * NUM_THREAD;
     const int64_t num_batch = remaining / NUM_ELEM_PER_BATCH;
     if (num_batch > 0) {
       const int64_t total_batch_elem = num_batch * NUM_ELEM_PER_BATCH;
-      DoBatchPackReduceOrCopy<method, T, T, BATCH_SIZE, false, NUM_IN, NUM_OUT>(total_batch_elem,
-                                                                                in, out);
+      DoBatchPackReduceOrCopy<method, T, T, NUM_PACK_PER_BATCH_PER_THREAD, false, NUM_IN, NUM_OUT>(
+          total_batch_elem, in, out);
       remaining -= total_batch_elem;
     } else {
-      DoBatchPackReduceOrCopy<method, T, T, BATCH_SIZE, true, NUM_IN, NUM_OUT>(remaining, in, out);
+      DoBatchPackReduceOrCopy<method, T, T, NUM_PACK_PER_BATCH_PER_THREAD, true, NUM_IN, NUM_OUT>(
+          remaining, in, out);
     }
   }
 }
