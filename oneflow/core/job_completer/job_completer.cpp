@@ -18,10 +18,7 @@ void CheckOpGraph(const OpGraph& op_graph) {
   op_graph.ForEachNode([&](OpNode* op_node) {
     size_t in_cnt = 0;
     op_graph.ForEachDataAndCtrlInNode(op_node, [&](OpNode*) { ++in_cnt; });
-    if (in_cnt == 0) {
-      CHECK(op_node->op().op_conf().has_source_tick_conf()
-            || op_node->op().op_conf().has_model_init_conf());
-    }
+    if (in_cnt == 0) { CHECK(op_node->op().op_conf().has_source_tick_conf()); }
     size_t out_cnt = 0;
     op_graph.ForEachDataAndCtrlOutNode(op_node, [&](OpNode*) { ++out_cnt; });
     if (out_cnt == 0) { CHECK(op_node->op().op_conf().has_sink_tick_conf()); }
