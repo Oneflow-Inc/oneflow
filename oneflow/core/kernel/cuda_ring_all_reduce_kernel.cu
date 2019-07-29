@@ -239,7 +239,8 @@ __device__ __forceinline__ void ReduceOrCopy(const int64_t num_elem, const T* (&
       DoBatchPackReduceOrCopy<method, T, T, NUM_PACK_PER_BATCH_PER_THREAD, false, NUM_IN, NUM_OUT>(
           total_batch_elem, in, out);
       remaining -= total_batch_elem;
-    } else {
+    }
+    if (remaining > 0) {
       DoBatchPackReduceOrCopy<method, T, T, NUM_PACK_PER_BATCH_PER_THREAD, true, NUM_IN, NUM_OUT>(
           remaining, in, out);
     }
@@ -311,6 +312,8 @@ template<typename T>
 void CudaRingAllReduceKernelUtil<T>::RecvCopy(DeviceCtx* ctx, CudaRingAllReduceParams<T> params) {
   LaunchGenericOp<ReduceMethod::kSum, T, true, false, false, true>(ctx, params);
 }
+
+size_t GetCudaRingAllReducePackAlignSize() { return PACK_ALIGN; }
 
 #define INSTANTIATE_CUDA_RING_ALL_REDUCE_KERNEL_UTIL(type_cpp, type_proto) \
   template struct CudaRingAllReduceKernelUtil<type_cpp>;

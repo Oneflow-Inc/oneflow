@@ -43,6 +43,8 @@ struct CudaRingAllReduceKernelUtil {
   static void RecvCopy(DeviceCtx* ctx, CudaRingAllReduceParams<T> params);
 };
 
+size_t GetCudaRingAllReducePackAlignSize();
+
 }  // namespace oneflow
 
 #endif  // #define ONEFLOW_CORE_KERNEL_CUDA_RING_ALL_REDUCE_KERNEL_H_
