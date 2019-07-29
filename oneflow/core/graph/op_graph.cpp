@@ -197,7 +197,7 @@ void OpNode::SplitLogicalInputBlobDesc() {
       FOR_RANGE(int64_t, axis_parallel_id, 0, parallel_desc().parallel_num()) {
         BlobDesc sub_blob_desc(blob_desc);
         sub_blob_desc.mut_shape().Set(axis, bs.At(axis_parallel_id).size());
-        bn2parallel_id2blob_desc_[bn].push_back(blob_desc);
+        bn2parallel_id2blob_desc_[bn].push_back(sub_blob_desc);
       }
     } else {
       CHECK(sbp_parallel.has_broadcast_parallel() || sbp_parallel.has_partial_sum_parallel());
