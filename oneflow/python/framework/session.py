@@ -81,6 +81,7 @@ class Session(object):
         self.is_running_ = True
         self.runtime_env_ = runtime.GetMachineRuntimeEnv(self.job_set_)
         self.runtime_env_.__enter__()
+        runtime_ctx.default_session = self
         return self
 
     def __exit__(self, *args):
