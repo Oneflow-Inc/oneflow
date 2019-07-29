@@ -20,6 +20,6 @@ const PbMessage& AssignKernel<device_type, T>::GetCustomizedOpConf() const {
   return this->op_conf().assign_conf();
 }
 
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kAssignConf, AssignKernel, FLOATING_DATA_TYPE_SEQ);
+ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kAssignConf, AssignKernel, ARITHMETIC_DATA_TYPE_SEQ);
 
 }  // namespace oneflow

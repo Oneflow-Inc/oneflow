@@ -29,6 +29,6 @@ void ModelInitKernel<device_type, T>::Forward(
   }
 }
 
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kModelInitConf, ModelInitKernel, FLOATING_DATA_TYPE_SEQ);
+ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kModelInitConf, ModelInitKernel, ARITHMETIC_DATA_TYPE_SEQ);
 
 }  // namespace oneflow
