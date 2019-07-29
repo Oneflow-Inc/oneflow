@@ -75,7 +75,8 @@ struct PackReduceFunctor<method, T, T> {
 
 template<ReduceMethod method, typename T, typename P, int32_t BATCH>
 struct BatchPackReduceFunctor {
-  __device__ __forceinline__ void operator()(P res[BATCH], const P a[BATCH], const P b[BATCH]) {
+  __device__ __forceinline__ void operator()(P (&res)[BATCH], const P (&a)[BATCH],
+                                             const P (&b)[BATCH]) {
 #pragma unroll
     for (int32_t i = 0; i < BATCH; ++i) { res[i] = PackReduceFunctor<method, T, P>()(a[i], b[i]); }
   }
@@ -111,30 +112,30 @@ struct StoreFunctor<Pack> {
 
 template<typename T, int32_t BATCH, int32_t STRIDE, bool BOUND>
 struct BatchFetchFunctor {
-  __device__ __forceinline__ void operator()(T a[BATCH], const T* start, const T* bound) {
+  __device__ __forceinline__ void operator()(T (&v)[BATCH], const T* start, const T* bound) {
 #pragma unroll
     for (int32_t i = 0; i < BATCH; ++i) {
       const T* ptr = start + i * STRIDE;
-      if (!BOUND || ptr < bound) { FetchFunctor<T>()(a[i], ptr); }
+      if (!BOUND || ptr < bound) { FetchFunctor<T>()(v[i], ptr); }
     }
   }
 };
 
 template<typename T, int32_t BATCH, int32_t STRIDE, bool BOUND>
 struct BatchStoreFunctor {
-  __device__ __forceinline__ void operator()(T* start, T a[BATCH], const T* bound) {
+  __device__ __forceinline__ void operator()(T* start, T (&v)[BATCH], const T* bound) {
 #pragma unroll
     for (int32_t i = 0; i < BATCH; ++i) {
       T* ptr = start + i * STRIDE;
-      if (!BOUND || ptr < bound) { StoreFunctor<T>()(ptr, a[i]); }
+      if (!BOUND || ptr < bound) { StoreFunctor<T>()(ptr, v[i]); }
     }
   }
 };
 
 template<ReduceMethod method, typename T, typename P, int32_t BATCH, bool BOUND, int32_t NUM_IN,
          int32_t NUM_OUT>
-__device__ __forceinline__ void BatchPackReduceOrCopy(const int64_t num_elem, const T* in[NUM_IN],
-                                                      T* out[NUM_OUT]) {
+__device__ __forceinline__ void BatchPackReduceOrCopy(const int64_t num_elem,
+                                                      const T* (&in)[NUM_IN], T* (&out)[NUM_OUT]) {
   constexpr int32_t NUM_PACK_PER_BATCH_PER_WARP = BATCH * NUM_THREAD_PER_WARP;
   constexpr int32_t NUM_ELEM_PER_PACK = sizeof(P) / sizeof(T);
   constexpr int32_t NUM_PACK_PER_BATCH_PER_BLOCK = NUM_PACK_PER_BATCH_PER_WARP * NUM_WARP_PER_BLOCK;
@@ -181,16 +182,17 @@ __device__ __forceinline__ void BatchPackReduceOrCopy(const int64_t num_elem, co
 
 template<ReduceMethod method, typename T, typename P, int32_t BATCH, bool BOUND, int32_t NUM_IN,
          int32_t NUM_OUT>
-__device__ __forceinline__ void DoBatchPackReduceOrCopy(const int64_t num_elem, const T* in[NUM_IN],
-                                                        T* out[NUM_OUT]) {
+__device__ __forceinline__ void DoBatchPackReduceOrCopy(const int64_t num_elem,
+                                                        const T* (&in)[NUM_IN],
+                                                        T* (&out)[NUM_OUT]) {
   BatchPackReduceOrCopy<method, T, P, BATCH, BOUND, NUM_IN, NUM_OUT>(num_elem, in, out);
   for (int32_t i = 0; i < NUM_IN; ++i) { in[i] += num_elem; }
   for (int32_t i = 0; i < NUM_OUT; ++i) { out[i] += num_elem; }
 }
 
 template<ReduceMethod method, typename T, int32_t NUM_IN, int32_t NUM_OUT>
-__device__ __forceinline__ void ReduceOrCopy(const int64_t num_elem, const T* in[NUM_IN],
-                                             T* out[NUM_OUT]) {
+__device__ __forceinline__ void ReduceOrCopy(const int64_t num_elem, const T* (&in)[NUM_IN],
+                                             T* (&out)[NUM_OUT]) {
   bool all_same_aligned = true;
   int32_t align = reinterpret_cast<uintptr_t>(in[0]) % sizeof(Pack);
   for (int32_t i = 1; i < NUM_IN; ++i) {
