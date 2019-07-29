@@ -895,6 +895,7 @@ void CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan) {
     for (const auto& pair : parallel_blob_conf2input_op_name2output_op_name) {
       helper_job_size += pair.second.size();
     }
+    helper_job_size += 1;
     size_t user_job_size = jobs.size();
     jobs.resize(user_job_size + helper_job_size);
     sub_plans.resize(user_job_size + helper_job_size);
