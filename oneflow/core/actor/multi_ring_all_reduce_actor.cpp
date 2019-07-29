@@ -121,7 +121,8 @@ int MultiRingAllReduceActor::HandlerAllReduce(const ActorMsg& msg) {
       });
       eord_sent_ = true;
     }
-    if (eord_sent_ && out_regst_reading_cnt_ == 0 && recv_regst_eord_cnt_ == num_rings_) {
+    if (eord_sent_ && out_regst_reading_cnt_ == 0 && recv_regst_eord_cnt_ == num_rings_
+        && send_rs_.total_regst_desc_cnt() == send_rs_.available_regst_desc_cnt()) {
       OF_SET_MSG_HANDLER(nullptr);
       return 1;
     }
