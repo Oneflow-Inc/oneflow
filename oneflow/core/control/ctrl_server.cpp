@@ -30,6 +30,7 @@ CtrlServer::CtrlServer() : is_first_connect_(true), this_machine_addr_("") {
   if (FLAGS_grpc_use_no_signal) { grpc_use_signal(-1); }
   int port = Global<JobDesc>::Get()->resource().ctrl_port();
   grpc::ServerBuilder server_builder;
+  server_builder.SetMaxMessageSize(INT_MAX);
   int bound_port = 0;
   server_builder.AddListeningPort("0.0.0.0:" + std::to_string(port),
                                   grpc::InsecureServerCredentials(), &bound_port);
