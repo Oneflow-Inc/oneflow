@@ -4,7 +4,6 @@
 #include "oneflow/core/job_completer/autotick.h"
 #include "oneflow/core/job_completer/add_keep_header_only_op_conf.h"
 #include "oneflow/core/job_completer/optimizer.h"
-#include "oneflow/core/job_completer/add_saver.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job_completer/all_reduce_add_pass.h"
 #include "oneflow/core/job_completer/group_boxing_by_dst_parallel.h"
@@ -452,7 +451,6 @@ void JobCompleter::Complete(Job* job) const {
     WithOpGraphAndMutJob(job, &TieUpChainHeadersUnReachableFromAnyVariableOps);
     // complete ops for trainning
     WithOpGraphAndMutJob(job, &GenerateOpConf4Trainning);
-    WithOpGraphAndMutJob(job, &AddSaver);
     WithOpGraphAndMutJob(job, &RewriteBoxingWithAllReduce);
   }
   WithOpGraphAndMutJob(job, &DumpLogicalBlobDescAndSbpSignature);
