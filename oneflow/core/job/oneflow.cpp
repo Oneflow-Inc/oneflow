@@ -119,9 +119,18 @@ void PushPlan(const std::string& plan_name, const Plan& plan) {
                                     std::to_string(plan.total_mbn_num()));
 
   Global<CtrlClient>::Get()->PushKV(net_topo_key(plan_name), plan.net_topo());
+
+  int l = std::stoi(getenv("TEST_GRPC_MAX_MSG_LEN"));
+  LOG(INFO) << "TEST_GRPC_MAX_MSG_LEN=" << l << std::endl;
+  std::string s (l, 'x');
+  Global<CtrlClient>::Get()->PushKV("test_grpc_limit"+plan_name, s);
 }
 
 void PullPlan(const std::string& plan_name, Plan* plan) {
+  std::string s;
+  Global<CtrlClient>::Get()->PullKV("test_grpc_limit"+plan_name, &s);
+  LOG(INFO) << "pull test ok!" << std::endl;
+
   ClusterThrdIds cluster_thrd_ids;
   Global<CtrlClient>::Get()->PullKV(cluster_thrd_ids_key(plan_name), &cluster_thrd_ids);
   PrintProtoToTextFile(cluster_thrd_ids, JoinPath(FLAGS_log_dir, cluster_thrd_ids_key(plan_name)));
