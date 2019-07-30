@@ -51,7 +51,6 @@ class JobDesc final {
   // Train conf
   int32_t NumOfBatchesInSnapshot() const;
   int64_t TotalBatchNum() const;
-  const InitializerConf* DefaultInitializerConf() const;
   int32_t PieceNumOfPrintLoss() const;
   int32_t PieceNumOfPrintAccuracy() const;
   int64_t BatchSize() const;
