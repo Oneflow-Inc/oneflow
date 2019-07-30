@@ -57,6 +57,7 @@ void CudaRingAllReduceCompTaskNode::BuildExecGphAndRegst() {
     send_regst->AddLbi(lbi_);
     node->BindBnWithRegst(send_name, send_regst);
   }
+  node->InferBlobDescs(parallel_ctx());
 }
 
 void CudaRingAllReduceCompTaskNode::InferProducedDataRegstTimeShape() {
