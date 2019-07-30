@@ -35,7 +35,8 @@ class Session(object):
 
     def run(self, job_func, *arg):
         assert self.is_running_
-        assert job_func.__name__ in self.job_name2job_func_
+        if job_func.__name__ not in [runtime_ctx.inter_user_job_info.global_model_save_job_name,runtime_ctx.inter_user_job_info.global_model_init_job_name]:  
+            assert job_func.__name__ in self.job_name2job_func_
         remote_blobs = runtime.LaunchJob(job_func, *arg)
         if remote_blobs is None: return
         return OutRemoteBlobsResultBox().SetResult(remote_blobs).Inited()

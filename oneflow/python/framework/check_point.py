@@ -8,10 +8,10 @@ class CheckPoint(object):
     def __init__(self):
         pass
 
-    def restore(save_path=None):
+    def restore(self, save_path=None):
         return CheckPointRestoreStatus(save_path)
 
-    def save(file_prefix=None, session = None):
+    def save(self, file_prefix=None, session = None):
         assert file_prefix == None
         if session == None: session = runtime_ctx.default_session
         session.run(_MakeModelSaveJobFunc())
@@ -20,7 +20,7 @@ class CheckPointRestoreStatus(object):
     def __init__(self, save_path):
         pass
 
-    def initialize_or_restore(session = None):
+    def initialize_or_restore(self, session = None):
         if session == None: session = runtime_ctx.default_session
         session.run(_MakeModelInitJobFunc())
 
