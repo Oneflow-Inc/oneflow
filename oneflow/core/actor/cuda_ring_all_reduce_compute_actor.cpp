@@ -8,7 +8,6 @@ void CudaRingAllReduceCompActor::VirtualActorInit(const TaskProto& task_proto) {
       exec_kernel_vec().front().kernel->kernel_conf().op_attribute().op_conf();
   const CudaRingAllReduceKernelConf& all_reduce_kernel_conf =
       exec_kernel_vec().front().kernel->kernel_conf().cuda_ring_all_reduce_conf();
-
   CHECK(op_conf.has_cuda_ring_all_reduce_conf());
   const CudaRingAllReduceOpConf& conf = op_conf.cuda_ring_all_reduce_conf();
   num_link_ = conf.link_size();
@@ -25,7 +24,7 @@ void CudaRingAllReduceCompActor::VirtualActorInit(const TaskProto& task_proto) {
     consumed_rs_.InsertRegstDescId(recv_regst_desc_id);
   }
   num_step_ = all_reduce_kernel_conf.num_step();
-  num_link_dup = all_reduce_kernel_conf.num_link_dup();
+  num_link_dup_ = all_reduce_kernel_conf.num_link_dup();
   current_step_id_ = 0;
   current_link_dup_id_ = 0;
   send_regst_piece_id_ = 0;
@@ -54,7 +53,8 @@ void CudaRingAllReduceCompActor::NormalProcessCustomizedEordMsg(const ActorMsg& 
 }
 
 bool CudaRingAllReduceCompActor::IsCustomizedReadAlwaysUnReadyFromNow() const {
-  return in_regst_eord_ && consumed_rs_.available_regst_desc_cnt() == 0 && current_step_id_ == 0;
+  return in_regst_eord_ && consumed_rs_.available_regst_desc_cnt() == 0 && current_step_id_ == 0
+         && current_link_dup_id_ == 0;
 }
 
 bool CudaRingAllReduceCompActor::IsCustomizedReadReady() const {
@@ -84,7 +84,7 @@ void CudaRingAllReduceCompActor::Act() {
 }
 
 void CudaRingAllReduceCompActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
-  if (current_step_id_ == num_step_ - 1) {
+  if (current_step_id_ == num_step_ - 1 && current_link_dup_id_ == num_link_dup_) {
     HandleProducedNaiveDataRegstToConsumer([this](Regst* regst) {
       if (regst->regst_desc_id() == out_regst_desc_id_) {
         regst->set_piece_id(consumed_rs_.Front(in_regst_desc_id_)->piece_id());
@@ -93,7 +93,7 @@ void CudaRingAllReduceCompActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer
         return false;
       }
     });
-  } else {
+  } else if (current_step_id_ < num_step_ - 1) {
     HandleProducedNaiveDataRegstToConsumer([this](Regst* regst) {
       if (send_regst_desc_ids_.find(regst->regst_desc_id()) != send_regst_desc_ids_.cend()) {
         regst->set_piece_id(send_regst_piece_id_);
@@ -107,7 +107,7 @@ void CudaRingAllReduceCompActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer
 }
 
 void CudaRingAllReduceCompActor::AsyncSendCustomizedConsumedRegstMsgToProducer() {
-  if (current_step_id_ == num_step_ - 1) {
+  if (current_step_id_ == num_step_ - 1 && current_link_dup_id_ == num_link_dup_) {
     Regst* cur_regst = consumed_rs_.Front(in_regst_desc_id_);
     CHECK(cur_regst);
     AsyncSendRegstMsgToProducer(cur_regst);
@@ -121,7 +121,8 @@ void CudaRingAllReduceCompActor::AsyncSendCustomizedConsumedRegstMsgToProducer()
       CHECK_EQ(0, consumed_rs_.TryPopFrontRegst(recv_regst_desc_id));
     }
   }
-  current_step_id_ = (current_step_id_ + 1) % num_step_;
+  current_link_dup_id_ = (current_link_dup_id_ + 1) % num_link_dup_;
+  if (current_link_dup_id_ == 0) { current_step_id_ = (current_step_id_ + 1) % num_step_; }
 }
 
 bool CudaRingAllReduceCompActor::CheckOutputActId(int64_t regst_desc_id) const {
@@ -143,5 +144,7 @@ void CudaRingAllReduceCompActor::AsyncReturnAllCustomizedReadableRegst() {
 bool CudaRingAllReduceCompActor::ProducedCtrlRegstValid(int64_t regst_desc_id) const {
   return true;
 }
+
+REGISTER_ACTOR(kCudaRingAllReduce, CudaRingAllReduceCompActor);
 
 }  // namespace oneflow

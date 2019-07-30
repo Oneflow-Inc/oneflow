@@ -192,6 +192,4 @@ void MultiRingAllReduceActor::VirtualActorInit(const TaskProto& task_proto) {
   OF_SET_MSG_HANDLER(&MultiRingAllReduceActor::HandlerAllReduce);
 }
 
-REGISTER_ACTOR(kCudaRingAllReduce, MultiRingAllReduceActor);
-
 }  // namespace oneflow
