@@ -115,6 +115,8 @@ void CudaRingAllReduceOp::VirtualGenKernelConf(
   const DataContentSplitHelper helper(num_link, num_link_dup, num_rank, in->shape().elem_cnt(),
                                       in->data_type());
   const int64_t num_step = num_rank * 2 - 1;
+  multi_cuda_ring_all_reduce_kernel_conf->set_num_step(num_step);
+  multi_cuda_ring_all_reduce_kernel_conf->set_num_link_dup(num_link_dup);
   std::vector<std::vector<int64_t>> step_rank_id;
   step_rank_id.resize(num_link);
   FOR_RANGE(int64_t, link_id, 0, num_link) {
