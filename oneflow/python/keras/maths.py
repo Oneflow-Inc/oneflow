@@ -75,4 +75,23 @@ def add(x,
     return remote_blob_util.RemoteBlob(lbi)
 
 
+@oneflow_export('keras.maths.multiply')
+def multiply(   x,
+                y,
+                name=None):
+
+    op_conf = op_conf_util.OperatorConf()
+    if name is None:
+        op_conf.name = id_util.UniqueStr('Multiply_')
+    else:
+        op_conf.name = name
+    op_conf.multiply_conf.in_0 = x.lbn
+    op_conf.multiply_conf.in_1 = y.lbn
+    op_conf.multiply_conf.out = "out"
+    compile_context.CurJobAddOp(op_conf)
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = "out"
+    return remote_blob_util.RemoteBlob(lbi)
+
 
