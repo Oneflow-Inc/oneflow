@@ -1,6 +1,6 @@
 #include "oneflow/core/operator/cuda_ring_all_reduce_op.h"
 #include "oneflow/core/common/balanced_splitter.h"
-#include "oneflow/core/kernel/cuda_ring_all_reduce_kernel.h"
+#include "oneflow/core/kernel/cuda_ring_boxing_kernel_util.h"
 
 namespace oneflow {
 
