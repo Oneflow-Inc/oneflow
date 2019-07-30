@@ -44,12 +44,6 @@ class Kernel {
 
   virtual void InitConstBufBlobs(DeviceCtx* ctx,
                                  std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
-  virtual void InitModelBlobsWithRandomSeed(
-      DeviceCtx* ctx, std::mt19937* random_seed_gen,
-      std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
-  virtual void InitModelBlobsWithDir(DeviceCtx* ctx, int32_t part_id, int32_t part_num,
-                                     const std::string& model_load_dir,
-                                     std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
   virtual ActivationType GetActivationType() const { return ActivationType::kNone; }
 
   virtual void Forward(const KernelCtx& ctx,
