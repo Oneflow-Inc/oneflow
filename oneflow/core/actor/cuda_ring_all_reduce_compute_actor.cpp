@@ -36,7 +36,7 @@ void CudaRingAllReduceCompActor::VirtualActorInit(const TaskProto& task_proto) {
 
 int64_t CudaRingAllReduceCompActor::ActNumForEachOutput(int64_t regst_desc_id) const {
   if (regst_desc_id == out_regst_desc_id_) {
-    return num_step_;
+    return num_step_ * num_link_dup_;
   } else if (send_regst_desc_ids_.find(regst_desc_id) != send_regst_desc_ids_.cend()) {
     return 1;
   } else {
