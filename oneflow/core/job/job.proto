@@ -17,6 +17,7 @@ message TrainConf {
   required int32 num_of_batches_in_snapshot = 5;
   repeated string loss_lbn = 6;
 
+  // default_initializer_conf here is now deprecated
   optional InitializerConf default_initializer_conf = 100;
   required float primary_lr = 101;
   optional float secondary_lr = 102 [default = -1];
@@ -54,6 +55,7 @@ message JobConfigProto {
   optional int64 total_batch_num = 7 [default = 1];
   optional DataType default_data_type = 8 [default = kFloat]; // kFloat or kDouble
   optional int32 max_data_id_length = 9 [default = 0];
+  optional InitializerConf default_initializer_conf = 10;
 
   optional ExperimentalRunConf exp_run_conf = 100;
 

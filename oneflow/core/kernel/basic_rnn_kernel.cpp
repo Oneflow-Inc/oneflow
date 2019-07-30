@@ -127,40 +127,6 @@ void BasicRnnKernel<device_type, T>::InitConstBufBlobs(
                                                  BnInOp2Blob("bias_multiplier"));
 }
 
-template<DeviceType device_type, typename T>
-void BasicRnnKernel<device_type, T>::VirtualInitModelBlobsWithRandomSeed(
-    DeviceCtx* ctx, std::mt19937* random_seed_gen,
-    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  KernelUtil<device_type, T>::InitializeWithProperConf(
-      ctx,
-      this->GetInitializerFromPbMessage(this->op_conf().basic_rnn_conf(), "i2h_weight_initializer"),
-      (*random_seed_gen)(), BnInOp2Blob("i2h_weight"));
-  KernelUtil<device_type, T>::InitializeWithProperConf(
-      ctx,
-      this->GetInitializerFromPbMessage(this->op_conf().basic_rnn_conf(), "h2h_weight_initializer"),
-      (*random_seed_gen)(), BnInOp2Blob("h2h_weight"));
-  KernelUtil<device_type, T>::InitializeWithProperConf(
-      ctx, this->GetInitializerFromPbMessage(this->op_conf().basic_rnn_conf(), "bias_initializer"),
-      (*random_seed_gen)(), BnInOp2Blob("bias"));
-}
-
-template<DeviceType device_type, typename T>
-void BasicRnnKernel<device_type, T>::VirtualInitModelBlobsWithDir(
-    DeviceCtx* ctx, int32_t part_id, int32_t part_num, const std::string& model_load_dir,
-    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  Blob* i2h_weight_blob = BnInOp2Blob("i2h_weight");
-  KernelUtil<device_type, T>::InitializeWithDir(
-      ctx, part_id, part_num, model_load_dir, i2h_weight_blob, "i2h_weight",
-      i2h_weight_blob->shape().At(0), i2h_weight_blob->shape().Count(1));
-  Blob* h2h_weight_blob = BnInOp2Blob("h2h_weight");
-  KernelUtil<device_type, T>::InitializeWithDir(
-      ctx, part_id, part_num, model_load_dir, h2h_weight_blob, "h2h_weight",
-      h2h_weight_blob->shape().At(0), h2h_weight_blob->shape().Count(1));
-  KernelUtil<device_type, T>::InitializeWithDir(ctx, part_id, part_num, model_load_dir,
-                                                BnInOp2Blob("bias"), "bias",
-                                                BnInOp2Blob("bias")->shape().At(0), 1);
-}
-
 template<typename T>
 struct BasicRnnKernelUtil<DeviceType::kCPU, T> {
   static void ComputeTanHDiff(DeviceCtx* ctx, int64_t n, const T* out, const T* out_diff,
