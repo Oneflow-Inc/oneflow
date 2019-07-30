@@ -84,7 +84,7 @@ void CudaRingAllReduceCompActor::Act() {
 }
 
 void CudaRingAllReduceCompActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
-  if (current_step_id_ == num_step_ - 1 && current_link_dup_id_ == num_link_dup_) {
+  if (current_step_id_ == num_step_ - 1 && current_link_dup_id_ == num_link_dup_ - 1) {
     HandleProducedNaiveDataRegstToConsumer([this](Regst* regst) {
       if (regst->regst_desc_id() == out_regst_desc_id_) {
         regst->set_piece_id(consumed_rs_.Front(in_regst_desc_id_)->piece_id());
@@ -107,7 +107,7 @@ void CudaRingAllReduceCompActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer
 }
 
 void CudaRingAllReduceCompActor::AsyncSendCustomizedConsumedRegstMsgToProducer() {
-  if (current_step_id_ == num_step_ - 1 && current_link_dup_id_ == num_link_dup_) {
+  if (current_step_id_ == num_step_ - 1 && current_link_dup_id_ == num_link_dup_ - 1) {
     Regst* cur_regst = consumed_rs_.Front(in_regst_desc_id_);
     CHECK(cur_regst);
     AsyncSendRegstMsgToProducer(cur_regst);
