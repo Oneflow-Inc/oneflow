@@ -3,10 +3,7 @@
 #include "oneflow/core/graph/normal_model_update_compute_task_node.h"
 #include "oneflow/core/graph/chain_graph.h"
 #include "oneflow/core/graph/boxing_task_node.h"
-#include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/graph/reduce_add_compute_task_node.h"
-#include "oneflow/core/graph/reduce_gather_compute_task_node.h"
 #include "oneflow/core/graph/reduce_split_compute_task_node.h"
 #include "oneflow/core/graph/inplace_lbi_graph.h"
 #include "oneflow/core/register/runtime_blob_desc.h"
@@ -18,12 +15,9 @@
 #include "oneflow/core/graph/boxing/naive_sub_task_graph_builder.h"
 #include "oneflow/core/graph/boxing/ring_sub_task_graph_builder.h"
 #include "oneflow/core/graph/boxing/multi_ring_all_reduce_sub_task_graph_builder.h"
-#include "oneflow/core/graph/boxing/cuda_ring_all_reduce_sub_task_graph_builder.h"
 #include "oneflow/core/graph/boxing/dynamic_shape_supported_sub_task_graph_builder.h"
 #include "oneflow/core/graph/boxing/chain_sub_task_graph_builder.h"
 #include "oneflow/core/graph/multi_ring_all_reduce_task_node.h"
-#include "oneflow/core/graph/cuda_ring_all_reduce_task_node.h"
-#include "oneflow/core/graph/nccl_all_reduce_compute_task_node.h"
 
 namespace oneflow {
 
@@ -341,10 +335,7 @@ TaskNode* FindPredReduceIdentityTaskNode(TaskNode* succ) {
   while (current) {
     auto reduce_task_node_edge_it =
         std::find_if(current->in_edges().begin(), current->in_edges().end(), [](TaskEdge* edge) {
-          return dynamic_cast<ReduceCompTaskNodeIf*>(edge->src_node()) != nullptr
-                 || dynamic_cast<MultiRingAllReduceTaskNode*>(edge->src_node()) != nullptr
-                 || dynamic_cast<CudaRingAllReduceTaskNode*>(edge->src_node()) != nullptr
-                 || dynamic_cast<NcclAllReduceCompTaskNode*>(edge->src_node()) != nullptr;
+          return dynamic_cast<ReduceCompTaskNodeIf*>(edge->src_node()) != nullptr;
         });
     if (reduce_task_node_edge_it == current->in_edges().end()) { return nullptr; }
     current = (*reduce_task_node_edge_it)->src_node();
@@ -769,7 +760,6 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxingV2) {
     const BlobDesc& blob_desc = Global<OpGraph>::Get()->GetLogicalBlobDesc(lbi);
     SubTskGphBuilderCtx ctx(this);
     std::vector<std::shared_ptr<SubTskGphBuilder>> builders;
-    builders.emplace_back(new CudaRingAllReduceSubTskGphBuilder());
     builders.emplace_back(new MultiRingAllReduceSubTskGphBuilder());
     builders.emplace_back(new RingSubTskGphBuilder());
     builders.emplace_back(new NaiveSubTskGphBuilder());
