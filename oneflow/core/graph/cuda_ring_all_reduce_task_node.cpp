@@ -88,9 +88,9 @@ OperatorConf CudaRingAllReduceTaskNode::GenOpConf() const {
   CudaRingAllReduceOpConf* all_reduce_conf = op_conf.mutable_cuda_ring_all_reduce_conf();
   *all_reduce_conf->mutable_lbi() = lbi_;
   FOR_RANGE(int64_t, ring_id, 0, rings_.size()) {
-    RingConf ring_conf{};
-    for (const int64_t id : rings_.at(ring_id)) { ring_conf.mutable_next()->Add(id); }
-    *all_reduce_conf->mutable_rings()->Add() = ring_conf;
+    RingLinkConf link_conf{};
+    for (const int64_t id : rings_.at(ring_id)) { link_conf.mutable_next()->Add(id); }
+    *all_reduce_conf->mutable_link()->Add() = link_conf;
   }
   logical_blob_shape_.ToProto(all_reduce_conf->mutable_logical_blob_shape());
   return op_conf;
