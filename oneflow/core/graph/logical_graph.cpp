@@ -518,8 +518,10 @@ void LogicalGraph::ReplaceAllReduceFacades() {
     LogicalBlobId ending_lbi;
     if (all_reduce_ending_op->output_bns().size() == 1) {
       ending_lbi = all_reduce_ending_op->BnInOp2Lbi(all_reduce_ending_op->SoleObn());
-    } else {
+    } else if (all_reduce_ending_op->op_conf().has_cuda_ring_all_reduce_conf()) {
       ending_lbi = all_reduce_ending_op->BnInOp2Lbi("out");
+    } else {
+      UNIMPLEMENTED();
     }
     *dst->SoleOp()->MutBnInOp2Lbi(dst->SoleOp()->SoleIbn()) = ending_lbi;
   });

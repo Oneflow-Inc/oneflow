@@ -18,6 +18,7 @@
 #include "oneflow/core/graph/boxing/dynamic_shape_supported_sub_task_graph_builder.h"
 #include "oneflow/core/graph/boxing/chain_sub_task_graph_builder.h"
 #include "oneflow/core/graph/multi_ring_all_reduce_task_node.h"
+#include "oneflow/core/graph/cuda_ring_all_reduce_compute_task_node.h"
 
 namespace oneflow {
 
@@ -896,6 +897,39 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceGather2ReduceGather) {
         BuildTaskPath(src_comp_task, dst_comp_task, MutBufTask, true);
       }
     }
+  }
+}
+
+DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByCudaRingAllReduce2Consumer) {
+  const auto& pd = sorted_src_comp_tasks.front()->logical_node()->parallel_desc();
+  const int64_t parallel_num = pd->parallel_num();
+  CHECK_EQ(sorted_src_comp_tasks.size(), parallel_num);
+  CHECK_EQ(sorted_dst_comp_tasks.size(), parallel_num);
+  CHECK_EQ(pd->sorted_machine_ids().size(), 1);
+  CHECK_GT(parallel_num, 1);
+  std::vector<std::vector<TaskNode*>> send_to(parallel_num);
+  std::vector<std::vector<TaskNode*>> recv_from(parallel_num);
+  const PbRpf<RingLinkConf>& links = sorted_src_comp_tasks.front()
+                                         ->logical_node()
+                                         ->SoleOp()
+                                         ->op_conf()
+                                         .cuda_ring_all_reduce_conf()
+                                         .link();
+  for (const RingLinkConf& link : links) {
+    FOR_RANGE(int64_t, i, 0, parallel_num) {
+      const int64_t next = link.next(i);
+      send_to[i].push_back(sorted_src_comp_tasks.at(next));
+      recv_from[next].push_back(sorted_src_comp_tasks.at(i));
+    }
+  }
+  FOR_RANGE(int64_t, i, 0, parallel_num) {
+    CudaRingAllReduceCompTaskNode* ring_node =
+        dynamic_cast<CudaRingAllReduceCompTaskNode*>(sorted_src_comp_tasks.at(i));
+    CHECK_NOTNULL(ring_node);
+    ring_node->SetRecvSendNodes(recv_from.at(i), send_to.at(i));
+  }
+  FOR_RANGE(int64_t, i, 0, parallel_num) {
+    Connect<TaskNode>(sorted_src_comp_tasks.at(i), NewEdge(), sorted_dst_comp_tasks.at(i));
   }
 }
 

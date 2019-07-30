@@ -16,8 +16,9 @@ class CudaRingAllReduceCompTaskNode final : public CompTaskNode, public ReduceCo
   void ConsumeAllRegsts() override;
   TaskType GetTaskType() const override { return TaskType::kCudaRingAllReduce; }
   CudaWorkType GetCudaWorkType() const override { return CudaWorkType::kMix; }
-
   void EnableMemSharingInReduce(const ReduceMemSharingCtx& ctx) override;
+  void SetRecvSendNodes(const std::vector<TaskNode*>& recv_from,
+                        const std::vector<TaskNode*>& send_to);
 
  private:
   bool IsReadyForBuild() override;

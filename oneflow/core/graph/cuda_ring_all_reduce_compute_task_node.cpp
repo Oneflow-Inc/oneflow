@@ -80,4 +80,10 @@ void CudaRingAllReduceCompTaskNode::EnableMemSharingInReduce(const ReduceMemShar
   ctx.EnableMemSharing4Regst(GetSoleConsumedRegst("in").get(), offset);
 }
 
+void CudaRingAllReduceCompTaskNode::SetRecvSendNodes(const std::vector<TaskNode*>& recv_from,
+                                                     const std::vector<TaskNode*>& send_to) {
+  recv_from_ = recv_from;
+  send_to_ = send_to;
+}
+
 }  // namespace oneflow

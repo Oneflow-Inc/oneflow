@@ -422,6 +422,12 @@ REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceGather"
 REGISTER_BLD_SUB_TSK_GPH_MTHD("NcclAllGather"
                               "ReduceSplit",
                               &TaskGraph::BldSubTskGphByOneToOne);
+REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceIdentity"
+                              "CudaRingAllReduce",
+                              &TaskGraph::BldSubTskGphByOneToOne);
+REGISTER_BLD_SUB_TSK_GPH_MTHD("CudaRingAllReduce"
+                              "ReduceSplit",
+                              &TaskGraph::BldSubTskGphByCudaRingAllReduce2Consumer);
 
 BldBoxingOpConfMthd GetMthdForBldBoxingOpConf(const LogicalNode* src, const LogicalNode* dst) {
   std::string k = ConcatTypeName(src, dst);
