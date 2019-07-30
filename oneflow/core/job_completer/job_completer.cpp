@@ -7,6 +7,7 @@
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job_completer/all_reduce_add_pass.h"
 #include "oneflow/core/job_completer/group_boxing_by_dst_parallel.h"
+#include "oneflow/core/job_completer/set_default_variable_conf.h"
 
 namespace oneflow {
 
@@ -446,6 +447,7 @@ void JobCompleter::Complete(Job* job) const {
   WithOpGraphAndMutJob(job, &ReplaceFacade);
   // complete variable ops
   WithOpGraphAndMutJob(job, &AutoVar);
+  WithOpGraphAndMutJob(job, &SetDefaultVariableConf);
   if (GlobalJobDesc().IsPredict()
       && GlobalJobDesc().job_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
     WithOpGraphAndMutJob(job, &TieUpChainHeadersUnReachableFromAnyVariableOps);
