@@ -22,6 +22,7 @@
 #include "oneflow/core/graph/plan_task_graph.h"
 #include "oneflow/core/graph/task_node.h"
 #include "oneflow/core/job/oneflow.h"
+#include "oneflow/core/job/model_init_job.h"
 
 DECLARE_bool(grpc_use_no_signal);
 
@@ -836,6 +837,7 @@ void MakeModelSaveJob(const std::string& job_name,
   {
     // there is always a tick op in model save job, so we can ignore the case with no variable
     OperatorConf tick_op_conf;
+    tick_op_conf.set_name("System-Saver-tick");
     tick_op_conf.mutable_tick_conf()->set_out("out");
     job_builder.AddOps(md_save_parallel_conf, {tick_op_conf});
   }
@@ -892,10 +894,12 @@ void CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan) {
   {
     size_t helper_job_size =
         push_op_name2parallel_blob_conf.size() + pull_op_name2parallel_blob_conf.size();
+
     for (const auto& pair : parallel_blob_conf2input_op_name2output_op_name) {
       helper_job_size += pair.second.size();
     }
-    helper_job_size += 1;
+    // + 2 for model init job and model save job
+    helper_job_size += 2;
     size_t user_job_size = jobs.size();
     jobs.resize(user_job_size + helper_job_size);
     sub_plans.resize(user_job_size + helper_job_size);
@@ -927,6 +931,13 @@ void CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan) {
                         pair.second, &arg_passing_job);
       CompileHelperJob(&arg_passing_job);
     }
+  }
+  {
+    Job model_init_job;
+    std::vector<std::pair<OperatorConf, ParallelConf>> variable_op_confs_and_parallel_confs;
+    FilterVariableOps(jobs, &variable_op_confs_and_parallel_confs);
+    MakeModelInitJob("System-ModelInit", &model_init_job, variable_op_confs_and_parallel_confs);
+    CompileHelperJob(&model_init_job);
   }
   {
     Job model_save_job;

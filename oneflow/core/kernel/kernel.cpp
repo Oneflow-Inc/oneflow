@@ -75,7 +75,7 @@ void Kernel::Init(const JobDesc* job_desc, const ParallelContext* parallel_ctx,
 const InitializerConf* Kernel::GetInitializerFromPbMessage(const PbMessage& msg,
                                                            const std::string& field) const {
   auto ret = dynamic_cast<const InitializerConf*>(GetMsgPtrFromPbMessage(msg, field));
-  if (ret == nullptr) { return job_desc().DefaultInitializerConf(); }
+  CHECK_NOTNULL(ret);
   return ret;
 }
 
@@ -83,19 +83,6 @@ void Kernel::InitModelAndConstBuf(const KernelCtx& ctx, const ParallelContext* p
                                   const Snapshot* snapshot,
                                   std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   InitConstBufBlobs(ctx.device_ctx, BnInOp2Blob);
-  std::string model_load_dir = op_conf().model_load_dir();
-  if (model_load_dir == "" && snapshot) {
-    model_load_dir = snapshot->GetDirFromOpName(op_conf().name());
-  }
-  if (model_load_dir == "") {
-    std::mt19937* random_seed_gen = static_cast<std::mt19937*>(ctx.other);
-    InitModelBlobsWithRandomSeed(ctx.device_ctx, random_seed_gen, BnInOp2Blob);
-  } else {
-    int32_t part_id = -1;
-    int32_t part_num = -1;
-    std::tie(part_id, part_num) = GetPartIdAndPartNumFromParallelCtx(parallel_ctx);
-    InitModelBlobsWithDir(ctx.device_ctx, part_id, part_num, model_load_dir, BnInOp2Blob);
-  }
 }
 
 void Kernel::Launch(const KernelCtx& ctx,
