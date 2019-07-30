@@ -25,6 +25,7 @@ void MakeModelInitJob(const std::string& job_name, Job* job,
   master_parallel_conf.add_device_name("0:cpu:0");
   auto* job_conf = job->mutable_job_conf();
 
+  // there is always a tick op in model save job, so we can ignore the case with no variable
   OperatorConf tick_op_conf;
   tick_op_conf.set_name("System-ModelInit-tick");
   tick_op_conf.mutable_tick_conf()->set_out("out");

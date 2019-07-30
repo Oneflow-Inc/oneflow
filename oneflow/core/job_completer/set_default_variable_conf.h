@@ -7,7 +7,7 @@
 
 namespace oneflow {
 
-void FillVariableConf(const OpGraph& op_graph, Job* job);
+void SetDefaultVariableConf(const OpGraph& op_graph, Job* job);
 
 }  // namespace oneflow
 

@@ -1,9 +1,9 @@
-#include "oneflow/core/job_completer/fill_variable_conf.h"
+#include "oneflow/core/job_completer/set_default_variable_conf.h"
 #include "oneflow/core/job/job_builder.h"
 
 namespace oneflow {
 
-void FillVariableConf(const OpGraph& op_graph, Job* job) {
+void SetDefaultVariableConf(const OpGraph& op_graph, Job* job) {
   auto BlobDesc4ModelLbi = op_graph.MakeGetterBlobDesc4ModelLbi();
   JobBuilder job_builder(job);
   op_graph.ForEachNode([&](OpNode* op_node) {
