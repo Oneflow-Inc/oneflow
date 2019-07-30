@@ -21,8 +21,15 @@ class CheckPointRestoreStatus(object):
         pass
 
     def initialize_or_restore(session = None):
-        TODO()
+        if session == None: session = runtime_ctx.default_session
+        session.run(_MakeModelInitJobFunc())
 
+def _MakeModelInitJobFunc():
+    def ModelInit():
+        pass
+    ModelInit.__name__ = runtime_ctx.inter_user_job_info.global_model_init_job_name
+    return ModelInit
+    
 def _MakeModelSaveJobFunc():
     def ModelSave():
         pass
