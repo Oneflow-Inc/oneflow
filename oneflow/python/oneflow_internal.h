@@ -95,7 +95,7 @@ void DestroyGlobalOneflow() {
 
 void DestroyGlobalEnvironment() {
   using namespace oneflow;
-  CHECK_NOTNULL(Global<EnvironmentObjectsScope>::Get());
+  if (Global<EnvironmentObjectsScope>::Get() == nullptr) { return; }
   bool is_master = Global<MachineCtx>::Get()->IsThisMachineMaster();
   if (is_master) { ClusterControl::MasterSendHaltAndWaitAck(); }
   Global<EnvironmentObjectsScope>::Delete();
