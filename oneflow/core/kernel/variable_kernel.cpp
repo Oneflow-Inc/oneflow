@@ -22,26 +22,6 @@ void VariableKernel<device_type, T>::ForwardDataContent(
 }
 
 template<DeviceType device_type, typename T>
-void VariableKernel<device_type, T>::InitModelBlobsWithRandomSeed(
-    DeviceCtx* ctx, std::mt19937* random_seed_gen,
-    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  KernelUtil<device_type, T>::InitializeWithProperConf(
-      ctx, this->GetInitializerFromPbMessage(this->op_conf().variable_conf(), "initializer"),
-      (*random_seed_gen)(), BnInOp2Blob(ModelName()));
-}
-
-template<DeviceType device_type, typename T>
-void VariableKernel<device_type, T>::InitModelBlobsWithDir(
-    DeviceCtx* ctx, int32_t part_id, int32_t part_num, const std::string& model_load_dir,
-    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const std::string& model_name = ModelName();
-  Blob* model_blob = BnInOp2Blob(model_name);
-  KernelUtil<device_type, T>::InitializeWithDir(ctx, part_id, part_num, model_load_dir, model_blob,
-                                                model_name, model_blob->shape().At(0),
-                                                model_blob->shape().Count(1));
-}
-
-template<DeviceType device_type, typename T>
 const PbMessage& VariableKernel<device_type, T>::GetCustomizedOpConf() const {
   return this->op_conf().variable_conf();
 }

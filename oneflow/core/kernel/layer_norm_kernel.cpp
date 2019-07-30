@@ -54,39 +54,6 @@ void LayerNormKernel<device_type, T>::ForwardDataContent(
 }
 
 template<DeviceType device_type, typename T>
-void LayerNormKernel<device_type, T>::InitModelBlobsWithRandomSeed(
-    DeviceCtx* ctx, std::mt19937*, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const LayerNormOpConf& conf = this->op_conf().layer_norm_conf();
-  if (conf.scale() && !conf.has_gamma()) {
-    InitializerConf ones_initializer = OnesInitializerConf();
-    KernelUtil<device_type, T>::InitializeWithConf(ctx, ones_initializer, 0, BnInOp2Blob("gamma"));
-  }
-  if (conf.center() && !conf.has_beta()) {
-    InitializerConf zeros_initializer = ZerosInitializerConf();
-    KernelUtil<device_type, T>::InitializeWithConf(ctx, zeros_initializer, 0, BnInOp2Blob("beta"));
-  }
-}
-
-template<DeviceType device_type, typename T>
-void LayerNormKernel<device_type, T>::InitModelBlobsWithDir(
-    DeviceCtx* ctx, int32_t part_id, int32_t part_num, const std::string& model_load_dir,
-    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const LayerNormOpConf& conf = this->op_conf().layer_norm_conf();
-  if (conf.scale() && !conf.has_gamma()) {
-    Blob* gamma = BnInOp2Blob("gamma");
-    KernelUtil<device_type, T>::InitializeWithDir(ctx, part_id, part_num, model_load_dir, gamma,
-                                                  "gamma", gamma->shape().At(0),
-                                                  gamma->shape().Count(1));
-  }
-  if (conf.center() && !conf.has_beta()) {
-    Blob* beta = BnInOp2Blob("beta");
-    KernelUtil<device_type, T>::InitializeWithDir(ctx, part_id, part_num, model_load_dir, beta,
-                                                  "beta", beta->shape().At(0),
-                                                  beta->shape().Count(1));
-  }
-}
-
-template<DeviceType device_type, typename T>
 void LayerNormKernel<device_type, T>::InitConstBufBlobs(
     DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   InitializerConf ones_initializer = OnesInitializerConf();
