@@ -135,7 +135,11 @@ bool CudaRingAllReduceCompActor::CheckOutputActId(int64_t regst_desc_id) const {
   }
 }
 
-void CudaRingAllReduceCompActor::SetKernelCtxOther(void** other) { *other = &current_step_id_; }
+void CudaRingAllReduceCompActor::SetKernelCtxOther(void** other) {
+  other_ctx_.first = current_step_id_;
+  other_ctx_.second = current_link_dup_id_;
+  *other = &other_ctx_;
+}
 
 void CudaRingAllReduceCompActor::AsyncReturnAllCustomizedReadableRegst() {
   CHECK_EQ(0, consumed_rs_.available_regst_desc_cnt());

@@ -45,6 +45,7 @@ class CudaRingAllReduceCompActor : public CompActor {
   int64_t out_regst_desc_id_ = -1;
   int64_t send_regst_piece_id_ = -1;
   bool in_regst_eord_ = false;
+  std::pair<int64_t, int64_t> other_ctx_;
 };
 
 }  // namespace oneflow
