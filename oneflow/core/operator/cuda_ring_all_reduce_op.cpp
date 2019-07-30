@@ -137,28 +137,28 @@ void CudaRingAllReduceOp::VirtualGenKernelConf(
     if (step_id == 0) {
       step_conf->set_send(true);
       step_conf->set_recv(false);
-      step_conf->set_reduce(false);
-      step_conf->set_copy(false);
+      step_conf->set_in(true);
+      step_conf->set_out(false);
     } else if (step_id < num_rank - 1) {
       step_conf->set_send(true);
       step_conf->set_recv(true);
-      step_conf->set_reduce(true);
-      step_conf->set_copy(false);
+      step_conf->set_in(true);
+      step_conf->set_out(false);
     } else if (step_id == num_rank - 1) {
       step_conf->set_send(true);
       step_conf->set_recv(true);
-      step_conf->set_reduce(true);
-      step_conf->set_copy(true);
+      step_conf->set_in(true);
+      step_conf->set_out(true);
     } else if (step_id < num_step - 1) {
       step_conf->set_send(true);
       step_conf->set_recv(true);
-      step_conf->set_reduce(false);
-      step_conf->set_copy(true);
+      step_conf->set_in(false);
+      step_conf->set_out(true);
     } else if (step_id == num_step - 1) {
       step_conf->set_send(false);
       step_conf->set_recv(true);
-      step_conf->set_reduce(false);
-      step_conf->set_copy(true);
+      step_conf->set_in(false);
+      step_conf->set_out(true);
     } else {
       UNIMPLEMENTED();
     }

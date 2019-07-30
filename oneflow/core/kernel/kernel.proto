@@ -182,8 +182,8 @@ message CudaRingAllReduceStepLinkConf {
 message CudaRingAllReduceStepConf {
   required bool send = 1;
   required bool recv = 2;
-  required bool reduce = 3;
-  required bool copy = 4;
+  required bool in = 3;
+  required bool out = 4;
   repeated CudaRingAllReduceStepLinkConf link_conf = 5;
 }
 

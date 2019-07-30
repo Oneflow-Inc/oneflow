@@ -1,7 +1,6 @@
-#include "oneflow/core/kernel/cuda_ring_all_reduce_kernel.h"
+#include "oneflow/core/kernel/cuda_ring_boxing_kernel_util.h"
 #include "oneflow/core/kernel/kernel_util.cuh"
 #include <device_launch_parameters.h>
-#include "oneflow/core/common/reduce_method.pb.h"
 
 namespace oneflow {
 
@@ -247,76 +246,66 @@ __device__ __forceinline__ void ReduceOrCopy(const int64_t num_elem, const T* (&
   }
 }
 
-template<ReduceMethod method, typename T, bool RECV, bool SRC, bool SEND, bool DST>
-__global__ void GenericOp(CudaRingAllReduceParams<T> params) {
+template<ReduceMethod method, typename T, bool RECV, bool IN, bool SEND, bool OUT>
+__global__ void GenericRingStepGpu(CudaRingBoxingStepParams<T> params) {
   const int32_t block_id = blockIdx.x;
   const int32_t link_id = block_id / NUM_BLOCK_PER_LINK;
-  const CudaRingAllReduceLinkParams<T>& link_params = params.links[link_id];
+  const CudaRingBoxingLinkParams<T>& link_params = params.links[link_id];
   const int32_t block_id_in_link = block_id % NUM_BLOCK_PER_LINK;
   const int64_t num_elem_per_block = DivUp(link_params.num_elem, NUM_BLOCK_PER_LINK);
   const int64_t block_offset = block_id_in_link * num_elem_per_block;
   const int64_t block_num_elem = min(num_elem_per_block, link_params.num_elem - block_offset);
   if (block_num_elem > 0) {
-    constexpr int32_t NUM_IN = RECV + SRC;
+    constexpr int32_t NUM_IN = RECV + IN;
     const T* in[NUM_IN];
     if (RECV) {
       in[0] = link_params.recv + block_offset;
-      if (SRC) { in[1] = link_params.src + block_offset; }
+      if (IN) { in[1] = link_params.in + block_offset; }
     } else {
-      in[0] = link_params.src + block_offset;
+      in[0] = link_params.in + block_offset;
     }
-    constexpr int32_t NUM_OUT = SEND + DST;
+    constexpr int32_t NUM_OUT = SEND + OUT;
     T* out[NUM_OUT];
     if (SEND) {
       out[0] = link_params.send + block_offset;
-      if (DST) { out[1] = link_params.dst + block_offset; }
+      if (OUT) { out[1] = link_params.out + block_offset; }
     } else {
-      out[0] = link_params.dst + block_offset;
+      out[0] = link_params.out + block_offset;
     }
     ReduceOrCopy<method, T, NUM_IN, NUM_OUT>(block_num_elem, in, out);
   }
 }
 
-template<ReduceMethod method, typename T, bool RECV, bool SRC, bool SEND, bool DST>
-void LaunchGenericOp(DeviceCtx* ctx, const CudaRingAllReduceParams<T>& params) {
-  GenericOp<method, T, RECV, SRC, SEND, DST>
+template<ReduceMethod method, typename T, bool RECV, bool IN, bool SEND, bool OUT>
+void LaunchGenericOp(DeviceCtx* ctx, const CudaRingBoxingStepParams<T>& params) {
+  GenericRingStepGpu<method, T, RECV, IN, SEND, OUT>
       <<<params.num_links * NUM_BLOCK_PER_LINK, NUM_THREAD, 0, ctx->cuda_stream()>>>(params);
 }
 
 }  // namespace
 
-template<typename T>
-void CudaRingAllReduceKernelUtil<T>::Send(DeviceCtx* ctx, CudaRingAllReduceParams<T> params) {
-  LaunchGenericOp<ReduceMethod::kSum, T, false, true, true, false>(ctx, params);
-}
-
-template<typename T>
-void CudaRingAllReduceKernelUtil<T>::RecvReduceSend(DeviceCtx* ctx,
-                                                    CudaRingAllReduceParams<T> params) {
-  LaunchGenericOp<ReduceMethod::kSum, T, true, true, true, false>(ctx, params);
-}
-
-template<typename T>
-void CudaRingAllReduceKernelUtil<T>::RecvReduceSendCopy(DeviceCtx* ctx,
-                                                        CudaRingAllReduceParams<T> params) {
-  LaunchGenericOp<ReduceMethod::kSum, T, true, true, true, true>(ctx, params);
-}
-
-template<typename T>
-void CudaRingAllReduceKernelUtil<T>::RecvSendCopy(DeviceCtx* ctx,
-                                                  CudaRingAllReduceParams<T> params) {
-  LaunchGenericOp<ReduceMethod::kSum, T, true, false, true, true>(ctx, params);
-}
-
-template<typename T>
-void CudaRingAllReduceKernelUtil<T>::RecvCopy(DeviceCtx* ctx, CudaRingAllReduceParams<T> params) {
-  LaunchGenericOp<ReduceMethod::kSum, T, true, false, false, true>(ctx, params);
+template<ReduceMethod method, typename T>
+void CudaRingBoxingKernelUtil<method, T>::LaunchGenericRingStep(
+    DeviceCtx* ctx, CudaRingBoxingStepParams<T> params) {
+  if (!params.recv && params.in && params.send && !params.out) {
+    LaunchGenericOp<method, T, false, true, true, false>(ctx, params);
+  } else if (params.recv && params.in && params.send && !params.out) {
+    LaunchGenericOp<method, T, true, true, true, false>(ctx, params);
+  } else if (params.recv && params.in && params.send && params.out) {
+    LaunchGenericOp<method, T, true, true, true, true>(ctx, params);
+  } else if (params.recv && !params.in && params.send && params.out) {
+    LaunchGenericOp<method, T, true, false, true, true>(ctx, params);
+  } else if (params.recv && !params.in && !params.send && params.out) {
+    LaunchGenericOp<method, T, true, false, false, true>(ctx, params);
+  } else {
+    UNIMPLEMENTED();
+  }
 }
 
 size_t GetCudaRingAllReducePackAlignSize() { return PACK_ALIGN; }
 
 #define INSTANTIATE_CUDA_RING_ALL_REDUCE_KERNEL_UTIL(type_cpp, type_proto) \
-  template struct CudaRingAllReduceKernelUtil<type_cpp>;
+  template struct CudaRingBoxingKernelUtil<ReduceMethod::kSum, type_cpp>;
 OF_PP_FOR_EACH_TUPLE(INSTANTIATE_CUDA_RING_ALL_REDUCE_KERNEL_UTIL, FLOATING_DATA_TYPE_SEQ)
 
 }  // namespace oneflow
