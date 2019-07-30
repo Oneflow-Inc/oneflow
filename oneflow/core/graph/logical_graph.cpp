@@ -515,8 +515,12 @@ void LogicalGraph::ReplaceAllReduceFacades() {
     DeleteNode(facade_node);
     AddAllReduce(src, dst);
     Operator* all_reduce_ending_op = dst->SoleInEdge()->src_node()->SoleOp().get();
-    const LogicalBlobId& ending_lbi =
-        all_reduce_ending_op->BnInOp2Lbi(all_reduce_ending_op->SoleObn());
+    LogicalBlobId ending_lbi;
+    if (all_reduce_ending_op->output_bns().size() == 1) {
+      ending_lbi = all_reduce_ending_op->BnInOp2Lbi(all_reduce_ending_op->SoleObn());
+    } else {
+      ending_lbi = all_reduce_ending_op->BnInOp2Lbi("out");
+    }
     *dst->SoleOp()->MutBnInOp2Lbi(dst->SoleOp()->SoleIbn()) = ending_lbi;
   });
 }
