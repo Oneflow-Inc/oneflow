@@ -6,7 +6,7 @@
 
 namespace oneflow {
 
-class NcclAllReduceCompTaskNode final : public PipeCompTaskNode {
+class NcclAllReduceCompTaskNode final : public PipeCompTaskNode, public ReduceCompTaskNodeIf {
  public:
   OF_DISALLOW_COPY_AND_MOVE(NcclAllReduceCompTaskNode);
   NcclAllReduceCompTaskNode() = default;
@@ -14,6 +14,8 @@ class NcclAllReduceCompTaskNode final : public PipeCompTaskNode {
 
   TaskType GetTaskType() const override { return TaskType::kNcclAllReduce; }
   CudaWorkType GetCudaWorkType() const override { return CudaWorkType::kMix; }
+
+  void EnableMemSharingInReduce(const ReduceMemSharingCtx& ctx) override;
 };
 
 }  // namespace oneflow

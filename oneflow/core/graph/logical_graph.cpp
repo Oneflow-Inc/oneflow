@@ -279,6 +279,10 @@ void LogicalGraph::AddAllReduce(LogicalNode* src, LogicalNode* dst) {
     } else {
       AddNcclReduceScatterAndAllGather(src, dst);
     }
+  } else if (Global<JobDesc>::Get()->enable_cuda_ring_all_reduce()
+             && src_pd->device_type() == DeviceType::kGPU
+             && src_pd->sorted_machine_ids().size() == 1) {
+    AddCudaRingAllReduce(src, dst);
   } else {
     AddReduceScatterAddGatherNodes(src, dst, ReduceRankCtx());
   }
@@ -324,6 +328,25 @@ void LogicalGraph::AddNcclAllReduce(LogicalNode* src, LogicalNode* dst) {
   nccl_all_reduce_node->mut_rank_ctx() = ReduceRankCtx().CtxWithScatter(src_pd->parallel_num());
   Connect<LogicalNode>(src, NewEdge(), nccl_all_reduce_node);
   Connect<LogicalNode>(nccl_all_reduce_node, NewEdge(), dst);
+}
+
+void LogicalGraph::AddCudaRingAllReduce(LogicalNode* src, LogicalNode* dst) {
+  std::shared_ptr<const ParallelDesc> src_pd = src->parallel_desc();
+  OperatorConf cuda_ring_all_reduce_op_conf{};
+  cuda_ring_all_reduce_op_conf.set_name("cuda_ring_all_reduce_" + NewUniqueId());
+  cuda_ring_all_reduce_op_conf.set_device_type(src_pd->device_type());
+  CudaRingAllReduceOpConf* conf = cuda_ring_all_reduce_op_conf.mutable_cuda_ring_all_reduce_conf();
+  conf->set_num_link_dup(2);
+  RingLinkConf* link_conf = conf->mutable_link()->Add();
+  FOR_RANGE(int64_t, i, 0, src_pd->parallel_num()) {
+    *link_conf->mutable_next()->Add() = (i + 1) % src_pd->parallel_num();
+  }
+  CudaRingAllReduceLogicalNode* logical_node = NewNode<CudaRingAllReduceLogicalNode>();
+  logical_node->mut_op_vec() = {ConstructOp(cuda_ring_all_reduce_op_conf)};
+  logical_node->mut_parallel_desc() = src_pd;
+  logical_node->mut_rank_ctx() = ReduceRankCtx().CtxWithScatter(src_pd->parallel_num());
+  Connect<LogicalNode>(src, NewEdge(), logical_node);
+  Connect<LogicalNode>(logical_node, NewEdge(), dst);
 }
 
 void LogicalGraph::AddReduceScatterAddGatherNodes(LogicalNode* src, LogicalNode* dst,

@@ -112,6 +112,7 @@ message Config {
   optional DebugBlobDumpConf debug_blob_dump_conf = 151;
 
   optional bool all_reduce_use_boxing = 152 [default = false];
+  optional bool enable_cuda_ring_all_reduce = 153 [default = false];
 
 
   oneof JobType {

@@ -55,6 +55,9 @@ class JobDesc final {
   bool write_snapshot_to_master() const { return snapshot_fs_conf().has_localfs_conf(); }
   bool enable_blob_mem_sharing() const { return job_conf_.other().enable_blob_mem_sharing(); }
   bool enable_nccl() const { return job_conf_.other().enable_nccl(); }
+  bool enable_cuda_ring_all_reduce() const {
+    return job_conf_.other().enable_cuda_ring_all_reduce();
+  }
   bool use_nccl_inter_node_communication() const {
     return job_conf_.other().use_nccl_inter_node_communication();
   }

@@ -82,7 +82,6 @@ void CudaRingAllReduceOp::InferBlobDescs(
     const ParallelContext* parallel_ctx) const {
   const CudaRingAllReduceOpConf& conf = op_conf().cuda_ring_all_reduce_conf();
   const BlobDesc* in = GetBlobDesc4BnInOp("in");
-  CHECK_EQ(in->shape(), Shape(conf.logical_blob_shape()));
   BlobDesc* out = GetBlobDesc4BnInOp("out");
   *out = *in;
   const int64_t num_link = conf.link().size();
