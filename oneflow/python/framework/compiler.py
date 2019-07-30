@@ -1,7 +1,9 @@
 from __future__ import absolute_import
 
+from oneflow.core.operator.op_conf_pb2 import OperatorConf
 import oneflow.core.job.job_set_pb2 as job_set_util
 import oneflow.python.lib.core.func_inspect_util as func_inspect_util
+import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.compile_context as compile_context
 import oneflow.python.framework.placement_util as placement_util
 import oneflow.python.framework.config_util as config_util
@@ -24,6 +26,17 @@ def Compile(job_set, job_funcs):
         assert job.job_conf.job_name not in check_unique_job_func_name
         check_unique_job_func_name.add(job.job_conf.job_name)
         compile_context.cur_job = None
+
+def IsOpConfOnlyCpuSupported(op_conf):
+    assert isinstance(op_conf, OperatorConf)
+    global _cpu_only_op_type_cases
+    if _cpu_only_op_type_cases == None:
+        _cpu_only_op_type_cases = set()
+        for field in OperatorConf.DESCRIPTOR.oneofs_by_name.op_type.fields:
+            _cpu_only_op_type_cases.add(c_api_util.IsOpTypeCaseCpuSupportOnly(field.number))
+    op_type_field = op_conf.WhichOneof("op_type")
+    return OperatorConf.DESCRIPTOR.fields_by_name(op_type_field).number in _cpu_only_op_type_cases
+_cpu_only_op_type_cases = None
 
 def _CompileJob(job, func, config):
     job_name = func.__name__
