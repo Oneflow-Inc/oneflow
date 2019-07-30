@@ -337,6 +337,7 @@ void LogicalGraph::AddCudaRingAllReduce(LogicalNode* src, LogicalNode* dst) {
   cuda_ring_all_reduce_op_conf.set_device_type(src_pd->device_type());
   CudaRingAllReduceOpConf* conf = cuda_ring_all_reduce_op_conf.mutable_cuda_ring_all_reduce_conf();
   conf->set_num_link_dup(2);
+  *conf->mutable_lbi() = src->SoleOp()->BnInOp2Lbi(src->SoleOp()->SoleObn());
   RingLinkConf* link_conf = conf->mutable_link()->Add();
   FOR_RANGE(int64_t, i, 0, src_pd->parallel_num()) {
     *link_conf->mutable_next()->Add() = (i + 1) % src_pd->parallel_num();

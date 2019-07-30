@@ -26,7 +26,6 @@ class CudaRingAllReduceCompTaskNode final : public CompTaskNode, public ReduceCo
   void InferProducedDataRegstTimeShape() override;
   void PinConsumedRegstMemCase(MemoryCase*) override;
 
-  LogicalBlobId lbi_;
   std::vector<TaskNode*> send_to_;
   std::vector<TaskNode*> recv_from_;
 };

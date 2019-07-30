@@ -44,17 +44,18 @@ void CudaRingAllReduceCompTaskNode::ConsumeAllRegsts() {
 void CudaRingAllReduceCompTaskNode::BuildExecGphAndRegst() {
   ExecNode* node = mut_exec_gph().NewNode();
   std::shared_ptr<Operator> op = this->logical_node()->SoleOp();
+  const LogicalBlobId& lbi = op->op_conf().cuda_ring_all_reduce_conf().lbi();
   node->mut_op() = op;
   node->BindBnWithRegst("in", GetSoleConsumedRegst("in"));
   std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out");
-  out_regst->AddLbi(lbi_);
+  out_regst->AddLbi(lbi);
   node->BindBnWithRegst("out", out_regst);
   FOR_RANGE(int64_t, i, 0, send_to_.size()) {
     const std::string recv_name = "recv_" + std::to_string(i);
     const std::string send_name = "send_" + std::to_string(i);
     node->BindBnWithRegst(recv_name, GetSoleConsumedRegst(recv_name));
     std::shared_ptr<RegstDesc> send_regst = GetProducedRegst(send_name);
-    send_regst->AddLbi(lbi_);
+    send_regst->AddLbi(lbi);
     node->BindBnWithRegst(send_name, send_regst);
   }
   node->InferBlobDescs(parallel_ctx());
