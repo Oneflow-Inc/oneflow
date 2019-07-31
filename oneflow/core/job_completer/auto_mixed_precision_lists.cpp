@@ -20,6 +20,7 @@ const AMPList& AutoMixedPrecisionLists::GrayList() {
                               OperatorConf::kBiasAddConf,
                               OperatorConf::kMultiplyConf,
                               OperatorConf::kSigmoidConf,
+                              OperatorConf::kGeluConf,
                               OperatorConf::kTanhConf,
                               OperatorConf::kSqrtConf,
                               OperatorConf::kScalarMulConf,
@@ -33,12 +34,12 @@ const AMPList& AutoMixedPrecisionLists::GrayList() {
 }
 
 const AMPList& AutoMixedPrecisionLists::ClearList() {
-  static AMPList gray_list = {OperatorConf::kGatherConf,        OperatorConf::kIdentityConf,
+  static AMPList clear_list = {OperatorConf::kGatherConf,        OperatorConf::kIdentityConf,
                               OperatorConf::kTupleIdentityConf, OperatorConf::kMaxPooling1DConf,
                               OperatorConf::kMaxPooling2DConf,  OperatorConf::kMaxPooling3DConf,
                               OperatorConf::kReshapeConf,       OperatorConf::kReluConf,
                               OperatorConf::kTransposeConf};
-  return gray_list;
+  return clear_list;
 }
 
 }  // namespace oneflow

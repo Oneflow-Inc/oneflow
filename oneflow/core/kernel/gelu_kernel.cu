@@ -44,6 +44,23 @@ __global__ void GeluBackwardGpu(const int64_t n, const double* x, const double* 
   }
 }
 
+__global__ void GeluForwardGpuHalf(const int64_t n, const half* x, const float inv_sqrt2, half* y) {
+  CUDA_1D_KERNEL_LOOP(i, n) {
+    float f_x = __half2float(x[i]);
+    y[i] = __float2half(0.5f * f_x * (1.0f + erff(inv_sqrt2 * f_x)));
+  }
+}
+
+__global__ void GeluBackwardGpuHalf(const int64_t n, const half* x, const half* dy,
+                                    const float inv_sqrt2, const float coef, half* dx) {
+  CUDA_1D_KERNEL_LOOP(i, n) {
+    float f_x = __half2float(x[i]);
+    dx[i] =
+        __float2half(0.5f * (1.0f + erff(inv_sqrt2 * f_x) + f_x * coef * expf(-0.5f * f_x * f_x))
+                     * __half2float(dy[i]));
+  }
+}
+
 }  // namespace
 
 template<typename T>
@@ -62,8 +79,27 @@ struct GeluKernelUtil<DeviceType::kGPU, T> {
   }
 };
 
+template<>
+struct GeluKernelUtil<DeviceType::kGPU, float16> {
+  static void GeluForward(DeviceCtx* ctx, const int64_t n, const float16* x, float16* y) {
+    const float inv_sqrt2 = sqrt(0.5);
+    GeluForwardGpuHalf<<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+        n, reinterpret_cast<const half*>(x), inv_sqrt2, reinterpret_cast<half*>(y));
+  }
+
+  static void GeluBackward(DeviceCtx* ctx, const int64_t n, const float16* x, const float16* dy,
+                           float16* dx) {
+    const float inv_sqrt2 = sqrt(0.5);
+    const float coef = sqrt(2.0 / acos(-1.0));
+    GeluBackwardGpuHalf<<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
+                          ctx->cuda_stream()>>>(n, reinterpret_cast<const half*>(x),
+                                                reinterpret_cast<const half*>(dy), inv_sqrt2, coef,
+                                                reinterpret_cast<half*>(dx));
+  }
+};
+
 #define INSTANTIATE_GELU_KERNEL_UTIL(type_cpp, type_proto) \
   template struct GeluKernelUtil<DeviceType::kGPU, type_cpp>;
-OF_PP_FOR_EACH_TUPLE(INSTANTIATE_GELU_KERNEL_UTIL, FLOATING_DATA_TYPE_SEQ)
+OF_PP_FOR_EACH_TUPLE(INSTANTIATE_GELU_KERNEL_UTIL, FLOATING_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ)
 
 }  // namespace oneflow
