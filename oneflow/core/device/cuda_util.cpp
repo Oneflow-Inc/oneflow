@@ -102,6 +102,7 @@ void ParseCpuMask(const std::string& cpu_mask, cpu_set_t* cpu_set) {
     }
     if (end_pos < tail) { CHECK_EQ(*end_pos, ','); }
     masks.push_back(mask);
+    pos = end_pos + 1;
   }
   int32_t cpu = 0;
   for (size_t i = masks.size() - 1; i >= 0; i--) {
