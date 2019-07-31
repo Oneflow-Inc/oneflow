@@ -4,7 +4,7 @@ from oneflow.core.operator.op_conf_pb2 import OperatorConf;
 from oneflow.core.job.dlnet_conf_pb2 import DLNetConf
 from google.protobuf import text_format;
 from oneflow.python.deprecated.blob import Blob
-import oneflow.python.framework.ops.op_util as op_util
+import oneflow.python.ops.op_util as op_util
 import oneflow.python.framework.placement_context as placement_ctx
 import oneflow.python.framework.compile_context as compile_ctx
 import oneflow.core.operator.op_conf_pb2 as op_conf_pb2;
