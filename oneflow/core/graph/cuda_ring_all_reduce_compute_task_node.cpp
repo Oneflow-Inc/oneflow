@@ -10,12 +10,12 @@ void CudaRingAllReduceCompTaskNode::ProduceAllRegstsAndBindEdges() {
   const CudaRingAllReduceOpConf& cuda_ring_all_reduce_conf =
       logical_node()->SoleOp()->op_conf().cuda_ring_all_reduce_conf();
   const int64_t num_link = cuda_ring_all_reduce_conf.link_size();
-  const int64_t num_link_dup = cuda_ring_all_reduce_conf.num_link_dup();
+  const int64_t slice_factor = cuda_ring_all_reduce_conf.slice_factor();
   std::shared_ptr<RegstDesc> out_regst_desc = ProduceRegst("out", false, 1, 1);
   HashSet<TaskNode*> send_to_nodes;
   FOR_RANGE(int64_t, i, 0, num_link) {
     std::shared_ptr<RegstDesc> send_regst_desc =
-        ProduceRegst("send_" + std::to_string(i), false, num_link_dup * 2, num_link_dup * 2);
+        ProduceRegst("send_" + std::to_string(i), false, slice_factor * 2, slice_factor * 2);
     send_regst_desc->mut_mem_case()->mutable_host_mem()->set_used_by_device_id(GpuPhyId());
     send_to_nodes.emplace(send_to_.at(i));
   }
