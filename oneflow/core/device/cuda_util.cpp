@@ -105,7 +105,7 @@ void ParseCpuMask(const std::string& cpu_mask, cpu_set_t* cpu_set) {
     pos = end_pos + 1;
   }
   int32_t cpu = 0;
-  for (size_t i = masks.size() - 1; i >= 0; i--) {
+  for (int64_t i = masks.size() - 1; i >= 0; i--) {
     for (uint64_t b = 0; b < 32; b++) {
       if ((masks.at(i) & (1UL << b)) != 0) { CPU_SET_S(cpu + b, sizeof(cpu_set_t), cpu_set); }
     }
