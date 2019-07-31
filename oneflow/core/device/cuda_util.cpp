@@ -94,7 +94,7 @@ void ParseCpuMask(const std::string& cpu_mask, cpu_set_t* cpu_set) {
   std::vector<uint64_t> masks;
   while (pos < tail) {
     char* end_pos = nullptr;
-    uint64_t mask = std::strtoul(head, &end_pos, 16);
+    const uint64_t mask = std::strtoul(pos, &end_pos, 16);
     if (pos != head) {
       CHECK_EQ(end_pos - pos, 8);
     } else {
