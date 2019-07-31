@@ -24,12 +24,12 @@ class MasterRuntimeEnv(object):
 
 def LaunchJob(job_func, *arg):
     job_name = job_func.__name__
-    if job_func.__name__ not in [runtime_ctx.inter_user_job_info.global_model_save_job_name,runtime_ctx.inter_user_job_info.global_model_init_job_name]:  
+    if job_func.__name__ not in [runtime_ctx.inter_user_job_info.global_model_save_job_name, runtime_ctx.inter_user_job_info.global_model_init_job_name]:  
         assert len(arg) == len(job_func.__oneflow_input_remote_blobs__)
     for i in range(len(arg)):
         assert isinstance(arg[i], np.ndarray)
         input_op_name = job_func.__oneflow_input_remote_blobs__[i].op_name
         inter_user_job_util.AsyncPush(input_op_name, inter_user_job_util.MakePushCallback(arg[i]))
     c_api_util.LaunchJob(job_instance.MakeUserJobInstance(job_name))
-    if job_func.__name__ not in [runtime_ctx.inter_user_job_info.global_model_save_job_name,runtime_ctx.inter_user_job_info.global_model_init_job_name]:  
+    if job_func.__name__ not in [runtime_ctx.inter_user_job_info.global_model_save_job_name, runtime_ctx.inter_user_job_info.global_model_init_job_name]:  
         return job_func.__oneflow_output_remote_blobs__

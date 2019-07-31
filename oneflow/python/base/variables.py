@@ -9,18 +9,15 @@ import oneflow.core.common.data_type_pb2 as data_type_conf_util
 
 from oneflow.python.oneflow_export import oneflow_export
 
-@oneflow_export('keras.variables.variable')
-def variable(shape,
-            tick=None,
-            dtype=None,
-            initializer=None,
-            name=None,
-            model_split_axis=None):
+@oneflow_export('variable')
+def variable(   shape,
+                dtype=None,
+                initializer=None,
+                model_split_axis=None,
+                model_name=None,
+                name=None):
     
     assert dtype == None
-    assert tick == None
-    assert model_split_axis == None
-    assert initializer == None
 
     op_conf = op_conf_util.OperatorConf()
     if name is None:
@@ -29,9 +26,12 @@ def variable(shape,
         op_conf.name = name
     for i in shape:
         getattr(op_conf.variable_conf.shape, 'dim').append(i)
-    op_conf.variable_conf.data_type = data_type_conf_util.kFloat
-    op_conf.variable_conf.initializer.random_uniform_conf.min = 1.0
-    op_conf.variable_conf.initializer.random_uniform_conf.max = 2.0
+    if initializer is not None:
+        op_conf.variable_conf.initializer.CopyFrom(initializer)
+    if model_split_axis is not None:
+        op_conf.variable_conf.model_split_axis = model_split_axis
+    if model_name is not None:
+        op_conf.variable_conf.model_name = model_name
     op_conf.variable_conf.out = "out"
     compile_context.CurJobAddOp(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
