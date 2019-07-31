@@ -14,6 +14,13 @@
 #include "oneflow/core/job/runtime_buffers_scope.h"
 #include "oneflow/core/control/cluster_control.h"
 
+bool IsOpTypeCaseCpuSupportOnly(int64_t op_type_case) {
+  using namespace oneflow;
+  using OnlyCpuSupport = OnlyCpuSupportPredicator;
+  CHECK(IsClassRegistered<OnlyCpuSupport>(op_type_case));
+  return *std::unique_ptr<OnlyCpuSupport>(NewObj<OnlyCpuSupport>(op_type_case));
+}
+
 void InitBySerializedConfigProto(const std::string& config_proto_str) {
   using namespace oneflow;
   ConfigProto config_proto;
@@ -88,7 +95,7 @@ void DestroyGlobalOneflow() {
 
 void DestroyGlobalEnvironment() {
   using namespace oneflow;
-  CHECK_NOTNULL(Global<EnvironmentObjectsScope>::Get());
+  if (Global<EnvironmentObjectsScope>::Get() == nullptr) { return; }
   bool is_master = Global<MachineCtx>::Get()->IsThisMachineMaster();
   if (is_master) { ClusterControl::MasterSendHaltAndWaitAck(); }
   Global<EnvironmentObjectsScope>::Delete();

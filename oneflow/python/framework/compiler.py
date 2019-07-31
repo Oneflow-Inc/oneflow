@@ -2,6 +2,7 @@ from __future__ import absolute_import
 
 import oneflow.core.job.job_set_pb2 as job_set_util
 import oneflow.python.lib.core.func_inspect_util as func_inspect_util
+import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.compile_context as compile_context
 import oneflow.python.framework.placement_util as placement_util
 import oneflow.python.framework.config_util as config_util
@@ -27,10 +28,10 @@ def Compile(job_set, job_funcs):
 
 def _CompileJob(job, func, config):
     job_name = func.__name__
-    parallel_conf = placement_util.GetJobPlacementParallelConf(job_name, config.resource)
+    device_type, machine_dev_ids = placement_util.GetDefaultMachineDeviceIds(config.resource)
     func.__oneflow_input_remote_blobs__ = []
     interface_op_names = []
-    with placement_util.PlacementScope(parallel_conf):
+    with placement_util.DevicePriorPlacementScope(device_type, machine_dev_ids):
         for blob_desc in _GetArgDefault(func):
             assert isinstance(blob_desc, val.val)
             remote_input_blob = ops.InputOpByBlobDesc(blob_desc)

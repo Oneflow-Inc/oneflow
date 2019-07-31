@@ -325,7 +325,6 @@ struct IsInterfaceOpConf4OpTypeCase final {};
 #define REGISTER_CPU_OP(op_type_case, OpType)                                  \
   REGISTER_CLASS_CREATOR(op_type_case, OnlyCpuSupportPredicator,               \
                          ([] { return new OnlyCpuSupportPredicator(true); })); \
-  extern "C" void Oneflow_OnlyCpuSupported_##OpType() {}                       \
   REGISTER_CLASS_WITH_ARGS(op_type_case, Operator, OpType, const OperatorConf&)
 
 #define REGISTER_OP_CREATOR(op_type_case, creator)                              \
