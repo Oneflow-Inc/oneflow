@@ -1633,6 +1633,12 @@ message ArgSortOpConf {
   optional string dir = 3 [default = "ASCENDING"];
 }
 
+message SqueezeOpConf {
+  required string in = 1;
+  required string out = 2;
+  repeated int32 dim = 3;
+}
+
 message OperatorConf {
   required string name = 1;
   optional string model_load_dir = 2;
@@ -1769,6 +1775,7 @@ message OperatorConf {
     ContiguousInstanceStackOpConf contiguous_instance_stack_conf = 310;
     SortOpConf sort_conf = 311;
     ArgSortOpConf arg_sort_conf = 312;
+    SqueezeOpConf squeeze_conf = 313;
 
     // Maybe not needed
     RedefineDim0OpConf redefine_dim0_conf = 400;
