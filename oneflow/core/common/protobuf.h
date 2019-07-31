@@ -36,6 +36,7 @@ using PbMd = google::protobuf::util::MessageDifferencer;
   OF_PP_MAKE_TUPLE_SEQ(int64_t, Int64)      \
   OF_PP_MAKE_TUPLE_SEQ(uint64_t, UInt64)    \
   OF_PP_MAKE_TUPLE_SEQ(float, Float)        \
+  OF_PP_MAKE_TUPLE_SEQ(double, Double)      \
   OF_PP_MAKE_TUPLE_SEQ(int16_t, EnumValue)  \
   OF_PP_MAKE_TUPLE_SEQ(bool, Bool)
 

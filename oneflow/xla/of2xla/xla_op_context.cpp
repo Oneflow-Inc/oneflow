@@ -42,7 +42,7 @@ xla::XlaOp XlaOprand::AsXlaOp(xla::XlaBuilder *builder) {
   return handle_;
 }
 
-xla::XlaBuilder *XlaOpContext::Builder() const { return param_.builder; }
+xla::XlaBuilder *XlaOpContext::builder() const { return param_.builder; }
 
 xla::XlaOp XlaOpContext::Input(const std::string &name) {
   return Input(ArgumentFromString(name));
@@ -54,12 +54,12 @@ xla::XlaOp XlaOpContext::Output(const std::string &name) {
 
 xla::XlaOp XlaOpContext::Input(const Argument &arg) {
   DCHECK_GT(param_.inputs.count(arg), 0);
-  return param_.inputs[arg].AsXlaOp(Builder());
+  return param_.inputs[arg].AsXlaOp(builder());
 }
 
 xla::XlaOp XlaOpContext::Output(const Argument &arg) {
   DCHECK_GT(outputs_.count(arg), 0);
-  return outputs_[arg].AsXlaOp(Builder());
+  return outputs_[arg].AsXlaOp(builder());
 }
 
 void XlaOpContext::SetOutput(const std::string &name,
@@ -70,7 +70,7 @@ void XlaOpContext::SetOutput(const std::string &name,
 
 void XlaOpContext::SetOutput(const std::string &name, const XlaOprand &handle) {
   Argument arg = ArgumentFromString(name);
-  CHECK_EQ(OfShapeToXlaShape(arg.shape(), arg.data_type()), handle.shape_);
+  CHECK_EQ(arg.shape(), XlaShapeToOfShape(handle.shape_));
   outputs_[arg] = handle;
 }
 
@@ -107,6 +107,10 @@ void XlaOpContext::SetAttr<Shape>(const std::string &attr_name,
   value.ToProto(&shape);
   SetValInPbMessage<ShapeProto>(const_cast<PbMessage *>(param_.op_conf),
                                 attr_name, shape);
+}
+
+bool XlaOpContext::HasAttr(const std::string &attr_name) const {
+  return HasFieldInPbMessage(*param_.op_conf, attr_name);
 }
 
 }  // namespace mola

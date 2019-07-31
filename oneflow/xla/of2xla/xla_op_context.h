@@ -88,8 +88,10 @@ class XlaOpContext {
   template <typename T>
   void SetAttr(const std::string &attr_name, const T &value);
 
+  bool HasAttr(const std::string &attr_name) const;
+
   // Return XlaBuilder
-  xla::XlaBuilder *Builder() const;
+  xla::XlaBuilder *builder() const;
 
  private:
   XlaOpContext() = delete;

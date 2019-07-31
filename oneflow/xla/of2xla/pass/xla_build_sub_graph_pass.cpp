@@ -72,7 +72,7 @@ void BuildSubGraphPass::Run() {
 
   // Build subgraph for xla launch nodes and repair error connections
   // caused by redirect. Add argument nodes and create connections
-  // between them and folded nodes.
+  // between them and the folded nodes
   for (auto &kv : folded_nodes) {
     int64_t cluster_id = kv.first;
     XlaNode *launch_node = launch_nodes[cluster_id];

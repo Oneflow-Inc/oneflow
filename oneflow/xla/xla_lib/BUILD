@@ -51,6 +51,7 @@ tf_cc_shared_object(
         "//tensorflow/compiler/xla/service:cpu_plugin",
 #        "//tensorflow/compiler/jit:xla_cpu_jit",
         "//tensorflow/compiler/tf2xla:tf2xla_util",
+        "//tensorflow/compiler/tf2xla/lib:util",
         "//tensorflow/core:lib",
         "@com_google_absl//absl/strings",
     ] + if_cuda([

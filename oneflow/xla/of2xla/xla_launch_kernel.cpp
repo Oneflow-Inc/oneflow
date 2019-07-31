@@ -98,7 +98,7 @@ void XlaLaunchKernel<device_type>::RunExecutable(
     result_status = executable->Run(arguments, run_options);
   }
 
-  CHECK(result_status.ok()) << "Failed to running the executable. "
+  CHECK(result_status.ok()) << "Failed to run the executable. "
                             << TF_CPP_VLOG_LEVEL_REQUARED(1);
   auto run_result = std::move(result_status.ValueOrDie());
   // Result shape should be tuple

@@ -37,6 +37,31 @@ void DoNoDuplicationAdd(RepeatedPtrField<T> *repeat_field, const T &val) {
   }
 }
 
+int GetRepeatedIndex(const std::string &input) {
+  std::vector<std::string> splits = absl::StrSplit(input, "_");
+  CHECK_GT(splits.size(), 0);
+  int index = 0;
+  absl::SimpleAtoi(splits.back(), &index);
+  return index;
+};
+
+void SetOpInputBlobName(OperatorConf *op_conf, const std::string &input,
+                        const std::string &blob_name,
+                        const std::string &fixed_blob_name) {
+  auto *spec_conf = MutableMessageInPbMessage(
+                          op_conf, op_conf->op_type_case());
+  switch (op_conf->op_type_case()) {
+    case OperatorConf::kPrintConf: {
+      int index = GetRepeatedIndex(input);
+      *(op_conf->mutable_print_conf()->mutable_in(index)->mutable_lbn())
+          = fixed_blob_name;
+      break;
+    }
+    default:
+      SetBnValInOpTypeConf(spec_conf, input, blob_name, fixed_blob_name);
+  }
+}
+
 class FoldSubgraphBuilder {
  public:
   FoldSubgraphBuilder(const XlaGraph &graph, Job *job);
@@ -361,9 +386,7 @@ void FoldSubgraphBuilder::FixupInOutBlobNames() {
             std::string fixed_blob_name = absl::StrCat(launch_op_name, "/",
                                                        it->second);
             // Fix input blob name for normal node
-            auto *spec_conf = MutableMessageInPbMessage(
-                                    op_conf, op_conf->op_type_case());
-            SetBnValInOpTypeConf(spec_conf, input, blob_name, fixed_blob_name);
+            SetOpInputBlobName(op_conf, input, blob_name, fixed_blob_name);
           }
         }
       }
