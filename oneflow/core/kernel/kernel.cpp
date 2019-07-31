@@ -348,8 +348,10 @@ void KernelIf<device_type>::CopyField(DeviceCtx* ctx,
 
 namespace {
 const HashSet<OperatorConf::OpTypeCase>& OpsWithNewKernelRegistry() {
-  static HashSet<OperatorConf::OpTypeCase> ops = {OperatorConf::kMatmulConf,
-                                                  OperatorConf::kCastConf};
+  static HashSet<OperatorConf::OpTypeCase> ops = {
+      OperatorConf::kMatmulConf, OperatorConf::kCastConf, OperatorConf::kGeluConf,
+      OperatorConf::kGeluGradConf,
+  };
   return ops;
 }
 }  // namespace

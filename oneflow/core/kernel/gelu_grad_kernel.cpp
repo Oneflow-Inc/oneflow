@@ -18,7 +18,13 @@ const PbMessage& GeluGradKernel<device_type, T>::GetCustomizedOpConf() const {
   return this->op_conf().gelu_grad_conf();
 }
 
-ADD_DEFAULT_KERNEL_CREATOR_WITH_GPU_HALF(OperatorConf::kGeluGradConf, GeluGradKernel,
-                                         FLOATING_DATA_TYPE_SEQ);
+#define REGISTER_GELU_GRAD_KERNEL(dev, dtype)                                    \
+  REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kGeluGradConf, dev, dtype, \
+                                        GeluGradKernel<dev, dtype>)
+
+REGISTER_GELU_GRAD_KERNEL(DeviceType::kGPU, float);
+REGISTER_GELU_GRAD_KERNEL(DeviceType::kGPU, double);
+REGISTER_GELU_GRAD_KERNEL(DeviceType::kCPU, float);
+REGISTER_GELU_GRAD_KERNEL(DeviceType::kCPU, double);
 
 }  // namespace oneflow

@@ -51,16 +51,6 @@ __global__ void GeluForwardGpuHalf(const int64_t n, const half* x, const float i
   }
 }
 
-__global__ void GeluBackwardGpuHalf(const int64_t n, const half* x, const half* dy,
-                                    const float inv_sqrt2, const float coef, half* dx) {
-  CUDA_1D_KERNEL_LOOP(i, n) {
-    float f_x = __half2float(x[i]);
-    dx[i] =
-        __float2half(0.5f * (1.0f + erff(inv_sqrt2 * f_x) + f_x * coef * expf(-0.5f * f_x * f_x))
-                     * __half2float(dy[i]));
-  }
-}
-
 }  // namespace
 
 template<typename T>
@@ -79,27 +69,32 @@ struct GeluKernelUtil<DeviceType::kGPU, T> {
   }
 };
 
-template<>
-struct GeluKernelUtil<DeviceType::kGPU, float16> {
-  static void GeluForward(DeviceCtx* ctx, const int64_t n, const float16* x, float16* y) {
+class GeluGpuHalfKernel final : public KernelIf<DeviceType::kGPU> {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(GeluGpuHalfKernel);
+  GeluGpuHalfKernel() = default;
+  ~GeluGpuHalfKernel() = default;
+
+ private:
+  void ForwardDataContent(const KernelCtx& ctx,
+                          std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
+    const Blob* in_blob = BnInOp2Blob("in");
     const float inv_sqrt2 = sqrt(0.5);
-    GeluForwardGpuHalf<<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-        n, reinterpret_cast<const half*>(x), inv_sqrt2, reinterpret_cast<half*>(y));
+    const int64_t n = in_blob->static_shape().elem_cnt();
+    GeluForwardGpuHalf<<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
+                         ctx.device_ctx->cuda_stream()>>>(
+        n, reinterpret_cast<const half*>(in_blob->dptr<float16>()), inv_sqrt2,
+        reinterpret_cast<half*>(BnInOp2Blob("out")->mut_dptr<float16>()));
   }
 
-  static void GeluBackward(DeviceCtx* ctx, const int64_t n, const float16* x, const float16* dy,
-                           float16* dx) {
-    const float inv_sqrt2 = sqrt(0.5);
-    const float coef = sqrt(2.0 / acos(-1.0));
-    GeluBackwardGpuHalf<<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
-                          ctx->cuda_stream()>>>(n, reinterpret_cast<const half*>(x),
-                                                reinterpret_cast<const half*>(dy), inv_sqrt2, coef,
-                                                reinterpret_cast<half*>(dx));
-  }
+  const PbMessage& GetCustomizedOpConf() const override { return this->op_conf().gelu_conf(); }
 };
 
 #define INSTANTIATE_GELU_KERNEL_UTIL(type_cpp, type_proto) \
   template struct GeluKernelUtil<DeviceType::kGPU, type_cpp>;
-OF_PP_FOR_EACH_TUPLE(INSTANTIATE_GELU_KERNEL_UTIL, FLOATING_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ)
+OF_PP_FOR_EACH_TUPLE(INSTANTIATE_GELU_KERNEL_UTIL, FLOATING_DATA_TYPE_SEQ)
+
+REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kGeluConf, DeviceType::kGPU, float16,
+                                      GeluGpuHalfKernel)
 
 }  // namespace oneflow

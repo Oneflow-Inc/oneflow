@@ -35,10 +35,10 @@ const AMPList& AutoMixedPrecisionLists::GrayList() {
 
 const AMPList& AutoMixedPrecisionLists::ClearList() {
   static AMPList clear_list = {OperatorConf::kGatherConf,        OperatorConf::kIdentityConf,
-                              OperatorConf::kTupleIdentityConf, OperatorConf::kMaxPooling1DConf,
-                              OperatorConf::kMaxPooling2DConf,  OperatorConf::kMaxPooling3DConf,
-                              OperatorConf::kReshapeConf,       OperatorConf::kReluConf,
-                              OperatorConf::kTransposeConf};
+                               OperatorConf::kTupleIdentityConf, OperatorConf::kMaxPooling1DConf,
+                               OperatorConf::kMaxPooling2DConf,  OperatorConf::kMaxPooling3DConf,
+                               OperatorConf::kReshapeConf,       OperatorConf::kReluConf,
+                               OperatorConf::kTransposeConf};
   return clear_list;
 }
 

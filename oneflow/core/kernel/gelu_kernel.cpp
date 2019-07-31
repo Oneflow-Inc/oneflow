@@ -38,7 +38,11 @@ struct GeluKernelUtil<DeviceType::kCPU, T> {
   template struct GeluKernelUtil<DeviceType::kCPU, type_cpp>;
 OF_PP_FOR_EACH_TUPLE(INSTANTIATE_GELU_KERNEL_UTIL, FLOATING_DATA_TYPE_SEQ)
 
-ADD_DEFAULT_KERNEL_CREATOR_WITH_GPU_HALF(OperatorConf::kGeluConf, GeluKernel,
-                                         FLOATING_DATA_TYPE_SEQ);
+#define REGISTER_GELU_KERNEL(dev, dtype) \
+  REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kGeluConf, dev, dtype, GeluKernel<dev, dtype>)
+REGISTER_GELU_KERNEL(DeviceType::kGPU, float);
+REGISTER_GELU_KERNEL(DeviceType::kGPU, double);
+REGISTER_GELU_KERNEL(DeviceType::kCPU, float);
+REGISTER_GELU_KERNEL(DeviceType::kCPU, double);
 
 }  // namespace oneflow
