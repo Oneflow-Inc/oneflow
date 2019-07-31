@@ -68,12 +68,12 @@ def truncated_normal_init(std=None):
 dict_variance_norm = {  'FAN_IN': op_conf_util.kFanIn,
                         'FAN_OUT': op_conf_util.kFanOut,
                         'FAN_AVG': op_conf_util.kAverage}
-@oneflow_export('ops.initializer.xavier_init')
+@oneflow_export('ops.initializers.xavier_init')
 def xavier_init(mode):
     allowed_variance_norms = {  'FAN_IN',
                                 'FAN_OUT',
                                 'FAN_AVG'}
-    init_conf = op_conf.InitializerConf()
+    init_conf = op_conf_util.InitializerConf()
     if mode not in allowed_variance_norms:
         raise TypeError('Mode argument not understood!')
     else:
@@ -81,12 +81,12 @@ def xavier_init(mode):
     return init_conf
 
 
-@oneflow_export('ops.initializer.msra_init')
+@oneflow_export('ops.initializers.msra_init')
 def msra_init(mode):
     allowed_variance_norms = {  'FAN_IN',
                                 'FAN_OUT',
                                 'FAN_AVG'}
-    init_conf = op_conf.InitializerConf()
+    init_conf = op_conf_util.InitializerConf()
     if mode not in allowed_variance_norms:
         raise TypeError('Mode argument not understood!')
     else:
@@ -94,9 +94,9 @@ def msra_init(mode):
     return init_conf
 
 
-@oneflow_export('ops.initializer.range_init')
+@oneflow_export('ops.initializers.range_init')
 def range_init(start=None, stride=None, axis=None):
-    init_conf = op_conf.InitializerConf()
+    init_conf = op_conf_util.InitializerConf()
     if start is not None:
         init_conf.range_conf.start = start
     if stride is not None:
@@ -106,9 +106,9 @@ def range_init(start=None, stride=None, axis=None):
     return init_conf
 
 
-@oneflow_export('ops.initializer.int_range_init')
+@oneflow_export('ops.initializers.int_range_init')
 def int_range_init(start=None, stride=None, axis=None):
-    init_conf = op_conf.InitializerConf()
+    init_conf = op_conf_util.InitializerConf()
     if start is not None:
         assert type(start) == int, "Arguments type error!"
         init_conf.int_range_conf.start = start
