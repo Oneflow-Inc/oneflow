@@ -177,8 +177,8 @@ inline double GetCurTime() {
   return std::chrono::high_resolution_clock::now().time_since_epoch().count();
 }
 
-const size_t kCudaAlignSize = 32;
 const size_t kCudaMemAllocAlignSize = 256;
+const size_t kCudaAlignSize = kCudaMemAllocAlignSize;
 inline size_t RoundUp(size_t n, size_t val) { return (n + val - 1) / val * val; }
 
 size_t GetAvailableCpuMemSize();

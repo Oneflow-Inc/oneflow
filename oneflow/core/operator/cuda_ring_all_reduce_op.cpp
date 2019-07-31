@@ -12,15 +12,15 @@ class DataContentSplitHelper final {
   DataContentSplitHelper(int64_t num_link, int64_t link_dup_factor, int64_t num_rank,
                          int64_t num_elem, DataType data_type)
       : num_link_(num_link), link_dup_factor_(link_dup_factor), num_rank_(num_rank) {
-    const size_t align_size = GetCudaRingAllReducePackAlignSize();
+    const size_t pack_region_size = GetCudaRingAllReducePackRegionSize();
     const size_t size_of_data_type = GetSizeOfDataType(data_type);
-    CHECK_EQ(align_size % size_of_data_type, 0);
-    const int64_t num_elem_per_pack = align_size / size_of_data_type;
-    const int64_t num_pack = RoundUp(num_elem, num_elem_per_pack) / num_elem_per_pack;
+    CHECK_EQ(pack_region_size % size_of_data_type, 0);
+    const int64_t num_elem_per_region = pack_region_size / size_of_data_type;
+    const int64_t num_pack_region = RoundUp(num_elem, num_elem_per_region) / num_elem_per_region;
     CHECK_GE(num_link, 1);
     const int64_t num_chunk = num_link * link_dup_factor * num_rank;
-    const int64_t num_pack_per_chunk = RoundUp(num_pack, num_chunk) / num_chunk;
-    const int64_t num_elem_per_chunk = num_pack_per_chunk * num_elem_per_pack;
+    const int64_t num_pack_region_per_chunk = RoundUp(num_pack_region, num_chunk) / num_chunk;
+    const int64_t num_elem_per_chunk = num_pack_region_per_chunk * num_elem_per_region;
     chunks_.resize(num_chunk);
     FOR_RANGE(int64_t, i, 0, num_chunk) {
       chunks_[i].mut_begin() = std::min(num_elem, i * num_elem_per_chunk);

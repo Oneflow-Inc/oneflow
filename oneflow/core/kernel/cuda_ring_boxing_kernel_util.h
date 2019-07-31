@@ -32,7 +32,7 @@ struct CudaRingBoxingKernelUtil {
   static void LaunchGenericRingStep(DeviceCtx* ctx, CudaRingBoxingStepParams<T> params);
 };
 
-size_t GetCudaRingAllReducePackAlignSize();
+size_t GetCudaRingAllReducePackRegionSize();
 
 }  // namespace oneflow
 

@@ -9,7 +9,8 @@ namespace {
 using Pack = ulong2;
 
 constexpr int32_t PACK_SIZE = sizeof(Pack);
-constexpr int32_t PACK_ALIGN = alignof(Pack);
+constexpr int32_t PACK_REGION_SIZE = PACK_SIZE * 16;
+constexpr int32_t PACK_REGION_ALIGN = PACK_REGION_SIZE;
 constexpr int32_t NUM_WARP_PER_BLOCK = 8;
 constexpr int32_t NUM_THREAD_PER_WARP = 32;
 constexpr int32_t NUM_THREAD = NUM_THREAD_PER_WARP * NUM_WARP_PER_BLOCK;
@@ -189,20 +190,24 @@ __device__ __forceinline__ void DoBatchPackReduceOrCopy(const int64_t num_elem,
   for (int32_t i = 0; i < NUM_OUT; ++i) { out[i] += num_elem; }
 }
 
+__device__ __forceinline__ int32_t AlignSizeToPackRegion(const void* ptr) {
+  return  reinterpret_cast<uintptr_t>(ptr) % PACK_REGION_ALIGN;
+}
+
 template<ReduceMethod method, typename T, int32_t NUM_IN, int32_t NUM_OUT>
 __device__ __forceinline__ void ReduceOrCopy(const int64_t num_elem, const T* (&in)[NUM_IN],
                                              T* (&out)[NUM_OUT]) {
   bool all_same_aligned = true;
-  int32_t align = reinterpret_cast<uintptr_t>(in[0]) % sizeof(Pack);
+  const int32_t align = AlignSizeToPackRegion(in[0]);
   for (int32_t i = 1; i < NUM_IN; ++i) {
-    if (reinterpret_cast<uintptr_t>(in[i]) % sizeof(Pack) != align) {
+    if (AlignSizeToPackRegion(in[i]) != align) {
       all_same_aligned = false;
       break;
     }
   }
   if (all_same_aligned) {
     for (int32_t i = 0; i < NUM_OUT; ++i) {
-      if (reinterpret_cast<uintptr_t>(out[i]) % sizeof(Pack) != align) {
+      if (AlignSizeToPackRegion(out[i]) != align) {
         all_same_aligned = false;
         break;
       }
@@ -252,7 +257,10 @@ __global__ void GenericRingStepGpu(CudaRingBoxingStepParams<T> params) {
   const int32_t link_id = block_id / NUM_BLOCK_PER_LINK;
   const CudaRingBoxingLinkParams<T>& link_params = params.links[link_id];
   const int32_t block_id_in_link = block_id % NUM_BLOCK_PER_LINK;
-  const int64_t num_elem_per_block = DivUp(link_params.num_elem, NUM_BLOCK_PER_LINK);
+  constexpr int64_t NUM_ELEM_PER_PACK_REGION = PACK_REGION_SIZE / sizeof(T);
+  const int64_t num_pack_region = DivUp(link_params.num_elem, NUM_ELEM_PER_PACK_REGION);
+  const int64_t num_pack_region_per_block = DivUp(num_pack_region, NUM_BLOCK_PER_LINK);
+  const int64_t num_elem_per_block = num_pack_region_per_block * NUM_ELEM_PER_PACK_REGION;
   const int64_t block_offset = block_id_in_link * num_elem_per_block;
   const int64_t block_num_elem = min(num_elem_per_block, link_params.num_elem - block_offset);
   if (block_num_elem > 0) {
@@ -302,7 +310,7 @@ void CudaRingBoxingKernelUtil<method, T>::LaunchGenericRingStep(
   }
 }
 
-size_t GetCudaRingAllReducePackAlignSize() { return PACK_ALIGN; }
+size_t GetCudaRingAllReducePackRegionSize() { return PACK_REGION_SIZE; }
 
 #define INSTANTIATE_CUDA_RING_ALL_REDUCE_KERNEL_UTIL(type_cpp, type_proto) \
   template struct CudaRingBoxingKernelUtil<ReduceMethod::kSum, type_cpp>;
