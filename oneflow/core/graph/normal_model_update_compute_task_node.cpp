@@ -58,20 +58,6 @@ void NormalMdUpdtCompTaskNode::LockRegsts() {
   GetProducedRegst("forward_model")->Lock();
 }
 
-void NormalMdUpdtCompTaskNode::ToProto(TaskProto* task_proto) {
-  CompTaskNode::ToProto(task_proto);
-  ForEachNodeOnOutEdge([&](const TaskNode* node) {
-    if (IsForwardTaskType(node->GetTaskType())) {
-      // do nothing
-    } else if (IsBackwardTaskType(node->GetTaskType())) {
-      // do nothing
-    } else {
-      task_proto->add_related_save_model_task_ids(node->task_id());
-    }
-  });
-  task_proto->set_related_init_model_task_id(related_init_model_task_id_);
-}
-
 void NormalMdUpdtCompTaskNode::FixPackedBlobDescOfProducedRegst() {
   std::shared_ptr<RegstDesc> diff_add_out_regst = GetProducedRegst("processed_model_diff");
   CHECK(diff_add_out_regst->IsLocked());

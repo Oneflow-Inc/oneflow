@@ -11,8 +11,6 @@ LogicalGraph::LogicalGraph(const Job& job) : job_(job) {
   BuildFwStruct();
   MergeEdge();
   SetNodeDataLbi();
-  // TODO: remove redundant code in BuildModelStruct
-  BuildModelStruct(false);
   ToDotWithAutoFilePath();
 }
 
@@ -177,48 +175,6 @@ bool LogicalGraph::MustHaveModelDiffAcc() {
   return must_have_model_diff_acc;
 }
 
-void LogicalGraph::BuildModelStruct(bool is_train) {
-  HashMap<const LogicalNode*, NormalMdUpdtLogicalNode*> first_shared2mdupdt;
-  HashMap<const LogicalNode*, ReduceCtx> fw_node2reduce_ctx;
-  ForEachLogicalNode<ForwardLogicalNode>([&](ForwardLogicalNode* fw_logical) {
-    if (fw_logical->HasOpWithForwardModelBlob()) { BuildMdSaveStructIfNeed(fw_logical); }
-    if (fw_logical->HasOpWithModelOrConstModelBlob()) {
-      // MdUpdt MdSave
-      NormalMdUpdtLogicalNode* md_updt_logical = nullptr;
-      if (fw_logical->shared_model_nodes() == nullptr) {
-        md_updt_logical = BuildNormalMdUpdtAndMdSaveStruct(is_train, fw_logical);
-      } else {
-        auto first_shared2mdupdt_it =
-            first_shared2mdupdt.find(fw_logical->shared_model_nodes()->front());
-        if (first_shared2mdupdt_it == first_shared2mdupdt.end()) {
-          md_updt_logical = BuildNormalMdUpdtAndMdSaveStruct(is_train, fw_logical);
-          CHECK(first_shared2mdupdt
-                    .emplace(fw_logical->shared_model_nodes()->front(), md_updt_logical)
-                    .second);
-        } else {
-          md_updt_logical = first_shared2mdupdt_it->second;
-        }
-      }
-      Connect<LogicalNode>(md_updt_logical, NewEdge(), fw_logical);
-      // Model Diff Accumulate Logical
-      if (is_train && fw_logical->HasOpWithModelBlob()) {
-        LogicalNode* md_diff_acc_logical = nullptr;
-        if (md_diff_acc_logical->parallel_desc()->parallel_num() > 1
-            && md_diff_acc_logical->parallel_desc()->policy() == kDataParallel) {
-          ReduceCtx reduce_ctx;
-          reduce_ctx.fw_logicals.emplace_back(fw_logical);
-          reduce_ctx.md_diff_acc_logicals.emplace_back(md_diff_acc_logical);
-          reduce_ctx.md_updt_logicals.emplace_back(md_updt_logical);
-          CHECK(fw_node2reduce_ctx.emplace(fw_logical, reduce_ctx).second);
-        } else {
-          Connect<LogicalNode>(md_diff_acc_logical, NewEdge(), md_updt_logical);
-        }
-      }
-    }
-  });
-  SetupNormalMdUpdtOp();
-}
-
 void LogicalGraph::BuildReduceStruct(const ReduceCtx& reduce_ctx) {
   CHECK_GT(reduce_ctx.fw_logicals.size(), 0);
   std::shared_ptr<const ParallelDesc> src_pd = reduce_ctx.fw_logicals[0]->parallel_desc();
@@ -372,63 +328,6 @@ void LogicalGraph::AddReduceScatterAddGatherNodes(LogicalNode* src, LogicalNode*
   Connect<LogicalNode>(reduce_gather_node, NewEdge(), dst);
 }
 
-void LogicalGraph::SetupNormalMdUpdtOp() {
-  ForEachLogicalNode<NormalMdUpdtLogicalNode>([](NormalMdUpdtLogicalNode* node) {
-    if (node->in_edges().size() < 1) { return; }
-    // Add shared_model_diff_add_op
-    OperatorConf op_conf;
-    op_conf.set_name("md_diff_add_" + NewUniqueId());
-    op_conf.set_device_type(node->parallel_desc()->device_type());
-    op_conf.mutable_shared_model_diff_add_conf()->set_in_num(node->in_edges().size());
-    node->mut_op_vec() = {ConstructOp(op_conf)};
-  });
-}
-
-MdSaveLogicalNode* LogicalGraph::BuildMdSaveStructIfNeed(LogicalNode* need_save_logical) {
-  bool write_snapshot_to_master =
-      Global<const IOConf>::Get()->snapshot_fs_conf().has_localfs_conf();
-  if (Global<const IOConf>::Get()->enable_write_snapshot()) {
-    OperatorConf md_save_op_conf;
-    md_save_op_conf.set_name("md_save_" + NewUniqueId());
-    md_save_op_conf.set_device_type(DeviceType::kCPU);
-    md_save_op_conf.mutable_model_save_conf();
-    auto model_save_op = ConstructOp(md_save_op_conf);
-    auto md_save_logical = NewNode<MdSaveLogicalNode>();
-    md_save_logical->mut_op_vec() = {model_save_op};
-    ParallelConf pr_conf;
-    auto related_pr_desc = need_save_logical->parallel_desc();
-    pr_conf.set_policy(related_pr_desc->policy());
-    if (pr_conf.policy() == ParallelPolicy::kDataParallel) {
-      if (write_snapshot_to_master) {
-        pr_conf.add_device_name("0:cpu:0");
-      } else {
-        std::mt19937 gen(NewRandomSeed());
-        std::uniform_int_distribution<> machine_selector(
-            0, related_pr_desc->sorted_machine_ids().size() - 1);
-        int64_t selected_mchn_id = related_pr_desc->sorted_machine_ids().at(machine_selector(gen));
-        pr_conf.add_device_name(std::to_string(selected_mchn_id) + ":cpu:0");
-      }
-    } else if (pr_conf.policy() == ParallelPolicy::kModelParallel) {
-      if (write_snapshot_to_master) {
-        pr_conf.add_device_name("0:cpu:0-" + std::to_string(related_pr_desc->parallel_num() - 1));
-      } else {
-        for (int64_t i = 0; i < related_pr_desc->sorted_machine_ids().size(); ++i) {
-          pr_conf.add_device_name(
-              std::to_string(related_pr_desc->sorted_machine_ids().at(i)) + ":cpu:0-"
-              + std::to_string(related_pr_desc->device_num_of_each_machine() - 1));
-        }
-      }
-    } else {
-      UNIMPLEMENTED();
-    }
-    md_save_logical->mut_parallel_desc().reset(new ParallelDesc(pr_conf));
-    Connect<LogicalNode>(need_save_logical, NewEdge(), md_save_logical);
-    return md_save_logical;
-  } else {
-    return nullptr;
-  }
-}
-
 void LogicalGraph::ForEachNecessaryCtrlEdge(
     const std::function<void(const LogicalNode*, const LogicalNode*, int64_t)>& Handler) const {
   HashMap<std::string, const LogicalNode*> op_name2node;
@@ -460,21 +359,6 @@ void LogicalGraph::ForEachNecessaryCtrlEdge(
       }
     }
   });
-}
-
-NormalMdUpdtLogicalNode* LogicalGraph::BuildNormalMdUpdtAndMdSaveStruct(
-    bool is_train, ForwardLogicalNode* fw_logical) {
-  NormalMdUpdtLogicalNode* md_updt_logical = NewNode<NormalMdUpdtLogicalNode>();
-  md_updt_logical->mut_parallel_desc() = fw_logical->parallel_desc();
-  // for model
-  BuildMdSaveStructIfNeed(md_updt_logical);
-  // TODO: remove the following ugly hard coded `if'
-  if (GlobalJobDesc().job_conf().train_conf().model_update_conf().has_momentum_conf()
-      || GlobalJobDesc().job_conf().train_conf().model_update_conf().has_adam_conf()) {
-    // for forward_model
-    BuildMdSaveStructIfNeed(md_updt_logical);
-  }
-  return md_updt_logical;
 }
 
 void LogicalGraph::ReplaceAllReduceFacades() {

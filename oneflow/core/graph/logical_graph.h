@@ -56,9 +56,6 @@ class LogicalGraph final : public Graph<LogicalNode, LogicalEdge> {
   void AddNcclReduceScatterAndAllGather(LogicalNode* src, LogicalNode* dst);
   void BuildReduceStruct(const ReduceCtx& reduce_ctx);
   void SetupNormalMdUpdtOp();
-  MdSaveLogicalNode* BuildMdSaveStructIfNeed(LogicalNode* need_save_logical);
-  NormalMdUpdtLogicalNode* BuildNormalMdUpdtAndMdSaveStruct(bool is_train,
-                                                            ForwardLogicalNode* fw_logical);
   void ReplaceAllReduceFacades();
 
   void UpdateEdge2Ibn(const LogicalEdge* edge, const std::string& ibn);

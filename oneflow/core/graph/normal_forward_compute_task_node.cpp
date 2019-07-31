@@ -78,7 +78,6 @@ bool NormalForwardCompTaskNode::IsReadyForBuild() {
 
 void NormalForwardCompTaskNode::ToProto(TaskProto* task_proto) {
   CompTaskNode::ToProto(task_proto);
-  task_proto->set_random_seed(random_seed_);
 }
 
 void NormalForwardCompTaskNode::BuildExecGphAndRegst() {

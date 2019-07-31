@@ -281,11 +281,6 @@ uint64_t NumOfPiecesInSnapshot() {
   return GlobalJobDesc().NumOfBatchesInSnapshot() * GlobalJobDesc().NumOfPiecesInBatch();
 }
 
-double IIScale4Actor(TaskType task_type, double default_ii_scale) {
-  if (task_type == TaskType::kMdSave) { return NumOfPiecesInSnapshot(); }
-  return default_ii_scale;
-}
-
 std::function<const HashMap<int64_t, double>&(int64_t)> MakeGetterPathIIScales4RegstDescId(
     const ChainActGraph& graph) {
   auto regst_desc_id2consumer_id2ii_scale =
@@ -293,8 +288,7 @@ std::function<const HashMap<int64_t, double>&(int64_t)> MakeGetterPathIIScales4R
   graph.ForEachRegstDescConsumerPathIIScale(
       [&](int64_t regst_desc_id, int64_t consumer_actor_id, double ii_scale) {
         TaskType task_type = graph.GetTaskProto(consumer_actor_id).task_type();
-        (*regst_desc_id2consumer_id2ii_scale)[regst_desc_id][consumer_actor_id] =
-            IIScale4Actor(task_type, ii_scale);
+        (*regst_desc_id2consumer_id2ii_scale)[regst_desc_id][consumer_actor_id] = ii_scale;
       });
   auto empty = std::make_shared<const HashMap<int64_t, double>>();
   return [regst_desc_id2consumer_id2ii_scale,

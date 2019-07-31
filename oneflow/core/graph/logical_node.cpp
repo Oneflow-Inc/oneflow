@@ -5,7 +5,6 @@
 #include "oneflow/core/graph/loss_compute_task_node.h"
 #include "oneflow/core/graph/loss_print_compute_task_node.h"
 #include "oneflow/core/graph/model_diff_accumulate_compute_task_node.h"
-#include "oneflow/core/graph/model_save_compute_task_node.h"
 #include "oneflow/core/graph/normal_model_update_compute_task_node.h"
 #include "oneflow/core/graph/print_compute_task_node.h"
 #include "oneflow/core/graph/decode_compute_task_node.h"
@@ -456,8 +455,6 @@ REGISTER_BLD_BOXING_OP_CONF_MTHD("NormalBackward"
   OF_PP_MAKE_TUPLE_SEQ(Loss, kDataForwardArea)            \
   OF_PP_MAKE_TUPLE_SEQ(LossAcc, kDataForwardArea)         \
   OF_PP_MAKE_TUPLE_SEQ(LossPrint, kPrintArea)             \
-  OF_PP_MAKE_TUPLE_SEQ(NormalMdUpdt, kMdUpdtArea)         \
-  OF_PP_MAKE_TUPLE_SEQ(MdSave, kMdSaveArea)               \
   OF_PP_MAKE_TUPLE_SEQ(MdDiffAcc, kDataBackwardArea)      \
   OF_PP_MAKE_TUPLE_SEQ(Print, kPrintArea)                 \
   OF_PP_MAKE_TUPLE_SEQ(ReduceConcat, kMdUpdtArea)         \
@@ -484,17 +481,6 @@ std::string OptimizerLogicalNode::TypeName() const { return "Optimizer"; }
 CompTaskNode* OptimizerLogicalNode::NewCompTaskNode() const { return new OptimizerCompTaskNode; }
 
 int64_t OptimizerLogicalNode::GetAreaId() const { return kMdUpdtArea; }
-
-void NormalMdUpdtLogicalNode::FixCompTaskNode(CompTaskNode* node) const {
-  NormalMdUpdtCompTaskNode* normal_mdupdt_node = static_cast<NormalMdUpdtCompTaskNode*>(node);
-  if (parallel_desc()->policy() == ParallelPolicy::kDataParallel) {
-    normal_mdupdt_node->set_random_seed(random_seed_);
-  } else if (parallel_desc()->policy() == ParallelPolicy::kModelParallel) {
-    normal_mdupdt_node->set_random_seed(NewRandomSeed());
-  } else {
-    UNIMPLEMENTED();
-  }
-}
 
 int64_t NewAreaId() {
   static int64_t next_area_id = AreaType_ARRAYSIZE;

@@ -3,7 +3,6 @@
 namespace oneflow {
 
 void NormalForwardCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
-  random_seed_ = task_proto.random_seed();
   cur_piece_id_ = -1;
   int64_t any_in_regst_desc_id = Name2RegstDescIds("in").front();
   const Shape& in_time_shape =
@@ -25,7 +24,7 @@ void NormalForwardCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
     const_buf_regst_ = GetSoleProducedRegst4RegstDescId(const_buf_regst_desc_id_);
   }
   send_const_buf_regst_ = false;
-  if (random_seed_ == -1 || (model_regst_desc_id_ == -1 && const_model_regst_desc_id_ == -1)) {
+  if (model_regst_desc_id_ == -1 && const_model_regst_desc_id_ == -1) {
     if (forward_model_regst_desc_id_ != -1 || const_buf_regst_desc_id_ != -1) {
       AsyncInitModelAndConstBuf();
     }
