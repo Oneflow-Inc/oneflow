@@ -14,7 +14,10 @@ def VariableJob():
     initializer = flow.keras.initializers.constant_int_init(value=5)
     return flow.variable((5,2), initializer = initializer, name="v1")
 
+ckp = flow.train.CheckPoint()
+status = ckp.restore()
 with flow.Session(jobs) as sess:
+    status.initialize_or_restore(session = sess)
     x = sess.run(VariableJob).get()
 
 print(x)
