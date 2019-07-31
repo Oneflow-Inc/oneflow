@@ -9,7 +9,7 @@ import oneflow.core.common.data_type_pb2 as data_type_conf_util
 
 from oneflow.python.oneflow_export import oneflow_export
 
-@oneflow_export('variable')
+@oneflow_export('ops.variables.variable')
 def variable(   shape,
                 dtype=None,
                 initializer=None,
@@ -38,4 +38,34 @@ def variable(   shape,
     lbi.op_name = op_conf.name
     lbi.blob_name = "out"
     return remote_blob_util.RemoteBlob(lbi)
+
+
+@oneflow_export('ops.variables.get_variable')
+def get_variable(name,
+                reuse=False,
+                shape=None,
+                dtype=None,
+                initializer=None,
+                model_split_axis=None,
+                model_name=None):
+
+    op_net = compile_context.cur_job.net
+    for op in op_net.op:
+        if op.HasField("variable_conf"):
+            if name == op.name:
+                if reuse == False:
+                    raise Exception("This variable already exists and the reuse is False!")
+                else:
+                    lbi = logical_blob_id_util.LogicalBlobId()
+                    lbi.op_name = op.name
+                    lbi.blob_name = op.variable_conf.out
+                    return remote_blob_util.RemoteBlob(lbi)
+    return variable(shape,
+                    dtype=dtype,
+                    initializer=initializer,
+                    model_split_axis=model_split_axis,
+                    model_name=model_name,
+                    name=name)
+    
+
 

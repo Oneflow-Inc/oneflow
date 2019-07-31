@@ -10,8 +10,8 @@ jobs = []
 def VariableJob():
     job_conf = flow.get_cur_job_conf_builder()
     job_conf.batch_size(1).data_part_num(1).default_data_type(flow.float)
-    initializer = flow.keras.initializers.constant_int_init(value=5)
-    return flow.variable((5,2), initializer = initializer, name="v1")
+    initializer = flow.ops.initializers.constant_int_init(value=5)
+    return flow.ops.variables.variable((5,2), initializer = initializer, name="v1")
 
 ckp = flow.train.CheckPoint()
 status = ckp.restore()
