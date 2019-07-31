@@ -38,7 +38,6 @@ void NormalMdUpdtCompTaskNode::ProduceAllRegstsAndBindEdges() {
       out_edge->AddRegst("const_model", const_model_regst);
       if (IsForwardTaskType(dst_node->GetTaskType()) && related_init_model_task_id_ == -1) {
         auto fw_node = static_cast<NormalForwardCompTaskNode*>(dst_node);
-        fw_node->set_random_seed(random_seed_);
         related_init_model_task_id_ = fw_node->task_id();
       }
     } else {

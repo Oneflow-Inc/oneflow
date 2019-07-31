@@ -19,8 +19,6 @@ class NormalForwardCompTaskNode final : public CompTaskNode {
   bool HasBackwardCompTaskNode();
   virtual void ToProto(TaskProto*) override;
 
-  void set_random_seed(int64_t random_seed) { random_seed_ = random_seed; }
-
  private:
   void BuildExecGphAndRegst() override;
   void LockRegsts() override;
@@ -29,8 +27,6 @@ class NormalForwardCompTaskNode final : public CompTaskNode {
   void BuildActivationRegst();
   void BuildModel7ConstModel7DataTmp7BufRegsts();
   void InferProducedDataRegstTimeShape() override;
-
-  int64_t random_seed_;
 };
 
 }  // namespace oneflow

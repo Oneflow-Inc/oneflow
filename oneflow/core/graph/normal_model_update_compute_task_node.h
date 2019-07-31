@@ -19,7 +19,6 @@ class NormalMdUpdtCompTaskNode final : public CompTaskNode {
   void LockRegsts() override;
   void EnableMemSharingBetweenFirstInAndProcessedMdDiffRegst();
 
-  void set_random_seed(uint32_t val) { random_seed_ = val; }
   TaskType GetTaskType() const override { return TaskType::kNormalMdUpdt; }
   CudaWorkType GetCudaWorkType() const override { return CudaWorkType::kMdUpdt; }
 
@@ -28,7 +27,6 @@ class NormalMdUpdtCompTaskNode final : public CompTaskNode {
   bool IsTrainable() const;
   void FixPackedBlobDescOfProducedRegst() override;
   void InferProducedDataRegstTimeShape() override;
-  uint32_t random_seed_;
   int64_t related_init_model_task_id_;
 };
 
