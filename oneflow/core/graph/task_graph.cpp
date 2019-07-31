@@ -909,13 +909,13 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByCudaRingAllReduce2Consumer) {
   CHECK_GT(parallel_num, 1);
   std::vector<std::vector<TaskNode*>> send_to(parallel_num);
   std::vector<std::vector<TaskNode*>> recv_from(parallel_num);
-  const PbRpf<RingLinkConf>& links = sorted_src_comp_tasks.front()
-                                         ->logical_node()
-                                         ->SoleOp()
-                                         ->op_conf()
-                                         .cuda_ring_all_reduce_conf()
-                                         .link();
-  for (const RingLinkConf& link : links) {
+  const PbRpf<CudaRingAllReduceLinkConf>& links = sorted_src_comp_tasks.front()
+                                                      ->logical_node()
+                                                      ->SoleOp()
+                                                      ->op_conf()
+                                                      .cuda_ring_all_reduce_conf()
+                                                      .link();
+  for (const CudaRingAllReduceLinkConf& link : links) {
     FOR_RANGE(int64_t, i, 0, parallel_num) {
       const int64_t next = link.next(i);
       send_to[i].push_back(sorted_src_comp_tasks.at(next));
@@ -923,8 +923,7 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByCudaRingAllReduce2Consumer) {
     }
   }
   FOR_RANGE(int64_t, i, 0, parallel_num) {
-    CudaRingAllReduceCompTaskNode* ring_node =
-        dynamic_cast<CudaRingAllReduceCompTaskNode*>(sorted_src_comp_tasks.at(i));
+    auto* ring_node = dynamic_cast<CudaRingAllReduceCompTaskNode*>(sorted_src_comp_tasks.at(i));
     CHECK_NOTNULL(ring_node);
     ring_node->SetRecvSendNodes(recv_from.at(i), send_to.at(i));
   }
