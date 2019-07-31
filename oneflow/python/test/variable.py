@@ -13,6 +13,8 @@ def VariableJob():
     initializer = flow.ops.initializers.constant_int_init(value=5)
     return flow.ops.variables.variable((5,2), initializer = initializer, name="v1")
 
+flow.add_job(VariableJob)
+
 ckp = flow.train.CheckPoint()
 status = ckp.restore()
 with flow.Session(jobs) as sess:

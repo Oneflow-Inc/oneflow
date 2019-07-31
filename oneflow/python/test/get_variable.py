@@ -5,8 +5,6 @@ config = flow.ConfigProtoBuilder()
 config.gpu_device_num(1)
 flow.init(config)
 
-jobs = []
-@flow.append_func_to_list(jobs)
 def VariableJob():
     job_conf = flow.get_cur_job_conf_builder()
     job_conf.batch_size(1).data_part_num(1).default_data_type(flow.float)
@@ -16,6 +14,8 @@ def VariableJob():
     v2 = flow.ops.variables.get_variable('v2', shape=(5,2), initializer = initializer)
     #v2 = flow.ops.variables.get_variable('v1', reuse=True)
     return v2 
+
+flow.add_job(VariableJob)
 
 ckp = flow.train.CheckPoint()
 status = ckp.restore()
