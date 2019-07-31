@@ -15,7 +15,7 @@ flow.add_job(VariableJob)
 
 ckp = flow.train.CheckPoint()
 status = ckp.restore()
-with flow.Session(jobs) as sess:
+with flow.Session() as sess:
     status.initialize_or_restore(session = sess)
     ckp.save(session = sess)
     #check_point.restore(save_path = './model_save/snapshot_1').initialize_or_restore(session = sess)

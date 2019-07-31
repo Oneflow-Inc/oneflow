@@ -17,7 +17,7 @@ flow.add_job(TanhJob)
 x = np.array(range(-5,5), dtype=np.float32)
 
 
-with flow.Session(jobs) as sess:
+with flow.Session() as sess:
     a = sess.run(TanhJob, x).get()
 
 b = torch.tanh(torch.Tensor(x))

@@ -16,7 +16,7 @@ flow.add_job(AddJob)
 a = np.arange(-5,5).reshape((5,2)).astype(np.float32)
 b = np.arange(-5,5).reshape((5,2)).astype(np.float32)
 
-with flow.Session(jobs) as sess:
+with flow.Session() as sess:
     x = sess.run(AddJob, a, b).get()
 
 y = torch.add(torch.Tensor(a), torch.Tensor(b))

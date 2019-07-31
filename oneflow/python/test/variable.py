@@ -15,7 +15,7 @@ flow.add_job(VariableJob)
 
 ckp = flow.train.CheckPoint()
 status = ckp.restore()
-with flow.Session(jobs) as sess:
+with flow.Session() as sess:
     status.initialize_or_restore(session = sess)
     x = sess.run(VariableJob).get()
 

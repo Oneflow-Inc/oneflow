@@ -16,7 +16,7 @@ flow.add_job(MatmulJob)
 a = np.arange(1,21).reshape((4,5)).astype(np.float32)
 b = np.arange(1,21).reshape((5,4)).astype(np.float32)
 
-with flow.Session(jobs) as sess:
+with flow.Session() as sess:
     x = sess.run(MatmulJob, a, b).get()
 
 y = torch.matmul(torch.Tensor(a), torch.Tensor(b))

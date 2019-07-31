@@ -16,7 +16,7 @@ flow.add_job(SigmoidJob)
 
 x = np.array(range(-5,5), dtype=np.float32)
 
-with flow.Session(jobs) as sess:
+with flow.Session() as sess:
     a = sess.run(SigmoidJob, x).get()
 
 b = torch.sigmoid(torch.Tensor(x))
