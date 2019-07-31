@@ -23,19 +23,8 @@ CtrlService::Stub::Stub(std::shared_ptr<grpc::ChannelInterface> channel)
       channel_(channel) {}
 
 std::unique_ptr<CtrlService::Stub> CtrlService::NewStub(const std::string& addr) {
-  //return std::make_unique<Stub>(grpc::CreateChannel(addr, grpc::InsecureChannelCredentials()));
-  grpc_arg grpc_max_msg_len_arg;
-  grpc_max_msg_len_arg.type = grpc_arg_type::GRPC_ARG_INTEGER;
-  grpc_max_msg_len_arg.key = (char *)GRPC_ARG_MAX_MESSAGE_LENGTH;
-  grpc_max_msg_len_arg.value.integer = INT_MAX;
-
-  grpc_channel_args channel_args;
-  channel_args.num_args = 1;
-  channel_args.args = &grpc_max_msg_len_arg;
-  
   grpc::ChannelArguments ch_args;
-  ch_args.SetChannelArgs(&channel_args);
-
+  ch_args.SetInt(GRPC_ARG_MAX_MESSAGE_LENGTH, 64*1024*1024);
   return std::make_unique<Stub>(grpc::CreateCustomChannel(addr, grpc::InsecureChannelCredentials(),
                                                           ch_args));
 }
