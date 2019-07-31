@@ -95,7 +95,7 @@ void CudaRingAllReduceOp::InferBlobDescs(
   *out = *in;
   const int64_t num_link = conf.link().size();
   const int64_t num_rank = conf.link(0).next_size();
-  CHECK_GT(parallel_ctx->parallel_num(), num_rank);
+  CHECK_EQ(parallel_ctx->parallel_num(), num_rank);
   FOR_RANGE(int64_t, i, 1, num_link) { CHECK_EQ(conf.link().Get(i).next_size(), num_rank); }
   const int64_t slice_factor = conf.slice_factor();
   auto* op_ctx = new CudaRingAllReduceOpCtx(num_link, slice_factor, num_rank,
