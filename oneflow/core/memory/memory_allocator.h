@@ -60,7 +60,11 @@ template<>
 struct hash<oneflow::MemoryCase> {
   size_t operator()(const oneflow::MemoryCase& val) const {
     if (val.has_host_mem()) {
-      return 1024;
+      if (val.host_mem().has_cuda_pinned_mem()) {
+        return 1025 + val.host_mem().has_cuda_pinned_mem();
+      } else {
+        return 1024;
+      }
     } else {
       return val.device_cuda_mem().device_id();
     }
