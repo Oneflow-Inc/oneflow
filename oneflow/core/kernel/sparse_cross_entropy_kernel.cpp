@@ -11,8 +11,7 @@ void Forward(DeviceCtx* ctx, const Blob* prediction, const Blob* label, Blob* ou
   CHECK_EQ(prediction->shape().elem_cnt() % num_instances, 0);
   const int64_t num_classes = prediction->shape().elem_cnt() / num_instances;
   SparseCrossEntropyKernelUtil<device_type, T, K>::ComputeEntropy(
-      ctx, num_instances, 0, num_classes, prediction->dptr<T>(), label->dptr<K>(),
-      out->mut_dptr<T>());
+      ctx, num_instances, num_classes, prediction->dptr<T>(), label->dptr<K>(), out->mut_dptr<T>());
 }
 
 template<DeviceType device_type, typename T>
