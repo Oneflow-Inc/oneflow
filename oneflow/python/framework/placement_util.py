@@ -4,7 +4,7 @@ import re
 import oneflow.core.job.placement_pb2 as placement_proto
 import oneflow.python.framework.placement_context as placement_context
 import oneflow.python.framework.compile_context as compile_context
-import oneflow.python.framework.ops.op_util as op_util
+import oneflow.python.ops.op_util as op_util
 from oneflow.python.oneflow_export import oneflow_export
 
 class PlacementScope(object):
