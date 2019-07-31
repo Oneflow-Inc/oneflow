@@ -88,8 +88,8 @@ namespace {
 
 void ParseCpuMask(const std::string& cpu_mask, cpu_set_t* cpu_set) {
   CPU_ZERO_S(sizeof(cpu_set_t), cpu_set);
-  const char* head = cpu_mask.c_str();
-  const char* tail = head + cpu_mask.size();
+  const char* const head = cpu_mask.c_str();
+  const char* const tail = head + cpu_mask.size();
   const char* pos = head;
   std::vector<uint64_t> masks;
   while (pos < tail) {
@@ -132,7 +132,7 @@ std::string CudaDeviceGetCpuMask(int32_t dev_id) {
 }
 
 void CudaDeviceGetCpuAffinity(int32_t dev_id, cpu_set_t* cpu_set) {
-  std::string cpu_mask = CudaDeviceGetCpuMask(dev_id);
+  const std::string cpu_mask = CudaDeviceGetCpuMask(dev_id);
   ParseCpuMask(cpu_mask, cpu_set);
 }
 
@@ -142,10 +142,10 @@ void NumaAwareCudaMallocHost(int32_t dev, void** ptr, size_t size) {
   cpu_set_t new_cpu_set;
   CudaDeviceGetCpuAffinity(dev, &new_cpu_set);
   cpu_set_t saved_cpu_set;
-  sched_getaffinity(0, sizeof(cpu_set_t), &saved_cpu_set);
-  sched_setaffinity(0, sizeof(cpu_set_t), &new_cpu_set);
+  CHECK_EQ(sched_getaffinity(0, sizeof(cpu_set_t), &saved_cpu_set), 0);
+  CHECK_EQ(sched_setaffinity(0, sizeof(cpu_set_t), &new_cpu_set), 0);
   CudaCheck(cudaMallocHost(ptr, size));
-  sched_setaffinity(0, sizeof(cpu_set_t), &saved_cpu_set);
+  CHECK_EQ(sched_setaffinity(0, sizeof(cpu_set_t), &saved_cpu_set), 0);
 }
 
 #endif
