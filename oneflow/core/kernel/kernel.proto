@@ -176,7 +176,7 @@ message MultiRingAllReduceKernelConf {
 }
 
 message CudaRingAllReduceStepLinkConf {
-  repeated RangeProto link_data_range = 5;
+  repeated RangeProto slice_range = 5;
 }
 
 message CudaRingAllReduceStepConf {
@@ -189,8 +189,9 @@ message CudaRingAllReduceStepConf {
 
 message CudaRingAllReduceKernelConf {
   required int64 num_step = 1;
-  required int64 num_link_dup = 2;
-  repeated CudaRingAllReduceStepConf step_conf = 3;
+  required int64 num_link = 2;
+  required int64 slice_factor = 3;
+  repeated CudaRingAllReduceStepConf step_conf = 4;
 }
 
 message KernelConf {

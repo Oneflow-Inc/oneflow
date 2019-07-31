@@ -4,13 +4,9 @@ namespace oneflow {
 
 void CudaRingAllReduceCompActor::VirtualActorInit(const TaskProto& task_proto) {
   CHECK_EQ(1, exec_kernel_vec().size());
-  const OperatorConf& op_conf =
-      exec_kernel_vec().front().kernel->kernel_conf().op_attribute().op_conf();
   const CudaRingAllReduceKernelConf& all_reduce_kernel_conf =
       exec_kernel_vec().front().kernel->kernel_conf().cuda_ring_all_reduce_conf();
-  CHECK(op_conf.has_cuda_ring_all_reduce_conf());
-  const CudaRingAllReduceOpConf& conf = op_conf.cuda_ring_all_reduce_conf();
-  num_link_ = conf.link_size();
+  num_link_ = all_reduce_kernel_conf.num_link();
   CHECK_GT(num_link_, 0);
   out_regst_desc_id_ = task_proto.produced_regst_desc().at("out").regst_desc_id();
   in_regst_desc_id_ = task_proto.consumed_regst_desc_id().at("in").regst_desc_id(0);
@@ -24,9 +20,9 @@ void CudaRingAllReduceCompActor::VirtualActorInit(const TaskProto& task_proto) {
     consumed_rs_.InsertRegstDescId(recv_regst_desc_id);
   }
   num_step_ = all_reduce_kernel_conf.num_step();
-  num_link_dup_ = all_reduce_kernel_conf.num_link_dup();
+  slice_factor_ = all_reduce_kernel_conf.slice_factor();
   current_step_id_ = 0;
-  current_link_dup_id_ = 0;
+  current_slice_id_ = 0;
   send_regst_piece_id_ = 0;
   consumed_rs_.InsertRegstDescId(in_regst_desc_id_);
   consumed_rs_.InitedDone();
@@ -36,7 +32,7 @@ void CudaRingAllReduceCompActor::VirtualActorInit(const TaskProto& task_proto) {
 
 int64_t CudaRingAllReduceCompActor::ActNumForEachOutput(int64_t regst_desc_id) const {
   if (regst_desc_id == out_regst_desc_id_) {
-    return num_step_ * num_link_dup_;
+    return num_step_ * slice_factor_;
   } else if (send_regst_desc_ids_.find(regst_desc_id) != send_regst_desc_ids_.cend()) {
     return 1;
   } else {
@@ -54,7 +50,7 @@ void CudaRingAllReduceCompActor::NormalProcessCustomizedEordMsg(const ActorMsg& 
 
 bool CudaRingAllReduceCompActor::IsCustomizedReadAlwaysUnReadyFromNow() const {
   return in_regst_eord_ && consumed_rs_.available_regst_desc_cnt() == 0 && current_step_id_ == 0
-         && current_link_dup_id_ == 0;
+         && current_slice_id_ == 0;
 }
 
 bool CudaRingAllReduceCompActor::IsCustomizedReadReady() const {
@@ -84,7 +80,7 @@ void CudaRingAllReduceCompActor::Act() {
 }
 
 void CudaRingAllReduceCompActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
-  if (current_step_id_ == num_step_ - 1 && current_link_dup_id_ == num_link_dup_ - 1) {
+  if (current_step_id_ == num_step_ - 1 && current_slice_id_ == slice_factor_ - 1) {
     HandleProducedNaiveDataRegstToConsumer([this](Regst* regst) {
       if (regst->regst_desc_id() == out_regst_desc_id_) {
         regst->set_piece_id(consumed_rs_.Front(in_regst_desc_id_)->piece_id());
@@ -107,7 +103,7 @@ void CudaRingAllReduceCompActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer
 }
 
 void CudaRingAllReduceCompActor::AsyncSendCustomizedConsumedRegstMsgToProducer() {
-  if (current_step_id_ == num_step_ - 1 && current_link_dup_id_ == num_link_dup_ - 1) {
+  if (current_step_id_ == num_step_ - 1 && current_slice_id_ == slice_factor_ - 1) {
     Regst* cur_regst = consumed_rs_.Front(in_regst_desc_id_);
     CHECK(cur_regst);
     AsyncSendRegstMsgToProducer(cur_regst);
@@ -121,8 +117,8 @@ void CudaRingAllReduceCompActor::AsyncSendCustomizedConsumedRegstMsgToProducer()
       CHECK_EQ(0, consumed_rs_.TryPopFrontRegst(recv_regst_desc_id));
     }
   }
-  current_link_dup_id_ = (current_link_dup_id_ + 1) % num_link_dup_;
-  if (current_link_dup_id_ == 0) { current_step_id_ = (current_step_id_ + 1) % num_step_; }
+  current_slice_id_ = (current_slice_id_ + 1) % slice_factor_;
+  if (current_slice_id_ == 0) { current_step_id_ = (current_step_id_ + 1) % num_step_; }
 }
 
 bool CudaRingAllReduceCompActor::CheckOutputActId(int64_t regst_desc_id) const {
@@ -137,7 +133,7 @@ bool CudaRingAllReduceCompActor::CheckOutputActId(int64_t regst_desc_id) const {
 
 void CudaRingAllReduceCompActor::SetKernelCtxOther(void** other) {
   other_ctx_.first = current_step_id_;
-  other_ctx_.second = current_link_dup_id_;
+  other_ctx_.second = current_slice_id_;
   *other = &other_ctx_;
 }
 

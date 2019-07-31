@@ -18,7 +18,8 @@ class CudaRingAllReduceOp : public Operator {
   LogicalBlobId obn2lbi(const std::string& output_bn) const override;
   const PbMessage& GetCustomizedConf() const override;
   void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                      const ParallelContext* parallel_ctx) const override;
+                      const ParallelContext* parallel_ctx, int64_t record_piece_size,
+                      std::function<void(OpContext*)> EnrollOpCtx) const override;
   void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                             const ParallelContext*, KernelConf*, const OpContext*) const override;
 };

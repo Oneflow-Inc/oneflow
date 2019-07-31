@@ -13,7 +13,6 @@ class CudaRingAllReduceKernel final : public KernelIf<DeviceType::kGPU> {
   ~CudaRingAllReduceKernel() override = default;
 
  private:
-  void VirtualKernelInit(const ParallelContext*) override;
   void Forward(const KernelCtx&, std::function<Blob*(const std::string&)>) const override;
 };
 

@@ -191,7 +191,7 @@ __device__ __forceinline__ void DoBatchPackReduceOrCopy(const int64_t num_elem,
 }
 
 __device__ __forceinline__ int32_t AlignSizeToPackRegion(const void* ptr) {
-  return  reinterpret_cast<uintptr_t>(ptr) % PACK_REGION_ALIGN;
+  return reinterpret_cast<uintptr_t>(ptr) % PACK_REGION_ALIGN;
 }
 
 template<ReduceMethod method, typename T, int32_t NUM_IN, int32_t NUM_OUT>
@@ -310,7 +310,7 @@ void CudaRingBoxingKernelUtil<method, T>::LaunchGenericRingStep(
   }
 }
 
-size_t GetCudaRingAllReducePackRegionSize() { return PACK_REGION_SIZE; }
+size_t GetCudaRingBoxingPackRegionSize() { return PACK_REGION_SIZE; }
 
 #define INSTANTIATE_CUDA_RING_ALL_REDUCE_KERNEL_UTIL(type_cpp, type_proto) \
   template struct CudaRingBoxingKernelUtil<ReduceMethod::kSum, type_cpp>;

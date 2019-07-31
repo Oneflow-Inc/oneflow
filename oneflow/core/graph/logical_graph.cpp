@@ -336,13 +336,15 @@ void LogicalGraph::AddCudaRingAllReduce(LogicalNode* src, LogicalNode* dst) {
   cuda_ring_all_reduce_op_conf.set_name("cuda_ring_all_reduce_" + NewUniqueId());
   cuda_ring_all_reduce_op_conf.set_device_type(src_pd->device_type());
   CudaRingAllReduceOpConf* conf = cuda_ring_all_reduce_op_conf.mutable_cuda_ring_all_reduce_conf();
-  conf->set_num_link_dup(2);
+  // TODO: set slice factor by topo and blob size
+  conf->set_slice_factor(2);
   *conf->mutable_lbi() = src->SoleOp()->BnInOp2Lbi(src->SoleOp()->SoleObn());
-  RingLinkConf* link_conf = conf->mutable_link()->Add();
+  CudaRingAllReduceLinkConf* link_conf = conf->mutable_link()->Add();
+  // TODO: build ring by topo
   FOR_RANGE(int64_t, i, 0, src_pd->parallel_num()) {
     *link_conf->mutable_next()->Add() = (i + 1) % src_pd->parallel_num();
   }
-  CudaRingAllReduceLogicalNode* logical_node = NewNode<CudaRingAllReduceLogicalNode>();
+  auto* logical_node = NewNode<CudaRingAllReduceLogicalNode>();
   logical_node->mut_op_vec() = {ConstructOp(cuda_ring_all_reduce_op_conf)};
   logical_node->mut_parallel_desc() = src_pd;
   logical_node->mut_rank_ctx() = ReduceRankCtx().CtxWithScatter(src_pd->parallel_num());

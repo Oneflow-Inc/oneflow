@@ -33,16 +33,16 @@ class CudaRingAllReduceCompActor : public CompActor {
   bool CheckOutputActId(int64_t regst_desc_id) const override;
   void SetKernelCtxOther(void** other);
 
-  HashSet<int64_t> send_regst_desc_ids_;
-  HashSet<int64_t> recv_regst_desc_ids_;
   int64_t num_link_ = -1;
-  int64_t num_link_dup_ = -1;
-  RegstSlot consumed_rs_;
+  int64_t slice_factor_ = -1;
   int64_t num_step_ = -1;
   int64_t current_step_id_ = -1;
-  int64_t current_link_dup_id_ = -1;
+  int64_t current_slice_id_ = -1;
   int64_t in_regst_desc_id_ = -1;
   int64_t out_regst_desc_id_ = -1;
+  HashSet<int64_t> send_regst_desc_ids_;
+  HashSet<int64_t> recv_regst_desc_ids_;
+  RegstSlot consumed_rs_;
   int64_t send_regst_piece_id_ = -1;
   bool in_regst_eord_ = false;
   std::pair<int64_t, int64_t> other_ctx_;
