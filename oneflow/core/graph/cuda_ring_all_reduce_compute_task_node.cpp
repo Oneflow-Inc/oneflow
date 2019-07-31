@@ -16,7 +16,8 @@ void CudaRingAllReduceCompTaskNode::ProduceAllRegstsAndBindEdges() {
   FOR_RANGE(int64_t, i, 0, num_link) {
     std::shared_ptr<RegstDesc> send_regst_desc =
         ProduceRegst("send_" + std::to_string(i), false, slice_factor * 2, slice_factor * 2);
-    send_regst_desc->mut_mem_case()->mutable_host_mem()->set_used_by_device_id(GpuPhyId());
+    send_regst_desc->mut_mem_case()->mutable_host_mem()->mutable_cuda_pinned_mem()->set_device_id(
+        GpuPhyId());
     send_to_nodes.emplace(send_to_.at(i));
   }
   this->ForEachOutDataEdge([&](TaskEdge* edge) {
@@ -71,7 +72,9 @@ void CudaRingAllReduceCompTaskNode::InferProducedDataRegstTimeShape() {
 }
 
 void CudaRingAllReduceCompTaskNode::PinConsumedRegstMemCase(MemoryCase* mem_case) {
-  if (mem_case->has_host_mem()) { mem_case->mutable_host_mem()->set_used_by_device_id(GpuPhyId()); }
+  if (mem_case->has_host_mem()) {
+    mem_case->mutable_host_mem()->mutable_cuda_pinned_mem()->set_device_id(GpuPhyId());
+  }
 }
 
 void CudaRingAllReduceCompTaskNode::EnableMemSharingInReduce(const ReduceMemSharingCtx& ctx) {

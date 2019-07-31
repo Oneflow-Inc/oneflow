@@ -113,7 +113,7 @@ OperatorConf SliceBoxingTaskNode::GetBoxingOpConf() {
 void SliceBoxingTaskNode::InitProducedRegstMemCase(MemoryCase* mem_case) {
   *mem_case = mem_case_;
   if (mem_case_.has_host_mem() && device_type() == DeviceType::kGPU) {
-    mem_case->mutable_host_mem()->set_used_by_device_id(GpuPhyId());
+    mem_case->mutable_host_mem()->mutable_cuda_pinned_mem()->set_device_id(GpuPhyId());
   }
 }
 

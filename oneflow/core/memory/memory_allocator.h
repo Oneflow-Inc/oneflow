@@ -38,7 +38,13 @@ T* MemoryAllocator::PlacementNew(T* mem_ptr) {
 
 inline bool operator==(const MemoryCase& lhs, const MemoryCase& rhs) {
   if (lhs.has_host_mem() && rhs.has_host_mem()) {
-    return lhs.host_mem().used_by_device_id() == rhs.host_mem().used_by_device_id();
+    if (lhs.host_mem().has_cuda_pinned_mem()) {
+      return rhs.has_device_cuda_mem()
+             && lhs.host_mem().cuda_pinned_mem().device_id()
+                    == rhs.host_mem().cuda_pinned_mem().device_id();
+    } else {
+      return !rhs.has_device_cuda_mem();
+    }
   }
   if (lhs.has_device_cuda_mem() && rhs.has_device_cuda_mem()) {
     return lhs.device_cuda_mem().device_id() == rhs.device_cuda_mem().device_id();

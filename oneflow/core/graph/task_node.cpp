@@ -312,7 +312,7 @@ void TaskNode::InitProducedRegstMemCase(MemoryCase* mem_case) {
 
 void TaskNode::PinConsumedRegstMemCase(MemoryCase* mem_case) {
   if (mem_case->has_host_mem() && device_type() == DeviceType::kGPU) {
-    mem_case->mutable_host_mem()->set_used_by_device_id(GpuPhyId());
+    mem_case->mutable_host_mem()->mutable_cuda_pinned_mem()->set_device_id(GpuPhyId());
   }
 }
 
