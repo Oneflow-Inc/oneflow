@@ -667,7 +667,7 @@ OP_CONF_TYPE_2_FIELD_NAME = _GetOpConfTypeName2FieldName();
 def _GetSoleOutputOperatorNamePrefixs():
   global OP_CONF_TYPE_2_FIELD_NAME;
   op_prefixes = [];
-  for op_conf_type_name, field_name in OP_CONF_TYPE_2_FIELD_NAME.iteritems():
+  for op_conf_type_name, field_name in OP_CONF_TYPE_2_FIELD_NAME.items():
     op_conf = getattr(OperatorConf(), field_name);
     if op_conf_type_name.endswith('OpConf') and hasattr(op_conf, 'in') \
         and hasattr(op_conf, 'out') and  not isinstance(op_conf.out, RepeatedScalarContainer):
@@ -688,7 +688,7 @@ _RegisterSoleOutputBlobOpMethods();
 def _GetLossOperatorNamePrefixs():
   global OP_CONF_TYPE_2_FIELD_NAME;
   op_prefixes = [];
-  for op_conf_type_name, field_name in OP_CONF_TYPE_2_FIELD_NAME.iteritems():
+  for op_conf_type_name, field_name in OP_CONF_TYPE_2_FIELD_NAME.items():
     op_conf = getattr(OperatorConf(), field_name);
     if op_conf_type_name.endswith('OpConf') and hasattr(op_conf, 'prediction') \
         and hasattr(op_conf, 'label') and hasattr(op_conf, 'loss'):
