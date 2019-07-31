@@ -38,7 +38,7 @@ char* MemoryAllocator::Allocate(MemoryCase mem_case, std::size_t size) {
 
 void MemoryAllocator::Deallocate(char* dptr, MemoryCase mem_case) {
   if (mem_case.has_host_mem()) {
-    if (mem_case.host_mem().used_by_device_id() != -1) {
+    if (mem_case.host_mem().has_cuda_pinned_mem()) {
       CudaCheck(cudaFreeHost(dptr));
     } else {
       free(dptr);
