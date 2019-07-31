@@ -55,13 +55,11 @@ class OpNode final : public Node<OpNode, OpEdge> {
   }
   bool* MutHasBatchDim4Lbi(const LogicalBlobId& lbi);
   BlobDesc* MutLogicalBlobDesc4Lbi(const LogicalBlobId& lbi);
-  OpNode* SrcNode4InputBnInOp(const std::string& bn_in_op) const;
-  OpNode* ProducerOpNode4BnInOp(const std::string& bn_in_op);
-  OpNode* SrcNode4InputLbi(const LogicalBlobId& lbi) const;
+  OpNode* MutSrcNode4InputBnInOp(const std::string& bn_in_op) const;
+  OpNode* MutProducerOpNode4BnInOp(const std::string& bn_in_op);
+  OpNode* MutSrcNode4InputLbi(const LogicalBlobId& lbi) const;
   OpNode* MutProducerOpNode4Lbi(const LogicalBlobId& lbi);
 
-  void ForEachParallelBlobDesc(const BlobDesc& blob_desc, const SbpParallel& sbp_parallel,
-                               const std::function<void(const BlobDesc&)>& Handler) const;
   int64_t GetAxisParallelNum(
       const std::function<void(bool*, int32_t*, int64_t*)>& GetAxisParallelInfo) const;
   void ConcatBlobDesc(const std::vector<BlobDesc>& blob_descs, const SbpParallel& sbp_parallel,

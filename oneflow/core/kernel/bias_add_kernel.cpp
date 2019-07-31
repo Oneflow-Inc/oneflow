@@ -1,5 +1,6 @@
 #include "oneflow/core/kernel/bias_add_kernel.h"
 #include "oneflow/core/kernel/kernel_util.h"
+#include "oneflow/core/kernel/new_kernel_util.h"
 
 namespace oneflow {
 
@@ -20,10 +21,10 @@ void BiasAddKernel<device_type, T>::ForwardDataContent(
   // out = bias_multiplier * b + a
   Memcpy<device_type>(ctx.device_ctx, out_blob->mut_dptr<T>(), a_blob->dptr<T>(),
                       a_blob->ByteSizeOfDataContentField());
-  KernelUtil<device_type, T>::OFGemm(ctx.device_ctx, CblasNoTrans, CblasNoTrans,
+  NewKernelUtil<device_type>::OFGemm(ctx.device_ctx, CblasNoTrans, CblasNoTrans,
                                      out_blob->shape().At(0), out_blob->shape().At(1), 1,
-                                     OneVal<T>::value, bias_mul_blob->dptr<T>(), b_blob->dptr<T>(),
-                                     OneVal<T>::value, out_blob->mut_dptr<T>());
+                                     GetOneVal<T>(), bias_mul_blob->dptr<T>(), b_blob->dptr<T>(),
+                                     GetOneVal<T>(), out_blob->mut_dptr<T>());
 }
 
 template<DeviceType device_type, typename T>
@@ -31,8 +32,8 @@ void BiasAddKernel<device_type, T>::InitConstBufBlobs(
     DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   InitializerConf bias_multiplier_initializer_conf;
   bias_multiplier_initializer_conf.mutable_constant_conf()->set_value(1.0f);
-  KernelUtil<device_type, T>::InitializeWithConf(ctx, bias_multiplier_initializer_conf, 0,
-                                                 BnInOp2Blob("bias_multiplier"));
+  NewKernelUtil<device_type>::InitializeWithConstConf(
+      ctx, bias_multiplier_initializer_conf.constant_conf(), 0, BnInOp2Blob("bias_multiplier"));
 }
 
 template<DeviceType device_type, typename T>
@@ -40,6 +41,7 @@ const PbMessage& BiasAddKernel<device_type, T>::GetCustomizedOpConf() const {
   return this->op_conf().bias_add_conf();
 }
 
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kBiasAddConf, BiasAddKernel, FLOATING_DATA_TYPE_SEQ);
+ADD_DEFAULT_KERNEL_CREATOR_WITH_GPU_HALF(OperatorConf::kBiasAddConf, BiasAddKernel,
+                                         FLOATING_DATA_TYPE_SEQ);
 
 }  // namespace oneflow

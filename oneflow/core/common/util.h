@@ -25,6 +25,7 @@
 
 #include "oneflow/core/common/meta_util.hpp"
 #include "oneflow/core/common/data_type.h"
+#include "oneflow/core/operator/op_conf.pb.h"
 
 DECLARE_string(log_dir);
 
@@ -39,6 +40,14 @@ struct hash<std::pair<T0, T1>> {
     return h0 ^ h1;
   }
 };
+
+template<>
+struct hash<::oneflow::OperatorConf::OpTypeCase> {
+  std::size_t operator()(const ::oneflow::OperatorConf::OpTypeCase& op_type) const {
+    return std::hash<int>()(static_cast<size_t>(op_type));
+  }
+};
+
 }  // namespace std
 
 namespace oneflow {
@@ -204,16 +213,6 @@ void Erase(T& container, const std::function<bool(const typename T::value_type&)
 template<typename T>
 void Erase(T& container, const std::function<bool(const typename T::value_type&)>& NeedErase) {
   Erase<T>(container, NeedErase, [](const typename T::value_type&) {});
-}
-
-template<typename T>
-inline T GetMinVal() {
-  return std::numeric_limits<T>::lowest();
-}
-
-template<typename T>
-inline T GetMaxVal() {
-  return std::numeric_limits<T>::max();
 }
 
 //  encode case

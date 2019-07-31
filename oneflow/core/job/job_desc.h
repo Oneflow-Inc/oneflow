@@ -49,6 +49,15 @@ class JobDesc final {
   bool collect_act_event() const { return job_conf_.other().collect_act_event(); }
   bool enable_mem_sharing() const { return job_conf_.other().enable_mem_sharing(); }
   bool enable_inplace() const { return job_conf_.other().enable_inplace(); }
+  bool enable_true_half_config_when_conv() const {
+    return job_conf_.other().enable_true_half_config_when_conv();
+  }
+  bool enable_float_compute_for_half_gemm() const {
+    return job_conf_.other().enable_float_compute_for_half_gemm();
+  }
+  bool enable_auto_mixed_precision() const {
+    return job_conf_.other().enable_auto_mixed_precision();
+  }
   const FileSystemConf& data_fs_conf() const;
   const FileSystemConf& snapshot_fs_conf() const;
   bool enable_write_snapshot() const;
@@ -86,6 +95,7 @@ class JobDesc final {
   float weight_l2() const;
   float bias_l2() const;
   int32_t DataPartNum() const;
+  int32_t loss_scale_factor() const;
 
  private:
   friend class Global<JobDesc>;
