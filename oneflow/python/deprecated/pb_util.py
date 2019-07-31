@@ -1,6 +1,6 @@
 def PythonDict2PbMessage(value, msg):
     def extend_dict(values, msg):
-        for k,v in values.iteritems():
+        for k,v in values.items():
             if type(v) is dict:
                 extend_dict(v, getattr(msg, k)) 
             elif type(v) is list or type(v) is tuple:
