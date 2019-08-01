@@ -14,7 +14,7 @@ class CheckPoint(object):
     def save(file_prefix=None, session = None):
         assert file_prefix == None
         if session == None: session = runtime_ctx.default_session
-        session.run(_MakeModelSaveJobFunc())
+        session.NoReturnRun(_MakeModelSaveJobFunc())
 
 class CheckPointRestoreStatus(object):
     def __init__(self, save_path):
@@ -22,16 +22,18 @@ class CheckPointRestoreStatus(object):
 
     def initialize_or_restore(session = None):
         if session == None: session = runtime_ctx.default_session
-        session.run(_MakeModelInitJobFunc())
+        session.NoReturnRun(_MakeModelInitJobFunc())
 
 def _MakeModelInitJobFunc():
     def ModelInit():
         pass
     ModelInit.__name__ = runtime_ctx.inter_user_job_info.global_model_init_job_name
+    ModelInit.__oneflow_input_remote_blobs__ = None
     return ModelInit
     
 def _MakeModelSaveJobFunc():
     def ModelSave():
         pass
     ModelSave.__name__ = runtime_ctx.inter_user_job_info.global_model_save_job_name
+    ModelSave.__oneflow_input_remote_blobs__ = None
     return ModelSave
