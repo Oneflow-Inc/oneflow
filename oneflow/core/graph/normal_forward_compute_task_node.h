@@ -17,15 +17,12 @@ class NormalForwardCompTaskNode final : public CompTaskNode {
 
   TaskType GetTaskType() const override { return TaskType::kNormalForward; }
   bool HasBackwardCompTaskNode();
-  virtual void ToProto(TaskProto*) override;
 
  private:
   void BuildExecGphAndRegst() override;
-  void LockRegsts() override;
   void BuildExecGphStructAndBindInRegst();
   void BuildOutRegst();
-  void BuildActivationRegst();
-  void BuildModel7ConstModel7DataTmp7BufRegsts();
+  void BuildDataTmp7BufRegsts();
   void InferProducedDataRegstTimeShape() override;
 };
 
