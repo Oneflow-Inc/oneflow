@@ -1,6 +1,5 @@
 #include "oneflow/core/graph/task_graph.h"
 #include "oneflow/core/graph/normal_forward_compute_task_node.h"
-#include "oneflow/core/graph/normal_model_update_compute_task_node.h"
 #include "oneflow/core/graph/chain_graph.h"
 #include "oneflow/core/graph/boxing_task_node.h"
 #include "oneflow/core/common/balanced_splitter.h"
@@ -484,11 +483,12 @@ void TaskGraph::EnableMemSharingInReduceStruct() {
 }
 
 void TaskGraph::EnableMemSharingAfterAllManualSetForMdUpdt() {
-  ForEachNode([&](TaskNode* node) {
-    auto* updt = dynamic_cast<NormalMdUpdtCompTaskNode*>(node);
-    if (!updt) { return; }
-    updt->EnableMemSharingBetweenFirstInAndProcessedMdDiffRegst();
-  });
+  TODO();
+  // ForEachNode([&](TaskNode* node) {
+  //   auto* updt = dynamic_cast<NormalMdUpdtCompTaskNode*>(node);
+  //   if (!updt) { return; }
+  //   updt->EnableMemSharingBetweenFirstInAndProcessedMdDiffRegst();
+  // });
 }
 
 void TaskGraph::EnableMemSharingInVariableOp() {
