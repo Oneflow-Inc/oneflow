@@ -8,7 +8,7 @@ import oneflow.python.framework.placement_util as placement_util
 import oneflow.python.framework.config_util as config_util
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.val as val
-import oneflow.python.framework.ops as ops
+import oneflow.python.ops as ops
 from oneflow.python.oneflow_export import oneflow_export
 
 @oneflow_export('get_cur_job_conf_builder')
