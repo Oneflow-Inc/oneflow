@@ -287,7 +287,6 @@ std::function<const HashMap<int64_t, double>&(int64_t)> MakeGetterPathIIScales4R
       std::make_shared<HashMap<int64_t, HashMap<int64_t, double>>>();
   graph.ForEachRegstDescConsumerPathIIScale(
       [&](int64_t regst_desc_id, int64_t consumer_actor_id, double ii_scale) {
-        TaskType task_type = graph.GetTaskProto(consumer_actor_id).task_type();
         (*regst_desc_id2consumer_id2ii_scale)[regst_desc_id][consumer_actor_id] = ii_scale;
       });
   auto empty = std::make_shared<const HashMap<int64_t, double>>();
