@@ -122,7 +122,7 @@ std::string CudaDeviceGetCpuMask(int32_t dev_id) {
   const std::string pci_bus_id(pci_bus_id_buf.data(), pci_bus_id_buf.size() - 1);
   const std::string pci_bus_id_short = pci_bus_id.substr(0, sizeof("0000:00") - 1);
   const std::string local_cpus_file =
-      "/sys/class/pci_bus/" + pci_bus_id_short + "/../../" + pci_bus_id + "/local_cpus";
+      "/sys/class/pci_bus/" + pci_bus_id_short + "/device/" + pci_bus_id + "/local_cpus";
   char* cpu_map_path = realpath(local_cpus_file.c_str(), nullptr);
   CHECK_NOTNULL(cpu_map_path);
   std::ifstream is(cpu_map_path);
@@ -140,7 +140,10 @@ void CudaDeviceGetCpuAffinity(int32_t dev_id, cpu_set_t* cpu_set) {
 
 }  // namespace
 
+#endif
+
 void NumaAwareCudaMallocHost(int32_t dev, void** ptr, size_t size) {
+#ifdef PLATFORM_POSIX
   cpu_set_t new_cpu_set;
   CudaDeviceGetCpuAffinity(dev, &new_cpu_set);
   cpu_set_t saved_cpu_set;
@@ -148,15 +151,10 @@ void NumaAwareCudaMallocHost(int32_t dev, void** ptr, size_t size) {
   CHECK_EQ(sched_setaffinity(0, sizeof(cpu_set_t), &new_cpu_set), 0);
   CudaCheck(cudaMallocHost(ptr, size));
   CHECK_EQ(sched_setaffinity(0, sizeof(cpu_set_t), &saved_cpu_set), 0);
-}
-
 #else
-
-void NumaAwareCudaMallocHost(int32_t dev, void** ptr, size_t size) {
-  CudaCheck(cudaMallocHost(ptr, size));
-}
-
+  UNIMPLEMENTED();
 #endif
+}
 
 cudaDataType_t GetCudaDataType(DataType val) {
 #define MAKE_ENTRY(type_cpp, type_cuda) \
