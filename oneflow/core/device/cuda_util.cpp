@@ -1,4 +1,5 @@
 #include "oneflow/core/device/cuda_util.h"
+#include "oneflow/core/common/platform.h"
 
 namespace oneflow {
 
@@ -99,6 +100,7 @@ void ParseCpuMask(const std::string& cpu_mask, cpu_set_t* cpu_set) {
       CHECK_EQ(end_pos - pos, 8);
     } else {
       CHECK_NE(end_pos, pos);
+      CHECK_LE(end_pos - pos, 8);
     }
     if (end_pos < tail) { CHECK_EQ(*end_pos, ','); }
     masks.push_back(mask);
@@ -107,9 +109,9 @@ void ParseCpuMask(const std::string& cpu_mask, cpu_set_t* cpu_set) {
   int32_t cpu = 0;
   for (int64_t i = masks.size() - 1; i >= 0; i--) {
     for (uint64_t b = 0; b < 32; b++) {
-      if ((masks.at(i) & (1UL << b)) != 0) { CPU_SET_S(cpu + b, sizeof(cpu_set_t), cpu_set); }
+      if ((masks.at(i) & (1UL << b)) != 0) { CPU_SET_S(cpu, sizeof(cpu_set_t), cpu_set); }
+      cpu += 1;
     }
-    cpu += 32;
   }
 }
 
@@ -120,7 +122,7 @@ std::string CudaDeviceGetCpuMask(int32_t dev_id) {
   const std::string pci_bus_id(pci_bus_id_buf.data(), pci_bus_id_buf.size() - 1);
   const std::string pci_bus_id_short = pci_bus_id.substr(0, sizeof("0000:00") - 1);
   const std::string local_cpus_file =
-      "/sys/class/pci_bus/" + pci_bus_id_short + "/../../" + pci_bus_id + "/local_cpus";
+      "/sys/class/pci_bus/" + pci_bus_id_short + "/device/" + pci_bus_id + "/local_cpus";
   char* cpu_map_path = realpath(local_cpus_file.c_str(), nullptr);
   CHECK_NOTNULL(cpu_map_path);
   std::ifstream is(cpu_map_path);
@@ -138,7 +140,10 @@ void CudaDeviceGetCpuAffinity(int32_t dev_id, cpu_set_t* cpu_set) {
 
 }  // namespace
 
+#endif
+
 void NumaAwareCudaMallocHost(int32_t dev, void** ptr, size_t size) {
+#ifdef PLATFORM_POSIX
   cpu_set_t new_cpu_set;
   CudaDeviceGetCpuAffinity(dev, &new_cpu_set);
   cpu_set_t saved_cpu_set;
@@ -146,9 +151,10 @@ void NumaAwareCudaMallocHost(int32_t dev, void** ptr, size_t size) {
   CHECK_EQ(sched_setaffinity(0, sizeof(cpu_set_t), &new_cpu_set), 0);
   CudaCheck(cudaMallocHost(ptr, size));
   CHECK_EQ(sched_setaffinity(0, sizeof(cpu_set_t), &saved_cpu_set), 0);
-}
-
+#else
+  UNIMPLEMENTED();
 #endif
+}
 
 cudaDataType_t GetCudaDataType(DataType val) {
 #define MAKE_ENTRY(type_cpp, type_cuda) \

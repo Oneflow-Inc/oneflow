@@ -14,12 +14,11 @@ char* MemoryAllocator::Allocate(MemoryCase mem_case, std::size_t size) {
   char* dptr = nullptr;
   if (mem_case.has_host_mem()) {
     if (mem_case.host_mem().has_cuda_pinned_mem()) {
-#ifdef PLATFORM_POSIX
-      NumaAwareCudaMallocHost(mem_case.host_mem().cuda_pinned_mem().device_id(),
-                              reinterpret_cast<void**>(&dptr), size);
-#else
-      CudaCheck(cudaMallocHost(ptr, size));
-#endif
+      if (Global<JobDesc>::Get()->enable_numa_aware_cuda_malloc_host()) {
+        NumaAwareCudaMallocHost(mem_case.host_mem().cuda_pinned_mem().device_id(), &dptr, size);
+      } else {
+        CudaCheck(cudaMallocHost(&dptr, size));
+      }
     } else {
       dptr = reinterpret_cast<char*>(malloc(size));
       CHECK_NOTNULL(dptr);

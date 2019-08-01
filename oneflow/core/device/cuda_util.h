@@ -66,9 +66,12 @@ enum class CudaWorkType {
 
 inline size_t GetCudaWorkTypeSize() { return OF_PP_SEQ_SIZE(CUDA_WORK_TYPE_SEQ); }
 
-#ifdef PLATFORM_POSIX
 void NumaAwareCudaMallocHost(int32_t dev, void** ptr, size_t size);
-#endif
+
+template<typename T>
+void NumaAwareCudaMallocHost(int32_t dev, T** ptr, size_t size) {
+  NumaAwareCudaMallocHost(dev, reinterpret_cast<void**>(ptr), size);
+}
 
 #define CUDA_DATA_TYPE_SEQ                 \
   OF_PP_MAKE_TUPLE_SEQ(float, CUDA_R_32F)  \

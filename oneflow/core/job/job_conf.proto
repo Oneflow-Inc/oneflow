@@ -110,6 +110,7 @@ message Config {
   optional bool enable_true_half_config_when_conv = 150 [default = false];
   optional bool enable_float_compute_for_half_gemm = 151[default = true];
   optional bool enable_auto_mixed_precision = 152 [default = false];
+  optional bool enable_numa_aware_cuda_malloc_host = 153 [default = false];
 
   optional bool use_boxing_v2 = 153 [default = false];
 
