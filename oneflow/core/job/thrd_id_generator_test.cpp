@@ -4,10 +4,6 @@ namespace oneflow {
 
 TEST(ThrdIdGenerator, ordered) {
   std::vector<std::pair<int64_t, TaskType>> machine_task_type_vec;
-  machine_task_type_vec.emplace_back(std::make_pair(0, TaskType::kMdSave));
-  machine_task_type_vec.emplace_back(std::make_pair(0, TaskType::kMdSave));
-  machine_task_type_vec.emplace_back(std::make_pair(0, TaskType::kMdSave));
-  machine_task_type_vec.emplace_back(std::make_pair(0, TaskType::kMdSave));
 
   machine_task_type_vec.emplace_back(std::make_pair(0, TaskType::kPrint));
   machine_task_type_vec.emplace_back(std::make_pair(0, TaskType::kPrint));
@@ -18,10 +14,6 @@ TEST(ThrdIdGenerator, ordered) {
 
   machine_task_type_vec.emplace_back(std::make_pair(0, TaskType::kLossPrint));
   machine_task_type_vec.emplace_back(std::make_pair(0, TaskType::kLossPrint));
-
-  machine_task_type_vec.emplace_back(std::make_pair(1, TaskType::kMdSave));
-  machine_task_type_vec.emplace_back(std::make_pair(1, TaskType::kMdSave));
-  machine_task_type_vec.emplace_back(std::make_pair(1, TaskType::kMdSave));
 
   machine_task_type_vec.emplace_back(std::make_pair(1, TaskType::kPrint));
   machine_task_type_vec.emplace_back(std::make_pair(1, TaskType::kPrint));
@@ -57,26 +49,20 @@ TEST(ThrdIdGenerator, ordered) {
 
 TEST(ThrdIdGenerator, disordered) {
   std::vector<std::pair<int64_t, TaskType>> machine_task_type_vec;
-  machine_task_type_vec.emplace_back(std::make_pair(0, TaskType::kMdSave));
-  machine_task_type_vec.emplace_back(std::make_pair(0, TaskType::kMdSave));
   machine_task_type_vec.emplace_back(std::make_pair(0, TaskType::kPrint));
   machine_task_type_vec.emplace_back(std::make_pair(0, TaskType::kPrint));
-  machine_task_type_vec.emplace_back(std::make_pair(0, TaskType::kMdSave));
   machine_task_type_vec.emplace_back(std::make_pair(0, TaskType::kRecordLoad));
-  machine_task_type_vec.emplace_back(std::make_pair(0, TaskType::kMdSave));
   machine_task_type_vec.emplace_back(std::make_pair(0, TaskType::kRecordLoad));
   machine_task_type_vec.emplace_back(std::make_pair(0, TaskType::kLossPrint));
   machine_task_type_vec.emplace_back(std::make_pair(0, TaskType::kRecordLoad));
   machine_task_type_vec.emplace_back(std::make_pair(0, TaskType::kLossPrint));
 
-  machine_task_type_vec.emplace_back(std::make_pair(1, TaskType::kMdSave));
   machine_task_type_vec.emplace_back(std::make_pair(1, TaskType::kPrint));
-  machine_task_type_vec.emplace_back(std::make_pair(1, TaskType::kMdSave));
+
   machine_task_type_vec.emplace_back(std::make_pair(1, TaskType::kLossPrint));
   machine_task_type_vec.emplace_back(std::make_pair(1, TaskType::kPrint));
   machine_task_type_vec.emplace_back(std::make_pair(1, TaskType::kLossPrint));
   machine_task_type_vec.emplace_back(std::make_pair(1, TaskType::kPrint));
-  machine_task_type_vec.emplace_back(std::make_pair(1, TaskType::kMdSave));
 
   int64_t base_thrd_id = 16;
   auto temp = machine_task_type_vec;
@@ -103,25 +89,12 @@ TEST(ThrdIdGenerator, ordered_mdsave_num_more_than_config) {
   machine_task_type_vec.emplace_back(std::make_pair(0, TaskType::kPrint));
   machine_task_type_vec.emplace_back(std::make_pair(0, TaskType::kPrint));
 
-  machine_task_type_vec.emplace_back(std::make_pair(0, TaskType::kMdSave));
-  machine_task_type_vec.emplace_back(std::make_pair(0, TaskType::kMdSave));
-  machine_task_type_vec.emplace_back(std::make_pair(0, TaskType::kMdSave));
-  machine_task_type_vec.emplace_back(std::make_pair(0, TaskType::kMdSave));
-  machine_task_type_vec.emplace_back(std::make_pair(0, TaskType::kMdSave));
-  machine_task_type_vec.emplace_back(std::make_pair(0, TaskType::kMdSave));
-
   machine_task_type_vec.emplace_back(std::make_pair(0, TaskType::kRecordLoad));
   machine_task_type_vec.emplace_back(std::make_pair(0, TaskType::kRecordLoad));
   machine_task_type_vec.emplace_back(std::make_pair(0, TaskType::kRecordLoad));
 
   machine_task_type_vec.emplace_back(std::make_pair(0, TaskType::kLossPrint));
   machine_task_type_vec.emplace_back(std::make_pair(0, TaskType::kLossPrint));
-
-  machine_task_type_vec.emplace_back(std::make_pair(1, TaskType::kMdSave));
-  machine_task_type_vec.emplace_back(std::make_pair(1, TaskType::kMdSave));
-  machine_task_type_vec.emplace_back(std::make_pair(1, TaskType::kMdSave));
-  machine_task_type_vec.emplace_back(std::make_pair(1, TaskType::kMdSave));
-  machine_task_type_vec.emplace_back(std::make_pair(1, TaskType::kMdSave));
 
   machine_task_type_vec.emplace_back(std::make_pair(1, TaskType::kPrint));
   machine_task_type_vec.emplace_back(std::make_pair(1, TaskType::kPrint));
@@ -154,37 +127,24 @@ TEST(ThrdIdGenerator, ordered_mdsave_num_more_than_config) {
 TEST(ThrdIdGenerator, disordered_mdsave_num_more_than_config) {
   std::vector<std::pair<int64_t, TaskType>> machine_task_type_vec;
   machine_task_type_vec.emplace_back(std::make_pair(0, TaskType::kPrint));
-  machine_task_type_vec.emplace_back(std::make_pair(0, TaskType::kMdSave));
+
   machine_task_type_vec.emplace_back(std::make_pair(0, TaskType::kPrint));
 
-  machine_task_type_vec.emplace_back(std::make_pair(0, TaskType::kMdSave));
-  machine_task_type_vec.emplace_back(std::make_pair(0, TaskType::kMdSave));
-  machine_task_type_vec.emplace_back(std::make_pair(0, TaskType::kMdSave));
-
   machine_task_type_vec.emplace_back(std::make_pair(0, TaskType::kRecordLoad));
-  machine_task_type_vec.emplace_back(std::make_pair(0, TaskType::kMdSave));
-  machine_task_type_vec.emplace_back(std::make_pair(0, TaskType::kMdSave));
-
-  machine_task_type_vec.emplace_back(std::make_pair(0, TaskType::kRecordLoad));
-  machine_task_type_vec.emplace_back(std::make_pair(0, TaskType::kLossPrint));
-  machine_task_type_vec.emplace_back(std::make_pair(0, TaskType::kMdSave));
 
   machine_task_type_vec.emplace_back(std::make_pair(0, TaskType::kRecordLoad));
   machine_task_type_vec.emplace_back(std::make_pair(0, TaskType::kLossPrint));
 
-  machine_task_type_vec.emplace_back(std::make_pair(1, TaskType::kMdSave));
+  machine_task_type_vec.emplace_back(std::make_pair(0, TaskType::kRecordLoad));
+  machine_task_type_vec.emplace_back(std::make_pair(0, TaskType::kLossPrint));
+
   machine_task_type_vec.emplace_back(std::make_pair(1, TaskType::kPrint));
-  machine_task_type_vec.emplace_back(std::make_pair(1, TaskType::kMdSave));
 
   machine_task_type_vec.emplace_back(std::make_pair(1, TaskType::kLossPrint));
   machine_task_type_vec.emplace_back(std::make_pair(1, TaskType::kPrint));
-  machine_task_type_vec.emplace_back(std::make_pair(1, TaskType::kMdSave));
 
   machine_task_type_vec.emplace_back(std::make_pair(1, TaskType::kLossPrint));
-  machine_task_type_vec.emplace_back(std::make_pair(1, TaskType::kMdSave));
   machine_task_type_vec.emplace_back(std::make_pair(1, TaskType::kPrint));
-
-  machine_task_type_vec.emplace_back(std::make_pair(1, TaskType::kMdSave));
 
   int64_t base_thrd_id = 16;
   auto temp = machine_task_type_vec;
