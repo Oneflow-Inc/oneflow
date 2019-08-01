@@ -9,7 +9,8 @@ def IsOpConfOnlyCpuSupported(op_conf):
     if _cpu_only_op_type_cases == None:
         _cpu_only_op_type_cases = set()
         for field in OperatorConf.DESCRIPTOR.oneofs_by_name["op_type"].fields:
-            _cpu_only_op_type_cases.add(c_api_util.IsOpTypeCaseCpuSupportOnly(field.number))
+            if c_api_util.IsOpTypeCaseCpuSupportOnly(field.number):
+                _cpu_only_op_type_cases.add(field.number)
     op_type_field = op_conf.WhichOneof("op_type")
     return OperatorConf.DESCRIPTOR.fields_by_name[op_type_field].number in _cpu_only_op_type_cases
 _cpu_only_op_type_cases = None

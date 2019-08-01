@@ -17,7 +17,7 @@
 bool IsOpTypeCaseCpuSupportOnly(int64_t op_type_case) {
   using namespace oneflow;
   using OnlyCpuSupport = OnlyCpuSupportPredicator;
-  CHECK(IsClassRegistered<OnlyCpuSupport>(op_type_case));
+  CHECK(IsClassRegistered<OnlyCpuSupport>(op_type_case)) << ": op_type_case = " << op_type_case;
   return *std::unique_ptr<OnlyCpuSupport>(NewObj<OnlyCpuSupport>(op_type_case));
 }
 
