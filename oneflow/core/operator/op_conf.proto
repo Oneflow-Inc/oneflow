@@ -806,6 +806,7 @@ message VariableOpConf {
   optional InitializerConf initializer = 5;
   optional string model_name = 6 [default = "weight"];
   optional int32 model_split_axis = 7 [default = 0];
+  optional int64 random_seed = 8;
 }
 
 message LocalResponseNormalizationOpConf {

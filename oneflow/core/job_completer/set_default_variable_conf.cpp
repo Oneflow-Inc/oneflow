@@ -16,6 +16,9 @@ void SetDefaultVariableConf(const OpGraph& op_graph, Job* job) {
         *variable_op_conf.mutable_variable_conf()->mutable_initializer() =
             job->job_conf().default_initializer_conf();
       }
+      if (variable_op_conf.variable_conf().has_random_seed() == false) {
+        variable_op_conf.mutable_variable_conf()->set_random_seed(NewRandomSeed());
+      }
       job_builder.AddOrMutOpsOnlyOnce(op_node->parallel_desc().parallel_conf(), {variable_op_conf});
     }
   });
