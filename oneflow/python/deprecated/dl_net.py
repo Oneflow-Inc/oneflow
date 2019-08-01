@@ -4,7 +4,7 @@ from oneflow.core.operator.op_conf_pb2 import OperatorConf;
 from oneflow.core.job.dlnet_conf_pb2 import DLNetConf
 from google.protobuf import text_format;
 from oneflow.python.deprecated.blob import Blob
-import oneflow.python.framework.ops.op_util as op_util
+import oneflow.python.ops.op_util as op_util
 import oneflow.python.framework.placement_context as placement_ctx
 import oneflow.python.framework.compile_context as compile_ctx
 import oneflow.core.operator.op_conf_pb2 as op_conf_pb2;
@@ -668,7 +668,7 @@ OP_CONF_TYPE_2_FIELD_NAME = _GetOpConfTypeName2FieldName();
 def _GetSoleOutputOperatorNamePrefixs():
     global OP_CONF_TYPE_2_FIELD_NAME;
     op_prefixes = [];
-    for op_conf_type_name, field_name in OP_CONF_TYPE_2_FIELD_NAME.iteritems():
+    for op_conf_type_name, field_name in OP_CONF_TYPE_2_FIELD_NAME.items():
         op_conf = getattr(OperatorConf(), field_name);
         if op_conf_type_name.endswith('OpConf') and hasattr(op_conf, 'in') \
                 and hasattr(op_conf, 'out') and  not isinstance(op_conf.out, RepeatedScalarContainer):
@@ -689,7 +689,7 @@ _RegisterSoleOutputBlobOpMethods();
 def _GetLossOperatorNamePrefixs():
     global OP_CONF_TYPE_2_FIELD_NAME;
     op_prefixes = [];
-    for op_conf_type_name, field_name in OP_CONF_TYPE_2_FIELD_NAME.iteritems():
+    for op_conf_type_name, field_name in OP_CONF_TYPE_2_FIELD_NAME.items():
         op_conf = getattr(OperatorConf(), field_name);
         if op_conf_type_name.endswith('OpConf') and hasattr(op_conf, 'prediction') \
                 and hasattr(op_conf, 'label') and hasattr(op_conf, 'loss'):
