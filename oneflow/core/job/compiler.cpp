@@ -89,7 +89,7 @@ void Compiler::GenNetTopo(Plan* plan) const {
 }
 
 void Compiler::Compile(Job* job, Plan* plan, bool need_job_complete) const {
-  CudnnConvCtxCacheScope cudnn_conv_ctx_cache_scope();
+  auto cudnn_conv_ctx_cache_scope = std::make_unique<CudnnConvCtxCacheScope>();
   const JobDesc& job_desc = GlobalJobDesc();
   if (need_job_complete) { JobCompleter().Complete(job); }
   TeePersistentLogStream::Create(StrCat("optimized_job", job_desc.job_id()))->Write(*job);
