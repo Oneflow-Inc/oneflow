@@ -14,6 +14,7 @@ class ModelInitKernel final : public KernelIf<device_type> {
 
   int32_t part_id_ = -1;
   int32_t part_num_ = -1;
+  std::unique_ptr<std::mt19937> random_seed_gen_;
 };
 
 }  // namespace oneflow
