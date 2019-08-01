@@ -85,11 +85,12 @@ void CudaRingAllReduceCompTaskNode::FixSendRegstMemCase(MemoryCase* mem_case, Ta
     const int32_t send_to_dev_id = send_to->GpuPhyId();
     int32_t can_access_peer = 0;
     {
-      CudaCurrentDeviceGuard guard(send_to_dev_id);
-      CudaCheck(cudaDeviceCanAccessPeer(&can_access_peer, send_to_dev_id, this_dev_id));
+      CudaCurrentDeviceGuard guard(this_dev_id);
+      CudaCheck(cudaDeviceCanAccessPeer(&can_access_peer, this_dev_id, send_to_dev_id));
       if (can_access_peer == 1) {
-        cudaError_t err = cudaDeviceEnablePeerAccess(this_dev_id, 0);
+        cudaError_t err = cudaDeviceEnablePeerAccess(send_to_dev_id, 0);
         if (err != cudaErrorPeerAccessAlreadyEnabled) { CudaCheck(err); }
+        mem_case->mutable_device_cuda_mem()->set_device_id(send_to_dev_id);
         p2p = true;
       }
     }
