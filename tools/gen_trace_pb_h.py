@@ -1,8 +1,5 @@
-import oneflow.core.job.job_set_pb2 as job_set_pb2
-import oneflow.core.job.job_pb2 as job_pb2
-
-
 import os
+from importlib import import_module
 
 TRACE_TEMPLATE_BASE = '''
 template<typename T>
@@ -18,7 +15,7 @@ class Trace<Repeated<T>> {
 };
 '''
 
-TRACE_TEMPLATE = '''
+TRACE_TEMPLATE = '''#include "trace_base.h"
 template<>
 class Trace<%s> {
 public:
@@ -33,8 +30,12 @@ def get_instance(typename):
     Return a instance of a typename
     '''
     ctor = ''.join(map(lambda x: x.capitalize(), typename.split('_')))
-    if typename + '_pb2' in globals():
-        return getattr(globals()[typename+'_pb2'], ctor)()
+    if typename in globals():
+        ctor_method = None
+        if hasattr(globals()[typename], ctor):
+            ctor_method = getattr(globals()[typename], ctor)
+        if callable(ctor_method):
+            return ctor_method()
     return None
 
 def get_children_list(instance):
@@ -54,7 +55,10 @@ def get_children_list(instance):
         child_inst = getattr(instance, child.name)
         typename = type(child_inst).__name__
         if typename.startswith('Repeated'):
-            typename = type(child_inst.add()).__name__
+            if typename == 'RepeatedScalarContainer':
+                typename = 'std::string'
+            else:
+                typename = type(child_inst.add()).__name__
         ret.append((child.name, typename, child.label))
     return ret
 
@@ -65,13 +69,13 @@ def generate_output(typename, children_list):
     attributes = []
     methods = []
     for name, childtype, label in children_list:
-        methods.append('  const auto& get_{}();'.format(name))
+        methods.append('  const Trace<{}>& {}();'.format(childtype, name))
         if label == 3: # repeated
-            attributes.append('  Trace<Repeated<{}>> {};'.format(childtype, name))
+            attributes.append('  Trace<Repeated<{}>> {}_;'.format(childtype, name))
         elif label == 2: # required
-            attributes.append('  Trace<{}> {};'.format(childtype, name))
+            attributes.append('  Trace<{}> {}_;'.format(childtype, name))
         elif label == 1: # optional
-            attributes.append('  Trace<{}> {};'.format(childtype, name))
+            attributes.append('  Trace<{}> {}_;'.format(childtype, name))
             methods.append('  bool has_{}() const;'.format(name))
         else:
             raise Exception('No such label!')
@@ -81,6 +85,7 @@ def handle(typename, pb_file_path):
     trace_pb_file_name = typename + '.trace.pb.h'
     inst = get_instance(typename)
     if inst == None: return
+    typename = type(inst).__name__
     chd_lst = get_children_list(inst)
     gen_output_str = generate_output(typename, chd_lst)
 
@@ -88,7 +93,20 @@ def handle(typename, pb_file_path):
         f.write(gen_output_str)
 
 if __name__ == '__main__':
+    output_path = './trace_tmp'
+    blacklist = set(['ibverbs'])
+    if not os.path.exists(output_path):
+        os.mkdir(output_path)
+
+    with open(os.path.join(output_path, 'trace_base.h'), 'w') as f:
+        f.write(TRACE_TEMPLATE_BASE)
+
     for rt, ps, fs in os.walk('../build/oneflow/core'):
         for f in fs:
             if f.endswith('.pb.h'):
-                handle(f[:-5], './trace_tmp')
+                typename = f[:-5]
+                if typename in blacklist: continue
+                globals()[typename] = import_module('.'.join(rt.split('/')[2:]) + '.%s_pb2'%(typename))
+                print(globals()[typename])
+                print('-----------------------------')
+                handle(typename, output_path)
