@@ -112,13 +112,13 @@ message Config {
   optional bool enable_auto_mixed_precision = 152 [default = false];
   optional bool enable_numa_aware_cuda_malloc_host = 153 [default = false];
 
-  optional bool use_boxing_v2 = 153 [default = false];
+  optional bool use_boxing_v2 = 154 [default = false];
 
-  optional DebugBlobDumpConf debug_blob_dump_conf = 154;
+  optional DebugBlobDumpConf debug_blob_dump_conf = 155;
 
-  optional bool all_reduce_use_boxing = 155 [default = false];
-  optional bool enable_cuda_ring_all_reduce = 156 [default = false];
-  optional bool cuda_ring_all_reduce_enable_p2p = 157 [default = false];
+  optional bool all_reduce_use_boxing = 156 [default = false];
+  optional bool enable_cuda_ring_all_reduce = 157 [default = false];
+  optional bool cuda_ring_all_reduce_enable_p2p = 158 [default = false];
 
 
   oneof JobType {
