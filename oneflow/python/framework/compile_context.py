@@ -3,10 +3,13 @@ from __future__ import absolute_import
 import oneflow.python.framework.placement_context as placement_context
 
 cur_job = None
+op_name2variable_blob = {}
 
-job_name2input_remote_blobs = {}
-
-job_name2output_remote_blobs = {}
+def ResetCurJob(job):
+    global cur_job
+    cur_job = job
+    global op_name2variable_blob
+    op_name2variable_blob = {}
 
 def CurJobAddOp(op_conf):
     cur_job.net.op.add().CopyFrom(op_conf)
