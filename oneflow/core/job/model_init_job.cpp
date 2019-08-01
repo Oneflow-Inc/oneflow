@@ -44,7 +44,6 @@ void MakeModelInitJob(const std::string& job_name, Job* job,
     model_init_conf->set_variable_op_name(variable_op_conf.name());
     *model_init_conf->mutable_original_variable_conf() = variable_op_conf.variable_conf();
     model_init_conf->set_out("out");
-    model_init_conf->set_random_seed(NewRandomSeed());
     job_builder.AddOps(master_parallel_conf, {model_init_op_conf});
 
     OperatorConf output_op_conf;

@@ -6,7 +6,8 @@ namespace oneflow {
 template<DeviceType device_type, typename T>
 void ModelInitKernel<device_type, T>::VirtualKernelInit(const ParallelContext* parallel_ctx) {
   std::tie(part_id_, part_num_) = GetPartIdAndPartNumFromParallelCtx(parallel_ctx);
-  random_seed_gen_.reset(new std::mt19937(this->op_conf().model_init_conf().random_seed()));
+  random_seed_gen_.reset(
+      new std::mt19937(this->op_conf().model_init_conf().original_variable_conf().random_seed()));
 }
 
 template<DeviceType device_type, typename T>
