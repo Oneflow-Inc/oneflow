@@ -31,7 +31,7 @@ void XlaLaunchOp::InferBlobDescs(
   for (const std::string &bn : this->input_bns()) {
     const LogicalBlobId& lbi = this->BnInOp2Lbi(bn);
     std::string blob_name = BlobName(lbi);
-    blob_descs[blob_name] = *GetBlobDesc4BnInOp(bn);
+    blob_descs[blob_name].CopyMetaFrom(*GetBlobDesc4BnInOp(bn));
   }
   // Inference blob descs in subgraph
   subgraph_->InferBlobDescs(&blob_descs, parallel_ctx);

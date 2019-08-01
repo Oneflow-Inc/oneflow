@@ -61,7 +61,8 @@ void XlaLaunchKernel<device_type>::RunExecutable(
     std::vector<Blob *> &output_blobs, const xla::Shape &output_shape) const {
   namespace se = tensorflow::se;
   CHECK_EQ(entry_blobs.size(), input_shapes.size())
-      << "Size mismatch between entry blobs and input shapes.";
+      << "Size mismatch between valid entry blobs and input shapes.";
+  CHECK_GT(output_blobs.size(), 0) << "Need one output at least.";
   const int device_ordinal = launch_ctx->device_ordinal();
   xla::LocalClient *client = launch_ctx->client();
 
@@ -77,6 +78,10 @@ void XlaLaunchKernel<device_type>::RunExecutable(
                                          "arguments in RunExecutable.";
     size_t data_size = entry_blobs[i]->ByteSizeOfDataContentField();
     const char *data_ptr = entry_blobs[i]->dptr<char>();
+    // Buffer is nullptr if the blob is body disabled
+    if (data_size > 0 && !data_ptr) {
+      data_ptr = output_blobs[0]->dptr<char>();
+    }
     se::DeviceMemoryBase memory_base =
         se::DeviceMemoryBase(const_cast<char *>(data_ptr), data_size);
     shaped_buffers[i] = std::make_shared<xla::ShapedBuffer>(
@@ -95,7 +100,7 @@ void XlaLaunchKernel<device_type>::RunExecutable(
     run_options.set_allocator(launch_ctx->allocator());
     run_options.set_intra_op_thread_pool(launch_ctx->host_device());
     run_options.set_rng_seed(tensorflow::GetXLARandomSeed());
-    result_status = executable->Run(arguments, run_options);
+    result_status = executable->RunAsync(arguments, run_options);
   }
 
   CHECK(result_status.ok()) << "Failed to run the executable. "

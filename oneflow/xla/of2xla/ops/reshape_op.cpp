@@ -43,5 +43,18 @@ class ReshapeOp : public XlaOpCompiler {
 
 REGISTER_XLA_OP_COMPILER(Reshape, ReshapeOp);
 
+class ReshapeLikeOp : public XlaOpCompiler {
+ public:
+  void Compile(XlaOpContext *ctx) override {
+    Shape x_shape = ctx->InputShape("x");
+    Shape like_shape = ctx->InputShape("like");
+    CHECK_EQ(x_shape.Count(0), like_shape.Count(0));
+
+    ctx->SetOutput("y", Reshape(ctx->Input("x"), like_shape));
+  }
+};
+
+REGISTER_XLA_OP_COMPILER(ReshapeLike, ReshapeLikeOp);
+
 }  // namespace mola
 }  // namespace oneflow

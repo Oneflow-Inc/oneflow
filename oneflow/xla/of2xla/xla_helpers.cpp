@@ -4,6 +4,16 @@
 namespace oneflow {
 namespace mola {
 
+xla::XlaOp One(xla::XlaBuilder *builder, DataType data_type) {
+  xla::PrimitiveType type = DataTypeToPrimitiveType(data_type);
+  return xla::ConstantLiteral(builder, xla::LiteralUtil::One(type));
+}
+
+xla::XlaOp Zero(xla::XlaBuilder *builder, DataType data_type) {
+  xla::PrimitiveType type = DataTypeToPrimitiveType(data_type);
+  return xla::ConstantLiteral(builder, xla::LiteralUtil::Zero(type));
+}
+
 xla::XlaOp IntegerLiteral(xla::XlaBuilder *builder, DataType data_type,
                           int32_t value) {
   xla::PrimitiveType type = DataTypeToPrimitiveType(data_type);

@@ -91,6 +91,7 @@ Shape XlaOpContext::OutputShape(const std::string &name) const {
 }
 
 Argument XlaOpContext::ArgumentFromString(const std::string &name) const {
+  DCHECK_GT(param_.arguments.count(name), 0);
   return param_.arguments.at(name);
 }
 

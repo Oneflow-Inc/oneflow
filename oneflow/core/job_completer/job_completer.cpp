@@ -445,9 +445,9 @@ void JobCompleter::Complete(Job* job) const {
     WithOpGraphAndMutJob(job, &AutoTick);
     // add keep_header_only op
     WithOpGraphAndMutJob(job, &RewriteBoxingWithAllReduce);
-    WithOpGraphAndMutJob(job, &FreezeSbpSignature);
     WithOpGraphAndMutJob(job, &GroupBoxingByDstParallel);
     WithOpGraphAndMutJob(job, &AddKeepHeaderOnlyOp);
+    WithOpGraphAndMutJob(job, &FreezeSbpSignature);
     WithOpGraphAndMutJob(job, &SetOpTimeShape7CtrlInOpName7ModelLbis);
   }
   // TODO: refine

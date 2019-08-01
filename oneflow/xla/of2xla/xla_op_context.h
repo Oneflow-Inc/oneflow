@@ -42,6 +42,7 @@ class XlaOpContext {
     std::string backend;
     // Input oprands
     XlaOprands inputs;
+    int num_outputs;
     // Config proto related to the operator
     const PbMessage *op_conf;
     // XlaBuilder to compile the XlaComputation
@@ -62,6 +63,8 @@ class XlaOpContext {
   xla::XlaOp Output(const std::string &name);
   xla::XlaOp Output(const Argument &arg);
 
+  int num_inputs() const { return param_.inputs.size(); }
+  int num_outputs() const { return param_.num_outputs; }
   // Return inputs as Oprands
   const XlaOprands &inputs() const { return param_.inputs; }
   // Return output as Oprands

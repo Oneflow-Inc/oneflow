@@ -8,6 +8,10 @@
 namespace oneflow {
 namespace mola {
 
+xla::XlaOp One(xla::XlaBuilder *builder, DataType data_type);
+
+xla::XlaOp Zero(xla::XlaBuilder *builder, DataType data_type);
+
 xla::XlaOp IntegerLiteral(xla::XlaBuilder *builder, DataType data_type,
                           int32_t value);
 
