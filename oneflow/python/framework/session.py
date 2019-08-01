@@ -37,13 +37,32 @@ class Session(object):
     def run(self, job_func, *arg):
         assert self.is_running_
         assert job_func.__name__ in self.job_name2job_func_
-        remote_blobs = runtime.LaunchJob(job_func, *arg)
-        if remote_blobs is None: return
-        return OutRemoteBlobsResultBox().SetResult(remote_blobs).Inited()
+        return self.Run(job_func, *arg)
 
     def map(self, job_func, feed_data):
         assert self.is_running_
         assert job_func.__name__ in self.job_name2job_func_
+        return self.Map(job_func, feed_data)
+
+    def no_return_run(self, job_func, *arg):
+        assert self.is_running_
+        assert job_func.__name__ in self.job_name2job_func_
+        return self.NoReturnRun(job_func, *arg)
+
+    def sync(self):
+        assert self.is_running_
+        self.cond_var_.acquire()
+        while self.running_job_cnt_ > 0:
+            self.cond_var_.wait()
+        assert self.running_job_cnt_ == 0
+        self.cond_var_.release()
+        
+    def Run(self, job_func, *arg):
+        remote_blobs = runtime.LaunchJob(job_func, *arg)
+        if remote_blobs is None: return
+        return OutRemoteBlobsResultBox().SetResult(remote_blobs).Inited()
+
+    def Map(self, job_func, feed_data):
         result_box = OutRemoteBlobsResultBox()
         for x in feed_data:
             if not (isinstance(x, list) or isinstance(x, tuple)): x = [x]
@@ -53,18 +72,8 @@ class Session(object):
         result_box.Inited()
         return result_box
 
-    def no_return_run(self, job_func, *arg):
-        assert self.is_running_
-        assert job_func.__name__ in self.job_name2job_func_
+    def NoReturnRun(self, job_func, *arg):
         runtime.LaunchJob(job_func, *arg)
-
-    def sync(self):
-        assert self.is_running_
-        self.cond_var_.acquire()
-        while self.running_job_cnt_ > 0:
-            self.cond_var_.wait()
-        assert self.running_job_cnt_ == 0
-        self.cond_var_.release()
 
     def _PreLaunchCallback(self, job_instance):
         self.cond_var_.acquire()
