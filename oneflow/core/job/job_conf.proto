@@ -117,6 +117,7 @@ message Config {
 
   optional bool all_reduce_use_boxing = 155 [default = false];
   optional bool enable_cuda_ring_all_reduce = 156 [default = false];
+  optional bool cuda_ring_all_reduce_enable_p2p = 157 [default = false];
 
 
   oneof JobType {

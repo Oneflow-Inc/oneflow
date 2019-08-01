@@ -16,8 +16,7 @@ void CudaRingAllReduceCompTaskNode::ProduceAllRegstsAndBindEdges() {
   FOR_RANGE(int64_t, i, 0, num_link) {
     std::shared_ptr<RegstDesc> send_regst_desc =
         ProduceRegst("send_" + std::to_string(i), false, slice_factor * 2, slice_factor * 2);
-    send_regst_desc->mut_mem_case()->mutable_host_mem()->mutable_cuda_pinned_mem()->set_device_id(
-        GpuPhyId());
+    FixSendRegstMemCase(send_regst_desc->mut_mem_case(), send_to_.at(i));
     send_to_nodes.emplace(send_to_.at(i));
   }
   this->ForEachOutDataEdge([&](TaskEdge* edge) {
@@ -75,6 +74,27 @@ void CudaRingAllReduceCompTaskNode::PinConsumedRegstMemCase(MemoryCase* mem_case
   if (mem_case->has_host_mem()) {
     mem_case->mutable_host_mem()->mutable_cuda_pinned_mem()->set_device_id(GpuPhyId());
   }
+}
+
+void CudaRingAllReduceCompTaskNode::FixSendRegstMemCase(MemoryCase* mem_case, TaskNode* send_to) {
+  bool p2p = false;
+  if (Global<JobDesc>::Get()->cuda_ring_all_reduce_enable_p2p()
+      && send_to->device_type() == DeviceType::kGPU && machine_id() == 0
+      && send_to->machine_id() == 0) {
+    const int32_t this_dev_id = GpuPhyId();
+    const int32_t send_to_dev_id = send_to->GpuPhyId();
+    int32_t can_access_peer = 0;
+    {
+      CudaCurrentDeviceGuard guard(send_to_dev_id);
+      CudaCheck(cudaDeviceCanAccessPeer(&can_access_peer, send_to_dev_id, this_dev_id));
+      if (can_access_peer == 1) {
+        cudaError_t err = cudaDeviceEnablePeerAccess(this_dev_id, 0);
+        if (err != cudaErrorPeerAccessAlreadyEnabled) { CudaCheck(err); }
+        p2p = true;
+      }
+    }
+  }
+  if (!p2p) { mem_case->mutable_host_mem()->mutable_cuda_pinned_mem()->set_device_id(GpuPhyId()); }
 }
 
 void CudaRingAllReduceCompTaskNode::EnableMemSharingInReduce(const ReduceMemSharingCtx& ctx) {

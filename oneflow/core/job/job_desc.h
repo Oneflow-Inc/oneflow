@@ -67,6 +67,9 @@ class JobDesc final {
   bool enable_cuda_ring_all_reduce() const {
     return job_conf_.other().enable_cuda_ring_all_reduce();
   }
+  bool cuda_ring_all_reduce_enable_p2p() const {
+    return job_conf_.other().cuda_ring_all_reduce_enable_p2p();
+  }
   bool use_nccl_inter_node_communication() const {
     return job_conf_.other().use_nccl_inter_node_communication();
   }
