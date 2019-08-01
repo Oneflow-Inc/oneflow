@@ -10,7 +10,7 @@ def VariableJob():
     job_conf.batch_size(1).data_part_num(1).default_data_type(flow.float)
     initializer = flow.ops.initializers.constant_int_init(value=5)
     v1 = flow.ops.variables.variable((5,2), initializer = initializer, name='v1') 
-    initializer = flow.ops.initializers.constant_int_init(value=4)
+    initializer = flow.deprecated.initializers.constant_int_init(value=4)
     v2 = flow.ops.variables.get_variable('v2', shape=(5,2), initializer = initializer)
     #v2 = flow.ops.variables.get_variable('v1', reuse=True)
     return v2 

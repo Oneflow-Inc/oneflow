@@ -9,7 +9,7 @@ import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 from oneflow.python.oneflow_export import oneflow_export
 
 
-@oneflow_export('ops.initializers.constant_int_init')
+@oneflow_export('deprecated.initializers.constant_int_init')
 def constant_int_init(value=None):
     init_conf = op_conf_util.InitializerConf()
     if value is not None:
@@ -18,7 +18,7 @@ def constant_int_init(value=None):
     return init_conf
 
 
-@oneflow_export('ops.initializers.constant_init')
+@oneflow_export('deprecated.initializers.constant_init')
 def constant_init(value=None):
     init_conf = op_conf_util.InitializerConf()
     if value is not None:
@@ -26,7 +26,7 @@ def constant_init(value=None):
     return init_conf
 
 
-@oneflow_export('ops.initializers.random_uniform_int_init')
+@oneflow_export('deprecated.initializers.random_uniform_int_init')
 def random_uniform_int_init(min_val=None, max_val=None):
     init_conf = op_conf_util.InitializerConf()
     if min_val is not None:
@@ -38,7 +38,7 @@ def random_uniform_int_init(min_val=None, max_val=None):
     return init_conf
 
 
-@oneflow_export('ops.initializers.random_uniform_init')
+@oneflow_export('deprecated.initializers.random_uniform_init')
 def random_uniform_init(min_val=None, max_val=None):
     init_conf = op_conf_util.InitializerConf()
     if min_val is not None:
@@ -48,7 +48,7 @@ def random_uniform_init(min_val=None, max_val=None):
     return init_conf
 
 
-@oneflow_export('ops.initializers.random_normal_init')
+@oneflow_export('deprecated.initializers.random_normal_init')
 def random_normal_init(mean=None, std=None):
     init_conf = op_conf_util.InitializerConf()
     if mean is not None:
@@ -57,7 +57,7 @@ def random_normal_init(mean=None, std=None):
         init_conf.random_normal_conf.std = std
     return init_conf
 
-@oneflow_export('ops.initializers.truncated_normal_init')
+@oneflow_export('deprecated.initializers.truncated_normal_init')
 def truncated_normal_init(std=None):
     init_conf = op_conf_util.InitializerConf()
     if std is not None:
@@ -68,7 +68,7 @@ def truncated_normal_init(std=None):
 dict_variance_norm = {  'FAN_IN': op_conf_util.kFanIn,
                         'FAN_OUT': op_conf_util.kFanOut,
                         'FAN_AVG': op_conf_util.kAverage}
-@oneflow_export('ops.initializers.xavier_init')
+@oneflow_export('deprecated.initializers.xavier_init')
 def xavier_init(mode):
     allowed_variance_norms = {  'FAN_IN',
                                 'FAN_OUT',
@@ -81,7 +81,7 @@ def xavier_init(mode):
     return init_conf
 
 
-@oneflow_export('ops.initializers.msra_init')
+@oneflow_export('deprecated.initializers.msra_init')
 def msra_init(mode):
     allowed_variance_norms = {  'FAN_IN',
                                 'FAN_OUT',
@@ -94,7 +94,7 @@ def msra_init(mode):
     return init_conf
 
 
-@oneflow_export('ops.initializers.range_init')
+@oneflow_export('deprecated.initializers.range_init')
 def range_init(start=None, stride=None, axis=None):
     init_conf = op_conf_util.InitializerConf()
     if start is not None:
@@ -106,7 +106,7 @@ def range_init(start=None, stride=None, axis=None):
     return init_conf
 
 
-@oneflow_export('ops.initializers.int_range_init')
+@oneflow_export('deprecated.initializers.int_range_init')
 def int_range_init(start=None, stride=None, axis=None):
     init_conf = op_conf_util.InitializerConf()
     if start is not None:
