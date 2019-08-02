@@ -1,10 +1,5 @@
 import oneflow as flow
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
-import sys
-import os
-sys.path.insert(
-    0, '/'.join(os.path.dirname(os.path.realpath(__file__)).split('/')[:-2]))
-
 
 config = flow.ConfigProtoBuilder()
 config.gpu_device_num(1)
@@ -184,10 +179,6 @@ def AlexNet():
 
 
 if __name__ == '__main__':
-
-    is_training = False
-    if len(sys.argv) > 1 and sys.argv[1] == 'is_train':
-        is_training = True
     flow.add_job(AlexNet)
     with flow.Session() as sess:
         check_point = flow.train.CheckPoint()
