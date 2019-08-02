@@ -1,6 +1,5 @@
 #include "oneflow/core/graph/task_graph.h"
 #include "oneflow/core/graph/normal_forward_compute_task_node.h"
-#include "oneflow/core/graph/normal_model_update_compute_task_node.h"
 #include "oneflow/core/graph/chain_graph.h"
 #include "oneflow/core/graph/boxing_task_node.h"
 #include "oneflow/core/common/balanced_splitter.h"
@@ -354,30 +353,31 @@ void TaskGraph::AddReduceSequenceCtrlEdges() {
 }
 
 void TaskGraph::AddMdUpdtCtrlEdgesWithinReduceSplitNode() {
-  auto GetOrderInReduceGroup = [&](NormalMdUpdtCompTaskNode* md_updt_node) {
-    const auto* logical_node =
-        dynamic_cast<const NormalMdUpdtLogicalNode*>(md_updt_node->logical_node());
-    return logical_node->order_in_reduce_group();
-  };
-  for (auto* node : ordered_task_nodes_) {
-    auto* split_node = dynamic_cast<ReduceSplitCompTaskNode*>(node);
-    if (split_node == nullptr) { continue; }
-    std::vector<NormalMdUpdtCompTaskNode*> md_updt_nodes;
-    split_node->ForEachNodeOnOutEdge([&](TaskNode* node) {
-      auto* md_updt_node = dynamic_cast<NormalMdUpdtCompTaskNode*>(node);
-      if (md_updt_node == nullptr) { return; }
-      md_updt_nodes.push_back(md_updt_node);
-    });
-    std::sort(md_updt_nodes.begin(), md_updt_nodes.end(),
-              [&](NormalMdUpdtCompTaskNode* lhs, NormalMdUpdtCompTaskNode* rhs) {
-                return GetOrderInReduceGroup(lhs) < GetOrderInReduceGroup(rhs);
-              });
-    NormalMdUpdtCompTaskNode* prev_md_updt = md_updt_nodes.at(0);
-    for (auto* md_updt_node : md_updt_nodes) {
-      if (md_updt_node != prev_md_updt) { prev_md_updt->BuildCtrlRegstDescIfNeed(md_updt_node); }
-      prev_md_updt = md_updt_node;
-    }
-  }
+  TODO();
+  // auto GetOrderInReduceGroup = [&](NormalMdUpdtCompTaskNode* md_updt_node) {
+  //   const auto* logical_node =
+  //       dynamic_cast<const NormalMdUpdtLogicalNode*>(md_updt_node->logical_node());
+  //   return logical_node->order_in_reduce_group();
+  // };
+  // for (auto* node : ordered_task_nodes_) {
+  //   auto* split_node = dynamic_cast<ReduceSplitCompTaskNode*>(node);
+  //   if (split_node == nullptr) { continue; }
+  //   std::vector<NormalMdUpdtCompTaskNode*> md_updt_nodes;
+  //   split_node->ForEachNodeOnOutEdge([&](TaskNode* node) {
+  //     auto* md_updt_node = dynamic_cast<NormalMdUpdtCompTaskNode*>(node);
+  //     if (md_updt_node == nullptr) { return; }
+  //     md_updt_nodes.push_back(md_updt_node);
+  //   });
+  //   std::sort(md_updt_nodes.begin(), md_updt_nodes.end(),
+  //             [&](NormalMdUpdtCompTaskNode* lhs, NormalMdUpdtCompTaskNode* rhs) {
+  //               return GetOrderInReduceGroup(lhs) < GetOrderInReduceGroup(rhs);
+  //             });
+  //   NormalMdUpdtCompTaskNode* prev_md_updt = md_updt_nodes.at(0);
+  //   for (auto* md_updt_node : md_updt_nodes) {
+  //     if (md_updt_node != prev_md_updt) { prev_md_updt->BuildCtrlRegstDescIfNeed(md_updt_node); }
+  //     prev_md_updt = md_updt_node;
+  //   }
+  // }
 }
 
 void TaskGraph::AddReduceNoBwForwardNodeOverlapingCtrlEdges() {
@@ -483,11 +483,12 @@ void TaskGraph::EnableMemSharingInReduceStruct() {
 }
 
 void TaskGraph::EnableMemSharingAfterAllManualSetForMdUpdt() {
-  ForEachNode([&](TaskNode* node) {
-    auto* updt = dynamic_cast<NormalMdUpdtCompTaskNode*>(node);
-    if (!updt) { return; }
-    updt->EnableMemSharingBetweenFirstInAndProcessedMdDiffRegst();
-  });
+  TODO();
+  // ForEachNode([&](TaskNode* node) {
+  //   auto* updt = dynamic_cast<NormalMdUpdtCompTaskNode*>(node);
+  //   if (!updt) { return; }
+  //   updt->EnableMemSharingBetweenFirstInAndProcessedMdDiffRegst();
+  // });
 }
 
 void TaskGraph::EnableMemSharingInVariableOp() {
@@ -515,7 +516,6 @@ void TaskGraph::EnableMemSharingInVariableOp() {
       out_regst->set_mem_shared_id(model_regst->mem_shared_id());
       out_regst->set_mem_shared_offset(model_regst->mem_shared_offset()
                                        + model_regst->ByteOffsetInPackedBlobDescBody(lbi));
-      variable_op->set_is_fw_inplace(true);
     } else {
       // do nothing
     }
@@ -716,7 +716,7 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByOneToOne) {
   FOR_RANGE(size_t, i, 0, sorted_src_comp_tasks.size()) {
     CompTaskNode* src = sorted_src_comp_tasks[i];
     CompTaskNode* dst = sorted_dst_comp_tasks[i];
-    BuildTaskPath(src, dst, MutBufTask, (dst->GetTaskType() != TaskType::kMdSave));
+    BuildTaskPath(src, dst, MutBufTask, true);
   }
 }
 

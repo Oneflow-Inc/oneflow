@@ -28,7 +28,11 @@ int64_t IDMgr::GetCpuDeviceThrdId(int64_t dev_phy_id) const {
 int64_t IDMgr::CommNetThrdId() const {
   return gpu_device_num_ * GetCudaWorkTypeSize() + cpu_device_num_;
 }
-int64_t IDMgr::BaseIndependentThrdId() const { return CommNetThrdId() + 1; }
+int64_t IDMgr::TickTockThrdId() const { return CommNetThrdId() + 1; }
+int64_t IDMgr::BaseIndependentThrdId() const { return base_independent_thrd_id_; }
+void IDMgr::UpdateBaseIndependentThrdId(int64_t val) {
+  if (val >= base_independent_thrd_id_) { base_independent_thrd_id_ = val + 1; }
+}
 
 int64_t IDMgr::NewTaskId(int64_t machine_id, int64_t thrd_id, int64_t local_work_stream_id) {
   int64_t machine_thrd_id = GetMachineThrdId(machine_id, thrd_id);
@@ -109,6 +113,7 @@ IDMgr::IDMgr() {
   regst_desc_id_count_ = 0;
   mem_shared_id_count_ = 0;
   mem_block_id_count_ = 0;
+  base_independent_thrd_id_ = TickTockThrdId() + 1;
 }
 
 int64_t IDMgr::GetMachineThrdId(int64_t machine_id, int64_t thrd_id) {

@@ -5,7 +5,7 @@ namespace oneflow {
 
 ThrdIdGenerator::ThrdIdGenerator(std::vector<std::pair<int64_t, TaskType>>& machine_task_type_vec,
                                  int64_t base_thrd_id)
-    : tick_tock_thrd_id_(base_thrd_id), base_thrd_id_(base_thrd_id + 1) {
+    : base_thrd_id_(base_thrd_id) {
   HashMap<int64_t, std::set<TaskType>> machine2task_types;
   // machine_task_type = <machine_id, task_type>
   for (const auto& machine_task_type : machine_task_type_vec) {
@@ -22,10 +22,13 @@ ThrdIdGenerator::ThrdIdGenerator(std::vector<std::pair<int64_t, TaskType>>& mach
 }
 
 int64_t ThrdIdGenerator::GenerateThrdId(int64_t machine_id, int64_t task_type) {
-  if (IsClassRegistered<TickTockTaskType>(task_type)) { return tick_tock_thrd_id_; }
+  if (IsClassRegistered<TickTockTaskType>(task_type)) {
+    return Global<IDMgr>::Get()->TickTockThrdId();
+  }
   auto key = std::make_pair(machine_id, task_type);
   int64_t ret = machine_task_type2lowerbound_[key] + GetModThrdId(key);
   CHECK_GE(ret, 0);
+  Global<IDMgr>::Get()->UpdateBaseIndependentThrdId(ret);
   return ret;
 }
 

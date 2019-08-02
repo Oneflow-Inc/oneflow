@@ -78,6 +78,5 @@ message ConfigProto {
 }
 
 message JobSet {
-  required ConfigProto config = 1;
-  repeated Job job = 2;
+  repeated Job job = 1;
 }

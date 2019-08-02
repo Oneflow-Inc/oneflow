@@ -3,7 +3,6 @@
 namespace oneflow {
 
 void NormalForwardCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
-  random_seed_ = task_proto.random_seed();
   cur_piece_id_ = -1;
   int64_t any_in_regst_desc_id = Name2RegstDescIds("in").front();
   const Shape& in_time_shape =
@@ -25,7 +24,7 @@ void NormalForwardCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
     const_buf_regst_ = GetSoleProducedRegst4RegstDescId(const_buf_regst_desc_id_);
   }
   send_const_buf_regst_ = false;
-  if (random_seed_ == -1 || (model_regst_desc_id_ == -1 && const_model_regst_desc_id_ == -1)) {
+  if (model_regst_desc_id_ == -1 && const_model_regst_desc_id_ == -1) {
     if (forward_model_regst_desc_id_ != -1 || const_buf_regst_desc_id_ != -1) {
       AsyncInitModelAndConstBuf();
     }
@@ -126,7 +125,6 @@ void NormalForwardCompActor::AsyncReturnAllCustomizedReadableRegst() {
 }
 
 int NormalForwardCompActor::HandlerInitModelAndConstBuf(const ActorMsg& msg) {
-  CHECK_NE(random_seed_, -1);
   Regst* regst = msg.regst();
   if (regst->regst_desc_id() == model_regst_desc_id_) {
     model_regst_ = regst;
@@ -160,8 +158,6 @@ void NormalForwardCompActor::UpdateModelRegstPtr(Regst* regst) {
 void NormalForwardCompActor::AsyncInitModelAndConstBuf() {
   for (const ExecKernel& exec_kernel : exec_kernel_vec()) {
     KernelCtx kernel_ctx = GenDefaultKernelCtx();
-    std::mt19937 random_seed_gen(random_seed_);
-    kernel_ctx.other = &random_seed_gen;
     exec_kernel.kernel->InitModelAndConstBuf(
         kernel_ctx, parallel_ctx(), Global<SnapshotMgr>::Get()->GetReadableSnapshot(),
         [&](const std::string& bn_in_op) {

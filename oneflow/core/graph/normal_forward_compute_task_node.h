@@ -17,20 +17,13 @@ class NormalForwardCompTaskNode final : public CompTaskNode {
 
   TaskType GetTaskType() const override { return TaskType::kNormalForward; }
   bool HasBackwardCompTaskNode();
-  virtual void ToProto(TaskProto*) override;
-
-  void set_random_seed(int64_t random_seed) { random_seed_ = random_seed; }
 
  private:
   void BuildExecGphAndRegst() override;
-  void LockRegsts() override;
   void BuildExecGphStructAndBindInRegst();
   void BuildOutRegst();
-  void BuildActivationRegst();
-  void BuildModel7ConstModel7DataTmp7BufRegsts();
+  void BuildDataTmp7BufRegsts();
   void InferProducedDataRegstTimeShape() override;
-
-  int64_t random_seed_;
 };
 
 }  // namespace oneflow

@@ -99,9 +99,6 @@ int32_t JobDesc::NumOfBatchesInSnapshot() const {
   return GetTrainConf(job_).num_of_batches_in_snapshot();
 }
 int64_t JobDesc::TotalBatchNum() const { return job_.job_conf().total_batch_num(); }
-const InitializerConf* JobDesc::DefaultInitializerConf() const {
-  return GetMsgPtrFromPbMessage<InitializerConf>(GetTrainConf(job_), "default_initializer_conf");
-}
 int32_t JobDesc::PieceNumOfPrintLoss() const {
   return job_.job_conf().train_conf().piece_num_of_print_loss();
 }
@@ -161,7 +158,7 @@ bool IsInterfaceOpConf(const OperatorConf& op_conf) {
   return IsClassRegistered<IsInterfaceOpConf4OpTypeCase>(op_conf.op_type_case());
 }
 
-void WithGlobalJobId(int64_t job_id, const std::function<void()>& Handler) {
+void WithJobIdGlobal(int64_t job_id, const std::function<void()>& Handler) {
   Global<JobId>::New(job_id);
   Handler();
   Global<JobId>::Delete();

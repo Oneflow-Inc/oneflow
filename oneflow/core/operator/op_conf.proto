@@ -614,10 +614,6 @@ message AccumulateOpConf {
 message EmbeddingLookupAccumulateOpConf {
 }
 
-message ModelSaveOpConf {
-}
-
-
 message PrintRecordConf {
   required string lbn = 1;
   optional string name = 2;
@@ -806,6 +802,7 @@ message VariableOpConf {
   optional InitializerConf initializer = 5;
   optional string model_name = 6 [default = "weight"];
   optional int32 model_split_axis = 7 [default = 0];
+  optional int64 random_seed = 8;
 }
 
 message LocalResponseNormalizationOpConf {
@@ -1427,6 +1424,13 @@ message ModelSaveV2OpConf {
   required string lbn = 2;
 }
 
+message ModelInitOpConf {
+  optional string tick = 1;
+  required string out = 2;
+  required string variable_op_name = 3;
+  required VariableOpConf original_variable_conf = 4;
+}
+
 message AllReduceFacadeOpConf {
   required string in = 1;
   required string out = 2;
@@ -1476,7 +1480,7 @@ message OperatorConf {
     NcclAllGatherOpConf nccl_all_gather_conf = 116;
     AccumulateOpConf accumulate_conf = 117;
     NormalModelUpdateOpConf normal_mdupdt_conf = 118;
-    ModelSaveOpConf model_save_conf = 119;
+    ModelSaveV2OpConf model_save_v2_conf = 119;
     SharedModelDiffAddOpConf shared_model_diff_add_conf = 120;
     CastOpConf cast_conf = 121;
     VariableOpConf variable_conf = 122;
@@ -1584,12 +1588,12 @@ message OperatorConf {
     ConvFilterGradOpConf conv_filter_grad_conf = 284;
     ConvDataGradOpConf conv_data_grad_conf = 285;
     EveryNthOpConf every_nth_conf = 286;
-    ModelSaveV2OpConf model_save_v2_conf = 287;
     TanHGradOpConf tanh_grad_conf = 288;
     PoolingGradOpConf pooling_grad_conf = 289;
     IdentityOpConf identity_conf = 290;
     CaseOpConf case_conf = 291;
     EsacOpConf esac_conf = 292;
+    ModelInitOpConf model_init_conf = 293;
 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;

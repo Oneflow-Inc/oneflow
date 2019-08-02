@@ -1,15 +1,14 @@
 from __future__ import absolute_import
 
-import oneflow.python.framework.compile_context as compile_context
-import oneflow.python.framework.placement_context as placement_context
-import oneflow.python.framework.placement_util as placement_util
 import oneflow.core.job.resource_pb2 as resource_util
 import oneflow.core.job.job_set_pb2 as job_set_util
 import oneflow.core.job.job_pb2 as job_util
+import oneflow.python.framework.compile_context as compile_context
+from oneflow.python.oneflow_export import oneflow_export
 
-def placement(device_names):
-    return placement_util.PlacementScope(placement_util.MakeParallelConf(device_names))
+inited_config_proto = None
 
+@oneflow_export('ConfigProtoBuilder')
 class ConfigProtoBuilder(object):
     def __init__(self):
         self.config_proto_ = job_set_util.ConfigProto()

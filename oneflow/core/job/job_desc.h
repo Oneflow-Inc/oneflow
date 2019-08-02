@@ -51,7 +51,6 @@ class JobDesc final {
   // Train conf
   int32_t NumOfBatchesInSnapshot() const;
   int64_t TotalBatchNum() const;
-  const InitializerConf* DefaultInitializerConf() const;
   int32_t PieceNumOfPrintLoss() const;
   int32_t PieceNumOfPrintAccuracy() const;
   int64_t BatchSize() const;
@@ -75,7 +74,7 @@ class JobDesc final {
 
 typedef HashMap<std::string, int64_t> JobName2JobId;
 
-void WithGlobalJobId(int64_t job_id, const std::function<void()>& Handler);
+void WithJobIdGlobal(int64_t job_id, const std::function<void()>& Handler);
 const JobDesc& GlobalJobDesc();
 const JobDesc& GlobalJobDesc(int64_t job_id);
 
