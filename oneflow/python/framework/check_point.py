@@ -27,7 +27,7 @@ class CheckPointRestoreStatus(object):
 def _MakeModelInitJobFunc():
     def ModelInit():
         pass
-    ModelInit.__name__ = runtime_ctx.inter_user_job_info.global_model_init_job_name
+    ModelInit.__name__ = str(runtime_ctx.inter_user_job_info.global_model_init_job_name)
     ModelInit.__oneflow_input_remote_blobs__ = ()
     ModelInit.__oneflow_output_remote_blobs__ = None
     return ModelInit
@@ -35,7 +35,7 @@ def _MakeModelInitJobFunc():
 def _MakeModelSaveJobFunc():
     def ModelSave():
         pass
-    ModelSave.__name__ = runtime_ctx.inter_user_job_info.global_model_save_job_name
+    ModelSave.__name__ = str(runtime_ctx.inter_user_job_info.global_model_save_job_name)
     ModelSave.__oneflow_input_remote_blobs__ = ()
     ModelSave.__oneflow_output_remote_blobs__ = None
     return ModelSave
