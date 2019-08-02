@@ -23,8 +23,7 @@ def get_variable(name,
         op_conf = op_conf_util.OperatorConf()
         op_conf.name = name
         assert shape is not None, "Argument shape should not be None when the variable exists!"
-        for i in shape:
-            getattr(op_conf.variable_conf.shape, 'dim').append(i)
+        op_conf.variable_conf.shape.dim.extend(shape)
         if dtype is not None:
             op_conf.variable_conf.data_type = dtype
         if initializer is not None:
