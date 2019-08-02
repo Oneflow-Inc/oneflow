@@ -1,6 +1,6 @@
 #include "oneflow/core/job/compiler.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
-#include "oneflow/core/device/cudnn_conv_ctx_cache.h"
+#include "oneflow/core/job/cudnn_conv_ctx_cache_scope.h"
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/job_completer/job_completer.h"
 
@@ -89,12 +89,10 @@ void Compiler::GenNetTopo(Plan* plan) const {
 }
 
 void Compiler::Compile(Job* job, Plan* plan, bool need_job_complete) const {
-#ifdef WITH_CUDA
-  Global<CudnnConvCtxCache>::New();
-#endif
+  auto cudnn_conv_ctx_cache_scope = std::make_unique<CudnnConvCtxCacheScope>();
   const JobDesc& job_desc = GlobalJobDesc();
   if (need_job_complete) { JobCompleter().Complete(job); }
-  TeePersistentLogStream::Create("optimized_job")->Write(*job);
+  TeePersistentLogStream::Create(StrCat("optimized_job", job_desc.job_id()))->Write(*job);
   Global<OpGraph>::New(*job);
   Global<OpGraph>::Get()->ToDotWithFilePath("optimized_dlnet_op_graph.dot");
   auto logical_gph = std::make_unique<LogicalGraph>(*job);
@@ -105,7 +103,7 @@ void Compiler::Compile(Job* job, Plan* plan, bool need_job_complete) const {
   task_gph->ForEachNode(std::bind(&TaskNode::ConsumeAllRegsts, _1));
   task_gph->ForEachNode(std::bind(&TaskNode::PinConsumedRegst, _1));
   task_gph->MdUpdtDelayedTopoForEachNode(&TaskNode::Build);
-  if (job_desc.other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
+  if (job_desc.job_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
     task_gph->AddReduceSequenceCtrlEdges();
     // TODO: update method for fw bw split
     // task_gph->AddMdUpdtCtrlEdgesWithinReduceSplitNode();
@@ -140,9 +138,6 @@ void Compiler::Compile(Job* job, Plan* plan, bool need_job_complete) const {
   // GenNetTopo(plan);
   // ToDotFile(*plan, "/dot/plan.dot");
   Global<OpGraph>::Delete();
-#ifdef WITH_CUDA
-  Global<CudnnConvCtxCache>::Delete();
-#endif
 }
 
 }  // namespace oneflow

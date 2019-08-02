@@ -3,7 +3,7 @@
 namespace oneflow {
 
 void MomentumModelUpdateOp::MdUpdtVirtualInitFromOpConf() {
-  if (GlobalJobDesc().other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
+  if (GlobalJobDesc().job_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
     EnrollInputBn("momentum", false)->set_is_mutable(true);
   } else {
     UNIMPLEMENTED();
@@ -16,7 +16,7 @@ void MomentumModelUpdateOp::MdUpdtVirtualInferBlobDescs(
   const BlobDesc* model_blob_desc = GetBlobDesc4BnInOp("model");
   CHECK_EQ(model_blob_desc->data_type(), GlobalJobDesc().DefaultDataType());
   CHECK_EQ(model_blob_desc->has_data_id_field(), false);
-  if (GlobalJobDesc().other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
+  if (GlobalJobDesc().job_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
     CHECK(*GetBlobDesc4BnInOp("momentum") == *model_blob_desc);
   } else {
     UNIMPLEMENTED();
@@ -24,7 +24,7 @@ void MomentumModelUpdateOp::MdUpdtVirtualInferBlobDescs(
 }
 
 const PbMessage& MomentumModelUpdateOp::GetCustomizedConf() const {
-  if (GlobalJobDesc().other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
+  if (GlobalJobDesc().job_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
     return op_conf().momentum_model_update_conf();
   } else {
     UNIMPLEMENTED();

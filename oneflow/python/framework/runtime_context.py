@@ -1,34 +1,25 @@
 from __future__ import absolute_import
 
-import oneflow.python.framework.compile_context as compile_ctx
-import oneflow.python.framework.c_api_util as c_api_util
-
-job_name2input_op_names = {}
-
-job_name2output_op_names = {}
+default_session = None
 
 inter_user_job_info = None
 
-def Init():
-    global job_name2input_op_names
-    job_name2input_op_names = {
-        k, v.op_name for k, v in compile_ctx.job_name2input_logical_blobs.items()
-    }
-    
-    global job_name2output_op_names
-    job_name2output_op_names = {
-        k, v.op_name for k, v in compile_ctx.job_name2output_logical_blobs.items()
-    }
-    
+def InitInterUserJobInfo(info):
     global inter_user_job_info
-    inter_user_job_info = c_api_util.GetInterUserJobInfo()
+    inter_user_job_info = info
     
-def Destroy():
-    global job_name2input_op_names
-    job_name2input_op_names = {}
-
-    global job_name2output_op_names
-    job_name2output_op_names = {}
-
+def DestroyInterUserJobInfo():
     global inter_user_job_info
     inter_user_job_info = None
+
+job_instance_pre_launch_callbacks = []
+
+def AddJobInstancePreLaunchCallbacks(cb):
+    global job_instance_pre_launch_callbacks
+    job_instance_pre_launch_callbacks.append(cb)
+
+job_instance_post_finish_callbacks = []
+
+def AddJobInstancePostFinishCallbacks(cb):
+    global job_instance_post_finish_callbacks
+    job_instance_post_finish_callbacks.append(cb)

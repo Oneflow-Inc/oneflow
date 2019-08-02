@@ -139,7 +139,10 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
   void ForEachDataAndCtrlInNode(OpNode* node, const std::function<void(OpNode*)>& Handler) const;
   void ForEachDataAndCtrlOutNode(OpNode* node, const std::function<void(OpNode*)>& Handler) const;
 
-  void DumpLogicalBlobDescAndSbpSignature(Job* job) const;
+  void DumpLogicalBlobDesc(Job* job) const;
+  void DumpSbpSignature(Job* job) const;
+  void DumpOpTimeShape(Job* job) const;
+  void DumpBatchDimLbi(Job* job) const;
 
  private:
   void Init(const Job& job);

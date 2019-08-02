@@ -24,7 +24,7 @@ const PbMessage& ReduceConcatOp::GetCustomizedConf() const {
 
 LogicalNode* ReduceConcatOp::NewProperLogicalNode() const {
   if (GlobalJobDesc().IsPredict()
-      && GlobalJobDesc().other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
+      && GlobalJobDesc().job_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
     return new NormalForwardLogicalNode;
   } else {
     return new ReduceConcatLogicalNode;
@@ -79,7 +79,7 @@ void ReduceConcatOp::VirtualGenKernelConf(
 
 LogicalBlobId ReduceConcatOp::ibn2lbi(const std::string& input_bn) const {
   if (GlobalJobDesc().IsPredict()
-      && GlobalJobDesc().other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
+      && GlobalJobDesc().job_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
     return this->Operator::ibn2lbi(input_bn);
   } else {
     return GenPackedLbi();
@@ -88,7 +88,7 @@ LogicalBlobId ReduceConcatOp::ibn2lbi(const std::string& input_bn) const {
 
 LogicalBlobId ReduceConcatOp::obn2lbi(const std::string& output_bn) const {
   if (GlobalJobDesc().IsPredict()
-      && GlobalJobDesc().other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
+      && GlobalJobDesc().job_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
     return this->Operator::obn2lbi(output_bn);
   } else {
     LogicalBlobId ret;

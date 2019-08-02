@@ -1,23 +1,26 @@
 from __future__ import absolute_import
 
-from oneflow.python.framework.oneflow import run
-from oneflow.python.framework.decorator_util import remote
-from oneflow.python.framework.decorator_util import static_assert
-from oneflow.python.framework.decorator_util import main
-from oneflow.python.framework.config import config_resource
-from oneflow.python.framework.config import config_io
-from oneflow.python.framework.config import config_cpp_flags
-from oneflow.python.framework.config import config_profiler
-from oneflow.python.framework.compiler import val
-from oneflow.python.framework.compiler import var
-from oneflow.python.framework.inter_user_job import pull
+from oneflow.core.job.job_set_pb2 import ConfigProto
+from oneflow.core.job.job_pb2 import JobConfigProto
 
 import oneflow.python.framework.dtype as dtype
 for x in dir(dtype):
     if x.startswith('_') == False: locals()[x] = getattr(dtype, x)
 del x
+del dtype
+
+import oneflow.python.__export_symbols__
+import oneflow.python.oneflow_export as oneflow_export
+for object_name in oneflow_export.exported_object_names:
+    locals()[object_name] = getattr(oneflow_export.exported_objects, object_name)
+if 'object_name' in locals(): del object_name
+del oneflow_export
+
+import atexit
+import oneflow.python.framework.c_api_util
+atexit.register(oneflow.python.framework.c_api_util.DestroyGlobalEnvironment)
+del atexit
 
 del absolute_import
 del python
-del core
-del dtype
+#del core

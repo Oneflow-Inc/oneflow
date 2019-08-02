@@ -65,7 +65,7 @@ void GenerateFacadeImplOpConf(const OpNode& op_node, JobBuilder* job_builder) {
   if (print_scalar_summary_conf.has_weight()) {
     *(print_conf->mutable_reduction_lbi()) = GenLogicalBlobId(print_scalar_summary_conf.weight());
   }
-  job_builder->MutOps({print_op_conf});
+  job_builder->MutOpsOnlyOnce({print_op_conf});
 }
 
 }  // namespace

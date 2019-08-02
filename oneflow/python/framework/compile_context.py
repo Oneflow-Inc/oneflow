@@ -1,26 +1,16 @@
 from __future__ import absolute_import
 
+import oneflow.python.framework.placement_context as placement_context
+
 cur_job = None
+op_name2variable_blob = {}
 
-cur_job_set = None
+def ResetCurJob(job):
+    global cur_job
+    cur_job = job
+    global op_name2variable_blob
+    op_name2variable_blob = {}
 
-is_compiling_main = False
-
-job_name2input_logical_blobs = {}
-
-job_name2output_logical_blobs = {}
-
-def IsCompilingMain():
-    return is_compiling_main == True
-
-class CompilingMain:
-    def __init__(self):
-        assert is_compiling_main == False, "no reentrant use of main func"
-
-    def __enter__(self):
-        global is_compiling_main
-        is_compiling_main = True
-
-    def __exit__(self, *args):
-        global is_compiling_main
-        is_compiling_main = False
+def CurJobAddOp(op_conf):
+    cur_job.net.op.add().CopyFrom(op_conf)
+    placement_context.CurPlacementGroupAddOpConf(op_conf)

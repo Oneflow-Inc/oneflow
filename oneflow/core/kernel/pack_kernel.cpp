@@ -82,9 +82,9 @@ void PackKernel<device_type>::ForwardDataId(
   const Blob* in_blob = BnInOp2Blob("in");
   Blob* out_blob = BnInOp2Blob("out");
   for (size_t i = 0; i < in_blob->shape().At(0); ++i) {
-    Memcpy<DeviceType::kCPU>(
-        ctx.device_ctx, out_blob->mut_data_id(i + in_index * in_blob->static_shape().At(0)),
-        in_blob->data_id(i), this->job_desc().other_conf().max_data_id_length());
+    Memcpy<DeviceType::kCPU>(ctx.device_ctx,
+                             out_blob->mut_data_id(i + in_index * in_blob->static_shape().At(0)),
+                             in_blob->data_id(i), this->job_desc().job_conf().max_data_id_length());
   }
 }
 

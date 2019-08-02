@@ -13,7 +13,7 @@ void NormalMdUpdateKernel<device_type, T>::Forward(
   int64_t next_model_vid = -1;
   int64_t cur_batch_num = -1;
   if (this->job_desc().IsPredict()
-      && this->job_desc().other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
+      && this->job_desc().job_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
     cur_batch_num = std::get<0>(
         *(reinterpret_cast<std::tuple<int64_t, std::function<const Blob*(const LogicalBlobId&)>>*>(
             ctx.other)));

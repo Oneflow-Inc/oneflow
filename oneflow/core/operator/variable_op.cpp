@@ -7,9 +7,8 @@ namespace oneflow {
 void VariableOp::InitFromOpConf() {
   CHECK(op_conf().has_variable_conf());
   if (op_conf().variable_conf().has_tick()) { EnrollInputBn("tick", false); }
-  bool has_diff = GlobalJobDesc().other_conf().predict_conf().has_tmp_split_fw_bw_train_conf();
+  bool has_diff = GlobalJobDesc().job_conf().predict_conf().has_tmp_split_fw_bw_train_conf();
   EnrollOutputBn("out", has_diff)->set_is_mutable(true);
-  EnrollModelBn(op_conf().variable_conf().model_name());
 }
 
 const PbMessage& VariableOp::GetCustomizedConf() const { return op_conf().variable_conf(); }
@@ -17,28 +16,20 @@ const PbMessage& VariableOp::GetCustomizedConf() const { return op_conf().variab
 void VariableOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                 const ParallelContext* parallel_ctx) const {
   const VariableOpConf& variable_conf = op_conf().variable_conf();
-  BlobDesc* model_blob_desc = GetBlobDesc4BnInOp(variable_conf.model_name());
-  model_blob_desc->mut_shape() = Shape(variable_conf.shape());
-  model_blob_desc->set_data_type(variable_conf.has_data_type() ? variable_conf.data_type()
-                                                               : GlobalJobDesc().DefaultDataType());
+  BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
+  out_blob_desc->mut_shape() = Shape(variable_conf.shape());
+  out_blob_desc->set_data_type(variable_conf.has_data_type() ? variable_conf.data_type()
+                                                             : GlobalJobDesc().DefaultDataType());
   if (parallel_ctx->policy() == kModelParallel) {
     int32_t model_split_axis = variable_conf.model_split_axis();
     CHECK_GE(model_split_axis, 0);
-    CHECK_LT(model_split_axis, model_blob_desc->shape().NumAxes());
-    int64_t split_dim_num = model_blob_desc->shape().At(model_split_axis);
+    CHECK_LT(model_split_axis, out_blob_desc->shape().NumAxes());
+    int64_t split_dim_num = out_blob_desc->shape().At(model_split_axis);
     BalancedSplitter bs(split_dim_num, parallel_ctx->parallel_num());
-    model_blob_desc->mut_shape().Set(model_split_axis, bs.At(parallel_ctx->parallel_id()).size());
+    out_blob_desc->mut_shape().Set(model_split_axis, bs.At(parallel_ctx->parallel_id()).size());
   } else {
     CHECK_EQ(parallel_ctx->policy(), kDataParallel);
   }
-  *GetBlobDesc4BnInOp("out") = *model_blob_desc;
-}
-
-void VariableOp::VirtualGenKernelConf(
-    std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*,
-    KernelConf* conf) const {
-  conf->mutable_variable_conf()->set_is_fw_inplace(*is_fw_inplace_);
-  conf->mutable_variable_conf()->set_is_bw_inplace(*is_bw_inplace_);
 }
 
 void VariableOp::InferHasBatchDim(

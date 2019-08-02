@@ -1,0 +1,48 @@
+syntax = "proto2";
+package oneflow;
+
+message FieldValue {
+  required string field = 1;
+  required string value = 2;
+}
+
+enum OpcodeType {
+  kInvalidCompareType = 0;
+  kEq = 1;
+  kNe = 2;
+  kGt = 3;
+  kGe = 4;
+  kLt = 5;
+  kLe = 6;
+}
+
+message OneFieldAssertError {
+  required OpcodeType compare_type = 1;
+  required FieldValue left = 2;
+  required string right_value = 3;
+}
+
+message TwoFieldAssertError {
+  required OpcodeType compare_type = 1;
+  required FieldValue left = 2;
+  required FieldValue right = 3;
+}
+
+message ConfigAssertFailedError {
+  oneof oprand_type {
+    OneFieldAssertError one_field_assert_error = 1;
+    TwoFieldAssertError two_field_assert_error = 2;
+  }
+}
+
+message ConfigResourceUnavailableError {
+  required FieldValue field_value = 1;
+}
+
+message Error {
+  optional string msg = 1 [default = ""];
+  oneof error_type {
+    ConfigAssertFailedError config_assert_failed_error = 2;
+    ConfigResourceUnavailableError config_resource_unavailable_error = 3;
+  }
+}
