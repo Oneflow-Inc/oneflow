@@ -1,7 +1,7 @@
 from __future__ import absolute_import
 
 import oneflow.core.record.record_pb2 as record_pb
-import oneflow.python.deprecated.pb_util as pb_util
+import oneflow.python.lib.core.pb_util as pb_util
 import numpy as np
 import tempfile
 import struct

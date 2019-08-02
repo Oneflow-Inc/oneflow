@@ -10,7 +10,7 @@ import oneflow.python.framework.compile_context as compile_ctx
 import oneflow.core.operator.op_conf_pb2 as op_conf_pb2;
 import oneflow.core.common.data_type_pb2 as data_type_pb;
 import oneflow.core.common.data_type_pb2 as dt
-import oneflow.python.deprecated.pb_util as pb_util
+import oneflow.python.lib.core.pb_util as pb_util
 import oneflow.python.deprecated.util as util
 import oneflow.python.deprecated.record_util as record_util
 from contextlib import contextmanager
