@@ -614,17 +614,16 @@ std::vector<HashSet<int32_t>> GetMutualExclusionJobGroups() {
     }
   }
 
-  const JobMemSharingStrategy& strategy =
-      Global<JobSet>::Get()->config().job_mem_sharing_strategy();
-  if (strategy.has_mem_sharing_priority()) {
+  const JobMemSharingStrategy* strategy = Global<const JobMemSharingStrategy>::Get();
+  if (strategy->has_mem_sharing_priority()) {
     job_groups.push_back(HashSet<int32_t>());
     FOR_RANGE(int32_t, i, 0, job_size) { job_groups.front().emplace(i); }
     return job_groups;
-  } else if (strategy.has_palallelism_priority()) {
+  } else if (strategy->has_palallelism_priority()) {
     // do nothing
-  } else if (strategy.has_custom_parallelism()) {
+  } else if (strategy->has_custom_parallelism()) {
     auto* job_name2job_id = Global<JobName2JobId>::Get();
-    for (const auto& group : strategy.custom_parallelism().nonparallel_group()) {
+    for (const auto& group : strategy->custom_parallelism().nonparallel_group()) {
       for (const std::string& first_name : group.job_name()) {
         for (const std::string& second_name : group.job_name()) {
           if (first_name != second_name) {
