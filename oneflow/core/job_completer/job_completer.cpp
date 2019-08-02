@@ -8,6 +8,7 @@
 #include "oneflow/core/job_completer/add_saver.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job_completer/all_reduce_add_pass.h"
+#include "oneflow/core/job_completer/all_reduce_sequence_pass.h"
 #include "oneflow/core/job_completer/freeze_sbp_signature.h"
 #include "oneflow/core/job_completer/group_boxing_by_dst_parallel.h"
 #include "oneflow/core/job_completer/auto_mixed_precision.h"
@@ -429,6 +430,10 @@ void RewriteBoxingWithAllReduce(const OpGraph& op_graph, Job* job) {
   AllReduceAddPass().Apply(op_graph, job);
 }
 
+void MakeAllReduceSequence(const OpGraph& op_graph, Job* job) {
+  AllReduceSequencePass().Apply(op_graph, job);
+}
+
 void EnableAutoMixedPrecision(const OpGraph& op_graph, Job* job) {
   if (!Global<JobDesc>::Get()->enable_auto_mixed_precision()) { return; }
   CHECK_GE(CUDA_VERSION, 10000);
@@ -455,6 +460,7 @@ void JobCompleter::Complete(Job* job) const {
     WithOpGraphAndMutJob(job, &AutoTick);
     // add keep_header_only op
     WithOpGraphAndMutJob(job, &RewriteBoxingWithAllReduce);
+    WithOpGraphAndMutJob(job, &MakeAllReduceSequence);
     WithOpGraphAndMutJob(job, &FreezeSbpSignature);
     WithOpGraphAndMutJob(job, &GroupBoxingByDstParallel);
     WithOpGraphAndMutJob(job, &AddKeepHeaderOnlyOp);

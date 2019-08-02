@@ -3,10 +3,8 @@
 #include "oneflow/core/graph/normal_model_update_compute_task_node.h"
 #include "oneflow/core/graph/chain_graph.h"
 #include "oneflow/core/graph/boxing_task_node.h"
-#include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/graph/reduce_add_compute_task_node.h"
-#include "oneflow/core/graph/reduce_gather_compute_task_node.h"
 #include "oneflow/core/graph/reduce_split_compute_task_node.h"
 #include "oneflow/core/graph/inplace_lbi_graph.h"
 #include "oneflow/core/register/runtime_blob_desc.h"
@@ -27,37 +25,6 @@ bool IsConnectToTickOp(const TaskNode* node) {
   if (dynamic_cast<const VariableOp*>(op) != nullptr) { return true; }
   if (dynamic_cast<const ConstantOp*>(op) != nullptr) { return true; }
   return false;
-}
-
-template<typename ReduceType = ReduceIdentityLogicalNode>
-typename std::enable_if<std::is_same<ReduceType, ReduceIdentityLogicalNode>::value
-                            || std::is_same<ReduceType, ReduceSplitLogicalNode>::value,
-                        std::function<int32_t(const LogicalNode*)>>::type
-MakeGetterReduceTaskNodeCtrlOrder(const LogicalGraph& logical_graph) {
-  std::vector<const ReduceType*> logical_nodes;
-  logical_graph.ForEachNode([&](LogicalNode* node) {
-    auto* logical_node = dynamic_cast<ReduceType*>(node);
-    if (logical_node == nullptr) { return; }
-    logical_nodes.push_back(logical_node);
-  });
-  std::sort(logical_nodes.begin(), logical_nodes.end(),
-            [](const ReduceType* lhs, const ReduceType* rhs) {
-              return lhs->order_in_logical_graph() < rhs->order_in_logical_graph();
-            });
-  auto logical_node2ctrl_order = std::make_shared<HashMap<const LogicalNode*, int32_t>>();
-  int32_t lazy_count = Global<JobDesc>::Get()->all_reduce_lazy_ratio() * logical_nodes.size();
-  for (int32_t i = 0; i < logical_nodes.size(); ++i) {
-    int32_t ctrl_order = 0;
-    if (i > lazy_count) {
-      ctrl_order = -i;
-    } else {
-      ctrl_order = i;
-    }
-    (*logical_node2ctrl_order)[logical_nodes[i]] = ctrl_order;
-  }
-  return [logical_node2ctrl_order](const LogicalNode* identity_node) {
-    return logical_node2ctrl_order->at(identity_node);
-  };
 }
 
 void ForEachDeviceSrcUntrainableNode(const std::vector<NormalForwardCompTaskNode*>& fw_nodes,
@@ -95,7 +62,7 @@ std::function<TaskNode*(const std::string&)> MakeGetterTaskNode4SoleOpName(
     if (iter->second.size() > 1) { return nullptr; }
     return *iter->second.begin();
   };
-};
+}
 
 bool IsLbiOnTaskEdge(const TaskEdge* edge, const LogicalBlobId& lbi) {
   for (const auto& regst_desc : edge->GetRegsts()) {
@@ -320,36 +287,6 @@ void TaskGraph::BuildCtrlRegstDescInSameChain() {
     } else {
       iter->second->BuildCtrlRegstDescIfNeed(node);
       iter->second = node;
-    }
-  }
-}
-
-void TaskGraph::AddReduceSequenceCtrlEdges() {
-  HashMap<int64_t, std::vector<ReduceSplitCompTaskNode*>> global_thrd_id2split_nodes;
-  for (auto* node : ordered_task_nodes_) {
-    auto* split_node = dynamic_cast<ReduceSplitCompTaskNode*>(node);
-    if (split_node == nullptr) { continue; }
-    int64_t global_thrd_id = Global<IDMgr>::Get()->GlobalThrdId4TaskId(split_node->task_id());
-    global_thrd_id2split_nodes[global_thrd_id].push_back(split_node);
-  }
-  auto GetCtrlOrder = MakeGetterReduceTaskNodeCtrlOrder<ReduceSplitLogicalNode>(*logical_gph_);
-  for (auto& pair : global_thrd_id2split_nodes) {
-    auto& split_nodes = pair.second;
-    std::sort(split_nodes.begin(), split_nodes.end(),
-              [&](ReduceSplitCompTaskNode* lhs, ReduceSplitCompTaskNode* rhs) {
-                return GetCtrlOrder(lhs->logical_node()) < GetCtrlOrder(rhs->logical_node());
-              });
-    ReduceSplitCompTaskNode* prev_split_node = split_nodes.at(0);
-    for (auto* split_node : split_nodes) {
-      if (prev_split_node != split_node) {
-        auto* to_node = split_node->GetPrevReduceTaskNode(TaskType::kReduceIdentity);
-        TaskNode* from_node = prev_split_node;
-        if (GetCtrlOrder(split_node->logical_node()) < 0) {
-          from_node = prev_split_node->GetPrevReduceTaskNode(TaskType::kReduceIdentity);
-        }
-        from_node->BuildCtrlRegstDescIfNeed(to_node);
-      }
-      prev_split_node = split_node;
     }
   }
 }
