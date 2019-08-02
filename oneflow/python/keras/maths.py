@@ -41,3 +41,23 @@ def matmul( a,
     return remote_blob_util.RemoteBlob(lbi)
 
 
+@oneflow_export('keras.maths.add')
+def add(x,
+        y,
+        name=None):
+
+    op_conf = op_conf_util.OperatorConf()
+    if name is None:
+        op_conf.name = id_util.UniqueStr('Add_')
+    else:
+        op_conf.name = name
+    getattr(op_conf.add_conf, 'in').append(x.lbn)
+    getattr(op_conf.add_conf, 'in').append(y.lbn)
+    op_conf.add_conf.out = "out"
+    compile_context.CurJobAddOp(op_conf)
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = "out"
+    return remote_blob_util.RemoteBlob(lbi)
+
+
