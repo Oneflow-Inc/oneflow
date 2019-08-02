@@ -1636,7 +1636,12 @@ message ArgSortOpConf {
 message SqueezeOpConf {
   required string in = 1;
   required string out = 2;
-  repeated int32 dim = 3;
+  repeated int32 axis = 3;
+}
+
+message MaskrcnnConcatUncontiguousDim1OpConf {
+  required string in = 1;
+  required string out = 2;
 }
 
 message OperatorConf {
@@ -1808,6 +1813,7 @@ message OperatorConf {
     MaskrcnnPositiveNegativeSampleOpConf maskrcnn_positive_negative_sample_conf = 607;
     LevelMapOpConf level_map_conf = 608;
     LocalNonzeroOpConf local_nonzero_conf = 609;
+    MaskrcnnConcatUncontiguousDim1OpConf maskrcnn_concat_uncontiguous_dim1_conf = 610;
   }
 }
 
