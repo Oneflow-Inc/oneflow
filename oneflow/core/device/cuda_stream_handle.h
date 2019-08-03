@@ -20,7 +20,10 @@ class CudaStreamHandle final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CudaStreamHandle);
   CudaStreamHandle() = delete;
-  CudaStreamHandle(Channel<CudaCBEvent>* cb_event_chan) : cb_event_chan_(cb_event_chan) {}
+  explicit CudaStreamHandle(Channel<CudaCBEvent>* cb_event_chan)
+      : CudaStreamHandle(cb_event_chan, 0) {}
+  CudaStreamHandle(Channel<CudaCBEvent>* cb_event_chan, int32_t priority)
+      : cb_event_chan_(cb_event_chan), priority_(priority) {}
   ~CudaStreamHandle();
 
   const cudaStream_t* cuda_stream();
@@ -42,6 +45,7 @@ class CudaStreamHandle final {
   std::unique_ptr<cudnnHandle_t> cudnn_handle_;
   std::deque<cudaEvent_t> cuda_event_pool_;
   std::atomic_flag cuda_event_pool_mutex_ = ATOMIC_FLAG_INIT;
+  int32_t priority_;
 };
 
 #endif  // WITH_CUDA

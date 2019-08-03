@@ -7,10 +7,19 @@ namespace oneflow {
 
 GpuThread::GpuThread(int64_t thrd_id, int64_t dev_id) {
   set_thrd_id(thrd_id);
-  mut_actor_thread() = std::thread([this, dev_id]() {
+  mut_actor_thread() = std::thread([this, dev_id, thrd_id]() {
     CudaCheck(cudaSetDevice(dev_id));
     ThreadCtx ctx;
-    ctx.g_cuda_stream.reset(new CudaStreamHandle(&cb_event_chan_));
+    int32_t lower;
+    int32_t upper;
+    CudaCheck(cudaDeviceGetStreamPriorityRange(&lower, &upper));
+    int32_t priority;
+    if (thrd_id == Global<IDMgr>::Get()->GetGpuMixThrdId(dev_id)) {
+      priority = upper;
+    } else {
+      priority = lower;
+    }
+    ctx.g_cuda_stream.reset(new CudaStreamHandle(&cb_event_chan_, priority));
     ctx.cb_event_chan = &cb_event_chan_;
     PollMsgChannel(ctx);
   });
