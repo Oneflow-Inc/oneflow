@@ -56,11 +56,12 @@ bool ReentrantLockCompActor::IsCustomizedReadAlwaysUnReadyFromNow() const {
 }
 
 void ReentrantLockCompActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
-  if (reentrant_lock_status_.cur_act_one_lock_acquired() == false) { return; }
+  if (reentrant_lock_status_.acquired_lock_to_be_sent() == false) { return; }
   HandleProducedNaiveDataRegstToConsumer([this](Regst* regst) { return true; });
 }
 
 void ReentrantLockCompActor::AsyncSendCustomizedConsumedRegstMsgToProducer() {
+  if (reentrant_lock_status_.cur_unlocked_ids().size() > 0) { return; }
   Regst* cur_regst = consumed_rs_.Front(cur_processed_regst_desc_id_);
   CHECK(cur_regst);
   AsyncSendRegstMsgToProducer(cur_regst);
