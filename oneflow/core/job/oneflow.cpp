@@ -319,10 +319,11 @@ HashMap<std::string, HashSet<int64_t>> GetInterfaceOpName2JobIds(const std::vect
       if (IsInterfaceOpConf(op)) {
         CHECK(arg_op_names.find(op.name()) != arg_op_names.end());
         CHECK(interface_op_name2job_ids[op.name()].emplace(i).second);
+        unique_op_name_check.emplace(op.name());
       } else {
+        // interface ops shouldn't share op_name with other ops
         CHECK(unique_op_name_check.find(op.name()) == unique_op_name_check.end());
       }
-      unique_op_name_check.emplace(op.name());
     }
   }
   return interface_op_name2job_ids;
