@@ -434,14 +434,17 @@ void BindInterfaceMemBlockId(const std::vector<Job>& jobs, std::vector<Plan>* su
         CHECK_NE(first_regst_desc->mem_shared_id(), -1);
         regst_desc->set_mem_shared_id(first_regst_desc->mem_shared_id());
 
-        int64_t separated_mem_size =
-            RtRegstDesc(*first_regst_desc).TotalSeparatedByteSize4AllRegst();
-        if (separated_mem_size > 0) {
-          CHECK_EQ(separated_mem_size, RtRegstDesc(*regst_desc).TotalSeparatedByteSize4AllRegst());
-          if (first_regst_desc->separated_mem_block_id() == -1) {
-            first_regst_desc->set_separated_mem_block_id(Global<IDMgr>::Get()->NewMemSharedId());
+        int64_t separated_header_mem_size =
+            RtRegstDesc(*first_regst_desc).TotalSeparatedHeaderByteSize4AllRegst();
+        if (separated_header_mem_size > 0) {
+          CHECK_EQ(separated_header_mem_size,
+                   RtRegstDesc(*regst_desc).TotalSeparatedHeaderByteSize4AllRegst());
+          if (first_regst_desc->separated_header_mem_block_id() == -1) {
+            first_regst_desc->set_separated_header_mem_block_id(
+                Global<IDMgr>::Get()->NewMemSharedId());
           }
-          regst_desc->set_separated_mem_block_id(first_regst_desc->separated_mem_block_id());
+          regst_desc->set_separated_header_mem_block_id(
+              first_regst_desc->separated_header_mem_block_id());
         }
       }
     }
