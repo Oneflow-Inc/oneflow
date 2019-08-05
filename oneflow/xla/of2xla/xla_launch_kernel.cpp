@@ -10,6 +10,11 @@
 
 namespace oneflow {
 
+size_t CalcWorkspaceByteSize(xla::LocalExecutable *executable) {
+  // TODO(hjchen2)
+  return 100 * 1024 * 1024;  // 100 MiB
+}
+
 template <DeviceType device_type>
 void XlaLaunchKernel<device_type>::BuildLocalExecutable(
     mola::XlaLaunchContext *launch_ctx,
@@ -53,7 +58,7 @@ void XlaLaunchKernel<device_type>::BuildLocalExecutable(
 }
 
 template <DeviceType device_type>
-void XlaLaunchKernel<device_type>::RunExecutable(
+void XlaLaunchKernel<device_type>::LaunchExecutable(
     mola::XlaLaunchContext *launch_ctx,
     xla::LocalExecutable *executable,
     const std::vector<Blob *> &entry_blobs,
@@ -75,10 +80,14 @@ void XlaLaunchKernel<device_type>::RunExecutable(
     const xla::Shape on_device_shape =
         client->backend().transfer_manager()->HostShapeToDeviceShape(shape);
     CHECK(!on_device_shape.IsTuple()) << "Tuple shape is not allowed for input "
-                                         "arguments in RunExecutable.";
+                                         "arguments in LaunchExecutable.";
     size_t data_size = entry_blobs[i]->ByteSizeOfDataContentField();
     const char *data_ptr = entry_blobs[i]->dptr<char>();
-    // Buffer is nullptr if the blob is body disabled
+
+    // Buffer is nullptr if the blob is body disabled. It should be assigned
+    // by a real pointer to prevent check failure while runing the XLA
+    // executable, so here we assign the first output buffer to it since it's
+    // sure that this entry should never be modified at any time
     if (data_size > 0 && !data_ptr) {
       data_ptr = output_blobs[0]->dptr<char>();
     }
@@ -91,21 +100,19 @@ void XlaLaunchKernel<device_type>::RunExecutable(
     arguments[i] = shaped_buffers[i].get();
   }
 
-  xla::StatusOr<xla::ScopedShapedBuffer> result_status;
-  {
+  OF_CHECK_AND_ASSIGN(auto run_result, [&]() {
     mola::XlaRuntimeScope scope(launch_ctx);
+    size_t workspace_size = CalcWorkspaceByteSize(executable);
+    launch_ctx->ReserveWorkspace(workspace_size);
 
     xla::ExecutableRunOptions run_options;
     run_options.set_stream(launch_ctx->stream());
     run_options.set_allocator(launch_ctx->allocator());
     run_options.set_intra_op_thread_pool(launch_ctx->host_device());
     run_options.set_rng_seed(tensorflow::GetXLARandomSeed());
-    result_status = executable->RunAsync(arguments, run_options);
-  }
+    return executable->Run(arguments, run_options);
+  }());
 
-  CHECK(result_status.ok()) << "Failed to run the executable. "
-                            << TF_CPP_VLOG_LEVEL_REQUARED(1);
-  auto run_result = std::move(result_status.ValueOrDie());
   // Result shape should be tuple
   CHECK(run_result.on_host_shape().IsTuple());
 
@@ -116,7 +123,8 @@ void XlaLaunchKernel<device_type>::RunExecutable(
     se::DeviceMemoryBase buffer = run_result.buffer({i});
     Memcpy<device_type>(launch_ctx->device_ctx(), output->mut_dptr(),
                         buffer.opaque(), output->ByteSizeOfDataContentField());
-    // Maybe release result buffer
+    // Maybe release result buffer. If we asynchronously launch the executable,
+    // then we must not release this buffer here.
     // run_result.set_buffer(se::OwningDeviceMemory(), {i});
   }
 }
@@ -151,10 +159,10 @@ void XlaLaunchKernel<device_type>::ForwardDataContent(
                         << TF_CPP_VLOG_LEVEL_REQUARED(2);
   auto *executable = compile_result->executable.get();
 
-  // Run executable in synchronous mode for CPU, or asynchronous for GPU.
-  RunExecutable(&launch_ctx, executable, entry_blobs,
-                compile_result->xla_input_shapes, output_blobs,
-                compile_result->xla_output_shape);
+  // Launch executable in synchronous mode for CPU, or asynchronous for GPU
+  LaunchExecutable(&launch_ctx, executable, entry_blobs,
+                   compile_result->xla_input_shapes, output_blobs,
+                   compile_result->xla_output_shape);
 }
 
 // ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kXlaLaunchConf, XlaLaunchKernel,

@@ -23,8 +23,9 @@ class XlaLaunchResourceMgr {
   static xla::LocalClient *GetOrCreateLocalClient(
       const se::Platform *platform, int intra_op_num_threads);
   
-  static mola::XlaAllocator *GetOrCreateAllocator(
-      const se::Platform *platform);
+  static DeviceMemoryPool *GetOrCreateCpuMemoryPool(int device_ordinal);
+  static DeviceMemoryPool *GetOrCreateGpuMemoryPool(const void *cuda_stream,
+                                                    int device_ordinal);
 
   static Eigen::ThreadPoolDevice *GetOrCreateEigenHostDevice();
 };
@@ -37,7 +38,7 @@ class XlaLaunchContext {
                             int intra_op_num_threads);
   xla::LocalClient *client() const { return client_; }
   xla::XlaBuilder *builder() const { return builder_.get(); }
-  mola::XlaAllocator *allocator() const { return allocator_; }
+  XlaAllocator *allocator() const { return allocator_.get(); }
 
   Eigen::ThreadPoolDevice *host_device() const { return host_device_; }
 
@@ -49,13 +50,24 @@ class XlaLaunchContext {
 
   se::Stream *stream() const { return stream_.get(); }
 
+  void ReserveWorkspace(size_t workspace_bytes);
+
  private:
+  xla::LocalClient *NewLocalClient(const se::Platform *platform,
+                                   int num_threads);
+  std::shared_ptr<XlaAllocator> NewAllocator(const se::Platform *platform,
+                                             int device_ordinal);
+  DeviceMemoryPool *NewCpuMemoryPool(int device_ordinal);
+  DeviceMemoryPool *NewGpuMemoryPool(const void *cuda_stream,
+                                     int device_ordinal);
+  Eigen::ThreadPoolDevice* NewEigenHostDevice();
+
   xla::LocalClient *client_;
   std::shared_ptr<xla::XlaBuilder> builder_;
 
   xla::StreamPool::Ptr stream_;
 
-  mola::XlaAllocator *allocator_;
+  std::shared_ptr<XlaAllocator> allocator_;
 
   Eigen::ThreadPoolDevice *host_device_;
 

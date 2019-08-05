@@ -1,6 +1,7 @@
 #include "tensorflow/compiler/xla/client/client_library.h"
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/xla/of2xla/xla_utility.h"
+#include "oneflow/xla/of2xla/memory/memory_pool.h"
 #include "oneflow/xla/of2xla/xla_launch_context.h"
 
 namespace oneflow {
@@ -28,16 +29,23 @@ xla::LocalClient* XlaLaunchResourceMgr::GetOrCreateLocalClient(
   return client;
 }
 
-mola::XlaAllocator* XlaLaunchResourceMgr::GetOrCreateAllocator(
-    const se::Platform *platform) {
-  static std::unordered_map<se::Platform::Id,
-                            std::shared_ptr<mola::XlaAllocator>> allocators;
-  se::Platform::Id platform_id = platform->id();
-  if (allocators.count(platform_id) == 0) {
-    allocators.emplace(platform_id,
-                       std::make_shared<mola::XlaAllocator>(platform));
+DeviceMemoryPool *XlaLaunchResourceMgr::GetOrCreateCpuMemoryPool(
+    int device_ordinal) {
+  static DeviceMemoryPool *memory_pool =
+      DeviceMemoryPool::NewCpuMemoryPool(device_ordinal);
+  return memory_pool;
+}
+
+DeviceMemoryPool *XlaLaunchResourceMgr::GetOrCreateGpuMemoryPool(
+    const void *cuda_stream, int device_ordinal) {
+  static std::unordered_map<uint64_t, DeviceMemoryPool *> memory_pools;
+  uint64_t stream_id = reinterpret_cast<uint64_t>(cuda_stream);
+  if (memory_pools.count(stream_id) == 0) {
+    DeviceMemoryPool *memory_pool =
+        DeviceMemoryPool::NewGpuMemoryPool(cuda_stream, device_ordinal);
+    memory_pools.emplace(stream_id, memory_pool);
   }
-  return allocators[platform_id].get();
+  return memory_pools[stream_id];
 }
 
 Eigen::ThreadPoolDevice* XlaLaunchResourceMgr::GetOrCreateEigenHostDevice() {
@@ -48,17 +56,54 @@ Eigen::ThreadPoolDevice* XlaLaunchResourceMgr::GetOrCreateEigenHostDevice() {
   return &host_device;
 }
 
+xla::LocalClient *XlaLaunchContext::NewLocalClient(
+    const se::Platform *platform, int num_threads) {
+  return XlaLaunchResourceMgr::GetOrCreateLocalClient(platform, num_threads);
+}
+
+DeviceMemoryPool *XlaLaunchContext::NewCpuMemoryPool(int device_ordinal) {
+  return XlaLaunchResourceMgr::GetOrCreateCpuMemoryPool(device_ordinal);
+}
+
+DeviceMemoryPool *XlaLaunchContext::NewGpuMemoryPool(const void *cuda_stream,
+                                                     int device_ordinal) {
+  return XlaLaunchResourceMgr::GetOrCreateGpuMemoryPool(cuda_stream,
+                                                        device_ordinal);
+}
+
+std::shared_ptr<XlaAllocator> XlaLaunchContext::NewAllocator(
+    const se::Platform *platform, int device_ordinal) {
+  DeviceMemoryPool *mem_pool = nullptr;
+  switch (device_type_) {
+    case DeviceType::kCPU:
+      mem_pool = NewCpuMemoryPool(device_ordinal);
+      break;
+    case DeviceType::kGPU: {
+      const void *cuda_stream = device_ctx_->cuda_stream();
+      mem_pool = NewGpuMemoryPool(cuda_stream, device_ordinal);
+      break;
+    }
+  }
+  CHECK(mem_pool) << "Failed to get or create memory pool for device "
+                  << device_type_;
+  return std::make_shared<XlaAllocator>(platform, mem_pool);
+}
+
+Eigen::ThreadPoolDevice* XlaLaunchContext::NewEigenHostDevice() {
+  return XlaLaunchResourceMgr::GetOrCreateEigenHostDevice();
+}
+
 XlaLaunchContext::XlaLaunchContext(const std::string &builder_name,
                                    DeviceCtx *device_ctx,
                                    DeviceType device_type,
                                    int intra_op_num_threads)
-    : device_ctx_(device_ctx), device_type_(device_type) {
-  typedef XlaLaunchResourceMgr ResourceMgr;
-  se::Platform::Id platform_id = nullptr;
+    : device_ctx_(device_ctx), device_type_(device_type), device_ordinal_(0) {
+  builder_ = std::make_shared<xla::XlaBuilder>(
+      absl::StrCat("XlaBuilder_", builder_name));
 
+  se::Platform::Id platform_id = nullptr;
   if (device_type == DeviceType::kCPU) {
     platform_id = se::host::kHostPlatformId;
-    device_ordinal_ = 0;
   } else if (device_type == DeviceType::kGPU) {
     platform_id = se::cuda::kCudaPlatformId;
 #ifdef WITH_CUDA
@@ -70,17 +115,18 @@ XlaLaunchContext::XlaLaunchContext(const std::string &builder_name,
   OF_CHECK_AND_ASSIGN(auto platform,
                       se::MultiPlatformManager::PlatformWithId(platform_id));
 
-  client_ = ResourceMgr::GetOrCreateLocalClient(platform, intra_op_num_threads);
-  builder_ = std::make_shared<xla::XlaBuilder>(
-      absl::StrCat("XlaBuilder_", builder_name));
+  client_ = NewLocalClient(platform, intra_op_num_threads);
   OF_CHECK_AND_ASSIGN(stream_,
                       client_->mutable_backend()
                              ->BorrowStream(device_ordinal_));
-  allocator_ = ResourceMgr::GetOrCreateAllocator(platform);
-
-  host_device_ = ResourceMgr::GetOrCreateEigenHostDevice();
-
+  allocator_ = NewAllocator(platform, device_ordinal_);
+  host_device_ = NewEigenHostDevice();
   parallel_ctx_ = LocalParallelContext(device_ordinal_);
+}
+
+void XlaLaunchContext::ReserveWorkspace(size_t workspace_bytes) {
+  CHECK(allocator_);
+  allocator_->memory_pool()->Reserve(workspace_bytes);
 }
 
 }  // namespace mola
