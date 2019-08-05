@@ -36,6 +36,10 @@ void ForeignInputOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)>
     out_blob_desc->set_data_type(GlobalJobDesc().DefaultDataType());
   }
   out_blob_desc->set_has_dim0_valid_num_field(conf.has_dim0_valid_num());
+  if (conf.has_dim0_inner_shape()) {
+    CHECK(conf.has_dim0_valid_num());
+    out_blob_desc->mut_dim0_inner_shape() = Shape(conf.dim0_inner_shape());
+  }
 }
 
 void ForeignInputOp::InferHasBatchDim(
