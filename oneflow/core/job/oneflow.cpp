@@ -427,11 +427,22 @@ void BindInterfaceMemBlockId(const std::vector<Job>& jobs, std::vector<Plan>* su
       FOR_RANGE(int32_t, i, 0, first_vec.size()) {
         CHECK_EQ(task_protos.at(i)->machine_id(), first_vec.at(i)->machine_id());
         CHECK_EQ(task_protos.at(i)->thrd_id(), first_vec.at(i)->thrd_id());
-        const RegstDescProto& first_regst_desc = *GetSoleProducedDataRegst(first_vec.at(i));
-        CHECK_EQ(first_regst_desc.mem_shared_offset(), 0);
+        RegstDescProto* first_regst_desc = GetSoleProducedDataRegst(first_vec.at(i));
+        CHECK_EQ(first_regst_desc->mem_shared_offset(), 0);
         RegstDescProto* regst_desc = GetSoleProducedDataRegst(task_protos.at(i));
         CHECK_EQ(regst_desc->mem_shared_offset(), 0);
-        regst_desc->set_mem_shared_id(first_regst_desc.mem_shared_id());
+        CHECK_NE(first_regst_desc->mem_shared_id(), -1);
+        regst_desc->set_mem_shared_id(first_regst_desc->mem_shared_id());
+
+        int64_t separated_mem_size =
+            RtRegstDesc(*first_regst_desc).TotalSeparatedByteSize4AllRegst();
+        if (separated_mem_size > 0) {
+          CHECK_EQ(separated_mem_size, RtRegstDesc(*regst_desc).TotalSeparatedByteSize4AllRegst());
+          if (first_regst_desc->separated_mem_block_id() == -1) {
+            first_regst_desc->set_separated_mem_block_id(Global<IDMgr>::Get()->NewMemSharedId());
+          }
+          regst_desc->set_separated_mem_block_id(first_regst_desc->separated_mem_block_id());
+        }
       }
     }
   }
