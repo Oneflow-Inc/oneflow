@@ -195,15 +195,6 @@ foreach(oneflow_python_file ${oneflow_all_python_file})
     "${of_pyscript_dir}/${oneflow_python_rel_file_path}")
 endforeach()
 
-# build main
-set(RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/bin)
-foreach(cc ${of_main_cc})
-  get_filename_component(main_name ${cc} NAME_WE)
-  oneflow_add_executable(${main_name} ${cc})
-  target_link_libraries(${main_name} ${of_libs} ${oneflow_third_party_libs})
-  set_target_properties(${main_name} PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin")
-endforeach()
-
 # build test
 if(BUILD_TESTING)
   if(NOT BUILD_CUDA)
