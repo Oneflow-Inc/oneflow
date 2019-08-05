@@ -23,7 +23,7 @@ class val(blob_desc.BlobDesc):
         interface_blob_conf.has_dim0_valid_num = self.is_dynamic_
         interface_blob_conf.has_batch_dim = self.has_batch_dim_
         if(self.is_dynamic_):
-            interface_blob_conf.dim0_inner_shape.dim.extend(self.shape_[0:1])
+            interface_blob_conf.dim0_inner_shape.dim.extend([1,self.shape_[0]])
         assert self.split_axis_ is None or self.broadcast_ is None
         if self.split_axis_ is not None:
             interface_blob_conf.split_axis = self.split_axis_
