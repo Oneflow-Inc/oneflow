@@ -44,7 +44,7 @@ void OfBlob::AutoMemCopyTo(T* ptr, int64_t len) const {
 
 template<typename T>
 void OfBlob::AutoMemCopyFrom(const T* ptr, int64_t len) const {
-  // TODO(): now only for dim0_inner_shape = { batch, }
+  // TODO(): now only for dim0_inner_shape = { 1, batch_num }
   if (blob_->has_dim0_valid_num_field()) {
     CHECK(blob_->has_dim0_inner_shape());
     CHECK_EQ(blob_->blob_desc().dim0_inner_shape().NumAxes(), 2);
