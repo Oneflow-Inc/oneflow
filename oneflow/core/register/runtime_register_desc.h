@@ -26,8 +26,8 @@ class RtRegstDesc {
   const RtBlobDesc* packed_blob_desc() const { return packed_blob_desc_.get(); }
   size_t TotalByteSize4AllRegst() const;
   size_t TotalMainByteSize4AllRegst() const;
-  size_t TotalSeparatedByteSize4AllRegst() const;
-  size_t SeparatedByteSize4OneRegst() const;
+  size_t TotalSeparatedHeaderByteSize4AllRegst() const;
+  size_t SeparatedHeaderByteSize4OneRegst() const;
   size_t MainByteSize4OneRegst() const;
   const Shape& data_regst_time_shape() const;
   bool is_body_disabled() const { return packed_blob_desc_->is_body_disabled(); }
