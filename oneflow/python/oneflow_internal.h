@@ -13,6 +13,7 @@
 #include "oneflow/core/job/runtime_buffer_managers_scope.h"
 #include "oneflow/core/job/runtime_buffers_scope.h"
 #include "oneflow/core/control/cluster_control.h"
+#include "oneflow/core/job/job_set_compile_ctx.h"
 
 bool IsOpTypeCaseCpuSupportOnly(int64_t op_type_case) {
   using namespace oneflow;
@@ -55,6 +56,7 @@ void InitGlobalOneflowBySerializedJobSet(const std::string& job_set_str) {
   CHECK_ISNULL(Global<Oneflow>::Get());
   Global<CtrlClient>::Get()->PushKV("session_job_set", job_set);
   Global<RuntimeBufferManagersScope>::New();
+  Global<JobSetCompileCtx>::New();
   Global<Oneflow>::New(job_set);
   Global<RuntimeBuffersScope>::New();
 }
@@ -90,6 +92,7 @@ void DestroyGlobalOneflow() {
   Global<RuntimeBuffersScope>::Delete();
   CHECK_NOTNULL(Global<Oneflow>::Get());
   Global<Oneflow>::Delete();
+  Global<JobSetCompileCtx>::Delete();
   Global<RuntimeBufferManagersScope>::Delete();
 }
 
