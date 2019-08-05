@@ -435,14 +435,17 @@ void BindInterfaceMemBlockId(const std::vector<Job>& jobs, std::vector<Plan>* su
         CHECK_NE(first_regst_desc->mem_shared_id(), -1);
         regst_desc->set_mem_shared_id(first_regst_desc->mem_shared_id());
 
-        int64_t separated_mem_size =
-            RtRegstDesc(*first_regst_desc).TotalSeparatedByteSize4AllRegst();
-        if (separated_mem_size > 0) {
-          CHECK_EQ(separated_mem_size, RtRegstDesc(*regst_desc).TotalSeparatedByteSize4AllRegst());
-          if (first_regst_desc->separated_mem_block_id() == -1) {
-            first_regst_desc->set_separated_mem_block_id(Global<IDMgr>::Get()->NewMemSharedId());
+        int64_t separated_header_mem_size =
+            RtRegstDesc(*first_regst_desc).TotalSeparatedHeaderByteSize4AllRegst();
+        if (separated_header_mem_size > 0) {
+          CHECK_EQ(separated_header_mem_size,
+                   RtRegstDesc(*regst_desc).TotalSeparatedHeaderByteSize4AllRegst());
+          if (first_regst_desc->separated_header_mem_block_id() == -1) {
+            first_regst_desc->set_separated_header_mem_block_id(
+                Global<IDMgr>::Get()->NewMemSharedId());
           }
-          regst_desc->set_separated_mem_block_id(first_regst_desc->separated_mem_block_id());
+          regst_desc->set_separated_header_mem_block_id(
+              first_regst_desc->separated_header_mem_block_id());
         }
       }
     }
@@ -700,6 +703,7 @@ void MakePullJob(const std::string& job_name, const std::string& op_name,
                  const ParallelBlobConf& parallel_blob_conf, Job* job) {
   auto* op_name2job_name =
       Global<InterUserJobInfo>::Get()->mutable_output_or_var_op_name2pull_job_name();
+  CHECK(op_name2job_name->find(op_name) == op_name2job_name->end());
   (*op_name2job_name)[op_name] = job_name;
   DataType data_type;
   JobBuilder job_builder(job);
@@ -738,6 +742,7 @@ void MakePushJob(const std::string& job_name, const std::string& op_name,
                  const ParallelBlobConf& parallel_blob_conf, Job* job) {
   auto* op_name2job_name =
       Global<InterUserJobInfo>::Get()->mutable_input_or_var_op_name2push_job_name();
+  CHECK(op_name2job_name->find(op_name) == op_name2job_name->end());
   (*op_name2job_name)[op_name] = job_name;
   DataType data_type;
   JobBuilder job_builder(job);
@@ -946,9 +951,10 @@ void CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan) {
   }
   {
     Job model_init_job;
-    std::vector<std::pair<OperatorConf, ParallelConf>> variable_op_confs_and_parallel_confs;
-    FilterVariableOps(jobs, &variable_op_confs_and_parallel_confs);
-    MakeModelInitJob("System-ModelInit", &model_init_job, variable_op_confs_and_parallel_confs);
+    HashMap<std::string, OperatorConf> var_op_name2op_conf;
+    FilterVariableOps(jobs, &var_op_name2op_conf);
+    MakeModelInitJob("System-ModelInit", &model_init_job, var_op_name2op_conf,
+                     var_op_name2parallel_blob_conf);
     CompileHelperJob(&model_init_job);
   }
   {
