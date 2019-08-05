@@ -7,7 +7,7 @@ import oneflow.python.framework.compile_context as compile_context
 import oneflow.python.framework.placement_util as placement_util
 import oneflow.python.framework.config_util as config_util
 import oneflow.python.framework.remote_blob as remote_blob_util
-import oneflow.python.framework.val as val
+import oneflow.python.framework.input_blob_def as input_blob_def
 import oneflow.python.ops as ops
 from oneflow.python.oneflow_export import oneflow_export
 
@@ -32,7 +32,7 @@ def _CompileJob(job, func, config):
     interface_op_names = []
     with placement_util.DevicePriorPlacementScope(device_type, machine_dev_ids):
         for blob_desc in _GetArgDefault(func):
-            assert isinstance(blob_desc, val.val)
+            assert isinstance(blob_desc, input_blob_def.input_blob_def)
             remote_input_blob = ops.InputOpByBlobDesc(blob_desc)
             func.__oneflow_input_remote_blobs__.append(remote_input_blob)
             interface_op_names.append(remote_input_blob.op_name)

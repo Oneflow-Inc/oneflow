@@ -44,7 +44,16 @@ void OfBlob::AutoMemCopyTo(T* ptr, int64_t len) const {
 
 template<typename T>
 void OfBlob::AutoMemCopyFrom(const T* ptr, int64_t len) const {
-  CHECK_EQ(blob_->shape().elem_cnt(), len);
+  // TODO(): now only for dim0_inner_shape = { 1, batch_num }
+  if (blob_->has_dim0_valid_num_field()) {
+    CHECK(blob_->has_dim0_inner_shape());
+    CHECK_EQ(blob_->blob_desc().dim0_inner_shape().NumAxes(), 2);
+    int64_t one_instance_elem_cnt = blob_->static_shape().Count(1);
+    CHECK(len % one_instance_elem_cnt == 0);
+    blob_->set_dim0_valid_num(0, len / one_instance_elem_cnt);
+  } else {
+    CHECK_EQ(blob_->shape().elem_cnt(), len);
+  }
   CHECK(blob_->data_type() == GetDataType<T>::value);
   AutoMemcpy(device_ctx_, blob_->mut_dptr(), ptr, len * sizeof(T), blob_->mem_case(), mem_case_);
 }

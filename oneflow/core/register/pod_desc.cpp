@@ -104,6 +104,7 @@ bool StructPodDesc::operator==(const PodDesc& rhs) const {
 }
 
 void StructPodDesc::ToProto(StructPodProto* struct_pod_proto) const {
+  struct_pod_proto->Clear();
   for (const auto& field : fields_) { field->ToProto(struct_pod_proto->add_field()); }
 }
 

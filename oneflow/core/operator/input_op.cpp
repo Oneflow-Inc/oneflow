@@ -8,7 +8,6 @@ namespace {
 
 void CheckOpConf(const OperatorConf& op_conf) {
   if (op_conf.input_conf().has_blob_conf()) {
-    if (op_conf.input_conf().blob_conf().has_dim0_inner_shape()) { TODO(); }
     if (op_conf.input_conf().blob_conf().has_dim1_valid_num()) { TODO(); }
     if (op_conf.input_conf().blob_conf().has_dim2_valid_num()) { TODO(); }
   }
@@ -62,6 +61,10 @@ void InputOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlo
     out_blob_desc->set_data_type(GlobalJobDesc().DefaultDataType());
   }
   out_blob_desc->set_has_dim0_valid_num_field(conf.has_dim0_valid_num());
+  if (conf.has_dim0_inner_shape()) {
+    CHECK(conf.has_dim0_valid_num());
+    out_blob_desc->mut_dim0_inner_shape() = Shape(conf.dim0_inner_shape());
+  }
   size_t split_axis = 0;
   if (GetSplitAxis(conf, &split_axis)) {
     BalancedSplitter bs(out_blob_desc->shape().At(split_axis), parallel_ctx->parallel_num());
