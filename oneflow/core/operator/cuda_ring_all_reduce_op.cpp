@@ -1,8 +1,10 @@
-#include "oneflow/core/operator/cuda_ring_all_reduce_op.h"
+#include "oneflow/core/operator/operator.h"
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/kernel/cuda_ring_boxing_kernel_util.h"
 
 namespace oneflow {
+
+#ifdef WITH_CUDA
 
 namespace {
 
@@ -63,6 +65,25 @@ class CudaRingAllReduceOpCtx final : public OpContext {
 };
 
 }  // namespace
+
+class CudaRingAllReduceOp : public Operator {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(CudaRingAllReduceOp);
+  CudaRingAllReduceOp() = default;
+  ~CudaRingAllReduceOp() override = default;
+
+  void InitFromOpConf() override;
+
+ private:
+  LogicalBlobId ibn2lbi(const std::string& input_bn) const override;
+  LogicalBlobId obn2lbi(const std::string& output_bn) const override;
+  const PbMessage& GetCustomizedConf() const override;
+  void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                      const ParallelContext* parallel_ctx, int64_t record_piece_size,
+                      std::function<void(OpContext*)> EnrollOpCtx) const override;
+  void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                            const ParallelContext*, KernelConf*, const OpContext*) const override;
+};
 
 void CudaRingAllReduceOp::InitFromOpConf() {
   EnrollInputBn("in", false);
@@ -189,5 +210,7 @@ void CudaRingAllReduceOp::VirtualGenKernelConf(
 }
 
 REGISTER_OP(OperatorConf::kCudaRingAllReduceConf, CudaRingAllReduceOp);
+
+#endif
 
 }  // namespace oneflow

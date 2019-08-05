@@ -1,8 +1,21 @@
-#include "oneflow/core/kernel/cuda_ring_all_reduce_kernel.h"
+#include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/kernel/cuda_ring_boxing_kernel_util.h"
 
 namespace oneflow {
+
+#ifdef WITH_CUDA
+
+template<typename T>
+class CudaRingAllReduceKernel final : public KernelIf<DeviceType::kGPU> {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(CudaRingAllReduceKernel);
+  CudaRingAllReduceKernel() = default;
+  ~CudaRingAllReduceKernel() override = default;
+
+ private:
+  void Forward(const KernelCtx&, std::function<Blob*(const std::string&)>) const override;
+};
 
 template<typename T>
 void CudaRingAllReduceKernel<T>::Forward(
@@ -43,5 +56,8 @@ void CudaRingAllReduceKernel<T>::Forward(
 }
 
 ADD_CPU_DEFAULT_KERNEL_CREATOR(OperatorConf::kCudaRingAllReduceConf, CudaRingAllReduceKernel,
-                               FLOATING_DATA_TYPE_SEQ)
+                               FLOATING_DATA_TYPE_SEQ);
+
+#endif
+
 }  // namespace oneflow
