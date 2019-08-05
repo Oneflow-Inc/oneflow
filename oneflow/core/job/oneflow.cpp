@@ -348,7 +348,7 @@ void FilterOpName2ParallelBlobConf(
   }
 }
 
-void FilterArgPassingJobGroupInfo(
+void FilterArgPassJobGroupInfo(
     std::vector<Job>* jobs,
     HashMap<ParallelBlobConf, HashMap<std::string, std::vector<std::string>>>*
         parallel_blob_conf2input_op_name2output_op_name) {
@@ -761,23 +761,23 @@ void MakePushJob(const std::string& job_name, const std::string& op_name,
   job_conf->set_default_data_type(data_type);
 }
 
-void MakeArgPassingJob(const std::string& job_name, const ParallelBlobConf& parallel_blob_conf,
-                       const std::string& input_op_name,
-                       const std::vector<std::string>& output_op_names, Job* job) {
+void MakeArgPassJob(const std::string& job_name, const ParallelBlobConf& parallel_blob_conf,
+                    const std::string& input_op_name,
+                    const std::vector<std::string>& output_op_names, Job* job) {
   CHECK_EQ(output_op_names.empty(), false);
   for (const auto& output_op_name : output_op_names) { CHECK_NE(output_op_name, input_op_name); }
-  auto* op_name2arg_passing_job_info =
-      Global<InterUserJobInfo>::Get()->mutable_input_or_var_op_name2arg_passing_job_info();
-  CHECK(op_name2arg_passing_job_info->find(input_op_name) == op_name2arg_passing_job_info->end());
-  auto* arg_passing_job_info = &(*op_name2arg_passing_job_info)[input_op_name];
-  arg_passing_job_info->set_intput_or_var_op_name(input_op_name);
-  arg_passing_job_info->set_arg_passing_job_name(job_name);
-  auto* op_name2in_index = arg_passing_job_info->mutable_output_or_var_op_name2in_index();
+  auto* op_name2arg_pass_job_info =
+      Global<InterUserJobInfo>::Get()->mutable_input_or_var_op_name2arg_pass_job_info();
+  CHECK(op_name2arg_pass_job_info->find(input_op_name) == op_name2arg_pass_job_info->end());
+  auto* arg_pass_job_info = &(*op_name2arg_pass_job_info)[input_op_name];
+  arg_pass_job_info->set_intput_or_var_op_name(input_op_name);
+  arg_pass_job_info->set_arg_pass_job_name(job_name);
+  auto* op_name2in_index = arg_pass_job_info->mutable_output_or_var_op_name2in_index();
 
   JobBuilder job_builder(job);
   OperatorConf foreign_input_op_conf;
   {
-    foreign_input_op_conf.set_name(std::string("System-ArgPassing-ForeignInput_") + NewUniqueId());
+    foreign_input_op_conf.set_name(std::string("System-ArgPass-ForeignInput_") + NewUniqueId());
     auto* foreign_input_conf = foreign_input_op_conf.mutable_foreign_input_conf();
     foreign_input_conf->set_out("out");
     foreign_input_conf->set_ofblob_buffer_name(GetForeignInputBufferName(job_name));
@@ -889,7 +889,7 @@ void CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan) {
                                 &var_op_name2parallel_blob_conf);
   HashMap<ParallelBlobConf, HashMap<std::string, std::vector<std::string>>>
       parallel_blob_conf2input_op_name2output_op_name;
-  FilterArgPassingJobGroupInfo(&jobs, &parallel_blob_conf2input_op_name2output_op_name);
+  FilterArgPassJobGroupInfo(&jobs, &parallel_blob_conf2input_op_name2output_op_name);
   int64_t job_id = -1;
   {
     size_t helper_job_size =
@@ -926,10 +926,10 @@ void CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan) {
   for (const auto& outer_pair : parallel_blob_conf2input_op_name2output_op_name) {
     const auto parallel_blob_conf = outer_pair.first;
     for (const auto& pair : outer_pair.second) {
-      Job arg_passing_job;
-      MakeArgPassingJob("System-ArgPassing-" + pair.first, parallel_blob_conf, pair.first,
-                        pair.second, &arg_passing_job);
-      CompileHelperJob(&arg_passing_job);
+      Job arg_pass_job;
+      MakeArgPassJob("System-ArgPass-" + pair.first, parallel_blob_conf, pair.first, pair.second,
+                     &arg_pass_job);
+      CompileHelperJob(&arg_pass_job);
     }
   }
   {
