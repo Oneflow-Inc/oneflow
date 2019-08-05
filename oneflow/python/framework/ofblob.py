@@ -28,7 +28,6 @@ class OfBlob(object):
         return dst_ndarray.reshape(self.shape)
 
     def CopyFromNdarray(self, src_ndarray):
-        assert(self._size == src_ndarray.size)
         of_dtype = convert_of_dtype_to_numpy_dtype(self.dtype)
         assert(of_dtype == src_ndarray.dtype), \
             "of_dtype: %s, numpy.dtype: %s" % (of_dtype, src_ndarray.dtype)
