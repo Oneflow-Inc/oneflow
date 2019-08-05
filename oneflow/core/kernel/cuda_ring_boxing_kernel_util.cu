@@ -192,36 +192,36 @@ __device__ __forceinline__ void DoBatchPackReduceOrCopy(const int64_t num_elem,
   for (int32_t i = 0; i < NUM_OUT; ++i) { out[i] += num_elem; }
 }
 
-__device__ __forceinline__ int32_t AlignSizeToPackRegion(const void* ptr) {
+__device__ __forceinline__ int32_t SizeToAlignPackRegion(const void* ptr) {
   return PACK_REGION_ALIGN - (reinterpret_cast<uintptr_t>(ptr) % PACK_REGION_ALIGN);
 }
 
 template<ReduceMethod method, typename T, int32_t NUM_IN, int32_t NUM_OUT>
 __device__ __forceinline__ void ReduceOrCopy(const int64_t num_elem, const T* (&in)[NUM_IN],
                                              T* (&out)[NUM_OUT]) {
-  bool all_same_aligned = true;
-  const int32_t align = AlignSizeToPackRegion(in[0]);
+  bool all_same_size_to_align = true;
+  const int32_t size_to_align = SizeToAlignPackRegion(in[0]);
   for (int32_t i = 1; i < NUM_IN; ++i) {
-    if (AlignSizeToPackRegion(in[i]) != align) {
-      all_same_aligned = false;
+    if (SizeToAlignPackRegion(in[i]) != size_to_align) {
+      all_same_size_to_align = false;
       break;
     }
   }
-  if (all_same_aligned) {
+  if (all_same_size_to_align) {
     for (int32_t i = 0; i < NUM_OUT; ++i) {
-      if (AlignSizeToPackRegion(out[i]) != align) {
-        all_same_aligned = false;
+      if (SizeToAlignPackRegion(out[i]) != size_to_align) {
+        all_same_size_to_align = false;
         break;
       }
     }
   }
-  if (all_same_aligned) {
+  if (all_same_size_to_align) {
     int64_t remaining = num_elem;
-    if (align > 0) {
-      const int32_t num_align_elem = align / sizeof(T);
+    if (size_to_align > 0) {
+      const int32_t num_elem_to_align = size_to_align / sizeof(T);
       DoBatchPackReduceOrCopy<method, T, T, NUM_PACK_PER_BATCH_PER_THREAD, true, NUM_IN, NUM_OUT>(
-          num_align_elem, in, out);
-      remaining -= num_align_elem;
+          num_elem_to_align, in, out);
+      remaining -= num_elem_to_align;
     }
     constexpr int32_t NUM_ELEM_PER_BATCH =
         sizeof(Pack) / sizeof(T) * NUM_PACK_PER_BATCH_PER_THREAD * NUM_THREAD;
