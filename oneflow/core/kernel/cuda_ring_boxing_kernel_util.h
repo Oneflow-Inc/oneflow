@@ -6,6 +6,8 @@
 
 namespace oneflow {
 
+#ifdef WITH_CUDA
+
 constexpr int32_t CUDA_RING_BOXING_MAX_NUM_LINK = 8;
 
 template<typename T>
@@ -33,6 +35,8 @@ struct CudaRingBoxingKernelUtil {
 };
 
 size_t GetCudaRingBoxingPackRegionSize();
+
+#endif
 
 }  // namespace oneflow
 
