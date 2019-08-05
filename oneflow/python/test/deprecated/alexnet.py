@@ -1,7 +1,6 @@
 from __future__ import print_function
 import oneflow as flow
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
-import numpy as np
 
 config = flow.ConfigProtoBuilder()
 config.gpu_device_num(1)
@@ -245,7 +244,8 @@ if __name__ == '__main__':
         check_point = flow.train.CheckPoint()
         check_point.restore().initialize_or_restore(session=sess)
         fmt_str = '{:>12}  {:>12}  {:>12.3f}'
-        print('{:>12}  {:>12}  {:>12}'.format("iter", "loss type", "loss value"))
+        print('{:>12}  {:>12}  {:>12}'.format(
+            "iter", "loss type", "loss value"))
         for i in range(100):
             if (i + 1) % 10 is 0:
                 print(fmt_str.format(i, "eval loss:", sess.run(
