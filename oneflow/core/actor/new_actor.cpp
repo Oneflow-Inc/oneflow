@@ -19,7 +19,10 @@ void UpdateCtxWithMsg(ActorCtx* ctx, const ActorMsg& msg) {
 }
 
 void ActUntilFail(ActorCtx* ctx) {
-  while(ctx->IsReady4Act()) { ctx->Act(); }
+  while(ctx->IsReady4Act()) {
+    ctx->Act();
+    ctx->HandleRegstMsgAfterAct();
+  }
 }
 
 }
@@ -33,7 +36,7 @@ int OpActor::HandlerNormal(OpActorCtx ctx, const ActorMsg& msg) {
 }
 
 int OpActor::HandlerZombie(OpActorCtx ctx, const ActorMsg& msg) {
-  ctx->ProcessMsgFromConsumers();
+  ctx->UpdateWithProducedRegstMsg();
   if (ctx->RecvAllProducedMsg()) {
     OF_SET_MSG_HANDLER(MsgHandler());
   }

@@ -9,6 +9,8 @@ class MsgHandler;
 
 class OpActorCtx {
  public:
+  using ProducedRegstType = HashMap<int64_t, std::vector<std::unique_ptr<Regst>>>;
+
   void Init(const TaskProto&, const ThreadCtx&);
   void UpdateWithRegstMsg(const ActorMsg&);
   void UpdateWithEordMsg(const ActorMsg&);
@@ -16,7 +18,8 @@ class OpActorCtx {
 
   bool IsReady4Act() const;
   void Act();
-  bool EndOfRead() const;
+  void HandleRegstMsgAfterAct();
+  bool NoLongerConsumeRegst() const;
 
   void ProcessMsgFromConsumers();
   void RecvAllProducedMsg();
@@ -41,7 +44,7 @@ class OpActorCtx {
   MsgHandler initial_msg_handler_;
   HashMap<std::string, std::vector<int64_t>> name2regst_desc_id_;
   std::vector<ExecKernel> exec_kernel_vec_;
-  HashMap<int64_t, std::vector<std::unique_ptr<Regst>>> produced_regsts_;
+  ProducedRegstType produced_regsts_;
 
   HashMap<std::string, std::unique_ptr<RegstPatternWrapperIf>> wrappers_;
   HashMap<int64_t, RegstPatternWrapperIf*> regst_desc_id2wrapper_;

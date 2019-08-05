@@ -1,4 +1,5 @@
 #include "oneflow/core/actor/op_actor_context.h"
+#include "oneflow/core/actor/regst_pattern_wrapper.h"
 
 namespace oneflow {
 
@@ -39,7 +40,7 @@ void OpActorCtx::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) 
   InsertRegstPattern(new CtrlPatternWrapper);
   VirtualHandleRegstPattern(task_proto);
   for (auto& pair : wrappers_) {
-    pair.second->Init(task_proto);
+    pair.second->Init(task_proto, produced_regsts_);
     pair.second->ForEachRegstDescId([&](int64_t regst_desc_id) {
           CHECK(regst_desc_id2wrapper_.emplace(regst_desc_id, pair.second.get()));
     });
@@ -62,7 +63,7 @@ void OpActorCtx::UpdateWithCmdMsg(const ActorMsg& msg) {
 
 void OpActorCtx::IsReady4Act() const {
   for (const auto& pair : wrappers_) {
-    if (pair.second.IsReady4Act() == false) {
+    if (pair.second->IsReady4Act() == false) {
       return false;
     }
   }
@@ -70,7 +71,31 @@ void OpActorCtx::IsReady4Act() const {
 }
 
 void OpActorCtx::Act() {
+  for (const ExecKernel& ek : exec_kernel_vec_) {
+    //TODO(niuchong): BnInOp2Blob return nullptr or failed?
+    ek.kernel->Launch(kernel_ctx, [&](const std::string& bn_in_op) -> Blob* {
+      int64_t regst_desc_id = ek.bn_in_op2regst_desc_id.at(bn_in_op);
+      RegstPatternWrapperIf* wrapper = regst_desc_id2wrapper_.at(regst_desc_id);
+      Regst* regst = wrapper->GetRegstByRegstDescId(regst_desc_id);
+      const LogicalBlobId& lbi = ek.kernel->BnInOp2Lbi(bn_in_op);
+      return regst->GetBlobByLbi(lbi);
+    });
+  }
+}
 
+void OpActorCtx::HandleRegstMsgAfterAct() {
+  for (auto& pair : wrappers_) {
+    pair.second->HandleRegstMsgAfterAct();
+  }
+}
+
+void OpActorCtx::NoLongerConsumeRegst() const {
+  for (const auto& pair : wrappers_) {
+    if (pair.second->NoLongerConsumeRegst() == false) {
+      return false;
+    }
+  }
+  return true;
 }
 
 MsgHandler OpActorCtx::initial_msg_handler() const {
