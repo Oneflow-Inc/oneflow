@@ -7,7 +7,6 @@ namespace {
 
 void CheckOpConf(const OperatorConf& op_conf) {
   CHECK(op_conf.ctrl_in_op_name().empty());
-  if (op_conf.foreign_input_conf().blob_conf().has_dim0_inner_shape()) { TODO(); }
   if (op_conf.foreign_input_conf().blob_conf().has_dim1_valid_num()) { TODO(); }
   if (op_conf.foreign_input_conf().blob_conf().has_dim2_valid_num()) { TODO(); }
 }
