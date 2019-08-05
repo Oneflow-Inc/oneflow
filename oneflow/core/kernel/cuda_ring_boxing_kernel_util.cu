@@ -1,6 +1,5 @@
 #include "oneflow/core/kernel/cuda_ring_boxing_kernel_util.h"
 #include "oneflow/core/kernel/kernel_util.cuh"
-#include <device_launch_parameters.h>
 
 namespace oneflow {
 
