@@ -688,6 +688,7 @@ void MakePullJob(const std::string& job_name, const std::string& op_name,
                  const ParallelBlobConf& parallel_blob_conf, Job* job) {
   auto* op_name2job_name =
       Global<InterUserJobInfo>::Get()->mutable_output_or_var_op_name2pull_job_name();
+  CHECK(op_name2job_name->find(op_name) == op_name2job_name->end());
   (*op_name2job_name)[op_name] = job_name;
   DataType data_type;
   JobBuilder job_builder(job);
@@ -726,6 +727,7 @@ void MakePushJob(const std::string& job_name, const std::string& op_name,
                  const ParallelBlobConf& parallel_blob_conf, Job* job) {
   auto* op_name2job_name =
       Global<InterUserJobInfo>::Get()->mutable_input_or_var_op_name2push_job_name();
+  CHECK(op_name2job_name->find(op_name) == op_name2job_name->end());
   (*op_name2job_name)[op_name] = job_name;
   DataType data_type;
   JobBuilder job_builder(job);
