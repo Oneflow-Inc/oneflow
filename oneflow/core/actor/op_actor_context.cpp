@@ -4,12 +4,10 @@ namespace oneflow {
 
 namespace actor {
 
+
 void OpActorCtx::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
   actor_id_ = task_proto.task_id();
   act_id_ = -1;
-  remaining_eord_cnt_ = 0;
-  total_reading_cnt_ = 0;
-  eord_regst_desc_ids_.clear();
   InitDeviceCtx(thread_ctx);
   if (task_proto.has_parallel_ctx()) {
     parallel_ctx_.reset(new ParallelContext(task_proto.parallel_ctx()));
@@ -21,66 +19,81 @@ void OpActorCtx::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) 
     exec_kernel_vec_.push_back(std::move(ek));
   }
 
-  {
-    for (const auto& pair : task_proto.produced_regst_desc()) {
-      Global<RegstMgr>::Get()->NewRegsts(pair.second, [this](Regst* regst) {
-        produced_regsts_[regst->regst_desc_id()].emplace_back(regst);
-      });
-      int64_t regst_desc_id = pair.second.regst_desc_id();
-      CHECK(name2regst_desc_id_.insert({pair.first, {regst_desc_id}}).second);
-      produced_regst2expected_act_id_[regst_desc_id] = act_id_;
-    }
-    for (const auto& pair : produced_regsts_) {
-      for (const auto& regst : pair.second) { produced_regst2reading_cnt_[regst.get()] = 0; }
+  for (const auto& pair : task_proto.produced_regst_desc()) {
+    Global<RegstMgr>::Get()->NewRegsts(pair.second, [this](Regst* regst) {
+      produced_regsts_[regst->regst_desc_id()].emplace_back(regst);
+    });
+    int64_t regst_desc_id = pair.second.regst_desc_id();
+    CHECK(name2regst_desc_id_.insert({pair.first, {regst_desc_id}}).second);
+    produced_regst2expected_act_id_[regst_desc_id] = act_id_;
+  }
+
+  for (const auto& pair : task_proto.consumed_regst_desc_id()) {
+    CHECK(name2regst_desc_id_.find(pair.first) == name2regst_desc_id_.end());
+    std::vector<int64_t>& regst_desc_id_vec = name2regst_desc_id_[pair.first];
+    for (int64_t regst_desc_id : pair.second.regst_desc_id()) {
+      regst_desc_id_vec.push_back(regst_desc_id);
     }
   }
 
-  {
-    for (const auto& pair : task_proto.consumed_regst_desc_id()) {
-      CHECK(name2regst_desc_id_.find(pair.first) == name2regst_desc_id_.end());
-      std::vector<int64_t>& regst_desc_id_vec = name2regst_desc_id_[pair.first];
-      for (int64_t regst_desc_id : pair.second.regst_desc_id()) {
-        regst_desc_id_vec.push_back(regst_desc_id);
-      }
-      remaining_eord_cnt_ += pair.second.regst_desc_id_size();
-    }
+  InsertRegstPattern(new CtrlPatternWrapper);
+  VirtualHandleRegstPattern(task_proto);
+  for (auto& pair : wrappers_) {
+    pair.second->Init(task_proto);
+    pair.second->ForEachRegstDescId([&](int64_t regst_desc_id) {
+          CHECK(regst_desc_id2wrapper_.emplace(regst_desc_id, pair.second.get()));
+    });
   }
-
-  rs_wrappers_.emplace_back(RSWrapperType::kCtrl, new CtrlRSWrapper);
-  VirtualExpandRegstSlotWrapper();
-  for (auto& pair : rs_wrappers_) { pair.second->Init(task_proto); }
 
   VirtualSetMsgHandler();
-  VirtualInitCustomized(task_proto);
 }
 
-void CtrlRSWrapper::DerivedInit(const TaskProto& task_proto) {
-  for (const auto& pair : task_proto.produced_regst_desc()) {
-    if (pair.second.regst_desc_type().has_ctrl_regst_desc()) {
-      InsertNewRegstDescId(true, pair.second.regst_desc_id());
-    }
-  }
-  for (const auto& pair : task_proto.produced_regst_desc()) {
-    if (pair.first == "in_ctrl") {
-      for (int regst_desc_id : pair.second.regst_desc_id()) {
-        InsertNewRegstDescId(false, pair.second.regst_desc_id());
-      }
-    }
-  }
+void OpActorCtx::UpdateWithRegstMsg(const ActorMsg& msg) {
+  regst_desc_id2wrapper_.at(msg.regst()->regst_desc_id())->UpdateWithRegstMsg(msg);
 }
 
-void NaiveRSWrapper::DerivedInit(const TaskProto& task_proto) {
-  for (const auto& pair : task_proto.produced_regst_desc()) {
-    if (pair.second.regst_desc_type().has_naive_regst_desc()) {
-      InsertNewRegstDescId(true, pair.second.regst_desc_id());
-    }
-  }
-  for (const auto& pair : task_proto.produced_regst_desc()) {
-    if (pair.second.regst_desc_type().has_naive_regst_desc()) {
-      InsertNewRegstDescId(false, pair.second.regst_desc_id());
-    }
-  }
+void OpActorCtx::UpdateWithEordMsg(const ActorMsg& msg) {
+  regst_desc_id2wrapper_.at(msg.regst()->regst_desc_id())->UpdateWithEordMsg(msg);
 }
+
+void OpActorCtx::UpdateWithCmdMsg(const ActorMsg& msg) {
+  CHECK_EQ(msg.actor_cmd(), ActorCmd::kStart);
+}
+
+void OpActorCtx::IsReady4Act() const {
+  for (const auto& pair : wrappers_) {
+    if (pair.second.IsReady4Act() == false) {
+      return false;
+    }
+  }
+  return true;
+}
+
+void OpActorCtx::Act() {
+
+}
+
+MsgHandler OpActorCtx::initial_msg_handler() const {
+  return initial_msg_handler_;
+}
+
+void OpActorCtx::InsertRegstPattern(RegstPatternWrapperIf* wrapper) {
+  CHECK(wrappers_.emplace(wrapper->type(), wrapper).second);
+}
+
+class GeneralOpActorCtx final : public OpActorCtx {
+ public:
+  GeneralOpActorCtx() = default;
+  ~GeneralOpActorCtx() = default;
+
+ private:
+  void VirtualHandleRegstPattern(const TaskProto& task_proto) override {
+    InsertRegstPattern(new NaivePatternWrapper);
+  }
+  void VirtualSetMsgHandler() override {
+    SetInitMsgHandler(&HandlerUtil::HandlerNormal);
+  }
+};
 
 }
 

@@ -35,8 +35,8 @@ class NewActor {
 };
 
 struct HandlerUtil final {
-  static int HandlerNormal(const ActorMsg&);
-  static int HandlerEord(const ActorMsg&);
+  static int HandlerNormal(OpActor*, const ActorMsg&);
+  static int HandlerEord(OpActor*, const ActorMsg&);
 };
 
 class OpActor final : public NewActor {
