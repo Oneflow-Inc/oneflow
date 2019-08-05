@@ -15,13 +15,15 @@ class val(blob_desc.BlobDesc):
                  broadcast = None):
         blob_desc.BlobDesc.__init__(
             self, shape, dtype, has_batch_dim, is_dynamic, split_axis, broadcast)
-        
+
     def ToInterfaceBlobConf(self):
         interface_blob_conf = op_conf_util.InterfaceBlobConf()
         interface_blob_conf.shape.dim.extend(self.shape_)
         interface_blob_conf.data_type = self.dtype_
         interface_blob_conf.has_dim0_valid_num = self.is_dynamic_
         interface_blob_conf.has_batch_dim = self.has_batch_dim_
+        if(self.is_dynamic_):
+            interface_blob_conf.dim0_inner_shape.dim.extend(self.shape_[0:1])
         assert self.split_axis_ is None or self.broadcast_ is None
         if self.split_axis_ is not None:
             interface_blob_conf.split_axis = self.split_axis_
