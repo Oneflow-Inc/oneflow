@@ -6,9 +6,9 @@
 
 namespace oneflow {
 
-void FilterVariableOps(std::vector<Job>&, std::vector<std::pair<OperatorConf, ParallelConf>>*);
-void MakeModelInitJob(const std::string&, Job*,
-                      const std::vector<std::pair<OperatorConf, ParallelConf>>&);
+void FilterVariableOps(std::vector<Job>&, HashMap<std::string, OperatorConf>*);
+void MakeModelInitJob(const std::string&, Job*, const HashMap<std::string, OperatorConf>&,
+                      const HashMap<std::string, ParallelBlobConf>&);
 
 }  // namespace oneflow
 
