@@ -1068,17 +1068,6 @@ message SquareOpConf {
   required string out = 2;
 }
 
-message ExpOpConf {
-  required string in = 1;
-  required string out = 2;
-}
-
-message ExpGradOpConf {
-  required string dy = 1;
-  required string y = 2;
-  required string dx = 3;
-}
-
 message BroadcastAddOpConf {
   required string a = 1;
   required string b = 2;
