@@ -191,7 +191,7 @@ __device__ __forceinline__ void DoBatchPackReduceOrCopy(const int64_t num_elem,
 }
 
 __device__ __forceinline__ int32_t AlignSizeToPackRegion(const void* ptr) {
-  return reinterpret_cast<uintptr_t>(ptr) % PACK_REGION_ALIGN;
+  return PACK_REGION_ALIGN - (reinterpret_cast<uintptr_t>(ptr) % PACK_REGION_ALIGN);
 }
 
 template<ReduceMethod method, typename T, int32_t NUM_IN, int32_t NUM_OUT>

@@ -299,7 +299,6 @@ void TaskGraph::BuildCtrlRegstDescInSameChain() {
   }
 }
 
-
 TaskNode* FindPredReduceIdentityTaskNode(TaskNode* succ) {
   TaskNode* current = succ;
   while (current) {

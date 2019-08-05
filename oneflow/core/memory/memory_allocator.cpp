@@ -1,7 +1,6 @@
 #include "oneflow/core/memory/memory_allocator.h"
 #include "oneflow/core/comm_network/comm_network.h"
 #include "oneflow/core/device/cuda_util.h"
-#include "oneflow/core/common/platform.h"
 
 namespace oneflow {
 
