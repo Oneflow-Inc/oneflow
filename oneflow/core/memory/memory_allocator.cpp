@@ -1,6 +1,7 @@
 #include "oneflow/core/memory/memory_allocator.h"
 #include "oneflow/core/comm_network/comm_network.h"
 #include "oneflow/core/device/cuda_util.h"
+#include "oneflow/core/job/resource_desc.h"
 
 namespace oneflow {
 
@@ -12,8 +13,12 @@ char* MemoryAllocator::Allocate(MemoryCase mem_case, std::size_t size) {
   const int memset_val = 0;
   char* dptr = nullptr;
   if (mem_case.has_host_mem()) {
-    if (mem_case.host_mem().used_by_device()) {
-      CudaCheck(cudaMallocHost(&dptr, size));
+    if (mem_case.host_mem().has_cuda_pinned_mem()) {
+      if (Global<ResourceDesc>::Get()->enable_numa_aware_cuda_malloc_host()) {
+        NumaAwareCudaMallocHost(mem_case.host_mem().cuda_pinned_mem().device_id(), &dptr, size);
+      } else {
+        CudaCheck(cudaMallocHost(&dptr, size));
+      }
     } else {
       dptr = reinterpret_cast<char*>(malloc(size));
       CHECK_NOTNULL(dptr);
@@ -32,7 +37,7 @@ char* MemoryAllocator::Allocate(MemoryCase mem_case, std::size_t size) {
 
 void MemoryAllocator::Deallocate(char* dptr, MemoryCase mem_case) {
   if (mem_case.has_host_mem()) {
-    if (mem_case.host_mem().used_by_device()) {
+    if (mem_case.host_mem().has_cuda_pinned_mem()) {
       CudaCheck(cudaFreeHost(dptr));
     } else {
       free(dptr);

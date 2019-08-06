@@ -13,19 +13,16 @@ void AddOptimizerOpConf(
 void BindTwoVariableOpObnSbpConf(const std::string& lhs_op_name, const std::string& rhs_op_name,
                                  JobBuilder* job_builder);
 template<typename T>
-void ConstructMdUpdtOpConf(
-    const VariableOp& op,
-    const std::function<const LogicalBlobId&(const std::string&)>& DiffLbi4BnInOp,
-    const LogicalBlobId& total_loss_instance_num_lbi, T*);
+void ConstructMdUpdtOpConf(const VariableOp& op, const LogicalBlobId& diff_lbi_of_var_out,
+                           const LogicalBlobId& total_loss_instance_num_lbi, T*);
 
 class GenerateOptimizerOpConfWrapperStruct final {
  public:
   using Func = std::function<void(const VariableOp&, const ParallelConf&, JobBuilder*,
-                                  const std::function<const LogicalBlobId&(const std::string&)>&,
-                                  const LogicalBlobId&)>;
+                                  const LogicalBlobId&, const LogicalBlobId&)>;
   GenerateOptimizerOpConfWrapperStruct(const Func& f) : func_(std::make_unique<Func>(f)) {}
   void Call(const VariableOp& op, const ParallelConf& parallel_conf, JobBuilder* job_builder,
-            const std::function<const LogicalBlobId&(const std::string&)>& DiffLbi4BnInOp,
+            const LogicalBlobId& diff_lbi_of_var_out,
             const LogicalBlobId& total_loss_instance_num_lbi) const;
 
  private:

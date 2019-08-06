@@ -27,14 +27,12 @@ void New() {
   JobDescProto proto;
   *proto.mutable_resource() = GetResource();
   TODO();
-  // Global<JobDesc>::New(proto);
   Global<IDMgr>::New();
 }
 
 void Delete() {
   Global<IDMgr>::Delete();
   TODO();
-  // Global<JobDesc>::Delete();
 }
 
 }  // namespace

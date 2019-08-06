@@ -14,25 +14,10 @@ void Forward(DeviceCtx* ctx, const Blob* prediction, const Blob* label, Blob* ou
       ctx, num_instances, num_classes, prediction->dptr<T>(), label->dptr<K>(), out->mut_dptr<T>());
 }
 
-template<DeviceType device_type, typename T, typename K>
-void Backward(DeviceCtx* ctx, const Blob* prediction, const Blob* label, const Blob* out_diff,
-              Blob* prediction_diff) {
-  const int64_t num_instances = label->shape().elem_cnt();
-  CHECK_EQ(prediction->shape().elem_cnt() % num_instances, 0);
-  const int64_t num_classes = prediction->shape().elem_cnt() / num_instances;
-  Memset<device_type>(ctx, prediction_diff->mut_dptr<T>(), 0,
-                      prediction_diff->ByteSizeOfDataContentField());
-  SparseCrossEntropyKernelUtil<device_type, T, K>::ComputeDiff(
-      ctx, num_instances, num_classes, prediction->dptr<T>(), label->dptr<K>(), out_diff->dptr<T>(),
-      prediction_diff->mut_dptr<T>());
-}
-
 template<DeviceType device_type, typename T>
 struct SparseCrossEntropyUntil final {
 #define MAKE_CROSS_ENTROPY_SWITCH_ENTRY(func_name, K) func_name<device_type, T, K>
   DEFINE_STATIC_SWITCH_FUNC(void, Forward, MAKE_CROSS_ENTROPY_SWITCH_ENTRY,
-                            MAKE_DATA_TYPE_CTRV_SEQ(INT_DATA_TYPE_SEQ));
-  DEFINE_STATIC_SWITCH_FUNC(void, Backward, MAKE_CROSS_ENTROPY_SWITCH_ENTRY,
                             MAKE_DATA_TYPE_CTRV_SEQ(INT_DATA_TYPE_SEQ));
 #undef MAKE_CROSS_ENTROPY_SWITCH_ENTRY
 };
@@ -49,7 +34,7 @@ void SparseCrossEntropyKernel<device_type, T>::ForwardDataContent(
                                                          ctx.device_ctx, prediction, label, out);
 }
 
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kSparseCrossEntropyConf, SparseCrossEntropyKernel,
-                           FLOATING_DATA_TYPE_SEQ);
+ADD_DEFAULT_KERNEL_CREATOR_WITH_GPU_HALF(OperatorConf::kSparseCrossEntropyConf,
+                                         SparseCrossEntropyKernel, FLOATING_DATA_TYPE_SEQ);
 
 }  // namespace oneflow

@@ -92,6 +92,8 @@ const PbMessage& GetMessageInPbMessage(const PbMessage& msg, int field_index);
 
 PbMessage* MutableMessageInPbMessage(PbMessage*, const std::string& field_name);
 PbMessage* MutableMessageInPbMessage(PbMessage*, int field_index);
+PbMessage* MutableRepeatedMessageInPbMessage(PbMessage* msg, const std::string& field_name,
+                                             int index);
 
 // Add In PbMessage RepeatedField
 
@@ -207,13 +209,6 @@ template<>
 struct hash<oneflow::OpBlobArg> {
   size_t operator()(const oneflow::OpBlobArg& oba) const {
     return std::hash<std::string>()(oba.op_name() + oba.bn_in_op());
-  }
-};
-
-template<>
-struct hash<oneflow::OperatorConf::OpTypeCase> {
-  size_t operator()(const oneflow::OperatorConf::OpTypeCase& op_type_case) const {
-    return std::hash<int64_t>()(static_cast<int64_t>(op_type_case));
   }
 };
 

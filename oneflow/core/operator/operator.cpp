@@ -210,7 +210,10 @@ void Operator::FixInDiffBlobDescs(std::function<BlobDesc*(const std::string&)> G
   }
 }
 
-void Operator::FixParallelDesc(ParallelDesc* pr_desc) const { VirtualFixParallelDesc(pr_desc); }
+void Operator::FixParallelDesc(ParallelDesc* pr_desc) const {
+  // TODO(): outdated, delete
+  VirtualFixParallelDesc(pr_desc);
+}
 
 void Operator::FixLbiWhenShareModel(const std::string& shared_op_name) {
   for (const std::string& model_bn : model_bns()) {

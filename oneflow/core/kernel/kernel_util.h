@@ -12,39 +12,20 @@
 #include "oneflow/core/persistence/snapshot.h"
 #include "oneflow/core/register/blob.h"
 #include "oneflow/core/common/switch_func.h"
+#include "oneflow/core/kernel/new_kernel_util.h"
 
 namespace oneflow {
 
 template<cudaMemcpyKind cpy_kind>
 void Memcpy(DeviceCtx*, void* dst, const void* src, size_t sz);
 
-template<DeviceType device_type>
-struct GetCudaMemcpyKind;
-template<>
-struct GetCudaMemcpyKind<DeviceType::kCPU> {
-  static const cudaMemcpyKind val = cudaMemcpyKind::cudaMemcpyHostToHost;
-};
-template<>
-struct GetCudaMemcpyKind<DeviceType::kGPU> {
-  static const cudaMemcpyKind val = cudaMemcpyKind::cudaMemcpyDeviceToDevice;
-};
 size_t GetTmpSizeForReduceSum(DataType data_type, int64_t sum_elem_num);
-
-template<DeviceType device_type>
-void Memcpy(DeviceCtx*, void* dst, const void* src, size_t sz,
-            cudaMemcpyKind kind = GetCudaMemcpyKind<device_type>::val);
 
 void AutoMemcpy(DeviceCtx* ctx, void* dst, const void* src, size_t sz,
                 const MemoryCase& dst_mem_case, const MemoryCase& src_mem_case);
 
 template<DeviceType device_type>
 void Memset(DeviceCtx*, void* dst, const char value, size_t sz);
-
-#if defined(__CUDACC__)
-#define OF_DEVICE_FUNC __device__ __host__ __forceinline__
-#else
-#define OF_DEVICE_FUNC
-#endif
 
 template<typename T>
 OF_DEVICE_FUNC T ReduceCoreAdd(const T x, const T y) {

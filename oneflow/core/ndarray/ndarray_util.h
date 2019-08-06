@@ -3,11 +3,14 @@
 
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/ndarray/xpu_var_ndarray.h"
+#include "oneflow/core/ndarray/xpu_var_ndarray_builder.h"
 #include "oneflow/core/ndarray/ndarray_reduce.h"
 #include "oneflow/core/ndarray/ndarray_apply_unary.h"
+#include "oneflow/core/ndarray/ndarray_apply_binary.h"
 #include "oneflow/core/ndarray/ndarray_apply_broadcast_unary.h"
 #include "oneflow/core/ndarray/ndarray_apply_broadcast_binary.h"
 #include "oneflow/core/ndarray/xpu_reduced_ndarray.h"
+#include "oneflow/core/ndarray/xpu_ndarray_assign.h"
 #include "oneflow/core/common/switch_func.h"
 #include "oneflow/core/common/util.h"
 
@@ -15,42 +18,132 @@ namespace oneflow {
 
 template<DeviceType device_type, typename T>
 struct NdarrayUtil final {
-  template<const T (*unary_func)(const T)>
+  static XpuVarNdarrayBuilder<const T> GetValNdarrayBuilder() {
+    return XpuVarNdarrayBuilder<const T>();
+  }
+  static XpuVarNdarrayBuilder<T> GetVarNdarrayBuilder() { return XpuVarNdarrayBuilder<T>(); }
+
+  static void Assign(DeviceCtx* ctx, const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x) {
+    return XpuNdarrayAssign<device_type, T>::Assign(ctx, y, x);
+  }
+
+  static void BroadcastTo(DeviceCtx* ctx, const XpuVarNdarray<T>& y,
+                          const XpuVarNdarray<const T>& x) {
+    return BroadcastIdentity(ctx, y, x);
+  }
+
+#define DEFINE_UNARY_FUNC(func_name)                               \
+  static void func_name(DeviceCtx* ctx, const XpuVarNdarray<T>& y, \
+                        const XpuVarNdarray<const T>& x) {         \
+    return Apply<UnaryFunc##func_name>(ctx, y, x);                 \
+  }
+  OF_PP_FOR_EACH_ATOMIC(DEFINE_UNARY_FUNC, ARITHMETIC_UNARY_FUNC_NAME_SEQ)
+#undef DEFINE_UNARY_FUNC
+
+#define DEFINE_BINARY_FUNC(func_name)                                                       \
+  static void func_name(DeviceCtx* ctx, const XpuVarNdarray<T>& y,                          \
+                        const XpuVarNdarray<const T>& a, const XpuVarNdarray<const T>& b) { \
+    return Apply<BinaryFunc##func_name>(ctx, y, a, b);                                      \
+  }
+  OF_PP_FOR_EACH_ATOMIC(DEFINE_BINARY_FUNC, ARITHMETIC_BINARY_FUNC_NAME_SEQ)
+#undef DEFINE_BINARY_FUNC
+
+#define DEFINE_BROADCAST_UNARY_FUNC(func_name)                                \
+  static void Broadcast##func_name(DeviceCtx* ctx, const XpuVarNdarray<T>& y, \
+                                   const XpuVarNdarray<const T>& x) {         \
+    return BroadcastApply<UnaryFunc##func_name>(ctx, y, x);                   \
+  }
+  OF_PP_FOR_EACH_ATOMIC(DEFINE_BROADCAST_UNARY_FUNC, ARITHMETIC_UNARY_FUNC_NAME_SEQ)
+#undef DEFINE_BROADCAST_UNARY_FUNC
+
+#define DEFINE_BROADCAST_BINARY_FUNC(func_name)                               \
+  static void Broadcast##func_name(DeviceCtx* ctx, const XpuVarNdarray<T>& y, \
+                                   const XpuVarNdarray<const T>& a,           \
+                                   const XpuVarNdarray<const T>& b) {         \
+    return BroadcastApply<BinaryFunc##func_name>(ctx, y, a, b);               \
+  }
+  OF_PP_FOR_EACH_ATOMIC(DEFINE_BROADCAST_BINARY_FUNC, ARITHMETIC_BINARY_FUNC_NAME_SEQ)
+#undef DEFINE_BROADCAST_BINARY_FUNC
+
+#define DEFINE_INPLACE_UNARY_FUNC(func_name)                                  \
+  static void Inplace##func_name(DeviceCtx* ctx, const XpuVarNdarray<T>& y) { \
+    InplaceApply<UnaryFunc##func_name>(ctx, y);                               \
+  }
+  OF_PP_FOR_EACH_ATOMIC(DEFINE_INPLACE_UNARY_FUNC, ARITHMETIC_UNARY_FUNC_NAME_SEQ)
+#undef DEFINE_INPLACE_UNARY_FUNC
+
+#define DEFINE_INPLACE_BINARY_FUNC(func_name)                               \
+  static void Inplace##func_name(DeviceCtx* ctx, const XpuVarNdarray<T>& y, \
+                                 const XpuVarNdarray<const T>& x) {         \
+    InplaceApply<BinaryFunc##func_name>(ctx, y, x);                         \
+  }
+  OF_PP_FOR_EACH_ATOMIC(DEFINE_INPLACE_BINARY_FUNC, ARITHMETIC_BINARY_FUNC_NAME_SEQ)
+#undef DEFINE_INPLACE_BINARY_FUNC
+
+#define DEFINE_INPLACE_BROADCAST_BINARY_FUNC(func_name)                              \
+  static void InplaceBroadcast##func_name(DeviceCtx* ctx, const XpuVarNdarray<T>& y, \
+                                          const XpuVarNdarray<const T>& x) {         \
+    return InplaceBroadcastApply<BinaryFunc##func_name>(ctx, y, x);                  \
+  }
+  OF_PP_FOR_EACH_ATOMIC(DEFINE_INPLACE_BROADCAST_BINARY_FUNC, ARITHMETIC_BINARY_FUNC_NAME_SEQ)
+#undef DEFINE_INPLACE_BROADCAST_BINARY_FUNC
+
+#define DEFINE_REDUCE_FUNC(func_name)                                                            \
+  static void Reduce##func_name(DeviceCtx* ctx, const XpuVarNdarray<T>& y,                       \
+                                const XpuVarNdarray<const T>& x,                                 \
+                                const XpuVarNdarray<T>& tmp_storage) {                           \
+    return NdarrayReduce<device_type, T, BinaryFunc##func_name>::Reduce(ctx, y, x, tmp_storage); \
+  }
+  OF_PP_FOR_EACH_ATOMIC(DEFINE_REDUCE_FUNC, REDUCE_BINARY_FUNC_NAME_SEQ)
+#undef DEFINE_REDUCE_FUNC
+
+ private:
+  template<template<typename> class unary_func>
   static void BroadcastApply(DeviceCtx* ctx, const XpuVarNdarray<T>& y,
                              const XpuVarNdarray<const T>& x) {
     CHECK_EQ(x.shape().NumAxes(), y.shape().NumAxes());
     return Unary<unary_func>::SwitchBroadcastApply(SwitchCase(x.shape().NumAxes()), ctx, y, x);
   }
-  static void BroadcastTo(DeviceCtx* ctx, const XpuVarNdarray<T>& y,
-                          const XpuVarNdarray<const T>& x) {
-    return BroadcastApply<UnaryFuncIdentity>(ctx, y, x);
-  }
-  template<const T (*binary_func)(const T, const T)>
+
+  template<template<typename> class binary_func>
   static void BroadcastApply(DeviceCtx* ctx, const XpuVarNdarray<T>& y,
                              const XpuVarNdarray<const T>& a, const XpuVarNdarray<const T>& b) {
     CHECK_EQ(a.shape().NumAxes(), y.shape().NumAxes());
     CHECK_EQ(b.shape().NumAxes(), y.shape().NumAxes());
     return Binary<binary_func>::SwitchBroadcastApply(SwitchCase(y.shape().NumAxes()), ctx, y, a, b);
   }
-  static void ReduceSum(DeviceCtx* ctx, const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x,
-                        const XpuVarNdarray<T>& tmp_storage) {
-    return NdarrayReduce<device_type, T, BinaryFuncAdd>::Reduce(ctx, y, x, tmp_storage);
-  }
-  static void ReduceMax(DeviceCtx* ctx, const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x,
-                        const XpuVarNdarray<T>& tmp_storage) {
-    return NdarrayReduce<device_type, T, BinaryFuncMax>::Reduce(ctx, y, x, tmp_storage);
-  }
-  static void ReduceMin(DeviceCtx* ctx, const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x,
-                        const XpuVarNdarray<T>& tmp_storage) {
-    return NdarrayReduce<device_type, T, BinaryFuncMin>::Reduce(ctx, y, x, tmp_storage);
-  }
-  template<const T (*unary_func)(const T)>
-  static void ImplaceApplyUnary(DeviceCtx* ctx, const XpuVarNdarray<T>& y) {
-    return NdarrayApplyUnary<device_type, T, unary_func>::ImplaceApply(ctx, y);
+
+  template<template<typename> class binary_func>
+  static void InplaceBroadcastApply(DeviceCtx* ctx, const XpuVarNdarray<T>& y,
+                                    const XpuVarNdarray<const T>& x) {
+    CHECK_EQ(x.shape().NumAxes(), y.shape().NumAxes());
+    return Binary<binary_func>::SwitchInplaceBroadcastApply(SwitchCase(y.shape().NumAxes()), ctx, y,
+                                                            x);
   }
 
- private:
-  template<const T (*unary_func)(const T)>
+  template<template<typename> class unary_func>
+  static void InplaceApply(DeviceCtx* ctx, const XpuVarNdarray<T>& y) {
+    return NdarrayApplyUnary<device_type, T, unary_func>::InplaceApply(ctx, y);
+  }
+
+  template<template<typename> class binary_func>
+  static void InplaceApply(DeviceCtx* ctx, const XpuVarNdarray<T>& y,
+                           const XpuVarNdarray<const T>& x) {
+    return NdarrayApplyBinary<device_type, T, binary_func>::InplaceApply(ctx, y, x);
+  }
+
+  template<template<typename> class unary_func>
+  static void Apply(DeviceCtx* ctx, const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x) {
+    return NdarrayApplyUnary<device_type, T, unary_func>::Apply(ctx, y, x);
+  }
+
+  template<template<typename> class binary_func>
+  static void Apply(DeviceCtx* ctx, const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& a,
+                    const XpuVarNdarray<const T>& b) {
+    return NdarrayApplyBinary<device_type, T, binary_func>::Apply(ctx, y, a, b);
+  }
+
+  template<template<typename> class unary_func>
   struct Unary final {
     template<int NDIMS>
     static void BroadcastApply(DeviceCtx* ctx, const XpuVarNdarray<T>& y,
@@ -64,18 +157,30 @@ struct NdarrayUtil final {
 #undef DEFINE_NDARRAY_BROADCAST_UNARY
   };
 
-  template<const T (*binary_func)(const T, const T)>
+  template<template<typename> class binary_func>
   struct Binary final {
     template<int NDIMS>
     static void BroadcastApply(DeviceCtx* ctx, const XpuVarNdarray<T>& y,
                                const XpuVarNdarray<const T>& a, const XpuVarNdarray<const T>& b) {
       return NdarrayApplyBroadcastBinary<device_type, T, NDIMS, binary_func>::Apply(ctx, y, a, b);
     }
-#define DEFINE_NDARRAY_BROADCAST_BINARY(func_name, NDIMS) \
+    template<int NDIMS>
+    static void InplaceBroadcastApply(DeviceCtx* ctx, const XpuVarNdarray<T>& y,
+                                      const XpuVarNdarray<const T>& x) {
+      return NdarrayApplyBroadcastBinary<device_type, T, NDIMS, binary_func>::InplaceApply(ctx, y,
+                                                                                           x);
+    }
+#define MAKE_NDARRAY_BROADCAST_BINARY(func_name, NDIMS) \
   NdarrayUtil<device_type, T>::Binary<binary_func>::func_name<NDIMS>
-    DEFINE_STATIC_SWITCH_FUNC(void, BroadcastApply, DEFINE_NDARRAY_BROADCAST_BINARY,
+    DEFINE_STATIC_SWITCH_FUNC(void, BroadcastApply, MAKE_NDARRAY_BROADCAST_BINARY,
                               MAKE_NDIM_CTRV_SEQ(DIM_SEQ));
-#undef DEFINE_NDARRAY_BROADCAST_BINARY
+#undef MAKE_NDARRAY_BROADCAST_BINARY
+
+#define MAKE_NDARRAY_INPLACE_BROADCAST_BINARY(func_name, NDIMS) \
+  NdarrayUtil<device_type, T>::Binary<binary_func>::func_name<NDIMS>
+    DEFINE_STATIC_SWITCH_FUNC(void, InplaceBroadcastApply, MAKE_NDARRAY_INPLACE_BROADCAST_BINARY,
+                              MAKE_NDIM_CTRV_SEQ(DIM_SEQ));
+#undef MAKE_NDARRAY_INPLACE_BROADCAST_BINARY
   };
 };
 

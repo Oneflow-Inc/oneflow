@@ -3,14 +3,14 @@
 
 namespace oneflow {
 
-template<typename T, const T (*binary_func)(const T, const T), typename A, typename B>
+template<typename T, template<typename> class binary_func, typename A, typename B>
 class XpuBinaryFuncNdarray final {
  public:
   OF_DEVICE_FUNC XpuBinaryFuncNdarray(const A& a, const B& b) : a_(a), b_(b) {}
 
   template<int NDIMS>
   OF_DEVICE_FUNC T Get(int64_t offset) const {
-    return binary_func(a_.Get<NDIMS>(offset), b_.Get<NDIMS>(offset));
+    return binary_func<T>::Invoke(a_.Get<NDIMS>(offset), b_.Get<NDIMS>(offset));
   }
 
  private:

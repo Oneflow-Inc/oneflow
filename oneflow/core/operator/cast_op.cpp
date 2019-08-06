@@ -19,17 +19,6 @@ void CastOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlob
   out_blob_desc->set_data_type(op_conf().cast_conf().data_type());
 }
 
-void CastOp::FixSbpSignature(
-    const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-    SbpSignature* sbp_signature) const {
-  auto* bn2sbp = sbp_signature->mutable_bn_in_op2sbp_parallel();
-  if (bn2sbp->at("out").has_partial_sum_parallel()  // TODO: data_type is float16
-      && GlobalJobDesc().all_reduce_fp16()) {
-    bn2sbp->at("in").mutable_broadcast_parallel();
-    bn2sbp->at("out").mutable_broadcast_parallel();
-  }
-}
-
 void CastOp::GetSbpSignatures(
     const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
     SbpSignatureList* sbp_sig_list) const {

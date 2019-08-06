@@ -6,8 +6,15 @@
 
 namespace oneflow {
 
-template<DeviceType device_type, typename T, int NDIMS, const T (*binary_func)(const T, const T)>
-struct NdarrayApplyBroadcastBinary final {
+template<DeviceType device_type, typename T, int NDIMS, template<typename> class binary_func,
+         typename Enable = void>
+struct NdarrayApplyBroadcastBinary;
+
+template<DeviceType device_type, typename T, int NDIMS, template<typename> class binary_func>
+struct NdarrayApplyBroadcastBinary<
+    device_type, T, NDIMS, binary_func,
+    typename std::enable_if<std::is_same<T, typename DevDType<device_type, T>::type>::value>::type>
+    final {
   static void Apply(DeviceCtx* ctx, const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& a,
                     const XpuVarNdarray<const T>& b) {
     using NdarrayAssign = XpuNdarrayAssign<device_type, T>;
@@ -17,15 +24,24 @@ struct NdarrayApplyBroadcastBinary final {
     return BroadcastBinary::Apply(ctx, y, a, b);
     if (a.shape() == y.shape()) {
       NdarrayAssign::Assign(ctx, y, a);
-      BroadcastBinary::ImplaceApply(ctx, y, b);
+      BroadcastBinary::InplaceApply(ctx, y, b);
     } else if (b.shape() == y.shape()) {
       NdarrayAssign::Assign(ctx, y, b);
-      BroadcastBinary::ImplaceApply(ctx, y, a);
+      BroadcastBinary::InplaceApply(ctx, y, a);
     } else {
       BroadcastBinary::Apply(ctx, y, a, b);
     }
   }
 
+  static void InplaceApply(DeviceCtx* ctx, const XpuVarNdarray<T>& y,
+                           const XpuVarNdarray<const T>& x) {
+    using BroadcastBinary =
+        NdarrayApplyBroadcastBinaryCoreWrapper<device_type, T, NDIMS, binary_func>;
+    CheckBroadcastable(y, reinterpret_cast<const XpuVarNdarray<const T>&>(y), x);
+    return BroadcastBinary::InplaceApply(ctx, y, x);
+  }
+
+ private:
   static void CheckBroadcastable(const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& a,
                                  const XpuVarNdarray<const T>& b) {
     CHECK_EQ(y.shape().NumAxes(), a.shape().NumAxes());
@@ -36,6 +52,27 @@ struct NdarrayApplyBroadcastBinary final {
         CHECK(a.shape().At(i) == 1 || b.shape().At(i) == 1);
       }
     }
+  }
+};
+
+template<DeviceType device_type, typename T, int NDIMS, template<typename> class binary_func>
+struct NdarrayApplyBroadcastBinary<
+    device_type, T, NDIMS, binary_func,
+    typename std::enable_if<!std::is_same<T, typename DevDType<device_type, T>::type>::value>::type>
+    final {
+  using NewT = typename DevDType<device_type, T>::type;
+  static void Apply(DeviceCtx* ctx, const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& a,
+                    const XpuVarNdarray<const T>& b) {
+    return NdarrayApplyBroadcastBinary<device_type, NewT, NDIMS, binary_func>::Apply(
+        ctx, reinterpret_cast<const XpuVarNdarray<NewT>&>(y),
+        reinterpret_cast<const XpuVarNdarray<const NewT>&>(a),
+        reinterpret_cast<const XpuVarNdarray<const NewT>&>(b));
+  }
+  static void InplaceApply(DeviceCtx* ctx, const XpuVarNdarray<T>& y,
+                           const XpuVarNdarray<const T>& x) {
+    return NdarrayApplyBroadcastBinary<device_type, NewT, NDIMS, binary_func>::InplaceApply(
+        ctx, reinterpret_cast<const XpuVarNdarray<NewT>&>(y),
+        reinterpret_cast<const XpuVarNdarray<const NewT>&>(x));
   }
 };
 

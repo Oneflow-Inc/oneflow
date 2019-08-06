@@ -529,7 +529,7 @@ void Graph<NodeType, EdgeType>::ForEachConnectedComponent(
     const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachConnected,
     const std::function<void(const HashSet<NodeType*>&)>& Handler) const {
   auto ForEachPotentialStart = [&](const std::function<void(NodeType*)>& Handler) {
-    BfsForEachNode(starts, ForEachConnected, Handler);
+    BfsForEachNode(starts, &NodeType::ForEachNodeOnInOutEdge, Handler);
   };
   ForEachConnectedComponent(ForEachPotentialStart, ForEachConnected, Handler);
 }

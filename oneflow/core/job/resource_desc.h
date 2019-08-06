@@ -29,6 +29,9 @@ class ResourceDesc final {
   size_t reserved_device_mem_byte() const { return resource_.reserved_device_mem_mbyte() * kMB; }
   int64_t GetMachineId(const std::string& addr) const;
   bool use_rdma() const { return resource_.use_rdma(); }
+  bool enable_numa_aware_cuda_malloc_host() const {
+    return resource_.enable_numa_aware_cuda_malloc_host();
+  }
 
  private:
   friend class Global<ResourceDesc>;
