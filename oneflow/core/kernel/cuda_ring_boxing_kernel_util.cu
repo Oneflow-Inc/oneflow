@@ -3,8 +3,6 @@
 
 namespace oneflow {
 
-#ifdef WITH_CUDA
-
 namespace {
 
 using Pack = ulong2;
@@ -315,8 +313,7 @@ size_t GetCudaRingBoxingPackRegionSize() { return PACK_REGION_SIZE; }
 
 #define INSTANTIATE_CUDA_RING_ALL_REDUCE_KERNEL_UTIL(type_cpp, type_proto) \
   template struct CudaRingBoxingKernelUtil<ReduceMethod::kSum, type_cpp>;
-OF_PP_FOR_EACH_TUPLE(INSTANTIATE_CUDA_RING_ALL_REDUCE_KERNEL_UTIL, FLOATING_DATA_TYPE_SEQ)
-
-#endif
+OF_PP_FOR_EACH_TUPLE(INSTANTIATE_CUDA_RING_ALL_REDUCE_KERNEL_UTIL,
+                     FLOATING_DATA_TYPE_SEQ HALF_DATA_TYPE_SEQ)
 
 }  // namespace oneflow

@@ -55,8 +55,12 @@ void CudaRingAllReduceKernel<T>::Forward(
   CudaRingBoxingKernelUtil<ReduceMethod::kSum, T>::LaunchGenericRingStep(ctx.device_ctx, params);
 }
 
-ADD_CPU_DEFAULT_KERNEL_CREATOR(OperatorConf::kCudaRingAllReduceConf, CudaRingAllReduceKernel,
-                               FLOATING_DATA_TYPE_SEQ);
+REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kCudaRingAllReduceConf, DeviceType::kGPU, float,
+                                      CudaRingAllReduceKernel<float>);
+REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kCudaRingAllReduceConf, DeviceType::kGPU,
+                                      double, CudaRingAllReduceKernel<double>);
+REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kCudaRingAllReduceConf, DeviceType::kGPU,
+                                      float16, CudaRingAllReduceKernel<float16>);
 
 #endif
 
