@@ -34,6 +34,11 @@ struct CudaRingBoxingKernelUtil {
   static void LaunchGenericRingStep(DeviceCtx* ctx, CudaRingBoxingStepParams<T> params);
 };
 
+template<ReduceMethod method>
+struct CudaRingBoxingKernelUtil<method, float16> {
+  static void LaunchGenericRingStep(DeviceCtx* ctx, CudaRingBoxingStepParams<float16> params);
+};
+
 size_t GetCudaRingBoxingPackRegionSize();
 
 #endif

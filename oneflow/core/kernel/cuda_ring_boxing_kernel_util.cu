@@ -1,5 +1,6 @@
 #include "oneflow/core/kernel/cuda_ring_boxing_kernel_util.h"
 #include "oneflow/core/kernel/kernel_util.cuh"
+#include <device_launch_parameters.h>
 
 namespace oneflow {
 
@@ -309,11 +310,29 @@ void CudaRingBoxingKernelUtil<method, T>::LaunchGenericRingStep(
   }
 }
 
+template<ReduceMethod method>
+void CudaRingBoxingKernelUtil<method, float16>::LaunchGenericRingStep(
+    DeviceCtx* ctx, CudaRingBoxingStepParams<float16> params) {
+  CudaRingBoxingStepParams<half> half_params{};
+  half_params.recv = params.recv;
+  half_params.in = params.in;
+  half_params.send = params.send;
+  half_params.out = params.out;
+  half_params.num_links = params.num_links;
+  FOR_RANGE(int32_t, i, 0, params.num_links) {
+    half_params.links[i].recv = reinterpret_cast<const half*>(params.links[i].recv);
+    half_params.links[i].in = reinterpret_cast<const half*>(params.links[i].in);
+    half_params.links[i].send = reinterpret_cast<half*>(params.links[i].send);
+    half_params.links[i].out = reinterpret_cast<half*>(params.links[i].out);
+  }
+  CudaRingBoxingKernelUtil<method, half>::LaunchGenericRingStep(ctx, half_params);
+}
+
 size_t GetCudaRingBoxingPackRegionSize() { return PACK_REGION_SIZE; }
 
 #define INSTANTIATE_CUDA_RING_ALL_REDUCE_KERNEL_UTIL(type_cpp, type_proto) \
   template struct CudaRingBoxingKernelUtil<ReduceMethod::kSum, type_cpp>;
 OF_PP_FOR_EACH_TUPLE(INSTANTIATE_CUDA_RING_ALL_REDUCE_KERNEL_UTIL,
-                     FLOATING_DATA_TYPE_SEQ HALF_DATA_TYPE_SEQ)
+                     FLOATING_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ)
 
 }  // namespace oneflow
