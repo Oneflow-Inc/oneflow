@@ -25,7 +25,7 @@ char* MemoryAllocator::Allocate(MemoryCase mem_case, std::size_t size) {
     }
     memset(dptr, memset_val, size);
   } else if (mem_case.has_device_cuda_mem()) {
-    CudaCheck(cudaSetDevice(mem_case.device_cuda_mem().device_id()));
+    CudaCurrentDeviceGuard guard(mem_case.device_cuda_mem().device_id());
     CudaCheck(cudaMalloc(&dptr, size));
     CudaCheck(cudaMemset(dptr, memset_val, size));
   } else {
@@ -43,7 +43,7 @@ void MemoryAllocator::Deallocate(char* dptr, MemoryCase mem_case) {
       free(dptr);
     }
   } else if (mem_case.has_device_cuda_mem()) {
-    CudaCheck(cudaSetDevice(mem_case.device_cuda_mem().device_id()));
+    CudaCurrentDeviceGuard guard(mem_case.device_cuda_mem().device_id());
     CudaCheck(cudaFree(dptr));
   } else {
     UNIMPLEMENTED();
