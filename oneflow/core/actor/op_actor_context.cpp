@@ -85,7 +85,7 @@ void OpActorCtx::Act() {
 
 void OpActorCtx::HandleRegstMsgAfterAct() {
   for (auto& pair : wrappers_) {
-    pair.second->HandleRegstMsgAfterAct();
+    pair.second->HandleRegstMsgAfterAct(this);
   }
 }
 

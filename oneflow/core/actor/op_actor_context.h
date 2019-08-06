@@ -11,6 +11,10 @@ class OpActorCtx {
  public:
   using ProducedRegstType = HashMap<int64_t, std::vector<std::unique_ptr<Regst>>>;
 
+  int64_t act_id() const { return act_id_; }
+  std::unique_ptr<DeviceCtx>& mut_device_ctx() { return device_ctx_; }
+  const ParallelContext* parallel_ctx() const { return parallel_ctx_.get(); }
+
   void Init(const TaskProto&, const ThreadCtx&);
   void UpdateWithRegstMsg(const ActorMsg&);
   void UpdateWithEordMsg(const ActorMsg&);
