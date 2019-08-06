@@ -1,5 +1,6 @@
 #include "oneflow/core/kernel/conv_kernel.h"
 #include "oneflow/core/kernel/kernel_util.h"
+#include "oneflow/core/kernel/new_kernel_util.h"
 
 namespace oneflow {
 
@@ -19,8 +20,8 @@ void ConvKernelIf<device_type, T>::InitConstBufBlobs(
       && (device_type == DeviceType::kCPU || this->EnableCudnn() == false)) {
     InitializerConf bias_multiplier_initializer_conf;
     bias_multiplier_initializer_conf.mutable_constant_conf()->set_value(1.0f);
-    KernelUtil<device_type, T>::InitializeWithConf(ctx, bias_multiplier_initializer_conf, 0,
-                                                   BnInOp2Blob("bias_multiplier"));
+    NewKernelUtil<device_type>::InitializeWithConstConf(
+        ctx, bias_multiplier_initializer_conf.constant_conf(), BnInOp2Blob("bias_multiplier"));
   }
 }
 
@@ -175,9 +176,12 @@ void ConvKernelImplByIm2Col<device_type, T>::BiasBackward(
   }
 }
 
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kConv1DConf, ConvKernel, FLOATING_DATA_TYPE_SEQ);
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kConv2DConf, ConvKernel, FLOATING_DATA_TYPE_SEQ);
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kConv3DConf, ConvKernel, FLOATING_DATA_TYPE_SEQ);
+ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kConv1DConf, ConvKernel,
+                           FLOATING_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ);
+ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kConv2DConf, ConvKernel,
+                           FLOATING_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ);
+ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kConv3DConf, ConvKernel,
+                           FLOATING_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ);
 
 template<typename T>
 ColBufWriter<T>::ColBufWriter(const T* src_ptr, T* dst_ptr, int64_t c_size, int64_t id_size,
@@ -398,6 +402,7 @@ void ConvKernelUtil<DeviceType::kCPU, T>::NDHWCCol2Im(
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_CONV_KERNEL_IF, DEVICE_TYPE_SEQ,
                                  FLOATING_DATA_TYPE_SEQ);
+template class ConvKernelIf<DeviceType::kGPU, float16>;
 
 #define INSTANTIATE_CONV_KERNEL(type_cpp, type_proto) \
   template class ConvKernel<DeviceType::kCPU, type_cpp>;

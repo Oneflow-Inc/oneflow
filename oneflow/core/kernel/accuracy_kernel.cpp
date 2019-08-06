@@ -76,7 +76,7 @@ struct AccuracyKernelUtil<DeviceType::kCPU, PredType, LabelType> {
           if (++cnt > top_k) { break; }
         }
       }
-      if (cnt <= top_k) { correct += weight ? weight[i] : OneVal<PredType>::value; }
+      if (cnt <= top_k) { correct += weight ? weight[i] : GetOneVal<PredType>(); }
     }
     *accuracyData = correct;
   }

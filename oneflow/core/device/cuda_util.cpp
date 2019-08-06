@@ -1,4 +1,5 @@
 #include "oneflow/core/device/cuda_util.h"
+#include "oneflow/core/common/platform.h"
 
 namespace oneflow {
 
@@ -80,6 +81,79 @@ size_t GetAvailableGpuMemSize(int dev_id) {
   cudaDeviceProp prop;
   cudaGetDeviceProperties(&prop, dev_id);
   return prop.totalGlobalMem;
+}
+
+#ifdef PLATFORM_POSIX
+
+namespace {
+
+void ParseCpuMask(const std::string& cpu_mask, cpu_set_t* cpu_set) {
+  CPU_ZERO_S(sizeof(cpu_set_t), cpu_set);
+  const char* const head = cpu_mask.c_str();
+  const char* const tail = head + cpu_mask.size();
+  const char* pos = head;
+  std::vector<uint64_t> masks;
+  while (pos < tail) {
+    char* end_pos = nullptr;
+    const uint64_t mask = std::strtoul(pos, &end_pos, 16);
+    if (pos != head) {
+      CHECK_EQ(end_pos - pos, 8);
+    } else {
+      CHECK_NE(end_pos, pos);
+      CHECK_LE(end_pos - pos, 8);
+    }
+    if (end_pos < tail) { CHECK_EQ(*end_pos, ','); }
+    masks.push_back(mask);
+    pos = end_pos + 1;
+  }
+  int32_t cpu = 0;
+  for (int64_t i = masks.size() - 1; i >= 0; i--) {
+    for (uint64_t b = 0; b < 32; b++) {
+      if ((masks.at(i) & (1UL << b)) != 0) { CPU_SET_S(cpu, sizeof(cpu_set_t), cpu_set); }
+      cpu += 1;
+    }
+  }
+}
+
+std::string CudaDeviceGetCpuMask(int32_t dev_id) {
+  std::vector<char> pci_bus_id_buf(sizeof("0000:00:00.0"));
+  CudaCheck(cudaDeviceGetPCIBusId(pci_bus_id_buf.data(), static_cast<int>(pci_bus_id_buf.size()),
+                                  dev_id));
+  const std::string pci_bus_id(pci_bus_id_buf.data(), pci_bus_id_buf.size() - 1);
+  const std::string pci_bus_id_short = pci_bus_id.substr(0, sizeof("0000:00") - 1);
+  const std::string local_cpus_file =
+      "/sys/class/pci_bus/" + pci_bus_id_short + "/device/" + pci_bus_id + "/local_cpus";
+  char* cpu_map_path = realpath(local_cpus_file.c_str(), nullptr);
+  CHECK_NOTNULL(cpu_map_path);
+  std::ifstream is(cpu_map_path);
+  std::string cpu_mask;
+  CHECK(std::getline(is, cpu_mask).good());
+  is.close();
+  free(cpu_map_path);
+  return cpu_mask;
+}
+
+void CudaDeviceGetCpuAffinity(int32_t dev_id, cpu_set_t* cpu_set) {
+  const std::string cpu_mask = CudaDeviceGetCpuMask(dev_id);
+  ParseCpuMask(cpu_mask, cpu_set);
+}
+
+}  // namespace
+
+#endif
+
+void NumaAwareCudaMallocHost(int32_t dev, void** ptr, size_t size) {
+#ifdef PLATFORM_POSIX
+  cpu_set_t new_cpu_set;
+  CudaDeviceGetCpuAffinity(dev, &new_cpu_set);
+  cpu_set_t saved_cpu_set;
+  CHECK_EQ(sched_getaffinity(0, sizeof(cpu_set_t), &saved_cpu_set), 0);
+  CHECK_EQ(sched_setaffinity(0, sizeof(cpu_set_t), &new_cpu_set), 0);
+  CudaCheck(cudaMallocHost(ptr, size));
+  CHECK_EQ(sched_setaffinity(0, sizeof(cpu_set_t), &saved_cpu_set), 0);
+#else
+  UNIMPLEMENTED();
+#endif
 }
 
 cudaDataType_t GetCudaDataType(DataType val) {

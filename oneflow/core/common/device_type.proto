@@ -1,0 +1,8 @@
+syntax = "proto2";
+package oneflow;
+
+enum DeviceType {
+  kInvalidDevice = 0;
+  kCPU = 1;
+  kGPU = 2;
+}
