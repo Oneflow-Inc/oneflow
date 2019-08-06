@@ -633,7 +633,7 @@ std::vector<HashSet<int32_t>> GetMutualExclusionJobGroups() {
     job_groups.push_back(HashSet<int32_t>());
     FOR_RANGE(int32_t, i, 0, job_size) { job_groups.front().emplace(i); }
     return job_groups;
-  } else if (strategy->has_palallelism_priority()) {
+  } else if (strategy->has_parallelism_priority()) {
     // do nothing
   } else if (strategy->has_custom_parallelism()) {
     auto* job_name2job_id = Global<JobName2JobId>::Get();
