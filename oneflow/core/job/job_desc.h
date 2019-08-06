@@ -34,8 +34,26 @@ class JobDesc final {
   int64_t RecordPieceSize() const { return job_.job_conf().piece_size(); }
   int64_t piece_num_of_experiment_phase() const;
   bool enable_experiment_run() const;
+  float available_zone_mem_ratio() const;
+  size_t persistence_buf_byte() const;
+  size_t reserved_host_mem_byte() const;
+  size_t reserved_device_mem_byte() const;
+  bool save_downloaded_file_to_local_fs() const;
+  size_t rdma_mem_block_byte() const;
+  size_t rdma_recv_msg_buf_byte() const;
   bool enable_mem_sharing() const { return job_.job_conf().enable_mem_sharing(); }
   bool enable_inplace() const { return job_.job_conf().enable_inplace(); }
+  bool enable_true_half_config_when_conv() const {
+    return job_.job_conf().enable_true_half_config_when_conv();
+  }
+  bool enable_float_compute_for_half_gemm() const {
+    return job_.job_conf().enable_float_compute_for_half_gemm();
+  }
+  bool enable_auto_mixed_precision() const { return job_.job_conf().enable_auto_mixed_precision(); }
+  const FileSystemConf& data_fs_conf() const;
+  const FileSystemConf& snapshot_fs_conf() const;
+  bool enable_write_snapshot() const;
+  bool write_snapshot_to_master() const { return snapshot_fs_conf().has_localfs_conf(); }
   bool enable_blob_mem_sharing() const { return job_.job_conf().enable_blob_mem_sharing(); }
   bool enable_nccl() const { return job_.job_conf().enable_nccl(); }
   bool use_nccl_inter_node_communication() const {
@@ -62,6 +80,7 @@ class JobDesc final {
   float weight_l2() const;
   float bias_l2() const;
   int32_t DataPartNum() const;
+  int32_t loss_scale_factor() const;
 
  private:
   void Init();

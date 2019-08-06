@@ -33,6 +33,18 @@ struct LayerNormKernelUtil {
                                 double epsilon, Blob* in_diff, Blob* scale_diff, Blob* bias_diff);
 };
 
+template<DeviceType device_type, typename T>
+struct LayerNormConstBufInitUtil {
+  static void InitConstBufBlobsImpl(DeviceCtx* ctx, const InitializerConf& initializer_conf,
+                                    uint32_t random_seed, Blob* blob);
+};
+
+template<DeviceType device_type>
+struct LayerNormConstBufInitUtil<device_type, float16> {
+  static void InitConstBufBlobsImpl(DeviceCtx* ctx, const InitializerConf& initializer_conf,
+                                    uint32_t random_seed, Blob* blob);
+};
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_KERNEL_LAYER_NORM_KERNEL_H_

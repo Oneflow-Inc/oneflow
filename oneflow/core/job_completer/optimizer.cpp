@@ -4,20 +4,35 @@ namespace oneflow {
 
 void GenerateOptimizerOpConfWrapperStruct::Call(
     const VariableOp& var_op, const ParallelConf& parallel_conf, JobBuilder* job_builder,
-    const std::function<const LogicalBlobId&(const std::string&)>& DiffLbi4BnInOp,
+    const LogicalBlobId& diff_lbi_of_var_out,
     const LogicalBlobId& total_loss_instance_num_lbi) const {
-  (*func_)(var_op, parallel_conf, job_builder, DiffLbi4BnInOp, total_loss_instance_num_lbi);
+  (*func_)(var_op, parallel_conf, job_builder, diff_lbi_of_var_out, total_loss_instance_num_lbi);
 }
 
-void GenerateOptimizerOpConfIf(
-    const VariableOp& var_op, const ParallelConf& parallel_conf, JobBuilder* job_builder,
-    const std::function<const LogicalBlobId&(const std::string&)>& DiffLbi4BnInOp,
-    const LogicalBlobId& total_loss_instance_num_lbi) {
+void GenerateOptimizerOpConfIf(const VariableOp& var_op, const ParallelConf& parallel_conf,
+                               JobBuilder* job_builder, const LogicalBlobId& diff_lbi_of_var_out,
+                               const LogicalBlobId& total_loss_instance_num_lbi) {
   const auto& train_conf = GlobalJobDesc().job_conf().predict_conf().tmp_split_fw_bw_train_conf();
   auto optimizer_case = train_conf.model_update_conf().normal_mdupdt_case();
-  std::unique_ptr<GenerateOptimizerOpConfWrapperStruct> obj;
-  obj.reset(NewObj<GenerateOptimizerOpConfWrapperStruct>(optimizer_case));
-  obj->Call(var_op, parallel_conf, job_builder, DiffLbi4BnInOp, total_loss_instance_num_lbi);
+  auto* obj = NewObj<GenerateOptimizerOpConfWrapperStruct>(optimizer_case);
+  obj->Call(var_op, parallel_conf, job_builder, diff_lbi_of_var_out, total_loss_instance_num_lbi);
+}
+
+void GenerateDownScaleOpConf(const std::string& name, const ParallelConf& parallel_conf,
+                             JobBuilder* job_builder, LogicalBlobId* diff_lbi_of_var_out) {
+  int32_t loss_scale_factor = GlobalJobDesc().loss_scale_factor();
+  if (loss_scale_factor == 1) { return; }
+  float down_scale_factor = 1.0 / loss_scale_factor;
+
+  OperatorConf down_scale_mul_op;
+  down_scale_mul_op.set_name(name);
+  ScalarMulOpConf* conf = down_scale_mul_op.mutable_scalar_mul_conf();
+  conf->set_in(GenLogicalBlobName(*diff_lbi_of_var_out));
+  conf->set_out("out");
+  conf->set_float_operand(down_scale_factor);
+
+  *diff_lbi_of_var_out = GenLogicalBlobId(name + "/out");
+  job_builder->AddOps(parallel_conf, {down_scale_mul_op});
 }
 
 void AddOptimizerOpConf(
@@ -28,14 +43,13 @@ void AddOptimizerOpConf(
     const VariableOp* var_op = dynamic_cast<const VariableOp*>(&op_node->op());
     if (var_op == nullptr) { return; }
     if (lbi2diff_lbi.find(var_op->BnInOp2Lbi(var_op->SoleObn())) == lbi2diff_lbi.end()) { return; }
-    std::vector<OperatorConf> optimizer_op_confs;
-    auto DiffLbi4BnInOp = [&](const std::string& bn) -> const LogicalBlobId& {
-      return lbi2diff_lbi.at(var_op->BnInOp2Lbi(bn));
-    };
+
+    LogicalBlobId diff_lbi_of_var_out = lbi2diff_lbi.at(var_op->BnInOp2Lbi(var_op->SoleObn()));
     const auto& parallel_desc = op_node->parallel_desc();
-    GenerateOptimizerOpConfIf(*var_op, op_node->parallel_desc().parallel_conf(), &job_builder,
-                              DiffLbi4BnInOp, LossInstanceNum4ParallelDesc(parallel_desc));
-    job_builder.AddOps(parallel_desc.parallel_conf(), optimizer_op_confs);
+    GenerateDownScaleOpConf(var_op->op_name() + "-down_scale", parallel_desc.parallel_conf(),
+                            &job_builder, &diff_lbi_of_var_out);
+    GenerateOptimizerOpConfIf(*var_op, parallel_desc.parallel_conf(), &job_builder,
+                              diff_lbi_of_var_out, LossInstanceNum4ParallelDesc(parallel_desc));
   });
 }
 
@@ -46,13 +60,11 @@ void BindTwoVariableOpObnSbpConf(const std::string& lhs_op_name, const std::stri
 }
 
 template<typename T>
-void ConstructMdUpdtOpConf(
-    const VariableOp& op,
-    const std::function<const LogicalBlobId&(const std::string&)>& DiffLbi4BnInOp,
-    const LogicalBlobId& total_loss_instance_num_lbi, T* mdupdt_op_conf) {
+void ConstructMdUpdtOpConf(const VariableOp& op, const LogicalBlobId& diff_lbi_of_var_out,
+                           const LogicalBlobId& total_loss_instance_num_lbi, T* mdupdt_op_conf) {
   const auto& train_conf = GlobalJobDesc().job_conf().predict_conf().tmp_split_fw_bw_train_conf();
   *mdupdt_op_conf->mutable_user_conf() = train_conf.model_update_conf();
-  mdupdt_op_conf->set_model_diff(GenLogicalBlobName(DiffLbi4BnInOp("out")));
+  mdupdt_op_conf->set_model_diff(GenLogicalBlobName(diff_lbi_of_var_out));
   mdupdt_op_conf->set_total_instance_num_diff(GenLogicalBlobName(total_loss_instance_num_lbi));
   mdupdt_op_conf->set_model(GenLogicalBlobName(op.BnInOp2Lbi("out")));
   float primary_lr = GlobalJobDesc().primary_lr();
@@ -73,10 +85,9 @@ void ConstructMdUpdtOpConf(
   }
 }
 
-#define INSTANTIATE_CONSTRUCTOR_MDUPDT_OP_CONF(T)                                    \
-  template void ConstructMdUpdtOpConf<T>(                                            \
-      const VariableOp& op,                                                          \
-      const std::function<const LogicalBlobId&(const std::string&)>& DiffLbi4BnInOp, \
+#define INSTANTIATE_CONSTRUCTOR_MDUPDT_OP_CONF(T)                     \
+  template void ConstructMdUpdtOpConf<T>(                             \
+      const VariableOp& op, const LogicalBlobId& diff_lbi_of_var_out, \
       const LogicalBlobId& total_loss_instance_num_lbi, T* mdupdt_op_conf)
 
 INSTANTIATE_CONSTRUCTOR_MDUPDT_OP_CONF(NaiveModelUpdateOpConf);

@@ -48,7 +48,7 @@ void OneHotKernelUtil<DeviceType::kCPU, T, K>::Encode(DeviceCtx* ctx, const K* i
     const K idx = indices[i];
     CHECK_GE(idx, 0);
     CHECK_LT(idx, depth);
-    out[i * depth + idx] = OneVal<T>::value;
+    out[i * depth + idx] = GetOneVal<T>();
   }
 }
 

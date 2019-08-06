@@ -14,10 +14,10 @@ void GroupBoxingByDstParallel(const OpGraph& op_graph, Job* job) {
   op_graph.ForEachNode([&](const OpNode* node) {
     for (const std::string& ibn : node->op().input_bns()) {
       const LogicalBlobId& lbi = node->op().BnInOp2Lbi(ibn);
-      const OpNode* producer = node->ProducerOpNode4Lbi(lbi);
-      const SbpParallel& producer_sbp = producer->SbpParallel4Lbi(lbi);
+      const OpNode& producer = node->ProducerOpNode4Lbi(lbi);
+      const SbpParallel& producer_sbp = producer.SbpParallel4Lbi(lbi);
       const SbpParallel& consumer_sbp = node->SbpParallel4BnInOp(ibn);
-      if (producer->parallel_desc() != node->parallel_desc() || producer_sbp != consumer_sbp) {
+      if (producer.parallel_desc() != node->parallel_desc() || producer_sbp != consumer_sbp) {
         lbi2consumer_grouped_by_parallel_sbp[lbi][{node->parallel_desc(), consumer_sbp}].push_back(
             {node, ibn});
         if (op_node2op_conf.find(node) == op_node2op_conf.end()) {
