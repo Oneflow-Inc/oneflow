@@ -696,7 +696,9 @@ std::vector<HashSet<int32_t>> GetMutualExclusionJobGroups() {
 int64_t GenMemZoneUniqueId(int64_t machine_id, const MemoryCase& mem_case) {
   int64_t mem_zone_id = 1024;
   if (mem_case.has_host_mem()) {
-    mem_zone_id += mem_case.host_mem().used_by_device();
+    if (mem_case.host_mem().has_cuda_pinned_mem()) {
+      mem_zone_id = 1025 + mem_case.host_mem().cuda_pinned_mem().device_id();
+    }
   } else {
     mem_zone_id = mem_case.device_cuda_mem().device_id();
   }
