@@ -12,6 +12,7 @@ static std::unordered_map<int32_t, std::string> op_type2string_map = {
   {OP_TYPE_CASE(FullyConnected), "FullyConnected"},
   {OP_TYPE_CASE(BiasAdd), "BiasAdd"},
   {OP_TYPE_CASE(Reshape), "Reshape"},
+  {OP_TYPE_CASE(Identity), "Identity"},
   // TODO(hjchen2)
 };
 
