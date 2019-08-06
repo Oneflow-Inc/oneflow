@@ -3,12 +3,20 @@
 
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/common/data_type.h"
 #include "oneflow/core/ndarray/ndarray_reduce_impl.h"
 
 namespace oneflow {
 
-template<DeviceType device_type, typename T, const T (*binary_func)(const T, const T)>
-struct NdarrayReduce final {
+template<DeviceType device_type, typename T, template<typename> class binary_func,
+         typename Enable = void>
+struct NdarrayReduce;
+
+template<DeviceType device_type, typename T, template<typename> class binary_func>
+struct NdarrayReduce<
+    device_type, T, binary_func,
+    typename std::enable_if<std::is_same<T, typename DevDType<device_type, T>::type>::value>::type>
+    final {
   static void Reduce(DeviceCtx* ctx, const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x,
                      const XpuVarNdarray<T>& tmp_storage) {
     CHECK_EQ(y.shape().NumAxes(), x.shape().NumAxes());
@@ -23,6 +31,21 @@ struct NdarrayReduce final {
     } else {
       NdarrayDefaultReduce<device_type, T, binary_func>::Reduce(ctx, y, x, tmp_storage);
     }
+  }
+};
+
+template<DeviceType device_type, typename T, template<typename> class binary_func>
+struct NdarrayReduce<
+    device_type, T, binary_func,
+    typename std::enable_if<!std::is_same<T, typename DevDType<device_type, T>::type>::value>::type>
+    final {
+  static void Reduce(DeviceCtx* ctx, const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x,
+                     const XpuVarNdarray<T>& tmp_storage) {
+    using NewT = typename DevDType<device_type, T>::type;
+    return NdarrayReduce<device_type, NewT, binary_func>::Reduce(
+        ctx, reinterpret_cast<const XpuVarNdarray<NewT>&>(y),
+        reinterpret_cast<const XpuVarNdarray<const NewT>&>(x),
+        reinterpret_cast<const XpuVarNdarray<NewT>&>(tmp_storage));
   }
 };
 

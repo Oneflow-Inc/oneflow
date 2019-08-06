@@ -22,7 +22,7 @@ const PbMessage& PoolingGradKernel<device_type, T>::GetCustomizedOpConf() const 
   return this->op_conf().pooling_grad_conf();
 }
 
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kPoolingGradConf, PoolingGradKernel,
-                           FLOATING_DATA_TYPE_SEQ);
+ADD_DEFAULT_KERNEL_CREATOR_WITH_GPU_HALF(OperatorConf::kPoolingGradConf, PoolingGradKernel,
+                                         FLOATING_DATA_TYPE_SEQ);
 
 }  // namespace oneflow

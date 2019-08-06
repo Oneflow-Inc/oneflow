@@ -25,7 +25,7 @@ class NaiveOFRecordReader final : public OFRecordReader {
  public:
   OF_DISALLOW_COPY_AND_MOVE(NaiveOFRecordReader);
   explicit NaiveOFRecordReader(PersistentInStream* in)
-      : NaiveOFRecordReader(in, MaxVal<size_t>::value) {}
+      : NaiveOFRecordReader(in, GetMaxVal<size_t>()) {}
   NaiveOFRecordReader(PersistentInStream* in, size_t num_max_read);
   ~NaiveOFRecordReader() override = default;
 
@@ -45,7 +45,7 @@ class RandomShuffleOFRecordReader final : public OFRecordReader {
   RandomShuffleOFRecordReader(PersistentInStream* in, size_t buffer_size, size_t num_max_read)
       : RandomShuffleOFRecordReader(in, buffer_size, num_max_read, std::random_device()()) {}
   RandomShuffleOFRecordReader(PersistentInStream* in, size_t buffer_size)
-      : RandomShuffleOFRecordReader(in, buffer_size, MaxVal<size_t>::value) {}
+      : RandomShuffleOFRecordReader(in, buffer_size, GetMaxVal<size_t>()) {}
   ~RandomShuffleOFRecordReader() override = default;
 
  private:

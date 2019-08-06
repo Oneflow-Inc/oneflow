@@ -12,6 +12,7 @@
 #include <cudnn.h>
 #include <curand.h>
 #include <nccl.h>
+#include <cuda_fp16.h>
 
 namespace oneflow {
 
@@ -61,9 +62,17 @@ enum class CudaWorkType {
 
 inline size_t GetCudaWorkTypeSize() { return OF_PP_SEQ_SIZE(CUDA_WORK_TYPE_SEQ); }
 
-#define CUDA_DATA_TYPE_SEQ                \
-  OF_PP_MAKE_TUPLE_SEQ(float, CUDA_R_32F) \
-  OF_PP_MAKE_TUPLE_SEQ(double, CUDA_R_64F)
+void NumaAwareCudaMallocHost(int32_t dev, void** ptr, size_t size);
+
+template<typename T>
+void NumaAwareCudaMallocHost(int32_t dev, T** ptr, size_t size) {
+  NumaAwareCudaMallocHost(dev, reinterpret_cast<void**>(ptr), size);
+}
+
+#define CUDA_DATA_TYPE_SEQ                 \
+  OF_PP_MAKE_TUPLE_SEQ(float, CUDA_R_32F)  \
+  OF_PP_MAKE_TUPLE_SEQ(double, CUDA_R_64F) \
+  OF_PP_MAKE_TUPLE_SEQ(float16, CUDA_R_16F)
 
 cudaDataType_t GetCudaDataType(DataType);
 
@@ -75,6 +84,16 @@ struct CudaDataType;
   struct CudaDataType<type_cpp> : std::integral_constant<cudaDataType_t, type_cuda> {};
 OF_PP_FOR_EACH_TUPLE(SPECIALIZE_CUDA_DATA_TYPE, CUDA_DATA_TYPE_SEQ);
 #undef SPECIALIZE_CUDA_DATA_TYPE
+
+class CudaCurrentDeviceGuard final {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(CudaCurrentDeviceGuard)
+  explicit CudaCurrentDeviceGuard(int32_t dev_id);
+  ~CudaCurrentDeviceGuard();
+
+ private:
+  int32_t saved_dev_id_ = -1;
+};
 
 }  // namespace oneflow
 
