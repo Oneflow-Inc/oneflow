@@ -6,7 +6,7 @@ config = flow.ConfigProtoBuilder()
 config.gpu_device_num(1)
 flow.init(config)
 
-def MatmulJob(a = flow.val((4, 5)), b = flow.val((5,4))):
+def MatmulJob(a = flow.input_blob_def((4, 5)), b = flow.input_blob_def((5,4))):
     job_conf = flow.get_cur_job_conf_builder()
     job_conf.batch_size(4).data_part_num(1).default_data_type(flow.float)
     return flow.keras.maths.matmul(a, b)
