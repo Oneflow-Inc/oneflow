@@ -164,6 +164,13 @@ cudaDataType_t GetCudaDataType(DataType val) {
   UNIMPLEMENTED();
 }
 
+CudaCurrentDeviceGuard::CudaCurrentDeviceGuard(int32_t dev_id) {
+  CudaCheck(cudaGetDevice(&saved_dev_id_));
+  CudaCheck(cudaSetDevice(dev_id));
+}
+
+CudaCurrentDeviceGuard::~CudaCurrentDeviceGuard() { CudaCheck(cudaSetDevice(saved_dev_id_)); }
+
 #endif  // WITH_CUDA
 
 }  // namespace oneflow
