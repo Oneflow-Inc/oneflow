@@ -1,3 +1,4 @@
+#include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/job_completer/job_completer.h"
 #include "oneflow/core/job_completer/autovar.h"
 #include "oneflow/core/job_completer/autograd.h"
@@ -6,8 +7,10 @@
 #include "oneflow/core/job_completer/optimizer.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job_completer/all_reduce_add_pass.h"
-#include "oneflow/core/job_completer/group_boxing_by_dst_parallel.h"
 #include "oneflow/core/job_completer/set_default_variable_conf.h"
+#include "oneflow/core/job_completer/all_reduce_sequence_pass.h"
+#include "oneflow/core/job_completer/group_boxing_by_dst_parallel.h"
+#include "oneflow/core/job_completer/auto_mixed_precision.h"
 
 namespace oneflow {
 
@@ -438,6 +441,18 @@ void AddRecordLoadOps(Job* job) {
   }
 }
 
+void MakeAllReduceSequence(const OpGraph& op_graph, Job* job) {
+  AllReduceSequencePass().Apply(op_graph, job);
+}
+
+void EnableAutoMixedPrecision(const OpGraph& op_graph, Job* job) {
+  if (!GlobalJobDesc().enable_auto_mixed_precision()) { return; }
+  CHECK_GE(CUDA_VERSION, 10000);
+  AutoMixedPrecision(AutoMixedPrecisionLists::WhiteList(), AutoMixedPrecisionLists::BlackList(),
+                     AutoMixedPrecisionLists::GrayList(), AutoMixedPrecisionLists::ClearList())
+      .Apply(op_graph, job);
+}
+
 }  // namespace
 
 void JobCompleter::Complete(Job* job) const {
@@ -451,9 +466,11 @@ void JobCompleter::Complete(Job* job) const {
   if (GlobalJobDesc().IsPredict()
       && GlobalJobDesc().job_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
     WithOpGraphAndMutJob(job, &TieUpChainHeadersUnReachableFromAnyVariableOps);
+    WithOpGraphAndMutJob(job, &EnableAutoMixedPrecision);
     // complete ops for trainning
     WithOpGraphAndMutJob(job, &GenerateOpConf4Trainning);
     WithOpGraphAndMutJob(job, &RewriteBoxingWithAllReduce);
+    WithOpGraphAndMutJob(job, &MakeAllReduceSequence);
   }
   WithOpGraphAndMutJob(job, &DumpLogicalBlobDescAndSbpSignature);
   WithOpGraphAndMutJob(job, &GroupBoxingByDstParallel);
