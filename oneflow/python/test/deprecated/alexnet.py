@@ -3,18 +3,17 @@ import oneflow as flow
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import os
 import shutil
+from datetime import datetime
 
 config = flow.ConfigProtoBuilder()
 config.gpu_device_num(1)
 config.grpc_use_no_signal()
 config.model_load_snapshot_path(
     "/home/caishenghang/dev/cnns_test/alexnet_fp16/fp32/of_model")
-_MODEL_SAVE = "./model_save"
+_MODEL_SAVE = "./model_save-{}".format(
+    str(datetime.now().strftime('%Y-%m-%d-%H:%M:%S')))
 config.model_save_snapshots_path(_MODEL_SAVE)
 flow.init(config)
-
-if os.path.isdir(_MODEL_SAVE):
-    shutil.rmtree(_MODEL_SAVE)
 
 _DATA_DIR = "/dataset/imagenet_227/train/32"
 _SINGLE_PIC_DATA_DIR = '/home/caishenghang/dev/cnns_test/dataset/PNG227/of_record'
