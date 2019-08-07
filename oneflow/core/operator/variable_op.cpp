@@ -7,8 +7,7 @@ namespace oneflow {
 void VariableOp::InitFromOpConf() {
   CHECK(op_conf().has_variable_conf());
   if (op_conf().variable_conf().has_tick()) { EnrollInputBn("tick", false); }
-  bool has_diff = GlobalJobDesc().job_conf().predict_conf().has_tmp_split_fw_bw_train_conf();
-  EnrollOutputBn("out", has_diff)->set_is_mutable(true);
+  EnrollOutputBn("out", GlobalJobDesc().IsTrain())->set_is_mutable(true);
 }
 
 const PbMessage& VariableOp::GetCustomizedConf() const { return op_conf().variable_conf(); }

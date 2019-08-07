@@ -22,7 +22,7 @@ void RecordLoadKernel::VirtualKernelInit(const ParallelContext* parallel_ctx) {
     data_paths.push_back(JoinPath(data_dir, part_name_prefix + std::string(zero_count, '0') + num));
   }
   piece_size_in_one_loader_ = kernel_conf().record_load_conf().device_piece_size();
-  if (this->job_desc().job_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
+  if (this->job_desc().IsTrain()) {
     const size_t num_max_read = GetMaxVal<int64_t>();
     bool save_to_local = Global<const IOConf>::Get()->save_downloaded_file_to_local_fs();
     in_stream_.reset(new PersistentInStream(DataFS(), data_paths, true, save_to_local));

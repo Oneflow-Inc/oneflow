@@ -8,14 +8,7 @@ namespace oneflow {
 
 namespace {
 
-const TrainConf& GetTrainConf() {
-  const JobDesc& job_desc = GlobalJobDesc();
-  if (job_desc.IsPredict() && job_desc.job_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
-    return job_desc.job_conf().predict_conf().tmp_split_fw_bw_train_conf();
-  } else {
-    UNIMPLEMENTED();
-  }
-}
+const TrainConf& GetTrainConf() { return GlobalJobDesc().job_conf().train_conf(); }
 
 bool AnyLbiWithDiffLbi(const OpEdge* op_edge) {
   const Operator& src_op = op_edge->src_node()->op();

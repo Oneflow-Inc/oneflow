@@ -12,7 +12,7 @@ void GenerateOptimizerOpConfWrapperStruct::Call(
 void GenerateOptimizerOpConfIf(const VariableOp& var_op, const ParallelConf& parallel_conf,
                                JobBuilder* job_builder, const LogicalBlobId& diff_lbi_of_var_out,
                                const LogicalBlobId& total_loss_instance_num_lbi) {
-  const auto& train_conf = GlobalJobDesc().job_conf().predict_conf().tmp_split_fw_bw_train_conf();
+  const auto& train_conf = GlobalJobDesc().job_conf().train_conf();
   auto optimizer_case = train_conf.model_update_conf().normal_mdupdt_case();
   auto* obj = NewObj<GenerateOptimizerOpConfWrapperStruct>(optimizer_case);
   obj->Call(var_op, parallel_conf, job_builder, diff_lbi_of_var_out, total_loss_instance_num_lbi);
@@ -62,7 +62,7 @@ void BindTwoVariableOpObnSbpConf(const std::string& lhs_op_name, const std::stri
 template<typename T>
 void ConstructMdUpdtOpConf(const VariableOp& op, const LogicalBlobId& diff_lbi_of_var_out,
                            const LogicalBlobId& total_loss_instance_num_lbi, T* mdupdt_op_conf) {
-  const auto& train_conf = GlobalJobDesc().job_conf().predict_conf().tmp_split_fw_bw_train_conf();
+  const auto& train_conf = GlobalJobDesc().job_conf().train_conf();
   *mdupdt_op_conf->mutable_user_conf() = train_conf.model_update_conf();
   mdupdt_op_conf->set_model_diff(GenLogicalBlobName(diff_lbi_of_var_out));
   mdupdt_op_conf->set_total_instance_num_diff(GenLogicalBlobName(total_loss_instance_num_lbi));
