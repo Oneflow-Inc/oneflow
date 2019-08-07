@@ -20,8 +20,8 @@ void LayerNormOp::InitFromOpConf() {
   if (!(conf.center() || conf.scale())) { mut_op_conf()->set_trainable(false); }
   EnrollInputBn("in");
   EnrollOutputBn("out");
-  if (conf.center()) { EnrollInputBn("beta"); }
-  if (conf.scale()) {
+  if (conf.center() && conf.has_beta()) { EnrollInputBn("beta"); }
+  if (conf.scale() && conf.has_gamma()) {
     EnrollInputBn("gamma");
     EnrollOutputBn("normalized", false);
   }
