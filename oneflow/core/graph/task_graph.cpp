@@ -546,10 +546,6 @@ void TaskGraph::ForEachGpuDeviceNodes(
 void TaskGraph::EnableInplaceMemSharing(
     const std::function<bool(const LogicalBlobId&, const std::string&)>&
         IsLbiAllConsumersReachableToOpName) {
-  if (!(GlobalJobDesc().IsPredict()
-        && GlobalJobDesc().job_conf().predict_conf().has_tmp_split_fw_bw_train_conf())) {
-    return;
-  }
   ForEachGpuDeviceNodes([&](const HashSet<TaskNode*>& dev_nodes) {
     OpBlobArgList safe_inplace_obas;
     GetSafeInplaceOpBlobArgList(&safe_inplace_obas, dev_nodes, IsLbiAllConsumersReachableToOpName);

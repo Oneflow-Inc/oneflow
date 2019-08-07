@@ -103,7 +103,7 @@ void Compiler::Compile(Job* job, Plan* plan, bool need_job_complete) const {
   task_gph->ForEachNode(std::bind(&TaskNode::ConsumeAllRegsts, _1));
   task_gph->ForEachNode(std::bind(&TaskNode::PinConsumedRegst, _1));
   task_gph->MdUpdtDelayedTopoForEachNode(&TaskNode::Build);
-  if (job_desc.job_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
+  if (job_desc.IsTrain()) {
     // TODO: update method for fw bw split
     // task_gph->AddMdUpdtCtrlEdgesWithinReduceSplitNode();
   }

@@ -23,12 +23,8 @@ const PbMessage& ReduceConcatOp::GetCustomizedConf() const {
 }
 
 LogicalNode* ReduceConcatOp::NewProperLogicalNode() const {
-  if (GlobalJobDesc().IsPredict()
-      && GlobalJobDesc().job_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
-    return new NormalForwardLogicalNode;
-  } else {
-    return new ReduceConcatLogicalNode;
-  }
+  // TODO(): return new ReduceConcatLogicalNode;
+  return new NormalForwardLogicalNode;
 }
 
 void ReduceConcatOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
@@ -78,24 +74,11 @@ void ReduceConcatOp::VirtualGenKernelConf(
 }
 
 LogicalBlobId ReduceConcatOp::ibn2lbi(const std::string& input_bn) const {
-  if (GlobalJobDesc().IsPredict()
-      && GlobalJobDesc().job_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
-    return this->Operator::ibn2lbi(input_bn);
-  } else {
-    return GenPackedLbi();
-  }
+  return this->Operator::ibn2lbi(input_bn);
 }
 
 LogicalBlobId ReduceConcatOp::obn2lbi(const std::string& output_bn) const {
-  if (GlobalJobDesc().IsPredict()
-      && GlobalJobDesc().job_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
-    return this->Operator::obn2lbi(output_bn);
-  } else {
-    LogicalBlobId ret;
-    ret.set_op_name(op_name());
-    ret.set_blob_name("out");
-    return ret;
-  }
+  return this->Operator::obn2lbi(output_bn);
 }
 
 void ReduceConcatOp::InferHasBatchDim(
