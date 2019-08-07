@@ -9,7 +9,7 @@
 namespace oneflow {
 namespace mola {
 
-size_t Align(int alignment, size_t size) {
+inline size_t Align(int alignment, size_t size) {
   return (size + alignment - 1) / alignment * alignment;
 }
 
@@ -27,7 +27,7 @@ xla::StatusOr<se::OwningDeviceMemory> XlaAllocator::Allocate(
     data = mem_pool_->AllocateRaw(offset_, size);
     CHECK(data) << absl::StrCat("Out of memory while trying to allocate ",
                                 size, " bytes.");
-    offset_ += Align(32 /*alignment*/, size);
+    offset_ += Align(64/*alignment*/, size);
   }
   return se::OwningDeviceMemory(se::DeviceMemoryBase(data, size),
                                 device_ordinal, this);

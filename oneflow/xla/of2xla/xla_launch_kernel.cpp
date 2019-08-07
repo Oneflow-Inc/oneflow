@@ -1,19 +1,14 @@
-#include "oneflow/xla/of2xla/xla_launch_kernel.h"
-
 #include "tensorflow/compiler/xla/client/local_client.h"
 #include "tensorflow/compiler/tf2xla/tf2xla_util.h"  // GetXLARandomSeed
 #include "oneflow/xla/of2xla/xla_utility.h"
-#include "oneflow/xla/of2xla/xla_runtime_scope.h"
 #include "oneflow/xla/of2xla/xla_graph_compiler.h"
 #include "oneflow/xla/of2xla/xla_compilation_cache.h"
 #include "oneflow/xla/of2xla/xla_launch_context.h"
+#include "oneflow/xla/of2xla/xla_launch_scope.h"
+
+#include "oneflow/xla/of2xla/xla_launch_kernel.h"
 
 namespace oneflow {
-
-size_t CalcWorkspaceByteSize(xla::LocalExecutable *executable) {
-  // TODO(hjchen2)
-  return 100 * 1024 * 1024;  // 100 MiB
-}
 
 template <DeviceType device_type>
 void XlaLaunchKernel<device_type>::BuildLocalExecutable(
@@ -101,9 +96,7 @@ void XlaLaunchKernel<device_type>::LaunchExecutable(
   }
 
   OF_CHECK_AND_ASSIGN(auto run_result, [&]() {
-    mola::XlaRuntimeScope scope(launch_ctx);
-    size_t workspace_size = CalcWorkspaceByteSize(executable);
-    launch_ctx->ReserveWorkspace(workspace_size);
+    mola::XlaLaunchScope scope(executable, launch_ctx);
 
     xla::ExecutableRunOptions run_options;
     run_options.set_stream(launch_ctx->stream());

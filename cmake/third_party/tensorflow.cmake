@@ -3,18 +3,18 @@ include (ExternalProject)
 if (WITH_XLA)
 
 set(BUILD_DEBUG ON)
-set(TF_BUILD_CMD --define with_xla_support=true)
+set(TENSORFLOW_BUILD_CMD --define with_xla_support=true)
 if (BUILD_DEBUG)
-  set(TF_BUILD_CMD --copt=-g -c dbg ${BUILD_CMD})
-  set(TF_GENFILE_DIR k8-dbg)
+  set(TENSORFLOW_BUILD_CMD --copt=-g -c dbg ${BUILD_CMD})
+  set(TENSORFLOW_GENFILE_DIR k8-dbg)
 else()
-  set(TF_BUILD_CMD -c opt ${BUILD_CMD})
-  set(TF_GENFILE_DIR k8-opt)
+  set(TENSORFLOW_BUILD_CMD -c opt ${BUILD_CMD})
+  set(TENSORFLOW_GENFILE_DIR k8-opt)
 endif()
 
 set(TF_WITH_CUDA ON)
 if (TF_WITH_CUDA)
-  set(TF_BUILD_CMD ${TF_BUILD_CMD} --action_env TF_NEED_CUDA=1 --config=cuda)
+  set(TENSORFLOW_BUILD_CMD ${TENSORFLOW_BUILD_CMD} --action_env TF_NEED_CUDA=1 --config=cuda)
 endif()
 
 set(TENSORFLOW_PROJECT  tensorflow)
@@ -27,7 +27,7 @@ set(TENSORFLOW_INC_DIR  ${TENSORFLOW_SOURCES_DIR}/src/tensorflow)
 set(XLA_BUILD_PATH  ${PROJECT_SOURCE_DIR}/oneflow/xla/xla_lib)
 set(TENSORFLOW_DEST_DIR ${TENSORFLOW_SRCS_DIR}/tensorflow/compiler/jit)
 
-set(TENSORFLOW_GEN_DIR ${TENSORFLOW_SRCS_DIR}/bazel-out/${TF_GENFILE_DIR}/genfiles)
+set(TENSORFLOW_GEN_DIR ${TENSORFLOW_SRCS_DIR}/bazel-out/${TENSORFLOW_GENFILE_DIR}/genfiles)
 set(TENSORFLOW_EXTERNAL_DIR ${TENSORFLOW_SRCS_DIR}/bazel-tensorflow/external)
 set(THIRD_ABSL_DIR ${TENSORFLOW_EXTERNAL_DIR}/com_google_absl)
 set(THIRD_PROTOBUF_DIR ${TENSORFLOW_EXTERNAL_DIR}/protobuf_archive/src)
@@ -59,7 +59,7 @@ ExternalProject_Add(
   GIT_TAG ${TENSORFLOW_GIT_TAG}
   CONFIGURE_COMMAND cp -r ${XLA_BUILD_PATH} ${TENSORFLOW_DEST_DIR}
   BUILD_COMMAND cd ${TENSORFLOW_SRCS_DIR} &&
-                bazel build ${TF_BUILD_CMD} -j 20 //tensorflow/compiler/jit/xla_lib:libxla_core.so
+                bazel build ${TENSORFLOW_BUILD_CMD} -j 20 //tensorflow/compiler/jit/xla_lib:libxla_core.so
   INSTALL_COMMAND ""
 )
 endif(THIRD_PARTY)

@@ -1,3 +1,5 @@
+#include "tensorflow/stream_executor/host/host_platform_id.h"
+#include "tensorflow/stream_executor/cuda/cuda_platform_id.h"
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/xla/of2xla/memory/memory_pool.h"
 
@@ -7,22 +9,18 @@ namespace memory {
 
 class CpuMemoryPool : public DeviceMemoryPool {
  public:
-  explicit CpuMemoryPool(int device_ordinal)
-      : DeviceMemoryPool(device_ordinal) {}
+  explicit CpuMemoryPool(se::Stream *stream, int device_ordinal)
+      : DeviceMemoryPool(stream, device_ordinal) {}
   virtual ~CpuMemoryPool() { Release(); }
 
-  void Reserve(size_t size) override {
-    if (limited_memory_size_ > -1) {
-      CHECK_LT(size, limited_memory_size_);
-    }
-    if (size > capacity_) {
-      Release();
-      mem_buffer_ = new uint8_t[size];
-      capacity_ = size;
-    }
+ private:
+  void ReserveImpl(size_t size) override {
+    mem_buffer_ = new uint8_t[size];
+    CHECK(mem_buffer_);
+    capacity_ = size;
   }
 
-  void Release() override {
+  void ReleaseImpl() override {
     if (capacity_ > 0 && mem_buffer_) {
       delete[] mem_buffer_;
     }
@@ -31,30 +29,17 @@ class CpuMemoryPool : public DeviceMemoryPool {
   }
 };
 
+REGISTER_XLA_MEMORY_POOL(se::host::kHostPlatformId, CpuMemoryPool);
+
 class GpuMemoryPool : public DeviceMemoryPool {
  public:
-  explicit GpuMemoryPool(const void *cuda_stream, int device_ordinal)
-      : DeviceMemoryPool(device_ordinal), cuda_stream_(cuda_stream) {}
+  explicit GpuMemoryPool(se::Stream *stream, int device_ordinal)
+      : DeviceMemoryPool(stream, device_ordinal) {}
 
   virtual ~GpuMemoryPool() { Release(); }
 
-  void Reserve(size_t size) override {
-    if (limited_memory_size_ > -1) {
-      CHECK_LT(size, limited_memory_size_);
-    }
-    if (size > capacity_) {
-      Release();
-#ifdef WITH_CUDA
-      CudaCheck(cudaMalloc(&mem_buffer_, size));
-#else
-      LOG(FATAL) << "Recompile with CUDA.";
-#endif
-      CHECK_NOTNULL(mem_buffer_);
-      capacity_ = size;
-    }
-  }
-
-  void Release() override {
+ private:
+  void ReserveImpl(size_t size) override {
 #ifdef WITH_CUDA
     int device_ordinal;
     cudaGetDevice(&device_ordinal);
@@ -62,11 +47,26 @@ class GpuMemoryPool : public DeviceMemoryPool {
       cudaSetDevice(device_ordinal_);
     }
 
-    // Synchronize cuda stream to ensure that all the launched kernel depend
-    // on this memory buffer have been executed completely
-    cudaStream_t stream = reinterpret_cast<CUstream_st *>(
-        const_cast<void *>(cuda_stream_));
-    CudaCheck(cudaStreamSynchronize(stream));
+    CudaCheck(cudaMalloc(&mem_buffer_, size));
+
+    if (device_ordinal != device_ordinal_) {
+      cudaSetDevice(device_ordinal);
+    }
+#else
+    LOG(FATAL) << "Recompile with CUDA.";
+#endif
+    CHECK(mem_buffer_);
+    capacity_ = size;
+  }
+
+  void ReleaseImpl() override {
+#ifdef WITH_CUDA
+    int device_ordinal;
+    cudaGetDevice(&device_ordinal);
+    if (device_ordinal != device_ordinal_) {
+      cudaSetDevice(device_ordinal_);
+    }
+
     if (capacity_ > 0 && mem_buffer_) {
       CudaCheck(cudaFree(mem_buffer_));
     }
@@ -80,21 +80,81 @@ class GpuMemoryPool : public DeviceMemoryPool {
     capacity_ = 0;
     mem_buffer_ = nullptr;
   }
-
- private:
-  const void *cuda_stream_;
 };
+
+REGISTER_XLA_MEMORY_POOL(se::cuda::kCudaPlatformId, GpuMemoryPool);
 
 }  // namespace memory
 
-/*static*/ DeviceMemoryPool *DeviceMemoryPool::NewCpuMemoryPool(
-    int device_ordinal) {
-  return new memory::CpuMemoryPool(device_ordinal);
+void DeviceMemoryPool::Reserve(size_t size) {
+  if (limited_memory_size_ > -1) {
+    CHECK_LT(size, limited_memory_size_);
+  }
+
+  std::unique_lock<std::mutex> lock(mutex_);
+  
+  cond_.wait(lock, [&]() { return reference_count_ == 0; });
+  
+  if (size > capacity_) {
+    // Block host to ensure that all the launched kernels depend on this
+    // memory buffer have been executed completely
+    CHECK(stream_->BlockHostUntilDone().ok());
+  
+    ReleaseImpl();
+
+    ReserveImpl(size);
+  }
 }
 
-/*static*/ DeviceMemoryPool *DeviceMemoryPool::NewGpuMemoryPool(
-    const void *cuda_stream, int device_ordinal) {
-  return new memory::GpuMemoryPool(cuda_stream, device_ordinal);
+void DeviceMemoryPool::Release() {
+  std::unique_lock<std::mutex> lock(mutex_);
+
+  cond_.wait(lock, [&]() { return reference_count_ == 0; });
+
+  // Block host to ensure that all the launched kernels depend on this
+  // memory buffer have been executed completely
+  CHECK(stream_->BlockHostUntilDone().ok());
+
+  ReleaseImpl();
+}
+
+void DeviceMemoryPool::IncreaseRef() const {
+  std::unique_lock<std::mutex> lock(mutex_);
+  ++reference_count_;
+}
+
+void DeviceMemoryPool::DecreaseRef() const {
+  std::unique_lock<std::mutex> lock(mutex_);
+  --reference_count_;
+  cond_.notify_all();
+}
+
+typedef DeviceMemoryPool::MemPoolFactory MemPoolFactory;
+typedef std::unordered_map<se::Platform::Id, MemPoolFactory> MemPoolFactoryMap;
+
+static MemPoolFactoryMap* GlobalMemPoolFactories() {
+  static MemPoolFactoryMap factories;
+  return &factories;
+}
+
+/*static*/ DeviceMemoryPool *DeviceMemoryPool::NewMemoryPool(
+    const se::Platform *platform, se::Stream *stream, int device_ordinal) {
+  MemPoolFactoryMap *factories = GlobalMemPoolFactories();
+  const auto &it = factories->find(platform->id());
+  CHECK(it != factories->end())
+      << "DeviceMemoryPool has not been registered for platform id "
+      << platform->id();
+  return (it->second)(stream, device_ordinal);
+}
+
+/*static*/ void DeviceMemoryPool::RegisterFactory(
+    const se::Platform::Id &platform_id, MemPoolFactory factory) {
+  MemPoolFactoryMap *factories = GlobalMemPoolFactories();
+  if (factories->count(platform_id)) {
+    DLOG(WARNING) << "DeviceMemoryPool for platform id (" << platform_id
+                  << ") has been registed more than once";
+  }
+  factories->emplace(platform_id, factory);
 }
 
 }  // namespace mola

@@ -29,20 +29,13 @@ xla::LocalClient* XlaLaunchResourceMgr::GetOrCreateLocalClient(
   return client;
 }
 
-DeviceMemoryPool *XlaLaunchResourceMgr::GetOrCreateCpuMemoryPool(
-    int device_ordinal) {
-  static DeviceMemoryPool *memory_pool =
-      DeviceMemoryPool::NewCpuMemoryPool(device_ordinal);
-  return memory_pool;
-}
-
-DeviceMemoryPool *XlaLaunchResourceMgr::GetOrCreateGpuMemoryPool(
-    const void *cuda_stream, int device_ordinal) {
+DeviceMemoryPool *XlaLaunchResourceMgr::GetOrCreateMemoryPool(
+    const se::Platform *platform, se::Stream *stream, int device_ordinal) {
   static std::unordered_map<uint64_t, DeviceMemoryPool *> memory_pools;
-  uint64_t stream_id = reinterpret_cast<uint64_t>(cuda_stream);
+  uint64_t stream_id = reinterpret_cast<uint64_t>(stream);
   if (memory_pools.count(stream_id) == 0) {
     DeviceMemoryPool *memory_pool =
-        DeviceMemoryPool::NewGpuMemoryPool(cuda_stream, device_ordinal);
+        DeviceMemoryPool::NewMemoryPool(platform, stream, device_ordinal);
     memory_pools.emplace(stream_id, memory_pool);
   }
   return memory_pools[stream_id];
@@ -61,32 +54,19 @@ xla::LocalClient *XlaLaunchContext::NewLocalClient(
   return XlaLaunchResourceMgr::GetOrCreateLocalClient(platform, num_threads);
 }
 
-DeviceMemoryPool *XlaLaunchContext::NewCpuMemoryPool(int device_ordinal) {
-  return XlaLaunchResourceMgr::GetOrCreateCpuMemoryPool(device_ordinal);
+DeviceMemoryPool *XlaLaunchContext::NewDeviceMemoryPool(
+    const se::Platform *platform, se::Stream *stream, int device_ordinal) {
+  return XlaLaunchResourceMgr::GetOrCreateMemoryPool(platform, stream,
+                                                     device_ordinal);
 }
 
-DeviceMemoryPool *XlaLaunchContext::NewGpuMemoryPool(const void *cuda_stream,
-                                                     int device_ordinal) {
-  return XlaLaunchResourceMgr::GetOrCreateGpuMemoryPool(cuda_stream,
-                                                        device_ordinal);
-}
-
-std::shared_ptr<XlaAllocator> XlaLaunchContext::NewAllocator(
-    const se::Platform *platform, int device_ordinal) {
-  DeviceMemoryPool *mem_pool = nullptr;
-  switch (device_type_) {
-    case DeviceType::kCPU:
-      mem_pool = NewCpuMemoryPool(device_ordinal);
-      break;
-    case DeviceType::kGPU: {
-      const void *cuda_stream = device_ctx_->cuda_stream();
-      mem_pool = NewGpuMemoryPool(cuda_stream, device_ordinal);
-      break;
-    }
-  }
+XlaAllocator *XlaLaunchContext::NewAllocator(const se::Platform *platform,
+                                             int device_ordinal) {
+  DeviceMemoryPool *mem_pool =
+      NewDeviceMemoryPool(platform, stream_.get(), device_ordinal);
   CHECK(mem_pool) << "Failed to get or create memory pool for device "
                   << device_type_;
-  return std::make_shared<XlaAllocator>(platform, mem_pool);
+  return new XlaAllocator(platform, mem_pool);
 }
 
 Eigen::ThreadPoolDevice* XlaLaunchContext::NewEigenHostDevice() {
@@ -119,7 +99,7 @@ XlaLaunchContext::XlaLaunchContext(const std::string &builder_name,
   OF_CHECK_AND_ASSIGN(stream_,
                       client_->mutable_backend()
                              ->BorrowStream(device_ordinal_));
-  allocator_ = NewAllocator(platform, device_ordinal_);
+  allocator_.reset(NewAllocator(platform, device_ordinal_));
   host_device_ = NewEigenHostDevice();
   parallel_ctx_ = LocalParallelContext(device_ordinal_);
 }
