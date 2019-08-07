@@ -215,10 +215,8 @@ class JobConfigProtoBuilder(object):
         return self
 
     def train_conf(self):
-        # self.job_conf_.train_conf.SetInParent()
-        # return self.job_conf_.train_conf
-        self.job_conf_.predict_conf.tmp_split_fw_bw_train_conf.SetInParent()
-        return self.job_conf_.predict_conf.tmp_split_fw_bw_train_conf
+        self.job_conf_.train_conf.SetInParent()
+        return self.job_conf_.train_conf
 
 def TryCompleteDefaultConfigProto(config):
     _DefaultConfigResource(config)
@@ -277,5 +275,3 @@ def _TryCompleteDefaultJobConfigProto(job_conf):
         job_conf.predict_conf.SetInParent()
     if job_conf.HasField('train_conf'):
         job_conf.train_conf.batch_size = job_conf.piece_size
-    if job_conf.predict_conf.HasField('tmp_split_fw_bw_train_conf'):
-        job_conf.predict_conf.tmp_split_fw_bw_train_conf.batch_size = job_conf.piece_size

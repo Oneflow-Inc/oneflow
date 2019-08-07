@@ -7,9 +7,7 @@ void ReduceConcatCompTaskNode::ProduceAllRegstsAndBindEdges() {
   this->SoleOutDataEdge()->AddRegst("out", ProduceRegst("out", false, 1, 1));
 }
 
-void ReduceConcatCompTaskNode::ConsumeAllRegsts() {
-  TODO();
-}
+void ReduceConcatCompTaskNode::ConsumeAllRegsts() { TODO(); }
 
 void ReduceConcatCompTaskNode::BuildExecGphAndRegst() {
   ExecNode* node = mut_exec_gph().NewNode();
