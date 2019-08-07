@@ -1,13 +1,20 @@
 from __future__ import print_function
 import oneflow as flow
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
+import os
+import shutil
+from datetime import datetime
 
 config = flow.ConfigProtoBuilder()
 config.gpu_device_num(1)
 config.grpc_use_no_signal()
 config.model_load_snapshot_path(
     "/home/caishenghang/dev/cnns_test/alexnet_fp16/fp32/of_model")
+_MODEL_SAVE = "./model_save-{}".format(
+    str(datetime.now().strftime('%Y-%m-%d-%H:%M:%S')))
+config.model_save_snapshots_path(_MODEL_SAVE)
 flow.init(config)
+
 _DATA_DIR = "/dataset/imagenet_227/train/32"
 _SINGLE_PIC_DATA_DIR = '/home/caishenghang/dev/cnns_test/dataset/PNG227/of_record'
 _EVAL_DIR = _DATA_DIR
@@ -247,10 +254,10 @@ if __name__ == '__main__':
         print('{:>12}  {:>12}  {:>12}'.format(
             "iter", "loss type", "loss value"))
         for i in range(100):
+            print(fmt_str.format(i, "train loss:", sess.run(
+                TrainAlexNet).get().mean()))
             if (i + 1) % 10 is 0:
                 print(fmt_str.format(i, "eval loss:", sess.run(
                     EvaluateAlexNet).get().mean()))
-            print(fmt_str.format(i, "train loss:", sess.run(
-                TrainAlexNet).get().mean()))
             if (i + 1) % 100 is 0:
                 check_point.save(session=sess)
