@@ -12,7 +12,9 @@ namespace mola {
 class DeviceBufferAllocator {
  public:
   explicit DeviceBufferAllocator(std::shared_ptr<DeviceMemoryPool> mem_pool)
-      : mem_pool_(mem_pool) {}
+      : mem_pool_(mem_pool) {
+    // mem_pool_->Reserve(256 * 1024 * 1024/*256MiB*/);
+  }
 
   virtual ~DeviceBufferAllocator() {}
 
@@ -21,10 +23,12 @@ class DeviceBufferAllocator {
   }
 
   void Reserve(size_t size) {
-    std::unique_lock<std::mutex> lock(mutex_);
-    cond_.wait(lock, [&]() { return lock_count_ == 0; });
+    while (size > mem_pool_->capacity()) {
+      std::unique_lock<std::mutex> lock(mutex_);
+      cond_.wait(lock, [&]() { return lock_count_ == 0; });
 
-    mem_pool_->Reserve(size);
+      mem_pool_->Reserve(size);
+    }
   }
 
   void Lock() {

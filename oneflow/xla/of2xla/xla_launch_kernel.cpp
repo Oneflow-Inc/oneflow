@@ -58,7 +58,8 @@ void XlaLaunchKernel<device_type>::LaunchExecutable(
     xla::LocalExecutable *executable,
     const std::vector<Blob *> &entry_blobs,
     const std::vector<xla::Shape> &input_shapes,
-    std::vector<Blob *> &output_blobs, const xla::Shape &output_shape) const {
+    std::vector<Blob *> &output_blobs, const xla::Shape &output_shape,
+    bool block_host_until_done) const {
   namespace se = tensorflow::se;
   CHECK_EQ(entry_blobs.size(), input_shapes.size())
       << "Size mismatch between valid entry blobs and input shapes.";
@@ -103,7 +104,12 @@ void XlaLaunchKernel<device_type>::LaunchExecutable(
     run_options.set_allocator(launch_ctx->allocator());
     run_options.set_intra_op_thread_pool(launch_ctx->host_device());
     run_options.set_rng_seed(tensorflow::GetXLARandomSeed());
-    return executable->RunAsync(arguments, run_options);
+
+    auto result = executable->RunAsync(arguments, run_options);
+    if (block_host_until_done) {
+      launch_ctx->stream()->BlockHostUntilDone();
+    }
+    return std::move(result);
   }());
 
   // Result shape should be tuple
@@ -152,10 +158,14 @@ void XlaLaunchKernel<device_type>::ForwardDataContent(
                         << TF_CPP_VLOG_LEVEL_REQUARED(2);
   auto *executable = compile_result->executable.get();
 
-  // Launch executable in synchronous mode for CPU, or asynchronous for GPU
+  // Launch executable in synchronous mode for CPU, or asynchronous mode for GPU
+  bool block_host_until_done = true;
+  if (device_type == DeviceType::kGPU) {
+    block_host_until_done = false;
+  }
   LaunchExecutable(&launch_ctx, executable, entry_blobs,
                    compile_result->xla_input_shapes, output_blobs,
-                   compile_result->xla_output_shape);
+                   compile_result->xla_output_shape, block_host_until_done);
 }
 
 // ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kXlaLaunchConf, XlaLaunchKernel,
