@@ -1,6 +1,7 @@
 #include "oneflow/core/kernel/cuda_ring_boxing_kernel_util.h"
 #include "oneflow/core/kernel/kernel_util.cuh"
 #include <device_launch_parameters.h>
+#include <cuda_fp16.h>
 
 namespace oneflow {
 
@@ -61,6 +62,26 @@ struct PackReduceFunctor {
 #pragma unroll
     for (size_t i = 0; i < sizeof(P) / sizeof(T); ++i) {
       vc.t[i] = ReduceFunctor<method, T>()(va.t[i], vb.t[i]);
+    }
+    return vc.p;
+  }
+};
+
+template<>
+struct PackReduceFunctor<ReduceMethod::kSum, half, Pack> {
+  union View {
+    Pack p;
+    half2 t[sizeof(Pack) / sizeof(half2)];
+  };
+  __device__ __forceinline__ Pack operator()(const Pack& a, const Pack& b) const {
+    View va;
+    View vb;
+    View vc;
+    va.p = a;
+    vb.p = b;
+#pragma unroll
+    for (size_t i = 0; i < sizeof(Pack) / sizeof(half2); ++i) {
+      vc.t[i] = __hadd2(va.t[i], vb.t[i]);
     }
     return vc.p;
   }
@@ -216,7 +237,8 @@ __device__ __forceinline__ void ReduceOrCopy(const int64_t num_elem, const T* (&
   if (all_same_size_to_align) {
     int64_t remaining = num_elem;
     if (size_to_align > 0) {
-      const int32_t num_elem_to_align = size_to_align / sizeof(T);
+      const int32_t num_elem_to_align =
+          min(static_cast<int64_t>(size_to_align / sizeof(T)), remaining);
       DoBatchPackReduceOrCopy<method, T, T, NUM_PACK_PER_BATCH_PER_THREAD, true, NUM_IN, NUM_OUT>(
           num_elem_to_align, in, out);
       remaining -= num_elem_to_align;
@@ -324,6 +346,7 @@ void CudaRingBoxingKernelUtil<method, float16>::LaunchGenericRingStep(
     half_params.links[i].in = reinterpret_cast<const half*>(params.links[i].in);
     half_params.links[i].send = reinterpret_cast<half*>(params.links[i].send);
     half_params.links[i].out = reinterpret_cast<half*>(params.links[i].out);
+    half_params.links[i].num_elem = params.links[i].num_elem;
   }
   CudaRingBoxingKernelUtil<method, half>::LaunchGenericRingStep(ctx, half_params);
 }
