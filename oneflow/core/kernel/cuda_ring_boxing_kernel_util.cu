@@ -56,14 +56,13 @@ struct PackReduceFunctor {
   __device__ __forceinline__ P operator()(const P& a, const P& b) const {
     View va;
     View vb;
-    View vc;
     va.p = a;
     vb.p = b;
 #pragma unroll
     for (size_t i = 0; i < sizeof(P) / sizeof(T); ++i) {
-      vc.t[i] = ReduceFunctor<method, T>()(va.t[i], vb.t[i]);
+      va.t[i] = ReduceFunctor<method, T>()(va.t[i], vb.t[i]);
     }
-    return vc.p;
+    return va.p;
   }
 };
 
@@ -76,14 +75,13 @@ struct PackReduceFunctor<ReduceMethod::kSum, half, Pack> {
   __device__ __forceinline__ Pack operator()(const Pack& a, const Pack& b) const {
     View va;
     View vb;
-    View vc;
     va.p = a;
     vb.p = b;
 #pragma unroll
     for (size_t i = 0; i < sizeof(Pack) / sizeof(half2); ++i) {
-      vc.t[i] = __hadd2(va.t[i], vb.t[i]);
+      va.t[i] = __hadd2(va.t[i], vb.t[i]);
     }
-    return vc.p;
+    return va.p;
   }
 };
 
