@@ -428,37 +428,6 @@ void TaskGraph::EnableMemSharingAfterAllManualSetForMdUpdt() {
   // });
 }
 
-void TaskGraph::EnableMemSharingInVariableOp() {
-  ForEachNode([&](TaskNode* node) {
-    if (node->exec_gph().node_num() != 1) { return; }
-    auto* variable_op = dynamic_cast<const VariableOp*>(node->exec_gph().SoleNode()->op().get());
-    if (variable_op == nullptr) { return; }
-    std::string model_bn = variable_op->op_conf().variable_conf().model_name();
-    auto* fw_task_node = dynamic_cast<NormalForwardCompTaskNode*>(node);
-    if (fw_task_node != nullptr) {
-      const LogicalBlobId& lbi = variable_op->BnInOp2Lbi(model_bn);
-      RegstDesc* model_regst = fw_task_node->GetSoleConsumedRegst("model").get();
-      CHECK_EQ(model_regst->min_register_num(), 1);
-      CHECK_EQ(model_regst->max_register_num(), 1);
-      model_regst->set_enable_mem_sharing(true);
-      if (model_regst->mem_shared_id() == -1) {
-        model_regst->set_mem_shared_id(Global<IDMgr>::Get()->NewMemSharedId());
-        model_regst->set_mem_shared_offset(0);
-      }
-      RegstDesc* out_regst = fw_task_node->GetProducedRegst("out").get();
-      CHECK_EQ(out_regst->min_register_num(), 1);
-      CHECK_EQ(out_regst->max_register_num(), 1);
-      CHECK_EQ(out_regst->NumOfLbi(), 1);
-      out_regst->set_enable_mem_sharing(true);
-      out_regst->set_mem_shared_id(model_regst->mem_shared_id());
-      out_regst->set_mem_shared_offset(model_regst->mem_shared_offset()
-                                       + model_regst->ByteOffsetInPackedBlobDescBody(lbi));
-    } else {
-      // do nothing
-    }
-  });
-}
-
 void TaskGraph::GetInplaceOpBlobArgList(
     OpBlobArgList* inplace_obas, const HashSet<TaskNode*>& dev_nodes,
     const std::function<const TaskNode*(const std::string&)>& TaskNode4OpName) const {
