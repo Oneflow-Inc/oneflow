@@ -70,7 +70,7 @@ message TaskSetInfo {
 
 message RegstHandlerProto {
   message InplaceDesc {
-    required map<int64, int64> paired_out2in = 1;
+    map<int64, int64> paired_out2in = 1;
   }
 
   required string type = 1;

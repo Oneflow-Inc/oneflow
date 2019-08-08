@@ -53,8 +53,8 @@ class OpActor final : public NewActor {
   std::unique_ptr<OpActorCtx> op_actor_ctx_;
 };
 
-}
+}  // namespace actor
 
-}
+}  // namespace oneflow
 
-#endif // ONEFLOW_CORE_ACTOR_NEW_ACTOR_H_
+#endif  // ONEFLOW_CORE_ACTOR_NEW_ACTOR_H_

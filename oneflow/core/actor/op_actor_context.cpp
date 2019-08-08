@@ -1,5 +1,5 @@
 #include "oneflow/core/actor/op_actor_context.h"
-#include "oneflow/core/actor/regst_pattern_wrapper.h"
+#include "oneflow/core/actor/regst_handler.h"
 
 namespace oneflow {
 
@@ -47,8 +47,8 @@ void OpActorCtx::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) 
     HashSet<int64_t> consumed_ids;
     HashSet<int64_t> produced_ids;
     auto ProcessRegstDescId = [&](const RegstHandlerProto& handler_proto, bool is_consumed) {
-      const RegstDescIdSet& ids = is_consumed ?
-        handler_proto.consumed_regst_desc_id() : handler_proto.produced_regst_desc_ids();
+      const RegstDescIdSet& ids = is_consumed ? handler_proto.consumed_regst_desc_id()
+                                              : handler_proto.produced_regst_desc_ids();
       HashSet<int64_t>& id_set = is_consumed ? consumed_ids : produced_ids;
       for (int64_t id : ids.regst_desc_id()) {
         regst_desc_id2handler_.emplace(id, handlers_.at(handler_proto.type()).get());
@@ -59,7 +59,7 @@ void OpActorCtx::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) 
     for (const RegstHandlerProto& handler_proto : task_proto.regst_handlers()) {
       const std::string& type = handler_proto.type();
       CHECK(IsKeyFound(handlers_, type))
-        << "OpActorCtx does not register RegstHandler with type = " << type;
+          << "OpActorCtx does not register RegstHandler with type = " << type;
       handlers_.at(type)->Init(handler_proto);
 
       ProcessRegstDescId(handler_proto, true);
@@ -97,16 +97,14 @@ void OpActorCtx::UpdateWithCmdMsg(const ActorMsg& msg) {
 
 void OpActorCtx::IsReady4Act() const {
   for (const auto& pair : wrappers_) {
-    if (pair.second->IsReady4Act() == false) {
-      return false;
-    }
+    if (pair.second->IsReady4Act() == false) { return false; }
   }
   return true;
 }
 
 void OpActorCtx::Act() {
   for (const ExecKernel& ek : exec_kernel_vec_) {
-    //TODO(niuchong): BnInOp2Blob return nullptr or failed?
+    // TODO(niuchong): BnInOp2Blob return nullptr or failed?
     ek.kernel->Launch(kernel_ctx, [&](const std::string& bn_in_op) -> Blob* {
       int64_t regst_desc_id = ek.bn_in_op2regst_desc_id.at(bn_in_op);
       RegstPatternWrapperIf* wrapper = regst_desc_id2wrapper_.at(regst_desc_id);
@@ -118,23 +116,17 @@ void OpActorCtx::Act() {
 }
 
 void OpActorCtx::HandleRegstMsgAfterAct() {
-  for (auto& pair : wrappers_) {
-    pair.second->HandleRegstMsgAfterAct(this);
-  }
+  for (auto& pair : wrappers_) { pair.second->HandleRegstMsgAfterAct(this); }
 }
 
 void OpActorCtx::NoLongerConsumeRegst() const {
   for (const auto& pair : wrappers_) {
-    if (pair.second->NoLongerConsumeRegst() == false) {
-      return false;
-    }
+    if (pair.second->NoLongerConsumeRegst() == false) { return false; }
   }
   return true;
 }
 
-MsgHandler OpActorCtx::initial_msg_handler() const {
-  return initial_msg_handler_;
-}
+MsgHandler OpActorCtx::initial_msg_handler() const { return initial_msg_handler_; }
 
 void OpActorCtx::InsertRegstPattern(RegstPatternWrapperIf* wrapper) {
   CHECK(wrappers_.emplace(wrapper->type(), wrapper).second);
@@ -149,11 +141,9 @@ class GeneralOpActorCtx final : public OpActorCtx {
   void VirtualHandleRegstPattern(const TaskProto& task_proto) override {
     InsertRegstPattern(new NaivePatternWrapper);
   }
-  void VirtualSetMsgHandler() override {
-    SetInitMsgHandler(&HandlerUtil::HandlerNormal);
-  }
+  void VirtualSetMsgHandler() override { SetInitMsgHandler(&HandlerUtil::HandlerNormal); }
 };
 
-}
+}  // namespace actor
 
-}
+}  // namespace oneflow

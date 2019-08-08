@@ -50,8 +50,8 @@ class OpActorCtx {
   HashMap<int64_t, RegstHandlerIfIf*> regst_desc_id2handler_;
 };
 
-}
+}  // namespace actor
 
-}
+}  // namespace oneflow
 
-#endif // ONEFLOW_CORE_ACTOR_OP_ACTOR_CONTEXT_H_
+#endif  // ONEFLOW_CORE_ACTOR_OP_ACTOR_CONTEXT_H_

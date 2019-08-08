@@ -5,7 +5,7 @@ namespace oneflow {
 namespace actor {
 
 void NormalRegstHandler::Init(const RegstHandlerProto& handler_proto,
-    const ProducedRegstType& produced_regsts, MsgDeliveryCtx* ctx) {
+                              const ProducedRegstType& produced_regsts, MsgDeliveryCtx* ctx) {
   CHECK(type() == handler_proto.type());
   for (int64_t consumed_id : handler_proto.consumed_regst_desc_ids().regst_desc_id()) {
     InsertNewRegstDescId(false, consumed_id);
@@ -36,7 +36,7 @@ void NormalRegstHandler::ForEachRegstDescId(std::function<void(int64_t)> handler
 }
 
 void NormalRegstHandler::UpdateWithRegstMsg(const ActorMsg& msg) {
-  //TODO(niuchong): not process regst from other machine
+  // TODO(niuchong): not process regst from other machine
   CHECK(msg.SrcMachineId() == Global<MachineCtx>::Get()->this_machine_id());
   Regst* regst = msg.regst();
   bool is_consumed_regst = IsKeyFound(consumed_regst2eord_, regst->regst_desc_id());
@@ -91,8 +91,9 @@ void CtrlRegstHandler::HandleConsumedRegstAfterAct() {
       Regst* regst = reg_deq.at(i);
       // must access regst before sending it to producer
       regst_desc_ids.push_back(regst->regst_desc_id());
-      ActorMsgUtil::AsyncSendMsg(msg_delivery_ctx(),
-          ActorMsg::BuildRegstMsgToProducer(msg_delivery_ctx()->actor_id, regst->producer_actor_id(), regst));
+      ActorMsgUtil::AsyncSendMsg(
+          msg_delivery_ctx(), ActorMsg::BuildRegstMsgToProducer(msg_delivery_ctx()->actor_id,
+                                                                regst->producer_actor_id(), regst));
     }
   });
   mut_consumed_rs()->PopFrontRegsts(regst_desc_ids);
@@ -104,7 +105,9 @@ void CtrlRegstHandler::HandleProducedRegstAfterAct() {
     regst_desc_ids.push_back(regst->regst_desc_id());
     CHECK_EQ(0, ReadingCnt4ProducedRegst(regst));
     for (int64_t consumer : regst->consumers_actor_id()) {
-      ActorMsgUtil::AsyncSendMsg(msg_delivery_ctx(), ActorMsg::BuildRegstMsgToConsumer(msg_delivery_ctx()->actor_id, consumer, regst));
+      ActorMsgUtil::AsyncSendMsg(
+          msg_delivery_ctx(),
+          ActorMsg::BuildRegstMsgToConsumer(msg_delivery_ctx()->actor_id, consumer, regst));
     }
     UpdateReadingCnt4ProducedRegst(regst, regst->consumers_actor_id().size());
   });
@@ -125,8 +128,9 @@ void NaiveRegstHandler::HandleConsumedRegstAfterAct() {
   mut_consumed_rs()->ForEachFrontRegst([&](Regst* regst) {
     // must access regst before sending it to producer
     regst_desc_ids.push_back(regst->regst_desc_id());
-    ActorMsgUtil::AsyncSendMsg(msg_delivery_ctx(),
-        ActorMsg::BuildRegstMsgToProducer(msg_delivery_ctx()->actor_id, regst->producer_actor_id(), regst));
+    ActorMsgUtil::AsyncSendMsg(
+        msg_delivery_ctx(), ActorMsg::BuildRegstMsgToProducer(msg_delivery_ctx()->actor_id,
+                                                              regst->producer_actor_id(), regst));
   });
   mut_consumed_rs()->PopFrontRegsts(regst_desc_ids);
 }
@@ -137,7 +141,9 @@ void NaiveRegstHandler::HandleProducedRegstAfterAct() {
     regst_desc_ids.push_back(regst->regst_desc_id());
     CHECK_EQ(0, ReadingCnt4ProducedRegst(regst));
     for (int64_t consumer : regst->consumers_actor_id()) {
-      ActorMsgUtil::AsyncSendMsg(msg_delivery_ctx(), ActorMsg::BuildRegstMsgToConsumer(msg_delivery_ctx()->actor_id, consumer, regst));
+      ActorMsgUtil::AsyncSendMsg(
+          msg_delivery_ctx(),
+          ActorMsg::BuildRegstMsgToConsumer(msg_delivery_ctx()->actor_id, consumer, regst));
     }
     UpdateReadingCnt4ProducedRegst(regst, regst->consumers_actor_id().size());
   });
@@ -165,7 +171,9 @@ void InplaceRegstHandler::UpdateWithProducedRegstMsg(Regst* regst) {
     int64_t corr_in_regst_id = inplace_pair_out2in_.at(regst->regst_desc_id());
     Regst* corr_in_regst = mut_consumed_rs()->Front(in_regst_desc_id);
     CHECK_NOTNULL(corr_in_regst);
-    ActorMsgUtil::AsyncSendMsg(msg_delivery_ctx(), ActorMsg::BuildRegstMsgToProducer(msg_delivery_ctx()->actor_id, producer, regst));
+    ActorMsgUtil::AsyncSendMsg(
+        msg_delivery_ctx(),
+        ActorMsg::BuildRegstMsgToProducer(msg_delivery_ctx()->actor_id, producer, regst));
     CHECK_EQ(mut_consumed_rs()->TryPopFrontRegst(corr_in_regst));
   }
 }
@@ -180,13 +188,15 @@ void InplaceRegstHandler::HandleProducedRegstAfterAct() {
     regst_desc_ids.push_back(regst->regst_desc_id());
     CHECK_EQ(0, ReadingCnt4ProducedRegst(regst));
     for (int64_t consumer : regst->consumers_actor_id()) {
-      ActorMsgUtil::AsyncSendMsg(msg_delivery_ctx(), ActorMsg::BuildRegstMsgToConsumer(msg_delivery_ctx()->actor_id, consumer, regst));
+      ActorMsgUtil::AsyncSendMsg(
+          msg_delivery_ctx(),
+          ActorMsg::BuildRegstMsgToConsumer(msg_delivery_ctx()->actor_id, consumer, regst));
     }
     UpdateReadingCnt4ProducedRegst(regst, regst->consumers_actor_id().size());
   });
   mut_produced_rs()->PopFrontRegsts(regst_desc_ids);
 }
 
-}
+}  // namespace actor
 
-}
+}  // namespace oneflow

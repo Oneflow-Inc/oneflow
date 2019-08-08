@@ -19,29 +19,25 @@ void UpdateCtxWithMsg(OpActorCtx* ctx, const ActorMsg& msg) {
 }
 
 void ActUntilFail(OpActorCtx* ctx) {
-  while(ctx->IsReady()) {
+  while (ctx->IsReady()) {
     ctx->Act();
     ctx->HandleRegstMsgAfterAct();
   }
 }
 
-}
+}  // namespace
 
 int OpActor::HandlerNormal(OpActorCtx* ctx, const ActorMsg& msg) {
   UpdateCtxWithMsg(ctx, msg);
   ActUntilFail(ctx);
-  if (ctx->EndOfRead()) {
-    OF_SET_MSG_HANDLER(HandlerZombie);
-  }
+  if (ctx->EndOfRead()) { OF_SET_MSG_HANDLER(HandlerZombie); }
 }
 
 int OpActor::HandlerZombie(OpActorCtx* ctx, const ActorMsg& msg) {
   ctx->UpdateWithProducedRegstMsg();
-  if (ctx->RecvAllProducedMsg()) {
-    OF_SET_MSG_HANDLER(MsgHandler());
-  }
+  if (ctx->RecvAllProducedMsg()) { OF_SET_MSG_HANDLER(MsgHandler()); }
 }
 
-}
+}  // namespace actor
 
-}
+}  // namespace oneflow

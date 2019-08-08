@@ -205,7 +205,6 @@ class Actor {
   std::unique_ptr<DeviceCtx> device_ctx_;
   HashMap<int64_t, std::vector<std::unique_ptr<Regst>>> produced_regsts_;
 
-
   HashSet<int64_t> eord_regst_desc_ids_;
   int64_t remaining_eord_cnt_;
 

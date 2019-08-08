@@ -36,14 +36,16 @@ class RegstHandlerIf {
 
   virtual bool IsReady() const = 0;
   virtual void HandleRegstMsgAfterAct() = 0;
-               PostActHandler();
+  PostActHandler();
   virtual bool NoLongerConsumeRegst() const = 0;
 };
 
 class NormalRegstHandler : public RegstHandlerIf {
  public:
   void Init(const RegstHandlerProto&, const ProducedRegstType&, MsgDeliveryCtx*) override final;
-  bool NoLongerConsumeRegst() const override final { return (eord_cnt_ == consumed_rs_.total_reading_cnt()); }
+  bool NoLongerConsumeRegst() const override final {
+    return (eord_cnt_ == consumed_rs_.total_reading_cnt());
+  }
   void UpdateWithRegstMsg(const ActorMsg&) override final;
   void UpdateWithEordMsg(const ActorMsg&) override final;
   bool IsReady4Act() const override final;
@@ -58,7 +60,7 @@ class NormalRegstHandler : public RegstHandlerIf {
 
   MsgDeliveryCtx* msg_delivery_ctx() { return msg_delivery_ctx_.get(); }
   RegstSlot* mut_consumed_rs() { return &consumed_rs_; }
-  RegstSlot* mut_produced_rs()  { return &produced_rs_; }
+  RegstSlot* mut_produced_rs() { return &produced_rs_; }
 
   int64_t ReadingCnt4ProducedRegst(Regst* regst) const {
     return produced_regst2reading_cnt_.at(regst);
@@ -127,8 +129,8 @@ class InplaceRegstHandler final : public NormalRegstHandler {
   HashMap<int64_t, int64_t> inplace_pair_out2in_;
 };
 
-}
+}  // namespace actor
 
-}
+}  // namespace oneflow
 
-#endif // ONEFLOW_CORE_ACTOR_REGST_HANDLER_H_
+#endif  // ONEFLOW_CORE_ACTOR_REGST_HANDLER_H_

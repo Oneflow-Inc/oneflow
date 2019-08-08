@@ -229,6 +229,11 @@ void Erase(T& container, const std::function<bool(const typename T::value_type&)
 #define ALWAYS_INLINE inline
 #endif
 
+template<typename MapT, typename KeyT>
+bool IsKeyFound(const MapT& m, const KeyT& k) {
+  return m.find(k) != m.end();
+}
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_COMMON_UTIL_H_

@@ -9,11 +9,6 @@ namespace {
 
 #define INSERT_CHECK(expr) CHECK(expr.second)
 
-template<typename MapT, typename KeyT>
-bool IsKeyFound(const MapT& m, const KeyT& k) {
-  return m.find(k) != m.end();
-}
-
 bool IsNodeInList(const AMPList& amp_list, OpNode* node) {
   OperatorConf::OpTypeCase op_type = node->op().op_conf().op_type_case();
   return IsKeyFound(amp_list, op_type);
