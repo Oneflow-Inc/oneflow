@@ -37,9 +37,9 @@ XlaLaunchScope::XlaLaunchScope(xla::LocalExecutable *executable,
   }
 
   size_t workspace_size = xla::CalcWorkspaceByteSize(executable);
-  launch_ctx->ReserveWorkspace(workspace_size);
+  launch_ctx_->allocator()->ReserveWorkspace(workspace_size);
 
-  launch_ctx_->allocator()->memory_pool()->IncreaseRef();
+  launch_ctx_->allocator()->LockWorkspace();
 }
 
 XlaLaunchScope::~XlaLaunchScope() {
@@ -48,7 +48,7 @@ XlaLaunchScope::~XlaLaunchScope() {
     xla::SwapGpuStreamHandle(launch_ctx_->stream(), cuda_stream_);
   }
 
-  launch_ctx_->allocator()->memory_pool()->DecreaseRef();
+  launch_ctx_->allocator()->UnlockWorkspace();
 }
 
 }  // namespace mola

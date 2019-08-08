@@ -1,7 +1,7 @@
 #include "tensorflow/stream_executor/host/host_platform_id.h"
 #include "tensorflow/stream_executor/cuda/cuda_platform_id.h"
 #include "oneflow/core/device/cuda_util.h"
-#include "oneflow/xla/of2xla/memory/memory_pool.h"
+#include "oneflow/xla/of2xla/memory/device_memory_pool.h"
 
 namespace oneflow {
 namespace mola {
@@ -90,12 +90,8 @@ void DeviceMemoryPool::Reserve(size_t size) {
   if (limited_memory_size_ > -1) {
     CHECK_LT(size, limited_memory_size_);
   }
-
-  std::unique_lock<std::mutex> lock(mutex_);
   
-  cond_.wait(lock, [&]() { return reference_count_ == 0; });
-  
-  if (size > capacity_) {
+  while (size > capacity_) {
     // Block host to ensure that all the launched kernels depend on this
     // memory buffer have been executed completely
     CHECK(stream_->BlockHostUntilDone().ok());
@@ -107,26 +103,11 @@ void DeviceMemoryPool::Reserve(size_t size) {
 }
 
 void DeviceMemoryPool::Release() {
-  std::unique_lock<std::mutex> lock(mutex_);
-
-  cond_.wait(lock, [&]() { return reference_count_ == 0; });
-
   // Block host to ensure that all the launched kernels depend on this
   // memory buffer have been executed completely
   CHECK(stream_->BlockHostUntilDone().ok());
 
   ReleaseImpl();
-}
-
-void DeviceMemoryPool::IncreaseRef() const {
-  std::unique_lock<std::mutex> lock(mutex_);
-  ++reference_count_;
-}
-
-void DeviceMemoryPool::DecreaseRef() const {
-  std::unique_lock<std::mutex> lock(mutex_);
-  --reference_count_;
-  cond_.notify_all();
 }
 
 typedef DeviceMemoryPool::MemPoolFactory MemPoolFactory;
@@ -137,14 +118,15 @@ static MemPoolFactoryMap* GlobalMemPoolFactories() {
   return &factories;
 }
 
-/*static*/ DeviceMemoryPool *DeviceMemoryPool::NewMemoryPool(
+/*static*/ std::shared_ptr<DeviceMemoryPool> DeviceMemoryPool::NewMemoryPool(
     const se::Platform *platform, se::Stream *stream, int device_ordinal) {
   MemPoolFactoryMap *factories = GlobalMemPoolFactories();
   const auto &it = factories->find(platform->id());
   CHECK(it != factories->end())
       << "DeviceMemoryPool has not been registered for platform id "
       << platform->id();
-  return (it->second)(stream, device_ordinal);
+  DeviceMemoryPool *mem_pool = (it->second)(stream, device_ordinal);
+  return std::shared_ptr<DeviceMemoryPool>(mem_pool);
 }
 
 /*static*/ void DeviceMemoryPool::RegisterFactory(

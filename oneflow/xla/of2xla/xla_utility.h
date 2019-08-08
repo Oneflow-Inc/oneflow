@@ -42,7 +42,7 @@ LogicalBlobId BlobId(const std::string &blob_name);
 #define OF_CHECK_AND_ASSIGN_IMPL(statusor, lhs, rexpr)             \
   auto &&statusor = (rexpr);                                       \
   CHECK(statusor.ok()) << xla::WithLogBacktrace(statusor.status()) \
-                       << TF_CPP_VLOG_LEVEL_REQUARED(2);           \
+                       << ", " << TF_CPP_VLOG_LEVEL_REQUARED(2);   \
   lhs = std::move(statusor.ValueOrDie());                          \
 
 #define TF_CPP_VLOG_LEVEL_REQUARED(level) \

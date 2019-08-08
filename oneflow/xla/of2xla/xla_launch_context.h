@@ -9,7 +9,6 @@
 #include "tensorflow/stream_executor/stream.h"
 #include "tensorflow/compiler/xla/client/xla_builder.h"
 #include "tensorflow/compiler/xla/client/local_client.h"
-#include "tensorflow/compiler/xla/service/stream_pool.h"
 #include "oneflow/core/job/resource.pb.h"  // DeviceType
 #include "oneflow/core/job/placement.pb.h"  // ParallelContext
 #include "oneflow/core/device/device_context.h"
@@ -23,9 +22,8 @@ class XlaLaunchResourceMgr {
   static xla::LocalClient *GetOrCreateLocalClient(
       const se::Platform *platform, int intra_op_num_threads);
 
-  static DeviceMemoryPool *GetOrCreateMemoryPool(const se::Platform *platform,
-                                                 se::Stream *stream,
-                                                 int device_ordinal);
+  static DeviceBufferAllocator *GetOrCreateBufferAllocator(
+      const se::Platform *platform, se::Stream *stream, int device_ordinal);
   
   static Eigen::ThreadPoolDevice *GetOrCreateEigenHostDevice();
 };
@@ -51,22 +49,17 @@ class XlaLaunchContext {
 
   se::Stream *stream() const { return stream_.get(); }
 
-  void ReserveWorkspace(size_t workspace_bytes);
-
  private:
   xla::LocalClient *NewLocalClient(const se::Platform *platform,
                                    int num_threads);
   XlaAllocator *NewAllocator(const se::Platform *platform, int device_ordinal);
-
-  DeviceMemoryPool *NewDeviceMemoryPool(const se::Platform *platform,
-                                        se::Stream *stream, int device_ordinal);
 
   Eigen::ThreadPoolDevice* NewEigenHostDevice();
 
   xla::LocalClient *client_;
   std::shared_ptr<xla::XlaBuilder> builder_;
 
-  xla::StreamPool::Ptr stream_;
+  std::shared_ptr<se::Stream> stream_;
 
   std::shared_ptr<XlaAllocator> allocator_;
 

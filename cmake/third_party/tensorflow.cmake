@@ -2,7 +2,7 @@ include (ExternalProject)
 
 if (WITH_XLA)
 
-set(BUILD_DEBUG ON)
+set(BUILD_DEBUG OFF)
 set(TENSORFLOW_BUILD_CMD --define with_xla_support=true)
 if (BUILD_DEBUG)
   set(TENSORFLOW_BUILD_CMD --copt=-g -c dbg ${BUILD_CMD})

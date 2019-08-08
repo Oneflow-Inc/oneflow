@@ -1,7 +1,7 @@
 #include "tensorflow/compiler/xla/client/client_library.h"
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/xla/of2xla/xla_utility.h"
-#include "oneflow/xla/of2xla/memory/memory_pool.h"
+#include "oneflow/xla/of2xla/memory/device_memory_pool.h"
 #include "oneflow/xla/of2xla/xla_launch_context.h"
 
 namespace oneflow {
@@ -29,16 +29,17 @@ xla::LocalClient* XlaLaunchResourceMgr::GetOrCreateLocalClient(
   return client;
 }
 
-DeviceMemoryPool *XlaLaunchResourceMgr::GetOrCreateMemoryPool(
+DeviceBufferAllocator *XlaLaunchResourceMgr::GetOrCreateBufferAllocator(
     const se::Platform *platform, se::Stream *stream, int device_ordinal) {
-  static std::unordered_map<uint64_t, DeviceMemoryPool *> memory_pools;
+  static std::unordered_map<uint64_t, DeviceBufferAllocator *> allocators;
   uint64_t stream_id = reinterpret_cast<uint64_t>(stream);
-  if (memory_pools.count(stream_id) == 0) {
-    DeviceMemoryPool *memory_pool =
+
+  if (allocators.count(stream_id) == 0) {
+    std::shared_ptr<DeviceMemoryPool> mem_pool =
         DeviceMemoryPool::NewMemoryPool(platform, stream, device_ordinal);
-    memory_pools.emplace(stream_id, memory_pool);
+    allocators.emplace(stream_id, new DeviceBufferAllocator(mem_pool));
   }
-  return memory_pools[stream_id];
+  return allocators[stream_id];
 }
 
 Eigen::ThreadPoolDevice* XlaLaunchResourceMgr::GetOrCreateEigenHostDevice() {
@@ -54,19 +55,13 @@ xla::LocalClient *XlaLaunchContext::NewLocalClient(
   return XlaLaunchResourceMgr::GetOrCreateLocalClient(platform, num_threads);
 }
 
-DeviceMemoryPool *XlaLaunchContext::NewDeviceMemoryPool(
-    const se::Platform *platform, se::Stream *stream, int device_ordinal) {
-  return XlaLaunchResourceMgr::GetOrCreateMemoryPool(platform, stream,
-                                                     device_ordinal);
-}
 
 XlaAllocator *XlaLaunchContext::NewAllocator(const se::Platform *platform,
                                              int device_ordinal) {
-  DeviceMemoryPool *mem_pool =
-      NewDeviceMemoryPool(platform, stream_.get(), device_ordinal);
-  CHECK(mem_pool) << "Failed to get or create memory pool for device "
-                  << device_type_;
-  return new XlaAllocator(platform, mem_pool);
+  DeviceBufferAllocator *buffer_allocator =
+      XlaLaunchResourceMgr::GetOrCreateBufferAllocator(platform, stream_.get(),
+                                                       device_ordinal);
+  return new XlaAllocator(platform, buffer_allocator);
 }
 
 Eigen::ThreadPoolDevice* XlaLaunchContext::NewEigenHostDevice() {
@@ -102,11 +97,6 @@ XlaLaunchContext::XlaLaunchContext(const std::string &builder_name,
   allocator_.reset(NewAllocator(platform, device_ordinal_));
   host_device_ = NewEigenHostDevice();
   parallel_ctx_ = LocalParallelContext(device_ordinal_);
-}
-
-void XlaLaunchContext::ReserveWorkspace(size_t workspace_bytes) {
-  CHECK(allocator_);
-  allocator_->memory_pool()->Reserve(workspace_bytes);
 }
 
 }  // namespace mola

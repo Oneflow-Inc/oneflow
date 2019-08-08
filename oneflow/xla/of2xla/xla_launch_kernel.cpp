@@ -103,7 +103,7 @@ void XlaLaunchKernel<device_type>::LaunchExecutable(
     run_options.set_allocator(launch_ctx->allocator());
     run_options.set_intra_op_thread_pool(launch_ctx->host_device());
     run_options.set_rng_seed(tensorflow::GetXLARandomSeed());
-    return executable->Run(arguments, run_options);
+    return executable->RunAsync(arguments, run_options);
   }());
 
   // Result shape should be tuple
