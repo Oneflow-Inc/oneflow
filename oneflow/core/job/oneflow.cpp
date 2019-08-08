@@ -361,10 +361,10 @@ void FilterArgPassJobGroupInfo(
       if (IsInterfaceOpConf(op_conf) == false) { continue; }
       ParallelBlobConf parallel_blob_conf;
       GetInterfaceOpBlobInfo(job_builder, op_conf.name(), &parallel_blob_conf);
-      if (op_conf.has_input_conf() || op_conf.has_variable_conf()) {
+      if (op_conf.has_input_conf()) {
         parallel_blob_conf2input_op_names[parallel_blob_conf].insert(op_conf.name());
       }
-      if (op_conf.has_output_conf() || op_conf.has_variable_conf()) {
+      if (op_conf.has_output_conf()) {
         parallel_blob_conf2output_op_names[parallel_blob_conf].insert(op_conf.name());
       }
     }
