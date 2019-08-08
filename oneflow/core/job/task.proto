@@ -68,6 +68,19 @@ message TaskSetInfo {
   required int64 order_in_graph = 5;
 }
 
+message RegstHandlerProto {
+  message InplaceDesc {
+    required map<int64, int64> paired_out2in = 1;
+  }
+
+  required string type = 1;
+  required RegstDescIdSet consumed_regst_desc_ids = 2;
+  required RegstDescIdSet produced_regst_desc_ids = 3;
+  oneof further_desc {
+    InplaceDesc inplace_desc = 100;
+  }
+}
+
 message TaskProto {
   // common
   required TaskType task_type = 1;
@@ -78,6 +91,7 @@ message TaskProto {
   required ExecSequence exec_sequence = 6;
   map<string, RegstDescProto> produced_regst_desc = 7;
   map<string, RegstDescIdSet> consumed_regst_desc_id = 8;
+  repeated RegstHandlerProto regst_handlers = 9;
   // compute task
   optional ParallelContext parallel_ctx = 1000; // CompTask
   optional int64 random_seed = 1001; // ForwardCompTask

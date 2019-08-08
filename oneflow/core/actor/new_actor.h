@@ -34,13 +34,11 @@ class NewActor {
   MsgHandler msg_handler_;
 };
 
-struct HandlerUtil final {
-  static int HandlerNormal(OpActor*, const ActorMsg&);
-  static int HandlerEord(OpActor*, const ActorMsg&);
-};
-
 class OpActor final : public NewActor {
  public:
+  static int HandlerNormal(OpActor*, const ActorMsg&);
+  static int HandlerEord(OpActor*, const ActorMsg&);
+
   OpActor() = default;
   ~OpActor() = default;
   OF_DISALLOW_COPY_AND_MOVE(OpActor);

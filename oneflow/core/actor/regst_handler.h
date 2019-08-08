@@ -1,25 +1,31 @@
-#ifndef ONEFLOW_CORE_ACTOR_REGST_PATTERN_WRAPPER_H_
-#define ONEFLOW_CORE_ACTOR_REGST_PATTERN_WRAPPER_H_
+#ifndef ONEFLOW_CORE_ACTOR_REGST_HANDLER_H_
+#define ONEFLOW_CORE_ACTOR_REGST_HANDLER_H_
 
 namespace oneflow {
 
 namespace actor {
 
 struct ActorMsgUtil {
-  static void AsyncSendMsg(OpActorCtx* op_actor_ctx, const ActorMsg& msg) {
+  static void AsyncSendMsg(MsgDeliveryCtx* msg_ctx, const ActorMsg& msg) {
     std::function<void()> callback = [msg]() { Global<ActorMsgBus>::Get()->SendMsg(msg); };
-    if (Global<IDMgr>::Get()->GlobalWorkStreamId4ActorId(op_actor_ctx->actor_id());
+    if (Global<IDMgr>::Get()->GlobalWorkStreamId4ActorId(msg_ctx->actor_id);
         == Global<IDMgr>::Get()->GlobalWorkStreamId4ActorId(msg.dst_actor_id())) {
       callback();
     } else {
-      op_actor_ctx->mut_device_ctx()->AddCallBack(callback);
+      msg_ctx->device_ctx->AddCallBack(callback);
     }
   }
 };
 
-class RegstPatternWrapperIf {
+struct MsgDeliveryCtx {
+  int64_t actor_id;
+  DeviceCtx* device_ctx;
+  MsgDeliveryCtx(int64_t id, DeviceCtx* ctx) : actor_id(id), device_ctx(ctx) {}
+};
+
+class RegstHandlerIf {
  public:
-  virtual void Init(const TaskProto&, const ProducedRegstType&, OpActorCtx*) = 0;
+  virtual void Init(const RegstHandlerProto&, const ProducedRegstType&, MsgDeliveryCtx*) = 0;
   virtual std::string type() = 0;
 
   virtual Regst* GetRegstByRegstDescId() const = 0;
@@ -28,14 +34,15 @@ class RegstPatternWrapperIf {
   virtual void UpdateWithRegstMsg(const ActorMsg&) = 0;
   virtual void UpdateWithProducedRegstMsg(const ActorMsg&) = 0;
 
-  virtual bool IsReady4Act() const = 0;
+  virtual bool IsReady() const = 0;
   virtual void HandleRegstMsgAfterAct() = 0;
+               PostActHandler();
   virtual bool NoLongerConsumeRegst() const = 0;
 };
 
-class NormalPatternWrapper : public RegstPatternWrapperIf {
+class NormalRegstHandler : public RegstHandlerIf {
  public:
-  void Init(const TaskProto&, const ProducedRegstType&, OpActorCtx*) override final;
+  void Init(const RegstHandlerProto&, const ProducedRegstType&, MsgDeliveryCtx*) override final;
   bool NoLongerConsumeRegst() const override final { return (eord_cnt_ == consumed_rs_.total_reading_cnt()); }
   void UpdateWithRegstMsg(const ActorMsg&) override final;
   void UpdateWithEordMsg(const ActorMsg&) override final;
@@ -46,10 +53,10 @@ class NormalPatternWrapper : public RegstPatternWrapperIf {
   void ForEachRegstDescId(std::function<void(int64_t)>) const;
 
  protected:
-  NormalPatternWrapper() = default;
-  ~NormalPatternWrapper() = default;
+  NormalRegstHandler() = default;
+  ~NormalRegstHandler() = default;
 
-  OpActorCtx* op_actor_ctx() { return op_actor_ctx_; }
+  MsgDeliveryCtx* msg_delivery_ctx() { return msg_delivery_ctx_.get(); }
   RegstSlot* mut_consumed_rs() { return &consumed_rs_; }
   RegstSlot* mut_produced_rs()  { return &produced_rs_; }
 
@@ -61,6 +68,12 @@ class NormalPatternWrapper : public RegstPatternWrapperIf {
     total_reading_cnt_ += udpate_val;
   }
 
+ private:
+  virtual void DerivedInit(const RegstHandlerProto&) {}
+  virtual void UpdateWithConsumedRegstMsg(Regst*) = 0;
+  virtual void HandleConsumedRegstAfterAct() = 0;
+  virtual void HandleProducedRegstAfterAct() = 0;
+
   void InsertNewRegstDescId(bool is_produced, int64_t regst_desc_id) {
     if (is_produced) {
       produced_rs_.InsertRegstDescId(regst_desc_id);
@@ -70,13 +83,7 @@ class NormalPatternWrapper : public RegstPatternWrapperIf {
     }
   }
 
- private:
-  virtual void DerivedInit(const TaskProto&) = 0;
-  virtual void UpdateWithConsumedRegstMsg(Regst*) = 0;
-  virtual void HandleConsumedRegstAfterAct() = 0;
-  virtual void HandleProducedRegstAfterAct() = 0;
-
-  OpActorCtx* op_actor_ctx_;
+  std::unique_ptr<MsgDeliveryCtx> msg_delivery_ctx_;
 
   RegstSlot consumed_rs_;
   RegstSlot produced_rs_;
@@ -88,30 +95,28 @@ class NormalPatternWrapper : public RegstPatternWrapperIf {
   // HashMap<int64_t, int64_t> produced_regst2expected_act_id_;
 };
 
-class CtrlPatternWrapper final : public NormalPatternWrapper {
+class CtrlRegstHandler final : public NormalRegstHandler {
  public:
   std::string type() override { return "Ctrl"; }
-  void DerivedInit(const TaskProto&) override;
   void UpdateWithConsumedRegstMsg(Regst*) override;
   void UpdateWithProducedRegstMsg(Regst*) override;
   void HandleConsumedRegstAfterAct() override;
   void HandleProducedRegstAfterAct() override;
 };
 
-class NaivePatternWrapper final : public NormalPatternWrapper {
+class NaiveRegstHandler final : public NormalRegstHandler {
  public:
   std::string type() override { return "Naive"; }
-  void DerivedInit(const TaskProto&) override;
   void UpdateWithConsumedRegstMsg(Regst*) override;
   void UpdateWithProducedRegstMsg(Regst*) override;
   void HandleConsumedRegstAfterAct() override;
   void HandleProducedRegstAfterAct() override;
 };
 
-class InplacePatternWrapper final : public NormalPatternWrapper {
+class InplaceRegstHandler final : public NormalRegstHandler {
  public:
   std::string type() override { return "Inplace"; }
-  void DerivedInit(const TaskProto&) override;
+  void DerivedInit(const RegstHandlerProto&) override;
   void UpdateWithConsumedRegstMsg(Regst*) override;
   void UpdateWithProducedRegstMsg(Regst*) override;
   void HandleConsumedRegstAfterAct() override;
@@ -126,4 +131,4 @@ class InplacePatternWrapper final : public NormalPatternWrapper {
 
 }
 
-#endif // ONEFLOW_CORE_ACTOR_REGST_PATTERN_WRAPPER_H_
+#endif // ONEFLOW_CORE_ACTOR_REGST_HANDLER_H_

@@ -6,7 +6,7 @@ namespace actor {
 
 namespace {
 
-void UpdateCtxWithMsg(ActorCtx* ctx, const ActorMsg& msg) {
+void UpdateCtxWithMsg(OpActorCtx* ctx, const ActorMsg& msg) {
   if (msg.msg_type() == ActorMsgType::kRegstMsg) {
     ctx->UpdateWithRegstMsg(msg);
   } else if (msg.msg_type() == ActorMsgType::kEordMsg) {
@@ -18,8 +18,8 @@ void UpdateCtxWithMsg(ActorCtx* ctx, const ActorMsg& msg) {
   }
 }
 
-void ActUntilFail(ActorCtx* ctx) {
-  while(ctx->IsReady4Act()) {
+void ActUntilFail(OpActorCtx* ctx) {
+  while(ctx->IsReady()) {
     ctx->Act();
     ctx->HandleRegstMsgAfterAct();
   }
@@ -27,7 +27,7 @@ void ActUntilFail(ActorCtx* ctx) {
 
 }
 
-int OpActor::HandlerNormal(OpActorCtx ctx, const ActorMsg& msg) {
+int OpActor::HandlerNormal(OpActorCtx* ctx, const ActorMsg& msg) {
   UpdateCtxWithMsg(ctx, msg);
   ActUntilFail(ctx);
   if (ctx->EndOfRead()) {
@@ -35,7 +35,7 @@ int OpActor::HandlerNormal(OpActorCtx ctx, const ActorMsg& msg) {
   }
 }
 
-int OpActor::HandlerZombie(OpActorCtx ctx, const ActorMsg& msg) {
+int OpActor::HandlerZombie(OpActorCtx* ctx, const ActorMsg& msg) {
   ctx->UpdateWithProducedRegstMsg();
   if (ctx->RecvAllProducedMsg()) {
     OF_SET_MSG_HANDLER(MsgHandler());

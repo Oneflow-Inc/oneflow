@@ -5,6 +5,12 @@ namespace oneflow {
 
 namespace actor {
 
+OpActorCtx::OpActorCtx(MsgHandler msg_handler, const std::vector<RegstHandlerIf*>& regst_handlers) {
+  msg_handler_ = msg_handler;
+  for (RegstHandlerIf* regst_handler : regst_handlers) {
+    handlers_.emplace(regst_handler->type(), regst_handler);
+  }
+}
 
 void OpActorCtx::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
   actor_id_ = task_proto.task_id();
@@ -37,16 +43,44 @@ void OpActorCtx::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) 
     }
   }
 
-  InsertRegstPattern(new CtrlPatternWrapper);
-  VirtualHandleRegstPattern(task_proto);
-  for (auto& pair : wrappers_) {
-    pair.second->Init(task_proto, produced_regsts_);
-    pair.second->ForEachRegstDescId([&](int64_t regst_desc_id) {
-          CHECK(regst_desc_id2wrapper_.emplace(regst_desc_id, pair.second.get()));
-    });
-  }
+  {
+    HashSet<int64_t> consumed_ids;
+    HashSet<int64_t> produced_ids;
+    auto ProcessRegstDescId = [&](const RegstHandlerProto& handler_proto, bool is_consumed) {
+      const RegstDescIdSet& ids = is_consumed ?
+        handler_proto.consumed_regst_desc_id() : handler_proto.produced_regst_desc_ids();
+      HashSet<int64_t>& id_set = is_consumed ? consumed_ids : produced_ids;
+      for (int64_t id : ids.regst_desc_id()) {
+        regst_desc_id2handler_.emplace(id, handlers_.at(handler_proto.type()).get());
+        CHECK(id_set.insert(id).second);
+      }
+    };
 
-  VirtualSetMsgHandler();
+    for (const RegstHandlerProto& handler_proto : task_proto.regst_handlers()) {
+      const std::string& type = handler_proto.type();
+      CHECK(IsKeyFound(handlers_, type))
+        << "OpActorCtx does not register RegstHandler with type = " << type;
+      handlers_.at(type)->Init(handler_proto);
+
+      ProcessRegstDescId(handler_proto, true);
+      ProcessRegstDescId(handler_proto, false);
+    }
+
+    // make sure task_proto is self-consistent
+    for (const auto& pair : task_proto.produced_regst_desc()) {
+      CHECK(IsKeyFound(produced_ids, pair.second.regst_desc_id()));
+    }
+    CHECK_EQ(task_proto.produced_regst_desc().size(), produced_ids.size());
+
+    size_t consumed_cnt = 0;
+    for (const auto& pair : task_proto.consumed_regst_desc_id()) {
+      consumed_cnt += pair.second.regst_desc_id().size();
+      for (int regst_desc_id : pair.second.regst_desc_id()) {
+        CHECK(IsKeyFound(consumed_ids, regst_desc_id));
+      }
+    }
+    CHECK_EQ(consumed_cnt, consumed_ids.size());
+  }
 }
 
 void OpActorCtx::UpdateWithRegstMsg(const ActorMsg& msg) {
