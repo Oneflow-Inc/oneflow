@@ -307,7 +307,7 @@ void InterJobMemSharingUtil::MergeMemBlockBetweenSubPlans(const std::vector<Job>
     return max_mem_block_num_job_id;
   };
 
-  for (auto& job_group : job_groups) {
+  for (const auto& job_group : job_groups) {
     if (job_group.size() <= 1) { continue; }
     HashMap<int32_t, HashSet<int32_t>> mzuid2job_ids = InitMzuid2JobIdsInJobGroup(job_group);
     for (const auto& pair : mzuid2job_ids) {
@@ -317,8 +317,6 @@ void InterJobMemSharingUtil::MergeMemBlockBetweenSubPlans(const std::vector<Job>
       int32_t merge_job_id = FindMaxMemBlockNumJobId(job_ids, mzuid);
       for (int32_t job_id : job_ids) {
         if (job_id == merge_job_id) { continue; }
-        auto& mzuid2mem_block_ids = job_id2mzuid2mem_block_ids[job_id];
-        CHECK(mzuid2mem_block_ids.find(mzuid) != mzuid2mem_block_ids.end());
         auto lhs_info = GetMemBlockId7MemSizeList(merge_job_id, mzuid);
         auto rhs_info = GetMemBlockId7MemSizeList(job_id, mzuid);
         CHECK_GE(lhs_info.size(), rhs_info.size());
