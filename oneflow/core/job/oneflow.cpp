@@ -896,7 +896,7 @@ void CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan) {
     CompileHelperJob(&model_save_job);
   }
   if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
-    BindInterfaceMemBlockId(jobs, &sub_plans);
+    InterJobMemSharingUtil::BindInterfaceMemBlockId(jobs, &sub_plans);
     InterJobMemSharingUtil::MergeMemBlockBetweenSubPlans(jobs, &sub_plans);
     FinishGlobalCriticalSectionDesc(sub_plans);
     MergePlan(plan, sub_plans);
