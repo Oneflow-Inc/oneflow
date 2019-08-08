@@ -41,7 +41,7 @@ void ReduceSplitOp::VirtualGenKernelConf(
       static_cast<int64_t>(GetSizeOfDataType(GetBlobDesc4BnInOp(SoleIbn())->data_type()));
   CHECK_EQ(offset % data_type_byte_size, 0);
   const int64_t out_blob_elem_cnt_sum =
-      RoundUp(offset / data_type_byte_size, parallel_ctx->parallel_num() * 2 * 16);
+      RoundUp(offset / data_type_byte_size, parallel_ctx->parallel_num());
   const int64_t in_blob_elem_cnt = GetBlobDesc4BnInOp(SoleIbn())->shape().elem_cnt();
   CHECK_EQ(out_blob_elem_cnt_sum, in_blob_elem_cnt);
 }

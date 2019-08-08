@@ -10,8 +10,8 @@ namespace {
 using Pack = ulong2;
 
 constexpr int32_t PACK_SIZE = sizeof(Pack);
-constexpr int32_t PACK_REGION_SIZE = PACK_SIZE * 16;
-constexpr int32_t PACK_REGION_ALIGN = PACK_REGION_SIZE;
+constexpr int32_t PACK_COALESCE_REGION_SIZE = PACK_SIZE * 16;
+constexpr int32_t PACK_COALESCE_REGION_ALIGN = PACK_COALESCE_REGION_SIZE;
 constexpr int32_t NUM_WARP_PER_BLOCK = 8;
 constexpr int32_t NUM_THREAD_PER_WARP = 32;
 constexpr int32_t NUM_THREAD = NUM_THREAD_PER_WARP * NUM_WARP_PER_BLOCK;
@@ -210,7 +210,8 @@ __device__ __forceinline__ void DoBatchPackReduceOrCopy(const int64_t num_elem,
 }
 
 __device__ __forceinline__ int32_t SizeToAlignPackRegion(const void* ptr) {
-  return PACK_REGION_ALIGN - (reinterpret_cast<uintptr_t>(ptr) % PACK_REGION_ALIGN);
+  return PACK_COALESCE_REGION_ALIGN
+         - (reinterpret_cast<uintptr_t>(ptr) % PACK_COALESCE_REGION_ALIGN);
 }
 
 template<ReduceMethod method, typename T, int32_t NUM_IN, int32_t NUM_OUT>
@@ -277,7 +278,7 @@ __global__ void GenericRingStepGpu(CudaRingBoxingStepParams<T> params) {
   const int32_t link_id = block_id / NUM_BLOCK_PER_LINK;
   const CudaRingBoxingLinkParams<T>& link_params = params.links[link_id];
   const int32_t block_id_in_link = block_id % NUM_BLOCK_PER_LINK;
-  constexpr int64_t NUM_ELEM_PER_PACK_REGION = PACK_REGION_SIZE / sizeof(T);
+  constexpr int64_t NUM_ELEM_PER_PACK_REGION = PACK_COALESCE_REGION_SIZE / sizeof(T);
   const int64_t num_pack_region = DivUp(link_params.num_elem, NUM_ELEM_PER_PACK_REGION);
   const int64_t num_pack_region_per_block = DivUp(num_pack_region, NUM_BLOCK_PER_LINK);
   const int64_t num_elem_per_block = num_pack_region_per_block * NUM_ELEM_PER_PACK_REGION;
@@ -349,7 +350,7 @@ void CudaRingBoxingKernelUtil<method, float16>::LaunchGenericRingStep(
   CudaRingBoxingKernelUtil<method, half>::LaunchGenericRingStep(ctx, half_params);
 }
 
-size_t GetCudaRingBoxingPackRegionSize() { return PACK_REGION_SIZE; }
+size_t GetCudaRingBoxingPackCoalesceRegionSize() { return PACK_COALESCE_REGION_SIZE; }
 
 #define INSTANTIATE_CUDA_RING_ALL_REDUCE_KERNEL_UTIL(type_cpp, type_proto) \
   template struct CudaRingBoxingKernelUtil<ReduceMethod::kSum, type_cpp>;

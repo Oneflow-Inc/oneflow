@@ -14,7 +14,7 @@ class CudaRingAllReduceOpCtx final : public OpContext {
   CudaRingAllReduceOpCtx(int64_t num_link, int64_t slice_factor, int64_t num_rank, int64_t num_elem,
                          DataType data_type)
       : num_link_(num_link), slice_factor_(slice_factor), num_rank_(num_rank) {
-    const size_t pack_region_size = GetCudaRingBoxingPackRegionSize();
+    const size_t pack_region_size = GetCudaRingBoxingPackCoalesceRegionSize();
     const size_t size_of_data_type = GetSizeOfDataType(data_type);
     CHECK_EQ(pack_region_size % size_of_data_type, 0);
     const int64_t num_elem_per_pack_region = pack_region_size / size_of_data_type;

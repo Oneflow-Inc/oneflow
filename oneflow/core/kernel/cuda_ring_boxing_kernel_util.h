@@ -39,7 +39,7 @@ struct CudaRingBoxingKernelUtil<method, float16> {
   static void LaunchGenericRingStep(DeviceCtx* ctx, CudaRingBoxingStepParams<float16> params);
 };
 
-size_t GetCudaRingBoxingPackRegionSize();
+size_t GetCudaRingBoxingPackCoalesceRegionSize();
 
 #endif
 
