@@ -643,7 +643,7 @@ std::vector<HashSet<int32_t>> GetMutualExclusionJobGroups(const std::vector<Job>
       }
     }
   } else {
-    return job_groups;
+    // do nothing; default using parallelism_priority strategy
   }
 
   std::vector<HashSet<int32_t>> job_id2enable_parallel_ids;
