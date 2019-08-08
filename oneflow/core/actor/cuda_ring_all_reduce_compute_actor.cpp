@@ -9,12 +9,17 @@ void CudaRingAllReduceCompActor::VirtualActorInit(const TaskProto& task_proto) {
   num_link_ = all_reduce_kernel_conf.num_link();
   CHECK_GT(num_link_, 0);
   out_regst_desc_id_ = task_proto.produced_regst_desc().at("out").regst_desc_id();
-  in_regst_desc_id_ = task_proto.consumed_regst_desc_id().at("in").regst_desc_id(0);
+  const RegstDescIdSet& consumed_in_regst_desc_ids = task_proto.consumed_regst_desc_id().at("in");
+  CHECK_EQ(consumed_in_regst_desc_ids.regst_desc_id_size(), 1);
+  in_regst_desc_id_ = consumed_in_regst_desc_ids.regst_desc_id(0);
+  consumed_rs_.InsertRegstDescId(in_regst_desc_id_);
   FOR_RANGE(int64_t, i, 0, num_link_) {
     const int64_t send_regst_desc_id =
         task_proto.produced_regst_desc().at("send_" + std::to_string(i)).regst_desc_id();
-    const int64_t recv_regst_desc_id =
-        task_proto.consumed_regst_desc_id().at("recv_" + std::to_string(i)).regst_desc_id(0);
+    const RegstDescIdSet& consumed_recv_regst_desc_ids =
+        task_proto.consumed_regst_desc_id().at("recv_" + std::to_string(i));
+    CHECK_EQ(consumed_recv_regst_desc_ids.regst_desc_id_size(), 1);
+    const int64_t recv_regst_desc_id = consumed_recv_regst_desc_ids.regst_desc_id(0);
     send_regst_desc_ids_.emplace(send_regst_desc_id);
     recv_regst_desc_ids_.emplace(recv_regst_desc_id);
     consumed_rs_.InsertRegstDescId(recv_regst_desc_id);
@@ -24,7 +29,6 @@ void CudaRingAllReduceCompActor::VirtualActorInit(const TaskProto& task_proto) {
   current_step_id_ = 0;
   current_slice_id_ = 0;
   send_regst_piece_id_ = 0;
-  consumed_rs_.InsertRegstDescId(in_regst_desc_id_);
   consumed_rs_.InitedDone();
   in_regst_eord_ = false;
   OF_SET_MSG_HANDLER(&CudaRingAllReduceCompActor::HandlerNormal);
