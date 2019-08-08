@@ -21,7 +21,7 @@ def add_job(job_func, job_set = None):
     _job_set2job_name2job_func[id(job_set)][job_func.__name__] = job_func
 
 @oneflow_export('job_mem_sharing_strategy')
-def job_mem_sharing_strategy(strategy_str, job_name_groups = None, job_set = None):
+def job_mem_sharing_strategy(strategy_str, job_set = None, **kwargs):
     assert type(strategy_str) is str
     if job_set == None: job_set = _default_job_set
     if strategy_str == "mem_sharing_priority":
@@ -31,8 +31,8 @@ def job_mem_sharing_strategy(strategy_str, job_name_groups = None, job_set = Non
         job_set.job_mem_sharing_strategy.parallelism_priority.SetInParent()
         assert job_set.job_mem_sharing_strategy.HasField("parallelism_priority")
     elif strategy_str == "custom_parallelism":
-        assert job_name_groups is not None
-        for job_name_group in job_name_groups:
+        assert kwargs["job_name_groups"] is not None
+        for job_name_group in kwargs["job_name_groups"]:
             group = job_set.job_mem_sharing_strategy.custom_parallelism.nonparallel_group.add()
             for job_name in job_name_group:
                 assert type(job_name) is str
