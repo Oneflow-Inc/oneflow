@@ -37,6 +37,31 @@ void DoNoDuplicationAdd(RepeatedPtrField<T> *repeat_field, const T &val) {
   }
 }
 
+int GetRepeatedIndex(const std::string &input) {
+  std::vector<std::string> splits = absl::StrSplit(input, "_");
+  CHECK_GT(splits.size(), 0);
+  int index = 0;
+  absl::SimpleAtoi(splits.back(), &index);
+  return index;
+};
+
+void SetOpInputBlobName(OperatorConf *op_conf, const std::string &input,
+                        const std::string &blob_name,
+                        const std::string &fixed_blob_name) {
+  auto *spec_conf = MutableMessageInPbMessage(
+                          op_conf, op_conf->op_type_case());
+  switch (op_conf->op_type_case()) {
+    case OperatorConf::kPrintConf: {
+      int index = GetRepeatedIndex(input);
+      *(op_conf->mutable_print_conf()->mutable_in(index)->mutable_lbn())
+          = fixed_blob_name;
+      break;
+    }
+    default:
+      SetBnValInOpTypeConf(spec_conf, input, blob_name, fixed_blob_name);
+  }
+}
+
 class FoldSubgraphBuilder {
  public:
   FoldSubgraphBuilder(const XlaGraph &graph, Job *job);
@@ -54,13 +79,13 @@ class FoldSubgraphBuilder {
     // 2.Replace control_in_op_name by XlaLaunch name if the operator
     //   has been folded by a XlaLaunch operator
     FixupControlInOpNames();
-    // 3.Fixup input blob names for all operators if it's input has
+    // 3.Add time shape for the XlaLaunch operators
+    FixupTimeShapes();
+    // 4.Add sbp parallel strategy for the XlaLaunch operators
+    FixupSbpSignatures();
+    // 5.Fixup input blob names for all operators if it's input has
     //   been folded, and fixup it's outputs
     FixupInOutBlobNames();
-    // 4.Add time shape for the XlaLaunch operators
-    FixupTimeShapes();
-    // 5.Add sbp parallel strategy for the XlaLaunch operators
-    FixupSbpSignatures();
     // 6.Finally remove the folded operators
     RemoveLaunchFoldedOps();
   }
@@ -99,24 +124,15 @@ class FoldSubgraphBuilder {
     return argument_conf;
   }
 
-  SbpParallel GetSbpSignature(const std::string &blob_name) {
-    LogicalBlobId lbi = BlobId(blob_name);
-    const auto &sbp_signatures =
-          builder_->GetSbpSignature(lbi.op_name()).bn_in_op2sbp_parallel();
-    const auto &it = sbp_signatures.find(lbi.blob_name());
-    CHECK(it != sbp_signatures.end());
-    return it->second;
-  }
-
   void BuildXlaLaunchOps();
 
   void FixupControlInOpNames();
 
-  void FixupInOutBlobNames();
-
   void FixupTimeShapes();
 
   void FixupSbpSignatures();
+
+  void FixupInOutBlobNames();
 
   void RemoveLaunchFoldedOps();
 
@@ -361,9 +377,7 @@ void FoldSubgraphBuilder::FixupInOutBlobNames() {
             std::string fixed_blob_name = absl::StrCat(launch_op_name, "/",
                                                        it->second);
             // Fix input blob name for normal node
-            auto *spec_conf = MutableMessageInPbMessage(
-                                    op_conf, op_conf->op_type_case());
-            SetBnValInOpTypeConf(spec_conf, input, blob_name, fixed_blob_name);
+            SetOpInputBlobName(op_conf, input, blob_name, fixed_blob_name);
           }
         }
       }
@@ -394,21 +408,21 @@ void FoldSubgraphBuilder::FixupSbpSignatures() {
       std::string blob_name = BlobName(op->BnInOp2Lbi(bn));
       blob_names.emplace(blob_name, bn);
     }
+    for (const std::string &bn : op->output_bns()) {
+      std::string blob_name = op->BnInOp2Lbi(bn).blob_name();
+      blob_names.emplace(blob_name, bn);
+    }
 
     SbpSignature sbp_conf;
     auto *sbp_signatures = sbp_conf.mutable_bn_in_op2sbp_parallel();
     auto *attr_proto = op_conf->mutable_xla_launch_conf()->mutable_attr();
-    for (const auto &argument : attr_proto->argument()) {
-      // Input argument
-      if (absl::StartsWith(argument.name(), mola::_XlaInArgumentPrefix)) {
-        std::string bn = blob_names.at(argument.in());
-        (*sbp_signatures)[bn] = GetSbpSignature(argument.out());
-      }
-      // Output argument
-      if (absl::StartsWith(argument.name(), mola::_XlaOutArgumentPrefix)) {
-        std::string bn = argument.out();
-        (*sbp_signatures)[bn] = GetSbpSignature(argument.in());
-      }
+    for (const XlaEdge *edge : node->in_edges()) {
+      std::string bn = blob_names.at(edge->argument().blob_name());
+      (*sbp_signatures)[bn] = edge->sbp_policy(1);
+    }
+    for (const XlaEdge *edge : node->out_edges()) {
+      std::string bn = blob_names.at(edge->argument().blob_name());
+      (*sbp_signatures)[bn] = edge->sbp_policy(0);
     }
     // Append sbp signatures to xla launch operator
     *(attr_proto->mutable_sbp_signature()) = *sbp_signatures;

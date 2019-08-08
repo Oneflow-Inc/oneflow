@@ -9,7 +9,6 @@
 #include "tensorflow/stream_executor/stream.h"
 #include "tensorflow/compiler/xla/client/xla_builder.h"
 #include "tensorflow/compiler/xla/client/local_client.h"
-#include "tensorflow/compiler/xla/service/stream_pool.h"
 #include "oneflow/core/job/resource.pb.h"  // DeviceType
 #include "oneflow/core/job/placement.pb.h"  // ParallelContext
 #include "oneflow/core/device/device_context.h"
@@ -22,10 +21,10 @@ class XlaLaunchResourceMgr {
  public:
   static xla::LocalClient *GetOrCreateLocalClient(
       const se::Platform *platform, int intra_op_num_threads);
-  
-  static mola::XlaAllocator *GetOrCreateAllocator(
-      const se::Platform *platform);
 
+  static DeviceBufferAllocator *GetOrCreateBufferAllocator(
+      const se::Platform *platform, se::Stream *stream, int device_ordinal);
+  
   static Eigen::ThreadPoolDevice *GetOrCreateEigenHostDevice();
 };
 
@@ -35,9 +34,10 @@ class XlaLaunchContext {
                             DeviceCtx *device_ctx, 
                             DeviceType device_type,
                             int intra_op_num_threads);
+
   xla::LocalClient *client() const { return client_; }
   xla::XlaBuilder *builder() const { return builder_.get(); }
-  mola::XlaAllocator *allocator() const { return allocator_; }
+  XlaAllocator *allocator() const { return allocator_.get(); }
 
   Eigen::ThreadPoolDevice *host_device() const { return host_device_; }
 
@@ -50,12 +50,18 @@ class XlaLaunchContext {
   se::Stream *stream() const { return stream_.get(); }
 
  private:
+  xla::LocalClient *NewLocalClient(const se::Platform *platform,
+                                   int num_threads);
+  XlaAllocator *NewAllocator(const se::Platform *platform, int device_ordinal);
+
+  Eigen::ThreadPoolDevice* NewEigenHostDevice();
+
   xla::LocalClient *client_;
   std::shared_ptr<xla::XlaBuilder> builder_;
 
-  xla::StreamPool::Ptr stream_;
+  std::shared_ptr<se::Stream> stream_;
 
-  mola::XlaAllocator *allocator_;
+  std::shared_ptr<XlaAllocator> allocator_;
 
   Eigen::ThreadPoolDevice *host_device_;
 

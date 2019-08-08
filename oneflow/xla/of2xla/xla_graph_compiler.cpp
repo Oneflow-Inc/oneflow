@@ -49,7 +49,7 @@ void XlaGraphCompiler::BuildComputation(
     const std::vector<Argument> &return_arguments,
     xla::Shape *output_shape, xla::XlaComputation *computation) {
   // All operator's output oprands collector
-  std::unordered_map<Argument, XlaOprand> all_outputs;
+  std::unordered_map<Argument, XlaOprand> all_outputs(entry_oprands);
 
   TopologyVisit(*graph_, [&](const XlaNode *node) {
     const std::string &backend = node->backend();
@@ -58,11 +58,12 @@ void XlaGraphCompiler::BuildComputation(
     auto op_compiler = CreateXlaOpCompiler(backend, op_type);
 
     // Setup input oprands from outputs of previous nodes
-    auto input_oprands = entry_oprands;
-    for (const XlaEdge *edge : node->in_edges()) {
-      const Argument &arg = edge->argument();
-      CHECK_GT(all_outputs.count(arg), 0);
-      input_oprands.emplace(arg, all_outputs[arg]);
+    std::unordered_map<Argument, XlaOprand> input_oprands;
+    for (const std::string &in : node->input_bns()) {
+      std::string blob_name = BlobName(node->Input(in));
+      Argument argument = arguments_.at(blob_name);
+      XlaOprand oprand = all_outputs.at(argument);
+      input_oprands.emplace(argument, oprand);
     }
 
     // Setup XlaOpContext Param to build a XlaOpContext
@@ -71,6 +72,7 @@ void XlaGraphCompiler::BuildComputation(
     param.inputs = std::move(input_oprands);
     param.op_conf = &node->proto_conf();
     param.builder = builder_;
+    param.num_outputs = node->output_bns().size();
 
     SetupParamArguments(node, arguments_, &param);
 

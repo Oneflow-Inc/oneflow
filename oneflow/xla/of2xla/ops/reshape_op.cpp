@@ -3,6 +3,8 @@
 #include "oneflow/xla/of2xla/xla_op_compiler.h"
 #include "oneflow/xla/of2xla/xla_op_context.h"
 
+#include "oneflow/xla/of2xla/xla_helpers.h"
+
 namespace oneflow {
 namespace mola {
 
@@ -35,15 +37,24 @@ class ReshapeOp : public XlaOpCompiler {
     }
 
     CHECK_EQ(shape.Count(0), in_shape.Count(0));
-    std::vector<long long> shape_dim(shape.NumAxes());
-    for (int i = 0; i < shape.NumAxes(); ++i) {
-      shape_dim[i] = shape.At(i);
-    }
-    ctx->SetOutput("out", xla::Reshape(ctx->Input("in"), shape_dim));
+    ctx->SetOutput("out", Reshape(ctx->Input("in"), shape));
   }
 };
 
 REGISTER_XLA_OP_COMPILER(Reshape, ReshapeOp);
+
+class ReshapeLikeOp : public XlaOpCompiler {
+ public:
+  void Compile(XlaOpContext *ctx) override {
+    Shape x_shape = ctx->InputShape("x");
+    Shape like_shape = ctx->InputShape("like");
+    CHECK_EQ(x_shape.Count(0), like_shape.Count(0));
+
+    ctx->SetOutput("y", Reshape(ctx->Input("x"), like_shape));
+  }
+};
+
+REGISTER_XLA_OP_COMPILER(ReshapeLike, ReshapeLikeOp);
 
 }  // namespace mola
 }  // namespace oneflow

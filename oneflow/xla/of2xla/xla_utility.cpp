@@ -13,6 +13,20 @@ static std::unordered_map<int32_t, std::string> op_type2string_map = {
   {OP_TYPE_CASE(BiasAdd), "BiasAdd"},
   {OP_TYPE_CASE(Reshape), "Reshape"},
   {OP_TYPE_CASE(Identity), "Identity"},
+  {OP_TYPE_CASE(ReshapeLike), "ReshapeLike"},
+  {OP_TYPE_CASE(Cast), "Cast"},
+  {OP_TYPE_CASE(ScalarAdd), "ScalarAdd"},
+  {OP_TYPE_CASE(ScalarMul), "ScalarMul"},
+  {OP_TYPE_CASE(Transpose), "Transpose"},
+  {OP_TYPE_CASE(BroadcastAdd), "BcastAdd"},
+  {OP_TYPE_CASE(BroadcastMul), "BcastMul"},
+  {OP_TYPE_CASE(BroadcastDiv), "BcastDiv"},
+  {OP_TYPE_CASE(Add), "Add"},
+  {OP_TYPE_CASE(Sigmoid), "Sigmoid"},
+  {OP_TYPE_CASE(Tanh), "Tanh"},
+  {OP_TYPE_CASE(TanhGrad), "TanhGrad"},
+  {OP_TYPE_CASE(Gelu), "Gelu"},
+  {OP_TYPE_CASE(GeluGrad), "GeluGrad"},
   // TODO(hjchen2)
 };
 

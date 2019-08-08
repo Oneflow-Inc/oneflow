@@ -5,6 +5,9 @@
 #include "glog/logging.h"
 #include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/core/operator/operator.h"
+#include "oneflow/core/register/blob.h"
+
+#include "tensorflow/compiler/xla/util.h"
 
 namespace oneflow {
 
@@ -36,10 +39,11 @@ LogicalBlobId BlobId(const std::string &blob_name);
   OF_CHECK_AND_ASSIGN_IMPL(             \
       OF_STATUS_MACROS_CONCAT_NAME(_status_or_value, __COUNTER__), lhs, rexpr)
 
-#define OF_CHECK_AND_ASSIGN_IMPL(statusor, lhs, rexpr) \
-  auto &&statusor = (rexpr);                           \
-  CHECK(statusor.ok());                                \
-  lhs = std::move(statusor.ValueOrDie());              \
+#define OF_CHECK_AND_ASSIGN_IMPL(statusor, lhs, rexpr)             \
+  auto &&statusor = (rexpr);                                       \
+  CHECK(statusor.ok()) << xla::WithLogBacktrace(statusor.status()) \
+                       << ", " << TF_CPP_VLOG_LEVEL_REQUARED(2);   \
+  lhs = std::move(statusor.ValueOrDie());                          \
 
 #define TF_CPP_VLOG_LEVEL_REQUARED(level) \
   "Set env TF_CPP_MIN_VLOG_LEVEL=" #level " to see the details."

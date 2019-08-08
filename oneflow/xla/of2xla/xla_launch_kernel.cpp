@@ -1,12 +1,12 @@
-#include "oneflow/xla/of2xla/xla_launch_kernel.h"
-
 #include "tensorflow/compiler/xla/client/local_client.h"
 #include "tensorflow/compiler/tf2xla/tf2xla_util.h"  // GetXLARandomSeed
 #include "oneflow/xla/of2xla/xla_utility.h"
-#include "oneflow/xla/of2xla/xla_runtime_scope.h"
 #include "oneflow/xla/of2xla/xla_graph_compiler.h"
 #include "oneflow/xla/of2xla/xla_compilation_cache.h"
 #include "oneflow/xla/of2xla/xla_launch_context.h"
+#include "oneflow/xla/of2xla/xla_launch_scope.h"
+
+#include "oneflow/xla/of2xla/xla_launch_kernel.h"
 
 namespace oneflow {
 
@@ -53,15 +53,17 @@ void XlaLaunchKernel<device_type>::BuildLocalExecutable(
 }
 
 template <DeviceType device_type>
-void XlaLaunchKernel<device_type>::RunExecutable(
+void XlaLaunchKernel<device_type>::LaunchExecutable(
     mola::XlaLaunchContext *launch_ctx,
     xla::LocalExecutable *executable,
     const std::vector<Blob *> &entry_blobs,
     const std::vector<xla::Shape> &input_shapes,
-    std::vector<Blob *> &output_blobs, const xla::Shape &output_shape) const {
+    std::vector<Blob *> &output_blobs, const xla::Shape &output_shape,
+    bool block_host_until_done) const {
   namespace se = tensorflow::se;
   CHECK_EQ(entry_blobs.size(), input_shapes.size())
-      << "Size mismatch between entry blobs and input shapes.";
+      << "Size mismatch between valid entry blobs and input shapes.";
+  CHECK_GT(output_blobs.size(), 0) << "Need one output at least.";
   const int device_ordinal = launch_ctx->device_ordinal();
   xla::LocalClient *client = launch_ctx->client();
 
@@ -74,9 +76,17 @@ void XlaLaunchKernel<device_type>::RunExecutable(
     const xla::Shape on_device_shape =
         client->backend().transfer_manager()->HostShapeToDeviceShape(shape);
     CHECK(!on_device_shape.IsTuple()) << "Tuple shape is not allowed for input "
-                                         "arguments in RunExecutable.";
+                                         "arguments in LaunchExecutable.";
     size_t data_size = entry_blobs[i]->ByteSizeOfDataContentField();
     const char *data_ptr = entry_blobs[i]->dptr<char>();
+
+    // Buffer is nullptr if the blob is body disabled. It should be assigned
+    // by a real pointer to prevent check failure while runing the XLA
+    // executable, so here we assign the first output buffer to it since it's
+    // sure that this entry should never be modified at any time
+    if (data_size > 0 && !data_ptr) {
+      data_ptr = output_blobs[0]->dptr<char>();
+    }
     se::DeviceMemoryBase memory_base =
         se::DeviceMemoryBase(const_cast<char *>(data_ptr), data_size);
     shaped_buffers[i] = std::make_shared<xla::ShapedBuffer>(
@@ -86,21 +96,22 @@ void XlaLaunchKernel<device_type>::RunExecutable(
     arguments[i] = shaped_buffers[i].get();
   }
 
-  xla::StatusOr<xla::ScopedShapedBuffer> result_status;
-  {
-    mola::XlaRuntimeScope scope(launch_ctx);
+  OF_CHECK_AND_ASSIGN(auto run_result, [&]() {
+    mola::XlaLaunchScope scope(executable, launch_ctx);
 
     xla::ExecutableRunOptions run_options;
     run_options.set_stream(launch_ctx->stream());
     run_options.set_allocator(launch_ctx->allocator());
     run_options.set_intra_op_thread_pool(launch_ctx->host_device());
     run_options.set_rng_seed(tensorflow::GetXLARandomSeed());
-    result_status = executable->Run(arguments, run_options);
-  }
 
-  CHECK(result_status.ok()) << "Failed to running the executable. "
-                            << TF_CPP_VLOG_LEVEL_REQUARED(1);
-  auto run_result = std::move(result_status.ValueOrDie());
+    auto result = executable->RunAsync(arguments, run_options);
+    if (block_host_until_done) {
+      launch_ctx->stream()->BlockHostUntilDone();
+    }
+    return std::move(result);
+  }());
+
   // Result shape should be tuple
   CHECK(run_result.on_host_shape().IsTuple());
 
@@ -111,7 +122,8 @@ void XlaLaunchKernel<device_type>::RunExecutable(
     se::DeviceMemoryBase buffer = run_result.buffer({i});
     Memcpy<device_type>(launch_ctx->device_ctx(), output->mut_dptr(),
                         buffer.opaque(), output->ByteSizeOfDataContentField());
-    // Maybe release result buffer
+    // Maybe release result buffer. If we asynchronously launch the executable,
+    // then we must not release this buffer here.
     // run_result.set_buffer(se::OwningDeviceMemory(), {i});
   }
 }
@@ -146,10 +158,14 @@ void XlaLaunchKernel<device_type>::ForwardDataContent(
                         << TF_CPP_VLOG_LEVEL_REQUARED(2);
   auto *executable = compile_result->executable.get();
 
-  // Run executable in synchronous mode for CPU, or asynchronous for GPU.
-  RunExecutable(&launch_ctx, executable, entry_blobs,
-                compile_result->xla_input_shapes, output_blobs,
-                compile_result->xla_output_shape);
+  // Launch executable in synchronous mode for CPU, or asynchronous mode for GPU
+  bool block_host_until_done = true;
+  if (device_type == DeviceType::kGPU) {
+    block_host_until_done = false;
+  }
+  LaunchExecutable(&launch_ctx, executable, entry_blobs,
+                   compile_result->xla_input_shapes, output_blobs,
+                   compile_result->xla_output_shape, block_host_until_done);
 }
 
 // ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kXlaLaunchConf, XlaLaunchKernel,

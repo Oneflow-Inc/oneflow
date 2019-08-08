@@ -30,6 +30,20 @@ cc_library(
     ],
 )
 
+cc_library(
+    name = "runtime_workspace_bytes",
+    srcs = [
+        "runtime_workspace_bytes.cc",
+        "runtime_workspace_bytes.h",
+    ],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//tensorflow/compiler/xla/client:local_client",
+        "//tensorflow/compiler/xla/service/cpu:cpu_executable",
+        "//tensorflow/compiler/xla/service/gpu:gpu_executable",
+    ],
+)
+
 tf_cc_shared_object(
     name = "libxla_core.so",
     linkopts = select({
@@ -40,6 +54,7 @@ tf_cc_shared_object(
     }),
     visibility = ["//visibility:public"],
     deps = [
+        ":runtime_workspace_bytes",
         "//tensorflow/compiler/jit:xla_tensor",
         "//tensorflow/compiler/xla/client",
         "//tensorflow/compiler/xla/client:xla_builder",
@@ -51,6 +66,7 @@ tf_cc_shared_object(
         "//tensorflow/compiler/xla/service:cpu_plugin",
 #        "//tensorflow/compiler/jit:xla_cpu_jit",
         "//tensorflow/compiler/tf2xla:tf2xla_util",
+        "//tensorflow/compiler/tf2xla/lib:util",
         "//tensorflow/core:lib",
         "@com_google_absl//absl/strings",
     ] + if_cuda([
