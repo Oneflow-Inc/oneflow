@@ -63,6 +63,7 @@ void TopKOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlob
   *out = *in;
   out->mut_shape().Set(in->shape().NumAxes() - 1, k);
   out->set_data_type(DataType::kInt32);
+  if (in->shape().NumAxes() <= 2) { out->set_has_instance_shape_field(false); }
 }
 
 void TopKOp::VirtualGenKernelConf(

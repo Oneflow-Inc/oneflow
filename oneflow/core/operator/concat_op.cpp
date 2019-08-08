@@ -19,7 +19,6 @@ void ConcatOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBl
   bool dim0_varing = in_0_blob_desc->has_dim0_valid_num_field();
   int32_t concat_axis = conf.axis();
   if (concat_axis < 0) { concat_axis += out_dim_vec.size(); }
-  CHECK_GE(concat_axis, 1);
   for (size_t i = 1; i < input_bns().size(); ++i) {
     const BlobDesc* in_i_blob_desc = GetBlobDesc4BnInOp(input_bns().Get(i));
     for (int64_t j = 0; j < in_i_blob_desc->shape().NumAxes(); ++j) {

@@ -13,7 +13,6 @@ const PbMessage& SqueezeOp::GetCustomizedConf() const { return op_conf().squeeze
 void SqueezeOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                const ParallelContext* parallel_ctx) const {
   BlobDesc* in = GetBlobDesc4BnInOp("in");
-  CHECK(!in->has_instance_shape_field());
   BlobDesc* out = GetBlobDesc4BnInOp("out");
   *out = *in;
   auto dim_vec = in->shape().dim_vec();
@@ -24,8 +23,9 @@ void SqueezeOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetB
     CHECK_EQ(dim_vec[idx], 1);
     dim_vec[idx] = -1;
   }
-  std::remove(dim_vec.begin(), dim_vec.end(), -1);
+  dim_vec.erase(std::remove(dim_vec.begin(), dim_vec.end(), -1), dim_vec.end());
   out->mut_shape() = Shape(dim_vec);
+  if (out->shape().NumAxes() < 2) { out->set_has_instance_shape_field(false); }
 }
 
 REGISTER_OP(OperatorConf::kSqueezeConf, SqueezeOp);

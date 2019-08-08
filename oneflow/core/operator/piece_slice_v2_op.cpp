@@ -15,7 +15,9 @@ void PieceSliceV2Op::InferBlobDescs(std::function<BlobDesc*(const std::string&)>
   const BlobDesc* in = GetBlobDesc4BnInOp(SoleIbn());
   CHECK(!in->has_dim0_valid_num_field());
   const int32_t out_size = op_conf().piece_slice_v2_conf().out_size();
-  CHECK_EQ(out_size, in->shape().At(0));
+  // out_size should be equal to in->shape().At(0), but record_piece_size is set to 1 in op_graph,
+  // so we use global device piece size to do this check
+  CHECK_EQ(out_size, Global<JobDesc>::Get()->DevicePieceSize4ParallelCtx(*parallel_ctx));
 
   const bool uncontiguous_varing_in =
       in->has_dim1_valid_num_field() || in->has_dim2_valid_num_field();
