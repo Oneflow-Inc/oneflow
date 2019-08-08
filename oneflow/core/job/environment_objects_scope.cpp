@@ -65,7 +65,6 @@ EnvironmentObjectsScope::EnvironmentObjectsScope(const ConfigProto& config_proto
   Global<ResourceDesc>::New(config_proto.resource());
   Global<const IOConf>::New(config_proto.io_conf());
   Global<const ProfilerConf>::New(config_proto.profiler_conf());
-  Global<const JobMemSharingStrategy>::New(config_proto.job_mem_sharing_strategy());
   Global<CtrlServer>::New();
   Global<CtrlClient>::New();
   OF_BARRIER();
@@ -98,7 +97,6 @@ EnvironmentObjectsScope::~EnvironmentObjectsScope() {
   Global<MachineCtx>::Delete();
   Global<CtrlClient>::Delete();
   Global<CtrlServer>::Delete();
-  Global<const JobMemSharingStrategy>::Delete();
   Global<const ProfilerConf>::Delete();
   Global<const IOConf>::Delete();
   Global<ResourceDesc>::Delete();

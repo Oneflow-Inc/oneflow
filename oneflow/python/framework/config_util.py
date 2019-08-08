@@ -131,24 +131,6 @@ class ConfigProtoBuilder(object):
         self.config_proto_.profile_conf.collect_act_event = val
         return self
 
-    def job_mem_sharing_strategy(self, strategy_str, job_name_groups = None):
-        assert type(strategy_str) is str
-        if strategy_str == "mem_sharing_priority":
-            self.config_proto_.job_mem_sharing_strategy.mem_sharing_priority.SetInParent()
-            assert self.config_proto_.job_mem_sharing_strategy.HasField("mem_sharing_priority")
-        elif strategy_str == "parallelism_priority":
-            self.config_proto_.job_mem_sharing_strategy.parallelism_priority.SetInParent()
-            assert self.config_proto_.job_mem_sharing_strategy.HasField("parallelism_priority")
-        elif strategy_str == "custom_parallelism":
-            assert job_name_groups is not None
-            for job_name_group in job_name_groups:
-                group = self.config_proto_.job_mem_sharing_strategy.custom_parallelism.nonparallel_group.add()
-                for job_name in job_name_group:
-                    assert type(job_name) is str
-                    group.job_name.append(job_name)
-        return self
-
-
 class JobConfigProtoBuilder(object):
     def __init__(self, job_conf):
         assert isinstance(job_conf, job_util.JobConfigProto)

@@ -310,9 +310,9 @@ HashSet<std::string> GetArgOpNames(const std::vector<Job>& jobs) {
   return arg_op_names;
 }
 
-HashMap<std::string, HashSet<int64_t>> GetInterfaceOpName2JobIds(const std::vector<Job>& jobs) {
+HashMap<std::string, HashSet<int32_t>> GetInterfaceOpName2JobIds(const std::vector<Job>& jobs) {
   HashSet<std::string> arg_op_names = GetArgOpNames(jobs);
-  HashMap<std::string, HashSet<int64_t>> interface_op_name2job_ids;
+  HashMap<std::string, HashSet<int32_t>> interface_op_name2job_ids;
   HashSet<std::string> unique_op_name_check;
   FOR_RANGE(int32_t, i, 0, jobs.size()) {
     const auto& job = jobs.at(i);
@@ -419,7 +419,7 @@ RegstDescProto* GetSoleProducedDataRegst(TaskProto* task_proto) {
 void BindInterfaceMemBlockId(const std::vector<Job>& jobs, std::vector<Plan>* sub_plans) {
   for (const auto& pair : GetInterfaceOpName2JobIds(jobs)) {
     std::vector<std::vector<TaskProto*>> same_op_name_sorted_task_protos;
-    for (int64_t job_id : pair.second) {
+    for (int32_t job_id : pair.second) {
       same_op_name_sorted_task_protos.push_back(
           SortSameOpNameTaskProtos(pair.first, &sub_plans->at(job_id)));
     }
@@ -608,20 +608,11 @@ bool NeedAllocateMemory(const RegstDescTypeProto& regst_desc_type) {
          && regst_desc_type.data_regst_desc().packed_blob_desc().is_body_disabled() == false;
 }
 
-std::vector<HashSet<int32_t>> GetMutualExclusionJobGroups() {
+std::vector<HashSet<int32_t>> GetMutualExclusionJobGroups(const std::vector<Job>& jobs) {
+  int32_t job_size = jobs.size();
   std::vector<HashSet<int32_t>> job_groups;
-  std::vector<std::unique_ptr<JobDesc>>* job_descs =
-      Global<std::vector<std::unique_ptr<JobDesc>>>::Get();
-  int32_t job_size = job_descs->size();
-  std::vector<HashSet<int32_t>> job_id2mutual_exclusion_ids;
-  HashMap<std::string, HashSet<int32_t>> arg_op_name2job_ids;
-  job_id2mutual_exclusion_ids.resize(job_size);
-  for (const auto& job_desc_ptr : *(job_descs)) {
-    for (const std::string& arg_op_name : job_desc_ptr->arg_op_name()) {
-      arg_op_name2job_ids[arg_op_name].emplace(job_desc_ptr->job_id());
-    }
-  }
-  for (const auto& pair : arg_op_name2job_ids) {
+  std::vector<HashSet<int32_t>> job_id2mutual_exclusion_ids(job_size);
+  for (const auto& pair : GetInterfaceOpName2JobIds(jobs)) {
     for (int32_t first_id : pair.second) {
       for (int32_t second_id : pair.second) {
         if (first_id != second_id) { job_id2mutual_exclusion_ids[first_id].emplace(second_id); }
@@ -705,8 +696,8 @@ int64_t GenMemZoneUniqueId(int64_t machine_id, const MemoryCase& mem_case) {
   return (machine_id << 32) | mem_zone_id;
 }
 
-void MergeMemBlockBetweenSubPlans(std::vector<Plan>* sub_plans) {
-  int32_t job_size = sub_plans->size();
+void MergeMemBlockBetweenSubPlans(const std::vector<Job>& jobs, std::vector<Plan>* sub_plans) {
+  int32_t job_size = jobs.size();
   if (job_size == 1) { return; }
   int64_t mem_block_id_max = Global<IDMgr>::Get()->NewMemSharedId();
   std::vector<std::vector<RegstDescProto*>> mem_block_id2regst_descs(mem_block_id_max);
@@ -746,7 +737,7 @@ void MergeMemBlockBetweenSubPlans(std::vector<Plan>* sub_plans) {
     }
   }
 
-  std::vector<HashSet<int32_t>> job_groups = GetMutualExclusionJobGroups();
+  std::vector<HashSet<int32_t>> job_groups = GetMutualExclusionJobGroups(jobs);
   HashSet<int32_t> job_id_unique;
   for (auto& job_group : job_groups) {
     for (int32_t job_id : job_group) { CHECK(job_id_unique.emplace(job_id).second); }
@@ -1175,7 +1166,7 @@ void CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan) {
   }
   if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
     BindInterfaceMemBlockId(jobs, &sub_plans);
-    MergeMemBlockBetweenSubPlans(&sub_plans);
+    MergeMemBlockBetweenSubPlans(jobs, &sub_plans);
     FinishGlobalCriticalSectionDesc(sub_plans);
     MergePlan(plan, sub_plans);
     Plan main_plan;
@@ -1198,6 +1189,7 @@ void CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan) {
 }  // namespace
 
 GlobalObjectsScope4JobConf::GlobalObjectsScope4JobConf(const JobSet& job_set) {
+  Global<const JobMemSharingStrategy>::New(job_set.job_mem_sharing_strategy());
   Global<JobName2JobId>::New();
   Global<std::vector<std::unique_ptr<JobDesc>>>::New();
   FOR_RANGE(int32_t, job_id, 0, job_set.job_size()) {
@@ -1210,6 +1202,7 @@ GlobalObjectsScope4JobConf::GlobalObjectsScope4JobConf(const JobSet& job_set) {
 GlobalObjectsScope4JobConf::~GlobalObjectsScope4JobConf() {
   Global<JobName2JobId>::Delete();
   Global<std::vector<std::unique_ptr<JobDesc>>>::Delete();
+  Global<const JobMemSharingStrategy>::Delete();
 }
 
 Oneflow::Oneflow(const oneflow::JobSet& job_set) {

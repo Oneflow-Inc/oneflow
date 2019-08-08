@@ -74,9 +74,9 @@ message ConfigProto {
   required IOConf io_conf = 2;
   required CppFlagsConf cpp_flags_conf = 3;
   optional ProfilerConf profiler_conf = 4;
-  optional JobMemSharingStrategy job_mem_sharing_strategy = 5;
 }
 
 message JobSet {
   repeated Job job = 1;
+  optional JobMemSharingStrategy job_mem_sharing_strategy = 5;
 }
