@@ -395,7 +395,7 @@ void TaskGraph::AddReduceNoBwForwardNodeOverlapingCtrlEdges() {
 void TaskGraph::EnableMemSharingInReduceStruct() {
   auto GetSuccReduceTaskNode = [](TaskNode* pred) {
     std::vector<TaskNode*> nodes;
-    pred->ForEachNodeOnOutEdge([&](TaskNode* succ) {
+    pred->ForEachNodeOnOutDataEdge([&](TaskNode* succ) {
       if (dynamic_cast<ReduceCompTaskNodeIf*>(succ) != nullptr) { nodes.push_back(succ); }
     });
     return nodes;
