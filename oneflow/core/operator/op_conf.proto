@@ -1644,6 +1644,16 @@ message MaskrcnnConcatUncontiguousDim1OpConf {
   required string out = 2;
 }
 
+message IdentifyOutsideAnchorsOpConf {
+  // in
+  required string anchors = 1;
+  required string image_size = 2;
+  // out
+  required string index = 3;
+  // conf
+  optional float tolerance = 4 [default = 0.0];
+}
+
 message OperatorConf {
   required string name = 1;
   optional string model_load_dir = 2;
@@ -1814,6 +1824,7 @@ message OperatorConf {
     LevelMapOpConf level_map_conf = 608;
     LocalNonzeroOpConf local_nonzero_conf = 609;
     MaskrcnnConcatUncontiguousDim1OpConf maskrcnn_concat_uncontiguous_dim1_conf = 610;
+    IdentifyOutsideAnchorsOpConf identify_outside_anchors_conf = 611;
   }
 }
 
