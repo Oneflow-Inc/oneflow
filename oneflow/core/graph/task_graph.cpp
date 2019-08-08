@@ -843,15 +843,18 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByCudaRingAllReduce2Consumer) {
   CHECK_GT(parallel_num, 1);
   std::vector<std::vector<TaskNode*>> send_to(parallel_num);
   std::vector<std::vector<TaskNode*>> recv_from(parallel_num);
-  const PbRpf<CudaRingAllReduceLinkConf>& links = sorted_src_comp_tasks.front()
-                                                      ->logical_node()
-                                                      ->SoleOp()
-                                                      ->op_conf()
-                                                      .cuda_ring_all_reduce_conf()
-                                                      .link();
+  const auto& links = sorted_src_comp_tasks.front()
+                          ->logical_node()
+                          ->SoleOp()
+                          ->op_conf()
+                          .cuda_ring_all_reduce_conf()
+                          .link();
   for (const CudaRingAllReduceLinkConf& link : links) {
+    CHECK_EQ(link.next_size(), parallel_num);
     FOR_RANGE(int64_t, i, 0, parallel_num) {
       const int64_t next = link.next(i);
+      CHECK_GE(next, 0);
+      CHECK_LT(next, parallel_num);
       send_to[i].push_back(sorted_src_comp_tasks.at(next));
       recv_from[next].push_back(sorted_src_comp_tasks.at(i));
     }
