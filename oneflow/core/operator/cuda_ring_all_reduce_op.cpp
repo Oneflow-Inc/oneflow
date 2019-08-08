@@ -150,11 +150,11 @@ void CudaRingAllReduceOp::VirtualGenKernelConf(
   cuda_ring_all_reduce_kernel_conf->set_num_link(num_link);
   cuda_ring_all_reduce_kernel_conf->set_num_step(num_step);
   cuda_ring_all_reduce_kernel_conf->set_slice_factor(all_reduce_op_ctx->slice_factor());
-  std::vector<std::vector<int64_t>> step_rank_id(num_link);
+  std::vector<std::vector<int64_t>> link2step_rank_id(num_link);
   FOR_RANGE(int64_t, link_id, 0, num_link) {
     const CudaRingAllReduceLinkConf& link = conf.link(link_id);
     CHECK_EQ(link.next_size(), num_rank);
-    step_rank_id.at(link_id).resize(num_step);
+    link2step_rank_id.at(link_id).resize(num_step);
     std::vector<int64_t> link_prev(num_rank);
     FOR_RANGE(int64_t, i, 0, num_rank) {
       const int64_t next = link.next(i);
@@ -165,7 +165,7 @@ void CudaRingAllReduceOp::VirtualGenKernelConf(
     int64_t current_rank_id = parallel_ctx->parallel_id();
     FOR_RANGE(int64_t, step_id, 0, num_step) {
       current_rank_id = link_prev[current_rank_id];
-      step_rank_id.at(link_id)[step_id] = current_rank_id;
+      link2step_rank_id.at(link_id)[step_id] = current_rank_id;
     }
   }
   FOR_RANGE(int64_t, step_id, 0, num_step) {
@@ -202,7 +202,7 @@ void CudaRingAllReduceOp::VirtualGenKernelConf(
     FOR_RANGE(int64_t, link_id, 0, all_reduce_op_ctx->num_link()) {
       CudaRingAllReduceStepLinkConf* link_conf = step_conf->mutable_link_conf()->Add();
       FOR_RANGE(int64_t, slice_id, 0, all_reduce_op_ctx->slice_factor()) {
-        all_reduce_op_ctx->GetSlice(link_id, slice_id, step_rank_id.at(link_id).at(step_id))
+        all_reduce_op_ctx->GetSlice(link_id, slice_id, link2step_rank_id.at(link_id).at(step_id))
             .ToProto(link_conf->mutable_slice_range()->Add());
       }
     }

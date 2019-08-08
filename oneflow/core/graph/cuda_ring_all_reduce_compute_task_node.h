@@ -24,7 +24,6 @@ class CudaRingAllReduceCompTaskNode final : public CompTaskNode, public ReduceCo
   bool IsReadyForBuild() override;
   void BuildExecGphAndRegst() override;
   void InferProducedDataRegstTimeShape() override;
-  void PinConsumedRegstMemCase(MemoryCase*) override;
   void FixSendRegstMemCase(MemoryCase* mem_case, TaskNode* send_to);
 
   std::vector<TaskNode*> send_to_;
