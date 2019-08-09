@@ -113,6 +113,6 @@ void BatchGatherKernelUtil<DeviceType::kCPU, T, K>::Backward(DeviceCtx* ctx, con
 }
 
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kBatchGatherConf, BatchGatherKernel,
-                           FLOATING_DATA_TYPE_SEQ);
+                           ARITHMETIC_DATA_TYPE_SEQ);
 
 }  // namespace oneflow
