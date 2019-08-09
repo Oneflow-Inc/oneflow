@@ -4,9 +4,9 @@ namespace oneflow {
 
 void CudaRingAllReduceCompActor::VirtualActorInit(const TaskProto& task_proto) {
   CHECK_EQ(1, exec_kernel_vec().size());
-  const CudaRingAllReduceKernelConf& all_reduce_kernel_conf =
-      exec_kernel_vec().front().kernel->kernel_conf().cuda_ring_all_reduce_conf();
-  num_link_ = all_reduce_kernel_conf.num_link();
+  const CudaRingAllReduceOpConf& conf =
+      exec_kernel_vec().front().kernel->op_attribute().op_conf().cuda_ring_all_reduce_conf();
+  num_link_ = conf.link_size();
   CHECK_GT(num_link_, 0);
   out_regst_desc_id_ = task_proto.produced_regst_desc().at("out").regst_desc_id();
   const RegstDescIdSet& consumed_in_regst_desc_ids = task_proto.consumed_regst_desc_id().at("in");
@@ -24,8 +24,8 @@ void CudaRingAllReduceCompActor::VirtualActorInit(const TaskProto& task_proto) {
     recv_regst_desc_ids_.emplace(recv_regst_desc_id);
     consumed_rs_.InsertRegstDescId(recv_regst_desc_id);
   }
-  num_step_ = all_reduce_kernel_conf.num_step();
-  slice_factor_ = all_reduce_kernel_conf.slice_factor();
+  num_step_ = parallel_ctx()->parallel_num() * 2 - 1;
+  slice_factor_ = conf.slice_factor();
   current_step_id_ = 0;
   current_slice_id_ = 0;
   send_regst_piece_id_ = 0;
