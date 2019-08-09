@@ -2,6 +2,7 @@ syntax = "proto2";
 package oneflow;
 
 import "oneflow/core/common/shape.proto";
+import "oneflow/core/common/range.proto";
 import "oneflow/core/common/data_type.proto";
 import "oneflow/core/operator/op_attribute.proto";
 import "oneflow/core/operator/op_conf.proto";
@@ -157,6 +158,26 @@ message ShapeElemCntKernelConf {
   repeated int32 axis = 1;
 }
 
+
+message CudaRingAllReduceStepLinkConf {
+  repeated RangeProto slice_range = 5;
+}
+
+message CudaRingAllReduceStepConf {
+  required bool send = 1;
+  required bool recv = 2;
+  required bool in = 3;
+  required bool out = 4;
+  repeated CudaRingAllReduceStepLinkConf link_conf = 5;
+}
+
+message CudaRingAllReduceKernelConf {
+  required int64 num_step = 1;
+  required int64 num_link = 2;
+  required int64 slice_factor = 3;
+  repeated CudaRingAllReduceStepConf step_conf = 4;
+}
+
 message KernelConf {
   required OpAttribute op_attribute = 1;
   required bool is_forward = 2;
@@ -202,5 +223,6 @@ message KernelConf {
     ConvFilterGradKernelConf conv_filter_grad_conf = 410;
     ConvDataGradKernelConf conv_data_grad_conf = 411;
     ShapeElemCntKernelConf shape_elem_cnt_conf = 412;
+    CudaRingAllReduceKernelConf cuda_ring_all_reduce_conf = 413;
   }
 }

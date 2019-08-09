@@ -545,5 +545,6 @@ std::map<TaskType, std::string> task_type2color = {{kInvalid, "0"},
                                                    {kOptimizer, "12"},
                                                    {kEveryNth, "2"},
                                                    {kCase, "2"},
-                                                   {kEsac, "2"}};
+                                                   {kEsac, "2"},
+                                                   {kCudaRingAllReduce, "2"}};
 }  // namespace oneflow

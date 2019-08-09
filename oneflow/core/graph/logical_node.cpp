@@ -23,6 +23,7 @@
 #include "oneflow/core/graph/task_graph.h"
 #include "oneflow/core/graph/reduce_identity_task_node.h"
 #include "oneflow/core/graph/op_graph.h"
+#include "oneflow/core/graph/cuda_ring_all_reduce_compute_task_node.h"
 
 namespace oneflow {
 
@@ -416,6 +417,12 @@ REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceGather"
 REGISTER_BLD_SUB_TSK_GPH_MTHD("NcclAllGather"
                               "ReduceSplit",
                               &TaskGraph::BldSubTskGphByOneToOne);
+REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceIdentity"
+                              "CudaRingAllReduce",
+                              &TaskGraph::BldSubTskGphByOneToOne);
+REGISTER_BLD_SUB_TSK_GPH_MTHD("CudaRingAllReduce"
+                              "ReduceSplit",
+                              &TaskGraph::BldSubTskGphByCudaRingAllReduce2Consumer);
 
 BldBoxingOpConfMthd GetMthdForBldBoxingOpConf(const LogicalNode* src, const LogicalNode* dst) {
   std::string k = ConcatTypeName(src, dst);
@@ -467,7 +474,8 @@ REGISTER_BLD_BOXING_OP_CONF_MTHD("NormalBackward"
   OF_PP_MAKE_TUPLE_SEQ(NcclAllGather, kMdUpdtArea)        \
   OF_PP_MAKE_TUPLE_SEQ(Accuracy, kDataForwardArea)        \
   OF_PP_MAKE_TUPLE_SEQ(AccuracyAcc, kDataForwardArea)     \
-  OF_PP_MAKE_TUPLE_SEQ(AccuracyPrint, kPrintArea)
+  OF_PP_MAKE_TUPLE_SEQ(AccuracyPrint, kPrintArea)         \
+  OF_PP_MAKE_TUPLE_SEQ(CudaRingAllReduce, kMdUpdtArea)
 
 #define DEFINE_VIRTUAL_METHOD(x, area_type)                                             \
   std::string x##LogicalNode::TypeName() const { return #x; }                           \

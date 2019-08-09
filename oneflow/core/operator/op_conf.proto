@@ -1451,6 +1451,16 @@ message EsacOpConf {
   optional DataType data_type = 3 [default=kInt32];
 }
 
+message CudaRingAllReduceLinkConf {
+  repeated int64 next = 1;
+}
+
+message CudaRingAllReduceOpConf {
+  required LogicalBlobId lbi = 1;
+  repeated CudaRingAllReduceLinkConf link = 2;
+  optional int64 slice_factor = 3 [default = 2];
+}
+
 message OperatorConf {
   required string name = 1;
   optional string model_load_dir = 2;
@@ -1506,6 +1516,7 @@ message OperatorConf {
     ForeignOutputOpConf foreign_output_conf = 143;
     AccTickOpConf acc_tick_conf = 144;
     SwitchOutputOpConf switch_output_conf = 145;
+    CudaRingAllReduceOpConf cuda_ring_all_reduce_conf = 146;
 
     // domain op
     TupleIdentityOpConf tuple_identity_conf = 200;

@@ -65,6 +65,10 @@ class JobDesc final {
   float all_reduce_lazy_ratio() const;
   bool all_reduce_fp16() const;
   int64_t cudnn_buf_limit_mbyte() const { return job_.job_conf().cudnn_buf_limit_mbyte(); }
+  bool enable_cuda_ring_all_reduce() const { return job_.job_conf().enable_cuda_ring_all_reduce(); }
+  bool cuda_ring_all_reduce_enable_p2p() const {
+    return job_.job_conf().cuda_ring_all_reduce_enable_p2p();
+  }
 
   // Train conf
   int32_t NumOfBatchesInSnapshot() const;

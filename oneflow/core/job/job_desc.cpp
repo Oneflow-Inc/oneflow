@@ -129,6 +129,8 @@ void JobDesc::Init() {
 #endif
 #ifndef WITH_CUDA
   CHECK_EQ(job_.job_conf().enable_nccl(), false) << "Please compile ONEFLOW with NCCL";
+  CHECK_EQ(job_.job_conf().enable_cuda_ring_all_reduce(), false)
+      << "Please compile ONEFLOW with CUDA";
 #endif  // WITH_CUDA
   int64_t piece_exp = job_.job_conf().exp_run_conf().piece_num_of_experiment_phase();
   if (job_.job_conf().has_train_conf()) {

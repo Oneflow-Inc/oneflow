@@ -87,6 +87,8 @@ message JobConfigProto {
   optional bool enable_true_half_config_when_conv = 604 [default = false];
   optional bool enable_float_compute_for_half_gemm = 605 [default = true];
   optional bool enable_auto_mixed_precision = 606 [default = false];
+  optional bool enable_cuda_ring_all_reduce = 608 [default = false];
+  optional bool cuda_ring_all_reduce_enable_p2p = 609 [default = false];
 
   optional int64 concurrency_width = 1000 [default = 128];
 }

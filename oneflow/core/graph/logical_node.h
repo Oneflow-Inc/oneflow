@@ -264,6 +264,7 @@ DECLARE_REDUCE_LOGICAL_NODE(ReduceConcatLogicalNode, true);
 DECLARE_REDUCE_LOGICAL_NODE(ReduceScatterLogicalNode, true);
 DECLARE_REDUCE_LOGICAL_NODE(ReduceGatherLogicalNode, false);
 DECLARE_REDUCE_LOGICAL_NODE(NcclAllReduceLogicalNode, true);
+DECLARE_REDUCE_LOGICAL_NODE(CudaRingAllReduceLogicalNode, true);
 DECLARE_REDUCE_LOGICAL_NODE(ReduceAddLogicalNode, false);
 DECLARE_REDUCE_LOGICAL_NODE(NcclAllGatherLogicalNode, false);
 DECLARE_REDUCE_LOGICAL_NODE(NcclReduceScatterLogicalNode, true);

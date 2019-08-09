@@ -11,6 +11,7 @@
 #include "oneflow/core/graph/reduce_identity_task_node.h"
 #include "oneflow/core/operator/variable_op.h"
 #include "oneflow/core/operator/constant_op.h"
+#include "oneflow/core/graph/cuda_ring_all_reduce_compute_task_node.h"
 
 namespace oneflow {
 
@@ -737,6 +738,42 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceGather2ReduceGather) {
         BuildTaskPath(src_comp_task, dst_comp_task, MutBufTask, true);
       }
     }
+  }
+}
+
+DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByCudaRingAllReduce2Consumer) {
+  const auto& pd = sorted_src_comp_tasks.front()->logical_node()->parallel_desc();
+  const int64_t parallel_num = pd->parallel_num();
+  CHECK_EQ(sorted_src_comp_tasks.size(), parallel_num);
+  CHECK_EQ(sorted_dst_comp_tasks.size(), parallel_num);
+  CHECK_EQ(pd->sorted_machine_ids().size(), 1);
+  CHECK_GT(parallel_num, 1);
+  std::vector<std::vector<TaskNode*>> parallel_id2link2send_to_node(parallel_num);
+  std::vector<std::vector<TaskNode*>> parallel_id2link2recv_from_node(parallel_num);
+  const auto& links = sorted_src_comp_tasks.front()
+                          ->logical_node()
+                          ->SoleOp()
+                          ->op_conf()
+                          .cuda_ring_all_reduce_conf()
+                          .link();
+  for (const CudaRingAllReduceLinkConf& link : links) {
+    CHECK_EQ(link.next_size(), parallel_num);
+    FOR_RANGE(int64_t, i, 0, parallel_num) {
+      const int64_t next = link.next(i);
+      CHECK_GE(next, 0);
+      CHECK_LT(next, parallel_num);
+      parallel_id2link2send_to_node[i].push_back(sorted_src_comp_tasks.at(next));
+      parallel_id2link2recv_from_node[next].push_back(sorted_src_comp_tasks.at(i));
+    }
+  }
+  FOR_RANGE(int64_t, i, 0, parallel_num) {
+    auto* ring_node = dynamic_cast<CudaRingAllReduceCompTaskNode*>(sorted_src_comp_tasks.at(i));
+    CHECK_NOTNULL(ring_node);
+    ring_node->SetRecvSendNodes(parallel_id2link2recv_from_node.at(i),
+                                parallel_id2link2send_to_node.at(i));
+  }
+  FOR_RANGE(int64_t, i, 0, parallel_num) {
+    Connect<TaskNode>(sorted_src_comp_tasks.at(i), NewEdge(), sorted_dst_comp_tasks.at(i));
   }
 }
 

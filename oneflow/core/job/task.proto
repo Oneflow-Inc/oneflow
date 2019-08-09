@@ -54,6 +54,7 @@ enum TaskType {
   kCallbackNotify = 47;
   kForeignInput = 48;
   kForeignOutput = 49;
+  kCudaRingAllReduce = 50;
 };
 
 enum AreaType {
