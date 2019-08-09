@@ -69,7 +69,7 @@ void TopKOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlob
 void TopKOp::VirtualGenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*,
     KernelConf* kernel_conf, const OpContext* op_ctx) const {
-  // kernel_conf->set_data_type(GetBlobDesc4BnInOp("in")->data_type());
+  kernel_conf->set_data_type(GetBlobDesc4BnInOp("in")->data_type());
   // if (device_type() == DeviceType::kGPU) {
   //   auto* top_k_op_ctx = static_cast<const TopKOpCtx*>(op_ctx);
   //   kernel_conf->mutable_top_k_conf()->set_temp_storage_bytes(top_k_op_ctx->temp_storage_bytes_);

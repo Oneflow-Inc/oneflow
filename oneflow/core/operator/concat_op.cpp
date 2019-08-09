@@ -37,7 +37,10 @@ void ConcatOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBl
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   *out_blob_desc = *in_0_blob_desc;
   out_blob_desc->mut_shape() = Shape(out_dim_vec);
-  if (dim0_varing) { out_blob_desc->set_has_dim0_valid_num_field(true); }
+  if (dim0_varing) {
+    out_blob_desc->set_has_dim0_valid_num_field(true);
+    out_blob_desc->mut_dim0_inner_shape() = Shape({1, out_dim_vec.at(0)});
+  }
 }
 
 REGISTER_OP(OperatorConf::kConcatConf, ConcatOp);
