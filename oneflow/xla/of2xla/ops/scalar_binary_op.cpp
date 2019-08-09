@@ -22,12 +22,12 @@ class ScalarBinaryOp : public XlaOpCompiler {
   xla::XlaOp Scalar(XlaOpContext *ctx) const {
     xla::XlaBuilder *builder = ctx->builder();
     DataType data_type = ctx->InputType("in");
-    bool has_int_operand = ctx->HasAttr("int_operand");
-    if (has_int_operand) {
-      int64_t value = ctx->GetAttr<int64_t>("int_operand");
+    std::string type = ctx->AttrTypeInOneof("scalar_operand");
+    if (type == "int_operand") {
+      int64_t value = ctx->GetAttr<int64_t>(type);
       return IntegerLiteral(builder, data_type, value);
     } else {
-      double value = ctx->GetAttr<double>("float_operand");
+      double value = ctx->GetAttr<double>(type);
       return FloatLiteral(builder, data_type, value);
     }
   }

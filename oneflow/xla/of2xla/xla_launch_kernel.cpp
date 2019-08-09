@@ -62,7 +62,7 @@ void XlaLaunchKernel<device_type>::LaunchExecutable(
     bool block_host_until_done) const {
   namespace se = tensorflow::se;
   CHECK_EQ(entry_blobs.size(), input_shapes.size())
-      << "Size mismatch between valid entry blobs and input shapes.";
+      << "Size mismatch between entry blobs and input shapes.";
   CHECK_GT(output_blobs.size(), 0) << "Need one output at least.";
   const int device_ordinal = launch_ctx->device_ordinal();
   xla::LocalClient *client = launch_ctx->client();
