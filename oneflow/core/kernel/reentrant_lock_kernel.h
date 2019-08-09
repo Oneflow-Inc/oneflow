@@ -14,6 +14,8 @@ class ReentrantLockStatus final {
 
   void Init(const KernelConf& kernel_conf);
 
+  static std::string kEmptyIbn;
+
   // true: success
   // false: failed
   void RequestLock(int64_t lock_id, std::queue<int64_t>* unlocked_ids);
