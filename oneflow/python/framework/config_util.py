@@ -30,12 +30,12 @@ class ConfigProtoBuilder(object):
     def machine(self, val):
         self.config_proto_.resource.machine.extend(_MakeMachine(val))
         return self
-    
+
     def ctrl_port(self, val):
         assert type(val) is int
         self.config_proto_.resource.ctrl_port = val
         return self
-    
+
     def data_port(self, val):
         assert type(val) is int
         self.config_proto_.resource.data_port = val
@@ -138,12 +138,12 @@ class JobConfigProtoBuilder(object):
 
     def job_conf():
         return self.job_conf_
-        
+
     def batch_size(self, val):
         assert type(val) is int
         self.job_conf_.piece_size = val # it's not a type
         return self
-    
+
     def default_data_type(self, val):
         assert type(val) is int
         self.job_conf_.default_data_type = val
@@ -248,7 +248,7 @@ def _MakeMachine(machines):
         assert m.addr not in addrs_for_check
         addrs_for_check.add(m.addr)
     return rp_machine
-    
+
 def _DefaultConfigResource(config):
     resource = config.resource
     if len(resource.machine) == 0:
@@ -264,11 +264,11 @@ def _DefaultConfigIO(config):
         io_conf.data_fs_conf.localfs_conf.SetInParent()
     if io_conf.snapshot_fs_conf.WhichOneof("fs_type") == None:
         io_conf.snapshot_fs_conf.localfs_conf.SetInParent()
-        
+
 def  _DefaultConfigCppFlags(config):
     config.cpp_flags_conf.SetInParent()
 
-    
+
 def _TryCompleteDefaultJobConfigProto(job_conf):
     assert job_conf.HasField('piece_size'), "batch_size unset"
     if job_conf.WhichOneof("job_type") is None:
