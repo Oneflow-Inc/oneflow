@@ -40,6 +40,12 @@ void LocalNonzeroOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)>
   out->mut_dim0_inner_shape() = Shape({1, elem_cnt});
 }
 
+void LocalNonzeroOp::VirtualGenKernelConf(
+    std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*,
+    KernelConf* kernel_conf, const OpContext* op_ctx) const {
+  kernel_conf->set_data_type(GetBlobDesc4BnInOp("in")->data_type());
+}
+
 REGISTER_OP(OperatorConf::kLocalNonzeroConf, LocalNonzeroOp);
 
 }  // namespace oneflow

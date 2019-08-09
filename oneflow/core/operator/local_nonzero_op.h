@@ -17,6 +17,9 @@ class LocalNonzeroOp final : public Operator {
                       const ParallelContext* parallel_ctx) const override;
 
  private:
+  virtual void VirtualGenKernelConf(
+      std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*,
+      KernelConf*, const OpContext*) const override;
   bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { return false; }
 };
 
