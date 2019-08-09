@@ -1,14 +1,27 @@
 #ifndef ONEFLOW_CORE_ACTOR_REGST_HANDLER_H_
 #define ONEFLOW_CORE_ACTOR_REGST_HANDLER_H_
 
+#include "oneflow/core/actor/actor_message_bus.h"
+#include "oneflow/core/device/cpu_device_context.h"
+#include "oneflow/core/device/cuda_device_context.h"
+#include "oneflow/core/job/task.pb.h"
+#include "oneflow/core/thread/thread_context.h"
+#include "oneflow/core/actor/register_slot.h"
+
 namespace oneflow {
 
 namespace actor {
 
+struct MsgDeliveryCtx {
+  int64_t actor_id;
+  DeviceCtx* device_ctx;
+  MsgDeliveryCtx(int64_t id, DeviceCtx* ctx) : actor_id(id), device_ctx(ctx) {}
+};
+
 struct ActorMsgUtil {
   static void AsyncSendMsg(MsgDeliveryCtx* msg_ctx, const ActorMsg& msg) {
     std::function<void()> callback = [msg]() { Global<ActorMsgBus>::Get()->SendMsg(msg); };
-    if (Global<IDMgr>::Get()->GlobalWorkStreamId4ActorId(msg_ctx->actor_id);
+    if (Global<IDMgr>::Get()->GlobalWorkStreamId4ActorId(msg_ctx->actor_id)
         == Global<IDMgr>::Get()->GlobalWorkStreamId4ActorId(msg.dst_actor_id())) {
       callback();
     } else {
@@ -17,18 +30,14 @@ struct ActorMsgUtil {
   }
 };
 
-struct MsgDeliveryCtx {
-  int64_t actor_id;
-  DeviceCtx* device_ctx;
-  MsgDeliveryCtx(int64_t id, DeviceCtx* ctx) : actor_id(id), device_ctx(ctx) {}
-};
+using ProducedRegstType = HashMap<int64_t, std::vector<std::unique_ptr<Regst>>>;
 
 class RegstHandlerIf {
  public:
   virtual void Init(const RegstHandlerProto&, const ProducedRegstType&, MsgDeliveryCtx*) = 0;
   virtual std::string type() = 0;
 
-  virtual Regst* GetRegstByRegstDescId() const = 0;
+  virtual Regst* GetRegstByRegstDescId(int64_t) const = 0;
 
   virtual void UpdateWithEordMsg(const ActorMsg&) = 0;
   virtual void UpdateWithRegstMsg(const ActorMsg&) = 0;
@@ -36,20 +45,21 @@ class RegstHandlerIf {
 
   virtual bool IsReady() const = 0;
   virtual void HandleRegstMsgAfterAct() = 0;
-  PostActHandler();
   virtual bool NoLongerConsumeRegst() const = 0;
+  virtual bool NoLongerConsumedByOthers() const = 0;
 };
 
 class NormalRegstHandler : public RegstHandlerIf {
  public:
   void Init(const RegstHandlerProto&, const ProducedRegstType&, MsgDeliveryCtx*) override final;
   bool NoLongerConsumeRegst() const override final {
-    return (eord_cnt_ == consumed_rs_.total_reading_cnt());
+    return (eord_cnt_ == consumed_rs_.total_regst_desc_cnt());
   }
+  bool NoLongerConsumedByOthers() const override final { return total_reading_cnt_ == 0; }
   void UpdateWithRegstMsg(const ActorMsg&) override final;
   void UpdateWithEordMsg(const ActorMsg&) override final;
-  bool IsReady4Act() const override final;
-  Regst* GetRegstByRegstDescId() const override final;
+  bool IsReady() const override final;
+  Regst* GetRegstByRegstDescId(int64_t) const override final;
   void HandleRegstMsgAfterAct() override final;
 
   void ForEachRegstDescId(std::function<void(int64_t)>) const;
@@ -67,12 +77,12 @@ class NormalRegstHandler : public RegstHandlerIf {
   }
   void UpdateReadingCnt4ProducedRegst(Regst* regst, int64_t update_val) {
     produced_regst2reading_cnt_.at(regst) += update_val;
-    total_reading_cnt_ += udpate_val;
+    total_reading_cnt_ += update_val;
   }
 
  private:
   virtual void DerivedInit(const RegstHandlerProto&) {}
-  virtual void UpdateWithConsumedRegstMsg(Regst*) = 0;
+  virtual void UpdateWithConsumedRegstMsg(const ActorMsg&) = 0;
   virtual void HandleConsumedRegstAfterAct() = 0;
   virtual void HandleProducedRegstAfterAct() = 0;
 
@@ -90,7 +100,7 @@ class NormalRegstHandler : public RegstHandlerIf {
   RegstSlot consumed_rs_;
   RegstSlot produced_rs_;
 
-  HashSet<int64_t, bool> consumed_regst2eord_;
+  HashMap<int64_t, bool> consumed_regst2eord_;
   int64_t eord_cnt_;
   HashMap<Regst*, int64_t> produced_regst2reading_cnt_;
   int64_t total_reading_cnt_;
@@ -100,8 +110,8 @@ class NormalRegstHandler : public RegstHandlerIf {
 class CtrlRegstHandler final : public NormalRegstHandler {
  public:
   std::string type() override { return "Ctrl"; }
-  void UpdateWithConsumedRegstMsg(Regst*) override;
-  void UpdateWithProducedRegstMsg(Regst*) override;
+  void UpdateWithConsumedRegstMsg(const ActorMsg&) override;
+  void UpdateWithProducedRegstMsg(const ActorMsg&) override;
   void HandleConsumedRegstAfterAct() override;
   void HandleProducedRegstAfterAct() override;
 };
@@ -109,8 +119,8 @@ class CtrlRegstHandler final : public NormalRegstHandler {
 class NaiveRegstHandler final : public NormalRegstHandler {
  public:
   std::string type() override { return "Naive"; }
-  void UpdateWithConsumedRegstMsg(Regst*) override;
-  void UpdateWithProducedRegstMsg(Regst*) override;
+  void UpdateWithConsumedRegstMsg(const ActorMsg&) override;
+  void UpdateWithProducedRegstMsg(const ActorMsg&) override;
   void HandleConsumedRegstAfterAct() override;
   void HandleProducedRegstAfterAct() override;
 };
@@ -119,8 +129,8 @@ class InplaceRegstHandler final : public NormalRegstHandler {
  public:
   std::string type() override { return "Inplace"; }
   void DerivedInit(const RegstHandlerProto&) override;
-  void UpdateWithConsumedRegstMsg(Regst*) override;
-  void UpdateWithProducedRegstMsg(Regst*) override;
+  void UpdateWithConsumedRegstMsg(const ActorMsg&) override;
+  void UpdateWithProducedRegstMsg(const ActorMsg&) override;
   void HandleConsumedRegstAfterAct() override;
   void HandleProducedRegstAfterAct() override;
 

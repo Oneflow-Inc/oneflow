@@ -12,6 +12,13 @@ struct KernelCtx {
   void* other;
 };
 
+struct NewKernelCtx {
+  NewKernelCtx() : device_ctx(nullptr), other(nullptr) {}
+
+  DeviceCtx* device_ctx;
+  std::shared_ptr<void> other;
+};
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_KERNEL_KERNEL_CONTEXT_H_

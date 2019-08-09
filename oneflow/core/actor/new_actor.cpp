@@ -27,15 +27,24 @@ void ActUntilFail(OpActorCtx* ctx) {
 
 }  // namespace
 
-int OpActor::HandlerNormal(OpActorCtx* ctx, const ActorMsg& msg) {
+int OpActor::HandlerNormal(OpActor* actor, const ActorMsg& msg) {
+  OpActorCtx* ctx = actor->op_actor_ctx();
   UpdateCtxWithMsg(ctx, msg);
   ActUntilFail(ctx);
-  if (ctx->EndOfRead()) { OF_SET_MSG_HANDLER(HandlerZombie); }
+  if (ctx->NoLongerConsumeRegst()) {
+    actor->set_msg_handler(std::bind(&OpActor::HandlerZombie, actor, std::placeholders::_1));
+  }
+  return 0;
 }
 
-int OpActor::HandlerZombie(OpActorCtx* ctx, const ActorMsg& msg) {
-  ctx->UpdateWithProducedRegstMsg();
-  if (ctx->RecvAllProducedMsg()) { OF_SET_MSG_HANDLER(MsgHandler()); }
+int OpActor::HandlerZombie(OpActor* actor, const ActorMsg& msg) {
+  OpActorCtx* ctx = actor->op_actor_ctx();
+  ctx->UpdateWithProducedRegstMsg(msg);
+  if (ctx->NoLongerConsumedByOthers()) {
+    actor->set_msg_handler(MsgHandler());
+    return 1;
+  }
+  return 0;
 }
 
 }  // namespace actor

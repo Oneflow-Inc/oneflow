@@ -1,14 +1,11 @@
 #ifndef ONEFLOW_CORE_ACTOR_NEW_ACTOR_H_
 #define ONEFLOW_CORE_ACTOR_NEW_ACTOR_H_
 
-#include "oneflow/core/actor/actor_message_bus.h"
 #include "oneflow/core/actor/op_actor_context.h"
 
 namespace oneflow {
 
 namespace actor {
-
-using MsgHandler = std::function<int(const ActorMsg&)>;
 
 class NewActor {
  public:
@@ -24,11 +21,6 @@ class NewActor {
 
  protected:
   void set_msg_handler(MsgHandler val) { msg_handler_ = val; }
-#define OF_SET_MSG_HANDLER(val)                                   \
-  do {                                                            \
-    LOG(INFO) << "actor " << actor_id() << " switch to " << #val; \
-    set_msg_handler(static_cast<MsgHandler>(val));                \
-  } while (0)
 
  private:
   MsgHandler msg_handler_;
@@ -37,7 +29,7 @@ class NewActor {
 class OpActor final : public NewActor {
  public:
   static int HandlerNormal(OpActor*, const ActorMsg&);
-  static int HandlerEord(OpActor*, const ActorMsg&);
+  static int HandlerZombie(OpActor*, const ActorMsg&);
 
   OpActor() = default;
   ~OpActor() = default;
@@ -46,8 +38,10 @@ class OpActor final : public NewActor {
   void Init(const TaskProto& task, const ThreadCtx& thread_ctx) override {
     op_actor_ctx_.reset(CreateOpActorCtx(task.task_type()));
     op_actor_ctx_->Init(task, thread_ctx);
-    OF_SET_MSG_HANDLER(op_actor_ctx_->initial_msg_handler());
+    set_msg_handler(op_actor_ctx_->initial_msg_handler());
   }
+
+  OpActorCtx* op_actor_ctx() { return op_actor_ctx_.get(); }
 
  private:
   std::unique_ptr<OpActorCtx> op_actor_ctx_;

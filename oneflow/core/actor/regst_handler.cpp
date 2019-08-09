@@ -1,4 +1,5 @@
 #include "oneflow/core/actor/regst_handler.h"
+#include "oneflow/core/actor/op_actor_context.h"
 
 namespace oneflow {
 
@@ -13,8 +14,8 @@ void NormalRegstHandler::Init(const RegstHandlerProto& handler_proto,
   for (int64_t produced_id : handler_proto.produced_regst_desc_ids().regst_desc_id()) {
     InsertNewRegstDescId(true, produced_id);
   }
-  consumed_rs_.InitDone();
-  produced_rs_.InitDone();
+  consumed_rs_.InitedDone();
+  produced_rs_.InitedDone();
 
   for (const auto& pair : produced_regsts) {
     if (produced_rs_.HasRegstDescId(pair.first) == false) { continue; }
@@ -41,9 +42,9 @@ void NormalRegstHandler::UpdateWithRegstMsg(const ActorMsg& msg) {
   Regst* regst = msg.regst();
   bool is_consumed_regst = IsKeyFound(consumed_regst2eord_, regst->regst_desc_id());
   if (is_consumed_regst) {
-    UpdateWithConsumedRegstMsg();
+    UpdateWithConsumedRegstMsg(msg);
   } else {
-    UpdateWithProducedRegstMsg();
+    UpdateWithProducedRegstMsg(msg);
   }
 }
 
@@ -52,12 +53,11 @@ void NormalRegstHandler::UpdateWithEordMsg(const ActorMsg& msg) {
   eord_cnt_ += 1;
 }
 
-void NormalRegstHandler::IsReady4Act() const {
+bool NormalRegstHandler::IsReady() const {
   return consumed_rs_.IsCurSlotReady() && produced_rs_.IsCurSlotReady();
 }
 
-Regst* NormalRegstHandler::GetRegstByRegstDescId() const {
-  int64_t desc_id = regst->regst_desc_id();
+Regst* NormalRegstHandler::GetRegstByRegstDescId(int64_t desc_id) const {
   bool is_consumed_regst = IsKeyFound(consumed_regst2eord_, desc_id);
   Regst* regst = is_consumed_regst ? consumed_rs_.Front(desc_id) : produced_rs_.Front(desc_id);
   CHECK_NOTNULL(regst);
@@ -69,13 +69,13 @@ void NormalRegstHandler::HandleRegstMsgAfterAct() {
   HandleConsumedRegstAfterAct();
 }
 
-void CtrlRegstHandler::UpdateWithConsumedRegstMsg(Regst* regst) {
-  CHECK_EQ(0, mut_consumed_rs()->TryPushBackRegst(regst));
+void CtrlRegstHandler::UpdateWithConsumedRegstMsg(const ActorMsg& msg) {
+  CHECK_EQ(0, mut_consumed_rs()->TryPushBackRegst(msg.regst()));
 }
 
-void CtrlRegstHandler::UpdateWithProducedRegstMsg(Regst* regst) {
-  CHECK_EQ(0, mut_produced_rs()->TryPushBackRegst(regst));
-  UpdateReadingCnt4ProducedRegst(regst, -1);
+void CtrlRegstHandler::UpdateWithProducedRegstMsg(const ActorMsg& msg) {
+  CHECK_EQ(0, mut_produced_rs()->TryPushBackRegst(msg.regst()));
+  UpdateReadingCnt4ProducedRegst(msg.regst(), -1);
 }
 
 void CtrlRegstHandler::HandleConsumedRegstAfterAct() {
@@ -114,13 +114,13 @@ void CtrlRegstHandler::HandleProducedRegstAfterAct() {
   mut_produced_rs()->PopFrontRegsts(regst_desc_ids);
 }
 
-void NaiveRegstHandler::UpdateWithConsumedRegstMsg(Regst* regst) {
-  CHECK_EQ(0, mut_consumed_rs()->TryPushBackRegst(regst));
+void NaiveRegstHandler::UpdateWithConsumedRegstMsg(const ActorMsg& msg) {
+  CHECK_EQ(0, mut_consumed_rs()->TryPushBackRegst(msg.regst()));
 }
 
-void NaiveRegstHandler::UpdateWithProducedRegstMsg(Regst* regst) {
-  CHECK_EQ(0, mut_produced_rs()->TryPushBackRegst(regst));
-  UpdateReadingCnt4ProducedRegst(regst, -1);
+void NaiveRegstHandler::UpdateWithProducedRegstMsg(const ActorMsg& msg) {
+  CHECK_EQ(0, mut_produced_rs()->TryPushBackRegst(msg.regst()));
+  UpdateReadingCnt4ProducedRegst(msg.regst(), -1);
 }
 
 void NaiveRegstHandler::HandleConsumedRegstAfterAct() {
@@ -157,24 +157,26 @@ void InplaceRegstHandler::DerivedInit(const RegstHandlerProto& handler_proto) {
   }
 }
 
-void InplaceRegstHandler::UpdateWithConsumedRegstMsg(Regst* regst) {
+void InplaceRegstHandler::UpdateWithConsumedRegstMsg(const ActorMsg& msg) {
+  Regst* regst = msg.regst();
   CHECK_EQ(0, mut_consumed_rs()->TryPushBackRegst(regst));
   int64_t corr_out_regst_id = inplace_pair_in2out_.at(regst->regst_desc_id());
   CHECK(regst->packed_blob()->dptr()
         == mut_produced_rs()->Front(corr_out_regst_id)->packed_blob()->dptr());
 }
 
-void InplaceRegstHandler::UpdateWithProducedRegstMsg(Regst* regst) {
+void InplaceRegstHandler::UpdateWithProducedRegstMsg(const ActorMsg& msg) {
+  Regst* regst = msg.regst();
   CHECK_EQ(0, mut_produced_rs()->TryPushBackRegst(regst));
   UpdateReadingCnt4ProducedRegst(regst, -1);
   if (ReadingCnt4ProducedRegst(regst) == 0) {
     int64_t corr_in_regst_id = inplace_pair_out2in_.at(regst->regst_desc_id());
-    Regst* corr_in_regst = mut_consumed_rs()->Front(in_regst_desc_id);
+    Regst* corr_in_regst = mut_consumed_rs()->Front(corr_in_regst_id);
     CHECK_NOTNULL(corr_in_regst);
     ActorMsgUtil::AsyncSendMsg(
-        msg_delivery_ctx(),
-        ActorMsg::BuildRegstMsgToProducer(msg_delivery_ctx()->actor_id, producer, regst));
-    CHECK_EQ(mut_consumed_rs()->TryPopFrontRegst(corr_in_regst));
+        msg_delivery_ctx(), ActorMsg::BuildRegstMsgToProducer(msg_delivery_ctx()->actor_id,
+                                                              regst->producer_actor_id(), regst));
+    CHECK_EQ(0, mut_consumed_rs()->TryPopFrontRegst(corr_in_regst_id));
   }
 }
 

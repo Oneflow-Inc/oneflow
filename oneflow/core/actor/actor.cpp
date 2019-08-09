@@ -455,25 +455,25 @@ bool Actor::IsWriteReady() const {
 
 void Actor::AsyncLaunchKernel(const KernelCtx& kernel_ctx,
                               std::function<Regst*(int64_t)> Regst4RegstDescId) {
-  for (const ExecKernel& ek : exec_kernel_vec_) {
-    ek.kernel->Launch(kernel_ctx, [&](const std::string& bn_in_op) -> Blob* {
-      auto regst_desc_id_it = ek.bn_in_op2regst_desc_id.find(bn_in_op);
-      if (regst_desc_id_it == ek.bn_in_op2regst_desc_id.end()) { return nullptr; }
-      Regst* regst = GetNaiveOrInplaceCurWriteable(regst_desc_id_it->second);
-      if (regst == nullptr) { regst = GetNaiveOrInplaceCurReadable(regst_desc_id_it->second); }
-      if (regst == nullptr) { regst = Regst4RegstDescId(regst_desc_id_it->second); }
-      if (regst == nullptr) { return nullptr; }
-      const LogicalBlobId& lbi = ek.kernel->BnInOp2Lbi(bn_in_op);
-      return regst->GetBlobByLbi(lbi);
-    });
-  }
+  // for (const ExecKernel& ek : exec_kernel_vec_) {
+  //   ek.kernel->Launch(kernel_ctx, [&](const std::string& bn_in_op) -> Blob* {
+  //     auto regst_desc_id_it = ek.bn_in_op2regst_desc_id.find(bn_in_op);
+  //     if (regst_desc_id_it == ek.bn_in_op2regst_desc_id.end()) { return nullptr; }
+  //     Regst* regst = GetNaiveOrInplaceCurWriteable(regst_desc_id_it->second);
+  //     if (regst == nullptr) { regst = GetNaiveOrInplaceCurReadable(regst_desc_id_it->second); }
+  //     if (regst == nullptr) { regst = Regst4RegstDescId(regst_desc_id_it->second); }
+  //     if (regst == nullptr) { return nullptr; }
+  //     const LogicalBlobId& lbi = ek.kernel->BnInOp2Lbi(bn_in_op);
+  //     return regst->GetBlobByLbi(lbi);
+  //   });
+  // }
 }
 
 void Actor::AsyncLaunchKernel(const KernelCtx& kernel_ctx) {
-  AsyncLaunchKernel(kernel_ctx, [](int64_t) -> Regst* {
-    UNIMPLEMENTED();
-    return nullptr;
-  });
+  // AsyncLaunchKernel(kernel_ctx, [](int64_t) -> Regst* {
+  //   UNIMPLEMENTED();
+  //   return nullptr;
+  // });
 }
 
 void Actor::HandleProducedNaiveDataRegstToConsumer(std::function<bool(Regst*)> RegstPreProcess,
