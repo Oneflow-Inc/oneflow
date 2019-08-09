@@ -5,6 +5,7 @@ import oneflow.core.job.job_set_pb2 as job_set_util
 import oneflow.core.job.job_pb2 as job_util
 import oneflow.python.framework.compile_context as compile_context
 from oneflow.python.oneflow_export import oneflow_export
+import oneflow.python.lib.core.pb_util as pb_util
 
 inited_config_proto = None
 
@@ -30,12 +31,12 @@ class ConfigProtoBuilder(object):
     def machine(self, val):
         self.config_proto_.resource.machine.extend(_MakeMachine(val))
         return self
-    
+
     def ctrl_port(self, val):
         assert type(val) is int
         self.config_proto_.resource.ctrl_port = val
         return self
-    
+
     def data_port(self, val):
         assert type(val) is int
         self.config_proto_.resource.data_port = val
@@ -138,12 +139,27 @@ class JobConfigProtoBuilder(object):
 
     def job_conf():
         return self.job_conf_
-        
+
+    def default_initializer_conf(self, val):
+        assert type(val) is dict
+        pb_util.PythonDict2PbMessage(val, self.job_conf_.default_initializer_conf)
+        return self
+
+    def model_update_conf(self, val):
+        assert type(val) is dict
+        pb_util.PythonDict2PbMessage(val, self.train_conf().model_update_conf)
+        return self
+
+    def total_batch_num(self, val):
+        assert type(val) is int
+        self.job_conf_.total_batch_num = val
+        return self
+
     def batch_size(self, val):
         assert type(val) is int
         self.job_conf_.piece_size = val # it's not a type
         return self
-    
+
     def default_data_type(self, val):
         assert type(val) is int
         self.job_conf_.default_data_type = val
@@ -248,7 +264,7 @@ def _MakeMachine(machines):
         assert m.addr not in addrs_for_check
         addrs_for_check.add(m.addr)
     return rp_machine
-    
+
 def _DefaultConfigResource(config):
     resource = config.resource
     if len(resource.machine) == 0:
@@ -264,11 +280,11 @@ def _DefaultConfigIO(config):
         io_conf.data_fs_conf.localfs_conf.SetInParent()
     if io_conf.snapshot_fs_conf.WhichOneof("fs_type") == None:
         io_conf.snapshot_fs_conf.localfs_conf.SetInParent()
-        
+
 def  _DefaultConfigCppFlags(config):
     config.cpp_flags_conf.SetInParent()
 
-    
+
 def _TryCompleteDefaultJobConfigProto(job_conf):
     assert job_conf.HasField('piece_size'), "batch_size unset"
     if job_conf.WhichOneof("job_type") is None:
