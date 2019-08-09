@@ -52,6 +52,14 @@ const PbMessage& BatchGatherKernel<device_type, T>::GetCustomizedOpConf() const 
 template<DeviceType device_type, typename T>
 void BatchGatherKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  const Blob* in_blob = BnInOp2Blob("in");
+  const Blob* indices_blob = BnInOp2Blob("indices");
+  const std::vector<int64_t>& in_dim_vec = in_blob->shape().dim_vec();
+  const std::vector<int64_t>& indices_dim_vec = indices_blob->shape().dim_vec();
+  CHECK_LE(indices_dim_vec.size(), in_dim_vec.size());
+  FOR_RANGE(int64_t, i, 0, indices_dim_vec.size() - 1) {
+    CHECK_EQ(indices_dim_vec.at(i), in_dim_vec.at(i));
+  }
   BatchGatherSwitchUtil<device_type, T>::SwitchBatchGatherForward(
       SwitchCase(BnInOp2Blob("indices")->data_type()), ctx.device_ctx, BnInOp2Blob("in"),
       BnInOp2Blob("indices"), BnInOp2Blob("out"));
@@ -63,6 +71,26 @@ void BatchGatherKernel<device_type, T>::BackwardDataContent(
   BatchGatherSwitchUtil<device_type, T>::SwitchBatchGatherBackward(
       SwitchCase(BnInOp2Blob("indices")->data_type()), ctx.device_ctx,
       BnInOp2Blob(GenDiffBn("out")), BnInOp2Blob("indices"), BnInOp2Blob(GenDiffBn("in")));
+}
+
+template<DeviceType device_type, typename T>
+void BatchGatherKernel<device_type, T>::ForwardDim0ValidNum(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  BnInOp2Blob("out")->set_dim0_valid_num(0, BnInOp2Blob("in")->shape().At(0));
+}
+
+template<DeviceType device_type, typename T>
+void BatchGatherKernel<device_type, T>::ForwardInstanceShape(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  const Blob* in_blob = BnInOp2Blob("in");
+  const std::vector<int64_t> in_dim_vec = in_blob->shape().dim_vec();
+  const Blob* indices_blob = BnInOp2Blob("indices");
+  const std::vector<int64_t> indices_dim_vec = indices_blob->shape().dim_vec();
+
+  std::vector<int64_t> out_dim_vec(indices_dim_vec);
+  out_dim_vec.insert(out_dim_vec.end(), in_dim_vec.begin() + out_dim_vec.size(), in_dim_vec.end());
+  BnInOp2Blob("out")->set_instance_shape(
+      Shape(std::vector<int64_t>(out_dim_vec.begin() + 1, out_dim_vec.end())));
 }
 
 template<typename T, typename K>
