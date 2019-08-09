@@ -12,10 +12,10 @@ void TopKOp::InitFromOpConf() {
     // indices, sorted_in, sorted_indices, temp_storage blobs are only used in radix sort but not
     // heap selection. We can't choose between these two algorithms at compile stage,
     // so always allocate memory for all these blobs for GPU device.
-    EnrollFwBufBn("indices");
-    EnrollFwBufBn("sorted_in");
-    EnrollFwBufBn("sorted_indices");
-    EnrollFwBufBn("temp_storage");
+    // EnrollFwBufBn("indices");
+    // EnrollFwBufBn("sorted_in");
+    // EnrollFwBufBn("sorted_indices");
+    // EnrollFwBufBn("temp_storage");
   }
   EnrollOutputBn("out", false);
 }
@@ -39,21 +39,21 @@ void TopKOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlob
     }
   } else if (device_type() == DeviceType::kGPU) {
     // fw_buf: indices
-    BlobDesc* indices = GetBlobDesc4BnInOp("indices");
-    *indices = *in;
-    indices->set_data_type(DataType::kInt32);
+    // BlobDesc* indices = GetBlobDesc4BnInOp("indices");
+    // *indices = *in;
+    // indices->set_data_type(DataType::kInt32);
     // fw_buf: sorted_in
-    *GetBlobDesc4BnInOp("sorted_in") = *in;
+    // *GetBlobDesc4BnInOp("sorted_in") = *in;
     // fw_buf: sorted_indices
-    *GetBlobDesc4BnInOp("sorted_indices") = *indices;
+    // *GetBlobDesc4BnInOp("sorted_indices") = *indices;
     // fw_buf: temp_storage
-    int64_t temp_storage_bytes = InferTempStorageForSortingPairsDescendingAtCompile(
-        in->shape().elem_cnt() / instance_size, instance_size, in->data_type());
-    BlobDesc* temp_storage = GetBlobDesc4BnInOp("temp_storage");
-    temp_storage->mut_shape() = Shape({temp_storage_bytes});
-    temp_storage->set_data_type(DataType::kChar);
-    TopKOpCtx* top_k_op_ctx = new TopKOpCtx(temp_storage_bytes);
-    EnrollOpCtx(top_k_op_ctx);
+    // int64_t temp_storage_bytes = InferTempStorageForSortingPairsDescendingAtCompile(
+    //     in->shape().elem_cnt() / instance_size, instance_size, in->data_type());
+    // BlobDesc* temp_storage = GetBlobDesc4BnInOp("temp_storage");
+    // temp_storage->mut_shape() = Shape({temp_storage_bytes});
+    // temp_storage->set_data_type(DataType::kChar);
+    // TopKOpCtx* top_k_op_ctx = new TopKOpCtx(temp_storage_bytes);
+    // EnrollOpCtx(top_k_op_ctx);
   } else {
     UNIMPLEMENTED();
   }
@@ -69,11 +69,11 @@ void TopKOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlob
 void TopKOp::VirtualGenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*,
     KernelConf* kernel_conf, const OpContext* op_ctx) const {
-  kernel_conf->set_data_type(GetBlobDesc4BnInOp("in")->data_type());
-  if (device_type() == DeviceType::kGPU) {
-    auto* top_k_op_ctx = static_cast<const TopKOpCtx*>(op_ctx);
-    kernel_conf->mutable_top_k_conf()->set_temp_storage_bytes(top_k_op_ctx->temp_storage_bytes_);
-  }
+  // kernel_conf->set_data_type(GetBlobDesc4BnInOp("in")->data_type());
+  // if (device_type() == DeviceType::kGPU) {
+  //   auto* top_k_op_ctx = static_cast<const TopKOpCtx*>(op_ctx);
+  //   kernel_conf->mutable_top_k_conf()->set_temp_storage_bytes(top_k_op_ctx->temp_storage_bytes_);
+  // }
 }
 
 REGISTER_OP(OperatorConf::kTopKConf, TopKOp);
