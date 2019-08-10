@@ -5,8 +5,7 @@
 namespace oneflow {
 
 void ReentrantLockCompTaskNode::ProduceAllRegstsAndBindEdges() {
-  size_t register_num = GlobalJobDesc().concurrency_width();
-  ProduceRegst("out", false, register_num, register_num);
+  ProduceRegst("out", false, 1, 1);
   ForEachOutDataEdge([&](TaskEdge* edge) { BindEdgeWithProducedRegst(edge, "out"); });
 }
 
