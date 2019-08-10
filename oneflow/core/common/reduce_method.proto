@@ -1,0 +1,10 @@
+syntax = "proto2";
+package oneflow;
+
+enum ReduceMethod {
+    kInvalid = 0;
+    kSum = 1;
+    kProd = 2;
+    kMin = 3;
+    kMax = 4;
+}
