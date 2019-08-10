@@ -1,10 +1,12 @@
 #include "oneflow/core/graph/reentrant_lock_compute_task_node.h"
 #include "oneflow/core/graph/logical_node.h"
+#include "oneflow/core/job/job_desc.h"
 
 namespace oneflow {
 
 void ReentrantLockCompTaskNode::ProduceAllRegstsAndBindEdges() {
-  ProduceRegst("out", false, 1, 1);
+  size_t register_num = GlobalJobDesc().concurrency_width();
+  ProduceRegst("out", false, register_num, register_num);
   ForEachOutDataEdge([&](TaskEdge* edge) { BindEdgeWithProducedRegst(edge, "out"); });
 }
 
