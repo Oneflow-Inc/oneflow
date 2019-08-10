@@ -86,6 +86,12 @@ void GatherKernel<device_type, T>::ForwardDim0ValidNum(
   }
 }
 
+template<DeviceType device_type, typename T>
+void GatherKernel<device_type, T>::BackwardInDiffDim0ValidNum(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  BnInOp2Blob(GenDiffBn("in"))->CopyDim0ValidNumFrom(ctx.device_ctx, BnInOp2Blob("in"));
+}
+
 template<typename T, typename K>
 struct GatherKernelUtil<DeviceType::kCPU, T, K> final {
   static void Forward(DeviceCtx* ctx, const K* indices, int64_t num_indices, const T* in,
