@@ -128,6 +128,8 @@ class Actor {
     return GetNaiveOrInplaceCurWriteable(Name2SoleRegstDescId(name));
   }
   Regst* GetSoleProducedRegst4RegstDescId(int64_t regst_desc_id) const;
+  void ForEachProducedRegst(const std::function<void(Regst*)>&) const;
+  int64_t HandleRegstToConsumer(Regst* regst, std::function<bool(int64_t)> IsAllowedActor);
 
  private:
   int64_t GetGlobalWorkStreamId() const;
@@ -175,7 +177,6 @@ class Actor {
   virtual void VirtualAsyncSendNaiveConsumedRegstMsgToProducer();
   void AsyncSendConsumedCtrlRegstMsgToProducer();
   void AsyncSendProducedCtrlRegstMsgToConsumer();
-  int64_t HandleRegstToConsumer(Regst* regst, std::function<bool(int64_t)> IsAllowedActor);
 
   // Customized Consumed virtual func
   virtual void ForEachCurCustomizedReadableRegst(std::function<void(const Regst*)>) const {}

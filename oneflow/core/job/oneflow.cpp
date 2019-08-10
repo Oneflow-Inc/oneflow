@@ -427,7 +427,8 @@ void MakeMainJob(const std::vector<Job>& jobs, Job* main_job,
   op_confs.push_back(cs_case_op_conf);
   FOR_RANGE(int64_t, i, 0, Global<CriticalSectionDesc>::Get()->CriticalSectionNum()) {
     OperatorConf identity_tick_op_conf;
-    identity_tick_op_conf.set_name(std::string("System-Main-Tick_") + NewUniqueId());
+    std::string name_prefix = "System-Main-Tick_CriticalSection_";
+    identity_tick_op_conf.set_name(name_prefix + std::to_string(i));
     auto* identity_tick_conf = identity_tick_op_conf.mutable_tick_conf();
     identity_tick_conf->add_tick(cs_case_op_conf.name() + "/" + GenRepeatedBn("out", i));
     identity_tick_conf->set_out("out");
