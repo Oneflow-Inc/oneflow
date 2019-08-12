@@ -1,5 +1,4 @@
 #include "oneflow/core/job_completer/all_reduce_sequence_pass.h"
-#include "oneflow/core/graph/op_graph.h"
 
 namespace oneflow {
 
@@ -55,18 +54,17 @@ void ReOrderAllReduceGroups(std::vector<AllReduceGroup>* all_reduce_groups) {
 
 }  // namespace
 
-void AllReduceSequencePass::Apply(const OpGraph& op_graph, Job* job) const {
+void AllReduceSequencePass::Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
   std::vector<AllReduceGroup> all_reduce_groups;
   FindAllReduceGroups(op_graph, &all_reduce_groups);
   ReOrderAllReduceGroups(&all_reduce_groups);
-  JobBuilder builder(job);
   FOR_RANGE(int32_t, i, 1, all_reduce_groups.size()) {
     const std::string& pred_split_op_name =
         all_reduce_groups.at(i - 1).reduce_split_node->op().op_name();
     OperatorConf succ_identity_op_conf =
         all_reduce_groups.at(i).reduce_identity_node->op().op_conf();
     succ_identity_op_conf.add_ctrl_in_op_name(pred_split_op_name);
-    builder.MutOpsOnlyOnce({succ_identity_op_conf});
+    job_builder->MutOpsOnlyOnce({succ_identity_op_conf});
   }
 }
 

@@ -443,8 +443,8 @@ void AddRecordLoadOps(Job* job) {
   }
 }
 
-void MakeAllReduceSequence(const OpGraph& op_graph, Job* job) {
-  AllReduceSequencePass().Apply(op_graph, job);
+void MakeAllReduceSequence(const OpGraph& op_graph, JobBuilder* job_builder) {
+  AllReduceSequencePass().Apply(op_graph, job_builder);
 }
 
 void EnableAutoMixedPrecision(const OpGraph& op_graph, Job* job) {
@@ -474,7 +474,7 @@ void JobCompleter::Complete(Job* job) const {
     // complete ops for trainning
     WithOpGraphAndMutJobBuilder(job_builder.get(), &GenerateOpConf4Trainning);
     WithOpGraphAndMutJobBuilder(job_builder.get(), &RewriteBoxingWithAllReduce);
-    WithOpGraphAndMutJob(job, &MakeAllReduceSequence);
+    WithOpGraphAndMutJobBuilder(job_builder.get(), &MakeAllReduceSequence);
   }
   WithOpGraphAndMutJob(job, &DumpLogicalBlobDescAndSbpSignature);
   WithOpGraphAndMutJob(job, &GroupBoxingByDstParallel);
