@@ -150,11 +150,6 @@ class JobConfigProtoBuilder(object):
         pb_util.PythonDict2PbMessage(val, self.train_conf().model_update_conf)
         return self
 
-    def total_batch_num(self, val):
-        assert type(val) is int
-        self.job_conf_.total_batch_num = val
-        return self
-
     def batch_size(self, val):
         assert type(val) is int
         self.job_conf_.piece_size = val # it's not a type
