@@ -486,9 +486,9 @@ void JobCompleter::Complete(Job* job) const {
   WithOpGraphAndMutJobBuilder(job_builder.get(), &AddTickForTimeShape);
   job_builder.reset(new JobBuilder(job));
   WithOpGraphAndMutJobBuilder(job_builder.get(), &AutoSinkTick);
-  AddGlobalTotalJobCriticalSection(*job);
-  WithOpGraphAndMutJob(job, &AddGlobalInputCriticalSections);
-  WithOpGraphAndMutJob(job, &AddGlobalOutputCriticalSections);
+  AddGlobalTotalJobCriticalSection(job_builder->job());
+  WithOpGraphAndMutJobBuilder(job_builder.get(), &AddGlobalInputCriticalSections);
+  WithOpGraphAndMutJobBuilder(job_builder.get(), &AddGlobalOutputCriticalSections);
   WithOpGraphAndMutJobBuilder(job_builder.get(), &DumpLogicalBlobDescAndSbpSignature);
   WithOpGraphAndMutJob(job, &SetOpTimeShape7BatchDimLbis);
   CheckOpGraph(OpGraph(*job));

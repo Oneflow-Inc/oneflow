@@ -249,40 +249,39 @@ std::vector<OperatorConf> AddTickForTimeShape(const Shape& src_time_shape,
 
 void AddGlobalInputOutputCriticalSection(const HashSet<const OpNode*>& op_nodes,
                                          const std::vector<std::string>& lbi_producer_op_names,
-                                         Job* job) {
+                                         JobBuilder* job_builder) {
   auto time_shape = std::make_unique<Shape>(
       std::vector<int64_t>{GlobalJobDesc().TotalBatchNum(), GlobalJobDesc().NumOfPiecesInBatch()});
   HashMap<ParallelDesc, std::list<const OpNode*>> parallel_desc2op_nodes;
   for (const OpNode* op_node : op_nodes) {
     parallel_desc2op_nodes[op_node->parallel_desc()].push_back(op_node);
   }
-  JobBuilder job_builder(job);
   std::vector<OperatorConf> source_ticks;
   std::vector<OperatorConf> sink_ticks;
   for (const auto& pair : parallel_desc2op_nodes) {
-    source_ticks.push_back(PrependTick(pair.second, &job_builder));
-    for (const auto& sink_tick : AddTickForTimeShape(*time_shape, op_nodes, &job_builder)) {
+    source_ticks.push_back(PrependTick(pair.second, job_builder));
+    for (const auto& sink_tick : AddTickForTimeShape(*time_shape, op_nodes, job_builder)) {
       sink_ticks.push_back(sink_tick);
     }
   }
   OperatorConf src_tick_op_conf;
   {
     CHECK_EQ(source_ticks.empty(), false);
-    BuildSourceTickOpAndParallelConf(&src_tick_op_conf, &job_builder);
+    BuildSourceTickOpAndParallelConf(&src_tick_op_conf, job_builder);
     for (auto& op_conf : source_ticks) {
       op_conf.mutable_tick_conf()->add_tick(src_tick_op_conf.name() + "/"
                                             + src_tick_op_conf.source_tick_conf().out());
     }
-    job_builder.MutOpsOnlyOnce(source_ticks);
+    job_builder->MutOpsOnlyOnce(source_ticks);
   }
   OperatorConf sink_tick_op_conf;
   {
-    BuildSinkTickOpAndParallelConf(&sink_tick_op_conf, &job_builder);
+    BuildSinkTickOpAndParallelConf(&sink_tick_op_conf, job_builder);
     for (const auto& op_conf : sink_ticks) {
       sink_tick_op_conf.mutable_sink_tick_conf()->add_tick(op_conf.name() + "/"
                                                            + op_conf.tick_conf().out());
     }
-    job_builder.MutOpsOnlyOnce({sink_tick_op_conf});
+    job_builder->MutOpsOnlyOnce({sink_tick_op_conf});
   }
   auto* io_cs = AddGlobalCriticalSection(src_tick_op_conf.name(), sink_tick_op_conf.name())
                     ->mutable_input_output_critical_section();
@@ -349,19 +348,19 @@ void AddGlobalTotalJobCriticalSection(const Job& job) {
       ->mutable_total_job_critical_section();
 }
 
-void AddGlobalInputCriticalSections(const OpGraph& op_graph, Job* job) {
+void AddGlobalInputCriticalSections(const OpGraph& op_graph, JobBuilder* job_builder) {
   ForEachInputCriticalSectionOpNodes(
       op_graph, [&](const HashSet<const OpNode*>& op_nodes,
                     const std::vector<std::string>& lbi_producer_op_names) {
-        AddGlobalInputOutputCriticalSection(op_nodes, lbi_producer_op_names, job);
+        AddGlobalInputOutputCriticalSection(op_nodes, lbi_producer_op_names, job_builder);
       });
 }
 
-void AddGlobalOutputCriticalSections(const OpGraph& op_graph, Job* job) {
+void AddGlobalOutputCriticalSections(const OpGraph& op_graph, JobBuilder* job_builder) {
   ForEachOutputCriticalSectionOpNodes(
       op_graph, [&](const HashSet<const OpNode*>& op_nodes,
                     const std::vector<std::string>& lbi_producer_op_names) {
-        AddGlobalInputOutputCriticalSection(op_nodes, lbi_producer_op_names, job);
+        AddGlobalInputOutputCriticalSection(op_nodes, lbi_producer_op_names, job_builder);
       });
 }
 
