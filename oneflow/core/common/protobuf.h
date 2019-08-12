@@ -177,8 +177,8 @@ inline bool operator<(const LogicalBlobId& lhs, const LogicalBlobId& rhs) {
 }
 
 inline bool operator==(const LogicalBlobId& lhs, const LogicalBlobId& rhs) {
-  PbMd message_diff;
-  return message_diff.Equivalent(lhs, rhs);
+  return lhs.op_name() == rhs.op_name() && lhs.blob_name() == rhs.blob_name()
+         && lhs.clone_id() == rhs.clone_id() && lhs.is_packed_id() == rhs.is_packed_id();
 }
 
 inline bool operator!=(const LogicalBlobId& lhs, const LogicalBlobId& rhs) { return !(lhs == rhs); }
