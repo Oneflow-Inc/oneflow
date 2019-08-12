@@ -458,26 +458,27 @@ void EnableAutoMixedPrecision(const OpGraph& op_graph, Job* job) {
 }  // namespace
 
 void JobCompleter::Complete(Job* job) const {
-  JobBuilder job_builder(job);
   // replace facade op
   SplitDecodeOps(job);
   AddRecordLoadOps(job);
-  WithOpGraphAndMutJobBuilder(&job_builder, &ReplaceFacade);
+  auto job_builder = std::make_unique<JobBuilder>(job);
+  WithOpGraphAndMutJobBuilder(job_builder.get(), &ReplaceFacade);
   // complete variable ops
-  WithOpGraphAndMutJobBuilder(&job_builder, &AutoVar);
-  WithOpGraphAndMutJobBuilder(&job_builder, &SetDefaultVariableConf);
+  WithOpGraphAndMutJobBuilder(job_builder.get(), &AutoVar);
+  WithOpGraphAndMutJobBuilder(job_builder.get(), &SetDefaultVariableConf);
   if (GlobalJobDesc().IsTrain()) {
     WithOpGraphAndMutJob(job, &TieUpChainHeadersUnReachableFromAnyVariableOps);
+    job_builder.reset(new JobBuilder(job));
     WithOpGraphAndMutJob(job, &EnableAutoMixedPrecision);
     // complete ops for trainning
-    WithOpGraphAndMutJobBuilder(&job_builder, &GenerateOpConf4Trainning);
+    WithOpGraphAndMutJobBuilder(job_builder.get(), &GenerateOpConf4Trainning);
     WithOpGraphAndMutJob(job, &RewriteBoxingWithAllReduce);
     WithOpGraphAndMutJob(job, &MakeAllReduceSequence);
   }
   WithOpGraphAndMutJob(job, &DumpLogicalBlobDescAndSbpSignature);
   WithOpGraphAndMutJob(job, &GroupBoxingByDstParallel);
   WithOpGraphAndMutJob(job, &AddKeepHeaderOnlyOp);
-  WithOpGraphAndMutJobBuilder(&job_builder, &SetCtrlInOpName4VariableOp);
+  WithOpGraphAndMutJobBuilder(job_builder.get(), &SetCtrlInOpName4VariableOp);
   // complete tick ops
   WithOpGraphAndMutJob(job, &AutoSourceTick);
   WithOpGraphAndMutJob(job, &AddTickForTimeShape);
