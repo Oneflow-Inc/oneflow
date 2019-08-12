@@ -93,6 +93,8 @@ class XlaOpContext {
 
   bool HasAttr(const std::string &attr_name) const;
 
+  std::string AttrTypeInOneof(const std::string &oneof_name) const;
+
   // Return XlaBuilder
   xla::XlaBuilder *builder() const;
 

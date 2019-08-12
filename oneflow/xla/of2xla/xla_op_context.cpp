@@ -95,6 +95,10 @@ Argument XlaOpContext::ArgumentFromString(const std::string &name) const {
   return param_.arguments.at(name);
 }
 
+bool XlaOpContext::HasAttr(const std::string &attr_name) const {
+  return HasFieldInPbMessage(*param_.op_conf, attr_name);
+}
+
 template <>
 Shape XlaOpContext::GetAttr<Shape>(const std::string &attr_name) const {
   DCHECK(HasFieldInPbMessage(*param_.op_conf, attr_name));
@@ -110,8 +114,16 @@ void XlaOpContext::SetAttr<Shape>(const std::string &attr_name,
                                 attr_name, shape);
 }
 
-bool XlaOpContext::HasAttr(const std::string &attr_name) const {
-  return HasFieldInPbMessage(*param_.op_conf, attr_name);
+std::string XlaOpContext::AttrTypeInOneof(const std::string &oneof_name) const {
+  using namespace google::protobuf;
+  const Descriptor *d = param_.op_conf->GetDescriptor();
+  const OneofDescriptor *ofd = d->FindOneofByName(oneof_name);
+  const Reflection *r = param_.op_conf->GetReflection();
+  
+  CHECK(ofd) << "Message has no oneof field named " << oneof_name;
+  const google::protobuf::FieldDescriptor *fd =
+      r->GetOneofFieldDescriptor(*(param_.op_conf), ofd);
+  return fd->name();
 }
 
 }  // namespace mola
