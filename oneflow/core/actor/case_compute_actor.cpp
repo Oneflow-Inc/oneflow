@@ -33,7 +33,7 @@ void CaseCompActor::TakeOverProducedRegst(const PbMap<std::string, RegstDescProt
     regst_desc_id2produced_rs_[regst_desc_id].InsertRegstDescId(regst_desc_id);
     regst_desc_id2produced_rs_.at(regst_desc_id).InitedDone();
   }
-  ForEachProducedRegst([&](Regst* regst){
+  ForEachProducedRegst([&](Regst* regst) {
     const int64_t regst_desc_id = regst->regst_desc_id();
     CHECK_EQ(0, regst_desc_id2produced_rs_.at(regst_desc_id).TryPushBackRegst(regst));
   });
@@ -46,7 +46,8 @@ void CaseCompActor::Act() {
   Regst* const consumed_regst = consumed_rs_.Front(consumed_regst_desc_id_);
   KernelCtx kernel_ctx = GenDefaultKernelCtx();
   case_status_.cur_selected_id = GetCurSelectId();
-  case_status_.cmd = (case_status_.cur_selected_id == -1 ? kCaseCmdHandleInput : kCaseCmdHandleOutput);
+  case_status_.cmd =
+      (case_status_.cur_selected_id == -1 ? kCaseCmdHandleInput : kCaseCmdHandleOutput);
   kernel_ctx.other = &case_status_;
   AsyncLaunchKernel(kernel_ctx, [&](int64_t regst_desc_id) -> Regst* {
     if (consumed_regst_desc_id_ == regst_desc_id) { return consumed_regst; }
@@ -59,13 +60,9 @@ void CaseCompActor::UpdtStateAsCustomizedProducedRegst(Regst* regst) {
   CHECK_EQ(0, regst_desc_id2produced_rs_.at(regst_desc_id).TryPushBackRegst(regst));
 }
 
-bool CaseCompActor::IsCustomizedReadReady() const {
-  return IsInputOrOutputReady();
-}
+bool CaseCompActor::IsCustomizedReadReady() const { return IsInputOrOutputReady(); }
 
-bool CaseCompActor::IsCustomizedWriteReady() const {
-  return IsInputOrOutputReady();
-}
+bool CaseCompActor::IsCustomizedWriteReady() const { return IsInputOrOutputReady(); }
 
 bool CaseCompActor::IsCustomizedReadAlwaysUnReadyFromNow() const {
   return ReceiveEordMsg(consumed_regst_desc_id_) && case_status_.select_id2request_cnt.size() == 0;
@@ -106,7 +103,7 @@ void CaseCompActor::AsyncSendCustomizedProducedRegstMsgToConsumer() {
   if (case_status_.cmd != kCaseCmdHandleOutput) { return; }
   const int64_t regst_desc_id = out_bn_id2regst_desc_id_.at(case_status_.cur_selected_id);
   Regst* const regst = regst_desc_id2produced_rs_.at(regst_desc_id).Front(regst_desc_id);
-  CHECK_GT(HandleRegstToConsumer(regst, [](int64_t){ return true; }), 0);
+  CHECK_GT(HandleRegstToConsumer(regst, [](int64_t) { return true; }), 0);
   regst_desc_id2produced_rs_.at(regst_desc_id).PopFrontRegsts({regst_desc_id});
 }
 
