@@ -29,8 +29,8 @@ class CaseCompActor final : public CompActor {
       override {
     return std::make_pair(RegstNameType::kNaive, HashSet<std::string>{});
   }
-  std::pair<RegstNameType, HashSet<std::string>>
-  GetNaiveOrCustomizedProducedRegstDescName() override {
+  std::pair<RegstNameType, HashSet<std::string>> GetNaiveOrCustomizedProducedRegstDescName()
+      override {
     return std::make_pair(RegstNameType::kNaive, HashSet<std::string>{});
   }
 
