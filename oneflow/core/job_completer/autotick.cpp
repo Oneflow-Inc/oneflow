@@ -298,7 +298,7 @@ void AutoSourceTick(const OpGraph& op_graph, JobBuilder* job_builder) {
   ConnectSourceTickAndOtherTick(job_builder);
 }
 
-void AddTickForTimeShape(const OpGraph& op_graph, Job* job) {
+void AddTickForTimeShape(const OpGraph& op_graph, JobBuilder* job_builder) {
   const auto& src_time_shape = *GetSrcTickOpNode(op_graph)->out_blob_time_shape();
   HashSet<const OpNode*> sink_op_nodes;
   op_graph.ForEachNode([&](OpNode* op_node) {
@@ -307,8 +307,7 @@ void AddTickForTimeShape(const OpGraph& op_graph, Job* job) {
     op_graph.ForEachDataAndCtrlOutNode(op_node, [&](OpNode*) { ++out_cnt; });
     if (out_cnt == 0) { sink_op_nodes.insert(op_node); }
   });
-  JobBuilder job_builder(job);
-  AddTickForTimeShape(src_time_shape, sink_op_nodes, &job_builder);
+  AddTickForTimeShape(src_time_shape, sink_op_nodes, job_builder);
 }
 
 void AutoSinkTick(const OpGraph& op_graph, Job* job) {
