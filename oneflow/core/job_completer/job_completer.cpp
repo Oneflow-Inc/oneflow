@@ -329,9 +329,9 @@ void RewriteBoxingWithAllReduce(const OpGraph& op_graph, JobBuilder* job_builder
   AllReduceAddPass().Apply(op_graph, job_builder);
 }
 
-void DumpLogicalBlobDescAndSbpSignature(const OpGraph& op_graph, Job* job) {
-  op_graph.DumpLogicalBlobDesc(job);
-  op_graph.DumpSbpSignature(job);
+void DumpLogicalBlobDescAndSbpSignature(const OpGraph& op_graph, JobBuilder* job_builder) {
+  op_graph.DumpLogicalBlobDesc(job_builder);
+  op_graph.DumpSbpSignature(job_builder);
 }
 
 void SplitDecodeOps(Job* job) {
@@ -475,7 +475,7 @@ void JobCompleter::Complete(Job* job) const {
     WithOpGraphAndMutJobBuilder(job_builder.get(), &RewriteBoxingWithAllReduce);
     WithOpGraphAndMutJobBuilder(job_builder.get(), &MakeAllReduceSequence);
   }
-  WithOpGraphAndMutJob(job, &DumpLogicalBlobDescAndSbpSignature);
+  WithOpGraphAndMutJobBuilder(job_builder.get(), &DumpLogicalBlobDescAndSbpSignature);
   WithOpGraphAndMutJob(job, &GroupBoxingByDstParallel);
   WithOpGraphAndMutJob(job, &AddKeepHeaderOnlyOp);
   WithOpGraphAndMutJobBuilder(job_builder.get(), &SetCtrlInOpName4VariableOp);
@@ -486,7 +486,7 @@ void JobCompleter::Complete(Job* job) const {
   AddGlobalTotalJobCriticalSection(*job);
   WithOpGraphAndMutJob(job, &AddGlobalInputCriticalSections);
   WithOpGraphAndMutJob(job, &AddGlobalOutputCriticalSections);
-  WithOpGraphAndMutJob(job, &DumpLogicalBlobDescAndSbpSignature);
+  WithOpGraphAndMutJobBuilder(job_builder.get(), &DumpLogicalBlobDescAndSbpSignature);
   WithOpGraphAndMutJob(job, &SetOpTimeShape7BatchDimLbis);
   CheckOpGraph(OpGraph(*job));
 }

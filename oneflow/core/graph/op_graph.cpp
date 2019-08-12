@@ -802,8 +802,8 @@ std::list<OpNode*> OpGraph::DataOrCtrlSourceNodes() const {
   return ret;
 }
 
-void OpGraph::DumpLogicalBlobDesc(Job* job) const {
-  auto* helper = job->mutable_helper();
+void OpGraph::DumpLogicalBlobDesc(JobBuilder* job_builder) const {
+  auto* helper = job_builder->mutable_helper();
   ForEachNode([&](const OpNode* node) {
     for (const auto& obn : node->op().output_bns()) {
       const auto& lbi = node->op().BnInOp2Lbi(obn);
@@ -813,9 +813,9 @@ void OpGraph::DumpLogicalBlobDesc(Job* job) const {
   });
 }
 
-void OpGraph::DumpSbpSignature(Job* job) const {
+void OpGraph::DumpSbpSignature(JobBuilder* job_builder) const {
   ForEachNode([&](const OpNode* node) {
-    (*job->mutable_sbp_conf()->mutable_op_name2sbp_signature_conf())[node->op().op_name()] =
+    (*job_builder->mutable_sbp_conf()->mutable_op_name2sbp_signature_conf())[node->op().op_name()] =
         node->sbp_signature();
   });
 }
