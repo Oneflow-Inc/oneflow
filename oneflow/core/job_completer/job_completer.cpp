@@ -325,8 +325,8 @@ void SetOpTimeShape7BatchDimLbis(const OpGraph& op_graph, Job* job) {
   op_graph.DumpBatchDimLbi(job);
 }
 
-void RewriteBoxingWithAllReduce(const OpGraph& op_graph, Job* job) {
-  AllReduceAddPass().Apply(op_graph, job);
+void RewriteBoxingWithAllReduce(const OpGraph& op_graph, JobBuilder* job_builder) {
+  AllReduceAddPass().Apply(op_graph, job_builder);
 }
 
 void DumpLogicalBlobDescAndSbpSignature(const OpGraph& op_graph, Job* job) {
@@ -470,9 +470,10 @@ void JobCompleter::Complete(Job* job) const {
     WithOpGraphAndMutJob(job, &TieUpChainHeadersUnReachableFromAnyVariableOps);
     job_builder.reset(new JobBuilder(job));
     WithOpGraphAndMutJob(job, &EnableAutoMixedPrecision);
+    job_builder.reset(new JobBuilder(job));
     // complete ops for trainning
     WithOpGraphAndMutJobBuilder(job_builder.get(), &GenerateOpConf4Trainning);
-    WithOpGraphAndMutJob(job, &RewriteBoxingWithAllReduce);
+    WithOpGraphAndMutJobBuilder(job_builder.get(), &RewriteBoxingWithAllReduce);
     WithOpGraphAndMutJob(job, &MakeAllReduceSequence);
   }
   WithOpGraphAndMutJob(job, &DumpLogicalBlobDescAndSbpSignature);
