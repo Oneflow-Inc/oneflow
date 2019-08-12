@@ -9,7 +9,7 @@ namespace oneflow {
 
 void AutoSourceTick(const OpGraph& op_graph, JobBuilder* job_builder);
 void AddTickForTimeShape(const OpGraph& op_graph, JobBuilder* job_builder);
-void AutoSinkTick(const OpGraph& op_graph, Job* job);
+void AutoSinkTick(const OpGraph& op_graph, JobBuilder* job_builder);
 void AddGlobalTotalJobCriticalSection(const Job& job);
 void AddGlobalInputCriticalSections(const OpGraph& op_graph, Job* job);
 void AddGlobalOutputCriticalSections(const OpGraph& op_graph, Job* job);

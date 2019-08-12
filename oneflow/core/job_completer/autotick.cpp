@@ -310,7 +310,7 @@ void AddTickForTimeShape(const OpGraph& op_graph, JobBuilder* job_builder) {
   AddTickForTimeShape(src_time_shape, sink_op_nodes, job_builder);
 }
 
-void AutoSinkTick(const OpGraph& op_graph, Job* job) {
+void AutoSinkTick(const OpGraph& op_graph, JobBuilder* job_builder) {
   op_graph.ForEachNode([&](OpNode* node) { CHECK(!node->op().op_conf().has_sink_tick_conf()); });
   const auto& src_time_shape = *GetSrcTickOpNode(op_graph)->out_blob_time_shape();
   HashSet<LogicalBlobId> tick_lbis;
@@ -322,13 +322,12 @@ void AutoSinkTick(const OpGraph& op_graph, Job* job) {
     CHECK(*op_node->out_blob_time_shape() == src_time_shape);
     CHECK(tick_lbis.emplace(op_node->op().BnInOp2Lbi(op_node->op().SoleObn())).second);
   });
-  JobBuilder job_builder(job);
   OperatorConf sink_tick_op_conf;
-  BuildSinkTickOpAndParallelConf(&sink_tick_op_conf, &job_builder);
+  BuildSinkTickOpAndParallelConf(&sink_tick_op_conf, job_builder);
   for (const LogicalBlobId& tick_lbi : tick_lbis) {
     sink_tick_op_conf.mutable_sink_tick_conf()->add_tick(GenLogicalBlobName(tick_lbi));
   }
-  job_builder.MutOpsOnlyOnce({sink_tick_op_conf});
+  job_builder->MutOpsOnlyOnce({sink_tick_op_conf});
 }
 
 void AddGlobalTotalJobCriticalSection(const Job& job) {

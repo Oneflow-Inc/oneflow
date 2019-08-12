@@ -480,9 +480,12 @@ void JobCompleter::Complete(Job* job) const {
   WithOpGraphAndMutJobBuilder(job_builder.get(), &AddKeepHeaderOnlyOp);
   WithOpGraphAndMutJobBuilder(job_builder.get(), &SetCtrlInOpName4VariableOp);
   // complete tick ops
+  job_builder.reset(new JobBuilder(job));
   WithOpGraphAndMutJobBuilder(job_builder.get(), &AutoSourceTick);
+  job_builder.reset(new JobBuilder(job));
   WithOpGraphAndMutJobBuilder(job_builder.get(), &AddTickForTimeShape);
-  WithOpGraphAndMutJob(job, &AutoSinkTick);
+  job_builder.reset(new JobBuilder(job));
+  WithOpGraphAndMutJobBuilder(job_builder.get(), &AutoSinkTick);
   AddGlobalTotalJobCriticalSection(*job);
   WithOpGraphAndMutJob(job, &AddGlobalInputCriticalSections);
   WithOpGraphAndMutJob(job, &AddGlobalOutputCriticalSections);
