@@ -47,10 +47,8 @@ void GenerateFacadeImplOpConfIf(const OpNode& op_node, JobBuilder* job_builder) 
   }
 }
 
-void ReplaceFacade(const OpGraph& op_graph, Job* job) {
-  JobBuilder job_builder(job);
-  op_graph.ForEachNode(
-      [&](OpNode* op_node) { GenerateFacadeImplOpConfIf(*op_node, &job_builder); });
+void ReplaceFacade(const OpGraph& op_graph, JobBuilder* job_builder) {
+  op_graph.ForEachNode([&](OpNode* op_node) { GenerateFacadeImplOpConfIf(*op_node, job_builder); });
 }
 
 void UpdateJobHelperConfProducedLbi2ConsumedDiffLbi(
@@ -465,10 +463,10 @@ void JobCompleter::Complete(Job* job) const {
   // replace facade op
   SplitDecodeOps(job);
   AddRecordLoadOps(job);
-  WithOpGraphAndMutJob(job, &ReplaceFacade);
+  WithOpGraphAndMutJobBuilder(&job_builder, &ReplaceFacade);
   // complete variable ops
-  WithOpGraphAndMutJob(job, &AutoVar);
-  WithOpGraphAndMutJob(job, &SetDefaultVariableConf);
+  WithOpGraphAndMutJobBuilder(&job_builder, &AutoVar);
+  WithOpGraphAndMutJobBuilder(&job_builder, &SetDefaultVariableConf);
   if (GlobalJobDesc().IsTrain()) {
     WithOpGraphAndMutJob(job, &TieUpChainHeadersUnReachableFromAnyVariableOps);
     WithOpGraphAndMutJob(job, &EnableAutoMixedPrecision);
