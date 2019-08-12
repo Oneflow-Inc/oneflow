@@ -25,6 +25,7 @@ class JobBuilder final {
   ~JobBuilder() = default;
 
   const Job& job() const { return *job_; }
+  JobHelperConf* mutable_helper() { return job_->mutable_helper(); }
 
   const OperatorConf& OpConf4OpName(const std::string& op_name) const;
   const ParallelConf& ParallelConf4OpName(const std::string& op_name) const;

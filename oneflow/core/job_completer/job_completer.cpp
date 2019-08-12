@@ -32,6 +32,12 @@ void WithOpGraphAndMutJob(Job* job, const std::function<void(const OpGraph&, Job
   Handler(op_graph, job);
 }
 
+void WithOpGraphAndMutJobBuilder(JobBuilder* job_builder,
+                                 const std::function<void(const OpGraph&, JobBuilder*)>& Handler) {
+  OpGraph op_graph(job_builder->job());
+  Handler(op_graph, job_builder);
+}
+
 void GenerateFacadeImplOpConfIf(const OpNode& op_node, JobBuilder* job_builder) {
   auto op_type_case = op_node.op().op_conf().op_type_case();
   if (IsClassRegistered<GenerateFacadeImplOpConfWrapperStruct>(op_type_case)) {
@@ -48,9 +54,9 @@ void ReplaceFacade(const OpGraph& op_graph, Job* job) {
 }
 
 void UpdateJobHelperConfProducedLbi2ConsumedDiffLbi(
-    const HashMap<LogicalBlobId, LogicalBlobId>& lbi2diff_lbi, Job* job) {
+    const HashMap<LogicalBlobId, LogicalBlobId>& lbi2diff_lbi, JobBuilder* job_builder) {
   auto& mut_pairs =
-      (*job->mutable_helper()->mutable_tag2lbi_relations())[kProducedLbi2ConsumedDiffLbi];
+      (*job_builder->mutable_helper()->mutable_tag2lbi_relations())[kProducedLbi2ConsumedDiffLbi];
   for (const auto& pair : lbi2diff_lbi) {
     auto* mut_pair = mut_pairs.add_pair();
     *mut_pair->mutable_first() = pair.first;
@@ -104,22 +110,21 @@ void SetSbpSignatureHintByIdenticalSbpObaPairs(const OpGraph& op_graph, JobBuild
   }
 }
 
-void UpdateOpSbpSignatureHint(const OpGraph& op_graph, Job* job) {
-  JobBuilder job_builder(job);
+void UpdateOpSbpSignatureHint(const OpGraph& op_graph, JobBuilder* job_builder) {
   op_graph.ForEachNode(
-      [&](OpNode* op_node) { BindIdenticalSbpObaPairsBetweenIbns(*op_node, &job_builder); });
-  SetSbpSignatureHintByIdenticalSbpObaPairs(op_graph, &job_builder);
+      [&](OpNode* op_node) { BindIdenticalSbpObaPairsBetweenIbns(*op_node, job_builder); });
+  SetSbpSignatureHintByIdenticalSbpObaPairs(op_graph, job_builder);
 }
 
-void GenerateOpConf4Trainning(const OpGraph& op_graph, Job* job) {
+void GenerateOpConf4Trainning(const OpGraph& op_graph, JobBuilder* job_builder) {
   LogicalBlobId total_loss_instance_num;
   HashMap<LogicalBlobId, LogicalBlobId> lbi2diff_lbi;
-  AutoGrad(op_graph, job, &lbi2diff_lbi);
+  AutoGrad(op_graph, job_builder, &lbi2diff_lbi);
   std::function<const LogicalBlobId&(const ParallelDesc&)> LossInstanceNum4ParallelDesc;
-  AddTotalLossInstanceNumOpConf(op_graph, job, lbi2diff_lbi, &LossInstanceNum4ParallelDesc);
-  AddOptimizerOpConf(op_graph, job, lbi2diff_lbi, LossInstanceNum4ParallelDesc);
-  UpdateJobHelperConfProducedLbi2ConsumedDiffLbi(lbi2diff_lbi, job);
-  UpdateOpSbpSignatureHint(op_graph, job);
+  AddTotalLossInstanceNumOpConf(op_graph, job_builder, lbi2diff_lbi, &LossInstanceNum4ParallelDesc);
+  AddOptimizerOpConf(op_graph, job_builder, lbi2diff_lbi, LossInstanceNum4ParallelDesc);
+  UpdateJobHelperConfProducedLbi2ConsumedDiffLbi(lbi2diff_lbi, job_builder);
+  UpdateOpSbpSignatureHint(op_graph, job_builder);
 }
 
 std::function<ParallelConf*(const std::string&)> MakeGetterMutParallelConf4OpName(
@@ -456,6 +461,7 @@ void EnableAutoMixedPrecision(const OpGraph& op_graph, Job* job) {
 }  // namespace
 
 void JobCompleter::Complete(Job* job) const {
+  JobBuilder job_builder(job);
   // replace facade op
   SplitDecodeOps(job);
   AddRecordLoadOps(job);
@@ -467,7 +473,7 @@ void JobCompleter::Complete(Job* job) const {
     WithOpGraphAndMutJob(job, &TieUpChainHeadersUnReachableFromAnyVariableOps);
     WithOpGraphAndMutJob(job, &EnableAutoMixedPrecision);
     // complete ops for trainning
-    WithOpGraphAndMutJob(job, &GenerateOpConf4Trainning);
+    WithOpGraphAndMutJobBuilder(&job_builder, &GenerateOpConf4Trainning);
     WithOpGraphAndMutJob(job, &RewriteBoxingWithAllReduce);
     WithOpGraphAndMutJob(job, &MakeAllReduceSequence);
   }
