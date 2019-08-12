@@ -1,5 +1,6 @@
 #include "oneflow/core/graph/reentrant_lock_compute_task_node.h"
 #include "oneflow/core/graph/logical_node.h"
+#include "oneflow/core/job/job_desc.h"
 
 namespace oneflow {
 

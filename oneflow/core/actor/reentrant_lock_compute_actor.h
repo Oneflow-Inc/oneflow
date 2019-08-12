@@ -32,7 +32,7 @@ class ReentrantLockCompActor final : public CompActor {
   void AsyncSendCustomizedConsumedRegstMsgToProducer() override;
   int64_t GetCurProcessedRegstDescId() const;
 
-  const std::string& Ibn4RegstDescId(int64_t id) const { return regst_desc_id2ibn_.at(id); }
+  const std::string& Ibn4RegstDescId(int64_t id) const;
 
   RegstSlot consumed_rs_;
   int64_t cur_processed_regst_desc_id_;

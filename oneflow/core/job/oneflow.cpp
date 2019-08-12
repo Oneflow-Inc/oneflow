@@ -20,9 +20,12 @@
 #include "oneflow/core/persistence/file_system.h"
 #include "oneflow/core/actor/act_event_logger.h"
 #include "oneflow/core/graph/plan_task_graph.h"
+#include "oneflow/core/memory/memory_allocator.h"
 #include "oneflow/core/graph/task_node.h"
 #include "oneflow/core/job/oneflow.h"
 #include "oneflow/core/job/model_init_job.h"
+#include "oneflow/core/job/inter_job_mem_sharing_util.h"
+#include "oneflow/core/job/plan_util.h"
 
 DECLARE_bool(grpc_use_no_signal);
 
@@ -309,9 +312,9 @@ HashSet<std::string> GetArgOpNames(const std::vector<Job>& jobs) {
   return arg_op_names;
 }
 
-HashMap<std::string, HashSet<int64_t>> GetInterfaceOpName2JobIds(const std::vector<Job>& jobs) {
+HashMap<std::string, HashSet<int32_t>> GetInterfaceOpName2JobIds(const std::vector<Job>& jobs) {
   HashSet<std::string> arg_op_names = GetArgOpNames(jobs);
-  HashMap<std::string, HashSet<int64_t>> interface_op_name2job_ids;
+  HashMap<std::string, HashSet<int32_t>> interface_op_name2job_ids;
   HashSet<std::string> unique_op_name_check;
   FOR_RANGE(int32_t, i, 0, jobs.size()) {
     const auto& job = jobs.at(i);
@@ -383,75 +386,6 @@ void FilterArgPassJobGroupInfo(
   }
 }
 
-std::vector<TaskProto*> SortSameOpNameTaskProtos(const std::string& op_name, Plan* plan) {
-  std::vector<TaskProto*> task_protos;
-  FOR_RANGE(int64_t, i, 0, plan->task_size()) {
-    TaskProto* task = plan->mutable_task(i);
-    if (task->exec_sequence().exec_node_size() == 1) {
-      const KernelConf& kernel_conf = task->exec_sequence().exec_node(0).kernel_conf();
-      if (op_name == kernel_conf.op_attribute().op_conf().name()) {
-        task_protos.emplace_back(task);
-      }
-    }
-  }
-  std::sort(task_protos.begin(), task_protos.end(), [](const TaskProto* lhs, const TaskProto* rhs) {
-    return lhs->machine_id() < rhs->machine_id()
-           || (lhs->machine_id() == rhs->machine_id() && lhs->thrd_id() < rhs->thrd_id());
-  });
-  return task_protos;
-}
-
-RegstDescProto* GetSoleProducedDataRegst(TaskProto* task_proto) {
-  RegstDescProto* ret = nullptr;
-  for (auto& pair : *task_proto->mutable_produced_regst_desc()) {
-    RegstDescProto* regst_desc = &pair.second;
-    if (regst_desc->regst_desc_type().has_data_regst_desc()) {
-      CHECK_ISNULL(ret);
-      CHECK_EQ(regst_desc->regst_desc_type().data_regst_desc().lbi2blob_desc_size(), 1);
-      ret = regst_desc;
-    }
-  }
-  CHECK_NOTNULL(ret);
-  return ret;
-}
-
-void BindInterfaceMemBlockId(const std::vector<Job>& jobs, std::vector<Plan>* sub_plans) {
-  for (const auto& pair : GetInterfaceOpName2JobIds(jobs)) {
-    std::vector<std::vector<TaskProto*>> same_op_name_sorted_task_protos;
-    for (int64_t job_id : pair.second) {
-      same_op_name_sorted_task_protos.push_back(
-          SortSameOpNameTaskProtos(pair.first, &sub_plans->at(job_id)));
-    }
-    const auto& first_vec = same_op_name_sorted_task_protos.at(0);
-    for (const auto& task_protos : same_op_name_sorted_task_protos) {
-      CHECK_EQ(task_protos.size(), first_vec.size());
-      FOR_RANGE(int32_t, i, 0, first_vec.size()) {
-        CHECK_EQ(task_protos.at(i)->machine_id(), first_vec.at(i)->machine_id());
-        CHECK_EQ(task_protos.at(i)->thrd_id(), first_vec.at(i)->thrd_id());
-        RegstDescProto* first_regst_desc = GetSoleProducedDataRegst(first_vec.at(i));
-        CHECK_EQ(first_regst_desc->mem_shared_offset(), 0);
-        RegstDescProto* regst_desc = GetSoleProducedDataRegst(task_protos.at(i));
-        CHECK_EQ(regst_desc->mem_shared_offset(), 0);
-        CHECK_NE(first_regst_desc->mem_shared_id(), -1);
-        regst_desc->set_mem_shared_id(first_regst_desc->mem_shared_id());
-
-        int64_t separated_header_mem_size =
-            RtRegstDesc(*first_regst_desc).TotalSeparatedHeaderByteSize4AllRegst();
-        if (separated_header_mem_size > 0) {
-          CHECK_EQ(separated_header_mem_size,
-                   RtRegstDesc(*regst_desc).TotalSeparatedHeaderByteSize4AllRegst());
-          if (first_regst_desc->separated_header_mem_block_id() == -1) {
-            first_regst_desc->set_separated_header_mem_block_id(
-                Global<IDMgr>::Get()->NewMemSharedId());
-          }
-          regst_desc->set_separated_header_mem_block_id(
-              first_regst_desc->separated_header_mem_block_id());
-        }
-      }
-    }
-  }
-}
-
 void MakeMainJob(const std::vector<Job>& jobs, Job* main_job,
                  std::vector<std::string>* identity_tick_op_names,
                  LogicalBlobId* critical_section_sink_lbi) {
@@ -493,7 +427,8 @@ void MakeMainJob(const std::vector<Job>& jobs, Job* main_job,
   op_confs.push_back(cs_case_op_conf);
   FOR_RANGE(int64_t, i, 0, Global<CriticalSectionDesc>::Get()->CriticalSectionNum()) {
     OperatorConf identity_tick_op_conf;
-    identity_tick_op_conf.set_name(std::string("System-Main-Tick_") + NewUniqueId());
+    std::string name_prefix = "System-Main-Tick_CriticalSection_";
+    identity_tick_op_conf.set_name(name_prefix + std::to_string(i));
     auto* identity_tick_conf = identity_tick_op_conf.mutable_tick_conf();
     identity_tick_conf->add_tick(cs_case_op_conf.name() + "/" + GenRepeatedBn("out", i));
     identity_tick_conf->set_out("out");
@@ -572,7 +507,7 @@ void ConnectCriticalSectionEndToReentrantLockEnd(Plan* main_plan,
   }
   CHECK_NOTNULL(reentrant_lock_task);
   CHECK_NOTNULL(cs_sink_task);
-  RegstDescProto* cs_end_regst = GetSoleProducedDataRegst(cs_sink_task);
+  RegstDescProto* cs_end_regst = PlanUtil::GetSoleProducedDataRegst(cs_sink_task);
   cs_end_regst->add_consumer_task_id(reentrant_lock_task->task_id());
   reentrant_lock_task->mutable_consumed_regst_desc_id()->at("in").add_regst_desc_id(
       cs_end_regst->regst_desc_id());
@@ -660,7 +595,6 @@ void FinishGlobalCriticalSectionDesc(const std::vector<Plan>& plans) {
     int64_t job_id = critical_section->job_id();
     const auto& input_output_mem_block_ids = job_id2input_output_mem_block_ids.at(job_id);
     if (critical_section->has_total_job_critical_section()) {
-      int64_t job_id = critical_section->job_id();
       CHECK(unique_job_id_check.emplace(job_id).second);
       auto* mem_block_ids = &job_id2mem_block_ids.at(job_id);
       {
@@ -963,7 +897,8 @@ void CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan) {
     CompileHelperJob(&model_save_job);
   }
   if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
-    BindInterfaceMemBlockId(jobs, &sub_plans);
+    InterJobMemSharingUtil::BindInterfaceMemBlockId(jobs, &sub_plans);
+    InterJobMemSharingUtil::MergeMemBlockBetweenSubPlans(jobs, &sub_plans);
     FinishGlobalCriticalSectionDesc(sub_plans);
     MergePlan(plan, sub_plans);
     Plan main_plan;
@@ -986,6 +921,7 @@ void CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan) {
 }  // namespace
 
 GlobalObjectsScope4JobConf::GlobalObjectsScope4JobConf(const JobSet& job_set) {
+  Global<const JobMemSharingStrategy>::New(job_set.job_mem_sharing_strategy());
   Global<JobName2JobId>::New();
   Global<std::vector<std::unique_ptr<JobDesc>>>::New();
   FOR_RANGE(int32_t, job_id, 0, job_set.job_size()) {
@@ -998,6 +934,7 @@ GlobalObjectsScope4JobConf::GlobalObjectsScope4JobConf(const JobSet& job_set) {
 GlobalObjectsScope4JobConf::~GlobalObjectsScope4JobConf() {
   Global<JobName2JobId>::Delete();
   Global<std::vector<std::unique_ptr<JobDesc>>>::Delete();
+  Global<const JobMemSharingStrategy>::Delete();
 }
 
 Oneflow::Oneflow(const oneflow::JobSet& job_set) {
