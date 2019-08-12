@@ -276,7 +276,7 @@ void TieUpChainHeadersUnReachableFromAnyVariableOps(const OpGraph& op_graph, Job
   });
 }
 
-void SetCtrlInOpName4VariableOp(const OpGraph& op_graph, Job* job) {
+void SetCtrlInOpName4VariableOp(const OpGraph& op_graph, JobBuilder* job_builder) {
   auto IsMutableConsumedLbi = [](const Operator& op, const LogicalBlobId& lbi) -> bool {
     for (const std::string& bn : op.input_bns()) {
       if (op.BnInOp2Lbi(bn) == lbi && op.InputBlobModifier4Ibn(bn).is_mutable()) { return true; }
@@ -286,7 +286,6 @@ void SetCtrlInOpName4VariableOp(const OpGraph& op_graph, Job* job) {
   auto IsMdSaveEveryNthOp = [](const OperatorConf& op_conf) -> bool {
     return op_conf.has_every_nth_conf();
   };
-  JobBuilder job_builder(job);
   op_graph.ForEachNode([&](OpNode* op_node) {
     if (op_node->op().op_conf().has_variable_conf() == false) { return; }
     if (op_node->out_edges().size() <= 1) { return; }
@@ -312,11 +311,11 @@ void SetCtrlInOpName4VariableOp(const OpGraph& op_graph, Job* job) {
     for (const auto* fw_bw_op : naive_consumers) {
       mut_mutable_consumer_op_conf.add_ctrl_in_op_name(fw_bw_op->name());
     }
-    job_builder.MutOpsOnlyOnce({mut_mutable_consumer_op_conf});
+    job_builder->MutOpsOnlyOnce({mut_mutable_consumer_op_conf});
     if (model_save_every_nth_op_conf != nullptr) {
       OperatorConf mut_model_save_every_nth_op_conf(*model_save_every_nth_op_conf);
       mut_model_save_every_nth_op_conf.add_ctrl_in_op_name(mutable_consumer->name());
-      job_builder.MutOpsOnlyOnce({mut_model_save_every_nth_op_conf});
+      job_builder->MutOpsOnlyOnce({mut_model_save_every_nth_op_conf});
     }
   });
 }
@@ -478,7 +477,7 @@ void JobCompleter::Complete(Job* job) const {
   WithOpGraphAndMutJob(job, &DumpLogicalBlobDescAndSbpSignature);
   WithOpGraphAndMutJob(job, &GroupBoxingByDstParallel);
   WithOpGraphAndMutJob(job, &AddKeepHeaderOnlyOp);
-  WithOpGraphAndMutJob(job, &SetCtrlInOpName4VariableOp);
+  WithOpGraphAndMutJobBuilder(&job_builder, &SetCtrlInOpName4VariableOp);
   // complete tick ops
   WithOpGraphAndMutJob(job, &AutoSourceTick);
   WithOpGraphAndMutJob(job, &AddTickForTimeShape);
