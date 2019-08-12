@@ -476,7 +476,7 @@ void JobCompleter::Complete(Job* job) const {
     WithOpGraphAndMutJobBuilder(job_builder.get(), &MakeAllReduceSequence);
   }
   WithOpGraphAndMutJobBuilder(job_builder.get(), &DumpLogicalBlobDescAndSbpSignature);
-  WithOpGraphAndMutJob(job, &GroupBoxingByDstParallel);
+  WithOpGraphAndMutJobBuilder(job_builder.get(), &GroupBoxingByDstParallel);
   WithOpGraphAndMutJob(job, &AddKeepHeaderOnlyOp);
   WithOpGraphAndMutJobBuilder(job_builder.get(), &SetCtrlInOpName4VariableOp);
   // complete tick ops

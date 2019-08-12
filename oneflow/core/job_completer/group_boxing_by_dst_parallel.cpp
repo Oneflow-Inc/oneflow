@@ -1,12 +1,10 @@
 #include "oneflow/core/job_completer/group_boxing_by_dst_parallel.h"
-#include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/common/protobuf.h"
 
 namespace oneflow {
 
-void GroupBoxingByDstParallel(const OpGraph& op_graph, Job* job) {
-  JobBuilder job_builder(job);
+void GroupBoxingByDstParallel(const OpGraph& op_graph, JobBuilder* job_builder) {
   HashMap<LogicalBlobId, HashMap<std::pair<ParallelDesc, SbpParallel>,
                                  std::vector<std::pair<const OpNode*, std::string>>>>
       lbi2consumer_grouped_by_parallel_sbp;
@@ -37,11 +35,12 @@ void GroupBoxingByDstParallel(const OpGraph& op_graph, Job* job) {
       IdentityOpConf* identity_conf = identity_op_conf.mutable_identity_conf();
       identity_conf->set_in(GenLogicalBlobName(lbi));
       identity_conf->set_out("out");
-      job_builder.AddOps(dst_parallel_desc.parallel_conf(), {identity_op_conf});
+      job_builder->AddOps(dst_parallel_desc.parallel_conf(), {identity_op_conf});
       SbpSignature identity_sbp_signature;
       (*identity_sbp_signature.mutable_bn_in_op2sbp_parallel())["in"] = dst_sbp_parallel;
       (*identity_sbp_signature.mutable_bn_in_op2sbp_parallel())["out"] = dst_sbp_parallel;
-      (*job->mutable_sbp_conf()->mutable_op_name2sbp_signature_conf())[identity_op_conf.name()] =
+      (*job_builder->mutable_sbp_conf()
+            ->mutable_op_name2sbp_signature_conf())[identity_op_conf.name()] =
           identity_sbp_signature;
       LogicalBlobId grouped_lbi;
       grouped_lbi.set_op_name(identity_op_conf.name());
@@ -58,7 +57,7 @@ void GroupBoxingByDstParallel(const OpGraph& op_graph, Job* job) {
     }
   }
   for (const auto& op_node7op_conf : op_node2op_conf) {
-    job_builder.MutOpsOnlyOnce({op_node7op_conf.second});
+    job_builder->MutOpsOnlyOnce({op_node7op_conf.second});
   }
 }
 
