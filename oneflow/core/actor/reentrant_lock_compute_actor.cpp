@@ -27,8 +27,7 @@ void ReentrantLockCompActor::NormalProcessCustomizedReadableRegstMsg(const Actor
 }
 
 bool ReentrantLockCompActor::IsCustomizedReadReady() const {
-  return reentrant_lock_status_.cur_unlocked_ids().size() > 0
-    || -1 != GetCurProcessedRegstDescId();
+  return reentrant_lock_status_.cur_unlocked_ids().size() > 0 || -1 != GetCurProcessedRegstDescId();
 }
 
 void ReentrantLockCompActor::ForEachCurCustomizedReadableRegst(
