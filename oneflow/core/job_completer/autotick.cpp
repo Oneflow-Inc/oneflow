@@ -16,8 +16,7 @@ std::unique_ptr<MutOpConTickInputHelper> NewMutOpConTickInputHelper(const Operat
   return ret;
 }
 
-void GroupTickByParallelDesc(const OpGraph& op_graph, Job* job) {
-  JobBuilder job_builder(job);
+void GroupTickByParallelDesc(const OpGraph& op_graph, JobBuilder* job_builder) {
   HashMap<ParallelDesc, std::vector<OpNode*>> parallel_desc2op_node;
   op_graph.ForEachNode([&](OpNode* op_node) {
     auto mut_tick_input_helper = NewMutOpConTickInputHelper(op_node->op().op_conf());
@@ -30,11 +29,11 @@ void GroupTickByParallelDesc(const OpGraph& op_graph, Job* job) {
     OperatorConf tick_op;
     tick_op.set_name("System-AutoTick-Tick_" + NewUniqueId());
     tick_op.mutable_tick_conf()->set_out("out");
-    job_builder.AddOps(pair.first.parallel_conf(), {tick_op});
+    job_builder->AddOps(pair.first.parallel_conf(), {tick_op});
 
     for (const auto* op_node : pair.second) {
       auto mut_tick_input_helper = NewMutOpConTickInputHelper(op_node->op().op_conf());
-      job_builder.MutOpsOnlyOnce(
+      job_builder->MutOpsOnlyOnce(
           {mut_tick_input_helper->NewTickInputBoundOpConf(tick_op.name() + "/out")});
     }
   }
@@ -58,17 +57,16 @@ void BuildSinkTickOpAndParallelConf(OperatorConf* sink_tick_op, JobBuilder* job_
   job_builder->AddOps(parallel_conf, {*sink_tick_op});
 }
 
-void ConnectSourceTickAndOtherTick(Job* job) {
-  JobBuilder job_builder(job);
+void ConnectSourceTickAndOtherTick(JobBuilder* job_builder) {
   OperatorConf src_tick_op;
-  BuildSourceTickOpAndParallelConf(&src_tick_op, &job_builder);
+  BuildSourceTickOpAndParallelConf(&src_tick_op, job_builder);
 
-  job_builder.ForEachOperator([&](const Operator& op) {
+  job_builder->ForEachOperator([&](const Operator& op) {
     if (op.op_name() != src_tick_op.name()) { CHECK(!op.op_conf().has_source_tick_conf()); }
     auto mut_helper = NewMutOpConTickInputHelper(op.op_conf());
     if (!mut_helper) { return; }
     if (mut_helper->IsTickInputBound() == true) { return; }
-    job_builder.MutOpsOnlyOnce({mut_helper->NewTickInputBoundOpConf(
+    job_builder->MutOpsOnlyOnce({mut_helper->NewTickInputBoundOpConf(
         src_tick_op.name() + "/" + src_tick_op.source_tick_conf().out())});
   });
 }
@@ -294,10 +292,10 @@ void AddGlobalInputOutputCriticalSection(const HashSet<const OpNode*>& op_nodes,
 
 }  // namespace
 
-void AutoSourceTick(const OpGraph& op_graph, Job* job) {
-  GroupTickByParallelDesc(op_graph, job);
+void AutoSourceTick(const OpGraph& op_graph, JobBuilder* job_builder) {
+  GroupTickByParallelDesc(op_graph, job_builder);
   op_graph.ForEachNode([&](OpNode* node) { CHECK(!node->op().op_conf().has_source_tick_conf()); });
-  ConnectSourceTickAndOtherTick(job);
+  ConnectSourceTickAndOtherTick(job_builder);
 }
 
 void AddTickForTimeShape(const OpGraph& op_graph, Job* job) {
