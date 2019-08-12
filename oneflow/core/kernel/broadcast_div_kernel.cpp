@@ -96,50 +96,6 @@ void BroadcastDivKernel<device_type, T>::BackwardDataContent(
   }
 }
 
-template<DeviceType device_type, typename T>
-void BroadcastDivKernel<device_type, T>::ForwardDim0ValidNum(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const Blob* a = BnInOp2Blob("a");
-  const Blob* b = BnInOp2Blob("b");
-  Blob* out = BnInOp2Blob("out");
-  if (a->has_dim0_valid_num_field() && b->has_dim0_valid_num_field()) {
-    CHECK_EQ(a->shape().NumAxes(), b->shape().NumAxes());
-    CHECK_EQ(a->dim0_inner_shape(), b->dim0_inner_shape());
-    this->CheckSameDim0ValidNum(this->kernel_conf().op_attribute().input_bns(), BnInOp2Blob);
-    out->CopyDim0ValidNumFrom(ctx.device_ctx, a);
-  } else if (a->has_dim0_valid_num_field()) {
-    if (b->shape().NumAxes() == a->shape().NumAxes()) {
-      CHECK_EQ(b->shape().At(0), 1);
-    } else {
-      CHECK_LE(b->shape().NumAxes(), a->shape().NumAxes());
-    }
-    out->CopyDim0ValidNumFrom(ctx.device_ctx, a);
-  } else if (b->has_dim0_valid_num_field()) {
-    if (a->shape().NumAxes() == b->shape().NumAxes()) {
-      CHECK_EQ(a->shape().At(0), 1);
-    } else {
-      CHECK_LE(a->shape().NumAxes(), b->shape().NumAxes());
-    }
-    out->CopyDim0ValidNumFrom(ctx.device_ctx, b);
-  } else {
-    UNIMPLEMENTED();
-  }
-}
-
-template<DeviceType device_type, typename T>
-void BroadcastDivKernel<device_type, T>::BackwardInDiffDim0ValidNum(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const Blob* out_diff = BnInOp2Blob(GenDiffBn("out"));
-  Blob* a_diff = BnInOp2Blob(GenDiffBn("a"));
-  Blob* b_diff = BnInOp2Blob(GenDiffBn("b"));
-  if (a_diff && a_diff->has_dim0_valid_num_field()) {
-    a_diff->CopyDim0ValidNumFrom(ctx.device_ctx, out_diff);
-  }
-  if (b_diff && b_diff->has_dim0_valid_num_field()) {
-    b_diff->CopyDim0ValidNumFrom(ctx.device_ctx, out_diff);
-  }
-}
-
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kBroadcastDivConf, BroadcastDivKernel,
                            FLOATING_DATA_TYPE_SEQ);
 }  // namespace oneflow

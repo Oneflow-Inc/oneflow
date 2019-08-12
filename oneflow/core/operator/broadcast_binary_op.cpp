@@ -98,9 +98,7 @@ void BroadcastBinaryOp::InferBlobDescs(
     }
     out_blob_desc->mut_shape() = out_shape;
   }
-  const bool dim0_varing =
-      a_blob_desc->has_dim0_valid_num_field() || b_blob_desc->has_dim0_valid_num_field();
-  if (dim0_varing) {
+  if (a_blob_desc->has_dim0_valid_num_field() || b_blob_desc->has_dim0_valid_num_field()) {
     out_blob_desc->set_has_dim0_valid_num_field(true);
     out_blob_desc->mut_dim0_inner_shape() = Shape({1, out_blob_desc->shape().At(0)});
   }

@@ -31,8 +31,8 @@ __global__ void LocalNonzeroForwardGpu(const int64_t num_elem, const T* in_ptr,
 }  // namespace
 
 template<typename T>
-void LocalNonzeroUtil<T>::ForwardGpu(DeviceCtx* ctx, const Blob* in_blob, Blob* num_nonzero_blob,
-                                     Blob* shape_blob, Blob* out_blob) {
+void GpuNonzero(DeviceCtx* ctx, const Blob* in_blob, Blob* num_nonzero_blob, Blob* shape_blob,
+                Blob* out_blob) {
   FOR_RANGE(int64_t, i, 0, shape_blob->shape().elem_cnt()) {
     KernelUtil<DeviceType::kGPU, int64_t>::Set(ctx, in_blob->shape().At(i),
                                                shape_blob->mut_dptr<int64_t>() + i);
@@ -45,7 +45,10 @@ void LocalNonzeroUtil<T>::ForwardGpu(DeviceCtx* ctx, const Blob* in_blob, Blob* 
                        sizeof(int64_t), cudaMemcpyDeviceToHost));
 }
 
-#define MAKE_ENTRY(type_cpp, type_proto) template struct LocalNonzeroUtil<type_cpp>;
-OF_PP_FOR_EACH_TUPLE(MAKE_ENTRY, ARITHMETIC_DATA_TYPE_SEQ)
+#define INSTANTIATE_GPU_NONZERO(T, type_proto)                                              \
+  template void GpuNonzero<T>(DeviceCtx * ctx, const Blob* in_blob, Blob* num_nonzero_blob, \
+                              Blob* shape_blob, Blob* out_blob);
+OF_PP_FOR_EACH_TUPLE(INSTANTIATE_GPU_NONZERO, ARITHMETIC_DATA_TYPE_SEQ)
+#undef INSTANTIATE_GPU_NONZERO
 
 }  // namespace oneflow
