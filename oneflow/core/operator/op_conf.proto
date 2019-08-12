@@ -1654,6 +1654,30 @@ message IdentifyOutsideAnchorsOpConf {
   optional float tolerance = 4 [default = 0.0];
 }
 
+message ClipBoxesToImageOpConf {
+  required string boxes = 1;
+  required string image_size = 2;
+  required string out = 3;
+}
+
+message ConvertBoxModeOpConf {
+  required string in = 1;
+  // only support "xyxy" and "xywh"
+  required string mode = 2;
+  required string out = 3;
+}
+
+message NonMaximumSupressionOpConf {
+  // in
+  required string boxes = 1;
+  required string scores = 2;
+  // out
+  required string out = 3;
+  // conf
+  optional float nms_threshold = 4 [default = 0.7];
+  required int32 max_boxes = 5;
+}
+
 message OperatorConf {
   required string name = 1;
   optional string model_load_dir = 2;
@@ -1825,6 +1849,9 @@ message OperatorConf {
     LocalNonzeroOpConf local_nonzero_conf = 609;
     MaskrcnnConcatUncontiguousDim1OpConf maskrcnn_concat_uncontiguous_dim1_conf = 610;
     IdentifyOutsideAnchorsOpConf identify_outside_anchors_conf = 611;
+    ClipBoxesToImageOpConf clip_boxes_to_image_conf = 612;
+    ConvertBoxModeOpConf convert_box_mode_conf = 613;
+    NonMaximumSupressionOpConf non_maximum_supression_conf = 614;
   }
 }
 
