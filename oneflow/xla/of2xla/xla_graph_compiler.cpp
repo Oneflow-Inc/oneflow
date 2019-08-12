@@ -103,6 +103,11 @@ void XlaGraphCompiler::BuildComputation(
   OF_CHECK_AND_ASSIGN(const auto& program_shape,
                       computation->GetProgramShape());
   *output_shape = program_shape.result();
+  for (int i = 0; i < return_vals.size(); ++i) {
+    xla::Shape* output_sub_shape = xla::ShapeUtil::GetMutableSubshape(
+        output_shape, {i});
+    xla::LayoutUtil::SetToDefaultLayout(output_sub_shape);
+  }
 }
 
 void XlaGraphCompiler::BuildExecutable(
