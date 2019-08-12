@@ -1649,7 +1649,7 @@ message IdentifyOutsideAnchorsOpConf {
   required string anchors = 1;
   required string image_size = 2;
   // out
-  required string index = 3;
+  required string out = 3;
   // conf
   optional float tolerance = 4 [default = 0.0];
 }
