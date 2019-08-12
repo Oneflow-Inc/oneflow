@@ -320,9 +320,9 @@ void SetCtrlInOpName4VariableOp(const OpGraph& op_graph, JobBuilder* job_builder
   });
 }
 
-void SetOpTimeShape7BatchDimLbis(const OpGraph& op_graph, Job* job) {
-  op_graph.DumpOpTimeShape(job);
-  op_graph.DumpBatchDimLbi(job);
+void SetOpTimeShape7BatchDimLbis(const OpGraph& op_graph, JobBuilder* job_builder) {
+  op_graph.DumpOpTimeShape(job_builder);
+  op_graph.DumpBatchDimLbi(job_builder);
 }
 
 void RewriteBoxingWithAllReduce(const OpGraph& op_graph, JobBuilder* job_builder) {
@@ -490,7 +490,7 @@ void JobCompleter::Complete(Job* job) const {
   WithOpGraphAndMutJobBuilder(job_builder.get(), &AddGlobalInputCriticalSections);
   WithOpGraphAndMutJobBuilder(job_builder.get(), &AddGlobalOutputCriticalSections);
   WithOpGraphAndMutJobBuilder(job_builder.get(), &DumpLogicalBlobDescAndSbpSignature);
-  WithOpGraphAndMutJob(job, &SetOpTimeShape7BatchDimLbis);
+  WithOpGraphAndMutJobBuilder(job_builder.get(), &SetOpTimeShape7BatchDimLbis);
   CheckOpGraph(OpGraph(*job));
 }
 

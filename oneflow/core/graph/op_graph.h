@@ -143,8 +143,8 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
 
   void DumpLogicalBlobDesc(JobBuilder* job_builder) const;
   void DumpSbpSignature(JobBuilder* job_builder) const;
-  void DumpOpTimeShape(Job* job) const;
-  void DumpBatchDimLbi(Job* job) const;
+  void DumpOpTimeShape(JobBuilder* job_builder) const;
+  void DumpBatchDimLbi(JobBuilder* job_builder) const;
 
  private:
   void Init(const Job& job);
