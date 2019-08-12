@@ -447,12 +447,12 @@ void MakeAllReduceSequence(const OpGraph& op_graph, JobBuilder* job_builder) {
   AllReduceSequencePass().Apply(op_graph, job_builder);
 }
 
-void EnableAutoMixedPrecision(const OpGraph& op_graph, Job* job) {
+void EnableAutoMixedPrecision(const OpGraph& op_graph, JobBuilder* job_builder) {
   if (!GlobalJobDesc().enable_auto_mixed_precision()) { return; }
   CHECK_GE(CUDA_VERSION, 10000);
   AutoMixedPrecision(AutoMixedPrecisionLists::WhiteList(), AutoMixedPrecisionLists::BlackList(),
                      AutoMixedPrecisionLists::GrayList(), AutoMixedPrecisionLists::ClearList())
-      .Apply(op_graph, job);
+      .Apply(op_graph, job_builder);
 }
 
 }  // namespace
@@ -469,8 +469,7 @@ void JobCompleter::Complete(Job* job) const {
   if (GlobalJobDesc().IsTrain()) {
     WithOpGraphAndMutJob(job, &TieUpChainHeadersUnReachableFromAnyVariableOps);
     job_builder.reset(new JobBuilder(job));
-    WithOpGraphAndMutJob(job, &EnableAutoMixedPrecision);
-    job_builder.reset(new JobBuilder(job));
+    WithOpGraphAndMutJobBuilder(job_builder.get(), &EnableAutoMixedPrecision);
     // complete ops for trainning
     WithOpGraphAndMutJobBuilder(job_builder.get(), &GenerateOpConf4Trainning);
     WithOpGraphAndMutJobBuilder(job_builder.get(), &RewriteBoxingWithAllReduce);
