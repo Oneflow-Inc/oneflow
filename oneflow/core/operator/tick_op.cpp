@@ -24,6 +24,7 @@ void TickOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
       .Build(sbp_sig_list->mutable_sbp_signature()->Add());
 }
 
+REGISTER_OP_SAME_OUTPUT_BLOB_MEM_BLOCK_NUM(OperatorConf::kTickConf, 2);
 REGISTER_OP(OperatorConf::kTickConf, TickOp);
 
 }  // namespace oneflow

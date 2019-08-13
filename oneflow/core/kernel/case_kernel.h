@@ -12,7 +12,7 @@ enum CaseCmd {
 };
 
 struct CaseStatus final {
-  CaseStatus(): cmd(kCaseCmdInvalid), cur_selected_id(-1) {}
+  CaseStatus() : cmd(kCaseCmdInvalid), cur_selected_id(-1) {}
   ~CaseStatus() = default;
 
   CaseCmd cmd;
