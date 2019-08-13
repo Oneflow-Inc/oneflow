@@ -90,6 +90,25 @@ void NormalizationGradOp::InferBlobDescs(
   SetParamBlobDesc("beta_diff");
 }
 
+void NormalizationGradOp::InferHasBatchDim(
+    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
+  *HasBatchDim4BnInOp("dx") = *HasBatchDim4BnInOp("dy");
+  *HasBatchDim4BnInOp("gamma_diff") = false;
+  *HasBatchDim4BnInOp("beta_diff") = false;
+}
+
+void NormalizationGradOp::GetSbpSignatures(
+    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
+    SbpSignatureList* sbp_sig_list) const {
+  SbpSignatureBuilder()
+      .Broadcast(input_bns())
+      .PartialSum(output_bns())
+      .Split("x", 0)
+      .Split("dx", 0)
+      .Split("dy", 0)
+      .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+}
+
 REGISTER_OP(OperatorConf::kNormalizationGradConf, NormalizationGradOp);
 
 }  // namespace oneflow
