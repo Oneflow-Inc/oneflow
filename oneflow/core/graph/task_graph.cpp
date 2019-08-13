@@ -15,12 +15,12 @@ namespace oneflow {
 
 namespace {
 
-bool IsInterfaceTask(const TaskNode* node) {
+bool IsOutputInterfaceTask(const TaskNode* node) {
   const auto* comp_task_node = dynamic_cast<const CompTaskNode*>(node);
   if (comp_task_node == nullptr) { return false; }
   if (comp_task_node->logical_node()->op_vec().size() != 1) { return false; }
   auto op_type_case = comp_task_node->logical_node()->SoleOp()->op_conf().op_type_case();
-  return IsClassRegistered<IsInterfaceOpConf4OpTypeCase>(op_type_case);
+  return IsClassRegistered<IsOutputInterfaceOpConf4OpTypeCase>(op_type_case);
 }
 
 bool IsConnectToTickOp(const TaskNode* node) {
@@ -799,7 +799,7 @@ TaskNode* TaskGraph::BuildTaskStep(
 }
 
 TaskNode* TaskGraph::TryAddCopyH2DTaskTo(TaskNode* task) {
-  if (IsInterfaceTask(task)) { return task; }
+  if (IsOutputInterfaceTask(task)) { return task; }
   CHECK_EQ(task->device_type(), DeviceType::kGPU);
   CopyHdTaskNode* copy_task = NewNode<CopyHdTaskNode>();
   copy_task->Init(CopyHdOpConf::H2D, task->machine_id(), task->GpuPhyId());
