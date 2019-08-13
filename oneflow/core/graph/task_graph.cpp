@@ -16,8 +16,10 @@ namespace oneflow {
 namespace {
 
 bool IsInterfaceTask(const TaskNode* node) {
-  if (node->exec_gph().node_num() != 1) { return false; }
-  auto op_type_case = node->exec_gph().SoleNode()->op()->op_conf().op_type_case();
+  const auto* comp_task_node = dynamic_cast<const CompTaskNode*>(node);
+  if (comp_task_node == nullptr) { return false; }
+  if (comp_task_node->logical_node()->op_vec().size() != 1) { return false; }
+  auto op_type_case = comp_task_node->logical_node()->SoleOp()->op_conf().op_type_case();
   return IsClassRegistered<IsInterfaceOpConf4OpTypeCase>(op_type_case);
 }
 
