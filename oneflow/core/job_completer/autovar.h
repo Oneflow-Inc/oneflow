@@ -7,7 +7,7 @@
 
 namespace oneflow {
 
-void AutoVar(const OpGraph& op_graph, Job* job);
+void AutoVar(const OpGraph& op_graph, JobBuilder* job_builder);
 
 OperatorConf GenerateVariableOpConf(const BlobDesc& blob_desc, const std::string& name,
                                     const std::string& model_name);

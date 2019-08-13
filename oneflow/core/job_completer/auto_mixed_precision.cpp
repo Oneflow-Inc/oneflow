@@ -1,6 +1,5 @@
 #include <algorithm>
 #include "oneflow/core/job_completer/auto_mixed_precision.h"
-#include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/job/job_desc.h"
 
 namespace oneflow {
@@ -103,9 +102,7 @@ std::string ReplaceSlashToDash4Lbn(std::string lbn) {
 }
 
 void InsertCastOpImpl(bool f2h, const OpGraph& op_graph, const HashSet<OpNode*>& white_set,
-                      Job* job) {
-  JobBuilder job_builder(job);
-
+                      JobBuilder* job_builder) {
   HashSet<OpEdge*> white_set_edges;
   {
     std::function<const std::unordered_set<OpEdge*>&(OpNode*)> Node2Edges =
@@ -150,8 +147,8 @@ void InsertCastOpImpl(bool f2h, const OpGraph& op_graph, const HashSet<OpNode*>&
       cast_conf->set_in(lbn);
       cast_conf->set_out("out");
       cast_conf->set_data_type(cast_data_type);
-      job_builder.AddOps(src_node->parallel_desc().parallel_conf(),
-                         std::vector<OperatorConf>{cast_op_conf});
+      job_builder->AddOps(src_node->parallel_desc().parallel_conf(),
+                          std::vector<OperatorConf>{cast_op_conf});
       LOG(INFO) << "Insert CastOp: " << cast_op_conf.name() << " between " << lbn;
     }
 
@@ -183,12 +180,12 @@ void InsertCastOpImpl(bool f2h, const OpGraph& op_graph, const HashSet<OpNode*>&
   std::vector<OperatorConf> dst_op_confs;
   for (const auto& pair : dst_op_name2dst_op_confs) { dst_op_confs.push_back(pair.second); }
   // make sure an op_conf can only be udpated once, cuz later update will override before
-  job_builder.MutOpsOnlyOnce(dst_op_confs);
+  job_builder->MutOpsOnlyOnce(dst_op_confs);
 }
 
 }  // namespace
 
-void AutoMixedPrecision::Apply(const OpGraph& op_graph, Job* job) {
+void AutoMixedPrecision::Apply(const OpGraph& op_graph, JobBuilder* job_builder) {
   CHECK(GlobalJobDesc().DefaultDataType() == DataType::kFloat);
 
   std::function<std::string(OpNode* const&)> OpName4Node = [](OpNode* const& node) {
@@ -209,7 +206,7 @@ void AutoMixedPrecision::Apply(const OpGraph& op_graph, Job* job) {
   VLOG(1) << "WhiteSet include: "
           << Container2Str<HashSet<OpNode*>, OpNode*>(white_set, OpName4Node);
 
-  InsertCastOp(op_graph, white_set, job);
+  InsertCastOp(op_graph, white_set, job_builder);
 }
 
 void AutoMixedPrecision::FillBlackSet(const OpGraph& op_graph, HashSet<OpNode*>* black_set) {
@@ -291,9 +288,9 @@ void AutoMixedPrecision::PropagateWhiteThroughClearNodes(
 }
 
 void AutoMixedPrecision::InsertCastOp(const OpGraph& op_graph, const HashSet<OpNode*>& white_set,
-                                      Job* job) {
-  InsertCastOpImpl(true, op_graph, white_set, job);
-  InsertCastOpImpl(false, op_graph, white_set, job);
+                                      JobBuilder* job_builder) {
+  InsertCastOpImpl(true, op_graph, white_set, job_builder);
+  InsertCastOpImpl(false, op_graph, white_set, job_builder);
 }
 
 }  // namespace oneflow

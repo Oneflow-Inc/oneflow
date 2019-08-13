@@ -1,12 +1,9 @@
 #include "oneflow/core/job_completer/add_keep_header_only_op_conf.h"
-#include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/job/job_desc.h"
 
 namespace oneflow {
 
-void AddKeepHeaderOnlyOp(const OpGraph& op_graph, Job* job) {
-  JobBuilder job_builder(job);
-
+void AddKeepHeaderOnlyOp(const OpGraph& op_graph, JobBuilder* job_builder) {
   std::vector<OperatorConf> op_confs;
   op_graph.TopoForEachNode([&](OpNode* node) {
     const PbRpf<std::string>& ibns = node->op().input_bns();
@@ -67,11 +64,11 @@ void AddKeepHeaderOnlyOp(const OpGraph& op_graph, Job* job) {
         std::string lbn = op_conf.name() + "/" + cur_lbi.blob_name();
         SetBnValInOpTypeConf(dst_op_type_conf, ibn, GenLogicalBlobName(cur_lbi), lbn);
       }
-      job_builder.AddOps(src_node->parallel_desc().parallel_conf(),
-                         std::vector<OperatorConf>{op_conf});
+      job_builder->AddOps(src_node->parallel_desc().parallel_conf(),
+                          std::vector<OperatorConf>{op_conf});
     }
     // make sure an op_conf can only be udpated once
-    job_builder.MutOpsOnlyOnce(std::vector<OperatorConf>{dst_op_conf});
+    job_builder->MutOpsOnlyOnce(std::vector<OperatorConf>{dst_op_conf});
   });
 }
 
