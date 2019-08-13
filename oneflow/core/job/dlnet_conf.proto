@@ -5,5 +5,4 @@ import "oneflow/core/operator/op_conf.proto";
 
 message DLNetConf {
   repeated OperatorConf op = 1;
-  repeated OpNameSet shared_model_group = 2;
 }

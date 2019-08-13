@@ -65,9 +65,6 @@ class BlobDesc {
   int32_t max_col_num() const { return max_col_num_; }
   void set_max_col_num(int32_t val) { max_col_num_ = val; }
 
-  int32_t blob_mem_id() const { return blob_mem_id_; }
-  void set_blob_mem_id(int32_t val) { blob_mem_id_ = val; }
-
   bool operator==(const BlobDesc& rhs) const;
   void ToProto(BlobDescProto* proto) const;
   BlobDesc& operator=(const BlobDesc& blob_desc);
@@ -99,7 +96,6 @@ class BlobDesc {
   bool has_record_id_in_device_piece_;
   bool has_loss_instance_num_;
   int64_t max_col_num_;
-  int32_t blob_mem_id_;
 
   FieldDesc body_field_;
   std::unique_ptr<Shape> dim0_inner_shape_;

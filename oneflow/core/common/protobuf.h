@@ -171,14 +171,13 @@ bool IsInRepeatedField(const PbRf<T>& repeated_field, const T& value) {
 inline bool operator<(const LogicalBlobId& lhs, const LogicalBlobId& rhs) {
   if (lhs.op_name() != rhs.op_name()) { return lhs.op_name() < rhs.op_name(); }
   if (lhs.blob_name() != rhs.blob_name()) { return lhs.blob_name() < rhs.blob_name(); }
-  if (lhs.clone_id() != rhs.clone_id()) { return lhs.clone_id() < rhs.clone_id(); }
   if (lhs.is_packed_id() != rhs.is_packed_id()) { return lhs.is_packed_id() < rhs.is_packed_id(); }
   return false;
 }
 
 inline bool operator==(const LogicalBlobId& lhs, const LogicalBlobId& rhs) {
-  PbMd message_diff;
-  return message_diff.Equivalent(lhs, rhs);
+  return lhs.op_name() == rhs.op_name() && lhs.blob_name() == rhs.blob_name()
+         && lhs.is_packed_id() == rhs.is_packed_id();
 }
 
 inline bool operator!=(const LogicalBlobId& lhs, const LogicalBlobId& rhs) { return !(lhs == rhs); }
@@ -200,7 +199,7 @@ namespace std {
 template<>
 struct hash<oneflow::LogicalBlobId> {
   size_t operator()(const oneflow::LogicalBlobId& lbi) const {
-    return std::hash<std::string>()(lbi.op_name() + lbi.blob_name() + std::to_string(lbi.clone_id())
+    return std::hash<std::string>()(lbi.op_name() + lbi.blob_name()
                                     + std::to_string(lbi.is_packed_id()));
   }
 };

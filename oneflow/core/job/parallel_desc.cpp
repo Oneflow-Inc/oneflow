@@ -3,6 +3,18 @@
 
 namespace oneflow {
 
+namespace {
+
+void ResetDeviceTag(std::string* device_name, const std::string& device_tag) {
+  int64_t mchn_id = 0;
+  std::string _ = "";
+  std::string device_id_str = "";
+  ParseDeviceNameConf(*device_name, &mchn_id, &_, &device_id_str);
+  *device_name = std::to_string(mchn_id) + ":" + device_tag + ":" + device_id_str;
+}
+
+}  // namespace
+
 void ParseDeviceNameConf(const std::string& device_name, int64_t* mchn_id, std::string* device_tag,
                          std::string* device_id_str) {
   size_t second_delimiter_pos = device_name.rfind(":");
@@ -15,13 +27,17 @@ void ParseDeviceNameConf(const std::string& device_name, int64_t* mchn_id, std::
   *device_id_str = device_name.substr(second_delimiter_pos + 1);
 }
 
+std::string DeviceTag4DeviceType(DeviceType device_type) {
+  if (device_type == kCPU) { return "cpu"; }
+  if (device_type == kGPU) { return "gpu"; }
+  UNIMPLEMENTED();
+  return "";
+}
+
 ParallelDesc::ParallelDesc(const ParallelConf& user_conf) : parallel_conf_(user_conf) {
   HashSet<int64_t> machine_id_set;
   device_type_ = DeviceType::kInvalidDevice;
-  int i = 0;
   for (const std::string& device_name : parallel_conf_.device_name()) {
-    if (i++ > 0) { device_names_ += ","; }
-    device_names_ += device_name;
     int64_t mchn_id;
     std::string device_tag;
     std::string device_id_str;
@@ -84,6 +100,15 @@ void ParallelDesc::ClearUp() {
     parallel_num_ += pair.second.size();
   }
   SortAndRemoveDuplication(&sorted_machine_ids_);
+}
+
+void ParallelDesc::set_device_type(DeviceType device_type) {
+  if (device_type == device_type_) { return; }
+  device_type_ = device_type;
+  const std::string& tag = DeviceTag4DeviceType(device_type);
+  FOR_RANGE(int64_t, i, 0, parallel_conf_.device_name_size()) {
+    ResetDeviceTag(parallel_conf_.mutable_device_name(i), tag);
+  }
 }
 
 void ParallelDesc::SanityCheck() {
