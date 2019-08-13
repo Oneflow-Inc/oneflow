@@ -829,6 +829,10 @@ void CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan) {
     jobs.at(i) = conf_jobs.Get(i);
     WithJobIdGlobal(i, [&]() { CompileCurJobOnMaster(&jobs.at(i), &sub_plans.at(i), true); });
   }
+  if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
+    // only has user job in jobs and sub_plans in this time
+    InterJobMemSharingUtil::MergeMemBlockBetweenSubPlans(jobs, &sub_plans);
+  }
   HashMap<std::string, ParallelBlobConf> push_op_name2parallel_blob_conf;
   FilterOpName2ParallelBlobConf({OperatorConf::kInputConf}, &jobs,
                                 &push_op_name2parallel_blob_conf);
@@ -898,7 +902,6 @@ void CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan) {
   }
   if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
     InterJobMemSharingUtil::BindInterfaceMemBlockId(jobs, &sub_plans);
-    InterJobMemSharingUtil::MergeMemBlockBetweenSubPlans(jobs, &sub_plans);
     FinishGlobalCriticalSectionDesc(sub_plans);
     MergePlan(plan, sub_plans);
     Plan main_plan;
