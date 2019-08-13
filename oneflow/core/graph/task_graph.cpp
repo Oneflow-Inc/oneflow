@@ -4,7 +4,6 @@
 #include "oneflow/core/graph/boxing_task_node.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/graph/reduce_add_compute_task_node.h"
-#include "oneflow/core/graph/reduce_split_compute_task_node.h"
 #include "oneflow/core/graph/inplace_lbi_graph.h"
 #include "oneflow/core/register/runtime_blob_desc.h"
 #include "oneflow/core/job/thrd_id_generator.h"
@@ -417,15 +416,6 @@ void TaskGraph::EnableMemSharingInReduceStruct() {
       has_enabled_nodes.insert(reduce_node);
     }
   });
-}
-
-void TaskGraph::EnableMemSharingAfterAllManualSetForMdUpdt() {
-  TODO();
-  // ForEachNode([&](TaskNode* node) {
-  //   auto* updt = dynamic_cast<NormalMdUpdtCompTaskNode*>(node);
-  //   if (!updt) { return; }
-  //   updt->EnableMemSharingBetweenFirstInAndProcessedMdDiffRegst();
-  // });
 }
 
 void TaskGraph::GetInplaceOpBlobArgList(
