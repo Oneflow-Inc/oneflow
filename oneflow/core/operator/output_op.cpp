@@ -34,5 +34,6 @@ void OutputOp::GetSbpSignatures(
 REGISTER_OP(OperatorConf::kOutputConf, OutputOp);
 REGISTER_OP_SAME_OUTPUT_BLOB_MEM_BLOCK_NUM(OperatorConf::kOutputConf, 1);
 REGISTER_INTERFACE_OP(OperatorConf::kOutputConf);
+REGISTER_OUTPUT_INTERFACE_OP(OperatorConf::kOutputConf);
 
 }  // namespace oneflow
