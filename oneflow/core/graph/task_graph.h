@@ -24,7 +24,6 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   void AddReduceNoBwForwardNodeOverlapingCtrlEdges();
 
   void EnableMemSharingInReduceStruct();
-  void EnableMemSharingAfterAllManualSetForMdUpdt();
   void EnableInplaceMemSharing(const std::function<bool(const LogicalBlobId&, const std::string&)>&
                                    IsLbiAllConsumersReachableToOpName);
 

@@ -8,6 +8,7 @@
 
 namespace oneflow {
 
+std::string DeviceTag4DeviceType(DeviceType device_type);
 void ParseDeviceNameConf(const std::string& device_name, int64_t* mchn_id, std::string* device_tag,
                          std::string* device_id_str);
 
@@ -29,11 +30,11 @@ class ParallelDesc final {
   }
   int64_t parallel_num() const { return parallel_num_; }
   int64_t device_num_of_each_machine() const { return device_num_of_each_machine_; }
-  std::string device_names() const { return device_names_; }
   const ParallelConf& parallel_conf() const { return parallel_conf_; }
 
   // Setters
   void set_policy(ParallelPolicy val) { parallel_conf_.set_policy(val); }
+  void set_device_type(DeviceType device_type);
 
   bool EqualsIgnoringPolicy(const ParallelDesc& rhs) const;
   bool EqualsIgnoringPolicyAndDeviceType(const ParallelDesc& rhs) const;
@@ -52,7 +53,6 @@ class ParallelDesc final {
   HashMap<int64_t, std::vector<int64_t>> machine_id2sorted_dev_phy_ids_;
   int64_t parallel_num_;
   int64_t device_num_of_each_machine_;
-  std::string device_names_;
 };
 
 inline bool operator==(const ParallelConf& lhs, const ParallelConf& rhs) {

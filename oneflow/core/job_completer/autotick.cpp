@@ -29,7 +29,9 @@ void GroupTickByParallelDesc(const OpGraph& op_graph, JobBuilder* job_builder) {
     OperatorConf tick_op;
     tick_op.set_name("System-AutoTick-Tick_" + NewUniqueId());
     tick_op.mutable_tick_conf()->set_out("out");
-    job_builder->AddOps(pair.first.parallel_conf(), {tick_op});
+    ParallelDesc pd(pair.first);
+    pd.set_device_type(DeviceType::kCPU);
+    job_builder->AddOps(pd.parallel_conf(), {tick_op});
 
     for (const auto* op_node : pair.second) {
       auto mut_tick_input_helper = NewMutOpConTickInputHelper(op_node->op().op_conf());
@@ -112,13 +114,16 @@ OperatorConf AppendTick(const std::list<const OpNode*>& op_nodes, JobBuilder* jo
   std::vector<std::string> op_names;
   std::vector<LogicalBlobId> lbis;
   for (const auto* op_node : op_nodes) {
+    CHECK(op_node->op().op_conf().has_keep_header_only_conf() == false);
     if (op_node->op().output_bns().empty()) {
       op_names.push_back(op_node->op().op_name());
     } else {
       lbis.push_back(op_node->op().BnInOp2Lbi(op_node->op().output_bns().Get(0)));
     }
   }
-  return AppendTick(op_names, lbis, op_nodes.front()->parallel_desc().parallel_conf(), job_builder);
+  ParallelDesc pd(op_nodes.front()->parallel_desc());
+  pd.set_device_type(DeviceType::kCPU);
+  return AppendTick(op_names, lbis, pd.parallel_conf(), job_builder);
 }
 
 OperatorConf PrependTick(const std::list<const OpNode*>& op_nodes, JobBuilder* job_builder) {
@@ -130,7 +135,9 @@ OperatorConf PrependTick(const std::list<const OpNode*>& op_nodes, JobBuilder* j
     op_confs.push_back(op_conf);
   }
   job_builder->MutOpsOnlyOnce({op_confs});
-  job_builder->AddOps(op_nodes.front()->parallel_desc().parallel_conf(), {tick_op_conf});
+  ParallelDesc pd(op_nodes.front()->parallel_desc());
+  pd.set_device_type(DeviceType::kCPU);
+  job_builder->AddOps(pd.parallel_conf(), {tick_op_conf});
   return tick_op_conf;
 }
 
@@ -154,8 +161,9 @@ OperatorConf AppendAccTick(const Shape& src_shape, const std::list<const OpNode*
     tick_conf->add_tick(acc_op_conf.name() + "/acc");
     tick_conf->set_out("out");
   }
-  job_builder->AddOps(op_nodes.front()->parallel_desc().parallel_conf(),
-                      {acc_op_conf, last_tick_op_conf});
+  ParallelDesc pd(op_nodes.front()->parallel_desc());
+  pd.set_device_type(DeviceType::kCPU);
+  job_builder->AddOps(pd.parallel_conf(), {acc_op_conf, last_tick_op_conf});
   return last_tick_op_conf;
 }
 
@@ -197,15 +205,13 @@ void ForEachInputCriticalSectionOpNodes(
         Handler) {
   HashMap<OperatorConf::OpTypeCase, HashSet<const OpNode*>> op_type_case2op_nodes;
   InitOpTypeCase2OpNodes(op_graph, &op_type_case2op_nodes);
-  for (OperatorConf::OpTypeCase op_type_case :
-       {OperatorConf::kVariableConf, OperatorConf::kInputConf}) {
-    if (op_type_case2op_nodes[op_type_case].empty()) { continue; }
-    HashSet<const OpNode*> op_nodes = op_type_case2op_nodes[op_type_case];
-    for (const OpNode* op_node : op_type_case2op_nodes[op_type_case]) {
-      op_node->ForEachNodeOnOutEdge([&](OpNode* out_node) { op_nodes.insert(out_node); });
-    }
-    Handler(op_nodes, GetOpNames(op_type_case2op_nodes[op_type_case]));
+  OperatorConf::OpTypeCase op_type_case = OperatorConf::kInputConf;
+  if (op_type_case2op_nodes[op_type_case].empty()) { return; }
+  HashSet<const OpNode*> op_nodes = op_type_case2op_nodes[op_type_case];
+  for (const OpNode* op_node : op_type_case2op_nodes[op_type_case]) {
+    op_node->ForEachNodeOnOutEdge([&](OpNode* out_node) { op_nodes.insert(out_node); });
   }
+  Handler(op_nodes, GetOpNames(op_type_case2op_nodes[op_type_case]));
 }
 
 void ForEachOutputCriticalSectionOpNodes(

@@ -14,7 +14,7 @@ void AddKeepHeaderOnlyOp(const OpGraph& op_graph, JobBuilder* job_builder) {
       }
     }
     if (header_only_ibns.empty()) { return; }
-
+    CHECK(node->op().op_conf().has_tick_conf() == false);
     auto OpEdge4Lbi = [node](const LogicalBlobId& lbi) -> OpEdge* {
       for (OpEdge* edge : node->in_edges()) {
         for (const LogicalBlobId& edge_lbi : edge->lbis()) {
