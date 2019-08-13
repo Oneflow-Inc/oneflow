@@ -487,10 +487,6 @@ void Operator::EnrollRepeatedOutputBn(const std::string& obn_prefix) {
 }
 
 void Operator::EnrollModelBn(const std::string& mbn) {
-  if (op_conf().trainable() == false) {
-    EnrollConstModelBn(mbn);
-    return;
-  }
   auto Enroll = [&](const std::string& mbn) {
     LogicalBlobId lbi = mbn2lbi(mbn);
     *(mut_model_bns()->Add()) = mbn;
