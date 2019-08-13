@@ -116,6 +116,7 @@ OperatorConf AppendTick(const std::list<const OpNode*>& op_nodes, JobBuilder* jo
   std::vector<std::string> op_names;
   std::vector<LogicalBlobId> lbis;
   for (const auto* op_node : op_nodes) {
+    CHECK(op_node->op().op_conf().has_keep_header_only_conf() == false);
     if (op_node->op().output_bns().empty()) {
       op_names.push_back(op_node->op().op_name());
     } else {
@@ -206,15 +207,13 @@ void ForEachInputCriticalSectionOpNodes(
         Handler) {
   HashMap<OperatorConf::OpTypeCase, HashSet<const OpNode*>> op_type_case2op_nodes;
   InitOpTypeCase2OpNodes(op_graph, &op_type_case2op_nodes);
-  for (OperatorConf::OpTypeCase op_type_case :
-       {OperatorConf::kVariableConf, OperatorConf::kInputConf}) {
-    if (op_type_case2op_nodes[op_type_case].empty()) { continue; }
-    HashSet<const OpNode*> op_nodes = op_type_case2op_nodes[op_type_case];
-    for (const OpNode* op_node : op_type_case2op_nodes[op_type_case]) {
-      op_node->ForEachNodeOnOutEdge([&](OpNode* out_node) { op_nodes.insert(out_node); });
-    }
-    Handler(op_nodes, GetOpNames(op_type_case2op_nodes[op_type_case]));
+  OperatorConf::OpTypeCase op_type_case = OperatorConf::kInputConf;
+  if (op_type_case2op_nodes[op_type_case].empty()) { return; }
+  HashSet<const OpNode*> op_nodes = op_type_case2op_nodes[op_type_case];
+  for (const OpNode* op_node : op_type_case2op_nodes[op_type_case]) {
+    op_node->ForEachNodeOnOutEdge([&](OpNode* out_node) { op_nodes.insert(out_node); });
   }
+  Handler(op_nodes, GetOpNames(op_type_case2op_nodes[op_type_case]));
 }
 
 void ForEachOutputCriticalSectionOpNodes(

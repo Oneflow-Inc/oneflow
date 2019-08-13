@@ -3,35 +3,8 @@
 
 namespace oneflow {
 
-bool IsAllInputPartialSumParallel(
-    const Operator& op,
-    const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn) {
-  for (const auto& ibn : op.input_bns()) {
-    if (SbpInferHint4Ibn(ibn).sbp_parallel().has_partial_sum_parallel() == false) { return false; }
-  }
-  return true;
-}
-
-bool IsAllInputBroadcastParallel(
-    const Operator& op,
-    const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn) {
-  for (const auto& ibn : op.input_bns()) {
-    if (SbpInferHint4Ibn(ibn).sbp_parallel().has_broadcast_parallel() == false) { return false; }
-  }
-  return true;
-}
-
 void AddOp::VirtualInitFromOpConf() { CHECK(op_conf().has_add_conf()); }
 const PbMessage& AddOp::GetCustomizedConf() const { return op_conf().add_conf(); }
-void AddOp::VirtualFixInDiffBlobDescs(
-    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx) const {
-  if (!GlobalJobDesc().enable_blob_mem_sharing()) { return; }
-  int64_t blob_mem_id = oneflow_cast<int64_t>(NewUniqueId());
-  FOR_RANGE(size_t, i, 0, input_diff_bns().size()) {
-    GetBlobDesc4BnInOp(input_diff_bns().Get(i))->set_blob_mem_id(blob_mem_id);
-  }
-}
 
 void AddOp::InferHasBatchDim(std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
   for (const auto& ibn : input_bns()) {

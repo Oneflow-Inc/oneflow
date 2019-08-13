@@ -54,7 +54,6 @@ class JobDesc final {
   const FileSystemConf& snapshot_fs_conf() const;
   bool enable_write_snapshot() const;
   bool write_snapshot_to_master() const { return snapshot_fs_conf().has_localfs_conf(); }
-  bool enable_blob_mem_sharing() const { return job_.job_conf().enable_blob_mem_sharing(); }
   bool enable_nccl() const { return job_.job_conf().enable_nccl(); }
   bool use_nccl_inter_node_communication() const {
     return job_.job_conf().use_nccl_inter_node_communication();
