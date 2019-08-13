@@ -15,6 +15,12 @@ namespace oneflow {
 
 namespace {
 
+bool IsInterfaceTask(const TaskNode* node) {
+  if (node->exec_gph().node_num() != 1) { return false; }
+  auto op_type_case = node->exec_gph().SoleNode()->op()->op_conf().op_type_case();
+  return IsClassRegistered<IsInterfaceOpConf4OpTypeCase>(op_type_case);
+}
+
 bool IsConnectToTickOp(const TaskNode* node) {
   const auto* comp_task_node = dynamic_cast<const CompTaskNode*>(node);
   if (comp_task_node == nullptr) { return false; }
@@ -774,7 +780,7 @@ TaskNode* TaskGraph::BuildTaskStep(
   } else if (cur_node->machine_id() == dst->machine_id()) {
     next_mem_zone_id = dst->MemZoneId121();
     if (!use_buf_task_node || !(next_node = GetBufTask(cur_node->machine_id(), next_mem_zone_id))) {
-      next_node = AddCopyH2DTaskTo(dst);
+      next_node = TryAddCopyH2DTaskTo(dst);
       Connect<TaskNode>(cur_node, NewEdge(), next_node);
     }
   } else if (cur_node->machine_id() != dst->machine_id()) {
@@ -790,7 +796,8 @@ TaskNode* TaskGraph::BuildTaskStep(
   return next_node;
 }
 
-TaskNode* TaskGraph::AddCopyH2DTaskTo(TaskNode* task) {
+TaskNode* TaskGraph::TryAddCopyH2DTaskTo(TaskNode* task) {
+  if (IsInterfaceTask(task)) { return task; }
   CHECK_EQ(task->device_type(), DeviceType::kGPU);
   CopyHdTaskNode* copy_task = NewNode<CopyHdTaskNode>();
   copy_task->Init(CopyHdOpConf::H2D, task->machine_id(), task->GpuPhyId());
@@ -850,7 +857,7 @@ void TaskGraph::BuildInBoxing(const LogicalNode* logical,
   for (CompTaskNode* comp_task : sorted_comp_tasks) {
     TaskNode* task = comp_task;
     if (task->device_type() == DeviceType::kGPU) {
-      task = AddCopyH2DTaskTo(comp_task);
+      task = TryAddCopyH2DTaskTo(comp_task);
       Connect<TaskNode>(task, NewEdge(), comp_task);
     }
     machine_id2bound_task[task->machine_id()].push_back(task);
