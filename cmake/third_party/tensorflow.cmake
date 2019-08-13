@@ -2,20 +2,21 @@ include (ExternalProject)
 
 if (WITH_XLA)
 
-set(BUILD_DEBUG OFF)
 set(TENSORFLOW_BUILD_CMD --define with_xla_support=true)
-if (BUILD_DEBUG)
-  set(TENSORFLOW_BUILD_CMD --copt=-g -c dbg ${BUILD_CMD})
-  set(TENSORFLOW_GENFILE_DIR k8-dbg)
-else()
+if (RELEASE_VERSION)
   set(TENSORFLOW_BUILD_CMD -c opt ${BUILD_CMD})
   set(TENSORFLOW_GENFILE_DIR k8-opt)
+else()
+  set(TENSORFLOW_BUILD_CMD --copt=-g -c dbg ${BUILD_CMD})
+  set(TENSORFLOW_GENFILE_DIR k8-dbg)
 endif()
 
 set(TF_WITH_CUDA ON)
 if (TF_WITH_CUDA)
   set(TENSORFLOW_BUILD_CMD ${TENSORFLOW_BUILD_CMD} --action_env TF_NEED_CUDA=1 --config=cuda)
 endif()
+
+message(STATUS ${TENSORFLOW_BUILD_CMD})
 
 set(TENSORFLOW_PROJECT  tensorflow)
 set(TENSORFLOW_GIT_URL  https://github.com/tensorflow/tensorflow.git)

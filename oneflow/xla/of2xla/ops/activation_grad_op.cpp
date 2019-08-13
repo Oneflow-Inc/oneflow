@@ -17,7 +17,7 @@ class TanhGradOp : public XlaOpCompiler {
     xla::XlaOp dy = ctx->Input("dy");
     xla::XlaOp one = xla::ScalarLike(y, 1.0);
     // dx = dy * (1 - y * y)
-    xla::XlaOp dx = xla::Mul(dy, xla::Sub(one, xla::Mul(y, y)));
+    xla::XlaOp dx = dy * (one - (y * y));
     ctx->SetOutput("dx", dx);
   }
 };
@@ -33,13 +33,12 @@ class GeluGradOp : public XlaOpCompiler {
     xla::XlaOp two = xla::ScalarLike(x, 2.0);
 
     xla::XlaOp inv_sqrt2 = xla::Sqrt(dot_5);
-    xla::XlaOp coef = xla::Sqrt(xla::Div(two, xla::Acos(xla::Neg(one))));
-    // t1 = exp(-0.5 * x * x)
-    xla::XlaOp t1 = xla::Exp(xla::Mul(xla::Neg(dot_5), xla::Mul(x, x)));
+    xla::XlaOp coef = xla::Sqrt(two / xla::Acos(xla::Neg(one)));
+    // coef = 1 + erf(sqrt(0.5) * x) + x * coef * exp(-0.5 * x * x)
+    coef = one + xla::Erf(inv_sqrt2 * x) +
+        (x * coef * xla::Exp(xla::Neg(dot_5) * x * x));
 
-    coef = xla::Mul(x, xla::Mul(coef, t1));
-    coef = xla::Add(one, xla::Add(xla::Erf(xla::Mul(inv_sqrt2, x)), coef));
-    ctx->SetOutput("dx", xla::Mul(dot_5, xla::Mul(coef, dy)));
+    ctx->SetOutput("dx", dot_5 * coef * dy);
   }
 };
 REGISTER_XLA_OP_COMPILER(GeluGrad, GeluGradOp);
