@@ -7,7 +7,8 @@
 namespace oneflow {
 
 void AddOptimizerOpConf(
-    const OpGraph& op_graph, Job* job, const HashMap<LogicalBlobId, LogicalBlobId>& lbi2diff_lbi,
+    const OpGraph& op_graph, JobBuilder* job_builder,
+    const HashMap<LogicalBlobId, LogicalBlobId>& lbi2diff_lbi,
     const std::function<const LogicalBlobId&(const ParallelDesc&)>& LossInstanceNum4ParallelDesc);
 
 void BindTwoVariableOpObnSbpConf(const std::string& lhs_op_name, const std::string& rhs_op_name,

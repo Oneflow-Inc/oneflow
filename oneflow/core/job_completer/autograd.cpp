@@ -179,9 +179,8 @@ void BuildTotalLossInstanceNumIdOpConf(
 
 void BuildConstantOpAsTotalLossInstanceNum(
     const HashMap<ParallelDesc, int32_t>& parallel_desc2optimizer_node_cnt,
-    const BlobDesc& loss_blob_desc, Job* job,
+    const BlobDesc& loss_blob_desc, JobBuilder* job_builder,
     std::function<const LogicalBlobId&(const ParallelDesc&)>* LossInstanceNum4ParallelDesc) {
-  JobBuilder job_builder(job);
   auto parallel_desc2total_loss_instance_num_lbi =
       std::make_shared<HashMap<ParallelDesc, LogicalBlobId>>();
   for (const auto& pair : parallel_desc2optimizer_node_cnt) {
@@ -195,8 +194,8 @@ void BuildConstantOpAsTotalLossInstanceNum(
     constant_conf->mutable_initializer()->mutable_constant_int_conf()->set_value(elem_cnt);
     ParallelConf parallel_conf = pair.first.parallel_conf();
     parallel_conf.set_policy(ParallelPolicy::kDataParallel);
-    job_builder.AddOps(parallel_conf, {constant_op_conf});
-    job_builder.MutSbpParallel4Oba(GenOpBlobArg(constant_op_conf.name(), "out"))
+    job_builder->AddOps(parallel_conf, {constant_op_conf});
+    job_builder->MutSbpParallel4Oba(GenOpBlobArg(constant_op_conf.name(), "out"))
         ->mutable_broadcast_parallel();
     parallel_desc2total_loss_instance_num_lbi->emplace(
         pair.first, GenLogicalBlobId(constant_op_conf.name() + "/out"));
@@ -209,9 +208,8 @@ void BuildConstantOpAsTotalLossInstanceNum(
 
 void AddTotalLossInstanceNumOpConfForDynamicDim0(
     const HashMap<ParallelDesc, int32_t>& parallel_desc2optimizer_node_cnt,
-    const HashMap<LogicalBlobId, OpNode*>& loss_lbi2loss_node, Job* job,
+    const HashMap<LogicalBlobId, OpNode*>& loss_lbi2loss_node, JobBuilder* job_builder,
     std::function<const LogicalBlobId&(const ParallelDesc&)>* LossInstanceNum4ParallelDesc) {
-  JobBuilder job_builder(job);
   auto BuildInstanceNumOpConf4LossOpNode = [&](const LogicalBlobId& loss_lbi, const OpNode* op_node,
                                                LogicalBlobId* lbi) {
     OperatorConf instance_num_op;
@@ -222,7 +220,7 @@ void AddTotalLossInstanceNumOpConfForDynamicDim0(
     instance_num_op_conf->set_y("y");
     instance_num_op_conf->set_data_type(op_node->LogicalBlobDesc4Lbi(loss_lbi).data_type());
     instance_num_op_conf->mutable_include_axis_conf()->add_axis(0);
-    job_builder.AddOps(op_node->parallel_desc().parallel_conf(), {instance_num_op});
+    job_builder->AddOps(op_node->parallel_desc().parallel_conf(), {instance_num_op});
     lbi->set_op_name(instance_num_op.name());
     lbi->set_blob_name("y");
   };
@@ -246,14 +244,14 @@ void AddTotalLossInstanceNumOpConfForDynamicDim0(
     ParallelConf parallel_conf;
     parallel_conf.set_policy(kDataParallel);
     parallel_conf.add_device_name("0:cpu:0");
-    job_builder.AddOps(parallel_conf, {op_conf});
+    job_builder->AddOps(parallel_conf, {op_conf});
 
     total_loss_instance_num_lbi.set_op_name(op_conf.name());
     total_loss_instance_num_lbi.set_blob_name("out");
   } else {
     UNIMPLEMENTED();
   }
-  BuildTotalLossInstanceNumIdOpConf(parallel_desc2optimizer_node_cnt, &job_builder,
+  BuildTotalLossInstanceNumIdOpConf(parallel_desc2optimizer_node_cnt, job_builder,
                                     total_loss_instance_num_lbi, LossInstanceNum4ParallelDesc);
 }
 
@@ -413,18 +411,17 @@ void GenerateBackwardOpConfIf(
   obj->Call(op, op_confs, DiffLbi4BnInOp, LogicalBlobDesc4BnInOp);
 }
 
-void AutoGrad(const OpGraph& op_graph, Job* job,
+void AutoGrad(const OpGraph& op_graph, JobBuilder* job_builder,
               HashMap<LogicalBlobId, LogicalBlobId>* out_lbi2out_diff_lbi) {
   auto NeedBackwardOp = MakePredicatorNeedBackwardOp(op_graph);
   std::list<OpNode*> loss_nodes;
   GetLossOpNodes(op_graph, &loss_nodes);
   CheckNotReachableAmongOpNodes(op_graph, loss_nodes);
   for (OpNode* loss_node : loss_nodes) { CHECK(NeedBackwardOp(loss_node)); }
-  JobBuilder job_builder(job);
 
   // generate ones lbi as loss's diff
   HashMap<OpBlobArg, LogicalBlobId> out_oba2out_diff_lbi;
-  InitOutOba2OutDiffLbi(loss_nodes, &out_oba2out_diff_lbi, &job_builder);
+  InitOutOba2OutDiffLbi(loss_nodes, &out_oba2out_diff_lbi, job_builder);
 
   // generate backward ops
   auto ForEachInNode = [&](OpNode* op_node, const std::function<void(OpNode*)>& Handler) {
@@ -463,17 +460,18 @@ void AutoGrad(const OpGraph& op_graph, Job* job,
     std::vector<OperatorConf> ops;
     GenerateCloneGradOpIfNeed(*op_node, &ops, in_oba2in_diff_lbi, &out_oba2out_diff_lbi);
     GenerateBackwardOpConfIf(op_node->op(), &ops, DiffLbi4BnInOp, LogicalBlobDesc4BnInOp);
-    job_builder.AddOps(op_node->parallel_desc().parallel_conf(), ops);
+    job_builder->AddOps(op_node->parallel_desc().parallel_conf(), ops);
   });
   OpBlobArgPairs fw_bw_oba_pairs;
-  CalcFwBwObaPairs(op_graph, in_oba2in_diff_lbi, out_oba2out_diff_lbi, job_builder,
+  CalcFwBwObaPairs(op_graph, in_oba2in_diff_lbi, out_oba2out_diff_lbi, *job_builder,
                    &fw_bw_oba_pairs);
-  BindFwBwObaPairs(op_graph, fw_bw_oba_pairs, &job_builder);
+  BindFwBwObaPairs(op_graph, fw_bw_oba_pairs, job_builder);
   CalcOutLbi2OutDiffLbi(op_graph, out_oba2out_diff_lbi, out_lbi2out_diff_lbi);
 }
 
 void AddTotalLossInstanceNumOpConf(
-    const OpGraph& op_graph, Job* job, const HashMap<LogicalBlobId, LogicalBlobId>& lbi2diff_lbi,
+    const OpGraph& op_graph, JobBuilder* job_builder,
+    const HashMap<LogicalBlobId, LogicalBlobId>& lbi2diff_lbi,
     std::function<const LogicalBlobId&(const ParallelDesc&)>* LossInstanceNum4ParallelDesc) {
   auto LossOpNode4OpName = MakeGetterLossOpNode4OpName(op_graph);
   const auto& train_conf = GetTrainConf();
@@ -493,9 +491,9 @@ void AddTotalLossInstanceNumOpConf(
   CalcParallelDesc2OptimizerNodeCnt(op_graph, lbi2diff_lbi, &parallel_desc2optimizer_node_cnt);
   if (blob_desc->has_dim0_valid_num_field()) {
     AddTotalLossInstanceNumOpConfForDynamicDim0(parallel_desc2optimizer_node_cnt, loss_lbi2op_node,
-                                                job, LossInstanceNum4ParallelDesc);
+                                                job_builder, LossInstanceNum4ParallelDesc);
   } else {
-    BuildConstantOpAsTotalLossInstanceNum(parallel_desc2optimizer_node_cnt, *blob_desc, job,
+    BuildConstantOpAsTotalLossInstanceNum(parallel_desc2optimizer_node_cnt, *blob_desc, job_builder,
                                           LossInstanceNum4ParallelDesc);
   }
 }
