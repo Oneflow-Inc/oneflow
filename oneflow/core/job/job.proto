@@ -64,7 +64,6 @@ message JobConfigProto {
 
   optional bool enable_mem_sharing = 300 [default = true];
   optional bool enable_inplace = 301 [default = true];
-  optional bool enable_blob_mem_sharing = 302 [default = true];
 
   optional bool enable_nccl = 400 [default = true];
   optional bool use_nccl_inter_node_communication = 401 [default = false];
