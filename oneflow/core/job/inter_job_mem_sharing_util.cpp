@@ -225,6 +225,7 @@ void InterJobMemSharingUtil::BindInterfaceMemBlockId(const std::vector<Job>& job
         RegstDescProto* first_regst_desc = PlanUtil::GetSoleProducedDataRegst(first_vec.at(i));
         CHECK_EQ(first_regst_desc->mem_shared_offset(), 0);
         RegstDescProto* regst_desc = PlanUtil::GetSoleProducedDataRegst(task_protos.at(i));
+        CHECK(regst_desc->enable_mem_sharing() == false);
         CHECK_EQ(regst_desc->mem_shared_offset(), 0);
         CHECK_NE(first_regst_desc->mem_shared_id(), -1);
         regst_desc->set_mem_shared_id(first_regst_desc->mem_shared_id());
