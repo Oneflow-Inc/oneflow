@@ -31,7 +31,7 @@ void GroupTickByParallelDesc(const OpGraph& op_graph, Job* job) {
     tick_op.set_name("System-AutoTick-Tick_" + NewUniqueId());
     tick_op.mutable_tick_conf()->set_out("out");
     ParallelDesc pd(pair.first);
-    // pd.set_device_type(DeviceType::kCPU);
+    pd.set_device_type(DeviceType::kCPU);
     job_builder.AddOps(pd.parallel_conf(), {tick_op});
 
     for (const auto* op_node : pair.second) {
@@ -124,7 +124,7 @@ OperatorConf AppendTick(const std::list<const OpNode*>& op_nodes, JobBuilder* jo
     }
   }
   ParallelDesc pd(op_nodes.front()->parallel_desc());
-  // pd.set_device_type(DeviceType::kCPU);
+  pd.set_device_type(DeviceType::kCPU);
   return AppendTick(op_names, lbis, pd.parallel_conf(), job_builder);
 }
 
@@ -138,7 +138,7 @@ OperatorConf PrependTick(const std::list<const OpNode*>& op_nodes, JobBuilder* j
   }
   job_builder->MutOpsOnlyOnce({op_confs});
   ParallelDesc pd(op_nodes.front()->parallel_desc());
-  // pd.set_device_type(DeviceType::kCPU);
+  pd.set_device_type(DeviceType::kCPU);
   job_builder->AddOps(pd.parallel_conf(), {tick_op_conf});
   return tick_op_conf;
 }
@@ -164,7 +164,7 @@ OperatorConf AppendAccTick(const Shape& src_shape, const std::list<const OpNode*
     tick_conf->set_out("out");
   }
   ParallelDesc pd(op_nodes.front()->parallel_desc());
-  // pd.set_device_type(DeviceType::kCPU);
+  pd.set_device_type(DeviceType::kCPU);
   job_builder->AddOps(pd.parallel_conf(), {acc_op_conf, last_tick_op_conf});
   return last_tick_op_conf;
 }
