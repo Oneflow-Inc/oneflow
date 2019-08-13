@@ -21,8 +21,8 @@ void LayerNormOp::InitFromOpConf() {
   EnrollInputBn("in");
   EnrollOutputBn("out");
   if (conf.center()) {
-    if (conf.has_beta()) { 
-      EnrollInputBn("beta"); 
+    if (conf.has_beta()) {
+      EnrollInputBn("beta");
     } else {
       EnrollModelBn("beta");
     }
