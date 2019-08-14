@@ -32,7 +32,7 @@ void CudaRingAllReduceKernel<T>::Forward(
   params.out = step_conf.out();
   const int64_t num_link = conf.num_link();
   CHECK_GT(num_link, 0);
-  CHECK_LE(num_link, CUDA_RING_BOXING_MAX_NUM_LINK);
+  CHECK_LE(num_link, kCudaRingBoxingMaxNumLink);
   params.num_links = num_link;
   Blob* in = BnInOp2Blob("in");
   Blob* out = BnInOp2Blob("out");

@@ -8,7 +8,7 @@ namespace oneflow {
 
 #ifdef WITH_CUDA
 
-constexpr int32_t CUDA_RING_BOXING_MAX_NUM_LINK = 8;
+constexpr int32_t kCudaRingBoxingMaxNumLink = 8;
 
 template<typename T>
 struct CudaRingBoxingLinkParams {
@@ -22,7 +22,7 @@ struct CudaRingBoxingLinkParams {
 template<typename T>
 struct CudaRingBoxingStepParams {
   int32_t num_links;
-  CudaRingBoxingLinkParams<T> links[CUDA_RING_BOXING_MAX_NUM_LINK];
+  CudaRingBoxingLinkParams<T> links[kCudaRingBoxingMaxNumLink];
   bool recv;
   bool in;
   bool send;
