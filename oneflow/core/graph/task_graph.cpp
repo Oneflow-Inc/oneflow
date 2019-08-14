@@ -15,12 +15,12 @@ namespace oneflow {
 
 namespace {
 
-bool IsOutputInterfaceTask(const TaskNode* node) {
+bool IsInterfaceTask(const TaskNode* node) {
   const auto* comp_task_node = dynamic_cast<const CompTaskNode*>(node);
   if (comp_task_node == nullptr) { return false; }
   if (comp_task_node->logical_node()->op_vec().size() != 1) { return false; }
   auto op_type_case = comp_task_node->logical_node()->SoleOp()->op_conf().op_type_case();
-  return IsClassRegistered<IsOutputInterfaceOpConf4OpTypeCase>(op_type_case);
+  return IsClassRegistered<IsInterfaceOpConf4OpTypeCase>(op_type_case);
 }
 
 bool IsConnectToTickOp(const TaskNode* node) {
@@ -762,7 +762,7 @@ void TaskGraph::BuildTaskPath(
          || cur_node->MemZoneId121() != dst->MemZoneId121()) {
     cur_node = BuildTaskStep(cur_node, dst, GetBufTask, SetBufTask, use_buf_task_node);
   }
-  Connect<TaskNode>(cur_node, NewEdge(), dst);
+  if (cur_node != dst) { Connect<TaskNode>(cur_node, NewEdge(), dst); }
 }
 
 TaskNode* TaskGraph::BuildTaskStep(
@@ -783,6 +783,7 @@ TaskNode* TaskGraph::BuildTaskStep(
     next_mem_zone_id = dst->MemZoneId121();
     if (!use_buf_task_node || !(next_node = GetBufTask(cur_node->machine_id(), next_mem_zone_id))) {
       next_node = TryAddCopyH2DTaskTo(dst);
+      if (next_node == nullptr) { next_node = dst; }
       Connect<TaskNode>(cur_node, NewEdge(), next_node);
     }
   } else if (cur_node->machine_id() != dst->machine_id()) {
@@ -794,12 +795,14 @@ TaskNode* TaskGraph::BuildTaskStep(
   } else {
     UNIMPLEMENTED();
   }
-  if (use_buf_task_node) { SetBufTask(next_node->machine_id(), next_mem_zone_id, next_node); }
+  if (use_buf_task_node && (next_node != dst)) {
+    SetBufTask(next_node->machine_id(), next_mem_zone_id, next_node);
+  }
   return next_node;
 }
 
 TaskNode* TaskGraph::TryAddCopyH2DTaskTo(TaskNode* task) {
-  if (IsOutputInterfaceTask(task)) { return task; }
+  if (IsInterfaceTask(task)) { return nullptr; }
   CHECK_EQ(task->device_type(), DeviceType::kGPU);
   CopyHdTaskNode* copy_task = NewNode<CopyHdTaskNode>();
   copy_task->Init(CopyHdOpConf::H2D, task->machine_id(), task->GpuPhyId());
@@ -860,7 +863,8 @@ void TaskGraph::BuildInBoxing(const LogicalNode* logical,
     TaskNode* task = comp_task;
     if (task->device_type() == DeviceType::kGPU) {
       task = TryAddCopyH2DTaskTo(comp_task);
-      Connect<TaskNode>(task, NewEdge(), comp_task);
+      if (task == nullptr) { task = comp_task; }
+      if (task != comp_task) { Connect<TaskNode>(task, NewEdge(), comp_task); }
     }
     machine_id2bound_task[task->machine_id()].push_back(task);
   }

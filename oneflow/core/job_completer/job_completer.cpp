@@ -32,10 +32,11 @@ void WithOpGraphAndMutJob(Job* job, const std::function<void(const OpGraph&, Job
   Handler(op_graph, job);
 }
 
-void WithOpGraphAndMutJobBuilder(JobBuilder* job_builder,
+void WithOpGraphAndMutJobBuilder(Job* job,
                                  const std::function<void(const OpGraph&, JobBuilder*)>& Handler) {
-  OpGraph op_graph(job_builder->job());
-  Handler(op_graph, job_builder);
+  OpGraph op_graph(*job);
+  JobBuilder job_builder(job);
+  Handler(op_graph, &job_builder);
 }
 
 void GenerateFacadeImplOpConfIf(const OpNode& op_node, JobBuilder* job_builder) {
@@ -461,36 +462,31 @@ void JobCompleter::Complete(Job* job) const {
   // replace facade op
   SplitDecodeOps(job);
   AddRecordLoadOps(job);
-  auto job_builder = std::make_unique<JobBuilder>(job);
-  WithOpGraphAndMutJobBuilder(job_builder.get(), &ReplaceFacade);
+  WithOpGraphAndMutJobBuilder(job, &ReplaceFacade);
   // complete variable ops
-  WithOpGraphAndMutJobBuilder(job_builder.get(), &AutoVar);
-  WithOpGraphAndMutJobBuilder(job_builder.get(), &SetDefaultVariableConf);
+  WithOpGraphAndMutJobBuilder(job, &AutoVar);
+  WithOpGraphAndMutJobBuilder(job, &SetDefaultVariableConf);
   if (GlobalJobDesc().IsTrain()) {
     WithOpGraphAndMutJob(job, &TieUpChainHeadersUnReachableFromAnyVariableOps);
-    job_builder.reset(new JobBuilder(job));
-    WithOpGraphAndMutJobBuilder(job_builder.get(), &EnableAutoMixedPrecision);
+    WithOpGraphAndMutJobBuilder(job, &EnableAutoMixedPrecision);
     // complete ops for trainning
-    WithOpGraphAndMutJobBuilder(job_builder.get(), &GenerateOpConf4Trainning);
-    WithOpGraphAndMutJobBuilder(job_builder.get(), &RewriteBoxingWithAllReduce);
-    WithOpGraphAndMutJobBuilder(job_builder.get(), &MakeAllReduceSequence);
+    WithOpGraphAndMutJobBuilder(job, &GenerateOpConf4Trainning);
+    WithOpGraphAndMutJobBuilder(job, &RewriteBoxingWithAllReduce);
+    WithOpGraphAndMutJobBuilder(job, &MakeAllReduceSequence);
   }
-  WithOpGraphAndMutJobBuilder(job_builder.get(), &DumpLogicalBlobDescAndSbpSignature);
-  WithOpGraphAndMutJobBuilder(job_builder.get(), &GroupBoxingByDstParallel);
-  WithOpGraphAndMutJobBuilder(job_builder.get(), &AddKeepHeaderOnlyOp);
-  WithOpGraphAndMutJobBuilder(job_builder.get(), &SetCtrlInOpName4VariableOp);
+  WithOpGraphAndMutJobBuilder(job, &DumpLogicalBlobDescAndSbpSignature);
+  WithOpGraphAndMutJobBuilder(job, &GroupBoxingByDstParallel);
+  WithOpGraphAndMutJobBuilder(job, &AddKeepHeaderOnlyOp);
+  WithOpGraphAndMutJobBuilder(job, &SetCtrlInOpName4VariableOp);
   // complete tick ops
-  job_builder.reset(new JobBuilder(job));
-  WithOpGraphAndMutJobBuilder(job_builder.get(), &AutoSourceTick);
-  job_builder.reset(new JobBuilder(job));
-  WithOpGraphAndMutJobBuilder(job_builder.get(), &AddTickForTimeShape);
-  job_builder.reset(new JobBuilder(job));
-  WithOpGraphAndMutJobBuilder(job_builder.get(), &AutoSinkTick);
-  AddGlobalTotalJobCriticalSection(job_builder->job());
-  WithOpGraphAndMutJobBuilder(job_builder.get(), &AddGlobalInputCriticalSections);
-  WithOpGraphAndMutJobBuilder(job_builder.get(), &AddGlobalOutputCriticalSections);
-  WithOpGraphAndMutJobBuilder(job_builder.get(), &DumpLogicalBlobDescAndSbpSignature);
-  WithOpGraphAndMutJobBuilder(job_builder.get(), &SetOpTimeShape7BatchDimLbis);
+  WithOpGraphAndMutJobBuilder(job, &AutoSourceTick);
+  WithOpGraphAndMutJobBuilder(job, &AddTickForTimeShape);
+  WithOpGraphAndMutJobBuilder(job, &AutoSinkTick);
+  AddGlobalTotalJobCriticalSection(*job);
+  WithOpGraphAndMutJobBuilder(job, &AddGlobalInputCriticalSections);
+  WithOpGraphAndMutJobBuilder(job, &AddGlobalOutputCriticalSections);
+  WithOpGraphAndMutJobBuilder(job, &DumpLogicalBlobDescAndSbpSignature);
+  WithOpGraphAndMutJobBuilder(job, &SetOpTimeShape7BatchDimLbis);
   CheckOpGraph(OpGraph(*job));
 }
 
