@@ -39,12 +39,12 @@ void VariableOp::InferHasBatchDim(
 void VariableOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
   FOR_RANGE(int32_t, i, 0, op_conf().variable_conf().shape().dim_size()) {
     SbpSignatureBuilder()
-        .Split(input_bns(), 0)
+        .Broadcast(input_bns())
         .Split(output_bns(), i)
         .Build(sbp_sig_list->mutable_sbp_signature()->Add());
   }
   SbpSignatureBuilder()
-      .Split(input_bns(), 0)
+      .Broadcast(input_bns())
       .Broadcast(output_bns())
       .Build(sbp_sig_list->mutable_sbp_signature()->Add());
 }

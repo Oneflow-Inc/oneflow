@@ -79,7 +79,7 @@ void InputOp::InferHasBatchDim(std::function<bool*(const std::string&)> HasBatch
 void InputOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
   int64_t num_axes = op_conf().input_conf().blob_conf().shape().dim_size();
   SbpSignatureBuilder()
-      .Split(input_bns(), 0)
+      .Broadcast(input_bns())
       .Split(output_bns(), 0)
       .MakeSplitSignatureListBuilder(num_axes)
       .Build(sbp_sig_list);
