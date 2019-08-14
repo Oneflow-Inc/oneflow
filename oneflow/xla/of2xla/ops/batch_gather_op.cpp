@@ -1,60 +1,87 @@
 #include "tensorflow/compiler/xla/client/xla_builder.h"
 #include "tensorflow/compiler/xla/client/lib/matrix.h"
+#include "tensorflow/compiler/xla/client/lib/slicing.h"
 #include "oneflow/xla/of2xla/xla_op_compiler_registry.h"
 #include "oneflow/xla/of2xla/xla_op_compiler.h"
 #include "oneflow/xla/of2xla/xla_op_context.h"
-#include "absl/types/optional.h"
 
 namespace oneflow {
 namespace mola {
 
-class BatchGatherOp : public XlaOpCompiler {
+xla::XlaOp GenericGather(const xla::XlaOp &input, const xla::XlaOp &indices,
+                         const Shape &input_shape, const Shape &indices_shape,
+                         int64_t axis) {
+ int64_t index_vector_dim = indices_shape.NumAxes();
+ xla::GatherDimensionNumbers dim_numbers;
+ std::vector<long long> slice_sizes(input_shape.NumAxes());
+ 
+ for (int64_t i = 0; i < input_shape.NumAxes(); ++i) {
+   int64_t window_bound;
+   if (i == axis) {
+     dim_numbers.add_collapsed_slice_dims(i);
+     window_bound = 1;
+   } else {
+     window_bound = input_shape.At(i);
+     if (i < axis) {
+       dim_numbers.add_offset_dims(i);
+     } else if (i >= (axis + 1)) {
+       dim_numbers.add_offset_dims(i + index_vector_dim - 1);
+     }
+   }
+   slice_sizes[i] = window_bound;
+  }
+ 
+ dim_numbers.set_index_vector_dim(index_vector_dim);
+ dim_numbers.add_start_index_map(axis);
+ return xla::Gather(input, indices, dim_numbers, slice_sizes);
+}
+
+class GatherOp : public XlaOpCompiler {
  public:
   void Compile(XlaOpContext *ctx) override {
-    Shape shape_in = ctx->InputShape("in");
-    Shape shape_indices = ctx->InputShape("indices");
-    CHECK_GT(shape_in.NumAxes(),0);
-    CHECK_GT(shape_indices.NumAxes(),0);
-
-    xla::XlaOp in = ctx->Input("in");
+    Shape input_shape = ctx->InputShape("in");
+    Shape indices_shape = ctx->InputShape("indices");
+   
+    CHECK_GT(input_shape.NumAxes(), 0);
+    CHECK_GT(indices_shape.NumAxes(), 0);
+    CHECK_LE(indices_shape.NumAxes(), input_shape.NumAxes());
+   
+    xla::XlaOp input = ctx->Input("in");
     xla::XlaOp indices = ctx->Input("indices");
-    std::vector<int64_t> in_dim_vec = shape_in.dim_vec();
-    std::vector<int64_t> indices_dim_vec = shape_indices.dim_vec();
-    CHECK_LE(indices_dim_vec.size(), in_dim_vec.size());
-    int64_t num_index_dims = shape_indices.At(1);
-    xla::GatherDimensionNumbers dim_numbers;
-    std::vector<long long> slice_sizes;
-    int64_t axis = 0;
-    slice_sizes.reserve(shape_in.NumAxes());
-    for (int64_t i = 0; i < shape_in.NumAxes(); i++) {
-      int64_t window_bound;
-      if (axis <= i && i < (axis + num_index_dims)) {
-        dim_numbers.add_collapsed_slice_dims(i);
-        window_bound = 1;
-      }
-      else {
-        window_bound = shape_in.At(i);
-      }
-
-      slice_sizes.push_back(window_bound);
-
-      if (i < axis) {
-        dim_numbers.add_offset_dims(i);
-      }
-      else if (i >= (axis + num_index_dims)) {
-        int64_t indices_rank = shape_indices.NumAxes() - 1;
-        dim_numbers.add_offset_dims(i + indices_rank - num_index_dims);
-      }
+    int axis = GatherAxis(ctx);
+    int batch_dims = GatherBatchDims(ctx);
+   
+    xla::XlaOp output;
+    if (batch_dims > 0) {
+      output = xla::TorchIndexSelect(input, indices, axis, batch_dims);
+    } else {
+      output = GenericGather(input, indices, input_shape, indices_shape,
+                             axis);
     }
-    
-    dim_numbers.set_index_vector_dim(shape_indices.NumAxes() - 1);
-    for (int64_t i = axis; i < axis + num_index_dims; i++) {
-      dim_numbers.add_start_index_map(i);
-    }
-    ctx->SetOutput("out", xla::Gather(in, indices, dim_numbers, slice_sizes));
+    ctx->SetOutput("out", output);
+  }
+ 
+  virtual int GatherAxis(XlaOpContext *ctx) const {
+    return ctx->GetAttr<int>("axis");
+  }
+  virtual int GatherBatchDims(XlaOpContext *ctx) const {
+    return 0;
   }
 };
 
+class BatchGatherOp : public GatherOp {
+ public:
+  int GatherAxis(XlaOpContext *ctx) const override {
+    Shape indices_shape = ctx->InputShape("indices");
+    return indices_shape.NumAxes() - 1;
+  }
+  int GatherBatchDims(XlaOpContext *ctx) const override {
+    Shape indices_shape = ctx->InputShape("indices");
+    return indices_shape.NumAxes() - 1;
+  }
+};
+
+REGISTER_XLA_OP_COMPILER(Gather, GatherOp);
 REGISTER_XLA_OP_COMPILER(BatchGather, BatchGatherOp);
 
 }  // namespace mola
