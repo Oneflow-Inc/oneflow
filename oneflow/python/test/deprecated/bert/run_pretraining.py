@@ -59,7 +59,8 @@ def BertDecoder(dl_net, data_dir='', seq_length=128, max_predictions_per_seq=20)
 def BuildPreTrainNetWithDeprecatedAPI(seq_length=128, max_position_embeddings=512,
                                       num_hidden_layers=12, num_attention_heads=12,
                                       hidden_dropout_prob=0.1, attention_probs_dropout_prob=0.1,
-                                      vocab_size=30522, type_vocab_size=2, max_predictions_per_seq=20):
+                                      vocab_size=30522, type_vocab_size=2,
+                                      max_predictions_per_seq=20):
 
   hidden_size = 64 * num_attention_heads#, H = 64, size per head
   intermediate_size = hidden_size * 4

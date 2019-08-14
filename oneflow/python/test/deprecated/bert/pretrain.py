@@ -120,7 +120,8 @@ def _AddMaskedLanguageModelLoss(input_blob,
     logit_blob = dl_net.Softmax(logit_blob)
     label_id_blob = bert_util.Reshape(label_id_blob, [-1])
     pre_example_loss = dl_net.SparseCrossEntropy(prediction=logit_blob, label=label_id_blob)
-    numerator = dl_net.BroadcastMul(bert_util.Reshape(pre_example_loss, [-1, max_predictions_per_seq]), label_weight_blob)
+    numerator = dl_net.BroadcastMul(bert_util.Reshape(pre_example_loss,
+                                    [-1, max_predictions_per_seq]), label_weight_blob)
     with dl_net.VariableScope("loss"):
       numerator = dl_net.ReduceSum(numerator, axis=[-1])
       denominator = dl_net.ScalarAdd(sum_label_weight_blob,1e-5)
