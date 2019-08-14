@@ -20,6 +20,24 @@ xla::XlaOp FloatLiteral(xla::XlaBuilder *builder, DataType data_type,
 
 xla::XlaOp Reshape(xla::XlaOp input, Shape dest_shape);
 
+
+xla::XlaOp MinValue(xla::XlaBuilder *builder, DataType data_type);
+xla::XlaOp MaxValue(xla::XlaBuilder *builder, DataType data_type);
+
+// Create computation of max func with data_type
+xla::XlaComputation CreateMaxFunc(DataType data_type);
+
+// Create computation of min func with data_type
+xla::XlaComputation CreateMinFunc(DataType data_type);
+
+xla::XlaComputation CreateAddFunc(DataType data_type);
+
+xla::XlaComputation CreateSubFunc(DataType data_type);
+
+xla::XlaComputation CreateMulFunc(DataType data_type);
+
+xla::XlaComputation CreateDivFunc(DataType data_type);
+
 }  // namespace mola
 }  // namespace oneflow
 

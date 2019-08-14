@@ -26,6 +26,8 @@ static std::unordered_map<int32_t, std::string> op_type2string_map = {
   {OP_TYPE_CASE(TanhGrad), "TanhGrad"},
   {OP_TYPE_CASE(Gelu), "Gelu"},
   {OP_TYPE_CASE(GeluGrad), "GeluGrad"},
+  {OP_TYPE_CASE(BatchGather), "BatchGather"},
+  {OP_TYPE_CASE(Softmax), "Softmax"},
   // TODO(hjchen2)
 };
 
