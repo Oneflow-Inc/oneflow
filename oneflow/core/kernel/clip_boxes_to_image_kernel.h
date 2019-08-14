@@ -21,7 +21,8 @@ class ClipBoxesToImageKernel final : public KernelIf<device_type> {
 
 template<DeviceType device_type, typename T>
 struct ClipBoxesToImageUtil {
-  static void Forward();
+  static void Forward(DeviceCtx* ctx, const int32_t num_boxes, const T* boxes_ptr,
+                      const int32_t* image_size_ptr, T* out_ptr);
 };
 
 }  // namespace oneflow

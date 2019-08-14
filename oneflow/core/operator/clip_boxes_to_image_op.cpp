@@ -25,6 +25,7 @@ void ClipBoxesToImageOp::InferBlobDescs(
   const BlobDesc* image_size = GetBlobDesc4BnInOp("image_size");
   CHECK_EQ(image_size->shape().NumAxes(), 1);
   CHECK_EQ(image_size->shape().At(0), 2);
+  CHECK_EQ(image_size->data_type(), DataType::kInt32);
   // output: out (R, 4)
   *GetBlobDesc4BnInOp("out") = *boxes;
 }

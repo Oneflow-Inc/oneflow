@@ -1660,11 +1660,10 @@ message ClipBoxesToImageOpConf {
   required string out = 3;
 }
 
-message ConvertBoxModeOpConf {
+message IdentifyNonSmallBoxesOpConf {
   required string in = 1;
-  // only support "xyxy" and "xywh"
-  required string mode = 2;
-  required string out = 3;
+  required string out = 2;
+  required float min_size = 3;
 }
 
 message NonMaximumSupressionOpConf {
@@ -1850,7 +1849,7 @@ message OperatorConf {
     MaskrcnnConcatUncontiguousDim1OpConf maskrcnn_concat_uncontiguous_dim1_conf = 610;
     IdentifyOutsideAnchorsOpConf identify_outside_anchors_conf = 611;
     ClipBoxesToImageOpConf clip_boxes_to_image_conf = 612;
-    ConvertBoxModeOpConf convert_box_mode_conf = 613;
+    IdentifyNonSmallBoxesOpConf identify_non_small_boxes_conf= 613;
     NonMaximumSupressionOpConf non_maximum_supression_conf = 614;
   }
 }
