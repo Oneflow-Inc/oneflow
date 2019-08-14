@@ -79,7 +79,6 @@ void ReentrantLockKernel<T>::ForwardDataContent(
   }
   if (status->cur_unlocked_ids().size() > 0) {
     T lock_id = status->cur_unlocked_ids().front();
-    LOG(INFO) << "lock_id:" << lock_id;
     status->mut_cur_unlocked_ids()->pop();
     *BnInOp2Blob("out")->mut_dptr<T>() = lock_id;
     status->set_acquired_lock_to_be_sent(true);
