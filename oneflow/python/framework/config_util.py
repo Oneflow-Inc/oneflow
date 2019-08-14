@@ -147,6 +147,7 @@ class JobConfigProtoBuilder(object):
 
     def model_update_conf(self, val):
         assert type(val) is dict
+        assert self.job_conf_.HasField("train_conf")
         pb_util.PythonDict2PbMessage(val, self.train_conf().model_update_conf)
         return self
 
