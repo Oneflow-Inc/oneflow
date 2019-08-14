@@ -22,7 +22,7 @@ REGISTER_XLA_OP_COMPILER(Sigmoid, ApplyUnaryOp<op::Logistic>);
 REGISTER_XLA_OP_COMPILER(Tanh, ApplyUnaryOp<op::Tanh>);
 
 struct Gelu {
-  xla::XlaOp operator()(xla::XlaOp x) {
+  xla::XlaOp operator()(const xla::XlaOp &x) {
     xla::XlaOp dot_5 = xla::ScalarLike(x, 0.5);
     xla::XlaOp one = xla::ScalarLike(x, 1.0);
     // cdf = erf(sqrt(0.5) * x)
@@ -33,6 +33,14 @@ struct Gelu {
 };
 
 REGISTER_XLA_OP_COMPILER(Gelu, ApplyUnaryOp<Gelu>);
+
+struct Identity {
+  xla::XlaOp operator()(const xla::XlaOp &x) {
+    return x;
+  }
+};
+
+REGISTER_XLA_OP_COMPILER(Identity, ApplyUnaryOp<Identity>);
 
 }  // namespace mola
 }  // namespace oneflow

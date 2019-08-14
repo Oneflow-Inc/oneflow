@@ -135,7 +135,7 @@ Plan Compiler::DoCompile() {
     mola::XlaGraph graph(Global<OpGraph>::Get());
     mola::OptimizeOptions options;
     options.graph = &graph;
-    options.minimum_nodes_in_cluster = 2;
+    options.minimum_nodes_in_cluster = 1;
 
     mola::RunOptimizePass("MarkClusterId", options);
     mola::RunOptimizePass("BuildSubGraph", options);
