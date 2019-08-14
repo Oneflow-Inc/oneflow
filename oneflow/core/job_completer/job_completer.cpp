@@ -32,6 +32,13 @@ void WithOpGraphAndMutJob(Job* job, const std::function<void(const OpGraph&, Job
   Handler(op_graph, job);
 }
 
+void WithOpGraphAndMutJobBuilder(Job* job,
+                                 const std::function<void(const OpGraph&, JobBuilder*)>& Handler) {
+  OpGraph op_graph(*job);
+  JobBuilder job_builder(job);
+  Handler(op_graph, &job_builder);
+}
+
 void GenerateFacadeImplOpConfIf(const OpNode& op_node, JobBuilder* job_builder) {
   auto op_type_case = op_node.op().op_conf().op_type_case();
   if (IsClassRegistered<GenerateFacadeImplOpConfWrapperStruct>(op_type_case)) {
@@ -41,16 +48,14 @@ void GenerateFacadeImplOpConfIf(const OpNode& op_node, JobBuilder* job_builder) 
   }
 }
 
-void ReplaceFacade(const OpGraph& op_graph, Job* job) {
-  JobBuilder job_builder(job);
-  op_graph.ForEachNode(
-      [&](OpNode* op_node) { GenerateFacadeImplOpConfIf(*op_node, &job_builder); });
+void ReplaceFacade(const OpGraph& op_graph, JobBuilder* job_builder) {
+  op_graph.ForEachNode([&](OpNode* op_node) { GenerateFacadeImplOpConfIf(*op_node, job_builder); });
 }
 
 void UpdateJobHelperConfProducedLbi2ConsumedDiffLbi(
-    const HashMap<LogicalBlobId, LogicalBlobId>& lbi2diff_lbi, Job* job) {
+    const HashMap<LogicalBlobId, LogicalBlobId>& lbi2diff_lbi, JobBuilder* job_builder) {
   auto& mut_pairs =
-      (*job->mutable_helper()->mutable_tag2lbi_relations())[kProducedLbi2ConsumedDiffLbi];
+      (*job_builder->mutable_helper()->mutable_tag2lbi_relations())[kProducedLbi2ConsumedDiffLbi];
   for (const auto& pair : lbi2diff_lbi) {
     auto* mut_pair = mut_pairs.add_pair();
     *mut_pair->mutable_first() = pair.first;
@@ -104,22 +109,21 @@ void SetSbpSignatureHintByIdenticalSbpObaPairs(const OpGraph& op_graph, JobBuild
   }
 }
 
-void UpdateOpSbpSignatureHint(const OpGraph& op_graph, Job* job) {
-  JobBuilder job_builder(job);
+void UpdateOpSbpSignatureHint(const OpGraph& op_graph, JobBuilder* job_builder) {
   op_graph.ForEachNode(
-      [&](OpNode* op_node) { BindIdenticalSbpObaPairsBetweenIbns(*op_node, &job_builder); });
-  SetSbpSignatureHintByIdenticalSbpObaPairs(op_graph, &job_builder);
+      [&](OpNode* op_node) { BindIdenticalSbpObaPairsBetweenIbns(*op_node, job_builder); });
+  SetSbpSignatureHintByIdenticalSbpObaPairs(op_graph, job_builder);
 }
 
-void GenerateOpConf4Trainning(const OpGraph& op_graph, Job* job) {
+void GenerateOpConf4Trainning(const OpGraph& op_graph, JobBuilder* job_builder) {
   LogicalBlobId total_loss_instance_num;
   HashMap<LogicalBlobId, LogicalBlobId> lbi2diff_lbi;
-  AutoGrad(op_graph, job, &lbi2diff_lbi);
+  AutoGrad(op_graph, job_builder, &lbi2diff_lbi);
   std::function<const LogicalBlobId&(const ParallelDesc&)> LossInstanceNum4ParallelDesc;
-  AddTotalLossInstanceNumOpConf(op_graph, job, lbi2diff_lbi, &LossInstanceNum4ParallelDesc);
-  AddOptimizerOpConf(op_graph, job, lbi2diff_lbi, LossInstanceNum4ParallelDesc);
-  UpdateJobHelperConfProducedLbi2ConsumedDiffLbi(lbi2diff_lbi, job);
-  UpdateOpSbpSignatureHint(op_graph, job);
+  AddTotalLossInstanceNumOpConf(op_graph, job_builder, lbi2diff_lbi, &LossInstanceNum4ParallelDesc);
+  AddOptimizerOpConf(op_graph, job_builder, lbi2diff_lbi, LossInstanceNum4ParallelDesc);
+  UpdateJobHelperConfProducedLbi2ConsumedDiffLbi(lbi2diff_lbi, job_builder);
+  UpdateOpSbpSignatureHint(op_graph, job_builder);
 }
 
 std::function<ParallelConf*(const std::string&)> MakeGetterMutParallelConf4OpName(
@@ -273,7 +277,7 @@ void TieUpChainHeadersUnReachableFromAnyVariableOps(const OpGraph& op_graph, Job
   });
 }
 
-void SetCtrlInOpName4VariableOp(const OpGraph& op_graph, Job* job) {
+void SetCtrlInOpName4VariableOp(const OpGraph& op_graph, JobBuilder* job_builder) {
   auto IsMutableConsumedLbi = [](const Operator& op, const LogicalBlobId& lbi) -> bool {
     for (const std::string& bn : op.input_bns()) {
       if (op.BnInOp2Lbi(bn) == lbi && op.InputBlobModifier4Ibn(bn).is_mutable()) { return true; }
@@ -283,7 +287,6 @@ void SetCtrlInOpName4VariableOp(const OpGraph& op_graph, Job* job) {
   auto IsMdSaveEveryNthOp = [](const OperatorConf& op_conf) -> bool {
     return op_conf.has_every_nth_conf();
   };
-  JobBuilder job_builder(job);
   op_graph.ForEachNode([&](OpNode* op_node) {
     if (op_node->op().op_conf().has_variable_conf() == false) { return; }
     if (op_node->out_edges().size() <= 1) { return; }
@@ -309,27 +312,27 @@ void SetCtrlInOpName4VariableOp(const OpGraph& op_graph, Job* job) {
     for (const auto* fw_bw_op : naive_consumers) {
       mut_mutable_consumer_op_conf.add_ctrl_in_op_name(fw_bw_op->name());
     }
-    job_builder.MutOpsOnlyOnce({mut_mutable_consumer_op_conf});
+    job_builder->MutOpsOnlyOnce({mut_mutable_consumer_op_conf});
     if (model_save_every_nth_op_conf != nullptr) {
       OperatorConf mut_model_save_every_nth_op_conf(*model_save_every_nth_op_conf);
       mut_model_save_every_nth_op_conf.add_ctrl_in_op_name(mutable_consumer->name());
-      job_builder.MutOpsOnlyOnce({mut_model_save_every_nth_op_conf});
+      job_builder->MutOpsOnlyOnce({mut_model_save_every_nth_op_conf});
     }
   });
 }
 
-void SetOpTimeShape7BatchDimLbis(const OpGraph& op_graph, Job* job) {
-  op_graph.DumpOpTimeShape(job);
-  op_graph.DumpBatchDimLbi(job);
+void SetOpTimeShape7BatchDimLbis(const OpGraph& op_graph, JobBuilder* job_builder) {
+  op_graph.DumpOpTimeShape(job_builder);
+  op_graph.DumpBatchDimLbi(job_builder);
 }
 
-void RewriteBoxingWithAllReduce(const OpGraph& op_graph, Job* job) {
-  AllReduceAddPass().Apply(op_graph, job);
+void RewriteBoxingWithAllReduce(const OpGraph& op_graph, JobBuilder* job_builder) {
+  AllReduceAddPass().Apply(op_graph, job_builder);
 }
 
-void DumpLogicalBlobDescAndSbpSignature(const OpGraph& op_graph, Job* job) {
-  op_graph.DumpLogicalBlobDesc(job);
-  op_graph.DumpSbpSignature(job);
+void DumpLogicalBlobDescAndSbpSignature(const OpGraph& op_graph, JobBuilder* job_builder) {
+  op_graph.DumpLogicalBlobDesc(job_builder);
+  op_graph.DumpSbpSignature(job_builder);
 }
 
 void SplitDecodeOps(Job* job) {
@@ -441,16 +444,16 @@ void AddRecordLoadOps(Job* job) {
   }
 }
 
-void MakeAllReduceSequence(const OpGraph& op_graph, Job* job) {
-  AllReduceSequencePass().Apply(op_graph, job);
+void MakeAllReduceSequence(const OpGraph& op_graph, JobBuilder* job_builder) {
+  AllReduceSequencePass().Apply(op_graph, job_builder);
 }
 
-void EnableAutoMixedPrecision(const OpGraph& op_graph, Job* job) {
+void EnableAutoMixedPrecision(const OpGraph& op_graph, JobBuilder* job_builder) {
   if (!GlobalJobDesc().enable_auto_mixed_precision()) { return; }
   CHECK_GE(CUDA_VERSION, 10000);
   AutoMixedPrecision(AutoMixedPrecisionLists::WhiteList(), AutoMixedPrecisionLists::BlackList(),
                      AutoMixedPrecisionLists::GrayList(), AutoMixedPrecisionLists::ClearList())
-      .Apply(op_graph, job);
+      .Apply(op_graph, job_builder);
 }
 
 }  // namespace
@@ -459,31 +462,31 @@ void JobCompleter::Complete(Job* job) const {
   // replace facade op
   SplitDecodeOps(job);
   AddRecordLoadOps(job);
-  WithOpGraphAndMutJob(job, &ReplaceFacade);
+  WithOpGraphAndMutJobBuilder(job, &ReplaceFacade);
   // complete variable ops
-  WithOpGraphAndMutJob(job, &AutoVar);
-  WithOpGraphAndMutJob(job, &SetDefaultVariableConf);
+  WithOpGraphAndMutJobBuilder(job, &AutoVar);
+  WithOpGraphAndMutJobBuilder(job, &SetDefaultVariableConf);
   if (GlobalJobDesc().IsTrain()) {
     WithOpGraphAndMutJob(job, &TieUpChainHeadersUnReachableFromAnyVariableOps);
-    WithOpGraphAndMutJob(job, &EnableAutoMixedPrecision);
+    WithOpGraphAndMutJobBuilder(job, &EnableAutoMixedPrecision);
     // complete ops for trainning
-    WithOpGraphAndMutJob(job, &GenerateOpConf4Trainning);
-    WithOpGraphAndMutJob(job, &RewriteBoxingWithAllReduce);
-    WithOpGraphAndMutJob(job, &MakeAllReduceSequence);
+    WithOpGraphAndMutJobBuilder(job, &GenerateOpConf4Trainning);
+    WithOpGraphAndMutJobBuilder(job, &RewriteBoxingWithAllReduce);
+    WithOpGraphAndMutJobBuilder(job, &MakeAllReduceSequence);
   }
-  WithOpGraphAndMutJob(job, &DumpLogicalBlobDescAndSbpSignature);
-  WithOpGraphAndMutJob(job, &GroupBoxingByDstParallel);
-  WithOpGraphAndMutJob(job, &AddKeepHeaderOnlyOp);
-  WithOpGraphAndMutJob(job, &SetCtrlInOpName4VariableOp);
+  WithOpGraphAndMutJobBuilder(job, &DumpLogicalBlobDescAndSbpSignature);
+  WithOpGraphAndMutJobBuilder(job, &GroupBoxingByDstParallel);
+  WithOpGraphAndMutJobBuilder(job, &AddKeepHeaderOnlyOp);
+  WithOpGraphAndMutJobBuilder(job, &SetCtrlInOpName4VariableOp);
   // complete tick ops
-  WithOpGraphAndMutJob(job, &AutoSourceTick);
-  WithOpGraphAndMutJob(job, &AddTickForTimeShape);
-  WithOpGraphAndMutJob(job, &AutoSinkTick);
+  WithOpGraphAndMutJobBuilder(job, &AutoSourceTick);
+  WithOpGraphAndMutJobBuilder(job, &AddTickForTimeShape);
+  WithOpGraphAndMutJobBuilder(job, &AutoSinkTick);
   AddGlobalTotalJobCriticalSection(*job);
-  WithOpGraphAndMutJob(job, &AddGlobalInputCriticalSections);
-  WithOpGraphAndMutJob(job, &AddGlobalOutputCriticalSections);
-  WithOpGraphAndMutJob(job, &DumpLogicalBlobDescAndSbpSignature);
-  WithOpGraphAndMutJob(job, &SetOpTimeShape7BatchDimLbis);
+  WithOpGraphAndMutJobBuilder(job, &AddGlobalInputCriticalSections);
+  WithOpGraphAndMutJobBuilder(job, &AddGlobalOutputCriticalSections);
+  WithOpGraphAndMutJobBuilder(job, &DumpLogicalBlobDescAndSbpSignature);
+  WithOpGraphAndMutJobBuilder(job, &SetOpTimeShape7BatchDimLbis);
   CheckOpGraph(OpGraph(*job));
 }
 

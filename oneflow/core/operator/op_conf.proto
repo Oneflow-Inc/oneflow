@@ -741,10 +741,6 @@ message MaximumOpConf {
   required string out = 2;
 }
 
-message SharedModelDiffAddOpConf {
-  required int32 in_num = 1;
-}
-
 message CastOpConf {
   required string in = 1;
   required string out = 2;
@@ -1490,7 +1486,6 @@ message OperatorConf {
     AccumulateOpConf accumulate_conf = 117;
     NormalModelUpdateOpConf normal_mdupdt_conf = 118;
     ModelSaveV2OpConf model_save_v2_conf = 119;
-    SharedModelDiffAddOpConf shared_model_diff_add_conf = 120;
     CastOpConf cast_conf = 121;
     VariableOpConf variable_conf = 122;
     ReduceIdentityOpConf reduce_identity_conf = 123;

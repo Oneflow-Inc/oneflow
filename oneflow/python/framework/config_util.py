@@ -5,6 +5,7 @@ import oneflow.core.job.job_set_pb2 as job_set_util
 import oneflow.core.job.job_pb2 as job_util
 import oneflow.python.framework.compile_context as compile_context
 from oneflow.python.oneflow_export import oneflow_export
+import oneflow.python.lib.core.pb_util as pb_util
 
 inited_config_proto = None
 
@@ -138,6 +139,17 @@ class JobConfigProtoBuilder(object):
 
     def job_conf():
         return self.job_conf_
+
+    def default_initializer_conf(self, val):
+        assert type(val) is dict
+        pb_util.PythonDict2PbMessage(val, self.job_conf_.default_initializer_conf)
+        return self
+
+    def model_update_conf(self, val):
+        assert type(val) is dict
+        assert self.job_conf_.HasField("train_conf")
+        pb_util.PythonDict2PbMessage(val, self.train_conf().model_update_conf)
+        return self
 
     def batch_size(self, val):
         assert type(val) is int

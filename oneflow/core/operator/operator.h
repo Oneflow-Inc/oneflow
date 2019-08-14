@@ -373,7 +373,6 @@ inline LogicalBlobId GenLogicalBlobId(const std::string& lbn) {
 inline std::string GenLogicalBlobName(const LogicalBlobId& lbi) {
   CHECK_EQ(lbi.has_op_name(), true);
   CHECK_EQ(lbi.has_blob_name(), true);
-  CHECK_EQ(lbi.has_clone_id(), false);
   CHECK_EQ(lbi.is_packed_id(), false);
   return lbi.op_name() + "/" + lbi.blob_name();
 }

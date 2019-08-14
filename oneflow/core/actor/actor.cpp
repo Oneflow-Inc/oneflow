@@ -154,7 +154,7 @@ void Actor::TakeOverNaiveProduced(const PbMap<std::string, RegstDescProto>& prod
 
 void Actor::ForEachProducedRegst(const std::function<void(Regst*)>& Handler) const {
   for (const auto& pair : produced_regsts_) {
-    for (const auto& regst : pair.second) {  Handler(regst.get()); }
+    for (const auto& regst : pair.second) { Handler(regst.get()); }
   }
 }
 

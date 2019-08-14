@@ -20,18 +20,25 @@ void LayerNormOp::InitFromOpConf() {
   if (!(conf.center() || conf.scale())) { mut_op_conf()->set_trainable(false); }
   EnrollInputBn("in");
   EnrollOutputBn("out");
-  if (conf.center() && conf.has_beta()) { EnrollInputBn("beta"); }
-  if (conf.scale() && conf.has_gamma()) {
-    EnrollInputBn("gamma");
+  if (conf.center()) {
+    if (conf.has_beta()) {
+      EnrollInputBn("beta");
+    } else {
+      EnrollModelBn("beta");
+    }
+  }
+  if (conf.scale()) {
+    if (conf.has_gamma()) {
+      EnrollInputBn("gamma");
+    } else {
+      EnrollModelBn("gamma");
+    }
     EnrollOutputBn("normalized", false);
   }
   EnrollOutputBn("mean", false);
   EnrollOutputBn("inv_variance", false);
   EnrollConstBufBn("cudnn_bn_scale_ones");
   EnrollConstBufBn("cudnn_bn_bias_zeros");
-  EnrollBwBufBn("cudnn_bn_scale_diff_buf");
-  EnrollBwBufBn("cudnn_bn_bias_diff_buf");
-  if (op_conf().trainable()) { EnrollBwBufBn("bw_reduce_buf"); }
 }
 
 void LayerNormOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,

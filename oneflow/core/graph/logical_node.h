@@ -51,14 +51,6 @@ class LogicalNode : public Node<LogicalNode, LogicalEdge> {
     in_blob_fastest_time_shape_.reset(time_shape);
   }
 
-  // shared_model_nodes_
-  std::shared_ptr<const std::vector<LogicalNode*>> shared_model_nodes() const {
-    return shared_model_nodes_;
-  }
-  std::shared_ptr<const std::vector<LogicalNode*>>& mut_shared_model_nodes() {
-    return shared_model_nodes_;
-  }
-
   // Lbis
   size_t produced_batch_dim_lbis_cnt() const { return produced_batch_dim_lbis_cnt_; }
   size_t consumed_batch_dim_lbis_cnt() const { return consumed_batch_dim_lbis_cnt_; }
@@ -92,7 +84,6 @@ class LogicalNode : public Node<LogicalNode, LogicalEdge> {
 
   std::vector<std::shared_ptr<Operator>> op_vec_;
   std::shared_ptr<const ParallelDesc> parallel_desc_;
-  std::shared_ptr<const std::vector<LogicalNode*>> shared_model_nodes_;
 
   HashMap<const LogicalNode*, std::vector<LogicalBlobId>> dst2data_lbis_;
   std::unique_ptr<const Shape> in_blob_fastest_time_shape_;

@@ -4,7 +4,6 @@
 #include "oneflow/core/graph/boxing_task_node.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/graph/reduce_add_compute_task_node.h"
-#include "oneflow/core/graph/reduce_split_compute_task_node.h"
 #include "oneflow/core/graph/inplace_lbi_graph.h"
 #include "oneflow/core/register/runtime_blob_desc.h"
 #include "oneflow/core/job/thrd_id_generator.h"
@@ -16,6 +15,14 @@
 namespace oneflow {
 
 namespace {
+
+bool IsInterfaceTask(const TaskNode* node) {
+  const auto* comp_task_node = dynamic_cast<const CompTaskNode*>(node);
+  if (comp_task_node == nullptr) { return false; }
+  if (comp_task_node->logical_node()->op_vec().size() != 1) { return false; }
+  auto op_type_case = comp_task_node->logical_node()->SoleOp()->op_conf().op_type_case();
+  return IsClassRegistered<IsInterfaceOpConf4OpTypeCase>(op_type_case);
+}
 
 bool IsConnectToTickOp(const TaskNode* node) {
   const auto* comp_task_node = dynamic_cast<const CompTaskNode*>(node);
@@ -420,15 +427,6 @@ void TaskGraph::EnableMemSharingInReduceStruct() {
   });
 }
 
-void TaskGraph::EnableMemSharingAfterAllManualSetForMdUpdt() {
-  TODO();
-  // ForEachNode([&](TaskNode* node) {
-  //   auto* updt = dynamic_cast<NormalMdUpdtCompTaskNode*>(node);
-  //   if (!updt) { return; }
-  //   updt->EnableMemSharingBetweenFirstInAndProcessedMdDiffRegst();
-  // });
-}
-
 void TaskGraph::GetInplaceOpBlobArgList(
     OpBlobArgList* inplace_obas, const HashSet<TaskNode*>& dev_nodes,
     const std::function<const TaskNode*(const std::string&)>& TaskNode4OpName) const {
@@ -801,7 +799,7 @@ void TaskGraph::BuildTaskPath(
          || cur_node->MemZoneId121() != dst->MemZoneId121()) {
     cur_node = BuildTaskStep(cur_node, dst, GetBufTask, SetBufTask, use_buf_task_node);
   }
-  Connect<TaskNode>(cur_node, NewEdge(), dst);
+  if (cur_node != dst) { Connect<TaskNode>(cur_node, NewEdge(), dst); }
 }
 
 TaskNode* TaskGraph::BuildTaskStep(
@@ -821,7 +819,8 @@ TaskNode* TaskGraph::BuildTaskStep(
   } else if (cur_node->machine_id() == dst->machine_id()) {
     next_mem_zone_id = dst->MemZoneId121();
     if (!use_buf_task_node || !(next_node = GetBufTask(cur_node->machine_id(), next_mem_zone_id))) {
-      next_node = AddCopyH2DTaskTo(dst);
+      next_node = TryAddCopyH2DTaskTo(dst);
+      if (next_node == nullptr) { next_node = dst; }
       Connect<TaskNode>(cur_node, NewEdge(), next_node);
     }
   } else if (cur_node->machine_id() != dst->machine_id()) {
@@ -833,11 +832,14 @@ TaskNode* TaskGraph::BuildTaskStep(
   } else {
     UNIMPLEMENTED();
   }
-  if (use_buf_task_node) { SetBufTask(next_node->machine_id(), next_mem_zone_id, next_node); }
+  if (use_buf_task_node && (next_node != dst)) {
+    SetBufTask(next_node->machine_id(), next_mem_zone_id, next_node);
+  }
   return next_node;
 }
 
-TaskNode* TaskGraph::AddCopyH2DTaskTo(TaskNode* task) {
+TaskNode* TaskGraph::TryAddCopyH2DTaskTo(TaskNode* task) {
+  if (IsInterfaceTask(task)) { return nullptr; }
   CHECK_EQ(task->device_type(), DeviceType::kGPU);
   CopyHdTaskNode* copy_task = NewNode<CopyHdTaskNode>();
   copy_task->Init(CopyHdOpConf::H2D, task->machine_id(), task->GpuPhyId());
@@ -897,8 +899,9 @@ void TaskGraph::BuildInBoxing(const LogicalNode* logical,
   for (CompTaskNode* comp_task : sorted_comp_tasks) {
     TaskNode* task = comp_task;
     if (task->device_type() == DeviceType::kGPU) {
-      task = AddCopyH2DTaskTo(comp_task);
-      Connect<TaskNode>(task, NewEdge(), comp_task);
+      task = TryAddCopyH2DTaskTo(comp_task);
+      if (task == nullptr) { task = comp_task; }
+      if (task != comp_task) { Connect<TaskNode>(task, NewEdge(), comp_task); }
     }
     machine_id2bound_task[task->machine_id()].push_back(task);
   }

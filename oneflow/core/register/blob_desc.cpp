@@ -17,7 +17,6 @@ BlobDesc::BlobDesc(const Shape& shape, DataType data_type, bool has_data_id, boo
       has_record_id_in_device_piece_(false),
       has_loss_instance_num_(false),
       max_col_num_(max_col_num),
-      blob_mem_id_(-1),
       body_field_(shape, data_type),
       is_body_disabled_(false) {}
 
@@ -28,7 +27,6 @@ BlobDesc::BlobDesc(const BlobDesc& blob_desc) : BlobDesc(DataType::kInvalidDataT
 void BlobDesc::InitFromProto(const BlobDescProto& proto) {
   body_field_.InitFromProto(proto.body());
   max_col_num_ = proto.header().max_col_num();
-  blob_mem_id_ = proto.header().blob_mem_id();
   header_pod_desc_.InitFromProto(proto.header().header_pod_desc());
   is_body_disabled_ = proto.is_body_disabled();
   if (proto.header().has_opaque_header()) {
@@ -68,7 +66,6 @@ BlobDesc::BlobDesc(const StructPodDesc& header_pod_desc, int64_t header_byte_siz
       has_record_id_in_device_piece_(false),
       has_loss_instance_num_(false),
       max_col_num_(max_col_num),
-      blob_mem_id_(-1),
       body_field_(shape, data_type),
       is_body_disabled_(false) {
   CHECK_EQ(header_pod_desc.ByteSize(), header_byte_size);
@@ -161,7 +158,6 @@ void BlobDesc::LossInstanceNumToProto(StructPodDesc* header_pod_desc) const {
 
 void BlobDesc::HeaderToProto(BlobDescProto* proto) const {
   proto->mutable_header()->set_max_col_num(max_col_num_);
-  proto->mutable_header()->set_blob_mem_id(blob_mem_id_);
   if (!header_is_opaque_) {
     FieldHeaderDesc* field_header = proto->mutable_header()->mutable_field_header();
     StructPodDesc header_pod_desc;
@@ -194,8 +190,7 @@ bool BlobDesc::operator==(const BlobDesc& rhs) const {
          && has_dim2_valid_num_ == rhs.has_dim2_valid_num_
          && has_record_id_in_device_piece_ == rhs.has_record_id_in_device_piece_
          && has_loss_instance_num_ == rhs.has_loss_instance_num_ && max_col_num_ == rhs.max_col_num_
-         && blob_mem_id_ == rhs.blob_mem_id_ && body_field_ == rhs.body_field_
-         && is_body_disabled_ == rhs.is_body_disabled_;
+         && body_field_ == rhs.body_field_ && is_body_disabled_ == rhs.is_body_disabled_;
 }
 
 BlobDesc& BlobDesc::operator=(const BlobDesc& blob_desc) {
@@ -218,7 +213,6 @@ void BlobDesc::CopyMetaFrom(const BlobDesc& rhs) {
   has_record_id_in_device_piece_ = rhs.has_record_id_in_device_piece_;
   has_loss_instance_num_ = rhs.has_loss_instance_num_;
   max_col_num_ = rhs.max_col_num_;
-  blob_mem_id_ = rhs.blob_mem_id_;
   body_field_ = rhs.body_field_;
   if (rhs.dim0_inner_shape_) {
     dim0_inner_shape_.reset(new Shape(rhs.dim0_inner_shape_->dim_vec()));
@@ -245,7 +239,6 @@ std::unique_ptr<BlobDesc> ComputePackedBlobDesc(
   int32_t blob_desc_cnt = 0;
   std::unique_ptr<BlobDesc> ret(new BlobDesc(GlobalJobDesc().DefaultDataType()));
   const BlobDesc* last_blob_desc = nullptr;
-  HashMap<int32_t, size_t> blob_mem_id2size;
   StructPodDesc opaque_header_pod_desc;
   bool is_body_disabled = false;
   for (auto& pair : lbi2blob_desc) {
@@ -253,18 +246,7 @@ std::unique_ptr<BlobDesc> ComputePackedBlobDesc(
     RtBlobDesc rt_blob_desc(*blob_desc);
     header_byte_size += rt_blob_desc.ByteSizeOfBlobHeader();
     *opaque_header_pod_desc.MutStructField(NewFieldId(pair.first)) = rt_blob_desc.header_pod_desc();
-    int64_t cur_body_byte_size = rt_blob_desc.ByteSizeOfBlobBody();
-    int32_t blob_mem_id = blob_desc->blob_mem_id();
-    if (blob_mem_id == -1) {
-      body_byte_size += cur_body_byte_size;
-    } else {
-      auto size_it = blob_mem_id2size.find(blob_mem_id);
-      if (size_it == blob_mem_id2size.end()) {
-        CHECK(blob_mem_id2size.emplace(blob_mem_id, cur_body_byte_size).second);
-      } else {
-        CHECK_EQ(size_it->second, cur_body_byte_size);
-      }
-    }
+    body_byte_size += rt_blob_desc.ByteSizeOfBlobBody();
     data_type_set.insert(static_cast<int>(blob_desc->data_type()));
     if (max_col_num == -1) {
       max_col_num = blob_desc->max_col_num();
@@ -275,7 +257,6 @@ std::unique_ptr<BlobDesc> ComputePackedBlobDesc(
     last_blob_desc = blob_desc;
     is_body_disabled = is_body_disabled || blob_desc->is_body_disabled();
   }
-  for (auto& pair : blob_mem_id2size) { body_byte_size += pair.second; }
   if (blob_desc_cnt == 0) {
     // do nothing
   } else if (blob_desc_cnt == 1) {
@@ -301,8 +282,7 @@ std::unique_ptr<BlobDesc> ComputePackedBlobDesc(
 }
 
 bool CompareLbiBlobDescPair(const LbiBlobDescPair& lhs, const LbiBlobDescPair& rhs) {
-  return (lhs.blob_desc().header().blob_mem_id() < rhs.blob_desc().header().blob_mem_id())
-         || (lhs.lbi() < rhs.lbi());
+  return lhs.lbi() < rhs.lbi();
 }
 
 }  // namespace oneflow

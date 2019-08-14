@@ -1,5 +1,4 @@
 #include "oneflow/core/job_completer/all_reduce_add_pass.h"
-#include "oneflow/core/graph/op_graph.h"
 
 namespace oneflow {
 
@@ -246,21 +245,20 @@ void BuildAllReduceStruct(
 
 }  // namespace
 
-void AllReduceAddPass::Apply(const OpGraph& op_graph, Job* job) const {
+void AllReduceAddPass::Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
   auto ProducerOpNode4Lbi = MakeGetterProducerOpNode4Lbi(op_graph);
 
   std::vector<LogicalBlobId> lbis;
-  FindAllReducedLbis(*job, op_graph, ProducerOpNode4Lbi, &lbis);
+  FindAllReducedLbis(job_builder->job(), op_graph, ProducerOpNode4Lbi, &lbis);
   SortAllReducedLbis(op_graph, ProducerOpNode4Lbi, &lbis);
   HashMap<LogicalBlobId, int32_t> lbi2order_in_graph;
   FOR_RANGE(int32_t, i, 0, lbis.size()) { CHECK(lbi2order_in_graph.emplace(lbis.at(i), i).second); }
 
   std::vector<std::vector<LogicalBlobId>> lbi_groups;
   GroupAllReducedLbisByStrategy(ProducerOpNode4Lbi, lbis, &lbi_groups);
-  JobBuilder job_builder(job);
   FOR_RANGE(int32_t, i, 0, lbi_groups.size()) {
     const auto& lbi_group = lbi_groups.at(i);
-    BuildAllReduceStruct(&job_builder, ProducerOpNode4Lbi, lbi_group,
+    BuildAllReduceStruct(job_builder, ProducerOpNode4Lbi, lbi_group,
                          lbi2order_in_graph.at(lbi_group.at(0)));
   }
 }
