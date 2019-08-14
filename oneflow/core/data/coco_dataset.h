@@ -15,6 +15,7 @@ class COCODataset final : public Dataset {
   void Init() override;
   size_t Size() const override { return image_ids_.size(); }
   std::unique_ptr<OFRecord> EncodeOneRecord(int64_t idx) const override;
+  int64_t GetGroupId(int64_t idx) const override;
 
  private:
   void EncodeImage(int64_t image_id, Feature& feature) const;

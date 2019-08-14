@@ -609,13 +609,4 @@ int64_t JobDesc::DevicePieceSize4ParallelCtx(const ParallelContext& ctx) const {
   return BalancedSplitter(RecordPieceSize(), ctx.parallel_num()).At(ctx.parallel_id()).size();
 }
 
-// std::unique_ptr<Dataset> JobDesc::BuildDataset() const {
-//   const DatasetProto& dataset_proto = job_conf_.other().dataset_config();
-//   Dataset* dataset = NewObj<Dataset>(dataset_proto.dataset_catalog_case(), dataset_proto);
-//   dataset->Init(dataset_proto);
-//   int64_t total_data_num = IsTrain() ? TotalBatchNum() * BatchSize() : dataset->Size();
-//   dataset->GenDataSequence(total_data_num);
-//   return std::unique_ptr<Dataset>(dataset);
-// }
-
 }  // namespace oneflow

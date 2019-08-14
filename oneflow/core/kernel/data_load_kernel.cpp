@@ -1,5 +1,6 @@
 #include "oneflow/core/kernel/data_load_kernel.h"
 #include "oneflow/core/data/dataset_manager.h"
+#include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/record/record.pb.h"
 
 namespace oneflow {
@@ -8,21 +9,25 @@ void DataLoadKernel::VirtualKernelInit(const ParallelContext* parallel_ctx) {
   using namespace data;
   const DataLoadOpConf& data_load_op_conf = op_conf().data_load_conf();
   int64_t piece_size = Global<JobDesc>::Get()->RecordPieceSize();
-  int64_t parallele_num = parallel_ctx->parallel_num();
-  CHECK_EQ(piece_size % parallele_num, 0);
-  int64_t device_piece_size = piece_size / parallele_num;
+  int64_t parallel_num = parallel_ctx->parallel_num();
+  CHECK_EQ(piece_size % parallel_num, 0);
+  int64_t device_piece_size = piece_size / parallel_num;
   size_t queue_size = Global<JobDesc>::Get()->data_load_queue_size();
   std::shared_ptr<Dataset> dataset = Global<DatasetManager>::Get()->At(data_load_op_conf.dataset());
-  std::vector<int64_t> part_data_seq =
-      dataset->GetPartDataSequence(parallel_ctx->parallel_id(), parallele_num);
-
-  data_loader_.reset(
-      new DataLoader(device_piece_size, queue_size, dataset, std::move(part_data_seq)));
+  int64_t total_num_data =
+      Global<JobDesc>::Get()->IsTrain()
+          ? Global<JobDesc>::Get()->TotalBatchNum() * Global<JobDesc>::Get()->BatchSize()
+          : dataset->Size();
+  CHECK_LE(parallel_num, total_num_data);
+  BalancedSplitter bs(total_num_data, parallel_num);
+  Range range = bs.At(parallel_ctx->parallel_id());
+  data_loader_.reset(new DataLoader(dataset, device_piece_size, range.size(), queue_size,
+                                    parallel_ctx->parallel_num(), parallel_ctx->parallel_id()));
 }
 
 void DataLoadKernel::Forward(const KernelCtx& ctx,
                              std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  data_loader_->BatchUnload(BnInOp2Blob("out")->mut_dptr<OFRecord>());
+  data_loader_->DumpToRecrod(BnInOp2Blob("out")->mut_dptr<OFRecord>());
   auto* status = static_cast<DataLoadStatus*>(ctx.other);
   if (data_loader_->IsEof()) { status->is_eof = true; }
   // auto status =

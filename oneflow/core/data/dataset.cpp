@@ -4,10 +4,9 @@
 namespace oneflow {
 namespace data {
 
-Dataset::Dataset(const DatasetProto& dataset_proto) {
+Dataset::Dataset(const DatasetProto& dataset_proto) : sampler_(new DataSampler(this)) {
   dataset_proto_ = &dataset_proto;
   data_seq_.clear();
-  // status_.reset(new DatasetStatus);
   Init();
 }
 
@@ -31,23 +30,6 @@ std::vector<int64_t> Dataset::GetPartDataSequence(int64_t part_id, int64_t part_
   Range range = bs.At(part_id);
   return std::vector<int64_t>(range.begin(), range.end());
 }
-
-// int64_t Dataset::GenNewEpochDataSequence(int64_t epoch) {
-//   int64_t step = status_->ForwardEpoch(epoch);
-//   status_->GenDataSequence(step, this->Size(), dataset_proto_.shuffle(),
-//   dataset_proto_.random_seed());
-// }
-
-// int64_t DatasetStatus::ForwardEpoch(int64_t epoch) {
-//   std::unique_lock<std::mutex> lck(mtx_);
-//   int64_t step = epoch - epoch_;
-// }
-
-// void DatasetStatus::GenDataSequence(int64_t count, int64_t size, bool shuffle, int64_t
-// random_seed) {
-//   if (count <= 0) { return; }
-
-// }
 
 }  // namespace data
 }  // namespace oneflow

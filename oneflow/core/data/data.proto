@@ -11,6 +11,7 @@ message ImageNetDatasetCatalog {
 message COCODatasetCatalog {
   required string annotation_file = 1;
   required string image_dir = 2;
+  optional bool group_by_aspect_ratio = 3 [default = true];
 }
 
 message DatasetProto {
@@ -67,9 +68,10 @@ message DataInstanceProto {
 }
 
 message DataTransformProto {
+  repeated string field_name = 1;
   oneof transform {
-    ResizeTransform resize = 1;
-    TargetResizeTransform target_resize = 2;
+    ResizeTransform resize = 10;
+    TargetResizeTransform target_resize = 11;
   }
 }
 

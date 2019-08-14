@@ -15,6 +15,7 @@ namespace data {
 void COCODataset::Init() {
   CHECK_EQ(dataset_proto().dataset_catalog_case(), DatasetProto::kCoco);
   const COCODatasetCatalog& coco_dataset = dataset_proto().coco();
+  if (coco_dataset.group_by_aspect_ratio()) { sampler().reset(new GroupedDataSampler(this)); }
   PersistentInStream in_stream(
       DataFS(), JoinPath(dataset_proto().dataset_dir(), coco_dataset.annotation_file()));
   std::string json_str;
@@ -49,6 +50,16 @@ void COCODataset::Init() {
     ++contiguous_id;
     CHECK(category_id2contiguous_id_.emplace(category_id, contiguous_id).second);
   }
+}
+
+int64_t COCODataset::GetGroupId(int64_t idx) const {
+  int64_t image_id = image_ids_.at(idx);
+  const auto& image_info = image_id2image_.at(image_id);
+  int64_t image_height = image_info["height"].get<int64_t>();
+  int64_t image_width = image_info["width"].get<int64_t>();
+  float aspect_ratio = image_height * 1.0f / image_width;
+  if (aspect_ratio > 1.0f) { return 1; }
+  return 0;
 }
 
 std::unique_ptr<OFRecord> COCODataset::EncodeOneRecord(int64_t idx) const {

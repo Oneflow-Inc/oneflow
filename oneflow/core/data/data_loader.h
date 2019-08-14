@@ -9,12 +9,12 @@
 namespace oneflow {
 namespace data {
 
-class BatchSampler final {
+class BatchCollator final {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(BatchSampler);
-  BatchSampler() = delete;
-  ~BatchSampler() = default;
-  BatchSampler(size_t batch_size) : batch_size_(batch_size), cur_slot_(0), batch_(batch_size) {}
+  OF_DISALLOW_COPY_AND_MOVE(BatchCollator);
+  BatchCollator() = delete;
+  ~BatchCollator() = default;
+  BatchCollator(size_t batch_size) : batch_size_(batch_size), cur_slot_(0), batch_(batch_size) {}
 
   size_t GetEmptySlot();
   bool IsFull() const { return cur_slot_ == batch_size_; }
@@ -33,25 +33,25 @@ class DataLoader final {
   OF_DISALLOW_COPY_AND_MOVE(DataLoader);
   DataLoader() = delete;
   ~DataLoader() = default;
-  DataLoader(size_t batch_size, size_t qsize, std::shared_ptr<Dataset> dataset,
-             std::vector<int64_t>&& data_seq);
+  DataLoader(std::shared_ptr<Dataset> dataset, size_t batch_size, size_t max_count, size_t qsize,
+             size_t num_replicas, size_t rank);
 
-  bool IsEof() const { return cur_load_data_idx_ == data_seq_.size(); }
-  void BatchUnload(OFRecord* record_array);
-
- private:
-  size_t Dispatch();
-  BatchSampler* GetBatchSampler();
+  bool IsEof() const { return load_count_ == 0; }
+  void DumpToRecrod(OFRecord* record_array);
 
  private:
-  std::shared_ptr<Dataset> dataset_;
-  std::vector<int64_t> data_seq_;
-  size_t cur_load_data_idx_;
+  size_t LoadBatch();
+  BatchCollator* GetBatchCollator();
+
+ private:
   size_t batch_size_;
+  size_t load_count_;
+  std::shared_ptr<Dataset> dataset_;
+  DataSamplerContext sampler_ctx_;
 
-  std::thread dispatcher_;
+  std::thread load_thrd_;
   ThreadPool worker_pool_;
-  util::RingQueue<BatchSampler> batch_queue_;
+  util::RingQueue<BatchCollator> batch_queue_;
 };
 
 }  // namespace data

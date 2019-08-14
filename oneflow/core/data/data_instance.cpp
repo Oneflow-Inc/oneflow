@@ -217,8 +217,7 @@ bool DataInstance::SetField(const std::string& field_name,
 
 void DataInstance::Transform(const DataInstanceProto& proto,
                              const DataTransformProto& trans_proto) {
-  for (auto& pair : fields_) {
-    const std::string& field_name = pair.first;
+  for (const std::string& field_name : trans_proto.field_name()) {
     const DataFieldProto& field_proto = proto.fields().at(field_name);
     GetDataFieldTransformer(field_proto, trans_proto)(this, field_name, trans_proto);
   }
