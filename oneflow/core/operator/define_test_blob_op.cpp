@@ -24,6 +24,7 @@ void DefineTestBlobOp::InferBlobDescs(
   out_blob_desc->set_has_dim0_valid_num_field(conf.has_dim0_valid_num());
   out_blob_desc->set_has_dim1_valid_num_field(conf.has_dim1_valid_num());
   out_blob_desc->set_has_dim2_valid_num_field(conf.has_dim2_valid_num());
+  out_blob_desc->set_has_instance_shape_field(conf.has_instance_shape());
   out_blob_desc->set_has_record_id_in_device_piece_field(!conf.record_id_in_device_piece().empty());
   out_blob_desc->set_max_col_num(1);
   if (conf.has_dim0_inner_shape()) {

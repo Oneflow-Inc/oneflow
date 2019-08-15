@@ -201,6 +201,28 @@ message PReluKernelConf {
   repeated int32 perm = 1;
 }
 
+message WhereKernelConf {
+  required DataType cond_type = 1;
+  required DataType value_type = 2;
+}
+
+message LocalScatterNdUpdateConf {
+ required DataType value_type = 1;
+ required DataType indices_type = 2; 
+}
+
+message TopKConf {
+  required int32 temp_storage_bytes = 1;
+}
+
+message SortConf {
+  required int32 temp_storage_bytes = 1;
+}
+
+message ArgSortConf {
+  required int32 temp_storage_bytes = 1;
+}
+
 message KernelConf {
   required OpAttribute op_attribute = 1;
   required bool is_forward = 2;
@@ -248,5 +270,10 @@ message KernelConf {
     RecordLoadKernelConf record_load_conf = 422;
     PReluKernelConf prelu_conf = 423;
     SmoothL1LossKernelConf smooth_l1_loss_conf = 424;
+    WhereKernelConf where_conf = 425;
+    LocalScatterNdUpdateConf local_scatter_nd_update_conf = 426;
+    TopKConf top_k_conf = 427;
+    SortConf sort_conf = 428;
+    ArgSortConf arg_sort_conf = 429;
   }
 }

@@ -480,4 +480,12 @@ BackwardLogicalNode* RepeatForwardLogicalNode::NewCorrectBackwardNode() {
   return new RepeatBackwardLogicalNode();
 }
 
+BackwardLogicalNode* PieceSliceForwardLogicalNode::NewCorrectBackwardNode() {
+  return new PieceSliceBackwardLogicalNode;
+}
+
+BackwardLogicalNode* InstanceStackForwardLogicalNode::NewCorrectBackwardNode() {
+  return new InstanceStackBackwardLogicalNode;
+}
+
 }  // namespace oneflow

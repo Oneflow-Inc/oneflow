@@ -80,7 +80,7 @@ void BatchGatherKernelUtil<DeviceType::kGPU, T, K>::Backward(DeviceCtx* ctx, con
 #define MAKE_BATCH_GATHER_KERNEL_UTIL_ENTRY(in_type_pair, index_type_pair)                \
   template struct BatchGatherKernelUtil<DeviceType::kGPU, OF_PP_PAIR_FIRST(in_type_pair), \
                                         OF_PP_PAIR_FIRST(index_type_pair)>;
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_BATCH_GATHER_KERNEL_UTIL_ENTRY, FLOATING_DATA_TYPE_SEQ,
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_BATCH_GATHER_KERNEL_UTIL_ENTRY, ARITHMETIC_DATA_TYPE_SEQ,
                                  INT_DATA_TYPE_SEQ);
 #undef MAKE_BATCH_GATHER_KERNEL_UTIL_ENTRY
 

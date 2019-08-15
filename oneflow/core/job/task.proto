@@ -42,7 +42,11 @@ enum TaskType {
   kRepeatForward = 34;
   kRepeatBackward = 35;
   kReduceIdentity = 36;
-  kDataLoad = 37;
+  kPieceSliceForward = 37;
+  kPieceSliceBackward = 38;
+  kInstanceStackForward = 39;
+  kInstanceStackBackward = 40;
+  kDataLoad = 41;
 };
 
 enum AreaType {

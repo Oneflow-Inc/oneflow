@@ -113,6 +113,7 @@ void LogicalGraph::BuildFwStruct() {
   NaiveBuildFwStruct(&op_name2nodes);
   FixSharedModelNodes(op_name2nodes);
   LinkUnpackFw2PackFw(op_name2nodes);
+  LinkInstanceStackFw2PieceSliceFw(op_name2nodes);
   total_mbn_num_ = 0;
   ForEachNode([&](LogicalNode* node) {
     total_mbn_num_ +=
@@ -142,7 +143,9 @@ void LogicalGraph::NaiveBuildFwStruct(
     cur_op_conf.set_device_type(parallel_desc_ptr->device_type());
     std::shared_ptr<Operator> cur_op = ConstructOp(cur_op_conf);
     LogicalNode* cur_node = cur_op->NewProperLogicalNode();
-    if (cur_node->TypeName() == "PackForward" || cur_node->TypeName() == "UnpackForward") {
+    const std::string type_name = cur_node->TypeName();
+    if (type_name == "PackForward" || type_name == "UnpackForward"
+        || type_name == "PieceSliceForward" || type_name == "InstanceStackForward") {
       CHECK_EQ(
           0, Global<JobDesc>::Get()->other_conf().piece_size() % parallel_desc_ptr->parallel_num());
     }
@@ -214,6 +217,21 @@ void LogicalGraph::LinkUnpackFw2PackFw(
     CHECK(unpack_fw);
     pack_fw->set_related_unpack(unpack_fw);
   });
+}
+
+void LogicalGraph::LinkInstanceStackFw2PieceSliceFw(
+    const HashMap<std::string, std::vector<LogicalNode*>>& op_name2nodes) {
+  ForEachLogicalNode<InstanceStackForwardLogicalNode>(
+      [&](InstanceStackForwardLogicalNode* instance_stack_fw) {
+        auto it = op_name2nodes.find(
+            instance_stack_fw->SoleOp()->op_conf().instance_stack_conf().related_piece_slice());
+        CHECK(it != op_name2nodes.end());
+        CHECK_EQ(1, it->second.size());
+        PieceSliceForwardLogicalNode* piece_slice_fw =
+            dynamic_cast<PieceSliceForwardLogicalNode*>(it->second.front());
+        CHECK_NOTNULL(piece_slice_fw);
+        instance_stack_fw->set_related_piece_slice(piece_slice_fw);
+      });
 }
 
 void LogicalGraph::BuildBwStruct() {

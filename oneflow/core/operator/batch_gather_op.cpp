@@ -31,6 +31,8 @@ void BatchGatherOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> 
   BlobDesc* out = GetBlobDesc4BnInOp("out");
   *out = *in;
   out->mut_shape() = Shape(out_dim_vec);
+  out->set_has_instance_shape_field(in->has_instance_shape_field()
+                                    || indices->has_instance_shape_field());
 }
 
 void BatchGatherOp::GetOpParallelSignatures(

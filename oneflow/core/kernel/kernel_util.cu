@@ -671,6 +671,25 @@ __device__ double gpu_atomic_add(double* address, const double val) {
 }
 
 template<>
+__device__ int8_t gpu_atomic_add(int8_t* address, const int8_t val) {
+  // do not support int8_t for now
+  assert(false);
+  return -1;
+}
+
+template<>
+__device__ int32_t gpu_atomic_add(int32_t* address, const int32_t val) {
+  return atomicAdd(address, val);
+}
+
+template<>
+__device__ int64_t gpu_atomic_add(int64_t* address, const int64_t val) {
+  // do not support int64_t for now
+  assert(false);
+  return -1;
+}
+
+template<>
 __device__ float gpu_atomic_max(float* address, const float val) {
   int* address_as_i = (int*)address;
   int old = *address_as_i;

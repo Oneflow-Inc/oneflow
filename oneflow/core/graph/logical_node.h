@@ -10,6 +10,10 @@
 #include "oneflow/core/graph/unpack_backward_task_node.h"
 #include "oneflow/core/graph/repeat_forward_compute_task_node.h"
 #include "oneflow/core/graph/repeat_backward_compute_task_node.h"
+#include "oneflow/core/graph/piece_slice_forward_compute_task_node.h"
+#include "oneflow/core/graph/piece_slice_backward_compute_task_node.h"
+#include "oneflow/core/graph/instance_stack_forward_compute_task_node.h"
+#include "oneflow/core/graph/instance_stack_backward_compute_task_node.h"
 
 namespace oneflow {
 
@@ -172,6 +176,7 @@ int64_t NewAreaId();
   }
 
 DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(UnpackForward);
+DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(PieceSliceForward);
 
 class PackForwardLogicalNode final : public ForwardLogicalNode {
   LOGICAL_NODE_WITH_NEW_AREA_ID_BOILERPLATE(PackForward)
@@ -184,6 +189,19 @@ class PackForwardLogicalNode final : public ForwardLogicalNode {
   BackwardLogicalNode* NewCorrectBackwardNode() override;
 
   UnpackForwardLogicalNode* related_unpack_;
+};
+
+class InstanceStackForwardLogicalNode final : public ForwardLogicalNode {
+  LOGICAL_NODE_WITH_NEW_AREA_ID_BOILERPLATE(InstanceStackForward)
+
+ public:
+  const PieceSliceForwardLogicalNode* related_piece_slice() const { return related_piece_slice_; }
+  void set_related_piece_slice(PieceSliceForwardLogicalNode* val) { related_piece_slice_ = val; }
+
+ private:
+  BackwardLogicalNode* NewCorrectBackwardNode() override;
+
+  PieceSliceForwardLogicalNode* related_piece_slice_;
 };
 
 class BackwardLogicalNode : public LogicalNode {
@@ -211,6 +229,8 @@ class NormalBackwardLogicalNode final : public BackwardLogicalNode {
   }
 
 DECLARE_DERIVED_BACKWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(UnpackBackward);
+DECLARE_DERIVED_BACKWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(PieceSliceBackward);
+DECLARE_DERIVED_BACKWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(InstanceStackBackward);
 
 #define DECLARE_NAIVE_LOGICAL_NODE(name)  \
   class name final : public LogicalNode { \

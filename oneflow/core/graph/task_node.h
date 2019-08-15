@@ -96,6 +96,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   virtual void InitProducedRegstMemCase(MemoryCase*);
   virtual void PinConsumedRegstMemCase(MemoryCase*);
   void ConsumeRegst(const std::string& name, std::shared_ptr<RegstDesc>);
+  void UnConsumeRegst(const std::string& name, std::shared_ptr<RegstDesc>);
   bool IsAllConsumedRegstLocked();
   ExecGraph& mut_exec_gph() { return exec_gph_; }
   void TryLockConsumedRegst(const std::string& name);
