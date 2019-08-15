@@ -64,6 +64,22 @@ void ConcatKernel<device_type, T>::ForwardDataContent(
 }
 
 template<DeviceType device_type, typename T>
+void ConcatKernel<device_type, T>::BackwardInDiffDim0ValidNum(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  const PbRpf<std::string>& in_diff_bns = this->op_attribute().input_diff_bns();
+  const PbRpf<std::string>& in_bns = this->op_attribute().input_bns();
+  CHECK_EQ(in_diff_bns.size(), in_bns.size());
+  FOR_RANGE(size_t, i, 0, in_diff_bns.size()) {
+    Blob* in_i_diff_blob = BnInOp2Blob(in_diff_bns.Get(i));
+    Blob* in_i_blob = BnInOp2Blob(in_bns.Get(i));
+    if (in_i_diff_blob->has_dim0_valid_num_field()) {
+      CHECK(in_i_blob->has_dim0_valid_num_field());
+      in_i_diff_blob->CopyDim0ValidNumFrom(ctx.device_ctx, BnInOp2Blob(in_bns.Get(i)));
+    }
+  }
+}
+
+template<DeviceType device_type, typename T>
 void ConcatKernel<device_type, T>::BackwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const int32_t axis = this->op_conf().concat_conf().axis();

@@ -37,4 +37,7 @@ struct IdentifyOutsideAnchorsUtil<DeviceType::kCPU, T> final {
   }
 };
 
+ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kIdentifyOutsideAnchorsConf, IdentifyOutsideAnchorsKernel,
+                           FLOATING_DATA_TYPE_SEQ);
+
 }  // namespace oneflow

@@ -86,6 +86,6 @@ struct LocalScatterNdUpdateKernelUtil<DeviceType::kGPU, T, K> {
   template struct LocalScatterNdUpdateKernelUtil<                                          \
       DeviceType::kGPU, OF_PP_PAIR_FIRST(value_type_pair), OF_PP_PAIR_FIRST(indices_type_pair)>;
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_LOCAL_SCATTER_ND_UPDATE_KERNEL_UTIL_ENTRY,
-                                 FLOATING_DATA_TYPE_SEQ, INT_DATA_TYPE_SEQ)
+                                 ARITHMETIC_DATA_TYPE_SEQ, INT_DATA_TYPE_SEQ)
 
 }  // namespace oneflow

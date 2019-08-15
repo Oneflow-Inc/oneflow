@@ -24,10 +24,9 @@ void LocalNonzeroKernel<device_type, T>::ForwardDataContent(
   if (this->op_conf().device_type() == DeviceType::kGPU) {
     Blob* num_nonzero_blob = BnInOp2Blob("num_nonzero");
     Blob* shape_blob = BnInOp2Blob("shape");
-    LocalNonzeroUtil<T>::ForwardGpu(ctx.device_ctx, in_blob, num_nonzero_blob, shape_blob,
-                                    out_blob);
+    GpuNonzero<T>(ctx.device_ctx, in_blob, num_nonzero_blob, shape_blob, out_blob);
   } else if (this->op_conf().device_type() == DeviceType::kCPU) {
-    LocalNonzeroUtil<T>::ForwardCpu(ctx.device_ctx, in_blob, out_blob);
+    CpuNonzero<T>(ctx.device_ctx, in_blob, out_blob);
   } else {
     UNIMPLEMENTED();
   }
@@ -40,10 +39,10 @@ void LocalNonzeroKernel<device_type, T>::ForwardDim0ValidNum(
 }
 
 template<typename T>
-void LocalNonzeroUtil<T>::ForwardCpu(DeviceCtx* ctx, const Blob* in_blob, Blob* out_blob) {
+void CpuNonzero(DeviceCtx* ctx, const Blob* in_blob, Blob* out_blob) {
   int64_t num_nonzero = 0;
   const Shape shape = in_blob->shape();
-  FOR_RANGE(int64_t, i, 0, in_blob->shape().elem_cnt()) {
+  FOR_RANGE(int64_t, i, 0, shape.elem_cnt()) {
     if (in_blob->dptr<T>()[i] != ZeroVal<T>::value) {
       SetIndex(i, shape, out_blob->mut_dptr<int32_t>() + num_nonzero * shape.NumAxes());
       num_nonzero += 1;

@@ -98,6 +98,12 @@ void BroadcastBinaryOp::InferBlobDescs(
     }
     out_blob_desc->mut_shape() = out_shape;
   }
+  if (a_blob_desc->has_dim0_valid_num_field() || b_blob_desc->has_dim0_valid_num_field()) {
+    out_blob_desc->set_has_dim0_valid_num_field(true);
+    out_blob_desc->mut_dim0_inner_shape() = Shape({1, out_blob_desc->shape().At(0)});
+  }
+  out_blob_desc->set_has_instance_shape_field(a_blob_desc->has_instance_shape_field()
+                                              || b_blob_desc->has_instance_shape_field());
 }
 
 void BroadcastBinaryOp::InferBwBufBlobDescs(

@@ -2,7 +2,6 @@
 #define ONEFLOW_CORE_OPERATOR_LOCAL_NONZERO_KERNEL_OP_H_
 
 #include "oneflow/core/kernel/kernel.h"
-#include "oneflow/core/kernel/bbox_util.h"
 
 namespace oneflow {
 
@@ -21,11 +20,11 @@ class LocalNonzeroKernel final : public KernelIf<device_type> {
 };
 
 template<typename T>
-struct LocalNonzeroUtil {
-  static void ForwardCpu(DeviceCtx* ctx, const Blob* in_blob, Blob* out_blob);
-  static void ForwardGpu(DeviceCtx* ctx, const Blob* in_blob, Blob* num_nonzero_blob,
-                         Blob* shape_blob, Blob* out_blob);
-};
+void CpuNonzero(DeviceCtx* ctx, const Blob* in_blob, Blob* out_blob);
+
+template<typename T>
+void GpuNonzero(DeviceCtx* ctx, const Blob* in_blob, Blob* num_nonzero_blob, Blob* shape_blob,
+                Blob* out_blob);
 
 }  // namespace oneflow
 

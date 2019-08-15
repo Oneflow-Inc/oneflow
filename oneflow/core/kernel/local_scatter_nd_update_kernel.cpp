@@ -140,7 +140,7 @@ Kernel* CreateLocalScatterNdUpdateKernel(const KernelConf& kernel_conf) {
                                            OF_PP_PAIR_FIRST(indices_type_pair)>();            \
    }},
       OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(LOCAL_SCATTER_ND_UPDATE_KERNEL_ENTRY, DEVICE_TYPE_SEQ,
-                                       FLOATING_DATA_TYPE_SEQ, INT_DATA_TYPE_SEQ)};
+                                       ARITHMETIC_DATA_TYPE_SEQ, INT_DATA_TYPE_SEQ)};
   return creators.at(GetHashKey(kernel_conf.op_attribute().op_conf().device_type(),
                                 kernel_conf.local_scatter_nd_update_conf().value_type(),
                                 kernel_conf.local_scatter_nd_update_conf().indices_type()))();
@@ -153,6 +153,6 @@ REGISTER_KERNEL_CREATOR(OperatorConf::kLocalScatterNdUpdateConf, CreateLocalScat
 #define MAKE_ENTRY(value_type_pair, indices_type_pair) \
   template struct LocalScatterNdUpdateKernelUtil<      \
       DeviceType::kCPU, OF_PP_PAIR_FIRST(value_type_pair), OF_PP_PAIR_FIRST(indices_type_pair)>;
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_ENTRY, FLOATING_DATA_TYPE_SEQ, INT_DATA_TYPE_SEQ)
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_ENTRY, ARITHMETIC_DATA_TYPE_SEQ, INT_DATA_TYPE_SEQ)
 
 }  // namespace oneflow

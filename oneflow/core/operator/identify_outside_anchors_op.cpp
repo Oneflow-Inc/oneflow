@@ -11,6 +11,10 @@ void IdentifyOutsideAnchorsOp::InitFromOpConf() {
   EnrollOutputBn("out", false);
 }
 
+const PbMessage& IdentifyOutsideAnchorsOp::GetCustomizedConf() const {
+  return this->op_conf().identify_outside_anchors_conf();
+}
+
 void IdentifyOutsideAnchorsOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
@@ -24,7 +28,7 @@ void IdentifyOutsideAnchorsOp::InferBlobDescs(
   CHECK_EQ(image_size_blob_desc->shape().At(0), 2);
   CHECK_EQ(image_size_blob_desc->data_type(), DataType::kInt32);
 
-  // output: index (R, )
+  // output: out (R, )
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   out_blob_desc->set_data_type(DataType::kInt8);
   out_blob_desc->mut_shape() = Shape({anchors_blob_desc->shape().At(0)});
@@ -33,5 +37,13 @@ void IdentifyOutsideAnchorsOp::InferBlobDescs(
     out_blob_desc->set_has_dim0_valid_num_field(anchors_blob_desc->has_dim0_inner_shape());
   }
 }
+
+void IdentifyOutsideAnchorsOp::VirtualGenKernelConf(
+    std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*,
+    KernelConf* kernel_conf, const OpContext* op_ctx) const {
+  kernel_conf->set_data_type(GetBlobDesc4BnInOp("anchors")->data_type());
+}
+
+REGISTER_OP(OperatorConf::kIdentifyOutsideAnchorsConf, IdentifyOutsideAnchorsOp);
 
 }  // namespace oneflow

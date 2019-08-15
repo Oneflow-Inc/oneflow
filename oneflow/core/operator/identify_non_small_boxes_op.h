@@ -1,15 +1,15 @@
-#ifndef ONEFLOW_CORE_OPERATOR_LOCAL_NONZERO_OP_H_
-#define ONEFLOW_CORE_OPERATOR_LOCAL_NONZERO_OP_H_
+#ifndef ONEFLOW_CORE_OPERATOR_IDENTIFY_NON_SMALL_BOXES_OP_H_
+#define ONEFLOW_CORE_OPERATOR_IDENTIFY_NON_SMALL_BOXES_OP_H_
 
 #include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
 
-class LocalNonzeroOp final : public Operator {
+class IdentifyNonSmallBoxesOp final : public Operator {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(LocalNonzeroOp);
-  LocalNonzeroOp() = default;
-  ~LocalNonzeroOp() = default;
+  OF_DISALLOW_COPY_AND_MOVE(IdentifyNonSmallBoxesOp);
+  IdentifyNonSmallBoxesOp() = default;
+  ~IdentifyNonSmallBoxesOp() = default;
 
   void InitFromOpConf() override;
   const PbMessage& GetCustomizedConf() const override;
@@ -25,4 +25,4 @@ class LocalNonzeroOp final : public Operator {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_OPERATOR_LOCAL_NONZERO_OP_H_
+#endif  // ONEFLOW_CORE_OPERATOR_IDENTIFY_NON_SMALL_BOXES_OP_H_
