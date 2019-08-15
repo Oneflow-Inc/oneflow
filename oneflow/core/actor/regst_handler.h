@@ -34,7 +34,8 @@ using ProducedRegstType = HashMap<int64_t, std::vector<std::unique_ptr<Regst>>>;
 
 class RegstHandlerIf {
  public:
-  virtual void Init(const RegstHandlerProto&, const ProducedRegstType&, MsgDeliveryCtx*) = 0;
+  virtual void Init(const RegstHandlerProto&, const ProducedRegstType&, MsgDeliveryCtx*,
+                    std::shared_ptr<void>) = 0;
   virtual std::string type() = 0;
 
   virtual Regst* GetRegstByRegstDescId(int64_t) const = 0;
@@ -51,7 +52,8 @@ class RegstHandlerIf {
 
 class NormalRegstHandler : public RegstHandlerIf {
  public:
-  void Init(const RegstHandlerProto&, const ProducedRegstType&, MsgDeliveryCtx*) override final;
+  void Init(const RegstHandlerProto&, const ProducedRegstType&, MsgDeliveryCtx*,
+            std::shared_ptr<void>) override final;
   bool NoLongerConsumeRegst() const override final {
     return (eord_cnt_ == consumed_rs_.total_regst_desc_cnt());
   }
@@ -71,6 +73,7 @@ class NormalRegstHandler : public RegstHandlerIf {
   MsgDeliveryCtx* msg_delivery_ctx() { return msg_delivery_ctx_.get(); }
   RegstSlot* mut_consumed_rs() { return &consumed_rs_; }
   RegstSlot* mut_produced_rs() { return &produced_rs_; }
+  void* mut_kernel_other() { return kernel_other_.get(); }
 
   int64_t ReadingCnt4ProducedRegst(Regst* regst) const {
     return produced_regst2reading_cnt_.at(regst);
@@ -96,6 +99,7 @@ class NormalRegstHandler : public RegstHandlerIf {
   }
 
   std::unique_ptr<MsgDeliveryCtx> msg_delivery_ctx_;
+  std::shared_ptr<void> kernel_other_;
 
   RegstSlot consumed_rs_;
   RegstSlot produced_rs_;

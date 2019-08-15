@@ -73,6 +73,7 @@ void OpActor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
   actor_id_ = task_proto.task_id();
   act_id_ = -1;
   InitDeviceCtx(thread_ctx);
+  kernel_ctx_.reset(new NewKernelCtx);
   kernel_ctx_->device_ctx = device_ctx_.get();
   if (task_proto.has_parallel_ctx()) {
     parallel_ctx_.reset(new ParallelContext(task_proto.parallel_ctx()));
@@ -125,7 +126,7 @@ void OpActor::InitRegstHandlersFromProto(const TaskProto& task_proto) {
     CHECK(IsKeyFound(handlers_, type))
         << "OpActor does not register RegstHandler with type = " << type;
     handlers_.at(type)->Init(handler_proto, produced_regsts_,
-                             new MsgDeliveryCtx(actor_id_, device_ctx_.get()));
+                             new MsgDeliveryCtx(actor_id_, device_ctx_.get()), kernel_ctx_->other);
 
     ProcessRegstDescId(handler_proto, true);
     ProcessRegstDescId(handler_proto, false);
@@ -206,9 +207,10 @@ void OpActor::InsertRegstHandler(RegstHandlerIf* handler) {
   CHECK(handlers_.emplace(handler->type(), std::unique_ptr<RegstHandlerIf>(handler)).second);
 }
 
-OpActor* CreateOpActor(const TaskType&) {
-  UNIMPLEMENTED();
-  return nullptr;
+std::unique_ptr<NewActor> NewOpActor(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
+  OpActor* rptr = NewObj<OpActor>(task_proto.task_type());
+  rptr->Init(task_proto, thread_ctx);
+  return std::unique_ptr<NewActor>(dynamic_cast<NewActor*>(rptr));
 }
 
 }  // namespace actor

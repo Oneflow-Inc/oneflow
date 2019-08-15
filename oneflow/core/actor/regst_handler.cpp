@@ -6,7 +6,8 @@ namespace oneflow {
 namespace actor {
 
 void NormalRegstHandler::Init(const RegstHandlerProto& handler_proto,
-                              const ProducedRegstType& produced_regsts, MsgDeliveryCtx* ctx) {
+                              const ProducedRegstType& produced_regsts, MsgDeliveryCtx* ctx,
+                              std::shared_ptr<void> other) {
   CHECK(type() == handler_proto.type());
   for (int64_t consumed_id : handler_proto.consumed_regst_desc_ids().regst_desc_id()) {
     InsertNewRegstDescId(false, consumed_id);
@@ -27,6 +28,7 @@ void NormalRegstHandler::Init(const RegstHandlerProto& handler_proto,
   total_reading_cnt_ = 0;
   eord_cnt_ = 0;
   msg_delivery_ctx_.reset(ctx);
+  kernel_other_ = other;
   DerivedInit(handler_proto);
 }
 

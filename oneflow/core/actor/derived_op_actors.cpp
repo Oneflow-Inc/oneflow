@@ -14,6 +14,18 @@ class GeneralOpActor final : public OpActor {
   void InitOtherVal() override {}
 };
 
+class InplaceOpActor final : public OpActor {
+ public:
+  void InitMsgHandler() override {
+    set_initial_msg_handler(std::bind(&OpActor::HandlerNormal, this, std::placeholders::_1));
+  }
+  void VirtualSetRegstHandlers() override {
+    InsertRegstHandler(new NaiveRegstHandler);
+    InsertRegstHandler(new InplaceRegstHandler);
+  }
+  void InitOtherVal() override {}
+};
+
 }  // namespace actor
 
 }  // namespace oneflow

@@ -6,6 +6,7 @@
 #include "oneflow/core/common/channel.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job/task.pb.h"
+#include "oneflow/core/actor/op_actor.h"
 
 namespace oneflow {
 
@@ -35,6 +36,7 @@ class Thread {
   std::thread actor_thread_;
   Channel<ActorMsg> msg_channel_;
   HashMap<int64_t, std::unique_ptr<Actor>> id2actor_ptr_;
+  HashMap<int64_t, std::unique_ptr<actor::NewActor>> id2new_actor_ptr_;
 
   int64_t thrd_id_;
 };

@@ -40,6 +40,7 @@ class OpActor : public NewActor {
   virtual ~OpActor() = default;
 
   void set_initial_msg_handler(MsgHandler handler) { initial_msg_handler_ = handler; }
+  void set_other_val(std::shared_ptr<void> other_val) { kernel_ctx_->other = other_val; }
   void InsertRegstHandler(RegstHandlerIf*);
 
  private:
@@ -69,7 +70,9 @@ class OpActor : public NewActor {
   HashMap<int64_t, RegstHandlerIf*> regst_desc_id2handler_;
 };
 
-OpActor* CreateOpActor(const TaskType&);
+std::unique_ptr<NewActor> NewOpActor(const TaskProto&, const ThreadCtx&);
+
+#define REGISTER_NEW_ACTOR(task_type, ActorType) REGISTER_CLASS(task_type, NewActor, ActorType)
 
 }  // namespace actor
 
