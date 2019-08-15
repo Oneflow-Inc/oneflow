@@ -45,6 +45,8 @@ void AdamMdUpdateKernel<device_type, T>::UpdateModel(
     KernelUtil<device_type, T>::Scal(ctx, 1, static_cast<T>(adam_conf.beta2()),
                                      beta2_t_blob->mut_dptr<T>(), 1);
   }
+  KernelUtil<device_type, T>::Div(ctx, model_blob->shape().elem_cnt(),
+                                  BnInOp2Blob("model_diff")->mut_dptr<T>(), batch_instance_num_ptr);
   AdamMdUpdateKernelUtil<device_type, T>::UpdateModel(
       ctx, model_blob->shape().elem_cnt(), learning_rate, l1, l2, static_cast<T>(adam_conf.beta1()),
       static_cast<T>(adam_conf.beta2()), static_cast<T>(adam_conf.epsilon()),
