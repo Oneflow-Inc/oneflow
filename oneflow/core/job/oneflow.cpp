@@ -26,6 +26,7 @@
 #include "oneflow/core/job/model_init_job.h"
 #include "oneflow/core/job/inter_job_mem_sharing_util.h"
 #include "oneflow/core/job/plan_util.h"
+#include "oneflow/core/operator/interface_op_util.h"
 
 DECLARE_bool(grpc_use_no_signal);
 
@@ -613,26 +614,6 @@ void FinishGlobalCriticalSectionDesc(const std::vector<Plan>& plans) {
   critical_section_desc->Done();
 }
 
-void InitBlobConf(InterfaceBlobConf* blob_conf, const ParallelBlobConf& parallel_blob_conf) {
-  BlobDesc blob_desc(parallel_blob_conf.logical_blob_desc_conf());
-  blob_desc.shape().ToProto(blob_conf->mutable_shape());
-  blob_conf->set_data_type(blob_desc.data_type());
-  if (blob_desc.has_dim0_inner_shape()) {
-    blob_desc.dim0_inner_shape().ToProto(blob_conf->mutable_dim0_inner_shape());
-  }
-  blob_conf->set_has_dim0_valid_num(blob_desc.has_dim0_valid_num_field());
-  blob_conf->set_has_dim1_valid_num(blob_desc.has_dim1_valid_num_field());
-  blob_conf->set_has_dim2_valid_num(blob_desc.has_dim2_valid_num_field());
-  if (parallel_blob_conf.sbp_conf().has_split_parallel()) {
-    blob_conf->set_split_axis(parallel_blob_conf.sbp_conf().split_parallel().axis());
-  } else if (parallel_blob_conf.sbp_conf().has_broadcast_parallel()) {
-    blob_conf->set_broadcast(true);
-  } else {
-    UNIMPLEMENTED();
-  }
-  blob_conf->set_has_batch_dim(parallel_blob_conf.has_batch_dim());
-}
-
 void MakePullJob(const std::string& job_name, const std::string& op_name,
                  const ParallelBlobConf& parallel_blob_conf, Job* job) {
   auto* op_name2job_name =
@@ -647,7 +628,7 @@ void MakePullJob(const std::string& job_name, const std::string& op_name,
     auto* input_conf = input_op_conf.mutable_input_conf();
     input_conf->set_out("out");
     auto* blob_conf = input_conf->mutable_blob_conf();
-    InitBlobConf(blob_conf, parallel_blob_conf);
+    InterfaceOpUtil::InitBlobConf(blob_conf, parallel_blob_conf);
     data_type = blob_conf->data_type();
     job_builder.AddOps(parallel_blob_conf.parallel_conf(), {input_op_conf});
   }
@@ -687,7 +668,7 @@ void MakePushJob(const std::string& job_name, const std::string& op_name,
     foreign_input_conf->set_out("out");
     foreign_input_conf->set_ofblob_buffer_name(GetForeignInputBufferName(job_name));
     auto* blob_conf = foreign_input_conf->mutable_blob_conf();
-    InitBlobConf(blob_conf, parallel_blob_conf);
+    InterfaceOpUtil::InitBlobConf(blob_conf, parallel_blob_conf);
     data_type = blob_conf->data_type();
     ParallelConf parallel_conf;
     parallel_conf.set_policy(kDataParallel);
@@ -700,6 +681,7 @@ void MakePushJob(const std::string& job_name, const std::string& op_name,
     auto* output_conf = output_op_conf.mutable_output_conf();
     output_conf->set_in(foreign_input_op_conf.name() + "/out");
     output_conf->set_out("out");
+    InterfaceOpUtil::InitBlobConf(output_conf->mutable_blob_conf(), parallel_blob_conf);
     job_builder.AddOps(parallel_blob_conf.parallel_conf(), {output_op_conf});
   }
   auto* job_conf = job->mutable_job_conf();
@@ -752,7 +734,7 @@ void MakeArgPassJob(const std::string& job_name, const ParallelBlobConf& paralle
     auto* input_conf = input_op_confs.at(i).mutable_input_conf();
     input_conf->set_out("out");
     auto* blob_conf = input_conf->mutable_blob_conf();
-    InitBlobConf(blob_conf, parallel_blob_conf);
+    InterfaceOpUtil::InitBlobConf(blob_conf, parallel_blob_conf);
   }
   job_builder.AddOps(parallel_blob_conf.parallel_conf(), input_op_confs);
   OperatorConf switch_output_op_conf;
@@ -764,6 +746,7 @@ void MakeArgPassJob(const std::string& job_name, const ParallelBlobConf& paralle
       switch_output_conf->add_in(op_conf.name() + "/out");
     }
     switch_output_conf->set_out("out");
+    InterfaceOpUtil::InitBlobConf(switch_output_conf->mutable_blob_conf(), parallel_blob_conf);
     job_builder.AddOps(parallel_blob_conf.parallel_conf(), {switch_output_op_conf});
   }
   auto* job_conf = job->mutable_job_conf();
@@ -801,7 +784,7 @@ void MakeModelSaveJob(const std::string& job_name,
       auto* input_conf = input_op_conf.mutable_input_conf();
       input_conf->set_out("out");
       auto* blob_conf = input_conf->mutable_blob_conf();
-      InitBlobConf(blob_conf, parallel_blob_conf);
+      InterfaceOpUtil::InitBlobConf(blob_conf, parallel_blob_conf);
       CHECK(blob_conf->has_data_type());
       job_builder.AddOps(parallel_blob_conf.parallel_conf(), {input_op_conf});
     }

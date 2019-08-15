@@ -777,12 +777,14 @@ message ForeignInputOpConf {
 message OutputOpConf {
   required string in = 1;
   required string out = 2;
+  optional InterfaceBlobConf blob_conf = 3;
 }
 
 message SwitchOutputOpConf {
   repeated string in = 1;
   required string in_index = 2;
   required string out = 3;
+  required InterfaceBlobConf blob_conf = 4;
 }
 
 message ForeignOutputOpConf {

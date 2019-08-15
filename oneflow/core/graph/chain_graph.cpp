@@ -200,12 +200,14 @@ void ChainGraph::GroupTaskNodesByMachineAndCollectAncestors(
     (*machine2tasks)[node->machine_id()].emplace_back(node);
     CHECK(node2ancestors->emplace(node, HashSet<TaskNode*>()).second);
     // to reduce memory consumption
-    if (node->AreaId4ChainMerge() == kMdUpdtArea) { return; }
+    if (node->GetTaskType() == TaskType::kTick) { return; }
     node->ForEachNodeOnInEdge([&](TaskNode* in_node) {
+      if (in_node->GetTaskType() == TaskType::kTick) { return; }
       if (IsBackEdge(in_node, node)) { return; }
       if (IsNonSoleKeepHeaderOnlyEdge(in_node, node)) { return; }
       if (dynamic_cast<CompTaskNode*>(in_node) != nullptr
-          && dynamic_cast<CompTaskNode*>(node) != nullptr && IsAllProducedBlobHasNoBatchDim(in_node)
+          && dynamic_cast<CompTaskNode*>(node) != nullptr &&
+          IsAllProducedBlobHasNoBatchDim(in_node)
           && !IsAllConsumedBlobHasNoBatchDim(node)) {
         return;
       }
@@ -345,6 +347,8 @@ void ChainGraph::InitChainEdge(const std::vector<std::vector<TaskNode*>>& chains
 }
 
 void ChainGraph::SetChainId4ChainNode() {
+  auto scc = FindFirstNontrivialSCC();
+  CHECK_ISNULL(scc.get());
   TopoForEachNode([&](ChainNode* chain_node) {
     ordered_chain_nodes_.emplace_back(chain_node);
     int64_t stream_id = chain_node->TaskNodes().front()->GlobalWorkStreamId();

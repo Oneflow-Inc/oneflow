@@ -887,10 +887,6 @@ void TaskGraph::ConnectWithCopyCommNetIfNeed(TaskNode* src, TaskNode* dst) {
   }
 }
 
-bool IsBackEdge(TaskNode* src, TaskNode* dst) {
-  return src->GetTaskType() == TaskType::kNormalMdUpdt
-         && (dst->GetTaskType() == TaskType::kNormalForward
-             || dst->GetTaskType() == TaskType::kNormalBackward);
-}
+bool IsBackEdge(TaskNode* src, TaskNode* dst) { return false; }
 
 }  // namespace oneflow
