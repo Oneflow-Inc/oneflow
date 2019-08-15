@@ -22,7 +22,13 @@ class SplitLikeOp final : public Operator {
   void InferHasBatchDim(
       const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
       std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const override {
-    NaiveInferHasBatchDim(HasBatchDim4BnInOp);
+    const SplitLikeOpConf& conf = op_conf().split_like_conf();
+    int32_t split_axis = conf.axis();
+    std::vector<int64_t> in_dim_vec = LogicalBlobDesc4Ibn("in").shape().dim_vec();
+    if (split_axis < 0) { split_axis += in_dim_vec.size(); }
+    bool has_batch_dim = true;
+    if (split_axis == 0) { has_batch_dim = false; }
+    for (const auto& obn : output_bns()) { *HasBatchDim4BnInOp(obn) = has_batch_dim; }
   }
 
   void GetSbpSignatures(

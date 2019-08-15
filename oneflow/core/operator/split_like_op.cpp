@@ -6,7 +6,6 @@ namespace oneflow {
 void SplitLikeOp::InitFromOpConf() {
   CHECK(op_conf().has_split_like_conf());
   EnrollInputBn("in");
-  EnrollRepeatedInputBn("like");
   FOR_RANGE(int32_t, i, 0, op_conf().split_like_conf().like_size()) {
     EnrollInputBn(GenRepeatedBn("like", i), false)->set_use_header_only(true);
   }
@@ -24,16 +23,17 @@ void SplitLikeOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Ge
   if (split_axis < 0) { split_axis += in_dim_vec.size(); }
   CHECK_GE(split_axis, 0);
   int64_t dim_sum = 0;
-  for (size_t i = 1; i < op_conf().split_like_conf().like_size(); ++i) {
-    const BlobDesc* like_i_blob_desc = GetBlobDesc4BnInOp(input_bns().Get(i));
+  for (size_t i = 0; i < op_conf().split_like_conf().like_size(); ++i) {
+    const BlobDesc* like_i_blob_desc = GetBlobDesc4BnInOp(GenRepeatedBn("like", i));
     for (int64_t j = 0; j < like_i_blob_desc->shape().NumAxes(); ++j) {
-      if (j == split_axis) {
-        dim_sum += like_i_blob_desc->shape().At(j);
-      } else {
+      if (j != split_axis) {
         CHECK_EQ(like_0_blob_desc->shape().dim_vec().at(j), like_i_blob_desc->shape().At(j));
       }
     }
-    *GetBlobDesc4BnInOp(output_bns().Get(i)) = *GetBlobDesc4BnInOp(GenRepeatedBn("like", i));
+    dim_sum += like_i_blob_desc->shape().At(split_axis);
+    BlobDesc* output_i_blob_desc = GetBlobDesc4BnInOp(output_bns().Get(i));
+    output_i_blob_desc->set_data_type(like_i_blob_desc->data_type());
+    output_i_blob_desc->mut_shape() = like_i_blob_desc->shape();
   }
   CHECK_EQ(dim_sum, in_dim_vec.at(split_axis));
 }

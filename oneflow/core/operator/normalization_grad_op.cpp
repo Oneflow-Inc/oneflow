@@ -85,6 +85,7 @@ void NormalizationGradOp::InferBlobDescs(
   };
   CheckParamBlobDesc("mean");
   CheckParamBlobDesc("inv_variance");
+  if (!conf.has_gamma()) { SetParamBlobDesc("gamma"); }
   CheckParamBlobDesc("gamma");
   SetParamBlobDesc("gamma_diff");
   SetParamBlobDesc("beta_diff");
