@@ -1,3 +1,5 @@
+#include <mutex>
+
 #include "tensorflow/compiler/xla/client/client_library.h"
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/xla/of2xla/xla_utility.h"
@@ -32,9 +34,12 @@ xla::LocalClient* XlaLaunchResourceMgr::GetOrCreateLocalClient(
 DeviceBufferAllocator *XlaLaunchResourceMgr::GetOrCreateBufferAllocator(
     const se::Platform *platform, se::Stream *stream, int device_ordinal) {
   static std::unordered_map<uint64_t, DeviceBufferAllocator *> allocators;
-  uint64_t stream_id = reinterpret_cast<uint64_t>(stream);
+  static std::mutex mutex;
 
+  uint64_t stream_id = reinterpret_cast<uint64_t>(stream);
   if (allocators.count(stream_id) == 0) {
+    std::lock_guard<std::mutex> lock(mutex);
+
     std::shared_ptr<DeviceMemoryPool> mem_pool =
         DeviceMemoryPool::NewMemoryPool(platform, stream, device_ordinal);
     allocators.emplace(stream_id, new DeviceBufferAllocator(mem_pool));
@@ -54,7 +59,6 @@ xla::LocalClient *XlaLaunchContext::NewLocalClient(
     const se::Platform *platform, int num_threads) {
   return XlaLaunchResourceMgr::GetOrCreateLocalClient(platform, num_threads);
 }
-
 
 XlaAllocator *XlaLaunchContext::NewAllocator(const se::Platform *platform,
                                              int device_ordinal) {
