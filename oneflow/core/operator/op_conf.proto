@@ -1677,6 +1677,11 @@ message NonMaximumSupressionOpConf {
   required int32 max_boxes = 5;
 }
 
+message ExtractPieceSliceIdOpConf {
+  repeated string in = 1;
+  repeated string out = 2;
+}
+
 message OperatorConf {
   required string name = 1;
   optional string model_load_dir = 2;
@@ -1851,6 +1856,7 @@ message OperatorConf {
     ClipBoxesToImageOpConf clip_boxes_to_image_conf = 612;
     IdentifyNonSmallBoxesOpConf identify_non_small_boxes_conf= 613;
     NonMaximumSupressionOpConf non_maximum_supression_conf = 614;
+    ExtractPieceSliceIdOpConf extract_piece_slice_id_conf = 615;
   }
 }
 
