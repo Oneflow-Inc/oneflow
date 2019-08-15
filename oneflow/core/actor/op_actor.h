@@ -40,6 +40,7 @@ class OpActor : public NewActor {
   virtual ~OpActor() = default;
 
   void set_initial_msg_handler(MsgHandler handler) { initial_msg_handler_ = handler; }
+  void InsertRegstHandler(RegstHandlerIf*);
 
  private:
   struct ExecKernel {
@@ -47,9 +48,11 @@ class OpActor : public NewActor {
     HashMap<std::string, int64_t> bn_in_op2regst_desc_id;
   };
   void InitDeviceCtx(const ThreadCtx&);
-  void InitRegstHandlers(const TaskProto&);
+  void InitRegstHandlersFromProto(const TaskProto&);
+  void SetRegstHandlers();
+
   virtual void InitMsgHandler() = 0;
-  virtual void InitRegstHandlers() = 0;
+  virtual void VirtualSetRegstHandlers() = 0;
   virtual void InitOtherVal() = 0;
 
   int64_t actor_id_;

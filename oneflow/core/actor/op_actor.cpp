@@ -98,9 +98,16 @@ void OpActor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
       regst_desc_id_vec.push_back(regst_desc_id);
     }
   }
+  SetRegstHandlers();
+  InitRegstHandlersFromProto(task_proto);
 }
 
-void OpActor::InitRegstHandlers(const TaskProto& task_proto) {
+void OpActor::SetRegstHandlers() {
+  InsertRegstHandler(new CtrlRegstHandler);
+  VirtualSetRegstHandlers();
+}
+
+void OpActor::InitRegstHandlersFromProto(const TaskProto& task_proto) {
   HashSet<int64_t> consumed_ids;
   HashSet<int64_t> produced_ids;
   auto ProcessRegstDescId = [&](const RegstHandlerProto& handler_proto, bool is_consumed) {
@@ -193,6 +200,10 @@ bool OpActor::NoLongerConsumedByOthers() const {
     if (pair.second->NoLongerConsumedByOthers() == false) { return false; }
   }
   return true;
+}
+
+void OpActor::InsertRegstHandler(RegstHandlerIf* handler) {
+  CHECK(handlers_.emplace(handler->type(), std::unique_ptr<RegstHandlerIf>(handler)).second);
 }
 
 OpActor* CreateOpActor(const TaskType&) {
