@@ -1,11 +1,13 @@
 #ifndef ONEFLOW_CORE_ACTOR_NEW_ACTOR_H_
 #define ONEFLOW_CORE_ACTOR_NEW_ACTOR_H_
 
-#include "oneflow/core/actor/op_actor_context.h"
+#include "oneflow/core/common/util.h"
 
 namespace oneflow {
 
 namespace actor {
+
+using MsgHandler = std::function<int(const ActorMsg&)>;
 
 class NewActor {
  public:
@@ -24,27 +26,6 @@ class NewActor {
 
  private:
   MsgHandler msg_handler_;
-};
-
-class OpActor final : public NewActor {
- public:
-  static int HandlerNormal(OpActor*, const ActorMsg&);
-  static int HandlerZombie(OpActor*, const ActorMsg&);
-
-  OpActor() = default;
-  ~OpActor() = default;
-  OF_DISALLOW_COPY_AND_MOVE(OpActor);
-
-  void Init(const TaskProto& task, const ThreadCtx& thread_ctx) override {
-    op_actor_ctx_.reset(CreateOpActorCtx(task.task_type()));
-    op_actor_ctx_->Init(task, thread_ctx);
-    set_msg_handler(op_actor_ctx_->initial_msg_handler());
-  }
-
-  OpActorCtx* op_actor_ctx() { return op_actor_ctx_.get(); }
-
- private:
-  std::unique_ptr<OpActorCtx> op_actor_ctx_;
 };
 
 }  // namespace actor

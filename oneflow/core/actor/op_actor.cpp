@@ -1,20 +1,52 @@
-#include "oneflow/core/actor/op_actor_context.h"
+#include "oneflow/core/actor/op_actor.h"
 #include "oneflow/core/actor/regst_handler.h"
 
 namespace oneflow {
 
 namespace actor {
 
-OpActorCtx::OpActorCtx(MsgHandler msg_handler, const std::vector<RegstHandlerIf*>& regst_handlers,
-                       const std::shared_ptr<void>& other_ptr) {
-  initial_msg_handler_ = msg_handler;
-  for (RegstHandlerIf* regst_handler : regst_handlers) {
-    handlers_.emplace(regst_handler->type(), std::unique_ptr<RegstHandlerIf>(regst_handler));
+namespace {
+
+void UpdateCtxWithMsg(OpActor* actor, const ActorMsg& msg) {
+  if (msg.msg_type() == ActorMsgType::kRegstMsg) {
+    actor->UpdateWithRegstMsg(msg);
+  } else if (msg.msg_type() == ActorMsgType::kEordMsg) {
+    actor->UpdateWithEordMsg(msg);
+  } else if (msg.msg_type() == ActorMsgType::kCmdMsg) {
+    actor->UpdateWithCmdMsg(msg);
+  } else {
+    LOG(FATAL) << "ActorMsgType error";
   }
-  kernel_ctx_->other = other_ptr;
 }
 
-void OpActorCtx::InitDeviceCtx(const ThreadCtx& thread_ctx) {
+void ActUntilFail(OpActor* actor) {
+  while (actor->IsReady()) {
+    actor->Act();
+    actor->HandleRegstMsgAfterAct();
+  }
+}
+
+}  // namespace
+
+int OpActor::HandlerNormal(OpActor* actor, const ActorMsg& msg) {
+  UpdateCtxWithMsg(actor, msg);
+  ActUntilFail(actor);
+  if (actor->NoLongerConsumeRegst()) {
+    actor->set_msg_handler(std::bind(&OpActor::HandlerZombie, actor, std::placeholders::_1));
+  }
+  return 0;
+}
+
+int OpActor::HandlerZombie(OpActor* actor, const ActorMsg& msg) {
+  actor->UpdateWithProducedRegstMsg(msg);
+  if (actor->NoLongerConsumedByOthers()) {
+    actor->set_msg_handler(MsgHandler());
+    return 1;
+  }
+  return 0;
+}
+
+void OpActor::InitDeviceCtx(const ThreadCtx& thread_ctx) {
   int64_t local_work_stream_id = Global<IDMgr>::Get()->LocalWorkStreamId4ActorId(actor_id_);
   switch (GetDeviceType()) {
     case DeviceType::kCPU: {
@@ -33,11 +65,11 @@ void OpActorCtx::InitDeviceCtx(const ThreadCtx& thread_ctx) {
   }
 }
 
-DeviceType OpActorCtx::GetDeviceType() const {
+DeviceType OpActor::GetDeviceType() const {
   return Global<IDMgr>::Get()->GetDeviceTypeFromActorId(actor_id_);
 }
 
-void OpActorCtx::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
+void OpActor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
   actor_id_ = task_proto.task_id();
   act_id_ = -1;
   InitDeviceCtx(thread_ctx);
@@ -68,7 +100,7 @@ void OpActorCtx::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) 
   }
 }
 
-void OpActorCtx::InitRegstHandlers(const TaskProto& task_proto) {
+void OpActor::InitRegstHandlers(const TaskProto& task_proto) {
   HashSet<int64_t> consumed_ids;
   HashSet<int64_t> produced_ids;
   auto ProcessRegstDescId = [&](const RegstHandlerProto& handler_proto, bool is_consumed) {
@@ -84,7 +116,7 @@ void OpActorCtx::InitRegstHandlers(const TaskProto& task_proto) {
   for (const RegstHandlerProto& handler_proto : task_proto.regst_handlers()) {
     const std::string& type = handler_proto.type();
     CHECK(IsKeyFound(handlers_, type))
-        << "OpActorCtx does not register RegstHandler with type = " << type;
+        << "OpActor does not register RegstHandler with type = " << type;
     handlers_.at(type)->Init(handler_proto, produced_regsts_,
                              new MsgDeliveryCtx(actor_id_, device_ctx_.get()));
 
@@ -108,31 +140,29 @@ void OpActorCtx::InitRegstHandlers(const TaskProto& task_proto) {
   CHECK_EQ(consumed_cnt, consumed_ids.size());
 }
 
-void OpActorCtx::UpdateWithRegstMsg(const ActorMsg& msg) {
+void OpActor::UpdateWithRegstMsg(const ActorMsg& msg) {
   regst_desc_id2handler_.at(msg.regst()->regst_desc_id())->UpdateWithRegstMsg(msg);
 }
 
-void OpActorCtx::UpdateWithProducedRegstMsg(const ActorMsg& msg) {
+void OpActor::UpdateWithProducedRegstMsg(const ActorMsg& msg) {
   CHECK(IsKeyFound(produced_regsts_, msg.regst()->regst_desc_id()));
   UpdateWithRegstMsg(msg);
 }
 
-void OpActorCtx::UpdateWithEordMsg(const ActorMsg& msg) {
+void OpActor::UpdateWithEordMsg(const ActorMsg& msg) {
   regst_desc_id2handler_.at(msg.regst()->regst_desc_id())->UpdateWithEordMsg(msg);
 }
 
-void OpActorCtx::UpdateWithCmdMsg(const ActorMsg& msg) {
-  CHECK_EQ(msg.actor_cmd(), ActorCmd::kStart);
-}
+void OpActor::UpdateWithCmdMsg(const ActorMsg& msg) { CHECK_EQ(msg.actor_cmd(), ActorCmd::kStart); }
 
-bool OpActorCtx::IsReady() const {
+bool OpActor::IsReady() const {
   for (const auto& pair : handlers_) {
     if (pair.second->IsReady() == false) { return false; }
   }
   return true;
 }
 
-void OpActorCtx::Act() {
+void OpActor::Act() {
   for (const ExecKernel& ek : exec_kernel_vec_) {
     // TODO(niuchong): BnInOp2Blob return nullptr or failed?
     ek.kernel->Launch(*kernel_ctx_, [&](const std::string& bn_in_op) -> Blob* {
@@ -145,27 +175,27 @@ void OpActorCtx::Act() {
   }
 }
 
-void OpActorCtx::HandleRegstMsgAfterAct() {
+void OpActor::HandleRegstMsgAfterAct() {
   for (auto& pair : handlers_) { pair.second->HandleRegstMsgAfterAct(); }
 }
 
-bool OpActorCtx::NoLongerConsumeRegst() const {
+bool OpActor::NoLongerConsumeRegst() const {
   for (const auto& pair : handlers_) {
     if (pair.second->NoLongerConsumeRegst() == false) { return false; }
   }
   return true;
 }
 
-MsgHandler OpActorCtx::initial_msg_handler() const { return initial_msg_handler_; }
+MsgHandler OpActor::initial_msg_handler() const { return initial_msg_handler_; }
 
-bool OpActorCtx::NoLongerConsumedByOthers() const {
+bool OpActor::NoLongerConsumedByOthers() const {
   for (const auto& pair : handlers_) {
     if (pair.second->NoLongerConsumedByOthers() == false) { return false; }
   }
   return true;
 }
 
-OpActorCtx* CreateOpActorCtx(const TaskType&) {
+OpActor* CreateOpActor(const TaskType&) {
   UNIMPLEMENTED();
   return nullptr;
 }

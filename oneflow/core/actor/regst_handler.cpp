@@ -1,5 +1,5 @@
 #include "oneflow/core/actor/regst_handler.h"
-#include "oneflow/core/actor/op_actor_context.h"
+#include "oneflow/core/actor/op_actor.h"
 
 namespace oneflow {
 
