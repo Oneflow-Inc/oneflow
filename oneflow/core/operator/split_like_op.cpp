@@ -23,9 +23,9 @@ void SplitLikeOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Ge
   if (split_axis < 0) { split_axis += in_dim_vec.size(); }
   CHECK_GE(split_axis, 0);
   int64_t dim_sum = 0;
-  FOR_RANGE(int32_t, i, 0, op_conf().split_like_conf().like_size()){
+  FOR_RANGE(int32_t, i, 0, op_conf().split_like_conf().like_size()) {
     const BlobDesc* like_i_blob_desc = GetBlobDesc4BnInOp(GenRepeatedBn("like", i));
-    FOR_RANGE(int64_t, j, 0, like_i_blob_desc->shape().NumAxes()){
+    FOR_RANGE(int64_t, j, 0, like_i_blob_desc->shape().NumAxes()) {
       if (j != split_axis) {
         CHECK_EQ(like_0_blob_desc->shape().dim_vec().at(j), like_i_blob_desc->shape().At(j));
       }
@@ -44,7 +44,7 @@ void SplitLikeOp::GetSbpSignatures(
   const SplitLikeOpConf& conf = op_conf().split_like_conf();
   const int axis = conf.axis();
   const int num_axes = LogicalBlobDesc4Ibn("in").shape().NumAxes();
-  FOR_RANGE(int32_t, i, 0, num_axes){
+  FOR_RANGE(int32_t, i, 0, num_axes) {
     if (i == axis) { continue; }
     SbpSignatureBuilder()
         .Split(output_bns(), i)
