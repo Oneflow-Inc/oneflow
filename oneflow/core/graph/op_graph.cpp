@@ -596,8 +596,7 @@ void OpGraph::ForEachChainFamily(
           if (edge->is_strict_121()) { Handler(edge->dst_node()); }
         }
       };
-  ForEachConnectedComponent(source_nodes(), ForEachConnectedWithSameSbp7ParallelDesc7TimeShape,
-                            Handler);
+  ForEachConnectedComponent(ForEachConnectedWithSameSbp7ParallelDesc7TimeShape, Handler);
 }
 
 std::string OpGraph::GetOpNameKey(const std::string& op_name, const LogicalBlobId& lbi) const {

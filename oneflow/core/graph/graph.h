@@ -61,7 +61,11 @@ class Graph {
       const std::function<void(const HashSet<NodeType*>&)>& Handler) const;
 
   void ForEachConnectedComponent(
-      const std::list<NodeType*>& starts,
+      const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachConnected,
+      const std::function<void(const HashSet<NodeType*>&)>& Handler) const;
+
+  void ForEachConnectedComponent(
+      const std::function<void(const std::function<void(NodeType*)>&)>& ForEachNodeAsStart,
       const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachConnected,
       const std::function<void(const HashSet<NodeType*>&)>& Handler) const;
 
@@ -112,11 +116,6 @@ class Graph {
   void ToDotWithAutoFilePath() const;
 
  private:
-  void ForEachConnectedComponent(
-      const std::function<void(const std::function<void(NodeType*)>&)>& ForEachPotentialStart,
-      const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachConnected,
-      const std::function<void(const HashSet<NodeType*>&)>& Handler) const;
-
   std::unique_ptr<HashSet<NodeType*>> FindFirstNontrivialSCC(
       const std::function<void(const std::function<void(NodeType*)>&)>& ForEachStart,
       const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachInNode,
@@ -553,23 +552,21 @@ void Graph<NodeType, EdgeType>::ForEachConnectedComponent(
 
 template<typename NodeType, typename EdgeType>
 void Graph<NodeType, EdgeType>::ForEachConnectedComponent(
-    const std::list<NodeType*>& starts,
     const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachConnected,
     const std::function<void(const HashSet<NodeType*>&)>& Handler) const {
-  auto ForEachPotentialStart = [&](const std::function<void(NodeType*)>& Handler) {
-    BfsForEachNode(starts, &NodeType::ForEachNodeOnInOutEdge, Handler);
-  };
-  ForEachConnectedComponent(ForEachPotentialStart, ForEachConnected, Handler);
+  ForEachConnectedComponent(
+      [&](const std::function<void(NodeType*)>& Handler) { ForEachNode(Handler); },
+      ForEachConnected, Handler);
 }
 
 template<typename NodeType, typename EdgeType>
 void Graph<NodeType, EdgeType>::ForEachConnectedComponent(
-    const std::function<void(const std::function<void(NodeType*)>&)>& ForEachPotentialStart,
+    const std::function<void(const std::function<void(NodeType*)>&)>& ForEachNodeAsStart,
     const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachConnected,
     const std::function<void(const HashSet<NodeType*>&)>& Handler) const {
   HashMap<NodeType*, int32_t> node2component_id;
   int32_t cur_component_id = 0;
-  ForEachPotentialStart([&](NodeType* start) {
+  ForEachNodeAsStart([&](NodeType* start) {
     if (node2component_id.find(start) != node2component_id.end()) { return; }
     ++cur_component_id;
     BfsForEachNode({start}, ForEachConnected, [&](NodeType* node) {
