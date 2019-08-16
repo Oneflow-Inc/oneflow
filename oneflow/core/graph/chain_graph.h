@@ -34,7 +34,10 @@ class ChainNode final : public Node<ChainNode, ChainEdge> {
 
   std::string VisualStr() const override;
   const std::vector<TaskNode*>& TaskNodes() const { return task_nodes_; }
-  int64_t chain_id() const { return chain_id_; }
+  int64_t chain_id() const {
+    CHECK_NE(chain_id_, -1);
+    return chain_id_;
+  }
   void SetChainId(int64_t val) { chain_id_ = val; }
 
  private:

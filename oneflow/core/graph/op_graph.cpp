@@ -4,36 +4,6 @@
 
 namespace oneflow {
 
-namespace {
-
-std::function<OpNodeReachability(const OpNode* src, const OpNode* dst)>
-MakeGetterOpNodeReachability(const OpGraph& op_graph) {
-  auto dst2src2is_strict_121 =
-      std::make_shared<HashMap<const OpNode*, HashMap<const OpNode*, bool>>>();
-  op_graph.TopoForEachNode([&](OpNode* op_node) {
-    auto* src2is_strict_121 = &(*dst2src2is_strict_121)[op_node];
-    for (OpEdge* in_edge : op_node->in_edges()) {
-      bool same_parallel121 = in_edge->is_strict_121();
-      (*src2is_strict_121)[in_edge->src_node()] = same_parallel121;
-      for (const auto& pair : dst2src2is_strict_121->at(in_edge->src_node())) {
-        (*src2is_strict_121)[pair.first] = same_parallel121 && pair.second;
-      }
-    }
-  });
-  return [dst2src2is_strict_121](const OpNode* src, const OpNode* dst) {
-    const auto& src2is_strict_121 = dst2src2is_strict_121->at(dst);
-    const auto& it = src2is_strict_121.find(src);
-    if (it == src2is_strict_121.end()) { return kOpNodeUnreachable; }
-    return it->second ? kOpNodeStrict121Reachable : kOpNodeBoxingOrCopyHdReachable;
-  };
-}
-
-bool IsOpNodeReachable(const OpNodeReachability r) {
-  return r == kOpNodeStrict121Reachable || r == kOpNodeBoxingOrCopyHdReachable;
-}
-
-}  // namespace
-
 std::string OpEdge::VisualStr() const {
   std::string str;
   int32_t idx = 0;
@@ -615,13 +585,6 @@ void OpGraph::CheckBlobDescs(const std::string& op_name,
   op_name2op_node_.at(op_name)->CheckBlobDescs(GetBlobDesc4BnInOp, parallel_ctx);
 }
 
-void OpGraph::ForEachPseudoChain(
-    const std::function<void(const HashSet<OpNode*>&)>& Handler) const {
-  auto GetReachability = MakeGetterOpNodeReachability(*this);
-  ForEachChainFamily(
-      [&](const HashSet<OpNode*>& nodes) { ForEachPseudoChain(nodes, GetReachability, Handler); });
-}
-
 void OpGraph::ForEachChainFamily(
     const std::function<void(const HashSet<OpNode*>&)>& Handler) const {
   auto ForEachConnectedWithSameSbp7ParallelDesc7TimeShape =
@@ -635,73 +598,6 @@ void OpGraph::ForEachChainFamily(
       };
   ForEachConnectedComponent(source_nodes(), ForEachConnectedWithSameSbp7ParallelDesc7TimeShape,
                             Handler);
-}
-
-void OpGraph::ForEachPseudoChain(
-    const HashSet<OpNode*>& nodes,
-    const std::function<OpNodeReachability(OpNode* src, OpNode* dst)>& GetReachability,
-    const std::function<void(const HashSet<OpNode*>&)>& Handler) const {
-  if (nodes.size() <= 1) { return; }
-  if ((*nodes.begin())->parallel_desc().device_type() == DeviceType::kCPU) { return; }
-  if ((*nodes.begin())->parallel_desc().policy() != ParallelPolicy::kDataParallel) { return; }
-  HashSet<OpNode*> all_nodes(nodes);
-  while (all_nodes.size() > 1) {
-    HashSet<OpNode*> chain;
-    ReverseTopoGetPseudoChain(all_nodes, &chain, GetReachability);
-    Handler(chain);
-    for (OpNode* node_in_chain : chain) { all_nodes.erase(node_in_chain); }
-  }
-}
-
-void OpGraph::ReverseTopoGetPseudoChain(
-    const HashSet<OpNode*>& op_nodes, HashSet<OpNode*>* pseudo_chain_nodes,
-    const std::function<OpNodeReachability(OpNode* src, OpNode* dst)>& GetReachability) const {
-  // get sink nodes
-  std::list<OpNode*> sinks;
-  auto IsSink = [&](OpNode* node) {
-    for (OpNode* inner_node : op_nodes) {
-      if (IsOpNodeReachable(GetReachability(node, inner_node))) { return false; }
-    }
-    return true;
-  };
-  for (OpNode* op_node : op_nodes) {
-    if (IsSink(op_node)) { sinks.push_back(op_node); }
-  }
-  // generate connections of subgraph
-  HashMap<OpNode*, std::vector<OpNode*>> node2in_nodes;
-  HashMap<OpNode*, std::vector<OpNode*>> node2out_nodes;
-  auto IsInSubset = [&](OpNode* node) { return op_nodes.find(node) != op_nodes.end(); };
-  auto ReachableToAnySink = [&](OpNode* node) {
-    for (OpNode* sink : sinks) {
-      if (node == sink) { return true; }
-      if (IsOpNodeReachable(GetReachability(node, sink))) { return true; }
-    }
-    return false;
-  };
-  auto AnyOutputNodesNotInSubsetAndReachableToSink = [&](OpNode* node) {
-    for (OpEdge* edge : node->out_edges()) {
-      if (!IsInSubset(edge->dst_node()) && ReachableToAnySink(edge->dst_node())) { return true; }
-    }
-    return false;
-  };
-  for (OpNode* node : op_nodes) {
-    if (AnyOutputNodesNotInSubsetAndReachableToSink(node)) { continue; }
-    node->ForEachNodeOnOutEdge([&](OpNode* out_node) {
-      if (IsInSubset(out_node)) {
-        node2in_nodes[out_node].push_back(node);
-        node2out_nodes[node].push_back(out_node);
-      }
-    });
-  }
-  // get chain nodes
-  auto ForEachInNode = [&](OpNode* node, const std::function<void(OpNode*)>& Handler) {
-    for (OpNode* in_node : node2in_nodes[node]) { Handler(in_node); }
-  };
-  auto ForEachOutNode = [&](OpNode* node, const std::function<void(OpNode*)>& Handler) {
-    for (OpNode* out_node : node2out_nodes[node]) { Handler(out_node); }
-  };
-  TopoForEachNode(sinks, ForEachOutNode, ForEachInNode,
-                  [&](OpNode* node) { CHECK(pseudo_chain_nodes->emplace(node).second); });
 }
 
 std::string OpGraph::GetOpNameKey(const std::string& op_name, const LogicalBlobId& lbi) const {

@@ -80,12 +80,6 @@ class OpNode final : public Node<OpNode, OpEdge> {
   HashMap<LogicalBlobId, std::unique_ptr<BlobDesc>> lbi2logical_blob_desc_;
 };
 
-enum OpNodeReachability {
-  kOpNodeUnreachable = 0,
-  kOpNodeBoxingOrCopyHdReachable = 1,
-  kOpNodeStrict121Reachable = 2,  // same time/space parallel, same sbp
-};
-
 class OpEdge final : public Edge<OpNode, OpEdge> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(OpEdge);
@@ -135,9 +129,6 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
                       const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
                       const ParallelContext* parallel_ctx) const;
 
-  // a set of nodes is called a pseudo chain if they can merge into a chain regardless of the
-  // connections before their source nodes
-  void ForEachPseudoChain(const std::function<void(const HashSet<OpNode*>&)>& Handler) const;
   // a set of nodes is called a chain family if they can divided into several connected chains
   void ForEachChainFamily(const std::function<void(const HashSet<OpNode*>&)>& Handler) const;
 
@@ -166,13 +157,6 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
   bool IsBatchDimBlob(const std::string& op_name, const LogicalBlobId& lbi) const;
   std::string GetOpNameKey(const std::string& op_name, const LogicalBlobId& lbi) const;
   LogicalBlobId GetLogicalBlobIdKey(const std::string& op_name, const LogicalBlobId& lbi) const;
-  void ForEachPseudoChain(
-      const HashSet<OpNode*>& nodes,
-      const std::function<OpNodeReachability(OpNode* src, OpNode* dst)>& IsReachable,
-      const std::function<void(const HashSet<OpNode*>&)>& Handler) const;
-  void ReverseTopoGetPseudoChain(
-      const HashSet<OpNode*>& op_nodes, HashSet<OpNode*>* chain,
-      const std::function<OpNodeReachability(OpNode* src, OpNode* dst)>& IsReachable) const;
 
   std::function<bool(const OpNode*, const OpNode*)> MakePredicatorIsDataOrCtrlReachable() const;
   std::list<OpNode*> DataOrCtrlSourceNodes() const;
