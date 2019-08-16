@@ -300,39 +300,6 @@ void GetInterfaceOpBlobInfo(const JobBuilder& job_builder, const std::string& op
   blob_conf->set_has_batch_dim(std::find(lbis.begin(), lbis.end(), lbi) != lbis.end());
 }
 
-HashSet<std::string> GetArgOpNames(const std::vector<Job>& jobs) {
-  HashSet<std::string> arg_op_names;
-  for (const Job& job : jobs) {
-    for (const auto& arg_op_name : job.job_conf().arg_op_name()) {
-      arg_op_names.insert(arg_op_name);
-    }
-    for (const OperatorConf& op_conf : job.net().op()) {
-      if (op_conf.has_variable_conf()) { arg_op_names.insert(op_conf.name()); }
-    }
-  }
-  return arg_op_names;
-}
-
-HashMap<std::string, HashSet<int32_t>> GetInterfaceOpName2JobIds(const std::vector<Job>& jobs) {
-  HashSet<std::string> arg_op_names = GetArgOpNames(jobs);
-  HashMap<std::string, HashSet<int32_t>> interface_op_name2job_ids;
-  HashSet<std::string> unique_op_name_check;
-  FOR_RANGE(int32_t, i, 0, jobs.size()) {
-    const auto& job = jobs.at(i);
-    for (const auto& op : job.net().op()) {
-      if (IsInterfaceOpConf(op)) {
-        CHECK(arg_op_names.find(op.name()) != arg_op_names.end());
-        CHECK(interface_op_name2job_ids[op.name()].emplace(i).second);
-        unique_op_name_check.emplace(op.name());
-      } else {
-        // interface ops shouldn't share op_name with other ops
-        CHECK(unique_op_name_check.find(op.name()) == unique_op_name_check.end());
-      }
-    }
-  }
-  return interface_op_name2job_ids;
-}
-
 void FilterOpName2ParallelBlobConf(
     const HashSet<OperatorConf::OpTypeCase>& match, std::vector<Job>* jobs,
     HashMap<std::string, ParallelBlobConf>* op_name2parallel_blob_conf) {
