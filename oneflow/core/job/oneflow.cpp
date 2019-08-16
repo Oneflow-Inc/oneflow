@@ -232,16 +232,29 @@ void LinkTickTaskProto(TaskProto* identity_tick, TaskProto* src_tick, TaskProto*
 
 void LinkMainPlan(Plan* plan, const Plan& main_plan,
                   const std::vector<std::string>& identity_tick_op_names) {
+  std::function<bool(const TaskProto*)> IsInterfaceTickTockTask;
+  {
+    auto task_ids = std::make_shared<HashSet<int64_t>>();
+    for (const auto& task : main_plan.task()) {
+      if (task.task_type() == TaskType::kTick) { CHECK(task_ids->emplace(task.task_id()).second); }
+    }
+    IsInterfaceTickTockTask = [task_ids](const TaskProto* task) {
+      if (task_ids->find(task->task_id()) != task_ids->end()) { return true; }
+      if (task->exec_sequence().exec_node_size() != 1) { return false; }
+      const auto& kernel_conf = task->exec_sequence().exec_node(0).kernel_conf();
+      OperatorConf::OpTypeCase op_type_case = kernel_conf.op_attribute().op_conf().op_type_case();
+      return op_type_case == OperatorConf::kSourceTickConf
+             || op_type_case == OperatorConf::kSinkTickConf;
+    };
+  }
   plan->mutable_task()->MergeFrom(main_plan.task());
   HashMap<std::string, TaskProto*> sole_tick_op_name2sole_task;
   FOR_RANGE(int64_t, i, 0, plan->task_size()) {
     TaskProto* task = plan->mutable_task(i);
-    if (IsClassRegistered<TickTockTaskType>(task->task_type()) == false) { continue; }
-    if (task->exec_sequence().exec_node_size() == 1) {
-      const auto& kernel_conf = task->exec_sequence().exec_node(0).kernel_conf();
-      const auto& op_name = kernel_conf.op_attribute().op_conf().name();
-      CHECK(sole_tick_op_name2sole_task.emplace(op_name, task).second);
-    }
+    if (IsInterfaceTickTockTask(task) == false) { continue; }
+    const auto& kernel_conf = task->exec_sequence().exec_node(0).kernel_conf();
+    const auto& op_name = kernel_conf.op_attribute().op_conf().name();
+    CHECK(sole_tick_op_name2sole_task.emplace(op_name, task).second);
   }
   FOR_RANGE(int32_t, i, 0, Global<CriticalSectionDesc>::Get()->CriticalSectionNum()) {
     const CriticalSection& critical_section =
@@ -383,6 +396,7 @@ void MakeMainJob(const std::vector<Job>& jobs, Job* main_job,
         reentrant_lock_conf->mutable_lock_id2intersecting_lock_ids());
   }
   op_confs.push_back(reentrant_lock_op_conf);
+  // critical section case op conf
   OperatorConf cs_case_op_conf;
   {
     cs_case_op_conf.set_name(std::string("System-Main-Case_") + NewUniqueId());
@@ -403,6 +417,7 @@ void MakeMainJob(const std::vector<Job>& jobs, Job* main_job,
     identity_tick_op_names->push_back(identity_tick_op_conf.name());
     op_confs.push_back(identity_tick_op_conf);
   }
+  // critical section esac op conf
   OperatorConf cs_esac_op_conf;
   {
     cs_esac_op_conf.set_name(std::string("System-Main-Esac_") + NewUniqueId());
@@ -525,7 +540,7 @@ void FinishGlobalCriticalSectionDesc(const std::vector<Plan>& plans) {
         auto* mem_block_ids = &(*sole_op_name2mem_block_ids)[op_name];
         for (const auto& pair : task.produced_regst_desc()) {
           if (NeedAllocateMemory(pair.second.regst_desc_type())) {
-            CHECK(mem_block_ids->emplace(pair.second.mem_shared_id()).second);
+            mem_block_ids->emplace(pair.second.mem_shared_id()).second;
           }
         }
       }
@@ -566,6 +581,7 @@ void FinishGlobalCriticalSectionDesc(const std::vector<Plan>& plans) {
       CHECK(unique_job_id_check.emplace(job_id).second);
       auto* mem_block_ids = &job_id2mem_block_ids.at(job_id);
       {
+        // exclude input/output criticalsection mem_blob_ids from total_job
         auto it = mem_block_ids->begin();
         while (it != mem_block_ids->end()) {
           if (input_output_mem_block_ids.find(*it) == input_output_mem_block_ids.end()) {
