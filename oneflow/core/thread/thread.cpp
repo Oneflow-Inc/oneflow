@@ -49,7 +49,7 @@ void Thread::PollMsgChannel(const ThreadCtx& thread_ctx) {
     }
     if (process_msg_ret == 1) {
       LOG(INFO) << "thread " << thrd_id_ << " deconstruct actor " << actor_id;
-      if (actor_it == id2actor_ptr_.end()) {
+      if (actor_it != id2actor_ptr_.end()) {
         id2actor_ptr_.erase(actor_it);
       } else {
         id2new_actor_ptr_.erase(actor_id);
