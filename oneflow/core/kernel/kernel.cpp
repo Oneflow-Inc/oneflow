@@ -127,7 +127,6 @@ void Kernel::Forward(const KernelCtx& ctx,
     CHECK(!kernel_conf_.need_do_opaque_header());
     ForwardDim0ValidNum(ctx, BnInOp2Blob);
   }
-  if (NeedForwardLossInstanceNum(ctx, BnInOp2Blob)) { ForwardLossInstanceNum(ctx, BnInOp2Blob); }
   if (HasEmptyShapeBlob(op_attribute().input_bns(), BnInOp2Blob) && !NeedForwardIfBlobEmpty()) {
     ClearBlobDim0ValidNumIfNeed(op_attribute().output_bns(), BnInOp2Blob);
     return;
@@ -233,19 +232,6 @@ void KernelIf<device_type>::ForwardRecordIdInDevicePiece(
   CheckSameRecordIdInDevicePiece(op_attribute().input_bns(), BnInOp2Blob);
   CopyField(ctx.device_ctx, BnInOp2Blob, BnInOp2Blob(op_attribute().input_bns(0)),
             op_attribute().output_bns(), &Blob::CopyRecordIdInDevicePieceFrom);
-}
-
-template<DeviceType device_type>
-void KernelIf<device_type>::ForwardLossInstanceNum(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  NaiveCopyLossInstanceNum(op_attribute().input_bns(), op_attribute().output_bns(), BnInOp2Blob);
-}
-
-template<DeviceType device_type>
-bool KernelIf<device_type>::NeedForwardLossInstanceNum(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  return NeedCopyLossInstanceNum(op_attribute().input_bns(), op_attribute().output_bns(),
-                                 BnInOp2Blob);
 }
 
 template<DeviceType device_type>
