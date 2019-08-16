@@ -129,6 +129,10 @@ void SetBoxingOpConfBySbpParallel(
     BoxingOpConf* conf, const LogicalBlobId& lbi, const Operator& in_op, const Operator& out_op,
     const std::vector<BoxingTaskNode::EdgeInfo>& sorted_edges,
     const std::function<SbpParallel(const std::string&, const LogicalBlobId&)>& GetSbpParallel) {
+  CHECK(in_op.op_conf().has_tick_conf() == false);
+  CHECK(in_op.op_conf().has_source_tick_conf() == false);
+  CHECK(out_op.op_conf().has_tick_conf() == false);
+  CHECK(out_op.op_conf().has_sink_tick_conf() == false);
   SbpParallel in_sbp = GetSbpParallel(in_op.op_name(), lbi);
   if (in_sbp.has_split_parallel()) {
     conf->mutable_concat_box()->set_axis(in_sbp.split_parallel().axis());

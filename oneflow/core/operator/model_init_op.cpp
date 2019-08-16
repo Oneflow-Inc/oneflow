@@ -28,6 +28,7 @@ void ModelInitOp::GetSbpSignatures(
     const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
     SbpSignatureList* sbp_sig_list) const {
   SbpSignatureBuilder()
+      .Broadcast(input_bns())
       .Split(output_bns(), 0)
       .MakeSplitSignatureListBuilder(LogicalBlobDesc4Ibn(output_bns().Get(0)).shape().NumAxes())
       .Build(sbp_sig_list);

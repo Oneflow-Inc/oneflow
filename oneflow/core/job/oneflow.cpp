@@ -26,6 +26,7 @@
 #include "oneflow/core/job/model_init_job.h"
 #include "oneflow/core/job/inter_job_mem_sharing_util.h"
 #include "oneflow/core/job/plan_util.h"
+#include "oneflow/core/operator/interface_op_util.h"
 
 DECLARE_bool(grpc_use_no_signal);
 
@@ -231,16 +232,29 @@ void LinkTickTaskProto(TaskProto* identity_tick, TaskProto* src_tick, TaskProto*
 
 void LinkMainPlan(Plan* plan, const Plan& main_plan,
                   const std::vector<std::string>& identity_tick_op_names) {
+  std::function<bool(const TaskProto*)> IsInterfaceTickTockTask;
+  {
+    auto task_ids = std::make_shared<HashSet<int64_t>>();
+    for (const auto& task : main_plan.task()) {
+      if (task.task_type() == TaskType::kTick) { CHECK(task_ids->emplace(task.task_id()).second); }
+    }
+    IsInterfaceTickTockTask = [task_ids](const TaskProto* task) {
+      if (task_ids->find(task->task_id()) != task_ids->end()) { return true; }
+      if (task->exec_sequence().exec_node_size() != 1) { return false; }
+      const auto& kernel_conf = task->exec_sequence().exec_node(0).kernel_conf();
+      OperatorConf::OpTypeCase op_type_case = kernel_conf.op_attribute().op_conf().op_type_case();
+      return op_type_case == OperatorConf::kSourceTickConf
+             || op_type_case == OperatorConf::kSinkTickConf;
+    };
+  }
   plan->mutable_task()->MergeFrom(main_plan.task());
   HashMap<std::string, TaskProto*> sole_tick_op_name2sole_task;
   FOR_RANGE(int64_t, i, 0, plan->task_size()) {
     TaskProto* task = plan->mutable_task(i);
-    if (IsClassRegistered<TickTockTaskType>(task->task_type()) == false) { continue; }
-    if (task->exec_sequence().exec_node_size() == 1) {
-      const auto& kernel_conf = task->exec_sequence().exec_node(0).kernel_conf();
-      const auto& op_name = kernel_conf.op_attribute().op_conf().name();
-      CHECK(sole_tick_op_name2sole_task.emplace(op_name, task).second);
-    }
+    if (IsInterfaceTickTockTask(task) == false) { continue; }
+    const auto& kernel_conf = task->exec_sequence().exec_node(0).kernel_conf();
+    const auto& op_name = kernel_conf.op_attribute().op_conf().name();
+    CHECK(sole_tick_op_name2sole_task.emplace(op_name, task).second);
   }
   FOR_RANGE(int32_t, i, 0, Global<CriticalSectionDesc>::Get()->CriticalSectionNum()) {
     const CriticalSection& critical_section =
@@ -382,6 +396,7 @@ void MakeMainJob(const std::vector<Job>& jobs, Job* main_job,
         reentrant_lock_conf->mutable_lock_id2intersecting_lock_ids());
   }
   op_confs.push_back(reentrant_lock_op_conf);
+  // critical section case op conf
   OperatorConf cs_case_op_conf;
   {
     cs_case_op_conf.set_name(std::string("System-Main-Case_") + NewUniqueId());
@@ -402,6 +417,7 @@ void MakeMainJob(const std::vector<Job>& jobs, Job* main_job,
     identity_tick_op_names->push_back(identity_tick_op_conf.name());
     op_confs.push_back(identity_tick_op_conf);
   }
+  // critical section esac op conf
   OperatorConf cs_esac_op_conf;
   {
     cs_esac_op_conf.set_name(std::string("System-Main-Esac_") + NewUniqueId());
@@ -524,7 +540,7 @@ void FinishGlobalCriticalSectionDesc(const std::vector<Plan>& plans) {
         auto* mem_block_ids = &(*sole_op_name2mem_block_ids)[op_name];
         for (const auto& pair : task.produced_regst_desc()) {
           if (NeedAllocateMemory(pair.second.regst_desc_type())) {
-            CHECK(mem_block_ids->emplace(pair.second.mem_shared_id()).second);
+            mem_block_ids->emplace(pair.second.mem_shared_id());
           }
         }
       }
@@ -565,6 +581,7 @@ void FinishGlobalCriticalSectionDesc(const std::vector<Plan>& plans) {
       CHECK(unique_job_id_check.emplace(job_id).second);
       auto* mem_block_ids = &job_id2mem_block_ids.at(job_id);
       {
+        // exclude input/output criticalsection mem_blob_ids from total_job
         auto it = mem_block_ids->begin();
         while (it != mem_block_ids->end()) {
           if (input_output_mem_block_ids.find(*it) == input_output_mem_block_ids.end()) {
@@ -578,26 +595,6 @@ void FinishGlobalCriticalSectionDesc(const std::vector<Plan>& plans) {
     }
   }
   critical_section_desc->Done();
-}
-
-void InitBlobConf(InterfaceBlobConf* blob_conf, const ParallelBlobConf& parallel_blob_conf) {
-  BlobDesc blob_desc(parallel_blob_conf.logical_blob_desc_conf());
-  blob_desc.shape().ToProto(blob_conf->mutable_shape());
-  blob_conf->set_data_type(blob_desc.data_type());
-  if (blob_desc.has_dim0_inner_shape()) {
-    blob_desc.dim0_inner_shape().ToProto(blob_conf->mutable_dim0_inner_shape());
-  }
-  blob_conf->set_has_dim0_valid_num(blob_desc.has_dim0_valid_num_field());
-  blob_conf->set_has_dim1_valid_num(blob_desc.has_dim1_valid_num_field());
-  blob_conf->set_has_dim2_valid_num(blob_desc.has_dim2_valid_num_field());
-  if (parallel_blob_conf.sbp_conf().has_split_parallel()) {
-    blob_conf->set_split_axis(parallel_blob_conf.sbp_conf().split_parallel().axis());
-  } else if (parallel_blob_conf.sbp_conf().has_broadcast_parallel()) {
-    blob_conf->set_broadcast(true);
-  } else {
-    UNIMPLEMENTED();
-  }
-  blob_conf->set_has_batch_dim(parallel_blob_conf.has_batch_dim());
 }
 
 void MakePullJob(const std::string& job_name, const std::string& op_name,
@@ -614,7 +611,7 @@ void MakePullJob(const std::string& job_name, const std::string& op_name,
     auto* input_conf = input_op_conf.mutable_input_conf();
     input_conf->set_out("out");
     auto* blob_conf = input_conf->mutable_blob_conf();
-    InitBlobConf(blob_conf, parallel_blob_conf);
+    InterfaceOpUtil::InitBlobConf(blob_conf, parallel_blob_conf);
     data_type = blob_conf->data_type();
     job_builder.AddOps(parallel_blob_conf.parallel_conf(), {input_op_conf});
   }
@@ -654,7 +651,7 @@ void MakePushJob(const std::string& job_name, const std::string& op_name,
     foreign_input_conf->set_out("out");
     foreign_input_conf->set_ofblob_buffer_name(GetForeignInputBufferName(job_name));
     auto* blob_conf = foreign_input_conf->mutable_blob_conf();
-    InitBlobConf(blob_conf, parallel_blob_conf);
+    InterfaceOpUtil::InitBlobConf(blob_conf, parallel_blob_conf);
     data_type = blob_conf->data_type();
     ParallelConf parallel_conf;
     parallel_conf.set_policy(kDataParallel);
@@ -667,6 +664,7 @@ void MakePushJob(const std::string& job_name, const std::string& op_name,
     auto* output_conf = output_op_conf.mutable_output_conf();
     output_conf->set_in(foreign_input_op_conf.name() + "/out");
     output_conf->set_out("out");
+    InterfaceOpUtil::InitBlobConf(output_conf->mutable_blob_conf(), parallel_blob_conf);
     job_builder.AddOps(parallel_blob_conf.parallel_conf(), {output_op_conf});
   }
   auto* job_conf = job->mutable_job_conf();
@@ -719,7 +717,7 @@ void MakeArgPassJob(const std::string& job_name, const ParallelBlobConf& paralle
     auto* input_conf = input_op_confs.at(i).mutable_input_conf();
     input_conf->set_out("out");
     auto* blob_conf = input_conf->mutable_blob_conf();
-    InitBlobConf(blob_conf, parallel_blob_conf);
+    InterfaceOpUtil::InitBlobConf(blob_conf, parallel_blob_conf);
   }
   job_builder.AddOps(parallel_blob_conf.parallel_conf(), input_op_confs);
   OperatorConf switch_output_op_conf;
@@ -731,6 +729,7 @@ void MakeArgPassJob(const std::string& job_name, const ParallelBlobConf& paralle
       switch_output_conf->add_in(op_conf.name() + "/out");
     }
     switch_output_conf->set_out("out");
+    InterfaceOpUtil::InitBlobConf(switch_output_conf->mutable_blob_conf(), parallel_blob_conf);
     job_builder.AddOps(parallel_blob_conf.parallel_conf(), {switch_output_op_conf});
   }
   auto* job_conf = job->mutable_job_conf();
@@ -768,7 +767,7 @@ void MakeModelSaveJob(const std::string& job_name,
       auto* input_conf = input_op_conf.mutable_input_conf();
       input_conf->set_out("out");
       auto* blob_conf = input_conf->mutable_blob_conf();
-      InitBlobConf(blob_conf, parallel_blob_conf);
+      InterfaceOpUtil::InitBlobConf(blob_conf, parallel_blob_conf);
       CHECK(blob_conf->has_data_type());
       job_builder.AddOps(parallel_blob_conf.parallel_conf(), {input_op_conf});
     }
