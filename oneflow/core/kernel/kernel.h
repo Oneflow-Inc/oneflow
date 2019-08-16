@@ -107,20 +107,12 @@ class Kernel {
       const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
     UNIMPLEMENTED();
   }
-  virtual void BackwardInDiffLossInstanceNum(
-      const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-    UNIMPLEMENTED();
-  }
   virtual void BackwardModelDiffDim0ValidNum(
       const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
     UNIMPLEMENTED();
   }
   virtual void BackwardActivation(const KernelCtx& ctx, const Blob* out_blob,
                                   const Blob* out_diff_blob, Blob* bw_activation_blob) const {}
-  virtual void SetTotalInstanceNumDiffBlob(
-      const KernelCtx& ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
-    UNIMPLEMENTED();
-  }
   virtual const PbMessage& GetCustomizedOpConf() const { UNIMPLEMENTED(); }
   virtual const PbMessage& GetCustomizedKernelConf() const { UNIMPLEMENTED(); }
   bool HasEmptyShapeBlob(const PbRpf<std::string>& bns,
@@ -182,8 +174,6 @@ class KernelIf : public Kernel {
   virtual void BackwardColNum(const KernelCtx& ctx,
                               std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   virtual void BackwardInDiffDim0ValidNum(
-      const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
-  virtual void BackwardInDiffLossInstanceNum(
       const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   virtual void BackwardModelDiffDim0ValidNum(
       const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
