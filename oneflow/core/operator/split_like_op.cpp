@@ -18,10 +18,8 @@ void SplitLikeOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Ge
                                  const ParallelContext* parallel_ctx) const {
   const SplitLikeOpConf& conf = op_conf().split_like_conf();
   const BlobDesc* like_0_blob_desc = GetBlobDesc4BnInOp(GenRepeatedBn("like", 0));
-  int32_t split_axis = conf.axis();
   std::vector<int64_t> in_dim_vec = GetBlobDesc4BnInOp("in")->shape().dim_vec();
-  if (split_axis < 0) { split_axis += in_dim_vec.size(); }
-  CHECK_GE(split_axis, 0);
+  int32_t split_axis = FixAxis(conf.axis(), in_dim_vec.size());
   int64_t dim_sum = 0;
   FOR_RANGE(int32_t, i, 0, op_conf().split_like_conf().like_size()) {
     const BlobDesc* like_i_blob_desc = GetBlobDesc4BnInOp(GenRepeatedBn("like", i));
@@ -38,12 +36,22 @@ void SplitLikeOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Ge
   CHECK_EQ(dim_sum, in_dim_vec.at(split_axis));
 }
 
+void SplitLikeOp::InferHasBatchDim(
+    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
+    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
+  const SplitLikeOpConf& conf = op_conf().split_like_conf();
+  int32_t split_axis = FixAxis(conf.axis(), LogicalBlobDesc4Ibn("in").shape().NumAxes());
+  bool has_batch_dim = true;
+  if (split_axis == 0) { has_batch_dim = false; }
+  for (const auto& obn : output_bns()) { *HasBatchDim4BnInOp(obn) = has_batch_dim; }
+}
+
 void SplitLikeOp::GetSbpSignatures(
     const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
     SbpSignatureList* sbp_sig_list) const {
   const SplitLikeOpConf& conf = op_conf().split_like_conf();
-  const int axis = conf.axis();
-  const int num_axes = LogicalBlobDesc4Ibn("in").shape().NumAxes();
+  const int64_t num_axes = LogicalBlobDesc4Ibn("in").shape().NumAxes();
+  const int32_t axis = FixAxis(conf.axis(), num_axes);
   FOR_RANGE(int32_t, i, 0, num_axes) {
     if (i == axis) { continue; }
     SbpSignatureBuilder()
@@ -51,6 +59,14 @@ void SplitLikeOp::GetSbpSignatures(
         .Split(output_bns(), i)
         .Build(sbp_sig_list->mutable_sbp_signature()->Add());
   }
+}
+
+int32_t SplitLikeOp::FixAxis(const int32_t axis, const int64_t num_axes) const {
+  int32_t ret = axis;
+  if (axis < num_axes) { ret += num_axes; }
+  CHECK_GE(axis, 0);
+  CHECK_LT(axis, num_axes);
+  return ret;
 }
 
 REGISTER_OP(OperatorConf::kSplitLikeConf, SplitLikeOp);
