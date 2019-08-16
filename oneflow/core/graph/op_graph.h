@@ -18,19 +18,15 @@ class OpNode final : public Node<OpNode, OpEdge> {
   explicit OpNode(const ParallelDesc& parallel_desc, const OperatorConf& op_conf)
       : parallel_desc_(parallel_desc),
         op_(ConstructOp(op_conf, parallel_desc.device_type())),
-        ibns_(op_->input_bns().begin(), op_->input_bns().end()),
-        has_in_diff_(false) {}
+        ibns_(op_->input_bns().begin(), op_->input_bns().end()) {}
   ~OpNode() = default;
 
   // Getters
   const Shape* GetInputBlobFastestTimeShape() const;
   const Shape* GetInputOutputFastestTimeShape() const;
   const Shape* out_blob_time_shape() const;
+  bool IsTimeShapeIdentity() const;
   const Operator& op() const { return *op_; }
-  bool HasBackward() const { return has_in_diff() || has_model_diff(); }
-  bool has_in_diff() const { return has_in_diff_; }
-  bool has_model_diff() const { return op().model_diff_bns().size() > 0; }
-  void set_has_in_diff(bool has_in_diff) { has_in_diff_ = has_in_diff; }
   const ParallelDesc& parallel_desc() const { return parallel_desc_; }
   const SbpSignature& sbp_signature() const { return sbp_signature_; }
   const SbpParallel& SbpParallel4Lbi(const LogicalBlobId& lbi) const;
@@ -77,12 +73,17 @@ class OpNode final : public Node<OpNode, OpEdge> {
   ParallelDesc parallel_desc_;
   std::shared_ptr<Operator> op_;
   HashSet<std::string> ibns_;
-  bool has_in_diff_;
   std::unique_ptr<Shape> out_blob_time_shape_;
   SbpSignature sbp_signature_;
   HashMap<LogicalBlobId, bool> lbi2has_batch_dim_;
   HashMap<std::string, std::vector<std::unique_ptr<BlobDesc>>> bn2parallel_id2blob_desc_;
   HashMap<LogicalBlobId, std::unique_ptr<BlobDesc>> lbi2logical_blob_desc_;
+};
+
+enum OpNodeReachability {
+  kOpNodeUnreachable = 0,
+  kOpNodeBoxingOrCopyHdReachable = 1,
+  kOpNodeStrict121Reachable = 2,  // same time/space parallel, same sbp
 };
 
 class OpEdge final : public Edge<OpNode, OpEdge> {
@@ -91,22 +92,27 @@ class OpEdge final : public Edge<OpNode, OpEdge> {
   explicit OpEdge(const std::vector<LogicalBlobId>& lbis,
                   const HashMap<LogicalBlobId, std::string>& lbi2obn,
                   const HashMap<LogicalBlobId, std::vector<std::string>>& lbi2ibns)
-      : lbis_(lbis), lbi2obn_(lbi2obn), lbi2ibns_(lbi2ibns), has_diff_(false) {}
+      : lbis_(lbis), lbi2obn_(lbi2obn), lbi2ibns_(lbi2ibns) {}
   ~OpEdge() = default;
 
+  void InitDistributeHierarchyInfo();
+
+  // Getters
   const std::vector<LogicalBlobId>& lbis() const { return lbis_; }
   const HashMap<LogicalBlobId, std::string>& lbi2obn() const { return lbi2obn_; }
   const HashMap<LogicalBlobId, std::vector<std::string>>& lbi2ibns() const { return lbi2ibns_; }
-  bool has_diff() const { return has_diff_; }
   std::string VisualStr() const override;
-
-  void set_has_diff(bool val) { has_diff_ = val; }
+  bool is_strict_121() const { return is_strict_121_; }
 
  private:
+  void InitIsStrict121();
+  bool CalcIsStrict121Connected() const;
+
   std::vector<LogicalBlobId> lbis_;
   HashMap<LogicalBlobId, std::string> lbi2obn_;
   HashMap<LogicalBlobId, std::vector<std::string>> lbi2ibns_;
-  bool has_diff_;
+
+  bool is_strict_121_;
 };
 
 class OpGraph final : public Graph<OpNode, OpEdge> {
@@ -153,7 +159,6 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
   void InitProducerOpName2CtrlConsumerOpNames(const Job& job);
   void CheckIsDAG() const;
   void FixOpParallelDesc() const;
-  void UpdateOpNodeHasInDiff() const;
   void InferTimeShape() const;
   void InferOpNodeSbpSignature(OpNode* op_node, const SbpSignature& sbp_sig_conf) const;
   void InferOpNodeLogicalBlobDesc(OpNode* op_node) const;
@@ -161,12 +166,13 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
   bool IsBatchDimBlob(const std::string& op_name, const LogicalBlobId& lbi) const;
   std::string GetOpNameKey(const std::string& op_name, const LogicalBlobId& lbi) const;
   LogicalBlobId GetLogicalBlobIdKey(const std::string& op_name, const LogicalBlobId& lbi) const;
-  void ForEachPseudoChain(const HashSet<OpNode*>& nodes,
-                          const std::function<bool(OpNode* src, OpNode* dst)>& IsReachable,
-                          const std::function<void(const HashSet<OpNode*>&)>& Handler) const;
+  void ForEachPseudoChain(
+      const HashSet<OpNode*>& nodes,
+      const std::function<OpNodeReachability(OpNode* src, OpNode* dst)>& IsReachable,
+      const std::function<void(const HashSet<OpNode*>&)>& Handler) const;
   void ReverseTopoGetPseudoChain(
       const HashSet<OpNode*>& op_nodes, HashSet<OpNode*>* chain,
-      const std::function<bool(OpNode* src, OpNode* dst)>& IsReachable) const;
+      const std::function<OpNodeReachability(OpNode* src, OpNode* dst)>& IsReachable) const;
 
   std::function<bool(const OpNode*, const OpNode*)> MakePredicatorIsDataOrCtrlReachable() const;
   std::list<OpNode*> DataOrCtrlSourceNodes() const;
