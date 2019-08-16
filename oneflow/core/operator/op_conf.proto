@@ -377,6 +377,13 @@ message ConcatOpConf {
   required int32 axis = 3;
 }
 
+message SplitLikeOpConf {
+  required string in = 1;
+  repeated string like = 2;
+  repeated string out = 3;
+  required int32 axis = 4;
+}
+
 message CopyCommNetOpConf {
 }
 
@@ -1588,6 +1595,7 @@ message OperatorConf {
     CaseOpConf case_conf = 291;
     EsacOpConf esac_conf = 292;
     ModelInitOpConf model_init_conf = 293;
+    SplitLikeOpConf split_like_conf = 294;
 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;
