@@ -99,7 +99,7 @@ OperatorConf MakeTickOpConf() {
   return tick_op_conf;
 }
 
-OperatorConf AppendTick(const std::vector<std::string> op_names, ParallelConf parallel_conf,
+OperatorConf AppendTick(const std::vector<std::string>& op_names, ParallelConf parallel_conf,
                         JobBuilder* job_builder) {
   OperatorConf tick_op_conf = MakeTickOpConf();
   for (const auto& op_name : op_names) { tick_op_conf.add_ctrl_in_op_name(op_name); }

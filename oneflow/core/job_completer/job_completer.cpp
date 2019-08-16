@@ -160,7 +160,7 @@ void AddIdentityOp(const std::string& op_name, Job* job, const HashSet<LogicalBl
   TupleIdentityOpConf* tuple_identity_op_conf = tuple_identity_op->mutable_tuple_identity_conf();
   int32_t idx = 0;
   for (const LogicalBlobId& lbi : input_lbis) {
-    const std::string& obn = std::string("out_") + std::to_string(idx++);
+    const std::string& obn = GenRepeatedBn("out_", idx++);
     const std::string& blob_name = obn;
     {
       LogicalBlobId output_lbi;
