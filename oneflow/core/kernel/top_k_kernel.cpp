@@ -48,13 +48,11 @@ void TopKKernel<device_type, T>::ForwardDim0ValidNum(
   const Blob* in_blob = BnInOp2Blob("in");
   CHECK(in_blob->has_dim0_valid_num_field());
   const int32_t dim0_valid_num = in_blob->dim0_valid_num(0);
-  // int32_t instance_size = in_blob->shape().dim_vec().back();
   int32_t k = this->op_conf().top_k_conf().k();
   if (device_type == DeviceType::kCPU) {
     if (k > 1) { BnInOp2Blob("indices")->set_dim0_valid_num(0, dim0_valid_num); }
   } else if (device_type == DeviceType::kGPU) {
-    // if (instance_size <= 1024 || k == instance_size || k > 128) {
-    if (false) {
+    if (k > 128) {
       BnInOp2Blob("indices")->set_dim0_valid_num(0, dim0_valid_num);
       BnInOp2Blob("sorted_in")->set_dim0_valid_num(0, dim0_valid_num);
       BnInOp2Blob("sorted_indices")->set_dim0_valid_num(0, dim0_valid_num);
@@ -71,15 +69,13 @@ void TopKKernel<device_type, T>::ForwardInstanceShape(
   const Blob* in_blob = BnInOp2Blob("in");
   CHECK(in_blob->has_instance_shape_field());
   std::vector<int64_t> dim_vec = in_blob->instance_shape().dim_vec();
-  // int32_t instance_size = dim_vec.back();
   dim_vec.back() = this->op_conf().top_k_conf().k();
   const Shape instance_shape = Shape(dim_vec);
   int32_t k = this->op_conf().top_k_conf().k();
   if (device_type == DeviceType::kCPU) {
     if (k > 1) { BnInOp2Blob("indices")->set_instance_shape(instance_shape); }
   } else if (device_type == DeviceType::kGPU) {
-    // if (instance_size <= 1024 || k == instance_size || k > 128) {
-    if (false) {
+    if (k > 128) {
       BnInOp2Blob("indices")->set_instance_shape(instance_shape);
       BnInOp2Blob("sorted_in")->set_instance_shape(instance_shape);
       BnInOp2Blob("sorted_indices")->set_instance_shape(instance_shape);
@@ -128,8 +124,7 @@ void TopKKernel<device_type, T>::ForwardDataContent(
     CpuTopK(ctx.device_ctx, in_ptr, indices_ptr, instance_num, instance_size, k,
             this->op_conf().top_k_conf().sorted(), out_ptr);
   } else if (this->op_conf().device_type() == DeviceType::kGPU) {
-    // if (instance_size <= 1024 || k == instance_size || k > 128) {
-    if (false) {
+    if (k > 128) {
       GpuRadixSortTopK(ctx.device_ctx, in_ptr, BnInOp2Blob("indices")->mut_dptr<int32_t>(),
                        instance_num, instance_size, k,
                        BnInOp2Blob("temp_storage")->mut_dptr<void>(),
