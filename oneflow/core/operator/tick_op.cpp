@@ -17,12 +17,9 @@ void TickOp::InferHasBatchDim(std::function<bool*(const std::string&)> HasBatchD
   *HasBatchDim4BnInOp("out") = false;
 }
 
-void TickOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
-  SbpSignatureBuilder()
-      .Split(input_bns(), 0)
-      .Split(output_bns(), 0)
-      .Build(sbp_sig_list->mutable_sbp_signature()->Add());
-}
+void TickOp::GetSbpSignatures(
+    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
+    SbpSignatureList* sbp_sig_list) const {}
 
 REGISTER_OP_SAME_OUTPUT_BLOB_MEM_BLOCK_NUM(OperatorConf::kTickConf, 2);
 REGISTER_OP(OperatorConf::kTickConf, TickOp);

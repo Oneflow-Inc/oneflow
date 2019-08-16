@@ -66,18 +66,18 @@ class Graph {
       const std::function<void(const HashSet<NodeType*>&)>& Handler) const;
 
   // find first nontrivial strongly connected component
-  std::unique_ptr<std::vector<NodeType*>> FindFirstNontrivialSCC(
+  std::unique_ptr<HashSet<NodeType*>> FindFirstNontrivialSCC(
       const std::list<NodeType*>& starts,
       const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachInNode,
       const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachOutNode)
       const;
 
-  std::unique_ptr<std::vector<NodeType*>> FindFirstNontrivialSCC(
+  std::unique_ptr<HashSet<NodeType*>> FindFirstNontrivialSCC(
       const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachInNode,
       const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachOutNode)
       const;
 
-  std::unique_ptr<std::vector<NodeType*>> FindFirstNontrivialSCC() const;
+  std::unique_ptr<HashSet<NodeType*>> FindFirstNontrivialSCC() const;
 
   // Getters
   std::list<NodeType*> source_nodes() const;
@@ -100,9 +100,16 @@ class Graph {
 
   // ToDot
   template<typename StreamT>
-  void ToDotWithStream(StreamT& out_stream);
-  void ToDotWithFilePath(const std::string& file_path);
-  void ToDotWithAutoFilePath();
+  void ToDotWithStream(StreamT& out_stream) const;
+  template<typename StreamT>
+  void ToDotWithStream(const std::function<bool(NodeType*)>& IsNodeAllowed,
+                       const std::function<bool(EdgeType*)>& IsEdgeAllowed,
+                       StreamT& out_stream) const;
+  void ToDotWithFilePath(const std::string& file_path) const;
+  void ToDotWithFilePath(const std::function<bool(NodeType*)>& IsNodeAllowed,
+                         const std::function<bool(EdgeType*)>& IsEdgeAllowed,
+                         const std::string& file_path) const;
+  void ToDotWithAutoFilePath() const;
 
  private:
   void ForEachConnectedComponent(
@@ -110,7 +117,7 @@ class Graph {
       const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachConnected,
       const std::function<void(const HashSet<NodeType*>&)>& Handler) const;
 
-  std::unique_ptr<std::vector<NodeType*>> FindFirstNontrivialSCC(
+  std::unique_ptr<HashSet<NodeType*>> FindFirstNontrivialSCC(
       const std::function<void(const std::function<void(NodeType*)>&)>& ForEachStart,
       const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachInNode,
       const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachOutNode)
@@ -226,12 +233,24 @@ void Graph<NodeType, EdgeType>::DeleteNode(NodeType* node) {
 
 template<typename NodeType, typename EdgeType>
 template<typename StreamT>
-void Graph<NodeType, EdgeType>::ToDotWithStream(StreamT& out_stream) {
+void Graph<NodeType, EdgeType>::ToDotWithStream(StreamT& out_stream) const {
+  ToDotWithStream([](NodeType*) { return true; }, [](EdgeType*) { return true; }, out_stream);
+}
+
+template<typename NodeType, typename EdgeType>
+template<typename StreamT>
+void Graph<NodeType, EdgeType>::ToDotWithStream(const std::function<bool(NodeType*)>& IsNodeAllowed,
+                                                const std::function<bool(EdgeType*)>& IsEdgeAllowed,
+                                                StreamT& out_stream) const {
   out_stream << "digraph {\n";
   this->ForEachNode([&](NodeType* node) {
+    if (IsNodeAllowed(node) == false) { return; }
     out_stream << "\"" << node->node_id_str() << "\" [label=\"" << node->VisualStr() << "\"]\n";
   });
-  this->ForEachEdge([&](const EdgeType* edge) {
+  this->ForEachEdge([&](EdgeType* edge) {
+    if (IsEdgeAllowed(edge) == false) { return; }
+    if (IsNodeAllowed(edge->src_node()) == false) { return; }
+    if (IsNodeAllowed(edge->dst_node()) == false) { return; }
     out_stream << "\"" << edge->src_node()->node_id_str() << "\" -> "
                << "\"" << edge->dst_node()->node_id_str() << "\""
                << "[label=\"" << edge->VisualStr() << "\"];\n";
@@ -240,14 +259,23 @@ void Graph<NodeType, EdgeType>::ToDotWithStream(StreamT& out_stream) {
 }
 
 template<typename NodeType, typename EdgeType>
-void Graph<NodeType, EdgeType>::ToDotWithFilePath(const std::string& file_path) {
+void Graph<NodeType, EdgeType>::ToDotWithFilePath(const std::string& file_path) const {
   auto log_stream = TeePersistentLogStream::Create(file_path);
   ToDotWithStream(log_stream);
   log_stream->Flush();
 }
 
 template<typename NodeType, typename EdgeType>
-void Graph<NodeType, EdgeType>::ToDotWithAutoFilePath() {
+void Graph<NodeType, EdgeType>::ToDotWithFilePath(
+    const std::function<bool(NodeType*)>& IsNodeAllowed,
+    const std::function<bool(EdgeType*)>& IsEdgeAllowed, const std::string& file_path) const {
+  auto log_stream = TeePersistentLogStream::Create(file_path);
+  ToDotWithStream(IsNodeAllowed, IsEdgeAllowed, log_stream);
+  log_stream->Flush();
+}
+
+template<typename NodeType, typename EdgeType>
+void Graph<NodeType, EdgeType>::ToDotWithAutoFilePath() const {
   std::string file_path = JoinPath("dot", TypeName(), NewUniqueId() + ".dot");
   ToDotWithFilePath(file_path);
 }
@@ -339,7 +367,7 @@ void Graph<NodeType, EdgeType>::FfsForEachNode(
 }
 
 template<typename NodeType, typename EdgeType>
-std::unique_ptr<std::vector<NodeType*>> Graph<NodeType, EdgeType>::FindFirstNontrivialSCC(
+std::unique_ptr<HashSet<NodeType*>> Graph<NodeType, EdgeType>::FindFirstNontrivialSCC(
     const std::list<NodeType*>& starts,
     const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachInNode,
     const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachOutNode)
@@ -351,7 +379,7 @@ std::unique_ptr<std::vector<NodeType*>> Graph<NodeType, EdgeType>::FindFirstNont
 }
 
 template<typename NodeType, typename EdgeType>
-std::unique_ptr<std::vector<NodeType*>> Graph<NodeType, EdgeType>::FindFirstNontrivialSCC(
+std::unique_ptr<HashSet<NodeType*>> Graph<NodeType, EdgeType>::FindFirstNontrivialSCC(
     const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachInNode,
     const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachOutNode)
     const {
@@ -361,14 +389,14 @@ std::unique_ptr<std::vector<NodeType*>> Graph<NodeType, EdgeType>::FindFirstNont
 }
 
 template<typename NodeType, typename EdgeType>
-std::unique_ptr<std::vector<NodeType*>> Graph<NodeType, EdgeType>::FindFirstNontrivialSCC() const {
+std::unique_ptr<HashSet<NodeType*>> Graph<NodeType, EdgeType>::FindFirstNontrivialSCC() const {
   return FindFirstNontrivialSCC(
       [&](const std::function<void(NodeType*)>& Handler) { ForEachNode(Handler); },
       &NodeType::ForEachNodeOnInEdge, &NodeType::ForEachNodeOnOutEdge);
 }
 
 template<typename NodeType, typename EdgeType>
-std::unique_ptr<std::vector<NodeType*>> Graph<NodeType, EdgeType>::FindFirstNontrivialSCC(
+std::unique_ptr<HashSet<NodeType*>> Graph<NodeType, EdgeType>::FindFirstNontrivialSCC(
     const std::function<void(const std::function<void(NodeType*)>&)>& ForEachStart,
     const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachInNode,
     const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachOutNode)
@@ -384,13 +412,13 @@ std::unique_ptr<std::vector<NodeType*>> Graph<NodeType, EdgeType>::FindFirstNont
   while (stack.empty() == false) {
     NodeType* cur_node = stack.top();
     stack.pop();
-    auto ret = std::make_unique<std::vector<NodeType*>>();
+    auto ret = std::make_unique<HashSet<NodeType*>>();
     DfsForEachNode({cur_node}, ForEachUnvisitedInNode,
-                   [&](NodeType* node) { ret->push_back(node); });
+                   [&](NodeType* node) { CHECK(ret->insert(node).second); });
     for (const auto& node : *ret) { visited.insert(node); }
     if (ret->size() > 1) { return ret; }
   }
-  return std::unique_ptr<std::vector<NodeType*>>();
+  return std::unique_ptr<HashSet<NodeType*>>();
 }
 
 template<typename NodeType, typename EdgeType>
