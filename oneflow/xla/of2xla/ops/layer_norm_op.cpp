@@ -77,7 +77,104 @@ void LayerNormOp::Compile(XlaOpContext *ctx) {
   ctx->SetOutput("out", Reshape(output, input_shape));
 }
 
+class LayerNormGradOp : public XlaOpCompiler {
+ public:
+  void Compile(XlaOpContext *ctx) override;
+
+ private:
+  xla::XlaOp BatchNormGrad(const xla::XlaOp &activations,
+                           const xla::XlaOp &scale, const xla::XlaOp &mean,
+                           const xla::XlaOp &variance, const xla::XlaOp &grad,
+                           double epsilon) {
+    // Feature index is 1 for NCHW
+    int feature_index = 1;
+    return xla::BatchNormGrad(
+        activations, scale, mean, variance, grad, epsilon, feature_index);
+  }
+};
+
+void LayerNormGradOp::Compile(XlaOpContext *ctx) {
+  xla::XlaOp output_grad = ctx->Input("dy");
+  xla::XlaOp activation = ctx->Input("x");
+  xla::XlaOp mean = ctx->Input("mean");
+  xla::XlaOp inv_variance = ctx->Input("inv_variance");
+
+  Shape activation_shape = ctx->InputShape("x");
+  int begin_norm_axis = ctx->GetAttr<int64_t>("begin_norm_axis");
+  CHECK_LT(begin_norm_axis, activation_shape.NumAxes());
+  while (begin_norm_axis < 0) {
+    begin_norm_axis += activation_shape.NumAxes();
+  }
+
+  int64_t batch_dims = activation_shape.Count(0, begin_norm_axis);
+  int64_t norm_dims = activation_shape.Count(begin_norm_axis);
+  Shape bn_shape = Shape({1, batch_dims, 1, norm_dims});
+  Shape scale_shape = Shape({batch_dims});
+
+  double epsilon = ctx->GetAttr<double>("epsilon");
+  xla::XlaOp ones = xla::ScalarLike(inv_variance, 1.0f);
+  xla::XlaOp variance = xla::Sub(ones / (inv_variance * inv_variance),
+                                 xla::ScalarLike(inv_variance, epsilon));
+
+  activation = Reshape(activation, bn_shape);
+  mean = Reshape(mean, scale_shape);
+  variance = Reshape(variance, scale_shape);
+  output_grad = Reshape(output_grad, bn_shape);
+  auto output = BatchNormGrad(activation, xla::Broadcast(ones, {batch_dims}),
+                              mean, variance, output_grad, epsilon);
+  xla::XlaOp activation_grad = xla::GetTupleElement(output, 0);
+  ctx->SetOutput("dx", Reshape(activation_grad, activation_shape));
+}
+
+class LayerNormParamGradOp : public XlaOpCompiler {
+ public:
+  void Compile(XlaOpContext *ctx) override;
+};
+
+void LayerNormParamGradOp::Compile(XlaOpContext *ctx) {
+  xla::XlaOp output_grad = ctx->Input("dy");
+  Shape output_shape = ctx->InputShape("dy");
+
+  int begin_params_axis = ctx->GetAttr<int64_t>("begin_params_axis");
+  while (begin_params_axis < 0) {
+    begin_params_axis += output_shape.NumAxes();
+  }
+  std::vector<long long> batch_dims(begin_params_axis);
+  std::iota(batch_dims.begin(), batch_dims.end(), 0);
+  int norm_dims_size = output_shape.NumAxes() - begin_params_axis;
+  std::vector<long long> norm_dims(norm_dims_size);
+  std::iota(norm_dims.begin(), norm_dims.end(), begin_params_axis);
+
+  xla::XlaBuilder *builder = ctx->builder();
+  DataType data_type = ctx->InputType("dy");
+  xla::XlaComputation add_func = CreateAddFunc(data_type);
+  if (ctx->HasAttr("beta_diff")) {
+    xla::XlaOp beta_grad = xla::Reduce(output_grad, Zero(builder, data_type),
+                                       add_func, batch_dims);
+    ctx->SetOutput("beta_diff", beta_grad);
+  }
+  if (ctx->HasAttr("gamma_diff")) {
+    xla::XlaOp normalized = ctx->Input("normalized");
+    xla::XlaOp gamma_grad = normalized * output_grad;
+    gamma_grad = xla::Reduce(gamma_grad, Zero(builder, data_type), add_func,
+                             batch_dims);
+    ctx->SetOutput("gamma_diff", gamma_grad);
+  }
+  if (ctx->HasAttr("normalized_diff")) {
+    xla::XlaOp normalized_grad;
+    if (ctx->HasAttr("gamma")) {
+      xla::XlaOp gamma = ctx->Input("gamma"); 
+      normalized_grad = xla::Mul(output_grad, gamma, norm_dims);
+    } else {
+      normalized_grad = output_grad;
+    }
+    ctx->SetOutput("normalized_diff", normalized_grad);
+  }
+}
+
 REGISTER_XLA_OP_COMPILER(LayerNorm, LayerNormOp);
+REGISTER_XLA_OP_COMPILER(LayerNormParamGrad, LayerNormParamGradOp);
+REGISTER_XLA_OP_COMPILER(LayerNormGrad, LayerNormGradOp);
 
 }  // namespace mola
 }  // namespace oneflow

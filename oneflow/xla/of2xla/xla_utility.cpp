@@ -32,6 +32,8 @@ static std::unordered_map<int32_t, std::string> op_type2string_map = {
   {OP_TYPE_CASE(Softmax), "Softmax"},
   {OP_TYPE_CASE(SoftmaxGrad), "SoftmaxGrad"},
   {OP_TYPE_CASE(LayerNorm), "LayerNorm"},
+  {OP_TYPE_CASE(LayerNormParamGrad), "LayerNormParamGrad"},
+  {OP_TYPE_CASE(LayerNormGrad), "LayerNormGrad"},
   // TODO(hjchen2)
 };
 
