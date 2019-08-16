@@ -15,6 +15,9 @@ xla::Shape OfShapeToXlaShape(const Shape &shape, DataType dtype);
 
 xla::Shape OfShapeToXlaShape(const Shape &shape, xla::PrimitiveType type);
 
+// Returns shape[start_dim:end_dim]
+Shape SliceShape(const Shape &shape, size_t start_dim, size_t end_dim);
+
 }  // namespace mola
 }  // namespace oneflow
 

@@ -49,7 +49,6 @@ class GatherOp : public XlaOpCompiler {
 
     xla::XlaOp input = ctx->Input("in");
     xla::XlaOp indices = ctx->Input("indices");
-
     int axis = GatherAxis(ctx);
     int batch_dims = GatherBatchDims(ctx);
 
@@ -64,7 +63,7 @@ class GatherOp : public XlaOpCompiler {
   }
 
   virtual int GatherAxis(XlaOpContext *ctx) const {
-    return ctx->GetAttr<int>("axis");
+    return ctx->GetAttr<int64_t>("axis");
   }
   virtual int GatherBatchDims(XlaOpContext *ctx) const {
     return 0;

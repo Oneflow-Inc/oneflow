@@ -12,6 +12,12 @@ xla::XlaOp One(xla::XlaBuilder *builder, DataType data_type);
 
 xla::XlaOp Zero(xla::XlaBuilder *builder, DataType data_type);
 
+xla::XlaOp Ones(xla::XlaBuilder *builder, const Shape& shape,
+                DataType data_type);
+
+xla::XlaOp Zeros(xla::XlaBuilder *builder, const Shape& shape,
+                 DataType data_type);
+
 xla::XlaOp IntegerLiteral(xla::XlaBuilder *builder, DataType data_type,
                           int32_t value);
 
