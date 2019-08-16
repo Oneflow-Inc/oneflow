@@ -1663,7 +1663,7 @@ message ClipBoxesToImageOpConf {
 message IdentifyNonSmallBoxesOpConf {
   required string in = 1;
   required string out = 2;
-  required float min_size = 3;
+  optional float min_size = 3 [default = 0.0];
 }
 
 message NonMaximumSupressionOpConf {
