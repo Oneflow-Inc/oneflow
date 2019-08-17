@@ -439,6 +439,7 @@ void FixOutputOpParallelConf(Job* job) {
   JobBuilder job_builder(job);
   for (const auto& op_conf : job->net().op()) {
     if (op_conf.has_output_conf() == false) { continue; }
+    if (op_conf.output_conf().has_blob_conf()) { continue; }
     LogicalBlobId lbi = GenLogicalBlobId(op_conf.output_conf().in());
     job_builder.MutParallelConfOnlyOnce(op_conf.name(),
                                         job_builder.ParallelConf4OpName(lbi.op_name()));
