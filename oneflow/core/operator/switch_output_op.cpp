@@ -44,8 +44,9 @@ void SwitchOutputOp::InferHasBatchDim(
 void SwitchOutputOp::GetSbpSignatures(
     const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
     SbpSignatureList* sbp_sig_list) const {
-  InterfaceOpUtil::GetOutputLikeOpSbpSignatures(op_conf().switch_output_conf().blob_conf(),
-                                                input_bns(), output_bns(), sbp_sig_list);
+  InterfaceOpUtil::GetOutputLikeOpSbpSignature(op_conf().switch_output_conf().blob_conf(),
+                                               input_bns(), output_bns(),
+                                               sbp_sig_list->mutable_sbp_signature()->Add());
 }
 
 REGISTER_OP(OperatorConf::kSwitchOutputConf, SwitchOutputOp);

@@ -50,6 +50,27 @@ void ReduceMeanOp::InferHasBatchDim(
   *HasBatchDim4BnInOp("out") = !(conf_axes.empty() || (conf_axes.find(0) != conf_axes.end()));
 }
 
+void ReduceMeanOp::GetSbpSignatures(
+    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
+    SbpSignatureList* sbp_sig_list) const {
+  int32_t num_axes = LogicalBlobDesc4Ibn("in").shape().NumAxes();
+  auto IsReducedAxis =
+      ReduceSbpUtil::MakePredicatorIsReducedAxis(op_conf().reduce_mean_conf().axis(), num_axes);
+  FOR_RANGE(int64_t, i, 0, num_axes) {
+    if (IsReducedAxis(i)) {
+      SbpSignatureBuilder()
+          .Split(input_bns(), i)
+          .PartialSum(output_bns())
+          .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+    } else {
+      SbpSignatureBuilder()
+          .Split(input_bns(), i)
+          .Split(output_bns(), i)
+          .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+    }
+  }
+}
+
 REGISTER_OP(OperatorConf::kReduceMeanConf, ReduceMeanOp);
 
 }  // namespace oneflow

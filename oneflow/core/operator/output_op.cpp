@@ -33,19 +33,24 @@ void OutputOp::InferHasBatchDim(std::function<bool*(const std::string&)> HasBatc
   }
 }
 
-void OutputOp::GetSbpSignatures(
-    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
-    SbpSignatureList* sbp_sig_list) const {
+void OutputOp::InferSbpSignature(
+    SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
+    const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
+    std::function<const SbpInferHint&(const std::string&)> SbpInferHint4Ibn,
+    const ParallelDesc& parallel_desc) const {
   if (op_conf().output_conf().has_blob_conf()) {
-    InterfaceOpUtil::GetOutputLikeOpSbpSignatures(op_conf().output_conf().blob_conf(), input_bns(),
-                                                  output_bns(), sbp_sig_list);
+    InterfaceOpUtil::GetOutputLikeOpSbpSignature(op_conf().output_conf().blob_conf(), input_bns(),
+                                                 output_bns(), sbp_signature);
   } else {
-    int64_t num_axes = LogicalBlobDesc4Ibn(input_bns().Get(0)).shape().NumAxes();
-    SbpSignatureBuilder()
-        .Split(input_bns(), 0)
-        .Split(output_bns(), 0)
-        .MakeSplitSignatureListBuilder(num_axes)
-        .Build(sbp_sig_list);
+    const auto& in_sbp_infer_hint = SbpInferHint4Ibn("in");
+    CHECK(in_sbp_infer_hint.parallel_desc() == parallel_desc);
+    if (in_sbp_infer_hint.sbp_parallel().has_partial_sum_parallel()) {
+      SbpSignatureBuilder().Broadcast(input_bns()).Broadcast(output_bns()).Build(sbp_signature);
+    } else {
+      auto* bn2sbp = sbp_signature->mutable_bn_in_op2sbp_parallel();
+      (*bn2sbp)["in"] = in_sbp_infer_hint.sbp_parallel();
+      (*bn2sbp)["out"] = in_sbp_infer_hint.sbp_parallel();
+    }
   }
 }
 

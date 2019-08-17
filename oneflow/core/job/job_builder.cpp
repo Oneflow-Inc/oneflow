@@ -70,9 +70,33 @@ void JobBuilder::AddOps(const ParallelConf& parallel_conf,
   }
 }
 
+PlacementGroup* JobBuilder::FindPlacementGroup(const std::string& op_name) const {
+  FOR_RANGE(int32_t, i, 0, job_->mutable_placement()->placement_group_size()) {
+    PlacementGroup* const cur_pg = job_->mutable_placement()->mutable_placement_group(i);
+    const auto& op_names = cur_pg->op_set().op_name();
+    if (std::find(op_names.begin(), op_names.end(), op_name) != op_names.end()) { return cur_pg; }
+  }
+  UNIMPLEMENTED();
+  return nullptr;
+}
+
+void JobBuilder::MutParallelConfOnlyOnce(const std::string& op_name,
+                                         const ParallelConf& parallel_conf) {
+  CHECK(modified_parallel_conf_op_names_.emplace(op_name).second);
+  PlacementGroup* placement_group = FindPlacementGroup(op_name);
+  {
+    auto* const op_names = placement_group->mutable_op_set()->mutable_op_name();
+    Erase<PbRpf<std::string>>(*op_names, [&](const std::string& x) { return x == op_name; });
+    Placement* const placement = job_->mutable_placement();
+    if (op_names->size() > 0) { placement_group = placement->mutable_placement_group()->Add(); }
+  }
+  placement_group->mutable_op_set()->add_op_name(op_name);
+  *placement_group->mutable_parallel_conf() = parallel_conf;
+}
+
 void JobBuilder::MutOpsOnlyOnce(const std::vector<OperatorConf>& op_confs) {
   for (const auto& op_conf : op_confs) {
-    CHECK(modified_op_names_.emplace(op_conf.name()).second);
+    CHECK(modified_op_conf_op_names_.emplace(op_conf.name()).second);
     op_name2op_conf_.at(op_conf.name())->CopyFrom(op_conf);
   }
 }

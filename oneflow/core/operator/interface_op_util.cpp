@@ -24,28 +24,29 @@ bool GetSplitAxis(const InterfaceBlobConf& input_blob_conf, size_t* split_axis) 
   return false;
 }
 
-void GetSbpSignatures(const InterfaceBlobConf& blob_conf, const PbRpf<std::string>& input_bns,
-                      const PbRpf<std::string>& output_bns, SbpSignatureList* sbp_sig_list,
-                      bool is_for_input_op) {
-  if (blob_conf.has_split_axis()) {
-    int64_t num_axes = blob_conf.shape().dim_size();
-    int64_t split_axis = blob_conf.split_axis();
-    if (split_axis < 0) { split_axis += num_axes; }
-    CHECK_GE(split_axis, 0);
-    CHECK_LT(split_axis, num_axes);
+void GetSbpSignature(const InterfaceBlobConf& blob_conf, const PbRpf<std::string>& input_bns,
+                     const PbRpf<std::string>& output_bns, SbpSignature* sbp_signature,
+                     bool is_for_input_op) {
+  auto BuildSbpSignature = [&](int64_t split_axis) {
     SbpSignatureBuilder sbp_signature_builder;
     if (is_for_input_op) {
       sbp_signature_builder.Broadcast(input_bns);
     } else {
       sbp_signature_builder.Split(input_bns, split_axis);
     }
-    sbp_signature_builder.Split(output_bns, split_axis)
-        .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+    sbp_signature_builder.Split(output_bns, split_axis).Build(sbp_signature);
+  };
+  if (blob_conf.has_split_axis()) {
+    int64_t num_axes = blob_conf.shape().dim_size();
+    int64_t split_axis = blob_conf.split_axis();
+    if (split_axis < 0) { split_axis += num_axes; }
+    CHECK_GE(split_axis, 0);
+    CHECK_LT(split_axis, num_axes);
+    BuildSbpSignature(split_axis);
   } else if (blob_conf.has_broadcast()) {
-    SbpSignatureBuilder()
-        .Broadcast(input_bns)
-        .Broadcast(output_bns)
-        .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+    SbpSignatureBuilder().Broadcast(input_bns).Broadcast(output_bns).Build(sbp_signature);
+  } else if (blob_conf.has_batch_dim()) {
+    BuildSbpSignature(0);
   } else {
     UNIMPLEMENTED();
   }
@@ -89,18 +90,18 @@ void InterfaceOpUtil::InferHasBatchDim(const InterfaceBlobConf& blob_conf, bool*
   *has_batch_dim = blob_conf.has_batch_dim();
 }
 
-void InterfaceOpUtil::GetInputLikeOpSbpSignatures(const InterfaceBlobConf& blob_conf,
-                                                  const PbRpf<std::string>& input_bns,
-                                                  const PbRpf<std::string>& output_bns,
-                                                  SbpSignatureList* sbp_sig_list) {
-  GetSbpSignatures(blob_conf, input_bns, output_bns, sbp_sig_list, true);
+void InterfaceOpUtil::GetInputLikeOpSbpSignature(const InterfaceBlobConf& blob_conf,
+                                                 const PbRpf<std::string>& input_bns,
+                                                 const PbRpf<std::string>& output_bns,
+                                                 SbpSignature* sbp_signature) {
+  GetSbpSignature(blob_conf, input_bns, output_bns, sbp_signature, true);
 }
 
-void InterfaceOpUtil::GetOutputLikeOpSbpSignatures(const InterfaceBlobConf& blob_conf,
-                                                   const PbRpf<std::string>& input_bns,
-                                                   const PbRpf<std::string>& output_bns,
-                                                   SbpSignatureList* sbp_sig_list) {
-  GetSbpSignatures(blob_conf, input_bns, output_bns, sbp_sig_list, false);
+void InterfaceOpUtil::GetOutputLikeOpSbpSignature(const InterfaceBlobConf& blob_conf,
+                                                  const PbRpf<std::string>& input_bns,
+                                                  const PbRpf<std::string>& output_bns,
+                                                  SbpSignature* sbp_signature) {
+  GetSbpSignature(blob_conf, input_bns, output_bns, sbp_signature, false);
 }
 
 void InterfaceOpUtil::InitBlobConf(InterfaceBlobConf* blob_conf,

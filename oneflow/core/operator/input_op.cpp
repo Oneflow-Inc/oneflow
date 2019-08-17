@@ -36,8 +36,9 @@ void InputOp::InferHasBatchDim(std::function<bool*(const std::string&)> HasBatch
 }
 
 void InputOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
-  InterfaceOpUtil::GetInputLikeOpSbpSignatures(op_conf().input_conf().blob_conf(), input_bns(),
-                                               output_bns(), sbp_sig_list);
+  InterfaceOpUtil::GetInputLikeOpSbpSignature(op_conf().input_conf().blob_conf(), input_bns(),
+                                              output_bns(),
+                                              sbp_sig_list->mutable_sbp_signature()->Add());
 }
 
 REGISTER_OP(OperatorConf::kInputConf, InputOp);

@@ -24,7 +24,7 @@ class ReduceMeanOp final : public Operator {
   void InferHasBatchDim(std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const override;
   void GetSbpSignatures(
       const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
-      SbpSignatureList* sbp_sig_list) const override {}
+      SbpSignatureList* sbp_sig_list) const override;
 };
 
 }  // namespace oneflow
