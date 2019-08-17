@@ -435,12 +435,11 @@ void EnableAutoMixedPrecision(const OpGraph& op_graph, JobBuilder* job_builder) 
       .Apply(op_graph, job_builder);
 }
 
-void FixOutputOpParallelConf(Job* job) {
+void FixReturnOpParallelConf(Job* job) {
   JobBuilder job_builder(job);
   for (const auto& op_conf : job->net().op()) {
-    if (op_conf.has_output_conf() == false) { continue; }
-    if (op_conf.output_conf().has_blob_conf()) { continue; }
-    LogicalBlobId lbi = GenLogicalBlobId(op_conf.output_conf().in());
+    if (op_conf.has_return_conf() == false) { continue; }
+    LogicalBlobId lbi = GenLogicalBlobId(op_conf.return_conf().in());
     job_builder.MutParallelConfOnlyOnce(op_conf.name(),
                                         job_builder.ParallelConf4OpName(lbi.op_name()));
   }
@@ -452,7 +451,7 @@ void JobCompleter::Complete(Job* job) const {
   // replace facade op
   SplitDecodeOps(job);
   AddRecordLoadOps(job);
-  FixOutputOpParallelConf(job);
+  FixReturnOpParallelConf(job);
   WithOpGraphAndMutJobBuilder(job, &ReplaceFacade);
   // complete variable ops
   WithOpGraphAndMutJobBuilder(job, &AutoVar);

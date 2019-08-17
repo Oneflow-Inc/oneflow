@@ -212,6 +212,10 @@ void ForEachOutputCriticalSectionOpNodes(
         Handler) {
   HashMap<OperatorConf::OpTypeCase, HashSet<const OpNode*>> op_type_case2op_nodes;
   InitOpTypeCase2OpNodes(op_graph, &op_type_case2op_nodes);
+  if (op_type_case2op_nodes[OperatorConf::kReturnConf].empty() == false) {
+    Handler(op_type_case2op_nodes[OperatorConf::kReturnConf],
+            GetOpNames(op_type_case2op_nodes[OperatorConf::kReturnConf]));
+  }
   if (op_type_case2op_nodes[OperatorConf::kOutputConf].empty() == false) {
     Handler(op_type_case2op_nodes[OperatorConf::kOutputConf],
             GetOpNames(op_type_case2op_nodes[OperatorConf::kOutputConf]));
