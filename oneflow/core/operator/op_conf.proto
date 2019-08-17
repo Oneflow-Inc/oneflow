@@ -781,10 +781,15 @@ message ForeignInputOpConf {
   required string ofblob_buffer_name = 4;
 }
 
+message ReturnOpConf {
+  required string in = 1;
+  required string out = 2;
+}
+
 message OutputOpConf {
   required string in = 1;
   required string out = 2;
-  optional InterfaceBlobConf blob_conf = 3;
+  required InterfaceBlobConf blob_conf = 3;
 }
 
 message SwitchOutputOpConf {
@@ -1510,6 +1515,7 @@ message OperatorConf {
     ForeignOutputOpConf foreign_output_conf = 143;
     AccTickOpConf acc_tick_conf = 144;
     SwitchOutputOpConf switch_output_conf = 145;
+    ReturnOpConf return_conf = 146;
 
     // domain op
     TupleIdentityOpConf tuple_identity_conf = 200;

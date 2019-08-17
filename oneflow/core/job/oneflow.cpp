@@ -286,8 +286,8 @@ void LinkMainPlan(Plan* plan, const Plan& main_plan,
   }
 }
 
-void GetInterfaceOpBlobInfo(const JobBuilder& job_builder, const std::string& op_name,
-                            ParallelBlobConf* blob_conf) {
+void GetMemSharingOpBlobInfo(const JobBuilder& job_builder, const std::string& op_name,
+                             ParallelBlobConf* blob_conf) {
   std::string obn = "out";
   std::string lbn;
   {
@@ -298,6 +298,10 @@ void GetInterfaceOpBlobInfo(const JobBuilder& job_builder, const std::string& op
       lbn = op_name + "/" + op_conf.input_conf().out();
     } else if (op_conf.has_output_conf()) {
       lbn = op_name + "/" + op_conf.output_conf().out();
+    } else if (op_conf.has_switch_output_conf()) {
+      lbn = op_name + "/" + op_conf.switch_output_conf().out();
+    } else if (op_conf.has_return_conf()) {
+      lbn = op_name + "/" + op_conf.return_conf().out();
     } else {
       UNIMPLEMENTED();
     }
@@ -323,10 +327,10 @@ void FilterOpName2ParallelBlobConf(
       const auto& iter = op_name2parallel_blob_conf->find(op_conf.name());
       if (iter == op_name2parallel_blob_conf->end()) {
         auto* first_op_parallel_blob_conf = &(*op_name2parallel_blob_conf)[op_conf.name()];
-        GetInterfaceOpBlobInfo(job_builder, op_conf.name(), first_op_parallel_blob_conf);
+        GetMemSharingOpBlobInfo(job_builder, op_conf.name(), first_op_parallel_blob_conf);
       } else {
         ParallelBlobConf parallel_blob_conf;
-        GetInterfaceOpBlobInfo(job_builder, op_conf.name(), &parallel_blob_conf);
+        GetMemSharingOpBlobInfo(job_builder, op_conf.name(), &parallel_blob_conf);
         CHECK(parallel_blob_conf == iter->second);
       }
     }
@@ -344,11 +348,11 @@ void FilterArgPassJobGroupInfo(
     for (const OperatorConf& op_conf : jobs->at(job_id).net().op()) {
       if (IsInterfaceOpConf(op_conf) == false) { continue; }
       ParallelBlobConf parallel_blob_conf;
-      GetInterfaceOpBlobInfo(job_builder, op_conf.name(), &parallel_blob_conf);
+      GetMemSharingOpBlobInfo(job_builder, op_conf.name(), &parallel_blob_conf);
       if (op_conf.has_input_conf()) {
         parallel_blob_conf2input_op_names[parallel_blob_conf].insert(op_conf.name());
       }
-      if (op_conf.has_output_conf()) {
+      if (op_conf.has_return_conf()) {
         parallel_blob_conf2output_op_names[parallel_blob_conf].insert(op_conf.name());
       }
     }
@@ -803,7 +807,7 @@ void CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan) {
   FilterOpName2ParallelBlobConf({OperatorConf::kInputConf}, &jobs,
                                 &push_op_name2parallel_blob_conf);
   HashMap<std::string, ParallelBlobConf> pull_op_name2parallel_blob_conf;
-  FilterOpName2ParallelBlobConf({OperatorConf::kOutputConf}, &jobs,
+  FilterOpName2ParallelBlobConf({OperatorConf::kReturnConf}, &jobs,
                                 &pull_op_name2parallel_blob_conf);
   HashMap<std::string, ParallelBlobConf> var_op_name2parallel_blob_conf;
   FilterOpName2ParallelBlobConf({OperatorConf::kVariableConf}, &jobs,
