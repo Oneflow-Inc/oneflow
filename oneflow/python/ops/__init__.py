@@ -20,7 +20,7 @@ def InputOpByBlobDesc(blob_desc):
 def OutputOpByRemoteBlob(remote_blob):
     op_conf = op_conf_util.OperatorConf()
     op_conf.name = id_util.UniqueStr('Output_')
-    setattr(op_conf.output_conf, 'in', remote_blob.lbn)
+    setattr(op_conf.output_conf, 'in', remote_blob.logical_blob_name)
     op_conf.output_conf.out = "out"
     compile_context.CurJobAddOp(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()

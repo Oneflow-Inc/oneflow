@@ -15,7 +15,8 @@ class Blob(RemoteBlob):
     # getters
     def dl_net(self):
         return self.dl_net_
-    
+
+    @property
     def logical_blob_name(self):
         return self.logical_blob_name_
     

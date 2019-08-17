@@ -15,7 +15,7 @@ def relu(x, alpha=0., max_value=None, threshold=0.):
     assert threshold == 0.
     op_conf = op_conf_util.OperatorConf()
     op_conf.name = id_util.UniqueStr('Relu_')
-    setattr(op_conf.relu_conf, 'in', x.lbn)
+    setattr(op_conf.relu_conf, 'in', x.logical_blob_name)
     op_conf.relu_conf.out = "out"
     compile_context.CurJobAddOp(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
@@ -27,7 +27,7 @@ def relu(x, alpha=0., max_value=None, threshold=0.):
 def gelu(x):
     op_conf = op_conf_util.OperatorConf()
     op_conf.name = id_util.UniqueStr('Gelu_')
-    setattr(op_conf.gelu_conf, 'in', x.lbn)
+    setattr(op_conf.gelu_conf, 'in', x.logical_blob_name)
     op_conf.gelu_conf.out = "out"
     compile_context.CurJobAddOp(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
@@ -39,7 +39,7 @@ def gelu(x):
 def tanh(x):
     op_conf = op_conf_util.OperatorConf()
     op_conf.name = id_util.UniqueStr('Tanh_')
-    setattr(op_conf.tanh_conf, 'in', x.lbn)
+    setattr(op_conf.tanh_conf, 'in', x.logical_blob_name)
     op_conf.tanh_conf.out = "out"
     compile_context.CurJobAddOp(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
@@ -51,7 +51,7 @@ def tanh(x):
 def sigmoid(x):
     op_conf = op_conf_util.OperatorConf()
     op_conf.name = id_util.UniqueStr('Sigmoid_')
-    setattr(op_conf.sigmoid_conf, 'in', x.lbn)
+    setattr(op_conf.sigmoid_conf, 'in', x.logical_blob_name)
     op_conf.sigmoid_conf.out = "out"
     compile_context.CurJobAddOp(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
