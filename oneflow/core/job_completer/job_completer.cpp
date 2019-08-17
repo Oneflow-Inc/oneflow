@@ -306,7 +306,9 @@ void SetOpTimeShape7BatchDimLbis(const OpGraph& op_graph, JobBuilder* job_builde
 }
 
 void RewriteBoxingWithAllReduce(const OpGraph& op_graph, JobBuilder* job_builder) {
-  AllReduceAddPass().Apply(op_graph, job_builder);
+  if (GlobalJobDesc().enable_all_reduce_group()) {
+    AllReduceAddPass().Apply(op_graph, job_builder);
+  }
 }
 
 void DumpLogicalBlobDescAndSbpSignature(const OpGraph& op_graph, JobBuilder* job_builder) {
