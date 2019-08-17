@@ -13,6 +13,7 @@ class input_blob_def(blob_desc.BlobDesc):
                  is_dynamic = False,
                  split_axis = None,
                  broadcast = None):
+        if split_axis == None and broadcast == None: split_axis = 0
         blob_desc.BlobDesc.__init__(
             self, shape, dtype, has_batch_dim, is_dynamic, split_axis, broadcast)
 

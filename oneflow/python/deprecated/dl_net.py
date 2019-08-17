@@ -169,7 +169,7 @@ class DLNet(object):
 
         # input blob
         if isinstance(gt_boxes, Blob):
-            kw['gt_boxes'] = gt_boxes.logical_blob_name()
+            kw['gt_boxes'] = gt_boxes.logical_blob_name
         elif isinstance(gt_boxes, str):
             kw['gt_boxes'] = gt_boxes
         else:
@@ -252,7 +252,7 @@ class DLNet(object):
         assert('roi_canonical_scale' in kw);
 
         name = self._GetVariableName(name, util.GetCurFuncName());
-        kw['collected_rois'] = in_blob.logical_blob_name(); #FpnCollect only
+        kw['collected_rois'] = in_blob.logical_blob_name; #FpnCollect only
 
         rois = [];
         roi_blobs = [];
@@ -276,7 +276,7 @@ class DLNet(object):
         assert('bbox_reg_weights' in kw);
 
         name = self._GetVariableName(name, util.GetCurFuncName());
-        kw['bbox'] = bbox_blob.logical_blob_name();
+        kw['bbox'] = bbox_blob.logical_blob_name;
         kw['bbox_prob'] = str(bbox_prob);
         kw['bbox_pred'] = str(bbox_pred);
         kw['out_bbox'] = 'out_bbox'
@@ -292,9 +292,9 @@ class DLNet(object):
         assert('im_width' in kw);
         assert('im_height' in kw);
         name = self._GetVariableName(name, util.GetCurFuncName());
-        kw['roi_labels'] = roi_labels.logical_blob_name();
-        kw['rois'] = rois.logical_blob_name();
-        kw['masks'] = in_blob.logical_blob_name();
+        kw['roi_labels'] = roi_labels.logical_blob_name;
+        kw['rois'] = rois.logical_blob_name;
+        kw['masks'] = in_blob.logical_blob_name;
         kw['out'] = 'out';
         self.CreateOperator(util.GetCurFuncName(), name, [], [], **kw);
         return Blob(self, "%s/out" % name);
@@ -348,7 +348,7 @@ class DLNet(object):
 
     def LogCounter(self, in_blob, name=None, interval=10):
         name = self._GetVariableName(name, util.GetCurFuncName());
-        conf = {'in': in_blob.logical_blob_name(), 'interval': interval};
+        conf = {'in': in_blob.logical_blob_name, 'interval': interval};
         self.CreateOperator(util.GetCurFuncName(), name, [], [], **conf);
 
     def Print(self, name, print_dir, in_blobs, print_names):
@@ -356,7 +356,7 @@ class DLNet(object):
         in_list = []
         for idx, blob in enumerate(in_blobs):
             one_in = {}
-            one_in['lbn'] = blob.logical_blob_name()
+            one_in['lbn'] = blob.logical_blob_name
             one_in['name'] = print_names[idx]
             one_in['encode_case'] = {'raw': {}}
             in_list.append(one_in)
@@ -375,16 +375,16 @@ class DLNet(object):
         return None;
 
     def Gather(self, in_blob, indices_blob, name=None, **kw):
-        kw['indices'] = indices_blob.logical_blob_name()
-        kw['in'] = in_blob.logical_blob_name()
+        kw['indices'] = indices_blob.logical_blob_name
+        kw['in'] = in_blob.logical_blob_name
         kw['out'] = 'out'
         name = self._GetVariableName(name, util.GetCurFuncName());
         self.CreateOperator(util.GetCurFuncName(), name, [], [], **kw)
         return Blob(self, '{}/out'.format(name))
 
     def BatchGather(self, in_blob, indices_blob, name=None, **kw):
-        kw['indices'] = indices_blob.logical_blob_name()
-        kw['in'] = in_blob.logical_blob_name()
+        kw['indices'] = indices_blob.logical_blob_name
+        kw['in'] = in_blob.logical_blob_name
         kw['out'] = 'out'
         name = self._GetVariableName(name, util.GetCurFuncName())
         self.CreateOperator(util.GetCurFuncName(), name, [], [], **kw)
@@ -452,22 +452,22 @@ class DLNet(object):
 
     def Matmul(self, a_blob, b_blob, name=None, **kw):
         kw['out'] = 'out'
-        kw['a'] = a_blob.logical_blob_name()
-        kw['b'] = b_blob.logical_blob_name()
+        kw['a'] = a_blob.logical_blob_name
+        kw['b'] = b_blob.logical_blob_name
         name = self._GetVariableName(name, util.GetCurFuncName())
         self.CreateOperator(util.GetCurFuncName(), name, [], [], **kw)
         return Blob(self, '{}/out'.format(name))
 
     def BiasAdd(self, a_blob, b_blob, name=None, **kw):
-        kw['a'] = a_blob.logical_blob_name()
-        kw['b'] = b_blob.logical_blob_name()
+        kw['a'] = a_blob.logical_blob_name
+        kw['b'] = b_blob.logical_blob_name
         kw['out'] = 'out'
         name = self._GetVariableName(name, util.GetCurFuncName());
         self.CreateOperator(util.GetCurFuncName(), name, [], [], **kw)
         return Blob(self, '{}/out'.format(name))
 
     def Concat(self, in_blobs, axis, name=None, **kw):
-        kw['in'] = [blob.logical_blob_name() for blob in in_blobs]
+        kw['in'] = [blob.logical_blob_name for blob in in_blobs]
         kw['axis'] = axis
         kw['out'] = 'out'
         name = self._GetVariableName(name, util.GetCurFuncName())
@@ -475,7 +475,7 @@ class DLNet(object):
         return Blob(self, '{}/out'.format(name))
 
     def OneHot(self, indices, depth, name=None, **kw):
-        kw['indices'] = indices.logical_blob_name()
+        kw['indices'] = indices.logical_blob_name
         kw['depth'] = depth
         kw['out'] = 'out'
         name = self._GetVariableName(name, util.GetCurFuncName())
@@ -483,7 +483,7 @@ class DLNet(object):
         return Blob(self, '{}/out'.format(name))
 
     def Add(self, in_blobs, activation=op_conf_pb2.kNone, name=None, **kw):
-        kw['in'] = [blob.logical_blob_name() for blob in in_blobs]
+        kw['in'] = [blob.logical_blob_name for blob in in_blobs]
         if activation != op_conf_pb2.kNone:
             kw['activation'] = activation
         kw['out'] = 'out'
@@ -499,40 +499,40 @@ class DLNet(object):
         return input_blob
 
     def SparseSoftmaxCrossEntropyLoss(self, prediction, label, name=None, **kw):
-        kw['prediction'] = prediction.logical_blob_name()
-        kw['label'] = label.logical_blob_name()
+        kw['prediction'] = prediction.logical_blob_name
+        kw['label'] = label.logical_blob_name
         kw['loss'] = 'loss'
         name = self._GetVariableName(name, util.GetCurFuncName())
         self.CreateOperator(util.GetCurFuncName(), name, [], [], **kw)
         return Blob(self, '{}/out'.format(name))
 
     def IdentityLoss(self, prediction,  name=None, **kw):
-        kw['prediction'] = prediction.logical_blob_name()
+        kw['prediction'] = prediction.logical_blob_name
         kw['loss'] = 'loss'
         name = self._GetVariableName(name, util.GetCurFuncName())
         self.CreateOperator(util.GetCurFuncName(), name, [], [], **kw)
         return Blob(self, '{}/loss'.format(name))
 
     def SparseCrossEntropy(self, prediction, label, name=None, **kw):
-        kw['prediction'] = prediction.logical_blob_name()
-        kw['label'] = label.logical_blob_name()
+        kw['prediction'] = prediction.logical_blob_name
+        kw['label'] = label.logical_blob_name
         kw['out'] = 'out'
         name = self._GetVariableName(name, util.GetCurFuncName())
         self.CreateOperator(util.GetCurFuncName(), name, [], [], **kw)
         return Blob(self, '{}/out'.format(name))
 
     def Accuracy(self, prediction, label, weight=None, name=None, **kw):
-        kw['prediction'] = prediction.logical_blob_name()
-        kw['label'] = label.logical_blob_name()
+        kw['prediction'] = prediction.logical_blob_name
+        kw['label'] = label.logical_blob_name
         kw['accuracy'] = 'accuracy'
         if weight is not None:
-            kw['weight'] = weight.logical_blob_name()
+            kw['weight'] = weight.logical_blob_name
         name = self._GetVariableName(name, util.GetCurFuncName())
         self.CreateOperator(util.GetCurFuncName(), name, [], [], **kw)
         return Blob(self, '{}/accuracy'.format(name)), Blob(self, '{}/accuracy_instance_num'.format(name))
 
     def TupleIdentity(self, in_blobs, name=None, **kw):
-        kw['in'] = list(map(lambda blob: blob.logical_blob_name(), in_blobs))
+        kw['in'] = list(map(lambda blob: blob.logical_blob_name, in_blobs))
         kw['out'] = list(map(lambda i: 'out_{}'.format(i), range(0, len(in_blobs))))
         name = self._GetVariableName(name, util.GetCurFuncName())
         self.CreateOperator(util.GetCurFuncName(), name, [], [], **kw)
@@ -548,8 +548,8 @@ class DLNet(object):
             self.variable_scope_ = self.variable_scope_[0:-1];
 
     def _BroadcastBinaryOp(self, op_type_name, a_blob, b_blob, name=None, **kw):
-        kw['a'] = a_blob.logical_blob_name();
-        kw['b'] = b_blob.logical_blob_name();
+        kw['a'] = a_blob.logical_blob_name;
+        kw['b'] = b_blob.logical_blob_name;
         return self._SoleOutputOperator(op_type_name, [], name=name, **kw);
 
     def _ScalarBinaryOp(self, op_type_name, in_blob, scalar, name=None, **kw):
@@ -561,11 +561,11 @@ class DLNet(object):
         assert('in' not in kw);
         assert('out' not in kw);
         if isinstance(in_blobs, Blob):
-            in_lbn = in_blobs.logical_blob_name()
+            in_lbn = in_blobs.logical_blob_name
         elif isinstance(in_blobs, str):
             in_lbn = in_blobs
         else:
-            in_lbn = [blob.logical_blob_name() for blob in in_blobs];
+            in_lbn = [blob.logical_blob_name for blob in in_blobs];
         name = self._GetVariableName(name, op_type_name);
         if out is None: out = "out";
         self.CreateOperator(op_type_name, name, in_lbn, out, **kw);
@@ -576,8 +576,8 @@ class DLNet(object):
         assert('label' not in kw);
         assert('loss' not in kw);
         name = self._GetVariableName(name, op_type_name);
-        kw['prediction'] = prediction_blob.logical_blob_name();
-        kw['label'] = label_blob.logical_blob_name();
+        kw['prediction'] = prediction_blob.logical_blob_name;
+        kw['label'] = label_blob.logical_blob_name;
         kw['loss'] = 'loss';
         self.CreateOperator(op_type_name, name, [], [], **kw);
         return None;
