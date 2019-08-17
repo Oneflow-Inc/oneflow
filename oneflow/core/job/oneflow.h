@@ -5,6 +5,7 @@
 #include "oneflow/core/job/plan.pb.h"
 #include "oneflow/core/control/ctrl_server.h"
 #include "oneflow/core/job/runtime.h"
+#include "oneflow/core/job/runtime_buffers_scope.h"
 #include "oneflow/core/job/inter_user_job_info.pb.h"
 
 namespace oneflow {
@@ -25,6 +26,7 @@ class Oneflow final {
  private:
   Plan plan_;
   std::unique_ptr<GlobalObjectsScope4JobConf> global_objects_scope4job_conf_;
+  std::unique_ptr<RuntimeBuffersScope> runtime_buffers_scope_;
   std::unique_ptr<Runtime> runtime_;
 };
 
