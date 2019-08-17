@@ -1,0 +1,21 @@
+#include "oneflow/core/kernel/segment_sum_kernel.h"
+#include "oneflow/core/kernel/segment_kernel_util.h"
+
+namespace oneflow {
+
+const PbMessage& SegmentSumKernel::GetCustomizedOpConf() const {
+  return this->op_conf().segment_sum_conf();
+}
+
+void SegmentSumKernel::ForwardDataContent(const KernelCtx& ctx,
+                                    std::function<Blob*(const std::string&)> BnInOp2Blob) const{
+  const Blob* in = BnInOp2Blob("in");
+  const Blob* segment_ids = BnInOp2Blob("segment_ids");
+  Blob* out = BnInOp2Blob("out");
+  // do some real work here
+  SegmentKernelUtil<device_type, T>::SegmentSumForward(ctx.device_ctx, in, segment_ids, out);
+}
+
+ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kSegmentSumConf, SegmentSumKernel, FLOATING_DATA_TYPE_SEQ);
+
+} // namespace oneflow

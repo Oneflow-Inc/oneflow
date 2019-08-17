@@ -1448,6 +1448,19 @@ message EsacOpConf {
   optional DataType data_type = 3 [default=kInt32];
 }
 
+message SegmentSumOpConf {
+  required in = 1;
+  required segment_ids = 2;
+  required out = 3;
+}
+
+message SegmentSumGradOpConf {
+  required out_diff = 1;
+  required segment_ids = 2;
+  required in_diff = 3;
+}
+
+
 message OperatorConf {
   required string name = 1;
   optional string model_load_dir = 2;
@@ -1590,6 +1603,8 @@ message OperatorConf {
     IdentityOpConf identity_conf = 290;
     CaseOpConf case_conf = 291;
     EsacOpConf esac_conf = 292;
+    SegmentSumOpConf segment_sum_conf = 293;
+    SegmentSumGradOpConf segment_sum_grad_conf = 294;
 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;
