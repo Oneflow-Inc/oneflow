@@ -437,6 +437,24 @@ void EnableAutoMixedPrecision(const OpGraph& op_graph, JobBuilder* job_builder) 
       .Apply(op_graph, job_builder);
 }
 
+void FixInputOpParallelConf(Job* job) {
+  JobBuilder job_builder(job);
+  HashSet<std::string> input_op_names;
+  for (const auto& op_conf : job->net().op()) {
+    if (op_conf.has_input_conf()) { CHECK(input_op_names.emplace(op_conf.name()).second); }
+  }
+  HashSet<std::string> updated_op_names;
+  job_builder.ForEachOperator([&](const Operator& op) {
+    for (const auto& ibn : op.input_bns()) {
+      const LogicalBlobId& lbi = op.BnInOp2Lbi(ibn);
+      if (input_op_names.find(lbi.op_name()) == input_op_names.end()) { continue; }
+      if (updated_op_names.find(lbi.op_name()) != updated_op_names.end()) { continue; }
+      job_builder.MutParallelConfOnlyOnce(lbi.op_name(),
+                                          job_builder.ParallelConf4OpName(op.op_name()));
+    }
+  });
+}
+
 void FixReturnOpParallelConf(Job* job) {
   JobBuilder job_builder(job);
   for (const auto& op_conf : job->net().op()) {
@@ -453,7 +471,6 @@ void JobCompleter::Complete(Job* job) const {
   // replace facade op
   SplitDecodeOps(job);
   AddRecordLoadOps(job);
-  FixReturnOpParallelConf(job);
   WithOpGraphAndMutJobBuilder(job, &ReplaceFacade);
   // complete variable ops
   WithOpGraphAndMutJobBuilder(job, &AutoVar);
