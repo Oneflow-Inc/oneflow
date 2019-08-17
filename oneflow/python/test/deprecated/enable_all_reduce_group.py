@@ -20,8 +20,7 @@ def UpdateVariable(x, scope_name, enable_all_reduce_group = True):
         job_conf.train_conf().loss_lbn.extend([scope_name + "-loss_op/out"])
         job_conf.enable_all_reduce_group(enable_all_reduce_group)
         initializer = op_conf_util.InitializerConf()
-        initializer.random_uniform_conf.min = 0
-        initializer.random_uniform_conf.max = 10
+        initializer.constant_conf.value = 1
         w = flow.get_variable(name = scope_name + '-w', shape = (10, ), dtype = flow.float, initializer = initializer)
         c = dl_net.BiasAdd(x, w)
         # return flow.keras.activations.tanh(c) 
