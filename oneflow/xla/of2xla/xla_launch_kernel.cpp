@@ -41,7 +41,8 @@ void XlaLaunchKernel<device_type>::BuildLocalExecutable(
     // the shape of arguments by `InferBlobDescs`
     mola::XlaGraphCompiler compiler(launch_ctx->client(), launch_ctx->builder(),
                                     &graph, parallel_ctx, entry_blobs,
-                                    entry_blob_names, return_blob_names);
+                                    entry_blob_names, return_blob_names,
+                                    false/*alias_input_output*/);
 
     auto result = std::make_shared<mola::CompilationResult>();
     *result = compiler.Compile();
@@ -61,11 +62,12 @@ void XlaLaunchKernel<device_type>::LaunchExecutable(
     std::vector<Blob *> &output_blobs, const xla::Shape &output_shape,
     bool block_host_until_done) const {
   namespace se = tensorflow::se;
-  CHECK_EQ(entry_blobs.size(), input_shapes.size())
-      << "Size mismatch between entry blobs and input shapes.";
-  CHECK_GT(output_blobs.size(), 0) << "Need one output at least.";
   const int device_ordinal = launch_ctx->device_ordinal();
   xla::LocalClient *client = launch_ctx->client();
+
+  CHECK_EQ(entry_blobs.size(), input_shapes.size())
+      << "Size mismatch between input blobs and input shapes.";
+  CHECK_GT(output_blobs.size(), 0) << "Need one output at least.";
 
   // Translate input blobs to xla ShapedBuffer suitable running the executable
   int argument_size = input_shapes.size();
@@ -115,17 +117,19 @@ void XlaLaunchKernel<device_type>::LaunchExecutable(
   // Result shape should be tuple
   CHECK(run_result.on_host_shape().IsTuple());
 
-  // TODO(hjchen2) Reuse the allocated output blobs while runing the executable
-  // Translate result to output blobs
-  for (int i = 0; i < output_blobs.size(); ++i) {
-    Blob *output = output_blobs[i];
-    se::DeviceMemoryBase buffer = run_result.buffer({i});
-    Memcpy<device_type>(launch_ctx->device_ctx(), output->mut_dptr(),
-                        buffer.opaque(), output->ByteSizeOfDataContentField());
-    // Maybe release result buffer. If we asynchronously launch the executable,
-    // then we must not release this buffer here.
-    // run_result.set_buffer(se::OwningDeviceMemory(), {i});
-  }
+//  // TODO(hjchen2) Reuse the allocated output blobs while runing the executable
+//  // Translate result to output blobs
+//  for (int i = 0; i < output_blobs.size(); ++i) {
+//    Blob *output = output_blobs[i];
+//    se::DeviceMemoryBase buffer = run_result.buffer({i});
+//    if (buffer.opaque()) {
+//      Memcpy<device_type>(launch_ctx->device_ctx(), output->mut_dptr(),
+//                          buffer.opaque(), output->ByteSizeOfDataContentField());
+//    }
+//    // Maybe release result buffer. If we asynchronously launch the executable,
+//    // then we must not release this buffer here.
+//    // run_result.set_buffer(se::OwningDeviceMemory(), {i});
+//  }
 }
 
 template <DeviceType device_type>
@@ -157,8 +161,14 @@ void XlaLaunchKernel<device_type>::ForwardDataContent(
   CHECK(compile_result) << "Executable built failed. "
                         << TF_CPP_VLOG_LEVEL_REQUARED(2);
   auto *executable = compile_result->executable.get();
+  
+  // Gather inputs and outputs as entry parameters if input and output aliased
+  if (compile_result->alias_input_output) {
+    entry_blobs.insert(entry_blobs.end(), output_blobs.begin(),
+                       output_blobs.end());
+  }
 
-  // Launch executable in synchronous mode for CPU, or asynchronous mode for GPU
+  // Launch executable synchronously for CPU, or asynchronously for GPU
   bool block_host_until_done = true;
   if (device_type == DeviceType::kGPU) {
     block_host_until_done = false;

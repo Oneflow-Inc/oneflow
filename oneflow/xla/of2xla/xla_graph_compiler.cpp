@@ -21,9 +21,11 @@ XlaGraphCompiler::XlaGraphCompiler(
     xla::LocalClient *client, xla::XlaBuilder *builder, XlaGraph *graph,
     ParallelContext parallel_ctx, const std::vector<Blob *> &entry_blobs,
     const std::vector<std::string> &entry_blob_names,
-    const std::vector<std::string> &return_blob_names)
+    const std::vector<std::string> &return_blob_names,
+    const bool alias_input_output)
     : client_(client), builder_(builder), graph_(graph),
-      entry_names_(entry_blob_names), return_names_(return_blob_names) {
+      entry_names_(entry_blob_names), return_names_(return_blob_names),
+      alias_input_output_(alias_input_output) {
   CHECK_EQ(entry_blobs.size(), entry_blob_names.size());
 
   std::unordered_map<std::string, BlobDesc> blob_descs;
@@ -80,8 +82,11 @@ void XlaGraphCompiler::BuildComputation(
     XlaOpContext op_context(param);
     op_compiler->Compile(&op_context);
 
+    // Always insert new output into `all_outputs`
     const auto &outputs = op_context.outputs();
-    all_outputs.insert(outputs.begin(), outputs.end());
+    for (auto it = outputs.begin(); it != outputs.end(); ++it) {
+      all_outputs[it->first] = it->second;
+    }
   });
 
   // Always insert a final tuple XlaOp to ensure the computation ends with
@@ -133,27 +138,38 @@ CompilationResult XlaGraphCompiler::Compile() {
   CHECK_NOTNULL(graph_);
 
   CompilationResult result;
-  std::unordered_map<Argument, XlaOprand> entry_oprands;
-  SetupEntryOprands(&entry_oprands, &result.xla_input_shapes);
+  result.alias_input_output = alias_input_output_;
 
-  int return_size = return_names_.size();
+  std::vector<std::string> input_names = entry_names_;
+  const int return_size = return_names_.size();
+  int argument_index = entry_names_.size();
   std::vector<Argument> return_arguments(return_size);
-  for (int i = 0; i < return_size; ++i) {
+  for (int i = 0; i < return_size; ++i, ++argument_index) {
+    // Alias outputs to input arguments to update in-place
+    if (alias_input_output_) {
+      builder_->SetUpAlias({i}/*output_index*/, argument_index/*param_number*/,
+                           {}/*param_index*/);
+      input_names.push_back(return_names_[i]);
+    }
     return_arguments[i] = arguments_.at(return_names_[i]);
   }
+  std::unordered_map<Argument, XlaOprand> entry_oprands;
+  SetupEntryOprands(input_names, &entry_oprands, &result.xla_input_shapes);
 
   BuildComputation(entry_oprands, return_arguments, &result.xla_output_shape,
                    &result.computation);
-  BuildExecutable(result, &result.executable);
 
+  BuildExecutable(result, &result.executable);
+  
   return std::move(result);
 }
 
 void XlaGraphCompiler::SetupEntryOprands(
+    const std::vector<std::string> &entry_names,
     std::unordered_map<Argument, XlaOprand> *entry_oprands,
     std::vector<xla::Shape> *input_shapes) {
-  for (int i = 0; i < entry_names_.size(); ++i) {
-    Argument arg = arguments_.at(entry_names_[i]);
+  for (int i = 0; i < entry_names.size(); ++i) {
+    Argument arg = arguments_.at(entry_names[i]);
     xla::Shape shape = OfShapeToXlaShape(arg.shape(), arg.data_type());
     input_shapes->push_back(shape);
 
