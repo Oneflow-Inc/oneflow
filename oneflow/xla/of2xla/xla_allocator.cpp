@@ -22,11 +22,9 @@ XlaAllocator::~XlaAllocator() {}
 xla::StatusOr<se::OwningDeviceMemory> XlaAllocator::Allocate(
     int device_ordinal, uint64 size, bool retry_on_failure) {
   se::DeviceMemoryBase memory_base;
-  if (allocate_index_ < populated_allocation_.size() &&
-      populated_allocation_[allocate_index_].populated) {
-    int index = populated_allocation_[allocate_index_].index;
-    DCHECK_LT(index, populated_buffers_.size());
-    memory_base = populated_buffers_[index];
+  if (allocate_index_ < populated_buffers_.size() &&
+      populated_buffers_[allocate_index_].populated) {
+    memory_base = populated_buffers_[allocate_index_].memory;
   } else {
     void* data = nullptr;
     if (size != 0) {
@@ -65,19 +63,19 @@ void XlaAllocator::ReserveWorkspace(size_t workspace_bytes) {
 void XlaAllocator::PopulateDeviceMemory(
       const std::vector<se::DeviceMemoryBase> &device_buffers,
       const std::vector<int64_t> &allocation_indices) {
-  populated_buffers_ = device_buffers;
   int64_t max_populated_index = 0;
   for (int i = 0; i < allocation_indices.size(); ++i) {
     int64_t index = allocation_indices[i]; 
     max_populated_index = std::max(max_populated_index, index);
   }
 
-  populated_allocation_.resize(max_populated_index + 1);
+  populated_buffers_.resize(max_populated_index + 1);
   for (int i = 0; i < allocation_indices.size(); ++i) {
     int64_t index = allocation_indices[i];
     if (index >= 0) {
-      populated_allocation_[index].populated = true;
-      populated_allocation_[index].index = i;
+      populated_buffers_[index].populated = true;
+      populated_buffers_[index].index = i;
+      populated_buffers_[index].memory = device_buffers[i];
     }
   }
 }

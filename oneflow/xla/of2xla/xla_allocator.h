@@ -40,12 +40,12 @@ class XlaAllocator : public se::DeviceMemoryAllocator {
   size_t allocate_offset_;
   int64_t allocate_index_;
 
-  struct AllocationInfo {
+  struct AllocationBuffer {
     bool populated = false;
-    int64_t index = 0;
+    int64_t index = -1;
+    se::DeviceMemoryBase memory;
   };
-  std::vector<se::DeviceMemoryBase> populated_buffers_;
-  std::vector<AllocationInfo> populated_allocation_;
+  std::vector<AllocationBuffer> populated_buffers_;
 };
 
 }  // namespace mola
