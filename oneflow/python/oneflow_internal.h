@@ -30,20 +30,7 @@ void InitBySerializedConfigProto(const std::string& config_proto_str) {
   // because glog is not constructed yet and LOG(INFO) has bad bahavior
   Global<EnvironmentObjectsScope>::SetAllocated(new EnvironmentObjectsScope(config_proto));
   LOG(INFO) << "NewGlobal " << typeid(EnvironmentObjectsScope).name();
-  if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
-    Global<CtrlClient>::Get()->PushKV("master_config_proto", config_proto);
-  } else {
-    ConfigProto master_config_proto;
-    Global<CtrlClient>::Get()->PullKV("master_config_proto", &master_config_proto);
-    CHECK(PbMd().Equals(config_proto, master_config_proto));
-
-    while (true) {
-      ClusterControl::WorkerSendAckAndExitIfReceiveHalt();
-      JobSet job_set;
-      Global<CtrlClient>::Get()->PullKV("session_job_set", &job_set);
-      { Oneflow oneflow(job_set); }
-    }
-  }
+  CHECK(Global<MachineCtx>::Get()->IsThisMachineMaster());
 }
 
 void InitGlobalOneflowBySerializedJobSet(const std::string& job_set_str) {
@@ -95,8 +82,8 @@ void DestroyGlobalOneflow() {
 void DestroyGlobalEnvironment() {
   using namespace oneflow;
   if (Global<EnvironmentObjectsScope>::Get() == nullptr) { return; }
-  bool is_master = Global<MachineCtx>::Get()->IsThisMachineMaster();
-  if (is_master) { ClusterControl::MasterSendHaltAndWaitAck(); }
+  CHECK(Global<MachineCtx>::Get()->IsThisMachineMaster());
+  ClusterControl::MasterSendHaltAndWaitAck();
   Global<EnvironmentObjectsScope>::Delete();
 }
 

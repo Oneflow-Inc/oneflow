@@ -28,14 +28,6 @@ void MasterWaitHaltAck() {
   }
 }
 
-void WorkerSendAckAndExit() {
-  const auto& machine_id_key = GetHaltAckCtrlKey(Global<MachineCtx>::Get()->this_machine_id());
-  ClusterControlProto cluster_control_proto;
-  cluster_control_proto.set_cmd(kClusterCtrlCmdHaltAck);
-  Global<CtrlClient>::Get()->PushKV(machine_id_key, cluster_control_proto);
-  exit(0);
-}
-
 }  // namespace
 
 void ClusterControl::MasterSendSessionStart() {
@@ -51,11 +43,19 @@ void ClusterControl::MasterSendHaltAndWaitAck() {
   MasterWaitHaltAck();
 }
 
-void ClusterControl::WorkerSendAckAndExitIfReceiveHalt() {
+bool ClusterControl::WorkerReceiveHalt() {
   ClusterControlProto cluster_control;
   Global<CtrlClient>::Get()->PullKV(GetHaltOrSessionStartCtrlKey(), &cluster_control);
-  if (cluster_control.cmd() == kClusterCtrlCmdHalt) { WorkerSendAckAndExit(); }
+  if (cluster_control.cmd() == kClusterCtrlCmdHalt) { return true; }
   CHECK_EQ(cluster_control.cmd(), kClusterCtrlCmdSessionStart);
+  return false;
+}
+
+void ClusterControl::WorkerSendHaltAck() {
+  const auto& machine_id_key = GetHaltAckCtrlKey(Global<MachineCtx>::Get()->this_machine_id());
+  ClusterControlProto cluster_control_proto;
+  cluster_control_proto.set_cmd(kClusterCtrlCmdHaltAck);
+  Global<CtrlClient>::Get()->PushKV(machine_id_key, cluster_control_proto);
 }
 
 }  // namespace oneflow

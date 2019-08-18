@@ -6,7 +6,8 @@ namespace oneflow {
 struct ClusterControl final {
   static void MasterSendSessionStart();
   static void MasterSendHaltAndWaitAck();
-  static void WorkerSendAckAndExitIfReceiveHalt();
+  static bool WorkerReceiveHalt();
+  static void WorkerSendHaltAck();
 };
 
 }  // namespace oneflow

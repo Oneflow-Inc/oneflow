@@ -966,8 +966,3 @@ Oneflow::~Oneflow() {
 }
 
 }  // namespace oneflow
-
-int main(int argc, char** argv) {
-  UNIMPLEMENTED();
-  return 0;
-}
