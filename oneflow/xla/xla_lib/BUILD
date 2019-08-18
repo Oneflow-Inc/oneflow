@@ -31,10 +31,10 @@ cc_library(
 )
 
 cc_library(
-    name = "runtime_workspace_bytes",
+    name = "xla_runtime_util",
     srcs = [
-        "runtime_workspace_bytes.cc",
-        "runtime_workspace_bytes.h",
+        "xla_runtime_util.cc",
+        "xla_runtime_util.h",
     ],
     visibility = ["//visibility:public"],
     deps = [
@@ -54,7 +54,7 @@ tf_cc_shared_object(
     }),
     visibility = ["//visibility:public"],
     deps = [
-        ":runtime_workspace_bytes",
+        ":xla_runtime_util",
         "//tensorflow/compiler/jit:xla_tensor",
         "//tensorflow/compiler/xla/client",
         "//tensorflow/compiler/xla/client:xla_builder",

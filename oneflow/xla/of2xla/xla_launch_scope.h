@@ -2,7 +2,7 @@
 #define ONEFLOW_CORE_COMPILER_OF2XLA_XLA_LAUNCH_SCOPE_H_
 
 #include "tensorflow/compiler/jit/xla_lib/swap_gpu_stream.h"
-#include "tensorflow/compiler/jit/xla_lib/runtime_workspace_bytes.h"
+#include "tensorflow/compiler/jit/xla_lib/xla_runtime_util.h"
 #include "oneflow/core/job/resource.pb.h"  // DeviceType
 #include "oneflow/core/device/device_context.h"
 #include "oneflow/xla/of2xla/xla_utility.h"

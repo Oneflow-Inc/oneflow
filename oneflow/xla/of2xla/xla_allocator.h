@@ -26,13 +26,26 @@ class XlaAllocator : public se::DeviceMemoryAllocator {
 
   bool AllowsAsynchronousDeallocation() const override { return true; }
 
+  void ResetState();
   void ReserveWorkspace(size_t workspace_bytes);
   void LockWorkspace();
   void UnlockWorkspace();
 
+  void PopulateDeviceMemory(
+      const std::vector<se::DeviceMemoryBase> &device_buffers,
+      const std::vector<int64_t> &allocation_indices);
+
  private:
   DeviceBufferAllocator *allocator_;
-  size_t offset_;
+  size_t allocate_offset_;
+  int64_t allocate_index_;
+
+  struct AllocationInfo {
+    bool populated = false;
+    int64_t index = 0;
+  };
+  std::vector<se::DeviceMemoryBase> populated_buffers_;
+  std::vector<AllocationInfo> populated_allocation_;
 };
 
 }  // namespace mola
