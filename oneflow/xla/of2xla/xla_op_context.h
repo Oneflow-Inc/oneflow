@@ -21,7 +21,7 @@ class XlaOprand {
   static XlaOprand XlaOp(const xla::XlaOp handle);
 
   // Return the XlaOp handle if the builder is matched with the handle
-  xla::XlaOp AsXlaOp(xla::XlaBuilder *builder);
+  xla::XlaOp AsXlaOp(xla::XlaBuilder *builder) const;
 
  private:
   friend class XlaOpContext;

@@ -103,5 +103,18 @@ XlaLaunchContext::XlaLaunchContext(const std::string &builder_name,
   parallel_ctx_ = LocalParallelContext(device_ordinal_);
 }
 
+void XlaLaunchContext::PopulateResultBuffers(
+    const std::vector<Blob *> &results,
+    const std::vector<int64_t> &allocation_indices) {
+  std::vector<se::DeviceMemoryBase> device_buffers;
+  device_buffers.reserve(results.size());
+  for (int i = 0; i < results.size(); ++i) {
+    size_t size = results[i]->ByteSizeOfDataContentField();
+    char *data = const_cast<char *>(results[i]->dptr<char>());
+    device_buffers.emplace_back(data, size);
+  }
+  allocator_->PopulateDeviceMemory(device_buffers, allocation_indices);
+}
+
 }  // namespace mola
 }  // namespace oneflow
