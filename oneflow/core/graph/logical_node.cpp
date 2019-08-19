@@ -1,7 +1,6 @@
 #include "oneflow/core/graph/logical_node.h"
 #include "oneflow/core/graph/normal_forward_compute_task_node.h"
 #include "oneflow/core/graph/optimizer_compute_task_node.h"
-#include "oneflow/core/graph/loss_accumulate_compute_task_node.h"
 #include "oneflow/core/graph/loss_compute_task_node.h"
 #include "oneflow/core/graph/model_diff_accumulate_compute_task_node.h"
 #include "oneflow/core/graph/print_compute_task_node.h"
@@ -386,9 +385,6 @@ REGISTER_BLD_SUB_TSK_GPH_MTHD("NormalBackward"
 REGISTER_BLD_SUB_TSK_GPH_MTHD("RecordLoad"
                               "Decode",
                               &TaskGraph::BldSubTskGphByOneToOne);
-REGISTER_BLD_SUB_TSK_GPH_MTHD("Loss"
-                              "LossAcc",
-                              &TaskGraph::BldSubTskGphByOneToOne);
 REGISTER_BLD_SUB_TSK_GPH_MTHD("Accuracy"
                               "AccuracyAcc",
                               &TaskGraph::BldSubTskGphByOneToOne);
@@ -446,7 +442,6 @@ REGISTER_BLD_BOXING_OP_CONF_MTHD("NormalBackward"
   OF_PP_MAKE_TUPLE_SEQ(Decode, kDataPreprocessArea)       \
   OF_PP_MAKE_TUPLE_SEQ(DecodeRandom, kDataPreprocessArea) \
   OF_PP_MAKE_TUPLE_SEQ(Loss, kDataForwardArea)            \
-  OF_PP_MAKE_TUPLE_SEQ(LossAcc, kDataForwardArea)         \
   OF_PP_MAKE_TUPLE_SEQ(MdDiffAcc, kDataBackwardArea)      \
   OF_PP_MAKE_TUPLE_SEQ(Print, kPrintArea)                 \
   OF_PP_MAKE_TUPLE_SEQ(ReduceConcat, kMdUpdtArea)         \
