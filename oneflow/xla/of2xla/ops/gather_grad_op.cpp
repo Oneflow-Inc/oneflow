@@ -5,7 +5,6 @@
 #include "oneflow/xla/of2xla/xla_op_compiler.h"
 #include "oneflow/xla/of2xla/xla_op_context.h"
 #include "oneflow/xla/of2xla/xla_helpers.h"
-#include "tensorflow/compiler/tf2xla/lib/scatter.h"
 namespace oneflow {
 namespace mola {
 
@@ -22,12 +21,12 @@ class GatherGradOp : public XlaOpCompiler {
     auto buffer = xla::Broadcast(Zero(builder, dtype), {buffer_shape.NumAxes()});
     auto indices = ctx->Input("indices");
     auto updates = ctx->Input("out_diff");
-    auto result = tensorflow::XlaScatter(buffer, updates, indices, true, Combine, builder);
-    ctx->SetOutput("in_diff", result.ValueOrDie());
+    auto result = XlaScatter(buffer, updates, indices, true, Combine, builder);
+    ctx->SetOutput("in_diff", result);
   }
   private:
    static xla::XlaOp Combine(const xla::XlaOp& x, const xla::XlaOp& y, xla::XlaBuilder* builder ) {
-     return xla::Add(x,y);
+     return xla::Add(x, y);
    }
 };
 
@@ -44,8 +43,8 @@ xla::XlaOp  GenericGatherGrad(
     auto buffer = ctx->Input("gather_dim_size");
     auto indices = ctx->Input("indices");
     auto updates = ctx->Input ("out_diff");
-    auto result = tensorflow::XlaScatter(buffer, updates, indices, true, combiner, builder);
-    ctx->SetOutput("in_diff", result.ValueOrDie());
+    auto result = XlaScatter(buffer, updates, indices, true, combiner, builder);
+    ctx->SetOutput("in_diff", result);
     }
 //actually scatterupdate
 //class GatherGradOp : public XlaOpCompiler {

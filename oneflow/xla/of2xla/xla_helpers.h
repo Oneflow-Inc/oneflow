@@ -20,6 +20,12 @@ xla::XlaOp FloatLiteral(xla::XlaBuilder *builder, DataType data_type,
 
 xla::XlaOp Reshape(xla::XlaOp input, Shape dest_shape);
 
+xla::XlaOp XlaScatter(
+    const xla::XlaOp& buffer, const xla::XlaOp& updates,
+    const xla::XlaOp& indices, bool indices_are_vectors,
+    const std::function<xla::XlaOp(xla::XlaOp, xla::XlaOp, xla::XlaBuilder*)>&
+        combiner,
+    xla::XlaBuilder* builder);
 }  // namespace mola
 }  // namespace oneflow
 
