@@ -162,14 +162,6 @@ DEFINE_BLD_BOXING_OP_CONF_METHOD(BoxingTaskNode, FwSbpParallel) {
                                });
 }
 
-DEFINE_BLD_BOXING_OP_CONF_METHOD(BoxingTaskNode, BwSbpParallel) {
-  SetBoxingOpConfBySbpParallel(
-      conf, lbi, *in_logical->SoleOp(), *out_logical->SoleOp(), sorted_out_edges,
-      [&](const std::string& op_name, const LogicalBlobId& lbi) {
-        return GetDualSbpParallel(Global<OpGraph>::Get()->GetSbpParallel(op_name, lbi));
-      });
-}
-
 void BoxingTaskNode::InitLogical2SortedEdgeInfo(
     void (TaskNode::*ForEachDataEdge)(const std::function<void(TaskEdge*)>&) const,
     TaskEdge* (TaskNode::*SoleEdge)() const, TaskNode* (TaskEdge::*SoleNode)() const,

@@ -16,22 +16,14 @@ class LossKernel : public KernelIf<device_type> {
   virtual void VirtualLossForwardDataContent(
       const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const = 0;
   virtual const LossKernelConf& GetLossKernelConf(const KernelConf& kernel_conf) const = 0;
-  virtual int64_t CalcLossInstanceNum(
-      const KernelCtx& ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
 
  private:
   void ForwardDataContent(const KernelCtx& ctx,
                           std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
-  void ForwardDataId(const KernelCtx& ctx,
-                     std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
-  void ForwardColNum(const KernelCtx& ctx,
-                     std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   void ForwardDim0ValidNum(const KernelCtx& ctx,
                            std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   void ForwardRecordIdInDevicePiece(
       const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
-  void SetLossInstanceNum(const KernelCtx& ctx,
-                          const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
 };
 
 template<DeviceType device_type, typename T>

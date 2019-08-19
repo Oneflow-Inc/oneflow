@@ -94,12 +94,6 @@ void UnpackKernel<device_type>::ForwardDataId(
   }
 }
 
-template<DeviceType device_type>
-void UnpackKernel<device_type>::BackwardInDiffDim0ValidNum(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  BnInOp2Blob("in_diff")->CopyDim0ValidNumFrom(ctx.device_ctx, BnInOp2Blob("in"));
-}
-
 ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kUnpackConf, UnpackKernel);
 
 }  // namespace oneflow

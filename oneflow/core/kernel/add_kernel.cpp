@@ -30,7 +30,7 @@ struct AddUtil {
     int r = in_num % kWidth;
     if (r) {
       tuple_switch(r, add_kernel->tp_,
-                   AdditionFunction<true, device_type, T, decltype(add_kernel)>{
+                   AdditionFunction<device_type, T, decltype(add_kernel)>{
                        out_blob, std::move(BnInOp2Blob), ctx.device_ctx, 0, add_kernel});
     }
     for (; r < in_num; r += kWidth) {

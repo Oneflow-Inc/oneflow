@@ -27,8 +27,6 @@ class EveryNthOp final : public Operator {
                                 Shape* time_shape) const override;
   void InitFromOpConf() override;
   LogicalNode* NewProperLogicalNode() const override;
-  bool NeedInBlobWhenBackward() const override { return false; }
-  bool NeedOutBlobWhenBackward() const override { return false; }
 };
 
 }  // namespace oneflow
