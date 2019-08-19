@@ -54,11 +54,11 @@ class JobDesc final {
   const FileSystemConf& snapshot_fs_conf() const;
   bool enable_write_snapshot() const;
   bool write_snapshot_to_master() const { return snapshot_fs_conf().has_localfs_conf(); }
-  bool enable_blob_mem_sharing() const { return job_.job_conf().enable_blob_mem_sharing(); }
   bool enable_nccl() const { return job_.job_conf().enable_nccl(); }
   bool use_nccl_inter_node_communication() const {
     return job_.job_conf().use_nccl_inter_node_communication();
   }
+  bool enable_all_reduce_group() const { return job_.job_conf().enable_all_reduce_group(); }
   int64_t all_reduce_group_num() const;
   int64_t all_reduce_group_min_byte() const;
   float all_reduce_group_size_warmup() const;

@@ -213,6 +213,7 @@ std::string TaskNode::VisualStr() const {
 bool TaskNode::IsMeaningLess() { return produced_regsts_.empty() && consumed_regsts_.empty(); }
 
 void TaskNode::ToProto(TaskProto* task_proto) {
+  CHECK_NE(chain_id_, -1);
   task_proto->set_task_type(GetTaskType());
   task_proto->set_machine_id(machine_id_);
   task_proto->set_thrd_id(thrd_id_);
@@ -514,8 +515,6 @@ std::map<TaskType, std::string> task_type2color = {{kInvalid, "0"},
                                                    {kRecordLoad, "1"},
                                                    {kDecode, "1"},
                                                    {kLoss, "4"},
-                                                   {kLossAcc, "5"},
-                                                   {kLossPrint, "1"},
                                                    {kNormalMdUpdt, "6"},
                                                    {kMdDiffAcc, "7"},
                                                    {kCopyHd, "8"},
@@ -531,8 +530,6 @@ std::map<TaskType, std::string> task_type2color = {{kInvalid, "0"},
                                                    {kNcclReduceScatter, "2"},
                                                    {kNcclAllGather, "2"},
                                                    {kAccuracy, "4"},
-                                                   {kAccuracyPrint, "1"},
-                                                   {kAccuracyAcc, "5"},
                                                    {kDecodeRandom, "1"},
                                                    {kPackForward, "11"},
                                                    {kPackBackward, "12"},

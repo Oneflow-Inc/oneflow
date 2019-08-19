@@ -7,8 +7,6 @@ namespace oneflow {
 
 extern const char* kPackedBlobName;
 extern const char* kNullDataId;
-extern const std::string LossPrintPrefix;
-extern const std::string AccuracyPrintPrefix;
 
 }  // namespace oneflow
 

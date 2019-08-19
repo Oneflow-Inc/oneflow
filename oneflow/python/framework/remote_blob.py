@@ -21,7 +21,7 @@ class RemoteBlob(blob_desc.BlobDesc):
         return self.lbi_.op_name
 
     @property
-    def lbn(self):
+    def logical_blob_name(self):
         return "%s/%s" % (self.lbi_.op_name, self.lbi_.blob_name)
 
     def pull(self):

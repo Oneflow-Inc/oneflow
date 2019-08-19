@@ -30,6 +30,8 @@ class ConcatOp final : public Operator {
   void GetSbpSignatures(
       const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
       SbpSignatureList* sbp_sig_list) const override;
+
+  int32_t FixAxis(const int32_t axis, const int64_t num_axes) const;
 };
 
 }  // namespace oneflow

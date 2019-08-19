@@ -127,7 +127,6 @@ void Kernel::Forward(const KernelCtx& ctx,
     CHECK(!kernel_conf_.need_do_opaque_header());
     ForwardDim0ValidNum(ctx, BnInOp2Blob);
   }
-  if (NeedForwardLossInstanceNum(ctx, BnInOp2Blob)) { ForwardLossInstanceNum(ctx, BnInOp2Blob); }
   if (HasEmptyShapeBlob(op_attribute().input_bns(), BnInOp2Blob) && !NeedForwardIfBlobEmpty()) {
     ClearBlobDim0ValidNumIfNeed(op_attribute().output_bns(), BnInOp2Blob);
     return;
@@ -169,7 +168,6 @@ void Kernel::Backward(const KernelCtx& ctx,
     CHECK(!kernel_conf_.need_do_opaque_header());
     BackwardInDiffDim0ValidNum(ctx, BnInOp2Blob);
   }
-  BackwardInDiffLossInstanceNum(ctx, BnInOp2Blob);
   if (HasEmptyShapeBlob(op_attribute().output_diff_bns(), BnInOp2Blob)
       && !NeedBackwardIfBlobEmpty()) {
     ClearBlobDim0ValidNumIfNeed(op_attribute().input_diff_bns(), BnInOp2Blob);
@@ -200,9 +198,6 @@ void Kernel::Backward(const KernelCtx& ctx,
   }
   if (kernel_conf_.need_do_data_id()) { BackwardDataId(ctx, BnInOp2Blob); }
   if (kernel_conf_.need_do_col_num()) { BackwardColNum(ctx, BnInOp2Blob); }
-  if (this->op_attribute().model_diff_bns().size() > 0) {
-    SetTotalInstanceNumDiffBlob(ctx, BnInOp2Blob);
-  }
 }
 
 bool Kernel::HasModelBns() const { return op_attribute().model_bns().size() > 0; }
@@ -240,19 +235,6 @@ void KernelIf<device_type>::ForwardRecordIdInDevicePiece(
 }
 
 template<DeviceType device_type>
-void KernelIf<device_type>::ForwardLossInstanceNum(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  NaiveCopyLossInstanceNum(op_attribute().input_bns(), op_attribute().output_bns(), BnInOp2Blob);
-}
-
-template<DeviceType device_type>
-bool KernelIf<device_type>::NeedForwardLossInstanceNum(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  return NeedCopyLossInstanceNum(op_attribute().input_bns(), op_attribute().output_bns(),
-                                 BnInOp2Blob);
-}
-
-template<DeviceType device_type>
 void KernelIf<device_type>::BackwardModelDiffDim0ValidNum(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   bool is_out_diff_empty = HasEmptyShapeBlob(op_attribute().output_diff_bns(), BnInOp2Blob);
@@ -279,15 +261,6 @@ void KernelIf<device_type>::BackwardInDiffDim0ValidNum(
   if (input_diff_bns.empty()) { return; }
   CopyField(ctx.device_ctx, BnInOp2Blob, BnInOp2Blob(op_attribute().output_diff_bns(0)),
             input_diff_bns, &Blob::CopyDim0ValidNumFrom);
-}
-
-template<DeviceType device_type>
-void KernelIf<device_type>::BackwardInDiffLossInstanceNum(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  CHECK(NeedCopyLossInstanceNum(op_attribute().output_diff_bns(), op_attribute().input_diff_bns(),
-                                BnInOp2Blob));
-  NaiveCopyLossInstanceNum(op_attribute().output_diff_bns(), op_attribute().input_diff_bns(),
-                           BnInOp2Blob);
 }
 
 template<DeviceType device_type>

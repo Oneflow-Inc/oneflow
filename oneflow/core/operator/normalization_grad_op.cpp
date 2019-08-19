@@ -69,14 +69,14 @@ void NormalizationGradOp::InferBlobDescs(
   BlobDesc* dx = GetBlobDesc4BnInOp("dx");
   if (dx) { *dx = *x; }
   const Shape param_shape({x->shape().At(conf.axis())});
-  const auto CheckParamBlobDesc = [&](const std::string& bn) {
+  const std::function<void(const std::string&)> CheckParamBlobDesc = [&](const std::string& bn) {
     const BlobDesc* blob_desc = GetBlobDesc4BnInOp(bn);
     if (blob_desc != nullptr) {
       CHECK_EQ(blob_desc->data_type(), data_type);
       CHECK_EQ(blob_desc->shape(), param_shape);
     }
   };
-  const auto SetParamBlobDesc = [&](const std::string& bn) {
+  const std::function<void(const std::string&)> SetParamBlobDesc = [&](const std::string& bn) {
     BlobDesc* blob_desc = GetBlobDesc4BnInOp(bn);
     if (blob_desc != nullptr) {
       blob_desc->set_data_type(data_type);
@@ -85,9 +85,28 @@ void NormalizationGradOp::InferBlobDescs(
   };
   CheckParamBlobDesc("mean");
   CheckParamBlobDesc("inv_variance");
-  CheckParamBlobDesc("gamma");
+  (conf.has_gamma() ? CheckParamBlobDesc : SetParamBlobDesc)("gamma");
   SetParamBlobDesc("gamma_diff");
   SetParamBlobDesc("beta_diff");
+}
+
+void NormalizationGradOp::InferHasBatchDim(
+    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
+  *HasBatchDim4BnInOp("dx") = *HasBatchDim4BnInOp("dy");
+  *HasBatchDim4BnInOp("gamma_diff") = false;
+  *HasBatchDim4BnInOp("beta_diff") = false;
+}
+
+void NormalizationGradOp::GetSbpSignatures(
+    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
+    SbpSignatureList* sbp_sig_list) const {
+  SbpSignatureBuilder()
+      .Broadcast(input_bns())
+      .PartialSum(output_bns())
+      .Split("x", 0)
+      .Split("dx", 0)
+      .Split("dy", 0)
+      .Build(sbp_sig_list->mutable_sbp_signature()->Add());
 }
 
 REGISTER_OP(OperatorConf::kNormalizationGradConf, NormalizationGradOp);

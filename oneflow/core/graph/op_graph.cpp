@@ -15,6 +15,29 @@ std::string OpEdge::VisualStr() const {
   return str;
 }
 
+void OpEdge::InitDistributeHierarchyInfo() { InitIsStrict121(); }
+
+void OpEdge::InitIsStrict121() { is_strict_121_ = CalcIsStrict121Connected(); }
+
+bool OpEdge::CalcIsStrict121Connected() const {
+  OpNode* src = src_node();
+  OpNode* dst = dst_node();
+  if (!src->parallel_desc().EqualsIgnoringPolicy(dst->parallel_desc())) { return false; }
+  if (src->IsTimeShapeIdentity() == false) { return false; }
+  if (dst->IsTimeShapeIdentity() == false) { return false; }
+  if (*src->GetInputOutputFastestTimeShape() != *src->GetInputOutputFastestTimeShape()) {
+    return false;
+  }
+  for (const LogicalBlobId& lbi : lbis()) {
+    const SbpParallel& obn_sbp = src->SbpParallel4BnInOp(lbi2obn().at(lbi));
+    for (const std::string& ibn : lbi2ibns().at(lbi)) {
+      const SbpParallel& ibn_sbp = dst->SbpParallel4BnInOp(ibn);
+      if (obn_sbp != ibn_sbp) { return false; }
+    }
+  }
+  return true;
+}
+
 bool* OpNode::MutHasBatchDim4Lbi(const LogicalBlobId& lbi) {
   CHECK_EQ(MutProducerOpNode4Lbi(lbi), this);
   return &lbi2has_batch_dim_[lbi];
@@ -142,6 +165,14 @@ OpNode* OpNode::MutSrcNode4InputLbi(const LogicalBlobId& lbi) const {
     }
   }
   return nullptr;
+}
+
+bool OpNode::IsTimeShapeIdentity() const {
+  const auto* in_shape = GetInputBlobFastestTimeShape();
+  if (in_shape == nullptr) { return true; }
+  const auto* out_shape = out_blob_time_shape();
+  if (out_shape == nullptr) { return true; }
+  return *in_shape == *out_shape;
 }
 
 const Shape* OpNode::GetInputBlobFastestTimeShape() const {
@@ -295,9 +326,9 @@ void OpGraph::Init(const Job& job) {
   InitProducerOpName2CtrlConsumerOpNames(job);
   CheckIsDAG();
   FixOpParallelDesc();
-  UpdateOpNodeHasInDiff();
   InferTimeShape();
   InferLogicalBlobDesc(job);
+  ForEachEdge([](OpEdge* edge) { edge->InitDistributeHierarchyInfo(); });
 }
 
 void OpGraph::CheckIsDAG() const {
@@ -358,20 +389,6 @@ void OpGraph::InitProducerOpName2CtrlConsumerOpNames(const Job& job) {
 void OpGraph::FixOpParallelDesc() const {
   // TODO() : outdated, delete
   ForEachNode([&](OpNode* node) { node->op().FixParallelDesc(node->mut_parallel_desc()); });
-}
-
-void OpGraph::UpdateOpNodeHasInDiff() const {
-  TopoForEachNode([&](OpNode* op_node) {
-    bool has_diff = false;
-    for (OpEdge* edge : op_node->in_edges()) {
-      if (edge->src_node()->has_in_diff() || edge->src_node()->has_model_diff()) {
-        edge->set_has_diff(true);
-        has_diff = true;
-        break;
-      }
-    }
-    op_node->set_has_in_diff(has_diff);
-  });
 }
 
 void OpGraph::InferTimeShape() const {
@@ -568,139 +585,36 @@ void OpGraph::CheckBlobDescs(const std::string& op_name,
   op_name2op_node_.at(op_name)->CheckBlobDescs(GetBlobDesc4BnInOp, parallel_ctx);
 }
 
-void OpGraph::ForEachPseudoChain(
-    const std::function<void(const HashSet<OpNode*>&)>& Handler) const {
-  auto IsReachable = MakePredicatorIsReachable();
-  ForEachChainFamily(
-      [&](const HashSet<OpNode*>& nodes) { ForEachPseudoChain(nodes, IsReachable, Handler); });
-}
-
 void OpGraph::ForEachChainFamily(
     const std::function<void(const HashSet<OpNode*>&)>& Handler) const {
-  auto IsSameSbpEdge = [](OpEdge* edge) -> bool {
-    for (const LogicalBlobId& lbi : edge->lbis()) {
-      if (edge->src_node()->SbpParallel4Lbi(lbi) != edge->dst_node()->SbpParallel4Lbi(lbi)) {
-        return false;
-      }
-    }
-    return true;
-  };
-  auto WithSameParallelDescAndTimeShape = [](OpEdge* edge) -> bool {
-    OpNode* src = edge->src_node();
-    OpNode* dst = edge->dst_node();
-    if (!src->parallel_desc().EqualsIgnoringPolicy(dst->parallel_desc())) { return false; }
-    if (src->in_edges().empty()) { return false; }
-    if (*src->GetInputBlobFastestTimeShape() != *src->out_blob_time_shape()) { return false; }
-    if (*dst->GetInputBlobFastestTimeShape() != *dst->out_blob_time_shape()) { return false; }
-    if (*src->out_blob_time_shape() != *dst->out_blob_time_shape()) { return false; }
-    return true;
-  };
-  auto Is121Edge = [&](OpEdge* edge) -> bool {
-    return IsSameSbpEdge(edge) && WithSameParallelDescAndTimeShape(edge);
-  };
   auto ForEachConnectedWithSameSbp7ParallelDesc7TimeShape =
       [&](OpNode* node, const std::function<void(OpNode*)>& Handler) {
         for (OpEdge* edge : node->in_edges()) {
-          if (Is121Edge(edge)) { Handler(edge->src_node()); }
+          if (edge->is_strict_121()) { Handler(edge->src_node()); }
         }
         for (OpEdge* edge : node->out_edges()) {
-          if (Is121Edge(edge)) { Handler(edge->dst_node()); }
+          if (edge->is_strict_121()) { Handler(edge->dst_node()); }
         }
       };
-  ForEachConnectedComponent(source_nodes(), ForEachConnectedWithSameSbp7ParallelDesc7TimeShape,
-                            Handler);
-}
-
-void OpGraph::ForEachPseudoChain(
-    const HashSet<OpNode*>& nodes, const std::function<bool(OpNode* src, OpNode* dst)>& IsReachable,
-    const std::function<void(const HashSet<OpNode*>&)>& Handler) const {
-  if (nodes.size() <= 1) { return; }
-  if ((*nodes.begin())->parallel_desc().device_type() == DeviceType::kCPU) { return; }
-  if ((*nodes.begin())->parallel_desc().policy() != ParallelPolicy::kDataParallel) { return; }
-  HashSet<OpNode*> all_nodes(nodes);
-  while (all_nodes.size() > 1) {
-    HashSet<OpNode*> chain;
-    ReverseTopoGetPseudoChain(all_nodes, &chain, IsReachable);
-    Handler(chain);
-    for (OpNode* node_in_chain : chain) { all_nodes.erase(node_in_chain); }
-  }
-}
-
-void OpGraph::ReverseTopoGetPseudoChain(
-    const HashSet<OpNode*>& op_nodes, HashSet<OpNode*>* pseudo_chain_nodes,
-    const std::function<bool(OpNode* src, OpNode* dst)>& IsReachable) const {
-  // get sink nodes
-  std::list<OpNode*> sinks;
-  auto IsSink = [&](OpNode* node) {
-    for (OpNode* inner_node : op_nodes) {
-      if (IsReachable(node, inner_node)) { return false; }
-    }
-    return true;
-  };
-  for (OpNode* op_node : op_nodes) {
-    if (IsSink(op_node)) { sinks.push_back(op_node); }
-  }
-  // generate connections of subgraph
-  HashMap<OpNode*, std::vector<OpNode*>> node2in_nodes;
-  HashMap<OpNode*, std::vector<OpNode*>> node2out_nodes;
-  auto IsInSubset = [&](OpNode* node) { return op_nodes.find(node) != op_nodes.end(); };
-  auto ReachableToAnySink = [&](OpNode* node) {
-    for (OpNode* sink : sinks) {
-      if (node == sink) { return true; }
-      if (IsReachable(node, sink)) { return true; }
-    }
-    return false;
-  };
-  auto AnyOutputNodesNotInSubsetAndReachableToSink = [&](OpNode* node) {
-    for (OpEdge* edge : node->out_edges()) {
-      if (!IsInSubset(edge->dst_node()) && ReachableToAnySink(edge->dst_node())) { return true; }
-    }
-    return false;
-  };
-  for (OpNode* node : op_nodes) {
-    if (AnyOutputNodesNotInSubsetAndReachableToSink(node)) { continue; }
-    node->ForEachNodeOnOutEdge([&](OpNode* out_node) {
-      if (IsInSubset(out_node)) {
-        node2in_nodes[out_node].push_back(node);
-        node2out_nodes[node].push_back(out_node);
-      }
-    });
-  }
-  // get chain nodes
-  auto ForEachInNode = [&](OpNode* node, const std::function<void(OpNode*)>& Handler) {
-    for (OpNode* in_node : node2in_nodes[node]) { Handler(in_node); }
-  };
-  auto ForEachOutNode = [&](OpNode* node, const std::function<void(OpNode*)>& Handler) {
-    for (OpNode* out_node : node2out_nodes[node]) { Handler(out_node); }
-  };
-  TopoForEachNode(sinks, ForEachOutNode, ForEachInNode,
-                  [&](OpNode* node) { CHECK(pseudo_chain_nodes->emplace(node).second); });
+  ForEachConnectedComponent(ForEachConnectedWithSameSbp7ParallelDesc7TimeShape, Handler);
 }
 
 std::string OpGraph::GetOpNameKey(const std::string& op_name, const LogicalBlobId& lbi) const {
   CHECK(!lbi.has_is_packed_id());
-  std::string op_name_key;
-  if (op_name2op_node_.find(op_name) == op_name2op_node_.end()) {
-    CHECK(lbi.has_clone_id());
-    return lbi.op_name();
-  } else {
-    CHECK(!lbi.has_clone_id());
+  if (op_name2op_node_.find(op_name) != op_name2op_node_.end()) {
     return op_name;
+  } else {
+    UNIMPLEMENTED();
   }
 }
 
 LogicalBlobId OpGraph::GetLogicalBlobIdKey(const std::string& op_name,
                                            const LogicalBlobId& lbi) const {
   CHECK(!lbi.has_is_packed_id());
-  if (op_name2op_node_.find(op_name) == op_name2op_node_.end()) {
-    CHECK(lbi.has_clone_id());
-    LogicalBlobId lbi_key;
-    lbi_key.set_op_name(lbi.op_name());
-    lbi_key.set_blob_name(lbi.blob_name());
-    return lbi_key;
-  } else {
-    CHECK(!lbi.has_clone_id());
+  if (op_name2op_node_.find(op_name) != op_name2op_node_.end()) {
     return lbi;
+  } else {
+    UNIMPLEMENTED();
   }
 }
 
@@ -802,8 +716,8 @@ std::list<OpNode*> OpGraph::DataOrCtrlSourceNodes() const {
   return ret;
 }
 
-void OpGraph::DumpLogicalBlobDesc(Job* job) const {
-  auto* helper = job->mutable_helper();
+void OpGraph::DumpLogicalBlobDesc(JobBuilder* job_builder) const {
+  auto* helper = job_builder->mutable_helper();
   ForEachNode([&](const OpNode* node) {
     for (const auto& obn : node->op().output_bns()) {
       const auto& lbi = node->op().BnInOp2Lbi(obn);
@@ -813,17 +727,17 @@ void OpGraph::DumpLogicalBlobDesc(Job* job) const {
   });
 }
 
-void OpGraph::DumpSbpSignature(Job* job) const {
+void OpGraph::DumpSbpSignature(JobBuilder* job_builder) const {
   ForEachNode([&](const OpNode* node) {
-    (*job->mutable_sbp_conf()->mutable_op_name2sbp_signature_conf())[node->op().op_name()] =
+    (*job_builder->mutable_sbp_conf()->mutable_op_name2sbp_signature_conf())[node->op().op_name()] =
         node->sbp_signature();
   });
 }
 
-void OpGraph::DumpOpTimeShape(Job* job) const {
+void OpGraph::DumpOpTimeShape(JobBuilder* job_builder) const {
   ForEachNode([&](OpNode* op_node) {
     auto* op_time_shape =
-        &(*job->mutable_helper()->mutable_op_name2op_time_shape())[op_node->op().op_name()];
+        &(*job_builder->mutable_helper()->mutable_op_name2op_time_shape())[op_node->op().op_name()];
     if (op_node->out_blob_time_shape() != nullptr) {
       op_node->out_blob_time_shape()->ToProto(op_time_shape->mutable_out_blob_time_shape());
     }
@@ -834,12 +748,12 @@ void OpGraph::DumpOpTimeShape(Job* job) const {
   });
 }
 
-void OpGraph::DumpBatchDimLbi(Job* job) const {
+void OpGraph::DumpBatchDimLbi(JobBuilder* job_builder) const {
   ForEachNode([&](OpNode* op_node) {
     for (const auto& obn : op_node->op().output_bns()) {
       const LogicalBlobId& lbi = op_node->op().BnInOp2Lbi(obn);
       if (op_node->HasBatchDim4Lbi(lbi)) {
-        *job->mutable_helper()->mutable_batch_dim_lbis()->Add() = lbi;
+        *job_builder->mutable_helper()->mutable_batch_dim_lbis()->Add() = lbi;
       }
     }
   });

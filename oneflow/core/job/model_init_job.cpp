@@ -1,4 +1,5 @@
 #include "oneflow/core/job/model_init_job.h"
+#include "oneflow/core/operator/interface_op_util.h"
 
 namespace oneflow {
 
@@ -51,8 +52,8 @@ void MakeModelInitJob(
   for (const auto& pair : var_op_name2op_conf) {
     const auto& var_op_name = pair.first;
     const OperatorConf& variable_op_conf = pair.second;
-    const ParallelConf& variable_op_parallel_conf =
-        var_op_name2parallel_blob_conf.at(var_op_name).parallel_conf();
+    const auto& variable_op_parallel_blob_conf = var_op_name2parallel_blob_conf.at(var_op_name);
+    const ParallelConf& variable_op_parallel_conf = variable_op_parallel_blob_conf.parallel_conf();
     CHECK_NE(variable_op_conf.variable_conf().data_type(), DataType::kInvalidDataType);
     CHECK(variable_op_conf.variable_conf().has_initializer());
 
@@ -69,6 +70,7 @@ void MakeModelInitJob(
     auto* output_conf = output_op_conf.mutable_output_conf();
     output_conf->set_in(model_init_op_conf.name() + "/out");
     output_conf->set_out("out");
+    InterfaceOpUtil::InitBlobConf(output_conf->mutable_blob_conf(), variable_op_parallel_blob_conf);
     job_builder.AddOps(variable_op_parallel_conf, {output_op_conf});
     job_conf->add_arg_op_name(output_op_conf.name());
   }

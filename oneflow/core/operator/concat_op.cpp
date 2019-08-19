@@ -17,9 +17,7 @@ void ConcatOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBl
   const ConcatOpConf& conf = op_conf().concat_conf();
   const BlobDesc* in_0_blob_desc = GetBlobDesc4BnInOp(input_bns().Get(0));
   std::vector<int64_t> out_dim_vec = in_0_blob_desc->shape().dim_vec();
-  int32_t concat_axis = conf.axis();
-  if (concat_axis < 0) { concat_axis += out_dim_vec.size(); }
-  CHECK_GE(concat_axis, 1);
+  int32_t concat_axis = FixAxis(conf.axis(), out_dim_vec.size());
   for (size_t i = 1; i < input_bns().size(); ++i) {
     const BlobDesc* in_i_blob_desc = GetBlobDesc4BnInOp(input_bns().Get(i));
     for (int64_t j = 0; j < in_i_blob_desc->shape().NumAxes(); ++j) {
@@ -41,15 +39,23 @@ void ConcatOp::GetSbpSignatures(
     const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
     SbpSignatureList* sbp_sig_list) const {
   const ConcatOpConf& conf = op_conf().concat_conf();
-  const int axis = conf.axis();
-  const int num_axes = LogicalBlobDesc4Ibn(input_bns().Get(0)).shape().NumAxes();
-  for (int i = 0; i < num_axes; ++i) {
+  const int64_t num_axes = LogicalBlobDesc4Ibn(input_bns().Get(0)).shape().NumAxes();
+  const int32_t axis = FixAxis(conf.axis(), num_axes);
+  for (int64_t i = 0; i < num_axes; ++i) {
     if (i == axis) { continue; }
     SbpSignatureBuilder()
         .Split(input_bns(), i)
         .Split(output_bns(), i)
         .Build(sbp_sig_list->mutable_sbp_signature()->Add());
   }
+}
+
+int32_t ConcatOp::FixAxis(const int32_t axis, const int64_t num_axes) const {
+  int32_t ret = axis;
+  if (axis < 0) { ret += num_axes; }
+  CHECK_GE(axis, 0);
+  CHECK_LT(axis, num_axes);
+  return ret;
 }
 
 REGISTER_OP(OperatorConf::kConcatConf, ConcatOp);

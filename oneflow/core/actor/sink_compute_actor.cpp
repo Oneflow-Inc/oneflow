@@ -1,4 +1,4 @@
-#include "oneflow/core/actor/loss_print_compute_actor.h"
+#include "oneflow/core/actor/sink_compute_actor.h"
 
 namespace oneflow {
 

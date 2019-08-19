@@ -1,6 +1,5 @@
 #include "oneflow/core/register/runtime_register_desc.h"
 #include "oneflow/core/common/protobuf.h"
-#include "oneflow/core/job/id_manager.h"
 #include "oneflow/core/job/keyword.h"
 
 namespace oneflow {
@@ -82,20 +81,13 @@ void RtRegstDesc::ForEachBlobDescOffsetInOnRegst(
     const std::vector<LbiBlobDescPair>& lbis,
     const std::function<void(const LbiBlobDescPair&, int64_t body_offset, int64_t header_offset)>&
         Handler) const {
-  int32_t last_blob_mem_id = -1;
-  size_t last_size = 0;
   int64_t cur_body_offset = 0;
   int64_t cur_header_offset = 0;
   for (const LbiBlobDescPair& lbi : lbis) {
-    const RtBlobDesc* blob_desc = GetRtBlobDescFromLbi(lbi.lbi());
-    int32_t cur_blob_mem_id = lbi.blob_desc().header().blob_mem_id();
-    if (cur_blob_mem_id == -1 || cur_blob_mem_id != last_blob_mem_id) {
-      cur_body_offset += last_size;
-    }
     Handler(lbi, cur_body_offset, cur_header_offset);
+    const RtBlobDesc* blob_desc = GetRtBlobDescFromLbi(lbi.lbi());
+    cur_body_offset += blob_desc->ByteSizeOfBlobBody();
     cur_header_offset += blob_desc->ByteSizeOfBlobHeader();
-    last_blob_mem_id = cur_blob_mem_id;
-    last_size = blob_desc->ByteSizeOfBlobBody();
   }
 }
 

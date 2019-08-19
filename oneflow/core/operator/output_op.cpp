@@ -1,5 +1,6 @@
 #include "oneflow/core/operator/output_op.h"
 #include "oneflow/core/job/sbp_signature_builder.h"
+#include "oneflow/core/operator/interface_op_util.h"
 
 namespace oneflow {
 
@@ -11,24 +12,25 @@ void OutputOp::InitFromOpConf() {
 
 void OutputOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                               const ParallelContext* parallel_ctx) const {
-  *GetBlobDesc4BnInOp("out") = *GetBlobDesc4BnInOp("in");
+  InterfaceOpUtil::InferOutBlobDesc(op_conf().output_conf().blob_conf(), GetBlobDesc4BnInOp("out"),
+                                    parallel_ctx);
+  CHECK(*GetBlobDesc4BnInOp("out") == *GetBlobDesc4BnInOp("in"));
 }
 
 const PbMessage& OutputOp::GetCustomizedConf() const { return op_conf().output_conf(); }
 
 void OutputOp::InferHasBatchDim(std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
-  *HasBatchDim4BnInOp("out") = *HasBatchDim4BnInOp("in");
+  InterfaceOpUtil::InferHasBatchDim(op_conf().output_conf().blob_conf(), HasBatchDim4BnInOp("out"));
+  CHECK(*HasBatchDim4BnInOp("out") == *HasBatchDim4BnInOp("in"));
 }
 
-void OutputOp::GetSbpSignatures(
-    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
-    SbpSignatureList* sbp_sig_list) const {
-  int64_t num_axes = LogicalBlobDesc4Ibn(input_bns().Get(0)).shape().NumAxes();
-  SbpSignatureBuilder()
-      .Split(input_bns(), 0)
-      .Split(output_bns(), 0)
-      .MakeSplitSignatureListBuilder(num_axes)
-      .Build(sbp_sig_list);
+void OutputOp::InferSbpSignature(
+    SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
+    const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
+    std::function<const SbpInferHint&(const std::string&)> SbpInferHint4Ibn,
+    const ParallelDesc& parallel_desc) const {
+  InterfaceOpUtil::GetOutputLikeOpSbpSignature(op_conf().output_conf().blob_conf(), input_bns(),
+                                               output_bns(), sbp_signature);
 }
 
 REGISTER_OP(OperatorConf::kOutputConf, OutputOp);

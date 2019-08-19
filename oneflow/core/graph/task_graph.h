@@ -24,7 +24,6 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   void AddReduceNoBwForwardNodeOverlapingCtrlEdges();
 
   void EnableMemSharingInReduceStruct();
-  void EnableMemSharingAfterAllManualSetForMdUpdt();
   void EnableInplaceMemSharing(const std::function<bool(const LogicalBlobId&, const std::string&)>&
                                    IsLbiAllConsumersReachableToOpName);
 
@@ -57,7 +56,7 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
       std::function<TaskNode*(int64_t machine_id, int32_t mem_zone_id)> GetBufTask,
       std::function<TaskNode*(int64_t machine_id, int32_t mem_zone_id, TaskNode*)> SetBufTask,
       bool use_buf_task_node);
-  TaskNode* AddCopyH2DTaskTo(TaskNode*);
+  TaskNode* TryAddCopyH2DTaskTo(TaskNode*);
   TaskNode* AddCopyD2HTaskFrom(TaskNode*);
   TaskNode* AddCopyCommNetTaskBetween(TaskNode* src, TaskNode* dst);
   void BuildOutBoxing(
@@ -97,6 +96,7 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   std::unique_ptr<const LogicalGraph> logical_gph_;
   std::vector<TaskNode*> ordered_task_nodes_;
 };
+
 bool IsBackEdge(TaskNode* src, TaskNode* dst);
 
 }  // namespace oneflow
