@@ -13,7 +13,6 @@ enum TaskType {
   kRecurrentBackward = 4;
   kDecode = 5;
   kLoss = 6;
-  kLossAcc = 7;
   kNormalMdUpdt = 9;
   kMdDiffAcc = 11;
   kCopyHd = 12;
