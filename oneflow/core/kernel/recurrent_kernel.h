@@ -22,7 +22,6 @@ class RecurrentKernel : public KernelIfWithModel<device_type, T> {
 
   void ForwardColNum(const KernelCtx&, std::function<Blob*(const std::string&)>) const override;
   void ForwardDataId(const KernelCtx&, std::function<Blob*(const std::string&)>) const override;
-  void BackwardColNum(const KernelCtx&, std::function<Blob*(const std::string&)>) const override;
   void VirtualKernelInit(const ParallelContext*) override;
 
  private:

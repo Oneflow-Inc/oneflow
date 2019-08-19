@@ -295,9 +295,7 @@ void OpNode::CheckBlobDescs(const std::function<BlobDesc*(const std::string&)>& 
   for (const std::string& bn : op().data_tmp_bns()) { Check(bn); }
   for (const std::string& bn : op().fw_buf_bns()) { Check(bn); }
   for (const std::string& bn : op().model_bns()) { Check(bn); }
-  for (const std::string& bn : op().const_model_bns()) { Check(bn); }
   for (const std::string& bn : op().const_buf_bns()) { Check(bn); }
-  for (const std::string& bn : op().forward_model_bns()) { Check(bn); }
 }
 
 void OpGraph::InferOpModelSize(HashMap<std::string, size_t>* op_name2model_size) {
@@ -647,8 +645,6 @@ std::function<const BlobDesc&(const LogicalBlobId&)> OpGraph::MakeGetterBlobDesc
   ForEachNode([&](OpNode* op_node) {
     auto ForEachModelBn = [&](const std::function<void(const std::string&)>& Handler) {
       for (const std::string& bn : op_node->op().model_bns()) { Handler(bn); }
-      for (const std::string& bn : op_node->op().const_model_bns()) { Handler(bn); }
-      for (const std::string& bn : op_node->op().forward_model_bns()) { Handler(bn); }
     };
     ForEachModelBn([&](const std::string& model_bn) {
       const auto& lbi = op_node->op().BnInOp2Lbi(model_bn);

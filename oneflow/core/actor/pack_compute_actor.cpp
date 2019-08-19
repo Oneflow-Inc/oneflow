@@ -54,6 +54,5 @@ void PackCompActor::VirtualAsyncSendNaiveConsumedRegstMsgToProducer() {
 }
 
 REGISTER_ACTOR(TaskType::kPackForward, PackCompActor);
-REGISTER_ACTOR(TaskType::kUnpackBackward, PackCompActor);
 
 }  // namespace oneflow

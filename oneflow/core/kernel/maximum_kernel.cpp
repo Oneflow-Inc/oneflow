@@ -23,6 +23,7 @@ void MaximumKernel<device_type, T>::ForwardDataContent(
 template<DeviceType device_type, typename T>
 void MaximumKernel<device_type, T>::BackwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  /*
   const Blob* mask_blob = BnInOp2Blob("mask");
   const Blob* out_diff_blob = BnInOp2Blob(GenDiffBn("out"));
   const int64_t elem_cnt = mask_blob->shape().elem_cnt();
@@ -34,6 +35,7 @@ void MaximumKernel<device_type, T>::BackwardDataContent(
         ctx.device_ctx, elem_cnt, in_diff_blob->mut_dptr<T>(), out_diff_blob->dptr<T>(), i,
         mask_blob->dptr<int32_t>());
   }
+  */
 }
 
 template<typename T>

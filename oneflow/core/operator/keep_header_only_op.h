@@ -13,8 +13,6 @@ class KeepHeaderOnlyOp final : public Operator {
   ~KeepHeaderOnlyOp() override = default;
 
   void InitFromOpConf() override;
-  bool NeedInBlobWhenBackward() const override { return false; }
-  bool NeedOutBlobWhenBackward() const override { return false; }
 
   const PbMessage& GetCustomizedConf() const override { return op_conf().keep_header_only_conf(); }
   void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,

@@ -16,8 +16,6 @@ class SparseCrossEntropyOp final : public Operator {
   void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                       const ParallelContext* parallel_ctx, int64_t record_piece_size,
                       std::function<void(OpContext*)> EnrollOpCtx) const override;
-  bool NeedOutBlobWhenBackward() const override { return false; }
-  bool NeedInBlobWhenBackward() const override { return true; }
 
  private:
   void InferHasBatchDim(
