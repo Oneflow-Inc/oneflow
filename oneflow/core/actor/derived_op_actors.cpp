@@ -14,6 +14,8 @@ class GeneralOpActor final : public OpActor {
   void InitOtherVal() override {}
 };
 
+REGISTER_NEW_ACTOR(TaskType::kLoss, GeneralOpActor);
+
 class InplaceOpActor final : public OpActor {
  public:
   void InitMsgHandler() override {
