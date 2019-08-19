@@ -3,7 +3,6 @@
 #include "oneflow/core/graph/optimizer_compute_task_node.h"
 #include "oneflow/core/graph/loss_accumulate_compute_task_node.h"
 #include "oneflow/core/graph/loss_compute_task_node.h"
-#include "oneflow/core/graph/loss_print_compute_task_node.h"
 #include "oneflow/core/graph/model_diff_accumulate_compute_task_node.h"
 #include "oneflow/core/graph/print_compute_task_node.h"
 #include "oneflow/core/graph/decode_compute_task_node.h"
@@ -171,9 +170,6 @@ std::vector<LogicalBlobId> ReturnPackedLbi(const LogicalNode* src, const Logical
   return {GenPackedLbi()};
 }
 
-REGISTER_FUNC_FOR_FIND_LBIS("LossAcc"
-                            "LossPrint",
-                            ReturnPackedLbi);
 REGISTER_FUNC_FOR_FIND_LBIS("AccuracyAcc"
                             "AccuracyPrint",
                             ReturnPackedLbi);
@@ -431,9 +427,6 @@ REGISTER_BLD_BOXING_OP_CONF_MTHD("NormalBackward"
 REGISTER_BLD_BOXING_OP_CONF_MTHD("Loss"
                                  "NormalBackward",
                                  &GetBldBoxingOpConfMethodByBwParallelPolicy);
-REGISTER_BLD_BOXING_OP_CONF_MTHD("LossAcc"
-                                 "LossPrint",
-                                 &BoxingTaskNode::BldBoxingOpConfWithAddAndClone);
 REGISTER_BLD_BOXING_OP_CONF_MTHD("AccuracyAcc"
                                  "AccuracyPrint",
                                  &BoxingTaskNode::BldBoxingOpConfWithAddAndClone);
@@ -454,7 +447,6 @@ REGISTER_BLD_BOXING_OP_CONF_MTHD("NormalBackward"
   OF_PP_MAKE_TUPLE_SEQ(DecodeRandom, kDataPreprocessArea) \
   OF_PP_MAKE_TUPLE_SEQ(Loss, kDataForwardArea)            \
   OF_PP_MAKE_TUPLE_SEQ(LossAcc, kDataForwardArea)         \
-  OF_PP_MAKE_TUPLE_SEQ(LossPrint, kPrintArea)             \
   OF_PP_MAKE_TUPLE_SEQ(MdDiffAcc, kDataBackwardArea)      \
   OF_PP_MAKE_TUPLE_SEQ(Print, kPrintArea)                 \
   OF_PP_MAKE_TUPLE_SEQ(ReduceConcat, kMdUpdtArea)         \

@@ -650,14 +650,6 @@ message GeluGradOpConf {
   required string dx = 3;
 }
 
-message LossPrintOpConf {
-  required LogicalBlobId loss_lbi = 1;
-  required LogicalBlobId loss_instance_num_lbi = 2;
-  optional LogicalBlobId reduction_lbi = 3;
-  optional float weight_scalar = 4 [default = 1.0];
-  optional ScalarReductionType reduction_type = 5 [default = kSumOverN];
-}
-
 message AccuracyPrintOpConf {
   required LogicalBlobId accuracy_lbi = 1;
   required LogicalBlobId accuracy_instance_num_lbi = 2;
@@ -1377,14 +1369,6 @@ message BatchGatherGradOpConf {
   required int64 gather_dim_size = 4;
 }
 
-message PrintScalarSummaryOpConf {
-  required string x = 1;
-  optional ScalarReductionType reduction_type = 2 [default = kSumOverN];
-  optional float weight_scalar = 3 [default = 1.0];
-  optional string weight = 4;
-  optional int32 interval = 5 [default = 1];
-}
-
 message ShapeElemCntAxisConf {
   repeated int32 axis = 1;
 }
@@ -1553,7 +1537,6 @@ message OperatorConf {
     AccuracyOpConf accuracy_conf = 232;
     PrintOpConf print_conf = 233;
     AccuracyPrintOpConf accuracy_print_conf = 234;
-    LossPrintOpConf loss_print_conf = 235;
     DefineTestBlobOpConf define_test_blob_conf = 236;
     PackOpConf pack_conf = 237;
     UnpackOpConf unpack_conf = 238;
@@ -1591,7 +1574,6 @@ message OperatorConf {
     SoftmaxGradOpConf softmax_grad_conf = 278;
     BatchGatherGradOpConf batch_gather_grad_conf = 279;
     ReduceMeanGradOpConf reduce_mean_grad_conf = 280;
-    PrintScalarSummaryOpConf print_scalar_summary_conf = 281;
     NormalizationGradOpConf normalization_grad_conf = 282;
     ConvBiasGradOpConf conv_bias_grad_conf = 283;
     ConvFilterGradOpConf conv_filter_grad_conf = 284;
