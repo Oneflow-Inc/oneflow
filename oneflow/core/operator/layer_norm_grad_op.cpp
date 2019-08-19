@@ -15,8 +15,8 @@ void LayerNormGradOp::InitFromOpConf() {
   }
   EnrollOutputBn("dx", false);
   EnrollConstBufBn("cudnn_bn_scale_ones");
-  EnrollFwBufBn("cudnn_bn_scale_diff_buf");
-  EnrollFwBufBn("cudnn_bn_bias_diff_buf");
+  EnrollTmpBn("cudnn_bn_scale_diff_buf");
+  EnrollTmpBn("cudnn_bn_bias_diff_buf");
 }
 
 void LayerNormGradOp::InferBlobDescs(

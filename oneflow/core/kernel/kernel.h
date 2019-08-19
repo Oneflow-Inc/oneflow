@@ -110,8 +110,6 @@ class Kernel {
 #undef DEFINE_GET_VAL_FROM_CUSTOMIZED_CONF
 
  private:
-  bool HasModelBns() const;
-
   const JobDesc* job_desc_;
   KernelConf kernel_conf_;
 };

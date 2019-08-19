@@ -3,9 +3,9 @@
 namespace oneflow {
 
 void HingeLossOp::VirtualInitFromOpConf() {
-  EnrollDataTmpBn("tmp");
-  EnrollDataTmpBn("tmp_diff");
-  EnrollDataTmpBn("tmp_storage");  // used by GPU
+  EnrollTmpBn("tmp");
+  EnrollTmpBn("tmp_diff");
+  EnrollTmpBn("tmp_storage");  // used by GPU
 }
 
 const PbMessage& HingeLossOp::GetCustomizedConf() const { return op_conf().hinge_loss_conf(); }

@@ -4,7 +4,7 @@ namespace oneflow {
 
 void LARSModelUpdateOp::MdUpdtVirtualInitFromOpConf() {
   EnrollInputBn("momentum", false)->set_is_mutable(true);
-  EnrollDataTmpBn("data_tmp");
+  EnrollTmpBn("data_tmp");
 }
 
 void LARSModelUpdateOp::MdUpdtVirtualInferBlobDescs(

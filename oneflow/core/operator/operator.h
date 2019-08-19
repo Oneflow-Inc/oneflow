@@ -81,8 +81,7 @@ class Operator {
 
   const std::string& SoleIbn() const;
   const std::string& SoleObn() const;
-  const std::string& SoleDtbn() const;
-  const std::string& SoleFbbn() const;
+  const std::string& SoleTbn() const;
 
 #define DEFINE_BLOB_NAMES_GETTER(getter_name)                                           \
   const PbRpf<std::string>& getter_name() const { return op_attribute_.getter_name(); } \
@@ -90,15 +89,13 @@ class Operator {
 
   DEFINE_BLOB_NAMES_GETTER(input_bns);
   DEFINE_BLOB_NAMES_GETTER(output_bns);
-  DEFINE_BLOB_NAMES_GETTER(data_tmp_bns);
-  DEFINE_BLOB_NAMES_GETTER(fw_buf_bns);
-  DEFINE_BLOB_NAMES_GETTER(model_bns);
+  DEFINE_BLOB_NAMES_GETTER(tmp_bns);
   DEFINE_BLOB_NAMES_GETTER(const_buf_bns);
 
 #undef DEFINE_BLOB_NAMES_GETTER
 
   // Read: shape of input_blobs
-  // Write: shape of output_blobs, model_blobs, data_tmp_blobs, const_model_blobs, const_buf_blobs
+  // Write: shape of output_blobs
   void InferBlobDescsIf(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                         const ParallelContext*, int64_t record_piece_size,
                         std::function<void(OpContext*)> EnrollOpCtx) const;
@@ -194,33 +191,25 @@ class Operator {
 
   virtual LogicalBlobId ibn2lbi(const std::string& input_bn) const;
   virtual LogicalBlobId obn2lbi(const std::string& output_bn) const;
-  virtual LogicalBlobId cmbn2lbi(const std::string& const_model_bn) const;
-  virtual LogicalBlobId cbbn2lbi(const std::string& const_buf_bn) const;
-  virtual LogicalBlobId mbn2lbi(const std::string& model_bn) const;
-  virtual LogicalBlobId fwmbn2lbi(const std::string& forward_model_bn) const;
 
   OperatorConf* mut_op_conf() { return op_attribute_.mutable_op_conf(); }
 
   // enroll data blobs
-  void EnrollDataTmpBn(const std::string& dtbn);
-  void EnrollFwBufBn(const std::string& fbbn);
-  InputBlobModifier* EnrollInputBn(const std::string& ibn, bool has_diff);
-  InputBlobModifier* EnrollInputBn(const std::string& ibn) { return EnrollInputBn(ibn, true); }
+  void EnrollTmpBn(const std::string& dtbn);
   void EnrollRepeatedInputBn(const std::string& ibn_prefix, int32_t num, bool has_diff);
   void EnrollRepeatedInputBn(const std::string& ibn_prefix, bool has_diff);
   void EnrollRepeatedInputBn(const std::string& ibn_prefix, int32_t num);
   void EnrollRepeatedInputBn(const std::string& ibn_prefix);
-  OutputBlobModifier* EnrollOutputBn(const std::string& obn, bool has_diff);
-  OutputBlobModifier* EnrollOutputBn(const std::string& obn) { return EnrollOutputBn(obn, true); }
   void EnrollRepeatedOutputBn(const std::string& obn_prefix, int32_t num, bool has_diff);
   void EnrollRepeatedOutputBn(const std::string& obn_prefix, bool has_diff);
   void EnrollRepeatedOutputBn(const std::string& obn_prefix, int32_t num);
   void EnrollRepeatedOutputBn(const std::string& obn_prefix);
-
-  // enroll model blobs
-  void EnrollModelBn(const std::string& mbn);
-
   void EnrollConstBufBn(const std::string& cbbn);
+
+  InputBlobModifier* EnrollInputBn(const std::string& ibn, bool has_diff);
+  InputBlobModifier* EnrollInputBn(const std::string& ibn) { return EnrollInputBn(ibn, true); }
+  OutputBlobModifier* EnrollOutputBn(const std::string& obn, bool has_diff);
+  OutputBlobModifier* EnrollOutputBn(const std::string& obn) { return EnrollOutputBn(obn, true); }
 
   void StrFieldTolower(const std::string& field_name);
 
@@ -237,8 +226,8 @@ class Operator {
     UNIMPLEMENTED();
   }
 
-  LogicalBlobId dtbn2lbi(const std::string& data_tmp_bn) const;
-  LogicalBlobId fbbn2lbi(const std::string& fw_buf_bn) const { return dtbn2lbi(fw_buf_bn); }
+  LogicalBlobId tbn2lbi(const std::string& data_tmp_bn) const;
+  virtual LogicalBlobId cbbn2lbi(const std::string& const_buf_bn) const;
   std::string Bn2ConfName(const std::string& bn) const;
   PbMap<std::string, LogicalBlobId>* mut_bn_in_op2lbi() {
     return op_attribute_.mutable_bn_in_op2lbi();

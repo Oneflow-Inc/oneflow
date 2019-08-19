@@ -189,14 +189,6 @@ std::string LogicalNode::VisualStr() const {
   return ss.str();
 }
 
-bool LogicalNode::HasOpWithModelOrConstModelBlob() const {
-  return HasOpWithCondition([](const Operator* op) { return op->model_bns().empty() == false; });
-}
-
-bool LogicalNode::HasOpWithModelBlob() const {
-  return HasOpWithCondition([](const Operator* op) { return op->model_bns().empty() == false; });
-}
-
 void LogicalNode::GenSortedCompTaskNodes(
     std::function<int64_t(const TaskNode*)> AllocateCpuThrdIdEvenly,
     std::vector<std::pair<int64_t, CompTaskNode*>>* nodes,

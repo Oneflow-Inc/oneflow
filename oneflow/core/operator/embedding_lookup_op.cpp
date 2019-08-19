@@ -8,7 +8,7 @@ void EmbeddingLookupOp::InitFromOpConf() {
 
   EnrollInputBn("ids", false);
   EnrollOutputBn("out");
-  EnrollModelBn("weight");
+  EnrollTmpBn("weight");
 }
 
 const PbMessage& EmbeddingLookupOp::GetCustomizedConf() const {

@@ -225,10 +225,10 @@ void BoxingTaskNode::BuildWithLogicalPair(const LogicalNode* in_logical,
       }
       node->BindBnWithRegst(obn, regst);
     }
-    for (const std::string& dtbn : node->op()->data_tmp_bns()) {
+    for (const std::string& tbn : node->op()->tmp_bns()) {
       CHECK_EQ(lbi.is_packed_id(), false);
-      middle_regst->AddLbi(node->op()->BnInOp2Lbi(dtbn));
-      node->BindBnWithRegst(dtbn, middle_regst);
+      middle_regst->AddLbi(node->op()->BnInOp2Lbi(tbn));
+      node->BindBnWithRegst(tbn, middle_regst);
     }
     if (lbi.is_packed_id() == false) { node->InferBlobDescs(nullptr); }
   }

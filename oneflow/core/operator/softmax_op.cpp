@@ -12,11 +12,11 @@ void SoftmaxOp::InitFromOpConf() {
     EnrollOutputBn("transpose_in");
     EnrollOutputBn("transpose_out", false);
   } else {
-    EnrollDataTmpBn("transpose_in");
-    EnrollDataTmpBn("transpose_out");
+    EnrollTmpBn("transpose_in");
+    EnrollTmpBn("transpose_out");
   }
-  EnrollFwBufBn("fw_softmax_num");
-  EnrollFwBufBn("fw_buf");
+  EnrollTmpBn("fw_softmax_num");
+  EnrollTmpBn("fw_buf");
 }
 
 const PbMessage& SoftmaxOp::GetCustomizedConf() const { return op_conf().softmax_conf(); }

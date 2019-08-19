@@ -2,7 +2,7 @@
 
 namespace oneflow {
 
-void RMSPropModelUpdateOp::MdUpdtVirtualInitFromOpConf() { EnrollDataTmpBn("mean_square"); }
+void RMSPropModelUpdateOp::MdUpdtVirtualInitFromOpConf() { EnrollTmpBn("mean_square"); }
 
 void RMSPropModelUpdateOp::MdUpdtVirtualInferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,

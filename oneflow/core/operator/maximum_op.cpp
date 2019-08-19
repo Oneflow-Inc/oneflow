@@ -4,7 +4,7 @@ namespace oneflow {
 
 void MaximumOp::VirtualInitFromOpConf() {
   CHECK(op_conf().has_maximum_conf());
-  EnrollDataTmpBn("mask");
+  EnrollTmpBn("mask");
 }
 
 const PbMessage& MaximumOp::GetCustomizedConf() const { return op_conf().maximum_conf(); }

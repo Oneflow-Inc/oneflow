@@ -24,14 +24,14 @@ void LayerNormOp::InitFromOpConf() {
     if (conf.has_beta()) {
       EnrollInputBn("beta");
     } else {
-      EnrollModelBn("beta");
+      EnrollTmpBn("beta");
     }
   }
   if (conf.scale()) {
     if (conf.has_gamma()) {
       EnrollInputBn("gamma");
     } else {
-      EnrollModelBn("gamma");
+      EnrollTmpBn("gamma");
     }
     EnrollOutputBn("normalized", false);
   }

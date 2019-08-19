@@ -8,7 +8,7 @@ void PReluOp::InitFromOpConf() {
   CHECK(op_conf().has_prelu_conf());
   StrFieldTolower("data_format");
   EnrollInputBn("in");
-  EnrollModelBn("alpha");
+  EnrollTmpBn("alpha");
   EnrollOutputBn("out")->set_mutable_inplace_ibn("in");
 }
 

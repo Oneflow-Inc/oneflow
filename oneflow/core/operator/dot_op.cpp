@@ -6,8 +6,8 @@ void DotOp::InitFromOpConf() {
 
   EnrollInputBn("in");
   EnrollInputBn("weight");
-  EnrollDataTmpBn("tmp");
-  EnrollDataTmpBn("tmp_storage");
+  EnrollTmpBn("tmp");
+  EnrollTmpBn("tmp_storage");
   EnrollConstBufBn("diff_multiplier");
   EnrollOutputBn("out");
   if (op_conf().dot_conf().has_bias()) { EnrollInputBn("bias"); }
