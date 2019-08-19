@@ -4,30 +4,6 @@
 namespace oneflow {
 
 template<DeviceType device_type, typename PredType, typename LabelType>
-void AccuracyKernel<device_type, PredType, LabelType>::SetAccuracyInstanceNumBlob(
-    const KernelCtx& ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
-  const Blob* weight = BnInOp2Blob("weight");
-  Blob* accuracy_instance_num = BnInOp2Blob("accuracy_instance_num");
-  if (weight == nullptr) {
-    CHECK_GE(this->op_attribute().input_bns().size(), 2);
-    this->CheckSameDim0ValidNum(this->op_attribute().input_bns(), BnInOp2Blob);
-    int64_t dim0_valid_num_sum =
-        BnInOp2Blob(this->op_attribute().input_bns(0))->CalcDim0ValidNumSum();
-    KernelUtil<device_type, PredType>::Set(ctx.device_ctx,
-                                           static_cast<PredType>(dim0_valid_num_sum),
-                                           accuracy_instance_num->mut_dptr<PredType>());
-  } else {
-    Blob* weight_reduce_tmp = BnInOp2Blob("weight_reduce_tmp");
-    CHECK_LE(weight->shape().elem_cnt(), weight_reduce_tmp->shape().elem_cnt());
-    const int64_t num_instance = weight->shape().elem_cnt();
-    NdarrayUtil<device_type, PredType>::ReduceSum(
-        ctx.device_ctx, XpuVarNdarray<PredType>({1}, accuracy_instance_num->mut_dptr<PredType>()),
-        XpuVarNdarray<const PredType>({num_instance}, weight->dptr<PredType>()),
-        XpuVarNdarray<PredType>({num_instance}, weight_reduce_tmp->mut_dptr<PredType>()));
-  }
-}
-
-template<DeviceType device_type, typename PredType, typename LabelType>
 void AccuracyKernel<device_type, PredType, LabelType>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* X = BnInOp2Blob("prediction");
@@ -45,7 +21,6 @@ void AccuracyKernel<device_type, PredType, LabelType>::ForwardDataContent(
   AccuracyKernelUtil<device_type, PredType, LabelType>::Forward(
       ctx.device_ctx, N, D, top_k, X->dptr<PredType>(), label->dptr<LabelType>(),
       weight ? weight->dptr<PredType>() : nullptr, accuracy->mut_dptr<PredType>());
-  SetAccuracyInstanceNumBlob(ctx, BnInOp2Blob);
 }
 
 template<DeviceType device_type, typename PredType, typename LabelType>

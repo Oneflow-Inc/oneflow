@@ -210,8 +210,6 @@ DECLARE_NAIVE_LOGICAL_NODE(DecodeRandomLogicalNode);
 DECLARE_NAIVE_LOGICAL_NODE(PrintLogicalNode);
 DECLARE_NAIVE_LOGICAL_NODE(LossLogicalNode);
 DECLARE_NAIVE_LOGICAL_NODE(AccuracyLogicalNode);
-DECLARE_NAIVE_LOGICAL_NODE(AccuracyAccLogicalNode);
-DECLARE_NAIVE_LOGICAL_NODE(AccuracyPrintLogicalNode);
 
 class MdDiffAccLogicalNode final : public LogicalNode {
  public:
