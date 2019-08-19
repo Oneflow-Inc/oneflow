@@ -29,8 +29,6 @@ enum TaskType {
   kNcclReduceScatter = 24;
   kNcclAllGather = 25;
   kAccuracy = 26;
-  kAccuracyAcc = 27;
-  kAccuracyPrint = 28;
   kDecodeRandom = 29;
   kPackForward = 30;
   kPackBackward = 31;

@@ -16,8 +16,6 @@
 #include "oneflow/core/graph/nccl_reduce_scatter_compute_task_node.h"
 #include "oneflow/core/graph/nccl_all_gather_compute_task_node.h"
 #include "oneflow/core/graph/accuracy_compute_task_node.h"
-#include "oneflow/core/graph/accuracy_accumulate_compute_task_node.h"
-#include "oneflow/core/graph/accuracy_print_compute_task_node.h"
 #include "oneflow/core/graph/task_graph.h"
 #include "oneflow/core/graph/reduce_identity_task_node.h"
 #include "oneflow/core/graph/op_graph.h"
@@ -169,9 +167,6 @@ std::vector<LogicalBlobId> ReturnPackedLbi(const LogicalNode* src, const Logical
   return {GenPackedLbi()};
 }
 
-REGISTER_FUNC_FOR_FIND_LBIS("AccuracyAcc"
-                            "AccuracyPrint",
-                            ReturnPackedLbi);
 REGISTER_FUNC_FOR_FIND_LBIS("MdDiffAcc"
                             "NormalMdUpdt",
                             ReturnPackedLbi);
@@ -385,9 +380,6 @@ REGISTER_BLD_SUB_TSK_GPH_MTHD("NormalBackward"
 REGISTER_BLD_SUB_TSK_GPH_MTHD("RecordLoad"
                               "Decode",
                               &TaskGraph::BldSubTskGphByOneToOne);
-REGISTER_BLD_SUB_TSK_GPH_MTHD("Accuracy"
-                              "AccuracyAcc",
-                              &TaskGraph::BldSubTskGphByOneToOne);
 REGISTER_BLD_SUB_TSK_GPH_MTHD("MdDiffAcc"
                               "NormalMdUpdt",
                               BldSubTskGphToNormalMdUpdt);
@@ -423,9 +415,6 @@ REGISTER_BLD_BOXING_OP_CONF_MTHD("NormalBackward"
 REGISTER_BLD_BOXING_OP_CONF_MTHD("Loss"
                                  "NormalBackward",
                                  &GetBldBoxingOpConfMethodByBwParallelPolicy);
-REGISTER_BLD_BOXING_OP_CONF_MTHD("AccuracyAcc"
-                                 "AccuracyPrint",
-                                 &BoxingTaskNode::BldBoxingOpConfWithAddAndClone);
 REGISTER_BLD_BOXING_OP_CONF_MTHD("Accuracy"
                                  "Print",
                                  &BoxingTaskNode::BldBoxingOpConfWithAddAndClone);
@@ -453,9 +442,7 @@ REGISTER_BLD_BOXING_OP_CONF_MTHD("NormalBackward"
   OF_PP_MAKE_TUPLE_SEQ(NcclAllReduce, kMdUpdtArea)        \
   OF_PP_MAKE_TUPLE_SEQ(NcclReduceScatter, kMdUpdtArea)    \
   OF_PP_MAKE_TUPLE_SEQ(NcclAllGather, kMdUpdtArea)        \
-  OF_PP_MAKE_TUPLE_SEQ(Accuracy, kDataForwardArea)        \
-  OF_PP_MAKE_TUPLE_SEQ(AccuracyAcc, kDataForwardArea)     \
-  OF_PP_MAKE_TUPLE_SEQ(AccuracyPrint, kPrintArea)
+  OF_PP_MAKE_TUPLE_SEQ(Accuracy, kDataForwardArea)
 
 #define DEFINE_VIRTUAL_METHOD(x, area_type)                                             \
   std::string x##LogicalNode::TypeName() const { return #x; }                           \

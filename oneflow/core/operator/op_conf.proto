@@ -650,12 +650,6 @@ message GeluGradOpConf {
   required string dx = 3;
 }
 
-message AccuracyPrintOpConf {
-  required LogicalBlobId accuracy_lbi = 1;
-  required LogicalBlobId accuracy_instance_num_lbi = 2;
-  optional int32 top_k_print = 3 [default = 1];
-}
-
 message ReduceSumOpConf {
   oneof in_conf {
     string in = 1; // For User
@@ -1536,7 +1530,6 @@ message OperatorConf {
     SparseSoftmaxCrossEntropyLossOpConf sparse_softmax_cross_entropy_loss_conf = 231;
     AccuracyOpConf accuracy_conf = 232;
     PrintOpConf print_conf = 233;
-    AccuracyPrintOpConf accuracy_print_conf = 234;
     DefineTestBlobOpConf define_test_blob_conf = 236;
     PackOpConf pack_conf = 237;
     UnpackOpConf unpack_conf = 238;
