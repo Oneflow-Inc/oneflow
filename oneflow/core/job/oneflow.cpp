@@ -7,6 +7,7 @@
 #include "oneflow/core/job/improver.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/job_builder.h"
+#include "oneflow/core/job_completer/user_job_completer.h"
 #include "oneflow/core/job/job_set.pb.h"
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/machine_context.h"
@@ -792,42 +793,13 @@ void MakeModelSaveJob(const std::string& job_name,
   job_conf->set_total_batch_num(1);
 }
 
-void FixInputOpParallelConf(Job* job) {
-  JobBuilder job_builder(job);
-  HashSet<std::string> input_op_names;
-  for (const auto& op_conf : job->net().op()) {
-    if (op_conf.has_input_conf()) { CHECK(input_op_names.emplace(op_conf.name()).second); }
-  }
-  HashSet<std::string> updated_op_names;
-  job_builder.ForEachOperator([&](const Operator& op) {
-    for (const auto& ibn : op.input_bns()) {
-      const LogicalBlobId& lbi = op.BnInOp2Lbi(ibn);
-      if (input_op_names.find(lbi.op_name()) == input_op_names.end()) { continue; }
-      if (updated_op_names.find(lbi.op_name()) != updated_op_names.end()) { continue; }
-      job_builder.MutParallelConfOnlyOnce(lbi.op_name(),
-                                          job_builder.ParallelConf4OpName(op.op_name()));
-    }
-  });
-}
-
-void FixReturnOpParallelConf(Job* job) {
-  JobBuilder job_builder(job);
-  for (const auto& op_conf : job->net().op()) {
-    if (op_conf.has_return_conf() == false) { continue; }
-    LogicalBlobId lbi = GenLogicalBlobId(op_conf.return_conf().in());
-    job_builder.MutParallelConfOnlyOnce(op_conf.name(),
-                                        job_builder.ParallelConf4OpName(lbi.op_name()));
-  }
-}
-
 void CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan) {
   std::vector<Job> jobs(conf_jobs.size());
   std::vector<Plan> sub_plans(conf_jobs.size());
   FOR_RANGE(int32_t, i, 0, sub_plans.size()) {
     jobs.at(i) = conf_jobs.Get(i);
     WithJobIdGlobal(i, [&]() {
-      FixInputOpParallelConf(&jobs.at(i));
-      FixReturnOpParallelConf(&jobs.at(i));
+      UserJobCompleter().Complete(&jobs.at(i));
       CompileCurJobOnMaster(&jobs.at(i), &sub_plans.at(i), true);
     });
   }
