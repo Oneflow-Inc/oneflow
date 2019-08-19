@@ -13,6 +13,7 @@ void RepeatKernel<device_type, T>::ForwardDataContent(
 template<DeviceType device_type, typename T>
 void RepeatKernel<device_type, T>::BackwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  /*
   Blob* in_diff_blob = BnInOp2Blob(GenDiffBn("in"));
   const Blob* out_diff_blob = BnInOp2Blob(GenDiffBn("out"));
 
@@ -24,6 +25,7 @@ void RepeatKernel<device_type, T>::BackwardDataContent(
     KernelUtil<device_type, T>::Axpy(ctx.device_ctx, out_diff_blob->shape().elem_cnt(), 1.0,
                                      out_diff_blob->dptr<T>(), 1, in_diff_blob->mut_dptr<T>(), 1);
   }
+  */
 }
 
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kRepeatConf, RepeatKernel, ARITHMETIC_DATA_TYPE_SEQ);

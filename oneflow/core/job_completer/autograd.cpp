@@ -97,7 +97,8 @@ std::function<bool(const LogicalBlobId&, const std::string&)> MakePredicatorHasD
   op_graph.ForEachEdge([&](OpEdge* edge) {
     if (NeedBackwardOp(edge->src_node()) && NeedBackwardOp(edge->dst_node())) {
       for (const auto& lbi : edge->lbis()) {
-        if (edge->src_node()->op().HasOutDiff4Lbi(lbi)) {
+        const auto& obn = edge->lbi2obn().at(lbi);
+        if (edge->src_node()->op().OutputBlobModifier4Obn(obn).requires_grad()) {
           (*lbis2ops_with_in_diff)[lbi].emplace(edge->dst_node()->op().op_name());
         }
       }

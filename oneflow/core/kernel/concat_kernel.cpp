@@ -24,27 +24,6 @@ void ConcatKernel<device_type, T>::ForwardDataContent(
   CHECK_EQ(out_col_offset, out_col_num);
 }
 
-template<DeviceType device_type, typename T>
-void ConcatKernel<device_type, T>::BackwardDataContent(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const int32_t axis = this->op_conf().concat_conf().axis();
-  const Blob* out_diff_blob = BnInOp2Blob("out_diff");
-  const int64_t row_num = out_diff_blob->shape().elem_cnt() / out_diff_blob->shape().Count(axis);
-  const int64_t out_diff_col_num = out_diff_blob->shape().Count(axis);
-  int64_t out_diff_col_offset = 0;
-  for (const auto& input_diff_bn : this->op_attribute().input_diff_bns()) {
-    Blob* in_diff_blob = BnInOp2Blob(input_diff_bn);
-    const int64_t in_diff_col_num = in_diff_blob->shape().Count(axis);
-    CHECK_EQ(in_diff_blob->shape().elem_cnt(), row_num * in_diff_col_num);
-    CHECK_EQ(in_diff_blob->data_type(), out_diff_blob->data_type());
-    KernelUtil<device_type, T>::CopyColsRegion(
-        ctx.device_ctx, row_num, in_diff_col_num, out_diff_blob->dptr<T>(), out_diff_col_offset,
-        out_diff_col_num, in_diff_blob->mut_dptr<T>(), 0, in_diff_col_num);
-    out_diff_col_offset += in_diff_col_num;
-  }
-  CHECK_EQ(out_diff_col_offset, out_diff_col_num);
-}
-
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kConcatConf, ConcatKernel, ARITHMETIC_DATA_TYPE_SEQ);
 
 }  // namespace oneflow

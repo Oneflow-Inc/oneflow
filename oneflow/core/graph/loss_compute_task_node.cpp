@@ -34,8 +34,6 @@ void LossCompTaskNode::BuildExecGphAndRegst() {
     loss_node->BindBnWithRegst(obn, out_regst);
   }
   mut_exec_gph().TopoForEachNode([this](ExecNode* node) { node->InferBlobDescs(parallel_ctx()); });
-  mut_exec_gph().TopoForEachNode(
-      [this](ExecNode* node) { node->FixInDiffBlobDescs(parallel_ctx()); });
 }
 
 void LossCompTaskNode::InferProducedDataRegstTimeShape() { NaiveInferProducedDataRegstTimeShape(); }
