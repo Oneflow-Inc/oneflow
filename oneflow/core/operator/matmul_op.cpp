@@ -9,7 +9,7 @@ void MatmulOp::InitFromOpConf() {
   EnrollInputBn("a");
   EnrollInputBn("b");
   EnrollOutputBn("out");
-  EnrollFwBufBn("fw_buf");
+  EnrollTmpBn("fw_buf");
 }
 
 const PbMessage& MatmulOp::GetCustomizedConf() const { return op_conf().matmul_conf(); }

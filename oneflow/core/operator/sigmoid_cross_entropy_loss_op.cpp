@@ -4,10 +4,10 @@
 namespace oneflow {
 
 void SigmoidCrossEntropyLossOp::VirtualInitFromOpConf() {
-  EnrollDataTmpBn("count");
-  EnrollDataTmpBn("label_num");
-  EnrollDataTmpBn("loss_buf");
-  EnrollDataTmpBn("sum_buf");
+  EnrollTmpBn("count");
+  EnrollTmpBn("label_num");
+  EnrollTmpBn("loss_buf");
+  EnrollTmpBn("sum_buf");
 }
 
 const PbMessage& SigmoidCrossEntropyLossOp::GetCustomizedConf() const {

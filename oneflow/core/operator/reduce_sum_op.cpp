@@ -10,9 +10,9 @@ void ReduceSumOp::InitFromOpConf() {
   EnrollInputBn("in");
   EnrollOutputBn("out");
   if (op_conf().reduce_sum_conf().has_in_sys()) {
-    EnrollDataTmpBn("fw_tmp");
+    EnrollTmpBn("fw_tmp");
   } else {
-    EnrollFwBufBn("fw_tmp");
+    EnrollTmpBn("fw_tmp");
   }
 }
 

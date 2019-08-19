@@ -16,7 +16,7 @@ void ConvDataGradOp::InitFromOpConf() {
   EnrollInputBn("x_like", false)->set_use_header_only(true);
   EnrollOutputBn("dx", false);
   if (DevIsGpuAndEnableCudnn()) {
-    EnrollFwBufBn("buf");
+    EnrollTmpBn("buf");
   } else {
     UNIMPLEMENTED();
   }

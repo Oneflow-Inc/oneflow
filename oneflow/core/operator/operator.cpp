@@ -52,13 +52,9 @@ const std::string& Operator::SoleObn() const {
   CHECK_EQ(output_bns().size(), 1);
   return output_bns().Get(0);
 }
-const std::string& Operator::SoleDtbn() const {
-  CHECK_EQ(data_tmp_bns().size(), 1);
-  return data_tmp_bns().Get(0);
-}
-const std::string& Operator::SoleFbbn() const {
-  CHECK_EQ(fw_buf_bns().size(), 1);
-  return fw_buf_bns().Get(0);
+const std::string& Operator::SoleTbn() const {
+  CHECK_EQ(tmp_bns().size(), 1);
+  return tmp_bns().Get(0);
 }
 
 void Operator::InferBlobDescsIf(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
@@ -303,10 +299,10 @@ LogicalBlobId Operator::obn2lbi(const std::string& output_bn) const {
   ret.set_blob_name(Bn2ConfName(output_bn));
   return ret;
 }
-LogicalBlobId Operator::cmbn2lbi(const std::string& const_model_bn) const {
+LogicalBlobId Operator::tbn2lbi(const std::string& tmp_bn) const {
   LogicalBlobId ret;
   ret.set_op_name(op_name());
-  ret.set_blob_name(const_model_bn);
+  ret.set_blob_name(tmp_bn);
   return ret;
 }
 LogicalBlobId Operator::cbbn2lbi(const std::string& const_buf_bn) const {
@@ -315,27 +311,10 @@ LogicalBlobId Operator::cbbn2lbi(const std::string& const_buf_bn) const {
   ret.set_blob_name(const_buf_bn);
   return ret;
 }
-LogicalBlobId Operator::mbn2lbi(const std::string& model_bn) const {
-  LogicalBlobId ret;
-  ret.set_op_name(op_name());
-  ret.set_blob_name(model_bn);
-  return ret;
-}
-LogicalBlobId Operator::fwmbn2lbi(const std::string& forward_model_bn) const {
-  LogicalBlobId ret;
-  ret.set_op_name(op_name());
-  ret.set_blob_name(forward_model_bn);
-  return ret;
-}
 
-void Operator::EnrollDataTmpBn(const std::string& dtbn) {
-  *(mut_data_tmp_bns()->Add()) = dtbn;
-  CHECK(mut_bn_in_op2lbi()->insert({dtbn, dtbn2lbi(dtbn)}).second);
-}
-
-void Operator::EnrollFwBufBn(const std::string& fbbn) {
-  *(mut_fw_buf_bns()->Add()) = fbbn;
-  CHECK(mut_bn_in_op2lbi()->insert({fbbn, fbbn2lbi(fbbn)}).second);
+void Operator::EnrollTmpBn(const std::string& tbn) {
+  *(mut_tmp_bns()->Add()) = tbn;
+  CHECK(mut_bn_in_op2lbi()->insert({tbn, tbn2lbi(tbn)}).second);
 }
 
 InputBlobModifier* Operator::EnrollInputBn(const std::string& ibn, bool has_diff) {
@@ -409,11 +388,6 @@ void Operator::EnrollRepeatedOutputBn(const std::string& obn_prefix) {
   EnrollRepeatedOutputBn(obn_prefix, true);
 }
 
-void Operator::EnrollModelBn(const std::string& mbn) {
-  LogicalBlobId lbi = mbn2lbi(mbn);
-  *(mut_model_bns()->Add()) = mbn;
-  CHECK(mut_bn_in_op2lbi()->insert({mbn, lbi}).second);
-}
 void Operator::EnrollConstBufBn(const std::string& cbbn) {
   *(mut_const_buf_bns()->Add()) = cbbn;
   CHECK(mut_bn_in_op2lbi()->insert({cbbn, cbbn2lbi(cbbn)}).second);
@@ -423,13 +397,6 @@ void Operator::StrFieldTolower(const std::string& field_name) {
   std::string field_val = GetValFromCustomizedConf<std::string>(field_name);
   std::transform(field_val.begin(), field_val.end(), field_val.begin(), ::tolower);
   SetValInCustomizedConf(field_name, field_val);
-}
-
-LogicalBlobId Operator::dtbn2lbi(const std::string& data_tmp_bn) const {
-  LogicalBlobId lbi;
-  lbi.set_op_name(op_name());
-  lbi.set_blob_name(data_tmp_bn);
-  return lbi;
 }
 
 std::string GenRepeatedBn(const std::string& bn_prefix, int32_t idx) {

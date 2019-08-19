@@ -15,7 +15,7 @@ void ConvFilterGradOp::InitFromOpConf() {
   EnrollInputBn("x", false);
   EnrollOutputBn("filter_diff", false);
   if (DevIsGpuAndEnableCudnn()) {
-    EnrollFwBufBn("buf");
+    EnrollTmpBn("buf");
   } else {
     UNIMPLEMENTED();
   }

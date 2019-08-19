@@ -292,28 +292,8 @@ void OpNode::CheckBlobDescs(const std::function<BlobDesc*(const std::string&)>& 
   };
   for (const std::string& bn : op().input_bns()) { Check(bn); }
   for (const std::string& bn : op().output_bns()) { Check(bn); }
-  for (const std::string& bn : op().data_tmp_bns()) { Check(bn); }
-  for (const std::string& bn : op().fw_buf_bns()) { Check(bn); }
-  for (const std::string& bn : op().model_bns()) { Check(bn); }
+  for (const std::string& bn : op().tmp_bns()) { Check(bn); }
   for (const std::string& bn : op().const_buf_bns()) { Check(bn); }
-}
-
-void OpGraph::InferOpModelSize(HashMap<std::string, size_t>* op_name2model_size) {
-  auto BlobDesc4ModelLbi = MakeGetterBlobDesc4ModelLbi();
-  ForEachNode([&](OpNode* op_node) {
-    size_t model_size = 0;
-    for (const std::string& model_bn : op_node->op().model_bns()) {
-      const auto& lbi = op_node->op().BnInOp2Lbi(model_bn);
-      int64_t elem_cnt = BlobDesc4ModelLbi(lbi).shape().elem_cnt();
-      model_size += elem_cnt * GetSizeOfDataType(GlobalJobDesc().DefaultDataType());
-      model_size = RoundUp(model_size, kCudaAlignSize);
-    }
-    size_t parallel_num = op_node->parallel_desc().parallel_num();
-    if (op_node->parallel_desc().policy() == ParallelPolicy::kModelParallel) {
-      model_size = (model_size + parallel_num - 1) / parallel_num;
-    }
-    CHECK(op_name2model_size->emplace(op_node->op().op_name(), model_size).second);
-  });
 }
 
 void OpGraph::Init(const Job& job) {
@@ -643,14 +623,12 @@ std::function<const BlobDesc&(const LogicalBlobId&)> OpGraph::MakeGetterBlobDesc
   });
   auto model_lbi2blob_desc = std::make_shared<HashMap<LogicalBlobId, std::unique_ptr<BlobDesc>>>();
   ForEachNode([&](OpNode* op_node) {
-    auto ForEachModelBn = [&](const std::function<void(const std::string&)>& Handler) {
-      for (const std::string& bn : op_node->op().model_bns()) { Handler(bn); }
-    };
-    ForEachModelBn([&](const std::string& model_bn) {
-      const auto& lbi = op_node->op().BnInOp2Lbi(model_bn);
-      CHECK(
-          model_lbi2blob_desc->emplace(lbi, std::move(lbi2unparalleled_blob_desc.at(lbi))).second);
-    });
+    for (const std::string& tmp_bn : op_node->op().tmp_bns()) {
+      const auto& lbi = op_node->op().BnInOp2Lbi(tmp_bn);
+      const auto& iter = lbi2unparalleled_blob_desc.find(lbi);
+      if (iter == lbi2unparalleled_blob_desc.end()) { continue; }
+      CHECK(model_lbi2blob_desc->emplace(lbi, std::move(iter->second)).second);
+    }
   });
   return [model_lbi2blob_desc](const LogicalBlobId& model_lbi) -> const BlobDesc& {
     return *model_lbi2blob_desc->at(model_lbi);

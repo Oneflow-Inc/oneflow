@@ -8,7 +8,7 @@ void ReduceMeanOp::InitFromOpConf() {
   CHECK(op_conf().has_reduce_mean_conf());
   EnrollInputBn("in");
   EnrollOutputBn("out");
-  EnrollFwBufBn("fw_tmp");
+  EnrollTmpBn("fw_tmp");
 }
 
 const PbMessage& ReduceMeanOp::GetCustomizedConf() const { return op_conf().reduce_mean_conf(); }

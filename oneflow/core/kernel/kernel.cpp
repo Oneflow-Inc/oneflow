@@ -157,8 +157,6 @@ void Kernel::Forward(const KernelCtx& ctx,
   }
 }
 
-bool Kernel::HasModelBns() const { return op_attribute().model_bns().size() > 0; }
-
 template<DeviceType device_type>
 void KernelIf<device_type>::ForwardDataId(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {

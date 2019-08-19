@@ -13,7 +13,7 @@ void LayerNormParamGradOp::InitFromOpConf() {
     EnrollInputBn("normalized", false);
     EnrollOutputBn("gamma_diff", false);
   }
-  if (conf.has_beta_diff() || conf.has_gamma_diff()) { EnrollFwBufBn("reduce_buf"); }
+  if (conf.has_beta_diff() || conf.has_gamma_diff()) { EnrollTmpBn("reduce_buf"); }
   if (conf.has_normalized_diff()) { EnrollOutputBn("normalized_diff", false); }
   if (conf.has_normalized_diff() || conf.has_gamma_diff()) { CHECK(conf.has_gamma()); }
   if (conf.has_gamma()) { EnrollInputBn("gamma", false); }
