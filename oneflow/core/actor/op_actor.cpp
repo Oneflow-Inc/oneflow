@@ -207,12 +207,6 @@ void OpActor::InsertRegstHandler(RegstHandlerIf* handler) {
   CHECK(handlers_.emplace(handler->type(), std::unique_ptr<RegstHandlerIf>(handler)).second);
 }
 
-std::unique_ptr<NewActor> NewOpActor(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
-  OpActor* rptr = NewObj<OpActor>(task_proto.task_type());
-  rptr->Init(task_proto, thread_ctx);
-  return std::unique_ptr<NewActor>(dynamic_cast<NewActor*>(rptr));
-}
-
 }  // namespace actor
 
 }  // namespace oneflow

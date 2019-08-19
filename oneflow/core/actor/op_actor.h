@@ -2,9 +2,6 @@
 #define ONEFLOW_CORE_ACTOR_OP_ACTOR_H_
 
 #include "oneflow/core/actor/regst_handler.h"
-#include "oneflow/core/register/register_manager.h"
-#include "oneflow/core/kernel/kernel.h"
-#include "oneflow/core/kernel/kernel_context.h"
 #include "oneflow/core/actor/new_actor.h"
 
 namespace oneflow {
@@ -69,10 +66,6 @@ class OpActor : public NewActor {
   HashMap<std::string, std::unique_ptr<RegstHandlerIf>> handlers_;
   HashMap<int64_t, RegstHandlerIf*> regst_desc_id2handler_;
 };
-
-std::unique_ptr<NewActor> NewOpActor(const TaskProto&, const ThreadCtx&);
-
-#define REGISTER_NEW_ACTOR(task_type, ActorType) REGISTER_CLASS(task_type, NewActor, ActorType)
 
 }  // namespace actor
 

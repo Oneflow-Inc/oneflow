@@ -2,6 +2,11 @@
 #define ONEFLOW_CORE_ACTOR_NEW_ACTOR_H_
 
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/register/register_manager.h"
+#include "oneflow/core/kernel/kernel.h"
+#include "oneflow/core/kernel/kernel_context.h"
+#include "oneflow/core/thread/thread_context.h"
+#include "oneflow/core/job/task.pb.h"
 
 namespace oneflow {
 
@@ -28,7 +33,11 @@ class NewActor {
   MsgHandler msg_handler_;
 };
 
+std::unique_ptr<NewActor> ConstructNewActor(const TaskProto&, const ThreadCtx&);
+
 }  // namespace actor
+
+#define REGISTER_NEW_ACTOR(task_type, ActorType) REGISTER_CLASS(task_type, NewActor, ActorType)
 
 }  // namespace oneflow
 
