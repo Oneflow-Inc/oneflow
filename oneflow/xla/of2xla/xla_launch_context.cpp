@@ -35,14 +35,14 @@ DeviceBufferAllocator *XlaLaunchResourceMgr::GetOrCreateBufferAllocator(
     const se::Platform *platform, se::Stream *stream, int device_ordinal) {
   static std::unordered_map<uint64_t, DeviceBufferAllocator *> allocators;
   static std::mutex mutex;
-
   uint64_t stream_id = reinterpret_cast<uint64_t>(stream);
   if (allocators.count(stream_id) == 0) {
     std::lock_guard<std::mutex> lock(mutex);
-
-    std::shared_ptr<DeviceMemoryPool> mem_pool =
-        DeviceMemoryPool::NewMemoryPool(platform, stream, device_ordinal);
-    allocators.emplace(stream_id, new DeviceBufferAllocator(mem_pool));
+    while (allocators.count(stream_id) == 0) {
+      std::shared_ptr<DeviceMemoryPool> mem_pool =
+          DeviceMemoryPool::NewMemoryPool(platform, stream, device_ordinal);
+      allocators.emplace(stream_id, new DeviceBufferAllocator(mem_pool));
+    }
   }
   return allocators[stream_id];
 }
@@ -76,10 +76,10 @@ XlaLaunchContext::XlaLaunchContext(const std::string &builder_name,
                                    DeviceCtx *device_ctx,
                                    DeviceType device_type,
                                    int intra_op_num_threads)
-    : device_ctx_(device_ctx), device_type_(device_type), device_ordinal_(0) {
-  builder_ = std::make_shared<xla::XlaBuilder>(
-      absl::StrCat("XlaBuilder_", builder_name));
-
+    : device_ctx_(device_ctx), device_type_(device_type), device_ordinal_(0),
+      host_device_(NewEigenHostDevice()) {
+  builder_ = std::make_shared<xla::XlaBuilder>(absl::StrCat("XlaBuilder_",
+                                                            builder_name));
   se::Platform::Id platform_id = nullptr;
   if (device_type == DeviceType::kCPU) {
     platform_id = se::host::kHostPlatformId;
@@ -93,14 +93,12 @@ XlaLaunchContext::XlaLaunchContext(const std::string &builder_name,
                         "your device type.";
   OF_CHECK_AND_ASSIGN(auto platform,
                       se::MultiPlatformManager::PlatformWithId(platform_id));
-
   client_ = NewLocalClient(platform, intra_op_num_threads);
   OF_CHECK_AND_ASSIGN(stream_,
                       client_->mutable_backend()
                              ->BorrowStream(device_ordinal_));
-  allocator_.reset(NewAllocator(platform, device_ordinal_));
-  host_device_ = NewEigenHostDevice();
   parallel_ctx_ = LocalParallelContext(device_ordinal_);
+  allocator_.reset(NewAllocator(platform, device_ordinal_));
 }
 
 void XlaLaunchContext::PopulateResultBuffers(

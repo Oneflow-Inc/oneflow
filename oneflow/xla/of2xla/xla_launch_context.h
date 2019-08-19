@@ -66,11 +66,11 @@ class XlaLaunchContext {
 
   std::shared_ptr<XlaAllocator> allocator_;
 
-  Eigen::ThreadPoolDevice *host_device_;
-
   DeviceCtx *device_ctx_;
   DeviceType device_type_;
   int device_ordinal_ = -1;
+
+  Eigen::ThreadPoolDevice *host_device_;
 
   ParallelContext parallel_ctx_;
 };

@@ -162,16 +162,19 @@ void XlaLaunchKernel<device_type>::ForwardDataContent(
                         << TF_CPP_VLOG_LEVEL_REQUARED(2);
   auto *executable = compile_result->executable.get();
   
-  // Gather inputs and outputs as entry parameters if input and output aliased
   if (compile_result->alias_input_output) {
+    // Gather outputs as entry parameters if input and output aliased
     entry_blobs.insert(entry_blobs.end(), output_blobs.begin(),
                        output_blobs.end());
+  } else {
+    std::vector<int64_t> allocation_indices;
+    xla::ResultAllocationIndices(executable, &allocation_indices);
+    CHECK_EQ(output_blobs.size(), allocation_indices.size());
+    // Populate output blobs to reuse the buffers in allocator. This helps
+    // to reduce memory occupancy and avoid extra copy between temporary
+    // buffers and output buffers
+    launch_ctx.PopulateResultBuffers(output_blobs, allocation_indices);
   }
-
-  std::vector<int64_t> allocation_indices;
-  xla::ResultAllocationIndices(executable, &allocation_indices);
-  CHECK_EQ(output_blobs.size(), allocation_indices.size());
-  launch_ctx.PopulateResultBuffers(output_blobs, allocation_indices);
 
   // Launch executable synchronously for CPU, or asynchronously for GPU
   bool block_host_until_done = true;

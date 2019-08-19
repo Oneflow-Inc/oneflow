@@ -50,7 +50,7 @@ size_t CalcWorkspaceByteSize(LocalExecutable *local_executable) {
 }
 
 Status ResultAllocationIndices(LocalExecutable *local_executable,
-                             std::vector<int64_t> *indices) {
+                               std::vector<int64_t> *indices) {
   const BufferAssignment *assignment =
       GetBufferAssignment(local_executable->executable());
   CHECK_NOTNULL(assignment);
