@@ -30,7 +30,22 @@ void InitBySerializedConfigProto(const std::string& config_proto_str) {
   // because glog is not constructed yet and LOG(INFO) has bad bahavior
   Global<EnvironmentObjectsScope>::SetAllocated(new EnvironmentObjectsScope(config_proto));
   LOG(INFO) << "NewGlobal " << typeid(EnvironmentObjectsScope).name();
-  CHECK(Global<MachineCtx>::Get()->IsThisMachineMaster());
+  if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
+    Global<CtrlClient>::Get()->PushKV("master_config_proto", config_proto);
+  } else {
+    ConfigProto master_config_proto;
+    Global<CtrlClient>::Get()->PullKV("master_config_proto", &master_config_proto);
+    CHECK(PbMd().Equals(config_proto, master_config_proto));
+
+    while (ClusterControl::WorkerReceiveHalt() == false) {
+      JobSet job_set;
+      Global<CtrlClient>::Get()->PullKV("session_job_set", &job_set);
+      { Oneflow oneflow(job_set); }
+    }
+    ClusterControl::WorkerSendHaltAck();
+    Global<EnvironmentObjectsScope>::Delete();
+    exit(0);
+  }
 }
 
 void InitGlobalOneflowBySerializedJobSet(const std::string& job_set_str) {
