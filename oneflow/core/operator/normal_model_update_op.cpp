@@ -10,7 +10,7 @@ void NormalModelUpdtOp::InitFromOpConf() {
   const PbMessage& conf = this->GetCustomizedConf();
   const auto& user_conf = *GetMsgPtrFromPbMessage<NormalModelUpdateOpUserConf>(conf, "user_conf");
   if (user_conf.has_clip_conf() && user_conf.clip_conf().has_clip_by_global_norm()) {
-    EnrollDataTmpBn("data_tmp");
+    EnrollTmpBn("data_tmp");
   }
   MdUpdtVirtualInitFromOpConf();
 }

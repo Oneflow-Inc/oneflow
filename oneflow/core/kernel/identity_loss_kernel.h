@@ -18,8 +18,6 @@ class IdentityLossKernel final : public LossKernel<device_type, PredType> {
   const LossKernelConf& GetLossKernelConf(const KernelConf& kernel_conf) const override;
   void InitConstBufBlobs(DeviceCtx* ctx,
                          std::function<Blob*(const std::string&)> BnInOp2Blob) const;
-  int64_t CalcLossInstanceNum(const KernelCtx& ctx,
-                              const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
 };
 
 }  // namespace oneflow

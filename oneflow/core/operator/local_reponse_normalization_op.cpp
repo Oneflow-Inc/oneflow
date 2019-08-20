@@ -6,8 +6,8 @@ void LocalResponseNormalizationOp::InitFromOpConf() {
   CHECK(op_conf().has_local_response_normalization_conf());
   EnrollInputBn("in");
   EnrollOutputBn("out");
-  EnrollDataTmpBn("padded_square");
-  EnrollDataTmpBn("normalize_coef");
+  EnrollTmpBn("padded_square");
+  EnrollTmpBn("normalize_coef");
 }
 
 const PbMessage& LocalResponseNormalizationOp::GetCustomizedConf() const {

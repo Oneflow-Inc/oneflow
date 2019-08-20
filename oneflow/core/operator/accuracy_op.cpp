@@ -8,7 +8,7 @@ void AccuracyOp::InitFromOpConf() {
   EnrollOutputBn("accuracy", false);
   if (op_conf().accuracy_conf().has_weight()) {
     EnrollInputBn("weight", false);
-    EnrollDataTmpBn("weight_reduce_tmp");
+    EnrollTmpBn("weight_reduce_tmp");
   }
 }
 

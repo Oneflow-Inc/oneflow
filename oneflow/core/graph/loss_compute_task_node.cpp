@@ -6,7 +6,7 @@ namespace oneflow {
 
 void LossCompTaskNode::ProduceAllRegstsAndBindEdges() {
   ProduceRegst("out", true);
-  ProduceRegst("data_tmp", true, 1, 1);
+  ProduceRegst("tmp", true, 1, 1);
   ProduceRegst("const_buf", false, 1, 1);
   ForEachOutDataEdge([&](TaskEdge* edge) { BindEdgeWithProducedRegst(edge, "out"); });
 }
@@ -24,8 +24,8 @@ void LossCompTaskNode::BuildExecGphAndRegst() {
   for (const std::string& ibn : loss_op->input_bns()) {
     loss_node->BindBnWithOneOfTheRegsts(ibn, GetConsumedRegst("in"));
   }
-  std::shared_ptr<RegstDesc> data_tmp_regst = GetProducedRegst("data_tmp");
-  loss_node->AddBnToRegstAndBindIt(&Operator::data_tmp_bns, data_tmp_regst);
+  std::shared_ptr<RegstDesc> tmp_regst = GetProducedRegst("tmp");
+  loss_node->AddBnToRegstAndBindIt(&Operator::tmp_bns, tmp_regst);
   loss_node->AddBnToRegstAndBindIt(&Operator::const_buf_bns, GetProducedRegst("const_buf"));
 
   std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out");
@@ -34,8 +34,6 @@ void LossCompTaskNode::BuildExecGphAndRegst() {
     loss_node->BindBnWithRegst(obn, out_regst);
   }
   mut_exec_gph().TopoForEachNode([this](ExecNode* node) { node->InferBlobDescs(parallel_ctx()); });
-  mut_exec_gph().TopoForEachNode(
-      [this](ExecNode* node) { node->FixInDiffBlobDescs(parallel_ctx()); });
 }
 
 void LossCompTaskNode::InferProducedDataRegstTimeShape() { NaiveInferProducedDataRegstTimeShape(); }

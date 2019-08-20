@@ -17,9 +17,9 @@ void SoftmaxGradOp::InitFromOpConf() {
     CHECK(!op_conf().softmax_grad_conf().has_transpose_x());
     CHECK(!op_conf().softmax_grad_conf().has_transpose_y());
   }
-  EnrollFwBufBn("transpose_dy");
-  EnrollFwBufBn("bw_buf");
-  EnrollFwBufBn("bw_softmax_num");
+  EnrollTmpBn("transpose_dy");
+  EnrollTmpBn("bw_buf");
+  EnrollTmpBn("bw_softmax_num");
   EnrollOutputBn("dx");
 }
 

@@ -20,7 +20,7 @@ void BoxingOp::InitFromOpConf() {
   }
   if (boxing_conf.in_box_case() == BoxingOpConf::kAddBox
       && boxing_conf.out_box_case() == BoxingOpConf::kSplitBox) {
-    EnrollDataTmpBn("middle");
+    EnrollTmpBn("middle");
   }
   for (int32_t i = 0; i < boxing_conf.out_num(); ++i) {
     EnrollOutputBn("out_" + std::to_string(i), false);
@@ -55,8 +55,8 @@ void BoxingOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBl
   }
   std::vector<int64_t> data_tmp_blob_shape_vec =
       GetBlobDesc4BnInOp(input_bns().Get(0))->shape().dim_vec();
-  InferDataTmpBlobDesc(GetBlobDesc4BnInOp, &data_tmp_blob_shape_vec,
-                       &data_tmp_blob_dim0_inner_shape_vec);
+  InferTmpBlobDesc(GetBlobDesc4BnInOp, &data_tmp_blob_shape_vec,
+                   &data_tmp_blob_dim0_inner_shape_vec);
 
   if (conf.out_box_case() == BoxingOpConf::kSplitBox) {
     const BoxSplitConf& split_conf = conf.split_box();
@@ -88,9 +88,9 @@ void BoxingOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBl
   }
 }
 
-void BoxingOp::InferDataTmpBlobDesc(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                    std::vector<int64_t>* data_tmp_vec_ptr,
-                                    std::vector<int64_t>* data_tmp_dim0_inner_shape_vec_ptr) const {
+void BoxingOp::InferTmpBlobDesc(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                                std::vector<int64_t>* data_tmp_vec_ptr,
+                                std::vector<int64_t>* data_tmp_dim0_inner_shape_vec_ptr) const {
   const BoxingOpConf& conf = op_conf().boxing_conf();
   if (conf.in_box_case() == BoxingOpConf::kConcatBox) {
     int32_t concat_axis = conf.concat_box().axis();
@@ -122,7 +122,7 @@ void BoxingOp::InferDataTmpBlobDesc(std::function<BlobDesc*(const std::string&)>
   CHECK_NE(conf.out_box_case(), BoxingOpConf::OUT_BOX_NOT_SET);
   if (conf.in_box_case() == BoxingOpConf::kAddBox
       && conf.out_box_case() == BoxingOpConf::kSplitBox) {
-    BlobDesc* data_tmp_blob_desc = GetBlobDesc4BnInOp(SoleDtbn());
+    BlobDesc* data_tmp_blob_desc = GetBlobDesc4BnInOp(SoleTbn());
     data_tmp_blob_desc->mut_shape() = Shape(*data_tmp_vec_ptr);
     data_tmp_blob_desc->set_data_type(GetBlobDesc4BnInOp(input_bns().Get(0))->data_type());
     if (data_tmp_dim0_inner_shape_vec_ptr->size() > 0) {

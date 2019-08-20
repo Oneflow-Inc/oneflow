@@ -5,7 +5,7 @@ namespace oneflow {
 void TopKOp::InitFromOpConf() {
   CHECK(op_conf().has_top_k_conf());
   EnrollInputBn("in", false);
-  EnrollFwBufBn("fw_buf");
+  EnrollTmpBn("fw_buf");
   EnrollOutputBn("out", false);
 }
 

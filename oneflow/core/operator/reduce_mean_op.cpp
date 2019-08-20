@@ -8,8 +8,7 @@ void ReduceMeanOp::InitFromOpConf() {
   CHECK(op_conf().has_reduce_mean_conf());
   EnrollInputBn("in");
   EnrollOutputBn("out");
-  EnrollFwBufBn("fw_tmp");
-  EnrollBwBufBn("bw_tmp");
+  EnrollTmpBn("fw_tmp");
 }
 
 const PbMessage& ReduceMeanOp::GetCustomizedConf() const { return op_conf().reduce_mean_conf(); }
@@ -36,11 +35,6 @@ void ReduceMeanOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> G
       out_blob->mut_shape() = reduced_shape.RemoveOnes(axis_vec);
     }
   }
-}
-
-void ReduceMeanOp::InferBwBufBlobDescs(
-    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*) const {
-  *GetBlobDesc4BnInOp("bw_tmp") = *GetBlobDesc4BnInOp("out");
 }
 
 void ReduceMeanOp::InferHasBatchDim(

@@ -21,13 +21,8 @@ class RepeatOp final : public Operator {
                                 const ParallelContext* parallel_ctx,
                                 Shape* time_shape) const override;
 
-  void InferDiffBlobDescsWithoutFwBlob(
-      std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-      const ParallelContext*) const override;
   void InitFromOpConf() override;
   LogicalNode* NewProperLogicalNode() const override;
-  bool NeedInBlobWhenBackward() const override { return false; }
-  bool NeedOutBlobWhenBackward() const override { return false; }
 };
 
 }  // namespace oneflow
