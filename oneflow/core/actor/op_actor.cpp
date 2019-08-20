@@ -153,7 +153,7 @@ void OpActor::UpdateWithProducedRegstMsg(const ActorMsg& msg) {
 }
 
 void OpActor::UpdateWithEordMsg(const ActorMsg& msg) {
-  regst_desc_id2handler_.at(msg.regst()->regst_desc_id())->UpdateWithEordMsg(msg);
+  regst_desc_id2handler_.at(msg.eord_regst_desc_id())->UpdateWithEordMsg(msg);
 }
 
 void OpActor::UpdateWithCmdMsg(const ActorMsg& msg) { CHECK_EQ(msg.actor_cmd(), ActorCmd::kStart); }

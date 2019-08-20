@@ -62,7 +62,6 @@ class NormalRegstHandler : public RegstHandlerIf {
   int64_t eord_cnt_;
   HashMap<Regst*, int64_t> produced_regst2reading_cnt_;
   int64_t total_reading_cnt_;
-  // HashMap<int64_t, int64_t> produced_regst2expected_act_id_;
 };
 
 void NormalRegstHandler::Init(const RegstHandlerProto& handler_proto,

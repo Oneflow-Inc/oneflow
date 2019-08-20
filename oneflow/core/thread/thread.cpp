@@ -40,19 +40,19 @@ void Thread::PollMsgChannel(const ThreadCtx& thread_ctx) {
       }
     }
     int64_t actor_id = msg.dst_actor_id();
-    auto actor_it = id2actor_ptr_.find(actor_id);
+    bool is_new_actor = !IsKeyFound(id2actor_ptr_, actor_id);
     int process_msg_ret = -1;
-    if (actor_it == id2actor_ptr_.end()) {
+    if (is_new_actor) {
       process_msg_ret = id2new_actor_ptr_.at(actor_id)->ProcessMsg(msg);
     } else {
-      process_msg_ret = actor_it->second->ProcessMsg(msg);
+      process_msg_ret = id2actor_ptr_.at(actor_id)->ProcessMsg(msg);
     }
     if (process_msg_ret == 1) {
       LOG(INFO) << "thread " << thrd_id_ << " deconstruct actor " << actor_id;
-      if (actor_it != id2actor_ptr_.end()) {
-        id2actor_ptr_.erase(actor_it);
-      } else {
+      if (is_new_actor) {
         id2new_actor_ptr_.erase(actor_id);
+      } else {
+        id2actor_ptr_.erase(actor_id);
       }
       Global<RuntimeCtx>::Get()->DecreaseCounter("running_actor_cnt");
     } else {

@@ -182,7 +182,7 @@ int64_t Actor::GetPieceId4NaiveCurReadableDataRegst() const {
   naive_consumed_rs_.ForChosenFrontRegst(FirstFoundOnly, [&pid](Regst* regst) {
     if (regst->regst_desc()->regst_desc_type().has_data_regst_desc()) { pid = regst->piece_id(); }
   });
-  CHECK_GE(pid, 0);
+  // CHECK_GE(pid, 0); TODO(niuchogn): remove all piece_id
   return pid;
 }
 
@@ -195,7 +195,7 @@ int64_t Actor::GetPieceId4NaiveOrInplaceCurReadableDataRegst() const {
   };
   naive_consumed_rs_.ForChosenFrontRegst(FirstFoundOnly, Select);
   if (pid == init_val) { inplace_consumed_rs_.ForChosenFrontRegst(FirstFoundOnly, Select); }
-  CHECK_GE(pid, 0);
+  // CHECK_GE(pid, 0); TODO(niuchong): remove all piece_id
   return pid;
 }
 
