@@ -28,7 +28,6 @@ RegstHandlerRegistrar::RegstHandlerRegistrar(const std::string& handler_type,
                                              RegstHandlerCreateFn f) {
   auto* creators = MutRegstHandlerRegistry();
   creators->emplace(handler_type, f);
-  VLOG(1) << "Register RegstHandler of type " << handler_type;
 }
 
 RegstHandlerIf* CreateRegstHandler(const std::string& handler_type) {
