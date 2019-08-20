@@ -40,6 +40,7 @@ class RegstHandlerIf {
   virtual void HandleRegstMsgAfterAct() = 0;
   virtual bool NoLongerConsumeRegst() const = 0;
   virtual bool NoLongerConsumedByOthers() const = 0;
+  virtual void SendEordMsgForProducedRegst() const = 0;
 };
 
 using RegstHandlerCreateFn = std::function<RegstHandlerIf*()>;

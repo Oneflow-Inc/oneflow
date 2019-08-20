@@ -6,6 +6,7 @@ namespace oneflow {
 namespace actor {
 
 void ActorMsgUtil::AsyncSendMsg(MsgDeliveryCtx* msg_ctx, const ActorMsg& msg) {
+  // TODO: for all consumers of regst, send only 1 callback
   std::function<void()> callback = [msg]() { Global<ActorMsgBus>::Get()->SendMsg(msg); };
   if (Global<IDMgr>::Get()->GlobalWorkStreamId4ActorId(msg_ctx->actor_id)
       == Global<IDMgr>::Get()->GlobalWorkStreamId4ActorId(msg.dst_actor_id())) {

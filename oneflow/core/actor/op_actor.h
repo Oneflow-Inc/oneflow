@@ -30,6 +30,7 @@ class OpActor : public NewActor {
   void HandleRegstMsgAfterAct();
   bool NoLongerConsumeRegst() const;
   bool NoLongerConsumedByOthers() const;
+  void SendEordMsgForProducedRegst() const;
 
   MsgHandler initial_msg_handler() const;
 
@@ -38,7 +39,6 @@ class OpActor : public NewActor {
   virtual ~OpActor() = default;
 
   void set_other_val(std::shared_ptr<void> other_val) { kernel_ctx_->other = other_val; }
-  void InsertRegstHandler(RegstHandlerIf*);
 
  private:
   struct ExecKernel {

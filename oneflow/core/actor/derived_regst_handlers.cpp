@@ -12,6 +12,7 @@ class NormalRegstHandler : public RegstHandlerIf {
     return (eord_cnt_ == consumed_rs_.total_regst_desc_cnt());
   }
   bool NoLongerConsumedByOthers() const override final { return total_reading_cnt_ == 0; }
+  void SendEordMsgForProducedRegst() const override final;
   void UpdateWithRegstMsg(const ActorMsg&) override final;
   void UpdateWithEordMsg(const ActorMsg&) override final;
   bool IsReady() const override final;
@@ -89,6 +90,23 @@ void NormalRegstHandler::Init(const RegstHandlerProto& handler_proto,
   msg_delivery_ctx_.reset(ctx);
   kernel_other_ = other;
   DerivedInit(handler_proto);
+}
+
+void NormalRegstHandler::SendEordMsgForProducedRegst() const {
+  // TODO: merge with ActorMsgUtil::AsyncSendMsg()
+  HashSet<int64_t> sended_regst_ids;
+  for (const auto& pair : produced_regst2reading_cnt_) {
+    const Regst* regst = pair.first;
+    int64_t regst_desc_id = pair.first->regst_desc_id();
+    if (IsKeyFound(sended_regst_ids, regst_desc_id)) { continue; }
+    msg_delivery_ctx_->device_ctx->AddCallBack([regst]() {
+      for (int64_t consumer : regst->consumers_actor_id()) {
+        Global<ActorMsgBus>::Get()->SendMsg(
+            ActorMsg::BuildEordMsg(consumer, regst->regst_desc_id()));
+      }
+    });
+    sended_regst_ids.insert(regst_desc_id);
+  }
 }
 
 void NormalRegstHandler::ForEachRegstDescId(std::function<void(int64_t)> handler) const {

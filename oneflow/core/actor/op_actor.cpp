@@ -32,6 +32,7 @@ int OpActor::HandlerNormal(OpActor* actor, const ActorMsg& msg) {
   UpdateCtxWithMsg(actor, msg);
   ActUntilFail(actor);
   if (actor->NoLongerConsumeRegst()) {
+    actor->SendEordMsgForProducedRegst();
     actor->set_msg_handler(std::bind(&OpActor::HandlerZombie, actor, std::placeholders::_1));
   }
   return 0;
@@ -167,7 +168,6 @@ bool OpActor::IsReady() const {
 
 void OpActor::Act() {
   for (const ExecKernel& ek : exec_kernel_vec_) {
-    // TODO(niuchong): BnInOp2Blob return nullptr or failed?
     ek.kernel->Launch(*kernel_ctx_, [&](const std::string& bn_in_op) -> Blob* {
       auto it = ek.bn_in_op2regst_desc_id.find(bn_in_op);
       if (it == ek.bn_in_op2regst_desc_id.end()) { return nullptr; }
@@ -199,8 +199,8 @@ bool OpActor::NoLongerConsumedByOthers() const {
   return true;
 }
 
-void OpActor::InsertRegstHandler(RegstHandlerIf* handler) {
-  CHECK(handlers_.emplace(handler->type(), std::unique_ptr<RegstHandlerIf>(handler)).second);
+void OpActor::SendEordMsgForProducedRegst() const {
+  for (const auto& pair : handlers_) { pair.second->SendEordMsgForProducedRegst(); }
 }
 
 }  // namespace actor
