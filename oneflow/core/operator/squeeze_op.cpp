@@ -15,7 +15,7 @@ void SqueezeOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetB
   BlobDesc* in = GetBlobDesc4BnInOp("in");
   BlobDesc* out = GetBlobDesc4BnInOp("out");
   *out = *in;
-  auto dim_vec = in->shape().dim_vec();
+  std::vector<int64_t> dim_vec = in->shape().dim_vec();
   for (const auto& idx : PbRf2StdVec(op_conf().squeeze_conf().axis())) {
     // do not allow squeeze the first axis for now
     CHECK_GT(idx, 0);
