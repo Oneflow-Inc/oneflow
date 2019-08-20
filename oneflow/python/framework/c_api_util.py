@@ -9,7 +9,7 @@ import oneflow.python.framework.runtime_context as runtime_ctx
 def IsOpTypeCaseCpuSupportOnly(op_type_case):
     return oneflow_internal.IsOpTypeCaseCpuSupportOnly(op_type_case)
 
-def InitOnMaster(config_proto):
+def Init(config_proto):
     assert(type(config_proto) is job_set_util.ConfigProto)
     config_proto_str = text_format.MessageToString(config_proto)
     oneflow_internal.InitBySerializedConfigProto(config_proto_str)
