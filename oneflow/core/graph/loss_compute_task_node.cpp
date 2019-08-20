@@ -40,4 +40,31 @@ void LossCompTaskNode::BuildExecGphAndRegst() {
 
 void LossCompTaskNode::InferProducedDataRegstTimeShape() { NaiveInferProducedDataRegstTimeShape(); }
 
+void LossCompTaskNode::GenerateProto4Actor(TaskProto* task_proto) {
+  HashSet<int64_t> ctrl_ids = GetAllCtrlRegstDescIds();
+  RegstHandlerProto* ctrl_handler_proto = task_proto->mutable_regst_handlers()->Add();
+  ctrl_handler_proto->set_type("Ctrl");
+  RegstHandlerProto* naive_handler_proto = task_proto->mutable_regst_handlers()->Add();
+  naive_handler_proto->set_type("Naive");
+
+  for (const auto& pair : consumed_regsts()) {
+    for (const auto& regst_desc : pair.second) {
+      int64_t regst_desc_id = regst_desc->regst_desc_id();
+      if (IsKeyFound(ctrl_ids, regst_desc_id)) {
+        ctrl_handler_proto->mutable_consumed_regst_desc_ids()->add_regst_desc_id(regst_desc_id);
+      } else {
+        naive_handler_proto->mutable_consumed_regst_desc_ids()->add_regst_desc_id(regst_desc_id);
+      }
+    }
+  }
+  for (const auto& pair : produced_regsts()) {
+    int64_t regst_desc_id = pair.second->regst_desc_id();
+    if (IsKeyFound(ctrl_ids, regst_desc_id)) {
+      ctrl_handler_proto->mutable_produced_regst_desc_ids()->add_regst_desc_id(regst_desc_id);
+    } else {
+      naive_handler_proto->mutable_produced_regst_desc_ids()->add_regst_desc_id(regst_desc_id);
+    }
+  }
+}
+
 }  // namespace oneflow

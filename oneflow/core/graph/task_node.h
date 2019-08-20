@@ -128,9 +128,11 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
                             const) const;
   size_t GetEdgesSize(void (TaskNode::*ForEachEdge)(const std::function<void(TaskEdge*)>&)
                           const) const;
+  HashSet<int64_t> GetAllCtrlRegstDescIds() const;
 
  private:
   void UpdateTaskId();
+  virtual void GenerateProto4Actor(TaskProto*) {}
 
   int64_t machine_id_;
   int64_t thrd_id_;

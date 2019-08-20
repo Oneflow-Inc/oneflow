@@ -220,6 +220,7 @@ void TaskNode::ToProto(TaskProto* task_proto) {
     }
     CHECK(consumed_regst_proto->insert({pair.first, regst_desc_ids}).second);
   }
+  GenerateProto4Actor(task_proto);
 }
 
 int64_t TaskNode::MemZoneId121() const {
@@ -478,6 +479,20 @@ TaskEdge* TaskNode::SoleOutDataEdge() const { return GetSoleEdge(&TaskNode::ForE
 size_t TaskNode::in_data_edges_size() const { return GetEdgesSize(&TaskNode::ForEachInDataEdge); }
 
 size_t TaskNode::out_data_edges_size() const { return GetEdgesSize(&TaskNode::ForEachOutDataEdge); }
+
+HashSet<int64_t> TaskNode::GetAllCtrlRegstDescIds() const {
+  HashSet<int64_t> id_set;
+  for (const auto& pair : produced_regsts()) {
+    if (pair.second->regst_desc_type().has_ctrl_regst_desc()) {
+      id_set.insert(pair.second->regst_desc_id());
+    }
+  }
+  for (const auto& pair : consumed_regsts()) {
+    if (pair.first == "in_ctrl") {
+      for (const auto& regst_desc : pair.second) { id_set.insert(regst_desc->regst_desc_id()); }
+    }
+  }
+}
 
 std::map<TaskType, std::string> task_type2color = {{kInvalid, "0"},
                                                    {kNormalForward, "2"},
