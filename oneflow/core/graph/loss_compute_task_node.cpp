@@ -42,8 +42,11 @@ void LossCompTaskNode::InferProducedDataRegstTimeShape() { NaiveInferProducedDat
 
 void LossCompTaskNode::GenerateProto4Actor(TaskProto* task_proto) {
   HashSet<int64_t> ctrl_ids = GetAllCtrlRegstDescIds();
-  RegstHandlerProto* ctrl_handler_proto = task_proto->mutable_regst_handlers()->Add();
-  ctrl_handler_proto->set_type("Ctrl");
+  RegstHandlerProto* ctrl_handler_proto = nullptr;
+  if (!ctrl_ids.empty()) {
+    ctrl_handler_proto = task_proto->mutable_regst_handlers()->Add();
+    ctrl_handler_proto->set_type("Ctrl");
+  }
   RegstHandlerProto* naive_handler_proto = task_proto->mutable_regst_handlers()->Add();
   naive_handler_proto->set_type("Naive");
 

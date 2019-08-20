@@ -492,6 +492,7 @@ HashSet<int64_t> TaskNode::GetAllCtrlRegstDescIds() const {
       for (const auto& regst_desc : pair.second) { id_set.insert(regst_desc->regst_desc_id()); }
     }
   }
+  return id_set;
 }
 
 std::map<TaskType, std::string> task_type2color = {{kInvalid, "0"},
