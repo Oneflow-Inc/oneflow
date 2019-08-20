@@ -21,7 +21,7 @@ namespace oneflow{
         LOG(FATAL) << "just support float point here";
     }
 
-    template<bool in, DeviceType device_type, typename T, typename U>
+    template<DeviceType device_type, typename T, typename U>
     struct AdditionFunction {
         template<typename V>
         void operator()(V v) {
@@ -30,14 +30,8 @@ namespace oneflow{
 
         template<size_t... Idx>
         void AdditionImpl(std::index_sequence<Idx...>) {
-            if (in) {
-                Addition<device_type, T>(device_ctx_, diff_blob_,
-                                            BnInOp2Blob_(u_->op_attribute().input_bns(offset_ + Idx))...);
-            } else {
-                Addition<device_type, T>(
-                        device_ctx_, diff_blob_,
-                        BnInOp2Blob_(u_->op_attribute().output_diff_bns(offset_ + Idx))...);
-            }
+	  Addition<device_type, T>(device_ctx_, diff_blob_,
+				   BnInOp2Blob_(u_->op_attribute().input_bns(offset_ + Idx))...);
         }
 
         void AdditionImpl(std::index_sequence<>) {}

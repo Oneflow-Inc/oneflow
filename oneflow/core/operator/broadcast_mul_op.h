@@ -12,7 +12,6 @@ class BroadcastMulOp final : public BroadcastBinaryOp {
   ~BroadcastMulOp() = default;
 
   const PbMessage& GetCustomizedConf() const override;
-  bool NeedInBlobWhenBackward() const override { return true; }
 };
 
 }  // namespace oneflow

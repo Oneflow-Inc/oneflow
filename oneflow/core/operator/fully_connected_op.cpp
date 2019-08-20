@@ -12,14 +12,14 @@ void FullyConnectedOp::InitFromOpConf() {
   if (conf.has_weight()) {
     EnrollInputBn("weight");
   } else {
-    EnrollModelBn("weight");
+    EnrollTmpBn("weight");
   }
 
   if (op_conf().fully_connected_conf().use_bias()) {
     if (conf.has_bias()) {
       EnrollInputBn("bias");
     } else {
-      EnrollModelBn("bias");
+      EnrollTmpBn("bias");
     }
     EnrollConstBufBn("bias_multiplier");
   }

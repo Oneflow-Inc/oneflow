@@ -29,8 +29,8 @@ def matmul( a,
         op_conf.name = id_util.UniqueStr('Matmul_')
     else:
         op_conf.name = name
-    op_conf.matmul_conf.a = a.lbn
-    op_conf.matmul_conf.b = b.lbn
+    op_conf.matmul_conf.a = a.logical_blob_name
+    op_conf.matmul_conf.b = b.logical_blob_name
     op_conf.matmul_conf.transpose_a = transpose_a
     op_conf.matmul_conf.transpose_b = transpose_b
     op_conf.matmul_conf.out = "out"
@@ -51,8 +51,8 @@ def add(x,
         op_conf.name = id_util.UniqueStr('Add_')
     else:
         op_conf.name = name
-    getattr(op_conf.add_conf, 'in').append(x.lbn)
-    getattr(op_conf.add_conf, 'in').append(y.lbn)
+    getattr(op_conf.add_conf, 'in').append(x.logical_blob_name)
+    getattr(op_conf.add_conf, 'in').append(y.logical_blob_name)
     op_conf.add_conf.out = "out"
     compile_context.CurJobAddOp(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()

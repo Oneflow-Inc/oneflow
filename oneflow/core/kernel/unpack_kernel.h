@@ -29,12 +29,6 @@ class UnpackKernel final : public KernelIf<device_type> {
                      std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   void ForwardRecordIdInDevicePiece(
       const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
-  void BackwardInDiffDim0ValidNum(
-      const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
-  void BackwardInDiffLossInstanceNum(
-      const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
-    UNIMPLEMENTED();
-  }
 };
 
 }  // namespace oneflow

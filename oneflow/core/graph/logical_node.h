@@ -7,7 +7,6 @@
 #include "oneflow/core/graph/reduce_rank_context.h"
 #include "oneflow/core/graph/pack_forward_task_node.h"
 #include "oneflow/core/graph/unpack_forward_task_node.h"
-#include "oneflow/core/graph/unpack_backward_task_node.h"
 #include "oneflow/core/graph/wait_and_send_ids_compute_task_node.h"
 #include "oneflow/core/graph/foreign_input_compute_task_node.h"
 #include "oneflow/core/graph/foreign_output_compute_task_node.h"
@@ -17,7 +16,6 @@
 #include "oneflow/core/graph/tick_compute_task_node.h"
 #include "oneflow/core/graph/acc_tick_compute_task_node.h"
 #include "oneflow/core/graph/repeat_forward_compute_task_node.h"
-#include "oneflow/core/graph/repeat_backward_compute_task_node.h"
 #include "oneflow/core/graph/acc_compute_task_node.h"
 #include "oneflow/core/graph/every_nth_compute_task_node.h"
 #include "oneflow/core/graph/case_compute_task_node.h"
@@ -63,9 +61,6 @@ class LogicalNode : public Node<LogicalNode, LogicalEdge> {
   // util
   virtual std::string TypeName() const = 0;
   std::string VisualStr() const;
-  bool HasOpWithModelOrConstModelBlob() const;
-  bool HasOpWithModelBlob() const;
-  bool HasOpWithForwardModelBlob() const;
   void GenSortedCompTaskNodes(std::function<int64_t(const TaskNode*)> AllocateCpuThrdIdEvenly,
                               std::vector<std::pair<int64_t, CompTaskNode*>>* nodes,
                               std::function<void(CompTaskNode*)>) const;
@@ -209,11 +204,7 @@ DECLARE_NAIVE_LOGICAL_NODE(DecodeLogicalNode);
 DECLARE_NAIVE_LOGICAL_NODE(DecodeRandomLogicalNode);
 DECLARE_NAIVE_LOGICAL_NODE(PrintLogicalNode);
 DECLARE_NAIVE_LOGICAL_NODE(LossLogicalNode);
-DECLARE_NAIVE_LOGICAL_NODE(LossAccLogicalNode);
-DECLARE_NAIVE_LOGICAL_NODE(LossPrintLogicalNode);
 DECLARE_NAIVE_LOGICAL_NODE(AccuracyLogicalNode);
-DECLARE_NAIVE_LOGICAL_NODE(AccuracyAccLogicalNode);
-DECLARE_NAIVE_LOGICAL_NODE(AccuracyPrintLogicalNode);
 
 class MdDiffAccLogicalNode final : public LogicalNode {
  public:

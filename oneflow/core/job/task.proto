@@ -9,12 +9,8 @@ enum TaskType {
   kInvalid = 0;
   kNormalForward = 1;
   kRecurrentForward = 2;
-  kNormalBackward = 3;
-  kRecurrentBackward = 4;
   kDecode = 5;
   kLoss = 6;
-  kLossAcc = 7;
-  kLossPrint = 8;
   kNormalMdUpdt = 9;
   kMdDiffAcc = 11;
   kCopyHd = 12;
@@ -31,15 +27,10 @@ enum TaskType {
   kNcclReduceScatter = 24;
   kNcclAllGather = 25;
   kAccuracy = 26;
-  kAccuracyAcc = 27;
-  kAccuracyPrint = 28;
   kDecodeRandom = 29;
   kPackForward = 30;
-  kPackBackward = 31;
   kUnpackForward = 32;
-  kUnpackBackward = 33;
   kRepeatForward = 34;
-  kRepeatBackward = 35;
   kReduceIdentity = 36;
   kAcc = 37;
   kOptimizer = 38;
@@ -61,7 +52,6 @@ enum AreaType {
   kInvalidArea = 0;
   kDataPreprocessArea = 1;
   kDataForwardArea = 2;
-  kDataBackwardArea = 3;
   // TODO: rename to OptimizerArea
   kMdUpdtArea = 4;
   kPrintArea = 6;

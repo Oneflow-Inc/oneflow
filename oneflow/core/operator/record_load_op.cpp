@@ -34,7 +34,7 @@ void RecordLoadOp::InferHasBatchDim(
 
 void RecordLoadOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
   SbpSignatureBuilder()
-      .Split(input_bns(), 0)
+      .Broadcast(input_bns())
       .Split(output_bns(), 0)
       .Build(sbp_sig_list->mutable_sbp_signature()->Add());
 }

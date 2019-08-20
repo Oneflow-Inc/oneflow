@@ -22,7 +22,7 @@ class NormalForwardCompTaskNode final : public CompTaskNode {
   void BuildExecGphAndRegst() override;
   void BuildExecGphStructAndBindInRegst();
   void BuildOutRegst();
-  void BuildDataTmp7BufRegsts();
+  void BuildTmp7BufRegsts();
   void InferProducedDataRegstTimeShape() override;
 };
 

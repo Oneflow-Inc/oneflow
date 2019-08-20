@@ -75,52 +75,14 @@ class Kernel {
       const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
     UNIMPLEMENTED();
   }
-  virtual bool NeedForwardLossInstanceNum(
-      const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-    UNIMPLEMENTED();
-  }
-  virtual void ForwardLossInstanceNum(const KernelCtx& ctx,
-                                      std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-    UNIMPLEMENTED();
-  }
   virtual void ForwardPackedHeader(const KernelCtx& ctx,
                                    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
     UNIMPLEMENTED();
   }
   virtual void ForwardActivation(const KernelCtx& ctx, Blob* out_blob) const {}
-
-  virtual void Backward(const KernelCtx& ctx,
-                        std::function<Blob*(const std::string&)> BnInOp2Blob) const;
   virtual void BackwardDataContent(const KernelCtx& ctx,
                                    std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
-  virtual void BackwardDataId(const KernelCtx& ctx,
-                              std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-    UNIMPLEMENTED();
-  }
-  virtual void BackwardColNum(const KernelCtx& ctx,
-                              std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-    UNIMPLEMENTED();
-  }
   virtual bool NeedForwardIfBlobEmpty() const { return false; }
-  virtual bool NeedBackwardIfBlobEmpty() const { return false; }
-  virtual void BackwardInDiffDim0ValidNum(
-      const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-    UNIMPLEMENTED();
-  }
-  virtual void BackwardInDiffLossInstanceNum(
-      const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-    UNIMPLEMENTED();
-  }
-  virtual void BackwardModelDiffDim0ValidNum(
-      const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-    UNIMPLEMENTED();
-  }
-  virtual void BackwardActivation(const KernelCtx& ctx, const Blob* out_blob,
-                                  const Blob* out_diff_blob, Blob* bw_activation_blob) const {}
-  virtual void SetTotalInstanceNumDiffBlob(
-      const KernelCtx& ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
-    UNIMPLEMENTED();
-  }
   virtual const PbMessage& GetCustomizedOpConf() const { UNIMPLEMENTED(); }
   virtual const PbMessage& GetCustomizedKernelConf() const { UNIMPLEMENTED(); }
   bool HasEmptyShapeBlob(const PbRpf<std::string>& bns,
@@ -148,8 +110,6 @@ class Kernel {
 #undef DEFINE_GET_VAL_FROM_CUSTOMIZED_CONF
 
  private:
-  bool HasModelBns() const;
-
   const JobDesc* job_desc_;
   KernelConf kernel_conf_;
 };
@@ -171,21 +131,7 @@ class KernelIf : public Kernel {
       const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   virtual void ForwardRecordIdInDevicePiece(
       const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
-  virtual void ForwardLossInstanceNum(
-      const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
-  virtual bool NeedForwardLossInstanceNum(
-      const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   virtual void ForwardPackedHeader(
-      const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
-  virtual void BackwardDataId(const KernelCtx& ctx,
-                              std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
-  virtual void BackwardColNum(const KernelCtx& ctx,
-                              std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
-  virtual void BackwardInDiffDim0ValidNum(
-      const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
-  virtual void BackwardInDiffLossInstanceNum(
-      const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
-  virtual void BackwardModelDiffDim0ValidNum(
       const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   void CopyField(DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob,
                  const Blob* from_blob, const PbRpf<std::string>& to_bns,

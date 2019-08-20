@@ -351,41 +351,6 @@ void BoxingKernel<T>::SetMaxColId(const KernelCtx& ctx,
   }
 }
 
-template<typename T>
-void BoxingKernel<T>::ForwardLossInstanceNum(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const PbRpf<std::string>& input_bns = op_attribute().input_bns();
-  const PbRpf<std::string>& output_bns = op_attribute().output_bns();
-  CHECK_GT(input_bns.size(), 0);
-  float in_loss_instance_num = BnInOp2Blob(input_bns.Get(0))->loss_instance_num();
-  const float loss_instance_num_epsilon = 1e-8;
-  const BoxingOpConf& conf = op_conf().boxing_conf();
-  if (conf.in_box_case() == BoxingOpConf::kConcatBox) {
-    FOR_RANGE(int32_t, i, 1, input_bns.size()) {
-      in_loss_instance_num += BnInOp2Blob(input_bns.Get(i))->loss_instance_num();
-    }
-  } else if (conf.in_box_case() == BoxingOpConf::kAddBox) {
-    FOR_RANGE(int32_t, i, 1, input_bns.size()) {
-      CHECK_LT(std::fabs(BnInOp2Blob(input_bns.Get(i))->loss_instance_num() - in_loss_instance_num),
-               loss_instance_num_epsilon);
-    }
-  } else {
-    UNIMPLEMENTED();
-  }
-  if (conf.out_box_case() == BoxingOpConf::kSplitBox) {
-    const float out_loss_instance_num = in_loss_instance_num / output_bns.size();
-    FOR_RANGE(int32_t, i, 0, output_bns.size()) {
-      BnInOp2Blob(output_bns.Get(i))->set_loss_instance_num(out_loss_instance_num);
-    }
-  } else if (conf.out_box_case() == BoxingOpConf::kCloneBox) {
-    FOR_RANGE(int32_t, i, 0, output_bns.size()) {
-      BnInOp2Blob(output_bns.Get(i))->set_loss_instance_num(in_loss_instance_num);
-    }
-  } else {
-    UNIMPLEMENTED();
-  }
-}
-
 ADD_CPU_DEFAULT_KERNEL_CREATOR(OperatorConf::kBoxingConf, BoxingKernel, ARITHMETIC_DATA_TYPE_SEQ);
 
 }  // namespace oneflow

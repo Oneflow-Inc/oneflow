@@ -97,6 +97,7 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   std::unique_ptr<const LogicalGraph> logical_gph_;
   std::vector<TaskNode*> ordered_task_nodes_;
 };
+
 bool IsBackEdge(TaskNode* src, TaskNode* dst);
 
 }  // namespace oneflow

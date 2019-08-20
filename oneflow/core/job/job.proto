@@ -68,12 +68,13 @@ message JobConfigProto {
   optional bool enable_nccl = 400 [default = true];
   optional bool use_nccl_inter_node_communication = 401 [default = false];
 
-  optional int64 all_reduce_group_num = 500 [default = 8];
+  optional bool enable_all_reduce_group = 500 [default = true];
+  optional int64 all_reduce_group_num = 501 [default = 8];
   // example:
   //   all_reduce_lazy_ratio = 0.5
   // It means that half of all_reduce nodes overlap with the forward pass of next batch
-  optional float all_reduce_lazy_ratio = 600 [default = 0.5];
-  optional int64 all_reduce_group_min_mbyte = 601 [default = 16];
+  optional float all_reduce_lazy_ratio = 502 [default = 0.5];
+  optional int64 all_reduce_group_min_mbyte = 503 [default = 16];
   // example:
   //   total weight bytes is 1024M
   //   all_reduce_group_num = 8
@@ -81,13 +82,14 @@ message JobConfigProto {
   //   all_reduce_group_size_warmup = 2
   // Each nodes' weight size are [16, 32, 64, 128, 128, 128, 128, 128, 128, 128, 16].
   // You can see the actual number of reduce group is slightly bigger than all_reduce_group_num.
-  optional float all_reduce_group_size_warmup = 602 [default = 2];
-  optional bool all_reduce_fp16 = 603 [default = true];
-  optional bool enable_true_half_config_when_conv = 604 [default = false];
-  optional bool enable_float_compute_for_half_gemm = 605 [default = true];
-  optional bool enable_auto_mixed_precision = 606 [default = false];
-  optional bool enable_cuda_ring_all_reduce = 608 [default = false];
-  optional bool cuda_ring_all_reduce_enable_p2p = 609 [default = false];
+  optional float all_reduce_group_size_warmup = 504 [default = 2];
+  optional bool all_reduce_fp16 = 505 [default = true];
+  
+  optional bool enable_true_half_config_when_conv = 600 [default = false];
+  optional bool enable_float_compute_for_half_gemm = 601 [default = true];
+  optional bool enable_auto_mixed_precision = 602 [default = false];
+  optional bool enable_cuda_ring_all_reduce = 603 [default = false];
+  optional bool cuda_ring_all_reduce_enable_p2p = 604 [default = false];
 
   optional int64 concurrency_width = 1000 [default = 128];
 }

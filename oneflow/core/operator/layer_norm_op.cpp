@@ -24,14 +24,14 @@ void LayerNormOp::InitFromOpConf() {
     if (conf.has_beta()) {
       EnrollInputBn("beta");
     } else {
-      EnrollModelBn("beta");
+      EnrollTmpBn("beta");
     }
   }
   if (conf.scale()) {
     if (conf.has_gamma()) {
       EnrollInputBn("gamma");
     } else {
-      EnrollModelBn("gamma");
+      EnrollTmpBn("gamma");
     }
     EnrollOutputBn("normalized", false);
   }
@@ -89,21 +89,6 @@ void LayerNormOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Ge
   *GetBlobDesc4BnInOp("inv_variance") = *cudnn_bn_mean;
   *GetBlobDesc4BnInOp("cudnn_bn_scale_ones") = *cudnn_bn_mean;
   *GetBlobDesc4BnInOp("cudnn_bn_bias_zeros") = *cudnn_bn_mean;
-}
-
-void LayerNormOp::InferBwBufBlobDescs(
-    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx) const {
-  CHECK(parallel_ctx->policy() != kModelParallel);
-  const BlobDesc* in = GetBlobDesc4BnInOp("in");
-  const LayerNormOpConf& conf = op_conf().layer_norm_conf();
-  if (op_conf().trainable()) { *GetBlobDesc4BnInOp("bw_reduce_buf") = *in; }
-  const int64_t begin_norm_axis = ShiftNegativeAxisIfNeed(in->shape(), conf.begin_norm_axis());
-  const Shape bn_param_shape = Shape({in->shape().Count(0, begin_norm_axis)});
-  BlobDesc* bn_scale_diff = GetBlobDesc4BnInOp("cudnn_bn_scale_diff_buf");
-  bn_scale_diff->mut_shape() = bn_param_shape;
-  bn_scale_diff->set_data_type(in->data_type());
-  *GetBlobDesc4BnInOp("cudnn_bn_bias_diff_buf") = *bn_scale_diff;
 }
 
 void LayerNormOp::InferHasBatchDim(

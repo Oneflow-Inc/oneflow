@@ -99,31 +99,23 @@ OperatorConf MakeTickOpConf() {
   return tick_op_conf;
 }
 
-OperatorConf AppendTick(const std::vector<std::string> op_names,
-                        const std::vector<LogicalBlobId>& lbis, ParallelConf parallel_conf,
+OperatorConf AppendTick(const std::vector<std::string>& op_names, ParallelConf parallel_conf,
                         JobBuilder* job_builder) {
   OperatorConf tick_op_conf = MakeTickOpConf();
   for (const auto& op_name : op_names) { tick_op_conf.add_ctrl_in_op_name(op_name); }
-  auto* tick_conf = tick_op_conf.mutable_tick_conf();
-  for (const auto& lbi : lbis) { tick_conf->add_tick(GenLogicalBlobName(lbi)); }
   job_builder->AddOps(parallel_conf, {tick_op_conf});
   return tick_op_conf;
 }
 
 OperatorConf AppendTick(const std::list<const OpNode*>& op_nodes, JobBuilder* job_builder) {
   std::vector<std::string> op_names;
-  std::vector<LogicalBlobId> lbis;
   for (const auto* op_node : op_nodes) {
     CHECK(op_node->op().op_conf().has_keep_header_only_conf() == false);
-    if (op_node->op().output_bns().empty()) {
-      op_names.push_back(op_node->op().op_name());
-    } else {
-      lbis.push_back(op_node->op().BnInOp2Lbi(op_node->op().output_bns().Get(0)));
-    }
+    op_names.push_back(op_node->op().op_name());
   }
   ParallelDesc pd(op_nodes.front()->parallel_desc());
   pd.set_device_type(DeviceType::kCPU);
-  return AppendTick(op_names, lbis, pd.parallel_conf(), job_builder);
+  return AppendTick(op_names, pd.parallel_conf(), job_builder);
 }
 
 OperatorConf PrependTick(const std::list<const OpNode*>& op_nodes, JobBuilder* job_builder) {
@@ -220,6 +212,10 @@ void ForEachOutputCriticalSectionOpNodes(
         Handler) {
   HashMap<OperatorConf::OpTypeCase, HashSet<const OpNode*>> op_type_case2op_nodes;
   InitOpTypeCase2OpNodes(op_graph, &op_type_case2op_nodes);
+  if (op_type_case2op_nodes[OperatorConf::kReturnConf].empty() == false) {
+    Handler(op_type_case2op_nodes[OperatorConf::kReturnConf],
+            GetOpNames(op_type_case2op_nodes[OperatorConf::kReturnConf]));
+  }
   if (op_type_case2op_nodes[OperatorConf::kOutputConf].empty() == false) {
     Handler(op_type_case2op_nodes[OperatorConf::kOutputConf],
             GetOpNames(op_type_case2op_nodes[OperatorConf::kOutputConf]));

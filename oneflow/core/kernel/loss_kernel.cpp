@@ -4,49 +4,13 @@
 namespace oneflow {
 
 template<DeviceType device_type, typename PredType>
-void LossKernel<device_type, PredType>::SetLossInstanceNum(
-    const KernelCtx& ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
-  Blob* prediction_diff_blob = BnInOp2Blob(GenDiffBn("prediction"));
-  if (prediction_diff_blob == nullptr) { return; }
-  const int64_t loss_instance_num = CalcLossInstanceNum(ctx, BnInOp2Blob);
-  KernelUtil<device_type, PredType>::Set(ctx.device_ctx, static_cast<PredType>(loss_instance_num),
-                                         BnInOp2Blob("loss_instance_num")->mut_dptr<PredType>());
-  CHECK(prediction_diff_blob->has_loss_instance_num_field());
-  prediction_diff_blob->set_loss_instance_num(static_cast<float>(loss_instance_num));
-}
-
-template<DeviceType device_type, typename PredType>
 void LossKernel<device_type, PredType>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   VirtualLossForwardDataContent(ctx, BnInOp2Blob);
-  SetLossInstanceNum(ctx, BnInOp2Blob);
 
   const LossKernelConf& conf = GetLossKernelConf(this->kernel_conf());
   int64_t n = BnInOp2Blob("prediction")->shape().At(0);
   Blob* weight_blob = BnInOp2Blob("weight");
-  // backward
-  // predict_diff *= weight
-  Blob* prediction_diff_blob = BnInOp2Blob(GenDiffBn("prediction"));
-  if (prediction_diff_blob != nullptr) {
-    PredType* prediction_diff = prediction_diff_blob->mut_dptr<PredType>();
-    if (weight_blob != nullptr) {
-      PredType* weight = weight_blob->mut_dptr<PredType>();
-      if (weight_blob->shape().elem_cnt() == n) {
-        const int64_t m = prediction_diff_blob->shape().Count(1);
-        NdarrayUtil<device_type, PredType>::BroadcastMul(
-            ctx.device_ctx, XpuVarNdarray<PredType>({n, m}, prediction_diff),
-            XpuVarNdarray<const PredType>({n, 1}, weight),
-            XpuVarNdarray<const PredType>({n, m}, prediction_diff));
-      } else if (weight_blob->shape().elem_cnt() == 1) {
-        KernelUtil<device_type, PredType>::Scal(ctx.device_ctx, n, weight, prediction_diff, 1);
-      } else {
-        UNIMPLEMENTED();
-      }
-    } else if (conf.weight_scalar() > 1.0 || conf.weight_scalar() < 1.0) {
-      KernelUtil<device_type, PredType>::Scal(
-          ctx.device_ctx, n, static_cast<PredType>(conf.weight_scalar()), prediction_diff, 1);
-    }
-  }
 
   // compute reduction_coefficient
   Blob* reduction_blob = BnInOp2Blob("reduction_coefficient");
@@ -59,22 +23,8 @@ void LossKernel<device_type, PredType>::ForwardDataContent(
 }
 
 template<DeviceType device_type, typename PredType>
-void LossKernel<device_type, PredType>::ForwardDataId(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  BnInOp2Blob("loss")->CopyDataIdFrom(ctx.device_ctx, BnInOp2Blob("prediction"));
-}
-
-template<DeviceType device_type, typename PredType>
-void LossKernel<device_type, PredType>::ForwardColNum(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  BnInOp2Blob(GenDiffBn("prediction"))->CopyColNumFrom(ctx.device_ctx, BnInOp2Blob("prediction"));
-}
-
-template<DeviceType device_type, typename PredType>
 void LossKernel<device_type, PredType>::ForwardDim0ValidNum(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  BnInOp2Blob(GenDiffBn("prediction"))
-      ->CopyDim0ValidNumFrom(ctx.device_ctx, BnInOp2Blob("prediction"));
   BnInOp2Blob("loss")->CopyDim0ValidNumFrom(ctx.device_ctx, BnInOp2Blob("prediction"));
 }
 
@@ -82,12 +32,6 @@ template<DeviceType device_type, typename PredType>
 void LossKernel<device_type, PredType>::ForwardRecordIdInDevicePiece(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   // do nothing
-}
-
-template<DeviceType device_type, typename PredType>
-int64_t LossKernel<device_type, PredType>::CalcLossInstanceNum(
-    const KernelCtx& ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
-  return BnInOp2Blob("prediction")->CalcDim0ValidNumSum();
 }
 
 template<typename T>

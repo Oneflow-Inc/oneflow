@@ -129,6 +129,10 @@ void SetBoxingOpConfBySbpParallel(
     BoxingOpConf* conf, const LogicalBlobId& lbi, const Operator& in_op, const Operator& out_op,
     const std::vector<BoxingTaskNode::EdgeInfo>& sorted_edges,
     const std::function<SbpParallel(const std::string&, const LogicalBlobId&)>& GetSbpParallel) {
+  CHECK(in_op.op_conf().has_tick_conf() == false);
+  CHECK(in_op.op_conf().has_source_tick_conf() == false);
+  CHECK(out_op.op_conf().has_tick_conf() == false);
+  CHECK(out_op.op_conf().has_sink_tick_conf() == false);
   SbpParallel in_sbp = GetSbpParallel(in_op.op_name(), lbi);
   if (in_sbp.has_split_parallel()) {
     conf->mutable_concat_box()->set_axis(in_sbp.split_parallel().axis());
@@ -156,14 +160,6 @@ DEFINE_BLD_BOXING_OP_CONF_METHOD(BoxingTaskNode, FwSbpParallel) {
                                [&](const std::string& op_name, const LogicalBlobId& lbi) {
                                  return Global<OpGraph>::Get()->GetSbpParallel(op_name, lbi);
                                });
-}
-
-DEFINE_BLD_BOXING_OP_CONF_METHOD(BoxingTaskNode, BwSbpParallel) {
-  SetBoxingOpConfBySbpParallel(
-      conf, lbi, *in_logical->SoleOp(), *out_logical->SoleOp(), sorted_out_edges,
-      [&](const std::string& op_name, const LogicalBlobId& lbi) {
-        return GetDualSbpParallel(Global<OpGraph>::Get()->GetSbpParallel(op_name, lbi));
-      });
 }
 
 void BoxingTaskNode::InitLogical2SortedEdgeInfo(
@@ -229,10 +225,10 @@ void BoxingTaskNode::BuildWithLogicalPair(const LogicalNode* in_logical,
       }
       node->BindBnWithRegst(obn, regst);
     }
-    for (const std::string& dtbn : node->op()->data_tmp_bns()) {
+    for (const std::string& tbn : node->op()->tmp_bns()) {
       CHECK_EQ(lbi.is_packed_id(), false);
-      middle_regst->AddLbi(node->op()->BnInOp2Lbi(dtbn));
-      node->BindBnWithRegst(dtbn, middle_regst);
+      middle_regst->AddLbi(node->op()->BnInOp2Lbi(tbn));
+      node->BindBnWithRegst(tbn, middle_regst);
     }
     if (lbi.is_packed_id() == false) { node->InferBlobDescs(nullptr); }
   }

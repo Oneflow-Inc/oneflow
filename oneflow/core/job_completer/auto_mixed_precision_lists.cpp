@@ -8,7 +8,7 @@ const AMPList& AutoMixedPrecisionLists::WhiteList() {
 }
 
 const AMPList& AutoMixedPrecisionLists::BlackList() {
-  static AMPList black_list = {OperatorConf::kMeanConf, OperatorConf::kSoftmaxConf};
+  static AMPList black_list = {OperatorConf::kReduceMeanConf, OperatorConf::kSoftmaxConf};
   return black_list;
 }
 

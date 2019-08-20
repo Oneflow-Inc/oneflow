@@ -174,9 +174,7 @@ bool IsNonSoleKeepHeaderOnlyEdge(TaskNode* src_task, TaskNode* dst_task) {
 std::string ChainNode::VisualStr() const {
   std::stringstream ss;
   ss << "chain_id:" << chain_id_ << "\\n";
-  for (auto& task_node : task_nodes_) {
-    ss << TaskType_Name(task_node->GetTaskType()) << ":" << task_node->task_id() << "\\n";
-  }
+  for (const auto* task_node : task_nodes_) { ss << task_node->VisualStr(); }
   return ss.str();
 }
 
@@ -189,8 +187,30 @@ ChainGraph::ChainGraph(const TaskGraph& task_gph) : task_gph_(task_gph) {
   for (auto& task_nodes : chains) { PrioritizeUntrainableTaskNode(&task_nodes); }
   InitChainNode(chains);
   InitChainEdge(chains);
+  CheckNoCycle();
   SetChainId4ChainNode();
   ToDotWithAutoFilePath();
+}
+
+void ChainGraph::CheckNoCycle() const {
+  auto scc = FindFirstNontrivialSCC();
+  if (scc) {
+    std::string job_id = std::to_string(GlobalJobDesc().job_id());
+    auto* ptr = scc.get();
+    auto OnCycle = [ptr](ChainNode* chain_node) { return ptr->find(chain_node) != ptr->end(); };
+    const auto& filename = "job" + job_id + "_cycle_chain_graph.dot";
+    ToDotWithFilePath(OnCycle, [](ChainEdge*) { return true; }, filename);
+    HashSet<const TaskNode*> tasks;
+    for (const auto* chain_node : *scc) {
+      for (const TaskNode* task_node : chain_node->TaskNodes()) {
+        CHECK(tasks.emplace(task_node).second);
+      }
+    }
+    auto TaskOnCycle = [&](TaskNode* task) { return tasks.find(task) != tasks.end(); };
+    const auto& task_gph_filename = "job" + job_id + "_cycle_task_graph.dot";
+    task_gph_.ToDotWithFilePath(TaskOnCycle, [](TaskEdge*) { return true; }, task_gph_filename);
+    LOG(FATAL) << "cycle in graph detected";
+  }
 }
 
 void ChainGraph::GroupTaskNodesByMachineAndCollectAncestors(
@@ -200,9 +220,9 @@ void ChainGraph::GroupTaskNodesByMachineAndCollectAncestors(
     (*machine2tasks)[node->machine_id()].emplace_back(node);
     CHECK(node2ancestors->emplace(node, HashSet<TaskNode*>()).second);
     // to reduce memory consumption
-    if (node->AreaId4ChainMerge() == kMdUpdtArea) { return; }
+    if (node->GetTaskType() == TaskType::kTick) { return; }
     node->ForEachNodeOnInEdge([&](TaskNode* in_node) {
-      if (IsBackEdge(in_node, node)) { return; }
+      if (in_node->GetTaskType() == TaskType::kTick) { return; }
       if (IsNonSoleKeepHeaderOnlyEdge(in_node, node)) { return; }
       if (dynamic_cast<CompTaskNode*>(in_node) != nullptr
           && dynamic_cast<CompTaskNode*>(node) != nullptr && IsAllProducedBlobHasNoBatchDim(in_node)

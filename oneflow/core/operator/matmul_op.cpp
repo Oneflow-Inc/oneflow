@@ -9,8 +9,7 @@ void MatmulOp::InitFromOpConf() {
   EnrollInputBn("a");
   EnrollInputBn("b");
   EnrollOutputBn("out");
-  EnrollFwBufBn("fw_buf");
-  EnrollBwBufBn("bw_buf");
+  EnrollTmpBn("fw_buf");
 }
 
 const PbMessage& MatmulOp::GetCustomizedConf() const { return op_conf().matmul_conf(); }
@@ -53,20 +52,6 @@ void MatmulOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBl
     fw_buf_blob_desc->mut_shape() = {3 * batch_num};
     fw_buf_blob_desc->set_data_type(DataType::kInt64);
     fw_buf_blob_desc->set_has_data_id_field(false);
-  }
-}
-
-void MatmulOp::InferBwBufBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                   const ParallelContext*) const {
-  BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
-  size_t num_axes = out_blob_desc->shape().NumAxes();
-  if (device_type() == DeviceType::kGPU && num_axes >= 3) {
-    BlobDesc* bw_buf_blob_desc = GetBlobDesc4BnInOp("bw_buf");
-    int32_t batch_num = out_blob_desc->shape().Count(0, num_axes - 2);
-    *bw_buf_blob_desc = *out_blob_desc;
-    bw_buf_blob_desc->mut_shape() = {3 * batch_num};
-    bw_buf_blob_desc->set_data_type(DataType::kInt64);
-    bw_buf_blob_desc->set_has_data_id_field(false);
   }
 }
 

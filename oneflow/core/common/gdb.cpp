@@ -59,9 +59,7 @@ static Blob* Blob4BnInOp(const std::function<Blob*(const std::string&)>* BnInOp2
 static HashMap<std::string, std::vector<std::string>> GetAllBlobNames(
     const OpAttribute& op_attribute) {
   std::list<std::string> attrs{
-      "input_bns",      "input_diff_bns",  "output_bns",        "output_diff_bns",
-      "data_tmp_bns",   "fw_buf_bns",      "bw_buf_bns",        "model_bns",
-      "model_diff_bns", "const_model_bns", "forward_model_bns", "const_buf_bns",
+      "input_bns", "output_bns", "tmp_bns", "const_buf_bns",
   };
   HashMap<std::string, std::vector<std::string>> ret;
   for (const auto& attr : attrs) {

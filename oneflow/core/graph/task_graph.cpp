@@ -533,8 +533,6 @@ void TaskGraph::AddOrderCtrlEdgeBetweenCopyAndMdUpdt() {
     std::vector<TaskNode*> candidate_nodes;
     auto ForEachNextNode = [&](TaskNode* node,
                                const std::function<void(TaskNode*)>& TryPushNodeToQueue) {
-      auto fw_task_node = dynamic_cast<NormalForwardCompTaskNode*>(node);
-      if (fw_task_node != nullptr && fw_task_node->logical_node()->HasOpWithModelBlob()) { return; }
       node->ForEachNodeOnOutEdge([&](TaskNode* node_on_out_edge) {
         if (IsForwardTaskType(node_on_out_edge->GetTaskType())) {
           TryPushNodeToQueue(node_on_out_edge);
@@ -542,12 +540,15 @@ void TaskGraph::AddOrderCtrlEdgeBetweenCopyAndMdUpdt() {
       });
     };
     auto HandlerAddCandidate = [&](TaskNode* node) {
+      TODO();  // refactor the following code
+      /*
       auto fw_task_node = dynamic_cast<NormalForwardCompTaskNode*>(node);
       if (fw_task_node != nullptr && fw_task_node->logical_node()->HasOpWithModelBlob()
           && fw_task_node->parallel_ctx()->parallel_num() > 1
           && fw_task_node->parallel_ctx()->policy() == kDataParallel) {
         candidate_nodes.push_back(node);
       }
+      */
     };
     BfsForEachNode({task_node}, ForEachNextNode, HandlerAddCandidate);
     std::sort(candidate_nodes.begin(), candidate_nodes.end(),
@@ -924,10 +925,6 @@ void TaskGraph::ConnectWithCopyCommNetIfNeed(TaskNode* src, TaskNode* dst) {
   }
 }
 
-bool IsBackEdge(TaskNode* src, TaskNode* dst) {
-  return src->GetTaskType() == TaskType::kNormalMdUpdt
-         && (dst->GetTaskType() == TaskType::kNormalForward
-             || dst->GetTaskType() == TaskType::kNormalBackward);
-}
+bool IsBackEdge(TaskNode* src, TaskNode* dst) { return false; }
 
 }  // namespace oneflow

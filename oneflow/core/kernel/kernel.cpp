@@ -92,9 +92,7 @@ void Kernel::Launch(const KernelCtx& ctx,
     Forward(ctx, BnInOp2Blob);
     gdb::ForwardLeaveBreakPoint(op_attribute(), BnInOp2Blob);
   } else {
-    gdb::BackwardEnterBreakPoint(op_attribute(), BnInOp2Blob);
-    Backward(ctx, BnInOp2Blob);
-    gdb::BackwardLeaveBreakPoint(op_attribute(), BnInOp2Blob);
+    UNIMPLEMENTED();
   }
 }
 
@@ -127,7 +125,6 @@ void Kernel::Forward(const KernelCtx& ctx,
     CHECK(!kernel_conf_.need_do_opaque_header());
     ForwardDim0ValidNum(ctx, BnInOp2Blob);
   }
-  if (NeedForwardLossInstanceNum(ctx, BnInOp2Blob)) { ForwardLossInstanceNum(ctx, BnInOp2Blob); }
   if (HasEmptyShapeBlob(op_attribute().input_bns(), BnInOp2Blob) && !NeedForwardIfBlobEmpty()) {
     ClearBlobDim0ValidNumIfNeed(op_attribute().output_bns(), BnInOp2Blob);
     return;
@@ -159,53 +156,6 @@ void Kernel::Forward(const KernelCtx& ctx,
     if (kernel_conf_.need_do_col_num()) { ForwardColNum(ctx, BnInOp2Blob); }
   }
 }
-
-void Kernel::Backward(const KernelCtx& ctx,
-                      std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  if (op_attribute().model_diff_bns().size() > 0) {
-    BackwardModelDiffDim0ValidNum(ctx, BnInOp2Blob);
-  }
-  if (kernel_conf_.need_do_dim0_valid_num() && op_attribute().input_diff_bns_size() > 0) {
-    CHECK(!kernel_conf_.need_do_opaque_header());
-    BackwardInDiffDim0ValidNum(ctx, BnInOp2Blob);
-  }
-  BackwardInDiffLossInstanceNum(ctx, BnInOp2Blob);
-  if (HasEmptyShapeBlob(op_attribute().output_diff_bns(), BnInOp2Blob)
-      && !NeedBackwardIfBlobEmpty()) {
-    ClearBlobDim0ValidNumIfNeed(op_attribute().input_diff_bns(), BnInOp2Blob);
-    return;
-  }
-  CHECK_EQ(false, HasEmptyShapeBlob(op_attribute().model_diff_bns(), BnInOp2Blob));
-  ActivationType activation = GetActivationType();
-  if (activation != ActivationType::kNone) {
-    const PbRpf<std::string> obns = this->op_attribute().output_bns();
-    const PbRpf<std::string> odbns = this->op_attribute().output_diff_bns();
-    CHECK_EQ(obns.size(), 1);
-    CHECK_EQ(odbns.size(), 1);
-
-    const Blob* out_blob = BnInOp2Blob(obns[0]);
-    const Blob* out_diff_blob = BnInOp2Blob(odbns[0]);
-    Blob* bw_activation_blob = BnInOp2Blob("bw_activation");
-    CHECK(bw_activation_blob != nullptr);
-    BackwardActivation(ctx, out_blob, out_diff_blob, bw_activation_blob);
-    BackwardDataContent(ctx, [&](const std::string& bn) -> Blob* {
-      if (bn == odbns[0]) {
-        return bw_activation_blob;
-      } else {
-        return BnInOp2Blob(bn);
-      }
-    });
-  } else {
-    BackwardDataContent(ctx, BnInOp2Blob);
-  }
-  if (kernel_conf_.need_do_data_id()) { BackwardDataId(ctx, BnInOp2Blob); }
-  if (kernel_conf_.need_do_col_num()) { BackwardColNum(ctx, BnInOp2Blob); }
-  if (this->op_attribute().model_diff_bns().size() > 0) {
-    SetTotalInstanceNumDiffBlob(ctx, BnInOp2Blob);
-  }
-}
-
-bool Kernel::HasModelBns() const { return op_attribute().model_bns().size() > 0; }
 
 template<DeviceType device_type>
 void KernelIf<device_type>::ForwardDataId(
@@ -240,74 +190,10 @@ void KernelIf<device_type>::ForwardRecordIdInDevicePiece(
 }
 
 template<DeviceType device_type>
-void KernelIf<device_type>::ForwardLossInstanceNum(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  NaiveCopyLossInstanceNum(op_attribute().input_bns(), op_attribute().output_bns(), BnInOp2Blob);
-}
-
-template<DeviceType device_type>
-bool KernelIf<device_type>::NeedForwardLossInstanceNum(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  return NeedCopyLossInstanceNum(op_attribute().input_bns(), op_attribute().output_bns(),
-                                 BnInOp2Blob);
-}
-
-template<DeviceType device_type>
-void KernelIf<device_type>::BackwardModelDiffDim0ValidNum(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  bool is_out_diff_empty = HasEmptyShapeBlob(op_attribute().output_diff_bns(), BnInOp2Blob);
-  for (const std::string& bn : op_attribute().model_diff_bns()) {
-    Blob* blob = BnInOp2Blob(bn);
-    CHECK(blob);
-    if (blob->has_dim0_valid_num_field()) {
-      CHECK(blob->has_dim0_inner_shape());
-      CHECK_EQ(1, blob->dim0_inner_shape().At(0));
-      blob->set_dim0_valid_num(0, is_out_diff_empty ? 0 : blob->static_shape().At(0));
-    }
-  }
-}
-
-template<DeviceType device_type>
-void KernelIf<device_type>::BackwardInDiffDim0ValidNum(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  CHECK(kernel_conf().can_naive_do_dim0_valid_num());
-  CheckSameDim0ValidNum(op_attribute().output_diff_bns(), BnInOp2Blob);
-  PbRpf<std::string> input_diff_bns;
-  for (const auto& bn : op_attribute().input_diff_bns()) {
-    if (BnInOp2Blob(bn) != nullptr) { *input_diff_bns.Add() = bn; }
-  }
-  if (input_diff_bns.empty()) { return; }
-  CopyField(ctx.device_ctx, BnInOp2Blob, BnInOp2Blob(op_attribute().output_diff_bns(0)),
-            input_diff_bns, &Blob::CopyDim0ValidNumFrom);
-}
-
-template<DeviceType device_type>
-void KernelIf<device_type>::BackwardInDiffLossInstanceNum(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  CHECK(NeedCopyLossInstanceNum(op_attribute().output_diff_bns(), op_attribute().input_diff_bns(),
-                                BnInOp2Blob));
-  NaiveCopyLossInstanceNum(op_attribute().output_diff_bns(), op_attribute().input_diff_bns(),
-                           BnInOp2Blob);
-}
-
-template<DeviceType device_type>
 void KernelIf<device_type>::ForwardPackedHeader(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   CopyField(ctx.device_ctx, BnInOp2Blob, op_attribute().input_bns(), op_attribute().output_bns(),
             &Blob::CopyHeaderFrom);
-}
-
-template<DeviceType device_type>
-void KernelIf<device_type>::BackwardDataId(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  // do nothing
-}
-
-template<DeviceType device_type>
-void KernelIf<device_type>::BackwardColNum(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  CopyField(ctx.device_ctx, BnInOp2Blob, op_attribute().output_diff_bns(),
-            op_attribute().input_diff_bns(), &Blob::CopyColNumFrom);
 }
 
 template<DeviceType device_type>

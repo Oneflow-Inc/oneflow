@@ -1,5 +1,4 @@
 #include "oneflow/core/graph/logical_node.h"
-#include "oneflow/core/graph/loss_accumulate_compute_task_node.h"
 
 namespace oneflow {
 

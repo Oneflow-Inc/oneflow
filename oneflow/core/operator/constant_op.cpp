@@ -61,7 +61,7 @@ void ConstantOp::InferHasBatchDim(
 
 void ConstantOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
   SbpSignatureBuilder()
-      .Split(input_bns(), 0)
+      .Broadcast(input_bns())
       .Broadcast(output_bns())
       .Build(sbp_sig_list->mutable_sbp_signature()->Add());
 }

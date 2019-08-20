@@ -66,17 +66,15 @@ void ConvOp<NDims>::InitFromOpConf() {
   EnrollInputBn("in");
   EnrollOutputBn("out");
   if (GetValFromCustomizedConf<std::string>("weight").empty()) {
-    EnrollModelBn("weight");
+    EnrollTmpBn("weight");
   } else {
     EnrollInputBn("weight");
   }
-  EnrollFwBufBn("fw_cudnn_buf");
-  EnrollBwBufBn("bw_cudnn_buf");
-  EnrollFwBufBn("fw_col_buf");
-  EnrollBwBufBn("bw_col_buf");
+  EnrollTmpBn("fw_cudnn_buf");
+  EnrollTmpBn("fw_col_buf");
   if (GetValFromCustomizedConf<bool>("use_bias")) {
     if (GetValFromCustomizedConf<std::string>("bias").empty()) {
-      EnrollModelBn("bias");
+      EnrollTmpBn("bias");
     } else {
       EnrollInputBn("bias");
     }
@@ -161,30 +159,6 @@ void ConvOp<NDims>::InferBlobDescs(std::function<BlobDesc*(const std::string&)> 
     fw_cudnn_buf->mut_shape() =
         Shape({static_cast<int64_t>(conv_op_ctx->cudnn_conv_algo_ctx.fwd_ws_size)});
     fw_cudnn_buf->set_data_type(DataType::kChar);
-  }
-#endif  // WITH_CUDA
-}
-
-template<int32_t NDims>
-void ConvOp<NDims>::InferBwBufBlobDescs(
-    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*,
-    const OpContext* op_ctx) const {
-  const ConvOpCtx* conv_op_ctx = static_cast<const ConvOpCtx*>(op_ctx);
-  if (DevIsGpuAndEnableCudnn() == false) {
-    // col_buf
-    BlobDesc* bw_col_buf = GetBlobDesc4BnInOp("bw_col_buf");
-    bw_col_buf->mut_shape() = Shape({conv_op_ctx->col_buf_size});
-    bw_col_buf->set_data_type(DataType::kChar);
-  }
-
-#ifdef WITH_CUDA
-  if (DevIsGpuAndEnableCudnn()) {
-    // cudnn_buf
-    BlobDesc* bw_cudnn_buf = GetBlobDesc4BnInOp("bw_cudnn_buf");
-    bw_cudnn_buf->mut_shape() =
-        Shape({static_cast<int64_t>(std::max(conv_op_ctx->cudnn_conv_algo_ctx.bwd_filter_ws_size,
-                                             conv_op_ctx->cudnn_conv_algo_ctx.bwd_data_ws_size))});
-    bw_cudnn_buf->set_data_type(DataType::kChar);
   }
 #endif  // WITH_CUDA
 }

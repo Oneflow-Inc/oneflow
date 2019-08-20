@@ -11,7 +11,6 @@
 #include "oneflow/core/control/cluster_control.pb.h"
 #include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/job/runtime_buffer_managers_scope.h"
-#include "oneflow/core/job/runtime_buffers_scope.h"
 #include "oneflow/core/control/cluster_control.h"
 #include "oneflow/core/job/job_set_compile_ctx.h"
 
@@ -38,12 +37,14 @@ void InitBySerializedConfigProto(const std::string& config_proto_str) {
     Global<CtrlClient>::Get()->PullKV("master_config_proto", &master_config_proto);
     CHECK(PbMd().Equals(config_proto, master_config_proto));
 
-    while (true) {
-      ClusterControl::WorkerSendAckAndExitIfReceiveHalt();
+    while (ClusterControl::WorkerReceiveHalt() == false) {
       JobSet job_set;
       Global<CtrlClient>::Get()->PullKV("session_job_set", &job_set);
       { Oneflow oneflow(job_set); }
     }
+    ClusterControl::WorkerSendHaltAck();
+    Global<EnvironmentObjectsScope>::Delete();
+    exit(0);
   }
 }
 
@@ -58,7 +59,6 @@ void InitGlobalOneflowBySerializedJobSet(const std::string& job_set_str) {
   Global<RuntimeBufferManagersScope>::New();
   Global<JobSetCompileCtx>::New();
   Global<Oneflow>::New(job_set);
-  Global<RuntimeBuffersScope>::New();
 }
 
 std::string GetSerializedInterUserJobInfo() {
@@ -88,8 +88,6 @@ void LaunchJob(const std::shared_ptr<oneflow::ForeignJobInstance>& cb) {
 void DestroyGlobalOneflow() {
   using namespace oneflow;
   CHECK(Global<MachineCtx>::Get()->IsThisMachineMaster());
-  CHECK_NOTNULL(Global<RuntimeBuffersScope>::Get());
-  Global<RuntimeBuffersScope>::Delete();
   CHECK_NOTNULL(Global<Oneflow>::Get());
   Global<Oneflow>::Delete();
   Global<JobSetCompileCtx>::Delete();
@@ -99,8 +97,8 @@ void DestroyGlobalOneflow() {
 void DestroyGlobalEnvironment() {
   using namespace oneflow;
   if (Global<EnvironmentObjectsScope>::Get() == nullptr) { return; }
-  bool is_master = Global<MachineCtx>::Get()->IsThisMachineMaster();
-  if (is_master) { ClusterControl::MasterSendHaltAndWaitAck(); }
+  CHECK(Global<MachineCtx>::Get()->IsThisMachineMaster());
+  ClusterControl::MasterSendHaltAndWaitAck();
   Global<EnvironmentObjectsScope>::Delete();
 }
 

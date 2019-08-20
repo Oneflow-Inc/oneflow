@@ -69,14 +69,14 @@ void NormalizationGradOp::InferBlobDescs(
   BlobDesc* dx = GetBlobDesc4BnInOp("dx");
   if (dx) { *dx = *x; }
   const Shape param_shape({x->shape().At(conf.axis())});
-  const auto CheckParamBlobDesc = [&](const std::string& bn) {
+  const std::function<void(const std::string&)> CheckParamBlobDesc = [&](const std::string& bn) {
     const BlobDesc* blob_desc = GetBlobDesc4BnInOp(bn);
     if (blob_desc != nullptr) {
       CHECK_EQ(blob_desc->data_type(), data_type);
       CHECK_EQ(blob_desc->shape(), param_shape);
     }
   };
-  const auto SetParamBlobDesc = [&](const std::string& bn) {
+  const std::function<void(const std::string&)> SetParamBlobDesc = [&](const std::string& bn) {
     BlobDesc* blob_desc = GetBlobDesc4BnInOp(bn);
     if (blob_desc != nullptr) {
       blob_desc->set_data_type(data_type);
@@ -85,7 +85,7 @@ void NormalizationGradOp::InferBlobDescs(
   };
   CheckParamBlobDesc("mean");
   CheckParamBlobDesc("inv_variance");
-  CheckParamBlobDesc("gamma");
+  (conf.has_gamma() ? CheckParamBlobDesc : SetParamBlobDesc)("gamma");
   SetParamBlobDesc("gamma_diff");
   SetParamBlobDesc("beta_diff");
 }

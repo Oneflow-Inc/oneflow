@@ -6,7 +6,5 @@ namespace oneflow {
 
 const char* kPackedBlobName = ONEFLOW_INTERNAL_PREFIX "PackedBlobName";
 const char* kNullDataId = ONEFLOW_INTERNAL_PREFIX "NullDataId";
-const std::string LossPrintPrefix = "loss_print_";
-const std::string AccuracyPrintPrefix = "accuracy_print_";
 
 }  // namespace oneflow

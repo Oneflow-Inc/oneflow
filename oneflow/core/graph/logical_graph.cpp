@@ -30,10 +30,6 @@ void LogicalGraph::BuildFwStruct() {
   ReplaceAllReduceFacades();
   LinkUnpackFw2PackFw(op_name2nodes);
   total_mbn_num_ = 0;
-  ForEachNode([&](LogicalNode* node) {
-    total_mbn_num_ +=
-        node->SoleOp()->model_bns().size() + node->SoleOp()->forward_model_bns().size();
-  });
 }
 
 void LogicalGraph::NaiveBuildFwStruct(

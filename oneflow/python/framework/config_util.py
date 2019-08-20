@@ -195,6 +195,11 @@ class JobConfigProtoBuilder(object):
         assert type(val) is bool
         self.job_conf_.use_nccl_inter_node_communication = val
         return self
+    
+    def enable_all_reduce_group(self, val = True):
+        assert type(val) is bool
+        self.job_conf_.enable_all_reduce_group = val
+        return self
 
     def all_reduce_group_num(self, val):
         assert type(val) is int
