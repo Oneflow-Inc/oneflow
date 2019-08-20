@@ -226,6 +226,16 @@ class JobConfigProtoBuilder(object):
         self.job_conf_.all_reduce_fp16 = val
         return self
 
+    def enable_cuda_ring_all_reduce(self, val=True):
+        assert type(val) is bool
+        self.job_conf_.enable_cuda_ring_all_reduce = val
+        return self
+
+    def cuda_ring_all_reduce_enable_p2p(self, val=True):
+        assert type(val) is bool
+        self.job_conf_.cuda_ring_all_reduce_enable_p2p = val
+        return self
+
     def concurrency_width(self, val):
         assert type(val) is int
         self.job_conf_.concurrency_width = val
