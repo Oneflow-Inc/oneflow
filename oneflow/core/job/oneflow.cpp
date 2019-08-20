@@ -923,12 +923,14 @@ Oneflow::Oneflow(const oneflow::JobSet& job_set) {
   } else {
     PullPlan("plan", &plan_);
   }
-  runtime_buffers_scope_.reset(new RuntimeBuffersScope());
+  if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
+    runtime_buffers_scope_.reset(new RuntimeBuffersScope());
+  }
   runtime_.reset(new Runtime(plan_, ComputeTotalPieceNum(), false));
 }
 
 Oneflow::~Oneflow() {
-  runtime_buffers_scope_.reset();
+  if (Global<MachineCtx>::Get()->IsThisMachineMaster()) { runtime_buffers_scope_.reset(); }
   runtime_.reset();
   if (Global<Profiler>::Get() != nullptr) {
     Global<Profiler>::Get()->Profile(

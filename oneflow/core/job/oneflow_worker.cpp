@@ -11,7 +11,7 @@ namespace {
 
 void Run(const std::string& config_proto_filepath) {
   ConfigProto config_proto;
-  TODO();  // Parse
+  ParseProtoFromTextFile(config_proto_filepath, &config_proto);
   // Global<T>::New is not allowed to be called here
   // because glog is not constructed yet and LOG(INFO) has bad bahavior
   Global<EnvironmentObjectsScope>::SetAllocated(new EnvironmentObjectsScope(config_proto));
