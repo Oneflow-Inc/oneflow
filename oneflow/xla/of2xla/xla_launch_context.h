@@ -49,6 +49,9 @@ class XlaLaunchContext {
 
   se::Stream *stream() const { return stream_.get(); }
 
+  void PopulateResultBuffers(const std::vector<Blob *> &outputs,
+                             const std::vector<int64_t> &allocation_indices);
+
  private:
   xla::LocalClient *NewLocalClient(const se::Platform *platform,
                                    int num_threads);

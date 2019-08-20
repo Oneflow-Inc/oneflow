@@ -1,3 +1,5 @@
+#include <mutex>
+
 #include "tensorflow/compiler/xla/client/client_library.h"
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/xla/of2xla/xla_utility.h"
@@ -32,9 +34,12 @@ xla::LocalClient* XlaLaunchResourceMgr::GetOrCreateLocalClient(
 DeviceBufferAllocator *XlaLaunchResourceMgr::GetOrCreateBufferAllocator(
     const se::Platform *platform, se::Stream *stream, int device_ordinal) {
   static std::unordered_map<uint64_t, DeviceBufferAllocator *> allocators;
-  uint64_t stream_id = reinterpret_cast<uint64_t>(stream);
+  static std::mutex mutex;
 
+  uint64_t stream_id = reinterpret_cast<uint64_t>(stream);
   if (allocators.count(stream_id) == 0) {
+    std::lock_guard<std::mutex> lock(mutex);
+
     std::shared_ptr<DeviceMemoryPool> mem_pool =
         DeviceMemoryPool::NewMemoryPool(platform, stream, device_ordinal);
     allocators.emplace(stream_id, new DeviceBufferAllocator(mem_pool));
@@ -54,7 +59,6 @@ xla::LocalClient *XlaLaunchContext::NewLocalClient(
     const se::Platform *platform, int num_threads) {
   return XlaLaunchResourceMgr::GetOrCreateLocalClient(platform, num_threads);
 }
-
 
 XlaAllocator *XlaLaunchContext::NewAllocator(const se::Platform *platform,
                                              int device_ordinal) {
@@ -97,6 +101,19 @@ XlaLaunchContext::XlaLaunchContext(const std::string &builder_name,
   allocator_.reset(NewAllocator(platform, device_ordinal_));
   host_device_ = NewEigenHostDevice();
   parallel_ctx_ = LocalParallelContext(device_ordinal_);
+}
+
+void XlaLaunchContext::PopulateResultBuffers(
+    const std::vector<Blob *> &results,
+    const std::vector<int64_t> &allocation_indices) {
+  std::vector<se::DeviceMemoryBase> device_buffers;
+  device_buffers.reserve(results.size());
+  for (int i = 0; i < results.size(); ++i) {
+    size_t size = results[i]->ByteSizeOfDataContentField();
+    char *data = const_cast<char *>(results[i]->dptr<char>());
+    device_buffers.emplace_back(data, size);
+  }
+  allocator_->PopulateDeviceMemory(device_buffers, allocation_indices);
 }
 
 }  // namespace mola

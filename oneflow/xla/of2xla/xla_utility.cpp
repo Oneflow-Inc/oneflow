@@ -27,9 +27,15 @@ static std::unordered_map<int32_t, std::string> op_type2string_map = {
   {OP_TYPE_CASE(TanhGrad), "TanhGrad"},
   {OP_TYPE_CASE(Gelu), "Gelu"},
   {OP_TYPE_CASE(GeluGrad), "GeluGrad"},
+  {OP_TYPE_CASE(Gather), "Gather"},
   {OP_TYPE_CASE(BatchGather), "BatchGather"},
   {OP_TYPE_CASE(BatchGatherGrad), "BatchGatherGrad"},
   {OP_TYPE_CASE(GatherGrad), "GatherGrad"},
+  {OP_TYPE_CASE(Softmax), "Softmax"},
+  {OP_TYPE_CASE(SoftmaxGrad), "SoftmaxGrad"},
+  {OP_TYPE_CASE(LayerNorm), "LayerNorm"},
+  {OP_TYPE_CASE(LayerNormParamGrad), "LayerNormParamGrad"},
+  {OP_TYPE_CASE(LayerNormGrad), "LayerNormGrad"},
   // TODO(hjchen2)
 };
 

@@ -19,6 +19,8 @@ struct CompilationResult {
 
   xla::XlaComputation computation;
 
+  bool alias_input_output;
+
   std::unique_ptr<xla::LocalExecutable> executable;
 };
 
@@ -28,7 +30,8 @@ class XlaGraphCompiler {
                    XlaGraph *graph, ParallelContext parallel_ctx,
                    const std::vector<Blob *> &entry_blobs,
                    const std::vector<std::string> &entry_blob_names,
-                   const std::vector<std::string> &return_blob_names);
+                   const std::vector<std::string> &return_blob_names,
+                   const bool alias_input_output);
 
   CompilationResult Compile();
 
@@ -42,6 +45,7 @@ class XlaGraphCompiler {
 
  private:
   void SetupEntryOprands(
+      const std::vector<std::string> &entry_names,
       std::unordered_map<Argument, XlaOprand> *entry_oprands,
       std::vector<xla::Shape> *input_shapes);
 
@@ -59,6 +63,9 @@ class XlaGraphCompiler {
 
   std::vector<std::string> entry_names_;
   std::vector<std::string> return_names_;
+
+  bool alias_input_output_;
+
   std::unordered_map<std::string, Argument> arguments_;
 };
 

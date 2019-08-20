@@ -37,5 +37,16 @@ xla::Shape OfShapeToXlaShape(const Shape &shape, xla::PrimitiveType type) {
   return xla::ShapeUtil::MakeShapeWithLayout(type, dimensions, layout);
 }
 
+Shape SliceShape(const Shape &shape, size_t start_dim, size_t end_dim) {
+  CHECK_LE(start_dim, end_dim);
+  CHECK_LE(end_dim, shape.NumAxes());
+
+  std::vector<int64_t> slice_shape(end_dim - start_dim);
+  for (size_t i = start_dim; i < end_dim; ++i) {
+    slice_shape[i] = shape.At(i);
+  }
+  return Shape(slice_shape);
+}
+
 }  // namespace mola
 }  // namespace oneflow

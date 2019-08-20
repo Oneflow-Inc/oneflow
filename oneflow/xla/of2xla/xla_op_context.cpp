@@ -30,7 +30,7 @@ XlaOprand XlaOprand::XlaOp(xla::XlaOp handle) {
   return op;
 }
 
-xla::XlaOp XlaOprand::AsXlaOp(xla::XlaBuilder *builder) {
+xla::XlaOp XlaOprand::AsXlaOp(xla::XlaBuilder *builder) const {
   CHECK(initialized_) << "XlaOprand has not been initialized.";
   if (handle_.IsUninitialized()) {
 //    LiteralSlice literal;
