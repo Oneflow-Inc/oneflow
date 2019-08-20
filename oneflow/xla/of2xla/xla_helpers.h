@@ -26,6 +26,7 @@ xla::XlaOp XlaScatter(
     const std::function<xla::XlaOp(xla::XlaOp, xla::XlaOp, xla::XlaBuilder*)>&
         combiner,
     xla::XlaBuilder* builder);
+
 }  // namespace mola
 }  // namespace oneflow
 
