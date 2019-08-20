@@ -977,6 +977,21 @@ message NcclReduceScatterOpConf {
 message NcclAllGatherOpConf {
 }
 
+message NcclTupleBroadcastOpConf {
+  optional string tick = 1;
+  repeated string in = 2;
+  repeated string out = 3;
+  repeated int64 root = 4;
+  repeated DataType data_type = 5;
+  repeated ShapeProto shape = 6;
+}
+
+message NcclTupleReduceOpConf {
+  repeated string in = 1;
+  repeated string out = 2;
+  repeated int64 root = 3;
+}
+
 message ReduceSplitOpConf {
   required int32 out_num = 1;
   optional string in = 2;
@@ -1483,6 +1498,8 @@ message OperatorConf {
     AccTickOpConf acc_tick_conf = 144;
     SwitchOutputOpConf switch_output_conf = 145;
     ReturnOpConf return_conf = 146;
+    NcclTupleBroadcastOpConf nccl_tuple_broadcast_conf = 147;
+    NcclTupleReduceOpConf nccl_tuple_reduce_conf = 148;
 
     // domain op
     TupleIdentityOpConf tuple_identity_conf = 200;
