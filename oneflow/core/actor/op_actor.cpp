@@ -101,6 +101,7 @@ void OpActor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
   }
   SetRegstHandlers();
   InitRegstHandlersFromProto(task_proto);
+  InitMsgHandler();
 }
 
 void OpActor::SetRegstHandlers() {
@@ -174,9 +175,12 @@ void OpActor::Act() {
   for (const ExecKernel& ek : exec_kernel_vec_) {
     // TODO(niuchong): BnInOp2Blob return nullptr or failed?
     ek.kernel->Launch(*kernel_ctx_, [&](const std::string& bn_in_op) -> Blob* {
-      int64_t regst_desc_id = ek.bn_in_op2regst_desc_id.at(bn_in_op);
+      auto it = ek.bn_in_op2regst_desc_id.find(bn_in_op);
+      if (it == ek.bn_in_op2regst_desc_id.end()) { return nullptr; }
+      int64_t regst_desc_id = it->second;
       RegstHandlerIf* handler = regst_desc_id2handler_.at(regst_desc_id);
       Regst* regst = handler->GetRegstByRegstDescId(regst_desc_id);
+      if (regst == nullptr) { return nullptr; }
       const LogicalBlobId& lbi = ek.kernel->BnInOp2Lbi(bn_in_op);
       return regst->GetBlobByLbi(lbi);
     });
@@ -193,8 +197,6 @@ bool OpActor::NoLongerConsumeRegst() const {
   }
   return true;
 }
-
-MsgHandler OpActor::initial_msg_handler() const { return initial_msg_handler_; }
 
 bool OpActor::NoLongerConsumedByOthers() const {
   for (const auto& pair : handlers_) {

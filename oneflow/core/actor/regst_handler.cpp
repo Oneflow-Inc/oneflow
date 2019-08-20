@@ -62,7 +62,6 @@ bool NormalRegstHandler::IsReady() const {
 Regst* NormalRegstHandler::GetRegstByRegstDescId(int64_t desc_id) const {
   bool is_consumed_regst = IsKeyFound(consumed_regst2eord_, desc_id);
   Regst* regst = is_consumed_regst ? consumed_rs_.Front(desc_id) : produced_rs_.Front(desc_id);
-  CHECK_NOTNULL(regst);
   return regst;
 }
 

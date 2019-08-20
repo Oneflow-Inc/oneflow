@@ -27,7 +27,10 @@ class Kernel {
 
   void Launch(const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const;
   void Launch(const NewKernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-    UNIMPLEMENTED();
+    KernelCtx tmp_ctx;
+    tmp_ctx.device_ctx = ctx.device_ctx;
+    tmp_ctx.other = ctx.other.get();
+    Launch(tmp_ctx, BnInOp2Blob);
   }
 
   const LogicalBlobId& BnInOp2Lbi(const std::string& bn_in_op) const;

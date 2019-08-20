@@ -13,6 +13,7 @@ class OpActor : public NewActor {
   static int HandlerNormal(OpActor*, const ActorMsg&);
   static int HandlerZombie(OpActor*, const ActorMsg&);
 
+  int64_t actor_id() const { return actor_id_; }
   int64_t act_id() const { return act_id_; }
   std::unique_ptr<DeviceCtx>& mut_device_ctx() { return device_ctx_; }
   const ParallelContext* parallel_ctx() const { return parallel_ctx_.get(); }
@@ -36,7 +37,6 @@ class OpActor : public NewActor {
   OpActor() = default;
   virtual ~OpActor() = default;
 
-  void set_initial_msg_handler(MsgHandler handler) { initial_msg_handler_ = handler; }
   void set_other_val(std::shared_ptr<void> other_val) { kernel_ctx_->other = other_val; }
   void InsertRegstHandler(RegstHandlerIf*);
 
@@ -58,7 +58,6 @@ class OpActor : public NewActor {
   std::unique_ptr<ParallelContext> parallel_ctx_;
   std::unique_ptr<DeviceCtx> device_ctx_;
   std::unique_ptr<NewKernelCtx> kernel_ctx_;
-  MsgHandler initial_msg_handler_;
   HashMap<std::string, std::vector<int64_t>> name2regst_desc_id_;
   std::vector<ExecKernel> exec_kernel_vec_;
   HashMap<int64_t, std::vector<std::unique_ptr<Regst>>> produced_regsts_;
@@ -66,6 +65,12 @@ class OpActor : public NewActor {
   HashMap<std::string, std::unique_ptr<RegstHandlerIf>> handlers_;
   HashMap<int64_t, RegstHandlerIf*> regst_desc_id2handler_;
 };
+
+#define OF_SET_OP_ACTOR_MSG_HANDLER(val)                          \
+  do {                                                            \
+    LOG(INFO) << "actor " << actor_id() << " switch to " << #val; \
+    set_msg_handler(std::bind(val, this, std::placeholders::_1)); \
+  } while (0)
 
 }  // namespace actor
 

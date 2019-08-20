@@ -7,9 +7,7 @@ namespace actor {
 
 class GeneralOpActor final : public OpActor {
  public:
-  void InitMsgHandler() override {
-    set_initial_msg_handler(std::bind(&OpActor::HandlerNormal, this, std::placeholders::_1));
-  }
+  void InitMsgHandler() override { OF_SET_OP_ACTOR_MSG_HANDLER(&OpActor::HandlerNormal); }
   void VirtualSetRegstHandlers() override { InsertRegstHandler(new NaiveRegstHandler); }
   void InitOtherVal() override {}
 };
@@ -18,9 +16,7 @@ REGISTER_NEW_ACTOR(TaskType::kLoss, GeneralOpActor);
 
 class InplaceOpActor final : public OpActor {
  public:
-  void InitMsgHandler() override {
-    set_initial_msg_handler(std::bind(&OpActor::HandlerNormal, this, std::placeholders::_1));
-  }
+  void InitMsgHandler() override { OF_SET_OP_ACTOR_MSG_HANDLER(&OpActor::HandlerNormal); }
   void VirtualSetRegstHandlers() override {
     InsertRegstHandler(new NaiveRegstHandler);
     InsertRegstHandler(new InplaceRegstHandler);
