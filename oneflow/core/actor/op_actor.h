@@ -47,10 +47,8 @@ class OpActor : public NewActor {
   };
   void InitDeviceCtx(const ThreadCtx&);
   void InitRegstHandlersFromProto(const TaskProto&);
-  void SetRegstHandlers();
 
   virtual void InitMsgHandler() = 0;
-  virtual void VirtualSetRegstHandlers() = 0;
   virtual void InitOtherVal() = 0;
 
   int64_t actor_id_;

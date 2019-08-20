@@ -73,7 +73,7 @@ void Thread::ConstructActor(int64_t actor_id, const ThreadCtx& thread_ctx) {
   std::unique_lock<std::mutex> lck(id2task_mtx_);
   auto task_it = id2task_.find(actor_id);
   if (IsKeyFound(TaskWithNewActor(), task_it->second.task_type())) {
-    CHECK(id2new_actor_ptr_.emplace(actor_id, actor::ConstructNewActor(task_it->second, thread_ctx))
+    CHECK(id2new_actor_ptr_.emplace(actor_id, actor::CreateNewActor(task_it->second, thread_ctx))
               .second);
   } else {
     CHECK(id2actor_ptr_.emplace(actor_id, NewActor(task_it->second, thread_ctx)).second);

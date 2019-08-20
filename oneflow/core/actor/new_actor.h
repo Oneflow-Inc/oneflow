@@ -33,7 +33,7 @@ class NewActor {
   MsgHandler msg_handler_;
 };
 
-std::unique_ptr<NewActor> ConstructNewActor(const TaskProto&, const ThreadCtx&);
+std::unique_ptr<NewActor> CreateNewActor(const TaskProto&, const ThreadCtx&);
 
 }  // namespace actor
 

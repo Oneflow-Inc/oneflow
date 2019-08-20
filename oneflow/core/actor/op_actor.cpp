@@ -99,14 +99,8 @@ void OpActor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
       regst_desc_id_vec.push_back(regst_desc_id);
     }
   }
-  SetRegstHandlers();
   InitRegstHandlersFromProto(task_proto);
   InitMsgHandler();
-}
-
-void OpActor::SetRegstHandlers() {
-  InsertRegstHandler(new CtrlRegstHandler);
-  VirtualSetRegstHandlers();
 }
 
 void OpActor::InitRegstHandlersFromProto(const TaskProto& task_proto) {
@@ -124,8 +118,8 @@ void OpActor::InitRegstHandlersFromProto(const TaskProto& task_proto) {
 
   for (const RegstHandlerProto& handler_proto : task_proto.regst_handlers()) {
     const std::string& type = handler_proto.type();
-    CHECK(IsKeyFound(handlers_, type))
-        << "OpActor does not register RegstHandler with type = " << type;
+    handlers_.emplace(type, std::unique_ptr<RegstHandlerIf>(CreateRegstHandler(type)));
+    LOG(INFO) << "OpActor " << actor_id() << " create RegstHandler of type " << type;
     handlers_.at(type)->Init(handler_proto, produced_regsts_,
                              new MsgDeliveryCtx(actor_id_, device_ctx_.get()), kernel_ctx_->other);
 
