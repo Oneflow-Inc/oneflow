@@ -20,6 +20,7 @@ void ExpandDimsOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> G
   CHECK_GT(axis, 0);
   CHECK_LE(axis, dim_vec.size());
   dim_vec.insert(dim_vec.begin() + axis, 1);
+  *out = *in;
   out->mut_shape() = Shape(dim_vec);
 }
 

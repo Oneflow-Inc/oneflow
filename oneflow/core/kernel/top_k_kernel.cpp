@@ -46,21 +46,26 @@ template<DeviceType device_type, typename T>
 void TopKKernel<device_type, T>::ForwardDim0ValidNum(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* in_blob = BnInOp2Blob("in");
+  Blob* out_blob = BnInOp2Blob("out");
   CHECK(in_blob->has_dim0_valid_num_field());
-  const int32_t dim0_valid_num = in_blob->dim0_valid_num(0);
   int32_t k = this->op_conf().top_k_conf().k();
-  if (device_type == DeviceType::kCPU) {
-    if (k > 1) { BnInOp2Blob("indices")->set_dim0_valid_num(0, dim0_valid_num); }
-  } else if (device_type == DeviceType::kGPU) {
-    if (k > 128) {
-      BnInOp2Blob("indices")->set_dim0_valid_num(0, dim0_valid_num);
-      BnInOp2Blob("sorted_in")->set_dim0_valid_num(0, dim0_valid_num);
-      BnInOp2Blob("sorted_indices")->set_dim0_valid_num(0, dim0_valid_num);
-    }
+  if (in_blob->shape().NumAxes() == 1) {
+    out_blob->set_dim0_valid_num(0, k);
   } else {
-    UNIMPLEMENTED();
+    const int32_t dim0_valid_num = in_blob->dim0_valid_num(0);
+    if (device_type == DeviceType::kCPU) {
+      if (k > 1) { BnInOp2Blob("indices")->set_dim0_valid_num(0, dim0_valid_num); }
+    } else if (device_type == DeviceType::kGPU) {
+      if (k > 128) {
+        BnInOp2Blob("indices")->set_dim0_valid_num(0, dim0_valid_num);
+        BnInOp2Blob("sorted_in")->set_dim0_valid_num(0, dim0_valid_num);
+        BnInOp2Blob("sorted_indices")->set_dim0_valid_num(0, dim0_valid_num);
+      }
+    } else {
+      UNIMPLEMENTED();
+    }
+    out_blob->set_dim0_valid_num(0, dim0_valid_num);
   }
-  BnInOp2Blob("out")->set_dim0_valid_num(0, dim0_valid_num);
 }
 
 template<DeviceType device_type, typename T>

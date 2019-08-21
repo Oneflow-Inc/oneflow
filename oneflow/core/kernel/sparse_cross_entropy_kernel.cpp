@@ -7,6 +7,9 @@ namespace {
 
 template<DeviceType device_type, typename T, typename K>
 void Forward(DeviceCtx* ctx, const Blob* prediction, const Blob* label, Blob* out) {
+  FOR_RANGE(int64_t, i, 0, label->shape().NumAxes()) {
+    CHECK_EQ(prediction->shape().At(i), label->shape().At(i));
+  }
   const int64_t num_instances = label->shape().elem_cnt();
   CHECK_EQ(prediction->shape().elem_cnt() % num_instances, 0);
   const int64_t num_classes = prediction->shape().elem_cnt() / num_instances;
@@ -58,6 +61,22 @@ void SparseCrossEntropyKernel<device_type, T>::BackwardDataContent(
   Blob* prediction_diff = BnInOp2Blob(GenDiffBn("prediction"));
   SparseCrossEntropyUntil<device_type, T>::SwitchBackward(
       SwitchCase(label->data_type()), ctx.device_ctx, prediction, label, out_diff, prediction_diff);
+}
+
+template<DeviceType device_type, typename T>
+void SparseCrossEntropyKernel<device_type, T>::ForwardDim0ValidNum(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  const Blob* prediction_blob = BnInOp2Blob("prediction");
+  const Blob* label_blob = BnInOp2Blob("label");
+  CHECK_EQ(prediction_blob->dim0_valid_num(0), label_blob->dim0_valid_num(0));
+  BnInOp2Blob("out")->CopyDim0ValidNumFrom(ctx.device_ctx, prediction_blob);
+}
+
+template<DeviceType device_type, typename T>
+void SparseCrossEntropyKernel<device_type, T>::BackwardInDiffDim0ValidNum(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  BnInOp2Blob(GenDiffBn("prediction"))
+      ->CopyDim0ValidNumFrom(ctx.device_ctx, BnInOp2Blob(GenDiffBn("out")));
 }
 
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kSparseCrossEntropyConf, SparseCrossEntropyKernel,
