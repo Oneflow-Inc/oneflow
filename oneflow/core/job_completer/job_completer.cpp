@@ -364,7 +364,6 @@ void EnableNonDistributedOptimizer(const OpGraph& op_graph, Job* job) {
   NonDistributedOptimizerPass().Apply(op_graph, job);
 }
 
-
 void GroupNcclTupleBroadcast(const OpGraph& op_graph, Job* job) {
   if (!Global<JobDesc>::Get()->enable_non_distributed_optimizer()) { return; }
   CHECK(Global<JobDesc>::Get()->enable_nccl());
@@ -376,8 +375,6 @@ void GroupNcclTupleReduce(const OpGraph& op_graph, Job* job) {
   CHECK(Global<JobDesc>::Get()->enable_nccl());
   NcclTupleReduceGroupPass().Apply(op_graph, job);
 }
-
-
 
 }  // namespace
 

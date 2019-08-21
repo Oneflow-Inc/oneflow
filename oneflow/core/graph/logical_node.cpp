@@ -368,8 +368,6 @@ REGISTER_BLD_SUB_TSK_GPH_MTHD("NcclTupleReduce"
                               "Optimizer",
                               &TaskGraph::BldSubTskGphByConnectNodeOnSameGpuDevice);
 
-
-
 BldBoxingOpConfMthd GetMthdForBldBoxingOpConf(const LogicalNode* src, const LogicalNode* dst) {
   std::string k = ConcatTypeName(src, dst);
   auto it = GetFuncForFindBldBoxingOpConfMthd()->find(k);
@@ -454,6 +452,5 @@ CompTaskNode* NcclTupleReduceLogicalNode::NewCompTaskNode() const {
 }
 
 int64_t NcclTupleReduceLogicalNode::GetAreaId() const { return NewAreaId(); }
-
 
 }  // namespace oneflow
