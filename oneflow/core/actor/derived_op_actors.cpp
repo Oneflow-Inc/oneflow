@@ -7,7 +7,7 @@ namespace actor {
 
 class GeneralOpActor final : public OpActor {
  public:
-  void InitMsgHandler() override { OF_SET_OP_ACTOR_MSG_HANDLER(&OpActor::HandlerNormal); }
+  void InitMsgHandler() override { OF_SET_OP_ACTOR_MSG_HANDLER(this, &OpActor::HandlerNormal); }
   void InitOtherVal() override {}
 };
 
@@ -15,7 +15,7 @@ REGISTER_NEW_ACTOR(TaskType::kLoss, GeneralOpActor);
 
 class InplaceOpActor final : public OpActor {
  public:
-  void InitMsgHandler() override { OF_SET_OP_ACTOR_MSG_HANDLER(&OpActor::HandlerNormal); }
+  void InitMsgHandler() override { OF_SET_OP_ACTOR_MSG_HANDLER(this, &OpActor::HandlerNormal); }
   void InitOtherVal() override {}
 };
 

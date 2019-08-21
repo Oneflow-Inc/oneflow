@@ -33,7 +33,7 @@ int OpActor::HandlerNormal(OpActor* actor, const ActorMsg& msg) {
   ActUntilFail(actor);
   if (actor->NoLongerConsumeRegst()) {
     actor->SendEordMsgForProducedRegst();
-    actor->set_msg_handler(std::bind(&OpActor::HandlerZombie, actor, std::placeholders::_1));
+    OF_SET_OP_ACTOR_MSG_HANDLER(actor, &OpActor::HandlerZombie);
   }
   return 0;
 }
@@ -41,7 +41,7 @@ int OpActor::HandlerNormal(OpActor* actor, const ActorMsg& msg) {
 int OpActor::HandlerZombie(OpActor* actor, const ActorMsg& msg) {
   actor->UpdateWithProducedRegstMsg(msg);
   if (actor->NoLongerConsumedByOthers()) {
-    actor->set_msg_handler(MsgHandler());
+    OF_CLEAR_OP_ACTOR_MSG_HANDLER(actor);
     return 1;
   }
   return 0;

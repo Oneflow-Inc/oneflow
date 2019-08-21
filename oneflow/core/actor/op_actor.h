@@ -64,10 +64,15 @@ class OpActor : public NewActor {
   HashMap<int64_t, RegstHandlerIf*> regst_desc_id2handler_;
 };
 
-#define OF_SET_OP_ACTOR_MSG_HANDLER(val)                          \
-  do {                                                            \
-    LOG(INFO) << "actor " << actor_id() << " switch to " << #val; \
-    set_msg_handler(std::bind(val, this, std::placeholders::_1)); \
+#define OF_SET_OP_ACTOR_MSG_HANDLER(actor, handler)                           \
+  do {                                                                        \
+    LOG(INFO) << "actor " << actor->actor_id() << " switch to " << #handler;  \
+    actor->set_msg_handler(std::bind(handler, actor, std::placeholders::_1)); \
+  } while (0)
+#define OF_CLEAR_OP_ACTOR_MSG_HANDLER(actor)                                  \
+  do {                                                                        \
+    LOG(INFO) << "actor " << actor->actor_id() << " release its msg handler"; \
+    actor->set_msg_handler(MsgHandler());                                     \
   } while (0)
 
 }  // namespace actor
