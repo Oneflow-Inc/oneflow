@@ -381,10 +381,14 @@ void MakeMainJob(const std::vector<Job>& jobs, Job* main_job,
     wait_and_send_ids_conf->set_out("out");
     wait_and_send_ids_conf->set_wait_buffer_name(kBufferNameGlobalWaitJobId);
     wait_and_send_ids_conf->set_data_type(DataType::kInt32);
+    auto* id_list = wait_and_send_ids_conf->mutable_id_list();
+    FOR_RANGE(int32_t, i, 0, Global<JobName2JobId>::Get()->size()) { id_list->Add(); }
+    HashSet<int64_t> unique_check;
     for (const auto& pair : *Global<JobName2JobId>::Get()) {
       int64_t job_id = pair.second;
+      CHECK(unique_check.insert(job_id).second);
       const auto& cs_idx = Global<CriticalSectionDesc>::Get()->CriticalSectionIds4JobId(job_id);
-      *wait_and_send_ids_conf->add_id_list()->mutable_id() = {cs_idx.begin(), cs_idx.end()};
+      *id_list->Mutable(job_id)->mutable_id() = {cs_idx.begin(), cs_idx.end()};
     }
   }
   op_confs.push_back(wait_and_send_ids_op_conf);
@@ -449,9 +453,12 @@ void MakeMainJob(const std::vector<Job>& jobs, Job* main_job,
     callback_notify_op_conf.set_name(std::string("System-Main-CallbackNotify_") + NewUniqueId());
     auto* callback_notify_conf = callback_notify_op_conf.mutable_callback_notify_conf();
     callback_notify_conf->set_in(callback_notify_esac_op_conf.name() + "/out");
+    auto* buffer_names = callback_notify_conf->mutable_callback_buffer_name();
+    FOR_RANGE(int64_t, i, 0, Global<JobName2JobId>::Get()->size()) { buffer_names->Add(); }
     for (const auto& pair : *Global<JobName2JobId>::Get()) {
+      int64_t job_id = pair.second;
       const auto& buffer_name = GetCallbackNotifierBufferName(pair.first);
-      callback_notify_conf->add_callback_buffer_name(buffer_name);
+      *buffer_names->Mutable(job_id) = buffer_name;
     }
   }
   op_confs.push_back(callback_notify_op_conf);
