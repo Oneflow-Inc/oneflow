@@ -385,7 +385,7 @@ void JobCompleter::Complete(Job* job) const {
   WithOpGraphAndMutJobBuilder(job, &AutoVar);
   WithOpGraphAndMutJobBuilder(job, &SetDefaultVariableConf);
   if (GlobalJobDesc().IsTrain()) {
-    WithOpGraphAndMutJobBuilder(job, &TieUpChainHeadersUnReachableFromAnyVariableOps);
+    WithOpGraphAndMutJob(job, &TieUpChainHeadersUnReachableFromAnyVariableOps);
     WithOpGraphAndMutJobBuilder(job, &EnableAutoMixedPrecision);
     WithOpGraphAndMutJobBuilder(job, &EnableNonDistributedOptimizer);
     // complete ops for trainning
