@@ -6,7 +6,7 @@
 namespace oneflow {
 
 class OpGraph;
-class Job;
+class JobBuilder;
 
 class NcclTupleBroadcastGroupPass final {
  public:
@@ -14,7 +14,7 @@ class NcclTupleBroadcastGroupPass final {
   NcclTupleBroadcastGroupPass() = default;
   ~NcclTupleBroadcastGroupPass() = default;
 
-  void Apply(const OpGraph& op_graph, Job* job);
+  void Apply(const OpGraph& op_graph, JobBuilder* job_builder);
 };
 
 }  // namespace oneflow

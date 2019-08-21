@@ -4,8 +4,7 @@
 
 namespace oneflow {
 
-void NcclTupleReduceGroupPass::Apply(const OpGraph& op_graph, Job* job) {
-  JobBuilder builder(job);
+void NcclTupleReduceGroupPass::Apply(const OpGraph& op_graph, JobBuilder* builder) {
   HashMap<ParallelDesc, std::vector<const OpNode*>> pd2reduce_nodes;
   HashMap<const OpNode*, OperatorConf> op_node2op_conf;
   HashMap<const OpNode*, int64_t> reduce_node2out_size;
@@ -57,11 +56,15 @@ void NcclTupleReduceGroupPass::Apply(const OpGraph& op_graph, Job* job) {
         }
       });
     }
-    builder.AddOrMutOps(pd7reduce_nodes.first.parallel_conf(), {group_op_conf});
+    builder->AddOrMutOpsOnlyOnce(pd7reduce_nodes.first.parallel_conf(), {group_op_conf});
   }
-  for (const auto& op_node7op_conf : op_node2op_conf) { builder.MutOps({op_node7op_conf.second}); }
+  for (const auto& op_node7op_conf : op_node2op_conf) {
+    builder->MutOpsOnlyOnce({op_node7op_conf.second});
+  }
   for (const auto& pd7broadcast_nodes : pd2reduce_nodes) {
-    for (const OpNode* node : pd7broadcast_nodes.second) { builder.DelOps({node->op().op_conf()}); }
+    for (const OpNode* node : pd7broadcast_nodes.second) {
+      builder->DelOps({node->op().op_conf()});
+    }
   }
 }
 

@@ -364,16 +364,16 @@ void EnableNonDistributedOptimizer(const OpGraph& op_graph, JobBuilder* job_buil
   NonDistributedOptimizerPass().Apply(op_graph, job_builder);
 }
 
-void GroupNcclTupleBroadcast(const OpGraph& op_graph, Job* job) {
+void GroupNcclTupleBroadcast(const OpGraph& op_graph, JobBuilder* job_builder) {
   if (!Global<JobDesc>::Get()->enable_non_distributed_optimizer()) { return; }
   CHECK(Global<JobDesc>::Get()->enable_nccl());
-  NcclTupleBroadcastGroupPass().Apply(op_graph, job);
+  NcclTupleBroadcastGroupPass().Apply(op_graph, job_builder);
 }
 
-void GroupNcclTupleReduce(const OpGraph& op_graph, Job* job) {
+void GroupNcclTupleReduce(const OpGraph& op_graph, JobBuilder* job_builder) {
   if (!Global<JobDesc>::Get()->enable_non_distributed_optimizer()) { return; }
   CHECK(Global<JobDesc>::Get()->enable_nccl());
-  NcclTupleReduceGroupPass().Apply(op_graph, job);
+  NcclTupleReduceGroupPass().Apply(op_graph, job_builder);
 }
 
 }  // namespace
