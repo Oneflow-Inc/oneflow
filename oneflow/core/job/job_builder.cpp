@@ -101,10 +101,7 @@ void JobBuilder::DelOps(const std::vector<OperatorConf>& op_confs) {
     auto* op_list = job_->mutable_net()->mutable_op();
     auto it = std::remove_if(op_list->begin(), op_list->end(),
                              [&](const OperatorConf& conf) { return conf.name() == op_name; });
-    if (it != op_list->end()) {
-      op_list->erase(it);
-      DelPlacementByOpName(op_name);
-    }
+    if (it != op_list->end()) { op_list->erase(it); }
   }
 }
 
