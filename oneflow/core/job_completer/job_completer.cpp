@@ -309,7 +309,8 @@ void SetOpTimeShape7BatchDimLbis(const OpGraph& op_graph, JobBuilder* job_builde
 }
 
 void RewriteBoxingWithAllReduce(const OpGraph& op_graph, JobBuilder* job_builder) {
-  if (GlobalJobDesc().enable_all_reduce_group()) {
+  if (!GlobalJobDesc().enable_non_distributed_optimizer()
+      && GlobalJobDesc().enable_all_reduce_group()) {
     AllReduceAddPass().Apply(op_graph, job_builder);
   }
 }
