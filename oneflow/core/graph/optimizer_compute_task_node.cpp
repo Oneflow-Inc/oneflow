@@ -37,6 +37,9 @@ void OptimizerCompTaskNode::GenerateNonCtrlRegstHandlerProto(TaskProto* task_pro
   ForEachNonCtrlProducedRegstDescId([&](int64_t regst_desc_id) {
     naive_proto.mutable_produced_regst_desc_ids()->add_regst_desc_id(regst_desc_id);
   });
+  if (!IsRegstHandlerProtoEmpty(naive_proto)) {
+    *(task_proto->mutable_regst_handlers()->Add()) = naive_proto;
+  }
 }
 
 }  // namespace oneflow
