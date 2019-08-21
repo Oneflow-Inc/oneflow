@@ -29,6 +29,7 @@ class NormalForwardCompTaskNode final : public CompTaskNode {
   void BuildActivationRegst();
   void BuildModel7ConstModel7DataTmp7BufRegsts();
   void InferProducedDataRegstTimeShape() override;
+  void GenerateNonCtrlRegstHandlerProto(TaskProto*) const override;
 
   int64_t random_seed_;
 };

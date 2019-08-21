@@ -13,6 +13,7 @@ class GeneralOpActor final : public OpActor {
 };
 
 REGISTER_NEW_ACTOR(TaskType::kLoss, GeneralOpActor);
+REGISTER_NEW_ACTOR(TaskType::kNormalForward, GeneralOpActor);
 
 class OptimizerOpActor final : public OpActor {
   void InitMsgHandler() override { OF_SET_OP_ACTOR_MSG_HANDLER(this, &OpActor::HandlerNormal); }
