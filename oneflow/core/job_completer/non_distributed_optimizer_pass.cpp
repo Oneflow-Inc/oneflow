@@ -29,7 +29,7 @@ ParallelConf NonDistributedParallelConf4ParallelId(const ParallelDesc& pd,
 void NonDistributedOptimizerPass::Apply(const OpGraph& op_graph, JobBuilder* builder) {
   HashMap<ParallelDesc, HashMap<const OpNode*, std::vector<const OpNode*>>> pd2last_node2node_seqs;
   HashMap<const OpNode*, OperatorConf> op_node2op_conf;
-  HashMap<const OpNode*, int64_t> last_node2out_size;
+  HashMap<const OpNode*, int64_t> last_node2model_size;
   op_graph.ForEachNode([&](const OpNode* node) {
     if (!node->op().op_conf().has_variable_conf()) { return; }
     std::vector<const OpNode*> op_seq_without_batch_dim;
@@ -59,11 +59,10 @@ void NonDistributedOptimizerPass::Apply(const OpGraph& op_graph, JobBuilder* bui
     pd2last_node2node_seqs[pd][last_node] = op_seq_without_batch_dim;
     last_node->ForEachNodeOnOutEdge(
         [&](const OpNode* dst) { op_node2op_conf.emplace(dst, dst->op().op_conf()); });
-    const BlobDesc& last_node_out_logical_blob_desc = last_node->LogicalBlobDesc4Lbi(
-        last_node->op().BnInOp2Lbi(last_node->op().output_bns().Get(0)));
-    last_node2out_size[last_node] =
-        last_node_out_logical_blob_desc.shape().elem_cnt()
-        * GetSizeOfDataType(last_node_out_logical_blob_desc.data_type());
+    const BlobDesc& model_logical_blob_desc =
+        node->LogicalBlobDesc4Lbi(node->op().BnInOp2Lbi("out"));
+    last_node2model_size[last_node] = model_logical_blob_desc.shape().elem_cnt()
+                                      * GetSizeOfDataType(model_logical_blob_desc.data_type());
   });
   for (const auto& pair : pd2last_node2node_seqs) {
     const ParallelDesc& pd = pair.first;
@@ -74,7 +73,7 @@ void NonDistributedOptimizerPass::Apply(const OpGraph& op_graph, JobBuilder* bui
     const auto& last_node2node_seqs = pair.second;
     for (const auto& last_node7node_seqs : last_node2node_seqs) {
       const OpNode* last_node = last_node7node_seqs.first;
-      last_node_out_size_pairs.emplace_back(last_node, last_node2out_size.at(last_node));
+      last_node_out_size_pairs.emplace_back(last_node, last_node2model_size.at(last_node));
     }
     std::sort(
         last_node_out_size_pairs.begin(), last_node_out_size_pairs.end(),
