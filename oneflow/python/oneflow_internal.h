@@ -79,11 +79,10 @@ void LaunchJob(const std::shared_ptr<oneflow::ForeignJobInstance>& cb) {
   const auto& job_name = cb->job_name();
   auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<ForeignJobInstance>>>::Get();
   int64_t job_id = Global<JobName2JobId>::Get()->at(job_name);
-  const JobDesc& job_desc = Global<RuntimeJobDescs>::Get()->job_desc(job_id);
-  if (IsPullJob(job_desc, *Global<InterUserJobInfo>::Get())) {
+  if (IsPullJob(job_name, *Global<InterUserJobInfo>::Get())) {
     buffer_mgr->Get(GetForeignOutputBufferName(job_name))->Send(cb);
   }
-  if (IsPushJob(job_desc, *Global<InterUserJobInfo>::Get())) {
+  if (IsPushJob(job_name, *Global<InterUserJobInfo>::Get())) {
     buffer_mgr->Get(GetForeignInputBufferName(job_name))->Send(cb);
   }
   buffer_mgr->Get(GetCallbackNotifierBufferName(job_name))->Send(cb);

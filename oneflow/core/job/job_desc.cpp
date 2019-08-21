@@ -123,18 +123,16 @@ GlobalJobDescScope::~GlobalJobDescScope() { Global<JobDesc>::Delete(); }
 
 const JobDesc& GlobalJobDesc() { return *Global<JobDesc>::Get(); }
 
-bool IsPullJob(const JobDesc& job_desc, const InterUserJobInfo& inter_user_job_info) {
-  const auto& op_name2pull_job_name = inter_user_job_info.output_or_var_op_name2pull_job_name();
-  for (const auto& op_name : job_desc.arg_op_name()) {
-    if (op_name2pull_job_name.find(op_name) != op_name2pull_job_name.end()) { return true; }
+bool IsPullJob(const std::string& job_name, const InterUserJobInfo& inter_user_job_info) {
+  for (const auto& pair : inter_user_job_info.output_or_var_op_name2pull_job_name()) {
+    if (pair.second == job_name) { return true; }
   }
   return false;
 }
 
-bool IsPushJob(const JobDesc& job_desc, const InterUserJobInfo& inter_user_job_info) {
-  const auto& op_name2push_job_name = inter_user_job_info.input_or_var_op_name2push_job_name();
-  for (const auto& op_name : job_desc.arg_op_name()) {
-    if (op_name2push_job_name.find(op_name) != op_name2push_job_name.end()) { return true; }
+bool IsPushJob(const std::string& job_name, const InterUserJobInfo& inter_user_job_info) {
+  for (const auto& pair : inter_user_job_info.input_or_var_op_name2push_job_name()) {
+    if (pair.second == job_name) { return true; }
   }
   return false;
 }

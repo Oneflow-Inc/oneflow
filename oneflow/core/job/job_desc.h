@@ -95,8 +95,8 @@ class GlobalJobDescScope final {
 };
 const JobDesc& GlobalJobDesc();
 
-bool IsPullJob(const JobDesc& job_desc, const InterUserJobInfo& inter_user_job_info);
-bool IsPushJob(const JobDesc& job_desc, const InterUserJobInfo& inter_user_job_info);
+bool IsPullJob(const std::string& job_name, const InterUserJobInfo& inter_user_job_info);
+bool IsPushJob(const std::string& job_name, const InterUserJobInfo& inter_user_job_info);
 
 }  // namespace oneflow
 
