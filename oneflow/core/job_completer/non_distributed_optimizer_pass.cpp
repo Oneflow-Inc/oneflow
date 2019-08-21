@@ -6,6 +6,12 @@ namespace oneflow {
 
 namespace {
 
+int64_t GetSoleOutBlobSize(const OpNode* node) {
+  const BlobDesc& blob_desc =
+      node->LogicalBlobDesc4Lbi(node->op().BnInOp2Lbi(node->op().SoleObn()));
+  return blob_desc.shape().elem_cnt() * GetSizeOfDataType(blob_desc.data_type());
+}
+
 ParallelConf NonDistributedParallelConf4ParallelId(const ParallelDesc& pd,
                                                    const int64_t parallel_id) {
   std::string device_name;
@@ -59,10 +65,7 @@ void NonDistributedOptimizerPass::Apply(const OpGraph& op_graph, JobBuilder* bui
     pd2last_node2node_seqs[pd][last_node] = op_seq_without_batch_dim;
     last_node->ForEachNodeOnOutEdge(
         [&](const OpNode* dst) { op_node2op_conf.emplace(dst, dst->op().op_conf()); });
-    const BlobDesc& model_logical_blob_desc =
-        node->LogicalBlobDesc4Lbi(node->op().BnInOp2Lbi("out"));
-    last_node2model_size[last_node] = model_logical_blob_desc.shape().elem_cnt()
-                                      * GetSizeOfDataType(model_logical_blob_desc.data_type());
+    last_node2model_size[last_node] = GetSoleOutBlobSize(node);
   });
   for (const auto& pair : pd2last_node2node_seqs) {
     const ParallelDesc& pd = pair.first;
