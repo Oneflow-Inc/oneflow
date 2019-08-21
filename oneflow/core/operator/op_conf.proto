@@ -1449,15 +1449,16 @@ message EsacOpConf {
 }
 
 message SegmentSumOpConf {
-  required in = 1;
-  required segment_ids = 2;
-  required out = 3;
+  required string in = 1;
+  required string segment_ids = 2;
+  required int32 unique_ids_count = 3;
+  required string out = 4;
 }
 
 message SegmentSumGradOpConf {
-  required out_diff = 1;
-  required segment_ids = 2;
-  required in_diff = 3;
+  required string out_diff = 1;
+  required string segment_ids = 2;
+  required string in_diff = 4;
 }
 
 

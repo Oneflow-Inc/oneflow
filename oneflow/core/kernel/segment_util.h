@@ -1,4 +1,6 @@
+#include <algorithm>
 #include <cuda_runtime.h>
+#include "oneflow/core/kernel/kernel.h"
 
 namespace oneflow {
   
@@ -38,13 +40,13 @@ inline CudaLaunchConfig GetCudaLaunchConfig(int32_t work_elem_count){
   const int32_t physical_thread_count = std::min(
        cuda_device_prop.multi_processors_num * cuda_device_prop.max_threads_per_multiprocessor,
        virtual_thread_count);
-  const int32_t threads_per_block = std::min(1024, prop.max_threads_per_block);
-  auto div_up = [] (int a, int b) { return (a + b -1) / b; }
+  const int32_t threads_per_block = std::min(1024, cuda_device_prop.max_threads_per_block);
+  auto div_up = [] (int a, int b) { return (a + b -1) / b; };
   const int32_t block_count = std::min(div_up(physical_thread_count, threads_per_block),
-                                       prop.multi_processors_num);
+                                       cuda_device_prop.multi_processors_num);
   auto cuda_launch_config = CudaLaunchConfig();
   cuda_launch_config.virtual_thread_count = virtual_thread_count;
-  cuda_launch_config.threads_per_block = therads_per_block;
+  cuda_launch_config.threads_per_block = threads_per_block;
   cuda_launch_config.block_count = block_count;
   return cuda_launch_config;
 

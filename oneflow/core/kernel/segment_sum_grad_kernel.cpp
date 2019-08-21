@@ -3,17 +3,18 @@
 
 namespace oneflow {
 
-const PbMessage& SegmentSumGradKernel::GetCustomizedOpConf() const {
+template <DeviceType device_type, typename T>
+const PbMessage& SegmentSumGradKernel<device_type, T>::GetCustomizedOpConf() const {
   return this->op_conf().segment_sum_grad_conf();
 }
 
-void SegmentSumGradKernel::ForwardDataContent(const KernelCtx& ctx,
+template <DeviceType device_type, typename T>
+void SegmentSumGradKernel<device_type, T>::ForwardDataContent(const KernelCtx& ctx,
                                     std::function<Blob*(const std::string&)> BnInOp2Blob) const{
   const Blob* out_diff = BnInOp2Blob("out_diff");
   const Blob* segment_ids = BnInOp2Blob("segment_ids");
   Blob* in_diff = BnInOp2Blob("in_diff");
-  // do some real work here
-  SegmentKernelUtil<device_type, T>::SegmentSumBackward(ctx.device_ctx, out_diff, segment_ids,
+  SegmentKernelUtil<device_type, float, int32_t>::SegmentSumBackward(ctx.device_ctx, out_diff, segment_ids,
                                                         in_diff);
 }
 
