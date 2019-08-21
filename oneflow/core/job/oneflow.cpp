@@ -812,76 +812,74 @@ void CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan) {
   if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
     // only has user job in jobs and sub_plans in this time
     InterJobMemSharingUtil::MergeMemBlockBetweenSubPlans(jobs, &sub_plans);
-  }
-  HashMap<std::string, ParallelBlobConf> push_op_name2parallel_blob_conf;
-  FilterOpName2ParallelBlobConf({OperatorConf::kInputConf}, &jobs,
-                                &push_op_name2parallel_blob_conf);
-  HashMap<std::string, ParallelBlobConf> pull_op_name2parallel_blob_conf;
-  FilterOpName2ParallelBlobConf({OperatorConf::kReturnConf}, &jobs,
-                                &pull_op_name2parallel_blob_conf);
-  HashMap<std::string, ParallelBlobConf> var_op_name2parallel_blob_conf;
-  FilterOpName2ParallelBlobConf({OperatorConf::kVariableConf}, &jobs,
-                                &var_op_name2parallel_blob_conf);
-  HashMap<ParallelBlobConf, HashMap<std::string, std::vector<std::string>>>
-      parallel_blob_conf2input_op_name2output_op_name;
-  FilterArgPassJobGroupInfo(&jobs, &parallel_blob_conf2input_op_name2output_op_name);
-  int64_t job_id = -1;
-  {
-    size_t helper_job_size =
-        push_op_name2parallel_blob_conf.size() + pull_op_name2parallel_blob_conf.size();
+    HashMap<std::string, ParallelBlobConf> push_op_name2parallel_blob_conf;
+    FilterOpName2ParallelBlobConf({OperatorConf::kInputConf}, &jobs,
+                                  &push_op_name2parallel_blob_conf);
+    HashMap<std::string, ParallelBlobConf> pull_op_name2parallel_blob_conf;
+    FilterOpName2ParallelBlobConf({OperatorConf::kReturnConf}, &jobs,
+                                  &pull_op_name2parallel_blob_conf);
+    HashMap<std::string, ParallelBlobConf> var_op_name2parallel_blob_conf;
+    FilterOpName2ParallelBlobConf({OperatorConf::kVariableConf}, &jobs,
+                                  &var_op_name2parallel_blob_conf);
+    HashMap<ParallelBlobConf, HashMap<std::string, std::vector<std::string>>>
+        parallel_blob_conf2input_op_name2output_op_name;
+    FilterArgPassJobGroupInfo(&jobs, &parallel_blob_conf2input_op_name2output_op_name);
+    int64_t job_id = -1;
+    {
+      size_t helper_job_size =
+          push_op_name2parallel_blob_conf.size() + pull_op_name2parallel_blob_conf.size();
 
-    for (const auto& pair : parallel_blob_conf2input_op_name2output_op_name) {
-      helper_job_size += pair.second.size();
+      for (const auto& pair : parallel_blob_conf2input_op_name2output_op_name) {
+        helper_job_size += pair.second.size();
+      }
+      // + 2 for model init job and model save job
+      helper_job_size += 2;
+      size_t user_job_size = jobs.size();
+      jobs.resize(user_job_size + helper_job_size);
+      sub_plans.resize(user_job_size + helper_job_size);
+      job_id = user_job_size;
     }
-    // + 2 for model init job and model save job
-    helper_job_size += 2;
-    size_t user_job_size = jobs.size();
-    jobs.resize(user_job_size + helper_job_size);
-    sub_plans.resize(user_job_size + helper_job_size);
-    job_id = user_job_size;
-  }
-  auto CompileHelperJob = [&](Job* job) {
-    jobs.at(job_id) = *job;
-    AddJobName2JobId(job->job_conf().job_name(), job_id);
-    if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
-      auto scope = std::make_unique<GlobalJobDescScope>(job->job_conf(), job_id);
-      CompileCurJobOnMaster(job, &sub_plans.at(job_id), true);
+    auto CompileHelperJob = [&](Job* job) {
+      jobs.at(job_id) = *job;
+      AddJobName2JobId(job->job_conf().job_name(), job_id);
+      {
+        auto scope = std::make_unique<GlobalJobDescScope>(job->job_conf(), job_id);
+        CompileCurJobOnMaster(job, &sub_plans.at(job_id), true);
+      }
+      ++job_id;
+    };
+    for (const auto& pair : push_op_name2parallel_blob_conf) {
+      Job push_job;
+      MakePushJob(std::string("System-Push-") + pair.first, pair.first, pair.second, &push_job);
+      CompileHelperJob(&push_job);
     }
-    ++job_id;
-  };
-  for (const auto& pair : push_op_name2parallel_blob_conf) {
-    Job push_job;
-    MakePushJob(std::string("System-Push-") + pair.first, pair.first, pair.second, &push_job);
-    CompileHelperJob(&push_job);
-  }
-  for (const auto& pair : pull_op_name2parallel_blob_conf) {
-    Job pull_job;
-    MakePullJob(std::string("System-Pull-") + pair.first, pair.first, pair.second, &pull_job);
-    CompileHelperJob(&pull_job);
-  }
-  for (const auto& outer_pair : parallel_blob_conf2input_op_name2output_op_name) {
-    const auto parallel_blob_conf = outer_pair.first;
-    for (const auto& pair : outer_pair.second) {
-      Job arg_pass_job;
-      MakeArgPassJob("System-ArgPass-" + pair.first, parallel_blob_conf, pair.first, pair.second,
-                     &arg_pass_job);
-      CompileHelperJob(&arg_pass_job);
+    for (const auto& pair : pull_op_name2parallel_blob_conf) {
+      Job pull_job;
+      MakePullJob(std::string("System-Pull-") + pair.first, pair.first, pair.second, &pull_job);
+      CompileHelperJob(&pull_job);
     }
-  }
-  {
-    Job model_init_job;
-    HashMap<std::string, OperatorConf> var_op_name2op_conf;
-    FilterVariableOps(jobs, &var_op_name2op_conf);
-    MakeModelInitJob("System-ModelInit", &model_init_job, var_op_name2op_conf,
-                     var_op_name2parallel_blob_conf);
-    CompileHelperJob(&model_init_job);
-  }
-  {
-    Job model_save_job;
-    MakeModelSaveJob("System-ModelSave", var_op_name2parallel_blob_conf, &model_save_job);
-    CompileHelperJob(&model_save_job);
-  }
-  if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
+    for (const auto& outer_pair : parallel_blob_conf2input_op_name2output_op_name) {
+      const auto parallel_blob_conf = outer_pair.first;
+      for (const auto& pair : outer_pair.second) {
+        Job arg_pass_job;
+        MakeArgPassJob("System-ArgPass-" + pair.first, parallel_blob_conf, pair.first, pair.second,
+                       &arg_pass_job);
+        CompileHelperJob(&arg_pass_job);
+      }
+    }
+    {
+      Job model_init_job;
+      HashMap<std::string, OperatorConf> var_op_name2op_conf;
+      FilterVariableOps(jobs, &var_op_name2op_conf);
+      MakeModelInitJob("System-ModelInit", &model_init_job, var_op_name2op_conf,
+                       var_op_name2parallel_blob_conf);
+      CompileHelperJob(&model_init_job);
+    }
+    {
+      Job model_save_job;
+      MakeModelSaveJob("System-ModelSave", var_op_name2parallel_blob_conf, &model_save_job);
+      CompileHelperJob(&model_save_job);
+    }
     InterJobMemSharingUtil::BindInterfaceMemBlockId(jobs, &sub_plans);
     FinishGlobalCriticalSectionDesc(sub_plans);
     MergePlan(plan, sub_plans);
@@ -918,11 +916,6 @@ Oneflow::Oneflow(const oneflow::JobSet& job_set) {
   global_objects_scope4job_conf_.reset(new GlobalObjectsScope4JobConf(job_set));
   // Runtime
   CompileAndMergePlanOnMaster(job_set.job(), &plan_);
-  if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
-    PushPlan("plan", plan_);
-  } else {
-    PullPlan("plan", &plan_);
-  }
   if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
     runtime_buffers_scope_.reset(new RuntimeBuffersScope(plan_));
   }
