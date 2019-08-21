@@ -29,4 +29,14 @@ void OptimizerCompTaskNode::InferProducedDataRegstTimeShape() {
   });
 }
 
+void OptimizerCompTaskNode::GenerateNonCtrlRegstHandlerProto(TaskProto* task_proto) const {
+  RegstHandlerProto naive_proto = CreateRegstHandlerProto("Naive");
+  ForEachNonCtrlConsumedRegstDescId([&](int64_t regst_desc_id) {
+    naive_proto.mutable_consumed_regst_desc_ids()->add_regst_desc_id(regst_desc_id);
+  });
+  ForEachNonCtrlProducedRegstDescId([&](int64_t regst_desc_id) {
+    naive_proto.mutable_produced_regst_desc_ids()->add_regst_desc_id(regst_desc_id);
+  });
+}
+
 }  // namespace oneflow

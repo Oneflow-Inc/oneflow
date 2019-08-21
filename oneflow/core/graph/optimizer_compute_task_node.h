@@ -20,6 +20,7 @@ class OptimizerCompTaskNode final : public CompTaskNode {
  private:
   void BuildExecGphAndRegst() override;
   void InferProducedDataRegstTimeShape() override;
+  void GenerateNonCtrlRegstHandlerProto(TaskProto*) const override;
 };
 
 }  // namespace oneflow

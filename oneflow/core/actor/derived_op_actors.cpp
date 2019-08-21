@@ -12,6 +12,7 @@ class GeneralOpActor final : public OpActor {
 };
 
 REGISTER_NEW_ACTOR(TaskType::kLoss, GeneralOpActor);
+REGISTER_NEW_ACTOR(TaskType::kOptimizer, GeneralOpActor);
 
 class InplaceOpActor final : public OpActor {
  public:

@@ -63,7 +63,7 @@ void Thread::PollMsgChannel(const ThreadCtx& thread_ctx) {
 
 namespace {
 const HashSet<TaskType>& TaskWithNewActor() {
-  static HashSet<TaskType> tasks = {TaskType::kLoss};
+  static HashSet<TaskType> tasks = {TaskType::kLoss, TaskType::kOptimizer};
   return tasks;
 }
 }  // namespace

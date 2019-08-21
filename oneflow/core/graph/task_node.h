@@ -17,6 +17,9 @@ RegstDescProto* FindOrCreateProducedCtrlRegstDesc(TaskProto* task_proto,
 RegstDescIdSet* FindOrCreateConsumedCtrlRegstDescIdSet(TaskProto* task_proto,
                                                        const std::string& regst_desc_name);
 
+RegstHandlerProto CreateRegstHandlerProto(const std::string&);
+bool IsRegstHandlerProtoEmpty(const RegstHandlerProto&);
+
 class TaskEdge;
 
 class TaskNode : public Node<TaskNode, TaskEdge> {
@@ -129,10 +132,15 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   size_t GetEdgesSize(void (TaskNode::*ForEachEdge)(const std::function<void(TaskEdge*)>&)
                           const) const;
   HashSet<int64_t> GetAllCtrlRegstDescIds() const;
+  void ForEachNonCtrlConsumedRegstDescId(std::function<void(int64_t)>) const;
+  void ForEachNonCtrlProducedRegstDescId(std::function<void(int64_t)>) const;
 
  private:
   void UpdateTaskId();
-  virtual void GenerateProto4Actor(TaskProto*) {}
+  void GenerateProto4Actor(TaskProto*) const;
+  virtual void GenerateNonCtrlRegstHandlerProto(TaskProto*) const {
+    // TODO(niuchong): marked as pure virtual
+  }
 
   int64_t machine_id_;
   int64_t thrd_id_;

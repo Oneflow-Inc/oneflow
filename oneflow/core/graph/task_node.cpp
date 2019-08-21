@@ -36,6 +36,22 @@ bool IsBackwardTaskType(TaskType tt) {
 
 bool IsMdUpdtTaskType(TaskType tt) { return tt == TaskType::kNormalMdUpdt; }
 
+RegstHandlerProto CreateRegstHandlerProto(const std::string& type) {
+  RegstHandlerProto proto;
+  proto.set_type(type);
+  proto.mutable_consumed_regst_desc_ids();
+  proto.mutable_produced_regst_desc_ids();
+  return proto;
+}
+
+bool IsRegstHandlerProtoEmpty(const RegstHandlerProto& proto) {
+  if (proto.consumed_regst_desc_ids().regst_desc_id_size() > 0
+      || proto.produced_regst_desc_ids().regst_desc_id_size() > 0) {
+    return false;
+  }
+  return true;
+}
+
 TaskNode::TaskNode()
     : machine_id_(-1),
       thrd_id_(-1),
@@ -493,6 +509,40 @@ HashSet<int64_t> TaskNode::GetAllCtrlRegstDescIds() const {
     }
   }
   return id_set;
+}
+
+void TaskNode::GenerateProto4Actor(TaskProto* task_proto) const {
+  RegstHandlerProto proto = CreateRegstHandlerProto("Ctrl");
+  for (const auto& pair : consumed_regsts()) {
+    if (pair.first == "in_ctrl") {
+      for (const auto& regst_desc : pair.second) {
+        int64_t regst_desc_id = regst_desc->regst_desc_id();
+        proto.mutable_consumed_regst_desc_ids()->add_regst_desc_id(regst_desc_id);
+      }
+    }
+  }
+  for (const auto& pair : produced_regsts()) {
+    if (pair.second->regst_desc_type().has_ctrl_regst_desc()) {
+      int64_t regst_desc_id = pair.second->regst_desc_id();
+      proto.mutable_produced_regst_desc_ids()->add_regst_desc_id(regst_desc_id);
+    }
+  }
+  if (!IsRegstHandlerProtoEmpty(proto)) { *(task_proto->mutable_regst_handlers()->Add()) = proto; }
+  GenerateNonCtrlRegstHandlerProto(task_proto);
+}
+
+void TaskNode::ForEachNonCtrlConsumedRegstDescId(std::function<void(int64_t)> handler) const {
+  for (const auto& pair : consumed_regsts()) {
+    if (pair.first == "in_ctrl") { continue; }
+    for (const auto& regst_desc : pair.second) { handler(regst_desc->regst_desc_id()); }
+  }
+}
+
+void TaskNode::ForEachNonCtrlProducedRegstDescId(std::function<void(int64_t)> handler) const {
+  for (const auto& pair : produced_regsts()) {
+    if (pair.second->regst_desc_type().has_ctrl_regst_desc()) { continue; }
+    handler(pair.second->regst_desc_id());
+  }
 }
 
 std::map<TaskType, std::string> task_type2color = {{kInvalid, "0"},
