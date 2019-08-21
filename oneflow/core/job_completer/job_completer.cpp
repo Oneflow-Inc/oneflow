@@ -358,10 +358,10 @@ void FixReturnOpParallelConf(Job* job) {
                                         job_builder.ParallelConf4OpName(lbi.op_name()));
   }
 }
-void EnableNonDistributedOptimizer(const OpGraph& op_graph, Job* job) {
+void EnableNonDistributedOptimizer(const OpGraph& op_graph, JobBuilder* job_builder) {
   if (!Global<JobDesc>::Get()->enable_non_distributed_optimizer()) { return; }
   CHECK(Global<JobDesc>::Get()->enable_nccl());
-  NonDistributedOptimizerPass().Apply(op_graph, job);
+  NonDistributedOptimizerPass().Apply(op_graph, job_builder);
 }
 
 void GroupNcclTupleBroadcast(const OpGraph& op_graph, Job* job) {
@@ -387,7 +387,7 @@ void JobCompleter::Complete(Job* job) const {
   if (GlobalJobDesc().IsTrain()) {
     WithOpGraphAndMutJobBuilder(job, &TieUpChainHeadersUnReachableFromAnyVariableOps);
     WithOpGraphAndMutJobBuilder(job, &EnableAutoMixedPrecision);
-    WithOpGraphAndMutJob(job, &EnableNonDistributedOptimizer);
+    WithOpGraphAndMutJobBuilder(job, &EnableNonDistributedOptimizer);
     // complete ops for trainning
     WithOpGraphAndMutJobBuilder(job, &GenerateOpConf4Trainning);
     WithOpGraphAndMutJobBuilder(job, &GroupNcclTupleBroadcast);
