@@ -512,5 +512,8 @@ std::map<TaskType, std::string> task_type2color = {
     {kUnpackForward, "11"}, {kRepeatForward, "2"},
     {kReduceIdentity, "2"}, {kAcc, "5"},
     {kOptimizer, "12"},     {kEveryNth, "2"},
-    {kCase, "2"},           {kEsac, "2"}};
+    {kCase, "2"},           {kEsac, "2"},
+                                                   {kNcclTupleBroadcast, "2"},
+                                                   {kNcclTupleReduce, "2"}
+};
 }  // namespace oneflow
