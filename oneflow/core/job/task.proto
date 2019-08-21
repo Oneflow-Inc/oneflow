@@ -45,6 +45,8 @@ enum TaskType {
   kCallbackNotify = 47;
   kForeignInput = 48;
   kForeignOutput = 49;
+  kNcclTupleBroadcast = 50;
+  kNcclTupleReduce = 51;
 };
 
 enum AreaType {

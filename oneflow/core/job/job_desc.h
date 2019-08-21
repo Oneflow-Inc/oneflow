@@ -59,6 +59,9 @@ class JobDesc final {
     return job_.job_conf().use_nccl_inter_node_communication();
   }
   bool enable_all_reduce_group() const { return job_.job_conf().enable_all_reduce_group(); }
+  bool enable_non_distributed_optimizer() const {
+    return job_.job_conf().enable_non_distributed_optimizer();
+  }
   int64_t all_reduce_group_num() const;
   int64_t all_reduce_group_min_byte() const;
   float all_reduce_group_size_warmup() const;
