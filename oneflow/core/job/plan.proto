@@ -2,6 +2,7 @@ syntax = "proto2";
 package oneflow;
 
 import "oneflow/core/job/task.proto";
+import "oneflow/core/job/job.proto";
 
 message MachineIds {
   repeated int64 machine_id = 1;
@@ -15,4 +16,5 @@ message Plan {
   repeated TaskProto task = 1;
   required int64 total_mbn_num = 2;
   required NetTopo net_topo = 3;
+  map<int64, JobConfigProto> job_id2job_conf = 4;
 }
