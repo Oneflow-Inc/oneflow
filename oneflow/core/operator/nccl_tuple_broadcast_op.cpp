@@ -78,11 +78,7 @@ void NcclTupleBroadcastOp::InferSbpSignature(
     CHECK(SbpInferHint4Ibn(ibn).sbp_parallel().has_broadcast_parallel()
           || SbpInferHint4Ibn(ibn).parallel_desc().parallel_num() == 1);
   }
-  SbpSignatureBuilder()
-      .Broadcast(input_bns())
-      .Split("tick", 0)
-      .Broadcast(output_bns())
-      .Build(sbp_signature);
+  SbpSignatureBuilder().Broadcast(input_bns()).Broadcast(output_bns()).Build(sbp_signature);
 }
 
 LogicalNode* NcclTupleBroadcastOp::NewProperLogicalNode() const {
