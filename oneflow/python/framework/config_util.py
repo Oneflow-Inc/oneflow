@@ -226,6 +226,11 @@ class JobConfigProtoBuilder(object):
         self.job_conf_.all_reduce_fp16 = val
         return self
 
+    def enable_non_distributed_optimizer(self, val=True):
+        assert type(val) is bool
+        self.job_conf_.enable_non_distributed_optimizer = val
+        return self
+
     def concurrency_width(self, val):
         assert type(val) is int
         self.job_conf_.concurrency_width = val
