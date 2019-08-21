@@ -33,7 +33,13 @@ int OpActor::HandlerNormal(OpActor* actor, const ActorMsg& msg) {
   ActUntilFail(actor);
   if (actor->NoLongerConsumeRegst()) {
     actor->SendEordMsgForProducedRegst();
-    OF_SET_OP_ACTOR_MSG_HANDLER(actor, &OpActor::HandlerZombie);
+    if (actor->NoLongerConsumedByOthers()) {
+      OF_CLEAR_OP_ACTOR_MSG_HANDLER(actor);
+      return 1;
+    } else {
+      OF_SET_OP_ACTOR_MSG_HANDLER(actor, &OpActor::HandlerZombie);
+      return 0;
+    }
   }
   return 0;
 }
@@ -102,6 +108,7 @@ void OpActor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
   }
   InitRegstHandlersFromProto(task_proto);
   InitMsgHandler();
+  InitOtherVal();
 }
 
 void OpActor::InitRegstHandlersFromProto(const TaskProto& task_proto) {
@@ -167,6 +174,7 @@ bool OpActor::IsReady() const {
 }
 
 void OpActor::Act() {
+  SetOtherVal4CurAct(kernel_ctx_->other.get());
   for (const ExecKernel& ek : exec_kernel_vec_) {
     ek.kernel->Launch(*kernel_ctx_, [&](const std::string& bn_in_op) -> Blob* {
       auto it = ek.bn_in_op2regst_desc_id.find(bn_in_op);

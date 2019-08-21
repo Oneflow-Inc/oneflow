@@ -50,6 +50,7 @@ class OpActor : public NewActor {
 
   virtual void InitMsgHandler() = 0;
   virtual void InitOtherVal() = 0;
+  virtual void SetOtherVal4CurAct(void*) = 0;
 
   int64_t actor_id_;
   int64_t act_id_;
