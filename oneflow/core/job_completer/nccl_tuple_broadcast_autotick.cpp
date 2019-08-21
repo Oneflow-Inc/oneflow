@@ -8,7 +8,7 @@ class MutNcclTupleBroadcastOpConTickInputHelper final : public MutOpConTickInput
  public:
   MutNcclTupleBroadcastOpConTickInputHelper() : MutOpConTickInputHelper() {}
 
-  bool IsTickInputBound() const override {
+  bool VirtualIsTickInputBound() const override {
     return op_conf().nccl_tuple_broadcast_conf().has_tick();
   }
 
