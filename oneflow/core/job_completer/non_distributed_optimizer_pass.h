@@ -6,7 +6,7 @@
 namespace oneflow {
 
 class OpGraph;
-class Job;
+class JobBuilder;
 
 class NonDistributedOptimizerPass final {
  public:
@@ -14,7 +14,7 @@ class NonDistributedOptimizerPass final {
   NonDistributedOptimizerPass() = default;
   ~NonDistributedOptimizerPass() = default;
 
-  void Apply(const OpGraph& op_graph, Job* job);
+  void Apply(const OpGraph& op_graph, JobBuilder* job_builder);
 };
 
 }  // namespace oneflow

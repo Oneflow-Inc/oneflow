@@ -26,8 +26,7 @@ ParallelConf NonDistributedParallelConf4ParallelId(const ParallelDesc& pd,
 
 }  // namespace
 
-void NonDistributedOptimizerPass::Apply(const OpGraph& op_graph, Job* job) {
-  JobBuilder builder(job);
+void NonDistributedOptimizerPass::Apply(const OpGraph& op_graph, JobBuilder* builder) {
   HashMap<ParallelDesc, HashMap<const OpNode*, std::vector<const OpNode*>>> pd2last_node2node_seqs;
   HashMap<const OpNode*, OperatorConf> op_node2op_conf;
   HashMap<const OpNode*, int64_t> last_node2out_size;
@@ -92,7 +91,7 @@ void NonDistributedOptimizerPass::Apply(const OpGraph& op_graph, Job* job) {
       const int64_t& parallel_id = last_node2parallel_id.at(last_node);
       for (const OpNode* node : last_node7node_seqs.second) {
         const ParallelConf parallel_conf = NonDistributedParallelConf4ParallelId(pd, parallel_id);
-        builder.MutOpsWithNewParallelConf(parallel_conf, {node->op().op_conf()});
+        builder->MutParallelConfOnlyOnce(node->op().op_name(), parallel_conf);
       }
       OperatorConf nccl_broadcast_op_conf{};
       nccl_broadcast_op_conf.set_name("System-Boxing-NcclTupleBroadcast-" + NewUniqueId());
@@ -105,7 +104,7 @@ void NonDistributedOptimizerPass::Apply(const OpGraph& op_graph, Job* job) {
       *tuple_broadcast_conf->mutable_root()->Add() = parallel_id;
       *tuple_broadcast_conf->mutable_data_type()->Add() = blob_desc.data_type();
       blob_desc.shape().ToProto(tuple_broadcast_conf->mutable_shape()->Add());
-      builder.AddOrMutOps(pd.parallel_conf(), {nccl_broadcast_op_conf});
+      builder->AddOrMutOpsOnlyOnce(pd.parallel_conf(), {nccl_broadcast_op_conf});
       const std::string new_lbn = nccl_broadcast_op_conf.name() + "/out";
       last_node->ForEachNodeOnOutEdge([&](const OpNode* dst) {
         for (const std::string& ibn : dst->op().input_bns()) {
@@ -118,7 +117,7 @@ void NonDistributedOptimizerPass::Apply(const OpGraph& op_graph, Job* job) {
       });
     }
     for (const auto& op_node7op_conf : op_node2op_conf) {
-      builder.MutOps({op_node7op_conf.second});
+      builder->MutOpsOnlyOnce({op_node7op_conf.second});
     }
   }
 }
