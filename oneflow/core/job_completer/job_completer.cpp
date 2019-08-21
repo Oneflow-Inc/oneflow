@@ -11,6 +11,9 @@
 #include "oneflow/core/job_completer/all_reduce_sequence_pass.h"
 #include "oneflow/core/job_completer/group_boxing_by_dst_parallel.h"
 #include "oneflow/core/job_completer/auto_mixed_precision.h"
+#include "oneflow/core/job_completer/non_distributed_optimizer_pass.h"
+#include "oneflow/core/job_completer/nccl_tuple_broadcast_group_pass.h"
+#include "oneflow/core/job_completer/nccl_tuple_reduce_group_pass.h"
 
 namespace oneflow {
 
@@ -355,6 +358,26 @@ void FixReturnOpParallelConf(Job* job) {
                                         job_builder.ParallelConf4OpName(lbi.op_name()));
   }
 }
+void EnableNonDistributedOptimizer(const OpGraph& op_graph, Job* job) {
+  if (!Global<JobDesc>::Get()->enable_non_distributed_optimizer()) { return; }
+  CHECK(Global<JobDesc>::Get()->enable_nccl());
+  NonDistributedOptimizerPass().Apply(op_graph, job);
+}
+
+
+void GroupNcclTupleBroadcast(const OpGraph& op_graph, Job* job) {
+  if (!Global<JobDesc>::Get()->enable_non_distributed_optimizer()) { return; }
+  CHECK(Global<JobDesc>::Get()->enable_nccl());
+  NcclTupleBroadcastGroupPass().Apply(op_graph, job);
+}
+
+void GroupNcclTupleReduce(const OpGraph& op_graph, Job* job) {
+  if (!Global<JobDesc>::Get()->enable_non_distributed_optimizer()) { return; }
+  CHECK(Global<JobDesc>::Get()->enable_nccl());
+  NcclTupleReduceGroupPass().Apply(op_graph, job);
+}
+
+
 
 }  // namespace
 
@@ -365,10 +388,13 @@ void JobCompleter::Complete(Job* job) const {
   WithOpGraphAndMutJobBuilder(job, &AutoVar);
   WithOpGraphAndMutJobBuilder(job, &SetDefaultVariableConf);
   if (GlobalJobDesc().IsTrain()) {
-    WithOpGraphAndMutJob(job, &TieUpChainHeadersUnReachableFromAnyVariableOps);
+    WithOpGraphAndMutJobBuilder(job, &TieUpChainHeadersUnReachableFromAnyVariableOps);
     WithOpGraphAndMutJobBuilder(job, &EnableAutoMixedPrecision);
+    WithOpGraphAndMutJob(job, &EnableNonDistributedOptimizer);
     // complete ops for trainning
     WithOpGraphAndMutJobBuilder(job, &GenerateOpConf4Trainning);
+    WithOpGraphAndMutJobBuilder(job, &GroupNcclTupleBroadcast);
+    WithOpGraphAndMutJobBuilder(job, &GroupNcclTupleReduce);
     WithOpGraphAndMutJobBuilder(job, &RewriteBoxingWithAllReduce);
     WithOpGraphAndMutJobBuilder(job, &MakeAllReduceSequence);
   }
