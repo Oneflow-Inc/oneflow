@@ -129,7 +129,6 @@ void CompileCurJobOnMaster(Job* job, Plan* improved_plan, bool need_job_complete
     LOG(INFO) << "compile time: " << GetCurTime() - start;
     mem_shared_plan =
         Improver().ImproveMemSharedIdOnly(*Global<AvailableMemDesc>::Get(), naive_plan);
-    OF_BARRIER();
     TeePersistentLogStream::Create("naive_plan")->Write(naive_plan);
     TeePersistentLogStream::Create("mem_shared_plan")->Write(mem_shared_plan);
     LOG(INFO) << "push_pull_plan:" << GetCurTime() - start;
@@ -140,6 +139,7 @@ void CompileCurJobOnMaster(Job* job, Plan* improved_plan, bool need_job_complete
     } else {
       PullPlan("mem_shared_plan", &mem_shared_plan);
     }
+    OF_BARRIER();
     // Experiment Runtime
     { Runtime experiment_run(mem_shared_plan, job_desc.piece_num_of_experiment_phase(), true); }
     // Improve
@@ -151,8 +151,6 @@ void CompileCurJobOnMaster(Job* job, Plan* improved_plan, bool need_job_complete
           JoinPath(FLAGS_log_dir, ActEventLogger::experiment_act_event_bin_filename()));
       OF_BARRIER();
       TeePersistentLogStream::Create("improved_plan")->Write(*improved_plan);
-      Global<CtrlClient>::Get()->Clear();
-      OF_BARRIER();
     }
   } else {
     *improved_plan = mem_shared_plan;
@@ -898,6 +896,7 @@ void CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan) {
   } else {
     PullPlan("merged_plan", plan);
   }
+  OF_BARRIER();
 }
 
 }  // namespace

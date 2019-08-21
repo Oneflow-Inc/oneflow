@@ -151,8 +151,7 @@ if __name__ == '__main__':
   config.grpc_use_no_signal()
   #config.model_load_snapshot_path(_MODEL_LOAD)
   config.model_save_snapshots_path(_MODEL_SAVE)
-  flow.deprecated.init_worker(config)
-  flow.init(config)
+  flow.deprecated.init_worker_and_master(config)
 
   flow.add_job(PretrainJob)
   with flow.Session() as sess:
