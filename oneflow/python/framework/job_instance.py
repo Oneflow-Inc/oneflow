@@ -3,7 +3,7 @@ from __future__ import absolute_import
 import traceback
 import sys
 import oneflow.python.framework.ofblob as ofblob
-import oneflow_internal
+import oneflow.oneflow_internal as oneflow_internal
 
 def MakeUserJobInstance(job_name, finish_cb = None):
     return MakeJobInstance(job_name, finish_cb = finish_cb)
@@ -108,4 +108,3 @@ class JobInstance(oneflow_internal.ForeignJobInstance):
 
 # span python object lifetime
 _flying_job_instance = {}
-

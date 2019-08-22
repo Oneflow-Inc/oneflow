@@ -160,7 +160,6 @@ elseif(WIN32)
 endif()
 
 # build swig
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/python_scripts)
 foreach(swig_name ${of_all_swig})
   file(RELATIVE_PATH swig_rel_name ${PROJECT_SOURCE_DIR} ${swig_name})
   list(APPEND of_all_rel_swigs ${swig_rel_name})
@@ -189,8 +188,8 @@ else()
   include_directories(${Python2_INCLUDE_DIRS} ${Python2_NumPy_INCLUDE_DIRS})
 endif()
 oneflow_add_library(oneflow_internal SHARED ${SWIG_SRCS} ${SWIG_HDRS} ${of_main_cc})
-SET_TARGET_PROPERTIES(oneflow_internal PROPERTIES PREFIX "_")
-set_target_properties(oneflow_internal PROPERTIES CMAKE_LIBRARY_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/python_scripts")
+set_target_properties(oneflow_internal PROPERTIES PREFIX "_")
+set_target_properties(oneflow_internal PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/python_scripts/oneflow")
 target_link_libraries(oneflow_internal ${of_libs} ${oneflow_third_party_libs})
 
 set(of_pyscript_dir "${PROJECT_BINARY_DIR}/python_scripts")
