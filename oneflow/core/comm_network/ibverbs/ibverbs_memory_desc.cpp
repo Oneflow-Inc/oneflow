@@ -1,5 +1,6 @@
 #include "oneflow/core/comm_network/ibverbs/ibverbs_memory_desc.h"
 #include "oneflow/core/job/job_desc.h"
+#include "oneflow/core/job/resource_desc.h"
 
 #if defined(WITH_RDMA) && defined(PLATFORM_POSIX)
 
