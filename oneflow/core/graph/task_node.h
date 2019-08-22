@@ -17,6 +17,7 @@ RegstDescProto* FindOrCreateProducedCtrlRegstDesc(TaskProto* task_proto,
 RegstDescIdSet* FindOrCreateConsumedCtrlRegstDescIdSet(TaskProto* task_proto,
                                                        const std::string& regst_desc_name);
 
+// the only way to create RegstHandlerProto
 RegstHandlerProto CreateRegstHandlerProto(const std::string&);
 bool IsRegstHandlerProtoEmpty(const RegstHandlerProto&);
 

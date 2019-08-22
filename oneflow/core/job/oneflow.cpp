@@ -145,10 +145,10 @@ void PullPlan(const std::string& plan_name, Plan* plan) {
 }
 
 void UpdateCtrlRegstHandler4MemSharedPlan(Plan* plan) {
-  for (int64_t i = 0; i < plan->task_size(); ++i) {
+  for (int i = 0; i < plan->task_size(); ++i) {
     TaskProto* task = plan->mutable_task(i);
     std::shared_ptr<RegstHandlerProto> ctrl_handler_proto;
-    for (int64_t j = 0; j < task->regst_handlers_size(); ++j) {
+    for (int j = 0; j < task->regst_handlers_size(); ++j) {
       RegstHandlerProto* handler_proto = task->mutable_regst_handlers(j);
       if (handler_proto->type() == "Ctrl") { ctrl_handler_proto.reset(handler_proto); }
     }
@@ -157,10 +157,7 @@ void UpdateCtrlRegstHandler4MemSharedPlan(Plan* plan) {
       ctrl_handler_proto->mutable_consumed_regst_desc_ids()->clear_regst_desc_id();
       ctrl_handler_proto->mutable_produced_regst_desc_ids()->clear_regst_desc_id();
     } else {
-      ctrl_handler_proto = std::make_shared<RegstHandlerProto>();
-      ctrl_handler_proto->set_type("Ctrl");
-      ctrl_handler_proto->mutable_consumed_regst_desc_ids();
-      ctrl_handler_proto->mutable_produced_regst_desc_ids();
+      ctrl_handler_proto = std::make_shared<RegstHandlerProto>(CreateRegstHandlerProto("Ctrl"));
     }
 
     for (const auto& pair : task->consumed_regst_desc_id()) {
@@ -176,7 +173,7 @@ void UpdateCtrlRegstHandler4MemSharedPlan(Plan* plan) {
             pair.second.regst_desc_id());
       }
     }
-    if (!already_have_ctrl_handler) {
+    if (!already_have_ctrl_handler && !IsRegstHandlerProtoEmpty(*ctrl_handler_proto)) {
       *(task->mutable_regst_handlers()->Add()) = *ctrl_handler_proto;
     }
   }
