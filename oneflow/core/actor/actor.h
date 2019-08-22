@@ -228,6 +228,8 @@ class Actor {
   bool is_inplace_consumed_eord_;
   HashMap<int64_t, int64_t> inplace_regst_desc_id_in2out_;
   HashMap<int64_t, int64_t> inplace_regst_desc_id_out2in_;
+
+  std::deque<ActorMsg> async_actor_msg_deque_;
 };
 
 std::unique_ptr<Actor> NewActor(const TaskProto&, const ThreadCtx&);

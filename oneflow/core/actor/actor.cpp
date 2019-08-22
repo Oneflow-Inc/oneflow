@@ -372,6 +372,14 @@ void Actor::ActUntilFail() {
 
     AsyncSendCustomizedConsumedRegstMsgToProducer();
     AsyncSendNaiveConsumedRegstMsgToProducer();
+
+    std::deque<ActorMsg> msgs;
+    msgs.swap(async_actor_msg_deque_);
+    device_ctx_->AddCallBack([msgs](){
+      for(const ActorMsg& msg : msgs) {
+        Global<ActorMsgBus>::Get()->SendMsg(msg);
+      }
+    });
   }
 }
 
@@ -621,9 +629,9 @@ void Actor::AsyncSendMsg(const ActorMsg& msg) {
   std::function<void()> callback = [msg]() { Global<ActorMsgBus>::Get()->SendMsg(msg); };
   if (GetGlobalWorkStreamId()
       == Global<IDMgr>::Get()->GlobalWorkStreamId4ActorId(msg.dst_actor_id())) {
-    callback();
+    Global<ActorMsgBus>::Get()->SendMsg(msg);
   } else {
-    device_ctx_->AddCallBack(callback);
+    async_actor_msg_deque_.push_back(msg);
   }
 }
 
