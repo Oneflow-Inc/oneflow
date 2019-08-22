@@ -4,11 +4,7 @@
 namespace oneflow {
 
 const PbMessage& NaiveModelUpdateOp::GetCustomizedConf() const {
-  if (GlobalJobDesc().other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
-    return op_conf().naive_model_update_conf();
-  } else {
-    UNIMPLEMENTED();
-  }
+  return op_conf().naive_model_update_conf();
 }
 
 const HashSet<std::string> NaiveModelUpdateOp::AlwaysBroadcastParallelBns() const {

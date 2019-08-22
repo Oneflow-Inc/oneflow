@@ -12,12 +12,11 @@ message FieldHeaderDesc {
 
 message BlobHeaderDescProto {
   required int32 max_col_num = 1;
-  required int32 blob_mem_id = 2;
   oneof header_type {
-    FieldDescProto opaque_header = 3;
-    FieldHeaderDesc field_header = 4;
+    FieldDescProto opaque_header = 2;
+    FieldHeaderDesc field_header = 3;
   }
-  required StructPodProto header_pod_desc = 5;
+  required StructPodProto header_pod_desc = 4;
 }
 
 message BlobDescProto {

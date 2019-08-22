@@ -27,7 +27,7 @@ void ReentrantLockCompActor::NormalProcessCustomizedReadableRegstMsg(const Actor
 }
 
 bool ReentrantLockCompActor::IsCustomizedReadReady() const {
-  return -1 != GetCurProcessedRegstDescId();
+  return reentrant_lock_status_.cur_unlocked_ids().size() > 0 || -1 != GetCurProcessedRegstDescId();
 }
 
 void ReentrantLockCompActor::ForEachCurCustomizedReadableRegst(
@@ -35,10 +35,15 @@ void ReentrantLockCompActor::ForEachCurCustomizedReadableRegst(
   handler(consumed_rs_.Front(cur_processed_regst_desc_id_));
 }
 
+const std::string& ReentrantLockCompActor::Ibn4RegstDescId(int64_t id) const {
+  const auto& iter = regst_desc_id2ibn_.find(id);
+  if (iter == regst_desc_id2ibn_.end()) { return ReentrantLockStatus::kEmptyIbn; }
+  return regst_desc_id2ibn_.at(id);
+}
+
 void ReentrantLockCompActor::Act() {
   cur_processed_regst_desc_id_ = GetCurProcessedRegstDescId();
-  Regst* cur_regst = consumed_rs_.Front(cur_processed_regst_desc_id_);
-  CHECK(cur_regst);
+  Regst* const cur_regst = consumed_rs_.Front(cur_processed_regst_desc_id_);
   reentrant_lock_status_.set_cur_ibn(Ibn4RegstDescId(cur_processed_regst_desc_id_));
   reentrant_lock_status_.set_cur_act_id(act_id());
   KernelCtx kernel_ctx = GenDefaultKernelCtx();
@@ -56,13 +61,13 @@ bool ReentrantLockCompActor::IsCustomizedReadAlwaysUnReadyFromNow() const {
 }
 
 void ReentrantLockCompActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
-  if (reentrant_lock_status_.cur_act_one_lock_acquired() == false) { return; }
+  if (reentrant_lock_status_.acquired_lock_to_be_sent() == false) { return; }
   HandleProducedNaiveDataRegstToConsumer([this](Regst* regst) { return true; });
 }
 
 void ReentrantLockCompActor::AsyncSendCustomizedConsumedRegstMsgToProducer() {
-  Regst* cur_regst = consumed_rs_.Front(cur_processed_regst_desc_id_);
-  CHECK(cur_regst);
+  Regst* const cur_regst = consumed_rs_.Front(cur_processed_regst_desc_id_);
+  if (cur_regst == nullptr) { return; }
   AsyncSendRegstMsgToProducer(cur_regst);
   CHECK_EQ(0, consumed_rs_.TryPopFrontRegst(cur_processed_regst_desc_id_));
   cur_processed_regst_desc_id_ = -1;

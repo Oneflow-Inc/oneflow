@@ -17,8 +17,6 @@ class ReduceIdentityOp final : public Operator {
   void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                       const ParallelContext* parallel_ctx) const override;
   const PbMessage& GetCustomizedConf() const override { return op_conf().reduce_identity_conf(); }
-  bool NeedInBlobWhenBackward() const override { return false; }
-  bool NeedOutBlobWhenBackward() const override { return false; }
 
  private:
   void InferHasBatchDim(
@@ -30,9 +28,6 @@ class ReduceIdentityOp final : public Operator {
                          const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
                          std::function<const SbpInferHint&(const std::string&)> SbpInferHint4Ibn,
                          const ParallelDesc& parallel_desc) const override;
-
-  LogicalBlobId ibn2lbi(const std::string& input_bn) const override;
-  LogicalBlobId obn2lbi(const std::string& output_bn) const override;
 };
 
 }  // namespace oneflow

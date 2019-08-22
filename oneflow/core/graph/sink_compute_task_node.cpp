@@ -15,7 +15,7 @@ void SinkCompTaskNode::BuildExecGphAndRegst() {
   for (const std::string& ibn : node->op()->input_bns()) {
     node->BindBnWithOneOfTheRegsts(ibn, GetConsumedRegst("in"));
   }
-  CHECK(node->op()->data_tmp_bns().empty());
+  CHECK(node->op()->tmp_bns().empty());
   CHECK(node->op()->output_bns().empty());
 }
 

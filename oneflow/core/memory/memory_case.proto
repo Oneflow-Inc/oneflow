@@ -1,8 +1,12 @@
 syntax = "proto2";
 package oneflow;
 
+message CudaPinnedMemory {
+  required int64 device_id = 1;
+}
+
 message HostMemory {
-  optional bool used_by_device = 1 [default = false];
+  optional CudaPinnedMemory cuda_pinned_mem = 1;
   optional bool used_by_network = 2 [default = false];
 }
 

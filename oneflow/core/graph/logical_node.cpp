@@ -1,12 +1,8 @@
 #include "oneflow/core/graph/logical_node.h"
 #include "oneflow/core/graph/normal_forward_compute_task_node.h"
 #include "oneflow/core/graph/optimizer_compute_task_node.h"
-#include "oneflow/core/graph/loss_accumulate_compute_task_node.h"
 #include "oneflow/core/graph/loss_compute_task_node.h"
-#include "oneflow/core/graph/loss_print_compute_task_node.h"
 #include "oneflow/core/graph/model_diff_accumulate_compute_task_node.h"
-#include "oneflow/core/graph/model_save_compute_task_node.h"
-#include "oneflow/core/graph/normal_model_update_compute_task_node.h"
 #include "oneflow/core/graph/print_compute_task_node.h"
 #include "oneflow/core/graph/decode_compute_task_node.h"
 #include "oneflow/core/graph/decode_random_compute_task_node.h"
@@ -20,8 +16,6 @@
 #include "oneflow/core/graph/nccl_reduce_scatter_compute_task_node.h"
 #include "oneflow/core/graph/nccl_all_gather_compute_task_node.h"
 #include "oneflow/core/graph/accuracy_compute_task_node.h"
-#include "oneflow/core/graph/accuracy_accumulate_compute_task_node.h"
-#include "oneflow/core/graph/accuracy_print_compute_task_node.h"
 #include "oneflow/core/graph/task_graph.h"
 #include "oneflow/core/graph/reduce_identity_task_node.h"
 #include "oneflow/core/graph/op_graph.h"
@@ -84,27 +78,6 @@ bool HasSoleIdentityOp(const LogicalNode* logical_node) {
 BldBoxingOpConfMthd GetBldBoxingOpConfMethodByFwParallelPolicy(const LogicalNode* in_logical,
                                                                const LogicalNode* out_logical) {
   return &BoxingTaskNode::BldBoxingOpConfWithFwSbpParallel;
-}
-
-BldBoxingOpConfMthd GetBldBoxingOpConfMethodByBwParallelPolicy(const LogicalNode* in_logical,
-                                                               const LogicalNode* out_logical) {
-  if (HasSoleIdentityOp(in_logical) || HasSoleIdentityOp(out_logical)) {
-    return &BoxingTaskNode::BldBoxingOpConfWithBwSbpParallel;
-  }
-  ParallelPolicy in_policy = in_logical->parallel_desc()->policy();
-  ParallelPolicy out_policy = out_logical->parallel_desc()->policy();
-  if (in_policy == kDataParallel && out_policy == kDataParallel) {
-    return &BoxingTaskNode::BldBoxingOpConfWithDataConcatAndDataSplit;
-  } else if (in_policy == kDataParallel && out_policy == kModelParallel) {
-    return &BoxingTaskNode::BldBoxingOpConfWithDataConcatAndModelSplit;
-  } else if (in_policy == kModelParallel && out_policy == kDataParallel) {
-    return &BoxingTaskNode::BldBoxingOpConfWithAddAndDataSplit;
-  } else if (in_policy == kModelParallel && out_policy == kModelParallel) {
-    return &BoxingTaskNode::BldBoxingOpConfWithAddAndModelSplit;
-  } else {
-    LOG(FATAL) << "out_diff " << in_policy << " in_diff " << out_policy;
-  }
-  return nullptr;
 }
 
 std::string ConcatTypeName(const LogicalNode* lhs, const LogicalNode* rhs) {
@@ -173,16 +146,7 @@ std::vector<LogicalBlobId> ReturnPackedLbi(const LogicalNode* src, const Logical
   return {GenPackedLbi()};
 }
 
-REGISTER_FUNC_FOR_FIND_LBIS("LossAcc"
-                            "LossPrint",
-                            ReturnPackedLbi);
-REGISTER_FUNC_FOR_FIND_LBIS("AccuracyAcc"
-                            "AccuracyPrint",
-                            ReturnPackedLbi);
 REGISTER_FUNC_FOR_FIND_LBIS("MdDiffAcc"
-                            "NormalMdUpdt",
-                            ReturnPackedLbi);
-REGISTER_FUNC_FOR_FIND_LBIS("NormalBackward"
                             "NormalMdUpdt",
                             ReturnPackedLbi);
 
@@ -223,21 +187,6 @@ std::string LogicalNode::VisualStr() const {
   ss << TypeName();
   for (std::shared_ptr<Operator> op : op_vec_) { ss << "\\n" << op->op_name(); }
   return ss.str();
-}
-
-bool LogicalNode::HasOpWithModelOrConstModelBlob() const {
-  return HasOpWithCondition([](const Operator* op) {
-    return op->model_bns().empty() == false || op->const_model_bns().empty() == false;
-  });
-}
-
-bool LogicalNode::HasOpWithModelBlob() const {
-  return HasOpWithCondition([](const Operator* op) { return op->model_bns().empty() == false; });
-}
-
-bool LogicalNode::HasOpWithForwardModelBlob() const {
-  return HasOpWithCondition(
-      [](const Operator* op) { return op->forward_model_bns().empty() == false; });
 }
 
 void LogicalNode::GenSortedCompTaskNodes(
@@ -323,9 +272,10 @@ BldSubTskGphMthd GetMthdForBldSubTskGph(const LogicalNode* src_node, const Logic
       CHECK(src_pd->parallel_num() == dst_pd->parallel_num());
       CHECK(src_pd->policy() == kDataParallel && dst_pd->policy() == kDataParallel);
     }
-    if ((src_node->SoleOp()->op_conf().has_source_tick_conf()
-         || src_node->SoleOp()->op_conf().has_tick_conf())
-        && dst_node->SoleOp()->op_conf().has_log_counter_conf() == false) {
+    if (src_node->SoleOp()->op_conf().has_source_tick_conf()
+        || src_node->SoleOp()->op_conf().has_tick_conf()
+        || dst_node->SoleOp()->op_conf().has_sink_tick_conf()
+        || dst_node->SoleOp()->op_conf().has_tick_conf()) {
       return &TaskGraph::BldSubTskGphByBroadcastToBroadcast;
     }
   }
@@ -350,17 +300,11 @@ REGISTER_BLD_SUB_TSK_GPH_MTHD("NormalMdUpdt"
                               "NormalForward",
                               &TaskGraph::BldSubTskGphByOneToOne);
 REGISTER_BLD_SUB_TSK_GPH_MTHD("NormalMdUpdt"
-                              "NormalBackward",
-                              &TaskGraph::BldSubTskGphByOneToOne);
-REGISTER_BLD_SUB_TSK_GPH_MTHD("NormalMdUpdt"
                               "MdSave",
                               BldSubTskGphToMdSave);
 REGISTER_BLD_SUB_TSK_GPH_MTHD("NormalForward"
                               "MdSave",
                               BldSubTskGphToMdSave);
-REGISTER_BLD_SUB_TSK_GPH_MTHD("NormalForward"
-                              "NormalBackward",
-                              &TaskGraph::BldSubTskGphByOneToOne);
 REGISTER_BLD_SUB_TSK_GPH_MTHD("NormalForward"
                               "ReduceConcat",
                               &TaskGraph::BldSubTskGphByOneToOne);
@@ -385,22 +329,10 @@ REGISTER_BLD_SUB_TSK_GPH_MTHD("NcclAllReduce"
 REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceSplit"
                               "NormalForward",
                               &TaskGraph::BldSubTskGphByOneToOne);
-REGISTER_BLD_SUB_TSK_GPH_MTHD("NormalBackward"
-                              "MdDiffAcc",
-                              &TaskGraph::BldSubTskGphByOneToOne);
 REGISTER_BLD_SUB_TSK_GPH_MTHD("RecordLoad"
                               "Decode",
                               &TaskGraph::BldSubTskGphByOneToOne);
-REGISTER_BLD_SUB_TSK_GPH_MTHD("Loss"
-                              "LossAcc",
-                              &TaskGraph::BldSubTskGphByOneToOne);
-REGISTER_BLD_SUB_TSK_GPH_MTHD("Accuracy"
-                              "AccuracyAcc",
-                              &TaskGraph::BldSubTskGphByOneToOne);
 REGISTER_BLD_SUB_TSK_GPH_MTHD("MdDiffAcc"
-                              "NormalMdUpdt",
-                              BldSubTskGphToNormalMdUpdt);
-REGISTER_BLD_SUB_TSK_GPH_MTHD("NormalBackward"
                               "NormalMdUpdt",
                               BldSubTskGphToNormalMdUpdt);
 REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceScatter"
@@ -426,25 +358,10 @@ BldBoxingOpConfMthd GetMthdForBldBoxingOpConf(const LogicalNode* src, const Logi
   return GetBldBoxingOpConfMethodByFwParallelPolicy(src, dst);
 }
 
-REGISTER_BLD_BOXING_OP_CONF_MTHD("NormalBackward"
-                                 "NormalBackward",
-                                 &GetBldBoxingOpConfMethodByBwParallelPolicy);
-REGISTER_BLD_BOXING_OP_CONF_MTHD("Loss"
-                                 "NormalBackward",
-                                 &GetBldBoxingOpConfMethodByBwParallelPolicy);
-REGISTER_BLD_BOXING_OP_CONF_MTHD("LossAcc"
-                                 "LossPrint",
-                                 &BoxingTaskNode::BldBoxingOpConfWithAddAndClone);
-REGISTER_BLD_BOXING_OP_CONF_MTHD("AccuracyAcc"
-                                 "AccuracyPrint",
-                                 &BoxingTaskNode::BldBoxingOpConfWithAddAndClone);
 REGISTER_BLD_BOXING_OP_CONF_MTHD("Accuracy"
                                  "Print",
                                  &BoxingTaskNode::BldBoxingOpConfWithAddAndClone);
 REGISTER_BLD_BOXING_OP_CONF_MTHD("MdDiffAcc"
-                                 "NormalMdUpdt",
-                                 &BoxingTaskNode::BldBoxingOpConfWithAddAndClone);
-REGISTER_BLD_BOXING_OP_CONF_MTHD("NormalBackward"
                                  "NormalMdUpdt",
                                  &BoxingTaskNode::BldBoxingOpConfWithAddAndClone);
 
@@ -454,11 +371,7 @@ REGISTER_BLD_BOXING_OP_CONF_MTHD("NormalBackward"
   OF_PP_MAKE_TUPLE_SEQ(Decode, kDataPreprocessArea)       \
   OF_PP_MAKE_TUPLE_SEQ(DecodeRandom, kDataPreprocessArea) \
   OF_PP_MAKE_TUPLE_SEQ(Loss, kDataForwardArea)            \
-  OF_PP_MAKE_TUPLE_SEQ(LossAcc, kDataForwardArea)         \
-  OF_PP_MAKE_TUPLE_SEQ(LossPrint, kPrintArea)             \
-  OF_PP_MAKE_TUPLE_SEQ(NormalMdUpdt, kMdUpdtArea)         \
-  OF_PP_MAKE_TUPLE_SEQ(MdSave, kMdSaveArea)               \
-  OF_PP_MAKE_TUPLE_SEQ(MdDiffAcc, kDataBackwardArea)      \
+  OF_PP_MAKE_TUPLE_SEQ(MdDiffAcc, kDataForwardArea)       \
   OF_PP_MAKE_TUPLE_SEQ(Print, kPrintArea)                 \
   OF_PP_MAKE_TUPLE_SEQ(ReduceConcat, kMdUpdtArea)         \
   OF_PP_MAKE_TUPLE_SEQ(ReduceIdentity, kMdUpdtArea)       \
@@ -469,9 +382,7 @@ REGISTER_BLD_BOXING_OP_CONF_MTHD("NormalBackward"
   OF_PP_MAKE_TUPLE_SEQ(NcclAllReduce, kMdUpdtArea)        \
   OF_PP_MAKE_TUPLE_SEQ(NcclReduceScatter, kMdUpdtArea)    \
   OF_PP_MAKE_TUPLE_SEQ(NcclAllGather, kMdUpdtArea)        \
-  OF_PP_MAKE_TUPLE_SEQ(Accuracy, kDataForwardArea)        \
-  OF_PP_MAKE_TUPLE_SEQ(AccuracyAcc, kDataForwardArea)     \
-  OF_PP_MAKE_TUPLE_SEQ(AccuracyPrint, kPrintArea)
+  OF_PP_MAKE_TUPLE_SEQ(Accuracy, kDataForwardArea)
 
 #define DEFINE_VIRTUAL_METHOD(x, area_type)                                             \
   std::string x##LogicalNode::TypeName() const { return #x; }                           \
@@ -484,17 +395,6 @@ std::string OptimizerLogicalNode::TypeName() const { return "Optimizer"; }
 CompTaskNode* OptimizerLogicalNode::NewCompTaskNode() const { return new OptimizerCompTaskNode; }
 
 int64_t OptimizerLogicalNode::GetAreaId() const { return kMdUpdtArea; }
-
-void NormalMdUpdtLogicalNode::FixCompTaskNode(CompTaskNode* node) const {
-  NormalMdUpdtCompTaskNode* normal_mdupdt_node = static_cast<NormalMdUpdtCompTaskNode*>(node);
-  if (parallel_desc()->policy() == ParallelPolicy::kDataParallel) {
-    normal_mdupdt_node->set_random_seed(random_seed_);
-  } else if (parallel_desc()->policy() == ParallelPolicy::kModelParallel) {
-    normal_mdupdt_node->set_random_seed(NewRandomSeed());
-  } else {
-    UNIMPLEMENTED();
-  }
-}
 
 int64_t NewAreaId() {
   static int64_t next_area_id = AreaType_ARRAYSIZE;

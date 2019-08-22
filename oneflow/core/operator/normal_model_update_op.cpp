@@ -1,8 +1,4 @@
 #include "oneflow/core/operator/naive_model_update_op.h"
-#include "oneflow/core/operator/rmsprop_model_update_op.h"
-#include "oneflow/core/operator/momentum_model_update_op.h"
-#include "oneflow/core/operator/lars_model_update_op.h"
-#include "oneflow/core/operator/adam_model_update_op.h"
 #include "oneflow/core/job/sbp_signature_builder.h"
 
 namespace oneflow {
@@ -10,15 +6,11 @@ namespace oneflow {
 void NormalModelUpdtOp::InitFromOpConf() {
   EnrollInputBn("model_diff", false);
   EnrollInputBn("total_instance_num_diff", false);
-  if (GlobalJobDesc().other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
-    EnrollInputBn("model", false)->set_is_mutable(true);
-  } else {
-    UNIMPLEMENTED();
-  }
+  EnrollInputBn("model", false)->set_is_mutable(true);
   const PbMessage& conf = this->GetCustomizedConf();
   const auto& user_conf = *GetMsgPtrFromPbMessage<NormalModelUpdateOpUserConf>(conf, "user_conf");
   if (user_conf.has_clip_conf() && user_conf.clip_conf().has_clip_by_global_norm()) {
-    EnrollDataTmpBn("data_tmp");
+    EnrollTmpBn("data_tmp");
   }
   MdUpdtVirtualInitFromOpConf();
 }

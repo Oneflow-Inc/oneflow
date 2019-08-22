@@ -15,8 +15,8 @@ void LayerNormGradOp::InitFromOpConf() {
   }
   EnrollOutputBn("dx", false);
   EnrollConstBufBn("cudnn_bn_scale_ones");
-  EnrollFwBufBn("cudnn_bn_scale_diff_buf");
-  EnrollFwBufBn("cudnn_bn_bias_diff_buf");
+  EnrollTmpBn("cudnn_bn_scale_diff_buf");
+  EnrollTmpBn("cudnn_bn_bias_diff_buf");
 }
 
 void LayerNormGradOp::InferBlobDescs(
@@ -44,9 +44,9 @@ void LayerNormGradOp::InferBlobDescs(
   if (mean || inv_variance) {
     CHECK_NOTNULL(mean);
     CHECK_NOTNULL(inv_variance);
-    CHECK_EQ(mean->data_type(), x->data_type());
+    // CHECK_EQ(mean->data_type(), x->data_type());
     CHECK_EQ(mean->shape(), bn_param_shape);
-    CHECK_EQ(inv_variance->data_type(), x->data_type());
+    // CHECK_EQ(inv_variance->data_type(), x->data_type());
     CHECK_EQ(inv_variance->shape(), bn_param_shape);
   }
   BlobDesc* dx = GetBlobDesc4BnInOp("dx");
@@ -55,7 +55,8 @@ void LayerNormGradOp::InferBlobDescs(
   BlobDesc* bn_bias_diff = GetBlobDesc4BnInOp("cudnn_bn_bias_diff_buf");
   *dx = *dy;
   bn_scale->mut_shape() = Shape({dy->shape().Count(0, begin_norm_axis)});
-  bn_scale->set_data_type(dy->data_type());
+  DataType data_type = dy->data_type() == DataType::kFloat16 ? DataType::kFloat : dy->data_type();
+  bn_scale->set_data_type(data_type);
   *bn_scale_diff = *bn_scale;
   *bn_bias_diff = *bn_scale;
 }

@@ -1,5 +1,6 @@
 #include "oneflow/core/actor/actor.h"
 #include "oneflow/core/thread/thread_manager.h"
+#include "oneflow/core/job/runtime_job_descs.h"
 
 namespace oneflow {
 
@@ -149,6 +150,12 @@ void Actor::TakeOverNaiveProduced(const PbMap<std::string, RegstDescProto>& prod
     for (const auto& regst : pair.second) {
       CHECK_EQ(0, naive_produced_rs_.TryPushBackRegst(regst.get()));
     }
+  }
+}
+
+void Actor::ForEachProducedRegst(const std::function<void(Regst*)>& Handler) const {
+  for (const auto& pair : produced_regsts_) {
+    for (const auto& regst : pair.second) { Handler(regst.get()); }
   }
 }
 
@@ -651,8 +658,8 @@ Regst* Actor::GetNaiveCurWriteable(int64_t regst_desc_id) const {
 
 std::unique_ptr<Actor> NewActor(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
   Actor* rptr = NewObj<Actor>(task_proto.task_type());
-  const auto* job_descs = Global<std::vector<std::unique_ptr<JobDesc>>>::Get();
-  rptr->Init(job_descs->at(task_proto.job_id()).get(), task_proto, thread_ctx);
+  const auto& job_descs = *Global<RuntimeJobDescs>::Get();
+  rptr->Init(&job_descs.job_desc(task_proto.job_id()), task_proto, thread_ctx);
   return std::unique_ptr<Actor>(rptr);
 }
 

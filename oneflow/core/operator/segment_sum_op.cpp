@@ -13,10 +13,11 @@ const PbMessage& SegmentSumOp::GetCustomizedConf() const { return op_conf().segm
 
 void SegmentSumOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                   const ParallelContext* parallel_ctx) const {
-  const SegmentSumOpConf& conf = op_conf().segment_sum_conf();
   const BlobDesc* in_blob = GetBlobDesc4BnInOp("in");
   const BlobDesc* segment_ids_blob = GetBlobDesc4BnInOp("segment_ids");
-  const int32_t unique_ids_count = conf.unique_ids_count();
+  const BlobDesc* unique_segment_ids_blob = GetBlobDesc4BnInOp("unique_segment_ids");
+
+  const int32_t unique_ids_count = unique_segment_ids_blob->shape().At(0);
   // input data's dim0 == segment ids' dim0
   CHECK_EQ(in_blob->shape().At(0), segment_ids_blob->shape().At(0));
   // segmnet_ids must be 1D tensor

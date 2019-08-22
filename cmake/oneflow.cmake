@@ -1,5 +1,5 @@
 # main cpp
-list(APPEND of_main_cc ${PROJECT_SOURCE_DIR}/oneflow/core/job/oneflow.cpp)
+list(APPEND of_main_cc ${PROJECT_SOURCE_DIR}/oneflow/core/job/oneflow_worker.cpp)
 
 function(oneflow_add_executable)
   if (BUILD_CUDA)
@@ -169,8 +169,25 @@ endforeach()
 RELATIVE_SWIG_GENERATE_CPP(SWIG_SRCS SWIG_HDRS
                               ${PROJECT_SOURCE_DIR}
                               ${of_all_rel_swigs})
-find_package(PythonLibs)
-include_directories(${PYTHON_INCLUDE_DIRS} ${Python_NumPy_INCLUDE_DIRS})
+if(${CMAKE_VERSION} VERSION_LESS "3.14") 
+  if(NOT IS_DIRECTORY ${Python_NumPy_INCLUDE_DIRS})
+    message(FATAL_ERROR "Python_NumPy_INCLUDE_DIRS not set. You could get it by running \"numpy.get_include()\" in python")
+  endif()
+  find_package(PythonLibs)
+  if(NOT PYTHONLIBS_FOUND)
+    message(FATAL_ERROR "python include files and libraries not found")
+  endif()
+  message("-- Python Version: " ${PYTHONLIBS_VERSION_STRING})
+  include_directories(${PYTHON_INCLUDE_DIRS} ${Python_NumPy_INCLUDE_DIRS})
+elseif(PY3)
+  find_package (Python3 COMPONENTS Development NumPy)
+  message("-- Python3 specified. Version found: " ${Python3_VERSION})
+  include_directories(${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS})
+else()
+  find_package (Python2 COMPONENTS Development NumPy)
+  message("-- Python2 specified. Version found: " ${Python2_VERSION})
+  include_directories(${Python2_INCLUDE_DIRS} ${Python2_NumPy_INCLUDE_DIRS})
+endif()
 oneflow_add_library(oneflow_internal SHARED ${SWIG_SRCS} ${SWIG_HDRS} ${of_main_cc})
 SET_TARGET_PROPERTIES(oneflow_internal PROPERTIES PREFIX "_")
 set_target_properties(oneflow_internal PROPERTIES CMAKE_LIBRARY_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/python_scripts")
@@ -181,7 +198,10 @@ file(REMOVE_RECURSE "${of_pyscript_dir}/oneflow/python")
 add_custom_target(of_pyscript_copy ALL
     COMMAND "${CMAKE_COMMAND}" -E copy
         "${PROJECT_SOURCE_DIR}/oneflow/__init__.py" "${of_pyscript_dir}/oneflow/__init__.py"
-    COMMAND ${CMAKE_COMMAND} -E touch "${of_pyscript_dir}/oneflow/core/__init__.py")
+    COMMAND ${CMAKE_COMMAND} -E touch "${of_pyscript_dir}/oneflow/core/__init__.py"
+    COMMAND ${CMAKE_COMMAND} -E make_directory "${of_pyscript_dir}/oneflow/python"
+    COMMAND python "${PROJECT_SOURCE_DIR}/tools/generate_oneflow_symbols_export_file.py"
+        "${PROJECT_SOURCE_DIR}" "${of_pyscript_dir}/oneflow/python/__export_symbols__.py")
 file(GLOB_RECURSE oneflow_all_python_file "${PROJECT_SOURCE_DIR}/oneflow/python/*.py")
 foreach(oneflow_python_file ${oneflow_all_python_file})
   file(RELATIVE_PATH oneflow_python_rel_file_path "${PROJECT_SOURCE_DIR}" ${oneflow_python_file})
@@ -190,7 +210,7 @@ foreach(oneflow_python_file ${oneflow_all_python_file})
     "${oneflow_python_file}"
     "${of_pyscript_dir}/${oneflow_python_rel_file_path}")
 endforeach()
-   
+
 # build main
 set(RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/bin)
 foreach(cc ${of_main_cc})

@@ -38,7 +38,14 @@ T* MemoryAllocator::PlacementNew(T* mem_ptr) {
 
 inline bool operator==(const MemoryCase& lhs, const MemoryCase& rhs) {
   if (lhs.has_host_mem() && rhs.has_host_mem()) {
-    return lhs.host_mem().used_by_device() == rhs.host_mem().used_by_device();
+    const HostMemory& lhs_host_mem = lhs.host_mem();
+    const HostMemory& rhs_host_mem = rhs.host_mem();
+    if (lhs_host_mem.has_cuda_pinned_mem() && rhs_host_mem.has_cuda_pinned_mem()) {
+      return lhs_host_mem.cuda_pinned_mem().device_id()
+             == rhs_host_mem.cuda_pinned_mem().device_id();
+    } else {
+      return (!lhs_host_mem.has_cuda_pinned_mem()) && (!rhs_host_mem.has_cuda_pinned_mem());
+    }
   }
   if (lhs.has_device_cuda_mem() && rhs.has_device_cuda_mem()) {
     return lhs.device_cuda_mem().device_id() == rhs.device_cuda_mem().device_id();
@@ -47,20 +54,5 @@ inline bool operator==(const MemoryCase& lhs, const MemoryCase& rhs) {
 }
 
 }  // namespace oneflow
-
-namespace std {
-
-template<>
-struct hash<oneflow::MemoryCase> {
-  size_t operator()(const oneflow::MemoryCase& val) const {
-    if (val.has_host_mem()) {
-      return val.host_mem().used_by_device() + 1024;
-    } else {
-      return val.device_cuda_mem().device_id();
-    }
-  }
-};
-
-}  // namespace std
 
 #endif  // ONEFLOW_CORE_MEMORY_MEMORY_ALLOCATOR_H_

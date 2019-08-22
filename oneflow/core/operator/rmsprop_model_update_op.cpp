@@ -2,7 +2,7 @@
 
 namespace oneflow {
 
-void RMSPropModelUpdateOp::MdUpdtVirtualInitFromOpConf() { EnrollDataTmpBn("mean_square"); }
+void RMSPropModelUpdateOp::MdUpdtVirtualInitFromOpConf() { EnrollTmpBn("mean_square"); }
 
 void RMSPropModelUpdateOp::MdUpdtVirtualInferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
@@ -14,11 +14,7 @@ void RMSPropModelUpdateOp::MdUpdtVirtualInferBlobDescs(
 }
 
 const PbMessage& RMSPropModelUpdateOp::GetCustomizedConf() const {
-  if (GlobalJobDesc().other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
-    return op_conf().rmsprop_model_update_conf();
-  } else {
-    UNIMPLEMENTED();
-  }
+  return op_conf().rmsprop_model_update_conf();
 }
 
 const HashSet<std::string> RMSPropModelUpdateOp::AlwaysBroadcastParallelBns() const {

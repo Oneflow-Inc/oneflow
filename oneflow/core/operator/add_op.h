@@ -13,10 +13,6 @@ class AddOp final : public CWiseOp {
 
   void VirtualInitFromOpConf() override;
   const PbMessage& GetCustomizedConf() const override;
-  bool NeedInBlobWhenBackward() const override { return false; }
-  bool NeedOutBlobWhenBackward() const override { return false; }
-  void VirtualFixInDiffBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                 const ParallelContext*) const override;
 
  private:
   void InferHasBatchDim(std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const override;

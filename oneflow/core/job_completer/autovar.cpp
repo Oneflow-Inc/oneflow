@@ -25,16 +25,17 @@ void GenerateInputVarOpConfIf(
   }
 }
 
-void AutoVar(const OpGraph& op_graph, Job* job) {
+void AutoVar(const OpGraph& op_graph, JobBuilder* job_builder) {
   auto BlobDesc4ModelLbi = op_graph.MakeGetterBlobDesc4ModelLbi();
-  JobBuilder job_builder(job);
   op_graph.ForEachNode([&](OpNode* op_node) {
     std::vector<OperatorConf> ops;
     auto BlobDesc4ModelBn = [&](const std::string& bn) -> const BlobDesc& {
       return BlobDesc4ModelLbi(op_node->op().BnInOp2Lbi(bn));
     };
     GenerateInputVarOpConfIf(op_node->op(), &ops, BlobDesc4ModelBn);
-    if (!ops.empty()) { job_builder.AddOrMutOps(op_node->parallel_desc().parallel_conf(), ops); }
+    if (!ops.empty()) {
+      job_builder->AddOrMutOpsOnlyOnce(op_node->parallel_desc().parallel_conf(), ops);
+    }
   });
 }
 

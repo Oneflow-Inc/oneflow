@@ -5,26 +5,16 @@
 #include "oneflow/core/job/plan.pb.h"
 #include "oneflow/core/control/ctrl_server.h"
 #include "oneflow/core/job/runtime.h"
+#include "oneflow/core/job/runtime_buffers_scope.h"
 #include "oneflow/core/job/inter_user_job_info.pb.h"
-#include "oneflow/core/job/flags_and_log_scope.h"
 
 namespace oneflow {
 
-class GlobalObjectsScope final {
+class GlobalObjectsScope4JobConf final {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(GlobalObjectsScope);
-  GlobalObjectsScope(const JobSet& job_set);
-  ~GlobalObjectsScope();
-
- private:
-  std::unique_ptr<CtrlServer> ctrl_server_;
-};
-
-class RuntimeBuffersScope final {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(RuntimeBuffersScope);
-  RuntimeBuffersScope();
-  ~RuntimeBuffersScope();
+  OF_DISALLOW_COPY_AND_MOVE(GlobalObjectsScope4JobConf);
+  GlobalObjectsScope4JobConf(const JobSet& job_set);
+  ~GlobalObjectsScope4JobConf();
 };
 
 class Oneflow final {
@@ -33,13 +23,11 @@ class Oneflow final {
   Oneflow(const oneflow::JobSet& job_set);
   ~Oneflow();
 
-  void NaiveSequentialRun() const;
-
  private:
-  std::unique_ptr<GlobalObjectsScope> global_objects_scope_;
   Plan plan_;
-  std::unique_ptr<Runtime> runtime_;
+  std::unique_ptr<GlobalObjectsScope4JobConf> global_objects_scope4job_conf_;
   std::unique_ptr<RuntimeBuffersScope> runtime_buffers_scope_;
+  std::unique_ptr<Runtime> runtime_;
 };
 
 int Main(const oneflow::JobSet& job_set);

@@ -18,43 +18,27 @@ void LayerNormOp::InitFromOpConf() {
   CHECK(op_conf().has_layer_norm_conf());
   const LayerNormOpConf& conf = op_conf().layer_norm_conf();
   if (!(conf.center() || conf.scale())) { mut_op_conf()->set_trainable(false); }
-  const bool fw_bw_split =
-      GlobalJobDesc().IsPredict()
-      && GlobalJobDesc().other_conf().predict_conf().has_tmp_split_fw_bw_train_conf();
-  if (!fw_bw_split) {
-    CHECK(!conf.has_beta());
-    CHECK(!conf.has_gamma());
-  }
   EnrollInputBn("in");
   EnrollOutputBn("out");
   if (conf.center()) {
-    if (fw_bw_split && conf.has_beta()) {
+    if (conf.has_beta()) {
       EnrollInputBn("beta");
     } else {
-      EnrollModelBn("beta");
+      EnrollTmpBn("beta");
     }
   }
   if (conf.scale()) {
-    if (fw_bw_split && conf.has_gamma()) {
+    if (conf.has_gamma()) {
       EnrollInputBn("gamma");
-      EnrollOutputBn("normalized", false);
     } else {
-      EnrollModelBn("gamma");
-      EnrollDataTmpBn("normalized");
+      EnrollTmpBn("gamma");
     }
+    EnrollOutputBn("normalized", false);
   }
-  if (fw_bw_split) {
-    EnrollOutputBn("mean", false);
-    EnrollOutputBn("inv_variance", false);
-  } else {
-    EnrollDataTmpBn("mean");
-    EnrollDataTmpBn("inv_variance");
-  }
+  EnrollOutputBn("mean", false);
+  EnrollOutputBn("inv_variance", false);
   EnrollConstBufBn("cudnn_bn_scale_ones");
   EnrollConstBufBn("cudnn_bn_bias_zeros");
-  EnrollBwBufBn("cudnn_bn_scale_diff_buf");
-  EnrollBwBufBn("cudnn_bn_bias_diff_buf");
-  if (op_conf().trainable()) { EnrollBwBufBn("bw_reduce_buf"); }
 }
 
 void LayerNormOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
@@ -100,31 +84,16 @@ void LayerNormOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Ge
   const Shape bn_param_shape(bn_param_shape_dim_vec);
   BlobDesc* cudnn_bn_mean = GetBlobDesc4BnInOp("mean");
   cudnn_bn_mean->mut_shape() = bn_param_shape;
-  cudnn_bn_mean->set_data_type(in->data_type());
+  DataType data_type = in->data_type() == DataType::kFloat16 ? DataType::kFloat : in->data_type();
+  cudnn_bn_mean->set_data_type(data_type);
   *GetBlobDesc4BnInOp("inv_variance") = *cudnn_bn_mean;
   *GetBlobDesc4BnInOp("cudnn_bn_scale_ones") = *cudnn_bn_mean;
   *GetBlobDesc4BnInOp("cudnn_bn_bias_zeros") = *cudnn_bn_mean;
 }
 
-void LayerNormOp::InferBwBufBlobDescs(
-    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx) const {
-  CHECK(parallel_ctx->policy() != kModelParallel);
-  const BlobDesc* in = GetBlobDesc4BnInOp("in");
-  const LayerNormOpConf& conf = op_conf().layer_norm_conf();
-  if (op_conf().trainable()) { *GetBlobDesc4BnInOp("bw_reduce_buf") = *in; }
-  const int64_t begin_norm_axis = ShiftNegativeAxisIfNeed(in->shape(), conf.begin_norm_axis());
-  const Shape bn_param_shape = Shape({in->shape().Count(0, begin_norm_axis)});
-  BlobDesc* bn_scale_diff = GetBlobDesc4BnInOp("cudnn_bn_scale_diff_buf");
-  bn_scale_diff->mut_shape() = bn_param_shape;
-  bn_scale_diff->set_data_type(in->data_type());
-  *GetBlobDesc4BnInOp("cudnn_bn_bias_diff_buf") = *bn_scale_diff;
-}
-
 void LayerNormOp::InferHasBatchDim(
     std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
-  for (const auto& obn : output_bns()) { *HasBatchDim4BnInOp(obn) = false; }
-  *HasBatchDim4BnInOp("out") = *HasBatchDim4BnInOp("in");
+  for (const auto& obn : output_bns()) { *HasBatchDim4BnInOp(obn) = true; }
 }
 
 void LayerNormOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {

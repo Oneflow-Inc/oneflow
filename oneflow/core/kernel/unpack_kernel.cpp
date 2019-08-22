@@ -90,14 +90,8 @@ void UnpackKernel<device_type>::ForwardDataId(
   for (size_t i = 0; i < out_blob->shape().At(0); ++i) {
     Memcpy<DeviceType::kCPU>(ctx.device_ctx, out_blob->mut_data_id(i),
                              in_blob->data_id(i + out_index * out_blob->static_shape().At(0)),
-                             this->job_desc().other_conf().max_data_id_length());
+                             this->job_desc().job_conf().max_data_id_length());
   }
-}
-
-template<DeviceType device_type>
-void UnpackKernel<device_type>::BackwardInDiffDim0ValidNum(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  BnInOp2Blob("in_diff")->CopyDim0ValidNumFrom(ctx.device_ctx, BnInOp2Blob("in"));
 }
 
 ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kUnpackConf, UnpackKernel);

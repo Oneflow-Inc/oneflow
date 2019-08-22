@@ -7,7 +7,6 @@
 #include "oneflow/core/graph/reduce_rank_context.h"
 #include "oneflow/core/graph/pack_forward_task_node.h"
 #include "oneflow/core/graph/unpack_forward_task_node.h"
-#include "oneflow/core/graph/unpack_backward_task_node.h"
 #include "oneflow/core/graph/wait_and_send_ids_compute_task_node.h"
 #include "oneflow/core/graph/foreign_input_compute_task_node.h"
 #include "oneflow/core/graph/foreign_output_compute_task_node.h"
@@ -17,7 +16,6 @@
 #include "oneflow/core/graph/tick_compute_task_node.h"
 #include "oneflow/core/graph/acc_tick_compute_task_node.h"
 #include "oneflow/core/graph/repeat_forward_compute_task_node.h"
-#include "oneflow/core/graph/repeat_backward_compute_task_node.h"
 #include "oneflow/core/graph/acc_compute_task_node.h"
 #include "oneflow/core/graph/every_nth_compute_task_node.h"
 #include "oneflow/core/graph/case_compute_task_node.h"
@@ -51,14 +49,6 @@ class LogicalNode : public Node<LogicalNode, LogicalEdge> {
     in_blob_fastest_time_shape_.reset(time_shape);
   }
 
-  // shared_model_nodes_
-  std::shared_ptr<const std::vector<LogicalNode*>> shared_model_nodes() const {
-    return shared_model_nodes_;
-  }
-  std::shared_ptr<const std::vector<LogicalNode*>>& mut_shared_model_nodes() {
-    return shared_model_nodes_;
-  }
-
   // Lbis
   size_t produced_batch_dim_lbis_cnt() const { return produced_batch_dim_lbis_cnt_; }
   size_t consumed_batch_dim_lbis_cnt() const { return consumed_batch_dim_lbis_cnt_; }
@@ -71,9 +61,6 @@ class LogicalNode : public Node<LogicalNode, LogicalEdge> {
   // util
   virtual std::string TypeName() const = 0;
   std::string VisualStr() const;
-  bool HasOpWithModelOrConstModelBlob() const;
-  bool HasOpWithModelBlob() const;
-  bool HasOpWithForwardModelBlob() const;
   void GenSortedCompTaskNodes(std::function<int64_t(const TaskNode*)> AllocateCpuThrdIdEvenly,
                               std::vector<std::pair<int64_t, CompTaskNode*>>* nodes,
                               std::function<void(CompTaskNode*)>) const;
@@ -92,7 +79,6 @@ class LogicalNode : public Node<LogicalNode, LogicalEdge> {
 
   std::vector<std::shared_ptr<Operator>> op_vec_;
   std::shared_ptr<const ParallelDesc> parallel_desc_;
-  std::shared_ptr<const std::vector<LogicalNode*>> shared_model_nodes_;
 
   HashMap<const LogicalNode*, std::vector<LogicalBlobId>> dst2data_lbis_;
   std::unique_ptr<const Shape> in_blob_fastest_time_shape_;
@@ -218,34 +204,7 @@ DECLARE_NAIVE_LOGICAL_NODE(DecodeLogicalNode);
 DECLARE_NAIVE_LOGICAL_NODE(DecodeRandomLogicalNode);
 DECLARE_NAIVE_LOGICAL_NODE(PrintLogicalNode);
 DECLARE_NAIVE_LOGICAL_NODE(LossLogicalNode);
-DECLARE_NAIVE_LOGICAL_NODE(LossAccLogicalNode);
-DECLARE_NAIVE_LOGICAL_NODE(LossPrintLogicalNode);
 DECLARE_NAIVE_LOGICAL_NODE(AccuracyLogicalNode);
-DECLARE_NAIVE_LOGICAL_NODE(AccuracyAccLogicalNode);
-DECLARE_NAIVE_LOGICAL_NODE(AccuracyPrintLogicalNode);
-
-class NormalMdUpdtLogicalNode final : public LogicalNode {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(NormalMdUpdtLogicalNode);
-  NormalMdUpdtLogicalNode() : random_seed_(NewRandomSeed()), order_in_reduce_group_(0) {}
-  ~NormalMdUpdtLogicalNode() = default;
-
-  OVERRIDE_PURE_VIRTUAL_METHOD();
-  bool MayConsumeModelDiff() const override { return true; }
-
-  int order_in_reduce_group() const { return order_in_reduce_group_; }
-  void set_order_in_reduce_group(int order_in_reduce_group) {
-    order_in_reduce_group_ = order_in_reduce_group;
-  }
-
- private:
-  void FixCompTaskNode(CompTaskNode*) const override;
-
-  uint32_t random_seed_;
-  int order_in_reduce_group_;
-};
-
-DECLARE_NAIVE_LOGICAL_NODE(MdSaveLogicalNode);
 
 class MdDiffAccLogicalNode final : public LogicalNode {
  public:

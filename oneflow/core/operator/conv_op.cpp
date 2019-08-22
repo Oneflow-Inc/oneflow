@@ -8,10 +8,6 @@ namespace oneflow {
 
 namespace {
 
-bool IsFwBwSplit() {
-  return GlobalJobDesc().other_conf().predict_conf().has_tmp_split_fw_bw_train_conf();
-}
-
 void GetOutAndPad(const Shape& in_blob_shape, const PbMessage& conv_conf, std::vector<int64_t>* out,
                   std::vector<int32_t>* pad_small_side, std::vector<int32_t>* pad_large_side) {
   int32_t opkernel_dim = in_blob_shape.NumAxes() - 2;
@@ -67,24 +63,20 @@ void ConvOp<NDims>::InitFromOpConf() {
   StrFieldTolower("data_format");
   StrFieldTolower("padding");
 
-  // TODO: fw bw split
-  const bool fw_bw_split = IsFwBwSplit();
   EnrollInputBn("in");
   EnrollOutputBn("out");
-  if (fw_bw_split) {
-    EnrollInputBn("weight");
+  if (GetValFromCustomizedConf<std::string>("weight").empty()) {
+    EnrollTmpBn("weight");
   } else {
-    EnrollModelBn("weight");
+    EnrollInputBn("weight");
   }
-  EnrollFwBufBn("fw_cudnn_buf");
-  EnrollBwBufBn("bw_cudnn_buf");
-  EnrollFwBufBn("fw_col_buf");
-  EnrollBwBufBn("bw_col_buf");
+  EnrollTmpBn("fw_cudnn_buf");
+  EnrollTmpBn("fw_col_buf");
   if (GetValFromCustomizedConf<bool>("use_bias")) {
-    if (fw_bw_split) {
-      EnrollInputBn("bias");
+    if (GetValFromCustomizedConf<std::string>("bias").empty()) {
+      EnrollTmpBn("bias");
     } else {
-      EnrollModelBn("bias");
+      EnrollInputBn("bias");
     }
     EnrollConstBufBn("bias_multiplier");
   }
@@ -95,7 +87,6 @@ void ConvOp<NDims>::InferBlobDescs(std::function<BlobDesc*(const std::string&)> 
                                    const ParallelContext* parallel_ctx, int64_t record_piece_size,
                                    std::function<void(OpContext*)> EnrollOpCtx) const {
   const std::string& data_format = GetValFromCustomizedConf<std::string>("data_format");
-  const bool fw_bw_split = IsFwBwSplit();
 
   // in
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
@@ -126,18 +117,18 @@ void ConvOp<NDims>::InferBlobDescs(std::function<BlobDesc*(const std::string&)> 
   for (size_t i = 0; i < NDims; ++i) {
     weight_shape[dhw_offset + i] = GetPbRfFromCustomizedConf<int32_t>("kernel_size").Get(i);
   }
-  if (fw_bw_split) {
-    CHECK_EQ(GetBlobDesc4BnInOp("weight")->shape(), Shape(weight_shape));
-  } else {
+  if (GetValFromCustomizedConf<std::string>("weight").empty()) {
     GetBlobDesc4BnInOp("weight")->mut_shape() = Shape(weight_shape);
+  } else {
+    CHECK_EQ(GetBlobDesc4BnInOp("weight")->shape(), Shape(weight_shape));
   }
 
   if (GetValFromCustomizedConf<bool>("use_bias")) {
     // bias and bias_multiplier
-    if (fw_bw_split) {
-      CHECK_EQ(GetBlobDesc4BnInOp("bias")->shape(), Shape({filters}));
+    if (GetValFromCustomizedConf<std::string>("bias").empty()) {
+      GetBlobDesc4BnInOp("bias")->mut_shape() = Shape({filters});
     } else {
-      GetBlobDesc4BnInOp("bias")->mut_shape() = Shape({filters, 1});
+      CHECK_EQ(GetBlobDesc4BnInOp("bias")->shape(), Shape({filters}));
     }
     if (DevIsGpuAndEnableCudnn() == false) {
       std::vector<int64_t> bias_mul_shape(NDims + 1, 1);
@@ -168,30 +159,6 @@ void ConvOp<NDims>::InferBlobDescs(std::function<BlobDesc*(const std::string&)> 
     fw_cudnn_buf->mut_shape() =
         Shape({static_cast<int64_t>(conv_op_ctx->cudnn_conv_algo_ctx.fwd_ws_size)});
     fw_cudnn_buf->set_data_type(DataType::kChar);
-  }
-#endif  // WITH_CUDA
-}
-
-template<int32_t NDims>
-void ConvOp<NDims>::InferBwBufBlobDescs(
-    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*,
-    const OpContext* op_ctx) const {
-  const ConvOpCtx* conv_op_ctx = static_cast<const ConvOpCtx*>(op_ctx);
-  if (DevIsGpuAndEnableCudnn() == false) {
-    // col_buf
-    BlobDesc* bw_col_buf = GetBlobDesc4BnInOp("bw_col_buf");
-    bw_col_buf->mut_shape() = Shape({conv_op_ctx->col_buf_size});
-    bw_col_buf->set_data_type(DataType::kChar);
-  }
-
-#ifdef WITH_CUDA
-  if (DevIsGpuAndEnableCudnn()) {
-    // cudnn_buf
-    BlobDesc* bw_cudnn_buf = GetBlobDesc4BnInOp("bw_cudnn_buf");
-    bw_cudnn_buf->mut_shape() =
-        Shape({static_cast<int64_t>(std::max(conv_op_ctx->cudnn_conv_algo_ctx.bwd_filter_ws_size,
-                                             conv_op_ctx->cudnn_conv_algo_ctx.bwd_data_ws_size))});
-    bw_cudnn_buf->set_data_type(DataType::kChar);
   }
 #endif  // WITH_CUDA
 }
@@ -305,6 +272,7 @@ void ConvOp<NDims>::InferCudnnAlgo(
   CHECK(Global<CudnnConvCtxCache>::Get()->FindCudnnConvAlgoCtxWithConfig(
       *GetBlobDesc4BnInOp("in"), *GetBlobDesc4BnInOp("out"), *GetBlobDesc4BnInOp("weight"),
       GetCustomizedConf(), static_cast<size_t>(cudnn_buf_limit_byte()), conv_ctx));
+  CHECK(conv_ctx->fwd_algo_found) << "algo: " << conv_ctx->fwd_algo;
 }
 #endif  // WITH_CUDA
 

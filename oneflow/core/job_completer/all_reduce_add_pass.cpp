@@ -1,5 +1,4 @@
 #include "oneflow/core/job_completer/all_reduce_add_pass.h"
-#include "oneflow/core/graph/op_graph.h"
 
 namespace oneflow {
 
@@ -140,7 +139,7 @@ void GroupAllReducedLbisByStrategy(
         const size_t group_min_size = GlobalJobDesc().all_reduce_group_min_byte();
         const float group_size_warmup = GlobalJobDesc().all_reduce_group_size_warmup();
         size_t cur_group_capacity = group_min_size / group_size_warmup;
-        size_t cur_group_model_size = MaxVal<size_t>::value;
+        size_t cur_group_model_size = GetMaxVal<size_t>();
         for (const LogicalBlobId& lbi : lbis) {
           if (cur_group_model_size >= cur_group_capacity) {
             lbi_groups->emplace_back(std::vector<LogicalBlobId>{});
@@ -209,7 +208,7 @@ void AddReduceSplitOpConf(
     PbMessage* md_updt_conf =
         MutableMessageInPbMessage(&md_updt_op_conf, md_updt_op_conf.op_type_case());
     SetBnValInOpTypeConf(md_updt_conf, ibn, GenLogicalBlobName(lbi), GenLogicalBlobName(new_lbi));
-    job_builder->MutOps({md_updt_op_conf});
+    job_builder->MutOpsOnlyOnce({md_updt_op_conf});
   };
 
   OperatorConf reduce_split_op_conf;
@@ -246,21 +245,20 @@ void BuildAllReduceStruct(
 
 }  // namespace
 
-void AllReduceAddPass::Apply(const OpGraph& op_graph, Job* job) const {
+void AllReduceAddPass::Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
   auto ProducerOpNode4Lbi = MakeGetterProducerOpNode4Lbi(op_graph);
 
   std::vector<LogicalBlobId> lbis;
-  FindAllReducedLbis(*job, op_graph, ProducerOpNode4Lbi, &lbis);
+  FindAllReducedLbis(job_builder->job(), op_graph, ProducerOpNode4Lbi, &lbis);
   SortAllReducedLbis(op_graph, ProducerOpNode4Lbi, &lbis);
   HashMap<LogicalBlobId, int32_t> lbi2order_in_graph;
   FOR_RANGE(int32_t, i, 0, lbis.size()) { CHECK(lbi2order_in_graph.emplace(lbis.at(i), i).second); }
 
   std::vector<std::vector<LogicalBlobId>> lbi_groups;
   GroupAllReducedLbisByStrategy(ProducerOpNode4Lbi, lbis, &lbi_groups);
-  JobBuilder job_builder(job);
   FOR_RANGE(int32_t, i, 0, lbi_groups.size()) {
     const auto& lbi_group = lbi_groups.at(i);
-    BuildAllReduceStruct(&job_builder, ProducerOpNode4Lbi, lbi_group,
+    BuildAllReduceStruct(job_builder, ProducerOpNode4Lbi, lbi_group,
                          lbi2order_in_graph.at(lbi_group.at(0)));
   }
 }

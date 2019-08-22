@@ -377,6 +377,13 @@ message ConcatOpConf {
   required int32 axis = 3;
 }
 
+message SplitLikeOpConf {
+  required string in = 1;
+  repeated string like = 2;
+  repeated string out = 3;
+  required int32 axis = 4;
+}
+
 message CopyCommNetOpConf {
 }
 
@@ -386,10 +393,6 @@ message CopyHdOpConf {
     D2H = 1;
   }
   required Type type = 1;
-}
-
-message CloneOpConf {
-  required int32 out_num = 1;
 }
 
 message BoxConcatConf {
@@ -614,10 +617,6 @@ message AccumulateOpConf {
 message EmbeddingLookupAccumulateOpConf {
 }
 
-message ModelSaveOpConf {
-}
-
-
 message PrintRecordConf {
   required string lbn = 1;
   optional string name = 2;
@@ -645,20 +644,6 @@ message GeluGradOpConf {
   required string x = 1;
   required string dy = 2;
   required string dx = 3;
-}
-
-message LossPrintOpConf {
-  required LogicalBlobId loss_lbi = 1;
-  required LogicalBlobId loss_instance_num_lbi = 2;
-  optional LogicalBlobId reduction_lbi = 3;
-  optional float weight_scalar = 4 [default = 1.0];
-  optional ScalarReductionType reduction_type = 5 [default = kSumOverN];
-}
-
-message AccuracyPrintOpConf {
-  required LogicalBlobId accuracy_lbi = 1;
-  required LogicalBlobId accuracy_instance_num_lbi = 2;
-  optional int32 top_k_print = 3 [default = 1];
 }
 
 message ReduceSumOpConf {
@@ -745,10 +730,6 @@ message MaximumOpConf {
   required string out = 2;
 }
 
-message SharedModelDiffAddOpConf {
-  required int32 in_num = 1;
-}
-
 message CastOpConf {
   required string in = 1;
   required string out = 2;
@@ -782,15 +763,22 @@ message ForeignInputOpConf {
   required string ofblob_buffer_name = 4;
 }
 
+message ReturnOpConf {
+  required string in = 1;
+  required string out = 2;
+}
+
 message OutputOpConf {
   required string in = 1;
   required string out = 2;
+  required InterfaceBlobConf blob_conf = 3;
 }
 
 message SwitchOutputOpConf {
   repeated string in = 1;
   required string in_index = 2;
   required string out = 3;
+  required InterfaceBlobConf blob_conf = 4;
 }
 
 message ForeignOutputOpConf {
@@ -806,6 +794,7 @@ message VariableOpConf {
   optional InitializerConf initializer = 5;
   optional string model_name = 6 [default = "weight"];
   optional int32 model_split_axis = 7 [default = 0];
+  optional int64 random_seed = 8;
 }
 
 message LocalResponseNormalizationOpConf {
@@ -955,7 +944,6 @@ message DropoutOpConf {
   required double rate = 3;
   optional ShapeProto noise_shape = 4;
   optional int64 seed = 5;
-  // TODO tmp_split_fw_bw_train_conf
   optional string random_mask = 6 [default = "random_mask"];
 }
 
@@ -1164,12 +1152,6 @@ message BiasAddOpConf {
   required string out = 3;
 }
 
-message MeanOpConf {
-  required string in = 1;
-  required string out = 2;
-  // TODO: axis of mean
-}
-
 message DimSliceConf {
   optional int32 start = 1 [default = 0];
   optional int32 end = 2 [default = 0];
@@ -1371,14 +1353,6 @@ message BatchGatherGradOpConf {
   required int64 gather_dim_size = 4;
 }
 
-message PrintScalarSummaryOpConf {
-  required string x = 1;
-  optional ScalarReductionType reduction_type = 2 [default = kSumOverN];
-  optional float weight_scalar = 3 [default = 1.0];
-  optional string weight = 4;
-  optional int32 interval = 5 [default = 1];
-}
-
 message ShapeElemCntAxisConf {
   repeated int32 axis = 1;
 }
@@ -1427,6 +1401,13 @@ message ModelSaveV2OpConf {
   required string lbn = 2;
 }
 
+message ModelInitOpConf {
+  optional string tick = 1;
+  required string out = 2;
+  required string variable_op_name = 3;
+  required VariableOpConf original_variable_conf = 4;
+}
+
 message AllReduceFacadeOpConf {
   required string in = 1;
   required string out = 2;
@@ -1451,14 +1432,14 @@ message EsacOpConf {
 message SegmentSumOpConf {
   required string in = 1;
   required string segment_ids = 2;
-  required int32 unique_ids_count = 3;
+  required string unique_segment_ids = 3;
   required string out = 4;
 }
 
 message SegmentSumGradOpConf {
   required string out_diff = 1;
   required string segment_ids = 2;
-  required string in_diff = 4;
+  required string in_diff = 3;
 }
 
 
@@ -1476,7 +1457,6 @@ message OperatorConf {
     DecodeRandomOpConf decode_random_conf = 102;
     RecordLoadOpConf record_load_conf = 103;
     CopyHdOpConf copy_hd_conf = 104;
-    CloneOpConf clone_conf = 105;
     CopyCommNetOpConf copy_comm_net_conf = 106;
     ConcatOpConf concat_conf = 107;
     BoxingOpConf boxing_conf = 108;
@@ -1490,8 +1470,7 @@ message OperatorConf {
     NcclAllGatherOpConf nccl_all_gather_conf = 116;
     AccumulateOpConf accumulate_conf = 117;
     NormalModelUpdateOpConf normal_mdupdt_conf = 118;
-    ModelSaveOpConf model_save_conf = 119;
-    SharedModelDiffAddOpConf shared_model_diff_add_conf = 120;
+    ModelSaveV2OpConf model_save_v2_conf = 119;
     CastOpConf cast_conf = 121;
     VariableOpConf variable_conf = 122;
     ReduceIdentityOpConf reduce_identity_conf = 123;
@@ -1517,6 +1496,7 @@ message OperatorConf {
     ForeignOutputOpConf foreign_output_conf = 143;
     AccTickOpConf acc_tick_conf = 144;
     SwitchOutputOpConf switch_output_conf = 145;
+    ReturnOpConf return_conf = 146;
 
     // domain op
     TupleIdentityOpConf tuple_identity_conf = 200;
@@ -1553,8 +1533,6 @@ message OperatorConf {
     SparseSoftmaxCrossEntropyLossOpConf sparse_softmax_cross_entropy_loss_conf = 231;
     AccuracyOpConf accuracy_conf = 232;
     PrintOpConf print_conf = 233;
-    AccuracyPrintOpConf accuracy_print_conf = 234;
-    LossPrintOpConf loss_print_conf = 235;
     DefineTestBlobOpConf define_test_blob_conf = 236;
     PackOpConf pack_conf = 237;
     UnpackOpConf unpack_conf = 238;
@@ -1563,7 +1541,6 @@ message OperatorConf {
     GeluOpConf gelu_conf = 241;
     GatherOpConf gather_conf = 242;
     BatchGatherOpConf batch_gather_conf = 243;
-    MeanOpConf mean_conf = 251;
     SliceOpConf slice_conf = 252;
     BiasAddOpConf bias_add_conf = 253;
     LayerNormOpConf layer_norm_conf = 254;
@@ -1592,20 +1569,20 @@ message OperatorConf {
     SoftmaxGradOpConf softmax_grad_conf = 278;
     BatchGatherGradOpConf batch_gather_grad_conf = 279;
     ReduceMeanGradOpConf reduce_mean_grad_conf = 280;
-    PrintScalarSummaryOpConf print_scalar_summary_conf = 281;
     NormalizationGradOpConf normalization_grad_conf = 282;
     ConvBiasGradOpConf conv_bias_grad_conf = 283;
     ConvFilterGradOpConf conv_filter_grad_conf = 284;
     ConvDataGradOpConf conv_data_grad_conf = 285;
     EveryNthOpConf every_nth_conf = 286;
-    ModelSaveV2OpConf model_save_v2_conf = 287;
     TanHGradOpConf tanh_grad_conf = 288;
     PoolingGradOpConf pooling_grad_conf = 289;
     IdentityOpConf identity_conf = 290;
     CaseOpConf case_conf = 291;
     EsacOpConf esac_conf = 292;
-    SegmentSumOpConf segment_sum_conf = 293;
-    SegmentSumGradOpConf segment_sum_grad_conf = 294;
+    ModelInitOpConf model_init_conf = 293;
+    SplitLikeOpConf split_like_conf = 294;
+    SegmentSumOpConf segment_sum_conf = 295;
+    SegmentSumGradOpConf segment_sum_grad_conf = 296;
 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;

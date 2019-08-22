@@ -30,11 +30,11 @@ void LayerNormGradKernel<device_type, T>::InitConstBufBlobs(
     DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   InitializerConf ones_initializer;
   ones_initializer.mutable_constant_conf()->set_value(1.0);
-  KernelUtil<device_type, T>::InitializeWithConf(ctx, ones_initializer, 0,
-                                                 BnInOp2Blob("cudnn_bn_scale_ones"));
+  LayerNormConstBufInitUtil<device_type, T>::InitConstBufBlobsImpl(
+      ctx, ones_initializer, 0, BnInOp2Blob("cudnn_bn_scale_ones"));
 }
 
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kLayerNormGradConf, LayerNormGradKernel,
-                           FLOATING_DATA_TYPE_SEQ);
+ADD_DEFAULT_KERNEL_CREATOR_WITH_GPU_HALF(OperatorConf::kLayerNormGradConf, LayerNormGradKernel,
+                                         FLOATING_DATA_TYPE_SEQ);
 
 }  // namespace oneflow

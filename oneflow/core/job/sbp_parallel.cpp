@@ -51,9 +51,9 @@ void FilterSbpSignatureList(const SbpSignatureList& sbp_sig_list, const SbpSigna
 double ComputCopyCostBetweenTwoSbpParallel(const SbpInferHint& producer_sbp_infer_hint,
                                            const SbpParallel& consumer_sbp_parallel) {
   if (producer_sbp_infer_hint.sbp_parallel() == consumer_sbp_parallel) { return 0.0; }
-  if (consumer_sbp_parallel.has_partial_sum_parallel()) { return MaxVal<int64_t>::value; }
+  if (consumer_sbp_parallel.has_partial_sum_parallel()) { return GetMaxVal<int64_t>(); }
   if (producer_sbp_infer_hint.sbp_parallel().has_broadcast_parallel()) {
-    return MaxVal<int32_t>::value;
+    return GetMaxVal<int32_t>();
   }
   const auto& logical_blob_desc = producer_sbp_infer_hint.logical_blob_desc();
   return logical_blob_desc.shape().elem_cnt() * GetSizeOfDataType(logical_blob_desc.data_type());

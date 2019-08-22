@@ -14,25 +14,30 @@ class ReentrantLockStatus final {
 
   void Init(const KernelConf& kernel_conf);
 
+  static std::string kEmptyIbn;
+
   // true: success
   // false: failed
-  bool RequestLock(int64_t lock_id);
+  void RequestLock(int64_t lock_id, std::queue<int64_t>* unlocked_ids);
 
   // return lock_id if any other lock acquired
   // -1: no other lock acquired
-  int64_t ReleaseLock(int64_t lock_id);
+  void ReleaseLock(int64_t lock_id, std::queue<int64_t>* unlocked_ids);
+
+  const std::queue<int64_t>& cur_unlocked_ids() const { return cur_unlocked_ids_; }
+  std::queue<int64_t>* mut_cur_unlocked_ids() { return &cur_unlocked_ids_; }
 
   // Getters
   const std::string& cur_ibn() const { return cur_ibn_; }
   int64_t cur_act_id() const { return cur_act_id_; }
-  bool cur_act_one_lock_acquired() const { return cur_act_one_lock_acquired_; }
+  bool acquired_lock_to_be_sent() const { return acquired_lock_to_be_sent_; }
   size_t total_queued_request_lock_num() const { return total_queued_request_lock_num_; }
   size_t total_acquired_lock_num() const { return total_acquired_lock_num_; }
 
   // Setters
   void set_cur_ibn(const std::string& ibn) { cur_ibn_ = ibn; }
   void set_cur_act_id(int64_t act_id) { cur_act_id_ = act_id; }
-  void set_cur_act_one_lock_acquired(bool val) { cur_act_one_lock_acquired_ = val; }
+  void set_acquired_lock_to_be_sent(bool val) { acquired_lock_to_be_sent_ = val; }
 
  private:
   // true: success
@@ -41,12 +46,13 @@ class ReentrantLockStatus final {
 
   std::string cur_ibn_;
   int64_t cur_act_id_;
-  bool cur_act_one_lock_acquired_;
+  bool acquired_lock_to_be_sent_;
   size_t total_queued_request_lock_num_;
   size_t total_acquired_lock_num_;
   std::vector<std::queue<int64_t>> lock_id2queued_request_act_id_;
   std::vector<size_t> lock_id2acquired_num_;
   std::vector<std::vector<int64_t>> lock_id2intersecting_lock_ids_;
+  std::queue<int64_t> cur_unlocked_ids_;
 };
 
 template<typename T>

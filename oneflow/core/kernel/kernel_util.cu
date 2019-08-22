@@ -237,7 +237,7 @@ __global__ void TransposeGpu(const Int32Array<NDIMS> y_shape, const Int32Array<N
 template<int32_t NDIMS, typename T>
 void Transpose(DeviceCtx* ctx, const Shape& x_shape, const Shape& y_shape,
                const PbRf<int32_t>& permutation, const int64_t elem_cnt, const T* x, T* y) {
-  CHECK_LE(y_shape.elem_cnt(), MaxVal<int32_t>::value);
+  CHECK_LE(y_shape.elem_cnt(), GetMaxVal<int32_t>());
   Int32Array<NDIMS> y_shape_struct;
   FOR_RANGE(int32_t, i, 0, NDIMS) { y_shape_struct.val[i] = y_shape.At(i); }
   Int32Array<NDIMS> x_strides;
@@ -329,13 +329,6 @@ void AssignStridedAddr(DeviceCtx* ctx, T** dev_ptrs, T* start_ptr, int stride_le
 }  // namespace
 
 template<>
-void Memcpy<DeviceType::kGPU>(DeviceCtx* ctx, void* dst, const void* src, size_t sz,
-                              cudaMemcpyKind kind) {
-  if (dst == src) { return; }
-  CudaCheck(cudaMemcpyAsync(dst, src, sz, kind, ctx->cuda_stream()));
-}
-
-template<>
 void Memset<DeviceType::kGPU>(DeviceCtx* ctx, void* dst, const char value, size_t sz) {
   CudaCheck(cudaMemsetAsync(dst, value, sz, ctx->cuda_stream()));
 }
@@ -385,7 +378,7 @@ KU_IF_METHOD RowSum(DeviceCtx* ctx, const int64_t row_num, const int64_t col_num
 KU_IF_METHOD Transpose(DeviceCtx* ctx, const int32_t num_axis, const Shape& x_shape,
                        const Shape& y_shape, const PbRf<int32_t>& permutation,
                        const int64_t elem_cnt, const T* x, T* y) {
-  CHECK_LE(y_shape.elem_cnt(), MaxVal<int32_t>::value);
+  CHECK_LE(y_shape.elem_cnt(), GetMaxVal<int32_t>());
   CHECK_EQ(num_axis, y_shape.NumAxes());
   CHECK_EQ(num_axis, x_shape.NumAxes());
   TransposeUtil<T>::SwitchTranspose(SwitchCase(num_axis), ctx, x_shape, y_shape, permutation,
@@ -653,9 +646,16 @@ KU_INTEGRAL_METHOD Axpy(DeviceCtx* ctx, const int n, const T alpha, const T* x, 
 OF_PP_FOR_EACH_TUPLE(INSTANTIATE_KERNEL_UTIL, ARITHMETIC_DATA_TYPE_SEQ);
 
 template<>
-__device__ float gpu_atomic_add(float* address, const float val) {
+__device__ float gpu_atomic_add(float* address, float val) {
   return atomicAdd(address, val);
 }
+
+#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 700
+template<>
+__device__ half gpu_atomic_add(half* address, half val) {
+  return atomicAdd(address, val);
+}
+#endif
 
 template<>
 __device__ double gpu_atomic_add(double* address, const double val) {
@@ -700,6 +700,16 @@ __global__ void CastOnGpu(const T* in, U* out, int64_t elem_num) {
   CUDA_1D_KERNEL_LOOP(i, elem_num) { out[i] = static_cast<U>(in[i]); }
 }
 
+template<>
+__global__ void CastOnGpu<float, half>(const float* in, half* out, int64_t elem_num) {
+  CUDA_1D_KERNEL_LOOP(i, elem_num) { out[i] = __float2half(in[i]); }
+}
+
+template<>
+__global__ void CastOnGpu<half, float>(const half* in, float* out, int64_t elem_num) {
+  CUDA_1D_KERNEL_LOOP(i, elem_num) { out[i] = __half2float(in[i]); }
+}
+
 template<typename T, typename U>
 void CopyElemOnGpu(DeviceCtx* ctx, const T* in_dptr, U* out_dptr, int64_t elem_num) {
   if (std::is_same<T, U>::value) {
@@ -709,6 +719,22 @@ void CopyElemOnGpu(DeviceCtx* ctx, const T* in_dptr, U* out_dptr, int64_t elem_n
         <<<BlocksNum4ThreadsNum(elem_num), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
             in_dptr, out_dptr, elem_num);
   }
+}
+
+template<>
+void CopyElemOnGpu<float, float16>(DeviceCtx* ctx, const float* in_dptr, float16* out_dptr,
+                                   int64_t elem_num) {
+  CastOnGpu<float, half>
+      <<<BlocksNum4ThreadsNum(elem_num), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+          in_dptr, reinterpret_cast<half*>(out_dptr), elem_num);
+}
+
+template<>
+void CopyElemOnGpu<float16, float>(DeviceCtx* ctx, const float16* in_dptr, float* out_dptr,
+                                   int64_t elem_num) {
+  CastOnGpu<half, float>
+      <<<BlocksNum4ThreadsNum(elem_num), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+          reinterpret_cast<const half*>(in_dptr), out_dptr, elem_num);
 }
 
 #define INSTANTIATE_COPY_ELEM_ON_GPU(T, U) \

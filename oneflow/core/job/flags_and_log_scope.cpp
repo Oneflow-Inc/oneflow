@@ -33,17 +33,16 @@ std::string LogDir(const std::string& log_dir) {
 }
 }
 
-FlagsAndLogScope::FlagsAndLogScope(const JobSet& job_set, const char* binary_name) {
-  FLAGS_log_dir = LogDir(job_set.cpp_flags_conf().log_dir());
-  FLAGS_logtostderr = job_set.cpp_flags_conf().logtostderr();
-  FLAGS_logbuflevel = job_set.cpp_flags_conf().logbuflevel();
-  FLAGS_grpc_use_no_signal = job_set.cpp_flags_conf().grpc_use_no_signal();
+FlagsAndLogScope::FlagsAndLogScope(const ConfigProto& config, const char* binary_name) {
+  FLAGS_log_dir = LogDir(config.cpp_flags_conf().log_dir());
+  FLAGS_logtostderr = config.cpp_flags_conf().logtostderr();
+  FLAGS_logbuflevel = config.cpp_flags_conf().logbuflevel();
+  FLAGS_grpc_use_no_signal = config.cpp_flags_conf().grpc_use_no_signal();
   google::InitGoogleLogging(binary_name);
   gflags::SetVersionString(BuildVersionString());
   LocalFS()->RecursivelyCreateDirIfNotExist(FLAGS_log_dir);
-  RedirectStdoutAndStderrToGlogDir();
 }
 
-FlagsAndLogScope::~FlagsAndLogScope() { CloseStdoutAndStderr(); }
+FlagsAndLogScope::~FlagsAndLogScope() {}
 
 }  // namespace oneflow

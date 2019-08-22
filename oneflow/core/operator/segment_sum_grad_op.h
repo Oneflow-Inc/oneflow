@@ -12,7 +12,6 @@ class SegmentSumGradOp final : public Operator {
   ~SegmentSumGradOp() = default;
 
   void InitFromOpConf() override;
-  bool NeedInBlobWhenBackward() const override { return false; }
 
   void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                       const ParallelContext* parallel_ctx) const override;

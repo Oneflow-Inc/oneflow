@@ -9,6 +9,8 @@ void EncodeDataToFeature(DeviceCtx* ctx, Feature* feature, const T* in_dptr, siz
   DataType data_type = GetDataType<T>();
   if (data_type == DataType::kInt8) {
     feature->mutable_bytes_list()->add_value(reinterpret_cast<const char*>(in_dptr), elem_num);
+  } else if (data_type == DataType::kFloat16) {
+    feature->mutable_bytes_list()->add_value(reinterpret_cast<const char*>(in_dptr), elem_num * 2);
   }
 #define DEFINE_ONE_ELIF(CppT, ListT)                                                     \
   else if (data_type == GetDataType<CppT>()) {                                           \
@@ -52,6 +54,7 @@ void OFRecordEncoderImpl<EncodeCase::kRaw, T>::EncodeBlob(DeviceCtx* ctx, const 
 #define INSTANTIATE_OFRECORD_RAW_ENCODER(type_cpp, type_proto) \
   template class OFRecordEncoderImpl<EncodeCase::kRaw, type_cpp>;
 
-OF_PP_FOR_EACH_TUPLE(INSTANTIATE_OFRECORD_RAW_ENCODER, ARITHMETIC_DATA_TYPE_SEQ CHAR_DATA_TYPE_SEQ)
+OF_PP_FOR_EACH_TUPLE(INSTANTIATE_OFRECORD_RAW_ENCODER,
+                     ARITHMETIC_DATA_TYPE_SEQ CHAR_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ)
 
 }  // namespace oneflow

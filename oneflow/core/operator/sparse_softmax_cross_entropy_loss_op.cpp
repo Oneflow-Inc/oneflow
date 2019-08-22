@@ -4,8 +4,8 @@
 namespace oneflow {
 
 void SparseSoftmaxCrossEntropyLossOp::VirtualInitFromOpConf() {
-  EnrollDataTmpBn("prob");
-  EnrollDataTmpBn("fw_buf");
+  EnrollTmpBn("prob");
+  EnrollTmpBn("fw_buf");
 }
 
 const PbMessage& SparseSoftmaxCrossEntropyLossOp::GetCustomizedConf() const {

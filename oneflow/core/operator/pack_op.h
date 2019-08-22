@@ -19,8 +19,6 @@ class PackOp final : public Operator {
                                 const ParallelContext* parallel_ctx,
                                 Shape* time_shape) const override;
 
-  bool NeedInBlobWhenBackward() const override { return true; }
-  bool NeedOutBlobWhenBackward() const override { return false; }
   int32_t GetPackNum() const;
 
  private:

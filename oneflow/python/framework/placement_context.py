@@ -1,21 +1,14 @@
-job_name2default_parallel_conf = {}
+placement_scope_stack = []
 
-parallel_conf_stack = []
+def PlacementScopeStackPush(placement_policy):
+    global placement_scope_stack
+    placement_scope_stack.insert(0, placement_policy)
 
-cur_placement_scope_op_names = None
-
-def ParallelConfStackPush(parallel_conf):
-    global parallel_conf_stack
-    parallel_conf_stack.insert(0, parallel_conf)
-
-def ParallelConfStackPop():
-    global parallel_conf_stack
-    parallel_conf_stack.pop(0)
+def PlacementScopeStackPop():
+    global placement_scope_stack
+    return placement_scope_stack.pop(0)
     
-def ParallelConfStackTop():
-    assert len(parallel_conf_stack) > 0
-    return parallel_conf_stack[0]
-
-def CurPlacementGroupAddOpName(op_name):
-    global cur_placement_scope_op_names
-    cur_placement_scope_op_names.append(op_name)
+def CurPlacementGroupAddOpConf(op_conf):
+    global placement_scope_stack
+    assert len(placement_scope_stack) > 0
+    placement_scope_stack[0].AppendOpConf(op_conf)
