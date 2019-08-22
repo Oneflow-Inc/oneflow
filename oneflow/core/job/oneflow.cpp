@@ -59,6 +59,8 @@ std::string cluster_thrd_ids_key(const std::string& plan_name) {
 
 std::string net_topo_key(const std::string& plan_name) { return plan_name + "_net_topo"; }
 
+std::string job_id2job_conf(const std::string& plan_name) { return plan_name + "_job_id2job_conf"; }
+
 std::string sub_plan_key(const std::string& plan_name, int64_t machine_id, int64_t thrd_id) {
   return plan_name + "_" + std::to_string(machine_id) + "_" + std::to_string(thrd_id);
 }
@@ -94,6 +96,7 @@ void PushPlan(const std::string& plan_name, const Plan& plan) {
                                     std::to_string(plan.total_mbn_num()));
 
   Global<CtrlClient>::Get()->PushKV(net_topo_key(plan_name), plan.net_topo());
+  Global<CtrlClient>::Get()->PushKV(job_id2job_conf(plan_name), plan.job_confs());
 }
 
 void PullPlan(const std::string& plan_name, Plan* plan) {
@@ -111,12 +114,15 @@ void PullPlan(const std::string& plan_name, Plan* plan) {
     Global<CtrlClient>::Get()->PullKV(sub_plan_key(plan_name, machine_id, thrd_id), &sub_plan);
     plan->mutable_task()->MergeFrom(sub_plan.task());
   }
-  NetTopo net_topo;
   std::string total_mbn_num;
   Global<CtrlClient>::Get()->PullKV(total_mbn_num_key(plan_name), &total_mbn_num);
   plan->set_total_mbn_num(oneflow_cast<int64_t>(total_mbn_num));
+  NetTopo net_topo;
   Global<CtrlClient>::Get()->PullKV(net_topo_key(plan_name), &net_topo);
   *(plan->mutable_net_topo()) = net_topo;
+  JobConfs job_confs;
+  Global<CtrlClient>::Get()->PullKV(job_id2job_conf(plan_name), &job_confs);
+  *(plan->mutable_job_confs()) = job_confs;
 }
 
 void CompileCurJobOnMaster(Job* job, Plan* improved_plan, bool need_job_complete) {
@@ -160,8 +166,8 @@ void CompileCurJobOnMaster(Job* job, Plan* improved_plan, bool need_job_complete
 
 void MergePlan(Plan* plan, const Plan& other) {
   plan->mutable_task()->MergeFrom(other.task());
-  for (const auto& pair : other.job_id2job_conf()) {
-    CHECK(plan->mutable_job_id2job_conf()->insert(pair).second);
+  for (const auto& pair : other.job_confs().job_id2job_conf()) {
+    CHECK(plan->mutable_job_confs()->mutable_job_id2job_conf()->insert(pair).second);
   }
 }
 

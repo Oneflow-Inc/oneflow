@@ -128,8 +128,11 @@ void Compiler::Compile(Job* job, Plan* plan, bool need_job_complete) const {
     if (task_node->IsMeaningLess()) { return; }
     task_node->ToProto(plan->mutable_task()->Add());
   });
-  plan->set_total_mbn_num(total_mbn_num);
-  (*plan->mutable_job_id2job_conf())[GlobalJobDesc().job_id()] = GlobalJobDesc().job_conf();
+  {
+    plan->set_total_mbn_num(total_mbn_num);
+    auto* job_id2job_conf = plan->mutable_job_confs()->mutable_job_id2job_conf();
+    (*job_id2job_conf)[GlobalJobDesc().job_id()] = GlobalJobDesc().job_conf();
+  }
   // TODO: fix .dot generate
   // GenNetTopo(plan);
   // ToDotFile(*plan, "/dot/plan.dot");
