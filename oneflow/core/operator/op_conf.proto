@@ -984,12 +984,14 @@ message NcclTupleBroadcastOpConf {
   repeated int64 root = 4;
   repeated DataType data_type = 5;
   repeated ShapeProto shape = 6;
+  optional int64 nccl_order_hint = 7 [default = 0];
 }
 
 message NcclTupleReduceOpConf {
   repeated string in = 1;
   repeated string out = 2;
   repeated int64 root = 3;
+  optional int64 nccl_order_hint = 4 [default = 0];
 }
 
 message ReduceSplitOpConf {

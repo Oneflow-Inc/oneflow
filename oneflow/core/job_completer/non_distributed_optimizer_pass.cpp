@@ -36,6 +36,15 @@ void NonDistributedOptimizerPass::Apply(const OpGraph& op_graph, JobBuilder* bui
   HashMap<ParallelDesc, HashMap<const OpNode*, std::vector<const OpNode*>>> pd2last_node2node_seqs;
   HashMap<const OpNode*, OperatorConf> op_node2op_conf;
   HashMap<const OpNode*, int64_t> last_node2model_size;
+  HashMap<const OpNode*, int64_t> op_node2topo_order;
+  HashMap<ParallelDesc, std::vector<const OpNode*>> pd2last_nodes;
+  HashMap<const OpNode*, int64_t> last_node2parallel_id;
+  HashMap<const OpNode*, int64_t> last_node2order;
+  int64_t node_cnt = 0;
+  op_graph.TopoForEachNode([&](const OpNode* node) {
+    op_node2topo_order[node] = node_cnt;
+    node_cnt += 1;
+  });
   op_graph.ForEachNode([&](const OpNode* node) {
     if (!node->op().op_conf().has_variable_conf()) { return; }
     std::vector<const OpNode*> op_seq_without_batch_dim;
@@ -63,15 +72,19 @@ void NonDistributedOptimizerPass::Apply(const OpGraph& op_graph, JobBuilder* bui
     const OpNode* last_node = op_seq_without_batch_dim.back();
     const ParallelDesc& pd = last_node->parallel_desc();
     pd2last_node2node_seqs[pd][last_node] = op_seq_without_batch_dim;
-    last_node->ForEachNodeOnOutEdge(
-        [&](const OpNode* dst) { op_node2op_conf.emplace(dst, dst->op().op_conf()); });
+    int64_t min_consumer_topo_order = node_cnt;
+    last_node->ForEachNodeOnOutEdge([&](const OpNode* dst) {
+      op_node2op_conf.emplace(dst, dst->op().op_conf());
+      min_consumer_topo_order = std::min(min_consumer_topo_order, op_node2topo_order.at(dst));
+    });
     last_node2model_size[last_node] = GetSoleOutBlobSize(node);
+    last_node2order[last_node] = min_consumer_topo_order;
   });
   for (const auto& pair : pd2last_node2node_seqs) {
     const ParallelDesc& pd = pair.first;
     if (pd.parallel_num() <= 1) { continue; }
     std::vector<int64_t> parallel_id2size(pd.parallel_num(), 0);
-    HashMap<const OpNode*, int64_t> last_node2parallel_id;
+
     std::vector<std::pair<const OpNode*, int64_t>> last_node_out_size_pairs;
     const auto& last_node2node_seqs = pair.second;
     for (const auto& last_node7node_seqs : last_node2node_seqs) {
@@ -95,32 +108,62 @@ void NonDistributedOptimizerPass::Apply(const OpGraph& op_graph, JobBuilder* bui
         const ParallelConf parallel_conf = NonDistributedParallelConf4ParallelId(pd, parallel_id);
         builder->MutParallelConfOnlyOnce(node->op().op_name(), parallel_conf);
       }
+      pd2last_nodes[pd].push_back(last_node);
+    }
+  }
+  for (auto& pair : pd2last_nodes) {
+    const ParallelDesc& pd = pair.first;
+    std::vector<const OpNode*>* last_nodes = &pair.second;
+    if (pd.parallel_num() <= 1) { continue; }
+    std::sort(last_nodes->begin(), last_nodes->end(), [&](const OpNode* lhs, const OpNode* rhs) {
+      return last_node2order.at(lhs) < last_node2order.at(rhs);
+    });
+    std::vector<std::vector<const OpNode*>> groups;
+    int64_t group_size = 0;
+    for (const OpNode* node : *last_nodes) {
+      const int64_t node_size = last_node2model_size.at(node);
+      if (groups.empty() || group_size > 100 * 1024 * 1024
+          || (group_size >= 50 * 1024 * 1024 && node_size > 100 * 1024 * 1024)) {
+        groups.push_back({node});
+        group_size = node_size;
+      } else {
+        groups.back().push_back(node);
+        group_size += node_size;
+      }
+    }
+    for (const std::vector<const OpNode*>& group : groups) {
       OperatorConf nccl_broadcast_op_conf{};
       nccl_broadcast_op_conf.set_name("System-Boxing-NcclTupleBroadcast-" + NewUniqueId());
       NcclTupleBroadcastOpConf* tuple_broadcast_conf =
           nccl_broadcast_op_conf.mutable_nccl_tuple_broadcast_conf();
-      const LogicalBlobId& lbi = last_node->op().BnInOp2Lbi(last_node->op().SoleObn());
-      const BlobDesc& blob_desc = last_node->LogicalBlobDesc4Lbi(lbi);
-      *tuple_broadcast_conf->mutable_in()->Add() = GenLogicalBlobName(lbi);
-      *tuple_broadcast_conf->mutable_out()->Add() = "out";
-      *tuple_broadcast_conf->mutable_root()->Add() = parallel_id;
-      *tuple_broadcast_conf->mutable_data_type()->Add() = blob_desc.data_type();
-      blob_desc.shape().ToProto(tuple_broadcast_conf->mutable_shape()->Add());
-      builder->AddOrMutOpsOnlyOnce(pd.parallel_conf(), {nccl_broadcast_op_conf});
-      const std::string new_lbn = nccl_broadcast_op_conf.name() + "/out";
-      last_node->ForEachNodeOnOutEdge([&](const OpNode* dst) {
-        for (const std::string& ibn : dst->op().input_bns()) {
-          if (dst->op().BnInOp2Lbi(ibn) == lbi) {
-            PbMessage* dst_op_type_conf = MutableMessageInPbMessage(
-                &op_node2op_conf.at(dst), op_node2op_conf.at(dst).op_type_case());
-            SetBnValInOpTypeConf(dst_op_type_conf, ibn, GenLogicalBlobName(lbi), new_lbn);
+      tuple_broadcast_conf->set_nccl_order_hint(op_node2topo_order.at(group.back()));
+      FOR_RANGE(int64_t, i, 0, group.size()) {
+        const OpNode* node = group.at(i);
+        const std::string obn = GenRepeatedBn("out", i);
+        const int64_t& parallel_id = last_node2parallel_id.at(node);
+        const LogicalBlobId& lbi = node->op().BnInOp2Lbi(node->op().SoleObn());
+        const BlobDesc& blob_desc = node->LogicalBlobDesc4Lbi(lbi);
+        *tuple_broadcast_conf->mutable_in()->Add() = GenLogicalBlobName(lbi);
+        *tuple_broadcast_conf->mutable_out()->Add() = obn;
+        *tuple_broadcast_conf->mutable_root()->Add() = parallel_id;
+        *tuple_broadcast_conf->mutable_data_type()->Add() = blob_desc.data_type();
+        blob_desc.shape().ToProto(tuple_broadcast_conf->mutable_shape()->Add());
+        const std::string new_lbn = nccl_broadcast_op_conf.name() + "/" + obn;
+        node->ForEachNodeOnOutEdge([&](const OpNode* dst) {
+          for (const std::string& ibn : dst->op().input_bns()) {
+            if (dst->op().BnInOp2Lbi(ibn) == lbi) {
+              PbMessage* dst_op_type_conf = MutableMessageInPbMessage(
+                  &op_node2op_conf.at(dst), op_node2op_conf.at(dst).op_type_case());
+              SetBnValInOpTypeConf(dst_op_type_conf, ibn, GenLogicalBlobName(lbi), new_lbn);
+            }
           }
-        }
-      });
+        });
+      }
+      builder->AddOrMutOpsOnlyOnce(pd.parallel_conf(), {nccl_broadcast_op_conf});
     }
-    for (const auto& op_node7op_conf : op_node2op_conf) {
-      builder->MutOpsOnlyOnce({op_node7op_conf.second});
-    }
+  }
+  for (const auto& op_node7op_conf : op_node2op_conf) {
+    builder->MutOpsOnlyOnce({op_node7op_conf.second});
   }
 }
 

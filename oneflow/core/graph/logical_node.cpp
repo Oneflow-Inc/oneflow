@@ -443,7 +443,7 @@ CompTaskNode* NcclTupleBroadcastLogicalNode::NewCompTaskNode() const {
   return new NcclTupleBroadcastCompTaskNode;
 }
 
-int64_t NcclTupleBroadcastLogicalNode::GetAreaId() const { return NewAreaId(); }
+int64_t NcclTupleBroadcastLogicalNode::GetAreaId() const { return kMdUpdtArea; }
 
 std::string NcclTupleReduceLogicalNode::TypeName() const { return "NcclTupleReduce"; }
 
@@ -451,6 +451,6 @@ CompTaskNode* NcclTupleReduceLogicalNode::NewCompTaskNode() const {
   return new NcclTupleReduceCompTaskNode;
 }
 
-int64_t NcclTupleReduceLogicalNode::GetAreaId() const { return NewAreaId(); }
+int64_t NcclTupleReduceLogicalNode::GetAreaId() const { return kMdUpdtArea; }
 
 }  // namespace oneflow
