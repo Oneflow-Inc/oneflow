@@ -16,7 +16,6 @@ void LevelMapKernel<device_type, T>::ForwardDataContent(
   LevelMapUtil<device_type, T>::Forward(
       ctx.device_ctx, num_boxes, in_blob->dptr<T>(), conf.canonical_level(), conf.canonical_scale(),
       conf.min_level(), conf.max_level(), conf.epsilon(), out_blob->mut_dptr<int32_t>());
-  LOG(INFO) << "debug...";
 }
 
 template<DeviceType device_type, typename T>

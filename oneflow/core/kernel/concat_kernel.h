@@ -13,6 +13,7 @@ class ConcatKernel final : public KernelIf<device_type> {
   ~ConcatKernel() = default;
 
  private:
+  bool NeedForwardIfBlobEmpty() const override { return true; }
   void ForwardDim0ValidNum(const KernelCtx& ctx,
                            std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   void ForwardInstanceShape(const KernelCtx& ctx,
