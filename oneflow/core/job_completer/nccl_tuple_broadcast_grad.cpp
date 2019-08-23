@@ -13,7 +13,7 @@ void GenerateBackwardOpConf(
   OperatorConf nccl_tuple_reduce_op{};
   nccl_tuple_reduce_op.set_name("System-AutoGrad-" + op.op_name());
   NcclTupleReduceOpConf* tuple_reduce_conf = nccl_tuple_reduce_op.mutable_nccl_tuple_reduce_conf();
-  tuple_reduce_conf->set_nccl_order_hint(-conf.nccl_order_hint());
+  tuple_reduce_conf->set_nccl_order_hint(conf.nccl_order_hint());
   FOR_RANGE(int64_t, i, 0, conf.in_size()) {
     const std::string ibn = GenRepeatedBn("in", i);
     LogicalBlobId* diff_lbi = DiffLbi4BnInOp(ibn);

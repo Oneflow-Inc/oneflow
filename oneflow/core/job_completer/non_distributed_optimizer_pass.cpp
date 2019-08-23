@@ -36,16 +36,15 @@ void NonDistributedOptimizerPass::Apply(const OpGraph& op_graph, JobBuilder* bui
   HashMap<ParallelDesc, HashMap<const OpNode*, std::vector<const OpNode*>>> pd2last_node2node_seqs;
   HashMap<const OpNode*, OperatorConf> op_node2op_conf;
   HashMap<const OpNode*, int64_t> last_node2model_size;
-  HashMap<const OpNode*, int64_t> op_name2order;
+  HashMap<const OpNode*, int64_t> op_node2topo_order;
   HashMap<ParallelDesc, std::vector<const OpNode*>> pd2last_nodes;
   HashMap<const OpNode*, int64_t> last_node2parallel_id;
-  int64_t order = 0;
-  op_graph.DfsTopoForEachNodeSortByDistanceToSink(
-      op_graph.source_nodes(), &OpNode::ForEachNodeOnInEdge, &OpNode::ForEachNodeOnOutEdge,
-      [&](const OpNode* node) {
-        op_name2order[node] = order;
-        order += 1;
-      });
+  HashMap<const OpNode*, int64_t> last_node2order;
+  int64_t node_cnt = 0;
+  op_graph.TopoForEachNode([&](const OpNode* node) {
+    op_node2topo_order[node] = node_cnt;
+    node_cnt += 1;
+  });
   op_graph.ForEachNode([&](const OpNode* node) {
     if (!node->op().op_conf().has_variable_conf()) { return; }
     std::vector<const OpNode*> op_seq_without_batch_dim;
@@ -73,9 +72,13 @@ void NonDistributedOptimizerPass::Apply(const OpGraph& op_graph, JobBuilder* bui
     const OpNode* last_node = op_seq_without_batch_dim.back();
     const ParallelDesc& pd = last_node->parallel_desc();
     pd2last_node2node_seqs[pd][last_node] = op_seq_without_batch_dim;
-    last_node->ForEachNodeOnOutEdge(
-        [&](const OpNode* dst) { op_node2op_conf.emplace(dst, dst->op().op_conf()); });
+    int64_t min_consumer_topo_order = node_cnt;
+    last_node->ForEachNodeOnOutEdge([&](const OpNode* dst) {
+      op_node2op_conf.emplace(dst, dst->op().op_conf());
+      min_consumer_topo_order = std::min(min_consumer_topo_order, op_node2topo_order.at(dst));
+    });
     last_node2model_size[last_node] = GetSoleOutBlobSize(node);
+    last_node2order[last_node] = min_consumer_topo_order;
   });
   for (const auto& pair : pd2last_node2node_seqs) {
     const ParallelDesc& pd = pair.first;
@@ -113,7 +116,7 @@ void NonDistributedOptimizerPass::Apply(const OpGraph& op_graph, JobBuilder* bui
     std::vector<const OpNode*>* last_nodes = &pair.second;
     if (pd.parallel_num() <= 1) { continue; }
     std::sort(last_nodes->begin(), last_nodes->end(), [&](const OpNode* lhs, const OpNode* rhs) {
-      return op_name2order.at(lhs) > op_name2order.at(rhs);
+      return last_node2order.at(lhs) < last_node2order.at(rhs);
     });
     std::vector<std::vector<const OpNode*>> groups;
     int64_t group_size = 0;
@@ -133,7 +136,7 @@ void NonDistributedOptimizerPass::Apply(const OpGraph& op_graph, JobBuilder* bui
       nccl_broadcast_op_conf.set_name("System-Boxing-NcclTupleBroadcast-" + NewUniqueId());
       NcclTupleBroadcastOpConf* tuple_broadcast_conf =
           nccl_broadcast_op_conf.mutable_nccl_tuple_broadcast_conf();
-      tuple_broadcast_conf->set_nccl_order_hint(-op_name2order.at(group.back()));
+      tuple_broadcast_conf->set_nccl_order_hint(op_node2topo_order.at(group.back()));
       FOR_RANGE(int64_t, i, 0, group.size()) {
         const OpNode* node = group.at(i);
         const std::string obn = GenRepeatedBn("out", i);
