@@ -113,7 +113,7 @@ void NonDistributedOptimizerPass::Apply(const OpGraph& op_graph, JobBuilder* bui
     std::vector<const OpNode*>* last_nodes = &pair.second;
     if (pd.parallel_num() <= 1) { continue; }
     std::sort(last_nodes->begin(), last_nodes->end(), [&](const OpNode* lhs, const OpNode* rhs) {
-      return op_name2order.at(lhs) < op_name2order.at(rhs);
+      return op_name2order.at(lhs) > op_name2order.at(rhs);
     });
     std::vector<std::vector<const OpNode*>> groups;
     int64_t group_size = 0;
