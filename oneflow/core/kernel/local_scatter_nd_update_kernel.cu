@@ -35,13 +35,24 @@ __global__ void GpuForward(const int64_t elem_cnt, const T* updates_ptr, const i
 }
 
 template<typename T, typename K>
-__global__ void GpuBackward(const int64_t elem_cnt, const T* out_diff_ptr, const int64_t* shape_ptr,
-                            const int64_t shape_dim, const K* indices_ptr, const int64_t index_dim,
-                            const int64_t block_size, T* updates_diff_ptr, T* in_diff_ptr) {
+__global__ void GpuBackwardUpdatesDiff(const int64_t elem_cnt, const T* out_diff_ptr,
+                                       const int64_t* shape_ptr, const int64_t shape_dim,
+                                       const K* indices_ptr, const int64_t index_dim,
+                                       const int64_t block_size, T* updates_diff_ptr) {
   CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
     const K* index_ptr = indices_ptr + (i / block_size) * index_dim;
     updates_diff_ptr[i] =
         out_diff_ptr[GetOffset(shape_ptr, shape_dim, index_ptr, index_dim, block_size, i)];
+  }
+}
+
+template<typename T, typename K>
+__global__ void GpuBackwardInDiff(const int64_t elem_cnt, const T* out_diff_ptr,
+                                  const int64_t* shape_ptr, const int64_t shape_dim,
+                                  const K* indices_ptr, const int64_t index_dim,
+                                  const int64_t block_size, T* in_diff_ptr) {
+  CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
+    const K* index_ptr = indices_ptr + (i / block_size) * index_dim;
     in_diff_ptr[GetOffset(shape_ptr, shape_dim, index_ptr, index_dim, block_size, i)] = 0;
   }
 }
@@ -65,20 +76,35 @@ struct LocalScatterNdUpdateKernelUtil<DeviceType::kGPU, T, K> {
             indices_blob->shape().dim_vec().back(), block_size, out_blob->mut_dptr<T>());
   }
 
-  static void Backward(DeviceCtx* ctx, const Blob* out_diff_blob, int64_t* shape_ptr,
-                       const Blob* indices_blob, const int64_t num_updates,
-                       const int64_t block_size, Blob* updates_diff_blob, Blob* in_diff_blob) {
+  static void BackwardUpdatesDiff(DeviceCtx* ctx, const Blob* out_diff_blob, const Blob* in_blob,
+                                  int64_t* shape_ptr, const Blob* indices_blob,
+                                  const int64_t num_updates, const int64_t block_size,
+                                  Blob* updates_diff_blob) {
+    CHECK_NOTNULL(shape_ptr);
+    const int64_t shape_dim = in_blob->shape().NumAxes();
+    FOR_RANGE(size_t, i, 0, shape_dim) {
+      KernelUtil<DeviceType::kGPU, int64_t>::Set(ctx, in_blob->shape().At(i), shape_ptr + i);
+    }
+    const int64_t elem_cnt = num_updates * block_size;
+    GpuBackwardUpdatesDiff<T, K>
+        <<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+            elem_cnt, out_diff_blob->dptr<T>(), shape_ptr, shape_dim, indices_blob->dptr<K>(),
+            indices_blob->shape().dim_vec().back(), block_size, updates_diff_blob->mut_dptr<T>());
+  }
+
+  static void BackwardInDiff(DeviceCtx* ctx, const Blob* out_diff_blob, int64_t* shape_ptr,
+                             const Blob* indices_blob, const int64_t num_updates,
+                             const int64_t block_size, Blob* in_diff_blob) {
     CHECK_NOTNULL(shape_ptr);
     const int64_t shape_dim = in_diff_blob->shape().NumAxes();
     FOR_RANGE(size_t, i, 0, shape_dim) {
       KernelUtil<DeviceType::kGPU, int64_t>::Set(ctx, in_diff_blob->shape().At(i), shape_ptr + i);
     }
     const int64_t elem_cnt = num_updates * block_size;
-    GpuBackward<T, K>
+    GpuBackwardInDiff<T, K>
         <<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
             elem_cnt, out_diff_blob->dptr<T>(), shape_ptr, shape_dim, indices_blob->dptr<K>(),
-            indices_blob->shape().dim_vec().back(), block_size, updates_diff_blob->mut_dptr<T>(),
-            in_diff_blob->mut_dptr<T>());
+            indices_blob->shape().dim_vec().back(), block_size, in_diff_blob->mut_dptr<T>());
   }
 };
 

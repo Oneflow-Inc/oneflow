@@ -56,6 +56,7 @@ void LocalScatterNdUpdateKernel<device_type, T, K>::ForwardDataContent(
 template<DeviceType device_type, typename T, typename K>
 void LocalScatterNdUpdateKernel<device_type, T, K>::BackwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  const Blob* in_blob = BnInOp2Blob("in");
   const Blob* out_diff_blob = BnInOp2Blob(GenDiffBn("out"));
   const Blob* indices_blob = BnInOp2Blob("indices");
   Blob* in_diff_blob = BnInOp2Blob(GenDiffBn("in"));
@@ -73,10 +74,17 @@ void LocalScatterNdUpdateKernel<device_type, T, K>::BackwardDataContent(
   int64_t* shape_ptr = (this->op_conf().device_type() == DeviceType::kGPU)
                            ? BnInOp2Blob("shape")->mut_dptr<int64_t>()
                            : nullptr;
-  in_diff_blob->CopyDataContentFrom(ctx.device_ctx, out_diff_blob);
-  LocalScatterNdUpdateKernelUtil<device_type, T, K>::Backward(
-      ctx.device_ctx, out_diff_blob, shape_ptr, indices_blob, num_updates, block_size,
-      updates_diff_blob, in_diff_blob);
+  if (updates_diff_blob) {
+    LocalScatterNdUpdateKernelUtil<device_type, T, K>::BackwardUpdatesDiff(
+        ctx.device_ctx, out_diff_blob, in_blob, shape_ptr, indices_blob, num_updates, block_size,
+        updates_diff_blob);
+  }
+  if (in_diff_blob) {
+    in_diff_blob->CopyDataContentFrom(ctx.device_ctx, out_diff_blob);
+    LocalScatterNdUpdateKernelUtil<device_type, T, K>::BackwardInDiff(
+        ctx.device_ctx, out_diff_blob, shape_ptr, indices_blob, num_updates, block_size,
+        in_diff_blob);
+  }
 }
 
 template<DeviceType device_type, typename T, typename K>
@@ -112,17 +120,28 @@ struct LocalScatterNdUpdateKernelUtil<DeviceType::kCPU, T, K> {
       std::transform(from, from + block_size, to, to, std::plus<T>());
     }
   }
-  static void Backward(DeviceCtx* ctx, const Blob* out_diff_blob, int64_t* shape_ptr,
-                       const Blob* indices_blob, const int64_t num_updates,
-                       const int64_t block_size, Blob* updates_diff_blob, Blob* in_diff_blob) {
+  static void BackwardUpdatesDiff(DeviceCtx* ctx, const Blob* out_diff_blob, const Blob* in_blob,
+                                  int64_t* shape_ptr, const Blob* indices_blob,
+                                  const int64_t num_updates, const int64_t block_size,
+                                  Blob* updates_diff_blob) {
+    CHECK(shape_ptr == nullptr);
+    const int64_t index_dim = indices_blob->shape().dim_vec().back();
+    FOR_RANGE(int64_t, i, 0, num_updates) {
+      const K* index_ptr = indices_blob->dptr<K>() + i * index_dim;
+      const int64_t offset = GetOffset(in_blob->shape().dim_vec(), index_ptr, index_dim);
+      const T* from = out_diff_blob->dptr<T>() + offset;
+      T* to = updates_diff_blob->mut_dptr<T>() + i * block_size;
+      std::copy(from, from + block_size, to);
+    }
+  }
+  static void BackwardInDiff(DeviceCtx* ctx, const Blob* out_diff_blob, int64_t* shape_ptr,
+                             const Blob* indices_blob, const int64_t num_updates,
+                             const int64_t block_size, Blob* in_diff_blob) {
     CHECK(shape_ptr == nullptr);
     const int64_t index_dim = indices_blob->shape().dim_vec().back();
     FOR_RANGE(int64_t, i, 0, num_updates) {
       const K* index_ptr = indices_blob->dptr<K>() + i * index_dim;
       const int64_t offset = GetOffset(in_diff_blob->shape().dim_vec(), index_ptr, index_dim);
-      const T* from = out_diff_blob->dptr<T>() + offset;
-      T* to = updates_diff_blob->mut_dptr<T>() + i * block_size;
-      std::copy(from, from + block_size, to);
       memset(in_diff_blob->mut_dptr<T>() + offset, 0, block_size * sizeof(T));
     }
   }

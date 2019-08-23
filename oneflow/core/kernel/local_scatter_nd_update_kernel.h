@@ -29,9 +29,13 @@ struct LocalScatterNdUpdateKernelUtil final {
   static void Forward(DeviceCtx* ctx, int64_t* shape_ptr, const Blob* indices_blob,
                       const Blob* updates_blob, const int64_t num_updates, const int64_t block_size,
                       Blob* out_blob);
-  static void Backward(DeviceCtx* ctx, const Blob* out_diff_blob, int64_t* shape_ptr,
-                       const Blob* indices_blob, const int64_t num_updates,
-                       const int64_t block_size, Blob* updates_diff_blob, Blob* in_diff_blob);
+  static void BackwardUpdatesDiff(DeviceCtx* ctx, const Blob* out_diff_blob, const Blob* in_blob,
+                                  int64_t* shape_ptr, const Blob* indices_blob,
+                                  const int64_t num_updates, const int64_t block_size,
+                                  Blob* updates_diff_blob);
+  static void BackwardInDiff(DeviceCtx* ctx, const Blob* out_diff_blob, int64_t* shape_ptr,
+                             const Blob* indices_blob, const int64_t num_updates,
+                             const int64_t block_size, Blob* in_diff_blob);
 };
 
 }  // namespace oneflow
