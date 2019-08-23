@@ -7,6 +7,7 @@ namespace oneflow {
 
 struct PlanUtil {
   static RegstDescProto* GetSoleProducedDataRegst(TaskProto* task_proto);
+  static std::function<const TaskProto&(int64_t)> MakeGetterTaskProto4TaskId(const Plan& plan);
 };
 
 }  // namespace oneflow

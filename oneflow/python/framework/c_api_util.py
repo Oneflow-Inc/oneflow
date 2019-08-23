@@ -31,6 +31,6 @@ def LaunchJob(job_instance):
 
 def DestroyGlobalOneflow():
     oneflow_internal.DestroyGlobalOneflow()
-    
+
 def DestroyGlobalEnvironment():
     oneflow_internal.DestroyGlobalEnvironment()
