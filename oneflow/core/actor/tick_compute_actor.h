@@ -13,7 +13,7 @@ class TickComputeActor final : public CompActor {
 
  private:
   void VirtualCompActorInit(const TaskProto&) override;
-  void Act() override { ++piece_id_; }
+  void Act() override {}
   void VirtualAsyncSendNaiveProducedRegstMsgToConsumer() override;
 
   int64_t piece_id_;

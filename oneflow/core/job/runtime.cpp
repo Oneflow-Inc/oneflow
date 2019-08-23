@@ -114,7 +114,7 @@ void Runtime::NewAllGlobal(const Plan& plan, size_t total_piece_num, bool is_exp
 #ifdef WITH_CUDA
   Global<NcclCommMgr>::New(plan);
 #endif  // WITH_CUDA
-  Global<RuntimeJobDescs>::New(plan.job_id2job_conf());
+  Global<RuntimeJobDescs>::New(plan.job_confs().job_id2job_conf());
 }
 
 void Runtime::DeleteAllGlobal() {
