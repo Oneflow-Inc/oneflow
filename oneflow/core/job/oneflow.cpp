@@ -553,7 +553,7 @@ void CompileMainJob(Job* main_job, const LogicalBlobId& critical_section_sink_lb
   ConnectCriticalSectionEndToReentrantLockEnd(main_plan, critical_section_sink_lbi);
 }
 
-void AddJobName2JobId(const std::string& job_name, int32_t job_id) {
+void AddJobName2JobId(const std::string& job_name, int64_t job_id) {
   CHECK(Global<JobName2JobId>::Get()->emplace(job_name, job_id).second);
 }
 
