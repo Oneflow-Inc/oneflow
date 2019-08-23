@@ -144,7 +144,6 @@ void NonDistributedOptimizerPass::Apply(const OpGraph& op_graph, JobBuilder* bui
         *tuple_broadcast_conf->mutable_root()->Add() = parallel_id;
         *tuple_broadcast_conf->mutable_data_type()->Add() = blob_desc.data_type();
         blob_desc.shape().ToProto(tuple_broadcast_conf->mutable_shape()->Add());
-        builder->AddOrMutOpsOnlyOnce(pd.parallel_conf(), {nccl_broadcast_op_conf});
         const std::string new_lbn = nccl_broadcast_op_conf.name() + "/" + obn;
         node->ForEachNodeOnOutEdge([&](const OpNode* dst) {
           for (const std::string& ibn : dst->op().input_bns()) {
@@ -156,6 +155,7 @@ void NonDistributedOptimizerPass::Apply(const OpGraph& op_graph, JobBuilder* bui
           }
         });
       }
+      builder->AddOrMutOpsOnlyOnce(pd.parallel_conf(), {nccl_broadcast_op_conf});
     }
   }
   for (const auto& op_node7op_conf : op_node2op_conf) {
