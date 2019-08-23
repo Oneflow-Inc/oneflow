@@ -33,6 +33,8 @@ void NcclTupleBroadcastReduceSequencePass::Apply(const OpGraph& op_graph, JobBui
   if (!broadcast_ops.empty() && !reduce_ops.empty()) {
     reduce_ops.front().add_ctrl_in_op_name(broadcast_ops.back().name());
   }
+  builder->MutOpsOnlyOnce(broadcast_ops);
+  builder->MutOpsOnlyOnce(reduce_ops);
 }
 
 }  // namespace oneflow
