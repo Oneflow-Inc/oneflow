@@ -2,6 +2,7 @@
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/protobuf.h"
+#include <google/protobuf/text_format.h>
 
 namespace oneflow {
 
@@ -73,6 +74,12 @@ const std::string& PbMsgSerializeToString(google::protobuf::Message* msg) {
   static std::string serialized_string;
   msg->SerializeToString(&serialized_string);
   return serialized_string;
+}
+
+const std::string& PbMsgPrintToString(google::protobuf::Message* msg) {
+  static std::string ret;
+  google::protobuf::TextFormat::PrintToString(*msg, &ret);
+  return ret;
 }
 
 void ForwardEnterBreakPoint(const OpAttribute& op_attribute,

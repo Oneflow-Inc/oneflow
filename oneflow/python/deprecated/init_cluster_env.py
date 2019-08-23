@@ -40,7 +40,10 @@ def init_worker(config_proto, scp_binary = True, use_uuid = True):
     run_dir = _temp_run_dir
     run_dir = os.path.abspath(os.path.expanduser(run_dir))
     config_file = NamedTemporaryFile(delete=False)
-    config_file.write(pbtxt.MessageToString(config_proto))
+    if sys.version_info >= (3, 0):
+        config_file.write(pbtxt.MessageToString(config_proto).encode())
+    else:
+        config_file.write(pbtxt.MessageToString(config_proto))
     config_file.close()
 
     for machine in resource.machine:
@@ -83,4 +86,3 @@ def _SystemCall(cmd):
   os.system(cmd)
 
 _temp_run_dir = ""
-
