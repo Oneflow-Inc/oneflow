@@ -17,6 +17,10 @@ def init_worker_and_master(config_proto):
     oneflow.deprecated.init_worker(config_proto)
     oneflow.init(config_proto)
 
+@oneflow_export('deprecated.init_worker_without_scp_binary')
+def init_worker_without_scp_binary(config_proto):
+
+
 @oneflow_export('deprecated.init_worker')
 def init_worker(config_proto):
     if (isinstance(config_proto, config_util.ConfigProtoBuilder)):
@@ -57,7 +61,7 @@ def delete_worker(config_proto):
             continue
         _SystemCall(ssh_prefix + "\"rm -r " + _temp_run_dir + "\"")
 
-def _SendBinaryAndConfig2Worker(machine, oneflow_worker_path, config_proto_path):
+def _SendBinaryAndConfig2Worker(machine, oneflow_worker_path, config_proto_path, run_dir, need_scp):
     global _temp_run_dir
     run_dir = _temp_run_dir
     ssh_prefix = "ssh " + getpass.getuser() + "@" + machine.addr + " "
