@@ -133,6 +133,7 @@ void NonDistributedOptimizerPass::Apply(const OpGraph& op_graph, JobBuilder* bui
       nccl_broadcast_op_conf.set_name("System-Boxing-NcclTupleBroadcast-" + NewUniqueId());
       NcclTupleBroadcastOpConf* tuple_broadcast_conf =
           nccl_broadcast_op_conf.mutable_nccl_tuple_broadcast_conf();
+      tuple_broadcast_conf->set_nccl_order_hint(op_name2order.at(group.back()));
       FOR_RANGE(int64_t, i, 0, group.size()) {
         const OpNode* node = group.at(i);
         const std::string obn = GenRepeatedBn("out", i);
