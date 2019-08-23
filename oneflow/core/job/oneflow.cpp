@@ -164,20 +164,24 @@ void CompileCurJobOnMaster(Job* job, Plan* improved_plan, bool need_job_complete
   LOG(INFO) << "compile and improve time: " << GetCurTime() - start;
 }
 
-void MergePlan(Plan* plan, const Plan& other) {
+void MergePlanWithoutGenNetTopo(Plan* plan, const Plan& other) {
   plan->mutable_task()->MergeFrom(other.task());
   for (const auto& pair : other.job_confs().job_id2job_conf()) {
     CHECK(plan->mutable_job_confs()->mutable_job_id2job_conf()->insert(pair).second);
   }
 }
 
-void MergePlan(Plan* plan, const std::vector<Plan>& sub_plans) {
+void MergeSubPlanWithoutGenNetTopo(Plan* plan, const std::vector<Plan>& sub_plans) {
   CHECK(!sub_plans.empty());
   *plan = sub_plans.at(0);
   FOR_RANGE(int32_t, i, 1, sub_plans.size()) {
-    MergePlan(plan, sub_plans.at(i));
+    MergePlanWithoutGenNetTopo(plan, sub_plans.at(i));
     plan->set_total_mbn_num(plan->total_mbn_num() + sub_plans.at(i).total_mbn_num());
   }
+}
+
+void MergePlan(Plan* plan, const Plan& other) {
+  MergePlanWithoutGenNetTopo(plan, other);
   Compiler().GenNetTopo(plan);
 }
 
@@ -226,10 +230,27 @@ void LinkTickTaskProto(TaskProto* identity_tick, TaskProto* src_tick, TaskProto*
   sink_tick_sole_regst->set_regst_desc_id(id_tick_sole_regst->regst_desc_id());
   *sink_tick_sole_regst->mutable_consumer_task_id() = id_tick_sole_regst->consumer_task_id();
   UpdateSoleObnRegstDescId(sink_tick);
+  CHECK_EQ(identity_tick->machine_id(), sink_tick->machine_id());
 
   id_tick_sole_regst->set_regst_desc_id(src_tick_sole_regst->regst_desc_id());
   *id_tick_sole_regst->mutable_consumer_task_id() = src_tick_sole_regst->consumer_task_id();
   UpdateSoleObnRegstDescId(identity_tick);
+}
+
+void FixRegstHostMemCase(TaskProto* task_proto,
+                         const std::function<const TaskProto&(int64_t)>& TaskProto4TaskId) {
+  for (auto& pair : *task_proto->mutable_produced_regst_desc()) {
+    auto* regst = &pair.second;
+    CHECK(regst->mem_case().has_host_mem());
+    CHECK_EQ(regst->mem_case().host_mem().has_cuda_pinned_mem(), false);
+    bool used_by_network = false;
+    for (int64_t consumer_task_id : regst->consumer_task_id()) {
+      const auto& consumer_task_proto = TaskProto4TaskId(consumer_task_id);
+      used_by_network =
+          used_by_network || (task_proto->machine_id() != consumer_task_proto.machine_id());
+    }
+    regst->mutable_mem_case()->mutable_host_mem()->set_used_by_network(used_by_network);
+  }
 }
 
 void LinkMainPlan(Plan* plan, const Plan& main_plan,
@@ -258,12 +279,15 @@ void LinkMainPlan(Plan* plan, const Plan& main_plan,
     const auto& op_name = kernel_conf.op_attribute().op_conf().name();
     CHECK(sole_tick_op_name2sole_task.emplace(op_name, task).second);
   }
+  auto TaskProto4TaskId = PlanUtil::MakeGetterTaskProto4TaskId(*plan);
   FOR_RANGE(int32_t, i, 0, Global<CriticalSectionDesc>::Get()->CriticalSectionNum()) {
     const CriticalSection& critical_section =
         Global<CriticalSectionDesc>::Get()->GetCriticalSection(i);
-    LinkTickTaskProto(sole_tick_op_name2sole_task.at(identity_tick_op_names.at(i)),
+    TaskProto* identity_tick = sole_tick_op_name2sole_task.at(identity_tick_op_names.at(i));
+    LinkTickTaskProto(identity_tick,
                       sole_tick_op_name2sole_task.at(critical_section.source_tick_op_name()),
                       sole_tick_op_name2sole_task.at(critical_section.sink_tick_op_name()));
+    FixRegstHostMemCase(identity_tick, TaskProto4TaskId);
   }
   {
     // erase source_tick task_proto
@@ -886,7 +910,7 @@ void CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan) {
     }
     InterJobMemSharingUtil::BindInterfaceMemBlockId(jobs, &sub_plans);
     FinishGlobalCriticalSectionDesc(sub_plans);
-    MergePlan(plan, sub_plans);
+    MergeSubPlanWithoutGenNetTopo(plan, sub_plans);
     Plan main_plan;
     std::vector<std::string> identity_tick_op_names;
     {
