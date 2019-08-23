@@ -374,9 +374,17 @@ class DLNet(object):
         self.CreateOperator('BlobDump', name, [], [], **kw);
         return None;
 
-    def SegmentSum(self, in_blob, segment_ids_blob, name=None, **kw):
-        print('segment_sum')
-        kw['segment_ids'] = segmnet_ids_blob.logical_blob_name
+    def Multiply(self, in0_blob, in1_blob, name=None, **kw):
+        kw['in_0'] = in0_blob.logical_blob_name
+        kw['in_1'] = in1_blob.logical_blob_name
+        kw['out'] = 'out'
+        name = self._GetVariableName(name, util.GetCurFuncName());
+        self.CreateOperator(util.GetCurFuncName(), name, [], [], **kw)
+        return Blob(self, '{}/out'.format(name))
+
+    def SegmentSum(self, in_blob, segment_ids_blob, unique_segment_ids_blob, name=None, **kw):
+        kw['segment_ids'] = segment_ids_blob.logical_blob_name
+        kw['unique_segment_ids'] = unique_segment_ids_blob.logical_blob_name
         kw['in'] = in_blob.logical_blob_name
         kw['out'] = 'out'
         name = self._GetVariableName(name, util.GetCurFuncName());
