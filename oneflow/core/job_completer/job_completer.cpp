@@ -391,8 +391,8 @@ void JobCompleter::Complete(Job* job) const {
     WithOpGraphAndMutJobBuilder(job, &EnableNonDistributedOptimizer);
     // complete ops for trainning
     WithOpGraphAndMutJobBuilder(job, &GenerateOpConf4Trainning);
-    WithOpGraphAndMutJobBuilder(job, &GroupNcclTupleBroadcast);
-    WithOpGraphAndMutJobBuilder(job, &GroupNcclTupleReduce);
+    //    WithOpGraphAndMutJobBuilder(job, &GroupNcclTupleBroadcast);
+    //    WithOpGraphAndMutJobBuilder(job, &GroupNcclTupleReduce);
     WithOpGraphAndMutJobBuilder(job, &RewriteBoxingWithAllReduce);
     WithOpGraphAndMutJobBuilder(job, &MakeAllReduceSequence);
   }
