@@ -12,8 +12,6 @@
 #include "oneflow/core/job_completer/group_boxing_by_dst_parallel.h"
 #include "oneflow/core/job_completer/auto_mixed_precision.h"
 #include "oneflow/core/job_completer/non_distributed_optimizer_pass.h"
-#include "oneflow/core/job_completer/nccl_tuple_broadcast_group_pass.h"
-#include "oneflow/core/job_completer/nccl_tuple_reduce_group_pass.h"
 #include "oneflow/core/job_completer/nccl_tuple_broadcast_reduce_sequence_pass.h"
 
 namespace oneflow {
@@ -366,18 +364,6 @@ void EnableNonDistributedOptimizer(const OpGraph& op_graph, JobBuilder* job_buil
   NonDistributedOptimizerPass().Apply(op_graph, job_builder);
 }
 
-void GroupNcclTupleBroadcast(const OpGraph& op_graph, JobBuilder* job_builder) {
-  if (!GlobalJobDesc().enable_non_distributed_optimizer()) { return; }
-  CHECK(GlobalJobDesc().enable_nccl());
-  NcclTupleBroadcastGroupPass().Apply(op_graph, job_builder);
-}
-
-void GroupNcclTupleReduce(const OpGraph& op_graph, JobBuilder* job_builder) {
-  if (!GlobalJobDesc().enable_non_distributed_optimizer()) { return; }
-  CHECK(GlobalJobDesc().enable_nccl());
-  NcclTupleReduceGroupPass().Apply(op_graph, job_builder);
-}
-
 void MakeNcclTupleBroadcastReduceSequence(const OpGraph& op_graph, JobBuilder* job_builder) {
   NcclTupleBroadcastReduceSequencePass().Apply(op_graph, job_builder);
 }
@@ -397,7 +383,6 @@ void JobCompleter::Complete(Job* job) const {
     // complete ops for trainning
     WithOpGraphAndMutJobBuilder(job, &GenerateOpConf4Trainning);
     WithOpGraphAndMutJobBuilder(job, &MakeNcclTupleBroadcastReduceSequence);
-    //    WithOpGraphAndMutJobBuilder(job, &GroupNcclTupleReduce);
     WithOpGraphAndMutJobBuilder(job, &RewriteBoxingWithAllReduce);
     WithOpGraphAndMutJobBuilder(job, &MakeAllReduceSequence);
   }
