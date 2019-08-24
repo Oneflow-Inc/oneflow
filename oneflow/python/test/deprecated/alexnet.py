@@ -4,16 +4,19 @@ import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import os
 import shutil
 from datetime import datetime
+import argparse
 
-config = flow.ConfigProtoBuilder()
-config.gpu_device_num(1)
-config.grpc_use_no_signal()
-config.model_load_snapshot_path(
-    "/home/caishenghang/dev/cnns_test/alexnet_fp16/fp32/of_model")
-_MODEL_SAVE = "./model_save-{}".format(
-    str(datetime.now().strftime('%Y-%m-%d-%H:%M:%S')))
-config.model_save_snapshots_path(_MODEL_SAVE)
-flow.init(config)
+parser = argparse.ArgumentParser(description='Process some integers.')
+parser.add_argument('-g', '--gpu_num_per_node',
+                    type=int, default=1, required=False)
+parser.add_argument('-m', '--multinode', default=False,
+                    action="store_true", required=False)
+parser.add_argument('-s', '--skip_scp_binary', default=False,
+                    action="store_true", required=False)
+parser.add_argument('-c', '--scp_binary_without_uuid', default=False,
+                    action="store_true", required=False)
+
+args = parser.parse_args()
 
 _DATA_DIR = "/dataset/imagenet_227/train/32"
 _SINGLE_PIC_DATA_DIR = '/home/caishenghang/dev/cnns_test/dataset/PNG227/of_record'
@@ -101,8 +104,8 @@ def ImgClassifyDecoder(dlnet, data_dir=''):
 def BuildAlexNetWithDeprecatedAPI(data_dir):
     dlnet = flow.deprecated.get_cur_job_dlnet_builder()
 
-    decoders = ImgClassifyDecoder(
-        dlnet, data_dir=data_dir)
+    # with flow.device_prior_placement("cpu", "0:0"):
+    decoders = ImgClassifyDecoder(dlnet, data_dir=data_dir)
     img_blob = decoders['encoded']
     transposers = dlnet.Transpose(
         img_blob, name='transpose', perm=[0, 3, 1, 2])
@@ -229,7 +232,7 @@ def BuildAlexNetWithDeprecatedAPI(data_dir):
 
 def TrainAlexNet():
     job_conf = flow.get_cur_job_conf_builder()
-    job_conf.batch_size(10).data_part_num(1).default_data_type(flow.float)
+    job_conf.batch_size(10).data_part_num(8).default_data_type(flow.float)
     job_conf.train_conf()
     job_conf.train_conf().primary_lr = 0.00001
     job_conf.train_conf().num_of_batches_in_snapshot = 100
@@ -240,20 +243,40 @@ def TrainAlexNet():
 
 def EvaluateAlexNet():
     job_conf = flow.get_cur_job_conf_builder()
-    job_conf.batch_size(256).data_part_num(1).default_data_type(flow.float)
+    job_conf.batch_size(256).data_part_num(8).default_data_type(flow.float)
     return BuildAlexNetWithDeprecatedAPI(_EVAL_DIR)
 
 
-flow.add_job(TrainAlexNet)
-flow.add_job(EvaluateAlexNet)
 if __name__ == '__main__':
+    config = flow.ConfigProtoBuilder()
+    config.gpu_device_num(args.gpu_num_per_node)
+    config.grpc_use_no_signal()
+    config.model_load_snapshot_path(
+        "/home/caishenghang/dev/cnns_test/alexnet_fp16/fp32/of_model")
+    _MODEL_SAVE = "./model_save-{}".format(
+        str(datetime.now().strftime('%Y-%m-%d-%H:%M:%S')))
+    config.model_save_snapshots_path(_MODEL_SAVE)
+    if args.multinode:
+        config.ctrl_port(12138)
+        config.machine([{'addr': '192.168.1.15'}, {'addr': '192.168.1.16'}])
+        if args.scp_binary_without_uuid:
+            flow.deprecated.init_worker(
+                config, scp_binary=True, use_uuid=False)
+        elif args.skip_scp_binary:
+            flow.deprecated.init_worker(
+                config, scp_binary=False, use_uuid=False)
+        else:
+            flow.deprecated.init_worker(config, scp_binary=True, use_uuid=True)
+    flow.init(config)
+    flow.add_job(TrainAlexNet)
+    flow.add_job(EvaluateAlexNet)
     with flow.Session() as sess:
         check_point = flow.train.CheckPoint()
         check_point.restore().initialize_or_restore(session=sess)
         fmt_str = '{:>12}  {:>12}  {:>12.3f}'
         print('{:>12}  {:>12}  {:>12}'.format(
             "iter", "loss type", "loss value"))
-        for i in range(100):
+        for i in range(10):
             print(fmt_str.format(i, "train loss:", sess.run(
                 TrainAlexNet).get().mean()))
             if (i + 1) % 10 is 0:
@@ -261,3 +284,5 @@ if __name__ == '__main__':
                     EvaluateAlexNet).get().mean()))
             if (i + 1) % 100 is 0:
                 check_point.save(session=sess)
+        if args.multinode:
+            flow.deprecated.delete_worker(config)
