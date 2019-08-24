@@ -31,7 +31,10 @@ void GenerateBackwardOpConf(
       diff_lbi->set_blob_name(obn);
     }
   }
-  if (tuple_reduce_conf->in_size() > 0) { op_confs->push_back(nccl_tuple_reduce_op); }
+  if (tuple_reduce_conf->in_size() > 0) {
+    op_confs->push_back(nccl_tuple_reduce_op);
+    op_confs->push_back(tuple_identity_op);
+  }
 }
 
 }  // namespace
