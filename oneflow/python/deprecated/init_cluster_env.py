@@ -65,6 +65,7 @@ def delete_worker(config_proto):
     for machine in config_proto.resource.machine:
         if machine.id == 0:
             continue
+        ssh_prefix = "ssh " + getpass.getuser() + "@" + machine.addr + " "
         _SystemCall(ssh_prefix + "\"rm -r " + _temp_run_dir + "\"")
 
 def _SendBinaryAndConfig2Worker(machine, oneflow_worker_path, config_proto_path, run_dir, scp_binary):
