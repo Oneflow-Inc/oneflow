@@ -9,6 +9,8 @@ import argparse
 parser = argparse.ArgumentParser(description='Process some integers.')
 parser.add_argument('-g', '--gpu_num_per_node',
                     type=int, default=1, required=False)
+parser.add_argument('-i', '--iter_num',
+                    type=int, default=10, required=False)
 parser.add_argument('-m', '--multinode', default=False,
                     action="store_true", required=False)
 parser.add_argument('-s', '--skip_scp_binary', default=False,
@@ -232,7 +234,7 @@ def BuildAlexNetWithDeprecatedAPI(data_dir):
 
 def TrainAlexNet():
     job_conf = flow.get_cur_job_conf_builder()
-    job_conf.batch_size(10).data_part_num(8).default_data_type(flow.float)
+    job_conf.batch_size(12).data_part_num(8).default_data_type(flow.float)
     job_conf.train_conf()
     job_conf.train_conf().primary_lr = 0.00001
     job_conf.train_conf().num_of_batches_in_snapshot = 100
@@ -243,7 +245,7 @@ def TrainAlexNet():
 
 def EvaluateAlexNet():
     job_conf = flow.get_cur_job_conf_builder()
-    job_conf.batch_size(256).data_part_num(8).default_data_type(flow.float)
+    job_conf.batch_size(12).data_part_num(8).default_data_type(flow.float)
     return BuildAlexNetWithDeprecatedAPI(_EVAL_DIR)
 
 
@@ -276,7 +278,7 @@ if __name__ == '__main__':
         fmt_str = '{:>12}  {:>12}  {:>12.3f}'
         print('{:>12}  {:>12}  {:>12}'.format(
             "iter", "loss type", "loss value"))
-        for i in range(10):
+        for i in range(args.iter_num):
             print(fmt_str.format(i, "train loss:", sess.run(
                 TrainAlexNet).get().mean()))
             if (i + 1) % 10 is 0:
