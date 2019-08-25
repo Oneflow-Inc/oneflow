@@ -279,12 +279,12 @@ if __name__ == '__main__':
         print('{:>12}  {:>12}  {:>12}'.format(
             "iter", "loss type", "loss value"))
         for i in range(args.iter_num):
-            print(fmt_str.format(i, "train loss:", sess.run(
-                TrainAlexNet).get().mean()))
+            print(sess.run(
+                TrainAlexNet).get())
             if (i + 1) % 10 is 0:
                 print(fmt_str.format(i, "eval loss:", sess.run(
                     EvaluateAlexNet).get().mean()))
             if (i + 1) % 100 is 0:
                 check_point.save(session=sess)
-        if args.multinode:
+        if args.multinode and args.skip_scp_binary is False:
             flow.deprecated.delete_worker(config)
