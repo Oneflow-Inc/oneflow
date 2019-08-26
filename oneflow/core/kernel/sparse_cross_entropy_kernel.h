@@ -17,6 +17,10 @@ class SparseCrossEntropyKernel final : public KernelIf<device_type> {
                           std::function<Blob*(const std::string&)>) const override;
   void BackwardDataContent(const KernelCtx&,
                            std::function<Blob*(const std::string&)>) const override;
+  void ForwardDim0ValidNum(const KernelCtx&,
+                           std::function<Blob*(const std::string&)>) const override;
+  void BackwardInDiffDim0ValidNum(const KernelCtx&,
+                                  std::function<Blob*(const std::string&)>) const override;
 };
 
 }  // namespace oneflow

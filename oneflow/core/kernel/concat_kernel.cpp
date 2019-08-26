@@ -21,6 +21,7 @@ void ConcatKernel<device_type, T>::ForwardInstanceShape(
       }
     }
   }
+  out_dim_vec.erase(out_dim_vec.begin());
   BnInOp2Blob("out")->set_instance_shape(Shape(out_dim_vec));
 }
 

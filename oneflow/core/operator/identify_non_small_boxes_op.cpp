@@ -24,7 +24,10 @@ void IdentifyNonSmallBoxesOp::InferBlobDescs(
   BlobDesc* out = GetBlobDesc4BnInOp("out");
   out->mut_shape() = Shape({in->shape().At(0)});
   out->set_data_type(DataType::kInt8);
-  out->set_has_dim0_valid_num_field(in->has_dim0_valid_num_field());
+  if (in->has_dim0_valid_num_field()) {
+    out->set_has_dim0_valid_num_field(true);
+    out->mut_dim0_inner_shape() = Shape({1, out->shape().At(0)});
+  }
 }
 
 void IdentifyNonSmallBoxesOp::VirtualGenKernelConf(

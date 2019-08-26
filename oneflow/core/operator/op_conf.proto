@@ -1639,6 +1639,12 @@ message SqueezeOpConf {
   repeated int32 axis = 3;
 }
 
+message ExpandDimsOpConf {
+  required string in = 1;
+  required string out = 2;
+  required int32 axis = 3;
+}
+
 message MaskrcnnConcatUncontiguousDim1OpConf {
   required string in = 1;
   required string out = 2;
@@ -1663,7 +1669,7 @@ message ClipBoxesToImageOpConf {
 message IdentifyNonSmallBoxesOpConf {
   required string in = 1;
   required string out = 2;
-  required float min_size = 3;
+  optional float min_size = 3 [default = 0.0];
 }
 
 message NonMaximumSuppressionOpConf {
@@ -1674,6 +1680,11 @@ message NonMaximumSuppressionOpConf {
   // conf
   optional float nms_iou_threshold = 3 [default = 0.7];
   optional int32 post_nms_top_n = 4 [default = 1000];
+}
+
+message ExtractPieceSliceIdOpConf {
+  repeated string in = 1;
+  repeated string out = 2;
 }
 
 message OperatorConf {
@@ -1813,6 +1824,7 @@ message OperatorConf {
     SortOpConf sort_conf = 311;
     ArgSortOpConf arg_sort_conf = 312;
     SqueezeOpConf squeeze_conf = 313;
+    ExpandDimsOpConf expand_dims_conf = 314;
 
     // Maybe not needed
     RedefineDim0OpConf redefine_dim0_conf = 400;
@@ -1850,6 +1862,7 @@ message OperatorConf {
     ClipBoxesToImageOpConf clip_boxes_to_image_conf = 612;
     IdentifyNonSmallBoxesOpConf identify_non_small_boxes_conf= 613;
     NonMaximumSuppressionOpConf non_maximum_suppression_conf = 614;
+    ExtractPieceSliceIdOpConf extract_piece_slice_id_conf = 615;
   }
 }
 

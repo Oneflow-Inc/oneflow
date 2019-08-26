@@ -6,16 +6,16 @@ namespace oneflow {
 void TopKOp::InitFromOpConf() {
   CHECK(op_conf().has_top_k_conf());
   EnrollInputBn("in", false);
-  if (device_type() == DeviceType::kCPU && op_conf().top_k_conf().k() > 1) {
-    if (op_conf().top_k_conf().k() > 1) { EnrollFwBufBn("indices"); }
+  const int32_t k = op_conf().top_k_conf().k();
+  if (device_type() == DeviceType::kCPU) {
+    if (k > 1) { EnrollFwBufBn("indices"); }
   } else if (device_type() == DeviceType::kGPU) {
-    // indices, sorted_in, sorted_indices, temp_storage blobs are only used in radix sort but not
-    // heap selection. We can't choose between these two algorithms at compile stage,
-    // so always allocate memory for all these blobs for GPU device.
-    // EnrollFwBufBn("indices");
-    // EnrollFwBufBn("sorted_in");
-    // EnrollFwBufBn("sorted_indices");
-    // EnrollFwBufBn("temp_storage");
+    if (k > 128) {
+      EnrollFwBufBn("indices");
+      EnrollFwBufBn("sorted_in");
+      EnrollFwBufBn("sorted_indices");
+      EnrollFwBufBn("temp_storage");
+    }
   }
   EnrollOutputBn("out", false);
 }
@@ -38,22 +38,24 @@ void TopKOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlob
       indices->set_data_type(DataType::kInt32);
     }
   } else if (device_type() == DeviceType::kGPU) {
-    // fw_buf: indices
-    // BlobDesc* indices = GetBlobDesc4BnInOp("indices");
-    // *indices = *in;
-    // indices->set_data_type(DataType::kInt32);
-    // fw_buf: sorted_in
-    // *GetBlobDesc4BnInOp("sorted_in") = *in;
-    // fw_buf: sorted_indices
-    // *GetBlobDesc4BnInOp("sorted_indices") = *indices;
-    // fw_buf: temp_storage
-    // int64_t temp_storage_bytes = InferTempStorageForSortingPairsDescendingAtCompile(
-    //     in->shape().elem_cnt() / instance_size, instance_size, in->data_type());
-    // BlobDesc* temp_storage = GetBlobDesc4BnInOp("temp_storage");
-    // temp_storage->mut_shape() = Shape({temp_storage_bytes});
-    // temp_storage->set_data_type(DataType::kChar);
-    // TopKOpCtx* top_k_op_ctx = new TopKOpCtx(temp_storage_bytes);
-    // EnrollOpCtx(top_k_op_ctx);
+    if (k > 128) {
+      // fw_buf: indices
+      BlobDesc* indices = GetBlobDesc4BnInOp("indices");
+      *indices = *in;
+      indices->set_data_type(DataType::kInt32);
+      // fw_buf: sorted_in
+      *GetBlobDesc4BnInOp("sorted_in") = *in;
+      // fw_buf: sorted_indices
+      *GetBlobDesc4BnInOp("sorted_indices") = *indices;
+      // fw_buf: temp_storage
+      int64_t temp_storage_bytes = InferTempStorageForSortingPairsDescendingAtCompile(
+          in->shape().elem_cnt() / instance_size, instance_size, in->data_type());
+      BlobDesc* temp_storage = GetBlobDesc4BnInOp("temp_storage");
+      temp_storage->mut_shape() = Shape({temp_storage_bytes});
+      temp_storage->set_data_type(DataType::kChar);
+      TopKOpCtx* top_k_op_ctx = new TopKOpCtx(temp_storage_bytes);
+      EnrollOpCtx(top_k_op_ctx);
+    }
   } else {
     UNIMPLEMENTED();
   }
@@ -64,16 +66,19 @@ void TopKOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlob
   out->mut_shape().Set(in->shape().NumAxes() - 1, k);
   out->set_data_type(DataType::kInt32);
   if (in->shape().NumAxes() <= 2) { out->set_has_instance_shape_field(false); }
+  if (out->has_dim0_valid_num_field()) {
+    out->mut_dim0_inner_shape() = Shape({1, out->shape().At(0)});
+  }
 }
 
 void TopKOp::VirtualGenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*,
     KernelConf* kernel_conf, const OpContext* op_ctx) const {
   kernel_conf->set_data_type(GetBlobDesc4BnInOp("in")->data_type());
-  // if (device_type() == DeviceType::kGPU) {
-  //   auto* top_k_op_ctx = static_cast<const TopKOpCtx*>(op_ctx);
-  //   kernel_conf->mutable_top_k_conf()->set_temp_storage_bytes(top_k_op_ctx->temp_storage_bytes_);
-  // }
+  if (device_type() == DeviceType::kGPU && op_conf().top_k_conf().k() > 128) {
+    auto* top_k_op_ctx = static_cast<const TopKOpCtx*>(op_ctx);
+    kernel_conf->mutable_top_k_conf()->set_temp_storage_bytes(top_k_op_ctx->temp_storage_bytes_);
+  }
 }
 
 REGISTER_OP(OperatorConf::kTopKConf, TopKOp);

@@ -25,6 +25,7 @@ void LocalNonzeroKernel<device_type, T>::ForwardDataContent(
     Blob* num_nonzero_blob = BnInOp2Blob("num_nonzero");
     Blob* shape_blob = BnInOp2Blob("shape");
     GpuNonzero<T>(ctx.device_ctx, in_blob, num_nonzero_blob, shape_blob, out_blob);
+    out_blob->set_dim0_valid_num(0, out_blob->dim0_valid_num(0));
   } else if (this->op_conf().device_type() == DeviceType::kCPU) {
     CpuNonzero<T>(ctx.device_ctx, in_blob, out_blob);
   } else {

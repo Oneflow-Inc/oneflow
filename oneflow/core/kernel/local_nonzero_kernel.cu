@@ -43,6 +43,7 @@ void GpuNonzero(DeviceCtx* ctx, const Blob* in_blob, Blob* num_nonzero_blob, Blo
       out_blob->mut_dptr<int32_t>());
   CudaCheck(cudaMemcpy(out_blob->mut_dim0_valid_num_ptr(), num_nonzero_blob->dptr<int64_t>(),
                        sizeof(int64_t), cudaMemcpyDeviceToHost));
+  // CudaCheck(cudaDeviceSynchronize());
 }
 
 #define INSTANTIATE_GPU_NONZERO(T, type_proto)                                              \
