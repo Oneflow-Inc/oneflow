@@ -166,43 +166,10 @@ void UpdateCtrlRegstHandler4MemSharedPlan(Plan* plan) {
       if (handler_proto.type() == "Ctrl") {
         handler_proto = ctrl_handler_proto;
         update_existed = true;
-        // TODO
       }
     }
     if (!update_existed) { *(task.mutable_regst_handlers()->Add()) = ctrl_handler_proto; }
   }
-  // for (int i = 0; i < plan->task_size(); ++i) {
-  //   TaskProto* task = plan->mutable_task(i);
-  //   std::shared_ptr<RegstHandlerProto> ctrl_handler_proto;
-  //   for (int j = 0; j < task->regst_handlers_size(); ++j) {
-  //     RegstHandlerProto* handler_proto = task->mutable_regst_handlers(j);
-  //     if (handler_proto->type() == "Ctrl") { ctrl_handler_proto.reset(handler_proto); }
-  //   }
-  //   bool already_have_ctrl_handler = ctrl_handler_proto ? true : false;
-  //   if (already_have_ctrl_handler) {
-  //     ctrl_handler_proto->mutable_consumed_regst_desc_ids()->clear_regst_desc_id();
-  //     ctrl_handler_proto->mutable_produced_regst_desc_ids()->clear_regst_desc_id();
-  //   } else {
-  //     ctrl_handler_proto = std::make_shared<RegstHandlerProto>(CreateRegstHandlerProto("Ctrl"));
-  //   }
-
-  //   for (const auto& pair : task->consumed_regst_desc_id()) {
-  //     if (pair.first == "in_ctrl") {
-  //       for (int64_t regst_desc_id : pair.second.regst_desc_id()) {
-  //         ctrl_handler_proto->mutable_consumed_regst_desc_ids()->add_regst_desc_id(regst_desc_id);
-  //       }
-  //     }
-  //   }
-  //   for (const auto& pair : task->produced_regst_desc()) {
-  //     if (pair.second.regst_desc_type().has_ctrl_regst_desc()) {
-  //       ctrl_handler_proto->mutable_produced_regst_desc_ids()->add_regst_desc_id(
-  //           pair.second.regst_desc_id());
-  //     }
-  //   }
-  //   if (!already_have_ctrl_handler && !IsRegstHandlerProtoEmpty(*ctrl_handler_proto)) {
-  //     *(task->mutable_regst_handlers()->Add()) = *ctrl_handler_proto;
-  //   }
-  // }
 }
 
 }  // namespace
