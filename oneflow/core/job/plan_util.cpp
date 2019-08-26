@@ -30,10 +30,24 @@ std::function<const TaskProto&(int64_t)> PlanUtil::MakeGetterTaskProto4TaskId(co
 void PlanUtil::ToDotFile(const Plan& plan, const std::string& filepath) {
   auto log_stream = TeePersistentLogStream::Create(filepath);
   log_stream << "digraph {\n";
-  HashSet<int64_t> regst_desc_ids;
+  HashMap<int64_t, std::string> regst_desc_id2node_shape;
+  auto GenNodeShapeStr = [](const RegstDescTypeProto& type) {
+    if (type.has_data_regst_desc()) {
+      return "shape=box";
+    } else if (type.has_ctrl_regst_desc()) {
+      return "shape=triangle";
+    } else {
+      UNIMPLEMENTED();
+    }
+  };
+
   for (const TaskProto& task_proto : plan.task()) {
-    log_stream << "task" << std::to_string(task_proto.task_id()) << "[label=\""
-               << std::to_string(task_proto.task_id()) << "\\n"
+    log_stream << "task" << std::to_string(task_proto.task_id()) << "[label=\"";
+    for (const ExecNodeProto& exec_node : task_proto.exec_sequence().exec_node()) {
+      log_stream << exec_node.kernel_conf().op_attribute().op_conf().name() << " ";
+    }
+    log_stream << "\",tooltip=\"" << task_type2type_str.at(task_proto.task_type()) << "  "
+               << std::to_string(task_proto.task_id()) << "-"
                << std::to_string(task_proto.machine_id()) << ":"
                << std::to_string(task_proto.thrd_id()) << ":"
                << std::to_string(task_proto.parallel_ctx().parallel_id())
@@ -41,12 +55,13 @@ void PlanUtil::ToDotFile(const Plan& plan, const std::string& filepath) {
                   "colorscheme=set312, color="
                << task_type2color.at(task_proto.task_type()) << "];\n";
     for (const auto& pair : task_proto.produced_regst_desc()) {
-      regst_desc_ids.insert(pair.second.regst_desc_id());
+      regst_desc_id2node_shape.emplace(pair.second.regst_desc_id(),
+                                       GenNodeShapeStr(pair.second.regst_desc_type()));
     }
   }
-  for (const int64_t regst_task_id : regst_desc_ids) {
-    log_stream << "regst_desc" << std::to_string(regst_task_id) << "[label=\""
-               << std::to_string(regst_task_id) << "\", shape=box];\n";
+  for (const auto& pair : regst_desc_id2node_shape) {
+    log_stream << "regst_desc" << std::to_string(pair.first) << "[label=\""
+               << std::to_string(pair.first) << "\", " << pair.second << " ];\n";
   }
   for (const TaskProto& task_proto : plan.task()) {
     for (const auto& pair : task_proto.produced_regst_desc()) {
