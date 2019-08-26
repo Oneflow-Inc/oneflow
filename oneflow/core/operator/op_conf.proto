@@ -1666,15 +1666,14 @@ message IdentifyNonSmallBoxesOpConf {
   required float min_size = 3;
 }
 
-message NonMaximumSupressionOpConf {
+message NonMaximumSuppressionOpConf {
   // in
-  required string boxes = 1;
-  required string scores = 2;
+  required string in = 1;
   // out
-  required string out = 3;
+  required string out = 2;
   // conf
-  optional float nms_threshold = 4 [default = 0.7];
-  required int32 max_boxes = 5;
+  optional float nms_iou_threshold = 3 [default = 0.7];
+  optional int32 post_nms_top_n = 4 [default = 1000];
 }
 
 message OperatorConf {
@@ -1850,7 +1849,7 @@ message OperatorConf {
     IdentifyOutsideAnchorsOpConf identify_outside_anchors_conf = 611;
     ClipBoxesToImageOpConf clip_boxes_to_image_conf = 612;
     IdentifyNonSmallBoxesOpConf identify_non_small_boxes_conf= 613;
-    NonMaximumSupressionOpConf non_maximum_supression_conf = 614;
+    NonMaximumSuppressionOpConf non_maximum_suppression_conf = 614;
   }
 }
 
