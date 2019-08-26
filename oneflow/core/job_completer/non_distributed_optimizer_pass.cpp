@@ -122,8 +122,8 @@ void NonDistributedOptimizerPass::Apply(const OpGraph& op_graph, JobBuilder* bui
     int64_t group_size = 0;
     for (const OpNode* node : *last_nodes) {
       const int64_t node_size = last_node2model_size.at(node);
-      if (groups.empty() || group_size > 100 * 1024 * 1024
-          || (group_size >= 50 * 1024 * 1024 && node_size > 100 * 1024 * 1024)) {
+      if (groups.empty() || group_size > 50 * 1024 * 1024
+          || (group_size >= 25 * 1024 * 1024 && node_size > 50 * 1024 * 1024)) {
         groups.push_back({node});
         group_size = node_size;
       } else {
