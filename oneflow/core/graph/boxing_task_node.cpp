@@ -147,6 +147,7 @@ void SetBoxingOpConfBySbpParallel(
   if (out_sbp.has_split_parallel()) {
     BoxSplitConf* split_conf = conf->mutable_split_box();
     split_conf->set_axis(out_sbp.split_parallel().axis());
+    CHECK(is_out_boxing_task_node ^ is_in_boxing_task_node);
     if (is_out_boxing_task_node) {
       BalancedSplitter in_bs = Global<OpGraph>::Get()->GetBalancedSplitter(in_op.op_name(), lbi);
       Range in_range =
