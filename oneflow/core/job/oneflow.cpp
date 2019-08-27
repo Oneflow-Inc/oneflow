@@ -922,6 +922,7 @@ void CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan) {
     }
     LinkMainPlan(plan, main_plan, identity_tick_op_names);
     TeePersistentLogStream::Create("merged_plan")->Write(*plan);
+    PlanUtil::ToDotFile(*plan, "/dot/merged_plan.dot");
     PushPlan("merged_plan", *plan);
   } else {
     PullPlan("merged_plan", plan);
