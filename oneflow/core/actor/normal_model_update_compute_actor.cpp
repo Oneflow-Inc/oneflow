@@ -116,22 +116,23 @@ void NormalMdUpdtCompActor::InitModelAndConstBuf() {
 }
 
 int NormalMdUpdtCompActor::HandlerInitModelAndConstModel(const ActorMsg& msg) {
-  if (msg.msg_type() == ActorMsgType::kCmdMsg) {
-    CHECK_EQ(msg.actor_cmd(), ActorCmd::kInitModel);
-    if (model_regst_desc_id_ != -1) {
-      InitRegstBySendToFw(GetNaiveCurWriteable(model_regst_desc_id_));
-    }
-    if (const_model_regst_desc_id_ != -1) { InitRegstBySendToFw(const_model_regst_); }
-    InitModelAndConstBuf();
-  } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
-    init_remaining_cnt_ -= 1;
-  } else {
-    UNIMPLEMENTED();
-  }
-  if (init_remaining_cnt_ == 0) {
-    OF_SET_MSG_HANDLER(&NormalMdUpdtCompActor::HandlerSendInitialModel);
-    Global<RuntimeCtx>::Get()->DecreaseCounter("model_init_cnt");
-  }
+  // if (msg.msg_type() == ActorMsgType::kCmdMsg) {
+  //   CHECK_EQ(msg.actor_cmd(), ActorCmd::kInitModel);
+  //   if (model_regst_desc_id_ != -1) {
+  //     InitRegstBySendToFw(GetNaiveCurWriteable(model_regst_desc_id_));
+  //   }
+  //   if (const_model_regst_desc_id_ != -1) { InitRegstBySendToFw(const_model_regst_); }
+  //   InitModelAndConstBuf();
+  // } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
+  //   init_remaining_cnt_ -= 1;
+  // } else {
+  //   UNIMPLEMENTED();
+  // }
+  // if (init_remaining_cnt_ == 0) {
+  CHECK_EQ(msg.actor_cmd(), ActorCmd::kInitModel);
+  OF_SET_MSG_HANDLER(&NormalMdUpdtCompActor::HandlerSendInitialModel);
+  Global<RuntimeCtx>::Get()->DecreaseCounter("model_init_cnt");
+  // }
   return 0;
 }
 
