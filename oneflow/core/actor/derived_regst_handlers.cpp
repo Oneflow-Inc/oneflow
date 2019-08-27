@@ -192,8 +192,10 @@ void CtrlRegstHandler::HandleConsumedRegstAfterAct() {
 void CtrlRegstHandler::HandleProducedRegstAfterAct() {
   std::vector<int64_t> regst_desc_ids;
   mut_produced_rs()->ForEachFrontRegst([&](Regst* regst) {
-    regst_desc_ids.push_back(regst->regst_desc_id());
     CHECK_EQ(0, ReadingCnt4ProducedRegst(regst));
+    if (regst->consumers_actor_id().size() == 0) { return; }
+
+    regst_desc_ids.push_back(regst->regst_desc_id());
     for (int64_t consumer : regst->consumers_actor_id()) {
       ActorMsgUtil::AsyncSendMsg(
           msg_delivery_ctx(),
@@ -240,8 +242,10 @@ void NaiveRegstHandler::HandleConsumedRegstAfterAct() {
 void NaiveRegstHandler::HandleProducedRegstAfterAct() {
   std::vector<int64_t> regst_desc_ids;
   mut_produced_rs()->ForEachFrontRegst([&](Regst* regst) {
-    regst_desc_ids.push_back(regst->regst_desc_id());
     CHECK_EQ(0, ReadingCnt4ProducedRegst(regst));
+    if (regst->consumers_actor_id().size() == 0) { return; }
+
+    regst_desc_ids.push_back(regst->regst_desc_id());
     for (int64_t consumer : regst->consumers_actor_id()) {
       ActorMsgUtil::AsyncSendMsg(
           msg_delivery_ctx(),
@@ -306,8 +310,10 @@ void InplaceRegstHandler::HandleConsumedRegstAfterAct() {
 void InplaceRegstHandler::HandleProducedRegstAfterAct() {
   std::vector<int64_t> regst_desc_ids;
   mut_produced_rs()->ForEachFrontRegst([&](Regst* regst) {
-    regst_desc_ids.push_back(regst->regst_desc_id());
     CHECK_EQ(0, ReadingCnt4ProducedRegst(regst));
+    if (regst->consumers_actor_id().size() == 0) { return; }
+
+    regst_desc_ids.push_back(regst->regst_desc_id());
     for (int64_t consumer : regst->consumers_actor_id()) {
       ActorMsgUtil::AsyncSendMsg(
           msg_delivery_ctx(),
