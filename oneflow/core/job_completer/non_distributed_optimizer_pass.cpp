@@ -111,6 +111,10 @@ void NonDistributedOptimizerPass::Apply(const OpGraph& op_graph, JobBuilder* bui
       pd2last_nodes[pd].push_back(last_node);
     }
   }
+  const int64_t group_size =
+      GlobalJobDesc().non_distributed_optimizer_group_size_mbyte() * 1024 * 1024;
+  CHECK_GE(group_size, 0);
+  const int64_t half_group_size = group_size / 2;
   for (auto& pair : pd2last_nodes) {
     const ParallelDesc& pd = pair.first;
     std::vector<const OpNode*>* last_nodes = &pair.second;
@@ -119,16 +123,16 @@ void NonDistributedOptimizerPass::Apply(const OpGraph& op_graph, JobBuilder* bui
       return last_node2order.at(lhs) < last_node2order.at(rhs);
     });
     std::vector<std::vector<const OpNode*>> groups;
-    int64_t group_size = 0;
+    int64_t cur_group_size = 0;
     for (const OpNode* node : *last_nodes) {
       const int64_t node_size = last_node2model_size.at(node);
-      if (groups.empty() || group_size > 50 * 1024 * 1024
-          || (group_size >= 25 * 1024 * 1024 && node_size > 50 * 1024 * 1024)) {
+      if (groups.empty() || cur_group_size > group_size
+          || (cur_group_size >= half_group_size && node_size > group_size)) {
         groups.push_back({node});
-        group_size = node_size;
+        cur_group_size = node_size;
       } else {
         groups.back().push_back(node);
-        group_size += node_size;
+        cur_group_size += node_size;
       }
     }
     for (std::vector<const OpNode*>& group : groups) {
