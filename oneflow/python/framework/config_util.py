@@ -231,6 +231,11 @@ class JobConfigProtoBuilder(object):
         self.job_conf_.enable_non_distributed_optimizer = val
         return self
 
+    def non_distributed_optimizer_group_size_mbyte(self, val=True):
+        assert type(val) is int
+        self.job_conf_.non_distributed_optimizer_group_size_mbyte = val
+        return self
+
     def concurrency_width(self, val):
         assert type(val) is int
         self.job_conf_.concurrency_width = val
