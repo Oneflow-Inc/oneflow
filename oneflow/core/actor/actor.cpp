@@ -376,10 +376,8 @@ void Actor::ActUntilFail() {
 
     std::deque<ActorMsg> msgs;
     msgs.swap(async_actor_msg_deque_);
-    device_ctx_->AddCallBack([msgs](){
-      for(const ActorMsg& msg : msgs) {
-        Global<ActorMsgBus>::Get()->SendMsg(msg);
-      }
+    device_ctx_->AddCallBack([msgs]() {
+      for (const ActorMsg& msg : msgs) { Global<ActorMsgBus>::Get()->SendMsg(msg); }
     });
   }
 }
