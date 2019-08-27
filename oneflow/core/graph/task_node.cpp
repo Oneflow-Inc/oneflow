@@ -73,7 +73,7 @@ const std::list<std::shared_ptr<RegstDesc>>& TaskNode::GetConsumedRegst(const st
   return consumed_regsts_.at(name);
 }
 
-std::shared_ptr<RegstDesc> TaskNode::GetSoleConsumedRegst(const std::string& name) {
+std::shared_ptr<RegstDesc> TaskNode::GetSoleConsumedRegst(const std::string& name) const {
   auto it = consumed_regsts_.find(name);
   if (it == consumed_regsts_.end()) { return nullptr; }
   const std::list<std::shared_ptr<RegstDesc>>& vec = it->second;

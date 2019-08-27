@@ -176,15 +176,26 @@ void NormalForwardCompTaskNode::InferProducedDataRegstTimeShape() {
 }
 
 void NormalForwardCompTaskNode::GenerateNonCtrlRegstHandlerProto(TaskProto* task_proto) const {
+  auto const_model_regst = GetSoleConsumedRegst("const_model");
+  int64_t const_model_id = const_model_regst ? const_model_regst->regst_desc_id() : -1;
+  RegstHandlerProto const_consumed_proto = CreateRegstHandlerProto("ConstConsumed");
   RegstHandlerProto naive_proto = CreateRegstHandlerProto("Naive");
   ForEachNonCtrlConsumedRegstDescId([&](int64_t regst_desc_id) {
-    naive_proto.mutable_consumed_regst_desc_ids()->add_regst_desc_id(regst_desc_id);
+    if (regst_desc_id == const_model_id) {
+      const_consumed_proto.mutable_consumed_regst_desc_ids()->add_regst_desc_id(const_model_id);
+    } else {
+      naive_proto.mutable_consumed_regst_desc_ids()->add_regst_desc_id(regst_desc_id);
+    }
   });
   ForEachNonCtrlProducedRegstDescId([&](int64_t regst_desc_id) {
     naive_proto.mutable_produced_regst_desc_ids()->add_regst_desc_id(regst_desc_id);
   });
+
   if (!IsRegstHandlerProtoEmpty(naive_proto)) {
     *(task_proto->mutable_regst_handlers()->Add()) = naive_proto;
+  }
+  if (!IsRegstHandlerProtoEmpty(const_consumed_proto)) {
+    *(task_proto->mutable_regst_handlers()->Add()) = const_consumed_proto;
   }
 }
 

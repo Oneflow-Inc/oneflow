@@ -39,7 +39,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   const ExecGraph& exec_gph() const { return exec_gph_; }
   std::shared_ptr<RegstDesc> GetProducedRegst(const std::string& name);
   const std::list<std::shared_ptr<RegstDesc>>& GetConsumedRegst(const std::string& name);
-  std::shared_ptr<RegstDesc> GetSoleConsumedRegst(const std::string& name);
+  std::shared_ptr<RegstDesc> GetSoleConsumedRegst(const std::string& name) const;
   const HashMap<std::string, std::shared_ptr<RegstDesc>>& produced_regsts() const {
     return produced_regsts_;
   }
