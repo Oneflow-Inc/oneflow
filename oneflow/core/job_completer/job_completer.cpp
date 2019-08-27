@@ -10,6 +10,11 @@
 #include "oneflow/core/job_completer/freeze_sbp_signature.h"
 #include "oneflow/core/job_completer/group_boxing_by_dst_parallel.h"
 
+#ifdef WITH_XLA
+#include "oneflow/xla/rewrite_optimizer.h"
+DECLARE_bool(use_xla_jit);
+#endif  // WITH_XLA
+
 namespace oneflow {
 
 namespace {
@@ -441,6 +446,17 @@ void JobCompleter::Complete(Job* job) const {
     HashMap<std::string, HashMap<std::string, LogicalBlobId>> op_name2ibn2in_diff_lbi;
     WithOpGraphAndMutJob(job, &GenerateOpConf4Trainning);
     WithOpGraphAndMutJob(job, &AddSaver);
+#ifdef WITH_XLA
+    if (FLAGS_use_xla_jit) {
+      OpGraph op_graph(*job);
+      mola::XlaGraph graph(&op_graph);
+      RewriteOptimizerGraph(graph, job);
+  
+      std::ofstream ost("./job_string_rewrite_optimizer.prototxt");
+      ost << job->DebugString();
+      ost.close();
+    }
+#endif
     // complete tick ops
     WithOpGraphAndMutJob(job, &AutoTick);
     // add keep_header_only op

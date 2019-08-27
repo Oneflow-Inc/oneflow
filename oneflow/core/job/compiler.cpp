@@ -5,6 +5,7 @@
 #include "oneflow/core/job_completer/job_completer.h"
 
 #ifdef WITH_XLA
+#include "oneflow/xla/rewrite_optimizer.h"
 #include "oneflow/xla/rebuild_job.h"
 #include "oneflow/xla/of2xla/xla_graph.h"
 #include "oneflow/xla/of2xla/pass/xla_optimize_pass.h"
@@ -123,15 +124,15 @@ Plan Compiler::DoCompile() {
   Global<OpGraph>::Get()->ToDotWithFilePath("optimized_dlnet_op_graph.dot");
 
 #ifdef WITH_XLA
-  // TODO(hjchen2): For debug
-  std::string job_string = job.DebugString();
-  std::ofstream ost("./job_string_without_xla.prototxt");
-  ost << job_string;
-  ost.close();
-
+  {
+    // TODO(hjchen2): For debug
+    std::string job_string = job.DebugString();
+    std::ofstream ost("./job_string_without_xla.prototxt");
+    ost << job_string;
+    ost.close();
+  }
   if (FLAGS_use_xla_jit) {
     LOG(INFO) << "Compile the job with XLA JIT support.";
-
     mola::XlaGraph graph(Global<OpGraph>::Get());
     mola::OptimizeOptions options;
     options.graph = &graph;
@@ -142,9 +143,8 @@ Plan Compiler::DoCompile() {
     // Rebuild Job
     RebuildXlaCompiledJob(graph, &job);
 
-    std::string job_string = job.DebugString();
     std::ofstream ost("./job_string_with_xla.prototxt");
-    ost << job_string;
+    ost << job.DebugString();
     ost.close();
 
     Global<OpGraph>::Delete();

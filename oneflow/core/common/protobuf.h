@@ -90,6 +90,8 @@ template<typename T>
 void SetValInPbMessage(PbMessage* msg, const std::string& field_name, const T& val);
 
 const PbMessage& GetMessageInPbMessage(const PbMessage& msg, int field_index);
+const PbMessage& GetMessageInPbMessage(const PbMessage& msg,
+                                       const std::string& field_name);
 
 PbMessage* MutableMessageInPbMessage(PbMessage*, const std::string& field_name);
 PbMessage* MutableMessageInPbMessage(PbMessage*, int field_index);

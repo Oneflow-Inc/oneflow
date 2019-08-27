@@ -442,8 +442,7 @@ void FoldSubgraphBuilder::RemoveLaunchFoldedOps() {
 }
 
 void RebuildXlaCompiledJob(const XlaGraph &graph, Job *job) {
-  FoldSubgraphBuilder builder(graph, job);
-  builder.Build();
+  FoldSubgraphBuilder(graph, job).Build();
 }
 
 }  // namespace oneflow
