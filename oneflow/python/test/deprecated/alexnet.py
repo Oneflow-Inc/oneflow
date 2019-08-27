@@ -4,21 +4,39 @@ import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import os
 import shutil
 from datetime import datetime
-
-config = flow.ConfigProtoBuilder()
-config.gpu_device_num(1)
-config.grpc_use_no_signal()
-config.model_load_snapshot_path(
-    "/home/caishenghang/dev/cnns_test/alexnet_fp16/fp32/of_model")
-_MODEL_SAVE = "./model_save-{}".format(
-    str(datetime.now().strftime('%Y-%m-%d-%H:%M:%S')))
-config.model_save_snapshots_path(_MODEL_SAVE)
-flow.init(config)
+import argparse
 
 _DATA_DIR = "/dataset/imagenet_227/train/32"
 _SINGLE_PIC_DATA_DIR = '/home/caishenghang/dev/cnns_test/dataset/PNG227/of_record'
-_EVAL_DIR = _DATA_DIR
-_TRAIN_DIR = _SINGLE_PIC_DATA_DIR
+_MODEL_LOAD_DIR = '/home/caishenghang/dev/cnns_test/alexnet_fp16/fp32/of_model'
+_MODEL_SAVE_DIR = "./model_save-{}".format(
+    str(datetime.now().strftime('%Y-%m-%d-%H:%M:%S')))
+
+parser = argparse.ArgumentParser(
+    description='flags for multi-node and resource')
+parser.add_argument('-g', '--gpu_num_per_node',
+                    type=int, default=1, required=False)
+parser.add_argument('-i', '--iter_num',
+                    type=int, default=10, required=False)
+parser.add_argument('-m', '--multinode', default=False,
+                    action="store_true", required=False)
+parser.add_argument('-s', '--skip_scp_binary', default=False,
+                    action="store_true", required=False)
+parser.add_argument('-c', '--scp_binary_without_uuid', default=False,
+                    action="store_true", required=False)
+parser.add_argument('-r', '--remote_by_hand', default=False,
+                    action="store_true", required=False)
+parser.add_argument('-e', '--eval_dir',
+                    type=str, default=_DATA_DIR, required=False)
+parser.add_argument('-t', '--train_dir',
+                    type=str, default=_SINGLE_PIC_DATA_DIR, required=False)
+parser.add_argument('-load', '--model_load_dir',
+                    type=str, default=_MODEL_LOAD_DIR, required=False)
+parser.add_argument('-save', '--model_save_dir',
+                    type=str, default=_MODEL_SAVE_DIR, required=False)
+
+args = parser.parse_args()
+
 
 _ALEXNET_BASIC_CONV_CONF = dict(
     data_format='channels_first',
@@ -46,14 +64,6 @@ _BASIC_FC_CONF = dict(
         constant_conf=dict(
             value=0.0))
 )
-
-
-def Reshape(in_blob, shape):
-    dl_net = in_blob.dl_net()
-    return dl_net.Reshape(
-        in_blob,
-        shape={'dim': shape},
-        has_dim0_in_shape=True)
 
 
 def ImgClassifyDecoder(dlnet, data_dir=''):
@@ -101,8 +111,8 @@ def ImgClassifyDecoder(dlnet, data_dir=''):
 def BuildAlexNetWithDeprecatedAPI(data_dir):
     dlnet = flow.deprecated.get_cur_job_dlnet_builder()
 
-    decoders = ImgClassifyDecoder(
-        dlnet, data_dir=data_dir)
+    # with flow.device_prior_placement("cpu", "0:0"):
+    decoders = ImgClassifyDecoder(dlnet, data_dir=data_dir)
     img_blob = decoders['encoded']
     transposers = dlnet.Transpose(
         img_blob, name='transpose', perm=[0, 3, 1, 2])
@@ -187,12 +197,8 @@ def BuildAlexNetWithDeprecatedAPI(data_dir):
         strides=[2, 2],
         **_ALEXNET_BASIC_POOLING_CONF)
 
-    reshape = Reshape(
-        pool5,
-        [-1, 9216])
-
     fc1 = dlnet.FullyConnected(
-        reshape,
+        pool5,
         name='fc1',
         units=4096,
         **_BASIC_FC_CONF)
@@ -229,31 +235,51 @@ def BuildAlexNetWithDeprecatedAPI(data_dir):
 
 def TrainAlexNet():
     job_conf = flow.get_cur_job_conf_builder()
-    job_conf.batch_size(10).data_part_num(1).default_data_type(flow.float)
+    job_conf.batch_size(12).data_part_num(8).default_data_type(flow.float)
     job_conf.train_conf()
     job_conf.train_conf().primary_lr = 0.00001
     job_conf.train_conf().num_of_batches_in_snapshot = 100
     job_conf.train_conf().model_update_conf.naive_conf.SetInParent()
     job_conf.train_conf().loss_lbn.extend(["softmax_loss/out"])
-    return BuildAlexNetWithDeprecatedAPI(_TRAIN_DIR)
+    return BuildAlexNetWithDeprecatedAPI(args.train_dir)
 
 
 def EvaluateAlexNet():
     job_conf = flow.get_cur_job_conf_builder()
-    job_conf.batch_size(256).data_part_num(1).default_data_type(flow.float)
-    return BuildAlexNetWithDeprecatedAPI(_EVAL_DIR)
+    job_conf.batch_size(12).data_part_num(8).default_data_type(flow.float)
+    return BuildAlexNetWithDeprecatedAPI(args.eval_dir)
 
 
-flow.add_job(TrainAlexNet)
-flow.add_job(EvaluateAlexNet)
 if __name__ == '__main__':
+    config = flow.ConfigProtoBuilder()
+    config.gpu_device_num(args.gpu_num_per_node)
+    config.grpc_use_no_signal()
+    config.model_load_snapshot_path(args.model_load_dir)
+    config.model_save_snapshots_path(args.model_save_dir)
+    config.ctrl_port(2019)
+    if args.multinode:
+        config.ctrl_port(12138)
+        config.machine([{'addr': '192.168.1.15'}, {'addr': '192.168.1.16'}])
+        if args.remote_by_hand is False:
+            if args.scp_binary_without_uuid:
+                flow.deprecated.init_worker(
+                    config, scp_binary=True, use_uuid=False)
+            elif args.skip_scp_binary:
+                flow.deprecated.init_worker(
+                    config, scp_binary=False, use_uuid=False)
+            else:
+                flow.deprecated.init_worker(
+                    config, scp_binary=True, use_uuid=True)
+    flow.init(config)
+    flow.add_job(TrainAlexNet)
+    flow.add_job(EvaluateAlexNet)
     with flow.Session() as sess:
         check_point = flow.train.CheckPoint()
         check_point.restore().initialize_or_restore(session=sess)
-        fmt_str = '{:>12}  {:>12}  {:>12.3f}'
+        fmt_str = '{:>12}  {:>12}  {:>12.10f}'
         print('{:>12}  {:>12}  {:>12}'.format(
             "iter", "loss type", "loss value"))
-        for i in range(100):
+        for i in range(args.iter_num):
             print(fmt_str.format(i, "train loss:", sess.run(
                 TrainAlexNet).get().mean()))
             if (i + 1) % 10 is 0:
@@ -261,3 +287,5 @@ if __name__ == '__main__':
                     EvaluateAlexNet).get().mean()))
             if (i + 1) % 100 is 0:
                 check_point.save(session=sess)
+        if args.multinode and args.skip_scp_binary is False and args.scp_binary_without_uuid is False:
+            flow.deprecated.delete_worker(config)

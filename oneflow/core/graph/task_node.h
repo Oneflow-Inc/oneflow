@@ -163,6 +163,7 @@ class TaskEdge final : public Edge<TaskNode, TaskEdge> {
 };
 
 extern std::map<TaskType, std::string> task_type2color;
+extern std::map<TaskType, std::string> task_type2type_str;
 
 struct IndependentThreadNum4TaskType final {
   IndependentThreadNum4TaskType(size_t num) : has_func_(false), num_(num) {}

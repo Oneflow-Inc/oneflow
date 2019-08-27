@@ -8,6 +8,7 @@
 #include "oneflow/core/job/environment_objects_scope.h"
 #include "oneflow/core/job/machine_context.h"
 #include "oneflow/core/job/oneflow.h"
+#include "oneflow/core/job/runtime_job_descs.h"
 #include "oneflow/core/control/cluster_control.pb.h"
 #include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/job/runtime_buffer_managers_scope.h"
@@ -78,9 +79,12 @@ void LaunchJob(const std::shared_ptr<oneflow::ForeignJobInstance>& cb) {
   const auto& job_name = cb->job_name();
   auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<ForeignJobInstance>>>::Get();
   int64_t job_id = Global<JobName2JobId>::Get()->at(job_name);
-  const JobDesc& job_desc = GlobalJobDesc(job_id);
-  if (job_desc.is_pull_job()) { buffer_mgr->Get(GetForeignOutputBufferName(job_name))->Send(cb); }
-  if (job_desc.is_push_job()) { buffer_mgr->Get(GetForeignInputBufferName(job_name))->Send(cb); }
+  if (IsPullJob(job_name, *Global<InterUserJobInfo>::Get())) {
+    buffer_mgr->Get(GetForeignOutputBufferName(job_name))->Send(cb);
+  }
+  if (IsPushJob(job_name, *Global<InterUserJobInfo>::Get())) {
+    buffer_mgr->Get(GetForeignInputBufferName(job_name))->Send(cb);
+  }
   buffer_mgr->Get(GetCallbackNotifierBufferName(job_name))->Send(cb);
   Global<BufferMgr<int64_t>>::Get()->Get(kBufferNameGlobalWaitJobId)->Send(job_id);
 }
