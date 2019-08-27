@@ -205,12 +205,10 @@ static bool HaveSameDim0InnerShape(
 
 ActivationType Operator::GetActivationType() const {
   if (HasFieldInCustomizedConf("activation")) {
-    if (static_cast<ActivationType>(GetEnumFromCustomizedConf("activation"))
-        != ActivationType::kNone) {
-      LOG(FATAL) << "please add an activation op for op: " << op_conf().name();
-    }
+    return static_cast<ActivationType>(GetEnumFromCustomizedConf("activation"));
+  } else {
+    return ActivationType::kNone;
   }
-  return ActivationType::kNone;
 }
 
 void Operator::GenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
