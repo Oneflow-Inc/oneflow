@@ -66,14 +66,6 @@ _BASIC_FC_CONF = dict(
 )
 
 
-def Reshape(in_blob, shape):
-    dl_net = in_blob.dl_net()
-    return dl_net.Reshape(
-        in_blob,
-        shape={'dim': shape},
-        has_dim0_in_shape=True)
-
-
 def ImgClassifyDecoder(dlnet, data_dir=''):
     return dlnet.DecodeOFRecord(data_dir, name='decode', blob=[
         {
@@ -205,12 +197,8 @@ def BuildAlexNetWithDeprecatedAPI(data_dir):
         strides=[2, 2],
         **_ALEXNET_BASIC_POOLING_CONF)
 
-    reshape = Reshape(
-        pool5,
-        [-1, 9216])
-
     fc1 = dlnet.FullyConnected(
-        reshape,
+        pool5,
         name='fc1',
         units=4096,
         **_BASIC_FC_CONF)
@@ -268,6 +256,7 @@ if __name__ == '__main__':
     config.grpc_use_no_signal()
     config.model_load_snapshot_path(args.model_load_dir)
     config.model_save_snapshots_path(args.model_save_dir)
+    config.ctrl_port(2019)
     if args.multinode:
         config.ctrl_port(12138)
         config.machine([{'addr': '192.168.1.15'}, {'addr': '192.168.1.16'}])

@@ -6,7 +6,8 @@ namespace {
 
 void GenerateBackwardOpConf(
     const Operator& op, std::vector<OperatorConf>* op_confs,
-    const std::function<LogicalBlobId*(const std::string&)>& DiffLbi4BnInOp) {
+    const std::function<LogicalBlobId*(const std::string&)>& DiffLbi4BnInOp,
+    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4BnInOp) {
   CHECK(op.op_conf().has_fully_connected_conf());
   const auto& conf = op.op_conf().fully_connected_conf();
   if (DiffLbi4BnInOp("in") != nullptr) {
@@ -26,9 +27,23 @@ void GenerateBackwardOpConf(
     OperatorConf matmul_weight_op;
     matmul_weight_op.set_name(op.op_name() + "_weight_grad");
     MatmulOpConf* matmul_weight_op_conf = matmul_weight_op.mutable_matmul_conf();
+    const Shape& in_shape = LogicalBlobDesc4BnInOp("in").shape();
+    if (in_shape.NumAxes() > 2) {
+      OperatorConf reshape_op;
+      reshape_op.set_name(op.op_name() + "_reshape_input_for" + "_weight_grad");
+      ReshapeOpConf* reshape_op_conf = reshape_op.mutable_reshape_conf();
+      reshape_op_conf->set_in(GenLogicalBlobName(op.BnInOp2Lbi("in")));
+      reshape_op_conf->set_out("out");
+      reshape_op_conf->set_has_dim0_in_shape(true);
+      reshape_op_conf->mutable_shape()->add_dim(-1);
+      reshape_op_conf->mutable_shape()->add_dim(in_shape.Count(1));
+      op_confs->push_back(reshape_op);
+      matmul_weight_op_conf->set_b(reshape_op.name() + "/out");
+    } else {
+      matmul_weight_op_conf->set_b(GenLogicalBlobName(op.BnInOp2Lbi("in")));
+    }
     matmul_weight_op_conf->set_out("out");
     matmul_weight_op_conf->set_a(GenLogicalBlobName(*DiffLbi4BnInOp("out")));
-    matmul_weight_op_conf->set_b(GenLogicalBlobName(op.BnInOp2Lbi("in")));
     matmul_weight_op_conf->set_transpose_a(true);
     matmul_weight_op_conf->set_transpose_b(false);
     op_confs->push_back(matmul_weight_op);
