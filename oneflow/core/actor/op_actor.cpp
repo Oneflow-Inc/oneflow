@@ -187,6 +187,7 @@ void OpActor::Act() {
       return regst->GetBlobByLbi(lbi);
     });
   }
+  act_id_ += 1;
 }
 
 void OpActor::HandleRegstMsgAfterAct() {

@@ -12,7 +12,7 @@ class NormalRegstHandler : public RegstHandlerIf {
     return (eord_cnt_ == consumed_rs_.total_regst_desc_cnt());
   }
   bool NoLongerConsumedByOthers() const override final { return total_reading_cnt_ == 0; }
-  void SendEordMsgForProducedRegst() const override final;
+  void SendEordMsgForProducedRegst() override final;
   void UpdateWithRegstMsg(const ActorMsg&) override final;
   void UpdateWithEordMsg(const ActorMsg&) override final;
   bool IsReady() const override final;
@@ -92,7 +92,7 @@ void NormalRegstHandler::Init(const RegstHandlerProto& handler_proto,
   DerivedInit(handler_proto);
 }
 
-void NormalRegstHandler::SendEordMsgForProducedRegst() const {
+void NormalRegstHandler::SendEordMsgForProducedRegst() {
   // TODO: merge with ActorMsgUtil::AsyncSendMsg()
   HashSet<int64_t> sended_regst_ids;
   for (const auto& pair : produced_regst2reading_cnt_) {
@@ -315,6 +315,60 @@ void InplaceRegstHandler::HandleProducedRegstAfterAct() {
   });
   mut_produced_rs()->PopFrontRegsts(regst_desc_ids);
 }
+
+class ConstConsumedRegstHandler final : public RegstHandlerIf {
+ public:
+  std::string type() override { return "ConstConsumed"; }
+  void Init(const RegstHandlerProto& handler_proto, const ProducedRegstType& produced_regsts,
+            MsgDeliveryCtx* ctx, std::shared_ptr<void> other) override {
+    for (int64_t consumed_id : handler_proto.consumed_regst_desc_ids().regst_desc_id()) {
+      consumed_rs_.InsertRegstDescId(consumed_id);
+      consumed_regst2eord_.emplace(consumed_id, false);
+    }
+    consumed_rs_.InitedDone();
+    eord_cnt_ = 0;
+    msg_delivery_ctx_.reset(ctx);
+  }
+
+  Regst* GetRegstByRegstDescId(int64_t desc_id) const override {
+    return consumed_rs_.Front(desc_id);
+  }
+
+  void UpdateWithEordMsg(const ActorMsg& msg) override {
+    consumed_regst2eord_.at(msg.eord_regst_desc_id()) = true;
+    eord_cnt_ += 1;
+  }
+  void UpdateWithRegstMsg(const ActorMsg& msg) override {
+    CHECK(msg.SrcMachineId() == Global<MachineCtx>::Get()->this_machine_id());
+    CHECK_EQ(0, consumed_rs_.TryPushBackRegst(msg.regst()));
+  }
+  void UpdateWithProducedRegstMsg(const ActorMsg&) override {}
+
+  bool IsReady() const override { return consumed_rs_.IsCurSlotReady(); }
+  void HandleRegstMsgAfterAct() override {}
+  bool NoLongerConsumeRegst() const override {
+    return (eord_cnt_ == consumed_rs_.total_regst_desc_cnt());
+  }
+  bool NoLongerConsumedByOthers() const override { return true; }
+  void SendEordMsgForProducedRegst() override {
+    std::vector<int64_t> regst_desc_ids;
+    consumed_rs_.ForEachFrontRegst([&](Regst* regst) {
+      // must access regst before sending it to producer
+      regst_desc_ids.push_back(regst->regst_desc_id());
+      ActorMsgUtil::AsyncSendMsg(msg_delivery_ctx_.get(), ActorMsg::BuildRegstMsgToProducer(
+                                                              msg_delivery_ctx_->actor_id,
+                                                              regst->producer_actor_id(), regst));
+    });
+    consumed_rs_.PopFrontRegsts(regst_desc_ids);
+    CHECK_EQ(0, consumed_rs_.available_regst_desc_cnt());
+  }
+
+ private:
+  std::unique_ptr<MsgDeliveryCtx> msg_delivery_ctx_;
+  RegstSlot consumed_rs_;
+  HashMap<int64_t, bool> consumed_regst2eord_;
+  int64_t eord_cnt_;
+};
 
 }  // namespace actor
 
