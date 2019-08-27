@@ -131,7 +131,10 @@ void NonDistributedOptimizerPass::Apply(const OpGraph& op_graph, JobBuilder* bui
         group_size += node_size;
       }
     }
-    for (const std::vector<const OpNode*>& group : groups) {
+    for (std::vector<const OpNode*>& group : groups) {
+      std::sort(group.begin(), group.end(), [&](const OpNode* lhs, const OpNode* rhs) {
+        return last_node2parallel_id.at(lhs) < last_node2parallel_id.at(rhs);
+      });
       OperatorConf nccl_broadcast_op_conf{};
       nccl_broadcast_op_conf.set_name("System-Boxing-NcclTupleBroadcast-" + NewUniqueId());
       NcclTupleBroadcastOpConf* tuple_broadcast_conf =
@@ -139,7 +142,9 @@ void NonDistributedOptimizerPass::Apply(const OpGraph& op_graph, JobBuilder* bui
       tuple_broadcast_conf->set_nccl_order_hint(op_node2topo_order.at(group.back()));
       FOR_RANGE(int64_t, i, 0, group.size()) {
         const OpNode* node = group.at(i);
-        const std::string obn = GenRepeatedBn("out", i);
+        std::ostringstream ss;
+        ss << "out_" << std::setw(6) << std::setfill('0') << i;
+        const std::string obn = ss.str();
         const int64_t& parallel_id = last_node2parallel_id.at(node);
         const LogicalBlobId& lbi = node->op().BnInOp2Lbi(node->op().SoleObn());
         const BlobDesc& blob_desc = node->LogicalBlobDesc4Lbi(lbi);
