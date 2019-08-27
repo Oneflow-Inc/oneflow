@@ -6,7 +6,8 @@ import shutil
 from datetime import datetime
 import argparse
 
-parser = argparse.ArgumentParser(description='flags for multi-node and resource')
+parser = argparse.ArgumentParser(
+    description='flags for multi-node and resource')
 parser.add_argument('-g', '--gpu_num_per_node',
                     type=int, default=1, required=False)
 parser.add_argument('-i', '--iter_num',
@@ -271,7 +272,8 @@ if __name__ == '__main__':
                 flow.deprecated.init_worker(
                     config, scp_binary=False, use_uuid=False)
             else:
-                flow.deprecated.init_worker(config, scp_binary=True, use_uuid=True)
+                flow.deprecated.init_worker(
+                    config, scp_binary=True, use_uuid=True)
     flow.init(config)
     flow.add_job(TrainAlexNet)
     flow.add_job(EvaluateAlexNet)
