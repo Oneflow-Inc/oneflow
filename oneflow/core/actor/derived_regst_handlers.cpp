@@ -163,8 +163,9 @@ void CtrlRegstHandler::UpdateWithConsumedRegstMsg(const ActorMsg& msg) {
 }
 
 void CtrlRegstHandler::UpdateWithProducedRegstMsg(const ActorMsg& msg) {
-  CHECK_EQ(0, mut_produced_rs()->TryPushBackRegst(msg.regst()));
   UpdateReadingCnt4ProducedRegst(msg.regst(), -1);
+  if (ReadingCnt4ProducedRegst(msg.regst()) != 0) { return; }
+  CHECK_EQ(0, mut_produced_rs()->TryPushBackRegst(msg.regst()));
 }
 
 void CtrlRegstHandler::HandleConsumedRegstAfterAct() {
@@ -219,8 +220,9 @@ void NaiveRegstHandler::UpdateWithConsumedRegstMsg(const ActorMsg& msg) {
 }
 
 void NaiveRegstHandler::UpdateWithProducedRegstMsg(const ActorMsg& msg) {
-  CHECK_EQ(0, mut_produced_rs()->TryPushBackRegst(msg.regst()));
   UpdateReadingCnt4ProducedRegst(msg.regst(), -1);
+  if (ReadingCnt4ProducedRegst(msg.regst()) != 0) { return; }
+  CHECK_EQ(0, mut_produced_rs()->TryPushBackRegst(msg.regst()));
 }
 
 void NaiveRegstHandler::HandleConsumedRegstAfterAct() {
@@ -284,17 +286,17 @@ void InplaceRegstHandler::UpdateWithConsumedRegstMsg(const ActorMsg& msg) {
 
 void InplaceRegstHandler::UpdateWithProducedRegstMsg(const ActorMsg& msg) {
   Regst* regst = msg.regst();
-  CHECK_EQ(0, mut_produced_rs()->TryPushBackRegst(regst));
   UpdateReadingCnt4ProducedRegst(regst, -1);
-  if (ReadingCnt4ProducedRegst(regst) == 0) {
-    int64_t corr_in_regst_id = inplace_pair_out2in_.at(regst->regst_desc_id());
-    Regst* corr_in_regst = mut_consumed_rs()->Front(corr_in_regst_id);
-    CHECK_NOTNULL(corr_in_regst);
-    ActorMsgUtil::AsyncSendMsg(
-        msg_delivery_ctx(), ActorMsg::BuildRegstMsgToProducer(msg_delivery_ctx()->actor_id,
-                                                              regst->producer_actor_id(), regst));
-    CHECK_EQ(0, mut_consumed_rs()->TryPopFrontRegst(corr_in_regst_id));
-  }
+  if (ReadingCnt4ProducedRegst(msg.regst()) != 0) { return; }
+
+  CHECK_EQ(0, mut_produced_rs()->TryPushBackRegst(regst));
+  int64_t corr_in_regst_id = inplace_pair_out2in_.at(regst->regst_desc_id());
+  Regst* corr_in_regst = mut_consumed_rs()->Front(corr_in_regst_id);
+  CHECK_NOTNULL(corr_in_regst);
+  ActorMsgUtil::AsyncSendMsg(msg_delivery_ctx(),
+                             ActorMsg::BuildRegstMsgToProducer(msg_delivery_ctx()->actor_id,
+                                                               regst->producer_actor_id(), regst));
+  CHECK_EQ(0, mut_consumed_rs()->TryPopFrontRegst(corr_in_regst_id));
 }
 
 void InplaceRegstHandler::HandleConsumedRegstAfterAct() {
@@ -369,6 +371,8 @@ class ConstConsumedRegstHandler final : public RegstHandlerIf {
   HashMap<int64_t, bool> consumed_regst2eord_;
   int64_t eord_cnt_;
 };
+
+REGISTER_REGST_HANDLER("ConstConsumed", ConstConsumedRegstHandler);
 
 }  // namespace actor
 
