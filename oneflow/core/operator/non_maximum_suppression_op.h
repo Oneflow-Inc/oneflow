@@ -12,11 +12,15 @@ class NonMaximumSuppressionOp final : public Operator {
   ~NonMaximumSuppressionOp() = default;
 
   void InitFromOpConf() override;
+  const PbMessage& GetCustomizedConf() const override;
   void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                       const ParallelContext* parallel_ctx) const override;
 
  private:
   bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { return false; }
+  virtual void VirtualGenKernelConf(
+      std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*,
+      KernelConf*, const OpContext*) const override;
 };
 
 }  // namespace oneflow
