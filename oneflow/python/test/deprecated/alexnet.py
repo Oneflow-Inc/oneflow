@@ -6,7 +6,7 @@ import shutil
 from datetime import datetime
 import argparse
 
-parser = argparse.ArgumentParser(description='Process some integers.')
+parser = argparse.ArgumentParser(description='flags for multi-node and resource')
 parser.add_argument('-g', '--gpu_num_per_node',
                     type=int, default=1, required=False)
 parser.add_argument('-i', '--iter_num',
@@ -16,6 +16,8 @@ parser.add_argument('-m', '--multinode', default=False,
 parser.add_argument('-s', '--skip_scp_binary', default=False,
                     action="store_true", required=False)
 parser.add_argument('-c', '--scp_binary_without_uuid', default=False,
+                    action="store_true", required=False)
+parser.add_argument('-r', '--remote_by_hand', default=False,
                     action="store_true", required=False)
 
 args = parser.parse_args()
@@ -261,14 +263,15 @@ if __name__ == '__main__':
     if args.multinode:
         config.ctrl_port(12138)
         config.machine([{'addr': '192.168.1.15'}, {'addr': '192.168.1.16'}])
-        if args.scp_binary_without_uuid:
-            flow.deprecated.init_worker(
-                config, scp_binary=True, use_uuid=False)
-        elif args.skip_scp_binary:
-            flow.deprecated.init_worker(
-                config, scp_binary=False, use_uuid=False)
-        else:
-            flow.deprecated.init_worker(config, scp_binary=True, use_uuid=True)
+        if args.remote_by_hand is False:
+            if args.scp_binary_without_uuid:
+                flow.deprecated.init_worker(
+                    config, scp_binary=True, use_uuid=False)
+            elif args.skip_scp_binary:
+                flow.deprecated.init_worker(
+                    config, scp_binary=False, use_uuid=False)
+            else:
+                flow.deprecated.init_worker(config, scp_binary=True, use_uuid=True)
     flow.init(config)
     flow.add_job(TrainAlexNet)
     flow.add_job(EvaluateAlexNet)
@@ -286,5 +289,5 @@ if __name__ == '__main__':
                     EvaluateAlexNet).get().mean()))
             if (i + 1) % 100 is 0:
                 check_point.save(session=sess)
-        if args.multinode and args.skip_scp_binary is False:
+        if args.multinode and args.skip_scp_binary is False and args.scp_binary_without_uuid is False:
             flow.deprecated.delete_worker(config)
