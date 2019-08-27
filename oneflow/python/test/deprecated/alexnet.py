@@ -6,6 +6,12 @@ import shutil
 from datetime import datetime
 import argparse
 
+_DATA_DIR = "/dataset/imagenet_227/train/32"
+_SINGLE_PIC_DATA_DIR = '/home/caishenghang/dev/cnns_test/dataset/PNG227/of_record'
+_MODEL_LOAD_DIR = '/home/caishenghang/dev/cnns_test/alexnet_fp16/fp32/of_model'
+_MODEL_SAVE_DIR = "./model_save-{}".format(
+    str(datetime.now().strftime('%Y-%m-%d-%H:%M:%S')))
+
 parser = argparse.ArgumentParser(
     description='flags for multi-node and resource')
 parser.add_argument('-g', '--gpu_num_per_node',
@@ -20,13 +26,17 @@ parser.add_argument('-c', '--scp_binary_without_uuid', default=False,
                     action="store_true", required=False)
 parser.add_argument('-r', '--remote_by_hand', default=False,
                     action="store_true", required=False)
+parser.add_argument('-e', '--eval_dir',
+                    type=str, default=_DATA_DIR, required=False)
+parser.add_argument('-t', '--train_dir',
+                    type=str, default=_SINGLE_PIC_DATA_DIR, required=False)
+parser.add_argument('-load', '--model_load_dir',
+                    type=str, default=_MODEL_LOAD_DIR, required=False)
+parser.add_argument('-save', '--model_save_dir',
+                    type=str, default=_MODEL_SAVE_DIR, required=False)
 
 args = parser.parse_args()
 
-_DATA_DIR = "/dataset/imagenet_227/train/32"
-_SINGLE_PIC_DATA_DIR = '/home/caishenghang/dev/cnns_test/dataset/PNG227/of_record'
-_EVAL_DIR = _DATA_DIR
-_TRAIN_DIR = _SINGLE_PIC_DATA_DIR
 
 _ALEXNET_BASIC_CONV_CONF = dict(
     data_format='channels_first',
@@ -243,24 +253,21 @@ def TrainAlexNet():
     job_conf.train_conf().num_of_batches_in_snapshot = 100
     job_conf.train_conf().model_update_conf.naive_conf.SetInParent()
     job_conf.train_conf().loss_lbn.extend(["softmax_loss/out"])
-    return BuildAlexNetWithDeprecatedAPI(_TRAIN_DIR)
+    return BuildAlexNetWithDeprecatedAPI(args.train_dir)
 
 
 def EvaluateAlexNet():
     job_conf = flow.get_cur_job_conf_builder()
     job_conf.batch_size(12).data_part_num(8).default_data_type(flow.float)
-    return BuildAlexNetWithDeprecatedAPI(_EVAL_DIR)
+    return BuildAlexNetWithDeprecatedAPI(args.eval_dir)
 
 
 if __name__ == '__main__':
     config = flow.ConfigProtoBuilder()
     config.gpu_device_num(args.gpu_num_per_node)
     config.grpc_use_no_signal()
-    config.model_load_snapshot_path(
-        "/home/caishenghang/dev/cnns_test/alexnet_fp16/fp32/of_model")
-    _MODEL_SAVE = "./model_save-{}".format(
-        str(datetime.now().strftime('%Y-%m-%d-%H:%M:%S')))
-    config.model_save_snapshots_path(_MODEL_SAVE)
+    config.model_load_snapshot_path(args.model_load_dir)
+    config.model_save_snapshots_path(args.model_save_dir)
     if args.multinode:
         config.ctrl_port(12138)
         config.machine([{'addr': '192.168.1.15'}, {'addr': '192.168.1.16'}])
@@ -280,7 +287,7 @@ if __name__ == '__main__':
     with flow.Session() as sess:
         check_point = flow.train.CheckPoint()
         check_point.restore().initialize_or_restore(session=sess)
-        fmt_str = '{:>12}  {:>12}  {:>12.3f}'
+        fmt_str = '{:>12}  {:>12}  {:>12.10f}'
         print('{:>12}  {:>12}  {:>12}'.format(
             "iter", "loss type", "loss value"))
         for i in range(args.iter_num):
