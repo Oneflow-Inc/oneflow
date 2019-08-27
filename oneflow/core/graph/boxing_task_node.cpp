@@ -127,7 +127,9 @@ DEFINE_BLD_BOXING_OP_CONF_METHOD(BoxingTaskNode, AddAndClone) {
 
 void SetBoxingOpConfBySbpParallel(
     BoxingOpConf* conf, const LogicalBlobId& lbi, const Operator& in_op, const Operator& out_op,
-    const std::vector<BoxingTaskNode::EdgeInfo>& sorted_edges,
+    const std::vector<BoxingTaskNode::EdgeInfo>& sorted_in_edges,
+    const std::vector<BoxingTaskNode::EdgeInfo>& sorted_out_edges,
+    const bool is_out_boxing_task_node, const bool is_in_boxing_task_node,
     const std::function<SbpParallel(const std::string&, const LogicalBlobId&)>& GetSbpParallel) {
   CHECK(in_op.op_conf().has_tick_conf() == false);
   CHECK(in_op.op_conf().has_source_tick_conf() == false);
@@ -145,8 +147,23 @@ void SetBoxingOpConfBySbpParallel(
   if (out_sbp.has_split_parallel()) {
     BoxSplitConf* split_conf = conf->mutable_split_box();
     split_conf->set_axis(out_sbp.split_parallel().axis());
-    const auto& bs = Global<OpGraph>::Get()->GetBalancedSplitter(out_op.op_name(), lbi);
-    SetBoxSplitPart(sorted_edges, bs, split_conf);
+    CHECK(is_out_boxing_task_node ^ is_in_boxing_task_node);
+    if (is_out_boxing_task_node) {
+      BalancedSplitter in_bs = Global<OpGraph>::Get()->GetBalancedSplitter(in_op.op_name(), lbi);
+      Range in_range =
+          in_bs.At(sorted_in_edges.front().parallel_id_min, sorted_in_edges.back().parallel_id_max);
+      BalancedSplitter out_bs = Global<OpGraph>::Get()->GetBalancedSplitter(out_op.op_name(), lbi);
+      for (const BoxingTaskNode::EdgeInfo& out_edge : sorted_out_edges) {
+        Range out_range = out_bs.At(out_edge.parallel_id_min, out_edge.parallel_id_max);
+        Range intersectant_range = FindIntersectant(in_range, out_range);
+        split_conf->add_part_num(intersectant_range.size());
+      }
+    } else if (is_in_boxing_task_node) {
+      const auto& bs = Global<OpGraph>::Get()->GetBalancedSplitter(out_op.op_name(), lbi);
+      SetBoxSplitPart(sorted_out_edges, bs, split_conf);
+    } else {
+      UNIMPLEMENTED();
+    }
   } else if (out_sbp.has_broadcast_parallel()) {
     conf->mutable_clone_box();
   } else {
@@ -155,8 +172,11 @@ void SetBoxingOpConfBySbpParallel(
 }
 
 DEFINE_BLD_BOXING_OP_CONF_METHOD(BoxingTaskNode, FwSbpParallel) {
+  bool is_out_boxing_task_node = dynamic_cast<OutBoxingTaskNode*>(this) != nullptr;
+  bool is_in_boxing_task_node = dynamic_cast<InBoxingTaskNode*>(this) != nullptr;
   SetBoxingOpConfBySbpParallel(conf, lbi, *in_logical->SoleOp(), *out_logical->SoleOp(),
-                               sorted_out_edges,
+                               sorted_in_edges, sorted_out_edges, is_out_boxing_task_node,
+                               is_in_boxing_task_node,
                                [&](const std::string& op_name, const LogicalBlobId& lbi) {
                                  return Global<OpGraph>::Get()->GetSbpParallel(op_name, lbi);
                                });
