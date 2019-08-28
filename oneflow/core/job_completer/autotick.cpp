@@ -147,7 +147,8 @@ OperatorConf AppendTick(const std::string tick_name, const std::list<const OpNod
   return AppendTick(tick_name, op_names, pd.parallel_conf(), job_builder);
 }
 
-OperatorConf PrependTick(const std::list<const OpNode*>& op_nodes, JobBuilder* job_builder) {
+OperatorConf PrependTick(const HashSet<const OpNode*>& op_nodes, JobBuilder* job_builder) {
+  CHECK_GE(op_nodes.size(), 1);
   OperatorConf tick_op_conf = MakeTickOpConf("Prepend");
   std::vector<OperatorConf> op_confs;
   for (const OpNode* op_node : op_nodes) {
@@ -156,7 +157,7 @@ OperatorConf PrependTick(const std::list<const OpNode*>& op_nodes, JobBuilder* j
     op_confs.push_back(op_conf);
   }
   job_builder->MutOpsOnlyOnce({op_confs});
-  ParallelDesc pd(op_nodes.front()->parallel_desc());
+  ParallelDesc pd((*op_nodes.begin())->parallel_desc());
   pd.set_device_type(DeviceType::kCPU);
   job_builder->AddOps(pd.parallel_conf(), {tick_op_conf});
   return tick_op_conf;
@@ -283,16 +284,16 @@ void AddGlobalInputOutputCriticalSection(const HashSet<const OpNode*>& op_nodes,
                                          JobBuilder* job_builder) {
   auto time_shape = std::make_unique<Shape>(
       std::vector<int64_t>{GlobalJobDesc().TotalBatchNum(), GlobalJobDesc().NumOfPiecesInBatch()});
-  HashMap<ParallelDesc, std::list<const OpNode*>> parallel_desc2op_nodes;
+  HashMap<ParallelDesc, HashSet<const OpNode*>> parallel_desc2op_nodes;
   HashMap<std::string, const ParallelConf*> op_name2parallel_conf;
   for (const OpNode* op_node : op_nodes) {
-    parallel_desc2op_nodes[op_node->parallel_desc()].push_back(op_node);
+    CHECK(parallel_desc2op_nodes[op_node->parallel_desc()].insert(op_node).second);
   }
   std::vector<OperatorConf> source_ticks;
   std::vector<OperatorConf> sink_ticks;
   for (const auto& pair : parallel_desc2op_nodes) {
     source_ticks.push_back(PrependTick(pair.second, job_builder));
-    for (const auto& sink_tick : AddTickForTimeShape(*time_shape, op_nodes, job_builder)) {
+    for (const auto& sink_tick : AddTickForTimeShape(*time_shape, pair.second, job_builder)) {
       sink_ticks.push_back(sink_tick);
       CHECK(op_name2parallel_conf.emplace(sink_tick.name(), &pair.first.parallel_conf()).second);
     }
