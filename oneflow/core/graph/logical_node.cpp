@@ -272,7 +272,7 @@ BldSubTskGphMthd GetMthdForBldSubTskGph(const LogicalNode* src_node, const Logic
       CHECK(src_pd->parallel_num() == dst_pd->parallel_num());
       CHECK(src_pd->policy() == kDataParallel && dst_pd->policy() == kDataParallel);
     }
-    bool IsTickNode = [&](const LogicalNode* node) {
+    auto IsTickNode = [&](const LogicalNode* node) {
       return IsClassRegistered<IsTickTockOpTypeCase>(node->SoleOp()->op_conf().op_type_case());
     };
     if (IsTickNode(src_node) || IsTickNode(dst_node)) {
