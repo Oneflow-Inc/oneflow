@@ -9,7 +9,6 @@ void SegmentSumGradOp::InitFromOpConf() {
   EnrollOutputBn("in_diff", false);
 }
 
-
 void SegmentSumGradOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                   const ParallelContext* parallel_ctx) const {
   const BlobDesc* out_diff_blob = GetBlobDesc4BnInOp("out_diff");

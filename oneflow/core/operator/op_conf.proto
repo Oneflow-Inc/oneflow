@@ -363,6 +363,12 @@ message SigmoidCrossEntropyLossOpConf {
   optional string weight = 8;
 }
 
+message SigmoidCrossEntropyLossGradOpConf {
+  required string prediction = 1;
+  required string label = 2;
+  required string loss_diff = 3;
+}
+
 message IdentityLossOpConf {
   required string prediction = 1;
   required string loss = 2;
@@ -1583,7 +1589,7 @@ message OperatorConf {
     SplitLikeOpConf split_like_conf = 294;
     SegmentSumOpConf segment_sum_conf = 295;
     SegmentSumGradOpConf segment_sum_grad_conf = 296;
-
+    SigmoidCrossEntropyLossGradOpConf sigmoid_cross_entropy_loss_grad_conf = 297; 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;
     BroadcastSubOpConf broadcast_sub_conf = 501;

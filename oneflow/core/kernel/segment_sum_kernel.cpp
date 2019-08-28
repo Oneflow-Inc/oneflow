@@ -10,11 +10,10 @@ const PbMessage& SegmentSumKernel<device_type, T>::GetCustomizedOpConf() const {
 
 template <DeviceType device_type, typename T>
 void SegmentSumKernel<device_type, T>::ForwardDataContent(const KernelCtx& ctx,
-                                    std::function<Blob*(const std::string&)> BnInOp2Blob) const{
+                                    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* in = BnInOp2Blob("in");
   const Blob* segment_ids = BnInOp2Blob("segment_ids");
-  Blob* out = BnInOp2Blob("out");
-  // 
+  Blob* out = BnInOp2Blob("out"); 
   SegmentKernelUtil<device_type, float, int32_t>::SegmentSumForward(ctx.device_ctx, in, segment_ids, out);
 }
 

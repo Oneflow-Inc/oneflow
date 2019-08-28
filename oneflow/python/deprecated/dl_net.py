@@ -449,8 +449,17 @@ class DLNet(object):
     def ScalarMul(self, in_blob, scalar, name=None, **kw):
         return self._ScalarBinaryOp(util.GetCurFuncName(), in_blob, scalar, name, **kw);
 
-    def ReduceSum(self, in_blob, name=None, **kw):
-        return self._SoleOutputOperator(util.GetCurFuncName(), in_blob, name, **kw);
+    def ReduceSum(self, in_blob, axis=None, keep_dims=None, name=None, **kw):
+        kw['in'] = in_blob.logical_blob_name
+        if axis is not None:
+            kw['axis'] = axis
+        if keep_dims is not None:
+            kw['keep_dims'] = keep_dims
+
+        kw['out'] = 'out'
+        name = self._GetVariableName(name, util.GetCurFuncName())
+        self.CreateOperator(util.GetCurFuncName(), name, [], [], **kw)
+        return Blob(self, '{}/out'.format(name))
 
     def ReduceMean(self, in_blob, name=None, **kw):
         return self._SoleOutputOperator(util.GetCurFuncName(), in_blob, name, **kw);
@@ -522,6 +531,14 @@ class DLNet(object):
         name = self._GetVariableName(name, util.GetCurFuncName())
         self.CreateOperator(util.GetCurFuncName(), name, [], [], **kw)
         return Blob(self, '{}/out'.format(name))
+
+    def SigmoidCrossEntropyLoss(self, prediction, label, name=None, **kw):
+        kw['prediction'] = prediction.logical_blob_name
+        kw['label'] = label.logical_blob_name
+        kw['loss'] = 'loss'
+        name = self._GetVariableName(name, util.GetCurFuncName())
+        self.CreateOperator(util.GetCurFuncName(), name, [], [], **kw)
+        return Blob(self, '{}/loss'.format(name))
 
     def IdentityLoss(self, prediction,  name=None, **kw):
         kw['prediction'] = prediction.logical_blob_name
