@@ -7,8 +7,8 @@ from datetime import datetime
 import argparse
 
 _DATA_DIR = "/dataset/imagenet_227/train/32"
-_SINGLE_PIC_DATA_DIR = '/home/caishenghang/dev/cnns_test/dataset/PNG227/of_record'
-_MODEL_LOAD_DIR = '/home/caishenghang/dev/cnns_test/alexnet_fp16/fp32/of_model'
+_SINGLE_PIC_DATA_DIR = '/home/sunxuexue/dev/cnns_test/dataset/PNG227/of_record'
+_MODEL_LOAD_DIR = ""
 _MODEL_SAVE_DIR = "./model_save-{}".format(
     str(datetime.now().strftime('%Y-%m-%d-%H:%M:%S')))
 
@@ -29,7 +29,7 @@ parser.add_argument('-r', '--remote_by_hand', default=False,
 parser.add_argument('-e', '--eval_dir',
                     type=str, default=_DATA_DIR, required=False)
 parser.add_argument('-t', '--train_dir',
-                    type=str, default=_SINGLE_PIC_DATA_DIR, required=False)
+                    type=str, default=_DATA_DIR, required=False)
 parser.add_argument('-load', '--model_load_dir',
                     type=str, default=_MODEL_LOAD_DIR, required=False)
 parser.add_argument('-save', '--model_save_dir',
@@ -230,17 +230,24 @@ def BuildAlexNetWithDeprecatedAPI(data_dir):
         fc3, name='softmax')
     softmax_loss = dlnet.SparseCrossEntropy(
         softmax, label_blob, name='softmax_loss')
-    return softmax_loss
+    loss_blob = [softmax_loss]
+    return loss_blob
 
 
 def TrainAlexNet():
     job_conf = flow.get_cur_job_conf_builder()
+    print("************************************")
+    print("job_conf  ", job_conf)
+    print("****************************************")
     job_conf.batch_size(12).data_part_num(8).default_data_type(flow.float)
     job_conf.train_conf()
     job_conf.train_conf().primary_lr = 0.00001
     job_conf.train_conf().num_of_batches_in_snapshot = 100
     job_conf.train_conf().model_update_conf.naive_conf.SetInParent()
-    job_conf.train_conf().loss_lbn.extend(["softmax_loss/out"])
+#    loss_blob = set_loss_blob()
+
+    job_conf.add_loss(flow.deprecated.get_cur_job_dlnet_builder())
+  #  job_conf.train_conf().loss_lbn.extend([softmax_loss])
     return BuildAlexNetWithDeprecatedAPI(args.train_dir)
 
 
@@ -258,8 +265,8 @@ if __name__ == '__main__':
     config.model_save_snapshots_path(args.model_save_dir)
     config.ctrl_port(2019)
     if args.multinode:
-        config.ctrl_port(12138)
-        config.machine([{'addr': '192.168.1.15'}, {'addr': '192.168.1.16'}])
+        config.ctrl_port(8888)
+        config.machine([{'addr': '192.168.1.11'}, {'addr': '192.168.1.16'}])
         if args.remote_by_hand is False:
             if args.scp_binary_without_uuid:
                 flow.deprecated.init_worker(
