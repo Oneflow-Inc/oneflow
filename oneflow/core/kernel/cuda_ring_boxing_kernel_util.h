@@ -22,11 +22,11 @@ struct CudaRingBoxingLinkParams {
 template<typename T>
 struct CudaRingBoxingStepParams {
   int32_t num_links;
-  CudaRingBoxingLinkParams<T> links[kCudaRingBoxingMaxNumLink];
   bool recv;
   bool in;
   bool send;
   bool out;
+  CudaRingBoxingLinkParams<T> links[kCudaRingBoxingMaxNumLink];
 };
 
 template<ReduceMethod method, typename T>
