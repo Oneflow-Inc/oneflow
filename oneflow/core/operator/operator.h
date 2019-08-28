@@ -280,6 +280,12 @@ struct IsInterfaceOpConf4OpTypeCase final {};
   REGISTER_CLASS_CREATOR(op_type_case, IsInterfaceOpConf4OpTypeCase, \
                          ([] { return new IsInterfaceOpConf4OpTypeCase(); }))
 
+struct IsTickTockOpTypeCase final {};
+
+#define REGISTER_TICK_TOCK_OP(op_type_case)                  \
+  REGISTER_CLASS_CREATOR(op_type_case, IsTickTockOpTypeCase, \
+                         ([] { return new IsTickTockOpTypeCase; }))
+
 std::shared_ptr<Operator> ConstructOp(const OperatorConf& op_conf);
 
 inline std::shared_ptr<Operator> ConstructOp(const OperatorConf& op_conf, DeviceType device_type) {
