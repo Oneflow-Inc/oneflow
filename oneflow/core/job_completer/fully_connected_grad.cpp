@@ -20,8 +20,15 @@ void GenerateBackwardOpConf(
     matmul_in_op_conf->set_transpose_a(false);
     matmul_in_op_conf->set_transpose_b(false);
     op_confs->push_back(matmul_in_op);
-    DiffLbi4BnInOp("in")->set_op_name(matmul_in_op.name());
-    DiffLbi4BnInOp("in")->set_blob_name("out");
+    OperatorConf in_diff_reshape_op;
+    in_diff_reshape_op.set_name(op.op_name() + "_reshape_in_grad");
+    ReshapeLikeOpConf* reshape_like_op_conf = in_diff_reshape_op.mutable_reshape_like_conf();
+    reshape_like_op_conf->set_x(matmul_in_op.name() + "/out");
+    reshape_like_op_conf->set_like(GenLogicalBlobName(op.BnInOp2Lbi("in")));
+    reshape_like_op_conf->set_y("y");
+    op_confs->push_back(in_diff_reshape_op);
+    DiffLbi4BnInOp("in")->set_op_name(in_diff_reshape_op.name());
+    DiffLbi4BnInOp("in")->set_blob_name("y");
   }
   if (DiffLbi4BnInOp("weight") != nullptr) {
     OperatorConf matmul_weight_op;
