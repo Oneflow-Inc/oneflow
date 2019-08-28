@@ -272,12 +272,7 @@ BldSubTskGphMthd GetMthdForBldSubTskGph(const LogicalNode* src_node, const Logic
       CHECK(src_pd->parallel_num() == dst_pd->parallel_num());
       CHECK(src_pd->policy() == kDataParallel && dst_pd->policy() == kDataParallel);
     }
-    if (src_node->SoleOp()->op_conf().has_source_tick_conf()
-        || src_node->SoleOp()->op_conf().has_tick_conf()
-        || src_node->SoleOp()->op_conf().has_partial_tick_conf()
-        || dst_node->SoleOp()->op_conf().has_sink_tick_conf()
-        || dst_node->SoleOp()->op_conf().has_tick_conf()
-        || dst_node->SoleOp()->op_conf().has_partial_tick_conf()) {
+    if (src_node->SoleOp().IsTickTockOp() || dst_node->SoleOp().IsTickTockOp()) {
       if (src_pd->parallel_num() > 1 && dst_pd->parallel_num() == 1
           && src_node->SoleOp()->op_conf().has_partial_tick_conf()) {
         CHECK(dst_node->SoleOp()->op_conf().has_sink_tick_conf());

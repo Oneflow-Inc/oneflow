@@ -29,5 +29,6 @@ void SourceTickOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
 }
 
 REGISTER_CPU_OP(OperatorConf::kSourceTickConf, SourceTickOp);
+REGISTER_TICK_TOCK_OP(OperatorConf::kSourceTickConf);
 
 }  // namespace oneflow

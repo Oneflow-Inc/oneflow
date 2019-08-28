@@ -30,5 +30,6 @@ void PartialTickOp::GetSbpSignatures(
 
 REGISTER_OP_SAME_OUTPUT_BLOB_MEM_BLOCK_NUM(OperatorConf::kPartialTickConf, 2);
 REGISTER_OP(OperatorConf::kPartialTickConf, PartialTickOp);
+REGISTER_TICK_TOCK_OP(OperatorConf::kPartialTickConf);
 
 }  // namespace oneflow
