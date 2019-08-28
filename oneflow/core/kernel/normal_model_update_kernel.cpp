@@ -153,8 +153,8 @@ double LinearWarmupLearningRate(const LinearWarmupConf& conf, double lr, int64_t
   double start_multiplier = conf.start_multiplier();
   double multiplier = 1.0;
   if (next_batch_num <= conf.warmup_batches()) {
-    multiplier =
-        start_multiplier + (1.0 - start_multiplier) * (next_batch_num * 1.0 / conf.warmup_batches());
+    multiplier = start_multiplier
+                 + (1.0 - start_multiplier) * (next_batch_num * 1.0 / conf.warmup_batches());
   }
   return lr * multiplier;
 }
