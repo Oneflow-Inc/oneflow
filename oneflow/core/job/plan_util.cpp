@@ -35,6 +35,7 @@ void PlanUtil::ToDotFile(const Plan& plan, const std::string& filepath) {
     machine_id2device_id2node_list[i].resize(gpu_device_num);
   }
   std::vector<std::vector<std::string>> machine_id2host_node_list(machine_num);
+  HashSet<int64_t> ctrl_regst_desc_ids;
 
   auto InsertNodeDefByTaskProto = [&](const TaskProto& task_proto, const std::string& node_def) {
     if (Global<IDMgr>::Get()->GetDeviceTypeFromThrdId(task_proto.thrd_id()) == DeviceType::kGPU) {
@@ -45,14 +46,21 @@ void PlanUtil::ToDotFile(const Plan& plan, const std::string& filepath) {
     }
   };
 
-  auto GenNodeShapeStr = [](const RegstDescTypeProto& type) {
+  auto GenNodeColorStr = [](const RegstDescTypeProto& type) {
     if (type.has_data_regst_desc()) {
-      return "shape=box";
+      return ",color=\"black\",fillcolor=\"lightgray\"";
     } else if (type.has_ctrl_regst_desc()) {
-      return "shape=triangle";
+      return ",color=\"gray70\",fillcolor=\"lightgray\"";
     } else {
       UNIMPLEMENTED();
     }
+  };
+
+  auto GenEdgeColorStr = [&](int64_t regst_desc_id) {
+    if (ctrl_regst_desc_ids.find(regst_desc_id) != ctrl_regst_desc_ids.end()) {
+      return ",fontcolor=\"gray70\",color=\"gray70\"";
+    }
+    return "";
   };
 
   auto log_stream = TeePersistentLogStream::Create(filepath);
@@ -68,19 +76,21 @@ void PlanUtil::ToDotFile(const Plan& plan, const std::string& filepath) {
          + ":" + std::to_string(task_proto.thrd_id()) + ":"
          + std::to_string(task_proto.parallel_ctx().parallel_id())
          + "\", shape=ellipse, style=\"rounded,filled\", "
-           "colorscheme=set312, color="
-         + std::to_string((task_proto.job_id() % 12) + 1) + "];\n");
+         + "colorscheme=set312, color=" + std::to_string((task_proto.job_id() % 12) + 1) + "];\n");
     InsertNodeDefByTaskProto(task_proto, node_def);
   }
   // regst node
   for (const TaskProto& task_proto : plan.task()) {
     for (const auto& pair : task_proto.produced_regst_desc()) {
       std::string node_def = "regst_desc" + std::to_string(pair.second.regst_desc_id())
-                             + "[label=\"" + std::to_string(pair.second.regst_desc_id()) + "\", "
-                             + GenNodeShapeStr(pair.second.regst_desc_type()) + ",tooltip=\""
+                             + "[label=\"" + std::to_string(pair.second.regst_desc_id()) + "\""
+                             + GenNodeColorStr(pair.second.regst_desc_type()) + ",tooltip=\""
                              + "regst_num = " + std::to_string(pair.second.register_num())
-                             + "\",style=\"rounded,filled\" ];\n";
+                             + "\",style=\"rounded,filled\",shape=\"box\"];\n";
       InsertNodeDefByTaskProto(task_proto, node_def);
+      if (pair.second.regst_desc_type().has_ctrl_regst_desc()) {
+        ctrl_regst_desc_ids.insert(pair.second.regst_desc_id());
+      }
     }
   }
   log_stream << "digraph merged_plan_graph {\n splines=\"ortho\";\n";
@@ -95,8 +105,9 @@ void PlanUtil::ToDotFile(const Plan& plan, const std::string& filepath) {
     for (size_t device_id = 0; device_id < gpu_device_num; ++device_id) {
       std::string device_name = machine_name + "_device_" + std::to_string(device_id);
       log_stream << "subgraph cluster_" << device_name << " { label = \"" << device_name << "\";\n";
-      log_stream << "bgcolor=\"azure\";\n";
-      log_stream << "style=\"rounded\";\n";
+      log_stream << "color=\"skyblue\";\n";
+      log_stream << "fillcolor=\"azure\";\n";
+      log_stream << "style=\"rounded,filled\";\n";
       for (const auto& device_node_def : machine_id2device_id2node_list[machine_id][device_id]) {
         log_stream << device_node_def;
       }
@@ -110,14 +121,13 @@ void PlanUtil::ToDotFile(const Plan& plan, const std::string& filepath) {
     for (const auto& pair : task_proto.produced_regst_desc()) {
       log_stream << "task" << std::to_string(task_proto.task_id()) << "->regst_desc"
                  << std::to_string(pair.second.regst_desc_id()) << "[xlabel=\"" << pair.first
-                 << "\""
-                 << "];\n";
+                 << "\"" << GenEdgeColorStr(pair.second.regst_desc_id()) << "];\n";
     }
     for (const auto& pair : task_proto.consumed_regst_desc_id()) {
       for (int64_t regst_desc_id : pair.second.regst_desc_id()) {
         log_stream << "regst_desc" << std::to_string(regst_desc_id) << "->task"
                    << std::to_string(task_proto.task_id()) << "[xlabel=\"" << pair.first << "\""
-                   << "];\n";
+                   << GenEdgeColorStr(regst_desc_id) << "];\n";
       }
     }
   }
