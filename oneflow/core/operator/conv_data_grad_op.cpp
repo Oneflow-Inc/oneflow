@@ -89,7 +89,7 @@ void ConvDataGradOp::GetSbpSignatures(
       .Split("dy", 0)
       .Broadcast("filter")
       .Split("x_like", 0)
-      .Split("out", 0)
+      .Split("dx", 0)
       .Build(sbp_sig_list->mutable_sbp_signature()->Add());
 }
 

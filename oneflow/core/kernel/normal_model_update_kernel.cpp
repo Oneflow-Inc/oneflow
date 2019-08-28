@@ -22,8 +22,8 @@ void NormalMdUpdateKernel<device_type, T>::Forward(
     ClipGradient(ctx.device_ctx, cur_batch_num, conf.clip_conf(), batch_instance_num_ptr,
                  BnInOp2Blob);
   }
-  if (TriggerWarmup(conf, learning_rate, cur_batch_num)) {
-    learning_rate = GetWarmupLearningRate(conf.warmup_conf(), learning_rate, cur_batch_num);
+  if (TriggerWarmup(conf, learning_rate, next_model_vid)) {
+    learning_rate = GetWarmupLearningRate(conf.warmup_conf(), learning_rate, next_model_vid);
   } else if (conf.has_learning_rate_decay()) {
     learning_rate =
         GetDecayedLearningRate(conf.learning_rate_decay(), learning_rate, cur_batch_num);
@@ -135,26 +135,26 @@ double LinearCosineDecayedLearningRate(const LinearCosineDecayConf& conf, double
 }
 
 double ConstantWarmupLearningRate(const ConstantWarmupConf& conf, double lr,
-                                  int64_t cur_batch_num) {
+                                  int64_t next_batch_num) {
   CHECK_GT(conf.warmup_batches(), 0);
   CHECK_GT(conf.multiplier(), 0);
   CHECK_LT(conf.multiplier(), 1);
-  if (cur_batch_num < conf.warmup_batches()) {
+  if (next_batch_num <= conf.warmup_batches()) {
     return lr * conf.multiplier();
   } else {
     return lr;
   }
 }
 
-double LinearWarmupLearningRate(const LinearWarmupConf& conf, double lr, int64_t cur_batch_num) {
+double LinearWarmupLearningRate(const LinearWarmupConf& conf, double lr, int64_t next_batch_num) {
   CHECK_GT(conf.warmup_batches(), 0);
   CHECK_GE(conf.start_multiplier(), 0);
   CHECK_LT(conf.start_multiplier(), 1);
   double start_multiplier = conf.start_multiplier();
   double multiplier = 1.0;
-  if (cur_batch_num < conf.warmup_batches()) {
+  if (next_batch_num <= conf.warmup_batches()) {
     multiplier =
-        start_multiplier + (1.0 - start_multiplier) * (cur_batch_num * 1.0 / conf.warmup_batches());
+        start_multiplier + (1.0 - start_multiplier) * (next_batch_num * 1.0 / conf.warmup_batches());
   }
   return lr * multiplier;
 }
@@ -184,13 +184,13 @@ void ClipByGlobalNorm(DeviceCtx* ctx, const int64_t cur_batch_num, const ClipByG
 
 template<DeviceType device_type, typename T>
 bool NormalMdUpdateKernel<device_type, T>::TriggerWarmup(const NormalModelUpdateOpUserConf& conf,
-                                                         double lr, int64_t cur_batch_num) const {
+                                                         double lr, int64_t next_batch_num) const {
   if (!conf.has_warmup_conf()) { return false; }
   const WarmupConf& warmup_conf = conf.warmup_conf();
   if (warmup_conf.has_constant_conf()) {
-    return (cur_batch_num < warmup_conf.constant_conf().warmup_batches());
+    return (next_batch_num <= warmup_conf.constant_conf().warmup_batches());
   } else if (warmup_conf.has_linear_conf()) {
-    return (cur_batch_num < warmup_conf.linear_conf().warmup_batches());
+    return (next_batch_num <= warmup_conf.linear_conf().warmup_batches());
   } else {
     UNIMPLEMENTED();
   }
@@ -199,11 +199,11 @@ bool NormalMdUpdateKernel<device_type, T>::TriggerWarmup(const NormalModelUpdate
 template<DeviceType device_type, typename T>
 double NormalMdUpdateKernel<device_type, T>::GetWarmupLearningRate(const WarmupConf& conf,
                                                                    double lr,
-                                                                   int64_t cur_batch_num) const {
+                                                                   int64_t next_batch_num) const {
   if (conf.has_constant_conf()) {
-    return ConstantWarmupLearningRate(conf.constant_conf(), lr, cur_batch_num);
+    return ConstantWarmupLearningRate(conf.constant_conf(), lr, next_batch_num);
   } else if (conf.has_linear_conf()) {
-    return LinearWarmupLearningRate(conf.linear_conf(), lr, cur_batch_num);
+    return LinearWarmupLearningRate(conf.linear_conf(), lr, next_batch_num);
   } else {
     UNIMPLEMENTED();
   }
