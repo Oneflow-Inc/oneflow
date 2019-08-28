@@ -272,12 +272,20 @@ BldSubTskGphMthd GetMthdForBldSubTskGph(const LogicalNode* src_node, const Logic
       CHECK(src_pd->parallel_num() == dst_pd->parallel_num());
       CHECK(src_pd->policy() == kDataParallel && dst_pd->policy() == kDataParallel);
     }
-    if (src_node->SoleOp().IsTickTockOp() || dst_node->SoleOp().IsTickTockOp()) {
+    bool IsTickNode = [&](const LogicalNode* node) {
+      return IsClassRegistered<IsTickTockOpTypeCase>(node->SoleOp()->op_conf().op_type_case());
+    };
+    if (IsTickNode(src_node) || IsTickNode(dst_node)) {
       if (src_pd->parallel_num() > 1 && dst_pd->parallel_num() == 1
           && src_node->SoleOp()->op_conf().has_partial_tick_conf()) {
         CHECK(dst_node->SoleOp()->op_conf().has_sink_tick_conf());
         return &TaskGraph::BldSubTskGphByBoxing;
       } else {
+        if (IsTickNode(src_node) && IsTickNode(dst_node)) {
+          if (src_pd->parallel_num() > 1) {
+            CHECK_EQ(src_pd->parallel_num(), dst_pd->parallel_num());
+          }
+        }
         return &TaskGraph::BldSubTskGphByBroadcastToBroadcast;
       }
     }

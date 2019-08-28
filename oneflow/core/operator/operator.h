@@ -21,12 +21,6 @@ struct OpContext {
 
 class LogicalNode;
 
-struct IsTickTockOpTypeCase final {};
-
-#define REGISTER_TICK_TOCK_OP(op_type_case)                  \
-  REGISTER_CLASS_CREATOR(op_type_case, IsTickTockOpTypeCase, \
-                         ([] { return new IsTickTockOpTypeCase; }))
-
 class Operator {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Operator);
@@ -222,8 +216,6 @@ class Operator {
   InputBlobModifier* MutInputBlobModifier4Ibn(const std::string& ibn);
   OutputBlobModifier* MutOutputBlobModifier4Obn(const std::string& obn);
 
-  bool IsTickTockOp() { return IsClassRegistered<IsTickTockOpTypeCase>(op_conf().op_type_case()); }
-  
  private:
   virtual void InferHasBatchDim(
       const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
@@ -287,6 +279,12 @@ struct IsInterfaceOpConf4OpTypeCase final {};
 #define REGISTER_INTERFACE_OP(op_type_case)                          \
   REGISTER_CLASS_CREATOR(op_type_case, IsInterfaceOpConf4OpTypeCase, \
                          ([] { return new IsInterfaceOpConf4OpTypeCase(); }))
+
+struct IsTickTockOpTypeCase final {};
+
+#define REGISTER_TICK_TOCK_OP(op_type_case)                  \
+  REGISTER_CLASS_CREATOR(op_type_case, IsTickTockOpTypeCase, \
+                         ([] { return new IsTickTockOpTypeCase; }))
 
 std::shared_ptr<Operator> ConstructOp(const OperatorConf& op_conf);
 
