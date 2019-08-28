@@ -284,7 +284,7 @@ void AddGlobalInputOutputCriticalSection(const HashSet<const OpNode*>& op_nodes,
   auto time_shape = std::make_unique<Shape>(
       std::vector<int64_t>{GlobalJobDesc().TotalBatchNum(), GlobalJobDesc().NumOfPiecesInBatch()});
   HashMap<ParallelDesc, std::list<const OpNode*>> parallel_desc2op_nodes;
-  HashMap<std::string, const ParallelConf*> op_name2_parallel_conf;
+  HashMap<std::string, const ParallelConf*> op_name2parallel_conf;
   for (const OpNode* op_node : op_nodes) {
     parallel_desc2op_nodes[op_node->parallel_desc()].push_back(op_node);
   }
@@ -294,7 +294,7 @@ void AddGlobalInputOutputCriticalSection(const HashSet<const OpNode*>& op_nodes,
     source_ticks.push_back(PrependTick(pair.second, job_builder));
     for (const auto& sink_tick : AddTickForTimeShape(*time_shape, op_nodes, job_builder)) {
       sink_ticks.push_back(sink_tick);
-      CHECK(op_name2_parallel_conf.emplace(sink_tick.name(), &pair.first.parallel_conf()).second);
+      CHECK(op_name2parallel_conf.emplace(sink_tick.name(), &pair.first.parallel_conf()).second);
     }
   }
   OperatorConf src_tick_op_conf;
@@ -315,7 +315,7 @@ void AddGlobalInputOutputCriticalSection(const HashSet<const OpNode*>& op_nodes,
     CHECK(tick_lbis.insert(lbi).second);
   }
   auto ParallelConf4OpName = [&](const std::string& op_name) {
-    return op_name2_parallel_conf.at(op_name);
+    return op_name2parallel_conf.at(op_name);
   };
   OperatorConf sink_tick_op_conf;
   BuildPartialTickOp7SinkTickOp(&sink_tick_op_conf, ParallelConf4OpName, tick_lbis, job_builder);

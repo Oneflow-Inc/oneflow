@@ -372,6 +372,9 @@ REGISTER_BLD_BOXING_OP_CONF_MTHD("Accuracy"
 REGISTER_BLD_BOXING_OP_CONF_MTHD("MdDiffAcc"
                                  "NormalMdUpdt",
                                  &BoxingTaskNode::BldBoxingOpConfWithAddAndClone);
+REGISTER_BLD_BOXING_OP_CONF_MTHD("Tick"
+                                 "Tick",
+                                 &BoxingTaskNode::BldBoxingOpConfWithPartialTick2SinkTick);
 
 #define LOGICAL_TYPE_SEQ                                  \
   OF_PP_MAKE_TUPLE_SEQ(NormalForward, kDataForwardArea)   \
