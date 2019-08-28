@@ -274,9 +274,17 @@ BldSubTskGphMthd GetMthdForBldSubTskGph(const LogicalNode* src_node, const Logic
     }
     if (src_node->SoleOp()->op_conf().has_source_tick_conf()
         || src_node->SoleOp()->op_conf().has_tick_conf()
+        || src_node->SoleOp()->op_conf().has_partial_tick_conf()
         || dst_node->SoleOp()->op_conf().has_sink_tick_conf()
-        || dst_node->SoleOp()->op_conf().has_tick_conf()) {
-      return &TaskGraph::BldSubTskGphByBroadcastToBroadcast;
+        || dst_node->SoleOp()->op_conf().has_tick_conf()
+        || dst_node->SoleOp()->op_conf().has_partial_tick_conf()) {
+      if (src_pd->parallel_num() > 1 && dst_pd->parallel_num() == 1
+          && src_node->SoleOp()->op_conf().has_partial_tick_conf()) {
+        CHECK(dst_node->SoleOp()->op_conf().has_sink_tick_conf());
+        return &TaskGraph::BldSubTskGphByBoxing;
+      } else {
+        return &TaskGraph::BldSubTskGphByBroadcastToBroadcast;
+      }
     }
   }
   if (src_pd->parallel_num() == 1 && dst_pd->parallel_num() == 1) {
