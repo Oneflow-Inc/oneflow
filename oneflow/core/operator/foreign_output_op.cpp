@@ -12,6 +12,7 @@ Maybe<void> ForeignOutputOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   CHECK_EQ(parallel_ctx->parallel_num(), 1);
+  return Maybe<void>::Ok();
 }
 
 const PbMessage& ForeignOutputOp::GetCustomizedConf() const {
@@ -19,7 +20,9 @@ const PbMessage& ForeignOutputOp::GetCustomizedConf() const {
 }
 
 Maybe<void> ForeignOutputOp::InferHasBatchDim(
-    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {}
+    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
+  return Maybe<void>::Ok();
+}
 
 void ForeignOutputOp::GetSbpSignatures(
     const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,

@@ -31,7 +31,7 @@ void LossOp::VirtualGenKernelConf(
 }
 
 Maybe<void> LossOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                            const ParallelContext* parallel_ctx) const {
+                                   const ParallelContext* parallel_ctx) const {
   const BlobDesc* pred_blob_desc = GetBlobDesc4BnInOp("prediction");
   if (HasFieldInCustomizedConf("label")) {
     const BlobDesc* label_blob_desc = GetBlobDesc4BnInOp("label");
@@ -61,7 +61,7 @@ Maybe<void> LossOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> 
     reduction_blob_desc->mut_shape() = Shape({1});
     reduction_blob_desc->set_data_type(pred_blob_desc->data_type());
   }
-  VirtualInferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx);
+  return VirtualInferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx);
 }
 
 LogicalBlobId LossOp::obn2lbi(const std::string& output_bn) const {
@@ -77,9 +77,11 @@ LogicalBlobId LossOp::obn2lbi(const std::string& output_bn) const {
   return ret;
 }
 
-Maybe<void> LossOp::InferHasBatchDim(std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
+Maybe<void> LossOp::InferHasBatchDim(
+    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
   for (const auto& obn : output_bns()) { *HasBatchDim4BnInOp(obn) = false; }
   *HasBatchDim4BnInOp("loss") = *HasBatchDim4BnInOp("prediction");
+  return Maybe<void>::Ok();
 }
 
 void LossOp::GetSbpSignatures(

@@ -25,8 +25,9 @@ void TransposeOp::InitFromOpConf() {
 
 const PbMessage& TransposeOp::GetCustomizedConf() const { return op_conf().transpose_conf(); }
 
-Maybe<void> TransposeOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                 const ParallelContext* parallel_ctx) const {
+Maybe<void> TransposeOp::InferBlobDescs(
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx) const {
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
   const Shape& in_blob_shape = in_blob_desc->shape();
   const PbRf<int32_t>& perm = op_conf().transpose_conf().perm();
@@ -46,6 +47,7 @@ Maybe<void> TransposeOp::InferBlobDescs(std::function<BlobDesc*(const std::strin
   FOR_RANGE(size_t, i, 0, perm.size()) {
     out_blob_desc->mut_shape().Set(i, in_blob_shape.At(perm[i]));
   }
+  return Maybe<void>::Ok();
 }
 
 void TransposeOp::VirtualGenKernelConf(

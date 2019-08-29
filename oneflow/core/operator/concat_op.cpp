@@ -12,8 +12,9 @@ void ConcatOp::InitFromOpConf() {
 
 const PbMessage& ConcatOp::GetCustomizedConf() const { return op_conf().concat_conf(); }
 
-Maybe<void> ConcatOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                              const ParallelContext* parallel_ctx) const {
+Maybe<void> ConcatOp::InferBlobDescs(
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx) const {
   const ConcatOpConf& conf = op_conf().concat_conf();
   const BlobDesc* in_0_blob_desc = GetBlobDesc4BnInOp(input_bns().Get(0));
   std::vector<int64_t> out_dim_vec = in_0_blob_desc->shape().dim_vec();
@@ -33,6 +34,7 @@ Maybe<void> ConcatOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   *out_blob_desc = *in_0_blob_desc;
   out_blob_desc->mut_shape() = Shape(out_dim_vec);
+  return Maybe<void>::Ok();
 }
 
 void ConcatOp::GetSbpSignatures(

@@ -23,11 +23,13 @@ Maybe<void> WaitAndSendIdsOp::InferBlobDescs(
   CHECK_EQ(parallel_ctx->parallel_num(), 1);
   GetBlobDesc4BnInOp("out")->mut_shape() = Shape({1});
   GetBlobDesc4BnInOp("out")->set_data_type(op_conf().wait_and_send_ids_conf().data_type());
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> WaitAndSendIdsOp::InferHasBatchDim(
     std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
   *HasBatchDim4BnInOp("out") = false;
+  return Maybe<void>::Ok();
 }
 
 void WaitAndSendIdsOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {

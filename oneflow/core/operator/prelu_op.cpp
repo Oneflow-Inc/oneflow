@@ -15,7 +15,7 @@ void PReluOp::InitFromOpConf() {
 const PbMessage& PReluOp::GetCustomizedConf() const { return op_conf().prelu_conf(); }
 
 Maybe<void> PReluOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                             const ParallelContext* parallel_ctx) const {
+                                    const ParallelContext* parallel_ctx) const {
   const PReluOpConf& conf = op_conf().prelu_conf();
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
   *GetBlobDesc4BnInOp("out") = *in_blob_desc;
@@ -33,6 +33,7 @@ Maybe<void> PReluOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)>
     }
   }
   alpha_blob_desc->set_data_type(in_blob_desc->data_type());
+  return Maybe<void>::Ok();
 }
 
 void PReluOp::VirtualFixParallelDesc(ParallelDesc* pr_desc) const {

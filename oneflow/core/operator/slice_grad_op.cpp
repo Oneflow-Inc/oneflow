@@ -20,8 +20,9 @@ void SliceGradOp::VirtualGenKernelConf(
   in_shape.ToProto(kernel_conf->mutable_slice_conf()->mutable_in_shape());
 }
 
-Maybe<void> SliceGradOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                 const ParallelContext* parallel_ctx) const {
+Maybe<void> SliceGradOp::InferBlobDescs(
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx) const {
   const SliceGradOpConf& conf = op_conf().slice_grad_conf();
   const BlobDesc* like_blob_desc = GetBlobDesc4BnInOp("like");
   CHECK_EQ(conf.dim_slice_conf_size(), like_blob_desc->shape().NumAxes() - 1);
@@ -31,6 +32,7 @@ Maybe<void> SliceGradOp::InferBlobDescs(std::function<BlobDesc*(const std::strin
     *offset_blob_desc = *GetBlobDesc4BnInOp("dy");
     offset_blob_desc->set_data_type(DataType::kInt64);
   }
+  return Maybe<void>::Ok();
 }
 
 void SliceGradOp::GetSbpSignatures(

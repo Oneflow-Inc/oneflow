@@ -20,6 +20,7 @@ Maybe<void> SparseCrossEntropyGradOp::InferBlobDescs(
     const ParallelContext* parallel_ctx, int64_t record_piece_size,
     std::function<void(OpContext*)> EnrollOpCtx) const {
   *GetBlobDesc4BnInOp("prediction_diff") = *GetBlobDesc4BnInOp("prediction");
+  return Maybe<void>::Ok();
 }
 
 void SparseCrossEntropyGradOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {

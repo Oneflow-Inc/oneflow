@@ -18,7 +18,7 @@ LossKernelConf* SigmoidCrossEntropyLossOp::GetMutLossKernelConf(KernelConf* kern
   return kernel_conf->mutable_sigmoid_cross_entropy_loss_conf()->mutable_loss_conf();
 }
 
-void SigmoidCrossEntropyLossOp::VirtualInferBlobDescs(
+Maybe<void> SigmoidCrossEntropyLossOp::VirtualInferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   // label
@@ -54,6 +54,7 @@ void SigmoidCrossEntropyLossOp::VirtualInferBlobDescs(
   const int64_t sum_buf_size = GetTmpSizeForReduceSum(pred_blob_desc->data_type(), data_dim);
   sum_buf_blob_desc->mut_shape() = Shape({sum_buf_size});
   sum_buf_blob_desc->set_data_type(DataType::kChar);
+  return Maybe<void>::Ok();
 }
 
 REGISTER_OP(OperatorConf::kSigmoidCrossEntropyLossConf, SigmoidCrossEntropyLossOp);

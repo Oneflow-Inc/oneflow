@@ -19,6 +19,7 @@ Maybe<void> BroadcastDivGradOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*) const {
   *GetBlobDesc4BnInOp("db") = *GetBlobDesc4BnInOp("b");
   *GetBlobDesc4BnInOp("temp_storage") = *GetBlobDesc4BnInOp("y");
+  return Maybe<void>::Ok();
 }
 
 REGISTER_OP(OperatorConf::kBroadcastDivGradConf, BroadcastDivGradOp);

@@ -13,8 +13,8 @@ void ReduceMeanOp::InitFromOpConf() {
 
 const PbMessage& ReduceMeanOp::GetCustomizedConf() const { return op_conf().reduce_mean_conf(); }
 
-Maybe<void> ReduceMeanOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                  const ParallelContext*) const {
+Maybe<void> ReduceMeanOp::InferBlobDescs(
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*) const {
   const ReduceMeanOpConf& conf = op_conf().reduce_mean_conf();
   const BlobDesc* in_blob = GetBlobDesc4BnInOp("in");
   *GetBlobDesc4BnInOp("fw_tmp") = *in_blob;
@@ -35,6 +35,7 @@ Maybe<void> ReduceMeanOp::InferBlobDescs(std::function<BlobDesc*(const std::stri
       out_blob->mut_shape() = reduced_shape.RemoveOnes(axis_vec);
     }
   }
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> ReduceMeanOp::InferHasBatchDim(
@@ -42,6 +43,7 @@ Maybe<void> ReduceMeanOp::InferHasBatchDim(
   const auto& reduced_axes = op_conf().reduce_mean_conf().axis();
   HashSet<int64_t> conf_axes = {reduced_axes.begin(), reduced_axes.end()};
   *HasBatchDim4BnInOp("out") = !(conf_axes.empty() || (conf_axes.find(0) != conf_axes.end()));
+  return Maybe<void>::Ok();
 }
 
 void ReduceMeanOp::GetSbpSignatures(

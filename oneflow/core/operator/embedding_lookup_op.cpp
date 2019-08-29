@@ -35,6 +35,7 @@ Maybe<void> EmbeddingLookupOp::InferBlobDescs(
 
   // weight
   GetBlobDesc4BnInOp("weight")->mut_shape() = Shape({table_size, units});
+  return Maybe<void>::Ok();
 }
 
 REGISTER_OP(OperatorConf::kEmbeddingLookupConf, EmbeddingLookupOp);

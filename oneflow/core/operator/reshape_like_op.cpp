@@ -12,11 +12,13 @@ void ReshapeLikeOp::InitFromOpConf() {
 
 const PbMessage& ReshapeLikeOp::GetCustomizedConf() const { return op_conf().reshape_like_conf(); }
 
-Maybe<void> ReshapeLikeOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                   const ParallelContext* parallel_ctx) const {
+Maybe<void> ReshapeLikeOp::InferBlobDescs(
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx) const {
   CHECK_EQ(GetBlobDesc4BnInOp("x")->shape().elem_cnt(),
            GetBlobDesc4BnInOp("like")->shape().elem_cnt());
   GetBlobDesc4BnInOp("y")->CopyMetaFrom(*GetBlobDesc4BnInOp("like"));
+  return Maybe<void>::Ok();
 }
 
 void ReshapeLikeOp::GetSbpSignatures(

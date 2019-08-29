@@ -11,9 +11,9 @@ void ConstantOp::InitFromOpConf() {
 
 const PbMessage& ConstantOp::GetCustomizedConf() const { return op_conf().constant_conf(); }
 
-Maybe<void> ConstantOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                const ParallelContext* parallel_ctx,
-                                int64_t record_piece_size) const {
+Maybe<void> ConstantOp::InferBlobDescs(
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx, int64_t record_piece_size) const {
   CHECK_EQ(parallel_ctx->policy(), ParallelPolicy::kDataParallel);
   const ConstantOpConf& conf = op_conf().constant_conf();
   const DataType& data_type =
@@ -30,6 +30,7 @@ Maybe<void> ConstantOp::InferBlobDescs(std::function<BlobDesc*(const std::string
   BlobDesc* out = GetBlobDesc4BnInOp("out");
   out->set_data_type(data_type);
   out->mut_shape() = Shape(dim_vec);
+  return Maybe<void>::Ok();
 }
 
 void ConstantOp::VirtualGenKernelConf(
@@ -57,6 +58,7 @@ void ConstantOp::VirtualGenKernelConf(
 Maybe<void> ConstantOp::InferHasBatchDim(
     std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
   *HasBatchDim4BnInOp("out") = false;
+  return Maybe<void>::Ok();
 }
 
 void ConstantOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {

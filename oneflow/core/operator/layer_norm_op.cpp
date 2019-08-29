@@ -41,8 +41,9 @@ void LayerNormOp::InitFromOpConf() {
   EnrollConstBufBn("cudnn_bn_bias_zeros");
 }
 
-Maybe<void> LayerNormOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                 const ParallelContext* parallel_ctx) const {
+Maybe<void> LayerNormOp::InferBlobDescs(
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx) const {
   CHECK(parallel_ctx->policy() != kModelParallel);
   const BlobDesc* in = GetBlobDesc4BnInOp("in");
   *GetBlobDesc4BnInOp("out") = *in;
@@ -89,11 +90,13 @@ Maybe<void> LayerNormOp::InferBlobDescs(std::function<BlobDesc*(const std::strin
   *GetBlobDesc4BnInOp("inv_variance") = *cudnn_bn_mean;
   *GetBlobDesc4BnInOp("cudnn_bn_scale_ones") = *cudnn_bn_mean;
   *GetBlobDesc4BnInOp("cudnn_bn_bias_zeros") = *cudnn_bn_mean;
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> LayerNormOp::InferHasBatchDim(
     std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
   for (const auto& obn : output_bns()) { *HasBatchDim4BnInOp(obn) = true; }
+  return Maybe<void>::Ok();
 }
 
 void LayerNormOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {

@@ -10,7 +10,7 @@ void TopKOp::InitFromOpConf() {
 }
 
 Maybe<void> TopKOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                            const ParallelContext* parallel_ctx) const {
+                                   const ParallelContext* parallel_ctx) const {
   const BlobDesc* in = GetBlobDesc4BnInOp("in");
   CHECK_LE(in->shape().elem_cnt(), GetMaxVal<int32_t>());
   const TopKOpConf& conf = op_conf().top_k_conf();
@@ -25,6 +25,7 @@ Maybe<void> TopKOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> 
   *out = *in;
   out->mut_shape().Set(in->shape().NumAxes() - 1, conf.k());
   out->set_data_type(DataType::kInt32);
+  return Maybe<void>::Ok();
 }
 
 void TopKOp::VirtualGenKernelConf(

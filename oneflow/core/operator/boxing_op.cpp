@@ -37,8 +37,9 @@ LogicalBlobId BoxingOp::obn2lbi(const std::string& output_bn) const {
   return GetMsgFromCustomizedConf<LogicalBlobId>("lbi");
 }
 
-Maybe<void> BoxingOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                              const ParallelContext* parallel_ctx) const {
+Maybe<void> BoxingOp::InferBlobDescs(
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx) const {
   const BoxingOpConf& conf = op_conf().boxing_conf();
   BlobDesc* first_in_blob = GetBlobDesc4BnInOp(input_bns().Get(0));
   if (conf.in_box_case() == BoxingOpConf::kAddBox) {
@@ -86,11 +87,13 @@ Maybe<void> BoxingOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)
   } else {
     UNIMPLEMENTED();
   }
+  return Maybe<void>::Ok();
 }
 
-void BoxingOp::InferTmpBlobDesc(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                std::vector<int64_t>* data_tmp_vec_ptr,
-                                std::vector<int64_t>* data_tmp_dim0_inner_shape_vec_ptr) const {
+Maybe<void> BoxingOp::InferTmpBlobDesc(
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    std::vector<int64_t>* data_tmp_vec_ptr,
+    std::vector<int64_t>* data_tmp_dim0_inner_shape_vec_ptr) const {
   const BoxingOpConf& conf = op_conf().boxing_conf();
   if (conf.in_box_case() == BoxingOpConf::kConcatBox) {
     int32_t concat_axis = conf.concat_box().axis();
@@ -129,6 +132,7 @@ void BoxingOp::InferTmpBlobDesc(std::function<BlobDesc*(const std::string&)> Get
       data_tmp_blob_desc->mut_dim0_inner_shape() = Shape(*data_tmp_dim0_inner_shape_vec_ptr);
     }
   }
+  return Maybe<void>::Ok();
 }
 
 REGISTER_OP(OperatorConf::kBoxingConf, BoxingOp);

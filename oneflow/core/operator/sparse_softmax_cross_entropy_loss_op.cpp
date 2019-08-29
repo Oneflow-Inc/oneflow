@@ -17,7 +17,7 @@ LossKernelConf* SparseSoftmaxCrossEntropyLossOp::GetMutLossKernelConf(
   return kernel_conf->mutable_sparse_softmax_cross_entropy_loss_conf()->mutable_loss_conf();
 }
 
-void SparseSoftmaxCrossEntropyLossOp::VirtualInferBlobDescs(
+Maybe<void> SparseSoftmaxCrossEntropyLossOp::VirtualInferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   const BlobDesc* pred_blob_desc = GetBlobDesc4BnInOp("prediction");
@@ -31,6 +31,7 @@ void SparseSoftmaxCrossEntropyLossOp::VirtualInferBlobDescs(
   fw_buf_blob_desc->mut_shape() =
       Shape({static_cast<int64_t>(RtBlobDesc(*pred_blob_desc).ByteSizeOfDataContentField())});
   fw_buf_blob_desc->set_data_type(DataType::kChar);
+  return Maybe<void>::Ok();
 }
 
 REGISTER_OP(OperatorConf::kSparseSoftmaxCrossEntropyLossConf, SparseSoftmaxCrossEntropyLossOp);

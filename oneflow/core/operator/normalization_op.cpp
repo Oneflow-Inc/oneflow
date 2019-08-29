@@ -80,6 +80,7 @@ Maybe<void> NormalizationOp::InferBlobDescs(
     SetParamBlobDesc("mean");
     SetParamBlobDesc("inv_variance");
   }
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> NormalizationOp::InferHasBatchDim(
@@ -87,6 +88,7 @@ Maybe<void> NormalizationOp::InferHasBatchDim(
   *HasBatchDim4BnInOp("out") = *HasBatchDim4BnInOp("in");
   *HasBatchDim4BnInOp("mean") = false;
   *HasBatchDim4BnInOp("inv_variance") = false;
+  return Maybe<void>::Ok();
 }
 
 void NormalizationOp::GetSbpSignatures(

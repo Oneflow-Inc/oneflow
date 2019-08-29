@@ -88,6 +88,7 @@ Maybe<void> NormalizationGradOp::InferBlobDescs(
   (conf.has_gamma() ? CheckParamBlobDesc : SetParamBlobDesc)("gamma");
   SetParamBlobDesc("gamma_diff");
   SetParamBlobDesc("beta_diff");
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> NormalizationGradOp::InferHasBatchDim(
@@ -95,6 +96,7 @@ Maybe<void> NormalizationGradOp::InferHasBatchDim(
   *HasBatchDim4BnInOp("dx") = *HasBatchDim4BnInOp("dy");
   *HasBatchDim4BnInOp("gamma_diff") = false;
   *HasBatchDim4BnInOp("beta_diff") = false;
+  return Maybe<void>::Ok();
 }
 
 void NormalizationGradOp::GetSbpSignatures(

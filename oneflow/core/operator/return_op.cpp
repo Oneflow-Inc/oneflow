@@ -10,15 +10,19 @@ void ReturnOp::InitFromOpConf() {
   EnrollOutputBn("out");
 }
 
-Maybe<void> ReturnOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                              const ParallelContext* parallel_ctx) const {
+Maybe<void> ReturnOp::InferBlobDescs(
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx) const {
   *GetBlobDesc4BnInOp("out") = *GetBlobDesc4BnInOp("in");
+  return Maybe<void>::Ok();
 }
 
 const PbMessage& ReturnOp::GetCustomizedConf() const { return op_conf().return_conf(); }
 
-Maybe<void> ReturnOp::InferHasBatchDim(std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
+Maybe<void> ReturnOp::InferHasBatchDim(
+    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
   *HasBatchDim4BnInOp("out") = *HasBatchDim4BnInOp("in");
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> ReturnOp::InferSbpSignature(
@@ -35,6 +39,7 @@ Maybe<void> ReturnOp::InferSbpSignature(
     (*bn2sbp)["in"] = in_sbp_infer_hint.sbp_parallel();
     (*bn2sbp)["out"] = in_sbp_infer_hint.sbp_parallel();
   }
+  return Maybe<void>::Ok();
 }
 
 REGISTER_OP(OperatorConf::kReturnConf, ReturnOp);

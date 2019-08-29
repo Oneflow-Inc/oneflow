@@ -10,8 +10,9 @@ void OneHotOp::InitFromOpConf() {
 
 const PbMessage& OneHotOp::GetCustomizedConf() const { return op_conf().one_hot_conf(); }
 
-Maybe<void> OneHotOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                              const ParallelContext* parallel_ctx) const {
+Maybe<void> OneHotOp::InferBlobDescs(
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx) const {
   const OneHotOpConf& conf = op_conf().one_hot_conf();
   const int64_t depth = conf.depth();
   const DataType data_type =
@@ -26,6 +27,7 @@ Maybe<void> OneHotOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)
   std::vector<int64_t> dim_vec = indices->shape().dim_vec();
   dim_vec.push_back(depth);
   out->mut_shape() = Shape(dim_vec);
+  return Maybe<void>::Ok();
 }
 
 REGISTER_OP(OperatorConf::kOneHotConf, OneHotOp);

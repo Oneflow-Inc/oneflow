@@ -16,14 +16,16 @@ class LossOp : public Operator {
   LogicalNode* NewProperLogicalNode() const override { return new LossLogicalNode; }
 
   Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                      const ParallelContext* parallel_ctx) const override;
+                             const ParallelContext* parallel_ctx) const override;
   bool IsLossOp() const override { return true; }
 
  protected:
   virtual void VirtualInitFromOpConf() {}
-  virtual void VirtualInferBlobDescs(
+  virtual Maybe<void> VirtualInferBlobDescs(
       std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-      const ParallelContext* parallel_ctx) const {}
+      const ParallelContext* parallel_ctx) const {
+    return Maybe<void>::Ok();
+  }
   virtual LossKernelConf* GetMutLossKernelConf(KernelConf*) const = 0;
 
   void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
@@ -31,7 +33,8 @@ class LossOp : public Operator {
                             KernelConf* kernel_conf) const override;
 
  private:
-  Maybe<void> InferHasBatchDim(std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const override;
+  Maybe<void> InferHasBatchDim(
+      std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const override;
   void GetSbpSignatures(
       const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
       SbpSignatureList* sbp_sig_list) const override;

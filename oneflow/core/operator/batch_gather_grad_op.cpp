@@ -34,6 +34,7 @@ Maybe<void> BatchGatherGradOp::InferBlobDescs(
   BlobDesc* in_diff = GetBlobDesc4BnInOp("in_diff");
   *in_diff = *out_diff;
   in_diff->mut_shape() = Shape(in_diff_dim_vec);
+  return Maybe<void>::Ok();
 }
 
 void BatchGatherGradOp::GetSbpSignatures(

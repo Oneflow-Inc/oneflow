@@ -23,6 +23,7 @@ Maybe<void> TupleIdentityOp::InferBlobDescs(
   FOR_RANGE(int, i, 0, bn_size) {
     *GetBlobDesc4BnInOp(output_bns().Get(i)) = *GetBlobDesc4BnInOp(input_bns().Get(i));
   }
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> TupleIdentityOp::InferSbpSignature(
@@ -43,6 +44,7 @@ Maybe<void> TupleIdentityOp::InferSbpSignature(
     (*bn2sbp)[input_bns().Get(i)] = *sbp_parallel;
     (*bn2sbp)[output_bns().Get(i)] = *sbp_parallel;
   }
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> TupleIdentityOp::InferHasBatchDim(
@@ -50,6 +52,7 @@ Maybe<void> TupleIdentityOp::InferHasBatchDim(
   FOR_RANGE(int32_t, i, 0, input_bns().size()) {
     *HasBatchDim4BnInOp(output_bns().Get(i)) = *HasBatchDim4BnInOp(input_bns().Get(i));
   }
+  return Maybe<void>::Ok();
 }
 
 REGISTER_OP(OperatorConf::kTupleIdentityConf, TupleIdentityOp);

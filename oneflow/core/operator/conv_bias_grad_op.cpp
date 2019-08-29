@@ -13,8 +13,9 @@ void ConvBiasGradOp::InitFromOpConf() {
   EnrollOutputBn("bias_diff", false);
 }
 
-Maybe<void> ConvBiasGradOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                    const ParallelContext* parallel_ctx) const {
+Maybe<void> ConvBiasGradOp::InferBlobDescs(
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx) const {
   const ConvBiasGradOpConf& conf = this->op_conf().conv_bias_grad_conf();
   const BlobDesc* dy = GetBlobDesc4BnInOp("dy");
   BlobDesc* bias_diff = GetBlobDesc4BnInOp("bias_diff");
@@ -29,12 +30,14 @@ Maybe<void> ConvBiasGradOp::InferBlobDescs(std::function<BlobDesc*(const std::st
   } else {
     UNIMPLEMENTED();
   }
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> ConvBiasGradOp::InferHasBatchDim(
     std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
   CHECK(*HasBatchDim4BnInOp("dy"));
   *HasBatchDim4BnInOp("bias_diff") = false;
+  return Maybe<void>::Ok();
 }
 
 void ConvBiasGradOp::GetSbpSignatures(

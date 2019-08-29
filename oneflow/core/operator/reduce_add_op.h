@@ -17,7 +17,7 @@ class ReduceAddOp final : public Operator {
 
   LogicalNode* NewProperLogicalNode() const override { return new ReduceAddLogicalNode; }
   Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                      const ParallelContext* parallel_ctx) const override;
+                             const ParallelContext* parallel_ctx) const override;
 
  private:
   LogicalBlobId ibn2lbi(const std::string& input_bn) const override { return GenPackedLbi(); }

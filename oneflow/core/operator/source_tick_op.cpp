@@ -13,15 +13,18 @@ LogicalNode* SourceTickOp::NewProperLogicalNode() const { return new SourceTickL
 
 const PbMessage& SourceTickOp::GetCustomizedConf() const { return op_conf().source_tick_conf(); }
 
-Maybe<void> SourceTickOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                  const ParallelContext* parallel_ctx) const {
+Maybe<void> SourceTickOp::InferBlobDescs(
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx) const {
   CHECK_EQ(parallel_ctx->parallel_num(), 1);
   GetBlobDesc4BnInOp("out")->mut_shape() = Shape({1});
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> SourceTickOp::InferHasBatchDim(
     std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
   *HasBatchDim4BnInOp("out") = false;
+  return Maybe<void>::Ok();
 }
 
 void SourceTickOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {

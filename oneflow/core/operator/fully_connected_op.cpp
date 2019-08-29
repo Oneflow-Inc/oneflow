@@ -64,6 +64,7 @@ Maybe<void> FullyConnectedOp::InferBlobDescs(
     // bias_multiplier
     GetBlobDesc4BnInOp("bias_multiplier")->mut_shape() = Shape({in_blob_desc->shape().At(0), 1});
   }
+  return Maybe<void>::Ok();
 }
 
 void FullyConnectedOp::GetSbpSignatures(

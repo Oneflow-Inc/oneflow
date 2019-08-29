@@ -23,6 +23,7 @@ Maybe<void> NcclReduceScatterOp::InferBlobDescs(
   int64_t rank_num = parallel_ctx->rank_ctx().rank_num();
   CHECK_EQ(total_elem_cnt % rank_num, 0);
   out_blob->mut_shape() = Shape({total_elem_cnt / rank_num});
+  return Maybe<void>::Ok();
 }
 
 LogicalBlobId NcclReduceScatterOp::obn2lbi(const std::string& output_bn) const {

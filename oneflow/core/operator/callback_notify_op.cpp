@@ -23,10 +23,13 @@ Maybe<void> CallbackNotifyOp::InferBlobDescs(
   CHECK_EQ(parallel_ctx->parallel_num(), 1);
   CHECK(GetBlobDesc4BnInOp("in")->shape() == Shape({1}));
   CHECK(IsIntegralDataType(GetBlobDesc4BnInOp("in")->data_type()));
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> CallbackNotifyOp::InferHasBatchDim(
-    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {}
+    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
+  return Maybe<void>::Ok();
+}
 
 void CallbackNotifyOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
   SbpSignatureBuilder().Split(input_bns(), 0).Build(sbp_sig_list->mutable_sbp_signature()->Add());

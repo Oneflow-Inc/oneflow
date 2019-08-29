@@ -13,6 +13,7 @@ Maybe<void> ReduceIdentityOp::InferBlobDescs(
     const ParallelContext* parallel_ctx) const {
   *GetBlobDesc4BnInOp("out") = *GetBlobDesc4BnInOp("in");
   CHECK_EQ(GetBlobDesc4BnInOp("out")->shape().elem_cnt() % parallel_ctx->parallel_num(), 0);
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> ReduceIdentityOp::InferSbpSignature(
@@ -24,6 +25,7 @@ Maybe<void> ReduceIdentityOp::InferSbpSignature(
     CHECK(SbpInferHint4Ibn(ibn).sbp_parallel().has_partial_sum_parallel());
   }
   SbpSignatureBuilder().PartialSum(input_bns()).PartialSum(output_bns()).Build(sbp_signature);
+  return Maybe<void>::Ok();
 }
 
 REGISTER_OP(OperatorConf::kReduceIdentityConf, ReduceIdentityOp);

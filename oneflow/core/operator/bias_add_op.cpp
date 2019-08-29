@@ -14,8 +14,9 @@ void BiasAddOp::InitFromOpConf() {
 
 const PbMessage& BiasAddOp::GetCustomizedConf() const { return op_conf().bias_add_conf(); }
 
-Maybe<void> BiasAddOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                               const ParallelContext* parallel_ctx) const {
+Maybe<void> BiasAddOp::InferBlobDescs(
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx) const {
   const BlobDesc* a_blob_desc = GetBlobDesc4BnInOp("a");
   const BlobDesc* b_blob_desc = GetBlobDesc4BnInOp("b");
 
@@ -26,6 +27,7 @@ Maybe<void> BiasAddOp::InferBlobDescs(std::function<BlobDesc*(const std::string&
   *GetBlobDesc4BnInOp("out") = *a_blob_desc;
   *GetBlobDesc4BnInOp("bias_multiplier") = *a_blob_desc;
   GetBlobDesc4BnInOp("bias_multiplier")->mut_shape() = Shape({a_blob_desc->shape().At(0), 1});
+  return Maybe<void>::Ok();
 }
 void BiasAddOp::GetSbpSignatures(
     const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,

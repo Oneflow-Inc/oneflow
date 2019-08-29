@@ -98,22 +98,25 @@ class Operator {
   // Read: shape of input_blobs
   // Write: shape of output_blobs
   Maybe<void> InferBlobDescsIf(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                        const ParallelContext*, int64_t record_piece_size,
-                        std::function<void(OpContext*)> EnrollOpCtx) const;
-  virtual Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                              const ParallelContext*, int64_t record_piece_size,
-                              std::function<void(OpContext*)> EnrollOpCtx) const;
-  virtual Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                              const ParallelContext*, int64_t record_piece_size) const;
-  virtual Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                              const ParallelContext*) const;
+                               const ParallelContext*, int64_t record_piece_size,
+                               std::function<void(OpContext*)> EnrollOpCtx) const;
+  virtual Maybe<void> InferBlobDescs(
+      std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*,
+      int64_t record_piece_size, std::function<void(OpContext*)> EnrollOpCtx) const;
+  virtual Maybe<void> InferBlobDescs(
+      std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*,
+      int64_t record_piece_size) const;
+  virtual Maybe<void> InferBlobDescs(
+      std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+      const ParallelContext*) const;
 
   Maybe<void> InferHasBatchDimIf(
       const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
       std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
     return InferHasBatchDim(LogicalBlobDesc4Ibn, HasBatchDim4BnInOp);
   }
-  Maybe<void> NaiveInferHasBatchDim(std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const;
+  Maybe<void> NaiveInferHasBatchDim(
+      std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const;
 
   // Infer out blob's time shape
   Maybe<void> InferOutputBlobTimeShapeIf(
@@ -123,10 +126,11 @@ class Operator {
       std::function<const Shape*(const std::string&)> GetTimeShape4BnInOp, const ParallelContext*,
       Shape* time_shape) const;
   // Infer blob's SbpSignature
-  Maybe<void> InferSbpSignatureIf(SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
-                           const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
-                           std::function<const SbpInferHint&(const std::string&)> SbpInferHint4Ibn,
-                           const ParallelDesc& parallel_desc) const;
+  Maybe<void> InferSbpSignatureIf(
+      SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
+      const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
+      std::function<const SbpInferHint&(const std::string&)> SbpInferHint4Ibn,
+      const ParallelDesc& parallel_desc) const;
   void FixParallelDesc(ParallelDesc* pr_desc) const;
   void GenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                      bool is_forward, const ParallelContext*, KernelConf*, const OpContext*) const;
@@ -223,8 +227,10 @@ class Operator {
       std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
     return InferHasBatchDim(HasBatchDim4BnInOp);
   }
-  virtual Maybe<void> InferHasBatchDim(std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
+  virtual Maybe<void> InferHasBatchDim(
+      std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
     UNIMPLEMENTED();
+    return Maybe<void>::Ok();
   }
 
   LogicalBlobId tbn2lbi(const std::string& data_tmp_bn) const;

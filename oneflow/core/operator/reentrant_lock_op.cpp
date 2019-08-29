@@ -19,6 +19,7 @@ Maybe<void> ReentrantLockOp::InferBlobDescs(
   const DataType data_type = GetBlobDesc4BnInOp("out")->data_type();
   CHECK(IsIntegralDataType(data_type));
   out->set_data_type(data_type);
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> ReentrantLockOp::InferHasBatchDim(

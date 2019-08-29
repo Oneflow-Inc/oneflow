@@ -9,7 +9,7 @@ void MaximumOp::VirtualInitFromOpConf() {
 
 const PbMessage& MaximumOp::GetCustomizedConf() const { return op_conf().maximum_conf(); }
 
-void MaximumOp::VirtualInferBlobDescs(
+Maybe<void> MaximumOp::VirtualInferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   const BlobDesc* in_0_blob_desc = GetBlobDesc4BnInOp(input_bns().Get(0));
@@ -18,6 +18,7 @@ void MaximumOp::VirtualInferBlobDescs(
   mask_blob_desc->set_data_type(DataType::kInt32);
   mask_blob_desc->set_has_data_id_field(false);
   mask_blob_desc->set_has_col_num_field(false);
+  return Maybe<void>::Ok();
 }
 
 REGISTER_OP(OperatorConf::kMaximumConf, MaximumOp);

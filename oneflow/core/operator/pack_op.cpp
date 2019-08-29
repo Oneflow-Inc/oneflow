@@ -17,6 +17,7 @@ Maybe<void> PackOp::InferOutputBlobTimeShape(
   CHECK_EQ(pack_num, dim_vec.back());
   dim_vec.pop_back();
   *time_shape = Shape(dim_vec);
+  return Maybe<void>::Ok();
 }
 
 int32_t PackOp::GetPackNum() const {

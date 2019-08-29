@@ -60,6 +60,7 @@ Maybe<void> LayerNormParamGradOp::InferBlobDescs(
     CHECK_EQ(gamma->data_type(), dy->data_type());
     CHECK_EQ(gamma->shape(), param_shape);
   }
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> LayerNormParamGradOp::InferHasBatchDim(
@@ -69,6 +70,7 @@ Maybe<void> LayerNormParamGradOp::InferHasBatchDim(
   if (conf.has_normalized_diff()) {
     *HasBatchDim4BnInOp("normalized_diff") = *HasBatchDim4BnInOp("dy");
   }
+  return Maybe<void>::Ok();
 }
 
 void LayerNormParamGradOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {

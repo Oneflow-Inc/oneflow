@@ -8,9 +8,11 @@ void IdentityOp::InitFromOpConf() {
   EnrollOutputBn("out")->set_const_inplace_ibn("in");
 }
 
-Maybe<void> IdentityOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                const ParallelContext* parallel_ctx) const {
+Maybe<void> IdentityOp::InferBlobDescs(
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx) const {
   *GetBlobDesc4BnInOp("out") = *GetBlobDesc4BnInOp("in");
+  return Maybe<void>::Ok();
 }
 
 const PbMessage& IdentityOp::GetCustomizedConf() const { return op_conf().identity_conf(); }

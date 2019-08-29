@@ -83,9 +83,10 @@ void ConvOp<NDims>::InitFromOpConf() {
 }
 
 template<int32_t NDims>
-Maybe<void> ConvOp<NDims>::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                   const ParallelContext* parallel_ctx, int64_t record_piece_size,
-                                   std::function<void(OpContext*)> EnrollOpCtx) const {
+Maybe<void> ConvOp<NDims>::InferBlobDescs(
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx, int64_t record_piece_size,
+    std::function<void(OpContext*)> EnrollOpCtx) const {
   const std::string& data_format = GetValFromCustomizedConf<std::string>("data_format");
 
   // in
@@ -161,6 +162,7 @@ Maybe<void> ConvOp<NDims>::InferBlobDescs(std::function<BlobDesc*(const std::str
     fw_cudnn_buf->set_data_type(DataType::kChar);
   }
 #endif  // WITH_CUDA
+  return Maybe<void>::Ok();
 }
 
 template<int32_t NDims>
@@ -280,6 +282,7 @@ template<int32_t NDims>
 Maybe<void> ConvOp<NDims>::InferHasBatchDim(
     std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
   *HasBatchDim4BnInOp("out") = *HasBatchDim4BnInOp("in");
+  return Maybe<void>::Ok();
 }
 
 template<int32_t NDims>

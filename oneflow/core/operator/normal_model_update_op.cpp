@@ -24,7 +24,7 @@ Maybe<void> NormalModelUpdtOp::InferBlobDescs(
     *GetBlobDesc4BnInOp("data_tmp") = *GetBlobDesc4BnInOp("model_diff");
     GetBlobDesc4BnInOp("data_tmp")->mut_shape() = Shape({1});
   }
-  MdUpdtVirtualInferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx);
+  return MdUpdtVirtualInferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx);
 }
 
 const PbMessage& NormalModelUpdtOp::GetCustomizedConf() const {
@@ -41,6 +41,7 @@ LogicalBlobId NormalModelUpdtOp::obn2lbi(const std::string& output_bn) const {
 Maybe<void> NormalModelUpdtOp::InferHasBatchDim(
     std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
   for (const auto& ibn : input_bns()) { CHECK_EQ(*HasBatchDim4BnInOp(ibn), false); }
+  return Maybe<void>::Ok();
 }
 
 void NormalModelUpdtOp::GetSbpSignatures(

@@ -17,7 +17,7 @@ class ReduceGatherOp final : public Operator {
 
   LogicalNode* NewProperLogicalNode() const override { return new ReduceGatherLogicalNode; }
   Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                      const ParallelContext* parallel_ctx) const override;
+                             const ParallelContext* parallel_ctx) const override;
 
  private:
   void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,

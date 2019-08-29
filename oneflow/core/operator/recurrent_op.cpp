@@ -19,8 +19,9 @@ void RecurrentOp::InitFromOpConf() {
   VirtualInitFromOpConf();
 }
 
-Maybe<void> RecurrentOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                 const ParallelContext* parallel_ctx) const {
+Maybe<void> RecurrentOp::InferBlobDescs(
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx) const {
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
   DataType data_type = GlobalJobDesc().DefaultDataType();
   CHECK_EQ(in_blob_desc->data_type(), data_type);
@@ -52,7 +53,7 @@ Maybe<void> RecurrentOp::InferBlobDescs(std::function<BlobDesc*(const std::strin
   *rec_out_blob_desc = *out_blob_desc;
   if (parallel_ctx->policy() == kDataParallel) { rec_out_blob_desc->set_max_col_num(1); }
 
-  VirtualInferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx);
+  return VirtualInferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx);
 }
 
 LogicalBlobId RecurrentOp::ibn2lbi(const std::string& input_bn) const {

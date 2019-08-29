@@ -26,13 +26,16 @@ Maybe<void> EveryNthOp::InferOutputBlobTimeShape(
     dim_vec.push_back(in_shape->elem_cnt() / n);
   }
   *time_shape = Shape(dim_vec);
+  return Maybe<void>::Ok();
 }
 
 const PbMessage& EveryNthOp::GetCustomizedConf() const { return op_conf().every_nth_conf(); }
 
-Maybe<void> EveryNthOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                const ParallelContext* parallel_ctx) const {
+Maybe<void> EveryNthOp::InferBlobDescs(
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx) const {
   *GetBlobDesc4BnInOp("out") = *GetBlobDesc4BnInOp("in");
+  return Maybe<void>::Ok();
 }
 
 void EveryNthOp::GetSbpSignatures(

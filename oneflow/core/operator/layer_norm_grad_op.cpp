@@ -59,6 +59,7 @@ Maybe<void> LayerNormGradOp::InferBlobDescs(
   bn_scale->set_data_type(data_type);
   *bn_scale_diff = *bn_scale;
   *bn_bias_diff = *bn_scale;
+  return Maybe<void>::Ok();
 }
 
 void LayerNormGradOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {

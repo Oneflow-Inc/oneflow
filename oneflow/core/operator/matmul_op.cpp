@@ -14,8 +14,9 @@ void MatmulOp::InitFromOpConf() {
 
 const PbMessage& MatmulOp::GetCustomizedConf() const { return op_conf().matmul_conf(); }
 
-Maybe<void> MatmulOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                              const ParallelContext* parallel_ctx) const {
+Maybe<void> MatmulOp::InferBlobDescs(
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx) const {
   const MatmulOpConf& conf = op_conf().matmul_conf();
   BlobDesc* a_blob_desc = GetBlobDesc4BnInOp("a");
   BlobDesc* b_blob_desc = GetBlobDesc4BnInOp("b");
@@ -53,6 +54,7 @@ Maybe<void> MatmulOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)
     fw_buf_blob_desc->set_data_type(DataType::kInt64);
     fw_buf_blob_desc->set_has_data_id_field(false);
   }
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> MatmulOp::InferHasBatchDim(
@@ -79,6 +81,7 @@ Maybe<void> MatmulOp::InferHasBatchDim(
   } else {
     UNIMPLEMENTED();
   }
+  return Maybe<void>::Ok();
 }
 
 void MatmulOp::GetSbpSignatures(

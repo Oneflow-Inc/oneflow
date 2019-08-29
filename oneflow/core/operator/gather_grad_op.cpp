@@ -13,8 +13,9 @@ void GatherGradOp::InitFromOpConf() {
 
 const PbMessage& GatherGradOp::GetCustomizedConf() const { return op_conf().gather_grad_conf(); }
 
-Maybe<void> GatherGradOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                  const ParallelContext* parallel_ctx) const {
+Maybe<void> GatherGradOp::InferBlobDescs(
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx) const {
   const GatherGradOpConf& conf = op_conf().gather_grad_conf();
   const BlobDesc* indices = GetBlobDesc4BnInOp("indices");
   CHECK(IsIntegralDataType(indices->data_type()));
@@ -30,6 +31,7 @@ Maybe<void> GatherGradOp::InferBlobDescs(std::function<BlobDesc*(const std::stri
   BlobDesc* in_diff = GetBlobDesc4BnInOp("in_diff");
   in_diff->set_data_type(out_diff->data_type());
   in_diff->mut_shape() = Shape(in_diff_dim_vec);
+  return Maybe<void>::Ok();
 }
 
 void GatherGradOp::GetSbpSignatures(
@@ -65,6 +67,7 @@ void GatherGradOp::GetSbpSignatures(
 Maybe<void> GatherGradOp::InferHasBatchDim(
     std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
   *HasBatchDim4BnInOp("in_diff") = false;
+  return Maybe<void>::Ok();
 }
 
 REGISTER_OP(OperatorConf::kGatherGradConf, GatherGradOp);

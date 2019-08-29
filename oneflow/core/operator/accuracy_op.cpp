@@ -22,8 +22,9 @@ void AccuracyOp::VirtualGenKernelConf(
   conf->set_label_type(GetBlobDesc4BnInOp("label")->data_type());
 }
 
-Maybe<void> AccuracyOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                const ParallelContext* parallel_ctx) const {
+Maybe<void> AccuracyOp::InferBlobDescs(
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx) const {
   BlobDesc* pred_blob_desc = GetBlobDesc4BnInOp("prediction");
   BlobDesc* label_blob_desc = GetBlobDesc4BnInOp("label");
   CHECK_EQ(pred_blob_desc->has_data_id_field(), label_blob_desc->has_data_id_field());
@@ -55,6 +56,7 @@ Maybe<void> AccuracyOp::InferBlobDescs(std::function<BlobDesc*(const std::string
   *accuracy_blob_desc = *pred_blob_desc;
   accuracy_blob_desc->mut_shape() = Shape({1});
   accuracy_blob_desc->set_data_type(pred_blob_desc->data_type());
+  return Maybe<void>::Ok();
 }
 
 REGISTER_OP(OperatorConf::kAccuracyConf, AccuracyOp);

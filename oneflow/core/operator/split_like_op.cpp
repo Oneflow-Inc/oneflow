@@ -14,8 +14,9 @@ void SplitLikeOp::InitFromOpConf() {
 
 const PbMessage& SplitLikeOp::GetCustomizedConf() const { return op_conf().split_like_conf(); }
 
-Maybe<void> SplitLikeOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                 const ParallelContext* parallel_ctx) const {
+Maybe<void> SplitLikeOp::InferBlobDescs(
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx) const {
   const SplitLikeOpConf& conf = op_conf().split_like_conf();
   const BlobDesc* like_0_blob_desc = GetBlobDesc4BnInOp(GenRepeatedBn("like", 0));
   const std::vector<int64_t>& in_dim_vec = GetBlobDesc4BnInOp("in")->shape().dim_vec();
@@ -34,6 +35,7 @@ Maybe<void> SplitLikeOp::InferBlobDescs(std::function<BlobDesc*(const std::strin
     output_i_blob_desc->mut_shape() = like_i_blob_desc->shape();
   }
   CHECK_EQ(dim_sum, in_dim_vec.at(split_axis));
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> SplitLikeOp::InferHasBatchDim(
@@ -44,6 +46,7 @@ Maybe<void> SplitLikeOp::InferHasBatchDim(
   bool has_batch_dim = true;
   if (split_axis == 0) { has_batch_dim = false; }
   for (const auto& obn : output_bns()) { *HasBatchDim4BnInOp(obn) = has_batch_dim; }
+  return Maybe<void>::Ok();
 }
 
 void SplitLikeOp::GetSbpSignatures(

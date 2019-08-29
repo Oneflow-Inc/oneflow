@@ -21,6 +21,7 @@ Maybe<void> ReduceMeanGradOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*) const {
   *GetBlobDesc4BnInOp("temp_storage") = *GetBlobDesc4BnInOp("dy");
   GetBlobDesc4BnInOp("dx")->CopyMetaFrom(*GetBlobDesc4BnInOp("x"));
+  return Maybe<void>::Ok();
 }
 
 REGISTER_OP(OperatorConf::kReduceMeanGradConf, ReduceMeanGradOp);

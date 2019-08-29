@@ -11,8 +11,9 @@ void ReshapeOp::InitFromOpConf() {
 
 const PbMessage& ReshapeOp::GetCustomizedConf() const { return op_conf().reshape_conf(); }
 
-Maybe<void> ReshapeOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                               const ParallelContext* parallel_ctx) const {
+Maybe<void> ReshapeOp::InferBlobDescs(
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx) const {
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
   *out_blob_desc = *in_blob_desc;
@@ -39,6 +40,7 @@ Maybe<void> ReshapeOp::InferBlobDescs(std::function<BlobDesc*(const std::string&
   }
   out_blob_desc->mut_shape() = Shape(dim_vec);
   CHECK_EQ(out_blob_desc->shape().elem_cnt(), in_blob_desc->shape().elem_cnt());
+  return Maybe<void>::Ok();
 }
 
 void ReshapeOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {

@@ -37,6 +37,7 @@ Maybe<void> ReduceScatterOp::InferBlobDescs(
     *out_blob = *in_blob;
     out_blob->mut_shape() = Shape({model_elem_cnt / out_num});
   }
+  return Maybe<void>::Ok();
 }
 
 REGISTER_OP(OperatorConf::kReduceScatterConf, ReduceScatterOp);

@@ -11,8 +11,9 @@ void SwitchOutputOp::InitFromOpConf() {
   EnrollOutputBn("out");
 }
 
-Maybe<void> SwitchOutputOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                    const ParallelContext* parallel_ctx) const {
+Maybe<void> SwitchOutputOp::InferBlobDescs(
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx) const {
   const BlobDesc& in_index_blob_desc = *GetBlobDesc4BnInOp("in_index");
   CHECK(in_index_blob_desc.shape() == Shape({1LL}));
   CHECK_EQ(in_index_blob_desc.data_type(), DataType::kInt32);
@@ -23,6 +24,7 @@ Maybe<void> SwitchOutputOp::InferBlobDescs(std::function<BlobDesc*(const std::st
   InterfaceOpUtil::InferOutBlobDesc(op_conf().switch_output_conf().blob_conf(),
                                     GetBlobDesc4BnInOp("out"), parallel_ctx);
   CHECK(*GetBlobDesc4BnInOp("out") == first_in_blob_desc);
+  return Maybe<void>::Ok();
 }
 
 const PbMessage& SwitchOutputOp::GetCustomizedConf() const {
@@ -39,6 +41,7 @@ Maybe<void> SwitchOutputOp::InferHasBatchDim(
   InterfaceOpUtil::InferHasBatchDim(op_conf().switch_output_conf().blob_conf(),
                                     HasBatchDim4BnInOp("out"));
   CHECK(*HasBatchDim4BnInOp("out") == first_in_has_batch_dim);
+  return Maybe<void>::Ok();
 }
 
 void SwitchOutputOp::GetSbpSignatures(

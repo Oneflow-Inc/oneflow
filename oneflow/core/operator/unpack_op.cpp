@@ -9,8 +9,9 @@ void UnpackOp::InitFromOpConf() {
   EnrollOutputBn("out");
 }
 
-Maybe<void> UnpackOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                              const ParallelContext* parallel_ctx) const {
+Maybe<void> UnpackOp::InferBlobDescs(
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx) const {
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp(SoleIbn());
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp(SoleObn());
   *out_blob_desc = *in_blob_desc;
@@ -24,6 +25,7 @@ Maybe<void> UnpackOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)
   }
   out_blob_desc->mut_shape().Set(0, out_blob_desc->shape().At(0) / unpack_num);
   out_blob_desc->mut_dim0_inner_shape() = Shape({1, out_blob_desc->shape().At(0)});
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> UnpackOp::InferOutputBlobTimeShape(
@@ -33,6 +35,7 @@ Maybe<void> UnpackOp::InferOutputBlobTimeShape(
   int32_t unpack_num = GetUnpackNum();
   dim_vec.push_back(unpack_num);
   *time_shape = Shape(dim_vec);
+  return Maybe<void>::Ok();
 }
 
 int32_t UnpackOp::GetUnpackNum() const { return op_conf().unpack_conf().unpack_num(); }

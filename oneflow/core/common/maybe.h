@@ -15,7 +15,7 @@ class MaybeBase {
   MaybeBase(const MaybeBase<T>&) = default;
   virtual ~MaybeBase() = default;
 
-  bool ok() const { return data_or_error_.template Has<T>(); }
+  bool isOk() const { return data_or_error_.template Has<T>(); }
   const std::shared_ptr<T>& data() const { return data_or_error_.template Get<T>(); }
   const Error& error() const { return *data_or_error_.template Get<const Error>(); }
 
@@ -34,6 +34,8 @@ class Maybe final : public MaybeBase<T> {
   Maybe(T* data) : MaybeBase<T>(std::shared_ptr<T>(data)) {}
   Maybe(const Maybe<T>&) = default;
   ~Maybe() override = default;
+
+  static Maybe<T> Ok() { return Maybe<T>(); }
 };
 
 template<>
@@ -45,6 +47,8 @@ class Maybe<void> final : public MaybeBase<void> {
   Maybe(const Error* error) : MaybeBase<void>(std::shared_ptr<const Error>(error)) {}
   Maybe(const Maybe<void>&) = default;
   ~Maybe() override = default;
+
+  static Maybe<void> Ok() { return Maybe<void>(); }
 };
 
 template<typename T>
@@ -60,7 +64,7 @@ inline Maybe<T> MaybeFuncSafeCallWrapper(Maybe<T>&& maybe) {
 #define JUST(...)                                              \
   ({                                                           \
     const auto& maybe = MaybeFuncSafeCallWrapper(__VA_ARGS__); \
-    if (!maybe.ok()) {                                         \
+    if (!maybe.isOk()) {                                       \
       LOG(INFO) << "maybe failed:" << __MAYBE_CALL_LOC__;      \
       return maybe;                                            \
     }                                                          \
@@ -69,7 +73,7 @@ inline Maybe<T> MaybeFuncSafeCallWrapper(Maybe<T>&& maybe) {
 #define CHECK_JUST(...)                                        \
   ({                                                           \
     const auto& maybe = MaybeFuncSafeCallWrapper(__VA_ARGS__); \
-    CHECK(maybe.ok());                                         \
+    CHECK(maybe.isOk());                                       \
     maybe.data();                                              \
   })
 

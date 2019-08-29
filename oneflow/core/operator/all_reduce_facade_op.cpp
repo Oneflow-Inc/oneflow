@@ -18,6 +18,7 @@ Maybe<void> AllReduceFacadeOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   *GetBlobDesc4BnInOp("out") = *GetBlobDesc4BnInOp("in");
+  return Maybe<void>::Ok();
 }
 
 LogicalNode* AllReduceFacadeOp::NewProperLogicalNode() const {
@@ -28,6 +29,7 @@ Maybe<void> AllReduceFacadeOp::InferHasBatchDim(
     std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
   CHECK_EQ(*HasBatchDim4BnInOp("in"), false);
   *HasBatchDim4BnInOp("out") = false;
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> AllReduceFacadeOp::InferSbpSignature(
@@ -39,6 +41,7 @@ Maybe<void> AllReduceFacadeOp::InferSbpSignature(
     CHECK(SbpInferHint4Ibn(ibn).sbp_parallel().has_partial_sum_parallel());
   }
   SbpSignatureBuilder().PartialSum(input_bns()).Broadcast(output_bns()).Build(sbp_signature);
+  return Maybe<void>::Ok();
 }
 
 REGISTER_OP(OperatorConf::kAllReduceFacadeConf, AllReduceFacadeOp);

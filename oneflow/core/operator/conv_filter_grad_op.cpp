@@ -71,6 +71,7 @@ Maybe<void> ConvFilterGradOp::InferBlobDescs(
   } else {
     UNIMPLEMENTED();
   }
+  return Maybe<void>::Ok();
 }
 
 void ConvFilterGradOp::VirtualGenKernelConf(
@@ -94,6 +95,7 @@ Maybe<void> ConvFilterGradOp::InferHasBatchDim(
   CHECK(*HasBatchDim4BnInOp("dy"));
   CHECK(*HasBatchDim4BnInOp("x"));
   *HasBatchDim4BnInOp("filter_diff") = false;
+  return Maybe<void>::Ok();
 }
 
 void ConvFilterGradOp::GetSbpSignatures(

@@ -12,8 +12,9 @@ void TanHOp::InitFromOpConf() {
 const PbMessage& TanHOp::GetCustomizedConf() const { return op_conf().tanh_conf(); }
 
 Maybe<void> TanHOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                            const ParallelContext* parallel_ctx) const {
+                                   const ParallelContext* parallel_ctx) const {
   *GetBlobDesc4BnInOp("out") = *GetBlobDesc4BnInOp("in");
+  return Maybe<void>::Ok();
 }
 
 void TanHOp::GetSbpSignatures(

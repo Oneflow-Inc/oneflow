@@ -40,6 +40,7 @@ Maybe<void> SparseCrossEntropyOp::InferBlobDescs(
   *out_blob_desc = *pred_blob_desc;
   out_blob_desc->mut_shape() = Shape(std::vector<int64_t>(
       pred_blob_desc->shape().dim_vec().cbegin(), pred_blob_desc->shape().dim_vec().cend() - 1));
+  return Maybe<void>::Ok();
 }
 
 void SparseCrossEntropyOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {

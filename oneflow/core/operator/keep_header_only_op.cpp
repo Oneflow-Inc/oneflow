@@ -19,6 +19,7 @@ Maybe<void> KeepHeaderOnlyOp::InferBlobDescs(
     *out = *GetBlobDesc4BnInOp(GenRepeatedBn("in", i));
     out->set_is_body_disabled(true);
   }
+  return Maybe<void>::Ok();
 }
 
 void KeepHeaderOnlyOp::GetSbpSignatures(

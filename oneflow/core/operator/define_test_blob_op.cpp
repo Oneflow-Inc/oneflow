@@ -32,11 +32,13 @@ Maybe<void> DefineTestBlobOp::InferBlobDescs(
     out_blob_desc->mut_dim0_inner_shape() = Shape(conf.dim0_inner_shape());
   }
   if (conf.has_dim0_valid_num()) { CHECK(conf.has_dim0_inner_shape()); }
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> DefineTestBlobOp::InferHasBatchDim(
     std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
   *HasBatchDim4BnInOp("out") = true;
+  return Maybe<void>::Ok();
 }
 
 void DefineTestBlobOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {

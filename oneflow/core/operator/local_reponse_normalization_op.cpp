@@ -45,6 +45,7 @@ Maybe<void> LocalResponseNormalizationOp::InferBlobDescs(
   } else {
     UNIMPLEMENTED();
   }
+  return Maybe<void>::Ok();
 }
 
 void LocalResponseNormalizationOp::VirtualGenKernelConf(

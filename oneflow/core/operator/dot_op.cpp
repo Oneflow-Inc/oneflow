@@ -16,7 +16,7 @@ void DotOp::InitFromOpConf() {
 const PbMessage& DotOp::GetCustomizedConf() const { return op_conf().dot_conf(); }
 
 Maybe<void> DotOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                           const ParallelContext* parallel_ctx) const {
+                                  const ParallelContext* parallel_ctx) const {
   BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
   BlobDesc* weight_blob_desc = GetBlobDesc4BnInOp("weight");
   CHECK_EQ(in_blob_desc->data_type(), GlobalJobDesc().DefaultDataType());
@@ -33,6 +33,7 @@ Maybe<void> DotOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> G
   out_blob_desc->mut_shape() = Shape({in_blob_desc->shape().At(0)});
   // diff_multiplier
   GetBlobDesc4BnInOp("diff_multiplier")->mut_shape() = Shape({1, in_blob_desc->shape().Count(1)});
+  return Maybe<void>::Ok();
 }
 
 REGISTER_OP(OperatorConf::kDotConf, DotOp);

@@ -19,6 +19,7 @@ Maybe<void> NcclAllReduceOp::InferBlobDescs(
   BlobDesc* in_blob = GetBlobDesc4BnInOp(SoleIbn());
   BlobDesc* out_blob = GetBlobDesc4BnInOp(SoleObn());
   *out_blob = *in_blob;
+  return Maybe<void>::Ok();
 }
 
 LogicalBlobId NcclAllReduceOp::obn2lbi(const std::string& output_bn) const {

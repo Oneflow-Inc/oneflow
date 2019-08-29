@@ -14,6 +14,7 @@ const PbMessage& AccumulateOp::GetCustomizedConf() const { return op_conf().accu
 Maybe<void> AccumulateOp::InferHasBatchDim(
     std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
   *HasBatchDim4BnInOp("acc") = false;
+  return Maybe<void>::Ok();
 }
 
 REGISTER_OP(OperatorConf::kAccumulateConf, AccumulateOp);

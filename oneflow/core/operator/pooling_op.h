@@ -15,7 +15,7 @@ class PoolingOp : public Operator {
   void InitFromOpConf() override;
 
   Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                      const ParallelContext* parallel_ctx) const override;
+                             const ParallelContext* parallel_ctx) const override;
 
  protected:
   virtual int32_t GetDim() const = 0;

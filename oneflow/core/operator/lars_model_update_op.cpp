@@ -7,7 +7,7 @@ void LARSModelUpdateOp::MdUpdtVirtualInitFromOpConf() {
   EnrollTmpBn("data_tmp");
 }
 
-void LARSModelUpdateOp::MdUpdtVirtualInferBlobDescs(
+Maybe<void> LARSModelUpdateOp::MdUpdtVirtualInferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   const BlobDesc* model_blob_desc = GetBlobDesc4BnInOp("model");
@@ -18,6 +18,7 @@ void LARSModelUpdateOp::MdUpdtVirtualInferBlobDescs(
   // local_learning_rate
   *GetBlobDesc4BnInOp("data_tmp") = *model_blob_desc;
   GetBlobDesc4BnInOp("data_tmp")->mut_shape() = Shape({3});
+  return Maybe<void>::Ok();
 }
 
 const PbMessage& LARSModelUpdateOp::GetCustomizedConf() const {

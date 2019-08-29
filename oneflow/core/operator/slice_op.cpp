@@ -20,7 +20,7 @@ void SliceOp::VirtualGenKernelConf(
 }
 
 Maybe<void> SliceOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                             const ParallelContext* parallel_ctx) const {
+                                    const ParallelContext* parallel_ctx) const {
   const SliceOpConf& conf = op_conf().slice_conf();
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
   CHECK_EQ(conf.dim_slice_conf_size(), in_blob_desc->shape().NumAxes() - 1);
@@ -50,6 +50,7 @@ Maybe<void> SliceOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)>
     *offset_blob_desc = *out_blob_desc;
     offset_blob_desc->set_data_type(DataType::kInt64);
   }
+  return Maybe<void>::Ok();
 }
 
 void SliceOp::GetSbpSignatures(

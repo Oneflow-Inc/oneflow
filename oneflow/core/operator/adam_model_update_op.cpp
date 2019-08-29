@@ -17,7 +17,7 @@ void AdamModelUpdateOp::MdUpdtVirtualInitFromOpConf() {
   }
 }
 
-void AdamModelUpdateOp::MdUpdtVirtualInferBlobDescs(
+Maybe<void> AdamModelUpdateOp::MdUpdtVirtualInferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   const auto& adam_conf = op_conf().adam_model_update_conf().user_conf().adam_conf();
@@ -31,6 +31,7 @@ void AdamModelUpdateOp::MdUpdtVirtualInferBlobDescs(
     CHECK_EQ(GetBlobDesc4BnInOp("beta1_t")->shape(), Shape({1}));
     CHECK_EQ(GetBlobDesc4BnInOp("beta2_t")->shape(), Shape({1}));
   }
+  return Maybe<void>::Ok();
 }
 
 const HashSet<std::string> AdamModelUpdateOp::AlwaysBroadcastParallelBns() const {

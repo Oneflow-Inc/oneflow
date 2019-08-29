@@ -27,12 +27,14 @@ Maybe<void> ReduceSumLikeOp::InferBlobDescs(
   if (conf.axis().empty()) { CHECK_EQ(x_blob->shape(), like_blob->shape()); }
   *GetBlobDesc4BnInOp("temp_storage") = *x_blob;
   GetBlobDesc4BnInOp("y")->CopyMetaFrom(*like_blob);
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> ReduceSumLikeOp::InferHasBatchDim(
     std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
   *HasBatchDim4BnInOp("y") = *HasBatchDim4BnInOp("like");
   *HasBatchDim4BnInOp("temp_storage") = *HasBatchDim4BnInOp("like");
+  return Maybe<void>::Ok();
 }
 
 void ReduceSumLikeOp::GetSbpSignatures(

@@ -15,7 +15,7 @@ class DebugOp final : public Operator {
   const PbMessage& GetCustomizedConf() const override { return op_conf().debug_conf(); }
 
   Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                      const ParallelContext* parallel_ctx) const override;
+                             const ParallelContext* parallel_ctx) const override;
 
  private:
   Maybe<void> InferHasBatchDim(

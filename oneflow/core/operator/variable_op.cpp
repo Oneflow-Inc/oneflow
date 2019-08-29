@@ -12,8 +12,9 @@ void VariableOp::InitFromOpConf() {
 
 const PbMessage& VariableOp::GetCustomizedConf() const { return op_conf().variable_conf(); }
 
-Maybe<void> VariableOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                const ParallelContext* parallel_ctx) const {
+Maybe<void> VariableOp::InferBlobDescs(
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx) const {
   const VariableOpConf& variable_conf = op_conf().variable_conf();
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   out_blob_desc->mut_shape() = Shape(variable_conf.shape());
@@ -29,11 +30,13 @@ Maybe<void> VariableOp::InferBlobDescs(std::function<BlobDesc*(const std::string
   } else {
     CHECK_EQ(parallel_ctx->policy(), kDataParallel);
   }
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> VariableOp::InferHasBatchDim(
     std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
   *HasBatchDim4BnInOp("out") = false;
+  return Maybe<void>::Ok();
 }
 
 void VariableOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
@@ -58,8 +61,8 @@ Maybe<void> VariableOp::InferSbpSignature(
   if (sbp_sig_conf.bn_in_op2sbp_parallel().empty()) {
     (*var_sbp_sig_conf.mutable_bn_in_op2sbp_parallel())["out"].mutable_broadcast_parallel();
   }
-  this->Operator::InferSbpSignature(sbp_signature, var_sbp_sig_conf, CalcOrderValue4SbpSig,
-                                    SbpInferHint4Ibn, parallel_desc);
+  return this->Operator::InferSbpSignature(sbp_signature, var_sbp_sig_conf, CalcOrderValue4SbpSig,
+                                           SbpInferHint4Ibn, parallel_desc);
 }
 
 REGISTER_OP(OperatorConf::kVariableConf, VariableOp);

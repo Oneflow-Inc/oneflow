@@ -17,11 +17,15 @@ class PrintOp final : public Operator {
   LogicalNode* NewProperLogicalNode() const override { return new PrintLogicalNode; }
 
   Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                      const ParallelContext* parallel_ctx) const override {}
+                             const ParallelContext* parallel_ctx) const override {
+    return Maybe<void>::Ok();
+  }
 
  private:
   Maybe<void> InferHasBatchDim(
-      std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const override {}
+      std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const override {
+    return Maybe<void>::Ok();
+  }
 
   void GetSbpSignatures(SbpSignatureList* sbp_sig_list) const override;
 

@@ -12,8 +12,9 @@ void BatchGatherOp::InitFromOpConf() {
 
 const PbMessage& BatchGatherOp::GetCustomizedConf() const { return op_conf().batch_gather_conf(); }
 
-Maybe<void> BatchGatherOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                   const ParallelContext* parallel_ctx) const {
+Maybe<void> BatchGatherOp::InferBlobDescs(
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx) const {
   const BlobDesc* in = GetBlobDesc4BnInOp("in");
   CHECK_GT(in->shape().NumAxes(), 0);
   const BlobDesc* indices = GetBlobDesc4BnInOp("indices");
@@ -32,6 +33,7 @@ Maybe<void> BatchGatherOp::InferBlobDescs(std::function<BlobDesc*(const std::str
   BlobDesc* out = GetBlobDesc4BnInOp("out");
   *out = *in;
   out->mut_shape() = Shape(out_dim_vec);
+  return Maybe<void>::Ok();
 }
 
 void BatchGatherOp::GetSbpSignatures(

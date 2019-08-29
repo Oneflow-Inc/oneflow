@@ -21,8 +21,9 @@ void PoolingOp::InitFromOpConf() {
   EnrollOutputBn("out");
 }
 
-Maybe<void> PoolingOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                               const ParallelContext* parallel_ctx) const {
+Maybe<void> PoolingOp::InferBlobDescs(
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx) const {
   // in
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
   const Shape& in_shape = in_blob_desc->shape();
@@ -52,6 +53,7 @@ Maybe<void> PoolingOp::InferBlobDescs(std::function<BlobDesc*(const std::string&
     UNIMPLEMENTED();
   }
   out_blob_desc->mut_shape() = GetOutShape(in_shape.At(0), in_c, out);
+  return Maybe<void>::Ok();
 }
 
 void PoolingOp::CheckPoolSizeAndStrides() const {

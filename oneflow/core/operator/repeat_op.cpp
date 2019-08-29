@@ -18,6 +18,7 @@ Maybe<void> RepeatOp::InferOutputBlobTimeShape(
   int32_t repeat_num = GetRepeatNum();
   dim_vec.push_back(repeat_num);
   *time_shape = Shape(dim_vec);
+  return Maybe<void>::Ok();
 }
 
 int32_t RepeatOp::GetRepeatNum() const {
@@ -28,11 +29,13 @@ int32_t RepeatOp::GetRepeatNum() const {
 
 const PbMessage& RepeatOp::GetCustomizedConf() const { return op_conf().repeat_conf(); }
 
-Maybe<void> RepeatOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                              const ParallelContext* parallel_ctx) const {
+Maybe<void> RepeatOp::InferBlobDescs(
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx) const {
   BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   *out_blob_desc = *in_blob_desc;
+  return Maybe<void>::Ok();
 }
 
 LogicalNode* RepeatOp::NewProperLogicalNode() const { return new RepeatForwardLogicalNode(); }

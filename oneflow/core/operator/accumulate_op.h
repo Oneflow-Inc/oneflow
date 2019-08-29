@@ -15,15 +15,19 @@ class AccumulateOp final : public Operator {
   const PbMessage& GetCustomizedConf() const override;
 
   Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                      const ParallelContext* parallel_ctx) const override {}
-  Maybe<void> InferOutputBlobTimeShape(std::function<const Shape*(const std::string&)> GetTimeShape4BnInOp,
-                                const ParallelContext* parallel_ctx,
-                                Shape* time_shape) const override {
+                             const ParallelContext* parallel_ctx) const override {
+    return Maybe<void>::Ok();
+  }
+  Maybe<void> InferOutputBlobTimeShape(
+      std::function<const Shape*(const std::string&)> GetTimeShape4BnInOp,
+      const ParallelContext* parallel_ctx, Shape* time_shape) const override {
     TODO();
+    return Maybe<void>::Ok();
   }
 
  private:
-  Maybe<void> InferHasBatchDim(std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const override;
+  Maybe<void> InferHasBatchDim(
+      std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const override;
   LogicalBlobId ibn2lbi(const std::string& input_bn) const override { return GenPackedLbi(); }
   LogicalBlobId obn2lbi(const std::string& output_bn) const override { return GenPackedLbi(); }
 };
