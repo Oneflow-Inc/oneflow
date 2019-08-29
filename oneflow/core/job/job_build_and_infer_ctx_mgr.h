@@ -14,7 +14,8 @@ class JobBuildAndInferCtxMgr {
   ~JobBuildAndInferCtxMgr() = default;
 
   Maybe<void> EnterJobBuildAndInferContext(const std::string& job_name);
-  Maybe<JobBuildAndInferCtx> GetCurrentJobBuildAndInferCtx();
+  Maybe<JobBuildAndInferCtx> FindJobBuildAndInferCtx(const std::string& job_name);
+  Maybe<std::string> GetCurrentJobName();
   Maybe<void> LeaveCurrentJobBuildAndInferCtx();
 
  private:

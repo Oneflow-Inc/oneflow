@@ -6,7 +6,12 @@ Maybe<void> JobBuildAndInferCtxMgr::EnterJobBuildAndInferContext(const std::stri
   TODO();
 }
 
-Maybe<JobBuildAndInferCtx> JobBuildAndInferCtxMgr::GetCurrentJobBuildAndInferCtx() { TODO(); }
+Maybe<JobBuildAndInferCtx> JobBuildAndInferCtxMgr::FindJobBuildAndInferCtx(
+    const std::string& job_name) {
+  TODO();
+}
+
+Maybe<std::string> JobBuildAndInferCtxMgr::GetCurrentJobName() { TODO(); }
 
 Maybe<void> JobBuildAndInferCtxMgr::LeaveCurrentJobBuildAndInferCtx() { TODO(); }
 
