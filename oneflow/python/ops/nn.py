@@ -9,19 +9,19 @@ import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 from oneflow.python.oneflow_export import oneflow_export
 
 
-@oneflow_export("pooling.max_pool1d")
+@oneflow_export("nn.max_pool1d")
 def max_pool1d(input, ksize, strides, padding, data_format="NWC"):
     # TODO: fix cuDNN bugs in pooling_1d
     raise NotImplementedError
 
 
-@oneflow_export("pooling.avg_pool1d")
+@oneflow_export("nn.avg_pool1d")
 def avg_pool1d(input, ksize, strides, padding, data_format="NWC"):
     # TODO: fix cuDNN bugs in pooling_1d
     raise NotImplementedError
 
 
-@oneflow_export("pooling.max_pool2d")
+@oneflow_export("nn.max_pool2d")
 def max_pool2d(input, ksize, strides, padding, data_format="NHWC", name=None):
     op_conf = op_conf_util.OperatorConf()
     setattr(
@@ -46,7 +46,7 @@ def max_pool2d(input, ksize, strides, padding, data_format="NHWC", name=None):
     return remote_blob_util.RemoteBlob(out_lbi)
 
 
-@oneflow_export("pooling.avg_pool2d")
+@oneflow_export("nn.avg_pool2d")
 def avg_pool2d(input, ksize, strides, padding, data_format="NHWC", name=None):
     op_conf = op_conf_util.OperatorConf()
     setattr(
@@ -73,7 +73,7 @@ def avg_pool2d(input, ksize, strides, padding, data_format="NHWC", name=None):
     return remote_blob_util.RemoteBlob(out_lbi)
 
 
-@oneflow_export("pooling.max_pool3d")
+@oneflow_export("nn.max_pool3d")
 def max_pool3d(input, ksize, strides, padding, data_format="NDHWC", name=None):
     op_conf = op_conf_util.OperatorConf()
     setattr(
@@ -98,7 +98,7 @@ def max_pool3d(input, ksize, strides, padding, data_format="NDHWC", name=None):
     return remote_blob_util.RemoteBlob(out_lbi)
 
 
-@oneflow_export("pooling.avg_pool3d")
+@oneflow_export("nn.avg_pool3d")
 def avg_pool3d(input, ksize, strides, padding, data_format="NDHWC", name=None):
     op_conf = op_conf_util.OperatorConf()
     setattr(
