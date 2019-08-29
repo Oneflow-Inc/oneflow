@@ -12,7 +12,7 @@ void ConcatOp::InitFromOpConf() {
 
 const PbMessage& ConcatOp::GetCustomizedConf() const { return op_conf().concat_conf(); }
 
-void ConcatOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+Maybe<void> ConcatOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                               const ParallelContext* parallel_ctx) const {
   const ConcatOpConf& conf = op_conf().concat_conf();
   const BlobDesc* in_0_blob_desc = GetBlobDesc4BnInOp(input_bns().Get(0));

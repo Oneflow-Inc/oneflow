@@ -11,7 +11,7 @@ class NormalModelUpdtOp : public Operator {
   virtual ~NormalModelUpdtOp() = default;
 
   void InitFromOpConf() override;
-  void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+  Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                       const ParallelContext* parallel_ctx) const override;
   virtual const PbMessage& GetCustomizedConf() const override;
 
@@ -25,7 +25,7 @@ class NormalModelUpdtOp : public Operator {
   virtual const HashSet<std::string> AlwaysBroadcastParallelBns() const = 0;
 
  private:
-  void InferHasBatchDim(std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const override;
+  Maybe<void> InferHasBatchDim(std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const override;
   void GetSbpSignatures(
       const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
       SbpSignatureList* sbp_sig_list) const override;

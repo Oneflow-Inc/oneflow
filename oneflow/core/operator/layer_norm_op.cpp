@@ -41,7 +41,7 @@ void LayerNormOp::InitFromOpConf() {
   EnrollConstBufBn("cudnn_bn_bias_zeros");
 }
 
-void LayerNormOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+Maybe<void> LayerNormOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                  const ParallelContext* parallel_ctx) const {
   CHECK(parallel_ctx->policy() != kModelParallel);
   const BlobDesc* in = GetBlobDesc4BnInOp("in");
@@ -91,7 +91,7 @@ void LayerNormOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Ge
   *GetBlobDesc4BnInOp("cudnn_bn_bias_zeros") = *cudnn_bn_mean;
 }
 
-void LayerNormOp::InferHasBatchDim(
+Maybe<void> LayerNormOp::InferHasBatchDim(
     std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
   for (const auto& obn : output_bns()) { *HasBatchDim4BnInOp(obn) = true; }
 }

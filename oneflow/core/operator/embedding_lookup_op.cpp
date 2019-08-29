@@ -15,7 +15,7 @@ const PbMessage& EmbeddingLookupOp::GetCustomizedConf() const {
   return op_conf().embedding_lookup_conf();
 }
 
-void EmbeddingLookupOp::InferBlobDescs(
+Maybe<void> EmbeddingLookupOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   const EmbeddingLookupOpConf& conf = op_conf().embedding_lookup_conf();

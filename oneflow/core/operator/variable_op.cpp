@@ -12,7 +12,7 @@ void VariableOp::InitFromOpConf() {
 
 const PbMessage& VariableOp::GetCustomizedConf() const { return op_conf().variable_conf(); }
 
-void VariableOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+Maybe<void> VariableOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                 const ParallelContext* parallel_ctx) const {
   const VariableOpConf& variable_conf = op_conf().variable_conf();
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
@@ -31,7 +31,7 @@ void VariableOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Get
   }
 }
 
-void VariableOp::InferHasBatchDim(
+Maybe<void> VariableOp::InferHasBatchDim(
     std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
   *HasBatchDim4BnInOp("out") = false;
 }
@@ -49,7 +49,7 @@ void VariableOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
       .Build(sbp_sig_list->mutable_sbp_signature()->Add());
 }
 
-void VariableOp::InferSbpSignature(
+Maybe<void> VariableOp::InferSbpSignature(
     SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
     const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
     std::function<const SbpInferHint&(const std::string&)> SbpInferHint4Ibn,

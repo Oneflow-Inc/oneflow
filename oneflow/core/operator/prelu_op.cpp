@@ -14,7 +14,7 @@ void PReluOp::InitFromOpConf() {
 
 const PbMessage& PReluOp::GetCustomizedConf() const { return op_conf().prelu_conf(); }
 
-void PReluOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+Maybe<void> PReluOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                              const ParallelContext* parallel_ctx) const {
   const PReluOpConf& conf = op_conf().prelu_conf();
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");

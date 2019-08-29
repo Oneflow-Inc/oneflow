@@ -19,7 +19,7 @@ const PbMessage& ReduceSumLikeOp::GetCustomizedConf() const {
   return op_conf().reduce_sum_like_conf();
 }
 
-void ReduceSumLikeOp::InferBlobDescs(
+Maybe<void> ReduceSumLikeOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*) const {
   const ReduceSumLikeOpConf& conf = op_conf().reduce_sum_like_conf();
   BlobDesc* x_blob = GetBlobDesc4BnInOp("x");
@@ -29,7 +29,7 @@ void ReduceSumLikeOp::InferBlobDescs(
   GetBlobDesc4BnInOp("y")->CopyMetaFrom(*like_blob);
 }
 
-void ReduceSumLikeOp::InferHasBatchDim(
+Maybe<void> ReduceSumLikeOp::InferHasBatchDim(
     std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
   *HasBatchDim4BnInOp("y") = *HasBatchDim4BnInOp("like");
   *HasBatchDim4BnInOp("temp_storage") = *HasBatchDim4BnInOp("like");

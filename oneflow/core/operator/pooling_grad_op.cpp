@@ -19,7 +19,7 @@ void PoolingGradOp::InitFromOpConf() {
 
 const PbMessage& PoolingGradOp::GetCustomizedConf() const { return op_conf().pooling_grad_conf(); }
 
-void PoolingGradOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+Maybe<void> PoolingGradOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                    const ParallelContext* parallel_ctx) const {
   // in
   const BlobDesc* x_blob_desc = GetBlobDesc4BnInOp("x");

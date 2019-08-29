@@ -7,7 +7,7 @@ void AxpyOp::InitFromOpConf() {
   EnrollInputBn("x", false);
 }
 
-void AxpyOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+Maybe<void> AxpyOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                             const ParallelContext* parallel_ctx) const {
   CHECK(*GetBlobDesc4BnInOp("x") == *GetBlobDesc4BnInOp("y"));
 }

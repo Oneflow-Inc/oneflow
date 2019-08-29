@@ -14,7 +14,7 @@ void MatmulOp::InitFromOpConf() {
 
 const PbMessage& MatmulOp::GetCustomizedConf() const { return op_conf().matmul_conf(); }
 
-void MatmulOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+Maybe<void> MatmulOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                               const ParallelContext* parallel_ctx) const {
   const MatmulOpConf& conf = op_conf().matmul_conf();
   BlobDesc* a_blob_desc = GetBlobDesc4BnInOp("a");
@@ -55,7 +55,7 @@ void MatmulOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBl
   }
 }
 
-void MatmulOp::InferHasBatchDim(
+Maybe<void> MatmulOp::InferHasBatchDim(
     const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
     std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
   const MatmulOpConf& conf = op_conf().matmul_conf();

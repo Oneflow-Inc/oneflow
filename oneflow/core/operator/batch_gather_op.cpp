@@ -12,7 +12,7 @@ void BatchGatherOp::InitFromOpConf() {
 
 const PbMessage& BatchGatherOp::GetCustomizedConf() const { return op_conf().batch_gather_conf(); }
 
-void BatchGatherOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+Maybe<void> BatchGatherOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                    const ParallelContext* parallel_ctx) const {
   const BlobDesc* in = GetBlobDesc4BnInOp("in");
   CHECK_GT(in->shape().NumAxes(), 0);

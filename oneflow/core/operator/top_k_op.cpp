@@ -9,7 +9,7 @@ void TopKOp::InitFromOpConf() {
   EnrollOutputBn("out", false);
 }
 
-void TopKOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+Maybe<void> TopKOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                             const ParallelContext* parallel_ctx) const {
   const BlobDesc* in = GetBlobDesc4BnInOp("in");
   CHECK_LE(in->shape().elem_cnt(), GetMaxVal<int32_t>());

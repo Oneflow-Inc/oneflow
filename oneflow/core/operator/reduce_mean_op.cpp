@@ -13,7 +13,7 @@ void ReduceMeanOp::InitFromOpConf() {
 
 const PbMessage& ReduceMeanOp::GetCustomizedConf() const { return op_conf().reduce_mean_conf(); }
 
-void ReduceMeanOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+Maybe<void> ReduceMeanOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                   const ParallelContext*) const {
   const ReduceMeanOpConf& conf = op_conf().reduce_mean_conf();
   const BlobDesc* in_blob = GetBlobDesc4BnInOp("in");
@@ -37,7 +37,7 @@ void ReduceMeanOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> G
   }
 }
 
-void ReduceMeanOp::InferHasBatchDim(
+Maybe<void> ReduceMeanOp::InferHasBatchDim(
     std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
   const auto& reduced_axes = op_conf().reduce_mean_conf().axis();
   HashSet<int64_t> conf_axes = {reduced_axes.begin(), reduced_axes.end()};

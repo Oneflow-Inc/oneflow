@@ -83,7 +83,7 @@ void ConvOp<NDims>::InitFromOpConf() {
 }
 
 template<int32_t NDims>
-void ConvOp<NDims>::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+Maybe<void> ConvOp<NDims>::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                    const ParallelContext* parallel_ctx, int64_t record_piece_size,
                                    std::function<void(OpContext*)> EnrollOpCtx) const {
   const std::string& data_format = GetValFromCustomizedConf<std::string>("data_format");
@@ -277,7 +277,7 @@ void ConvOp<NDims>::InferCudnnAlgo(
 #endif  // WITH_CUDA
 
 template<int32_t NDims>
-void ConvOp<NDims>::InferHasBatchDim(
+Maybe<void> ConvOp<NDims>::InferHasBatchDim(
     std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
   *HasBatchDim4BnInOp("out") = *HasBatchDim4BnInOp("in");
 }

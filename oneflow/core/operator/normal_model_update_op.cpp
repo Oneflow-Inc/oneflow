@@ -15,7 +15,7 @@ void NormalModelUpdtOp::InitFromOpConf() {
   MdUpdtVirtualInitFromOpConf();
 }
 
-void NormalModelUpdtOp::InferBlobDescs(
+Maybe<void> NormalModelUpdtOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   const PbMessage& conf = this->GetCustomizedConf();
@@ -38,7 +38,7 @@ LogicalBlobId NormalModelUpdtOp::obn2lbi(const std::string& output_bn) const {
   return GenLogicalBlobId(GetValFromCustomizedConf<std::string>(output_bn));
 }
 
-void NormalModelUpdtOp::InferHasBatchDim(
+Maybe<void> NormalModelUpdtOp::InferHasBatchDim(
     std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
   for (const auto& ibn : input_bns()) { CHECK_EQ(*HasBatchDim4BnInOp(ibn), false); }
 }

@@ -29,7 +29,7 @@ const PbMessage& FullyConnectedOp::GetCustomizedConf() const {
   return op_conf().fully_connected_conf();
 }
 
-void FullyConnectedOp::InferBlobDescs(
+Maybe<void> FullyConnectedOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   // useful vars

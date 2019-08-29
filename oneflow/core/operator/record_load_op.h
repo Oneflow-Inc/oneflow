@@ -14,7 +14,7 @@ class RecordLoadOp final : public Operator {
 
   void InitFromOpConf() override;
   const PbMessage& GetCustomizedConf() const override;
-  void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+  Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                       const ParallelContext* parallel_ctx,
                       int64_t record_piece_size) const override;
   void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
@@ -23,7 +23,7 @@ class RecordLoadOp final : public Operator {
   LogicalNode* NewProperLogicalNode() const override { return new RecordLoadLogicalNode; }
 
  private:
-  void InferHasBatchDim(std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const override;
+  Maybe<void> InferHasBatchDim(std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const override;
   void GetSbpSignatures(SbpSignatureList* sbp_sig_list) const override;
 };
 

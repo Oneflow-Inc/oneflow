@@ -14,7 +14,7 @@ void DropoutGradOp::InitFromOpConf() {
 
 const PbMessage& DropoutGradOp::GetCustomizedConf() const { return op_conf().dropout_grad_conf(); }
 
-void DropoutGradOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+Maybe<void> DropoutGradOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                    const ParallelContext* parallel_ctx) const {
   BlobDesc* dy_desc = GetBlobDesc4BnInOp("dy");
   *GetBlobDesc4BnInOp("dx") = *dy_desc;

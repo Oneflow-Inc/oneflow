@@ -15,7 +15,7 @@ void DotOp::InitFromOpConf() {
 
 const PbMessage& DotOp::GetCustomizedConf() const { return op_conf().dot_conf(); }
 
-void DotOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+Maybe<void> DotOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                            const ParallelContext* parallel_ctx) const {
   BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
   BlobDesc* weight_blob_desc = GetBlobDesc4BnInOp("weight");

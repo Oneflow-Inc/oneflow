@@ -25,7 +25,7 @@ void TransposeOp::InitFromOpConf() {
 
 const PbMessage& TransposeOp::GetCustomizedConf() const { return op_conf().transpose_conf(); }
 
-void TransposeOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+Maybe<void> TransposeOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                  const ParallelContext* parallel_ctx) const {
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
   const Shape& in_blob_shape = in_blob_desc->shape();

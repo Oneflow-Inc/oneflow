@@ -21,7 +21,7 @@ void ConvFilterGradOp::InitFromOpConf() {
   }
 }
 
-void ConvFilterGradOp::InferBlobDescs(
+Maybe<void> ConvFilterGradOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, int64_t record_piece_size,
     std::function<void(OpContext*)> EnrollOpCtx) const {
@@ -89,7 +89,7 @@ void ConvFilterGradOp::VirtualGenKernelConf(
   }
 }
 
-void ConvFilterGradOp::InferHasBatchDim(
+Maybe<void> ConvFilterGradOp::InferHasBatchDim(
     std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
   CHECK(*HasBatchDim4BnInOp("dy"));
   CHECK(*HasBatchDim4BnInOp("x"));

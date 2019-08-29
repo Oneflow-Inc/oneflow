@@ -9,12 +9,12 @@ void SinkTickOp::InitFromOpConf() {
   EnrollOutputBn("out", false);
 }
 
-void SinkTickOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+Maybe<void> SinkTickOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                 const ParallelContext* parallel_ctx) const {
   GetBlobDesc4BnInOp("out")->mut_shape() = Shape({1});
 }
 
-void SinkTickOp::InferHasBatchDim(
+Maybe<void> SinkTickOp::InferHasBatchDim(
     std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
   *HasBatchDim4BnInOp("out") = false;
 }

@@ -22,7 +22,7 @@ void ConvDataGradOp::InitFromOpConf() {
   }
 }
 
-void ConvDataGradOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+Maybe<void> ConvDataGradOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                     const ParallelContext* parallel_ctx, int64_t record_piece_size,
                                     std::function<void(OpContext*)> EnrollOpCtx) const {
   const ConvDataGradOpConf& conf = this->op_conf().conv_data_grad_conf();
@@ -74,7 +74,7 @@ void ConvDataGradOp::VirtualGenKernelConf(
   }
 }
 
-void ConvDataGradOp::InferHasBatchDim(
+Maybe<void> ConvDataGradOp::InferHasBatchDim(
     std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
   CHECK(*HasBatchDim4BnInOp("dy"));
   CHECK(*HasBatchDim4BnInOp("x_like"));

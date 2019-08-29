@@ -35,7 +35,7 @@ void GatherOp::InitFromOpConf() {
 
 const PbMessage& GatherOp::GetCustomizedConf() const { return op_conf().gather_conf(); }
 
-void GatherOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+Maybe<void> GatherOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                               const ParallelContext* parallel_ctx) const {
   const BlobDesc* indices = GetBlobDesc4BnInOp("indices");
   CHECK(IsIntegralDataType(indices->data_type()));

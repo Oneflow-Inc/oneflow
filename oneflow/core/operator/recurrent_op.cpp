@@ -19,7 +19,7 @@ void RecurrentOp::InitFromOpConf() {
   VirtualInitFromOpConf();
 }
 
-void RecurrentOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+Maybe<void> RecurrentOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                  const ParallelContext* parallel_ctx) const {
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
   DataType data_type = GlobalJobDesc().DefaultDataType();

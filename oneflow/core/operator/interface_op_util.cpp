@@ -86,7 +86,7 @@ void InterfaceOpUtil::InferOutBlobDesc(const InterfaceBlobConf& blob_conf, BlobD
   }
 }
 
-void InterfaceOpUtil::InferHasBatchDim(const InterfaceBlobConf& blob_conf, bool* has_batch_dim) {
+Maybe<void> InterfaceOpUtil::InferHasBatchDim(const InterfaceBlobConf& blob_conf, bool* has_batch_dim) {
   *has_batch_dim = blob_conf.has_batch_dim();
 }
 

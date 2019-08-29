@@ -57,7 +57,7 @@ const PbMessage& NormalizationGradOp::GetCustomizedConf() const {
   return op_conf().normalization_grad_conf();
 }
 
-void NormalizationGradOp::InferBlobDescs(
+Maybe<void> NormalizationGradOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   const NormalizationGradOpConf& conf = op_conf().normalization_grad_conf();
@@ -90,7 +90,7 @@ void NormalizationGradOp::InferBlobDescs(
   SetParamBlobDesc("beta_diff");
 }
 
-void NormalizationGradOp::InferHasBatchDim(
+Maybe<void> NormalizationGradOp::InferHasBatchDim(
     std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
   *HasBatchDim4BnInOp("dx") = *HasBatchDim4BnInOp("dy");
   *HasBatchDim4BnInOp("gamma_diff") = false;

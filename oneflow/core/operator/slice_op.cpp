@@ -19,7 +19,7 @@ void SliceOp::VirtualGenKernelConf(
   in_shape.ToProto(kernel_conf->mutable_slice_conf()->mutable_in_shape());
 }
 
-void SliceOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+Maybe<void> SliceOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                              const ParallelContext* parallel_ctx) const {
   const SliceOpConf& conf = op_conf().slice_conf();
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");

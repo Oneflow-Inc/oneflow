@@ -14,7 +14,7 @@ const PbMessage& BatchGatherGradOp::GetCustomizedConf() const {
   return op_conf().batch_gather_grad_conf();
 }
 
-void BatchGatherGradOp::InferBlobDescs(
+Maybe<void> BatchGatherGradOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   const int64_t gather_dim_size = op_conf().batch_gather_grad_conf().gather_dim_size();

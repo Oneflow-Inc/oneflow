@@ -14,7 +14,7 @@ const PbMessage& AllReduceFacadeOp::GetCustomizedConf() const {
   return op_conf().all_reduce_facade_conf();
 }
 
-void AllReduceFacadeOp::InferBlobDescs(
+Maybe<void> AllReduceFacadeOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   *GetBlobDesc4BnInOp("out") = *GetBlobDesc4BnInOp("in");
@@ -24,13 +24,13 @@ LogicalNode* AllReduceFacadeOp::NewProperLogicalNode() const {
   return new AllReduceFacadeLogicalNode();
 }
 
-void AllReduceFacadeOp::InferHasBatchDim(
+Maybe<void> AllReduceFacadeOp::InferHasBatchDim(
     std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
   CHECK_EQ(*HasBatchDim4BnInOp("in"), false);
   *HasBatchDim4BnInOp("out") = false;
 }
 
-void AllReduceFacadeOp::InferSbpSignature(
+Maybe<void> AllReduceFacadeOp::InferSbpSignature(
     SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
     const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
     std::function<const SbpInferHint&(const std::string&)> SbpInferHint4Ibn,

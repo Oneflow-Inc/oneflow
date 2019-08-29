@@ -8,12 +8,12 @@ void TickOp::InitFromOpConf() {
   EnrollOutputBn("out", false);
 }
 
-void TickOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+Maybe<void> TickOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                             const ParallelContext* parallel_ctx) const {
   GetBlobDesc4BnInOp("out")->mut_shape() = Shape({1});
 }
 
-void TickOp::InferHasBatchDim(std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
+Maybe<void> TickOp::InferHasBatchDim(std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
   *HasBatchDim4BnInOp("out") = false;
 }
 

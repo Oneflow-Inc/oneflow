@@ -14,7 +14,7 @@ void BiasAddOp::InitFromOpConf() {
 
 const PbMessage& BiasAddOp::GetCustomizedConf() const { return op_conf().bias_add_conf(); }
 
-void BiasAddOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+Maybe<void> BiasAddOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                const ParallelContext* parallel_ctx) const {
   const BlobDesc* a_blob_desc = GetBlobDesc4BnInOp("a");
   const BlobDesc* b_blob_desc = GetBlobDesc4BnInOp("b");

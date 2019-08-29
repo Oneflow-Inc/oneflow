@@ -11,7 +11,7 @@ void RecordLoadOp::InitFromOpConf() {
 
 const PbMessage& RecordLoadOp::GetCustomizedConf() const { return op_conf().record_load_conf(); }
 
-void RecordLoadOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+Maybe<void> RecordLoadOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                   const ParallelContext* parallel_ctx,
                                   int64_t record_piece_size) const {
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
@@ -27,7 +27,7 @@ void RecordLoadOp::VirtualGenKernelConf(
   kernel_conf->mutable_record_load_conf()->set_device_piece_size(device_piece_size);
 }
 
-void RecordLoadOp::InferHasBatchDim(
+Maybe<void> RecordLoadOp::InferHasBatchDim(
     std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
   *HasBatchDim4BnInOp("out") = true;
 }

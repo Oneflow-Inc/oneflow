@@ -13,7 +13,7 @@ void MultiplyOp::InitFromOpConf() {
 
 const PbMessage& MultiplyOp::GetCustomizedConf() const { return op_conf().multiply_conf(); }
 
-void MultiplyOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+Maybe<void> MultiplyOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                 const ParallelContext* parallel_ctx) const {
   BlobDesc* in_0_blob_desc = GetBlobDesc4BnInOp("in_0");
   BlobDesc* in_1_blob_desc = GetBlobDesc4BnInOp("in_1");

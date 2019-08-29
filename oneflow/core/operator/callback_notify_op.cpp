@@ -17,7 +17,7 @@ const PbMessage& CallbackNotifyOp::GetCustomizedConf() const {
   return op_conf().callback_notify_conf();
 }
 
-void CallbackNotifyOp::InferBlobDescs(
+Maybe<void> CallbackNotifyOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   CHECK_EQ(parallel_ctx->parallel_num(), 1);
@@ -25,7 +25,7 @@ void CallbackNotifyOp::InferBlobDescs(
   CHECK(IsIntegralDataType(GetBlobDesc4BnInOp("in")->data_type()));
 }
 
-void CallbackNotifyOp::InferHasBatchDim(
+Maybe<void> CallbackNotifyOp::InferHasBatchDim(
     std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {}
 
 void CallbackNotifyOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {

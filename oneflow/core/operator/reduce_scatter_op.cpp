@@ -22,7 +22,7 @@ LogicalBlobId ReduceScatterOp::obn2lbi(const std::string& output_bn) const {
   return ret;
 }
 
-void ReduceScatterOp::InferBlobDescs(
+Maybe<void> ReduceScatterOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   int32_t out_num = op_conf().reduce_scatter_conf().out_num();

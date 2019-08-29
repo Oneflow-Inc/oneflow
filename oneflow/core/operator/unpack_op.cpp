@@ -9,7 +9,7 @@ void UnpackOp::InitFromOpConf() {
   EnrollOutputBn("out");
 }
 
-void UnpackOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+Maybe<void> UnpackOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                               const ParallelContext* parallel_ctx) const {
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp(SoleIbn());
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp(SoleObn());
@@ -26,7 +26,7 @@ void UnpackOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBl
   out_blob_desc->mut_dim0_inner_shape() = Shape({1, out_blob_desc->shape().At(0)});
 }
 
-void UnpackOp::InferOutputBlobTimeShape(
+Maybe<void> UnpackOp::InferOutputBlobTimeShape(
     std::function<const Shape*(const std::string&)> GetTimeShape4BnInOp,
     const ParallelContext* parallel_ctx, Shape* time_shape) const {
   std::vector<int64_t> dim_vec(GetTimeShape4BnInOp("in")->dim_vec());

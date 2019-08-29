@@ -18,7 +18,7 @@ void ReduceSumOp::InitFromOpConf() {
 
 const PbMessage& ReduceSumOp::GetCustomizedConf() const { return op_conf().reduce_sum_conf(); }
 
-void ReduceSumOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+Maybe<void> ReduceSumOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                  const ParallelContext*) const {
   const ReduceSumOpConf& conf = op_conf().reduce_sum_conf();
   const BlobDesc* in_blob = GetBlobDesc4BnInOp("in");
@@ -42,7 +42,7 @@ void ReduceSumOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Ge
   }
 }
 
-void ReduceSumOp::InferHasBatchDim(
+Maybe<void> ReduceSumOp::InferHasBatchDim(
     std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
   const auto& reduced_axes = op_conf().reduce_sum_conf().axis();
   HashSet<int64_t> conf_axes = {reduced_axes.begin(), reduced_axes.end()};

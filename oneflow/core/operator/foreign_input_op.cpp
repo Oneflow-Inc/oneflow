@@ -23,7 +23,7 @@ const PbMessage& ForeignInputOp::GetCustomizedConf() const {
   return op_conf().foreign_input_conf();
 }
 
-void ForeignInputOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+Maybe<void> ForeignInputOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                     const ParallelContext* parallel_ctx) const {
   CHECK_EQ(parallel_ctx->parallel_num(), 1);
   CheckOpConf(op_conf());
@@ -42,7 +42,7 @@ void ForeignInputOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)>
   }
 }
 
-void ForeignInputOp::InferHasBatchDim(
+Maybe<void> ForeignInputOp::InferHasBatchDim(
     std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
   *HasBatchDim4BnInOp("out") = op_conf().foreign_input_conf().blob_conf().has_batch_dim();
 }

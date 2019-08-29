@@ -18,7 +18,7 @@ void DecodeRandomOp::VirtualGenKernelConf(
   kernel_conf->mutable_decode_random_conf()->set_random_seed(NewRandomSeed());
 }
 
-void DecodeRandomOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+Maybe<void> DecodeRandomOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                     const ParallelContext* parallel_ctx,
                                     int64_t record_piece_size) const {
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
@@ -32,7 +32,7 @@ void DecodeRandomOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)>
   out_blob_desc->set_has_data_id_field(GlobalJobDesc().SizeOfOneDataId() > 0);
 }
 
-void DecodeRandomOp::InferHasBatchDim(
+Maybe<void> DecodeRandomOp::InferHasBatchDim(
     std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
   *HasBatchDim4BnInOp("out") = true;
 }

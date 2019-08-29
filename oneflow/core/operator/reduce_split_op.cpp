@@ -14,7 +14,7 @@ void ReduceSplitOp::InitFromOpConf() {
 
 const PbMessage& ReduceSplitOp::GetCustomizedConf() const { return op_conf().reduce_split_conf(); }
 
-void ReduceSplitOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+Maybe<void> ReduceSplitOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                    const ParallelContext* parallel_ctx) const {
   const auto& conf = op_conf().reduce_split_conf();
   FOR_RANGE(int32_t, i, 0, conf.out_num()) {
@@ -43,7 +43,7 @@ void ReduceSplitOp::VirtualGenKernelConf(
   CHECK_EQ(out_blob_elem_cnt_sum, in_blob_elem_cnt);
 }
 
-void ReduceSplitOp::InferHasBatchDim(
+Maybe<void> ReduceSplitOp::InferHasBatchDim(
     std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
   CHECK_EQ(*HasBatchDim4BnInOp("in"), false);
   for (const auto& ibn : input_bns()) { *HasBatchDim4BnInOp(ibn) = false; }

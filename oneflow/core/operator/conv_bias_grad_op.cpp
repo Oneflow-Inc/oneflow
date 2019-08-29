@@ -13,7 +13,7 @@ void ConvBiasGradOp::InitFromOpConf() {
   EnrollOutputBn("bias_diff", false);
 }
 
-void ConvBiasGradOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+Maybe<void> ConvBiasGradOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                     const ParallelContext* parallel_ctx) const {
   const ConvBiasGradOpConf& conf = this->op_conf().conv_bias_grad_conf();
   const BlobDesc* dy = GetBlobDesc4BnInOp("dy");
@@ -31,7 +31,7 @@ void ConvBiasGradOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)>
   }
 }
 
-void ConvBiasGradOp::InferHasBatchDim(
+Maybe<void> ConvBiasGradOp::InferHasBatchDim(
     std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
   CHECK(*HasBatchDim4BnInOp("dy"));
   *HasBatchDim4BnInOp("bias_diff") = false;

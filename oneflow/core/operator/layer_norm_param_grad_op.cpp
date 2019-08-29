@@ -19,7 +19,7 @@ void LayerNormParamGradOp::InitFromOpConf() {
   if (conf.has_gamma()) { EnrollInputBn("gamma", false); }
 }
 
-void LayerNormParamGradOp::InferBlobDescs(
+Maybe<void> LayerNormParamGradOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   CHECK(parallel_ctx->policy() != kModelParallel);
@@ -62,7 +62,7 @@ void LayerNormParamGradOp::InferBlobDescs(
   }
 }
 
-void LayerNormParamGradOp::InferHasBatchDim(
+Maybe<void> LayerNormParamGradOp::InferHasBatchDim(
     std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
   for (const auto& obn : output_bns()) { *HasBatchDim4BnInOp(obn) = false; }
   const LayerNormParamGradOpConf& conf = op_conf().layer_norm_param_grad_conf();

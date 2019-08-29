@@ -15,7 +15,7 @@ class LossOp : public Operator {
   void InitFromOpConf() override;
   LogicalNode* NewProperLogicalNode() const override { return new LossLogicalNode; }
 
-  void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+  Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                       const ParallelContext* parallel_ctx) const override;
   bool IsLossOp() const override { return true; }
 
@@ -31,7 +31,7 @@ class LossOp : public Operator {
                             KernelConf* kernel_conf) const override;
 
  private:
-  void InferHasBatchDim(std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const override;
+  Maybe<void> InferHasBatchDim(std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const override;
   void GetSbpSignatures(
       const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
       SbpSignatureList* sbp_sig_list) const override;

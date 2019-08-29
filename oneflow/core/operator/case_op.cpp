@@ -9,7 +9,7 @@ void CaseOp::InitFromOpConf() {
   EnrollRepeatedOutputBn("out", false);
 }
 
-void CaseOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+Maybe<void> CaseOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                             const ParallelContext* parallel_ctx) const {
   const BlobDesc* in = GetBlobDesc4BnInOp("in");
   CHECK_EQ(in->shape().elem_cnt(), 1);
@@ -24,7 +24,7 @@ void CaseOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlob
 
 const PbMessage& CaseOp::GetCustomizedConf() const { return op_conf().case_conf(); }
 
-void CaseOp::InferHasBatchDim(std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
+Maybe<void> CaseOp::InferHasBatchDim(std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
   for (const std::string& obn : output_bns()) {
     *HasBatchDim4BnInOp(obn) = *HasBatchDim4BnInOp("in");
   }

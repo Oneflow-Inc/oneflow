@@ -12,7 +12,7 @@ void TanHGradOp::InitFromOpConf() {
 
 const PbMessage& TanHGradOp::GetCustomizedConf() const { return op_conf().tanh_grad_conf(); }
 
-void TanHGradOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+Maybe<void> TanHGradOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                 const ParallelContext* parallel_ctx) const {
   *GetBlobDesc4BnInOp("dx") = *GetBlobDesc4BnInOp("y");
 }

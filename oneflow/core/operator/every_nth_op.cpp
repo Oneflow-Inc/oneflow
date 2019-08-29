@@ -11,7 +11,7 @@ void EveryNthOp::InitFromOpConf() {
   EnrollOutputBn("out");
 }
 
-void EveryNthOp::InferOutputBlobTimeShape(
+Maybe<void> EveryNthOp::InferOutputBlobTimeShape(
     std::function<const Shape*(const std::string&)> GetTimeShape4BnInOp,
     const ParallelContext* parallel_ctx, Shape* time_shape) const {
   const int64_t n = op_conf().every_nth_conf().n();
@@ -30,7 +30,7 @@ void EveryNthOp::InferOutputBlobTimeShape(
 
 const PbMessage& EveryNthOp::GetCustomizedConf() const { return op_conf().every_nth_conf(); }
 
-void EveryNthOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+Maybe<void> EveryNthOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                 const ParallelContext* parallel_ctx) const {
   *GetBlobDesc4BnInOp("out") = *GetBlobDesc4BnInOp("in");
 }

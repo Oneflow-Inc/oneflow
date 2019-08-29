@@ -10,7 +10,7 @@ void ReentrantLockOp::InitFromOpConf() {
   EnrollOutputBn("out", false);
 }
 
-void ReentrantLockOp::InferBlobDescs(
+Maybe<void> ReentrantLockOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   CHECK_EQ(parallel_ctx->parallel_num(), 1);
@@ -21,9 +21,9 @@ void ReentrantLockOp::InferBlobDescs(
   out->set_data_type(data_type);
 }
 
-void ReentrantLockOp::InferHasBatchDim(
+Maybe<void> ReentrantLockOp::InferHasBatchDim(
     std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
-  NaiveInferHasBatchDim(HasBatchDim4BnInOp);
+  return NaiveInferHasBatchDim(HasBatchDim4BnInOp);
 }
 
 void ReentrantLockOp::GetSbpSignatures(

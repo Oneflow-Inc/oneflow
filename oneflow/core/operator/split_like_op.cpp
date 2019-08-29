@@ -14,7 +14,7 @@ void SplitLikeOp::InitFromOpConf() {
 
 const PbMessage& SplitLikeOp::GetCustomizedConf() const { return op_conf().split_like_conf(); }
 
-void SplitLikeOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+Maybe<void> SplitLikeOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                  const ParallelContext* parallel_ctx) const {
   const SplitLikeOpConf& conf = op_conf().split_like_conf();
   const BlobDesc* like_0_blob_desc = GetBlobDesc4BnInOp(GenRepeatedBn("like", 0));
@@ -36,7 +36,7 @@ void SplitLikeOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Ge
   CHECK_EQ(dim_sum, in_dim_vec.at(split_axis));
 }
 
-void SplitLikeOp::InferHasBatchDim(
+Maybe<void> SplitLikeOp::InferHasBatchDim(
     const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
     std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
   const SplitLikeOpConf& conf = op_conf().split_like_conf();

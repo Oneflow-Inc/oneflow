@@ -14,7 +14,7 @@ class EmbeddingLookupOp final : public Operator {
   void InitFromOpConf() override;
   bool IsEmbeddingLookupOp() const override { return true; }
   const PbMessage& GetCustomizedConf() const override;
-  void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+  Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                       const ParallelContext* parallel_ctx) const override;
 
  private:

@@ -9,12 +9,12 @@ void AccOp::InitFromOpConf() {
   EnrollOutputBn("acc", false);
 }
 
-void AccOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+Maybe<void> AccOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                            const ParallelContext* parallel_ctx) const {
   *GetBlobDesc4BnInOp("acc") = *GetBlobDesc4BnInOp("one");
 }
 
-void AccOp::InferOutputBlobTimeShape(
+Maybe<void> AccOp::InferOutputBlobTimeShape(
     std::function<const Shape*(const std::string&)> GetTimeShape4BnInOp,
     const ParallelContext* parallel_ctx, Shape* time_shape) const {
   const int32_t max_acc_num = op_conf().acc_conf().max_acc_num();
@@ -24,7 +24,7 @@ void AccOp::InferOutputBlobTimeShape(
 
 const PbMessage& AccOp::GetCustomizedConf() const { return op_conf().acc_conf(); }
 
-void AccOp::InferHasBatchDim(std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
+Maybe<void> AccOp::InferHasBatchDim(std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
   *HasBatchDim4BnInOp("acc") = false;
 }
 

@@ -27,7 +27,7 @@ LogicalNode* ReduceConcatOp::NewProperLogicalNode() const {
   return new NormalForwardLogicalNode;
 }
 
-void ReduceConcatOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+Maybe<void> ReduceConcatOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                     const ParallelContext* parallel_ctx, int64_t record_piece_size,
                                     std::function<void(OpContext*)> EnrollOpCtx) const {
   const BlobDesc* first_in_blob = GetBlobDesc4BnInOp(input_bns().Get(0));
@@ -73,13 +73,13 @@ void ReduceConcatOp::VirtualGenKernelConf(
   CHECK_EQ(reduce_concat_op_ctx->out_blob_elem_cnt, out_blob_elem_cnt);
 }
 
-void ReduceConcatOp::InferHasBatchDim(
+Maybe<void> ReduceConcatOp::InferHasBatchDim(
     std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
   for (const auto& ibn : input_bns()) { CHECK_EQ(*HasBatchDim4BnInOp(ibn), false); }
   *HasBatchDim4BnInOp("out") = false;
 }
 
-void ReduceConcatOp::InferSbpSignature(
+Maybe<void> ReduceConcatOp::InferSbpSignature(
     SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
     const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
     std::function<const SbpInferHint&(const std::string&)> SbpInferHint4Ibn,

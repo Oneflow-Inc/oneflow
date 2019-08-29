@@ -15,7 +15,7 @@ void DropoutOp::InitFromOpConf() {
 
 const PbMessage& DropoutOp::GetCustomizedConf() const { return op_conf().dropout_conf(); }
 
-void DropoutOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+Maybe<void> DropoutOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                const ParallelContext* parallel_ctx) const {
   // CHECK_EQ(op_conf().dropout_conf().noise_shape().dim_size(),
   //          GetBlobDesc4BnInOp("in")->shape().NumAxes());
@@ -35,7 +35,7 @@ void DropoutOp::VirtualGenKernelConf(
   GetBlobDesc4BnInOp("out")->shape().ToProto(mut_dropout_conf->mutable_out());
 }
 
-void DropoutOp::InferHasBatchDim(
+Maybe<void> DropoutOp::InferHasBatchDim(
     std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
   for (const auto& obn : output_bns()) {
     *HasBatchDim4BnInOp(obn) = *HasBatchDim4BnInOp(SoleIbn());

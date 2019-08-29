@@ -37,7 +37,7 @@ LogicalBlobId BoxingOp::obn2lbi(const std::string& output_bn) const {
   return GetMsgFromCustomizedConf<LogicalBlobId>("lbi");
 }
 
-void BoxingOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+Maybe<void> BoxingOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                               const ParallelContext* parallel_ctx) const {
   const BoxingOpConf& conf = op_conf().boxing_conf();
   BlobDesc* first_in_blob = GetBlobDesc4BnInOp(input_bns().Get(0));

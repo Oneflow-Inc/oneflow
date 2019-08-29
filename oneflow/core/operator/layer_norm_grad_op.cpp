@@ -19,7 +19,7 @@ void LayerNormGradOp::InitFromOpConf() {
   EnrollTmpBn("cudnn_bn_bias_diff_buf");
 }
 
-void LayerNormGradOp::InferBlobDescs(
+Maybe<void> LayerNormGradOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   CHECK(parallel_ctx->policy() != kModelParallel);

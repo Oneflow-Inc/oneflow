@@ -14,7 +14,7 @@ const PbMessage& SparseCrossEntropyOp::GetCustomizedConf() const {
   return op_conf().sparse_cross_entropy_conf();
 }
 
-void SparseCrossEntropyOp::InferBlobDescs(
+Maybe<void> SparseCrossEntropyOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, int64_t record_piece_size,
     std::function<void(OpContext*)> EnrollOpCtx) const {

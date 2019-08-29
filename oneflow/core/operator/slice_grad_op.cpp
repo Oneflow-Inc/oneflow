@@ -20,7 +20,7 @@ void SliceGradOp::VirtualGenKernelConf(
   in_shape.ToProto(kernel_conf->mutable_slice_conf()->mutable_in_shape());
 }
 
-void SliceGradOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+Maybe<void> SliceGradOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                  const ParallelContext* parallel_ctx) const {
   const SliceGradOpConf& conf = op_conf().slice_grad_conf();
   const BlobDesc* like_blob_desc = GetBlobDesc4BnInOp("like");

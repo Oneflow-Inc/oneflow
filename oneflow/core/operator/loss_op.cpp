@@ -30,7 +30,7 @@ void LossOp::VirtualGenKernelConf(
   conf->set_reduction(static_cast<ScalarReductionType>(GetEnumFromCustomizedConf("reduction")));
 }
 
-void LossOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+Maybe<void> LossOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                             const ParallelContext* parallel_ctx) const {
   const BlobDesc* pred_blob_desc = GetBlobDesc4BnInOp("prediction");
   if (HasFieldInCustomizedConf("label")) {
@@ -77,7 +77,7 @@ LogicalBlobId LossOp::obn2lbi(const std::string& output_bn) const {
   return ret;
 }
 
-void LossOp::InferHasBatchDim(std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
+Maybe<void> LossOp::InferHasBatchDim(std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
   for (const auto& obn : output_bns()) { *HasBatchDim4BnInOp(obn) = false; }
   *HasBatchDim4BnInOp("loss") = *HasBatchDim4BnInOp("prediction");
 }

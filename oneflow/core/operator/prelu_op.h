@@ -13,7 +13,7 @@ class PReluOp final : public Operator {
 
   void InitFromOpConf() override;
   const PbMessage& GetCustomizedConf() const override;
-  void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+  Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                       const ParallelContext* parallel_ctx) const override;
   void VirtualFixParallelDesc(ParallelDesc* pr_desc) const override;
 
@@ -21,9 +21,9 @@ class PReluOp final : public Operator {
   void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                             const ParallelContext*, KernelConf*) const override;
 
-  void InferHasBatchDim(
+  Maybe<void> InferHasBatchDim(
       std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const override {
-    NaiveInferHasBatchDim(HasBatchDim4BnInOp);
+    return NaiveInferHasBatchDim(HasBatchDim4BnInOp);
   }
 
   void GetSbpSignatures(

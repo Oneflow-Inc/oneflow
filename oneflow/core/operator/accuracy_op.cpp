@@ -22,7 +22,7 @@ void AccuracyOp::VirtualGenKernelConf(
   conf->set_label_type(GetBlobDesc4BnInOp("label")->data_type());
 }
 
-void AccuracyOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+Maybe<void> AccuracyOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                 const ParallelContext* parallel_ctx) const {
   BlobDesc* pred_blob_desc = GetBlobDesc4BnInOp("prediction");
   BlobDesc* label_blob_desc = GetBlobDesc4BnInOp("label");

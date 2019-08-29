@@ -50,7 +50,7 @@ const PbMessage& NormalizationOp::GetCustomizedConf() const {
   return op_conf().normalization_conf();
 }
 
-void NormalizationOp::InferBlobDescs(
+Maybe<void> NormalizationOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   const NormalizationOpConf& conf = op_conf().normalization_conf();
@@ -82,7 +82,7 @@ void NormalizationOp::InferBlobDescs(
   }
 }
 
-void NormalizationOp::InferHasBatchDim(
+Maybe<void> NormalizationOp::InferHasBatchDim(
     std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
   *HasBatchDim4BnInOp("out") = *HasBatchDim4BnInOp("in");
   *HasBatchDim4BnInOp("mean") = false;

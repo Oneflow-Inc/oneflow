@@ -13,7 +13,7 @@ void GeluGradOp::InitFromOpConf() {
 
 const PbMessage& GeluGradOp::GetCustomizedConf() const { return op_conf().gelu_grad_conf(); }
 
-void GeluGradOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+Maybe<void> GeluGradOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                 const ParallelContext* parallel_ctx) const {
   *GetBlobDesc4BnInOp("dx") = *GetBlobDesc4BnInOp("x");
 }

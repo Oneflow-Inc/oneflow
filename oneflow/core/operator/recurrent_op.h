@@ -14,7 +14,7 @@ class RecurrentOp : public Operator {
   void InitFromOpConf() override;
   bool IsRecurrentOp() const override { return true; }
 
-  void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+  Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                       const ParallelContext* parallel_ctx) const override;
 
  private:

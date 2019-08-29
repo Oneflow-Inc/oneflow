@@ -11,7 +11,7 @@ void EmbeddingLookupAccumulateOp::InitFromOpConf() {
   EnrollOutputBn("acc_val", false);
 }
 
-void EmbeddingLookupAccumulateOp::InferBlobDescs(
+Maybe<void> EmbeddingLookupAccumulateOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   // use vars

@@ -11,7 +11,7 @@ void SwitchOutputOp::InitFromOpConf() {
   EnrollOutputBn("out");
 }
 
-void SwitchOutputOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+Maybe<void> SwitchOutputOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                     const ParallelContext* parallel_ctx) const {
   const BlobDesc& in_index_blob_desc = *GetBlobDesc4BnInOp("in_index");
   CHECK(in_index_blob_desc.shape() == Shape({1LL}));
@@ -29,7 +29,7 @@ const PbMessage& SwitchOutputOp::GetCustomizedConf() const {
   return op_conf().switch_output_conf();
 }
 
-void SwitchOutputOp::InferHasBatchDim(
+Maybe<void> SwitchOutputOp::InferHasBatchDim(
     std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
   CHECK_EQ(*HasBatchDim4BnInOp("in_index"), false);
   bool first_in_has_batch_dim = *HasBatchDim4BnInOp(GenRepeatedBn("in", 0));

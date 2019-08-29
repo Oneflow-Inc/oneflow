@@ -13,7 +13,7 @@ const PbMessage& DefineTestBlobOp::GetCustomizedConf() const {
   return op_conf().define_test_blob_conf();
 }
 
-void DefineTestBlobOp::InferBlobDescs(
+Maybe<void> DefineTestBlobOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
@@ -34,7 +34,7 @@ void DefineTestBlobOp::InferBlobDescs(
   if (conf.has_dim0_valid_num()) { CHECK(conf.has_dim0_inner_shape()); }
 }
 
-void DefineTestBlobOp::InferHasBatchDim(
+Maybe<void> DefineTestBlobOp::InferHasBatchDim(
     std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
   *HasBatchDim4BnInOp("out") = true;
 }

@@ -8,7 +8,7 @@ void ForeignOutputOp::InitFromOpConf() {
   EnrollInputBn("in");
 }
 
-void ForeignOutputOp::InferBlobDescs(
+Maybe<void> ForeignOutputOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   CHECK_EQ(parallel_ctx->parallel_num(), 1);
@@ -18,7 +18,7 @@ const PbMessage& ForeignOutputOp::GetCustomizedConf() const {
   return op_conf().foreign_output_conf();
 }
 
-void ForeignOutputOp::InferHasBatchDim(
+Maybe<void> ForeignOutputOp::InferHasBatchDim(
     std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {}
 
 void ForeignOutputOp::GetSbpSignatures(

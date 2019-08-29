@@ -13,7 +13,7 @@ void GatherGradOp::InitFromOpConf() {
 
 const PbMessage& GatherGradOp::GetCustomizedConf() const { return op_conf().gather_grad_conf(); }
 
-void GatherGradOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+Maybe<void> GatherGradOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                   const ParallelContext* parallel_ctx) const {
   const GatherGradOpConf& conf = op_conf().gather_grad_conf();
   const BlobDesc* indices = GetBlobDesc4BnInOp("indices");
@@ -62,7 +62,7 @@ void GatherGradOp::GetSbpSignatures(
       .Build(sbp_sig_list->mutable_sbp_signature()->Add());
 }
 
-void GatherGradOp::InferHasBatchDim(
+Maybe<void> GatherGradOp::InferHasBatchDim(
     std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
   *HasBatchDim4BnInOp("in_diff") = false;
 }
