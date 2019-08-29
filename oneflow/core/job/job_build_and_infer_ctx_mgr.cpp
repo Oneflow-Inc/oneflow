@@ -13,6 +13,6 @@ Maybe<JobBuildAndInferCtx> JobBuildAndInferCtxMgr::FindJobBuildAndInferCtx(
 
 Maybe<std::string> JobBuildAndInferCtxMgr::GetCurrentJobName() { TODO(); }
 
-Maybe<void> JobBuildAndInferCtxMgr::LeaveCurrentJobBuildAndInferCtx() { TODO(); }
+void JobBuildAndInferCtxMgr::LeaveCurrentJobBuildAndInferCtx() { TODO(); }
 
 }  // namespace oneflow

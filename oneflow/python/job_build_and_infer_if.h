@@ -4,34 +4,23 @@
 
 std::string JobBuildAndInferCtx_NewAndEnter(const std::string& job_name) { TODO(); }
 
-std::pair<std::string, std::string> JobBuildAndInferCtx_GetCurrentJobName(
-    const std::string& job_name) {
+std::pair<std::string, std::string> JobBuildAndInferCtx_GetCurrentJobName() { TODO(); }
+
+void JobBuildAndInferCtx_Leave() { TODO(); }
+
+std::string CurJobBuildAndInferCtx_SetJobConf(const std::string& serialized_job_conf) { TODO(); }
+
+std::string CurJobBuildAndInferCtx_AddAndInferInputOp(const std::string& serialized_op_conf) {
   TODO();
 }
 
-std::string JobBuildAndInferCtx_Leave() { TODO(); }
-
-std::string JobBuildAndInferCtx_SetJobConf(const std::string& job_name,
-                                           const std::string& serialized_job_conf) {
+std::string CurJobBuildAndInferCtx_AddAndInferNonInputOp(const std::string& serialized_op_conf) {
   TODO();
 }
 
-std::string JobBuildAndInferCtx_AddAndInferInputOp(const std::string& job_name,
-                                                   const std::string& serialized_op_conf) {
-  TODO();
-}
+std::string CurJobBuildAndInferCtx_AddLossLogicalBlobName(const std::string& lbn) { TODO(); }
 
-std::string JobBuildAndInferCtx_AddAndInferNonInputOp(const std::string& job_name,
-                                                      const std::string& serialized_op_conf) {
-  TODO();
-}
-
-std::string JobBuildAndInferCtx_AddLossLogicalBlobName(const std::string& job_name,
-                                                       const std::string& lbn) {
-  TODO();
-}
-
-bool JobBuildAndInferCtx_HasJobConf(const std::string& job_name) { TODO(); }
+bool CurJobBuildAndInferCtx_HasJobConf() { TODO(); }
 
 std::pair<std::string, std::string> JobBuildAndInferCtx_GetSerializedIdListAsStaticShape(
     const std::string& job_name, const std::string& lbn) {
