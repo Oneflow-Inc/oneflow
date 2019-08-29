@@ -31,7 +31,7 @@ bool DeviceAndDTypeConstraint::IsMatched(const KernelConf& kernel_conf) {
 void DeviceAndDTypeConstraint::ToProto(KernelRegValProto::RegVal* val) const {
   KernelRegValProto::Device7DType proto;
   proto.set_device(dev_);
-  proto.add_dtype(dtype_);
+  proto.set_dtype(dtype_);
   *(val->mutable_device_and_dtypes()->Add()) = proto;
 }
 

@@ -27,7 +27,7 @@ class KernelConstraint {
 
   virtual bool IsMatched(const KernelConf&) = 0;
   virtual size_t PriorityLevel() { return 0; }  // big number means high priority
-  virtual void ToProto(KernelRegValProto::RegVal* val) const = 0;
+  virtual void ToProto(KernelRegValProto::RegVal*) const = 0;
 };
 
 class DeviceAndDTypeConstraint final : public KernelConstraint {
