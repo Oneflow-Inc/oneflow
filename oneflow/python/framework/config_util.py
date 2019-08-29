@@ -241,7 +241,6 @@ class JobConfigProtoBuilder(object):
             lbn_list.append(blob.logical_blob_name)
         return self.job_conf_.train_conf.loss_lbn.extend(lbn_list)
       
-
 def TryCompleteDefaultConfigProto(config):
     _DefaultConfigResource(config)
     _DefaultConfigIO(config)

@@ -241,16 +241,9 @@ def TrainAlexNet():
     job_conf.train_conf().primary_lr = 0.00001
     job_conf.train_conf().num_of_batches_in_snapshot = 100
     job_conf.train_conf().model_update_conf.naive_conf.SetInParent()
-<<<<<<< HEAD
     loss_blob = BuildAlexNetWithDeprecatedAPI(args.train_dir)
     job_conf.add_loss(loss_blob)
     return loss_blob
-=======
-    return job_conf.add_loss(BuildAlexNetWithDeprecatedAPI(args.train_dir))
-    #return BuildAlexNetWithDeprecatedAPI(args.train_dir)
-
->>>>>>> 4a1d2a27c4e534ae0bddf20a5f9a14468fa5e6e9
-
 
 def EvaluateAlexNet():
     job_conf = flow.get_cur_job_conf_builder()
