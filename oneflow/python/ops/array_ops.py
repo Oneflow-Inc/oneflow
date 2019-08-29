@@ -10,7 +10,9 @@ from oneflow.python.oneflow_export import oneflow_export
 
 
 @oneflow_export("gather")
-def gather(params, indices, validate_indices=None, axis=None, batch_dims=0, name=None):
+def gather(
+    params, indices, validate_indices=None, axis=None, batch_dims=0, name=None
+):
     op_conf = op_conf_util.OperatorConf()
     if name is None:
         op_conf.name = id_util.UniqueStr("Gather_")
@@ -25,9 +27,9 @@ def gather(params, indices, validate_indices=None, axis=None, batch_dims=0, name
             op_conf.batch_gather_conf.indices = indices.logical_blob_name
             op_conf.batch_gather_conf.out = "out"
         elif axis > batch_dims:
-            raise(NotImplementedError)
+            raise (NotImplementedError)
         else:
-            raise(AttributeError)
+            raise (AttributeError)
     else:
         setattr(op_conf.gather_conf, "in", params.logical_blob_name)
         op_conf.gather_conf.indices = indices.logical_blob_name

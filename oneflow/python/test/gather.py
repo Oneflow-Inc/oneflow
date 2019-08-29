@@ -8,7 +8,7 @@ oneflow.init(config)
 
 def gather_test_job_1(
     a=oneflow.input_blob_def((2, 3, 4)),
-    b=oneflow.input_blob_def((5,), dtype=oneflow.int32)
+    b=oneflow.input_blob_def((5,), dtype=oneflow.int32),
 ):
     r"""1-D indices gather test job"""
     job_conf = oneflow.get_cur_job_conf_builder()
@@ -18,7 +18,7 @@ def gather_test_job_1(
 
 def gather_test_job_2(
     a=oneflow.input_blob_def((2, 3, 4)),
-    b=oneflow.input_blob_def((2, 2), dtype=oneflow.int32)
+    b=oneflow.input_blob_def((2, 2), dtype=oneflow.int32),
 ):
     r"""(>1)-D indices gather test job"""
     job_conf = oneflow.get_cur_job_conf_builder()
@@ -28,7 +28,7 @@ def gather_test_job_2(
 
 def gather_test_job_3(
     a=oneflow.input_blob_def((2, 3, 4)),
-    b=oneflow.input_blob_def((2, 2), dtype=oneflow.int32)
+    b=oneflow.input_blob_def((2, 2), dtype=oneflow.int32),
 ):
     r"""batch_gather test job (batch_dims==axis)"""
     job_conf = oneflow.get_cur_job_conf_builder()
@@ -38,7 +38,7 @@ def gather_test_job_3(
 
 def gather_test_job_4(
     a=oneflow.input_blob_def((2, 3, 4)),
-    b=oneflow.input_blob_def((2, 2, 2), dtype=oneflow.int32)
+    b=oneflow.input_blob_def((2, 2, 2), dtype=oneflow.int32),
 ):
     r"""gather & batch_gather mixed test job (batch_dims==1, axis>batch_dims)"""
     job_conf = oneflow.get_cur_job_conf_builder()
@@ -69,7 +69,7 @@ def _gather_test_case_1(session):
     exp = a[:, b, :]
     print("expectd output: ")
     print(exp)
-    assert(numpy.allclose(ret, exp))
+    assert numpy.allclose(ret, exp)
     print("## Done ##")
 
 
@@ -90,7 +90,7 @@ def _gather_test_case_2(session):
     exp = a[:, b, :]
     print("expectd output: ")
     print(exp)
-    assert(numpy.allclose(ret, exp))
+    assert numpy.allclose(ret, exp)
     print("## Done ##")
 
 
@@ -115,7 +115,7 @@ def _gather_test_case_3(session):
     print("shape: ", ret.shape)
     print("expectd output: ")
     print(exp)
-    assert(numpy.allclose(ret, exp))
+    assert numpy.allclose(ret, exp)
     print("## Done ##")
 
 
