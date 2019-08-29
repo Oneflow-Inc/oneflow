@@ -13,16 +13,14 @@ class JobBuildAndInferCtxMgr {
   OF_DISALLOW_COPY_AND_MOVE(JobBuildAndInferCtxMgr);
   ~JobBuildAndInferCtxMgr() = default;
 
-  Maybe<void> EnterJobBuildAndInferContext(const std::string& job_name);
-  Maybe<JobBuildAndInferCtx> GetCurrentJobBuildAndInferCtx();
-  Maybe<void> LeaveCurrentJobBuildAndInferCtx();
+  Maybe<void> CreateJobBuildAndInferCtx(const std::string& job_name);
+  Maybe<JobBuildAndInferCtx> FindJobBuildAndInferCtx(const std::string& job_name);
 
  private:
-  JobBuildAndInferCtxMgr() : cur_infer_ctx_(nullptr) {}
+  JobBuildAndInferCtxMgr() = default;
   friend class Global<JobBuildAndInferCtxMgr>;
 
   HashMap<std::string, std::shared_ptr<JobBuildAndInferCtx>> job_name2infer_ctx_;
-  std::shared_ptr<JobBuildAndInferCtx> cur_infer_ctx_;
 };
 
 }  // namespace oneflow

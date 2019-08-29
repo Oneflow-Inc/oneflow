@@ -7,6 +7,7 @@
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/job.pb.h"
+#include "oneflow/core/register/blob_desc.h"
 
 namespace oneflow {
 
@@ -34,6 +35,8 @@ class JobBuildAndInferCtx {
   const Job& job() const;
 
  private:
+  Job job_;
+  HashMap<std::string, BlobDesc*> lbn2logical_blob_desc_;
 };
 
 }  // namespace oneflow
