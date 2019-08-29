@@ -34,9 +34,6 @@ COPY CMakeLists.txt /workspace/CMakeLists.txt
 
 # BUILD DEPENDENCY
 COPY build/third_party /workspace/build/third_party
-# COPY third_party /workspace/third_party 
-# COPY build/nccl /workspace/build/nccl
-# COPY build/opencv /workspace/build/opencv
 RUN cmake -DTHIRD_PARTY=ON -DCMAKE_BUILD_TYPE=Release -DRELEASE_VERSION=ON .. && make -j
 
 # BUILD ONEFLOW
@@ -44,5 +41,13 @@ COPY oneflow /workspace/oneflow
 COPY tools /workspace/tools
 
 RUN cmake -DTHIRD_PARTY=OFF -DPY3=ON .. && make -j $(nproc) 
-ENV PYTHONPATH=/workspace/build/python_scripts:$PYTHONPATH
-# RUN cmake -DTHIRD_PARTY=OFF .. && make -j 48 
+
+## BUILD WHEEL
+WORKDIR /workspace
+RUN pip3 install wheel
+COPY setup.py /workspace/setup.py
+RUN python3 setup.py bdist_wheel
+RUN pip3 install /workspace/dist/*.whl
+
+RUN rm -rf oneflow
+# ENV PYTHONPATH=/workspace/build/python_scripts:$PYTHONPATH
