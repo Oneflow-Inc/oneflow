@@ -32,7 +32,6 @@ SnapshotMgr::SnapshotMgr(const Plan& plan) {
   }
   const std::string& load_path = Global<const IOConf>::Get()->model_load_snapshot_path();
   if (!load_path.empty()) { readable_snapshot_.reset(new Snapshot(load_path)); }
-  total_mbn_num_ = plan.total_mbn_num();
 }
 
 Snapshot* SnapshotMgr::GetWriteableSnapshot(int64_t snapshot_id) {

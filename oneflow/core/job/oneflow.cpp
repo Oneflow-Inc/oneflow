@@ -1,7 +1,6 @@
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/control/ctrl_client.h"
-#include "oneflow/core/control/ctrl_server.h"
 #include "oneflow/core/common/buffer_manager.h"
 #include "oneflow/core/job/compiler.h"
 #include "oneflow/core/job/improver.h"
@@ -9,20 +8,14 @@
 #include "oneflow/core/job/job_builder.h"
 #include "oneflow/core/job_completer/user_job_completer.h"
 #include "oneflow/core/job/job_set.pb.h"
-#include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/machine_context.h"
 #include "oneflow/core/job/profiler.h"
 #include "oneflow/core/job/sub_plan.pb.h"
 #include "oneflow/core/job/plan.pb.h"
 #include "oneflow/core/job/critical_section_desc.h"
 #include "oneflow/core/job/available_memory_desc.pb.h"
-#include "oneflow/core/job/foreign_job_instance.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
-#include "oneflow/core/persistence/file_system.h"
 #include "oneflow/core/actor/act_event_logger.h"
-#include "oneflow/core/graph/plan_task_graph.h"
-#include "oneflow/core/memory/memory_allocator.h"
-#include "oneflow/core/graph/task_node.h"
 #include "oneflow/core/job/oneflow.h"
 #include "oneflow/core/job/model_init_job.h"
 #include "oneflow/core/job/inter_job_mem_sharing_util.h"
@@ -65,8 +58,6 @@ std::string sub_plan_key(const std::string& plan_name, int64_t machine_id, int64
   return plan_name + "_" + std::to_string(machine_id) + "_" + std::to_string(thrd_id);
 }
 
-std::string total_mbn_num_key(const std::string& plan_name) { return plan_name + "_total_mbn_num"; }
-
 void PushPlan(const std::string& plan_name, const Plan& plan) {
   HashMap<int64_t, std::set<int64_t>> machine_id2thrd_id_set;
   HashMap<std::pair<int64_t, int64_t>, std::vector<TaskProto>> mchn_thrd_id2task_protos;
@@ -92,8 +83,6 @@ void PushPlan(const std::string& plan_name, const Plan& plan) {
     Global<CtrlClient>::Get()->PushKV(sub_plan_key(plan_name, pair.first.first, pair.first.second),
                                       sub_plan);
   }
-  Global<CtrlClient>::Get()->PushKV(total_mbn_num_key(plan_name),
-                                    std::to_string(plan.total_mbn_num()));
 
   Global<CtrlClient>::Get()->PushKV(net_topo_key(plan_name), plan.net_topo());
   Global<CtrlClient>::Get()->PushKV(job_id2job_conf(plan_name), plan.job_confs());
@@ -114,9 +103,6 @@ void PullPlan(const std::string& plan_name, Plan* plan) {
     Global<CtrlClient>::Get()->PullKV(sub_plan_key(plan_name, machine_id, thrd_id), &sub_plan);
     plan->mutable_task()->MergeFrom(sub_plan.task());
   }
-  std::string total_mbn_num;
-  Global<CtrlClient>::Get()->PullKV(total_mbn_num_key(plan_name), &total_mbn_num);
-  plan->set_total_mbn_num(oneflow_cast<int64_t>(total_mbn_num));
   NetTopo net_topo;
   Global<CtrlClient>::Get()->PullKV(net_topo_key(plan_name), &net_topo);
   *(plan->mutable_net_topo()) = net_topo;
@@ -176,7 +162,6 @@ void MergeSubPlanWithoutGenNetTopo(Plan* plan, const std::vector<Plan>& sub_plan
   *plan = sub_plans.at(0);
   FOR_RANGE(int32_t, i, 1, sub_plans.size()) {
     MergePlanWithoutGenNetTopo(plan, sub_plans.at(i));
-    plan->set_total_mbn_num(plan->total_mbn_num() + sub_plans.at(i).total_mbn_num());
   }
 }
 
