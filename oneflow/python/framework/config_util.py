@@ -7,130 +7,143 @@ import oneflow.python.framework.compile_context as compile_context
 from oneflow.python.oneflow_export import oneflow_export
 import oneflow.python.lib.core.pb_util as pb_util
 
-inited_config_proto = None
+@oneflow_export('gpu_device_num')
+def gpu_device_num(val):
+    assert config_proto_inited == False
+    assert type(val) is int
+    config_proto.resource.gpu_device_num = val
 
-@oneflow_export('ConfigProtoBuilder')
-class ConfigProtoBuilder(object):
-    def __init__(self):
-        self.config_proto_ = job_set_util.ConfigProto()
+@oneflow_export('cpu_device_num')
+def cpu_device_num(val):
+    assert config_proto_inited == False
+    assert type(val) is int
+    config_proto.resource.cpu_device_num = val
 
-    @property
-    def config_proto(self):
-        return self.config_proto_
+@oneflow_export('machine')
+def machine(val):
+    assert config_proto_inited == False
+    del config_proto.resource.machine[:]
+    config_proto.resource.machine.extend(_MakeMachine(val))
 
-    def gpu_device_num(self, val):
-        assert type(val) is int
-        self.config_proto_.resource.gpu_device_num = val
-        return self
+@oneflow_export('ctrl_port')
+def ctrl_port(val):
+    assert config_proto_inited == False
+    assert type(val) is int
+    config_proto.resource.ctrl_port = val
 
-    def cpu_device_num(self, val):
-        assert type(val) is int
-        self.config_proto_.resource.cpu_device_num = val
-        return self
+@oneflow_export('data_port')
+def data_port(val):
+    assert config_proto_inited == False
+    assert type(val) is int
+    config_proto.resource.data_port = val
 
-    def machine(self, val):
-        self.config_proto_.resource.machine.extend(_MakeMachine(val))
-        return self
+@oneflow_export('comm_net_worker_num')
+def comm_net_worker_num(val):
+    assert config_proto_inited == False
+    assert type(val) is int
+    config_proto.resource.comm_net_worker_num = val
 
-    def ctrl_port(self, val):
-        assert type(val) is int
-        self.config_proto_.resource.ctrl_port = val
-        return self
+@oneflow_export('max_mdsave_worker_num')
+def max_mdsave_worker_num(val):
+    assert config_proto_inited == False
+    assert type(val) is int
+    config_proto.resource.max_mdsave_worker_num = val
 
-    def data_port(self, val):
-        assert type(val) is int
-        self.config_proto_.resource.data_port = val
-        return self
+@oneflow_export('rdma_mem_block_mbyte')
+def rdma_mem_block_mbyte(val):
+    assert config_proto_inited == False
+    assert type(val) is int
+    config_proto.resource.rdma_mem_block_mbyte = val
 
-    def comm_net_worker_num(self, val):
-        assert type(val) is int
-        self.config_proto_.resource.comm_net_worker_num = val
-        return self
+@oneflow_export('rdma_recv_msg_buf_mbyte')
+def rdma_recv_msg_buf_mbyte(val):
+    assert config_proto_inited == False
+    assert type(val) is int
+    config_proto.resource.rdma_recv_msg_buf_mbyte = val
 
-    def max_mdsave_worker_num(self, val):
-        assert type(val) is int
-        self.config_proto_.resource.max_mdsave_worker_num = val
-        return self
+@oneflow_export('reserved_host_mem_mbyte')
+def reserved_host_mem_mbyte(val):
+    assert config_proto_inited == False
+    assert type(val) is int
+    config_proto.resource.reserved_host_mem_mbyte = val
 
-    def rdma_mem_block_mbyte(self, val):
-        assert type(val) is int
-        self.config_proto_.resource.rdma_mem_block_mbyte = val
-        return self
+@oneflow_export('reserved_device_mem_mbyte')
+def reserved_device_mem_mbyte(val):
+    assert config_proto_inited == False
+    assert type(val) is int
+    config_proto.resource.reserved_device_mem_mbyte = val
 
-    def rdma_recv_msg_buf_mbyte(self, val):
-        assert type(val) is int
-        self.config_proto_.resource.rdma_recv_msg_buf_mbyte = val
-        return self
+@oneflow_export('use_rdma')
+def use_rdma(val = True):
+    assert config_proto_inited == False
+    assert type(val) is bool
+    config_proto.resource.use_rdma = val
 
-    def reserved_host_mem_mbyte(self, val):
-        assert type(val) is int
-        self.config_proto_.resource.reserved_host_mem_mbyte = val
-        return self
+@oneflow_export('model_load_snapshot_path')
+def model_load_snapshot_path(val):
+    assert config_proto_inited == False
+    assert type(val) is str
+    config_proto.io_conf.model_load_snapshot_path = val
 
-    def reserved_device_mem_mbyte(self, val):
-        assert type(val) is int
-        self.config_proto_.resource.reserved_device_mem_mbyte = val
-        return self
+@oneflow_export('model_save_snapshots_path')
+def model_save_snapshots_path(val):
+    assert config_proto_inited == False
+    assert type(val) is str
+    config_proto.io_conf.model_save_snapshots_path = val
 
-    def use_rdma(self, val = True):
-        assert type(val) is bool
-        self.config_proto_.resource.use_rdma = val
-        return self
+@oneflow_export('enable_write_snapshot')
+def enable_write_snapshot(val = True):
+    assert config_proto_inited == False
+    assert type(val) is bool
+    config_proto.io_conf.enable_write_snapshot = val
 
-    def model_load_snapshot_path(self, val):
-        assert type(val) is str
-        self.config_proto_.io_conf.model_load_snapshot_path = val
-        return self
+@oneflow_export('save_downloaded_file_to_local_fs')
+def save_downloaded_file_to_local_fs(val = True):
+    assert config_proto_inited == False
+    assert type(val) is bool
+    config_proto.io_conf.save_downloaded_file_to_local_fs = val
 
-    def model_save_snapshots_path(self, val):
-        assert type(val) is str
-        self.config_proto_.io_conf.model_save_snapshots_path = val
-        return self
+@oneflow_export('persistence_buf_byte')
+def persistence_buf_byte(val):
+    assert config_proto_inited == False
+    assert type(val) is int
+    config_proto.io_conf.persistence_buf_byte = val
 
-    def enable_write_snapshot(self, val = True):
-        assert type(val) is bool
-        self.config_proto_.io_conf.enable_write_snapshot = val
-        return self
+@oneflow_export('log_dir')
+def log_dir(val):
+    assert config_proto_inited == False
+    assert type(val) is str
+    config_proto.cpp_flags_conf.log_dir = val
 
-    def save_downloaded_file_to_local_fs(self, val = True):
-        assert type(val) is bool
-        self.config_proto_.io_conf.save_downloaded_file_to_local_fs = val
-        return self
+@oneflow_export('logtostderr')
+def logtostderr(val):
+    assert config_proto_inited == False
+    assert type(val) is int
+    config_proto.cpp_flags_conf.logtostderr = val
 
-    def persistence_buf_byte(self, val):
-        assert type(val) is int
-        self.config_proto_.io_conf.persistence_buf_byte = val
-        return self
+@oneflow_export('logbuflevel')
+def logbuflevel(val):
+    assert config_proto_inited == False
+    assert type(val) is int
+    config_proto.cpp_flags_conf.logbuflevel = val
 
-    def log_dir(self, val):
-        assert type(val) is str
-        self.config_proto_.cpp_flags_conf.log_dir = val
-        return self
+@oneflow_export('v')
+def v(val):
+    assert config_proto_inited == False
+    assert type(val) is int
+    config_proto.cpp_flags_conf.v = val
 
-    def logtostderr(self, val):
-        assert type(val) is int
-        self.config_proto_.cpp_flags_conf.logtostderr = val
-        return self
+@oneflow_export('grpc_use_no_signal')
+def grpc_use_no_signal(val = True):
+    assert config_proto_inited == False
+    assert type(val) is bool
+    config_proto.cpp_flags_conf.grpc_use_no_signal = val
 
-    def logbuflevel(self, val):
-        assert type(val) is int
-        self.config_proto_.cpp_flags_conf.logbuflevel = val
-        return self
-
-    def v(self, val):
-        assert type(val) is int
-        self.config_proto_.cpp_flags_conf.v = val
-        return self
-
-    def grpc_use_no_signal(self, val = True):
-        assert type(val) is bool
-        self.config_proto_.cpp_flags_conf.grpc_use_no_signal = val
-        return self
-
-    def collect_act_event(self, val = True):
-        assert type(val) is int
-        self.config_proto_.profile_conf.collect_act_event = val
-        return self
+@oneflow_export('collect_act_event')
+def collect_act_event(val = True):
+    assert config_proto_inited == False
+    assert type(val) is int
+    config_proto.profile_conf.collect_act_event = val
 
 class JobConfigProtoBuilder(object):
     def __init__(self, job_conf):
@@ -235,6 +248,11 @@ class JobConfigProtoBuilder(object):
         self.job_conf_.train_conf.SetInParent()
         return self.job_conf_.train_conf
 
+def DefaultConfigProto():
+    config_proto = job_set_util.ConfigProto()
+    TryCompleteDefaultConfigProto(config_proto)
+    return config_proto
+
 def TryCompleteDefaultConfigProto(config):
     _DefaultConfigResource(config)
     _DefaultConfigIO(config)
@@ -292,3 +310,6 @@ def _TryCompleteDefaultJobConfigProto(job_conf):
         job_conf.predict_conf.SetInParent()
     if job_conf.HasField('train_conf'):
         job_conf.train_conf.batch_size = job_conf.piece_size
+
+config_proto = DefaultConfigProto()
+config_proto_inited = False

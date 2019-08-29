@@ -19,7 +19,7 @@ def Compile(job_set, job_func):
     check_unique_job_func_name = set()
     job = job_set.job.add()
     compile_context.ResetCurJob(job)
-    _CompileJob(job, job_func, config_util.inited_config_proto)
+    _CompileJob(job, job_func, config_util.config_proto)
     config_util.TryCompleteDefaultJobConfigProto(job.job_conf)
     assert job.job_conf.job_name not in check_unique_job_func_name
     check_unique_job_func_name.add(job.job_conf.job_name)

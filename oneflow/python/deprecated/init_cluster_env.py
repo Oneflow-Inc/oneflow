@@ -11,21 +11,10 @@ from oneflow.core.job.job_set_pb2 import ConfigProto
 from oneflow.python.oneflow_export import oneflow_export
 import oneflow.python.framework.config_util as config_util
 
-@oneflow_export('deprecated.init_worker_and_master')
-def init_worker_and_master(config_proto):
-    import oneflow
-    oneflow.deprecated.init_worker(config_proto)
-    oneflow.init(config_proto)
-
-
 @oneflow_export('deprecated.init_worker')
-def init_worker(config_proto, scp_binary = True, use_uuid = True):
-    if isinstance(config_proto, config_util.ConfigProtoBuilder):
-        config_proto = config_proto.config_proto
-    assert isinstance(config_proto, ConfigProto)
-    config_util.TryCompleteDefaultConfigProto(config_proto)
-    assert type(config_proto) is job_set_util.ConfigProto
-    resource = config_proto.resource
+def init_worker(scp_binary = True, use_uuid = True):
+    assert type(config_util.config_proto) is job_set_util.ConfigProto
+    resource = config_util.config_proto.resource
     assert len(resource.machine) > 0
     assert type(scp_binary) is bool
     assert type(use_uuid) is bool
@@ -52,6 +41,7 @@ def init_worker(config_proto, scp_binary = True, use_uuid = True):
         _SendBinaryAndConfig2Worker(machine, oneflow_worker_path, config_file.name, run_dir, scp_binary)
 
     os.remove(config_file.name)
+    config_util.config_proto_inited = True
 
 
 @oneflow_export('deprecated.delete_worker')

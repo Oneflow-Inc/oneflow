@@ -12,15 +12,6 @@ import oneflow.python.framework.job_set_util as job_set_util
 from oneflow.python.framework.out_remote_blobs_result_box import OutRemoteBlobsResultBox
 from oneflow.python.oneflow_export import oneflow_export
 
-@oneflow_export('init')
-def init(config_proto):
-    if (isinstance(config_proto, config_util.ConfigProtoBuilder)):
-        config_proto = config_proto.config_proto
-    assert isinstance(config_proto, ConfigProto)
-    config_util.TryCompleteDefaultConfigProto(config_proto)
-    config_util.inited_config_proto = config_proto
-    c_api_util.Init(config_proto)
-
 @oneflow_export('Session')
 class Session(object):
     def __init__(self, job_set = None):
@@ -33,6 +24,8 @@ class Session(object):
         self.running_job_cnt_ = 0
         runtime_ctx.AddJobInstancePreLaunchCallbacks(self._PreLaunchCallback)
         runtime_ctx.AddJobInstancePostFinishCallbacks(self._PostFinishCallback)
+        c_api_util.Init(config_util.config_proto)
+        config_util.config_proto_inited = True
 
     def run(self, job_func, *arg):
         assert self.is_running_
@@ -97,4 +90,3 @@ class Session(object):
     def __exit__(self, *args):
         assert self.is_running_ == True
         self.runtime_env_.__exit__()
-
