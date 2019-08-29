@@ -160,9 +160,7 @@ void MergePlanWithoutGenNetTopo(Plan* plan, const Plan& other) {
 void MergeSubPlanWithoutGenNetTopo(Plan* plan, const std::vector<Plan>& sub_plans) {
   CHECK(!sub_plans.empty());
   *plan = sub_plans.at(0);
-  FOR_RANGE(int32_t, i, 1, sub_plans.size()) {
-    MergePlanWithoutGenNetTopo(plan, sub_plans.at(i));
-  }
+  FOR_RANGE(int32_t, i, 1, sub_plans.size()) { MergePlanWithoutGenNetTopo(plan, sub_plans.at(i)); }
 }
 
 void MergePlan(Plan* plan, const Plan& other) {

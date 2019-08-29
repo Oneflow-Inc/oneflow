@@ -11,8 +11,8 @@ namespace oneflow {
 namespace {
 
 std::string GenNewSnapshotName() {
-  auto now_clock = std::chrono::system_clock::now();
-  std::time_t now_time = std::chrono::system_clock::to_time_t(now_clock);
+  const auto now_clock = std::chrono::system_clock::now();
+  const std::time_t now_time = std::chrono::system_clock::to_time_t(now_clock);
   char datetime[sizeof("2006_01_02_15_04_05")];
   std::strftime(datetime, sizeof(datetime), "%Y_%m_%d_%H_%M_%S", std::localtime(&now_time));
   std::ostringstream oss;
@@ -39,14 +39,15 @@ Snapshot* SnapshotMgr::GetWriteableSnapshot(int64_t snapshot_id) {
   std::unique_lock<std::mutex> lck(snapshot_id2writeable_snapshot_mtx_);
   auto it = snapshot_id2writeable_snapshot_.find(snapshot_id);
   if (it == snapshot_id2writeable_snapshot_.end()) {
-    std::string snapshot_root_path = JoinPath(model_save_snapshots_path_, GenNewSnapshotName());
-    OfCallOnce(snapshot_root_path, SnapshotFS(), &fs::FileSystem::CreateDirIfNotExist);
-    std::unique_ptr<Snapshot> ret(new Snapshot(snapshot_root_path));
-    auto emplace_ret = snapshot_id2writeable_snapshot_.emplace(snapshot_id, std::move(ret));
-    it = emplace_ret.first;
-    CHECK(emplace_ret.second);
+    const std::string snapshot_root_path =
+        JoinPath(model_save_snapshots_path_, GenNewSnapshotName());
+    SnapshotFS()->CreateDirIfNotExist(snapshot_root_path);
+    Snapshot* snapshot = new Snapshot(snapshot_root_path);
+    CHECK(snapshot_id2writeable_snapshot_.emplace(snapshot_id, snapshot).second);
+    return snapshot;
+  } else {
+    return it->second.get();
   }
-  return it->second.get();
 }
 
 }  // namespace oneflow

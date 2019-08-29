@@ -189,10 +189,11 @@ void ConstructMdUpdtOpConf(const VariableOp& op, const LogicalBlobId& diff_lbi_o
   }
 }
 
-#define INSTANTIATE_CONSTRUCTOR_MDUPDT_OP_CONF(T)                     \
-  template void ConstructMdUpdtOpConf<T>(                             \
-      const VariableOp& op, const LogicalBlobId& diff_lbi_of_var_out, \
-      const LogicalBlobId& total_loss_instance_num_lbi, JobBuilder* job_builder, T* mdupdt_op_conf)
+#define INSTANTIATE_CONSTRUCTOR_MDUPDT_OP_CONF(T)                                          \
+  template void ConstructMdUpdtOpConf<T>(const VariableOp& op,                             \
+                                         const LogicalBlobId& diff_lbi_of_var_out,         \
+                                         const LogicalBlobId& total_loss_instance_num_lbi, \
+                                         JobBuilder* job_builder, T* mdupdt_op_conf)
 
 INSTANTIATE_CONSTRUCTOR_MDUPDT_OP_CONF(NaiveModelUpdateOpConf);
 INSTANTIATE_CONSTRUCTOR_MDUPDT_OP_CONF(MomentumModelUpdateOpConf);
