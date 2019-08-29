@@ -13,7 +13,7 @@ namespace {
 std::string GenNewSnapshotName() {
   auto now_clock = std::chrono::system_clock::now();
   std::time_t now_time = std::chrono::system_clock::to_time_t(now_clock);
-  char datetime[sizeof("1970_00_00_00_00_00")];
+  char datetime[sizeof("2006_01_02_15_04_05")];
   std::strftime(datetime, sizeof(datetime), "%Y_%m_%d_%H_%M_%S", std::localtime(&now_time));
   std::ostringstream oss;
   oss << "snapshot_" << datetime << "_" << std::setw(3) << std::setfill('0')

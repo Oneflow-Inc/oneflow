@@ -14,7 +14,6 @@ class SnapshotMgr {
   ~SnapshotMgr() = default;
 
   Snapshot* GetWriteableSnapshot(int64_t snapshot_id);
-
   const Snapshot* GetReadableSnapshot() { return readable_snapshot_.get(); }
 
  private:
