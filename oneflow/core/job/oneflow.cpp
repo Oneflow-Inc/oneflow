@@ -799,8 +799,9 @@ void MakeModelSaveJob(const std::string& job_name,
     InterfaceOpUtil::InitBlobConf(blob_conf, parallel_blob_conf);
     CHECK(blob_conf->has_data_type());
     job_builder.AddOps(parallel_blob_conf.parallel_conf(), {input_op_conf});
-    *snapshot_conf->mutable_in()->Add() = input_op_conf.name() + "/out";
-    *snapshot_conf->mutable_lbn()->Add() = input_op_conf.name() + "/out";
+    const std::string lbn = input_op_conf.name() + "/" + input_conf->out();
+    *snapshot_conf->mutable_in()->Add() = lbn;
+    *snapshot_conf->mutable_lbn()->Add() = lbn;
   }
   job_builder.AddOps(md_save_parallel_conf, {snapshot_op_conf});
 }
