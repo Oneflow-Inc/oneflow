@@ -20,8 +20,8 @@ class JobBuildAndInferCtx {
   ~JobBuildAndInferCtx() = default;
 
   Maybe<void> SetJobConf(const JobConfigProto& job_conf);
-  Maybe<void> AddAndInferInputOp(const OperatorConf& op_conf, int64_t parallel_num);
-  Maybe<void> AddAndInferNonInputOp(const OperatorConf& op_conf, int64_t parallel_num);
+  Maybe<void> AddAndInferInputOp(const OperatorConf& op_conf);
+  Maybe<void> AddAndInferNonInputOp(const OperatorConf& op_conf);
   Maybe<void> AddLossLogicalBlobName(const std::string& lbn);
 
   bool HasJobConf() const;
@@ -37,6 +37,8 @@ class JobBuildAndInferCtx {
  private:
   Job job_;
   HashMap<std::string, BlobDesc*> lbn2logical_blob_desc_;
+  bool is_job_conf_frozen_;
+  bool has_job_conf_;
 };
 
 }  // namespace oneflow

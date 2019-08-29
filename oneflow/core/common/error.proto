@@ -41,8 +41,11 @@ message ConfigResourceUnavailableError {
 
 enum JobBuildAndInferError {
   kJobNameExists = 100;
+  kJobNameEmpty = 101;
+  kJobNameNotEqual = 102;
   kNoJobBuildAndInferCtx = 200;
-  kJobConfFreezed = 300;
+  kJobConfFrozen = 300;
+  kJobConfNotSet = 301;
   kLogicalBlobNameNotExist = 400;
   kUnknownJobBuildAndInferError = 500;
 }

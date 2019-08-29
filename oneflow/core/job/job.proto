@@ -51,7 +51,7 @@ message JobConfigProto {
     PredictConf predict_conf = 4;
   }
   optional int64 piece_size = 5 [default = 1];
-  required int32 data_part_num = 6; // piece_size % data_part_num = 0
+  optional int32 data_part_num = 6 [default = 1]; // piece_size % data_part_num = 0
   optional int64 total_batch_num = 7 [default = 1];
   optional DataType default_data_type = 8 [default = kFloat]; // kFloat or kDouble
   optional int32 max_data_id_length = 9 [default = 0];
