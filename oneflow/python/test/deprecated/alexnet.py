@@ -29,7 +29,7 @@ parser.add_argument('-r', '--remote_by_hand', default=False,
 parser.add_argument('-e', '--eval_dir',
                     type=str, default=_DATA_DIR, required=False)
 parser.add_argument('-t', '--train_dir',
-                    type=str, default=_SINGLE_PIC_DATA_DIR, required=False)
+                    type=str, default=_DATA_DIR, required=False)
 parser.add_argument('-load', '--model_load_dir',
                     type=str, default=_MODEL_LOAD_DIR, required=False)
 parser.add_argument('-save', '--model_save_dir',
