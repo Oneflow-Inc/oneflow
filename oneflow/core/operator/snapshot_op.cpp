@@ -20,7 +20,7 @@ class SnapshotOp final : public Operator {
       std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const override {}
   void GetSbpSignatures(
       const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
-      SbpSignatureList* sbp_sig_list) const override;
+      SbpSignatureList* sbp_sig_list) const override{};
 };
 
 void SnapshotOp::InitFromOpConf() {
@@ -29,10 +29,6 @@ void SnapshotOp::InitFromOpConf() {
 }
 
 const PbMessage& SnapshotOp::GetCustomizedConf() const { return op_conf().snapshot_conf(); }
-
-void SnapshotOp::GetSbpSignatures(
-    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
-    SbpSignatureList* sbp_sig_list) const {}
 
 REGISTER_CPU_OP(OperatorConf::kSnapshotConf, SnapshotOp);
 
