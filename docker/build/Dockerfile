@@ -20,14 +20,12 @@ RUN mkdir -p /tmp/download/cmake-extracted && \
     cd cmake-extracted/* && \
     mkdir /cmake-install && \
     cmake . -DCMAKE_INSTALL_PREFIX=/cmake-install && \
-    make -j 48 && \
+    make -j $(nproc) && \
     make install
 ENV PATH="/cmake-install/bin:${PATH}"
 
 RUN python3 -m ensurepip
 RUN pip3 install numpy protobuf
-
-ENV PYTHONPATH=/workspace/build/python_scripts:$PYTHONPATH
 
 WORKDIR /workspace/build
 
@@ -35,16 +33,16 @@ COPY cmake /workspace/cmake
 COPY CMakeLists.txt /workspace/CMakeLists.txt
 
 # BUILD DEPENDENCY
-# You might want to remove some lines when building third party from scratch
-COPY third_party /workspace/third_party 
 COPY build/third_party /workspace/build/third_party
-COPY build/nccl /workspace/build/nccl
-COPY build/opencv /workspace/build/opencv
-RUN cmake -DTHIRD_PARTY=ON .. && make -j
+# COPY third_party /workspace/third_party 
+# COPY build/nccl /workspace/build/nccl
+# COPY build/opencv /workspace/build/opencv
+RUN cmake -DTHIRD_PARTY=ON -DCMAKE_BUILD_TYPE=Release -DRELEASE_VERSION=ON .. && make -j
 
 # BUILD ONEFLOW
 COPY oneflow /workspace/oneflow
 COPY tools /workspace/tools
 
-RUN cmake -DTHIRD_PARTY=OFF -DPY3=ON -DRELEASE_VERSION=OFF .. && make -j 48 
+RUN cmake -DTHIRD_PARTY=OFF -DPY3=ON && make -j $(nproc) 
+ENV PYTHONPATH=/workspace/build/python_scripts:$PYTHONPATH
 # RUN cmake -DTHIRD_PARTY=OFF .. && make -j 48 
