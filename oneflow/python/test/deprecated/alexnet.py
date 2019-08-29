@@ -246,7 +246,6 @@ def TrainAlexNet():
     return loss_blob
 
 
-
 def EvaluateAlexNet():
     job_conf = flow.get_cur_job_conf_builder()
     job_conf.batch_size(12).data_part_num(8).default_data_type(flow.float)
