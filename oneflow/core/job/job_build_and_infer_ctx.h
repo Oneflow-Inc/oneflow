@@ -10,6 +10,8 @@
 
 namespace oneflow {
 
+Error GenJobBuildAndInferError(JobBuildAndInferError err_code, std::string msg);
+
 class JobBuildAndInferCtx {
  public:
   OF_DISALLOW_COPY_AND_MOVE(JobBuildAndInferCtx);

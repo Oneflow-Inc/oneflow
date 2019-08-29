@@ -2,12 +2,20 @@
 
 namespace oneflow {
 
+Error GenJobBuildAndInferError(JobBuildAndInferError err_code, std::string msg) {
+  Error err;
+  err.set_msg(msg);
+  err.set_job_build_and_infer_error(err_code);
+  return err;
+}
+
 JobBuildAndInferCtx::JobBuildAndInferCtx(const std::string& job_name) { TODO(); }
 
 Maybe<void> JobBuildAndInferCtx::SetJobConf(const JobConfigProto& job_conf) { TODO(); }
 
 Maybe<void> JobBuildAndInferCtx::AddAndInferInputOp(const OperatorConf& op_conf,
                                                     int64_t parallel_num) {
+  // add check same interface op blob between jobs
   TODO();
 }
 

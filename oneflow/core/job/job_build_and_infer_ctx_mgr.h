@@ -18,8 +18,11 @@ class JobBuildAndInferCtxMgr {
   Maybe<void> LeaveCurrentJobBuildAndInferCtx();
 
  private:
-  JobBuildAndInferCtxMgr() = default;
+  JobBuildAndInferCtxMgr() : cur_infer_ctx_(nullptr) {}
   friend class Global<JobBuildAndInferCtxMgr>;
+
+  HashMap<std::string, std::shared_ptr<JobBuildAndInferCtx>> job_name2infer_ctx_;
+  std::shared_ptr<JobBuildAndInferCtx> cur_infer_ctx_;
 };
 
 }  // namespace oneflow
