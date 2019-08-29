@@ -8,6 +8,7 @@
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/core/kernel/kernel.pb.h"
+#include "oneflow/core/kernel/kernel_reg_value.pb.h"
 
 namespace oneflow {
 
@@ -26,12 +27,14 @@ class KernelConstraint {
 
   virtual bool IsMatched(const KernelConf&) = 0;
   virtual size_t PriorityLevel() { return 0; }  // big number means high priority
+  virtual void ToProto(KernelRegValProto::RegVal* val) = 0;
 };
 
 class DeviceAndDTypeConstraint final : public KernelConstraint {
  public:
   DeviceAndDTypeConstraint(DeviceType dev, DataType dtype) : dev_(dev), dtype_(dtype) {}
   bool IsMatched(const KernelConf&) override;
+  void ToProto(KernelRegValProto::RegVal* val) override;
 
  private:
   DeviceType dev_;
@@ -42,6 +45,7 @@ class DeviceConstraint final : public KernelConstraint {
  public:
   DeviceConstraint(DeviceType dev) : dev_(dev) {}
   bool IsMatched(const KernelConf&) override;
+  void ToProto(KernelRegValProto::RegVal* val) override;
 
  private:
   DeviceType dev_;

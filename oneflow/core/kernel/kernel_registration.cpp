@@ -28,8 +28,21 @@ bool DeviceAndDTypeConstraint::IsMatched(const KernelConf& kernel_conf) {
           && dtype_ == kernel_conf.data_type());
 }
 
+void DeviceAndDTypeConstraint::ToProto(KernelRegValProto::RegVal* val) {
+  KernelRegValProto::Device7DType proto;
+  proto.set_device(dev_);
+  proto.add_dtype(dtype_);
+  *(val->mutable_device_and_dtypes()->Add()) = proto;
+}
+
 bool DeviceConstraint::IsMatched(const KernelConf& kernel_conf) {
   return dev_ == kernel_conf.op_attribute().op_conf().device_type();
+}
+
+void DeviceConstraint::ToProto(KernelRegValProto::RegVal* val) {
+  KernelRegValProto::Device7DType proto;
+  proto.set_device(dev_);
+  *(val->mutable_device_and_dtypes()->Add()) = proto;
 }
 
 }  // namespace constraint
