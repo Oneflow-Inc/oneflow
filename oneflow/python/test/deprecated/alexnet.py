@@ -7,8 +7,6 @@ from datetime import datetime
 import argparse
 
 _DATA_DIR = "/dataset/imagenet_227/train/32"
-_SINGLE_PIC_DATA_DIR = '/home/caishenghang/dev/cnns_test/dataset/PNG227/of_record'
-_MODEL_LOAD_DIR = '/home/caishenghang/dev/cnns_test/alexnet_fp16/fp32/of_model'
 _MODEL_SAVE_DIR = "./model_save-{}".format(
     str(datetime.now().strftime('%Y-%m-%d-%H:%M:%S')))
 
@@ -31,7 +29,7 @@ parser.add_argument('-e', '--eval_dir',
 parser.add_argument('-t', '--train_dir',
                     type=str, default=_DATA_DIR, required=False)
 parser.add_argument('-load', '--model_load_dir',
-                    type=str, default=_MODEL_LOAD_DIR, required=False)
+                    type=str, default="", required=False)
 parser.add_argument('-save', '--model_save_dir',
                     type=str, default=_MODEL_SAVE_DIR, required=False)
 
