@@ -12,7 +12,7 @@ SnapshotMgr::SnapshotMgr(const Plan& plan) {
     if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
       SnapshotFS()->CreateDirIfNotExist(model_save_snapshots_path_);
       CHECK(SnapshotFS()->IsDirEmpty(model_save_snapshots_path_))
-          << "directory of model snapshots must be emtpy, path: " << model_save_snapshots_path_;
+          << "directory of model snapshot must be emtpy, path: " << model_save_snapshots_path_;
     }
   }
   const std::string& load_path = Global<const IOConf>::Get()->model_load_snapshot_path();
