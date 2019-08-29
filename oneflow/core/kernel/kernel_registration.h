@@ -27,14 +27,14 @@ class KernelConstraint {
 
   virtual bool IsMatched(const KernelConf&) = 0;
   virtual size_t PriorityLevel() { return 0; }  // big number means high priority
-  virtual void ToProto(KernelRegValProto::RegVal* val) = 0;
+  virtual void ToProto(KernelRegValProto::RegVal* val) const = 0;
 };
 
 class DeviceAndDTypeConstraint final : public KernelConstraint {
  public:
   DeviceAndDTypeConstraint(DeviceType dev, DataType dtype) : dev_(dev), dtype_(dtype) {}
   bool IsMatched(const KernelConf&) override;
-  void ToProto(KernelRegValProto::RegVal* val) override;
+  void ToProto(KernelRegValProto::RegVal*) const override;
 
  private:
   DeviceType dev_;
@@ -45,7 +45,7 @@ class DeviceConstraint final : public KernelConstraint {
  public:
   DeviceConstraint(DeviceType dev) : dev_(dev) {}
   bool IsMatched(const KernelConf&) override;
-  void ToProto(KernelRegValProto::RegVal* val) override;
+  void ToProto(KernelRegValProto::RegVal*) const override;
 
  private:
   DeviceType dev_;
@@ -59,6 +59,8 @@ struct KernelRegistrar final {
 };
 
 Kernel* CreateKernel(const KernelConf& kernel_conf);
+
+void ExportProtoFromKernelRegistry(KernelRegValProto*);
 
 }  // namespace kernel_registration
 

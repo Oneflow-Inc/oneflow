@@ -28,7 +28,7 @@ bool DeviceAndDTypeConstraint::IsMatched(const KernelConf& kernel_conf) {
           && dtype_ == kernel_conf.data_type());
 }
 
-void DeviceAndDTypeConstraint::ToProto(KernelRegValProto::RegVal* val) {
+void DeviceAndDTypeConstraint::ToProto(KernelRegValProto::RegVal* val) const {
   KernelRegValProto::Device7DType proto;
   proto.set_device(dev_);
   proto.add_dtype(dtype_);
@@ -39,7 +39,7 @@ bool DeviceConstraint::IsMatched(const KernelConf& kernel_conf) {
   return dev_ == kernel_conf.op_attribute().op_conf().device_type();
 }
 
-void DeviceConstraint::ToProto(KernelRegValProto::RegVal* val) {
+void DeviceConstraint::ToProto(KernelRegValProto::RegVal* val) const {
   KernelRegValProto::Device7DType proto;
   proto.set_device(dev_);
   *(val->mutable_device_and_dtypes()->Add()) = proto;
@@ -69,6 +69,15 @@ Kernel* CreateKernel(const KernelConf& kernel_conf) {
     }
   }
   return ret;
+}
+
+void ExportProtoFromKernelRegistry(KernelRegValProto* proto) {
+  auto* creators = MutKernelRegistry();
+  for (const auto& pair : *creators) {
+    KernelRegValProto::RegVal reg_val_proto;
+    for (const auto& registry_val : pair.second) { registry_val.cons->ToProto(&reg_val_proto); }
+    proto->mutable_kernel2reg_val()->insert({static_cast<int64_t>(pair.first), reg_val_proto});
+  }
 }
 
 }  // namespace kernel_registration
