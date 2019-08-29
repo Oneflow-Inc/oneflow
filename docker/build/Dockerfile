@@ -43,6 +43,6 @@ RUN cmake -DTHIRD_PARTY=ON -DCMAKE_BUILD_TYPE=Release -DRELEASE_VERSION=ON .. &&
 COPY oneflow /workspace/oneflow
 COPY tools /workspace/tools
 
-RUN cmake -DTHIRD_PARTY=OFF -DPY3=ON && make -j $(nproc) 
+RUN cmake -DTHIRD_PARTY=OFF -DPY3=ON .. && make -j $(nproc) 
 ENV PYTHONPATH=/workspace/build/python_scripts:$PYTHONPATH
 # RUN cmake -DTHIRD_PARTY=OFF .. && make -j 48 
