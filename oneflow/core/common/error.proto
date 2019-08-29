@@ -47,6 +47,7 @@ enum JobBuildAndInferError {
   kJobConfFrozen = 300;
   kJobConfNotSet = 301;
   kLogicalBlobNameNotExist = 400;
+  kOpNameExists = 450;
   kUnknownJobBuildAndInferError = 500;
 }
 

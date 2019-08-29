@@ -36,7 +36,9 @@ class JobBuildAndInferCtx {
 
  private:
   Job job_;
-  HashMap<std::string, BlobDesc*> lbn2logical_blob_desc_;
+  HashMap<LogicalBlobId, bool> lbi2has_batch_dim_;
+  HashMap<LogicalBlobId, std::unique_ptr<BlobDesc>> lbi2logical_blob_desc_;
+  HasmMap<std::string, std::shared_ptr<Operator>> op_name2op_;
   bool is_job_conf_frozen_;
   bool has_job_conf_;
 };
