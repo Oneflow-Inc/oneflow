@@ -10,13 +10,13 @@ from oneflow.python.oneflow_export import oneflow_export
 
 
 @oneflow_export("nn.max_pool1d")
-def max_pool1d(input, ksize, strides, padding, data_format="NWC"):
+def max_pool1d(input, ksize, strides, padding, data_format="NWC", name=None):
     # TODO: fix cuDNN bugs in pooling_1d
     raise NotImplementedError
 
 
 @oneflow_export("nn.avg_pool1d")
-def avg_pool1d(input, ksize, strides, padding, data_format="NWC"):
+def avg_pool1d(input, ksize, strides, padding, data_format="NWC", name=None):
     # TODO: fix cuDNN bugs in pooling_1d
     raise NotImplementedError
 
