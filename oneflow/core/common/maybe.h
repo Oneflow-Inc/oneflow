@@ -62,7 +62,7 @@ inline Maybe<T> MaybeFuncSafeCallWrapper(Maybe<T>&& maybe) {
 #define JUST(...)                                              \
   ({                                                           \
     const auto& maybe = MaybeFuncSafeCallWrapper(__VA_ARGS__); \
-    if (maybe.Ok() == false) {                                 \
+    if (maybe.IsOk() == false) {                               \
       LOG(INFO) << "maybe failed:" << __MAYBE_CALL_LOC__;      \
       return maybe;                                            \
     }                                                          \
@@ -71,7 +71,7 @@ inline Maybe<T> MaybeFuncSafeCallWrapper(Maybe<T>&& maybe) {
 #define CHECK_JUST(...)                                        \
   ({                                                           \
     const auto& maybe = MaybeFuncSafeCallWrapper(__VA_ARGS__); \
-    CHECK(maybe.Ok());                                         \
+    CHECK(maybe.IsOk());                                       \
     maybe.data();                                              \
   })
 
