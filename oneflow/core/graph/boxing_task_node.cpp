@@ -125,6 +125,14 @@ DEFINE_BLD_BOXING_OP_CONF_METHOD(BoxingTaskNode, AddAndClone) {
   conf->mutable_clone_box();
 }
 
+DEFINE_BLD_BOXING_OP_CONF_METHOD(BoxingTaskNode, PartialTick2SinkTick) {
+  CHECK(sorted_out_edges.size() == 1);
+  CHECK(in_logical->SoleOp()->op_conf().has_partial_tick_conf());
+  CHECK(out_logical->SoleOp()->op_conf().has_sink_tick_conf());
+  conf->mutable_add_box();
+  conf->mutable_clone_box();
+}
+
 void SetBoxingOpConfBySbpParallel(
     BoxingOpConf* conf, const LogicalBlobId& lbi, const Operator& in_op, const Operator& out_op,
     const std::vector<BoxingTaskNode::EdgeInfo>& sorted_in_edges,
