@@ -23,5 +23,6 @@ void TickOp::GetSbpSignatures(
 
 REGISTER_OP_SAME_OUTPUT_BLOB_MEM_BLOCK_NUM(OperatorConf::kTickConf, 2);
 REGISTER_OP(OperatorConf::kTickConf, TickOp);
+REGISTER_TICK_TOCK_OP(OperatorConf::kTickConf);
 
 }  // namespace oneflow
