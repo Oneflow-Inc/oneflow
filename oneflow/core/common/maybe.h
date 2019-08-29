@@ -17,7 +17,7 @@ class MaybeBase {
 
   bool IsOk() const { return data_or_error_.template Has<T>(); }
   const std::shared_ptr<T>& data() const { return data_or_error_.template Get<T>(); }
-  const Error& error() const { return *data_or_error_.template Get<const Error>(); }
+  std::shared_ptr<const Error> error() const { return data_or_error_.template Get<const Error>(); }
 
  private:
   EitherPtr<T, const Error> data_or_error_;
@@ -64,7 +64,7 @@ inline Maybe<T> MaybeFuncSafeCallWrapper(Maybe<T>&& maybe) {
     const auto& maybe = MaybeFuncSafeCallWrapper(__VA_ARGS__); \
     if (maybe.IsOk() == false) {                               \
       LOG(INFO) << "maybe failed:" << __MAYBE_CALL_LOC__;      \
-      return maybe;                                            \
+      return maybe.error();                                    \
     }                                                          \
     maybe.data();                                              \
   })
