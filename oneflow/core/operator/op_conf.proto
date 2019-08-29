@@ -1434,6 +1434,11 @@ message PartialTickOpConf {
   required string out = 2;
 }
 
+message AssignOpConf {
+  required string ref = 1;
+  required string value = 2;
+}
+
 message OperatorConf {
   required string name = 1;
   optional string model_load_dir = 2;
@@ -1489,6 +1494,7 @@ message OperatorConf {
     SwitchOutputOpConf switch_output_conf = 145;
     ReturnOpConf return_conf = 146;
     PartialTickOpConf partial_tick_conf = 147;
+    AssignOpConf assign_conf = 148;
 
     // domain op
     TupleIdentityOpConf tuple_identity_conf = 200;
