@@ -42,12 +42,12 @@ Snapshot* SnapshotMgr::GetWriteableSnapshot(int64_t snapshot_id) {
     const std::string snapshot_root_path =
         JoinPath(model_save_snapshots_path_, GenNewSnapshotName());
     SnapshotFS()->CreateDirIfNotExist(snapshot_root_path);
-    Snapshot* snapshot = new Snapshot(snapshot_root_path);
-    CHECK(snapshot_id2writeable_snapshot_.emplace(snapshot_id, snapshot).second);
-    return snapshot;
-  } else {
-    return it->second.get();
+    std::unique_ptr<Snapshot> ret(new Snapshot(snapshot_root_path));
+    auto emplace_ret = snapshot_id2writeable_snapshot_.emplace(snapshot_id, std::move(ret));
+    it = emplace_ret.first;
+    CHECK(emplace_ret.second);
   }
+  return it->second.get();
 }
 
 }  // namespace oneflow
