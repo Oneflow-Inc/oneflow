@@ -237,18 +237,16 @@ def BuildAlexNetWithDeprecatedAPI(data_dir):
 def TrainAlexNet():
     job_conf = flow.get_cur_job_conf_builder()
     print("************************************")
-    print("job_conf  ", job_conf)
+    #print("job_conf  ", job_conf)
     print("****************************************")
     job_conf.batch_size(12).data_part_num(8).default_data_type(flow.float)
     job_conf.train_conf()
     job_conf.train_conf().primary_lr = 0.00001
     job_conf.train_conf().num_of_batches_in_snapshot = 100
     job_conf.train_conf().model_update_conf.naive_conf.SetInParent()
-#    loss_blob = set_loss_blob()
+    return job_conf.add_loss(BuildAlexNetWithDeprecatedAPI(args.train_dir))
+    #return BuildAlexNetWithDeprecatedAPI(args.train_dir)
 
-    job_conf.add_loss(flow.deprecated.get_cur_job_dlnet_builder())
-  #  job_conf.train_conf().loss_lbn.extend([softmax_loss])
-    return BuildAlexNetWithDeprecatedAPI(args.train_dir)
 
 
 def EvaluateAlexNet():
@@ -288,10 +286,10 @@ if __name__ == '__main__':
             "iter", "loss type", "loss value"))
         for i in range(args.iter_num):
             print(fmt_str.format(i, "train loss:", sess.run(
-                TrainAlexNet).get().mean()))
+                TrainAlexNet).get()[0].mean()))
             if (i + 1) % 10 is 0:
                 print(fmt_str.format(i, "eval loss:", sess.run(
-                    EvaluateAlexNet).get().mean()))
+                    EvaluateAlexNet).get()[0].mean()))
             if (i + 1) % 100 is 0:
                 check_point.save(session=sess)
         if args.multinode and args.skip_scp_binary is False and args.scp_binary_without_uuid is False:
