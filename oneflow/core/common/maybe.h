@@ -15,7 +15,7 @@ class MaybeBase {
   MaybeBase(const MaybeBase<T>&) = default;
   virtual ~MaybeBase() = default;
 
-  bool Ok() const { return data_or_error_.template Has<T>(); }
+  bool IsOk() const { return data_or_error_.template Has<T>(); }
   const std::shared_ptr<T>& data() const { return data_or_error_.template Get<T>(); }
   const Error& error() const { return *data_or_error_.template Get<const Error>(); }
 
@@ -45,6 +45,8 @@ class Maybe<void> final : public MaybeBase<void> {
   Maybe(const Error* error) : MaybeBase<void>(std::shared_ptr<const Error>(error)) {}
   Maybe(const Maybe<void>&) = default;
   ~Maybe() override = default;
+
+  static Maybe<void> Ok() { return Maybe<void>(); }
 };
 
 template<typename T>
