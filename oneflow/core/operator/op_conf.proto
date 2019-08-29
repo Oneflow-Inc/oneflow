@@ -1424,11 +1424,20 @@ message EsacOpConf {
   optional DataType data_type = 3 [default=kInt32];
 }
 
+<<<<<<< HEAD
+=======
+message PartialTickOpConf {
+  required string tick = 1;
+  required string out = 2;
+}
+
+>>>>>>> dev_python
 message AssignOpConf {
   required string ref = 1;
   required string value = 2;
 }
 
+<<<<<<< HEAD
 message SnapshotOpConf {
   repeated string in = 1;
   repeated string lbn = 2;
@@ -1442,6 +1451,8 @@ message LearningRateScheduleOpConf {
   optional WarmupConf warmup_conf = 5;
 }
 
+=======
+>>>>>>> dev_python
 message OperatorConf {
   required string name = 1;
   optional string model_load_dir = 2;
@@ -1495,9 +1506,10 @@ message OperatorConf {
     AccTickOpConf acc_tick_conf = 144;
     SwitchOutputOpConf switch_output_conf = 145;
     ReturnOpConf return_conf = 146;
-    AssignOpConf assign_conf = 147;
-    SnapshotOpConf snapshot_conf = 148;
-    LearningRateScheduleOpConf learning_rate_schedule_conf = 149;
+    PartialTickOpConf partial_tick_conf = 147;
+    AssignOpConf assign_conf = 148;
+    SnapshotOpConf snapshot_conf = 149;
+    LearningRateScheduleOpConf learning_rate_schedule_conf = 150;
 
     // domain op
     TupleIdentityOpConf tuple_identity_conf = 200;
