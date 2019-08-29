@@ -13,7 +13,6 @@ inited_config_proto = None
 class ConfigProtoBuilder(object):
     def __init__(self):
         self.config_proto_ = job_set_util.ConfigProto()
-
     @property
     def config_proto(self):
         return self.config_proto_
@@ -233,15 +232,16 @@ class JobConfigProtoBuilder(object):
 
     def train_conf(self):
         self.job_conf_.train_conf.SetInParent()
-        return self.job_conf_.train_conf
+        train= self.job_conf_.train_conf
+        return train
     
     def add_loss(self, loss_blob=[]):
         #assert self.job_conf_.train_conf
         lbn_list = []
-       # for loss in loss_blob:
-        lbn = "softmax_loss/out"
-        lbn_list.append(lbn)
-        self.job_conf_.train_conf.loss_lbn.extend(lbn_list)
+        for blob in loss_blob:
+            lbn_list.append(blob.logical_blob_name)
+        return self.job_conf_.train_conf.loss_lbn.extend(lbn_list)
+      
 
 def TryCompleteDefaultConfigProto(config):
     _DefaultConfigResource(config)
