@@ -44,17 +44,17 @@ __device__ void UpdateMomentEstimate(T beta, const T* model_diff, const T* beta_
 }
 
 template<typename T>
-__device__ void UpdateModel(T learning_rate, T l1, T l2, T epsilon, T* model_diff, T* model, T* m,
-                            T* v) {
+__device__ void UpdateModel(const float* learning_rate, T l1, T l2, T epsilon, T* model_diff,
+                            T* model, T* m, T* v) {
   *model_diff = *m / (sqrt(*v) + epsilon);
   T reg_diff = RegDiff(*model_diff, l1, l2, *model);
-  *model = *model - learning_rate * reg_diff;
+  *model = *model - *learning_rate * reg_diff;
 }
 
 template<bool do_bias_correction, typename T>
-__global__ void UpdateModelGpu(int64_t n, T learning_rate, T l1, T l2, T beta1, T beta2, T epsilon,
-                               const T* beta1_t, const T* beta2_t, T* model_diff, T* model, T* m,
-                               T* v) {
+__global__ void UpdateModelGpu(int64_t n, const float* learning_rate, T l1, T l2, T beta1, T beta2,
+                               T epsilon, const T* beta1_t, const T* beta2_t, T* model_diff,
+                               T* model, T* m, T* v) {
   CUDA_1D_KERNEL_LOOP(i, n) {
     UpdateMomentEstimate<1, do_bias_correction>(beta1, model_diff + i, beta1_t, m + i);
     UpdateMomentEstimate<2, do_bias_correction>(beta2, model_diff + i, beta2_t, v + i);
@@ -67,9 +67,10 @@ __global__ void UpdateModelGpu(int64_t n, T learning_rate, T l1, T l2, T beta1, 
 template<typename T>
 class AdamMdUpdateKernelUtil<DeviceType::kGPU, T> final {
  public:
-  static void UpdateModel(DeviceCtx* ctx, int64_t n, T learning_rate, T l1, T l2, T beta1, T beta2,
-                          T epsilon, bool do_bias_correction, int64_t next_model_vid,
-                          const T* beta1_t, const T* beta2_t, T* model_diff, T* model, T* m, T* v) {
+  static void UpdateModel(DeviceCtx* ctx, int64_t n, const float* learning_rate, T l1, T l2,
+                          T beta1, T beta2, T epsilon, bool do_bias_correction,
+                          int64_t next_model_vid, const T* beta1_t, const T* beta2_t, T* model_diff,
+                          T* model, T* m, T* v) {
     if (do_bias_correction) {
       UpdateModelGpu<true, T>
           <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(

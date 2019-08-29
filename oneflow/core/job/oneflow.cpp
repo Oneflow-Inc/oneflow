@@ -790,32 +790,10 @@ void MakeModelSaveJob(const std::string& job_name,
   md_save_parallel_conf.set_policy(ParallelPolicy::kDataParallel);
   {
     // there is always a tick op in model save job, so we can ignore the case with no variable
-    OperatorConf tick_op_conf;
+    OperatorConf tick_op_conf{};
     tick_op_conf.set_name("System-Saver-tick");
     tick_op_conf.mutable_tick_conf()->set_out("out");
     job_builder.AddOps(md_save_parallel_conf, {tick_op_conf});
-  }
-  for (const auto& pair : var_op_name2parallel_blob_conf) {
-    const auto& var_op_name = pair.first;
-    OperatorConf input_op_conf;
-    {
-      const auto& parallel_blob_conf = pair.second;
-      input_op_conf.set_name(var_op_name);
-      auto* input_conf = input_op_conf.mutable_input_conf();
-      input_conf->set_out("out");
-      auto* blob_conf = input_conf->mutable_blob_conf();
-      InterfaceOpUtil::InitBlobConf(blob_conf, parallel_blob_conf);
-      CHECK(blob_conf->has_data_type());
-      job_builder.AddOps(parallel_blob_conf.parallel_conf(), {input_op_conf});
-    }
-    OperatorConf model_save_op_conf;
-    {
-      model_save_op_conf.set_name("System-Saver-" + var_op_name + "-MdSave");
-      ModelSaveV2OpConf* model_save_conf = model_save_op_conf.mutable_model_save_v2_conf();
-      model_save_conf->set_in(input_op_conf.name() + "/out");
-      model_save_conf->set_lbn(input_op_conf.name() + "/out");
-      job_builder.AddOps(md_save_parallel_conf, {model_save_op_conf});
-    }
   }
   auto* job_conf = job->mutable_job_conf();
   job_conf->set_job_name(job_name);
@@ -823,6 +801,25 @@ void MakeModelSaveJob(const std::string& job_name,
   job_conf->set_piece_size(1);
   job_conf->set_data_part_num(1);
   job_conf->set_total_batch_num(1);
+  if (var_op_name2parallel_blob_conf.empty()) { return; }
+  OperatorConf snapshot_op_conf{};
+  snapshot_op_conf.set_name("System-Saver-Snapshot");
+  SnapshotOpConf* snapshot_conf = snapshot_op_conf.mutable_snapshot_conf();
+  for (const auto& pair : var_op_name2parallel_blob_conf) {
+    const auto& var_op_name = pair.first;
+    OperatorConf input_op_conf{};
+    const auto& parallel_blob_conf = pair.second;
+    input_op_conf.set_name(var_op_name);
+    auto* input_conf = input_op_conf.mutable_input_conf();
+    input_conf->set_out("out");
+    auto* blob_conf = input_conf->mutable_blob_conf();
+    InterfaceOpUtil::InitBlobConf(blob_conf, parallel_blob_conf);
+    CHECK(blob_conf->has_data_type());
+    job_builder.AddOps(parallel_blob_conf.parallel_conf(), {input_op_conf});
+    *snapshot_conf->mutable_in()->Add() = input_op_conf.name() + "/out";
+    *snapshot_conf->mutable_lbn()->Add() = input_op_conf.name() + "/out";
+  }
+  job_builder.AddOps(md_save_parallel_conf, {snapshot_op_conf});
 }
 
 void CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan) {

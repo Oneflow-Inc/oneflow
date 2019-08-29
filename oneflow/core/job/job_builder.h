@@ -25,6 +25,7 @@ class JobBuilder final {
   ~JobBuilder() = default;
 
   const Job& job() const { return *job_; }
+  Job* mut_job() const { return job_; }
   JobHelperConf* mutable_helper() { return job_->mutable_helper(); }
   SbpConf* mutable_sbp_conf() { return job_->mutable_sbp_conf(); }
 

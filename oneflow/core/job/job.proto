@@ -17,17 +17,18 @@ message TrainConf {
   required int32 num_of_batches_in_snapshot = 5;
   repeated string loss_lbn = 6;
   optional int32 loss_scale_factor = 7 [default = 1];
+  optional string global_step_lbn = 8;
+  optional string primary_lr_lbn = 9;
+  optional string secondary_lr_lbn = 10;
 
   // default_initializer_conf here is now deprecated
   optional InitializerConf default_initializer_conf = 100;
   required float primary_lr = 101;
-  optional float secondary_lr = 102 [default = -1];
+  optional float secondary_lr = 102;
   optional float weight_l1 = 103 [default = 0];
   optional float bias_l1 = 104 [default = 0];
   optional float weight_l2 = 105 [default = 0];
   optional float bias_l2 = 106 [default = 0];
-  optional int64 piece_num_of_print_loss = 107 [default = -1];
-  optional int64 piece_num_of_print_accuracy = 108 [default = -1];
 }
 
 message PredictConf {

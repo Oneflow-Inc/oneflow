@@ -121,6 +121,8 @@ void GenerateOpConf4Trainning(const OpGraph& op_graph, JobBuilder* job_builder) 
   AutoGrad(op_graph, job_builder, &lbi2diff_lbi);
   std::function<const LogicalBlobId&(const ParallelDesc&)> LossInstanceNum4ParallelDesc;
   AddTotalLossInstanceNumOpConf(op_graph, job_builder, lbi2diff_lbi, &LossInstanceNum4ParallelDesc);
+  AddGlobalStepOpConf(op_graph, job_builder, lbi2diff_lbi);
+  AddLearningRateScheduleOpConf(op_graph, job_builder, lbi2diff_lbi);
   AddOptimizerOpConf(op_graph, job_builder, lbi2diff_lbi, LossInstanceNum4ParallelDesc);
   UpdateJobHelperConfProducedLbi2ConsumedDiffLbi(lbi2diff_lbi, job_builder);
   UpdateOpSbpSignatureHint(op_graph, job_builder);
