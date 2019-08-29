@@ -39,10 +39,19 @@ message ConfigResourceUnavailableError {
   required FieldValue field_value = 1;
 }
 
+enum JobBuildAndInferError {
+  kJobNameExists = 100;
+  kNoJobBuildAndInferCtx = 200;
+  kJobConfFreezed = 300;
+  kLogicalBlobNameNotExist = 400;
+  kUnknownJobBuildAndInferError = 500;
+}
+
 message Error {
   optional string msg = 1 [default = ""];
   oneof error_type {
     ConfigAssertFailedError config_assert_failed_error = 2;
     ConfigResourceUnavailableError config_resource_unavailable_error = 3;
+    JobBuildAndInferError job_build_and_infer_error = 4;
   }
 }
