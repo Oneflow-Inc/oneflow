@@ -17,13 +17,10 @@ def max_pool_2d(
     setattr(op_conf, "name", id_util.UniqueStr("MaxPool2D_"))
     setattr(op_conf.max_pooling_2d_conf, "in", x.logical_blob_name)
     setattr(op_conf.max_pooling_2d_conf, "out", "out")
-    assert isinstance(pool_size, list)
-    op_conf.max_pooling_2d_conf.pool_size[:] = pool_size
-    if strides == None:
-        op_conf.max_pooling_2d_conf.strides[:] = pool_size
-    else:
-        assert isinstance(strides, list)
-        op_conf.max_pooling_2d_conf.strides[:] = strides
+    op_conf.max_pooling_2d_conf.pool_size[:] = list(pool_size)
+    op_conf.max_pooling_2d_conf.strides[:] = (
+        list(strides) if strides is not None else list(pool_size)
+    )
     setattr(op_conf.max_pooling_2d_conf, "padding", padding)
     setattr(op_conf.max_pooling_2d_conf, "data_format", data_format)
     compile_context.CurJobAddOp(op_conf)
@@ -41,13 +38,10 @@ def average_pool_2d(
     setattr(op_conf, "name", id_util.UniqueStr("AveragePool2D_"))
     setattr(op_conf.average_pooling_2d_conf, "in", x.logical_blob_name)
     setattr(op_conf.average_pooling_2d_conf, "out", "out")
-    assert isinstance(pool_size, list)
-    op_conf.average_pooling_2d_conf.pool_size[:] = pool_size
-    if strides == None:
-        op_conf.average_pooling_2d_conf.strides[:] = pool_size
-    else:
-        assert isinstance(strides, list)
-        op_conf.average_pooling_2d_conf.strides[:] = strides
+    op_conf.average_pooling_2d_conf.pool_size[:] = list(pool_size)
+    op_conf.average_pooling_2d_conf.strides[:] = (
+        list(strides) if strides is not None else list(pool_size)
+    )
     setattr(op_conf.average_pooling_2d_conf, "padding", padding)
     setattr(op_conf.average_pooling_2d_conf, "data_format", data_format)
     compile_context.CurJobAddOp(op_conf)
@@ -55,11 +49,3 @@ def average_pool_2d(
     setattr(out_lbi, "op_name", op_conf.name)
     setattr(out_lbi, "blob_name", "out")
     return remote_blob_util.RemoteBlob(out_lbi)
-
-
-# @oneflow_export("keras.layers.MaxPool1D")
-# @oneflow_export("keras.layers.AveragePool1D")
-# @oneflow_export("keras.layers.MaxPool2D")
-# @oneflow_export("keras.layers.AveragePool2D")
-# @oneflow_export("keras.layers.MaxPool3D")
-# @oneflow_export("keras.layers.AveragePool3D")
