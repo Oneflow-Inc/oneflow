@@ -29,8 +29,7 @@ void NormalForwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
   } else {
     ProduceRegst("out", true);
   }
-  ProduceRegst("data_tmp", true);
-  ProduceRegst("fw_buf", true, 1, 1);
+  ProduceRegst("tmp", true);
   ProduceRegst("const_buf", false, 1, 1);
   ForEachOutDataEdge([&](TaskEdge* edge) { BindEdgeWithProducedRegst(edge, "out"); });
 }
@@ -49,7 +48,7 @@ bool NormalForwardCompTaskNode::IsReadyForBuild() {
 void NormalForwardCompTaskNode::BuildExecGphAndRegst() {
   BuildExecGphStructAndBindInRegst();
   BuildOutRegst();
-  BuildDataTmp7BufRegsts();
+  BuildTmp7BufRegsts();
   mut_exec_gph().TopoForEachNode([this](ExecNode* node) { node->InferBlobDescs(parallel_ctx()); });
 }
 
@@ -93,10 +92,9 @@ void NormalForwardCompTaskNode::BuildOutRegst() {
   });
 }
 
-void NormalForwardCompTaskNode::BuildDataTmp7BufRegsts() {
+void NormalForwardCompTaskNode::BuildTmp7BufRegsts() {
   mut_exec_gph().ForEachNode([&](ExecNode* node) {
-    node->AddBnToRegstAndBindIt(&Operator::data_tmp_bns, GetProducedRegst("data_tmp"));
-    node->AddBnToRegstAndBindIt(&Operator::fw_buf_bns, GetProducedRegst("fw_buf"));
+    node->AddBnToRegstAndBindIt(&Operator::tmp_bns, GetProducedRegst("tmp"));
     node->AddBnToRegstAndBindIt(&Operator::const_buf_bns, GetProducedRegst("const_buf"));
   });
 }

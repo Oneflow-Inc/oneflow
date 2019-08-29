@@ -2,6 +2,7 @@
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/protobuf.h"
+#include <google/protobuf/text_format.h>
 
 namespace oneflow {
 
@@ -59,7 +60,7 @@ static Blob* Blob4BnInOp(const std::function<Blob*(const std::string&)>* BnInOp2
 static HashMap<std::string, std::vector<std::string>> GetAllBlobNames(
     const OpAttribute& op_attribute) {
   std::list<std::string> attrs{
-      "input_bns", "output_bns", "data_tmp_bns", "fw_buf_bns", "model_bns", "const_buf_bns",
+      "input_bns", "output_bns", "tmp_bns", "const_buf_bns",
   };
   HashMap<std::string, std::vector<std::string>> ret;
   for (const auto& attr : attrs) {
@@ -73,6 +74,12 @@ const std::string& PbMsgSerializeToString(google::protobuf::Message* msg) {
   static std::string serialized_string;
   msg->SerializeToString(&serialized_string);
   return serialized_string;
+}
+
+const std::string& PbMsgPrintToString(google::protobuf::Message* msg) {
+  static std::string ret;
+  google::protobuf::TextFormat::PrintToString(*msg, &ret);
+  return ret;
 }
 
 void ForwardEnterBreakPoint(const OpAttribute& op_attribute,

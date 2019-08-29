@@ -15,12 +15,12 @@ void NormalizationOp::InitFromOpConf() {
   if (conf.has_moving_mean()) {
     EnrollInputBn("moving_mean")->set_is_mutable(conf.is_training());
   } else {
-    EnrollModelBn("moving_mean");
+    EnrollTmpBn("moving_mean");
   }
   if (conf.has_moving_variance()) {
     EnrollInputBn("moving_variance")->set_is_mutable(conf.is_training());
   } else {
-    EnrollModelBn("moving_variance");
+    EnrollTmpBn("moving_variance");
   }
   if (conf.has_gamma()) {
     EnrollInputBn("gamma")->set_is_mutable(true);

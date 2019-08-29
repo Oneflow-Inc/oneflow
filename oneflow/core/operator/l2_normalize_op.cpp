@@ -6,7 +6,7 @@ void L2NormalizeOp::InitFromOpConf() {
   CHECK(op_conf().has_l2_normalize_conf());
   EnrollInputBn("in");
   EnrollOutputBn("out");
-  EnrollDataTmpBn("square_x_sum");
+  EnrollTmpBn("square_x_sum");
 }
 
 const PbMessage& L2NormalizeOp::GetCustomizedConf() const { return op_conf().l2_normalize_conf(); }

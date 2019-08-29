@@ -59,6 +59,34 @@ void BuildSinkTickOpAndParallelConf(OperatorConf* sink_tick_op, JobBuilder* job_
   job_builder->AddOps(parallel_conf, {*sink_tick_op});
 }
 
+void BuildPartialTickOp(OperatorConf* partial_tick_op, const ParallelConf& parallel_conf,
+                        JobBuilder* job_builder) {
+  partial_tick_op->set_name("System-AutoTick-PartialTick_" + NewUniqueId());
+  partial_tick_op->mutable_partial_tick_conf()->set_out("out");
+  job_builder->AddOps(parallel_conf, {*partial_tick_op});
+}
+
+void BuildPartialTickOp7SinkTickOp(
+    OperatorConf* sink_tick_op_conf,
+    const std::function<const ParallelConf*(const std::string&)>& ParallelConf4OpName,
+    const HashSet<LogicalBlobId>& tick_lbis, JobBuilder* job_builder) {
+  BuildSinkTickOpAndParallelConf(sink_tick_op_conf, job_builder);
+  for (const LogicalBlobId& tick_lbi : tick_lbis) {
+    OperatorConf partial_tick_op_conf;
+    {
+      const ParallelConf& parallel_conf = *ParallelConf4OpName(tick_lbi.op_name());
+      ParallelDesc pd(parallel_conf);
+      pd.set_device_type(DeviceType::kCPU);
+      BuildPartialTickOp(&partial_tick_op_conf, pd.parallel_conf(), job_builder);
+      partial_tick_op_conf.mutable_partial_tick_conf()->set_tick(GenLogicalBlobName(tick_lbi));
+      job_builder->MutOpsOnlyOnce({partial_tick_op_conf});
+    }
+    sink_tick_op_conf->mutable_sink_tick_conf()->add_tick(
+        partial_tick_op_conf.name() + "/" + partial_tick_op_conf.partial_tick_conf().out());
+  }
+  job_builder->MutOpsOnlyOnce({*sink_tick_op_conf});
+}
+
 void ConnectSourceTickAndOtherTick(JobBuilder* job_builder) {
   OperatorConf src_tick_op;
   BuildSourceTickOpAndParallelConf(&src_tick_op, job_builder);
@@ -91,23 +119,24 @@ const Shape& GetOpTimeShape(const OpNode* op_node) {
   return *output_shape;
 };
 
-OperatorConf MakeTickOpConf() {
+OperatorConf MakeTickOpConf(const std::string& tick_name) {
   OperatorConf tick_op_conf;
-  tick_op_conf.set_name(std::string("System-AutoTick-Tick_") + NewUniqueId());
+  tick_op_conf.set_name(std::string("System-AutoTick-" + tick_name + "Tick_") + NewUniqueId());
   auto* tick_conf = tick_op_conf.mutable_tick_conf();
   tick_conf->set_out("out");
   return tick_op_conf;
 }
 
-OperatorConf AppendTick(const std::vector<std::string>& op_names, ParallelConf parallel_conf,
-                        JobBuilder* job_builder) {
-  OperatorConf tick_op_conf = MakeTickOpConf();
+OperatorConf AppendTick(const std::string tick_name, const std::vector<std::string>& op_names,
+                        ParallelConf parallel_conf, JobBuilder* job_builder) {
+  OperatorConf tick_op_conf = MakeTickOpConf(tick_name);
   for (const auto& op_name : op_names) { tick_op_conf.add_ctrl_in_op_name(op_name); }
   job_builder->AddOps(parallel_conf, {tick_op_conf});
   return tick_op_conf;
 }
 
-OperatorConf AppendTick(const std::list<const OpNode*>& op_nodes, JobBuilder* job_builder) {
+OperatorConf AppendTick(const std::string tick_name, const std::list<const OpNode*>& op_nodes,
+                        JobBuilder* job_builder) {
   std::vector<std::string> op_names;
   for (const auto* op_node : op_nodes) {
     CHECK(op_node->op().op_conf().has_keep_header_only_conf() == false);
@@ -115,11 +144,12 @@ OperatorConf AppendTick(const std::list<const OpNode*>& op_nodes, JobBuilder* jo
   }
   ParallelDesc pd(op_nodes.front()->parallel_desc());
   pd.set_device_type(DeviceType::kCPU);
-  return AppendTick(op_names, pd.parallel_conf(), job_builder);
+  return AppendTick(tick_name, op_names, pd.parallel_conf(), job_builder);
 }
 
-OperatorConf PrependTick(const std::list<const OpNode*>& op_nodes, JobBuilder* job_builder) {
-  OperatorConf tick_op_conf = MakeTickOpConf();
+OperatorConf PrependTick(const HashSet<const OpNode*>& op_nodes, JobBuilder* job_builder) {
+  CHECK_GE(op_nodes.size(), 1);
+  OperatorConf tick_op_conf = MakeTickOpConf("Prepend");
   std::vector<OperatorConf> op_confs;
   for (const OpNode* op_node : op_nodes) {
     OperatorConf op_conf(op_node->op().op_conf());
@@ -127,7 +157,7 @@ OperatorConf PrependTick(const std::list<const OpNode*>& op_nodes, JobBuilder* j
     op_confs.push_back(op_conf);
   }
   job_builder->MutOpsOnlyOnce({op_confs});
-  ParallelDesc pd(op_nodes.front()->parallel_desc());
+  ParallelDesc pd((*op_nodes.begin())->parallel_desc());
   pd.set_device_type(DeviceType::kCPU);
   job_builder->AddOps(pd.parallel_conf(), {tick_op_conf});
   return tick_op_conf;
@@ -137,7 +167,7 @@ OperatorConf AppendAccTick(const Shape& src_shape, const std::list<const OpNode*
                            JobBuilder* job_builder) {
   const auto& tick_shape = GetOpTimeShape(op_nodes.front());
   CHECK_EQ(tick_shape.elem_cnt() % src_shape.elem_cnt(), 0);
-  const OperatorConf& tick_op_conf = AppendTick(op_nodes, job_builder);
+  const OperatorConf& tick_op_conf = AppendTick("AppendAcc", op_nodes, job_builder);
   OperatorConf acc_op_conf;
   {
     acc_op_conf.set_name(std::string("System-AutoTick-AccTick_") + NewUniqueId());
@@ -239,7 +269,7 @@ std::vector<OperatorConf> AddTickForTimeShape(const Shape& src_time_shape,
     const std::pair<Shape, Shape>& ts = pair.first.second;
     if (ts.second.elem_cnt() == src_time_shape.elem_cnt()) {
       CHECK_GE(ts.first.elem_cnt(), ts.second.elem_cnt());
-      op_confs.push_back(AppendTick(pair.second, job_builder));
+      op_confs.push_back(AppendTick("Append", pair.second, job_builder));
     } else if (ts.second.elem_cnt() > src_time_shape.elem_cnt()) {
       op_confs.push_back(AppendAccTick(src_time_shape, pair.second, job_builder));
     } else {
@@ -254,16 +284,18 @@ void AddGlobalInputOutputCriticalSection(const HashSet<const OpNode*>& op_nodes,
                                          JobBuilder* job_builder) {
   auto time_shape = std::make_unique<Shape>(
       std::vector<int64_t>{GlobalJobDesc().TotalBatchNum(), GlobalJobDesc().NumOfPiecesInBatch()});
-  HashMap<ParallelDesc, std::list<const OpNode*>> parallel_desc2op_nodes;
+  HashMap<ParallelDesc, HashSet<const OpNode*>> parallel_desc2op_nodes;
+  HashMap<std::string, const ParallelConf*> op_name2parallel_conf;
   for (const OpNode* op_node : op_nodes) {
-    parallel_desc2op_nodes[op_node->parallel_desc()].push_back(op_node);
+    CHECK(parallel_desc2op_nodes[op_node->parallel_desc()].insert(op_node).second);
   }
   std::vector<OperatorConf> source_ticks;
   std::vector<OperatorConf> sink_ticks;
   for (const auto& pair : parallel_desc2op_nodes) {
     source_ticks.push_back(PrependTick(pair.second, job_builder));
-    for (const auto& sink_tick : AddTickForTimeShape(*time_shape, op_nodes, job_builder)) {
+    for (const auto& sink_tick : AddTickForTimeShape(*time_shape, pair.second, job_builder)) {
       sink_ticks.push_back(sink_tick);
+      CHECK(op_name2parallel_conf.emplace(sink_tick.name(), &pair.first.parallel_conf()).second);
     }
   }
   OperatorConf src_tick_op_conf;
@@ -276,15 +308,18 @@ void AddGlobalInputOutputCriticalSection(const HashSet<const OpNode*>& op_nodes,
     }
     job_builder->MutOpsOnlyOnce(source_ticks);
   }
-  OperatorConf sink_tick_op_conf;
-  {
-    BuildSinkTickOpAndParallelConf(&sink_tick_op_conf, job_builder);
-    for (const auto& op_conf : sink_ticks) {
-      sink_tick_op_conf.mutable_sink_tick_conf()->add_tick(op_conf.name() + "/"
-                                                           + op_conf.tick_conf().out());
-    }
-    job_builder->MutOpsOnlyOnce({sink_tick_op_conf});
+  HashSet<LogicalBlobId> tick_lbis;
+  for (const auto& op_conf : sink_ticks) {
+    LogicalBlobId lbi;
+    lbi.set_op_name(op_conf.name());
+    lbi.set_blob_name(op_conf.tick_conf().out());
+    CHECK(tick_lbis.insert(lbi).second);
   }
+  auto ParallelConf4OpName = [&](const std::string& op_name) {
+    return op_name2parallel_conf.at(op_name);
+  };
+  OperatorConf sink_tick_op_conf;
+  BuildPartialTickOp7SinkTickOp(&sink_tick_op_conf, ParallelConf4OpName, tick_lbis, job_builder);
   auto* io_cs = AddGlobalCriticalSection(src_tick_op_conf.name(), sink_tick_op_conf.name())
                     ->mutable_input_output_critical_section();
   *io_cs->mutable_lbi_producer_op_name() = {lbi_producer_op_names.begin(),
@@ -323,12 +358,11 @@ void AutoSinkTick(const OpGraph& op_graph, JobBuilder* job_builder) {
     CHECK(*op_node->out_blob_time_shape() == src_time_shape);
     CHECK(tick_lbis.emplace(op_node->op().BnInOp2Lbi(op_node->op().SoleObn())).second);
   });
+  auto ParallelConf4OpName = [&](const std::string& op_name) {
+    return &op_graph.OpNode4OpName(op_name)->parallel_desc().parallel_conf();
+  };
   OperatorConf sink_tick_op_conf;
-  BuildSinkTickOpAndParallelConf(&sink_tick_op_conf, job_builder);
-  for (const LogicalBlobId& tick_lbi : tick_lbis) {
-    sink_tick_op_conf.mutable_sink_tick_conf()->add_tick(GenLogicalBlobName(tick_lbi));
-  }
-  job_builder->MutOpsOnlyOnce({sink_tick_op_conf});
+  BuildPartialTickOp7SinkTickOp(&sink_tick_op_conf, ParallelConf4OpName, tick_lbis, job_builder);
 }
 
 void AddGlobalTotalJobCriticalSection(const Job& job) {

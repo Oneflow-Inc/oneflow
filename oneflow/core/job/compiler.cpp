@@ -6,47 +6,6 @@
 
 namespace oneflow {
 
-namespace {
-
-void ToDotFile(const Plan& plan, const std::string& filepath) {
-  auto log_stream = TeePersistentLogStream::Create(filepath);
-  log_stream << "digraph {\n";
-  HashSet<int64_t> regst_desc_ids;
-  for (const TaskProto& task_proto : plan.task()) {
-    log_stream << "task" << std::to_string(task_proto.task_id()) << "[label=\""
-               << std::to_string(task_proto.task_id()) << "\\n"
-               << std::to_string(task_proto.machine_id()) << ":"
-               << std::to_string(task_proto.thrd_id()) << ":"
-               << std::to_string(task_proto.parallel_ctx().parallel_id())
-               << "\", shape=ellipse, style=\"rounded,filled\", "
-                  "colorscheme=set312, color="
-               << task_type2color.at(task_proto.task_type()) << "];\n";
-    for (const auto& pair : task_proto.produced_regst_desc()) {
-      regst_desc_ids.insert(pair.second.regst_desc_id());
-    }
-  }
-  for (const int64_t regst_task_id : regst_desc_ids) {
-    log_stream << "regst_desc" << std::to_string(regst_task_id) << "[label=\""
-               << std::to_string(regst_task_id) << "\", shape=box];\n";
-  }
-  for (const TaskProto& task_proto : plan.task()) {
-    for (const auto& pair : task_proto.produced_regst_desc()) {
-      log_stream << "task" << std::to_string(task_proto.task_id()) << "->regst_desc"
-                 << std::to_string(pair.second.regst_desc_id()) << "[label=\"" << pair.first
-                 << "\"];\n";
-    }
-    for (const auto& pair : task_proto.consumed_regst_desc_id()) {
-      for (int64_t regst_desc_id : pair.second.regst_desc_id()) {
-        log_stream << "regst_desc" << std::to_string(regst_desc_id) << "->task"
-                   << std::to_string(task_proto.task_id()) << "[label=\"" << pair.first << "\"];\n";
-      }
-    }
-  }
-  log_stream << "}\n";
-}
-
-}  // namespace
-
 void Compiler::GenNetTopo(Plan* plan) const {
   HashMap<int64_t, int64_t> rid2mid;
   HashMap<int64_t, int64_t> tid2mid;
@@ -128,10 +87,13 @@ void Compiler::Compile(Job* job, Plan* plan, bool need_job_complete) const {
     if (task_node->IsMeaningLess()) { return; }
     task_node->ToProto(plan->mutable_task()->Add());
   });
-  plan->set_total_mbn_num(total_mbn_num);
+  {
+    plan->set_total_mbn_num(total_mbn_num);
+    auto* job_id2job_conf = plan->mutable_job_confs()->mutable_job_id2job_conf();
+    (*job_id2job_conf)[GlobalJobDesc().job_id()] = GlobalJobDesc().job_conf();
+  }
   // TODO: fix .dot generate
   // GenNetTopo(plan);
-  // ToDotFile(*plan, "/dot/plan.dot");
   Global<OpGraph>::Delete();
 }
 

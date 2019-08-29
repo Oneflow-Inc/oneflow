@@ -10,7 +10,7 @@ void RecurrentOp::InitFromOpConf() {
     CHECK(!GetValFromCustomizedConf<bool>("has_init_hidden_initializer"));
     EnrollInputBn("h0");
   } else if (GetValFromCustomizedConf<bool>("is_init_hidden_trainable")) {
-    EnrollModelBn("h0");
+    EnrollTmpBn("h0");
   } else {
     EnrollConstBufBn("h0");
   }

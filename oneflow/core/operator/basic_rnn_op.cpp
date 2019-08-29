@@ -5,11 +5,11 @@ namespace oneflow {
 const PbMessage& BasicRnnOp::GetCustomizedConf() const { return op_conf().basic_rnn_conf(); }
 
 void BasicRnnOp::VirtualInitFromOpConf() {
-  EnrollDataTmpBn("plus_op_out");
-  EnrollModelBn("i2h_weight");
-  EnrollModelBn("h2h_weight");
+  EnrollTmpBn("plus_op_out");
+  EnrollTmpBn("i2h_weight");
+  EnrollTmpBn("h2h_weight");
   if (GetValFromCustomizedConf<bool>("use_bias")) {
-    EnrollModelBn("bias");
+    EnrollTmpBn("bias");
     EnrollConstBufBn("bias_multiplier");
   }
 }
