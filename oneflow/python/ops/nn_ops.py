@@ -10,24 +10,6 @@ from oneflow.python.oneflow_export import oneflow_export
 import collections
 
 
-def _get_sequence(value, n, name):
-    """Formats value from input"""
-    if value is None:
-        value = [1]
-    elif not isinstance(value, collections.Sized):
-        value = [value]
-
-    current_n = len(value)
-    if current_n == 1:
-        return list(value * n)
-    elif current_n == n:
-        return list(value)
-    else:
-        raise ValueError(
-            "{} should be of length 1 or {} but was {}".format(name, n, current_n)
-        )
-
-
 @oneflow_export("nn.max_pool1d")
 def max_pool1d(input, ksize, strides, padding, data_format="NWC", name=None):
     # TODO: fix cuDNN bugs in pooling_1d
@@ -48,8 +30,8 @@ def max_pool2d(input, ksize, strides, padding, data_format="NHWC", name=None):
     )
     setattr(op_conf.max_pooling_2d_conf, "in", input.logical_blob_name)
     setattr(op_conf.max_pooling_2d_conf, "out", "out")
-    op_conf.max_pooling_2d_conf.pool_size[:] = _get_sequence(ksize, 2, "ksize")
-    op_conf.max_pooling_2d_conf.strides[:] = _get_sequence(ksize, 2, "strides")
+    op_conf.max_pooling_2d_conf.pool_size[:] = _GetSequence(ksize, 2, "ksize")
+    op_conf.max_pooling_2d_conf.strides[:] = _GetSequence(ksize, 2, "strides")
     assert padding in ["VALID", "SAME"]
     setattr(op_conf.max_pooling_2d_conf, "padding", padding)
     assert data_format in ["NHWC", "NCHW", "NCHW_VECT_C"]
@@ -75,8 +57,8 @@ def avg_pool2d(input, ksize, strides, padding, data_format="NHWC", name=None):
     )
     setattr(op_conf.average_pooling_2d_conf, "in", input.logical_blob_name)
     setattr(op_conf.average_pooling_2d_conf, "out", "out")
-    op_conf.average_pooling_2d_conf.pool_size[:] = _get_sequence(ksize, 2, "ksize")
-    op_conf.average_pooling_2d_conf.strides[:] = _get_sequence(ksize, 2, "strides")
+    op_conf.average_pooling_2d_conf.pool_size[:] = _GetSequence(ksize, 2, "ksize")
+    op_conf.average_pooling_2d_conf.strides[:] = _GetSequence(ksize, 2, "strides")
     assert padding in ["VALID", "SAME"]
     setattr(op_conf.average_pooling_2d_conf, "padding", padding)
     assert data_format in ["NHWC", "NCHW", "NCHW_VECT_C"]
@@ -100,8 +82,8 @@ def max_pool3d(input, ksize, strides, padding, data_format="NDHWC", name=None):
     )
     setattr(op_conf.max_pooling_3d_conf, "in", input.logical_blob_name)
     setattr(op_conf.max_pooling_3d_conf, "out", "out")
-    op_conf.max_pooling_3d_conf.pool_size[:] = _get_sequence(ksize, 3, "ksize")
-    op_conf.max_pooling_3d_conf.strides[:] = _get_sequence(strides, 3, "strides")
+    op_conf.max_pooling_3d_conf.pool_size[:] = _GetSequence(ksize, 3, "ksize")
+    op_conf.max_pooling_3d_conf.strides[:] = _GetSequence(strides, 3, "strides")
     assert padding in ["VALID", "SAME"]
     setattr(op_conf.max_pooling_3d_conf, "padding", padding)
     assert data_format in ["NDHWC", "NCDHW"]
@@ -127,8 +109,8 @@ def avg_pool3d(input, ksize, strides, padding, data_format="NDHWC", name=None):
     )
     setattr(op_conf.average_pooling_3d_conf, "in", input.logical_blob_name)
     setattr(op_conf.average_pooling_3d_conf, "out", "out")
-    op_conf.average_pooling_3d_conf.pool_size[:] = _get_sequence(ksize, 3, "ksize")
-    op_conf.average_pooling_3d_conf.strides[:] = _get_sequence(strides, 3, "strides")
+    op_conf.average_pooling_3d_conf.pool_size[:] = _GetSequence(ksize, 3, "ksize")
+    op_conf.average_pooling_3d_conf.strides[:] = _GetSequence(strides, 3, "strides")
     assert padding in ["VALID", "SAME"]
     setattr(op_conf.average_pooling_3d_conf, "padding", padding)
     assert data_format in ["NDHWC", "NCDHW"]
@@ -142,3 +124,21 @@ def avg_pool3d(input, ksize, strides, padding, data_format="NDHWC", name=None):
     setattr(out_lbi, "op_name", op_conf.name)
     setattr(out_lbi, "blob_name", "out")
     return remote_blob_util.RemoteBlob(out_lbi)
+
+
+def _GetSequence(value, n, name):
+    """Formats value from input"""
+    if value is None:
+        value = [1]
+    elif not isinstance(value, collections.Sized):
+        value = [value]
+
+    current_n = len(value)
+    if current_n == 1:
+        return list(value * n)
+    elif current_n == n:
+        return list(value)
+    else:
+        raise ValueError(
+            "{} should be of length 1 or {} but was {}".format(name, n, current_n)
+        )
