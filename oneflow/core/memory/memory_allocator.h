@@ -2,7 +2,7 @@
 #define ONEFLOW_CORE_MEMORY_MEMORY_ALLOCATOR_H_
 
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/memory/memory_case.pb.h"
+#include "oneflow/core/memory/memory_case_util.h"
 
 namespace oneflow {
 
@@ -34,23 +34,6 @@ T* MemoryAllocator::PlacementNew(T* mem_ptr) {
   }
   CHECK_EQ(mem_ptr, obj);
   return obj;
-}
-
-inline bool operator==(const MemoryCase& lhs, const MemoryCase& rhs) {
-  if (lhs.has_host_mem() && rhs.has_host_mem()) {
-    const HostMemory& lhs_host_mem = lhs.host_mem();
-    const HostMemory& rhs_host_mem = rhs.host_mem();
-    if (lhs_host_mem.has_cuda_pinned_mem() && rhs_host_mem.has_cuda_pinned_mem()) {
-      return lhs_host_mem.cuda_pinned_mem().device_id()
-             == rhs_host_mem.cuda_pinned_mem().device_id();
-    } else {
-      return (!lhs_host_mem.has_cuda_pinned_mem()) && (!rhs_host_mem.has_cuda_pinned_mem());
-    }
-  }
-  if (lhs.has_device_cuda_mem() && rhs.has_device_cuda_mem()) {
-    return lhs.device_cuda_mem().device_id() == rhs.device_cuda_mem().device_id();
-  }
-  return false;
 }
 
 }  // namespace oneflow

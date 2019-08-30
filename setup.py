@@ -24,8 +24,9 @@ setup(
     name='oneflow',
     version='0.0.1',
     url='https://www.oneflow.org/',
-    packages=find_packages("build/python_scripts"),
     install_requires=REQUIRED_PACKAGES,
+    packages=find_packages("build/python_scripts"),
+    package_dir={'':'build/python_scripts'},
     package_data={
         'oneflow': [
             '_oneflow_internal.so',
