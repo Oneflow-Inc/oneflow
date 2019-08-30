@@ -35,61 +35,6 @@ void GenerateDownScaleOpConf(const std::string& name, const ParallelConf& parall
   job_builder->AddOps(parallel_conf, {down_scale_mul_op});
 }
 
-void AddGlobalStepOpConf(const OpGraph& op_graph, JobBuilder* job_builder,
-                         const HashMap<LogicalBlobId, LogicalBlobId>& lbi2diff_lbi) {
-  if (job_builder->job().job_conf().train_conf().has_global_step_lbn()) { return; }
-  OperatorConf global_step_variable_op_conf{};
-  global_step_variable_op_conf.set_name("System-Train-GlobalStep-"
-                                        + job_builder->job().job_conf().job_name());
-  VariableOpConf* global_step_variable_conf = global_step_variable_op_conf.mutable_variable_conf();
-  global_step_variable_conf->set_out("out");
-  *global_step_variable_conf->mutable_shape()->mutable_dim()->Add() = 1;
-  global_step_variable_conf->set_data_type(DataType::kInt64);
-  global_step_variable_conf->mutable_initializer()->mutable_constant_int_conf()->set_value(0);
-
-  OperatorConf identity_op_conf{};
-  identity_op_conf.set_name("System-Train-GlobalStep-" + job_builder->job().job_conf().job_name()
-                            + "-Identity");
-  IdentityOpConf* identity_conf = identity_op_conf.mutable_identity_conf();
-  identity_conf->set_in(global_step_variable_op_conf.name() + "/"
-                        + global_step_variable_conf->out());
-  identity_conf->set_out("out");
-
-  OperatorConf scalar_one_op_conf{};
-  scalar_one_op_conf.set_name("System-Train-GlobalStep-" + job_builder->job().job_conf().job_name()
-                              + "-ScalarOne");
-  ConstantOpConf* scalar_one_constant_conf = scalar_one_op_conf.mutable_constant_conf();
-  scalar_one_constant_conf->set_out("out");
-  *scalar_one_constant_conf->mutable_shape()->mutable_dim()->Add() = 1;
-  scalar_one_constant_conf->set_data_type(DataType::kInt64);
-  scalar_one_constant_conf->mutable_initializer()->mutable_constant_int_conf()->set_value(1);
-
-  OperatorConf add_op_conf{};
-  add_op_conf.set_name("System-Train-GlobalStep-" + job_builder->job().job_conf().job_name()
-                       + "-Add");
-  BroadcastAddOpConf* broadcast_add_conf = add_op_conf.mutable_broadcast_add_conf();
-  broadcast_add_conf->set_out("out");
-  broadcast_add_conf->set_a(identity_op_conf.name() + "/" + identity_conf->out());
-  broadcast_add_conf->set_b(scalar_one_op_conf.name() + "/" + scalar_one_constant_conf->out());
-
-  OperatorConf assign_op_conf{};
-  assign_op_conf.set_name("System-Train-GlobalStep-" + job_builder->job().job_conf().job_name()
-                          + "-Assign");
-  AssignOpConf* assign_conf = assign_op_conf.mutable_assign_conf();
-  assign_conf->set_ref(global_step_variable_op_conf.name() + "/"
-                       + global_step_variable_conf->out());
-  assign_conf->set_value(add_op_conf.name() + "/" + broadcast_add_conf->out());
-
-  ParallelConf parallel_conf{};
-  *parallel_conf.mutable_device_name()->Add() = "0:cpu:0";
-  parallel_conf.set_policy(ParallelPolicy::kDataParallel);
-
-  job_builder->AddOps(parallel_conf, {global_step_variable_op_conf, identity_op_conf,
-                                      scalar_one_op_conf, add_op_conf, assign_op_conf});
-  job_builder->mut_job()->mutable_job_conf()->mutable_train_conf()->set_global_step_lbn(
-      identity_op_conf.name() + "/" + identity_conf->out());
-}
-
 void AddLearningRateScheduleOpConf(const OpGraph& op_graph, JobBuilder* job_builder,
                                    const HashMap<LogicalBlobId, LogicalBlobId>& lbi2diff_lbi) {
   ParallelConf parallel_conf{};

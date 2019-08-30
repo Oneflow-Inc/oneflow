@@ -6,8 +6,6 @@
 
 namespace oneflow {
 
-void AddGlobalStepOpConf(const OpGraph& op_graph, JobBuilder* job_builder,
-                         const HashMap<LogicalBlobId, LogicalBlobId>& lbi2diff_lbi);
 void AddLearningRateScheduleOpConf(const OpGraph& op_graph, JobBuilder* job_builder,
                                    const HashMap<LogicalBlobId, LogicalBlobId>& lbi2diff_lbi);
 void AddOptimizerOpConf(
