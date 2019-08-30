@@ -21,7 +21,6 @@ void BatchGatherGradKernel<device_type, T>::BackwardDataContent(
   UNIMPLEMENTED();
 }
 
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kBatchGatherGradConf, BatchGatherGradKernel,
-                           FLOATING_DATA_TYPE_SEQ);
+REGISTER_KERNEL_HELPER_GPU_FLOATING(OperatorConf::kBatchGatherGradConf, BatchGatherGradKernel);
 
 }  // namespace oneflow

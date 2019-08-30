@@ -35,7 +35,7 @@ const PbMessage& BiasAddKernel<device_type, T>::GetCustomizedOpConf() const {
   return this->op_conf().bias_add_conf();
 }
 
-ADD_DEFAULT_KERNEL_CREATOR_WITH_GPU_HALF(OperatorConf::kBiasAddConf, BiasAddKernel,
-                                         FLOATING_DATA_TYPE_SEQ);
+REGISTER_KERNEL_HELPER_GPU_FLOATING(OperatorConf::kBiasAddConf, BiasAddKernel);
+REGISTER_KERNEL_HELPER_GPU_HALF(OperatorConf::kBiasAddConf, BiasAddKernel);
 
 }  // namespace oneflow
