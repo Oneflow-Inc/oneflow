@@ -10,24 +10,28 @@ void ReturnOp::InitFromOpConf() {
   EnrollOutputBn("out");
 }
 
-void ReturnOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                              const ParallelContext* parallel_ctx) const {
+Maybe<void> ReturnOp::InferBlobDescs(
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx) const {
   *GetBlobDesc4BnInOp("out") = *GetBlobDesc4BnInOp("in");
+  return Maybe<void>::Ok();
 }
 
 const PbMessage& ReturnOp::GetCustomizedConf() const { return op_conf().return_conf(); }
 
-void ReturnOp::InferHasBatchDim(std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
+Maybe<void> ReturnOp::InferHasBatchDim(
+    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
   *HasBatchDim4BnInOp("out") = *HasBatchDim4BnInOp("in");
+  return Maybe<void>::Ok();
 }
 
-void ReturnOp::InferSbpSignature(
+Maybe<void> ReturnOp::InferSbpSignature(
     SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
     const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
     std::function<const SbpInferHint&(const std::string&)> SbpInferHint4Ibn,
     const ParallelDesc& parallel_desc) const {
   const auto& in_sbp_infer_hint = SbpInferHint4Ibn("in");
-  CHECK(in_sbp_infer_hint.parallel_desc() == parallel_desc);
+  CHECK_OR_RETURN(in_sbp_infer_hint.parallel_desc() == parallel_desc);
   if (in_sbp_infer_hint.sbp_parallel().has_partial_sum_parallel()) {
     SbpSignatureBuilder().Broadcast(input_bns()).Broadcast(output_bns()).Build(sbp_signature);
   } else {
@@ -35,6 +39,7 @@ void ReturnOp::InferSbpSignature(
     (*bn2sbp)["in"] = in_sbp_infer_hint.sbp_parallel();
     (*bn2sbp)["out"] = in_sbp_infer_hint.sbp_parallel();
   }
+  return Maybe<void>::Ok();
 }
 
 REGISTER_OP(OperatorConf::kReturnConf, ReturnOp);

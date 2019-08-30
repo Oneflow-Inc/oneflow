@@ -10,27 +10,32 @@ void OutputOp::InitFromOpConf() {
   EnrollOutputBn("out");
 }
 
-void OutputOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                              const ParallelContext* parallel_ctx) const {
+Maybe<void> OutputOp::InferBlobDescs(
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx) const {
   InterfaceOpUtil::InferOutBlobDesc(op_conf().output_conf().blob_conf(), GetBlobDesc4BnInOp("out"),
                                     parallel_ctx);
-  CHECK(*GetBlobDesc4BnInOp("out") == *GetBlobDesc4BnInOp("in"));
+  CHECK_OR_RETURN(*GetBlobDesc4BnInOp("out") == *GetBlobDesc4BnInOp("in"));
+  return Maybe<void>::Ok();
 }
 
 const PbMessage& OutputOp::GetCustomizedConf() const { return op_conf().output_conf(); }
 
-void OutputOp::InferHasBatchDim(std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
+Maybe<void> OutputOp::InferHasBatchDim(
+    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
   InterfaceOpUtil::InferHasBatchDim(op_conf().output_conf().blob_conf(), HasBatchDim4BnInOp("out"));
-  CHECK(*HasBatchDim4BnInOp("out") == *HasBatchDim4BnInOp("in"));
+  CHECK_OR_RETURN(*HasBatchDim4BnInOp("out") == *HasBatchDim4BnInOp("in"));
+  return Maybe<void>::Ok();
 }
 
-void OutputOp::InferSbpSignature(
+Maybe<void> OutputOp::InferSbpSignature(
     SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
     const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
     std::function<const SbpInferHint&(const std::string&)> SbpInferHint4Ibn,
     const ParallelDesc& parallel_desc) const {
   InterfaceOpUtil::GetOutputLikeOpSbpSignature(op_conf().output_conf().blob_conf(), input_bns(),
                                                output_bns(), sbp_signature);
+  return Maybe<void>::Ok();
 }
 
 REGISTER_OP(OperatorConf::kOutputConf, OutputOp);

@@ -25,9 +25,10 @@ void SoftmaxGradOp::InitFromOpConf() {
 
 const PbMessage& SoftmaxGradOp::GetCustomizedConf() const { return op_conf().softmax_grad_conf(); }
 
-void SoftmaxGradOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                   const ParallelContext* parallel_ctx, int64_t record_piece_size,
-                                   std::function<void(OpContext*)> EnrollOpCtx) const {
+Maybe<void> SoftmaxGradOp::InferBlobDescs(
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx, int64_t record_piece_size,
+    std::function<void(OpContext*)> EnrollOpCtx) const {
   // dy
   const BlobDesc* dy_blob_desc = GetBlobDesc4BnInOp("dy");
   // dx
@@ -47,6 +48,7 @@ void SoftmaxGradOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> 
       Shape({static_cast<int64_t>(RtBlobDesc(*dx_blob_desc).ByteSizeOfDataContentField())});
   bw_buf_blob_desc->set_data_type(DataType::kChar);
   EnrollOpCtx(op_ctx);
+  return Maybe<void>::Ok();
 }
 
 void SoftmaxGradOp::VirtualGenKernelConf(

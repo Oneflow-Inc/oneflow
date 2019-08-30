@@ -27,7 +27,7 @@ const PbMessage& DecodeOFRecordOp::GetCustomizedConf() const {
   return op_conf().decode_ofrecord_conf();
 }
 
-void DecodeOFRecordOp::InferBlobDescs(
+Maybe<void> DecodeOFRecordOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   BlobDesc* in_blob_desc = GetBlobDesc4BnInOp(SoleIbn());
@@ -47,6 +47,7 @@ void DecodeOFRecordOp::InferBlobDescs(
     out_blob_desc->set_has_dim1_valid_num_field(decoder_if->HasDim1ValidNumField(encode));
     out_blob_desc->set_has_dim2_valid_num_field(decoder_if->HasDim2ValidNumField(encode));
   }
+  return Maybe<void>::Ok();
 }
 
 LogicalBlobId DecodeOFRecordOp::obn2lbi(const std::string& output_bn) const {
@@ -58,10 +59,11 @@ LogicalBlobId DecodeOFRecordOp::obn2lbi(const std::string& output_bn) const {
   return ret;
 }
 
-void DecodeOFRecordOp::InferHasBatchDim(
+Maybe<void> DecodeOFRecordOp::InferHasBatchDim(
     std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
-  CHECK(*HasBatchDim4BnInOp(SoleIbn()));
+  CHECK_OR_RETURN(*HasBatchDim4BnInOp(SoleIbn()));
   for (const auto& obn : output_bns()) { *HasBatchDim4BnInOp(obn) = true; }
+  return Maybe<void>::Ok();
 }
 
 void DecodeOFRecordOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {

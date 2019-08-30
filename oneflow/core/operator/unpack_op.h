@@ -16,11 +16,11 @@ class UnpackOp final : public Operator {
   const PbMessage& GetCustomizedConf() const override { return op_conf().unpack_conf(); }
   LogicalNode* NewProperLogicalNode() const override { return new UnpackForwardLogicalNode; }
 
-  void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                      const ParallelContext* parallel_ctx) const override;
-  void InferOutputBlobTimeShape(std::function<const Shape*(const std::string&)> GetTimeShape4BnInOp,
-                                const ParallelContext* parallel_ctx,
-                                Shape* time_shape) const override;
+  Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                             const ParallelContext* parallel_ctx) const override;
+  Maybe<void> InferOutputBlobTimeShape(
+      std::function<const Shape*(const std::string&)> GetTimeShape4BnInOp,
+      const ParallelContext* parallel_ctx, Shape* time_shape) const override;
   int32_t GetUnpackNum() const;
 
  private:
