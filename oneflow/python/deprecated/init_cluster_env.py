@@ -30,7 +30,9 @@ def init_worker(config_proto, scp_binary = True, use_uuid = True):
     assert type(scp_binary) is bool
     assert type(use_uuid) is bool
     oneflow_worker_path = os.getenv("ONEFLOW_WORKER_BIN")
-    assert os.path.isfile(oneflow_worker_path)
+    assert oneflow_worker_path is not None, "please set env ONEFLOW_WORKER_BIN"
+    assert os.path.isfile(
+        oneflow_worker_path), "binary oneflow_worker not found, please check your environment variable ONEFLOW_WORKER_BIN, path: {}".format(oneflow_worker_path)
     global _temp_run_dir
     if use_uuid:
         assert scp_binary is True
