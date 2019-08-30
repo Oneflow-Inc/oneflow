@@ -124,6 +124,10 @@ Maybe<void> JobBuildAndInferCtx::AddLossLogicalBlobName(const std::string& lbn) 
 
 bool JobBuildAndInferCtx::HasJobConf() const { return has_job_conf_; }
 
+Maybe<void> JobBuildAndInferCtx::AddPlacementGroup(const PlacementGroup& placement_group) {
+  TODO();
+}
+
 #define GEN_ERROR_WHEN_GET_INFO_FROM_LBN(info_src)                                                 \
   if (lbn.find('/') == std::string::npos) {                                                        \
     return GenJobBuildAndInferError(JobBuildAndInferError::kLogicalBlobNameInvalid, "lbn:" + lbn); \

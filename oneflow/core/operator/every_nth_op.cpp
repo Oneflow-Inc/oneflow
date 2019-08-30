@@ -11,14 +11,14 @@ void EveryNthOp::InitFromOpConf() {
   EnrollOutputBn("out");
 }
 
-void EveryNthOp::InferOutputBlobTimeShape(
+Maybe<void> EveryNthOp::InferOutputBlobTimeShape(
     std::function<const Shape*(const std::string&)> GetTimeShape4BnInOp,
     const ParallelContext* parallel_ctx, Shape* time_shape) const {
   const int64_t n = op_conf().every_nth_conf().n();
   const Shape* in_shape = GetTimeShape4BnInOp("in");
   std::vector<int64_t> dim_vec;
-  CHECK_GE(in_shape->NumAxes(), 1);
-  CHECK_GE(n, 1);
+  CHECK_GE_OR_RETURN(in_shape->NumAxes(), 1);
+  CHECK_GE_OR_RETURN(n, 1);
   if (in_shape->dim_vec().back() % n == 0) {
     dim_vec.insert(dim_vec.end(), in_shape->dim_vec().begin(), in_shape->dim_vec().cend() - 1);
     if (in_shape->dim_vec().back() != n) { dim_vec.push_back(in_shape->dim_vec().back() / n); }
@@ -26,13 +26,16 @@ void EveryNthOp::InferOutputBlobTimeShape(
     dim_vec.push_back(in_shape->elem_cnt() / n);
   }
   *time_shape = Shape(dim_vec);
+  return Maybe<void>::Ok();
 }
 
 const PbMessage& EveryNthOp::GetCustomizedConf() const { return op_conf().every_nth_conf(); }
 
-void EveryNthOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                const ParallelContext* parallel_ctx) const {
+Maybe<void> EveryNthOp::InferBlobDescs(
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx) const {
   *GetBlobDesc4BnInOp("out") = *GetBlobDesc4BnInOp("in");
+  return Maybe<void>::Ok();
 }
 
 void EveryNthOp::GetSbpSignatures(

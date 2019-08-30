@@ -18,6 +18,7 @@ class JobBuildAndInferCtxMgr {
   Maybe<JobBuildAndInferCtx> FindJobBuildAndInferCtx(const std::string& job_name);
   Maybe<std::string> GetCurrentJobName();
   Maybe<void> LeaveCurrentJobBuildAndInferCtx();
+  const JobSet& job_set() const { return job_set_; }
 
  private:
   JobBuildAndInferCtxMgr() : has_cur_job_(false) {}

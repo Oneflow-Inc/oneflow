@@ -13,18 +13,12 @@ class Snapshot final {
   Snapshot() = delete;
   ~Snapshot() = default;
 
-  Snapshot(const std::string& snapshot_root_path);
-
-  std::unique_ptr<PersistentOutStream> GetOutStream(const LogicalBlobId& lbi, int32_t part_id);
-
-  void OnePartDone(const LogicalBlobId& lbi, int32_t part_id, int32_t part_num);
-
-  std::string GetDirFromOpName(const std::string& op_name) const;
+  explicit Snapshot(const std::string& snapshot_root_path);
+  std::unique_ptr<PersistentOutStream> GetOutStream(const LogicalBlobId& lbi);
+  void Done();
 
  private:
-  void ConcatLbnFile(const LogicalBlobId& lbi, int32_t part_num, const std::string& concat_file);
-
-  std::string root_path_;
+  const std::string root_path_;
 };
 
 }  // namespace oneflow

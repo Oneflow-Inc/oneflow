@@ -24,15 +24,19 @@ void InputOp::InitFromOpConf() {
 
 const PbMessage& InputOp::GetCustomizedConf() const { return op_conf().input_conf(); }
 
-void InputOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                             const ParallelContext* parallel_ctx, int64_t record_piece_size) const {
+Maybe<void> InputOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                                    const ParallelContext* parallel_ctx,
+                                    int64_t record_piece_size) const {
   CheckOpConf(op_conf());
-  InterfaceOpUtil::InferOutBlobDesc(op_conf().input_conf().blob_conf(), GetBlobDesc4BnInOp("out"),
-                                    parallel_ctx, record_piece_size);
+  return InterfaceOpUtil::InferOutBlobDesc(op_conf().input_conf().blob_conf(),
+                                           GetBlobDesc4BnInOp("out"), parallel_ctx,
+                                           record_piece_size);
 }
 
-void InputOp::InferHasBatchDim(std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
+Maybe<void> InputOp::InferHasBatchDim(
+    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
   *HasBatchDim4BnInOp("out") = op_conf().input_conf().blob_conf().has_batch_dim();
+  return Maybe<void>::Ok();
 }
 
 void InputOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {

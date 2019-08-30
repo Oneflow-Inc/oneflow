@@ -7,8 +7,6 @@ from datetime import datetime
 import argparse
 
 _DATA_DIR = "/dataset/imagenet_227/train/32"
-_SINGLE_PIC_DATA_DIR = '/home/caishenghang/dev/cnns_test/dataset/PNG227/of_record'
-_MODEL_LOAD_DIR = '/home/caishenghang/dev/cnns_test/alexnet_fp16/fp32/of_model'
 _MODEL_SAVE_DIR = "./model_save-{}".format(
     str(datetime.now().strftime('%Y-%m-%d-%H:%M:%S')))
 
@@ -29,9 +27,9 @@ parser.add_argument('-r', '--remote_by_hand', default=False,
 parser.add_argument('-e', '--eval_dir',
                     type=str, default=_DATA_DIR, required=False)
 parser.add_argument('-t', '--train_dir',
-                    type=str, default=_SINGLE_PIC_DATA_DIR, required=False)
+                    type=str, default=_DATA_DIR, required=False)
 parser.add_argument('-load', '--model_load_dir',
-                    type=str, default=_MODEL_LOAD_DIR, required=False)
+                    type=str, default="", required=False)
 parser.add_argument('-save', '--model_save_dir',
                     type=str, default=_MODEL_SAVE_DIR, required=False)
 
@@ -240,8 +238,10 @@ def TrainAlexNet():
     job_conf.train_conf().primary_lr = 0.00001
     job_conf.train_conf().num_of_batches_in_snapshot = 100
     job_conf.train_conf().model_update_conf.naive_conf.SetInParent()
-    job_conf.train_conf().loss_lbn.extend(["softmax_loss/out"])
-    return BuildAlexNetWithDeprecatedAPI(args.train_dir)
+    softmax_loss = BuildAlexNetWithDeprecatedAPI(args.train_dir)
+    train_conf_builder = job_conf.get_train_conf_builder()
+    train_conf_builder.add_loss(softmax_loss)
+    return softmax_loss
 
 
 def EvaluateAlexNet():

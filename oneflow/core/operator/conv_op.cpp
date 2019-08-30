@@ -83,14 +83,15 @@ void ConvOp<NDims>::InitFromOpConf() {
 }
 
 template<int32_t NDims>
-void ConvOp<NDims>::InferOutBlobDescs(
+Maybe<void> ConvOp<NDims>::InferOutBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, int64_t record_piece_size,
     std::function<void(OpContext*)> EnrollOpCtx) const {
   const std::string& data_format = GetValFromCustomizedConf<std::string>("data_format");
+
   // in
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
-  CHECK_EQ(in_blob_desc->shape().NumAxes(), NDims + 2);
+  CHECK_EQ_OR_RETURN(in_blob_desc->shape().NumAxes(), NDims + 2);
   // CHECK_EQ(in_blob_desc->data_type(), GlobalJobDesc().DefaultDataType());
 
   // out
@@ -110,17 +111,19 @@ void ConvOp<NDims>::InferOutBlobDescs(
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   *out_blob_desc = *in_blob_desc;
   out_blob_desc->mut_shape() = Shape(out_shape);
+  return Maybe<void>::Ok();
 }
 
 template<int32_t NDims>
-void ConvOp<NDims>::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                   const ParallelContext* parallel_ctx, int64_t record_piece_size,
-                                   std::function<void(OpContext*)> EnrollOpCtx) const {
+Maybe<void> ConvOp<NDims>::InferBlobDescs(
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx, int64_t record_piece_size,
+    std::function<void(OpContext*)> EnrollOpCtx) const {
   const std::string& data_format = GetValFromCustomizedConf<std::string>("data_format");
 
   // in
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
-  CHECK_EQ(in_blob_desc->shape().NumAxes(), NDims + 2);
+  CHECK_EQ_OR_RETURN(in_blob_desc->shape().NumAxes(), NDims + 2);
   // CHECK_EQ(in_blob_desc->data_type(), GlobalJobDesc().DefaultDataType());
 
   // out
@@ -150,7 +153,7 @@ void ConvOp<NDims>::InferBlobDescs(std::function<BlobDesc*(const std::string&)> 
   if (GetValFromCustomizedConf<std::string>("weight").empty()) {
     GetBlobDesc4BnInOp("weight")->mut_shape() = Shape(weight_shape);
   } else {
-    CHECK_EQ(GetBlobDesc4BnInOp("weight")->shape(), Shape(weight_shape));
+    CHECK_EQ_OR_RETURN(GetBlobDesc4BnInOp("weight")->shape(), Shape(weight_shape));
   }
 
   if (GetValFromCustomizedConf<bool>("use_bias")) {
@@ -158,7 +161,7 @@ void ConvOp<NDims>::InferBlobDescs(std::function<BlobDesc*(const std::string&)> 
     if (GetValFromCustomizedConf<std::string>("bias").empty()) {
       GetBlobDesc4BnInOp("bias")->mut_shape() = Shape({filters});
     } else {
-      CHECK_EQ(GetBlobDesc4BnInOp("bias")->shape(), Shape({filters}));
+      CHECK_EQ_OR_RETURN(GetBlobDesc4BnInOp("bias")->shape(), Shape({filters}));
     }
     if (DevIsGpuAndEnableCudnn() == false) {
       std::vector<int64_t> bias_mul_shape(NDims + 1, 1);
@@ -191,6 +194,7 @@ void ConvOp<NDims>::InferBlobDescs(std::function<BlobDesc*(const std::string&)> 
     fw_cudnn_buf->set_data_type(DataType::kChar);
   }
 #endif  // WITH_CUDA
+  return Maybe<void>::Ok();
 }
 
 template<int32_t NDims>
@@ -307,9 +311,10 @@ void ConvOp<NDims>::InferCudnnAlgo(
 #endif  // WITH_CUDA
 
 template<int32_t NDims>
-void ConvOp<NDims>::InferHasBatchDim(
+Maybe<void> ConvOp<NDims>::InferHasBatchDim(
     std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
   *HasBatchDim4BnInOp("out") = *HasBatchDim4BnInOp("in");
+  return Maybe<void>::Ok();
 }
 
 template<int32_t NDims>
