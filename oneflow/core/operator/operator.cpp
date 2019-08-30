@@ -88,8 +88,8 @@ Maybe<void> Operator::InferOutputBlobTimeShapeIf(
     std::function<const Shape*(const std::string&)> GetTimeShape4BnInOp,
     const ParallelContext* parallel_ctx, Shape* time_shape) const {
   for (const std::string& ibn : input_bns()) {
-    CHECK_EQ(GetTimeShape4BnInOp(ibn)->elem_cnt(),
-             GetTimeShape4BnInOp(input_bns().Get(0))->elem_cnt());
+    CHECK_EQ_OR_RETURN(GetTimeShape4BnInOp(ibn)->elem_cnt(),
+                       GetTimeShape4BnInOp(input_bns().Get(0))->elem_cnt());
   }
   return InferOutputBlobTimeShape(GetTimeShape4BnInOp, parallel_ctx, time_shape);
 }
@@ -147,7 +147,7 @@ Maybe<void> Operator::InferSbpSignature(
   // filter sbp signatures by sbp signature conf
   SbpSignatureList filtered_sbp_sigs_by_conf;
   FilterSbpSignatureList(sbp_sig_list, sbp_sig_conf, &filtered_sbp_sigs_by_conf);
-  CHECK_GT(filtered_sbp_sigs_by_conf.sbp_signature_size(), 0);
+  CHECK_GT_OR_RETURN(filtered_sbp_sigs_by_conf.sbp_signature_size(), 0);
   if (filtered_sbp_sigs_by_conf.sbp_signature_size() == 1) {
     *sbp_signature = *filtered_sbp_sigs_by_conf.sbp_signature().begin();
     return Maybe<void>::Ok();
@@ -450,8 +450,8 @@ void EraseEmptyBnInVec(std::function<const BlobDesc*(const std::string&)> GetBlo
 Maybe<void> Operator::NaiveInferHasBatchDim(
     std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
   if (output_bns().empty()) { return Maybe<void>::Ok(); }
-  CHECK_GT(input_bns().size(), 0);
-  CHECK_EQ(output_bns().size(), 1);
+  CHECK_GT_OR_RETURN(input_bns().size(), 0);
+  CHECK_EQ_OR_RETURN(output_bns().size(), 1);
   bool has_batch_dim = false;
   for (const auto& ibn : input_bns()) { has_batch_dim = has_batch_dim || *HasBatchDim4BnInOp(ibn); }
   *HasBatchDim4BnInOp(SoleObn()) = has_batch_dim;

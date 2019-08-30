@@ -20,9 +20,9 @@ const PbMessage& CallbackNotifyOp::GetCustomizedConf() const {
 Maybe<void> CallbackNotifyOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
-  CHECK_EQ(parallel_ctx->parallel_num(), 1);
-  CHECK(GetBlobDesc4BnInOp("in")->shape() == Shape({1}));
-  CHECK(IsIntegralDataType(GetBlobDesc4BnInOp("in")->data_type()));
+  CHECK_EQ_OR_RETURN(parallel_ctx->parallel_num(), 1);
+  CHECK_OR_RETURN(GetBlobDesc4BnInOp("in")->shape() == Shape({1}));
+  CHECK_OR_RETURN(IsIntegralDataType(GetBlobDesc4BnInOp("in")->data_type()));
   return Maybe<void>::Ok();
 }
 

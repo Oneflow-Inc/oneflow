@@ -61,7 +61,7 @@ LogicalBlobId DecodeOFRecordOp::obn2lbi(const std::string& output_bn) const {
 
 Maybe<void> DecodeOFRecordOp::InferHasBatchDim(
     std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
-  CHECK(*HasBatchDim4BnInOp(SoleIbn()));
+  CHECK_OR_RETURN(*HasBatchDim4BnInOp(SoleIbn()));
   for (const auto& obn : output_bns()) { *HasBatchDim4BnInOp(obn) = true; }
   return Maybe<void>::Ok();
 }

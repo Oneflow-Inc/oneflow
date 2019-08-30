@@ -20,7 +20,7 @@ Maybe<void> EmbeddingLookupOp::InferBlobDescs(
     const ParallelContext* parallel_ctx) const {
   const EmbeddingLookupOpConf& conf = op_conf().embedding_lookup_conf();
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("ids");
-  CHECK_EQ(in_blob_desc->data_type(), DataType::kInt32);
+  CHECK_EQ_OR_RETURN(in_blob_desc->data_type(), DataType::kInt32);
   int32_t units = conf.units();
   int32_t table_size = conf.table_size();
   if (parallel_ctx->policy() == kModelParallel) {

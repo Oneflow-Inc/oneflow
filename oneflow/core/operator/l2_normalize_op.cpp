@@ -18,9 +18,9 @@ Maybe<void> L2NormalizeOp::InferBlobDescs(
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
   int32_t axis_num = in_blob_desc->shape().NumAxes();
   int32_t axis = conf.axis() >= 0 ? conf.axis() : conf.axis() + axis_num;
-  CHECK_GE(axis, 0);
-  CHECK_LT(axis, axis_num);
-  CHECK_GT(conf.epsilon(), 0);
+  CHECK_GE_OR_RETURN(axis, 0);
+  CHECK_LT_OR_RETURN(axis, axis_num);
+  CHECK_GT_OR_RETURN(conf.epsilon(), 0);
   *GetBlobDesc4BnInOp("out") = *in_blob_desc;
   BlobDesc* square_x_sum_blob_desc = GetBlobDesc4BnInOp("square_x_sum");
   *square_x_sum_blob_desc = *in_blob_desc;

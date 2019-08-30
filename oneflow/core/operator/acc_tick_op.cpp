@@ -21,7 +21,7 @@ Maybe<void> AccTickOp::InferOutputBlobTimeShape(
     std::function<const Shape*(const std::string&)> GetTimeShape4BnInOp,
     const ParallelContext* parallel_ctx, Shape* time_shape) const {
   const int32_t max_acc_num = op_conf().acc_tick_conf().max_acc_num();
-  CHECK_EQ(GetTimeShape4BnInOp("one")->elem_cnt() % max_acc_num, 0);
+  CHECK_EQ_OR_RETURN(GetTimeShape4BnInOp("one")->elem_cnt() % max_acc_num, 0);
   *time_shape = Shape({GetTimeShape4BnInOp("one")->elem_cnt() / max_acc_num});
   return Maybe<void>::Ok();
 }

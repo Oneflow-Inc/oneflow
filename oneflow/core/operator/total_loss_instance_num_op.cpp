@@ -10,7 +10,7 @@ Maybe<void> TotalLossInstanceNumOp::VirtualInferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   for (const std::string& ibn : input_bns()) {
-    CHECK(*GetBlobDesc4BnInOp(ibn) == *GetBlobDesc4BnInOp(input_bns().Get(0)));
+    CHECK_OR_RETURN(*GetBlobDesc4BnInOp(ibn) == *GetBlobDesc4BnInOp(input_bns().Get(0)));
   }
   return Maybe<void>::Ok();
 }

@@ -35,7 +35,7 @@ Maybe<void> FullyConnectedOp::InferBlobDescs(
   // useful vars
   const FullyConnectedOpConf& conf = op_conf().fully_connected_conf();
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
-  CHECK_EQ(in_blob_desc->data_type(), GlobalJobDesc().DefaultDataType());
+  CHECK_EQ_OR_RETURN(in_blob_desc->data_type(), GlobalJobDesc().DefaultDataType());
   int32_t units = conf.units();
   if (parallel_ctx->policy() == kModelParallel) {
     BalancedSplitter splitter(units, parallel_ctx->parallel_num());
@@ -48,7 +48,8 @@ Maybe<void> FullyConnectedOp::InferBlobDescs(
 
   // weight
   if (conf.has_weight()) {
-    CHECK_EQ(GetBlobDesc4BnInOp("weight")->shape(), Shape({units, in_blob_desc->shape().Count(1)}));
+    CHECK_EQ_OR_RETURN(GetBlobDesc4BnInOp("weight")->shape(),
+                       Shape({units, in_blob_desc->shape().Count(1)}));
   } else {
     GetBlobDesc4BnInOp("weight")->mut_shape() = Shape({units, in_blob_desc->shape().Count(1)});
   }
@@ -56,7 +57,7 @@ Maybe<void> FullyConnectedOp::InferBlobDescs(
   if (conf.use_bias()) {
     // bias
     if (conf.has_bias()) {
-      CHECK_EQ(GetBlobDesc4BnInOp("bias")->shape(), Shape({1, units}));
+      CHECK_EQ_OR_RETURN(GetBlobDesc4BnInOp("bias")->shape(), Shape({1, units}));
     } else {
       GetBlobDesc4BnInOp("bias")->mut_shape() = Shape({1, units});
     }

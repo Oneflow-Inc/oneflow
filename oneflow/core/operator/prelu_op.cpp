@@ -29,7 +29,7 @@ Maybe<void> PReluOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)>
       alpha_blob_desc->mut_shape() =
           Shape({in_blob_desc->shape().At(in_blob_desc->shape().NumAxes() - 1)});
     } else {
-      UNIMPLEMENTED();
+      UNIMPLEMENTED_THEN_RETURN();
     }
   }
   alpha_blob_desc->set_data_type(in_blob_desc->data_type());

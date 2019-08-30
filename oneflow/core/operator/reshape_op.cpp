@@ -34,12 +34,12 @@ Maybe<void> ReshapeOp::InferBlobDescs(
       elem_cnt *= dim_vec[i];
     }
   }
-  CHECK_LE(dim_cnt_need_infer, 1);
+  CHECK_LE_OR_RETURN(dim_cnt_need_infer, 1);
   if (dim_cnt_need_infer == 1) {
     dim_vec[dim_index_need_infer] = in_blob_desc->shape().elem_cnt() / elem_cnt;
   }
   out_blob_desc->mut_shape() = Shape(dim_vec);
-  CHECK_EQ(out_blob_desc->shape().elem_cnt(), in_blob_desc->shape().elem_cnt());
+  CHECK_EQ_OR_RETURN(out_blob_desc->shape().elem_cnt(), in_blob_desc->shape().elem_cnt());
   return Maybe<void>::Ok();
 }
 

@@ -40,7 +40,7 @@ LogicalBlobId NormalModelUpdtOp::obn2lbi(const std::string& output_bn) const {
 
 Maybe<void> NormalModelUpdtOp::InferHasBatchDim(
     std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
-  for (const auto& ibn : input_bns()) { CHECK_EQ(*HasBatchDim4BnInOp(ibn), false); }
+  for (const auto& ibn : input_bns()) { CHECK_EQ_OR_RETURN(*HasBatchDim4BnInOp(ibn), false); }
   return Maybe<void>::Ok();
 }
 

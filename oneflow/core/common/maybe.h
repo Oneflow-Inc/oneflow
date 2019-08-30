@@ -15,7 +15,7 @@ class MaybeBase {
   MaybeBase(const MaybeBase<T>&) = default;
   virtual ~MaybeBase() = default;
 
-  bool IsOk() const { return data_or_error_.template Has<T>(); }
+  bool isOk() const { return data_or_error_.template Has<T>(); }
   const std::shared_ptr<T>& data() const { return data_or_error_.template Get<T>(); }
   const Error& error() const { return *data_or_error_.template Get<const Error>(); }
 
@@ -64,7 +64,7 @@ inline Maybe<T> MaybeFuncSafeCallWrapper(Maybe<T>&& maybe) {
 #define JUST(...)                                              \
   ({                                                           \
     const auto& maybe = MaybeFuncSafeCallWrapper(__VA_ARGS__); \
-    if (!maybe.IsOk()) {                                       \
+    if (!maybe.isOk()) {                                       \
       LOG(INFO) << "maybe failed:" << __MAYBE_CALL_LOC__;      \
       return maybe;                                            \
     }                                                          \
@@ -73,7 +73,7 @@ inline Maybe<T> MaybeFuncSafeCallWrapper(Maybe<T>&& maybe) {
 #define CHECK_JUST(...)                                        \
   ({                                                           \
     const auto& maybe = MaybeFuncSafeCallWrapper(__VA_ARGS__); \
-    CHECK(maybe.IsOk());                                       \
+    CHECK(maybe.isOk());                                       \
     maybe.data();                                              \
   })
 
@@ -82,5 +82,97 @@ inline Maybe<T> MaybeFuncSafeCallWrapper(Maybe<T>&& maybe) {
 #endif
 
 }  // namespace oneflow
+
+namespace {
+
+enum class ErrorType {
+  kUnknown = 0,
+  kCondition = 1,
+  kEnforce = 2,
+};
+
+template<ErrorType type>
+std::ostringstream& SerializeExprError(std::ostringstream& oss, const std::string& expr) {
+  oss << "Unknown type error `" << expr << "` occurs.";
+  return oss;
+}
+
+template<>
+std::ostringstream& SerializeExprError<ErrorType::kCondition>(std::ostringstream& oss,
+                                                              const std::string& expr) {
+  oss << "Condition expression `" << expr << "` check failed.";
+  return oss;
+}
+
+template<>
+std::ostringstream& SerializeExprError<ErrorType::kEnforce>(std::ostringstream& oss,
+                                                            const std::string& expr) {
+  oss << "Enforce error `" << expr << "` occurs.";
+  return oss;
+}
+
+std::string Sprintf() { return ""; }
+
+template<typename... Args>
+std::string Sprintf(const Args&... args) {
+  char buffer[2048];
+  snprintf(buffer, sizeof(buffer), std::forward<const Args>(args)...);
+  return std::string(buffer);
+}
+
+}  // namespace
+
+#define ASSERT_EQ(lhs, rhs) ((lhs) == (rhs))
+#define ASSERT_GE(lhs, rhs) ((lhs) >= (rhs))
+#define ASSERT_GT(lhs, rhs) ((lhs) > (rhs))
+#define ASSERT_LE(lhs, rhs) ((lhs) <= (rhs))
+#define ASSERT_LT(lhs, rhs) ((lhs) < (rhs))
+#define ASSERT_NE(lhs, rhs) ((lhs) != (rhs))
+
+#define GEN_ERROR_MSG(type, expr, ...)             \
+  [&]() -> std::string {                           \
+    std::string detail = Sprintf(__VA_ARGS__);     \
+    std::ostringstream oss;                        \
+    SerializeExprError<type>(oss, expr);           \
+    if (!detail.empty()) { oss << " " << detail; } \
+    return oss.str();                              \
+  }()
+
+#define CHECK_OR_RETURN(expr, ...)                                             \
+  {                                                                            \
+    if (!(expr)) {                                                             \
+      Error error;                                                             \
+      error.set_msg(GEN_ERROR_MSG(ErrorType::kCondition, #expr, __VA_ARGS__)); \
+      return Maybe<void>(error);                                               \
+    }                                                                          \
+  }
+
+#define CHECK_EQ_OR_RETURN(lhs, rhs, ...) CHECK_OR_RETURN(ASSERT_EQ(lhs, rhs), __VA_ARGS__)
+
+#define CHECK_GE_OR_RETURN(lhs, rhs, ...) CHECK_OR_RETURN(ASSERT_GE(lhs, rhs), __VA_ARGS__)
+
+#define CHECK_GT_OR_RETURN(lhs, rhs, ...) CHECK_OR_RETURN(ASSERT_GT(lhs, rhs), __VA_ARGS__)
+
+#define CHECK_LE_OR_RETURN(lhs, rhs, ...) CHECK_OR_RETURN(ASSERT_LE(lhs, rhs), __VA_ARGS__)
+
+#define CHECK_LT_OR_RETURN(lhs, rhs, ...) CHECK_OR_RETURN(ASSERT_LT(lhs, rhs), __VA_ARGS__)
+
+#define CHECK_NE_OR_RETURN(lhs, rhs, ...) CHECK_OR_RETURN(ASSERT_NE(lhs, rhs), __VA_ARGS__)
+
+#define CHECK_STREQ_OR_RETURN(lhs, rhs, ...) \
+  CHECK_EQ_OR_RETURN(std::string(lhs), std::string(rhs), __VA_ARGS__)
+
+#define ENFORCE_THEN_RETURN(type, ...)                                     \
+  {                                                                        \
+    Error error;                                                           \
+    error.set_msg(GEN_ERROR_MSG(ErrorType::kEnforce, #type, __VA_ARGS__)); \
+    return Maybe<void>(error);                                             \
+  }
+
+#define UNSUPPORTED_THEN_RETURN(...) ENFORCE_THEN_RETURN(ASSERT_UNSUPPORTED, __VA_ARGS__)
+
+#define TODO_THEN_RETURN(...) ENFORCE_THEN_RETURN(ASSERT_TODO, __VA_ARGS__)
+
+#define UNIMPLEMENTED_THEN_RETURN(...) ENFORCE_THEN_RETURN(ASSERT_UNIMPLEMENTED, __VA_ARGS__)
 
 #endif  // ONEFLOW_CORE_COMMON_MAYBE_H_

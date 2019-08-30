@@ -15,8 +15,8 @@ const PbMessage& ReshapeLikeOp::GetCustomizedConf() const { return op_conf().res
 Maybe<void> ReshapeLikeOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
-  CHECK_EQ(GetBlobDesc4BnInOp("x")->shape().elem_cnt(),
-           GetBlobDesc4BnInOp("like")->shape().elem_cnt());
+  CHECK_EQ_OR_RETURN(GetBlobDesc4BnInOp("x")->shape().elem_cnt(),
+                     GetBlobDesc4BnInOp("like")->shape().elem_cnt());
   GetBlobDesc4BnInOp("y")->CopyMetaFrom(*GetBlobDesc4BnInOp("like"));
   return Maybe<void>::Ok();
 }

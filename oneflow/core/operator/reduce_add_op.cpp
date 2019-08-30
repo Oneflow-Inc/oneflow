@@ -23,11 +23,11 @@ Maybe<void> ReduceAddOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   int32_t in_num = op_conf().reduce_add_conf().in_num();
-  CHECK_GE(in_num, 2);
+  CHECK_GE_OR_RETURN(in_num, 2);
   BlobDesc* first_in_blob = GetBlobDesc4BnInOp(input_bns().Get(0));
   *GetBlobDesc4BnInOp(SoleObn()) = *first_in_blob;
   for (int32_t i = 1; i < in_num; ++i) {
-    CHECK(*first_in_blob == *GetBlobDesc4BnInOp(input_bns().Get(i)));
+    CHECK_OR_RETURN(*first_in_blob == *GetBlobDesc4BnInOp(input_bns().Get(i)));
   }
   return Maybe<void>::Ok();
 }

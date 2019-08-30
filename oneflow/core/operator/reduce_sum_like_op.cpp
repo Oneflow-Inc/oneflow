@@ -24,7 +24,7 @@ Maybe<void> ReduceSumLikeOp::InferBlobDescs(
   const ReduceSumLikeOpConf& conf = op_conf().reduce_sum_like_conf();
   BlobDesc* x_blob = GetBlobDesc4BnInOp("x");
   BlobDesc* like_blob = GetBlobDesc4BnInOp("like");
-  if (conf.axis().empty()) { CHECK_EQ(x_blob->shape(), like_blob->shape()); }
+  if (conf.axis().empty()) { CHECK_EQ_OR_RETURN(x_blob->shape(), like_blob->shape()); }
   *GetBlobDesc4BnInOp("temp_storage") = *x_blob;
   GetBlobDesc4BnInOp("y")->CopyMetaFrom(*like_blob);
   return Maybe<void>::Ok();

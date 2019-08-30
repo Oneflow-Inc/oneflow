@@ -18,8 +18,8 @@ Maybe<void> MultiplyOp::InferBlobDescs(
     const ParallelContext* parallel_ctx) const {
   BlobDesc* in_0_blob_desc = GetBlobDesc4BnInOp("in_0");
   BlobDesc* in_1_blob_desc = GetBlobDesc4BnInOp("in_1");
-  CHECK_EQ(in_0_blob_desc->data_type(), GlobalJobDesc().DefaultDataType());
-  CHECK_EQ(in_0_blob_desc->shape(), in_1_blob_desc->shape());
+  CHECK_EQ_OR_RETURN(in_0_blob_desc->data_type(), GlobalJobDesc().DefaultDataType());
+  CHECK_EQ_OR_RETURN(in_0_blob_desc->shape(), in_1_blob_desc->shape());
   // out
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   *out_blob_desc = *in_0_blob_desc;

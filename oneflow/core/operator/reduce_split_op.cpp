@@ -47,7 +47,7 @@ void ReduceSplitOp::VirtualGenKernelConf(
 
 Maybe<void> ReduceSplitOp::InferHasBatchDim(
     std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
-  CHECK_EQ(*HasBatchDim4BnInOp("in"), false);
+  CHECK_EQ_OR_RETURN(*HasBatchDim4BnInOp("in"), false);
   for (const auto& ibn : input_bns()) { *HasBatchDim4BnInOp(ibn) = false; }
   return Maybe<void>::Ok();
 }

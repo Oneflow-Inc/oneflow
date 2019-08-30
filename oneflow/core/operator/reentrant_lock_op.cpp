@@ -13,11 +13,11 @@ void ReentrantLockOp::InitFromOpConf() {
 Maybe<void> ReentrantLockOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
-  CHECK_EQ(parallel_ctx->parallel_num(), 1);
+  CHECK_EQ_OR_RETURN(parallel_ctx->parallel_num(), 1);
   BlobDesc* out = GetBlobDesc4BnInOp("out");
   out->mut_shape() = Shape({1});
   const DataType data_type = GetBlobDesc4BnInOp("out")->data_type();
-  CHECK(IsIntegralDataType(data_type));
+  CHECK_OR_RETURN(IsIntegralDataType(data_type));
   out->set_data_type(data_type);
   return Maybe<void>::Ok();
 }

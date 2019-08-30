@@ -11,7 +11,7 @@ void ForeignOutputOp::InitFromOpConf() {
 Maybe<void> ForeignOutputOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
-  CHECK_EQ(parallel_ctx->parallel_num(), 1);
+  CHECK_EQ_OR_RETURN(parallel_ctx->parallel_num(), 1);
   return Maybe<void>::Ok();
 }
 

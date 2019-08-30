@@ -18,12 +18,12 @@ Maybe<void> BatchGatherGradOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   const int64_t gather_dim_size = op_conf().batch_gather_grad_conf().gather_dim_size();
-  CHECK_GE(gather_dim_size, 1);
+  CHECK_GE_OR_RETURN(gather_dim_size, 1);
   const BlobDesc* out_diff = GetBlobDesc4BnInOp("out_diff");
   const BlobDesc* indices = GetBlobDesc4BnInOp("indices");
-  CHECK(IsIntegralDataType(indices->data_type()));
-  CHECK_GE(indices->shape().NumAxes(), 1);
-  CHECK_GE(out_diff->shape().NumAxes(), indices->shape().NumAxes());
+  CHECK_OR_RETURN(IsIntegralDataType(indices->data_type()));
+  CHECK_GE_OR_RETURN(indices->shape().NumAxes(), 1);
+  CHECK_GE_OR_RETURN(out_diff->shape().NumAxes(), indices->shape().NumAxes());
   std::vector<int64_t> in_diff_dim_vec;
   in_diff_dim_vec.insert(in_diff_dim_vec.end(), indices->shape().dim_vec().cbegin(),
                          indices->shape().dim_vec().cend() - 1);

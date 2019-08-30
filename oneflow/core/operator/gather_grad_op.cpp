@@ -18,7 +18,7 @@ Maybe<void> GatherGradOp::InferBlobDescs(
     const ParallelContext* parallel_ctx) const {
   const GatherGradOpConf& conf = op_conf().gather_grad_conf();
   const BlobDesc* indices = GetBlobDesc4BnInOp("indices");
-  CHECK(IsIntegralDataType(indices->data_type()));
+  CHECK_OR_RETURN(IsIntegralDataType(indices->data_type()));
   const BlobDesc* out_diff = GetBlobDesc4BnInOp("out_diff");
   std::vector<int64_t> in_diff_dim_vec;
   in_diff_dim_vec.insert(in_diff_dim_vec.end(), out_diff->shape().dim_vec().cbegin(),

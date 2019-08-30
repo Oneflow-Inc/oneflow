@@ -8,8 +8,8 @@ Maybe<void> RMSPropModelUpdateOp::MdUpdtVirtualInferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   const BlobDesc* model_blob_desc = GetBlobDesc4BnInOp("model");
-  CHECK_EQ(model_blob_desc->data_type(), GlobalJobDesc().DefaultDataType());
-  CHECK_EQ(model_blob_desc->has_data_id_field(), false);
+  CHECK_EQ_OR_RETURN(model_blob_desc->data_type(), GlobalJobDesc().DefaultDataType());
+  CHECK_EQ_OR_RETURN(model_blob_desc->has_data_id_field(), false);
   *GetBlobDesc4BnInOp("mean_square") = *model_blob_desc;
   return Maybe<void>::Ok();
 }

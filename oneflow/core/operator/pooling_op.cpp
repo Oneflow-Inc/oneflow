@@ -27,8 +27,8 @@ Maybe<void> PoolingOp::InferBlobDescs(
   // in
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
   const Shape& in_shape = in_blob_desc->shape();
-  CHECK_GE(in_blob_desc->shape().NumAxes(), 3);
-  CHECK_LE(in_blob_desc->shape().NumAxes(), 5);
+  CHECK_GE_OR_RETURN(in_blob_desc->shape().NumAxes(), 3);
+  CHECK_LE_OR_RETURN(in_blob_desc->shape().NumAxes(), 5);
   // out
   std::string data_format = GetValFromCustomizedConf<std::string>("data_format");
   std::vector<int64_t> in = {GetInDim(in_shape, data_format, 0, GetDim()),

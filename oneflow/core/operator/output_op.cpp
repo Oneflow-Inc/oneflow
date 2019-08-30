@@ -15,7 +15,7 @@ Maybe<void> OutputOp::InferBlobDescs(
     const ParallelContext* parallel_ctx) const {
   InterfaceOpUtil::InferOutBlobDesc(op_conf().output_conf().blob_conf(), GetBlobDesc4BnInOp("out"),
                                     parallel_ctx);
-  CHECK(*GetBlobDesc4BnInOp("out") == *GetBlobDesc4BnInOp("in"));
+  CHECK_OR_RETURN(*GetBlobDesc4BnInOp("out") == *GetBlobDesc4BnInOp("in"));
   return Maybe<void>::Ok();
 }
 
@@ -24,7 +24,7 @@ const PbMessage& OutputOp::GetCustomizedConf() const { return op_conf().output_c
 Maybe<void> OutputOp::InferHasBatchDim(
     std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
   InterfaceOpUtil::InferHasBatchDim(op_conf().output_conf().blob_conf(), HasBatchDim4BnInOp("out"));
-  CHECK(*HasBatchDim4BnInOp("out") == *HasBatchDim4BnInOp("in"));
+  CHECK_OR_RETURN(*HasBatchDim4BnInOp("out") == *HasBatchDim4BnInOp("in"));
   return Maybe<void>::Ok();
 }
 

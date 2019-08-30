@@ -19,9 +19,9 @@ Maybe<void> DotOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> G
                                   const ParallelContext* parallel_ctx) const {
   BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
   BlobDesc* weight_blob_desc = GetBlobDesc4BnInOp("weight");
-  CHECK_EQ(in_blob_desc->data_type(), GlobalJobDesc().DefaultDataType());
-  CHECK_EQ(in_blob_desc->shape().At(0), weight_blob_desc->shape().At(0));
-  CHECK_EQ(in_blob_desc->shape().Count(1), weight_blob_desc->shape().Count(1));
+  CHECK_EQ_OR_RETURN(in_blob_desc->data_type(), GlobalJobDesc().DefaultDataType());
+  CHECK_EQ_OR_RETURN(in_blob_desc->shape().At(0), weight_blob_desc->shape().At(0));
+  CHECK_EQ_OR_RETURN(in_blob_desc->shape().Count(1), weight_blob_desc->shape().Count(1));
   // tmp & tmp storage
   BlobDesc* tmp_blob_desc = GetBlobDesc4BnInOp("tmp");
   *tmp_blob_desc = *in_blob_desc;

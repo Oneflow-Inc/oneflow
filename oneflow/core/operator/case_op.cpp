@@ -12,9 +12,9 @@ void CaseOp::InitFromOpConf() {
 Maybe<void> CaseOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                    const ParallelContext* parallel_ctx) const {
   const BlobDesc* in = GetBlobDesc4BnInOp("in");
-  CHECK_EQ(in->shape().elem_cnt(), 1);
+  CHECK_EQ_OR_RETURN(in->shape().elem_cnt(), 1);
   const DataType data_type = in->data_type();
-  CHECK(IsIntegralDataType(data_type));
+  CHECK_OR_RETURN(IsIntegralDataType(data_type));
   for (const std::string& obn : output_bns()) {
     BlobDesc* out = GetBlobDesc4BnInOp(obn);
     out->mut_shape() = Shape({1});

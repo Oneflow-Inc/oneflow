@@ -26,7 +26,8 @@ Maybe<void> SplitLikeOp::InferBlobDescs(
     const BlobDesc* like_i_blob_desc = GetBlobDesc4BnInOp(GenRepeatedBn("like", i));
     FOR_RANGE(int64_t, j, 0, like_i_blob_desc->shape().NumAxes()) {
       if (j != split_axis) {
-        CHECK_EQ(like_0_blob_desc->shape().dim_vec().at(j), like_i_blob_desc->shape().At(j));
+        CHECK_EQ_OR_RETURN(like_0_blob_desc->shape().dim_vec().at(j),
+                           like_i_blob_desc->shape().At(j));
       }
     }
     dim_sum += like_i_blob_desc->shape().At(split_axis);
@@ -34,7 +35,7 @@ Maybe<void> SplitLikeOp::InferBlobDescs(
     output_i_blob_desc->set_data_type(like_i_blob_desc->data_type());
     output_i_blob_desc->mut_shape() = like_i_blob_desc->shape();
   }
-  CHECK_EQ(dim_sum, in_dim_vec.at(split_axis));
+  CHECK_EQ_OR_RETURN(dim_sum, in_dim_vec.at(split_axis));
   return Maybe<void>::Ok();
 }
 

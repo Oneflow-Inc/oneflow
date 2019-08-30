@@ -19,7 +19,7 @@ Maybe<void> DropoutGradOp::InferBlobDescs(
     const ParallelContext* parallel_ctx) const {
   BlobDesc* dy_desc = GetBlobDesc4BnInOp("dy");
   *GetBlobDesc4BnInOp("dx") = *dy_desc;
-  CHECK_EQ(dy_desc->shape(), GetBlobDesc4BnInOp("random_mask")->shape());
+  CHECK_EQ_OR_RETURN(dy_desc->shape(), GetBlobDesc4BnInOp("random_mask")->shape());
   return Maybe<void>::Ok();
 }
 

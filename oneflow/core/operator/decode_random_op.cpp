@@ -24,7 +24,7 @@ Maybe<void> DecodeRandomOp::InferBlobDescs(
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   const DecodeRandomOpConf& conf = op_conf().decode_random_conf();
   std::vector<int64_t> dim_vec(1 + conf.shape().dim_size());
-  CHECK_EQ(record_piece_size % parallel_ctx->parallel_num(), 0);
+  CHECK_EQ_OR_RETURN(record_piece_size % parallel_ctx->parallel_num(), 0);
   dim_vec[0] = record_piece_size / parallel_ctx->parallel_num();
   FOR_RANGE(size_t, j, 1, dim_vec.size()) { dim_vec[j] = conf.shape().dim(j - 1); }
   out_blob_desc->mut_shape() = Shape(dim_vec);

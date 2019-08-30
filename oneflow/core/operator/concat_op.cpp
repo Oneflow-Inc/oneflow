@@ -25,11 +25,11 @@ Maybe<void> ConcatOp::InferBlobDescs(
       if (j == concat_axis) {
         out_dim_vec[j] += in_i_blob_desc->shape().At(j);
       } else {
-        CHECK_EQ(out_dim_vec[j], in_i_blob_desc->shape().At(j));
+        CHECK_EQ_OR_RETURN(out_dim_vec[j], in_i_blob_desc->shape().At(j));
       }
     }
-    CHECK_EQ(in_i_blob_desc->data_type(), in_0_blob_desc->data_type());
-    CHECK_EQ(in_i_blob_desc->has_data_id_field(), in_0_blob_desc->has_data_id_field());
+    CHECK_EQ_OR_RETURN(in_i_blob_desc->data_type(), in_0_blob_desc->data_type());
+    CHECK_EQ_OR_RETURN(in_i_blob_desc->has_data_id_field(), in_0_blob_desc->has_data_id_field());
   }
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   *out_blob_desc = *in_0_blob_desc;

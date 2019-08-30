@@ -35,15 +35,16 @@ Maybe<void> LossOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> 
   const BlobDesc* pred_blob_desc = GetBlobDesc4BnInOp("prediction");
   if (HasFieldInCustomizedConf("label")) {
     const BlobDesc* label_blob_desc = GetBlobDesc4BnInOp("label");
-    CHECK_EQ(pred_blob_desc->has_data_id_field(), label_blob_desc->has_data_id_field());
-    CHECK_EQ(pred_blob_desc->has_dim0_valid_num_field(),
-             label_blob_desc->has_dim0_valid_num_field());
-    CHECK_EQ(pred_blob_desc->has_dim0_inner_shape(), label_blob_desc->has_dim0_inner_shape());
+    CHECK_EQ_OR_RETURN(pred_blob_desc->has_data_id_field(), label_blob_desc->has_data_id_field());
+    CHECK_EQ_OR_RETURN(pred_blob_desc->has_dim0_valid_num_field(),
+                       label_blob_desc->has_dim0_valid_num_field());
+    CHECK_EQ_OR_RETURN(pred_blob_desc->has_dim0_inner_shape(),
+                       label_blob_desc->has_dim0_inner_shape());
   }
   if (pred_blob_desc->has_dim0_inner_shape()) {
-    CHECK_EQ(pred_blob_desc->dim0_inner_shape().At(0), 1);
+    CHECK_EQ_OR_RETURN(pred_blob_desc->dim0_inner_shape().At(0), 1);
   }
-  CHECK_GT(pred_blob_desc->shape().NumAxes(), 0);
+  CHECK_GT_OR_RETURN(pred_blob_desc->shape().NumAxes(), 0);
   // loss
   BlobDesc* loss_blob_desc = GetBlobDesc4BnInOp("loss");
   *loss_blob_desc = *pred_blob_desc;

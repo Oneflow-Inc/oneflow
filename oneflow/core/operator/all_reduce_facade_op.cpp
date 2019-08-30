@@ -27,7 +27,7 @@ LogicalNode* AllReduceFacadeOp::NewProperLogicalNode() const {
 
 Maybe<void> AllReduceFacadeOp::InferHasBatchDim(
     std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
-  CHECK_EQ(*HasBatchDim4BnInOp("in"), false);
+  CHECK_EQ_OR_RETURN(*HasBatchDim4BnInOp("in"), false);
   *HasBatchDim4BnInOp("out") = false;
   return Maybe<void>::Ok();
 }
@@ -38,7 +38,7 @@ Maybe<void> AllReduceFacadeOp::InferSbpSignature(
     std::function<const SbpInferHint&(const std::string&)> SbpInferHint4Ibn,
     const ParallelDesc& parallel_desc) const {
   for (const auto& ibn : input_bns()) {
-    CHECK(SbpInferHint4Ibn(ibn).sbp_parallel().has_partial_sum_parallel());
+    CHECK_OR_RETURN(SbpInferHint4Ibn(ibn).sbp_parallel().has_partial_sum_parallel());
   }
   SbpSignatureBuilder().PartialSum(input_bns()).Broadcast(output_bns()).Build(sbp_signature);
   return Maybe<void>::Ok();

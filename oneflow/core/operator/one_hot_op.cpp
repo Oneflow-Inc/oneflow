@@ -17,10 +17,10 @@ Maybe<void> OneHotOp::InferBlobDescs(
   const int64_t depth = conf.depth();
   const DataType data_type =
       conf.has_data_type() ? conf.data_type() : GlobalJobDesc().DefaultDataType();
-  CHECK_GT(depth, 0);
+  CHECK_GT_OR_RETURN(depth, 0);
   const BlobDesc* indices = GetBlobDesc4BnInOp("indices");
-  CHECK(IsIntegralDataType(indices->data_type()));
-  CHECK_GT(indices->shape().NumAxes(), 0);
+  CHECK_OR_RETURN(IsIntegralDataType(indices->data_type()));
+  CHECK_GT_OR_RETURN(indices->shape().NumAxes(), 0);
   BlobDesc* out = GetBlobDesc4BnInOp("out");
   *out = *indices;
   out->set_data_type(data_type);

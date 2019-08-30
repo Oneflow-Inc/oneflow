@@ -61,8 +61,8 @@ Maybe<void> NormalizationOp::InferBlobDescs(
   const std::function<void(const std::string&)> CheckParamBlobDesc = [&](const std::string& bn) {
     const BlobDesc* blob_desc = GetBlobDesc4BnInOp(bn);
     if (blob_desc != nullptr) {
-      CHECK_EQ(blob_desc->data_type(), data_type);
-      CHECK_EQ(blob_desc->shape(), param_shape);
+      CHECK_EQ_OR_RETURN(blob_desc->data_type(), data_type);
+      CHECK_EQ_OR_RETURN(blob_desc->shape(), param_shape);
     }
   };
   const std::function<void(const std::string&)> SetParamBlobDesc = [&](const std::string& bn) {

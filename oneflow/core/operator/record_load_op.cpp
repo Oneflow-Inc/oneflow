@@ -15,7 +15,7 @@ Maybe<void> RecordLoadOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, int64_t record_piece_size) const {
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
-  CHECK_EQ(record_piece_size % parallel_ctx->parallel_num(), 0);
+  CHECK_EQ_OR_RETURN(record_piece_size % parallel_ctx->parallel_num(), 0);
   out_blob_desc->mut_shape() = Shape({record_piece_size / parallel_ctx->parallel_num()});
   out_blob_desc->set_data_type(kOFRecord);
   return Maybe<void>::Ok();

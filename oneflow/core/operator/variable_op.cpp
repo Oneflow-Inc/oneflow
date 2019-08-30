@@ -22,13 +22,13 @@ Maybe<void> VariableOp::InferBlobDescs(
                                                              : GlobalJobDesc().DefaultDataType());
   if (parallel_ctx->policy() == kModelParallel) {
     int32_t model_split_axis = variable_conf.model_split_axis();
-    CHECK_GE(model_split_axis, 0);
-    CHECK_LT(model_split_axis, out_blob_desc->shape().NumAxes());
+    CHECK_GE_OR_RETURN(model_split_axis, 0);
+    CHECK_LT_OR_RETURN(model_split_axis, out_blob_desc->shape().NumAxes());
     int64_t split_dim_num = out_blob_desc->shape().At(model_split_axis);
     BalancedSplitter bs(split_dim_num, parallel_ctx->parallel_num());
     out_blob_desc->mut_shape().Set(model_split_axis, bs.At(parallel_ctx->parallel_id()).size());
   } else {
-    CHECK_EQ(parallel_ctx->policy(), kDataParallel);
+    CHECK_EQ_OR_RETURN(parallel_ctx->policy(), kDataParallel);
   }
   return Maybe<void>::Ok();
 }

@@ -40,15 +40,15 @@ Maybe<void> GetSbpSignature(const InterfaceBlobConf& blob_conf, const PbRpf<std:
     int64_t num_axes = blob_conf.shape().dim_size();
     int64_t split_axis = blob_conf.split_axis();
     if (split_axis < 0) { split_axis += num_axes; }
-    CHECK_GE(split_axis, 0);
-    CHECK_LT(split_axis, num_axes);
+    CHECK_GE_OR_RETURN(split_axis, 0);
+    CHECK_LT_OR_RETURN(split_axis, num_axes);
     BuildSbpSignature(split_axis);
   } else if (blob_conf.has_broadcast()) {
     SbpSignatureBuilder().Broadcast(input_bns).Broadcast(output_bns).Build(sbp_signature);
   } else if (blob_conf.has_batch_dim()) {
     BuildSbpSignature(0);
   } else {
-    UNIMPLEMENTED();
+    UNIMPLEMENTED_THEN_RETURN();
   }
   return Maybe<void>::Ok();
 }

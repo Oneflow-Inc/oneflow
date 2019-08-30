@@ -9,7 +9,7 @@ void AxpyOp::InitFromOpConf() {
 
 Maybe<void> AxpyOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                    const ParallelContext* parallel_ctx) const {
-  CHECK(*GetBlobDesc4BnInOp("x") == *GetBlobDesc4BnInOp("y"));
+  CHECK_OR_RETURN(*GetBlobDesc4BnInOp("x") == *GetBlobDesc4BnInOp("y"));
   return Maybe<void>::Ok();
 }
 
