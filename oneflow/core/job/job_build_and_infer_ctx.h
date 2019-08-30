@@ -17,7 +17,7 @@ Error GenJobBuildAndInferError(JobBuildAndInferError err_code, std::string msg);
 class JobBuildAndInferCtx {
  public:
   OF_DISALLOW_COPY_AND_MOVE(JobBuildAndInferCtx);
-  JobBuildAndInferCtx(const std::string& job_name);
+  JobBuildAndInferCtx(Job* job);
   ~JobBuildAndInferCtx() = default;
 
   Maybe<void> SetJobConf(const JobConfigProto& job_conf);
@@ -38,7 +38,7 @@ class JobBuildAndInferCtx {
  private:
   Maybe<void> GenOpProducedEmptyLogicalBlobDesc(Operator* op);
 
-  Job job_;
+  Job* job_;
   HashMap<LogicalBlobId, bool> lbi2has_batch_dim_;
   HashMap<LogicalBlobId, std::unique_ptr<BlobDesc>> lbi2logical_blob_desc_;
   HashMap<std::string, std::shared_ptr<Operator>> op_name2op_;

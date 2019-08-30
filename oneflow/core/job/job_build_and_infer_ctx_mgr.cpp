@@ -14,7 +14,9 @@ Maybe<void> JobBuildAndInferCtxMgr::EnterJobBuildAndInferCtx(const std::string& 
     return GenJobBuildAndInferError(JobBuildAndInferError::kJobNameExist,
                                     "job name: " + job_name + " already exist");
   }
-  job_name2infer_ctx_.emplace(job_name, std::make_shared<JobBuildAndInferCtx>(job_name));
+  Job* job = job_set_.add_job();
+  job->mutable_job_conf()->set_job_name(job_name);
+  job_name2infer_ctx_.emplace(job_name, std::make_shared<JobBuildAndInferCtx>(job));
   cur_job_name_ = job_name;
   has_cur_job_ = true;
   return Maybe<void>();
@@ -37,6 +39,9 @@ Maybe<std::string> JobBuildAndInferCtxMgr::GetCurrentJobName() {
   return cur_job_name_;
 }
 
-void JobBuildAndInferCtxMgr::LeaveCurrentJobBuildAndInferCtx() { has_cur_job_ = false; }
+Maybe<void> JobBuildAndInferCtxMgr::LeaveCurrentJobBuildAndInferCtx() {
+  has_cur_job_ = false;
+  return Maybe<void>();
+}
 
 }  // namespace oneflow

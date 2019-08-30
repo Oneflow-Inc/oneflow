@@ -9,11 +9,9 @@ Error GenJobBuildAndInferError(JobBuildAndInferError err_code, std::string msg) 
   return err;
 }
 
-JobBuildAndInferCtx::JobBuildAndInferCtx(const std::string& job_name) {
+JobBuildAndInferCtx::JobBuildAndInferCtx(Job* job) : job_(job) {
   is_job_conf_frozen_ = false;
   has_job_conf_ = false;
-  job_ = Job();
-  job_.mutable_job_conf()->set_job_name(job_name);
 }
 
 Maybe<void> JobBuildAndInferCtx::SetJobConf(const JobConfigProto& job_conf) {
@@ -24,13 +22,13 @@ Maybe<void> JobBuildAndInferCtx::SetJobConf(const JobConfigProto& job_conf) {
     return GenJobBuildAndInferError(JobBuildAndInferError::kJobConfRepeatedSet, "");
   }
   has_job_conf_ = true;
-  if (job_.job_conf().job_name() != job_conf.job_name()) {
+  if (job_->job_conf().job_name() != job_conf.job_name()) {
     return GenJobBuildAndInferError(
         JobBuildAndInferError::kJobNameNotEqual,
         "job name you set: " + job_conf.job_name()
-            + " not equal to origin job name: " + job_.job_conf().job_name());
+            + " not equal to origin job name: " + job_->job_conf().job_name());
   }
-  job_.mutable_job_conf()->CopyFrom(job_conf);
+  job_->mutable_job_conf()->CopyFrom(job_conf);
   return Maybe<void>();
 }
 
@@ -69,13 +67,13 @@ Maybe<void> JobBuildAndInferCtx::AddAndInferInputOp(const OperatorConf& op_conf)
   if (op_name2op_.find(op_name) != op_name2op_.end()) {
     return GenJobBuildAndInferError(
         JobBuildAndInferError::kOpNameExist,
-        "op_name: " + op_name + "already exist in job: " + job_.job_conf().job_name());
+        "op_name: " + op_name + "already exist in job: " + job_->job_conf().job_name());
   }
   if (op_conf.device_type() == DeviceType::kInvalidDevice) {
     return GenJobBuildAndInferError(JobBuildAndInferError::kOpConfDeviceTypeNoSet,
                                     "op_name: " + op_name + " not set device type");
   }
-  OperatorConf* mut_op_conf = job_.mutable_net()->add_op();
+  OperatorConf* mut_op_conf = job_->mutable_net()->add_op();
   *mut_op_conf = op_conf;
   op_name2op_.emplace(op_name, ConstructOp(op_conf));
   Operator* op = op_name2op_.at(op_name).get();
@@ -92,7 +90,7 @@ Maybe<void> JobBuildAndInferCtx::AddAndInferInputOp(const OperatorConf& op_conf)
   parallel_ctx.set_parallel_id(0);
   parallel_ctx.set_parallel_num(1);
   parallel_ctx.set_policy(ParallelPolicy::kDataParallel);
-  op->InferOutBlobDescsIf(GetBlobDesc4BnInOp, &parallel_ctx, job_.job_conf().piece_size(),
+  op->InferOutBlobDescsIf(GetBlobDesc4BnInOp, &parallel_ctx, job_->job_conf().piece_size(),
                           [](OpContext*) {});
   auto HasBatchDim4BnInOp = [&](const std::string& bn) -> bool* {
     const LogicalBlobId& lbi = op->BnInOp2Lbi(bn);
@@ -116,11 +114,11 @@ Maybe<void> JobBuildAndInferCtx::AddAndInferNonInputOp(const OperatorConf& op_co
 }
 
 Maybe<void> JobBuildAndInferCtx::AddLossLogicalBlobName(const std::string& lbn) {
-  if (!(job_.job_conf().has_train_conf())) {
+  if (!(job_->job_conf().has_train_conf())) {
     return GenJobBuildAndInferError(JobBuildAndInferError::kUnknownJobBuildAndInferError,
                                     "job has not TrainConf when add loss logical blob name");
   }
-  job_.mutable_job_conf()->mutable_train_conf()->add_loss_lbn(lbn);
+  job_->mutable_job_conf()->mutable_train_conf()->add_loss_lbn(lbn);
   return Maybe<void>();
 }
 
@@ -164,6 +162,6 @@ Maybe<ParallelDesc> JobBuildAndInferCtx::GetParallelDescFromProducerView(
   TODO();
 }
 
-const Job& JobBuildAndInferCtx::job() const { return job_; }
+const Job& JobBuildAndInferCtx::job() const { return *job_; }
 
 }  // namespace oneflow
