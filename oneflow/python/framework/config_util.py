@@ -145,6 +145,21 @@ def collect_act_event(val = True):
     assert type(val) is int
     config_proto.profile_conf.collect_act_event = val
 
+class ConfigTrainConfBuilder(object):
+    def __init__(self, train_conf):
+        self.train_conf_ = train_conf
+
+    def add_loss(self, *args):
+        loss_blob_list = []
+        assert(len(args) > 0)
+        if type(args[0]) in [list, tuple]:
+            assert(len(args) == 1)
+            loss_blob_list = args[0]
+        else:
+            loss_blob_list = args
+        self.train_conf_.loss_lbn.extend(
+            [b.logical_blob_name for b in loss_blob_list])
+
 class JobConfigProtoBuilder(object):
     def __init__(self, job_conf):
         assert isinstance(job_conf, job_util.JobConfigProto)
@@ -248,10 +263,8 @@ class JobConfigProtoBuilder(object):
         self.job_conf_.train_conf.SetInParent()
         return self.job_conf_.train_conf
 
-def DefaultConfigProto():
-    config_proto = job_set_util.ConfigProto()
-    TryCompleteDefaultConfigProto(config_proto)
-    return config_proto
+    def get_train_conf_builder(self):
+        return ConfigTrainConfBuilder(self.train_conf())
 
 def TryCompleteDefaultConfigProto(config):
     _DefaultConfigResource(config)
@@ -310,6 +323,11 @@ def _TryCompleteDefaultJobConfigProto(job_conf):
         job_conf.predict_conf.SetInParent()
     if job_conf.HasField('train_conf'):
         job_conf.train_conf.batch_size = job_conf.piece_size
+
+def DefaultConfigProto():
+    config_proto = job_set_util.ConfigProto()
+    TryCompleteDefaultConfigProto(config_proto)
+    return config_proto
 
 config_proto = DefaultConfigProto()
 config_proto_inited = False

@@ -1429,6 +1429,16 @@ message EsacOpConf {
   optional DataType data_type = 3 [default=kInt32];
 }
 
+message PartialTickOpConf {
+  required string tick = 1;
+  required string out = 2;
+}
+
+message AssignOpConf {
+  required string ref = 1;
+  required string value = 2;
+}
+
 message OperatorConf {
   required string name = 1;
   optional string model_load_dir = 2;
@@ -1483,6 +1493,8 @@ message OperatorConf {
     AccTickOpConf acc_tick_conf = 144;
     SwitchOutputOpConf switch_output_conf = 145;
     ReturnOpConf return_conf = 146;
+    PartialTickOpConf partial_tick_conf = 147;
+    AssignOpConf assign_conf = 148;
 
     // domain op
     TupleIdentityOpConf tuple_identity_conf = 200;
