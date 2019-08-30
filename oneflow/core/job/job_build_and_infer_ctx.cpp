@@ -153,11 +153,18 @@ Maybe<bool> JobBuildAndInferCtx::GetHasBatchDim(const std::string& lbn) const {
   return Maybe<bool>(lbi2has_batch_dim_.at(lbi));
 }
 
-Maybe<bool> JobBuildAndInferCtx::GetHasSplitDim(const std::string& lbn) const { TODO(); }
+Maybe<bool> JobBuildAndInferCtx::GetHasSplitDimFromProducerView(const std::string& lbn) const {
+  TODO();
+}
 
-Maybe<int64_t> JobBuildAndInferCtx::GetSplitDim(const std::string& lbn) const { TODO(); }
+Maybe<int64_t> JobBuildAndInferCtx::GetSplitDimFromProducerView(const std::string& lbn) const {
+  TODO();
+}
 
-Maybe<ParallelDesc> JobBuildAndInferCtx::GetParallelDesc(const std::string& lbn) const { TODO(); }
+Maybe<ParallelDesc> JobBuildAndInferCtx::GetParallelDescFromProducerView(
+    const std::string& lbn) const {
+  TODO();
+}
 
 const Job& JobBuildAndInferCtx::job() const { return job_; }
 

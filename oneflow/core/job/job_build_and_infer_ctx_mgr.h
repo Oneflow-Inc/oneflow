@@ -13,13 +13,17 @@ class JobBuildAndInferCtxMgr {
   OF_DISALLOW_COPY_AND_MOVE(JobBuildAndInferCtxMgr);
   ~JobBuildAndInferCtxMgr() = default;
 
-  Maybe<void> CreateJobBuildAndInferCtx(const std::string& job_name);
+  Maybe<void> EnterJobBuildAndInferCtx(const std::string& job_name);
   Maybe<JobBuildAndInferCtx> FindJobBuildAndInferCtx(const std::string& job_name);
+  Maybe<std::string> GetCurrentJobName();
+  void LeaveCurrentJobBuildAndInferCtx();
 
  private:
-  JobBuildAndInferCtxMgr() = default;
+  JobBuildAndInferCtxMgr() : has_cur_job_(false) {}
   friend class Global<JobBuildAndInferCtxMgr>;
 
+  bool has_cur_job_;
+  std::string cur_job_name_;
   HashMap<std::string, std::shared_ptr<JobBuildAndInferCtx>> job_name2infer_ctx_;
 };
 

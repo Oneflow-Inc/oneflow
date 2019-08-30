@@ -29,9 +29,9 @@ class JobBuildAndInferCtx {
   Maybe<Shape> GetStaticShape(const std::string& lbn) const;
   Maybe<DataType> GetDataType(const std::string& lbn) const;
   Maybe<bool> GetHasBatchDim(const std::string& lbn) const;
-  Maybe<bool> GetHasSplitDim(const std::string& lbn) const;
-  Maybe<int64_t> GetSplitDim(const std::string& lbn) const;
-  Maybe<ParallelDesc> GetParallelDesc(const std::string& lbn) const;
+  Maybe<bool> GetHasSplitDimFromProducerView(const std::string& lbn) const;
+  Maybe<int64_t> GetSplitDimFromProducerView(const std::string& lbn) const;
+  Maybe<ParallelDesc> GetParallelDescFromProducerView(const std::string& lbn) const;
 
   const Job& job() const;
 
