@@ -45,14 +45,13 @@ def init_worker(scp_binary = True, use_uuid = True):
 
 
 @oneflow_export('deprecated.delete_worker')
-def delete_worker(config_proto):
-    if isinstance(config_proto, config_util.ConfigProtoBuilder):
-        config_proto = config_proto.config_proto
-    assert isinstance(config_proto, ConfigProto)
-    assert type(config_proto) is job_set_util.ConfigProto
+def delete_worker():
+    assert config_util.config_proto_inited == True
+    assert isinstance(config_util.config_proto, ConfigProto)
+    assert type(config_util.config_proto) is job_set_util.ConfigProto
     global _temp_run_dir
     assert _temp_run_dir != ""
-    for machine in config_proto.resource.machine:
+    for machine in config_util.config_proto.resource.machine:
         if machine.id == 0:
             continue
         ssh_prefix = "ssh " + getpass.getuser() + "@" + machine.addr + " "

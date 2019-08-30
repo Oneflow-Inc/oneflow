@@ -24,8 +24,7 @@ class Session(object):
         self.running_job_cnt_ = 0
         runtime_ctx.AddJobInstancePreLaunchCallbacks(self._PreLaunchCallback)
         runtime_ctx.AddJobInstancePostFinishCallbacks(self._PostFinishCallback)
-        c_api_util.Init(config_util.config_proto)
-        config_util.config_proto_inited = True
+        self._InitEnvironmentAtTheFirstTime()
 
     def run(self, job_func, *arg):
         assert self.is_running_
@@ -78,6 +77,12 @@ class Session(object):
         self.running_job_cnt_ -= 1
         self.cond_var_.notify()
         self.cond_var_.release()
+
+    def _InitEnvironmentAtTheFirstTime(self):
+        if c_api_util.environment_inited == False:
+            c_api_util.Init(config_util.config_proto)
+            c_api_util.environment_inited = True
+            config_util.config_proto_inited = True
 
     def __enter__(self):
         assert self.is_running_ == False

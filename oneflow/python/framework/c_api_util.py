@@ -6,6 +6,8 @@ from google.protobuf import text_format
 import oneflow.oneflow_internal as oneflow_internal
 import oneflow.python.framework.runtime_context as runtime_ctx
 
+environment_inited=False
+
 def IsOpTypeCaseCpuSupportOnly(op_type_case):
     return oneflow_internal.IsOpTypeCaseCpuSupportOnly(op_type_case)
 

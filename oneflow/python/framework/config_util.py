@@ -7,139 +7,208 @@ import oneflow.python.framework.compile_context as compile_context
 from oneflow.python.oneflow_export import oneflow_export
 import oneflow.python.lib.core.pb_util as pb_util
 
-@oneflow_export('gpu_device_num')
+def TryCompleteDefaultJobConfigProto(job_conf):
+    _TryCompleteDefaultJobConfigProto(job_conf)
+
+def _TryCompleteDefaultConfigProto(config):
+    _DefaultConfigResource(config)
+    _DefaultConfigIO(config)
+    _DefaultConfigCppFlags(config)
+
+def _MakeMachine(machines):
+    if isinstance(machines, str): machines = [machines]
+    resource = resource_util.Resource()
+    rp_machine = resource.machine
+    for m_data in machines:
+        m = rp_machine.add()
+        if isinstance(m_data, str):
+            m.addr = m_data
+        elif isinstance(m_data, dict):
+            if 'addr' in m_data: m.addr = m_data['addr']
+            if 'ctrl_port_agent' in m_data: m.ctrl_port_agent = m_data['ctrl_port_agent']
+            if 'data_port_agent' in m_data: m.data_port_agent = m_data['data_port_agent']
+        else:
+            raise NotImplementedError
+    id = 0
+    addrs_for_check = set()
+    for m in rp_machine:
+        m.id = id
+        id += 1
+        assert m.addr not in addrs_for_check
+        addrs_for_check.add(m.addr)
+    return rp_machine
+
+def _DefaultConfigResource(config):
+    resource = config.resource
+    if len(resource.machine) == 0:
+        machine = resource.machine.add()
+        machine.id = 0
+        machine.addr = "127.0.0.1"
+    if resource.HasField("ctrl_port") == False:
+        resource.ctrl_port = 2017
+    if resource.gpu_device_num == 0:
+        resource.gpu_device_num = 1
+
+def _DefaultConfigIO(config):
+    io_conf = config.io_conf
+    if io_conf.data_fs_conf.WhichOneof("fs_type") == None:
+        io_conf.data_fs_conf.localfs_conf.SetInParent()
+    if io_conf.snapshot_fs_conf.WhichOneof("fs_type") == None:
+        io_conf.snapshot_fs_conf.localfs_conf.SetInParent()
+
+def  _DefaultConfigCppFlags(config):
+    config.cpp_flags_conf.SetInParent()
+    config.cpp_flags_conf.grpc_use_no_signal = True
+
+
+def _TryCompleteDefaultJobConfigProto(job_conf):
+    assert job_conf.HasField('piece_size'), "batch_size unset"
+    if job_conf.WhichOneof("job_type") is None:
+        job_conf.predict_conf.SetInParent()
+    if job_conf.HasField('train_conf'):
+        job_conf.train_conf.batch_size = job_conf.piece_size
+
+def _DefaultConfigProto():
+    config_proto = job_set_util.ConfigProto()
+    _TryCompleteDefaultConfigProto(config_proto)
+    return config_proto
+
+config_proto = _DefaultConfigProto()
+config_proto_inited = False
+
+@oneflow_export('config.gpu_device_num')
 def gpu_device_num(val):
     assert config_proto_inited == False
     assert type(val) is int
     config_proto.resource.gpu_device_num = val
 
-@oneflow_export('cpu_device_num')
+@oneflow_export('config.cpu_device_num')
 def cpu_device_num(val):
     assert config_proto_inited == False
     assert type(val) is int
     config_proto.resource.cpu_device_num = val
 
-@oneflow_export('machine')
+@oneflow_export('config.machine')
 def machine(val):
     assert config_proto_inited == False
     del config_proto.resource.machine[:]
     config_proto.resource.machine.extend(_MakeMachine(val))
 
-@oneflow_export('ctrl_port')
+@oneflow_export('config.ctrl_port')
 def ctrl_port(val):
     assert config_proto_inited == False
     assert type(val) is int
     config_proto.resource.ctrl_port = val
 
-@oneflow_export('data_port')
+@oneflow_export('config.data_port')
 def data_port(val):
     assert config_proto_inited == False
     assert type(val) is int
     config_proto.resource.data_port = val
 
-@oneflow_export('comm_net_worker_num')
+@oneflow_export('config.comm_net_worker_num')
 def comm_net_worker_num(val):
     assert config_proto_inited == False
     assert type(val) is int
     config_proto.resource.comm_net_worker_num = val
 
-@oneflow_export('max_mdsave_worker_num')
+@oneflow_export('config.max_mdsave_worker_num')
 def max_mdsave_worker_num(val):
     assert config_proto_inited == False
     assert type(val) is int
     config_proto.resource.max_mdsave_worker_num = val
 
-@oneflow_export('rdma_mem_block_mbyte')
+@oneflow_export('config.rdma_mem_block_mbyte')
 def rdma_mem_block_mbyte(val):
     assert config_proto_inited == False
     assert type(val) is int
     config_proto.resource.rdma_mem_block_mbyte = val
 
-@oneflow_export('rdma_recv_msg_buf_mbyte')
+@oneflow_export('config.rdma_recv_msg_buf_mbyte')
 def rdma_recv_msg_buf_mbyte(val):
     assert config_proto_inited == False
     assert type(val) is int
     config_proto.resource.rdma_recv_msg_buf_mbyte = val
 
-@oneflow_export('reserved_host_mem_mbyte')
+@oneflow_export('config.reserved_host_mem_mbyte')
 def reserved_host_mem_mbyte(val):
     assert config_proto_inited == False
     assert type(val) is int
     config_proto.resource.reserved_host_mem_mbyte = val
 
-@oneflow_export('reserved_device_mem_mbyte')
+@oneflow_export('config.reserved_device_mem_mbyte')
 def reserved_device_mem_mbyte(val):
     assert config_proto_inited == False
     assert type(val) is int
     config_proto.resource.reserved_device_mem_mbyte = val
 
-@oneflow_export('use_rdma')
+@oneflow_export('config.use_rdma')
 def use_rdma(val = True):
     assert config_proto_inited == False
     assert type(val) is bool
     config_proto.resource.use_rdma = val
 
-@oneflow_export('model_load_snapshot_path')
+@oneflow_export('config.model_load_snapshot_path')
 def model_load_snapshot_path(val):
     assert config_proto_inited == False
     assert type(val) is str
     config_proto.io_conf.model_load_snapshot_path = val
 
-@oneflow_export('model_save_snapshots_path')
+@oneflow_export('config.model_save_snapshots_path')
 def model_save_snapshots_path(val):
     assert config_proto_inited == False
     assert type(val) is str
     config_proto.io_conf.model_save_snapshots_path = val
 
-@oneflow_export('enable_write_snapshot')
+@oneflow_export('config.enable_write_snapshot')
 def enable_write_snapshot(val = True):
     assert config_proto_inited == False
     assert type(val) is bool
     config_proto.io_conf.enable_write_snapshot = val
 
-@oneflow_export('save_downloaded_file_to_local_fs')
+@oneflow_export('config.save_downloaded_file_to_local_fs')
 def save_downloaded_file_to_local_fs(val = True):
     assert config_proto_inited == False
     assert type(val) is bool
     config_proto.io_conf.save_downloaded_file_to_local_fs = val
 
-@oneflow_export('persistence_buf_byte')
+@oneflow_export('config.persistence_buf_byte')
 def persistence_buf_byte(val):
     assert config_proto_inited == False
     assert type(val) is int
     config_proto.io_conf.persistence_buf_byte = val
 
-@oneflow_export('log_dir')
+@oneflow_export('config.log_dir')
 def log_dir(val):
     assert config_proto_inited == False
     assert type(val) is str
     config_proto.cpp_flags_conf.log_dir = val
 
-@oneflow_export('logtostderr')
+@oneflow_export('config.logtostderr')
 def logtostderr(val):
     assert config_proto_inited == False
     assert type(val) is int
     config_proto.cpp_flags_conf.logtostderr = val
 
-@oneflow_export('logbuflevel')
+@oneflow_export('config.logbuflevel')
 def logbuflevel(val):
     assert config_proto_inited == False
     assert type(val) is int
     config_proto.cpp_flags_conf.logbuflevel = val
 
-@oneflow_export('v')
+@oneflow_export('config.v')
 def v(val):
     assert config_proto_inited == False
     assert type(val) is int
     config_proto.cpp_flags_conf.v = val
 
-@oneflow_export('grpc_use_no_signal')
+@oneflow_export('config.grpc_use_no_signal')
 def grpc_use_no_signal(val = True):
     assert config_proto_inited == False
     assert type(val) is bool
     config_proto.cpp_flags_conf.grpc_use_no_signal = val
 
-@oneflow_export('collect_act_event')
+@oneflow_export('config.collect_act_event')
 def collect_act_event(val = True):
     assert config_proto_inited == False
     assert type(val) is int
@@ -265,69 +334,3 @@ class JobConfigProtoBuilder(object):
 
     def get_train_conf_builder(self):
         return ConfigTrainConfBuilder(self.train_conf())
-
-def TryCompleteDefaultConfigProto(config):
-    _DefaultConfigResource(config)
-    _DefaultConfigIO(config)
-    _DefaultConfigCppFlags(config)
-
-def TryCompleteDefaultJobConfigProto(job_conf):
-    _TryCompleteDefaultJobConfigProto(job_conf)
-
-def _MakeMachine(machines):
-    if isinstance(machines, str): machines = [machines]
-    resource = resource_util.Resource()
-    rp_machine = resource.machine
-    for m_data in machines:
-        m = rp_machine.add()
-        if isinstance(m_data, str):
-            m.addr = m_data
-        elif isinstance(m_data, dict):
-            if 'addr' in m_data: m.addr = m_data['addr']
-            if 'ctrl_port_agent' in m_data: m.ctrl_port_agent = m_data['ctrl_port_agent']
-            if 'data_port_agent' in m_data: m.data_port_agent = m_data['data_port_agent']
-        else:
-            raise NotImplementedError
-    id = 0
-    addrs_for_check = set()
-    for m in rp_machine:
-        m.id = id
-        id += 1
-        assert m.addr not in addrs_for_check
-        addrs_for_check.add(m.addr)
-    return rp_machine
-
-def _DefaultConfigResource(config):
-    resource = config.resource
-    if len(resource.machine) == 0:
-        machine = resource.machine.add()
-        machine.id = 0
-        machine.addr = "127.0.0.1"
-    if resource.HasField("ctrl_port") == False:
-        resource.ctrl_port = 2017
-
-def _DefaultConfigIO(config):
-    io_conf = config.io_conf
-    if io_conf.data_fs_conf.WhichOneof("fs_type") == None:
-        io_conf.data_fs_conf.localfs_conf.SetInParent()
-    if io_conf.snapshot_fs_conf.WhichOneof("fs_type") == None:
-        io_conf.snapshot_fs_conf.localfs_conf.SetInParent()
-
-def  _DefaultConfigCppFlags(config):
-    config.cpp_flags_conf.SetInParent()
-
-
-def _TryCompleteDefaultJobConfigProto(job_conf):
-    assert job_conf.HasField('piece_size'), "batch_size unset"
-    if job_conf.WhichOneof("job_type") is None:
-        job_conf.predict_conf.SetInParent()
-    if job_conf.HasField('train_conf'):
-        job_conf.train_conf.batch_size = job_conf.piece_size
-
-def DefaultConfigProto():
-    config_proto = job_set_util.ConfigProto()
-    TryCompleteDefaultConfigProto(config_proto)
-    return config_proto
-
-config_proto = DefaultConfigProto()
-config_proto_inited = False
