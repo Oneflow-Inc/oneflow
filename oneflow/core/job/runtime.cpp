@@ -106,7 +106,7 @@ void Runtime::NewAllGlobal(const Plan& plan, size_t total_piece_num, bool is_exp
 #ifdef WITH_CUDA
   InitGlobalCudaDeviceProp();
 #endif
-  Global<SnapshotMgr>::New(plan);
+  if (Global<MachineCtx>::Get()->IsThisMachineMaster()) { Global<SnapshotMgr>::New(plan); }
   Global<MemoryAllocator>::New();
   Global<RegstMgr>::New(plan);
   Global<ActorMsgBus>::New();
@@ -126,7 +126,7 @@ void Runtime::DeleteAllGlobal() {
   Global<ActorMsgBus>::Delete();
   Global<RegstMgr>::Delete();
   Global<MemoryAllocator>::Delete();
-  Global<SnapshotMgr>::Delete();
+  if (Global<MachineCtx>::Get()->IsThisMachineMaster()) { Global<SnapshotMgr>::Delete(); }
   Global<CommNet>::Delete();
   Global<ActEventLogger>::Delete();
   Global<RuntimeCtx>::Delete();
