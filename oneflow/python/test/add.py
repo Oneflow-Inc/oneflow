@@ -1,26 +1,25 @@
 import oneflow as flow
 import numpy as np
-import torch
 
 config = flow.ConfigProtoBuilder()
 config.gpu_device_num(1)
 flow.init(config)
 
-def AddJob(a = flow.input_blob_def((5,2)), b = flow.input_blob_def((5,2))):
+
+def AddJob(a=flow.input_blob_def((5, 2)), b=flow.input_blob_def((5, 2))):
     job_conf = flow.get_cur_job_conf_builder()
     job_conf.batch_size(5).data_part_num(1).default_data_type(flow.float)
-    return flow.keras.maths.add(a, b)
+    a + b
+    return a + b + b
+
 
 flow.add_job(AddJob)
 
-a = np.arange(-5,5).reshape((5,2)).astype(np.float32)
-b = np.arange(-5,5).reshape((5,2)).astype(np.float32)
+x = np.random.rand(5, 2).astype(np.float32)
+y = np.random.rand(5, 2).astype(np.float32)
+z = None
 
 with flow.Session() as sess:
-    x = sess.run(AddJob, a, b).get()
+    z = sess.run(AddJob, x, y).get()
 
-y = torch.add(torch.Tensor(a), torch.Tensor(b))
-
-result = np.isclose(np.array(x), y.numpy(), rtol=1e-03, atol=1e-05)
-for i in result.ravel():
-    assert i, "the add test is wrong!"
+assert np.array_equal(z, x + y + y)
