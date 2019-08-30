@@ -5,8 +5,27 @@ import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.id_util as id_util
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
-
 from oneflow.python.oneflow_export import oneflow_export
+
+import collections
+
+
+def _get_sequence(value, n, name):
+    """Formats value from input"""
+    if value is None:
+        value = [1]
+    elif not isinstance(value, collections.Sized):
+        value = [value]
+
+    current_n = len(value)
+    if current_n == 1:
+        return list(value * n)
+    elif current_n == n:
+        return list(value)
+    else:
+        raise ValueError(
+            "{} should be of length 1 or {} but was {}".format(name, n, current_n)
+        )
 
 
 @oneflow_export("nn.max_pool1d")
@@ -29,9 +48,9 @@ def max_pool2d(input, ksize, strides, padding, data_format="NHWC", name=None):
     )
     setattr(op_conf.max_pooling_2d_conf, "in", input.logical_blob_name)
     setattr(op_conf.max_pooling_2d_conf, "out", "out")
-    op_conf.max_pooling_2d_conf.pool_size[:] = list(ksize)
-    op_conf.max_pooling_2d_conf.strides[:] = list(strides)
-    assert padding in ["valid", "same"]
+    op_conf.max_pooling_2d_conf.pool_size[:] = _get_sequence(ksize, 2, "ksize")
+    op_conf.max_pooling_2d_conf.strides[:] = _get_sequence(ksize, 2, "strides")
+    assert padding in ["VALID", "SAME"]
     setattr(op_conf.max_pooling_2d_conf, "padding", padding)
     assert data_format in ["NHWC", "NCHW", "NCHW_VECT_C"]
     setattr(
@@ -56,9 +75,9 @@ def avg_pool2d(input, ksize, strides, padding, data_format="NHWC", name=None):
     )
     setattr(op_conf.average_pooling_2d_conf, "in", input.logical_blob_name)
     setattr(op_conf.average_pooling_2d_conf, "out", "out")
-    op_conf.average_pooling_2d_conf.pool_size[:] = list(ksize)
-    op_conf.average_pooling_2d_conf.strides[:] = list(strides)
-    assert padding in ["valid", "same"]
+    op_conf.average_pooling_2d_conf.pool_size[:] = _get_sequence(ksize, 2, "ksize")
+    op_conf.average_pooling_2d_conf.strides[:] = _get_sequence(ksize, 2, "strides")
+    assert padding in ["VALID", "SAME"]
     setattr(op_conf.average_pooling_2d_conf, "padding", padding)
     assert data_format in ["NHWC", "NCHW", "NCHW_VECT_C"]
     setattr(
@@ -81,9 +100,9 @@ def max_pool3d(input, ksize, strides, padding, data_format="NDHWC", name=None):
     )
     setattr(op_conf.max_pooling_3d_conf, "in", input.logical_blob_name)
     setattr(op_conf.max_pooling_3d_conf, "out", "out")
-    op_conf.max_pooling_3d_conf.pool_size[:] = list(ksize)
-    op_conf.max_pooling_3d_conf.strides[:] = list(strides)
-    assert padding in ["valid", "same"]
+    op_conf.max_pooling_3d_conf.pool_size[:] = _get_sequence(ksize, 3, "ksize")
+    op_conf.max_pooling_3d_conf.strides[:] = _get_sequence(strides, 3, "strides")
+    assert padding in ["VALID", "SAME"]
     setattr(op_conf.max_pooling_3d_conf, "padding", padding)
     assert data_format in ["NDHWC", "NCDHW"]
     setattr(
@@ -108,9 +127,9 @@ def avg_pool3d(input, ksize, strides, padding, data_format="NDHWC", name=None):
     )
     setattr(op_conf.average_pooling_3d_conf, "in", input.logical_blob_name)
     setattr(op_conf.average_pooling_3d_conf, "out", "out")
-    op_conf.average_pooling_3d_conf.pool_size[:] = list(ksize)
-    op_conf.average_pooling_3d_conf.strides[:] = list(strides)
-    assert padding in ["valid", "same"]
+    op_conf.average_pooling_3d_conf.pool_size[:] = _get_sequence(ksize, 3, "ksize")
+    op_conf.average_pooling_3d_conf.strides[:] = _get_sequence(strides, 3, "strides")
+    assert padding in ["VALID", "SAME"]
     setattr(op_conf.average_pooling_3d_conf, "padding", padding)
     assert data_format in ["NDHWC", "NCDHW"]
     setattr(
