@@ -14,8 +14,8 @@ class BoxingOp final : public Operator {
   void InitFromOpConf() override;
   const PbMessage& GetCustomizedConf() const override;
 
-  void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                      const ParallelContext* parallel_ctx) const override;
+  Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                             const ParallelContext* parallel_ctx) const override;
 
  protected:
   void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
@@ -25,9 +25,9 @@ class BoxingOp final : public Operator {
  private:
   LogicalBlobId ibn2lbi(const std::string& input_bn) const override;
   LogicalBlobId obn2lbi(const std::string& output_bn) const override;
-  void InferTmpBlobDesc(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                        std::vector<int64_t>* data_tmp_vec_ptr,
-                        std::vector<int64_t>* data_tmp_dim0_inner_shape_vec_ptr) const;
+  Maybe<void> InferTmpBlobDesc(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                               std::vector<int64_t>* data_tmp_vec_ptr,
+                               std::vector<int64_t>* data_tmp_dim0_inner_shape_vec_ptr) const;
 };
 
 }  // namespace oneflow

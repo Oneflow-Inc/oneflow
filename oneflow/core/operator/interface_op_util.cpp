@@ -24,9 +24,9 @@ bool GetSplitAxis(const InterfaceBlobConf& input_blob_conf, size_t* split_axis) 
   return false;
 }
 
-void GetSbpSignature(const InterfaceBlobConf& blob_conf, const PbRpf<std::string>& input_bns,
-                     const PbRpf<std::string>& output_bns, SbpSignature* sbp_signature,
-                     bool is_for_input_op) {
+Maybe<void> GetSbpSignature(const InterfaceBlobConf& blob_conf, const PbRpf<std::string>& input_bns,
+                            const PbRpf<std::string>& output_bns, SbpSignature* sbp_signature,
+                            bool is_for_input_op) {
   auto BuildSbpSignature = [&](int64_t split_axis) {
     SbpSignatureBuilder sbp_signature_builder;
     if (is_for_input_op) {
@@ -40,27 +40,30 @@ void GetSbpSignature(const InterfaceBlobConf& blob_conf, const PbRpf<std::string
     int64_t num_axes = blob_conf.shape().dim_size();
     int64_t split_axis = blob_conf.split_axis();
     if (split_axis < 0) { split_axis += num_axes; }
-    CHECK_GE(split_axis, 0);
-    CHECK_LT(split_axis, num_axes);
+    CHECK_GE_OR_RETURN(split_axis, 0);
+    CHECK_LT_OR_RETURN(split_axis, num_axes);
     BuildSbpSignature(split_axis);
   } else if (blob_conf.has_broadcast()) {
     SbpSignatureBuilder().Broadcast(input_bns).Broadcast(output_bns).Build(sbp_signature);
   } else if (blob_conf.has_batch_dim()) {
     BuildSbpSignature(0);
   } else {
-    UNIMPLEMENTED();
+    UNIMPLEMENTED_THEN_RETURN();
   }
+  return Maybe<void>::Ok();
 }
 
 }  // namespace
 
-void InterfaceOpUtil::InferOutBlobDesc(const InterfaceBlobConf& blob_conf, BlobDesc* out_blob_desc,
-                                       const ParallelContext* parallel_ctx) {
-  InferOutBlobDesc(blob_conf, out_blob_desc, parallel_ctx, 0);
+Maybe<void> InterfaceOpUtil::InferOutBlobDesc(const InterfaceBlobConf& blob_conf,
+                                              BlobDesc* out_blob_desc,
+                                              const ParallelContext* parallel_ctx) {
+  return InferOutBlobDesc(blob_conf, out_blob_desc, parallel_ctx, 0);
 }
-void InterfaceOpUtil::InferOutBlobDesc(const InterfaceBlobConf& blob_conf, BlobDesc* out_blob_desc,
-                                       const ParallelContext* parallel_ctx,
-                                       int64_t record_piece_size) {
+Maybe<void> InterfaceOpUtil::InferOutBlobDesc(const InterfaceBlobConf& blob_conf,
+                                              BlobDesc* out_blob_desc,
+                                              const ParallelContext* parallel_ctx,
+                                              int64_t record_piece_size) {
   out_blob_desc->mut_shape() = Shape(blob_conf.shape());
   CheckShape(out_blob_desc->shape());
   if (out_blob_desc->mut_shape().At(0) == -1) {
@@ -84,28 +87,33 @@ void InterfaceOpUtil::InferOutBlobDesc(const InterfaceBlobConf& blob_conf, BlobD
     BalancedSplitter bs(out_blob_desc->shape().At(split_axis), parallel_ctx->parallel_num());
     out_blob_desc->mut_shape().Set(split_axis, bs.At(parallel_ctx->parallel_id()).size());
   }
+  return Maybe<void>::Ok();
 }
 
-void InterfaceOpUtil::InferHasBatchDim(const InterfaceBlobConf& blob_conf, bool* has_batch_dim) {
+Maybe<void> InterfaceOpUtil::InferHasBatchDim(const InterfaceBlobConf& blob_conf,
+                                              bool* has_batch_dim) {
   *has_batch_dim = blob_conf.has_batch_dim();
+  return Maybe<void>::Ok();
 }
 
-void InterfaceOpUtil::GetInputLikeOpSbpSignature(const InterfaceBlobConf& blob_conf,
-                                                 const PbRpf<std::string>& input_bns,
-                                                 const PbRpf<std::string>& output_bns,
-                                                 SbpSignature* sbp_signature) {
+Maybe<void> InterfaceOpUtil::GetInputLikeOpSbpSignature(const InterfaceBlobConf& blob_conf,
+                                                        const PbRpf<std::string>& input_bns,
+                                                        const PbRpf<std::string>& output_bns,
+                                                        SbpSignature* sbp_signature) {
   GetSbpSignature(blob_conf, input_bns, output_bns, sbp_signature, true);
+  return Maybe<void>::Ok();
 }
 
-void InterfaceOpUtil::GetOutputLikeOpSbpSignature(const InterfaceBlobConf& blob_conf,
-                                                  const PbRpf<std::string>& input_bns,
-                                                  const PbRpf<std::string>& output_bns,
-                                                  SbpSignature* sbp_signature) {
+Maybe<void> InterfaceOpUtil::GetOutputLikeOpSbpSignature(const InterfaceBlobConf& blob_conf,
+                                                         const PbRpf<std::string>& input_bns,
+                                                         const PbRpf<std::string>& output_bns,
+                                                         SbpSignature* sbp_signature) {
   GetSbpSignature(blob_conf, input_bns, output_bns, sbp_signature, false);
+  return Maybe<void>::Ok();
 }
 
-void InterfaceOpUtil::InitBlobConf(InterfaceBlobConf* blob_conf,
-                                   const ParallelBlobConf& parallel_blob_conf) {
+Maybe<void> InterfaceOpUtil::InitBlobConf(InterfaceBlobConf* blob_conf,
+                                          const ParallelBlobConf& parallel_blob_conf) {
   BlobDesc blob_desc(parallel_blob_conf.logical_blob_desc_conf());
   blob_desc.shape().ToProto(blob_conf->mutable_shape());
   blob_conf->set_data_type(blob_desc.data_type());
@@ -123,6 +131,7 @@ void InterfaceOpUtil::InitBlobConf(InterfaceBlobConf* blob_conf,
     UNIMPLEMENTED();
   }
   blob_conf->set_has_batch_dim(parallel_blob_conf.has_batch_dim());
+  return Maybe<void>::Ok();
 }
 
 }  // namespace oneflow

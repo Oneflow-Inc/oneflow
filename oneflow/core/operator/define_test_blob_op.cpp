@@ -13,7 +13,7 @@ const PbMessage& DefineTestBlobOp::GetCustomizedConf() const {
   return op_conf().define_test_blob_conf();
 }
 
-void DefineTestBlobOp::InferBlobDescs(
+Maybe<void> DefineTestBlobOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
@@ -31,12 +31,14 @@ void DefineTestBlobOp::InferBlobDescs(
   if (conf.has_dim0_inner_shape()) {
     out_blob_desc->mut_dim0_inner_shape() = Shape(conf.dim0_inner_shape());
   }
-  if (conf.has_dim0_valid_num()) { CHECK(conf.has_dim0_inner_shape()); }
+  if (conf.has_dim0_valid_num()) { CHECK_OR_RETURN(conf.has_dim0_inner_shape()); }
+  return Maybe<void>::Ok();
 }
 
-void DefineTestBlobOp::InferHasBatchDim(
+Maybe<void> DefineTestBlobOp::InferHasBatchDim(
     std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
   *HasBatchDim4BnInOp("out") = true;
+  return Maybe<void>::Ok();
 }
 
 void DefineTestBlobOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {

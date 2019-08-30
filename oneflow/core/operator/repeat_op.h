@@ -15,11 +15,11 @@ class RepeatOp final : public Operator {
 
  private:
   const PbMessage& GetCustomizedConf() const override;
-  void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                      const ParallelContext* parallel_ctx) const override;
-  void InferOutputBlobTimeShape(std::function<const Shape*(const std::string&)> GetTimeShape4BnInOp,
-                                const ParallelContext* parallel_ctx,
-                                Shape* time_shape) const override;
+  Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                             const ParallelContext* parallel_ctx) const override;
+  Maybe<void> InferOutputBlobTimeShape(
+      std::function<const Shape*(const std::string&)> GetTimeShape4BnInOp,
+      const ParallelContext* parallel_ctx, Shape* time_shape) const override;
 
   void InitFromOpConf() override;
   LogicalNode* NewProperLogicalNode() const override;

@@ -13,7 +13,7 @@ const PbMessage& NcclReduceScatterOp::GetCustomizedConf() const {
   return op_conf().nccl_reduce_scatter_conf();
 }
 
-void NcclReduceScatterOp::InferBlobDescs(
+Maybe<void> NcclReduceScatterOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   BlobDesc* in_blob = GetBlobDesc4BnInOp(SoleIbn());
@@ -21,8 +21,9 @@ void NcclReduceScatterOp::InferBlobDescs(
   *out_blob = *in_blob;
   int64_t total_elem_cnt = in_blob->shape().elem_cnt();
   int64_t rank_num = parallel_ctx->rank_ctx().rank_num();
-  CHECK_EQ(total_elem_cnt % rank_num, 0);
+  CHECK_EQ_OR_RETURN(total_elem_cnt % rank_num, 0);
   out_blob->mut_shape() = Shape({total_elem_cnt / rank_num});
+  return Maybe<void>::Ok();
 }
 
 LogicalBlobId NcclReduceScatterOp::obn2lbi(const std::string& output_bn) const {

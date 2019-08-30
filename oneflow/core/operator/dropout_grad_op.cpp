@@ -14,11 +14,13 @@ void DropoutGradOp::InitFromOpConf() {
 
 const PbMessage& DropoutGradOp::GetCustomizedConf() const { return op_conf().dropout_grad_conf(); }
 
-void DropoutGradOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                   const ParallelContext* parallel_ctx) const {
+Maybe<void> DropoutGradOp::InferBlobDescs(
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx) const {
   BlobDesc* dy_desc = GetBlobDesc4BnInOp("dy");
   *GetBlobDesc4BnInOp("dx") = *dy_desc;
-  CHECK_EQ(dy_desc->shape(), GetBlobDesc4BnInOp("random_mask")->shape());
+  CHECK_EQ_OR_RETURN(dy_desc->shape(), GetBlobDesc4BnInOp("random_mask")->shape());
+  return Maybe<void>::Ok();
 }
 
 void DropoutGradOp::GetSbpSignatures(

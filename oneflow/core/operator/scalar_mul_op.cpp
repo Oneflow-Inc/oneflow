@@ -8,9 +8,11 @@ void ScalarMulOp::InitFromOpConf() {
   EnrollOutputBn("out")->set_mutable_inplace_ibn("in");
 }
 
-void ScalarMulOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                 const ParallelContext* parallel_ctx) const {
+Maybe<void> ScalarMulOp::InferBlobDescs(
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx) const {
   *GetBlobDesc4BnInOp("out") = *GetBlobDesc4BnInOp("in");
+  return Maybe<void>::Ok();
 }
 
 void ScalarMulOp::GetSbpSignatures(
