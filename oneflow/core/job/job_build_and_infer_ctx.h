@@ -7,6 +7,7 @@
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/job.pb.h"
+#include "oneflow/core/operator/operator.h"
 #include "oneflow/core/register/blob_desc.h"
 
 namespace oneflow {
@@ -35,10 +36,12 @@ class JobBuildAndInferCtx {
   const Job& job() const;
 
  private:
+  Maybe<void> GenOpProducedEmptyLogicalBlobDesc(Operator* op);
+
   Job job_;
   HashMap<LogicalBlobId, bool> lbi2has_batch_dim_;
   HashMap<LogicalBlobId, std::unique_ptr<BlobDesc>> lbi2logical_blob_desc_;
-  HasmMap<std::string, std::shared_ptr<Operator>> op_name2op_;
+  HashMap<std::string, std::shared_ptr<Operator>> op_name2op_;
   bool is_job_conf_frozen_;
   bool has_job_conf_;
 };

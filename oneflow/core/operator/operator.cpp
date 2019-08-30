@@ -80,6 +80,20 @@ void Operator::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBl
   UNIMPLEMENTED() << typeid(*this).name();
 }
 
+void Operator::InferOutBlobDescsIf(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                                   const ParallelContext* parallel_ctx, int64_t record_piece_size,
+                                   std::function<void(OpContext*)> EnrollOpCtx) const {
+  InferOutBlobDescs(GetBlobDesc4BnInOp, parallel_ctx, record_piece_size, EnrollOpCtx);
+}
+
+void Operator::InferOutBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                                 const ParallelContext* parallel_ctx, int64_t record_piece_size,
+                                 std::function<void(OpContext*)> EnrollOpCtx) const {
+  // TODO() separate InferOut and InferTmp
+  // At present, only conv_op infer out blob separately
+  InferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx, record_piece_size, EnrollOpCtx);
+}
+
 void Operator::InferOutputBlobTimeShapeIf(
     std::function<const Shape*(const std::string&)> GetTimeShape4BnInOp,
     const ParallelContext* parallel_ctx, Shape* time_shape) const {
