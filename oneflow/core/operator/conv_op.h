@@ -42,6 +42,9 @@ class ConvOp : public Operator {
   void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                       const ParallelContext* parallel_ctx, int64_t record_piece_size,
                       std::function<void(OpContext*)> EnrollOpCtx) const override;
+  void InferOutBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                         const ParallelContext* parallel_ctx, int64_t record_piece_size,
+                         std::function<void(OpContext*)> EnrollOpCtx) const override;
 
  private:
   void InferHasBatchDim(std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const override;

@@ -83,6 +83,36 @@ void ConvOp<NDims>::InitFromOpConf() {
 }
 
 template<int32_t NDims>
+void ConvOp<NDims>::InferOutBlobDescs(
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx, int64_t record_piece_size,
+    std::function<void(OpContext*)> EnrollOpCtx) const {
+  const std::string& data_format = GetValFromCustomizedConf<std::string>("data_format");
+  // in
+  const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
+  CHECK_EQ(in_blob_desc->shape().NumAxes(), NDims + 2);
+  // CHECK_EQ(in_blob_desc->data_type(), GlobalJobDesc().DefaultDataType());
+
+  // out
+  int64_t data_num = in_blob_desc->shape().At(0);
+  int32_t filters = GetValFromCustomizedConf<int32_t>("filters");
+  if (parallel_ctx->policy() == kModelParallel) {
+    BalancedSplitter splitter(filters, parallel_ctx->parallel_num());
+    filters = splitter.At(parallel_ctx->parallel_id()).size();
+  }
+  std::vector<int64_t> out;
+  GetOutAndPad(in_blob_desc->shape(), GetCustomizedConf(), &out, nullptr, nullptr);
+  std::vector<int64_t> out_shape = {data_num, filters};
+  size_t dhw_offset = DhwOffset(data_format);
+  for (size_t i = 0; i < NDims; ++i) {
+    out_shape.insert(out_shape.begin() + dhw_offset + i, out[i]);
+  }
+  BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
+  *out_blob_desc = *in_blob_desc;
+  out_blob_desc->mut_shape() = Shape(out_shape);
+}
+
+template<int32_t NDims>
 void ConvOp<NDims>::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                    const ParallelContext* parallel_ctx, int64_t record_piece_size,
                                    std::function<void(OpContext*)> EnrollOpCtx) const {
