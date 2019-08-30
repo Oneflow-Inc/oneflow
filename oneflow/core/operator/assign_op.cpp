@@ -17,8 +17,7 @@ class AssignOp final : public Operator {
  private:
   Maybe<void> InferHasBatchDim(
       std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const override {
-    NaiveInferHasBatchDim(HasBatchDim4BnInOp);
-    return Maybe<void>::Ok();
+    return NaiveInferHasBatchDim(HasBatchDim4BnInOp);
   }
   void GetSbpSignatures(
       const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
@@ -36,7 +35,7 @@ const PbMessage& AssignOp::GetCustomizedConf() const { return op_conf().assign_c
 Maybe<void> AssignOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
-  CHECK(*GetBlobDesc4BnInOp("ref") == *GetBlobDesc4BnInOp("value"));
+  CHECK_OR_RETURN(*GetBlobDesc4BnInOp("ref") == *GetBlobDesc4BnInOp("value"));
   return Maybe<void>::Ok();
 }
 
