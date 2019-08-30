@@ -18,6 +18,6 @@ void GatherKernel<device_type, T>::ForwardDataContent(
                                             this->kernel_conf().gather_conf().axis(), out);
 }
 
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kGatherConf, GatherKernel, FLOATING_DATA_TYPE_SEQ);
+REGISTER_KERNEL_HELPER_GPU_FLOATING(OperatorConf::kGatherConf, GatherKernel);
 
 }  // namespace oneflow

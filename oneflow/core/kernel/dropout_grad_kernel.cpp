@@ -21,7 +21,7 @@ void DropoutGradKernel<device_type, T>::DropoutBackward(DeviceCtx* ctx, const in
                                                   random_mask, dx);
 }
 
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kDropoutGradConf, DropoutGradKernel,
-                           ARITHMETIC_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ);
+REGISTER_KERNEL_HELPER_GPU_FLOATING(OperatorConf::kDropoutGradConf, DropoutGradKernel);
+REGISTER_KERNEL_HELPER_GPU_HALF(OperatorConf::kDropoutGradConf, DropoutGradKernel);
 
 }  // namespace oneflow

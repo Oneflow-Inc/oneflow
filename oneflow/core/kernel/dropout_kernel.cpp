@@ -50,7 +50,7 @@ OF_PP_FOR_EACH_TUPLE(INITIATE_DROPOUT_KERNEL_UTIL_CPU,
                      ARITHMETIC_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ);
 #undef INITIATE_DROPOUT_KERNEL_UTIL_CPU
 
-ADD_DEFAULT_KERNEL_CREATOR_WITH_GPU_HALF(OperatorConf::kDropoutConf, DropoutKernel,
-                                         ARITHMETIC_DATA_TYPE_SEQ);
+REGISTER_KERNEL_HELPER_GPU_FLOATING(OperatorConf::kDropoutConf, DropoutKernel);
+REGISTER_KERNEL_HELPER_GPU_HALF(OperatorConf::kDropoutConf, DropoutKernel);
 
 }  // namespace oneflow

@@ -15,6 +15,11 @@ void EsacKernel<T>::BackwardDataContent(
   UNIMPLEMENTED();
 }
 
-ADD_CPU_DEFAULT_KERNEL_CREATOR(OperatorConf::kEsacConf, EsacKernel, INT_DATA_TYPE_SEQ)
+REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kEsacConf, DeviceType::kCPU, int8_t,
+                                      EsacKernel<int8_t>);
+REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kEsacConf, DeviceType::kCPU, int32_t,
+                                      EsacKernel<int32_t>);
+REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kEsacConf, DeviceType::kCPU, int64_t,
+                                      EsacKernel<int64_t>);
 
 }  // namespace oneflow

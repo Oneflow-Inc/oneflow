@@ -41,6 +41,6 @@ void DecodeOFRecordKernel::Forward(const KernelCtx& ctx,
   CHECK_GE(status->max_col_id_, 0);
 }
 
-REGISTER_KERNEL(OperatorConf::kDecodeOfrecordConf, DecodeOFRecordKernel);
+REGISTER_KERNEL_WITH_NOTHING(OperatorConf::kDecodeOfrecordConf, DecodeOFRecordKernel);
 
 }  // namespace oneflow

@@ -19,6 +19,6 @@ void ForeignOutputKernel::ForwardDataContent(
   }
 }
 
-REGISTER_KERNEL(OperatorConf::kForeignOutputConf, ForeignOutputKernel);
+REGISTER_KERNEL_WITH_NOTHING(OperatorConf::kForeignOutputConf, ForeignOutputKernel);
 
 }  // namespace oneflow
