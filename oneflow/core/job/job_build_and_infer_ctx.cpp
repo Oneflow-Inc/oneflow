@@ -18,17 +18,17 @@ JobBuildAndInferCtx::JobBuildAndInferCtx(const std::string& job_name) {
 
 Maybe<void> JobBuildAndInferCtx::SetJobConf(const JobConfigProto& job_conf) {
   if (is_job_conf_frozen_) {
-    return Maybe<void>(GenJobBuildAndInferError(JobBuildAndInferError::kJobConfFrozen, ""));
+    return GenJobBuildAndInferError(JobBuildAndInferError::kJobConfFrozen, "");
   }
   if (has_job_conf_) {
-    return Maybe<void>(GenJobBuildAndInferError(JobBuildAndInferError::kJobConfRepeatedSet, ""));
+    return GenJobBuildAndInferError(JobBuildAndInferError::kJobConfRepeatedSet, "");
   }
   has_job_conf_ = true;
   if (job_.job_conf().job_name() != job_conf.job_name()) {
-    return Maybe<void>(GenJobBuildAndInferError(
+    return GenJobBuildAndInferError(
         JobBuildAndInferError::kJobNameNotEqual,
         "job name you set: " + job_conf.job_name()
-            + " not equal to origin job name: " + job_.job_conf().job_name()));
+            + " not equal to origin job name: " + job_.job_conf().job_name());
   }
   job_.mutable_job_conf()->CopyFrom(job_conf);
   return Maybe<void>();
@@ -39,10 +39,10 @@ Maybe<void> JobBuildAndInferCtx::GenOpProducedEmptyLogicalBlobDesc(Operator* op)
   for (const std::string& consumed_bn : op->input_bns()) {
     const LogicalBlobId& lbi = op->BnInOp2Lbi(consumed_bn);
     if (lbi2logical_blob_desc_.find(lbi) == lbi2logical_blob_desc_.end()) {
-      return Maybe<void>(GenJobBuildAndInferError(
-          JobBuildAndInferError::kLogicalBlobNameNotExist,
-          "op_name: " + op->op_name() + " consumed_op_name:" + lbi.op_name()
-              + " blob_name: " + lbi.blob_name() + " not exist"));
+      return GenJobBuildAndInferError(JobBuildAndInferError::kLogicalBlobNameNotExist,
+                                      "op_name: " + op->op_name()
+                                          + " consumed_op_name:" + lbi.op_name()
+                                          + " blob_name: " + lbi.blob_name() + " not exist");
     }
   }
 
@@ -54,9 +54,9 @@ Maybe<void> JobBuildAndInferCtx::GenOpProducedEmptyLogicalBlobDesc(Operator* op)
   for (const std::string& produced_bn : produced_bns) {
     const LogicalBlobId& lbi = op->BnInOp2Lbi(produced_bn);
     if (lbi2logical_blob_desc_.find(lbi) != lbi2logical_blob_desc_.end()) {
-      return Maybe<void>(GenJobBuildAndInferError(
+      return GenJobBuildAndInferError(
           JobBuildAndInferError::kLogicalBlobNameRepeated,
-          "op_name: " + lbi.op_name() + " blob_name: " + lbi.blob_name() + " is repeated"));
+          "op_name: " + lbi.op_name() + " blob_name: " + lbi.blob_name() + " is repeated");
     }
     lbi2logical_blob_desc_.emplace(lbi, std::make_unique<BlobDesc>(DataType::kInvalidDataType));
   }
@@ -67,13 +67,13 @@ Maybe<void> JobBuildAndInferCtx::GenOpProducedEmptyLogicalBlobDesc(Operator* op)
 Maybe<void> JobBuildAndInferCtx::AddAndInferInputOp(const OperatorConf& op_conf) {
   const std::string& op_name = op_conf.name();
   if (op_name2op_.find(op_name) != op_name2op_.end()) {
-    return Maybe<void>(GenJobBuildAndInferError(
+    return GenJobBuildAndInferError(
         JobBuildAndInferError::kOpNameExist,
-        "op_name: " + op_name + "already exist in job: " + job_.job_conf().job_name()));
+        "op_name: " + op_name + "already exist in job: " + job_.job_conf().job_name());
   }
   if (op_conf.device_type() == DeviceType::kInvalidDevice) {
-    return Maybe<void>(GenJobBuildAndInferError(JobBuildAndInferError::kOpConfDeviceTypeNoSet,
-                                                "op_name: " + op_name + " not set device type"));
+    return GenJobBuildAndInferError(JobBuildAndInferError::kOpConfDeviceTypeNoSet,
+                                    "op_name: " + op_name + " not set device type");
   }
   OperatorConf* mut_op_conf = job_.mutable_net()->add_op();
   *mut_op_conf = op_conf;
@@ -109,7 +109,7 @@ Maybe<void> JobBuildAndInferCtx::AddAndInferInputOp(const OperatorConf& op_conf)
 
 Maybe<void> JobBuildAndInferCtx::AddAndInferNonInputOp(const OperatorConf& op_conf) {
   if (!has_job_conf_) {
-    return Maybe<void>(GenJobBuildAndInferError(JobBuildAndInferError::kJobConfNotSet, ""));
+    return GenJobBuildAndInferError(JobBuildAndInferError::kJobConfNotSet, "");
   }
   if (!is_job_conf_frozen_) { is_job_conf_frozen_ = true; }
   return AddAndInferInputOp(op_conf);
@@ -117,9 +117,8 @@ Maybe<void> JobBuildAndInferCtx::AddAndInferNonInputOp(const OperatorConf& op_co
 
 Maybe<void> JobBuildAndInferCtx::AddLossLogicalBlobName(const std::string& lbn) {
   if (!(job_.job_conf().has_train_conf())) {
-    return Maybe<void>(
-        GenJobBuildAndInferError(JobBuildAndInferError::kUnknownJobBuildAndInferError,
-                                 "job has not TrainConf when add loss logical blob name"));
+    return GenJobBuildAndInferError(JobBuildAndInferError::kUnknownJobBuildAndInferError,
+                                    "job has not TrainConf when add loss logical blob name");
   }
   job_.mutable_job_conf()->mutable_train_conf()->add_loss_lbn(lbn);
   return Maybe<void>();
@@ -127,30 +126,29 @@ Maybe<void> JobBuildAndInferCtx::AddLossLogicalBlobName(const std::string& lbn) 
 
 bool JobBuildAndInferCtx::HasJobConf() const { return has_job_conf_; }
 
-#define GEN_ERROR_WHEN_GET_INFO_FROM_LBN(ret_type, info_src)                                      \
-  if (lbn.find('/') == std::string::npos) {                                                       \
-    return Maybe<ret_type>(                                                                       \
-        GenJobBuildAndInferError(JobBuildAndInferError::kLogicalBlobNameInvalid, "lbn:" + lbn));  \
-  }                                                                                               \
-  LogicalBlobId lbi = GenLogicalBlobId(lbn);                                                      \
-  if (info_src.find(lbi) == info_src.end()) {                                                     \
-    return Maybe<ret_type>(                                                                       \
-        GenJobBuildAndInferError(JobBuildAndInferError::kLogicalBlobNameNotExist, "lbn:" + lbn)); \
+#define GEN_ERROR_WHEN_GET_INFO_FROM_LBN(info_src)                                                 \
+  if (lbn.find('/') == std::string::npos) {                                                        \
+    return GenJobBuildAndInferError(JobBuildAndInferError::kLogicalBlobNameInvalid, "lbn:" + lbn); \
+  }                                                                                                \
+  LogicalBlobId lbi = GenLogicalBlobId(lbn);                                                       \
+  if (info_src.find(lbi) == info_src.end()) {                                                      \
+    return GenJobBuildAndInferError(JobBuildAndInferError::kLogicalBlobNameNotExist,               \
+                                    "lbn:" + lbn);                                                 \
   }
 
 Maybe<Shape> JobBuildAndInferCtx::GetStaticShape(const std::string& lbn) const {
-  GEN_ERROR_WHEN_GET_INFO_FROM_LBN(Shape, lbi2logical_blob_desc_);
-  return Maybe<Shape>(lbi2logical_blob_desc_.at(lbi)->shape());
+  GEN_ERROR_WHEN_GET_INFO_FROM_LBN(lbi2logical_blob_desc_);
+  return lbi2logical_blob_desc_.at(lbi)->shape();
 }
 
 Maybe<DataType> JobBuildAndInferCtx::GetDataType(const std::string& lbn) const {
-  GEN_ERROR_WHEN_GET_INFO_FROM_LBN(DataType, lbi2logical_blob_desc_);
-  return Maybe<DataType>(lbi2logical_blob_desc_.at(lbi)->data_type());
+  GEN_ERROR_WHEN_GET_INFO_FROM_LBN(lbi2logical_blob_desc_);
+  return lbi2logical_blob_desc_.at(lbi)->data_type();
 }
 
 Maybe<bool> JobBuildAndInferCtx::GetHasBatchDim(const std::string& lbn) const {
-  GEN_ERROR_WHEN_GET_INFO_FROM_LBN(bool, lbi2has_batch_dim_);
-  return Maybe<bool>(lbi2has_batch_dim_.at(lbi));
+  GEN_ERROR_WHEN_GET_INFO_FROM_LBN(lbi2has_batch_dim_);
+  return lbi2has_batch_dim_.at(lbi);
 }
 
 Maybe<bool> JobBuildAndInferCtx::GetHasSplitDimFromProducerView(const std::string& lbn) const {
