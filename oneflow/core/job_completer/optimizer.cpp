@@ -35,55 +35,6 @@ void GenerateDownScaleOpConf(const std::string& name, const ParallelConf& parall
   job_builder->AddOps(parallel_conf, {down_scale_mul_op});
 }
 
-void AddLearningRateScheduleOpConf(const OpGraph& op_graph, JobBuilder* job_builder,
-                                   const HashMap<LogicalBlobId, LogicalBlobId>& lbi2diff_lbi) {
-  ParallelConf parallel_conf{};
-  *parallel_conf.mutable_device_name()->Add() = "0:cpu:0";
-  parallel_conf.set_policy(ParallelPolicy::kDataParallel);
-  const NormalModelUpdateOpUserConf& model_update_conf =
-      job_builder->job().job_conf().train_conf().model_update_conf();
-  auto AddLearningRateScheduleOp = [&](const std::string& op_name,
-                                       const float learning_rate) -> std::string {
-    if (model_update_conf.has_warmup_conf() || model_update_conf.has_learning_rate_decay()) {
-      OperatorConf schedule_op_conf{};
-      schedule_op_conf.set_name(op_name);
-      LearningRateScheduleOpConf* schedule_conf =
-          schedule_op_conf.mutable_learning_rate_schedule_conf();
-      schedule_conf->set_out("out");
-      schedule_conf->set_global_step(job_builder->job().job_conf().train_conf().global_step_lbn());
-      schedule_conf->set_learning_rate(learning_rate);
-      if (model_update_conf.has_warmup_conf()) {
-        *schedule_conf->mutable_warmup_conf() = model_update_conf.warmup_conf();
-      }
-      if (model_update_conf.has_learning_rate_decay()) {
-        *schedule_conf->mutable_learning_rate_decay() = model_update_conf.learning_rate_decay();
-      }
-      job_builder->AddOps(parallel_conf, {schedule_op_conf});
-      return op_name + "/" + schedule_conf->out();
-    } else {
-      OperatorConf constant_op_conf{};
-      constant_op_conf.set_name(op_name);
-      ConstantOpConf* constant_conf = constant_op_conf.mutable_constant_conf();
-      constant_conf->set_out("out");
-      *constant_conf->mutable_shape()->mutable_dim()->Add() = 1;
-      constant_conf->set_data_type(DataType::kFloat);
-      constant_conf->mutable_initializer()->mutable_constant_conf()->set_value(learning_rate);
-      job_builder->AddOps(parallel_conf, {constant_op_conf});
-      return op_name + "/" + constant_conf->out();
-    }
-  };
-  if (!job_builder->job().job_conf().train_conf().has_primary_lr_lbn()) {
-    const std::string lbn =
-        AddLearningRateScheduleOp("System-Train-PrimaryLearningRate", GlobalJobDesc().primary_lr());
-    job_builder->mut_job()->mutable_job_conf()->mutable_train_conf()->set_primary_lr_lbn(lbn);
-  }
-  if (!job_builder->job().job_conf().train_conf().has_secondary_lr_lbn()) {
-    const std::string lbn = AddLearningRateScheduleOp("System-Train-SecondaryLearningRate",
-                                                      GlobalJobDesc().secondary_lr());
-    job_builder->mut_job()->mutable_job_conf()->mutable_train_conf()->set_secondary_lr_lbn(lbn);
-  }
-}
-
 void AddOptimizerOpConf(
     const OpGraph& op_graph, JobBuilder* job_builder,
     const HashMap<LogicalBlobId, LogicalBlobId>& lbi2diff_lbi,

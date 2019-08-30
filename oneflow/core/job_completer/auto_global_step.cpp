@@ -1,4 +1,3 @@
-#include "oneflow/core/job_completer/auto_global_step.h"
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/job/job.pb.h"
 
@@ -18,9 +17,10 @@ void AutoGlobalStep(const OpGraph& op_graph, Job* job) {
   OperatorConf identity_op_conf{};
   identity_op_conf.set_name(global_step_name + "-Identity");
   IdentityOpConf* identity_conf = identity_op_conf.mutable_identity_conf();
-  identity_conf->set_in(GenLogicalBlobName(variable_op_conf.name(),variable_conf->out()));
+  identity_conf->set_in(GenLogicalBlobName(variable_op_conf.name(), variable_conf->out()));
   identity_conf->set_out("out");
-  const std::string& global_step_lbn = GenLogicalBlobName(identity_op_conf.name(), identity_conf->out());
+  const std::string& global_step_lbn =
+      GenLogicalBlobName(identity_op_conf.name(), identity_conf->out());
 
   OperatorConf scalar_add_op_conf{};
   scalar_add_op_conf.set_name(global_step_name + "-ScalarAdd");
@@ -32,8 +32,8 @@ void AutoGlobalStep(const OpGraph& op_graph, Job* job) {
   OperatorConf assign_op_conf{};
   assign_op_conf.set_name(global_step_name + "-Assign");
   AssignOpConf* assign_conf = assign_op_conf.mutable_assign_conf();
-  assign_conf->set_ref(GenLogicalBlobName(variable_op_conf.name(),variable_conf->out()));
-  assign_conf->set_value(GenLogicalBlobName(scalar_add_op_conf.name() ,scalar_add_conf->out()));
+  assign_conf->set_ref(GenLogicalBlobName(variable_op_conf.name(), variable_conf->out()));
+  assign_conf->set_value(GenLogicalBlobName(scalar_add_op_conf.name(), scalar_add_conf->out()));
 
   JobBuilder job_builder(job);
   job_builder.AddOps(GenParallelConfOfCpuZeroOnAllMachines(),
