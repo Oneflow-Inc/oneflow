@@ -15,10 +15,11 @@ const PbMessage& ReduceGatherOp::GetCustomizedConf() const {
   return op_conf().reduce_gather_conf();
 }
 
-void ReduceGatherOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                    const ParallelContext* parallel_ctx) const {
+Maybe<void> ReduceGatherOp::InferBlobDescs(
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx) const {
   int32_t in_num = op_conf().reduce_gather_conf().in_num();
-  CHECK_GE(in_num, 2);
+  CHECK_GE_OR_RETURN(in_num, 2);
   BlobDesc* first_in_blob = GetBlobDesc4BnInOp(input_bns().Get(0));
   BlobDesc* out_blob = GetBlobDesc4BnInOp(SoleObn());
   *out_blob = *first_in_blob;
@@ -27,6 +28,7 @@ void ReduceGatherOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)>
     out_blob_elem_cnt += GetBlobDesc4BnInOp(input_bns().Get(i))->shape().elem_cnt();
   }
   out_blob->mut_shape() = Shape({out_blob_elem_cnt});
+  return Maybe<void>::Ok();
 }
 
 void ReduceGatherOp::VirtualGenKernelConf(

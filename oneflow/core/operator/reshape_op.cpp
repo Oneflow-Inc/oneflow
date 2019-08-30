@@ -11,8 +11,9 @@ void ReshapeOp::InitFromOpConf() {
 
 const PbMessage& ReshapeOp::GetCustomizedConf() const { return op_conf().reshape_conf(); }
 
-void ReshapeOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                               const ParallelContext* parallel_ctx) const {
+Maybe<void> ReshapeOp::InferBlobDescs(
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx) const {
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
   *out_blob_desc = *in_blob_desc;
@@ -33,12 +34,13 @@ void ReshapeOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetB
       elem_cnt *= dim_vec[i];
     }
   }
-  CHECK_LE(dim_cnt_need_infer, 1);
+  CHECK_LE_OR_RETURN(dim_cnt_need_infer, 1);
   if (dim_cnt_need_infer == 1) {
     dim_vec[dim_index_need_infer] = in_blob_desc->shape().elem_cnt() / elem_cnt;
   }
   out_blob_desc->mut_shape() = Shape(dim_vec);
-  CHECK_EQ(out_blob_desc->shape().elem_cnt(), in_blob_desc->shape().elem_cnt());
+  CHECK_EQ_OR_RETURN(out_blob_desc->shape().elem_cnt(), in_blob_desc->shape().elem_cnt());
+  return Maybe<void>::Ok();
 }
 
 void ReshapeOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {

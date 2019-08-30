@@ -27,13 +27,14 @@ LogicalNode* ReduceConcatOp::NewProperLogicalNode() const {
   return new NormalForwardLogicalNode;
 }
 
-void ReduceConcatOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                    const ParallelContext* parallel_ctx, int64_t record_piece_size,
-                                    std::function<void(OpContext*)> EnrollOpCtx) const {
+Maybe<void> ReduceConcatOp::InferBlobDescs(
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx, int64_t record_piece_size,
+    std::function<void(OpContext*)> EnrollOpCtx) const {
   const BlobDesc* first_in_blob = GetBlobDesc4BnInOp(input_bns().Get(0));
   const DataType data_type = first_in_blob->data_type();
   for (int32_t i = 1; i < op_conf().reduce_concat_conf().in_num(); ++i) {
-    CHECK_EQ(data_type, GetBlobDesc4BnInOp(input_bns().Get(i))->data_type());
+    CHECK_EQ_OR_RETURN(data_type, GetBlobDesc4BnInOp(input_bns().Get(i))->data_type());
   }
 
   BlobDesc* out_blob = GetBlobDesc4BnInOp(SoleObn());
@@ -45,7 +46,7 @@ void ReduceConcatOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)>
   }
   const int64_t data_type_byte_size =
       static_cast<int64_t>(GetSizeOfDataType(first_in_blob->data_type()));
-  CHECK_EQ(in_blob_body_size_sum % data_type_byte_size, 0);
+  CHECK_EQ_OR_RETURN(in_blob_body_size_sum % data_type_byte_size, 0);
   const int64_t out_blob_elem_cnt =
       RoundUp(in_blob_body_size_sum / data_type_byte_size, parallel_ctx->parallel_num());
   out_blob->mut_shape() = Shape({out_blob_elem_cnt});
@@ -53,6 +54,7 @@ void ReduceConcatOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)>
   // construct reduce_concat_op_ctx for later CHECK in ReduceConcatOp::VirtualGenKernelConf
   ReduceConcatOpCtx* reduce_concat_op_ctx = new ReduceConcatOpCtx(out_blob_elem_cnt);
   EnrollOpCtx(reduce_concat_op_ctx);
+  return Maybe<void>::Ok();
 }
 
 void ReduceConcatOp::VirtualGenKernelConf(
@@ -73,21 +75,23 @@ void ReduceConcatOp::VirtualGenKernelConf(
   CHECK_EQ(reduce_concat_op_ctx->out_blob_elem_cnt, out_blob_elem_cnt);
 }
 
-void ReduceConcatOp::InferHasBatchDim(
+Maybe<void> ReduceConcatOp::InferHasBatchDim(
     std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
-  for (const auto& ibn : input_bns()) { CHECK_EQ(*HasBatchDim4BnInOp(ibn), false); }
+  for (const auto& ibn : input_bns()) { CHECK_EQ_OR_RETURN(*HasBatchDim4BnInOp(ibn), false); }
   *HasBatchDim4BnInOp("out") = false;
+  return Maybe<void>::Ok();
 }
 
-void ReduceConcatOp::InferSbpSignature(
+Maybe<void> ReduceConcatOp::InferSbpSignature(
     SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
     const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
     std::function<const SbpInferHint&(const std::string&)> SbpInferHint4Ibn,
     const ParallelDesc& parallel_desc) const {
   for (const auto& ibn : input_bns()) {
-    CHECK(SbpInferHint4Ibn(ibn).sbp_parallel().has_partial_sum_parallel());
+    CHECK_OR_RETURN(SbpInferHint4Ibn(ibn).sbp_parallel().has_partial_sum_parallel());
   }
   SbpSignatureBuilder().PartialSum(input_bns()).PartialSum(output_bns()).Build(sbp_signature);
+  return Maybe<void>::Ok();
 }
 
 REGISTER_OP(OperatorConf::kReduceConcatConf, ReduceConcatOp);

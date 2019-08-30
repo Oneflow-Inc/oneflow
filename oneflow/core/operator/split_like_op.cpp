@@ -14,8 +14,9 @@ void SplitLikeOp::InitFromOpConf() {
 
 const PbMessage& SplitLikeOp::GetCustomizedConf() const { return op_conf().split_like_conf(); }
 
-void SplitLikeOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                 const ParallelContext* parallel_ctx) const {
+Maybe<void> SplitLikeOp::InferBlobDescs(
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx) const {
   const SplitLikeOpConf& conf = op_conf().split_like_conf();
   const BlobDesc* like_0_blob_desc = GetBlobDesc4BnInOp(GenRepeatedBn("like", 0));
   const std::vector<int64_t>& in_dim_vec = GetBlobDesc4BnInOp("in")->shape().dim_vec();
@@ -25,7 +26,8 @@ void SplitLikeOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Ge
     const BlobDesc* like_i_blob_desc = GetBlobDesc4BnInOp(GenRepeatedBn("like", i));
     FOR_RANGE(int64_t, j, 0, like_i_blob_desc->shape().NumAxes()) {
       if (j != split_axis) {
-        CHECK_EQ(like_0_blob_desc->shape().dim_vec().at(j), like_i_blob_desc->shape().At(j));
+        CHECK_EQ_OR_RETURN(like_0_blob_desc->shape().dim_vec().at(j),
+                           like_i_blob_desc->shape().At(j));
       }
     }
     dim_sum += like_i_blob_desc->shape().At(split_axis);
@@ -33,10 +35,11 @@ void SplitLikeOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Ge
     output_i_blob_desc->set_data_type(like_i_blob_desc->data_type());
     output_i_blob_desc->mut_shape() = like_i_blob_desc->shape();
   }
-  CHECK_EQ(dim_sum, in_dim_vec.at(split_axis));
+  CHECK_EQ_OR_RETURN(dim_sum, in_dim_vec.at(split_axis));
+  return Maybe<void>::Ok();
 }
 
-void SplitLikeOp::InferHasBatchDim(
+Maybe<void> SplitLikeOp::InferHasBatchDim(
     const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
     std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
   const SplitLikeOpConf& conf = op_conf().split_like_conf();
@@ -44,6 +47,7 @@ void SplitLikeOp::InferHasBatchDim(
   bool has_batch_dim = true;
   if (split_axis == 0) { has_batch_dim = false; }
   for (const auto& obn : output_bns()) { *HasBatchDim4BnInOp(obn) = has_batch_dim; }
+  return Maybe<void>::Ok();
 }
 
 void SplitLikeOp::GetSbpSignatures(
@@ -55,7 +59,7 @@ void SplitLikeOp::GetSbpSignatures(
   FOR_RANGE(int32_t, i, 0, num_axes) {
     if (i == axis) { continue; }
     SbpSignatureBuilder()
-        .Split(output_bns(), i)
+        .Split(input_bns(), i)
         .Split(output_bns(), i)
         .Build(sbp_sig_list->mutable_sbp_signature()->Add());
   }

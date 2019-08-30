@@ -41,9 +41,10 @@ void LayerNormOp::InitFromOpConf() {
   EnrollConstBufBn("cudnn_bn_bias_zeros");
 }
 
-void LayerNormOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                 const ParallelContext* parallel_ctx) const {
-  CHECK(parallel_ctx->policy() != kModelParallel);
+Maybe<void> LayerNormOp::InferBlobDescs(
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx) const {
+  CHECK_OR_RETURN(parallel_ctx->policy() != kModelParallel);
   const BlobDesc* in = GetBlobDesc4BnInOp("in");
   *GetBlobDesc4BnInOp("out") = *in;
   const LayerNormOpConf& conf = op_conf().layer_norm_conf();
@@ -57,8 +58,8 @@ void LayerNormOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Ge
   if (conf.center()) {
     if (conf.has_beta()) {
       const BlobDesc* beta = GetBlobDesc4BnInOp("beta");
-      CHECK_EQ(beta->shape(), param_shape);
-      CHECK_EQ(beta->data_type(), in->data_type());
+      CHECK_EQ_OR_RETURN(beta->shape(), param_shape);
+      CHECK_EQ_OR_RETURN(beta->data_type(), in->data_type());
     } else {
       BlobDesc* beta = GetBlobDesc4BnInOp("beta");
       beta->mut_shape() = param_shape;
@@ -68,8 +69,8 @@ void LayerNormOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Ge
   if (conf.scale()) {
     if (conf.has_gamma()) {
       const BlobDesc* gamma = GetBlobDesc4BnInOp("gamma");
-      CHECK_EQ(gamma->shape(), param_shape);
-      CHECK_EQ(gamma->data_type(), in->data_type());
+      CHECK_EQ_OR_RETURN(gamma->shape(), param_shape);
+      CHECK_EQ_OR_RETURN(gamma->data_type(), in->data_type());
     } else {
       BlobDesc* gamma = GetBlobDesc4BnInOp("gamma");
       gamma->mut_shape() = param_shape;
@@ -89,11 +90,13 @@ void LayerNormOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Ge
   *GetBlobDesc4BnInOp("inv_variance") = *cudnn_bn_mean;
   *GetBlobDesc4BnInOp("cudnn_bn_scale_ones") = *cudnn_bn_mean;
   *GetBlobDesc4BnInOp("cudnn_bn_bias_zeros") = *cudnn_bn_mean;
+  return Maybe<void>::Ok();
 }
 
-void LayerNormOp::InferHasBatchDim(
+Maybe<void> LayerNormOp::InferHasBatchDim(
     std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
   for (const auto& obn : output_bns()) { *HasBatchDim4BnInOp(obn) = true; }
+  return Maybe<void>::Ok();
 }
 
 void LayerNormOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {

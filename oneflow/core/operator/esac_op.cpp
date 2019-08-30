@@ -9,19 +9,22 @@ void EsacOp::InitFromOpConf() {
   EnrollOutputBn("out", false);
 }
 
-void EsacOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                            const ParallelContext* parallel_ctx) const {
+Maybe<void> EsacOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                                   const ParallelContext* parallel_ctx) const {
   BlobDesc* out = GetBlobDesc4BnInOp("out");
   out->mut_shape() = Shape({1});
   const DataType data_type = op_conf().esac_conf().data_type();
-  CHECK(IsIntegralDataType(data_type));
+  CHECK_OR_RETURN(IsIntegralDataType(data_type));
   out->set_data_type(data_type);
+  return Maybe<void>::Ok();
 }
 
 const PbMessage& EsacOp::GetCustomizedConf() const { return op_conf().esac_conf(); }
 
-void EsacOp::InferHasBatchDim(std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
+Maybe<void> EsacOp::InferHasBatchDim(
+    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
   *HasBatchDim4BnInOp("out") = false;
+  return Maybe<void>::Ok();
 }
 
 void EsacOp::GetSbpSignatures(

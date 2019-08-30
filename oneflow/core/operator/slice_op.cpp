@@ -19,25 +19,25 @@ void SliceOp::VirtualGenKernelConf(
   in_shape.ToProto(kernel_conf->mutable_slice_conf()->mutable_in_shape());
 }
 
-void SliceOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                             const ParallelContext* parallel_ctx) const {
+Maybe<void> SliceOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                                    const ParallelContext* parallel_ctx) const {
   const SliceOpConf& conf = op_conf().slice_conf();
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
-  CHECK_EQ(conf.dim_slice_conf_size(), in_blob_desc->shape().NumAxes() - 1);
+  CHECK_EQ_OR_RETURN(conf.dim_slice_conf_size(), in_blob_desc->shape().NumAxes() - 1);
   std::vector<int64_t> shape_vec(in_blob_desc->shape().NumAxes());
   shape_vec[0] = in_blob_desc->shape().At(0);
   FOR_RANGE(size_t, i, 0, conf.dim_slice_conf_size()) {
     int32_t dim_len = in_blob_desc->shape().At(i + 1);
     const DimSliceConf& dim_slice_conf = conf.dim_slice_conf(i);
     int32_t step = dim_slice_conf.stride();
-    CHECK_GT(step, 0);
+    CHECK_GT_OR_RETURN(step, 0);
     int32_t start = dim_slice_conf.has_start() ? dim_slice_conf.start() : 0;
     int32_t end = dim_slice_conf.has_end() ? dim_slice_conf.end() : dim_len;
     if (start < 0) { start += dim_len; }
     if (end < 0) { end += dim_len; }
-    CHECK_GE(start, 0);
-    CHECK_LT(start, end);
-    CHECK_LE(end, dim_len);
+    CHECK_GE_OR_RETURN(start, 0);
+    CHECK_LT_OR_RETURN(start, end);
+    CHECK_LE_OR_RETURN(end, dim_len);
     shape_vec[i + 1] = (end - start - 1) / std::abs(step) + 1;
   }
 
@@ -50,6 +50,7 @@ void SliceOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlo
     *offset_blob_desc = *out_blob_desc;
     offset_blob_desc->set_data_type(DataType::kInt64);
   }
+  return Maybe<void>::Ok();
 }
 
 void SliceOp::GetSbpSignatures(
