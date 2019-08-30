@@ -6,17 +6,15 @@ namespace oneflow {
 
 template<DeviceType device_type, typename T>
 class MultiplyKernel final : public KernelIfWithModel<device_type, T> {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(MultiplyKernel);
-  MultiplyKernel() = default;
-  ~MultiplyKernel() = default;
+  public:
+    OF_DISALLOW_COPY_AND_MOVE(MultiplyKernel);
+    MultiplyKernel() = default;
+    ~MultiplyKernel() = default;
 
- private:
-  void ForwardDataContent(const KernelCtx&,
-                          std::function<Blob*(const std::string&)>) const override;
-  void BackwardDataContent(const KernelCtx&,
-                           std::function<Blob*(const std::string&)>) const override;
-  const PbMessage& GetCustomizedOpConf() const override;
+  private:
+    void ForwardDataContent(const KernelCtx&,
+                            std::function<Blob*(const std::string&)>) const override;
+    const PbMessage& GetCustomizedOpConf() const override;
 };
 
 }  // namespace oneflow
