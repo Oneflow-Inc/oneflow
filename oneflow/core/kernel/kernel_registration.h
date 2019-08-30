@@ -85,6 +85,9 @@ void ExportProtoFromKernelRegistry(KernelRegValProto*);
                                         kernel<DeviceType::kGPU, float>)   \
   REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(op_type, DeviceType::kGPU, double, \
                                         kernel<DeviceType::kGPU, double>)
+#define REGISTER_KERNEL_HELPER_GPU_HALF(op_type, kernel)                    \
+  REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(op_type, DeviceType::kGPU, float16, \
+                                        kernel<DeviceType::kGPU, float16>)
 
 }  // namespace oneflow
 
