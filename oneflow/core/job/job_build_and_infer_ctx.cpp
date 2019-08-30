@@ -125,7 +125,8 @@ Maybe<void> JobBuildAndInferCtx::AddLossLogicalBlobName(const std::string& lbn) 
 bool JobBuildAndInferCtx::HasJobConf() const { return has_job_conf_; }
 
 Maybe<void> JobBuildAndInferCtx::AddPlacementGroup(const PlacementGroup& placement_group) {
-  TODO();
+  job_->mutable_placement()->add_placement_group()->CopyFrom(placement_group);
+  return Maybe<void>();
 }
 
 #define GEN_ERROR_WHEN_GET_INFO_FROM_LBN(info_src)                                                 \
@@ -164,6 +165,40 @@ Maybe<int64_t> JobBuildAndInferCtx::GetSplitDimFromProducerView(const std::strin
 Maybe<ParallelDesc> JobBuildAndInferCtx::GetParallelDescFromProducerView(
     const std::string& lbn) const {
   TODO();
+}
+
+Maybe<void> JobBuildAndInferCtx::CheckPlacement() {
+  HashSet<std::string> op_names_in_net;
+  HashSet<std::string> op_names_in_placement;
+  for (const OperatorConf& op_conf : job_->net().op()) {
+    if (!(op_names_in_net.insert(op_conf.name()).second)) {
+      return GenJobBuildAndInferError(JobBuildAndInferError::kOpNameExist,
+                                      "op_name: " + op_conf.name() + "already exist in job: "
+                                          + job_->job_conf().job_name() + " net");
+    }
+  }
+  for (const PlacementGroup& placement_group : job_->placement().placement_group()) {
+    for (const std::string& op_name : placement_group.op_set().op_name()) {
+      if (!(op_names_in_placement.insert(op_name).second)) {
+        return GenJobBuildAndInferError(JobBuildAndInferError::kOpNameExist,
+                                        "op_name: " + op_name + "already exist in job: "
+                                            + job_->job_conf().job_name() + " placement");
+      }
+    }
+  }
+  if (op_names_in_net.size() != op_names_in_placement.size()) {
+    return GenJobBuildAndInferError(
+        JobBuildAndInferError::kPlacementError,
+        "job: " + job_->job_conf().job_name() + " op number not equal between net and placement");
+  }
+  for (const std::string& op_name : op_names_in_net) {
+    if (op_names_in_placement.find(op_name) == op_names_in_placement.end()) {
+      return GenJobBuildAndInferError(JobBuildAndInferError::kPlacementError,
+                                      "job: " + job_->job_conf().job_name() + " op_name: " + op_name
+                                          + "defined in net cannot find its placement");
+    }
+  }
+  return Maybe<void>();
 }
 
 const Job& JobBuildAndInferCtx::job() const { return *job_; }

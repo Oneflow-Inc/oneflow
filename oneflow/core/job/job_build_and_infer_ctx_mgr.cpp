@@ -40,8 +40,12 @@ Maybe<std::string> JobBuildAndInferCtxMgr::GetCurrentJobName() {
 }
 
 Maybe<void> JobBuildAndInferCtxMgr::LeaveCurrentJobBuildAndInferCtx() {
+  if (!has_cur_job_) {
+    return GenJobBuildAndInferError(JobBuildAndInferError::kNoJobBuildAndInferCtx,
+                                    "cannot leave current job beacuse current has no job");
+  }
   has_cur_job_ = false;
-  return Maybe<void>();
+  return job_name2infer_ctx_.at(cur_job_name_)->CheckPlacement();
 }
 
 }  // namespace oneflow
