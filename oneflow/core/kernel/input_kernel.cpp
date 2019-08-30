@@ -2,5 +2,8 @@
 
 namespace oneflow {
 
-ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kInputConf, InputKernel);
-}
+REGISTER_KERNEL_WITH_DEVICE(OperatorConf::kInputConf, DeviceType::kCPU,
+                            InputKernel<DeviceType::kCPU>);
+REGISTER_KERNEL_WITH_DEVICE(OperatorConf::kInputConf, DeviceType::kGPU,
+                            InputKernel<DeviceType::kGPU>);
+}  // namespace oneflow

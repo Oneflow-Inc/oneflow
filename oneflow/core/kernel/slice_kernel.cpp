@@ -43,7 +43,7 @@ void SliceKernel<DeviceType::kCPU, T>::ForwardDataContent(
   }
 }
 
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kSliceConf, SliceKernel, ARITHMETIC_DATA_TYPE_SEQ);
+REGISTER_KERNEL_HELPER_GPU_FLOATING(OperatorConf::kSliceConf, SliceKernel);
 
 template<typename T>
 struct NdarraySliceUtil<T, 2> final {

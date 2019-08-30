@@ -21,6 +21,6 @@ void ScalarAddKernel<device_type, T>::ForwardDataContent(
                                           out_blob->mut_dptr<T>());
 }
 
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kScalarAddConf, ScalarAddKernel, ARITHMETIC_DATA_TYPE_SEQ);
+REGISTER_KERNEL_HELPER_GPU_FLOATING(OperatorConf::kScalarAddConf, ScalarAddKernel);
 
 }  // namespace oneflow

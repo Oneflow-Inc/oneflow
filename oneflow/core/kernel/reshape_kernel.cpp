@@ -10,6 +10,9 @@ void ReshapeKernel<device_type>::ForwardDataContent(
   out_blob->CopyDataContentFrom(ctx.device_ctx, in_blob);
 }
 
-ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kReshapeConf, ReshapeKernel);
+REGISTER_KERNEL_WITH_DEVICE(OperatorConf::kReshapeConf, DeviceType::kCPU,
+                            ReshapeKernel<DeviceType::kCPU>);
+REGISTER_KERNEL_WITH_DEVICE(OperatorConf::kReshapeConf, DeviceType::kGPU,
+                            ReshapeKernel<DeviceType::kGPU>);
 
 }  // namespace oneflow

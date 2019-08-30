@@ -18,6 +18,6 @@ void ModelSaveV2Kernel::Forward(const KernelCtx& ctx,
   (*next_snapshot_id_) += 1;
 }
 
-REGISTER_KERNEL(OperatorConf::kModelSaveV2Conf, ModelSaveV2Kernel);
+REGISTER_KERNEL_WITH_NOTHING(OperatorConf::kModelSaveV2Conf, ModelSaveV2Kernel);
 
 }  // namespace oneflow

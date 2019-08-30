@@ -30,6 +30,9 @@ void KeepHeaderOnlyKernel<device_type>::ForwardRecordIdInDevicePiece(
                   this->op_attribute().output_bns(), &Blob::CopyRecordIdInDevicePieceFrom);
 }
 
-ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kKeepHeaderOnlyConf, KeepHeaderOnlyKernel);
+REGISTER_KERNEL_WITH_DEVICE(OperatorConf::kKeepHeaderOnlyConf, DeviceType::kCPU,
+                            KeepHeaderOnlyKernel<DeviceType::kCPU>);
+REGISTER_KERNEL_WITH_DEVICE(OperatorConf::kKeepHeaderOnlyConf, DeviceType::kGPU,
+                            KeepHeaderOnlyKernel<DeviceType::kGPU>);
 
 }  // namespace oneflow

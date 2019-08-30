@@ -14,6 +14,9 @@ void TupleIdentityKernel<device_type>::ForwardDataContent(
   }
 }
 
-ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kTupleIdentityConf, TupleIdentityKernel);
+REGISTER_KERNEL_WITH_DEVICE(OperatorConf::kTupleIdentityConf, DeviceType::kCPU,
+                            TupleIdentityKernel<DeviceType::kCPU>);
+REGISTER_KERNEL_WITH_DEVICE(OperatorConf::kTupleIdentityConf, DeviceType::kGPU,
+                            TupleIdentityKernel<DeviceType::kGPU>);
 
 }  // namespace oneflow

@@ -16,6 +16,9 @@ void ReshapeLikeKernel<device_type>::ForwardDim0ValidNum(
   BnInOp2Blob("y")->CopyDim0ValidNumFrom(ctx.device_ctx, BnInOp2Blob("like"));
 }
 
-ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kReshapeLikeConf, ReshapeLikeKernel);
+REGISTER_KERNEL_WITH_DEVICE(OperatorConf::kReshapeLikeConf, DeviceType::kCPU,
+                            ReshapeLikeKernel<DeviceType::kCPU>);
+REGISTER_KERNEL_WITH_DEVICE(OperatorConf::kReshapeLikeConf, DeviceType::kGPU,
+                            ReshapeLikeKernel<DeviceType::kGPU>);
 
 }  // namespace oneflow

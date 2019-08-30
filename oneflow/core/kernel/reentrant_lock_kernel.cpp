@@ -87,7 +87,11 @@ void ReentrantLockKernel<T>::ForwardDataContent(
   }
 }
 
-ADD_CPU_DEFAULT_KERNEL_CREATOR(OperatorConf::kReentrantLockConf, ReentrantLockKernel,
-                               INT_DATA_TYPE_SEQ)
+REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kReentrantLockConf, DeviceType::kCPU, int8_t,
+                                      ReentrantLockKernel<int8_t>);
+REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kReentrantLockConf, DeviceType::kCPU, int32_t,
+                                      ReentrantLockKernel<int32_t>);
+REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kReentrantLockConf, DeviceType::kCPU, int64_t,
+                                      ReentrantLockKernel<int64_t>);
 
 }  // namespace oneflow

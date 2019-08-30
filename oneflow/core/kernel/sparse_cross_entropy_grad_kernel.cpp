@@ -40,7 +40,9 @@ void SparseCrossEntropyGradKernel<device_type, T>::ForwardDataContent(
       SwitchCase(label->data_type()), ctx.device_ctx, prediction, label, dy, prediction_diff);
 }
 
-ADD_DEFAULT_KERNEL_CREATOR_WITH_GPU_HALF(OperatorConf::kSparseCrossEntropyGradConf,
-                                         SparseCrossEntropyGradKernel, FLOATING_DATA_TYPE_SEQ);
+REGISTER_KERNEL_HELPER_GPU_FLOATING(OperatorConf::kSparseCrossEntropyGradConf,
+                                    SparseCrossEntropyGradKernel);
+REGISTER_KERNEL_HELPER_GPU_HALF(OperatorConf::kSparseCrossEntropyGradConf,
+                                SparseCrossEntropyGradKernel);
 
 }  // namespace oneflow

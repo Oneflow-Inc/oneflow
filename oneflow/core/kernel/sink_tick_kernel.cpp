@@ -2,6 +2,6 @@
 
 namespace oneflow {
 
-REGISTER_KERNEL(OperatorConf::kSinkTickConf, SinkTickKernel);
+REGISTER_KERNEL_WITH_NOTHING(OperatorConf::kSinkTickConf, SinkTickKernel);
 
 }  // namespace oneflow

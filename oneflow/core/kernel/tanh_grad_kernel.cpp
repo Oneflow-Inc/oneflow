@@ -12,7 +12,7 @@ void TanHGradKernel<device_type, T>::ForwardDataContent(
       BnInOp2Blob("dy")->dptr<T>(), BnInOp2Blob("dx")->mut_dptr<T>());
 }
 
-ADD_DEFAULT_KERNEL_CREATOR_WITH_GPU_HALF(OperatorConf::kTanhGradConf, TanHGradKernel,
-                                         FLOATING_DATA_TYPE_SEQ);
+REGISTER_KERNEL_HELPER_GPU_FLOATING(OperatorConf::kTanhGradConf, TanHGradKernel);
+REGISTER_KERNEL_HELPER_GPU_HALF(OperatorConf::kTanhGradConf, TanHGradKernel);
 
 }  // namespace oneflow

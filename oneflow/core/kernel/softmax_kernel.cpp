@@ -82,7 +82,7 @@ void SoftmaxKernel<device_type, T>::ForwardDataContent(
   }
 }
 
-ADD_DEFAULT_KERNEL_CREATOR_WITH_GPU_HALF(OperatorConf::kSoftmaxConf, SoftmaxKernel,
-                                         FLOATING_DATA_TYPE_SEQ);
+REGISTER_KERNEL_HELPER_GPU_FLOATING(OperatorConf::kSoftmaxConf, SoftmaxKernel);
+REGISTER_KERNEL_HELPER_GPU_HALF(OperatorConf::kSoftmaxConf, SoftmaxKernel);
 
 }  // namespace oneflow

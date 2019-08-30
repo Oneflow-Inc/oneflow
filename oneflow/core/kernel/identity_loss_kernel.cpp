@@ -24,7 +24,6 @@ const LossKernelConf& IdentityLossKernel<device_type, PredType>::GetLossKernelCo
   return kernel_conf.identity_loss_conf().loss_conf();
 }
 
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kIdentityLossConf, IdentityLossKernel,
-                           FLOATING_DATA_TYPE_SEQ);
+REGISTER_KERNEL_HELPER_GPU_FLOATING(OperatorConf::kIdentityLossConf, IdentityLossKernel);
 
 }  // namespace oneflow

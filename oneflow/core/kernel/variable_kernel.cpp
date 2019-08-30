@@ -2,6 +2,6 @@
 
 namespace oneflow {
 
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kVariableConf, VariableKernel, FLOATING_DATA_TYPE_SEQ);
+REGISTER_KERNEL_HELPER_GPU_FLOATING(OperatorConf::kVariableConf, VariableKernel);
 
 }  // namespace oneflow

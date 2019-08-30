@@ -56,6 +56,6 @@ void RecordLoadKernel::Forward(const KernelCtx& ctx,
   if (status->record_num < piece_size_in_one_loader_) { status->is_eof = true; }
 }
 
-REGISTER_KERNEL(OperatorConf::kRecordLoadConf, RecordLoadKernel);
+REGISTER_KERNEL_WITH_NOTHING(OperatorConf::kRecordLoadConf, RecordLoadKernel);
 
 }  // namespace oneflow

@@ -102,7 +102,7 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_LAYER_NORM_CONST_BUF_INIT_UTIL, DEV
                                  FLOATING_DATA_TYPE_SEQ);
 template struct LayerNormConstBufInitUtil<DeviceType::kGPU, float16>;
 
-ADD_DEFAULT_KERNEL_CREATOR_WITH_GPU_HALF(OperatorConf::kLayerNormConf, LayerNormKernel,
-                                         FLOATING_DATA_TYPE_SEQ);
+REGISTER_KERNEL_HELPER_GPU_FLOATING(OperatorConf::kLayerNormConf, LayerNormKernel);
+REGISTER_KERNEL_HELPER_GPU_HALF(OperatorConf::kLayerNormConf, LayerNormKernel);
 
 }  // namespace oneflow

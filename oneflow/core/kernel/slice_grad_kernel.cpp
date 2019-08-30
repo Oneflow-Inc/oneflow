@@ -47,7 +47,7 @@ void SliceGradKernel<DeviceType::kCPU, T>::ForwardDataContent(
   }
 }
 
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kSliceGradConf, SliceGradKernel, ARITHMETIC_DATA_TYPE_SEQ);
+REGISTER_KERNEL_HELPER_GPU_FLOATING(OperatorConf::kSliceGradConf, SliceGradKernel);
 
 template<typename T>
 struct NdarraySliceUtil<T, 2> final {

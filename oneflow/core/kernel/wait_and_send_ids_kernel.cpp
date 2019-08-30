@@ -19,7 +19,11 @@ void WaitAndSendIdsKernel<T>::ForwardDataContent(
   ++status->out_idx_;
 }
 
-ADD_CPU_DEFAULT_KERNEL_CREATOR(OperatorConf::kWaitAndSendIdsConf, WaitAndSendIdsKernel,
-                               INT_DATA_TYPE_SEQ);
+REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kWaitAndSendIdsConf, DeviceType::kCPU, int8_t,
+                                      WaitAndSendIdsKernel<int8_t>);
+REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kWaitAndSendIdsConf, DeviceType::kCPU, int32_t,
+                                      WaitAndSendIdsKernel<int32_t>);
+REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kWaitAndSendIdsConf, DeviceType::kCPU, int64_t,
+                                      WaitAndSendIdsKernel<int64_t>);
 
 }  // namespace oneflow

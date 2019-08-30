@@ -30,7 +30,6 @@ void ReduceSumLikeKernel<device_type, T>::ForwardDim0ValidNum(
   BnInOp2Blob("y")->CopyDim0ValidNumFrom(ctx.device_ctx, BnInOp2Blob("like"));
 }
 
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kReduceSumLikeConf, ReduceSumLikeKernel,
-                           ARITHMETIC_DATA_TYPE_SEQ);
+REGISTER_KERNEL_HELPER_GPU_FLOATING(OperatorConf::kReduceSumLikeConf, ReduceSumLikeKernel);
 
 }  // namespace oneflow

@@ -48,7 +48,8 @@ void LayerNormParamGradKernel<device_type, T>::ForwardDataContent(
   }
 }
 
-ADD_DEFAULT_KERNEL_CREATOR_WITH_GPU_HALF(OperatorConf::kLayerNormParamGradConf,
-                                         LayerNormParamGradKernel, FLOATING_DATA_TYPE_SEQ);
+REGISTER_KERNEL_HELPER_GPU_FLOATING(OperatorConf::kLayerNormParamGradConf,
+                                    LayerNormParamGradKernel);
+REGISTER_KERNEL_HELPER_GPU_HALF(OperatorConf::kLayerNormParamGradConf, LayerNormParamGradKernel);
 
 }  // namespace oneflow

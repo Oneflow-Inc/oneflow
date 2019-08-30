@@ -34,7 +34,7 @@ void LayerNormGradKernel<device_type, T>::InitConstBufBlobs(
       ctx, ones_initializer, 0, BnInOp2Blob("cudnn_bn_scale_ones"));
 }
 
-ADD_DEFAULT_KERNEL_CREATOR_WITH_GPU_HALF(OperatorConf::kLayerNormGradConf, LayerNormGradKernel,
-                                         FLOATING_DATA_TYPE_SEQ);
+REGISTER_KERNEL_HELPER_GPU_FLOATING(OperatorConf::kLayerNormGradConf, LayerNormGradKernel);
+REGISTER_KERNEL_HELPER_GPU_HALF(OperatorConf::kLayerNormGradConf, LayerNormGradKernel);
 
 }  // namespace oneflow
