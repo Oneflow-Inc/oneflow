@@ -22,23 +22,27 @@ void NormalizationOp::InitFromOpConf() {
   } else {
     EnrollTmpBn("moving_variance");
   }
-  if (conf.has_gamma()) {
-    EnrollInputBn("gamma")->set_is_mutable(true);
-  } else {
-    if (DevIsGpuAndEnableCudnn()) {
-      EnrollConstBufBn("gamma");
+  if (conf.scale()) {
+    if (conf.has_gamma()) {
+      EnrollInputBn("gamma");
     } else {
-      UNIMPLEMENTED();
+      EnrollTmpBn("gamma");
     }
+  } else if (DevIsGpuAndEnableCudnn()) {
+    EnrollConstBufBn("gamma");
+  } else {
+    UNIMPLEMENTED();
   }
-  if (conf.has_beta()) {
-    EnrollInputBn("beta")->set_is_mutable(true);
-  } else {
-    if (DevIsGpuAndEnableCudnn()) {
-      EnrollConstBufBn("beta");
+  if (conf.center()) {
+    if (conf.has_beta()) {
+      EnrollInputBn("beta");
     } else {
-      UNIMPLEMENTED();
+      EnrollTmpBn("beta");
     }
+  } else if (DevIsGpuAndEnableCudnn()) {
+      EnrollConstBufBn("beta");
+  } else {
+      UNIMPLEMENTED();
   }
   if (conf.is_training()) {
     EnrollOutputBn("mean", false);
