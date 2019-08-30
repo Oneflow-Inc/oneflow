@@ -2,9 +2,9 @@ import oneflow as flow
 import numpy as np
 import torch
 
-config = flow.ConfigProtoBuilder()
-config.gpu_device_num(1)
-flow.init(config)
+#config = flow.ConfigProtoBuilder()
+#config.gpu_device_num(1)
+#flow.init(config)
 
 def AddJob(a = flow.input_blob_def((5,2)), b = flow.input_blob_def((5,2))):
     job_conf = flow.get_cur_job_conf_builder()

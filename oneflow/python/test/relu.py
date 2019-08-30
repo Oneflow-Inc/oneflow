@@ -2,9 +2,9 @@ import oneflow as flow
 import numpy as np
 
 
-config = flow.ConfigProtoBuilder()
-config.gpu_device_num(1)
-flow.init(config)
+#config = flow.ConfigProtoBuilder()
+#config.gpu_device_num(1)
+#flow.init(config)
 
 def ReluJob(x = flow.input_blob_def((10,))):
     job_conf = flow.get_cur_job_conf_builder()

@@ -144,14 +144,12 @@ def AsyncGetCallback(result):
   cur_step += 1
 
 if __name__ == '__main__':
-  config = flow.ConfigProtoBuilder()
-  config.ctrl_port(12137)
-  config.machine([{'addr':'192.168.1.11'},{'addr':'192.168.1.15'}])
-  config.gpu_device_num(2)
-  config.grpc_use_no_signal()
-  #config.model_load_snapshot_path(_MODEL_LOAD)
-  config.model_save_snapshots_path(_MODEL_SAVE)
-  flow.deprecated.init_worker_and_master(config)
+  flow.config.ctrl_port(12137)
+  flow.config.machine([{'addr':'192.168.1.11'},{'addr':'192.168.1.15'}])
+  flow.config.gpu_device_num(2)
+  #flow.config.model_load_snapshot_path(_MODEL_LOAD)
+  flow.config.model_save_snapshots_path(_MODEL_SAVE)
+  flow.deprecated.init_worker()
 
   flow.add_job(PretrainJob)
   with flow.Session() as sess:
@@ -163,4 +161,4 @@ if __name__ == '__main__':
       #print(fmt_str.format(i, "train loss:", sess.run(PretrainJob).get().mean()))
       #sess.no_return_run(PretrainJob)#.async_get(AsyncGetCallback)
       sess.run(PretrainJob).async_get(AsyncGetCallback)
-  flow.deprecated.delete_worker(config)
+  flow.deprecated.delete_worker()

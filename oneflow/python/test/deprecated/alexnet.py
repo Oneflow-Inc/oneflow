@@ -251,26 +251,23 @@ def EvaluateAlexNet():
 
 
 if __name__ == '__main__':
-    config = flow.ConfigProtoBuilder()
-    config.gpu_device_num(args.gpu_num_per_node)
-    config.grpc_use_no_signal()
-    config.model_load_snapshot_path(args.model_load_dir)
-    config.model_save_snapshots_path(args.model_save_dir)
-    config.ctrl_port(2019)
+    flow.config.gpu_device_num(args.gpu_num_per_node)
+    flow.config.model_load_snapshot_path(args.model_load_dir)
+    flow.config.model_save_snapshots_path(args.model_save_dir)
+    flow.config.ctrl_port(2019)
     if args.multinode:
-        config.ctrl_port(12138)
-        config.machine([{'addr': '192.168.1.15'}, {'addr': '192.168.1.16'}])
+        flow.config.ctrl_port(12138)
+        flow.config.machine([{'addr': '192.168.1.15'}, {'addr': '192.168.1.16'}])
         if args.remote_by_hand is False:
             if args.scp_binary_without_uuid:
                 flow.deprecated.init_worker(
-                    config, scp_binary=True, use_uuid=False)
+                    scp_binary=True, use_uuid=False)
             elif args.skip_scp_binary:
                 flow.deprecated.init_worker(
-                    config, scp_binary=False, use_uuid=False)
+                    scp_binary=False, use_uuid=False)
             else:
                 flow.deprecated.init_worker(
-                    config, scp_binary=True, use_uuid=True)
-    flow.init(config)
+                    scp_binary=True, use_uuid=True)
     flow.add_job(TrainAlexNet)
     flow.add_job(EvaluateAlexNet)
     with flow.Session() as sess:
@@ -288,4 +285,4 @@ if __name__ == '__main__':
             if (i + 1) % 100 is 0:
                 check_point.save(session=sess)
         if args.multinode and args.skip_scp_binary is False and args.scp_binary_without_uuid is False:
-            flow.deprecated.delete_worker(config)
+            flow.deprecated.delete_worker()

@@ -144,12 +144,8 @@ def AsyncGetCallback(result):
   cur_step += 1
 
 if __name__ == '__main__':
-  config = flow.ConfigProtoBuilder()
-  config.gpu_device_num(1)
-  config.grpc_use_no_signal()
-  config.model_load_snapshot_path(_MODEL_LOAD)
-  config.model_save_snapshots_path(_MODEL_SAVE)
-  flow.init(config)
+  flow.config.model_load_snapshot_path(_MODEL_LOAD)
+  flow.config.model_save_snapshots_path(_MODEL_SAVE)
 
   flow.add_job(PretrainJob)
   with flow.Session() as sess:

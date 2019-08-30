@@ -1,9 +1,9 @@
 import oneflow
 import numpy
 
-config = oneflow.ConfigProtoBuilder()
-config.gpu_device_num(1)
-oneflow.init(config)
+#config = oneflow.ConfigProtoBuilder()
+#config.gpu_device_num(1)
+#oneflow.init(config)
 
 
 def gather_test_job_1(
