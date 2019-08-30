@@ -23,9 +23,9 @@ void ModelInitKernel<device_type, T>::Forward(
         (*random_seed_gen_)(), out_blob);
   } else {
     std::string load_path = JoinPath(snapshot_path, op_conf.variable_op_name());
-    std::string model_name = op_conf.original_variable_conf().model_name();
+    std::string blob_name = op_conf.original_variable_conf().out();
     KernelUtil<device_type, T>::InitializeWithDir(ctx.device_ctx, part_id_, part_num_, load_path,
-                                                  out_blob, model_name, out_blob->shape().At(0),
+                                                  out_blob, blob_name, out_blob->shape().At(0),
                                                   out_blob->shape().Count(1));
   }
 }

@@ -31,7 +31,7 @@ std::string LogDir(const std::string& log_dir) {
   std::string v = log_dir + "/" + std::string(hostname);
   return v;
 }
-}
+}  // namespace
 
 FlagsAndLogScope::FlagsAndLogScope(const ConfigProto& config, const char* binary_name) {
   FLAGS_log_dir = LogDir(config.cpp_flags_conf().log_dir());
