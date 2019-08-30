@@ -9,25 +9,28 @@ void CaseOp::InitFromOpConf() {
   EnrollRepeatedOutputBn("out", false);
 }
 
-void CaseOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                            const ParallelContext* parallel_ctx) const {
+Maybe<void> CaseOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                                   const ParallelContext* parallel_ctx) const {
   const BlobDesc* in = GetBlobDesc4BnInOp("in");
-  CHECK_EQ(in->shape().elem_cnt(), 1);
+  CHECK_EQ_OR_RETURN(in->shape().elem_cnt(), 1);
   const DataType data_type = in->data_type();
-  CHECK(IsIntegralDataType(data_type));
+  CHECK_OR_RETURN(IsIntegralDataType(data_type));
   for (const std::string& obn : output_bns()) {
     BlobDesc* out = GetBlobDesc4BnInOp(obn);
     out->mut_shape() = Shape({1});
     out->set_data_type(data_type);
   }
+  return Maybe<void>::Ok();
 }
 
 const PbMessage& CaseOp::GetCustomizedConf() const { return op_conf().case_conf(); }
 
-void CaseOp::InferHasBatchDim(std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
+Maybe<void> CaseOp::InferHasBatchDim(
+    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
   for (const std::string& obn : output_bns()) {
     *HasBatchDim4BnInOp(obn) = *HasBatchDim4BnInOp("in");
   }
+  return Maybe<void>::Ok();
 }
 
 void CaseOp::GetSbpSignatures(

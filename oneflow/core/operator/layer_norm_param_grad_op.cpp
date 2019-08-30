@@ -19,10 +19,10 @@ void LayerNormParamGradOp::InitFromOpConf() {
   if (conf.has_gamma()) { EnrollInputBn("gamma", false); }
 }
 
-void LayerNormParamGradOp::InferBlobDescs(
+Maybe<void> LayerNormParamGradOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
-  CHECK(parallel_ctx->policy() != kModelParallel);
+  CHECK_OR_RETURN(parallel_ctx->policy() != kModelParallel);
   const LayerNormParamGradOpConf& conf = op_conf().layer_norm_param_grad_conf();
   const BlobDesc* dy = GetBlobDesc4BnInOp("dy");
   if (conf.has_beta_diff() || conf.has_gamma_diff()) {
@@ -33,8 +33,8 @@ void LayerNormParamGradOp::InferBlobDescs(
   const int64_t begin_params_axis = conf.begin_params_axis() < 0
                                         ? dy->shape().NumAxes() + conf.begin_params_axis()
                                         : conf.begin_params_axis();
-  CHECK_GE(begin_params_axis, 1);
-  CHECK_LT(begin_params_axis, dy->shape().NumAxes());
+  CHECK_GE_OR_RETURN(begin_params_axis, 1);
+  CHECK_LT_OR_RETURN(begin_params_axis, dy->shape().NumAxes());
   std::vector<int64_t> param_shape_dim_vec;
   param_shape_dim_vec.insert(param_shape_dim_vec.end(),
                              dy->shape().dim_vec().cbegin() + begin_params_axis,
@@ -48,8 +48,8 @@ void LayerNormParamGradOp::InferBlobDescs(
   }
   if (conf.has_gamma_diff()) {
     const BlobDesc* normalized = GetBlobDesc4BnInOp("normalized");
-    CHECK_EQ(normalized->data_type(), dy->data_type());
-    CHECK_EQ(normalized->shape(), dy->shape());
+    CHECK_EQ_OR_RETURN(normalized->data_type(), dy->data_type());
+    CHECK_EQ_OR_RETURN(normalized->shape(), dy->shape());
     BlobDesc* gamma_diff = GetBlobDesc4BnInOp("gamma_diff");
     gamma_diff->mut_shape() = param_shape;
     gamma_diff->set_data_type(dy->data_type());
@@ -57,18 +57,20 @@ void LayerNormParamGradOp::InferBlobDescs(
   if (conf.has_normalized_diff()) { *GetBlobDesc4BnInOp("normalized_diff") = *dy; }
   if (conf.has_gamma()) {
     const BlobDesc* gamma = GetBlobDesc4BnInOp("gamma");
-    CHECK_EQ(gamma->data_type(), dy->data_type());
-    CHECK_EQ(gamma->shape(), param_shape);
+    CHECK_EQ_OR_RETURN(gamma->data_type(), dy->data_type());
+    CHECK_EQ_OR_RETURN(gamma->shape(), param_shape);
   }
+  return Maybe<void>::Ok();
 }
 
-void LayerNormParamGradOp::InferHasBatchDim(
+Maybe<void> LayerNormParamGradOp::InferHasBatchDim(
     std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
   for (const auto& obn : output_bns()) { *HasBatchDim4BnInOp(obn) = false; }
   const LayerNormParamGradOpConf& conf = op_conf().layer_norm_param_grad_conf();
   if (conf.has_normalized_diff()) {
     *HasBatchDim4BnInOp("normalized_diff") = *HasBatchDim4BnInOp("dy");
   }
+  return Maybe<void>::Ok();
 }
 
 void LayerNormParamGradOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {

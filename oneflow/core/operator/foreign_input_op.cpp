@@ -23,9 +23,10 @@ const PbMessage& ForeignInputOp::GetCustomizedConf() const {
   return op_conf().foreign_input_conf();
 }
 
-void ForeignInputOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                    const ParallelContext* parallel_ctx) const {
-  CHECK_EQ(parallel_ctx->parallel_num(), 1);
+Maybe<void> ForeignInputOp::InferBlobDescs(
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx) const {
+  CHECK_EQ_OR_RETURN(parallel_ctx->parallel_num(), 1);
   CheckOpConf(op_conf());
   const auto& conf = op_conf().foreign_input_conf().blob_conf();
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
@@ -37,14 +38,16 @@ void ForeignInputOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)>
   }
   out_blob_desc->set_has_dim0_valid_num_field(conf.has_dim0_valid_num());
   if (conf.has_dim0_inner_shape()) {
-    CHECK(conf.has_dim0_valid_num());
+    CHECK_OR_RETURN(conf.has_dim0_valid_num());
     out_blob_desc->mut_dim0_inner_shape() = Shape(conf.dim0_inner_shape());
   }
+  return Maybe<void>::Ok();
 }
 
-void ForeignInputOp::InferHasBatchDim(
+Maybe<void> ForeignInputOp::InferHasBatchDim(
     std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
   *HasBatchDim4BnInOp("out") = op_conf().foreign_input_conf().blob_conf().has_batch_dim();
+  return Maybe<void>::Ok();
 }
 
 void ForeignInputOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {}

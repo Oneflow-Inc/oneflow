@@ -26,8 +26,6 @@ message TrainConf {
   optional float bias_l1 = 104 [default = 0];
   optional float weight_l2 = 105 [default = 0];
   optional float bias_l2 = 106 [default = 0];
-  optional int64 piece_num_of_print_loss = 107 [default = -1];
-  optional int64 piece_num_of_print_accuracy = 108 [default = -1];
 }
 
 message PredictConf {
