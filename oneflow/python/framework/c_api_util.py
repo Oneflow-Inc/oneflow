@@ -76,7 +76,10 @@ def CurJobBuildAndInferCtx_AddLossLogicalBlobName(lbn):
     if error.HasField("error_type"): raise JobBuildAndInferError(error)
 
 def CurJobBuildAndInferCtx_HasJobConf():
-    return oneflow_internal.CurJobBuildAndInferCtx_HasJobConf()
+    pair =  oneflow_internal.CurJobBuildAndInferCtx_HasJobConf()
+    error = text_format.Parse(pair.second, error_util.Error())
+    if error.HasField("error_type"): raise JobBuildAndInferError(error)
+    return pair.first
 
 def JobBuildAndInferCtx_GetStaticShape(job_name, lbn):
     pair = oneflow_internal.JobBuildAndInferCtx_GetSerializedIdListAsStaticShape(job_name, lbn)

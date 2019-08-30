@@ -21,7 +21,7 @@ class JobBuildAndInferCtx {
   Maybe<void> AddAndInferNonInputOp(const OperatorConf& op_conf);
   Maybe<void> AddLossLogicalBlobName(const std::string& lbn);
 
-  bool HasJobConf(const std::string& job_name) const;
+  bool HasJobConf() const;
   Maybe<Shape> GetStaticShape(const std::string& lbn) const;
   Maybe<DataType> GetDataType(const std::string& lbn) const;
   Maybe<bool> GetHasBatchDim(const std::string& lbn) const;

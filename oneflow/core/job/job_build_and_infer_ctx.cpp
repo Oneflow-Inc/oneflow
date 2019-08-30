@@ -12,7 +12,7 @@ Maybe<void> JobBuildAndInferCtx::AddAndInferNonInputOp(const OperatorConf& op_co
 
 Maybe<void> JobBuildAndInferCtx::AddLossLogicalBlobName(const std::string& lbn) { TODO(); }
 
-bool JobBuildAndInferCtx::HasJobConf(const std::string& job_name) const { TODO(); }
+bool JobBuildAndInferCtx::HasJobConf() const { TODO(); }
 
 Maybe<Shape> JobBuildAndInferCtx::GetStaticShape(const std::string& lbn) const { TODO(); }
 

@@ -40,13 +40,19 @@ template<>
 class Maybe<void> final : public MaybeBase<void> {
  public:
   Maybe() : MaybeBase<void>(std::shared_ptr<void>()) {}
-  Maybe(const Error& error) : MaybeBase<void>(std::make_shared<const Error>(error)) {}
-  Maybe(const std::shared_ptr<const Error>& error) : MaybeBase<void>(error) {}
-  Maybe(const Error* error) : MaybeBase<void>(std::shared_ptr<const Error>(error)) {}
+  Maybe(void* _) : MaybeBase<void>(std::shared_ptr<void>()) {}
+  Maybe(const Error& error) : MaybeBase<void>(std::make_shared<const Error>(error)) {
+    CheckError();
+  }
+  Maybe(const std::shared_ptr<const Error>& error) : MaybeBase<void>(error) { CheckError(); }
+  Maybe(const Error* error) : MaybeBase<void>(std::shared_ptr<const Error>(error)) { CheckError(); }
   Maybe(const Maybe<void>&) = default;
   ~Maybe() override = default;
 
   static Maybe<void> Ok() { return Maybe<void>(); }
+
+ private:
+  void CheckError() const { CHECK_NE(error()->error_type_case(), Error::ERROR_TYPE_NOT_SET); }
 };
 
 template<typename T>
