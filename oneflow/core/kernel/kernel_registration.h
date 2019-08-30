@@ -30,6 +30,12 @@ class KernelConstraint {
   virtual void ToProto(KernelRegValProto::RegVal*) const = 0;
 };
 
+class NoConstraint final : public KernelConstraint {
+ public:
+  bool IsMatched(const KernelConf&) override { return true; }
+  void ToProto(KernelRegValProto::RegVal*) const override;
+};
+
 class DeviceAndDTypeConstraint final : public KernelConstraint {
  public:
   DeviceAndDTypeConstraint(DeviceType dev, DataType dtype) : dev_(dev), dtype_(dtype) {}
@@ -63,6 +69,13 @@ Kernel* CreateKernel(const KernelConf& kernel_conf);
 void ExportProtoFromKernelRegistry(KernelRegValProto*);
 
 }  // namespace kernel_registration
+
+#define REGISTER_KERNEL_WITH_NOTHING(op_type, ...)                                 \
+  namespace {                                                                      \
+  static kernel_registration::KernelRegistrar OF_PP_CAT(g_registrar, __COUNTER__)( \
+      op_type, new kernel_registration::constraint::NoConstraint(),                \
+      []() { return new __VA_ARGS__(); });                                         \
+  }  // namespace
 
 #define REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(op_type, device, dtype, ...)                      \
   namespace {                                                                                   \

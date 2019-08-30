@@ -6,7 +6,7 @@ import "oneflow/core/common/device_type.proto";
 
 message KernelRegValProto {
   message Device7DType {
-    required DeviceType device = 1;
+    optional DeviceType device = 1;
     optional DataType dtype = 2;
   }
 

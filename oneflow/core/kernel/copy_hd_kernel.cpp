@@ -11,7 +11,7 @@ void CopyHdKernel::ForwardDataContent(const KernelCtx& ctx,
   out_blob->CopyDataContentFrom(ctx.device_ctx, in_blob);
 }
 
-REGISTER_KERNEL(OperatorConf::kCopyHdConf, CopyHdKernel);
+REGISTER_KERNEL_WITH_NOTHING(OperatorConf::kCopyHdConf, CopyHdKernel);
 
 #endif
 

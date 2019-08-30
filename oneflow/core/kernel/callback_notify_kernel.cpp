@@ -16,7 +16,11 @@ void CallbackNotifyKernel<T>::ForwardDataContent(
   if (buffer_status == kBufferStatusSuccess) { foreign_job_instance->Finish(); }
 }
 
-ADD_CPU_DEFAULT_KERNEL_CREATOR(OperatorConf::kCallbackNotifyConf, CallbackNotifyKernel,
-                               INT_DATA_TYPE_SEQ);
+REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kCallbackNotifyConf, DeviceType::kCPU, int8_t,
+                                      CallbackNotifyKernel<int8_t>);
+REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kCallbackNotifyConf, DeviceType::kCPU, int32_t,
+                                      CallbackNotifyKernel<int32_t>);
+REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kCallbackNotifyConf, DeviceType::kCPU, int64_t,
+                                      CallbackNotifyKernel<int64_t>);
 
 }  // namespace oneflow

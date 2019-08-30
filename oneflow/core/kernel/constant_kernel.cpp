@@ -18,6 +18,6 @@ const PbMessage& ConstantKernel<device_type, T>::GetCustomizedOpConf() const {
   return this->op_conf().constant_conf();
 }
 
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kConstantConf, ConstantKernel, ARITHMETIC_DATA_TYPE_SEQ);
+REGISTER_KERNEL_HELPER_GPU_FLOATING(OperatorConf::kConstantConf, ConstantKernel);
 
 }  // namespace oneflow

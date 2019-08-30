@@ -24,6 +24,11 @@ void CaseKernel<T>::ForwardDataContent(const KernelCtx& ctx,
   }
 }
 
-ADD_CPU_DEFAULT_KERNEL_CREATOR(OperatorConf::kCaseConf, CaseKernel, INT_DATA_TYPE_SEQ)
+REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kCaseConf, DeviceType::kCPU, int8_t,
+                                      CaseKernel<int8_t>);
+REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kCaseConf, DeviceType::kCPU, int32_t,
+                                      CaseKernel<int32_t>);
+REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kCaseConf, DeviceType::kCPU, int64_t,
+                                      CaseKernel<int64_t>);
 
 }  // namespace oneflow

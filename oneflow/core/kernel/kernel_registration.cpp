@@ -23,6 +23,10 @@ HashMap<OperatorConf::OpTypeCase, std::vector<KernelRegistryVal>>* MutKernelRegi
 
 namespace constraint {
 
+void NoConstraint::ToProto(KernelRegValProto::RegVal* val) const {
+  *(val->mutable_device_and_dtypes()->Add()) = KernelRegValProto::Device7DType();
+}
+
 bool DeviceAndDTypeConstraint::IsMatched(const KernelConf& kernel_conf) {
   return (dev_ == kernel_conf.op_attribute().op_conf().device_type()
           && dtype_ == kernel_conf.data_type());
