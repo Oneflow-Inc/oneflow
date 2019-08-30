@@ -19,6 +19,7 @@ function(RELATIVE_SWIG_GENERATE_CPP SRCS HDRS ROOT_DIR)
 
     set(GENERATED_CPP "${CMAKE_CURRENT_BINARY_DIR}/${REL_DIR}/${FIL_WE}PYTHON_wrap.cpp")
     set(GENERATED_H "${CMAKE_CURRENT_BINARY_DIR}/${REL_DIR}/${FIL_WE}PYTHON_wrap.h")
+    set(GENERATED_PY "${CMAKE_CURRENT_BINARY_DIR}/python_scripts/oneflow/${FIL_WE}.py")
     file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/${REL_DIR}")
     file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/python_scripts")
     list(APPEND ${SRCS} ${GENERATED_CPP})
@@ -29,6 +30,7 @@ function(RELATIVE_SWIG_GENERATE_CPP SRCS HDRS ROOT_DIR)
     add_custom_command(
       OUTPUT ${GENERATED_CPP} 
              ${GENERATED_H}
+             ${GENERATED_PY}
       COMMAND ${SWIG_EXECUTABLE}
       ARGS -python -c++ ${PY3_ARG} -threads
            -module ${FIL_WE}

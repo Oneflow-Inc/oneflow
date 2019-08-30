@@ -1,7 +1,6 @@
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/control/ctrl_client.h"
-#include "oneflow/core/control/ctrl_server.h"
 #include "oneflow/core/common/buffer_manager.h"
 #include "oneflow/core/job/compiler.h"
 #include "oneflow/core/job/improver.h"
@@ -9,20 +8,14 @@
 #include "oneflow/core/job/job_builder.h"
 #include "oneflow/core/job_completer/user_job_completer.h"
 #include "oneflow/core/job/job_set.pb.h"
-#include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/machine_context.h"
 #include "oneflow/core/job/profiler.h"
 #include "oneflow/core/job/sub_plan.pb.h"
 #include "oneflow/core/job/plan.pb.h"
 #include "oneflow/core/job/critical_section_desc.h"
 #include "oneflow/core/job/available_memory_desc.pb.h"
-#include "oneflow/core/job/foreign_job_instance.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
-#include "oneflow/core/persistence/file_system.h"
 #include "oneflow/core/actor/act_event_logger.h"
-#include "oneflow/core/graph/plan_task_graph.h"
-#include "oneflow/core/memory/memory_allocator.h"
-#include "oneflow/core/graph/task_node.h"
 #include "oneflow/core/job/oneflow.h"
 #include "oneflow/core/job/model_init_job.h"
 #include "oneflow/core/job/inter_job_mem_sharing_util.h"
@@ -65,8 +58,6 @@ std::string sub_plan_key(const std::string& plan_name, int64_t machine_id, int64
   return plan_name + "_" + std::to_string(machine_id) + "_" + std::to_string(thrd_id);
 }
 
-std::string total_mbn_num_key(const std::string& plan_name) { return plan_name + "_total_mbn_num"; }
-
 void PushPlan(const std::string& plan_name, const Plan& plan) {
   HashMap<int64_t, std::set<int64_t>> machine_id2thrd_id_set;
   HashMap<std::pair<int64_t, int64_t>, std::vector<TaskProto>> mchn_thrd_id2task_protos;
@@ -92,8 +83,6 @@ void PushPlan(const std::string& plan_name, const Plan& plan) {
     Global<CtrlClient>::Get()->PushKV(sub_plan_key(plan_name, pair.first.first, pair.first.second),
                                       sub_plan);
   }
-  Global<CtrlClient>::Get()->PushKV(total_mbn_num_key(plan_name),
-                                    std::to_string(plan.total_mbn_num()));
 
   Global<CtrlClient>::Get()->PushKV(net_topo_key(plan_name), plan.net_topo());
   Global<CtrlClient>::Get()->PushKV(job_id2job_conf(plan_name), plan.job_confs());
@@ -114,9 +103,6 @@ void PullPlan(const std::string& plan_name, Plan* plan) {
     Global<CtrlClient>::Get()->PullKV(sub_plan_key(plan_name, machine_id, thrd_id), &sub_plan);
     plan->mutable_task()->MergeFrom(sub_plan.task());
   }
-  std::string total_mbn_num;
-  Global<CtrlClient>::Get()->PullKV(total_mbn_num_key(plan_name), &total_mbn_num);
-  plan->set_total_mbn_num(oneflow_cast<int64_t>(total_mbn_num));
   NetTopo net_topo;
   Global<CtrlClient>::Get()->PullKV(net_topo_key(plan_name), &net_topo);
   *(plan->mutable_net_topo()) = net_topo;
@@ -174,10 +160,7 @@ void MergePlanWithoutGenNetTopo(Plan* plan, const Plan& other) {
 void MergeSubPlanWithoutGenNetTopo(Plan* plan, const std::vector<Plan>& sub_plans) {
   CHECK(!sub_plans.empty());
   *plan = sub_plans.at(0);
-  FOR_RANGE(int32_t, i, 1, sub_plans.size()) {
-    MergePlanWithoutGenNetTopo(plan, sub_plans.at(i));
-    plan->set_total_mbn_num(plan->total_mbn_num() + sub_plans.at(i).total_mbn_num());
-  }
+  FOR_RANGE(int32_t, i, 1, sub_plans.size()) { MergePlanWithoutGenNetTopo(plan, sub_plans.at(i)); }
 }
 
 void MergePlan(Plan* plan, const Plan& other) {
@@ -790,32 +773,10 @@ void MakeModelSaveJob(const std::string& job_name,
   md_save_parallel_conf.set_policy(ParallelPolicy::kDataParallel);
   {
     // there is always a tick op in model save job, so we can ignore the case with no variable
-    OperatorConf tick_op_conf;
+    OperatorConf tick_op_conf{};
     tick_op_conf.set_name("System-Saver-tick");
     tick_op_conf.mutable_tick_conf()->set_out("out");
     job_builder.AddOps(md_save_parallel_conf, {tick_op_conf});
-  }
-  for (const auto& pair : var_op_name2parallel_blob_conf) {
-    const auto& var_op_name = pair.first;
-    OperatorConf input_op_conf;
-    {
-      const auto& parallel_blob_conf = pair.second;
-      input_op_conf.set_name(var_op_name);
-      auto* input_conf = input_op_conf.mutable_input_conf();
-      input_conf->set_out("out");
-      auto* blob_conf = input_conf->mutable_blob_conf();
-      InterfaceOpUtil::InitBlobConf(blob_conf, parallel_blob_conf);
-      CHECK(blob_conf->has_data_type());
-      job_builder.AddOps(parallel_blob_conf.parallel_conf(), {input_op_conf});
-    }
-    OperatorConf model_save_op_conf;
-    {
-      model_save_op_conf.set_name("System-Saver-" + var_op_name + "-MdSave");
-      ModelSaveV2OpConf* model_save_conf = model_save_op_conf.mutable_model_save_v2_conf();
-      model_save_conf->set_in(input_op_conf.name() + "/out");
-      model_save_conf->set_lbn(input_op_conf.name() + "/out");
-      job_builder.AddOps(md_save_parallel_conf, {model_save_op_conf});
-    }
   }
   auto* job_conf = job->mutable_job_conf();
   job_conf->set_job_name(job_name);
@@ -823,6 +784,26 @@ void MakeModelSaveJob(const std::string& job_name,
   job_conf->set_piece_size(1);
   job_conf->set_data_part_num(1);
   job_conf->set_total_batch_num(1);
+  if (var_op_name2parallel_blob_conf.empty()) { return; }
+  OperatorConf snapshot_op_conf{};
+  snapshot_op_conf.set_name("System-Saver-Snapshot");
+  SnapshotOpConf* snapshot_conf = snapshot_op_conf.mutable_snapshot_conf();
+  for (const auto& pair : var_op_name2parallel_blob_conf) {
+    const auto& var_op_name = pair.first;
+    OperatorConf input_op_conf{};
+    const auto& parallel_blob_conf = pair.second;
+    input_op_conf.set_name(var_op_name);
+    auto* input_conf = input_op_conf.mutable_input_conf();
+    input_conf->set_out("out");
+    auto* blob_conf = input_conf->mutable_blob_conf();
+    InterfaceOpUtil::InitBlobConf(blob_conf, parallel_blob_conf);
+    CHECK(blob_conf->has_data_type());
+    job_builder.AddOps(parallel_blob_conf.parallel_conf(), {input_op_conf});
+    const std::string lbn = input_op_conf.name() + "/" + input_conf->out();
+    *snapshot_conf->mutable_in()->Add() = lbn;
+    *snapshot_conf->mutable_lbn()->Add() = lbn;
+  }
+  job_builder.AddOps(md_save_parallel_conf, {snapshot_op_conf});
 }
 
 void CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan) {

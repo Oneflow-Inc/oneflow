@@ -14,10 +14,7 @@ class SnapshotMgr {
   ~SnapshotMgr() = default;
 
   Snapshot* GetWriteableSnapshot(int64_t snapshot_id);
-
   const Snapshot* GetReadableSnapshot() { return readable_snapshot_.get(); }
-
-  int64_t total_mbn_num() const { return total_mbn_num_; }
 
  private:
   friend class Global<SnapshotMgr>;
@@ -27,7 +24,6 @@ class SnapshotMgr {
   std::unique_ptr<const Snapshot> readable_snapshot_;
   std::mutex snapshot_id2writeable_snapshot_mtx_;
   HashMap<int64_t, std::unique_ptr<Snapshot>> snapshot_id2writeable_snapshot_;
-  int64_t total_mbn_num_;
 };
 
 }  // namespace oneflow

@@ -50,12 +50,6 @@ int32_t JobDesc::NumOfBatchesInSnapshot() const {
   return job_conf_.train_conf().num_of_batches_in_snapshot();
 }
 int64_t JobDesc::TotalBatchNum() const { return job_conf_.total_batch_num(); }
-int32_t JobDesc::PieceNumOfPrintLoss() const {
-  return job_conf_.train_conf().piece_num_of_print_loss();
-}
-int32_t JobDesc::PieceNumOfPrintAccuracy() const {
-  return job_conf_.train_conf().piece_num_of_print_accuracy();
-}
 int64_t JobDesc::BatchSize() const { return job_conf_.train_conf().batch_size(); }
 int64_t JobDesc::NumOfPiecesInBatch() const {
   if (IsPredict()) { return 1; }
@@ -90,16 +84,8 @@ void JobDesc::Init() {
 #endif  // WITH_CUDA
   int64_t piece_exp = job_conf_.exp_run_conf().piece_num_of_experiment_phase();
   if (job_conf_.has_train_conf()) {
-    TrainConf* train_conf = job_conf_.mutable_train_conf();
-    if (train_conf->piece_num_of_print_loss() == -1) {
-      train_conf->set_piece_num_of_print_loss(NumOfPiecesInBatch());
-    }
-    if (train_conf->piece_num_of_print_accuracy() == -1) {
-      train_conf->set_piece_num_of_print_accuracy(NumOfPiecesInBatch());
-    }
     if (piece_exp == -1) { piece_exp = 19 * NumOfPiecesInBatch(); }
     piece_exp = std::max(piece_exp, NumOfPiecesInBatch());
-    piece_exp = std::max(piece_exp, train_conf->piece_num_of_print_loss());
     piece_exp = std::min(piece_exp, job_conf_.total_batch_num() * NumOfPiecesInBatch());
   } else {
     if (piece_exp == -1) { piece_exp = 19; }

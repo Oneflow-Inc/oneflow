@@ -1,16 +1,13 @@
-#ifndef ONEFLOW_CORE_OPERATOR_MODEL_SAVE_V2_OP_H_
-#define ONEFLOW_CORE_OPERATOR_MODEL_SAVE_V2_OP_H_
-
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/graph/logical_node.h"
 
 namespace oneflow {
 
-class ModelSaveV2Op final : public Operator {
+class SnapshotOp final : public Operator {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(ModelSaveV2Op);
-  ModelSaveV2Op() = default;
-  ~ModelSaveV2Op() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(SnapshotOp);
+  SnapshotOp() = default;
+  ~SnapshotOp() override = default;
 
   void InitFromOpConf() override;
   const PbMessage& GetCustomizedConf() const override;
@@ -23,9 +20,16 @@ class ModelSaveV2Op final : public Operator {
       std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const override {}
   void GetSbpSignatures(
       const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
-      SbpSignatureList* sbp_sig_list) const override {}
+      SbpSignatureList* sbp_sig_list) const override{};
 };
 
-}  // namespace oneflow
+void SnapshotOp::InitFromOpConf() {
+  CHECK(op_conf().has_snapshot_conf());
+  EnrollRepeatedInputBn("in", false);
+}
 
-#endif  // ONEFLOW_CORE_OPERATOR_MODEL_SAVE_V2_OP_H_
+const PbMessage& SnapshotOp::GetCustomizedConf() const { return op_conf().snapshot_conf(); }
+
+REGISTER_CPU_OP(OperatorConf::kSnapshotConf, SnapshotOp);
+
+}  // namespace oneflow
