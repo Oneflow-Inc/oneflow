@@ -10,11 +10,12 @@ class LearningRateScheduleOp final : public Operator {
 
   void InitFromOpConf() override;
   const PbMessage& GetCustomizedConf() const override;
-  void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                      const ParallelContext* parallel_ctx) const override;
+  Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                             const ParallelContext* parallel_ctx) const override;
 
  private:
-  void InferHasBatchDim(std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const override;
+  Maybe<void> InferHasBatchDim(
+      std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const override;
   void GetSbpSignatures(
       const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
       SbpSignatureList* sbp_sig_list) const override;
@@ -30,7 +31,7 @@ void LearningRateScheduleOp::InitFromOpConf() {
   EnrollOutputBn("out");
 }
 
-void LearningRateScheduleOp::InferBlobDescs(
+Maybe<void> LearningRateScheduleOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   const BlobDesc* global_step = GetBlobDesc4BnInOp("global_step");
@@ -39,12 +40,14 @@ void LearningRateScheduleOp::InferBlobDescs(
   BlobDesc* out = GetBlobDesc4BnInOp("out");
   out->mut_shape() = Shape({1});
   out->set_data_type(DataType::kFloat);
+  return Maybe<void>::Ok();
 }
 
-void LearningRateScheduleOp::InferHasBatchDim(
+Maybe<void> LearningRateScheduleOp::InferHasBatchDim(
     std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
   CHECK(!*HasBatchDim4BnInOp("global_step"));
   *HasBatchDim4BnInOp("out") = false;
+  return Maybe<void>::Ok();
 }
 
 void LearningRateScheduleOp::GetSbpSignatures(
