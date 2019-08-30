@@ -11,13 +11,13 @@ class AssignOp final : public Operator {
   void InitFromOpConf() override;
   const PbMessage& GetCustomizedConf() const override;
 
-  void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                      const ParallelContext* parallel_ctx) const override;
+  Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                             const ParallelContext* parallel_ctx) const override;
 
  private:
-  void InferHasBatchDim(
+  Maybe<void> InferHasBatchDim(
       std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const override {
-    NaiveInferHasBatchDim(HasBatchDim4BnInOp);
+    return NaiveInferHasBatchDim(HasBatchDim4BnInOp);
   }
   void GetSbpSignatures(
       const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
@@ -32,9 +32,11 @@ void AssignOp::InitFromOpConf() {
 
 const PbMessage& AssignOp::GetCustomizedConf() const { return op_conf().assign_conf(); }
 
-void AssignOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                              const ParallelContext* parallel_ctx) const {
-  CHECK(*GetBlobDesc4BnInOp("ref") == *GetBlobDesc4BnInOp("value"));
+Maybe<void> AssignOp::InferBlobDescs(
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx) const {
+  CHECK_OR_RETURN(*GetBlobDesc4BnInOp("ref") == *GetBlobDesc4BnInOp("value"));
+  return Maybe<void>::Ok();
 }
 
 void AssignOp::GetSbpSignatures(

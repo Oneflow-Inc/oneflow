@@ -16,14 +16,15 @@ class AccOp final : public Operator {
   const PbMessage& GetCustomizedConf() const override;
   LogicalNode* NewProperLogicalNode() const override { return new AccLogicalNode; }
 
-  void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                      const ParallelContext* parallel_ctx) const override;
-  void InferOutputBlobTimeShape(std::function<const Shape*(const std::string&)> GetTimeShape4BnInOp,
-                                const ParallelContext* parallel_ctx,
-                                Shape* time_shape) const override;
+  Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                             const ParallelContext* parallel_ctx) const override;
+  Maybe<void> InferOutputBlobTimeShape(
+      std::function<const Shape*(const std::string&)> GetTimeShape4BnInOp,
+      const ParallelContext* parallel_ctx, Shape* time_shape) const override;
 
  private:
-  void InferHasBatchDim(std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const override;
+  Maybe<void> InferHasBatchDim(
+      std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const override;
 };
 
 }  // namespace oneflow

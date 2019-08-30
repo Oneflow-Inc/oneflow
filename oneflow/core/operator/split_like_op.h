@@ -15,11 +15,11 @@ class SplitLikeOp final : public Operator {
 
   const PbMessage& GetCustomizedConf() const override;
 
-  void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                      const ParallelContext* parallel_ctx) const override;
+  Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                             const ParallelContext* parallel_ctx) const override;
 
  private:
-  void InferHasBatchDim(
+  Maybe<void> InferHasBatchDim(
       const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
       std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const override;
 

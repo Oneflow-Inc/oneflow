@@ -50,7 +50,7 @@ const PbMessage& NormalizationOp::GetCustomizedConf() const {
   return op_conf().normalization_conf();
 }
 
-void NormalizationOp::InferBlobDescs(
+Maybe<void> NormalizationOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   const NormalizationOpConf& conf = op_conf().normalization_conf();
@@ -61,8 +61,8 @@ void NormalizationOp::InferBlobDescs(
   const std::function<void(const std::string&)> CheckParamBlobDesc = [&](const std::string& bn) {
     const BlobDesc* blob_desc = GetBlobDesc4BnInOp(bn);
     if (blob_desc != nullptr) {
-      CHECK_EQ(blob_desc->data_type(), data_type);
-      CHECK_EQ(blob_desc->shape(), param_shape);
+      CHECK_EQ_OR_RETURN(blob_desc->data_type(), data_type);
+      CHECK_EQ_OR_RETURN(blob_desc->shape(), param_shape);
     }
   };
   const std::function<void(const std::string&)> SetParamBlobDesc = [&](const std::string& bn) {
@@ -80,13 +80,15 @@ void NormalizationOp::InferBlobDescs(
     SetParamBlobDesc("mean");
     SetParamBlobDesc("inv_variance");
   }
+  return Maybe<void>::Ok();
 }
 
-void NormalizationOp::InferHasBatchDim(
+Maybe<void> NormalizationOp::InferHasBatchDim(
     std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
   *HasBatchDim4BnInOp("out") = *HasBatchDim4BnInOp("in");
   *HasBatchDim4BnInOp("mean") = false;
   *HasBatchDim4BnInOp("inv_variance") = false;
+  return Maybe<void>::Ok();
 }
 
 void NormalizationOp::GetSbpSignatures(
