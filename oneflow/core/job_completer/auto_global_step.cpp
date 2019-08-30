@@ -6,7 +6,6 @@ namespace oneflow {
 
 void AutoGlobalStep(const OpGraph& op_graph, Job* job) {
   if (job->job_conf().train_conf().has_global_step_lbn()) { return; }
-  JobBuilder job_builder(job);
   OperatorConf variable_op_conf{};
   const std::string global_step_name = "System-Train-GlobalStep-" + job->job_conf().job_name();
   variable_op_conf.set_name(global_step_name);
@@ -23,7 +22,7 @@ void AutoGlobalStep(const OpGraph& op_graph, Job* job) {
   identity_conf->set_out("out");
 
   OperatorConf scalar_add_op_conf{};
-  scalar_add_op_conf.set_name(global_step_name + "ScalarAdd");
+  scalar_add_op_conf.set_name(global_step_name + "-ScalarAdd");
   ScalarAddOpConf* scalar_add_conf = scalar_add_op_conf.mutable_scalar_add_conf();
   scalar_add_conf->set_in(identity_op_conf.name() + "/" + identity_conf->out());
   scalar_add_conf->set_out("out");
@@ -35,10 +34,11 @@ void AutoGlobalStep(const OpGraph& op_graph, Job* job) {
   assign_conf->set_ref(variable_op_conf.name() + "/" + variable_conf->out());
   assign_conf->set_value(scalar_add_op_conf.name() + "/" + scalar_add_conf->out());
 
+  JobBuilder job_builder(job);
   job_builder.AddOps(GenParallelConfOfCpuZeroOnAllMachines(),
                      {variable_op_conf, identity_op_conf, scalar_add_op_conf, assign_op_conf});
-  job_builder.mut_job()->mutable_job_conf()->mutable_train_conf()->set_global_step_lbn(
-      identity_op_conf.name() + "/" + identity_conf->out());
+  job->mutable_job_conf()->mutable_train_conf()->set_global_step_lbn(identity_op_conf.name() + "/"
+                                                                     + identity_conf->out());
 }
 
 }  // namespace oneflow
