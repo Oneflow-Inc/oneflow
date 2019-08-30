@@ -7,22 +7,29 @@ config = flow.ConfigProtoBuilder()
 config.gpu_device_num(1)
 flow.init(config)
 
+
 def GetVariableJob():
     job_conf = flow.get_cur_job_conf_builder()
     job_conf.batch_size(1).data_part_num(1).default_data_type(flow.float)
     initializer = op_conf_util.InitializerConf()
     initializer.random_uniform_conf.min = 0
     initializer.random_uniform_conf.max = 10
-    v1 = flow.get_variable(name = 'v1', shape = (5,2), dtype = data_type_conf_util.kFloat, initializer = initializer) 
-    v2 = flow.get_variable(name = 'v1') 
-    return v2 
+    v1 = flow.get_variable(
+        name="v1",
+        shape=(5, 2),
+        dtype=data_type_conf_util.kFloat,
+        initializer=initializer,
+    )
+    v2 = flow.get_variable(name="v1")
+    return v2
+
 
 flow.add_job(GetVariableJob)
 
 ckp = flow.train.CheckPoint()
 status = ckp.restore()
 with flow.Session() as sess:
-    status.initialize_or_restore(session = sess)
+    status.initialize_or_restore(session=sess)
     x = sess.run(GetVariableJob).get()
 
 print(x)

@@ -10,19 +10,23 @@ import oneflow.core.common.data_type_pb2 as data_type_conf_util
 from oneflow.python.oneflow_export import oneflow_export
 
 
-@oneflow_export('get_variable')
-def get_variable(name,
-                shape=None,
-                dtype=None,
-                initializer=None,
-                trainable=None,
-                model_name=None,
-                model_split_axis=None):
-    
+@oneflow_export("get_variable")
+def get_variable(
+    name,
+    shape=None,
+    dtype=None,
+    initializer=None,
+    trainable=None,
+    model_name=None,
+    model_split_axis=None,
+):
+
     if name not in compile_context.cur_job_var_op_name2var_blob:
         op_conf = op_conf_util.OperatorConf()
         op_conf.name = name
-        assert shape is not None, "Argument shape should not be None when the variable exists!"
+        assert (
+            shape is not None
+        ), "Argument shape should not be None when the variable exists!"
         op_conf.variable_conf.shape.dim.extend(shape)
         if dtype is not None:
             op_conf.variable_conf.data_type = dtype
@@ -41,5 +45,5 @@ def get_variable(name,
         lbi.blob_name = op_conf.variable_conf.out
         var_blob = remote_blob_util.RemoteBlob(lbi)
         compile_context.cur_job_var_op_name2var_blob[name] = var_blob
-    return compile_context.cur_job_var_op_name2var_blob[name] 
+    return compile_context.cur_job_var_op_name2var_blob[name]
 
