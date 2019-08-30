@@ -122,12 +122,12 @@ std::string Sprintf(const Args&... args) {
 
 }  // namespace
 
-#define ASSERT_EQ(lhs, rhs) ((lhs) == (rhs))
-#define ASSERT_GE(lhs, rhs) ((lhs) >= (rhs))
-#define ASSERT_GT(lhs, rhs) ((lhs) > (rhs))
-#define ASSERT_LE(lhs, rhs) ((lhs) <= (rhs))
-#define ASSERT_LT(lhs, rhs) ((lhs) < (rhs))
-#define ASSERT_NE(lhs, rhs) ((lhs) != (rhs))
+#define OF_TEST_EQ(lhs, rhs) ((lhs) == (rhs))
+#define OF_TEST_GE(lhs, rhs) ((lhs) >= (rhs))
+#define OF_TEST_GT(lhs, rhs) ((lhs) > (rhs))
+#define OF_TEST_LE(lhs, rhs) ((lhs) <= (rhs))
+#define OF_TEST_LT(lhs, rhs) ((lhs) < (rhs))
+#define OF_TEST_NE(lhs, rhs) ((lhs) != (rhs))
 
 #define GEN_ERROR_MSG(type, expr, ...)             \
   [&]() -> std::string {                           \
@@ -147,17 +147,17 @@ std::string Sprintf(const Args&... args) {
     }                                                                          \
   }
 
-#define CHECK_EQ_OR_RETURN(lhs, rhs, ...) CHECK_OR_RETURN(ASSERT_EQ(lhs, rhs), __VA_ARGS__)
+#define CHECK_EQ_OR_RETURN(lhs, rhs, ...) CHECK_OR_RETURN(OF_TEST_EQ(lhs, rhs), __VA_ARGS__)
 
-#define CHECK_GE_OR_RETURN(lhs, rhs, ...) CHECK_OR_RETURN(ASSERT_GE(lhs, rhs), __VA_ARGS__)
+#define CHECK_GE_OR_RETURN(lhs, rhs, ...) CHECK_OR_RETURN(OF_TEST_GE(lhs, rhs), __VA_ARGS__)
 
-#define CHECK_GT_OR_RETURN(lhs, rhs, ...) CHECK_OR_RETURN(ASSERT_GT(lhs, rhs), __VA_ARGS__)
+#define CHECK_GT_OR_RETURN(lhs, rhs, ...) CHECK_OR_RETURN(OF_TEST_GT(lhs, rhs), __VA_ARGS__)
 
-#define CHECK_LE_OR_RETURN(lhs, rhs, ...) CHECK_OR_RETURN(ASSERT_LE(lhs, rhs), __VA_ARGS__)
+#define CHECK_LE_OR_RETURN(lhs, rhs, ...) CHECK_OR_RETURN(OF_TEST_LE(lhs, rhs), __VA_ARGS__)
 
-#define CHECK_LT_OR_RETURN(lhs, rhs, ...) CHECK_OR_RETURN(ASSERT_LT(lhs, rhs), __VA_ARGS__)
+#define CHECK_LT_OR_RETURN(lhs, rhs, ...) CHECK_OR_RETURN(OF_TEST_LT(lhs, rhs), __VA_ARGS__)
 
-#define CHECK_NE_OR_RETURN(lhs, rhs, ...) CHECK_OR_RETURN(ASSERT_NE(lhs, rhs), __VA_ARGS__)
+#define CHECK_NE_OR_RETURN(lhs, rhs, ...) CHECK_OR_RETURN(OF_TEST_NE(lhs, rhs), __VA_ARGS__)
 
 #define CHECK_STREQ_OR_RETURN(lhs, rhs, ...) \
   CHECK_EQ_OR_RETURN(std::string(lhs), std::string(rhs), __VA_ARGS__)
@@ -169,10 +169,10 @@ std::string Sprintf(const Args&... args) {
     return Maybe<void>(error);                                             \
   }
 
-#define UNSUPPORTED_THEN_RETURN(...) ENFORCE_THEN_RETURN(ASSERT_UNSUPPORTED, __VA_ARGS__)
+#define UNSUPPORTED_THEN_RETURN(...) ENFORCE_THEN_RETURN(OF_TEST_UNSUPPORTED, __VA_ARGS__)
 
-#define TODO_THEN_RETURN(...) ENFORCE_THEN_RETURN(ASSERT_TODO, __VA_ARGS__)
+#define TODO_THEN_RETURN(...) ENFORCE_THEN_RETURN(OF_TEST_TODO, __VA_ARGS__)
 
-#define UNIMPLEMENTED_THEN_RETURN(...) ENFORCE_THEN_RETURN(ASSERT_UNIMPLEMENTED, __VA_ARGS__)
+#define UNIMPLEMENTED_THEN_RETURN(...) ENFORCE_THEN_RETURN(OF_TEST_UNIMPLEMENTED, __VA_ARGS__)
 
 #endif  // ONEFLOW_CORE_COMMON_MAYBE_H_
