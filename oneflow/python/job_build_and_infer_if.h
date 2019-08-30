@@ -10,8 +10,7 @@
 
 std::string JobBuildAndInferCtx_NewAndEnter(const std::string& job_name) {
   using namespace oneflow;
-  auto maybe_ok =
-      TRY(Global<JobBuildAndInferCtxMgr>::Get()->EnterJobBuildAndInferContext(job_name));
+  auto maybe_ok = TRY(Global<JobBuildAndInferCtxMgr>::Get()->EnterJobBuildAndInferCtx(job_name));
   if (maybe_ok.IsOk() == false) { return PbMessage2TxtString(*maybe_ok.error()); }
   return PbMessage2TxtString(ErrorUtil::Ok());
 }
@@ -26,9 +25,11 @@ std::pair<std::string, std::string> JobBuildAndInferCtx_GetCurrentJobName() {
   }
 }
 
-void JobBuildAndInferCtx_Leave() {
+std::string JobBuildAndInferCtx_Leave() {
   using namespace oneflow;
-  Global<JobBuildAndInferCtxMgr>::Get()->LeaveCurrentJobBuildAndInferCtx();
+  auto maybe_ok = TRY(Global<JobBuildAndInferCtxMgr>::Get()->LeaveCurrentJobBuildAndInferCtx());
+  if (maybe_ok.IsOk() == false) { return PbMessage2TxtString(*maybe_ok.error()); }
+  return PbMessage2TxtString(ErrorUtil::Ok());
 }
 
 std::string CurJobBuildAndInferCtx_SetJobConf(const std::string& serialized_job_conf) {
@@ -90,6 +91,23 @@ std::string CurJobBuildAndInferCtx_AddLossLogicalBlobName(const std::string& lbn
   if (ctx == nullptr) { return error_str; }
   // add loss_lbn
   auto maybe_ok = TRY(ctx->AddLossLogicalBlobName(lbn));
+  if (maybe_ok.IsOk() == false) { return PbMessage2TxtString(*maybe_ok.error()); }
+  return PbMessage2TxtString(ErrorUtil::Ok());
+}
+
+std::string CurJobBuildAndInferCtx_AddPlacementGroup(const std::string& serialized_placement_grp) {
+  using namespace oneflow;
+  // parse
+  PlacementGroup placement_group;
+  if (TxtString2PbMessage(serialized_placement_grp, &placement_group) == false) {
+    return PbMessage2TxtString(ErrorUtil::ProtoParseFailedError("placement group parse failed"));
+  }
+  // get current JobBuildandInferCtx
+  std::string error_str;
+  JobBuildAndInferCtx* ctx = JobBuildAndInferHelper::GetCurInferCtx(&error_str);
+  if (ctx == nullptr) { return error_str; }
+  // add and infer input_op
+  auto maybe_ok = TRY(ctx->AddPlacementGroup(placement_group));
   if (maybe_ok.IsOk() == false) { return PbMessage2TxtString(*maybe_ok.error()); }
   return PbMessage2TxtString(ErrorUtil::Ok());
 }

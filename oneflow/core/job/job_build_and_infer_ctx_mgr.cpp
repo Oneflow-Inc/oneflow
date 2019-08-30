@@ -2,7 +2,7 @@
 
 namespace oneflow {
 
-Maybe<void> JobBuildAndInferCtxMgr::EnterJobBuildAndInferContext(const std::string& job_name) {
+Maybe<void> JobBuildAndInferCtxMgr::EnterJobBuildAndInferCtx(const std::string& job_name) {
   TODO();
 }
 
@@ -13,6 +13,6 @@ Maybe<JobBuildAndInferCtx> JobBuildAndInferCtxMgr::FindJobBuildAndInferCtx(
 
 Maybe<std::string> JobBuildAndInferCtxMgr::GetCurrentJobName() { TODO(); }
 
-void JobBuildAndInferCtxMgr::LeaveCurrentJobBuildAndInferCtx() { TODO(); }
+Maybe<void> JobBuildAndInferCtxMgr::LeaveCurrentJobBuildAndInferCtx() { TODO(); }
 
 }  // namespace oneflow

@@ -4,6 +4,7 @@
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/job/job.pb.h"
+#include "oneflow/core/job/job_set.pb.h"
 #include "oneflow/core/job/job_build_and_infer_ctx.h"
 
 namespace oneflow {
@@ -13,10 +14,12 @@ class JobBuildAndInferCtxMgr {
   OF_DISALLOW_COPY_AND_MOVE(JobBuildAndInferCtxMgr);
   ~JobBuildAndInferCtxMgr() = default;
 
-  Maybe<void> EnterJobBuildAndInferContext(const std::string& job_name);
+  Maybe<void> EnterJobBuildAndInferCtx(const std::string& job_name);
   Maybe<JobBuildAndInferCtx> FindJobBuildAndInferCtx(const std::string& job_name);
   Maybe<std::string> GetCurrentJobName();
-  void LeaveCurrentJobBuildAndInferCtx();
+  Maybe<void> LeaveCurrentJobBuildAndInferCtx();
+
+  const JobSet& job_set() const { TODO(); }
 
  private:
   JobBuildAndInferCtxMgr() = default;
