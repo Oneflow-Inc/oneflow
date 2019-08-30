@@ -5,11 +5,11 @@ namespace oneflow {
 Maybe<void> JobBuildAndInferCtxMgr::CreateJobBuildAndInferCtx(const std::string& job_name) {
   if (job_name.empty()) {
     return Maybe<void>(
-        GenJobBuildAndInferError(JobBuildAndInferError::kJobNameExists, "job name is empty"));
+        GenJobBuildAndInferError(JobBuildAndInferError::kJobNameEmpty, "job name is empty"));
   }
   if (job_name2infer_ctx_.find(job_name) != job_name2infer_ctx_.end()) {
-    return Maybe<void>(GenJobBuildAndInferError(JobBuildAndInferError::kJobNameExists,
-                                                "job name: " + job_name + " is exists"));
+    return Maybe<void>(GenJobBuildAndInferError(JobBuildAndInferError::kJobNameExist,
+                                                "job name: " + job_name + " already exist"));
   }
   job_name2infer_ctx_.emplace(job_name, std::make_shared<JobBuildAndInferCtx>(job_name));
   return Maybe<void>();
