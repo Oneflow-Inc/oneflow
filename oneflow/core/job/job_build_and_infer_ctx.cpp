@@ -90,8 +90,8 @@ Maybe<void> JobBuildAndInferCtx::AddAndInferInputOp(const OperatorConf& op_conf)
   parallel_ctx.set_parallel_id(0);
   parallel_ctx.set_parallel_num(1);
   parallel_ctx.set_policy(ParallelPolicy::kDataParallel);
-  op->InferOutBlobDescsIf(GetBlobDesc4BnInOp, &parallel_ctx, job_->job_conf().piece_size(),
-                          [](OpContext*) {});
+  JUST(op->InferOutBlobDescsIf(GetBlobDesc4BnInOp, &parallel_ctx, job_->job_conf().piece_size(),
+                               [](OpContext*) {}));
   auto HasBatchDim4BnInOp = [&](const std::string& bn) -> bool* {
     const LogicalBlobId& lbi = op->BnInOp2Lbi(bn);
     return &(lbi2has_batch_dim_[lbi]);
@@ -100,7 +100,7 @@ Maybe<void> JobBuildAndInferCtx::AddAndInferInputOp(const OperatorConf& op_conf)
     const LogicalBlobId& lbi = op->BnInOp2Lbi(bn);
     return *(lbi2logical_blob_desc_[lbi].get());
   };
-  op->InferHasBatchDimIf(GetConstBlobDescBnInOp, HasBatchDim4BnInOp);
+  JUST(op->InferHasBatchDimIf(GetConstBlobDescBnInOp, HasBatchDim4BnInOp));
   // TODO()  infer blob desc split dim
   return Maybe<void>();
 }
