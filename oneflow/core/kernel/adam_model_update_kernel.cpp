@@ -76,7 +76,6 @@ class AdamMdUpdateKernelUtil<DeviceType::kCPU, T> final {
 
 DEFINE_MDUPDT_KERNEL_CREATOR(Adam);
 
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kAdamModelUpdateConf, AdamMdUpdateKernel,
-                           FLOATING_DATA_TYPE_SEQ);
+REGISTER_KERNEL_HELPER_GPU_FLOATING(OperatorConf::kAdamModelUpdateConf, AdamMdUpdateKernel);
 
 }  // namespace oneflow
