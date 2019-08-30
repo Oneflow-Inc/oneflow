@@ -13,7 +13,7 @@ void GenerateBackwardOpConf(
     OperatorConf segment_sum_grad;
     segment_sum_grad.set_name("System-AutoGrad-" + op.op_name());
     SegmentSumGradOpConf* conf = segment_sum_grad.mutable_segment_sum_grad_conf();
-    conf->set_out_diff(GenLogicalBlobName(*DiffLbi4BnInOp("out_diff")));
+    conf->set_out_diff(GenLogicalBlobName(*DiffLbi4BnInOp("out")));
     conf->set_segment_ids(GenLogicalBlobName(op.BnInOp2Lbi("segment_ids")));
     conf->set_in_diff("in_diff");
     op_confs->push_back(segment_sum_grad);

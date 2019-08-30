@@ -29,7 +29,11 @@ struct SigmoidCrossEntropyLossGradKernelUtil<DeviceType::kGPU, PredType, LabelTy
     }
 };
 
-// instantiate template declaration
-template struct SigmoidCrossEntropyLossGradKernelUtil<DeviceType::kGPU, float, float>;
+#define INSTANTIATE_SIGMOID_CROSS_ENTROPY_LOSS_GRAD_KERNEL_UTIL(data_type_pair, label_type_pair) \
+  template struct SigmoidCrossEntropyLossGradKernelUtil<                                        \
+      DeviceType::kGPU, OF_PP_PAIR_FIRST(data_type_pair), OF_PP_PAIR_FIRST(label_type_pair)>;
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_SIGMOID_CROSS_ENTROPY_LOSS_GRAD_KERNEL_UTIL,
+                                 FLOATING_DATA_TYPE_SEQ, INT_DATA_TYPE_SEQ)
+
 
 }  // namespace oneflow

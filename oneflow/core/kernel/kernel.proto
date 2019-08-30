@@ -25,7 +25,7 @@ message DropoutKernelConf {
   required ShapeProto in = 1;
   required ShapeProto random_mask = 2;
   required ShapeProto out = 3;
-};
+}
 
 message LossKernelConf {
   required DataType prediction_type = 1;
@@ -43,6 +43,10 @@ message SparseCrossEntropyLossKernelConf {
 }
 
 message SigmoidCrossEntropyLossKernelConf {
+    required LossKernelConf loss_conf = 1;
+}
+
+message SigmoidCrossEntropyLossGradKernelConf {
     required LossKernelConf loss_conf = 1;
 }
 
@@ -202,5 +206,6 @@ message KernelConf {
     ConvFilterGradKernelConf conv_filter_grad_conf = 410;
     ConvDataGradKernelConf conv_data_grad_conf = 411;
     ShapeElemCntKernelConf shape_elem_cnt_conf = 412;
+    SigmoidCrossEntropyLossGradKernelConf sigmoid_cross_entropy_loss_grad_conf = 413;
   }
 }

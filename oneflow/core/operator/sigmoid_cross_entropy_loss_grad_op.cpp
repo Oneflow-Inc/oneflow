@@ -5,34 +5,51 @@ namespace oneflow {
 
 void SigmoidCrossEntropyLossGradOp::InitFromOpConf() {
   CHECK(op_conf().has_sigmoid_cross_entropy_loss_grad_conf());
-  EnrollInputBn("loss_diff");
-  EnrollOutputBn("prediction");
-  EnrollOutputBn("label");
+  EnrollInputBn("loss_diff", false);
+  EnrollInputBn("prediction", false);
+  EnrollInputBn("label", false);
+  EnrollOutputBn("prediction_diff");
 }
 
 const PbMessage& SigmoidCrossEntropyLossGradOp::GetCustomizedConf() const {
   return op_conf().sigmoid_cross_entropy_loss_grad_conf();
 }
 
+LossKernelConf* SigmoidCrossEntropyLossGradOp::GetMutLossKernelConf(KernelConf* kernel_conf) const {
+  return kernel_conf->mutable_sigmoid_cross_entropy_loss_grad_conf()->mutable_loss_conf();
+}
+
+
+void SigmoidCrossEntropyLossGradOp::VirtualGenKernelConf(
+    std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
+  LossKernelConf* conf = GetMutLossKernelConf(kernel_conf);
+  conf->set_prediction_type(GetBlobDesc4BnInOp("prediction")->data_type());
+
+  if (HasFieldInCustomizedConf("label")) {
+    conf->set_label_type(GetBlobDesc4BnInOp("label")->data_type());
+  } else {
+    conf->set_label_type(DataType::kInvalidDataType);
+  }
+  conf->set_weight_scalar(GetValFromCustomizedConf<float>("weight_scalar"));
+  conf->set_reduction(static_cast<ScalarReductionType>(GetEnumFromCustomizedConf("reduction")));
+
+}
+
+
 void SigmoidCrossEntropyLossGradOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
-  // prediction
   const BlobDesc* pred_blob_desc = GetBlobDesc4BnInOp("prediction");
   CHECK_GE(pred_blob_desc->shape().NumAxes(), 2);
-  int64_t data_num = pred_blob_desc->shape().At(0);
 
-  // label
   const BlobDesc* label_blob_desc = GetBlobDesc4BnInOp("label");
   // a label must be in {-1, 0, 1} while -1 indicates ignorance
   CHECK_GE(label_blob_desc->shape().NumAxes(), 2);
   CHECK_EQ(pred_blob_desc->shape(), label_blob_desc->shape());
 
-  // loss
-  BlobDesc* loss_diff_blob_desc = GetBlobDesc4BnInOp("loss_diff");
-  loss_diff_blob_desc->mut_shape() = Shape({data_num});
-  loss_diff_blob_desc->set_data_type(pred_blob_desc->data_type());
-   
+  BlobDesc* loss_diff_blob_desc = GetBlobDesc4BnInOp("prediction_diff");
+  *loss_diff_blob_desc = *pred_blob_desc; 
 }
 
 void SigmoidCrossEntropyLossGradOp::GetSbpSignatures(
@@ -41,7 +58,7 @@ void SigmoidCrossEntropyLossGradOp::GetSbpSignatures(
   SbpSignatureBuilder()
       .Split(input_bns(), 0)
       .Split(output_bns(), 0)
-      .MakeSplitSignatureListBuilder(LogicalBlobDesc4Ibn("in").shape().NumAxes())
+      .MakeSplitSignatureListBuilder(LogicalBlobDesc4Ibn("prediction").shape().NumAxes())
       .Build(sbp_sig_list);
 }
 

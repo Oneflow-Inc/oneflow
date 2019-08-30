@@ -82,20 +82,6 @@ struct SegmentKernelUtilImpl<DeviceType::kGPU, T, K> final {
                                  const K* segment_ids, T* in_diff);
 };
 
-/*
-template void SegmentKernelUtilImpl<DeviceType::kGPU, float, int32_t>::SegmentSumForward(DeviceCtx* ctx, 
-                                                    const Shape& data_shape,
-                                                    const float* in,
-                                                    const int32_t* segment_ids,
-                                                    float* out);
-
-template void SegmentKernelUtilImpl<DeviceType::kGPU, float, int32_t>::SegmentSumBackward(DeviceCtx* ctx,
-                                                    const Shape& out_diff_shape,
-                                                    const Shape& segment_ids_shape,
-                                                    const float* out_diff,
-                                                    const int32_t* segment_ids,
-                                                    float* in_diff);
-*/
 
 template <typename T, typename K>
 void SegmentKernelUtilImpl<DeviceType::kGPU, T, K>::SegmentSumForward(DeviceCtx* ctx, 
@@ -106,8 +92,9 @@ void SegmentKernelUtilImpl<DeviceType::kGPU, T, K>::SegmentSumForward(DeviceCtx*
   const int32_t input_total_size = data_shape.elem_cnt();
   const int32_t input_outer_dim_size = data_shape.At(0);
   const int32_t inner_dim_size = input_total_size / input_outer_dim_size;
-  const std::set<K> unique_segment_ids(segment_ids, segment_ids + input_outer_dim_size);
-  const auto output_rows = unique_segment_ids.size();
+  // const std::set<K> unique_segment_ids(segment_ids, segment_ids + input_outer_dim_size);
+  //const auto output_rows = unique_segment_ids.size();
+  const auto output_rows = 40000;
   const int32_t output_total_size = output_rows * inner_dim_size;
   const auto config = GetCudaLaunchConfig(output_total_size); 
   auto div_up = [] (int a, int b){ return (a + b - 1) / b; };

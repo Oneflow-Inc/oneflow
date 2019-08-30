@@ -5,8 +5,13 @@ namespace oneflow {
 
 void SegmentSumGradOp::InitFromOpConf() {
   CHECK(op_conf().has_segment_sum_grad_conf());
-  EnrollInputBn("out_diff", false);
-  EnrollOutputBn("in_diff", false);
+  EnrollInputBn("out_diff");
+  EnrollInputBn("segment_ids");
+  EnrollOutputBn("in_diff");
+}
+
+const PbMessage& SegmentSumGradOp::GetCustomizedConf() const {
+  return op_conf().segment_sum_grad_conf();
 }
 
 void SegmentSumGradOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
@@ -14,7 +19,6 @@ void SegmentSumGradOp::InferBlobDescs(std::function<BlobDesc*(const std::string&
   const BlobDesc* out_diff_blob = GetBlobDesc4BnInOp("out_diff");
   const BlobDesc* segment_ids_blob = GetBlobDesc4BnInOp("segment_ids");
   // segment_ids must be 1D tensor
-  CHECK_EQ(segment_ids_blob->shape().NumAxes(), 1);
   auto segment_ids_count = segment_ids_blob->shape().At(0);
   auto dims = out_diff_blob->shape().dim_vec();
   dims[0] = segment_ids_count;
