@@ -55,7 +55,7 @@ void SplitLikeOp::GetSbpSignatures(
   FOR_RANGE(int32_t, i, 0, num_axes) {
     if (i == axis) { continue; }
     SbpSignatureBuilder()
-        .Split(output_bns(), i)
+        .Split(input_bns(), i)
         .Split(output_bns(), i)
         .Build(sbp_sig_list->mutable_sbp_signature()->Add());
   }
