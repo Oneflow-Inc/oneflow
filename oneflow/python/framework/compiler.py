@@ -10,6 +10,8 @@ import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.input_blob_def as input_blob_def
 import oneflow.python.framework.job_builder as job_builder
 import oneflow.python.ops as ops
+from oneflow.python.lib.core.box import Box
+
 from oneflow.python.oneflow_export import oneflow_export
 
 @oneflow_export('get_cur_job_conf_builder')
@@ -25,6 +27,7 @@ def Compile(job_set, job_func):
         _CompileJob(job_func, config_util.inited_config_proto)
         job_builder.CurCtxSetJobConfIfNotSet(job.job_conf)
         assert job_builder.CurCtxHasJobConf()
+        job_builder.CurCtxCheckJob()
     config_util.TryCompleteDefaultJobConfigProto(job.job_conf)
     assert job.job_conf.job_name not in check_unique_job_func_name
     check_unique_job_func_name.add(job.job_conf.job_name)
@@ -51,18 +54,17 @@ def _CompileJob(func, config):
             raise NotImplementedError
 
 def _CompileJobBody(func):
-    input_op_add_and_infered = False
+    input_op_add_and_infered = Box(False)
     def AddAndInferInputOp():
-        if input_op_add_and_infered: return
+        if input_op_add_and_infered.value: return
         for blob_desc in func.__oneflow_input_blob_defs__:
             assert isinstance(blob_desc, input_blob_def.input_blob_def)
             ops.InputOpByBlobDesc(blob_desc)
-        input_op_add_and_infered = True
+        input_op_add_and_infered.set_value(True)
     with compile_context.BeforeNonInputOpBuildAndInferHook(AddAndInferInputOp):
         ret_remote_blobs = func()
-    if input_op_add_and_infered == False: AddAndInferInputOp()
+    if input_op_add_and_infered.value == False: AddAndInferInputOp()
     return ret_remote_blobs
-
 
 def _GetArgDefault(func):
     if hasattr(func, '__oneflow_arg_default__'): return func.__oneflow_arg_default__

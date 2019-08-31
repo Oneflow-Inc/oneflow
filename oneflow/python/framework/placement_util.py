@@ -69,9 +69,11 @@ class DevicePriorPlacementScope(PlacementScope):
         return self.default_device_tag
 
     def ParallelConfAndOpNames(self):
-        device_tag2op_names = {True: [], False: []}
+        device_tag2op_names = {}
         for op_conf in self.op_confs:
-            device_tag2op_names[self.GetDeviceTag4OpConf(op_conf)].append(op_conf.name)
+            device_tag = self.GetDeviceTag4OpConf(op_conf)
+            if device_tag not in device_tag2op_names: device_tag2op_names[device_tag] = []
+            device_tag2op_names[device_tag].append(op_conf.name)
         for device_tag, op_names in device_tag2op_names.items():
             if len(op_names) == 0: continue
             parallel_conf = MakeParallelConf(device_tag, self.machine_device_ids)

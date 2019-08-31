@@ -27,9 +27,17 @@ std::string JobBuildAndInferCtx_GetCurrentJobName(std::string* error_str) {
   }
 }
 
-std::string JobBuildAndInferCtx_Leave() {
+void JobBuildAndInferCtx_Leave() {
   using namespace oneflow;
-  auto maybe_ok = TRY(Global<JobBuildAndInferCtxMgr>::Get()->LeaveCurrentJobBuildAndInferCtx());
+  Global<JobBuildAndInferCtxMgr>::Get()->LeaveCurrentJobBuildAndInferCtx();
+}
+
+std::string CurJobBuildAndInferCtx_CheckJob() {
+  using namespace oneflow;
+  std::string error_str;
+  JobBuildAndInferCtx* ctx = JobBuildAndInferHelper::GetCurInferCtx(&error_str);
+  if (ctx == nullptr) { return error_str; }
+  auto maybe_ok = TRY(ctx->CheckJob());
   if (maybe_ok.IsOk() == false) { return PbMessage2TxtString(*maybe_ok.error()); }
   return PbMessage2TxtString(ErrorUtil::Ok());
 }

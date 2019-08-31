@@ -40,19 +40,14 @@ Maybe<std::string> JobBuildAndInferCtxMgr::GetCurrentJobName() {
   return cur_job_name_;
 }
 
-Maybe<void> JobBuildAndInferCtxMgr::LeaveCurrentJobBuildAndInferCtx() {
-  if (!has_cur_job_) {
-    return GenJobBuildAndInferError(JobBuildAndInferError::kNoJobBuildAndInferCtx,
-                                    "cannot leave current job beacuse current has no job");
-  }
+void JobBuildAndInferCtxMgr::LeaveCurrentJobBuildAndInferCtx() {
+  if (!has_cur_job_) { return; }
   has_cur_job_ = false;
   const JobDesc* job_desc = Global<JobDesc>::Get();
-  if (job_desc != nullptr) {
-    CHECK_EQ(job_desc->job_name(), cur_job_name_);
-    CHECK_EQ(job_desc->job_id(), job_set_.job_size() - 1);
-    Global<JobDesc>::Delete();
-  }
-  return job_name2infer_ctx_.at(cur_job_name_)->CheckPlacement();
+  if (job_desc == nullptr) { return; }
+  CHECK_EQ(job_desc->job_name(), cur_job_name_);
+  CHECK_EQ(job_desc->job_id(), job_set_.job_size() - 1);
+  Global<JobDesc>::Delete();
 }
 
 }  // namespace oneflow

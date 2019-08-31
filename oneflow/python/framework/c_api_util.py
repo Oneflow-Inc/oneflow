@@ -52,9 +52,7 @@ def JobBuildAndInferCtx_GetCurrentJobName():
     return job_name
 
 def JobBuildAndInferCtx_Leave():
-    serialized_error = oneflow_internal.JobBuildAndInferCtx_Leave()
-    error = text_format.Parse(serialized_error, error_util.Error())
-    if error.HasField("error_type"): raise JobBuildAndInferError(error)
+    oneflow_internal.JobBuildAndInferCtx_Leave()
 
 def CurJobBuildAndInferCtx_SetJobConf(job_config_proto):
     serialized_job_conf = str(text_format.MessageToString(job_config_proto))
@@ -83,6 +81,11 @@ def CurJobBuildAndInferCtx_AddLossLogicalBlobName(lbn):
 def CurJobBuildAndInferCtx_AddPlacementGroup(placement_group_proto):
     serialized_placement_grp = str(text_format.MessageToString(placement_group_proto))
     error_str = oneflow_internal.CurJobBuildAndInferCtx_AddPlacementGroup(serialized_placement_grp)
+    error = text_format.Parse(error_str, error_util.Error())
+    if error.HasField("error_type"): raise JobBuildAndInferError(error)
+
+def CurJobBuildAndInferCtx_CheckJob():
+    error_str = oneflow_internal.CurJobBuildAndInferCtx_CheckJob()
     error = text_format.Parse(error_str, error_util.Error())
     if error.HasField("error_type"): raise JobBuildAndInferError(error)
 

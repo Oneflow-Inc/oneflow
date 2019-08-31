@@ -15,6 +15,9 @@ class JobBuildAndInferCtx(object):
 def GetCurCtxJobName():
     return c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
 
+def CurCtxCheckJob():
+    c_api_util.CurJobBuildAndInferCtx_CheckJob()
+
 def CurCtxSetJobConfIfNotSet(job_config_proto):
     global job_conf_inited
     if job_conf_inited == False:

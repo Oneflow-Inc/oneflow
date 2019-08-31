@@ -169,7 +169,7 @@ Maybe<ParallelDesc> JobBuildAndInferCtx::GetParallelDescFromProducerView(
   TODO();
 }
 
-Maybe<void> JobBuildAndInferCtx::CheckPlacement() {
+Maybe<void> JobBuildAndInferCtx::CheckJob() {
   HashSet<std::string> op_names_in_net;
   HashSet<std::string> op_names_in_placement;
   for (const OperatorConf& op_conf : job_->net().op()) {
