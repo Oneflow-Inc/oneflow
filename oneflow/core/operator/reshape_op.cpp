@@ -21,24 +21,19 @@ Maybe<void> ReshapeOp::InferBlobDescs(
 
   const ReshapeOpConf& conf = op_conf().reshape_conf();
   CHECK_GE_OR_RETURN(conf.shape().dim_size(), 1);
+  // fill dim_vec
   std::vector<int64_t> dim_vec;
-  int32_t begin_index = 0;
-  if (conf.has_dim0_in_shape()) {
-    // infer dim0 as split(0)
-    if (conf.shape().dim(0) > 0) {
-      CHECK_GE_OR_RETURN(conf.shape().dim(0), parallel_ctx->parallel_num());
-      BalancedSplitter splitter(conf.shape().dim(0), parallel_ctx->parallel_num());
-      dim_vec.push_back(splitter.At(parallel_ctx->parallel_id()).size());
-    } else {
-      dim_vec.push_back(-1);
-    }
-    begin_index = 1;
-  } else {
-    dim_vec.push_back(in_blob_desc->shape().At(0));
+  if (!conf.has_dim0_in_shape()) { dim_vec.push_back(in_blob_desc->shape().At(0)); }
+  dim_vec.insert(dim_vec.end(), conf.shape().dim().begin(), conf.shape().dim().end());
+
+  // infer dim0 as split(0) when user set dim0 not -1
+  if (conf.has_dim0_in_shape() && conf.shape().dim(0) > 0) {
+    CHECK_GE_OR_RETURN(dim_vec[0], parallel_ctx->parallel_num());
+    BalancedSplitter splitter(dim_vec[0], parallel_ctx->parallel_num());
+    dim_vec[0] = splitter.At(parallel_ctx->parallel_id()).size();
   }
-  for (int32_t i = begin_index; i < conf.shape().dim_size(); ++i) {
-    dim_vec.push_back(conf.shape().dim(i));
-  }
+
+  // infer -1
   int32_t dim_cnt_need_infer = 0;
   int32_t dim_index_need_infer = -1;
   int64_t elem_cnt = 1;
