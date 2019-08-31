@@ -10,21 +10,18 @@ namespace oneflow {
 template<DeviceType device_type, typename T>
 void NormalMdUpdateKernel<device_type, T>::Forward(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  int64_t cur_batch_num = std::get<0>(
-      *(reinterpret_cast<std::tuple<int64_t, std::function<const Blob*(const LogicalBlobId&)>>*>(
-          ctx.other)));
-  int64_t next_model_vid = cur_batch_num + 1;
   const PbMessage& op_conf = this->GetCustomizedOpConf();
   const auto& conf = *GetMsgPtrFromPbMessage<NormalModelUpdateOpUserConf>(op_conf, "user_conf");
   const T* batch_instance_num_ptr = BnInOp2Blob("total_instance_num_diff")->dptr<T>();
+  const int64_t* global_step_ptr = BnInOp2Blob("global_step")->dptr<int64_t>();
+  const float* learning_rate_ptr = BnInOp2Blob("learning_rate")->dptr<float>();
   if (conf.has_clip_conf()) {
-    ClipGradient(ctx.device_ctx, cur_batch_num, conf.clip_conf(), batch_instance_num_ptr,
-                 BnInOp2Blob);
+    ClipGradient(ctx.device_ctx, conf.clip_conf(), batch_instance_num_ptr, BnInOp2Blob);
   }
   float l1 = GetValFromPbMessage<float>(op_conf, "l1");
   float l2 = GetValFromPbMessage<float>(op_conf, "l2");
   UpdateModel(ctx.device_ctx, batch_instance_num_ptr, static_cast<T>(l1), static_cast<T>(l2),
-              next_model_vid, BnInOp2Blob);
+              global_step_ptr, learning_rate_ptr, BnInOp2Blob);
 }
 
 #define INSTANTIATE_KERNEL(device_type, data_type_pair) \
@@ -52,7 +49,7 @@ Kernel* CreateMdUpdtKernel(const KernelConf& kernel_conf) {
 }
 
 template<DeviceType device_type, typename T>
-void ClipByGlobalNorm(DeviceCtx* ctx, const int64_t cur_batch_num, const ClipByGlobalNormConf& conf,
+void ClipByGlobalNorm(DeviceCtx* ctx, const ClipByGlobalNormConf& conf,
                       const T* batch_instance_num_ptr,
                       std::function<Blob*(const std::string&)> BnInOp2Blob) {
   int64_t n = BnInOp2Blob("model_diff")->shape().elem_cnt();
@@ -76,11 +73,11 @@ void ClipByGlobalNorm(DeviceCtx* ctx, const int64_t cur_batch_num, const ClipByG
 
 template<DeviceType device_type, typename T>
 void NormalMdUpdateKernel<device_type, T>::ClipGradient(
-    DeviceCtx* ctx, const int64_t cur_batch_num, const ClipConf& conf,
-    const T* batch_instance_num_ptr, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+    DeviceCtx* ctx, const ClipConf& conf, const T* batch_instance_num_ptr,
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   if (conf.has_clip_by_global_norm()) {
-    ClipByGlobalNorm<device_type, T>(ctx, cur_batch_num, conf.clip_by_global_norm(),
-                                     batch_instance_num_ptr, BnInOp2Blob);
+    ClipByGlobalNorm<device_type, T>(ctx, conf.clip_by_global_norm(), batch_instance_num_ptr,
+                                     BnInOp2Blob);
   } else {
     UNIMPLEMENTED();
   }

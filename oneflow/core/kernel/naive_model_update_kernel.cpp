@@ -5,15 +5,14 @@ namespace oneflow {
 
 template<DeviceType device_type, typename T>
 void NaiveMdUpdateKernel<device_type, T>::UpdateModel(
-    DeviceCtx* ctx, const T* batch_instance_num_ptr, T l1, T l2, int64_t next_model_vid,
-    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+    DeviceCtx* ctx, const T* batch_instance_num_ptr, T l1, T l2, const int64_t* global_step,
+    const float* learning_rate, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* model_diff_blob = BnInOp2Blob("model_diff");
-  const Blob* learning_rate = BnInOp2Blob("learning_rate");
   Blob* model_blob = BnInOp2Blob("model");
   // model = model - alpha * model_diff
   NaiveMdUpdateKernelUtil<device_type, T>::UpdateModel(
-      ctx, model_blob->shape().elem_cnt(), batch_instance_num_ptr, learning_rate->dptr<float>(), l1,
-      l2, model_diff_blob->dptr<T>(), model_blob->mut_dptr<T>());
+      ctx, model_blob->shape().elem_cnt(), batch_instance_num_ptr, learning_rate, l1, l2,
+      model_diff_blob->dptr<T>(), model_blob->mut_dptr<T>());
 }
 
 template<DeviceType device_type, typename T>

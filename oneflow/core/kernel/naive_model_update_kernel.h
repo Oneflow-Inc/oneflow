@@ -15,7 +15,7 @@ class NaiveMdUpdateKernel final : public NormalMdUpdateKernel<device_type, T> {
  private:
   const PbMessage& GetCustomizedOpConf() const override;
   void UpdateModel(DeviceCtx* ctx, const T* batch_instance_num_ptr, T l1, T l2,
-                   int64_t next_model_vid,
+                   const int64_t* global_step, const float* learning_rate,
                    std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 };
 
