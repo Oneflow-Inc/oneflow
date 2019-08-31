@@ -41,3 +41,18 @@ def gather(
     lbi.op_name = op_conf.name
     lbi.blob_name = "out"
     return remote_blob_util.RemoteBlob(lbi)
+
+
+@oneflow_export('reshape')
+def reshape(x, shape, name=None):
+    assert isinstance(shape, tuple) or isinstance(shape, list)
+    op_conf = op_conf_util.OperatorConf()
+    op_conf.name = id_util.UniqueStr('Reshape_')
+    setattr(op_conf.reshape_conf, 'in', x.logical_blob_name)
+    op_conf.reshape_conf.shape.dim[:] = list(shape)
+    op_conf.reshape_conf.out = "out"
+    compile_context.CurJobAddOp(op_conf)
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = "out"
+    return remote_blob_util.RemoteBlob(lbi)
