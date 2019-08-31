@@ -49,5 +49,5 @@ COPY setup.py /workspace/setup.py
 RUN python3 setup.py bdist_wheel
 RUN pip3 install /workspace/dist/*.whl
 
-RUN rm -rf oneflow build third_party setup.py cmake CMakeLists.txt
+RUN rm -rf oneflow third_party cmake CMakeLists.txt
 # ENV PYTHONPATH=/workspace/build/python_scripts:$PYTHONPATH
