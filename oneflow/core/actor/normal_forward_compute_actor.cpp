@@ -159,7 +159,7 @@ void NormalForwardCompActor::AsyncInitModelAndConstBuf() {
   for (const ExecKernel& exec_kernel : exec_kernel_vec()) {
     KernelCtx kernel_ctx = GenDefaultKernelCtx();
     exec_kernel.kernel->InitModelAndConstBuf(
-        kernel_ctx, parallel_ctx(), Global<SnapshotMgr>::Get()->GetReadableSnapshot(),
+        kernel_ctx, parallel_ctx(), nullptr, 
         [&](const std::string& bn_in_op) {
           const LogicalBlobId& lbi = exec_kernel.kernel->BnInOp2Lbi(bn_in_op);
           Blob* blob = nullptr;
