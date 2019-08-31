@@ -22,23 +22,27 @@ void NormalizationOp::InitFromOpConf() {
   } else {
     EnrollTmpBn("moving_variance");
   }
-  if (conf.has_gamma()) {
-    EnrollInputBn("gamma")->set_is_mutable(true);
-  } else {
-    if (DevIsGpuAndEnableCudnn()) {
-      EnrollConstBufBn("gamma");
+  if (conf.scale()) {
+    if (conf.has_gamma()) {
+      EnrollInputBn("gamma");
     } else {
-      UNIMPLEMENTED();
+      EnrollTmpBn("gamma");
     }
+  } else if (DevIsGpuAndEnableCudnn()) {
+    EnrollConstBufBn("gamma");
+  } else {
+    UNIMPLEMENTED();
   }
-  if (conf.has_beta()) {
-    EnrollInputBn("beta")->set_is_mutable(true);
-  } else {
-    if (DevIsGpuAndEnableCudnn()) {
-      EnrollConstBufBn("beta");
+  if (conf.center()) {
+    if (conf.has_beta()) {
+      EnrollInputBn("beta");
     } else {
-      UNIMPLEMENTED();
+      EnrollTmpBn("beta");
     }
+  } else if (DevIsGpuAndEnableCudnn()) {
+    EnrollConstBufBn("beta");
+  } else {
+    UNIMPLEMENTED();
   }
   if (conf.is_training()) {
     EnrollOutputBn("mean", false);
@@ -50,7 +54,7 @@ const PbMessage& NormalizationOp::GetCustomizedConf() const {
   return op_conf().normalization_conf();
 }
 
-void NormalizationOp::InferBlobDescs(
+Maybe<void> NormalizationOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   const NormalizationOpConf& conf = op_conf().normalization_conf();
@@ -61,9 +65,10 @@ void NormalizationOp::InferBlobDescs(
   const std::function<void(const std::string&)> CheckParamBlobDesc = [&](const std::string& bn) {
     const BlobDesc* blob_desc = GetBlobDesc4BnInOp(bn);
     if (blob_desc != nullptr) {
-      CHECK_EQ(blob_desc->data_type(), data_type);
-      CHECK_EQ(blob_desc->shape(), param_shape);
+      CHECK_EQ_OR_RETURN(blob_desc->data_type(), data_type);
+      CHECK_EQ_OR_RETURN(blob_desc->shape(), param_shape);
     }
+    return Maybe<void>::Ok();
   };
   const std::function<void(const std::string&)> SetParamBlobDesc = [&](const std::string& bn) {
     BlobDesc* blob_desc = GetBlobDesc4BnInOp(bn);
@@ -71,6 +76,7 @@ void NormalizationOp::InferBlobDescs(
       blob_desc->set_data_type(data_type);
       blob_desc->mut_shape() = param_shape;
     }
+    return Maybe<void>::Ok();
   };
   (conf.has_moving_mean() ? CheckParamBlobDesc : SetParamBlobDesc)("moving_mean");
   (conf.has_moving_variance() ? CheckParamBlobDesc : SetParamBlobDesc)("moving_variance");
@@ -80,13 +86,15 @@ void NormalizationOp::InferBlobDescs(
     SetParamBlobDesc("mean");
     SetParamBlobDesc("inv_variance");
   }
+  return Maybe<void>::Ok();
 }
 
-void NormalizationOp::InferHasBatchDim(
+Maybe<void> NormalizationOp::InferHasBatchDim(
     std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
   *HasBatchDim4BnInOp("out") = *HasBatchDim4BnInOp("in");
   *HasBatchDim4BnInOp("mean") = false;
   *HasBatchDim4BnInOp("inv_variance") = false;
+  return Maybe<void>::Ok();
 }
 
 void NormalizationOp::GetSbpSignatures(

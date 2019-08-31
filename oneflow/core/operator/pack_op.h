@@ -15,9 +15,9 @@ class PackOp final : public Operator {
   void InitFromOpConf() override;
   const PbMessage& GetCustomizedConf() const override { return op_conf().pack_conf(); }
   LogicalNode* NewProperLogicalNode() const override { return new PackForwardLogicalNode; }
-  void InferOutputBlobTimeShape(std::function<const Shape*(const std::string&)> GetTimeShape4BnInOp,
-                                const ParallelContext* parallel_ctx,
-                                Shape* time_shape) const override;
+  Maybe<void> InferOutputBlobTimeShape(
+      std::function<const Shape*(const std::string&)> GetTimeShape4BnInOp,
+      const ParallelContext* parallel_ctx, Shape* time_shape) const override;
 
   int32_t GetPackNum() const;
 

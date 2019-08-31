@@ -35,8 +35,9 @@ void GatherOp::InitFromOpConf() {
 
 const PbMessage& GatherOp::GetCustomizedConf() const { return op_conf().gather_conf(); }
 
-void GatherOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                              const ParallelContext* parallel_ctx) const {
+Maybe<void> GatherOp::InferBlobDescs(
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx) const {
   const BlobDesc* indices = GetBlobDesc4BnInOp("indices");
   CHECK(IsIntegralDataType(indices->data_type()));
   CHECK_GT(indices->shape().NumAxes(), 0);
@@ -46,6 +47,7 @@ void GatherOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBl
   BlobDesc* out = GetBlobDesc4BnInOp("out");
   *out = *in;
   out->mut_shape() = Shape(GatherGetOutShape(in->shape(), indices->shape(), axis));
+  return Maybe<void>::Ok();
 }
 
 void GatherOp::VirtualGenKernelConf(

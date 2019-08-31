@@ -9,13 +9,13 @@ void TopKOp::InitFromOpConf() {
   EnrollOutputBn("out", false);
 }
 
-void TopKOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                            const ParallelContext* parallel_ctx) const {
+Maybe<void> TopKOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                                   const ParallelContext* parallel_ctx) const {
   const BlobDesc* in = GetBlobDesc4BnInOp("in");
-  CHECK_LE(in->shape().elem_cnt(), GetMaxVal<int32_t>());
+  CHECK_LE_OR_RETURN(in->shape().elem_cnt(), GetMaxVal<int32_t>());
   const TopKOpConf& conf = op_conf().top_k_conf();
-  CHECK_GE(conf.k(), 1);
-  CHECK_LE(conf.k(), in->shape().dim_vec().back());
+  CHECK_GE_OR_RETURN(conf.k(), 1);
+  CHECK_LE_OR_RETURN(conf.k(), in->shape().dim_vec().back());
   // fw_buf
   BlobDesc* fw_buf = GetBlobDesc4BnInOp("fw_buf");
   fw_buf->mut_shape() = Shape({in->shape().dim_vec().back()});
@@ -25,6 +25,7 @@ void TopKOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlob
   *out = *in;
   out->mut_shape().Set(in->shape().NumAxes() - 1, conf.k());
   out->set_data_type(DataType::kInt32);
+  return Maybe<void>::Ok();
 }
 
 void TopKOp::VirtualGenKernelConf(

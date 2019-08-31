@@ -17,9 +17,8 @@ message TrainConf {
   required int32 num_of_batches_in_snapshot = 5;
   repeated string loss_lbn = 6;
   optional int32 loss_scale_factor = 7 [default = 1];
+  optional string global_step_lbn = 8;
 
-  // default_initializer_conf here is now deprecated
-  optional InitializerConf default_initializer_conf = 100;
   required float primary_lr = 101;
   optional float secondary_lr = 102 [default = -1];
   optional float weight_l1 = 103 [default = 0];

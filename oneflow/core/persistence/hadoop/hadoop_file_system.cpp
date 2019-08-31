@@ -295,7 +295,7 @@ std::vector<std::string> HadoopFileSystem::ListDir(const std::string& dir) {
 
   // hdfsListDirectory returns nullptr if the directory is empty. Do a separate
   // check to verify the directory exists first.
-  CHECK(IsDirectory(dir));
+  CHECK(IsDirectory(dir)) << "directory not found, path: " << dir;
 
   int entries = 0;
   hdfsFileInfo* info = hdfs_->hdfsListDirectory(fs, TranslateName(dir).c_str(), &entries);
@@ -335,7 +335,9 @@ void HadoopFileSystem::DeleteDir(const std::string& dir) {
   // Due to HDFS bug HDFS-8407, we can't distinguish between an error and empty
   // folder, expscially for Kerberos enable setup, EAGAIN is quite common
   // when the call is actually successful. Check again by Stat.
-  if (info == nullptr && errno != 0) { CHECK(IsDirectory(dir)); }
+  if (info == nullptr && errno != 0) {
+    CHECK(IsDirectory(dir)) << "directory not found, path: " << dir;
+  }
   PCHECK(entries == 0) << dir << "Cannot delete a non-empty directory.";
   PCHECK(hdfs_->hdfsDelete(fs, TranslateName(dir).c_str(), /*recursive=*/1) == 0) << dir;
 }

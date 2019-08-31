@@ -13,12 +13,13 @@ const PbMessage& NcclAllReduceOp::GetCustomizedConf() const {
   return op_conf().nccl_all_reduce_conf();
 }
 
-void NcclAllReduceOp::InferBlobDescs(
+Maybe<void> NcclAllReduceOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   BlobDesc* in_blob = GetBlobDesc4BnInOp(SoleIbn());
   BlobDesc* out_blob = GetBlobDesc4BnInOp(SoleObn());
   *out_blob = *in_blob;
+  return Maybe<void>::Ok();
 }
 
 LogicalBlobId NcclAllReduceOp::obn2lbi(const std::string& output_bn) const {
