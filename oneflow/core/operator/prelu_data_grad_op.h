@@ -1,15 +1,15 @@
-#ifndef ONEFLOW_CORE_OPERATOR_PRELU_OP_H_
-#define ONEFLOW_CORE_OPERATOR_PRELU_OP_H_
+#ifndef ONEFLOW_CORE_OPERATOR_PRELU_DATA_GRAD_OP_H_
+#define ONEFLOW_CORE_OPERATOR_PRELU_DATA_GRAD_OP_H_
 
 #include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
 
-class PReluOp final : public Operator {
+class PReluDataGradOp final : public Operator {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(PReluOp);
-  PReluOp() = default;
-  ~PReluOp() = default;
+  OF_DISALLOW_COPY_AND_MOVE(PReluDataGradOp);
+  PReluDataGradOp() = default;
+  ~PReluDataGradOp() = default;
 
   void InitFromOpConf() override;
   const PbMessage& GetCustomizedConf() const override;
@@ -19,7 +19,6 @@ class PReluOp final : public Operator {
  private:
   Maybe<void> InferHasBatchDim(
       std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const override;
-
   void GetSbpSignatures(
       const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
       SbpSignatureList* sbp_sig_list) const override;

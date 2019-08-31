@@ -279,6 +279,24 @@ message PReluOpConf {
   required string data_format = 3;
   optional bool channel_shared = 4 [default = false];
   optional float alpha_init = 5 [default = 0.25];
+  optional string alpha = 6;
+}
+
+message PReluDataGradOpConf {
+  required string dy = 1;
+  required string x = 2;
+  required string alpha = 3;
+  required string dx = 4;
+  required string data_format = 5;
+  optional bool channel_shared = 6 [default = false];
+}
+
+message PReluAlphaGradOpConf {
+  required string dy = 1;
+  required string x = 2;
+  required string alpha_grad = 3;
+  required string data_format = 4;
+  optional bool channel_shared = 5 [default = false];
 }
 
 message SigmoidOpConf {
@@ -1595,6 +1613,8 @@ message OperatorConf {
     AssignOpConf assign_conf = 296;
     SnapshotOpConf snapshot_conf = 297;
     LearningRateScheduleOpConf learning_rate_schedule_conf = 298;
+    PReluDataGradOpConf prelu_data_grad_conf = 299;
+    PReluAlphaGradOpConf prelu_alpha_grad_conf = 300;
 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;
