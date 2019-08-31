@@ -14,7 +14,8 @@ void PReluOp::InitFromOpConf() {
   } else {
     EnrollTmpBn("alpha");
   }
-  EnrollOutputBn("out");
+  EnrollOutputBn("out")->set_mutable_inplace_ibn("in");
+  ;
 }
 
 const PbMessage& PReluOp::GetCustomizedConf() const { return op_conf().prelu_conf(); }
@@ -31,8 +32,7 @@ Maybe<void> PReluOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)>
     if (conf.data_format() == "channels_first") {
       alpha_size = in_blob_desc->shape().At(1);
     } else if (conf.data_format() == "channels_last") {
-      alpha_size =
-          in_blob_desc->shape().At(in_blob_desc->shape().NumAxes() - 1);
+      alpha_size = in_blob_desc->shape().At(in_blob_desc->shape().NumAxes() - 1);
     } else {
       UNIMPLEMENTED_THEN_RETURN();
     }

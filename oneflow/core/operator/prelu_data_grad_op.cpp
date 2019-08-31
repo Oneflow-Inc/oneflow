@@ -24,21 +24,17 @@ Maybe<void> PReluDataGradOp::InferBlobDescs(
 
 Maybe<void> PReluDataGradOp::InferHasBatchDim(
     std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
-  CHECK(*HasBatchDim4BnInOp("dy"));
-  CHECK(*HasBatchDim4BnInOp("x"));
-  CHECK(*HasBatchDim4BnInOp("alpha") == false);
+  CHECK_OR_RETURN(*HasBatchDim4BnInOp("dy"));
+  CHECK_OR_RETURN(*HasBatchDim4BnInOp("x"));
+  CHECK_OR_RETURN(*HasBatchDim4BnInOp("alpha") == false);
   *HasBatchDim4BnInOp("dx") = true;
   return Maybe<void>::Ok();
 }
 void PReluDataGradOp::GetSbpSignatures(
     const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
     SbpSignatureList* sbp_sig_list) const {
-  SbpSignatureBuilder()
-      .Split("dy", 0)
-      .Broadcast("alpha")
-      .Split("x", 0)
-      .Split("dx", 0)
-      .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+  SbpSignatureBuilder().Split("dy", 0).Broadcast("alpha").Split("x", 0).Split("dx", 0).Build(
+      sbp_sig_list->mutable_sbp_signature()->Add());
 }
 
 REGISTER_OP(OperatorConf::kPreluDataGradConf, PReluDataGradOp);

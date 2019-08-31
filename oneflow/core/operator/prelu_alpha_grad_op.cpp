@@ -22,40 +22,40 @@ Maybe<void> PReluAlphaGradOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   const PReluAlphaGradOpConf& conf = op_conf().prelu_alpha_grad_conf();
-  const BlobDesc* x = GetBlobDesc4BnInOp("x");
+  const BlobDesc* x_blob_desc = GetBlobDesc4BnInOp("x");
   BlobDesc* alpha_grad_blob_desc = GetBlobDesc4BnInOp("alpha_grad");
   if (conf.channel_shared()) {
     alpha_grad_blob_desc->mut_shape() = Shape({1});
   } else {
     if (conf.data_format() == "channels_first") {
-      alpha_grad_blob_desc->mut_shape() = Shape({x->shape().At(1)});
+      alpha_grad_blob_desc->mut_shape() = Shape({x_blob_desc->shape().At(1)});
     } else if (conf.data_format() == "channels_last") {
-      alpha_grad_blob_desc->mut_shape() = Shape({x->shape().At(x->shape().NumAxes() - 1)});
+      alpha_grad_blob_desc->mut_shape() =
+          Shape({x_blob_desc->shape().At(x_blob_desc->shape().NumAxes() - 1)});
     } else {
-      UNIMPLEMENTED();
+      UNIMPLEMENTED_THEN_RETURN();
     }
   }
-  alpha_grad_blob_desc->set_data_type(x->data_type());
+  alpha_grad_blob_desc->set_data_type(x_blob_desc->data_type());
   if (device_type() == DeviceType::kGPU) {
     BlobDesc* bw_buf_desc = GetBlobDesc4BnInOp("bw_buf");
     BlobDesc* alpha_grad_buf_desc = GetBlobDesc4BnInOp("alpha_grad_buf");
-    *alpha_grad_buf_desc = *GetBlobDesc4BnInOp("x");
+    *alpha_grad_buf_desc = *x_blob_desc;
     if (conf.channel_shared()) {
-      *bw_buf_desc = *GetBlobDesc4BnInOp("x");
+      *bw_buf_desc = *x_blob_desc;
     } else {
-      const BlobDesc* x = GetBlobDesc4BnInOp("x");
-      bw_buf_desc->set_data_type(x->data_type());
-      std::vector<int64_t> bw_buf_shape_vec = x->shape().dim_vec();
+      bw_buf_desc->set_data_type(x_blob_desc->data_type());
+      std::vector<int64_t> bw_buf_shape_vec = x_blob_desc->shape().dim_vec();
       if (conf.data_format() == "channels_first") {
-        bw_buf_shape_vec[0] = x->shape().At(1);
-        bw_buf_shape_vec[1] = x->shape().At(0);
+        bw_buf_shape_vec[0] = x_blob_desc->shape().At(1);
+        bw_buf_shape_vec[1] = x_blob_desc->shape().At(0);
         bw_buf_desc->mut_shape() = Shape(bw_buf_shape_vec);
       } else if (conf.data_format() == "channels_last") {
-        bw_buf_shape_vec[0] = x->shape().At(x->shape().NumAxes() - 1);
-        bw_buf_shape_vec[x->shape().NumAxes() - 1] = x->shape().At(0);
+        bw_buf_shape_vec[0] = x_blob_desc->shape().At(x_blob_desc->shape().NumAxes() - 1);
+        bw_buf_shape_vec[x_blob_desc->shape().NumAxes() - 1] = x_blob_desc->shape().At(0);
         bw_buf_desc->mut_shape() = Shape(bw_buf_shape_vec);
       } else {
-        UNIMPLEMENTED();
+        UNIMPLEMENTED_THEN_RETURN();
       }
     }
   }
@@ -67,8 +67,8 @@ void PReluAlphaGradOp::VirtualGenKernelConf(
     const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
   const PReluAlphaGradOpConf& conf = op_conf().prelu_alpha_grad_conf();
   PbRf<int32_t>* perm = kernel_conf->mutable_prelu_alpha_grad_conf()->mutable_perm();
-  const BlobDesc* x = GetBlobDesc4BnInOp("x");
-  int64_t num_axes = x->shape().NumAxes();
+  const BlobDesc* x_blob_desc = GetBlobDesc4BnInOp("x");
+  int64_t num_axes = x_blob_desc->shape().NumAxes();
   FOR_RANGE(int64_t, i, 0, num_axes) { perm->Add(i); }
   if (!conf.channel_shared()) {
     if (conf.data_format() == "channels_first") {

@@ -6,7 +6,6 @@ template<DeviceType device_type, typename T>
 void PReluAlphaGradKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   Blob* alpha_grad_blob = BnInOp2Blob("alpha_grad");
-  if (alpha_grad_blob == nullptr) { return; }
   Memset<device_type>(ctx.device_ctx, alpha_grad_blob->mut_dptr<T>(), 0,
                       alpha_grad_blob->ByteSizeOfDataContentField());
   PReluAlphaGradKernelUtil<device_type, T>::Compute(

@@ -288,7 +288,7 @@ message PReluDataGradOpConf {
   required string alpha = 3;
   required string dx = 4;
   required string data_format = 5;
-  optional bool channel_shared = 6 [default = false];
+  required bool channel_shared = 6;
 }
 
 message PReluAlphaGradOpConf {
@@ -296,7 +296,7 @@ message PReluAlphaGradOpConf {
   required string x = 2;
   required string alpha_grad = 3;
   required string data_format = 4;
-  optional bool channel_shared = 5 [default = false];
+  required bool channel_shared = 5;
 }
 
 message SigmoidOpConf {
