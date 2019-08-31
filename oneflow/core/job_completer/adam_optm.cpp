@@ -9,6 +9,9 @@ OperatorConf GenerateAdamHelperVariableOpConf(const VariableOp& op, const std::s
   OperatorConf helper_variable_op(op.op_conf());
   helper_variable_op.set_name(op.op_name() + "-" + name);
   helper_variable_op.mutable_variable_conf()->set_out("out");
+  InitializerConf adam_initializer_conf;
+  adam_initializer_conf.mutable_constant_conf()->set_value(0.f);
+  *(helper_variable_op.mutable_variable_conf()->mutable_initializer()) = adam_initializer_conf; 
   BindTwoVariableOpObnSbpConf(helper_variable_op.name(), op.op_name(), job_builder);
   return helper_variable_op;
 }
