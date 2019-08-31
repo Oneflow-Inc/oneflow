@@ -78,7 +78,6 @@ class EitherPtr final {
   }
   void Set(const std::shared_ptr<X>& ptr) {
     CHECK(union_.get() == nullptr);
-
     std::shared_ptr<X>* __attribute__((__may_alias__)) __ptr =
         reinterpret_cast<std::shared_ptr<X>*>(&union_);
     *__ptr = ptr;
@@ -86,7 +85,6 @@ class EitherPtr final {
   }
   void Set(const std::shared_ptr<Y>& ptr) {
     CHECK(union_.get() == nullptr);
-
     std::shared_ptr<Y>* __attribute__((__may_alias__)) __ptr =
         reinterpret_cast<std::shared_ptr<Y>*>(&union_);
     *__ptr = ptr;
