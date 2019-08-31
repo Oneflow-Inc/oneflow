@@ -53,7 +53,6 @@ void GenerateInputVarOpConf(
         ->set_value(conf.gamma_init());
       op_confs->push_back(gamma_var_op);
       mut_conf->set_gamma(gamma_var_op.name() + "/out");
-    
     }
   }
   op_confs->push_back(normalization_conf);
