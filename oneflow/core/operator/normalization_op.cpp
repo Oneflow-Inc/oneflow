@@ -40,9 +40,9 @@ void NormalizationOp::InitFromOpConf() {
       EnrollTmpBn("beta");
     }
   } else if (DevIsGpuAndEnableCudnn()) {
-      EnrollConstBufBn("beta");
+    EnrollConstBufBn("beta");
   } else {
-      UNIMPLEMENTED();
+    UNIMPLEMENTED();
   }
   if (conf.is_training()) {
     EnrollOutputBn("mean", false);
