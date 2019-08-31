@@ -5,7 +5,7 @@ namespace oneflow {
 namespace {
 
 OperatorConf GenerateAdamHelperVariableOpConf(const VariableOp& op, const std::string& name,
-                                              const float& constant_initializer_value,
+                                              const float constant_initializer_value,
                                               JobBuilder* job_builder) {
   OperatorConf helper_variable_op(op.op_conf());
   helper_variable_op.set_name(op.op_name() + "-" + name);
