@@ -11,7 +11,7 @@ OperatorConf GenerateAdamHelperVariableOpConf(const VariableOp& op, const std::s
   helper_variable_op.mutable_variable_conf()->set_out("out");
   InitializerConf adam_initializer_conf;
   adam_initializer_conf.mutable_constant_conf()->set_value(0.f);
-  *(helper_variable_op.mutable_variable_conf()->mutable_initializer()) = adam_initializer_conf; 
+  *(helper_variable_op.mutable_variable_conf()->mutable_initializer()) = adam_initializer_conf;
   BindTwoVariableOpObnSbpConf(helper_variable_op.name(), op.op_name(), job_builder);
   return helper_variable_op;
 }
