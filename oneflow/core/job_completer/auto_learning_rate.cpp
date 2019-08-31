@@ -17,9 +17,9 @@ void AutoLearningRate(const OpGraph& op_graph, Job* job) {
       schedule_op_conf.set_name(op_name);
       LearningRateScheduleOpConf* schedule_conf =
           schedule_op_conf.mutable_learning_rate_schedule_conf();
-      schedule_conf->set_out("out");
       schedule_conf->set_global_step(train_conf.global_step_lbn());
       schedule_conf->set_learning_rate(learning_rate);
+      schedule_conf->set_out("out");
       if (model_update_conf.has_warmup_conf()) {
         *schedule_conf->mutable_warmup_conf() = model_update_conf.warmup_conf();
       }
@@ -41,15 +41,20 @@ void AutoLearningRate(const OpGraph& op_graph, Job* job) {
     }
   };
   if (!train_conf.has_primary_lr_lbn()) {
+    CHECK(train_conf.has_primary_lr());
     const std::string lbn =
         AddScheduleOp("System-Train-PrimaryLearningRate-Scheduler", train_conf.primary_lr());
     job->mutable_job_conf()->mutable_train_conf()->set_primary_lr_lbn(lbn);
   }
   if (!train_conf.has_secondary_lr_lbn()) {
-    const std::string lbn = AddScheduleOp(
-        "System-Train-SecondaryLearningRate-Scheduler",
-        train_conf.has_secondary_lr() ? train_conf.secondary_lr() : train_conf.primary_lr());
-    job->mutable_job_conf()->mutable_train_conf()->set_secondary_lr_lbn(lbn);
+    if (train_conf.has_secondary_lr()) {
+      const std::string lbn =
+          AddScheduleOp("System-Train-SecondaryLearningRate-Scheduler", train_conf.secondary_lr());
+      job->mutable_job_conf()->mutable_train_conf()->set_secondary_lr_lbn(lbn);
+    } else {
+      job->mutable_job_conf()->mutable_train_conf()->set_secondary_lr_lbn(
+          train_conf.primary_lr_lbn());
+    }
   }
 }
 
