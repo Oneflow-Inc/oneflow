@@ -54,7 +54,6 @@ def _CompileJob(job, func, config):
         else:
             raise NotImplementedError
     job.job_conf.job_name = job_name
-    job.job_conf.arg_op_name.extend(interface_op_names)
 
 def _GetArgDefault(func):
     if hasattr(func, '__oneflow_arg_default__'): return func.__oneflow_arg_default__
