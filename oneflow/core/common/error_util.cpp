@@ -11,4 +11,18 @@ Error ErrorUtil::ProtoParseFailedError(const std::string& msg) {
   return error;
 }
 
+Error ErrorUtil::JobSetEmpty(const std::string& msg) {
+  Error error;
+  error.set_msg(msg);
+  error.set_job_build_and_infer_error(JobBuildAndInferError::kJobSetEmpty);
+  return error;
+}
+
+Error ErrorUtil::DeviceTagNotFound(const std::string& msg) {
+  Error error;
+  error.set_msg(msg);
+  error.set_job_build_and_infer_error(JobBuildAndInferError::kDeviceTagNotFound);
+  return error;
+}
+
 }  // namespace oneflow

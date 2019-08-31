@@ -154,11 +154,11 @@ Maybe<bool> JobBuildAndInferCtx::GetHasBatchDim(const std::string& lbn) const {
   return lbi2has_batch_dim_.at(lbi);
 }
 
-Maybe<bool> JobBuildAndInferCtx::GetHasSplitDimFromProducerView(const std::string& lbn) const {
+Maybe<bool> JobBuildAndInferCtx::GetHasSplitAxisFromProducerView(const std::string& lbn) const {
   TODO();
 }
 
-Maybe<int64_t> JobBuildAndInferCtx::GetSplitDimFromProducerView(const std::string& lbn) const {
+Maybe<int64_t> JobBuildAndInferCtx::GetSplitAxisFromProducerView(const std::string& lbn) const {
   TODO();
 }
 

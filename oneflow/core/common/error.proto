@@ -40,6 +40,8 @@ message ConfigResourceUnavailableError {
 }
 
 enum JobBuildAndInferError {
+  kJobSetEmpty = 1;
+  kDeviceTagNotFound = 2;
   kJobNameExist = 100;
   kJobNameEmpty = 101;
   kJobNameNotEqual = 102;

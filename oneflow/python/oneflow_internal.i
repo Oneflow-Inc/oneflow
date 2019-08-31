@@ -3,6 +3,8 @@
 %include <std_pair.i>
 %include <std_shared_ptr.i>
 %include <stdint.i>
+%include <typemaps.i>
+%apply std::string *OUTPUT { std::string *error_str };
 %include "oneflow/python/lib/core/Flat.i"
 %include "oneflow/python/framework/oneflow_typemap.i"
 

@@ -2,6 +2,7 @@
 #define ONEFLOW_CORE_JOB_PARALLEL_DESC_H_
 
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/common/maybe.h"
 #include "oneflow/core/job/id_manager.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/placement.pb.h"
@@ -9,6 +10,8 @@
 namespace oneflow {
 
 std::string DeviceTag4DeviceType(DeviceType device_type);
+Maybe<DeviceType> DeviceType4DeviceTag(const std::string& device_tag);
+
 void ParseDeviceNameConf(const std::string& device_name, int64_t* mchn_id, std::string* device_tag,
                          std::string* device_id_str);
 

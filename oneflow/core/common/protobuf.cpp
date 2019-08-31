@@ -22,8 +22,12 @@ void PrintProtoToTextFile(const PbMessage& proto, const std::string& file_path) 
 
 std::string PbMessage2TxtString(const PbMessage& proto) {
   std::string str;
-  google::protobuf::TextFormat::PrintToString(proto, &str);
+  PbMessage2TxtString(proto, &str);
   return str;
+}
+
+void PbMessage2TxtString(const PbMessage& proto, std::string* str) {
+  google::protobuf::TextFormat::PrintToString(proto, str);
 }
 
 bool TxtString2PbMessage(const std::string& proto_str, PbMessage* msg) {

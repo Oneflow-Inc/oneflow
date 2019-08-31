@@ -8,6 +8,8 @@ namespace oneflow {
 struct ErrorUtil final {
   static Error Ok();
   static Error ProtoParseFailedError(const std::string& msg);
+  static Error JobSetEmpty(const std::string& msg);
+  static Error DeviceTagNotFound(const std::string& msg);
 };
 
 }  // namespace oneflow
