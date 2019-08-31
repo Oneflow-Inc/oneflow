@@ -32,13 +32,9 @@ def Compile(job_set, job_func):
 
 def _CompileJob(func, config):
     device_type, machine_dev_ids = placement_util.GetDefaultMachineDeviceIds(config.resource)
-    func.__oneflow_input_remote_blobs__ = []
+    func.__oneflow_input_blob_defs__ = _GetArgDefault(func)
     with placement_util.DevicePriorPlacementScope(device_type, machine_dev_ids):
-        for blob_desc in _GetArgDefault(func):
-            assert isinstance(blob_desc, input_blob_def.input_blob_def)
-            remote_input_blob = ops.InputOpByBlobDesc(blob_desc)
-            func.__oneflow_input_remote_blobs__.append(remote_input_blob)
-            ret_remote_blobs = func(*func.__oneflow_input_remote_blobs__)
+        ret_remote_blobs = _CompileJobBody(func)
         if ret_remote_blobs is None:
             func.__oneflow_output_remote_blobs__ = None 
         elif isinstance(ret_remote_blobs, remote_blob_util.RemoteBlob):
@@ -53,6 +49,20 @@ def _CompileJob(func, config):
                 func.__oneflow_output_remote_blobs__ = tuple(func.__oneflow_output_remote_blobs__)
         else:
             raise NotImplementedError
+
+def _CompileJobBody(func):
+    input_op_add_and_infered = False
+    def AddAndInferInputOp():
+        if input_op_add_and_infered: return
+        for blob_desc in func.__oneflow_input_blob_defs__:
+            assert isinstance(blob_desc, input_blob_def.input_blob_def)
+            ops.InputOpByBlobDesc(blob_desc)
+        input_op_add_and_infered = True
+    with compile_context.BeforeNonInputOpBuildAndInferHook(AddAndInferInputOp):
+        ret_remote_blobs = func()
+    if input_op_add_and_infered == False: AddAndInferInputOp()
+    return ret_remote_blobs
+
 
 def _GetArgDefault(func):
     if hasattr(func, '__oneflow_arg_default__'): return func.__oneflow_arg_default__

@@ -6,6 +6,7 @@ import oneflow.python.framework.placement_context as placement_context
 import oneflow.python.framework.compile_context as compile_context
 import oneflow.python.ops.op_util as op_util
 import oneflow.python.framework.device_util as device_util
+import oneflow.python.framework.job_builder as job_builder
 from oneflow.python.oneflow_export import oneflow_export
 
 class PlacementScope(object):
@@ -44,6 +45,7 @@ class PlacementScope(object):
             placement_group = placement_proto.PlacementGroup()
             placement_group.op_set.op_name.extend(op_names)
             placement_group.parallel_conf.CopyFrom(parallel_conf)
+            job_builder.CurCtxAddPlacementGroup(placement_group)
             compile_context.cur_job.placement.placement_group.add().CopyFrom(placement_group)
 
 @oneflow_export('fixed_placement')

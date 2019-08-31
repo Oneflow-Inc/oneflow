@@ -14,9 +14,10 @@ Maybe<void> JobBuildAndInferCtxMgr::EnterJobBuildAndInferCtx(const std::string& 
     return GenJobBuildAndInferError(JobBuildAndInferError::kJobNameExist,
                                     "job name: " + job_name + " already exist");
   }
+  int64_t job_id = job_set_.job_size();
   Job* job = job_set_.add_job();
   job->mutable_job_conf()->set_job_name(job_name);
-  job_name2infer_ctx_.emplace(job_name, std::make_shared<JobBuildAndInferCtx>(job));
+  job_name2infer_ctx_.emplace(job_name, std::make_shared<JobBuildAndInferCtx>(job, job_id));
   cur_job_name_ = job_name;
   has_cur_job_ = true;
   return Maybe<void>();
@@ -45,6 +46,12 @@ Maybe<void> JobBuildAndInferCtxMgr::LeaveCurrentJobBuildAndInferCtx() {
                                     "cannot leave current job beacuse current has no job");
   }
   has_cur_job_ = false;
+  const JobDesc* job_desc = Global<JobDesc>::Get();
+  if (job_desc != nullptr) {
+    CHECK_EQ(job_desc->job_name(), cur_job_name_);
+    CHECK_EQ(job_desc->job_id(), job_set_.job_size() - 1);
+    Global<JobDesc>::Delete();
+  }
   return job_name2infer_ctx_.at(cur_job_name_)->CheckPlacement();
 }
 

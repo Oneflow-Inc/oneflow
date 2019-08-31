@@ -9,7 +9,7 @@ Error GenJobBuildAndInferError(JobBuildAndInferError err_code, std::string msg) 
   return err;
 }
 
-JobBuildAndInferCtx::JobBuildAndInferCtx(Job* job) : job_(job) {
+JobBuildAndInferCtx::JobBuildAndInferCtx(Job* job, int64_t job_id) : job_(job), job_id_(job_id) {
   is_job_conf_frozen_ = false;
   has_job_conf_ = false;
 }
@@ -29,6 +29,8 @@ Maybe<void> JobBuildAndInferCtx::SetJobConf(const JobConfigProto& job_conf) {
             + " not equal to origin job name: " + job_->job_conf().job_name());
   }
   job_->mutable_job_conf()->CopyFrom(job_conf);
+  CHECK_ISNULL(Global<JobDesc>::Get());
+  Global<JobDesc>::New(job_conf, job_id_);
   return Maybe<void>();
 }
 
