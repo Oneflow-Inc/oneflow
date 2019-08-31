@@ -2,8 +2,8 @@
 
 namespace oneflow {
 
-REGISTER_KERNEL(OperatorConf::kNcclReduceScatterConf, NcclReduceScatterKernel);
-REGISTER_KERNEL(OperatorConf::kNcclAllGatherConf, NcclAllGatherKernel);
-REGISTER_KERNEL(OperatorConf::kNcclAllReduceConf, NcclAllReduceKernel);
+REGISTER_KERNEL_WITH_NOTHING(OperatorConf::kNcclReduceScatterConf, NcclReduceScatterKernel);
+REGISTER_KERNEL_WITH_NOTHING(OperatorConf::kNcclAllGatherConf, NcclAllGatherKernel);
+REGISTER_KERNEL_WITH_NOTHING(OperatorConf::kNcclAllReduceConf, NcclAllReduceKernel);
 
 }  // namespace oneflow

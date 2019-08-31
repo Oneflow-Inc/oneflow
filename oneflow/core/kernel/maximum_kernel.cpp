@@ -58,6 +58,6 @@ struct MaximumKernelUtil<DeviceType::kCPU, T> {
   }
 };
 
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kMaximumConf, MaximumKernel, ARITHMETIC_DATA_TYPE_SEQ);
+REGISTER_KERNEL_HELPER_GPU_FLOATING(OperatorConf::kMaximumConf, MaximumKernel);
 
 }  // namespace oneflow

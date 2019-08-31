@@ -16,6 +16,9 @@ void EveryNthKernel<device_type>::BackwardDataContent(
   UNIMPLEMENTED();
 }
 
-ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kEveryNthConf, EveryNthKernel)
+REGISTER_KERNEL_WITH_DEVICE(OperatorConf::kEveryNthConf, DeviceType::kCPU,
+                            EveryNthKernel<DeviceType::kCPU>);
+REGISTER_KERNEL_WITH_DEVICE(OperatorConf::kEveryNthConf, DeviceType::kGPU,
+                            EveryNthKernel<DeviceType::kGPU>);
 
 }  // namespace oneflow

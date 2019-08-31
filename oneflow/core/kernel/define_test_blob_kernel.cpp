@@ -45,6 +45,6 @@ void DefineTestBlobKernel::ForwardRecordIdInDevicePiece(
   }
 }
 
-REGISTER_KERNEL(OperatorConf::kDefineTestBlobConf, DefineTestBlobKernel);
+REGISTER_KERNEL_WITH_NOTHING(OperatorConf::kDefineTestBlobConf, DefineTestBlobKernel);
 
 }  // namespace oneflow

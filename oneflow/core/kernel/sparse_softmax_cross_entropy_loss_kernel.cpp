@@ -44,7 +44,7 @@ struct SparseSoftmaxCrossEntropyLossKernelUtil<DeviceType::kCPU, PredType, Label
 
 // SSCE: SparseSoftmaxCrossEntropy
 #define REGISTER_SSCE_LOSS_KERNEL(pred_type, label_type)                                         \
-  REGISTER_KERNEL_WITH_LOSS(                                                                     \
+  REGISTER_KERNEL_WITH_PRED_AND_LABEL(                                                           \
       OperatorConf::kSparseSoftmaxCrossEntropyLossConf, DeviceType::kGPU, pred_type, label_type, \
       SparseSoftmaxCrossEntropyLossKernel<DeviceType::kGPU, pred_type, label_type>)
 

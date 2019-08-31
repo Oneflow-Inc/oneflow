@@ -19,6 +19,6 @@ void ForeignInputKernel::Forward(const KernelCtx& ctx,
   }
 }
 
-REGISTER_KERNEL(OperatorConf::kForeignInputConf, ForeignInputKernel);
+REGISTER_KERNEL_WITH_NOTHING(OperatorConf::kForeignInputConf, ForeignInputKernel);
 
 }  // namespace oneflow

@@ -15,6 +15,9 @@ void ReduceConcatKernel<device_type>::ForwardDataContent(
   }
 }
 
-ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kReduceConcatConf, ReduceConcatKernel);
+REGISTER_KERNEL_WITH_DEVICE(OperatorConf::kReduceConcatConf, DeviceType::kCPU,
+                            ReduceConcatKernel<DeviceType::kCPU>);
+REGISTER_KERNEL_WITH_DEVICE(OperatorConf::kReduceConcatConf, DeviceType::kGPU,
+                            ReduceConcatKernel<DeviceType::kGPU>);
 
 }  // namespace oneflow

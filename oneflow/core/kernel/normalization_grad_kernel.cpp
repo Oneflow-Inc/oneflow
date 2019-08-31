@@ -38,7 +38,6 @@ void NormalizationGradKernel<device_type, T>::InitConstBufBlobs(
   }
 }
 
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kNormalizationGradConf, NormalizationGradKernel,
-                           FLOATING_DATA_TYPE_SEQ);
+REGISTER_KERNEL_HELPER_GPU_FLOATING(OperatorConf::kNormalizationGradConf, NormalizationGradKernel);
 
 }  // namespace oneflow

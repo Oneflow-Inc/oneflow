@@ -71,7 +71,6 @@ class LARSMdUpdateKernelUtil<DeviceType::kCPU, T> final {
 
 DEFINE_MDUPDT_KERNEL_CREATOR(LARS);
 
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kLarsModelUpdateConf, LARSMdUpdateKernel,
-                           FLOATING_DATA_TYPE_SEQ);
+REGISTER_KERNEL_HELPER_GPU_FLOATING(OperatorConf::kLarsModelUpdateConf, LARSMdUpdateKernel);
 
 }  // namespace oneflow

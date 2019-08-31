@@ -65,8 +65,15 @@ Kernel* CreateSparseCrossEntropyLossKernel(const KernelConf& kernel_conf) {
 
 }  // namespace
 
-REGISTER_KERNEL_CREATOR(OperatorConf::kSparseCrossEntropyLossConf,
-                        CreateSparseCrossEntropyLossKernel);
+#define REGISTER_SPARSE_CROSS_ENTROPY_LOSS_KERNEL(pred_type, label_type)                  \
+  REGISTER_KERNEL_WITH_PRED_AND_LABEL(                                                    \
+      OperatorConf::kSparseCrossEntropyLossConf, DeviceType::kGPU, pred_type, label_type, \
+      SparseCrossEntropyLossKernel<DeviceType::kGPU, pred_type, label_type>)
+
+REGISTER_SPARSE_CROSS_ENTROPY_LOSS_KERNEL(float, int32_t);
+REGISTER_SPARSE_CROSS_ENTROPY_LOSS_KERNEL(float, int64_t);
+REGISTER_SPARSE_CROSS_ENTROPY_LOSS_KERNEL(double, int32_t);
+REGISTER_SPARSE_CROSS_ENTROPY_LOSS_KERNEL(double, int64_t);
 
 #define MAKE_ENTRY(data_type_pair, label_type_pair) \
   template struct SparseCrossEntropyLossKernelUtil< \

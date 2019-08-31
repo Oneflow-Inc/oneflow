@@ -35,6 +35,13 @@ void TopKKernel<T>::ForwardDataContent(const KernelCtx& ctx,
   }
 }
 
-ADD_CPU_DEFAULT_KERNEL_CREATOR(OperatorConf::kTopKConf, TopKKernel, FLOATING_DATA_TYPE_SEQ);
+#define REGISTER_TOPK_KERNEL(dtype)                                                       \
+  REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kTopkConf, DeviceType::kCPU, dtype, \
+                                        TopkKernel<dtype>);
+
+REGISTER_TOPK_KERNEL(int32_t);
+REGISTER_TOPK_KERNEL(int64_t);
+REGISTER_TOPK_KERNEL(float);
+REGISTER_TOPK_KERNEL(double);
 
 }  // namespace oneflow

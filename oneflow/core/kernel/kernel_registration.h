@@ -57,9 +57,9 @@ class DeviceConstraint final : public KernelConstraint {
   DeviceType dev_;
 };
 
-class LossKernelConstraint final : public KernelConstraint {
+class PredAndLabelKernelConstraint final : public KernelConstraint {
  public:
-  LossKernelConstraint(DeviceType dev, DataType pred_type, DataType label_type)
+  PredAndLabelKernelConstraint(DeviceType dev, DataType pred_type, DataType label_type)
       : dev_(dev), pred_type_(pred_type), label_type_(label_type) {}
   bool IsMatched(const KernelConf&) const override;
   void ToProto(KernelRegValProto::RegVal*) const override;
@@ -106,13 +106,13 @@ void ExportProtoFromKernelRegistry(KernelRegValProto*);
       []() { return new __VA_ARGS__(); });                                         \
   }  // namespace
 
-#define REGISTER_KERNEL_WITH_LOSS(op_type, device, dtype, label_type, ...)                         \
-  namespace {                                                                                      \
-  static kernel_registration::KernelRegistrar OF_PP_CAT(g_registrar, __COUNTER__)(                 \
-      op_type,                                                                                     \
-      new kernel_registration::constraint::LossKernelConstraint(device, GetDataType<dtype>::value, \
-                                                                GetDataType<label_type>::value),   \
-      []() { return new __VA_ARGS__(); });                                                         \
+#define REGISTER_KERNEL_WITH_PRED_AND_LABEL(op_type, device, pred_type, label_type, ...) \
+  namespace {                                                                            \
+  static kernel_registration::KernelRegistrar OF_PP_CAT(g_registrar, __COUNTER__)(       \
+      op_type,                                                                           \
+      new kernel_registration::constraint::PredAndLabelKernelConstraint(                 \
+          device, GetDataType<pred_type>::value, GetDataType<label_type>::value),        \
+      []() { return new __VA_ARGS__(); });                                               \
   }  // namespace
 
 #define REGISTER_KERNEL_HELPER_GPU_FLOATING(op_type, kernel)               \

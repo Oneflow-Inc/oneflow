@@ -28,6 +28,6 @@ void RepeatKernel<device_type, T>::BackwardDataContent(
   */
 }
 
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kRepeatConf, RepeatKernel, ARITHMETIC_DATA_TYPE_SEQ);
+REGISTER_KERNEL_HELPER_GPU_FLOATING(OperatorConf::kRepeatConf, RepeatKernel);
 
 }  // namespace oneflow

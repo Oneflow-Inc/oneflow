@@ -24,6 +24,6 @@ void ConcatKernel<device_type, T>::ForwardDataContent(
   CHECK_EQ(out_col_offset, out_col_num);
 }
 
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kConcatConf, ConcatKernel, ARITHMETIC_DATA_TYPE_SEQ);
+REGISTER_KERNEL_HELPER_GPU_FLOATING(OperatorConf::kConcatConf, ConcatKernel);
 
 }  // namespace oneflow

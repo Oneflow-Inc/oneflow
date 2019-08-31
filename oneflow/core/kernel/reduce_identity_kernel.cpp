@@ -12,6 +12,9 @@ void ReduceIdentityKernel<device_type>::ForwardDataContent(
                       out_blob->ByteSizeOfDataContentField());
 }
 
-ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kReduceIdentityConf, ReduceIdentityKernel);
+REGISTER_KERNEL_WITH_DEVICE(OperatorConf::kReduceIdentityConf, DeviceType::kCPU,
+                            ReduceIdentityKernel<DeviceType::kCPU>);
+REGISTER_KERNEL_WITH_DEVICE(OperatorConf::kReduceIdentityConf, DeviceType::kGPU,
+                            ReduceIdentityKernel<DeviceType::kGPU>);
 
 }  // namespace oneflow

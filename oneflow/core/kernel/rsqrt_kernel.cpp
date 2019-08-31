@@ -18,6 +18,6 @@ void RsqrtKernel<device_type, T>::BackwardDataContent(
   TODO();
 }
 
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kRsqrtConf, RsqrtKernel, FLOATING_DATA_TYPE_SEQ);
+REGISTER_KERNEL_HELPER_GPU_FLOATING(OperatorConf::kRsqrtConf, RsqrtKernel);
 
 }  // namespace oneflow

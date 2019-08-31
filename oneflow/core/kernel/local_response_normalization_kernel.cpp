@@ -235,7 +235,7 @@ void LocalResponseNormalizationKernel<DeviceType::kCPU, T>::NHWCBackward(
   }
 }
 
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kLocalResponseNormalizationConf,
-                           LocalResponseNormalizationKernel, FLOATING_DATA_TYPE_SEQ);
+REGISTER_KERNEL_HELPER_GPU_FLOATING(OperatorConf::kLocalResponseNormalizationConf,
+                                    LocalResponseNormalizationKernel);
 
 }  // namespace oneflow

@@ -2,6 +2,6 @@
 
 namespace oneflow {
 
-REGISTER_KERNEL(OperatorConf::kSourceTickConf, SourceTickKernel);
+REGISTER_KERNEL_WITH_NOTHING(OperatorConf::kSourceTickConf, SourceTickKernel);
 
 }  // namespace oneflow

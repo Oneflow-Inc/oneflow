@@ -18,6 +18,9 @@ void ReduceGatherKernel<device_type>::ForwardDataContent(
   Memcpy<device_type>(ctx.device_ctx, dst_cur_dptr, in_blob->dptr<char>(), in_byte_size);
 }
 
-ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kReduceGatherConf, ReduceGatherKernel);
+REGISTER_KERNEL_WITH_DEVICE(OperatorConf::kReduceGatherConf, DeviceType::kCPU,
+                            ReduceGatherKernel<DeviceType::kCPU>);
+REGISTER_KERNEL_WITH_DEVICE(OperatorConf::kReduceGatherConf, DeviceType::kGPU,
+                            ReduceGatherKernel<DeviceType::kGPU>);
 
 }  // namespace oneflow

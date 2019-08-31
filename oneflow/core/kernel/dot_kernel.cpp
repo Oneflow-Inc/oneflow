@@ -71,6 +71,6 @@ const PbMessage& DotKernel<device_type, T>::GetCustomizedOpConf() const {
   return this->op_conf().dot_conf();
 }
 
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kDotConf, DotKernel, FLOATING_DATA_TYPE_SEQ);
+REGISTER_KERNEL_HELPER_GPU_FLOATING(OperatorConf::kDotConf, DotKernel);
 
 }  // namespace oneflow

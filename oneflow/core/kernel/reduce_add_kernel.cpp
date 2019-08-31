@@ -24,6 +24,6 @@ void ReduceAddKernel<device_type, T>::ForwardDataContent(
   }
 }
 
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kReduceAddConf, ReduceAddKernel, FLOATING_DATA_TYPE_SEQ);
+REGISTER_KERNEL_HELPER_GPU_FLOATING(OperatorConf::kReduceAddConf, ReduceAddKernel);
 
 }  // namespace oneflow

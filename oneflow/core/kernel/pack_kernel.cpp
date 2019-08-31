@@ -88,6 +88,9 @@ void PackKernel<device_type>::ForwardDataId(
   }
 }
 
-ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kPackConf, PackKernel);
+REGISTER_KERNEL_WITH_DEVICE(OperatorConf::kPackConf, DeviceType::kCPU,
+                            PackKernel<DeviceType::kCPU>);
+REGISTER_KERNEL_WITH_DEVICE(OperatorConf::kPackConf, DeviceType::kGPU,
+                            PackKernel<DeviceType::kGPU>);
 
 }  // namespace oneflow

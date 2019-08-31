@@ -10,6 +10,9 @@ void SwitchOutputKernel<device_type>::ForwardDataContent(
   BnInOp2Blob("out")->CopyDataContentFrom(ctx.device_ctx, BnInOp2Blob(ibn));
 }
 
-ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kSwitchOutputConf, SwitchOutputKernel);
+REGISTER_KERNEL_WITH_DEVICE(OperatorConf::kSwitchOutputConf, DeviceType::kCPU,
+                            SwitchOutputKernel<DeviceType::kCPU>);
+REGISTER_KERNEL_WITH_DEVICE(OperatorConf::kSwitchOutputConf, DeviceType::kGPU,
+                            SwitchOutputKernel<DeviceType::kGPU>);
 
 }  // namespace oneflow

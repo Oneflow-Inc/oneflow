@@ -11,7 +11,7 @@ void AccumulateKernel<device_type, T>::ForwardDataContent(
                                    in_blob->dptr<T>(), 1, out_blob->mut_dptr<T>(), 1);
 }
 
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kAccumulateConf, AccumulateKernel, FLOATING_DATA_TYPE_SEQ);
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kAccConf, AccumulateKernel, ARITHMETIC_DATA_TYPE_SEQ);
+REGISTER_KERNEL_HELPER_GPU_FLOATING(OperatorConf::kAccumulateConf, AccumulateKernel);
+REGISTER_KERNEL_HELPER_GPU_FLOATING(OperatorConf::kAccConf, AccumulateKernel);
 
 }  // namespace oneflow

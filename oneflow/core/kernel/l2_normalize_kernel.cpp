@@ -81,7 +81,6 @@ struct L2NormalizeKernelUtil<DeviceType::kCPU, T> {
   }
 };
 
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kL2NormalizeConf, L2NormalizeKernel,
-                           FLOATING_DATA_TYPE_SEQ);
+REGISTER_KERNEL_HELPER_GPU_FLOATING(OperatorConf::kL2NormalizeConf, L2NormalizeKernel);
 
 }  // namespace oneflow

@@ -52,6 +52,6 @@ void OneHotKernelUtil<DeviceType::kCPU, T, K>::Encode(DeviceCtx* ctx, const K* i
   }
 }
 
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kOneHotConf, OneHotKernel, ARITHMETIC_DATA_TYPE_SEQ);
+REGISTER_KERNEL_HELPER_GPU_FLOATING(OperatorConf::kOneHotConf, OneHotKernel);
 
 }  // namespace oneflow

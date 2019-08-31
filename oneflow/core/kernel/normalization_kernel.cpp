@@ -45,7 +45,6 @@ const PbMessage& NormalizationKernel<device_type, T>::GetCustomizedOpConf() cons
   return this->op_conf().normalization_conf();
 }
 
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kNormalizationConf, NormalizationKernel,
-                           FLOATING_DATA_TYPE_SEQ);
+REGISTER_KERNEL_HELPER_GPU_FLOATING(OperatorConf::kNormalizationConf, NormalizationKernel);
 
 }  // namespace oneflow

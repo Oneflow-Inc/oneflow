@@ -24,6 +24,6 @@ void SplitLikeKernel<device_type, T>::ForwardDataContent(
   CHECK_EQ(in_col_offset, in_col_num);
 }
 
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kSplitLikeConf, SplitLikeKernel, ARITHMETIC_DATA_TYPE_SEQ);
+REGISTER_KERNEL_HELPER_GPU_FLOATING(OperatorConf::kSplitLikeConf, SplitLikeKernel);
 
 }  // namespace oneflow

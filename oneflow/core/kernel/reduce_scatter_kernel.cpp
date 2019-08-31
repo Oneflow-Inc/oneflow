@@ -17,6 +17,9 @@ void ReduceScatterKernel<device_type>::ForwardDataContent(
   }
 }
 
-ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kReduceScatterConf, ReduceScatterKernel);
+REGISTER_KERNEL_WITH_DEVICE(OperatorConf::kReduceScatterConf, DeviceType::kCPU,
+                            ReduceScatterKernel<DeviceType::kCPU>);
+REGISTER_KERNEL_WITH_DEVICE(OperatorConf::kReduceScatterConf, DeviceType::kGPU,
+                            ReduceScatterKernel<DeviceType::kGPU>);
 
 }  // namespace oneflow

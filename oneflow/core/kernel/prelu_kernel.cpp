@@ -103,6 +103,6 @@ struct PReluKernelUtil<DeviceType::kCPU, T> {
   }
 };
 
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kPreluConf, PReluKernel, FLOATING_DATA_TYPE_SEQ);
+REGISTER_KERNEL_HELPER_GPU_FLOATING(OperatorConf::kPreluConf, PReluKernel);
 
 }  // namespace oneflow

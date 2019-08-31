@@ -26,6 +26,5 @@ void BroadcastDivGradKernel<device_type, T>::ForwardDataContent(
   NdarrayUtil<device_type, T>::InplaceNegative(ctx.device_ctx, XpuVarNdarray<T>(db_blob, num_axes));
 }
 
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kBroadcastDivGradConf, BroadcastDivGradKernel,
-                           FLOATING_DATA_TYPE_SEQ);
+REGISTER_KERNEL_HELPER_GPU_FLOATING(OperatorConf::kBroadcastDivGradConf, BroadcastDivGradKernel);
 }  // namespace oneflow

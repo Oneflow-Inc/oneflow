@@ -19,6 +19,6 @@ const PbMessage& AxpyKernel<device_type, T>::GetCustomizedOpConf() const {
   return this->op_conf().axpy_conf();
 }
 
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kAxpyConf, AxpyKernel, FLOATING_DATA_TYPE_SEQ);
+REGISTER_KERNEL_HELPER_GPU_FLOATING(OperatorConf::kAxpyConf, AxpyKernel);
 
 }  // namespace oneflow

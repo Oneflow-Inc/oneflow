@@ -62,7 +62,6 @@ class EmbeddingLookupKernelUtil<DeviceType::kCPU, T> final {
   }
 };
 
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kEmbeddingLookupConf, EmbeddingLookupKernel,
-                           FLOATING_DATA_TYPE_SEQ);
+REGISTER_KERNEL_HELPER_GPU_FLOATING(OperatorConf::kEmbeddingLookupConf, EmbeddingLookupKernel);
 
 }  // namespace oneflow

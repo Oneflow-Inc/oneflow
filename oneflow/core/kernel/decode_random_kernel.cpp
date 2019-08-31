@@ -44,6 +44,9 @@ void DecodeRandomKernel<device_type>::Forward(
   }
 }
 
-ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kDecodeRandomConf, DecodeRandomKernel);
+REGISTER_KERNEL_WITH_DEVICE(OperatorConf::kDecodeRandomConf, DeviceType::kCPU,
+                            DecodeRandomKernel<DeviceType::kCPU>);
+REGISTER_KERNEL_WITH_DEVICE(OperatorConf::kDecodeRandomConf, DeviceType::kGPU,
+                            DecodeRandomKernel<DeviceType::kGPU>);
 
 }  // namespace oneflow

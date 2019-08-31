@@ -16,7 +16,6 @@ int32_t ShapeElemCntKernel<device_type, T>::GetShapePartialElemCnt(const Shape& 
   return ret;
 }
 
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kShapeElemCntConf, ShapeElemCntKernel,
-                           ARITHMETIC_DATA_TYPE_SEQ);
+REGISTER_KERNEL_HELPER_GPU_FLOATING(OperatorConf::kShapeElemCntConf, ShapeElemCntKernel);
 
 }  // namespace oneflow

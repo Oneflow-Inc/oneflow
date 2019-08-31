@@ -17,6 +17,6 @@ void LogCounterKernel::Forward(const KernelCtx& ctx,
   }
 }
 
-REGISTER_KERNEL(OperatorConf::kLogCounterConf, LogCounterKernel);
+REGISTER_KERNEL_WITH_NOTHING(OperatorConf::kLogCounterConf, LogCounterKernel);
 
 }  // namespace oneflow

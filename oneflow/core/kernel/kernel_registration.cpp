@@ -49,17 +49,23 @@ void DeviceConstraint::ToProto(KernelRegValProto::RegVal* val) const {
   *(val->mutable_device_and_dtypes()->Add()) = proto;
 }
 
-bool LossKernelConstraint::IsMatched(const KernelConf& kernel_conf) const {
+bool PredAndLabelKernelConstraint::IsMatched(const KernelConf& kernel_conf) const {
+  DataType pred_type;
+  DataType label_type;
   LossKernelConf loss_conf;
   if (kernel_conf.kernel_type_case() == KernelConf::kSparseSoftmaxCrossEntropyLossConf) {
-    loss_conf = kernel_conf.sparse_softmax_cross_entropy_loss_conf().loss_conf();
+    pred_type = kernel_conf.sparse_softmax_cross_entropy_loss_conf().loss_conf().prediction_type();
+    label_type = kernel_conf.sparse_softmax_cross_entropy_loss_conf().loss_conf().label_type();
+  } else if (kernel_conf.kernel_type_case() == KernelConf::kAccuracyConf) {
+    pred_type = kernel_conf.accuracy_conf().prediction_type();
+    label_type = kernel_conf.accuracy_conf().label_type();
   } else {
     UNIMPLEMENTED();
   }
-  return (loss_conf.prediction_type() == pred_type_ && loss_conf.label_type() == label_type_);
+  return (pred_type == pred_type_ && label_type == label_type_);
 }
 
-void LossKernelConstraint::ToProto(KernelRegValProto::RegVal* val) const {
+void PredAndLabelKernelConstraint::ToProto(KernelRegValProto::RegVal* val) const {
   KernelRegValProto::Device7DType proto;
   proto.set_device(dev_);
   proto.add_dtype(pred_type_);

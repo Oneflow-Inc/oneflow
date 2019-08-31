@@ -252,6 +252,7 @@ class NormalMdUpdateKernelUtil<DeviceType::kCPU, T> final {
   }
 };
 
-REGISTER_KERNEL_CREATOR(OperatorConf::kNormalMdupdtConf, CreateMdUpdtKernel);
+// user shouldn't use NormalMdupdtConf as op_conf
+// REGISTER_KERNEL_CREATOR(OperatorConf::kNormalMdupdtConf, CreateMdUpdtKernel);
 
 }  // namespace oneflow

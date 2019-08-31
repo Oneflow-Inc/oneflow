@@ -17,6 +17,5 @@ void BroadcastSubKernel<device_type, T>::ForwardDataContent(
       XpuVarNdarray<const T>(a_blob, num_axes), XpuVarNdarray<const T>(b_blob, num_axes));
 }
 
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kBroadcastSubConf, BroadcastSubKernel,
-                           FLOATING_DATA_TYPE_SEQ);
+REGISTER_KERNEL_HELPER_GPU_FLOATING(OperatorConf::kBroadcastSubConf, BroadcastSubKernel);
 }  // namespace oneflow

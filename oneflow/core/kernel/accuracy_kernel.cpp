@@ -57,30 +57,19 @@ struct AccuracyKernelUtil<DeviceType::kCPU, PredType, LabelType> {
   }
 };
 
-namespace {
-
-Kernel* CreateAccuracyKernel(const KernelConf& kernel_conf) {
-  static const HashMap<std::string, std::function<Kernel*()>> creators = {
-#define ACCURACY_KERNEL_ENTRY(device_type, pred_type_pair, label_type_pair)                        \
-  {GetHashKey(device_type, OF_PP_PAIR_SECOND(pred_type_pair), OF_PP_PAIR_SECOND(label_type_pair)), \
-   []() {                                                                                          \
-     return new AccuracyKernel<device_type, OF_PP_PAIR_FIRST(pred_type_pair),                      \
-                               OF_PP_PAIR_FIRST(label_type_pair)>();                               \
-   }},
-      OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(ACCURACY_KERNEL_ENTRY, DEVICE_TYPE_SEQ,
-                                       FLOATING_DATA_TYPE_SEQ, INT_DATA_TYPE_SEQ)};
-  return creators.at(GetHashKey(kernel_conf.op_attribute().op_conf().device_type(),
-                                kernel_conf.accuracy_conf().prediction_type(),
-                                kernel_conf.accuracy_conf().label_type()))();
-}
-
-}  // namespace
-
-REGISTER_KERNEL_CREATOR(OperatorConf::kAccuracyConf, CreateAccuracyKernel);
-
 #define MAKE_ENTRY(data_type_pair, label_type_pair)                                      \
   template struct AccuracyKernelUtil<DeviceType::kCPU, OF_PP_PAIR_FIRST(data_type_pair), \
                                      OF_PP_PAIR_FIRST(label_type_pair)>;
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_ENTRY, FLOATING_DATA_TYPE_SEQ, INT_DATA_TYPE_SEQ)
+
+#define REGISTER_ACCURACY_KERNEL(pred_type, label_type)                                         \
+  REGISTER_KERNEL_WITH_PRED_AND_LABEL(OperatorConf::kAccuracyConf, DeviceType::kGPU, pred_type, \
+                                      label_type,                                               \
+                                      AccuracyKernel<DeviceType::kGPU, pred_type, label_type>)
+
+REGISTER_ACCURACY_KERNEL(float, int32_t);
+REGISTER_ACCURACY_KERNEL(float, int64_t);
+REGISTER_ACCURACY_KERNEL(double, int32_t);
+REGISTER_ACCURACY_KERNEL(double, int64_t);
 
 }  // namespace oneflow

@@ -83,26 +83,15 @@ struct HingeLossKernelUtil<DeviceType::kCPU, PredType, LabelType> {
   }
 };
 
-namespace {
+#define REGISTER_HINGE_LOSS_KERNEL(pred_type, label_type)                                        \
+  REGISTER_KERNEL_WITH_PRED_AND_LABEL(OperatorConf::kHingeLossConf, DeviceType::kGPU, pred_type, \
+                                      label_type,                                                \
+                                      HingeLossKernel<DeviceType::kGPU, pred_type, label_type>)
 
-Kernel* CreateHingeLossKernel(const KernelConf& kernel_conf) {
-  static const HashMap<std::string, std::function<Kernel*()>> creators = {
-#define HINGE_LOSS_KERNEL_ENTRY(device_type, pred_type_pair, label_type_pair)                      \
-  {GetHashKey(device_type, OF_PP_PAIR_SECOND(pred_type_pair), OF_PP_PAIR_SECOND(label_type_pair)), \
-   []() {                                                                                          \
-     return new HingeLossKernel<device_type, OF_PP_PAIR_FIRST(pred_type_pair),                     \
-                                OF_PP_PAIR_FIRST(label_type_pair)>();                              \
-   }},
-      OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(HINGE_LOSS_KERNEL_ENTRY, DEVICE_TYPE_SEQ,
-                                       FLOATING_DATA_TYPE_SEQ, INT_DATA_TYPE_SEQ)};
-  return creators.at(GetHashKey(kernel_conf.op_attribute().op_conf().device_type(),
-                                kernel_conf.hinge_loss_conf().loss_conf().prediction_type(),
-                                kernel_conf.hinge_loss_conf().loss_conf().label_type()))();
-}
-
-}  // namespace
-
-REGISTER_KERNEL_CREATOR(OperatorConf::kHingeLossConf, CreateHingeLossKernel);
+REGISTER_HINGE_LOSS_KERNEL(float, int32_t);
+REGISTER_HINGE_LOSS_KERNEL(float, int64_t);
+REGISTER_HINGE_LOSS_KERNEL(double, int32_t);
+REGISTER_HINGE_LOSS_KERNEL(double, int64_t);
 
 #define MAKE_ENTRY(data_type_pair, label_type_pair)                                       \
   template struct HingeLossKernelUtil<DeviceType::kCPU, OF_PP_PAIR_FIRST(data_type_pair), \

@@ -351,6 +351,13 @@ void BoxingKernel<T>::SetMaxColId(const KernelCtx& ctx,
   }
 }
 
-ADD_CPU_DEFAULT_KERNEL_CREATOR(OperatorConf::kBoxingConf, BoxingKernel, ARITHMETIC_DATA_TYPE_SEQ);
+#define REGISTER_BOXING_KERNEL(dtype)                                                       \
+  REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kBoxingConf, DeviceType::kCPU, dtype, \
+                                        BoxingKernel<dtype>);
+
+REGISTER_BOXING_KERNEL(int32_t);
+REGISTER_BOXING_KERNEL(int64_t);
+REGISTER_BOXING_KERNEL(float);
+REGISTER_BOXING_KERNEL(double);
 
 }  // namespace oneflow

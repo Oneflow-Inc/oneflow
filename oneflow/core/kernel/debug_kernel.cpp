@@ -112,6 +112,6 @@ void DebugKernel<T>::BackwardDataContent(
   }
 }
 
-ADD_CPU_DEFAULT_KERNEL_CREATOR(OperatorConf::kDebugConf, DebugKernel, ARITHMETIC_DATA_TYPE_SEQ);
+// ADD_CPU_DEFAULT_KERNEL_CREATOR(OperatorConf::kDebugConf, DebugKernel, ARITHMETIC_DATA_TYPE_SEQ);
 
 }  // namespace oneflow

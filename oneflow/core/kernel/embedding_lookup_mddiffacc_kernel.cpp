@@ -18,7 +18,7 @@ void EmbeddingLookupMdDiffAccKernel<device_type, T>::ForwardDataContent(
                       one_val_blob->dptr<T>(), sizeof(T) * one_val_size);
 }
 
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kEmbeddingLookupAccumulateConf,
-                           EmbeddingLookupMdDiffAccKernel, FLOATING_DATA_TYPE_SEQ);
+REGISTER_KERNEL_HELPER_GPU_FLOATING(OperatorConf::kEmbeddingLookupAccumulateConf,
+                                    EmbeddingLookupMdDiffAccKernel);
 
 }  // namespace oneflow

@@ -34,7 +34,6 @@ class NaiveMdUpdateKernelUtil<DeviceType::kCPU, T> final {
 
 DEFINE_MDUPDT_KERNEL_CREATOR(Naive);
 
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kNaiveModelUpdateConf, NaiveMdUpdateKernel,
-                           FLOATING_DATA_TYPE_SEQ);
+REGISTER_KERNEL_HELPER_GPU_FLOATING(OperatorConf::kNaiveModelUpdateConf, NaiveMdUpdateKernel);
 
 }  // namespace oneflow

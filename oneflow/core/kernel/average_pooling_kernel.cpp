@@ -47,13 +47,13 @@ void AveragePoolingKernel<DeviceType::kCPU, T>::NDHWCProcessGrad(
   in_diff_arr.col(in_col) += out_diff_arr.col(out_col) / static_cast<T>(size);
 }
 
-ADD_DEFAULT_KERNEL_CREATOR_WITH_GPU_HALF(OperatorConf::kAveragePooling1DConf, AveragePoolingKernel,
-                                         FLOATING_DATA_TYPE_SEQ);
+REGISTER_KERNEL_HELPER_GPU_FLOATING(OperatorConf::kAveragePooling1DConf, AveragePoolingKernel);
+REGISTER_KERNEL_HELPER_GPU_HALF(OperatorConf::kAveragePooling1DConf, AveragePoolingKernel);
 
-ADD_DEFAULT_KERNEL_CREATOR_WITH_GPU_HALF(OperatorConf::kAveragePooling2DConf, AveragePoolingKernel,
-                                         FLOATING_DATA_TYPE_SEQ);
+REGISTER_KERNEL_HELPER_GPU_FLOATING(OperatorConf::kAveragePooling2DConf, AveragePoolingKernel);
+REGISTER_KERNEL_HELPER_GPU_HALF(OperatorConf::kAveragePooling2DConf, AveragePoolingKernel);
 
-ADD_DEFAULT_KERNEL_CREATOR_WITH_GPU_HALF(OperatorConf::kAveragePooling3DConf, AveragePoolingKernel,
-                                         FLOATING_DATA_TYPE_SEQ);
+REGISTER_KERNEL_HELPER_GPU_FLOATING(OperatorConf::kAveragePooling3DConf, AveragePoolingKernel);
+REGISTER_KERNEL_HELPER_GPU_HALF(OperatorConf::kAveragePooling3DConf, AveragePoolingKernel);
 
 }  // namespace oneflow

@@ -47,7 +47,6 @@ class MomentumMdUpdateKernelUtil<DeviceType::kCPU, T> final {
 
 DEFINE_MDUPDT_KERNEL_CREATOR(Momentum);
 
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kMomentumModelUpdateConf, MomentumMdUpdateKernel,
-                           FLOATING_DATA_TYPE_SEQ);
+REGISTER_KERNEL_HELPER_GPU_FLOATING(OperatorConf::kMomentumModelUpdateConf, MomentumMdUpdateKernel);
 
 }  // namespace oneflow

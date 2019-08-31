@@ -38,6 +38,6 @@ const PbMessage& MultiplyKernel<device_type, T>::GetCustomizedOpConf() const {
   return this->op_conf().multiply_conf();
 }
 
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kMultiplyConf, MultiplyKernel, FLOATING_DATA_TYPE_SEQ);
+REGISTER_KERNEL_HELPER_GPU_FLOATING(OperatorConf::kMultiplyConf, MultiplyKernel);
 
 }  // namespace oneflow

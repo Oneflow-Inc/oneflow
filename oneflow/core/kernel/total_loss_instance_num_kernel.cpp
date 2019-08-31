@@ -13,7 +13,13 @@ void TotalLossInstanceNumKernel<T>::ForwardDataContent(
   *BnInOp2Blob("out")->template mut_dptr<T>() = *BnInOp2Blob(input_bns.Get(0))->template dptr<T>();
 }
 
-ADD_CPU_DEFAULT_KERNEL_CREATOR(OperatorConf::kTotalLossInstanceNumConf, TotalLossInstanceNumKernel,
-                               ARITHMETIC_DATA_TYPE_SEQ);
+#define REGISTER_TOTALLOSSINSTANCENUM_KERNEL(dtype)                                                \
+  REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kTotalLossInstanceNumConf, DeviceType::kCPU, \
+                                        dtype, TotalLossInstanceNumKernel<dtype>);
+
+REGISTER_TOTALLOSSINSTANCENUM_KERNEL(int32_t);
+REGISTER_TOTALLOSSINSTANCENUM_KERNEL(int64_t);
+REGISTER_TOTALLOSSINSTANCENUM_KERNEL(float);
+REGISTER_TOTALLOSSINSTANCENUM_KERNEL(double);
 
 }  // namespace oneflow

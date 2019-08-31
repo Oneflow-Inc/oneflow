@@ -17,6 +17,9 @@ void IdentityKernel<device_type>::ForwardDataContent(
   CheckSizeAndCopyBlob(ctx.device_ctx, BnInOp2Blob("out"), BnInOp2Blob("in"));
 }
 
-ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kIdentityConf, IdentityKernel);
+REGISTER_KERNEL_WITH_DEVICE(OperatorConf::kIdentityConf, DeviceType::kCPU,
+                            IdentityKernel<DeviceType::kCPU>);
+REGISTER_KERNEL_WITH_DEVICE(OperatorConf::kIdentityConf, DeviceType::kGPU,
+                            IdentityKernel<DeviceType::kGPU>);
 
 }  // namespace oneflow
