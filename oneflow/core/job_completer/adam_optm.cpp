@@ -5,12 +5,14 @@ namespace oneflow {
 namespace {
 
 OperatorConf GenerateAdamHelperVariableOpConf(const VariableOp& op, const std::string& name,
-                                              InitializerConf& initializer_conf,
+                                              const float& constant_initializer_value,
                                               JobBuilder* job_builder) {
   OperatorConf helper_variable_op(op.op_conf());
   helper_variable_op.set_name(op.op_name() + "-" + name);
   helper_variable_op.mutable_variable_conf()->set_out("out");
-  *(helper_variable_op.mutable_variable_conf()->mutable_initializer()) = initializer_conf;
+  InitializerConf constant_initializer;
+  constant_initializer.mutable_constant_conf()->set_value(constant_initializer_value);
+  *(helper_variable_op.mutable_variable_conf()->mutable_initializer()) = constant_initializer;
   BindTwoVariableOpObnSbpConf(helper_variable_op.name(), op.op_name(), job_builder);
   return helper_variable_op;
 }
@@ -26,10 +28,8 @@ void SetScalarShapeAndSbpConf(OperatorConf* op_conf, JobBuilder* job_builder) {
 void GenerateOptimizerOpConf(const VariableOp& op, const ParallelConf& parallel_conf,
                              JobBuilder* job_builder, const LogicalBlobId& diff_lbi_of_var_out,
                              const LogicalBlobId& total_loss_instance_num_lbi) {
-  InitializerConf initializer;
-  initializer.mutable_constant_conf()->set_value(0.f);
-  const OperatorConf& m_var = GenerateAdamHelperVariableOpConf(op, "m", initializer, job_builder);
-  const OperatorConf& v_var = GenerateAdamHelperVariableOpConf(op, "v", initializer, job_builder);
+  const OperatorConf& m_var = GenerateAdamHelperVariableOpConf(op, "m", 0.f, job_builder);
+  const OperatorConf& v_var = GenerateAdamHelperVariableOpConf(op, "v", 0.f, job_builder);
   job_builder->AddOps(parallel_conf, {m_var, v_var});
 
   OperatorConf mdupdt_op;
@@ -40,10 +40,10 @@ void GenerateOptimizerOpConf(const VariableOp& op, const ParallelConf& parallel_
   OperatorConf beta1_t_var;
   OperatorConf beta2_t_var;
   if (mdupdt_op_conf->user_conf().adam_conf().do_bias_correction()) {
-    initializer.mutable_constant_conf()->set_value(mdupdt_op_conf->user_conf().adam_conf().beta1());
-    beta1_t_var = GenerateAdamHelperVariableOpConf(op, "beta1_t", initializer, job_builder);
-    initializer.mutable_constant_conf()->set_value(mdupdt_op_conf->user_conf().adam_conf().beta2());
-    beta2_t_var = GenerateAdamHelperVariableOpConf(op, "beta2_t", initializer, job_builder);
+    beta1_t_var = GenerateAdamHelperVariableOpConf(
+        op, "beta1_t", mdupdt_op_conf->user_conf().adam_conf().beta1(), job_builder);
+    beta2_t_var = GenerateAdamHelperVariableOpConf(
+        op, "beta2_t", mdupdt_op_conf->user_conf().adam_conf().beta2(), job_builder);
     job_builder->AddOps(parallel_conf, {beta1_t_var, beta2_t_var});
     SetScalarShapeAndSbpConf(&beta1_t_var, job_builder);
     SetScalarShapeAndSbpConf(&beta2_t_var, job_builder);
