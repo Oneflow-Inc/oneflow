@@ -57,40 +57,44 @@ const std::string& Operator::SoleTbn() const {
   return tmp_bns().Get(0);
 }
 
-void Operator::InferBlobDescsIf(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                const ParallelContext* parallel_ctx, int64_t record_piece_size,
-                                std::function<void(OpContext*)> EnrollOpCtx) const {
-  InferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx, record_piece_size, EnrollOpCtx);
+Maybe<void> Operator::InferBlobDescsIf(
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx, int64_t record_piece_size,
+    std::function<void(OpContext*)> EnrollOpCtx) const {
+  return InferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx, record_piece_size, EnrollOpCtx);
 }
 
-void Operator::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                              const ParallelContext* parallel_ctx, int64_t record_piece_size,
-                              std::function<void(OpContext*)> EnrollOpCtx) const {
-  InferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx, record_piece_size);
+Maybe<void> Operator::InferBlobDescs(
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx, int64_t record_piece_size,
+    std::function<void(OpContext*)> EnrollOpCtx) const {
+  return InferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx, record_piece_size);
 }
 
-void Operator::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                              const ParallelContext* parallel_ctx,
-                              int64_t record_piece_size) const {
-  InferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx);
+Maybe<void> Operator::InferBlobDescs(
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx, int64_t record_piece_size) const {
+  return InferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx);
 }
 
-void Operator::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                              const ParallelContext* parallel_ctx) const {
+Maybe<void> Operator::InferBlobDescs(
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx) const {
   UNIMPLEMENTED() << typeid(*this).name();
+  return Maybe<void>::Ok();
 }
 
-void Operator::InferOutputBlobTimeShapeIf(
+Maybe<void> Operator::InferOutputBlobTimeShapeIf(
     std::function<const Shape*(const std::string&)> GetTimeShape4BnInOp,
     const ParallelContext* parallel_ctx, Shape* time_shape) const {
   for (const std::string& ibn : input_bns()) {
-    CHECK_EQ(GetTimeShape4BnInOp(ibn)->elem_cnt(),
-             GetTimeShape4BnInOp(input_bns().Get(0))->elem_cnt());
+    CHECK_EQ_OR_RETURN(GetTimeShape4BnInOp(ibn)->elem_cnt(),
+                       GetTimeShape4BnInOp(input_bns().Get(0))->elem_cnt());
   }
-  InferOutputBlobTimeShape(GetTimeShape4BnInOp, parallel_ctx, time_shape);
+  return InferOutputBlobTimeShape(GetTimeShape4BnInOp, parallel_ctx, time_shape);
 }
 
-void Operator::InferOutputBlobTimeShape(
+Maybe<void> Operator::InferOutputBlobTimeShape(
     std::function<const Shape*(const std::string&)> GetTimeShape4BnInOp, const ParallelContext*,
     Shape* time_shape) const {
   if (input_bns().empty() == false) {
@@ -98,6 +102,7 @@ void Operator::InferOutputBlobTimeShape(
   } else {
     *time_shape = Shape({GlobalJobDesc().TotalBatchNum(), GlobalJobDesc().NumOfPiecesInBatch()});
   }
+  return Maybe<void>::Ok();
 }
 
 void Operator::GetSbpSignaturesIf(
@@ -110,7 +115,7 @@ void Operator::GetSbpSignaturesIf(
       .Build(sbp_sig_list->mutable_sbp_signature()->Add());
 }
 
-void Operator::InferSbpSignatureIf(
+Maybe<void> Operator::InferSbpSignatureIf(
     SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
     const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
     std::function<const SbpInferHint&(const std::string&)> SbpInferHint4Ibn,
@@ -120,14 +125,15 @@ void Operator::InferSbpSignatureIf(
     for (const auto& ibn : input_bns()) { (*bn2sbp)[ibn].mutable_split_parallel()->set_axis(0); }
     for (const auto& obn : output_bns()) { (*bn2sbp)[obn].mutable_split_parallel()->set_axis(0); }
   } else if (parallel_desc.parallel_num() > 1) {
-    InferSbpSignature(sbp_signature, sbp_sig_conf, CalcOrderValue4SbpSig, SbpInferHint4Ibn,
-                      parallel_desc);
+    return InferSbpSignature(sbp_signature, sbp_sig_conf, CalcOrderValue4SbpSig, SbpInferHint4Ibn,
+                             parallel_desc);
   } else {
     UNIMPLEMENTED();
   }
+  return Maybe<void>::Ok();
 }
 
-void Operator::InferSbpSignature(
+Maybe<void> Operator::InferSbpSignature(
     SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
     const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
     std::function<const SbpInferHint&(const std::string&)> SbpInferHint4Ibn,
@@ -141,10 +147,10 @@ void Operator::InferSbpSignature(
   // filter sbp signatures by sbp signature conf
   SbpSignatureList filtered_sbp_sigs_by_conf;
   FilterSbpSignatureList(sbp_sig_list, sbp_sig_conf, &filtered_sbp_sigs_by_conf);
-  CHECK_GT(filtered_sbp_sigs_by_conf.sbp_signature_size(), 0);
+  CHECK_GT_OR_RETURN(filtered_sbp_sigs_by_conf.sbp_signature_size(), 0);
   if (filtered_sbp_sigs_by_conf.sbp_signature_size() == 1) {
     *sbp_signature = *filtered_sbp_sigs_by_conf.sbp_signature().begin();
-    return;
+    return Maybe<void>::Ok();
   }
   // sort sbp signatures by copy cost, then return the one with least cost
   HashMap<std::string, const SbpParallel*> ibn2producer_sbp_parallel;
@@ -155,6 +161,7 @@ void Operator::InferSbpSignature(
   SortSbpSignatureListByCopyCost(filtered_sbp_sigs_by_conf, input_bns(), SbpInferHint4Ibn,
                                  CalcOrderValue4SbpSig, &sorted_sbp_signatures);
   *sbp_signature = *sorted_sbp_signatures.at(0);
+  return Maybe<void>::Ok();
 }
 
 void Operator::FixParallelDesc(ParallelDesc* pr_desc) const {
@@ -440,14 +447,15 @@ void EraseEmptyBnInVec(std::function<const BlobDesc*(const std::string&)> GetBlo
   bns->erase(bns->begin() + idx_available, bns->end());
 }
 
-void Operator::NaiveInferHasBatchDim(
+Maybe<void> Operator::NaiveInferHasBatchDim(
     std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
-  if (output_bns().empty()) { return; }
-  CHECK_GT(input_bns().size(), 0);
-  CHECK_EQ(output_bns().size(), 1);
+  if (output_bns().empty()) { return Maybe<void>::Ok(); }
+  CHECK_GT_OR_RETURN(input_bns().size(), 0);
+  CHECK_EQ_OR_RETURN(output_bns().size(), 1);
   bool has_batch_dim = false;
   for (const auto& ibn : input_bns()) { has_batch_dim = has_batch_dim || *HasBatchDim4BnInOp(ibn); }
   *HasBatchDim4BnInOp(SoleObn()) = has_batch_dim;
+  return Maybe<void>::Ok();
 }
 
 }  // namespace oneflow

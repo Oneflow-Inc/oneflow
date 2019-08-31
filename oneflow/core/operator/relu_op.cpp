@@ -11,9 +11,10 @@ void ReluOp::InitFromOpConf() {
 
 const PbMessage& ReluOp::GetCustomizedConf() const { return op_conf().relu_conf(); }
 
-void ReluOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                            const ParallelContext* parallel_ctx) const {
+Maybe<void> ReluOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                                   const ParallelContext* parallel_ctx) const {
   *GetBlobDesc4BnInOp("out") = *GetBlobDesc4BnInOp("in");
+  return Maybe<void>::Ok();
 }
 
 void ReluOp::GetSbpSignatures(

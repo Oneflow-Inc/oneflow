@@ -17,14 +17,15 @@ class DecodeOFRecordOp final : public Operator {
 
   LogicalNode* NewProperLogicalNode() const override { return new DecodeLogicalNode; }
 
-  void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                      const ParallelContext* parallel_ctx) const override;
+  Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                             const ParallelContext* parallel_ctx) const override;
   void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                             const ParallelContext* parallel_ctx,
                             KernelConf* kernel_conf) const override;
 
  private:
-  void InferHasBatchDim(std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const override;
+  Maybe<void> InferHasBatchDim(
+      std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const override;
   void GetSbpSignatures(SbpSignatureList* sbp_sig_list) const override;
 
   LogicalBlobId obn2lbi(const std::string& output_bn) const override;

@@ -11,12 +11,13 @@ void CastOp::InitFromOpConf() {
 
 const PbMessage& CastOp::GetCustomizedConf() const { return op_conf().cast_conf(); }
 
-void CastOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                            const ParallelContext* parallel_ctx) const {
+Maybe<void> CastOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                                   const ParallelContext* parallel_ctx) const {
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
   *out_blob_desc = *in_blob_desc;
   out_blob_desc->set_data_type(op_conf().cast_conf().data_type());
+  return Maybe<void>::Ok();
 }
 
 void CastOp::GetSbpSignatures(

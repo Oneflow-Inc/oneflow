@@ -133,4 +133,20 @@ std::tuple<int32_t, int32_t> GetPartIdAndPartNumFromParallelCtx(
   }
 }
 
+ParallelConf GenParallelConfOfCpuZeroOnMaster() {
+  ParallelConf parallel_conf;
+  parallel_conf.set_policy(kDataParallel);
+  parallel_conf.add_device_name("0:cpu:0");
+  return parallel_conf;
+}
+
+ParallelConf GenParallelConfOfCpuZeroOnAllMachines() {
+  ParallelConf parallel_conf;
+  parallel_conf.set_policy(kDataParallel);
+  FOR_RANGE(int64_t, i, 0, Global<ResourceDesc>::Get()->TotalMachineNum()) {
+    parallel_conf.add_device_name(std::to_string(i) + ":cpu:0");
+  }
+  return parallel_conf;
+}
+
 }  // namespace oneflow

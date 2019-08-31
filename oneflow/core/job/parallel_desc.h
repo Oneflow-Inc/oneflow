@@ -66,6 +66,9 @@ inline bool operator!=(const ParallelConf& lhs, const ParallelConf& rhs) {
 std::tuple<int32_t, int32_t> GetPartIdAndPartNumFromParallelCtx(
     const ParallelContext* parallel_ctx);
 
+ParallelConf GenParallelConfOfCpuZeroOnMaster();
+ParallelConf GenParallelConfOfCpuZeroOnAllMachines();
+
 }  // namespace oneflow
 
 namespace std {

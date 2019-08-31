@@ -12,9 +12,11 @@ void ReluGradOp::InitFromOpConf() {
 
 const PbMessage& ReluGradOp::GetCustomizedConf() const { return op_conf().relu_grad_conf(); }
 
-void ReluGradOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                const ParallelContext* parallel_ctx) const {
+Maybe<void> ReluGradOp::InferBlobDescs(
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx) const {
   *GetBlobDesc4BnInOp("dx") = *GetBlobDesc4BnInOp("y");
+  return Maybe<void>::Ok();
 }
 
 void ReluGradOp::GetSbpSignatures(

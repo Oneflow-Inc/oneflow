@@ -10,7 +10,7 @@ void KeepHeaderOnlyOp::InitFromOpConf() {
   EnrollRepeatedOutputBn("out", false);
 }
 
-void KeepHeaderOnlyOp::InferBlobDescs(
+Maybe<void> KeepHeaderOnlyOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   size_t in_num = GetPbRpfFromCustomizedConf<std::string>("in").size();
@@ -19,6 +19,7 @@ void KeepHeaderOnlyOp::InferBlobDescs(
     *out = *GetBlobDesc4BnInOp(GenRepeatedBn("in", i));
     out->set_is_body_disabled(true);
   }
+  return Maybe<void>::Ok();
 }
 
 void KeepHeaderOnlyOp::GetSbpSignatures(

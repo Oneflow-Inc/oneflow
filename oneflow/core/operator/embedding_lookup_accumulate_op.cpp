@@ -11,7 +11,7 @@ void EmbeddingLookupAccumulateOp::InitFromOpConf() {
   EnrollOutputBn("acc_val", false);
 }
 
-void EmbeddingLookupAccumulateOp::InferBlobDescs(
+Maybe<void> EmbeddingLookupAccumulateOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   // use vars
@@ -28,6 +28,7 @@ void EmbeddingLookupAccumulateOp::InferBlobDescs(
   BlobDesc* acc_val_blob_desc = GetBlobDesc4BnInOp("acc_val");
   *acc_val_blob_desc = *val_blob_desc;
   acc_val_blob_desc->mut_shape().Set(0, (val_blob_desc->shape().At(0)) * num_of_piece_in_batch);
+  return Maybe<void>::Ok();
 }
 
 const PbMessage& EmbeddingLookupAccumulateOp::GetCustomizedConf() const {

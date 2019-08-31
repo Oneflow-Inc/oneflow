@@ -43,10 +43,12 @@ const PbMessage& ShapeElemCntOp::GetCustomizedConf() const {
   return op_conf().shape_elem_cnt_conf();
 }
 
-void ShapeElemCntOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                    const ParallelContext* parallel_ctx) const {
+Maybe<void> ShapeElemCntOp::InferBlobDescs(
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx) const {
   GetBlobDesc4BnInOp("y")->set_data_type(op_conf().shape_elem_cnt_conf().data_type());
   GetBlobDesc4BnInOp("y")->mut_shape() = Shape({1});
+  return Maybe<void>::Ok();
 }
 
 void ShapeElemCntOp::VirtualGenKernelConf(
@@ -59,9 +61,10 @@ void ShapeElemCntOp::VirtualGenKernelConf(
                                                                  inclusive_axis.end()};
 }
 
-void ShapeElemCntOp::InferHasBatchDim(
+Maybe<void> ShapeElemCntOp::InferHasBatchDim(
     std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
   *HasBatchDim4BnInOp("y") = false;
+  return Maybe<void>::Ok();
 }
 
 void ShapeElemCntOp::GetSbpSignatures(

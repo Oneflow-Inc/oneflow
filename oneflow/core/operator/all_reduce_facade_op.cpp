@@ -14,31 +14,34 @@ const PbMessage& AllReduceFacadeOp::GetCustomizedConf() const {
   return op_conf().all_reduce_facade_conf();
 }
 
-void AllReduceFacadeOp::InferBlobDescs(
+Maybe<void> AllReduceFacadeOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   *GetBlobDesc4BnInOp("out") = *GetBlobDesc4BnInOp("in");
+  return Maybe<void>::Ok();
 }
 
 LogicalNode* AllReduceFacadeOp::NewProperLogicalNode() const {
   return new AllReduceFacadeLogicalNode();
 }
 
-void AllReduceFacadeOp::InferHasBatchDim(
+Maybe<void> AllReduceFacadeOp::InferHasBatchDim(
     std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
-  CHECK_EQ(*HasBatchDim4BnInOp("in"), false);
+  CHECK_EQ_OR_RETURN(*HasBatchDim4BnInOp("in"), false);
   *HasBatchDim4BnInOp("out") = false;
+  return Maybe<void>::Ok();
 }
 
-void AllReduceFacadeOp::InferSbpSignature(
+Maybe<void> AllReduceFacadeOp::InferSbpSignature(
     SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
     const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
     std::function<const SbpInferHint&(const std::string&)> SbpInferHint4Ibn,
     const ParallelDesc& parallel_desc) const {
   for (const auto& ibn : input_bns()) {
-    CHECK(SbpInferHint4Ibn(ibn).sbp_parallel().has_partial_sum_parallel());
+    CHECK_OR_RETURN(SbpInferHint4Ibn(ibn).sbp_parallel().has_partial_sum_parallel());
   }
   SbpSignatureBuilder().PartialSum(input_bns()).Broadcast(output_bns()).Build(sbp_signature);
+  return Maybe<void>::Ok();
 }
 
 REGISTER_OP(OperatorConf::kAllReduceFacadeConf, AllReduceFacadeOp);
