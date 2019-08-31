@@ -286,6 +286,12 @@ message SigmoidOpConf {
   required string out = 2;
 }
 
+message SigmoidGradOpConf {
+  required string y = 1;
+  required string dy = 2;
+  required string dx = 3;
+}
+
 message TanHOpConf {
   required string in = 1;
   required string out = 2;
@@ -1588,6 +1594,7 @@ message OperatorConf {
     EsacOpConf esac_conf = 292;
     ModelInitOpConf model_init_conf = 293;
     SplitLikeOpConf split_like_conf = 294;
+    SigmoidGradOpConf sigmoid_grad_conf = 295;
 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;

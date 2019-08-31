@@ -21,8 +21,6 @@ message TrainConf {
   optional string primary_lr_lbn = 9;
   optional string secondary_lr_lbn = 10;
 
-  // default_initializer_conf here is now deprecated
-  optional InitializerConf default_initializer_conf = 100;
   required float primary_lr = 101;
   optional float secondary_lr = 102;
   optional float weight_l1 = 103 [default = 0];

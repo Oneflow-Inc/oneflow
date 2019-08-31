@@ -1,24 +1,25 @@
-#include "oneflow/core/operator/sigmoid_op.h"
+#include "oneflow/core/operator/sigmoid_grad_op.h"
 #include "oneflow/core/job/sbp_signature_builder.h"
 
 namespace oneflow {
 
-void SigmoidOp::InitFromOpConf() {
-  CHECK(op_conf().has_sigmoid_conf());
-  EnrollInputBn("in");
-  EnrollOutputBn("out")->set_mutable_inplace_ibn("in");
+void SigmoidGradOp::InitFromOpConf() {
+  CHECK(op_conf().has_sigmoid_grad_conf());
+  EnrollInputBn("y");
+  EnrollInputBn("dy");
+  EnrollOutputBn("dx")->set_mutable_inplace_ibn("dy");
 }
 
-const PbMessage& SigmoidOp::GetCustomizedConf() const { return op_conf().sigmoid_conf(); }
+const PbMessage& SigmoidGradOp::GetCustomizedConf() const { return op_conf().sigmoid_grad_conf(); }
 
-Maybe<void> SigmoidOp::InferBlobDescs(
+Maybe<void> SigmoidGradOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
-  *GetBlobDesc4BnInOp("out") = *GetBlobDesc4BnInOp("in");
+  *GetBlobDesc4BnInOp("dx") = *GetBlobDesc4BnInOp("y");
   return Maybe<void>::Ok();
 }
 
-void SigmoidOp::GetSbpSignatures(
+void SigmoidGradOp::GetSbpSignatures(
     const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
     SbpSignatureList* sbp_sig_list) const {
   SbpSignatureBuilder()
@@ -28,6 +29,6 @@ void SigmoidOp::GetSbpSignatures(
       .Build(sbp_sig_list);
 }
 
-REGISTER_OP(OperatorConf::kSigmoidConf, SigmoidOp);
+REGISTER_OP(OperatorConf::kSigmoidGradConf, SigmoidGradOp);
 
 }  // namespace oneflow
