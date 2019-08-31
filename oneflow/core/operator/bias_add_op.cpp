@@ -18,15 +18,18 @@ void BiasAddOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetB
                                const ParallelContext* parallel_ctx) const {
   const BlobDesc* a_blob_desc = GetBlobDesc4BnInOp("a");
   const BlobDesc* b_blob_desc = GetBlobDesc4BnInOp("b");
+  int32_t bias_add_axis = op_conf().bias_add_conf().axis();
 
-  CHECK_EQ(a_blob_desc->shape().NumAxes(), 2);
   CHECK_EQ(b_blob_desc->shape().NumAxes(), 1);
-  CHECK_EQ(a_blob_desc->shape().At(1), b_blob_desc->shape().At(0));
+  CHECK_GE(bias_add_axis, 0);
+  CHECK_LT(bias_add_axis, a_blob_desc->shape().NumAxes());
+  CHECK_EQ(a_blob_desc->shape().At(bias_add_axis), b_blob_desc->shape().At(0));
 
   *GetBlobDesc4BnInOp("out") = *a_blob_desc;
   *GetBlobDesc4BnInOp("bias_multiplier") = *a_blob_desc;
   GetBlobDesc4BnInOp("bias_multiplier")->mut_shape() = Shape({a_blob_desc->shape().At(0), 1});
 }
+
 void BiasAddOp::GetSbpSignatures(
     const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
     SbpSignatureList* sbp_sig_list) const {
@@ -40,6 +43,17 @@ void BiasAddOp::GetSbpSignatures(
       .Broadcast("a")
       .Split(output_bns(), 1)
       .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+}
+
+void BiasAddOp::VirtualGenKernelConf(
+    std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
+  BiasAddKenrelConf* conf = kernel_conf->mutable_bias_add_conf();
+  if (op_conf().bias_add_conf().axis() == GetBlobDesc4BnInOp("a")->shape().NumAxes() - 1) {
+    conf->set_is_channels_last(true);
+  } else {
+    conf->set_is_channels_last(false);
+  }
 }
 
 REGISTER_OP(OperatorConf::kBiasAddConf, BiasAddOp);

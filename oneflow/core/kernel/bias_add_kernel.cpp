@@ -1,6 +1,7 @@
 #include "oneflow/core/kernel/bias_add_kernel.h"
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
+#include "oneflow/core/ndarray/ndarray_util.h"
 
 namespace oneflow {
 
@@ -12,13 +13,20 @@ void BiasAddKernel<device_type, T>::ForwardDataContent(
   const Blob* bias_mul_blob = BnInOp2Blob("bias_multiplier");
   Blob* out_blob = BnInOp2Blob("out");
 
-  // out = bias_multiplier * b + a
-  Memcpy<device_type>(ctx.device_ctx, out_blob->mut_dptr<T>(), a_blob->dptr<T>(),
-                      a_blob->ByteSizeOfDataContentField());
-  NewKernelUtil<device_type>::OFGemm(ctx.device_ctx, CblasNoTrans, CblasNoTrans,
-                                     out_blob->shape().At(0), out_blob->shape().At(1), 1,
-                                     GetOneVal<T>(), bias_mul_blob->dptr<T>(), b_blob->dptr<T>(),
-                                     GetOneVal<T>(), out_blob->mut_dptr<T>());
+  if (this->kernel_conf().bias_add_conf().is_channels_last()) {
+    // out = bias_multiplier * b + a
+    Memcpy<device_type>(ctx.device_ctx, out_blob->mut_dptr<T>(), a_blob->dptr<T>(),
+                        a_blob->ByteSizeOfDataContentField());
+    NewKernelUtil<device_type>::OFGemm(ctx.device_ctx, CblasNoTrans, CblasNoTrans,
+                                       out_blob->shape().At(0), out_blob->shape().At(1), 1,
+                                       GetOneVal<T>(), bias_mul_blob->dptr<T>(), b_blob->dptr<T>(),
+                                       GetOneVal<T>(), out_blob->mut_dptr<T>());
+  } else {
+    int32_t bias_add_axis = this->op_conf().bias_add_conf().axis();
+    BiasAddUtil<device_type, T>::BiasAddNCX(ctx.device_ctx, a_blob->shape(), bias_add_axis,
+                                            a_blob->dptr<T>(), b_blob->dptr<T>(),
+                                            out_blob->mut_dptr<T>());
+  }
 }
 
 template<DeviceType device_type, typename T>
@@ -34,6 +42,18 @@ template<DeviceType device_type, typename T>
 const PbMessage& BiasAddKernel<device_type, T>::GetCustomizedOpConf() const {
   return this->op_conf().bias_add_conf();
 }
+
+template<typename T>
+struct BiasAddUtil<DeviceType::kCPU, T> {
+  static void BiasAddNCX(DeviceCtx* ctx, const Shape& shape, int32_t bias_axis, const T* input,
+                         const T* bias, T* output) {
+    std::vector<int64_t> bias_dim_vec(1, shape.NumAxes());
+    bias_dim_vec.at(bias_axis) = shape.At(bias_axis);
+    NdarrayUtil<DeviceType::kCPU, T>::BroadcastAdd(
+        ctx, XpuVarNdarray<T>(shape, output), XpuVarNdarray<const T>(shape, input),
+        XpuVarNdarray<const T>(Shape(bias_dim_vec), bias));
+  }
+};
 
 ADD_DEFAULT_KERNEL_CREATOR_WITH_GPU_HALF(OperatorConf::kBiasAddConf, BiasAddKernel,
                                          FLOATING_DATA_TYPE_SEQ);
