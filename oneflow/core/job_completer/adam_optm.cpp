@@ -5,13 +5,12 @@ namespace oneflow {
 namespace {
 
 OperatorConf GenerateAdamHelperVariableOpConf(const VariableOp& op, const std::string& name,
-                                              const float constant_initializer_value,
-                                              JobBuilder* job_builder) {
+                                              const float initial_value, JobBuilder* job_builder) {
   OperatorConf helper_variable_op(op.op_conf());
   helper_variable_op.set_name(op.op_name() + "-" + name);
   helper_variable_op.mutable_variable_conf()->set_out("out");
   InitializerConf constant_initializer;
-  constant_initializer.mutable_constant_conf()->set_value(constant_initializer_value);
+  constant_initializer.mutable_constant_conf()->set_value(initial_value);
   *(helper_variable_op.mutable_variable_conf()->mutable_initializer()) = constant_initializer;
   BindTwoVariableOpObnSbpConf(helper_variable_op.name(), op.op_name(), job_builder);
   return helper_variable_op;
@@ -39,11 +38,10 @@ void GenerateOptimizerOpConf(const VariableOp& op, const ParallelConf& parallel_
       GlobalJobDesc().job_conf().train_conf().model_update_conf();
   OperatorConf beta1_t_var;
   OperatorConf beta2_t_var;
-  if (mdupdt_op_conf->user_conf().adam_conf().do_bias_correction()) {
-    beta1_t_var = GenerateAdamHelperVariableOpConf(
-        op, "beta1_t", mdupdt_op_conf->user_conf().adam_conf().beta1(), job_builder);
-    beta2_t_var = GenerateAdamHelperVariableOpConf(
-        op, "beta2_t", mdupdt_op_conf->user_conf().adam_conf().beta2(), job_builder);
+  const AdamModelUpdateConf& adam_conf = mdupdt_op_conf->user_conf().adam_conf();
+  if (adam_conf.do_bias_correction()) {
+    beta1_t_var = GenerateAdamHelperVariableOpConf(op, "beta1_t", adam_conf.beta1(), job_builder);
+    beta2_t_var = GenerateAdamHelperVariableOpConf(op, "beta2_t", adam_conf.beta2(), job_builder);
     job_builder->AddOps(parallel_conf, {beta1_t_var, beta2_t_var});
     SetScalarShapeAndSbpConf(&beta1_t_var, job_builder);
     SetScalarShapeAndSbpConf(&beta2_t_var, job_builder);
@@ -51,7 +49,7 @@ void GenerateOptimizerOpConf(const VariableOp& op, const ParallelConf& parallel_
   ConstructMdUpdtOpConf(op, diff_lbi_of_var_out, total_loss_instance_num_lbi, mdupdt_op_conf);
   mdupdt_op_conf->set_m(m_var.name() + "/out");
   mdupdt_op_conf->set_v(v_var.name() + "/out");
-  if (mdupdt_op_conf->user_conf().adam_conf().do_bias_correction()) {
+  if (adam_conf.do_bias_correction()) {
     mdupdt_op_conf->set_beta1_t(beta1_t_var.name() + "/out");
     mdupdt_op_conf->set_beta2_t(beta2_t_var.name() + "/out");
   }
