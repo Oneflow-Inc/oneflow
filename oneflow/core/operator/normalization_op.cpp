@@ -68,6 +68,7 @@ Maybe<void> NormalizationOp::InferBlobDescs(
       CHECK_EQ_OR_RETURN(blob_desc->data_type(), data_type);
       CHECK_EQ_OR_RETURN(blob_desc->shape(), param_shape);
     }
+    return Maybe<void>::Ok();
   };
   const std::function<void(const std::string&)> SetParamBlobDesc = [&](const std::string& bn) {
     BlobDesc* blob_desc = GetBlobDesc4BnInOp(bn);
@@ -75,6 +76,7 @@ Maybe<void> NormalizationOp::InferBlobDescs(
       blob_desc->set_data_type(data_type);
       blob_desc->mut_shape() = param_shape;
     }
+    return Maybe<void>::Ok();
   };
   (conf.has_moving_mean() ? CheckParamBlobDesc : SetParamBlobDesc)("moving_mean");
   (conf.has_moving_variance() ? CheckParamBlobDesc : SetParamBlobDesc)("moving_variance");
