@@ -40,10 +40,19 @@ message ConfigResourceUnavailableError {
 }
 
 enum JobBuildAndInferError {
-  kJobNameExists = 100;
+  kJobNameExist = 100;
+  kJobNameEmpty = 101;
+  kJobNameNotEqual = 102;
   kNoJobBuildAndInferCtx = 200;
-  kJobConfFreezed = 300;
+  kJobConfFrozen = 300;
+  kJobConfNotSet = 301;
+  kJobConfRepeatedSet = 302;
   kLogicalBlobNameNotExist = 400;
+  kLogicalBlobNameRepeated = 401;
+  kLogicalBlobNameInvalid = 402;
+  kOpNameExist = 450;
+  kOpConfDeviceTypeNoSet = 460;
+  kPlacementError = 470;
   kUnknownJobBuildAndInferError = 500;
 }
 

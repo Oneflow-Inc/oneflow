@@ -7,13 +7,17 @@
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/job.pb.h"
+#include "oneflow/core/operator/operator.h"
+#include "oneflow/core/register/blob_desc.h"
 
 namespace oneflow {
+
+Error GenJobBuildAndInferError(JobBuildAndInferError err_code, std::string msg);
 
 class JobBuildAndInferCtx {
  public:
   OF_DISALLOW_COPY_AND_MOVE(JobBuildAndInferCtx);
-  JobBuildAndInferCtx(const std::string& job_name);
+  JobBuildAndInferCtx(Job* job);
   ~JobBuildAndInferCtx() = default;
 
   Maybe<void> SetJobConf(const JobConfigProto& job_conf);
@@ -21,6 +25,7 @@ class JobBuildAndInferCtx {
   Maybe<void> AddAndInferNonInputOp(const OperatorConf& op_conf);
   Maybe<void> AddLossLogicalBlobName(const std::string& lbn);
   Maybe<void> AddPlacementGroup(const PlacementGroup& placement_group);
+  Maybe<void> CheckPlacement();
 
   bool HasJobConf() const;
   Maybe<Shape> GetStaticShape(const std::string& lbn) const;
@@ -33,6 +38,14 @@ class JobBuildAndInferCtx {
   const Job& job() const;
 
  private:
+  Maybe<void> GenOpProducedEmptyLogicalBlobDesc(Operator* op);
+
+  Job* job_;
+  HashMap<LogicalBlobId, bool> lbi2has_batch_dim_;
+  HashMap<LogicalBlobId, std::unique_ptr<BlobDesc>> lbi2logical_blob_desc_;
+  HashMap<std::string, std::shared_ptr<Operator>> op_name2op_;
+  bool is_job_conf_frozen_;
+  bool has_job_conf_;
 };
 
 }  // namespace oneflow

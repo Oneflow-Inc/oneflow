@@ -18,12 +18,16 @@ class JobBuildAndInferCtxMgr {
   Maybe<JobBuildAndInferCtx> FindJobBuildAndInferCtx(const std::string& job_name);
   Maybe<std::string> GetCurrentJobName();
   Maybe<void> LeaveCurrentJobBuildAndInferCtx();
-
-  const JobSet& job_set() const { TODO(); }
+  const JobSet& job_set() const { return job_set_; }
 
  private:
-  JobBuildAndInferCtxMgr() = default;
+  JobBuildAndInferCtxMgr() : has_cur_job_(false) {}
   friend class Global<JobBuildAndInferCtxMgr>;
+
+  JobSet job_set_;
+  bool has_cur_job_;
+  std::string cur_job_name_;
+  HashMap<std::string, std::shared_ptr<JobBuildAndInferCtx>> job_name2infer_ctx_;
 };
 
 }  // namespace oneflow
