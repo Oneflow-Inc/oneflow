@@ -42,28 +42,15 @@ struct SparseSoftmaxCrossEntropyLossKernelUtil<DeviceType::kCPU, PredType, Label
   }
 };
 
-namespace {
+// SSCE: SparseSoftmaxCrossEntropy
+#define REGISTER_SSCE_LOSS_KERNEL(pred_type, label_type)                                         \
+  REGISTER_KERNEL_WITH_LOSS(                                                                     \
+      OperatorConf::kSparseSoftmaxCrossEntropyLossConf, DeviceType::kGPU, pred_type, label_type, \
+      SparseSoftmaxCrossEntropyLossKernel<DeviceType::kGPU, pred_type, label_type>)
 
-Kernel* CreateSparseSoftmaxCrossEntropyLossKernel(const KernelConf& kernel_conf) {
-  static const HashMap<std::string, std::function<Kernel*()>> creators = {
-#define SPARSE_SOFTMAX_CROSS_ENTROPY_LOSS_KERNEL_ENTRY(device_type, pred_type_pair,                \
-                                                       label_type_pair)                            \
-  {GetHashKey(device_type, OF_PP_PAIR_SECOND(pred_type_pair), OF_PP_PAIR_SECOND(label_type_pair)), \
-   []() {                                                                                          \
-     return new SparseSoftmaxCrossEntropyLossKernel<device_type, OF_PP_PAIR_FIRST(pred_type_pair), \
-                                                    OF_PP_PAIR_FIRST(label_type_pair)>();          \
-   }},
-      OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(SPARSE_SOFTMAX_CROSS_ENTROPY_LOSS_KERNEL_ENTRY,
-                                       DEVICE_TYPE_SEQ, FLOATING_DATA_TYPE_SEQ, INT_DATA_TYPE_SEQ)};
-  return creators.at(
-      GetHashKey(kernel_conf.op_attribute().op_conf().device_type(),
-                 kernel_conf.sparse_softmax_cross_entropy_loss_conf().loss_conf().prediction_type(),
-                 kernel_conf.sparse_softmax_cross_entropy_loss_conf().loss_conf().label_type()))();
-}
-
-}  // namespace
-
-REGISTER_KERNEL_CREATOR(OperatorConf::kSparseSoftmaxCrossEntropyLossConf,
-                        CreateSparseSoftmaxCrossEntropyLossKernel);
+REGISTER_SSCE_LOSS_KERNEL(float, int32_t);
+REGISTER_SSCE_LOSS_KERNEL(float, int64_t);
+REGISTER_SSCE_LOSS_KERNEL(double, int32_t);
+REGISTER_SSCE_LOSS_KERNEL(double, int64_t);
 
 }  // namespace oneflow
