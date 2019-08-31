@@ -1513,9 +1513,6 @@ message OperatorConf {
     SwitchOutputOpConf switch_output_conf = 145;
     ReturnOpConf return_conf = 146;
     PartialTickOpConf partial_tick_conf = 147;
-    AssignOpConf assign_conf = 148;
-    SnapshotOpConf snapshot_conf = 149;
-    LearningRateScheduleOpConf learning_rate_schedule_conf = 150;
 
     // domain op
     TupleIdentityOpConf tuple_identity_conf = 200;
@@ -1601,6 +1598,9 @@ message OperatorConf {
     ModelInitOpConf model_init_conf = 293;
     SplitLikeOpConf split_like_conf = 294;
     SigmoidGradOpConf sigmoid_grad_conf = 295;
+    AssignOpConf assign_conf = 296;
+    SnapshotOpConf snapshot_conf = 297;
+    LearningRateScheduleOpConf learning_rate_schedule_conf = 298;
 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;

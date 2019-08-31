@@ -1,5 +1,4 @@
 #include "oneflow/core/kernel/kernel.h"
-#include "oneflow/core/persistence/snapshot_manager.h"
 
 namespace oneflow {
 
