@@ -21,6 +21,7 @@ void MomentumMdUpdateKernel<device_type, T>::UpdateModel(
     DeviceCtx* ctx, const T* batch_instance_num_ptr, T l1, T l2, int64_t next_model_vid,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* model_diff_blob = BnInOp2Blob("model_diff");
+  const Blob* learning_rate = BnInOp2Blob("learning_rate");
   Blob* model_blob = BnInOp2Blob("model");
   Blob* momentum_blob = BnInOp2Blob("momentum");
   float beta = GetMomentumModelUpdateConf(this->op_conf()).beta();
@@ -28,8 +29,8 @@ void MomentumMdUpdateKernel<device_type, T>::UpdateModel(
 
   MomentumMdUpdateKernelUtil<device_type, T>::UpdateModel(
       ctx, model_blob->shape().elem_cnt(), batch_instance_num_ptr, static_cast<T>(beta),
-      BnInOp2Blob("learning_rate")->dptr<float>(), l1, l2, model_diff_blob->dptr<T>(),
-      model_blob->mut_dptr<T>(), momentum_blob->mut_dptr<T>());
+      learning_rate->dptr<float>(), l1, l2, model_diff_blob->dptr<T>(), model_blob->mut_dptr<T>(),
+      momentum_blob->mut_dptr<T>());
 }
 
 template<typename T>

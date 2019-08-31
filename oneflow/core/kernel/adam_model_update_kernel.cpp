@@ -38,6 +38,7 @@ void AdamMdUpdateKernel<device_type, T>::UpdateModel(
   Blob* v_blob = BnInOp2Blob("v");
   Blob* beta1_t_blob = BnInOp2Blob("beta1_t");
   Blob* beta2_t_blob = BnInOp2Blob("beta2_t");
+  const Blob* learning_rate = BnInOp2Blob("learning_rate");
   const auto& adam_conf = GetAdamModelUpdateConf(this->op_conf());
   if ((next_model_vid != 1) && adam_conf.do_bias_correction()) {
     KernelUtil<device_type, T>::Scal(ctx, 1, static_cast<T>(adam_conf.beta1()),
@@ -48,7 +49,7 @@ void AdamMdUpdateKernel<device_type, T>::UpdateModel(
   KernelUtil<device_type, T>::Div(ctx, model_blob->shape().elem_cnt(),
                                   BnInOp2Blob("model_diff")->mut_dptr<T>(), batch_instance_num_ptr);
   AdamMdUpdateKernelUtil<device_type, T>::UpdateModel(
-      ctx, model_blob->shape().elem_cnt(), BnInOp2Blob("learning_rate")->dptr<float>(), l1, l2,
+      ctx, model_blob->shape().elem_cnt(), learning_rate->dptr<float>(), l1, l2,
       static_cast<T>(adam_conf.beta1()), static_cast<T>(adam_conf.beta2()),
       static_cast<T>(adam_conf.epsilon()), adam_conf.do_bias_correction(), next_model_vid,
       (beta1_t_blob ? beta1_t_blob->dptr<T>() : nullptr),
