@@ -21,6 +21,5 @@ void GatherGradKernel<device_type, T>::ForwardDataContent(
 }
 
 REGISTER_KERNEL_HELPER_GPU_FLOATING(OperatorConf::kGatherGradConf, GatherGradKernel);
-REGISTER_KERNEL_HELPER_GPU_HALF(OperatorConf::kGatherGradConf, GatherGradKernel);
 
 }  // namespace oneflow
