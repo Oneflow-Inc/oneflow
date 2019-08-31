@@ -12,9 +12,11 @@ void SigmoidGradOp::InitFromOpConf() {
 
 const PbMessage& SigmoidGradOp::GetCustomizedConf() const { return op_conf().sigmoid_grad_conf(); }
 
-void SigmoidGradOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                   const ParallelContext* parallel_ctx) const {
+Maybe<void> SigmoidGradOp::InferBlobDescs(
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx) const {
   *GetBlobDesc4BnInOp("dx") = *GetBlobDesc4BnInOp("y");
+  return Maybe<void>::Ok();
 }
 
 void SigmoidGradOp::GetSbpSignatures(
