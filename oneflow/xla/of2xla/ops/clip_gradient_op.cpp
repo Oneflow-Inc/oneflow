@@ -8,16 +8,17 @@
 namespace oneflow {
 namespace mola {
 
-class AdamOptimizerOp : public XlaOpCompiler {
+class ClipGradientOp : public XlaOpCompiler {
  public:
   void Compile(XlaOpContext *ctx) override;
 };
 
-void AdamOptimizerOp::Compile(XlaOpContext *ctx) {
+void ClipGradientOp::Compile(XlaOpContext *ctx) {
   // TODO(hjchen2)
+  ctx->SetOutput("out", ctx->Input("gradient"));
 }
 
-REGISTER_XLA_OP_COMPILER(AdamOptimizer, AdamOptimizerOp);
+REGISTER_XLA_OP_COMPILER(ClipGradient, ClipGradientOp);
 
 }  // namespace mola
 }  // namespace oneflow

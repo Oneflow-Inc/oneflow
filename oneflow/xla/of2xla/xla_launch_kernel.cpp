@@ -68,8 +68,8 @@ void XlaLaunchKernel<device_type>::LaunchExecutable(
 
   CHECK_EQ(entry_blobs.size(), input_shapes.size())
       << "Size mismatch between input blobs and input shapes.";
-  CHECK_GT(output_blobs.size(), 0) << "Need one output at least.";
-
+  CHECK((output_blobs.size() > 0) || (entry_blobs.size() > 0))
+      << "Need one input or output at least.";
   // Translate input blobs to xla ShapedBuffer suitable running the executable
   int argument_size = input_shapes.size();
   std::vector<std::shared_ptr<xla::ShapedBuffer>> shaped_buffers(argument_size);
@@ -83,12 +83,12 @@ void XlaLaunchKernel<device_type>::LaunchExecutable(
     size_t data_size = entry_blobs[i]->ByteSizeOfDataContentField();
     const char *data_ptr = entry_blobs[i]->dptr<char>();
 
-    // Buffer is nullptr if the blob is body disabled. It should be assigned
-    // by a real pointer to prevent check failure while runing the XLA
-    // executable, so here we assign the first output buffer to it since it's
-    // sure that this entry should never be modified at any time
+    // Buffer is nullptr if the blob is body disabled. But tt should be
+    // assigned by a real pointer to prevent check failure while runing the XLA
+    // executable
     if (data_size > 0 && !data_ptr) {
-      data_ptr = output_blobs[0]->dptr<char>();
+      static const char fake_body_data('\0');
+      data_ptr = &fake_body_data;
     }
     se::DeviceMemoryBase memory_base =
         se::DeviceMemoryBase(const_cast<char *>(data_ptr), data_size);

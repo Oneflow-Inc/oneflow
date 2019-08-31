@@ -31,11 +31,13 @@ class AdamOptimizerOp : public Operator {
 
 void AdamOptimizerOp::InitFromOpConf() {
   CHECK(op_conf().has_adam_optimizer_conf());
-  std::vector<std::string> input_bns{"gradient", "m", "v", "instance_num_diff",
+  std::vector<std::string> input_bns{"gradient", "instance_num_diff",
                                      "learning_rate"};
   for (const std::string &bn : input_bns) {
     EnrollInputBn(bn, false);
   }
+  EnrollInputBn("m")->set_is_mutable(true);
+  EnrollInputBn("v")->set_is_mutable(true);
   EnrollInputBn("weight")->set_is_mutable(true);
 }
 

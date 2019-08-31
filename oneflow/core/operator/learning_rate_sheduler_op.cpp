@@ -15,10 +15,6 @@ class LearningRateShedulerOp : public Operator {
       std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
       const ParallelContext* parallel_ctx) const override;
 
-  LogicalNode* NewProperLogicalNode() const override {
-    return new RecordLoadLogicalNode;
-  }
-
  private:
   typedef std::function<bool*(const std::string&)> HasBatchDim4BnInOpFunc;
   void InferHasBatchDim(
@@ -28,12 +24,16 @@ class LearningRateShedulerOp : public Operator {
 
   typedef std::function<const BlobDesc&(const std::string&)>
       LogicalBlobDesc4IbnFunc;
-  void GetSbpSignatures(const LogicalBlobDesc4IbnFunc& LogicalBlobDesc4Ibn,
-                        SbpSignatureList* sbp_sig_list) const override;
+  void GetSbpSignatures(
+       const LogicalBlobDesc4IbnFunc &LogicalBlobDesc4Ibn,
+       SbpSignatureList* sbp_sig_list) const override;
 };
 
 void LearningRateShedulerOp::InitFromOpConf() {
   CHECK(op_conf().has_lr_sheduler_conf());
+  if (op_conf().lr_sheduler_conf().has_tick()) {
+    EnrollInputBn("tick", false);
+  }
   EnrollOutputBn("out", false);
 }
 
@@ -53,12 +53,8 @@ void LearningRateShedulerOp::InferBlobDescs(
 typedef std::function<const BlobDesc&(const std::string&)>
       LogicalBlobDesc4IbnFunc;
 void LearningRateShedulerOp::GetSbpSignatures(
-    const LogicalBlobDesc4IbnFunc& LogicalBlobDesc4Ibn,
-    SbpSignatureList* sbp_sig_list) const {
-  SbpSignatureBuilder()
-      .Broadcast("out")
-      .Build(sbp_sig_list->mutable_sbp_signature()->Add());
-}
+       const LogicalBlobDesc4IbnFunc &LogicalBlobDesc4Ibn,
+       SbpSignatureList* sbp_sig_list) const {}
 
 REGISTER_OP(OperatorConf::kLrShedulerConf, LearningRateShedulerOp);
 

@@ -1353,32 +1353,33 @@ message IdentityOpConf {
 }
 
 message LearningRateShedulerOpConf {
-  required string out = 1;
-  required float base_learning_rate = 2;
-  required string decay_policy = 3;
-  optional int64 steps = 4;
-  optional double decay = 5;
-  optional bool staircase = 6;
+  optional string tick = 1;
+  required string out = 2;
+  required float base_learning_rate = 3;
+  required string decay_policy = 4;
+  optional int64 steps = 5;
+  optional double decay = 6;
+  optional bool staircase = 7;
   // PiecewiseConstant
-  repeated int64 boundaries = 7;
-  repeated double values = 8;
+  repeated int64 boundaries = 8;
+  repeated double values = 9;
   // PolynomialDecay
-  optional double end_learning_rate = 9 [default = 0.0001];
-  optional double power = 10 [default = 1.0];
-  optional bool cycle = 11 [default = false];
+  optional double end_learning_rate = 10 [default = 0.0001];
+  optional double power = 11 [default = 1.0];
+  optional bool cycle = 12 [default = false];
   // CosineDecay and LinearCosineDecay
-  optional double alpha = 12 [default = 0.0];
+  optional double alpha = 13 [default = 0.0];
   // LinearCosineDecay
-  optional double num_periods = 13 [default = 0.5];
-  optional double beta = 14 [default = 0.001]; 
+  optional double num_periods = 14 [default = 0.5];
+  optional double beta = 15 [default = 0.001]; 
 
-  required bool use_warmup = 15 [default = false];
-  optional string warmup_policy = 16;
+  required bool use_warmup = 16 [default = false];
+  optional string warmup_policy = 17;
   // Constant warmup
-  optional double multiplier = 17;
+  optional double multiplier = 18;
   // Linear warmup
-  optional int64 warmup_steps = 18;
-  optional double start_multiplier = 19;
+  optional int64 warmup_steps = 19;
+  optional double start_multiplier = 20;
 }
 
 message ClipGradientOpConf {

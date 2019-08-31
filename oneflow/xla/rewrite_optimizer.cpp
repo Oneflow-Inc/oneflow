@@ -48,15 +48,15 @@ class OptimizerRewritor {
 
 OptimizerMode OptimizerRewritor::GetOptimizerModeIfModelUpdate(
     const mola::XlaNode *node) const {
-  if (node->op_type() == "NavieOptimizer") {
+  if (node->op_type() == "NavieModelUpdate") {
     return OptimizerMode::kNaive;
-  } else if (node->op_type() == "MomentumOptimizer") {
+  } else if (node->op_type() == "MomentumModelUpdate") {
     return OptimizerMode::kMomentum;
-  } else if (node->op_type() == "RMSPropOptimizer") {
+  } else if (node->op_type() == "RMSPropModelUpdate") {
     return OptimizerMode::kRMSProp;
-  } else if (node->op_type() == "LARSOptimizer") {
+  } else if (node->op_type() == "LARSModelUpdate") {
     return OptimizerMode::kLARS;
-  } else if (node->op_type() == "AdamOptimizer") {
+  } else if (node->op_type() == "AdamModelUpdate") {
     return OptimizerMode::kAdam;
   } else {
     return OptimizerMode::kInvalid;

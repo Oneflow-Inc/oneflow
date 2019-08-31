@@ -27,6 +27,7 @@ bool IsConnectToTickOp(const TaskNode* node) {
   const Operator* op = comp_task_node->logical_node()->SoleOp().get();
   if (dynamic_cast<const VariableOp*>(op) != nullptr) { return true; }
   if (dynamic_cast<const ConstantOp*>(op) != nullptr) { return true; }
+  if (op->op_conf().has_lr_sheduler_conf()) { return true; }
   return false;
 }
 
