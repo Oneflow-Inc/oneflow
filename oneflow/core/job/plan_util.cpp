@@ -142,11 +142,11 @@ void PlanUtil::ToDotFile(const Plan& plan, const std::string& filepath) {
   }
 
   log_stream << "digraph merged_plan_graph {\n";
-  log_stream << "splines=\"ortho\";\n";
   log_stream << "rankdir=TB;\n";
-  log_stream << "nodesep=1.3;\n";
-  log_stream << "ranksep=1.3;\n";
-  log_stream << "node[color=\"gray\"];\n";
+  log_stream << "//You can use the following comments to beautify the generated results "
+             << "but it will slow down several times\n";
+  log_stream << "/*\nsplines=\"ortho\";\nnodesep=1.3;\nranksep=1.3;\n*/\n";
+  log_stream << "node[color=\"/X11/gray\"];\n";
   // sub graph
   for (size_t machine_id = 0; machine_id < machine_num; ++machine_id) {
     std::string machine_name = "machine_" + std::to_string(machine_id);
@@ -165,6 +165,15 @@ void PlanUtil::ToDotFile(const Plan& plan, const std::string& filepath) {
         log_stream << device_node_def;
       }
       log_stream << "}\n";
+    }
+    // rank for system task over job
+    if (machine_id == 0) {
+      const auto& rank_list = GenNodeRank(plan);
+      for (const auto& current_list : rank_list) {
+        log_stream << "{ rank = same;";
+        for (const auto& node_name : current_list) { log_stream << node_name << "; "; }
+        log_stream << "}\n";
+      }
     }
     log_stream << "}\n";
   }
@@ -198,13 +207,6 @@ void PlanUtil::ToDotFile(const Plan& plan, const std::string& filepath) {
                    << "];\n";
       }
     }
-  }
-  // rank
-  const auto& rank_list = GenNodeRank(plan);
-  for (const auto& current_list : rank_list) {
-    log_stream << "{ rank = same;";
-    for (const auto& node_name : current_list) { log_stream << node_name << "; "; }
-    log_stream << "}\n";
   }
   log_stream << "}\n";
 }
