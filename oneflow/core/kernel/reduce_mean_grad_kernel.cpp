@@ -31,7 +31,6 @@ void ReduceMeanGradKernel<device_type, T>::ForwardDim0ValidNum(
   BnInOp2Blob("dx")->CopyDim0ValidNumFrom(ctx.device_ctx, BnInOp2Blob("x"));
 }
 
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kReduceMeanGradConf, ReduceMeanGradKernel,
-                           FLOATING_DATA_TYPE_SEQ);
+REGISTER_KERNEL_HELPER_GPU_FLOATING(OperatorConf::kReduceMeanGradConf, ReduceMeanGradKernel);
 
 }  // namespace oneflow

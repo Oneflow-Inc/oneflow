@@ -38,6 +38,7 @@ class NormalMdUpdateKernelUtil final {
                                         T* ratio_ptr);
 };
 
+/*
 #define DECLARE_MDUPDT_KERNEL_CREATOR(x) Kernel* Create##x##MdUpdtKernel(const KernelConf&);
 
 #define DEFINE_MDUPDT_KERNEL_CREATOR(x)                                                  \
@@ -48,6 +49,7 @@ class NormalMdUpdateKernelUtil final {
     return creators.at(GetHashKey(kernel_conf.op_attribute().op_conf().device_type(),    \
                                   kernel_conf.data_type()))();                           \
   }
+*/
 
 }  // namespace oneflow
 

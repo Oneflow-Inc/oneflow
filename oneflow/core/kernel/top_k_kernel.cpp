@@ -36,8 +36,8 @@ void TopKKernel<T>::ForwardDataContent(const KernelCtx& ctx,
 }
 
 #define REGISTER_TOPK_KERNEL(dtype)                                                       \
-  REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kTopkConf, DeviceType::kCPU, dtype, \
-                                        TopkKernel<dtype>);
+  REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kTopKConf, DeviceType::kCPU, dtype, \
+                                        TopKKernel<dtype>);
 
 REGISTER_TOPK_KERNEL(int32_t);
 REGISTER_TOPK_KERNEL(int64_t);

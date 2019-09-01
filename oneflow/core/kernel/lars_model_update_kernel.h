@@ -28,7 +28,7 @@ class LARSMdUpdateKernelUtil final {
                           T* data_tmp);
 };
 
-DECLARE_MDUPDT_KERNEL_CREATOR(LARS);
+// DECLARE_MDUPDT_KERNEL_CREATOR(LARS);
 
 }  // namespace oneflow
 

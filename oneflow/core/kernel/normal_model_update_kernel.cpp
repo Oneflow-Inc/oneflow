@@ -40,23 +40,23 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_KERNEL, DEVICE_TYPE_SEQ, FLOATING_D
 
 namespace {
 
-Kernel* CreateMdUpdtKernel(const KernelConf& kernel_conf) {
-  const NormalModelUpdateOpUserConf& user_conf =
-      kernel_conf.op_attribute().op_conf().normal_mdupdt_conf().user_conf();
-  if (user_conf.has_naive_conf()) {
-    return CreateNaiveMdUpdtKernel(kernel_conf);
-  } else if (user_conf.has_momentum_conf()) {
-    return CreateMomentumMdUpdtKernel(kernel_conf);
-  } else if (user_conf.has_rmsprop_conf()) {
-    return CreateRMSPropMdUpdtKernel(kernel_conf);
-  } else if (user_conf.has_lars_conf()) {
-    return CreateLARSMdUpdtKernel(kernel_conf);
-  } else if (user_conf.has_adam_conf()) {
-    return CreateAdamMdUpdtKernel(kernel_conf);
-  } else {
-    UNIMPLEMENTED();
-  }
-}
+// Kernel* CreateMdUpdtKernel(const KernelConf& kernel_conf) {
+//   const NormalModelUpdateOpUserConf& user_conf =
+//       kernel_conf.op_attribute().op_conf().normal_mdupdt_conf().user_conf();
+//   if (user_conf.has_naive_conf()) {
+//     return CreateNaiveMdUpdtKernel(kernel_conf);
+//   } else if (user_conf.has_momentum_conf()) {
+//     return CreateMomentumMdUpdtKernel(kernel_conf);
+//   } else if (user_conf.has_rmsprop_conf()) {
+//     return CreateRMSPropMdUpdtKernel(kernel_conf);
+//   } else if (user_conf.has_lars_conf()) {
+//     return CreateLARSMdUpdtKernel(kernel_conf);
+//   } else if (user_conf.has_adam_conf()) {
+//     return CreateAdamMdUpdtKernel(kernel_conf);
+//   } else {
+//     UNIMPLEMENTED();
+//   }
+// }
 
 double ExponentialDecayedLearningRate(const ExponentialDecayConf& conf, double lr,
                                       int64_t cur_batch_num) {

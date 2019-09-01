@@ -94,6 +94,9 @@ void UnpackKernel<device_type>::ForwardDataId(
   }
 }
 
-ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kUnpackConf, UnpackKernel);
+REGISTER_KERNEL_WITH_DEVICE(OperatorConf::kUnpackConf, DeviceType::kCPU,
+                            UnpackKernel<DeviceType::kCPU>);
+REGISTER_KERNEL_WITH_DEVICE(OperatorConf::kUnpackConf, DeviceType::kGPU,
+                            UnpackKernel<DeviceType::kGPU>);
 
 }  // namespace oneflow

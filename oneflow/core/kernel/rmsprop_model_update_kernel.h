@@ -29,7 +29,7 @@ class RMSPropMdUpdateKernelUtil final {
                           T* mean_square);
 };
 
-DECLARE_MDUPDT_KERNEL_CREATOR(RMSProp);
+// DECLARE_MDUPDT_KERNEL_CREATOR(RMSProp);
 
 }  // namespace oneflow
 

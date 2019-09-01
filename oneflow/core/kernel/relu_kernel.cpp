@@ -11,7 +11,7 @@ void ReluKernel<device_type, T>::ForwardDataContent(
                                    BnInOp2Blob("out")->mut_dptr<T>());
 }
 
-ADD_DEFAULT_KERNEL_CREATOR_WITH_GPU_HALF(OperatorConf::kReluConf, ReluKernel,
-                                         FLOATING_DATA_TYPE_SEQ);
+REGISTER_KERNEL_HELPER_GPU_FLOATING(OperatorConf::kReluConf, ReluKernel);
+REGISTER_KERNEL_HELPER_GPU_HALF(OperatorConf::kReluConf, ReluKernel);
 
 }  // namespace oneflow

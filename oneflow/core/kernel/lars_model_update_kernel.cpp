@@ -69,7 +69,7 @@ class LARSMdUpdateKernelUtil<DeviceType::kCPU, T> final {
   }
 };
 
-DEFINE_MDUPDT_KERNEL_CREATOR(LARS);
+// DEFINE_MDUPDT_KERNEL_CREATOR(LARS);
 
 REGISTER_KERNEL_HELPER_GPU_FLOATING(OperatorConf::kLarsModelUpdateConf, LARSMdUpdateKernel);
 

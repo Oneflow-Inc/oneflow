@@ -26,7 +26,7 @@ class NaiveMdUpdateKernelUtil final {
                           T l1, T l2, const T* model_diff, T* model);
 };
 
-DECLARE_MDUPDT_KERNEL_CREATOR(Naive);
+// DECLARE_MDUPDT_KERNEL_CREATOR(Naive);
 
 }  // namespace oneflow
 

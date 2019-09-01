@@ -32,7 +32,7 @@ class NaiveMdUpdateKernelUtil<DeviceType::kCPU, T> final {
   }
 };
 
-DEFINE_MDUPDT_KERNEL_CREATOR(Naive);
+// DEFINE_MDUPDT_KERNEL_CREATOR(Naive);
 
 REGISTER_KERNEL_HELPER_GPU_FLOATING(OperatorConf::kNaiveModelUpdateConf, NaiveMdUpdateKernel);
 

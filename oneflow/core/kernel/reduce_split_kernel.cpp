@@ -16,6 +16,9 @@ void ReduceSplitKernel<device_type>::ForwardDataContent(
   }
 }
 
-ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kReduceSplitConf, ReduceSplitKernel);
+REGISTER_KERNEL_WITH_DEVICE(OperatorConf::kReduceSplitConf, DeviceType::kCPU,
+                            ReduceSplitKernel<DeviceType::kCPU>);
+REGISTER_KERNEL_WITH_DEVICE(OperatorConf::kReduceSplitConf, DeviceType::kGPU,
+                            ReduceSplitKernel<DeviceType::kGPU>);
 
 }  // namespace oneflow

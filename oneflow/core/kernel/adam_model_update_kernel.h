@@ -27,7 +27,7 @@ class AdamMdUpdateKernelUtil final {
                           const T* beta1_t, const T* beta2_t, T* model_diff, T* model, T* m, T* v);
 };
 
-DECLARE_MDUPDT_KERNEL_CREATOR(Adam);
+// DECLARE_MDUPDT_KERNEL_CREATOR(Adam);
 
 }  // namespace oneflow
 

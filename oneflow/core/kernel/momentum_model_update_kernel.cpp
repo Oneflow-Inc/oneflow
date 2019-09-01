@@ -45,7 +45,7 @@ class MomentumMdUpdateKernelUtil<DeviceType::kCPU, T> final {
   }
 };
 
-DEFINE_MDUPDT_KERNEL_CREATOR(Momentum);
+// DEFINE_MDUPDT_KERNEL_CREATOR(Momentum);
 
 REGISTER_KERNEL_HELPER_GPU_FLOATING(OperatorConf::kMomentumModelUpdateConf, MomentumMdUpdateKernel);
 

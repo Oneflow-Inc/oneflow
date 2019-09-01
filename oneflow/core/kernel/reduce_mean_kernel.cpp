@@ -24,6 +24,6 @@ void ReduceMeanKernel<device_type, T>::ForwardDataContent(
                                   out_blob->mut_dptr<T>(), static_cast<T>(count));
 }
 
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kReduceMeanConf, ReduceMeanKernel, FLOATING_DATA_TYPE_SEQ);
+REGISTER_KERNEL_HELPER_GPU_FLOATING(OperatorConf::kReduceMeanConf, ReduceMeanKernel);
 
 }  // namespace oneflow

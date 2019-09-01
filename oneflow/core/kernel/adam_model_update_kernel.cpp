@@ -74,7 +74,7 @@ class AdamMdUpdateKernelUtil<DeviceType::kCPU, T> final {
   }
 };
 
-DEFINE_MDUPDT_KERNEL_CREATOR(Adam);
+// DEFINE_MDUPDT_KERNEL_CREATOR(Adam);
 
 REGISTER_KERNEL_HELPER_GPU_FLOATING(OperatorConf::kAdamModelUpdateConf, AdamMdUpdateKernel);
 

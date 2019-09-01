@@ -24,6 +24,6 @@ void SquareKernel<device_type, T>::BackwardDataContent(
                                    static_cast<T>(2), in_diff_blob->mut_dptr<T>(), 1);
 }
 
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kSquareConf, SquareKernel, FLOATING_DATA_TYPE_SEQ);
+REGISTER_KERNEL_HELPER_GPU_FLOATING(OperatorConf::kSquareConf, SquareKernel);
 
 }  // namespace oneflow

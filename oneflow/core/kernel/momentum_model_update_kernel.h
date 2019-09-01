@@ -28,7 +28,7 @@ class MomentumMdUpdateKernelUtil final {
                           T learning_rate, T l1, T l2, const T* model_diff, T* model, T* momentum);
 };
 
-DECLARE_MDUPDT_KERNEL_CREATOR(Momentum);
+// DECLARE_MDUPDT_KERNEL_CREATOR(Momentum);
 
 }  // namespace oneflow
 
