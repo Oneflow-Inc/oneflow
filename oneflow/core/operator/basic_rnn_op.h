@@ -14,8 +14,8 @@ class BasicRnnOp final : public RecurrentOp {
 
  private:
   void VirtualInitFromOpConf();
-  void VirtualInferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                             const ParallelContext* parallel_ctx) const;
+  Maybe<void> VirtualInferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                                    const ParallelContext* parallel_ctx) const;
 };
 
 }  // namespace oneflow

@@ -8,15 +8,15 @@ void CWiseOp::InitFromOpConf() {
   VirtualInitFromOpConf();
 }
 
-void CWiseOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                             const ParallelContext* parallel_ctx) const {
+Maybe<void> CWiseOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                                    const ParallelContext* parallel_ctx) const {
   const BlobDesc* in_0_blob_desc = GetBlobDesc4BnInOp(input_bns().Get(0));
   for (size_t i = 1; i < input_bns().size(); ++i) {
     const auto* blob_desc = GetBlobDesc4BnInOp(input_bns().Get(i));
-    CHECK(*in_0_blob_desc == *blob_desc);
+    CHECK_OR_RETURN(*in_0_blob_desc == *blob_desc);
   }
   *GetBlobDesc4BnInOp("out") = *in_0_blob_desc;
-  VirtualInferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx);
+  return VirtualInferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx);
 }
 
 }  // namespace oneflow

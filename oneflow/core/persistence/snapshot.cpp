@@ -5,7 +5,8 @@
 namespace oneflow {
 
 Snapshot::Snapshot(const std::string& snapshot_root_path) : root_path_(snapshot_root_path) {
-  CHECK(SnapshotFS()->IsDirectory(snapshot_root_path));
+  CHECK(SnapshotFS()->IsDirectory(snapshot_root_path))
+      << "root directory of model snapshot not found, path: " << snapshot_root_path;
 }
 
 std::unique_ptr<PersistentOutStream> Snapshot::GetOutStream(const LogicalBlobId& lbi) {

@@ -27,7 +27,7 @@ def test_matmul(a_shape, b_shape, transpose_a=False, transpose_b=False):
     # TensorFlow
     tf_out = tf.matmul(tf.Variable(a), tf.Variable(b), transpose_a, transpose_b).numpy()
 
-    print("matmul max diff: " + str(np.max(np.abs(of_out - tf_out))))
+    assert np.allclose(of_out, tf_out, atol=1e-7)
 
 
 # run one example each time

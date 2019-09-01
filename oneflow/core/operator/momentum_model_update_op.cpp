@@ -6,13 +6,14 @@ void MomentumModelUpdateOp::MdUpdtVirtualInitFromOpConf() {
   EnrollInputBn("momentum", false)->set_is_mutable(true);
 }
 
-void MomentumModelUpdateOp::MdUpdtVirtualInferBlobDescs(
+Maybe<void> MomentumModelUpdateOp::MdUpdtVirtualInferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   const BlobDesc* model_blob_desc = GetBlobDesc4BnInOp("model");
-  CHECK_EQ(model_blob_desc->data_type(), GlobalJobDesc().DefaultDataType());
-  CHECK_EQ(model_blob_desc->has_data_id_field(), false);
-  CHECK(*GetBlobDesc4BnInOp("momentum") == *model_blob_desc);
+  CHECK_EQ_OR_RETURN(model_blob_desc->data_type(), GlobalJobDesc().DefaultDataType());
+  CHECK_EQ_OR_RETURN(model_blob_desc->has_data_id_field(), false);
+  CHECK_OR_RETURN(*GetBlobDesc4BnInOp("momentum") == *model_blob_desc);
+  return Maybe<void>::Ok();
 }
 
 const PbMessage& MomentumModelUpdateOp::GetCustomizedConf() const {

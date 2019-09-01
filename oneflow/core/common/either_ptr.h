@@ -22,7 +22,7 @@ class EitherPtr final {
   template<typename T>
   const std::shared_ptr<T>& Get() const {
     CHECK(Has<T>());
-    return reinterpret_cast<const std::shared_ptr<T>&>(union_);
+    return Cast<T>();
   }
   void Reset(const std::shared_ptr<X>& ptr) {
     Reset();
@@ -37,9 +37,9 @@ class EitherPtr final {
     if (type_ == UnionType<Void>::value) {
       union_.reset();
     } else if (type_ == UnionType<X>::value) {
-      reinterpret_cast<std::shared_ptr<X>*>(&union_)->reset();
+      MutCast<X>()->reset();
     } else if (type_ == UnionType<Y>::value) {
-      reinterpret_cast<std::shared_ptr<Y>*>(&union_)->reset();
+      MutCast<Y>()->reset();
     } else {
       LOG(FATAL) << "UNIMPLEMENTED";
     }
@@ -72,13 +72,25 @@ class EitherPtr final {
   }
   void Set(const std::shared_ptr<X>& ptr) {
     CHECK(union_.get() == nullptr);
-    *reinterpret_cast<std::shared_ptr<X>*>(&union_) = ptr;
+    *MutCast<X>() = ptr;
     type_ = UnionType<X>::value;
   }
   void Set(const std::shared_ptr<Y>& ptr) {
     CHECK(union_.get() == nullptr);
-    *reinterpret_cast<std::shared_ptr<Y>*>(&union_) = ptr;
+    *MutCast<Y>() = ptr;
     type_ = UnionType<Y>::value;
+  }
+  template<typename T>
+  std::shared_ptr<T>* MutCast() {
+    std::shared_ptr<T>* __attribute__((__may_alias__)) ptr =
+        reinterpret_cast<std::shared_ptr<T>*>(&union_);
+    return ptr;
+  }
+  template<typename T>
+  const std::shared_ptr<T>& Cast() const {
+    const std::shared_ptr<T>* __attribute__((__may_alias__)) ptr =
+        reinterpret_cast<const std::shared_ptr<T>*>(&union_);
+    return *ptr;
   }
 
   std::shared_ptr<Void> union_;

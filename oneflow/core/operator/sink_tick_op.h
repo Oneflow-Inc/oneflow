@@ -14,12 +14,12 @@ class SinkTickOp final : public Operator {
 
   void InitFromOpConf() override;
   const PbMessage& GetCustomizedConf() const override;
-  void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                      const ParallelContext* parallel_ctx) const;
+  Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                             const ParallelContext* parallel_ctx) const;
   LogicalNode* NewProperLogicalNode() const override { return new TickLogicalNode; }
 
  private:
-  void InferHasBatchDim(std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const;
+  Maybe<void> InferHasBatchDim(std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const;
   void GetSbpSignatures(SbpSignatureList* sbp_sig_list) const override;
 };
 

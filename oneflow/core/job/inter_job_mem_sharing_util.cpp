@@ -27,28 +27,13 @@ std::vector<TaskProto*> SortSameOpNameTaskProtos(const std::string& op_name, Pla
   return task_protos;
 }
 
-HashSet<std::string> GetArgOpNames(const std::vector<Job>& jobs) {
-  HashSet<std::string> arg_op_names;
-  for (const Job& job : jobs) {
-    for (const auto& arg_op_name : job.job_conf().arg_op_name()) {
-      arg_op_names.insert(arg_op_name);
-    }
-    for (const OperatorConf& op_conf : job.net().op()) {
-      if (op_conf.has_variable_conf()) { arg_op_names.insert(op_conf.name()); }
-    }
-  }
-  return arg_op_names;
-}
-
 HashMap<std::string, HashSet<int64_t>> GetInterfaceOpName2JobIds(const std::vector<Job>& jobs) {
-  HashSet<std::string> arg_op_names = GetArgOpNames(jobs);
   HashMap<std::string, HashSet<int64_t>> interface_op_name2job_ids;
   HashSet<std::string> unique_op_name_check;
   FOR_RANGE(int64_t, i, 0, jobs.size()) {
     const auto& job = jobs.at(i);
     for (const auto& op : job.net().op()) {
       if (IsInterfaceOpConf(op)) {
-        CHECK(arg_op_names.find(op.name()) != arg_op_names.end());
         CHECK(interface_op_name2job_ids[op.name()].emplace(i).second);
         unique_op_name_check.emplace(op.name());
       } else {

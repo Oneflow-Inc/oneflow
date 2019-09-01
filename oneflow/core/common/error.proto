@@ -39,10 +39,38 @@ message ConfigResourceUnavailableError {
   required FieldValue field_value = 1;
 }
 
+enum JobBuildAndInferError {
+  kJobSetEmpty = 1;
+  kDeviceTagNotFound = 2;
+  kJobNameExist = 100;
+  kJobNameEmpty = 101;
+  kJobNameNotEqual = 102;
+  kNoJobBuildAndInferCtx = 200;
+  
+  kJobConfFrozen = 300;
+  kJobConfNotSet = 301;
+  kJobConfRepeatedSet = 302;
+  kJobTypeNotSet = 303;
+  
+  kLogicalBlobNameNotExist = 400;
+  kLogicalBlobNameRepeated = 401;
+  kLogicalBlobNameInvalid = 402;
+  
+  kOpNameExist = 450;
+  kOpConfDeviceTypeNoSet = 460;
+  kPlacementError = 470;
+  kUnknownJobBuildAndInferError = 500;
+}
+
+message ProtoParseFailedError {
+}
+
 message Error {
   optional string msg = 1 [default = ""];
   oneof error_type {
     ConfigAssertFailedError config_assert_failed_error = 2;
     ConfigResourceUnavailableError config_resource_unavailable_error = 3;
+    JobBuildAndInferError job_build_and_infer_error = 4;
+    ProtoParseFailedError proto_parse_failed_error = 5;
   }
 }

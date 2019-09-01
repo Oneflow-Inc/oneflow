@@ -11,34 +11,37 @@ void SwitchOutputOp::InitFromOpConf() {
   EnrollOutputBn("out");
 }
 
-void SwitchOutputOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                    const ParallelContext* parallel_ctx) const {
+Maybe<void> SwitchOutputOp::InferBlobDescs(
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx) const {
   const BlobDesc& in_index_blob_desc = *GetBlobDesc4BnInOp("in_index");
-  CHECK(in_index_blob_desc.shape() == Shape({1LL}));
-  CHECK_EQ(in_index_blob_desc.data_type(), DataType::kInt32);
+  CHECK_OR_RETURN(in_index_blob_desc.shape() == Shape({1LL}));
+  CHECK_EQ_OR_RETURN(in_index_blob_desc.data_type(), DataType::kInt32);
   const BlobDesc& first_in_blob_desc = *GetBlobDesc4BnInOp(GenRepeatedBn("in", 0));
   FOR_RANGE(int64_t, i, 0, op_conf().switch_output_conf().in_size()) {
-    CHECK(*GetBlobDesc4BnInOp(GenRepeatedBn("in", i)) == first_in_blob_desc);
+    CHECK_OR_RETURN(*GetBlobDesc4BnInOp(GenRepeatedBn("in", i)) == first_in_blob_desc);
   }
   InterfaceOpUtil::InferOutBlobDesc(op_conf().switch_output_conf().blob_conf(),
                                     GetBlobDesc4BnInOp("out"), parallel_ctx);
-  CHECK(*GetBlobDesc4BnInOp("out") == first_in_blob_desc);
+  CHECK_OR_RETURN(*GetBlobDesc4BnInOp("out") == first_in_blob_desc);
+  return Maybe<void>::Ok();
 }
 
 const PbMessage& SwitchOutputOp::GetCustomizedConf() const {
   return op_conf().switch_output_conf();
 }
 
-void SwitchOutputOp::InferHasBatchDim(
+Maybe<void> SwitchOutputOp::InferHasBatchDim(
     std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
-  CHECK_EQ(*HasBatchDim4BnInOp("in_index"), false);
+  CHECK_EQ_OR_RETURN(*HasBatchDim4BnInOp("in_index"), false);
   bool first_in_has_batch_dim = *HasBatchDim4BnInOp(GenRepeatedBn("in", 0));
   FOR_RANGE(int64_t, i, 0, op_conf().switch_output_conf().in_size()) {
-    CHECK_EQ(*HasBatchDim4BnInOp(GenRepeatedBn("in", i)), first_in_has_batch_dim);
+    CHECK_EQ_OR_RETURN(*HasBatchDim4BnInOp(GenRepeatedBn("in", i)), first_in_has_batch_dim);
   }
   InterfaceOpUtil::InferHasBatchDim(op_conf().switch_output_conf().blob_conf(),
                                     HasBatchDim4BnInOp("out"));
-  CHECK(*HasBatchDim4BnInOp("out") == first_in_has_batch_dim);
+  CHECK_OR_RETURN(*HasBatchDim4BnInOp("out") == first_in_has_batch_dim);
+  return Maybe<void>::Ok();
 }
 
 void SwitchOutputOp::GetSbpSignatures(

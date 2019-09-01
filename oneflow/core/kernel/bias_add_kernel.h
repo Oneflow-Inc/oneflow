@@ -20,6 +20,18 @@ class BiasAddKernel final : public KernelIf<device_type> {
   const PbMessage& GetCustomizedOpConf() const override;
 };
 
+template<DeviceType device_type, typename T>
+struct BiasAddUtil {
+  static void BiasAddNCX(DeviceCtx* ctx, const Shape& shape, const int32_t bias_axis,
+                         const T* input, const T* bias, T* output);
+};
+
+template<>
+struct BiasAddUtil<DeviceType::kGPU, float16> {
+  static void BiasAddNCX(DeviceCtx* ctx, const Shape& shape, const int32_t bias_axis,
+                         const float16* input, const float16* bias, float16* output);
+};
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_KERNEL_BIAS_ADD_KERNEL_H_
