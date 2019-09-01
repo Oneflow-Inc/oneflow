@@ -32,11 +32,11 @@ const std::vector<int64_t>& CriticalSectionDesc::CriticalSectionIds4JobId(int64_
   return job_id2critical_section_ids_.at(job_id);
 }
 
-void CriticalSectionDesc::DumpCriticalSectionId2IntersectinIds(PbRpf<IdList>* id2id_list) const {
+void CriticalSectionDesc::DumpCriticalSectionId2IntersectinIds(PbRpf<Int64List>* id2id_list) const {
   CHECK(inited_);
   FOR_RANGE(int64_t, i, 0, critical_sections_.size()) {
-    *id2id_list->Add()->mutable_id() = {critical_section_id2intersecting_ids_.at(i).begin(),
-                                        critical_section_id2intersecting_ids_.at(i).end()};
+    *id2id_list->Add()->mutable_value() = {critical_section_id2intersecting_ids_.at(i).begin(),
+                                           critical_section_id2intersecting_ids_.at(i).end()};
   }
 }
 

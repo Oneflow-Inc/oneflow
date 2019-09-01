@@ -41,7 +41,6 @@ message ExperimentalRunConf {
 
 message JobConfigProto {
   required string job_name = 1;
-  repeated string arg_op_name = 2;
 
   oneof job_type {
     TrainConf train_conf = 3;

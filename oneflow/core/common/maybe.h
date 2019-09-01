@@ -17,7 +17,7 @@ class MaybeBase {
 
   bool IsOk() const { return data_or_error_.template Has<T>(); }
   const std::shared_ptr<T>& data() const { return data_or_error_.template Get<T>(); }
-  const Error& error() const { return *data_or_error_.template Get<const Error>(); }
+  std::shared_ptr<const Error> error() const { return data_or_error_.template Get<const Error>(); }
 
  private:
   EitherPtr<T, const Error> data_or_error_;
@@ -41,14 +41,19 @@ class Maybe final : public MaybeBase<T> {
 template<>
 class Maybe<void> final : public MaybeBase<void> {
  public:
-  Maybe() : MaybeBase<void>(std::shared_ptr<void>()) {}
-  Maybe(const Error& error) : MaybeBase<void>(std::make_shared<const Error>(error)) {}
-  Maybe(const std::shared_ptr<const Error>& error) : MaybeBase<void>(error) {}
-  Maybe(const Error* error) : MaybeBase<void>(std::shared_ptr<const Error>(error)) {}
+  Maybe(const Error& error) : MaybeBase<void>(std::make_shared<const Error>(error)) {
+    CheckError();
+  }
+  Maybe(const std::shared_ptr<const Error>& error) : MaybeBase<void>(error) { CheckError(); }
+  Maybe(const Error* error) : MaybeBase<void>(std::shared_ptr<const Error>(error)) { CheckError(); }
   Maybe(const Maybe<void>&) = default;
   ~Maybe() override = default;
 
   static Maybe<void> Ok() { return Maybe<void>(); }
+
+ private:
+  Maybe() : MaybeBase<void>(std::shared_ptr<void>()) {}
+  void CheckError() const { CHECK_NE(error()->error_type_case(), Error::ERROR_TYPE_NOT_SET); }
 };
 
 template<typename T>
@@ -66,7 +71,7 @@ inline Maybe<T> MaybeFuncSafeCallWrapper(Maybe<T>&& maybe) {
     const auto& maybe = MaybeFuncSafeCallWrapper(__VA_ARGS__); \
     if (!maybe.IsOk()) {                                       \
       LOG(INFO) << "maybe failed:" << __MAYBE_CALL_LOC__;      \
-      return maybe;                                            \
+      return maybe.error();                                    \
     }                                                          \
     maybe.data();                                              \
   })

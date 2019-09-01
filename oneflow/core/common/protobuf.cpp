@@ -20,6 +20,20 @@ void PrintProtoToTextFile(const PbMessage& proto, const std::string& file_path) 
   CHECK(google::protobuf::TextFormat::Print(proto, &output));
 }
 
+std::string PbMessage2TxtString(const PbMessage& proto) {
+  std::string str;
+  PbMessage2TxtString(proto, &str);
+  return str;
+}
+
+void PbMessage2TxtString(const PbMessage& proto, std::string* str) {
+  google::protobuf::TextFormat::PrintToString(proto, str);
+}
+
+bool TxtString2PbMessage(const std::string& proto_str, PbMessage* msg) {
+  return google::protobuf::TextFormat::ParseFromString(proto_str, msg);
+}
+
 bool HasFieldInPbMessage(const PbMessage& msg, const std::string& field_name) {
   PROTOBUF_GET_FIELDDESC(msg, field_name);
   return fd != nullptr;
