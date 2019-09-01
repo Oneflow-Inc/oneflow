@@ -1,3 +1,4 @@
+#include "oneflow/core/persistence/snapshot.h"
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/operator/operator.h"
 
