@@ -56,7 +56,7 @@ std::string InitGlobalOneflow() {
   CHECK(Global<MachineCtx>::Get()->IsThisMachineMaster());
   ClusterControl::MasterSendSessionStart();
   const JobSet& job_set = Global<JobBuildAndInferCtxMgr>::Get()->job_set();
-  if (job_set.job_size() == 0) {
+  if (job_set.job().empty()) {
     return PbMessage2TxtString(ErrorUtil::JobSetEmpty("no function defined"));
   }
   CHECK_ISNULL(Global<Oneflow>::Get());

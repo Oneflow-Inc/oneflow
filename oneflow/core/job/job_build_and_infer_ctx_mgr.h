@@ -14,10 +14,10 @@ class JobBuildAndInferCtxMgr {
   OF_DISALLOW_COPY_AND_MOVE(JobBuildAndInferCtxMgr);
   ~JobBuildAndInferCtxMgr() = default;
 
-  Maybe<void> EnterJobBuildAndInferCtx(const std::string& job_name);
+  Maybe<void> OpenJobBuildAndInferCtx(const std::string& job_name);
   Maybe<JobBuildAndInferCtx> FindJobBuildAndInferCtx(const std::string& job_name);
   Maybe<std::string> GetCurrentJobName();
-  void LeaveCurrentJobBuildAndInferCtx();
+  void CloseCurrentJobBuildAndInferCtx();
   const JobSet& job_set() const { return job_set_; }
 
  private:

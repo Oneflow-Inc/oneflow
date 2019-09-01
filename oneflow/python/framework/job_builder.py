@@ -7,10 +7,10 @@ class JobBuildAndInferCtx(object):
         self.job_name_ = job_name
 
     def __enter__(self):
-        _NewAndEnter(self.job_name_)
+        _Open(self.job_name_)
 
     def __exit__(self, *args):
-        _Leave(self.job_name_)
+        _Close(self.job_name_)
         
 def GetCurCtxJobName():
     return c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
@@ -54,12 +54,12 @@ def GetSplitDimFromProducerView(job_name, lbn):
 def GetParallelConfFromProducerView(job_name, lbn):
     return c_api_util.JobBuildAndInferCtx_GetParallelConfFromProducerView(job_name, lbn)
 
-def _NewAndEnter(job_name):
-    return c_api_util.JobBuildAndInferCtx_NewAndEnter(job_name)
+def _Open(job_name):
+    return c_api_util.JobBuildAndInferCtx_Open(job_name)
 
-def _Leave(job_name):
+def _Close(job_name):
     global job_conf_inited
     job_conf_inited = False
-    return c_api_util.JobBuildAndInferCtx_Leave()
+    return c_api_util.JobBuildAndInferCtx_Close()
 
 job_conf_inited = False

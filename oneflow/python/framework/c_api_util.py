@@ -39,9 +39,9 @@ def DestroyGlobalOneflow():
 def DestroyGlobalEnvironment():
     oneflow_internal.DestroyGlobalEnvironment()
 
-def JobBuildAndInferCtx_NewAndEnter(job_name):
+def JobBuildAndInferCtx_Open(job_name):
     job_name = str(job_name)
-    serialized_error = oneflow_internal.JobBuildAndInferCtx_NewAndEnter(job_name)
+    serialized_error = oneflow_internal.JobBuildAndInferCtx_Open(job_name)
     error = text_format.Parse(serialized_error, error_util.Error())
     if error.HasField("error_type"): raise JobBuildAndInferError(error)
 
@@ -51,8 +51,8 @@ def JobBuildAndInferCtx_GetCurrentJobName():
     if error.HasField("error_type"): raise JobBuildAndInferError(error)
     return job_name
 
-def JobBuildAndInferCtx_Leave():
-    oneflow_internal.JobBuildAndInferCtx_Leave()
+def JobBuildAndInferCtx_Close():
+    oneflow_internal.JobBuildAndInferCtx_Close()
 
 def CurJobBuildAndInferCtx_SetJobConf(job_config_proto):
     serialized_job_conf = str(text_format.MessageToString(job_config_proto))

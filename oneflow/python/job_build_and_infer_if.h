@@ -8,9 +8,9 @@
 #include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/python/job_build_and_infer_helper.h"
 
-std::string JobBuildAndInferCtx_NewAndEnter(const std::string& job_name) {
+std::string JobBuildAndInferCtx_Open(const std::string& job_name) {
   using namespace oneflow;
-  auto maybe_ok = TRY(Global<JobBuildAndInferCtxMgr>::Get()->EnterJobBuildAndInferCtx(job_name));
+  auto maybe_ok = TRY(Global<JobBuildAndInferCtxMgr>::Get()->OpenJobBuildAndInferCtx(job_name));
   if (maybe_ok.IsOk() == false) { return PbMessage2TxtString(*maybe_ok.error()); }
   return PbMessage2TxtString(ErrorUtil::Ok());
 }
@@ -27,9 +27,9 @@ std::string JobBuildAndInferCtx_GetCurrentJobName(std::string* error_str) {
   }
 }
 
-void JobBuildAndInferCtx_Leave() {
+void JobBuildAndInferCtx_Close() {
   using namespace oneflow;
-  Global<JobBuildAndInferCtxMgr>::Get()->LeaveCurrentJobBuildAndInferCtx();
+  Global<JobBuildAndInferCtxMgr>::Get()->CloseCurrentJobBuildAndInferCtx();
 }
 
 std::string CurJobBuildAndInferCtx_CheckJob() {

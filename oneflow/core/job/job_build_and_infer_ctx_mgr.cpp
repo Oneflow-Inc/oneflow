@@ -2,7 +2,7 @@
 
 namespace oneflow {
 
-Maybe<void> JobBuildAndInferCtxMgr::EnterJobBuildAndInferCtx(const std::string& job_name) {
+Maybe<void> JobBuildAndInferCtxMgr::OpenJobBuildAndInferCtx(const std::string& job_name) {
   if (has_cur_job_) {
     return GenJobBuildAndInferError(JobBuildAndInferError::kUnknownJobBuildAndInferError,
                                     "cur job not leave before you enter this job_name:" + job_name);
@@ -40,7 +40,7 @@ Maybe<std::string> JobBuildAndInferCtxMgr::GetCurrentJobName() {
   return cur_job_name_;
 }
 
-void JobBuildAndInferCtxMgr::LeaveCurrentJobBuildAndInferCtx() {
+void JobBuildAndInferCtxMgr::CloseCurrentJobBuildAndInferCtx() {
   if (!has_cur_job_) { return; }
   has_cur_job_ = false;
   const JobDesc* job_desc = Global<JobDesc>::Get();
