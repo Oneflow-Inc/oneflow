@@ -49,8 +49,6 @@ class JobDesc final {
   bool enable_auto_mixed_precision() const { return job_conf_.enable_auto_mixed_precision(); }
   const FileSystemConf& data_fs_conf() const;
   const FileSystemConf& snapshot_fs_conf() const;
-  bool enable_write_snapshot() const;
-  bool write_snapshot_to_master() const { return snapshot_fs_conf().has_localfs_conf(); }
   bool enable_nccl() const { return job_conf_.enable_nccl(); }
   bool use_nccl_inter_node_communication() const {
     return job_conf_.use_nccl_inter_node_communication();

@@ -25,17 +25,14 @@ std::string GenNewSnapshotName() {
 }  // namespace
 
 SnapshotMgr::SnapshotMgr(const Plan& plan) {
-  if (Global<const IOConf>::Get()->enable_write_snapshot()) {
-    model_save_snapshots_path_ = Global<const IOConf>::Get()->model_save_snapshots_path();
-    CHECK(Global<MachineCtx>::Get()->IsThisMachineMaster());
-    SnapshotFS()->CreateDirIfNotExist(model_save_snapshots_path_);
-  }
+  model_save_snapshots_path_ = Global<const IOConf>::Get()->model_save_snapshots_path();
+  CHECK(Global<MachineCtx>::Get()->IsThisMachineMaster());
+  SnapshotFS()->CreateDirIfNotExist(model_save_snapshots_path_);
   const std::string& load_path = Global<const IOConf>::Get()->model_load_snapshot_path();
   if (!load_path.empty()) { readable_snapshot_.reset(new Snapshot(load_path)); }
 }
 
 Snapshot* SnapshotMgr::GetWriteableSnapshot(int64_t snapshot_id) {
-  CHECK(Global<const IOConf>::Get()->enable_write_snapshot());
   std::unique_lock<std::mutex> lck(snapshot_id2writeable_snapshot_mtx_);
   auto it = snapshot_id2writeable_snapshot_.find(snapshot_id);
   if (it == snapshot_id2writeable_snapshot_.end()) {
