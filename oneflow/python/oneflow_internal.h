@@ -1,6 +1,7 @@
 #include <google/protobuf/text_format.h>
 #include "oneflow/core/common/buffer_manager.h"
 #include "oneflow/core/common/protobuf.h"
+#include "oneflow/core/common/error_util.h"
 #include "oneflow/core/register/ofblob.h"
 #include "oneflow/core/job/job_set.pb.h"
 #include "oneflow/core/job/oneflow.h"
@@ -14,6 +15,7 @@
 #include "oneflow/core/job/runtime_buffer_managers_scope.h"
 #include "oneflow/core/control/cluster_control.h"
 #include "oneflow/core/job/job_set_compile_ctx.h"
+#include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 
 bool IsOpTypeCaseCpuSupportOnly(int64_t op_type_case) {
   using namespace oneflow;
@@ -49,17 +51,20 @@ void InitBySerializedConfigProto(const std::string& config_proto_str) {
   }
 }
 
-void InitGlobalOneflowBySerializedJobSet(const std::string& job_set_str) {
+std::string InitGlobalOneflow() {
   using namespace oneflow;
   CHECK(Global<MachineCtx>::Get()->IsThisMachineMaster());
   ClusterControl::MasterSendSessionStart();
-  JobSet job_set;
-  CHECK(google::protobuf::TextFormat::ParseFromString(job_set_str, &job_set));
+  const JobSet& job_set = Global<JobBuildAndInferCtxMgr>::Get()->job_set();
+  if (job_set.job().empty()) {
+    return PbMessage2TxtString(ErrorUtil::JobSetEmpty("no function defined"));
+  }
   CHECK_ISNULL(Global<Oneflow>::Get());
   Global<CtrlClient>::Get()->PushKV("session_job_set", job_set);
   Global<RuntimeBufferManagersScope>::New();
   Global<JobSetCompileCtx>::New();
   Global<Oneflow>::New(job_set);
+  return PbMessage2TxtString(ErrorUtil::Ok());
 }
 
 std::string GetSerializedInterUserJobInfo() {
@@ -123,6 +128,17 @@ void OfBlob_CopyShapeToNumpy(uint64_t of_blob_ptr, int64_t* array, int size) {
   auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
   return of_blob->CopyShapeTo(array, size);
 };
+
+long long DeviceType4DeviceTag(const std::string& device_tag, std::string* error_str) {
+  using namespace oneflow;
+  auto maybe_dev_type = TRY(DeviceType4DeviceTag(device_tag));
+  if (maybe_dev_type.IsOk() == false) {
+    PbMessage2TxtString(*maybe_dev_type.error(), error_str);
+    return DeviceType::kInvalidDevice;
+  }
+  PbMessage2TxtString(ErrorUtil::Ok(), error_str);
+  return *maybe_dev_type.data();
+}
 
 namespace oneflow {
 

@@ -13,13 +13,13 @@ class LayerNormGradOp final : public Operator {
 
   void InitFromOpConf() override;
   const PbMessage& GetCustomizedConf() const override { return op_conf().layer_norm_grad_conf(); }
-  void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                      const ParallelContext*) const override;
+  Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                             const ParallelContext*) const override;
 
  private:
-  void InferHasBatchDim(
+  Maybe<void> InferHasBatchDim(
       std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const override {
-    NaiveInferHasBatchDim(HasBatchDim4BnInOp);
+    return NaiveInferHasBatchDim(HasBatchDim4BnInOp);
   }
 
   void GetSbpSignatures(SbpSignatureList* sbp_sig_list) const override;

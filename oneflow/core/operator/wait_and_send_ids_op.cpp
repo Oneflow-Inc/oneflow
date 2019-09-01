@@ -17,17 +17,19 @@ const PbMessage& WaitAndSendIdsOp::GetCustomizedConf() const {
   return op_conf().wait_and_send_ids_conf();
 }
 
-void WaitAndSendIdsOp::InferBlobDescs(
+Maybe<void> WaitAndSendIdsOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
-  CHECK_EQ(parallel_ctx->parallel_num(), 1);
+  CHECK_EQ_OR_RETURN(parallel_ctx->parallel_num(), 1);
   GetBlobDesc4BnInOp("out")->mut_shape() = Shape({1});
   GetBlobDesc4BnInOp("out")->set_data_type(op_conf().wait_and_send_ids_conf().data_type());
+  return Maybe<void>::Ok();
 }
 
-void WaitAndSendIdsOp::InferHasBatchDim(
+Maybe<void> WaitAndSendIdsOp::InferHasBatchDim(
     std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
   *HasBatchDim4BnInOp("out") = false;
+  return Maybe<void>::Ok();
 }
 
 void WaitAndSendIdsOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {

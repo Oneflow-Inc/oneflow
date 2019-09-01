@@ -20,7 +20,6 @@ class LogicalGraph final : public Graph<LogicalNode, LogicalEdge> {
   LogicalGraph(const Job& job);
 
   const char* TypeName() const override { return "LogicalGraph"; }
-  int64_t total_mbn_num() const { return total_mbn_num_; }
 
   void ForEachNecessaryCtrlEdge(
       const std::function<void(const LogicalNode* src, const LogicalNode* dst,
@@ -49,7 +48,6 @@ class LogicalGraph final : public Graph<LogicalNode, LogicalEdge> {
   bool MustHaveModelDiffAcc();
 
   Job job_;
-  int64_t total_mbn_num_;
 
   HashMap<const LogicalEdge*, std::string> edge2ibn_;
   HashMap<const LogicalEdge*, std::string> edge2obn_;

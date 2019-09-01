@@ -279,11 +279,35 @@ message PReluOpConf {
   required string data_format = 3;
   optional bool channel_shared = 4 [default = false];
   optional float alpha_init = 5 [default = 0.25];
+  optional string alpha = 6;
+}
+
+message PReluDataGradOpConf {
+  required string dy = 1;
+  required string x = 2;
+  required string alpha = 3;
+  required string dx = 4;
+  required string data_format = 5;
+  required bool channel_shared = 6;
+}
+
+message PReluAlphaGradOpConf {
+  required string dy = 1;
+  required string x = 2;
+  required string alpha_grad = 3;
+  required string data_format = 4;
+  required bool channel_shared = 5;
 }
 
 message SigmoidOpConf {
   required string in = 1;
   required string out = 2;
+}
+
+message SigmoidGradOpConf {
+  required string y = 1;
+  required string dy = 2;
+  required string dx = 3;
 }
 
 message TanHOpConf {
@@ -702,7 +726,7 @@ message ReshapeOpConf {
   required string in = 1;
   required string out = 2;
   required ShapeProto shape = 3;
-  optional bool has_dim0_in_shape = 4;
+  optional bool has_dim0_in_shape = 4 [default = true];
 }
 
 message ReshapeLikeOpConf {
@@ -1281,14 +1305,10 @@ message TickOpConf {
   required string out = 2;
 }
 
-message IdList {
-  repeated int64 id = 1;
-}
-
 message WaitAndSendIdsOpConf {
   required string out = 1;
   required string wait_buffer_name = 2;
-  repeated IdList id_list = 3;
+  repeated Int64List id_list = 3;
   required DataType data_type = 4 [default = kInt32];
 }
 
@@ -1301,7 +1321,7 @@ message ReentrantLockOpConf {
   required string start = 1;
   optional string end = 2;
   required string out = 3;
-  repeated IdList lock_id2intersecting_lock_ids = 4;
+  repeated Int64List lock_id2intersecting_lock_ids = 4;
 }
 
 message SourceTickOpConf {
@@ -1398,11 +1418,6 @@ message EveryNthOpConf {
   required int64 n = 3;
 }
 
-message ModelSaveV2OpConf {
-  required string in = 1;
-  required string lbn = 2;
-}
-
 message ModelInitOpConf {
   optional string tick = 1;
   required string out = 2;
@@ -1436,6 +1451,24 @@ message PartialTickOpConf {
   required string out = 2;
 }
 
+message AssignOpConf {
+  required string ref = 1;
+  required string value = 2;
+}
+
+message SnapshotOpConf {
+  repeated string in = 1;
+  repeated string lbn = 2;
+}
+
+message LearningRateScheduleOpConf {
+  required string global_step = 1;
+  required string out = 2;
+  required float learning_rate = 3;
+  optional LearningRateDecayConf learning_rate_decay = 4;
+  optional WarmupConf warmup_conf = 5;
+}
+
 message OperatorConf {
   required string name = 1;
   optional string model_load_dir = 2;
@@ -1463,7 +1496,6 @@ message OperatorConf {
     NcclAllGatherOpConf nccl_all_gather_conf = 116;
     AccumulateOpConf accumulate_conf = 117;
     NormalModelUpdateOpConf normal_mdupdt_conf = 118;
-    ModelSaveV2OpConf model_save_v2_conf = 119;
     CastOpConf cast_conf = 121;
     VariableOpConf variable_conf = 122;
     ReduceIdentityOpConf reduce_identity_conf = 123;
@@ -1575,6 +1607,12 @@ message OperatorConf {
     EsacOpConf esac_conf = 292;
     ModelInitOpConf model_init_conf = 293;
     SplitLikeOpConf split_like_conf = 294;
+    SigmoidGradOpConf sigmoid_grad_conf = 295;
+    AssignOpConf assign_conf = 296;
+    SnapshotOpConf snapshot_conf = 297;
+    LearningRateScheduleOpConf learning_rate_schedule_conf = 298;
+    PReluDataGradOpConf prelu_data_grad_conf = 299;
+    PReluAlphaGradOpConf prelu_alpha_grad_conf = 300;
 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;

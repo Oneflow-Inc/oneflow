@@ -14,20 +14,21 @@ class ReduceIdentityOp final : public Operator {
 
   LogicalNode* NewProperLogicalNode() const override { return new ReduceIdentityLogicalNode; }
   void InitFromOpConf() override;
-  void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                      const ParallelContext* parallel_ctx) const override;
+  Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                             const ParallelContext* parallel_ctx) const override;
   const PbMessage& GetCustomizedConf() const override { return op_conf().reduce_identity_conf(); }
 
  private:
-  void InferHasBatchDim(
+  Maybe<void> InferHasBatchDim(
       std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const override {
-    NaiveInferHasBatchDim(HasBatchDim4BnInOp);
+    return NaiveInferHasBatchDim(HasBatchDim4BnInOp);
   }
 
-  void InferSbpSignature(SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
-                         const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
-                         std::function<const SbpInferHint&(const std::string&)> SbpInferHint4Ibn,
-                         const ParallelDesc& parallel_desc) const override;
+  Maybe<void> InferSbpSignature(
+      SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
+      const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
+      std::function<const SbpInferHint&(const std::string&)> SbpInferHint4Ibn,
+      const ParallelDesc& parallel_desc) const override;
 };
 
 }  // namespace oneflow

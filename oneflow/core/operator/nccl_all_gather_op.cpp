@@ -13,7 +13,7 @@ const PbMessage& NcclAllGatherOp::GetCustomizedConf() const {
   return op_conf().nccl_all_gather_conf();
 }
 
-void NcclAllGatherOp::InferBlobDescs(
+Maybe<void> NcclAllGatherOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   BlobDesc* in_blob = GetBlobDesc4BnInOp(SoleIbn());
@@ -22,6 +22,7 @@ void NcclAllGatherOp::InferBlobDescs(
   int64_t elem_cnt = in_blob->shape().elem_cnt();
   int64_t rank_num = parallel_ctx->rank_ctx().rank_num();
   out_blob->mut_shape() = Shape({elem_cnt * rank_num});
+  return Maybe<void>::Ok();
 }
 
 LogicalBlobId NcclAllGatherOp::obn2lbi(const std::string& output_bn) const {

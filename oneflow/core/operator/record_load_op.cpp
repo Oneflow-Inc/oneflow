@@ -11,13 +11,14 @@ void RecordLoadOp::InitFromOpConf() {
 
 const PbMessage& RecordLoadOp::GetCustomizedConf() const { return op_conf().record_load_conf(); }
 
-void RecordLoadOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                  const ParallelContext* parallel_ctx,
-                                  int64_t record_piece_size) const {
+Maybe<void> RecordLoadOp::InferBlobDescs(
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx, int64_t record_piece_size) const {
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
-  CHECK_EQ(record_piece_size % parallel_ctx->parallel_num(), 0);
+  CHECK_EQ_OR_RETURN(record_piece_size % parallel_ctx->parallel_num(), 0);
   out_blob_desc->mut_shape() = Shape({record_piece_size / parallel_ctx->parallel_num()});
   out_blob_desc->set_data_type(kOFRecord);
+  return Maybe<void>::Ok();
 }
 
 void RecordLoadOp::VirtualGenKernelConf(
@@ -27,9 +28,10 @@ void RecordLoadOp::VirtualGenKernelConf(
   kernel_conf->mutable_record_load_conf()->set_device_piece_size(device_piece_size);
 }
 
-void RecordLoadOp::InferHasBatchDim(
+Maybe<void> RecordLoadOp::InferHasBatchDim(
     std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
   *HasBatchDim4BnInOp("out") = true;
+  return Maybe<void>::Ok();
 }
 
 void RecordLoadOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {

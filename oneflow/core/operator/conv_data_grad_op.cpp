@@ -22,40 +22,42 @@ void ConvDataGradOp::InitFromOpConf() {
   }
 }
 
-void ConvDataGradOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                    const ParallelContext* parallel_ctx, int64_t record_piece_size,
-                                    std::function<void(OpContext*)> EnrollOpCtx) const {
+Maybe<void> ConvDataGradOp::InferBlobDescs(
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx, int64_t record_piece_size,
+    std::function<void(OpContext*)> EnrollOpCtx) const {
   const ConvDataGradOpConf& conf = this->op_conf().conv_data_grad_conf();
   const ConvConf& conv_conf = conf.conv_conf();
   const BlobDesc* dy = GetBlobDesc4BnInOp("dy");
   const BlobDesc* filter = GetBlobDesc4BnInOp("filter");
   const BlobDesc* x_like = GetBlobDesc4BnInOp("x_like");
   const int32_t num_spatial_dims = conf.conv_conf().num_spatial_dims();
-  CHECK_GE(num_spatial_dims, 1);
-  CHECK_LE(num_spatial_dims, 3);
-  CHECK_EQ(dy->shape().NumAxes(), num_spatial_dims + 2);
-  CHECK_EQ(x_like->shape().NumAxes(), num_spatial_dims + 2);
-  CHECK_EQ(x_like->data_type(), dy->data_type());
+  CHECK_GE_OR_RETURN(num_spatial_dims, 1);
+  CHECK_LE_OR_RETURN(num_spatial_dims, 3);
+  CHECK_EQ_OR_RETURN(dy->shape().NumAxes(), num_spatial_dims + 2);
+  CHECK_EQ_OR_RETURN(x_like->shape().NumAxes(), num_spatial_dims + 2);
+  CHECK_EQ_OR_RETURN(x_like->data_type(), dy->data_type());
   BlobDesc* dx = GetBlobDesc4BnInOp("dx");
   dx->CopyMetaFrom(*x_like);
   if (DevIsGpuAndEnableCudnn()) {
 #ifdef WITH_CUDA
     ConvOpCtx* conv_op_ctx = new ConvOpCtx();
     EnrollOpCtx(conv_op_ctx);
-    CHECK(Global<CudnnConvCtxCache>::Get()->FindCudnnConvAlgoCtxWithConfig(
+    CHECK_OR_RETURN(Global<CudnnConvCtxCache>::Get()->FindCudnnConvAlgoCtxWithConfig(
         *x_like, *dy, *filter, conv_conf, cudnn_buf_limit_byte(),
         &conv_op_ctx->cudnn_conv_algo_ctx));
-    CHECK(conv_op_ctx->cudnn_conv_algo_ctx.bwd_data_algo_found);
+    CHECK_OR_RETURN(conv_op_ctx->cudnn_conv_algo_ctx.bwd_data_algo_found);
     BlobDesc* cudnn_buf = GetBlobDesc4BnInOp("buf");
     cudnn_buf->set_data_type(DataType::kChar);
     size_t buf_size = std::max(size_t(1), conv_op_ctx->cudnn_conv_algo_ctx.bwd_data_ws_size);
     cudnn_buf->mut_shape() = Shape({static_cast<int64_t>(buf_size)});
 #else
-    UNIMPLEMENTED();
+    UNIMPLEMENTED_THEN_RETURN();
 #endif
   } else {
-    UNIMPLEMENTED();
+    UNIMPLEMENTED_THEN_RETURN();
   }
+  return Maybe<void>::Ok();
 }
 
 void ConvDataGradOp::VirtualGenKernelConf(
@@ -74,12 +76,13 @@ void ConvDataGradOp::VirtualGenKernelConf(
   }
 }
 
-void ConvDataGradOp::InferHasBatchDim(
+Maybe<void> ConvDataGradOp::InferHasBatchDim(
     std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
-  CHECK(*HasBatchDim4BnInOp("dy"));
-  CHECK(*HasBatchDim4BnInOp("x_like"));
-  CHECK(*HasBatchDim4BnInOp("filter") == false);
+  CHECK_OR_RETURN(*HasBatchDim4BnInOp("dy"));
+  CHECK_OR_RETURN(*HasBatchDim4BnInOp("x_like"));
+  CHECK_OR_RETURN(*HasBatchDim4BnInOp("filter") == false);
   *HasBatchDim4BnInOp("dx") = true;
+  return Maybe<void>::Ok();
 }
 
 void ConvDataGradOp::GetSbpSignatures(

@@ -11,9 +11,11 @@ void SigmoidOp::InitFromOpConf() {
 
 const PbMessage& SigmoidOp::GetCustomizedConf() const { return op_conf().sigmoid_conf(); }
 
-void SigmoidOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                               const ParallelContext* parallel_ctx) const {
+Maybe<void> SigmoidOp::InferBlobDescs(
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx) const {
   *GetBlobDesc4BnInOp("out") = *GetBlobDesc4BnInOp("in");
+  return Maybe<void>::Ok();
 }
 
 void SigmoidOp::GetSbpSignatures(
@@ -22,7 +24,7 @@ void SigmoidOp::GetSbpSignatures(
   SbpSignatureBuilder()
       .Split(input_bns(), 0)
       .Split(output_bns(), 0)
-      .MakeSplitSignatureListBuilder(LogicalBlobDesc4Ibn(output_bns().Get(0)).shape().NumAxes())
+      .MakeSplitSignatureListBuilder(LogicalBlobDesc4Ibn(input_bns().Get(0)).shape().NumAxes())
       .Build(sbp_sig_list);
 }
 

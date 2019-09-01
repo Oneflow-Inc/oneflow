@@ -118,14 +118,6 @@ void AddFuncForFindBldBoxingOpConfMthd(const std::string& k, BldBoxingOpConfMthd
 }
 #define REGISTER_BLD_BOXING_OP_CONF_MTHD(k, v) COMMAND(AddFuncForFindBldBoxingOpConfMthd(k, v))
 
-BldSubTskGphMthd BldSubTskGphToMdSave(const LogicalNode*, const LogicalNode* save) {
-  if (save->parallel_desc()->parallel_num() == 1) {
-    return &TaskGraph::BldSubTskGphBySelectOneSourceToSoleSink;
-  } else {
-    return &TaskGraph::BldSubTskGphByOneToOne;
-  }
-}
-
 BldSubTskGphMthd BldSubTskGphToNormalMdUpdt(const LogicalNode*, const LogicalNode* updt) {
   if (updt->parallel_desc()->policy() == kDataParallel) {
     return &TaskGraph::BldSubTskGphByBoxing;
@@ -310,12 +302,6 @@ BldSubTskGphMthd GetMthdForBldSubTskGph(const LogicalNode* src_node, const Logic
 REGISTER_BLD_SUB_TSK_GPH_MTHD("NormalMdUpdt"
                               "NormalForward",
                               &TaskGraph::BldSubTskGphByOneToOne);
-REGISTER_BLD_SUB_TSK_GPH_MTHD("NormalMdUpdt"
-                              "MdSave",
-                              BldSubTskGphToMdSave);
-REGISTER_BLD_SUB_TSK_GPH_MTHD("NormalForward"
-                              "MdSave",
-                              BldSubTskGphToMdSave);
 REGISTER_BLD_SUB_TSK_GPH_MTHD("NormalForward"
                               "ReduceConcat",
                               &TaskGraph::BldSubTskGphByOneToOne);

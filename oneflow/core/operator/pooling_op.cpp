@@ -21,13 +21,14 @@ void PoolingOp::InitFromOpConf() {
   EnrollOutputBn("out");
 }
 
-void PoolingOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                               const ParallelContext* parallel_ctx) const {
+Maybe<void> PoolingOp::InferBlobDescs(
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx) const {
   // in
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
   const Shape& in_shape = in_blob_desc->shape();
-  CHECK_GE(in_blob_desc->shape().NumAxes(), 3);
-  CHECK_LE(in_blob_desc->shape().NumAxes(), 5);
+  CHECK_GE_OR_RETURN(in_blob_desc->shape().NumAxes(), 3);
+  CHECK_LE_OR_RETURN(in_blob_desc->shape().NumAxes(), 5);
   // out
   std::string data_format = GetValFromCustomizedConf<std::string>("data_format");
   std::vector<int64_t> in = {GetInDim(in_shape, data_format, 0, GetDim()),
@@ -52,6 +53,7 @@ void PoolingOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetB
     UNIMPLEMENTED();
   }
   out_blob_desc->mut_shape() = GetOutShape(in_shape.At(0), in_c, out);
+  return Maybe<void>::Ok();
 }
 
 void PoolingOp::CheckPoolSizeAndStrides() const {

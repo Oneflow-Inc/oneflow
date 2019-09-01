@@ -20,7 +20,6 @@ class JobDesc final {
   // Common
   int64_t job_id() const { return job_id_; }
   const std::string& job_name() const { return job_conf_.job_name(); }
-  const PbRpf<std::string>& arg_op_name() const { return job_conf_.arg_op_name(); }
   int64_t concurrency_width() const { return job_conf_.concurrency_width(); }
   const JobConfigProto& job_conf() const { return job_conf_; }
   DataType DefaultDataType() const { return job_conf_.default_data_type(); }
@@ -66,8 +65,6 @@ class JobDesc final {
   // Train conf
   int32_t NumOfBatchesInSnapshot() const;
   int64_t TotalBatchNum() const;
-  int32_t PieceNumOfPrintLoss() const;
-  int32_t PieceNumOfPrintAccuracy() const;
   int64_t BatchSize() const;
   int64_t NumOfPiecesInBatch() const;
   float primary_lr() const;

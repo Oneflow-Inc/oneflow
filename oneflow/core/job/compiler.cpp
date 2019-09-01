@@ -55,7 +55,6 @@ void Compiler::Compile(Job* job, Plan* plan, bool need_job_complete) const {
   Global<OpGraph>::New(*job);
   Global<OpGraph>::Get()->ToDotWithFilePath("optimized_dlnet_op_graph.dot");
   auto logical_gph = std::make_unique<LogicalGraph>(*job);
-  int64_t total_mbn_num = logical_gph->total_mbn_num();
   auto task_gph = std::make_unique<TaskGraph>(std::move(logical_gph));
   using std::placeholders::_1;
   task_gph->ForEachNode(std::bind(&TaskNode::ProduceAllRegstsAndBindEdges, _1));
@@ -88,7 +87,6 @@ void Compiler::Compile(Job* job, Plan* plan, bool need_job_complete) const {
     task_node->ToProto(plan->mutable_task()->Add());
   });
   {
-    plan->set_total_mbn_num(total_mbn_num);
     auto* job_id2job_conf = plan->mutable_job_confs()->mutable_job_id2job_conf();
     (*job_id2job_conf)[GlobalJobDesc().job_id()] = GlobalJobDesc().job_conf();
   }
