@@ -206,8 +206,11 @@ void MarkClusterIdPass::Run() {
   // Clear invalid cluster
   int32_t minimum_nodes_in_cluster =
       this->optimize_options_.minimum_nodes_in_cluster;
+  int32_t maximum_nodes_in_cluster =
+      this->optimize_options_.maximum_nodes_in_cluster;
   for (Cluster &cluster : clusters_) {
-    if (cluster.size() < minimum_nodes_in_cluster) {
+    if (cluster.size() < minimum_nodes_in_cluster ||
+        cluster.size() > maximum_nodes_in_cluster) {
       cluster.Clear();
     }
   }
