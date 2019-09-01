@@ -25,7 +25,8 @@ class JobBuildAndInferCtx {
   Maybe<void> AddAndInferNonInputOp(const OperatorConf& op_conf);
   Maybe<void> AddLossLogicalBlobName(const std::string& lbn);
   Maybe<void> AddPlacementGroup(const PlacementGroup& placement_group);
-  Maybe<void> CheckJob();
+
+  Maybe<void> CheckJob() const;
 
   bool HasJobConf() const;
   Maybe<Shape> GetStaticShape(const std::string& lbn) const;
@@ -39,6 +40,8 @@ class JobBuildAndInferCtx {
 
  private:
   Maybe<void> GenOpProducedEmptyLogicalBlobDesc(Operator* op);
+  Maybe<void> CheckPlacement() const;
+  Maybe<void> CheckJobConf() const;
 
   Job* job_;
   int64_t job_id_;

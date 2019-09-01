@@ -25,4 +25,11 @@ Error ErrorUtil::DeviceTagNotFound(const std::string& msg) {
   return error;
 }
 
+Error ErrorUtil::JobTypeNotSet(const std::string& msg) {
+  Error error;
+  error.set_msg(msg);
+  error.set_job_build_and_infer_error(JobBuildAndInferError::kJobTypeNotSet);
+  return error;
+}
+
 }  // namespace oneflow

@@ -1,4 +1,5 @@
 #include "oneflow/core/job/job_build_and_infer_ctx.h"
+#include "oneflow/core/common/error_util.h"
 
 namespace oneflow {
 
@@ -31,7 +32,7 @@ Maybe<void> JobBuildAndInferCtx::SetJobConf(const JobConfigProto& job_conf) {
   job_->mutable_job_conf()->CopyFrom(job_conf);
   CHECK_ISNULL(Global<JobDesc>::Get());
   Global<JobDesc>::New(job_conf, job_id_);
-  return Maybe<void>();
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> JobBuildAndInferCtx::GenOpProducedEmptyLogicalBlobDesc(Operator* op) {
@@ -60,7 +61,7 @@ Maybe<void> JobBuildAndInferCtx::GenOpProducedEmptyLogicalBlobDesc(Operator* op)
     }
     lbi2logical_blob_desc_.emplace(lbi, std::make_unique<BlobDesc>(DataType::kInvalidDataType));
   }
-  return Maybe<void>();
+  return Maybe<void>::Ok();
 }
 
 // TODO(): add handle error of same interface op blob between jobs
@@ -104,7 +105,7 @@ Maybe<void> JobBuildAndInferCtx::AddAndInferInputOp(const OperatorConf& op_conf)
   };
   JUST(op->InferHasBatchDimIf(GetConstBlobDescBnInOp, HasBatchDim4BnInOp));
   // TODO()  infer blob desc split dim
-  return Maybe<void>();
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> JobBuildAndInferCtx::AddAndInferNonInputOp(const OperatorConf& op_conf) {
@@ -121,14 +122,14 @@ Maybe<void> JobBuildAndInferCtx::AddLossLogicalBlobName(const std::string& lbn) 
                                     "job has not TrainConf when add loss logical blob name");
   }
   job_->mutable_job_conf()->mutable_train_conf()->add_loss_lbn(lbn);
-  return Maybe<void>();
+  return Maybe<void>::Ok();
 }
 
 bool JobBuildAndInferCtx::HasJobConf() const { return has_job_conf_; }
 
 Maybe<void> JobBuildAndInferCtx::AddPlacementGroup(const PlacementGroup& placement_group) {
   job_->mutable_placement()->add_placement_group()->CopyFrom(placement_group);
-  return Maybe<void>();
+  return Maybe<void>::Ok();
 }
 
 #define GEN_ERROR_WHEN_GET_INFO_FROM_LBN(info_src)                                                 \
@@ -169,7 +170,13 @@ Maybe<ParallelDesc> JobBuildAndInferCtx::GetParallelDescFromProducerView(
   TODO();
 }
 
-Maybe<void> JobBuildAndInferCtx::CheckJob() {
+Maybe<void> JobBuildAndInferCtx::CheckJob() const {
+  JUST(CheckPlacement());
+  JUST(CheckJobConf());
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> JobBuildAndInferCtx::CheckPlacement() const {
   HashSet<std::string> op_names_in_net;
   HashSet<std::string> op_names_in_placement;
   for (const OperatorConf& op_conf : job_->net().op()) {
@@ -200,7 +207,14 @@ Maybe<void> JobBuildAndInferCtx::CheckJob() {
                                           + "defined in net cannot find its placement");
     }
   }
-  return Maybe<void>();
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> JobBuildAndInferCtx::CheckJobConf() const {
+  if (job_->job_conf().job_type_case() == JobConfigProto::JOB_TYPE_NOT_SET) {
+    return ErrorUtil::JobTypeNotSet("job_type not set, please set predict_conf or train_conf");
+  }
+  return Maybe<void>::Ok();
 }
 
 const Job& JobBuildAndInferCtx::job() const { return *job_; }

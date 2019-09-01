@@ -20,7 +20,7 @@ Maybe<void> JobBuildAndInferCtxMgr::EnterJobBuildAndInferCtx(const std::string& 
   job_name2infer_ctx_.emplace(job_name, std::make_shared<JobBuildAndInferCtx>(job, job_id));
   cur_job_name_ = job_name;
   has_cur_job_ = true;
-  return Maybe<void>();
+  return Maybe<void>::Ok();
 }
 
 Maybe<JobBuildAndInferCtx> JobBuildAndInferCtxMgr::FindJobBuildAndInferCtx(

@@ -12,6 +12,8 @@ import oneflow.python.framework.job_builder as job_builder
 import oneflow.python.ops as ops
 from oneflow.python.lib.core.box import Box
 
+from contextlib import contextmanager
+
 from oneflow.python.oneflow_export import oneflow_export
 
 @oneflow_export('get_cur_job_conf_builder')
@@ -19,25 +21,20 @@ def get_cur_job_conf_builder():
     return config_util.JobConfigProtoBuilder(compile_context.cur_job.job_conf)
 
 def Compile(job_set, job_func):
-    check_unique_job_func_name = set()
     job = job_set.job.add()
-    compile_context.ResetCurJob(job)
     job.job_conf.job_name = job_func.__name__
-    with job_builder.JobBuildAndInferCtx(job.job_conf.job_name):
-        _CompileJob(job_func, config_util.inited_config_proto)
+    with compile_context.CurJob(job), job_builder.JobBuildAndInferCtx(job.job_conf.job_name):
+        _CompileJob(job.job_conf, job_func, config_util.inited_config_proto)
         job_builder.CurCtxSetJobConfIfNotSet(job.job_conf)
         assert job_builder.CurCtxHasJobConf()
         job_builder.CurCtxCheckJob()
-    config_util.TryCompleteDefaultJobConfigProto(job.job_conf)
-    assert job.job_conf.job_name not in check_unique_job_func_name
-    check_unique_job_func_name.add(job.job_conf.job_name)
-    compile_context.ResetCurJob(None)
 
-def _CompileJob(func, config):
+def _CompileJob(job_conf, func, config):
     device_type, machine_dev_ids = placement_util.GetDefaultMachineDeviceIds(config.resource)
     func.__oneflow_input_blob_defs__ = _GetArgDefault(func)
     with placement_util.DevicePriorPlacementScope(device_type, machine_dev_ids):
-        ret_remote_blobs = _CompileJobBody(func)
+        with _SetJobConfBeforeInferOp(job_conf), _AddInputOpBeforeNonInputOp(func):
+            ret_remote_blobs = func()
         if ret_remote_blobs is None:
             func.__oneflow_output_remote_blobs__ = None 
         elif isinstance(ret_remote_blobs, remote_blob_util.RemoteBlob):
@@ -53,7 +50,20 @@ def _CompileJob(func, config):
         else:
             raise NotImplementedError
 
-def _CompileJobBody(func):
+@contextmanager
+def _SetJobConfBeforeInferOp(job_conf):
+    job_conf_has_set = Box(False)
+    def SetJobconf():
+        if job_conf_has_set.value: return
+        config_util.TryCompleteDefaultJobConfigProto(job_conf)
+        job_builder.CurCtxSetJobConfIfNotSet(job_conf)
+        job_conf_has_set.set_value(True)
+    with compile_context.BeforeNonInputOpBuildAndInferHook(SetJobconf):
+        yield None
+    if job_conf_has_set.value == False: SetJobconf()
+
+@contextmanager
+def _AddInputOpBeforeNonInputOp(func):
     input_op_add_and_infered = Box(False)
     def AddAndInferInputOp():
         if input_op_add_and_infered.value: return
@@ -62,9 +72,8 @@ def _CompileJobBody(func):
             ops.InputOpByBlobDesc(blob_desc)
         input_op_add_and_infered.set_value(True)
     with compile_context.BeforeNonInputOpBuildAndInferHook(AddAndInferInputOp):
-        ret_remote_blobs = func()
+        yield None
     if input_op_add_and_infered.value == False: AddAndInferInputOp()
-    return ret_remote_blobs
 
 def _GetArgDefault(func):
     if hasattr(func, '__oneflow_arg_default__'): return func.__oneflow_arg_default__
