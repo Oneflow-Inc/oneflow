@@ -297,7 +297,9 @@ void FoldSubgraphBuilder::FixupControlInOpNames() {
     if (it != folded_op_names.end()) {
       ctrl_in_op_name = it->second->op_name();
     }
-    DoNoDuplicationAdd(conf->mutable_ctrl_in_op_name(), ctrl_in_op_name);
+    if (conf->name() != ctrl_in_op_name) {
+      DoNoDuplicationAdd(conf->mutable_ctrl_in_op_name(), ctrl_in_op_name);
+    }
   };
 
   for (const XlaNode *node : graph_.Nodes()) {

@@ -164,13 +164,13 @@ void OptimizerRewritor::Run() {
         GetNodeAttr<PbMessage *>(node, "user_conf"));
     CHECK_NOTNULL(user_conf);
     // Create clip gradient operator if `has_clip_conf`
-//    if (user_conf->has_clip_conf()) {
-//      OperatorConf *clip_conf = BuildClipGradientOp(node->op_name(), model_diff,
-//                                                    total_instances,
-//                                                    user_conf->clip_conf());
-//      operator_confs.push_back(clip_conf);
-//      model_diff = absl::StrCat(clip_conf->name(), "/out");
-//    }
+    if (user_conf->has_clip_conf()) {
+      OperatorConf *clip_conf = BuildClipGradientOp(node->op_name(), model_diff,
+                                                    total_instances,
+                                                    user_conf->clip_conf());
+      operator_confs.push_back(clip_conf);
+      model_diff = absl::StrCat(clip_conf->name(), "/out");
+    }
 
     // TODO(hjchen2): learning_rate maybe a untrainable variable
     // Always build a learning rate sheduler operator even if using const
