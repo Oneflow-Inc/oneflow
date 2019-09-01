@@ -30,6 +30,13 @@ void ModelInitKernel<device_type, T>::Forward(
   }
 }
 
-REGISTER_KERNEL_HELPER_GPU_FLOATING(OperatorConf::kModelInitConf, ModelInitKernel);
+#define REGISTER_MODEL_INIT_KERNEL(dev, dtype)                                    \
+  REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kModelInitConf, dev, dtype, \
+                                        ModelInitKernel<dev, dtype>)
+
+REGISTER_MODEL_INIT_KERNEL(DeviceType::kCPU, float);
+REGISTER_MODEL_INIT_KERNEL(DeviceType::kCPU, double);
+REGISTER_MODEL_INIT_KERNEL(DeviceType::kGPU, float);
+REGISTER_MODEL_INIT_KERNEL(DeviceType::kGPU, double);
 
 }  // namespace oneflow
