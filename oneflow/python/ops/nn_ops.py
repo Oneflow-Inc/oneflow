@@ -265,7 +265,7 @@ def sparse_softmax_cross_entropy_with_logits(
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf, "name", name if name is not None else id_util.UniqueStr(
-            'SparseCrossEntropyConf_')
+            'SparseCrossEntropy_')
     )
     setattr(op_conf.sparse_cross_entropy_conf,
             'prediction', softmax(logits).logical_blob_name)
