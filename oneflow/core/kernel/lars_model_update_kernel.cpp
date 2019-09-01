@@ -23,7 +23,7 @@ void LARSMdUpdateKernel<device_type, T>::UpdateModel(
   const Blob* model_diff_blob = BnInOp2Blob("model_diff");
   Blob* model_blob = BnInOp2Blob("model");
   Blob* momentum_blob = BnInOp2Blob("momentum");
-  Blob* data_tmp_blob = BnInOp2Blob("data_tmp");
+  Blob* data_tmp_blob = BnInOp2Blob("lars_data_tmp");
   const LARSModelUpdateConf& lars_conf = GetLARSModelUpdateConf(this->op_conf());
   Memset<device_type>(ctx, data_tmp_blob->mut_dptr<T>(), 0,
                       data_tmp_blob->ByteSizeOfDataContentField());
