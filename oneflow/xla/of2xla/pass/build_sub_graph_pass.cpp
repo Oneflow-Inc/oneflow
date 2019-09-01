@@ -94,6 +94,10 @@ void BuildSubGraphPass::Run() {
     // different argument (or `LogicalBlobId`), and then fill their `op_name_`
     DivideArgumentNodes(sub_graph);
   }
+
+  for (const XlaNode *node : graph->Nodes()) {
+    CHECK(!node->IsReachable(*node));
+  }
 }
 
 void BuildSubGraphPass::CreateLaunchNodes(

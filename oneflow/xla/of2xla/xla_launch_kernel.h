@@ -16,8 +16,9 @@ class XlaLaunchKernel : public KernelIf<device_type> {
   virtual ~XlaLaunchKernel() {}
 
  private:
-  void ForwardDataContent(const KernelCtx&,
-                          std::function<Blob*(const std::string&)>) const override;
+  void ForwardDataContent(
+      const KernelCtx &ctx,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 
   void BuildLocalExecutable(mola::XlaLaunchContext *launch_ctx,
                             const std::vector<Blob *> &entry_blobs,
@@ -32,6 +33,10 @@ class XlaLaunchKernel : public KernelIf<device_type> {
                         std::vector<Blob *> &output_blobs,
                         const xla::Shape &output_shape,
                         bool block_host_until_done) const;
+
+  std::vector<Blob *> RealIOBuffers(
+      const std::vector<Blob *> &input_blobs,
+      const std::vector<Blob *> &output_blobs) const;
 
   mutable std::shared_ptr<mola::XlaCompilationCache> compilation_cache_;
 };

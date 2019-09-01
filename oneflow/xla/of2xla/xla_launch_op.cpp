@@ -10,7 +10,10 @@ namespace oneflow {
 void XlaLaunchOp::InitFromOpConf() {
   CHECK(op_conf().has_xla_launch_conf());
 
-  EnrollRepeatedInputBn("in");
+  int inputs_num = op_conf().xla_launch_conf().in().size();
+  for (int i = 0; i < inputs_num; ++i) {
+    EnrollInputBn(absl::StrCat("in_", i))->set_is_mutable(true);
+  }
   EnrollRepeatedOutputBn("out");
   // Setup subgraph
   DeviceType device_type = (this->device_type() == DeviceType::kInvalidDevice) ?

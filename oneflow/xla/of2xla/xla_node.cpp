@@ -115,6 +115,29 @@ bool XlaNode::IsOutArgumentNode() const {
   return IsArgumentNode() && absl::StartsWith(op_name_, _XlaOutArgumentPrefix);
 }
 
+bool XlaNode::IsReachable(const XlaNode &dst_node) const {
+  std::unordered_set<const XlaNode *> visited_nodes;
+  std::stack<const XlaNode *> stack;
+  for (const XlaEdge *edge : out_edges_) {
+    stack.push(edge->end());
+  }
+
+  while (!stack.empty()) {
+    const XlaNode *node = stack.top();
+    stack.pop();
+    if (node->unique_id() == dst_node.unique_id()) {
+      return true;
+    }
+    for (const XlaEdge *edge : node->out_edges()) {
+      const XlaNode *end = edge->end();
+      if (visited_nodes.insert(end).second) {
+        stack.push(end);
+      }
+    }
+  }
+  return false;
+}
+
 std::vector<std::string> XlaNode::input_bns() const {
   std::vector<std::string> input_bns(inputs_.size());
   std::transform(inputs_.begin(), inputs_.end(), input_bns.begin(),

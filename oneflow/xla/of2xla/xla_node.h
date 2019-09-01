@@ -97,6 +97,7 @@ class XlaNode {
   bool IsArgumentNode() const;
   bool IsInArgumentNode() const;
   bool IsOutArgumentNode() const;
+  bool IsReachable(const XlaNode &dst_node) const;
 
   typedef std::function<BlobDesc*(const LogicalBlobId &)> GetBlobDescFunc;
   virtual void InferBlobDescs(GetBlobDescFunc func,

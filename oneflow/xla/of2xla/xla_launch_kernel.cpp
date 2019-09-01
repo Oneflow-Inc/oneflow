@@ -12,6 +12,25 @@
 namespace oneflow {
 
 template <DeviceType device_type>
+std::vector<Blob *> XlaLaunchKernel<device_type>::RealIOBuffers(
+    const std::vector<Blob *> &input_blobs,
+    const std::vector<Blob *> &output_blobs) const {
+  auto PickRealBuffersImpl =
+      [&](const std::vector<Blob *> &candidate_buffers,
+          std::vector<Blob *> *real_buffers) {
+    for (Blob *blob : candidate_buffers) {
+      if (blob->dptr<char>()) {
+        real_buffers->push_back(blob);
+      }
+    }
+  };
+  std::vector<Blob *> real_buffers;
+  PickRealBuffersImpl(input_blobs, &real_buffers);
+  PickRealBuffersImpl(output_blobs, &real_buffers);
+  return std::move(real_buffers);
+}
+
+template <DeviceType device_type>
 void XlaLaunchKernel<device_type>::BuildLocalExecutable(
     mola::XlaLaunchContext *launch_ctx,
     const std::vector<Blob *> &entry_blobs,
@@ -68,8 +87,8 @@ void XlaLaunchKernel<device_type>::LaunchExecutable(
 
   CHECK_EQ(entry_blobs.size(), input_shapes.size())
       << "Size mismatch between input blobs and input shapes.";
-  CHECK((output_blobs.size() > 0) || (entry_blobs.size() > 0))
-      << "Need one input or output at least.";
+  std::vector<Blob *> real_buffers = RealIOBuffers(entry_blobs, output_blobs);
+  CHECK_GT(real_buffers.size(), 0) << "Need one real input or output at least.";
   // Translate input blobs to xla ShapedBuffer suitable running the executable
   int argument_size = input_shapes.size();
   std::vector<std::shared_ptr<xla::ShapedBuffer>> shaped_buffers(argument_size);
@@ -83,12 +102,12 @@ void XlaLaunchKernel<device_type>::LaunchExecutable(
     size_t data_size = entry_blobs[i]->ByteSizeOfDataContentField();
     const char *data_ptr = entry_blobs[i]->dptr<char>();
 
-    // Buffer is nullptr if the blob is body disabled. But tt should be
-    // assigned by a real pointer to prevent check failure while runing the XLA
-    // executable
+    // Buffer is nullptr if the blob is body disabled. It should be assigned
+    // by a real pointer to prevent check failure while runing the XLA
+    // executable, so here we assign the first input or output buffer to it
+    // since it's sure that this entry should never be modified at any time
     if (data_size > 0 && !data_ptr) {
-      static const char fake_body_data('\0');
-      data_ptr = &fake_body_data;
+      data_ptr = real_buffers[0]->dptr<char>();
     }
     se::DeviceMemoryBase memory_base =
         se::DeviceMemoryBase(const_cast<char *>(data_ptr), data_size);
@@ -135,8 +154,8 @@ void XlaLaunchKernel<device_type>::LaunchExecutable(
 
 template <DeviceType device_type>
 void XlaLaunchKernel<device_type>::ForwardDataContent(
-                const KernelCtx &ctx,
-                std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+    const KernelCtx &ctx,
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   // Prepare input and output buffers and their names
   std::vector<Blob *> entry_blobs, output_blobs;
   std::vector<std::string> entry_blob_names, return_blob_names;
