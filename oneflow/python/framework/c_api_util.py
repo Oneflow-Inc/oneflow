@@ -103,7 +103,7 @@ def JobBuildAndInferCtx_GetStaticShape(job_name, lbn):
     error = text_format.Parse(error_str, error_util.Error())
     if error.HasField("error_type"): raise JobBuildAndInferError(error)
     int_list = text_format.Parse(axis_str, record_util.Int64List())
-    return tuple(int_list)
+    return tuple(map(int, int_list.value))
 
 def JobBuildAndInferCtx_GetDataType(job_name, lbn):
     job_name = str(job_name)
@@ -111,7 +111,7 @@ def JobBuildAndInferCtx_GetDataType(job_name, lbn):
     dtype, erro_str = oneflow_internal.JobBuildAndInferCtx_GetDataType(job_name, lbn)
     error = text_format.Parse(erro_str, error_util.Error())
     if error.HasField("error_type"): raise JobBuildAndInferError(error)
-    return dtype
+    return int(dtype)
 
 def JobBuildAndInferCtx_GetHasBatchDim(job_name, lbn):
     job_name = str(job_name)
