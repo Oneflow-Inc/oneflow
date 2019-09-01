@@ -598,6 +598,7 @@ class DLNet(object):
     def CreateOperator(self, op_type_name, op_name, input_lbn, output_bn, **kw):
         op_conf = self.dl_net_conf_.op.add()
         ret = _CreateOperator(op_conf, op_type_name, op_name, input_lbn, output_bn, kw)
+        compile_ctx.CurJobAddOp(op_conf)
         placement_ctx.CurPlacementGroupAddOpConf(op_conf)
         return op_conf
 
