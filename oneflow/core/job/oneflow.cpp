@@ -399,7 +399,7 @@ void MakeMainJob(const std::vector<Job>& jobs, Job* main_job,
       int64_t job_id = pair.second;
       CHECK(unique_check.insert(job_id).second);
       const auto& cs_idx = Global<CriticalSectionDesc>::Get()->CriticalSectionIds4JobId(job_id);
-      *id_list->Mutable(job_id)->mutable_id() = {cs_idx.begin(), cs_idx.end()};
+      *id_list->Mutable(job_id)->mutable_value() = {cs_idx.begin(), cs_idx.end()};
     }
   }
   op_confs.push_back(wait_and_send_ids_op_conf);

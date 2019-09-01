@@ -22,8 +22,3 @@ message LogicalBlobIdGroups {
   }
   repeated LogicalBlobIdGroup lbi_group = 2;
 }
-
-message LbnWithSplitHint {
-  required string lbn = 1;
-  optional int64 split_axis = 2;
-}
