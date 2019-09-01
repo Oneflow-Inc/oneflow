@@ -26,7 +26,7 @@ def dense(
     setattr(op_conf.fully_connected_conf, "units", units)
     setattr(op_conf.fully_connected_conf, "activation", activation)
     setattr(op_conf.fully_connected_conf, "use_bias", use_bias)
-    setattr(op_conf.fully_connected_conf, "uweight_initializer", kernel_initializer)
+    setattr(op_conf.fully_connected_conf, "weight_initializer", kernel_initializer)
     setattr(op_conf.fully_connected_conf, "bias_initializer", bias_initializer)
     setattr(op_conf.trainable, "trainable", trainable)
     compile_context.CurJobAddOp(op_conf)
