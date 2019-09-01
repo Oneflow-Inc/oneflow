@@ -5,7 +5,6 @@ from oneflow.core.job.dlnet_conf_pb2 import DLNetConf
 from google.protobuf import text_format;
 from oneflow.python.deprecated.blob import Blob
 import oneflow.python.ops.op_util as op_util
-import oneflow.python.framework.placement_context as placement_ctx
 import oneflow.python.framework.compile_context as compile_ctx
 import oneflow.core.operator.op_conf_pb2 as op_conf_pb2;
 import oneflow.core.common.data_type_pb2 as data_type_pb;
@@ -598,7 +597,7 @@ class DLNet(object):
     def CreateOperator(self, op_type_name, op_name, input_lbn, output_bn, **kw):
         op_conf = self.dl_net_conf_.op.add()
         ret = _CreateOperator(op_conf, op_type_name, op_name, input_lbn, output_bn, kw)
-        placement_ctx.CurPlacementGroupAddOpConf(op_conf)
+        compile_ctx.CurJobAddOp(op_conf)
         return op_conf
 
     def __str__(self):
