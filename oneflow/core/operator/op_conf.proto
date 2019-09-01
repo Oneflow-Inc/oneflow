@@ -1174,6 +1174,8 @@ message BiasAddOpConf {
   required string b = 2;
   // output
   required string out = 3;
+  // conf
+  required int32 axis = 4;
 }
 
 message DimSliceConf {
