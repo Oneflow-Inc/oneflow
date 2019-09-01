@@ -125,6 +125,38 @@ def avg_pool3d(input, ksize, strides, padding, data_format="NDHWC", name=None):
     setattr(out_lbi, "blob_name", "out")
     return remote_blob_util.RemoteBlob(out_lbi)
 
+@oneflow_export("nn.softmax")
+def softmax(logits, axis=None, name=None):
+    if axis is None:
+        axis = -1
+    assert type(axis) is int
+    op_conf = op_conf_util.OperatorConf()
+    op_conf.name = id_util.UniqueStr('Softmax_')
+    setattr(op_conf.softmax_conf, 'in', logits.logical_blob_name)
+    op_conf.softmax_conf.axis = axis
+    op_conf.softmax_conf.out = "out"
+    compile_context.CurJobAddOp(op_conf)
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = "out"
+    return remote_blob_util.RemoteBlob(lbi)
+
+@oneflow_export("nn.sparse_softmax_cross_entropy_with_logits")
+def sparse_softmax_cross_entropy_with_logits(labels=None, logits=None, name=None):
+    assert labels is not None
+    assert logits is not None
+    op_conf = op_conf_util.OperatorConf()
+    op_conf.name = id_util.UniqueStr('SparseCrossEntropyConf_')
+    setattr(op_conf.sparse_cross_entropy_conf,
+            'prediction', softmax(logits).logical_blob_name)
+    setattr(op_conf.sparse_cross_entropy_conf,
+            'label', labels.logical_blob_name)
+    op_conf.softmax_conf.out = "out"
+    compile_context.CurJobAddOp(op_conf)
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = "out"
+    return remote_blob_util.RemoteBlob(lbi)
 
 def _GetSequence(value, n, name):
     """Formats value from input"""
