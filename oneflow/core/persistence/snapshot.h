@@ -7,20 +7,6 @@
 
 namespace oneflow {
 
-class Snapshot final {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(Snapshot);
-  Snapshot() = delete;
-  ~Snapshot() = default;
-
-  explicit Snapshot(const std::string& snapshot_root_path);
-  std::unique_ptr<PersistentOutStream> GetOutStream(const LogicalBlobId& lbi);
-  void Done();
-
- private:
-  const std::string root_path_;
-};
-
 class SnapshotReader final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(SnapshotReader);

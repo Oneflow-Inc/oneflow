@@ -80,7 +80,6 @@ const InitializerConf* Kernel::GetInitializerFromPbMessage(const PbMessage& msg,
 }
 
 void Kernel::InitModelAndConstBuf(const KernelCtx& ctx, const ParallelContext* parallel_ctx,
-                                  const Snapshot* snapshot,
                                   std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   InitConstBufBlobs(ctx.device_ctx, BnInOp2Blob);
 }

@@ -5,7 +5,6 @@
 #include "oneflow/core/job/machine_context.h"
 #include "oneflow/core/job/nccl_comm_manager.h"
 #include "oneflow/core/job/resource_desc.h"
-#include "oneflow/core/job/critical_section_desc.h"
 #include "oneflow/core/job/runtime_job_descs.h"
 #include "oneflow/core/thread/thread_manager.h"
 #include "oneflow/core/actor/act_event_logger.h"
@@ -106,7 +105,6 @@ void Runtime::NewAllGlobal(const Plan& plan, size_t total_piece_num, bool is_exp
 #ifdef WITH_CUDA
   InitGlobalCudaDeviceProp();
 #endif
-  if (Global<MachineCtx>::Get()->IsThisMachineMaster()) { Global<SnapshotMgr>::New(plan); }
   Global<MemoryAllocator>::New();
   Global<RegstMgr>::New(plan);
   Global<ActorMsgBus>::New();
@@ -126,7 +124,6 @@ void Runtime::DeleteAllGlobal() {
   Global<ActorMsgBus>::Delete();
   Global<RegstMgr>::Delete();
   Global<MemoryAllocator>::Delete();
-  if (Global<MachineCtx>::Get()->IsThisMachineMaster()) { Global<SnapshotMgr>::Delete(); }
   Global<CommNet>::Delete();
   Global<ActEventLogger>::Delete();
   Global<RuntimeCtx>::Delete();

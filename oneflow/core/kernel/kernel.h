@@ -24,7 +24,6 @@ class Kernel {
   void Init(const JobDesc* job_desc, const ParallelContext*, const KernelConf&, DeviceCtx*);
 
   void InitModelAndConstBuf(const KernelCtx& ctx, const ParallelContext* parallel_ctx,
-                            const Snapshot*,
                             std::function<Blob*(const std::string&)> BnInOp2Blob) const;
 
   void Launch(const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const;
