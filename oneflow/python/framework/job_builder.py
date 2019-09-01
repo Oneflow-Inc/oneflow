@@ -45,6 +45,9 @@ def GetStaticShape(job_name, lbn):
 def GetDataType(job_name, lbn):
     return c_api_util.JobBuildAndInferCtx_GetDataType(job_name, lbn)
 
+def GetHasBatchDim(job_name, lbn):
+    return c_api_util.JobBuildAndInferCtx_GetHasBatchDim(job_name, lbn)
+
 def GetHasSplitDimFromProducerView(job_name, lbn):
     return c_api_util.JobBuildAndInferCtx_GetHasSplitDimFromProducerView(job_name, lbn)
 
