@@ -17,8 +17,8 @@ void GenerateBackwardOpConf(
     reduce_sum_op_conf->set_in(GenLogicalBlobName(*DiffLbi4BnInOp("out")));
     reduce_sum_op_conf->set_out("out");
 
-    int32_t bias_add_axis = op.op_conf().bias_add_conf().axis();
-    int32_t num_axes = LogicalBlobDesc4BnInOp("a").shape().NumAxes();
+    const int32_t bias_add_axis = op.op_conf().bias_add_conf().axis();
+    const int32_t num_axes = LogicalBlobDesc4BnInOp("a").shape().NumAxes();
     FOR_RANGE(int32_t, i, 0, num_axes) {
       if (i != bias_add_axis) { reduce_sum_op_conf->add_axis(i); }
     }

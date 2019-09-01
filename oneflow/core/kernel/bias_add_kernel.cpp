@@ -13,7 +13,8 @@ void BiasAddKernel<device_type, T>::ForwardDataContent(
   const Blob* bias_mul_blob = BnInOp2Blob("bias_multiplier");
   Blob* out_blob = BnInOp2Blob("out");
 
-  if (this->kernel_conf().bias_add_conf().is_channels_last()) {
+  const BiasAddOpConf& op_conf = this->op_conf().bias_add_conf();
+  if (op_conf.axis() == a_blob->shape().NumAxes() - 1) {
     // out = bias_multiplier * b + a
     Memcpy<device_type>(ctx.device_ctx, out_blob->mut_dptr<T>(), a_blob->dptr<T>(),
                         a_blob->ByteSizeOfDataContentField());
@@ -22,7 +23,7 @@ void BiasAddKernel<device_type, T>::ForwardDataContent(
                                        GetOneVal<T>(), bias_mul_blob->dptr<T>(), b_blob->dptr<T>(),
                                        GetOneVal<T>(), out_blob->mut_dptr<T>());
   } else {
-    int32_t bias_add_axis = this->op_conf().bias_add_conf().axis();
+    const int32_t bias_add_axis = this->op_conf().bias_add_conf().axis();
     BiasAddUtil<device_type, T>::BiasAddNCX(ctx.device_ctx, a_blob->shape(), bias_add_axis,
                                             a_blob->dptr<T>(), b_blob->dptr<T>(),
                                             out_blob->mut_dptr<T>());
@@ -45,13 +46,13 @@ const PbMessage& BiasAddKernel<device_type, T>::GetCustomizedOpConf() const {
 
 template<typename T>
 struct BiasAddUtil<DeviceType::kCPU, T> {
-  static void BiasAddNCX(DeviceCtx* ctx, const Shape& shape, int32_t bias_axis, const T* input,
-                         const T* bias, T* output) {
-    std::vector<int64_t> bias_dim_vec(1, shape.NumAxes());
-    bias_dim_vec.at(bias_axis) = shape.At(bias_axis);
-    NdarrayUtil<DeviceType::kCPU, T>::BroadcastAdd(
-        ctx, XpuVarNdarray<T>(shape, output), XpuVarNdarray<const T>(shape, input),
-        XpuVarNdarray<const T>(Shape(bias_dim_vec), bias));
+  static void BiasAddNCX(DeviceCtx* ctx, const Shape& shape, const int32_t bias_axis,
+                         const T* input, const T* bias, T* output) {
+    Shape bias_shape = Shape::Ones(shape.NumAxes());
+    bias_shape.Set(bias_axis, shape.At(bias_axis));
+    NdarrayUtil<DeviceType::kCPU, T>::BroadcastAdd(ctx, XpuVarNdarray<T>(shape, output),
+                                                   XpuVarNdarray<const T>(shape, input),
+                                                   XpuVarNdarray<const T>(bias_shape, bias));
   }
 };
 

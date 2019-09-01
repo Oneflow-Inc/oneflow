@@ -45,17 +45,6 @@ void BiasAddOp::GetSbpSignatures(
       .Build(sbp_sig_list->mutable_sbp_signature()->Add());
 }
 
-void BiasAddOp::VirtualGenKernelConf(
-    std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
-  BiasAddKenrelConf* conf = kernel_conf->mutable_bias_add_conf();
-  if (op_conf().bias_add_conf().axis() == GetBlobDesc4BnInOp("a")->shape().NumAxes() - 1) {
-    conf->set_is_channels_last(true);
-  } else {
-    conf->set_is_channels_last(false);
-  }
-}
-
 REGISTER_OP(OperatorConf::kBiasAddConf, BiasAddOp);
 
 }  // namespace oneflow

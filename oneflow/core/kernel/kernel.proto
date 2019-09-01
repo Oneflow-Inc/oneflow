@@ -157,10 +157,6 @@ message ShapeElemCntKernelConf {
   repeated int32 axis = 1;
 }
 
-message BiasAddKenrelConf {
-  required bool is_channels_last = 1;
-}
-
 message KernelConf {
   required OpAttribute op_attribute = 1;
   required bool is_forward = 2;
@@ -190,7 +186,6 @@ message KernelConf {
     DropoutKernelConf dropout_conf = 140;
     AveragePoolingKernelConf average_pooling_conf = 204;
     MaxPoolingKernelConf max_pooling_conf = 205;
-    BiasAddKenrelConf bias_add_conf = 206;
     LocalResponseNormalizationKernelConf local_response_normalization_conf = 300;
     ReduceGatherKernelConf reduce_gather_conf = 350;
     ReduceConcatKernelConf reduce_concat_conf = 351;

@@ -22,13 +22,13 @@ class BiasAddKernel final : public KernelIf<device_type> {
 
 template<DeviceType device_type, typename T>
 struct BiasAddUtil {
-  static void BiasAddNCX(DeviceCtx* ctx, const Shape& shape, int32_t bias_axis, const T* input,
-                         const T* bias, T* output);
+  static void BiasAddNCX(DeviceCtx* ctx, const Shape& shape, const int32_t bias_axis,
+                         const T* input, const T* bias, T* output);
 };
 
 template<>
 struct BiasAddUtil<DeviceType::kGPU, float16> {
-  static void BiasAddNCX(DeviceCtx* ctx, const Shape& shape, int32_t bias_axis,
+  static void BiasAddNCX(DeviceCtx* ctx, const Shape& shape, const int32_t bias_axis,
                          const float16* input, const float16* bias, float16* output);
 };
 
