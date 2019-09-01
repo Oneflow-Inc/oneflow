@@ -13,9 +13,9 @@ void WaitAndSendIdsKernel<T>::ForwardDataContent(
         Global<BufferMgr<int64_t>>::Get()->Get(conf.wait_buffer_name())->Receive(&status->in_id_);
     if (status->buffer_status_ == kBufferStatusErrorClosed) { return; }
     status->out_idx_ = 0;
-    status->out_num_ = conf.id_list(status->in_id_).id_size();
+    status->out_num_ = conf.id_list(status->in_id_).value_size();
   }
-  *BnInOp2Blob("out")->mut_dptr<T>() = conf.id_list(status->in_id_).id(status->out_idx_);
+  *BnInOp2Blob("out")->mut_dptr<T>() = conf.id_list(status->in_id_).value(status->out_idx_);
   ++status->out_idx_;
 }
 

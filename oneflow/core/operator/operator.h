@@ -110,6 +110,14 @@ class Operator {
       std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
       const ParallelContext*) const;
 
+  Maybe<void> InferOutBlobDescsIf(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                                  const ParallelContext*, int64_t record_piece_size,
+                                  std::function<void(OpContext*)> EnrollOpCtx) const;
+
+  virtual Maybe<void> InferOutBlobDescs(
+      std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*,
+      int64_t record_piece_size, std::function<void(OpContext*)> EnrollOpCtx) const;
+
   Maybe<void> InferHasBatchDimIf(
       const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
       std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
