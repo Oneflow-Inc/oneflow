@@ -41,7 +41,6 @@ class Maybe final : public MaybeBase<T> {
 template<>
 class Maybe<void> final : public MaybeBase<void> {
  public:
-  Maybe(void* null_ptr) : MaybeBase<void>(std::shared_ptr<void>()) { CHECK_ISNULL(null_ptr); }
   Maybe(const Error& error) : MaybeBase<void>(std::make_shared<const Error>(error)) {
     CheckError();
   }
@@ -50,9 +49,10 @@ class Maybe<void> final : public MaybeBase<void> {
   Maybe(const Maybe<void>&) = default;
   ~Maybe() override = default;
 
-  static void* Ok() { return nullptr; }
+  static Maybe<void> Ok() { return Maybe<void>(); }
 
  private:
+  Maybe() : MaybeBase<void>(std::shared_ptr<void>()) {}
   void CheckError() const { CHECK_NE(error()->error_type_case(), Error::ERROR_TYPE_NOT_SET); }
 };
 
