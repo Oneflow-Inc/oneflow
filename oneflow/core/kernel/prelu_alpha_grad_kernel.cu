@@ -1,5 +1,4 @@
 #include "oneflow/core/kernel/prelu_alpha_grad_kernel.h"
-#include "oneflow/core/kernel/kernel_util.cuh"
 
 namespace oneflow {
 namespace {
