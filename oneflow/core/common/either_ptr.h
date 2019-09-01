@@ -37,9 +37,9 @@ class EitherPtr final {
     if (type_ == UnionType<Void>::value) {
       union_.reset();
     } else if (type_ == UnionType<X>::value) {
-      Cast<X>()->reset();
+      MutCast<X>()->reset();
     } else if (type_ == UnionType<Y>::value) {
-      Cast<Y>()->reset();
+      MutCast<Y>()->reset();
     } else {
       LOG(FATAL) << "UNIMPLEMENTED";
     }
@@ -72,16 +72,16 @@ class EitherPtr final {
   }
   void Set(const std::shared_ptr<X>& ptr) {
     CHECK(union_.get() == nullptr);
-    *Cast<X>() = ptr;
+    *MutCast<X>() = ptr;
     type_ = UnionType<X>::value;
   }
   void Set(const std::shared_ptr<Y>& ptr) {
     CHECK(union_.get() == nullptr);
-    *Cast<Y>() = ptr;
+    *MutCast<Y>() = ptr;
     type_ = UnionType<Y>::value;
   }
   template<typename T>
-  std::shared_ptr<T>* Cast() {
+  std::shared_ptr<T>* MutCast() {
     std::shared_ptr<T>* __attribute__((__may_alias__)) ptr =
         reinterpret_cast<std::shared_ptr<T>*>(&union_);
     return ptr;
