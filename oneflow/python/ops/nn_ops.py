@@ -131,7 +131,10 @@ def softmax(logits, axis=None, name=None):
         axis = -1
     assert type(axis) is int
     op_conf = op_conf_util.OperatorConf()
-    op_conf.name = id_util.UniqueStr('Softmax_')
+    setattr(
+        op_conf, "name", name if name is not None else id_util.UniqueStr(
+            'Softmax_')
+    )
     setattr(op_conf.softmax_conf, 'in', logits.logical_blob_name)
     op_conf.softmax_conf.axis = axis
     op_conf.softmax_conf.out = "out"
@@ -146,7 +149,10 @@ def sparse_softmax_cross_entropy_with_logits(labels=None, logits=None, name=None
     assert labels is not None
     assert logits is not None
     op_conf = op_conf_util.OperatorConf()
-    op_conf.name = id_util.UniqueStr('SparseCrossEntropyConf_')
+    setattr(
+        op_conf, "name", name if name is not None else id_util.UniqueStr(
+            'SparseCrossEntropyConf_')
+    )
     setattr(op_conf.sparse_cross_entropy_conf,
             'prediction', softmax(logits).logical_blob_name)
     setattr(op_conf.sparse_cross_entropy_conf,
