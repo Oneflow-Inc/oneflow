@@ -279,11 +279,35 @@ message PReluOpConf {
   required string data_format = 3;
   optional bool channel_shared = 4 [default = false];
   optional float alpha_init = 5 [default = 0.25];
+  optional string alpha = 6;
+}
+
+message PReluDataGradOpConf {
+  required string dy = 1;
+  required string x = 2;
+  required string alpha = 3;
+  required string dx = 4;
+  required string data_format = 5;
+  required bool channel_shared = 6;
+}
+
+message PReluAlphaGradOpConf {
+  required string dy = 1;
+  required string x = 2;
+  required string alpha_grad = 3;
+  required string data_format = 4;
+  required bool channel_shared = 5;
 }
 
 message SigmoidOpConf {
   required string in = 1;
   required string out = 2;
+}
+
+message SigmoidGradOpConf {
+  required string y = 1;
+  required string dy = 2;
+  required string dx = 3;
 }
 
 message TanHOpConf {
@@ -702,7 +726,7 @@ message ReshapeOpConf {
   required string in = 1;
   required string out = 2;
   required ShapeProto shape = 3;
-  optional bool has_dim0_in_shape = 4;
+  optional bool has_dim0_in_shape = 4 [default = true];
 }
 
 message ReshapeLikeOpConf {
@@ -1439,6 +1463,14 @@ message SnapshotOpConf {
   repeated string lbn = 2;
 }
 
+message LearningRateScheduleOpConf {
+  required string global_step = 1;
+  required string out = 2;
+  required float learning_rate = 3;
+  optional LearningRateDecayConf learning_rate_decay = 4;
+  optional WarmupConf warmup_conf = 5;
+}
+
 message OperatorConf {
   required string name = 1;
   optional string model_load_dir = 2;
@@ -1493,8 +1525,6 @@ message OperatorConf {
     SwitchOutputOpConf switch_output_conf = 145;
     ReturnOpConf return_conf = 146;
     PartialTickOpConf partial_tick_conf = 147;
-    AssignOpConf assign_conf = 148;
-    SnapshotOpConf snapshot_conf = 149;
 
     // domain op
     TupleIdentityOpConf tuple_identity_conf = 200;
@@ -1579,6 +1609,12 @@ message OperatorConf {
     EsacOpConf esac_conf = 292;
     ModelInitOpConf model_init_conf = 293;
     SplitLikeOpConf split_like_conf = 294;
+    SigmoidGradOpConf sigmoid_grad_conf = 295;
+    AssignOpConf assign_conf = 296;
+    SnapshotOpConf snapshot_conf = 297;
+    LearningRateScheduleOpConf learning_rate_schedule_conf = 298;
+    PReluDataGradOpConf prelu_data_grad_conf = 299;
+    PReluAlphaGradOpConf prelu_alpha_grad_conf = 300;
 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;
