@@ -23,7 +23,7 @@ def test_dense(
         job_conf = flow.get_cur_job_conf_builder()
         job_conf.batch_size(1).data_part_num(1).default_data_type(flow.float)
         return flow.layers.dense(
-            inputs=inputs, units=units, activation=of_activation_map["sigmoid"]
+            inputs=inputs, units=units, activation=of_activation_map[activation]
         )
 
     flow.add_job(DenseTestJob)
@@ -38,7 +38,7 @@ def test_dense(
     tf_out = tf.layers.dense(
         tf.Variable(input),
         units,
-        tf_activation_map["sigmoid"],
+        tf_activation_map[activation],
         use_bias=use_bias,
         kernel_initializer=tf.constant_initializer(),
     ).numpy()
@@ -51,7 +51,7 @@ if __name__ == "__main__":
     test_dense(
         in_shape=(64, 32),
         units=128,
-        activation="sigmoid",
+        activation="None",
         use_bias=False,
         trainable=False,
     )

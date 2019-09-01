@@ -22,32 +22,29 @@ def dense(
     trainable=True,
     name=None,
 ):
-    # TODO: check inputs' rank >= 2
-    # TODO: reshape if inputs' rank > 2
-    # TODO: check shape in inputs and units
+    in_shape = inputs.statis_shape()
+    in_num_axes = len(in_shape)
+    assert in_num_axes >= 2
+    if in_num_axes > 2:
+        inputs = flow.reshape(inputs, (in_shape[0], -1))
 
-    # TODO: set variable's dtype = inputs' dtype
-    initializer = op_conf_util.InitializerConf()
-    initializer.random_uniform_conf.min = 0
-    initializer.random_uniform_conf.max = 10
     weight = flow.get_variable(
-        name="dense_weight",
-        shape=(units, 32),
-        dtype=data_type_conf_util.kFloat,
-        initializer=initializer,
+        name=id_util.UniqueStr("DenseWeight_"),
+        shape=(units, inputs.static_shape()[1]),
+        dtype=inputs.dtype(),
+        initializer=flow.random_uniform_initializer(minval=0, maxval=1),
         trainable=True,
-        model_name="dense-weight",
+        model_name="weight",
         model_split_axis=None,
     )
     out = flow.matmul(a=inputs, b=weight, transpose_b=True)
 
     if use_bias:
-        # TODO: set variable's dtype = inputs' dtype
-        # flow.get_variable(shape=(128), dtype=dtat_type_conf_util.kFloat)
         # TODO: add bias_add here
         pass
 
     if activation is not None:
-        out = activation(out)       
+        # out = activation(out)
+        pass
 
     return out
