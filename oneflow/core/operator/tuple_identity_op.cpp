@@ -16,16 +16,17 @@ const PbMessage& TupleIdentityOp::GetCustomizedConf() const {
   return op_conf().tuple_identity_conf();
 }
 
-void TupleIdentityOp::InferBlobDescs(
+Maybe<void> TupleIdentityOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   size_t bn_size = op_conf().tuple_identity_conf().in_size();
   FOR_RANGE(int, i, 0, bn_size) {
     *GetBlobDesc4BnInOp(output_bns().Get(i)) = *GetBlobDesc4BnInOp(input_bns().Get(i));
   }
+  return Maybe<void>::Ok();
 }
 
-void TupleIdentityOp::InferSbpSignature(
+Maybe<void> TupleIdentityOp::InferSbpSignature(
     SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
     const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
     std::function<const SbpInferHint&(const std::string&)> SbpInferHint4Ibn,
@@ -43,13 +44,15 @@ void TupleIdentityOp::InferSbpSignature(
     (*bn2sbp)[input_bns().Get(i)] = *sbp_parallel;
     (*bn2sbp)[output_bns().Get(i)] = *sbp_parallel;
   }
+  return Maybe<void>::Ok();
 }
 
-void TupleIdentityOp::InferHasBatchDim(
+Maybe<void> TupleIdentityOp::InferHasBatchDim(
     std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
   FOR_RANGE(int32_t, i, 0, input_bns().size()) {
     *HasBatchDim4BnInOp(output_bns().Get(i)) = *HasBatchDim4BnInOp(input_bns().Get(i));
   }
+  return Maybe<void>::Ok();
 }
 
 REGISTER_OP(OperatorConf::kTupleIdentityConf, TupleIdentityOp);

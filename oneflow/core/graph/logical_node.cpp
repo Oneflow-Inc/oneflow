@@ -118,14 +118,6 @@ void AddFuncForFindBldBoxingOpConfMthd(const std::string& k, BldBoxingOpConfMthd
 }
 #define REGISTER_BLD_BOXING_OP_CONF_MTHD(k, v) COMMAND(AddFuncForFindBldBoxingOpConfMthd(k, v))
 
-BldSubTskGphMthd BldSubTskGphToMdSave(const LogicalNode*, const LogicalNode* save) {
-  if (save->parallel_desc()->parallel_num() == 1) {
-    return &TaskGraph::BldSubTskGphBySelectOneSourceToSoleSink;
-  } else {
-    return &TaskGraph::BldSubTskGphByOneToOne;
-  }
-}
-
 BldSubTskGphMthd BldSubTskGphToNormalMdUpdt(const LogicalNode*, const LogicalNode* updt) {
   if (updt->parallel_desc()->policy() == kDataParallel) {
     return &TaskGraph::BldSubTskGphByBoxing;
@@ -272,11 +264,22 @@ BldSubTskGphMthd GetMthdForBldSubTskGph(const LogicalNode* src_node, const Logic
       CHECK(src_pd->parallel_num() == dst_pd->parallel_num());
       CHECK(src_pd->policy() == kDataParallel && dst_pd->policy() == kDataParallel);
     }
-    if (src_node->SoleOp()->op_conf().has_source_tick_conf()
-        || src_node->SoleOp()->op_conf().has_tick_conf()
-        || dst_node->SoleOp()->op_conf().has_sink_tick_conf()
-        || dst_node->SoleOp()->op_conf().has_tick_conf()) {
-      return &TaskGraph::BldSubTskGphByBroadcastToBroadcast;
+    auto IsTickNode = [&](const LogicalNode* node) {
+      return IsClassRegistered<IsTickTockOpTypeCase>(node->SoleOp()->op_conf().op_type_case());
+    };
+    if (IsTickNode(src_node) || IsTickNode(dst_node)) {
+      if (src_pd->parallel_num() > 1 && dst_pd->parallel_num() == 1
+          && src_node->SoleOp()->op_conf().has_partial_tick_conf()) {
+        CHECK(dst_node->SoleOp()->op_conf().has_sink_tick_conf());
+        return &TaskGraph::BldSubTskGphByBoxing;
+      } else {
+        if (IsTickNode(src_node) && IsTickNode(dst_node)) {
+          if (src_pd->parallel_num() > 1) {
+            CHECK_EQ(src_pd->parallel_num(), dst_pd->parallel_num());
+          }
+        }
+        return &TaskGraph::BldSubTskGphByBroadcastToBroadcast;
+      }
     }
   }
   if (src_pd->parallel_num() == 1 && dst_pd->parallel_num() == 1) {
@@ -299,12 +302,6 @@ BldSubTskGphMthd GetMthdForBldSubTskGph(const LogicalNode* src_node, const Logic
 REGISTER_BLD_SUB_TSK_GPH_MTHD("NormalMdUpdt"
                               "NormalForward",
                               &TaskGraph::BldSubTskGphByOneToOne);
-REGISTER_BLD_SUB_TSK_GPH_MTHD("NormalMdUpdt"
-                              "MdSave",
-                              BldSubTskGphToMdSave);
-REGISTER_BLD_SUB_TSK_GPH_MTHD("NormalForward"
-                              "MdSave",
-                              BldSubTskGphToMdSave);
 REGISTER_BLD_SUB_TSK_GPH_MTHD("NormalForward"
                               "ReduceConcat",
                               &TaskGraph::BldSubTskGphByOneToOne);
@@ -364,6 +361,9 @@ REGISTER_BLD_BOXING_OP_CONF_MTHD("Accuracy"
 REGISTER_BLD_BOXING_OP_CONF_MTHD("MdDiffAcc"
                                  "NormalMdUpdt",
                                  &BoxingTaskNode::BldBoxingOpConfWithAddAndClone);
+REGISTER_BLD_BOXING_OP_CONF_MTHD("Tick"
+                                 "Tick",
+                                 &BoxingTaskNode::BldBoxingOpConfWithPartialTick2SinkTick);
 
 #define LOGICAL_TYPE_SEQ                                  \
   OF_PP_MAKE_TUPLE_SEQ(NormalForward, kDataForwardArea)   \

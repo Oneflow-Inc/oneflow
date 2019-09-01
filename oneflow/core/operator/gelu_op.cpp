@@ -13,9 +13,10 @@ void GeluOp::InitFromOpConf() {
 
 const PbMessage& GeluOp::GetCustomizedConf() const { return op_conf().gelu_conf(); }
 
-void GeluOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                            const ParallelContext* parallel_ctx) const {
+Maybe<void> GeluOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                                   const ParallelContext* parallel_ctx) const {
   *GetBlobDesc4BnInOp("out") = *GetBlobDesc4BnInOp("in");
+  return Maybe<void>::Ok();
 }
 
 void GeluOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {

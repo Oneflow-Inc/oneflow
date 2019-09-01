@@ -72,7 +72,6 @@ void MakeModelInitJob(
     output_conf->set_out("out");
     InterfaceOpUtil::InitBlobConf(output_conf->mutable_blob_conf(), variable_op_parallel_blob_conf);
     job_builder.AddOps(variable_op_parallel_conf, {output_op_conf});
-    job_conf->add_arg_op_name(output_op_conf.name());
   }
 
   const std::string global_model_init_job_name = "System-ModelInit";

@@ -8,21 +8,22 @@
 namespace oneflow {
 
 struct InterfaceOpUtil final {
-  static void InferOutBlobDesc(const InterfaceBlobConf& blob_conf, BlobDesc* out_blob_desc,
-                               const ParallelContext* parallel_ctx);
-  static void InferOutBlobDesc(const InterfaceBlobConf& blob_conf, BlobDesc* out_blob_desc,
-                               const ParallelContext* parallel_ctx, int64_t record_piece_size);
-  static void InferHasBatchDim(const InterfaceBlobConf& blob_conf, bool* has_batch_dim);
-  static void GetInputLikeOpSbpSignature(const InterfaceBlobConf& blob_conf,
-                                         const PbRpf<std::string>& input_bns,
-                                         const PbRpf<std::string>& output_bns,
-                                         SbpSignature* sbp_signature);
-  static void GetOutputLikeOpSbpSignature(const InterfaceBlobConf& blob_conf,
-                                          const PbRpf<std::string>& input_bns,
-                                          const PbRpf<std::string>& output_bns,
-                                          SbpSignature* sbp_signature);
-  static void InitBlobConf(InterfaceBlobConf* blob_conf,
-                           const ParallelBlobConf& parallel_blob_conf);
+  static Maybe<void> InferOutBlobDesc(const InterfaceBlobConf& blob_conf, BlobDesc* out_blob_desc,
+                                      const ParallelContext* parallel_ctx);
+  static Maybe<void> InferOutBlobDesc(const InterfaceBlobConf& blob_conf, BlobDesc* out_blob_desc,
+                                      const ParallelContext* parallel_ctx,
+                                      int64_t record_piece_size);
+  static Maybe<void> InferHasBatchDim(const InterfaceBlobConf& blob_conf, bool* has_batch_dim);
+  static Maybe<void> GetInputLikeOpSbpSignature(const InterfaceBlobConf& blob_conf,
+                                                const PbRpf<std::string>& input_bns,
+                                                const PbRpf<std::string>& output_bns,
+                                                SbpSignature* sbp_signature);
+  static Maybe<void> GetOutputLikeOpSbpSignature(const InterfaceBlobConf& blob_conf,
+                                                 const PbRpf<std::string>& input_bns,
+                                                 const PbRpf<std::string>& output_bns,
+                                                 SbpSignature* sbp_signature);
+  static Maybe<void> InitBlobConf(InterfaceBlobConf* blob_conf,
+                                  const ParallelBlobConf& parallel_blob_conf);
 };
 
 }  // namespace oneflow

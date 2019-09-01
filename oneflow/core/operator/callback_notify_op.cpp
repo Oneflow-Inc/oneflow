@@ -17,16 +17,19 @@ const PbMessage& CallbackNotifyOp::GetCustomizedConf() const {
   return op_conf().callback_notify_conf();
 }
 
-void CallbackNotifyOp::InferBlobDescs(
+Maybe<void> CallbackNotifyOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
-  CHECK_EQ(parallel_ctx->parallel_num(), 1);
-  CHECK(GetBlobDesc4BnInOp("in")->shape() == Shape({1}));
-  CHECK(IsIntegralDataType(GetBlobDesc4BnInOp("in")->data_type()));
+  CHECK_EQ_OR_RETURN(parallel_ctx->parallel_num(), 1);
+  CHECK_OR_RETURN(GetBlobDesc4BnInOp("in")->shape() == Shape({1}));
+  CHECK_OR_RETURN(IsIntegralDataType(GetBlobDesc4BnInOp("in")->data_type()));
+  return Maybe<void>::Ok();
 }
 
-void CallbackNotifyOp::InferHasBatchDim(
-    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {}
+Maybe<void> CallbackNotifyOp::InferHasBatchDim(
+    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
+  return Maybe<void>::Ok();
+}
 
 void CallbackNotifyOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
   SbpSignatureBuilder().Split(input_bns(), 0).Build(sbp_sig_list->mutable_sbp_signature()->Add());

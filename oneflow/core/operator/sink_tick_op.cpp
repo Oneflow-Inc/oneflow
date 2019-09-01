@@ -9,14 +9,17 @@ void SinkTickOp::InitFromOpConf() {
   EnrollOutputBn("out", false);
 }
 
-void SinkTickOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                const ParallelContext* parallel_ctx) const {
+Maybe<void> SinkTickOp::InferBlobDescs(
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx) const {
   GetBlobDesc4BnInOp("out")->mut_shape() = Shape({1});
+  return Maybe<void>::Ok();
 }
 
-void SinkTickOp::InferHasBatchDim(
+Maybe<void> SinkTickOp::InferHasBatchDim(
     std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
   *HasBatchDim4BnInOp("out") = false;
+  return Maybe<void>::Ok();
 }
 
 const PbMessage& SinkTickOp::GetCustomizedConf() const { return op_conf().sink_tick_conf(); }
@@ -26,5 +29,6 @@ void SinkTickOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
 }
 
 REGISTER_CPU_OP(OperatorConf::kSinkTickConf, SinkTickOp);
+REGISTER_TICK_TOCK_OP(OperatorConf::kSinkTickConf);
 
 }  // namespace oneflow

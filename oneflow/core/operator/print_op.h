@@ -16,12 +16,16 @@ class PrintOp final : public Operator {
   const PbMessage& GetCustomizedConf() const override;
   LogicalNode* NewProperLogicalNode() const override { return new PrintLogicalNode; }
 
-  void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                      const ParallelContext* parallel_ctx) const override {}
+  Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                             const ParallelContext* parallel_ctx) const override {
+    return Maybe<void>::Ok();
+  }
 
  private:
-  void InferHasBatchDim(
-      std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const override {}
+  Maybe<void> InferHasBatchDim(
+      std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const override {
+    return Maybe<void>::Ok();
+  }
 
   void GetSbpSignatures(SbpSignatureList* sbp_sig_list) const override;
 

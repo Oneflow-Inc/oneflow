@@ -17,12 +17,12 @@ void BroadcastBinaryOp::InitFromOpConf() {
   EnrollOutputBn("out");
 }
 
-void BroadcastBinaryOp::InferBlobDescs(
+Maybe<void> BroadcastBinaryOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   const BlobDesc* a_blob_desc = GetBlobDesc4BnInOp("a");
   const BlobDesc* b_blob_desc = GetBlobDesc4BnInOp("b");
-  CHECK_EQ(a_blob_desc->data_type(), b_blob_desc->data_type());
+  CHECK_EQ_OR_RETURN(a_blob_desc->data_type(), b_blob_desc->data_type());
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   size_t output_num_axes = std::max(a_blob_desc->shape().NumAxes(), b_blob_desc->shape().NumAxes());
   if (IsScalarBlob(a_blob_desc)) {
@@ -35,11 +35,12 @@ void BroadcastBinaryOp::InferBlobDescs(
     *out_blob_desc = *a_blob_desc;
     Shape out_shape(a_shape);
     FOR_RANGE(int64_t, i, 0, a_shape.NumAxes()) {
-      CHECK(a_shape.At(i) == 1 || b_shape.At(i) == 1 || a_shape.At(i) == b_shape.At(i));
+      CHECK_OR_RETURN(a_shape.At(i) == 1 || b_shape.At(i) == 1 || a_shape.At(i) == b_shape.At(i));
       out_shape.Set(i, std::max(a_shape.At(i), b_shape.At(i)));
     }
     out_blob_desc->mut_shape() = out_shape;
   }
+  return Maybe<void>::Ok();
 }
 
 void BroadcastBinaryOp::GetSbpSignatures(

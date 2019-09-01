@@ -29,7 +29,6 @@ void LogicalGraph::BuildFwStruct() {
   NaiveBuildFwStruct(&op_name2nodes);
   ReplaceAllReduceFacades();
   LinkUnpackFw2PackFw(op_name2nodes);
-  total_mbn_num_ = 0;
 }
 
 void LogicalGraph::NaiveBuildFwStruct(

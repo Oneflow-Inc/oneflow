@@ -1,6 +1,6 @@
 #include "oneflow/core/job/inter_job_mem_sharing_util.h"
 #include "oneflow/core/common/str_util.h"
-#include "oneflow/core/memory/memory_case.pb.h"
+#include "oneflow/core/memory/memory_case_util.h"
 #include "oneflow/core/register/runtime_register_desc.h"
 #include "oneflow/core/job/id_manager.h"
 #include "oneflow/core/job/plan_util.h"
@@ -16,39 +16,24 @@ std::vector<TaskProto*> SortSameOpNameTaskProtos(const std::string& op_name, Pla
     if (task->exec_sequence().exec_node_size() == 1) {
       const KernelConf& kernel_conf = task->exec_sequence().exec_node(0).kernel_conf();
       if (op_name == kernel_conf.op_attribute().op_conf().name()) {
+        CHECK(task->has_parallel_ctx());
         task_protos.emplace_back(task);
       }
     }
   }
   std::sort(task_protos.begin(), task_protos.end(), [](const TaskProto* lhs, const TaskProto* rhs) {
-    return lhs->machine_id() < rhs->machine_id()
-           || (lhs->machine_id() == rhs->machine_id() && lhs->thrd_id() < rhs->thrd_id());
+    return lhs->parallel_ctx().parallel_id() < rhs->parallel_ctx().parallel_id();
   });
   return task_protos;
 }
 
-HashSet<std::string> GetArgOpNames(const std::vector<Job>& jobs) {
-  HashSet<std::string> arg_op_names;
-  for (const Job& job : jobs) {
-    for (const auto& arg_op_name : job.job_conf().arg_op_name()) {
-      arg_op_names.insert(arg_op_name);
-    }
-    for (const OperatorConf& op_conf : job.net().op()) {
-      if (op_conf.has_variable_conf()) { arg_op_names.insert(op_conf.name()); }
-    }
-  }
-  return arg_op_names;
-}
-
 HashMap<std::string, HashSet<int64_t>> GetInterfaceOpName2JobIds(const std::vector<Job>& jobs) {
-  HashSet<std::string> arg_op_names = GetArgOpNames(jobs);
   HashMap<std::string, HashSet<int64_t>> interface_op_name2job_ids;
   HashSet<std::string> unique_op_name_check;
   FOR_RANGE(int64_t, i, 0, jobs.size()) {
     const auto& job = jobs.at(i);
     for (const auto& op : job.net().op()) {
       if (IsInterfaceOpConf(op)) {
-        CHECK(arg_op_names.find(op.name()) != arg_op_names.end());
         CHECK(interface_op_name2job_ids[op.name()].emplace(i).second);
         unique_op_name_check.emplace(op.name());
       } else {
@@ -217,14 +202,21 @@ void InterJobMemSharingUtil::BindInterfaceMemBlockId(const std::vector<Job>& job
           SortSameOpNameTaskProtos(pair.first, &sub_plans->at(job_id)));
     }
     const auto& first_vec = same_op_name_sorted_task_protos.at(0);
+    std::vector<MemoryCase> common_mem_case_vec(first_vec.size());
+    std::transform(
+        first_vec.cbegin(), first_vec.cend(), common_mem_case_vec.begin(),
+        [](TaskProto* tp) { return PlanUtil::GetSoleProducedDataRegst(tp)->mem_case(); });
     for (const auto& task_protos : same_op_name_sorted_task_protos) {
       CHECK_EQ(task_protos.size(), first_vec.size());
       FOR_RANGE(int64_t, i, 0, first_vec.size()) {
         CHECK_EQ(task_protos.at(i)->machine_id(), first_vec.at(i)->machine_id());
-        CHECK_EQ(task_protos.at(i)->thrd_id(), first_vec.at(i)->thrd_id());
         RegstDescProto* first_regst_desc = PlanUtil::GetSoleProducedDataRegst(first_vec.at(i));
         CHECK_EQ(first_regst_desc->mem_shared_offset(), 0);
         RegstDescProto* regst_desc = PlanUtil::GetSoleProducedDataRegst(task_protos.at(i));
+        MemoryCase common_mem_case;
+        CHECK(MemoryCaseUtil::GetCommonMemoryCase(common_mem_case_vec.at(i), regst_desc->mem_case(),
+                                                  &common_mem_case));
+        common_mem_case_vec[i] = common_mem_case;
         CHECK(regst_desc->enable_mem_sharing() == false);
         CHECK_EQ(regst_desc->mem_shared_offset(), 0);
         CHECK_NE(first_regst_desc->mem_shared_id(), -1);
@@ -242,6 +234,12 @@ void InterJobMemSharingUtil::BindInterfaceMemBlockId(const std::vector<Job>& job
           regst_desc->set_separated_header_mem_block_id(
               first_regst_desc->separated_header_mem_block_id());
         }
+      }
+    }
+    for (const auto& task_protos : same_op_name_sorted_task_protos) {
+      FOR_RANGE(int64_t, i, 0, task_protos.size()) {
+        *PlanUtil::GetSoleProducedDataRegst(task_protos.at(i))->mutable_mem_case() =
+            common_mem_case_vec.at(i);
       }
     }
   }

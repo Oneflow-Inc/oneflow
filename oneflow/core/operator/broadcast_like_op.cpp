@@ -14,10 +14,11 @@ const PbMessage& BroadcastLikeOp::GetCustomizedConf() const {
   return op_conf().broadcast_like_conf();
 }
 
-void BroadcastLikeOp::InferBlobDescs(
+Maybe<void> BroadcastLikeOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   GetBlobDesc4BnInOp("y")->CopyMetaFrom(*GetBlobDesc4BnInOp("like"));
+  return Maybe<void>::Ok();
 }
 
 void BroadcastLikeOp::GetSbpSignatures(

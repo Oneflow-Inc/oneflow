@@ -13,9 +13,9 @@ void ReentrantLockStatus::Init(const KernelConf& kernel_conf) {
   total_acquired_lock_num_ = 0;
   lock_id2queued_request_act_id_.resize(conf.lock_id2intersecting_lock_ids_size());
   lock_id2acquired_num_.resize(conf.lock_id2intersecting_lock_ids_size());
-  for (const IdList ids : conf.lock_id2intersecting_lock_ids()) {
+  for (const Int64List& ids : conf.lock_id2intersecting_lock_ids()) {
     lock_id2intersecting_lock_ids_.push_back(
-        std::vector<int64_t>(ids.id().begin(), ids.id().end()));
+        std::vector<int64_t>(ids.value().begin(), ids.value().end()));
   }
 }
 

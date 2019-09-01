@@ -17,20 +17,21 @@ void AdamModelUpdateOp::MdUpdtVirtualInitFromOpConf() {
   }
 }
 
-void AdamModelUpdateOp::MdUpdtVirtualInferBlobDescs(
+Maybe<void> AdamModelUpdateOp::MdUpdtVirtualInferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   const auto& adam_conf = op_conf().adam_model_update_conf().user_conf().adam_conf();
   const BlobDesc* model_blob_desc = GetBlobDesc4BnInOp("model");
-  CHECK_EQ(model_blob_desc->data_type(), GlobalJobDesc().DefaultDataType());
-  CHECK_EQ(model_blob_desc->has_data_id_field(), false);
-  CHECK(*GetBlobDesc4BnInOp("m") == *model_blob_desc);
-  CHECK(*GetBlobDesc4BnInOp("v") == *model_blob_desc);
+  CHECK_EQ_OR_RETURN(model_blob_desc->data_type(), GlobalJobDesc().DefaultDataType());
+  CHECK_EQ_OR_RETURN(model_blob_desc->has_data_id_field(), false);
+  CHECK_OR_RETURN(*GetBlobDesc4BnInOp("m") == *model_blob_desc);
+  CHECK_OR_RETURN(*GetBlobDesc4BnInOp("v") == *model_blob_desc);
 
   if (adam_conf.do_bias_correction()) {
-    CHECK_EQ(GetBlobDesc4BnInOp("beta1_t")->shape(), Shape({1}));
-    CHECK_EQ(GetBlobDesc4BnInOp("beta2_t")->shape(), Shape({1}));
+    CHECK_EQ_OR_RETURN(GetBlobDesc4BnInOp("beta1_t")->shape(), Shape({1}));
+    CHECK_EQ_OR_RETURN(GetBlobDesc4BnInOp("beta2_t")->shape(), Shape({1}));
   }
+  return Maybe<void>::Ok();
 }
 
 const HashSet<std::string> AdamModelUpdateOp::AlwaysBroadcastParallelBns() const {

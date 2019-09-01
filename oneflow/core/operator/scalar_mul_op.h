@@ -12,14 +12,14 @@ class ScalarMulOp final : public Operator {
   ~ScalarMulOp() = default;
 
   void InitFromOpConf() override;
-  void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                      const ParallelContext* parallel_ctx) const override;
+  Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                             const ParallelContext* parallel_ctx) const override;
   const PbMessage& GetCustomizedConf() const override { return op_conf().scalar_mul_conf(); }
 
  private:
-  void InferHasBatchDim(
+  Maybe<void> InferHasBatchDim(
       std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const override {
-    NaiveInferHasBatchDim(HasBatchDim4BnInOp);
+    return NaiveInferHasBatchDim(HasBatchDim4BnInOp);
   }
 
   void GetSbpSignatures(

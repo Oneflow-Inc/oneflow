@@ -14,7 +14,7 @@ void BasicRnnOp::VirtualInitFromOpConf() {
   }
 }
 
-void BasicRnnOp::VirtualInferBlobDescs(
+Maybe<void> BasicRnnOp::VirtualInferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   int32_t hidden_size = GetBlobDesc4BnInOp("out")->shape().At(1);
@@ -32,6 +32,7 @@ void BasicRnnOp::VirtualInferBlobDescs(
     // *GetBlobDesc4BnInOp("bias_multiplier") = BlobDesc(Shape({data_num, 1}));
     TODO();
   }
+  return Maybe<void>::Ok();
 }
 
 REGISTER_OP(OperatorConf::kBasicRnnConf, BasicRnnOp);

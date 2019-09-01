@@ -15,7 +15,8 @@ class AddOp final : public CWiseOp {
   const PbMessage& GetCustomizedConf() const override;
 
  private:
-  void InferHasBatchDim(std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const override;
+  Maybe<void> InferHasBatchDim(
+      std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const override;
 
   void GetSbpSignatures(
       const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,

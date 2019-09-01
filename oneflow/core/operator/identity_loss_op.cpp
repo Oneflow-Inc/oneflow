@@ -11,11 +11,12 @@ LossKernelConf* IdentityLossOp::GetMutLossKernelConf(KernelConf* kernel_conf) co
   return kernel_conf->mutable_identity_loss_conf()->mutable_loss_conf();
 }
 
-void IdentityLossOp::VirtualInferBlobDescs(
+Maybe<void> IdentityLossOp::VirtualInferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   const BlobDesc* prediction = GetBlobDesc4BnInOp("prediction");
   *GetBlobDesc4BnInOp("loss") = *prediction;
+  return Maybe<void>::Ok();
 }
 
 void IdentityLossOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
