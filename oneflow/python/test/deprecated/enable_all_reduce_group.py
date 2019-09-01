@@ -19,9 +19,7 @@ def UpdateVariable(x, scope_name, enable_all_reduce_group = True):
         job_conf.train_conf().model_update_conf.naive_conf.SetInParent()
         job_conf.train_conf().loss_lbn.extend([scope_name + "-loss_op/out"])
         job_conf.enable_all_reduce_group(enable_all_reduce_group)
-        initializer = op_conf_util.InitializerConf()
-        initializer.constant_conf.value = 1
-        w = flow.get_variable(name = scope_name + '-w', shape = (10, ), dtype = flow.float, initializer = initializer)
+        w = flow.get_variable(name = scope_name + '-w', shape = (10, ), dtype = flow.float, initializer = flow.constant_initializer(value=1.0))
         c = dl_net.BiasAdd(x, w)
         # return flow.keras.activations.tanh(c) 
         return dl_net.ReduceMean(c, name="loss_op")
