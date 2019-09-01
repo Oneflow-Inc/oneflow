@@ -66,12 +66,7 @@ Maybe<void> InterfaceOpUtil::InferOutBlobDesc(const InterfaceBlobConf& blob_conf
                                               int64_t record_piece_size) {
   out_blob_desc->mut_shape() = Shape(blob_conf.shape());
   CheckShape(out_blob_desc->shape());
-  if (out_blob_desc->mut_shape().At(0) == -1) {
-    CHECK_EQ(record_piece_size % parallel_ctx->parallel_num(), 0);
-    out_blob_desc->mut_shape().Set(0, record_piece_size);
-  } else {
-    CHECK_GT(out_blob_desc->mut_shape().At(0), 0);
-  }
+  CHECK_GT(out_blob_desc->mut_shape().At(0), 0);
   if (blob_conf.has_data_type()) {
     out_blob_desc->set_data_type(blob_conf.data_type());
   } else {
