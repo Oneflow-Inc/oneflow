@@ -18,7 +18,7 @@ void BiasAddOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetB
                                const ParallelContext* parallel_ctx) const {
   const BlobDesc* a_blob_desc = GetBlobDesc4BnInOp("a");
   const BlobDesc* b_blob_desc = GetBlobDesc4BnInOp("b");
-  int32_t bias_add_axis = op_conf().bias_add_conf().axis();
+  const int32_t bias_add_axis = op_conf().bias_add_conf().axis();
 
   CHECK_EQ(b_blob_desc->shape().NumAxes(), 1);
   CHECK_GE(bias_add_axis, 0);
