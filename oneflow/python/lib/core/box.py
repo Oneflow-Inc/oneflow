@@ -4,9 +4,10 @@ from oneflow.python.oneflow_export import oneflow_export
 
 @oneflow_export('Box')
 class Box(object):
-    def __init__(self):
-        self.value_ = None
-        self.has_value_ = False
+    def __init__(self, *arg):
+        assert len(arg) == 1
+        self.value_ = arg[0]
+        self.has_value_ = len(arg) > 0
 
     @property
     def value(self):
