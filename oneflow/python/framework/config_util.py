@@ -305,4 +305,5 @@ def  _DefaultConfigCppFlags(config):
 
 
 def _TryCompleteDefaultJobConfigProto(job_conf):
-    job_conf.predict_conf.SetInParent()
+    if job_conf.WhichOneof('job_type') is None:
+        job_conf.predict_conf.SetInParent()
