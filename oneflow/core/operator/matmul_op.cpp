@@ -64,8 +64,13 @@ Maybe<void> MatmulOp::InferBatchAxis(
   const MatmulOpConf& conf = op_conf().matmul_conf();
   int32_t num_axes = LogicalBlobDesc4Ibn("a").shape().NumAxes();
   if (num_axes > 2) {
-    CHECK_OR_RETURN(*BatchAxis4BnInOp("a") == *BatchAxis4BnInOp("b"));
-    *BatchAxis4BnInOp("out") = *BatchAxis4BnInOp("a");
+    if (BatchAxis4BnInOp("a")->has_value()) {
+      *BatchAxis4BnInOp("out") = *BatchAxis4BnInOp("a");
+    } else if (BatchAxis4BnInOp("b")->has_value()) {
+      *BatchAxis4BnInOp("out") = *BatchAxis4BnInOp("b");
+    } else {
+      BatchAxis4BnInOp("out")->clear_value();
+    }
   } else if (num_axes == 2) {
     OptInt64 a_batch_axis(*BatchAxis4BnInOp("a"));
     if (a_batch_axis.has_value() && conf.transpose_a()) {
@@ -75,18 +80,12 @@ Maybe<void> MatmulOp::InferBatchAxis(
     if (b_batch_axis.has_value() && conf.transpose_b()) {
       b_batch_axis.set_value(1 - b_batch_axis.value());
     }
-    if (!a_batch_axis.has_value() && !b_batch_axis.has_value()) {
-      BatchAxis4BnInOp("out")->clear_value();
-    } else if (a_batch_axis.has_value() && b_batch_axis.has_value()) {
-      CHECK_EQ_OR_RETURN(a_batch_axis.value(), 1);
-      CHECK_EQ_OR_RETURN(b_batch_axis.value(), 0);
-      BatchAxis4BnInOp("out")->clear_value();
-    } else if (a_batch_axis.has_value()) {
-      CHECK_EQ_OR_RETURN(a_batch_axis.value(), 0);
+    if (a_batch_axis.has_value() && a_batch_axis.value() == 0) {
       *BatchAxis4BnInOp("out") = a_batch_axis;
-    } else if (b_batch_axis.has_value()) {
-      CHECK_EQ_OR_RETURN(b_batch_axis.value(), 1);
+    } else if (b_batch_axis.has_value() && b_batch_axis.value() == 1) {
       *BatchAxis4BnInOp("out") = b_batch_axis;
+    } else {
+      BatchAxis4BnInOp("out")->clear_value();
     }
   } else {
     UNIMPLEMENTED_THEN_RETURN();
