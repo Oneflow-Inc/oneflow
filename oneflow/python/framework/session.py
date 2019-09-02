@@ -1,14 +1,12 @@
 from __future__ import absolute_import
 
 import threading
-from oneflow.core.job.job_set_pb2 import JobSet
 from oneflow.core.job.job_set_pb2 import ConfigProto
 import oneflow.core.job.job_pb2 as job_util
 import oneflow.python.framework.runtime as runtime
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.runtime_context as runtime_ctx
 import oneflow.python.framework.config_util as config_util
-import oneflow.python.framework.job_set_util as job_set_util
 from oneflow.python.framework.out_remote_blobs_result_box import OutRemoteBlobsResultBox
 from oneflow.python.oneflow_export import oneflow_export
 
@@ -23,11 +21,7 @@ def init(config_proto):
 
 @oneflow_export('Session')
 class Session(object):
-    def __init__(self, job_set = None):
-        if job_set == None: job_set = job_set_util.get_default_job_set()
-        assert isinstance(job_set, JobSet)
-        self.job_set_ = job_set
-        self.job_name2job_func_ = job_set_util.GetJobName2JobFunc(job_set)
+    def __init__(self):
         self.is_running_ = False
         self.cond_var_ = threading.Condition()
         self.running_job_cnt_ = 0
@@ -36,17 +30,14 @@ class Session(object):
 
     def run(self, job_func, *arg):
         assert self.is_running_
-        assert job_func.__name__ in self.job_name2job_func_
         return self.Run(job_func, *arg)
 
     def map(self, job_func, feed_data):
         assert self.is_running_
-        assert job_func.__name__ in self.job_name2job_func_
         return self.Map(job_func, feed_data)
 
     def no_return_run(self, job_func, *arg):
         assert self.is_running_
-        assert job_func.__name__ in self.job_name2job_func_
         return self.NoReturnRun(job_func, *arg)
 
     def sync(self):
@@ -89,7 +80,7 @@ class Session(object):
     def __enter__(self):
         assert self.is_running_ == False
         self.is_running_ = True
-        self.runtime_env_ = runtime.GetMachineRuntimeEnv(self.job_set_)
+        self.runtime_env_ = runtime.GetMachineRuntimeEnv()
         self.runtime_env_.__enter__()
         runtime_ctx.default_session = self
         return self
