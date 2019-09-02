@@ -65,7 +65,13 @@ Maybe<void> JobBuildAndInferCtx::GenOpProducedEmptyLogicalBlobDesc(Operator* op)
 }
 
 // TODO(): add handle error of same interface op blob between jobs
-Maybe<void> JobBuildAndInferCtx::AddAndInferInputOp(const OperatorConf& op_conf) {
+Maybe<void> JobBuildAndInferCtx::AddAndInferOp(const OperatorConf& op_conf,
+                                               const ParallelConf& parallel_conf) {
+  if (!has_job_conf_) {
+    return GenJobBuildAndInferError(JobBuildAndInferError::kJobConfNotSet, "");
+  }
+  if (!is_job_conf_frozen_) { is_job_conf_frozen_ = true; }
+
   const std::string& op_name = op_conf.name();
   if (op_name2op_.find(op_name) != op_name2op_.end()) {
     return GenJobBuildAndInferError(
@@ -106,14 +112,6 @@ Maybe<void> JobBuildAndInferCtx::AddAndInferInputOp(const OperatorConf& op_conf)
   JUST(op->InferBatchAxisIf(GetConstBlobDescBnInOp, BatchAxis4BnInOp));
   // TODO()  infer blob desc split dim
   return Maybe<void>::Ok();
-}
-
-Maybe<void> JobBuildAndInferCtx::AddAndInferNonInputOp(const OperatorConf& op_conf) {
-  if (!has_job_conf_) {
-    return GenJobBuildAndInferError(JobBuildAndInferError::kJobConfNotSet, "");
-  }
-  if (!is_job_conf_frozen_) { is_job_conf_frozen_ = true; }
-  return AddAndInferInputOp(op_conf);
 }
 
 Maybe<void> JobBuildAndInferCtx::AddLossLogicalBlobName(const std::string& lbn) {

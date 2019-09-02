@@ -61,15 +61,11 @@ def CurJobBuildAndInferCtx_SetJobConf(job_config_proto):
     error = text_format.Parse(serialized_error, error_util.Error())
     if error.HasField("error_type"): raise JobBuildAndInferError(error)
 
-def CurJobBuildAndInferCtx_AddAndInferInputOp(op_conf_proto):
+def CurJobBuildAndInferCtx_AddAndInferOp(op_conf_proto, parallel_conf_proto):
     serialized_op_conf = str(text_format.MessageToString(op_conf_proto))
-    serialized_error = oneflow_internal.CurJobBuildAndInferCtx_AddAndInferInputOp(serialized_op_conf)
-    error = text_format.Parse(serialized_error, error_util.Error())
-    if error.HasField("error_type"): raise JobBuildAndInferError(error)
-
-def CurJobBuildAndInferCtx_AddAndInferNonInputOp(op_conf_proto):
-    serialized_op_conf = str(text_format.MessageToString(op_conf_proto))
-    error_str = oneflow_internal.CurJobBuildAndInferCtx_AddAndInferNonInputOp(serialized_op_conf)
+    serialized_parallel_conf = str(text_format.MessageToString(parallel_conf_proto))
+    add_and_infer = oneflow_internal.CurJobBuildAndInferCtx_AddAndInferOp
+    error_str = add_and_infer(serialized_op_conf, serialized_parallel_conf)
     error = text_format.Parse(error_str, error_util.Error())
     if error.HasField("error_type"): raise JobBuildAndInferError(error)
 
