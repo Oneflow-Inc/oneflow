@@ -10,7 +10,7 @@ def _conv2d_layer(
     kernel_size=3,
     strides=1,
     padding="SAME",
-    data_format="channels_first",
+    data_format="NCHW",
     dilation_rate=1,
     activation=op_conf_util.kRelu,
     use_bias=False,
