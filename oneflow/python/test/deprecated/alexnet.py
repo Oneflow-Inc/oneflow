@@ -235,12 +235,14 @@ def TrainAlexNet():
     job_conf = flow.get_cur_job_conf_builder()
     job_conf.batch_size(12).data_part_num(8).default_data_type(flow.float)
     job_conf.train_conf()
+    job_conf.train_conf().batch_size = 12
     job_conf.train_conf().primary_lr = 0.00001
     job_conf.train_conf().num_of_batches_in_snapshot = 100
     job_conf.train_conf().model_update_conf.naive_conf.SetInParent()
+    job_conf.train_conf().loss_lbn.extend(["softmax_loss/out"])
     softmax_loss = BuildAlexNetWithDeprecatedAPI(args.train_dir)
-    train_conf_builder = job_conf.get_train_conf_builder()
-    train_conf_builder.add_loss(softmax_loss)
+    # train_conf_builder = job_conf.get_train_conf_builder()
+    # train_conf_builder.add_loss(softmax_loss)
     return softmax_loss
 
 
