@@ -161,7 +161,7 @@ def avg_pool2d(input, ksize, strides, padding, data_format="NHWC", name=None):
         ksize, 2, "ksize"
     )
     op_conf.average_pooling_2d_conf.strides[:] = _GetSequence(
-        ksize, 2, "strides"
+        strides, 2, "strides"
     )
     assert padding in ["VALID", "SAME"]
     setattr(op_conf.average_pooling_2d_conf, "padding", padding)
