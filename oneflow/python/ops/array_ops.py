@@ -57,3 +57,26 @@ def reshape(x, shape, name=None):
     lbi.op_name = op_conf.name
     lbi.blob_name = "out"
     return remote_blob_util.RemoteBlob(lbi)
+
+
+@oneflow_export("transpose")
+def transpose(a, perm=None, conjugate=False, name=None):
+    assert isinstance(perm, (tuple, list))
+
+    if name is None:
+        name = id_util.UniqueStr("Tranpose_")
+
+    if conjugate:
+        raise NotImplementedError
+
+    op_conf = op_conf_util.OperatorConf()
+    op_conf.name = name
+    setattr(op_conf.transpose_conf, "in", a.logical_blob_name)
+    op_conf.transpose_conf.out = "out"
+    op_conf.transpose_conf.perm.extend(list(perm))
+
+    compile_context.CurJobAddOp(op_conf)
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = "out"
+    return remote_blob_util.RemoteBlob(lbi)
