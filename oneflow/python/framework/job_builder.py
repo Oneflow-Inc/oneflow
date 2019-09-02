@@ -24,11 +24,8 @@ def CurCtxSetJobConfIfNotSet(job_config_proto):
         c_api_util.CurJobBuildAndInferCtx_SetJobConf(job_config_proto)
         job_conf_inited = True
 
-def CurCtxAddAndInferInputOp(op_conf_proto):
-    return c_api_util.CurJobBuildAndInferCtx_AddAndInferInputOp(op_conf_proto)
-
-def CurCtxAddAndInferNonInputOp(op_conf_proto):
-    return c_api_util.CurJobBuildAndInferCtx_AddAndInferNonInputOp(op_conf_proto)
+def CurCtxAddAndInferOp(op_conf_proto, parallel_conf_proto):
+    return c_api_util.CurJobBuildAndInferCtx_AddAndInferOp(op_conf_proto, parallel_conf_proto)
 
 def CurCtxAddLossLogicalBlobName(lbn):
     return c_api_util.CurJobBuildAndInferCtx_AddLossLogicalBlobName(lbn)
