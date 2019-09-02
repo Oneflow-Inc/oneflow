@@ -24,7 +24,7 @@ def conv2d(
         assert len(strides) == 2, ValueError(
             "strides length must be 2 when passed as a list."
         )
-    elif isinstance(strides, (int, long)):
+    elif isinstance(strides, int):
         strides = [strides] * 2
     else:
         raise ValueError("strides must be an int or a list.")
@@ -46,7 +46,7 @@ def conv2d(
             assert len(dilations) == 2, ValueError(
                 "dilations length must be 2 when passed as a list."
             )
-        elif isinstance(dilations, (int, long)):
+        elif isinstance(dilations, int):
             dilations = [dilations] * 2
         else:
             raise ValueError("dilations must be an int or a list.")
@@ -58,12 +58,12 @@ def conv2d(
     op_conf.conv_2d_conf.filters = filters.static_shape[0]
     op_conf.conv_2d_conf.padding = padding.lower()
     op_conf.conv_2d_conf.data_format = channel_pos
-    op_conf.conv_2d_conf.kernel_size = [
+    op_conf.conv_2d_conf.kernel_size.extend([
         filters.static_shape[2],
         filters.static_shape[3],
-    ]
-    op_conf.conv_2d_conf.strides = strides
-    op_conf.conv_2d_conf.dilation_rate = dilations
+    ])
+    op_conf.conv_2d_conf.strides.extend(strides)
+    op_conf.conv_2d_conf.dilation_rate.extend(dilations)
     op_conf.conv_2d_conf.use_bias = False
 
     if name is None:
