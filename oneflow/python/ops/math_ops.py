@@ -1,0 +1,147 @@
+from __future__ import absolute_import
+
+import oneflow.python.framework.compile_context as compile_context
+import oneflow.python.framework.remote_blob as remote_blob_util
+import oneflow.python.framework.id_util as id_util
+import oneflow.core.operator.op_conf_pb2 as op_conf_util
+import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
+
+from oneflow.python.oneflow_export import oneflow_export
+
+
+@oneflow_export('math.add')
+def add(x,
+        y,
+        name=None):
+
+    if isinstance(x, (int, float)):
+        return scalar_add(y, x)
+    elif isinstance(y, (int, float)):
+        return scalar_add(x, y)
+    elif x.static_shape == y.static_shape:
+        return element_wise_add(x, y)
+    elif x.static_shape != y.static_shape:
+        return broadcast_add(x, y)
+    else:
+        raise NotImplementedError
+
+
+def element_wise_add(x,
+                     y,
+                     name=None):
+
+    op_conf = op_conf_util.OperatorConf()
+    if name is None:
+        op_conf.name = id_util.UniqueStr('Add_')
+    else:
+        op_conf.name = name
+    getattr(op_conf.add_conf, 'in').append(x.logical_blob_name)
+    getattr(op_conf.add_conf, 'in').append(y.logical_blob_name)
+    op_conf.add_conf.out = "out"
+    compile_context.CurJobAddOp(op_conf)
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = "out"
+    return remote_blob_util.RemoteBlob(lbi)
+
+
+def broadcast_add(x, y, name=None):
+    op_conf = op_conf_util.OperatorConf()
+    if name is None:
+        op_conf.name = id_util.UniqueStr('BoadcastAdd_')
+    else:
+        op_conf.name = name
+    op_conf.broadcast_add_conf.a = x.logical_blob_name
+    op_conf.broadcast_add_conf.b = y.logical_blob_name
+    op_conf.broadcast_add_conf.out = "out"
+    compile_context.CurJobAddOp(op_conf)
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = "out"
+    return remote_blob_util.RemoteBlob(lbi)
+
+
+def broadcast_div(x, y, name=None):
+    op_conf = op_conf_util.OperatorConf()
+    if name is None:
+        op_conf.name = id_util.UniqueStr('BoadcastDiv_')
+    else:
+        op_conf.name = name
+    op_conf.broadcast_div_conf.a = x.logical_blob_name
+    op_conf.broadcast_div_conf.b = y.logical_blob_name
+    op_conf.broadcast_div_conf.out = "out"
+    compile_context.CurJobAddOp(op_conf)
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = "out"
+    return remote_blob_util.RemoteBlob(lbi)
+
+
+def broadcast_mul(x, y, name=None):
+    op_conf = op_conf_util.OperatorConf()
+    if name is None:
+        op_conf.name = id_util.UniqueStr('BoadcastMul_')
+    else:
+        op_conf.name = name
+    op_conf.broadcast_mul_conf.a = x.logical_blob_name
+    op_conf.broadcast_mul_conf.b = y.logical_blob_name
+    op_conf.broadcast_mul_conf.out = "out"
+    compile_context.CurJobAddOp(op_conf)
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = "out"
+    return remote_blob_util.RemoteBlob(lbi)
+
+
+def broadcast_sub(x, y, name=None):
+    op_conf = op_conf_util.OperatorConf()
+    if name is None:
+        op_conf.name = id_util.UniqueStr('BoadcastSub_')
+    else:
+        op_conf.name = name
+    op_conf.broadcast_sub_conf.a = x.logical_blob_name
+    op_conf.broadcast_sub_conf.b = y.logical_blob_name
+    op_conf.broadcast_sub_conf.out = "out"
+    compile_context.CurJobAddOp(op_conf)
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = "out"
+    return remote_blob_util.RemoteBlob(lbi)
+
+
+def scalar_add(x, operand, name=None):
+    op_conf = op_conf_util.OperatorConf()
+    if name is None:
+        op_conf.name = id_util.UniqueStr('ScalarAdd_')
+    else:
+        op_conf.name = name
+    setattr(op_conf.scalar_add_conf, "in", x.logical_blob_name)
+    if isinstance(operand, int):
+        op_conf.scalar_add_conf.int_operand = operand
+    elif isinstance(operand, float):
+        op_conf.scalar_add_conf.float_operand = operand
+    op_conf.scalar_add_conf.out = "out"
+    compile_context.CurJobAddOp(op_conf)
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = "out"
+    return remote_blob_util.RemoteBlob(lbi)
+
+
+def scalar_mul(x, operand, name=None):
+    op_conf = op_conf_util.OperatorConf()
+    if name is None:
+        op_conf.name = id_util.UniqueStr('ScalarMul_')
+    else:
+        op_conf.name = name
+    setattr(op_conf.scalar_mul_conf, "in", x.logical_blob_name)
+    if isinstance(operand, int):
+        op_conf.scalar_mul_conf.int_operand = operand
+    elif isinstance(operand, float):
+        op_conf.scalar_mul_conf.float_operand = operand
+    op_conf.scalar_mul_conf.out = "out"
+    compile_context.CurJobAddOp(op_conf)
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = "out"
+    return remote_blob_util.RemoteBlob(lbi)

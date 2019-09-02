@@ -5,6 +5,7 @@ import oneflow.core.common.data_type_pb2 as data_type_util
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.register.logical_blob_id_pb2 as lbi_util
 import oneflow.python.framework.id_util as id_util
+import oneflow
 
 from oneflow.python.oneflow_export import oneflow_export
 
@@ -79,3 +80,6 @@ class input_blob_def(blob_desc.BlobDesc):
             pass # do nothing
         interface_blob_conf.has_batch_dim = self.has_batch_dim_
         return interface_blob_conf
+
+    def __add__(self, rhs): 
+        return oneflow.math.add(self, rhs)
