@@ -56,8 +56,6 @@ int64_t JobDesc::NumOfPiecesInBatch() const {
   CHECK_EQ(BatchSize() % RecordPieceSize(), 0);
   return BatchSize() / RecordPieceSize();
 }
-float JobDesc::primary_lr() const { return job_conf_.train_conf().primary_lr(); }
-float JobDesc::secondary_lr() const { return job_conf_.train_conf().secondary_lr(); }
 float JobDesc::weight_l1() const { return job_conf_.train_conf().weight_l1(); }
 float JobDesc::bias_l1() const { return job_conf_.train_conf().bias_l1(); }
 float JobDesc::weight_l2() const { return job_conf_.train_conf().weight_l2(); }

@@ -305,8 +305,5 @@ def  _DefaultConfigCppFlags(config):
 
 
 def _TryCompleteDefaultJobConfigProto(job_conf):
-    assert job_conf.HasField('piece_size'), "batch_size unset"
-    if job_conf.WhichOneof("job_type") is None:
+    if job_conf.WhichOneof('job_type') is None:
         job_conf.predict_conf.SetInParent()
-    if job_conf.HasField('train_conf'):
-        job_conf.train_conf.batch_size = job_conf.piece_size

@@ -16,9 +16,9 @@ Maybe<void> SinkTickOp::InferBlobDescs(
   return Maybe<void>::Ok();
 }
 
-Maybe<void> SinkTickOp::InferHasBatchDim(
-    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
-  *HasBatchDim4BnInOp("out") = false;
+Maybe<void> SinkTickOp::InferBatchAxis(
+    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
+  BatchAxis4BnInOp("out")->clear_value();
   return Maybe<void>::Ok();
 }
 

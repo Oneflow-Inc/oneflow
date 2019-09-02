@@ -16,18 +16,12 @@ class NormalMdUpdateKernel : public KernelIf<device_type> {
 
  protected:
   NormalMdUpdateKernel() = default;
-  virtual void UpdateModel(DeviceCtx* ctx, const T* batch_instance_num_ptr, T learning_rate, T l1,
-                           T l2, int64_t next_model_vid,
+  virtual void UpdateModel(DeviceCtx* ctx, const T* batch_instance_num_ptr, T l1, T l2,
+                           const int64_t* global_step, const float* learning_rate,
                            std::function<Blob*(const std::string&)> BnInOp2Blob) const = 0;
 
  private:
-  bool TriggerWarmup(const NormalModelUpdateOpUserConf& conf, double lr,
-                     int64_t cur_batch_num) const;
-  double GetWarmupLearningRate(const WarmupConf&, double lr, int64_t cur_batch_num) const;
-  double GetDecayedLearningRate(const LearningRateDecayConf&, double lr,
-                                int64_t cur_batch_num) const;
-  void ClipGradient(DeviceCtx* ctx, const int64_t cur_batch_num, const ClipConf& conf,
-                    const T* batch_instance_num_ptr,
+  void ClipGradient(DeviceCtx* ctx, const ClipConf& conf, const T* batch_instance_num_ptr,
                     std::function<Blob*(const std::string&)> BnInOp2Blob) const;
 };
 

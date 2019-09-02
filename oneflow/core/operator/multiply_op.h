@@ -14,9 +14,9 @@ class MultiplyOp final : public Operator {
                              const ParallelContext* parallel_ctx) const override;
 
  private:
-  Maybe<void> InferHasBatchDim(
-      std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const override {
-    return NaiveInferHasBatchDim(HasBatchDim4BnInOp);
+  Maybe<void> InferBatchAxis(
+      std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override {
+    return NaiveInferBatchAxis(BatchAxis4BnInOp);
   }
 
   void GetSbpSignatures(

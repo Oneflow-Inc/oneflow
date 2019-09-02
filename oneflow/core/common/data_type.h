@@ -228,6 +228,11 @@ bool IsIntegralDataType(DataType data_type);
 bool IsFloatingDataType(DataType data_type);
 size_t GetSizeOfDataType(DataType data_type);
 
+inline bool operator==(const OptInt64& lhs, const OptInt64& rhs) {
+  return (lhs.has_value() && rhs.has_value() && lhs.value() == rhs.value())
+         || (!lhs.has_value() && !rhs.has_value());
+}
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_COMMON_DATA_TYPE_H_

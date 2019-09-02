@@ -141,7 +141,7 @@ message RecordLoadKernelConf {
   required int64 device_piece_size = 1;
 }
 
-message PReluKernelConf {
+message PReluAlphaGradKernelConf {
   repeated int32 perm = 1;
 }
 
@@ -198,7 +198,7 @@ message KernelConf {
     GatherKernelConf gather_conf = 406;
     VariableKernelConf variable_conf = 407;
     RecordLoadKernelConf record_load_conf = 408;
-    PReluKernelConf prelu_conf = 409;
+    PReluAlphaGradKernelConf prelu_alpha_grad_conf = 409;
     ConvFilterGradKernelConf conv_filter_grad_conf = 410;
     ConvDataGradKernelConf conv_data_grad_conf = 411;
     ShapeElemCntKernelConf shape_elem_cnt_conf = 412;

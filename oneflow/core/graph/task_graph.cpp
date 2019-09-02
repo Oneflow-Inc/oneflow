@@ -615,13 +615,22 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxing) {
 DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByOneToOne) {
   CHECK_EQ(sorted_src_comp_tasks.size(), sorted_dst_comp_tasks.size());
   FOR_RANGE(size_t, i, 0, sorted_src_comp_tasks.size()) {
-    CompTaskNode* src = sorted_src_comp_tasks[i];
-    CompTaskNode* dst = sorted_dst_comp_tasks[i];
+    CompTaskNode* src = sorted_src_comp_tasks.at(i);
+    CompTaskNode* dst = sorted_dst_comp_tasks.at(i);
     BuildTaskPath(src, dst, MutBufTask, true);
   }
 }
 
 DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBroadcastToBroadcast) {
+  CHECK_EQ(sorted_dst_comp_tasks.size() % sorted_src_comp_tasks.size(), 0);
+  if (sorted_src_comp_tasks.size() == sorted_dst_comp_tasks.size()) {
+    FOR_RANGE(size_t, i, 0, sorted_src_comp_tasks.size()) {
+      CompTaskNode* src = sorted_src_comp_tasks.at(i);
+      CompTaskNode* dst = sorted_dst_comp_tasks.at(i);
+      BuildTaskPath(src, dst, MutBufTask, true);
+    }
+    return;
+  }
   HashMap<size_t, CompTaskNode*> machine_id2last_src_task;
   HashMap<std::pair<int64_t, int64_t>, CompTaskNode*> global_thrd_id2src_task;
   auto GlobalThrdId4TaskNode = [](TaskNode* task_node) -> std::pair<int64_t, int64_t> {

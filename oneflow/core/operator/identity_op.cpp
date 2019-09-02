@@ -17,9 +17,9 @@ Maybe<void> IdentityOp::InferBlobDescs(
 
 const PbMessage& IdentityOp::GetCustomizedConf() const { return op_conf().identity_conf(); }
 
-Maybe<void> IdentityOp::InferHasBatchDim(
-    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
-  return NaiveInferHasBatchDim(HasBatchDim4BnInOp);
+Maybe<void> IdentityOp::InferBatchAxis(
+    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
+  return NaiveInferBatchAxis(BatchAxis4BnInOp);
 }
 
 void IdentityOp::GetSbpSignatures(

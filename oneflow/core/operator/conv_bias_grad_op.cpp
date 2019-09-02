@@ -28,15 +28,15 @@ Maybe<void> ConvBiasGradOp::InferBlobDescs(
   } else if (conf.data_format() == "channels_last") {
     bias_diff->mut_shape() = Shape({dy->shape().At(dy->shape().NumAxes() - 1)});
   } else {
-    CHECK_OR_RETURN(false, "UNIMPLEMENTED");
+    UNIMPLEMENTED_THEN_RETURN();
   }
   return Maybe<void>::Ok();
 }
 
-Maybe<void> ConvBiasGradOp::InferHasBatchDim(
-    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
-  CHECK_OR_RETURN(*HasBatchDim4BnInOp("dy"));
-  *HasBatchDim4BnInOp("bias_diff") = false;
+Maybe<void> ConvBiasGradOp::InferBatchAxis(
+    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
+  CHECK_OR_RETURN(BatchAxis4BnInOp("dy")->has_value());
+  BatchAxis4BnInOp("bias_diff")->clear_value();
   return Maybe<void>::Ok();
 }
 

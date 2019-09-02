@@ -3,39 +3,32 @@ from __future__ import absolute_import
 import oneflow.core.common.data_type_pb2 as data_type_util
 
 class BlobDesc(object):
-    def __init__(self, shape,
-                 dtype = data_type_util.kFloat,
-                 has_batch_dim = True,
-                 is_dynamic = False,
-                 split_axis = None,
-                 broadcast = None):
-        self.shape_ = shape
-        self.dtype_ = dtype
-        self.has_batch_dim_ = has_batch_dim
-        self.is_dynamic_ = is_dynamic
-        self.split_axis_ = split_axis
-        self.broadcast_ = broadcast
+    def __init__(self):
+        pass
+
+    @property
+    def shape(self): return self.static_shape
     
     @property
-    def shape(self):
-        return self.shape_
+    def static_shape(self):
+        raise NotImplementedError
 
     @property
     def dtype(self):
-        return self.dtype_
+        raise NotImplementedError
 
     @property
     def has_batch_dim(self):
-        return self.has_batch_dim_
+        raise NotImplementedError
 
     @property
     def is_dynamic(self):
-        return self.is_dynamic_
+        raise NotImplementedError
 
     @property
     def split_axis(self):
-        return self.split_axis_
+        raise NotImplementedError
 
     @property
     def broadcast(self):
-        return self.broadcast_
+        raise NotImplementedError
