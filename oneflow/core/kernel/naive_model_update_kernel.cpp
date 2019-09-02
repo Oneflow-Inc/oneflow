@@ -5,8 +5,8 @@ namespace oneflow {
 
 template<DeviceType device_type, typename T>
 void NaiveMdUpdateKernel<device_type, T>::UpdateModel(
-    DeviceCtx* ctx, const T* batch_instance_num_ptr, T learning_rate, T l1, T l2,
-    int64_t next_model_vid, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+    DeviceCtx* ctx, const T* batch_instance_num_ptr, T l1, T l2, const int64_t* global_step,
+    const float* learning_rate, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* model_diff_blob = BnInOp2Blob("model_diff");
   Blob* model_blob = BnInOp2Blob("model");
   // model = model - alpha * model_diff
@@ -24,10 +24,10 @@ template<typename T>
 class NaiveMdUpdateKernelUtil<DeviceType::kCPU, T> final {
  public:
   static void UpdateModel(DeviceCtx*, const int64_t n, const T* batch_instance_num_ptr,
-                          T learning_rate, T l1, T l2, const T* model_diff, T* model) {
+                          const float* learning_rate, T l1, T l2, const T* model_diff, T* model) {
     for (int64_t i = 0; i != n; ++i) {
       T reg_diff = RegularizeDiff(model_diff[i], *batch_instance_num_ptr, l1, l2, model[i]);
-      model[i] = model[i] - learning_rate * reg_diff;
+      model[i] = model[i] - *learning_rate * reg_diff;
     }
   }
 };
