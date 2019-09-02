@@ -36,7 +36,7 @@ void AutoGlobalStep(const OpGraph& op_graph, Job* job) {
   assign_conf->set_value(GenLogicalBlobName(scalar_add_op_conf.name(), scalar_add_conf->out()));
 
   JobBuilder job_builder(job);
-  job_builder.AddOps(GenParallelConfOfCpuZeroOnAllMachines(),
+  job_builder.AddOps(GenParallelConfOfCpuZeroOnMaster(),
                      {variable_op_conf, identity_op_conf, scalar_add_op_conf, assign_op_conf});
   job->mutable_job_conf()->mutable_train_conf()->set_global_step_lbn(global_step_lbn);
 }

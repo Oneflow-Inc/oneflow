@@ -18,9 +18,11 @@ message TrainConf {
   repeated string loss_lbn = 6;
   optional int32 loss_scale_factor = 7 [default = 1];
   optional string global_step_lbn = 8;
+  optional string primary_lr_lbn = 9;
+  optional string secondary_lr_lbn = 10;
 
   required float primary_lr = 101;
-  optional float secondary_lr = 102 [default = -1];
+  optional float secondary_lr = 102;
   optional float weight_l1 = 103 [default = 0];
   optional float bias_l1 = 104 [default = 0];
   optional float weight_l2 = 105 [default = 0];
