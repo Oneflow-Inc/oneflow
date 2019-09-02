@@ -6,12 +6,12 @@
 namespace oneflow {
 
 struct ErrorUtil final {
-  static Error Ok();
-  static Error ProtoParseFailedError(const std::string& msg);
-  static Error JobSetEmpty(const std::string& msg);
-  static Error DeviceTagNotFound(const std::string& msg);
+  static std::shared_ptr<ErrorProto> Ok();
+  static std::shared_ptr<ErrorProto> ProtoParseFailedError(const std::string& msg);
+  static std::shared_ptr<ErrorProto> JobSetEmpty(const std::string& msg);
+  static std::shared_ptr<ErrorProto> DeviceTagNotFound(const std::string& msg);
 
-  static Error JobTypeNotSet(const std::string& msg);
+  static std::shared_ptr<ErrorProto> JobTypeNotSet(const std::string& msg);
 };
 
 }  // namespace oneflow

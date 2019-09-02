@@ -12,14 +12,14 @@ std::string JobBuildAndInferCtx_Open(const std::string& job_name) {
   using namespace oneflow;
   auto maybe_ok = TRY(Global<JobBuildAndInferCtxMgr>::Get()->OpenJobBuildAndInferCtx(job_name));
   if (maybe_ok.IsOk() == false) { return PbMessage2TxtString(*maybe_ok.error()); }
-  return PbMessage2TxtString(ErrorUtil::Ok());
+  return PbMessage2TxtString(*ErrorUtil::Ok());
 }
 
 std::string JobBuildAndInferCtx_GetCurrentJobName(std::string* error_str) {
   using namespace oneflow;
   auto maybe_ok = TRY(Global<JobBuildAndInferCtxMgr>::Get()->GetCurrentJobName());
   if (maybe_ok.IsOk()) {
-    PbMessage2TxtString(ErrorUtil::Ok(), error_str);
+    PbMessage2TxtString(*ErrorUtil::Ok(), error_str);
     return *maybe_ok.data();
   } else {
     PbMessage2TxtString(*maybe_ok.error(), error_str);
@@ -39,7 +39,7 @@ std::string CurJobBuildAndInferCtx_CheckJob() {
   if (ctx == nullptr) { return error_str; }
   auto maybe_ok = TRY(ctx->CheckJob());
   if (maybe_ok.IsOk() == false) { return PbMessage2TxtString(*maybe_ok.error()); }
-  return PbMessage2TxtString(ErrorUtil::Ok());
+  return PbMessage2TxtString(*ErrorUtil::Ok());
 }
 
 std::string CurJobBuildAndInferCtx_SetJobConf(const std::string& serialized_job_conf) {
@@ -47,7 +47,7 @@ std::string CurJobBuildAndInferCtx_SetJobConf(const std::string& serialized_job_
   // parse
   JobConfigProto job_conf;
   if (TxtString2PbMessage(serialized_job_conf, &job_conf) == false) {
-    return PbMessage2TxtString(ErrorUtil::ProtoParseFailedError("job conf parse failed"));
+    return PbMessage2TxtString(*ErrorUtil::ProtoParseFailedError("job conf parse failed"));
   }
   // get current JobBuildandInferCtx
   std::string error_str;
@@ -56,14 +56,14 @@ std::string CurJobBuildAndInferCtx_SetJobConf(const std::string& serialized_job_
   // set job_conf
   auto maybe_ok = TRY(ctx->SetJobConf(job_conf));
   if (maybe_ok.IsOk() == false) { return PbMessage2TxtString(*maybe_ok.error()); }
-  return PbMessage2TxtString(ErrorUtil::Ok());
+  return PbMessage2TxtString(*ErrorUtil::Ok());
 }
 
 bool CurJobBuildAndInferCtx_HasJobConf(std::string* error_str) {
   using namespace oneflow;
   JobBuildAndInferCtx* ctx = JobBuildAndInferHelper::GetCurInferCtx(error_str);
   if (ctx == nullptr) { return false; }
-  PbMessage2TxtString(ErrorUtil::Ok(), error_str);
+  PbMessage2TxtString(*ErrorUtil::Ok(), error_str);
   return ctx->HasJobConf();
 }
 
@@ -73,11 +73,11 @@ std::string CurJobBuildAndInferCtx_AddAndInferOp(const std::string& serialized_o
   // parse
   OperatorConf op_conf;
   if (TxtString2PbMessage(serialized_op_conf, &op_conf) == false) {
-    return PbMessage2TxtString(ErrorUtil::ProtoParseFailedError("operator conf parse failed"));
+    return PbMessage2TxtString(*ErrorUtil::ProtoParseFailedError("operator conf parse failed"));
   }
   ParallelConf parallel_conf;
   if (TxtString2PbMessage(serialized_parallel_conf, &parallel_conf) == false) {
-    return PbMessage2TxtString(ErrorUtil::ProtoParseFailedError("parallel conf parse failed"));
+    return PbMessage2TxtString(*ErrorUtil::ProtoParseFailedError("parallel conf parse failed"));
   }
   // get current JobBuildandInferCtx
   std::string error_str;
@@ -86,7 +86,7 @@ std::string CurJobBuildAndInferCtx_AddAndInferOp(const std::string& serialized_o
   // add and infer input_op
   auto maybe_ok = TRY(ctx->AddAndInferOp(op_conf, parallel_conf));
   if (maybe_ok.IsOk() == false) { return PbMessage2TxtString(*maybe_ok.error()); }
-  return PbMessage2TxtString(ErrorUtil::Ok());
+  return PbMessage2TxtString(*ErrorUtil::Ok());
 }
 
 std::string CurJobBuildAndInferCtx_AddLossLogicalBlobName(const std::string& lbn) {
@@ -98,7 +98,7 @@ std::string CurJobBuildAndInferCtx_AddLossLogicalBlobName(const std::string& lbn
   // add loss_lbn
   auto maybe_ok = TRY(ctx->AddLossLogicalBlobName(lbn));
   if (maybe_ok.IsOk() == false) { return PbMessage2TxtString(*maybe_ok.error()); }
-  return PbMessage2TxtString(ErrorUtil::Ok());
+  return PbMessage2TxtString(*ErrorUtil::Ok());
 }
 
 std::string CurJobBuildAndInferCtx_AddPlacementGroup(const std::string& serialized_placement_grp) {
@@ -106,7 +106,7 @@ std::string CurJobBuildAndInferCtx_AddPlacementGroup(const std::string& serializ
   // parse
   PlacementGroup placement_group;
   if (TxtString2PbMessage(serialized_placement_grp, &placement_group) == false) {
-    return PbMessage2TxtString(ErrorUtil::ProtoParseFailedError("placement group parse failed"));
+    return PbMessage2TxtString(*ErrorUtil::ProtoParseFailedError("placement group parse failed"));
   }
   // get current JobBuildandInferCtx
   std::string error_str;
@@ -115,7 +115,7 @@ std::string CurJobBuildAndInferCtx_AddPlacementGroup(const std::string& serializ
   // add and infer input_op
   auto maybe_ok = TRY(ctx->AddPlacementGroup(placement_group));
   if (maybe_ok.IsOk() == false) { return PbMessage2TxtString(*maybe_ok.error()); }
-  return PbMessage2TxtString(ErrorUtil::Ok());
+  return PbMessage2TxtString(*ErrorUtil::Ok());
 }
 
 std::string JobBuildAndInferCtx_GetSerializedIdListAsStaticShape(const std::string& job_name,
@@ -133,7 +133,7 @@ std::string JobBuildAndInferCtx_GetSerializedIdListAsStaticShape(const std::stri
     PbMessage2TxtString(*maybe_shape.error(), error_str);
     return PbMessage2TxtString(id_list);
   }
-  PbMessage2TxtString(ErrorUtil::Ok(), error_str);
+  PbMessage2TxtString(*ErrorUtil::Ok(), error_str);
   const auto& shape = *maybe_shape.data();
   *id_list.mutable_value() = {shape.dim_vec().begin(), shape.dim_vec().end()};
   return PbMessage2TxtString(id_list);
@@ -152,7 +152,7 @@ long long JobBuildAndInferCtx_GetDataType(const std::string& job_name, const std
     PbMessage2TxtString(*maybe_data_type.error(), error_str);
     return 0LL;
   }
-  PbMessage2TxtString(ErrorUtil::Ok(), error_str);
+  PbMessage2TxtString(*ErrorUtil::Ok(), error_str);
   return *maybe_data_type.data();
 }
 
@@ -169,7 +169,7 @@ std::string JobBuildAndInferCtx_GetBatchAxis(const std::string& job_name, const 
     PbMessage2TxtString(*maybe_has_batch_dim.error(), error_str);
     return PbMessage2TxtString(OptInt64());
   }
-  PbMessage2TxtString(ErrorUtil::Ok(), error_str);
+  PbMessage2TxtString(*ErrorUtil::Ok(), error_str);
   return PbMessage2TxtString(*maybe_has_batch_dim.data());
 }
 
@@ -187,7 +187,7 @@ bool JobBuildAndInferCtx_GetHasSplitAxisFromProducerView(const std::string& job_
     PbMessage2TxtString(*maybe_has_split_axis.error(), error_str);
     return false;
   }
-  PbMessage2TxtString(ErrorUtil::Ok(), error_str);
+  PbMessage2TxtString(*ErrorUtil::Ok(), error_str);
   return *maybe_has_split_axis.data();
 }
 
@@ -205,7 +205,7 @@ long long JobBuildAndInferCtx_GetSplitAxisFromProducerView(const std::string& jo
     PbMessage2TxtString(*maybe_split_axis.error(), error_str);
     return 0LL;
   }
-  PbMessage2TxtString(ErrorUtil::Ok(), error_str);
+  PbMessage2TxtString(*ErrorUtil::Ok(), error_str);
   return *maybe_split_axis.data();
 }
 
@@ -222,6 +222,6 @@ std::string JobBuildAndInferCtx_GetSerializedParallelConfFromProducerView(
     PbMessage2TxtString(*maybe_parallel_conf.error(), error_str);
     return PbMessage2TxtString(ParallelConf());
   }
-  PbMessage2TxtString(ErrorUtil::Ok(), error_str);
+  PbMessage2TxtString(*ErrorUtil::Ok(), error_str);
   return PbMessage2TxtString(maybe_parallel_conf.data()->parallel_conf());
 }
