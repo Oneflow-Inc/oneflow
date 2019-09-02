@@ -11,6 +11,7 @@
 #include "oneflow/core/common/buffer_manager.h"
 #include "oneflow/core/job/foreign_job_instance.h"
 #include "oneflow/core/job/inter_user_job_info.pb.h"
+#include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 
 namespace oneflow {
 
@@ -83,11 +84,13 @@ EnvironmentObjectsScope::EnvironmentObjectsScope(const ConfigProto& config_proto
     *Global<AvailableMemDesc>::Get() = PullAvailableMemDesc();
     Global<CriticalSectionDesc>::New();
     Global<InterUserJobInfo>::New();
+    Global<JobBuildAndInferCtxMgr>::New();
   }
 }
 
 EnvironmentObjectsScope::~EnvironmentObjectsScope() {
   if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
+    Global<JobBuildAndInferCtxMgr>::Delete();
     Global<InterUserJobInfo>::Delete();
     Global<CriticalSectionDesc>::Delete();
     Global<AvailableMemDesc>::Delete();

@@ -399,7 +399,7 @@ void MakeMainJob(const std::vector<Job>& jobs, Job* main_job,
       int64_t job_id = pair.second;
       CHECK(unique_check.insert(job_id).second);
       const auto& cs_idx = Global<CriticalSectionDesc>::Get()->CriticalSectionIds4JobId(job_id);
-      *id_list->Mutable(job_id)->mutable_id() = {cs_idx.begin(), cs_idx.end()};
+      *id_list->Mutable(job_id)->mutable_value() = {cs_idx.begin(), cs_idx.end()};
     }
   }
   op_confs.push_back(wait_and_send_ids_op_conf);
@@ -648,7 +648,6 @@ void MakePullJob(const std::string& job_name, const std::string& op_name,
   }
   auto* job_conf = job->mutable_job_conf();
   job_conf->set_job_name(job_name);
-  job_conf->add_arg_op_name(input_op_conf.name());
   job_conf->mutable_predict_conf();
   job_conf->set_piece_size(1);
   job_conf->set_data_part_num(1);
@@ -689,7 +688,6 @@ void MakePushJob(const std::string& job_name, const std::string& op_name,
   }
   auto* job_conf = job->mutable_job_conf();
   job_conf->set_job_name(job_name);
-  job_conf->add_arg_op_name(output_op_conf.name());
   job_conf->mutable_predict_conf();
   job_conf->set_piece_size(1);
   job_conf->set_data_part_num(1);
@@ -754,8 +752,6 @@ void MakeArgPassJob(const std::string& job_name, const ParallelBlobConf& paralle
   }
   auto* job_conf = job->mutable_job_conf();
   job_conf->set_job_name(job_name);
-  *job_conf->mutable_arg_op_name() = {output_op_names.begin(), output_op_names.end()};
-  job_conf->add_arg_op_name(input_op_name);
   job_conf->mutable_predict_conf();
   job_conf->set_piece_size(1);
   job_conf->set_data_part_num(1);

@@ -22,9 +22,7 @@ class EitherPtr final {
   template<typename T>
   const std::shared_ptr<T>& Get() const {
     CHECK(Has<T>());
-    const std::shared_ptr<T>* __attribute__((__may_alias__)) ptr =
-        reinterpret_cast<const std::shared_ptr<T>*>(&union_);
-    return *ptr;
+    return Cast<T>();
   }
   void Reset(const std::shared_ptr<X>& ptr) {
     Reset();
@@ -39,13 +37,9 @@ class EitherPtr final {
     if (type_ == UnionType<Void>::value) {
       union_.reset();
     } else if (type_ == UnionType<X>::value) {
-      std::shared_ptr<X>* __attribute__((__may_alias__)) ptr =
-          reinterpret_cast<std::shared_ptr<X>*>(&union_);
-      ptr->reset();
+      MutCast<X>()->reset();
     } else if (type_ == UnionType<Y>::value) {
-      std::shared_ptr<Y>* __attribute__((__may_alias__)) ptr =
-          reinterpret_cast<std::shared_ptr<Y>*>(&union_);
-      ptr->reset();
+      MutCast<Y>()->reset();
     } else {
       LOG(FATAL) << "UNIMPLEMENTED";
     }
@@ -78,17 +72,25 @@ class EitherPtr final {
   }
   void Set(const std::shared_ptr<X>& ptr) {
     CHECK(union_.get() == nullptr);
-    std::shared_ptr<X>* __attribute__((__may_alias__)) __ptr =
-        reinterpret_cast<std::shared_ptr<X>*>(&union_);
-    *__ptr = ptr;
+    *MutCast<X>() = ptr;
     type_ = UnionType<X>::value;
   }
   void Set(const std::shared_ptr<Y>& ptr) {
     CHECK(union_.get() == nullptr);
-    std::shared_ptr<Y>* __attribute__((__may_alias__)) __ptr =
-        reinterpret_cast<std::shared_ptr<Y>*>(&union_);
-    *__ptr = ptr;
+    *MutCast<Y>() = ptr;
     type_ = UnionType<Y>::value;
+  }
+  template<typename T>
+  std::shared_ptr<T>* MutCast() {
+    std::shared_ptr<T>* __attribute__((__may_alias__)) ptr =
+        reinterpret_cast<std::shared_ptr<T>*>(&union_);
+    return ptr;
+  }
+  template<typename T>
+  const std::shared_ptr<T>& Cast() const {
+    const std::shared_ptr<T>* __attribute__((__may_alias__)) ptr =
+        reinterpret_cast<const std::shared_ptr<T>*>(&union_);
+    return *ptr;
   }
 
   std::shared_ptr<Void> union_;

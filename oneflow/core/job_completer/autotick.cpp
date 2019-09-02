@@ -209,13 +209,9 @@ std::vector<std::string> GetOpNames(const HashSet<const OpNode*>& op_nodes) {
 void InitOpTypeCase2OpNodes(
     const OpGraph& op_graph,
     HashMap<OperatorConf::OpTypeCase, HashSet<const OpNode*>>* op_type_case2op_nodes) {
-  HashSet<std::string> arg_op_names;
-  for (const auto& name : GlobalJobDesc().arg_op_name()) { arg_op_names.insert(name); }
   op_graph.ForEachNode([&](OpNode* op_node) {
-    const auto& op_name = op_node->op().op_name();
     const auto& op_conf = op_node->op().op_conf();
-    if (IsInterfaceOpConf(op_conf)
-        && (op_conf.has_variable_conf() || arg_op_names.find(op_name) != arg_op_names.end())) {
+    if (IsInterfaceOpConf(op_conf)) {
       CHECK((*op_type_case2op_nodes)[op_conf.op_type_case()].emplace(op_node).second);
     }
   });

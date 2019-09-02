@@ -1,12 +1,22 @@
 #include "oneflow/core/operator/decode_ofrecord_op.h"
 #include "oneflow/core/record/ofrecord_decoder.h"
 #include "oneflow/core/job/sbp_signature_builder.h"
+#include "oneflow/core/common/balanced_splitter.h"
 
 namespace oneflow {
 
+namespace {
+
+int64_t GetDim0(int64_t record_piece_size, const ParallelContext& parallel_ctx) {
+  BalancedSplitter bs(record_piece_size, parallel_ctx.parallel_num());
+  return bs.At(parallel_ctx.parallel_id()).size();
+}
+
+}  // namespace
+
 void DecodeOFRecordOp::InitFromOpConf() {
   CHECK(op_conf().has_decode_ofrecord_conf());
-  EnrollInputBn("in", false);
+  if (op_conf().decode_ofrecord_conf().has_in()) { EnrollInputBn("in", false); }
   const DecodeOFRecordOpConf& conf = op_conf().decode_ofrecord_conf();
   for (int32_t i = 0; i < conf.blob_size(); ++i) {
     EnrollOutputBn("out_" + std::to_string(i), false);
@@ -29,13 +39,18 @@ const PbMessage& DecodeOFRecordOp::GetCustomizedConf() const {
 
 Maybe<void> DecodeOFRecordOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx) const {
-  BlobDesc* in_blob_desc = GetBlobDesc4BnInOp(SoleIbn());
+    const ParallelContext* parallel_ctx, int64_t record_piece_size) const {
+  int64_t dim0 = GetDim0(record_piece_size, *parallel_ctx);
+  if (op_conf().decode_ofrecord_conf().has_in()) {
+    BlobDesc* in_blob_desc = GetBlobDesc4BnInOp(SoleIbn());
+    CHECK_EQ(dim0, in_blob_desc->shape().At(0));
+  }
+
   FOR_RANGE(size_t, i, 0, output_bns().size()) {
     BlobDesc* out_blob_desc = GetBlobDesc4BnInOp(output_bns().Get(i));
     const BlobConf& blob_conf = op_conf().decode_ofrecord_conf().blob(i);
     std::vector<int64_t> dim_vec(1 + blob_conf.shape().dim_size());
-    dim_vec[0] = in_blob_desc->shape().At(0);
+    dim_vec[0] = dim0;
     FOR_RANGE(size_t, j, 1, dim_vec.size()) { dim_vec[j] = blob_conf.shape().dim(j - 1); }
     out_blob_desc->mut_shape() = Shape(dim_vec);
     out_blob_desc->set_data_type(blob_conf.data_type());
@@ -61,7 +76,9 @@ LogicalBlobId DecodeOFRecordOp::obn2lbi(const std::string& output_bn) const {
 
 Maybe<void> DecodeOFRecordOp::InferHasBatchDim(
     std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
-  CHECK_OR_RETURN(*HasBatchDim4BnInOp(SoleIbn()));
+  if (op_conf().decode_ofrecord_conf().has_in()) {
+    CHECK_OR_RETURN(*HasBatchDim4BnInOp(SoleIbn()));
+  }
   for (const auto& obn : output_bns()) { *HasBatchDim4BnInOp(obn) = true; }
   return Maybe<void>::Ok();
 }
