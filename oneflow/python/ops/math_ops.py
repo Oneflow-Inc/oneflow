@@ -25,6 +25,25 @@ def add(x,
     else:
         raise NotImplementedError
 
+@oneflow_export('math.subtract')
+def subtract(x,
+        y,
+        name=None):
+
+    if isinstance(x, (int, float)):
+        # TODO: add scalar op
+        raise NotImplementedError
+    elif isinstance(y, (int, float)):
+        # TODO: add scalar op
+        raise NotImplementedError
+    elif x.static_shape == y.static_shape:
+        # TODO: add element-wise op
+        return broadcast_sub(x, y)
+    elif x.static_shape != y.static_shape:
+        return broadcast_sub(x, y)
+    else:
+        raise NotImplementedError
+
 
 def element_wise_add(x,
                      y,
