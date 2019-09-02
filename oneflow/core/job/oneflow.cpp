@@ -321,9 +321,7 @@ void GetMemSharingOpBlobInfo(const JobBuilder& job_builder, const std::string& o
   *blob_conf->mutable_logical_blob_desc_conf() = job.helper().lbn2logical_blob_desc().at(lbn);
   *blob_conf->mutable_sbp_conf() =
       job.sbp_conf().op_name2sbp_signature_conf().at(op_name).bn_in_op2sbp_parallel().at(obn);
-  LogicalBlobId lbi(GenLogicalBlobId(lbn));
-  const auto& lbis = job.helper().batch_dim_lbis();
-  blob_conf->set_has_batch_dim(std::find(lbis.begin(), lbis.end(), lbi) != lbis.end());
+  *blob_conf->mutable_batch_axis() = job.helper().lbn2batch_axis().at(lbn);
 }
 
 void FilterOpName2ParallelBlobConf(
@@ -722,7 +720,7 @@ void MakeArgPassJob(const std::string& job_name, const ParallelBlobConf& paralle
     blob_conf->set_has_dim1_valid_num(false);
     blob_conf->set_has_dim2_valid_num(false);
     blob_conf->set_split_axis(0);
-    blob_conf->set_has_batch_dim(false);
+    blob_conf->mutable_batch_axis()->clear_value();
     ParallelConf parallel_conf;
     parallel_conf.set_policy(kDataParallel);
     parallel_conf.add_device_name("0:cpu:0");

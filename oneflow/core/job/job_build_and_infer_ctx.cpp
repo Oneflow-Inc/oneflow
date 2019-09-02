@@ -95,15 +95,15 @@ Maybe<void> JobBuildAndInferCtx::AddAndInferInputOp(const OperatorConf& op_conf)
   parallel_ctx.set_policy(ParallelPolicy::kDataParallel);
   JUST(op->InferOutBlobDescsIf(GetBlobDesc4BnInOp, &parallel_ctx, job_->job_conf().piece_size(),
                                [](OpContext*) {}));
-  auto HasBatchDim4BnInOp = [&](const std::string& bn) -> bool* {
+  auto BatchAxis4BnInOp = [&](const std::string& bn) -> OptInt64* {
     const LogicalBlobId& lbi = op->BnInOp2Lbi(bn);
-    return &(lbi2has_batch_dim_[lbi]);
+    return &(lbi2batch_axis_[lbi]);
   };
   auto GetConstBlobDescBnInOp = [&](const std::string& bn) -> const BlobDesc& {
     const LogicalBlobId& lbi = op->BnInOp2Lbi(bn);
     return *(lbi2logical_blob_desc_[lbi].get());
   };
-  JUST(op->InferHasBatchDimIf(GetConstBlobDescBnInOp, HasBatchDim4BnInOp));
+  JUST(op->InferBatchAxisIf(GetConstBlobDescBnInOp, BatchAxis4BnInOp));
   // TODO()  infer blob desc split dim
   return Maybe<void>::Ok();
 }
@@ -152,9 +152,9 @@ Maybe<DataType> JobBuildAndInferCtx::GetDataType(const std::string& lbn) const {
   return lbi2logical_blob_desc_.at(lbi)->data_type();
 }
 
-Maybe<bool> JobBuildAndInferCtx::GetHasBatchDim(const std::string& lbn) const {
-  GEN_ERROR_WHEN_GET_INFO_FROM_LBN(lbi2has_batch_dim_);
-  return lbi2has_batch_dim_.at(lbi);
+Maybe<OptInt64> JobBuildAndInferCtx::GetBatchAxis(const std::string& lbn) const {
+  GEN_ERROR_WHEN_GET_INFO_FROM_LBN(lbi2batch_axis_);
+  return lbi2batch_axis_.at(lbi);
 }
 
 Maybe<bool> JobBuildAndInferCtx::GetHasSplitAxisFromProducerView(const std::string& lbn) const {

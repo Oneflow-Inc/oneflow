@@ -93,11 +93,11 @@ Maybe<void> NormalizationGradOp::InferBlobDescs(
   return Maybe<void>::Ok();
 }
 
-Maybe<void> NormalizationGradOp::InferHasBatchDim(
-    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
-  *HasBatchDim4BnInOp("dx") = *HasBatchDim4BnInOp("dy");
-  *HasBatchDim4BnInOp("gamma_diff") = false;
-  *HasBatchDim4BnInOp("beta_diff") = false;
+Maybe<void> NormalizationGradOp::InferBatchAxis(
+    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
+  *BatchAxis4BnInOp("dx") = *BatchAxis4BnInOp("dy");
+  BatchAxis4BnInOp("gamma_diff")->clear_value();
+  BatchAxis4BnInOp("beta_diff")->clear_value();
   return Maybe<void>::Ok();
 }
 

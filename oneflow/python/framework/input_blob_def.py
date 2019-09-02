@@ -67,7 +67,8 @@ class input_blob_def(blob_desc.BlobDesc):
         interface_blob_conf.shape.dim.extend(self.shape_)
         interface_blob_conf.data_type = self.dtype_
         interface_blob_conf.has_dim0_valid_num = self.is_dynamic_
-        interface_blob_conf.has_batch_dim = self.has_batch_dim_
+        if self.has_batch_dim_:
+            interface_blob_conf.batch_axis.value = 0
         if self.is_dynamic_:
             interface_blob_conf.dim0_inner_shape.dim.extend([1,self.shape_[0]])
         assert self.split_axis_ is None or self.broadcast_ is None
@@ -77,5 +78,4 @@ class input_blob_def(blob_desc.BlobDesc):
             interface_blob_conf.broadcast = self.broadcast_
         else:
             pass # do nothing
-        interface_blob_conf.has_batch_dim = self.has_batch_dim_
         return interface_blob_conf

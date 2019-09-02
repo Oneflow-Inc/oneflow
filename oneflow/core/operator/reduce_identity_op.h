@@ -19,9 +19,9 @@ class ReduceIdentityOp final : public Operator {
   const PbMessage& GetCustomizedConf() const override { return op_conf().reduce_identity_conf(); }
 
  private:
-  Maybe<void> InferHasBatchDim(
-      std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const override {
-    return NaiveInferHasBatchDim(HasBatchDim4BnInOp);
+  Maybe<void> InferBatchAxis(
+      std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override {
+    return NaiveInferBatchAxis(BatchAxis4BnInOp);
   }
 
   Maybe<void> InferSbpSignature(

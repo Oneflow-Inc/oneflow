@@ -13,7 +13,7 @@ struct InterfaceOpUtil final {
   static Maybe<void> InferOutBlobDesc(const InterfaceBlobConf& blob_conf, BlobDesc* out_blob_desc,
                                       const ParallelContext* parallel_ctx,
                                       int64_t record_piece_size);
-  static Maybe<void> InferHasBatchDim(const InterfaceBlobConf& blob_conf, bool* has_batch_dim);
+  static Maybe<void> InferBatchAxis(const InterfaceBlobConf& blob_conf, OptInt64* batch_axis);
   static Maybe<void> GetInputLikeOpSbpSignature(const InterfaceBlobConf& blob_conf,
                                                 const PbRpf<std::string>& input_bns,
                                                 const PbRpf<std::string>& output_bns,

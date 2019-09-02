@@ -58,26 +58,35 @@ Maybe<void> MatmulOp::InferBlobDescs(
   return Maybe<void>::Ok();
 }
 
-Maybe<void> MatmulOp::InferHasBatchDim(
+Maybe<void> MatmulOp::InferBatchAxis(
     const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
-    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
+    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
   const MatmulOpConf& conf = op_conf().matmul_conf();
   int32_t num_axes = LogicalBlobDesc4Ibn("a").shape().NumAxes();
   if (num_axes > 2) {
-    CHECK_OR_RETURN(*HasBatchDim4BnInOp("a"));
-    CHECK_OR_RETURN(*HasBatchDim4BnInOp("b"));
-    *HasBatchDim4BnInOp("out") = true;
+    CHECK_OR_RETURN(*BatchAxis4BnInOp("a") == *BatchAxis4BnInOp("b"));
+    *BatchAxis4BnInOp("out") = *BatchAxis4BnInOp("a");
   } else if (num_axes == 2) {
-    if (*HasBatchDim4BnInOp("a") == false) {
-      *HasBatchDim4BnInOp("out") = false;
-    } else {
-      if (conf.transpose_a()) {
-        CHECK_OR_RETURN(*HasBatchDim4BnInOp("b"));
-        CHECK_OR_RETURN(!conf.transpose_b());
-        *HasBatchDim4BnInOp("out") = false;
-      } else {
-        *HasBatchDim4BnInOp("out") = true;
-      }
+    OptInt64 a_batch_axis(*BatchAxis4BnInOp("a"));
+    if (a_batch_axis.has_value() && conf.transpose_a()) {
+      a_batch_axis.set_value(1 - a_batch_axis.value());
+    }
+    OptInt64 b_batch_axis(*BatchAxis4BnInOp("b"));
+    if (b_batch_axis.has_value() && conf.transpose_b()) {
+      b_batch_axis.set_value(1 - b_batch_axis.value());
+    }
+    if (!a_batch_axis.has_value() && !b_batch_axis.has_value()) {
+      BatchAxis4BnInOp("out")->clear_value();
+    } else if (a_batch_axis.has_value() && b_batch_axis.has_value()) {
+      CHECK_EQ_OR_RETURN(a_batch_axis.value(), 1);
+      CHECK_EQ_OR_RETURN(b_batch_axis.value(), 0);
+      BatchAxis4BnInOp("out")->clear_value();
+    } else if (a_batch_axis.has_value()) {
+      CHECK_EQ_OR_RETURN(a_batch_axis.value(), 0);
+      *BatchAxis4BnInOp("out") = a_batch_axis;
+    } else if (b_batch_axis.has_value()) {
+      CHECK_EQ_OR_RETURN(b_batch_axis.value(), 1);
+      *BatchAxis4BnInOp("out") = b_batch_axis;
     }
   } else {
     UNIMPLEMENTED_THEN_RETURN();
