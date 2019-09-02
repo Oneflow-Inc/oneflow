@@ -156,7 +156,7 @@ def _data_load_layer(data_dir):
     )
 
     return flow.data.decode_ofrecord(
-        data_dir, (image_blob_conf, label_blob_conf), name="decode"
+        data_dir, (label_blob_conf, image_blob_conf), name="decode"
     )
 
 
@@ -194,7 +194,7 @@ def alexnet(images, labels, trainable=True):
     dropout2 = fc2
 
     fc3 = _fully_connected_layer(
-        "fc3", dropout2, 1001, activation=None, trainable=trainable
+        "fc3", dropout2, units=1001, activation=None, trainable=trainable
     )
 
     loss = flow.nn.sparse_softmax_cross_entropy_with_logits(
@@ -214,7 +214,7 @@ def alexnet_train_job():
     job_conf.train_conf().model_update_conf.naive_conf.SetInParent()
     job_conf.train_conf().loss_lbn.extend(["softmax_loss/out"])
 
-    (images, labels) = _data_load_layer(args.train_dir)
+    (labels, images) = _data_load_layer(args.train_dir)
     loss = alexnet(images, labels)
     # job_conf.get_train_conf_builder().add_loss(loss)
     return loss
@@ -223,7 +223,7 @@ def alexnet_train_job():
 def alexnet_eval_job():
     job_conf = flow.get_cur_job_conf_builder()
     job_conf.batch_size(12).data_part_num(8).default_data_type(flow.float)
-    (images, labels) = _data_load_layer(args.eval_dir)
+    (labels, images) = _data_load_layer(args.eval_dir)
     return alexnet(images, labels, False)
 
 
