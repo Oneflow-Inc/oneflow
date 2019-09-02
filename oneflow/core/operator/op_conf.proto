@@ -94,7 +94,7 @@ message Conv1DOpConf {
   repeated int32 kernel_size = 6;
   repeated int32 strides = 7;
   repeated int32 dilation_rate = 8;
-  optional ActivationType activation = 9 [default = kNone];
+  // optional ActivationType activation = 9 [default = kNone];
   optional bool use_bias = 10 [default = true];
   optional InitializerConf weight_initializer = 11;
   optional InitializerConf bias_initializer = 12;
@@ -111,7 +111,7 @@ message Conv2DOpConf {
   repeated int32 kernel_size = 6;
   repeated int32 strides = 7;
   repeated int32 dilation_rate = 8;
-  optional ActivationType activation = 9 [default = kNone];
+  // optional ActivationType activation = 9 [default = kNone];
   optional bool use_bias = 10 [default = true];
   optional InitializerConf weight_initializer = 11;
   optional InitializerConf bias_initializer = 12;
@@ -128,7 +128,7 @@ message Conv3DOpConf {
   repeated int32 kernel_size = 6;
   repeated int32 strides = 7;
   repeated int32 dilation_rate = 8;
-  optional ActivationType activation = 9 [default = kNone];
+  // optional ActivationType activation = 9 [default = kNone];
   optional bool use_bias = 10 [default = true];
   optional InitializerConf weight_initializer = 11;
   optional InitializerConf bias_initializer = 12;
@@ -175,7 +175,7 @@ message FullyConnectedOpConf {
   // out
   required string out = 4;
   required int32 units = 5;
-  optional ActivationType activation = 6 [default = kNone];
+  // optional ActivationType activation = 6 [default = kNone];
   optional bool use_bias = 7 [default = true];
   optional InitializerConf weight_initializer = 8;
   optional InitializerConf bias_initializer = 9;
@@ -574,9 +574,10 @@ message NormalModelUpdateOpConf {
   required string model_diff = 2;
   required string total_instance_num_diff = 3;
   required string model = 4;
-  required float learning_rate = 5;
-  required float l1 = 6;
-  required float l2 = 7;
+  required string global_step = 5;
+  required string learning_rate = 6;
+  required float l1 = 7;
+  required float l2 = 8;
 }
 
 message NaiveModelUpdateOpConf {
@@ -584,9 +585,10 @@ message NaiveModelUpdateOpConf {
   required string model_diff = 2;
   required string total_instance_num_diff = 3;
   required string model = 4;
-  required float learning_rate = 5;
-  required float l1 = 6;
-  required float l2 = 7;
+  required string global_step = 5;
+  required string learning_rate = 6;
+  required float l1 = 7;
+  required float l2 = 8;
 }
 
 message MomentumModelUpdateOpConf {
@@ -595,9 +597,10 @@ message MomentumModelUpdateOpConf {
   required string model_diff = 3;
   required string total_instance_num_diff = 4;
   required string model = 5;
-  required float learning_rate = 6;
-  required float l1 = 7;
-  required float l2 = 8;
+  required string global_step = 6;
+  required string learning_rate = 7;
+  required float l1 = 8;
+  required float l2 = 9;
 }
 
 message RMSPropModelUpdateOpConf {
@@ -605,9 +608,10 @@ message RMSPropModelUpdateOpConf {
   required string model_diff = 2;
   required string total_instance_num_diff = 3;
   required string model = 4;
-  required float learning_rate = 5;
-  required float l1 = 6;
-  required float l2 = 7;
+  required string global_step = 5;
+  required string learning_rate = 6;
+  required float l1 = 7;
+  required float l2 = 8;
 }
 
 message LARSModelUpdateOpConf {
@@ -616,9 +620,10 @@ message LARSModelUpdateOpConf {
   required string model_diff = 3;
   required string total_instance_num_diff = 4;
   required string model = 5;
-  required float learning_rate = 6;
-  required float l1 = 7;
-  required float l2 = 8;
+  required string global_step = 6;
+  required string learning_rate = 7;
+  required float l1 = 8;
+  required float l2 = 9;
 }
 
 message AdamModelUpdateOpConf {
@@ -630,9 +635,10 @@ message AdamModelUpdateOpConf {
   required string model_diff = 6;
   required string total_instance_num_diff = 7;
   required string model = 8;
-  required float learning_rate = 9;
-  required float l1 = 10;
-  required float l2 = 11;
+  required string global_step = 9;
+  required string learning_rate = 10;
+  required float l1 = 11;
+  required float l2 = 12;
 }
 
 message AccumulateOpConf {
@@ -746,7 +752,7 @@ message EmbeddingLookupOpConf {
 message AddOpConf {
   repeated string in = 1;
   required string out = 2;
-  optional ActivationType activation = 3 [default = kNone];
+  // optional ActivationType activation = 3 [default = kNone];
 }
 
 message MaximumOpConf {
@@ -936,7 +942,7 @@ message NormalizationOpConf {
   optional float gamma_init = 9 [default = 1.0];
   optional float mean_init = 10 [default = 0.0];
   optional float variance_init = 11 [default = 1.0];
-  optional ActivationType activation = 13 [default = kNone];
+  // optional ActivationType activation = 13 [default = kNone];
   optional string moving_mean = 14;
   optional string moving_variance = 15;
   optional string beta = 16;
@@ -1211,7 +1217,7 @@ message LayerNormOpConf {
 
   optional bool center = 8 [default = true];
   optional bool scale = 9 [default = true];
-  optional ActivationType activation = 10 [default = kNone];
+  // optional ActivationType activation = 10 [default = kNone];
   optional int64 begin_norm_axis = 11 [default = 1];
   optional int64 begin_params_axis = 12 [default = -1];
   optional double epsilon = 13 [default = 1e-5];
