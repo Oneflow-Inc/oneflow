@@ -9,17 +9,15 @@ of_activation_map = {"sigmoid": flow.keras.activations.sigmoid}
 tf_activation_map = {"sigmoid": tf.nn.sigmoid}
 
 
-def test_dense(
-    in_shape, units, activation=None, use_bias=True, trainable=True, name=None
-):
+def test_dense(in_shape, units, activation=None, use_bias=True):
     config = flow.ConfigProtoBuilder()
     config.gpu_device_num(1)
     flow.init(config)
 
-    input = np.random.random_sample((64, 32)).astype(np.float32) / 10000
+    input = np.random.random_sample(in_shape).astype(np.float32) / 10000
 
     # OneFlow
-    def DenseTestJob(inputs=flow.input_blob_def((64, 32))):
+    def DenseTestJob(inputs=flow.input_blob_def(in_shape)):
         job_conf = flow.get_cur_job_conf_builder()
         job_conf.batch_size(1).data_part_num(1).default_data_type(flow.float)
         return flow.layers.dense(
@@ -45,21 +43,15 @@ def test_dense(
         units,
         tf_activation_map[activation],
         use_bias=use_bias,
-        kernel_initializer=tf.constant_initializer(np.ones((32, 128))),
-        bias_initializer=tf.constant_initializer(np.ones(128)),
+        kernel_initializer=tf.ones_initializer(),
+        bias_initializer=tf.ones_initializer(),
     ).numpy()
 
-    print(of_out)
-    print(tf_out)
-    print("matmul max diff: " + str(np.max(np.abs(of_out - tf_out))))
+    print("dense max diff: " + str(np.max(np.abs(of_out - tf_out))))
     assert np.allclose(of_out, tf_out, atol=1e-7)
 
 
 # run one example each time
 if __name__ == "__main__":
-    test_dense(
-        in_shape=(64, 32),
-        units=128,
-        activation="sigmoid",
-        use_bias=False,
-    )
+    test_dense(in_shape=(1024, 2048), units=512, activation="sigmoid", use_bias=False)
+    # test_dense(in_shape=(16, 32, 64, 128), units=512, activation="sigmoid", use_bias=False)
