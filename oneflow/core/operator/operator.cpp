@@ -304,13 +304,7 @@ int64_t Operator::cudnn_buf_limit_byte() const {
 }
 
 std::string Operator::Bn2ConfName(const std::string& bn) const {
-  const PbFd* fd = GetCustomizedConf().GetDescriptor()->FindFieldByName(bn);
-  if (fd) {
-    return GetValFromCustomizedConf<std::string>(bn);
-  } else {
-    const std::pair<std::string, int32_t> prefix_idx = GenUnRepeatedBn(bn);
-    return GetPbRpfFromCustomizedConf<std::string>(prefix_idx.first).Get(prefix_idx.second);
-  }
+  return GetStrValInPbFdOrPbRpf(GetCustomizedConf(), bn);
 }
 
 LogicalBlobId Operator::ibn2lbi(const std::string& input_bn) const {
@@ -428,14 +422,7 @@ std::string GenRepeatedBn(const std::string& bn_prefix, int32_t idx) {
 }
 
 std::pair<std::string, int32_t> GenUnRepeatedBn(const std::string& bn) {
-  const size_t underline_pos = bn.rfind('_');
-  CHECK_NE(underline_pos, std::string::npos);
-  CHECK_GT(underline_pos, 0);
-  CHECK_LT(underline_pos, bn.size() - 1);
-  const std::string prefix = bn.substr(0, underline_pos);
-  const int32_t idx = oneflow_cast<int32_t>(bn.substr(underline_pos + 1));
-  CHECK_GE(idx, 0);
-  return std::make_pair(prefix, idx);
+  return GetFieldNameAndIndex4StrVal(bn);
 }
 
 bool IsOpOnlyCpuSupported(OperatorConf::OpTypeCase op_type_case) {

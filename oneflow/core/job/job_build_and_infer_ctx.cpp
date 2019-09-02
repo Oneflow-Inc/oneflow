@@ -76,11 +76,30 @@ Maybe<void> JobBuildAndInferCtx::AddAndInferInputOp(const OperatorConf& op_conf)
     return GenJobBuildAndInferError(JobBuildAndInferError::kOpConfDeviceTypeNoSet,
                                     "op_name: " + op_name + " not set device type");
   }
-  OperatorConf* mut_op_conf = job_->mutable_net()->add_op();
-  *mut_op_conf = op_conf;
+  OperatorConf op_conf_with_split_hint = op_conf;
   op_name2op_.emplace(op_name, ConstructOp(op_conf));
   Operator* op = op_name2op_.at(op_name).get();
-  // TODO() lbn with split hist
+
+  OperatorConf op_conf_without_split_hint = op_conf_with_split_hint;
+  PbMessage* op_type_conf = MutableMessageInPbMessage(&op_conf_without_split_hint,
+                                                      op_conf_without_split_hint.op_type_case());
+  SbpSignature sbp_signature;
+  for (const std::string& ibn : op->input_bns()) {
+    std::string lbn_may_with_split_hint = GetStrValInPbFdOrPbRpf(op->GetCustomizedConf(), ibn);
+    if (HasSplitHintInLbn(lbn_may_with_split_hint)) {
+      SbpParallel sbp_parallel = GetSbpParallelInLbn(lbn_may_with_split_hint);
+      (*(sbp_signature.mutable_bn_in_op2sbp_parallel()))[ibn] = sbp_parallel;
+      const LogicalBlobId& lbi = op->BnInOp2Lbi(ibn);
+      std::string lbn = GenLogicalBlobName(lbi);
+      ReplaceStrValInPbFdOrPbRpf(op_type_conf, ibn, lbn_may_with_split_hint, lbn);
+    }
+  }
+  (*(job_->mutable_sbp_conf()->mutable_op_name2sbp_signature_conf()))[op_name] = sbp_signature;
+
+  job_->mutable_net()->add_op()->CopyFrom(op_conf_without_split_hint);
+
+  // TODO() infer op out_blob sbp signature; implement get split dim of blob
+
   JUST(GenOpProducedEmptyLogicalBlobDesc(op));
   auto GetBlobDesc4BnInOp = [&](const std::string& bn) -> BlobDesc* {
     const LogicalBlobId& lbi = op->BnInOp2Lbi(bn);

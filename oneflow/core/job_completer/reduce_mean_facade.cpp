@@ -13,7 +13,7 @@ void UpdateConsumerOpConf(const std::string& new_lbn, const OpNode& op_node,
     OperatorConf mut_op_conf(out_node->op().op_conf());
     PbMessage* mut_conf = MutableMessageInPbMessage(&mut_op_conf, mut_op_conf.op_type_case());
     for (const std::string& ibn : edge->lbi2ibns().at(old_lbi)) {
-      SetBnValInOpTypeConf(mut_conf, ibn, old_lbn, new_lbn);
+      ReplaceStrValInPbFdOrPbRpf(mut_conf, ibn, old_lbn, new_lbn);
     }
     job_builder->MutOpsOnlyOnce({mut_op_conf});
   }

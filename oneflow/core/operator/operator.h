@@ -327,10 +327,12 @@ inline OpBlobArg GenOpBlobArg(const std::string& op_name, const std::string& bn_
 
 inline LogicalBlobId GenLogicalBlobId(const std::string& lbn) {
   LogicalBlobId lbi;
-  size_t pos = lbn.find('/');
+  size_t pos = lbn.rfind('/');
   CHECK_NE(pos, std::string::npos);
   lbi.set_op_name(lbn.substr(0, pos));
-  lbi.set_blob_name(lbn.substr(pos + 1));
+  std::string blob_name_with_split_hit = lbn.substr(pos + 1);
+  size_t split_pos = blob_name_with_split_hit.rfind(':');
+  lbi.set_blob_name(blob_name_with_split_hit.substr(0, split_pos));
   return lbi;
 }
 
@@ -343,6 +345,31 @@ inline std::string GenLogicalBlobName(const LogicalBlobId& lbi) {
   CHECK_EQ(lbi.has_blob_name(), true);
   CHECK_EQ(lbi.is_packed_id(), false);
   return GenLogicalBlobName(lbi.op_name(), lbi.blob_name());
+}
+
+inline bool HasSplitHintInLbn(const std::string& lbn_may_with_split_hint) {
+  size_t pos = lbn_may_with_split_hint.rfind(':');
+  if (pos != std::string::npos) {
+    std::string split_hint = lbn_may_with_split_hint.substr(pos + 1);
+    if (split_hint.length() >= 1 && (split_hint[0] == 'S' || split_hint[0] == 'B')) { return true; }
+  }
+  return false;
+}
+
+inline SbpParallel GetSbpParallelInLbn(const std::string& lbn_with_split_hint) {
+  SbpParallel ret;
+  size_t pos = lbn_with_split_hint.rfind(':');
+  CHECK_NE(pos, std::string::npos);
+  std::string split_hint = lbn_with_split_hint.substr(pos + 1);
+  if (split_hint[0] == 'S') {
+    int64_t axis = oneflow_cast<int64_t>(split_hint.substr(1));
+    ret.mutable_split_parallel()->set_axis(axis);
+  } else if (split_hint[0] == 'B') {
+    ret.mutable_broadcast_parallel();
+  } else {
+    UNIMPLEMENTED();
+  }
+  return ret;
 }
 
 }  // namespace oneflow
