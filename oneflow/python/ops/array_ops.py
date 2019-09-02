@@ -80,3 +80,57 @@ def transpose(a, perm=None, conjugate=False, name=None):
     lbi.op_name = op_conf.name
     lbi.blob_name = "out"
     return remote_blob_util.RemoteBlob(lbi)
+
+
+@oneflow_export("slice")
+def slice(input_, begin, size, name=None):
+    ndims = len(input_.static_shape)
+    assert (
+        isinstance(begin, (list, tuple)) and len(begin) == ndims
+    ), "begin must be a list or tuple whose length is the same with input_'s number of dimensions."
+    assert (
+        isinstance(size, (list, tuple)) and len(size) == ndims
+    ), "size must be a list or tuple whose length is the same with input_'s number of dimensions."
+
+    if name is None:
+        name = id_util.UniqueStr("Slice_")
+
+    slice_conf_list = []
+    for b, s, d in enumerate(zip(begin, size, input_.static_shape)):
+        slice_conf = op_conf_util.DimSliceConf()
+        if b < -d or b > d - 1:
+            raise ValueError(
+                "'i'th element of begin must be greater than or equal to negative input_'s 'i'th dimension "
+                "and less than input_'s 'i'th dimension."
+            )
+        b = b + d if b < 0 else b
+        slice_conf.start = b
+
+        if s > 0:
+            if b + s > d:
+                raise ValueError(
+                    "the sum of 'i'th element of begin and 'i'th element of size must be "
+                    "less than or equal to input_'s 'i'th dimension."
+                )
+            slice_conf.end = b + s
+        elif s == -1:
+            slice_conf.end = d
+        else:
+            raise ValueError(
+                "elements of size must be an int that greater then 0 or equal to -1"
+            )
+
+        slice_conf.stride = 1
+        slice_conf_list.append(slice_conf)
+
+    op_conf = op_conf_util.OperatorConf()
+    op_conf.name = name
+    setattr(op_conf.slice_conf, "in", input_.logical_blob_name)
+    op_conf.slice_conf.out = "out"
+    op_conf.slice_conf.dim_slice_conf.extend(slice_conf_list)
+
+    compile_context.CurJobAddOp(op_conf)
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = "out"
+    return remote_blob_util.RemoteBlob(lbi)
