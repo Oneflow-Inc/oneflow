@@ -160,7 +160,7 @@ def _data_load_layer(data_dir):
     )
 
 
-def alexnet_train(images, labels):
+def alexnet(images, labels, trainable=True):
     transposed = flow.transpose(images, name="transpose", perm=[0, 3, 1, 2])
     conv1 = _conv2d_layer(
         "conv1",
@@ -185,25 +185,23 @@ def alexnet_train(images, labels):
 
     pool5 = flow.nn.avg_pool2d(conv5, 3, 2, "VALID", "NCHW", name="pool5")
 
-    fc1 = _fully_connected_layer("fc1", pool5, 4096)
+    fc1 = _fully_connected_layer("fc1", pool5, 4096, trainable=trainable)
 
     dropout1 = fc1
 
-    fc2 = _fully_connected_layer("fc2", dropout1, 4096)
+    fc2 = _fully_connected_layer("fc2", dropout1, 4096, trainable=trainable)
 
     dropout2 = fc2
 
-    fc3 = _fully_connected_layer("fc3", dropout2, 1001, activation=None)
+    fc3 = _fully_connected_layer(
+        "fc3", dropout2, 1001, activation=None, trainable=trainable
+    )
 
     loss = flow.nn.sparse_softmax_cross_entropy_with_logits(
         labels, fc3, name="softmax_loss"
     )
 
     return loss
-
-
-def alexnet_evaluate():
-    raise NotImplementedError
 
 
 def alexnet_train_job():
@@ -217,9 +215,16 @@ def alexnet_train_job():
     job_conf.train_conf().loss_lbn.extend(["softmax_loss/out"])
 
     (images, labels) = _data_load_layer(args.train_dir)
-    loss = alexnet_train(images, labels)
+    loss = alexnet(images, labels)
     # job_conf.get_train_conf_builder().add_loss(loss)
     return loss
+
+
+def alexnet_eval_job():
+    job_conf = flow.get_cur_job_conf_builder()
+    job_conf.batch_size(12).data_part_num(8).default_data_type(flow.float)
+    (images, labels) = _data_load_layer(args.eval_dir)
+    return alexnet(images, labels, False)
 
 
 if __name__ == "__main__":
@@ -249,9 +254,11 @@ if __name__ == "__main__":
                 flow.deprecated.init_worker(
                     config, scp_binary=True, use_uuid=True
                 )
+
     flow.init(config)
 
     flow.add_job(alexnet_train_job)
+    flow.add_job(alexnet_eval_job)
 
     with flow.Session() as sess:
         check_point = flow.train.CheckPoint()
@@ -266,12 +273,12 @@ if __name__ == "__main__":
                     i, "train loss:", sess.run(alexnet_train_job).get().mean()
                 )
             )
-            # if (i + 1) % 10 == 0:
-            #     print(
-            #         fmt_str.format(
-            #             i, "eval loss:", sess.run(EvaluateAlexNet).get().mean()
-            #         )
-            #     )
+            if (i + 1) % 10 == 0:
+                print(
+                    fmt_str.format(
+                        i, "eval loss:", sess.run(alexnet_eval_job).get().mean()
+                    )
+                )
             if (i + 1) % 100 == 0:
                 check_point.save(session=sess)
         if (
