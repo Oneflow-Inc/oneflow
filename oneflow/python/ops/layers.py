@@ -20,16 +20,21 @@ def dense(
     name=None,
 ):
     op_conf = op_conf_util.OperatorConf()
-    setattr(op_conf, "name", name if name is not None else id_util.UniqueStr("Dense_"))
+    setattr(op_conf, "name",
+            name if name is not None else id_util.UniqueStr("Dense_"))
     setattr(op_conf.fully_connected_conf, "in", inputs.logical_blob_name)
     setattr(op_conf.fully_connected_conf, "out", "out")
     setattr(op_conf.fully_connected_conf, "units", units)
     # setattr(op_conf.fully_connected_conf, "activation", activation)
     assert(activation is None)
     setattr(op_conf.fully_connected_conf, "use_bias", use_bias)
-    setattr(op_conf.fully_connected_conf, "weight_initializer", kernel_initializer)
-    setattr(op_conf.fully_connected_conf, "bias_initializer", bias_initializer)
-    setattr(op_conf.trainable, "trainable", trainable)
+    if kernel_initializer is not None:
+        op_conf.fully_connected_conf.weight_initializer.CopyFrom(
+            kernel_initializer)
+    if bias_initializer is not None:
+        op_conf.fully_connected_conf.bias_initializer.CopyFrom(
+            bias_initializer)
+    setattr(op_conf, "trainable", trainable)
     compile_context.CurJobAddOp(op_conf)
     out_lbi = logical_blob_id_util.LogicalBlobId()
     setattr(out_lbi, "op_name", op_conf.name)
