@@ -20,7 +20,7 @@ class ImagePreprocessor(object):
             proto = image_util.ImagePreprocess()
 
         if self.preprocessor == "bgr2rgb":
-            proto.bgr2rgb
+            proto.bgr2rgb.SetInParent()
         else:
             raise NotImplementedError
 
@@ -29,16 +29,14 @@ class ImagePreprocessor(object):
 
 @oneflow_export("data.ImageCodec")
 class ImageCodec(object):
-    def __init__(self, image_preprocessors=[]):
+    def __init__(self, image_preprocessors=None):
         self.image_preprocessors = image_preprocessors
 
     def to_proto(self, proto=None):
         if proto is None:
             proto = op_conf_util.EncodeConf()
-
-        for pp in self.image_preprocessors:
-            proto.jpeg.preprocess.append(pp.to_proto())
-
+        if isinstance(self.image_preprocessors, list):
+            proto.jpeg.preprocess.extend([p.to_proto() for p in self.image_preprocessors])
         return proto
 
 
@@ -80,7 +78,7 @@ class NormByChannelPreprocessor(object):
 
 @oneflow_export("data.BlobConf")
 class BlobConf(object):
-    def __init__(self, name, shape, dtype, codec, preprocessors=[]):
+    def __init__(self, name, shape, dtype, codec, preprocessors=None):
         self.name = name
         self.shape = shape
         self.dtype = dtype
@@ -93,8 +91,8 @@ class BlobConf(object):
         blob_conf.shape.dim.extend(self.shape)
         blob_conf.data_type = self.dtype
         self.codec.to_proto(blob_conf.encode_case)
-        for pp in self.preprocessors:
-            blob_conf.preprocess.append(pp.to_proto())
+        if isinstance(self.preprocessors, list):
+            blob_conf.preprocess.extend([p.to_proto() for p in self.preprocessors])
         return blob_conf
 
 
