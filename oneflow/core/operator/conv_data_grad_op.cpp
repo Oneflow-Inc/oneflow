@@ -76,12 +76,11 @@ void ConvDataGradOp::VirtualGenKernelConf(
   }
 }
 
-Maybe<void> ConvDataGradOp::InferHasBatchDim(
-    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
-  CHECK_OR_RETURN(*HasBatchDim4BnInOp("dy"));
-  CHECK_OR_RETURN(*HasBatchDim4BnInOp("x_like"));
-  CHECK_OR_RETURN(*HasBatchDim4BnInOp("filter") == false);
-  *HasBatchDim4BnInOp("dx") = true;
+Maybe<void> ConvDataGradOp::InferBatchAxis(
+    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
+  CHECK_OR_RETURN(*BatchAxis4BnInOp("dy") == *BatchAxis4BnInOp("x_like"));
+  CHECK_OR_RETURN(BatchAxis4BnInOp("filter")->has_value() == false);
+  *BatchAxis4BnInOp("dx") = *BatchAxis4BnInOp("dy");
   return Maybe<void>::Ok();
 }
 

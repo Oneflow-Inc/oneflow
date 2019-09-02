@@ -45,10 +45,10 @@ void ReduceSplitOp::VirtualGenKernelConf(
   CHECK_EQ(out_blob_elem_cnt_sum, in_blob_elem_cnt);
 }
 
-Maybe<void> ReduceSplitOp::InferHasBatchDim(
-    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
-  CHECK_EQ_OR_RETURN(*HasBatchDim4BnInOp("in"), false);
-  for (const auto& ibn : input_bns()) { *HasBatchDim4BnInOp(ibn) = false; }
+Maybe<void> ReduceSplitOp::InferBatchAxis(
+    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
+  CHECK_EQ_OR_RETURN(BatchAxis4BnInOp("in")->has_value(), false);
+  for (const auto& ibn : input_bns()) { BatchAxis4BnInOp(ibn)->clear_value(); }
   return Maybe<void>::Ok();
 }
 

@@ -93,9 +93,9 @@ Maybe<void> LayerNormOp::InferBlobDescs(
   return Maybe<void>::Ok();
 }
 
-Maybe<void> LayerNormOp::InferHasBatchDim(
-    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
-  for (const auto& obn : output_bns()) { *HasBatchDim4BnInOp(obn) = true; }
+Maybe<void> LayerNormOp::InferBatchAxis(
+    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
+  for (const auto& obn : output_bns()) { *BatchAxis4BnInOp(obn) = *BatchAxis4BnInOp("in"); }
   return Maybe<void>::Ok();
 }
 

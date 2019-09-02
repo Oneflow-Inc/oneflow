@@ -26,9 +26,9 @@ class PoolingOp : public Operator {
  private:
   void CheckPoolSizeAndStrides() const;
   Shape GetOutShape(int64_t in_n, int64_t in_c, const std::vector<int64_t>& out) const;
-  Maybe<void> InferHasBatchDim(
-      std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const override {
-    return NaiveInferHasBatchDim(HasBatchDim4BnInOp);
+  Maybe<void> InferBatchAxis(
+      std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override {
+    return NaiveInferBatchAxis(BatchAxis4BnInOp);
   }
   void GetSbpSignatures(
       const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,

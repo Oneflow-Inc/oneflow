@@ -17,8 +17,8 @@ bool GetSplitAxis(const InterfaceBlobConf& input_blob_conf, size_t* split_axis) 
       *split_axis = axis;
       return true;
     }
-  } else if (input_blob_conf.broadcast() == false && input_blob_conf.has_batch_dim()) {
-    *split_axis = 0;
+  } else if (input_blob_conf.broadcast() == false && input_blob_conf.batch_axis().has_value()) {
+    *split_axis = input_blob_conf.batch_axis().value();
     return true;
   }
   return false;
@@ -45,8 +45,8 @@ Maybe<void> GetSbpSignature(const InterfaceBlobConf& blob_conf, const PbRpf<std:
     BuildSbpSignature(split_axis);
   } else if (blob_conf.has_broadcast()) {
     SbpSignatureBuilder().Broadcast(input_bns).Broadcast(output_bns).Build(sbp_signature);
-  } else if (blob_conf.has_batch_dim()) {
-    BuildSbpSignature(0);
+  } else if (blob_conf.batch_axis().has_value()) {
+    BuildSbpSignature(blob_conf.batch_axis().value());
   } else {
     UNIMPLEMENTED_THEN_RETURN();
   }
@@ -85,9 +85,9 @@ Maybe<void> InterfaceOpUtil::InferOutBlobDesc(const InterfaceBlobConf& blob_conf
   return Maybe<void>::Ok();
 }
 
-Maybe<void> InterfaceOpUtil::InferHasBatchDim(const InterfaceBlobConf& blob_conf,
-                                              bool* has_batch_dim) {
-  *has_batch_dim = blob_conf.has_batch_dim();
+Maybe<void> InterfaceOpUtil::InferBatchAxis(const InterfaceBlobConf& blob_conf,
+                                            OptInt64* batch_axis) {
+  *batch_axis = blob_conf.batch_axis();
   return Maybe<void>::Ok();
 }
 
@@ -125,7 +125,7 @@ Maybe<void> InterfaceOpUtil::InitBlobConf(InterfaceBlobConf* blob_conf,
   } else {
     UNIMPLEMENTED();
   }
-  blob_conf->set_has_batch_dim(parallel_blob_conf.has_batch_dim());
+  *blob_conf->mutable_batch_axis() = parallel_blob_conf.batch_axis();
   return Maybe<void>::Ok();
 }
 

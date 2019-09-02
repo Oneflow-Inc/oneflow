@@ -22,8 +22,8 @@ class VariableOp final : public Operator {
       const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
       std::function<const SbpInferHint&(const std::string&)> SbpInferHint4Ibn,
       const ParallelDesc& parallel_desc) const override;
-  Maybe<void> InferHasBatchDim(
-      std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const override;
+  Maybe<void> InferBatchAxis(
+      std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override;
   void GetSbpSignatures(SbpSignatureList* sbp_sig_list) const override;
 };
 

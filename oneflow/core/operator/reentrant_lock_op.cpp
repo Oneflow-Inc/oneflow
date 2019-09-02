@@ -22,9 +22,9 @@ Maybe<void> ReentrantLockOp::InferBlobDescs(
   return Maybe<void>::Ok();
 }
 
-Maybe<void> ReentrantLockOp::InferHasBatchDim(
-    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
-  return NaiveInferHasBatchDim(HasBatchDim4BnInOp);
+Maybe<void> ReentrantLockOp::InferBatchAxis(
+    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
+  return NaiveInferBatchAxis(BatchAxis4BnInOp);
 }
 
 void ReentrantLockOp::GetSbpSignatures(

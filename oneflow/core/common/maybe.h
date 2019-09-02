@@ -148,6 +148,7 @@ std::string Sprintf(const Args&... args) {
     if (!(expr)) {                                                             \
       Error error;                                                             \
       error.set_msg(GEN_ERROR_MSG(ErrorType::kCondition, #expr, __VA_ARGS__)); \
+      error.mutable_unknown_error();                                           \
       return Maybe<void>(error);                                               \
     }                                                                          \
   }

@@ -65,6 +65,8 @@ enum JobBuildAndInferError {
 message ProtoParseFailedError {
 }
 
+message UnkownError { }
+
 message Error {
   optional string msg = 1 [default = ""];
   oneof error_type {
@@ -72,5 +74,6 @@ message Error {
     ConfigResourceUnavailableError config_resource_unavailable_error = 3;
     JobBuildAndInferError job_build_and_infer_error = 4;
     ProtoParseFailedError proto_parse_failed_error = 5;
+    UnkownError unknown_error = 6;
   }
 }
