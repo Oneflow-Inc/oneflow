@@ -131,7 +131,7 @@ def max_pool2d(input, ksize, strides, padding, data_format="NHWC", name=None):
     setattr(op_conf.max_pooling_2d_conf, "in", input.logical_blob_name)
     setattr(op_conf.max_pooling_2d_conf, "out", "out")
     op_conf.max_pooling_2d_conf.pool_size[:] = _GetSequence(ksize, 2, "ksize")
-    op_conf.max_pooling_2d_conf.strides[:] = _GetSequence(ksize, 2, "strides")
+    op_conf.max_pooling_2d_conf.strides[:] = _GetSequence(strides, 2, "strides")
     assert padding in ["VALID", "SAME"]
     setattr(op_conf.max_pooling_2d_conf, "padding", padding)
     assert data_format in ["NHWC", "NCHW", "NCHW_VECT_C"]
