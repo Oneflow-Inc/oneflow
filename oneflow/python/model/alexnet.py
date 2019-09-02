@@ -62,7 +62,7 @@ def _fully_connected_layer(
     output = of.layers.dense(
         input,
         units,
-        activation,
+        None,
         use_bias,
         kernel_initializer,
         bias_initializer,
