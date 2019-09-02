@@ -67,8 +67,6 @@ class JobDesc final {
   int64_t TotalBatchNum() const;
   int64_t BatchSize() const;
   int64_t NumOfPiecesInBatch() const;
-  float primary_lr() const;
-  float secondary_lr() const;
   float weight_l1() const;
   float bias_l1() const;
   float weight_l2() const;

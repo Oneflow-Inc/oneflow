@@ -19,16 +19,19 @@ Maybe<void> BiasAddOp::InferBlobDescs(
     const ParallelContext* parallel_ctx) const {
   const BlobDesc* a_blob_desc = GetBlobDesc4BnInOp("a");
   const BlobDesc* b_blob_desc = GetBlobDesc4BnInOp("b");
+  const int32_t bias_add_axis = op_conf().bias_add_conf().axis();
 
-  CHECK_EQ_OR_RETURN(a_blob_desc->shape().NumAxes(), 2);
   CHECK_EQ_OR_RETURN(b_blob_desc->shape().NumAxes(), 1);
-  CHECK_EQ_OR_RETURN(a_blob_desc->shape().At(1), b_blob_desc->shape().At(0));
+  CHECK_GE_OR_RETURN(bias_add_axis, 0);
+  CHECK_LT_OR_RETURN(bias_add_axis, a_blob_desc->shape().NumAxes());
+  CHECK_EQ_OR_RETURN(a_blob_desc->shape().At(bias_add_axis), b_blob_desc->shape().At(0));
 
   *GetBlobDesc4BnInOp("out") = *a_blob_desc;
   *GetBlobDesc4BnInOp("bias_multiplier") = *a_blob_desc;
   GetBlobDesc4BnInOp("bias_multiplier")->mut_shape() = Shape({a_blob_desc->shape().At(0), 1});
   return Maybe<void>::Ok();
 }
+
 void BiasAddOp::GetSbpSignatures(
     const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
     SbpSignatureList* sbp_sig_list) const {
