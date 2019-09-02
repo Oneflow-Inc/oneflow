@@ -89,11 +89,11 @@ Maybe<void> NormalizationOp::InferBlobDescs(
   return Maybe<void>::Ok();
 }
 
-Maybe<void> NormalizationOp::InferHasBatchDim(
-    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
-  *HasBatchDim4BnInOp("out") = *HasBatchDim4BnInOp("in");
-  *HasBatchDim4BnInOp("mean") = false;
-  *HasBatchDim4BnInOp("inv_variance") = false;
+Maybe<void> NormalizationOp::InferBatchAxis(
+    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
+  *BatchAxis4BnInOp("out") = *BatchAxis4BnInOp("in");
+  BatchAxis4BnInOp("mean")->clear_value();
+  BatchAxis4BnInOp("inv_variance")->clear_value();
   return Maybe<void>::Ok();
 }
 

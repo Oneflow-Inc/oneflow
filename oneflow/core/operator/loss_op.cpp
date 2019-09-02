@@ -78,10 +78,10 @@ LogicalBlobId LossOp::obn2lbi(const std::string& output_bn) const {
   return ret;
 }
 
-Maybe<void> LossOp::InferHasBatchDim(
-    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
-  for (const auto& obn : output_bns()) { *HasBatchDim4BnInOp(obn) = false; }
-  *HasBatchDim4BnInOp("loss") = *HasBatchDim4BnInOp("prediction");
+Maybe<void> LossOp::InferBatchAxis(
+    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
+  for (const auto& obn : output_bns()) { BatchAxis4BnInOp(obn)->clear_value(); }
+  *BatchAxis4BnInOp("loss") = *BatchAxis4BnInOp("prediction");
   return Maybe<void>::Ok();
 }
 

@@ -19,8 +19,8 @@ const PbMessage& ForeignOutputOp::GetCustomizedConf() const {
   return op_conf().foreign_output_conf();
 }
 
-Maybe<void> ForeignOutputOp::InferHasBatchDim(
-    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
+Maybe<void> ForeignOutputOp::InferBatchAxis(
+    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
   return Maybe<void>::Ok();
 }
 

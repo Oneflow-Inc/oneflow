@@ -777,7 +777,7 @@ message InterfaceBlobConf {
     int32 split_axis = 7;
     bool broadcast = 8;
   }
-  optional bool has_batch_dim = 9 [default = true];
+  required OptInt64 batch_axis = 9;
 }
 
 message InputOpConf {

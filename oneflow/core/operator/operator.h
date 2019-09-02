@@ -118,13 +118,13 @@ class Operator {
       std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*,
       int64_t record_piece_size, std::function<void(OpContext*)> EnrollOpCtx) const;
 
-  Maybe<void> InferHasBatchDimIf(
+  Maybe<void> InferBatchAxisIf(
       const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
-      std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
-    return InferHasBatchDim(LogicalBlobDesc4Ibn, HasBatchDim4BnInOp);
+      std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
+    return InferBatchAxis(LogicalBlobDesc4Ibn, BatchAxis4BnInOp);
   }
-  Maybe<void> NaiveInferHasBatchDim(
-      std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const;
+  Maybe<void> NaiveInferBatchAxis(
+      std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const;
 
   // Infer out blob's time shape
   Maybe<void> InferOutputBlobTimeShapeIf(
@@ -230,13 +230,13 @@ class Operator {
   OutputBlobModifier* MutOutputBlobModifier4Obn(const std::string& obn);
 
  private:
-  virtual Maybe<void> InferHasBatchDim(
+  virtual Maybe<void> InferBatchAxis(
       const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
-      std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
-    return InferHasBatchDim(HasBatchDim4BnInOp);
+      std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
+    return InferBatchAxis(BatchAxis4BnInOp);
   }
-  virtual Maybe<void> InferHasBatchDim(
-      std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
+  virtual Maybe<void> InferBatchAxis(
+      std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
     UNIMPLEMENTED();
     return Maybe<void>::Ok();
   }

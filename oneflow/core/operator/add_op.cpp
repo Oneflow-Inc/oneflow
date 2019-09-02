@@ -6,12 +6,12 @@ namespace oneflow {
 void AddOp::VirtualInitFromOpConf() { CHECK(op_conf().has_add_conf()); }
 const PbMessage& AddOp::GetCustomizedConf() const { return op_conf().add_conf(); }
 
-Maybe<void> AddOp::InferHasBatchDim(
-    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
+Maybe<void> AddOp::InferBatchAxis(
+    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
   for (const auto& ibn : input_bns()) {
-    CHECK_EQ(*HasBatchDim4BnInOp(ibn), *HasBatchDim4BnInOp(input_bns().Get(0)));
+    CHECK_OR_RETURN(*BatchAxis4BnInOp(ibn) == *BatchAxis4BnInOp(input_bns().Get(0)));
   }
-  return NaiveInferHasBatchDim(HasBatchDim4BnInOp);
+  return NaiveInferBatchAxis(BatchAxis4BnInOp);
 }
 
 void AddOp::GetSbpSignatures(

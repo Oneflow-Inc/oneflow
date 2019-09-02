@@ -463,14 +463,24 @@ void EraseEmptyBnInVec(std::function<const BlobDesc*(const std::string&)> GetBlo
   bns->erase(bns->begin() + idx_available, bns->end());
 }
 
-Maybe<void> Operator::NaiveInferHasBatchDim(
-    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
+Maybe<void> Operator::NaiveInferBatchAxis(
+    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
   if (output_bns().empty()) { return Maybe<void>::Ok(); }
   CHECK_GT_OR_RETURN(input_bns().size(), 0);
   CHECK_EQ_OR_RETURN(output_bns().size(), 1);
-  bool has_batch_dim = false;
-  for (const auto& ibn : input_bns()) { has_batch_dim = has_batch_dim || *HasBatchDim4BnInOp(ibn); }
-  *HasBatchDim4BnInOp(SoleObn()) = has_batch_dim;
+  const OptInt64* batch_axis = nullptr;
+  for (const auto& ibn : input_bns()) {
+    const OptInt64* const cur_ibn_batch_axis = BatchAxis4BnInOp(ibn);
+    if (cur_ibn_batch_axis->has_value() == false) { continue; }
+    if (batch_axis) {
+      CHECK_OR_RETURN(*batch_axis == *cur_ibn_batch_axis);
+    } else {
+      batch_axis = cur_ibn_batch_axis;
+    }
+  }
+  OptInt64 no_batch_axis;
+  if (batch_axis == nullptr) { batch_axis = &no_batch_axis; }
+  *BatchAxis4BnInOp(SoleObn()) = *batch_axis;
   return Maybe<void>::Ok();
 }
 

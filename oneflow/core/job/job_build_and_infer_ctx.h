@@ -31,7 +31,7 @@ class JobBuildAndInferCtx {
   bool HasJobConf() const;
   Maybe<Shape> GetStaticShape(const std::string& lbn) const;
   Maybe<DataType> GetDataType(const std::string& lbn) const;
-  Maybe<bool> GetHasBatchDim(const std::string& lbn) const;
+  Maybe<OptInt64> GetBatchAxis(const std::string& lbn) const;
   Maybe<bool> GetHasSplitAxisFromProducerView(const std::string& lbn) const;
   Maybe<int64_t> GetSplitAxisFromProducerView(const std::string& lbn) const;
   Maybe<ParallelDesc> GetParallelDescFromProducerView(const std::string& lbn) const;
@@ -45,7 +45,7 @@ class JobBuildAndInferCtx {
 
   Job* job_;
   int64_t job_id_;
-  HashMap<LogicalBlobId, bool> lbi2has_batch_dim_;
+  HashMap<LogicalBlobId, OptInt64> lbi2batch_axis_;
   HashMap<LogicalBlobId, std::unique_ptr<BlobDesc>> lbi2logical_blob_desc_;
   HashMap<std::string, std::shared_ptr<Operator>> op_name2op_;
   bool is_job_conf_frozen_;

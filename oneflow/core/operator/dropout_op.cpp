@@ -37,11 +37,9 @@ void DropoutOp::VirtualGenKernelConf(
   GetBlobDesc4BnInOp("out")->shape().ToProto(mut_dropout_conf->mutable_out());
 }
 
-Maybe<void> DropoutOp::InferHasBatchDim(
-    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
-  for (const auto& obn : output_bns()) {
-    *HasBatchDim4BnInOp(obn) = *HasBatchDim4BnInOp(SoleIbn());
-  }
+Maybe<void> DropoutOp::InferBatchAxis(
+    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
+  for (const auto& obn : output_bns()) { *BatchAxis4BnInOp(obn) = *BatchAxis4BnInOp(SoleIbn()); }
   return Maybe<void>::Ok();
 }
 
