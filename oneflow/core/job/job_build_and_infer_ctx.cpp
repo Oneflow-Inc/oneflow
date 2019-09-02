@@ -1,5 +1,4 @@
 #include "oneflow/core/job/job_build_and_infer_ctx.h"
-#include "oneflow/core/common/error_util.h"
 
 namespace oneflow {
 
@@ -211,7 +210,7 @@ Maybe<void> JobBuildAndInferCtx::CheckPlacement() const {
 
 Maybe<void> JobBuildAndInferCtx::CheckJobConf() const {
   if (job_->job_conf().job_type_case() == JobConfigProto::JOB_TYPE_NOT_SET) {
-    return ErrorUtil::JobTypeNotSet("job_type not set, please set predict_conf or train_conf");
+    return Error::JobTypeNotSet() << "job_type not set, please set predict_conf or train_conf";
   }
   return Maybe<void>::Ok();
 }

@@ -1,6 +1,7 @@
 #ifndef ONEFLOW_CORE_COMMON_ERROR_H_
 #define ONEFLOW_CORE_COMMON_ERROR_H_
 
+#include <sstream>
 #include "oneflow/core/common/error.pb.h"
 
 namespace oneflow {
@@ -19,10 +20,19 @@ class Error final {
 
   std::shared_ptr<ErrorProto> error_proto() const { return error_proto_; }
   ErrorProto* operator->() const { return error_proto_.get(); }
+  operator std::string() const;
 
  private:
   std::shared_ptr<ErrorProto> error_proto_;
 };
+
+template<typename T>
+Error&& operator<<(Error&& error, const T& x) {
+  std::ostringstream ss;
+  ss << x;
+  error->set_msg(error->msg() + ss.str());
+  return std::move(error);
+}
 
 }  // namespace oneflow
 
