@@ -22,7 +22,7 @@ class ModelLoadOp : public Operator {
 
 void ModelLoadOp::InitFromOpConf() {
   CHECK(op_conf().has_model_load_conf());
-  if (op_conf().model_load_conf().has_tick()) { EnrollInputBn("tick", false); }
+  EnrollInputBn("path", false);
   EnrollRepeatedOutputBn("out", false);
 }
 

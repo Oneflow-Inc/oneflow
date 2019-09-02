@@ -13,7 +13,11 @@ class ModelLoadKernel final : public KernelIf<device_type> {
   void Forward(const KernelCtx& ctx,
                std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
     const ModelLoadOpConf& conf = this->op_conf().model_load_conf();
-    SnapshotReader reader(Global<const IOConf>::Get()->model_load_snapshot_path());
+    const Blob* path_blob = BnInOp2Blob("path");
+    const size_t path_len =
+        strnlen(path_blob->dptr<char>(), path_blob->ByteSizeOfDataContentField());
+    const std::string path(path_blob->dptr<char>(), path_len);
+    SnapshotReader reader(path);
     FOR_RANGE(int64_t, i, 0, conf.out_size()) {
       const VariableOpConf& original_variable_conf = conf.original_variable_conf(i);
       Blob* out_i = BnInOp2Blob(GenRepeatedBn("out", i));

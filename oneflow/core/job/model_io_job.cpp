@@ -1,5 +1,6 @@
 #include "oneflow/core/job/model_io_job.h"
 #include "oneflow/core/operator/interface_op_util.h"
+#include "oneflow/core/common/buffer_manager.h"
 
 namespace oneflow {
 
@@ -41,7 +42,6 @@ void MakeModelInitJob(
   ParallelConf master_parallel_conf = GenParallelConfOfCpuZeroOnMaster();
   auto* job_conf = job->mutable_job_conf();
 
-  // there is always a tick op in model save job, so we can ignore the case with no variable
   OperatorConf tick_op_conf{};
   tick_op_conf.set_name("System-ModelInit-tick");
   tick_op_conf.mutable_tick_conf()->set_out("out");
@@ -59,7 +59,7 @@ void MakeModelInitJob(
     CHECK_NE(variable_op_conf.variable_conf().data_type(), DataType::kInvalidDataType);
     CHECK(variable_op_conf.variable_conf().has_initializer());
 
-    std::string obn = GenRepeatedBn("out", idx);
+    const std::string obn = GenRepeatedBn("out", idx);
     idx += 1;
     *model_init_conf->mutable_variable_op_name()->Add() = var_op_name;
     *model_init_conf->mutable_original_variable_conf()->Add() = variable_op_conf.variable_conf();
@@ -72,7 +72,6 @@ void MakeModelInitJob(
     output_conf->set_out("out");
     InterfaceOpUtil::InitBlobConf(output_conf->mutable_blob_conf(), variable_op_parallel_blob_conf);
     job_builder.AddOps(variable_op_parallel_conf, {output_op_conf});
-    job_conf->add_arg_op_name(output_op_conf.name());
   }
   job_builder.AddOps(master_parallel_conf, {model_init_op_conf});
 
@@ -92,15 +91,36 @@ void MakeModelLoadJob(
   ParallelConf master_parallel_conf = GenParallelConfOfCpuZeroOnMaster();
   auto* job_conf = job->mutable_job_conf();
 
-  // there is always a tick op in model save job, so we can ignore the case with no variable
   OperatorConf tick_op_conf{};
   tick_op_conf.set_name("System-ModelLoad-tick");
   tick_op_conf.mutable_tick_conf()->set_out("out");
   job_builder.AddOps(master_parallel_conf, {tick_op_conf});
 
+  OperatorConf foreign_input_op_conf{};
+  foreign_input_op_conf.set_name("System-Push-ForeignInput_" + NewUniqueId());
+  ForeignInputOpConf* foreign_input_conf = foreign_input_op_conf.mutable_foreign_input_conf();
+  foreign_input_conf->set_out("out");
+  foreign_input_conf->set_ofblob_buffer_name(GetForeignInputBufferName(job_name));
+  InterfaceBlobConf* blob_conf = foreign_input_conf->mutable_blob_conf();
+  *blob_conf->mutable_shape()->mutable_dim()->Add() = 65536;
+  blob_conf->set_data_type(DataType::kUInt8);
+  blob_conf->set_broadcast(true);
+  blob_conf->set_has_batch_dim(false);
+  job_builder.AddOps(master_parallel_conf, {foreign_input_op_conf});
+
+  job_conf->set_job_name(job_name);
+  job_conf->mutable_predict_conf();
+  job_conf->set_piece_size(1);
+  job_conf->set_data_part_num(1);
+  job_conf->set_total_batch_num(1);
+  Global<InterUserJobInfo>::Get()->set_global_model_load_job_name(job_name);
+
+  if (var_op_name2op_conf.empty()) { return; }
   OperatorConf model_load_op_conf{};
   model_load_op_conf.set_name("System-ModelLoad-ModelLoad");
   ModelLoadOpConf* model_load_conf = model_load_op_conf.mutable_model_load_conf();
+  model_load_conf->set_path(
+      GenLogicalBlobName(foreign_input_op_conf.name(), foreign_input_conf->out()));
   int64_t idx = 0;
   for (const auto& pair : var_op_name2op_conf) {
     const auto& var_op_name = pair.first;
@@ -110,7 +130,7 @@ void MakeModelLoadJob(
     CHECK_NE(variable_op_conf.variable_conf().data_type(), DataType::kInvalidDataType);
     CHECK(variable_op_conf.variable_conf().has_initializer());
 
-    std::string obn = GenRepeatedBn("out", idx);
+    const std::string obn = GenRepeatedBn("out", idx);
     idx += 1;
     *model_load_conf->mutable_variable_op_name()->Add() = var_op_name;
     *model_load_conf->mutable_original_variable_conf()->Add() = variable_op_conf.variable_conf();
@@ -123,16 +143,8 @@ void MakeModelLoadJob(
     output_conf->set_out("out");
     InterfaceOpUtil::InitBlobConf(output_conf->mutable_blob_conf(), variable_op_parallel_blob_conf);
     job_builder.AddOps(variable_op_parallel_conf, {output_op_conf});
-    job_conf->add_arg_op_name(output_op_conf.name());
   }
   job_builder.AddOps(master_parallel_conf, {model_load_op_conf});
-
-  job_conf->set_job_name(job_name);
-  job_conf->mutable_predict_conf();
-  job_conf->set_piece_size(1);
-  job_conf->set_data_part_num(1);
-  job_conf->set_total_batch_num(1);
-  Global<InterUserJobInfo>::Get()->set_global_model_load_job_name(job_name);
 }
 
 void MakeModelSaveJob(
