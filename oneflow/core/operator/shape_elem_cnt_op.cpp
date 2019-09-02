@@ -61,9 +61,9 @@ void ShapeElemCntOp::VirtualGenKernelConf(
                                                                  inclusive_axis.end()};
 }
 
-Maybe<void> ShapeElemCntOp::InferHasBatchDim(
-    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
-  *HasBatchDim4BnInOp("y") = false;
+Maybe<void> ShapeElemCntOp::InferBatchAxis(
+    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
+  BatchAxis4BnInOp("y")->clear_value();
   return Maybe<void>::Ok();
 }
 

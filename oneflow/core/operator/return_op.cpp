@@ -19,9 +19,9 @@ Maybe<void> ReturnOp::InferBlobDescs(
 
 const PbMessage& ReturnOp::GetCustomizedConf() const { return op_conf().return_conf(); }
 
-Maybe<void> ReturnOp::InferHasBatchDim(
-    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
-  *HasBatchDim4BnInOp("out") = *HasBatchDim4BnInOp("in");
+Maybe<void> ReturnOp::InferBatchAxis(
+    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
+  *BatchAxis4BnInOp("out") = *BatchAxis4BnInOp("in");
   return Maybe<void>::Ok();
 }
 

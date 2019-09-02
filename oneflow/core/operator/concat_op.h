@@ -19,10 +19,10 @@ class ConcatOp final : public Operator {
                              const ParallelContext* parallel_ctx) const override;
 
  private:
-  Maybe<void> InferHasBatchDim(
+  Maybe<void> InferBatchAxis(
       const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
-      std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const override {
-    return NaiveInferHasBatchDim(HasBatchDim4BnInOp);
+      std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override {
+    return NaiveInferBatchAxis(BatchAxis4BnInOp);
   }
 
   void GetSbpSignatures(

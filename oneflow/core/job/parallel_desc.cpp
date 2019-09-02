@@ -1,5 +1,6 @@
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/common/error_util.h"
 
 namespace oneflow {
 
@@ -32,6 +33,12 @@ std::string DeviceTag4DeviceType(DeviceType device_type) {
   if (device_type == kGPU) { return "gpu"; }
   UNIMPLEMENTED();
   return "";
+}
+
+Maybe<DeviceType> DeviceType4DeviceTag(const std::string& device_tag) {
+  if (device_tag == "cpu") { return DeviceType::kCPU; }
+  if (device_tag == "gpu") { return DeviceType::kGPU; }
+  return ErrorUtil::DeviceTagNotFound(std::string("device tag `") + device_tag + "' not found");
 }
 
 ParallelDesc::ParallelDesc(const ParallelConf& user_conf) : parallel_conf_(user_conf) {
@@ -131,6 +138,22 @@ std::tuple<int32_t, int32_t> GetPartIdAndPartNumFromParallelCtx(
   } else {
     UNIMPLEMENTED();
   }
+}
+
+ParallelConf GenParallelConfOfCpuZeroOnMaster() {
+  ParallelConf parallel_conf;
+  parallel_conf.set_policy(kDataParallel);
+  parallel_conf.add_device_name("0:cpu:0");
+  return parallel_conf;
+}
+
+ParallelConf GenParallelConfOfCpuZeroOnAllMachines() {
+  ParallelConf parallel_conf;
+  parallel_conf.set_policy(kDataParallel);
+  FOR_RANGE(int64_t, i, 0, Global<ResourceDesc>::Get()->TotalMachineNum()) {
+    parallel_conf.add_device_name(std::to_string(i) + ":cpu:0");
+  }
+  return parallel_conf;
 }
 
 }  // namespace oneflow

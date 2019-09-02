@@ -75,10 +75,12 @@ void ReduceConcatOp::VirtualGenKernelConf(
   CHECK_EQ(reduce_concat_op_ctx->out_blob_elem_cnt, out_blob_elem_cnt);
 }
 
-Maybe<void> ReduceConcatOp::InferHasBatchDim(
-    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
-  for (const auto& ibn : input_bns()) { CHECK_EQ_OR_RETURN(*HasBatchDim4BnInOp(ibn), false); }
-  *HasBatchDim4BnInOp("out") = false;
+Maybe<void> ReduceConcatOp::InferBatchAxis(
+    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
+  for (const auto& ibn : input_bns()) {
+    CHECK_EQ_OR_RETURN(BatchAxis4BnInOp(ibn)->has_value(), false);
+  }
+  BatchAxis4BnInOp("out")->clear_value();
   return Maybe<void>::Ok();
 }
 

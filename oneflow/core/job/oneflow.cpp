@@ -321,9 +321,7 @@ void GetMemSharingOpBlobInfo(const JobBuilder& job_builder, const std::string& o
   *blob_conf->mutable_logical_blob_desc_conf() = job.helper().lbn2logical_blob_desc().at(lbn);
   *blob_conf->mutable_sbp_conf() =
       job.sbp_conf().op_name2sbp_signature_conf().at(op_name).bn_in_op2sbp_parallel().at(obn);
-  LogicalBlobId lbi(GenLogicalBlobId(lbn));
-  const auto& lbis = job.helper().batch_dim_lbis();
-  blob_conf->set_has_batch_dim(std::find(lbis.begin(), lbis.end(), lbi) != lbis.end());
+  *blob_conf->mutable_batch_axis() = job.helper().lbn2batch_axis().at(lbn);
 }
 
 void FilterOpName2ParallelBlobConf(
@@ -399,7 +397,7 @@ void MakeMainJob(const std::vector<Job>& jobs, Job* main_job,
       int64_t job_id = pair.second;
       CHECK(unique_check.insert(job_id).second);
       const auto& cs_idx = Global<CriticalSectionDesc>::Get()->CriticalSectionIds4JobId(job_id);
-      *id_list->Mutable(job_id)->mutable_id() = {cs_idx.begin(), cs_idx.end()};
+      *id_list->Mutable(job_id)->mutable_value() = {cs_idx.begin(), cs_idx.end()};
     }
   }
   op_confs.push_back(wait_and_send_ids_op_conf);
@@ -648,7 +646,6 @@ void MakePullJob(const std::string& job_name, const std::string& op_name,
   }
   auto* job_conf = job->mutable_job_conf();
   job_conf->set_job_name(job_name);
-  job_conf->add_arg_op_name(input_op_conf.name());
   job_conf->mutable_predict_conf();
   job_conf->set_piece_size(1);
   job_conf->set_data_part_num(1);
@@ -689,7 +686,6 @@ void MakePushJob(const std::string& job_name, const std::string& op_name,
   }
   auto* job_conf = job->mutable_job_conf();
   job_conf->set_job_name(job_name);
-  job_conf->add_arg_op_name(output_op_conf.name());
   job_conf->mutable_predict_conf();
   job_conf->set_piece_size(1);
   job_conf->set_data_part_num(1);
@@ -724,7 +720,7 @@ void MakeArgPassJob(const std::string& job_name, const ParallelBlobConf& paralle
     blob_conf->set_has_dim1_valid_num(false);
     blob_conf->set_has_dim2_valid_num(false);
     blob_conf->set_split_axis(0);
-    blob_conf->set_has_batch_dim(false);
+    blob_conf->mutable_batch_axis()->clear_value();
     ParallelConf parallel_conf;
     parallel_conf.set_policy(kDataParallel);
     parallel_conf.add_device_name("0:cpu:0");
@@ -754,8 +750,6 @@ void MakeArgPassJob(const std::string& job_name, const ParallelBlobConf& paralle
   }
   auto* job_conf = job->mutable_job_conf();
   job_conf->set_job_name(job_name);
-  *job_conf->mutable_arg_op_name() = {output_op_names.begin(), output_op_names.end()};
-  job_conf->add_arg_op_name(input_op_name);
   job_conf->mutable_predict_conf();
   job_conf->set_piece_size(1);
   job_conf->set_data_part_num(1);
