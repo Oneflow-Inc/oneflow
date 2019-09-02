@@ -46,7 +46,8 @@ void GenerateOptimizerOpConf(const VariableOp& op, const ParallelConf& parallel_
     SetScalarShapeAndSbpConf(&beta1_t_var, job_builder);
     SetScalarShapeAndSbpConf(&beta2_t_var, job_builder);
   }
-  ConstructMdUpdtOpConf(op, diff_lbi_of_var_out, total_loss_instance_num_lbi, mdupdt_op_conf);
+  ConstructMdUpdtOpConf(op, diff_lbi_of_var_out, total_loss_instance_num_lbi, job_builder,
+                        mdupdt_op_conf);
   mdupdt_op_conf->set_m(m_var.name() + "/out");
   mdupdt_op_conf->set_v(v_var.name() + "/out");
   if (adam_conf.do_bias_correction()) {

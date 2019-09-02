@@ -14,18 +14,18 @@ class LARSMdUpdateKernel final : public NormalMdUpdateKernel<device_type, T> {
 
  private:
   const PbMessage& GetCustomizedOpConf() const override;
-  void UpdateModel(DeviceCtx* ctx, const T* batch_instance_num_ptr, T learning_rate, T l1, T l2,
-                   int64_t next_model_vid,
+  void UpdateModel(DeviceCtx* ctx, const T* batch_instance_num_ptr, T l1, T l2,
+                   const int64_t* global_step, const float* learning_rate,
                    std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 };
 
 template<DeviceType device_type, typename T>
 class LARSMdUpdateKernelUtil final {
  public:
-  static void UpdateModel(DeviceCtx*, int64_t n, const T* batch_instance_num_ptr, T learning_rate,
-                          T l1, T l2, T momentum_beta, T epsilon, T lars_coefficient,
-                          int64_t next_model_vid, const T* model_diff, T* model, T* momentum,
-                          T* data_tmp);
+  static void UpdateModel(DeviceCtx*, int64_t n, const T* batch_instance_num_ptr,
+                          const float* learning_rate, T l1, T l2, T momentum_beta, T epsilon,
+                          T lars_coefficient, const int64_t* global_step, const T* model_diff,
+                          T* model, T* momentum, T* data_tmp);
 };
 
 DECLARE_MDUPDT_KERNEL_CREATOR(LARS);
