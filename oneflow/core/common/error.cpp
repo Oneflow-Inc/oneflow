@@ -1,6 +1,9 @@
 #include "oneflow/core/common/error.h"
+#include "oneflow/core/common/protobuf.h"
 
 namespace oneflow {
+
+Error::operator std::string() const { return PbMessage2TxtString(*error_proto_); }
 
 Error Error::Ok() { return std::make_shared<ErrorProto>(); }
 
