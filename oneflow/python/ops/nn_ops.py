@@ -58,10 +58,9 @@ def conv2d(
     op_conf.conv_2d_conf.filters = filters.static_shape[0]
     op_conf.conv_2d_conf.padding = padding.lower()
     op_conf.conv_2d_conf.data_format = channel_pos
-    op_conf.conv_2d_conf.kernel_size.extend([
-        filters.static_shape[2],
-        filters.static_shape[3],
-    ])
+    op_conf.conv_2d_conf.kernel_size.extend(
+        [filters.static_shape[2], filters.static_shape[3]]
+    )
     op_conf.conv_2d_conf.strides.extend(strides)
     op_conf.conv_2d_conf.dilation_rate.extend(dilations)
     op_conf.conv_2d_conf.use_bias = False
@@ -243,10 +242,11 @@ def softmax(logits, axis=None, name=None):
     assert type(axis) is int
     op_conf = op_conf_util.OperatorConf()
     setattr(
-        op_conf, "name", name if name is not None else id_util.UniqueStr(
-            'Softmax_')
+        op_conf,
+        "name",
+        name if name is not None else id_util.UniqueStr("Softmax_"),
     )
-    setattr(op_conf.softmax_conf, 'in', logits.logical_blob_name)
+    setattr(op_conf.softmax_conf, "in", logits.logical_blob_name)
     op_conf.softmax_conf.axis = axis
     op_conf.softmax_conf.out = "out"
     compile_context.CurJobAddOp(op_conf)
@@ -264,15 +264,19 @@ def sparse_softmax_cross_entropy_with_logits(
     assert logits is not None
     op_conf = op_conf_util.OperatorConf()
     setattr(
-        op_conf, "name", name if name is not None else id_util.UniqueStr(
-            'SparseCrossEntropy_')
+        op_conf,
+        "name",
+        name if name is not None else id_util.UniqueStr("SparseCrossEntropy_"),
     )
-    setattr(op_conf.sparse_cross_entropy_conf,
-            'prediction', softmax(logits).logical_blob_name)
-    setattr(op_conf.sparse_cross_entropy_conf,
-            'label', labels.logical_blob_name)
-    setattr(op_conf.sparse_cross_entropy_conf,
-            'out', 'out')
+    setattr(
+        op_conf.sparse_cross_entropy_conf,
+        "prediction",
+        softmax(logits).logical_blob_name,
+    )
+    setattr(
+        op_conf.sparse_cross_entropy_conf, "label", labels.logical_blob_name
+    )
+    setattr(op_conf.sparse_cross_entropy_conf, "out", "out")
     compile_context.CurJobAddOp(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
     lbi.op_name = op_conf.name
