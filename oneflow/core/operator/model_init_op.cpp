@@ -22,7 +22,7 @@ class ModelInitOp : public Operator {
 
 void ModelInitOp::InitFromOpConf() {
   CHECK(op_conf().has_model_init_conf());
-  if (op_conf().model_init_conf().has_tick()) { EnrollInputBn("tick", false); }
+  EnrollInputBn("tick", false);
   EnrollRepeatedOutputBn("out", false);
 }
 

@@ -47,9 +47,23 @@ void MakeModelInitJob(
   tick_op_conf.mutable_tick_conf()->set_out("out");
   job_builder.AddOps(master_parallel_conf, {tick_op_conf});
 
+  OperatorConf foreign_input_op_conf{};
+  foreign_input_op_conf.set_name("System-Push-ForeignInput_" + NewUniqueId());
+  ForeignInputOpConf* foreign_input_conf = foreign_input_op_conf.mutable_foreign_input_conf();
+  foreign_input_conf->set_out("out");
+  foreign_input_conf->set_ofblob_buffer_name(GetForeignInputBufferName(job_name));
+  InterfaceBlobConf* blob_conf = foreign_input_conf->mutable_blob_conf();
+  *blob_conf->mutable_shape()->mutable_dim()->Add() = 1;
+  blob_conf->set_data_type(DataType::kUInt8);
+  blob_conf->set_broadcast(true);
+  blob_conf->set_has_batch_dim(false);
+  job_builder.AddOps(master_parallel_conf, {foreign_input_op_conf});
+
   OperatorConf model_init_op_conf{};
   model_init_op_conf.set_name("System-Init-ModelInit");
   ModelInitOpConf* model_init_conf = model_init_op_conf.mutable_model_init_conf();
+  model_init_conf->set_tick(
+      GenLogicalBlobName(foreign_input_op_conf.name(), foreign_input_conf->out()));
   int64_t idx = 0;
   for (const auto& pair : var_op_name2op_conf) {
     const auto& var_op_name = pair.first;

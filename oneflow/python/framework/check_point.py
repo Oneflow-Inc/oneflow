@@ -22,9 +22,7 @@ class CheckPoint(object):
         session.NoReturnRun(_MakeModelSaveJobFunc())
 
     def init(self, session=None):
-        if session is None:
-            session = runtime_ctx.default_session
-        session.NoReturnRun(_MakeModelInitJobFunc())
+        c_api_util.LaunchJob(_MakeModelInitJobFunc())
 
     def load(self, path, session=None):
         assert type(path) is str
@@ -42,13 +40,15 @@ class CheckPointRestoreStatus(object):
 
 
 def _MakeModelInitJobFunc():
-    def ModelInit():
+    def push_cb(blob):
         pass
 
-    ModelInit.__name__ = str(runtime_ctx.inter_user_job_info.global_model_init_job_name)
-    ModelInit.__oneflow_input_blob_defs__ = ()
-    ModelInit.__oneflow_output_remote_blobs__ = None
-    return ModelInit
+    def finish_cb():
+        pass
+
+    return job_instance.MakeJobInstance(str(runtime_ctx.inter_user_job_info.global_model_init_job_name),
+                                        push_cb=push_cb,
+                                        finish_cb=finish_cb)
 
 
 def _MakeModelLoadJobFunc(path):
