@@ -16,14 +16,19 @@ def test_dense(
     config.gpu_device_num(1)
     flow.init(config)
 
-    input = np.random.random_sample((64, 32)).astype(np.float32)
+    input = np.random.random_sample((64, 32)).astype(np.float32) / 10000
 
     # OneFlow
     def DenseTestJob(inputs=flow.input_blob_def((64, 32))):
         job_conf = flow.get_cur_job_conf_builder()
         job_conf.batch_size(1).data_part_num(1).default_data_type(flow.float)
         return flow.layers.dense(
-            inputs=inputs, units=units, activation=of_activation_map[activation]
+            inputs=inputs,
+            units=units,
+            activation=of_activation_map[activation],
+            use_bias=use_bias,
+            kernel_initializer=flow.constant_initializer(value=1),
+            bias_initializer=flow.constant_initializer(value=1),
         )
 
     flow.add_job(DenseTestJob)
@@ -40,10 +45,14 @@ def test_dense(
         units,
         tf_activation_map[activation],
         use_bias=use_bias,
-        kernel_initializer=tf.constant_initializer(),
+        kernel_initializer=tf.constant_initializer(np.ones((32, 128))),
+        bias_initializer=tf.constant_initializer(np.ones(128)),
     ).numpy()
 
+    print(of_out)
+    print(tf_out)
     print("matmul max diff: " + str(np.max(np.abs(of_out - tf_out))))
+    assert np.allclose(of_out, tf_out, atol=1e-7)
 
 
 # run one example each time
@@ -51,7 +60,6 @@ if __name__ == "__main__":
     test_dense(
         in_shape=(64, 32),
         units=128,
-        activation="None",
+        activation="sigmoid",
         use_bias=False,
-        trainable=False,
     )
