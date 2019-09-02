@@ -108,8 +108,9 @@ def _data_load_layer(data_dir="/dataset/imagenet_227/train/32"):
 
 
 def alexnet_train(images, labels):
+    transposed = of.transpose(images, name='transpose', perm=[0, 3, 1, 2])
     conv1 = _conv2d_layer(
-        "conv1", images, filters=64, kernel_size=11, strides=4, padding="VALID"
+        "conv1", transposed, filters=64, kernel_size=11, strides=4, padding="VALID"
     )
 
     pool1 = of.nn.avg_pool2d(conv1, 3, 2, "VALID", "NCHW", name="pool1")
