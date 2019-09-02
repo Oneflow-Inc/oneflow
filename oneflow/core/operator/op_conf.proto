@@ -1391,14 +1391,19 @@ message ClipGradientOpConf {
 }
 
 message AdamOptimizerOpConf {
-  required string gradient = 1;
-  required string weight = 2;
-  required string instance_num_diff = 3;
-  required string learning_rate = 4;
-  required string m = 5;
-  required string v = 6;
-  required float l1 = 7;
-  required float l2 = 8;
+  required string out = 1;
+  required string gradient = 2;
+  required string weight = 3;
+  required string instance_num_diff = 4;
+  required string learning_rate = 5;
+  required string m = 6;
+  required string v = 7;
+  required float l1 = 8;
+  required float l2 = 9;
+}
+
+message FakeConsumeOpConf {
+  repeated string in = 1;
 }
 
 message XlaLaunchOpConf {
@@ -1552,6 +1557,7 @@ message OperatorConf {
     ClipGradientOpConf clip_gradient_conf = 401;
     LearningRateShedulerOpConf lr_sheduler_conf = 402;
     AdamOptimizerOpConf adam_optimizer_conf = 403;
+    FakeConsumeOpConf fake_consume_conf = 404;
     XlaLaunchOpConf xla_launch_conf = 410;
 
     // math op

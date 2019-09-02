@@ -110,6 +110,7 @@ void OptimizerParamBuilder::BuilderImpl::ApplyBuild<OptimizerMode::kAdam>() {
   conf->set_l1(l1_weight_decay);
   conf->set_l2(l2_weight_decay);
 
+  conf->set_out("out");
   conf->set_gradient(gradient_);
   conf->set_instance_num_diff(total_instances_);
   conf->set_learning_rate(learning_rate_);
