@@ -271,7 +271,8 @@ def sparse_softmax_cross_entropy_with_logits(
             'prediction', softmax(logits).logical_blob_name)
     setattr(op_conf.sparse_cross_entropy_conf,
             'label', labels.logical_blob_name)
-    op_conf.softmax_conf.out = "out"
+    setattr(op_conf.sparse_cross_entropy_conf,
+            'out', 'out')
     compile_context.CurJobAddOp(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
     lbi.op_name = op_conf.name
