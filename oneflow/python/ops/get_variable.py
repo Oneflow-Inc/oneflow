@@ -17,7 +17,8 @@ def get_variable(name,
                 initializer=None,
                 trainable=None,
                 model_name=None,
-                model_split_axis=None):
+                model_split_axis=None,
+                random_seed=None):
     
     if name not in compile_context.cur_job_var_op_name2var_blob:
         op_conf = op_conf_util.OperatorConf()
@@ -34,6 +35,8 @@ def get_variable(name,
             op_conf.variable_conf.model_name = model_name
         if model_split_axis is not None:
             op_conf.variable_conf.model_split_axis = model_split_axis
+        if random_seed is not None:
+            op_conf.variable_conf.random_seed = random_seed
         op_conf.variable_conf.out = "out"
         compile_context.CurJobAddOp(op_conf)
         lbi = logical_blob_id_util.LogicalBlobId()
@@ -42,4 +45,3 @@ def get_variable(name,
         var_blob = remote_blob_util.RemoteBlob(lbi)
         compile_context.cur_job_var_op_name2var_blob[name] = var_blob
     return compile_context.cur_job_var_op_name2var_blob[name] 
-
