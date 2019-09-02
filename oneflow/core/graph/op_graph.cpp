@@ -399,11 +399,12 @@ void OpGraph::InferOpNodeSbpSignature(OpNode* op_node, const SbpSignature& sbp_s
   };
   std::function<int32_t(const SbpSignature&)> CalcOrderValue4SbpSig;
   if (sbp_sig_conf.bn_in_op2sbp_parallel().empty()) {
-    auto OrderValue4BatchAxis = [&](const std::string& bn,
-                                    const SbpParallel& sbp_parallel) -> int32_t {
+    auto OrderValue4HasBatchAxis = [&](const std::string& bn,
+                                       const SbpParallel& sbp_parallel) -> int32_t {
+      const auto& batch_axis = op_node->BatchAxis4Lbi(op_node->op().BnInOp2Lbi(bn));
       return -1
-             * (op_node->BatchAxis4Lbi(op_node->op().BnInOp2Lbi(bn)).has_value()
-                && sbp_parallel.has_split_parallel() && sbp_parallel.split_parallel().axis() == 0);
+             * (batch_axis.has_value() && sbp_parallel.has_split_parallel()
+                && sbp_parallel.split_parallel().axis() == batch_axis.value());
     };
     auto OrderValue4HasNoBatchAxis = [&](const std::string& ibn,
                                          const SbpParallel& sbp_parallel) -> int32_t {
@@ -417,13 +418,13 @@ void OpGraph::InferOpNodeSbpSignature(OpNode* op_node, const SbpSignature& sbp_s
       for (const auto& ibn : op_node->op().input_bns()) {
         const auto& sbp_parallel_it = sbp_signature.bn_in_op2sbp_parallel().find(ibn);
         CHECK(sbp_parallel_it != sbp_signature.bn_in_op2sbp_parallel().end());
-        order_value += OrderValue4BatchAxis(ibn, sbp_parallel_it->second);
+        order_value += OrderValue4HasBatchAxis(ibn, sbp_parallel_it->second);
         order_value += OrderValue4HasNoBatchAxis(ibn, sbp_parallel_it->second);
       }
       for (const auto& obn : op_node->op().output_bns()) {
         const auto& sbp_parallel_it = sbp_signature.bn_in_op2sbp_parallel().find(obn);
         CHECK(sbp_parallel_it != sbp_signature.bn_in_op2sbp_parallel().end());
-        order_value += OrderValue4BatchAxis(obn, sbp_parallel_it->second);
+        order_value += OrderValue4HasBatchAxis(obn, sbp_parallel_it->second);
       }
       return order_value;
     };

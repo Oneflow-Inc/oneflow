@@ -121,7 +121,8 @@ def JobBuildAndInferCtx_GetBatchAxis(job_name, lbn):
     batch_axis = text_format.Parse(batch_axis_str, dtype_util.OptInt64())
     error = text_format.Parse(error_str, error_util.Error())
     if error.HasField("error_type"): raise JobBuildAndInferError(error)
-    return batch_axis.HasField("value") ? batch_axis.value : None
+    if batch_axis.HasField("value"): return batch_axis.value
+    return None
 
 def JobBuildAndInferCtx_GetHasSplitAxisFromProducerView(job_name, lbn):
     job_name = str(job_name)
