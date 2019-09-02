@@ -62,7 +62,8 @@ Maybe<void> NormalizationOp::InferBlobDescs(
   const DataType data_type = in->data_type();
   *GetBlobDesc4BnInOp("out") = *in;
   const Shape param_shape({in->shape().At(conf.axis())});
-  const std::function<void(const std::string&)> CheckParamBlobDesc = [&](const std::string& bn) {
+  const std::function<void(const std::string&)> CheckParamBlobDesc =
+      [&](const std::string& bn) -> Maybe<void> {
     const BlobDesc* blob_desc = GetBlobDesc4BnInOp(bn);
     if (blob_desc != nullptr) {
       CHECK_EQ_OR_RETURN(blob_desc->data_type(), data_type);
@@ -70,7 +71,8 @@ Maybe<void> NormalizationOp::InferBlobDescs(
     }
     return Maybe<void>::Ok();
   };
-  const std::function<void(const std::string&)> SetParamBlobDesc = [&](const std::string& bn) {
+  const std::function<void(const std::string&)> SetParamBlobDesc =
+      [&](const std::string& bn) -> Maybe<void> {
     BlobDesc* blob_desc = GetBlobDesc4BnInOp(bn);
     if (blob_desc != nullptr) {
       blob_desc->set_data_type(data_type);

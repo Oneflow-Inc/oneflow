@@ -3,10 +3,11 @@
 
 namespace oneflow {
 
-Error GenJobBuildAndInferError(JobBuildAndInferError err_code, std::string msg) {
-  Error err;
-  err.set_msg(msg);
-  err.set_job_build_and_infer_error(err_code);
+std::shared_ptr<ErrorProto> GenJobBuildAndInferError(JobBuildAndInferError err_code,
+                                                     std::string msg) {
+  auto err = std::make_shared<ErrorProto>();
+  err->set_msg(msg);
+  err->set_job_build_and_infer_error(err_code);
   return err;
 }
 

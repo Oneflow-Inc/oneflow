@@ -12,7 +12,8 @@
 
 namespace oneflow {
 
-Error GenJobBuildAndInferError(JobBuildAndInferError err_code, std::string msg);
+std::shared_ptr<ErrorProto> GenJobBuildAndInferError(JobBuildAndInferError err_code,
+                                                     std::string msg);
 
 class JobBuildAndInferCtx {
  public:

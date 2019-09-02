@@ -57,14 +57,14 @@ std::string InitGlobalOneflow() {
   ClusterControl::MasterSendSessionStart();
   const JobSet& job_set = Global<JobBuildAndInferCtxMgr>::Get()->job_set();
   if (job_set.job().empty()) {
-    return PbMessage2TxtString(ErrorUtil::JobSetEmpty("no function defined"));
+    return PbMessage2TxtString(*ErrorUtil::JobSetEmpty("no function defined"));
   }
   CHECK_ISNULL(Global<Oneflow>::Get());
   Global<CtrlClient>::Get()->PushKV("session_job_set", job_set);
   Global<RuntimeBufferManagersScope>::New();
   Global<JobSetCompileCtx>::New();
   Global<Oneflow>::New(job_set);
-  return PbMessage2TxtString(ErrorUtil::Ok());
+  return PbMessage2TxtString(*ErrorUtil::Ok());
 }
 
 std::string GetSerializedInterUserJobInfo() {
@@ -136,7 +136,7 @@ long long DeviceType4DeviceTag(const std::string& device_tag, std::string* error
     PbMessage2TxtString(*maybe_dev_type.error(), error_str);
     return DeviceType::kInvalidDevice;
   }
-  PbMessage2TxtString(ErrorUtil::Ok(), error_str);
+  PbMessage2TxtString(*ErrorUtil::Ok(), error_str);
   return *maybe_dev_type.data();
 }
 
