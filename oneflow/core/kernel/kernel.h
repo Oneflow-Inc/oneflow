@@ -34,8 +34,6 @@ class Kernel {
 
  protected:
   Kernel() = default;
-  const InitializerConf* GetInitializerFromPbMessage(const PbMessage& msg,
-                                                     const std::string& field) const;
   virtual void VirtualKernelInit(const ParallelContext* parallel_ctx, DeviceCtx* device_ctx) {
     VirtualKernelInit(parallel_ctx);
   }
