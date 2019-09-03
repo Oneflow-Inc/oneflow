@@ -37,11 +37,16 @@ Maybe<void> JobBuildAndInferCtx::SetJobConf(const JobConfigProto& job_conf) {
 
 Maybe<void> JobBuildAndInferCtx::AddOpNameParallelConf2Placement(
     const std::string& op_name, const ParallelConf& parallel_conf) {
-  PlacementGroup* pg = job_->mutable_placement()->add_placement_group();
-  *(pg->mutable_parallel_conf()) = parallel_conf;
+  if (parallel_conf2placement_group_id_.find(parallel_conf)
+      == parallel_conf2placement_group_id_.end()) {
+    parallel_conf2placement_group_id_.emplace(parallel_conf,
+                                              job_->placement().placement_group_size());
+    *(job_->mutable_placement()->add_placement_group()->mutable_parallel_conf()) = parallel_conf;
+  }
+  PlacementGroup* pg = job_->mutable_placement()->mutable_placement_group(
+      parallel_conf2placement_group_id_.at(parallel_conf));
+  CHECK(pg->parallel_conf() == parallel_conf);
   pg->mutable_op_set()->add_op_name(op_name);
-
-  TODO();
   return Maybe<void>::Ok();
 }
 
@@ -62,7 +67,6 @@ Maybe<void> JobBuildAndInferCtx::DecodeSplitHint7AddOp7AddSbpSignature2Job(Opera
   }
   (*(job_->mutable_sbp_conf()->mutable_op_name2sbp_signature_conf()))[op->op_name()] =
       sbp_signature;
-
   job_->mutable_net()->add_op()->CopyFrom(op_conf_without_split_hint);
   return Maybe<void>::Ok();
 }
@@ -166,36 +170,6 @@ bool JobBuildAndInferCtx::HasJobConf() const { return has_job_conf_; }
 Maybe<void> JobBuildAndInferCtx::AddPlacementGroup(const PlacementGroup& placement_group) {
   // OUTDATE need to be deleted
   job_->mutable_placement()->add_placement_group()->CopyFrom(placement_group);
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> JobBuildAndInferCtx::MergePlacementGroup() {
-  HashMap<ParallelConf, HashSet<std::string>> parallel_conf2op_name_set;
-  for (const PlacementGroup& placement_group : job_->placement().placement_group()) {
-    for (const std::string& op_name : placement_group.op_set().op_name()) {
-      if (!parallel_conf2op_name_set[placement_group.parallel_conf()].insert(op_name).second) {
-        return GenJobBuildAndInferError(JobBuildAndInferError::kOpNameExist,
-                                        "op_name: " + op_name + " repeated exist in job: "
-                                            + job_->job_conf().job_name() + " placement");
-      }
-    }
-  }
-
-  size_t op_name_size_in_placement = 0;
-  job_->mutable_placement()->clear_placement_group();
-  for (const auto& pair : parallel_conf2op_name_set) {
-    PlacementGroup* pg = job_->mutable_placement()->add_placement_group();
-    *(pg->mutable_parallel_conf()) = pair.first;
-    for (const std::string& op_name : pair.second) {
-      pg->mutable_op_set()->add_op_name(op_name);
-      op_name_size_in_placement += 1;
-      if (op_name2op_.find(op_name) == op_name2op_.end()) {
-        return GenJobBuildAndInferError(JobBuildAndInferError::kPlacementError,
-                                        "job: " + job_->job_conf().job_name() + " op_name: "
-                                            + op_name + " defined in placement cannot find in net");
-      }
-    }
-  }
   return Maybe<void>::Ok();
 }
 

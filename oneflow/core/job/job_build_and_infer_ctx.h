@@ -26,10 +26,6 @@ class JobBuildAndInferCtx {
   Maybe<void> AddLossLogicalBlobName(const std::string& lbn);
   Maybe<void> AddPlacementGroup(const PlacementGroup& placement_group);
 
-  Maybe<void> MergePlacementGroup();
-
-  Maybe<void> CheckJob() const;
-
   bool HasJobConf() const;
   Maybe<Shape> GetStaticShape(const std::string& lbn) const;
   Maybe<DataType> GetDataType(const std::string& lbn) const;
@@ -39,6 +35,7 @@ class JobBuildAndInferCtx {
   Maybe<ParallelDesc> GetParallelDescFromProducerView(const std::string& lbn) const;
 
   const Job& job() const;
+  Maybe<void> CheckJob() const;
 
  private:
   Maybe<void> AddOpNameParallelConf2Placement(const std::string& op_name,
