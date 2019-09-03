@@ -54,7 +54,7 @@ class ModelInitKernel final : public KernelIf<DeviceType::kCPU> {
       if (original_variable_conf.has_initializer()) {
         InitializeWithConfUtil::SwitchInitializeWithConf(SwitchCase(out_i->data_type()),
                                                          original_variable_conf.initializer(),
-                                                         random_seed_gen(), out_i)
+                                                         random_seed_gen(), out_i);
       } else if (original_variable_conf.has_initialize_with_snapshot()) {
         const std::string key = original_variable_conf.initialize_with_snapshot().has_key()
                                     ? original_variable_conf.initialize_with_snapshot().key()
