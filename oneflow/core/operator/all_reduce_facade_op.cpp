@@ -25,10 +25,10 @@ LogicalNode* AllReduceFacadeOp::NewProperLogicalNode() const {
   return new AllReduceFacadeLogicalNode();
 }
 
-Maybe<void> AllReduceFacadeOp::InferHasBatchDim(
-    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
-  CHECK_EQ_OR_RETURN(*HasBatchDim4BnInOp("in"), false);
-  *HasBatchDim4BnInOp("out") = false;
+Maybe<void> AllReduceFacadeOp::InferBatchAxis(
+    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
+  CHECK_EQ_OR_RETURN(BatchAxis4BnInOp("in")->has_value(), false);
+  BatchAxis4BnInOp("out")->clear_value();
   return Maybe<void>::Ok();
 }
 

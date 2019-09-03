@@ -22,12 +22,11 @@ Maybe<void> PReluDataGradOp::InferBlobDescs(
   return Maybe<void>::Ok();
 }
 
-Maybe<void> PReluDataGradOp::InferHasBatchDim(
-    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
-  CHECK_OR_RETURN(*HasBatchDim4BnInOp("dy"));
-  CHECK_OR_RETURN(*HasBatchDim4BnInOp("x"));
-  CHECK_OR_RETURN(*HasBatchDim4BnInOp("alpha") == false);
-  *HasBatchDim4BnInOp("dx") = true;
+Maybe<void> PReluDataGradOp::InferBatchAxis(
+    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
+  CHECK_OR_RETURN(*BatchAxis4BnInOp("dy") == *BatchAxis4BnInOp("x"));
+  CHECK_EQ_OR_RETURN(BatchAxis4BnInOp("alpha")->has_value(), false);
+  *BatchAxis4BnInOp("dx") = *BatchAxis4BnInOp("dy");
   return Maybe<void>::Ok();
 }
 void PReluDataGradOp::GetSbpSignatures(

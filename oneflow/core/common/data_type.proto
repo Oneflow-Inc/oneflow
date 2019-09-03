@@ -13,3 +13,7 @@ enum DataType {
   kOFRecord = 8;
   kFloat16 = 9;
 }
+
+message OptInt64 {
+  optional int64 value = 1 [ default = -1 ];
+}

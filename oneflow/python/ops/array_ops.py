@@ -18,6 +18,7 @@ def gather(
         op_conf.name = id_util.UniqueStr("Gather_")
     else:
         op_conf.name = name
+
     if axis is None:
         axis = batch_dims
 
@@ -43,14 +44,37 @@ def gather(
     return remote_blob_util.RemoteBlob(lbi)
 
 
-@oneflow_export('reshape')
+@oneflow_export("reshape")
 def reshape(x, shape, name=None):
     assert isinstance(shape, tuple) or isinstance(shape, list)
     op_conf = op_conf_util.OperatorConf()
-    op_conf.name = id_util.UniqueStr('Reshape_')
-    setattr(op_conf.reshape_conf, 'in', x.logical_blob_name)
+    op_conf.name = id_util.UniqueStr("Reshape_")
+    setattr(op_conf.reshape_conf, "in", x.logical_blob_name)
     op_conf.reshape_conf.shape.dim[:] = list(shape)
     op_conf.reshape_conf.out = "out"
+    compile_context.CurJobAddOp(op_conf)
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = "out"
+    return remote_blob_util.RemoteBlob(lbi)
+
+
+@oneflow_export("transpose")
+def transpose(a, perm=None, conjugate=False, name=None):
+    assert isinstance(perm, (tuple, list))
+
+    if name is None:
+        name = id_util.UniqueStr("Tranpose_")
+
+    if conjugate:
+        raise NotImplementedError
+
+    op_conf = op_conf_util.OperatorConf()
+    op_conf.name = name
+    setattr(op_conf.transpose_conf, "in", a.logical_blob_name)
+    op_conf.transpose_conf.out = "out"
+    op_conf.transpose_conf.perm.extend(list(perm))
+
     compile_context.CurJobAddOp(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
     lbi.op_name = op_conf.name

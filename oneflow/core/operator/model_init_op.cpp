@@ -12,7 +12,7 @@ class ModelInitOp : public Operator {
                              const ParallelContext* parallel_ctx) const override;
 
  private:
-  Maybe<void> InferHasBatchDim(
+  Maybe<void> InferBatchAxis(
       std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const override;
 
   void GetSbpSignatures(
@@ -42,9 +42,9 @@ Maybe<void> ModelInitOp::InferBlobDescs(
   return Maybe<void>::Ok();
 }
 
-Maybe<void> ModelInitOp::InferHasBatchDim(
-    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
-  for (const std::string& obn : output_bns()) { *HasBatchDim4BnInOp(obn) = false; }
+Maybe<void> ModelInitOp::InferBatchAxis(
+    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
+  BatchAxis4BnInOp("out")->clear_value();
   return Maybe<void>::Ok();
 }
 

@@ -2,7 +2,6 @@
 #define ONEFLOW_PYTHON_JOB_BUILD_AND_INFER_HELPER_H_
 
 #include "oneflow/core/common/protobuf.h"
-#include "oneflow/core/common/error_util.h"
 #include "oneflow/core/job/job_build_and_infer_ctx.h"
 #include "oneflow/core/record/record.pb.h"
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"

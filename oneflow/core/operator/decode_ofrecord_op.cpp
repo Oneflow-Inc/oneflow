@@ -74,12 +74,13 @@ LogicalBlobId DecodeOFRecordOp::obn2lbi(const std::string& output_bn) const {
   return ret;
 }
 
-Maybe<void> DecodeOFRecordOp::InferHasBatchDim(
-    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
+Maybe<void> DecodeOFRecordOp::InferBatchAxis(
+    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
   if (op_conf().decode_ofrecord_conf().has_in()) {
-    CHECK_OR_RETURN(*HasBatchDim4BnInOp(SoleIbn()));
+    CHECK_OR_RETURN(BatchAxis4BnInOp(SoleIbn())->has_value());
+    CHECK_EQ_OR_RETURN(BatchAxis4BnInOp(SoleIbn())->value(), 0);
   }
-  for (const auto& obn : output_bns()) { *HasBatchDim4BnInOp(obn) = true; }
+  for (const auto& obn : output_bns()) { BatchAxis4BnInOp(obn)->set_value(0); }
   return Maybe<void>::Ok();
 }
 

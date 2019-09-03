@@ -311,9 +311,9 @@ void ConvOp<NDims>::InferCudnnAlgo(
 #endif  // WITH_CUDA
 
 template<int32_t NDims>
-Maybe<void> ConvOp<NDims>::InferHasBatchDim(
-    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
-  *HasBatchDim4BnInOp("out") = *HasBatchDim4BnInOp("in");
+Maybe<void> ConvOp<NDims>::InferBatchAxis(
+    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
+  *BatchAxis4BnInOp("out") = *BatchAxis4BnInOp("in");
   return Maybe<void>::Ok();
 }
 
