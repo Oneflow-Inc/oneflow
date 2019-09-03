@@ -39,7 +39,10 @@ def _ResetCurJob(job):
     cur_job = job
     global cur_job_var_op_name2var_blob 
     cur_job_var_op_name2var_blob = {}
+    global cur_job_variable_scope_stack
+    cur_job_variable_scope_stack = []
 
 cur_job = None
 cur_job_var_op_name2var_blob = {}
 before_non_input_op_build_and_infer_hooks = []
+cur_job_variable_scope_stack = []
