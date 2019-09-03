@@ -40,8 +40,8 @@ Maybe<void> VariableOp::InferBlobDescs(
   out_blob_desc->set_data_type(variable_conf.has_data_type() ? variable_conf.data_type()
                                                              : GlobalJobDesc().DefaultDataType());
   const auto& opt_split_axis = JUST(GetSplitAxis(variable_conf));
-  if (opt_split_axis.has_value()) {
-    int32_t model_split_axis = opt_split_axis.value();
+  if (opt_split_axis->has_value()) {
+    int32_t model_split_axis = opt_split_axis->value();
     int64_t split_dim_num = out_blob_desc->shape().At(model_split_axis);
     BalancedSplitter bs(split_dim_num, parallel_ctx->parallel_num());
     out_blob_desc->mut_shape().Set(model_split_axis, bs.At(parallel_ctx->parallel_id()).size());
@@ -58,8 +58,8 @@ Maybe<void> VariableOp::InferBatchAxis(
 Maybe<void> VariableOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
   const auto& opt_split_axis = JUST(GetSplitAxis(op_conf().variable_conf()));
   SbpSignatureBuilder sbp_sig_builder;
-  if (opt_split_axis.has_value()) {
-    sbp_sig_builder.Split(output_bns(), opt_split_axis.value());
+  if (opt_split_axis->has_value()) {
+    sbp_sig_builder.Split(output_bns(), opt_split_axis->value());
   } else {
     sbp_sig_builder.Broadcast(output_bns());
   }

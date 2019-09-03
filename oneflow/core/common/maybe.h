@@ -1,6 +1,7 @@
 #ifndef ONEFLOW_CORE_COMMON_MAYBE_H_
 #define ONEFLOW_CORE_COMMON_MAYBE_H_
 
+#include <cstring>
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/either_ptr.h"
 #include "oneflow/core/common/error.h"
@@ -33,8 +34,46 @@ class Maybe final : public MaybeBase<T> {
   Maybe(const std::shared_ptr<ErrorProto>& error) : MaybeBase<T>(error) {}
   Maybe(const Maybe<T>&) = default;
   ~Maybe() = default;
+};
 
-  static Maybe<T> Ok() { return Maybe<T>(); }
+template<typename T>
+class Maybe<T*> final {
+ public:
+  Maybe(T* data) : error_proto_(std::shared_ptr<ErrorProto>()) { SetData(data); }
+  Maybe(const Error& error) : error_proto_(error.error_proto()) { CheckError(); }
+  Maybe(const std::shared_ptr<ErrorProto>& error) : error_proto_(error) { CheckError(); }
+  ~Maybe() {
+    if (IsOk()) {
+      std::shared_ptr<ErrorProto> empty_ptr;
+      std::memcpy(&error_proto_, &empty_ptr, sizeof(empty_ptr));
+    }
+  }
+
+  bool IsOk() const {
+    uint64_t __attribute__((__may_alias__)) addr = reinterpret_cast<uint64_t>(error_proto_.get());
+    return addr & 1;
+  }
+  T* data() const {
+    uint64_t __attribute__((__may_alias__)) addr = reinterpret_cast<uint64_t>(error_proto_.get());
+    CHECK_EQ(addr & 1, 1);
+    T* __attribute__((__may_alias__)) ptr = reinterpret_cast<T*>(addr - 1);
+    return ptr;
+  }
+  std::shared_ptr<ErrorProto> error() const {
+    CHECK(!IsOk());
+    return error_proto_;
+  }
+
+ private:
+  void SetData(T* data) {
+    uint64_t __attribute__((__may_alias__)) addr = reinterpret_cast<uint64_t>(data);
+    uint64_t* __attribute__((__may_alias__)) ptr = reinterpret_cast<uint64_t*>(&error_proto_);
+    CHECK_EQ(addr % 2, 0);
+    *ptr = addr + 1;
+  }
+  void CheckError() const { CHECK_NE(error()->error_type_case(), ErrorProto::ERROR_TYPE_NOT_SET); }
+
+  std::shared_ptr<ErrorProto> error_proto_;
 };
 
 template<>
@@ -64,10 +103,7 @@ inline Maybe<T> MaybeFuncSafeCallWrapper(Maybe<T>&& maybe) {
 #if defined(__GNUC__) || defined(__CUDACC__) || defined(__clang__)
 
 #define TRY(...) MaybeFuncSafeCallWrapper(__VA_ARGS__)
-#define JUST(...) (*JUST_PTR(__VA_ARGS__))
-#define CHECK_JUST(...) (*CHECK_JUST_PTR(__VA_ARGS__))
-
-#define JUST_PTR(...)                                          \
+#define JUST(...)                                              \
   ({                                                           \
     const auto& maybe = MaybeFuncSafeCallWrapper(__VA_ARGS__); \
     if (!maybe.IsOk()) {                                       \
@@ -76,7 +112,7 @@ inline Maybe<T> MaybeFuncSafeCallWrapper(Maybe<T>&& maybe) {
     }                                                          \
     maybe.data();                                              \
   })
-#define CHECK_JUST_PTR(...)                                    \
+#define CHECK_JUST(...)                                        \
   ({                                                           \
     const auto& maybe = MaybeFuncSafeCallWrapper(__VA_ARGS__); \
     CHECK(maybe.IsOk());                                       \
