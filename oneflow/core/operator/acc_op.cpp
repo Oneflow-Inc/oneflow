@@ -20,7 +20,7 @@ Maybe<void> AccOp::InferOutputBlobTimeShape(
     const ParallelContext* parallel_ctx, Shape* time_shape) const {
   const int32_t max_acc_num = op_conf().acc_conf().max_acc_num();
   // CHECK_GE(GetTimeShape4BnInOp("one")->elem_cnt(), max_acc_num);
-  CHECK_GE_OR_RETURN(GetTimeShape4BnInOp("one")->elem_cnt(), max_acc_num, "");
+  CHECK_GE_OR_RETURN(GetTimeShape4BnInOp("one")->elem_cnt(), max_acc_num);
   *time_shape = Shape({GetTimeShape4BnInOp("one")->elem_cnt() / max_acc_num});
   return Maybe<void>::Ok();
 }
