@@ -7,6 +7,7 @@ import oneflow.core.common.data_type_pb2 as data_type_util
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.register.logical_blob_id_pb2 as lbi_util
 import oneflow.python.framework.id_util as id_util
+import oneflow.python.framework.undefined as undefined
 
 from oneflow.python.oneflow_export import oneflow_export
 
@@ -16,7 +17,7 @@ class input_blob_def(blob_desc.BlobDesc):
                  dtype = data_type_util.kFloat,
                  is_dynamic = False,
                  batch_axis = 0,
-                 split_axis = int(sys.maxint)):
+                 split_axis = undefined):
         assert type(shape) is tuple
         for dim in shape: assert type(dim) is int
         self.shape_ = shape
@@ -71,7 +72,7 @@ class input_blob_def(blob_desc.BlobDesc):
         else:
             assert type(self.batch_axis_) is None or type(self.batch_axis_) is False
             interface_blob_conf.batch_axis.ClearField("value")
-        if type(self.split_axis_) is int and self.split_axis_ != int(sys.maxint):
+        if type(self.split_axis_) is int:
             interface_blob_conf.split_axis.value = self.split_axis_
         elif type(self.split_axis_) is None or type(self.split_axis_) is False:
             interface_blob_conf.split_axis.ClearField("value")
