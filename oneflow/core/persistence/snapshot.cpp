@@ -12,15 +12,6 @@ std::string GenDataFilePath(const std::string& root, const std::string& key) {
   return JoinPath(root, key);
 }
 
-std::string DirName(const std::string& path) {
-  const size_t pos = path.rfind("\\/");
-  if (pos == std::string::npos) {
-    return "";
-  } else {
-    return path.substr(0, pos + 1);
-  }
-}
-
 }  // namespace
 
 SnapshotReader::SnapshotReader(const std::string& snapshot_root_path)
@@ -49,9 +40,8 @@ SnapshotWriter::SnapshotWriter(const std::string& snapshot_root_path)
 
 void SnapshotWriter::Write(const std::string& key, const Blob* blob) {
   const std::string path = GenDataFilePath(root_path_, key);
-  const std::string dir = DirName(path);
-
-  SnapshotFS()->CreateDirIfNotExist(dir);
+  const std::string dir_path = Dirname(path);
+  SnapshotFS()->CreateDirIfNotExist(dir_path);
   CHECK(!SnapshotFS()->FileExists(path));
   const int64_t blob_size = blob->ByteSizeOfDataContentField();
   PersistentOutStream out_stream(SnapshotFS(), path);
