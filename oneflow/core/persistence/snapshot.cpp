@@ -1,6 +1,5 @@
 #include "oneflow/core/persistence/snapshot.h"
 #include "oneflow/core/common/str_util.h"
-#include "oneflow/core/operator/operator.h"
 #include "oneflow/core/persistence/persistent_in_stream.h"
 #include "oneflow/core/persistence/persistent_out_stream.h"
 
