@@ -25,10 +25,11 @@ def add(x,
     else:
         raise NotImplementedError
 
+
 @oneflow_export('math.subtract')
 def subtract(x,
-        y,
-        name=None):
+             y,
+             name=None):
 
     if isinstance(x, (int, float)):
         # TODO: add scalar op
@@ -44,10 +45,11 @@ def subtract(x,
     else:
         raise NotImplementedError
 
+
 @oneflow_export('math.multiply')
 def multiply(x,
-        y,
-        name=None):
+             y,
+             name=None):
 
     if isinstance(x, (int, float)):
         return scalar_mul(y, x)
@@ -61,10 +63,11 @@ def multiply(x,
     else:
         raise NotImplementedError
 
-@oneflow_export('math.multiply')
-def multiply(x,
-        y,
-        name=None):
+
+@oneflow_export('math.divide')
+def divide(x,
+           y,
+           name=None):
 
     if isinstance(x, (int, float)):
         raise NotImplementedError
@@ -193,6 +196,38 @@ def scalar_mul(x, operand, name=None):
     elif isinstance(operand, float):
         op_conf.scalar_mul_conf.float_operand = operand
     op_conf.scalar_mul_conf.out = "out"
+    compile_context.CurJobAddOp(op_conf)
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = "out"
+    return remote_blob_util.RemoteBlob(lbi)
+
+
+@oneflow_export('math.tanh')
+def tanh(x, name=None):
+    op_conf = op_conf_util.OperatorConf()
+    if name is None:
+        op_conf.name = id_util.UniqueStr('TanH_')
+    else:
+        op_conf.name = name
+    setattr(op_conf.tanh_conf, "in", x.logical_blob_name)
+    op_conf.tanh_conf.out = "out"
+    compile_context.CurJobAddOp(op_conf)
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = "out"
+    return remote_blob_util.RemoteBlob(lbi)
+
+
+@oneflow_export('math.gelu')
+def gelu(x, name=None):
+    op_conf = op_conf_util.OperatorConf()
+    if name is None:
+        op_conf.name = id_util.UniqueStr('Gelu_')
+    else:
+        op_conf.name = name
+    setattr(op_conf.gelu_conf, "in", x.logical_blob_name)
+    op_conf.gelu_conf.out = "out"
     compile_context.CurJobAddOp(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
     lbi.op_name = op_conf.name
