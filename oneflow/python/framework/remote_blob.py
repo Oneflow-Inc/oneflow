@@ -18,9 +18,6 @@ class RemoteBlob(blob_desc.BlobDesc):
     @property
     def dtype(self): return job_builder.GetDataType(self.job_name_, self.lbn_)
 
-    @property
-    def has_batch_dim(self): return job_builder.GetHasBatchDim(self.job_name_, self.lbn_)
-
     def pull(self):
         return inter_user_job_util.pull(self)
 

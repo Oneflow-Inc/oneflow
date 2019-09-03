@@ -30,10 +30,6 @@ class BlobDesc(object):
         raise NotImplementedError
 
     @property
-    def has_batch_dim(self):
-        raise NotImplementedError
-
-    @property
     def is_dynamic(self):
         raise NotImplementedError
 
