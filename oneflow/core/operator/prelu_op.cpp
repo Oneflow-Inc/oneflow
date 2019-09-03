@@ -61,7 +61,8 @@ Maybe<void> PReluOp::GetSbpSignatures(
   SbpSignatureBuilder()
       .Split(input_bns(), 0)
       .Split(output_bns(), 0)
-      .MakeSplitSignatureListBuilder(JUST(LogicalBlobDesc4Ibn(output_bns())->Get(0)).shape().NumAxes())
+      .MakeSplitSignatureListBuilder(
+          JUST(LogicalBlobDesc4Ibn(output_bns())->Get(0)).shape().NumAxes())
       .Build(sbp_sig_list);
   return Maybe<void>::Ok();
 }

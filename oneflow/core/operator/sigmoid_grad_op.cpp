@@ -25,7 +25,8 @@ Maybe<void> SigmoidGradOp::GetSbpSignatures(
   SbpSignatureBuilder()
       .Split(input_bns(), 0)
       .Split(output_bns(), 0)
-      .MakeSplitSignatureListBuilder(JUST(LogicalBlobDesc4Ibn(input_bns())->Get(0)).shape().NumAxes())
+      .MakeSplitSignatureListBuilder(
+          JUST(LogicalBlobDesc4Ibn(input_bns())->Get(0)).shape().NumAxes())
       .Build(sbp_sig_list);
   return Maybe<void>::Ok();
 }

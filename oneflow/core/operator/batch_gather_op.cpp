@@ -51,7 +51,7 @@ Maybe<void> BatchGatherOp::GetSbpSignatures(
   } else {
     std::shared_ptr<ErrorProto> err;
     err->set_msg("BatchGatherOp: indices_num_axes equals " + std::to_string(indices_num_axes)
-        + " (should be bigger than 1).");
+                 + " (should be bigger than 1).");
     err->set_check_failed();
     return err;
   }
