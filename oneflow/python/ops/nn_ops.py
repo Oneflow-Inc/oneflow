@@ -131,8 +131,7 @@ def max_pool2d(input, ksize, strides, padding, data_format="NHWC", name=None):
     setattr(op_conf.max_pooling_2d_conf, "in", input.logical_blob_name)
     setattr(op_conf.max_pooling_2d_conf, "out", "out")
     op_conf.max_pooling_2d_conf.pool_size[:] = _GetSequence(ksize, 2, "ksize")
-    op_conf.max_pooling_2d_conf.strides[:] = _GetSequence(
-        strides, 2, "strides")
+    op_conf.max_pooling_2d_conf.strides[:] = _GetSequence(strides, 2, "strides")
     assert padding in ["VALID", "SAME"]
     setattr(op_conf.max_pooling_2d_conf, "padding", padding)
     assert data_format in ["NHWC", "NCHW", "NCHW_VECT_C"]
@@ -190,8 +189,7 @@ def max_pool3d(input, ksize, strides, padding, data_format="NDHWC", name=None):
     setattr(op_conf.max_pooling_3d_conf, "in", input.logical_blob_name)
     setattr(op_conf.max_pooling_3d_conf, "out", "out")
     op_conf.max_pooling_3d_conf.pool_size[:] = _GetSequence(ksize, 3, "ksize")
-    op_conf.max_pooling_3d_conf.strides[:] = _GetSequence(
-        strides, 3, "strides")
+    op_conf.max_pooling_3d_conf.strides[:] = _GetSequence(strides, 3, "strides")
     assert padding in ["VALID", "SAME"]
     setattr(op_conf.max_pooling_3d_conf, "padding", padding)
     assert data_format in ["NDHWC", "NCDHW"]
@@ -307,17 +305,11 @@ def _GetSequence(value, n, name):
         )
 
 
-@oneflow_export('math.dropout')
-def dropout(
-    x,
-    noise_shape=None,
-    seed=None,
-    name=None,
-    rate=None
-):
+@oneflow_export("math.dropout")
+def dropout(x, noise_shape=None, seed=None, name=None, rate=None):
     op_conf = op_conf_util.OperatorConf()
     if name is None:
-        op_conf.name = id_util.UniqueStr('Dropout_')
+        op_conf.name = id_util.UniqueStr("Dropout_")
     else:
         op_conf.name = name
     setattr(op_conf.dropout_conf, "in", x.logical_blob_name)

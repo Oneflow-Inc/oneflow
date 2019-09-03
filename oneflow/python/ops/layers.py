@@ -1,6 +1,11 @@
 from __future__ import absolute_import
 
+import oneflow as flow
+import oneflow.core.operator.op_conf_pb2 as op_conf_util
+import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 import oneflow.python.framework.id_util as id_util
+import oneflow.python.framework.compile_context as compile_context
+import oneflow.python.framework.remote_blob as remote_blob_util
 from oneflow.python.oneflow_export import oneflow_export
 
 
@@ -20,7 +25,9 @@ def dense(
     assert in_num_axes >= 2
 
     name_prefix = name if name is not None else id_util.UniqueStr("Dense_")
-    inputs = flow.reshape(inputs, (-1, in_shape[-1])) if in_num_axes > 2 else inputs
+    inputs = (
+        flow.reshape(inputs, (-1, in_shape[-1])) if in_num_axes > 2 else inputs
+    )
     weight = flow.get_variable(
         name="{}_weight".format(name_prefix),
         shape=(units, inputs.static_shape[1]),
@@ -35,7 +42,10 @@ def dense(
         model_split_axis=None,
     )
     out = flow.matmul(
-        a=inputs, b=weight, transpose_b=True, name="{}_matmul".format(name_prefix)
+        a=inputs,
+        b=weight,
+        transpose_b=True,
+        name="{}_matmul".format(name_prefix),
     )
     if use_bias:
         bias = flow.get_variable(
@@ -53,7 +63,9 @@ def dense(
         )
         flow.bias_add(out, bias, name="{}_bias_add".format(name_prefix))
     out = activation(out) if activation is not None else out
-    out = flow.reshape(out, in_shape[:-1] + (units,)) if in_num_axes > 2 else out
+    out = (
+        flow.reshape(out, in_shape[:-1] + (units,)) if in_num_axes > 2 else out
+    )
 
     return out
 
@@ -70,12 +82,15 @@ def layer_norm(
     trainable=True,
     begin_norm_axis=1,
     begin_params_axis=-1,
-    # scope=None
+    # scope=None,
+    name=None,
 ):
     op_conf = op_conf_util.OperatorConf()
     setattr(op_conf, "trainable", trainable)
     setattr(
-        op_conf, "name", name if name is not None else id_util.UniqueStr("LayerNorm_")
+        op_conf,
+        "name",
+        name if name is not None else id_util.UniqueStr("LayerNorm_"),
     )
     setattr(op_conf.layer_norm_conf, "in", inputs.logical_blob_name)
     setattr(op_conf.layer_norm_conf, "out", "out")
