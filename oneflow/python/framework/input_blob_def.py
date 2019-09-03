@@ -17,10 +17,11 @@ class input_blob_def(blob_desc.BlobDesc):
                  is_dynamic = False,
                  batch_axis = 0,
                  split_axis = None):
-        if sys.version_info >= (3, 0):
-            split_axis = int(sys.maxsize)
-        else:
-            split_axis = int(sys.maxint)
+        if split_axis is None:
+            if sys.version_info >= (3, 0):
+                split_axis = int(sys.maxsize)
+            else:
+                split_axis = int(sys.maxint)
         assert type(shape) is tuple
         for dim in shape: assert type(dim) is int
         self.shape_ = shape
