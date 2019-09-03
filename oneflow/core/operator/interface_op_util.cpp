@@ -9,25 +9,25 @@ void CheckShape(const Shape& shape) {
   FOR_RANGE(int, i, 1, shape.NumAxes()) { CHECK_GT(shape.At(i), 0); }
 }
 
-bool GetSplitAxis(const InterfaceBlobConf& input_blob_conf, size_t* split_axis) {
+const OptInt64& GetSplitAxis(const InterfaceBlobConf& input_blob_conf) {
   if (input_blob_conf.has_split_axis()) {
-    int64_t axis = input_blob_conf.split_axis();
-    if (axis < 0) { axis += input_blob_conf.shape().dim_size(); }
-    if (axis >= 0 && axis < input_blob_conf.shape().dim_size()) {
-      *split_axis = axis;
-      return true;
-    }
-  } else if (input_blob_conf.broadcast() == false && input_blob_conf.batch_axis().has_value()) {
-    *split_axis = input_blob_conf.batch_axis().value();
-    return true;
+    return input_blob_conf.split_axis();
+  } else {
+    return input_blob_conf.batch_axis();
   }
-  return false;
 }
 
 Maybe<void> GetSbpSignature(const InterfaceBlobConf& blob_conf, const PbRpf<std::string>& input_bns,
                             const PbRpf<std::string>& output_bns, SbpSignature* sbp_signature,
                             bool is_for_input_op) {
-  auto BuildSbpSignature = [&](int64_t split_axis) {
+  const OptInt64& opt_split_axis = GetSplitAxis(blob_conf);
+  if (opt_split_axis.has_value()) {
+    int64_t num_axes = blob_conf.shape().dim_size();
+    int64_t split_axis = opt_split_axis.value();
+    if (split_axis < 0) { split_axis += num_axes; }
+    OF_CHECK_GE(split_axis, 0);
+    OF_CHECK_LT(split_axis, num_axes);
+
     SbpSignatureBuilder sbp_signature_builder;
     if (is_for_input_op) {
       sbp_signature_builder.Broadcast(input_bns);
@@ -35,20 +35,8 @@ Maybe<void> GetSbpSignature(const InterfaceBlobConf& blob_conf, const PbRpf<std:
       sbp_signature_builder.Split(input_bns, split_axis);
     }
     sbp_signature_builder.Split(output_bns, split_axis).Build(sbp_signature);
-  };
-  if (blob_conf.has_split_axis()) {
-    int64_t num_axes = blob_conf.shape().dim_size();
-    int64_t split_axis = blob_conf.split_axis();
-    if (split_axis < 0) { split_axis += num_axes; }
-    CHECK_GE_OR_RETURN(split_axis, 0);
-    CHECK_LT_OR_RETURN(split_axis, num_axes);
-    BuildSbpSignature(split_axis);
-  } else if (blob_conf.has_broadcast()) {
-    SbpSignatureBuilder().Broadcast(input_bns).Broadcast(output_bns).Build(sbp_signature);
-  } else if (blob_conf.batch_axis().has_value()) {
-    BuildSbpSignature(blob_conf.batch_axis().value());
   } else {
-    UNIMPLEMENTED_THEN_RETURN();
+    SbpSignatureBuilder().Broadcast(input_bns).Broadcast(output_bns).Build(sbp_signature);
   }
   return Maybe<void>::Ok();
 }
@@ -77,8 +65,9 @@ Maybe<void> InterfaceOpUtil::InferOutBlobDesc(const InterfaceBlobConf& blob_conf
     CHECK(blob_conf.has_dim0_valid_num());
     out_blob_desc->mut_dim0_inner_shape() = Shape(blob_conf.dim0_inner_shape());
   }
-  size_t split_axis = 0;
-  if (GetSplitAxis(blob_conf, &split_axis)) {
+  const auto& opt_split_axis = GetSplitAxis(blob_conf);
+  if (opt_split_axis.has_value()) {
+    int64_t split_axis = opt_split_axis.value();
     BalancedSplitter bs(out_blob_desc->shape().At(split_axis), parallel_ctx->parallel_num());
     out_blob_desc->mut_shape().Set(split_axis, bs.At(parallel_ctx->parallel_id()).size());
   }
@@ -119,11 +108,12 @@ Maybe<void> InterfaceOpUtil::InitBlobConf(InterfaceBlobConf* blob_conf,
   blob_conf->set_has_dim1_valid_num(blob_desc.has_dim1_valid_num_field());
   blob_conf->set_has_dim2_valid_num(blob_desc.has_dim2_valid_num_field());
   if (parallel_blob_conf.sbp_conf().has_split_parallel()) {
-    blob_conf->set_split_axis(parallel_blob_conf.sbp_conf().split_parallel().axis());
+    int64_t axis = parallel_blob_conf.sbp_conf().split_parallel().axis();
+    blob_conf->mutable_split_axis()->set_value(axis);
   } else if (parallel_blob_conf.sbp_conf().has_broadcast_parallel()) {
-    blob_conf->set_broadcast(true);
+    blob_conf->mutable_split_axis()->clear_value();
   } else {
-    UNIMPLEMENTED();
+    OF_UNIMPLEMENTED();
   }
   *blob_conf->mutable_batch_axis() = parallel_blob_conf.batch_axis();
   return Maybe<void>::Ok();

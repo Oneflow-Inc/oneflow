@@ -62,8 +62,13 @@ enum JobBuildAndInferError {
   kUnknownJobBuildAndInferError = 500;
 }
 
-message ProtoParseFailedError {
-}
+message ProtoParseFailedError { }
+
+message CheckFailed { }
+
+message TodoError { }
+
+message UnimplementedError { }
 
 message UnkownError { }
 
@@ -74,6 +79,9 @@ message ErrorProto {
     ConfigResourceUnavailableError config_resource_unavailable_error = 3;
     JobBuildAndInferError job_build_and_infer_error = 4;
     ProtoParseFailedError proto_parse_failed_error = 5;
-    UnkownError unknown_error = 6;
+    CheckFailed check_failed = 6;
+    TodoError todo_error = 7;
+    UnimplementedError unimplemented_error = 8;
+    UnkownError unknown_error = 100;
   }
 }

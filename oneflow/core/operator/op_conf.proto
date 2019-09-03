@@ -773,11 +773,8 @@ message InterfaceBlobConf {
   optional bool has_dim0_valid_num = 4;
   optional bool has_dim1_valid_num = 5;
   optional bool has_dim2_valid_num = 6;
-  oneof split_or_broadcast {
-    int32 split_axis = 7;
-    bool broadcast = 8;
-  }
-  required OptInt64 batch_axis = 9;
+  optional OptInt64 split_axis = 7;
+  required OptInt64 batch_axis = 8;
 }
 
 message InputOpConf {
