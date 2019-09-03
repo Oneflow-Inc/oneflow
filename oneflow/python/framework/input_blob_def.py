@@ -80,7 +80,7 @@ class input_blob_def(blob_desc.BlobDesc):
             maxint = int(sys.maxsize)
         else:
             maxint = int(sys.maxint) 
-        if type(self.split_axis_) is int and self.split_axis_ != int(maxint):
+        if type(self.split_axis_) is int and self.split_axis_ != maxint:
             interface_blob_conf.split_axis.value = self.split_axis_
         elif type(self.split_axis_) is None or type(self.split_axis_) is False:
             interface_blob_conf.split_axis.ClearField("value")
