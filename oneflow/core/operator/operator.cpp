@@ -121,14 +121,15 @@ Maybe<void> Operator::InferOutputBlobTimeShape(
   return Maybe<void>::Ok();
 }
 
-void Operator::GetSbpSignaturesIf(
-    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
+Maybe<void> Operator::GetSbpSignaturesIf(
+    const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
     SbpSignatureList* sbp_sig_list) const {
-  GetSbpSignatures(LogicalBlobDesc4Ibn, sbp_sig_list);
+  JUST(GetSbpSignatures(LogicalBlobDesc4Ibn, sbp_sig_list));
   SbpSignatureBuilder()
       .Broadcast(input_bns())
       .Broadcast(output_bns())
       .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> Operator::InferSbpSignatureIf(
@@ -152,14 +153,15 @@ Maybe<void> Operator::InferSbpSignatureIf(
 Maybe<void> Operator::InferSbpSignature(
     SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
     const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
-    std::function<const SbpInferHint&(const std::string&)> SbpInferHint4Ibn,
+    std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
     const ParallelDesc& parallel_desc) const {
   // get op sbp signatures
-  auto LogicalBlobDesc4Ibn = [&](const std::string& ibn) -> const BlobDesc& {
-    return SbpInferHint4Ibn(ibn).logical_blob_desc();
+  auto LogicalBlobDesc4Ibn = [&](const std::string& ibn) -> Maybe<const BlobDesc*> {
+    const SbpInferHint* sbp_infer_hint = JUST(SbpInferHint4Ibn(ibn));
+    return Maybe<const BlobDesc*>(&(sbp_infer_hint->logical_blob_desc()));
   };
   SbpSignatureList sbp_sig_list;
-  GetSbpSignaturesIf(LogicalBlobDesc4Ibn, &sbp_sig_list);
+  JUST(GetSbpSignaturesIf(LogicalBlobDesc4Ibn, &sbp_sig_list));
   // filter sbp signatures by sbp signature conf
   SbpSignatureList filtered_sbp_sigs_by_conf;
   FilterSbpSignatureList(sbp_sig_list, sbp_sig_conf, &filtered_sbp_sigs_by_conf);

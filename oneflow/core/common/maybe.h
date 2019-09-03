@@ -62,7 +62,8 @@ inline Maybe<T> MaybeFuncSafeCallWrapper(Maybe<T>&& maybe) {
 #if defined(__GNUC__) || defined(__CUDACC__) || defined(__clang__)
 
 #define TRY(...) MaybeFuncSafeCallWrapper(__VA_ARGS__)
-#define JUST(...)                                              \
+#define JUST(...) *JUST_PTR(__VA_ARGS__)
+#define JUST_PTR(...)                                              \
   ({                                                           \
     const auto& maybe = MaybeFuncSafeCallWrapper(__VA_ARGS__); \
     if (!maybe.IsOk()) {                                       \
