@@ -3,23 +3,23 @@
 
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/either_ptr.h"
-#include "oneflow/core/common/error.pb.h"
+#include "oneflow/core/common/error.h"
 
 namespace oneflow {
 
-class ErrorMsgGenerator {
+class ErrorMessage {
  public:
-  ErrorMsgGenerator() : error_(std::make_shared<Error>()) {}
-  virtual ~ErrorMsgGenerator() = default;
+  ErrorMessage() : error_(std::make_shared<ErrorProto>()) {}
+  virtual ~ErrorMessage() = default;
 
   template<typename MessageType>
-  ErrorMsgGenerator&& operator<<(const MessageType& msg) {
+  ErrorMessage&& operator<<(const MessageType& msg) {
     oss_ << msg;
     return std::move(*this);
   }
 
-  std::shared_ptr<Error> Release() const {
-    SendMsg();
+  std::shared_ptr<ErrorProto> Release() const {
+    SendMessage();
     return std::move(error_);
   }
 
@@ -28,10 +28,10 @@ class ErrorMsgGenerator {
     ResetError();
   }
 
-  OF_DISALLOW_COPY_AND_MOVE(ErrorMsgGenerator);
+  OF_DISALLOW_COPY_AND_MOVE(ErrorMessage);
 
  private:
-  void SendMsg() const {
+  void SendMessage() const {
     // TODO: set error type
     error_->set_msg(oss_.str());
   }
@@ -41,62 +41,56 @@ class ErrorMsgGenerator {
   void ResetError() { error_->Clear(); }
 
   std::ostringstream oss_;
-  mutable std::shared_ptr<Error> error_;
+  mutable std::shared_ptr<ErrorProto> error_;
 };
 
 template<typename T>
 class MaybeBase {
  public:
-  MaybeBase(const std::shared_ptr<Error>& error) : data_or_error_(error) {}
   MaybeBase(const std::shared_ptr<T>& data) : data_or_error_(data) {}
+  MaybeBase(const std::shared_ptr<ErrorProto>& error) : data_or_error_(error) {}
   MaybeBase(const MaybeBase<T>&) = default;
-  virtual ~MaybeBase() = default;
+  ~MaybeBase() = default;  // no virtual is what we want
 
   bool IsOk() const { return data_or_error_.template Has<T>(); }
   const std::shared_ptr<T>& data() const { return data_or_error_.template Get<T>(); }
-  const std::shared_ptr<Error> error() const { return data_or_error_.template Get<Error>(); }
+  std::shared_ptr<ErrorProto> error() const { return data_or_error_.template Get<ErrorProto>(); }
 
  private:
-  EitherPtr<T, Error> data_or_error_;
+  EitherPtr<T, ErrorProto> data_or_error_;
 };
 
 template<typename T>
 class Maybe final : public MaybeBase<T> {
  public:
-  Maybe(const Error& error) : MaybeBase<T>(std::make_shared<Error>(error)) {}
   Maybe(const T& data) : MaybeBase<T>(std::make_shared<T>(data)) {}
-  Maybe(const std::shared_ptr<Error>& error) : MaybeBase<T>(error) {}
+  Maybe(const Error& error) : MaybeBase<T>(error.error_proto()) {}
   Maybe(const std::shared_ptr<T>& data) : MaybeBase<T>(data) {}
-  Maybe(Error* error) : MaybeBase<T>(std::shared_ptr<Error>(error)) {}
-  Maybe(T* data) : MaybeBase<T>(std::shared_ptr<T>(data)) {}
-
-  Maybe(const ErrorMsgGenerator&& error_msg) : MaybeBase<T>(error_msg.Release()) {}
-
+  Maybe(const std::shared_ptr<ErrorProto>& error) : MaybeBase<T>(error) {}
   Maybe(const Maybe<T>&) = default;
-  ~Maybe() override = default;
+  ~Maybe() = default;
 
+  Maybe(const ErrorMessage&& error_msg) : MaybeBase<T>(error_msg.Release()) {}
   static Maybe<T> Ok() { return Maybe<T>(); }
 };
 
 template<>
 class Maybe<void> final : public MaybeBase<void> {
  public:
-  Maybe(const Error& error) : MaybeBase<void>(std::make_shared<Error>(error)) { CheckError(); }
-  Maybe(const std::shared_ptr<Error>& error) : MaybeBase<void>(error) { CheckError(); }
-  Maybe(Error* error) : MaybeBase<void>(std::shared_ptr<Error>(error)) { CheckError(); }
+  Maybe(const Error& error) : MaybeBase<void>(error.error_proto()) { CheckError(); }
+  Maybe(const std::shared_ptr<ErrorProto>& error) : MaybeBase<void>(error) { CheckError(); }
+  Maybe(const Maybe<void>&) = default;
+  ~Maybe() = default;
 
-  Maybe(const ErrorMsgGenerator&& error_msg) : MaybeBase<void>(error_msg.Release()) {
+  Maybe(const ErrorMessage&& error_msg) : MaybeBase<void>(error_msg.Release()) {
     CheckError();
   }
-
-  Maybe(const Maybe<void>&) = default;
-  ~Maybe() override = default;
 
   static Maybe<void> Ok() { return Maybe<void>(); }
 
  private:
   Maybe() : MaybeBase<void>(std::shared_ptr<void>()) {}
-  void CheckError() const { CHECK_NE(error()->error_type_case(), Error::ERROR_TYPE_NOT_SET); }
+  void CheckError() const { CHECK_NE(error()->error_type_case(), ErrorProto::ERROR_TYPE_NOT_SET); }
 };
 
 template<typename T>
@@ -144,10 +138,10 @@ inline Maybe<T> MaybeFuncSafeCallWrapper(Maybe<T>&& maybe) {
 #define OF_MESSAGE_TAG COMPACT_MESSAGE_TAG(__TIME__, __FILE__, __LINE__)
 
 #define CHECK_OR_RETURN(expr) \
-  if (!(expr)) return ErrorMsgGenerator() << OF_MESSAGE_TAG << #expr << ": "
+  if (!(expr)) return ErrorMessage() << OF_MESSAGE_TAG << #expr << ": "
 
 #define ENFORCE_THEN_RETURN(error_type) \
-  return ErrorMsgGenerator() << OF_MESSAGE_TAG << #error_type << ": "
+  return ErrorMessage() << OF_MESSAGE_TAG << #error_type << ": "
 
 #define CHECK_EQ_OR_RETURN(lhs, rhs) CHECK_OR_RETURN(OF_TEST_EQ(lhs, rhs))
 

@@ -1,12 +1,12 @@
 #include "oneflow/core/job/job_build_and_infer_ctx.h"
-#include "oneflow/core/common/error_util.h"
 
 namespace oneflow {
 
-Error GenJobBuildAndInferError(JobBuildAndInferError err_code, std::string msg) {
-  Error err;
-  err.set_msg(msg);
-  err.set_job_build_and_infer_error(err_code);
+std::shared_ptr<ErrorProto> GenJobBuildAndInferError(JobBuildAndInferError err_code,
+                                                     std::string msg) {
+  auto err = std::make_shared<ErrorProto>();
+  err->set_msg(msg);
+  err->set_job_build_and_infer_error(err_code);
   return err;
 }
 
@@ -65,7 +65,13 @@ Maybe<void> JobBuildAndInferCtx::GenOpProducedEmptyLogicalBlobDesc(Operator* op)
 }
 
 // TODO(): add handle error of same interface op blob between jobs
-Maybe<void> JobBuildAndInferCtx::AddAndInferInputOp(const OperatorConf& op_conf) {
+Maybe<void> JobBuildAndInferCtx::AddAndInferOp(const OperatorConf& op_conf,
+                                               const ParallelConf& parallel_conf) {
+  if (!has_job_conf_) {
+    return GenJobBuildAndInferError(JobBuildAndInferError::kJobConfNotSet, "");
+  }
+  if (!is_job_conf_frozen_) { is_job_conf_frozen_ = true; }
+
   const std::string& op_name = op_conf.name();
   if (op_name2op_.find(op_name) != op_name2op_.end()) {
     return GenJobBuildAndInferError(
@@ -106,14 +112,6 @@ Maybe<void> JobBuildAndInferCtx::AddAndInferInputOp(const OperatorConf& op_conf)
   JUST(op->InferBatchAxisIf(GetConstBlobDescBnInOp, BatchAxis4BnInOp));
   // TODO()  infer blob desc split dim
   return Maybe<void>::Ok();
-}
-
-Maybe<void> JobBuildAndInferCtx::AddAndInferNonInputOp(const OperatorConf& op_conf) {
-  if (!has_job_conf_) {
-    return GenJobBuildAndInferError(JobBuildAndInferError::kJobConfNotSet, "");
-  }
-  if (!is_job_conf_frozen_) { is_job_conf_frozen_ = true; }
-  return AddAndInferInputOp(op_conf);
 }
 
 Maybe<void> JobBuildAndInferCtx::AddLossLogicalBlobName(const std::string& lbn) {
@@ -212,7 +210,7 @@ Maybe<void> JobBuildAndInferCtx::CheckPlacement() const {
 
 Maybe<void> JobBuildAndInferCtx::CheckJobConf() const {
   if (job_->job_conf().job_type_case() == JobConfigProto::JOB_TYPE_NOT_SET) {
-    return ErrorUtil::JobTypeNotSet("job_type not set, please set predict_conf or train_conf");
+    return Error::JobTypeNotSet() << "job_type not set, please set predict_conf or train_conf";
   }
   return Maybe<void>::Ok();
 }

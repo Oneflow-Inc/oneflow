@@ -78,7 +78,8 @@ Maybe<void> NormalizationGradOp::InferBlobDescs(
     }
     return Maybe<void>::Ok();
   };
-  const std::function<void(const std::string&)> SetParamBlobDesc = [&](const std::string& bn) {
+  const std::function<void(const std::string&)> SetParamBlobDesc =
+      [&](const std::string& bn) -> Maybe<void> {
     BlobDesc* blob_desc = GetBlobDesc4BnInOp(bn);
     if (blob_desc != nullptr) {
       blob_desc->set_data_type(data_type);

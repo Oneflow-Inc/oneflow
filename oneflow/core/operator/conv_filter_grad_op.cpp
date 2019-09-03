@@ -93,7 +93,7 @@ void ConvFilterGradOp::VirtualGenKernelConf(
 Maybe<void> ConvFilterGradOp::InferBatchAxis(
     std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
   CHECK_OR_RETURN(*BatchAxis4BnInOp("dy") == *BatchAxis4BnInOp("x"));
-  *BatchAxis4BnInOp("filter_diff") = *BatchAxis4BnInOp("x");
+  BatchAxis4BnInOp("filter_diff")->clear_value();
   return Maybe<void>::Ok();
 }
 

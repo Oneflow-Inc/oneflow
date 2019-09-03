@@ -12,7 +12,8 @@
 
 namespace oneflow {
 
-Error GenJobBuildAndInferError(JobBuildAndInferError err_code, std::string msg);
+std::shared_ptr<ErrorProto> GenJobBuildAndInferError(JobBuildAndInferError err_code,
+                                                     std::string msg);
 
 class JobBuildAndInferCtx {
  public:
@@ -21,8 +22,7 @@ class JobBuildAndInferCtx {
   ~JobBuildAndInferCtx() = default;
 
   Maybe<void> SetJobConf(const JobConfigProto& job_conf);
-  Maybe<void> AddAndInferInputOp(const OperatorConf& op_conf);
-  Maybe<void> AddAndInferNonInputOp(const OperatorConf& op_conf);
+  Maybe<void> AddAndInferOp(const OperatorConf& op_conf, const ParallelConf& parallel_conf);
   Maybe<void> AddLossLogicalBlobName(const std::string& lbn);
   Maybe<void> AddPlacementGroup(const PlacementGroup& placement_group);
 
