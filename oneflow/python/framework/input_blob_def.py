@@ -16,7 +16,11 @@ class input_blob_def(blob_desc.BlobDesc):
                  dtype = data_type_util.kFloat,
                  is_dynamic = False,
                  batch_axis = 0,
-                 split_axis = int(sys.maxint)):
+                 split_axis = None):
+        if sys.version_info >= (3, 0):
+            split_axis = int(sys.maxsize)
+        else:
+            split_axis = int(sys.maxint)
         assert type(shape) is tuple
         for dim in shape: assert type(dim) is int
         self.shape_ = shape
@@ -71,7 +75,12 @@ class input_blob_def(blob_desc.BlobDesc):
         else:
             assert type(self.batch_axis_) is None or type(self.batch_axis_) is False
             interface_blob_conf.batch_axis.ClearField("value")
-        if type(self.split_axis_) is int and self.split_axis_ != int(sys.maxint):
+        maxint = None
+        if sys.version_info >= (3, 0):
+            maxint = int(sys.maxsize)
+        else:
+            maxint = int(sys.maxint) 
+        if type(self.split_axis_) is int and self.split_axis_ != int(maxint):
             interface_blob_conf.split_axis.value = self.split_axis_
         elif type(self.split_axis_) is None or type(self.split_axis_) is False:
             interface_blob_conf.split_axis.ClearField("value")
