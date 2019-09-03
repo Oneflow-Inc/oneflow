@@ -30,10 +30,10 @@ Maybe<void> ReduceSumLikeOp::InferBlobDescs(
   return Maybe<void>::Ok();
 }
 
-Maybe<void> ReduceSumLikeOp::InferHasBatchDim(
-    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
-  *HasBatchDim4BnInOp("y") = *HasBatchDim4BnInOp("like");
-  *HasBatchDim4BnInOp("temp_storage") = *HasBatchDim4BnInOp("like");
+Maybe<void> ReduceSumLikeOp::InferBatchAxis(
+    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
+  *BatchAxis4BnInOp("y") = *BatchAxis4BnInOp("like");
+  *BatchAxis4BnInOp("temp_storage") = *BatchAxis4BnInOp("like");
   return Maybe<void>::Ok();
 }
 

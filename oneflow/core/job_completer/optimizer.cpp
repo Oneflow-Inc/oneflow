@@ -61,34 +61,36 @@ void BindTwoVariableOpObnSbpConf(const std::string& lhs_op_name, const std::stri
 
 template<typename T>
 void ConstructMdUpdtOpConf(const VariableOp& op, const LogicalBlobId& diff_lbi_of_var_out,
-                           const LogicalBlobId& total_loss_instance_num_lbi, T* mdupdt_op_conf) {
-  const auto& train_conf = GlobalJobDesc().job_conf().train_conf();
+                           const LogicalBlobId& total_loss_instance_num_lbi,
+                           JobBuilder* job_builder, T* mdupdt_op_conf) {
+  const auto& train_conf = job_builder->job().job_conf().train_conf();
   *mdupdt_op_conf->mutable_user_conf() = train_conf.model_update_conf();
   mdupdt_op_conf->set_model_diff(GenLogicalBlobName(diff_lbi_of_var_out));
   mdupdt_op_conf->set_total_instance_num_diff(GenLogicalBlobName(total_loss_instance_num_lbi));
   mdupdt_op_conf->set_model(GenLogicalBlobName(op.BnInOp2Lbi("out")));
-  float primary_lr = GlobalJobDesc().primary_lr();
-  float secondary_lr = GlobalJobDesc().secondary_lr();
-  if (secondary_lr < 0) { secondary_lr = primary_lr; }
+  mdupdt_op_conf->set_global_step(train_conf.global_step_lbn());
+  const std::string& primary_lr_lbn = train_conf.primary_lr_lbn();
+  const std::string& secondary_lr_lbn = train_conf.secondary_lr_lbn();
   if (op.op_conf().variable_conf().model_name() == "weight") {
-    mdupdt_op_conf->set_learning_rate(primary_lr);
-    mdupdt_op_conf->set_l1(GlobalJobDesc().weight_l1());
-    mdupdt_op_conf->set_l2(GlobalJobDesc().weight_l2());
+    mdupdt_op_conf->set_learning_rate(primary_lr_lbn);
+    mdupdt_op_conf->set_l1(train_conf.weight_l1());
+    mdupdt_op_conf->set_l2(train_conf.weight_l2());
   } else if (op.op_conf().variable_conf().model_name() == "bias") {
-    mdupdt_op_conf->set_learning_rate(secondary_lr);
-    mdupdt_op_conf->set_l1(GlobalJobDesc().bias_l1());
-    mdupdt_op_conf->set_l2(GlobalJobDesc().bias_l2());
+    mdupdt_op_conf->set_learning_rate(secondary_lr_lbn);
+    mdupdt_op_conf->set_l1(train_conf.bias_l1());
+    mdupdt_op_conf->set_l2(train_conf.bias_l2());
   } else {
-    mdupdt_op_conf->set_learning_rate(primary_lr);
+    mdupdt_op_conf->set_learning_rate(primary_lr_lbn);
     mdupdt_op_conf->set_l1(0);
     mdupdt_op_conf->set_l2(0);
   }
 }
 
-#define INSTANTIATE_CONSTRUCTOR_MDUPDT_OP_CONF(T)                     \
-  template void ConstructMdUpdtOpConf<T>(                             \
-      const VariableOp& op, const LogicalBlobId& diff_lbi_of_var_out, \
-      const LogicalBlobId& total_loss_instance_num_lbi, T* mdupdt_op_conf)
+#define INSTANTIATE_CONSTRUCTOR_MDUPDT_OP_CONF(T)                                          \
+  template void ConstructMdUpdtOpConf<T>(const VariableOp& op,                             \
+                                         const LogicalBlobId& diff_lbi_of_var_out,         \
+                                         const LogicalBlobId& total_loss_instance_num_lbi, \
+                                         JobBuilder* job_builder, T* mdupdt_op_conf)
 
 INSTANTIATE_CONSTRUCTOR_MDUPDT_OP_CONF(NaiveModelUpdateOpConf);
 INSTANTIATE_CONSTRUCTOR_MDUPDT_OP_CONF(MomentumModelUpdateOpConf);

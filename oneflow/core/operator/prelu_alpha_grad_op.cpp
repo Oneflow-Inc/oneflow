@@ -83,11 +83,10 @@ void PReluAlphaGradOp::VirtualGenKernelConf(
   }
 }
 
-Maybe<void> PReluAlphaGradOp::InferHasBatchDim(
-    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
-  CHECK_OR_RETURN(*HasBatchDim4BnInOp("dy"));
-  CHECK_OR_RETURN(*HasBatchDim4BnInOp("x"));
-  *HasBatchDim4BnInOp("alpha_grad") = false;
+Maybe<void> PReluAlphaGradOp::InferBatchAxis(
+    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
+  CHECK_OR_RETURN(*BatchAxis4BnInOp("dy") == *BatchAxis4BnInOp("x"));
+  BatchAxis4BnInOp("alpha_grad")->clear_value();
   return Maybe<void>::Ok();
 }
 

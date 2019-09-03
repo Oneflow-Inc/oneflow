@@ -38,11 +38,16 @@ Maybe<void> ReduceMeanOp::InferBlobDescs(
   return Maybe<void>::Ok();
 }
 
-Maybe<void> ReduceMeanOp::InferHasBatchDim(
-    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
+Maybe<void> ReduceMeanOp::InferBatchAxis(
+    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
   const auto& reduced_axes = op_conf().reduce_mean_conf().axis();
   HashSet<int64_t> conf_axes = {reduced_axes.begin(), reduced_axes.end()};
-  *HasBatchDim4BnInOp("out") = !(conf_axes.empty() || (conf_axes.find(0) != conf_axes.end()));
+  if (BatchAxis4BnInOp("in")->has_value() && !conf_axes.empty()
+      && conf_axes.find(BatchAxis4BnInOp("in")->value()) == conf_axes.end()) {
+    *BatchAxis4BnInOp("out") = *BatchAxis4BnInOp("in");
+  } else {
+    BatchAxis4BnInOp("out")->clear_value();
+  }
   return Maybe<void>::Ok();
 }
 

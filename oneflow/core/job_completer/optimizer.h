@@ -15,7 +15,8 @@ void BindTwoVariableOpObnSbpConf(const std::string& lhs_op_name, const std::stri
                                  JobBuilder* job_builder);
 template<typename T>
 void ConstructMdUpdtOpConf(const VariableOp& op, const LogicalBlobId& diff_lbi_of_var_out,
-                           const LogicalBlobId& total_loss_instance_num_lbi, T*);
+                           const LogicalBlobId& total_loss_instance_num_lbi,
+                           JobBuilder* job_builder, T*);
 
 class GenerateOptimizerOpConfWrapperStruct final {
  public:

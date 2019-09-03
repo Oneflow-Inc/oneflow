@@ -28,9 +28,9 @@ Maybe<void> AccTickOp::InferOutputBlobTimeShape(
 
 const PbMessage& AccTickOp::GetCustomizedConf() const { return op_conf().acc_tick_conf(); }
 
-Maybe<void> AccTickOp::InferHasBatchDim(
-    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
-  *HasBatchDim4BnInOp("acc") = false;
+Maybe<void> AccTickOp::InferBatchAxis(
+    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
+  BatchAxis4BnInOp("acc")->clear_value();
   return Maybe<void>::Ok();
 }
 

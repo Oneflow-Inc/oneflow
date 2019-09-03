@@ -64,9 +64,9 @@ void GatherGradOp::GetSbpSignatures(
       .Build(sbp_sig_list->mutable_sbp_signature()->Add());
 }
 
-Maybe<void> GatherGradOp::InferHasBatchDim(
-    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
-  *HasBatchDim4BnInOp("in_diff") = false;
+Maybe<void> GatherGradOp::InferBatchAxis(
+    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
+  BatchAxis4BnInOp("in_diff")->clear_value();
   return Maybe<void>::Ok();
 }
 

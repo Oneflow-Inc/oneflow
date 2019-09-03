@@ -31,13 +31,13 @@ Maybe<void> DefineTestBlobOp::InferBlobDescs(
   if (conf.has_dim0_inner_shape()) {
     out_blob_desc->mut_dim0_inner_shape() = Shape(conf.dim0_inner_shape());
   }
-  if (conf.has_dim0_valid_num()) { CHECK_OR_RETURN(conf.has_dim0_inner_shape()); }
+  if (conf.has_dim0_valid_num()) { OF_CHECK(conf.has_dim0_inner_shape()); }
   return Maybe<void>::Ok();
 }
 
-Maybe<void> DefineTestBlobOp::InferHasBatchDim(
-    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
-  *HasBatchDim4BnInOp("out") = true;
+Maybe<void> DefineTestBlobOp::InferBatchAxis(
+    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
+  BatchAxis4BnInOp("out")->set_value(0);
   return Maybe<void>::Ok();
 }
 

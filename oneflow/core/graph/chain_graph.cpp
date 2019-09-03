@@ -146,14 +146,14 @@ bool NoOutRegstConsumedByBwNode(TaskNode* node) {
   return true;
 };
 
-size_t IsAllProducedBlobHasNoBatchDim(TaskNode* task_node) {
+size_t IsAllProducedBlobHasNoBatchAxis(TaskNode* task_node) {
   const auto* comp_task_node = dynamic_cast<CompTaskNode*>(task_node);
   CHECK_NOTNULL(comp_task_node);
   const LogicalNode* logical_node = comp_task_node->logical_node();
   return logical_node->produced_batch_dim_lbis_cnt() == 0;
 }
 
-bool IsAllConsumedBlobHasNoBatchDim(TaskNode* task_node) {
+bool IsAllConsumedBlobHasNoBatchAxis(TaskNode* task_node) {
   const auto* comp_task_node = dynamic_cast<CompTaskNode*>(task_node);
   CHECK_NOTNULL(comp_task_node);
   const LogicalNode* logical_node = comp_task_node->logical_node();
@@ -225,8 +225,8 @@ void ChainGraph::GroupTaskNodesByMachineAndCollectAncestors(
       if (in_node->GetTaskType() == TaskType::kTick) { return; }
       if (IsNonSoleKeepHeaderOnlyEdge(in_node, node)) { return; }
       if (dynamic_cast<CompTaskNode*>(in_node) != nullptr
-          && dynamic_cast<CompTaskNode*>(node) != nullptr && IsAllProducedBlobHasNoBatchDim(in_node)
-          && !IsAllConsumedBlobHasNoBatchDim(node)) {
+          && dynamic_cast<CompTaskNode*>(node) != nullptr
+          && IsAllProducedBlobHasNoBatchAxis(in_node) && !IsAllConsumedBlobHasNoBatchAxis(node)) {
         return;
       }
       (*node2ancestors)[node].insert(in_node);

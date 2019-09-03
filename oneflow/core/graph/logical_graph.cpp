@@ -95,8 +95,9 @@ void LogicalGraph::NaiveBuildFwStruct(
   });
   // set batch_dim_lbis_cnt
   HashSet<LogicalBlobId> batch_dim_lbis;
-  for (const LogicalBlobId& lbi : job_.helper().batch_dim_lbis()) {
-    CHECK(batch_dim_lbis.emplace(lbi).second);
+  for (const auto& pair : job_.helper().lbn2batch_axis()) {
+    if (pair.second.has_value() == false) { continue; }
+    CHECK(batch_dim_lbis.emplace(GenLogicalBlobId(pair.first)).second);
   }
   ForEachNode([&](LogicalNode* cur_node) {
     size_t consumed_batch_dim_lbis_cnt = 0;

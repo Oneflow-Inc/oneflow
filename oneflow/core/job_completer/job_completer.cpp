@@ -12,6 +12,7 @@
 #include "oneflow/core/job_completer/group_boxing_by_dst_parallel.h"
 #include "oneflow/core/job_completer/auto_mixed_precision.h"
 #include "oneflow/core/job_completer/auto_global_step.h"
+#include "oneflow/core/job_completer/auto_learning_rate.h"
 
 namespace oneflow {
 
@@ -301,9 +302,9 @@ void SetCtrlInOpName4VariableOp(const OpGraph& op_graph, JobBuilder* job_builder
   });
 }
 
-void SetOpTimeShape7BatchDimLbis(const OpGraph& op_graph, JobBuilder* job_builder) {
+void SetOpTimeShape7BatchAxisLbis(const OpGraph& op_graph, JobBuilder* job_builder) {
   op_graph.DumpOpTimeShape(job_builder);
-  op_graph.DumpBatchDimLbi(job_builder);
+  op_graph.DumpBatchAxisLbi(job_builder);
 }
 
 void RewriteBoxingWithAllReduce(const OpGraph& op_graph, JobBuilder* job_builder) {
@@ -341,6 +342,7 @@ void JobCompleter::Complete(Job* job) const {
     WithOpGraphAndMutJob(job, &TieUpChainHeadersUnReachableFromAnyVariableOps);
     WithOpGraphAndMutJobBuilder(job, &EnableAutoMixedPrecision);
     WithOpGraphAndMutJob(job, &AutoGlobalStep);
+    WithOpGraphAndMutJob(job, &AutoLearningRate);
     // complete ops for trainning
     WithOpGraphAndMutJobBuilder(job, &GenerateOpConf4Trainning);
     WithOpGraphAndMutJobBuilder(job, &RewriteBoxingWithAllReduce);
@@ -358,7 +360,7 @@ void JobCompleter::Complete(Job* job) const {
   WithOpGraphAndMutJobBuilder(job, &AddGlobalInputCriticalSections);
   WithOpGraphAndMutJobBuilder(job, &AddGlobalOutputCriticalSections);
   WithOpGraphAndMutJobBuilder(job, &DumpLogicalBlobDescAndSbpSignature);
-  WithOpGraphAndMutJobBuilder(job, &SetOpTimeShape7BatchDimLbis);
+  WithOpGraphAndMutJobBuilder(job, &SetOpTimeShape7BatchAxisLbis);
   CheckOpGraph(OpGraph(*job));
 }
 

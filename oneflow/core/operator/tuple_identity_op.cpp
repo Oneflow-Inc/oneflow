@@ -47,10 +47,10 @@ Maybe<void> TupleIdentityOp::InferSbpSignature(
   return Maybe<void>::Ok();
 }
 
-Maybe<void> TupleIdentityOp::InferHasBatchDim(
-    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
+Maybe<void> TupleIdentityOp::InferBatchAxis(
+    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
   FOR_RANGE(int32_t, i, 0, input_bns().size()) {
-    *HasBatchDim4BnInOp(output_bns().Get(i)) = *HasBatchDim4BnInOp(input_bns().Get(i));
+    *BatchAxis4BnInOp(output_bns().Get(i)) = *BatchAxis4BnInOp(input_bns().Get(i));
   }
   return Maybe<void>::Ok();
 }

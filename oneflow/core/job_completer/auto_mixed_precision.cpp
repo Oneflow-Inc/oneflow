@@ -66,7 +66,7 @@ std::function<bool(OpNode*)> MakePredicatorIsAllowedToRunWithHalf(const OpGraph&
     for (const std::string& obn : node->op().output_bns()) {
       LogicalBlobId lbi = node->op().BnInOp2Lbi(obn);
       // TODO(niuchong): this ain't right for fw-bw-opgraph, but right for fw-opgraph
-      if (node->HasBatchDim4Lbi(lbi) == false) { return; }
+      if (node->BatchAxis4Lbi(lbi).has_value() == false) { return; }
     }
     INSERT_CHECK(allowed_set->insert(node));
   });
