@@ -222,7 +222,7 @@ void MakeModelSaveJob(
   job_builder.AddOps(md_save_parallel_conf, {model_save_op_conf});
 }
 
-void MakeModelIoJobs(const std::vector<Job>& jobs,
+void MakeModelIoJobs(std::vector<Job>& jobs,
                      const HashMap<std::string, ParallelBlobConf>& var_op_name2parallel_blob_conf,
                      const std::function<void(Job*)>& Handler) {
   HashMap<std::string, OperatorConf> var_op_name2op_conf;
