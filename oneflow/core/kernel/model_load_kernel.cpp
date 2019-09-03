@@ -14,9 +14,7 @@ class ModelLoadKernel final : public KernelIf<device_type> {
                std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
     const ModelLoadOpConf& conf = this->op_conf().model_load_conf();
     const Blob* path_blob = BnInOp2Blob("path");
-    const size_t path_len =
-        strnlen(path_blob->dptr<char>(), path_blob->ByteSizeOfDataContentField());
-    const std::string path(path_blob->dptr<char>(), path_len);
+    const std::string path(path_blob->dptr<char>(), path_blob->shape().elem_cnt());
     SnapshotReader reader(path);
     FOR_RANGE(int64_t, i, 0, conf.out_size()) {
       const VariableOpConf& original_variable_conf = conf.original_variable_conf(i);

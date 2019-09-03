@@ -29,6 +29,7 @@ class ModelSaveOp final : public Operator {
 
 void ModelSaveOp::InitFromOpConf() {
   CHECK(op_conf().has_model_save_conf());
+  EnrollInputBn("path", false);
   EnrollRepeatedInputBn("in", false);
 }
 

@@ -54,7 +54,7 @@ void MakeModelInitJob(
   foreign_input_conf->set_ofblob_buffer_name(GetForeignInputBufferName(job_name));
   InterfaceBlobConf* blob_conf = foreign_input_conf->mutable_blob_conf();
   *blob_conf->mutable_shape()->mutable_dim()->Add() = 1;
-  blob_conf->set_data_type(DataType::kUInt8);
+  blob_conf->set_data_type(DataType::kInt8);
   blob_conf->set_broadcast(true);
   blob_conf->set_has_batch_dim(false);
   job_builder.AddOps(master_parallel_conf, {foreign_input_op_conf});
@@ -117,7 +117,9 @@ void MakeModelLoadJob(
   foreign_input_conf->set_ofblob_buffer_name(GetForeignInputBufferName(job_name));
   InterfaceBlobConf* blob_conf = foreign_input_conf->mutable_blob_conf();
   *blob_conf->mutable_shape()->mutable_dim()->Add() = 65536;
-  blob_conf->set_data_type(DataType::kUInt8);
+  blob_conf->set_has_dim0_valid_num(true);
+  Shape({1, 65536}).ToProto(blob_conf->mutable_dim0_inner_shape());
+  blob_conf->set_data_type(DataType::kInt8);
   blob_conf->set_broadcast(true);
   blob_conf->set_has_batch_dim(false);
   job_builder.AddOps(master_parallel_conf, {foreign_input_op_conf});
@@ -169,22 +171,39 @@ void MakeModelSaveJob(
   JobBuilder job_builder(job);
   ParallelConf md_save_parallel_conf = GenParallelConfOfCpuZeroOnMaster();
   {
-    // there is always a tick op in model save job, so we can ignore the case with no variable
     OperatorConf tick_op_conf{};
     tick_op_conf.set_name("System-Saver-tick");
     tick_op_conf.mutable_tick_conf()->set_out("out");
     job_builder.AddOps(md_save_parallel_conf, {tick_op_conf});
   }
+
+  OperatorConf foreign_input_op_conf{};
+  foreign_input_op_conf.set_name("System-Push-ForeignInput_" + NewUniqueId());
+  ForeignInputOpConf* foreign_input_conf = foreign_input_op_conf.mutable_foreign_input_conf();
+  foreign_input_conf->set_out("out");
+  foreign_input_conf->set_ofblob_buffer_name(GetForeignInputBufferName(job_name));
+  InterfaceBlobConf* blob_conf = foreign_input_conf->mutable_blob_conf();
+  *blob_conf->mutable_shape()->mutable_dim()->Add() = 65536;
+  blob_conf->set_has_dim0_valid_num(true);
+  Shape({1, 65536}).ToProto(blob_conf->mutable_dim0_inner_shape());
+  blob_conf->set_data_type(DataType::kInt8);
+  blob_conf->set_broadcast(true);
+  blob_conf->set_has_batch_dim(false);
+  job_builder.AddOps(md_save_parallel_conf, {foreign_input_op_conf});
+
   auto* job_conf = job->mutable_job_conf();
   job_conf->set_job_name(job_name);
   job_conf->mutable_predict_conf();
   job_conf->set_piece_size(1);
   job_conf->set_data_part_num(1);
   job_conf->set_total_batch_num(1);
+
   if (var_op_name2parallel_blob_conf.empty()) { return; }
   OperatorConf model_save_op_conf{};
   model_save_op_conf.set_name("System-ModelSave-ModelSave");
   ModelSaveOpConf* model_save_conf = model_save_op_conf.mutable_model_save_conf();
+  model_save_conf->set_path(
+      GenLogicalBlobName(foreign_input_op_conf.name(), foreign_input_conf->out()));
   for (const auto& pair : var_op_name2parallel_blob_conf) {
     const auto& var_op_name = pair.first;
     OperatorConf input_op_conf{};

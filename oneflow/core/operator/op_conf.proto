@@ -1478,8 +1478,9 @@ message AssignOpConf {
 }
 
 message ModelSaveOpConf {
-  repeated string in = 1;
-  repeated string key = 2;
+  required string path = 1;
+  repeated string in = 2;
+  repeated string key = 3;
 }
 
 message LearningRateScheduleOpConf {

@@ -15,11 +15,9 @@ class CheckPoint(object):
     def restore(self, save_path=None):
         return CheckPointRestoreStatus(save_path)
 
-    def save(self, file_prefix=None, session=None):
-        assert file_prefix is None
-        if session is None:
-            session = runtime_ctx.default_session
-        session.NoReturnRun(_MakeModelSaveJobFunc())
+    def save(self, path, session=None):
+        assert type(path) is str
+        session.NoReturnRun(_MakeModelSaveJobFunc(path))
 
     def init(self, session=None):
         c_api_util.LaunchJob(_MakeModelInitJobFunc())
@@ -53,10 +51,7 @@ def _MakeModelInitJobFunc():
 
 def _MakeModelLoadJobFunc(path):
     def push_cb(blob):
-        byte_list = list(map(int, path.encode('ascii')))
-        arr = np.zeros(65536, np.uint8)
-        arr[0:len(byte_list)] = np.asarray(byte_list, dtype=np.uint8)
-        blob.CopyFromNdarray(arr)
+        blob.CopyFromNdarray(np.asarray(list(map(int, path.encode('ascii'))), dtype=np.int8))
 
     def finish_cb():
         pass
@@ -66,11 +61,13 @@ def _MakeModelLoadJobFunc(path):
                                         finish_cb=finish_cb)
 
 
-def _MakeModelSaveJobFunc():
-    def ModelSave():
+def _MakeModelSaveJobFunc(path):
+    def push_cb(blob):
+        blob.CopyFromNdarray(np.asarray(list(map(int, path.encode('ascii'))), dtype=np.int8))
+
+    def finish_cb():
         pass
 
-    ModelSave.__name__ = str(runtime_ctx.inter_user_job_info.global_model_save_job_name)
-    ModelSave.__oneflow_input_blob_defs__ = ()
-    ModelSave.__oneflow_output_remote_blobs__ = None
-    return ModelSave
+    return job_instance.MakeJobInstance(str(runtime_ctx.inter_user_job_info.global_model_save_job_name),
+                                        push_cb=push_cb,
+                                        finish_cb=finish_cb)

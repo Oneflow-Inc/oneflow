@@ -30,9 +30,9 @@ class ModelSaveKernel final : public KernelIf<DeviceType::kCPU> {
 
 void ModelSaveKernel::Forward(const KernelCtx& ctx,
                               std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const std::string snapshot_root_path =
-      JoinPath(Global<const IOConf>::Get()->model_save_snapshots_path(), GenNewSnapshotName());
-  SnapshotWriter writer(snapshot_root_path);
+  const Blob* path_blob = BnInOp2Blob("path");
+  const std::string path(path_blob->dptr<char>(), path_blob->shape().elem_cnt());
+  SnapshotWriter writer(path);
   FOR_RANGE(int64_t, i, 0, op_attribute().input_bns().size()) {
     const Blob* in_i = BnInOp2Blob(GenRepeatedBn("in", i));
     writer.Write(op_conf().model_save_conf().key(i), in_i);
