@@ -68,10 +68,10 @@ Maybe<void> FullyConnectedOp::InferBlobDescs(
   return Maybe<void>::Ok();
 }
 
-void FullyConnectedOp::GetSbpSignatures(
-    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
+Maybe<void> FullyConnectedOp::GetSbpSignatures(
+    const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
     SbpSignatureList* sbp_sig_list) const {
-  int32_t num_axes = LogicalBlobDesc4Ibn("in").shape().NumAxes();
+  int32_t num_axes = JUST(LogicalBlobDesc4Ibn("in"))->shape().NumAxes();
   SbpSignatureBuilder()
       .Split("in", 0)
       .Broadcast({"weight", "bias"})
@@ -83,6 +83,7 @@ void FullyConnectedOp::GetSbpSignatures(
       .Split({"weight", "bias"}, 0)
       .Split("out", num_axes - 1)
       .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+  return Maybe<void>::Ok();
 }
 
 REGISTER_OP(OperatorConf::kFullyConnectedConf, FullyConnectedOp);

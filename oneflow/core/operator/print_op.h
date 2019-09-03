@@ -27,7 +27,7 @@ class PrintOp final : public Operator {
     return Maybe<void>::Ok();
   }
 
-  void GetSbpSignatures(SbpSignatureList* sbp_sig_list) const override;
+  Maybe<void> GetSbpSignatures(SbpSignatureList* sbp_sig_list) const override;
 
   LogicalBlobId ibn2lbi(const std::string& input_bn) const override;
 };

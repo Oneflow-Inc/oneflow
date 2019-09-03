@@ -61,11 +61,12 @@ Maybe<void> ConstantOp::InferBatchAxis(
   return Maybe<void>::Ok();
 }
 
-void ConstantOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
+Maybe<void> ConstantOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
   SbpSignatureBuilder()
       .Broadcast(input_bns())
       .Broadcast(output_bns())
       .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+  return Maybe<void>::Ok();
 }
 
 REGISTER_OP(OperatorConf::kConstantConf, ConstantOp);

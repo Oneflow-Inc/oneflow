@@ -48,20 +48,21 @@ Maybe<void> NormalModelUpdtOp::InferBatchAxis(
   return Maybe<void>::Ok();
 }
 
-void NormalModelUpdtOp::GetSbpSignatures(
-    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
+Maybe<void> NormalModelUpdtOp::GetSbpSignatures(
+    const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
     SbpSignatureList* sbp_sig_list) const {
   const auto& bns = AlwaysBroadcastParallelBns();
   PbRpf<std::string> broadcast_bns = {bns.begin(), bns.end()};
   *broadcast_bns.Add() = "total_instance_num_diff";
   *broadcast_bns.Add() = "learning_rate";
   *broadcast_bns.Add() = "global_step";
-  FOR_RANGE(int64_t, i, 0, LogicalBlobDesc4Ibn("model").shape().NumAxes()) {
+  FOR_RANGE(int64_t, i, 0, JUST(LogicalBlobDesc4Ibn("model"))->shape().NumAxes()) {
     SbpSignatureBuilder()
         .Split(input_bns(), i)
         .Broadcast(broadcast_bns)
         .Build(sbp_sig_list->mutable_sbp_signature()->Add());
   }
+  return Maybe<void>::Ok();
 }
 
 REGISTER_OP_CREATOR(OperatorConf::kNormalMdupdtConf, [](const OperatorConf& op_conf) -> Operator* {
