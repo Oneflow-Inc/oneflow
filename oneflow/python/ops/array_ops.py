@@ -97,7 +97,7 @@ def slice(input_, begin, size, name=None):
         name = id_util.UniqueStr("Slice_")
 
     slice_conf_list = []
-    for b, s, d in enumerate(zip(begin, size, input_.static_shape)):
+    for b, s, d in zip(begin, size, input_.static_shape):
         slice_conf = op_conf_util.DimSliceConf()
         if b < -d or b > d - 1:
             raise ValueError(
