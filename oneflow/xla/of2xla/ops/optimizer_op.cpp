@@ -18,10 +18,19 @@ class AdamOptimizerOp : public XlaOpCompiler {
 void AdamOptimizerOp::Compile(XlaOpContext *ctx) {
   xla::XlaOp instance_num = ctx->Input("instance_num_diff");
   xla::XlaOp learning_rate = ctx->Input("learning_rate");
-  xla::XlaOp gradient = ctx->Input("gradient") / instance_num;
   xla::XlaOp weight = ctx->Input("weight");
   xla::XlaOp m = ctx->Input("m");
   xla::XlaOp v = ctx->Input("v");
+  Shape gradient_shape = ctx->InputShape("gradient");
+  if (gradient_shape.NumAxes() > 1) {
+    std::vector<long long> bcast_sizes;
+    for (int i = 0; i < gradient_shape.NumAxes() - 1; ++i) {
+      bcast_sizes.push_back(gradient_shape.At(i));
+    }
+    instance_num = xla::Broadcast(instance_num, bcast_sizes);
+    learning_rate = xla::Broadcast(learning_rate, bcast_sizes);
+  }
+  xla::XlaOp gradient = ctx->Input("gradient") / instance_num;
 
   xla::XlaOp one = One(ctx->builder(), ctx->InputType("m"));
   float beta1_val = ctx->GetAttr<float>("beta1");
