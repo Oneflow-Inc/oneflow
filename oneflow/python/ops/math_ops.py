@@ -211,7 +211,7 @@ def tanh(x, name=None):
     else:
         op_conf.name = name
     setattr(op_conf.tanh_conf, "in", x.logical_blob_name)
-    op_conf.tanh_conf.out = "out"
+    setattr(op_conf.tanh_conf, "out", "out")
     compile_context.CurJobAddOp(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
     lbi.op_name = op_conf.name
@@ -227,7 +227,7 @@ def gelu(x, name=None):
     else:
         op_conf.name = name
     setattr(op_conf.gelu_conf, "in", x.logical_blob_name)
-    op_conf.gelu_conf.out = "out"
+    setattr(op_conf.gelu_conf, "out", "out")
     compile_context.CurJobAddOp(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
     lbi.op_name = op_conf.name
