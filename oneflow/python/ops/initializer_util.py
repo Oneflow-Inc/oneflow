@@ -48,3 +48,11 @@ def random_normal_initializer(mean=0.0, stddev=1.0):
     setattr(initializer.random_normal_conf, "std", float(stddev))
 
     return initializer
+
+
+@oneflow_export("truncated_normal_initializer")
+def truncated_normal_initializer(stddev=1.0):
+    initializer = op_conf_util.InitializerConf()
+    setattr(initializer.truncated_normal_conf, "std", float(stddev))
+
+    return initializer
