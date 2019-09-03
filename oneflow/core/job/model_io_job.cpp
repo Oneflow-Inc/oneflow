@@ -17,7 +17,7 @@ bool CompareVariableOpconf(const VariableOpConf& lhs, const VariableOpConf& rhs)
   return PbMd::Equals(var_conf_a, var_conf_b);
 }
 
-void FilterVariableOps(std::vector<Job>& jobs,
+void FilterVariableOps(const std::vector<Job>& jobs,
                        HashMap<std::string, OperatorConf>* var_op_name2op_conf) {
   FOR_RANGE(int64_t, job_id, 0, jobs.size()) {
     const JobBuilder job_builder(&jobs.at(job_id));
@@ -220,6 +220,31 @@ void MakeModelSaveJob(
     *model_save_conf->mutable_key()->Add() = lbn;
   }
   job_builder.AddOps(md_save_parallel_conf, {model_save_op_conf});
+}
+
+void MakeModelIoJobs(const std::vector<Job>& jobs,
+                     const HashMap<std::string, ParallelBlobConf>& var_op_name2parallel_blob_conf,
+                     const std::function<void(Job*)>& Handler) {
+  HashMap<std::string, OperatorConf> var_op_name2op_conf;
+  FilterVariableOps(jobs, &var_op_name2op_conf);
+  {
+    Job model_init_job;
+    MakeModelInitJob("System-ModelInit", &model_init_job, var_op_name2op_conf,
+                     var_op_name2parallel_blob_conf);
+    Handler(&model_init_job);
+  }
+  {
+    Job model_load_job;
+    MakeModelLoadJob("System-ModelLoad", &model_load_job, var_op_name2op_conf,
+                     var_op_name2parallel_blob_conf);
+    Handler(&model_load_job);
+  }
+  {
+    Job model_save_job;
+    MakeModelSaveJob("System-ModelSave", &model_save_job, var_op_name2op_conf,
+                     var_op_name2parallel_blob_conf);
+    Handler(&model_save_job);
+  }
 }
 
 }  // namespace oneflow

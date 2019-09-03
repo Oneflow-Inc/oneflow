@@ -826,26 +826,7 @@ void CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan) {
         CompileHelperJob(&arg_pass_job);
       }
     }
-    HashMap<std::string, OperatorConf> var_op_name2op_conf;
-    FilterVariableOps(jobs, &var_op_name2op_conf);
-    {
-      Job model_init_job;
-      MakeModelInitJob("System-ModelInit", &model_init_job, var_op_name2op_conf,
-                       var_op_name2parallel_blob_conf);
-      CompileHelperJob(&model_init_job);
-    }
-    {
-      Job model_load_job;
-      MakeModelLoadJob("System-ModelLoad", &model_load_job, var_op_name2op_conf,
-                       var_op_name2parallel_blob_conf);
-      CompileHelperJob(&model_load_job);
-    }
-    {
-      Job model_save_job;
-      MakeModelSaveJob("System-ModelSave", &model_save_job, var_op_name2op_conf,
-                       var_op_name2parallel_blob_conf);
-      CompileHelperJob(&model_save_job);
-    }
+    MakeModelIoJobs(var_op_name2parallel_blob_conf, [&](Job* job) { CompileHelperJob(job); });
     InterJobMemSharingUtil::BindInterfaceMemBlockId(jobs, &sub_plans);
     FinishGlobalCriticalSectionDesc(sub_plans);
     MergeSubPlanWithoutGenNetTopo(plan, sub_plans);
