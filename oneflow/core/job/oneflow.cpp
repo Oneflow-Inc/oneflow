@@ -719,7 +719,7 @@ void MakeArgPassJob(const std::string& job_name, const ParallelBlobConf& paralle
     blob_conf->set_has_dim0_valid_num(false);
     blob_conf->set_has_dim1_valid_num(false);
     blob_conf->set_has_dim2_valid_num(false);
-    blob_conf->set_split_axis(0);
+    blob_conf->mutable_split_axis()->clear_value();
     blob_conf->mutable_batch_axis()->clear_value();
     ParallelConf parallel_conf;
     parallel_conf.set_policy(kDataParallel);
