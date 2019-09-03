@@ -1,11 +1,11 @@
 #ifndef ONEFLOW_CORE_PERSISTENCE_SNAPSHOT_H_
 #define ONEFLOW_CORE_PERSISTENCE_SNAPSHOT_H_
 
-#include "oneflow/core/control/ctrl_client.h"
-#include "oneflow/core/persistence/persistent_in_stream.h"
-#include "oneflow/core/persistence/persistent_out_stream.h"
+#include "oneflow/core/common/util.h"
 
 namespace oneflow {
+
+class Blob;
 
 class SnapshotReader final {
  public:
@@ -33,9 +33,6 @@ class SnapshotWriter final {
 
  private:
   const std::string root_path_;
-  std::mutex writer_mutex_;
-  bool closed_;
-  int64_t writing_count_;
 };
 
 }  // namespace oneflow

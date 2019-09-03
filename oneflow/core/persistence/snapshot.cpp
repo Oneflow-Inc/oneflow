@@ -1,6 +1,8 @@
 #include "oneflow/core/persistence/snapshot.h"
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/operator/operator.h"
+#include "oneflow/core/persistence/persistent_in_stream.h"
+#include "oneflow/core/persistence/persistent_out_stream.h"
 
 namespace oneflow {
 
@@ -35,7 +37,7 @@ void SnapshotReader::Read(const std::string& key, Blob* blob) const {
 void SnapshotReader::Close() {}
 
 SnapshotWriter::SnapshotWriter(const std::string& snapshot_root_path)
-    : root_path_(snapshot_root_path), closed_(false), writing_count_(0) {
+    : root_path_(snapshot_root_path) {
   if (SnapshotFS()->FileExists(snapshot_root_path)) {
     CHECK(SnapshotFS()->IsDirectory(snapshot_root_path))
         << "root directory of model snapshot not found, path: " << snapshot_root_path;
@@ -48,26 +50,15 @@ SnapshotWriter::SnapshotWriter(const std::string& snapshot_root_path)
 void SnapshotWriter::Write(const std::string& key, const Blob* blob) {
   const std::string path = GenDataFilePath(root_path_, key);
   const std::string dir = DirName(path);
-  {
-    std::unique_lock<std::mutex> lck(writer_mutex_);
-    CHECK(!closed_);
-    writing_count_ += 1;
-    SnapshotFS()->CreateDirIfNotExist(dir);
-    CHECK(!SnapshotFS()->FileExists(path));
-  }
+
+  SnapshotFS()->CreateDirIfNotExist(dir);
+  CHECK(!SnapshotFS()->FileExists(path));
   const int64_t blob_size = blob->ByteSizeOfDataContentField();
   PersistentOutStream out_stream(SnapshotFS(), path);
   out_stream.Write(blob->dptr<char>(), blob_size);
-  {
-    std::unique_lock<std::mutex> lck(writer_mutex_);
-    writing_count_ -= 1;
-  }
 }
 
 void SnapshotWriter::Close() {
-  std::unique_lock<std::mutex> lck(writer_mutex_);
-  CHECK_EQ(writing_count_, 0);
-  closed_ = true;
   PersistentOutStream out_stream(SnapshotFS(), JoinPath(root_path_, "snapshot_done"));
 }
 
