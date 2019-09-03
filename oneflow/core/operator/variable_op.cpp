@@ -33,6 +33,8 @@ Maybe<void> VariableOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   const VariableOpConf& variable_conf = op_conf().variable_conf();
+  OF_CHECK(GlobalJobDesc().job_conf().has_default_initializer_conf()
+           || variable_conf.has_initializer());
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   out_blob_desc->mut_shape() = Shape(variable_conf.shape());
   out_blob_desc->set_data_type(variable_conf.has_data_type() ? variable_conf.data_type()
@@ -72,6 +74,7 @@ Maybe<void> VariableOp::InferSbpSignature(
   SbpSignatureList sbp_sig_list;
   GetSbpSignatures(&sbp_sig_list);
   *sbp_signature = sbp_sig_list.sbp_signature().Get(0);
+  return Maybe<void>::Ok();
 }
 
 REGISTER_OP(OperatorConf::kVariableConf, VariableOp);

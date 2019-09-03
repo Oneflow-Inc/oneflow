@@ -1,6 +1,5 @@
 from __future__ import absolute_import
 
-import sys
 import oneflow.python.framework.compile_context as compile_context
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.id_util as id_util
@@ -36,7 +35,7 @@ def get_variable(name,
         if type(split_axis) is int:
             op_conf.variable_conf.split_axis.value = split_axis
         else:
-            assert type(split_axis) is None or split_axis is False
+            assert split_axis is None or split_axis is False
             op_conf.variable_conf.split_axis.ClearField("value")
         op_conf.variable_conf.out = "out"
         compile_context.CurJobAddOp(op_conf)
