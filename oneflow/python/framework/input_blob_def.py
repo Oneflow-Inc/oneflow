@@ -69,7 +69,7 @@ class input_blob_def(blob_desc.BlobDesc):
             assert self.batch_axis_ >= 0
             interface_blob_conf.batch_axis.value = self.batch_axis_
         else:
-            assert type(self.batch_axis_) is None or type(self.batch_axis_) is False
+            assert type(self.batch_axis_) is None or self.batch_axis_ is False
             interface_blob_conf.batch_axis.ClearField("value")
         if type(self.split_axis_) is int and self.split_axis_ != int(sys.maxint):
             interface_blob_conf.split_axis.value = self.split_axis_

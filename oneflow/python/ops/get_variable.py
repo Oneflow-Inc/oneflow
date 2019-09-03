@@ -1,5 +1,6 @@
 from __future__ import absolute_import
 
+import sys
 import oneflow.python.framework.compile_context as compile_context
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.id_util as id_util
@@ -17,7 +18,7 @@ def get_variable(name,
                 initializer=None,
                 trainable=None,
                 model_name=None,
-                model_split_axis=None):
+                split_axis=None):
     
     if name not in compile_context.cur_job_var_op_name2var_blob:
         op_conf = op_conf_util.OperatorConf()
@@ -32,8 +33,11 @@ def get_variable(name,
             op_conf.trainable = trainable
         if model_name is not None:
             op_conf.variable_conf.model_name = model_name
-        if model_split_axis is not None:
-            op_conf.variable_conf.model_split_axis = model_split_axis
+        if type(split_axis) is int:
+            op_conf.variable_conf.split_axis.value = split_axis
+        else:
+            assert type(split_axis) is None or split_axis is False
+            op_conf.variable_conf.split_axis.ClearField("value")
         op_conf.variable_conf.out = "out"
         compile_context.CurJobAddOp(op_conf)
         lbi = logical_blob_id_util.LogicalBlobId()
