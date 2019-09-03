@@ -99,7 +99,7 @@ message ParallelBlobConf {
   required BlobDescProto logical_blob_desc_conf = 1;
   required ParallelConf parallel_conf = 2;
   required SbpParallel sbp_conf = 3;
-  required bool has_batch_dim = 4;
+  required OptInt64 batch_axis = 4;
 }
 
 message JobHelperConf {
@@ -107,7 +107,7 @@ message JobHelperConf {
   map<string, OpNameRelations> tag2op_name_relations = 2;
   map<string, OpTimeShape> op_name2op_time_shape = 3;
   map<string, BlobDescProto> lbn2logical_blob_desc = 4;
-  repeated LogicalBlobId batch_dim_lbis = 6;
+  map<string, OptInt64> lbn2batch_axis = 6;
   optional OpBlobArgPairs identical_sbp_oba_pairs = 7;
 }
 

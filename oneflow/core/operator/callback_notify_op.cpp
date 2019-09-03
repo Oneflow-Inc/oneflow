@@ -26,8 +26,8 @@ Maybe<void> CallbackNotifyOp::InferBlobDescs(
   return Maybe<void>::Ok();
 }
 
-Maybe<void> CallbackNotifyOp::InferHasBatchDim(
-    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
+Maybe<void> CallbackNotifyOp::InferBatchAxis(
+    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
   return Maybe<void>::Ok();
 }
 

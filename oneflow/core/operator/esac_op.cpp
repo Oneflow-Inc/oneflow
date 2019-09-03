@@ -21,9 +21,9 @@ Maybe<void> EsacOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> 
 
 const PbMessage& EsacOp::GetCustomizedConf() const { return op_conf().esac_conf(); }
 
-Maybe<void> EsacOp::InferHasBatchDim(
-    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
-  *HasBatchDim4BnInOp("out") = false;
+Maybe<void> EsacOp::InferBatchAxis(
+    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
+  BatchAxis4BnInOp("out")->clear_value();
   return Maybe<void>::Ok();
 }
 
