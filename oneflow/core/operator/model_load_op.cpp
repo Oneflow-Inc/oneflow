@@ -42,7 +42,7 @@ Maybe<void> ModelLoadOp::InferBlobDescs(
   return Maybe<void>::Ok();
 }
 
-Maybe<void> ModelInitOp::InferBatchAxis(
+Maybe<void> ModelLoadOp::InferBatchAxis(
     std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
   for (const std::string& bns : output_bns()) { BatchAxis4BnInOp(bns)->clear_value(); }
   return Maybe<void>::Ok();
