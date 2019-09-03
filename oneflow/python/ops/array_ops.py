@@ -1,5 +1,6 @@
 from __future__ import absolute_import
 
+import oneflow as flow
 import oneflow.python.framework.compile_context as compile_context
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.id_util as id_util
@@ -144,24 +145,31 @@ def constant(
     name=None,
     # verify_shape=False
 ):
-      op_conf = op_conf_util.OperatorConf()
-   if name is None:
-        op_conf.name = id_util.UniqueStr('Constant_')
+    op_conf = op_conf_util.OperatorConf()
+
+    if name is None:
+        op_conf.name = id_util.UniqueStr("Constant_")
     else:
         op_conf.name = name
-    setattr(op_conf.constant_conf, "out", "out")
+
     if value is not None:
         if isinstance(value, list):
             raise NotImplementedError
         elif isinstance(value, (int, float)):
-            op_conf.constant_conf.initializer.CopyFrom(flow.constant_initializer(value, dtype))
+            op_conf.constant_conf.initializer.CopyFrom(
+                flow.constant_initializer(value, dtype)
+            )
         else:
             raise NotImplementedError
+
     if dtype is not None:
         setattr(op_conf.constant_conf, "data_type", dtype)
+
     if shape is not None:
-        assert isinstance(noise_shape, (list, tuple))
-        op_conf.constant_conf.shape.dim.extend(list(noise_shape))
+        assert isinstance(shape, (list, tuple))
+        op_conf.constant_conf.shape.dim.extend(list(shape))
+
+    setattr(op_conf.constant_conf, "out", "out")
     compile_context.CurJobAddOp(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
     lbi.op_name = op_conf.name

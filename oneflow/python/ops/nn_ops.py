@@ -314,9 +314,9 @@ def dropout(
     seed=None,
     name=None,
     rate=None
-)
-  op_conf = op_conf_util.OperatorConf()
-   if name is None:
+):
+    op_conf = op_conf_util.OperatorConf()
+    if name is None:
         op_conf.name = id_util.UniqueStr('Dropout_')
     else:
         op_conf.name = name
