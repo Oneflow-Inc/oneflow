@@ -291,11 +291,12 @@ def reduce_sum(input_tensor,
     lbi.blob_name = "out"
     return remote_blob_util.RemoteBlob(lbi)
 
+
 @oneflow_export('math.reduce_mean')
 def reduce_mean(input_tensor,
-               axis=None,
-               keepdims=False,
-               name=None):
+                axis=None,
+                keepdims=False,
+                name=None):
     op_conf = op_conf_util.OperatorConf()
     if name is None:
         op_conf.name = id_util.UniqueStr('ReduceMean_')
