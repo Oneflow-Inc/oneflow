@@ -5,7 +5,6 @@
 #include "oneflow/core/common/preprocessor.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/common/auto_registration_factory.h"
-#include "oneflow/core/job/keyword.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/kernel/kernel.pb.h"
