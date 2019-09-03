@@ -76,12 +76,18 @@ Maybe<void> JobBuildAndInferCtx::AddAndInferOp(const OperatorConf& op_conf,
   if (op_name2op_.find(op_name) != op_name2op_.end()) {
     return GenJobBuildAndInferError(
         JobBuildAndInferError::kOpNameExist,
-        "op_name: " + op_name + "already exist in job: " + job_->job_conf().job_name());
+        "op_name: " + op_name + " already exist in job: " + job_->job_conf().job_name());
   }
   if (op_conf.device_type() == DeviceType::kInvalidDevice) {
     return GenJobBuildAndInferError(JobBuildAndInferError::kOpConfDeviceTypeNoSet,
                                     "op_name: " + op_name + " not set device type");
   }
+
+  // add op name to placement
+  PlacementGroup* pg = job_->mutable_placement()->add_placement_group();
+  *(pg->mutable_parallel_conf()) = parallel_conf;
+  pg->mutable_op_set()->add_op_name(op_name);
+
   OperatorConf op_conf_with_split_hint = op_conf;
   op_name2op_.emplace(op_name, ConstructOp(op_conf));
   Operator* op = op_name2op_.at(op_name).get();
@@ -145,7 +151,38 @@ Maybe<void> JobBuildAndInferCtx::AddLossLogicalBlobName(const std::string& lbn) 
 bool JobBuildAndInferCtx::HasJobConf() const { return has_job_conf_; }
 
 Maybe<void> JobBuildAndInferCtx::AddPlacementGroup(const PlacementGroup& placement_group) {
+  // OUTDATE need to be deleted
   job_->mutable_placement()->add_placement_group()->CopyFrom(placement_group);
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> JobBuildAndInferCtx::MergePlacementGroup() {
+  HashMap<ParallelConf, HashSet<std::string>> parallel_conf2op_name_set;
+  for (const PlacementGroup& placement_group : job_->placement().placement_group()) {
+    for (const std::string& op_name : placement_group.op_set().op_name()) {
+      if (!parallel_conf2op_name_set[placement_group.parallel_conf()].insert(op_name).second) {
+        return GenJobBuildAndInferError(JobBuildAndInferError::kOpNameExist,
+                                        "op_name: " + op_name + " repeated exist in job: "
+                                            + job_->job_conf().job_name() + " placement");
+      }
+    }
+  }
+
+  size_t op_name_size_in_placement = 0;
+  job_->mutable_placement()->clear_placement_group();
+  for (const auto& pair : parallel_conf2op_name_set) {
+    PlacementGroup* pg = job_->mutable_placement()->add_placement_group();
+    *(pg->mutable_parallel_conf()) = pair.first;
+    for (const std::string& op_name : pair.second) {
+      pg->mutable_op_set()->add_op_name(op_name);
+      op_name_size_in_placement += 1;
+      if (op_name2op_.find(op_name) == op_name2op_.end()) {
+        return GenJobBuildAndInferError(JobBuildAndInferError::kPlacementError,
+                                        "job: " + job_->job_conf().job_name() + " op_name: "
+                                            + op_name + " defined in placement cannot find in net");
+      }
+    }
+  }
   return Maybe<void>::Ok();
 }
 
@@ -199,7 +236,7 @@ Maybe<void> JobBuildAndInferCtx::CheckPlacement() const {
   for (const OperatorConf& op_conf : job_->net().op()) {
     if (!(op_names_in_net.insert(op_conf.name()).second)) {
       return GenJobBuildAndInferError(JobBuildAndInferError::kOpNameExist,
-                                      "op_name: " + op_conf.name() + "already exist in job: "
+                                      "op_name: " + op_conf.name() + " already exist in job: "
                                           + job_->job_conf().job_name() + " net");
     }
   }
@@ -207,7 +244,7 @@ Maybe<void> JobBuildAndInferCtx::CheckPlacement() const {
     for (const std::string& op_name : placement_group.op_set().op_name()) {
       if (!(op_names_in_placement.insert(op_name).second)) {
         return GenJobBuildAndInferError(JobBuildAndInferError::kOpNameExist,
-                                        "op_name: " + op_name + "already exist in job: "
+                                        "op_name: " + op_name + " already exist in job: "
                                             + job_->job_conf().job_name() + " placement");
       }
     }
@@ -221,7 +258,7 @@ Maybe<void> JobBuildAndInferCtx::CheckPlacement() const {
     if (op_names_in_placement.find(op_name) == op_names_in_placement.end()) {
       return GenJobBuildAndInferError(JobBuildAndInferError::kPlacementError,
                                       "job: " + job_->job_conf().job_name() + " op_name: " + op_name
-                                          + "defined in net cannot find its placement");
+                                          + " defined in net cannot find its placement");
     }
   }
   return Maybe<void>::Ok();

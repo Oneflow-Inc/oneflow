@@ -42,6 +42,7 @@ Maybe<std::string> JobBuildAndInferCtxMgr::GetCurrentJobName() {
 
 void JobBuildAndInferCtxMgr::CloseCurrentJobBuildAndInferCtx() {
   if (!has_cur_job_) { return; }
+  job_name2infer_ctx_[cur_job_name_]->MergePlacementGroup();
   has_cur_job_ = false;
   const JobDesc* job_desc = Global<JobDesc>::Get();
   if (job_desc == nullptr) { return; }

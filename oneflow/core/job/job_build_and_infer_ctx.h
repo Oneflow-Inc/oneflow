@@ -26,6 +26,8 @@ class JobBuildAndInferCtx {
   Maybe<void> AddLossLogicalBlobName(const std::string& lbn);
   Maybe<void> AddPlacementGroup(const PlacementGroup& placement_group);
 
+  Maybe<void> MergePlacementGroup();
+
   Maybe<void> CheckJob() const;
 
   bool HasJobConf() const;
