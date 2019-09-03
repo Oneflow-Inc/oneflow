@@ -257,9 +257,9 @@ if __name__ == "__main__":
     with flow.Session() as sess:
         check_point = flow.train.CheckPoint()
         if not args.model_load_dir:
-            check_point.init(session=sess)
+            check_point.init()
         else:
-            check_point.load(args.model_load_dir, session=sess)
+            check_point.load(args.model_load_dir)
         fmt_str = "{:>12}  {:>12}  {:>12.10f}"
         print(
             "{:>12}  {:>12}  {:>12}".format("iter", "loss type", "loss value")
@@ -277,7 +277,7 @@ if __name__ == "__main__":
                     )
                 )
             if (i + 1) % 100 == 0:
-                check_point.save(_MODEL_SAVE_DIR + str(i), session=sess)
+                check_point.save(_MODEL_SAVE_DIR + str(i))
         if (
             args.multinode
             and args.skip_scp_binary is False

@@ -12,14 +12,14 @@ class CheckPoint(object):
     def __init__(self):
         pass
 
-    def save(self, path, session=None):
+    def save(self, path):
         assert type(path) is str
         c_api_util.LaunchJob(_MakeModelSaveJobFunc(path))
 
-    def init(self, session=None):
+    def init(self):
         c_api_util.LaunchJob(_MakeModelInitJobFunc())
 
-    def load(self, path, session=None):
+    def load(self, path):
         assert type(path) is str
         c_api_util.LaunchJob(_MakeModelLoadJobFunc(path))
 

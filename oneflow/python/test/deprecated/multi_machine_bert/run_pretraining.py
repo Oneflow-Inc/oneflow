@@ -155,14 +155,14 @@ if __name__ == '__main__':
   with flow.Session() as sess:
     check_point = flow.train.CheckPoint()
     if _MODEL_LOAD is None:
-      check_point.init(session=sess)
+      check_point.init()
     else:
-      check_point.load(_MODEL_LOAD, session=sess)
+      check_point.load(_MODEL_LOAD)
     # sess.sync()
     print('{:>12}  {:8}  {}'.format( "step", "loss", "time"))
     for i in range(200):
       #print(fmt_str.format(i, "train loss:", sess.run(PretrainJob).get().mean()))
       #sess.no_return_run(PretrainJob)#.async_get(AsyncGetCallback)
       sess.run(PretrainJob).async_get(AsyncGetCallback)
-    check_point.save(_MODEL_SAVE, session=sess)
+    check_point.save(_MODEL_SAVE)
   flow.deprecated.delete_worker(config)
