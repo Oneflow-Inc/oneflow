@@ -8,7 +8,7 @@ void NormalModelUpdtOp::InitFromOpConf() {
   EnrollInputBn("total_instance_num_diff", false);
   EnrollInputBn("model", false)->set_is_mutable(true);
   EnrollInputBn("learning_rate", false);
-  EnrollInputBn("global_step", false);
+  EnrollInputBn("train_step", false);
   const PbMessage& conf = this->GetCustomizedConf();
   const auto& user_conf = *GetMsgPtrFromPbMessage<NormalModelUpdateOpUserConf>(conf, "user_conf");
   if (user_conf.has_clip_conf() && user_conf.clip_conf().has_clip_by_global_norm()) {
@@ -55,7 +55,7 @@ void NormalModelUpdtOp::GetSbpSignatures(
   PbRpf<std::string> broadcast_bns = {bns.begin(), bns.end()};
   *broadcast_bns.Add() = "total_instance_num_diff";
   *broadcast_bns.Add() = "learning_rate";
-  *broadcast_bns.Add() = "global_step";
+  *broadcast_bns.Add() = "train_step";
   FOR_RANGE(int64_t, i, 0, LogicalBlobDesc4Ibn("model").shape().NumAxes()) {
     SbpSignatureBuilder()
         .Split(input_bns(), i)

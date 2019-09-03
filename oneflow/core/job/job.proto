@@ -17,7 +17,7 @@ message TrainConf {
   required int32 num_of_batches_in_snapshot = 5;
   repeated string loss_lbn = 6;
   optional int32 loss_scale_factor = 7 [default = 1];
-  optional string global_step_lbn = 8;
+  optional string train_step_lbn = 8;
   optional string primary_lr_lbn = 9;
   optional string secondary_lr_lbn = 10;
 

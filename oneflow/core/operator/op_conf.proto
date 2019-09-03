@@ -574,7 +574,7 @@ message NormalModelUpdateOpConf {
   required string model_diff = 2;
   required string total_instance_num_diff = 3;
   required string model = 4;
-  required string global_step = 5;
+  required string train_step = 5;
   required string learning_rate = 6;
   required float l1 = 7;
   required float l2 = 8;
@@ -585,7 +585,7 @@ message NaiveModelUpdateOpConf {
   required string model_diff = 2;
   required string total_instance_num_diff = 3;
   required string model = 4;
-  required string global_step = 5;
+  required string train_step = 5;
   required string learning_rate = 6;
   required float l1 = 7;
   required float l2 = 8;
@@ -597,7 +597,7 @@ message MomentumModelUpdateOpConf {
   required string model_diff = 3;
   required string total_instance_num_diff = 4;
   required string model = 5;
-  required string global_step = 6;
+  required string train_step = 6;
   required string learning_rate = 7;
   required float l1 = 8;
   required float l2 = 9;
@@ -608,7 +608,7 @@ message RMSPropModelUpdateOpConf {
   required string model_diff = 2;
   required string total_instance_num_diff = 3;
   required string model = 4;
-  required string global_step = 5;
+  required string train_step = 5;
   required string learning_rate = 6;
   required float l1 = 7;
   required float l2 = 8;
@@ -620,7 +620,7 @@ message LARSModelUpdateOpConf {
   required string model_diff = 3;
   required string total_instance_num_diff = 4;
   required string model = 5;
-  required string global_step = 6;
+  required string train_step = 6;
   required string learning_rate = 7;
   required float l1 = 8;
   required float l2 = 9;
@@ -635,7 +635,7 @@ message AdamModelUpdateOpConf {
   required string model_diff = 6;
   required string total_instance_num_diff = 7;
   required string model = 8;
-  required string global_step = 9;
+  required string train_step = 9;
   required string learning_rate = 10;
   required float l1 = 11;
   required float l2 = 12;
@@ -1481,7 +1481,7 @@ message ModelSaveOpConf {
 }
 
 message LearningRateScheduleOpConf {
-  required string global_step = 1;
+  required string train_step = 1;
   required string out = 2;
   required float learning_rate = 3;
   optional LearningRateDecayConf learning_rate_decay = 4;
