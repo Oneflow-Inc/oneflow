@@ -13,7 +13,7 @@ class ModelInitOp : public Operator {
 
  private:
   Maybe<void> InferBatchAxis(
-      std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const override;
+      std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override;
 
   void GetSbpSignatures(
       const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
@@ -44,7 +44,7 @@ Maybe<void> ModelInitOp::InferBlobDescs(
 
 Maybe<void> ModelInitOp::InferBatchAxis(
     std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
-  BatchAxis4BnInOp("out")->clear_value();
+  for (const std::string& bns : output_bns()) { BatchAxis4BnInOp(bns)->clear_value(); }
   return Maybe<void>::Ok();
 }
 
