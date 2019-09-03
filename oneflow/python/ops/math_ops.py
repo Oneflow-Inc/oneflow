@@ -276,7 +276,7 @@ def reduce_sum(input_tensor,
                name=None):
     op_conf = op_conf_util.OperatorConf()
     if name is None:
-        op_conf.name = id_util.UniqueStr('Rsqrt_')
+        op_conf.name = id_util.UniqueStr('ReduceSum_')
     else:
         op_conf.name = name
     setattr(op_conf.reduce_sum_conf, "in", input_tensor.logical_blob_name)
@@ -285,6 +285,28 @@ def reduce_sum(input_tensor,
         setattr(op_conf.reduce_sum_conf, "axis", axis)
     if keep_dims is not None:
         setattr(op_conf.reduce_sum_conf, "keep_dims", keep_dims)
+    compile_context.CurJobAddOp(op_conf)
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = "out"
+    return remote_blob_util.RemoteBlob(lbi)
+
+@oneflow_export('math.reduce_mean')
+def reduce_mean(input_tensor,
+               axis=None,
+               keepdims=False,
+               name=None):
+    op_conf = op_conf_util.OperatorConf()
+    if name is None:
+        op_conf.name = id_util.UniqueStr('ReduceMean_')
+    else:
+        op_conf.name = name
+    setattr(op_conf.reduce_mean_conf, "in", input_tensor.logical_blob_name)
+    setattr(op_conf.reduce_mean_conf, "out", "out")
+    if axis is not None:
+        setattr(op_conf.reduce_mean_conf, "axis", axis)
+    if keep_dims is not None:
+        setattr(op_conf.reduce_mean_conf, "keep_dims", keep_dims)
     compile_context.CurJobAddOp(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
     lbi.op_name = op_conf.name
