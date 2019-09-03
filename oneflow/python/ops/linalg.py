@@ -7,8 +7,7 @@ import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 from oneflow.python.oneflow_export import oneflow_export
 
-# TODO: Support export multiple interfaces, eg. @oneflow_export("matmul", "linalg.matmul")
-@oneflow_export("matmul")
+@oneflow_export("matmul", "linalg.matmul")
 def matmul(a, b, transpose_a=False, transpose_b=False, name=None):
     op_conf = op_conf_util.OperatorConf()
     setattr(op_conf, "name", name if name is not None else id_util.UniqueStr("Matmul_"))
