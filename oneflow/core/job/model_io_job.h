@@ -6,7 +6,7 @@
 
 namespace oneflow {
 
-void MakeModelIoJobs(const std::vector<Job>& jobs, const HashMap<std::string, ParallelBlobConf>&,
+void MakeModelIoJobs(std::vector<Job>& jobs, const HashMap<std::string, ParallelBlobConf>&,
                      const std::function<void(Job*)>& Handler);
 
 }  // namespace oneflow

@@ -17,7 +17,7 @@ bool CompareVariableOpconf(const VariableOpConf& lhs, const VariableOpConf& rhs)
   return PbMd::Equals(var_conf_a, var_conf_b);
 }
 
-void FilterVariableOps(const std::vector<Job>& jobs,
+void FilterVariableOps(std::vector<Job>& jobs,
                        HashMap<std::string, OperatorConf>* var_op_name2op_conf) {
   FOR_RANGE(int64_t, job_id, 0, jobs.size()) {
     const JobBuilder job_builder(&jobs.at(job_id));
