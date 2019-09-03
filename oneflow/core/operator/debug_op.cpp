@@ -17,7 +17,7 @@ Maybe<void> DebugOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)>
 Maybe<void> DebugOp::GetSbpSignatures(
     const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
     SbpSignatureList* sbp_sig_list) const {
-  int64_t num_axes = JUST(LogicalBlobDesc4Ibn(input_bns())->Get(0)).shape().NumAxes();
+  int64_t num_axes = JUST(LogicalBlobDesc4Ibn(input_bns().Get(0)))->shape().NumAxes();
   SbpSignatureBuilder()
       .Split(input_bns(), 0)
       .Split(output_bns(), 0)

@@ -399,7 +399,7 @@ void OpGraph::InferOpNodeSbpSignature(OpNode* op_node, const SbpSignature& sbp_s
     if (it == ibn2sbp_infer_hint.end()) {
       std::shared_ptr<ErrorProto> err;
       err->set_msg("cannot find corresponding SbpInferHint for input_blob_name : " + ibn);
-      err->set_check_failed();
+      err->mutable_check_failed();
       return err;
     }
     return Maybe<const SbpInferHint*>(&(it->second));

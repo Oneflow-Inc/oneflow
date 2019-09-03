@@ -39,11 +39,12 @@ Maybe<void> DecodeRandomOp::InferBatchAxis(
   return Maybe<void>::Ok();
 }
 
-void DecodeRandomOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
+Maybe<void> DecodeRandomOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
   SbpSignatureBuilder()
       .Broadcast(input_bns())
       .Split(output_bns(), 0)
       .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+  return Maybe<void>::Ok();
 }
 
 REGISTER_OP(OperatorConf::kDecodeRandomConf, DecodeRandomOp);

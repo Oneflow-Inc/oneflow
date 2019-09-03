@@ -135,7 +135,7 @@ Maybe<void> Operator::GetSbpSignaturesIf(
 Maybe<void> Operator::InferSbpSignatureIf(
     SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
     const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
-    std::function<const SbpInferHint&(const std::string&)> SbpInferHint4Ibn,
+    std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
     const ParallelDesc& parallel_desc) const {
   if (parallel_desc.parallel_num() == 1) {
     auto* bn2sbp = sbp_signature->mutable_bn_in_op2sbp_parallel();
@@ -173,7 +173,7 @@ Maybe<void> Operator::InferSbpSignature(
   // sort sbp signatures by copy cost, then return the one with least cost
   HashMap<std::string, const SbpParallel*> ibn2producer_sbp_parallel;
   for (const auto& ibn : input_bns()) {
-    ibn2producer_sbp_parallel[ibn] = &SbpInferHint4Ibn(ibn).sbp_parallel();
+    ibn2producer_sbp_parallel[ibn] = &(JUST(SbpInferHint4Ibn(ibn))->sbp_parallel());
   }
   std::vector<const SbpSignature*> sorted_sbp_signatures;
   SortSbpSignatureListByCopyCost(filtered_sbp_sigs_by_conf, input_bns(), SbpInferHint4Ibn,

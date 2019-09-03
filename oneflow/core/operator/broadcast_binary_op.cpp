@@ -97,7 +97,7 @@ Maybe<void> BroadcastBinaryOp::GetSbpSignatures(
       }
     }
   }
-  return Maybe::Ok();
+  return Maybe<void>::Ok();
 }
 
 }  // namespace oneflow

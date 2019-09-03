@@ -14,10 +14,10 @@ void SwitchOutputOp::InitFromOpConf() {
 Maybe<void> SwitchOutputOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
-  Maybe<const BlobDesc*> in_index_blob_desc = *GetBlobDesc4BnInOp("in_index");
+  const BlobDesc& in_index_blob_desc = *GetBlobDesc4BnInOp("in_index");
   CHECK_OR_RETURN(in_index_blob_desc.shape() == Shape({1LL}));
   CHECK_EQ_OR_RETURN(in_index_blob_desc.data_type(), DataType::kInt32);
-  Maybe<const BlobDesc*> first_in_blob_desc = *GetBlobDesc4BnInOp(GenRepeatedBn("in", 0));
+  const BlobDesc& first_in_blob_desc = *GetBlobDesc4BnInOp(GenRepeatedBn("in", 0));
   FOR_RANGE(int64_t, i, 0, op_conf().switch_output_conf().in_size()) {
     CHECK_OR_RETURN(*GetBlobDesc4BnInOp(GenRepeatedBn("in", i)) == first_in_blob_desc);
   }

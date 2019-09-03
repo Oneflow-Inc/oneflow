@@ -137,7 +137,7 @@ class Operator {
   Maybe<void> InferSbpSignatureIf(
       SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
       const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
-      std::function<const SbpInferHint&(const std::string&)> SbpInferHint4Ibn,
+      std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
       const ParallelDesc& parallel_desc) const;
   void FixParallelDesc(ParallelDesc* pr_desc) const;
   void GenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
@@ -158,7 +158,7 @@ class Operator {
   virtual Maybe<void> InferSbpSignature(
       SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
       const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
-      std::function<const SbpInferHint&(const std::string&)> SbpInferHint4Ibn,
+      std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
       const ParallelDesc& parallel_desc) const;
   virtual Maybe<void> GetSbpSignatures(SbpSignatureList* sbp_sig_list) const { UNIMPLEMENTED(); }
 

@@ -39,7 +39,7 @@ Maybe<void> VariableOp::InferBatchAxis(
   return Maybe<void>::Ok();
 }
 
-void VariableOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
+Maybe<void> VariableOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
   FOR_RANGE(int32_t, i, 0, op_conf().variable_conf().shape().dim_size()) {
     SbpSignatureBuilder()
         .Broadcast(input_bns())
@@ -50,12 +50,13 @@ void VariableOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
       .Broadcast(input_bns())
       .Broadcast(output_bns())
       .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> VariableOp::InferSbpSignature(
     SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
     const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
-    std::function<const SbpInferHint&(const std::string&)> SbpInferHint4Ibn,
+    std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
     const ParallelDesc& parallel_desc) const {
   SbpSignature var_sbp_sig_conf(sbp_sig_conf);
   if (sbp_sig_conf.bn_in_op2sbp_parallel().empty()) {

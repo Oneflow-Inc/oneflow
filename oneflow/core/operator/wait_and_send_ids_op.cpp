@@ -32,8 +32,9 @@ Maybe<void> WaitAndSendIdsOp::InferBatchAxis(
   return Maybe<void>::Ok();
 }
 
-void WaitAndSendIdsOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
+Maybe<void> WaitAndSendIdsOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
   SbpSignatureBuilder().Split(output_bns(), 0).Build(sbp_sig_list->mutable_sbp_signature()->Add());
+  return Maybe<void>::Ok();
 }
 
 REGISTER_CPU_OP(OperatorConf::kWaitAndSendIdsConf, WaitAndSendIdsOp);

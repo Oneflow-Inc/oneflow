@@ -41,7 +41,7 @@ Maybe<void> ConcatOp::GetSbpSignatures(
     const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
     SbpSignatureList* sbp_sig_list) const {
   const ConcatOpConf& conf = op_conf().concat_conf();
-  const int64_t num_axes = JUST(LogicalBlobDesc4Ibn(input_bns())->Get(0)).shape().NumAxes();
+  const int64_t num_axes = JUST(LogicalBlobDesc4Ibn(input_bns().Get(0)))->shape().NumAxes();
   const int32_t axis = FixAxis(conf.axis(), num_axes);
   for (int64_t i = 0; i < num_axes; ++i) {
     if (i == axis) { continue; }

@@ -141,7 +141,7 @@ Maybe<void> MatmulOp::GetSbpSignatures(
   } else {
     std::shared_ptr<ErrorProto> err;
     err->set_msg("MatMulOp: number of axis is " + std::to_string(num_axes) + " (not supported).");
-    err->set_check_failed();
+    err->mutable_check_failed();
     return err;
   }
   return Maybe<void>::Ok();
