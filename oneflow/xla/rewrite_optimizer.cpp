@@ -41,7 +41,7 @@ class OptimizerRewritor {
                                  const std::string &learning_rate);
 
   OperatorConf *BuildFakeConsumeOp(const std::string &node_name,
-                                   const std::string &input);
+                                   const std::vector<std::string> &inputs);
 
   std::vector<std::string> GetControlInOpNames(const mola::XlaNode *node) const;
 
@@ -132,10 +132,12 @@ OperatorConf *OptimizerRewritor::BuildOptimizerOp(
 
 OperatorConf *OptimizerRewritor::BuildFakeConsumeOp(
                                 const std::string &node_name,
-                                const std::string &input) {
+                                const std::vector<std::string> &inputs) {
   OperatorConf op_conf;
   op_conf.set_name(absl::StrCat(node_name, "-fake_consume"));
-  op_conf.mutable_fake_consume_conf()->add_in(input);
+  for (const std::string &input : inputs) {
+    op_conf.mutable_fake_consume_conf()->add_in(input);
+  }
 
   ParallelConf parallel_conf = builder_->GetParallelConf(node_name);
   builder_->AddOps(parallel_conf, {op_conf});
@@ -202,8 +204,11 @@ void OptimizerRewritor::Run() {
 
     // Currently each model update operator will result in a fake consumer
     // TODO(hjchen2): Only one global final fake consume operator maybe better.
-    BuildFakeConsumeOp(node->op_name(),
-                       absl::StrCat(optimizer_conf->name(), "/out"));
+    std::vector<std::string> consume_inputs{
+        absl::StrCat(optimizer_conf->name(), "/out"),
+        absl::StrCat(optimizer_conf->name(), "/out_m"),
+        absl::StrCat(optimizer_conf->name(), "/out_v")};
+    BuildFakeConsumeOp(node->op_name(), consume_inputs);
 
     if (control_in_op_names.size() > 0) {
       for (OperatorConf *op_conf : operator_confs) {

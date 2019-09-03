@@ -1392,14 +1392,19 @@ message ClipGradientOpConf {
 
 message AdamOptimizerOpConf {
   required string out = 1;
-  required string gradient = 2;
-  required string weight = 3;
-  required string instance_num_diff = 4;
-  required string learning_rate = 5;
-  required string m = 6;
-  required string v = 7;
-  required float l1 = 8;
-  required float l2 = 9;
+  required string out_m = 2;
+  required string out_v = 3;
+  required string gradient = 4;
+  required string weight = 5;
+  required string instance_num_diff = 6;
+  required string learning_rate = 7;
+  required string m = 8;
+  required string v = 9;
+  required float l1 = 10;
+  required float l2 = 11;
+  optional float beta1 = 12 [default = 0.9];
+  optional float beta2 = 13 [default = 0.999];
+  optional float epsilon = 14 [default = 1e-8];
 }
 
 message FakeConsumeOpConf {

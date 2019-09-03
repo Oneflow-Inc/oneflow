@@ -111,6 +111,8 @@ void OptimizerParamBuilder::BuilderImpl::ApplyBuild<OptimizerMode::kAdam>() {
   conf->set_l2(l2_weight_decay);
 
   conf->set_out("out");
+  conf->set_out_m("out_m");
+  conf->set_out_v("out_v");
   conf->set_gradient(gradient_);
   conf->set_instance_num_diff(total_instances_);
   conf->set_learning_rate(learning_rate_);
@@ -119,6 +121,9 @@ void OptimizerParamBuilder::BuilderImpl::ApplyBuild<OptimizerMode::kAdam>() {
   conf->set_v(GetNodeAttr<std::string>(node_, "v"));
   // conf->set_beta1(GetNodeAttr<std::string>(node_, "beta1_t"));
   // conf->set_beta2(GetNodeAttr<std::string>(node_, "beta2_t"));
+  //conf->set_beta1(GetNodeAttr<float>(node_, "beta1"));
+  //conf->set_beta2(GetNodeAttr<float>(node_, "beta2"));
+  //conf->set_epsilon(GetNodeAttr<float>(node_, "epsilon"));
 }
 
 /*static*/ void OptimizerParamBuilder::ApplyOptimizerModeVisitor(
