@@ -83,3 +83,12 @@ class input_blob_def(blob_desc.BlobDesc):
 
     def __add__(self, rhs): 
         return oneflow.math.add(self, rhs)
+        
+    def __radd__(self, lhs): 
+        return oneflow.math.add(lhs, self)
+
+    def __sub__():
+        return oneflow.math.sub(self, rhs)
+
+    def __rsub__():
+        return oneflow.math.sub(lhs, self)
