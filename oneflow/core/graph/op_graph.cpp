@@ -394,8 +394,15 @@ void OpGraph::InferOpNodeSbpSignature(OpNode* op_node, const SbpSignature& sbp_s
     ibn2sbp_infer_hint.emplace(ibn, SbpInferHint(parallel_desc, logical_blob_desc, sbp));
   }
   SbpSignature* sbp_signature = op_node->mut_sbp_signature();
-  auto SbpInferHint4Ibn = [&](const std::string& ibn) -> const SbpInferHint& {
-    return ibn2sbp_infer_hint.at(ibn);
+  auto SbpInferHint4Ibn = [&](const std::string& ibn) -> Maybe<const SbpInferHint*> {
+    auto it = ibn2sbp_infer_hint.find(ibn);
+    if (it == ibn2sbp_infer_hint.end()) {
+      std::shared_ptr<ErrorProto> err;
+      err->set_msg("cannot find corresponding SbpInferHint for input_blob_name : " + ibn);
+      err->mutable_check_failed();
+      return err;
+    }
+    return Maybe<const SbpInferHint*>(&(it->second));
   };
   std::function<int32_t(const SbpSignature&)> CalcOrderValue4SbpSig;
   if (sbp_sig_conf.bn_in_op2sbp_parallel().empty()) {
@@ -410,7 +417,7 @@ void OpGraph::InferOpNodeSbpSignature(OpNode* op_node, const SbpSignature& sbp_s
                                          const SbpParallel& sbp_parallel) -> int32_t {
       return -2
              * (op_node->BatchAxis4Lbi(op_node->op().BnInOp2Lbi(ibn)).has_value() == false
-                && SbpInferHint4Ibn(ibn).sbp_parallel().has_split_parallel() == false
+                && CHECK_JUST(SbpInferHint4Ibn(ibn))->sbp_parallel().has_split_parallel() == false
                 && sbp_parallel.has_split_parallel() == false);
     };
     CalcOrderValue4SbpSig = [&](const SbpSignature& sbp_signature) -> int32_t {

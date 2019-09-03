@@ -16,8 +16,8 @@ class LearningRateScheduleOp final : public Operator {
  private:
   Maybe<void> InferBatchAxis(
       std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override;
-  void GetSbpSignatures(
-      const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
+  Maybe<void> GetSbpSignatures(
+      const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
       SbpSignatureList* sbp_sig_list) const override;
 };
 
@@ -50,9 +50,11 @@ Maybe<void> LearningRateScheduleOp::InferBatchAxis(
   return Maybe<void>::Ok();
 }
 
-void LearningRateScheduleOp::GetSbpSignatures(
-    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
-    SbpSignatureList* sbp_sig_list) const {}
+Maybe<void> LearningRateScheduleOp::GetSbpSignatures(
+    const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
+    SbpSignatureList* sbp_sig_list) const {
+  return Maybe<void>::Ok();
+}
 
 REGISTER_CPU_OP(OperatorConf::kLearningRateScheduleConf, LearningRateScheduleOp);
 

@@ -55,8 +55,8 @@ Maybe<void> VariableOp::InferBatchAxis(
   return Maybe<void>::Ok();
 }
 
-void VariableOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
-  const auto& opt_split_axis = CHECK_JUST(GetSplitAxis(op_conf().variable_conf()));
+Maybe<void> VariableOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
+  const auto& opt_split_axis = JUST(GetSplitAxis(op_conf().variable_conf()));
   SbpSignatureBuilder sbp_sig_builder;
   if (opt_split_axis.has_value()) {
     sbp_sig_builder.Split(output_bns(), opt_split_axis.value());
@@ -64,12 +64,13 @@ void VariableOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
     sbp_sig_builder.Broadcast(output_bns());
   }
   sbp_sig_builder.Broadcast(input_bns()).Build(sbp_sig_list->mutable_sbp_signature()->Add());
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> VariableOp::InferSbpSignature(
     SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
     const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
-    std::function<const SbpInferHint&(const std::string&)> SbpInferHint4Ibn,
+    std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
     const ParallelDesc& parallel_desc) const {
   SbpSignatureList sbp_sig_list;
   GetSbpSignatures(&sbp_sig_list);

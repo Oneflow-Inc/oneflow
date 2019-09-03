@@ -17,14 +17,16 @@ Maybe<void> SqrtOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> 
   return Maybe<void>::Ok();
 }
 
-void SqrtOp::GetSbpSignatures(
-    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
+Maybe<void> SqrtOp::GetSbpSignatures(
+    const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
     SbpSignatureList* sbp_sig_list) const {
   SbpSignatureBuilder()
       .Split(input_bns(), 0)
       .Split(output_bns(), 0)
-      .MakeSplitSignatureListBuilder(LogicalBlobDesc4Ibn(output_bns().Get(0)).shape().NumAxes())
+      .MakeSplitSignatureListBuilder(
+          JUST(LogicalBlobDesc4Ibn(output_bns().Get(0)))->shape().NumAxes())
       .Build(sbp_sig_list);
+  return Maybe<void>::Ok();
 }
 
 REGISTER_OP(OperatorConf::kSqrtConf, SqrtOp);

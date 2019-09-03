@@ -27,9 +27,11 @@ Maybe<void> ReentrantLockOp::InferBatchAxis(
   return NaiveInferBatchAxis(BatchAxis4BnInOp);
 }
 
-void ReentrantLockOp::GetSbpSignatures(
-    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
-    SbpSignatureList* sbp_sig_list) const {}
+Maybe<void> ReentrantLockOp::GetSbpSignatures(
+    const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
+    SbpSignatureList* sbp_sig_list) const {
+  return Maybe<void>::Ok();
+}
 
 LogicalNode* ReentrantLockOp::NewProperLogicalNode() const {
   return new ReentrantLockLogicalNode();

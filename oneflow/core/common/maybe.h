@@ -64,8 +64,8 @@ inline Maybe<T> MaybeFuncSafeCallWrapper(Maybe<T>&& maybe) {
 #if defined(__GNUC__) || defined(__CUDACC__) || defined(__clang__)
 
 #define TRY(...) MaybeFuncSafeCallWrapper(__VA_ARGS__)
-#define JUST(...) *JUST_PTR(__VA_ARGS__)
-#define CHECK_JUST(...) *CHECK_JUST_PTR(__VA_ARGS__)
+#define JUST(...) (*JUST_PTR(__VA_ARGS__))
+#define CHECK_JUST(...) (*CHECK_JUST_PTR(__VA_ARGS__))
 
 #define JUST_PTR(...)                                          \
   ({                                                           \
