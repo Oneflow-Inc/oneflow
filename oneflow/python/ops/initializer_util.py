@@ -6,7 +6,7 @@ from oneflow.python.oneflow_export import oneflow_export
 
 
 @oneflow_export("constant_initializer")
-def constant_initializer(value=0, dtype=data_type_conf_util.kFloat):
+def constant_initializer(value=0., dtype=data_type_conf_util.kFloat):
     initializer = op_conf_util.InitializerConf()
     if dtype in [data_type_conf_util.kFloat, data_type_conf_util.kDouble]:
         setattr(initializer.constant_conf, "value", float(value))
