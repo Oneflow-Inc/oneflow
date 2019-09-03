@@ -38,8 +38,23 @@ class RemoteBlob(blob_desc.BlobDesc):
     def __radd__(self, lhs): 
         return oneflow.math.add(lhs, self)
 
-    def __sub__():
-        return oneflow.math.sub(self, rhs)
+    def __sub__(self, rhs):
+        return oneflow.math.subtract(self, rhs)
 
-    def __rsub__():
-        return oneflow.math.sub(lhs, self)
+    def __rsub__(self, lhs):
+        return oneflow.math.subtract(lhs, self)
+
+    def __mul__(self, rhs):
+        return oneflow.math.multiply(self, rhs)
+
+    def __rmul__(self, lhs):
+        return oneflow.math.multiply(lhs, self)
+
+    def __mul__(self, rhs):
+        return oneflow.math.multiply(self, rhs)
+
+    def __rmul__(self, lhs):
+        return oneflow.math.multiply(lhs, self)
+
+    def __truediv__(self, rhs):
+        return oneflow.math.divide(self, rhs)

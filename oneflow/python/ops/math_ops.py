@@ -44,6 +44,40 @@ def subtract(x,
     else:
         raise NotImplementedError
 
+@oneflow_export('math.multiply')
+def multiply(x,
+        y,
+        name=None):
+
+    if isinstance(x, (int, float)):
+        return scalar_mul(y, x)
+    elif isinstance(y, (int, float)):
+        return scalar_mul(x, y)
+    elif x.static_shape == y.static_shape:
+        # TODO: add element-wise op
+        return broadcast_mul(x, y)
+    elif x.static_shape != y.static_shape:
+        return broadcast_mul(x, y)
+    else:
+        raise NotImplementedError
+
+@oneflow_export('math.multiply')
+def multiply(x,
+        y,
+        name=None):
+
+    if isinstance(x, (int, float)):
+        raise NotImplementedError
+    elif isinstance(y, (int, float)):
+        raise NotImplementedError
+    elif x.static_shape == y.static_shape:
+        # TODO: add element-wise op
+        return broadcast_div(x, y)
+    elif x.static_shape != y.static_shape:
+        return broadcast_div(x, y)
+    else:
+        raise NotImplementedError
+
 
 def element_wise_add(x,
                      y,
