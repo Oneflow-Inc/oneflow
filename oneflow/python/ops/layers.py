@@ -61,7 +61,7 @@ def dense(
             model_name="bias",
             model_split_axis=None,
         )
-        flow.nn.bias_add(out, bias, name="{}_bias_add".format(name_prefix))
+        out = flow.nn.bias_add(out, bias, name="{}_bias_add".format(name_prefix))
     out = activation(out) if activation is not None else out
     out = (
         flow.reshape(out, in_shape[:-1] + (units,)) if in_num_axes > 2 else out

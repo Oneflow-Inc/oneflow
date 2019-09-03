@@ -56,7 +56,7 @@ def test_dense(in_shape, units, activation=None, use_bias=True):
 
 # run one example each time
 if __name__ == "__main__":
-    # test_dense(in_shape=(1024, 2048), units=512, activation="sigmoid", use_bias=False)
-    test_dense(in_shape=(16, 32, 64, 128), units=512, activation="sigmoid", use_bias=False)
+    test_dense(in_shape=(1024, 2048), units=512, activation="sigmoid", use_bias=False)
+    # test_dense(in_shape=(16, 32, 64, 128), units=512, activation="sigmoid", use_bias=False)
     # test_dense(in_shape=(1024, 2048), units=512, activation="none", use_bias=True)
     # test_dense(in_shape=(16, 32, 64, 128), units=512, activation="sigmoid", use_bias=True)
