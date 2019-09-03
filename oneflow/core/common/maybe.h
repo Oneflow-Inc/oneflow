@@ -52,7 +52,7 @@ class Maybe<void> final : public MaybeBase<void> {
   void CheckError() const { CHECK_NE(error()->error_type_case(), ErrorProto::ERROR_TYPE_NOT_SET); }
 };
 
-void operator*(const std::shared_ptr<void>& x) {}  // safe for *JUST_PTR(...)
+inline void operator*(const std::shared_ptr<void>& x) {}  // safe for *JUST_PTR(...)
 
 template<typename T>
 inline Maybe<T> MaybeFuncSafeCallWrapper(Maybe<T>&& maybe) {
