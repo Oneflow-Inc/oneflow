@@ -233,3 +233,60 @@ def gelu(x, name=None):
     lbi.op_name = op_conf.name
     lbi.blob_name = "out"
     return remote_blob_util.RemoteBlob(lbi)
+
+
+def sqrt(x, name=None):
+    # TODO: not implemented yet
+    raise NotImplementedError
+    op_conf = op_conf_util.OperatorConf()
+    if name is None:
+        op_conf.name = id_util.UniqueStr('Sqrt_')
+    else:
+        op_conf.name = name
+    setattr(op_conf.sqrt_conf, "in", x.logical_blob_name)
+    setattr(op_conf.sqrt_conf, "out", "out")
+    compile_context.CurJobAddOp(op_conf)
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = "out"
+    return remote_blob_util.RemoteBlob(lbi)
+
+
+def rsqrt(x, name=None):
+    # TODO: not implemented yet
+    raise NotImplementedError
+    op_conf = op_conf_util.OperatorConf()
+    if name is None:
+        op_conf.name = id_util.UniqueStr('Rsqrt_')
+    else:
+        op_conf.name = name
+    setattr(op_conf.rsqrt_conf, "in", x.logical_blob_name)
+    setattr(op_conf.rsqrt_conf, "out", "out")
+    compile_context.CurJobAddOp(op_conf)
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = "out"
+    return remote_blob_util.RemoteBlob(lbi)
+
+
+@oneflow_export('math.reduce_sum')
+def reduce_sum(input_tensor,
+               axis=None,
+               keepdims=False,
+               name=None):
+    op_conf = op_conf_util.OperatorConf()
+    if name is None:
+        op_conf.name = id_util.UniqueStr('Rsqrt_')
+    else:
+        op_conf.name = name
+    setattr(op_conf.reduce_sum_conf, "in", input_tensor.logical_blob_name)
+    setattr(op_conf.reduce_sum_conf, "out", "out")
+    if axis is not None:
+        setattr(op_conf.reduce_sum_conf, "axis", axis)
+    if keep_dims is not None:
+        setattr(op_conf.reduce_sum_conf, "keep_dims", keep_dims)
+    compile_context.CurJobAddOp(op_conf)
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = "out"
+    return remote_blob_util.RemoteBlob(lbi)
