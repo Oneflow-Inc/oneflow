@@ -56,3 +56,40 @@ def dense(
     out = flow.reshape(out, in_shape[:-1] + (units,)) if in_num_axes > 2 else out
 
     return out
+
+
+@oneflow_export("layers.layer_norm")
+def layer_norm(
+    inputs,
+    center=True,
+    scale=True,
+    # activation_fn=None,
+    # reuse=None,
+    # variables_collections=None,
+    # outputs_collections=None,
+    trainable=True,
+    begin_norm_axis=1,
+    begin_params_axis=-1,
+    # scope=None
+):
+    op_conf = op_conf_util.OperatorConf()
+    setattr(op_conf, "trainable", trainable)
+    setattr(
+        op_conf, "name", name if name is not None else id_util.UniqueStr("LayerNorm_")
+    )
+    setattr(op_conf.layer_norm_conf, "in", inputs.logical_blob_name)
+    setattr(op_conf.layer_norm_conf, "out", "out")
+    if center is not None:
+        setattr(op_conf.layer_norm_conf, "center", center)
+    if scale is not None:
+        setattr(op_conf.layer_norm_conf, "scale", scale)
+    setattr(op_conf, "trainable", trainable)
+    if begin_norm_axis is not None:
+        setattr(op_conf.layer_norm_conf, "begin_norm_axis", begin_norm_axis)
+    if begin_params_axis is not None:
+        setattr(op_conf.layer_norm_conf, "begin_params_axis", begin_params_axis)
+    compile_context.CurJobAddOp(op_conf)
+    out_lbi = logical_blob_id_util.LogicalBlobId()
+    setattr(out_lbi, "op_name", op_conf.name)
+    setattr(out_lbi, "blob_name", "out")
+    return remote_blob_util.RemoteBlob(out_lbi)
