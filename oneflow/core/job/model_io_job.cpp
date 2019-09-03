@@ -56,7 +56,7 @@ void MakeModelInitJob(
   *blob_conf->mutable_shape()->mutable_dim()->Add() = 1;
   blob_conf->set_data_type(DataType::kInt8);
   blob_conf->set_broadcast(true);
-  blob_conf->set_has_batch_dim(false);
+  blob_conf->mutable_batch_axis()->Clear();
   job_builder.AddOps(master_parallel_conf, {foreign_input_op_conf});
 
   OperatorConf model_init_op_conf{};
@@ -121,7 +121,7 @@ void MakeModelLoadJob(
   Shape({1, 65536}).ToProto(blob_conf->mutable_dim0_inner_shape());
   blob_conf->set_data_type(DataType::kInt8);
   blob_conf->set_broadcast(true);
-  blob_conf->set_has_batch_dim(false);
+  blob_conf->mutable_batch_axis()->Clear();
   job_builder.AddOps(master_parallel_conf, {foreign_input_op_conf});
 
   job_conf->set_job_name(job_name);
@@ -188,7 +188,7 @@ void MakeModelSaveJob(
   Shape({1, 65536}).ToProto(blob_conf->mutable_dim0_inner_shape());
   blob_conf->set_data_type(DataType::kInt8);
   blob_conf->set_broadcast(true);
-  blob_conf->set_has_batch_dim(false);
+  blob_conf->mutable_batch_axis()->Clear();
   job_builder.AddOps(md_save_parallel_conf, {foreign_input_op_conf});
 
   auto* job_conf = job->mutable_job_conf();
