@@ -29,7 +29,7 @@ def dense(
         flow.reshape(inputs, (-1, in_shape[-1])) if in_num_axes > 2 else inputs
     )
     weight = flow.get_variable(
-        name="{}_weight".format(name_prefix),
+        name="{}-weight".format(name_prefix),
         shape=(units, inputs.static_shape[1]),
         dtype=inputs.dtype,
         initializer=(
@@ -49,7 +49,7 @@ def dense(
     )
     if use_bias:
         bias = flow.get_variable(
-            name="{}_bias".format(name_prefix),
+            name="{}-bias".format(name_prefix),
             shape=(units,),
             dtype=inputs.dtype,
             initializer=(

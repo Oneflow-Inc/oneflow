@@ -112,7 +112,7 @@ def _fully_connected_layer(
         kernel_initializer.truncated_normal_conf.std = 0.816496580927726
 
     output = flow.layers.dense(
-        input,
+        flow.reshape(input, shape=(input.static_shape[0], -1)),
         units,
         None,
         use_bias,
@@ -197,6 +197,8 @@ def alexnet(images, labels, trainable=True):
         "fc3", dropout2, units=1001, activation=None, trainable=trainable
     )
 
+    print("labels", labels.static_shape)
+    print("fc3", fc3.static_shape)
     loss = flow.nn.sparse_softmax_cross_entropy_with_logits(
         labels, fc3, name="softmax_loss"
     )
