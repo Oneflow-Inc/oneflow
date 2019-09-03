@@ -37,10 +37,10 @@ Maybe<void> ReduceSumLikeOp::InferBatchAxis(
   return Maybe<void>::Ok();
 }
 
-void ReduceSumLikeOp::GetSbpSignatures(
-    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
+Maybe<void> ReduceSumLikeOp::GetSbpSignatures(
+    const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
     SbpSignatureList* sbp_sig_list) const {
-  int32_t num_axes = LogicalBlobDesc4Ibn("x").shape().NumAxes();
+  int32_t num_axes = JUST(LogicalBlobDesc4Ibn("x"))->shape().NumAxes();
   auto IsReducedAxis =
       ReduceSbpUtil::MakePredicatorIsReducedAxis(op_conf().reduce_sum_like_conf().axis(), num_axes);
   FOR_RANGE(int64_t, i, 0, num_axes) {
@@ -57,6 +57,7 @@ void ReduceSumLikeOp::GetSbpSignatures(
           .Build(sbp_sig_list->mutable_sbp_signature()->Add());
     }
   }
+  return Maybe<void>::Ok();
 }
 
 REGISTER_OP(OperatorConf::kReduceSumLikeConf, ReduceSumLikeOp);

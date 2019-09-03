@@ -32,8 +32,8 @@ Maybe<void> BiasAddOp::InferBlobDescs(
   return Maybe<void>::Ok();
 }
 
-void BiasAddOp::GetSbpSignatures(
-    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
+Maybe<void> BiasAddOp::GetSbpSignatures(
+    const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
     SbpSignatureList* sbp_sig_list) const {
   SbpSignatureBuilder()
       .Split("a", 0)
@@ -45,6 +45,7 @@ void BiasAddOp::GetSbpSignatures(
       .Broadcast("a")
       .Split(output_bns(), 1)
       .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+  return Maybe<void>::Ok();
 }
 
 REGISTER_OP(OperatorConf::kBiasAddConf, BiasAddOp);

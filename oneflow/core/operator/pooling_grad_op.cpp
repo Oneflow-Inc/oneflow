@@ -42,13 +42,14 @@ void PoolingGradOp::CheckPoolSizeAndStrides() const {
   for (int32_t stride_dim : strides) { CHECK_GT(stride_dim, 0); }
 }
 
-void PoolingGradOp::GetSbpSignatures(
-    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
+Maybe<void> PoolingGradOp::GetSbpSignatures(
+    const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
     SbpSignatureList* sbp_sig_list) const {
   SbpSignatureBuilder()
       .Split(input_bns(), 0)
       .Split(output_bns(), 0)
       .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+  return Maybe<void>::Ok();
 }
 
 REGISTER_OP(OperatorConf::kPoolingGradConf, PoolingGradOp);

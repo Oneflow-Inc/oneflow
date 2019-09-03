@@ -14,10 +14,10 @@ void SwitchOutputOp::InitFromOpConf() {
 Maybe<void> SwitchOutputOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
-  const BlobDesc& in_index_blob_desc = *GetBlobDesc4BnInOp("in_index");
+  Maybe<const BlobDesc*> in_index_blob_desc = *GetBlobDesc4BnInOp("in_index");
   CHECK_OR_RETURN(in_index_blob_desc.shape() == Shape({1LL}));
   CHECK_EQ_OR_RETURN(in_index_blob_desc.data_type(), DataType::kInt32);
-  const BlobDesc& first_in_blob_desc = *GetBlobDesc4BnInOp(GenRepeatedBn("in", 0));
+  Maybe<const BlobDesc*> first_in_blob_desc = *GetBlobDesc4BnInOp(GenRepeatedBn("in", 0));
   FOR_RANGE(int64_t, i, 0, op_conf().switch_output_conf().in_size()) {
     CHECK_OR_RETURN(*GetBlobDesc4BnInOp(GenRepeatedBn("in", i)) == first_in_blob_desc);
   }
@@ -44,12 +44,13 @@ Maybe<void> SwitchOutputOp::InferBatchAxis(
   return Maybe<void>::Ok();
 }
 
-void SwitchOutputOp::GetSbpSignatures(
-    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
+Maybe<void> SwitchOutputOp::GetSbpSignatures(
+    const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
     SbpSignatureList* sbp_sig_list) const {
   InterfaceOpUtil::GetOutputLikeOpSbpSignature(op_conf().switch_output_conf().blob_conf(),
                                                input_bns(), output_bns(),
                                                sbp_sig_list->mutable_sbp_signature()->Add());
+  return Maybe<void>::Ok();
 }
 
 REGISTER_OP(OperatorConf::kSwitchOutputConf, SwitchOutputOp);
