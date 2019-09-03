@@ -99,6 +99,7 @@ def bias_add(value, bias, data_format=None, name=None):
     op_conf.bias_add_conf.a = value.logical_blob_name
     op_conf.bias_add_conf.b = bias.logical_blob_name
     op_conf.bias_add_conf.axis = bias_add_axis
+    op_conf.bias_add_conf.out = "out"
 
     compile_context.CurJobAddOp(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()

@@ -12,6 +12,7 @@ void AutoGlobalStep(const OpGraph& op_graph, Job* job) {
   variable_conf->set_out("out");
   *variable_conf->mutable_shape()->mutable_dim()->Add() = 1;
   variable_conf->set_data_type(DataType::kInt64);
+  variable_conf->mutable_split_axis()->clear_value();
   variable_conf->mutable_initializer()->mutable_constant_int_conf()->set_value(0);
 
   OperatorConf identity_op_conf{};
