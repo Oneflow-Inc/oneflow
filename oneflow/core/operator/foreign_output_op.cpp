@@ -24,9 +24,11 @@ Maybe<void> ForeignOutputOp::InferBatchAxis(
   return Maybe<void>::Ok();
 }
 
-void ForeignOutputOp::GetSbpSignatures(
-    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
-    SbpSignatureList* sbp_sig_list) const {}
+Maybe<void> ForeignOutputOp::GetSbpSignatures(
+    const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
+    SbpSignatureList* sbp_sig_list) const {
+  return Maybe<void>::Ok();
+}
 
 REGISTER_OP(OperatorConf::kForeignOutputConf, ForeignOutputOp);
 

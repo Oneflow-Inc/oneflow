@@ -73,13 +73,14 @@ Maybe<void> LayerNormParamGradOp::InferBatchAxis(
   return Maybe<void>::Ok();
 }
 
-void LayerNormParamGradOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
+Maybe<void> LayerNormParamGradOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
   SbpSignatureBuilder()
       .Split(input_bns(), 0)
       .Broadcast("gamma")
       .Split(output_bns(), 0)
       .PartialSum({"gamma_diff", "beta_diff"})
       .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+  return Maybe<void>::Ok();
 }
 
 REGISTER_OP(OperatorConf::kLayerNormParamGradConf, LayerNormParamGradOp);

@@ -103,8 +103,8 @@ Maybe<void> NormalizationGradOp::InferBatchAxis(
   return Maybe<void>::Ok();
 }
 
-void NormalizationGradOp::GetSbpSignatures(
-    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
+Maybe<void> NormalizationGradOp::GetSbpSignatures(
+    const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
     SbpSignatureList* sbp_sig_list) const {
   SbpSignatureBuilder()
       .Broadcast(input_bns())
@@ -113,6 +113,7 @@ void NormalizationGradOp::GetSbpSignatures(
       .Split("dx", 0)
       .Split("dy", 0)
       .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+  return Maybe<void>::Ok();
 }
 
 REGISTER_OP(OperatorConf::kNormalizationGradConf, NormalizationGradOp);

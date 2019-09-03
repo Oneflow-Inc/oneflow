@@ -23,14 +23,15 @@ Maybe<void> DropoutGradOp::InferBlobDescs(
   return Maybe<void>::Ok();
 }
 
-void DropoutGradOp::GetSbpSignatures(
-    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
+Maybe<void> DropoutGradOp::GetSbpSignatures(
+    const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
     SbpSignatureList* sbp_sig_list) const {
   SbpSignatureBuilder()
       .Split(input_bns(), 0)
       .Split(output_bns(), 0)
-      .MakeSplitSignatureListBuilder(LogicalBlobDesc4Ibn("dy").shape().NumAxes())
+      .MakeSplitSignatureListBuilder(JUST(LogicalBlobDesc4Ibn("dy"))->shape().NumAxes())
       .Build(sbp_sig_list);
+  return Maybe<void>::Ok();
 }
 
 REGISTER_OP(OperatorConf::kDropoutGradConf, DropoutGradOp);

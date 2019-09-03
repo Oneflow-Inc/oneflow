@@ -21,10 +21,10 @@ Maybe<void> BroadcastLikeOp::InferBlobDescs(
   return Maybe<void>::Ok();
 }
 
-void BroadcastLikeOp::GetSbpSignatures(
-    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
+Maybe<void> BroadcastLikeOp::GetSbpSignatures(
+    const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
     SbpSignatureList* sbp_sig_list) const {
-  int32_t num_axes = LogicalBlobDesc4Ibn("like").shape().NumAxes();
+  int32_t num_axes = JUST(LogicalBlobDesc4Ibn("like"))->shape().NumAxes();
   auto IsReducedAxis = ReduceSbpUtil::MakePredicatorIsReducedAxis(
       op_conf().broadcast_like_conf().reduced_axis(), num_axes);
   FOR_RANGE(int64_t, i, 0, num_axes) {
@@ -41,6 +41,7 @@ void BroadcastLikeOp::GetSbpSignatures(
           .Build(sbp_sig_list->mutable_sbp_signature()->Add());
     }
   }
+  return Maybe<void>::Ok();
 }
 
 REGISTER_OP(OperatorConf::kBroadcastLikeConf, BroadcastLikeOp);

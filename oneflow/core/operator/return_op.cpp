@@ -28,9 +28,9 @@ Maybe<void> ReturnOp::InferBatchAxis(
 Maybe<void> ReturnOp::InferSbpSignature(
     SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
     const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
-    std::function<const SbpInferHint&(const std::string&)> SbpInferHint4Ibn,
+    std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
     const ParallelDesc& parallel_desc) const {
-  const auto& in_sbp_infer_hint = SbpInferHint4Ibn("in");
+  const auto& in_sbp_infer_hint = *JUST(SbpInferHint4Ibn("in"));
   CHECK_OR_RETURN(in_sbp_infer_hint.parallel_desc() == parallel_desc);
   if (in_sbp_infer_hint.sbp_parallel().has_partial_sum_parallel()) {
     SbpSignatureBuilder().Broadcast(input_bns()).Broadcast(output_bns()).Build(sbp_signature);
