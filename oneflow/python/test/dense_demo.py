@@ -5,8 +5,8 @@ import numpy as np
 tf.enable_eager_execution()
 assert tf.executing_eagerly()
 
-of_activation_map = {"sigmoid": flow.keras.activations.sigmoid}
-tf_activation_map = {"sigmoid": tf.nn.sigmoid}
+of_activation_map = {"sigmoid": flow.keras.activations.sigmoid, "none": None}
+tf_activation_map = {"sigmoid": tf.nn.sigmoid, "none": None}
 
 
 def test_dense(in_shape, units, activation=None, use_bias=True):
@@ -47,6 +47,9 @@ def test_dense(in_shape, units, activation=None, use_bias=True):
         bias_initializer=tf.ones_initializer(),
     ).numpy()
 
+    print(of_out)
+    print(tf_out)
+
     print("dense max diff: " + str(np.max(np.abs(of_out - tf_out))))
     assert np.allclose(of_out, tf_out, atol=1e-7)
 
@@ -54,6 +57,6 @@ def test_dense(in_shape, units, activation=None, use_bias=True):
 # run one example each time
 if __name__ == "__main__":
     # test_dense(in_shape=(1024, 2048), units=512, activation="sigmoid", use_bias=False)
-    # test_dense(in_shape=(16, 32, 64, 128), units=512, activation="sigmoid", use_bias=False)
-    test_dense(in_shape=(1024, 2048), units=512, activation="sigmoid", use_bias=True)
-    # test_dense(in_shape=(16, 32, 64, 128), units=512, activation="sigmoid", use_bias=False)
+    test_dense(in_shape=(16, 32, 64, 128), units=512, activation="sigmoid", use_bias=False)
+    # test_dense(in_shape=(1024, 2048), units=512, activation="none", use_bias=True)
+    # test_dense(in_shape=(16, 32, 64, 128), units=512, activation="sigmoid", use_bias=True)

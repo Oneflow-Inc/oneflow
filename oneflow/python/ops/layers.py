@@ -35,7 +35,7 @@ def dense(
         initializer=(
             kernel_initializer
             if kernel_initializer is not None
-            else flow.constant_intializer(0)
+            else flow.constant_initializer(0)
         ),
         trainable=trainable,
         model_name="weight",
@@ -55,13 +55,13 @@ def dense(
             initializer=(
                 bias_initializer
                 if bias_initializer is not None
-                else flow.constant_intializer(0)
+                else flow.constant_initializer(0)
             ),
             trainable=trainable,
             model_name="bias",
             model_split_axis=None,
         )
-        flow.bias_add(out, bias, name="{}_bias_add".format(name_prefix))
+        flow.nn.bias_add(out, bias, name="{}_bias_add".format(name_prefix))
     out = activation(out) if activation is not None else out
     out = (
         flow.reshape(out, in_shape[:-1] + (units,)) if in_num_axes > 2 else out
