@@ -8,10 +8,9 @@ import oneflow
 
 class RemoteBlob(blob_desc.BlobDesc):
     def __init__(self, lbi):
+        blob_desc.BlobDesc.__init__(self, lbi)
         self.job_name_ = job_builder.GetCurCtxJobName()
-        self.lbi_ = lbi
-        self.lbn_ = lbi.op_name + "/" + lbi.blob_name
-        
+
     @property
     def static_shape(self): return job_builder.GetStaticShape(self.job_name_, self.lbn_)
 
@@ -20,18 +19,18 @@ class RemoteBlob(blob_desc.BlobDesc):
 
     @property
     def has_batch_dim(self): return job_builder.GetHasBatchDim(self.job_name_, self.lbn_)
-    
-    @property
-    def op_name(self):
-        return self.lbi_.op_name
 
     @property
-    def logical_blob_name(self):
-        return "%s/%s" % (self.lbi_.op_name, self.lbi_.blob_name)
+    def has_split_axis(self):
+        return job_builder.GetHasSplitDimFromProducerView(self.job_name_, self.lbn_)
+
+    @property
+    def split_axis(self):
+        return job_builder.GetSplitDimFromProducerView(self.job_name_, self.lbn_)
 
     def pull(self):
         return inter_user_job_util.pull(self)
 
-    def __add__(self, rhs): 
+    def __add__(self, rhs):
         # TODO: scalar_add/broadcast_add/elemwise_add
         return oneflow.keras.maths.add(self, rhs)
