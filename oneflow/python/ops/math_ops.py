@@ -307,3 +307,24 @@ def reduce_mean(input_tensor,
     lbi.op_name = op_conf.name
     lbi.blob_name = "out"
     return remote_blob_util.RemoteBlob(lbi)
+
+
+@oneflow_export("cast")
+def cast(x, dtype, name=None):
+    if x.dtype == dtype:
+        return x
+
+    if name is None:
+        name = id_util.UniqueStr('Cast_')
+
+    op_conf = op_conf_util.OperatorConf()
+    op_conf.name = name
+    setattr(op_conf.cast_conf, "in", x.logical_blob_name)
+    op_conf.cast_conf.data_type = dtype
+    op_conf.cast_conf.out = "out"
+
+    compile_context.CurJobAddOp(op_conf)
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = "out"
+    return remote_blob_util.RemoteBlob(lbi)
