@@ -197,8 +197,6 @@ def alexnet(images, labels, trainable=True):
         "fc3", dropout2, units=1001, activation=None, trainable=trainable
     )
 
-    print("labels", labels.static_shape)
-    print("fc3", fc3.static_shape)
     loss = flow.nn.sparse_softmax_cross_entropy_with_logits(
         labels, fc3, name="softmax_loss"
     )
