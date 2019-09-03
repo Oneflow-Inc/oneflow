@@ -17,7 +17,7 @@ class CheckPoint(object):
 
     def save(self, path, session=None):
         assert type(path) is str
-        session.NoReturnRun(_MakeModelSaveJobFunc(path))
+        c_api_util.LaunchJob(_MakeModelSaveJobFunc(path))
 
     def init(self, session=None):
         c_api_util.LaunchJob(_MakeModelInitJobFunc())
