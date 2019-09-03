@@ -1,6 +1,7 @@
 from __future__ import absolute_import
 
 import oneflow.core.common.data_type_pb2 as data_type_util
+import oneflow.python.framework.undefined as undefined
 
 class BlobDesc(object):
     def __init__(self, lbi):
@@ -37,6 +38,7 @@ class BlobDesc(object):
         raise NotImplementedError
 
     def split(self, split_axis):
+        assert split_axis_ is not undefined
         ret = copy.deepcopy(self)
         ret.split_axis_ = split_axis
         return ret
@@ -53,9 +55,9 @@ class BlobDesc(object):
     def logical_blob_name(self):
         if self.split_axis_ == undefined:
             return lbn_
-        elif type(self.split_axis_ is int):
+        elif type(self.split_axis_) is int:
             return lbi_ + "S" + str(self.split_axis_)
-        elif split_axis_ is None or (type(self.split_axis_ is bool) and not self.split_axis):
+        elif split_axis_ is None or type(self.split_axis_) is False:
             return lbi_ + "B"
         else:
             raise NotImplementedError
