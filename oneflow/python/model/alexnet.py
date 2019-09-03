@@ -231,12 +231,6 @@ if __name__ == "__main__":
     config = flow.ConfigProtoBuilder()
     config.gpu_device_num(1)
     config.grpc_use_no_signal()
-    config.model_load_snapshot_path(args.model_load_dir)
-    config.model_save_snapshots_path(
-        "./model_save-{}".format(
-            str(datetime.now().strftime("%Y-%m-%d-%H:%M:%S"))
-        )
-    )
     config.ctrl_port(9727)
     if args.multinode:
         config.ctrl_port(12138)
@@ -262,7 +256,10 @@ if __name__ == "__main__":
 
     with flow.Session() as sess:
         check_point = flow.train.CheckPoint()
-        check_point.restore().initialize_or_restore(session=sess)
+        if not args.model_load_dir:
+            check_point.init(session=sess)
+        else:
+            check_point.load(args.model_load_dir, session=sess)
         fmt_str = "{:>12}  {:>12}  {:>12.10f}"
         print(
             "{:>12}  {:>12}  {:>12}".format("iter", "loss type", "loss value")
@@ -280,7 +277,7 @@ if __name__ == "__main__":
                     )
                 )
             if (i + 1) % 100 == 0:
-                check_point.save(session=sess)
+                check_point.save(_MODEL_SAVE_DIR + str(i), session=sess)
         if (
             args.multinode
             and args.skip_scp_binary is False

@@ -2,6 +2,7 @@
 #define ONEFLOW_CORE_PERSISTENCE_SNAPSHOT_H_
 
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/control/ctrl_client.h"
 
 namespace oneflow {
 
