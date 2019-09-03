@@ -39,14 +39,10 @@ Maybe<void> SplitLikeOp::InferBlobDescs(
   return Maybe<void>::Ok();
 }
 
-Maybe<void> SplitLikeOp::InferHasBatchDim(
+Maybe<void> SplitLikeOp::InferBatchAxis(
     const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
-    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
-  const SplitLikeOpConf& conf = op_conf().split_like_conf();
-  int32_t split_axis = FixAxis(conf.axis(), LogicalBlobDesc4Ibn("in").shape().NumAxes());
-  bool has_batch_dim = true;
-  if (split_axis == 0) { has_batch_dim = false; }
-  for (const auto& obn : output_bns()) { *HasBatchDim4BnInOp(obn) = has_batch_dim; }
+    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
+  for (const auto& obn : output_bns()) { *BatchAxis4BnInOp(obn) = *BatchAxis4BnInOp("in"); }
   return Maybe<void>::Ok();
 }
 

@@ -1,12 +1,12 @@
 #include "oneflow/core/job/job_build_and_infer_ctx.h"
-#include "oneflow/core/common/error_util.h"
 
 namespace oneflow {
 
-Error GenJobBuildAndInferError(JobBuildAndInferError err_code, std::string msg) {
-  Error err;
-  err.set_msg(msg);
-  err.set_job_build_and_infer_error(err_code);
+std::shared_ptr<ErrorProto> GenJobBuildAndInferError(JobBuildAndInferError err_code,
+                                                     std::string msg) {
+  auto err = std::make_shared<ErrorProto>();
+  err->set_msg(msg);
+  err->set_job_build_and_infer_error(err_code);
   return err;
 }
 
@@ -65,7 +65,13 @@ Maybe<void> JobBuildAndInferCtx::GenOpProducedEmptyLogicalBlobDesc(Operator* op)
 }
 
 // TODO(): add handle error of same interface op blob between jobs
-Maybe<void> JobBuildAndInferCtx::AddAndInferInputOp(const OperatorConf& op_conf) {
+Maybe<void> JobBuildAndInferCtx::AddAndInferOp(const OperatorConf& op_conf,
+                                               const ParallelConf& parallel_conf) {
+  if (!has_job_conf_) {
+    return GenJobBuildAndInferError(JobBuildAndInferError::kJobConfNotSet, "");
+  }
+  if (!is_job_conf_frozen_) { is_job_conf_frozen_ = true; }
+
   const std::string& op_name = op_conf.name();
   if (op_name2op_.find(op_name) != op_name2op_.end()) {
     return GenJobBuildAndInferError(
@@ -95,25 +101,17 @@ Maybe<void> JobBuildAndInferCtx::AddAndInferInputOp(const OperatorConf& op_conf)
   parallel_ctx.set_policy(ParallelPolicy::kDataParallel);
   JUST(op->InferOutBlobDescsIf(GetBlobDesc4BnInOp, &parallel_ctx, job_->job_conf().piece_size(),
                                [](OpContext*) {}));
-  auto HasBatchDim4BnInOp = [&](const std::string& bn) -> bool* {
+  auto BatchAxis4BnInOp = [&](const std::string& bn) -> OptInt64* {
     const LogicalBlobId& lbi = op->BnInOp2Lbi(bn);
-    return &(lbi2has_batch_dim_[lbi]);
+    return &(lbi2batch_axis_[lbi]);
   };
   auto GetConstBlobDescBnInOp = [&](const std::string& bn) -> const BlobDesc& {
     const LogicalBlobId& lbi = op->BnInOp2Lbi(bn);
     return *(lbi2logical_blob_desc_[lbi].get());
   };
-  JUST(op->InferHasBatchDimIf(GetConstBlobDescBnInOp, HasBatchDim4BnInOp));
+  JUST(op->InferBatchAxisIf(GetConstBlobDescBnInOp, BatchAxis4BnInOp));
   // TODO()  infer blob desc split dim
   return Maybe<void>::Ok();
-}
-
-Maybe<void> JobBuildAndInferCtx::AddAndInferNonInputOp(const OperatorConf& op_conf) {
-  if (!has_job_conf_) {
-    return GenJobBuildAndInferError(JobBuildAndInferError::kJobConfNotSet, "");
-  }
-  if (!is_job_conf_frozen_) { is_job_conf_frozen_ = true; }
-  return AddAndInferInputOp(op_conf);
 }
 
 Maybe<void> JobBuildAndInferCtx::AddLossLogicalBlobName(const std::string& lbn) {
@@ -152,9 +150,9 @@ Maybe<DataType> JobBuildAndInferCtx::GetDataType(const std::string& lbn) const {
   return lbi2logical_blob_desc_.at(lbi)->data_type();
 }
 
-Maybe<bool> JobBuildAndInferCtx::GetHasBatchDim(const std::string& lbn) const {
-  GEN_ERROR_WHEN_GET_INFO_FROM_LBN(lbi2has_batch_dim_);
-  return lbi2has_batch_dim_.at(lbi);
+Maybe<OptInt64> JobBuildAndInferCtx::GetBatchAxis(const std::string& lbn) const {
+  GEN_ERROR_WHEN_GET_INFO_FROM_LBN(lbi2batch_axis_);
+  return lbi2batch_axis_.at(lbi);
 }
 
 Maybe<bool> JobBuildAndInferCtx::GetHasSplitAxisFromProducerView(const std::string& lbn) const {
@@ -212,7 +210,7 @@ Maybe<void> JobBuildAndInferCtx::CheckPlacement() const {
 
 Maybe<void> JobBuildAndInferCtx::CheckJobConf() const {
   if (job_->job_conf().job_type_case() == JobConfigProto::JOB_TYPE_NOT_SET) {
-    return ErrorUtil::JobTypeNotSet("job_type not set, please set predict_conf or train_conf");
+    return Error::JobTypeNotSet() << "job_type not set, please set predict_conf or train_conf";
   }
   return Maybe<void>::Ok();
 }

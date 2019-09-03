@@ -3,37 +3,35 @@
 
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/either_ptr.h"
-#include "oneflow/core/common/error.pb.h"
+#include "oneflow/core/common/error.h"
 
 namespace oneflow {
 
 template<typename T>
 class MaybeBase {
  public:
-  MaybeBase(const std::shared_ptr<const Error>& error) : data_or_error_(error) {}
   MaybeBase(const std::shared_ptr<T>& data) : data_or_error_(data) {}
+  MaybeBase(const std::shared_ptr<ErrorProto>& error) : data_or_error_(error) {}
   MaybeBase(const MaybeBase<T>&) = default;
-  virtual ~MaybeBase() = default;
+  ~MaybeBase() = default;  // no virtual is what we want
 
   bool IsOk() const { return data_or_error_.template Has<T>(); }
   const std::shared_ptr<T>& data() const { return data_or_error_.template Get<T>(); }
-  std::shared_ptr<const Error> error() const { return data_or_error_.template Get<const Error>(); }
+  std::shared_ptr<ErrorProto> error() const { return data_or_error_.template Get<ErrorProto>(); }
 
  private:
-  EitherPtr<T, const Error> data_or_error_;
+  EitherPtr<T, ErrorProto> data_or_error_;
 };
 
 template<typename T>
 class Maybe final : public MaybeBase<T> {
  public:
-  Maybe(const Error& error) : MaybeBase<T>(std::make_shared<const Error>(error)) {}
   Maybe(const T& data) : MaybeBase<T>(std::make_shared<T>(data)) {}
-  Maybe(const std::shared_ptr<const Error>& error) : MaybeBase<T>(error) {}
+  Maybe(const Error& error) : MaybeBase<T>(error.error_proto()) {}
   Maybe(const std::shared_ptr<T>& data) : MaybeBase<T>(data) {}
-  Maybe(const Error* error) : MaybeBase<T>(std::shared_ptr<const Error>(error)) {}
-  Maybe(T* data) : MaybeBase<T>(std::shared_ptr<T>(data)) {}
+  Maybe(const std::shared_ptr<ErrorProto>& error) : MaybeBase<T>(error) {}
   Maybe(const Maybe<T>&) = default;
-  ~Maybe() override = default;
+  ~Maybe() = default;
 
   static Maybe<T> Ok() { return Maybe<T>(); }
 };
@@ -41,19 +39,16 @@ class Maybe final : public MaybeBase<T> {
 template<>
 class Maybe<void> final : public MaybeBase<void> {
  public:
-  Maybe(const Error& error) : MaybeBase<void>(std::make_shared<const Error>(error)) {
-    CheckError();
-  }
-  Maybe(const std::shared_ptr<const Error>& error) : MaybeBase<void>(error) { CheckError(); }
-  Maybe(const Error* error) : MaybeBase<void>(std::shared_ptr<const Error>(error)) { CheckError(); }
+  Maybe(const Error& error) : MaybeBase<void>(error.error_proto()) { CheckError(); }
+  Maybe(const std::shared_ptr<ErrorProto>& error) : MaybeBase<void>(error) { CheckError(); }
   Maybe(const Maybe<void>&) = default;
-  ~Maybe() override = default;
+  ~Maybe() = default;
 
   static Maybe<void> Ok() { return Maybe<void>(); }
 
  private:
   Maybe() : MaybeBase<void>(std::shared_ptr<void>()) {}
-  void CheckError() const { CHECK_NE(error()->error_type_case(), Error::ERROR_TYPE_NOT_SET); }
+  void CheckError() const { CHECK_NE(error()->error_type_case(), ErrorProto::ERROR_TYPE_NOT_SET); }
 };
 
 template<typename T>
@@ -143,13 +138,14 @@ std::string Sprintf(const Args&... args) {
     return oss.str();                              \
   }()
 
-#define CHECK_OR_RETURN(expr, ...)                                             \
-  {                                                                            \
-    if (!(expr)) {                                                             \
-      Error error;                                                             \
-      error.set_msg(GEN_ERROR_MSG(ErrorType::kCondition, #expr, __VA_ARGS__)); \
-      return Maybe<void>(error);                                               \
-    }                                                                          \
+#define CHECK_OR_RETURN(expr, ...)                                              \
+  {                                                                             \
+    if (!(expr)) {                                                              \
+      auto error = std::make_shared<ErrorProto>();                              \
+      error->set_msg(GEN_ERROR_MSG(ErrorType::kCondition, #expr, __VA_ARGS__)); \
+      error->mutable_unknown_error();                                           \
+      return error;                                                             \
+    }                                                                           \
   }
 
 #define CHECK_EQ_OR_RETURN(lhs, rhs, ...) CHECK_OR_RETURN(OF_TEST_EQ(lhs, rhs), __VA_ARGS__)
@@ -167,11 +163,12 @@ std::string Sprintf(const Args&... args) {
 #define CHECK_STREQ_OR_RETURN(lhs, rhs, ...) \
   CHECK_EQ_OR_RETURN(std::string(lhs), std::string(rhs), __VA_ARGS__)
 
-#define ENFORCE_THEN_RETURN(type, ...)                                     \
-  {                                                                        \
-    Error error;                                                           \
-    error.set_msg(GEN_ERROR_MSG(ErrorType::kEnforce, #type, __VA_ARGS__)); \
-    return Maybe<void>(error);                                             \
+#define ENFORCE_THEN_RETURN(type, ...)                                      \
+  {                                                                         \
+    auto error = std::make_shared<ErrorProto>();                            \
+    error->set_msg(GEN_ERROR_MSG(ErrorType::kEnforce, #type, __VA_ARGS__)); \
+    error->mutable_unknown_error();                                         \
+    return error;                                                           \
   }
 
 #define UNSUPPORTED_THEN_RETURN(...) ENFORCE_THEN_RETURN(OF_TEST_UNSUPPORTED, __VA_ARGS__)

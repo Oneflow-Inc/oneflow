@@ -25,11 +25,9 @@ Maybe<void> CaseOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> 
 
 const PbMessage& CaseOp::GetCustomizedConf() const { return op_conf().case_conf(); }
 
-Maybe<void> CaseOp::InferHasBatchDim(
-    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
-  for (const std::string& obn : output_bns()) {
-    *HasBatchDim4BnInOp(obn) = *HasBatchDim4BnInOp("in");
-  }
+Maybe<void> CaseOp::InferBatchAxis(
+    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
+  for (const std::string& obn : output_bns()) { *BatchAxis4BnInOp(obn) = *BatchAxis4BnInOp("in"); }
   return Maybe<void>::Ok();
 }
 

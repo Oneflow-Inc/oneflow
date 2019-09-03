@@ -40,9 +40,11 @@ LogicalBlobId NormalModelUpdtOp::obn2lbi(const std::string& output_bn) const {
   return GenLogicalBlobId(GetValFromCustomizedConf<std::string>(output_bn));
 }
 
-Maybe<void> NormalModelUpdtOp::InferHasBatchDim(
-    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
-  for (const auto& ibn : input_bns()) { CHECK_EQ_OR_RETURN(*HasBatchDim4BnInOp(ibn), false); }
+Maybe<void> NormalModelUpdtOp::InferBatchAxis(
+    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
+  for (const auto& ibn : input_bns()) {
+    CHECK_EQ_OR_RETURN(BatchAxis4BnInOp(ibn)->has_value(), false);
+  }
   return Maybe<void>::Ok();
 }
 

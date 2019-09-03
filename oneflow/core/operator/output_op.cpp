@@ -21,10 +21,10 @@ Maybe<void> OutputOp::InferBlobDescs(
 
 const PbMessage& OutputOp::GetCustomizedConf() const { return op_conf().output_conf(); }
 
-Maybe<void> OutputOp::InferHasBatchDim(
-    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
-  InterfaceOpUtil::InferHasBatchDim(op_conf().output_conf().blob_conf(), HasBatchDim4BnInOp("out"));
-  CHECK_OR_RETURN(*HasBatchDim4BnInOp("out") == *HasBatchDim4BnInOp("in"));
+Maybe<void> OutputOp::InferBatchAxis(
+    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
+  InterfaceOpUtil::InferBatchAxis(op_conf().output_conf().blob_conf(), BatchAxis4BnInOp("out"));
+  CHECK_OR_RETURN(*BatchAxis4BnInOp("out") == *BatchAxis4BnInOp("in"));
   return Maybe<void>::Ok();
 }
 

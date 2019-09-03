@@ -28,9 +28,9 @@ void RecordLoadOp::VirtualGenKernelConf(
   kernel_conf->mutable_record_load_conf()->set_device_piece_size(device_piece_size);
 }
 
-Maybe<void> RecordLoadOp::InferHasBatchDim(
-    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
-  *HasBatchDim4BnInOp("out") = true;
+Maybe<void> RecordLoadOp::InferBatchAxis(
+    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
+  BatchAxis4BnInOp("out")->set_value(0);
   return Maybe<void>::Ok();
 }
 

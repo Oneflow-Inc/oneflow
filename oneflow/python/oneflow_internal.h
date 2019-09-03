@@ -1,7 +1,6 @@
 #include <google/protobuf/text_format.h>
 #include "oneflow/core/common/buffer_manager.h"
 #include "oneflow/core/common/protobuf.h"
-#include "oneflow/core/common/error_util.h"
 #include "oneflow/core/register/ofblob.h"
 #include "oneflow/core/job/job_set.pb.h"
 #include "oneflow/core/job/oneflow.h"
@@ -56,15 +55,13 @@ std::string InitGlobalOneflow() {
   CHECK(Global<MachineCtx>::Get()->IsThisMachineMaster());
   ClusterControl::MasterSendSessionStart();
   const JobSet& job_set = Global<JobBuildAndInferCtxMgr>::Get()->job_set();
-  if (job_set.job().empty()) {
-    return PbMessage2TxtString(ErrorUtil::JobSetEmpty("no function defined"));
-  }
+  if (job_set.job().empty()) { return Error::JobSetEmpty() << "no function defined"; }
   CHECK_ISNULL(Global<Oneflow>::Get());
   Global<CtrlClient>::Get()->PushKV("session_job_set", job_set);
   Global<RuntimeBufferManagersScope>::New();
   Global<JobSetCompileCtx>::New();
   Global<Oneflow>::New(job_set);
-  return PbMessage2TxtString(ErrorUtil::Ok());
+  return Error::Ok();
 }
 
 std::string GetSerializedInterUserJobInfo() {
@@ -136,7 +133,7 @@ long long DeviceType4DeviceTag(const std::string& device_tag, std::string* error
     PbMessage2TxtString(*maybe_dev_type.error(), error_str);
     return DeviceType::kInvalidDevice;
   }
-  PbMessage2TxtString(ErrorUtil::Ok(), error_str);
+  *error_str = Error::Ok();
   return *maybe_dev_type.data();
 }
 

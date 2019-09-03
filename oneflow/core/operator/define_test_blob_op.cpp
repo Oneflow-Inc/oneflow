@@ -35,9 +35,9 @@ Maybe<void> DefineTestBlobOp::InferBlobDescs(
   return Maybe<void>::Ok();
 }
 
-Maybe<void> DefineTestBlobOp::InferHasBatchDim(
-    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
-  *HasBatchDim4BnInOp("out") = true;
+Maybe<void> DefineTestBlobOp::InferBatchAxis(
+    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
+  BatchAxis4BnInOp("out")->set_value(0);
   return Maybe<void>::Ok();
 }
 
