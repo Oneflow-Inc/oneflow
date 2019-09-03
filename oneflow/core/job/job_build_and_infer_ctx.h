@@ -40,7 +40,8 @@ class JobBuildAndInferCtx {
  private:
   Maybe<void> AddOpNameParallelConf2Placement(const std::string& op_name,
                                               const ParallelConf& parallel_conf);
-  Maybe<void> DecodeSplitHint7AddOp7AddSbpSignature2Job(Operator* op);
+  Maybe<void> DecodeSplitHint7AddOp7AddSbpSigConf2Job(Operator*, SbpSignature*);
+  Maybe<void> InferOpOutSbpParallel(Operator*, const SbpSignature&, const ParallelConf&);
   Maybe<void> GenOpProducedEmptyLogicalBlobDesc(Operator* op);
   Maybe<void> CheckPlacement() const;
   Maybe<void> CheckJobConf() const;
@@ -49,6 +50,8 @@ class JobBuildAndInferCtx {
   int64_t job_id_;
   HashMap<LogicalBlobId, OptInt64> lbi2batch_axis_;
   HashMap<LogicalBlobId, std::unique_ptr<BlobDesc>> lbi2logical_blob_desc_;
+  HashMap<LogicalBlobId, SbpParallel> lbi2sbp_parallel_from_producer_view_;
+  HashMap<LogicalBlobId, ParallelDesc> lbi2parallel_desc_from_producer_view_;
   HashMap<std::string, std::shared_ptr<Operator>> op_name2op_;
   HashMap<ParallelConf, int32_t> parallel_conf2placement_group_id_;
   bool is_job_conf_frozen_;
