@@ -314,6 +314,7 @@ def dropout(x, noise_shape=None, seed=None, name=None, rate=None):
         op_conf.name = name
     setattr(op_conf.dropout_conf, "in", x.logical_blob_name)
     setattr(op_conf.dropout_conf, "out", "out")
+    assert rate is not None
     if seed is not None:
         setattr(op_conf.dropout_conf, "seed", seed)
     if rate is not None:
