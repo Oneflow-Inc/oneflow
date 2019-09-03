@@ -15,7 +15,7 @@ class AdamOptimizerOp : public XlaOpCompiler {
 
 void AdamOptimizerOp::Compile(XlaOpContext *ctx) {
   // TODO(hjchen2)
-  // ctx->SetOutput("out", ctx->Input("weight") + ctx->Input("gradient"));
+  ctx->SetOutput("out", ctx->Input("weight") * ctx->Input("gradient"));
 }
 
 REGISTER_XLA_OP_COMPILER(AdamOptimizer, AdamOptimizerOp);
