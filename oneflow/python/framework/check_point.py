@@ -12,9 +12,6 @@ class CheckPoint(object):
     def __init__(self):
         pass
 
-    def restore(self, save_path=None):
-        return CheckPointRestoreStatus(save_path)
-
     def save(self, path, session=None):
         assert type(path) is str
         c_api_util.LaunchJob(_MakeModelSaveJobFunc(path))
@@ -25,16 +22,6 @@ class CheckPoint(object):
     def load(self, path, session=None):
         assert type(path) is str
         c_api_util.LaunchJob(_MakeModelLoadJobFunc(path))
-
-
-class CheckPointRestoreStatus(object):
-    def __init__(self, save_path):
-        pass
-
-    def initialize_or_restore(self, session=None):
-        if session is None:
-            session = runtime_ctx.default_session
-        session.NoReturnRun(_MakeModelInitJobFunc())
 
 
 def _MakeModelInitJobFunc():
