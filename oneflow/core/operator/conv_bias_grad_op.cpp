@@ -28,7 +28,7 @@ Maybe<void> ConvBiasGradOp::InferBlobDescs(
   } else if (conf.data_format() == "channels_last") {
     bias_diff->mut_shape() = Shape({dy->shape().At(dy->shape().NumAxes() - 1)});
   } else {
-    CHECK_OR_RETURN(false, "UNIMPLEMENTED");
+    UNIMPLEMENTED_THEN_RETURN();
   }
   return Maybe<void>::Ok();
 }

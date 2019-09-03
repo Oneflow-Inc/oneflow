@@ -7,6 +7,43 @@
 
 namespace oneflow {
 
+class ErrorMessage {
+ public:
+  ErrorMessage() : error_(std::make_shared<ErrorProto>()) {}
+  virtual ~ErrorMessage() = default;
+
+  template<typename MessageType>
+  ErrorMessage&& operator<<(const MessageType& msg) {
+    oss_ << msg;
+    return std::move(*this);
+  }
+
+  std::shared_ptr<ErrorProto> Release() const {
+    SendMessage();
+    return std::move(error_);
+  }
+
+  void Reset() {
+    ResetStream();
+    ResetError();
+  }
+
+  OF_DISALLOW_COPY_AND_MOVE(ErrorMessage);
+
+ private:
+  void SendMessage() const {
+    // TODO: set error type
+    error_->set_msg(oss_.str());
+  }
+
+  void ResetStream() { oss_.str(""); }
+
+  void ResetError() { error_->Clear(); }
+
+  std::ostringstream oss_;
+  mutable std::shared_ptr<ErrorProto> error_;
+};
+
 template<typename T>
 class MaybeBase {
  public:
@@ -33,6 +70,7 @@ class Maybe final : public MaybeBase<T> {
   Maybe(const Maybe<T>&) = default;
   ~Maybe() = default;
 
+  Maybe(const ErrorMessage&& error_msg) : MaybeBase<T>(error_msg.Release()) {}
   static Maybe<T> Ok() { return Maybe<T>(); }
 };
 
@@ -43,6 +81,8 @@ class Maybe<void> final : public MaybeBase<void> {
   Maybe(const std::shared_ptr<ErrorProto>& error) : MaybeBase<void>(error) { CheckError(); }
   Maybe(const Maybe<void>&) = default;
   ~Maybe() = default;
+
+  Maybe(const ErrorMessage&& error_msg) : MaybeBase<void>(error_msg.Release()) { CheckError(); }
 
   static Maybe<void> Ok() { return Maybe<void>(); }
 
@@ -83,45 +123,6 @@ inline Maybe<T> MaybeFuncSafeCallWrapper(Maybe<T>&& maybe) {
 
 }  // namespace oneflow
 
-namespace {
-
-enum class ErrorType {
-  kUnknown = 0,
-  kCondition = 1,
-  kEnforce = 2,
-};
-
-template<ErrorType type>
-std::ostringstream& SerializeExprError(std::ostringstream& oss, const std::string& expr) {
-  oss << "Unknown type error `" << expr << "` occurs.";
-  return oss;
-}
-
-template<>
-std::ostringstream& SerializeExprError<ErrorType::kCondition>(std::ostringstream& oss,
-                                                              const std::string& expr) {
-  oss << "Condition expression `" << expr << "` check failed.";
-  return oss;
-}
-
-template<>
-std::ostringstream& SerializeExprError<ErrorType::kEnforce>(std::ostringstream& oss,
-                                                            const std::string& expr) {
-  oss << "Enforce error `" << expr << "` occurs.";
-  return oss;
-}
-
-std::string Sprintf() { return ""; }
-
-template<typename... Args>
-std::string Sprintf(const Args&... args) {
-  char buffer[2048];
-  snprintf(buffer, sizeof(buffer), std::forward<const Args>(args)...);
-  return std::string(buffer);
-}
-
-}  // namespace
-
 #define OF_TEST_EQ(lhs, rhs) ((lhs) == (rhs))
 #define OF_TEST_GE(lhs, rhs) ((lhs) >= (rhs))
 #define OF_TEST_GT(lhs, rhs) ((lhs) > (rhs))
@@ -129,52 +130,35 @@ std::string Sprintf(const Args&... args) {
 #define OF_TEST_LT(lhs, rhs) ((lhs) < (rhs))
 #define OF_TEST_NE(lhs, rhs) ((lhs) != (rhs))
 
-#define GEN_ERROR_MSG(type, expr, ...)             \
-  [&]() -> std::string {                           \
-    std::string detail = Sprintf(__VA_ARGS__);     \
-    std::ostringstream oss;                        \
-    SerializeExprError<type>(oss, expr);           \
-    if (!detail.empty()) { oss << " " << detail; } \
-    return oss.str();                              \
-  }()
+#define COMPACT_MESSAGE_TAG(time, file, line) COMPACT_MESSAGE_TAG_IMPL(time, file, line)
+#define COMPACT_MESSAGE_TAG_IMPL(time, file, line) time " " file ":" #line "] "
 
-#define CHECK_OR_RETURN(expr, ...)                                              \
-  {                                                                             \
-    if (!(expr)) {                                                              \
-      auto error = std::make_shared<ErrorProto>();                              \
-      error->set_msg(GEN_ERROR_MSG(ErrorType::kCondition, #expr, __VA_ARGS__)); \
-      error->mutable_unknown_error();                                           \
-      return error;                                                             \
-    }                                                                           \
-  }
+#define OF_MESSAGE_TAG COMPACT_MESSAGE_TAG(__TIME__, __FILE__, __LINE__)
 
-#define CHECK_EQ_OR_RETURN(lhs, rhs, ...) CHECK_OR_RETURN(OF_TEST_EQ(lhs, rhs), __VA_ARGS__)
+#define CHECK_OR_RETURN(expr) \
+  if (!(expr)) return ErrorMessage() << OF_MESSAGE_TAG << #expr << ": "
 
-#define CHECK_GE_OR_RETURN(lhs, rhs, ...) CHECK_OR_RETURN(OF_TEST_GE(lhs, rhs), __VA_ARGS__)
+#define ENFORCE_THEN_RETURN(error_type) \
+  return ErrorMessage() << OF_MESSAGE_TAG << #error_type << ": "
 
-#define CHECK_GT_OR_RETURN(lhs, rhs, ...) CHECK_OR_RETURN(OF_TEST_GT(lhs, rhs), __VA_ARGS__)
+#define CHECK_EQ_OR_RETURN(lhs, rhs) CHECK_OR_RETURN(OF_TEST_EQ(lhs, rhs))
 
-#define CHECK_LE_OR_RETURN(lhs, rhs, ...) CHECK_OR_RETURN(OF_TEST_LE(lhs, rhs), __VA_ARGS__)
+#define CHECK_GE_OR_RETURN(lhs, rhs) CHECK_OR_RETURN(OF_TEST_GE(lhs, rhs))
 
-#define CHECK_LT_OR_RETURN(lhs, rhs, ...) CHECK_OR_RETURN(OF_TEST_LT(lhs, rhs), __VA_ARGS__)
+#define CHECK_GT_OR_RETURN(lhs, rhs) CHECK_OR_RETURN(OF_TEST_GT(lhs, rhs))
 
-#define CHECK_NE_OR_RETURN(lhs, rhs, ...) CHECK_OR_RETURN(OF_TEST_NE(lhs, rhs), __VA_ARGS__)
+#define CHECK_LE_OR_RETURN(lhs, rhs) CHECK_OR_RETURN(OF_TEST_LE(lhs, rhs))
 
-#define CHECK_STREQ_OR_RETURN(lhs, rhs, ...) \
-  CHECK_EQ_OR_RETURN(std::string(lhs), std::string(rhs), __VA_ARGS__)
+#define CHECK_LT_OR_RETURN(lhs, rhs) CHECK_OR_RETURN(OF_TEST_LT(lhs, rhs))
 
-#define ENFORCE_THEN_RETURN(type, ...)                                      \
-  {                                                                         \
-    auto error = std::make_shared<ErrorProto>();                            \
-    error->set_msg(GEN_ERROR_MSG(ErrorType::kEnforce, #type, __VA_ARGS__)); \
-    error->mutable_unknown_error();                                         \
-    return error;                                                           \
-  }
+#define CHECK_NE_OR_RETURN(lhs, rhs) CHECK_OR_RETURN(OF_TEST_NE(lhs, rhs))
 
-#define UNSUPPORTED_THEN_RETURN(...) ENFORCE_THEN_RETURN(OF_TEST_UNSUPPORTED, __VA_ARGS__)
+#define CHECK_STREQ_OR_RETURN(lhs, rhs) CHECK_EQ_OR_RETURN(std::string(lhs), std::string(rhs))
 
-#define TODO_THEN_RETURN(...) ENFORCE_THEN_RETURN(OF_TEST_TODO, __VA_ARGS__)
+#define UNSUPPORTED_THEN_RETURN() ENFORCE_THEN_RETURN(UNSUPPORTED)
 
-#define UNIMPLEMENTED_THEN_RETURN(...) ENFORCE_THEN_RETURN(OF_TEST_UNIMPLEMENTED, __VA_ARGS__)
+#define TODO_THEN_RETURN() ENFORCE_THEN_RETURN(TODO)
+
+#define UNIMPLEMENTED_THEN_RETURN() ENFORCE_THEN_RETURN(UNIMPLEMENTED)
 
 #endif  // ONEFLOW_CORE_COMMON_MAYBE_H_

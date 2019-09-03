@@ -69,7 +69,7 @@ Maybe<void> NormalizationGradOp::InferBlobDescs(
   BlobDesc* dx = GetBlobDesc4BnInOp("dx");
   if (dx) { *dx = *x; }
   const Shape param_shape({x->shape().At(conf.axis())});
-  const std::function<void(const std::string&)> CheckParamBlobDesc =
+  const std::function<Maybe<void>(const std::string&)> CheckParamBlobDesc =
       [&](const std::string& bn) -> Maybe<void> {
     const BlobDesc* blob_desc = GetBlobDesc4BnInOp(bn);
     if (blob_desc != nullptr) {
@@ -78,7 +78,7 @@ Maybe<void> NormalizationGradOp::InferBlobDescs(
     }
     return Maybe<void>::Ok();
   };
-  const std::function<void(const std::string&)> SetParamBlobDesc =
+  const std::function<Maybe<void>(const std::string&)> SetParamBlobDesc =
       [&](const std::string& bn) -> Maybe<void> {
     BlobDesc* blob_desc = GetBlobDesc4BnInOp(bn);
     if (blob_desc != nullptr) {
