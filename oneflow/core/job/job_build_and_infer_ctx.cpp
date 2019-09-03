@@ -35,6 +35,38 @@ Maybe<void> JobBuildAndInferCtx::SetJobConf(const JobConfigProto& job_conf) {
   return Maybe<void>::Ok();
 }
 
+Maybe<void> JobBuildAndInferCtx::AddOpNameParallelConf2Placement(
+    const std::string& op_name, const ParallelConf& parallel_conf) {
+  PlacementGroup* pg = job_->mutable_placement()->add_placement_group();
+  *(pg->mutable_parallel_conf()) = parallel_conf;
+  pg->mutable_op_set()->add_op_name(op_name);
+
+  TODO();
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> JobBuildAndInferCtx::DecodeSplitHint7AddOp7AddSbpSignature2Job(Operator* op) {
+  OperatorConf op_conf_without_split_hint = op->op_conf();
+  PbMessage* op_type_conf = MutableMessageInPbMessage(&op_conf_without_split_hint,
+                                                      op_conf_without_split_hint.op_type_case());
+  SbpSignature sbp_signature;
+  for (const std::string& ibn : op->input_bns()) {
+    std::string lbn_may_with_split_hint = GetStrValInPbFdOrPbRpf(op->GetCustomizedConf(), ibn);
+    if (HasSplitHintInLbn(lbn_may_with_split_hint)) {
+      SbpParallel sbp_parallel = GetSbpParallelInLbn(lbn_may_with_split_hint);
+      (*(sbp_signature.mutable_bn_in_op2sbp_parallel()))[ibn] = sbp_parallel;
+      const LogicalBlobId& lbi = op->BnInOp2Lbi(ibn);
+      std::string lbn = GenLogicalBlobName(lbi);
+      ReplaceStrValInPbFdOrPbRpf(op_type_conf, ibn, lbn_may_with_split_hint, lbn);
+    }
+  }
+  (*(job_->mutable_sbp_conf()->mutable_op_name2sbp_signature_conf()))[op->op_name()] =
+      sbp_signature;
+
+  job_->mutable_net()->add_op()->CopyFrom(op_conf_without_split_hint);
+  return Maybe<void>::Ok();
+}
+
 Maybe<void> JobBuildAndInferCtx::GenOpProducedEmptyLogicalBlobDesc(Operator* op) {
   // check consumed blob
   for (const std::string& consumed_bn : op->input_bns()) {
@@ -83,32 +115,12 @@ Maybe<void> JobBuildAndInferCtx::AddAndInferOp(const OperatorConf& op_conf,
                                     "op_name: " + op_name + " not set device type");
   }
 
-  // add op name to placement
-  PlacementGroup* pg = job_->mutable_placement()->add_placement_group();
-  *(pg->mutable_parallel_conf()) = parallel_conf;
-  pg->mutable_op_set()->add_op_name(op_name);
+  JUST(AddOpNameParallelConf2Placement(op_name, parallel_conf));
 
-  OperatorConf op_conf_with_split_hint = op_conf;
   op_name2op_.emplace(op_name, ConstructOp(op_conf));
   Operator* op = op_name2op_.at(op_name).get();
 
-  OperatorConf op_conf_without_split_hint = op_conf_with_split_hint;
-  PbMessage* op_type_conf = MutableMessageInPbMessage(&op_conf_without_split_hint,
-                                                      op_conf_without_split_hint.op_type_case());
-  SbpSignature sbp_signature;
-  for (const std::string& ibn : op->input_bns()) {
-    std::string lbn_may_with_split_hint = GetStrValInPbFdOrPbRpf(op->GetCustomizedConf(), ibn);
-    if (HasSplitHintInLbn(lbn_may_with_split_hint)) {
-      SbpParallel sbp_parallel = GetSbpParallelInLbn(lbn_may_with_split_hint);
-      (*(sbp_signature.mutable_bn_in_op2sbp_parallel()))[ibn] = sbp_parallel;
-      const LogicalBlobId& lbi = op->BnInOp2Lbi(ibn);
-      std::string lbn = GenLogicalBlobName(lbi);
-      ReplaceStrValInPbFdOrPbRpf(op_type_conf, ibn, lbn_may_with_split_hint, lbn);
-    }
-  }
-  (*(job_->mutable_sbp_conf()->mutable_op_name2sbp_signature_conf()))[op_name] = sbp_signature;
-
-  job_->mutable_net()->add_op()->CopyFrom(op_conf_without_split_hint);
+  JUST(DecodeSplitHint7AddOp7AddSbpSignature2Job(op));
 
   // TODO() infer op out_blob sbp signature; implement get split dim of blob
 
@@ -126,6 +138,7 @@ Maybe<void> JobBuildAndInferCtx::AddAndInferOp(const OperatorConf& op_conf,
   parallel_ctx.set_policy(ParallelPolicy::kDataParallel);
   JUST(op->InferOutBlobDescsIf(GetBlobDesc4BnInOp, &parallel_ctx, job_->job_conf().piece_size(),
                                [](OpContext*) {}));
+
   auto BatchAxis4BnInOp = [&](const std::string& bn) -> OptInt64* {
     const LogicalBlobId& lbi = op->BnInOp2Lbi(bn);
     return &(lbi2batch_axis_[lbi]);

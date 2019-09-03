@@ -41,6 +41,9 @@ class JobBuildAndInferCtx {
   const Job& job() const;
 
  private:
+  Maybe<void> AddOpNameParallelConf2Placement(const std::string& op_name,
+                                              const ParallelConf& parallel_conf);
+  Maybe<void> DecodeSplitHint7AddOp7AddSbpSignature2Job(Operator* op);
   Maybe<void> GenOpProducedEmptyLogicalBlobDesc(Operator* op);
   Maybe<void> CheckPlacement() const;
   Maybe<void> CheckJobConf() const;
@@ -50,6 +53,7 @@ class JobBuildAndInferCtx {
   HashMap<LogicalBlobId, OptInt64> lbi2batch_axis_;
   HashMap<LogicalBlobId, std::unique_ptr<BlobDesc>> lbi2logical_blob_desc_;
   HashMap<std::string, std::shared_ptr<Operator>> op_name2op_;
+  HashMap<ParallelConf, int32_t> parallel_conf2placement_group_id_;
   bool is_job_conf_frozen_;
   bool has_job_conf_;
 };
