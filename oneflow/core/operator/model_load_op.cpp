@@ -58,6 +58,6 @@ void ModelLoadOp::GetSbpSignatures(
       .Build(sbp_sig_list);
 }
 
-REGISTER_OP(OperatorConf::kModelLoadConf, ModelLoadOp);
+REGISTER_CPU_OP(OperatorConf::kModelLoadConf, ModelLoadOp);
 
 }  // namespace oneflow

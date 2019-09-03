@@ -2,8 +2,7 @@
 
 namespace oneflow {
 
-template<DeviceType device_type, typename T>
-class ModelLoadKernel final : public KernelIf<device_type> {
+class ModelLoadKernel final : public KernelIf<DeviceType::kCPU> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ModelLoadKernel);
   ModelLoadKernel() = default;
@@ -26,6 +25,6 @@ class ModelLoadKernel final : public KernelIf<device_type> {
   }
 };
 
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kModelLoadConf, ModelLoadKernel, ARITHMETIC_DATA_TYPE_SEQ);
+REGISTER_KERNEL(OperatorConf::kModelLoadConf, ModelLoadKernel);
 
 }  // namespace oneflow
