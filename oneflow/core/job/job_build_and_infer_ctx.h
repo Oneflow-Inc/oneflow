@@ -41,8 +41,11 @@ class JobBuildAndInferCtx {
   Maybe<void> AddOpNameParallelConf2Placement(const std::string& op_name,
                                               const ParallelConf& parallel_conf);
   Maybe<void> DecodeSplitHint7AddOp7AddSbpSigConf2Job(Operator*, SbpSignature*);
-  Maybe<void> InferOpOutSbpParallel(Operator*, const SbpSignature&, const ParallelConf&);
+  Maybe<void> InferOpOutSbpParallel(Operator*, const SbpSignature&, const ParallelDesc&,
+                                    SbpSignature*);
   Maybe<void> GenOpProducedEmptyLogicalBlobDesc(Operator* op);
+  Maybe<void> CheckOpBlobCanBeSplitedByParallelNum(Operator*, const SbpSignature&,
+                                                   int64_t parallel_num);
   Maybe<void> CheckPlacement() const;
   Maybe<void> CheckJobConf() const;
 
