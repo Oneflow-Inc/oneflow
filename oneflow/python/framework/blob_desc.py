@@ -44,16 +44,8 @@ class BlobDesc(object):
         return ret
 
     @property
-    def has_split_axis(self):
-        raise NotImplementedError
-
-    @property
-    def split_axis(self):
-        raise NotImplementedError
-
-    @property
     def logical_blob_name(self):
-        if self.split_axis_ == undefined:
+        if self.split_axis_ is undefined:
             return lbn_
         elif type(self.split_axis_) is int:
             return lbi_ + "S" + str(self.split_axis_)

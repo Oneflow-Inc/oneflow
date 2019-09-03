@@ -43,16 +43,6 @@ class input_blob_def(blob_desc.BlobDesc):
     def batch_axis(self): return self.batch_axis_
 
     @property
-    def has_split_axis(self):
-        if type(self.split_axis_) is int:
-            return True
-        else:
-            return False
-
-    @property
-    def split_axis(self): return self.split_axis_
-
-    @property
     def is_dynamic(self): return self.is_dynamic_
 
     def ToInterfaceBlobConf(self):

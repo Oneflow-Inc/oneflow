@@ -21,22 +21,6 @@ class RemoteBlob(blob_desc.BlobDesc):
     @property
     def has_batch_dim(self): return job_builder.GetHasBatchDim(self.job_name_, self.lbn_)
 
-    @property
-    def has_split_axis(self):
-        if self.split_axis_ == undefined:
-            return job_builder.GetHasSplitDimFromProducerView(self.job_name_, self.lbn_)
-        elif type(self.split_axis_) is int:
-            return True
-        else:
-            return False
-
-    @property
-    def split_axis(self):
-        if self.split_axis_ == undefined:
-            return job_builder.GetSplitDimFromProducerView(self.job_name_, self.lbn_)
-        else:
-            return split_axis_
-
     def pull(self):
         return inter_user_job_util.pull(self)
 
