@@ -17,6 +17,9 @@ class Error final {
   static Error JobSetEmpty();
   static Error DeviceTagNotFound();
   static Error JobTypeNotSet();
+  static Error CheckFailed();
+  static Error Todo();
+  static Error Unimplemented();
 
   std::shared_ptr<ErrorProto> error_proto() const { return error_proto_; }
   ErrorProto* operator->() const { return error_proto_.get(); }
@@ -33,6 +36,9 @@ Error&& operator<<(Error&& error, const T& x) {
   error->set_msg(error->msg() + ss.str());
   return std::move(error);
 }
+
+// for LOG(ERROR)
+Error&& operator<=(const std::string& log_str, Error&& error);
 
 }  // namespace oneflow
 

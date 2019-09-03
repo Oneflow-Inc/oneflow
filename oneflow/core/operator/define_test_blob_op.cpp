@@ -31,7 +31,7 @@ Maybe<void> DefineTestBlobOp::InferBlobDescs(
   if (conf.has_dim0_inner_shape()) {
     out_blob_desc->mut_dim0_inner_shape() = Shape(conf.dim0_inner_shape());
   }
-  if (conf.has_dim0_valid_num()) { CHECK_OR_RETURN(conf.has_dim0_inner_shape()); }
+  if (conf.has_dim0_valid_num()) { OF_CHECK(conf.has_dim0_inner_shape()); }
   return Maybe<void>::Ok();
 }
 
