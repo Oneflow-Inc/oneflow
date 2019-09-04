@@ -134,7 +134,7 @@ long long DeviceType4DeviceTag(const std::string& device_tag, std::string* error
     return DeviceType::kInvalidDevice;
   }
   *error_str = Error::Ok();
-  return *maybe_dev_type.data();
+  return *CHECK_JUST(maybe_dev_type);
 }
 
 namespace oneflow {
