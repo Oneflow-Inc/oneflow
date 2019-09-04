@@ -22,7 +22,7 @@ struct JobBuildAndInferHelper final {
       *error_str = PbMessage2TxtString(*maybe_ctx.error());
       return nullptr;
     }
-    return CHECK_JUST(maybe_ctx).get();
+    return CHECK_JUST(maybe_ctx);
   }
 };
 
