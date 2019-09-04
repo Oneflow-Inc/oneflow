@@ -42,9 +42,9 @@ AvailableMemDesc PullAvailableMemDesc() {
   return ret;
 }
 
-void FixCpuDeviceNum() {
+Maybe<void> FixCpuDeviceNum() {
   int32_t cpu_device_num = Global<ResourceDesc>::Get()->CpuDeviceNum();
-  if (cpu_device_num > 0) { return; }
+  if (cpu_device_num > 0) { return Maybe<void>::Ok(); }
   if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
     cpu_device_num = std::thread::hardware_concurrency();
     Global<CtrlClient>::Get()->PushKVT("cpu_device_num", cpu_device_num);
@@ -55,13 +55,16 @@ void FixCpuDeviceNum() {
   if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
     Global<CtrlClient>::Get()->ClearKV("cpu_device_num");
   }
-  CHECK_GT(cpu_device_num, 0);
+  OF_CHECK_GT(cpu_device_num, 0);
   Global<ResourceDesc>::Get()->SetCpuDeviceNum(cpu_device_num);
+  return Maybe<void>::Ok();
 }
 
 }  // namespace
 
-EnvironmentObjectsScope::EnvironmentObjectsScope(const ConfigProto& config_proto) {
+EnvironmentObjectsScope::EnvironmentObjectsScope() {}
+
+Maybe<void> EnvironmentObjectsScope::Init(const ConfigProto& config_proto) {
   flags_and_log_scope_.reset(new FlagsAndLogScope(config_proto, "oneflow"));
   Global<ResourceDesc>::New(config_proto.resource());
   Global<const IOConf>::New(config_proto.io_conf());
@@ -72,7 +75,7 @@ EnvironmentObjectsScope::EnvironmentObjectsScope(const ConfigProto& config_proto
   int64_t this_mchn_id =
       Global<ResourceDesc>::Get()->GetMachineId(Global<CtrlServer>::Get()->this_machine_addr());
   Global<MachineCtx>::New(this_mchn_id);
-  FixCpuDeviceNum();
+  JUST(FixCpuDeviceNum());
   Global<IDMgr>::New();
   if (Global<MachineCtx>::Get()->IsThisMachineMaster()
       && Global<const ProfilerConf>::Get()->collect_act_event()) {
@@ -86,6 +89,7 @@ EnvironmentObjectsScope::EnvironmentObjectsScope(const ConfigProto& config_proto
     Global<InterUserJobInfo>::New();
     Global<JobBuildAndInferCtxMgr>::New();
   }
+  return Maybe<void>::Ok();
 }
 
 EnvironmentObjectsScope::~EnvironmentObjectsScope() {
