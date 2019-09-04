@@ -47,9 +47,6 @@ def test_dense(in_shape, units, activation=None, use_bias=True):
         bias_initializer=tf.ones_initializer(),
     ).numpy()
 
-    print(of_out)
-    print(tf_out)
-
     print("dense max diff: " + str(np.max(np.abs(of_out - tf_out))))
     assert np.allclose(of_out, tf_out, atol=1e-7)
 
