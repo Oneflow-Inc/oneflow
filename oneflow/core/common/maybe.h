@@ -17,10 +17,13 @@ class Maybe final {
   Maybe(const std::shared_ptr<T>& data) : data_or_error_(data) {}
   Maybe(const std::shared_ptr<ErrorProto>& error) : data_or_error_(error) {}
   Maybe(const Maybe<T>&) = default;
+  Maybe(Maybe<T>&&) = default;
   ~Maybe() = default;
 
   bool IsOk() const { return data_or_error_.template Has<T>(); }
-  std::shared_ptr<T> data() const { return data_or_error_.template Get<T>(); }
+  std::shared_ptr<T> Data_YouAreNotAllowedToCallThisOutsideJustOrCheckJust() const {
+    return data_or_error_.template Get<T>();
+  }
   std::shared_ptr<ErrorProto> error() const { return data_or_error_.template Get<ErrorProto>(); }
 
  private:
@@ -33,12 +36,13 @@ class Maybe<void> final {
   Maybe(const Error& error) : error_or_plain_(error.error_proto()) { CheckError(); }
   Maybe(const std::shared_ptr<ErrorProto>& error) : error_or_plain_(error) { CheckError(); }
   Maybe(const Maybe<void>&) = default;
+  Maybe(Maybe<void>&&) = default;
   ~Maybe() = default;
 
   static Maybe<void> Ok() { return Maybe<void>(); }
 
   bool IsOk() const { return error_or_plain_.IsPlain(); }
-  void data() const {}
+  void Data_YouAreNotAllowedToCallThisOutsideJustOrCheckJust() const {}
   std::shared_ptr<ErrorProto> error() const { return error_or_plain_.shared_ptr(); }
 
  private:
@@ -55,10 +59,13 @@ class Maybe<void> final {
     Maybe(const Error& error) : error_or_plain_(error.error_proto()) { CheckError(); }         \
     Maybe(const std::shared_ptr<ErrorProto>& error) : error_or_plain_(error) { CheckError(); } \
     Maybe(const Maybe<T>&) = default;                                                          \
+    Maybe(Maybe<T>&&) = default;                                                               \
     ~Maybe() = default;                                                                        \
                                                                                                \
     bool IsOk() const { return error_or_plain_.IsPlain(); }                                    \
-    T data() const { return error_or_plain_.plain_data(); }                                    \
+    T Data_YouAreNotAllowedToCallThisOutsideJustOrCheckJust() const {                          \
+      return error_or_plain_.plain_data();                                                     \
+    }                                                                                          \
     std::shared_ptr<ErrorProto> error() const { return error_or_plain_.shared_ptr(); }         \
                                                                                                \
    private:                                                                                    \
@@ -102,21 +109,21 @@ inline Maybe<T> MaybeFuncSafeCallWrapper(Maybe<T>&& maybe) {
 
 #if defined(__GNUC__) || defined(__CUDACC__) || defined(__clang__)
 
-#define TRY(...) MaybeFuncSafeCallWrapper(__VA_ARGS__)
-#define JUST(...)                                              \
-  ({                                                           \
-    const auto& maybe = MaybeFuncSafeCallWrapper(__VA_ARGS__); \
-    if (!maybe.IsOk()) {                                       \
-      LOG(INFO) << "maybe failed:" << __LOC__;                 \
-      return maybe.error();                                    \
-    }                                                          \
-    maybe.data();                                              \
+#define TRY(...) MaybeFuncSafeCallWrapper(std::move(__VA_ARGS__))
+#define JUST(...)                                                         \
+  ({                                                                      \
+    const auto& maybe = MaybeFuncSafeCallWrapper(std::move(__VA_ARGS__)); \
+    if (!maybe.IsOk()) {                                                  \
+      LOG(INFO) << "maybe failed:" << __LOC__;                            \
+      return maybe.error();                                               \
+    }                                                                     \
+    maybe.Data_YouAreNotAllowedToCallThisOutsideJustOrCheckJust();        \
   })
-#define CHECK_JUST(...)                                        \
-  ({                                                           \
-    const auto& maybe = MaybeFuncSafeCallWrapper(__VA_ARGS__); \
-    CHECK(maybe.IsOk());                                       \
-    maybe.data();                                              \
+#define CHECK_JUST(...)                                                   \
+  ({                                                                      \
+    const auto& maybe = MaybeFuncSafeCallWrapper(std::move(__VA_ARGS__)); \
+    CHECK(maybe.IsOk());                                                  \
+    maybe.Data_YouAreNotAllowedToCallThisOutsideJustOrCheckJust();        \
   })
 
 #else

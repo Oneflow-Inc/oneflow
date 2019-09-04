@@ -163,7 +163,7 @@ Maybe<int64_t> JobBuildAndInferCtx::GetSplitAxisFromProducerView(const std::stri
   TODO();
 }
 
-Maybe<ParallelDesc> JobBuildAndInferCtx::GetParallelDescFromProducerView(
+Maybe<const ParallelDesc*> JobBuildAndInferCtx::GetParallelDescFromProducerView(
     const std::string& lbn) const {
   TODO();
 }
