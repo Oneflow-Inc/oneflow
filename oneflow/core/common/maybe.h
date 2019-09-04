@@ -3,56 +3,95 @@
 
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/either_ptr.h"
+#include "oneflow/core/common/shared_or_plain.h"
 #include "oneflow/core/common/error.h"
 #include "oneflow/core/common/preprocessor.h"
 
 namespace oneflow {
 
 template<typename T>
-class MaybeBase {
+class Maybe final {
  public:
-  MaybeBase(const std::shared_ptr<T>& data) : data_or_error_(data) {}
-  MaybeBase(const std::shared_ptr<ErrorProto>& error) : data_or_error_(error) {}
-  MaybeBase(const MaybeBase<T>&) = default;
-  ~MaybeBase() = default;  // no virtual is what we want
+  Maybe(const T& data) : data_or_error_(std::make_shared<T>(data)) {}
+  Maybe(const Error& error) : data_or_error_(error.error_proto()) {}
+  Maybe(const std::shared_ptr<T>& data) : data_or_error_(data) {}
+  Maybe(const std::shared_ptr<ErrorProto>& error) : data_or_error_(error) {}
+  Maybe(const Maybe<T>&) = default;
+  ~Maybe() = default;
 
   bool IsOk() const { return data_or_error_.template Has<T>(); }
-  const std::shared_ptr<T>& data() const { return data_or_error_.template Get<T>(); }
+  std::shared_ptr<T> data() const { return data_or_error_.template Get<T>(); }
   std::shared_ptr<ErrorProto> error() const { return data_or_error_.template Get<ErrorProto>(); }
 
  private:
   EitherPtr<T, ErrorProto> data_or_error_;
 };
 
-template<typename T>
-class Maybe final : public MaybeBase<T> {
- public:
-  Maybe(const T& data) : MaybeBase<T>(std::make_shared<T>(data)) {}
-  Maybe(const Error& error) : MaybeBase<T>(error.error_proto()) {}
-  Maybe(const std::shared_ptr<T>& data) : MaybeBase<T>(data) {}
-  Maybe(const std::shared_ptr<ErrorProto>& error) : MaybeBase<T>(error) {}
-  Maybe(const Maybe<T>&) = default;
-  ~Maybe() = default;
-
-  static Maybe<T> Ok() { return Maybe<T>(); }
-};
-
 template<>
-class Maybe<void> final : public MaybeBase<void> {
+class Maybe<void> final {
  public:
-  Maybe(const Error& error) : MaybeBase<void>(error.error_proto()) { CheckError(); }
-  Maybe(const std::shared_ptr<ErrorProto>& error) : MaybeBase<void>(error) { CheckError(); }
+  Maybe(const Error& error) : error_or_plain_(error.error_proto()) { CheckError(); }
+  Maybe(const std::shared_ptr<ErrorProto>& error) : error_or_plain_(error) { CheckError(); }
   Maybe(const Maybe<void>&) = default;
   ~Maybe() = default;
 
   static Maybe<void> Ok() { return Maybe<void>(); }
 
+  bool IsOk() const { return error_or_plain_.IsPlain(); }
+  void data() const {}
+  std::shared_ptr<ErrorProto> error() const { return error_or_plain_.shared_ptr(); }
+
  private:
-  Maybe() : MaybeBase<void>(std::shared_ptr<void>()) {}
+  Maybe() : error_or_plain_(nullptr) {}
   void CheckError() const { CHECK_NE(error()->error_type_case(), ErrorProto::ERROR_TYPE_NOT_SET); }
+
+  SharedOrPlain<ErrorProto, void*> error_or_plain_;
 };
 
-inline void operator*(const std::shared_ptr<void>& x) {}  // safe for *JUST_PTR(...)
+#define SPECIALIZE_PLAIN_MAYBE(T)                                                              \
+  class Maybe<T> final {                                                                       \
+   public:                                                                                     \
+    Maybe(T data) : error_or_plain_(data) {}                                                   \
+    Maybe(const Error& error) : error_or_plain_(error.error_proto()) { CheckError(); }         \
+    Maybe(const std::shared_ptr<ErrorProto>& error) : error_or_plain_(error) { CheckError(); } \
+    Maybe(const Maybe<T>&) = default;                                                          \
+    ~Maybe() = default;                                                                        \
+                                                                                               \
+    bool IsOk() const { return error_or_plain_.IsPlain(); }                                    \
+    T data() const { return error_or_plain_.plain_data(); }                                    \
+    std::shared_ptr<ErrorProto> error() const { return error_or_plain_.shared_ptr(); }         \
+                                                                                               \
+   private:                                                                                    \
+    void CheckError() const {                                                                  \
+      CHECK_NE(error()->error_type_case(), ErrorProto::ERROR_TYPE_NOT_SET);                    \
+    }                                                                                          \
+                                                                                               \
+    SharedOrPlain<ErrorProto, T> error_or_plain_;                                              \
+  }
+
+template<typename T>
+SPECIALIZE_PLAIN_MAYBE(T*);
+
+#define SPECIALIZE_BASIC_DATA_TYPE_MAYBE(T) \
+  template<>                                \
+  SPECIALIZE_PLAIN_MAYBE(T)
+
+SPECIALIZE_BASIC_DATA_TYPE_MAYBE(bool);
+SPECIALIZE_BASIC_DATA_TYPE_MAYBE(char);
+SPECIALIZE_BASIC_DATA_TYPE_MAYBE(unsigned char);
+SPECIALIZE_BASIC_DATA_TYPE_MAYBE(short);
+SPECIALIZE_BASIC_DATA_TYPE_MAYBE(unsigned short);
+SPECIALIZE_BASIC_DATA_TYPE_MAYBE(int);
+SPECIALIZE_BASIC_DATA_TYPE_MAYBE(unsigned int);
+SPECIALIZE_BASIC_DATA_TYPE_MAYBE(long);
+SPECIALIZE_BASIC_DATA_TYPE_MAYBE(unsigned long);
+SPECIALIZE_BASIC_DATA_TYPE_MAYBE(long long);
+SPECIALIZE_BASIC_DATA_TYPE_MAYBE(unsigned long long);
+SPECIALIZE_BASIC_DATA_TYPE_MAYBE(float);
+SPECIALIZE_BASIC_DATA_TYPE_MAYBE(double);
+
+#undef SPECIALIZE_BASIC_DATA_TYPE_MAYBE
+#undef SPECIALIZE_PLAIN_MAYBE
 
 template<typename T>
 inline Maybe<T> MaybeFuncSafeCallWrapper(Maybe<T>&& maybe) {
@@ -64,10 +103,7 @@ inline Maybe<T> MaybeFuncSafeCallWrapper(Maybe<T>&& maybe) {
 #if defined(__GNUC__) || defined(__CUDACC__) || defined(__clang__)
 
 #define TRY(...) MaybeFuncSafeCallWrapper(__VA_ARGS__)
-#define JUST(...) (*JUST_PTR(__VA_ARGS__))
-#define CHECK_JUST(...) (*CHECK_JUST_PTR(__VA_ARGS__))
-
-#define JUST_PTR(...)                                          \
+#define JUST(...)                                              \
   ({                                                           \
     const auto& maybe = MaybeFuncSafeCallWrapper(__VA_ARGS__); \
     if (!maybe.IsOk()) {                                       \
@@ -76,7 +112,7 @@ inline Maybe<T> MaybeFuncSafeCallWrapper(Maybe<T>&& maybe) {
     }                                                          \
     maybe.data();                                              \
   })
-#define CHECK_JUST_PTR(...)                                    \
+#define CHECK_JUST(...)                                        \
   ({                                                           \
     const auto& maybe = MaybeFuncSafeCallWrapper(__VA_ARGS__); \
     CHECK(maybe.IsOk());                                       \

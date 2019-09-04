@@ -21,7 +21,7 @@ class Error final {
   static Error Todo();
   static Error Unimplemented();
 
-  const std::shared_ptr<ErrorProto>& error_proto() const { return error_proto_; }
+  std::shared_ptr<ErrorProto> error_proto() const { return error_proto_; }
   ErrorProto* operator->() const { return error_proto_.get(); }
   operator std::string() const;
 
