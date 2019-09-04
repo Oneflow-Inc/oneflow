@@ -49,9 +49,12 @@ def variable_scope_test_job_1(a=of.input_blob_def((1, 3, 6, 6))):
         fc2 = of.matmul(fc_bias, fcw2, name="fc2")
 
     print("conv_weight op name: ", convw.op_name)
+    print("conv op name: ", conv.op_name)
     print("fc_weight op name: ", fcw.op_name)
     print("fc_bias op name: ", fcb.op_name)
+    print("fc op name: ", fc.op_name)
     print("fc2_weight op name: ", fcw2.op_name)
+    print("fc2 op name: ", fc2.op_name)
 
     return fc2
 
@@ -69,7 +72,8 @@ def variable_scope_test_job_2(a=of.input_blob_def((2, 5))):
         )
         output = of.gather(a, indices, axis=1)
 
-    print("indices: ", indices.op_name)
+    print("indices op name: ", indices.op_name)
+    print("gather op name: ", output.op_name)
     return output
 
 

@@ -37,14 +37,6 @@ def variable_scope(name):
         variable_scope_stack_pop()
 
 
-def get_variable_prefix():
-    var_scope_stack = get_variable_scope_stack()
-    if len(var_scope_stack) == 0:
-        return ""
-
-    return "-".join(var_scope_stack) + "-"
-
-
 def get_variable_scope_stack():
     return compile_context.cur_job_variable_scope_stack
 
