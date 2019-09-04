@@ -10,8 +10,10 @@ namespace oneflow {
 class EnvironmentObjectsScope final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(EnvironmentObjectsScope);
-  explicit EnvironmentObjectsScope(const ConfigProto& config_proto);
+  EnvironmentObjectsScope();
   ~EnvironmentObjectsScope();
+
+  Maybe<bool> Init(const ConfigProto& config_proto);
 
  private:
   std::unique_ptr<FlagsAndLogScope> flags_and_log_scope_;
