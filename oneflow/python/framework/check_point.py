@@ -98,6 +98,7 @@ class SimpleCheckPointManager(object):
             self._checkpoint.load(self.get_snapshot_path(name))
         else:
             self._checkpoint.init()
+            self.save()
 
     def next_snapshot_name(self):
         return self._prefix + datetime.datetime.now().strftime('%Y%m%d_%H%M%S_%f')
