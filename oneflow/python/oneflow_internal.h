@@ -21,7 +21,7 @@ bool IsOpTypeCaseCpuSupportOnly(int64_t op_type_case, std::string* error_str) {
   using namespace oneflow;
   using OnlyCpuSupport = OnlyCpuSupportPredicator;
   OF_ERROR_STR_CHECK(IsClassRegistered<OnlyCpuSupport>(op_type_case), false,
-      ": op_type_case = %d", op_type_case);
+      ": op_type_case = ", op_type_case);
   return *std::unique_ptr<OnlyCpuSupport>(NewObj<OnlyCpuSupport>(op_type_case));
 }
 
@@ -32,7 +32,13 @@ void InitBySerializedConfigProto(const std::string& config_proto_str, std::strin
   OF_ERROR_STR_CHECK_ISNULL(Global<EnvironmentObjectsScope>::Get(), void);
   // Global<T>::New is not allowed to be called here
   // because glog is not constructed yet and LOG(INFO) has bad bahavior
-  Global<EnvironmentObjectsScope>::SetAllocated(new EnvironmentObjectsScope(config_proto));
+  Global<EnvironmentObjectsScope>::SetAllocated(new EnvironmentObjectsScope());
+  auto status = TRY(Global<EnvironmentObjectsScope>::Get()->Init(config_proto));
+  if (!status.IsOk()) {
+    PbMessage2TxtString(*status.error(), error_str);
+    return;
+  }
+
   LOG(INFO) << "NewGlobal " << typeid(EnvironmentObjectsScope).name();
   if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
     Global<CtrlClient>::Get()->PushKV("master_config_proto", config_proto);
