@@ -238,7 +238,7 @@ def _FullyConnected(input_blob, input_size, units, activation=None, name=None,
     shape=[units],
     dtype=input_blob.dtype,
     initializer=flow.constant_initializer(0.0))
-  output_blob = flow.matmul(input_blob, weight_blob)#, transpose_b=True)
+  output_blob = flow.matmul(input_blob, weight_blob)
   output_blob = flow.nn.bias_add(output_blob, bias_blob)
   return output_blob
 
@@ -249,7 +249,6 @@ def _Dropout(input_blob, dropout_prob):
 
 
 def _LayerNorm(input_blob, hidden_size):
-  #return flow.layers.layer_norm(input_blob, begin_norm_axis=-1, begin_params_axis=-1)
   return flow.layers.layer_norm(input_blob, name='LayerNorm', begin_norm_axis=-1, begin_params_axis=-1)
 
 
@@ -313,7 +312,7 @@ def _EmbeddingLookup(input_ids_blob,
 
 def GetActivation(name):
   if name == 'linear':
-    return None#op_conf_util.kNone
+    return None
   elif name == 'relu':
     return flow.keras.activations.relu
   elif name == 'tanh':

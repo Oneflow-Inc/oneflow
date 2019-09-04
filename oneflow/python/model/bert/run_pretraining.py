@@ -13,13 +13,11 @@ from pretrain import PreTrain#, Eval
 _DATA_DIR = '/dataset/bert_regression_test/0'
 #_MODEL_LOAD = "/dataset/model_zoo/bert/of_L-12_H-768_A-12_random_init"
 _MODEL_LOAD = "/dataset/model_zoo/bert_new_snapshot/of_L-12_H-768_A-12_random_init"
-#_MODEL_LOAD = "/home/xiexuan/work/bert_job_set/snapshots/snapshot_2019_08_31_17_32_38_663"
-_MODEL_SAVE = './snapshots'
 
-parser = argparse.ArgumentParser(description="flags for multi-node and resource")
+parser = argparse.ArgumentParser(description="flags for bert")
 parser.add_argument("-d", "--device_num_per_node", type=int, default=1)
 parser.add_argument("-n", "--node_num", type=int, default=1)
-parser.add_argument("-b", "--batch_size_per_device", type=int, default=8)
+parser.add_argument("-b", "--batch_size_per_device", type=int, default=24)
 parser.add_argument("-s", "--num_steps", type=int, default=100)
 args = parser.parse_args()
 
@@ -46,17 +44,7 @@ def BuildPreTrainNet(seq_length=128, max_position_embeddings=512, num_hidden_lay
   hidden_size = 64 * num_attention_heads#, H = 64, size per head
   intermediate_size = hidden_size * 4
 
-  #with flow.deprecated.variable_scope('other'):
   decoders = BertDecoder(_DATA_DIR, seq_length, max_predictions_per_seq)
-
-  # input blobs
-  #input_ids = decoders['input_ids']
-  #next_sentence_labels = decoders['next_sentence_labels']
-  #token_type_ids = decoders['segment_ids']
-  #input_mask = decoders['input_mask']
-  #masked_lm_ids = decoders['masked_lm_ids']
-  #masked_lm_positions = decoders['masked_lm_positions']
-  #masked_lm_weights = decoders['masked_lm_weights']
 
   input_ids = decoders[0]
   next_sentence_labels = decoders[1]
@@ -93,19 +81,17 @@ _BERT_MODEL_UPDATE_CONF = dict(
       end_learning_rate = 0.0,
     )
   ),
-  #warmup_conf = dict(
-  #  linear_conf = dict(
-  #    warmup_batches = 1000,
-  #    start_multiplier = 0,
-  #  )
-  #),
+  warmup_conf = dict(
+    linear_conf = dict(
+      warmup_batches = 1000,
+      start_multiplier = 0,
+    )
+  ),
   clip_conf = dict(
     clip_by_global_norm = dict(
       clip_norm = 1.0,
     )
   ),
-  #momentum_conf = dict(
-  #lars_conf = dict(
   adam_conf = dict(
     epsilon = 1e-6
   ),
@@ -150,19 +136,16 @@ if __name__ == '__main__':
   config.ctrl_port(9917)
   config.data_port(9927)
   config.machine(nodes[:args.node_num])
-  #config.model_load_snapshot_path(_MODEL_LOAD)
-  #config.model_save_snapshots_path(_MODEL_SAVE)
 
   assert args.node_num == 1, 'support 1 node currently'
   flow.init(config)
 
   flow.add_job(PretrainJob)
   with flow.Session() as sess:
-    check_point = flow.train.SimpleCheckPointManager('mode_save')
+    check_point = flow.train.SimpleCheckPointManager('model_save')
     check_point.initialize_or_restore()
     #check_point = flow.train.CheckPoint()
     #check_point.load(_MODEL_LOAD)
-    # sess.sync()
     fmt_str = "{:>12}  {:>12}  {:>12.10f}"
     print('{:>12}  {:14}  {}'.format( "step", "loss", "time"))
     for i in range(args.num_steps):

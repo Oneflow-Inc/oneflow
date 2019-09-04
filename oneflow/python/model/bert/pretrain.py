@@ -113,7 +113,6 @@ def _AddMaskedLanguageModelLoss(input_blob,
                                     initializer=flow.constant_initializer(1.0))
     logit_blob = flow.matmul(input_blob, output_weights_blob, transpose_b=True)
     logit_blob = flow.nn.bias_add(logit_blob, output_bias)
-    #logit_blob = flow.softmax(logit_blob)
     label_id_blob = flow.reshape(label_id_blob, [-1])
     pre_example_loss = flow.nn.sparse_softmax_cross_entropy_with_logits(logits=logit_blob,
                                                                         labels=label_id_blob)
@@ -143,6 +142,4 @@ def _AddNextSentenceOutput(input_blob, label_blob, hidden_size, initializer_rang
     pre_example_loss = flow.nn.sparse_softmax_cross_entropy_with_logits(logits=logit_blob,
                                                                         labels=label_blob)
     loss = pre_example_loss
-    #with flow.deprecated.variable_scope("loss"):
-    #  loss = dl_net.ReduceSum(pre_example_loss, axis=[-1])
     return loss, pre_example_loss, logit_blob
