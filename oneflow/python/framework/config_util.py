@@ -77,16 +77,6 @@ class ConfigProtoBuilder(object):
         self.config_proto_.resource.use_rdma = val
         return self
 
-    def model_load_snapshot_path(self, val):
-        assert type(val) is str
-        self.config_proto_.io_conf.model_load_snapshot_path = val
-        return self
-
-    def model_save_snapshots_path(self, val):
-        assert type(val) is str
-        self.config_proto_.io_conf.model_save_snapshots_path = val
-        return self
-
     def enable_write_snapshot(self, val = True):
         assert type(val) is bool
         self.config_proto_.io_conf.enable_write_snapshot = val

@@ -13,7 +13,7 @@ void NormalMdUpdateKernel<device_type, T>::Forward(
   const PbMessage& op_conf = this->GetCustomizedOpConf();
   const auto& conf = *GetMsgPtrFromPbMessage<NormalModelUpdateOpUserConf>(op_conf, "user_conf");
   const T* batch_instance_num_ptr = BnInOp2Blob("total_instance_num_diff")->dptr<T>();
-  const int64_t* global_step_ptr = BnInOp2Blob("global_step")->dptr<int64_t>();
+  const int64_t* train_step_ptr = BnInOp2Blob("train_step")->dptr<int64_t>();
   const float* learning_rate_ptr = BnInOp2Blob("learning_rate")->dptr<float>();
   if (conf.has_clip_conf()) {
     ClipGradient(ctx.device_ctx, conf.clip_conf(), batch_instance_num_ptr, BnInOp2Blob);
@@ -21,7 +21,7 @@ void NormalMdUpdateKernel<device_type, T>::Forward(
   float l1 = GetValFromPbMessage<float>(op_conf, "l1");
   float l2 = GetValFromPbMessage<float>(op_conf, "l2");
   UpdateModel(ctx.device_ctx, batch_instance_num_ptr, static_cast<T>(l1), static_cast<T>(l2),
-              global_step_ptr, learning_rate_ptr, BnInOp2Blob);
+              train_step_ptr, learning_rate_ptr, BnInOp2Blob);
 }
 
 #define INSTANTIATE_KERNEL(device_type, data_type_pair) \
