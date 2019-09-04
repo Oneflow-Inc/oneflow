@@ -326,7 +326,7 @@ inline OpBlobArg GenOpBlobArg(const std::string& op_name, const std::string& bn_
 
 inline LogicalBlobId GenLogicalBlobId(const std::string& lbn) {
   LogicalBlobId lbi;
-  size_t pos = lbn.rfind('/');
+  size_t pos = lbn.find('/');
   CHECK_NE(pos, std::string::npos);
   lbi.set_op_name(lbn.substr(0, pos));
   std::string blob_name_with_split_hit = lbn.substr(pos + 1);

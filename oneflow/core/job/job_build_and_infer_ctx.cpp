@@ -85,7 +85,7 @@ Maybe<void> JobBuildAndInferCtx::InferOpOutSbpParallel(Operator* op,
     if (lbi2logical_blob_desc_.find(lbi) == lbi2logical_blob_desc_.end()) {
       return GenJobBuildAndInferError(
           JobBuildAndInferError::kLogicalBlobNameNotExist,
-          "when infer op_name: " + op->op_name() + "consumed op_name: " + lbi.op_name()
+          "when infer op_name: " + op->op_name() + " consumed op_name: " + lbi.op_name()
               + " blob_name: " + lbi.blob_name() + " not infer blob desc");
     }
     const BlobDesc* logical_blob_desc = lbi2logical_blob_desc_.at(lbi).get();
@@ -93,7 +93,7 @@ Maybe<void> JobBuildAndInferCtx::InferOpOutSbpParallel(Operator* op,
         == lbi2sbp_parallel_from_producer_view_.end()) {
       return GenJobBuildAndInferError(
           JobBuildAndInferError::kLogicalBlobNameNotExist,
-          "when infer op_name: " + op->op_name() + "consumed op_name: " + lbi.op_name()
+          "when infer op_name: " + op->op_name() + " consumed op_name: " + lbi.op_name()
               + " blob_name: " + lbi.blob_name() + " not infer split axis");
     }
     const SbpParallel& sbp_parallel = lbi2sbp_parallel_from_producer_view_.at(lbi);

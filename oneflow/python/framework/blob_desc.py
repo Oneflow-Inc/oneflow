@@ -42,11 +42,11 @@ class BlobDesc(object):
     @property
     def logical_blob_name(self):
         if self.split_axis_ is undefined:
-            return lbn_
+            return self.lbn_
         elif type(self.split_axis_) is int:
-            return lbi_ + "S" + str(self.split_axis_)
-        elif split_axis_ is None or type(self.split_axis_) is False:
-            return lbi_ + "B"
+            return self.lbi_ + "S" + str(self.split_axis_)
+        elif self.split_axis_ is None or self.split_axis_ is False:
+            return self.lbi_ + "B"
         else:
             raise NotImplementedError
 
