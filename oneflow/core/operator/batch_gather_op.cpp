@@ -36,10 +36,10 @@ Maybe<void> BatchGatherOp::InferBlobDescs(
   return Maybe<void>::Ok();
 }
 
-void BatchGatherOp::GetSbpSignatures(
-    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
+Maybe<void> BatchGatherOp::GetSbpSignatures(
+    const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
     SbpSignatureList* sbp_sig_list) const {
-  const int64_t indices_num_axes = LogicalBlobDesc4Ibn("indices").shape().NumAxes();
+  const int64_t indices_num_axes = JUST(LogicalBlobDesc4Ibn("indices"))->shape().NumAxes();
   if (indices_num_axes > 1) {
     FOR_RANGE(int64_t, i, 0, indices_num_axes - 1) {
       SbpSignatureBuilder()
@@ -49,8 +49,13 @@ void BatchGatherOp::GetSbpSignatures(
           .Build(sbp_sig_list->mutable_sbp_signature()->Add());
     }
   } else {
-    UNIMPLEMENTED();
+    std::shared_ptr<ErrorProto> err;
+    err->set_msg("BatchGatherOp: indices_num_axes equals " + std::to_string(indices_num_axes)
+                 + " (should be bigger than 1).");
+    err->mutable_check_failed();
+    return err;
   }
+  return Maybe<void>::Ok();
 }
 
 REGISTER_OP(OperatorConf::kBatchGatherConf, BatchGatherOp);

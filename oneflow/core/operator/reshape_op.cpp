@@ -55,7 +55,7 @@ Maybe<void> ReshapeOp::InferBlobDescs(
   return Maybe<void>::Ok();
 }
 
-void ReshapeOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
+Maybe<void> ReshapeOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
   SbpSignatureBuilder()
       .Split(input_bns(), 0)
       .Split(output_bns(), 0)
@@ -64,6 +64,7 @@ void ReshapeOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
       .PartialSum(input_bns())
       .PartialSum(output_bns())
       .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+  return Maybe<void>::Ok();
 }
 
 REGISTER_OP(OperatorConf::kReshapeConf, ReshapeOp);

@@ -34,12 +34,12 @@ Maybe<void> GatherGradOp::InferBlobDescs(
   return Maybe<void>::Ok();
 }
 
-void GatherGradOp::GetSbpSignatures(
-    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
+Maybe<void> GatherGradOp::GetSbpSignatures(
+    const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
     SbpSignatureList* sbp_sig_list) const {
   const int64_t gather_axis = op_conf().gather_grad_conf().axis();
-  const int64_t indices_num_axes = LogicalBlobDesc4Ibn("indices").shape().NumAxes();
-  const int64_t out_diff_num_axes = LogicalBlobDesc4Ibn("out_diff").shape().NumAxes();
+  const int64_t indices_num_axes = JUST(LogicalBlobDesc4Ibn("indices"))->shape().NumAxes();
+  const int64_t out_diff_num_axes = JUST(LogicalBlobDesc4Ibn("out_diff"))->shape().NumAxes();
   FOR_RANGE(int64_t, i, 0, indices_num_axes) {
     SbpSignatureBuilder()
         .Split("indices", i)
@@ -62,6 +62,7 @@ void GatherGradOp::GetSbpSignatures(
       .PartialSum("out_diff")
       .PartialSum("in_diff")
       .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> GatherGradOp::InferBatchAxis(

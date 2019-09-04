@@ -54,9 +54,6 @@ def test_reduce_mean(input_shape, axis=None, keepdims=False):
         tf.Variable(input), axis=axis, keepdims=keepdims
     ).numpy()
 
-    print(of_out)
-    print(tf_out)
-
     print("dense max diff: " + str(np.max(np.abs(of_out - tf_out))))
     assert np.allclose(of_out, tf_out, atol=1e-7)
 

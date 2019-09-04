@@ -21,7 +21,9 @@ class ReduceSplitOp final : public Operator {
  private:
   Maybe<void> InferBatchAxis(
       std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override;
-  void GetSbpSignatures(SbpSignatureList* sbp_sig_list) const override {}
+  Maybe<void> GetSbpSignatures(SbpSignatureList* sbp_sig_list) const override {
+    return Maybe<void>::Ok();
+  }
   void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                             const ParallelContext*, KernelConf*) const override;
 };

@@ -19,8 +19,8 @@ class AssignOp final : public Operator {
       std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override {
     return NaiveInferBatchAxis(BatchAxis4BnInOp);
   }
-  void GetSbpSignatures(
-      const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
+  Maybe<void> GetSbpSignatures(
+      const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
       SbpSignatureList* sbp_sig_list) const override;
 };
 
@@ -39,13 +39,15 @@ Maybe<void> AssignOp::InferBlobDescs(
   return Maybe<void>::Ok();
 }
 
-void AssignOp::GetSbpSignatures(
-    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
+Maybe<void> AssignOp::GetSbpSignatures(
+    const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
     SbpSignatureList* sbp_sig_list) const {
   SbpSignatureBuilder()
       .Split(input_bns(), 0)
-      .MakeSplitSignatureListBuilder(LogicalBlobDesc4Ibn(input_bns().Get(0)).shape().NumAxes())
+      .MakeSplitSignatureListBuilder(
+          JUST(LogicalBlobDesc4Ibn(input_bns().Get(0)))->shape().NumAxes())
       .Build(sbp_sig_list);
+  return Maybe<void>::Ok();
 }
 
 REGISTER_OP(OperatorConf::kAssignConf, AssignOp);

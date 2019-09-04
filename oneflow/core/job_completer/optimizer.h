@@ -11,8 +11,6 @@ void AddOptimizerOpConf(
     const HashMap<LogicalBlobId, LogicalBlobId>& lbi2diff_lbi,
     const std::function<const LogicalBlobId&(const ParallelDesc&)>& LossInstanceNum4ParallelDesc);
 
-void BindTwoVariableOpObnSbpConf(const std::string& lhs_op_name, const std::string& rhs_op_name,
-                                 JobBuilder* job_builder);
 template<typename T>
 void ConstructMdUpdtOpConf(const VariableOp& op, const LogicalBlobId& diff_lbi_of_var_out,
                            const LogicalBlobId& total_loss_instance_num_lbi,

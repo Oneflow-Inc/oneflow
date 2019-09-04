@@ -39,10 +39,11 @@ Maybe<void> InputOp::InferBatchAxis(
   return Maybe<void>::Ok();
 }
 
-void InputOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
+Maybe<void> InputOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
   InterfaceOpUtil::GetInputLikeOpSbpSignature(op_conf().input_conf().blob_conf(), input_bns(),
                                               output_bns(),
                                               sbp_sig_list->mutable_sbp_signature()->Add());
+  return Maybe<void>::Ok();
 }
 
 REGISTER_OP(OperatorConf::kInputConf, InputOp);

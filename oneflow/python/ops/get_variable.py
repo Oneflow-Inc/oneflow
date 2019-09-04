@@ -17,7 +17,7 @@ def get_variable(
     initializer=None,
     trainable=None,
     model_name=None,
-    model_split_axis=None,
+    split_axis=None,
     random_seed=None,
 ):
     assert isinstance(name, str)
@@ -40,8 +40,11 @@ def get_variable(
             op_conf.trainable = trainable
         if model_name is not None:
             op_conf.variable_conf.model_name = model_name
-        if model_split_axis is not None:
-            op_conf.variable_conf.model_split_axis = model_split_axis
+        if type(split_axis) is int:
+            op_conf.variable_conf.split_axis.value = split_axis
+        else:
+            assert split_axis is None or split_axis is False
+            op_conf.variable_conf.split_axis.ClearField("value")
         if random_seed is not None:
             op_conf.variable_conf.random_seed = random_seed
         op_conf.variable_conf.out = "out"

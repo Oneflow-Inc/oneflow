@@ -43,11 +43,11 @@ Maybe<void> BroadcastBinaryOp::InferBlobDescs(
   return Maybe<void>::Ok();
 }
 
-void BroadcastBinaryOp::GetSbpSignatures(
-    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
+Maybe<void> BroadcastBinaryOp::GetSbpSignatures(
+    const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
     SbpSignatureList* sbp_sig_list) const {
-  const Shape& a_shape = LogicalBlobDesc4Ibn("a").shape();
-  const Shape& b_shape = LogicalBlobDesc4Ibn("b").shape();
+  const Shape& a_shape = JUST(LogicalBlobDesc4Ibn("a"))->shape();
+  const Shape& b_shape = JUST(LogicalBlobDesc4Ibn("b"))->shape();
   if (a_shape.NumAxes() < b_shape.NumAxes()) {
     FOR_RANGE(int64_t, i, 0, b_shape.NumAxes() - a_shape.NumAxes()) {
       SbpSignatureBuilder().Broadcast("a").Split("b", i).Split("out", i).Build(
@@ -97,6 +97,7 @@ void BroadcastBinaryOp::GetSbpSignatures(
       }
     }
   }
+  return Maybe<void>::Ok();
 }
 
 }  // namespace oneflow
