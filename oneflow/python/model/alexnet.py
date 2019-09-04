@@ -110,9 +110,10 @@ def _fully_connected_layer(
     if kernel_initializer is None:
         kernel_initializer = op_conf_util.InitializerConf()
         kernel_initializer.truncated_normal_conf.std = 0.816496580927726
-
+    if len(input.shape) > 2:
+        input = flow.reshape(input, shape=(input.static_shape[0], -1))
     output = flow.layers.dense(
-        flow.reshape(input, shape=(input.static_shape[0], -1)),
+        input,
         units,
         None,
         use_bias,
