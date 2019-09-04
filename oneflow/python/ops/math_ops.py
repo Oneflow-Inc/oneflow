@@ -156,7 +156,7 @@ def scalar_mul(x, operand, name=None):
     lbi.op_name = op_conf.name
     lbi.blob_name = "out"
     return remote_blob_util.RemoteBlob(lbi)
-    
+
 
 def broadcast_div(x, y, name=None):
     op_conf = op_conf_util.OperatorConf()
@@ -253,4 +253,10 @@ def cast(x, dtype, name=None):
     setattr(op_conf.cast_conf, "in", x.logical_blob_name)
     op_conf.cast_conf.data_type = dtype
     op_conf.cast_conf.out = "out"
+    compile_context.CurJobAddOp(op_conf)	
+    lbi = logical_blob_id_util.LogicalBlobId()	
+    lbi.op_name = op_conf.name	
+    lbi.blob_name = "out"	
+    return remote_blob_util.RemoteBlob(lbi)	
+
 
