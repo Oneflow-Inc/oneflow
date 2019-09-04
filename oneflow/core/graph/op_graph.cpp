@@ -625,9 +625,9 @@ std::function<const BlobDesc&(const LogicalBlobId&)> OpGraph::MakeGetterBlobDesc
     // the real important data we want to get is:
     // a) model blobs' byte size;
     // b) number of axes of blobs' body shape;
-    // Hence the argument record_piece_size can be any positive number, here it's 1
-    op_node->op().InferBlobDescsIf(MutUnparalleledBlobDesc4BnInOp, &parallel_ctx, 1,
-                                   [](OpContext*) {});
+    // Hence the argument record_piece_size can be any positive number
+    op_node->op().InferBlobDescsIf(MutUnparalleledBlobDesc4BnInOp, &parallel_ctx,
+                                   GlobalJobDesc().RecordPieceSize(), [](OpContext*) {});
   });
   auto model_lbi2blob_desc = std::make_shared<HashMap<LogicalBlobId, std::unique_ptr<BlobDesc>>>();
   ForEachNode([&](OpNode* op_node) {
