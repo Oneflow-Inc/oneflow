@@ -1,6 +1,7 @@
 from __future__ import absolute_import
 
 import sys
+import copy
 
 import oneflow.python.framework.blob_desc as blob_desc
 import oneflow.core.common.data_type_pb2 as data_type_util
@@ -46,6 +47,12 @@ class input_blob_def(blob_desc.BlobDesc):
     @property
     def is_dynamic(self): return self.is_dynamic_
 
+    def split(self, split_axis):
+        assert split_axis is not undefined
+        ret = self
+        ret.split_axis_ = split_axis
+        return ret
+
     def ToInterfaceBlobConf(self):
         interface_blob_conf = op_conf_util.InterfaceBlobConf()
         interface_blob_conf.shape.dim.extend(self.shape_)
@@ -68,10 +75,10 @@ class input_blob_def(blob_desc.BlobDesc):
             pass
         return interface_blob_conf
 
-    def __add__(self, rhs): 
+    def __add__(self, rhs):
         return oneflow.math.add(self, rhs)
-        
-    def __radd__(self, lhs): 
+
+    def __radd__(self, lhs):
         return oneflow.math.add(lhs, self)
 
     def __sub__(self, rhs):

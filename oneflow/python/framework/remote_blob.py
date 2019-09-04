@@ -1,5 +1,7 @@
 from __future__ import absolute_import
 
+import copy
+
 import oneflow.python.framework.blob_desc as blob_desc
 import oneflow.python.framework.inter_user_job_util as inter_user_job_util
 import oneflow.python.framework.job_builder as job_builder
@@ -17,6 +19,12 @@ class RemoteBlob(blob_desc.BlobDesc):
 
     @property
     def dtype(self): return job_builder.GetDataType(self.job_name_, self.lbn_)
+
+    def split(self, split_axis):
+        assert split_axis is not undefined
+        ret = self
+        ret.split_axis_ = split_axis
+        return ret
 
     def pull(self):
         return inter_user_job_util.pull(self)

@@ -34,19 +34,16 @@ class BlobDesc(object):
         raise NotImplementedError
 
     def split(self, split_axis):
-        assert split_axis_ is not undefined
-        ret = copy.deepcopy(self)
-        ret.split_axis_ = split_axis
-        return ret
+        raise NotImplementedError
 
     @property
     def logical_blob_name(self):
         if self.split_axis_ is undefined:
             return self.lbn_
         elif type(self.split_axis_) is int:
-            return self.lbi_ + "S" + str(self.split_axis_)
+            return self.lbn_ + ":S" + str(self.split_axis_)
         elif self.split_axis_ is None or self.split_axis_ is False:
-            return self.lbi_ + "B"
+            return self.lbn_ + ":B"
         else:
             raise NotImplementedError
 
