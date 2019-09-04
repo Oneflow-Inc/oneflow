@@ -185,16 +185,46 @@ def alexnet(images, labels, trainable=True):
 
     pool5 = flow.nn.avg_pool2d(conv5, 3, 2, "VALID", "NCHW", name="pool5")
 
-    fc1 = _fully_connected_layer("fc1", pool5, 4096, trainable=trainable)
+    def _get_initializer():
+        kernel_initializer = op_conf_util.InitializerConf()
+        kernel_initializer.truncated_normal_conf.std = 0.816496580927726
+        return kernel_initializer
+
+    fc1 = flow.layers.dense(
+        inputs=flow.reshape(pool5, shape=(pool5.static_shape[0], -1)),
+        units=4096,
+        activation=flow.keras.activations.relu,
+        use_bias=False,
+        kernel_initializer=_get_initializer(),
+        bias_initializer=False,
+        trainable=trainable,
+        name="fc1"
+    )
 
     dropout1 = fc1
 
-    fc2 = _fully_connected_layer("fc2", dropout1, 4096, trainable=trainable)
+    fc2 = flow.layers.dense(
+        inputs=flow.reshape(dropout1, shape=(dropout1.static_shape[0], -1)),
+        units=4096,
+        activation=flow.keras.activations.relu,
+        use_bias=False,
+        kernel_initializer=_get_initializer(),
+        bias_initializer=False,
+        trainable=trainable,
+        name="fc2"
+    )
 
     dropout2 = fc2
 
-    fc3 = _fully_connected_layer(
-        "fc3", dropout2, units=1001, activation=None, trainable=trainable
+    fc3 = flow.layers.dense(
+        inputs=flow.reshape(dropout2, shape=(dropout2.static_shape[0], -1)),
+        units=1001,
+        activation=None,
+        use_bias=False,
+        kernel_initializer=_get_initializer(),
+        bias_initializer=False,
+        trainable=trainable,
+        name="fc3"
     )
 
     loss = flow.nn.sparse_softmax_cross_entropy_with_logits(
