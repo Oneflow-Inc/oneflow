@@ -10,6 +10,7 @@ import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.undefined as undefined
 
 from oneflow.python.oneflow_export import oneflow_export
+import oneflow
 
 @oneflow_export('input_blob_def')
 class input_blob_def(blob_desc.BlobDesc):
@@ -80,3 +81,33 @@ class input_blob_def(blob_desc.BlobDesc):
             # do nothing
             pass
         return interface_blob_conf
+
+    def __add__(self, rhs): 
+        return oneflow.math.add(self, rhs)
+        
+    def __radd__(self, lhs): 
+        return oneflow.math.add(lhs, self)
+
+    def __sub__(self, rhs):
+        return oneflow.math.subtract(self, rhs)
+
+    def __rsub__(self, lhs):
+        return oneflow.math.subtract(lhs, self)
+
+    def __mul__(self, rhs):
+        return oneflow.math.multiply(self, rhs)
+
+    def __rmul__(self, lhs):
+        return oneflow.math.multiply(lhs, self)
+
+    def __mul__(self, rhs):
+        return oneflow.math.multiply(self, rhs)
+
+    def __rmul__(self, lhs):
+        return oneflow.math.multiply(lhs, self)
+
+    def __truediv__(self, rhs):
+        return oneflow.math.divide(self, rhs)
+
+    def __div__(self, rhs):
+        return oneflow.math.divide(self, rhs)

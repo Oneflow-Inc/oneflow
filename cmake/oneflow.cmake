@@ -210,6 +210,11 @@ foreach(oneflow_python_file ${oneflow_all_python_file})
     "${of_pyscript_dir}/${oneflow_python_rel_file_path}")
 endforeach()
 
+# get_property(include_dirs DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY INCLUDE_DIRECTORIES)
+# foreach(dir ${include_dirs})
+#   message("-I'${dir}' ")
+# endforeach()
+
 # build main
 set(RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/bin)
 foreach(cc ${of_main_cc})
