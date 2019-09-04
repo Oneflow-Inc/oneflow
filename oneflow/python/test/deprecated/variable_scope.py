@@ -39,7 +39,21 @@ def variable_scope_test_job_1(a=of.input_blob_def((1, 3, 6, 6))):
             )
             fc_bias = of.nn.bias_add(fc, fcb)
 
-    return fc_bias
+        fcw2 = of.get_variable(
+            "fc2_weight",
+            shape=(10, 20),
+            dtype=a.dtype,
+            initializer=of.random_uniform_initializer(),
+            trainable=True,
+        )
+        fc2 = of.matmul(fc_bias, fcw2, name="fc2")
+
+    print("conv_weight op name: ", convw.op_name)
+    print("fc_weight op name: ", fcw.op_name)
+    print("fc_bias op name: ", fcb.op_name)
+    print("fc2_weight op name: ", fcw2.op_name)
+
+    return fc2
 
 
 def variable_scope_test_job_2(a=of.input_blob_def((2, 5))):
@@ -54,7 +68,9 @@ def variable_scope_test_job_2(a=of.input_blob_def((2, 5))):
             trainable=False,
         )
         output = of.gather(a, indices, axis=1)
-        return output
+
+    print("indices: ", indices.op_name)
+    return output
 
 
 of.add_job(variable_scope_test_job_1)

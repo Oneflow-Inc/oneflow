@@ -34,7 +34,7 @@ def variable_scope(name):
     try:
         yield None
     finally:
-        var_scope_stack = var_scope_stack[0:-1]
+        variable_scope_stack_pop()
 
 
 def get_variable_prefix():
@@ -47,3 +47,9 @@ def get_variable_prefix():
 
 def get_variable_scope_stack():
     return compile_context.cur_job_variable_scope_stack
+
+
+def variable_scope_stack_pop():
+    compile_context.cur_job_variable_scope_stack = compile_context.cur_job_variable_scope_stack[
+        0:-1
+    ]
