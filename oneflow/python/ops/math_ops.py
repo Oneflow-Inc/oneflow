@@ -161,7 +161,7 @@ def scalar_mul(x, operand, name=None):
 def broadcast_div(x, y, name=None):
     op_conf = op_conf_util.OperatorConf()
     setattr(
-        op_conf, "name", name if name is not None else id_util.UniqueStr("BoadcastDiv_")
+        op_conf, "name", name if name is not None else id_util.UniqueStr("BroadcastDiv_")
     )
     op_conf.broadcast_div_conf.a = x.logical_blob_name
     op_conf.broadcast_div_conf.b = y.logical_blob_name
