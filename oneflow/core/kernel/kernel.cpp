@@ -72,15 +72,7 @@ void Kernel::Init(const JobDesc* job_desc, const ParallelContext* parallel_ctx,
   VirtualKernelInit(parallel_ctx, device_ctx);
 }
 
-const InitializerConf* Kernel::GetInitializerFromPbMessage(const PbMessage& msg,
-                                                           const std::string& field) const {
-  auto ret = dynamic_cast<const InitializerConf*>(GetMsgPtrFromPbMessage(msg, field));
-  CHECK_NOTNULL(ret);
-  return ret;
-}
-
 void Kernel::InitModelAndConstBuf(const KernelCtx& ctx, const ParallelContext* parallel_ctx,
-                                  const Snapshot* snapshot,
                                   std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   InitConstBufBlobs(ctx.device_ctx, BnInOp2Blob);
 }

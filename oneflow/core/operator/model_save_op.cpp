@@ -3,11 +3,11 @@
 
 namespace oneflow {
 
-class SnapshotOp final : public Operator {
+class ModelSaveOp final : public Operator {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(SnapshotOp);
-  SnapshotOp() = default;
-  ~SnapshotOp() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(ModelSaveOp);
+  ModelSaveOp() = default;
+  ~ModelSaveOp() override = default;
 
   void InitFromOpConf() override;
   const PbMessage& GetCustomizedConf() const override;
@@ -29,13 +29,14 @@ class SnapshotOp final : public Operator {
   };
 };
 
-void SnapshotOp::InitFromOpConf() {
-  CHECK(op_conf().has_snapshot_conf());
+void ModelSaveOp::InitFromOpConf() {
+  CHECK(op_conf().has_model_save_conf());
+  EnrollInputBn("path", false);
   EnrollRepeatedInputBn("in", false);
 }
 
-const PbMessage& SnapshotOp::GetCustomizedConf() const { return op_conf().snapshot_conf(); }
+const PbMessage& ModelSaveOp::GetCustomizedConf() const { return op_conf().model_save_conf(); }
 
-REGISTER_CPU_OP(OperatorConf::kSnapshotConf, SnapshotOp);
+REGISTER_CPU_OP(OperatorConf::kModelSaveConf, ModelSaveOp);
 
 }  // namespace oneflow
