@@ -820,7 +820,7 @@ message VariableOpConf {
   optional DataType data_type = 4;
   optional InitializerConf initializer = 5;
   optional string model_name = 6 [default = "weight"];
-  optional int32 model_split_axis = 7 [default = 0];
+  required OptInt64 split_axis = 7;
   optional int64 random_seed = 8;
 }
 

@@ -75,11 +75,11 @@ Maybe<void> TransposeOp::InferBatchAxis(
   return Maybe<void>::Ok();
 }
 
-void TransposeOp::GetSbpSignatures(
-    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
+Maybe<void> TransposeOp::GetSbpSignatures(
+    const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
     SbpSignatureList* sbp_sig_list) const {
   const PbRf<int32_t>& perm = op_conf().transpose_conf().perm();
-  CHECK_EQ(perm.size(), LogicalBlobDesc4Ibn("in").shape().NumAxes());
+  CHECK_EQ(perm.size(), JUST(LogicalBlobDesc4Ibn("in"))->shape().NumAxes());
   FOR_RANGE(int32_t, i, 0, perm.size()) {
     int32_t axis = perm.Get(i);
     if (axis < 0) { axis += perm.size(); }
@@ -90,6 +90,7 @@ void TransposeOp::GetSbpSignatures(
         .Split(output_bns(), axis)
         .Build(sbp_sig_list->mutable_sbp_signature()->Add());
   }
+  return Maybe<void>::Ok();
 }
 
 REGISTER_OP(OperatorConf::kTransposeConf, TransposeOp);

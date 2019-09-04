@@ -34,11 +34,12 @@ Maybe<void> RecordLoadOp::InferBatchAxis(
   return Maybe<void>::Ok();
 }
 
-void RecordLoadOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
+Maybe<void> RecordLoadOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
   SbpSignatureBuilder()
       .Broadcast(input_bns())
       .Split(output_bns(), 0)
       .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+  return Maybe<void>::Ok();
 }
 
 REGISTER_CPU_OP(OperatorConf::kRecordLoadConf, RecordLoadOp);

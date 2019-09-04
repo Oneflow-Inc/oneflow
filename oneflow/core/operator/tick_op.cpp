@@ -20,9 +20,11 @@ Maybe<void> TickOp::InferBatchAxis(
   return Maybe<void>::Ok();
 }
 
-void TickOp::GetSbpSignatures(
-    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
-    SbpSignatureList* sbp_sig_list) const {}
+Maybe<void> TickOp::GetSbpSignatures(
+    const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
+    SbpSignatureList* sbp_sig_list) const {
+  return Maybe<void>::Ok();
+}
 
 REGISTER_OP_SAME_OUTPUT_BLOB_MEM_BLOCK_NUM(OperatorConf::kTickConf, 2);
 REGISTER_OP(OperatorConf::kTickConf, TickOp);

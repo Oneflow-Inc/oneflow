@@ -21,8 +21,8 @@ Maybe<void> ReshapeLikeOp::InferBlobDescs(
   return Maybe<void>::Ok();
 }
 
-void ReshapeLikeOp::GetSbpSignatures(
-    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
+Maybe<void> ReshapeLikeOp::GetSbpSignatures(
+    const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
     SbpSignatureList* sbp_sig_list) const {
   SbpSignatureBuilder()
       .Split(input_bns(), 0)
@@ -32,6 +32,7 @@ void ReshapeLikeOp::GetSbpSignatures(
       .PartialSum(input_bns())
       .PartialSum(output_bns())
       .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+  return Maybe<void>::Ok();
 }
 
 REGISTER_OP(OperatorConf::kReshapeLikeConf, ReshapeLikeOp);
