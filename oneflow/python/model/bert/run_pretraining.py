@@ -9,11 +9,11 @@ import oneflow as flow
 from pretrain import PreTrain#, Eval
 
 #_DATA_DIR = '/dataset/bert/of_wiki_seq_len_128'
-_DATA_DIR = '/dataset/bert/bert_seq_len_128_repeat1024'
-#_DATA_DIR = '/dataset/bert_regression_test/0'
+#_DATA_DIR = '/dataset/bert/bert_seq_len_128_repeat1024'
+_DATA_DIR = '/dataset/bert_regression_test/0'
 #_MODEL_LOAD = "/dataset/model_zoo/bert/of_L-12_H-768_A-12_random_init"
-#_MODEL_LOAD = "/dataset/model_zoo/bert_new_snapshot/of_L-12_H-768_A-12_random_init"
-_MODEL_LOAD = "/home/xiexuan/work/bert_job_set/snapshots/snapshot_2019_08_31_17_32_38_663"
+_MODEL_LOAD = "/dataset/model_zoo/bert_new_snapshot/of_L-12_H-768_A-12_random_init"
+#_MODEL_LOAD = "/home/xiexuan/work/bert_job_set/snapshots/snapshot_2019_08_31_17_32_38_663"
 _MODEL_SAVE = './snapshots'
 
 parser = argparse.ArgumentParser(description="flags for multi-node and resource")
@@ -46,8 +46,8 @@ def BuildPreTrainNet(seq_length=128, max_position_embeddings=512, num_hidden_lay
   hidden_size = 64 * num_attention_heads#, H = 64, size per head
   intermediate_size = hidden_size * 4
 
-  with flow.deprecated.variable_scope('other'):
-    decoders = BertDecoder(_DATA_DIR, seq_length, max_predictions_per_seq)
+  #with flow.deprecated.variable_scope('other'):
+  decoders = BertDecoder(_DATA_DIR, seq_length, max_predictions_per_seq)
 
   # input blobs
   #input_ids = decoders['input_ids']
@@ -65,6 +65,8 @@ def BuildPreTrainNet(seq_length=128, max_position_embeddings=512, num_hidden_lay
   masked_lm_ids = decoders[4]
   masked_lm_positions = decoders[5]
   masked_lm_weights = decoders[6]
+  print(input_ids.op_name)
+  print(input_ids.logical_blob_name)
   return PreTrain(input_ids,
                   input_mask,
                   token_type_ids,
@@ -160,11 +162,14 @@ if __name__ == '__main__':
   with flow.Session() as sess:
     check_point = flow.train.SimpleCheckPointManager('mode_save')
     check_point.initialize_or_restore()
+    #check_point = flow.train.CheckPoint()
+    #check_point.load(_MODEL_LOAD)
     # sess.sync()
+    fmt_str = "{:>12}  {:>12}  {:>12.10f}"
     print('{:>12}  {:14}  {}'.format( "step", "loss", "time"))
     for i in range(args.num_steps):
       print(fmt_str.format(i, "train loss:", sess.run(PretrainJob).get().mean()))
       #sess.no_return_run(PretrainJob)#.async_get(AsyncGetCallback)
       #sess.run(PretrainJob).async_get(AsyncGetCallback)
-    check_point.save(session=sess)
+    check_point.save()
 

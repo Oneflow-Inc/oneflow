@@ -249,7 +249,8 @@ def _Dropout(input_blob, dropout_prob):
 
 
 def _LayerNorm(input_blob, hidden_size):
-  return flow.layers.layer_norm(input_blob, begin_norm_axis=-1, begin_params_axis=-1)
+  #return flow.layers.layer_norm(input_blob, begin_norm_axis=-1, begin_params_axis=-1)
+  return flow.layers.layer_norm(input_blob, name='LayerNorm', begin_norm_axis=-1, begin_params_axis=-1)
 
 
 def _CreateAttentionMaskFromInputMask(to_mask_blob, from_seq_length, to_seq_length):
