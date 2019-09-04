@@ -83,19 +83,19 @@ class SimpleCheckPointManager(object):
         return sorted([f for f in os.listdir(self._root_path) if is_snapshot(f)])
 
     def latest_checkpoint(self):
-        checkpoints = self.list_checkpoints()
-        if not checkpoints:
+        names = self.list_checkpoints()
+        if not names:
             return None
         else:
-            return checkpoints[-1]
+            return names[-1]
 
     def get_snapshot_path(self, name):
         return os.path.join(self._root_path, name)
 
     def initialize_or_restore(self):
-        checkpoint = self.latest_checkpoint()
-        if checkpoint:
-            self._checkpoint.load(checkpoint)
+        name = self.latest_checkpoint()
+        if name:
+            self._checkpoint.load(self.get_snapshot_path(name))
         else:
             self._checkpoint.init()
 
@@ -103,4 +103,4 @@ class SimpleCheckPointManager(object):
         return self._prefix + datetime.datetime.now().strftime('%Y%m%d_%H%M%S_%f')
 
     def save(self):
-        self._checkpoint.save(self.next_snapshot_name())
+        self._checkpoint.save(self.get_snapshot_path(self.next_snapshot_name()))
