@@ -31,10 +31,9 @@ def test_dense(in_shape, units, activation=None, use_bias=True):
 
     flow.add_job(DenseTestJob)
 
-    ckp = flow.train.CheckPoint()
-    status = ckp.restore()
     with flow.Session() as sess:
-        status.initialize_or_restore(session=sess)
+        check_point = flow.train.SimpleCheckPointManager("model_save")
+        check_point.initialize_or_restore()
         of_out = sess.run(DenseTestJob, input).get()
 
     # TensorFlow
