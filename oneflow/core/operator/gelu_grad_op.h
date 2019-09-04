@@ -22,7 +22,7 @@ class GeluGradOp final : public Operator {
     return NaiveInferBatchAxis(BatchAxis4BnInOp);
   }
 
-  void GetSbpSignatures(SbpSignatureList* sbp_sig_list) const override;
+  Maybe<void> GetSbpSignatures(SbpSignatureList* sbp_sig_list) const override;
 };
 
 }  // namespace oneflow

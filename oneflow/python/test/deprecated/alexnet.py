@@ -35,7 +35,6 @@ parser.add_argument('-save', '--model_save_dir',
 
 args = parser.parse_args()
 
-
 _ALEXNET_BASIC_CONV_CONF = dict(
     data_format='channels_first',
     dilation_rate=[1, 1],
@@ -256,8 +255,6 @@ if __name__ == '__main__':
     config = flow.ConfigProtoBuilder()
     config.gpu_device_num(args.gpu_num_per_node)
     config.grpc_use_no_signal()
-    config.model_load_snapshot_path(args.model_load_dir)
-    config.model_save_snapshots_path(args.model_save_dir)
     config.ctrl_port(2019)
     if args.multinode:
         config.ctrl_port(12138)
@@ -277,7 +274,10 @@ if __name__ == '__main__':
     flow.add_job(EvaluateAlexNet)
     with flow.Session() as sess:
         check_point = flow.train.CheckPoint()
-        check_point.restore().initialize_or_restore(session=sess)
+        if not args.model_load_dir:
+            check_point.init()
+        else:
+            check_point.load(args.model_load_dir)
         fmt_str = '{:>12}  {:>12}  {:>12.10f}'
         print('{:>12}  {:>12}  {:>12}'.format(
             "iter", "loss type", "loss value"))
@@ -288,6 +288,6 @@ if __name__ == '__main__':
                 print(fmt_str.format(i, "eval loss:", sess.run(
                     EvaluateAlexNet).get().mean()))
             if (i + 1) % 100 is 0:
-                check_point.save(session=sess)
+                check_point.save(_MODEL_SAVE_DIR + str(i))
         if args.multinode and args.skip_scp_binary is False and args.scp_binary_without_uuid is False:
             flow.deprecated.delete_worker(config)

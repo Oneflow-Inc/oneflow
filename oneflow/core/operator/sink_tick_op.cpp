@@ -24,8 +24,9 @@ Maybe<void> SinkTickOp::InferBatchAxis(
 
 const PbMessage& SinkTickOp::GetCustomizedConf() const { return op_conf().sink_tick_conf(); }
 
-void SinkTickOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
+Maybe<void> SinkTickOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
   SbpSignatureBuilder().Broadcast(input_bns()).Build(sbp_sig_list->mutable_sbp_signature()->Add());
+  return Maybe<void>::Ok();
 }
 
 REGISTER_CPU_OP(OperatorConf::kSinkTickConf, SinkTickOp);

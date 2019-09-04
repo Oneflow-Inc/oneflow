@@ -93,11 +93,11 @@ Maybe<void> MatmulOp::InferBatchAxis(
   return Maybe<void>::Ok();
 }
 
-void MatmulOp::GetSbpSignatures(
-    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
+Maybe<void> MatmulOp::GetSbpSignatures(
+    const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
     SbpSignatureList* sbp_sig_list) const {
   const MatmulOpConf& conf = op_conf().matmul_conf();
-  int32_t num_axes = LogicalBlobDesc4Ibn("a").shape().NumAxes();
+  int32_t num_axes = JUST(LogicalBlobDesc4Ibn("a"))->shape().NumAxes();
   if (num_axes > 2) {
     SbpSignatureBuilder()
         .Split(input_bns(), 0)
@@ -139,8 +139,12 @@ void MatmulOp::GetSbpSignatures(
         .PartialSum(output_bns())
         .Build(sbp_sig_list->mutable_sbp_signature()->Add());
   } else {
-    UNIMPLEMENTED();
+    std::shared_ptr<ErrorProto> err;
+    err->set_msg("MatMulOp: number of axis is " + std::to_string(num_axes) + " (not supported).");
+    err->mutable_check_failed();
+    return err;
   }
+  return Maybe<void>::Ok();
 }
 
 REGISTER_OP(OperatorConf::kMatmulConf, MatmulOp);

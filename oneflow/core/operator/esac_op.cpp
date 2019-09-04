@@ -27,9 +27,11 @@ Maybe<void> EsacOp::InferBatchAxis(
   return Maybe<void>::Ok();
 }
 
-void EsacOp::GetSbpSignatures(
-    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
-    SbpSignatureList* sbp_sig_list) const {}
+Maybe<void> EsacOp::GetSbpSignatures(
+    const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
+    SbpSignatureList* sbp_sig_list) const {
+  return Maybe<void>::Ok();
+}
 
 LogicalNode* EsacOp::NewProperLogicalNode() const { return new EsacLogicalNode(); }
 

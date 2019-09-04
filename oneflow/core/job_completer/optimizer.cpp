@@ -53,12 +53,6 @@ void AddOptimizerOpConf(
   });
 }
 
-void BindTwoVariableOpObnSbpConf(const std::string& lhs_op_name, const std::string& rhs_op_name,
-                                 JobBuilder* job_builder) {
-  job_builder->BindIdenticalSbpOpBlobArgPair(GenOpBlobArg(lhs_op_name, "out"),
-                                             GenOpBlobArg(rhs_op_name, "out"));
-}
-
 template<typename T>
 void ConstructMdUpdtOpConf(const VariableOp& op, const LogicalBlobId& diff_lbi_of_var_out,
                            const LogicalBlobId& total_loss_instance_num_lbi,
@@ -68,7 +62,7 @@ void ConstructMdUpdtOpConf(const VariableOp& op, const LogicalBlobId& diff_lbi_o
   mdupdt_op_conf->set_model_diff(GenLogicalBlobName(diff_lbi_of_var_out));
   mdupdt_op_conf->set_total_instance_num_diff(GenLogicalBlobName(total_loss_instance_num_lbi));
   mdupdt_op_conf->set_model(GenLogicalBlobName(op.BnInOp2Lbi("out")));
-  mdupdt_op_conf->set_global_step(train_conf.global_step_lbn());
+  mdupdt_op_conf->set_train_step(train_conf.train_step_lbn());
   const std::string& primary_lr_lbn = train_conf.primary_lr_lbn();
   const std::string& secondary_lr_lbn = train_conf.secondary_lr_lbn();
   if (op.op_conf().variable_conf().model_name() == "weight") {
