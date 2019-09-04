@@ -128,7 +128,7 @@ def slice(input_, begin, size, name=None):
     op_conf.name = name
     setattr(op_conf.slice_conf, "in", input_.logical_blob_name)
     op_conf.slice_conf.out = "out"
-    op_conf.slice_conf.dim_slice_conf.extend(slice_conf_list)
+    op_conf.slice_conf.dim_slice_conf.extend(slice_conf_list[1:])
 
     compile_context.CurJobAddOp(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
