@@ -100,23 +100,6 @@ std::string CurJobBuildAndInferCtx_AddLossLogicalBlobName(const std::string& lbn
   return Error::Ok();
 }
 
-std::string CurJobBuildAndInferCtx_AddPlacementGroup(const std::string& serialized_placement_grp) {
-  using namespace oneflow;
-  // parse
-  PlacementGroup placement_group;
-  if (TxtString2PbMessage(serialized_placement_grp, &placement_group) == false) {
-    return Error::ProtoParseFailedError() << "placement group parse failed";
-  }
-  // get current JobBuildandInferCtx
-  std::string error_str;
-  JobBuildAndInferCtx* ctx = JobBuildAndInferHelper::GetCurInferCtx(&error_str);
-  if (ctx == nullptr) { return error_str; }
-  // add and infer input_op
-  auto maybe_ok = TRY(ctx->AddPlacementGroup(placement_group));
-  if (maybe_ok.IsOk() == false) { return PbMessage2TxtString(*maybe_ok.error()); }
-  return Error::Ok();
-}
-
 std::string JobBuildAndInferCtx_GetSerializedIdListAsStaticShape(const std::string& job_name,
                                                                  const std::string& lbn,
                                                                  std::string* error_str) {

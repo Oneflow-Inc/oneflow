@@ -24,7 +24,6 @@ class JobBuildAndInferCtx {
   Maybe<void> SetJobConf(const JobConfigProto& job_conf);
   Maybe<void> AddAndInferOp(const OperatorConf& op_conf, const ParallelConf& parallel_conf);
   Maybe<void> AddLossLogicalBlobName(const std::string& lbn);
-  Maybe<void> AddPlacementGroup(const PlacementGroup& placement_group);
 
   bool HasJobConf() const;
   Maybe<Shape> GetStaticShape(const std::string& lbn) const;
