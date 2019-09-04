@@ -212,11 +212,10 @@ def alexnet_train_job():
     job_conf.train_conf().primary_lr = 0.00001
     job_conf.train_conf().num_of_batches_in_snapshot = 100
     job_conf.train_conf().model_update_conf.naive_conf.SetInParent()
-    job_conf.train_conf().loss_lbn.extend(["softmax_loss/out"])
 
     (labels, images) = _data_load_layer(args.train_dir)
     loss = alexnet(images, labels)
-    # job_conf.get_train_conf_builder().add_loss(loss)
+    flow.losses.add_loss(loss)
     return loss
 
 
