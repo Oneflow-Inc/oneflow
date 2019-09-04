@@ -1,21 +1,36 @@
 #ifndef ONEFLOW_CORE_PERSISTENCE_SNAPSHOT_H_
 #define ONEFLOW_CORE_PERSISTENCE_SNAPSHOT_H_
 
+#include "oneflow/core/common/util.h"
 #include "oneflow/core/control/ctrl_client.h"
-#include "oneflow/core/persistence/persistent_in_stream.h"
-#include "oneflow/core/persistence/persistent_out_stream.h"
 
 namespace oneflow {
 
-class Snapshot final {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(Snapshot);
-  Snapshot() = delete;
-  ~Snapshot() = default;
+class Blob;
 
-  explicit Snapshot(const std::string& snapshot_root_path);
-  std::unique_ptr<PersistentOutStream> GetOutStream(const LogicalBlobId& lbi);
-  void Done();
+class SnapshotReader final {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(SnapshotReader);
+  SnapshotReader() = delete;
+  explicit SnapshotReader(const std::string& snapshot_root_path);
+  ~SnapshotReader() = default;
+
+  void Read(const std::string& key, Blob* blob) const;
+  void Close();
+
+ private:
+  const std::string root_path_;
+};
+
+class SnapshotWriter final {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(SnapshotWriter);
+  SnapshotWriter() = delete;
+  explicit SnapshotWriter(const std::string& snapshot_root_path);
+  ~SnapshotWriter() = default;
+
+  void Write(const std::string& key, const Blob* blob);
+  void Close();
 
  private:
   const std::string root_path_;
