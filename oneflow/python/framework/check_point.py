@@ -65,6 +65,10 @@ def _MakeModelSaveJobFunc(path):
 @oneflow_export('train.SimpleCheckPointManager')
 class SimpleCheckPointManager(object):
     def __init__(self, root_path, prefix='snapshot_'):
+        if not os.path.exists(root_path):
+            os.makedirs(root_path)
+        else:
+            assert os.path.isdir(root_path)
         self._root_path = root_path
         self._prefix = prefix
         self._checkpoint = CheckPoint()
