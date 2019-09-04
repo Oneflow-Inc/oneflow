@@ -65,8 +65,6 @@ def BuildPreTrainNet(seq_length=128, max_position_embeddings=512, num_hidden_lay
   masked_lm_ids = decoders[4]
   masked_lm_positions = decoders[5]
   masked_lm_weights = decoders[6]
-  print(input_ids.op_name)
-  print(input_ids.logical_blob_name)
   return PreTrain(input_ids,
                   input_mask,
                   token_type_ids,
