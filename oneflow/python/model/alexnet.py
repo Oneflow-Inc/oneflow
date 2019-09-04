@@ -124,7 +124,7 @@ def alexnet(images, labels, trainable=True):
 
     if len(pool5.shape) > 2:
         pool5 = flow.reshape(pool5, shape=(pool5.static_shape[0], -1))
-        
+
     fc1 = flow.layers.dense(
         inputs=pool5,
         units=4096,
