@@ -1,5 +1,5 @@
 # warning: never share the container image this dockerfile produces
-FROM nvidia/cuda:10.0-cudnn7-devel-centos7
+FROM nvcr.io/nvdia/cuda:9.0-cudnn7-devel-centos7
 RUN yum update -y && yum install -y epel-release
 RUN yum update -y && yum install -y rdma-core-devel \
     openblas-devel \
@@ -36,7 +36,7 @@ COPY CMakeLists.txt /workspace/CMakeLists.txt
 
 # BUILD DEPENDENCY
 COPY build/third_party /workspace/build/third_party
-RUN cmake -DTHIRD_PARTY=ON -DCMAKE_BUILD_TYPE=Release -DRELEASE_VERSION=ON .. && make -j
+RUN cmake -DTHIRD_PARTY=ON -DCMAKE_BUILD_TYPE=Release -DRELEASE_VERSION=OFF .. && make -j
 
 # BUILD ONEFLOW
 COPY oneflow /workspace/oneflow
