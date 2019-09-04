@@ -23,7 +23,11 @@ Maybe<void> ReshapeOp::InferBlobDescs(
   CHECK_GE_OR_RETURN(conf.shape().dim_size(), 1);
   // fill dim_vec
   std::vector<int64_t> dim_vec;
-  if (!conf.has_dim0_in_shape()) { dim_vec.push_back(in_blob_desc->shape().At(0)); }
+  if (conf.has_dim0_in_shape()) {
+    CHECK_EQ_OR_RETURN(conf.shape().dim(0), in_blob_desc->shape().At(0));
+  } else {
+    dim_vec.push_back(in_blob_desc->shape().At(0));
+  }
   dim_vec.insert(dim_vec.end(), conf.shape().dim().begin(), conf.shape().dim().end());
 
   // infer dim0 as split(0) when user set dim0 not -1
@@ -55,7 +59,7 @@ Maybe<void> ReshapeOp::InferBlobDescs(
   return Maybe<void>::Ok();
 }
 
-Maybe<void> ReshapeOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
+void ReshapeOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
   SbpSignatureBuilder()
       .Split(input_bns(), 0)
       .Split(output_bns(), 0)
@@ -64,7 +68,6 @@ Maybe<void> ReshapeOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
       .PartialSum(input_bns())
       .PartialSum(output_bns())
       .Build(sbp_sig_list->mutable_sbp_signature()->Add());
-  return Maybe<void>::Ok();
 }
 
 REGISTER_OP(OperatorConf::kReshapeConf, ReshapeOp);
