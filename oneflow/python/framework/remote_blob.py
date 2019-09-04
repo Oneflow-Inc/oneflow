@@ -33,5 +33,31 @@ class RemoteBlob(blob_desc.BlobDesc):
         return inter_user_job_util.pull(self)
 
     def __add__(self, rhs): 
-        # TODO: scalar_add/broadcast_add/elemwise_add
-        return oneflow.keras.maths.add(self, rhs)
+        return oneflow.math.add(self, rhs)
+    
+    def __radd__(self, lhs): 
+        return oneflow.math.add(lhs, self)
+
+    def __sub__(self, rhs):
+        return oneflow.math.subtract(self, rhs)
+
+    def __rsub__(self, lhs):
+        return oneflow.math.subtract(lhs, self)
+
+    def __mul__(self, rhs):
+        return oneflow.math.multiply(self, rhs)
+
+    def __rmul__(self, lhs):
+        return oneflow.math.multiply(lhs, self)
+
+    def __mul__(self, rhs):
+        return oneflow.math.multiply(self, rhs)
+
+    def __rmul__(self, lhs):
+        return oneflow.math.multiply(lhs, self)
+
+    def __truediv__(self, rhs):
+        return oneflow.math.divide(self, rhs)
+
+    def __div__(self, rhs):
+        return oneflow.math.divide(self, rhs)
