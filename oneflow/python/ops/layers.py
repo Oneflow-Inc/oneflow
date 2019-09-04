@@ -39,7 +39,6 @@ def dense(
         ),
         trainable=trainable,
         model_name="weight",
-        model_split_axis=None,
     )
     out = flow.matmul(
         a=inputs,
@@ -59,7 +58,6 @@ def dense(
             ),
             trainable=trainable,
             model_name="bias",
-            model_split_axis=None,
         )
         out = flow.nn.bias_add(out, bias, name="{}_bias_add".format(name_prefix))
     out = activation(out) if activation is not None else out
