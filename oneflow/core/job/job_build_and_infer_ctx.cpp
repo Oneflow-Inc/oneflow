@@ -343,7 +343,7 @@ Maybe<int64_t> JobBuildAndInferCtx::GetSplitAxisFromProducerView(const std::stri
 Maybe<const ParallelDesc*> JobBuildAndInferCtx::GetParallelDescFromProducerView(
     const std::string& lbn) const {
   GEN_ERROR_WHEN_GET_INFO_FROM_LBN(lbi2parallel_desc_from_producer_view_);
-  return lbi2parallel_desc_from_producer_view_.at(lbi);
+  return &(lbi2parallel_desc_from_producer_view_.at(lbi));
 }
 
 Maybe<void> JobBuildAndInferCtx::CheckJob() const {
