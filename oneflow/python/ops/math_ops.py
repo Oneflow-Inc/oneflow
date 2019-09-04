@@ -32,9 +32,9 @@ def subtract(x,
              name=None):
 
     if isinstance(x, (int, float)):
-        scalar_add(-1 * y, x)
+        return scalar_add(-1 * y, x)
     elif isinstance(y, (int, float)):
-        scalar_add(x, -1 * y)
+        return scalar_add(x, -1 * y)
     elif x.static_shape == y.static_shape:
         # TODO: add element-wise op
         return broadcast_sub(x, y)
