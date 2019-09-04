@@ -117,10 +117,6 @@ struct CpuKernelUtilIf {
   static void Transpose(DeviceCtx* ctx, const int32_t num_axis, const Shape& x_shape,
                         const Shape& y_shape, const PbRf<int32_t>& permutation,
                         const int64_t elem_cnt, const T* x, T* y);
-  static void InitializeWithDir(DeviceCtx* ctx, int32_t part_id, int32_t part_num,
-                                const std::string& model_dir, Blob* blob,
-                                const std::string& bn_in_op, int32_t dim_num,
-                                int64_t num_in_each_dim);
   static void Set(DeviceCtx* ctx, const T value, T* addr);
   static void Replicate(DeviceCtx* ctx, const int64_t n, T* y, const T* x);
   static void AddByScalar(DeviceCtx* ctx, const int64_t n, const T* x, const T y, T* z);
@@ -235,10 +231,6 @@ struct GpuKernelUtilIf {
                                  uint32_t random_seed, Blob* blob);
   static void InitializeWithConf(DeviceCtx* ctx, const InitializerConf& initializer_conf,
                                  uint32_t random_seed, Blob* blob, const std::string& data_format);
-  static void InitializeWithDir(DeviceCtx* ctx, int32_t part_id, int32_t part_num,
-                                const std::string& model_dir, Blob* blob,
-                                const std::string& bn_in_op, int32_t dim_num,
-                                int64_t num_in_each_dim);
   static void Set(DeviceCtx* ctx, const T value, T* addr);
   static void Replicate(DeviceCtx* ctx, const int64_t n, T* y, const T* x);
   static void AddByScalar(DeviceCtx* ctx, const int64_t n, const T* x, const T y, T* z);

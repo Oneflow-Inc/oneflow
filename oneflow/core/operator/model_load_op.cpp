@@ -2,7 +2,7 @@
 
 namespace oneflow {
 
-class ModelInitOp : public Operator {
+class ModelLoadOp : public Operator {
  public:
   void InitFromOpConf() override;
 
@@ -19,21 +19,21 @@ class ModelInitOp : public Operator {
       SbpSignatureList* sbp_sig_list) const override;
 };
 
-void ModelInitOp::InitFromOpConf() {
-  CHECK(op_conf().has_model_init_conf());
-  EnrollInputBn("tick", false);
+void ModelLoadOp::InitFromOpConf() {
+  CHECK(op_conf().has_model_load_conf());
+  EnrollInputBn("path", false);
   EnrollRepeatedOutputBn("out", false);
 }
 
-const PbMessage& ModelInitOp::GetCustomizedConf() const { return op_conf().model_init_conf(); }
+const PbMessage& ModelLoadOp::GetCustomizedConf() const { return op_conf().model_load_conf(); }
 
-Maybe<void> ModelInitOp::InferBlobDescs(
+Maybe<void> ModelLoadOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
-  const int64_t num_out = op_conf().model_init_conf().out().size();
+  const int64_t num_out = op_conf().model_load_conf().out().size();
   FOR_RANGE(int64_t, i, 0, num_out) {
     const VariableOpConf& original_variable_conf =
-        op_conf().model_init_conf().original_variable_conf(i);
+        op_conf().model_load_conf().original_variable_conf(i);
     BlobDesc* out_i = GetBlobDesc4BnInOp(GenRepeatedBn("out", i));
     out_i->mut_shape() = Shape(original_variable_conf.shape());
     out_i->set_data_type(original_variable_conf.data_type());
@@ -41,13 +41,13 @@ Maybe<void> ModelInitOp::InferBlobDescs(
   return Maybe<void>::Ok();
 }
 
-Maybe<void> ModelInitOp::InferBatchAxis(
+Maybe<void> ModelLoadOp::InferBatchAxis(
     std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
   for (const std::string& bns : output_bns()) { BatchAxis4BnInOp(bns)->clear_value(); }
   return Maybe<void>::Ok();
 }
 
-Maybe<void> ModelInitOp::GetSbpSignatures(
+Maybe<void> ModelLoadOp::GetSbpSignatures(
     const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
     SbpSignatureList* sbp_sig_list) const {
   SbpSignatureBuilder()
@@ -59,6 +59,6 @@ Maybe<void> ModelInitOp::GetSbpSignatures(
   return Maybe<void>::Ok();
 }
 
-REGISTER_CPU_OP(OperatorConf::kModelInitConf, ModelInitOp);
+REGISTER_CPU_OP(OperatorConf::kModelLoadConf, ModelLoadOp);
 
 }  // namespace oneflow

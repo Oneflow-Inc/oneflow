@@ -25,11 +25,8 @@ message FileSystemConf {
 message IOConf {
   required FileSystemConf data_fs_conf = 1;
   required FileSystemConf snapshot_fs_conf = 2;
-  optional string model_load_snapshot_path = 3 [default = ""];
-  optional string model_save_snapshots_path = 4 [default = "./model_save"];
-  optional bool enable_write_snapshot = 5 [default = true];
-  optional bool save_downloaded_file_to_local_fs = 6 [default = false];
-  optional uint64 persistence_buf_byte = 7 [default = 67108864]; // 64M
+  optional bool save_downloaded_file_to_local_fs = 3 [default = false];
+  optional uint64 persistence_buf_byte = 4 [default = 67108864]; // 64M
 }
 
 message ProfilerConf {
