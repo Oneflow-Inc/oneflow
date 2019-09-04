@@ -89,9 +89,6 @@ class SimpleCheckPointManager(object):
         else:
             return names[-1]
 
-    def _GetSnapshotPath(self, name):
-        return os.path.join(self._root_path, name)
-
     def initialize_or_restore(self):
         name = self.latest_checkpoint()
         if name:
@@ -100,8 +97,11 @@ class SimpleCheckPointManager(object):
             self._checkpoint.init()
             self.save()
 
+    def save(self):
+        self._checkpoint.save(self._GetSnapshotPath(self._NextSnapshotName()))
+
     def _NextSnapshotName(self):
         return self._prefix + datetime.datetime.now().strftime('%Y%m%d_%H%M%S_%f')
 
-    def save(self):
-        self._checkpoint.save(self._GetSnapshotPath(self._NextSnapshotName()))
+    def _GetSnapshotPath(self, name):
+        return os.path.join(self._root_path, name)
