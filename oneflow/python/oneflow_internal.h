@@ -38,16 +38,18 @@ std::string OFStrCat(T0 t0, T1 t1, T2 t2, T3 t3, T4 t4) {
   return Error::CheckFailed() << t0 << t1 << t2 << t3 << t4;
 }
 
-#define OF_ERROR_STR_CHECK(expr, ret_val, ...) do {
-*error_str = OFStrCat(##__VA_ARGS__);
-return ret_val;
+#define OF_ERROR_STR_CHECK(expr, ret_val, ...) \
+  do {                                         \
+    *error_str = OFStrCat(##__VA_ARGS__);      \
+    return ret_val;                            \
+  } while (0)
+
+bool IsOpTypeCaseCpuSupportOnly(int64_t op_type_case) {
+  using namespace oneflow;
+  using OnlyCpuSupport = OnlyCpuSupportPredicator;
+  CHECK(IsClassRegistered<OnlyCpuSupport>(op_type_case)) << ": op_type_case = " << op_type_case;
+  return *std::unique_ptr<OnlyCpuSupport>(NewObj<OnlyCpuSupport>(op_type_case));
 }
-while (0) bool IsOpTypeCaseCpuSupportOnly(int64_t op_type_case) {
-    using namespace oneflow;
-    using OnlyCpuSupport = OnlyCpuSupportPredicator;
-    CHECK(IsClassRegistered<OnlyCpuSupport>(op_type_case)) << ": op_type_case = " << op_type_case;
-    return *std::unique_ptr<OnlyCpuSupport>(NewObj<OnlyCpuSupport>(op_type_case));
-  }
 
 void InitBySerializedConfigProto(const std::string& config_proto_str, std::string* error_str) {
   using namespace oneflow;
