@@ -99,8 +99,13 @@ Maybe<void> JobBuildAndInferCtx::InferOpOutSbpParallel(Operator* op,
     const SbpParallel& sbp_parallel = lbi2sbp_parallel_from_producer_view_.at(lbi);
     ibn2sbp_infer_hint.emplace(ibn, SbpInferHint(&parallel_desc, logical_blob_desc, sbp_parallel));
   }
-  auto SbpInferHint4Ibn = [&](const std::string& ibn) -> const SbpInferHint& {
-    return ibn2sbp_infer_hint.at(ibn);
+  auto SbpInferHint4Ibn = [&](const std::string& ibn) -> Maybe<const SbpInferHint*> {
+    auto it = ibn2sbp_infer_hint.find(ibn);
+    if (it == ibn2sbp_infer_hint.end()) {
+      return Error::CheckFailed() << "cannot find corresponding SbpInferHint for input_blob_name : "
+                                  << ibn;
+    }
+    return &(it->second);
   };
   std::function<int32_t(const SbpSignature&)> CalcOrderValue4SbpSig;
   if (sbp_sig_conf.bn_in_op2sbp_parallel().empty()) {
@@ -115,7 +120,7 @@ Maybe<void> JobBuildAndInferCtx::InferOpOutSbpParallel(Operator* op,
                                          const SbpParallel& sbp_parallel) -> int32_t {
       return -2
              * (lbi2batch_axis_.at(op->BnInOp2Lbi(ibn)).has_value() == false
-                && SbpInferHint4Ibn(ibn).sbp_parallel().has_split_parallel() == false
+                && CHECK_JUST(SbpInferHint4Ibn(ibn))->sbp_parallel().has_split_parallel() == false
                 && sbp_parallel.has_split_parallel() == false);
     };
     CalcOrderValue4SbpSig = [&](const SbpSignature& sbp_signature) -> int32_t {

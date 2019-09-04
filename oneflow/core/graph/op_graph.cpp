@@ -397,12 +397,10 @@ void OpGraph::InferOpNodeSbpSignature(OpNode* op_node, const SbpSignature& sbp_s
   auto SbpInferHint4Ibn = [&](const std::string& ibn) -> Maybe<const SbpInferHint*> {
     auto it = ibn2sbp_infer_hint.find(ibn);
     if (it == ibn2sbp_infer_hint.end()) {
-      std::shared_ptr<ErrorProto> err;
-      err->set_msg("cannot find corresponding SbpInferHint for input_blob_name : " + ibn);
-      err->mutable_check_failed();
-      return err;
+      return Error::CheckFailed() << "cannot find corresponding SbpInferHint for input_blob_name : "
+                                  << ibn;
     }
-    return Maybe<const SbpInferHint*>(&(it->second));
+    return &(it->second);
   };
   std::function<int32_t(const SbpSignature&)> CalcOrderValue4SbpSig;
   if (sbp_sig_conf.bn_in_op2sbp_parallel().empty()) {
