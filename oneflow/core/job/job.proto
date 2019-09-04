@@ -17,7 +17,7 @@ message TrainConf {
   required int32 num_of_batches_in_snapshot = 5;
   repeated string loss_lbn = 6;
   optional int32 loss_scale_factor = 7 [default = 1];
-  optional string global_step_lbn = 8;
+  optional string train_step_lbn = 8;
   optional string primary_lr_lbn = 9;
   optional string secondary_lr_lbn = 10;
 
@@ -53,7 +53,10 @@ message JobConfigProto {
   optional int64 total_batch_num = 7 [default = 1];
   optional DataType default_data_type = 8 [default = kFloat]; // kFloat or kDouble
   optional int32 max_data_id_length = 9 [default = 0];
-  optional InitializerConf default_initializer_conf = 10;
+  oneof default_initialize_conf {
+    InitializerConf default_initializer_conf = 10;
+    string default_initialize_with_snapshot_path = 11;
+  }
 
   optional ExperimentalRunConf exp_run_conf = 100;
 
