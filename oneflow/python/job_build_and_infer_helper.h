@@ -16,13 +16,13 @@ struct JobBuildAndInferHelper final {
       *error_str = PbMessage2TxtString(*maybe_job_name.error());
       return nullptr;
     }
-    const std::string& job_name = *maybe_job_name.data();
+    const std::string& job_name = *CHECK_JUST(maybe_job_name);
     auto maybe_ctx = TRY(Global<JobBuildAndInferCtxMgr>::Get()->FindJobBuildAndInferCtx(job_name));
     if (maybe_ctx.IsOk() == false) {
       *error_str = PbMessage2TxtString(*maybe_ctx.error());
       return nullptr;
     }
-    return maybe_ctx.data().get();
+    return CHECK_JUST(maybe_ctx);
   }
 };
 
