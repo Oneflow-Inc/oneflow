@@ -187,7 +187,7 @@ bool JobBuildAndInferCtx_GetHasSplitAxisFromProducerView(const std::string& job_
     return false;
   }
   *error_str = Error::Ok();
-  return *maybe_has_split_axis.data();
+  return maybe_has_split_axis.data();
 }
 
 long long JobBuildAndInferCtx_GetSplitAxisFromProducerView(const std::string& job_name,
@@ -205,7 +205,7 @@ long long JobBuildAndInferCtx_GetSplitAxisFromProducerView(const std::string& jo
     return 0LL;
   }
   *error_str = Error::Ok();
-  return *maybe_split_axis.data();
+  return maybe_split_axis.data();
 }
 
 std::string JobBuildAndInferCtx_GetSerializedParallelConfFromProducerView(
