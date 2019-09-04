@@ -131,7 +131,6 @@ def PretrainJob():
     job_conf.train_conf()
     job_conf.train_conf().primary_lr = 1e-4
     job_conf.train_conf().weight_l2 = 0.01
-    job_conf.train_conf().num_of_batches_in_snapshot = 1000
     job_conf.model_update_conf(_BERT_MODEL_UPDATE_CONF)
     job_conf.train_conf().loss_lbn.extend(["identity_loss/loss"])
     job_conf.enable_inplace(False)

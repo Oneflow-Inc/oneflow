@@ -210,7 +210,6 @@ def alexnet_train_job():
     job_conf.train_conf()
     job_conf.train_conf().batch_size = 12
     job_conf.train_conf().primary_lr = 0.00001
-    job_conf.train_conf().num_of_batches_in_snapshot = 100
     job_conf.train_conf().model_update_conf.naive_conf.SetInParent()
     job_conf.train_conf().loss_lbn.extend(["softmax_loss/out"])
 
