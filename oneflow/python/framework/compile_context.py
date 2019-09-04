@@ -62,11 +62,12 @@ def _ResetCurJob(job):
 
 def _prefixing_op_name_if_need(op_conf):
     if op_conf.HasField("variable_conf"):
-        op_conf.name = _get_variable_prefix() + op_conf.name
-    elif op_conf.HasField("layer_norm_conf"):
-        op_conf.name = _get_variable_prefix() + op_conf.name
-    else:
-        op_conf.name = _get_variable_prefix() + op_conf.name
+        return
+
+    if op_conf.HasField("layer_norm_conf"):
+        pass
+
+    op_conf.name = _get_variable_prefix() + op_conf.name
 
 
 def _get_variable_prefix():

@@ -25,6 +25,7 @@ def get_variable(
         shape is not None
     ), "Argument shape should not be None when the variable exists!"
 
+    name = compile_context._get_variable_prefix() + name
     if name not in compile_context.cur_job_var_op_name2var_blob:
         op_conf = op_conf_util.OperatorConf()
         op_conf.name = name
