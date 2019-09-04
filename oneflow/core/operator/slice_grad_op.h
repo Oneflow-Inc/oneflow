@@ -24,8 +24,8 @@ class SliceGradOp final : public Operator {
       std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override {
     return NaiveInferBatchAxis(BatchAxis4BnInOp);
   }
-  void GetSbpSignatures(
-      const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
+  Maybe<void> GetSbpSignatures(
+      const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
       SbpSignatureList* sbp_sig_list) const override;
 };
 

@@ -22,10 +22,10 @@ Maybe<void> KeepHeaderOnlyOp::InferBlobDescs(
   return Maybe<void>::Ok();
 }
 
-void KeepHeaderOnlyOp::GetSbpSignatures(
-    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
+Maybe<void> KeepHeaderOnlyOp::GetSbpSignatures(
+    const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
     SbpSignatureList* sbp_sig_list) const {
-  int64_t num_axes = LogicalBlobDesc4Ibn(SoleIbn()).shape().NumAxes();
+  int64_t num_axes = JUST(LogicalBlobDesc4Ibn(SoleIbn()))->shape().NumAxes();
   SbpSignatureBuilder()
       .Split(input_bns(), 0)
       .Split(output_bns(), 0)
@@ -35,6 +35,7 @@ void KeepHeaderOnlyOp::GetSbpSignatures(
       .PartialSum(input_bns())
       .PartialSum(output_bns())
       .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+  return Maybe<void>::Ok();
 }
 
 REGISTER_OP(OperatorConf::kKeepHeaderOnlyConf, KeepHeaderOnlyOp);

@@ -19,8 +19,8 @@ class MultiplyOp final : public Operator {
     return NaiveInferBatchAxis(BatchAxis4BnInOp);
   }
 
-  void GetSbpSignatures(
-      const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
+  Maybe<void> GetSbpSignatures(
+      const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
       SbpSignatureList* sbp_sig_list) const override;
 };
 

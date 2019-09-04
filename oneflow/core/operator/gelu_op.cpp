@@ -19,11 +19,12 @@ Maybe<void> GeluOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> 
   return Maybe<void>::Ok();
 }
 
-void GeluOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
+Maybe<void> GeluOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
   SbpSignatureBuilder()
       .Split(input_bns(), 0)
       .Split(output_bns(), 0)
       .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+  return Maybe<void>::Ok();
 }
 
 REGISTER_OP(OperatorConf::kGeluConf, GeluOp);

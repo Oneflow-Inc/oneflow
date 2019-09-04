@@ -41,11 +41,12 @@ Maybe<void> DefineTestBlobOp::InferBatchAxis(
   return Maybe<void>::Ok();
 }
 
-void DefineTestBlobOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
+Maybe<void> DefineTestBlobOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
   SbpSignatureBuilder()
       .Broadcast(input_bns())
       .Split(output_bns(), 0)
       .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+  return Maybe<void>::Ok();
 }
 
 REGISTER_OP(OperatorConf::kDefineTestBlobConf, DefineTestBlobOp);

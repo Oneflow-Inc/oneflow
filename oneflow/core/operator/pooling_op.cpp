@@ -131,11 +131,12 @@ void PoolingOp::VirtualGenKernelConf(
   pooling_conf->set_data_format(GetValFromCustomizedConf<std::string>("data_format"));
 }
 
-void PoolingOp::GetSbpSignatures(
-    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
+Maybe<void> PoolingOp::GetSbpSignatures(
+    const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
     SbpSignatureList* sbp_sig_list) const {
   SbpSignatureBuilder().Split("in", 0).Split("out", 0).Build(
       sbp_sig_list->mutable_sbp_signature()->Add());
+  return Maybe<void>::Ok();
 }
 
 }  // namespace oneflow

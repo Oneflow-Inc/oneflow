@@ -22,9 +22,11 @@ class ModelSaveOp final : public Operator {
       std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override {
     return Maybe<void>::Ok();
   }
-  void GetSbpSignatures(
-      const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
-      SbpSignatureList* sbp_sig_list) const override{};
+  Maybe<void> GetSbpSignatures(
+      const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
+      SbpSignatureList* sbp_sig_list) const override {
+    return Maybe<void>::Ok();
+  };
 };
 
 void ModelSaveOp::InitFromOpConf() {

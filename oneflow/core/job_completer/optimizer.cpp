@@ -53,12 +53,6 @@ void AddOptimizerOpConf(
   });
 }
 
-void BindTwoVariableOpObnSbpConf(const std::string& lhs_op_name, const std::string& rhs_op_name,
-                                 JobBuilder* job_builder) {
-  job_builder->BindIdenticalSbpOpBlobArgPair(GenOpBlobArg(lhs_op_name, "out"),
-                                             GenOpBlobArg(rhs_op_name, "out"));
-}
-
 template<typename T>
 void ConstructMdUpdtOpConf(const VariableOp& op, const LogicalBlobId& diff_lbi_of_var_out,
                            const LogicalBlobId& total_loss_instance_num_lbi,

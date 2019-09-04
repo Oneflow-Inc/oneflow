@@ -32,7 +32,7 @@ class SoftmaxOp final : public Operator {
     return NaiveInferBatchAxis(BatchAxis4BnInOp);
   }
 
-  void GetSbpSignatures(SbpSignatureList* sbp_sig_list) const override;
+  Maybe<void> GetSbpSignatures(SbpSignatureList* sbp_sig_list) const override;
 
   void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                             const ParallelContext*, KernelConf*, const OpContext*) const override;
