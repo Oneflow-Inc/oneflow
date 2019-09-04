@@ -8,6 +8,9 @@ import oneflow.python.framework.remote_blob as remote_blob_util
 from oneflow.python.oneflow_export import oneflow_export
 
 
+import collections
+
+
 @oneflow_export("math.reduce_sum")
 def reduce_sum(input_tensor, axis=None, keepdims=False, name=None):
     op_conf = op_conf_util.OperatorConf()
@@ -17,8 +20,9 @@ def reduce_sum(input_tensor, axis=None, keepdims=False, name=None):
     setattr(op_conf.reduce_sum_conf, "in", input_tensor.logical_blob_name)
     setattr(op_conf.reduce_sum_conf, "out", "out")
     if axis is not None:
-        assert isinstance(axis, list) or isinstance(axis, tuple)
-        op_conf.reduce_sum_conf.axis[:] = list(axis)
+        op_conf.reduce_sum_conf.axis[:] = (
+            list(axis) if isinstance(axis, collections.Sized) else [axis]
+        )
     setattr(op_conf.reduce_sum_conf, "keep_dims", keepdims)
     compile_context.CurJobAddOp(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()

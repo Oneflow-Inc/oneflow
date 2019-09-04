@@ -8,7 +8,7 @@ void AutoLearningRate(const OpGraph& op_graph, Job* job) {
   const TrainConf& train_conf = job->job_conf().train_conf();
   auto AddScheduleOp = [&](const std::string& op_name, const float learning_rate) -> std::string {
     const ParallelConf& parallel_conf =
-        op_graph.OpNode4OpName(GenLogicalBlobId(train_conf.global_step_lbn()).op_name())
+        op_graph.OpNode4OpName(GenLogicalBlobId(train_conf.train_step_lbn()).op_name())
             ->parallel_desc()
             .parallel_conf();
     const NormalModelUpdateOpUserConf& model_update_conf = train_conf.model_update_conf();
@@ -17,7 +17,7 @@ void AutoLearningRate(const OpGraph& op_graph, Job* job) {
       schedule_op_conf.set_name(op_name);
       LearningRateScheduleOpConf* schedule_conf =
           schedule_op_conf.mutable_learning_rate_schedule_conf();
-      schedule_conf->set_global_step(train_conf.global_step_lbn());
+      schedule_conf->set_train_step(train_conf.train_step_lbn());
       schedule_conf->set_learning_rate(learning_rate);
       schedule_conf->set_out("out");
       if (model_update_conf.has_warmup_conf()) {

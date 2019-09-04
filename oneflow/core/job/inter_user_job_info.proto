@@ -13,5 +13,6 @@ message InterUserJobInfo {
   map<string, string> output_or_var_op_name2pull_job_name = 2;
   map<string, ArgPassJobInfo> input_or_var_op_name2arg_pass_job_info = 3;
   required string global_model_init_job_name = 4;
-  required string global_model_save_job_name = 5;
+  required string global_model_load_job_name = 5;
+  required string global_model_save_job_name = 6;
 }
