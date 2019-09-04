@@ -98,7 +98,7 @@ def element_wise_add(x, y, name=None):
 def broadcast_add(x, y, name=None):
     op_conf = op_conf_util.OperatorConf()
     setattr(
-        op_conf, "name", name if name is not None else id_util.UniqueStr("BoadcastAdd_")
+        op_conf, "name", name if name is not None else id_util.UniqueStr("BroadcastAdd_")
     )
     op_conf.broadcast_add_conf.a = x.logical_blob_name
     op_conf.broadcast_add_conf.b = y.logical_blob_name
@@ -113,7 +113,7 @@ def broadcast_add(x, y, name=None):
 def broadcast_sub(x, y, name=None):
     op_conf = op_conf_util.OperatorConf()
     setattr(
-        op_conf, "name", name if name is not None else id_util.UniqueStr("BoadcastSub_")
+        op_conf, "name", name if name is not None else id_util.UniqueStr("BroadcastSub_")
     )
     op_conf.broadcast_sub_conf.a = x.logical_blob_name
     op_conf.broadcast_sub_conf.b = y.logical_blob_name
@@ -128,7 +128,7 @@ def broadcast_sub(x, y, name=None):
 def broadcast_mul(x, y, name=None):
     op_conf = op_conf_util.OperatorConf()
     setattr(
-        op_conf, "name", name if name is not None else id_util.UniqueStr("BoadcastMul_")
+        op_conf, "name", name if name is not None else id_util.UniqueStr("BroadcastMul_")
     )
     op_conf.broadcast_mul_conf.a = x.logical_blob_name
     op_conf.broadcast_mul_conf.b = y.logical_blob_name
