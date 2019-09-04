@@ -4,3 +4,5 @@
 /benchmark/**/oneflow
 *plan
 core.*
+/oneflow/python/test/log
+*.pyc
