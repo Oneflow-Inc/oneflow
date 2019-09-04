@@ -11,6 +11,7 @@ import oneflow.python.framework.undefined as undefined
 import oneflow
 
 from oneflow.python.oneflow_export import oneflow_export
+import oneflow
 
 @oneflow_export('input_blob_def')
 class input_blob_def(blob_desc.BlobDesc):
