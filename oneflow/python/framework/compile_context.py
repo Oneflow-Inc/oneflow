@@ -39,7 +39,7 @@ def CurJobAddInputOp(op_conf):
 
 
 def _CurJobAddNonInputOp(op_conf):
-    # _prefixing_op_name_if_need(op_conf)
+    _prefixing_op_name_if_need(op_conf)
     op_conf.device_type = placement_context.CurPlacementGroupGetDeviceType(
         op_conf
     )
