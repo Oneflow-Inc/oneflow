@@ -245,7 +245,7 @@ def _FullyConnected(input_blob, input_size, units, activation=None, name=None,
 def _Dropout(input_blob, dropout_prob):
   if dropout_prob == 0.0:
     return input_blob
-  return flow.math.dropout(input_blob, rate=dropout_prob)
+  return flow.nn.dropout(input_blob, rate=dropout_prob)
 
 
 def _LayerNorm(input_blob, hidden_size):
