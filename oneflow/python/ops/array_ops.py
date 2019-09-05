@@ -94,9 +94,6 @@ def slice(input_, begin, size, name=None):
         size: A list or a tuple, indicate each dimension slice size, whose length must be equal 
             to input_'s number of dimensions, the first element of beign must be set to None.
         name: A name for the operation (optional).
-
-    Returns:
-        `value` safely cast to `dtype`.
     """
     ndims = len(input_.static_shape)
     assert (
@@ -144,9 +141,9 @@ def slice(input_, begin, size, name=None):
         slice_conf_list.append(slice_conf)
 
     op_conf = op_conf_util.OperatorConf()
-    op_conf.name = name
+    setattr(op_conf, "name", name)
     setattr(op_conf.slice_conf, "in", input_.logical_blob_name)
-    op_conf.slice_conf.out = "out"
+    setattr(op_conf.slice_conf, "out", "out")
     # ignore first slice conf because oneflow slice op not support dim0 slice yet
     op_conf.slice_conf.dim_slice_conf.extend(slice_conf_list[1:])
 
