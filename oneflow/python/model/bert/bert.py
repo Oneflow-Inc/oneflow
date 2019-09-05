@@ -67,7 +67,9 @@ class BertBackbone(object):
   def embedding_table(self): return self.embedding_table_
 
 def CreateInitializer(std):
-  return flow.truncated_normal_initializer(std)
+  initializer = op_conf_util.InitializerConf()
+  setattr(initializer.truncated_normal_conf, "std", float(std))
+  return initializer
 
 def _Gelu(in_blob):
   return flow.keras.activations.gelu(in_blob)
