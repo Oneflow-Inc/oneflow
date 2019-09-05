@@ -24,15 +24,6 @@ def try_activate_default_session(func):
         return func(*args, **kwargs)
     return Func
 
-
-def init(config_proto):
-    if (isinstance(config_proto, config_util.ConfigProtoBuilder)):
-        config_proto = config_proto.config_proto
-    assert isinstance(config_proto, ConfigProto)
-    config_util.TryCompleteDefaultConfigProto(config_proto)
-    config_util.inited_config_proto = config_proto
-    c_api_util.Init(config_proto)
-
 class Session(object):
     def __init__(self):
         self.is_running_ = False
