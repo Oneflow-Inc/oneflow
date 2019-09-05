@@ -85,6 +85,17 @@ def transpose(a, perm=None, conjugate=False, name=None):
 
 @oneflow_export("slice")
 def slice(input_, begin, size, name=None):
+    r"""Extracts a slice from a tensor.
+
+    Args:
+        input_: A `Blob`.
+        begin: A list or a tuple, indicate each dimension slice begin, whose length must be equal 
+            to input_'s number of dimensions, the first element of beign must be set to None.
+            (because oneflow internal slice op do not support slice at dim0 at present)
+        size: A list or a tuple, indicate each dimension slice size, whose length must be equal 
+            to input_'s number of dimensions, the first element of beign must be set to None.
+        name: A name for the operation (optional).
+    """
     ndims = len(input_.static_shape)
     assert (
         isinstance(begin, (list, tuple)) and len(begin) == ndims
@@ -92,9 +103,12 @@ def slice(input_, begin, size, name=None):
     assert (
         isinstance(size, (list, tuple)) and len(size) == ndims
     ), "size must be a list or tuple whose length is the same with input_'s number of dimensions."
-
-    if name is None:
-        name = id_util.UniqueStr("Slice_")
+    assert (
+        begin[0] is None
+    ), "begin not support dim0 slice at present, the first element of begin must be set to None"
+    assert (
+        size[0] is None
+    ), "size not support dim0 slice at present, the first element of size must be set to None"
 
     slice_conf_list = []
     for b, s, d in zip(begin, size, input_.static_shape):
@@ -125,52 +139,14 @@ def slice(input_, begin, size, name=None):
         slice_conf_list.append(slice_conf)
 
     op_conf = op_conf_util.OperatorConf()
-    op_conf.name = name
+    setattr(
+        op_conf, "name", name if name is not None else id_util.UniqueStr("Slice_"),
+    )
     setattr(op_conf.slice_conf, "in", input_.logical_blob_name)
-    op_conf.slice_conf.out = "out"
+    setattr(op_conf.slice_conf, "out", "out")
     # ignore first slice conf because oneflow slice op not support dim0 slice yet
     op_conf.slice_conf.dim_slice_conf.extend(slice_conf_list[1:])
 
-    compile_context.CurJobAddOp(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
-
-
-@oneflow_export("constant")
-def constant(
-    value,
-    dtype=None,
-    shape=None,
-    name=None,
-    # verify_shape=False
-):
-    op_conf = op_conf_util.OperatorConf()
-
-    if name is None:
-        op_conf.name = id_util.UniqueStr("Constant_")
-    else:
-        op_conf.name = name
-
-    if value is not None:
-        if isinstance(value, list):
-            raise NotImplementedError
-        elif isinstance(value, (int, float)):
-            op_conf.constant_conf.initializer.CopyFrom(
-                flow.constant_initializer(value, dtype)
-            )
-        else:
-            raise NotImplementedError
-
-    if dtype is not None:
-        setattr(op_conf.constant_conf, "data_type", dtype)
-
-    if shape is not None:
-        assert isinstance(shape, (list, tuple))
-        op_conf.constant_conf.shape.dim.extend(list(shape))
-
-    setattr(op_conf.constant_conf, "out", "out")
     compile_context.CurJobAddOp(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
     lbi.op_name = op_conf.name
