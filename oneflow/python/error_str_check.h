@@ -24,7 +24,7 @@ std::string OFStrCat(T0 t0, T1 t1, T2 t2, T3 t3, T4 t4) {
 
 #define OF_ERROR_STR_CHECK(expr, ret_val, ...) \
   do {                                         \
-    if (!expr) {                               \
+    if (!(expr)) {                             \
       *error_str = OFStrCat(##__VA_ARGS__);    \
       return ret_val;                          \
     }                                          \
