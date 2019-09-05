@@ -1,7 +1,6 @@
 #include <google/protobuf/text_format.h>
 #include "oneflow/core/common/buffer_manager.h"
 #include "oneflow/core/common/protobuf.h"
-#include "oneflow/core/common/maybe.h"
 #include "oneflow/core/register/ofblob.h"
 #include "oneflow/core/job/job_set.pb.h"
 #include "oneflow/core/job/oneflow.h"
@@ -16,45 +15,14 @@
 #include "oneflow/core/control/cluster_control.h"
 #include "oneflow/core/job/job_set_compile_ctx.h"
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
-
-std::string OFStrCat() { return Error::CheckFailed(); }
-template<typename T0>
-std::string OFStrCat(T0 t0) {
-  return Error::CheckFailed() << t0;
-}
-template<typename T0, typename T1>
-std::string OFStrCat(T0 t0, T1 t1) {
-  return Error::CheckFailed() << t0 << t1;
-}
-template<typename T0, typename T1, typename T2>
-std::string OFStrCat(T0 t0, T1 t1, T2 t2) {
-  return Error::CheckFailed() << t0 << t1 << t2;
-}
-template<typename T0, typename T1, typename T2, typename T3>
-std::string OFStrCat(T0 t0, T1 t1, T2 t2, T3 t3) {
-  return Error::CheckFailed() << t0 << t1 << t2 << t3;
-}
-template<typename T0, typename T1, typename T2, typename T3, typename T4>
-std::string OFStrCat(T0 t0, T1 t1, T2 t2, T3 t3, T4 t4) {
-  return Error::CheckFailed() << t0 << t1 << t2 << t3 << t4;
-}
-
-#define OF_ERROR_STR_CHECK(expr, ret_val, ...) \
-  do {                                         \
-    *error_str = OFStrCat(##__VA_ARGS__);      \
-    return ret_val;                            \
-  } while (0)
+#include "onefow/python/error_str_check.h"
 
 bool IsOpTypeCaseCpuSupportOnly(int64_t op_type_case, std::string* error_str) {
   using namespace oneflow;
   using OnlyCpuSupport = OnlyCpuSupportPredicator;
-  do {
-    *error_str = OFStrCat("123", "456");
-    return ret_val;
-  } while (0)
-      // OF_ERROR_STR_CHECK(IsClassRegistered<OnlyCpuSupport>(op_type_case), false,
-      //                    ": op_type_case = ", op_type_case);
-      return *std::unique_ptr<OnlyCpuSupport>(NewObj<OnlyCpuSupport>(op_type_case));
+  OF_ERROR_STR_CHECK(IsClassRegistered<OnlyCpuSupport>(op_type_case), false,
+                     ": op_type_case = ", op_type_case);
+  return *std::unique_ptr<OnlyCpuSupport>(NewObj<OnlyCpuSupport>(op_type_case));
 }
 
 void InitBySerializedConfigProto(const std::string& config_proto_str, std::string* error_str) {
