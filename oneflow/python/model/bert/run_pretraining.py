@@ -8,17 +8,19 @@ from datetime import datetime
 import oneflow as flow
 from pretrain import PreTrain#, Eval
 
-#_DATA_DIR = '/dataset/bert/of_wiki_seq_len_128'
+_DATA_DIR = '/dataset/bert/of_wiki_seq_len_128'
 #_DATA_DIR = '/dataset/bert/bert_seq_len_128_repeat1024'
-_DATA_DIR = '/dataset/bert_regression_test/0'
+#_DATA_DIR = '/dataset/bert_regression_test/0'
 #_MODEL_LOAD = "/dataset/model_zoo/bert/of_L-12_H-768_A-12_random_init"
 _MODEL_LOAD = "/dataset/model_zoo/bert_new_snapshot/of_L-12_H-768_A-12_random_init"
 
 parser = argparse.ArgumentParser(description="flags for bert")
-parser.add_argument("-d", "--device_num_per_node", type=int, default=1)
+parser.add_argument("-d", "--device_num_per_node", type=int, default=4)
 parser.add_argument("-n", "--node_num", type=int, default=1)
 parser.add_argument("-b", "--batch_size_per_device", type=int, default=24)
 parser.add_argument("-s", "--num_steps", type=int, default=100)
+parser.add_argument("-c", "--copy_binary_to_worker", type=bool, default=True)
+parser.add_argument("-u", "--use_uuid", type=bool, default=False)
 args = parser.parse_args()
 
 nodes = [{'addr':'192.168.1.16'},{'addr':'192.168.1.15'}]
@@ -100,9 +102,10 @@ _BERT_MODEL_UPDATE_CONF = dict(
 def PretrainJob():
     total_device_num = args.node_num * args.device_num_per_node
     batch_size = total_device_num * args.batch_size_per_device
+    data_part_num = total_device_num #use total_device_num for test
 
     job_conf = flow.get_cur_job_conf_builder()
-    job_conf.batch_size(batch_size).data_part_num(total_device_num).default_data_type(flow.float)
+    job_conf.batch_size(batch_size).data_part_num(data_part_num).default_data_type(flow.float)
     job_conf.default_initializer_conf(dict(constant_conf=dict(value=0.0)))
     #job_conf.enable_nccl(False)
     #job_conf.enable_cuda_ring_all_reduce()
@@ -130,6 +133,7 @@ if __name__ == '__main__':
   print('batch size per device/gpu', args.batch_size_per_device)
   print('number of steps', args.num_steps)
 
+  start_time = time.time()
   config = flow.ConfigProtoBuilder()
   config.gpu_device_num(args.device_num_per_node)
   config.grpc_use_no_signal()
@@ -137,7 +141,9 @@ if __name__ == '__main__':
   config.data_port(9927)
   config.machine(nodes[:args.node_num])
 
-  assert args.node_num == 1, 'support 1 node currently'
+  assert args.node_num <= len(nodes)
+  if args.node_num > 1:
+    flow.deprecated.init_worker(config, scp_binary=args.copy_binary_to_worker, use_uuid=args.use_uuid)
   flow.init(config)
 
   flow.add_job(PretrainJob)
@@ -148,9 +154,28 @@ if __name__ == '__main__':
     #check_point.load(_MODEL_LOAD)
     fmt_str = "{:>12}  {:>12}  {:>12.10f}"
     print('{:>12}  {:14}  {}'.format( "step", "loss", "time"))
+    train_start_time = time.time()
+    step_time = []
     for i in range(args.num_steps):
-      print(fmt_str.format(i, "train loss:", sess.run(PretrainJob).get().mean()))
+      loss_mean = sess.run(PretrainJob).get().mean()
+      step_time.append(time.time())
+      train_step_time = step_time[i] - step_time[i-1]
+      print(fmt_str.format(i, loss_mean, train_step_time))
       #sess.no_return_run(PretrainJob)#.async_get(AsyncGetCallback)
       #sess.run(PretrainJob).async_get(AsyncGetCallback)
     check_point.save()
+  total_time = step_time[-1] - start_time
+  train_time = step_time[-1] - train_start_time
+  initial_time = train_start_time - start_time
+  mean_batch_time = (step_time[-1] - step_time[0]) / (args.num_steps - 1)
+  total_batch_size = args.node_num * args.device_num_per_node * args.batch_size_per_device
+  throughput = total_batch_size / mean_batch_time
 
+  print('total time', total_time)
+  print('initial time', initial_time)
+  print('first loss time', step_time[0] - start_time) #include model init and first batch cal time.
+  print('train time', train_time)
+  print('last - first loss time', step_time[-1] - step_time[0])
+  print('average batch time', mean_batch_time)
+  print('samples/sec', throughput)
+  print('destroy time', time.time() - step_time[-1])
