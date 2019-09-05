@@ -8,7 +8,7 @@ flow.init(config)
 
 def TestNet(x=flow.input_blob_def((1,))):
     job_conf = flow.get_cur_job_conf_builder()
-    job_conf.batch_size(1).data_part_num(1).default_data_type(flow.float)
+    job_conf.batch_size(1).default_data_type(flow.float)
     dlnet = flow.deprecated.get_cur_job_dlnet_builder()
     return (x, x)
 flow.add_job(TestNet)

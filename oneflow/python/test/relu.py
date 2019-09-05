@@ -8,7 +8,7 @@ flow.init(config)
 
 def ReluJob(x = flow.input_blob_def((10,))):
     job_conf = flow.get_cur_job_conf_builder()
-    job_conf.batch_size(10).data_part_num(1).default_data_type(flow.float)
+    job_conf.batch_size(10).default_data_type(flow.float)
     return flow.keras.activations.relu(x)
 flow.add_job(ReluJob)
 
