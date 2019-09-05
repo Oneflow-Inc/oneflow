@@ -173,18 +173,13 @@ def constant(
     if isinstance(value, list):
         raise NotImplementedError
     elif isinstance(value, (int, float)):
+        # TODO: should only set dtype once 
         setattr(op_conf.constant_conf, "data_type", dtype)
-        if isinstance(value, list):
-            raise NotImplementedError
-        elif isinstance(value, (int, float)):
-            op_conf.constant_conf.initializer.CopyFrom(
-               flow.constant_initializer(value, dtype)
-            )
-        else:
-            raise NotImplementedError
+        op_conf.constant_conf.initializer.CopyFrom(
+            flow.constant_initializer(value, dtype)
+        )
     else:
         raise NotImplementedError
-    
 
     if shape is not None:
         assert isinstance(shape, (list, tuple))
