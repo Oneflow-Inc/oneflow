@@ -147,6 +147,8 @@ long long DeviceType4DeviceTag(const std::string& device_tag, std::string* error
 }
 
 #undef OF_ERROR_STR_CHECK
+#undef OF_ERROR_STR_CHECK_ISNULL
+#undef OF_ERROR_STR_CHECK_NOTNULL
 
 namespace oneflow {
 
