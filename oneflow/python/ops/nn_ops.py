@@ -305,7 +305,7 @@ def _GetSequence(value, n, name):
         )
 
 
-@oneflow_export("math.dropout")
+@oneflow_export("nn.dropout")
  def dropout(x, noise_shape=None, seed=None, name=None, rate=None):
      op_conf = op_conf_util.OperatorConf()
      if name is None:
