@@ -12,39 +12,39 @@ from oneflow.python.oneflow_export import oneflow_export
 @oneflow_export("math.add")
 def add(x, y, name=None):
     if isinstance(x, (int, float)):
-        return scalar_add(y, x)
+        return scalar_add(y, x, name)
     elif isinstance(y, (int, float)):
-        return scalar_add(x, y)
+        return scalar_add(x, y, name)
     elif x.static_shape == y.static_shape:
-        return element_wise_add(x, y)
+        return element_wise_add(x, y, name)
     else:
-        return broadcast_add(x, y)
+        return broadcast_add(x, y, name)
 
 
 @oneflow_export("math.subtract")
 def subtract(x, y, name=None):
     if isinstance(x, (int, float)):
-        return scalar_add(-1 * y, x)
+        return scalar_add(-1 * y, x, name)
     elif isinstance(y, (int, float)):
-        return scalar_add(x, -1 * y)
+        return scalar_add(x, -1 * y, name)
     elif x.static_shape == y.static_shape:
         # TODO: add element-wise op
-        return broadcast_sub(x, y)
+        return broadcast_sub(x, y, name)
     else:
-        return broadcast_sub(x, y)
+        return broadcast_sub(x, y, name)
 
 
 @oneflow_export("math.multiply")
 def multiply(x, y, name=None):
     if isinstance(x, (int, float)):
-        return scalar_mul(y, x)
+        return scalar_mul(y, x, name)
     elif isinstance(y, (int, float)):
-        return scalar_mul(x, y)
+        return scalar_mul(x, y, name)
     elif x.static_shape == y.static_shape:
         # TODO: add element-wise op
-        return broadcast_mul(x, y)
+        return broadcast_mul(x, y, name)
     else:
-        return broadcast_mul(x, y)
+        return broadcast_mul(x, y, name)
 
 
 @oneflow_export("math.divide")
@@ -55,9 +55,9 @@ def divide(x, y, name=None):
         raise NotImplementedError
     elif x.static_shape == y.static_shape:
         # TODO: add element-wise op
-        return broadcast_div(x, y)
+        return broadcast_div(x, y, name)
     else:
-        return broadcast_div(x, y)
+        return broadcast_div(x, y, name)
 
 
 def scalar_add(x, operand, name=None):
