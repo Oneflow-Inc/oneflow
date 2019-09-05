@@ -1,5 +1,5 @@
 # warning: never share the container image this dockerfile produces
-ARG CUDA
+ARG CUDA=9
 FROM nvidia/cuda:${CUDA}.0-cudnn7-devel-centos7
 RUN yum update -y && yum install -y epel-release
 RUN yum update -y && yum install -y rdma-core-devel \
@@ -8,7 +8,6 @@ RUN yum update -y && yum install -y rdma-core-devel \
     cmake3 \
     make \
     git \
-    wget \
     centos-release-scl \
     swig
 RUN ln -sf /usr/bin/cmake3 /usr/bin/cmake
@@ -24,18 +23,17 @@ RUN mkdir -p /tmp/download/cmake-extracted && \
     make install
 ENV PATH="/cmake-install/bin:${PATH}"
 
-ARG USE_PYTHON_3_OR_2
+ARG USE_PYTHON_3_OR_2=2
 
-RUN [[ "${USE_PYTHON_3_OR_2}" == "3" ]] || { echo "=========================================== Starting to build OneFlow via Python2 ======================================" \
-    && yum update -y \
+RUN echo "=========================================== Starting to build OneFlow via Python${USE_PYTHON_3_OR_2} with CUDA${CUDA} ======================================" 
+RUN [[ "${USE_PYTHON_3_OR_2}" == "3" ]] || { yum update -y \
     && yum install -y python-devel.x86_64 \
-    && wget https://bootstrap.pypa.io/get-pip.py \
+    && curl https://bootstrap.pypa.io/get-pip.py \
     && python ./get-pip.py \
     && rm get-pip.py \
-    && pip install -U numpy==1.12.0 protobuf; }
+    && pip install numpy==1.12.0 protobuf; }
 
-RUN [[ "${USE_PYTHON_3_OR_2}" == "2" ]] || { echo "=========================================== Starting to build OneFlow via Python3 ======================================" \
-    && yum update -y \
+RUN [[ "${USE_PYTHON_3_OR_2}" == "2" ]] || { yum update -y \
     && yum install -y rh-python36 python36-devel.x86_64 \
     && python3 -m ensurepip \
     && pip3 install numpy protobuf; }
@@ -61,8 +59,7 @@ RUN [[ "${USE_PYTHON_3_OR_2}" == "3" ]] || { cmake -DTHIRD_PARTY=OFF -DPY3=OFF .
 WORKDIR /workspace
 RUN pip${USE_PYTHON_3_OR_2} install wheel
 COPY setup.py /workspace/setup.py
-RUN python setup.py bdist_wheel
-RUN pip install /workspace/dist/*.whl
+RUN python${USE_PYTHON_3_OR_2} setup.py bdist_wheel
+RUN pip${USE_PYTHON_3_OR_2} install /workspace/dist/*.whl
 
 RUN rm -rf oneflow third_party cmake CMakeLists.txt
-# ENV PYTHONPATH=/workspace/build/python_scripts:$PYTHONPATH
