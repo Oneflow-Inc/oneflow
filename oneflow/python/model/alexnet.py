@@ -175,7 +175,6 @@ def alexnet_train_job():
     job_conf.train_conf()
     job_conf.train_conf().batch_size = 12
     job_conf.train_conf().primary_lr = 0.00001
-    job_conf.train_conf().num_of_batches_in_snapshot = 100
     job_conf.train_conf().model_update_conf.naive_conf.SetInParent()
 
     (labels, images) = _data_load_layer(args.train_dir)
@@ -193,7 +192,7 @@ def alexnet_eval_job():
 
 if __name__ == "__main__":
     config = flow.ConfigProtoBuilder()
-    config.gpu_device_num(1)
+    config.gpu_device_num(args.gpu_num_per_node)
     config.grpc_use_no_signal()
     config.ctrl_port(9788)
     if args.multinode:
