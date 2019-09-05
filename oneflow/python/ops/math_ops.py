@@ -260,9 +260,9 @@ def cast(x, dtype, name=None):
     setattr(op_conf, "name", name if name is not None else id_util.UniqueStr('Cast_'))
     setattr(op_conf.cast_conf, "in", x.logical_blob_name)
     setattr(op_conf.cast_conf, "data_type", dtype)
-    setattr(op_conf, "out", "out")
-    compile_context.CurJobAddOp(op_conf)	
-    lbi = logical_blob_id_util.LogicalBlobId()	
-    lbi.op_name = op_conf.name	
-    lbi.blob_name = "out"	
-    return remote_blob_util.RemoteBlob(lbi)	
+    setattr(op_conf.cast_conf, "out", "out")
+    compile_context.CurJobAddOp(op_conf)
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = "out"
+    return remote_blob_util.RemoteBlob(lbi)
