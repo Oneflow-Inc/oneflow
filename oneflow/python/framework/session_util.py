@@ -1,16 +1,30 @@
 from __future__ import absolute_import
 
 import threading
+import functools
 from oneflow.core.job.job_set_pb2 import ConfigProto
 import oneflow.core.job.job_pb2 as job_util
 import oneflow.python.framework.runtime as runtime
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.runtime_context as runtime_ctx
 import oneflow.python.framework.config_util as config_util
+import oneflow.python.framework.job_set_util as job_set_util
 from oneflow.python.framework.out_remote_blobs_result_box import OutRemoteBlobsResultBox
 from oneflow.python.oneflow_export import oneflow_export
 
-@oneflow_export('init')
+def try_activate_default_session(func):
+    @functools.wraps(func)
+    def Func(*args, **kwargs):
+        if c_api_util.environment_inited == False:
+            c_api_util.Init(config_util.config_proto)
+            c_api_util.environment_inited = True
+            config_util.config_proto_mutable = False
+            job_set_util.compile_all_job()
+            default_session.__enter__()
+        return func(*args, **kwargs)
+    return Func
+
+
 def init(config_proto):
     if (isinstance(config_proto, config_util.ConfigProtoBuilder)):
         config_proto = config_proto.config_proto
@@ -19,7 +33,6 @@ def init(config_proto):
     config_util.inited_config_proto = config_proto
     c_api_util.Init(config_proto)
 
-@oneflow_export('Session')
 class Session(object):
     def __init__(self):
         self.is_running_ = False
@@ -28,18 +41,22 @@ class Session(object):
         runtime_ctx.AddJobInstancePreLaunchCallbacks(self._PreLaunchCallback)
         runtime_ctx.AddJobInstancePostFinishCallbacks(self._PostFinishCallback)
 
+    @try_activate_default_session
     def run(self, job_func, *arg):
         assert self.is_running_
         return self.Run(job_func, *arg)
 
+    @try_activate_default_session
     def map(self, job_func, feed_data):
         assert self.is_running_
         return self.Map(job_func, feed_data)
 
+    @try_activate_default_session
     def no_return_run(self, job_func, *arg):
         assert self.is_running_
         return self.NoReturnRun(job_func, *arg)
 
+    @try_activate_default_session
     def sync(self):
         assert self.is_running_
         self.cond_var_.acquire()
@@ -82,10 +99,10 @@ class Session(object):
         self.is_running_ = True
         self.runtime_env_ = runtime.GetMachineRuntimeEnv()
         self.runtime_env_.__enter__()
-        runtime_ctx.default_session = self
         return self
 
     def __exit__(self, *args):
         assert self.is_running_ == True
         self.runtime_env_.__exit__()
 
+default_session = Session()

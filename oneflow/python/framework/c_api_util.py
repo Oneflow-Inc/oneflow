@@ -153,3 +153,4 @@ def DeviceType4DeviceTag(device_tag):
     if error.HasField("error_type"): raise JobBuildAndInferError(error)
     return device_type
 
+environment_inited=False

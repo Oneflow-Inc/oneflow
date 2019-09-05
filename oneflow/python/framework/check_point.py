@@ -4,6 +4,7 @@ import oneflow.python.framework.runtime_context as runtime_ctx
 from oneflow.python.oneflow_export import oneflow_export
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.job_instance as job_instance
+import oneflow.python.framework.session_util as session_util
 import numpy as np
 import os
 import datetime
@@ -14,13 +15,16 @@ class CheckPoint(object):
     def __init__(self):
         pass
 
+    @session_util.try_activate_default_session
     def save(self, path):
         assert type(path) is str
         c_api_util.LaunchJob(_MakeModelSaveJobFunc(path))
 
+    @session_util.try_activate_default_session
     def init(self):
         c_api_util.LaunchJob(_MakeModelInitJobFunc())
 
+    @session_util.try_activate_default_session
     def load(self, path):
         assert type(path) is str
         c_api_util.LaunchJob(_MakeModelLoadJobFunc(path))
