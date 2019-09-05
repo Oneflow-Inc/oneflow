@@ -206,7 +206,7 @@ def gelu(x, name=None):
 
 
 def sqrt(x, name=None):
-    # TODO: not implemented yet
+    # TODO: not ready yet
     raise NotImplementedError
     op_conf = op_conf_util.OperatorConf()
     if name is None:
@@ -223,7 +223,7 @@ def sqrt(x, name=None):
 
 
 def rsqrt(x, name=None):
-    # TODO: not implemented yet
+    # TODO: not ready yet
     raise NotImplementedError
     op_conf = op_conf_util.OperatorConf()
     if name is None:
