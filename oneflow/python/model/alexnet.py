@@ -193,7 +193,7 @@ def alexnet_eval_job():
 
 if __name__ == "__main__":
     config = flow.ConfigProtoBuilder()
-    config.gpu_device_num(1)
+    config.gpu_device_num(args.gpu_num_per_node)
     config.grpc_use_no_signal()
     config.ctrl_port(9788)
     if args.multinode:
