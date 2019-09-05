@@ -177,13 +177,12 @@ def constant(
             raise NotImplementedError
         elif isinstance(value, (int, float)):
             op_conf.constant_conf.initializer.CopyFrom(
-               flow.constant_initializer(value, dtype)
+                flow.constant_initializer(value, dtype)
             )
         else:
             raise NotImplementedError
     else:
         raise NotImplementedError
-    
 
     if shape is not None:
         assert isinstance(shape, (list, tuple))
