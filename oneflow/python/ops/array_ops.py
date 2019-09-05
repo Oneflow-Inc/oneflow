@@ -151,3 +151,43 @@ def slice(input_, begin, size, name=None):
     lbi.op_name = op_conf.name
     lbi.blob_name = "out"
     return remote_blob_util.RemoteBlob(lbi)
+
+
+@oneflow_export("constant")		
+ def constant(		
+     value,		
+     dtype=None,		
+     shape=None,		
+     name=None,		
+     # verify_shape=False		
+ ):		
+     op_conf = op_conf_util.OperatorConf()		
+
+      if name is None:		
+         op_conf.name = id_util.UniqueStr("Constant_")		
+     else:		
+         op_conf.name = name		
+
+      if value is not None:		
+         if isinstance(value, list):		
+             raise NotImplementedError		
+         elif isinstance(value, (int, float)):		
+             op_conf.constant_conf.initializer.CopyFrom(		
+                 flow.constant_initializer(value, dtype)		
+             )		
+         else:		
+             raise NotImplementedError		
+
+      if dtype is not None:		
+         setattr(op_conf.constant_conf, "data_type", dtype)		
+
+      if shape is not None:		
+         assert isinstance(shape, (list, tuple))		
+         op_conf.constant_conf.shape.dim.extend(list(shape))		
+
+      setattr(op_conf.constant_conf, "out", "out")		
+     compile_context.CurJobAddOp(op_conf)		
+     lbi = logical_blob_id_util.LogicalBlobId()		
+     lbi.op_name = op_conf.name		
+     lbi.blob_name = "out"		
+     return remote_blob_util.RemoteBlob(lbi)
