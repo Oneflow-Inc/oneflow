@@ -173,8 +173,6 @@ def constant(
         raise NotImplementedError
     elif isinstance(value, (int, float)):
         setattr(op_conf.constant_conf, "data_type", dtype)
-        if isinstance(value, list):
-            raise NotImplementedError
         elif isinstance(value, (int, float)):
             op_conf.constant_conf.initializer.CopyFrom(
                 flow.constant_initializer(value, dtype)
