@@ -23,10 +23,7 @@ class BeforeNonInputOpBuildAndInferHook:
         global before_non_input_op_build_and_infer_hooks
         before_non_input_op_build_and_infer_hooks = []
 
-
-def CurJobAddOp(op_conf):
-    return _CurJobAddNonInputOp(op_conf)
-
+def CurJobAddOp(op_conf): return _CurJobAddNonInputOp(op_conf)
 
 def CurJobAddInputOp(op_conf):
     op_conf.device_type = placement_context.CurPlacementGroupGetDeviceType(
@@ -40,14 +37,9 @@ def CurJobAddInputOp(op_conf):
 
 def _CurJobAddNonInputOp(op_conf):
     _prefixing_op_name_if_need(op_conf)
-    op_conf.device_type = placement_context.CurPlacementGroupGetDeviceType(
-        op_conf
-    )
-    for callback in before_non_input_op_build_and_infer_hooks:
-        callback()
-    job_builder.CurCtxAddAndInferOp(
-        op_conf, placement_context.ParallelConf4OpConf(op_conf)
-    )
+    op_conf.device_type = placement_context.CurPlacementGroupGetDeviceType(op_conf)
+    for callback in before_non_input_op_build_and_infer_hooks: callback()
+    job_builder.CurCtxAddAndInferOp(op_conf, placement_context.ParallelConf4OpConf(op_conf))
     placement_context.CurPlacementGroupAddOpConf(op_conf)
 
 
