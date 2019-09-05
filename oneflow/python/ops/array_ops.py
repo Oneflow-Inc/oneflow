@@ -109,9 +109,6 @@ def slice(input_, begin, size, name=None):
         size[0] is None
     ), "size not support dim0 slice at present, the first element of size must be set to None"
 
-    if name is None:
-        name = id_util.UniqueStr("Slice_")
-
     slice_conf_list = []
     for b, s, d in zip(begin, size, input_.static_shape):
         slice_conf = op_conf_util.DimSliceConf()
@@ -141,7 +138,9 @@ def slice(input_, begin, size, name=None):
         slice_conf_list.append(slice_conf)
 
     op_conf = op_conf_util.OperatorConf()
-    setattr(op_conf, "name", name)
+    setattr(
+        op_conf, "name", name if name is not None else id_util.UniqueStr("Slice_"),
+    )
     setattr(op_conf.slice_conf, "in", input_.logical_blob_name)
     setattr(op_conf.slice_conf, "out", "out")
     # ignore first slice conf because oneflow slice op not support dim0 slice yet
