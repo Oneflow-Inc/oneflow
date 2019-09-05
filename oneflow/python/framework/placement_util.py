@@ -44,11 +44,6 @@ class PlacementScope(object):
 
     def __exit__(self, *args):
         assert self == placement_context.PlacementScopeStackPop()
-        for parallel_conf, op_names in self.ParallelConfAndOpNames():
-            placement_group = placement_proto.PlacementGroup()
-            placement_group.op_set.op_name.extend(op_names)
-            placement_group.parallel_conf.CopyFrom(parallel_conf)
-            compile_context.cur_job.placement.placement_group.add().CopyFrom(placement_group)
 
 @oneflow_export('fixed_placement')
 class FixedPlacementScope(PlacementScope):
