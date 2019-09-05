@@ -574,7 +574,7 @@ message NormalModelUpdateOpConf {
   required string model_diff = 2;
   required string total_instance_num_diff = 3;
   required string model = 4;
-  required string global_step = 5;
+  required string train_step = 5;
   required string learning_rate = 6;
   required float l1 = 7;
   required float l2 = 8;
@@ -585,7 +585,7 @@ message NaiveModelUpdateOpConf {
   required string model_diff = 2;
   required string total_instance_num_diff = 3;
   required string model = 4;
-  required string global_step = 5;
+  required string train_step = 5;
   required string learning_rate = 6;
   required float l1 = 7;
   required float l2 = 8;
@@ -597,7 +597,7 @@ message MomentumModelUpdateOpConf {
   required string model_diff = 3;
   required string total_instance_num_diff = 4;
   required string model = 5;
-  required string global_step = 6;
+  required string train_step = 6;
   required string learning_rate = 7;
   required float l1 = 8;
   required float l2 = 9;
@@ -608,7 +608,7 @@ message RMSPropModelUpdateOpConf {
   required string model_diff = 2;
   required string total_instance_num_diff = 3;
   required string model = 4;
-  required string global_step = 5;
+  required string train_step = 5;
   required string learning_rate = 6;
   required float l1 = 7;
   required float l2 = 8;
@@ -620,7 +620,7 @@ message LARSModelUpdateOpConf {
   required string model_diff = 3;
   required string total_instance_num_diff = 4;
   required string model = 5;
-  required string global_step = 6;
+  required string train_step = 6;
   required string learning_rate = 7;
   required float l1 = 8;
   required float l2 = 9;
@@ -635,7 +635,7 @@ message AdamModelUpdateOpConf {
   required string model_diff = 6;
   required string total_instance_num_diff = 7;
   required string model = 8;
-  required string global_step = 9;
+  required string train_step = 9;
   required string learning_rate = 10;
   required float l1 = 11;
   required float l2 = 12;
@@ -813,15 +813,23 @@ message ForeignOutputOpConf {
   required string ofblob_buffer_name = 3;
 }
 
+message InitializeWithSnapshotConf {
+  required string path = 1;
+  optional string key = 2;
+}
+
 message VariableOpConf {
   optional string tick = 1;
   required string out = 2;
   required ShapeProto shape = 3;
   optional DataType data_type = 4;
-  optional InitializerConf initializer = 5;
-  optional string model_name = 6 [default = "weight"];
-  optional int32 model_split_axis = 7 [default = 0];
-  optional int64 random_seed = 8;
+  oneof initialize {
+    InitializerConf initializer = 5;
+    InitializeWithSnapshotConf initialize_with_snapshot = 6;
+  }
+  optional string model_name = 7 [default = "weight"];
+  required OptInt64 split_axis = 8;
+  optional int64 random_seed = 9;
 }
 
 message LocalResponseNormalizationOpConf {
@@ -1422,10 +1430,17 @@ message EveryNthOpConf {
 }
 
 message ModelInitOpConf {
-  optional string tick = 1;
-  required string out = 2;
-  required string variable_op_name = 3;
-  required VariableOpConf original_variable_conf = 4;
+  required string tick = 1;
+  repeated string out = 2;
+  repeated string variable_op_name = 3;
+  repeated VariableOpConf original_variable_conf = 4;
+}
+
+message ModelLoadOpConf {
+  required string path = 1;
+  repeated string out = 2;
+  repeated string variable_op_name = 3;
+  repeated VariableOpConf original_variable_conf = 4;
 }
 
 message AllReduceFacadeOpConf {
@@ -1459,13 +1474,14 @@ message AssignOpConf {
   required string value = 2;
 }
 
-message SnapshotOpConf {
-  repeated string in = 1;
-  repeated string lbn = 2;
+message ModelSaveOpConf {
+  required string path = 1;
+  repeated string in = 2;
+  repeated string key = 3;
 }
 
 message LearningRateScheduleOpConf {
-  required string global_step = 1;
+  required string train_step = 1;
   required string out = 2;
   required float learning_rate = 3;
   optional LearningRateDecayConf learning_rate_decay = 4;
@@ -1474,7 +1490,6 @@ message LearningRateScheduleOpConf {
 
 message OperatorConf {
   required string name = 1;
-  optional string model_load_dir = 2;
   optional bool trainable = 3 [default = true];
   optional DeviceType device_type = 4 [default = kInvalidDevice];
   optional bool enable_cudnn = 5;
@@ -1612,10 +1627,11 @@ message OperatorConf {
     SplitLikeOpConf split_like_conf = 294;
     SigmoidGradOpConf sigmoid_grad_conf = 295;
     AssignOpConf assign_conf = 296;
-    SnapshotOpConf snapshot_conf = 297;
+    ModelSaveOpConf model_save_conf = 297;
     LearningRateScheduleOpConf learning_rate_schedule_conf = 298;
     PReluDataGradOpConf prelu_data_grad_conf = 299;
     PReluAlphaGradOpConf prelu_alpha_grad_conf = 300;
+    ModelLoadOpConf model_load_conf = 301;
 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;

@@ -131,7 +131,6 @@ def PretrainJob():
     job_conf.train_conf()
     job_conf.train_conf().primary_lr = 1e-4
     job_conf.train_conf().weight_l2 = 0.01
-    job_conf.train_conf().num_of_batches_in_snapshot = 1000
     job_conf.model_update_conf(_BERT_MODEL_UPDATE_CONF)
     job_conf.train_conf().loss_lbn.extend(["identity_loss/loss"])
     job_conf.enable_inplace(False)
@@ -147,17 +146,19 @@ if __name__ == '__main__':
   config = flow.ConfigProtoBuilder()
   config.gpu_device_num(1)
   config.grpc_use_no_signal()
-  config.model_load_snapshot_path(_MODEL_LOAD)
-  config.model_save_snapshots_path(_MODEL_SAVE)
   flow.init(config)
 
   flow.add_job(PretrainJob)
   with flow.Session() as sess:
     check_point = flow.train.CheckPoint()
-    check_point.restore().initialize_or_restore(session=sess)
+    if _MODEL_LOAD is None:
+        check_point.init()
+    else:
+        check_point.load(_MODEL_LOAD)
     # sess.sync()
     print('{:>12}  {:8}  {}'.format( "step", "loss", "time"))
     for i in range(200):
       #print(fmt_str.format(i, "train loss:", sess.run(PretrainJob).get().mean()))
       #sess.no_return_run(PretrainJob)#.async_get(AsyncGetCallback)
       sess.run(PretrainJob).async_get(AsyncGetCallback)
+    check_point.save(_MODEL_SAVE)

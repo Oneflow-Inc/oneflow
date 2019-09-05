@@ -63,9 +63,9 @@ __global__ void UpdateModelGpu(int64_t n, const float* learning_rate, T l1, T l2
 }
 
 template<typename T>
-__global__ void DoBiasCorrectionGpu(const int64_t* global_step, const T beta1, const T beta2,
+__global__ void DoBiasCorrectionGpu(const int64_t* train_step, const T beta1, const T beta2,
                                     T* beta1_t, T* beta2_t) {
-  if (*global_step != 0) {
+  if (*train_step != 0) {
     *beta1_t *= beta1;
     *beta2_t *= beta2;
   }
@@ -78,7 +78,7 @@ class AdamMdUpdateKernelUtil<DeviceType::kGPU, T> final {
  public:
   static void UpdateModel(DeviceCtx* ctx, int64_t n, const float* learning_rate, T l1, T l2,
                           T beta1, T beta2, T epsilon, bool do_bias_correction,
-                          const int64_t* global_step, const T* beta1_t, const T* beta2_t,
+                          const int64_t* train_step, const T* beta1_t, const T* beta2_t,
                           T* model_diff, T* model, T* m, T* v) {
     if (do_bias_correction) {
       UpdateModelGpu<true, T>
@@ -93,10 +93,10 @@ class AdamMdUpdateKernelUtil<DeviceType::kGPU, T> final {
     }
   }
 
-  static void DoBiasCorrection(DeviceCtx* ctx, const int64_t* global_step, const T beta1,
+  static void DoBiasCorrection(DeviceCtx* ctx, const int64_t* train_step, const T beta1,
                                const T beta2, T* beta1_t, T* beta2_t) {
     DoBiasCorrectionGpu<T>
-        <<<1, 1, 0, ctx->cuda_stream()>>>(global_step, beta1, beta2, beta1_t, beta2_t);
+        <<<1, 1, 0, ctx->cuda_stream()>>>(train_step, beta1, beta2, beta1_t, beta2_t);
   }
 };
 

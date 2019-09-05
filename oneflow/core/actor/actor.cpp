@@ -30,11 +30,6 @@ bool IsLastRegstInPieceWithOrder(const Regst* regst, ColIdOrder order) {
          || (order == ColIdOrder::kDescending && regst->col_id() == 0);
 }
 
-bool NeedModelSave(const JobDesc& job_desc, int64_t model_version_id) {
-  return model_version_id + 1 == job_desc.TotalBatchNum()
-         || (model_version_id + 1) % job_desc.NumOfBatchesInSnapshot() == 0;
-}
-
 void Actor::Init(const JobDesc* job_desc, const TaskProto& task_proto,
                  const ThreadCtx& thread_ctx) {
   job_desc_ = job_desc;

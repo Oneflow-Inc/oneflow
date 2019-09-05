@@ -99,6 +99,7 @@ def bias_add(value, bias, data_format=None, name=None):
     op_conf.bias_add_conf.a = value.logical_blob_name
     op_conf.bias_add_conf.b = bias.logical_blob_name
     op_conf.bias_add_conf.axis = bias_add_axis
+    op_conf.bias_add_conf.out = "out"
 
     compile_context.CurJobAddOp(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
@@ -302,3 +303,26 @@ def _GetSequence(value, n, name):
                 name, n, current_n
             )
         )
+
+
+@oneflow_export("nn.dropout")
+def dropout(x, noise_shape=None, seed=None, name=None, rate=None):
+     op_conf = op_conf_util.OperatorConf()
+     if name is None:
+         op_conf.name = id_util.UniqueStr("Dropout_")
+     else:
+         op_conf.name = name
+     setattr(op_conf.dropout_conf, "in", x.logical_blob_name)
+     setattr(op_conf.dropout_conf, "out", "out")
+     if noise_shape is not None:
+         assert isinstance(noise_shape, (list, tuple))
+         op_conf.dropout_conf.noise_shape.dim.extend(list(noise_shape))
+     if seed is not None:
+         setattr(op_conf.dropout_conf, "seed", seed)
+     assert rate is not None
+     setattr(op_conf.dropout_conf, "rate", rate)
+     compile_context.CurJobAddOp(op_conf)
+     lbi = logical_blob_id_util.LogicalBlobId()
+     lbi.op_name = op_conf.name
+     lbi.blob_name = "out"
+     return remote_blob_util.RemoteBlob(lbi)

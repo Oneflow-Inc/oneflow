@@ -1,35 +1,73 @@
-#include "oneflow/core/job/job_set.pb.h"
-#include "oneflow/core/kernel/model_init_kernel.h"
+#include "oneflow/core/kernel/kernel.h"
 
 namespace oneflow {
 
-template<DeviceType device_type, typename T>
-void ModelInitKernel<device_type, T>::VirtualKernelInit(const ParallelContext* parallel_ctx) {
-  std::tie(part_id_, part_num_) = GetPartIdAndPartNumFromParallelCtx(parallel_ctx);
-  random_seed_gen_.reset(
-      new std::mt19937(this->op_conf().model_init_conf().original_variable_conf().random_seed()));
+namespace {
+
+template<typename T>
+void InitializeWithConf(const InitializerConf& conf, const uint32_t random_seed, Blob* blob) {
+  KernelUtil<DeviceType::kCPU, T>::InitializeWithConf(nullptr, conf, random_seed, blob);
 }
 
-template<DeviceType device_type, typename T>
-void ModelInitKernel<device_type, T>::Forward(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  Blob* out_blob = BnInOp2Blob("out");
-  const ModelInitOpConf& op_conf = this->op_conf().model_init_conf();
-  const std::string& snapshot_path = Global<const IOConf>::Get()->model_load_snapshot_path();
-  if (snapshot_path == "") {
-    KernelUtil<device_type, T>::InitializeWithProperConf(
-        ctx.device_ctx,
-        this->GetInitializerFromPbMessage(op_conf.original_variable_conf(), "initializer"),
-        (*random_seed_gen_)(), out_blob);
-  } else {
-    std::string load_path = JoinPath(snapshot_path, op_conf.variable_op_name());
-    std::string blob_name = op_conf.original_variable_conf().out();
-    KernelUtil<device_type, T>::InitializeWithDir(ctx.device_ctx, part_id_, part_num_, load_path,
-                                                  out_blob, blob_name, out_blob->shape().At(0),
-                                                  out_blob->shape().Count(1));
+struct InitializeWithConfUtil final {
+#define MAKE_INITIALIZE_SWITCH_ENTRY(func_name, T) func_name<T>
+  DEFINE_STATIC_SWITCH_FUNC(void, InitializeWithConf, MAKE_INITIALIZE_SWITCH_ENTRY,
+                            MAKE_DATA_TYPE_CTRV_SEQ(ARITHMETIC_DATA_TYPE_SEQ));
+#undef MAKE_INITIALIZE_SWITCH_ENTRY
+};
+
+}  // namespace
+
+class ModelInitKernel final : public KernelIf<DeviceType::kCPU> {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(ModelInitKernel);
+  ModelInitKernel() = default;
+  ~ModelInitKernel() override = default;
+
+ private:
+  void Forward(const KernelCtx& ctx,
+               std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
+    const ModelInitOpConf& conf = this->op_conf().model_init_conf();
+    const int64_t num_var = conf.out_size();
+    HashMap<std::string, std::unique_ptr<SnapshotReader>> path2snapshot_reader;
+    const auto GetSnapshotReader = [&](const std::string& path) -> SnapshotReader* {
+      auto it = path2snapshot_reader.find(path);
+      if (it != path2snapshot_reader.end()) {
+        return it->second.get();
+      } else {
+        SnapshotReader* snapshot = new SnapshotReader(path);
+        path2snapshot_reader[path].reset(snapshot);
+        return snapshot;
+      }
+    };
+    const auto InitializeWithSnapshot = [&](const std::string& snapshot_path,
+                                            const std::string& key, Blob* blob) {
+      SnapshotReader* reader = GetSnapshotReader(snapshot_path);
+      reader->Read(key, blob);
+    };
+    FOR_RANGE(int64_t, i, 0, num_var) {
+      Blob* out_i = BnInOp2Blob(GenRepeatedBn("out", i));
+      const VariableOpConf& original_variable_conf = conf.original_variable_conf(i);
+      std::mt19937 random_seed_gen(original_variable_conf.random_seed());
+      const std::string& var_lbn =
+          GenLogicalBlobName(conf.variable_op_name(i), original_variable_conf.out());
+      if (original_variable_conf.has_initializer()) {
+        InitializeWithConfUtil::SwitchInitializeWithConf(SwitchCase(out_i->data_type()),
+                                                         original_variable_conf.initializer(),
+                                                         random_seed_gen(), out_i);
+      } else if (original_variable_conf.has_initialize_with_snapshot()) {
+        const std::string key = original_variable_conf.initialize_with_snapshot().has_key()
+                                    ? original_variable_conf.initialize_with_snapshot().key()
+                                    : var_lbn;
+        InitializeWithSnapshot(original_variable_conf.initialize_with_snapshot().path(), key,
+                               out_i);
+      } else {
+        UNIMPLEMENTED();
+      }
+    }
   }
-}
+};
 
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kModelInitConf, ModelInitKernel, ARITHMETIC_DATA_TYPE_SEQ);
+REGISTER_KERNEL(OperatorConf::kModelInitConf, ModelInitKernel);
 
 }  // namespace oneflow

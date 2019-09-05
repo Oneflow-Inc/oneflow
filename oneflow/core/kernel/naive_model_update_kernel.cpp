@@ -5,7 +5,7 @@ namespace oneflow {
 
 template<DeviceType device_type, typename T>
 void NaiveMdUpdateKernel<device_type, T>::UpdateModel(
-    DeviceCtx* ctx, const T* batch_instance_num_ptr, T l1, T l2, const int64_t* global_step,
+    DeviceCtx* ctx, const T* batch_instance_num_ptr, T l1, T l2, const int64_t* train_step,
     const float* learning_rate, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* model_diff_blob = BnInOp2Blob("model_diff");
   Blob* model_blob = BnInOp2Blob("model");
