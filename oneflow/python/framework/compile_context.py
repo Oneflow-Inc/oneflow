@@ -64,6 +64,9 @@ def _prefixing_op_name_if_need(op_conf):
     if op_conf.HasField("variable_conf"):
         return
 
+    if op_conf.HasField("decode_ofrecord_conf"):
+        return
+
     if op_conf.HasField("layer_norm_conf"):
         pass
 
