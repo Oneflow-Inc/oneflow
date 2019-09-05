@@ -84,6 +84,20 @@ def transpose(a, perm=None, conjugate=False, name=None):
 
 @oneflow_export("slice")
 def slice(input_, begin, size, name=None):
+    r"""Extracts a slice from a tensor.
+
+    Args:
+        input_: A `Blob`.
+        begin: A list or a tuple, indicate each dimension slice begin, whose length must be equal 
+            to input_'s number of dimensions, the first element of beign must be set to None.
+            (because oneflow internal slice op do not support slice at dim0 at present)
+        size: A list or a tuple, indicate each dimension slice size, whose length must be equal 
+            to input_'s number of dimensions, the first element of beign must be set to None.
+        name: A name for the operation (optional).
+
+    Returns:
+        `value` safely cast to `dtype`.
+    """
     ndims = len(input_.static_shape)
     assert (
         isinstance(begin, (list, tuple)) and len(begin) == ndims
@@ -91,6 +105,12 @@ def slice(input_, begin, size, name=None):
     assert (
         isinstance(size, (list, tuple)) and len(size) == ndims
     ), "size must be a list or tuple whose length is the same with input_'s number of dimensions."
+    assert (
+        begin[0] is None
+    ), "begin not support dim0 slice at present, the first element of begin must be set to None"
+    assert (
+        size[0] is None
+    ), "size not support dim0 slice at present, the first element of size must be set to None"
 
     if name is None:
         name = id_util.UniqueStr("Slice_")
