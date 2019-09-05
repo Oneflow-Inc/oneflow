@@ -4,26 +4,6 @@ import oneflow.python.framework.compile_context as compile_context
 from oneflow.python.oneflow_export import oneflow_export
 from contextlib import contextmanager
 
-# from contextlib import ContextDecorator
-
-
-# @oneflow_expor("deprecated.VariableScope")
-# class VariableScope(ContextDecorator):
-#     def __init__(name):
-#         assert isinstance(name, str)
-#         self.scope_name = name
-
-#     def __enter__(self):
-#         global global_variable_scopes
-#         global_variable_scopes.append(self.scope_name)
-#         return self
-
-#     def __exit__(self, *exc):
-#         global global_variable_scopes
-#         assert global_variable_scopes[-1] == self.scope_name
-#         global_variable_scopes = global_variable_scopes[0:-1]
-#         return False
-
 
 @oneflow_export("deprecated.variable_scope")
 @contextmanager
