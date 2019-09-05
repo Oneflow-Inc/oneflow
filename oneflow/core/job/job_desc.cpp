@@ -46,9 +46,6 @@ bool JobDesc::enable_experiment_run() const {
   return job_conf_.exp_run_conf().enable_experiment_run();
 }
 
-int32_t JobDesc::NumOfBatchesInSnapshot() const {
-  return job_conf_.train_conf().num_of_batches_in_snapshot();
-}
 int64_t JobDesc::TotalBatchNum() const { return job_conf_.total_batch_num(); }
 int64_t JobDesc::BatchSize() const { return job_conf_.train_conf().batch_size(); }
 int64_t JobDesc::NumOfPiecesInBatch() const {

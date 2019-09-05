@@ -15,7 +15,6 @@ def UpdateVariable(x, scope_name, enable_all_reduce_group = True):
         job_conf.batch_size(1).data_part_num(1).default_data_type(flow.float)
         job_conf.train_conf()
         job_conf.train_conf().primary_lr = 0.01
-        job_conf.train_conf().num_of_batches_in_snapshot = 100
         job_conf.train_conf().model_update_conf.naive_conf.SetInParent()
         job_conf.train_conf().loss_lbn.extend([scope_name + "-loss_op/out"])
         job_conf.enable_all_reduce_group(enable_all_reduce_group)
