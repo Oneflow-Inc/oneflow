@@ -162,28 +162,32 @@ def constant(
     # verify_shape=False
 ):
     op_conf = op_conf_util.OperatorConf()
-
-    if name is None:
-       op_conf.name = id_util.UniqueStr("Constant_")
-    else:
-        op_conf.name = name
-
-    if value is not None:
-       if isinstance(value, list):
-           raise NotImplementedError
-       elif isinstance(value, (int, float)):
-           op_conf.constant_conf.initializer.CopyFrom(
+    setattr(
+        op_conf,
+        "name",
+        name if name is not None else id_util.UniqueStr("Constant_"),
+    )
+    assert value is not None
+    assert dtype is not None
+    if isinstance(value, list):
+        raise NotImplementedError
+    elif isinstance(value, (int, float)):
+        setattr(op_conf.constant_conf, "data_type", dtype)
+        if isinstance(value, list):
+            raise NotImplementedError
+        elif isinstance(value, (int, float)):
+            op_conf.constant_conf.initializer.CopyFrom(
                flow.constant_initializer(value, dtype)
-           )
-       else:
-           raise NotImplementedError
-
-    if dtype is not None:
-       setattr(op_conf.constant_conf, "data_type", dtype)
+            )
+        else:
+            raise NotImplementedError
+    else:
+        raise NotImplementedError
+    
 
     if shape is not None:
-       assert isinstance(shape, (list, tuple))
-       op_conf.constant_conf.shape.dim.extend(list(shape))
+        assert isinstance(shape, (list, tuple))
+        op_conf.constant_conf.shape.dim.extend(list(shape))
 
     setattr(op_conf.constant_conf, "out", "out")
     compile_context.CurJobAddOp(op_conf)
