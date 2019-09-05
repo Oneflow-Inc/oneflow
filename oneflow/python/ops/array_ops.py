@@ -80,3 +80,112 @@ def transpose(a, perm=None, conjugate=False, name=None):
     lbi.op_name = op_conf.name
     lbi.blob_name = "out"
     return remote_blob_util.RemoteBlob(lbi)
+
+
+@oneflow_export("slice")
+def slice(input_, begin, size, name=None):
+    r"""Extracts a slice from a tensor.
+
+    Args:
+        input_: A `Blob`.
+        begin: A list or a tuple, indicate each dimension slice begin, whose length must be equal 
+            to input_'s number of dimensions, the first element of beign must be set to None.
+            (because oneflow internal slice op do not support slice at dim0 at present)
+        size: A list or a tuple, indicate each dimension slice size, whose length must be equal 
+            to input_'s number of dimensions, the first element of beign must be set to None.
+        name: A name for the operation (optional).
+    """
+    ndims = len(input_.static_shape)
+    assert (
+        isinstance(begin, (list, tuple)) and len(begin) == ndims
+    ), "begin must be a list or tuple whose length is the same with input_'s number of dimensions."
+    assert (
+        isinstance(size, (list, tuple)) and len(size) == ndims
+    ), "size must be a list or tuple whose length is the same with input_'s number of dimensions."
+    assert (
+        begin[0] is None
+    ), "begin not support dim0 slice at present, the first element of begin must be set to None"
+    assert (
+        size[0] is None
+    ), "size not support dim0 slice at present, the first element of size must be set to None"
+
+    slice_conf_list = []
+    for b, s, d in zip(begin, size, input_.static_shape):
+        slice_conf = op_conf_util.DimSliceConf()
+        if b < -d or b > d - 1:
+            raise ValueError(
+                "'i'th element of begin must be greater than or equal to negative input_'s 'i'th dimension "
+                "and less than input_'s 'i'th dimension."
+            )
+        b = b + d if b < 0 else b
+        slice_conf.start = b
+
+        if s > 0:
+            if b + s > d:
+                raise ValueError(
+                    "the sum of 'i'th element of begin and 'i'th element of size must be "
+                    "less than or equal to input_'s 'i'th dimension."
+                )
+            slice_conf.end = b + s
+        elif s == -1:
+            slice_conf.end = d
+        else:
+            raise ValueError(
+                "elements of size must be an int that greater then 0 or equal to -1"
+            )
+
+        slice_conf.stride = 1
+        slice_conf_list.append(slice_conf)
+
+    op_conf = op_conf_util.OperatorConf()
+    setattr(
+        op_conf, "name", name if name is not None else id_util.UniqueStr("Slice_"),
+    )
+    setattr(op_conf.slice_conf, "in", input_.logical_blob_name)
+    setattr(op_conf.slice_conf, "out", "out")
+    # ignore first slice conf because oneflow slice op not support dim0 slice yet
+    op_conf.slice_conf.dim_slice_conf.extend(slice_conf_list[1:])
+
+    compile_context.CurJobAddOp(op_conf)
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = "out"
+    return remote_blob_util.RemoteBlob(lbi)
+
+
+@oneflow_export("constant")
+def constant(
+    value,
+    dtype=None,
+    shape=None,
+    name=None,
+):
+    op_conf = op_conf_util.OperatorConf()
+    setattr(
+        op_conf,
+        "name",
+        name if name is not None else id_util.UniqueStr("Constant_"),
+    )
+    assert value is not None
+    assert dtype is not None
+    if isinstance(value, list):
+        raise NotImplementedError
+    elif isinstance(value, (int, float)):
+        # TODO: should only set dtype once 
+        setattr(op_conf.constant_conf, "data_type", dtype)
+        op_conf.constant_conf.initializer.CopyFrom(
+            flow.constant_initializer(value, dtype)
+        )
+    else:
+        raise NotImplementedError
+
+    if shape is not None:
+        assert isinstance(shape, (list, tuple))
+        op_conf.constant_conf.shape.dim.extend(list(shape))
+
+    setattr(op_conf.constant_conf, "out", "out")
+    compile_context.CurJobAddOp(op_conf)
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = "out"
+    return remote_blob_util.RemoteBlob(lbi)
