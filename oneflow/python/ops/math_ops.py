@@ -198,6 +198,32 @@ def gelu(x, name=None):
     return remote_blob_util.RemoteBlob(lbi)
 
 
+@oneflow_export('math.relu')
+def relu(x, name=None):
+    op_conf = op_conf_util.OperatorConf()
+    setattr(op_conf, "name", name if name is not None else id_util.UniqueStr('Relu_'))
+    setattr(op_conf.relu_conf, "in", x.logical_blob_name)
+    setattr(op_conf.relu_conf, "out", "out")
+    compile_context.CurJobAddOp(op_conf)
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = "out"
+    return remote_blob_util.RemoteBlob(lbi)
+
+
+@oneflow_export('math.sigmoid')
+def sigmoid(x, name=None):
+    op_conf = op_conf_util.OperatorConf()
+    setattr(op_conf, "name", name if name is not None else id_util.UniqueStr('Sigmoid_'))
+    setattr(op_conf.sigmoid_conf, "in", x.logical_blob_name)
+    setattr(op_conf.sigmoid_conf, "out", "out")
+    compile_context.CurJobAddOp(op_conf)
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = "out"
+    return remote_blob_util.RemoteBlob(lbi)
+
+
 def sqrt(x, name=None):
     # TODO: not ready yet
     raise NotImplementedError
