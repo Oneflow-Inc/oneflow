@@ -172,6 +172,7 @@ def constant(
     if isinstance(value, list):
         raise NotImplementedError
     elif isinstance(value, (int, float)):
+        # TODO: should only set dtype once 
         setattr(op_conf.constant_conf, "data_type", dtype)
         op_conf.constant_conf.initializer.CopyFrom(
             flow.constant_initializer(value, dtype)
