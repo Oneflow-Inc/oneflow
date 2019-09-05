@@ -160,7 +160,6 @@ def constant(
     dtype=None,
     shape=None,
     name=None,
-    # verify_shape=False
 ):
     op_conf = op_conf_util.OperatorConf()
     setattr(
