@@ -155,11 +155,7 @@ Maybe<OptInt64> JobBuildAndInferCtx::GetBatchAxis(const std::string& lbn) const 
   return lbi2batch_axis_.at(lbi);
 }
 
-Maybe<bool> JobBuildAndInferCtx::GetHasSplitAxisFromProducerView(const std::string& lbn) const {
-  TODO();
-}
-
-Maybe<int64_t> JobBuildAndInferCtx::GetSplitAxisFromProducerView(const std::string& lbn) const {
+Maybe<OptInt64> JobBuildAndInferCtx::GetSplitAxisFromProducerView(const std::string& lbn) const {
   TODO();
 }
 
