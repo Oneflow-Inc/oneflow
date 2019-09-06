@@ -112,7 +112,7 @@ def slice(input_, begin, size, name=None):
 
     slice_conf_list = []
     # ignore first dimension because it's not supported yet
-    for b, s, d in zip(begin, size, input_.static_shape)[1:]:
+    for b, s, d in list(zip(begin, size, input_.static_shape))[1:]:
         slice_conf = op_conf_util.DimSliceConf()
         if b < -d or b > d - 1:
             raise ValueError(
