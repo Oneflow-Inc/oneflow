@@ -51,9 +51,9 @@ RUN cmake -DTHIRD_PARTY=ON -DCMAKE_BUILD_TYPE=Release -DRELEASE_VERSION=ON .. &&
 COPY oneflow /workspace/oneflow
 COPY tools /workspace/tools
 
-RUN [[ "${USE_PYTHON_3_OR_2}" == "2" ]] || { cmake -DTHIRD_PARTY=OFF -DPY3=ON .. && make -j $(nproc); }
+RUN if [ "${USE_PYTHON_3_OR_2}" -eq 2 ] ; then cmake -DTHIRD_PARTY=OFF -DPY3=OFF .. && make -j $(nproc) ; fi
 
-RUN [[ "${USE_PYTHON_3_OR_2}" == "3" ]] || { cmake -DTHIRD_PARTY=OFF -DPY3=OFF .. && make -j $(nproc); }
+RUN if [ "${USE_PYTHON_3_OR_2}" -eq 3 ] ; then cmake -DTHIRD_PARTY=OFF -DPY3=ON .. && make -j $(nproc) ; fi
 
 ## BUILD WHEEL
 WORKDIR /workspace
