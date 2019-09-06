@@ -1,7 +1,9 @@
 from __future__ import absolute_import
 
 import oneflow.core.job.job_set_pb2 as job_set_util
+import oneflow.core.job.job_pb2 as job_util
 import oneflow.python.lib.core.func_inspect_util as func_inspect_util
+import oneflow.python.lib.core.pb_util as pb_util
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.compile_context as compile_context
 import oneflow.python.framework.placement_util as placement_util
@@ -18,14 +20,14 @@ from oneflow.python.oneflow_export import oneflow_export
 
 @oneflow_export('get_cur_job_conf_builder')
 def get_cur_job_conf_builder():
-    return config_util.JobConfigProtoBuilder(compile_context.cur_job.job_conf)
+    return config_util.JobConfigProtoBuilder(compile_context.cur_job_conf)
 
 def Compile(job_set, job_func):
-    job = job_set.job.add()
-    job.job_conf.job_name = job_func.__name__
-    with compile_context.CurJob(job), job_builder.JobBuildAndInferCtx(job.job_conf.job_name):
-        _CompileJob(job.job_conf, job_func, config_util.default_config_proto)
-        job_builder.CurCtxSetJobConfIfNotSet(job.job_conf)
+    job_conf = job_util.JobConfigProto()
+    job_conf.job_name = job_func.__name__
+    with compile_context.CurJobConf(job_conf), job_builder.JobBuildAndInferCtx(job_conf.job_name):
+        _CompileJob(job_conf, job_func, config_util.default_config_proto)
+        job_builder.CurCtxSetJobConfIfNotSet(job_conf)
         assert job_builder.CurCtxHasJobConf()
         job_builder.CurCtxCheckJob()
 
@@ -56,6 +58,7 @@ def _SetJobConfBeforeInferOp(job_conf):
     def SetJobconf():
         if job_conf_has_set.value: return
         config_util.TryCompleteDefaultJobConfigProto(job_conf)
+        pb_util.MergePbMessage(job_conf, config_util.default_job_conf)
         job_builder.CurCtxSetJobConfIfNotSet(job_conf)
         job_conf_has_set.set_value(True)
     with compile_context.BeforeNonInputOpBuildAndInferHook(SetJobconf):

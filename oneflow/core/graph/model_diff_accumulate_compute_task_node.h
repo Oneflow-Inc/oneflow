@@ -13,7 +13,6 @@ class MdDiffAccCompTaskNode final : public AccumulateCompTaskNode {
   TaskType GetTaskType() const override { return TaskType::kMdDiffAcc; }
 
  private:
-  void FixPackedBlobDescOfProducedRegst() override;
   void InferProducedDataRegstTimeShape() override;
 };
 

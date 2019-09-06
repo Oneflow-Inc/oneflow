@@ -76,17 +76,6 @@ void ReduceSplitCompTaskNode::BuildExecGphAndRegst() {
   node->InferBlobDescs(parallel_ctx());
 }
 
-void ReduceSplitCompTaskNode::FixPackedBlobDescOfProducedRegst() {
-  int64_t out_regst_num = GetDataRegstDescCnt(produced_regsts());
-  FOR_RANGE(int64_t, idx, 0, out_regst_num) {
-    std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out_" + std::to_string(idx));
-    CHECK(out_regst->IsLocked());
-    Shape& shape = out_regst->MutBlobDesc(GenPackedLbi())->mut_shape();
-    shape =
-        Shape({static_cast<int64_t>(RoundUp(shape.elem_cnt(), parallel_ctx()->parallel_num()))});
-  }
-}
-
 void ReduceSplitCompTaskNode::EnableMemSharingInReduce(const ReduceMemSharingCtx& ctx) {
   CHECK_EQ(GetRankCtx().TotalSegmentCount(), 1);
   size_t split_num = GetDataRegstDescCnt(produced_regsts());
