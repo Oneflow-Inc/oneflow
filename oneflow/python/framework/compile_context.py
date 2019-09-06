@@ -43,6 +43,7 @@ def _ResetCurJobConf(job_conf):
     global cur_job_variable_scope_stack
     assert len(cur_job_variable_scope_stack) == 0
     cur_job_variable_scope_stack = []
+    before_non_input_op_build_and_infer_hooks = []
 
 
 def _prefixing_op_name_if_need(op_conf):

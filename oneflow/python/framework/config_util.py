@@ -217,18 +217,15 @@ def set_max_data_id_length(value):
 
 @oneflow_export('config.default_initialize_conf')
 def set_default_initialize_conf(value):
-    assert type(val) is dict
-    conf_proto = job_util.JobConfigProto().default_initialize_conf
-    pb_util.PythonDict2PbMessage(val, conf_proto)
-    _SetJobConfAttr(lambda x:x, 'default_initialize_conf', conf_proto)
+    assert type(value) is dict
+    pb_msg = _GetJobConfAttr(lambda x:x, 'default_initialize_conf')
+    pb_util.PythonDict2PbMessage(value, pb_msg)
     return oneflow.config
 
 @oneflow_export('config.exp_run_conf')
 def set_exp_run_conf(value):
-    assert type(val) is dict
-    conf_proto = job_util.JobConfigProto().exp_run_conf
-    pb_util.PythonDict2PbMessage(val, conf_proto)
-    _SetJobConfAttr(lambda x:x, 'exp_run_conf', conf_proto)
+    assert type(value) is dict
+    pb_util.PythonDict2PbMessage(value, _GetJobConfAttr(lambda x:x, 'exp_run_conf'))
     return oneflow.config
 
 @oneflow_export('config.enable_cudnn')
@@ -333,9 +330,9 @@ def set_batch_size(value):
 
 @oneflow_export('config.train.model_update_conf')
 def set_model_update_conf(value):
-    conf_proto = job_util.TrainConf()
-    pb_util.PythonDict2PbMessage(val, conf_proto)
-    _SetJobConfAttr(lambda job_conf: job_conf.train_conf, 'model_update_conf', conf_proto)
+    assert type(value) is dict
+    pb_msg = _GetJobConfAttr(lambda job_conf: job_conf.train_conf, 'model_update_conf')
+    pb_util.PythonDict2PbMessage(value, pb_msg)
     return oneflow.config
 
 @oneflow_export('config.train.loss_scale_factor')
@@ -381,122 +378,12 @@ def _SetJobConfAttr(GetConf, field, value):
         assert c_api_util.IsEnvironmentInited() == False
         setattr(GetConf(default_job_conf), field, value)
 
-class JobConfigProtoBuilder(object):
-    def __init__(self, job_conf):
-        assert isinstance(job_conf, job_util.JobConfigProto)
-        self.job_conf_ = job_conf
-
-    def job_conf():
-        return self.job_conf_
-
-    def default_initializer_conf(self, val):
-        assert type(val) is dict
-        pb_util.PythonDict2PbMessage(val, self.job_conf_.default_initializer_conf)
-        return self
-
-    def model_update_conf(self, val):
-        assert type(val) is dict
-        assert self.job_conf_.HasField("train_conf")
-        pb_util.PythonDict2PbMessage(val, self.train_conf().model_update_conf)
-        return self
-
-    def batch_size(self, val):
-        assert type(val) is int
-        self.job_conf_.piece_size = val # it's not a type
-        return self
-
-    def default_data_type(self, val):
-        assert type(val) is int
-        self.job_conf_.default_data_type = val
-        return self
-
-    def data_part_num(self, val):
-        assert type(val) is int
-        self.job_conf_.data_part_num = val
-        return self
-
-    def enable_cudnn(self, val = True):
-        assert type(val) is bool
-        self.job_conf_.enable_cudnn = val
-        return self
-
-    def cudnn_buf_limit_mbyte(self, val):
-        assert type(val) is int
-        self.job_conf_.cudnn_buf_limit_mbyte = val
-        return self
-
-    def cudnn_conv_force_fwd_algo(self, val):
-        assert type(val) is int
-        self.job_conf_.cudnn_conv_force_fwd_algo = val
-        return self
-
-    def cudnn_conv_force_bwd_data_algo(self, val):
-        assert type(val) is int
-        self.job_conf_.cudnn_conv_force_bwd_data_algo = val
-        return self
-
-    def cudnn_conv_force_bwd_filter_algo(self, val):
-        assert type(val) is int
-        self.job_conf_.cudnn_conv_force_bwd_filter_algo = val
-        return self
-
-    def enable_mem_sharing(self, val = True):
-        assert type(val) is bool
-        self.job_conf_.enable_mem_sharing = val
-        return self
-
-    def enable_inplace(self, val = True):
-        assert type(val) is bool
-        self.job_conf_.enable_inplace = val
-        return self
-
-    def enable_nccl(self, val = True):
-        assert type(val) is bool
-        self.job_conf_.enable_nccl = val
-        return self
-
-    def use_nccl_inter_node_communication(self, val = True):
-        assert type(val) is bool
-        self.job_conf_.use_nccl_inter_node_communication = val
-        return self
-
-    def enable_all_reduce_group(self, val = True):
-        assert type(val) is bool
-        self.job_conf_.enable_all_reduce_group = val
-        return self
-
-    def all_reduce_group_num(self, val):
-        assert type(val) is int
-        self.job_conf_.all_reduce_group_num = val
-        return self
-
-    def all_reduce_lazy_ratio(self, val):
-        assert type(val) is float
-        self.job_conf_.all_reduce_lazy_ratio = val
-        return self
-
-    def all_reduce_group_min_mbyte(self, val):
-        assert type(val) is int
-        self.job_conf_.all_reduce_group_min_mbyte = val
-        return self
-
-    def all_reduce_group_size_warmup(self, val):
-        assert type(val) is float
-        self.job_conf_.all_reduce_group_size_warmup = val
-        return self
-
-    def all_reduce_fp16(self, val = True):
-        assert type(val) is bool
-        self.job_conf_.all_reduce_fp16 = val
-        return self
-
-    def concurrency_width(self, val):
-        assert type(val) is int
-        self.job_conf_.concurrency_width = val
-        return self
-
-    def train_conf(self):
-        self.job_conf_.train_conf.SetInParent()
-        return self.job_conf_.train_conf
+def _GetJobConfAttr(GetConf, field):
+    if compile_context.cur_job_conf is not None:
+        assert c_api_util.CurJobBuildAndInferCtx_HasJobConf() == False
+        return getattr(GetConf(compile_context.cur_job_conf), field)
+    else:
+        assert c_api_util.IsEnvironmentInited() == False
+        return getattr(GetConf(default_job_conf), field)
 
 default_job_conf = job_util.JobConfigProto()

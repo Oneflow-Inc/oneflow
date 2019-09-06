@@ -17,6 +17,7 @@ def test_dense(in_shape, units, activation=None, use_bias=True):
     input = np.random.random_sample(in_shape).astype(np.float32) / 10000
 
     # OneFlow
+    @flow.function
     def DenseTestJob(inputs=flow.input_blob_def(in_shape)):
         job_conf = flow.get_cur_job_conf_builder()
         job_conf.batch_size(1).default_data_type(flow.float)
@@ -29,12 +30,9 @@ def test_dense(in_shape, units, activation=None, use_bias=True):
             bias_initializer=flow.constant_initializer(value=1),
         )
 
-    flow.add_job(DenseTestJob)
-
-    with flow.Session() as sess:
-        check_point = flow.train.SimpleCheckPointManager("model_save")
-        check_point.initialize_or_restore()
-        of_out = sess.run(DenseTestJob, input).get()
+    check_point = flow.train.SimpleCheckPointManager("model_save")
+    check_point.initialize_or_restore()
+    of_out = DenseTestJob(input).get()
 
     # TensorFlow
     tf_out = tf.layers.dense(
