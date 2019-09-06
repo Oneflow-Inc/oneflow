@@ -18,10 +18,6 @@ from contextlib import contextmanager
 
 from oneflow.python.oneflow_export import oneflow_export
 
-@oneflow_export('get_cur_job_conf_builder')
-def get_cur_job_conf_builder():
-    return config_util.JobConfigProtoBuilder(compile_context.cur_job_conf)
-
 def Compile(job_set, job_func):
     job_conf = job_util.JobConfigProto()
     job_conf.job_name = job_func.__name__
