@@ -1,5 +1,6 @@
 # warning: never share the container image this dockerfile produces
 ARG CUDA=10
+
 FROM nvidia/cuda:${CUDA}.0-cudnn7-devel-centos7
 RUN yum update -y && yum install -y epel-release
 RUN yum update -y && yum install -y rdma-core-devel \
@@ -23,19 +24,19 @@ RUN mkdir -p /tmp/download/cmake-extracted && \
     make install
 ENV PATH="/cmake-install/bin:${PATH}"
 
-ARG USE_PYTHON_3_OR_2=2
+ARG USE_PYTHON_3_OR_2
 
-RUN [[ "${USE_PYTHON_3_OR_2}" == "3" ]] || { yum update -y \
+RUN if [ "${USE_PYTHON_3_OR_2}" -eq 2 ] ; then yum update -y \
     && yum install -y python-devel.x86_64 \
-    && curl https://bootstrap.pypa.io/get-pip.py \
+    && curl https://bootstrap.pypa.io/get-pip.py --output ./get-pip.py \
     && python ./get-pip.py \
     && rm get-pip.py \
-    && pip install numpy==1.12.0 protobuf; }
+    && pip install numpy==1.12.0 protobuf ; fi
 
-RUN [[ "${USE_PYTHON_3_OR_2}" == "2" ]] || { yum update -y \
+RUN if [ "${USE_PYTHON_3_OR_2}" -eq 3 ] ; then yum update -y \
     && yum install -y rh-python36 python36-devel.x86_64 \
     && python3 -m ensurepip \
-    && pip3 install numpy protobuf; }
+    && pip3 install numpy protobuf ; fi
 
 WORKDIR /workspace/build
 
