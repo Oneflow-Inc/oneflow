@@ -93,18 +93,19 @@ Maybe<void> LayerNormOp::InferBlobDescs(
   return Maybe<void>::Ok();
 }
 
-Maybe<void> LayerNormOp::InferHasBatchDim(
-    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
-  for (const auto& obn : output_bns()) { *HasBatchDim4BnInOp(obn) = true; }
+Maybe<void> LayerNormOp::InferBatchAxis(
+    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
+  for (const auto& obn : output_bns()) { *BatchAxis4BnInOp(obn) = *BatchAxis4BnInOp("in"); }
   return Maybe<void>::Ok();
 }
 
-void LayerNormOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
+Maybe<void> LayerNormOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
   SbpSignatureBuilder()
       .Split(input_bns(), 0)
       .Split(output_bns(), 0)
       .Broadcast({"gamma", "beta"})
       .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+  return Maybe<void>::Ok();
 }
 
 REGISTER_OP(OperatorConf::kLayerNormConf, LayerNormOp);

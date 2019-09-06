@@ -121,20 +121,21 @@ Maybe<void> Operator::InferOutputBlobTimeShape(
   return Maybe<void>::Ok();
 }
 
-void Operator::GetSbpSignaturesIf(
-    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
+Maybe<void> Operator::GetSbpSignaturesIf(
+    const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
     SbpSignatureList* sbp_sig_list) const {
-  GetSbpSignatures(LogicalBlobDesc4Ibn, sbp_sig_list);
+  JUST(GetSbpSignatures(LogicalBlobDesc4Ibn, sbp_sig_list));
   SbpSignatureBuilder()
       .Broadcast(input_bns())
       .Broadcast(output_bns())
       .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> Operator::InferSbpSignatureIf(
     SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
     const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
-    std::function<const SbpInferHint&(const std::string&)> SbpInferHint4Ibn,
+    std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
     const ParallelDesc& parallel_desc) const {
   if (parallel_desc.parallel_num() == 1) {
     auto* bn2sbp = sbp_signature->mutable_bn_in_op2sbp_parallel();
@@ -152,14 +153,15 @@ Maybe<void> Operator::InferSbpSignatureIf(
 Maybe<void> Operator::InferSbpSignature(
     SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
     const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
-    std::function<const SbpInferHint&(const std::string&)> SbpInferHint4Ibn,
+    std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
     const ParallelDesc& parallel_desc) const {
   // get op sbp signatures
-  auto LogicalBlobDesc4Ibn = [&](const std::string& ibn) -> const BlobDesc& {
-    return SbpInferHint4Ibn(ibn).logical_blob_desc();
+  auto LogicalBlobDesc4Ibn = [&](const std::string& ibn) -> Maybe<const BlobDesc*> {
+    const SbpInferHint* sbp_infer_hint = JUST(SbpInferHint4Ibn(ibn));
+    return Maybe<const BlobDesc*>(&(sbp_infer_hint->logical_blob_desc()));
   };
   SbpSignatureList sbp_sig_list;
-  GetSbpSignaturesIf(LogicalBlobDesc4Ibn, &sbp_sig_list);
+  JUST(GetSbpSignaturesIf(LogicalBlobDesc4Ibn, &sbp_sig_list));
   // filter sbp signatures by sbp signature conf
   SbpSignatureList filtered_sbp_sigs_by_conf;
   FilterSbpSignatureList(sbp_sig_list, sbp_sig_conf, &filtered_sbp_sigs_by_conf);
@@ -171,7 +173,7 @@ Maybe<void> Operator::InferSbpSignature(
   // sort sbp signatures by copy cost, then return the one with least cost
   HashMap<std::string, const SbpParallel*> ibn2producer_sbp_parallel;
   for (const auto& ibn : input_bns()) {
-    ibn2producer_sbp_parallel[ibn] = &SbpInferHint4Ibn(ibn).sbp_parallel();
+    ibn2producer_sbp_parallel[ibn] = &(JUST(SbpInferHint4Ibn(ibn))->sbp_parallel());
   }
   std::vector<const SbpSignature*> sorted_sbp_signatures;
   SortSbpSignatureListByCopyCost(filtered_sbp_sigs_by_conf, input_bns(), SbpInferHint4Ibn,
@@ -463,14 +465,24 @@ void EraseEmptyBnInVec(std::function<const BlobDesc*(const std::string&)> GetBlo
   bns->erase(bns->begin() + idx_available, bns->end());
 }
 
-Maybe<void> Operator::NaiveInferHasBatchDim(
-    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
+Maybe<void> Operator::NaiveInferBatchAxis(
+    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
   if (output_bns().empty()) { return Maybe<void>::Ok(); }
   CHECK_GT_OR_RETURN(input_bns().size(), 0);
   CHECK_EQ_OR_RETURN(output_bns().size(), 1);
-  bool has_batch_dim = false;
-  for (const auto& ibn : input_bns()) { has_batch_dim = has_batch_dim || *HasBatchDim4BnInOp(ibn); }
-  *HasBatchDim4BnInOp(SoleObn()) = has_batch_dim;
+  const OptInt64* batch_axis = nullptr;
+  for (const auto& ibn : input_bns()) {
+    const OptInt64* const cur_ibn_batch_axis = BatchAxis4BnInOp(ibn);
+    if (cur_ibn_batch_axis->has_value() == false) { continue; }
+    if (batch_axis) {
+      CHECK_OR_RETURN(*batch_axis == *cur_ibn_batch_axis);
+    } else {
+      batch_axis = cur_ibn_batch_axis;
+    }
+  }
+  OptInt64 no_batch_axis;
+  if (batch_axis == nullptr) { batch_axis = &no_batch_axis; }
+  *BatchAxis4BnInOp(SoleObn()) = *batch_axis;
   return Maybe<void>::Ok();
 }
 

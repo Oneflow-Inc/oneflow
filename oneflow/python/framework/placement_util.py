@@ -18,6 +18,9 @@ class PlacementScope(object):
     def AppendOpConf(self, op_conf):
         self.op_confs_.append(op_conf)
 
+    def ParallelConf4OpConf(self, op_conf):
+        return _MakeParallelConf(self.GetDeviceType4OpConf(op_conf), self.machine_device_ids)
+
     def GetDeviceType4OpConf(self, op_conf):
         return device_util.DeviceType4DeviceTag(self.GetDeviceTag4OpConf(op_conf))
 
@@ -56,7 +59,7 @@ class FixedPlacementScope(PlacementScope):
     def GetDeviceTag4OpConf(self, op_conf): return self.default_device_tag
 
     def ParallelConfAndOpNames(self):
-        parallel_conf = MakeParallelConf(self.default_device_tag, self.machine_device_ids)
+        parallel_conf = _MakeParallelConf(self.default_device_tag, self.machine_device_ids)
         yield parallel_conf, map(lambda op_conf: op_conf.name, self.op_confs)
         
 @oneflow_export('device_prior_placement')
@@ -76,10 +79,10 @@ class DevicePriorPlacementScope(PlacementScope):
             device_tag2op_names[device_tag].append(op_conf.name)
         for device_tag, op_names in device_tag2op_names.items():
             if len(op_names) == 0: continue
-            parallel_conf = MakeParallelConf(device_tag, self.machine_device_ids)
+            parallel_conf = _MakeParallelConf(device_tag, self.machine_device_ids)
             yield parallel_conf, op_names
         
-def MakeParallelConf(device_tag, machine_device_ids):
+def _MakeParallelConf(device_tag, machine_device_ids):
     if isinstance(machine_device_ids, str): machine_device_ids = [machine_device_ids]
     device_names = []
     for machine_device_id in machine_device_ids:

@@ -7,7 +7,7 @@ namespace oneflow {
 void RecordLoadKernel::VirtualKernelInit(const ParallelContext* parallel_ctx) {
   const RecordLoadOpConf& record_load_conf = op_conf().record_load_conf();
 
-  int32_t data_part_num = this->job_desc().DataPartNum();
+  int32_t data_part_num = record_load_conf.data_part_num();
   std::string data_dir = record_load_conf.data_dir();
   std::string part_name_prefix = record_load_conf.part_name_prefix();
   int32_t part_name_suffix_length = record_load_conf.part_name_suffix_length();

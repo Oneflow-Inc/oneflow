@@ -311,21 +311,22 @@ void ConvOp<NDims>::InferCudnnAlgo(
 #endif  // WITH_CUDA
 
 template<int32_t NDims>
-Maybe<void> ConvOp<NDims>::InferHasBatchDim(
-    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
-  *HasBatchDim4BnInOp("out") = *HasBatchDim4BnInOp("in");
+Maybe<void> ConvOp<NDims>::InferBatchAxis(
+    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
+  *BatchAxis4BnInOp("out") = *BatchAxis4BnInOp("in");
   return Maybe<void>::Ok();
 }
 
 template<int32_t NDims>
-void ConvOp<NDims>::GetSbpSignatures(
-    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
+Maybe<void> ConvOp<NDims>::GetSbpSignatures(
+    const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
     SbpSignatureList* sbp_sig_list) const {
   SbpSignatureBuilder()
       .Split("in", 0)
       .Broadcast({"weight", "bias"})
       .Split("out", 0)
       .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+  return Maybe<void>::Ok();
 }
 
 template class ConvOp<1>;

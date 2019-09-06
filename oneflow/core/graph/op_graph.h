@@ -32,7 +32,7 @@ class OpNode final : public Node<OpNode, OpEdge> {
   const SbpParallel& SbpParallel4Lbi(const LogicalBlobId& lbi) const;
   const SbpParallel& SbpParallel4BnInOp(const std::string& bn_in_op) const;
   const BlobDesc& LogicalBlobDesc4Lbi(const LogicalBlobId& lbi) const;
-  bool HasBatchDim4Lbi(const LogicalBlobId& lbi) const;
+  const OptInt64& BatchAxis4Lbi(const LogicalBlobId& lbi) const;
   const OpNode& ProducerOpNode4Lbi(const LogicalBlobId& lbi) const;
   const OpNode& SrcNode4InputBnInOp(const std::string& bn_in_op) const;
   const OpNode& ProducerOpNode4BnInOp(const std::string& bn_in_op) const;
@@ -52,7 +52,7 @@ class OpNode final : public Node<OpNode, OpEdge> {
   HashMap<std::string, std::vector<std::unique_ptr<BlobDesc>>>* mut_bn2parallel_id2blob_desc() {
     return &bn2parallel_id2blob_desc_;
   }
-  bool* MutHasBatchDim4Lbi(const LogicalBlobId& lbi);
+  OptInt64* MutBatchAxis4Lbi(const LogicalBlobId& lbi);
   BlobDesc* MutLogicalBlobDesc4Lbi(const LogicalBlobId& lbi);
   OpNode* MutSrcNode4InputBnInOp(const std::string& bn_in_op) const;
   OpNode* MutProducerOpNode4BnInOp(const std::string& bn_in_op);
@@ -75,7 +75,7 @@ class OpNode final : public Node<OpNode, OpEdge> {
   HashSet<std::string> ibns_;
   std::unique_ptr<Shape> out_blob_time_shape_;
   SbpSignature sbp_signature_;
-  HashMap<LogicalBlobId, bool> lbi2has_batch_dim_;
+  HashMap<LogicalBlobId, OptInt64> lbi2batch_axis_;
   HashMap<std::string, std::vector<std::unique_ptr<BlobDesc>>> bn2parallel_id2blob_desc_;
   HashMap<LogicalBlobId, std::unique_ptr<BlobDesc>> lbi2logical_blob_desc_;
 };
@@ -140,7 +140,7 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
   void DumpLogicalBlobDesc(JobBuilder* job_builder) const;
   void DumpSbpSignature(JobBuilder* job_builder) const;
   void DumpOpTimeShape(JobBuilder* job_builder) const;
-  void DumpBatchDimLbi(JobBuilder* job_builder) const;
+  void DumpBatchAxisLbi(JobBuilder* job_builder) const;
 
  private:
   void Init(const Job& job);
@@ -153,7 +153,7 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
   void InferOpNodeSbpSignature(OpNode* op_node, const SbpSignature& sbp_sig_conf) const;
   void InferOpNodeLogicalBlobDesc(OpNode* op_node) const;
   void InferLogicalBlobDesc(const Job& job) const;
-  bool IsBatchDimBlob(const std::string& op_name, const LogicalBlobId& lbi) const;
+  bool IsBatchAxisBlob(const std::string& op_name, const LogicalBlobId& lbi) const;
   std::string GetOpNameKey(const std::string& op_name, const LogicalBlobId& lbi) const;
   LogicalBlobId GetLogicalBlobIdKey(const std::string& op_name, const LogicalBlobId& lbi) const;
 

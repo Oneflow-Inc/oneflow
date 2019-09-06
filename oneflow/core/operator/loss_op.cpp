@@ -78,21 +78,22 @@ LogicalBlobId LossOp::obn2lbi(const std::string& output_bn) const {
   return ret;
 }
 
-Maybe<void> LossOp::InferHasBatchDim(
-    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
-  for (const auto& obn : output_bns()) { *HasBatchDim4BnInOp(obn) = false; }
-  *HasBatchDim4BnInOp("loss") = *HasBatchDim4BnInOp("prediction");
+Maybe<void> LossOp::InferBatchAxis(
+    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
+  for (const auto& obn : output_bns()) { BatchAxis4BnInOp(obn)->clear_value(); }
+  *BatchAxis4BnInOp("loss") = *BatchAxis4BnInOp("prediction");
   return Maybe<void>::Ok();
 }
 
-void LossOp::GetSbpSignatures(
-    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
+Maybe<void> LossOp::GetSbpSignatures(
+    const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
     SbpSignatureList* sbp_sig_list) const {
   SbpSignatureBuilder()
       .Split(input_bns(), 0)
       .Split(output_bns(), 0)
       .PartialSum({"loss_instance_num", "reduction_coefficient"})
       .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+  return Maybe<void>::Ok();
 }
 
 }  // namespace oneflow

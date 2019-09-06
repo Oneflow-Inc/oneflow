@@ -32,6 +32,7 @@ void SplitDecodeOps(Job* job) {
 
 void AddRecordLoadOps(Job* job) {
   HashMap<std::pair<std::string, std::string>, std::vector<OperatorConf*>> data_info2decode_ops;
+  HashMap<std::pair<std::string, std::string>, int32_t> data_info2part_num;
   HashMap<std::pair<std::string, std::string>, int32_t> data_info2suffix_length;
   HashMap<std::pair<std::string, std::string>, const RandomShuffleConf*> data_info2shuffle_conf;
   size_t op_num = job->net().op_size();
@@ -45,10 +46,13 @@ void AddRecordLoadOps(Job* job) {
                                                      decode_conf.part_name_prefix()};
     data_info2decode_ops[data_info].emplace_back(op_conf);
     int32_t part_name_suffix_length = decode_conf.part_name_suffix_length();
+    int32_t data_part_num = decode_conf.data_part_num();
     if (data_info2suffix_length.find(data_info) != data_info2suffix_length.end()) {
       CHECK_EQ(data_info2suffix_length[data_info], part_name_suffix_length);
+      CHECK_EQ(data_info2part_num[data_info], data_part_num);
     } else {
       data_info2suffix_length[data_info] = part_name_suffix_length;
+      data_info2part_num[data_info] = data_part_num;
     }
     const RandomShuffleConf* shuffle_conf =
         decode_conf.has_random_shuffle_conf() ? &decode_conf.random_shuffle_conf() : nullptr;
@@ -96,6 +100,7 @@ void AddRecordLoadOps(Job* job) {
       op->set_name(record_load_op_name);
       record_load_op->set_out(record_load_out_name);
       record_load_op->set_data_dir(pair.first.first);
+      record_load_op->set_data_part_num(data_info2part_num.at(pair.first));
       record_load_op->set_part_name_prefix(pair.first.second);
       record_load_op->set_part_name_suffix_length(data_info2suffix_length.at(pair.first));
       if (data_info2shuffle_conf.at(pair.first) != nullptr) {

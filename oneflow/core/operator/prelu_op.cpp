@@ -49,20 +49,22 @@ Maybe<void> PReluOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)>
   return Maybe<void>::Ok();
 }
 
-Maybe<void> PReluOp::InferHasBatchDim(
-    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
-  *HasBatchDim4BnInOp("out") = *HasBatchDim4BnInOp("in");
+Maybe<void> PReluOp::InferBatchAxis(
+    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
+  *BatchAxis4BnInOp("out") = *BatchAxis4BnInOp("in");
   return Maybe<void>::Ok();
 }
 
-void PReluOp::GetSbpSignatures(
-    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
+Maybe<void> PReluOp::GetSbpSignatures(
+    const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
     SbpSignatureList* sbp_sig_list) const {
   SbpSignatureBuilder()
       .Split(input_bns(), 0)
       .Split(output_bns(), 0)
-      .MakeSplitSignatureListBuilder(LogicalBlobDesc4Ibn(output_bns().Get(0)).shape().NumAxes())
+      .MakeSplitSignatureListBuilder(
+          JUST(LogicalBlobDesc4Ibn(output_bns().Get(0)))->shape().NumAxes())
       .Build(sbp_sig_list);
+  return Maybe<void>::Ok();
 }
 
 REGISTER_OP(OperatorConf::kPreluConf, PReluOp);

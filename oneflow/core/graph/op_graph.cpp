@@ -38,12 +38,12 @@ bool OpEdge::CalcIsStrict121Connected() const {
   return true;
 }
 
-bool* OpNode::MutHasBatchDim4Lbi(const LogicalBlobId& lbi) {
+OptInt64* OpNode::MutBatchAxis4Lbi(const LogicalBlobId& lbi) {
   CHECK_EQ(MutProducerOpNode4Lbi(lbi), this);
-  return &lbi2has_batch_dim_[lbi];
+  return &lbi2batch_axis_[lbi];
 }
-bool OpNode::HasBatchDim4Lbi(const LogicalBlobId& lbi) const {
-  return ProducerOpNode4Lbi(lbi).lbi2has_batch_dim_.at(lbi);
+const OptInt64& OpNode::BatchAxis4Lbi(const LogicalBlobId& lbi) const {
+  return ProducerOpNode4Lbi(lbi).lbi2batch_axis_.at(lbi);
 }
 
 const SbpParallel& OpNode::SbpParallel4BnInOp(const std::string& bn_in_op) const {
@@ -394,22 +394,30 @@ void OpGraph::InferOpNodeSbpSignature(OpNode* op_node, const SbpSignature& sbp_s
     ibn2sbp_infer_hint.emplace(ibn, SbpInferHint(parallel_desc, logical_blob_desc, sbp));
   }
   SbpSignature* sbp_signature = op_node->mut_sbp_signature();
-  auto SbpInferHint4Ibn = [&](const std::string& ibn) -> const SbpInferHint& {
-    return ibn2sbp_infer_hint.at(ibn);
+  auto SbpInferHint4Ibn = [&](const std::string& ibn) -> Maybe<const SbpInferHint*> {
+    auto it = ibn2sbp_infer_hint.find(ibn);
+    if (it == ibn2sbp_infer_hint.end()) {
+      std::shared_ptr<ErrorProto> err;
+      err->set_msg("cannot find corresponding SbpInferHint for input_blob_name : " + ibn);
+      err->mutable_check_failed();
+      return err;
+    }
+    return Maybe<const SbpInferHint*>(&(it->second));
   };
   std::function<int32_t(const SbpSignature&)> CalcOrderValue4SbpSig;
   if (sbp_sig_conf.bn_in_op2sbp_parallel().empty()) {
-    auto OrderValue4HasBatchDim = [&](const std::string& bn,
-                                      const SbpParallel& sbp_parallel) -> int32_t {
+    auto OrderValue4HasBatchAxis = [&](const std::string& bn,
+                                       const SbpParallel& sbp_parallel) -> int32_t {
+      const auto& batch_axis = op_node->BatchAxis4Lbi(op_node->op().BnInOp2Lbi(bn));
       return -1
-             * (op_node->HasBatchDim4Lbi(op_node->op().BnInOp2Lbi(bn))
-                && sbp_parallel.has_split_parallel() && sbp_parallel.split_parallel().axis() == 0);
+             * (batch_axis.has_value() && sbp_parallel.has_split_parallel()
+                && sbp_parallel.split_parallel().axis() == batch_axis.value());
     };
-    auto OrderValue4HasNoBatchDim = [&](const std::string& ibn,
-                                        const SbpParallel& sbp_parallel) -> int32_t {
+    auto OrderValue4HasNoBatchAxis = [&](const std::string& ibn,
+                                         const SbpParallel& sbp_parallel) -> int32_t {
       return -2
-             * (op_node->HasBatchDim4Lbi(op_node->op().BnInOp2Lbi(ibn)) == false
-                && SbpInferHint4Ibn(ibn).sbp_parallel().has_split_parallel() == false
+             * (op_node->BatchAxis4Lbi(op_node->op().BnInOp2Lbi(ibn)).has_value() == false
+                && CHECK_JUST(SbpInferHint4Ibn(ibn))->sbp_parallel().has_split_parallel() == false
                 && sbp_parallel.has_split_parallel() == false);
     };
     CalcOrderValue4SbpSig = [&](const SbpSignature& sbp_signature) -> int32_t {
@@ -417,13 +425,13 @@ void OpGraph::InferOpNodeSbpSignature(OpNode* op_node, const SbpSignature& sbp_s
       for (const auto& ibn : op_node->op().input_bns()) {
         const auto& sbp_parallel_it = sbp_signature.bn_in_op2sbp_parallel().find(ibn);
         CHECK(sbp_parallel_it != sbp_signature.bn_in_op2sbp_parallel().end());
-        order_value += OrderValue4HasBatchDim(ibn, sbp_parallel_it->second);
-        order_value += OrderValue4HasNoBatchDim(ibn, sbp_parallel_it->second);
+        order_value += OrderValue4HasBatchAxis(ibn, sbp_parallel_it->second);
+        order_value += OrderValue4HasNoBatchAxis(ibn, sbp_parallel_it->second);
       }
       for (const auto& obn : op_node->op().output_bns()) {
         const auto& sbp_parallel_it = sbp_signature.bn_in_op2sbp_parallel().find(obn);
         CHECK(sbp_parallel_it != sbp_signature.bn_in_op2sbp_parallel().end());
-        order_value += OrderValue4HasBatchDim(obn, sbp_parallel_it->second);
+        order_value += OrderValue4HasBatchAxis(obn, sbp_parallel_it->second);
       }
       return order_value;
     };
@@ -466,17 +474,16 @@ void OpGraph::InferOpNodeLogicalBlobDesc(OpNode* op_node) const {
 
 void OpGraph::InferLogicalBlobDesc(const Job& job) const {
   TopoForEachNode([&](OpNode* op_node) {
-    // infer has_batch_dim
-    auto HasBatchDim4BnInOp = [&](const std::string& bn) -> bool* {
-      return op_node->MutProducerOpNode4BnInOp(bn)->MutHasBatchDim4Lbi(
-          op_node->op().BnInOp2Lbi(bn));
+    // infer batch_axis
+    auto BatchAxis4BnInOp = [&](const std::string& bn) -> OptInt64* {
+      return op_node->MutProducerOpNode4BnInOp(bn)->MutBatchAxis4Lbi(op_node->op().BnInOp2Lbi(bn));
     };
     auto LogicalBlobDesc4Ibn = [&](const std::string& ibn) -> const BlobDesc& {
       const auto& ibns = op_node->op().input_bns();
       CHECK(std::find(ibns.begin(), ibns.end(), ibn) != ibns.end());
       return op_node->LogicalBlobDesc4Lbi(op_node->op().BnInOp2Lbi(ibn));
     };
-    op_node->op().InferHasBatchDimIf(LogicalBlobDesc4Ibn, HasBatchDim4BnInOp);
+    op_node->op().InferBatchAxisIf(LogicalBlobDesc4Ibn, BatchAxis4BnInOp);
     // infer sbp_signature
     SbpSignature sbp_sig_conf;
     {
@@ -511,7 +518,7 @@ BalancedSplitter OpGraph::GetBalancedSplitter(const std::string& op_name,
   const SbpParallel& sbp_parallel = GetSbpParallel(op_name, lbi);
   CHECK(sbp_parallel.has_split_parallel());
   int64_t split_num = GetSplitNum(op_name, lbi);
-  if (IsBatchDimBlob(op_name, lbi)) {
+  if (IsBatchAxisBlob(op_name, lbi)) {
     CHECK_EQ(sbp_parallel.split_parallel().axis(), 0);
     CHECK_EQ(split_num % op_node->parallel_desc().parallel_num(), 0);
   } else {
@@ -551,9 +558,10 @@ const BlobDesc& OpGraph::GetLogicalBlobDesc(const LogicalBlobId& lbi) const {
       ->LogicalBlobDesc4Lbi(GetLogicalBlobIdKey(lbi.op_name(), lbi));
 }
 
-bool OpGraph::IsBatchDimBlob(const std::string& op_name, const LogicalBlobId& lbi) const {
+bool OpGraph::IsBatchAxisBlob(const std::string& op_name, const LogicalBlobId& lbi) const {
   return op_name2op_node_.at(GetOpNameKey(op_name, lbi))
-      ->HasBatchDim4Lbi(GetLogicalBlobIdKey(op_name, lbi));
+      ->BatchAxis4Lbi(GetLogicalBlobIdKey(op_name, lbi))
+      .has_value();
 }
 
 void OpGraph::CheckBlobDescs(const std::string& op_name,
@@ -617,9 +625,9 @@ std::function<const BlobDesc&(const LogicalBlobId&)> OpGraph::MakeGetterBlobDesc
     // the real important data we want to get is:
     // a) model blobs' byte size;
     // b) number of axes of blobs' body shape;
-    // Hence the argument record_piece_size can be any positive number, here it's 1
-    op_node->op().InferBlobDescsIf(MutUnparalleledBlobDesc4BnInOp, &parallel_ctx, 1,
-                                   [](OpContext*) {});
+    // Hence the argument record_piece_size can be any positive number
+    op_node->op().InferBlobDescsIf(MutUnparalleledBlobDesc4BnInOp, &parallel_ctx,
+                                   GlobalJobDesc().RecordPieceSize(), [](OpContext*) {});
   });
   auto model_lbi2blob_desc = std::make_shared<HashMap<LogicalBlobId, std::unique_ptr<BlobDesc>>>();
   ForEachNode([&](OpNode* op_node) {
@@ -722,13 +730,14 @@ void OpGraph::DumpOpTimeShape(JobBuilder* job_builder) const {
   });
 }
 
-void OpGraph::DumpBatchDimLbi(JobBuilder* job_builder) const {
+void OpGraph::DumpBatchAxisLbi(JobBuilder* job_builder) const {
+  auto* lbn2batch_axis = job_builder->mutable_helper()->mutable_lbn2batch_axis();
   ForEachNode([&](OpNode* op_node) {
     for (const auto& obn : op_node->op().output_bns()) {
       const LogicalBlobId& lbi = op_node->op().BnInOp2Lbi(obn);
-      if (op_node->HasBatchDim4Lbi(lbi)) {
-        *job_builder->mutable_helper()->mutable_batch_dim_lbis()->Add() = lbi;
-      }
+      const auto& lbn = GenLogicalBlobName(lbi);
+      const auto& pair = PbMapPair<std::string, OptInt64>(lbn, op_node->BatchAxis4Lbi(lbi));
+      CHECK(lbn2batch_axis->insert(pair).second);
     }
   });
 }

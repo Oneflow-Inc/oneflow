@@ -22,8 +22,7 @@ void DecodeOFRecordOp::InitFromOpConf() {
     EnrollOutputBn("out_" + std::to_string(i), false);
   }
   if (conf.part_name_suffix_length() != -1) {
-    CHECK_GE(conf.part_name_suffix_length(),
-             std::to_string(GlobalJobDesc().job_conf().data_part_num() - 1).length());
+    CHECK_GE(conf.part_name_suffix_length(), std::to_string(conf.data_part_num() - 1).length());
   }
 }
 
@@ -74,20 +73,22 @@ LogicalBlobId DecodeOFRecordOp::obn2lbi(const std::string& output_bn) const {
   return ret;
 }
 
-Maybe<void> DecodeOFRecordOp::InferHasBatchDim(
-    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
+Maybe<void> DecodeOFRecordOp::InferBatchAxis(
+    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
   if (op_conf().decode_ofrecord_conf().has_in()) {
-    CHECK_OR_RETURN(*HasBatchDim4BnInOp(SoleIbn()));
+    CHECK_OR_RETURN(BatchAxis4BnInOp(SoleIbn())->has_value());
+    CHECK_EQ_OR_RETURN(BatchAxis4BnInOp(SoleIbn())->value(), 0);
   }
-  for (const auto& obn : output_bns()) { *HasBatchDim4BnInOp(obn) = true; }
+  for (const auto& obn : output_bns()) { BatchAxis4BnInOp(obn)->set_value(0); }
   return Maybe<void>::Ok();
 }
 
-void DecodeOFRecordOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
+Maybe<void> DecodeOFRecordOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
   SbpSignatureBuilder()
       .Split(input_bns(), 0)
       .Split(output_bns(), 0)
       .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+  return Maybe<void>::Ok();
 }
 
 REGISTER_CPU_OP(OperatorConf::kDecodeOfrecordConf, DecodeOFRecordOp);

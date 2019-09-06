@@ -83,22 +83,22 @@ void PReluAlphaGradOp::VirtualGenKernelConf(
   }
 }
 
-Maybe<void> PReluAlphaGradOp::InferHasBatchDim(
-    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
-  CHECK_OR_RETURN(*HasBatchDim4BnInOp("dy"));
-  CHECK_OR_RETURN(*HasBatchDim4BnInOp("x"));
-  *HasBatchDim4BnInOp("alpha_grad") = false;
+Maybe<void> PReluAlphaGradOp::InferBatchAxis(
+    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
+  CHECK_OR_RETURN(*BatchAxis4BnInOp("dy") == *BatchAxis4BnInOp("x"));
+  BatchAxis4BnInOp("alpha_grad")->clear_value();
   return Maybe<void>::Ok();
 }
 
-void PReluAlphaGradOp::GetSbpSignatures(
-    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
+Maybe<void> PReluAlphaGradOp::GetSbpSignatures(
+    const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
     SbpSignatureList* sbp_sig_list) const {
   SbpSignatureBuilder()
       .Split("dy", 0)
       .Split("x", 0)
       .PartialSum("alpha_grad")
       .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+  return Maybe<void>::Ok();
 }
 
 REGISTER_OP(OperatorConf::kPreluAlphaGradConf, PReluAlphaGradOp);
