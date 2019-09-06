@@ -12,16 +12,11 @@ import oneflow.python.framework.job_set_util as job_set_util
 from oneflow.python.framework.out_remote_blobs_result_box import OutRemoteBlobsResultBox
 from oneflow.python.oneflow_export import oneflow_export
 
-def try_activate_default_session(func):
+
+def try_init_default_session(func):
     @functools.wraps(func)
     def Func(*args, **kwargs):
-        global environment_inited
-        if environment_inited == False:
-            c_api_util.Init(config_util.default_config_proto)
-            config_util.config_proto_mutable = False
-            environment_inited = True
-            job_set_util.compile_all_job()
-            runtime_ctx.default_session.__enter__()
+        assert GetDefaultSession() != None
         return func(*args, **kwargs)
     return Func
 
@@ -32,23 +27,27 @@ class Session(object):
         self.running_job_cnt_ = 0
         runtime_ctx.AddJobInstancePreLaunchCallbacks(self._PreLaunchCallback)
         runtime_ctx.AddJobInstancePostFinishCallbacks(self._PostFinishCallback)
+        global environment_inited
+        assert environment_inited == False
+        c_api_util.Init(config_util.default_config_proto)
+        config_util.config_proto_mutable = False
+        environment_inited = True
+        job_set_util.compile_all_job()
+        self.is_running_ = True
+        self.runtime_env_ = runtime.GetMachineRuntimeEnv()
 
-    @try_activate_default_session
     def run(self, job_func, *arg):
         assert self.is_running_
         return self.Run(job_func, *arg)
 
-    @try_activate_default_session
     def map(self, job_func, feed_data):
         assert self.is_running_
         return self.Map(job_func, feed_data)
 
-    @try_activate_default_session
     def no_return_run(self, job_func, *arg):
         assert self.is_running_
         return self.NoReturnRun(job_func, *arg)
 
-    @try_activate_default_session
     def sync(self):
         assert self.is_running_
         self.cond_var_.acquire()
@@ -86,16 +85,16 @@ class Session(object):
         self.cond_var_.notify()
         self.cond_var_.release()
 
-    def __enter__(self):
+    def InitMasterRuntimeEnv(self):
         assert self.is_running_ == False
         self.is_running_ = True
-        self.runtime_env_ = runtime.GetMachineRuntimeEnv()
-        self.runtime_env_.__enter__()
         return self
 
-    def __exit__(self, *args):
-        assert self.is_running_ == True
-        self.runtime_env_.__exit__()
+def GetDefaultSession():
+    global _default_session
+    if _default_session == None:
+        _default_session = Session()
+    return _default_session
 
-runtime_ctx.default_session = Session()
+_default_session = None
 environment_inited = False

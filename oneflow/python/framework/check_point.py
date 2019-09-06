@@ -15,16 +15,16 @@ class CheckPoint(object):
     def __init__(self):
         pass
 
-    @session_util.try_activate_default_session
+    @session_util.try_init_default_session
     def save(self, path):
         assert type(path) is str
         c_api_util.LaunchJob(_MakeModelSaveJobFunc(path))
 
-    @session_util.try_activate_default_session
+    @session_util.try_init_default_session
     def init(self):
         c_api_util.LaunchJob(_MakeModelInitJobFunc())
 
-    @session_util.try_activate_default_session
+    @session_util.try_init_default_session
     def load(self, path):
         assert type(path) is str
         c_api_util.LaunchJob(_MakeModelLoadJobFunc(path))
