@@ -25,7 +25,6 @@ ENV PATH="/cmake-install/bin:${PATH}"
 
 ARG USE_PYTHON_3_OR_2=2
 
-RUN echo "=========================================== Starting to build OneFlow via Python${USE_PYTHON_3_OR_2} with CUDA${CUDA} ======================================" 
 RUN [[ "${USE_PYTHON_3_OR_2}" == "3" ]] || { yum update -y \
     && yum install -y python-devel.x86_64 \
     && curl https://bootstrap.pypa.io/get-pip.py \
