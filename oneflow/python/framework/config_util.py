@@ -334,7 +334,7 @@ def set_batch_size(value):
 @oneflow_export('config.train.model_update_conf')
 def set_model_update_conf(value):
     conf_proto = job_util.TrainConf()
-    pb_util.PythonDict2PbMessage(val, conf_proto)
+    pb_util.PythonDict2PbMessage(value, conf_proto)
     _SetJobConfAttr(lambda job_conf: job_conf.train_conf, 'model_update_conf', conf_proto)
     return oneflow.config
 
