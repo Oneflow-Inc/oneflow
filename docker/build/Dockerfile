@@ -1,5 +1,5 @@
 # warning: never share the container image this dockerfile produces
-ARG CUDA=9
+ARG CUDA=10
 FROM nvidia/cuda:${CUDA}.0-cudnn7-devel-centos7
 RUN yum update -y && yum install -y epel-release
 RUN yum update -y && yum install -y rdma-core-devel \
