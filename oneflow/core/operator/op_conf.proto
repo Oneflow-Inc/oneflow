@@ -1037,13 +1037,6 @@ message MultiplyOpConf {
   required string out = 4;
 }
 
-message MultiplyGradOpConf {
-  required string out_diff = 1;
-  required string in_0 = 2;
-  required string in_1 = 3;
-  required string in_0_diff = 4;
-  required string in_1_diff = 5;
-}
 
 enum Norm {
   L1 = 1;
@@ -1601,7 +1594,6 @@ message OperatorConf {
     SegmentSumOpConf segment_sum_conf = 295;
     SegmentSumGradOpConf segment_sum_grad_conf = 296;
     SigmoidCrossEntropyLossGradOpConf sigmoid_cross_entropy_loss_grad_conf = 297; 
-    MultiplyGradOpConf multiply_grad_conf = 298;
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;
     BroadcastSubOpConf broadcast_sub_conf = 501;

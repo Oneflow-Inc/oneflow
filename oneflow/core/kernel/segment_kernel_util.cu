@@ -16,16 +16,16 @@ __global__ void SegmentSumKernel(const int input_outer_dim_size,
 
   for(int stripe_idx = threadIdx.x + blockIdx.x * blockDim.x; stripe_idx < total_stripe_count;
       stripe_idx += gridDim.x * blockDim.x) {
-    const int segment_offset = stripe_idx % OuterDimTileSize;
+    const int segment_offset = stripe_idx % inner_dim_size;
     const int input_outer_dim_index_base = 
-                  stripe_idx / inner_dim_size * OuterDimTileSize;
+        stripe_idx / inner_dim_size * OuterDimTileSize;
     int first_segment_id = segment_ids[input_outer_dim_index_base];
     int last_segment_id = output_outer_dim_size;
 
     const int actual_stripe_height = min(OuterDimTileSize, 
                                          input_outer_dim_size - input_outer_dim_index_base);
     T sum = T(0);
-    for (int i = 0; i < actual_stripe_height; ++i){
+    for (int i = 0; i < actual_stripe_height; ++i) {
       K current_segment_id = segment_ids[input_outer_dim_index_base + i];
       if (current_segment_id > last_segment_id) {
         const int output_index = last_segment_id * inner_dim_size + segment_offset;
@@ -92,16 +92,55 @@ void SegmentKernelUtilImpl<DeviceType::kGPU, T, K>::SegmentSumForward(DeviceCtx*
   const int32_t input_total_size = data_shape.elem_cnt();
   const int32_t input_outer_dim_size = data_shape.At(0);
   const int32_t inner_dim_size = input_total_size / input_outer_dim_size;
-  // const std::set<K> unique_segment_ids(segment_ids, segment_ids + input_outer_dim_size);
-  //const auto output_rows = unique_segment_ids.size();
+  // TODO: will change this magic 40000 later
   const auto output_rows = 40000;
   const int32_t output_total_size = output_rows * inner_dim_size;
   const auto config = GetCudaLaunchConfig(output_total_size); 
   auto div_up = [] (int a, int b){ return (a + b - 1) / b; };
   const auto total_stripe_count = inner_dim_size * div_up(input_outer_dim_size, 8);
+
+  // DO SOME TEST WORK
+  {
+    float* h_in = new float[input_total_size];
+    for(int i = 0; i < input_total_size; ++i) h_in[i] = 0.0f;
+
+    FILE* fp = fopen("real_data_before_segment_sum.txt", "w");
+    CudaCheck(cudaMemcpy(h_in, in, input_total_size * sizeof(float), cudaMemcpyDeviceToHost));
+
+    for (int i = 0; i < input_outer_dim_size; ++i) {
+        fprintf(fp, "%f %f %f %f %f %f %f %f\n", 
+                    h_in[i * inner_dim_size], h_in[i * inner_dim_size + 1],
+                    h_in[i * inner_dim_size + 2], h_in[i * inner_dim_size + 3],
+                    h_in[i * inner_dim_size + 4], h_in[i * inner_dim_size + 5],
+                    h_in[i * inner_dim_size + 6], h_in[i * inner_dim_size + 7]);
+    }
+    fclose(fp);
+    delete[] h_in;
+
+  }
+
+
   SegmentSumKernel<T, K, 8><<<config.block_count, config.threads_per_block>>>(
                             input_outer_dim_size, inner_dim_size, output_rows, total_stripe_count, 
                             in, segment_ids, out);
+  CudaCheck(cudaPeekAtLastError());
+  
+  {
+    float* h_out = new float[output_total_size];
+    for(int i = 0; i < output_total_size; ++i) h_out[i] = 0.0f;
+    FILE* fp = fopen("real_data_after_segment_sum.txt", "w");
+    CudaCheck(cudaMemcpy(h_out, out, output_total_size * sizeof(float), cudaMemcpyDeviceToHost));
+
+    for (int i = 0; i < output_rows; ++i) {
+        fprintf(fp, "%f %f %f %f %f %f %f %f\n", 
+                    h_out[i * inner_dim_size], h_out[i * inner_dim_size + 1],
+                    h_out[i * inner_dim_size + 2], h_out[i * inner_dim_size + 3],
+                    h_out[i * inner_dim_size + 4], h_out[i * inner_dim_size + 5],
+                    h_out[i * inner_dim_size + 6], h_out[i * inner_dim_size + 7]);
+    }
+    fclose(fp);
+    delete[] h_out;
+  }
 }
 
 template <typename T, typename K>
