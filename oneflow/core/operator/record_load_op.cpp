@@ -28,17 +28,18 @@ void RecordLoadOp::VirtualGenKernelConf(
   kernel_conf->mutable_record_load_conf()->set_device_piece_size(device_piece_size);
 }
 
-Maybe<void> RecordLoadOp::InferHasBatchDim(
-    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
-  *HasBatchDim4BnInOp("out") = true;
+Maybe<void> RecordLoadOp::InferBatchAxis(
+    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
+  BatchAxis4BnInOp("out")->set_value(0);
   return Maybe<void>::Ok();
 }
 
-void RecordLoadOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
+Maybe<void> RecordLoadOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
   SbpSignatureBuilder()
       .Broadcast(input_bns())
       .Split(output_bns(), 0)
       .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+  return Maybe<void>::Ok();
 }
 
 REGISTER_CPU_OP(OperatorConf::kRecordLoadConf, RecordLoadOp);

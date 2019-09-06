@@ -33,16 +33,17 @@ Maybe<void> InputOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)>
                                            record_piece_size);
 }
 
-Maybe<void> InputOp::InferHasBatchDim(
-    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
-  *HasBatchDim4BnInOp("out") = op_conf().input_conf().blob_conf().has_batch_dim();
+Maybe<void> InputOp::InferBatchAxis(
+    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
+  *BatchAxis4BnInOp("out") = op_conf().input_conf().blob_conf().batch_axis();
   return Maybe<void>::Ok();
 }
 
-void InputOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
+Maybe<void> InputOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
   InterfaceOpUtil::GetInputLikeOpSbpSignature(op_conf().input_conf().blob_conf(), input_bns(),
                                               output_bns(),
                                               sbp_sig_list->mutable_sbp_signature()->Add());
+  return Maybe<void>::Ok();
 }
 
 REGISTER_OP(OperatorConf::kInputConf, InputOp);

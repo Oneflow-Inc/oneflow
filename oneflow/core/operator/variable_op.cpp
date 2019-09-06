@@ -4,6 +4,23 @@
 
 namespace oneflow {
 
+namespace {
+
+Maybe<OptInt64> GetSplitAxis(const VariableOpConf& variable_conf) {
+  auto opt_split_axis = std::make_shared<OptInt64>(variable_conf.split_axis());
+  if (opt_split_axis->has_value()) {
+    size_t num_axes = variable_conf.shape().dim_size();
+    if (opt_split_axis->value() < 0) {
+      opt_split_axis->set_value(opt_split_axis->value() + num_axes);
+    }
+    CHECK_GE_OR_RETURN(opt_split_axis->value(), 0);
+    CHECK_LT_OR_RETURN(opt_split_axis->value(), num_axes);
+  }
+  return opt_split_axis;
+}
+
+}  // namespace
+
 void VariableOp::InitFromOpConf() {
   CHECK(op_conf().has_variable_conf());
   if (op_conf().variable_conf().has_tick()) { EnrollInputBn("tick", false); }
@@ -16,53 +33,49 @@ Maybe<void> VariableOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   const VariableOpConf& variable_conf = op_conf().variable_conf();
+  OF_CHECK(GlobalJobDesc().job_conf().has_default_initializer_conf()
+           || variable_conf.has_initializer());
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   out_blob_desc->mut_shape() = Shape(variable_conf.shape());
   out_blob_desc->set_data_type(variable_conf.has_data_type() ? variable_conf.data_type()
                                                              : GlobalJobDesc().DefaultDataType());
-  if (parallel_ctx->policy() == kModelParallel) {
-    int32_t model_split_axis = variable_conf.model_split_axis();
-    CHECK_GE_OR_RETURN(model_split_axis, 0);
-    CHECK_LT_OR_RETURN(model_split_axis, out_blob_desc->shape().NumAxes());
+  const auto& opt_split_axis = JUST(GetSplitAxis(variable_conf));
+  if (opt_split_axis->has_value()) {
+    int32_t model_split_axis = opt_split_axis->value();
     int64_t split_dim_num = out_blob_desc->shape().At(model_split_axis);
     BalancedSplitter bs(split_dim_num, parallel_ctx->parallel_num());
     out_blob_desc->mut_shape().Set(model_split_axis, bs.At(parallel_ctx->parallel_id()).size());
+  }
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> VariableOp::InferBatchAxis(
+    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
+  BatchAxis4BnInOp("out")->clear_value();
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> VariableOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
+  const auto& opt_split_axis = JUST(GetSplitAxis(op_conf().variable_conf()));
+  SbpSignatureBuilder sbp_sig_builder;
+  if (opt_split_axis->has_value()) {
+    sbp_sig_builder.Split(output_bns(), opt_split_axis->value());
   } else {
-    CHECK_EQ_OR_RETURN(parallel_ctx->policy(), kDataParallel);
+    sbp_sig_builder.Broadcast(output_bns());
   }
+  sbp_sig_builder.Broadcast(input_bns()).Build(sbp_sig_list->mutable_sbp_signature()->Add());
   return Maybe<void>::Ok();
-}
-
-Maybe<void> VariableOp::InferHasBatchDim(
-    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
-  *HasBatchDim4BnInOp("out") = false;
-  return Maybe<void>::Ok();
-}
-
-void VariableOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
-  FOR_RANGE(int32_t, i, 0, op_conf().variable_conf().shape().dim_size()) {
-    SbpSignatureBuilder()
-        .Broadcast(input_bns())
-        .Split(output_bns(), i)
-        .Build(sbp_sig_list->mutable_sbp_signature()->Add());
-  }
-  SbpSignatureBuilder()
-      .Broadcast(input_bns())
-      .Broadcast(output_bns())
-      .Build(sbp_sig_list->mutable_sbp_signature()->Add());
 }
 
 Maybe<void> VariableOp::InferSbpSignature(
     SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
     const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
-    std::function<const SbpInferHint&(const std::string&)> SbpInferHint4Ibn,
+    std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
     const ParallelDesc& parallel_desc) const {
-  SbpSignature var_sbp_sig_conf(sbp_sig_conf);
-  if (sbp_sig_conf.bn_in_op2sbp_parallel().empty()) {
-    (*var_sbp_sig_conf.mutable_bn_in_op2sbp_parallel())["out"].mutable_broadcast_parallel();
-  }
-  return this->Operator::InferSbpSignature(sbp_signature, var_sbp_sig_conf, CalcOrderValue4SbpSig,
-                                           SbpInferHint4Ibn, parallel_desc);
+  SbpSignatureList sbp_sig_list;
+  GetSbpSignatures(&sbp_sig_list);
+  *sbp_signature = sbp_sig_list.sbp_signature().Get(0);
+  return Maybe<void>::Ok();
 }
 
 REGISTER_OP(OperatorConf::kVariableConf, VariableOp);

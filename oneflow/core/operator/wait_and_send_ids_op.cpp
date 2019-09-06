@@ -26,14 +26,15 @@ Maybe<void> WaitAndSendIdsOp::InferBlobDescs(
   return Maybe<void>::Ok();
 }
 
-Maybe<void> WaitAndSendIdsOp::InferHasBatchDim(
-    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
-  *HasBatchDim4BnInOp("out") = false;
+Maybe<void> WaitAndSendIdsOp::InferBatchAxis(
+    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
+  BatchAxis4BnInOp("out")->clear_value();
   return Maybe<void>::Ok();
 }
 
-void WaitAndSendIdsOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
+Maybe<void> WaitAndSendIdsOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
   SbpSignatureBuilder().Split(output_bns(), 0).Build(sbp_sig_list->mutable_sbp_signature()->Add());
+  return Maybe<void>::Ok();
 }
 
 REGISTER_CPU_OP(OperatorConf::kWaitAndSendIdsConf, WaitAndSendIdsOp);

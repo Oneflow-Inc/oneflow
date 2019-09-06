@@ -69,7 +69,8 @@ Maybe<void> NormalizationGradOp::InferBlobDescs(
   BlobDesc* dx = GetBlobDesc4BnInOp("dx");
   if (dx) { *dx = *x; }
   const Shape param_shape({x->shape().At(conf.axis())});
-  const std::function<void(const std::string&)> CheckParamBlobDesc = [&](const std::string& bn) {
+  const std::function<void(const std::string&)> CheckParamBlobDesc =
+      [&](const std::string& bn) -> Maybe<void> {
     const BlobDesc* blob_desc = GetBlobDesc4BnInOp(bn);
     if (blob_desc != nullptr) {
       CHECK_EQ_OR_RETURN(blob_desc->data_type(), data_type);
@@ -77,7 +78,8 @@ Maybe<void> NormalizationGradOp::InferBlobDescs(
     }
     return Maybe<void>::Ok();
   };
-  const std::function<void(const std::string&)> SetParamBlobDesc = [&](const std::string& bn) {
+  const std::function<void(const std::string&)> SetParamBlobDesc =
+      [&](const std::string& bn) -> Maybe<void> {
     BlobDesc* blob_desc = GetBlobDesc4BnInOp(bn);
     if (blob_desc != nullptr) {
       blob_desc->set_data_type(data_type);
@@ -93,16 +95,16 @@ Maybe<void> NormalizationGradOp::InferBlobDescs(
   return Maybe<void>::Ok();
 }
 
-Maybe<void> NormalizationGradOp::InferHasBatchDim(
-    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
-  *HasBatchDim4BnInOp("dx") = *HasBatchDim4BnInOp("dy");
-  *HasBatchDim4BnInOp("gamma_diff") = false;
-  *HasBatchDim4BnInOp("beta_diff") = false;
+Maybe<void> NormalizationGradOp::InferBatchAxis(
+    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
+  *BatchAxis4BnInOp("dx") = *BatchAxis4BnInOp("dy");
+  BatchAxis4BnInOp("gamma_diff")->clear_value();
+  BatchAxis4BnInOp("beta_diff")->clear_value();
   return Maybe<void>::Ok();
 }
 
-void NormalizationGradOp::GetSbpSignatures(
-    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
+Maybe<void> NormalizationGradOp::GetSbpSignatures(
+    const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
     SbpSignatureList* sbp_sig_list) const {
   SbpSignatureBuilder()
       .Broadcast(input_bns())
@@ -111,6 +113,7 @@ void NormalizationGradOp::GetSbpSignatures(
       .Split("dx", 0)
       .Split("dy", 0)
       .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+  return Maybe<void>::Ok();
 }
 
 REGISTER_OP(OperatorConf::kNormalizationGradConf, NormalizationGradOp);

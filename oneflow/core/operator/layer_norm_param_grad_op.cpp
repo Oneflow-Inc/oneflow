@@ -63,23 +63,24 @@ Maybe<void> LayerNormParamGradOp::InferBlobDescs(
   return Maybe<void>::Ok();
 }
 
-Maybe<void> LayerNormParamGradOp::InferHasBatchDim(
-    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
-  for (const auto& obn : output_bns()) { *HasBatchDim4BnInOp(obn) = false; }
+Maybe<void> LayerNormParamGradOp::InferBatchAxis(
+    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
+  for (const auto& obn : output_bns()) { BatchAxis4BnInOp(obn)->clear_value(); }
   const LayerNormParamGradOpConf& conf = op_conf().layer_norm_param_grad_conf();
   if (conf.has_normalized_diff()) {
-    *HasBatchDim4BnInOp("normalized_diff") = *HasBatchDim4BnInOp("dy");
+    *BatchAxis4BnInOp("normalized_diff") = *BatchAxis4BnInOp("dy");
   }
   return Maybe<void>::Ok();
 }
 
-void LayerNormParamGradOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
+Maybe<void> LayerNormParamGradOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
   SbpSignatureBuilder()
       .Split(input_bns(), 0)
       .Broadcast("gamma")
       .Split(output_bns(), 0)
       .PartialSum({"gamma_diff", "beta_diff"})
       .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+  return Maybe<void>::Ok();
 }
 
 REGISTER_OP(OperatorConf::kLayerNormParamGradConf, LayerNormParamGradOp);

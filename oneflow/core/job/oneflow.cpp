@@ -17,7 +17,7 @@
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
 #include "oneflow/core/actor/act_event_logger.h"
 #include "oneflow/core/job/oneflow.h"
-#include "oneflow/core/job/model_init_job.h"
+#include "oneflow/core/job/model_io_job.h"
 #include "oneflow/core/job/inter_job_mem_sharing_util.h"
 #include "oneflow/core/job/plan_util.h"
 #include "oneflow/core/operator/interface_op_util.h"
@@ -321,9 +321,7 @@ void GetMemSharingOpBlobInfo(const JobBuilder& job_builder, const std::string& o
   *blob_conf->mutable_logical_blob_desc_conf() = job.helper().lbn2logical_blob_desc().at(lbn);
   *blob_conf->mutable_sbp_conf() =
       job.sbp_conf().op_name2sbp_signature_conf().at(op_name).bn_in_op2sbp_parallel().at(obn);
-  LogicalBlobId lbi(GenLogicalBlobId(lbn));
-  const auto& lbis = job.helper().batch_dim_lbis();
-  blob_conf->set_has_batch_dim(std::find(lbis.begin(), lbis.end(), lbi) != lbis.end());
+  *blob_conf->mutable_batch_axis() = job.helper().lbn2batch_axis().at(lbn);
 }
 
 void FilterOpName2ParallelBlobConf(
@@ -399,7 +397,7 @@ void MakeMainJob(const std::vector<Job>& jobs, Job* main_job,
       int64_t job_id = pair.second;
       CHECK(unique_check.insert(job_id).second);
       const auto& cs_idx = Global<CriticalSectionDesc>::Get()->CriticalSectionIds4JobId(job_id);
-      *id_list->Mutable(job_id)->mutable_id() = {cs_idx.begin(), cs_idx.end()};
+      *id_list->Mutable(job_id)->mutable_value() = {cs_idx.begin(), cs_idx.end()};
     }
   }
   op_confs.push_back(wait_and_send_ids_op_conf);
@@ -485,7 +483,6 @@ void MakeMainJob(const std::vector<Job>& jobs, Job* main_job,
   job_conf->set_job_name("MainJob-unamed");
   job_conf->mutable_predict_conf();
   job_conf->set_piece_size(1);
-  job_conf->set_data_part_num(1);
   job_conf->set_total_batch_num(1);
   job_conf->set_default_data_type(DataType::kInt32);
 }
@@ -648,10 +645,8 @@ void MakePullJob(const std::string& job_name, const std::string& op_name,
   }
   auto* job_conf = job->mutable_job_conf();
   job_conf->set_job_name(job_name);
-  job_conf->add_arg_op_name(input_op_conf.name());
   job_conf->mutable_predict_conf();
   job_conf->set_piece_size(1);
-  job_conf->set_data_part_num(1);
   job_conf->set_total_batch_num(1);
   job_conf->set_default_data_type(data_type);
 }
@@ -689,10 +684,8 @@ void MakePushJob(const std::string& job_name, const std::string& op_name,
   }
   auto* job_conf = job->mutable_job_conf();
   job_conf->set_job_name(job_name);
-  job_conf->add_arg_op_name(output_op_conf.name());
   job_conf->mutable_predict_conf();
   job_conf->set_piece_size(1);
-  job_conf->set_data_part_num(1);
   job_conf->set_total_batch_num(1);
   job_conf->set_default_data_type(data_type);
 }
@@ -723,8 +716,8 @@ void MakeArgPassJob(const std::string& job_name, const ParallelBlobConf& paralle
     blob_conf->set_has_dim0_valid_num(false);
     blob_conf->set_has_dim1_valid_num(false);
     blob_conf->set_has_dim2_valid_num(false);
-    blob_conf->set_split_axis(0);
-    blob_conf->set_has_batch_dim(false);
+    blob_conf->mutable_split_axis()->clear_value();
+    blob_conf->mutable_batch_axis()->clear_value();
     ParallelConf parallel_conf;
     parallel_conf.set_policy(kDataParallel);
     parallel_conf.add_device_name("0:cpu:0");
@@ -754,56 +747,9 @@ void MakeArgPassJob(const std::string& job_name, const ParallelBlobConf& paralle
   }
   auto* job_conf = job->mutable_job_conf();
   job_conf->set_job_name(job_name);
-  *job_conf->mutable_arg_op_name() = {output_op_names.begin(), output_op_names.end()};
-  job_conf->add_arg_op_name(input_op_name);
   job_conf->mutable_predict_conf();
   job_conf->set_piece_size(1);
-  job_conf->set_data_part_num(1);
   job_conf->set_total_batch_num(1);
-}
-
-void MakeModelSaveJob(const std::string& job_name,
-                      const HashMap<std::string, ParallelBlobConf>& var_op_name2parallel_blob_conf,
-                      Job* job) {
-  Global<InterUserJobInfo>::Get()->set_global_model_save_job_name(job_name);
-  JobBuilder job_builder(job);
-  ParallelConf md_save_parallel_conf;
-  // only save on master
-  md_save_parallel_conf.add_device_name("0:cpu:0");
-  md_save_parallel_conf.set_policy(ParallelPolicy::kDataParallel);
-  {
-    // there is always a tick op in model save job, so we can ignore the case with no variable
-    OperatorConf tick_op_conf{};
-    tick_op_conf.set_name("System-Saver-tick");
-    tick_op_conf.mutable_tick_conf()->set_out("out");
-    job_builder.AddOps(md_save_parallel_conf, {tick_op_conf});
-  }
-  auto* job_conf = job->mutable_job_conf();
-  job_conf->set_job_name(job_name);
-  job_conf->mutable_predict_conf();
-  job_conf->set_piece_size(1);
-  job_conf->set_data_part_num(1);
-  job_conf->set_total_batch_num(1);
-  if (var_op_name2parallel_blob_conf.empty()) { return; }
-  OperatorConf snapshot_op_conf{};
-  snapshot_op_conf.set_name("System-Saver-Snapshot");
-  SnapshotOpConf* snapshot_conf = snapshot_op_conf.mutable_snapshot_conf();
-  for (const auto& pair : var_op_name2parallel_blob_conf) {
-    const auto& var_op_name = pair.first;
-    OperatorConf input_op_conf{};
-    const auto& parallel_blob_conf = pair.second;
-    input_op_conf.set_name(var_op_name);
-    auto* input_conf = input_op_conf.mutable_input_conf();
-    input_conf->set_out("out");
-    auto* blob_conf = input_conf->mutable_blob_conf();
-    InterfaceOpUtil::InitBlobConf(blob_conf, parallel_blob_conf);
-    CHECK(blob_conf->has_data_type());
-    job_builder.AddOps(parallel_blob_conf.parallel_conf(), {input_op_conf});
-    const std::string lbn = input_op_conf.name() + "/" + input_conf->out();
-    *snapshot_conf->mutable_in()->Add() = lbn;
-    *snapshot_conf->mutable_lbn()->Add() = lbn;
-  }
-  job_builder.AddOps(md_save_parallel_conf, {snapshot_op_conf});
 }
 
 void CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan) {
@@ -841,8 +787,8 @@ void CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan) {
       for (const auto& pair : parallel_blob_conf2input_op_name2output_op_name) {
         helper_job_size += pair.second.size();
       }
-      // + 2 for model init job and model save job
-      helper_job_size += 2;
+      // + 3 for model init job, model load job and model save job
+      helper_job_size += 3;
       size_t user_job_size = jobs.size();
       jobs.resize(user_job_size + helper_job_size);
       sub_plans.resize(user_job_size + helper_job_size);
@@ -876,19 +822,7 @@ void CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan) {
         CompileHelperJob(&arg_pass_job);
       }
     }
-    {
-      Job model_init_job;
-      HashMap<std::string, OperatorConf> var_op_name2op_conf;
-      FilterVariableOps(jobs, &var_op_name2op_conf);
-      MakeModelInitJob("System-ModelInit", &model_init_job, var_op_name2op_conf,
-                       var_op_name2parallel_blob_conf);
-      CompileHelperJob(&model_init_job);
-    }
-    {
-      Job model_save_job;
-      MakeModelSaveJob("System-ModelSave", var_op_name2parallel_blob_conf, &model_save_job);
-      CompileHelperJob(&model_save_job);
-    }
+    MakeModelIoJobs(jobs, var_op_name2parallel_blob_conf, [&](Job* job) { CompileHelperJob(job); });
     InterJobMemSharingUtil::BindInterfaceMemBlockId(jobs, &sub_plans);
     FinishGlobalCriticalSectionDesc(sub_plans);
     MergeSubPlanWithoutGenNetTopo(plan, sub_plans);

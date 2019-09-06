@@ -7,6 +7,8 @@ void NormalModelUpdtOp::InitFromOpConf() {
   EnrollInputBn("model_diff", false);
   EnrollInputBn("total_instance_num_diff", false);
   EnrollInputBn("model", false)->set_is_mutable(true);
+  EnrollInputBn("learning_rate", false);
+  EnrollInputBn("train_step", false);
   const PbMessage& conf = this->GetCustomizedConf();
   const auto& user_conf = *GetMsgPtrFromPbMessage<NormalModelUpdateOpUserConf>(conf, "user_conf");
   if (user_conf.has_clip_conf() && user_conf.clip_conf().has_clip_by_global_norm()) {
@@ -38,24 +40,29 @@ LogicalBlobId NormalModelUpdtOp::obn2lbi(const std::string& output_bn) const {
   return GenLogicalBlobId(GetValFromCustomizedConf<std::string>(output_bn));
 }
 
-Maybe<void> NormalModelUpdtOp::InferHasBatchDim(
-    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
-  for (const auto& ibn : input_bns()) { CHECK_EQ_OR_RETURN(*HasBatchDim4BnInOp(ibn), false); }
+Maybe<void> NormalModelUpdtOp::InferBatchAxis(
+    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
+  for (const auto& ibn : input_bns()) {
+    CHECK_EQ_OR_RETURN(BatchAxis4BnInOp(ibn)->has_value(), false);
+  }
   return Maybe<void>::Ok();
 }
 
-void NormalModelUpdtOp::GetSbpSignatures(
-    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
+Maybe<void> NormalModelUpdtOp::GetSbpSignatures(
+    const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
     SbpSignatureList* sbp_sig_list) const {
   const auto& bns = AlwaysBroadcastParallelBns();
   PbRpf<std::string> broadcast_bns = {bns.begin(), bns.end()};
   *broadcast_bns.Add() = "total_instance_num_diff";
-  FOR_RANGE(int64_t, i, 0, LogicalBlobDesc4Ibn("model").shape().NumAxes()) {
+  *broadcast_bns.Add() = "learning_rate";
+  *broadcast_bns.Add() = "train_step";
+  FOR_RANGE(int64_t, i, 0, JUST(LogicalBlobDesc4Ibn("model"))->shape().NumAxes()) {
     SbpSignatureBuilder()
         .Split(input_bns(), i)
         .Broadcast(broadcast_bns)
         .Build(sbp_sig_list->mutable_sbp_signature()->Add());
   }
+  return Maybe<void>::Ok();
 }
 
 REGISTER_OP_CREATOR(OperatorConf::kNormalMdupdtConf, [](const OperatorConf& op_conf) -> Operator* {

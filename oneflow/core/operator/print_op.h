@@ -22,12 +22,12 @@ class PrintOp final : public Operator {
   }
 
  private:
-  Maybe<void> InferHasBatchDim(
-      std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const override {
+  Maybe<void> InferBatchAxis(
+      std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override {
     return Maybe<void>::Ok();
   }
 
-  void GetSbpSignatures(SbpSignatureList* sbp_sig_list) const override;
+  Maybe<void> GetSbpSignatures(SbpSignatureList* sbp_sig_list) const override;
 
   LogicalBlobId ibn2lbi(const std::string& input_bn) const override;
 };

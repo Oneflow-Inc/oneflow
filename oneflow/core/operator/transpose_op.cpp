@@ -63,11 +63,23 @@ void TransposeOp::VirtualGenKernelConf(
   FOR_RANGE(size_t, i, 0, perm->size()) { (*invert_perm)[(*perm)[i]] = i; }
 }
 
-void TransposeOp::GetSbpSignatures(
+Maybe<void> TransposeOp::InferBatchAxis(
     const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
+    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
+  if (BatchAxis4BnInOp("in")->has_value()) {
+    const PbRf<int32_t>& perm = op_conf().transpose_conf().perm();
+    BatchAxis4BnInOp("out")->set_value(perm.Get(BatchAxis4BnInOp("in")->value()));
+  } else {
+    BatchAxis4BnInOp("out")->clear_value();
+  }
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> TransposeOp::GetSbpSignatures(
+    const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
     SbpSignatureList* sbp_sig_list) const {
   const PbRf<int32_t>& perm = op_conf().transpose_conf().perm();
-  CHECK_EQ(perm.size(), LogicalBlobDesc4Ibn("in").shape().NumAxes());
+  CHECK_EQ(perm.size(), JUST(LogicalBlobDesc4Ibn("in"))->shape().NumAxes());
   FOR_RANGE(int32_t, i, 0, perm.size()) {
     int32_t axis = perm.Get(i);
     if (axis < 0) { axis += perm.size(); }
@@ -78,6 +90,7 @@ void TransposeOp::GetSbpSignatures(
         .Split(output_bns(), axis)
         .Build(sbp_sig_list->mutable_sbp_signature()->Add());
   }
+  return Maybe<void>::Ok();
 }
 
 REGISTER_OP(OperatorConf::kTransposeConf, TransposeOp);

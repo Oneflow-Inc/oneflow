@@ -44,13 +44,15 @@ Maybe<void> ForeignInputOp::InferBlobDescs(
   return Maybe<void>::Ok();
 }
 
-Maybe<void> ForeignInputOp::InferHasBatchDim(
-    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
-  *HasBatchDim4BnInOp("out") = op_conf().foreign_input_conf().blob_conf().has_batch_dim();
+Maybe<void> ForeignInputOp::InferBatchAxis(
+    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
+  *BatchAxis4BnInOp("out") = op_conf().foreign_input_conf().blob_conf().batch_axis();
   return Maybe<void>::Ok();
 }
 
-void ForeignInputOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {}
+Maybe<void> ForeignInputOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
+  return Maybe<void>::Ok();
+}
 
 REGISTER_OP(OperatorConf::kForeignInputConf, ForeignInputOp);
 REGISTER_OP_SAME_OUTPUT_BLOB_MEM_BLOCK_NUM(OperatorConf::kForeignInputConf, 1);

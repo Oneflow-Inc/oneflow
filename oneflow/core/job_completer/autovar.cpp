@@ -12,6 +12,7 @@ OperatorConf GenerateVariableOpConf(const BlobDesc& blob_desc, const std::string
   blob_desc.shape().ToProto(var_op_conf->mutable_shape());
   var_op_conf->set_data_type(blob_desc.data_type());
   var_op_conf->set_model_name(model_name);
+  var_op_conf->mutable_split_axis()->Clear();
   return var_op;
 }
 

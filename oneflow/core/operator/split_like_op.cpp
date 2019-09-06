@@ -39,22 +39,18 @@ Maybe<void> SplitLikeOp::InferBlobDescs(
   return Maybe<void>::Ok();
 }
 
-Maybe<void> SplitLikeOp::InferHasBatchDim(
+Maybe<void> SplitLikeOp::InferBatchAxis(
     const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
-    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
-  const SplitLikeOpConf& conf = op_conf().split_like_conf();
-  int32_t split_axis = FixAxis(conf.axis(), LogicalBlobDesc4Ibn("in").shape().NumAxes());
-  bool has_batch_dim = true;
-  if (split_axis == 0) { has_batch_dim = false; }
-  for (const auto& obn : output_bns()) { *HasBatchDim4BnInOp(obn) = has_batch_dim; }
+    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
+  for (const auto& obn : output_bns()) { *BatchAxis4BnInOp(obn) = *BatchAxis4BnInOp("in"); }
   return Maybe<void>::Ok();
 }
 
-void SplitLikeOp::GetSbpSignatures(
-    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
+Maybe<void> SplitLikeOp::GetSbpSignatures(
+    const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
     SbpSignatureList* sbp_sig_list) const {
   const SplitLikeOpConf& conf = op_conf().split_like_conf();
-  const int64_t num_axes = LogicalBlobDesc4Ibn("in").shape().NumAxes();
+  const int64_t num_axes = JUST(LogicalBlobDesc4Ibn("in"))->shape().NumAxes();
   const int32_t axis = FixAxis(conf.axis(), num_axes);
   FOR_RANGE(int32_t, i, 0, num_axes) {
     if (i == axis) { continue; }
@@ -63,6 +59,7 @@ void SplitLikeOp::GetSbpSignatures(
         .Split(output_bns(), i)
         .Build(sbp_sig_list->mutable_sbp_signature()->Add());
   }
+  return Maybe<void>::Ok();
 }
 
 int32_t SplitLikeOp::FixAxis(const int32_t axis, const int64_t num_axes) const {

@@ -12,16 +12,13 @@ def UpdateVariable(x, scope_name, enable_all_reduce_group = True):
     dl_net = flow.deprecated.get_cur_job_dlnet_builder()
     with dl_net.VariableScope(scope_name):
         job_conf = flow.get_cur_job_conf_builder()
-        job_conf.batch_size(1).data_part_num(1).default_data_type(flow.float)
+        job_conf.batch_size(1).default_data_type(flow.float)
         job_conf.train_conf()
         job_conf.train_conf().primary_lr = 0.01
-        job_conf.train_conf().num_of_batches_in_snapshot = 100
         job_conf.train_conf().model_update_conf.naive_conf.SetInParent()
         job_conf.train_conf().loss_lbn.extend([scope_name + "-loss_op/out"])
         job_conf.enable_all_reduce_group(enable_all_reduce_group)
-        initializer = op_conf_util.InitializerConf()
-        initializer.constant_conf.value = 1
-        w = flow.get_variable(name = scope_name + '-w', shape = (10, ), dtype = flow.float, initializer = initializer)
+        w = flow.get_variable(name = scope_name + '-w', shape = (10, ), dtype = flow.float, initializer = flow.constant_initializer(value=1.0))
         c = dl_net.BiasAdd(x, w)
         # return flow.keras.activations.tanh(c) 
         return dl_net.ReduceMean(c, name="loss_op")

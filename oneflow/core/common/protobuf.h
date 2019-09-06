@@ -52,6 +52,9 @@ using PbMd = google::protobuf::util::MessageDifferencer;
 bool TryParseProtoFromTextFile(const std::string& file_path, PbMessage* proto);
 void ParseProtoFromTextFile(const std::string& file_path, PbMessage* proto);
 void PrintProtoToTextFile(const PbMessage& proto, const std::string& file_path);
+std::string PbMessage2TxtString(const PbMessage& proto);
+void PbMessage2TxtString(const PbMessage& proto, std::string* str);
+bool TxtString2PbMessage(const std::string& proto_str, PbMessage* proto);
 
 // Does PbMessage have the field_name
 bool HasFieldInPbMessage(const PbMessage&, const std::string& field_name);

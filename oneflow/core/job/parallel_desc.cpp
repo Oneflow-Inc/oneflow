@@ -34,6 +34,12 @@ std::string DeviceTag4DeviceType(DeviceType device_type) {
   return "";
 }
 
+Maybe<DeviceType> DeviceType4DeviceTag(const std::string& device_tag) {
+  if (device_tag == "cpu") { return DeviceType::kCPU; }
+  if (device_tag == "gpu") { return DeviceType::kGPU; }
+  return Error::DeviceTagNotFound() << "device tag `" << device_tag << "' not found";
+}
+
 ParallelDesc::ParallelDesc(const ParallelConf& user_conf) : parallel_conf_(user_conf) {
   HashSet<int64_t> machine_id_set;
   device_type_ = DeviceType::kInvalidDevice;

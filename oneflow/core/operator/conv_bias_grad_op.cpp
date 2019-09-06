@@ -28,25 +28,26 @@ Maybe<void> ConvBiasGradOp::InferBlobDescs(
   } else if (conf.data_format() == "channels_last") {
     bias_diff->mut_shape() = Shape({dy->shape().At(dy->shape().NumAxes() - 1)});
   } else {
-    CHECK_OR_RETURN(false, "UNIMPLEMENTED");
+    OF_UNIMPLEMENTED();
   }
   return Maybe<void>::Ok();
 }
 
-Maybe<void> ConvBiasGradOp::InferHasBatchDim(
-    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
-  CHECK_OR_RETURN(*HasBatchDim4BnInOp("dy"));
-  *HasBatchDim4BnInOp("bias_diff") = false;
+Maybe<void> ConvBiasGradOp::InferBatchAxis(
+    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
+  CHECK_OR_RETURN(BatchAxis4BnInOp("dy")->has_value());
+  BatchAxis4BnInOp("bias_diff")->clear_value();
   return Maybe<void>::Ok();
 }
 
-void ConvBiasGradOp::GetSbpSignatures(
-    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
+Maybe<void> ConvBiasGradOp::GetSbpSignatures(
+    const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
     SbpSignatureList* sbp_sig_list) const {
   SbpSignatureBuilder()
       .Split("dy", 0)
       .PartialSum("bias_diff")
       .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+  return Maybe<void>::Ok();
 }
 
 REGISTER_OP(OperatorConf::kConvBiasGradConf, ConvBiasGradOp);

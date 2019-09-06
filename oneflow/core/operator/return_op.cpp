@@ -19,18 +19,18 @@ Maybe<void> ReturnOp::InferBlobDescs(
 
 const PbMessage& ReturnOp::GetCustomizedConf() const { return op_conf().return_conf(); }
 
-Maybe<void> ReturnOp::InferHasBatchDim(
-    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
-  *HasBatchDim4BnInOp("out") = *HasBatchDim4BnInOp("in");
+Maybe<void> ReturnOp::InferBatchAxis(
+    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
+  *BatchAxis4BnInOp("out") = *BatchAxis4BnInOp("in");
   return Maybe<void>::Ok();
 }
 
 Maybe<void> ReturnOp::InferSbpSignature(
     SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
     const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
-    std::function<const SbpInferHint&(const std::string&)> SbpInferHint4Ibn,
+    std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
     const ParallelDesc& parallel_desc) const {
-  const auto& in_sbp_infer_hint = SbpInferHint4Ibn("in");
+  const auto& in_sbp_infer_hint = *JUST(SbpInferHint4Ibn("in"));
   CHECK_OR_RETURN(in_sbp_infer_hint.parallel_desc() == parallel_desc);
   if (in_sbp_infer_hint.sbp_parallel().has_partial_sum_parallel()) {
     SbpSignatureBuilder().Broadcast(input_bns()).Broadcast(output_bns()).Build(sbp_signature);

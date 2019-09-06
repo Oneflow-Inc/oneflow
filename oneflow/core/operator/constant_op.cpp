@@ -55,17 +55,18 @@ void ConstantOp::VirtualGenKernelConf(
   kernel_conf->set_data_type(data_type);
 }
 
-Maybe<void> ConstantOp::InferHasBatchDim(
-    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
-  *HasBatchDim4BnInOp("out") = false;
+Maybe<void> ConstantOp::InferBatchAxis(
+    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
+  BatchAxis4BnInOp("out")->clear_value();
   return Maybe<void>::Ok();
 }
 
-void ConstantOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
+Maybe<void> ConstantOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
   SbpSignatureBuilder()
       .Broadcast(input_bns())
       .Broadcast(output_bns())
       .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+  return Maybe<void>::Ok();
 }
 
 REGISTER_OP(OperatorConf::kConstantConf, ConstantOp);

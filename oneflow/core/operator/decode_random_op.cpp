@@ -33,17 +33,18 @@ Maybe<void> DecodeRandomOp::InferBlobDescs(
   return Maybe<void>::Ok();
 }
 
-Maybe<void> DecodeRandomOp::InferHasBatchDim(
-    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
-  *HasBatchDim4BnInOp("out") = true;
+Maybe<void> DecodeRandomOp::InferBatchAxis(
+    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
+  BatchAxis4BnInOp("out")->set_value(0);
   return Maybe<void>::Ok();
 }
 
-void DecodeRandomOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
+Maybe<void> DecodeRandomOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
   SbpSignatureBuilder()
       .Broadcast(input_bns())
       .Split(output_bns(), 0)
       .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+  return Maybe<void>::Ok();
 }
 
 REGISTER_OP(OperatorConf::kDecodeRandomConf, DecodeRandomOp);
