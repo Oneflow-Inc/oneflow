@@ -121,6 +121,8 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
 
   int32_t GetModelSplitAxis(const std::string& op_name, const LogicalBlobId& lbi) const;
   BalancedSplitter GetBalancedSplitter(const std::string& op_name, const LogicalBlobId& lbi) const;
+  int64_t GetParallelNum(const std::string& op_name) const;
+  int64_t GetSplitNum(const std::string& op_name, const LogicalBlobId& lbi) const;
   const SbpParallel& GetSbpParallel(const std::string& op_name, const LogicalBlobId& lbi) const;
   DataType GetBlobDataType(const LogicalBlobId& lbi) const;
   const BlobDesc& GetLogicalBlobDesc(const LogicalBlobId& lbi) const;
@@ -160,7 +162,6 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
   std::function<bool(const OpNode*, const OpNode*)> MakePredicatorIsDataOrCtrlReachable() const;
   std::list<OpNode*> DataOrCtrlSourceNodes() const;
 
-  int64_t GetSplitNum(const std::string& op_name, const LogicalBlobId& lbi) const;
   HashMap<std::string, OpNode*> op_name2op_node_;
   HashMap<std::string, HashSet<std::string>> producer_op_name2ctrl_consumer_op_names_;
 };
