@@ -12,7 +12,7 @@ def UpdateVariable(x, scope_name, enable_all_reduce_group = True):
     dl_net = flow.deprecated.get_cur_job_dlnet_builder()
     with dl_net.VariableScope(scope_name):
         job_conf = flow.get_cur_job_conf_builder()
-        job_conf.batch_size(1).data_part_num(1).default_data_type(flow.float)
+        job_conf.batch_size(1).default_data_type(flow.float)
         job_conf.train_conf()
         job_conf.train_conf().primary_lr = 0.01
         job_conf.train_conf().model_update_conf.naive_conf.SetInParent()
