@@ -45,11 +45,8 @@ def GetDataType(job_name, lbn):
 def GetBatchAxis(job_name, lbn):
     return c_api_util.JobBuildAndInferCtx_GetBatchAxis(job_name, lbn)
 
-def GetHasSplitDimFromProducerView(job_name, lbn):
-    return c_api_util.JobBuildAndInferCtx_GetHasSplitDimFromProducerView(job_name, lbn)
-
-def GetSplitDimFromProducerView(job_name, lbn):
-    return c_api_util.JobBuildAndInferCtx_GetSplitDimFromProducerView(job_name, lbn)
+def GetSplitAxisFromProducerView(job_name, lbn):
+    return c_api_util.JobBuildAndInferCtx_GetSplitAxisFromProducerView(job_name, lbn)
 
 def GetParallelConfFromProducerView(job_name, lbn):
     return c_api_util.JobBuildAndInferCtx_GetParallelConfFromProducerView(job_name, lbn)
