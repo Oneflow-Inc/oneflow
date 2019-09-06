@@ -16,7 +16,7 @@ def test_reduce_sum(input_shape, axis=None, keepdims=False):
 
     def ReduceSumTestJob(input=flow.input_blob_def(input_shape)):
         job_conf = flow.get_cur_job_conf_builder()
-        job_conf.batch_size(1).data_part_num(1).default_data_type(flow.float)
+        job_conf.batch_size(1).default_data_type(flow.float)
         return flow.math.reduce_sum(input_tensor=input, axis=axis, keepdims=keepdims)
 
     flow.add_job(ReduceSumTestJob)
@@ -42,7 +42,7 @@ def test_reduce_mean(input_shape, axis=None, keepdims=False):
 
     def ReduceMeanTestJob(input=flow.input_blob_def(input_shape)):
         job_conf = flow.get_cur_job_conf_builder()
-        job_conf.batch_size(1).data_part_num(1).default_data_type(flow.float)
+        job_conf.batch_size(1).default_data_type(flow.float)
         return flow.math.reduce_mean(input_tensor=input, axis=axis, keepdims=keepdims)
 
     flow.add_job(ReduceMeanTestJob)

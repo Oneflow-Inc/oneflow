@@ -39,7 +39,6 @@ void SetModelIoDefaultJobConf(JobConfigProto* job_conf, const std::string& job_n
   job_conf->set_job_name(job_name);
   job_conf->mutable_predict_conf();
   job_conf->set_piece_size(1);
-  job_conf->set_data_part_num(1);
   job_conf->set_total_batch_num(1);
 }
 

@@ -17,7 +17,7 @@ def test_matmul(a_shape, b_shape, transpose_a=False, transpose_b=False):
 
     def MatmulTestJob(a=flow.input_blob_def(a_shape), b=flow.input_blob_def(b_shape)):
         job_conf = flow.get_cur_job_conf_builder()
-        job_conf.batch_size(1).data_part_num(1).default_data_type(flow.float)
+        job_conf.batch_size(1).default_data_type(flow.float)
         return flow.matmul(a, b, transpose_a, transpose_b)
 
     flow.add_job(MatmulTestJob)

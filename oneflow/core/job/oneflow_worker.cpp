@@ -15,7 +15,8 @@ void Run(const std::string& config_proto_filepath) {
   ParseProtoFromTextFile(config_proto_filepath, &config_proto);
   // Global<T>::New is not allowed to be called here
   // because glog is not constructed yet and LOG(INFO) has bad bahavior
-  Global<EnvironmentObjectsScope>::SetAllocated(new EnvironmentObjectsScope(config_proto));
+  Global<EnvironmentObjectsScope>::SetAllocated(new EnvironmentObjectsScope());
+  Global<EnvironmentObjectsScope>::Get()->Init(config_proto);
   LOG(INFO) << "NewGlobal " << typeid(EnvironmentObjectsScope).name();
   CHECK_EQ(Global<MachineCtx>::Get()->IsThisMachineMaster(), false);
   while (ClusterControl::WorkerReceiveHalt() == false) {
