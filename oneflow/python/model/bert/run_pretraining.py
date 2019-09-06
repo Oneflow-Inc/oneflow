@@ -28,7 +28,7 @@ nodes = [{'addr':'192.168.1.16'},{'addr':'192.168.1.15'}]
 def _blob_conf(name, shape, dtype=flow.int32):
   return flow.data.BlobConf(name=name, shape=shape, dtype=dtype, codec=flow.data.RawCodec())
 
-def BertDecoder(data_dir='', seq_length=128, max_predictions_per_seq=20):
+def BertDecoder(data_dir='', data_part_num=1, seq_length=128, max_predictions_per_seq=20):
   blob_confs = []
   blob_confs.append(_blob_conf('input_ids', [seq_length]))
   blob_confs.append(_blob_conf('next_sentence_labels', [1]))
@@ -37,16 +37,17 @@ def BertDecoder(data_dir='', seq_length=128, max_predictions_per_seq=20):
   blob_confs.append(_blob_conf('masked_lm_ids', [max_predictions_per_seq]))
   blob_confs.append(_blob_conf('masked_lm_positions', [max_predictions_per_seq]))
   blob_confs.append(_blob_conf('masked_lm_weights', [max_predictions_per_seq], flow.float))
-  return flow.data.decode_ofrecord(data_dir, blob_confs, name="decode")
+  return flow.data.decode_ofrecord(data_dir, blob_confs, name="decode", data_part_num=data_part_num)
 
-def BuildPreTrainNet(seq_length=128, max_position_embeddings=512, num_hidden_layers=12,
-                     num_attention_heads=12, hidden_dropout_prob=0.1, attention_probs_dropout_prob=0.1,
+def BuildPreTrainNet(data_part_num, seq_length=128, max_position_embeddings=512,
+                     num_hidden_layers=12, num_attention_heads=12,
+                     hidden_dropout_prob=0.1, attention_probs_dropout_prob=0.1,
                      vocab_size=30522, type_vocab_size=2, max_predictions_per_seq=20):
 
   hidden_size = 64 * num_attention_heads#, H = 64, size per head
   intermediate_size = hidden_size * 4
 
-  decoders = BertDecoder(_DATA_DIR, seq_length, max_predictions_per_seq)
+  decoders = BertDecoder(_DATA_DIR, data_part_num, seq_length, max_predictions_per_seq)
 
   input_ids = decoders[0]
   next_sentence_labels = decoders[1]
@@ -105,7 +106,7 @@ def PretrainJob():
     data_part_num = total_device_num #use total_device_num for test
 
     job_conf = flow.get_cur_job_conf_builder()
-    job_conf.batch_size(batch_size).data_part_num(data_part_num).default_data_type(flow.float)
+    job_conf.batch_size(batch_size).default_data_type(flow.float)
     job_conf.default_initializer_conf(dict(constant_conf=dict(value=0.0)))
     #job_conf.enable_nccl(False)
     #job_conf.enable_cuda_ring_all_reduce()
@@ -116,7 +117,7 @@ def PretrainJob():
     job_conf.model_update_conf(_BERT_MODEL_UPDATE_CONF)
 
     job_conf.enable_inplace(False)
-    loss = BuildPreTrainNet(hidden_dropout_prob=0, attention_probs_dropout_prob=0)
+    loss = BuildPreTrainNet(data_part_num, hidden_dropout_prob=0, attention_probs_dropout_prob=0)
     flow.losses.add_loss(loss)
     return loss
 
@@ -142,7 +143,8 @@ if __name__ == '__main__':
 
   assert args.node_num <= len(nodes)
   if args.node_num > 1:
-    flow.deprecated.init_worker(config, scp_binary=args.copy_binary_to_worker, use_uuid=args.use_uuid)
+    flow.deprecated.init_worker(config, scp_binary=args.copy_binary_to_worker,
+                                use_uuid=args.use_uuid)
   flow.init(config)
 
   flow.add_job(PretrainJob)
@@ -165,13 +167,13 @@ if __name__ == '__main__':
     check_point.save()
   total_time = step_time[-1] - start_time
   train_time = step_time[-1] - train_start_time
-  initial_time = train_start_time - start_time
+  init_time = train_start_time - start_time
   mean_batch_time = (step_time[-1] - step_time[0]) / (args.num_steps - 1)
   total_batch_size = args.node_num * args.device_num_per_node * args.batch_size_per_device
   throughput = total_batch_size / mean_batch_time
 
   print('total time', total_time)
-  print('initial time', initial_time)
+  print('init time', init_time)
   print('first loss time', step_time[0] - start_time) #include model init and first batch cal time.
   print('train time', train_time)
   print('last - first loss time', step_time[-1] - step_time[0])
