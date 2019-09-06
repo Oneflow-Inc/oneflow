@@ -1,9 +1,11 @@
 from __future__ import absolute_import
 
+import oneflow
 import oneflow.core.job.resource_pb2 as resource_util
 import oneflow.core.job.job_set_pb2 as job_set_util
 import oneflow.core.job.job_pb2 as job_util
 import oneflow.python.framework.compile_context as compile_context
+import oneflow.python.framework.c_api_util as c_api_util
 from oneflow.python.oneflow_export import oneflow_export
 import oneflow.python.lib.core.pb_util as pb_util
 
@@ -122,20 +124,23 @@ class ConfigProtoBuilder(object):
         self.config_proto_.profile_conf.collect_act_event = val
         return self
 
-class ConfigTrainConfBuilder(object):
-    def __init__(self, train_conf):
-        self.train_conf_ = train_conf
+@oneflow_export('config.piece_size')
+def set_piece_size(value):
+    _SetJobConfAttr(lambda x:x, 'piece_size', value)
+    return oneflow.config
 
-    def add_loss(self, *args):
-        loss_blob_list = []
-        assert(len(args) > 0)
-        if type(args[0]) in [list, tuple]:
-            assert(len(args) == 1)
-            loss_blob_list = args[0]
-        else:
-            loss_blob_list = args
-        self.train_conf_.loss_lbn.extend(
-            [b.logical_blob_name for b in loss_blob_list])
+@oneflow_export('config.train.batch_size')
+def set_batch_size(value):
+    _SetJobConfAttr(lambda job_conf: job_conf.train_conf, 'batch_size', value)
+    return oneflow.config
+
+def _SetJobConfAttr(GetConf, field, value):
+    if compile_context.cur_job_conf is not None:
+        assert c_api_util.CurJobBuildAndInferCtx_HasJobConf() == False
+        setattr(GetConf(compile_context.cur_job_conf), field, value)
+    else:
+        assert c_api_util.IsEnvironmentInited() == False
+        setattr(GetConf(default_job_conf), field, value)
 
 class JobConfigProtoBuilder(object):
     def __init__(self, job_conf):
@@ -240,9 +245,6 @@ class JobConfigProtoBuilder(object):
         self.job_conf_.train_conf.SetInParent()
         return self.job_conf_.train_conf
 
-    def get_train_conf_builder(self):
-        return ConfigTrainConfBuilder(self.train_conf())
-
 def TryCompleteDefaultConfigProto(config):
     _DefaultConfigResource(config)
     _DefaultConfigIO(config)
@@ -297,3 +299,5 @@ def  _DefaultConfigCppFlags(config):
 def _TryCompleteDefaultJobConfigProto(job_conf):
     if job_conf.WhichOneof('job_type') is None:
         job_conf.predict_conf.SetInParent()
+
+default_job_conf = job_util.JobConfigProto()
