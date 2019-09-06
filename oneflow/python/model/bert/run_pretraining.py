@@ -28,7 +28,7 @@ parser.add_argument("-save", "--model_save_dir", type=str, default=_MODEL_SAVE_D
 parser.add_argument('--save_checkpoints_steps', default=10000, type=int)
 args = parser.parse_args()
 
-nodes = [{'addr':'192.168.1.15'},{'addr':'192.168.1.15'}]
+nodes = [{'addr':'192.168.1.16'},{'addr':'192.168.1.15'}]
 
 def _blob_conf(name, shape, dtype=flow.int32):
   return flow.data.BlobConf(name=name, shape=shape, dtype=dtype, codec=flow.data.RawCodec())
