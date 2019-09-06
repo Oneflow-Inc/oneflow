@@ -33,11 +33,12 @@ void BiasAddKernel<device_type, T>::ForwardDataContent(
 template<DeviceType device_type, typename T>
 void BiasAddKernel<device_type, T>::InitConstBufBlobs(
     DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  if (this->op_conf().bias_add_conf().axis() == BnInOp2Blob("a")->shape().NumAxes() - 1) {
+  Blob* bias_mul_blob = BnInOp2Blob("bias_multiplier");
+  if (bias_mul_blob) {
     InitializerConf bias_multiplier_initializer_conf;
     bias_multiplier_initializer_conf.mutable_constant_conf()->set_value(1.0f);
     NewKernelUtil<device_type>::InitializeWithConstConf(
-        ctx, bias_multiplier_initializer_conf.constant_conf(), BnInOp2Blob("bias_multiplier"));
+        ctx, bias_multiplier_initializer_conf.constant_conf(), bias_mul_blob);
   }
 }
 

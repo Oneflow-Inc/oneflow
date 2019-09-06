@@ -62,16 +62,18 @@ Maybe<void> ReduceSumOp::GetSbpSignatures(
   int32_t num_axes = JUST(LogicalBlobDesc4Ibn("in"))->shape().NumAxes();
   auto IsReducedAxis =
       ReduceSbpUtil::MakePredicatorIsReducedAxis(op_conf().reduce_sum_conf().axis(), num_axes);
+  int32_t num_reduced_axes = 0;
   FOR_RANGE(int64_t, i, 0, num_axes) {
     if (IsReducedAxis(i)) {
       SbpSignatureBuilder()
           .Split(input_bns(), i)
           .PartialSum(output_bns())
           .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+      num_reduced_axes += 1;
     } else {
       SbpSignatureBuilder()
           .Split(input_bns(), i)
-          .Split(output_bns(), i)
+          .Split(output_bns(), op_conf().reduce_sum_conf().keep_dims() ? i : i - num_reduced_axes)
           .Build(sbp_sig_list->mutable_sbp_signature()->Add());
     }
   }
