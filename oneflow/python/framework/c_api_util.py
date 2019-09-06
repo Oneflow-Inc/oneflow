@@ -17,12 +17,15 @@ def IsOpTypeCaseCpuSupportOnly(op_type_case):
     if error.HasField("error_type"): raise JobBuildAndInferError(error)
     return ret
 
-def Init(config_proto):
+def InitEnvironment(config_proto):
     assert(type(config_proto) is job_set_util.ConfigProto)
     config_proto_str = text_format.MessageToString(config_proto)
-    error_str = oneflow_internal.InitBySerializedConfigProto(config_proto_str)
+    error_str = oneflow_internal.InitEnvironmentBySerializedConfigProto(config_proto_str)
     error = text_format.Parse(error_str, error_util.ErrorProto())
     if error.HasField("error_type"): raise JobBuildAndInferError(error)
+
+def IsEnvironmentInited():
+    return oneflow_internal.IsEnvironmentInited()
 
 def InitGlobalOneflow():
     error_str = oneflow_internal.InitGlobalOneflow()
@@ -134,23 +137,16 @@ def JobBuildAndInferCtx_GetBatchAxis(job_name, lbn):
     if batch_axis.HasField("value"): return batch_axis.value
     return None
 
-def JobBuildAndInferCtx_GetHasSplitAxisFromProducerView(job_name, lbn):
-    job_name = str(job_name)
-    lbn = str(lbn)
-    has_split_axis, error_str = \
-        oneflow_internal.JobBuildAndInferCtx_GetHasSplitAxisFromProducerView(job_name, lbn)
-    error = text_format.Parse(error_str, error_util.ErrorProto())
-    if error.HasField("error_type"): raise JobBuildAndInferError(error)
-    return has_split_axis
-
 def JobBuildAndInferCtx_GetSplitAxisFromProducerView(job_name, lbn):
     job_name = str(job_name)
     lbn = str(lbn)
-    split_axis, error_str = \
+    batch_axis_str, error_str = \
         oneflow_internal.JobBuildAndInferCtx_GetSplitAxisFromProducerView(job_name, lbn)
+    batch_axis = text_format.Parse(batch_axis_str, dtype_util.OptInt64())
     error = text_format.Parse(error_str, error_util.ErrorProto())
     if error.HasField("error_type"): raise JobBuildAndInferError(error)
-    return split_axis
+    if batch_axis.HasField("value"): return batch_axis.value
+    return None
 
 def JobBuildAndInferCtx_GetParallelConfFromProducerView(job_name, lbn):
     job_name = str(job_name)

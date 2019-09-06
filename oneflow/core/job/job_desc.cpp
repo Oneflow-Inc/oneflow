@@ -63,8 +63,6 @@ int32_t JobDesc::loss_scale_factor() const {
   return loss_scale_factor;
 }
 
-int32_t JobDesc::DataPartNum() const { return job_conf_.data_part_num(); }
-
 JobDesc::JobDesc(const JobConfigProto& job_conf, int64_t job_id)
     : job_conf_(job_conf), job_id_(job_id) {
   Init();

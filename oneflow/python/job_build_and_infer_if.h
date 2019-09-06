@@ -7,220 +7,80 @@
 #include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/python/job_build_and_infer_helper.h"
 
-std::string JobBuildAndInferCtx_Open(const std::string& job_name) {
-  using namespace oneflow;
-  auto maybe_ok = TRY(Global<JobBuildAndInferCtxMgr>::Get()->OpenJobBuildAndInferCtx(job_name));
-  if (maybe_ok.IsOk() == false) { return PbMessage2TxtString(*maybe_ok.error()); }
-  return Error::Ok();
+void JobBuildAndInferCtx_Open(const std::string& job_name, std::string* error_str) {
+  return oneflow::JobBuildAndInferCtx_Open(job_name).GetDataAndSerializedErrorProto(error_str);
 }
 
 std::string JobBuildAndInferCtx_GetCurrentJobName(std::string* error_str) {
-  using namespace oneflow;
-  auto maybe_ok = TRY(Global<JobBuildAndInferCtxMgr>::Get()->GetCurrentJobName());
-  if (maybe_ok.IsOk()) {
-    *error_str = Error::Ok();
-    return *CHECK_JUST(maybe_ok);
-  } else {
-    PbMessage2TxtString(*maybe_ok.error(), error_str);
-    return "";
-  }
+  return oneflow::JobBuildAndInferCtx_GetCurrentJobName().GetDataAndSerializedErrorProto(error_str,
+                                                                                         "");
 }
 
-void JobBuildAndInferCtx_Close() {
-  using namespace oneflow;
-  Global<JobBuildAndInferCtxMgr>::Get()->CloseCurrentJobBuildAndInferCtx();
+void JobBuildAndInferCtx_Close(std::string* error_str) {
+  return oneflow::JobBuildAndInferCtx_Close().GetDataAndSerializedErrorProto(error_str);
 }
 
-std::string CurJobBuildAndInferCtx_CheckJob() {
-  using namespace oneflow;
-  std::string error_str;
-  JobBuildAndInferCtx* ctx = JobBuildAndInferHelper::GetCurInferCtx(&error_str);
-  if (ctx == nullptr) { return error_str; }
-  auto maybe_ok = TRY(ctx->CheckJob());
-  if (maybe_ok.IsOk() == false) { return PbMessage2TxtString(*maybe_ok.error()); }
-  return Error::Ok();
+void CurJobBuildAndInferCtx_CheckJob(std::string* error_str) {
+  return oneflow::CurJobBuildAndInferCtx_CheckJob().GetDataAndSerializedErrorProto(error_str);
 }
 
-std::string CurJobBuildAndInferCtx_SetJobConf(const std::string& serialized_job_conf) {
-  using namespace oneflow;
-  // parse
-  JobConfigProto job_conf;
-  if (TxtString2PbMessage(serialized_job_conf, &job_conf) == false) {
-    return Error::ProtoParseFailedError() << "job conf parse failed";
-  }
-  // get current JobBuildandInferCtx
-  std::string error_str;
-  JobBuildAndInferCtx* ctx = JobBuildAndInferHelper::GetCurInferCtx(&error_str);
-  if (ctx == nullptr) { return error_str; }
-  // set job_conf
-  auto maybe_ok = TRY(ctx->SetJobConf(job_conf));
-  if (maybe_ok.IsOk() == false) { return PbMessage2TxtString(*maybe_ok.error()); }
-  return Error::Ok();
+void CurJobBuildAndInferCtx_SetJobConf(const std::string& serialized_job_conf,
+                                       std::string* error_str) {
+  return oneflow::CurJobBuildAndInferCtx_SetJobConf(serialized_job_conf)
+      .GetDataAndSerializedErrorProto(error_str);
 }
 
 bool CurJobBuildAndInferCtx_HasJobConf(std::string* error_str) {
-  using namespace oneflow;
-  JobBuildAndInferCtx* ctx = JobBuildAndInferHelper::GetCurInferCtx(error_str);
-  if (ctx == nullptr) { return false; }
-  *error_str = Error::Ok();
-  return ctx->HasJobConf();
+  return oneflow::CurJobBuildAndInferCtx_HasJobConf().GetDataAndSerializedErrorProto(error_str,
+                                                                                     false);
 }
 
-std::string CurJobBuildAndInferCtx_AddAndInferOp(const std::string& serialized_op_conf,
-                                                 const std::string& serialized_parallel_conf) {
-  using namespace oneflow;
-  // parse
-  OperatorConf op_conf;
-  if (TxtString2PbMessage(serialized_op_conf, &op_conf) == false) {
-    return Error::ProtoParseFailedError() << "operator conf parse failed";
-  }
-  ParallelConf parallel_conf;
-  if (TxtString2PbMessage(serialized_parallel_conf, &parallel_conf) == false) {
-    return Error::ProtoParseFailedError() << "parallel conf parse failed";
-  }
-  // get current JobBuildandInferCtx
-  std::string error_str;
-  JobBuildAndInferCtx* ctx = JobBuildAndInferHelper::GetCurInferCtx(&error_str);
-  if (ctx == nullptr) { return error_str; }
-  // add and infer input_op
-  auto maybe_ok = TRY(ctx->AddAndInferOp(op_conf, parallel_conf));
-  if (maybe_ok.IsOk() == false) { return PbMessage2TxtString(*maybe_ok.error()); }
-  return Error::Ok();
+void CurJobBuildAndInferCtx_AddAndInferOp(const std::string& serialized_op_conf,
+                                          const std::string& serialized_parallel_conf,
+                                          std::string* error_str) {
+  return oneflow::CurJobBuildAndInferCtx_AddAndInferOp(serialized_op_conf, serialized_parallel_conf)
+      .GetDataAndSerializedErrorProto(error_str);
 }
 
-std::string CurJobBuildAndInferCtx_AddLossLogicalBlobName(const std::string& lbn) {
-  using namespace oneflow;
-  // get current JobBuildandInferCtx
-  std::string error_str;
-  JobBuildAndInferCtx* ctx = JobBuildAndInferHelper::GetCurInferCtx(&error_str);
-  if (ctx == nullptr) { return error_str; }
-  // add loss_lbn
-  auto maybe_ok = TRY(ctx->AddLossLogicalBlobName(lbn));
-  if (maybe_ok.IsOk() == false) { return PbMessage2TxtString(*maybe_ok.error()); }
-  return Error::Ok();
+void CurJobBuildAndInferCtx_AddLossLogicalBlobName(const std::string& lbn, std::string* error_str) {
+  return oneflow::CurJobBuildAndInferCtx_AddLossLogicalBlobName(lbn).GetDataAndSerializedErrorProto(
+      error_str);
 }
 
-std::string CurJobBuildAndInferCtx_AddPlacementGroup(const std::string& serialized_placement_grp) {
-  using namespace oneflow;
-  // parse
-  PlacementGroup placement_group;
-  if (TxtString2PbMessage(serialized_placement_grp, &placement_group) == false) {
-    return Error::ProtoParseFailedError() << "placement group parse failed";
-  }
-  // get current JobBuildandInferCtx
-  std::string error_str;
-  JobBuildAndInferCtx* ctx = JobBuildAndInferHelper::GetCurInferCtx(&error_str);
-  if (ctx == nullptr) { return error_str; }
-  // add and infer input_op
-  auto maybe_ok = TRY(ctx->AddPlacementGroup(placement_group));
-  if (maybe_ok.IsOk() == false) { return PbMessage2TxtString(*maybe_ok.error()); }
-  return Error::Ok();
+void CurJobBuildAndInferCtx_AddPlacementGroup(const std::string& serialized_placement_grp,
+                                              std::string* error_str) {
+  return oneflow::CurJobBuildAndInferCtx_AddPlacementGroup(serialized_placement_grp)
+      .GetDataAndSerializedErrorProto(error_str);
 }
 
 std::string JobBuildAndInferCtx_GetSerializedIdListAsStaticShape(const std::string& job_name,
                                                                  const std::string& lbn,
                                                                  std::string* error_str) {
-  using namespace oneflow;
-  auto maybe_ctx = TRY(Global<JobBuildAndInferCtxMgr>::Get()->FindJobBuildAndInferCtx(job_name));
-  Int64List id_list;
-  if (maybe_ctx.IsOk() == false) {
-    PbMessage2TxtString(*maybe_ctx.error(), error_str);
-    return PbMessage2TxtString(id_list);
-  }
-  auto maybe_shape = TRY(CHECK_JUST(maybe_ctx)->GetStaticShape(lbn));
-  if (maybe_shape.IsOk() == false) {
-    PbMessage2TxtString(*maybe_shape.error(), error_str);
-    return PbMessage2TxtString(id_list);
-  }
-  *error_str = Error::Ok();
-  const auto& shape = *CHECK_JUST(maybe_shape);
-  *id_list.mutable_value() = {shape.dim_vec().begin(), shape.dim_vec().end()};
-  return PbMessage2TxtString(id_list);
+  return oneflow::JobBuildAndInferCtx_GetSerializedIdListAsStaticShape(job_name, lbn)
+      .GetDataAndSerializedErrorProto(error_str, "");
 }
 
 long long JobBuildAndInferCtx_GetDataType(const std::string& job_name, const std::string& lbn,
                                           std::string* error_str) {
-  using namespace oneflow;
-  auto maybe_ctx = TRY(Global<JobBuildAndInferCtxMgr>::Get()->FindJobBuildAndInferCtx(job_name));
-  if (maybe_ctx.IsOk() == false) {
-    PbMessage2TxtString(*maybe_ctx.error(), error_str);
-    return 0LL;
-  }
-  auto maybe_data_type = TRY(CHECK_JUST(maybe_ctx)->GetDataType(lbn));
-  if (maybe_data_type.IsOk() == false) {
-    PbMessage2TxtString(*maybe_data_type.error(), error_str);
-    return 0LL;
-  }
-  *error_str = Error::Ok();
-  return *CHECK_JUST(maybe_data_type);
+  return oneflow::JobBuildAndInferCtx_GetDataType(job_name, lbn)
+      .GetDataAndSerializedErrorProto(error_str, 0LL);
 }
 
 std::string JobBuildAndInferCtx_GetBatchAxis(const std::string& job_name, const std::string& lbn,
                                              std::string* error_str) {
-  using namespace oneflow;
-  auto maybe_ctx = TRY(Global<JobBuildAndInferCtxMgr>::Get()->FindJobBuildAndInferCtx(job_name));
-  if (maybe_ctx.IsOk() == false) {
-    PbMessage2TxtString(*maybe_ctx.error(), error_str);
-    return PbMessage2TxtString(OptInt64());
-  }
-  auto maybe_has_batch_dim = TRY(CHECK_JUST(maybe_ctx)->GetBatchAxis(lbn));
-  if (maybe_has_batch_dim.IsOk() == false) {
-    PbMessage2TxtString(*maybe_has_batch_dim.error(), error_str);
-    return PbMessage2TxtString(OptInt64());
-  }
-  *error_str = Error::Ok();
-  return PbMessage2TxtString(*CHECK_JUST(maybe_has_batch_dim));
+  return oneflow::JobBuildAndInferCtx_GetBatchAxis(job_name, lbn)
+      .GetDataAndSerializedErrorProto(error_str, "");
 }
 
-bool JobBuildAndInferCtx_GetHasSplitAxisFromProducerView(const std::string& job_name,
-                                                         const std::string& lbn,
-                                                         std::string* error_str) {
-  using namespace oneflow;
-  auto maybe_ctx = TRY(Global<JobBuildAndInferCtxMgr>::Get()->FindJobBuildAndInferCtx(job_name));
-  if (maybe_ctx.IsOk() == false) {
-    PbMessage2TxtString(*maybe_ctx.error(), error_str);
-    return false;
-  }
-  auto maybe_has_split_axis = TRY(CHECK_JUST(maybe_ctx)->GetHasSplitAxisFromProducerView(lbn));
-  if (maybe_has_split_axis.IsOk() == false) {
-    PbMessage2TxtString(*maybe_has_split_axis.error(), error_str);
-    return false;
-  }
-  *error_str = Error::Ok();
-  return CHECK_JUST(maybe_has_split_axis);
-}
-
-long long JobBuildAndInferCtx_GetSplitAxisFromProducerView(const std::string& job_name,
-                                                           const std::string& lbn,
-                                                           std::string* error_str) {
-  using namespace oneflow;
-  auto maybe_ctx = TRY(Global<JobBuildAndInferCtxMgr>::Get()->FindJobBuildAndInferCtx(job_name));
-  if (maybe_ctx.IsOk() == false) {
-    PbMessage2TxtString(*maybe_ctx.error(), error_str);
-    return 0LL;
-  }
-  auto maybe_split_axis = TRY(CHECK_JUST(maybe_ctx)->GetSplitAxisFromProducerView(lbn));
-  if (maybe_split_axis.IsOk() == false) {
-    PbMessage2TxtString(*maybe_split_axis.error(), error_str);
-    return 0LL;
-  }
-  *error_str = Error::Ok();
-  return CHECK_JUST(maybe_split_axis);
+std::string JobBuildAndInferCtx_GetSplitAxisFromProducerView(const std::string& job_name,
+                                                             const std::string& lbn,
+                                                             std::string* error_str) {
+  return oneflow::JobBuildAndInferCtx_GetSplitAxisFromProducerView(job_name, lbn)
+      .GetDataAndSerializedErrorProto(error_str, "");
 }
 
 std::string JobBuildAndInferCtx_GetSerializedParallelConfFromProducerView(
     const std::string& job_name, const std::string& lbn, std::string* error_str) {
-  using namespace oneflow;
-  auto maybe_ctx = TRY(Global<JobBuildAndInferCtxMgr>::Get()->FindJobBuildAndInferCtx(job_name));
-  if (maybe_ctx.IsOk() == false) {
-    PbMessage2TxtString(*maybe_ctx.error(), error_str);
-    return PbMessage2TxtString(ParallelConf());
-  }
-  auto maybe_parallel_conf = TRY(CHECK_JUST(maybe_ctx)->GetParallelDescFromProducerView(lbn));
-  if (maybe_parallel_conf.IsOk() == false) {
-    PbMessage2TxtString(*maybe_parallel_conf.error(), error_str);
-    return PbMessage2TxtString(ParallelConf());
-  }
-  *error_str = Error::Ok();
-  return PbMessage2TxtString(CHECK_JUST(maybe_parallel_conf)->parallel_conf());
+  return oneflow::JobBuildAndInferCtx_GetSerializedParallelConfFromProducerView(job_name, lbn)
+      .GetDataAndSerializedErrorProto(error_str, "");
 }

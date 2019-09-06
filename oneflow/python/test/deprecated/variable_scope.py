@@ -8,7 +8,7 @@ of.init(config)
 
 def variable_scope_test_job_1(a=of.input_blob_def((1, 3, 6, 6))):
     job_conf = of.get_cur_job_conf_builder()
-    job_conf.batch_size(1).data_part_num(1).default_data_type(of.float)
+    job_conf.batch_size(1).default_data_type(of.float)
     with of.deprecated.variable_scope("job1_scope1"):
         convw = of.get_variable(
             "conv_weight",
@@ -61,7 +61,7 @@ def variable_scope_test_job_1(a=of.input_blob_def((1, 3, 6, 6))):
 
 def variable_scope_test_job_2(a=of.input_blob_def((2, 5))):
     job_conf = of.get_cur_job_conf_builder()
-    job_conf.batch_size(1).data_part_num(1).default_data_type(of.float)
+    job_conf.batch_size(1).default_data_type(of.float)
     with of.deprecated.variable_scope("job2_scope1"):
         indices = of.get_variable(
             "gather_inds",

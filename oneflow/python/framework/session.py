@@ -17,7 +17,7 @@ def init(config_proto):
     assert isinstance(config_proto, ConfigProto)
     config_util.TryCompleteDefaultConfigProto(config_proto)
     config_util.inited_config_proto = config_proto
-    c_api_util.Init(config_proto)
+    c_api_util.InitEnvironment(config_proto)
 
 @oneflow_export('Session')
 class Session(object):

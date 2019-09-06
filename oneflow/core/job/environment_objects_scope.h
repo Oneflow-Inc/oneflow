@@ -4,14 +4,17 @@
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job/job_set.pb.h"
 #include "oneflow/core/job/flags_and_log_scope.h"
+#include "oneflow/core/common/maybe.h"
 
 namespace oneflow {
 
 class EnvironmentObjectsScope final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(EnvironmentObjectsScope);
-  explicit EnvironmentObjectsScope(const ConfigProto& config_proto);
+  EnvironmentObjectsScope();
   ~EnvironmentObjectsScope();
+
+  Maybe<void> Init(const ConfigProto& config_proto);
 
  private:
   std::unique_ptr<FlagsAndLogScope> flags_and_log_scope_;
