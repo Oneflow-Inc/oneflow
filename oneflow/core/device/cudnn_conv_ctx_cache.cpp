@@ -60,7 +60,21 @@ bool CudnnConvCtxCache::InferCudnnConvAlgoCtxWithConfig(
   CudaCheck(cudaMalloc(&work_space, max_buf_size));
   int32_t algo_max_cnt;
   int32_t found_algo_cnt;
-  {
+  if (GlobalJobDesc().job_conf().has_cudnn_conv_force_fwd_algo()) {
+    size_t work_space_size;
+    const cudnnConvolutionFwdAlgo_t algo = static_cast<cudnnConvolutionFwdAlgo_t>(
+        GlobalJobDesc().job_conf().cudnn_conv_force_fwd_algo());
+    CudaCheck(cudnnGetConvolutionForwardWorkspaceSize(cudnn_handle, in_desc.Get(),
+                                                      filter_desc.Get(), conv_desc.Get(),
+                                                      out_desc.Get(), algo, &work_space_size));
+    if (work_space_size <= max_buf_size) {
+      conv_algo_ctx->fwd_algo_found = true;
+      conv_algo_ctx->fwd_algo = algo;
+      conv_algo_ctx->fwd_ws_size = work_space_size;
+    } else {
+      conv_algo_ctx->fwd_algo_found = false;
+    }
+  } else {
     CudaCheck(cudnnGetConvolutionForwardAlgorithmMaxCount(cudnn_handle, &algo_max_cnt));
     std::vector<cudnnConvolutionFwdAlgoPerf_t> fwd_algo_perf_vec(static_cast<size_t>(algo_max_cnt));
     CudaCheck(cudnnFindConvolutionForwardAlgorithmEx(
@@ -75,7 +89,21 @@ bool CudnnConvCtxCache::InferCudnnConvAlgoCtxWithConfig(
       conv_algo_ctx->fwd_algo_found = false;
     }
   }
-  {
+  if (GlobalJobDesc().job_conf().has_cudnn_conv_force_bwd_filter_algo()) {
+    size_t work_space_size;
+    const cudnnConvolutionBwdFilterAlgo_t algo = static_cast<cudnnConvolutionBwdFilterAlgo_t>(
+        GlobalJobDesc().job_conf().cudnn_conv_force_bwd_filter_algo());
+    CudaCheck((cudnnGetConvolutionBackwardFilterWorkspaceSize(
+        cudnn_handle, in_desc.Get(), out_desc.Get(), conv_desc.Get(), filter_desc.Get(), algo,
+        &work_space_size)));
+    if (work_space_size <= max_buf_size) {
+      conv_algo_ctx->bwd_filter_algo_found = true;
+      conv_algo_ctx->bwd_filter_algo = algo;
+      conv_algo_ctx->bwd_filter_ws_size = work_space_size;
+    } else {
+      conv_algo_ctx->bwd_filter_algo_found = false;
+    }
+  } else {
     CudaCheck(cudnnGetConvolutionBackwardFilterAlgorithmMaxCount(cudnn_handle, &algo_max_cnt));
     std::vector<cudnnConvolutionBwdFilterAlgoPerf_t> bwd_filter_algo_perf_vec(
         static_cast<size_t>(algo_max_cnt));
@@ -91,7 +119,21 @@ bool CudnnConvCtxCache::InferCudnnConvAlgoCtxWithConfig(
       conv_algo_ctx->bwd_filter_algo_found = false;
     }
   }
-  {
+  if (GlobalJobDesc().job_conf().has_cudnn_conv_force_bwd_data_algo()) {
+    size_t work_space_size;
+    const cudnnConvolutionBwdDataAlgo_t algo = static_cast<cudnnConvolutionBwdDataAlgo_t>(
+        GlobalJobDesc().job_conf().cudnn_conv_force_bwd_data_algo());
+    CudaCheck(cudnnGetConvolutionBackwardDataWorkspaceSize(cudnn_handle, filter_desc.Get(),
+                                                           out_desc.Get(), conv_desc.Get(),
+                                                           in_desc.Get(), algo, &work_space_size));
+    if (work_space_size <= max_buf_size) {
+      conv_algo_ctx->bwd_data_algo_found = true;
+      conv_algo_ctx->bwd_data_algo = algo;
+      conv_algo_ctx->bwd_data_ws_size = work_space_size;
+    } else {
+      conv_algo_ctx->bwd_data_algo_found = false;
+    }
+  } else {
     CudaCheck(cudnnGetConvolutionBackwardDataAlgorithmMaxCount(cudnn_handle, &algo_max_cnt));
     std::vector<cudnnConvolutionBwdDataAlgoPerf_t> bwd_data_algo_perf_vec(
         static_cast<size_t>(algo_max_cnt));
