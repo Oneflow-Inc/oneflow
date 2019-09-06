@@ -200,9 +200,177 @@ def set_piece_size(value):
     _SetJobConfAttr(lambda x:x, 'piece_size', value)
     return oneflow.config
 
+@oneflow_export('config.total_batch_num')
+def set_total_batch_num(value):
+    _SetJobConfAttr(lambda x:x, 'total_batch_num', value)
+    return oneflow.config
+
+@oneflow_export('config.default_data_type')
+def set_default_data_type(value):
+    _SetJobConfAttr(lambda x:x, 'default_data_type', value)
+    return oneflow.config
+
+@oneflow_export('config.max_data_id_length')
+def set_max_data_id_length(value):
+    _SetJobConfAttr(lambda x:x, 'max_data_id_length', value)
+    return oneflow.config
+
+@oneflow_export('config.default_initialize_conf')
+def set_default_initialize_conf(value):
+    assert type(val) is dict
+    conf_proto = job_util.JobConfigProto().default_initialize_conf
+    pb_util.PythonDict2PbMessage(val, conf_proto)
+    _SetJobConfAttr(lambda x:x, 'default_initialize_conf', conf_proto)
+    return oneflow.config
+
+@oneflow_export('config.exp_run_conf')
+def set_exp_run_conf(value):
+    assert type(val) is dict
+    conf_proto = job_util.JobConfigProto().exp_run_conf
+    pb_util.PythonDict2PbMessage(val, conf_proto)
+    _SetJobConfAttr(lambda x:x, 'exp_run_conf', conf_proto)
+    return oneflow.config
+
+@oneflow_export('config.enable_cudnn')
+def set_enable_cudnn(value = True):
+    _SetJobConfAttr(lambda x:x, 'enable_cudnn', value)
+    return oneflow.config
+
+@oneflow_export('config.cudnn_buf_limit_mbyte')
+def set_cudnn_buf_limit_mbyte(value):
+    _SetJobConfAttr(lambda x:x, 'cudnn_buf_limit_mbyte', value)
+    return oneflow.config
+
+@oneflow_export('config.cudnn_conv_force_fwd_algo')
+def set_cudnn_conv_force_fwd_algo(value):
+    _SetJobConfAttr(lambda x:x, 'cudnn_conv_force_fwd_algo', value)
+    return oneflow.config
+
+@oneflow_export('config.cudnn_conv_force_bwd_data_algo')
+def set_cudnn_conv_force_bwd_data_algo(value):
+    _SetJobConfAttr(lambda x:x, 'cudnn_conv_force_bwd_data_algo', value)
+    return oneflow.config
+
+@oneflow_export('config.cudnn_conv_force_bwd_filter_algo')
+def set_cudnn_conv_force_bwd_filter_algo(value):
+    _SetJobConfAttr(lambda x:x, 'cudnn_conv_force_bwd_filter_algo', value)
+    return oneflow.config
+
+@oneflow_export('config.enable_mem_sharing')
+def set_enable_mem_sharing(value = True):
+    _SetJobConfAttr(lambda x:x, 'enable_mem_sharing', value)
+    return oneflow.config
+
+@oneflow_export('config.enable_inplace')
+def set_enable_inplace(value = True):
+    _SetJobConfAttr(lambda x:x, 'enable_inplace', value)
+    return oneflow.config
+
+@oneflow_export('config.enable_nccl')
+def set_enable_nccl(value = True):
+    _SetJobConfAttr(lambda x:x, 'enable_nccl', value)
+    return oneflow.config
+
+@oneflow_export('config.use_nccl_inter_node_communication')
+def set_use_nccl_inter_node_communication(value = True):
+    _SetJobConfAttr(lambda x:x, 'use_nccl_inter_node_communication', value)
+    return oneflow.config
+
+@oneflow_export('config.enable_all_reduce_group')
+def set_enable_all_reduce_group(value = True):
+    _SetJobConfAttr(lambda x:x, 'enable_all_reduce_group', value)
+    return oneflow.config
+
+@oneflow_export('config.all_reduce_group_num')
+def set_all_reduce_group_num(value):
+    _SetJobConfAttr(lambda x:x, 'all_reduce_group_num', value)
+    return oneflow.config
+
+@oneflow_export('config.all_reduce_lazy_ratio')
+def set_all_reduce_lazy_ratio(value):
+    _SetJobConfAttr(lambda x:x, 'all_reduce_lazy_ratio', value)
+    return oneflow.config
+
+@oneflow_export('config.all_reduce_group_min_mbyte')
+def set_all_reduce_group_min_mbyte(value):
+    _SetJobConfAttr(lambda x:x, 'all_reduce_group_min_mbyte', value)
+    return oneflow.config
+
+@oneflow_export('config.all_reduce_group_size_warmup')
+def set_all_reduce_group_size_warmup(value):
+    _SetJobConfAttr(lambda x:x, 'all_reduce_group_size_warmup', value)
+    return oneflow.config
+
+@oneflow_export('config.all_reduce_fp16')
+def set_all_reduce_fp16(value = True):
+    _SetJobConfAttr(lambda x:x, 'all_reduce_fp16', value)
+    return oneflow.config
+
+@oneflow_export('config.enable_true_half_config_when_conv')
+def set_enable_true_half_config_when_conv(value = True):
+    _SetJobConfAttr(lambda x:x, 'enable_true_half_config_when_conv', value)
+    return oneflow.config
+
+@oneflow_export('config.enable_float_compute_for_half_gemm')
+def set_enable_float_compute_for_half_gemm(value = True):
+    _SetJobConfAttr(lambda x:x, 'enable_float_compute_for_half_gemm', value)
+    return oneflow.config
+
+@oneflow_export('config.enable_auto_mixed_precision')
+def set_enable_auto_mixed_precision(value = True):
+    _SetJobConfAttr(lambda x:x, 'enable_auto_mixed_precision', value)
+    return oneflow.config
+
+@oneflow_export('config.concurrency_width')
+def set_concurrency_width(value):
+    _SetJobConfAttr(lambda x:x, 'concurrency_width', value)
+    return oneflow.config
+
 @oneflow_export('config.train.batch_size')
 def set_batch_size(value):
     _SetJobConfAttr(lambda job_conf: job_conf.train_conf, 'batch_size', value)
+    return oneflow.config
+
+@oneflow_export('config.train.model_update_conf')
+def set_model_update_conf(value):
+    conf_proto = job_util.TrainConf()
+    pb_util.PythonDict2PbMessage(val, conf_proto)
+    _SetJobConfAttr(lambda job_conf: job_conf.train_conf, 'model_update_conf', conf_proto)
+    return oneflow.config
+
+@oneflow_export('config.train.loss_scale_factor')
+def set_loss_scale_factor(value):
+    _SetJobConfAttr(lambda job_conf: job_conf.train_conf, 'loss_scale_factor', value)
+    return oneflow.config
+
+@oneflow_export('config.train.primary_lr')
+def set_primary_lr(value):
+    _SetJobConfAttr(lambda job_conf: job_conf.train_conf, 'primary_lr', value)
+    return oneflow.config
+
+@oneflow_export('config.train.secondary_lr')
+def set_secondary_lr(value):
+    _SetJobConfAttr(lambda job_conf: job_conf.train_conf, 'secondary_lr', value)
+    return oneflow.config
+
+@oneflow_export('config.train.weight_l1')
+def set_weight_l1(value):
+    _SetJobConfAttr(lambda job_conf: job_conf.train_conf, 'weight_l1', value)
+    return oneflow.config
+
+@oneflow_export('config.train.bias_l1')
+def set_bias_l1(value):
+    _SetJobConfAttr(lambda job_conf: job_conf.train_conf, 'bias_l1', value)
+    return oneflow.config
+
+@oneflow_export('config.train.weight_l2')
+def set_weight_l2(value):
+    _SetJobConfAttr(lambda job_conf: job_conf.train_conf, 'weight_l2', value)
+    return oneflow.config
+
+@oneflow_export('config.train.bias_l2')
+def set_bias_l2(value):
+    _SetJobConfAttr(lambda job_conf: job_conf.train_conf, 'bias_l2', value)
     return oneflow.config
 
 def _SetJobConfAttr(GetConf, field, value):
