@@ -1,5 +1,6 @@
 from __future__ import absolute_import
 
+import oneflow as flow
 import oneflow.python.framework.compile_context as compile_context
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.id_util as id_util
@@ -110,7 +111,8 @@ def slice(input_, begin, size, name=None):
     ), "size not support dim0 slice at present, the first element of size must be set to None"
 
     slice_conf_list = []
-    for b, s, d in zip(begin, size, input_.static_shape):
+    # ignore first dimension because it's not supported yet
+    for b, s, d in zip(begin, size, input_.static_shape)[1:]:
         slice_conf = op_conf_util.DimSliceConf()
         if b < -d or b > d - 1:
             raise ValueError(
@@ -143,8 +145,7 @@ def slice(input_, begin, size, name=None):
     )
     setattr(op_conf.slice_conf, "in", input_.logical_blob_name)
     setattr(op_conf.slice_conf, "out", "out")
-    # ignore first slice conf because oneflow slice op not support dim0 slice yet
-    op_conf.slice_conf.dim_slice_conf.extend(slice_conf_list[1:])
+    op_conf.slice_conf.dim_slice_conf.extend(slice_conf_list)
 
     compile_context.CurJobAddOp(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
