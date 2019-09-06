@@ -49,9 +49,9 @@ class input_blob_def(blob_desc.BlobDesc):
 
     def split(self, split_axis):
         assert split_axis is not undefined
-        ret = self
-        ret.split_axis_ = split_axis
-        return ret
+        return input_blob_def(shape = self.shape_, dtype = self.dtype_,               \
+                        is_dynamic = self.is_dynamic_, batch_axis = self.batch_axis_, \
+                        split_axis = split_axis)
 
     def ToInterfaceBlobConf(self):
         interface_blob_conf = op_conf_util.InterfaceBlobConf()
