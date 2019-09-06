@@ -19,7 +19,7 @@ std::string JobBuildAndInferCtx_GetCurrentJobName(std::string* error_str) {
   auto maybe_ok = TRY(Global<JobBuildAndInferCtxMgr>::Get()->GetCurrentJobName());
   if (maybe_ok.IsOk()) {
     *error_str = Error::Ok();
-    return *maybe_ok.data();
+    return *CHECK_JUST(maybe_ok);
   } else {
     PbMessage2TxtString(*maybe_ok.error(), error_str);
     return "";
@@ -127,13 +127,13 @@ std::string JobBuildAndInferCtx_GetSerializedIdListAsStaticShape(const std::stri
     PbMessage2TxtString(*maybe_ctx.error(), error_str);
     return PbMessage2TxtString(id_list);
   }
-  auto maybe_shape = TRY(maybe_ctx.data()->GetStaticShape(lbn));
+  auto maybe_shape = TRY(CHECK_JUST(maybe_ctx)->GetStaticShape(lbn));
   if (maybe_shape.IsOk() == false) {
     PbMessage2TxtString(*maybe_shape.error(), error_str);
     return PbMessage2TxtString(id_list);
   }
   *error_str = Error::Ok();
-  const auto& shape = *maybe_shape.data();
+  const auto& shape = *CHECK_JUST(maybe_shape);
   *id_list.mutable_value() = {shape.dim_vec().begin(), shape.dim_vec().end()};
   return PbMessage2TxtString(id_list);
 }
@@ -146,13 +146,13 @@ long long JobBuildAndInferCtx_GetDataType(const std::string& job_name, const std
     PbMessage2TxtString(*maybe_ctx.error(), error_str);
     return 0LL;
   }
-  auto maybe_data_type = TRY(maybe_ctx.data()->GetDataType(lbn));
+  auto maybe_data_type = TRY(CHECK_JUST(maybe_ctx)->GetDataType(lbn));
   if (maybe_data_type.IsOk() == false) {
     PbMessage2TxtString(*maybe_data_type.error(), error_str);
     return 0LL;
   }
   *error_str = Error::Ok();
-  return *maybe_data_type.data();
+  return *CHECK_JUST(maybe_data_type);
 }
 
 std::string JobBuildAndInferCtx_GetBatchAxis(const std::string& job_name, const std::string& lbn,
@@ -163,13 +163,13 @@ std::string JobBuildAndInferCtx_GetBatchAxis(const std::string& job_name, const 
     PbMessage2TxtString(*maybe_ctx.error(), error_str);
     return PbMessage2TxtString(OptInt64());
   }
-  auto maybe_has_batch_dim = TRY(maybe_ctx.data()->GetBatchAxis(lbn));
+  auto maybe_has_batch_dim = TRY(CHECK_JUST(maybe_ctx)->GetBatchAxis(lbn));
   if (maybe_has_batch_dim.IsOk() == false) {
     PbMessage2TxtString(*maybe_has_batch_dim.error(), error_str);
     return PbMessage2TxtString(OptInt64());
   }
   *error_str = Error::Ok();
-  return PbMessage2TxtString(*maybe_has_batch_dim.data());
+  return PbMessage2TxtString(*CHECK_JUST(maybe_has_batch_dim));
 }
 
 bool JobBuildAndInferCtx_GetHasSplitAxisFromProducerView(const std::string& job_name,
@@ -181,13 +181,13 @@ bool JobBuildAndInferCtx_GetHasSplitAxisFromProducerView(const std::string& job_
     PbMessage2TxtString(*maybe_ctx.error(), error_str);
     return false;
   }
-  auto maybe_has_split_axis = TRY(maybe_ctx.data()->GetHasSplitAxisFromProducerView(lbn));
+  auto maybe_has_split_axis = TRY(CHECK_JUST(maybe_ctx)->GetHasSplitAxisFromProducerView(lbn));
   if (maybe_has_split_axis.IsOk() == false) {
     PbMessage2TxtString(*maybe_has_split_axis.error(), error_str);
     return false;
   }
   *error_str = Error::Ok();
-  return maybe_has_split_axis.data();
+  return CHECK_JUST(maybe_has_split_axis);
 }
 
 long long JobBuildAndInferCtx_GetSplitAxisFromProducerView(const std::string& job_name,
@@ -199,13 +199,13 @@ long long JobBuildAndInferCtx_GetSplitAxisFromProducerView(const std::string& jo
     PbMessage2TxtString(*maybe_ctx.error(), error_str);
     return 0LL;
   }
-  auto maybe_split_axis = TRY(maybe_ctx.data()->GetSplitAxisFromProducerView(lbn));
+  auto maybe_split_axis = TRY(CHECK_JUST(maybe_ctx)->GetSplitAxisFromProducerView(lbn));
   if (maybe_split_axis.IsOk() == false) {
     PbMessage2TxtString(*maybe_split_axis.error(), error_str);
     return 0LL;
   }
   *error_str = Error::Ok();
-  return maybe_split_axis.data();
+  return CHECK_JUST(maybe_split_axis);
 }
 
 std::string JobBuildAndInferCtx_GetSerializedParallelConfFromProducerView(
@@ -216,11 +216,11 @@ std::string JobBuildAndInferCtx_GetSerializedParallelConfFromProducerView(
     PbMessage2TxtString(*maybe_ctx.error(), error_str);
     return PbMessage2TxtString(ParallelConf());
   }
-  auto maybe_parallel_conf = TRY(maybe_ctx.data()->GetParallelDescFromProducerView(lbn));
+  auto maybe_parallel_conf = TRY(CHECK_JUST(maybe_ctx)->GetParallelDescFromProducerView(lbn));
   if (maybe_parallel_conf.IsOk() == false) {
     PbMessage2TxtString(*maybe_parallel_conf.error(), error_str);
     return PbMessage2TxtString(ParallelConf());
   }
   *error_str = Error::Ok();
-  return PbMessage2TxtString(maybe_parallel_conf.data()->parallel_conf());
+  return PbMessage2TxtString(CHECK_JUST(maybe_parallel_conf)->parallel_conf());
 }

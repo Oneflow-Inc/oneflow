@@ -14,7 +14,6 @@ import "oneflow/core/job/sbp_parallel.proto";
 message TrainConf {
   required int64 batch_size = 1; // batch_size % piece_size = 0
   required NormalModelUpdateOpUserConf model_update_conf = 3;
-  required int32 num_of_batches_in_snapshot = 5;
   repeated string loss_lbn = 6;
   optional int32 loss_scale_factor = 7 [default = 1];
   optional string train_step_lbn = 8;

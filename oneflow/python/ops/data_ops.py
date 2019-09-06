@@ -126,7 +126,7 @@ def decode_ofrecord(ofrecord_dir, blobs, name=None):
 
     op_conf.decode_ofrecord_conf.data_dir = ofrecord_dir
     for blob_conf in blobs:
-        op_conf.decode_ofrecord_conf.blob.append(blob_conf.to_proto())
+        op_conf.decode_ofrecord_conf.blob.extend([blob_conf.to_proto()])
         lbi = logical_blob_id_util.LogicalBlobId()
         lbi.op_name = name
         lbi.blob_name = blob_conf.name
