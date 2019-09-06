@@ -5,10 +5,10 @@ import oneflow.python.framework.job_builder as job_builder
 from contextlib import contextmanager
 
 @contextmanager
-def CurJob(job):
-    _ResetCurJob(job)
+def CurJobConf(job_conf):
+    _ResetCurJobConf(job_conf)
     yield None
-    _ResetCurJob(None)
+    _ResetCurJobConf(None)
 
 class BeforeNonInputOpBuildAndInferHook:
     def __init__(self, hook):
@@ -35,9 +35,9 @@ def _CurJobAddNonInputOp(op_conf):
     job_builder.CurCtxAddAndInferOp(op_conf, placement_context.ParallelConf4OpConf(op_conf))
     placement_context.CurPlacementGroupAddOpConf(op_conf)
 
-def _ResetCurJob(job):
-    global cur_job
-    cur_job = job
+def _ResetCurJobConf(job_conf):
+    global cur_job_conf
+    cur_job_conf = job_conf
     global cur_job_var_op_name2var_blob
     cur_job_var_op_name2var_blob = {}
     global cur_job_variable_scope_stack
@@ -65,8 +65,7 @@ def _get_variable_prefix():
 
     return "-".join(cur_job_variable_scope_stack) + "-"
 
-
-cur_job = None
+cur_job_conf = None
 cur_job_var_op_name2var_blob = {}
 before_non_input_op_build_and_infer_hooks = []
 cur_job_variable_scope_stack = []

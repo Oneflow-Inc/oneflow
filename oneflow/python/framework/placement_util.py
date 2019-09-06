@@ -49,7 +49,6 @@ class PlacementScope(object):
             placement_group.op_set.op_name.extend(op_names)
             placement_group.parallel_conf.CopyFrom(parallel_conf)
             job_builder.CurCtxAddPlacementGroup(placement_group)
-            compile_context.cur_job.placement.placement_group.add().CopyFrom(placement_group)
 
 @oneflow_export('fixed_placement')
 class FixedPlacementScope(PlacementScope):
