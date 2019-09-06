@@ -5,8 +5,14 @@ bool IsOpTypeCaseCpuSupportOnly(int64_t op_type_case, std::string* error_str) {
       .GetDataAndSerializedErrorProto(error_str, false);
 }
 
-void InitBySerializedConfigProto(const std::string& config_proto_str, std::string* error_str) {
-  return oneflow::InitBySerializedConfigProto(config_proto_str)
+bool IsEnvironmentInited() {
+  using namespace oneflow;
+  return Global<EnvironmentObjectsScope>::Get() != nullptr;
+}
+
+void InitEnvironmentBySerializedConfigProto(const std::string& config_proto_str,
+                                            std::string* error_str) {
+  return oneflow::InitEnvironmentBySerializedConfigProto(config_proto_str)
       .GetDataAndSerializedErrorProto(error_str);
 }
 
