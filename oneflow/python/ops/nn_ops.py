@@ -28,7 +28,7 @@ def conv2d(
             "strides length must be 2 when passed as a list."
         )
     elif isinstance(strides, int):
-        strides = [strides] * 2
+        strides = [strides, strides]
     else:
         raise ValueError("strides must be an int or a list.")
 
@@ -43,18 +43,19 @@ def conv2d(
     )
 
     if dilations is None:
-        dilations = [1] * 2
+        dilations = [1, 1]
     else:
         if isinstance(dilations, (list, tuple)):
             assert len(dilations) == 2, ValueError(
                 "dilations length must be 2 when passed as a list."
             )
         elif isinstance(dilations, int):
-            dilations = [dilations] * 2
+            dilations = [dilations, dilations]
         else:
             raise ValueError("dilations must be an int or a list.")
 
     op_conf = op_conf_util.OperatorConf()
+    setattr(op_conf, "name", name if name is not None else id_util.UniqueStr("Conv2d_"))
     setattr(op_conf.conv_2d_conf, "in", input.logical_blob_name)
     op_conf.conv_2d_conf.out = "out"
     op_conf.conv_2d_conf.weight = filters.logical_blob_name
@@ -70,11 +71,6 @@ def conv2d(
     op_conf.conv_2d_conf.strides.extend(strides)
     op_conf.conv_2d_conf.dilation_rate.extend(dilations)
     op_conf.conv_2d_conf.use_bias = False
-
-    if name is None:
-        op_conf.name = id_util.UniqueStr("Conv2d_")
-    else:
-        op_conf.name = name
 
     compile_context.CurJobAddOp(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
