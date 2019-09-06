@@ -217,18 +217,15 @@ def set_max_data_id_length(value):
 
 @oneflow_export('config.default_initialize_conf')
 def set_default_initialize_conf(value):
-    assert type(val) is dict
-    conf_proto = job_util.JobConfigProto().default_initialize_conf
-    pb_util.PythonDict2PbMessage(val, conf_proto)
-    _SetJobConfAttr(lambda x:x, 'default_initialize_conf', conf_proto)
+    assert type(value) is dict
+    pb_msg = _GetJobConfAttr(lambda x:x, 'default_initialize_conf')
+    pb_util.PythonDict2PbMessage(value, pb_msg)
     return oneflow.config
 
 @oneflow_export('config.exp_run_conf')
 def set_exp_run_conf(value):
-    assert type(val) is dict
-    conf_proto = job_util.JobConfigProto().exp_run_conf
-    pb_util.PythonDict2PbMessage(val, conf_proto)
-    _SetJobConfAttr(lambda x:x, 'exp_run_conf', conf_proto)
+    assert type(value) is dict
+    pb_util.PythonDict2PbMessage(value, _GetJobConfAttr(lambda x:x, 'exp_run_conf'))
     return oneflow.config
 
 @oneflow_export('config.enable_cudnn')
@@ -333,9 +330,9 @@ def set_batch_size(value):
 
 @oneflow_export('config.train.model_update_conf')
 def set_model_update_conf(value):
-    conf_proto = job_util.TrainConf().model_update_conf
-    pb_util.PythonDict2PbMessage(value, conf_proto)
-    _SetJobConfAttr(lambda job_conf: job_conf.train_conf, 'model_update_conf', conf_proto)
+    assert type(value) is dict
+    pb_msg = _GetJobConfAttr(lambda job_conf: job_conf.train_conf, 'model_update_conf')
+    pb_util.PythonDict2PbMessage(value, pb_msg)
     return oneflow.config
 
 @oneflow_export('config.train.loss_scale_factor')
@@ -380,5 +377,13 @@ def _SetJobConfAttr(GetConf, field, value):
     else:
         assert c_api_util.IsEnvironmentInited() == False
         setattr(GetConf(default_job_conf), field, value)
+
+def _GetJobConfAttr(GetConf, field):
+    if compile_context.cur_job_conf is not None:
+        assert c_api_util.CurJobBuildAndInferCtx_HasJobConf() == False
+        return getattr(GetConf(compile_context.cur_job_conf), field)
+    else:
+        assert c_api_util.IsEnvironmentInited() == False
+        return getattr(GetConf(default_job_conf), field)
 
 default_job_conf = job_util.JobConfigProto()
