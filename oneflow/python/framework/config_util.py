@@ -343,21 +343,6 @@ def set_loss_scale_factor(value):
     _SetJobConfAttr(lambda job_conf: job_conf.train_conf, 'loss_scale_factor', value)
     return oneflow.config
 
-@oneflow_export('config.train.train_step_lbn')
-def set_train_step_lbn(value):
-    _SetJobConfAttr(lambda job_conf: job_conf.train_conf, 'train_step_lbn', value)
-    return oneflow.config
-
-@oneflow_export('config.train.primary_lr_lbn')
-def set_primary_lr_lbn(value):
-    _SetJobConfAttr(lambda job_conf: job_conf.train_conf, 'primary_lr_lbn', value)
-    return oneflow.config
-
-@oneflow_export('config.train.secondary_lr_lbn')
-def set_secondary_lr_lbn(value):
-    _SetJobConfAttr(lambda job_conf: job_conf.train_conf, 'secondary_lr_lbn', value)
-    return oneflow.config
-
 @oneflow_export('config.train.primary_lr')
 def set_primary_lr(value):
     _SetJobConfAttr(lambda job_conf: job_conf.train_conf, 'primary_lr', value)
