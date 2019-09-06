@@ -29,7 +29,7 @@ Maybe<void> InitBySerializedConfigProto(const std::string& config_proto_str) {
   using namespace oneflow;
   ConfigProto config_proto;
   OF_CHECK(google::protobuf::TextFormat::ParseFromString(config_proto_str, &config_proto))
-      << "InitBySerializedConfigProto(): failed to parse config_proto: " << config_proto;
+      << "InitBySerializedConfigProto(): failed to parse config_proto: " << config_proto_str;
   OF_CHECK_ISNULL(Global<EnvironmentObjectsScope>::Get());
   // Global<T>::New is not allowed to be called here
   // because glog is not constructed yet and LOG(INFO) has bad bahavior
@@ -42,9 +42,7 @@ Maybe<void> InitBySerializedConfigProto(const std::string& config_proto_str) {
     ConfigProto master_config_proto;
     Global<CtrlClient>::Get()->PullKV("master_config_proto", &master_config_proto);
     OF_CHECK(PbMd().Equals(config_proto, master_config_proto))
-        << "InitBySerializedConfigProto(): config_proto not equals master_config_proto "
-        << "( config proto: " << config_proto << ", master_config_proto: " << master_config_proto
-        << " )";
+        << "InitBySerializedConfigProto(): config_proto not equals master_config_proto";
 
     while (ClusterControl::WorkerReceiveHalt() == false) {
       JobSet job_set;
