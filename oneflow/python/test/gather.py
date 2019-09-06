@@ -12,7 +12,7 @@ def gather_test_job_1(
 ):
     r"""1-D indices gather test job"""
     job_conf = oneflow.get_cur_job_conf_builder()
-    job_conf.batch_size(1).data_part_num(1).default_data_type(oneflow.float)
+    job_conf.batch_size(1).default_data_type(oneflow.float)
     return oneflow.gather(a, b, axis=1)
 
 
@@ -22,7 +22,7 @@ def gather_test_job_2(
 ):
     r"""(>1)-D indices gather test job"""
     job_conf = oneflow.get_cur_job_conf_builder()
-    job_conf.batch_size(1).data_part_num(1).default_data_type(oneflow.float)
+    job_conf.batch_size(1).default_data_type(oneflow.float)
     return oneflow.gather(a, b, axis=1)
 
 
@@ -32,7 +32,7 @@ def gather_test_job_3(
 ):
     r"""batch_gather test job (batch_dims==axis)"""
     job_conf = oneflow.get_cur_job_conf_builder()
-    job_conf.batch_size(1).data_part_num(1).default_data_type(oneflow.float)
+    job_conf.batch_size(1).default_data_type(oneflow.float)
     return oneflow.gather(a, b, batch_dims=1)
 
 
@@ -42,7 +42,7 @@ def gather_test_job_4(
 ):
     r"""gather & batch_gather mixed test job (batch_dims==1, axis>batch_dims)"""
     job_conf = oneflow.get_cur_job_conf_builder()
-    job_conf.batch_size(1).data_part_num(1).default_data_type(oneflow.float)
+    job_conf.batch_size(1).default_data_type(oneflow.float)
     return oneflow.gather(a, b, axis=2, batch_dims=1)
 
 
