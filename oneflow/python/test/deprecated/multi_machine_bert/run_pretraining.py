@@ -54,7 +54,7 @@ def BertDecoder(dl_net, data_dir='', seq_length=128, max_predictions_per_seq=20)
       'data_type': flow.float,
       'encode_case': {'raw': {}},
     }
-  ]);
+  ], data_part_num=4);
 
 def BuildPreTrainNetWithDeprecatedAPI(seq_length=128, max_position_embeddings=512,
                                       num_hidden_layers=12, num_attention_heads=12,
@@ -126,7 +126,7 @@ _BERT_MODEL_UPDATE_CONF = dict(
 
 def PretrainJob():
     job_conf = flow.get_cur_job_conf_builder()
-    job_conf.batch_size(96).data_part_num(4).default_data_type(flow.float)
+    job_conf.batch_size(96).default_data_type(flow.float)
     job_conf.default_initializer_conf(dict(constant_conf=dict(value=0.0)))
     job_conf.train_conf()
     job_conf.train_conf().primary_lr = 1e-4

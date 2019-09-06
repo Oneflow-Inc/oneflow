@@ -12,7 +12,6 @@ import oneflow.python.framework.job_set_util as job_set_util
 from oneflow.python.framework.out_remote_blobs_result_box import OutRemoteBlobsResultBox
 from oneflow.python.oneflow_export import oneflow_export
 
-
 def try_init_default_session(func):
     @functools.wraps(func)
     def Func(*args, **kwargs):
@@ -27,11 +26,9 @@ class Session(object):
         self.running_job_cnt_ = 0
         runtime_ctx.AddJobInstancePreLaunchCallbacks(self._PreLaunchCallback)
         runtime_ctx.AddJobInstancePostFinishCallbacks(self._PostFinishCallback)
-        global environment_inited
-        assert environment_inited == False
-        c_api_util.Init(config_util.default_config_proto)
+        assert c_api_util.IsEnvironmentInited() == False
+        c_api_util.InitEnvironment(config_util.default_config_proto)
         config_util.config_proto_mutable = False
-        environment_inited = True
         job_set_util.compile_all_job()
         self.is_running_ = True
         self.runtime_env_ = runtime.GetMachineRuntimeEnv()
@@ -97,4 +94,3 @@ def GetDefaultSession():
     return _default_session
 
 _default_session = None
-environment_inited = False

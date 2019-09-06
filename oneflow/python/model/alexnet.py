@@ -93,7 +93,7 @@ def _data_load_layer(data_dir):
     )
 
     return flow.data.decode_ofrecord(
-        data_dir, (label_blob_conf, image_blob_conf), name="decode"
+        data_dir, (label_blob_conf, image_blob_conf), data_part_num=8, name="decode"
     )
 
 
@@ -171,7 +171,7 @@ def alexnet(images, labels, trainable=True):
 @flow.function
 def alexnet_train_job():
     job_conf = flow.get_cur_job_conf_builder()
-    job_conf.batch_size(12).data_part_num(8).default_data_type(flow.float)
+    job_conf.batch_size(12).default_data_type(flow.float)
     job_conf.train_conf()
     job_conf.train_conf().batch_size = 12
     job_conf.train_conf().primary_lr = 0.00001
@@ -186,7 +186,7 @@ def alexnet_train_job():
 @flow.function
 def alexnet_eval_job():
     job_conf = flow.get_cur_job_conf_builder()
-    job_conf.batch_size(12).data_part_num(8).default_data_type(flow.float)
+    job_conf.batch_size(12).default_data_type(flow.float)
     (labels, images) = _data_load_layer(args.eval_dir)
     return alexnet(images, labels, False)
 

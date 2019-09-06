@@ -171,3 +171,98 @@ def broadcast_div(x, y, name=None):
     lbi.op_name = op_conf.name
     lbi.blob_name = "out"
     return remote_blob_util.RemoteBlob(lbi)
+
+@oneflow_export('math.tanh')
+def tanh(x, name=None):
+    op_conf = op_conf_util.OperatorConf()
+    setattr(op_conf, "name", name if name is not None else id_util.UniqueStr('TanH_'))
+    setattr(op_conf.tanh_conf, "in", x.logical_blob_name)
+    setattr(op_conf.tanh_conf, "out", "out")
+    compile_context.CurJobAddOp(op_conf)
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = "out"
+    return remote_blob_util.RemoteBlob(lbi)
+
+
+@oneflow_export('math.gelu')
+def gelu(x, name=None):
+    op_conf = op_conf_util.OperatorConf()
+    setattr(op_conf, "name", name if name is not None else id_util.UniqueStr('Gelu_'))
+    setattr(op_conf.gelu_conf, "in", x.logical_blob_name)
+    setattr(op_conf.gelu_conf, "out", "out")
+    compile_context.CurJobAddOp(op_conf)
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = "out"
+    return remote_blob_util.RemoteBlob(lbi)
+
+
+@oneflow_export('math.relu')
+def relu(x, name=None):
+    op_conf = op_conf_util.OperatorConf()
+    setattr(op_conf, "name", name if name is not None else id_util.UniqueStr('Relu_'))
+    setattr(op_conf.relu_conf, "in", x.logical_blob_name)
+    setattr(op_conf.relu_conf, "out", "out")
+    compile_context.CurJobAddOp(op_conf)
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = "out"
+    return remote_blob_util.RemoteBlob(lbi)
+
+
+@oneflow_export('math.sigmoid')
+def sigmoid(x, name=None):
+    op_conf = op_conf_util.OperatorConf()
+    setattr(op_conf, "name", name if name is not None else id_util.UniqueStr('Sigmoid_'))
+    setattr(op_conf.sigmoid_conf, "in", x.logical_blob_name)
+    setattr(op_conf.sigmoid_conf, "out", "out")
+    compile_context.CurJobAddOp(op_conf)
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = "out"
+    return remote_blob_util.RemoteBlob(lbi)
+
+
+def sqrt(x, name=None):
+    # TODO: not ready yet
+    raise NotImplementedError
+    op_conf = op_conf_util.OperatorConf()
+    setattr(op_conf, "name", name if name is not None else id_util.UniqueStr('Sqrt_'))
+    setattr(op_conf.sqrt_conf, "in", x.logical_blob_name)
+    setattr(op_conf.sqrt_conf, "out", "out")
+    compile_context.CurJobAddOp(op_conf)
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = "out"
+    return remote_blob_util.RemoteBlob(lbi)
+
+
+def rsqrt(x, name=None):
+    # TODO: not ready yet
+    raise NotImplementedError
+    op_conf = op_conf_util.OperatorConf()
+    setattr(op_conf, "name", name if name is not None else id_util.UniqueStr('Rsqrt_'))
+    setattr(op_conf.rsqrt_conf, "in", x.logical_blob_name)
+    setattr(op_conf.rsqrt_conf, "out", "out")
+    compile_context.CurJobAddOp(op_conf)
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = "out"
+    return remote_blob_util.RemoteBlob(lbi)
+
+
+@oneflow_export("cast")
+def cast(x, dtype, name=None):
+    if x.dtype == dtype:
+        return x
+    op_conf = op_conf_util.OperatorConf()
+    setattr(op_conf, "name", name if name is not None else id_util.UniqueStr('Cast_'))
+    setattr(op_conf.cast_conf, "in", x.logical_blob_name)
+    setattr(op_conf.cast_conf, "data_type", dtype)
+    setattr(op_conf.cast_conf, "out", "out")
+    compile_context.CurJobAddOp(op_conf)
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = "out"
+    return remote_blob_util.RemoteBlob(lbi)
