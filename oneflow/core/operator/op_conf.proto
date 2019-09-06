@@ -891,9 +891,10 @@ message RecordLoadOpConf {
   optional string tick  = 1;
   required string out = 2;
   required string data_dir = 3;
-  optional string part_name_prefix = 4 [default = "part-"];
-  optional int32 part_name_suffix_length = 5 [default = -1];
-  optional RandomShuffleConf random_shuffle_conf = 6;
+  required int32 data_part_num = 4;
+  optional string part_name_prefix = 5 [default = "part-"];
+  optional int32 part_name_suffix_length = 6 [default = -1];
+  optional RandomShuffleConf random_shuffle_conf = 7;
 }
 
 message BlobConf {
@@ -907,11 +908,12 @@ message BlobConf {
 
 message DecodeOFRecordOpConf {
   required string data_dir = 1;
-  optional string part_name_prefix = 2 [default = "part-"];
-  optional int32 part_name_suffix_length = 3 [default = -1];
-  optional string in = 4;
-  repeated BlobConf blob = 5;
-  optional RandomShuffleConf random_shuffle_conf = 6;
+  required int32 data_part_num = 2; // piece_size % data_part_num = 0
+  optional string part_name_prefix = 3 [default = "part-"];
+  optional int32 part_name_suffix_length = 4 [default = -1];
+  optional string in = 5;
+  repeated BlobConf blob = 6;
+  optional RandomShuffleConf random_shuffle_conf = 7;
 }
 
 message DecodeRandomOpConf {

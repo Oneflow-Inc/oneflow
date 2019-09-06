@@ -1,7 +1,8 @@
 #ifndef ONEFLOW_CORE_COMMON_MAYBE_H_
 #define ONEFLOW_CORE_COMMON_MAYBE_H_
 
-#include "oneflow/core/common/util.h"
+#include <glog/logging.h>
+#include <google/protobuf/text_format.h>
 #include "oneflow/core/common/either_ptr.h"
 #include "oneflow/core/common/shared_or_plain.h"
 #include "oneflow/core/common/error.h"
@@ -21,10 +22,20 @@ class Maybe final {
   ~Maybe() = default;
 
   bool IsOk() const { return data_or_error_.template Has<T>(); }
-  std::shared_ptr<T> Data_YouAreNotAllowedToCallThisOutsideJustOrCheckJust() const {
+  std::shared_ptr<T> Data_YouAreNotAllowedToCallThisFuncOutsideThisFile() const {
     return data_or_error_.template Get<T>();
   }
   std::shared_ptr<ErrorProto> error() const { return data_or_error_.template Get<ErrorProto>(); }
+
+  T GetDataAndSerializedErrorProto(std::string* error_str, const T& default_for_error) const {
+    if (IsOk()) {
+      google::protobuf::TextFormat::PrintToString(ErrorProto(), error_str);
+      return *Data_YouAreNotAllowedToCallThisFuncOutsideThisFile();
+    } else {
+      google::protobuf::TextFormat::PrintToString(*error(), error_str);
+      return default_for_error;
+    }
+  }
 
  private:
   EitherPtr<T, ErrorProto> data_or_error_;
@@ -42,8 +53,16 @@ class Maybe<void> final {
   static Maybe<void> Ok() { return Maybe<void>(); }
 
   bool IsOk() const { return error_or_plain_.IsPlain(); }
-  void Data_YouAreNotAllowedToCallThisOutsideJustOrCheckJust() const {}
+  void Data_YouAreNotAllowedToCallThisFuncOutsideThisFile() const {}
   std::shared_ptr<ErrorProto> error() const { return error_or_plain_.shared_ptr(); }
+
+  void GetDataAndSerializedErrorProto(std::string* error_str) const {
+    if (IsOk()) {
+      google::protobuf::TextFormat::PrintToString(ErrorProto(), error_str);
+    } else {
+      google::protobuf::TextFormat::PrintToString(*error(), error_str);
+    }
+  }
 
  private:
   Maybe() : error_or_plain_(nullptr) {}
@@ -52,28 +71,38 @@ class Maybe<void> final {
   SharedOrPlain<ErrorProto, void*> error_or_plain_;
 };
 
-#define SPECIALIZE_PLAIN_MAYBE(T)                                                              \
-  class Maybe<T> final {                                                                       \
-   public:                                                                                     \
-    Maybe(T data) : error_or_plain_(data) {}                                                   \
-    Maybe(const Error& error) : error_or_plain_(error.error_proto()) { CheckError(); }         \
-    Maybe(const std::shared_ptr<ErrorProto>& error) : error_or_plain_(error) { CheckError(); } \
-    Maybe(const Maybe<T>&) = default;                                                          \
-    Maybe(Maybe<T>&&) = default;                                                               \
-    ~Maybe() = default;                                                                        \
-                                                                                               \
-    bool IsOk() const { return error_or_plain_.IsPlain(); }                                    \
-    T Data_YouAreNotAllowedToCallThisOutsideJustOrCheckJust() const {                          \
-      return error_or_plain_.plain_data();                                                     \
-    }                                                                                          \
-    std::shared_ptr<ErrorProto> error() const { return error_or_plain_.shared_ptr(); }         \
-                                                                                               \
-   private:                                                                                    \
-    void CheckError() const {                                                                  \
-      CHECK_NE(error()->error_type_case(), ErrorProto::ERROR_TYPE_NOT_SET);                    \
-    }                                                                                          \
-                                                                                               \
-    SharedOrPlain<ErrorProto, T> error_or_plain_;                                              \
+#define SPECIALIZE_PLAIN_MAYBE(T)                                                                \
+  class Maybe<T> final {                                                                         \
+   public:                                                                                       \
+    Maybe(T data) : error_or_plain_(data) {}                                                     \
+    Maybe(const Error& error) : error_or_plain_(error.error_proto()) { CheckError(); }           \
+    Maybe(const std::shared_ptr<ErrorProto>& error) : error_or_plain_(error) { CheckError(); }   \
+    Maybe(const Maybe<T>&) = default;                                                            \
+    Maybe(Maybe<T>&&) = default;                                                                 \
+    ~Maybe() = default;                                                                          \
+                                                                                                 \
+    bool IsOk() const { return error_or_plain_.IsPlain(); }                                      \
+    T Data_YouAreNotAllowedToCallThisFuncOutsideThisFile() const {                               \
+      return error_or_plain_.plain_data();                                                       \
+    }                                                                                            \
+    std::shared_ptr<ErrorProto> error() const { return error_or_plain_.shared_ptr(); }           \
+                                                                                                 \
+    T GetDataAndSerializedErrorProto(std::string* error_str, const T& default_for_error) const { \
+      if (IsOk()) {                                                                              \
+        google::protobuf::TextFormat::PrintToString(ErrorProto(), error_str);                    \
+        return Data_YouAreNotAllowedToCallThisFuncOutsideThisFile();                             \
+      } else {                                                                                   \
+        google::protobuf::TextFormat::PrintToString(*error(), error_str);                        \
+        return default_for_error;                                                                \
+      }                                                                                          \
+    }                                                                                            \
+                                                                                                 \
+   private:                                                                                      \
+    void CheckError() const {                                                                    \
+      CHECK_NE(error()->error_type_case(), ErrorProto::ERROR_TYPE_NOT_SET);                      \
+    }                                                                                            \
+                                                                                                 \
+    SharedOrPlain<ErrorProto, T> error_or_plain_;                                                \
   }
 
 template<typename T>
@@ -117,13 +146,13 @@ inline Maybe<T> MaybeFuncSafeCallWrapper(Maybe<T>&& maybe) {
       LOG(INFO) << "maybe failed:" << __LOC__;                            \
       return maybe.error();                                               \
     }                                                                     \
-    maybe.Data_YouAreNotAllowedToCallThisOutsideJustOrCheckJust();        \
+    maybe.Data_YouAreNotAllowedToCallThisFuncOutsideThisFile();           \
   })
 #define CHECK_JUST(...)                                                   \
   ({                                                                      \
     const auto& maybe = MaybeFuncSafeCallWrapper(std::move(__VA_ARGS__)); \
     CHECK(maybe.IsOk());                                                  \
-    maybe.Data_YouAreNotAllowedToCallThisOutsideJustOrCheckJust();        \
+    maybe.Data_YouAreNotAllowedToCallThisFuncOutsideThisFile();           \
   })
 
 #else

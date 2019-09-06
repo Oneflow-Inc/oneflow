@@ -31,7 +31,8 @@ SnapshotWriter::SnapshotWriter(const std::string& snapshot_root_path)
   if (SnapshotFS()->FileExists(snapshot_root_path)) {
     CHECK(SnapshotFS()->IsDirectory(snapshot_root_path))
         << "root directory of model snapshot not found, path: " << snapshot_root_path;
-    CHECK(SnapshotFS()->IsDirEmpty(snapshot_root_path));
+    CHECK(SnapshotFS()->IsDirEmpty(snapshot_root_path))
+        << "root directory of model snapshot not empty, path: " << snapshot_root_path;
   } else {
     SnapshotFS()->CreateDir(snapshot_root_path);
   }

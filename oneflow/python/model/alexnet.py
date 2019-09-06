@@ -93,7 +93,7 @@ def _data_load_layer(data_dir):
     )
 
     return flow.data.decode_ofrecord(
-        data_dir, (label_blob_conf, image_blob_conf), name="decode"
+        data_dir, (label_blob_conf, image_blob_conf), data_part_num=8, name="decode"
     )
 
 
@@ -171,11 +171,10 @@ def alexnet(images, labels, trainable=True):
 
 def alexnet_train_job():
     job_conf = flow.get_cur_job_conf_builder()
-    job_conf.batch_size(12).data_part_num(8).default_data_type(flow.float)
+    job_conf.batch_size(12).default_data_type(flow.float)
     job_conf.train_conf()
     job_conf.train_conf().batch_size = 12
     job_conf.train_conf().primary_lr = 0.00001
-    job_conf.train_conf().num_of_batches_in_snapshot = 100
     job_conf.train_conf().model_update_conf.naive_conf.SetInParent()
 
     (labels, images) = _data_load_layer(args.train_dir)
@@ -186,14 +185,14 @@ def alexnet_train_job():
 
 def alexnet_eval_job():
     job_conf = flow.get_cur_job_conf_builder()
-    job_conf.batch_size(12).data_part_num(8).default_data_type(flow.float)
+    job_conf.batch_size(12).default_data_type(flow.float)
     (labels, images) = _data_load_layer(args.eval_dir)
     return alexnet(images, labels, False)
 
 
 if __name__ == "__main__":
     config = flow.ConfigProtoBuilder()
-    config.gpu_device_num(1)
+    config.gpu_device_num(args.gpu_num_per_node)
     config.grpc_use_no_signal()
     config.ctrl_port(9788)
     if args.multinode:

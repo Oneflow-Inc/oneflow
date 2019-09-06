@@ -29,8 +29,7 @@ class JobBuildAndInferCtx {
   Maybe<Shape> GetStaticShape(const std::string& lbn) const;
   Maybe<DataType> GetDataType(const std::string& lbn) const;
   Maybe<OptInt64> GetBatchAxis(const std::string& lbn) const;
-  Maybe<bool> GetHasSplitAxisFromProducerView(const std::string& lbn) const;
-  Maybe<int64_t> GetSplitAxisFromProducerView(const std::string& lbn) const;
+  Maybe<OptInt64> GetSplitAxisFromProducerView(const std::string& lbn) const;
   Maybe<const ParallelDesc*> GetParallelDescFromProducerView(const std::string& lbn) const;
 
   const Job& job() const;

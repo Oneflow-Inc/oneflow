@@ -318,20 +318,17 @@ Maybe<OptInt64> JobBuildAndInferCtx::GetBatchAxis(const std::string& lbn) const 
   return lbi2batch_axis_.at(lbi);
 }
 
-Maybe<bool> JobBuildAndInferCtx::GetHasSplitAxisFromProducerView(const std::string& lbn) const {
-  GEN_ERROR_WHEN_GET_INFO_FROM_LBN(lbi2sbp_parallel_from_producer_view_);
-  return lbi2sbp_parallel_from_producer_view_.at(lbi).has_split_parallel();
-}
-
-Maybe<int64_t> JobBuildAndInferCtx::GetSplitAxisFromProducerView(const std::string& lbn) const {
-  GEN_ERROR_WHEN_GET_INFO_FROM_LBN(lbi2sbp_parallel_from_producer_view_);
-  const SbpParallel& sbp = lbi2sbp_parallel_from_producer_view_.at(lbi);
-  if (sbp.has_split_parallel()) {
-    return sbp.split_parallel().axis();
-  } else {
-    return GenJobBuildAndInferError(JobBuildAndInferError::kLogicalBlobNameInvalid,
-                                    "lbn:" + lbn + " has no split axis from producer view ");
+Maybe<OptInt64> JobBuildAndInferCtx::GetSplitAxisFromProducerView(const std::string& lbn) const {
+  if (lbn.find('/') == std::string::npos) {
+    return GenJobBuildAndInferError(JobBuildAndInferError::kLogicalBlobNameInvalid, "lbn:" + lbn);
   }
+  LogicalBlobId lbi = GenLogicalBlobId(lbn);
+  OptInt64 ret;
+  auto sbp_it = lbi2sbp_parallel_from_producer_view_.find(lbi);
+  if (sbp_it != lbi2sbp_parallel_from_producer_view_.end() || sbp_it->second.has_split_parallel()) {
+    ret.set_value(sbp_it->second.split_parallel().axis());
+  }
+  return ret;
 }
 
 Maybe<const ParallelDesc*> JobBuildAndInferCtx::GetParallelDescFromProducerView(

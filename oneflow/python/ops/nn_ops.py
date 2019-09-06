@@ -20,12 +20,15 @@ def conv2d(
     dilations=None,
     name=None,
 ):
+    assert len(input.static_shape) == 4
+    assert len(filters.static_shape) == 4
+
     if isinstance(strides, (list, tuple)):
         assert len(strides) == 2, ValueError(
             "strides length must be 2 when passed as a list."
         )
     elif isinstance(strides, int):
-        strides = [strides] * 2
+        strides = [strides, strides]
     else:
         raise ValueError("strides must be an int or a list.")
 
@@ -40,35 +43,34 @@ def conv2d(
     )
 
     if dilations is None:
-        dilations = [1] * 2
+        dilations = [1, 1]
     else:
         if isinstance(dilations, (list, tuple)):
             assert len(dilations) == 2, ValueError(
                 "dilations length must be 2 when passed as a list."
             )
         elif isinstance(dilations, int):
-            dilations = [dilations] * 2
+            dilations = [dilations, dilations]
         else:
             raise ValueError("dilations must be an int or a list.")
 
     op_conf = op_conf_util.OperatorConf()
+    setattr(op_conf, "name", name if name is not None else id_util.UniqueStr("Conv2d_"))
     setattr(op_conf.conv_2d_conf, "in", input.logical_blob_name)
     op_conf.conv_2d_conf.out = "out"
     op_conf.conv_2d_conf.weight = filters.logical_blob_name
     op_conf.conv_2d_conf.filters = filters.static_shape[0]
     op_conf.conv_2d_conf.padding = padding.lower()
     op_conf.conv_2d_conf.data_format = channel_pos
-    op_conf.conv_2d_conf.kernel_size.extend(
-        [filters.static_shape[2], filters.static_shape[3]]
-    )
+    if channel_pos == "channels_first":
+        op_conf.conv_2d_conf.kernel_size.extend(filters.static_shape[2:4])
+    elif channel_pos == "channels_last":
+        op_conf.conv_2d_conf.kernel_size.extend(filters.static_shape[-3:-1])
+    else:
+        raise ValueError("invalid data_format")
     op_conf.conv_2d_conf.strides.extend(strides)
     op_conf.conv_2d_conf.dilation_rate.extend(dilations)
     op_conf.conv_2d_conf.use_bias = False
-
-    if name is None:
-        op_conf.name = id_util.UniqueStr("Conv2d_")
-    else:
-        op_conf.name = name
 
     compile_context.CurJobAddOp(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
@@ -303,3 +305,26 @@ def _GetSequence(value, n, name):
                 name, n, current_n
             )
         )
+
+
+@oneflow_export("nn.dropout")
+def dropout(x, noise_shape=None, seed=None, name=None, rate=None):
+    op_conf = op_conf_util.OperatorConf()
+    if name is None:
+        op_conf.name = id_util.UniqueStr("Dropout_")
+    else:
+        op_conf.name = name
+    setattr(op_conf.dropout_conf, "in", x.logical_blob_name)
+    setattr(op_conf.dropout_conf, "out", "out")
+    if noise_shape is not None:
+        assert isinstance(noise_shape, (list, tuple))
+        op_conf.dropout_conf.noise_shape.dim.extend(list(noise_shape))
+    if seed is not None:
+        setattr(op_conf.dropout_conf, "seed", seed)
+    assert rate is not None
+    setattr(op_conf.dropout_conf, "rate", rate)
+    compile_context.CurJobAddOp(op_conf)
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = "out"
+    return remote_blob_util.RemoteBlob(lbi)

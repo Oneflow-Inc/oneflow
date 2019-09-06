@@ -483,7 +483,6 @@ void MakeMainJob(const std::vector<Job>& jobs, Job* main_job,
   job_conf->set_job_name("MainJob-unamed");
   job_conf->mutable_predict_conf();
   job_conf->set_piece_size(1);
-  job_conf->set_data_part_num(1);
   job_conf->set_total_batch_num(1);
   job_conf->set_default_data_type(DataType::kInt32);
 }
@@ -648,7 +647,6 @@ void MakePullJob(const std::string& job_name, const std::string& op_name,
   job_conf->set_job_name(job_name);
   job_conf->mutable_predict_conf();
   job_conf->set_piece_size(1);
-  job_conf->set_data_part_num(1);
   job_conf->set_total_batch_num(1);
   job_conf->set_default_data_type(data_type);
 }
@@ -688,7 +686,6 @@ void MakePushJob(const std::string& job_name, const std::string& op_name,
   job_conf->set_job_name(job_name);
   job_conf->mutable_predict_conf();
   job_conf->set_piece_size(1);
-  job_conf->set_data_part_num(1);
   job_conf->set_total_batch_num(1);
   job_conf->set_default_data_type(data_type);
 }
@@ -752,7 +749,6 @@ void MakeArgPassJob(const std::string& job_name, const ParallelBlobConf& paralle
   job_conf->set_job_name(job_name);
   job_conf->mutable_predict_conf();
   job_conf->set_piece_size(1);
-  job_conf->set_data_part_num(1);
   job_conf->set_total_batch_num(1);
 }
 

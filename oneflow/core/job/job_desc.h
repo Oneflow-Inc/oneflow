@@ -52,7 +52,6 @@ class JobDesc final {
   int64_t cudnn_buf_limit_mbyte() const { return job_conf_.cudnn_buf_limit_mbyte(); }
 
   // Train conf
-  int32_t NumOfBatchesInSnapshot() const;
   int64_t TotalBatchNum() const;
   int64_t BatchSize() const;
   int64_t NumOfPiecesInBatch() const;
@@ -60,7 +59,6 @@ class JobDesc final {
   float bias_l1() const;
   float weight_l2() const;
   float bias_l2() const;
-  int32_t DataPartNum() const;
   int32_t loss_scale_factor() const;
 
  private:

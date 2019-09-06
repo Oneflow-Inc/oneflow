@@ -22,8 +22,7 @@ void DecodeOFRecordOp::InitFromOpConf() {
     EnrollOutputBn("out_" + std::to_string(i), false);
   }
   if (conf.part_name_suffix_length() != -1) {
-    CHECK_GE(conf.part_name_suffix_length(),
-             std::to_string(GlobalJobDesc().job_conf().data_part_num() - 1).length());
+    CHECK_GE(conf.part_name_suffix_length(), std::to_string(conf.data_part_num() - 1).length());
   }
 }
 
