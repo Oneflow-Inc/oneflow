@@ -186,6 +186,21 @@ class JobConfigProtoBuilder(object):
         self.job_conf_.cudnn_buf_limit_mbyte = val
         return self
 
+    def cudnn_conv_force_fwd_algo(self, val):
+        assert type(val) is int
+        self.job_conf_.cudnn_conv_force_fwd_algo = val
+        return self
+
+    def cudnn_conv_force_bwd_data_algo(self, val):
+        assert type(val) is int
+        self.job_conf_.cudnn_conv_force_bwd_data_algo = val
+        return self
+
+    def cudnn_conv_force_bwd_filter_algo(self, val):
+        assert type(val) is int
+        self.job_conf_.cudnn_conv_force_bwd_filter_algo = val
+        return self
+
     def enable_mem_sharing(self, val = True):
         assert type(val) is bool
         self.job_conf_.enable_mem_sharing = val
@@ -205,7 +220,7 @@ class JobConfigProtoBuilder(object):
         assert type(val) is bool
         self.job_conf_.use_nccl_inter_node_communication = val
         return self
-    
+
     def enable_all_reduce_group(self, val = True):
         assert type(val) is bool
         self.job_conf_.enable_all_reduce_group = val

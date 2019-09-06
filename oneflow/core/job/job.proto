@@ -60,7 +60,10 @@ message JobConfigProto {
 
   optional bool enable_cudnn = 200 [default = true];
   optional int64 cudnn_buf_limit_mbyte = 201 [default = 1024];  // 1GByte
-
+  optional int32 cudnn_conv_force_fwd_algo = 202;
+  optional int32 cudnn_conv_force_bwd_data_algo = 203;
+  optional int32 cudnn_conv_force_bwd_filter_algo = 204;
+  
   optional bool enable_mem_sharing = 300 [default = true];
   optional bool enable_inplace = 301 [default = true];
 
