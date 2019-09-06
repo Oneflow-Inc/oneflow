@@ -1,5 +1,6 @@
 from __future__ import absolute_import
 
+default_session = None
 inter_user_job_info = None
 
 def InitInterUserJobInfo(info):

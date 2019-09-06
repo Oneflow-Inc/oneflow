@@ -168,9 +168,6 @@ def alexnet(images, labels, trainable=True):
 
     return loss
 
-flow.config.gpu_device_num(args.gpu_num_per_node)
-flow.config.ctrl_port(9788)
-
 @flow.function
 def alexnet_train_job():
     job_conf = flow.get_cur_job_conf_builder()
@@ -195,6 +192,9 @@ def alexnet_eval_job():
 
 
 if __name__ == "__main__":
+    flow.config.gpu_device_num(args.gpu_num_per_node)
+    flow.config.ctrl_port(9788)
+
     if args.multinode:
         config.ctrl_port(12138)
         config.machine([{"addr": "192.168.1.15"}, {"addr": "192.168.1.16"}])

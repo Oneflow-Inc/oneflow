@@ -15,12 +15,13 @@ from oneflow.python.oneflow_export import oneflow_export
 def try_activate_default_session(func):
     @functools.wraps(func)
     def Func(*args, **kwargs):
-        if c_api_util.environment_inited == False:
-            c_api_util.Init(config_util.config_proto)
-            c_api_util.environment_inited = True
+        global environment_inited
+        if environment_inited == False:
+            c_api_util.Init(config_util.default_config_proto)
             config_util.config_proto_mutable = False
+            environment_inited = True
             job_set_util.compile_all_job()
-            default_session.__enter__()
+            runtime_ctx.default_session.__enter__()
         return func(*args, **kwargs)
     return Func
 
@@ -96,4 +97,5 @@ class Session(object):
         assert self.is_running_ == True
         self.runtime_env_.__exit__()
 
-default_session = Session()
+runtime_ctx.default_session = Session()
+environment_inited = False

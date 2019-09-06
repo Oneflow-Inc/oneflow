@@ -70,38 +70,38 @@ def _DefaultConfigProto():
     _TryCompleteDefaultConfigProto(config_proto)
     return config_proto
 
-config_proto = _DefaultConfigProto()
+default_config_proto = _DefaultConfigProto()
 config_proto_mutable = True
 
 @oneflow_export('config.gpu_device_num')
 def gpu_device_num(val):
     assert config_proto_mutable == True
     assert type(val) is int
-    config_proto.resource.gpu_device_num = val
+    default_config_proto.resource.gpu_device_num = val
 
 @oneflow_export('config.cpu_device_num')
 def cpu_device_num(val):
     assert config_proto_mutable == True
     assert type(val) is int
-    config_proto.resource.cpu_device_num = val
+    default_config_proto.resource.cpu_device_num = val
 
 @oneflow_export('config.machine')
 def machine(val):
     assert config_proto_mutable == True
-    del config_proto.resource.machine[:]
-    config_proto.resource.machine.extend(_MakeMachine(val))
+    del default_config_proto.resource.machine[:]
+    default_config_proto.resource.machine.extend(_MakeMachine(val))
 
 @oneflow_export('config.ctrl_port')
 def ctrl_port(val):
     assert config_proto_mutable == True
     assert type(val) is int
-    config_proto.resource.ctrl_port = val
+    default_config_proto.resource.ctrl_port = val
 
 @oneflow_export('config.data_port')
 def data_port(val):
     assert config_proto_mutable == True
     assert type(val) is int
-    config_proto.resource.data_port = val
+    default_config_proto.resource.data_port = val
 
 @oneflow_export('config.comm_net_worker_num')
 def comm_net_worker_num(val):
@@ -113,85 +113,85 @@ def comm_net_worker_num(val):
 def max_mdsave_worker_num(val):
     assert config_proto_mutable == True
     assert type(val) is int
-    config_proto.resource.max_mdsave_worker_num = val
+    default_config_proto.resource.max_mdsave_worker_num = val
 
 @oneflow_export('config.rdma_mem_block_mbyte')
 def rdma_mem_block_mbyte(val):
     assert config_proto_mutable == True
     assert type(val) is int
-    config_proto.resource.rdma_mem_block_mbyte = val
+    default_config_proto.resource.rdma_mem_block_mbyte = val
 
 @oneflow_export('config.rdma_recv_msg_buf_mbyte')
 def rdma_recv_msg_buf_mbyte(val):
     assert config_proto_mutable == True
     assert type(val) is int
-    config_proto.resource.rdma_recv_msg_buf_mbyte = val
+    default_config_proto.resource.rdma_recv_msg_buf_mbyte = val
 
 @oneflow_export('config.reserved_host_mem_mbyte')
 def reserved_host_mem_mbyte(val):
     assert config_proto_mutable == True
     assert type(val) is int
-    config_proto.resource.reserved_host_mem_mbyte = val
+    default_config_proto.resource.reserved_host_mem_mbyte = val
 
 @oneflow_export('config.reserved_device_mem_mbyte')
 def reserved_device_mem_mbyte(val):
     assert config_proto_mutable == True
     assert type(val) is int
-    config_proto.resource.reserved_device_mem_mbyte = val
+    default_config_proto.resource.reserved_device_mem_mbyte = val
 
 @oneflow_export('config.use_rdma')
 def use_rdma(val = True):
     assert config_proto_mutable == True
     assert type(val) is bool
-    config_proto.resource.use_rdma = val
+    default_config_proto.resource.use_rdma = val
 
 @oneflow_export('config.save_downloaded_file_to_local_fs')
 def save_downloaded_file_to_local_fs(val = True):
     assert config_proto_mutable == True
     assert type(val) is bool
-    config_proto.io_conf.save_downloaded_file_to_local_fs = val
+    default_config_proto.io_conf.save_downloaded_file_to_local_fs = val
 
 @oneflow_export('config.persistence_buf_byte')
 def persistence_buf_byte(val):
     assert config_proto_mutable == True
     assert type(val) is int
-    config_proto.io_conf.persistence_buf_byte = val
+    default_config_proto.io_conf.persistence_buf_byte = val
 
 @oneflow_export('config.log_dir')
 def log_dir(val):
     assert config_proto_mutable == True
     assert type(val) is str
-    config_proto.cpp_flags_conf.log_dir = val
+    default_config_proto.cpp_flags_conf.log_dir = val
 
 @oneflow_export('config.logtostderr')
 def logtostderr(val):
     assert config_proto_mutable == True
     assert type(val) is int
-    config_proto.cpp_flags_conf.logtostderr = val
+    default_config_proto.cpp_flags_conf.logtostderr = val
 
 @oneflow_export('config.logbuflevel')
 def logbuflevel(val):
     assert config_proto_mutable == True
     assert type(val) is int
-    config_proto.cpp_flags_conf.logbuflevel = val
+    default_config_proto.cpp_flags_conf.logbuflevel = val
 
 @oneflow_export('config.v')
 def v(val):
     assert config_proto_mutable == True
     assert type(val) is int
-    config_proto.cpp_flags_conf.v = val
+    default_config_proto.cpp_flags_conf.v = val
 
 @oneflow_export('config.grpc_use_no_signal')
 def grpc_use_no_signal(val = True):
     assert config_proto_mutable == True
     assert type(val) is bool
-    config_proto.cpp_flags_conf.grpc_use_no_signal = val
+    default_config_proto.cpp_flags_conf.grpc_use_no_signal = val
 
 @oneflow_export('config.collect_act_event')
 def collect_act_event(val = True):
     assert config_proto_mutable == True
     assert type(val) is int
-    config_proto.profile_conf.collect_act_event = val
+    default_config_proto.profile_conf.collect_act_event = val
 
 class ConfigTrainConfBuilder(object):
     def __init__(self, train_conf):
