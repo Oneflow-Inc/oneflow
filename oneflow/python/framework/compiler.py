@@ -26,7 +26,7 @@ def Compile(job_set, job_func):
     job_conf = job_util.JobConfigProto()
     job_conf.job_name = job_func.__name__
     with compile_context.CurJobConf(job_conf), job_builder.JobBuildAndInferCtx(job_conf.job_name):
-        _CompileJob(job_conf, job_func, config_util.inited_config_proto)
+        _CompileJob(job_conf, job_func, config_util.default_config_proto)
         job_builder.CurCtxSetJobConfIfNotSet(job_conf)
         assert job_builder.CurCtxHasJobConf()
         job_builder.CurCtxCheckJob()
