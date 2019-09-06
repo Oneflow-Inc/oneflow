@@ -24,7 +24,7 @@ RUN mkdir -p /tmp/download/cmake-extracted && \
     make install
 ENV PATH="/cmake-install/bin:${PATH}"
 
-ARG USE_PYTHON_3_OR_2
+ARG USE_PYTHON_3_OR_2=3
 
 RUN if [ "${USE_PYTHON_3_OR_2}" -eq 2 ] ; then yum update -y \
     && yum install -y python-devel.x86_64 \
