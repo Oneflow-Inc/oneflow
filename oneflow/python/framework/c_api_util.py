@@ -17,12 +17,15 @@ def IsOpTypeCaseCpuSupportOnly(op_type_case):
     if error.HasField("error_type"): raise JobBuildAndInferError(error)
     return ret
 
-def Init(config_proto):
+def InitEnvironment(config_proto):
     assert(type(config_proto) is job_set_util.ConfigProto)
     config_proto_str = text_format.MessageToString(config_proto)
-    error_str = oneflow_internal.InitBySerializedConfigProto(config_proto_str)
+    error_str = oneflow_internal.InitEnvironmentBySerializedConfigProto(config_proto_str)
     error = text_format.Parse(error_str, error_util.ErrorProto())
     if error.HasField("error_type"): raise JobBuildAndInferError(error)
+
+def IsEnvironmentInited():
+    return oneflow_internal.IsEnvironmentInited()
 
 def InitGlobalOneflow():
     error_str = oneflow_internal.InitGlobalOneflow()
