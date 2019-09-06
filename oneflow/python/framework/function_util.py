@@ -11,8 +11,8 @@ _job_name2job_func = {}
 @oneflow_export("function")
 def function(job_func):
     @functools.wraps(job_func)
-    def Func(*args, **kwargs):
-        return session_util.GetDefaultSession().run(job_func)
+    def Func(*args):
+        return session_util.GetDefaultSession().run(job_func, *args)
     for x in dir(job_func):
         if x.startswith('__oneflow_'):
             setattr(Func, x, getattr(job_func, x))

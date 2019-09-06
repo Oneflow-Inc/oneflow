@@ -14,9 +14,9 @@ from oneflow.python.oneflow_export import oneflow_export
 
 def try_init_default_session(func):
     @functools.wraps(func)
-    def Func(*args, **kwargs):
+    def Func(*args):
         assert GetDefaultSession() != None
-        return func(*args, **kwargs)
+        return func(*args)
     return Func
 
 class Session(object):
