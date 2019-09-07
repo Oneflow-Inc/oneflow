@@ -1,5 +1,8 @@
 import oneflow as flow
+import oneflow.core.operator.op_conf_pb2 as op_conf_util
+from datetime import datetime
 import argparse
+import os
 
 _DATA_DIR = "/home/xfjiang/dataset/inception_v3/of_record_repeated"
 _EVAL_DIR = _DATA_DIR
@@ -79,7 +82,7 @@ def _conv2d_layer(
         if activation == op_conf_util.kRelu:
             output = flow.keras.activations.relu(output)
         elif activation == op_conf_util.kSigmoid:
-            output = flow.deras.activations.kSigmoid(output)
+            output = flow.keras.activations.sigmoid(output)
         else:
             raise NotImplementedError
 
@@ -202,7 +205,7 @@ def InceptionB(in_blob, index):
                 in_blob,
                 ksize=3,
                 strides=2,
-                padding="SAME",
+                padding="VALID",
                 data_format="NCHW",
                 name="pool0",
             )
@@ -211,7 +214,9 @@ def InceptionB(in_blob, index):
         inceptionB_bn.append(branch3x3)
         inceptionB_bn.append(branch3x3dbl_3)
         inceptionB_bn.append(branch_pool)
-
+        print(branch3x3.shape)
+        print(branch3x3dbl_3.shape)
+        print(branch_pool.shape)
         mixed_concat = flow.concat(values=inceptionB_bn, axis=1, name="concat")
 
     return mixed_concat
@@ -486,10 +491,10 @@ def InceptionV3(images, labels, trainable=True):
         conv2, ksize=3, strides=2, padding="SAME", data_format="NCHW", name="pool1"
     )
     conv3 = _conv2d_layer(
-        "conv3", filters=80, kernel_size=1, strides=1, padding="VALID"
+        "conv3", pool1, filters=80, kernel_size=1, strides=1, padding="VALID"
     )
     conv4 = _conv2d_layer(
-        "conv4", filters=192, kernel_size=3, strides=1, padding="VALID"
+        "conv4", conv3, filters=192, kernel_size=3, strides=1, padding="VALID"
     )
     pool2 = flow.nn.max_pool2d(
         conv4, ksize=3, strides=2, padding="SAME", data_format="NCHW", name="pool2"
@@ -498,7 +503,7 @@ def InceptionV3(images, labels, trainable=True):
     # mixed_0 ~ mixed_2
     mixed_0 = InceptionA(pool2, 0)
     mixed_1 = InceptionA(mixed_0, 1)
-    mixed_2 = InceptionA(mixed_1, 1)
+    mixed_2 = InceptionA(mixed_1, 2)
 
     # mixed_3
     mixed_3 = InceptionB(mixed_2, 3)
@@ -540,12 +545,12 @@ def InceptionV3(images, labels, trainable=True):
 
 @flow.function
 def inception_v3_train_job():
-    flow.config.train.batch_size(1)
-    flow.config.train.primary_lf(0.0001)
+    flow.config.train.batch_size(args.iter_num)
+    flow.config.train.primary_lr(0.0001)
     flow.config.train.model_update_conf(dict(naive_conf={}))
 
     (images, labels) = _data_load_layer(args.train_dir)
-    loss = InceptionV3(images, lables)
+    loss = InceptionV3(images, labels)
     flow.losses.add_loss(loss)
     return loss
 
@@ -553,7 +558,7 @@ def inception_v3_train_job():
 if __name__ == "__main__":
     flow.config.gpu_device_num(args.gpu_num_per_node)
     flow.config.ctrl_port(9678)
-    flow.config.piece_size()
+    flow.config.piece_size(args.iter_num)
     flow.config.default_data_type(flow.float)
 
     if args.multinode:
@@ -567,7 +572,7 @@ if __name__ == "__main__":
             else:
                 flow.deprecated.init_worker(scp_binary=True, use_uuid=True)
 
-    check_point = flow.train.check_point()
+    check_point = flow.train.CheckPoint()
     if not args.model_load_dir:
         check_point.init()
     else:
