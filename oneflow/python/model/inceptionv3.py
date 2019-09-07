@@ -370,9 +370,6 @@ def InceptionD(in_blob, index):
         inceptionD_bn.append(branch3x3_2)
         inceptionD_bn.append(branch7x7x3_4)
         inceptionD_bn.append(branch_pool)
-        print(branch3x3_2.shape)
-        print(branch7x7x3_4.shape)
-        print(branch_pool.shape)
 
         mixed_concat = flow.concat(values=inceptionD_bn, axis=1, name="concat")
 
@@ -526,8 +523,8 @@ def InceptionV3(images, labels, trainable=True):
     )
 
     with flow.deprecated.variable_scope("logits"):
-        pool3 = flow.reshape(pool3, [-1])
-        fc1 = flow.dense(
+        pool3 = flow.reshape(pool3, [pool3.shape[0], -1])
+        fc1 = flow.layers.dense(
             pool3,
             1001,
             activation=None,
