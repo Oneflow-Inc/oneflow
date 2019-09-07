@@ -65,11 +65,11 @@ void ConvOp<NDims>::InitFromOpConf() {
 
   EnrollInputBn("in");
   EnrollOutputBn("out");
-    EnrollInputBn("weight");
+  EnrollInputBn("weight");
   EnrollTmpBn("fw_cudnn_buf");
   EnrollTmpBn("fw_col_buf");
   if (GetValFromCustomizedConf<bool>("use_bias")) {
-      EnrollInputBn("bias");
+    EnrollInputBn("bias");
     EnrollConstBufBn("bias_multiplier");
   }
 }
