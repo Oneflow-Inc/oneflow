@@ -11,7 +11,7 @@ class JobBuildAndInferCtx(object):
 
     def __exit__(self, *args):
         _Close(self.job_name_)
-        
+
 def GetCurCtxJobName():
     return c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
 
@@ -29,9 +29,6 @@ def CurCtxAddAndInferOp(op_conf_proto, parallel_conf_proto):
 
 def CurCtxAddLossLogicalBlobName(lbn):
     return c_api_util.CurJobBuildAndInferCtx_AddLossLogicalBlobName(lbn)
-
-def CurCtxAddPlacementGroup(placement_group_proto):
-    return c_api_util.CurJobBuildAndInferCtx_AddPlacementGroup(placement_group_proto)
 
 def CurCtxHasJobConf():
     return c_api_util.CurJobBuildAndInferCtx_HasJobConf()

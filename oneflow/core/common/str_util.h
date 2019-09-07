@@ -7,6 +7,13 @@
 
 namespace oneflow {
 
+inline bool IsStrInt(const std::string& s) {
+  if (s.empty() || (!isdigit(s[0]) && (s[0] != '-'))) { return false; }
+  char* end_ptr = nullptr;
+  strtoll(s.c_str(), &end_ptr, 0);
+  return (*end_ptr == 0);
+}
+
 inline std::string StrCat(const std::string& prefix, int64_t id) {
   return prefix + std::to_string(id);
 }
