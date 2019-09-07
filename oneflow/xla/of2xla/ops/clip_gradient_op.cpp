@@ -25,9 +25,17 @@ void ClipGradientOp::Compile(XlaOpContext *ctx) {
     float global_norm_val = ctx->GetAttr<float>("global_norm");
     norm = xla::ScalarLike(gradient, global_norm_val);
   } else {
-    int64_t count = gradient_shape.elem_cnt();
-    xla::XlaOp flat = Reshape(gradient, Shape({count}));
-    norm = xla::Sqrt(xla::Dot(flat, flat)) / instance_num;
+    // int64_t count = gradient_shape.elem_cnt();
+    // xla::XlaOp flat = Reshape(gradient, Shape({count}));
+    // norm = xla::Sqrt(xla::Dot(flat, flat)) / instance_num;
+    DataType data_type = ctx->InputType("gradient");
+    xla::XlaBuilder *builder = ctx->builder();
+    std::vector<long long> reduce_dims(gradient_shape.NumAxes());
+    std::iota(reduce_dims.begin(), reduce_dims.end(), 0);
+    xla::XlaComputation add_func = CreateAddFunc(data_type);
+    xla::XlaOp sum = xla::Reduce(gradient * gradient, Zero(builder, data_type),
+                                 add_func, reduce_dims);
+    norm = xla::Sqrt(sum) / instance_num;
   }
 
   float clip_norm_val = ctx->GetAttr<float>("clip_norm");

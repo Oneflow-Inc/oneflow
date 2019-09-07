@@ -68,6 +68,11 @@ void XlaGraphCompiler::BuildComputation(
       input_oprands.emplace(argument, oprand);
     }
 
+    xla::OpMetadata metadata;
+    metadata.set_op_type(op_type);
+    metadata.set_op_name(node->op_name());
+    builder_->SetOpMetadata(metadata);
+
     // Setup XlaOpContext Param to build a XlaOpContext
     XlaOpContext::Param param;
     param.backend = backend;
@@ -81,6 +86,8 @@ void XlaGraphCompiler::BuildComputation(
     // Do compile and lower the operator computation to HLO instructions
     XlaOpContext op_context(param);
     op_compiler->Compile(&op_context);
+
+    builder_->ClearOpMetadata();
 
     // Always insert new output into `all_outputs`
     const auto &outputs = op_context.outputs();
@@ -136,7 +143,6 @@ void XlaGraphCompiler::BuildExecutable(
 
 CompilationResult XlaGraphCompiler::Compile() {
   CHECK_NOTNULL(graph_);
-
   CompilationResult result;
   result.alias_input_output = alias_input_output_;
 

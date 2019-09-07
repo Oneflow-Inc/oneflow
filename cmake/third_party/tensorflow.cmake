@@ -4,10 +4,10 @@ if (WITH_XLA)
 
 set(TENSORFLOW_BUILD_CMD --define with_xla_support=true)
 if (RELEASE_VERSION)
-  set(TENSORFLOW_BUILD_CMD -c opt ${BUILD_CMD})
+  set(TENSORFLOW_BUILD_CMD -c opt ${TENSORFLOW_BUILD_CMD})
   set(TENSORFLOW_GENFILE_DIR k8-opt)
 else()
-  set(TENSORFLOW_BUILD_CMD --copt=-g -c dbg ${BUILD_CMD})
+  set(TENSORFLOW_BUILD_CMD --copt=-g -c dbg ${TENSORFLOW_BUILD_CMD})
   set(TENSORFLOW_GENFILE_DIR k8-dbg)
 endif()
 
