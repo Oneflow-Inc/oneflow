@@ -22,6 +22,16 @@ def constant_initializer(value=0, dtype=data_type_conf_util.kFloat):
     return initializer
 
 
+@oneflow_export("zeros_initializer")
+def zeros_initializer(dtype=data_type_conf_util.kFloat):
+    return constant_initializer(0.0, dtype)
+
+
+@oneflow_export("ones_initializer")
+def ones_initializer(dtype=data_type_conf_util.kFloat):
+    return constant_initializer(1.0, dtype)
+
+
 @oneflow_export("random_uniform_initializer")
 def random_uniform_initializer(minval=0, maxval=1, dtype=data_type_conf_util.kFloat):
     initializer = op_conf_util.InitializerConf()
