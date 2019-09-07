@@ -397,12 +397,10 @@ void OpGraph::InferOpNodeSbpSignature(OpNode* op_node, const SbpSignature& sbp_s
   auto SbpInferHint4Ibn = [&](const std::string& ibn) -> Maybe<const SbpInferHint*> {
     auto it = ibn2sbp_infer_hint.find(ibn);
     if (it == ibn2sbp_infer_hint.end()) {
-      std::shared_ptr<ErrorProto> err;
-      err->set_msg("cannot find corresponding SbpInferHint for input_blob_name : " + ibn);
-      err->mutable_check_failed();
-      return err;
+      return Error::CheckFailed() << "cannot find corresponding SbpInferHint for input_blob_name : "
+                                  << ibn;
     }
-    return Maybe<const SbpInferHint*>(&(it->second));
+    return &(it->second);
   };
   std::function<int32_t(const SbpSignature&)> CalcOrderValue4SbpSig;
   if (sbp_sig_conf.bn_in_op2sbp_parallel().empty()) {
@@ -438,8 +436,8 @@ void OpGraph::InferOpNodeSbpSignature(OpNode* op_node, const SbpSignature& sbp_s
   } else {
     CalcOrderValue4SbpSig = [](const SbpSignature&) -> int32_t { return 0; };
   }
-  op_node->op().InferSbpSignatureIf(sbp_signature, sbp_sig_conf, CalcOrderValue4SbpSig,
-                                    SbpInferHint4Ibn, op_node->parallel_desc());
+  CHECK_JUST(op_node->op().InferSbpSignatureIf(sbp_signature, sbp_sig_conf, CalcOrderValue4SbpSig,
+                                               SbpInferHint4Ibn, op_node->parallel_desc()));
 }
 
 void OpGraph::InferOpNodeLogicalBlobDesc(OpNode* op_node) const {
@@ -518,12 +516,7 @@ BalancedSplitter OpGraph::GetBalancedSplitter(const std::string& op_name,
   const SbpParallel& sbp_parallel = GetSbpParallel(op_name, lbi);
   CHECK(sbp_parallel.has_split_parallel());
   int64_t split_num = GetSplitNum(op_name, lbi);
-  if (IsBatchAxisBlob(op_name, lbi)) {
-    CHECK_EQ(sbp_parallel.split_parallel().axis(), 0);
-    CHECK_EQ(split_num % op_node->parallel_desc().parallel_num(), 0);
-  } else {
-    CHECK_GE(split_num, op_node->parallel_desc().parallel_num());
-  }
+  CHECK_GE(split_num, op_node->parallel_desc().parallel_num());
   return BalancedSplitter(split_num, op_node->parallel_desc().parallel_num());
 }
 
@@ -539,6 +532,10 @@ int64_t OpGraph::GetSplitNum(const std::string& op_name, const LogicalBlobId& lb
   const SbpParallel& sbp_parallel = op_node->SbpParallel4Lbi(lbi_key);
   CHECK(sbp_parallel.has_split_parallel());
   return op_node->LogicalBlobDesc4Lbi(lbi_key).shape().At(sbp_parallel.split_parallel().axis());
+}
+
+int64_t OpGraph::GetParallelNum(const std::string& op_name) const {
+  return op_name2op_node_.at(op_name)->parallel_desc().parallel_num();
 }
 
 const SbpParallel& OpGraph::GetSbpParallel(const std::string& op_name,

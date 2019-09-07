@@ -200,9 +200,174 @@ def set_piece_size(value):
     _SetJobConfAttr(lambda x:x, 'piece_size', value)
     return oneflow.config
 
+@oneflow_export('config.total_batch_num')
+def set_total_batch_num(value):
+    _SetJobConfAttr(lambda x:x, 'total_batch_num', value)
+    return oneflow.config
+
+@oneflow_export('config.default_data_type')
+def set_default_data_type(value):
+    _SetJobConfAttr(lambda x:x, 'default_data_type', value)
+    return oneflow.config
+
+@oneflow_export('config.max_data_id_length')
+def set_max_data_id_length(value):
+    _SetJobConfAttr(lambda x:x, 'max_data_id_length', value)
+    return oneflow.config
+
+@oneflow_export('config.default_initialize_conf')
+def set_default_initialize_conf(value):
+    assert type(value) is dict
+    pb_msg = _GetJobConfAttr(lambda x:x, 'default_initialize_conf')
+    pb_util.PythonDict2PbMessage(value, pb_msg)
+    return oneflow.config
+
+@oneflow_export('config.exp_run_conf')
+def set_exp_run_conf(value):
+    assert type(value) is dict
+    pb_util.PythonDict2PbMessage(value, _GetJobConfAttr(lambda x:x, 'exp_run_conf'))
+    return oneflow.config
+
+@oneflow_export('config.enable_cudnn')
+def set_enable_cudnn(value = True):
+    _SetJobConfAttr(lambda x:x, 'enable_cudnn', value)
+    return oneflow.config
+
+@oneflow_export('config.cudnn_buf_limit_mbyte')
+def set_cudnn_buf_limit_mbyte(value):
+    _SetJobConfAttr(lambda x:x, 'cudnn_buf_limit_mbyte', value)
+    return oneflow.config
+
+@oneflow_export('config.cudnn_conv_force_fwd_algo')
+def set_cudnn_conv_force_fwd_algo(value):
+    _SetJobConfAttr(lambda x:x, 'cudnn_conv_force_fwd_algo', value)
+    return oneflow.config
+
+@oneflow_export('config.cudnn_conv_force_bwd_data_algo')
+def set_cudnn_conv_force_bwd_data_algo(value):
+    _SetJobConfAttr(lambda x:x, 'cudnn_conv_force_bwd_data_algo', value)
+    return oneflow.config
+
+@oneflow_export('config.cudnn_conv_force_bwd_filter_algo')
+def set_cudnn_conv_force_bwd_filter_algo(value):
+    _SetJobConfAttr(lambda x:x, 'cudnn_conv_force_bwd_filter_algo', value)
+    return oneflow.config
+
+@oneflow_export('config.enable_mem_sharing')
+def set_enable_mem_sharing(value = True):
+    _SetJobConfAttr(lambda x:x, 'enable_mem_sharing', value)
+    return oneflow.config
+
+@oneflow_export('config.enable_inplace')
+def set_enable_inplace(value = True):
+    _SetJobConfAttr(lambda x:x, 'enable_inplace', value)
+    return oneflow.config
+
+@oneflow_export('config.enable_nccl')
+def set_enable_nccl(value = True):
+    _SetJobConfAttr(lambda x:x, 'enable_nccl', value)
+    return oneflow.config
+
+@oneflow_export('config.use_nccl_inter_node_communication')
+def set_use_nccl_inter_node_communication(value = True):
+    _SetJobConfAttr(lambda x:x, 'use_nccl_inter_node_communication', value)
+    return oneflow.config
+
+@oneflow_export('config.enable_all_reduce_group')
+def set_enable_all_reduce_group(value = True):
+    _SetJobConfAttr(lambda x:x, 'enable_all_reduce_group', value)
+    return oneflow.config
+
+@oneflow_export('config.all_reduce_group_num')
+def set_all_reduce_group_num(value):
+    _SetJobConfAttr(lambda x:x, 'all_reduce_group_num', value)
+    return oneflow.config
+
+@oneflow_export('config.all_reduce_lazy_ratio')
+def set_all_reduce_lazy_ratio(value):
+    _SetJobConfAttr(lambda x:x, 'all_reduce_lazy_ratio', value)
+    return oneflow.config
+
+@oneflow_export('config.all_reduce_group_min_mbyte')
+def set_all_reduce_group_min_mbyte(value):
+    _SetJobConfAttr(lambda x:x, 'all_reduce_group_min_mbyte', value)
+    return oneflow.config
+
+@oneflow_export('config.all_reduce_group_size_warmup')
+def set_all_reduce_group_size_warmup(value):
+    _SetJobConfAttr(lambda x:x, 'all_reduce_group_size_warmup', value)
+    return oneflow.config
+
+@oneflow_export('config.all_reduce_fp16')
+def set_all_reduce_fp16(value = True):
+    _SetJobConfAttr(lambda x:x, 'all_reduce_fp16', value)
+    return oneflow.config
+
+@oneflow_export('config.enable_true_half_config_when_conv')
+def set_enable_true_half_config_when_conv(value = True):
+    _SetJobConfAttr(lambda x:x, 'enable_true_half_config_when_conv', value)
+    return oneflow.config
+
+@oneflow_export('config.enable_float_compute_for_half_gemm')
+def set_enable_float_compute_for_half_gemm(value = True):
+    _SetJobConfAttr(lambda x:x, 'enable_float_compute_for_half_gemm', value)
+    return oneflow.config
+
+@oneflow_export('config.enable_auto_mixed_precision')
+def set_enable_auto_mixed_precision(value = True):
+    _SetJobConfAttr(lambda x:x, 'enable_auto_mixed_precision', value)
+    return oneflow.config
+
+@oneflow_export('config.concurrency_width')
+def set_concurrency_width(value):
+    _SetJobConfAttr(lambda x:x, 'concurrency_width', value)
+    return oneflow.config
+
 @oneflow_export('config.train.batch_size')
 def set_batch_size(value):
     _SetJobConfAttr(lambda job_conf: job_conf.train_conf, 'batch_size', value)
+    return oneflow.config
+
+@oneflow_export('config.train.model_update_conf')
+def set_model_update_conf(value):
+    assert type(value) is dict
+    pb_msg = _GetJobConfAttr(lambda job_conf: job_conf.train_conf, 'model_update_conf')
+    pb_util.PythonDict2PbMessage(value, pb_msg)
+    return oneflow.config
+
+@oneflow_export('config.train.loss_scale_factor')
+def set_loss_scale_factor(value):
+    _SetJobConfAttr(lambda job_conf: job_conf.train_conf, 'loss_scale_factor', value)
+    return oneflow.config
+
+@oneflow_export('config.train.primary_lr')
+def set_primary_lr(value):
+    _SetJobConfAttr(lambda job_conf: job_conf.train_conf, 'primary_lr', value)
+    return oneflow.config
+
+@oneflow_export('config.train.secondary_lr')
+def set_secondary_lr(value):
+    _SetJobConfAttr(lambda job_conf: job_conf.train_conf, 'secondary_lr', value)
+    return oneflow.config
+
+@oneflow_export('config.train.weight_l1')
+def set_weight_l1(value):
+    _SetJobConfAttr(lambda job_conf: job_conf.train_conf, 'weight_l1', value)
+    return oneflow.config
+
+@oneflow_export('config.train.bias_l1')
+def set_bias_l1(value):
+    _SetJobConfAttr(lambda job_conf: job_conf.train_conf, 'bias_l1', value)
+    return oneflow.config
+
+@oneflow_export('config.train.weight_l2')
+def set_weight_l2(value):
+    _SetJobConfAttr(lambda job_conf: job_conf.train_conf, 'weight_l2', value)
+    return oneflow.config
+
+@oneflow_export('config.train.bias_l2')
+def set_bias_l2(value):
+    _SetJobConfAttr(lambda job_conf: job_conf.train_conf, 'bias_l2', value)
     return oneflow.config
 
 def _SetJobConfAttr(GetConf, field, value):
@@ -213,122 +378,12 @@ def _SetJobConfAttr(GetConf, field, value):
         assert c_api_util.IsEnvironmentInited() == False
         setattr(GetConf(default_job_conf), field, value)
 
-class JobConfigProtoBuilder(object):
-    def __init__(self, job_conf):
-        assert isinstance(job_conf, job_util.JobConfigProto)
-        self.job_conf_ = job_conf
-
-    def job_conf():
-        return self.job_conf_
-
-    def default_initializer_conf(self, val):
-        assert type(val) is dict
-        pb_util.PythonDict2PbMessage(val, self.job_conf_.default_initializer_conf)
-        return self
-
-    def model_update_conf(self, val):
-        assert type(val) is dict
-        assert self.job_conf_.HasField("train_conf")
-        pb_util.PythonDict2PbMessage(val, self.train_conf().model_update_conf)
-        return self
-
-    def batch_size(self, val):
-        assert type(val) is int
-        self.job_conf_.piece_size = val # it's not a type
-        return self
-
-    def default_data_type(self, val):
-        assert type(val) is int
-        self.job_conf_.default_data_type = val
-        return self
-
-    def data_part_num(self, val):
-        assert type(val) is int
-        self.job_conf_.data_part_num = val
-        return self
-
-    def enable_cudnn(self, val = True):
-        assert type(val) is bool
-        self.job_conf_.enable_cudnn = val
-        return self
-
-    def cudnn_buf_limit_mbyte(self, val):
-        assert type(val) is int
-        self.job_conf_.cudnn_buf_limit_mbyte = val
-        return self
-
-    def cudnn_conv_force_fwd_algo(self, val):
-        assert type(val) is int
-        self.job_conf_.cudnn_conv_force_fwd_algo = val
-        return self
-
-    def cudnn_conv_force_bwd_data_algo(self, val):
-        assert type(val) is int
-        self.job_conf_.cudnn_conv_force_bwd_data_algo = val
-        return self
-
-    def cudnn_conv_force_bwd_filter_algo(self, val):
-        assert type(val) is int
-        self.job_conf_.cudnn_conv_force_bwd_filter_algo = val
-        return self
-
-    def enable_mem_sharing(self, val = True):
-        assert type(val) is bool
-        self.job_conf_.enable_mem_sharing = val
-        return self
-
-    def enable_inplace(self, val = True):
-        assert type(val) is bool
-        self.job_conf_.enable_inplace = val
-        return self
-
-    def enable_nccl(self, val = True):
-        assert type(val) is bool
-        self.job_conf_.enable_nccl = val
-        return self
-
-    def use_nccl_inter_node_communication(self, val = True):
-        assert type(val) is bool
-        self.job_conf_.use_nccl_inter_node_communication = val
-        return self
-
-    def enable_all_reduce_group(self, val = True):
-        assert type(val) is bool
-        self.job_conf_.enable_all_reduce_group = val
-        return self
-
-    def all_reduce_group_num(self, val):
-        assert type(val) is int
-        self.job_conf_.all_reduce_group_num = val
-        return self
-
-    def all_reduce_lazy_ratio(self, val):
-        assert type(val) is float
-        self.job_conf_.all_reduce_lazy_ratio = val
-        return self
-
-    def all_reduce_group_min_mbyte(self, val):
-        assert type(val) is int
-        self.job_conf_.all_reduce_group_min_mbyte = val
-        return self
-
-    def all_reduce_group_size_warmup(self, val):
-        assert type(val) is float
-        self.job_conf_.all_reduce_group_size_warmup = val
-        return self
-
-    def all_reduce_fp16(self, val = True):
-        assert type(val) is bool
-        self.job_conf_.all_reduce_fp16 = val
-        return self
-
-    def concurrency_width(self, val):
-        assert type(val) is int
-        self.job_conf_.concurrency_width = val
-        return self
-
-    def train_conf(self):
-        self.job_conf_.train_conf.SetInParent()
-        return self.job_conf_.train_conf
+def _GetJobConfAttr(GetConf, field):
+    if compile_context.cur_job_conf is not None:
+        assert c_api_util.CurJobBuildAndInferCtx_HasJobConf() == False
+        return getattr(GetConf(compile_context.cur_job_conf), field)
+    else:
+        assert c_api_util.IsEnvironmentInited() == False
+        return getattr(GetConf(default_job_conf), field)
 
 default_job_conf = job_util.JobConfigProto()
