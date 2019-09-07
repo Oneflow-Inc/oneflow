@@ -6,10 +6,29 @@
 
 namespace oneflow {
 
-template<DeviceType device_type, typename T, const T (*unary_func)(const T)>
-struct NdarrayApplyUnary final {
-  static void ImplaceApply(DeviceCtx* ctx, const XpuVarNdarray<T>& y) {
-    NdarrayApplyUnaryCoreWrapper<device_type, T, unary_func>::ImplaceApply(ctx, y);
+template<DeviceType device_type, typename T, template<typename> class unary_func,
+         typename Enable = void>
+struct NdarrayApplyUnary;
+
+template<DeviceType device_type, typename T, template<typename> class unary_func>
+struct NdarrayApplyUnary<
+    device_type, T, unary_func,
+    typename std::enable_if<std::is_same<T, typename DevDType<device_type, T>::type>::value>::type>
+    final {
+  static void InplaceApply(DeviceCtx* ctx, const XpuVarNdarray<T>& y) {
+    NdarrayApplyUnaryCoreWrapper<device_type, T, unary_func>::InplaceApply(ctx, y);
+  }
+};
+
+template<DeviceType device_type, typename T, template<typename> class unary_func>
+struct NdarrayApplyUnary<
+    device_type, T, unary_func,
+    typename std::enable_if<!std::is_same<T, typename DevDType<device_type, T>::type>::value>::type>
+    final {
+  static void InplaceApply(DeviceCtx* ctx, const XpuVarNdarray<T>& y) {
+    using NewT = typename DevDType<device_type, T>::type;
+    return NdarrayApplyUnary<device_type, NewT, unary_func>::InplaceApply(
+        ctx, reinterpret_cast<const XpuVarNdarray<NewT>&>(y));
   }
 };
 

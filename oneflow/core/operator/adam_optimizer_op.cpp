@@ -10,30 +10,33 @@ class AdamOptimizerOp : public Operator {
   void InitFromOpConf() override;
   const PbMessage& GetCustomizedConf() const override;
 
-  void InferBlobDescs(
+  Maybe<void> InferBlobDescs(
       std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
       const ParallelContext* parallel_ctx) const override {
     *GetBlobDesc4BnInOp("out") = *GetBlobDesc4BnInOp("weight");
     *GetBlobDesc4BnInOp("out_m") = *GetBlobDesc4BnInOp("m");
     *GetBlobDesc4BnInOp("out_v") = *GetBlobDesc4BnInOp("v");
-  };
-
- private:
-  typedef std::function<bool*(const std::string&)> HasBatchDim4BnInOpFunc;
-  void InferHasBatchDim(
-      HasBatchDim4BnInOpFunc HasBatchDim4BnInOp) const override {
-    for (const auto& ibn : input_bns()) {
-      CHECK_EQ(*HasBatchDim4BnInOp(ibn), false);
-      *HasBatchDim4BnInOp("out") = false;
-      *HasBatchDim4BnInOp("out_m") = false;
-      *HasBatchDim4BnInOp("out_v") = false;
-    }
+    return Maybe<void>::Ok();
   }
 
-  typedef std::function<const BlobDesc&(const std::string&)>
+ private:
+  typedef std::function<OptInt64*(const std::string&)> BatchAxis4BnInOpFunc;
+  Maybe<void> InferBatchAxis(
+      BatchAxis4BnInOpFunc BatchAxis4BnInOp) const override {
+    for (const auto& ibn : input_bns()) {
+      CHECK_OR_RETURN(!BatchAxis4BnInOp(ibn)->has_value());
+    }
+    *BatchAxis4BnInOp("out") = OptInt64();
+    *BatchAxis4BnInOp("out_m") = OptInt64();
+    *BatchAxis4BnInOp("out_v") = OptInt64();
+    return Maybe<void>::Ok();
+  }
+
+  typedef std::function<Maybe<const BlobDesc*>(const std::string&)>
       LogicalBlobDesc4IbnFunc;
-  void GetSbpSignatures(const LogicalBlobDesc4IbnFunc& LogicalBlobDesc4Ibn,
-                        SbpSignatureList* sbp_sig_list) const override;
+  Maybe<void> GetSbpSignatures(
+      const LogicalBlobDesc4IbnFunc& LogicalBlobDesc4Ibn,
+      SbpSignatureList* sbp_sig_list) const override;
 };
 
 void AdamOptimizerOp::InitFromOpConf() {
@@ -56,18 +59,19 @@ const PbMessage& AdamOptimizerOp::GetCustomizedConf() const {
   return op_conf().adam_optimizer_conf();
 }
 
-typedef std::function<const BlobDesc&(const std::string&)>
+typedef std::function<Maybe<const BlobDesc*>(const std::string&)>
       LogicalBlobDesc4IbnFunc;
-void AdamOptimizerOp::GetSbpSignatures(
+Maybe<void> AdamOptimizerOp::GetSbpSignatures(
     const LogicalBlobDesc4IbnFunc& LogicalBlobDesc4Ibn,
     SbpSignatureList* sbp_sig_list) const {
-  const Shape &weight_shape = LogicalBlobDesc4Ibn("weight").shape();
+  const Shape &weight_shape = JUST(LogicalBlobDesc4Ibn("weight"))->shape();
   for (int i = 0; i < weight_shape.NumAxes(); ++i) {
     SbpSignatureBuilder()
         .Split({"out", "out_m", "out_v", "gradient", "weight", "m", "v"}, i)
         .Broadcast({"instance_num_diff", "learning_rate"})
         .Build(sbp_sig_list->mutable_sbp_signature()->Add());
   }
+  return Maybe<void>::Ok();
 }
 
 REGISTER_OP(OperatorConf::kAdamOptimizerConf, AdamOptimizerOp);

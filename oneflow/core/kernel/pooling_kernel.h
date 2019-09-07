@@ -81,18 +81,6 @@ class PoolingKernelIf : public KernelIf<device_type> {
     Blob* out_blob = BnInOp2Blob("out");
     PoolingForward(kernel_ctx, this->pooling_ctx(), in_blob, out_blob);
   }
-  void BackwardDataContent(const KernelCtx& kernel_ctx,
-                           std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
-    Blob* in_diff_blob = BnInOp2Blob("in_diff");
-    if (in_diff_blob == nullptr) { return; }
-    Memset<device_type>(kernel_ctx.device_ctx, in_diff_blob->mut_dptr(), 0,
-                        in_diff_blob->ByteSizeOfDataContentField());
-    const Blob* out_diff_blob = BnInOp2Blob("out_diff");
-    const Blob* in_blob = BnInOp2Blob("in");
-    const Blob* out_blob = BnInOp2Blob("out");
-    PoolingBackward(kernel_ctx, this->pooling_ctx(), out_diff_blob, out_blob, in_blob,
-                    in_diff_blob);
-  }
   virtual void PoolingForward(const KernelCtx& kernel_ctx, const PoolingCtx& pooling_ctx,
                               const Blob* in_blob, Blob* out_blob) const = 0;
   virtual void PoolingBackward(const KernelCtx& kernel_ctx, const PoolingCtx& pooling_ctx,

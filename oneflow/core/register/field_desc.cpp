@@ -3,8 +3,6 @@
 
 namespace oneflow {
 
-FieldDesc::FieldDesc() : FieldDesc(Shape(), Global<JobDesc>::Get()->DefaultDataType()) {}
-
 FieldDesc::FieldDesc(const Shape& shape, DataType data_type)
     : shape_(shape), data_type_(data_type) {}
 

@@ -6,8 +6,10 @@
 
 namespace oneflow {
 
-void SetBnValInOpTypeConf(PbMessage* pb_msg, const std::string& bn, const std::string& old_val,
-                          const std::string& new_val);
+const static std::string kProducedLbi2ConsumedDiffLbi = "produced_lbi2consumed_diff_lbi";
+
+std::function<const ParallelConf*(const std::string&)> MakeGetterParallelConf4OpName(
+    const Placement& placement);
 
 class SbpParallel;
 class LogicalBlobId;
@@ -21,12 +23,18 @@ class JobBuilder final {
   
   Job *mutable_job() { return job_; }
   const Job& job() const { return *job_; }
+  JobHelperConf* mutable_helper() { return job_->mutable_helper(); }
+  SbpConf* mutable_sbp_conf() { return job_->mutable_sbp_conf(); }
 
+  const OperatorConf& OpConf4OpName(const std::string& op_name) const;
+  const ParallelConf& ParallelConf4OpName(const std::string& op_name) const;
   void AddOps(const ParallelConf& parallel_conf, const std::vector<OperatorConf>& op_confs);
-  void MutOps(const std::vector<OperatorConf>& op_confs) const;
-  void AddOrMutOps(const ParallelConf& parallel_conf, const std::vector<OperatorConf>& op_confs);
   void RemoveOp(const std::string &op_name);
 
+  void MutOpsOnlyOnce(const std::vector<OperatorConf>& op_confs);
+  void MutParallelConfOnlyOnce(const std::string& op_name, const ParallelConf& parallel_conf);
+  void AddOrMutOpsOnlyOnce(const ParallelConf& parallel_conf,
+                           const std::vector<OperatorConf>& op_confs);
   SbpParallel* MutSbpParallel4Oba(const OpBlobArg& oba) const;
   void BindIdenticalSbpOpBlobArgPair(const OpBlobArg& first, const OpBlobArg& second);
 
@@ -48,16 +56,25 @@ class JobBuilder final {
   const OpTimeShape &GetTimeShape(const std::string &op_name) const;
   void AddTimeShape(const std::string &op_name, const OpTimeShape &time_shape);
 
-  void AddBatchDimLbi(const LogicalBlobId &lbi);
-  const HashSet<LogicalBlobId> &batch_dim_lbis() const { return batch_dim_lbis_; }
+  OptInt64 *MutableBatchAxis(const std::string &lbn);
+  const OptInt64 &GetBatchAxis(const std::string &lbn) const;
+  void AddBatchAxis(const std::string &lbn, const OptInt64 &axis);
+  bool HasBatchAxis(const std::string &lbn) const {
+    return lbn2batch_axis_.count(lbn) > 0;
+  }
 
  private:
+  PlacementGroup* FindPlacementGroup(const std::string& op_name) const;
+
   Job* job_;
   HashMap<std::string, OperatorConf*> op_name2op_conf_;
   HashMap<std::string, ParallelConf*> op_name2parallel_conf_;
-  HashMap<std::string, SbpSignature*> op_name2sbp_signature_conf_;
+  HashSet<std::string> modified_op_conf_op_names_;
+  HashSet<std::string> modified_parallel_conf_op_names_;
+
+  HashMap<std::string, SbpSignature *> op_name2sbp_signature_conf_;
   HashMap<std::string, OpTimeShape *> op_name2time_shapes_;
-  HashSet<LogicalBlobId> batch_dim_lbis_;
+  HashMap<std::string, OptInt64 *> lbn2batch_axis_;
 };
 
 }  // namespace oneflow

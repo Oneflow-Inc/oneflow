@@ -23,7 +23,6 @@ class ReduceSplitCompTaskNode final : public CompTaskNode, public ReduceCompTask
 
  private:
   void BuildExecGphAndRegst() override;
-  void FixPackedBlobDescOfProducedRegst() override;
   void InferProducedDataRegstTimeShape() override;
 };
 

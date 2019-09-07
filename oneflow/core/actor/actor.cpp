@@ -1,5 +1,6 @@
 #include "oneflow/core/actor/actor.h"
 #include "oneflow/core/thread/thread_manager.h"
+#include "oneflow/core/job/runtime_job_descs.h"
 
 namespace oneflow {
 
@@ -29,12 +30,9 @@ bool IsLastRegstInPieceWithOrder(const Regst* regst, ColIdOrder order) {
          || (order == ColIdOrder::kDescending && regst->col_id() == 0);
 }
 
-bool NeedModelSave(int64_t model_version_id) {
-  return model_version_id + 1 == Global<JobDesc>::Get()->TotalBatchNum()
-         || (model_version_id + 1) % Global<JobDesc>::Get()->NumOfBatchesInSnapshot() == 0;
-}
-
-void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
+void Actor::Init(const JobDesc* job_desc, const TaskProto& task_proto,
+                 const ThreadCtx& thread_ctx) {
+  job_desc_ = job_desc;
   actor_id_ = task_proto.task_id();
   act_id_ = -1;
   InitDeviceCtx(thread_ctx);
@@ -43,7 +41,7 @@ void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
   }
   for (const ExecNodeProto& node : task_proto.exec_sequence().exec_node()) {
     ExecKernel ek;
-    ek.kernel = ConstructKernel(parallel_ctx(), node.kernel_conf(), device_ctx_.get());
+    ek.kernel = ConstructKernel(job_desc_, parallel_ctx(), node.kernel_conf(), device_ctx_.get());
     ek.bn_in_op2regst_desc_id = PbMap2HashMap(node.bn_in_op2regst_desc_id());
     exec_kernel_vec_.push_back(std::move(ek));
   }
@@ -150,6 +148,12 @@ void Actor::TakeOverNaiveProduced(const PbMap<std::string, RegstDescProto>& prod
   }
 }
 
+void Actor::ForEachProducedRegst(const std::function<void(Regst*)>& Handler) const {
+  for (const auto& pair : produced_regsts_) {
+    for (const auto& regst : pair.second) { Handler(regst.get()); }
+  }
+}
+
 DeviceType Actor::GetDeviceType() const {
   return Global<IDMgr>::Get()->GetDeviceTypeFromActorId(actor_id_);
 }
@@ -232,6 +236,10 @@ void Actor::ForEachCurNaiveReadableDataRegst(std::function<void(const Regst*)> f
   naive_consumed_rs_.ForEachFrontRegst([func](Regst* regst) {
     if (regst->regst_desc()->regst_desc_type().has_data_regst_desc()) { func(regst); }
   });
+}
+
+bool Actor::ReceiveEordMsg(int64_t regst_desc_id) const {
+  return eord_regst_desc_ids_.find(regst_desc_id) != eord_regst_desc_ids_.end();
 }
 
 int Actor::HandlerNormal(const ActorMsg& msg) {
@@ -645,7 +653,8 @@ Regst* Actor::GetNaiveCurWriteable(int64_t regst_desc_id) const {
 
 std::unique_ptr<Actor> NewActor(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
   Actor* rptr = NewObj<Actor>(task_proto.task_type());
-  rptr->Init(task_proto, thread_ctx);
+  const auto& job_descs = *Global<RuntimeJobDescs>::Get();
+  rptr->Init(&job_descs.job_desc(task_proto.job_id()), task_proto, thread_ctx);
   return std::unique_ptr<Actor>(rptr);
 }
 

@@ -43,33 +43,6 @@ void SliceKernel<DeviceType::kCPU, T>::ForwardDataContent(
   }
 }
 
-template<typename T>
-void SliceKernel<DeviceType::kCPU, T>::BackwardDataContent(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const SliceOpConf& conf = this->op_conf().slice_conf();
-  const Blob* out_diff_blob = BnInOp2Blob(GenDiffBn("out"));
-  Blob* in_diff_blob = BnInOp2Blob(GenDiffBn("in"));
-  CHECK_EQ(out_diff_blob->shape().NumAxes(), in_diff_blob->shape().NumAxes());
-
-  Memset<DeviceType::kCPU>(ctx.device_ctx, in_diff_blob->mut_dptr<T>(), 0,
-                           in_diff_blob->ByteSizeOfDataContentField());
-
-  switch (in_diff_blob->shape().NumAxes()) {
-// clang-format off
-#define MAKE_CASE(num_axes)                                                           \
-    case num_axes: {                                                                  \
-      NdarraySliceUtil<T, num_axes>::Backward(ctx.device_ctx, conf.dim_slice_conf(),  \
-                                              out_diff_blob, in_diff_blob);           \
-      break;                                                                          \
-    }
-    MAKE_CASE(2);
-    MAKE_CASE(3);
-#undef MAKE_CASE
-    // clang-format on
-    default: { UNIMPLEMENTED(); }
-  }
-}
-
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kSliceConf, SliceKernel, ARITHMETIC_DATA_TYPE_SEQ);
 
 template<typename T>

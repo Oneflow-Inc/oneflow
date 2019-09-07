@@ -30,9 +30,10 @@ class OptimizerRewritor {
                                     const std::string &total_instances,
                                     const ClipConf &clip_conf);
 
-  OperatorConf *BuildLearningRateShedulerOp(
+  OperatorConf *BuildLearningRateScheduleOp(
                                 const std::string &node_name,
                                 const float learning_rate,
+                                const std::string &train_step,
                                 const NormalModelUpdateOpUserConf &update_conf);
 
   OperatorConf *BuildOptimizerOp(const mola::XlaNode *node,
@@ -89,25 +90,24 @@ OperatorConf *OptimizerRewritor::BuildClipGradientOp(
   return builder_->MutableOpConf(op_conf.name());
 }
 
-OperatorConf *OptimizerRewritor::BuildLearningRateShedulerOp(
+OperatorConf *OptimizerRewritor::BuildLearningRateScheduleOp(
                             const std::string &node_name,
                             const float learning_rate,
+                            const std::string &train_step,
                             const NormalModelUpdateOpUserConf &update_conf) {
   OperatorConf op_conf;
-  op_conf.set_name(absl::StrCat(node_name, "-lr_sheduler"));
-  LearningRateShedulerOpConf *conf = op_conf.mutable_lr_sheduler_conf();
+  op_conf.set_name(absl::StrCat(node_name, "-lr_scheduler"));
+  LearningRateScheduleOpConf *conf =
+      op_conf.mutable_learning_rate_schedule_conf();
   conf->set_out("out");
-  conf->set_base_learning_rate(learning_rate);
+  conf->set_train_step(train_step);
+  conf->set_learning_rate(learning_rate);
 
   if (update_conf.has_warmup_conf()) {
-    conf->set_use_warmup(true);
-    OptimizerParamBuilder::SetupWarmupParam(conf, update_conf.warmup_conf());
-  } else {
-    conf->set_use_warmup(false);
+    *(conf->mutable_warmup_conf()) = update_conf.warmup_conf();
   }
   if (update_conf.has_learning_rate_decay()) {
-    const auto &lr_decay_conf = update_conf.learning_rate_decay();
-    OptimizerParamBuilder::SetupLearningRateDecayParam(conf, lr_decay_conf);
+    *(conf->mutable_learning_rate_decay()) = update_conf.learning_rate_decay();
   }
 
   ParallelConf parallel_conf = builder_->GetParallelConf(node_name);
@@ -126,7 +126,7 @@ OperatorConf *OptimizerRewritor::BuildOptimizerOp(
       mode, node, gradient, total_instances, learning_rate);
 
   ParallelConf parallel_conf = builder_->GetParallelConf(node->op_name());
-  builder_->AddOrMutOps(parallel_conf, {op_conf});
+  builder_->AddOrMutOpsOnlyOnce(parallel_conf, {op_conf});
   return builder_->MutableOpConf(op_conf.name());
 }
 
@@ -174,6 +174,7 @@ void OptimizerRewritor::Run() {
     std::string model_diff = GetNodeAttr<std::string>(node, "model_diff");
     std::string total_instances =
         GetNodeAttr<std::string>(node, "total_instance_num_diff");
+    std::string train_step = GetNodeAttr<std::string>(node, "train_step");
 
     auto control_in_op_names = GetControlInOpNames(node);
     std::vector<OperatorConf *> operator_confs;
@@ -190,16 +191,16 @@ void OptimizerRewritor::Run() {
     }
 
     // TODO(hjchen2): learning_rate maybe a untrainable variable
-    // Always build a learning rate sheduler operator even if using const
+    // Always build a learning rate scheduler operator even if using const
     // learning rate
-    OperatorConf *lr_shedule_conf = BuildLearningRateShedulerOp(
-        node->op_name(), learning_rate, *user_conf);
-    operator_confs.push_back(lr_shedule_conf);
+    OperatorConf *lr_schedule_conf = BuildLearningRateScheduleOp(
+        node->op_name(), learning_rate, train_step, *user_conf);
+    operator_confs.push_back(lr_schedule_conf);
 
-    std::string lr_shedule_output =
-        absl::StrCat(lr_shedule_conf->name(), "/out");
+    std::string lr_schedule_output =
+        absl::StrCat(lr_schedule_conf->name(), "/out");
     OperatorConf *optimizer_conf = BuildOptimizerOp(
-        node, model_diff, total_instances, lr_shedule_output);
+        node, model_diff, total_instances, lr_schedule_output);
     operator_confs.push_back(optimizer_conf);
 
     // Currently each model update operator will result in a fake consumer

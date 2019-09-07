@@ -7,9 +7,7 @@ void OptimizerCompTaskNode::ConsumeAllRegsts() {
   ForEachInDataEdge([&](TaskEdge* edge) { ConsumeRegst("in", edge->GetSoleRegst()); });
 }
 
-void OptimizerCompTaskNode::ProduceAllRegstsAndBindEdges() {
-  ProduceRegst("data_tmp", false, 1, 1);
-}
+void OptimizerCompTaskNode::ProduceAllRegstsAndBindEdges() { ProduceRegst("tmp", false, 1, 1); }
 
 void OptimizerCompTaskNode::BuildExecGphAndRegst() {
   ExecNode* node = mut_exec_gph().NewNode();
@@ -19,13 +17,14 @@ void OptimizerCompTaskNode::BuildExecGphAndRegst() {
   for (const auto& ibn : node->op()->input_bns()) {
     node->BindBnWithOneOfTheRegsts(ibn, in_regsts);
   }
-  node->AddBnToRegstAndBindIt(&Operator::data_tmp_bns, GetProducedRegst("data_tmp"));
+  node->AddBnToRegstAndBindIt(&Operator::tmp_bns, GetProducedRegst("tmp"));
   node->InferBlobDescs(parallel_ctx());
 }
 
 void OptimizerCompTaskNode::InferProducedDataRegstTimeShape() {
   ForEachProducedDataRegst([](const std::string& name, RegstDesc* regst) {
-    regst->mut_data_regst_time_shape()->reset(new Shape({Global<JobDesc>::Get()->TotalBatchNum()}));
+    regst->mut_data_regst_time_shape()->reset(
+        new Shape({GlobalJobDesc().TotalBatchNum(), static_cast<int64_t>(1)}));
   });
 }
 

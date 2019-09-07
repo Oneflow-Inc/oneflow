@@ -15,19 +15,6 @@ class SoftmaxKernel final : public KernelIf<device_type> {
  private:
   void ForwardDataContent(const KernelCtx&,
                           std::function<Blob*(const std::string&)>) const override;
-  void BackwardDataContent(const KernelCtx&,
-                           std::function<Blob*(const std::string&)>) const override;
-};
-
-template<DeviceType device_type, typename T>
-struct SoftmaxKernelUtil {
-  // matrix[i][j] -= vector[i]
-  // matrix shape = n*w, vector shape = n
-  static void Sub(DeviceCtx* ctx, const int64_t n, const int64_t w, T* matrix, const T* vector);
-
-  // matrix[i][j] /= vector[i]
-  // matrix shape = n*w, vector shape = n
-  static void Div(DeviceCtx* ctx, const int64_t n, const int64_t w, T* matrix, const T* vector);
 };
 
 template<DeviceType device_type, typename T>

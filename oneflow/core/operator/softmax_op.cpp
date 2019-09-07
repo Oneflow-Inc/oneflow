@@ -8,26 +8,22 @@ void SoftmaxOp::InitFromOpConf() {
   CHECK(op_conf().has_softmax_conf());
   EnrollInputBn("in");
   EnrollOutputBn("out");
-  if (Global<JobDesc>::Get()->IsPredict()
-      && Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()
-      && op_conf().softmax_conf().axis() != -1) {
+  if (GlobalJobDesc().IsTrain() && op_conf().softmax_conf().axis() != -1) {
     EnrollOutputBn("transpose_in");
     EnrollOutputBn("transpose_out", false);
   } else {
-    EnrollDataTmpBn("transpose_in");
-    EnrollDataTmpBn("transpose_out");
+    EnrollTmpBn("transpose_in");
+    EnrollTmpBn("transpose_out");
   }
-  EnrollFwBufBn("fw_softmax_num");
-  EnrollFwBufBn("fw_buf");
-  EnrollBwBufBn("transpose_out_diff");
-  EnrollBwBufBn("bw_buf");
-  EnrollBwBufBn("bw_softmax_num");
+  EnrollTmpBn("fw_softmax_num");
+  EnrollTmpBn("fw_buf");
 }
 
 const PbMessage& SoftmaxOp::GetCustomizedConf() const { return op_conf().softmax_conf(); }
 
-void SoftmaxOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                               const ParallelContext* parallel_ctx) const {
+Maybe<void> SoftmaxOp::InferBlobDescs(
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx) const {
   // in
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
   // out
@@ -53,21 +49,7 @@ void SoftmaxOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetB
     transpose_blob_desc->set_data_type(in_blob_desc->data_type());
     *GetBlobDesc4BnInOp("transpose_out") = *transpose_blob_desc;
   }
-}
-
-void SoftmaxOp::InferBwBufBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                    const ParallelContext*) const {
-  *GetBlobDesc4BnInOp("transpose_out_diff") = *GetBlobDesc4BnInOp("transpose_in");
-  const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
-  // 1D blob store tmp calculate result
-  BlobDesc* bw_tmp_blob_desc = GetBlobDesc4BnInOp("bw_softmax_num");
-  bw_tmp_blob_desc->mut_shape() = Shape({op_context_->transpose_rows});
-  bw_tmp_blob_desc->set_data_type(in_blob_desc->data_type());
-  // temp storage for RowMax etc.
-  BlobDesc* bw_buf_blob_desc = GetBlobDesc4BnInOp("bw_buf");
-  bw_buf_blob_desc->mut_shape() =
-      Shape({static_cast<int64_t>(RtBlobDesc(*in_blob_desc).ByteSizeOfDataContentField())});
-  bw_buf_blob_desc->set_data_type(DataType::kChar);
+  return Maybe<void>::Ok();
 }
 
 void SoftmaxOp::VirtualGenKernelConf(
@@ -105,11 +87,12 @@ SoftmaxOpCtx* SoftmaxOp::NewSoftmaxOpCtx(const Shape& in_shape) const {
   return op_context;
 }
 
-void SoftmaxOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
+Maybe<void> SoftmaxOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
   SbpSignatureBuilder()
       .Split(input_bns(), 0)
       .Split(output_bns(), 0)
       .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+  return Maybe<void>::Ok();
 }
 
 REGISTER_OP(OperatorConf::kSoftmaxConf, SoftmaxOp);

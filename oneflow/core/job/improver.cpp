@@ -4,6 +4,7 @@
 #include "oneflow/core/register/register_desc.pb.h"
 #include "oneflow/core/register/register_manager.h"
 #include "oneflow/core/job/job_desc.h"
+#include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/profiler.h"
 #include "oneflow/core/graph/plan_task_graph.h"
 #include "oneflow/core/graph/regst_lifetime_graph.h"
@@ -276,25 +277,13 @@ std::function<const HashMap<int64_t, double>&(int64_t)> MakeGetterPathDurations4
   };
 }
 
-uint64_t NumOfPiecesInSnapshot() {
-  return Global<JobDesc>::Get()->NumOfBatchesInSnapshot()
-         * Global<JobDesc>::Get()->NumOfPiecesInBatch();
-}
-
-double IIScale4Actor(TaskType task_type, double default_ii_scale) {
-  if (task_type == TaskType::kMdSave) { return NumOfPiecesInSnapshot(); }
-  return default_ii_scale;
-}
-
 std::function<const HashMap<int64_t, double>&(int64_t)> MakeGetterPathIIScales4RegstDescId(
     const ChainActGraph& graph) {
   auto regst_desc_id2consumer_id2ii_scale =
       std::make_shared<HashMap<int64_t, HashMap<int64_t, double>>>();
   graph.ForEachRegstDescConsumerPathIIScale(
       [&](int64_t regst_desc_id, int64_t consumer_actor_id, double ii_scale) {
-        TaskType task_type = graph.GetTaskProto(consumer_actor_id).task_type();
-        (*regst_desc_id2consumer_id2ii_scale)[regst_desc_id][consumer_actor_id] =
-            IIScale4Actor(task_type, ii_scale);
+        (*regst_desc_id2consumer_id2ii_scale)[regst_desc_id][consumer_actor_id] = ii_scale;
       });
   auto empty = std::make_shared<const HashMap<int64_t, double>>();
   return [regst_desc_id2consumer_id2ii_scale,
@@ -380,7 +369,7 @@ void FixReliantCtrlRegstNum(const Plan& plan, const std::function<uint64_t(int64
         // set ctrl regst num between copyHd and MdUpdt
         CHECK(task_proto.task_type() == kCopyHd);
         uint64_t regst_num = GetRegstNum(regst_type.ctrl_regst_desc().reliant_regst_desc_id())
-                             + Global<JobDesc>::Get()->NumOfPiecesInBatch() - 1;
+                             + GlobalJobDesc().NumOfPiecesInBatch() - 1;
         SetRegstNum(regst.regst_desc_id(), regst_num);
       }
     }
@@ -408,16 +397,31 @@ void SetInplaceConsumedRegstDescId(
   }
 }
 
+void SetUniqueMemSharedId4UnsharedRegst(Plan* plan) {
+  for (int i = 0; i < plan->task_size(); i++) {
+    TaskProto* task = plan->mutable_task(i);
+    for (auto& pair : *task->mutable_produced_regst_desc()) {
+      RegstDescProto* regst_desc = &pair.second;
+      if (regst_desc->mem_shared_id() == -1) {
+        CHECK_EQ(regst_desc->mem_shared_offset(), -1);
+        regst_desc->set_mem_shared_id(Global<IDMgr>::Get()->NewMemSharedId());
+        regst_desc->set_mem_shared_offset(0);
+      }
+    }
+  }
+}
+
 }  // namespace
 
 uint64_t Improver::AvailableMemSize(int64_t machine_id, int64_t memory_zone_id) const {
   int64_t mem_size = amd_.machine_amd(machine_id).zone_size(memory_zone_id);
-  JobDesc* job_desc = Global<JobDesc>::Get();
-  if (memory_zone_id == job_desc->GpuDeviceNum()) {
-    mem_size -= job_desc->reserved_host_mem_byte();
-    mem_size -= job_desc->persistence_buf_byte() * record_load_task_num_.at(machine_id);
+  const ResourceDesc* resource_desc = Global<ResourceDesc>::Get();
+  if (memory_zone_id == resource_desc->GpuDeviceNum()) {
+    mem_size -= resource_desc->reserved_host_mem_byte();
+    mem_size -=
+        Global<const IOConf>::Get()->persistence_buf_byte() * record_load_task_num_.at(machine_id);
   } else {
-    mem_size -= job_desc->reserved_device_mem_byte();
+    mem_size -= resource_desc->reserved_device_mem_byte();
   }
   CHECK_GT(mem_size, 0);
   return static_cast<uint64_t>(mem_size);
@@ -427,7 +431,7 @@ int64_t Improver::GetMemoryZoneId(const MemoryCase& mem_case) const {
   if (mem_case.has_device_cuda_mem()) {
     return mem_case.device_cuda_mem().device_id();
   } else {
-    return Global<JobDesc>::Get()->GpuDeviceNum();
+    return Global<ResourceDesc>::Get()->GpuDeviceNum();
   }
 }
 
@@ -554,7 +558,7 @@ void Improver::ForEachInferredMemSharingCriticalSection(
 void Improver::Init(const AvailableMemDesc& amd, const Plan& naive_plan) {
   start_mem_shared_id_ = Global<IDMgr>::Get()->NewMemSharedId();
   amd_ = amd;
-  record_load_task_num_.assign(Global<JobDesc>::Get()->TotalMachineNum(), 0);
+  record_load_task_num_.assign(Global<ResourceDesc>::Get()->TotalMachineNum(), 0);
   for (const TaskProto& task_proto : naive_plan.task()) {
     if (task_proto.task_type() == TaskType::kRecordLoad) {
       record_load_task_num_.at(Global<IDMgr>::Get()->MachineId4ActorId(task_proto.task_id())) += 1;
@@ -571,6 +575,7 @@ Plan Improver::ImproveMemSharedIdOnly(const AvailableMemDesc& amd, const Plan& n
   HashMap<int64_t, double> zero2one{{0, 1}};
   auto Zero2One = [&](int64_t) -> const HashMap<int64_t, double>& { return zero2one; };
   CHECK(!IsAnyZoneOutOfMemory(mz_regst_descs, Zero2One, Zero2One, 1));
+  SetUniqueMemSharedId4UnsharedRegst(&mem_shared_plan);
   return mem_shared_plan;
 }
 
@@ -593,6 +598,7 @@ Plan Improver::Improve(const AvailableMemDesc& amd, const Plan& naive_plan,
   ForEachImprovedRegstNum(mem_shared_plan, true, base_ii, PathDurations4RegstDescId,
                           PathIIScales4RegstDescId, MakeSetterSetPlanRegstNum(&plan));
   FixReliantCtrlRegstNum(plan, MakeGetterGetPlanRegstNum(&plan), MakeSetterSetPlanRegstNum(&plan));
+  SetUniqueMemSharedId4UnsharedRegst(&plan);
   return plan;
 }
 

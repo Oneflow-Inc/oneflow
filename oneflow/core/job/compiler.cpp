@@ -1,6 +1,6 @@
 #include "oneflow/core/job/compiler.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
-#include "oneflow/core/device/cudnn_conv_ctx_cache.h"
+#include "oneflow/core/job/cudnn_conv_ctx_cache_scope.h"
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/job_completer/job_completer.h"
 
@@ -15,63 +15,7 @@ DEFINE_bool(use_xla_jit, true, "Option to use xla jit");
 
 namespace oneflow {
 
-namespace {
-
-void ToDotFile(const Plan& plan, const std::string& filepath) {
-  auto log_stream = TeePersistentLogStream::Create(filepath);
-  log_stream << "digraph {\n";
-  HashSet<int64_t> regst_desc_ids;
-  for (const TaskProto& task_proto : plan.task()) {
-    log_stream << "task" << std::to_string(task_proto.task_id()) << "[label=\""
-               << std::to_string(task_proto.task_id()) << "\\n"
-               << std::to_string(task_proto.machine_id()) << ":"
-               << std::to_string(task_proto.thrd_id()) << ":"
-               << std::to_string(task_proto.parallel_ctx().parallel_id())
-               << "\", shape=ellipse, style=\"rounded,filled\", "
-                  "colorscheme=set312, color="
-               << task_type2color.at(task_proto.task_type()) << "];\n";
-    for (const auto& pair : task_proto.produced_regst_desc()) {
-      regst_desc_ids.insert(pair.second.regst_desc_id());
-    }
-  }
-  for (const int64_t regst_task_id : regst_desc_ids) {
-    log_stream << "regst_desc" << std::to_string(regst_task_id) << "[label=\""
-               << std::to_string(regst_task_id) << "\", shape=box];\n";
-  }
-  for (const TaskProto& task_proto : plan.task()) {
-    for (const auto& pair : task_proto.produced_regst_desc()) {
-      log_stream << "task" << std::to_string(task_proto.task_id()) << "->regst_desc"
-                 << std::to_string(pair.second.regst_desc_id()) << "[label=\"" << pair.first
-                 << "\"];\n";
-    }
-    for (const auto& pair : task_proto.consumed_regst_desc_id()) {
-      for (int64_t regst_desc_id : pair.second.regst_desc_id()) {
-        log_stream << "regst_desc" << std::to_string(regst_desc_id) << "->task"
-                   << std::to_string(task_proto.task_id()) << "[label=\"" << pair.first << "\"];\n";
-      }
-    }
-  }
-  log_stream << "}\n";
-}
-
-Job ConvertJobConf2Job(const JobConf& job_conf) {
-  Job job;
-  *job.mutable_net() = job_conf.net();
-  *job.mutable_resource() = job_conf.resource();
-  *job.mutable_placement() = job_conf.placement();
-  *job.mutable_sbp_conf() = job_conf.sbp_conf();
-  *job.mutable_other() = job_conf.other();
-  return job;
-}
-
-}  // namespace
-
-Plan Compiler::Compile() {
-  Plan plan = DoCompile();
-  return plan;
-}
-
-void Compiler::GenNetTopo(Plan* plan) {
+void Compiler::GenNetTopo(Plan* plan) const {
   HashMap<int64_t, int64_t> rid2mid;
   HashMap<int64_t, int64_t> tid2mid;
   std::map<int64_t, std::set<int64_t>> net_topo;
@@ -112,23 +56,19 @@ void Compiler::GenNetTopo(Plan* plan) {
   *(pb_net_topo.mutable_peer_machine_ids()) = HashMap2PbMap(std_net_topo);
 }
 
-Plan Compiler::DoCompile() {
-#ifdef WITH_CUDA
-  Global<CudnnConvCtxCache>::New();
-#endif
-  const JobDesc* job_desc = Global<JobDesc>::Get();
-  Job job = ConvertJobConf2Job(job_desc->job_conf());
-  JobCompleter().Complete(&job);
-  TeePersistentLogStream::Create("optimized_job")->Write(job);
-  Global<OpGraph>::New(job);
+void Compiler::Compile(Job* job, Plan* plan, bool need_job_complete) const {
+  auto cudnn_conv_ctx_cache_scope = std::make_unique<CudnnConvCtxCacheScope>();
+  const JobDesc& job_desc = GlobalJobDesc();
+  if (need_job_complete) { JobCompleter().Complete(job); }
+  TeePersistentLogStream::Create(StrCat("optimized_job", job_desc.job_id()))->Write(*job);
+  Global<OpGraph>::New(*job);
   Global<OpGraph>::Get()->ToDotWithFilePath("optimized_dlnet_op_graph.dot");
 
 #ifdef WITH_XLA
   {
     // TODO(hjchen2): For debug
-    std::string job_string = job.DebugString();
     std::ofstream ost("./job_string_without_xla.prototxt");
-    ost << job_string;
+    ost << job->DebugString();
     ost.close();
   }
   if (FLAGS_use_xla_jit) {
@@ -141,60 +81,56 @@ Plan Compiler::DoCompile() {
     mola::RunOptimizePass("MarkClusterId", options);
     mola::RunOptimizePass("BuildSubGraph", options);
     // Rebuild Job
-    RebuildXlaCompiledJob(graph, &job);
+    RebuildXlaCompiledJob(graph, job);
 
     std::ofstream ost("./job_string_with_xla.prototxt");
-    ost << job.DebugString();
+    ost << job->DebugString();
     ost.close();
 
     Global<OpGraph>::Delete();
-    Global<OpGraph>::New(job);
+    Global<OpGraph>::New(*job);
   }
 #endif  // WITH_XLA
 
-  auto logical_gph = std::make_unique<LogicalGraph>(job);
-  int64_t total_mbn_num = logical_gph->total_mbn_num();
+  auto logical_gph = std::make_unique<LogicalGraph>(*job);
   auto task_gph = std::make_unique<TaskGraph>(std::move(logical_gph));
   using std::placeholders::_1;
   task_gph->ForEachNode(std::bind(&TaskNode::ProduceAllRegstsAndBindEdges, _1));
   task_gph->ForEachNode(std::bind(&TaskNode::ConsumeAllRegsts, _1));
   task_gph->ForEachNode(std::bind(&TaskNode::PinConsumedRegst, _1));
   task_gph->MdUpdtDelayedTopoForEachNode(&TaskNode::Build);
-  if (job_desc->IsTrain()) {
-    task_gph->AddReduceSequenceCtrlEdges();
-    task_gph->AddMdUpdtCtrlEdgesWithinReduceSplitNode();
+  if (job_desc.IsTrain()) {
+    // TODO: update method for fw bw split
+    // task_gph->AddMdUpdtCtrlEdgesWithinReduceSplitNode();
   }
   task_gph->RemoveEmptyRegsts();
   task_gph->AddOrderingCtrlEdgeInSameChain();
   task_gph->EnableMemSharingInReduceStruct();
-  if (job_desc->IsTrain() && job_desc->enable_mem_sharing()) {
-    task_gph->EnableMemSharingAfterAllManualSetForMdUpdt();  // must last mem shared manual set
-  }
-  if (job_desc->enable_inplace()) {
+  // TODO: update method for fw bw split
+  // if (job_desc.IsTrain() && job_desc.enable_mem_sharing()) {
+  //   task_gph->EnableMemSharingAfterAllManualSetForMdUpdt();  // must last mem shared manual set
+  // }
+  if (job_desc.enable_inplace()) {
     auto IsReachable = Global<OpGraph>::Get()->MakePredicatorIsLbiAllConsumersReachableToOpName();
     task_gph->EnableInplaceMemSharing(IsReachable);
   }
-  if (job_desc->IsTrain()) { task_gph->AddOrderCtrlEdgeBetweenCopyAndMdUpdt(); }
-  if (job_desc->IsTrain()) { task_gph->RmUselessConsumeRelationshipBetweenFwBw(); }
+  // TODO: update method for fw bw split
+  // if (job_desc.IsTrain()) { task_gph->AddOrderCtrlEdgeBetweenCopyAndMdUpdt(); }
   task_gph->MdUpdtDelayedTopoForEachNode(&TaskNode::InferTimeShapeIfMeaningful);
-  if (job_desc->IsTrain() && job_desc->enable_mem_sharing()) {
-    task_gph->EnableMemSharingInVariableOp();
-  }
-  if (job_desc->IsTrain()) { task_gph->AddReduceNoBwForwardNodeOverlapingCtrlEdges(); }
+  // TODO: update method for fw bw split
+  // if (job_desc.IsTrain()) { task_gph->AddReduceNoBwForwardNodeOverlapingCtrlEdges(); }
 
-  Plan plan;
   task_gph->ForEachNode([&](TaskNode* task_node) {
     if (task_node->IsMeaningLess()) { return; }
-    task_node->ToProto(plan.mutable_task()->Add());
+    task_node->ToProto(plan->mutable_task()->Add());
   });
-  plan.set_total_mbn_num(total_mbn_num);
-  GenNetTopo(&plan);
-  ToDotFile(plan, "/dot/plan.dot");
+  {
+    auto* job_id2job_conf = plan->mutable_job_confs()->mutable_job_id2job_conf();
+    (*job_id2job_conf)[GlobalJobDesc().job_id()] = GlobalJobDesc().job_conf();
+  }
+  // TODO: fix .dot generate
+  // GenNetTopo(plan);
   Global<OpGraph>::Delete();
-#ifdef WITH_CUDA
-  Global<CudnnConvCtxCache>::Delete();
-#endif
-  return plan;
 }
 
 }  // namespace oneflow

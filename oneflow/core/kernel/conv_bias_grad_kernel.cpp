@@ -22,7 +22,7 @@ struct ConvBiasGradKernelUtil<DeviceType::kCPU, T> final {
   }
 };
 
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kConvBiasGradConf, ConvBiasGradKernel,
-                           FLOATING_DATA_TYPE_SEQ);
+ADD_DEFAULT_KERNEL_CREATOR_WITH_GPU_HALF(OperatorConf::kConvBiasGradConf, ConvBiasGradKernel,
+                                         FLOATING_DATA_TYPE_SEQ);
 
 }  // namespace oneflow

@@ -11,9 +11,6 @@ class BroadcastAddOp final : public BroadcastBinaryOp {
   BroadcastAddOp() = default;
   ~BroadcastAddOp() = default;
 
-  bool NeedInBlobWhenBackward() const override { return false; }
-  bool NeedOutBlobWhenBackward() const override { return false; }
-
   const PbMessage& GetCustomizedConf() const override;
 };
 

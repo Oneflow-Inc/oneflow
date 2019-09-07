@@ -112,10 +112,12 @@ class Blob final {
   size_t ByteSizeOfDim2ValidNumField() const;
   size_t ByteSizeOfRecordIdInDevicePieceField() const;
   size_t ByteSizeOfDataContentField() const { return blob_desc_->ByteSizeOfDataContentField(); }
+  size_t ByteSizeOfValidDataContent() const;
   size_t TotalByteSize() const { return blob_desc_->TotalByteSize(); }
 
   bool IsContiguous() const { return is_contiguous_; }
   void CopyDataContentFrom(DeviceCtx* device_ctx, const Blob* rhs);
+  void CopyValidDataContentFrom(DeviceCtx* device_ctx, const Blob* rhs);
   void CopyHeaderFrom(DeviceCtx* device_ctx, const Blob* rhs);
   void CopyDataIdFrom(DeviceCtx* device_ctx, const Blob* rhs);
   void CopyColNumFrom(DeviceCtx* device_ctx, const Blob* rhs);

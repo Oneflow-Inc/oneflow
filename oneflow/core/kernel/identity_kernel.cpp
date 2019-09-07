@@ -17,12 +17,6 @@ void IdentityKernel<device_type>::ForwardDataContent(
   CheckSizeAndCopyBlob(ctx.device_ctx, BnInOp2Blob("out"), BnInOp2Blob("in"));
 }
 
-template<DeviceType device_type>
-void IdentityKernel<device_type>::BackwardDataContent(
-    const KernelCtx &ctx, std::function<Blob *(const std::string &)> BnInOp2Blob) const {
-  CheckSizeAndCopyBlob(ctx.device_ctx, BnInOp2Blob(GenDiffBn("in")), BnInOp2Blob(GenDiffBn("out")));
-}
-
 ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kIdentityConf, IdentityKernel);
 
 }  // namespace oneflow

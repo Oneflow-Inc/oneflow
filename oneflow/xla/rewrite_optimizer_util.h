@@ -22,13 +22,6 @@ class OptimizerParamBuilder {
                             const std::string &total_instances,
                             const std::string &learning_rate);
 
-  static void SetupLearningRateDecayParam(
-                            LearningRateShedulerOpConf *conf,
-                            const LearningRateDecayConf &lr_decay_conf);
-  
-  static void SetupWarmupParam(LearningRateShedulerOpConf *conf,
-                               const WarmupConf &warmup_conf);
-
  private:
   class BuilderImpl {
    public:

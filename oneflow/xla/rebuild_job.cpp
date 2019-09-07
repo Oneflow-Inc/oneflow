@@ -58,7 +58,7 @@ void SetOpInputBlobName(OperatorConf *op_conf, const std::string &input,
       break;
     }
     default:
-      SetBnValInOpTypeConf(spec_conf, input, blob_name, fixed_blob_name);
+      ReplaceStrValInPbFdOrPbRpf(spec_conf, input, blob_name, fixed_blob_name);
   }
 }
 
@@ -105,12 +105,6 @@ class FoldSubgraphBuilder {
     XlaLaunchOpConf *launch_conf,
     const std::unordered_map<std::string, std::string> &fixed_blob_names);
 
-  bool HasBatchDim(const std::string &blob_name) {
-    const auto &batch_dim_lbis = builder_->batch_dim_lbis();
-    LogicalBlobId lbi = BlobId(blob_name);
-    return batch_dim_lbis.count(lbi) > 0;
-  }
-  
   XlaLaunchOpConf::Argument *MutableArgumentConf(
       XlaLaunchOpConf *launch_conf, const std::string &argument_name) {
     XlaLaunchOpConf::Argument *argument_conf = nullptr;
@@ -222,16 +216,17 @@ void FoldSubgraphBuilder::buildXlaLaunchAttribute(
       }
 
       // Restore the blob names that have batch dimension, so that it's no need
-      // to infer `HasBatchDim` for `XlaLaunch` operators. In practice it's hard
-      // to infer `HasBatchDim` since the operators to be infered have been
-      // folded. Normally we have to infer `HasBatchDim` before `SbpSignature`
-      // and `BlobDesc`, and `HasBatchDim` replies on the front operators
-      // `BlobDesc`. Therefor we probably could not infer `HasBatchDim` for the
+      // to infer `HasBatchAxis` for `XlaLaunch` operators. In practice it's hard
+      // to infer `HasBatchAxis` since the operators to be infered have been
+      // folded. Normally we have to infer `HasBatchAxis` before `SbpSignature`
+      // and `BlobDesc`, and `HasBatchAxis` replies on the front operators
+      // `BlobDesc`. Therefor we probably could not infer `HasBatchAxis` for the
       // folded operators because their inputs `BlobDesc` were not infered since
       // the front operators have been folded as well
-      if (HasBatchDim(argument_proto->out())) {
-        DoNoDuplicationAdd(launch_attr->mutable_batch_dim_blob(),
-                           argument_proto->out());
+      const std::string &argument_out = argument_proto->out();
+      if (builder_->HasBatchAxis(argument_out)) {
+        auto *batch_axis = launch_attr->mutable_batch_axis();
+        (*batch_axis)[argument_out] = builder_->GetBatchAxis(argument_out);
       }
     }
   }
@@ -337,12 +332,11 @@ void FoldSubgraphBuilder::FixupInOutBlobNames() {
       fixed_blob_names.emplace(blob_name, fixed_blob_name);
 
       launch_conf->mutable_out()->Mutable(i)->assign(fixed_blob_name);
-      // Append to `batch_dim_lbis`
-      if (HasBatchDim(blob_name)) {
-        LogicalBlobId lbi;
-        lbi.set_op_name(launch_op_name);
-        lbi.set_blob_name(fixed_blob_name);
-        builder_->AddBatchDimLbi(lbi);
+      // Append to `batch_axis`
+      if (builder_->HasBatchAxis(blob_name)) {
+        fixed_blob_name = absl::StrCat(launch_op_name, "/", fixed_blob_name);
+        builder_->AddBatchAxis(fixed_blob_name,
+                               builder_->GetBatchAxis(blob_name));
       }
     }
 

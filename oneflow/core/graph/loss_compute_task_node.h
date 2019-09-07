@@ -17,7 +17,6 @@ class LossCompTaskNode final : public CompTaskNode {
   TaskType GetTaskType() const override { return TaskType::kLoss; }
 
  private:
-  void BuildRegstWhenTraining();
   void InferProducedDataRegstTimeShape() override;
 };
 

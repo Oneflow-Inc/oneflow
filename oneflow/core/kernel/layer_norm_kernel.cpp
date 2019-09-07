@@ -19,6 +19,18 @@ InitializerConf ZerosInitializerConf() { return ConstantInitializerConf(0.0f); }
 }  // namespace
 
 template<DeviceType device_type, typename T>
+void LayerNormConstBufInitUtil<device_type, T>::InitConstBufBlobsImpl(
+    DeviceCtx* ctx, const InitializerConf& initializer_conf, uint32_t random_seed, Blob* blob) {
+  KernelUtil<device_type, T>::InitializeWithConf(ctx, initializer_conf, 0, blob);
+}
+
+template<DeviceType device_type>
+void LayerNormConstBufInitUtil<device_type, float16>::InitConstBufBlobsImpl(
+    DeviceCtx* ctx, const InitializerConf& initializer_conf, uint32_t random_seed, Blob* blob) {
+  KernelUtil<device_type, float>::InitializeWithConf(ctx, initializer_conf, 0, blob);
+}
+
+template<DeviceType device_type, typename T>
 void LayerNormKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const LayerNormOpConf& conf = this->op_conf().layer_norm_conf();
@@ -36,7 +48,7 @@ void LayerNormKernel<device_type, T>::ForwardDataContent(
     const int64_t m = gamma->shape().elem_cnt();
     CHECK_EQ(out->shape().elem_cnt() % m, 0);
     const int64_t n = out->shape().elem_cnt() / m;
-    NdarrayUtil<device_type, T>::template BroadcastApply<BinaryFuncMul>(
+    NdarrayUtil<device_type, T>::BroadcastMul(
         ctx.device_ctx, XpuVarNdarray<T>({n, m}, out->mut_dptr<T>()),
         XpuVarNdarray<const T>({n, m}, normalize_out->dptr<T>()),
         XpuVarNdarray<const T>({1, m}, gamma->dptr<T>()));
@@ -46,98 +58,10 @@ void LayerNormKernel<device_type, T>::ForwardDataContent(
     const int64_t m = beta->shape().elem_cnt();
     CHECK_EQ(out->shape().elem_cnt() % m, 0);
     const int64_t n = out->shape().elem_cnt() / m;
-    NdarrayUtil<device_type, T>::template BroadcastApply<BinaryFuncAdd>(
-        ctx.device_ctx, XpuVarNdarray<T>({n, m}, out->mut_dptr<T>()),
-        XpuVarNdarray<const T>({n, m}, out->dptr<T>()),
-        XpuVarNdarray<const T>({1, m}, beta->dptr<T>()));
-  }
-}
-
-template<DeviceType device_type, typename T>
-void LayerNormKernel<device_type, T>::BackwardDataContent(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const LayerNormOpConf& conf = this->op_conf().layer_norm_conf();
-  const Blob* out_diff = BnInOp2Blob(GenDiffBn("out"));
-  Blob* in_diff = BnInOp2Blob(GenDiffBn("in"));
-  Blob* bw_buf = BnInOp2Blob("bw_reduce_buf");
-  if (conf.center() && this->op_conf().trainable()) {
-    Blob* beta_diff = BnInOp2Blob(GenDiffBn("beta"));
-    const int64_t m = beta_diff->shape().elem_cnt();
-    CHECK_EQ(out_diff->shape().elem_cnt() % m, 0);
-    const int64_t n = out_diff->shape().elem_cnt() / m;
-    NdarrayUtil<device_type, T>::ReduceSum(ctx.device_ctx,
-                                           XpuVarNdarray<T>({1, m}, beta_diff->mut_dptr<T>()),
-                                           XpuVarNdarray<const T>({n, m}, out_diff->dptr<T>()),
-                                           XpuVarNdarray<T>({n, m}, bw_buf->mut_dptr<T>()));
-  }
-  if (conf.scale()) {
-    Blob* normalize_out = BnInOp2Blob("normalized");
-    const Blob* gamma = BnInOp2Blob("gamma");
-    Blob* gamma_diff = BnInOp2Blob(GenDiffBn("gamma"));
-    const int64_t m = gamma_diff->shape().elem_cnt();
-    CHECK_EQ(out_diff->shape().elem_cnt() % m, 0);
-    const int64_t n = out_diff->shape().elem_cnt() / m;
-    if (this->op_conf().trainable()) {
-      NdarrayUtil<device_type, T>::template BroadcastApply<BinaryFuncMul>(
-          ctx.device_ctx, XpuVarNdarray<T>({n, m}, bw_buf->mut_dptr<T>()),
-          XpuVarNdarray<const T>({n, m}, normalize_out->dptr<T>()),
-          XpuVarNdarray<const T>({n, m}, out_diff->dptr<T>()));
-      NdarrayUtil<device_type, T>::ReduceSum(ctx.device_ctx,
-                                             XpuVarNdarray<T>({1, m}, gamma_diff->mut_dptr<T>()),
-                                             XpuVarNdarray<const T>({n, m}, bw_buf->dptr<T>()),
-                                             XpuVarNdarray<T>({n, m}, bw_buf->mut_dptr<T>()));
-    }
-    if (in_diff) {
-      NdarrayUtil<device_type, T>::template BroadcastApply<BinaryFuncMul>(
-          ctx.device_ctx, XpuVarNdarray<T>({n, m}, normalize_out->mut_dptr<T>()),
-          XpuVarNdarray<const T>({n, m}, out_diff->dptr<T>()),
-          XpuVarNdarray<const T>({1, m}, gamma->dptr<T>()));
-    }
-  }
-  if (in_diff) {
-    const Blob* in = BnInOp2Blob("in");
-    const Blob* normalize_out_diff = conf.scale() ? BnInOp2Blob("normalized") : out_diff;
-    const Blob* bn_scale = BnInOp2Blob("cudnn_bn_scale_ones");
-    const Blob* mean = BnInOp2Blob("mean");
-    const Blob* inv_variance = BnInOp2Blob("inv_variance");
-    Blob* bn_scale_diff = BnInOp2Blob("cudnn_bn_scale_diff_buf");
-    Blob* bn_bias_diff = BnInOp2Blob("cudnn_bn_bias_diff_buf");
-    LayerNormKernelUtil<device_type, T>::NormalizeBackward(
-        ctx.device_ctx, in, bn_scale, mean, inv_variance, normalize_out_diff, conf.epsilon(),
-        in_diff, bn_scale_diff, bn_bias_diff);
-  }
-}
-
-template<DeviceType device_type, typename T>
-void LayerNormKernel<device_type, T>::InitModelBlobsWithRandomSeed(
-    DeviceCtx* ctx, std::mt19937*, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const LayerNormOpConf& conf = this->op_conf().layer_norm_conf();
-  if (conf.scale() && !conf.has_gamma()) {
-    InitializerConf ones_initializer = OnesInitializerConf();
-    KernelUtil<device_type, T>::InitializeWithConf(ctx, ones_initializer, 0, BnInOp2Blob("gamma"));
-  }
-  if (conf.center() && !conf.has_beta()) {
-    InitializerConf zeros_initializer = ZerosInitializerConf();
-    KernelUtil<device_type, T>::InitializeWithConf(ctx, zeros_initializer, 0, BnInOp2Blob("beta"));
-  }
-}
-
-template<DeviceType device_type, typename T>
-void LayerNormKernel<device_type, T>::InitModelBlobsWithDir(
-    DeviceCtx* ctx, int32_t part_id, int32_t part_num, const std::string& model_load_dir,
-    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const LayerNormOpConf& conf = this->op_conf().layer_norm_conf();
-  if (conf.scale() && !conf.has_gamma()) {
-    Blob* gamma = BnInOp2Blob("gamma");
-    KernelUtil<device_type, T>::InitializeWithDir(ctx, part_id, part_num, model_load_dir, gamma,
-                                                  "gamma", gamma->shape().At(0),
-                                                  gamma->shape().Count(1));
-  }
-  if (conf.center() && !conf.has_beta()) {
-    Blob* beta = BnInOp2Blob("beta");
-    KernelUtil<device_type, T>::InitializeWithDir(ctx, part_id, part_num, model_load_dir, beta,
-                                                  "beta", beta->shape().At(0),
-                                                  beta->shape().Count(1));
+    NdarrayUtil<device_type, T>::BroadcastAdd(ctx.device_ctx,
+                                              XpuVarNdarray<T>({n, m}, out->mut_dptr<T>()),
+                                              XpuVarNdarray<const T>({n, m}, out->dptr<T>()),
+                                              XpuVarNdarray<const T>({1, m}, beta->dptr<T>()));
   }
 }
 
@@ -145,11 +69,11 @@ template<DeviceType device_type, typename T>
 void LayerNormKernel<device_type, T>::InitConstBufBlobs(
     DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   InitializerConf ones_initializer = OnesInitializerConf();
-  KernelUtil<device_type, T>::InitializeWithConf(ctx, ones_initializer, 0,
-                                                 BnInOp2Blob("cudnn_bn_scale_ones"));
+  LayerNormConstBufInitUtil<device_type, T>::InitConstBufBlobsImpl(
+      ctx, ones_initializer, 0, BnInOp2Blob("cudnn_bn_scale_ones"));
   InitializerConf zeros_initializer = ZerosInitializerConf();
-  KernelUtil<device_type, T>::InitializeWithConf(ctx, zeros_initializer, 0,
-                                                 BnInOp2Blob("cudnn_bn_bias_zeros"));
+  LayerNormConstBufInitUtil<device_type, T>::InitConstBufBlobsImpl(
+      ctx, zeros_initializer, 0, BnInOp2Blob("cudnn_bn_bias_zeros"));
 }
 
 template<typename T>
@@ -171,6 +95,14 @@ struct LayerNormKernelUtil<DeviceType::kCPU, T> {
 OF_PP_FOR_EACH_TUPLE(INSTANTIATE_LAYER_NORM_KERNEL_UTIL_CPU, FLOATING_DATA_TYPE_SEQ)
 #undef INSTANTIATE_LAYER_NORM_KERNEL_UTIL_CPU
 
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kLayerNormConf, LayerNormKernel, FLOATING_DATA_TYPE_SEQ);
+#define INSTANTIATE_LAYER_NORM_CONST_BUF_INIT_UTIL(device_type, data_type_pair) \
+  template class LayerNormConstBufInitUtil<device_type, OF_PP_PAIR_FIRST(data_type_pair)>;
+
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_LAYER_NORM_CONST_BUF_INIT_UTIL, DEVICE_TYPE_SEQ,
+                                 FLOATING_DATA_TYPE_SEQ);
+template struct LayerNormConstBufInitUtil<DeviceType::kGPU, float16>;
+
+ADD_DEFAULT_KERNEL_CREATOR_WITH_GPU_HALF(OperatorConf::kLayerNormConf, LayerNormKernel,
+                                         FLOATING_DATA_TYPE_SEQ);
 
 }  // namespace oneflow

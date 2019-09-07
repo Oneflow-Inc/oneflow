@@ -14,11 +14,8 @@ class Compiler final {
   Compiler() = default;
   ~Compiler() = default;
 
-  Plan Compile();
-
- private:
-  Plan DoCompile();
-  void GenNetTopo(Plan* plan);
+  void Compile(Job*, Plan*, bool need_job_complete) const;
+  void GenNetTopo(Plan* plan) const;
 };
 
 }  // namespace oneflow

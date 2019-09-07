@@ -17,16 +17,17 @@ void SoftmaxGradOp::InitFromOpConf() {
     CHECK(!op_conf().softmax_grad_conf().has_transpose_x());
     CHECK(!op_conf().softmax_grad_conf().has_transpose_y());
   }
-  EnrollFwBufBn("transpose_dy");
-  EnrollFwBufBn("bw_buf");
-  EnrollFwBufBn("bw_softmax_num");
+  EnrollTmpBn("transpose_dy");
+  EnrollTmpBn("bw_buf");
+  EnrollTmpBn("bw_softmax_num");
   EnrollOutputBn("dx");
 }
 
 const PbMessage& SoftmaxGradOp::GetCustomizedConf() const { return op_conf().softmax_grad_conf(); }
 
-void SoftmaxGradOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                   const ParallelContext* parallel_ctx) const {
+Maybe<void> SoftmaxGradOp::InferBlobDescs(
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx) const {
   // dy
   const BlobDesc* dy_blob_desc = GetBlobDesc4BnInOp("dy");
   // dx
@@ -45,6 +46,7 @@ void SoftmaxGradOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> 
   bw_buf_blob_desc->mut_shape() =
       Shape({static_cast<int64_t>(RtBlobDesc(*dx_blob_desc).ByteSizeOfDataContentField())});
   bw_buf_blob_desc->set_data_type(DataType::kChar);
+  return Maybe<void>::Ok();
 }
 
 void SoftmaxGradOp::VirtualGenKernelConf(
@@ -82,11 +84,12 @@ SoftmaxGradOpCtx* SoftmaxGradOp::NewSoftmaxGradOpCtx(const Shape& dx_shape) cons
   return op_ctx;
 }
 
-void SoftmaxGradOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
+Maybe<void> SoftmaxGradOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
   SbpSignatureBuilder()
       .Split(input_bns(), 0)
       .Split(output_bns(), 0)
       .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+  return Maybe<void>::Ok();
 }
 
 REGISTER_OP(OperatorConf::kSoftmaxGradConf, SoftmaxGradOp);

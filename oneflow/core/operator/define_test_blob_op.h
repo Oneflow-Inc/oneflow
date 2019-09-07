@@ -16,12 +16,13 @@ class DefineTestBlobOp final : public Operator {
   const PbMessage& GetCustomizedConf() const override;
   LogicalNode* NewProperLogicalNode() const override { return new DecodeRandomLogicalNode; }
 
-  void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                      const ParallelContext* parallel_ctx) const override;
+  Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                             const ParallelContext* parallel_ctx) const override;
 
  private:
-  void InferHasBatchDim(std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const override;
-  void GetSbpSignatures(SbpSignatureList* sbp_sig_list) const override;
+  Maybe<void> InferBatchAxis(
+      std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override;
+  Maybe<void> GetSbpSignatures(SbpSignatureList* sbp_sig_list) const override;
 };
 
 }  // namespace oneflow

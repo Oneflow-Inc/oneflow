@@ -99,7 +99,7 @@ void TruncatedNormalInitializer(const TruncatedNormalInitializerConf& initialize
 
 template<typename T>
 T GenInitialFan(VarianceNorm variance_norm, Blob* blob, const std::string& data_format) {
-  T fan = ZeroVal<T>::value;
+  T fan = GetZeroVal<T>();
   T fan_in = static_cast<T>(blob->shape().Count(1));
   T fan_out = static_cast<T>(blob->shape().At(0));
   if (data_format == "channels_first") {
@@ -138,7 +138,7 @@ void MsraInitializer(const MsraInitializerConf& initializer_conf, uint32_t rando
   CHECK(blob->shape().elem_cnt());
   VarianceNorm variance_norm = static_cast<VarianceNorm>(initializer_conf.variance_norm());
   T std = std::sqrt(static_cast<T>(2) / GenInitialFan<T>(variance_norm, blob, data_format));
-  RngNormal<T>(blob->shape().elem_cnt(), ZeroVal<T>::value, static_cast<T>(std), random_seed,
+  RngNormal<T>(blob->shape().elem_cnt(), GetZeroVal<T>(), static_cast<T>(std), random_seed,
                blob->mut_dptr<T>());
 }
 
@@ -212,18 +212,6 @@ void MatrixRowReduce(const int64_t row_num, const int64_t col_num, const T* x, T
 }
 
 }  // namespace
-
-template<>
-void Memcpy<DeviceType::kCPU>(DeviceCtx* ctx, void* dst, const void* src, size_t sz
-#ifdef WITH_CUDA
-                              ,
-                              cudaMemcpyKind kind
-#endif
-
-) {
-  if (dst == src) { return; }
-  memcpy(dst, src, sz);
-}
 
 void AutoMemcpy(DeviceCtx* ctx, void* dst, const void* src, size_t sz,
                 const MemoryCase& dst_mem_case, const MemoryCase& src_mem_case) {
@@ -320,20 +308,6 @@ KU_IF_METHOD Transpose(DeviceCtx* ctx, const int32_t num_axis, const Shape& x_sh
     }
     IncreaseIndex(x_shape.dim_vec().data(), x_index_digits);
   }
-}
-KU_IF_METHOD InitializeWithDir(DeviceCtx* ctx, int32_t part_id, int32_t part_num,
-                               const std::string& model_dir, Blob* blob,
-                               const std::string& bn_in_op, int32_t dim_num,
-                               int64_t num_in_each_dim) {
-  int64_t blob_size = blob->ByteSizeOfDataContentField();
-  int64_t byte_size_of_each_dim = num_in_each_dim * sizeof(T);
-  std::string file_path = JoinPath(model_dir, bn_in_op);
-  uint64_t file_size = SnapshotFS()->GetFileSize(file_path);
-  CHECK_EQ(file_size, dim_num * byte_size_of_each_dim);
-  BalancedSplitter splitter = BalancedSplitter(dim_num, part_num);
-  int64_t begin_pos = splitter.At(part_id).begin() * byte_size_of_each_dim;
-  PersistentInStream in_stream(SnapshotFS(), file_path, begin_pos);
-  in_stream.Read(blob->mut_dptr<char>(), blob_size);
 }
 KU_IF_METHOD Set(DeviceCtx* ctx, const T value, T* addr) { *addr = value; }
 KU_IF_METHOD Replicate(DeviceCtx* ctx, const int64_t n, T* y, const T* x) {
@@ -445,12 +419,12 @@ KU_FLOATING_METHOD TanHBackward(DeviceCtx* ctx, const int64_t n, const T* x, con
   for (int64_t i = 0; i != n; ++i) { dx[i] = (1 - y[i] * y[i]) * dy[i]; }
 }
 KU_FLOATING_METHOD Relu(DeviceCtx* ctx, const int64_t n, const T* x, T* y) {
-  T zero = ZeroVal<T>::value;
+  T zero = GetZeroVal<T>();
   for (int64_t i = 0; i != n; ++i) { y[i] = std::max(x[i], zero); }
 }
 KU_FLOATING_METHOD ReluBackward(DeviceCtx* ctx, const int64_t n, const T* x, const T* y,
                                 const T* dy, T* dx) {
-  T zero = ZeroVal<T>::value;
+  T zero = GetZeroVal<T>();
   for (int64_t i = 0; i != n; ++i) { dx[i] = (y[i] > zero) * dy[i]; }
 }
 KU_FLOATING_METHOD Addition(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0) {

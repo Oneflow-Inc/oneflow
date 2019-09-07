@@ -12,12 +12,12 @@ class RecordLoadCompTaskNode final : public CompTaskNode {
   ~RecordLoadCompTaskNode() = default;
 
   void ProduceAllRegstsAndBindEdges() override;
-  void ConsumeAllRegsts() override {}
+  void ConsumeAllRegsts() override;
   void BuildExecGphAndRegst() override;
   bool IsMeaningLess() override { return false; }
 
   TaskType GetTaskType() const override { return TaskType::kRecordLoad; }
-  bool IsPersistence() const override { return true; }
+  bool IsIndependent() const override { return true; }
 
  private:
   void InferProducedDataRegstTimeShape() override;

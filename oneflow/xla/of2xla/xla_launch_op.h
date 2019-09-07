@@ -13,19 +13,21 @@ class XlaLaunchOp : public Operator {
   
   const PbMessage& GetCustomizedConf() const override;
 
-  bool NeedInBlobWhenBackward() const override { return false; }
-
-  void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                      const ParallelContext* parallel_ctx) const override;
+  Maybe<void> InferBlobDescs(
+      std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+      const ParallelContext* parallel_ctx) const override;
 
  private:
-  void InferHasBatchDim(
-    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const override;
+  Maybe<void> InferBatchAxis(
+    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp)
+    const override;
 
-  void InferSbpSignature(
+  typedef std::function<Maybe<const SbpInferHint*>(const std::string&)>
+      SbpInferHint4IbnFunc;
+  Maybe<void> InferSbpSignature(
     SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
     const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
-    std::function<const SbpInferHint&(const std::string&)> SbpInferHint4Ibn,
+    SbpInferHint4IbnFunc SbpInferHint4Ibn,
     const ParallelDesc& parallel_desc) const override;
 
   std::shared_ptr<mola::XlaLaunchGraph> subgraph_;

@@ -10,19 +10,26 @@ class FakeConsumeOp : public Operator {
   void InitFromOpConf() override;
   const PbMessage& GetCustomizedConf() const override;
 
-  void InferBlobDescs(
+  Maybe<void> InferBlobDescs(
       std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-      const ParallelContext* parallel_ctx) const override {};
+      const ParallelContext* parallel_ctx) const override {
+    return Maybe<void>::Ok();
+  };
 
  private:
-  typedef std::function<bool*(const std::string&)> HasBatchDim4BnInOpFunc;
-  void InferHasBatchDim(
-      HasBatchDim4BnInOpFunc HasBatchDim4BnInOp) const override {};
+  typedef std::function<OptInt64*(const std::string&)> BatchAxis4BnInOpFunc;
+  Maybe<void> InferBatchAxis(
+      BatchAxis4BnInOpFunc BatchAxis4BnInOp) const override {
+    return Maybe<void>::Ok();
+  };
 
-  typedef std::function<const BlobDesc&(const std::string&)>
+  typedef std::function<Maybe<const BlobDesc*>(const std::string&)>
       LogicalBlobDesc4IbnFunc;
-  void GetSbpSignatures(const LogicalBlobDesc4IbnFunc& LogicalBlobDesc4Ibn,
-                        SbpSignatureList* sbp_sig_list) const override {};
+  Maybe<void> GetSbpSignatures(
+      const LogicalBlobDesc4IbnFunc& LogicalBlobDesc4Ibn,
+      SbpSignatureList* sbp_sig_list) const override {
+    return Maybe<void>::Ok();
+  };
 };
 
 void FakeConsumeOp::InitFromOpConf() {

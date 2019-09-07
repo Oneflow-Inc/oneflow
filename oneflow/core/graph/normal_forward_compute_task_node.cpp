@@ -5,55 +5,37 @@
 
 namespace oneflow {
 
-bool NormalForwardCompTaskNode::HasBackwardCompTaskNode() {
-  bool ret = false;
-  ForEachOutDataEdge([&](TaskEdge* edge) {
-    const LogicalNode* succ_logical = GetOneSuccLogicalNodeOnEdge(edge);
-    if (ret == false && succ_logical->TypeName() == "NormalBackward") { ret = true; }
-  });
-  return ret;
+namespace {
+
+size_t MemBlockNum4OpSameOutputBlob(OperatorConf::OpTypeCase op_type_case) {
+  if (IsClassRegistered<RuntimeMemBlockNum4OpSameOutputBlob>(op_type_case)) {
+    std::unique_ptr<RuntimeMemBlockNum4OpSameOutputBlob> ptr;
+    ptr.reset(NewObj<RuntimeMemBlockNum4OpSameOutputBlob>(op_type_case));
+    return *ptr;
+  } else {
+    return -1;
+  }
 }
+
+}  // namespace
+
+bool NormalForwardCompTaskNode::HasBackwardCompTaskNode() { return false; }
 
 void NormalForwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
   const Operator& op = *logical_node()->SoleOp();
-  if (op.IsAllOutputConst() || op.op_conf().has_variable_conf()) {
-    ProduceRegst("out", false, 1, 1);
-  } else if (op.op_conf().has_keep_header_only_conf()) {
-    ProduceRegst("out", false, 100, 100);
+  size_t mem_block_num = MemBlockNum4OpSameOutputBlob(op.op_conf().op_type_case());
+  if (mem_block_num != -1) {
+    ProduceRegst("out", false, mem_block_num, mem_block_num);
   } else {
     ProduceRegst("out", true);
   }
-  ProduceRegst("activation", true);
-  ProduceRegst("data_tmp", true);
-  ProduceRegst("fw_buf", true, 1, 1);
-  ProduceRegst("forward_model", false);
+  ProduceRegst("tmp", true);
   ProduceRegst("const_buf", false, 1, 1);
-  ForEachOutDataEdge([&](TaskEdge* edge) {
-    const LogicalNode* succ_logical = GetOneSuccLogicalNodeOnEdge(edge);
-    if (succ_logical->TypeName() == "MdSave") {
-      BindEdgeWithProducedRegst(edge, "forward_model");
-    } else if (succ_logical->TypeName() == "NormalBackward") {
-      BindEdgeWithProducedRegst(edge, "out");
-      BindEdgeWithProducedRegst(edge, "activation");
-      BindEdgeWithProducedRegst(edge, "data_tmp");
-      BindEdgeWithProducedRegst(edge, "const_buf");
-    } else {
-      BindEdgeWithProducedRegst(edge, "out");
-    }
-  });
+  ForEachOutDataEdge([&](TaskEdge* edge) { BindEdgeWithProducedRegst(edge, "out"); });
 }
 
 void NormalForwardCompTaskNode::ConsumeAllRegsts() {
-  ForEachInDataEdge([&](TaskEdge* edge) {
-    TaskNode* src_node = edge->src_node();
-    TaskType src_task_type = src_node->GetTaskType();
-    if (src_task_type == TaskType::kNormalMdUpdt) {
-      ConsumeRegst("model", edge->GetRegst("model"));
-      ConsumeRegst("const_model", edge->GetRegst("const_model"));
-    } else {
-      ConsumeRegst("in", edge->GetSoleRegst());
-    }
-  });
+  ForEachInDataEdge([&](TaskEdge* edge) { ConsumeRegst("in", edge->GetSoleRegst()); });
 }
 
 bool NormalForwardCompTaskNode::IsReadyForBuild() {
@@ -63,23 +45,11 @@ bool NormalForwardCompTaskNode::IsReadyForBuild() {
   return true;
 }
 
-void NormalForwardCompTaskNode::ToProto(TaskProto* task_proto) {
-  CompTaskNode::ToProto(task_proto);
-  task_proto->set_random_seed(random_seed_);
-}
-
 void NormalForwardCompTaskNode::BuildExecGphAndRegst() {
   BuildExecGphStructAndBindInRegst();
   BuildOutRegst();
-  BuildActivationRegst();
-  BuildModel7ConstModel7DataTmp7BufRegsts();
+  BuildTmp7BufRegsts();
   mut_exec_gph().TopoForEachNode([this](ExecNode* node) { node->InferBlobDescs(parallel_ctx()); });
-}
-
-void NormalForwardCompTaskNode::LockRegsts() {
-  TaskNode::LockRegsts();
-  TryLockConsumedRegst("model");
-  TryLockConsumedRegst("const_model");
 }
 
 void NormalForwardCompTaskNode::BuildExecGphStructAndBindInRegst() {
@@ -122,39 +92,10 @@ void NormalForwardCompTaskNode::BuildOutRegst() {
   });
 }
 
-void NormalForwardCompTaskNode::BuildActivationRegst() {
-  std::shared_ptr<RegstDesc> activation_regst = GetProducedRegst("activation");
-  mut_exec_gph().ForEachEdge([&](const ExecEdge* edge) {
-    if (activation_regst->GetBlobDesc(edge->lbi()) == nullptr) {
-      activation_regst->AddLbi(edge->lbi());
-      edge->src_node()->BindBnWithRegst(edge->src_bn(), activation_regst);
-    }
-    edge->dst_node()->BindBnWithRegst(edge->dst_bn(), activation_regst);
-  });
-}
-
-void NormalForwardCompTaskNode::BuildModel7ConstModel7DataTmp7BufRegsts() {
-  std::shared_ptr<RegstDesc> model_regst = GetSoleConsumedRegst("model");
-  std::shared_ptr<RegstDesc> const_model_regst = GetSoleConsumedRegst("const_model");
+void NormalForwardCompTaskNode::BuildTmp7BufRegsts() {
   mut_exec_gph().ForEachNode([&](ExecNode* node) {
-    node->AddBnToRegstAndBindIt(&Operator::data_tmp_bns, GetProducedRegst("data_tmp"));
-    node->AddBnToRegstAndBindIt(&Operator::fw_buf_bns, GetProducedRegst("fw_buf"));
+    node->AddBnToRegstAndBindIt(&Operator::tmp_bns, GetProducedRegst("tmp"));
     node->AddBnToRegstAndBindIt(&Operator::const_buf_bns, GetProducedRegst("const_buf"));
-    node->AddBnToRegstAndBindIt(&Operator::forward_model_bns, GetProducedRegst("forward_model"));
-    for (const std::string& cmbn : node->op()->const_model_bns()) {
-      if (!const_model_regst->IsLocked()) {
-        const LogicalBlobId& lbi = node->op()->BnInOp2Lbi(cmbn);
-        const_model_regst->AddLbi(lbi);
-      }
-      node->BindBnWithRegst(cmbn, const_model_regst);
-    }
-    for (const std::string& mbn : node->op()->model_bns()) {
-      if (!model_regst->IsLocked()) {
-        const LogicalBlobId& lbi = node->op()->BnInOp2Lbi(mbn);
-        model_regst->AddLbi(lbi);
-      }
-      node->BindBnWithRegst(mbn, model_regst);
-    }
   });
 }
 

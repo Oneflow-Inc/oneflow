@@ -2,11 +2,15 @@
 #define ONEFLOW_CORE_JOB_PARALLEL_DESC_H_
 
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/common/maybe.h"
 #include "oneflow/core/job/id_manager.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/placement.pb.h"
 
 namespace oneflow {
+
+std::string DeviceTag4DeviceType(DeviceType device_type);
+Maybe<DeviceType> DeviceType4DeviceTag(const std::string& device_tag);
 
 void ParseDeviceNameConf(const std::string& device_name, int64_t* mchn_id, std::string* device_tag,
                          std::string* device_id_str);
@@ -29,13 +33,14 @@ class ParallelDesc final {
   }
   int64_t parallel_num() const { return parallel_num_; }
   int64_t device_num_of_each_machine() const { return device_num_of_each_machine_; }
-  std::string device_names() const { return device_names_; }
   const ParallelConf& parallel_conf() const { return parallel_conf_; }
 
   // Setters
   void set_policy(ParallelPolicy val) { parallel_conf_.set_policy(val); }
+  void set_device_type(DeviceType device_type);
 
   bool EqualsIgnoringPolicy(const ParallelDesc& rhs) const;
+  bool EqualsIgnoringPolicyAndDeviceType(const ParallelDesc& rhs) const;
   bool Equals(const ParallelDesc& rhs) const;
   bool operator==(const ParallelDesc& rhs) const { return Equals(rhs); }
   bool operator!=(const ParallelDesc& rhs) const { return !(*this == rhs); }
@@ -51,11 +56,21 @@ class ParallelDesc final {
   HashMap<int64_t, std::vector<int64_t>> machine_id2sorted_dev_phy_ids_;
   int64_t parallel_num_;
   int64_t device_num_of_each_machine_;
-  std::string device_names_;
 };
+
+inline bool operator==(const ParallelConf& lhs, const ParallelConf& rhs) {
+  return ParallelDesc(lhs) == ParallelDesc(rhs);
+}
+
+inline bool operator!=(const ParallelConf& lhs, const ParallelConf& rhs) {
+  return ParallelDesc(lhs) != ParallelDesc(rhs);
+}
 
 std::tuple<int32_t, int32_t> GetPartIdAndPartNumFromParallelCtx(
     const ParallelContext* parallel_ctx);
+
+ParallelConf GenParallelConfOfCpuZeroOnMaster();
+ParallelConf GenParallelConfOfCpuZeroOnAllMachines();
 
 }  // namespace oneflow
 
@@ -70,6 +85,13 @@ struct hash<oneflow::ParallelDesc> {
       for (int dev_id : pr.sorted_dev_phy_ids(machine_id)) { str += std::to_string(dev_id) + ","; }
     }
     return hash<std::string>()(str);
+  }
+};
+
+template<>
+struct hash<oneflow::ParallelConf> {
+  size_t operator()(const oneflow::ParallelConf& parallel_conf) const {
+    return std::hash<oneflow::ParallelDesc>()(oneflow::ParallelDesc(parallel_conf));
   }
 };
 

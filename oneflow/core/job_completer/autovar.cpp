@@ -12,6 +12,7 @@ OperatorConf GenerateVariableOpConf(const BlobDesc& blob_desc, const std::string
   blob_desc.shape().ToProto(var_op_conf->mutable_shape());
   var_op_conf->set_data_type(blob_desc.data_type());
   var_op_conf->set_model_name(model_name);
+  var_op_conf->mutable_split_axis()->Clear();
   return var_op;
 }
 
@@ -25,16 +26,17 @@ void GenerateInputVarOpConfIf(
   }
 }
 
-void AutoVar(const OpGraph& op_graph, Job* job) {
+void AutoVar(const OpGraph& op_graph, JobBuilder* job_builder) {
   auto BlobDesc4ModelLbi = op_graph.MakeGetterBlobDesc4ModelLbi();
-  JobBuilder job_builder(job);
   op_graph.ForEachNode([&](OpNode* op_node) {
     std::vector<OperatorConf> ops;
     auto BlobDesc4ModelBn = [&](const std::string& bn) -> const BlobDesc& {
       return BlobDesc4ModelLbi(op_node->op().BnInOp2Lbi(bn));
     };
     GenerateInputVarOpConfIf(op_node->op(), &ops, BlobDesc4ModelBn);
-    if (!ops.empty()) { job_builder.AddOrMutOps(op_node->parallel_desc().parallel_conf(), ops); }
+    if (!ops.empty()) {
+      job_builder->AddOrMutOpsOnlyOnce(op_node->parallel_desc().parallel_conf(), ops);
+    }
   });
 }
 
