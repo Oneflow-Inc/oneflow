@@ -18,7 +18,7 @@ EVAL_DIR = REPEATED_PIC_DATA_DIR
 IMAGE_SIZE = 228
 DATA_PART_NUM = 32  # 32 or 1
 BATCH_SIZE = 8
-NUM_ITER = 5
+NUM_ITER = 10
 BLOCK_COUNTS = [3, 4, 6, 3]
 BLOCK_FILTERS = [256, 512, 1024, 2048]
 BLOCK_FILTERS_INNER = [64, 128, 256, 512]
@@ -309,14 +309,14 @@ def main():
 
     if g_args.multinode:
         flow.config.ctrl_port(12139)
-        flow.config.machine([{"addr": "192.168.1.12"}, {"addr": "192.168.1.14"}])
-        if g_args.remote_by_hand is False:
-            if g_args.scp_binary_without_uuid:
-                flow.deprecated.init_worker(scp_binary=True, use_uuid=False)
-            elif g_args.skip_scp_binary:
-                flow.deprecated.init_worker(scp_binary=False, use_uuid=False)
-            else:
-                flow.deprecated.init_worker(scp_binary=True, use_uuid=True)
+        flow.config.machine([{"addr": "192.168.1.15"}, {"addr": "192.168.1.16"}])
+
+        if g_args.scp_binary_without_uuid:
+            flow.deprecated.init_worker(scp_binary=True, use_uuid=False)
+        elif g_args.skip_scp_binary:
+            flow.deprecated.init_worker(scp_binary=False, use_uuid=False)
+        else:
+            flow.deprecated.init_worker(scp_binary=True, use_uuid=True)
 
     check_point = flow.train.CheckPoint()
     check_point.load(MODEL_LOAD)
@@ -325,7 +325,7 @@ def main():
     # else:
     #     check_point.load(g_args.model_load_dir)
 
-    fmt_str = "{:>12}  {:>12}  {}"
+    fmt_str = "{:>12}  {:>12}  {:.11f}"
     print("{:>12}  {:>12}  {:>12}".format("iter", "loss type", "loss value"))
     for i in range(NUM_ITER):
         loss = TrainNet().get().mean()
