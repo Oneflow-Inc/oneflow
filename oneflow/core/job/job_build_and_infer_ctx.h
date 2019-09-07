@@ -54,7 +54,7 @@ class JobBuildAndInferCtx {
   HashMap<LogicalBlobId, SbpParallel> lbi2sbp_parallel_from_producer_view_;
   HashMap<LogicalBlobId, ParallelDesc> lbi2parallel_desc_from_producer_view_;
   HashMap<std::string, std::shared_ptr<Operator>> op_name2op_;
-  HashMap<ParallelConf, int32_t> parallel_conf2placement_group_id_;
+  HashMap<ParallelDesc, PlacementGroup*> parallel_desc2placement_group_;
   bool is_job_conf_frozen_;
   bool has_job_conf_;
 };

@@ -37,15 +37,15 @@ Maybe<void> JobBuildAndInferCtx::SetJobConf(const JobConfigProto& job_conf) {
 
 Maybe<void> JobBuildAndInferCtx::AddOpNameParallelConf2Placement(
     const std::string& op_name, const ParallelConf& parallel_conf) {
-  if (parallel_conf2placement_group_id_.find(parallel_conf)
-      == parallel_conf2placement_group_id_.end()) {
-    parallel_conf2placement_group_id_.emplace(parallel_conf,
-                                              job_->placement().placement_group_size());
-    *(job_->mutable_placement()->add_placement_group()->mutable_parallel_conf()) = parallel_conf;
+  ParallelDesc parallel_desc(parallel_conf);
+  PlacementGroup* pg = nullptr;
+  if (parallel_desc2placement_group_.find(parallel_desc) == parallel_desc2placement_group_.end()) {
+    pg = job_->mutable_placement()->add_placement_group();
+    parallel_desc2placement_group_.emplace(parallel_desc, pg);
+    *(pg->mutable_parallel_conf()) = parallel_conf;
+  } else {
+    pg = parallel_desc2placement_group_.at(parallel_desc);
   }
-  PlacementGroup* pg = job_->mutable_placement()->mutable_placement_group(
-      parallel_conf2placement_group_id_.at(parallel_conf));
-  CHECK(pg->parallel_conf() == parallel_conf);
   pg->mutable_op_set()->add_op_name(op_name);
   return Maybe<void>::Ok();
 }
