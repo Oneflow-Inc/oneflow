@@ -295,7 +295,7 @@ def InceptionC(in_blob, index, filters):
             branch_pool_1 = flow.nn.avg_pool2d(
                 in_blob,
                 ksize=3,
-                strides=2,
+                strides=1,
                 padding="SAME",
                 data_format="NCHW",
                 name="pool",
@@ -314,7 +314,6 @@ def InceptionC(in_blob, index, filters):
         inceptionC_bn.append(branch7x7_3)
         inceptionC_bn.append(branch7x7dbl_5)
         inceptionC_bn.append(branch_pool_2)
-
         mixed_concat = flow.concat(values=inceptionC_bn, axis=1, name="concat")
 
     return mixed_concat
