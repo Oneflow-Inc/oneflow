@@ -2,7 +2,6 @@ import oneflow as flow
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 from datetime import datetime
 import argparse
-import os
 
 _DATA_DIR = '/dataset/PNGS/PNG299/of_record_repeated'
 _EVAL_DIR = _DATA_DIR
@@ -14,7 +13,7 @@ _MODEL_SAVE_DIR = "./model_save-{}".format(
 
 parser = argparse.ArgumentParser(description="flags for multi-node and resource")
 parser.add_argument("-g", "--gpu_num_per_node", type=int, default=1, required=False)
-parser.add_argument("-i", "--iter_num", type=int, default=10, required=False)
+parser.add_argument("-i", "--iter_num", type=int, default=2, required=False)
 parser.add_argument(
     "-m", "--multinode", default=False, action="store_true", required=False
 )
@@ -103,7 +102,7 @@ def _data_load_layer(data_dir):
     )
 
     return flow.data.decode_ofrecord(
-        data_dir, (image_blob_conf, label_blob_conf), data_part_num=1, name="decode"
+        data_dir, (image_blob_conf, label_blob_conf), data_part_num=32, name="decode"
     )
 
 
@@ -519,7 +518,7 @@ def InceptionV3(images, labels, trainable=True):
 
     # pool3
     pool3 = flow.nn.avg_pool2d(
-        mixed_10, ksize=8, strides=1, padding="SAME", data_format="NCHW", name="pool3"
+        mixed_10, ksize=8, strides=1, padding="VALID", data_format="NCHW", name="pool3"
     )
 
     with flow.deprecated.variable_scope("logits"):
