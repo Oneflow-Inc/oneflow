@@ -12,6 +12,7 @@ void FullyConnectedOp::InitFromOpConf() {
   EnrollInputBn("weight");
 
   if (op_conf().fully_connected_conf().use_bias()) {
+    CHECK(op_conf().fully_connected_conf().has_bias());
     EnrollInputBn("bias");
     EnrollConstBufBn("bias_multiplier");
   }
@@ -39,20 +40,12 @@ Maybe<void> FullyConnectedOp::InferBlobDescs(
   out_blob_desc->mut_shape() = Shape({in_blob_desc->shape().At(0), units});
 
   // weight
-  if (conf.has_weight()) {
-    CHECK_EQ_OR_RETURN(GetBlobDesc4BnInOp("weight")->shape(),
-                       Shape({units, in_blob_desc->shape().Count(1)}));
-  } else {
-    GetBlobDesc4BnInOp("weight")->mut_shape() = Shape({units, in_blob_desc->shape().Count(1)});
-  }
+  CHECK_EQ_OR_RETURN(GetBlobDesc4BnInOp("weight")->shape(),
+                     Shape({units, in_blob_desc->shape().Count(1)}));
 
   if (conf.use_bias()) {
     // bias
-    if (conf.has_bias()) {
-      CHECK_EQ_OR_RETURN(GetBlobDesc4BnInOp("bias")->shape(), Shape({1, units}));
-    } else {
-      GetBlobDesc4BnInOp("bias")->mut_shape() = Shape({1, units});
-    }
+    CHECK_EQ_OR_RETURN(GetBlobDesc4BnInOp("bias")->shape(), Shape({1, units}));
 
     // bias_multiplier
     GetBlobDesc4BnInOp("bias_multiplier")->mut_shape() = Shape({in_blob_desc->shape().At(0), 1});

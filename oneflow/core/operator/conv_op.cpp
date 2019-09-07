@@ -69,6 +69,7 @@ void ConvOp<NDims>::InitFromOpConf() {
   EnrollTmpBn("fw_cudnn_buf");
   EnrollTmpBn("fw_col_buf");
   if (GetValFromCustomizedConf<bool>("use_bias")) {
+    CHECK(!GetValFromCustomizedConf<std::string>("bias").empty());
     EnrollInputBn("bias");
     EnrollConstBufBn("bias_multiplier");
   }
@@ -142,19 +143,11 @@ Maybe<void> ConvOp<NDims>::InferBlobDescs(
   for (size_t i = 0; i < NDims; ++i) {
     weight_shape[dhw_offset + i] = GetPbRfFromCustomizedConf<int32_t>("kernel_size").Get(i);
   }
-  if (GetValFromCustomizedConf<std::string>("weight").empty()) {
-    GetBlobDesc4BnInOp("weight")->mut_shape() = Shape(weight_shape);
-  } else {
-    CHECK_EQ_OR_RETURN(GetBlobDesc4BnInOp("weight")->shape(), Shape(weight_shape));
-  }
+  CHECK_EQ_OR_RETURN(GetBlobDesc4BnInOp("weight")->shape(), Shape(weight_shape));
 
   if (GetValFromCustomizedConf<bool>("use_bias")) {
     // bias and bias_multiplier
-    if (GetValFromCustomizedConf<std::string>("bias").empty()) {
-      GetBlobDesc4BnInOp("bias")->mut_shape() = Shape({filters});
-    } else {
-      CHECK_EQ_OR_RETURN(GetBlobDesc4BnInOp("bias")->shape(), Shape({filters}));
-    }
+    CHECK_EQ_OR_RETURN(GetBlobDesc4BnInOp("bias")->shape(), Shape({filters}));
     if (DevIsGpuAndEnableCudnn() == false) {
       std::vector<int64_t> bias_mul_shape(NDims + 1, 1);
       for (size_t i = 0; i != NDims; ++i) { bias_mul_shape[i + 1] = out_shape[dhw_offset + i]; }

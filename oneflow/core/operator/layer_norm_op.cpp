@@ -20,8 +20,12 @@ void LayerNormOp::InitFromOpConf() {
   if (!(conf.center() || conf.scale())) { mut_op_conf()->set_trainable(false); }
   EnrollInputBn("in");
   EnrollOutputBn("out");
-  if (conf.center()) { EnrollInputBn("beta"); }
+  if (conf.center()) {
+    CHECK(conf.has_beta());
+    EnrollInputBn("beta");
+  }
   if (conf.scale()) {
+    CHECK(conf.has_gamma());
     EnrollInputBn("gamma");
     EnrollOutputBn("normalized", false);
   }
@@ -46,26 +50,14 @@ Maybe<void> LayerNormOp::InferBlobDescs(
   if (param_shape_dim_vec.empty()) { param_shape_dim_vec.push_back(1); }
   const Shape param_shape(param_shape_dim_vec);
   if (conf.center()) {
-    if (conf.has_beta()) {
-      const BlobDesc* beta = GetBlobDesc4BnInOp("beta");
-      CHECK_EQ_OR_RETURN(beta->shape(), param_shape);
-      CHECK_EQ_OR_RETURN(beta->data_type(), in->data_type());
-    } else {
-      BlobDesc* beta = GetBlobDesc4BnInOp("beta");
-      beta->mut_shape() = param_shape;
-      beta->set_data_type(in->data_type());
-    }
+    const BlobDesc* beta = GetBlobDesc4BnInOp("beta");
+    CHECK_EQ_OR_RETURN(beta->shape(), param_shape);
+    CHECK_EQ_OR_RETURN(beta->data_type(), in->data_type());
   }
   if (conf.scale()) {
-    if (conf.has_gamma()) {
-      const BlobDesc* gamma = GetBlobDesc4BnInOp("gamma");
-      CHECK_EQ_OR_RETURN(gamma->shape(), param_shape);
-      CHECK_EQ_OR_RETURN(gamma->data_type(), in->data_type());
-    } else {
-      BlobDesc* gamma = GetBlobDesc4BnInOp("gamma");
-      gamma->mut_shape() = param_shape;
-      gamma->set_data_type(in->data_type());
-    }
+    const BlobDesc* gamma = GetBlobDesc4BnInOp("gamma");
+    CHECK_EQ_OR_RETURN(gamma->shape(), param_shape);
+    CHECK_EQ_OR_RETURN(gamma->data_type(), in->data_type());
     *GetBlobDesc4BnInOp("normalized") = *in;
   }
   const int64_t begin_norm_axis = ShiftNegativeAxisIfNeed(in->shape(), conf.begin_norm_axis());

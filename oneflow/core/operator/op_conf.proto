@@ -97,7 +97,7 @@ message Conv1DOpConf {
   // optional ActivationType activation = 9 [default = kNone];
   optional bool use_bias = 10 [default = true];
   required string weight = 13;
-  required string bias = 14;
+  optional string bias = 14;
 }
 
 message Conv2DOpConf {
@@ -112,7 +112,7 @@ message Conv2DOpConf {
   // optional ActivationType activation = 9 [default = kNone];
   optional bool use_bias = 10 [default = true];
   required string weight = 13;
-  required string bias = 14;
+  optional string bias = 14;
 }
 
 message Conv3DOpConf {
@@ -127,7 +127,7 @@ message Conv3DOpConf {
   // optional ActivationType activation = 9 [default = kNone];
   optional bool use_bias = 10 [default = true];
   required string weight = 13;
-  required string bias = 14;
+  optional string bias = 14;
 }
 
 message ConvConf {
@@ -165,7 +165,7 @@ message FullyConnectedOpConf {
   // in
   required string in = 1;
   required string weight = 2;
-  required string bias = 3;
+  optional string bias = 3;
   // out
   required string out = 4;
   required int32 units = 5;
@@ -946,8 +946,8 @@ message NormalizationOpConf {
   // optional ActivationType activation = 13 [default = kNone];
   required string moving_mean = 14;
   required string moving_variance = 15;
-  required string beta = 16;
-  required string gamma = 17;
+  optional string beta = 16;
+  optional string gamma = 17;
   optional string mean = 18 [default = "mean"];
   optional string inv_variance = 19 [default = "inv_variance"];
   optional bool is_training = 20 [default = true];
@@ -1207,8 +1207,8 @@ message SliceGradOpConf {
 message LayerNormOpConf {
   // in
   required string in = 1;
-  required string beta = 2;
-  required string gamma = 3;
+  optional string beta = 2;
+  optional string gamma = 3;
 
   // out
   required string out = 4;

@@ -15,6 +15,7 @@ void NormalizationOp::InitFromOpConf() {
   EnrollInputBn("moving_mean")->set_is_mutable(conf.is_training());
   EnrollInputBn("moving_variance")->set_is_mutable(conf.is_training());
   if (conf.scale()) {
+    CHECK(conf.has_gamma());
     EnrollInputBn("gamma");
   } else if (DevIsGpuAndEnableCudnn()) {
     EnrollConstBufBn("gamma");
@@ -22,6 +23,7 @@ void NormalizationOp::InitFromOpConf() {
     UNIMPLEMENTED();
   }
   if (conf.center()) {
+    CHECK(conf.has_beta());
     EnrollInputBn("beta");
   } else if (DevIsGpuAndEnableCudnn()) {
     EnrollConstBufBn("beta");
@@ -66,8 +68,8 @@ Maybe<void> NormalizationOp::InferBlobDescs(
   };
   (conf.has_moving_mean() ? CheckParamBlobDesc : SetParamBlobDesc)("moving_mean");
   (conf.has_moving_variance() ? CheckParamBlobDesc : SetParamBlobDesc)("moving_variance");
-  (conf.has_beta() ? CheckParamBlobDesc : SetParamBlobDesc)("beta");
-  (conf.has_gamma() ? CheckParamBlobDesc : SetParamBlobDesc)("gamma");
+  if (conf.center()) { CheckParamBlobDesc("beta"); }
+  if (conf.scale()) { CheckParamBlobDesc("gamma"); }
   if (conf.is_training()) {
     SetParamBlobDesc("mean");
     SetParamBlobDesc("inv_variance");
