@@ -9,13 +9,8 @@ void PReluOp::InitFromOpConf() {
   const PReluOpConf& conf = op_conf().prelu_conf();
   StrFieldTolower("data_format");
   EnrollInputBn("in");
-  if (conf.has_alpha()) {
-    EnrollInputBn("alpha");
-  } else {
-    EnrollTmpBn("alpha");
-  }
+  EnrollInputBn("alpha");
   EnrollOutputBn("out")->set_mutable_inplace_ibn("in");
-  ;
 }
 
 const PbMessage& PReluOp::GetCustomizedConf() const { return op_conf().prelu_conf(); }
@@ -38,14 +33,8 @@ Maybe<void> PReluOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)>
     }
   }
   const Shape alpha_shape({alpha_size});
-  if (conf.has_alpha()) {
-    CHECK_EQ_OR_RETURN(GetBlobDesc4BnInOp("alpha")->shape(), alpha_shape);
-    CHECK_EQ_OR_RETURN(GetBlobDesc4BnInOp("alpha")->data_type(), in_blob_desc->data_type());
-  } else {
-    BlobDesc* alpha_blob_desc = GetBlobDesc4BnInOp("alpha");
-    alpha_blob_desc->set_data_type(in_blob_desc->data_type());
-    alpha_blob_desc->mut_shape() = alpha_shape;
-  }
+  CHECK_EQ_OR_RETURN(GetBlobDesc4BnInOp("alpha")->shape(), alpha_shape);
+  CHECK_EQ_OR_RETURN(GetBlobDesc4BnInOp("alpha")->data_type(), in_blob_desc->data_type());
   return Maybe<void>::Ok();
 }
 

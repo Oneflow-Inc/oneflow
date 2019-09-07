@@ -47,12 +47,6 @@ void CurJobBuildAndInferCtx_AddLossLogicalBlobName(const std::string& lbn, std::
       error_str);
 }
 
-void CurJobBuildAndInferCtx_AddPlacementGroup(const std::string& serialized_placement_grp,
-                                              std::string* error_str) {
-  return oneflow::CurJobBuildAndInferCtx_AddPlacementGroup(serialized_placement_grp)
-      .GetDataAndSerializedErrorProto(error_str);
-}
-
 std::string JobBuildAndInferCtx_GetSerializedIdListAsStaticShape(const std::string& job_name,
                                                                  const std::string& lbn,
                                                                  std::string* error_str) {

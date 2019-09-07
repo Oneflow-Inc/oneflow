@@ -55,13 +55,6 @@ Maybe<void> CurJobBuildAndInferCtx_AddLossLogicalBlobName(const std::string& lbn
   return JUST(GetCurInferCtx())->AddLossLogicalBlobName(lbn);
 }
 
-Maybe<void> CurJobBuildAndInferCtx_AddPlacementGroup(const std::string& placement_group_str) {
-  PlacementGroup placement_group;
-  OF_CHECK(TxtString2PbMessage(placement_group_str, &placement_group))
-      << "placement group parse failed";
-  return JUST(GetCurInferCtx())->AddPlacementGroup(placement_group);
-}
-
 Maybe<std::string> JobBuildAndInferCtx_GetSerializedIdListAsStaticShape(const std::string& job_name,
                                                                         const std::string& lbn) {
   auto* ctx = JUST(Global<JobBuildAndInferCtxMgr>::Get()->FindJobBuildAndInferCtx(job_name));
