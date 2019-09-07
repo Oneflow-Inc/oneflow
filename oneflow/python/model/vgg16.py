@@ -77,10 +77,10 @@ def _conv2d_layer(
             dtype=input.dtype,
             initializer=bias_initializer,
         )
-        output = flow.transpose(output, perm=[0, 2, 3, 1])
-        output = flow.nn.bias_add(output, bias, "NHWC")
-        output = flow.transpose(output, perm=[0, 3, 1, 2])
-        # output = flow.nn.bias_add(output, bias, "NCHW")
+        # output = flow.transpose(output, perm=[0, 2, 3, 1])
+        # output = flow.nn.bias_add(output, bias, "NHWC")
+        # output = flow.transpose(output, perm=[0, 3, 1, 2])
+        output = flow.nn.bias_add(output, bias, "NCHW")
     if activation is not None:
         if activation == op_conf_util.kRelu:
             output = flow.keras.activations.relu(output)
