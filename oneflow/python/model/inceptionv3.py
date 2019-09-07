@@ -410,7 +410,7 @@ def InceptionE(in_blob, index):
             )
         with flow.deprecated.variable_scope("branch3x3dbl"):
             branch3x3dbl_1 = _conv2d_layer(
-                "conv0", in_blob, filters=1, kernel_size=1, strides=1, padding="SAME"
+                "conv0", in_blob, filters=448, kernel_size=1, strides=1, padding="SAME"
             )
             branch3x3dbl_2 = _conv2d_layer(
                 "conv1",
