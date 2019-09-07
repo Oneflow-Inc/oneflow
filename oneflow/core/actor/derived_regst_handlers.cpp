@@ -8,8 +8,9 @@ class NormalRegstHandler : public RegstHandlerIf {
  public:
   void Init(const RegstHandlerProto&, const ProducedRegstType&, MsgDeliveryCtx*,
             std::shared_ptr<void>) override final;
-  bool NoLongerConsumeRegst() const override final {
-    return (eord_cnt_ == consumed_rs_.total_regst_desc_cnt());
+  bool NoLongerAct() const override final {
+    return (eord_cnt_ == consumed_rs_.total_regst_desc_cnt())
+           && (consumed_rs_.available_regst_desc_cnt() == 0);
   }
   bool NoLongerConsumedByOthers() const override final { return total_reading_cnt_ == 0; }
   void SendEordMsgForProducedRegst() override final;
@@ -339,9 +340,7 @@ class ConstConsumedRegstHandler final : public RegstHandlerIf {
 
   bool IsReady() const override { return consumed_rs_.IsCurSlotReady(); }
   void HandleRegstMsgAfterAct() override {}
-  bool NoLongerConsumeRegst() const override {
-    return (eord_cnt_ == consumed_rs_.total_regst_desc_cnt());
-  }
+  bool NoLongerAct() const override { return (eord_cnt_ == consumed_rs_.total_regst_desc_cnt()); }
   bool NoLongerConsumedByOthers() const override { return true; }
   void SendEordMsgForProducedRegst() override;
 

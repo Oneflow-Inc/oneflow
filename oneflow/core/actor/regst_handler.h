@@ -38,7 +38,7 @@ class RegstHandlerIf {
 
   virtual bool IsReady() const = 0;
   virtual void HandleRegstMsgAfterAct() = 0;
-  virtual bool NoLongerConsumeRegst() const = 0;
+  virtual bool NoLongerAct() const = 0;
   virtual bool NoLongerConsumedByOthers() const = 0;
   virtual void SendEordMsgForProducedRegst() = 0;
 };

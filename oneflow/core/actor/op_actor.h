@@ -28,7 +28,7 @@ class OpActor : public NewActor {
   bool IsReady() const;
   void Act();
   void HandleRegstMsgAfterAct();
-  bool NoLongerConsumeRegst() const;
+  bool NoLongerAct() const;
   bool NoLongerConsumedByOthers() const;
   void SendEordMsgForProducedRegst() const;
 

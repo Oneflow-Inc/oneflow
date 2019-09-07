@@ -31,7 +31,7 @@ void ActUntilFail(OpActor* actor) {
 int OpActor::HandlerNormal(OpActor* actor, const ActorMsg& msg) {
   UpdateCtxWithMsg(actor, msg);
   ActUntilFail(actor);
-  if (actor->NoLongerConsumeRegst()) {
+  if (actor->NoLongerAct()) {
     actor->SendEordMsgForProducedRegst();
     if (actor->NoLongerConsumedByOthers()) {
       OF_CLEAR_OP_ACTOR_MSG_HANDLER(actor);
@@ -194,9 +194,9 @@ void OpActor::HandleRegstMsgAfterAct() {
   for (auto& pair : handlers_) { pair.second->HandleRegstMsgAfterAct(); }
 }
 
-bool OpActor::NoLongerConsumeRegst() const {
+bool OpActor::NoLongerAct() const {
   for (const auto& pair : handlers_) {
-    if (pair.second->NoLongerConsumeRegst() == false) { return false; }
+    if (pair.second->NoLongerAct() == false) { return false; }
   }
   return true;
 }
