@@ -97,50 +97,12 @@ Maybe<void> JobBuildAndInferCtx::InferOpOutSbpParallel(Operator* op,
     const SbpParallel& sbp_parallel = lbi2sbp_parallel_from_producer_view_.at(lbi);
     ibn2sbp_infer_hint.emplace(ibn, SbpInferHint(&parallel_desc, logical_blob_desc, sbp_parallel));
   }
-  auto SbpInferHint4Ibn = [&](const std::string& ibn) -> Maybe<const SbpInferHint*> {
-    auto it = ibn2sbp_infer_hint.find(ibn);
-    if (it == ibn2sbp_infer_hint.end()) {
-      return Error::CheckFailed() << "cannot find corresponding SbpInferHint for input_blob_name : "
-                                  << ibn;
-    }
-    return &(it->second);
+  auto GetBatchAxis4Lbi = [&](const LogicalBlobId& lbi) -> const OptInt64& {
+    return lbi2batch_axis_.at(lbi);
   };
-  std::function<int32_t(const SbpSignature&)> CalcOrderValue4SbpSig;
-  if (sbp_sig_conf.bn_in_op2sbp_parallel().empty()) {
-    auto OrderValue4HasBatchAxis = [&](const std::string& bn,
-                                       const SbpParallel& sbp_parallel) -> int32_t {
-      const auto& batch_axis = lbi2batch_axis_.at(op->BnInOp2Lbi(bn));
-      return -1
-             * (batch_axis.has_value() && sbp_parallel.has_split_parallel()
-                && sbp_parallel.split_parallel().axis() == batch_axis.value());
-    };
-    auto OrderValue4HasNoBatchAxis = [&](const std::string& ibn,
-                                         const SbpParallel& sbp_parallel) -> int32_t {
-      return -2
-             * (lbi2batch_axis_.at(op->BnInOp2Lbi(ibn)).has_value() == false
-                && CHECK_JUST(SbpInferHint4Ibn(ibn))->sbp_parallel().has_split_parallel() == false
-                && sbp_parallel.has_split_parallel() == false);
-    };
-    CalcOrderValue4SbpSig = [&](const SbpSignature& sbp_signature) -> int32_t {
-      int32_t order_value = 0;
-      for (const auto& ibn : op->input_bns()) {
-        const auto& sbp_parallel_it = sbp_signature.bn_in_op2sbp_parallel().find(ibn);
-        CHECK(sbp_parallel_it != sbp_signature.bn_in_op2sbp_parallel().end());
-        order_value += OrderValue4HasBatchAxis(ibn, sbp_parallel_it->second);
-        order_value += OrderValue4HasNoBatchAxis(ibn, sbp_parallel_it->second);
-      }
-      for (const auto& obn : op->output_bns()) {
-        const auto& sbp_parallel_it = sbp_signature.bn_in_op2sbp_parallel().find(obn);
-        CHECK(sbp_parallel_it != sbp_signature.bn_in_op2sbp_parallel().end());
-        order_value += OrderValue4HasBatchAxis(obn, sbp_parallel_it->second);
-      }
-      return order_value;
-    };
-  } else {
-    CalcOrderValue4SbpSig = [](const SbpSignature&) -> int32_t { return 0; };
-  }
-  JUST(op->InferSbpSignatureIf(sbp_sig_to_infer, sbp_sig_conf, CalcOrderValue4SbpSig,
-                               SbpInferHint4Ibn, parallel_desc));
+
+  CHECK_JUST(InferOpSbpSignature(*op, sbp_sig_conf, parallel_desc, ibn2sbp_infer_hint,
+                                 GetBatchAxis4Lbi, sbp_sig_to_infer));
 
   const auto& bn2sbp_parallel = sbp_sig_to_infer->bn_in_op2sbp_parallel();
   for (const auto& obn : op->output_bns()) {

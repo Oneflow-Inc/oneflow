@@ -483,4 +483,56 @@ Maybe<void> Operator::NaiveInferBatchAxis(
   return Maybe<void>::Ok();
 }
 
+Maybe<void> InferOpSbpSignature(
+    const Operator& op, const SbpSignature& sbp_sig_conf, const ParallelDesc& parallel_desc,
+    const HashMap<std::string, SbpInferHint>& ibn2sbp_infer_hint,
+    std::function<const OptInt64&(const LogicalBlobId&)> GetBatchAxis4Lbi,
+    SbpSignature* sbp_sig_to_infer) {
+  auto SbpInferHint4Ibn = [&](const std::string& ibn) -> Maybe<const SbpInferHint*> {
+    auto it = ibn2sbp_infer_hint.find(ibn);
+    if (it == ibn2sbp_infer_hint.end()) {
+      return Error::CheckFailed() << "cannot find corresponding SbpInferHint for input_blob_name : "
+                                  << ibn;
+    }
+    return &(it->second);
+  };
+  std::function<int32_t(const SbpSignature&)> CalcOrderValue4SbpSig;
+  if (sbp_sig_conf.bn_in_op2sbp_parallel().empty()) {
+    auto OrderValue4HasBatchAxis = [&](const std::string& bn,
+                                       const SbpParallel& sbp_parallel) -> int32_t {
+      const auto& batch_axis = GetBatchAxis4Lbi(op.BnInOp2Lbi(bn));
+      return -1
+             * (batch_axis.has_value() && sbp_parallel.has_split_parallel()
+                && sbp_parallel.split_parallel().axis() == batch_axis.value());
+    };
+    auto OrderValue4HasNoBatchAxis = [&](const std::string& ibn,
+                                         const SbpParallel& sbp_parallel) -> int32_t {
+      return -2
+             * (GetBatchAxis4Lbi(op.BnInOp2Lbi(ibn)).has_value() == false
+                && CHECK_JUST(SbpInferHint4Ibn(ibn))->sbp_parallel().has_split_parallel() == false
+                && sbp_parallel.has_split_parallel() == false);
+    };
+    CalcOrderValue4SbpSig = [&](const SbpSignature& sbp_signature) -> int32_t {
+      int32_t order_value = 0;
+      for (const auto& ibn : op.input_bns()) {
+        const auto& sbp_parallel_it = sbp_signature.bn_in_op2sbp_parallel().find(ibn);
+        CHECK(sbp_parallel_it != sbp_signature.bn_in_op2sbp_parallel().end());
+        order_value += OrderValue4HasBatchAxis(ibn, sbp_parallel_it->second);
+        order_value += OrderValue4HasNoBatchAxis(ibn, sbp_parallel_it->second);
+      }
+      for (const auto& obn : op.output_bns()) {
+        const auto& sbp_parallel_it = sbp_signature.bn_in_op2sbp_parallel().find(obn);
+        CHECK(sbp_parallel_it != sbp_signature.bn_in_op2sbp_parallel().end());
+        order_value += OrderValue4HasBatchAxis(obn, sbp_parallel_it->second);
+      }
+      return order_value;
+    };
+  } else {
+    CalcOrderValue4SbpSig = [](const SbpSignature&) -> int32_t { return 0; };
+  }
+  JUST(op.InferSbpSignatureIf(sbp_sig_to_infer, sbp_sig_conf, CalcOrderValue4SbpSig,
+                              SbpInferHint4Ibn, parallel_desc));
+  return Maybe<void>::Ok();
+}
+
 }  // namespace oneflow
