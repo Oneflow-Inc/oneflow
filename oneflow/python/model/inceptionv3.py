@@ -245,7 +245,7 @@ def InceptionC(in_blob, index, filters):
             branch7x7_3 = _conv2d_layer(
                 "conv2",
                 branch7x7_2,
-                filters=filters,
+                filters=192,
                 kernel_size=[7, 1],
                 strides=[1, 1],
                 padding="SAME",
