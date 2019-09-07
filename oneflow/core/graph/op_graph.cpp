@@ -464,8 +464,8 @@ void OpGraph::InferOpNodeLogicalBlobDesc(OpNode* op_node) const {
     parallel_ctx.set_parallel_id(parallel_id);
     parallel_ctx.set_parallel_num(parallel_num);
     parallel_ctx.set_policy(op_node->parallel_desc().policy());
-    op_node->op().InferBlobDescsIf(BlobDesc4BnInOp, &parallel_ctx,
-                                   GlobalJobDesc().RecordPieceSize(), [](OpContext*) {});
+    CHECK_JUST(op_node->op().InferBlobDescsIf(
+        BlobDesc4BnInOp, &parallel_ctx, GlobalJobDesc().RecordPieceSize(), [](OpContext*) {}));
   }
   op_node->ConcatLogicalOutputBlobDesc();
 }
@@ -623,8 +623,9 @@ std::function<const BlobDesc&(const LogicalBlobId&)> OpGraph::MakeGetterBlobDesc
     // a) model blobs' byte size;
     // b) number of axes of blobs' body shape;
     // Hence the argument record_piece_size can be any positive number
-    op_node->op().InferBlobDescsIf(MutUnparalleledBlobDesc4BnInOp, &parallel_ctx,
-                                   GlobalJobDesc().RecordPieceSize(), [](OpContext*) {});
+    CHECK_JUST(op_node->op().InferBlobDescsIf(MutUnparalleledBlobDesc4BnInOp, &parallel_ctx,
+                                              GlobalJobDesc().RecordPieceSize(),
+                                              [](OpContext*) {}));
   });
   auto model_lbi2blob_desc = std::make_shared<HashMap<LogicalBlobId, std::unique_ptr<BlobDesc>>>();
   ForEachNode([&](OpNode* op_node) {
