@@ -99,6 +99,7 @@ class Operator {
   // Write: shape of output_blobs
   Maybe<void> InferBlobDescsIf(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                const ParallelContext*, int64_t record_piece_size,
+			       const SbpSignature* sbp_signature,
                                std::function<void(OpContext*)> EnrollOpCtx) const;
   virtual Maybe<void> InferBlobDescs(
       std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*,
