@@ -2,6 +2,7 @@ import oneflow as flow
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 from datetime import datetime
 import argparse
+import os
 
 _DATA_DIR = "/dataset/PNGS/PNG224/of_record_repeated"
 _SINGLE_DATA_DIR = "/dataset/PNGS/PNG224/of_record"
@@ -32,7 +33,7 @@ parser.add_argument(
     "-r", "--remote_by_hand", default=False, action="store_true", required=False
 )
 parser.add_argument("-e", "--eval_dir", type=str,
-                    default=_SINGLE_DATA_DIR, required=False)
+                    default=_DATA_DIR, required=False)
 parser.add_argument("-t", "--train_dir", type=str,
                     default=_DATA_DIR, required=False)
 parser.add_argument("-load", "--model_load_dir", type=str,
@@ -130,25 +131,19 @@ def vgg(images, labels, trainable=True):
     to_return = []
     transposed = flow.transpose(images, name="transpose", perm=[0, 3, 1, 2])
     conv1 = _conv_block(transposed, 0, 64, 2)
-    # print("conv1   ", conv1[-1].shape)
     pool1 = flow.nn.max_pool2d(conv1[-1], 2, 2, "VALID", "NCHW", name="pool1")
-    # print("pool1   ", pool1.shape)
+
     conv2 = _conv_block(pool1, 2, 128, 2)
-
     pool2 = flow.nn.max_pool2d(conv2[-1], 2, 2, "VALID", "NCHW", name="pool2")
-    # print("pool2    ", pool2.shape)
+
     conv3 = _conv_block(pool2, 4, 256, 3)
-
     pool3 = flow.nn.max_pool2d(conv3[-1], 2, 2, "VALID", "NCHW", name="pool3")
-    # print("pool3   ", pool3.shape)
+
     conv4 = _conv_block(pool3, 7, 512, 3)
-
     pool4 = flow.nn.max_pool2d(conv4[-1], 2, 2, "VALID", "NCHW", name="pool4")
-    # print("pool4    ", pool4.shape)
-    conv5 = _conv_block(pool4, 10, 512, 3)
 
+    conv5 = _conv_block(pool4, 10, 512, 3)
     pool5 = flow.nn.max_pool2d(conv5[-1], 2, 2, "VALID", "NCHW", name="pool5")
-    # print("pool5   ", pool5.shape)
 
     def _get_kernel_initializer():
         kernel_initializer = op_conf_util.InitializerConf()
@@ -160,9 +155,7 @@ def vgg(images, labels, trainable=True):
         bias_initializer.constant_conf.value = 0.0
         return bias_initializer
 
-  # if len(pool5.shape) > 2:
     pool5 = flow.reshape(pool5, [-1, 512])
-    # print("pool5   reshaped  ", pool5.shape)
 
     fc6 = flow.layers.dense(
         inputs=pool5,
@@ -174,7 +167,6 @@ def vgg(images, labels, trainable=True):
         trainable=trainable,
         name="fc1"
     )
-    # print("fc6   ", fc6.shape)
 
     fc7 = flow.layers.dense(
         inputs=fc6,
@@ -186,7 +178,6 @@ def vgg(images, labels, trainable=True):
         trainable=trainable,
         name="fc2"
     )
-    # print("fc7    ", fc7.shape)
 
     fc8 = flow.layers.dense(
         inputs=fc7,
@@ -197,16 +188,12 @@ def vgg(images, labels, trainable=True):
         trainable=trainable,
         name="fc_final"
     )
-    # print("fc8   :", fc8.shape)
+
     loss = flow.nn.sparse_softmax_cross_entropy_with_logits(
         labels, fc8, name="softmax_loss"
     )
-    # to_return.append(conv5[1])
-    to_return.append(fc8)
-    print("conv1[1].op_name", conv1[1].op_name)
-    print("conv1[1].logical_blob_name", conv1[1].logical_blob_name)
+
     to_return.append(loss)
-    print(to_return)
     return tuple(to_return)
 
 
@@ -222,12 +209,11 @@ def TrainNet():
     flow.losses.add_loss(loss)
     return to_return
 
-# @flow.function
-# def vgg_eval_job():
-#    job_conf = flow.get_cur_job_conf_builder()
-#    job_conf.batch_size(8).default_data_type(flow.float)
-#    (labels, images) = _data_load_layer(args.eval_dir)
-#    return vgg(images, labels, False)
+
+@flow.function
+def vgg_eval_job():
+    (labels, images) = _data_load_layer(args.eval_dir)
+    return vgg(images, labels, False)
 
 
 if __name__ == "__main__":
@@ -245,13 +231,13 @@ if __name__ == "__main__":
         if args.remote_by_hand is False:
             if args.scp_binary_without_uuid:
                 flow.deprecated.init_worker(
-                    config, scp_binary=True, use_uuid=False)
+                    scp_binary=True, use_uuid=False)
             elif args.skip_scp_binary:
                 flow.deprecated.init_worker(
-                    config, scp_binary=False, use_uuid=False)
+                    scp_binary=False, use_uuid=False)
             else:
                 flow.deprecated.init_worker(
-                    config, scp_binary=True, use_uuid=True)
+                    scp_binary=True, use_uuid=True)
 
     check_point = flow.train.CheckPoint()
     if not args.model_load_dir:
@@ -267,16 +253,14 @@ if __name__ == "__main__":
                 i, "train loss:", train_result[-1].mean()
             )
         )
-        if args.iter_num == 1:
-            print(train_result[0])
-        #  if (i + 1) % 10 == 0:
-        #      print(
-        #          fmt_str.format(
-        #              i, "eval loss:", sess.run(vgg_eval_job).get().mean()
-        #          )
-        #      )
+        if (i + 1) % 10 == 0:
+            print(
+                fmt_str.format(
+                    i, "eval loss:", vgg_eval_job().get()[-1].mean()
+                )
+            )
         if (i + 1) % 100 == 0:
-            check_point.save(_MODEL_SAVE_DIR + str(i))
+            check_point.save(os.path.join(args.model_save_dir, str(i)))
     if (
         args.multinode
         and args.skip_scp_binary is False
