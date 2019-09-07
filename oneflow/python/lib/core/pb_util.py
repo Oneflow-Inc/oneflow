@@ -30,7 +30,7 @@ def MergePbMessage(dst, src):
             if dst.WhichOneof(field.containing_oneof.name) is not None: continue
             src_field_name = src.WhichOneof(field.containing_oneof.name)
             if src_field_name is None: continue
-            if field_name is not src_field_name: continue
+            if field_name != src_field_name: continue
         else:
             if dst.HasField(field_name): continue
             if not src.HasField(field_name): continue
