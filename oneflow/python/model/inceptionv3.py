@@ -326,7 +326,7 @@ def InceptionD(in_blob, index):
                 "conv0", in_blob, filters=192, kernel_size=1, strides=1, padding="SAME"
             )
             branch3x3_2 = _conv2d_layer(
-                "conv1", in_blob, filters=320, kernel_size=3, strides=2, padding="VALID"
+                "conv1", branch3x3_1, filters=320, kernel_size=3, strides=2, padding="VALID"
             )
         with flow.deprecated.variable_scope("branch7x7x3"):
             branch7x7x3_1 = _conv2d_layer(
@@ -346,7 +346,7 @@ def InceptionD(in_blob, index):
                 filters=192,
                 kernel_size=[7, 1],
                 strides=2,
-                padding="VALID",
+                padding="SAME",
             )
             branch7x7x3_4 = _conv2d_layer(
                 "conv3",
@@ -361,7 +361,7 @@ def InceptionD(in_blob, index):
                 in_blob,
                 ksize=3,
                 strides=2,
-                padding="SAME",
+                padding="VALID",
                 data_format="NCHW",
                 name="pool",
             )
