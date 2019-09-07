@@ -9,18 +9,10 @@ void FullyConnectedOp::InitFromOpConf() {
   const auto& conf = op_conf().fully_connected_conf();
   EnrollInputBn("in");
   EnrollOutputBn("out");
-  if (conf.has_weight()) {
-    EnrollInputBn("weight");
-  } else {
-    EnrollTmpBn("weight");
-  }
+  EnrollInputBn("weight");
 
   if (op_conf().fully_connected_conf().use_bias()) {
-    if (conf.has_bias()) {
-      EnrollInputBn("bias");
-    } else {
-      EnrollTmpBn("bias");
-    }
+    EnrollInputBn("bias");
     EnrollConstBufBn("bias_multiplier");
   }
 }

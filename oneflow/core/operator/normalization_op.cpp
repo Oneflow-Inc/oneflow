@@ -12,33 +12,17 @@ void NormalizationOp::InitFromOpConf() {
   CHECK_LE(conf.momentum(), 1);
   EnrollInputBn("in");
   EnrollOutputBn("out");
-  if (conf.has_moving_mean()) {
     EnrollInputBn("moving_mean")->set_is_mutable(conf.is_training());
-  } else {
-    EnrollTmpBn("moving_mean");
-  }
-  if (conf.has_moving_variance()) {
     EnrollInputBn("moving_variance")->set_is_mutable(conf.is_training());
-  } else {
-    EnrollTmpBn("moving_variance");
-  }
   if (conf.scale()) {
-    if (conf.has_gamma()) {
       EnrollInputBn("gamma");
-    } else {
-      EnrollTmpBn("gamma");
-    }
   } else if (DevIsGpuAndEnableCudnn()) {
     EnrollConstBufBn("gamma");
   } else {
     UNIMPLEMENTED();
   }
   if (conf.center()) {
-    if (conf.has_beta()) {
       EnrollInputBn("beta");
-    } else {
-      EnrollTmpBn("beta");
-    }
   } else if (DevIsGpuAndEnableCudnn()) {
     EnrollConstBufBn("beta");
   } else {

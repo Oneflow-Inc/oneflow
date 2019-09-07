@@ -21,18 +21,10 @@ void LayerNormOp::InitFromOpConf() {
   EnrollInputBn("in");
   EnrollOutputBn("out");
   if (conf.center()) {
-    if (conf.has_beta()) {
       EnrollInputBn("beta");
-    } else {
-      EnrollTmpBn("beta");
-    }
   }
   if (conf.scale()) {
-    if (conf.has_gamma()) {
       EnrollInputBn("gamma");
-    } else {
-      EnrollTmpBn("gamma");
-    }
     EnrollOutputBn("normalized", false);
   }
   EnrollOutputBn("mean", false);

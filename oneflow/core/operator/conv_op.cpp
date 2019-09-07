@@ -65,19 +65,11 @@ void ConvOp<NDims>::InitFromOpConf() {
 
   EnrollInputBn("in");
   EnrollOutputBn("out");
-  if (GetValFromCustomizedConf<std::string>("weight").empty()) {
-    EnrollTmpBn("weight");
-  } else {
     EnrollInputBn("weight");
-  }
   EnrollTmpBn("fw_cudnn_buf");
   EnrollTmpBn("fw_col_buf");
   if (GetValFromCustomizedConf<bool>("use_bias")) {
-    if (GetValFromCustomizedConf<std::string>("bias").empty()) {
-      EnrollTmpBn("bias");
-    } else {
       EnrollInputBn("bias");
-    }
     EnrollConstBufBn("bias_multiplier");
   }
 }

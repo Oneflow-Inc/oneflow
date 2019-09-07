@@ -96,10 +96,8 @@ message Conv1DOpConf {
   repeated int32 dilation_rate = 8;
   // optional ActivationType activation = 9 [default = kNone];
   optional bool use_bias = 10 [default = true];
-  optional InitializerConf weight_initializer = 11;
-  optional InitializerConf bias_initializer = 12;
-  optional string weight = 13;
-  optional string bias = 14;
+  required string weight = 13;
+  required string bias = 14;
 }
 
 message Conv2DOpConf {
@@ -113,10 +111,8 @@ message Conv2DOpConf {
   repeated int32 dilation_rate = 8;
   // optional ActivationType activation = 9 [default = kNone];
   optional bool use_bias = 10 [default = true];
-  optional InitializerConf weight_initializer = 11;
-  optional InitializerConf bias_initializer = 12;
-  optional string weight = 13;
-  optional string bias = 14;
+  required string weight = 13;
+  required string bias = 14;
 }
 
 message Conv3DOpConf {
@@ -130,10 +126,8 @@ message Conv3DOpConf {
   repeated int32 dilation_rate = 8;
   // optional ActivationType activation = 9 [default = kNone];
   optional bool use_bias = 10 [default = true];
-  optional InitializerConf weight_initializer = 11;
-  optional InitializerConf bias_initializer = 12;
-  optional string weight = 13;
-  optional string bias = 14;
+  required string weight = 13;
+  required string bias = 14;
 }
 
 message ConvConf {
@@ -170,8 +164,8 @@ message ConvBiasGradOpConf {
 message FullyConnectedOpConf {
   // in
   required string in = 1;
-  optional string weight = 2;
-  optional string bias = 3;
+  required string weight = 2;
+  required string bias = 3;
   // out
   required string out = 4;
   required int32 units = 5;
@@ -279,7 +273,7 @@ message PReluOpConf {
   required string data_format = 3;
   optional bool channel_shared = 4 [default = false];
   optional float alpha_init = 5 [default = 0.25];
-  optional string alpha = 6;
+  required string alpha = 6;
 }
 
 message PReluDataGradOpConf {
@@ -950,10 +944,10 @@ message NormalizationOpConf {
   optional float mean_init = 10 [default = 0.0];
   optional float variance_init = 11 [default = 1.0];
   // optional ActivationType activation = 13 [default = kNone];
-  optional string moving_mean = 14;
-  optional string moving_variance = 15;
-  optional string beta = 16;
-  optional string gamma = 17;
+  required string moving_mean = 14;
+  required string moving_variance = 15;
+  required string beta = 16;
+  required string gamma = 17;
   optional string mean = 18 [default = "mean"];
   optional string inv_variance = 19 [default = "inv_variance"];
   optional bool is_training = 20 [default = true];
@@ -1213,8 +1207,8 @@ message SliceGradOpConf {
 message LayerNormOpConf {
   // in
   required string in = 1;
-  optional string beta = 2;
-  optional string gamma = 3;
+  required string beta = 2;
+  required string gamma = 3;
 
   // out
   required string out = 4;
