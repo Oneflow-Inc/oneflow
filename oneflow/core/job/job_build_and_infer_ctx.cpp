@@ -270,8 +270,8 @@ Maybe<void> JobBuildAndInferCtx::AddAndInferOp(const OperatorConf& op_conf,
   parallel_ctx.set_parallel_id(0);
   parallel_ctx.set_parallel_num(1);
   parallel_ctx.set_policy(ParallelPolicy::kDataParallel);
-  JUST(op->InferOutBlobDescsIf(GetBlobDesc4BnInOp, &parallel_ctx, job_->job_conf().piece_size(),
-                               [](OpContext*) {}));
+  JUST(op->InferOutBlobDescsIf(GetBlobDesc4BnInOp, &parallel_ctx, &sbp_sig_to_infer,
+                               job_->job_conf().piece_size(), [](OpContext*) {}));
 
   // check splitability
   JUST(CheckOpBlobSplitability(op, sbp_sig_to_infer, parallel_desc.parallel_num()));

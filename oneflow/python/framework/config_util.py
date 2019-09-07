@@ -215,10 +215,10 @@ def set_max_data_id_length(value):
     _SetJobConfAttr(lambda x:x, 'max_data_id_length', value)
     return oneflow.config
 
-@oneflow_export('config.default_initialize_conf')
-def set_default_initialize_conf(value):
+@oneflow_export('config.default_initializer_conf')
+def set_default_initializer_conf(value):
     assert type(value) is dict
-    pb_msg = _GetJobConfAttr(lambda x:x, 'default_initialize_conf')
+    pb_msg = _GetJobConfAttr(lambda x:x, 'default_initializer_conf')
     pb_util.PythonDict2PbMessage(value, pb_msg)
     return oneflow.config
 

@@ -464,10 +464,16 @@ void OpGraph::InferOpNodeLogicalBlobDesc(OpNode* op_node) const {
     parallel_ctx.set_parallel_id(parallel_id);
     parallel_ctx.set_parallel_num(parallel_num);
     parallel_ctx.set_policy(op_node->parallel_desc().policy());
-    op_node->op().InferBlobDescsIf(BlobDesc4BnInOp, &parallel_ctx,
+    op_node->op().InferBlobDescsIf(BlobDesc4BnInOp, &parallel_ctx, &op_node->sbp_signature(),
                                    GlobalJobDesc().RecordPieceSize(), [](OpContext*) {});
   }
   op_node->ConcatLogicalOutputBlobDesc();
+}
+
+const OpNode* OpGraph::OpNode4OpName(const std::string& op_name) const {
+  const auto& op_node_it = op_name2op_node_.find(op_name);
+  if (op_node_it == op_name2op_node_.end()) { return nullptr; }
+  return op_node_it->second;
 }
 
 void OpGraph::InferLogicalBlobDesc(const Job& job) const {
@@ -609,6 +615,13 @@ std::function<const BlobDesc&(const LogicalBlobId&)> OpGraph::MakeGetterBlobDesc
     parallel_ctx.set_parallel_id(0);
     parallel_ctx.set_parallel_num(1);
     parallel_ctx.set_policy(op_node->parallel_desc().policy());
+    SbpSignature sbp_signature;
+    for (const auto& ibn : op_node->op().input_bns()) {
+      (*sbp_signature.mutable_bn_in_op2sbp_parallel())[ibn].mutable_split_parallel()->set_axis(0);
+    }
+    for (const auto& obn : op_node->op().output_bns()) {
+      (*sbp_signature.mutable_bn_in_op2sbp_parallel())[obn].mutable_split_parallel()->set_axis(0);
+    }
     auto MutUnparalleledBlobDesc4BnInOp = [&](const std::string& bn) -> BlobDesc* {
       const auto& lbi = op_node->op().BnInOp2Lbi(bn);
       auto it = lbi2unparalleled_blob_desc.find(lbi);
@@ -623,7 +636,7 @@ std::function<const BlobDesc&(const LogicalBlobId&)> OpGraph::MakeGetterBlobDesc
     // a) model blobs' byte size;
     // b) number of axes of blobs' body shape;
     // Hence the argument record_piece_size can be any positive number
-    op_node->op().InferBlobDescsIf(MutUnparalleledBlobDesc4BnInOp, &parallel_ctx,
+    op_node->op().InferBlobDescsIf(MutUnparalleledBlobDesc4BnInOp, &parallel_ctx, &sbp_signature,
                                    GlobalJobDesc().RecordPieceSize(), [](OpContext*) {});
   });
   auto model_lbi2blob_desc = std::make_shared<HashMap<LogicalBlobId, std::unique_ptr<BlobDesc>>>();
