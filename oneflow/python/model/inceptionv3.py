@@ -3,7 +3,7 @@ import oneflow.core.operator.op_conf_pb2 as op_conf_util
 from datetime import datetime
 import argparse
 
-_DATA_DIR = '/dataset/PNGS/PNG299/of_record_repeated'
+_DATA_DIR = "/dataset/PNGS/PNG299/of_record_repeated"
 _EVAL_DIR = _DATA_DIR
 _TRAIN_DIR = _DATA_DIR
 _MODEL_LOAD = "/dataset/PNGS/cnns_model_for_test/inceptionv3/models/of_model"
@@ -32,7 +32,9 @@ parser.add_argument(
 )
 parser.add_argument("-e", "--eval_dir", type=str, default=_DATA_DIR, required=False)
 parser.add_argument("-t", "--train_dir", type=str, default=_DATA_DIR, required=False)
-parser.add_argument("-load", "--model_load_dir", type=str, default=_MODEL_LOAD, required=False)
+parser.add_argument(
+    "-load", "--model_load_dir", type=str, default=_MODEL_LOAD, required=False
+)
 parser.add_argument(
     "-save", "--model_save_dir", type=str, default=_MODEL_SAVE_DIR, required=False
 )
@@ -284,7 +286,7 @@ def InceptionC(in_blob, index, filters):
             )
             branch7x7dbl_5 = _conv2d_layer(
                 "conv4",
-                branch7x7dbl_3,
+                branch7x7dbl_4,
                 filters=192,
                 kernel_size=[1, 7],
                 strides=1,
@@ -325,7 +327,12 @@ def InceptionD(in_blob, index):
                 "conv0", in_blob, filters=192, kernel_size=1, strides=1, padding="SAME"
             )
             branch3x3_2 = _conv2d_layer(
-                "conv1", branch3x3_1, filters=320, kernel_size=3, strides=2, padding="VALID"
+                "conv1",
+                branch3x3_1,
+                filters=320,
+                kernel_size=3,
+                strides=2,
+                padding="VALID",
             )
         with flow.deprecated.variable_scope("branch7x7x3"):
             branch7x7x3_1 = _conv2d_layer(
@@ -483,7 +490,7 @@ def InceptionV3(images, labels, trainable=True):
         "conv2", conv1, filters=64, kernel_size=3, strides=1, padding="SAME"
     )
     pool1 = flow.nn.max_pool2d(
-        conv2, ksize=3, strides=2, padding="SAME", data_format="NCHW", name="pool1"
+        conv2, ksize=3, strides=2, padding="VALID", data_format="NCHW", name="pool1"
     )
     conv3 = _conv2d_layer(
         "conv3", pool1, filters=80, kernel_size=1, strides=1, padding="VALID"
@@ -492,7 +499,7 @@ def InceptionV3(images, labels, trainable=True):
         "conv4", conv3, filters=192, kernel_size=3, strides=1, padding="VALID"
     )
     pool2 = flow.nn.max_pool2d(
-        conv4, ksize=3, strides=2, padding="SAME", data_format="NCHW", name="pool2"
+        conv4, ksize=3, strides=2, padding="VALID", data_format="NCHW", name="pool2"
     )
 
     # mixed_0 ~ mixed_2
@@ -527,15 +534,19 @@ def InceptionV3(images, labels, trainable=True):
             pool3,
             1001,
             activation=None,
-            use_bias=True,
+            use_bias=False,
             kernel_initializer=flow.truncated_normal(0.816496580927726),
             bias_initializer=flow.constant_initializer(),
-            name="fc1"
+            name="fc1",
         )
 
-    return flow.nn.sparse_softmax_cross_entropy_with_logits(
+    loss = flow.nn.sparse_softmax_cross_entropy_with_logits(
         labels=labels, logits=fc1, name="softmax_loss"
     )
+
+    xxxxx = fc1
+
+    return loss, xxxxx
 
 
 @flow.function
@@ -545,9 +556,9 @@ def TrainNet():
     flow.config.train.model_update_conf(dict(naive_conf={}))
 
     (images, labels) = _data_load_layer(args.train_dir)
-    loss = InceptionV3(images, labels)
+    loss, xxxxx = InceptionV3(images, labels)
     flow.losses.add_loss(loss)
-    return loss
+    return loss, xxxxx
 
 
 if __name__ == "__main__":
@@ -575,8 +586,10 @@ if __name__ == "__main__":
 
     fmt_str = "{:>12}  {:>12}  {:>12.10f}"
     print("{:>12}  {:>12}  {:>12}".format("iter", "loss type", "loss value"))
-    for i in range(10):
-        print(fmt_str.format(i, "train loss:", TrainNet().get().mean()))
+    for i in range(1):
+        import numpy as np
+        np.save("xxxxx", TrainNet().get()[1])
+        print(fmt_str.format(i, "train loss:", TrainNet().get()[0].mean()))
         # if (i + 1) % 10 == 0:
         #     print(fmt_str.format(i, "eval loss:", alexnet_eval_job().get().mean()))
         if (i + 1) % 100 == 0:
