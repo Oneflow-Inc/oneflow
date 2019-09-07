@@ -4,10 +4,10 @@ from datetime import datetime
 import argparse
 import os
 
-_DATA_DIR = "/home/xfjiang/dataset/inception_v3/of_record_repeated"
+_DATA_DIR = '/dataset/PNGS/PNG299/of_record_repeated'
 _EVAL_DIR = _DATA_DIR
 _TRAIN_DIR = _DATA_DIR
-_MODEL_LOAD = "/home/xfjiang/model_zoo/inception_v3/of_model"
+_MODEL_LOAD = "/dataset/PNGS/cnns_model_for_test/inceptionv3/models/of_model"
 _MODEL_SAVE_DIR = "./model_save-{}".format(
     str(datetime.now().strftime("%Y-%m-%d-%H:%M:%S"))
 )
@@ -33,7 +33,7 @@ parser.add_argument(
 )
 parser.add_argument("-e", "--eval_dir", type=str, default=_DATA_DIR, required=False)
 parser.add_argument("-t", "--train_dir", type=str, default=_DATA_DIR, required=False)
-parser.add_argument("-load", "--model_load_dir", type=str, default="", required=False)
+parser.add_argument("-load", "--model_load_dir", type=str, default=_MODEL_LOAD, required=False)
 parser.add_argument(
     "-save", "--model_save_dir", type=str, default=_MODEL_SAVE_DIR, required=False
 )
@@ -540,7 +540,7 @@ def InceptionV3(images, labels, trainable=True):
 
 
 @flow.function
-def inception_v3_train_job():
+def TrainNet():
     flow.config.train.batch_size(args.iter_num)
     flow.config.train.primary_lr(0.0001)
     flow.config.train.model_update_conf(dict(naive_conf={}))
@@ -577,9 +577,9 @@ if __name__ == "__main__":
     fmt_str = "{:>12}  {:>12}  {:>12.10f}"
     print("{:>12}  {:>12}  {:>12}".format("iter", "loss type", "loss value"))
     for i in range(10):
-        print(fmt_str.format(i, "train loss:", alexnet_train_job().get().mean()))
-        if (i + 1) % 10 == 0:
-            print(fmt_str.format(i, "eval loss:", alexnet_eval_job().get().mean()))
+        print(fmt_str.format(i, "train loss:", TrainNet().get().mean()))
+        # if (i + 1) % 10 == 0:
+        #     print(fmt_str.format(i, "eval loss:", alexnet_eval_job().get().mean()))
         if (i + 1) % 100 == 0:
             check_point.save(_MODEL_SAVE_DIR + str(i))
 
