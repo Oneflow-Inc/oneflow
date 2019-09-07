@@ -214,9 +214,6 @@ def InceptionB(in_blob, index):
         inceptionB_bn.append(branch3x3)
         inceptionB_bn.append(branch3x3dbl_3)
         inceptionB_bn.append(branch_pool)
-        print(branch3x3.shape)
-        print(branch3x3dbl_3.shape)
-        print(branch_pool.shape)
         mixed_concat = flow.concat(values=inceptionB_bn, axis=1, name="concat")
 
     return mixed_concat
