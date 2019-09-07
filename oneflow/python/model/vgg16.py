@@ -10,8 +10,10 @@ _MODEL_SAVE_DIR = "./model_save-{}".format(
     str(datetime.now().strftime("%Y-%m-%d-%H:%M:%S"))
 )
 
-parser = argparse.ArgumentParser(description="flags for multi-node and resource")
-parser.add_argument("-g", "--gpu_num_per_node", type=int, default=1, required=False)
+parser = argparse.ArgumentParser(
+    description="flags for multi-node and resource")
+parser.add_argument("-g", "--gpu_num_per_node",
+                    type=int, default=1, required=False)
 parser.add_argument("-i", "--iter_num", type=int, default=10, required=False)
 parser.add_argument(
     "-m", "--multinode", default=False, action="store_true", required=False
@@ -29,15 +31,19 @@ parser.add_argument(
 parser.add_argument(
     "-r", "--remote_by_hand", default=False, action="store_true", required=False
 )
-parser.add_argument("-e", "--eval_dir", type=str, default=_SINGLE_DATA_DIR, required=False)
-parser.add_argument("-t", "--train_dir", type=str, default=_DATA_DIR, required=False)
-parser.add_argument("-load", "--model_load_dir", type=str, default=_MODEL_LOAD_DIR, required=False)
+parser.add_argument("-e", "--eval_dir", type=str,
+                    default=_SINGLE_DATA_DIR, required=False)
+parser.add_argument("-t", "--train_dir", type=str,
+                    default=_DATA_DIR, required=False)
+parser.add_argument("-load", "--model_load_dir", type=str,
+                    default=_MODEL_LOAD_DIR, required=False)
 #parser.add_argument("-load", "--model_load_dir", type=str, default="", required=False)
 parser.add_argument(
     "-save", "--model_save_dir", type=str, default=_MODEL_SAVE_DIR, required=False
 )
 
 args = parser.parse_args()
+
 
 def _conv2d_layer(
     name,
@@ -63,6 +69,7 @@ def _conv2d_layer(
     output = flow.nn.conv2d(
         input, weight, strides, padding, data_format, dilation_rate, name=name
     )
+
     if use_bias:
         bias = flow.get_variable(
             name + "-bias",
@@ -70,8 +77,10 @@ def _conv2d_layer(
             dtype=input.dtype,
             initializer=bias_initializer,
         )
-        output = flow.nn.bias_add(output, bias, data_format)
-
+        output = flow.transpose(output, perm=[0, 2, 3, 1])
+        output = flow.nn.bias_add(output, bias, "NHWC")
+        output = flow.transpose(output, perm=[0, 3, 1, 2])
+        # output = flow.nn.bias_add(output, bias, "NCHW")
     if activation is not None:
         if activation == op_conf_util.kRelu:
             output = flow.keras.activations.relu(output)
@@ -87,7 +96,8 @@ def _data_load_layer(data_dir):
         shape=(224, 224, 3),
         dtype=flow.float,
         codec=flow.data.ImageCodec([flow.data.ImagePreprocessor("bgr2rgb")]),
-        preprocessors=[flow.data.NormByChannelPreprocessor((123.68, 116.78, 103.94))],
+        preprocessors=[flow.data.NormByChannelPreprocessor(
+            (123.68, 116.78, 103.94))],
     )
 
     label_blob_conf = flow.data.BlobConf(
@@ -98,33 +108,33 @@ def _data_load_layer(data_dir):
         data_dir, (label_blob_conf, image_blob_conf), data_part_num=32, name="decode"
     )
 
+
 def _conv_block(in_blob, index, filters, conv_times):
     conv_block = []
     conv_block.insert(0, in_blob)
     for i in range(conv_times):
-        print("conv{}".format(index))
         conv_i = _conv2d_layer(
-        name="conv{}".format(index),
-        input=conv_block[i], 
-        filters=filters,
-        kernel_size=3,
-        strides=1,
+            name="conv{}".format(index),
+            input=conv_block[i],
+            filters=filters,
+            kernel_size=3,
+            strides=1,
         )
         conv_block.append(conv_i)
         index += 1
-        
+
     return conv_block
-    
-    
+
+
 def vgg(images, labels, trainable=True):
     to_return = []
     transposed = flow.transpose(images, name="transpose", perm=[0, 3, 1, 2])
     conv1 = _conv_block(transposed, 0, 64, 2)
-    # print("conv1   ", conv1[-1].shape)  
+    # print("conv1   ", conv1[-1].shape)
     pool1 = flow.nn.max_pool2d(conv1[-1], 2, 2, "VALID", "NCHW", name="pool1")
     # print("pool1   ", pool1.shape)
     conv2 = _conv_block(pool1, 2, 128, 2)
-    
+
     pool2 = flow.nn.max_pool2d(conv2[-1], 2, 2, "VALID", "NCHW", name="pool2")
     # print("pool2    ", pool2.shape)
     conv3 = _conv_block(pool2, 4, 256, 3)
@@ -139,11 +149,12 @@ def vgg(images, labels, trainable=True):
 
     pool5 = flow.nn.max_pool2d(conv5[-1], 2, 2, "VALID", "NCHW", name="pool5")
     # print("pool5   ", pool5.shape)
+
     def _get_kernel_initializer():
         kernel_initializer = op_conf_util.InitializerConf()
         kernel_initializer.truncated_normal_conf.std = 0.816496580927726
         return kernel_initializer
-   
+
     def _get_bias_initializer():
         bias_initializer = op_conf_util.InitializerConf()
         bias_initializer.constant_conf.value = 0.0
@@ -153,51 +164,51 @@ def vgg(images, labels, trainable=True):
     pool5 = flow.reshape(pool5, [-1, 512])
     # print("pool5   reshaped  ", pool5.shape)
 
-
-    fc6 = flow.layers.dense( 
-      inputs=pool5, 
-      units=4096,
-      activation=flow.keras.activations.relu,
-      use_bias=True,
-      kernel_initializer=_get_kernel_initializer(),
-      bias_initializer=_get_bias_initializer(),
-      trainable=trainable,
-      name="fc1"
+    fc6 = flow.layers.dense(
+        inputs=pool5,
+        units=4096,
+        activation=flow.keras.activations.relu,
+        use_bias=True,
+        kernel_initializer=_get_kernel_initializer(),
+        bias_initializer=_get_bias_initializer(),
+        trainable=trainable,
+        name="fc1"
     )
     # print("fc6   ", fc6.shape)
 
-    fc7 = flow.layers.dense( 
-      inputs=fc6, 
-      units=4096,
-      activation=flow.keras.activations.relu,
-      use_bias=True,
-      kernel_initializer=_get_kernel_initializer(),
-      bias_initializer=_get_bias_initializer(),
-      trainable=trainable,
-      name="fc2"
+    fc7 = flow.layers.dense(
+        inputs=fc6,
+        units=4096,
+        activation=flow.keras.activations.relu,
+        use_bias=True,
+        kernel_initializer=_get_kernel_initializer(),
+        bias_initializer=_get_bias_initializer(),
+        trainable=trainable,
+        name="fc2"
     )
     # print("fc7    ", fc7.shape)
 
-    fc8 = flow.layers.dense( 
-      inputs=fc7, 
-      units=1001,
-      activation=flow.keras.activations.relu,
-      use_bias=True,
-      kernel_initializer=_get_kernel_initializer(),
-      bias_initializer=_get_bias_initializer(),
-      trainable=trainable,
-      name="fc_final"
+    fc8 = flow.layers.dense(
+        inputs=fc7,
+        units=1001,
+        use_bias=True,
+        kernel_initializer=_get_kernel_initializer(),
+        bias_initializer=_get_bias_initializer(),
+        trainable=trainable,
+        name="fc_final"
     )
     # print("fc8   :", fc8.shape)
     loss = flow.nn.sparse_softmax_cross_entropy_with_logits(
         labels, fc8, name="softmax_loss"
     )
-    to_return.append(conv1[1])
+    # to_return.append(conv5[1])
+    to_return.append(fc8)
     print("conv1[1].op_name", conv1[1].op_name)
     print("conv1[1].logical_blob_name", conv1[1].logical_blob_name)
     to_return.append(loss)
     print(to_return)
     return tuple(to_return)
+
 
 @flow.function
 def TrainNet():
@@ -212,7 +223,7 @@ def TrainNet():
     return to_return
 
 # @flow.function
-#def vgg_eval_job():
+# def vgg_eval_job():
 #    job_conf = flow.get_cur_job_conf_builder()
 #    job_conf.batch_size(8).default_data_type(flow.float)
 #    (labels, images) = _data_load_layer(args.eval_dir)
@@ -229,14 +240,18 @@ if __name__ == "__main__":
     flow.config.default_data_type(flow.float)
     if args.multinode:
         flow.config.ctrl_port(12138)
-        flow.config.machine([{"addr": "192.168.1.15"}, {"addr": "192.168.1.16"}])
+        flow.config.machine(
+            [{"addr": "192.168.1.15"}, {"addr": "192.168.1.16"}])
         if args.remote_by_hand is False:
             if args.scp_binary_without_uuid:
-                flow.deprecated.init_worker(config, scp_binary=True, use_uuid=False)
+                flow.deprecated.init_worker(
+                    config, scp_binary=True, use_uuid=False)
             elif args.skip_scp_binary:
-                flow.deprecated.init_worker(config, scp_binary=False, use_uuid=False)
+                flow.deprecated.init_worker(
+                    config, scp_binary=False, use_uuid=False)
             else:
-                flow.deprecated.init_worker(config, scp_binary=True, use_uuid=True)
+                flow.deprecated.init_worker(
+                    config, scp_binary=True, use_uuid=True)
 
     check_point = flow.train.CheckPoint()
     if not args.model_load_dir:
@@ -245,14 +260,15 @@ if __name__ == "__main__":
         check_point.load(args.model_load_dir)
     fmt_str = "{:>12}  {:>12}  {:>12.10f}"
     print("{:>12}  {:>12}  {:>12}".format("iter", "loss type", "loss value"))
-    for i in range(1):
+    for i in range(args.iter_num):
         train_result = TrainNet().get()
         print(
             fmt_str.format(
                 i, "train loss:", train_result[-1].mean()
             )
         )
-        print(train_result[0])
+        if args.iter_num == 1:
+            print(train_result[0])
         #  if (i + 1) % 10 == 0:
         #      print(
         #          fmt_str.format(
