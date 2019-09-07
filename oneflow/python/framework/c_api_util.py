@@ -157,4 +157,3 @@ def DeviceType4DeviceTag(device_tag):
     error = text_format.Parse(error_str, error_util.ErrorProto())
     if error.HasField("error_type"): raise JobBuildAndInferError(error)
     return device_type
-
