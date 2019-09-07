@@ -14,6 +14,7 @@ void SegmentSumGradKernel<device_type, T>::ForwardDataContent(const KernelCtx& c
   const Blob* out_diff = BnInOp2Blob("out_diff");
   const Blob* segment_ids = BnInOp2Blob("segment_ids");
   Blob* in_diff = BnInOp2Blob("in_diff");
+  Memset<device_type>(ctx.device_ctx, in_diff->mut_dptr(), 0, in_diff->ByteSizeOfDataContentField());
   SegmentKernelUtil<device_type, float, int32_t>::SegmentSumBackward(ctx.device_ctx, out_diff, segment_ids,
                                                         in_diff);
 }

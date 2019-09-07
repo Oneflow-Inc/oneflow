@@ -14,6 +14,7 @@ void SegmentSumKernel<device_type, T>::ForwardDataContent(const KernelCtx& ctx,
   const Blob* in = BnInOp2Blob("in");
   const Blob* segment_ids = BnInOp2Blob("segment_ids");
   Blob* out = BnInOp2Blob("out"); 
+  Memset<device_type>(ctx.device_ctx, out->mut_dptr(), 0, out->ByteSizeOfDataContentField());
   SegmentKernelUtil<device_type, float, int32_t>::SegmentSumForward(ctx.device_ctx, in, segment_ids, out);
 }
 
