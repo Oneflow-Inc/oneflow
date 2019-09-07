@@ -1,7 +1,6 @@
 from __future__ import absolute_import
 
 import sys
-import copy
 
 import oneflow.python.framework.blob_desc as blob_desc
 import oneflow.core.common.data_type_pb2 as data_type_util

@@ -194,9 +194,8 @@ Maybe<void> JobBuildAndInferCtx::GenOpProducedEmptyLogicalBlobDesc(Operator* op)
   return Maybe<void>::Ok();
 }
 
-Maybe<void> JobBuildAndInferCtx::CheckOpBlobCanBeSplitedByParallelNum(Operator* op,
-                                                                      const SbpSignature& sbp_sig,
-                                                                      int64_t parallel_num) {
+Maybe<void> JobBuildAndInferCtx::CheckOpBlobSplitability(Operator* op, const SbpSignature& sbp_sig,
+                                                         int64_t parallel_num) {
   for (const auto& pair : sbp_sig.bn_in_op2sbp_parallel()) {
     if (pair.second.has_split_parallel()) {
       int64_t axis = pair.second.split_parallel().axis();
@@ -274,8 +273,8 @@ Maybe<void> JobBuildAndInferCtx::AddAndInferOp(const OperatorConf& op_conf,
   JUST(op->InferOutBlobDescsIf(GetBlobDesc4BnInOp, &parallel_ctx, job_->job_conf().piece_size(),
                                [](OpContext*) {}));
 
-  // check blob can be split
-  JUST(CheckOpBlobCanBeSplitedByParallelNum(op, sbp_sig_to_infer, parallel_desc.parallel_num()));
+  // check splitability
+  JUST(CheckOpBlobSplitability(op, sbp_sig_to_infer, parallel_desc.parallel_num()));
 
   return Maybe<void>::Ok();
 }

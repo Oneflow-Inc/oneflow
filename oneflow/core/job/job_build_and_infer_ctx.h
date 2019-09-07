@@ -42,8 +42,7 @@ class JobBuildAndInferCtx {
   Maybe<void> InferOpOutSbpParallel(Operator*, const SbpSignature&, const ParallelDesc&,
                                     SbpSignature*);
   Maybe<void> GenOpProducedEmptyLogicalBlobDesc(Operator* op);
-  Maybe<void> CheckOpBlobCanBeSplitedByParallelNum(Operator*, const SbpSignature&,
-                                                   int64_t parallel_num);
+  Maybe<void> CheckOpBlobSplitability(Operator*, const SbpSignature&, int64_t parallel_num);
   Maybe<void> CheckPlacement() const;
   Maybe<void> CheckJobConf() const;
 
