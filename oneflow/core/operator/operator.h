@@ -347,18 +347,19 @@ inline std::string GenLogicalBlobName(const LogicalBlobId& lbi) {
   return GenLogicalBlobName(lbi.op_name(), lbi.blob_name());
 }
 
-inline bool GetSbpParallelInLbnOrNothing(const std::string& lbn_with_split_hint, SbpParallel* sbp) {
+inline Maybe<bool> GetSbpParallelInLbnOrNothing(const std::string& lbn_with_split_hint,
+                                                SbpParallel* sbp) {
   size_t pos = lbn_with_split_hint.rfind(':');
   if (pos == std::string::npos || pos == lbn_with_split_hint.length() - 1) { return false; }
   std::string split_hint = lbn_with_split_hint.substr(pos + 1);
   if (split_hint[0] == 'S') {
     std::string axis_str = split_hint.substr(1);
-    if (!IsStrInt(axis_str)) { return false; }
+    OF_CHECK(IsStrInt(axis_str));
     sbp->mutable_split_parallel()->set_axis(oneflow_cast<int64_t>(axis_str));
   } else if (split_hint[0] == 'B') {
     sbp->mutable_broadcast_parallel();
   } else {
-    return false;
+    return Error::CheckFailed() << "split hint only support 'S' or 'B', but get:" << split_hint[0];
   }
   return true;
 }

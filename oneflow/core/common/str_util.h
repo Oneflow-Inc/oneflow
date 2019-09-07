@@ -7,12 +7,11 @@
 
 namespace oneflow {
 
-inline bool IsStrInt(const std::string& str) {
-  if (str.size() == 0) { return false; }
-  for (size_t i = 0; i < str.size(); ++i) {
-    if (str.at(i) < '0' || str.at(i) > '9') { return false; }
-  }
-  return true;
+inline bool IsStrInt(const std::string& s) {
+  if (s.empty() || (!isdigit(s[0]) && (s[0] != '-'))) { return false; }
+  char* end_ptr = nullptr;
+  strtoll(s.c_str(), &end_ptr, 0);
+  return (*end_ptr == 0);
 }
 
 inline std::string StrCat(const std::string& prefix, int64_t id) {

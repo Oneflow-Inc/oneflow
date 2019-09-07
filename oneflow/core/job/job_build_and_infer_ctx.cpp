@@ -58,7 +58,7 @@ Maybe<void> JobBuildAndInferCtx::DecodeSplitHint7AddOp7AddSbpSigConf2Job(
   for (const std::string& ibn : op->input_bns()) {
     std::string lbn_may_with_split_hint = GetStrValInPbFdOrPbRpf(op->GetCustomizedConf(), ibn);
     SbpParallel sbp_parallel;
-    if (GetSbpParallelInLbnOrNothing(lbn_may_with_split_hint, &sbp_parallel)) {
+    if (JUST(GetSbpParallelInLbnOrNothing(lbn_may_with_split_hint, &sbp_parallel))) {
       (*(sbp_sig_conf->mutable_bn_in_op2sbp_parallel()))[ibn] = sbp_parallel;
       const LogicalBlobId& lbi = op->BnInOp2Lbi(ibn);
       std::string lbn = GenLogicalBlobName(lbi);
