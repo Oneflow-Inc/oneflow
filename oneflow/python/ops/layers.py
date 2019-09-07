@@ -74,9 +74,36 @@ def layer_norm(
     name=None,
 ):
     op_conf = op_conf_util.OperatorConf()
-    setattr(
-        op_conf, "name", name if name is not None else id_util.UniqueStr("LayerNorm_")
-    )
+    name = name if name is not None else id_util.UniqueStr(
+        "LayerNorm_")
+    begin_params_axis = begin_params_axis if begin_params_axis >= 0 else len(
+        inputs.shape) + begin_params_axis
+    param_shape = inputs.shape[begin_params_axis:]
+    if len(param_shape) is 0:
+        param_shape = (1,)
+    if center:
+        beta = flow.get_variable(
+            name="{}-beta".format(name),
+            shape=param_shape,
+            dtype=inputs.dtype,
+            initializer=flow.constant_initializer(0.0),
+            trainable=trainable,
+            model_name="weight",
+            split_axis=None,
+        )
+        setattr(op_conf.layer_norm_conf, "beta", beta.logical_blob_name)
+    if scale:
+        gamma = flow.get_variable(
+            name="{}-gamma".format(name),
+            shape=param_shape,
+            dtype=inputs.dtype,
+            initializer=flow.constant_initializer(1.0),
+            trainable=trainable,
+            model_name="weight",
+            split_axis=None,
+        )
+        setattr(op_conf.layer_norm_conf, "gamma", gamma.logical_blob_name)
+    setattr(op_conf, "name", name)
     setattr(op_conf, "trainable", trainable)
     setattr(op_conf.layer_norm_conf, "in", inputs.logical_blob_name)
     setattr(op_conf.layer_norm_conf, "out", "out")
