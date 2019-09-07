@@ -102,6 +102,7 @@ def _conv_block(in_blob, index, filters, conv_times):
     conv_block = []
     conv_block.insert(0, in_blob)
     for i in range(conv_times):
+        print("conv{}".format(index))
         conv_i = _conv2d_layer(
         name="conv{}".format(index),
         input=conv_block[i], 
@@ -116,27 +117,28 @@ def _conv_block(in_blob, index, filters, conv_times):
     
     
 def vgg(images, labels, trainable=True):
+    to_return = []
     transposed = flow.transpose(images, name="transpose", perm=[0, 3, 1, 2])
     conv1 = _conv_block(transposed, 0, 64, 2)
-    print("conv1   ", conv1[-1].shape)  
+    # print("conv1   ", conv1[-1].shape)  
     pool1 = flow.nn.max_pool2d(conv1[-1], 2, 2, "VALID", "NCHW", name="pool1")
-    print("pool1   ", pool1.shape)
+    # print("pool1   ", pool1.shape)
     conv2 = _conv_block(pool1, 2, 128, 2)
     
     pool2 = flow.nn.max_pool2d(conv2[-1], 2, 2, "VALID", "NCHW", name="pool2")
-    print("pool2    ", pool2.shape)
+    # print("pool2    ", pool2.shape)
     conv3 = _conv_block(pool2, 4, 256, 3)
 
     pool3 = flow.nn.max_pool2d(conv3[-1], 2, 2, "VALID", "NCHW", name="pool3")
-    print("pool3   ", pool3.shape)
+    # print("pool3   ", pool3.shape)
     conv4 = _conv_block(pool3, 7, 512, 3)
 
     pool4 = flow.nn.max_pool2d(conv4[-1], 2, 2, "VALID", "NCHW", name="pool4")
-    print("pool4    ", pool4.shape)
+    # print("pool4    ", pool4.shape)
     conv5 = _conv_block(pool4, 10, 512, 3)
 
     pool5 = flow.nn.max_pool2d(conv5[-1], 2, 2, "VALID", "NCHW", name="pool5")
-    print("pool5   ", pool5.shape)
+    # print("pool5   ", pool5.shape)
     def _get_kernel_initializer():
         kernel_initializer = op_conf_util.InitializerConf()
         kernel_initializer.truncated_normal_conf.std = 0.816496580927726
@@ -149,7 +151,7 @@ def vgg(images, labels, trainable=True):
 
   # if len(pool5.shape) > 2:
     pool5 = flow.reshape(pool5, [-1, 512])
-    print("pool5   reshaped  ", pool5.shape)
+    # print("pool5   reshaped  ", pool5.shape)
 
 
     fc6 = flow.layers.dense( 
@@ -162,7 +164,7 @@ def vgg(images, labels, trainable=True):
       trainable=trainable,
       name="fc1"
     )
-    print("fc6   ", fc6.shape)
+    # print("fc6   ", fc6.shape)
 
     fc7 = flow.layers.dense( 
       inputs=fc6, 
@@ -174,7 +176,7 @@ def vgg(images, labels, trainable=True):
       trainable=trainable,
       name="fc2"
     )
-    print("fc7    ", fc7.shape)
+    # print("fc7    ", fc7.shape)
 
     fc8 = flow.layers.dense( 
       inputs=fc7, 
@@ -186,23 +188,28 @@ def vgg(images, labels, trainable=True):
       trainable=trainable,
       name="fc_final"
     )
-    print("fc8   :", fc8.shape)
+    # print("fc8   :", fc8.shape)
     loss = flow.nn.sparse_softmax_cross_entropy_with_logits(
         labels, fc8, name="softmax_loss"
     )
-
-    return loss
+    to_return.append(conv1[1])
+    print("conv1[1].op_name", conv1[1].op_name)
+    print("conv1[1].logical_blob_name", conv1[1].logical_blob_name)
+    to_return.append(loss)
+    print(to_return)
+    return tuple(to_return)
 
 @flow.function
 def TrainNet():
-    flow.config.train.batch_size(8).default_data_type(flow.float)
+    flow.config.train.batch_size(8)
     flow.config.train.primary_lr(0.00001)
     flow.config.train.model_update_conf(dict(naive_conf={}))
 
     (labels, images) = _data_load_layer(args.train_dir)
-    loss = vgg(images, labels)
+    to_return = vgg(images, labels)
+    loss = to_return[-1]
     flow.losses.add_loss(loss)
-    return loss
+    return to_return
 
 # @flow.function
 #def vgg_eval_job():
@@ -218,7 +225,8 @@ if __name__ == "__main__":
     flow.config.ctrl_port(3333)
 
     flow.config.log_dir("./log")
-    
+    flow.config.piece_size(8)
+    flow.config.default_data_type(flow.float)
     if args.multinode:
         flow.config.ctrl_port(12138)
         flow.config.machine([{"addr": "192.168.1.15"}, {"addr": "192.168.1.16"}])
@@ -237,12 +245,14 @@ if __name__ == "__main__":
         check_point.load(args.model_load_dir)
     fmt_str = "{:>12}  {:>12}  {:>12.10f}"
     print("{:>12}  {:>12}  {:>12}".format("iter", "loss type", "loss value"))
-    for i in range(10):
+    for i in range(1):
+        train_result = TrainNet().get()
         print(
             fmt_str.format(
-                i, "train loss:", TrainNet().get().mean()
+                i, "train loss:", train_result[-1].mean()
             )
         )
+        print(train_result[0])
         #  if (i + 1) % 10 == 0:
         #      print(
         #          fmt_str.format(
