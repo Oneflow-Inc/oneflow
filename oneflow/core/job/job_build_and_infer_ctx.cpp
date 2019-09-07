@@ -55,19 +55,17 @@ Maybe<void> JobBuildAndInferCtx::DecodeSplitHint7AddOp7AddSbpSigConf2Job(
   OperatorConf op_conf_without_split_hint = op->op_conf();
   PbMessage* op_type_conf = MutableMessageInPbMessage(&op_conf_without_split_hint,
                                                       op_conf_without_split_hint.op_type_case());
-  bool has_user_set_sbp_sig_conf = false;
   for (const std::string& ibn : op->input_bns()) {
     std::string lbn_may_with_split_hint = GetStrValInPbFdOrPbRpf(op->GetCustomizedConf(), ibn);
-    if (HasSplitHintInLbn(lbn_may_with_split_hint)) {
-      has_user_set_sbp_sig_conf = true;
-      SbpParallel sbp_parallel = GetSbpParallelInLbn(lbn_may_with_split_hint);
+    SbpParallel sbp_parallel;
+    if (GetSbpParallelInLbnOrNothing(lbn_may_with_split_hint, &sbp_parallel)) {
       (*(sbp_sig_conf->mutable_bn_in_op2sbp_parallel()))[ibn] = sbp_parallel;
       const LogicalBlobId& lbi = op->BnInOp2Lbi(ibn);
       std::string lbn = GenLogicalBlobName(lbi);
       ReplaceStrValInPbFdOrPbRpf(op_type_conf, ibn, lbn_may_with_split_hint, lbn);
     }
   }
-  if (has_user_set_sbp_sig_conf) {
+  if (sbp_sig_conf->bn_in_op2sbp_parallel().size() > 0) {
     (*(job_->mutable_sbp_conf()->mutable_op_name2sbp_signature_conf()))[op->op_name()] =
         *sbp_sig_conf;
   }

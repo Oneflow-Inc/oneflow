@@ -7,6 +7,14 @@
 
 namespace oneflow {
 
+inline bool IsStrInt(const std::string& str) {
+  if (str.size() == 0) { return false; }
+  for (size_t i = 0; i < str.size(); ++i) {
+    if (str.at(i) < '0' || str.at(i) > '9') { return false; }
+  }
+  return true;
+}
+
 inline std::string StrCat(const std::string& prefix, int64_t id) {
   return prefix + std::to_string(id);
 }
