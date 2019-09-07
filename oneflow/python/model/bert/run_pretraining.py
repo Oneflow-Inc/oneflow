@@ -14,7 +14,9 @@ _DATA_DIR = '/dataset/bert/of_wiki_seq_len_128'
 #_DATA_DIR = '/dataset/bert_regression_test/0'
 #_MODEL_LOAD = "/dataset/model_zoo/bert/of_L-12_H-768_A-12_random_init"
 _MODEL_LOAD = "/dataset/model_zoo/bert_new_snapshot/of_L-12_H-768_A-12_random_init"
-_MODEL_SAVE_DIR = './log/snapshots'
+_MODEL_SAVE_DIR = "./model_save-{}".format(
+    str(datetime.now().strftime("%Y-%m-%d-%H:%M:%S"))
+)
 parser = argparse.ArgumentParser(description="flags for bert")
 parser.add_argument("-d", "--device_num_per_node", type=int, default=4)
 parser.add_argument("-n", "--node_num", type=int, default=1)
@@ -137,11 +139,11 @@ if __name__ == '__main__':
   flow.config.ctrl_port(9788)
   flow.config.data_port(9789)
   flow.config.default_data_type(flow.float)
-  flow.config.machine(nodes[:args.node_num])
   flow.config.enable_inplace(False)
 
   assert args.node_num <= len(nodes)
   if args.node_num > 1:
+    flow.config.machine(nodes[:args.node_num])
     flow.deprecated.init_worker(config, scp_binary=args.copy_binary_to_worker,
                                 use_uuid=args.use_uuid)
   check_point = flow.train.CheckPoint()
@@ -169,8 +171,6 @@ if __name__ == '__main__':
       assert args.save_checkpoints_steps > 0
       if step % args.save_checkpoints_steps == 0:
         snapshot_save_path = os.path.join(args.model_save_dir, 'snapshot_%d'%(step+1))
-        if os.path.exists(snapshot_save_path):
-          shutil.rmtree(snapshot_save_path)
         check_point.save(snapshot_save_path)
 
   total_time = step_time[-1] - start_time
