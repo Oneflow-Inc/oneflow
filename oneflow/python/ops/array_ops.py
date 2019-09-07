@@ -190,3 +190,20 @@ def constant(
     lbi.op_name = op_conf.name
     lbi.blob_name = "out"
     return remote_blob_util.RemoteBlob(lbi)
+
+
+@oneflow_export("concat")
+def concat(values, axis, name=None):
+    op_conf = op_conf_util.OperatorConf()
+    setattr(op_conf, "name", name if name is not None else id_util.UniqueStr("Concat_"))
+    if not isinstance(values, (list, tuple)):
+        values = [values]
+    for value in values:
+        getattr(op_conf.concat_conf, "in").append(value.logical_blob_name)
+    setattr(op_conf.concat_conf, "axis", axis)
+    setattr(op_conf.concat_conf, "out", "out")
+    compile_context.CurJobAddOp(op_conf)
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = "out"
+    return remote_blob_util.RemoteBlob(lbi)
