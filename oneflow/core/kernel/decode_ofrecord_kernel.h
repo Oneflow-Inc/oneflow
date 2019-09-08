@@ -25,7 +25,6 @@ class DecodeOFRecordKernel final : public KernelIf<DeviceType::kCPU> {
 
   std::unique_ptr<std::mt19937> random_seed_gen_;
   std::unique_ptr<std::uniform_int_distribution<int32_t>> distribution_;
-  int64_t parallel_num_;
 };
 
 }  // namespace oneflow

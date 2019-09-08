@@ -96,7 +96,6 @@ message DecodeRandomKernelConf {
 
 message DecodeOFRecordKernelConf {
   required uint32 random_seed = 1;
-  required int64 parallel_num = 3;
 }
 
 message ReduceGatherKernelConf {

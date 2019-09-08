@@ -30,7 +30,6 @@ void DecodeOFRecordOp::VirtualGenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
   kernel_conf->mutable_decode_ofrecord_conf()->set_random_seed(NewRandomSeed());
-  kernel_conf->mutable_decode_ofrecord_conf()->set_parallel_num(parallel_ctx->parallel_num());
 }
 
 const PbMessage& DecodeOFRecordOp::GetCustomizedConf() const {
