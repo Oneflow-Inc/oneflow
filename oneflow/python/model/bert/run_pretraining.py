@@ -144,8 +144,7 @@ if __name__ == '__main__':
   assert args.node_num <= len(nodes)
   if args.node_num > 1:
     flow.config.machine(nodes[:args.node_num])
-    flow.deprecated.init_worker(config, scp_binary=args.copy_binary_to_worker,
-                                use_uuid=args.use_uuid)
+    flow.deprecated.init_worker(scp_binary=args.copy_binary_to_worker, use_uuid=args.use_uuid)
   check_point = flow.train.CheckPoint()
   if args.model_load_dir != '':
     assert os.path.isdir(args.model_load_dir)
