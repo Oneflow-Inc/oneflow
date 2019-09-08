@@ -3,7 +3,7 @@
 
 namespace oneflow {
 
-void ConvKernel<DeviceType::kGPU, float16>::VirtualKernelInit(const ParallelContext* parallel_ctx) {
+void ConvKernel<DeviceType::kGPU, float16>::VirtualKernelInit() {
   CHECK(this->EnableCudnn());
   Shape in_shape(this->GetConvKernelConf().in());
   Shape out_shape(this->GetConvKernelConf().out());
@@ -74,11 +74,11 @@ void ConvKernel<DeviceType::kGPU, float16>::DoForwardDataContent(
 }
 
 template<typename T>
-void ConvKernel<DeviceType::kGPU, T>::VirtualKernelInit(const ParallelContext* parallel_ctx) {
+void ConvKernel<DeviceType::kGPU, T>::VirtualKernelInit() {
   if (this->EnableCudnn()) {
-    KernelInitWithCudnn(parallel_ctx);
+    KernelInitWithCudnn();
   } else {
-    ConvKernelImplByIm2Col<DeviceType::kGPU, T>::VirtualKernelInit(parallel_ctx);
+    ConvKernelImplByIm2Col<DeviceType::kGPU, T>::VirtualKernelInit();
   }
 }
 
@@ -121,7 +121,7 @@ void ConvKernel<DeviceType::kGPU, T>::BiasBackward(
 }
 
 template<typename T>
-void ConvKernel<DeviceType::kGPU, T>::KernelInitWithCudnn(const ParallelContext* parallel_ctx) {
+void ConvKernel<DeviceType::kGPU, T>::KernelInitWithCudnn() {
   Shape in_shape(this->GetConvKernelConf().in());
   Shape out_shape(this->GetConvKernelConf().out());
   Shape weight_shape(this->GetConvKernelConf().weight());
