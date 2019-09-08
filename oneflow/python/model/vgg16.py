@@ -38,7 +38,6 @@ parser.add_argument("-t", "--train_dir", type=str,
                     default=_DATA_DIR, required=False)
 parser.add_argument("-load", "--model_load_dir", type=str,
                     default=_MODEL_LOAD_DIR, required=False)
-#parser.add_argument("-load", "--model_load_dir", type=str, default="", required=False)
 parser.add_argument(
     "-save", "--model_save_dir", type=str, default=_MODEL_SAVE_DIR, required=False
 )
@@ -78,9 +77,6 @@ def _conv2d_layer(
             dtype=input.dtype,
             initializer=bias_initializer,
         )
-        # output = flow.transpose(output, perm=[0, 2, 3, 1])
-        # output = flow.nn.bias_add(output, bias, "NHWC")
-        # output = flow.transpose(output, perm=[0, 3, 1, 2])
         output = flow.nn.bias_add(output, bias, "NCHW")
     if activation is not None:
         if activation == op_conf_util.kRelu:
@@ -266,4 +262,4 @@ if __name__ == "__main__":
         and args.skip_scp_binary is False
         and args.scp_binary_without_uuid is False
     ):
-        flow.deprecated.delete_worker(config)
+        flow.deprecated.delete_worker()
