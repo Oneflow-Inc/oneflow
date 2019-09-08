@@ -17,5 +17,10 @@ PbMessagePtr GetNodeAttr<PbMessagePtr>(const XlaNode *node,
                                                          attr_name));
 }
 
+std::string GetNodeAttrAsString(const XlaNode *node,
+                                const std::string &attr_name) {
+  return GetNodeAttr<std::string>(node, attr_name);
+}
+
 }  // namespace mola
 }  // namespace oneflow

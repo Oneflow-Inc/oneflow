@@ -87,6 +87,11 @@ void JobBuilder::RemoveOp(const std::string &op_name) {
   // Update net
   DLNetConf net = job_->net();
   job_->mutable_net()->clear_op();
+  for (const OperatorConf &op_conf : net.op()) {
+    if (op_conf.name() != op_name) {
+      *(job_->mutable_net()->add_op()) = op_conf;
+    }
+  }
   // Update Sbp
   auto *sbp_conf = job_->mutable_sbp_conf()
                        ->mutable_op_name2sbp_signature_conf();

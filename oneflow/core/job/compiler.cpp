@@ -65,12 +65,8 @@ void Compiler::Compile(Job* job, Plan* plan, bool need_job_complete) const {
   Global<OpGraph>::Get()->ToDotWithFilePath("optimized_dlnet_op_graph.dot");
 
 #ifdef WITH_XLA
-  {
-    // TODO(hjchen2): For debug
-    std::ofstream ost("./job_string_without_xla.prototxt");
-    ost << job->DebugString();
-    ost.close();
-  }
+  TeePersistentLogStream::Create(
+      absl::StrCat("job_without_xla", job_desc.job_id()))->Write(*job);
   if (FLAGS_use_xla_jit) {
     LOG(INFO) << "Compile the job with XLA JIT support.";
     mola::XlaGraph graph(Global<OpGraph>::Get());
@@ -83,10 +79,8 @@ void Compiler::Compile(Job* job, Plan* plan, bool need_job_complete) const {
     // Rebuild Job
     RebuildXlaCompiledJob(graph, job);
 
-    std::ofstream ost("./job_string_with_xla.prototxt");
-    ost << job->DebugString();
-    ost.close();
-
+    TeePersistentLogStream::Create(
+        absl::StrCat("job_with_xla", job_desc.job_id()))->Write(*job);
     Global<OpGraph>::Delete();
     Global<OpGraph>::New(*job);
   }

@@ -133,6 +133,11 @@ void GenerateOpConf4Trainning(const OpGraph& op_graph, JobBuilder* job_builder) 
   UpdateOpSbpSignatureHint(op_graph, job_builder);
 }
 
+void RewriteOptimizerOp(const OpGraph& op_graph, Job* job) {
+  mola::XlaGraph graph(&op_graph);
+  RewriteOptimizerGraph(graph, job);
+}
+
 std::function<ParallelConf*(const std::string&)> MakeGetterMutParallelConf4OpName(
     Placement* placement) {
   auto op_name2parallel_conf = std::make_shared<HashMap<std::string, ParallelConf*>>();
@@ -352,13 +357,10 @@ void JobCompleter::Complete(Job* job) const {
     WithOpGraphAndMutJobBuilder(job, &GenerateOpConf4Trainning);
 #ifdef WITH_XLA
     if (FLAGS_use_xla_jit) {
-      OpGraph op_graph(*job);
-      mola::XlaGraph graph(&op_graph);
-      RewriteOptimizerGraph(graph, job);
-  
-      std::ofstream ost("./job_string_rewrite_optimizer.prototxt");
-      ost << job->DebugString();
-      ost.close();
+      WithOpGraphAndMutJob(job, &RewriteOptimizerOp);
+      const JobDesc& job_desc = GlobalJobDesc();
+      TeePersistentLogStream::Create(
+      absl::StrCat("job_rewrite_optimizer", job_desc.job_id()))->Write(*job);
     }
 #endif
     WithOpGraphAndMutJobBuilder(job, &RewriteBoxingWithAllReduce);

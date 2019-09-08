@@ -30,12 +30,6 @@ class OptimizerRewritor {
                                     const std::string &total_instances,
                                     const ClipConf &clip_conf);
 
-  OperatorConf *BuildLearningRateScheduleOp(
-                                const std::string &node_name,
-                                const float learning_rate,
-                                const std::string &train_step,
-                                const NormalModelUpdateOpUserConf &update_conf);
-
   OperatorConf *BuildOptimizerOp(const mola::XlaNode *node,
                                  const std::string &gradient,
                                  const std::string &total_instances,
@@ -85,31 +79,6 @@ OperatorConf *OptimizerRewritor::BuildClipGradientOp(
     conf->set_global_norm(global_norm);
   }
   
-  ParallelConf parallel_conf = builder_->GetParallelConf(node_name);
-  builder_->AddOps(parallel_conf, {op_conf});
-  return builder_->MutableOpConf(op_conf.name());
-}
-
-OperatorConf *OptimizerRewritor::BuildLearningRateScheduleOp(
-                            const std::string &node_name,
-                            const float learning_rate,
-                            const std::string &train_step,
-                            const NormalModelUpdateOpUserConf &update_conf) {
-  OperatorConf op_conf;
-  op_conf.set_name(absl::StrCat(node_name, "-lr_scheduler"));
-  LearningRateScheduleOpConf *conf =
-      op_conf.mutable_learning_rate_schedule_conf();
-  conf->set_out("out");
-  conf->set_train_step(train_step);
-  conf->set_learning_rate(learning_rate);
-
-  if (update_conf.has_warmup_conf()) {
-    *(conf->mutable_warmup_conf()) = update_conf.warmup_conf();
-  }
-  if (update_conf.has_learning_rate_decay()) {
-    *(conf->mutable_learning_rate_decay()) = update_conf.learning_rate_decay();
-  }
-
   ParallelConf parallel_conf = builder_->GetParallelConf(node_name);
   builder_->AddOps(parallel_conf, {op_conf});
   return builder_->MutableOpConf(op_conf.name());
@@ -170,11 +139,12 @@ void OptimizerRewritor::Run() {
       continue;
     }
     using mola::GetNodeAttr;
-    float learning_rate = GetNodeAttr<float>(node, "learning_rate");
-    std::string model_diff = GetNodeAttr<std::string>(node, "model_diff");
+    using mola::GetNodeAttrAsString;
+    std::string learning_rate = GetNodeAttrAsString(node, "learning_rate");
+    std::string model_diff = GetNodeAttrAsString(node, "model_diff");
     std::string total_instances =
-        GetNodeAttr<std::string>(node, "total_instance_num_diff");
-    std::string train_step = GetNodeAttr<std::string>(node, "train_step");
+        GetNodeAttrAsString(node, "total_instance_num_diff");
+    std::string train_step = GetNodeAttrAsString(node, "train_step");
 
     auto control_in_op_names = GetControlInOpNames(node);
     std::vector<OperatorConf *> operator_confs;
@@ -190,17 +160,8 @@ void OptimizerRewritor::Run() {
       model_diff = absl::StrCat(clip_conf->name(), "/out");
     }
 
-    // TODO(hjchen2): learning_rate maybe a untrainable variable
-    // Always build a learning rate scheduler operator even if using const
-    // learning rate
-    OperatorConf *lr_schedule_conf = BuildLearningRateScheduleOp(
-        node->op_name(), learning_rate, train_step, *user_conf);
-    operator_confs.push_back(lr_schedule_conf);
-
-    std::string lr_schedule_output =
-        absl::StrCat(lr_schedule_conf->name(), "/out");
     OperatorConf *optimizer_conf = BuildOptimizerOp(
-        node, model_diff, total_instances, lr_schedule_output);
+        node, model_diff, total_instances, learning_rate);
     operator_confs.push_back(optimizer_conf);
 
     // Currently each model update operator will result in a fake consumer

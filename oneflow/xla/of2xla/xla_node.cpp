@@ -92,7 +92,7 @@ void XlaNode::InferBlobDescs(GetBlobDescFunc func,
     const LogicalBlobId &lbi = op()->BnInOp2Lbi(bn);
     return func(lbi);
   };
-  op()->InferBlobDescs(inner_get_blob_desc_fn, parallel_ctx);
+  CHECK_JUST(op()->InferBlobDescs(inner_get_blob_desc_fn, parallel_ctx));
 }
 
 bool XlaNode::IsSourceNode() const {
