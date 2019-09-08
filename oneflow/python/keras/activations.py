@@ -52,6 +52,12 @@ def gelu(x):
 
 @oneflow_export('keras.activations.tanh')
 def tanh(x):
+    r"""Computes hyperbolic tangent of `x` element-wise.
+    Args:
+        x: Input `Blob`.
+    Returns:
+        A `Blob`
+    """
     op_conf = op_conf_util.OperatorConf()
     op_conf.name = id_util.UniqueStr('Tanh_')
     setattr(op_conf.tanh_conf, 'in', x.logical_blob_name)
@@ -64,6 +70,12 @@ def tanh(x):
 
 @oneflow_export('keras.activations.sigmoid')
 def sigmoid(x):
+    r"""Computes sigmoid of `x` element-wise.
+    Args:
+        x: Input `Blob`.
+    Returns:
+        A `Blob`
+    """
     op_conf = op_conf_util.OperatorConf()
     op_conf.name = id_util.UniqueStr('Sigmoid_')
     setattr(op_conf.sigmoid_conf, 'in', x.logical_blob_name)
