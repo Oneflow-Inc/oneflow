@@ -194,8 +194,8 @@ if __name__ == "__main__":
     flow.config.default_data_type(flow.float)
 
     if args.multinode:
-        config.ctrl_port(12138)
-        config.machine([{"addr": "192.168.1.15"}, {"addr": "192.168.1.16"}])
+        flow.config.ctrl_port(12138)
+        flow.config.machine([{"addr": "192.168.1.15"}, {"addr": "192.168.1.16"}])
         if args.remote_by_hand is False:
             if args.scp_binary_without_uuid:
                 flow.deprecated.init_worker(scp_binary=True, use_uuid=False)

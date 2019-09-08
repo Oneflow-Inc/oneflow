@@ -115,7 +115,7 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
   explicit OpGraph(const Job& job) { Init(job); }
   ~OpGraph() = default;
 
-  const OpNode* OpNode4OpName(const std::string& name) const { return op_name2op_node_.at(name); }
+  const OpNode* OpNode4OpName(const std::string& name) const;
 
   std::function<const BlobDesc&(const LogicalBlobId&)> MakeGetterBlobDesc4ModelLbi() const;
 

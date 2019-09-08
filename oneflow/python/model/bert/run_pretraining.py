@@ -144,8 +144,7 @@ if __name__ == '__main__':
   assert args.node_num <= len(nodes)
   if args.node_num > 1:
     flow.config.machine(nodes[:args.node_num])
-    flow.deprecated.init_worker(config, scp_binary=args.copy_binary_to_worker,
-                                use_uuid=args.use_uuid)
+    flow.deprecated.init_worker(scp_binary=args.copy_binary_to_worker, use_uuid=args.use_uuid)
   check_point = flow.train.CheckPoint()
   if args.model_load_dir != '':
     assert os.path.isdir(args.model_load_dir)
@@ -172,6 +171,9 @@ if __name__ == '__main__':
       if step % args.save_checkpoints_steps == 0:
         snapshot_save_path = os.path.join(args.model_save_dir, 'snapshot_%d'%(step+1))
         check_point.save(snapshot_save_path)
+
+  if args.node_num > 1:
+    flow.deprecated.delete_worker()
 
   total_time = step_time[-1] - start_time
   train_time = step_time[-1] - train_start_time
