@@ -104,6 +104,13 @@ message ParallelBlobConf {
   required ParallelConf parallel_conf = 2;
   required SbpParallel sbp_conf = 3;
   required OptInt64 batch_axis = 4;
+  required ShapeProto time_shape = 5;
+}
+
+message OpInferConf {
+  required uint64_t op_conf_sym = 1;
+  map<string, uint64_t> ibn2parallel_blob_conf_sym = 2;
+  required uint64_t job_conf_sym = 3;
 }
 
 message JobHelperConf {

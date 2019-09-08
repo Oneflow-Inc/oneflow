@@ -296,6 +296,19 @@ void OpNode::CheckBlobDescs(const std::function<BlobDesc*(const std::string&)>& 
   for (const std::string& bn : op().const_buf_bns()) { Check(bn); }
 }
 
+void OpNode::Infer() {
+  OpInferConf op_infer_conf;
+  TODO(); // set op_infer_conf
+  Sym<OpInferConf> op_infer_conf_sym(op_infer_conf);
+  const auto* OpInferCache = Global<HashMap<Sym<OpInferConf>, Sym<LogicalOperator>>>::Get();
+  auto logical_op_sym_iter = OpInferCache->find(op_infer_conf_sym);
+  if (logical_op_sym_iter == OpInferCache.end()) {
+    logical_op_sym_iter = OpInferCache->insert(op_infer_conf_sym,
+					       Sym<LogicalOperator>::New(op_infer_conf)).first;
+  }
+  logical_op_sym_ = logical_op_sym_iter->second;
+}
+
 void OpGraph::Init(const Job& job) {
   InitNodes(job);
   ForEachNode(
@@ -304,6 +317,7 @@ void OpGraph::Init(const Job& job) {
   InitProducerOpName2CtrlConsumerOpNames(job);
   CheckIsDAG();
   FixOpParallelDesc();
+  ForEachNode([](OpEdge* node) { node->Infer(); });
   InferTimeShape();
   InferLogicalBlobDesc(job);
   ForEachEdge([](OpEdge* edge) { edge->InitDistributeHierarchyInfo(); });
