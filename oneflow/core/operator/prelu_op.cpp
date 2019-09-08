@@ -6,7 +6,6 @@ namespace oneflow {
 
 void PReluOp::InitFromOpConf() {
   CHECK(op_conf().has_prelu_conf());
-  const PReluOpConf& conf = op_conf().prelu_conf();
   StrFieldTolower("data_format");
   EnrollInputBn("in");
   EnrollInputBn("alpha");
