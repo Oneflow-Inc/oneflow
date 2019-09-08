@@ -11,8 +11,18 @@ from oneflow.python.oneflow_export import oneflow_export
 import collections
 
 
-@oneflow_export("math.reduce_sum")
+@oneflow_export("reduce_sum, math.reduce_sum")
 def reduce_sum(input_tensor, axis=None, keepdims=False, name=None):
+    r"""Computes the sum of elements across dimensions of a `Blob`.
+    Args:
+        input_tensor: The `Blob` to reduce. Should have numeric type.
+        axis: The dimensions to reduce. If None (the default), reduces all dimensions. 
+        Must be in the range [-rank(input_tensor), rank(input_tensor)).
+        keepdims: If true, retains reduced dimensions with length 1.
+        name: A name for the operation (optional).
+    Returns:
+        the default job set.
+    """
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf, "name", name if name is not None else id_util.UniqueStr("ReduceSum_")
