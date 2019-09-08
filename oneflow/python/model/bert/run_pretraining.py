@@ -172,6 +172,9 @@ if __name__ == '__main__':
         snapshot_save_path = os.path.join(args.model_save_dir, 'snapshot_%d'%(step+1))
         check_point.save(snapshot_save_path)
 
+  if args.node_num > 1:
+    flow.deprecated.delete_worker()
+
   total_time = step_time[-1] - start_time
   train_time = step_time[-1] - train_start_time
   init_time = train_start_time - start_time
