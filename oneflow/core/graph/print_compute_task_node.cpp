@@ -3,6 +3,6 @@
 namespace oneflow {
 
 REGISTER_INDEPENDENT_THREAD_NUM(TaskType::kPrint, []() -> size_t {
-  return Global<ResourceDesc>::Get()->MaxMdSaveWorkerNum();
+  return Global<ResourceDesc>::Get()->MaxIoThreadNum();
 });
 }

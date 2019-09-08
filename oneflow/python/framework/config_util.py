@@ -111,11 +111,11 @@ def comm_net_worker_num(val):
     assert type(val) is int
     default_config_proto.resource.comm_net_worker_num = val
 
-@oneflow_export('config.max_mdsave_worker_num')
-def max_mdsave_worker_num(val):
+@oneflow_export('config.max_io_thread_num')
+def max_io_thread_num(val):
     assert config_proto_mutable == True
     assert type(val) is int
-    default_config_proto.resource.max_mdsave_worker_num = val
+    default_config_proto.resource.max_io_thread_num = val
 
 @oneflow_export('config.rdma_mem_block_mbyte')
 def rdma_mem_block_mbyte(val):
