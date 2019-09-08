@@ -12,9 +12,6 @@
 
 namespace oneflow {
 
-#define ReturnJobBuildAndInferError(err_code, msg) \
-  return __LOC__ <= Error::JobBuildAndInferCtxError(err_code) << msg;
-
 class JobBuildAndInferCtx {
  public:
   OF_DISALLOW_COPY_AND_MOVE(JobBuildAndInferCtx);

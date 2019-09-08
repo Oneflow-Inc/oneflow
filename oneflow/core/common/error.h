@@ -17,7 +17,6 @@ class Error final {
   static Error JobSetEmpty();
   static Error DeviceTagNotFound();
   static Error JobTypeNotSet();
-  static Error JobBuildAndInferCtxError(JobBuildAndInferError err_code);
   static Error CheckFailed();
   static Error Todo();
   static Error Unimplemented();
@@ -35,6 +34,12 @@ Error&& operator<<(Error&& error, const T& x) {
   std::ostringstream ss;
   ss << x;
   error->set_msg(error->msg() + ss.str());
+  return std::move(error);
+}
+
+template<>
+inline Error&& operator<<(Error&& error, const JobBuildAndInferError& x) {
+  error->set_job_build_and_infer_error(x);
   return std::move(error);
 }
 

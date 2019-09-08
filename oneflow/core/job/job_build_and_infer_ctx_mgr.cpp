@@ -3,17 +3,11 @@
 namespace oneflow {
 
 Maybe<void> JobBuildAndInferCtxMgr::OpenJobBuildAndInferCtx(const std::string& job_name) {
-  if (has_cur_job_) {
-    ReturnJobBuildAndInferError(JobBuildAndInferError::kUnknownJobBuildAndInferError,
-                                "cur job not leave before you enter this job_name:" + job_name);
-  }
-  if (job_name.empty()) {
-    ReturnJobBuildAndInferError(JobBuildAndInferError::kJobNameEmpty, "job name is empty");
-  }
-  if (job_name2infer_ctx_.find(job_name) != job_name2infer_ctx_.end()) {
-    ReturnJobBuildAndInferError(JobBuildAndInferError::kJobNameExist,
-                                "job name: " + job_name + " already exist");
-  }
+  CHECK_OR_RETURN(!has_cur_job_) << JobBuildAndInferError::kUnknownJobBuildAndInferError
+                                 << "cur job not leave before you enter this job_name:" << job_name;
+  CHECK_OR_RETURN(!job_name.empty()) << JobBuildAndInferError::kJobNameEmpty;
+  CHECK_OR_RETURN(job_name2infer_ctx_.find(job_name) == job_name2infer_ctx_.end())
+      << JobBuildAndInferError::kJobNameExist << "job name: " << job_name << " already exist";
   int64_t job_id = job_set_.job_size();
   Job* job = job_set_.add_job();
   job->mutable_job_conf()->set_job_name(job_name);
@@ -25,18 +19,14 @@ Maybe<void> JobBuildAndInferCtxMgr::OpenJobBuildAndInferCtx(const std::string& j
 
 Maybe<JobBuildAndInferCtx*> JobBuildAndInferCtxMgr::FindJobBuildAndInferCtx(
     const std::string& job_name) {
-  if (job_name2infer_ctx_.find(job_name) == job_name2infer_ctx_.end()) {
-    ReturnJobBuildAndInferError(JobBuildAndInferError::kNoJobBuildAndInferCtx,
-                                "cannot find job name:" + job_name);
-  }
+  CHECK_OR_RETURN(job_name2infer_ctx_.find(job_name) != job_name2infer_ctx_.end())
+      << JobBuildAndInferError::kNoJobBuildAndInferCtx << "cannot find job name:" << job_name;
   return job_name2infer_ctx_.at(job_name).get();
 }
 
 Maybe<std::string> JobBuildAndInferCtxMgr::GetCurrentJobName() {
-  if (!has_cur_job_) {
-    ReturnJobBuildAndInferError(JobBuildAndInferError::kNoJobBuildAndInferCtx,
-                                "current has not job name");
-  }
+  CHECK_OR_RETURN(has_cur_job_) << JobBuildAndInferError::kNoJobBuildAndInferCtx
+                                << "current has not job name";
   return cur_job_name_;
 }
 
