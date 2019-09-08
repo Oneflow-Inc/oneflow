@@ -1,6 +1,7 @@
 #ifndef ONEFLOW_CORE_OPERATOR_OPERATOR_H_
 #define ONEFLOW_CORE_OPERATOR_OPERATOR_H_
 
+#include "oneflow/core/common/str_util.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/preprocessor.h"
 #include "oneflow/core/common/protobuf.h"
@@ -97,25 +98,32 @@ class Operator {
   // Read: shape of input_blobs
   // Write: shape of output_blobs
   Maybe<void> InferBlobDescsIf(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                               const ParallelContext*, int64_t record_piece_size,
+                               const ParallelContext*, const SbpSignature* sbp_signature,
+                               int64_t record_piece_size,
                                std::function<void(OpContext*)> EnrollOpCtx) const;
   virtual Maybe<void> InferBlobDescs(
       std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*,
-      int64_t record_piece_size, std::function<void(OpContext*)> EnrollOpCtx) const;
+      const SbpSignature* sbp_signature, int64_t record_piece_size,
+      std::function<void(OpContext*)> EnrollOpCtx) const;
   virtual Maybe<void> InferBlobDescs(
       std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*,
-      int64_t record_piece_size) const;
+      const SbpSignature* sbp_signature, int64_t record_piece_size) const;
+  virtual Maybe<void> InferBlobDescs(
+      std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*,
+      const SbpSignature* sbp_signature) const;
   virtual Maybe<void> InferBlobDescs(
       std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
       const ParallelContext*) const;
 
   Maybe<void> InferOutBlobDescsIf(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                  const ParallelContext*, int64_t record_piece_size,
+                                  const ParallelContext*, const SbpSignature* sbp_signature,
+                                  int64_t record_piece_size,
                                   std::function<void(OpContext*)> EnrollOpCtx) const;
 
   virtual Maybe<void> InferOutBlobDescs(
       std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*,
-      int64_t record_piece_size, std::function<void(OpContext*)> EnrollOpCtx) const;
+      const SbpSignature* sbp_signature, int64_t record_piece_size,
+      std::function<void(OpContext*)> EnrollOpCtx) const;
 
   Maybe<void> InferBatchAxisIf(
       const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
@@ -346,29 +354,21 @@ inline std::string GenLogicalBlobName(const LogicalBlobId& lbi) {
   return GenLogicalBlobName(lbi.op_name(), lbi.blob_name());
 }
 
-inline bool HasSplitHintInLbn(const std::string& lbn_may_with_split_hint) {
-  size_t pos = lbn_may_with_split_hint.rfind(':');
-  if (pos != std::string::npos) {
-    std::string split_hint = lbn_may_with_split_hint.substr(pos + 1);
-    if (split_hint.length() >= 1 && (split_hint[0] == 'S' || split_hint[0] == 'B')) { return true; }
-  }
-  return false;
-}
-
-inline SbpParallel GetSbpParallelInLbn(const std::string& lbn_with_split_hint) {
-  SbpParallel ret;
+inline Maybe<bool> GetSbpParallelInLbnOrNothing(const std::string& lbn_with_split_hint,
+                                                SbpParallel* sbp) {
   size_t pos = lbn_with_split_hint.rfind(':');
-  CHECK_NE(pos, std::string::npos);
+  if (pos == std::string::npos || pos == lbn_with_split_hint.length() - 1) { return false; }
   std::string split_hint = lbn_with_split_hint.substr(pos + 1);
   if (split_hint[0] == 'S') {
-    int64_t axis = oneflow_cast<int64_t>(split_hint.substr(1));
-    ret.mutable_split_parallel()->set_axis(axis);
+    std::string axis_str = split_hint.substr(1);
+    OF_CHECK(IsStrInt(axis_str));
+    sbp->mutable_split_parallel()->set_axis(oneflow_cast<int64_t>(axis_str));
   } else if (split_hint[0] == 'B') {
-    ret.mutable_broadcast_parallel();
+    sbp->mutable_broadcast_parallel();
   } else {
-    UNIMPLEMENTED();
+    return Error::CheckFailed() << "split hint only support 'S' or 'B', but get:" << split_hint[0];
   }
-  return ret;
+  return true;
 }
 
 }  // namespace oneflow
