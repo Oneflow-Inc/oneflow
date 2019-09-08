@@ -13,9 +13,10 @@ import oneflow.python.framework.config_util as config_util
 
 @oneflow_export('deprecated.init_worker')
 def init_worker(scp_binary = True, use_uuid = True):
-    assert type(config_util.config_proto) is job_set_util.ConfigProto
-    config_util.config_proto_mutable = False
-    resource = config_util.config_proto.resource
+    assert type(config_util.default_config_proto) is job_set_util.ConfigProto
+    config_util.defautl_config_proto_mutable = False
+    config_proto = config_util.default_config_proto
+    resource = config_proto.resource
     assert len(resource.machine) > 0
     assert type(scp_binary) is bool
     assert type(use_uuid) is bool
