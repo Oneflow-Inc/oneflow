@@ -90,7 +90,7 @@ bool TryUpdtBnVal4SepcialOpConf(const OperatorConf::OpTypeCase& op_type, PbMessa
     CHECK_EQ("in", prefix_idx.first);
     PbMessage* print_record_conf =
         MutableRepeatedMessageInPbMessage(op_conf, "in", prefix_idx.second);
-    SetBnValInOpTypeConf(print_record_conf, "lbn", old_val, new_val);
+    ReplaceStrValInPbFdOrPbRpf(print_record_conf, "lbn", old_val, new_val);
     return true;
   }
   return false;
@@ -172,7 +172,7 @@ void InsertCastOpImpl(bool f2h, const OpGraph& op_graph, const HashSet<OpNode*>&
       std::string new_lbn = cast_op_conf.name() + "/out";
       if (!TryUpdtBnVal4SepcialOpConf(dst_op_conf.op_type_case(), dst_op_type_conf, lbn, new_lbn,
                                       dst_ibn)) {
-        SetBnValInOpTypeConf(dst_op_type_conf, dst_ibn, lbn, new_lbn);
+        ReplaceStrValInPbFdOrPbRpf(dst_op_type_conf, dst_ibn, lbn, new_lbn);
       }
     }
   }

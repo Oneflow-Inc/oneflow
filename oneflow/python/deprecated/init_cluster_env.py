@@ -13,9 +13,10 @@ import oneflow.python.framework.config_util as config_util
 
 @oneflow_export('deprecated.init_worker')
 def init_worker(scp_binary = True, use_uuid = True):
-    assert type(config_util.config_proto) is job_set_util.ConfigProto
-    config_util.config_proto_mutable = False
-    resource = config_util.config_proto.resource
+    assert type(config_util.default_config_proto) is job_set_util.ConfigProto
+    config_util.defautl_config_proto_mutable = False
+    config_proto = config_util.default_config_proto
+    resource = config_proto.resource
     assert len(resource.machine) > 0
     assert type(scp_binary) is bool
     assert type(use_uuid) is bool
@@ -49,11 +50,12 @@ def init_worker(scp_binary = True, use_uuid = True):
 @oneflow_export('deprecated.delete_worker')
 def delete_worker():
     assert config_util.config_proto_mutable == False
-    assert isinstance(config_util.config_proto, ConfigProto)
-    assert type(config_util.config_proto) is job_set_util.ConfigProto
+    config_proto = config_util.default_config_proto
+    assert isinstance(config_proto, ConfigProto)
+    assert type(config_proto) is job_set_util.ConfigProto
     global _temp_run_dir
     assert _temp_run_dir != ""
-    for machine in config_util.config_proto.resource.machine:
+    for machine in config_proto.resource.machine:
         if machine.id == 0:
             continue
         ssh_prefix = "ssh " + getpass.getuser() + "@" + machine.addr + " "

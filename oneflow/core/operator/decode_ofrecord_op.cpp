@@ -38,7 +38,8 @@ const PbMessage& DecodeOFRecordOp::GetCustomizedConf() const {
 
 Maybe<void> DecodeOFRecordOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx, int64_t record_piece_size) const {
+    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature,
+    int64_t record_piece_size) const {
   int64_t dim0 = GetDim0(record_piece_size, *parallel_ctx);
   if (op_conf().decode_ofrecord_conf().has_in()) {
     BlobDesc* in_blob_desc = GetBlobDesc4BnInOp(SoleIbn());

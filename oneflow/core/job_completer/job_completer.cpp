@@ -1,6 +1,5 @@
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/job_completer/job_completer.h"
-#include "oneflow/core/job_completer/autovar.h"
 #include "oneflow/core/job_completer/autograd.h"
 #include "oneflow/core/job_completer/autotick.h"
 #include "oneflow/core/job_completer/add_keep_header_only_op_conf.h"
@@ -200,7 +199,7 @@ void AddIdentityOpAndReconnect(
       std::string lbn_check = GenLogicalBlobName(lbi);
       std::string identity_out_lbn = GenLogicalBlobName(old_lbi2new_lbi.at(lbi));
       for (const std::string& ibn : edge->lbi2ibns().at(lbi)) {
-        SetBnValInOpTypeConf(op_type_conf, ibn, lbn_check, identity_out_lbn);
+        ReplaceStrValInPbFdOrPbRpf(op_type_conf, ibn, lbn_check, identity_out_lbn);
         const auto& sbp_parallel = edge->dst_node()->SbpParallel4BnInOp(ibn);
         const auto& sbp_iter = old_lbi2sbp_parallel.find(lbi);
         if (sbp_iter == old_lbi2sbp_parallel.end()) {
@@ -336,7 +335,6 @@ void JobCompleter::Complete(Job* job) const {
   // replace facade op
   WithOpGraphAndMutJobBuilder(job, &ReplaceFacade);
   // complete variable ops
-  WithOpGraphAndMutJobBuilder(job, &AutoVar);
   WithOpGraphAndMutJobBuilder(job, &SetDefaultVariableConf);
   if (GlobalJobDesc().IsTrain()) {
     WithOpGraphAndMutJob(job, &TieUpChainHeadersUnReachableFromAnyVariableOps);

@@ -13,7 +13,8 @@ const PbMessage& RecordLoadOp::GetCustomizedConf() const { return op_conf().reco
 
 Maybe<void> RecordLoadOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx, int64_t record_piece_size) const {
+    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature,
+    int64_t record_piece_size) const {
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   CHECK_EQ_OR_RETURN(record_piece_size % parallel_ctx->parallel_num(), 0);
   out_blob_desc->mut_shape() = Shape({record_piece_size / parallel_ctx->parallel_num()});

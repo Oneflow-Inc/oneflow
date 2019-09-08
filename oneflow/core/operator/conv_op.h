@@ -40,10 +40,12 @@ class ConvOp : public Operator {
 
   void InitFromOpConf() override;
   Maybe<void> InferOutBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                const ParallelContext* parallel_ctx, int64_t record_piece_size,
+                                const ParallelContext* parallel_ctx,
+                                const SbpSignature* sbp_signature, int64_t record_piece_size,
                                 std::function<void(OpContext*)> EnrollOpCtx) const override;
   Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                             const ParallelContext* parallel_ctx, int64_t record_piece_size,
+                             const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature,
+                             int64_t record_piece_size,
                              std::function<void(OpContext*)> EnrollOpCtx) const override;
 
  private:
