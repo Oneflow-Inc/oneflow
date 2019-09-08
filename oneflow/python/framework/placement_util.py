@@ -47,6 +47,11 @@ class PlacementScope(object):
 
 @oneflow_export('fixed_placement')
 class FixedPlacementScope(PlacementScope):
+    """Base class for fixed placement scope.
+
+    This class along with `device_prior_placement` allows to define PlacementScope
+    with fixed parallel configuration.
+    """
     def __init__(self, device_tag, machine_device_ids):
         PlacementScope.__init__(self, device_tag, machine_device_ids)
 
@@ -58,6 +63,11 @@ class FixedPlacementScope(PlacementScope):
 
 @oneflow_export('device_prior_placement')
 class DevicePriorPlacementScope(PlacementScope):
+    """Base class for device prior placement scope.
+
+    This class along with `device_prior_placement` allows to define PlacementScope
+    with device prior parallel configuration.
+    """
     def __init__(self, device_tag, machine_device_ids):
         PlacementScope.__init__(self, device_tag, machine_device_ids)
 
