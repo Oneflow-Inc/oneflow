@@ -9,10 +9,18 @@ import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 from oneflow.python.oneflow_export import oneflow_export
 
 
-@oneflow_export('keras.maths.add')
+@oneflow_export('add', 'math.add', 'keras.maths.add')
 def add(x,
         y,
         name=None):
+    r"""Returns x + y element-wise.
+    Args:
+        x: A `Blob`.
+        y: A `Blob`. Must have the same type as `x`.
+        name: A name for the operation (optional).
+    Returns:
+        A `Blob`. Has the same type as `x`.
+    """
 
     op_conf = op_conf_util.OperatorConf()
     if name is None:
