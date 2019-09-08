@@ -19,7 +19,7 @@ class RecordLoadKernel final : public KernelIf<DeviceType::kCPU> {
   ~RecordLoadKernel() override = default;
 
  private:
-  void VirtualKernelInit(const ParallelContext*) override;
+  void VirtualKernelInit() override;
   void Forward(const KernelCtx& ctx,
                std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 
