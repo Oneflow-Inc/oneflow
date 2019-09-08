@@ -22,7 +22,16 @@ Maybe<void> ReshapeOp::InferBlobDescs(
   const ReshapeOpConf& conf = op_conf().reshape_conf();
   CHECK_GE_OR_RETURN(conf.shape().dim_size(), 1);
   // fill dim_vec
-  std::vector<int64_t> dim_vec = {conf.shape().dim().begin(), conf.shape().dim().end()};
+  std::vector<int64_t> dim_vec;
+  if (!conf.has_dim0_in_shape()) { dim_vec.push_back(in_blob_desc->shape().At(0)); }
+  dim_vec.insert(dim_vec.end(), conf.shape().dim().begin(), conf.shape().dim().end());
+
+  // infer dim0 as split(0) when user set dim0 not -1
+  if (conf.has_dim0_in_shape() && conf.shape().dim(0) > 0) {
+    CHECK_GE_OR_RETURN(dim_vec[0], parallel_ctx->parallel_num());
+    BalancedSplitter splitter(dim_vec[0], parallel_ctx->parallel_num());
+    dim_vec[0] = splitter.At(parallel_ctx->parallel_id()).size();
+  }
 
   // infer -1
   int32_t dim_cnt_need_infer = 0;
@@ -41,19 +50,6 @@ Maybe<void> ReshapeOp::InferBlobDescs(
   if (dim_cnt_need_infer == 1) {
     dim_vec[dim_index_need_infer] = in_blob_desc->shape().elem_cnt() / elem_cnt;
   }
-
-  const auto& sbp_parallel_it = sbp_signature->bn_in_op2sbp_parallel().find("in");
-  CHECK_OR_RETURN(sbp_parallel_it != sbp_signature->bn_in_op2sbp_parallel().end());
-  const SbpParallel& sbp_parallel = sbp_parallel_it->second;
-  if (sbp_parallel.has_split_parallel()) {
-    const int64_t split_axis = sbp_parallel.split_parallel().axis();
-    if (dim_index_need_infer != split_axis) {
-      BalancedSplitter splitter(dim_vec.at(split_axis), parallel_ctx->parallel_num());
-      CHECK_GE_OR_RETURN(dim_vec.at(split_axis), parallel_ctx->parallel_num());
-      dim_vec[split_axis] = splitter.At(parallel_ctx->parallel_id()).size();
-    }
-  }
-
   out_blob_desc->mut_shape() = Shape(dim_vec);
   CHECK_EQ_OR_RETURN(out_blob_desc->shape().elem_cnt(), in_blob_desc->shape().elem_cnt());
   return Maybe<void>::Ok();
