@@ -28,7 +28,12 @@ Maybe<Shape> GetLogicalOutBlobShape(const Shape& in_shape, const ShapeProto& res
     }
   }
   OF_CHECK_EQ(in_shape.elem_cnt() % total_elem_dim_exclude_minus_1, 0);
-  if (has_minus_1) { dim_vec[minus_1_axis] = in_shape.elem_cnt() / total_elem_dim_exclude_minus_1; }
+  if (has_minus_1) {
+    dim_vec[minus_1_axis] = in_shape.elem_cnt() / total_elem_dim_exclude_minus_1;
+  } else {
+    OF_CHECK_EQ(in_shape.elem_cnt(), total_elem_dim_exclude_minus_1)
+        << "input blob's element number not equals reshape_conf";
+  }
   return std::make_shared<Shape>(dim_vec);
 }
 
