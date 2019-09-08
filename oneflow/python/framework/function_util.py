@@ -10,7 +10,7 @@ _job_name2job_func = {}
 
 @oneflow_export("function")
 def function(job_func):
-    r"""Creates a callable OneFlow graph from a Python function..
+    r"""Creates a callable OneFlow graph from a Python function.
     Args:
         job_func: job function to be compiled.
     Returns:

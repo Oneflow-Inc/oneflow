@@ -19,16 +19,32 @@ def compile_all_job(job_set = None):
 
 @oneflow_export('get_default_job_set')
 def get_default_job_set():
+    r"""Return the default job set object.
+    Args:
+        None. 
+    Returns:
+        the default job set.
+    """
     return _default_job_set
 
 @oneflow_export('reset_default_job_set')
 def reset_default_job_set():
+    r"""Reset the default job set object.
+    Args:
+        None. 
+    """
     global _default_job_set
     _default_job_set = JobSet()
     _job_set2job_name2job_func[id(_default_job_set)] = {}
 
 @oneflow_export('job_mem_sharing_strategy')
 def job_mem_sharing_strategy(strategy_str, job_set = None, **kwargs):
+    r"""Set memory sharing strategy for job set.
+    Args:
+        strategy_str: An optional `string` from: `mem_sharing_priority`, `parallelism_priority` 
+        or `custom_parallelism`. 
+        job_set: A `JobSet` object. If None, set default job set.
+    """
     assert type(strategy_str) is str
     if job_set == None: job_set = _default_job_set
     if strategy_str == "mem_sharing_priority":
