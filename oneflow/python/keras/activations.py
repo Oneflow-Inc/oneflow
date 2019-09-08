@@ -10,6 +10,15 @@ from oneflow.python.oneflow_export import oneflow_export
 
 @oneflow_export('keras.activations.relu')
 def relu(x, alpha=0., max_value=None, threshold=0.):
+    r"""Rectified Linear Unit.
+    Args:
+        x: Input `Blob`.
+        alpha: float. Slope of the negative part. Defaults to zero.
+        max_value: float. Saturation threshold.
+        threshold: float. Threshold value for thresholded activation.
+    Returns:
+        A `Blob`
+    """
     assert alpha == 0.
     assert max_value == None
     assert threshold == 0.
