@@ -530,15 +530,33 @@ def InceptionV3(images, labels, trainable=True):
 
     with flow.deprecated.variable_scope("logits"):
         pool3 = flow.reshape(pool3, [pool3.shape[0], -1])
-        fc1 = flow.layers.dense(
-            pool3,
-            1001,
-            activation=None,
-            use_bias=False,
-            kernel_initializer=flow.truncated_normal(0.816496580927726),
-            bias_initializer=flow.constant_initializer(),
-            name="fc1",
+        # TODO: Need to transpose weight when converting model from TF to OF if
+        # you want to use layers.dense interface.
+        # fc1 = flow.layers.dense(
+        #     pool3,
+        #     1001,
+        #     activation=None,
+        #     use_bias=False,
+        #     kernel_initializer=flow.truncated_normal(0.816496580927726),
+        #     bias_initializer=flow.constant_initializer(),
+        #     name="fc1",
+        # )
+        weight = flow.get_variable(
+            "fc1-weight",
+            shape=(pool3.shape[1], 1001),
+            dtype=flow.float,
+            initializer=flow.truncated_normal(0.816496580927726),
+            model_name="weight",
         )
+        bias = flow.get_variable(
+            "fc1-bias",
+            shape=(1001,),
+            dtype=flow.float,
+            initializer=flow.constant_initializer(),
+            model_name="bias",
+        )
+        fc1 = flow.matmul(pool3, weight)
+        fc1 = flow.nn.bias_add(fc1, bias)
 
     loss = flow.nn.sparse_softmax_cross_entropy_with_logits(
         labels=labels, logits=fc1, name="softmax_loss"
@@ -586,8 +604,9 @@ if __name__ == "__main__":
 
     fmt_str = "{:>12}  {:>12}  {:>12.10f}"
     print("{:>12}  {:>12}  {:>12}".format("iter", "loss type", "loss value"))
-    for i in range(1):
+    for i in range(10):
         import numpy as np
+
         np.save("xxxxx", TrainNet().get()[1])
         print(fmt_str.format(i, "train loss:", TrainNet().get()[0].mean()))
         # if (i + 1) % 10 == 0:
