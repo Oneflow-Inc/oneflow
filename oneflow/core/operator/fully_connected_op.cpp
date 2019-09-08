@@ -6,7 +6,6 @@ namespace oneflow {
 
 void FullyConnectedOp::InitFromOpConf() {
   CHECK(op_conf().has_fully_connected_conf());
-  const auto& conf = op_conf().fully_connected_conf();
   EnrollInputBn("in");
   EnrollOutputBn("out");
   EnrollInputBn("weight");
