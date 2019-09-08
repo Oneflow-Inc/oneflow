@@ -14,6 +14,9 @@ import oneflow
 
 @oneflow_export('input_blob_def')
 class input_blob_def(blob_desc.BlobDesc):
+    """Class for blob definition with input logical blob ID.
+
+    """
     def __init__(self, shape,
                  dtype = data_type_util.kFloat,
                  is_dynamic = False,
