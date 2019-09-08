@@ -6,6 +6,7 @@ import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.compile_context as compile_context
 import oneflow.python.framework.remote_blob as remote_blob_util
+import oneflow.python.framework.undefined as undefined
 from oneflow.python.oneflow_export import oneflow_export
 
 
@@ -19,6 +20,7 @@ def dense(
     bias_initializer=None,
     trainable=True,
     name=None,
+    model_split_axis=None,
 ):
     in_shape = inputs.static_shape
     in_num_axes = len(in_shape)
@@ -26,6 +28,17 @@ def dense(
 
     name_prefix = name if name is not None else id_util.UniqueStr("Dense_")
     inputs = flow.reshape(inputs, (-1, in_shape[-1])) if in_num_axes > 2 else inputs
+
+    assert model_split_axis is None or model_split_axis is False or \
+        ((type(model_split_axis) is int) and model_split_axis is 0)
+    # data parallel:  model_split_axis = None / False
+    # model parallel: model_split_axis = 0
+
+    use_model_parallel = False
+    if (type(model_split_axis) is int) and model_split_axis is 0:
+        use_model_parallel = True
+        assert in_num_axes is 2 # model parallel is hard for reshape split dim 1
+
     weight = flow.get_variable(
         name="{}-weight".format(name_prefix),
         shape=(units, inputs.static_shape[1]),
@@ -37,8 +50,12 @@ def dense(
         ),
         trainable=trainable,
         model_name="weight",
-        split_axis=None,
+        split_axis=model_split_axis,
     )
+
+    if use_model_parallel:
+        weight = weight.split(model_split_axis)
+
     out = flow.matmul(
         a=inputs, b=weight, transpose_b=True, name="{}_matmul".format(name_prefix)
     )
@@ -54,8 +71,10 @@ def dense(
             ),
             trainable=trainable,
             model_name="bias",
-            split_axis=None,
+            split_axis=model_split_axis,
         )
+        if use_model_parallel:
+            bias = bias.split(model_split_axis)
         out = flow.nn.bias_add(out, bias, name="{}_bias_add".format(name_prefix))
     out = activation(out) if activation is not None else out
     out = flow.reshape(out, in_shape[:-1] + (units,)) if in_num_axes > 2 else out

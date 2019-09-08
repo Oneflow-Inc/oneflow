@@ -17,8 +17,8 @@ const PbMessage& SparseCrossEntropyGradOp::GetCustomizedConf() const {
 
 Maybe<void> SparseCrossEntropyGradOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx, int64_t record_piece_size,
-    std::function<void(OpContext*)> EnrollOpCtx) const {
+    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature,
+    int64_t record_piece_size, std::function<void(OpContext*)> EnrollOpCtx) const {
   *GetBlobDesc4BnInOp("prediction_diff") = *GetBlobDesc4BnInOp("prediction");
   return Maybe<void>::Ok();
 }

@@ -21,9 +21,9 @@ class Kernel {
 
   const JobDesc& job_desc() const { return *job_desc_; }
 
-  void Init(const JobDesc* job_desc, const ParallelContext*, const KernelConf&, DeviceCtx*);
+  void Init(const JobDesc* job_desc, const KernelConf&, DeviceCtx*);
 
-  void InitModelAndConstBuf(const KernelCtx& ctx, const ParallelContext* parallel_ctx,
+  void InitModelAndConstBuf(const KernelCtx& ctx,
                             std::function<Blob*(const std::string&)> BnInOp2Blob) const;
 
   void Launch(const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const;
@@ -34,10 +34,8 @@ class Kernel {
 
  protected:
   Kernel() = default;
-  virtual void VirtualKernelInit(const ParallelContext* parallel_ctx, DeviceCtx* device_ctx) {
-    VirtualKernelInit(parallel_ctx);
-  }
-  virtual void VirtualKernelInit(const ParallelContext*) {}
+  virtual void VirtualKernelInit(DeviceCtx* device_ctx) { VirtualKernelInit(); }
+  virtual void VirtualKernelInit() {}
   const KernelConf& kernel_conf() const { return kernel_conf_; }
 
   virtual void InitConstBufBlobs(DeviceCtx* ctx,
@@ -164,8 +162,8 @@ class KernelIfWithActivation : virtual public KernelIf<device_type> {
   REGISTER_CLASS_WITH_ARGS(k, Kernel, KernelType, const KernelConf&)
 #define REGISTER_KERNEL_CREATOR(k, f) REGISTER_CLASS_CREATOR(k, Kernel, f, const KernelConf&)
 
-std::unique_ptr<const Kernel> ConstructKernel(const JobDesc* job_desc, const ParallelContext*,
-                                              const KernelConf&, DeviceCtx*);
+std::unique_ptr<const Kernel> ConstructKernel(const JobDesc* job_desc, const KernelConf&,
+                                              DeviceCtx*);
 
 }  // namespace oneflow
 

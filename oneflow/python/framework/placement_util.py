@@ -19,7 +19,7 @@ class PlacementScope(object):
         self.op_confs_.append(op_conf)
 
     def ParallelConf4OpConf(self, op_conf):
-        return _MakeParallelConf(self.GetDeviceType4OpConf(op_conf), self.machine_device_ids)
+        return _MakeParallelConf(self.GetDeviceTag4OpConf(op_conf), self.machine_device_ids)
 
     def GetDeviceType4OpConf(self, op_conf):
         return device_util.DeviceType4DeviceTag(self.GetDeviceTag4OpConf(op_conf))
@@ -41,14 +41,9 @@ class PlacementScope(object):
 
     def ParallelConfAndOpNames(self):
         raise NotImplementedError
-        
+
     def __exit__(self, *args):
         assert self == placement_context.PlacementScopeStackPop()
-        for parallel_conf, op_names in self.ParallelConfAndOpNames():
-            placement_group = placement_proto.PlacementGroup()
-            placement_group.op_set.op_name.extend(op_names)
-            placement_group.parallel_conf.CopyFrom(parallel_conf)
-            job_builder.CurCtxAddPlacementGroup(placement_group)
 
 @oneflow_export('fixed_placement')
 class FixedPlacementScope(PlacementScope):
@@ -60,7 +55,7 @@ class FixedPlacementScope(PlacementScope):
     def ParallelConfAndOpNames(self):
         parallel_conf = _MakeParallelConf(self.default_device_tag, self.machine_device_ids)
         yield parallel_conf, map(lambda op_conf: op_conf.name, self.op_confs)
-        
+
 @oneflow_export('device_prior_placement')
 class DevicePriorPlacementScope(PlacementScope):
     def __init__(self, device_tag, machine_device_ids):
@@ -80,7 +75,7 @@ class DevicePriorPlacementScope(PlacementScope):
             if len(op_names) == 0: continue
             parallel_conf = _MakeParallelConf(device_tag, self.machine_device_ids)
             yield parallel_conf, op_names
-        
+
 def _MakeParallelConf(device_tag, machine_device_ids):
     if isinstance(machine_device_ids, str): machine_device_ids = [machine_device_ids]
     device_names = []
@@ -89,6 +84,7 @@ def _MakeParallelConf(device_tag, machine_device_ids):
         assert re.match("^\d+:\d+(-\d+)?$", machine_device_id) is not None
         pair = machine_device_id.split(':')
         device_names.append("%s:%s:%s" % (pair[0], device_tag, pair[1]))
+
     parallel_conf = placement_proto.ParallelConf()
     parallel_conf.policy = placement_proto.kDataParallel
     parallel_conf.device_name.extend(device_names)
@@ -106,7 +102,7 @@ def GetGpuDefaultMachineDeviceIds(resource):
     assert len(resource.machine) > 0
     assert resource.HasField('gpu_device_num')
     return ["%s:0-%s" % (m.id, resource.gpu_device_num - 1) for m in resource.machine]
-    
+
 def GetCpuDefaultMachineDeviceIds(resource):
     assert len(resource.machine) > 0
     assert resource.HasField('cpu_device_num')
