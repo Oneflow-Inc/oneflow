@@ -58,15 +58,15 @@ def gather(
 
 
 @oneflow_export("reshape")
-def reshape(tensor, shape, name=None):
+def reshape(x, shape, name=None):
     r"""Reshapes a blob.
 
     Args:
-        tensor: A `Blob`.
+        x: A `Blob`.
         shape: Defines the shape of the output blob.
         name: A name for the operation (optional).
     Returns:
-        A blob. Has the same type as `tensor`.
+        A blob. Has the same type as `x`.
     """
     assert isinstance(shape, tuple) or isinstance(shape, list)
     op_conf = op_conf_util.OperatorConf()
