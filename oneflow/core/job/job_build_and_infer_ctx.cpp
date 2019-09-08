@@ -216,44 +216,33 @@ Maybe<void> JobBuildAndInferCtx::AddLossLogicalBlobName(const std::string& lbn) 
 
 bool JobBuildAndInferCtx::HasJobConf() const { return has_job_conf_; }
 
-#define GEN_ERROR_WHEN_GET_INFO_FROM_LBN(info_src)                        \
-  CHECK_OR_RETURN(lbn.find('/') != std::string::npos)                     \
-      << JobBuildAndInferError::kLogicalBlobNameInvalid << "lbn:" << lbn; \
-  LogicalBlobId lbi = GenLogicalBlobId(lbn);                              \
-  CHECK_OR_RETURN(info_src.find(lbi) != info_src.end())                   \
-      << JobBuildAndInferError::kLogicalBlobNameNotExist << "lbn:" << lbn;
-
 Maybe<Shape> JobBuildAndInferCtx::GetStaticShape(const std::string& lbn) const {
-  GEN_ERROR_WHEN_GET_INFO_FROM_LBN(lbi2logical_blob_desc_);
-  return lbi2logical_blob_desc_.at(lbi)->shape();
+  JUST(CheckLbnValidAndExist(lbn));
+  return lbi2logical_blob_desc_.at(GenLogicalBlobId(lbn))->shape();
 }
 
 Maybe<DataType> JobBuildAndInferCtx::GetDataType(const std::string& lbn) const {
-  GEN_ERROR_WHEN_GET_INFO_FROM_LBN(lbi2logical_blob_desc_);
-  return lbi2logical_blob_desc_.at(lbi)->data_type();
+  JUST(CheckLbnValidAndExist(lbn));
+  return lbi2logical_blob_desc_.at(GenLogicalBlobId(lbn))->data_type();
 }
 
 Maybe<OptInt64> JobBuildAndInferCtx::GetBatchAxis(const std::string& lbn) const {
-  GEN_ERROR_WHEN_GET_INFO_FROM_LBN(lbi2batch_axis_);
-  return lbi2batch_axis_.at(lbi);
+  JUST(CheckLbnValidAndExist(lbn));
+  return lbi2batch_axis_.at(GenLogicalBlobId(lbn));
 }
 
 Maybe<OptInt64> JobBuildAndInferCtx::GetSplitAxisFromProducerView(const std::string& lbn) const {
-  CHECK_OR_RETURN(lbn.find('/') != std::string::npos)
-      << JobBuildAndInferError::kLogicalBlobNameInvalid << "lbn:" << lbn;
-  LogicalBlobId lbi = GenLogicalBlobId(lbn);
+  JUST(CheckLbnValidAndExist(lbn));
   OptInt64 ret;
-  auto sbp_it = lbi2sbp_parallel_from_producer_view_.find(lbi);
-  if (sbp_it != lbi2sbp_parallel_from_producer_view_.end() || sbp_it->second.has_split_parallel()) {
-    ret.set_value(sbp_it->second.split_parallel().axis());
-  }
+  const auto& sbp = lbi2sbp_parallel_from_producer_view_.at(GenLogicalBlobId(lbn));
+  if (sbp.has_split_parallel()) { ret.set_value(sbp.split_parallel().axis()); }
   return ret;
 }
 
 Maybe<const ParallelDesc*> JobBuildAndInferCtx::GetParallelDescFromProducerView(
     const std::string& lbn) const {
-  GEN_ERROR_WHEN_GET_INFO_FROM_LBN(lbi2parallel_desc_from_producer_view_);
-  return &(lbi2parallel_desc_from_producer_view_.at(lbi));
+  JUST(CheckLbnValidAndExist(lbn));
+  return &(lbi2parallel_desc_from_producer_view_.at(GenLogicalBlobId(lbn)));
 }
 
 Maybe<void> JobBuildAndInferCtx::CheckJob() const {
@@ -292,6 +281,24 @@ Maybe<void> JobBuildAndInferCtx::CheckJobConf() const {
   if (job_->job_conf().job_type_case() == JobConfigProto::JOB_TYPE_NOT_SET) {
     return Error::JobTypeNotSet() << "job_type not set, please set predict_conf or train_conf";
   }
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> JobBuildAndInferCtx::CheckLbnValidAndExist(const std::string& lbn) const {
+  CHECK_OR_RETURN(lbn.find('/') != std::string::npos)
+      << JobBuildAndInferError::kLogicalBlobNameInvalid << "lbn:" << lbn;
+  LogicalBlobId lbi = GenLogicalBlobId(lbn);
+
+#define CHECK_HAS_LBI_KEY(info_src)                     \
+  CHECK_OR_RETURN(info_src.find(lbi) != info_src.end()) \
+      << JobBuildAndInferError::kLogicalBlobNameNotExist << "lbn:" << lbn;
+
+  CHECK_HAS_LBI_KEY(lbi2logical_blob_desc_);
+  CHECK_HAS_LBI_KEY(lbi2sbp_parallel_from_producer_view_);
+  CHECK_HAS_LBI_KEY(lbi2batch_axis_);
+  CHECK_HAS_LBI_KEY(lbi2parallel_desc_from_producer_view_);
+#undef CHECK_HAS_LBI_KEY
+
   return Maybe<void>::Ok();
 }
 

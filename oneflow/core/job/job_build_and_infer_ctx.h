@@ -42,6 +42,7 @@ class JobBuildAndInferCtx {
   Maybe<void> CheckOpBlobSplitability(Operator*, const SbpSignature&, int64_t parallel_num);
   Maybe<void> CheckPlacement() const;
   Maybe<void> CheckJobConf() const;
+  Maybe<void> CheckLbnValidAndExist(const std::string& lbn) const;
 
   Job* job_;
   int64_t job_id_;
