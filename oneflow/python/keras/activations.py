@@ -34,6 +34,12 @@ def relu(x, alpha=0., max_value=None, threshold=0.):
 
 @oneflow_export('keras.activations.gelu')
 def gelu(x):
+    r"""Gaussian Error Linear Units.
+    Args:
+        x: Input `Blob`.
+    Returns:
+        A `Blob`
+    """
     op_conf = op_conf_util.OperatorConf()
     op_conf.name = id_util.UniqueStr('Gelu_')
     setattr(op_conf.gelu_conf, 'in', x.logical_blob_name)
