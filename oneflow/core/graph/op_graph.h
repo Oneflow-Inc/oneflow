@@ -12,6 +12,24 @@ namespace oneflow {
 class OpEdge;
 class OpGraph;
 
+class LogicalOperator final {
+ public:
+  const Shape* GetInputBlobFastestTimeShape() const;
+  const Shape* GetInputOutputFastestTimeShape() const;
+  const Shape* out_blob_time_shape() const;
+  bool IsTimeShapeIdentity() const;
+  const Operator& op() const { return *op_; }
+  const ParallelDesc& parallel_desc() const { return parallel_desc_; }
+  const SbpSignature& sbp_signature() const { return sbp_signature_; }
+  const SbpParallel& SbpParallel4Lbi(const LogicalBlobId& lbi) const;
+  const SbpParallel& SbpParallel4BnInOp(const std::string& bn_in_op) const;
+  const BlobDesc& LogicalBlobDesc4Lbi(const LogicalBlobId& lbi) const;
+  const OptInt64& BatchAxis4Lbi(const LogicalBlobId& lbi) const;
+  const OpNode& ProducerOpNode4Lbi(const LogicalBlobId& lbi) const;
+  const OpNode& SrcNode4InputBnInOp(const std::string& bn_in_op) const;
+  const OpNode& ProducerOpNode4BnInOp(const std::string& bn_in_op) const;
+};
+
 class OpNode final : public Node<OpNode, OpEdge> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(OpNode);
@@ -20,6 +38,8 @@ class OpNode final : public Node<OpNode, OpEdge> {
         op_(ConstructOp(op_conf, parallel_desc.device_type())),
         ibns_(op_->input_bns().begin(), op_->input_bns().end()) {}
   ~OpNode() = default;
+
+  void Infer();
 
   // Getters
   const Shape* GetInputBlobFastestTimeShape() const;
@@ -78,6 +98,8 @@ class OpNode final : public Node<OpNode, OpEdge> {
   HashMap<LogicalBlobId, OptInt64> lbi2batch_axis_;
   HashMap<std::string, std::vector<std::unique_ptr<BlobDesc>>> bn2parallel_id2blob_desc_;
   HashMap<LogicalBlobId, std::unique_ptr<BlobDesc>> lbi2logical_blob_desc_;
+
+  Sym<LogicalOperator> logical_op_sym_;
 };
 
 class OpEdge final : public Edge<OpNode, OpEdge> {
