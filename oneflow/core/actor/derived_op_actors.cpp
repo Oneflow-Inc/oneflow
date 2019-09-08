@@ -35,6 +35,21 @@ class InplaceOpActor final : public OpActor {
   void SetOtherVal4CurAct(void*) override {}
 };
 
+class SourceOpActor final : public OpActor {
+ public:
+  static int HandlerWaitToStart(OpActor* actor, const ActorMsg& msg) {
+    CHECK_EQ(msg.actor_cmd(), ActorCmd::kStart);
+    OF_SET_OP_ACTOR_MSG_HANDLER(dynamic_cast<SourceOpActor*>(actor), &OpActor::HandlerNormal);
+    return actor->ProcessMsg(msg);
+  }
+  void InitMsgHandler() override {
+    OF_SET_OP_ACTOR_MSG_HANDLER(this, &SourceOpActor::HandlerWaitToStart);
+  }
+  void InitOtherVal() override {}
+  void SetOtherVal4CurAct(void*) override {}
+};
+REGISTER_NEW_ACTOR(TaskType::kDecodeRandom, SourceOpActor);
+
 }  // namespace actor
 
 }  // namespace oneflow
