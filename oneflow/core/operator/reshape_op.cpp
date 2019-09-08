@@ -21,18 +21,26 @@ Maybe<void> ReshapeOp::InferBlobDescs(
 
   const ReshapeOpConf& conf = op_conf().reshape_conf();
   CHECK_GE_OR_RETURN(conf.shape().dim_size(), 1);
+  // fill dim_vec
   std::vector<int64_t> dim_vec = {conf.shape().dim().begin(), conf.shape().dim().end()};
-  int32_t dim_cnt_need_infer = 0;
-  int64_t dim_index_need_infer = -1;
-  int64_t elem_cnt = 1;
 
+  // infer -1
+  int32_t dim_cnt_need_infer = 0;
+  int32_t dim_index_need_infer = -1;
+  int64_t elem_cnt = 1;
   for (int32_t i = 0; i < dim_vec.size(); ++i) {
     if (dim_vec[i] == -1) {
       ++dim_cnt_need_infer;
       dim_index_need_infer = i;
+    } else {
+      CHECK_GT_OR_RETURN(dim_vec[i], 0);
+      elem_cnt *= dim_vec[i];
     }
   }
   CHECK_LE_OR_RETURN(dim_cnt_need_infer, 1);
+  if (dim_cnt_need_infer == 1) {
+    dim_vec[dim_index_need_infer] = in_blob_desc->shape().elem_cnt() / elem_cnt;
+  }
 
   const auto& sbp_parallel_it = sbp_signature->bn_in_op2sbp_parallel().find("in");
   CHECK_OR_RETURN(sbp_parallel_it != sbp_signature->bn_in_op2sbp_parallel().end());
@@ -40,20 +48,10 @@ Maybe<void> ReshapeOp::InferBlobDescs(
   if (sbp_parallel.has_split_parallel()) {
     const int64_t split_axis = sbp_parallel.split_parallel().axis();
     if (dim_index_need_infer != split_axis) {
-      BalancedSplitter splitter(conf.shape().dim().Get(split_axis), parallel_ctx->parallel_num());
-      CHECK_GE_OR_RETURN(conf.shape().dim().Get(split_axis), parallel_ctx->parallel_num());
+      BalancedSplitter splitter(dim_vec.at(split_axis), parallel_ctx->parallel_num());
+      CHECK_GE_OR_RETURN(dim_vec.at(split_axis), parallel_ctx->parallel_num());
       dim_vec[split_axis] = splitter.At(parallel_ctx->parallel_id()).size();
     }
-  }
-
-  if (dim_cnt_need_infer == 1) {
-    for (int32_t i = 0; i < dim_vec.size(); ++i) {
-      if (dim_vec[i] != -1) {
-        CHECK_GT_OR_RETURN(dim_vec[i], 0);
-        elem_cnt *= dim_vec[i];
-      }
-    }
-    dim_vec[dim_index_need_infer] = in_blob_desc->shape().elem_cnt() / elem_cnt;
   }
 
   out_blob_desc->mut_shape() = Shape(dim_vec);
