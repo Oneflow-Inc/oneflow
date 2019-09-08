@@ -13,7 +13,8 @@ _MODEL_SAVE_DIR = "./model_save-{}".format(
 
 parser = argparse.ArgumentParser(description="flags for multi-node and resource")
 parser.add_argument("-g", "--gpu_num_per_node", type=int, default=1, required=False)
-parser.add_argument("-i", "--iter_num", type=int, default=2, required=False)
+parser.add_argument("-b", "--batch_size", type=int, default=2, required=False)
+parser.add_argument("-p", "--piece_size", type=int, default=2, required=False)
 parser.add_argument(
     "-m", "--multinode", default=False, action="store_true", required=False
 )
@@ -98,11 +99,9 @@ def _data_load_layer(data_dir):
         codec=flow.data.ImageCodec([flow.data.ImagePreprocessor("bgr2rgb")]),
         preprocessors=[flow.data.NormByChannelPreprocessor((123.68, 116.78, 103.94))],
     )
-
     label_blob_conf = flow.data.BlobConf(
         "class/label", shape=(), dtype=flow.int32, codec=flow.data.RawCodec()
     )
-
     return flow.data.decode_ofrecord(
         data_dir, (image_blob_conf, label_blob_conf), data_part_num=32, name="decode"
     )
@@ -562,27 +561,25 @@ def InceptionV3(images, labels, trainable=True):
         labels=labels, logits=fc1, name="softmax_loss"
     )
 
-    xxxxx = fc1
-
-    return loss, xxxxx
+    return loss
 
 
 @flow.function
 def TrainNet():
-    flow.config.train.batch_size(args.iter_num)
+    flow.config.train.batch_size(args.batch_size)
     flow.config.train.primary_lr(0.0001)
     flow.config.train.model_update_conf(dict(naive_conf={}))
 
     (images, labels) = _data_load_layer(args.train_dir)
-    loss, xxxxx = InceptionV3(images, labels)
+    loss = InceptionV3(images, labels)
     flow.losses.add_loss(loss)
-    return loss, xxxxx
+    return loss
 
 
 if __name__ == "__main__":
     flow.config.gpu_device_num(args.gpu_num_per_node)
     flow.config.ctrl_port(9678)
-    flow.config.piece_size(args.iter_num)
+    flow.config.piece_size(args.piece_size)
     flow.config.default_data_type(flow.float)
 
     if args.multinode:
@@ -605,12 +602,7 @@ if __name__ == "__main__":
     fmt_str = "{:>12}  {:>12}  {:>12.10f}"
     print("{:>12}  {:>12}  {:>12}".format("iter", "loss type", "loss value"))
     for i in range(10):
-        import numpy as np
-
-        np.save("xxxxx", TrainNet().get()[1])
         print(fmt_str.format(i, "train loss:", TrainNet().get()[0].mean()))
-        # if (i + 1) % 10 == 0:
-        #     print(fmt_str.format(i, "eval loss:", alexnet_eval_job().get().mean()))
         if (i + 1) % 100 == 0:
             check_point.save(_MODEL_SAVE_DIR + str(i))
 
