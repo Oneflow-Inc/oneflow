@@ -38,7 +38,6 @@ def init_worker(scp_binary = True, use_uuid = True):
         config_file.write(pbtxt.MessageToString(config_util.default_config_proto))
     config_file.close()
 
-    print(sys._getframe().f_code.co_name, resource.machine)
     for machine in resource.machine:
         if machine.id == 0:
             continue

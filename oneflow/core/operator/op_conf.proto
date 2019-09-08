@@ -39,7 +39,8 @@ message RandomNormalInitializerConf {
 }
 
 message TruncatedNormalInitializerConf {
-  optional float std = 1 [default = 1];
+  optional float mean = 1 [default = 0.0];
+  optional float std = 2 [default = 0.05];
 }
 
 enum VarianceNorm {
@@ -48,12 +49,20 @@ enum VarianceNorm {
   kAverage = 2;
 }
 
+enum RandomDistribution {
+  kRandomUniform = 0;
+  kRandomNormal = 1;
+  kTruncatedNormal = 2;
+}
+
 message XavierInitializerConf {
   required VarianceNorm variance_norm = 1;
+  required string data_format = 2;
 }
 
 message MsraInitializerConf {
   required VarianceNorm variance_norm = 1;
+  required string data_format = 2;
 }
 
 //output[D_0 ... D_(axis - 1) i D_(axis + 1) ... D_n] = start + i * stride
@@ -69,6 +78,12 @@ message IntRangeInitializerConf {
   optional int64 axis = 3 [default = -1];
 }
 
+message VarianceScalingInitializerConf {
+  required float scale = 1;
+  required VarianceNorm variance_norm = 2;
+  required RandomDistribution distribution = 3;
+  required string data_format = 4;
+}
 
 message InitializerConf {
   oneof type {
@@ -82,6 +97,7 @@ message InitializerConf {
     MsraInitializerConf msra_conf = 8;
     RangeInitializerConf range_conf = 9;
     IntRangeInitializerConf int_range_conf = 10;
+    VarianceScalingInitializerConf variance_scaling_conf = 11;
   }
 }
 
