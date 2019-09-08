@@ -98,6 +98,7 @@ def bias_add(value, bias, data_format=None, name=None):
             )
     bias_extended_shape = [1] * len(value.shape)
     bias_extended_shape[bias_add_axis] = value.shape[bias_add_axis]
+    assert bias_extended_shape[bias_add_axis] == bias.shape[0]
     bias = oneflow.reshape(bias, bias_extended_shape)
 
     return value + bias
