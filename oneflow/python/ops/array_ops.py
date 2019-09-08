@@ -12,8 +12,20 @@ from oneflow.python.oneflow_export import oneflow_export
 
 @oneflow_export("gather")
 def gather(
-    params, indices, validate_indices=None, axis=None, batch_dims=0, name=None
+    params, indices, axis=None, batch_dims=0, name=None
 ):
+    r"""Gather slices from params axis axis according to indices.
+
+    Args:
+        params: A `Blob`. The blob from which to gather values. Must be at least rank `axis + 1`.
+        indices: A `Blob`. Index blob. Must be in range [0, params.shape[axis]).
+        axis: A Tensor. The axis in params to gather indices from. Defaults to the first dimension. 
+            Supports negative indexes.
+        batch_dims: An optional int. Defaults to 0.
+        name: A name for the operation (optional).
+    Returns:
+        A blob. Has the same type as params.
+    """
     op_conf = op_conf_util.OperatorConf()
     if name is None:
         op_conf.name = id_util.UniqueStr("Gather_")
@@ -46,7 +58,16 @@ def gather(
 
 
 @oneflow_export("reshape")
-def reshape(x, shape, name=None):
+def reshape(tensor, shape, name=None):
+    r"""Reshapes a blob.
+
+    Args:
+        tensor: A `Blob`.
+        shape: Defines the shape of the output blob.
+        name: A name for the operation (optional).
+    Returns:
+        A blob. Has the same type as `tensor`.
+    """
     assert isinstance(shape, tuple) or isinstance(shape, list)
     op_conf = op_conf_util.OperatorConf()
     op_conf.name = id_util.UniqueStr("Reshape_")
@@ -62,6 +83,16 @@ def reshape(x, shape, name=None):
 
 @oneflow_export("transpose")
 def transpose(a, perm=None, conjugate=False, name=None):
+    r"""Transposes `a`.
+
+    Args:
+        a: A `Blob`.
+        perm: A permutation of the dimensions of `a`.
+        conjugate: False. Not support in OneFlow.
+        name: A name for the operation (optional).
+    Returns:
+        A transposed blob.
+    """
     assert isinstance(perm, (tuple, list))
 
     if name is None:
@@ -161,6 +192,16 @@ def constant(
     shape=None,
     name=None,
 ):
+    r"""Creates a constant blob.
+
+    Args:
+        value: A constant value (or list) of output type dtype.
+        dtype: The type of the elements of the resulting tensor.
+        shape: Optional dimensions of resulting tensor.
+        name: A name for the operation (optional).
+    Returns:
+        A Constant blob.
+    """
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf,
