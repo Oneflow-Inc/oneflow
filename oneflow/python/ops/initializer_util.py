@@ -75,7 +75,7 @@ def truncated_normal_initializer(mean=0.0, stddev=1.0):
 
 
 @oneflow_export("glorot_uniform_initializer", "xavier_uniform_initializer")
-def glorot_uniform_initializer(data_format=None):
+def glorot_uniform_initializer(data_format=""):
     return variance_scaling_initializer(
         1.0, "fan_avg", "random_uniform", data_format
     )
@@ -86,7 +86,7 @@ def variance_scaling_initializer(
     scale=1.0,
     mode="fan_in",
     distribution="truncated_normal",
-    data_format=None,
+    data_format="",
 ):
     r"""Initializer that generates a truncated normal distribution 
     or a random normal distribution or a random uniform distribution 
