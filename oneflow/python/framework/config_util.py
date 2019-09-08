@@ -109,7 +109,7 @@ def data_port(val):
 def comm_net_worker_num(val):
     assert config_proto_mutable == True
     assert type(val) is int
-    config_proto.resource.comm_net_worker_num = val
+    default_config_proto.resource.comm_net_worker_num = val
 
 @oneflow_export('config.max_mdsave_worker_num')
 def max_mdsave_worker_num(val):
