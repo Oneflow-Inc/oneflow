@@ -497,21 +497,21 @@ Maybe<void> InferOpSbpSignature(
     return &(it->second);
   };
   std::function<int32_t(const SbpSignature&)> CalcOrderValue4SbpSig;
-  if (sbp_sig_conf.bn_in_op2sbp_parallel().empty()) {
-    auto OrderValue4HasBatchAxis = [&](const std::string& bn,
+  auto OrderValue4HasBatchAxis = [&](const std::string& bn,
+                                     const SbpParallel& sbp_parallel) -> int32_t {
+    const auto& batch_axis = GetBatchAxis4Lbi(op.BnInOp2Lbi(bn));
+    return -1
+           * (batch_axis.has_value() && sbp_parallel.has_split_parallel()
+              && sbp_parallel.split_parallel().axis() == batch_axis.value());
+  };
+  auto OrderValue4HasNoBatchAxis = [&](const std::string& ibn,
                                        const SbpParallel& sbp_parallel) -> int32_t {
-      const auto& batch_axis = GetBatchAxis4Lbi(op.BnInOp2Lbi(bn));
-      return -1
-             * (batch_axis.has_value() && sbp_parallel.has_split_parallel()
-                && sbp_parallel.split_parallel().axis() == batch_axis.value());
-    };
-    auto OrderValue4HasNoBatchAxis = [&](const std::string& ibn,
-                                         const SbpParallel& sbp_parallel) -> int32_t {
-      return -2
-             * (GetBatchAxis4Lbi(op.BnInOp2Lbi(ibn)).has_value() == false
-                && CHECK_JUST(SbpInferHint4Ibn(ibn))->sbp_parallel().has_split_parallel() == false
-                && sbp_parallel.has_split_parallel() == false);
-    };
+    return -2
+           * (GetBatchAxis4Lbi(op.BnInOp2Lbi(ibn)).has_value() == false
+              && CHECK_JUST(SbpInferHint4Ibn(ibn))->sbp_parallel().has_split_parallel() == false
+              && sbp_parallel.has_split_parallel() == false);
+  };
+  if (sbp_sig_conf.bn_in_op2sbp_parallel().empty()) {
     CalcOrderValue4SbpSig = [&](const SbpSignature& sbp_signature) -> int32_t {
       int32_t order_value = 0;
       for (const auto& ibn : op.input_bns()) {

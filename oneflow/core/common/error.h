@@ -17,6 +17,7 @@ class Error final {
   static Error JobSetEmpty();
   static Error DeviceTagNotFound();
   static Error JobTypeNotSet();
+  static Error JobBuildAndInferCtxError(JobBuildAndInferError err_code);
   static Error CheckFailed();
   static Error Todo();
   static Error Unimplemented();

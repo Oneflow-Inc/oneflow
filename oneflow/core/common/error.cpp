@@ -32,6 +32,12 @@ Error Error::JobTypeNotSet() {
   return error;
 }
 
+Error Error::JobBuildAndInferCtxError(JobBuildAndInferError err_code) {
+  auto error = std::make_shared<ErrorProto>();
+  error->set_job_build_and_infer_error(err_code);
+  return error;
+}
+
 Error Error::CheckFailed() {
   auto error = std::make_shared<ErrorProto>();
   error->mutable_check_failed();
