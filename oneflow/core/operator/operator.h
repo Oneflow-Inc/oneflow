@@ -371,6 +371,12 @@ inline Maybe<bool> GetSbpParallelInLbnOrNothing(const std::string& lbn_with_spli
   return true;
 }
 
+Maybe<void> InferOpSbpSignature(
+    const Operator& op, const SbpSignature& sbp_sig_conf, const ParallelDesc& parallel_desc,
+    const HashMap<std::string, SbpInferHint>& ibn2sbp_infer_hint,
+    std::function<const OptInt64&(const LogicalBlobId&)> GetBatchAxis4Lbi,
+    SbpSignature* sbp_sig_to_infer);
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_OPERATOR_OPERATOR_H_
