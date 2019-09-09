@@ -10,7 +10,7 @@ void DropoutOp::InitFromOpConf() {
   CHECK_LT(dropout_rate, 1);
   EnrollInputBn("in");
   EnrollOutputBn("out");
-  if (GlobalJobDesc().IsTrain()) { EnrollOutputBn("random_mask"); }
+  if (job_desc().IsTrain()) { EnrollOutputBn("random_mask"); }
 }
 
 const PbMessage& DropoutOp::GetCustomizedConf() const { return op_conf().dropout_conf(); }
@@ -21,7 +21,7 @@ Maybe<void> DropoutOp::InferBlobDescs(
   // CHECK_EQ(op_conf().dropout_conf().noise_shape().dim_size(),
   //          GetBlobDesc4BnInOp("in")->shape().NumAxes());
   *GetBlobDesc4BnInOp("out") = *GetBlobDesc4BnInOp("in");
-  if (GlobalJobDesc().IsTrain()) {
+  if (job_desc().IsTrain()) {
     *GetBlobDesc4BnInOp("random_mask") = *GetBlobDesc4BnInOp("in");
     GetBlobDesc4BnInOp("random_mask")->set_data_type(DataType::kFloat);
   }

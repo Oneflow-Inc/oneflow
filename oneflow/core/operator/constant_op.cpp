@@ -18,7 +18,7 @@ Maybe<void> ConstantOp::InferBlobDescs(
   CHECK_EQ_OR_RETURN(parallel_ctx->policy(), ParallelPolicy::kDataParallel);
   const ConstantOpConf& conf = op_conf().constant_conf();
   const DataType& data_type =
-      conf.has_data_type() ? conf.data_type() : GlobalJobDesc().DefaultDataType();
+      conf.has_data_type() ? conf.data_type() : job_desc().DefaultDataType();
   std::vector<int64_t> dim_vec;
   if (conf.use_device_piece_size_as_dim0()) {
     CHECK_EQ_OR_RETURN(record_piece_size % parallel_ctx->parallel_num(), 0);
