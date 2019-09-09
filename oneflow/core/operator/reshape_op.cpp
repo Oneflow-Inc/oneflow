@@ -70,7 +70,11 @@ void GetGroupStartInAxis2OutAxis(const Shape& in_shape, const Shape& out_shape,
       --out_axis;
     }
   }
-  CHECK_EQ(in_axis + out_axis, -1);
+  CHECK_GE(in_axis, -1);
+  CHECK_GE(out_axis, -1);
+  CHECK_LE(in_axis, 0);
+  CHECK_LE(out_axis, 0);
+  CHECK_EQ(in_axis == 0 && out_axis == 0, false);
 }
 
 }  // namespace
