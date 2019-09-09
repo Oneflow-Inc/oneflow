@@ -37,23 +37,25 @@ Maybe<Shape> GetLogicalOutBlobShape(const Shape& in_shape, const ShapeProto& res
   return std::make_shared<Shape>(dim_vec);
 }
 
-void Squeeze(const Shape& origin, Shape* shape, HashMap<int, int>* squeezed_axis2origin_axis) {
-  CHECK_GT(origin.NumAxes(), 0);
+Maybe<void> Squeeze(const Shape& origin, Shape* shape,
+                    HashMap<int, int>* squeezed_axis2origin_axis) {
+  OF_CHECK_GT(origin.NumAxes(), 0);
   std::vector<int64_t> dim_vec;
   FOR_RANGE(int, axis, 0, origin.NumAxes()) {
     int64_t dim = origin.At(axis);
-    CHECK_GT(dim, 0);
+    OF_CHECK_GT(dim, 0);
     if (dim == 1) { continue; }
-    CHECK(squeezed_axis2origin_axis->emplace(dim_vec.size(), axis).second);
+    OF_CHECK(squeezed_axis2origin_axis->emplace(dim_vec.size(), axis).second);
     dim_vec.push_back(dim);
   }
   *shape = Shape(dim_vec);
+  return Maybe<void>::Ok();
 }
 
-void GetGroupStartInAxis2OutAxis(const Shape& in_shape, const Shape& out_shape,
-                                 HashMap<int, int>* group_start_in_axis2out_axis) {
-  if (in_shape.NumAxes() == 0) { return; }
-  if (out_shape.NumAxes() == 0) { return; }
+Maybe<void> GetGroupStartInAxis2OutAxis(const Shape& in_shape, const Shape& out_shape,
+                                        HashMap<int, int>* group_start_in_axis2out_axis) {
+  CHECK_NE_OR_RETURN(in_shape.NumAxes(), 0);
+  CHECK_NE_OR_RETURN(out_shape.NumAxes(), 0);
   CHECK_EQ(in_shape.elem_cnt(), out_shape.elem_cnt());
   int in_axis = in_shape.NumAxes() - 1;
   int out_axis = out_shape.NumAxes() - 1;
@@ -70,11 +72,12 @@ void GetGroupStartInAxis2OutAxis(const Shape& in_shape, const Shape& out_shape,
       --out_axis;
     }
   }
-  CHECK_GE(in_axis, -1);
-  CHECK_GE(out_axis, -1);
-  CHECK_LE(in_axis, 0);
-  CHECK_LE(out_axis, 0);
-  CHECK_EQ(in_axis == 0 && out_axis == 0, false);
+  OF_CHECK_GE(in_axis, -1);
+  OF_CHECK_GE(out_axis, -1);
+  OF_CHECK_LE(in_axis, 0);
+  OF_CHECK_LE(out_axis, 0);
+  OF_CHECK_EQ(in_axis == 0 && out_axis == 0, false);
+  return Maybe<void>::Ok();
 }
 
 }  // namespace
@@ -96,34 +99,16 @@ Maybe<void> ReshapeOp::InferBlobDescs(
 
   const ReshapeOpConf& conf = op_conf().reshape_conf();
   CHECK_GE_OR_RETURN(conf.shape().dim_size(), 1);
-  // fill dim_vec
-  std::vector<int64_t> dim_vec;
-  if (!conf.has_dim0_in_shape()) { dim_vec.push_back(in_blob_desc->shape().At(0)); }
-  dim_vec.insert(dim_vec.end(), conf.shape().dim().begin(), conf.shape().dim().end());
-
-  // infer dim0 as split(0) when user set dim0 not -1
-  if (conf.has_dim0_in_shape() && conf.shape().dim(0) > 0) {
-    CHECK_GE_OR_RETURN(dim_vec[0], parallel_ctx->parallel_num());
-    BalancedSplitter splitter(dim_vec[0], parallel_ctx->parallel_num());
-    dim_vec[0] = splitter.At(parallel_ctx->parallel_id()).size();
-  }
-
-  // infer -1
-  int32_t dim_cnt_need_infer = 0;
-  int32_t dim_index_need_infer = -1;
-  int64_t elem_cnt = 1;
-  for (int32_t i = 0; i < dim_vec.size(); ++i) {
-    if (dim_vec[i] == -1) {
-      ++dim_cnt_need_infer;
-      dim_index_need_infer = i;
-    } else {
-      CHECK_GT_OR_RETURN(dim_vec[i], 0);
-      elem_cnt *= dim_vec[i];
-    }
-  }
-  CHECK_LE_OR_RETURN(dim_cnt_need_infer, 1);
-  if (dim_cnt_need_infer == 1) {
-    dim_vec[dim_index_need_infer] = in_blob_desc->shape().elem_cnt() / elem_cnt;
+  std::vector<int64_t> dim_vec = {conf.shape().dim().begin(), conf.shape().dim().end()};
+  for (int32_t i = 0; i < dim_vec.size(); ++i) { CHECK_GT_OR_RETURN(dim_vec[i], 0); }
+  const auto& sbp_parallel_it = sbp_signature->bn_in_op2sbp_parallel().find("out");
+  CHECK_OR_RETURN(sbp_parallel_it != sbp_signature->bn_in_op2sbp_parallel().end());
+  const SbpParallel& sbp_parallel = sbp_parallel_it->second;
+  if (sbp_parallel.has_split_parallel()) {
+    const int64_t split_axis = sbp_parallel.split_parallel().axis();
+    BalancedSplitter splitter(conf.shape().dim().Get(split_axis), parallel_ctx->parallel_num());
+    CHECK_GE_OR_RETURN(conf.shape().dim().Get(split_axis), parallel_ctx->parallel_num());
+    dim_vec[split_axis] = splitter.At(parallel_ctx->parallel_id()).size();
   }
   out_blob_desc->mut_shape() = Shape(dim_vec);
   CHECK_EQ_OR_RETURN(out_blob_desc->shape().elem_cnt(), in_blob_desc->shape().elem_cnt());
