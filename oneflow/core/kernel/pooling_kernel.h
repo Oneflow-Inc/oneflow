@@ -66,7 +66,7 @@ class PoolingKernelIf : public KernelIf<device_type> {
   virtual cudnnPoolingMode_t GetCudnnPoolingMode() = 0;
 #endif  // WITH_CUDA
   const PoolingCtx& pooling_ctx() const { return *pooling_ctx_; }
-  void VirtualKernelInit(const ParallelContext*) override {
+  void VirtualKernelInit() override {
     pooling_ctx_.reset(new PoolingCtx(GetPoolingKernelConf()
 #ifdef WITH_CUDA
                                           ,

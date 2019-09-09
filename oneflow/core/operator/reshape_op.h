@@ -24,7 +24,9 @@ class ReshapeOp final : public Operator {
     return NaiveInferBatchAxis(BatchAxis4BnInOp);
   }
 
-  Maybe<void> GetSbpSignatures(SbpSignatureList* sbp_sig_list) const override;
+  Maybe<void> GetSbpSignatures(
+      const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
+      SbpSignatureList* sbp_sig_list) const override;
 };
 
 }  // namespace oneflow
