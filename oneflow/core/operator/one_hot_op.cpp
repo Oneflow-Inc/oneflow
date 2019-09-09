@@ -15,8 +15,7 @@ Maybe<void> OneHotOp::InferBlobDescs(
     const ParallelContext* parallel_ctx) const {
   const OneHotOpConf& conf = op_conf().one_hot_conf();
   const int64_t depth = conf.depth();
-  const DataType data_type =
-      conf.has_data_type() ? conf.data_type() : GlobalJobDesc().DefaultDataType();
+  const DataType data_type = conf.has_data_type() ? conf.data_type() : job_desc().DefaultDataType();
   CHECK_GT_OR_RETURN(depth, 0);
   const BlobDesc* indices = GetBlobDesc4BnInOp("indices");
   CHECK_OR_RETURN(IsIntegralDataType(indices->data_type()));
