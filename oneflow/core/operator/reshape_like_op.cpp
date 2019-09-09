@@ -1,5 +1,6 @@
 #include "oneflow/core/operator/reshape_like_op.h"
 #include "oneflow/core/job/sbp_signature_builder.h"
+#include "oneflow/core/operator/reshape_util.h"
 
 namespace oneflow {
 
@@ -24,10 +25,27 @@ Maybe<void> ReshapeLikeOp::InferBlobDescs(
 Maybe<void> ReshapeLikeOp::GetSbpSignatures(
     const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
     SbpSignatureList* sbp_sig_list) const {
-  SbpSignatureBuilder()
-      .Split(input_bns(), 0)
-      .Split(output_bns(), 0)
-      .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+  HashMap<int, int> squeezed_group_start_in_axis2out_axis;
+  HashMap<int, int> x_squeezed_axis2original_axis;
+  HashMap<int, int> y_squeezed_axis2original_axis;
+  {
+    const auto& x_shape = JUST(LogicalBlobDesc4Ibn("x"))->shape();
+    const auto& y_shape = JUST(LogicalBlobDesc4Ibn("like"))->shape();
+    Shape squeezed_x_shape;
+    Shape squeezed_y_shape;
+    Squeeze(x_shape, &squeezed_x_shape, &x_squeezed_axis2original_axis);
+    Squeeze(y_shape, &squeezed_y_shape, &y_squeezed_axis2original_axis);
+    GetGroupStartInAxis2OutAxis(squeezed_x_shape, squeezed_y_shape,
+                                &squeezed_group_start_in_axis2out_axis);
+  }
+  for (const auto& pair : squeezed_group_start_in_axis2out_axis) {
+    int64_t start_in_axis = x_squeezed_axis2original_axis.at(pair.first);
+    int64_t start_out_axis = y_squeezed_axis2original_axis.at(pair.second);
+    SbpSignatureBuilder()
+        .Split(input_bns(), start_in_axis)
+        .Split(output_bns(), start_out_axis)
+        .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+  }
   SbpSignatureBuilder()
       .PartialSum(input_bns())
       .PartialSum(output_bns())
