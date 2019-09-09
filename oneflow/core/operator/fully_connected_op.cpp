@@ -27,7 +27,7 @@ Maybe<void> FullyConnectedOp::InferBlobDescs(
   // useful vars
   const FullyConnectedOpConf& conf = op_conf().fully_connected_conf();
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
-  CHECK_EQ_OR_RETURN(in_blob_desc->data_type(), GlobalJobDesc().DefaultDataType());
+  CHECK_EQ_OR_RETURN(in_blob_desc->data_type(), job_desc().DefaultDataType());
   int32_t units = conf.units();
   if (parallel_ctx->policy() == kModelParallel) {
     BalancedSplitter splitter(units, parallel_ctx->parallel_num());

@@ -34,7 +34,7 @@ Maybe<void> ForeignInputOp::InferBlobDescs(
   if (conf.has_data_type()) {
     out_blob_desc->set_data_type(conf.data_type());
   } else {
-    out_blob_desc->set_data_type(GlobalJobDesc().DefaultDataType());
+    out_blob_desc->set_data_type(job_desc().DefaultDataType());
   }
   out_blob_desc->set_has_dim0_valid_num_field(conf.has_dim0_valid_num());
   if (conf.has_dim0_inner_shape()) {

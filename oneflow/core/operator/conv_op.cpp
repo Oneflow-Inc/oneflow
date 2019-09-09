@@ -85,7 +85,7 @@ Maybe<void> ConvOp<NDims>::InferOutBlobDescs(
   // in
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
   CHECK_EQ_OR_RETURN(in_blob_desc->shape().NumAxes(), NDims + 2);
-  // CHECK_EQ(in_blob_desc->data_type(), GlobalJobDesc().DefaultDataType());
+  // CHECK_EQ(in_blob_desc->data_type(), job_desc().DefaultDataType());
 
   // out
   int64_t data_num = in_blob_desc->shape().At(0);
@@ -117,7 +117,7 @@ Maybe<void> ConvOp<NDims>::InferBlobDescs(
   // in
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
   CHECK_EQ_OR_RETURN(in_blob_desc->shape().NumAxes(), NDims + 2);
-  // CHECK_EQ(in_blob_desc->data_type(), GlobalJobDesc().DefaultDataType());
+  // CHECK_EQ(in_blob_desc->data_type(), job_desc().DefaultDataType());
 
   // out
   int64_t data_num = in_blob_desc->shape().At(0);
