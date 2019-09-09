@@ -51,7 +51,7 @@ void RngTruncatedNormal(const int64_t elem_cnt, const T mean, const T std, uint3
   int64_t index = 0;
   while (true) {
     T val = random_distribution(generator);
-    if (std::abs(val) < truncated_value) {
+    if (std::abs(val - mean) < truncated_value) {
       dptr[index++] = val;
       if (index >= elem_cnt) { break; }
     }
