@@ -80,8 +80,10 @@ Maybe<void> NormalizationOp::InferBlobDescs(
 Maybe<void> NormalizationOp::InferBatchAxis(
     std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
   *BatchAxis4BnInOp("out") = *BatchAxis4BnInOp("in");
-  BatchAxis4BnInOp("mean")->clear_value();
-  BatchAxis4BnInOp("inv_variance")->clear_value();
+  if (op_conf().normalization_conf().is_training()) {
+    BatchAxis4BnInOp("mean")->clear_value();
+    BatchAxis4BnInOp("inv_variance")->clear_value();
+  }
   return Maybe<void>::Ok();
 }
 
