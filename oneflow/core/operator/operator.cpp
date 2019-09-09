@@ -22,9 +22,9 @@ DataType GetDataTypeFromBnInOpVec(
 void Operator::InitFromOpConf(const OperatorConf& op_conf) {
   OperatorConf* this_op_conf = op_attribute_.mutable_op_conf();
   *this_op_conf = op_conf;
-  if (GlobalJobDesc().IsPredict()) { this_op_conf->set_trainable(false); }
+  if (job_desc().IsPredict()) { this_op_conf->set_trainable(false); }
   if (this_op_conf->has_enable_cudnn() == false) {
-    this_op_conf->set_enable_cudnn(GlobalJobDesc().EnableCudnn());
+    this_op_conf->set_enable_cudnn(job_desc().EnableCudnn());
   }
   InitFromOpConf();
 }
@@ -126,7 +126,7 @@ Maybe<void> Operator::InferOutputBlobTimeShape(
   if (input_bns().empty() == false) {
     *time_shape = *GetTimeShape4BnInOp(input_bns().Get(0));
   } else {
-    *time_shape = Shape({GlobalJobDesc().TotalBatchNum(), GlobalJobDesc().NumOfPiecesInBatch()});
+    *time_shape = Shape({job_desc().TotalBatchNum(), job_desc().NumOfPiecesInBatch()});
   }
   return Maybe<void>::Ok();
 }
@@ -310,7 +310,7 @@ int64_t Operator::cudnn_buf_limit_byte() const {
   if (op_conf().has_cudnn_buf_limit_mbyte()) {
     cudnn_buf_limit_mbyte = op_conf().cudnn_buf_limit_mbyte();
   } else {
-    cudnn_buf_limit_mbyte = GlobalJobDesc().cudnn_buf_limit_mbyte();
+    cudnn_buf_limit_mbyte = job_desc().cudnn_buf_limit_mbyte();
   }
   return cudnn_buf_limit_mbyte * 1024 * 1024;
 }
@@ -441,13 +441,21 @@ bool IsOpOnlyCpuSupported(OperatorConf::OpTypeCase op_type_case) {
   return *std::unique_ptr<OnlyCpuSupportPredicator>(NewObj<OnlyCpuSupportPredicator>(op_type_case));
 }
 
-std::shared_ptr<Operator> ConstructOp(const OperatorConf& op_conf) {
+std::shared_ptr<Operator> ConstructOp(const OperatorConf& op_conf, const JobDesc* job_desc) {
   Operator* rptr = NewObj<Operator>(op_conf.op_type_case(), op_conf);
   if (IsOpOnlyCpuSupported(op_conf.op_type_case())) {
     CHECK_EQ(op_conf.device_type(), DeviceType::kCPU);
   }
+  rptr->set_job_desc(job_desc);
   rptr->InitFromOpConf(op_conf);
   return std::shared_ptr<Operator>(rptr);
+}
+
+std::shared_ptr<Operator> ConstructOp(const OperatorConf& op_conf, DeviceType device_type,
+                                      const JobDesc* job_desc) {
+  OperatorConf dev_op_conf = op_conf;
+  dev_op_conf.set_device_type(device_type);
+  return ConstructOp(dev_op_conf, job_desc);
 }
 
 void EraseEmptyBnInVec(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
@@ -480,6 +488,58 @@ Maybe<void> Operator::NaiveInferBatchAxis(
   OptInt64 no_batch_axis;
   if (batch_axis == nullptr) { batch_axis = &no_batch_axis; }
   *BatchAxis4BnInOp(SoleObn()) = *batch_axis;
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> InferOpSbpSignature(
+    const Operator& op, const SbpSignature& sbp_sig_conf, const ParallelDesc& parallel_desc,
+    const HashMap<std::string, SbpInferHint>& ibn2sbp_infer_hint,
+    std::function<const OptInt64&(const LogicalBlobId&)> GetBatchAxis4Lbi,
+    SbpSignature* sbp_sig_to_infer) {
+  auto SbpInferHint4Ibn = [&](const std::string& ibn) -> Maybe<const SbpInferHint*> {
+    auto it = ibn2sbp_infer_hint.find(ibn);
+    if (it == ibn2sbp_infer_hint.end()) {
+      return Error::CheckFailed() << "cannot find corresponding SbpInferHint for input_blob_name : "
+                                  << ibn;
+    }
+    return &(it->second);
+  };
+  std::function<int32_t(const SbpSignature&)> CalcOrderValue4SbpSig;
+  auto OrderValue4HasBatchAxis = [&](const std::string& bn,
+                                     const SbpParallel& sbp_parallel) -> int32_t {
+    const auto& batch_axis = GetBatchAxis4Lbi(op.BnInOp2Lbi(bn));
+    return -1
+           * (batch_axis.has_value() && sbp_parallel.has_split_parallel()
+              && sbp_parallel.split_parallel().axis() == batch_axis.value());
+  };
+  auto OrderValue4HasNoBatchAxis = [&](const std::string& ibn,
+                                       const SbpParallel& sbp_parallel) -> int32_t {
+    return -2
+           * (GetBatchAxis4Lbi(op.BnInOp2Lbi(ibn)).has_value() == false
+              && CHECK_JUST(SbpInferHint4Ibn(ibn))->sbp_parallel().has_split_parallel() == false
+              && sbp_parallel.has_split_parallel() == false);
+  };
+  if (sbp_sig_conf.bn_in_op2sbp_parallel().empty()) {
+    CalcOrderValue4SbpSig = [&](const SbpSignature& sbp_signature) -> int32_t {
+      int32_t order_value = 0;
+      for (const auto& ibn : op.input_bns()) {
+        const auto& sbp_parallel_it = sbp_signature.bn_in_op2sbp_parallel().find(ibn);
+        CHECK(sbp_parallel_it != sbp_signature.bn_in_op2sbp_parallel().end());
+        order_value += OrderValue4HasBatchAxis(ibn, sbp_parallel_it->second);
+        order_value += OrderValue4HasNoBatchAxis(ibn, sbp_parallel_it->second);
+      }
+      for (const auto& obn : op.output_bns()) {
+        const auto& sbp_parallel_it = sbp_signature.bn_in_op2sbp_parallel().find(obn);
+        CHECK(sbp_parallel_it != sbp_signature.bn_in_op2sbp_parallel().end());
+        order_value += OrderValue4HasBatchAxis(obn, sbp_parallel_it->second);
+      }
+      return order_value;
+    };
+  } else {
+    CalcOrderValue4SbpSig = [](const SbpSignature&) -> int32_t { return 0; };
+  }
+  JUST(op.InferSbpSignatureIf(sbp_sig_to_infer, sbp_sig_conf, CalcOrderValue4SbpSig,
+                              SbpInferHint4Ibn, parallel_desc));
   return Maybe<void>::Ok();
 }
 

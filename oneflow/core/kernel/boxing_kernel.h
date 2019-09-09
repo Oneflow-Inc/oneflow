@@ -13,7 +13,7 @@ class BoxingKernel final : public KernelIf<DeviceType::kCPU> {
   ~BoxingKernel() = default;
 
  private:
-  void VirtualKernelInit(const ParallelContext*) override;
+  void VirtualKernelInit() override;
   void ForwardDataContent(const KernelCtx&,
                           std::function<Blob*(const std::string&)>) const override;
   template<typename Iter>

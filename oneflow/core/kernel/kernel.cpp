@@ -65,14 +65,13 @@ void NaiveCopyLossInstanceNum(const PbRpf<std::string>& from_bns, const PbRpf<st
 
 }  // namespace
 
-void Kernel::Init(const JobDesc* job_desc, const ParallelContext* parallel_ctx,
-                  const KernelConf& kernel_conf, DeviceCtx* device_ctx) {
+void Kernel::Init(const JobDesc* job_desc, const KernelConf& kernel_conf, DeviceCtx* device_ctx) {
   job_desc_ = job_desc;
   kernel_conf_ = kernel_conf;
-  VirtualKernelInit(parallel_ctx, device_ctx);
+  VirtualKernelInit(device_ctx);
 }
 
-void Kernel::InitModelAndConstBuf(const KernelCtx& ctx, const ParallelContext* parallel_ctx,
+void Kernel::InitModelAndConstBuf(const KernelCtx& ctx,
                                   std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   InitConstBufBlobs(ctx.device_ctx, BnInOp2Blob);
 }
@@ -229,9 +228,8 @@ const HashSet<OperatorConf::OpTypeCase>& OpsWithNewKernelRegistry() {
 
 }  // namespace
 
-std::unique_ptr<const Kernel> ConstructKernel(const JobDesc* job_desc,
-                                              const ParallelContext* parallel_ctx,
-                                              const KernelConf& conf, DeviceCtx* device_ctx) {
+std::unique_ptr<const Kernel> ConstructKernel(const JobDesc* job_desc, const KernelConf& conf,
+                                              DeviceCtx* device_ctx) {
   const auto& ops = OpsWithNewKernelRegistry();
   auto op_type = conf.op_attribute().op_conf().op_type_case();
   Kernel* rptr = nullptr;
@@ -241,7 +239,7 @@ std::unique_ptr<const Kernel> ConstructKernel(const JobDesc* job_desc,
     rptr = NewObj<Kernel>(op_type, conf);
   }
   CHECK_NOTNULL(rptr);
-  rptr->Init(job_desc, parallel_ctx, conf, device_ctx);
+  rptr->Init(job_desc, conf, device_ctx);
   return std::unique_ptr<const Kernel>(rptr);
 }
 

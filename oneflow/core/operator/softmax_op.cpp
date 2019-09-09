@@ -8,7 +8,7 @@ void SoftmaxOp::InitFromOpConf() {
   CHECK(op_conf().has_softmax_conf());
   EnrollInputBn("in");
   EnrollOutputBn("out");
-  if (GlobalJobDesc().IsTrain() && op_conf().softmax_conf().axis() != -1) {
+  if (job_desc().IsTrain() && op_conf().softmax_conf().axis() != -1) {
     EnrollOutputBn("transpose_in");
     EnrollOutputBn("transpose_out", false);
   } else {
