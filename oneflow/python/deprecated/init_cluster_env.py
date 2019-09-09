@@ -34,9 +34,9 @@ def init_worker(scp_binary = True, use_uuid = True):
     run_dir = os.path.abspath(os.path.expanduser(run_dir))
     config_file = NamedTemporaryFile(delete=False)
     if sys.version_info >= (3, 0):
-        config_file.write(pbtxt.MessageToString(config_proto).encode())
+        config_file.write(pbtxt.MessageToString(config_util.config_proto).encode())
     else:
-        config_file.write(pbtxt.MessageToString(config_proto))
+        config_file.write(pbtxt.MessageToString(config_util.config_proto))
     config_file.close()
 
     for machine in resource.machine:

@@ -393,14 +393,6 @@ KU_IF_METHOD InitializeWithConf(DeviceCtx* ctx, const InitializerConf& initializ
                                                       host_blob.get());
   AFTER_CPU_INITIALIZE();
 }
-KU_IF_METHOD InitializeWithConf(DeviceCtx* ctx, const InitializerConf& initializer_conf,
-                                uint32_t random_seed, Blob* blob, const std::string& data_format) {
-  BEFORE_CPU_INITIALIZE();
-  // synchronous initialize the host blob
-  KernelUtil<DeviceType::kCPU, T>::InitializeWithConf(nullptr, initializer_conf, random_seed,
-                                                      host_blob.get(), data_format);
-  AFTER_CPU_INITIALIZE();
-}
 KU_IF_METHOD Set(DeviceCtx* ctx, const T value, T* addr) {
   gpu_set<T><<<1, 1, 0, ctx->cuda_stream()>>>(value, addr);
 }
