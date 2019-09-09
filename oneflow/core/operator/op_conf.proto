@@ -773,7 +773,7 @@ message CastOpConf {
 
 message InterfaceBlobConf {
   required ShapeProto shape = 1;
-  optional DataType data_type = 2;
+  required DataType data_type = 2;
   optional ShapeProto dim0_inner_shape = 3;
   optional bool has_dim0_valid_num = 4;
   optional bool has_dim1_valid_num = 5;

@@ -162,7 +162,7 @@ Maybe<void> JobBuildAndInferCtx::AddAndInferOp(const OperatorConf& op_conf,
 
   JUST(AddOpNameParallelConf2Placement(op_name, parallel_conf));
 
-  op_name2op_.emplace(op_name, ConstructOp(op_conf));
+  op_name2op_.emplace(op_name, ConstructOp(op_conf, &GlobalJobDesc()));
   Operator* op = op_name2op_.at(op_name).get();
 
   SbpSignature sbp_sig_conf;

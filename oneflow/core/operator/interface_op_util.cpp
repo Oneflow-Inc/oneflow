@@ -55,11 +55,7 @@ Maybe<void> InterfaceOpUtil::InferOutBlobDesc(const InterfaceBlobConf& blob_conf
   out_blob_desc->mut_shape() = Shape(blob_conf.shape());
   CheckShape(out_blob_desc->shape());
   CHECK_GT(out_blob_desc->mut_shape().At(0), 0);
-  if (blob_conf.has_data_type()) {
-    out_blob_desc->set_data_type(blob_conf.data_type());
-  } else {
-    out_blob_desc->set_data_type(GlobalJobDesc().DefaultDataType());
-  }
+  out_blob_desc->set_data_type(blob_conf.data_type());
   out_blob_desc->set_has_dim0_valid_num_field(blob_conf.has_dim0_valid_num());
   if (blob_conf.has_dim0_inner_shape()) {
     CHECK(blob_conf.has_dim0_valid_num());
