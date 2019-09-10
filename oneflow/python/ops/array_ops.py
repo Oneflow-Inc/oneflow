@@ -58,8 +58,8 @@ def reshape(x, shape, name=None):
     if dim_index_need_infer is not None:
         assert (reduce(operator.mul, x.shape, 1) %
                 reduce(operator.mul, shape, 1)) == 0
-        shape[dim_index_need_infer] = int(-1 * reduce(
-            operator.mul, x.shape, 1) / reduce(operator.mul, shape, 1))
+        shape[dim_index_need_infer] = int(
+            abs(reduce(operator.mul, x.shape, 1) / reduce(operator.mul, shape, 1)))
     else:
         assert reduce(operator.mul, x.shape, 1) == reduce(
             operator.mul, shape, 1)
