@@ -1,7 +1,8 @@
-#include "oneflow/core/operator/reshape_util.h"
+#include "oneflow/core/operator/reshape_op_util.h"
 
 namespace oneflow {
-Maybe<Shape> GetLogicalOutBlobShape(const Shape& in_shape, const ShapeProto& reshape_proto) {
+Maybe<Shape> ReshapeOpUtil::GetLogicalOutBlobShape(const Shape& in_shape,
+                                                   const ShapeProto& reshape_proto) {
   size_t total_elem_dim_exclude_minus_1 = 1;
   bool has_minus_1 = false;
   bool minus_1_axis = -1;
@@ -32,8 +33,8 @@ Maybe<Shape> GetLogicalOutBlobShape(const Shape& in_shape, const ShapeProto& res
   return std::make_shared<Shape>(dim_vec);
 }
 
-Maybe<void> Squeeze(const Shape& origin, Shape* shape,
-                    HashMap<int, int>* squeezed_axis2origin_axis) {
+Maybe<void> ReshapeOpUtil::Squeeze(const Shape& origin, Shape* shape,
+                                   HashMap<int, int>* squeezed_axis2origin_axis) {
   OF_CHECK_GT(origin.NumAxes(), 0);
   std::vector<int64_t> dim_vec;
   FOR_RANGE(int, axis, 0, origin.NumAxes()) {
@@ -47,9 +48,9 @@ Maybe<void> Squeeze(const Shape& origin, Shape* shape,
   return Maybe<void>::Ok();
 }
 
-Maybe<void> GetGroupStartInAxis2OutAxis(const Shape& in_shape, const Shape& out_shape,
-                                        const int64_t parallel_num,
-                                        HashMap<int, int>* group_start_in_axis2out_axis) {
+Maybe<void> ReshapeOpUtil::GetGroupStartInAxis2OutAxis(
+    const Shape& in_shape, const Shape& out_shape, const int64_t parallel_num,
+    HashMap<int, int>* group_start_in_axis2out_axis) {
   CHECK_NE_OR_RETURN(in_shape.NumAxes(), 0);
   CHECK_NE_OR_RETURN(out_shape.NumAxes(), 0);
   CHECK_EQ(in_shape.elem_cnt(), out_shape.elem_cnt());
@@ -78,20 +79,21 @@ Maybe<void> GetGroupStartInAxis2OutAxis(const Shape& in_shape, const Shape& out_
   return Maybe<void>::Ok();
 }
 
-Maybe<void> GetReshapeSbpSignatures(const Shape& in_shape, const Shape& out_shape,
-                                    const PbRpf<std::string>& input_bns,
-                                    const PbRpf<std::string>& output_bns,
-                                    const int64_t parallel_num, SbpSignatureList* sbp_sig_list) {
+Maybe<void> ReshapeOpUtil::GetReshapeSbpSignatures(const Shape& in_shape, const Shape& out_shape,
+                                                   const PbRpf<std::string>& input_bns,
+                                                   const PbRpf<std::string>& output_bns,
+                                                   const int64_t parallel_num,
+                                                   SbpSignatureList* sbp_sig_list) {
   HashMap<int, int> squeezed_group_start_in_axis2out_axis;
   HashMap<int, int> in_squeezed_axis2original_axis;
   HashMap<int, int> out_squeezed_axis2original_axis;
   {
     Shape squeezed_in_shape;
     Shape squeezed_out_shape;
-    Squeeze(in_shape, &squeezed_in_shape, &in_squeezed_axis2original_axis);
-    Squeeze(out_shape, &squeezed_out_shape, &out_squeezed_axis2original_axis);
-    GetGroupStartInAxis2OutAxis(squeezed_in_shape, squeezed_out_shape, parallel_num,
-                                &squeezed_group_start_in_axis2out_axis);
+    ReshapeOpUtil::Squeeze(in_shape, &squeezed_in_shape, &in_squeezed_axis2original_axis);
+    ReshapeOpUtil::Squeeze(out_shape, &squeezed_out_shape, &out_squeezed_axis2original_axis);
+    ReshapeOpUtil::GetGroupStartInAxis2OutAxis(squeezed_in_shape, squeezed_out_shape, parallel_num,
+                                               &squeezed_group_start_in_axis2out_axis);
   }
   for (const auto& pair : squeezed_group_start_in_axis2out_axis) {
     int64_t start_in_axis = in_squeezed_axis2original_axis.at(pair.first);
@@ -107,5 +109,4 @@ Maybe<void> GetReshapeSbpSignatures(const Shape& in_shape, const Shape& out_shap
       .Build(sbp_sig_list->mutable_sbp_signature()->Add());
   return Maybe<void>::Ok();
 }
-
 }  // namespace oneflow

@@ -1,7 +1,7 @@
 #include "oneflow/core/operator/reshape_op.h"
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/job/sbp_signature_builder.h"
-#include "oneflow/core/operator/reshape_util.h"
+#include "oneflow/core/operator/reshape_op_util.h"
 
 namespace oneflow {
 
@@ -41,9 +41,10 @@ Maybe<void> ReshapeOp::GetSbpSignatures(
     const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
     const ParallelDesc& parallel_desc, SbpSignatureList* sbp_sig_list) const {
   const auto& in_shape = JUST(LogicalBlobDesc4Ibn("in"))->shape();
-  const auto& out_shape = JUST(GetLogicalOutBlobShape(in_shape, op_conf().reshape_conf().shape()));
-  return GetReshapeSbpSignatures(in_shape, *out_shape, input_bns(), output_bns(),
-                                 parallel_desc.parallel_num(), sbp_sig_list);
+  const auto& out_shape =
+      JUST(ReshapeOpUtil::GetLogicalOutBlobShape(in_shape, op_conf().reshape_conf().shape()));
+  return ReshapeOpUtil::GetReshapeSbpSignatures(in_shape, *out_shape, input_bns(), output_bns(),
+                                                parallel_desc.parallel_num(), sbp_sig_list);
 }
 
 REGISTER_OP(OperatorConf::kReshapeConf, ReshapeOp);
