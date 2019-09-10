@@ -5,7 +5,7 @@ namespace oneflow {
 template<typename T, typename K>
 struct SegmentKernelUtilImpl<DeviceType::kCPU, T, K> final {
   static void SegmentSumForward(DeviceCtx* ctx, const Shape& in_shape,
-                                const T* in, const K* segment_ids, T* out);
+                                const T* in, const K* segment_ids, const int32_t unique_ids_num, T* out);
 
   static void SegmentSumBackward(DeviceCtx* ctx, const Shape& out_diff_shape, 
                                  const Shape& segment_ids_shape, const T* out_diff,
@@ -25,6 +25,7 @@ void SegmentKernelUtilImpl<DeviceType::kCPU, T, K>::SegmentSumForward(DeviceCtx*
                                                     const Shape& in_shape,
                                                     const T* in, 
                                                     const K* segment_ids,
+                                                    const int32_t unique_ids_num,
                                                     T* out) {
   // input tensor's dim 0 size
   const int32_t input_outer_dim_size = in_shape.At(0);

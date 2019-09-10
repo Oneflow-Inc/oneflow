@@ -1442,7 +1442,7 @@ message EsacOpConf {
 message SegmentSumOpConf {
   required string in = 1;
   required string segment_ids = 2;
-  required string unique_segment_ids = 3;
+  required int32 unique_ids_num = 3;
   required string out = 4;
 }
 

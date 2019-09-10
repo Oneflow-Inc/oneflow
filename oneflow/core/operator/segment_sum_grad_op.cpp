@@ -19,9 +19,9 @@ void SegmentSumGradOp::InferBlobDescs(std::function<BlobDesc*(const std::string&
   const BlobDesc* out_diff_blob = GetBlobDesc4BnInOp("out_diff");
   const BlobDesc* segment_ids_blob = GetBlobDesc4BnInOp("segment_ids");
   // segment_ids must be 1D tensor
-  auto segment_ids_count = segment_ids_blob->shape().At(0);
+  auto segment_ids_count = segment_ids_blob->shape().At(1);
   auto dims = out_diff_blob->shape().dim_vec();
-  dims[0] = segment_ids_count;
+  dims[1] = segment_ids_count;
   BlobDesc* in_diff_blob = GetBlobDesc4BnInOp("in_diff");
   in_diff_blob->set_data_type(out_diff_blob->data_type());
   in_diff_blob->mut_shape() = Shape(dims);

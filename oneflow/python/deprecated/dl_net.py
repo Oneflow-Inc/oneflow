@@ -382,9 +382,9 @@ class DLNet(object):
         self.CreateOperator(util.GetCurFuncName(), name, [], [], **kw)
         return Blob(self, '{}/out'.format(name))
 
-    def SegmentSum(self, in_blob, segment_ids_blob, unique_segment_ids_blob, name=None, **kw):
+    def SegmentSum(self, in_blob, segment_ids_blob, unique_ids_num, name=None, **kw):
         kw['segment_ids'] = segment_ids_blob.logical_blob_name
-        kw['unique_segment_ids'] = unique_segment_ids_blob.logical_blob_name
+        kw['unique_ids_num'] = unique_ids_num
         kw['in'] = in_blob.logical_blob_name
         kw['out'] = 'out'
         name = self._GetVariableName(name, util.GetCurFuncName());
