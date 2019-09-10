@@ -11,7 +11,7 @@ class TestNet(unittest.TestCase):
     self.net = ''
     self.tf_loss_dir = ''
     self.of_loss_dir = ''
-    self.num_iter = 5
+    self.num_iter = 10
     self.set_params()
 
   def set_params(self):
@@ -76,6 +76,27 @@ class TestAlexNet(TestNet):
   def test_report(self):
     self.print_report()
 
+
+class TestResNet50(TestNet):
+  """
+    AlexNet Tester
+  """
+  def set_params(self):
+    self.net = 'resnet50'
+    self.tf_loss_dir = os.path.join("/dataset/PNGS/cnns_model_for_test/tf_loss", self.net)
+    self.of_loss_dir = os.path.join("./of_loss", self.net)
+
+  def test_1n1c(self):
+    self.run_and_compare(1)
+
+  def test_1n4c(self):
+    self.run_and_compare(4)
+
+  def test_2n8c(self):
+    self.run_and_compare(4, 2, "192.168.1.12,192.168.1.14")
+
+  def test_report(self):
+    self.print_report()
 
 
 
