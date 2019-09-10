@@ -101,6 +101,7 @@ Maybe<void> LaunchJob(const std::shared_ptr<oneflow::ForeignJobInstance>& cb) {
 
 Maybe<void> DestroyGlobalOneflow() {
   using namespace oneflow;
+  if (Global<Oneflow>::Get() == nullptr) { return Maybe<void>::Ok(); }
   OF_CHECK(Global<MachineCtx>::Get()->IsThisMachineMaster());
   OF_CHECK_NOTNULL(Global<Oneflow>::Get());
   Global<Oneflow>::Delete();
