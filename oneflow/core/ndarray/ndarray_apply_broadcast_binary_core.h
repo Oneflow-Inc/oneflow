@@ -10,15 +10,15 @@
 
 namespace oneflow {
 
-template<DeviceType device_type, typename T, int NDIMS, const T (*binary_func)(const T, const T)>
+template<DeviceType device_type, typename T, int NDIMS, template<typename> class binary_func>
 struct NdarrayApplyBroadcastBinaryCoreWrapper final {
   static void Apply(DeviceCtx* ctx, const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& a,
                     const XpuVarNdarray<const T>& b);
-  static void ImplaceApply(DeviceCtx* ctx, const XpuVarNdarray<T>& y,
+  static void InplaceApply(DeviceCtx* ctx, const XpuVarNdarray<T>& y,
                            const XpuVarNdarray<const T>& x);
 };
 
-template<typename T, int NDIMS, const T (*binary_func)(const T, const T)>
+template<typename T, int NDIMS, template<typename> class binary_func>
 struct NdarrayApplyBroadcastBinaryCore final {
   OF_DEVICE_FUNC static void Apply(const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& a,
                                    const XpuVarNdarray<const T>& b) {
@@ -26,7 +26,7 @@ struct NdarrayApplyBroadcastBinaryCore final {
         a.Broadcast(y.shape()).template BinaryFunc<binary_func>(b.Broadcast(y.shape()));
     y.template Assign<NDIMS>(ret);
   }
-  OF_DEVICE_FUNC static void ImplaceApply(const XpuVarNdarray<T>& y,
+  OF_DEVICE_FUNC static void InplaceApply(const XpuVarNdarray<T>& y,
                                           const XpuVarNdarray<const T>& x) {
     y.template BinaryAssign<binary_func, NDIMS>(x.Broadcast(y.shape()));
   }

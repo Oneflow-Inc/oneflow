@@ -8,10 +8,6 @@ namespace oneflow {
 
 namespace {
 
-bool IsFwBwSplit() {
-  return Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf();
-}
-
 void GetOutAndPad(const Shape& in_blob_shape, const PbMessage& conv_conf, std::vector<int64_t>* out,
                   std::vector<int32_t>* pad_small_side, std::vector<int32_t>* pad_large_side) {
   int32_t opkernel_dim = in_blob_shape.NumAxes() - 2;
@@ -67,40 +63,61 @@ void ConvOp<NDims>::InitFromOpConf() {
   StrFieldTolower("data_format");
   StrFieldTolower("padding");
 
-  // TODO: fw bw split
-  const bool fw_bw_split = IsFwBwSplit();
   EnrollInputBn("in");
   EnrollOutputBn("out");
-  if (fw_bw_split) {
-    EnrollInputBn("weight");
-  } else {
-    EnrollModelBn("weight");
-  }
-  EnrollFwBufBn("fw_cudnn_buf");
-  EnrollBwBufBn("bw_cudnn_buf");
-  EnrollFwBufBn("fw_col_buf");
-  EnrollBwBufBn("bw_col_buf");
+  EnrollInputBn("weight");
+  EnrollTmpBn("fw_cudnn_buf");
+  EnrollTmpBn("fw_col_buf");
   if (GetValFromCustomizedConf<bool>("use_bias")) {
-    if (fw_bw_split) {
-      EnrollInputBn("bias");
-    } else {
-      EnrollModelBn("bias");
-    }
+    CHECK(!GetValFromCustomizedConf<std::string>("bias").empty());
+    EnrollInputBn("bias");
     EnrollConstBufBn("bias_multiplier");
   }
 }
 
 template<int32_t NDims>
-void ConvOp<NDims>::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                   const ParallelContext* parallel_ctx, int64_t record_piece_size,
-                                   std::function<void(OpContext*)> EnrollOpCtx) const {
+Maybe<void> ConvOp<NDims>::InferOutBlobDescs(
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature,
+    int64_t record_piece_size, std::function<void(OpContext*)> EnrollOpCtx) const {
   const std::string& data_format = GetValFromCustomizedConf<std::string>("data_format");
-  const bool fw_bw_split = IsFwBwSplit();
 
   // in
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
-  CHECK_EQ(in_blob_desc->shape().NumAxes(), NDims + 2);
-  // CHECK_EQ(in_blob_desc->data_type(), Global<JobDesc>::Get()->DefaultDataType());
+  CHECK_EQ_OR_RETURN(in_blob_desc->shape().NumAxes(), NDims + 2);
+  // CHECK_EQ(in_blob_desc->data_type(), job_desc().DefaultDataType());
+
+  // out
+  int64_t data_num = in_blob_desc->shape().At(0);
+  int32_t filters = GetValFromCustomizedConf<int32_t>("filters");
+  if (parallel_ctx->policy() == kModelParallel) {
+    BalancedSplitter splitter(filters, parallel_ctx->parallel_num());
+    filters = splitter.At(parallel_ctx->parallel_id()).size();
+  }
+  std::vector<int64_t> out;
+  GetOutAndPad(in_blob_desc->shape(), GetCustomizedConf(), &out, nullptr, nullptr);
+  std::vector<int64_t> out_shape = {data_num, filters};
+  size_t dhw_offset = DhwOffset(data_format);
+  for (size_t i = 0; i < NDims; ++i) {
+    out_shape.insert(out_shape.begin() + dhw_offset + i, out[i]);
+  }
+  BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
+  *out_blob_desc = *in_blob_desc;
+  out_blob_desc->mut_shape() = Shape(out_shape);
+  return Maybe<void>::Ok();
+}
+
+template<int32_t NDims>
+Maybe<void> ConvOp<NDims>::InferBlobDescs(
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature,
+    int64_t record_piece_size, std::function<void(OpContext*)> EnrollOpCtx) const {
+  const std::string& data_format = GetValFromCustomizedConf<std::string>("data_format");
+
+  // in
+  const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
+  CHECK_EQ_OR_RETURN(in_blob_desc->shape().NumAxes(), NDims + 2);
+  // CHECK_EQ(in_blob_desc->data_type(), job_desc().DefaultDataType());
 
   // out
   int64_t data_num = in_blob_desc->shape().At(0);
@@ -126,19 +143,11 @@ void ConvOp<NDims>::InferBlobDescs(std::function<BlobDesc*(const std::string&)> 
   for (size_t i = 0; i < NDims; ++i) {
     weight_shape[dhw_offset + i] = GetPbRfFromCustomizedConf<int32_t>("kernel_size").Get(i);
   }
-  if (fw_bw_split) {
-    CHECK_EQ(GetBlobDesc4BnInOp("weight")->shape(), Shape(weight_shape));
-  } else {
-    GetBlobDesc4BnInOp("weight")->mut_shape() = Shape(weight_shape);
-  }
+  CHECK_EQ_OR_RETURN(GetBlobDesc4BnInOp("weight")->shape(), Shape(weight_shape));
 
   if (GetValFromCustomizedConf<bool>("use_bias")) {
     // bias and bias_multiplier
-    if (fw_bw_split) {
-      CHECK_EQ(GetBlobDesc4BnInOp("bias")->shape(), Shape({filters}));
-    } else {
-      GetBlobDesc4BnInOp("bias")->mut_shape() = Shape({filters, 1});
-    }
+    CHECK_EQ_OR_RETURN(GetBlobDesc4BnInOp("bias")->shape(), Shape({filters}));
     if (DevIsGpuAndEnableCudnn() == false) {
       std::vector<int64_t> bias_mul_shape(NDims + 1, 1);
       for (size_t i = 0; i != NDims; ++i) { bias_mul_shape[i + 1] = out_shape[dhw_offset + i]; }
@@ -170,30 +179,7 @@ void ConvOp<NDims>::InferBlobDescs(std::function<BlobDesc*(const std::string&)> 
     fw_cudnn_buf->set_data_type(DataType::kChar);
   }
 #endif  // WITH_CUDA
-}
-
-template<int32_t NDims>
-void ConvOp<NDims>::InferBwBufBlobDescs(
-    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*,
-    const OpContext* op_ctx) const {
-  const ConvOpCtx* conv_op_ctx = static_cast<const ConvOpCtx*>(op_ctx);
-  if (DevIsGpuAndEnableCudnn() == false) {
-    // col_buf
-    BlobDesc* bw_col_buf = GetBlobDesc4BnInOp("bw_col_buf");
-    bw_col_buf->mut_shape() = Shape({conv_op_ctx->col_buf_size});
-    bw_col_buf->set_data_type(DataType::kChar);
-  }
-
-#ifdef WITH_CUDA
-  if (DevIsGpuAndEnableCudnn()) {
-    // cudnn_buf
-    BlobDesc* bw_cudnn_buf = GetBlobDesc4BnInOp("bw_cudnn_buf");
-    bw_cudnn_buf->mut_shape() =
-        Shape({static_cast<int64_t>(std::max(conv_op_ctx->cudnn_conv_algo_ctx.bwd_filter_ws_size,
-                                             conv_op_ctx->cudnn_conv_algo_ctx.bwd_data_ws_size))});
-    bw_cudnn_buf->set_data_type(DataType::kChar);
-  }
-#endif  // WITH_CUDA
+  return Maybe<void>::Ok();
 }
 
 template<int32_t NDims>
@@ -305,24 +291,27 @@ void ConvOp<NDims>::InferCudnnAlgo(
   CHECK(Global<CudnnConvCtxCache>::Get()->FindCudnnConvAlgoCtxWithConfig(
       *GetBlobDesc4BnInOp("in"), *GetBlobDesc4BnInOp("out"), *GetBlobDesc4BnInOp("weight"),
       GetCustomizedConf(), static_cast<size_t>(cudnn_buf_limit_byte()), conv_ctx));
+  CHECK(conv_ctx->fwd_algo_found) << "algo: " << conv_ctx->fwd_algo;
 }
 #endif  // WITH_CUDA
 
 template<int32_t NDims>
-void ConvOp<NDims>::InferHasBatchDim(
-    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
-  *HasBatchDim4BnInOp("out") = *HasBatchDim4BnInOp("in");
+Maybe<void> ConvOp<NDims>::InferBatchAxis(
+    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
+  *BatchAxis4BnInOp("out") = *BatchAxis4BnInOp("in");
+  return Maybe<void>::Ok();
 }
 
 template<int32_t NDims>
-void ConvOp<NDims>::GetSbpSignatures(
-    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
+Maybe<void> ConvOp<NDims>::GetSbpSignatures(
+    const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
     SbpSignatureList* sbp_sig_list) const {
   SbpSignatureBuilder()
       .Split("in", 0)
       .Broadcast({"weight", "bias"})
       .Split("out", 0)
       .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+  return Maybe<void>::Ok();
 }
 
 template class ConvOp<1>;

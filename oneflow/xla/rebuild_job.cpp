@@ -58,7 +58,7 @@ void SetOpInputBlobName(OperatorConf *op_conf, const std::string &input,
       break;
     }
     default:
-      SetBnValInOpTypeConf(spec_conf, input, blob_name, fixed_blob_name);
+      ReplaceStrValInPbFdOrPbRpf(spec_conf, input, blob_name, fixed_blob_name);
   }
 }
 
@@ -105,12 +105,6 @@ class FoldSubgraphBuilder {
     XlaLaunchOpConf *launch_conf,
     const std::unordered_map<std::string, std::string> &fixed_blob_names);
 
-  bool HasBatchDim(const std::string &blob_name) {
-    const auto &batch_dim_lbis = builder_->batch_dim_lbis();
-    LogicalBlobId lbi = BlobId(blob_name);
-    return batch_dim_lbis.count(lbi) > 0;
-  }
-  
   XlaLaunchOpConf::Argument *MutableArgumentConf(
       XlaLaunchOpConf *launch_conf, const std::string &argument_name) {
     XlaLaunchOpConf::Argument *argument_conf = nullptr;
@@ -201,12 +195,15 @@ void FoldSubgraphBuilder::FixSubgraphOutArgumentsBlobNames(
 
 void FoldSubgraphBuilder::buildXlaLaunchAttribute(
     const XlaGraph *sub_graph, XlaLaunchOpConf::Attribute *launch_attr) {
+  auto *resource_scope = launch_attr->mutable_resource_scope();
   for (const XlaNode *node : sub_graph->Nodes()) {
     if (!node->IsArgumentNode()) {
-      *(launch_attr->add_node()) = node->op()->op_conf();      
+      *(launch_attr->add_node()) = node->op()->op_conf();
     } else {
       auto *argument_proto = launch_attr->add_argument();
       argument_proto->set_name(node->op_name());
+      DeviceType device_type = mola::BackendToDeviceType(node->backend());
+      argument_proto->set_device_type(device_type);
       // Usually one argument node has either inputs or outputs
       CHECK(node->in_edges().size() == 0 || node->out_edges().size() == 0);
       // Build inputs or outputs for the argument nodes
@@ -221,18 +218,28 @@ void FoldSubgraphBuilder::buildXlaLaunchAttribute(
         argument_proto->set_out(argument.blob_name());
       }
 
-      // Restore the blob names that have batch dimension, so that it's no need
-      // to infer `HasBatchDim` for `XlaLaunch` operators. In practice it's hard
-      // to infer `HasBatchDim` since the operators to be infered have been
-      // folded. Normally we have to infer `HasBatchDim` before `SbpSignature`
-      // and `BlobDesc`, and `HasBatchDim` replies on the front operators
-      // `BlobDesc`. Therefor we probably could not infer `HasBatchDim` for the
+      // Restore the batch axis that have batch dimension, so that it's no need
+      // to infer `HasBatchAxis` for `XlaLaunch` operators. In practice it's hard
+      // to infer `HasBatchAxis` since the operators to be infered have been
+      // folded. Normally we have to infer `HasBatchAxis` before `SbpSignature`
+      // and `BlobDesc`, and `HasBatchAxis` replies on the front operators
+      // `BlobDesc`. Therefor we probably could not infer `HasBatchAxis` for the
       // folded operators because their inputs `BlobDesc` were not infered since
       // the front operators have been folded as well
-      if (HasBatchDim(argument_proto->out())) {
-        DoNoDuplicationAdd(launch_attr->mutable_batch_dim_blob(),
-                           argument_proto->out());
+      const std::string &argument_out = argument_proto->out();
+      if (builder_->HasBatchAxis(argument_out)) {
+        auto *batch_axis = resource_scope->mutable_batch_axis();
+        (*batch_axis)[argument_out] = builder_->GetBatchAxis(argument_out);
       }
+    }
+
+    // Restore output shapes
+    auto &shapes = *(resource_scope->mutable_shapes());
+    for (const XlaEdge *edge : node->out_edges()) {
+      const Argument &argument = edge->argument();
+      const std::string blob_name = argument.blob_name();
+      *(shapes[blob_name].mutable_shape()) = argument.shape_proto();
+      shapes[blob_name].set_data_type(argument.data_type());
     }
   }
 }
@@ -263,6 +270,8 @@ void FoldSubgraphBuilder::BuildXlaLaunchOps() {
     // Add xla launch operator
     OperatorConf op_conf; 
     op_conf.set_name(node->op_name());
+    DeviceType device_type = mola::BackendToDeviceType(node->backend());
+    op_conf.set_device_type(device_type);
 
     XlaLaunchOpConf *launch_conf = op_conf.mutable_xla_launch_conf();
     AddInBlobNames(node->in_edges(), launch_conf);
@@ -297,7 +306,9 @@ void FoldSubgraphBuilder::FixupControlInOpNames() {
     if (it != folded_op_names.end()) {
       ctrl_in_op_name = it->second->op_name();
     }
-    DoNoDuplicationAdd(conf->mutable_ctrl_in_op_name(), ctrl_in_op_name);
+    if (conf->name() != ctrl_in_op_name) {
+      DoNoDuplicationAdd(conf->mutable_ctrl_in_op_name(), ctrl_in_op_name);
+    }
   };
 
   for (const XlaNode *node : graph_.Nodes()) {
@@ -335,12 +346,11 @@ void FoldSubgraphBuilder::FixupInOutBlobNames() {
       fixed_blob_names.emplace(blob_name, fixed_blob_name);
 
       launch_conf->mutable_out()->Mutable(i)->assign(fixed_blob_name);
-      // Append to `batch_dim_lbis`
-      if (HasBatchDim(blob_name)) {
-        LogicalBlobId lbi;
-        lbi.set_op_name(launch_op_name);
-        lbi.set_blob_name(fixed_blob_name);
-        builder_->AddBatchDimLbi(lbi);
+      // Append to `batch_axis`
+      if (builder_->HasBatchAxis(blob_name)) {
+        fixed_blob_name = absl::StrCat(launch_op_name, "/", fixed_blob_name);
+        builder_->AddBatchAxis(fixed_blob_name,
+                               builder_->GetBatchAxis(blob_name));
       }
     }
 
@@ -402,7 +412,7 @@ void FoldSubgraphBuilder::FixupTimeShapes() {
 void FoldSubgraphBuilder::FixupSbpSignatures() {
   for (const XlaNode *node : launch_nodes_) {
     OperatorConf *op_conf = builder_->MutableOpConf(node->op_name());
-    std::shared_ptr<Operator> op = ConstructOp(*op_conf);
+    std::shared_ptr<Operator> op = ConstructOp(*op_conf, &GlobalJobDesc());
     std::unordered_map<std::string, std::string> blob_names;
     for (const std::string &bn : op->input_bns()) {
       std::string blob_name = BlobName(op->BnInOp2Lbi(bn));
@@ -424,8 +434,9 @@ void FoldSubgraphBuilder::FixupSbpSignatures() {
       std::string bn = blob_names.at(edge->argument().blob_name());
       (*sbp_signatures)[bn] = edge->sbp_policy(0);
     }
+    auto *resource_scope = attr_proto->mutable_resource_scope();
     // Append sbp signatures to xla launch operator
-    *(attr_proto->mutable_sbp_signature()) = *sbp_signatures;
+    *(resource_scope->mutable_sbp_signatures()) = *sbp_signatures;
     // Append sbp signatures to helper
     builder_->AddSbpSignature(node->op_name(), sbp_conf);
   }
@@ -442,8 +453,7 @@ void FoldSubgraphBuilder::RemoveLaunchFoldedOps() {
 }
 
 void RebuildXlaCompiledJob(const XlaGraph &graph, Job *job) {
-  FoldSubgraphBuilder builder(graph, job);
-  builder.Build();
+  FoldSubgraphBuilder(graph, job).Build();
 }
 
 }  // namespace oneflow

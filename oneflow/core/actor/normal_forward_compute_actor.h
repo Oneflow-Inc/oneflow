@@ -45,7 +45,6 @@ class NormalForwardCompActor final : public CompActor {
   void SendMsgToForwardModelSaveActor(int64_t batch_id);
   void SendConstBufInitMsgToBwActor();
 
-  int64_t random_seed_;
   int64_t cur_piece_id_;
   int64_t actual_num_of_piece_in_batch_;
 

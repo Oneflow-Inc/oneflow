@@ -12,39 +12,20 @@
 #include "oneflow/core/persistence/snapshot.h"
 #include "oneflow/core/register/blob.h"
 #include "oneflow/core/common/switch_func.h"
+#include "oneflow/core/kernel/new_kernel_util.h"
 
 namespace oneflow {
 
 template<cudaMemcpyKind cpy_kind>
 void Memcpy(DeviceCtx*, void* dst, const void* src, size_t sz);
 
-template<DeviceType device_type>
-struct GetCudaMemcpyKind;
-template<>
-struct GetCudaMemcpyKind<DeviceType::kCPU> {
-  static const cudaMemcpyKind val = cudaMemcpyKind::cudaMemcpyHostToHost;
-};
-template<>
-struct GetCudaMemcpyKind<DeviceType::kGPU> {
-  static const cudaMemcpyKind val = cudaMemcpyKind::cudaMemcpyDeviceToDevice;
-};
 size_t GetTmpSizeForReduceSum(DataType data_type, int64_t sum_elem_num);
-
-template<DeviceType device_type>
-void Memcpy(DeviceCtx*, void* dst, const void* src, size_t sz,
-            cudaMemcpyKind kind = GetCudaMemcpyKind<device_type>::val);
 
 void AutoMemcpy(DeviceCtx* ctx, void* dst, const void* src, size_t sz,
                 const MemoryCase& dst_mem_case, const MemoryCase& src_mem_case);
 
 template<DeviceType device_type>
 void Memset(DeviceCtx*, void* dst, const char value, size_t sz);
-
-#if defined(__CUDACC__)
-#define OF_DEVICE_FUNC __device__ __host__ __forceinline__
-#else
-#define OF_DEVICE_FUNC
-#endif
 
 template<typename T>
 OF_DEVICE_FUNC T ReduceCoreAdd(const T x, const T y) {
@@ -99,16 +80,8 @@ struct KernelUtilIf {
   static void InitializeWithProperConf(DeviceCtx* ctx, const InitializerConf* initializer_conf,
                                        uint32_t random_seed, Blob* blob,
                                        const std::string& data_format = "") {
-    if (initializer_conf == nullptr) {
-      initializer_conf = Global<JobDesc>::Get()->DefaultInitializerConf();
-    }
+    CHECK_NOTNULL(initializer_conf);
     Derived::InitializeWithConf(ctx, *initializer_conf, random_seed, blob, data_format);
-  }
-  static void InitializeWithProperConf(DeviceCtx* ctx, const PbMessage* initializer_conf,
-                                       uint32_t random_seed, Blob* blob,
-                                       const std::string& data_format = "") {
-    InitializeWithProperConf(ctx, static_cast<const InitializerConf*>(initializer_conf),
-                             random_seed, blob, data_format);
   }
 };
 
@@ -144,10 +117,6 @@ struct CpuKernelUtilIf {
   static void Transpose(DeviceCtx* ctx, const int32_t num_axis, const Shape& x_shape,
                         const Shape& y_shape, const PbRf<int32_t>& permutation,
                         const int64_t elem_cnt, const T* x, T* y);
-  static void InitializeWithDir(DeviceCtx* ctx, int32_t part_id, int32_t part_num,
-                                const std::string& model_dir, Blob* blob,
-                                const std::string& bn_in_op, int32_t dim_num,
-                                int64_t num_in_each_dim);
   static void Set(DeviceCtx* ctx, const T value, T* addr);
   static void Replicate(DeviceCtx* ctx, const int64_t n, T* y, const T* x);
   static void AddByScalar(DeviceCtx* ctx, const int64_t n, const T* x, const T y, T* z);
@@ -262,10 +231,6 @@ struct GpuKernelUtilIf {
                                  uint32_t random_seed, Blob* blob);
   static void InitializeWithConf(DeviceCtx* ctx, const InitializerConf& initializer_conf,
                                  uint32_t random_seed, Blob* blob, const std::string& data_format);
-  static void InitializeWithDir(DeviceCtx* ctx, int32_t part_id, int32_t part_num,
-                                const std::string& model_dir, Blob* blob,
-                                const std::string& bn_in_op, int32_t dim_num,
-                                int64_t num_in_each_dim);
   static void Set(DeviceCtx* ctx, const T value, T* addr);
   static void Replicate(DeviceCtx* ctx, const int64_t n, T* y, const T* x);
   static void AddByScalar(DeviceCtx* ctx, const int64_t n, const T* x, const T y, T* z);

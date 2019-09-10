@@ -15,11 +15,21 @@ class BiasAddKernel final : public KernelIf<device_type> {
  private:
   void ForwardDataContent(const KernelCtx&,
                           std::function<Blob*(const std::string&)>) const override;
-  void BackwardDataContent(const KernelCtx&,
-                           std::function<Blob*(const std::string&)>) const override;
-  void InitConstBufBlobs(DeviceCtx*,
-                         std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  void InitConstBufBlobs(DeviceCtx* ctx,
+                         std::function<Blob*(const std::string&)> BnInOp2Blob) const;
   const PbMessage& GetCustomizedOpConf() const override;
+};
+
+template<DeviceType device_type, typename T>
+struct BiasAddUtil {
+  static void BiasAddNCX(DeviceCtx* ctx, const Shape& shape, const int32_t bias_axis,
+                         const T* input, const T* bias, T* output);
+};
+
+template<>
+struct BiasAddUtil<DeviceType::kGPU, float16> {
+  static void BiasAddNCX(DeviceCtx* ctx, const Shape& shape, const int32_t bias_axis,
+                         const float16* input, const float16* bias, float16* output);
 };
 
 }  // namespace oneflow

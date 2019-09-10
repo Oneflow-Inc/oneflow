@@ -8,7 +8,7 @@ class MutVariableOpConTickInputHelper final : public MutOpConTickInputHelper {
  public:
   MutVariableOpConTickInputHelper() : MutOpConTickInputHelper() {}
 
-  bool IsTickInputBound() const override { return op_conf().variable_conf().has_tick(); }
+  bool VirtualIsTickInputBound() const override { return op_conf().variable_conf().has_tick(); }
 
   OperatorConf NewTickInputBoundOpConf(const std::string& lbn) const override {
     OperatorConf ret(op_conf());

@@ -26,6 +26,10 @@ XlaGraphCompiler::XlaGraphCompiler(
     : client_(client), builder_(builder), graph_(graph),
       entry_names_(entry_blob_names), return_names_(return_blob_names),
       alias_input_output_(alias_input_output) {
+  const std::vector<Argument> arguments = graph_->Arguments();
+  for (const Argument &argument : arguments) {
+    arguments_.emplace(argument.blob_name(), argument);
+  }
   CHECK_EQ(entry_blobs.size(), entry_blob_names.size());
 
   std::unordered_map<std::string, BlobDesc> blob_descs;
@@ -36,13 +40,9 @@ XlaGraphCompiler::XlaGraphCompiler(
                        runtime_desc.has_data_id_field(),
                        runtime_desc.has_col_num_field(),
                        runtime_desc.max_col_num());
-    blob_descs.emplace(entry_blob_names[i], blob_desc);
-  }
-  graph_->InferBlobDescs(&blob_descs, &parallel_ctx);
-
-  for (const auto &pair : blob_descs) {
-    LogicalBlobId lbi = BlobId(pair.first);
-    arguments_.emplace(pair.first, Argument(lbi, pair.second));
+    LogicalBlobId blob_id = BlobId(entry_blob_names[i]);
+    // TODO(hjchen2): Check blob shape and data type if existed
+    arguments_.emplace(entry_blob_names[i], Argument(blob_id, blob_desc));
   }
 }
 
@@ -68,6 +68,11 @@ void XlaGraphCompiler::BuildComputation(
       input_oprands.emplace(argument, oprand);
     }
 
+    xla::OpMetadata metadata;
+    metadata.set_op_type(op_type);
+    metadata.set_op_name(node->op_name());
+    builder_->SetOpMetadata(metadata);
+
     // Setup XlaOpContext Param to build a XlaOpContext
     XlaOpContext::Param param;
     param.backend = backend;
@@ -81,6 +86,8 @@ void XlaGraphCompiler::BuildComputation(
     // Do compile and lower the operator computation to HLO instructions
     XlaOpContext op_context(param);
     op_compiler->Compile(&op_context);
+
+    builder_->ClearOpMetadata();
 
     // Always insert new output into `all_outputs`
     const auto &outputs = op_context.outputs();
@@ -136,7 +143,6 @@ void XlaGraphCompiler::BuildExecutable(
 
 CompilationResult XlaGraphCompiler::Compile() {
   CHECK_NOTNULL(graph_);
-
   CompilationResult result;
   result.alias_input_output = alias_input_output_;
 

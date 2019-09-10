@@ -4,6 +4,8 @@
 #include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/job/machine_context.h"
 #include "oneflow/core/job/nccl_comm_manager.h"
+#include "oneflow/core/job/resource_desc.h"
+#include "oneflow/core/job/runtime_job_descs.h"
 #include "oneflow/core/thread/thread_manager.h"
 #include "oneflow/core/actor/act_event_logger.h"
 #include "oneflow/core/graph/task_node.h"
@@ -37,8 +39,8 @@ bool HasNonCtrlConsumedRegstDescId(const TaskProto& task) {
 
 }  // namespace
 
-Runtime::Runtime(const Plan& plan, bool is_experiment_phase) {
-  NewAllGlobal(plan, is_experiment_phase);
+Runtime::Runtime(const Plan& plan, size_t total_piece_num, bool is_experiment_phase) {
+  NewAllGlobal(plan, total_piece_num, is_experiment_phase);
   std::vector<const TaskProto*> mdupdt_tasks;
   std::vector<const TaskProto*> source_tasks;
   std::vector<const TaskProto*> other_tasks;
@@ -73,27 +75,23 @@ Runtime::Runtime(const Plan& plan, bool is_experiment_phase) {
   runtime_ctx->NewCounter("running_actor_cnt", this_machine_task_num);
   SendCmdMsg(mdupdt_tasks, ActorCmd::kSendInitialModel);
   SendCmdMsg(source_tasks, ActorCmd::kStart);
-  runtime_ctx->WaitUntilCntEqualZero("running_actor_cnt");
+}
+
+Runtime::~Runtime() {
+  Global<RuntimeCtx>::Get()->WaitUntilCntEqualZero("running_actor_cnt");
   OF_BARRIER();
   DeleteAllGlobal();
 }
 
-void Runtime::NewAllGlobal(const Plan& plan, bool is_experiment_phase) {
-  const JobDesc* job_desc = Global<JobDesc>::Get();
-  int64_t piece_num = 0;
-  if (is_experiment_phase) {
-    piece_num = job_desc->piece_num_of_experiment_phase();
-  } else {
-    piece_num = job_desc->NumOfPiecesInBatch() * job_desc->TotalBatchNum();
-  }
-  Global<RuntimeCtx>::New(piece_num, is_experiment_phase);
+void Runtime::NewAllGlobal(const Plan& plan, size_t total_piece_num, bool is_experiment_phase) {
+  Global<RuntimeCtx>::New(total_piece_num, is_experiment_phase);
   if (Global<MachineCtx>::Get()->IsThisMachineMaster()
       && Global<RuntimeCtx>::Get()->NeedCollectActEvent()) {
     Global<ActEventLogger>::New(is_experiment_phase);
   }
-  if (job_desc->TotalMachineNum() > 1) {
+  if (Global<ResourceDesc>::Get()->TotalMachineNum() > 1) {
 #ifdef PLATFORM_POSIX
-    if (job_desc->use_rdma()) {
+    if (Global<ResourceDesc>::Get()->use_rdma()) {
 #ifdef WITH_RDMA
       IBVerbsCommNet::Init(plan);
 #else
@@ -107,7 +105,6 @@ void Runtime::NewAllGlobal(const Plan& plan, bool is_experiment_phase) {
 #ifdef WITH_CUDA
   InitGlobalCudaDeviceProp();
 #endif
-  Global<SnapshotMgr>::New(plan);
   Global<MemoryAllocator>::New();
   Global<RegstMgr>::New(plan);
   Global<ActorMsgBus>::New();
@@ -115,9 +112,11 @@ void Runtime::NewAllGlobal(const Plan& plan, bool is_experiment_phase) {
 #ifdef WITH_CUDA
   Global<NcclCommMgr>::New(plan);
 #endif  // WITH_CUDA
+  Global<RuntimeJobDescs>::New(plan.job_confs().job_id2job_conf());
 }
 
 void Runtime::DeleteAllGlobal() {
+  Global<RuntimeJobDescs>::Delete();
 #ifdef WITH_CUDA
   Global<NcclCommMgr>::Delete();
 #endif  // WITH_CUDA
@@ -125,7 +124,6 @@ void Runtime::DeleteAllGlobal() {
   Global<ActorMsgBus>::Delete();
   Global<RegstMgr>::Delete();
   Global<MemoryAllocator>::Delete();
-  Global<SnapshotMgr>::Delete();
   Global<CommNet>::Delete();
   Global<ActEventLogger>::Delete();
   Global<RuntimeCtx>::Delete();

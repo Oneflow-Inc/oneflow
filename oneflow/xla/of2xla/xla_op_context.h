@@ -85,6 +85,8 @@ class XlaOpContext {
   // Output data type
   DataType OutputType(const std::string &name) const;
 
+  const Param &param() const { return param_; }
+
   template <typename T>
   T GetAttr(const std::string &attr_name) const;
 

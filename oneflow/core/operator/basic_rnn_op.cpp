@@ -5,16 +5,16 @@ namespace oneflow {
 const PbMessage& BasicRnnOp::GetCustomizedConf() const { return op_conf().basic_rnn_conf(); }
 
 void BasicRnnOp::VirtualInitFromOpConf() {
-  EnrollDataTmpBn("plus_op_out");
-  EnrollModelBn("i2h_weight");
-  EnrollModelBn("h2h_weight");
+  EnrollTmpBn("plus_op_out");
+  EnrollTmpBn("i2h_weight");
+  EnrollTmpBn("h2h_weight");
   if (GetValFromCustomizedConf<bool>("use_bias")) {
-    EnrollModelBn("bias");
+    EnrollTmpBn("bias");
     EnrollConstBufBn("bias_multiplier");
   }
 }
 
-void BasicRnnOp::VirtualInferBlobDescs(
+Maybe<void> BasicRnnOp::VirtualInferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   int32_t hidden_size = GetBlobDesc4BnInOp("out")->shape().At(1);
@@ -22,8 +22,8 @@ void BasicRnnOp::VirtualInferBlobDescs(
   // int64_t embedding_size = in_blob_desc->shape().Count(1);
   int64_t data_num = in_blob_desc->shape().At(0);
   *GetBlobDesc4BnInOp("plus_op_out") =
-      BlobDesc(Shape({data_num, hidden_size}), Global<JobDesc>::Get()->DefaultDataType(), false,
-               true, in_blob_desc->max_col_num());
+      BlobDesc(Shape({data_num, hidden_size}), job_desc().DefaultDataType(), false, true,
+               in_blob_desc->max_col_num());
   // *GetBlobDesc4BnInOp("i2h_weight") = BlobDesc(Shape({hidden_size, embedding_size}));
   // *GetBlobDesc4BnInOp("h2h_weight") = BlobDesc(Shape({hidden_size, hidden_size}));
   TODO();
@@ -32,6 +32,7 @@ void BasicRnnOp::VirtualInferBlobDescs(
     // *GetBlobDesc4BnInOp("bias_multiplier") = BlobDesc(Shape({data_num, 1}));
     TODO();
   }
+  return Maybe<void>::Ok();
 }
 
 REGISTER_OP(OperatorConf::kBasicRnnConf, BasicRnnOp);

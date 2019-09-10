@@ -1,8 +1,4 @@
 #include "oneflow/core/operator/naive_model_update_op.h"
-#include "oneflow/core/operator/rmsprop_model_update_op.h"
-#include "oneflow/core/operator/momentum_model_update_op.h"
-#include "oneflow/core/operator/lars_model_update_op.h"
-#include "oneflow/core/operator/adam_model_update_op.h"
 #include "oneflow/core/job/sbp_signature_builder.h"
 
 namespace oneflow {
@@ -10,23 +6,18 @@ namespace oneflow {
 void NormalModelUpdtOp::InitFromOpConf() {
   EnrollInputBn("model_diff", false);
   EnrollInputBn("total_instance_num_diff", false);
-  const JobDesc* g_job_conf = Global<JobDesc>::Get();
-  if (g_job_conf->IsTrain()) {
-    EnrollOutputBn("model", false);
-  } else if (g_job_conf->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
-    EnrollInputBn("model", false)->set_is_mutable(true);
-  } else {
-    UNIMPLEMENTED();
-  }
+  EnrollInputBn("model", false)->set_is_mutable(true);
+  EnrollInputBn("learning_rate", false);
+  EnrollInputBn("train_step", false);
   const PbMessage& conf = this->GetCustomizedConf();
   const auto& user_conf = *GetMsgPtrFromPbMessage<NormalModelUpdateOpUserConf>(conf, "user_conf");
   if (user_conf.has_clip_conf() && user_conf.clip_conf().has_clip_by_global_norm()) {
-    EnrollDataTmpBn("data_tmp");
+    EnrollTmpBn("data_tmp");
   }
   MdUpdtVirtualInitFromOpConf();
 }
 
-void NormalModelUpdtOp::InferBlobDescs(
+Maybe<void> NormalModelUpdtOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   const PbMessage& conf = this->GetCustomizedConf();
@@ -35,7 +26,7 @@ void NormalModelUpdtOp::InferBlobDescs(
     *GetBlobDesc4BnInOp("data_tmp") = *GetBlobDesc4BnInOp("model_diff");
     GetBlobDesc4BnInOp("data_tmp")->mut_shape() = Shape({1});
   }
-  MdUpdtVirtualInferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx);
+  return MdUpdtVirtualInferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx);
 }
 
 const PbMessage& NormalModelUpdtOp::GetCustomizedConf() const {
@@ -49,25 +40,29 @@ LogicalBlobId NormalModelUpdtOp::obn2lbi(const std::string& output_bn) const {
   return GenLogicalBlobId(GetValFromCustomizedConf<std::string>(output_bn));
 }
 
-void NormalModelUpdtOp::InferHasBatchDim(
-    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
+Maybe<void> NormalModelUpdtOp::InferBatchAxis(
+    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
   for (const auto& ibn : input_bns()) {
-    CHECK_EQ(*HasBatchDim4BnInOp(ibn), false);
+    CHECK_EQ_OR_RETURN(BatchAxis4BnInOp(ibn)->has_value(), false);
   }
+  return Maybe<void>::Ok();
 }
 
-void NormalModelUpdtOp::GetSbpSignatures(
-    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
+Maybe<void> NormalModelUpdtOp::GetSbpSignatures(
+    const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
     SbpSignatureList* sbp_sig_list) const {
   const auto& bns = AlwaysBroadcastParallelBns();
   PbRpf<std::string> broadcast_bns = {bns.begin(), bns.end()};
   *broadcast_bns.Add() = "total_instance_num_diff";
-  FOR_RANGE(int64_t, i, 0, LogicalBlobDesc4Ibn("model").shape().NumAxes()) {
+  *broadcast_bns.Add() = "learning_rate";
+  *broadcast_bns.Add() = "train_step";
+  FOR_RANGE(int64_t, i, 0, JUST(LogicalBlobDesc4Ibn("model"))->shape().NumAxes()) {
     SbpSignatureBuilder()
         .Split(input_bns(), i)
         .Broadcast(broadcast_bns)
         .Build(sbp_sig_list->mutable_sbp_signature()->Add());
   }
+  return Maybe<void>::Ok();
 }
 
 REGISTER_OP_CREATOR(OperatorConf::kNormalMdupdtConf, [](const OperatorConf& op_conf) -> Operator* {

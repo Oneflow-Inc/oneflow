@@ -27,13 +27,6 @@ bool IsForwardTaskType(TaskType tt) {
          || tt == TaskType::kPackForward || tt == TaskType::kUnpackForward
          || tt == TaskType::kRepeatForward || tt == TaskType::kEveryNth;
 }
-
-bool IsBackwardTaskType(TaskType tt) {
-  return tt == TaskType::kNormalBackward || tt == TaskType::kRecurrentBackward
-         || tt == TaskType::kPackBackward || tt == TaskType::kUnpackBackward
-         || tt == TaskType::kRepeatBackward;
-}
-
 bool IsMdUpdtTaskType(TaskType tt) { return tt == TaskType::kNormalMdUpdt; }
 
 TaskNode::TaskNode()
@@ -78,6 +71,7 @@ void TaskNode::set_machine_id(int64_t val) {
 void TaskNode::set_thrd_id(int64_t val) {
   CHECK_EQ(thrd_id_, -1);
   thrd_id_ = val;
+  CHECK_GE(thrd_id_, 0);
   if (machine_id_ != -1) { UpdateTaskId(); }
 }
 
@@ -126,6 +120,21 @@ void TaskNode::InferTimeShapeIfMeaningful() {
   if (!IsMeaningLess()) { InferProducedDataRegstTimeShape(); }
 }
 
+std::shared_ptr<Shape> TaskNode::GetFastestInputOutputTimeShape() const {
+  std::shared_ptr<Shape> shape;
+  auto UpdateRetShape = [&](TaskEdge* edge) {
+    for (const auto& regst : edge->GetRegsts()) {
+      if (!shape || shape->elem_cnt() < regst->data_regst_time_shape()->elem_cnt()) {
+        shape = regst->data_regst_time_shape();
+      }
+    }
+  };
+  ForEachOutDataEdge(UpdateRetShape);
+  if (shape) { return shape; }
+  ForEachInDataEdge(UpdateRetShape);
+  return shape;
+}
+
 void TaskNode::ForEachConsumedDataRegst(
     std::function<void(const std::string&, const RegstDesc*)> Handler) const {
   for (const auto& pair : consumed_regsts_) {
@@ -149,7 +158,6 @@ void TaskNode::Build() {
   BuildExecGphAndRegst();
   LockRegsts();
   FixRegisterNumRange();
-  FixPackedBlobDescOfProducedRegst();
 }
 
 void TaskNode::EraseZeroSizeProducedBlob() {
@@ -197,15 +205,16 @@ std::string TaskNode::VisualStr() const {
 bool TaskNode::IsMeaningLess() { return produced_regsts_.empty() && consumed_regsts_.empty(); }
 
 void TaskNode::ToProto(TaskProto* task_proto) {
+  CHECK_NE(chain_id_, -1);
   task_proto->set_task_type(GetTaskType());
   task_proto->set_machine_id(machine_id_);
   task_proto->set_thrd_id(thrd_id_);
   task_proto->set_task_id(task_id_);
+  task_proto->set_job_id(GlobalJobDesc().job_id());
   task_proto->mutable_task_set_info()->set_area_id(area_id_);
   task_proto->mutable_task_set_info()->set_chain_id(chain_id_);
   task_proto->mutable_task_set_info()->set_order_in_graph(order_in_graph_);
-  exec_gph_.ToExecSequence(IsBackwardTaskType(GetTaskType()) == false, parallel_ctx(),
-                           task_proto->mutable_exec_sequence());
+  exec_gph_.ToExecSequence(true, parallel_ctx(), task_proto->mutable_exec_sequence());
   auto produced_regst_proto = task_proto->mutable_produced_regst_desc();
   for (auto& pair : produced_regsts_) {
     RegstDescProto regst_desc_proto;
@@ -291,7 +300,7 @@ std::shared_ptr<RegstDesc> TaskNode::NewProducedRegst(bool enable_mem_sharing,
   *(regst->mut_regst_desc_type()) = regst_desc_type;
   regst->UpdtMinRegstNumIfNeed(min_register_num);
   regst->UpdtMaxRegstNumIfNeed(max_register_num);
-  regst->set_enable_mem_sharing(Global<JobDesc>::Get()->enable_mem_sharing() && enable_mem_sharing);
+  regst->set_enable_mem_sharing(GlobalJobDesc().enable_mem_sharing() && enable_mem_sharing);
   InitProducedRegstMemCase(regst.get());
   return regst;
 }
@@ -313,8 +322,12 @@ void TaskNode::InitProducedRegstMemCase(MemoryCase* mem_case) {
 
 void TaskNode::PinConsumedRegstMemCase(MemoryCase* mem_case) {
   if (mem_case->has_host_mem() && device_type() == DeviceType::kGPU) {
-    mem_case->mutable_host_mem()->set_used_by_device(true);
+    mem_case->mutable_host_mem()->mutable_cuda_pinned_mem()->set_device_id(GpuPhyId());
   }
+}
+
+void TaskNode::ConsumeRegst(const std::string& name) {
+  consumed_regsts_.emplace(name, std::list<std::shared_ptr<RegstDesc>>{});
 }
 
 void TaskNode::ConsumeRegst(const std::string& name, std::shared_ptr<RegstDesc> regst) {
@@ -479,41 +492,64 @@ size_t TaskNode::in_data_edges_size() const { return GetEdgesSize(&TaskNode::For
 
 size_t TaskNode::out_data_edges_size() const { return GetEdgesSize(&TaskNode::ForEachOutDataEdge); }
 
-std::map<TaskType, std::string> task_type2color = {{kInvalid, "0"},
-                                                   {kNormalForward, "2"},
-                                                   {kNormalBackward, "3"},
-                                                   {kRecordLoad, "1"},
-                                                   {kDecode, "1"},
-                                                   {kLoss, "4"},
-                                                   {kLossAcc, "5"},
-                                                   {kLossPrint, "1"},
-                                                   {kNormalMdUpdt, "6"},
-                                                   {kMdSave, "1"},
-                                                   {kMdDiffAcc, "7"},
-                                                   {kCopyHd, "8"},
-                                                   {kCopyCommNet, "9"},
-                                                   {kBoxing, "10"},
-                                                   {kPrint, "1"},
-                                                   {kReduceConcat, "2"},
-                                                   {kReduceScatter, "2"},
-                                                   {kReduceAdd, "2"},
-                                                   {kReduceGather, "2"},
-                                                   {kReduceSplit, "2"},
-                                                   {kNcclAllReduce, "2"},
-                                                   {kNcclReduceScatter, "2"},
-                                                   {kNcclAllGather, "2"},
-                                                   {kAccuracy, "4"},
-                                                   {kAccuracyPrint, "1"},
-                                                   {kAccuracyAcc, "5"},
-                                                   {kDecodeRandom, "1"},
-                                                   {kPackForward, "11"},
-                                                   {kPackBackward, "12"},
-                                                   {kUnpackForward, "11"},
-                                                   {kUnpackBackward, "12"},
-                                                   {kRepeatForward, "2"},
-                                                   {kRepeatBackward, "3"},
-                                                   {kReduceIdentity, "2"},
-                                                   {kAcc, "5"},
-                                                   {kOptimizer, "12"},
-                                                   {kEveryNth, "2"}};
+std::map<TaskType, std::string> task_type2color = {
+    {kInvalid, "0"},        {kNormalForward, "2"},
+    {kWaitAndSendIds, "1"}, {kForeignInput, "1"},
+    {kForeignOutput, "1"},  {kReentrantLock, "1"},
+    {kCallbackNotify, "1"}, {kSourceTick, "1"},
+    {kTick, "1"},           {kAccTick, "1"},
+    {kRecordLoad, "1"},     {kDecode, "1"},
+    {kLoss, "4"},           {kNormalMdUpdt, "6"},
+    {kMdDiffAcc, "7"},      {kCopyHd, "8"},
+    {kCopyCommNet, "9"},    {kBoxing, "10"},
+    {kPrint, "1"},          {kReduceConcat, "2"},
+    {kReduceScatter, "2"},  {kReduceAdd, "2"},
+    {kReduceGather, "2"},   {kReduceSplit, "2"},
+    {kNcclAllReduce, "2"},  {kNcclReduceScatter, "2"},
+    {kNcclAllGather, "2"},  {kAccuracy, "4"},
+    {kDecodeRandom, "1"},   {kPackForward, "11"},
+    {kUnpackForward, "11"}, {kRepeatForward, "2"},
+    {kReduceIdentity, "2"}, {kAcc, "5"},
+    {kOptimizer, "12"},     {kEveryNth, "2"},
+    {kCase, "2"},           {kEsac, "2"}};
+
+std::map<TaskType, std::string> task_type2type_str = {{kInvalid, "kInvalid"},
+                                                      {kNormalForward, "kNormalForward"},
+                                                      {kWaitAndSendIds, "kWaitAndSendIds"},
+                                                      {kForeignInput, "kForeignInput"},
+                                                      {kForeignOutput, "kForeignOutput"},
+                                                      {kReentrantLock, "kReentrantLock"},
+                                                      {kCallbackNotify, "kCallbackNotify"},
+                                                      {kSourceTick, "kSourceTick"},
+                                                      {kTick, "kTick"},
+                                                      {kAccTick, "kAccTick"},
+                                                      {kRecordLoad, "kRecordLoad"},
+                                                      {kDecode, "kDecode"},
+                                                      {kLoss, "kLoss"},
+                                                      {kNormalMdUpdt, "kNormalMdUpdt"},
+                                                      {kMdDiffAcc, "kMdDiffAcc"},
+                                                      {kCopyHd, "kCopyHd"},
+                                                      {kCopyCommNet, "kCopyCommNet"},
+                                                      {kBoxing, "kBoxing"},
+                                                      {kPrint, "kPrint"},
+                                                      {kReduceConcat, "kReduceConcat"},
+                                                      {kReduceScatter, "kReduceScatter"},
+                                                      {kReduceAdd, "kReduceAdd"},
+                                                      {kReduceGather, "kReduceGather"},
+                                                      {kReduceSplit, "kReduceSplit"},
+                                                      {kNcclAllReduce, "kNcclAllReduce"},
+                                                      {kNcclReduceScatter, "kNcclReduceScatter"},
+                                                      {kNcclAllGather, "kNcclAllGather"},
+                                                      {kAccuracy, "kAccuracy"},
+                                                      {kDecodeRandom, "kDecodeRandom"},
+                                                      {kPackForward, "kPackForward"},
+                                                      {kUnpackForward, "kUnpackForward"},
+                                                      {kRepeatForward, "kRepeatForward"},
+                                                      {kReduceIdentity, "kReduceIdentity"},
+                                                      {kAcc, "kAcc"},
+                                                      {kOptimizer, "kOptimizer"},
+                                                      {kEveryNth, "kEveryNth"},
+                                                      {kCase, "kCase"},
+                                                      {kEsac, "kEsac"}};
+
 }  // namespace oneflow

@@ -10,33 +10,22 @@ void DropoutOp::InitFromOpConf() {
   CHECK_LT(dropout_rate, 1);
   EnrollInputBn("in");
   EnrollOutputBn("out");
-  if (Global<JobDesc>::Get()->IsTrain()) {
-    EnrollDataTmpBn("random_mask");
-  } else if (Global<JobDesc>::Get()->IsPredict()
-             && Global<JobDesc>::Get()
-                    ->other_conf()
-                    .predict_conf()
-                    .has_tmp_split_fw_bw_train_conf()) {
-    EnrollOutputBn("random_mask");
-  }
+  if (job_desc().IsTrain()) { EnrollOutputBn("random_mask"); }
 }
 
 const PbMessage& DropoutOp::GetCustomizedConf() const { return op_conf().dropout_conf(); }
 
-void DropoutOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                               const ParallelContext* parallel_ctx) const {
+Maybe<void> DropoutOp::InferBlobDescs(
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx) const {
   // CHECK_EQ(op_conf().dropout_conf().noise_shape().dim_size(),
   //          GetBlobDesc4BnInOp("in")->shape().NumAxes());
   *GetBlobDesc4BnInOp("out") = *GetBlobDesc4BnInOp("in");
-  if (Global<JobDesc>::Get()->IsTrain()
-      || (Global<JobDesc>::Get()->IsPredict()
-          && Global<JobDesc>::Get()
-                 ->other_conf()
-                 .predict_conf()
-                 .has_tmp_split_fw_bw_train_conf())) {
+  if (job_desc().IsTrain()) {
     *GetBlobDesc4BnInOp("random_mask") = *GetBlobDesc4BnInOp("in");
     GetBlobDesc4BnInOp("random_mask")->set_data_type(DataType::kFloat);
   }
+  return Maybe<void>::Ok();
 }
 
 void DropoutOp::VirtualGenKernelConf(
@@ -48,21 +37,21 @@ void DropoutOp::VirtualGenKernelConf(
   GetBlobDesc4BnInOp("out")->shape().ToProto(mut_dropout_conf->mutable_out());
 }
 
-void DropoutOp::InferHasBatchDim(
-    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
-  for (const auto& obn : output_bns()) {
-    *HasBatchDim4BnInOp(obn) = *HasBatchDim4BnInOp(SoleIbn());
-  }
+Maybe<void> DropoutOp::InferBatchAxis(
+    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
+  for (const auto& obn : output_bns()) { *BatchAxis4BnInOp(obn) = *BatchAxis4BnInOp(SoleIbn()); }
+  return Maybe<void>::Ok();
 }
 
-void DropoutOp::GetSbpSignatures(
-    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
+Maybe<void> DropoutOp::GetSbpSignatures(
+    const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
     SbpSignatureList* sbp_sig_list) const {
   SbpSignatureBuilder()
       .Split(input_bns(), 0)
       .Split(output_bns(), 0)
-      .MakeSplitSignatureListBuilder(LogicalBlobDesc4Ibn("in").shape().NumAxes())
+      .MakeSplitSignatureListBuilder(JUST(LogicalBlobDesc4Ibn("in"))->shape().NumAxes())
       .Build(sbp_sig_list);
+  return Maybe<void>::Ok();
 }
 
 REGISTER_OP(OperatorConf::kDropoutConf, DropoutOp);

@@ -1,22 +1,48 @@
+#include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/job_completer/job_completer.h"
-#include "oneflow/core/job_completer/autovar.h"
 #include "oneflow/core/job_completer/autograd.h"
 #include "oneflow/core/job_completer/autotick.h"
 #include "oneflow/core/job_completer/add_keep_header_only_op_conf.h"
 #include "oneflow/core/job_completer/optimizer.h"
-#include "oneflow/core/job_completer/add_saver.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job_completer/all_reduce_add_pass.h"
-#include "oneflow/core/job_completer/freeze_sbp_signature.h"
+#include "oneflow/core/job_completer/set_default_variable_conf.h"
+#include "oneflow/core/job_completer/all_reduce_sequence_pass.h"
 #include "oneflow/core/job_completer/group_boxing_by_dst_parallel.h"
+#include "oneflow/core/job_completer/auto_mixed_precision.h"
+#include "oneflow/core/job_completer/auto_train_step.h"
+#include "oneflow/core/job_completer/auto_learning_rate.h"
+
+#ifdef WITH_XLA
+#include "oneflow/xla/rewrite_optimizer.h"
+DECLARE_bool(use_xla_jit);
+#endif  // WITH_XLA
 
 namespace oneflow {
 
 namespace {
 
+void CheckOpGraph(const OpGraph& op_graph) {
+  op_graph.ForEachNode([&](OpNode* op_node) {
+    size_t in_cnt = 0;
+    op_graph.ForEachDataAndCtrlInNode(op_node, [&](OpNode*) { ++in_cnt; });
+    if (in_cnt == 0) { CHECK(op_node->op().op_conf().has_source_tick_conf()); }
+    size_t out_cnt = 0;
+    op_graph.ForEachDataAndCtrlOutNode(op_node, [&](OpNode*) { ++out_cnt; });
+    if (out_cnt == 0) { CHECK(op_node->op().op_conf().has_sink_tick_conf()); }
+  });
+}
+
 void WithOpGraphAndMutJob(Job* job, const std::function<void(const OpGraph&, Job*)>& Handler) {
   OpGraph op_graph(*job);
   Handler(op_graph, job);
+}
+
+void WithOpGraphAndMutJobBuilder(Job* job,
+                                 const std::function<void(const OpGraph&, JobBuilder*)>& Handler) {
+  OpGraph op_graph(*job);
+  JobBuilder job_builder(job);
+  Handler(op_graph, &job_builder);
 }
 
 void GenerateFacadeImplOpConfIf(const OpNode& op_node, JobBuilder* job_builder) {
@@ -28,16 +54,14 @@ void GenerateFacadeImplOpConfIf(const OpNode& op_node, JobBuilder* job_builder) 
   }
 }
 
-void ReplaceFacade(const OpGraph& op_graph, Job* job) {
-  JobBuilder job_builder(job);
-  op_graph.ForEachNode(
-      [&](OpNode* op_node) { GenerateFacadeImplOpConfIf(*op_node, &job_builder); });
+void ReplaceFacade(const OpGraph& op_graph, JobBuilder* job_builder) {
+  op_graph.ForEachNode([&](OpNode* op_node) { GenerateFacadeImplOpConfIf(*op_node, job_builder); });
 }
 
 void UpdateJobHelperConfProducedLbi2ConsumedDiffLbi(
-    const HashMap<LogicalBlobId, LogicalBlobId>& lbi2diff_lbi, Job* job) {
+    const HashMap<LogicalBlobId, LogicalBlobId>& lbi2diff_lbi, JobBuilder* job_builder) {
   auto& mut_pairs =
-      (*job->mutable_helper()->mutable_tag2lbi_relations())[kProducedLbi2ConsumedDiffLbi];
+      (*job_builder->mutable_helper()->mutable_tag2lbi_relations())[kProducedLbi2ConsumedDiffLbi];
   for (const auto& pair : lbi2diff_lbi) {
     auto* mut_pair = mut_pairs.add_pair();
     *mut_pair->mutable_first() = pair.first;
@@ -91,22 +115,26 @@ void SetSbpSignatureHintByIdenticalSbpObaPairs(const OpGraph& op_graph, JobBuild
   }
 }
 
-void UpdateOpSbpSignatureHint(const OpGraph& op_graph, Job* job) {
-  JobBuilder job_builder(job);
+void UpdateOpSbpSignatureHint(const OpGraph& op_graph, JobBuilder* job_builder) {
   op_graph.ForEachNode(
-      [&](OpNode* op_node) { BindIdenticalSbpObaPairsBetweenIbns(*op_node, &job_builder); });
-  SetSbpSignatureHintByIdenticalSbpObaPairs(op_graph, &job_builder);
+      [&](OpNode* op_node) { BindIdenticalSbpObaPairsBetweenIbns(*op_node, job_builder); });
+  SetSbpSignatureHintByIdenticalSbpObaPairs(op_graph, job_builder);
 }
 
-void GenerateOpConf4Trainning(const OpGraph& op_graph, Job* job) {
+void GenerateOpConf4Trainning(const OpGraph& op_graph, JobBuilder* job_builder) {
   LogicalBlobId total_loss_instance_num;
   HashMap<LogicalBlobId, LogicalBlobId> lbi2diff_lbi;
-  AutoGrad(op_graph, job, &lbi2diff_lbi);
+  AutoGrad(op_graph, job_builder, &lbi2diff_lbi);
   std::function<const LogicalBlobId&(const ParallelDesc&)> LossInstanceNum4ParallelDesc;
-  AddTotalLossInstanceNumOpConf(op_graph, job, lbi2diff_lbi, &LossInstanceNum4ParallelDesc);
-  AddOptimizerOpConf(op_graph, job, lbi2diff_lbi, LossInstanceNum4ParallelDesc);
-  UpdateJobHelperConfProducedLbi2ConsumedDiffLbi(lbi2diff_lbi, job);
-  UpdateOpSbpSignatureHint(op_graph, job);
+  AddTotalLossInstanceNumOpConf(op_graph, job_builder, lbi2diff_lbi, &LossInstanceNum4ParallelDesc);
+  AddOptimizerOpConf(op_graph, job_builder, lbi2diff_lbi, LossInstanceNum4ParallelDesc);
+  UpdateJobHelperConfProducedLbi2ConsumedDiffLbi(lbi2diff_lbi, job_builder);
+  UpdateOpSbpSignatureHint(op_graph, job_builder);
+}
+
+void RewriteOptimizerOp(const OpGraph& op_graph, Job* job) {
+  mola::XlaGraph graph(&op_graph);
+  RewriteOptimizerGraph(graph, job);
 }
 
 std::function<ParallelConf*(const std::string&)> MakeGetterMutParallelConf4OpName(
@@ -133,21 +161,24 @@ std::function<OperatorConf*(const std::string&)> MakeMutableOperatorConf4OpName(
   return [op_name2op_conf](const std::string& op_name) { return op_name2op_conf->at(op_name); };
 }
 
-void AddIdentityOp(const std::string& prefix, Job* job, const HashSet<LogicalBlobId>& input_lbis,
+void AddIdentityOp(const std::string& op_name, Job* job, const HashSet<LogicalBlobId>& input_lbis,
                    HashMap<LogicalBlobId, LogicalBlobId>* old_lbi2new_lbi,
+                   HashMap<LogicalBlobId, std::string>* old_lbi2new_obn,
                    const ParallelConf& parallel_conf) {
   // add tuple identity op
   OperatorConf* tuple_identity_op = job->mutable_net()->add_op();
-  tuple_identity_op->set_name(prefix + NewUniqueId());
+  tuple_identity_op->set_name(op_name);
   TupleIdentityOpConf* tuple_identity_op_conf = tuple_identity_op->mutable_tuple_identity_conf();
   int32_t idx = 0;
   for (const LogicalBlobId& lbi : input_lbis) {
-    std::string blob_name = std::string("out_") + std::to_string(idx++);
+    const std::string& obn = GenRepeatedBn("out", idx++);
+    const std::string& blob_name = obn;
     {
       LogicalBlobId output_lbi;
       output_lbi.set_op_name(tuple_identity_op->name());
       output_lbi.set_blob_name(blob_name);
       CHECK(old_lbi2new_lbi->emplace(lbi, output_lbi).second);
+      CHECK(old_lbi2new_obn->emplace(lbi, obn).second);
     }
     tuple_identity_op_conf->add_in(lbi.op_name() + "/" + lbi.blob_name());
     tuple_identity_op_conf->add_out(blob_name);
@@ -159,15 +190,18 @@ void AddIdentityOp(const std::string& prefix, Job* job, const HashSet<LogicalBlo
 }
 
 void AddIdentityOpAndReconnect(
-    const std::string& identity_op_name_prefix, Job* job, const std::vector<OpEdge*>& op_edges,
+    const std::string& op_name_prefix, Job* job, const std::vector<OpEdge*>& op_edges,
     const std::function<OperatorConf*(const std::string&)>& MutOperatorConf4OpName,
     const ParallelConf& parallel_conf) {
   // add identity op
   HashSet<LogicalBlobId> lbis;
   for (OpEdge* edge : op_edges) { lbis.insert(edge->lbis().begin(), edge->lbis().end()); }
   HashMap<LogicalBlobId, LogicalBlobId> old_lbi2new_lbi;
-  AddIdentityOp(identity_op_name_prefix, job, lbis, &old_lbi2new_lbi, parallel_conf);
+  HashMap<LogicalBlobId, std::string> old_lbi2new_obn;
+  const auto& identity_op_name = op_name_prefix + NewUniqueId();
+  AddIdentityOp(identity_op_name, job, lbis, &old_lbi2new_lbi, &old_lbi2new_obn, parallel_conf);
   // reconnect to identity op
+  HashMap<LogicalBlobId, SbpParallel> old_lbi2sbp_parallel;
   for (OpEdge* edge : op_edges) {
     OperatorConf* op_conf = MutOperatorConf4OpName(edge->dst_node()->op().op_name());
     PbMessage* op_type_conf = MutableMessageInPbMessage(op_conf, op_conf->op_type_case());
@@ -175,100 +209,24 @@ void AddIdentityOpAndReconnect(
       std::string lbn_check = GenLogicalBlobName(lbi);
       std::string identity_out_lbn = GenLogicalBlobName(old_lbi2new_lbi.at(lbi));
       for (const std::string& ibn : edge->lbi2ibns().at(lbi)) {
-        SetBnValInOpTypeConf(op_type_conf, ibn, lbn_check, identity_out_lbn);
-      }
-    }
-  }
-}
-
-void FixTickOpIfExists(Job* job) {
-  auto MutParallelConf4OpName = MakeGetterMutParallelConf4OpName(job->mutable_placement());
-  OperatorConf* tick_op_conf = nullptr;
-  FOR_RANGE(int, idx, 0, job->mutable_net()->op_size()) {
-    OperatorConf* op_conf = job->mutable_net()->mutable_op(idx);
-    if (op_conf->has_tick_conf()) {
-      CHECK(tick_op_conf == nullptr);
-      tick_op_conf = op_conf;
-    }
-  }
-  if (tick_op_conf == nullptr) { return; }
-  if (tick_op_conf->tick_conf().has_in()) { return; }
-  std::map<OperatorConf::OpTypeCase, std::vector<OperatorConf*>> op_type_case2source_op_confs;
-  FOR_RANGE(int, idx, 0, job->mutable_net()->op_size()) {
-    OperatorConf* op_conf = job->mutable_net()->mutable_op(idx);
-    if (op_conf == tick_op_conf) { continue; }
-    DeviceType device_type = ParallelDesc(*MutParallelConf4OpName(op_conf->name())).device_type();
-    if (ConstructOp(*op_conf, device_type)->input_bns().size() == 0) {
-      op_type_case2source_op_confs[op_conf->op_type_case()].push_back(op_conf);
-    }
-  }
-  if (op_type_case2source_op_confs.find(OperatorConf::kRecordLoadConf)
-      != op_type_case2source_op_confs.end()) {
-    CHECK_EQ(op_type_case2source_op_confs.size(), 1);
-  }
-  // set input of tick op
-  OperatorConf* source_op_conf = op_type_case2source_op_confs.cbegin()->second.at(0);
-  ParallelConf* source_parallel_conf = MutParallelConf4OpName(source_op_conf->name());
-  DeviceType device_type = ParallelDesc(*source_parallel_conf).device_type();
-  std::shared_ptr<Operator> source_op = ConstructOp(*source_op_conf, device_type);
-  CHECK_GE(source_op->output_bns().size(), 1);
-  LogicalBlobId src_first_output_lbi = source_op->BnInOp2Lbi(source_op->output_bns().Get(0));
-  std::string source_op_output_lbn = GenLogicalBlobName(src_first_output_lbi);
-  CHECK_EQ(tick_op_conf->tick_conf().has_in(), false);
-  tick_op_conf->mutable_tick_conf()->set_in(source_op_output_lbn);
-  // fix tick op placement
-  *MutParallelConf4OpName(tick_op_conf->name()) = *source_parallel_conf;
-  // add log_counter op connecting to tick op, making tick op always consumed
-  OperatorConf* tick_log_counter = job->mutable_net()->add_op();
-  tick_log_counter->set_name("tick_log_counter_" + NewUniqueId());
-  LogCounterOpConf* tick_log_counter_conf = tick_log_counter->mutable_log_counter_conf();
-  tick_log_counter_conf->set_in(tick_op_conf->name() + "/" + tick_op_conf->tick_conf().out());
-  tick_log_counter_conf->set_interval(MaxVal<int32_t>::value);
-  // add placement of tick_log_counter op
-  PlacementGroup* p_group = job->mutable_placement()->add_placement_group();
-  *(p_group->mutable_op_set()->add_op_name()) = tick_log_counter->name();
-  *(p_group->mutable_parallel_conf()) = *source_parallel_conf;
-}
-
-void ConvertPseudoChainToChain(Job* job) {
-  auto GetSourceNodesAndEdges = [&](const HashSet<OpNode*>& chain_nodes,
-                                    HashSet<OpNode*>* source_nodes,
-                                    std::vector<OpEdge*>* source_edges) {
-    for (OpNode* node : chain_nodes) {
-      for (OpEdge* edge : node->in_edges()) {
-        if (chain_nodes.find(edge->src_node()) == chain_nodes.end()) {
-          source_edges->push_back(edge);
-          source_nodes->insert(node);
+        ReplaceStrValInPbFdOrPbRpf(op_type_conf, ibn, lbn_check, identity_out_lbn);
+        const auto& sbp_parallel = edge->dst_node()->SbpParallel4BnInOp(ibn);
+        const auto& sbp_iter = old_lbi2sbp_parallel.find(lbi);
+        if (sbp_iter == old_lbi2sbp_parallel.end()) {
+          old_lbi2sbp_parallel[lbi] = sbp_parallel;
+        } else {
+          CHECK(sbp_iter->second == sbp_parallel);
         }
       }
     }
-  };
-  auto MutOperatorConf4OpName = MakeMutableOperatorConf4OpName(job);
-  auto ParallelConf4OpName = MakeGetterParallelConf4OpName(job->placement());
-  OpGraph(*job).ForEachPseudoChain([&](const HashSet<OpNode*>& chain_nodes) {
-    HashSet<OpNode*> source_nodes;
-    std::vector<OpEdge*> source_edges;
-    GetSourceNodesAndEdges(chain_nodes, &source_nodes, &source_edges);
-    if (source_edges.size() <= 1) { return; }
-    if (source_nodes.size() <= 1) { return; }
-    if (chain_nodes.size() - source_nodes.size() <= 2) { return; }
-    const OpNode* first_node = *source_nodes.begin();
-    if (first_node->parallel_desc().device_type() == DeviceType::kCPU) { return; }
-    HashMap<bool, std::vector<OpEdge*>> has_diff2source_edges;
-    for (OpEdge* edge : source_edges) { has_diff2source_edges[edge->has_diff()].push_back(edge); }
-    for (const auto& pair : has_diff2source_edges) {
-      HashSet<OpNode*> src_nodes;
-      HashSet<OpNode*> dst_nodes;
-      for (OpEdge* edge : pair.second) {
-        src_nodes.emplace(edge->src_node());
-        dst_nodes.emplace(edge->dst_node());
-      }
-      if (src_nodes.size() > 1 && dst_nodes.size() > 1) {
-        AddIdentityOpAndReconnect("pseudo_chain_header_", job, pair.second, MutOperatorConf4OpName,
-                                  *ParallelConf4OpName(first_node->op().op_name()));
-      }
-    }
-  });
+  }
+  // set sbp conf for tuple_identity_op
+  CHECK_EQ(old_lbi2new_obn.size(), old_lbi2sbp_parallel.size());
+  auto* sbp_sig_conf_map = job->mutable_sbp_conf()->mutable_op_name2sbp_signature_conf();
+  auto* sbp_parallel_map = (*sbp_sig_conf_map)[identity_op_name].mutable_bn_in_op2sbp_parallel();
+  for (const auto& pair : old_lbi2new_obn) {
+    (*sbp_parallel_map)[pair.second] = old_lbi2sbp_parallel.at(pair.first);
+  }
 }
 
 std::function<bool(OpNode*)> MakePredicatorIsReachableFromAnyVariableOps(const OpGraph& op_graph) {
@@ -309,59 +267,7 @@ void TieUpChainHeadersUnReachableFromAnyVariableOps(const OpGraph& op_graph, Job
   });
 }
 
-void AddIdentityOpForAllReduceOverlapingUntrainble(Job* job) {
-  auto MutOperatorConf4OpName = MakeMutableOperatorConf4OpName(job);
-  auto ParallelConf4OpName = MakeGetterParallelConf4OpName(job->placement());
-  OpGraph(*job).TopoForEachNode([&](OpNode* op_node) {
-    if (op_node->HasBackward()) { return; }
-    HashMap<bool, std::vector<OpEdge*>> has_bw2out_op_edges;
-    for (OpEdge* edge : op_node->out_edges()) {
-      has_bw2out_op_edges[edge->dst_node()->HasBackward()].push_back(edge);
-    }
-    if (has_bw2out_op_edges.size() <= 1) { return; }
-    // only handle op_nodes that:
-    // a) have no backward node;
-    // b) have trainable and untrainble consumers;
-
-    // group out_edge by trainable consumers' ParallelDesc
-    HashMap<ParallelDesc, std::vector<OpEdge*>> consumer_op_pr2edges;
-    for (OpEdge* edge : has_bw2out_op_edges.at(true)) {
-      ParallelDesc pr(*ParallelConf4OpName(edge->dst_node()->op().op_name()));
-      consumer_op_pr2edges[pr].push_back(edge);
-    }
-    for (const auto& pair : consumer_op_pr2edges) {
-      AddIdentityOpAndReconnect(
-          "all_reduce_overlapping_untrainable_", job, pair.second, MutOperatorConf4OpName,
-          *ParallelConf4OpName(pair.second.at(0)->dst_node()->op().op_name()));
-    }
-  });
-}
-
-void FixAndOptimizeDLNet(Job* job) {
-  const JobDesc* job_desc = Global<JobDesc>::Get();
-  if (!(job_desc->IsPredict()
-        && job_desc->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf())) {
-    FixTickOpIfExists(job);
-    // ConvertPseudoChainToChain(job);
-  }
-  // if (job_desc->IsTrain()) { AddIdentityOpForAllReduceOverlapingUntrainble(job); }
-}
-
-void SetOpTimeShape(const OpGraph& op_graph, Job* job) {
-  op_graph.ForEachNode([&](OpNode* op_node) {
-    auto* op_time_shape =
-        &(*job->mutable_helper()->mutable_op_name2op_time_shape())[op_node->op().op_name()];
-    if (op_node->out_blob_time_shape() != nullptr) {
-      op_node->out_blob_time_shape()->ToProto(op_time_shape->mutable_out_blob_time_shape());
-    }
-    const auto* in_blob_fastest_time_shape = op_node->GetInputBlobFastestTimeShape();
-    if (in_blob_fastest_time_shape != nullptr) {
-      in_blob_fastest_time_shape->ToProto(op_time_shape->mutable_in_blob_fastest_time_shape());
-    }
-  });
-}
-
-void SetCtrlInOpName(const OpGraph& op_graph, Job* job) {
+void SetCtrlInOpName4VariableOp(const OpGraph& op_graph, JobBuilder* job_builder) {
   auto IsMutableConsumedLbi = [](const Operator& op, const LogicalBlobId& lbi) -> bool {
     for (const std::string& bn : op.input_bns()) {
       if (op.BnInOp2Lbi(bn) == lbi && op.InputBlobModifier4Ibn(bn).is_mutable()) { return true; }
@@ -371,7 +277,6 @@ void SetCtrlInOpName(const OpGraph& op_graph, Job* job) {
   auto IsMdSaveEveryNthOp = [](const OperatorConf& op_conf) -> bool {
     return op_conf.has_every_nth_conf();
   };
-  JobBuilder job_builder(job);
   op_graph.ForEachNode([&](OpNode* op_node) {
     if (op_node->op().op_conf().has_variable_conf() == false) { return; }
     if (op_node->out_edges().size() <= 1) { return; }
@@ -397,61 +302,82 @@ void SetCtrlInOpName(const OpGraph& op_graph, Job* job) {
     for (const auto* fw_bw_op : naive_consumers) {
       mut_mutable_consumer_op_conf.add_ctrl_in_op_name(fw_bw_op->name());
     }
-    job_builder.MutOps({mut_mutable_consumer_op_conf});
+    job_builder->MutOpsOnlyOnce({mut_mutable_consumer_op_conf});
     if (model_save_every_nth_op_conf != nullptr) {
       OperatorConf mut_model_save_every_nth_op_conf(*model_save_every_nth_op_conf);
       mut_model_save_every_nth_op_conf.add_ctrl_in_op_name(mutable_consumer->name());
-      job_builder.MutOps({mut_model_save_every_nth_op_conf});
+      job_builder->MutOpsOnlyOnce({mut_model_save_every_nth_op_conf});
     }
   });
 }
 
-void SetBatchDimLbis(const OpGraph& op_graph, Job* job) {
-  op_graph.ForEachNode([&](OpNode* op_node) {
-    for (const auto& obn : op_node->op().output_bns()) {
-      const LogicalBlobId& lbi = op_node->op().BnInOp2Lbi(obn);
-      if (op_node->HasBatchDim4Lbi(lbi)) {
-        *job->mutable_helper()->mutable_batch_dim_lbis()->Add() = lbi;
-      }
-    }
-  });
+void SetOpTimeShape7BatchAxisLbis(const OpGraph& op_graph, JobBuilder* job_builder) {
+  op_graph.DumpOpTimeShape(job_builder);
+  op_graph.DumpBatchAxisLbi(job_builder);
 }
 
-void SetOpTimeShape7CtrlInOpName7ModelLbis(const OpGraph& op_graph, Job* job) {
-  SetOpTimeShape(op_graph, job);
-  SetCtrlInOpName(op_graph, job);
-  SetBatchDimLbis(op_graph, job);
+void RewriteBoxingWithAllReduce(const OpGraph& op_graph, JobBuilder* job_builder) {
+  if (GlobalJobDesc().enable_all_reduce_group()) {
+    AllReduceAddPass().Apply(op_graph, job_builder);
+  }
 }
 
-void RewriteBoxingWithAllReduce(const OpGraph& op_graph, Job* job) {
-  AllReduceAddPass().Apply(op_graph, job);
+void DumpLogicalBlobDescAndSbpSignature(const OpGraph& op_graph, JobBuilder* job_builder) {
+  op_graph.DumpLogicalBlobDesc(job_builder);
+  op_graph.DumpSbpSignature(job_builder);
+}
+
+void MakeAllReduceSequence(const OpGraph& op_graph, JobBuilder* job_builder) {
+  AllReduceSequencePass().Apply(op_graph, job_builder);
+}
+
+void EnableAutoMixedPrecision(const OpGraph& op_graph, JobBuilder* job_builder) {
+  if (!GlobalJobDesc().enable_auto_mixed_precision()) { return; }
+  CHECK_GE(CUDA_VERSION, 10000);
+  AutoMixedPrecision(AutoMixedPrecisionLists::WhiteList(), AutoMixedPrecisionLists::BlackList(),
+                     AutoMixedPrecisionLists::GrayList(), AutoMixedPrecisionLists::ClearList())
+      .Apply(op_graph, job_builder);
 }
 
 }  // namespace
 
 void JobCompleter::Complete(Job* job) const {
   // replace facade op
-  WithOpGraphAndMutJob(job, &ReplaceFacade);
-  if (Global<JobDesc>::Get()->IsPredict()
-      && Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
-    // complete variable ops
-    WithOpGraphAndMutJob(job, &AutoVar);
+  WithOpGraphAndMutJobBuilder(job, &ReplaceFacade);
+  // complete variable ops
+  WithOpGraphAndMutJobBuilder(job, &SetDefaultVariableConf);
+  if (GlobalJobDesc().IsTrain()) {
     WithOpGraphAndMutJob(job, &TieUpChainHeadersUnReachableFromAnyVariableOps);
+    WithOpGraphAndMutJobBuilder(job, &EnableAutoMixedPrecision);
+    WithOpGraphAndMutJob(job, &AutoTrainStep);
+    WithOpGraphAndMutJob(job, &AutoLearningRate);
     // complete ops for trainning
-    HashMap<std::string, HashMap<std::string, LogicalBlobId>> op_name2ibn2in_diff_lbi;
-    WithOpGraphAndMutJob(job, &GenerateOpConf4Trainning);
-    WithOpGraphAndMutJob(job, &AddSaver);
-    // complete tick ops
-    WithOpGraphAndMutJob(job, &AutoTick);
-    // add keep_header_only op
-    WithOpGraphAndMutJob(job, &RewriteBoxingWithAllReduce);
-    WithOpGraphAndMutJob(job, &GroupBoxingByDstParallel);
-    WithOpGraphAndMutJob(job, &AddKeepHeaderOnlyOp);
-    WithOpGraphAndMutJob(job, &FreezeSbpSignature);
-    WithOpGraphAndMutJob(job, &SetOpTimeShape7CtrlInOpName7ModelLbis);
+    WithOpGraphAndMutJobBuilder(job, &GenerateOpConf4Trainning);
+#ifdef WITH_XLA
+    if (FLAGS_use_xla_jit) {
+      WithOpGraphAndMutJob(job, &RewriteOptimizerOp);
+      const JobDesc& job_desc = GlobalJobDesc();
+      TeePersistentLogStream::Create(
+      absl::StrCat("job_rewrite_optimizer", job_desc.job_id()))->Write(*job);
+    }
+#endif
+    WithOpGraphAndMutJobBuilder(job, &RewriteBoxingWithAllReduce);
+    WithOpGraphAndMutJobBuilder(job, &MakeAllReduceSequence);
   }
-  // TODO: refine
-  FixAndOptimizeDLNet(job);
+  WithOpGraphAndMutJobBuilder(job, &DumpLogicalBlobDescAndSbpSignature);
+  WithOpGraphAndMutJobBuilder(job, &GroupBoxingByDstParallel);
+  WithOpGraphAndMutJobBuilder(job, &AddKeepHeaderOnlyOp);
+  WithOpGraphAndMutJobBuilder(job, &SetCtrlInOpName4VariableOp);
+  // complete tick ops
+  WithOpGraphAndMutJobBuilder(job, &AutoSourceTick);
+  WithOpGraphAndMutJobBuilder(job, &AddTickForTimeShape);
+  WithOpGraphAndMutJobBuilder(job, &AutoSinkTick);
+  AddGlobalTotalJobCriticalSection(*job);
+  WithOpGraphAndMutJobBuilder(job, &AddGlobalInputCriticalSections);
+  WithOpGraphAndMutJobBuilder(job, &AddGlobalOutputCriticalSections);
+  WithOpGraphAndMutJobBuilder(job, &DumpLogicalBlobDescAndSbpSignature);
+  WithOpGraphAndMutJobBuilder(job, &SetOpTimeShape7BatchAxisLbis);
+  CheckOpGraph(OpGraph(*job));
 }
 
 }  // namespace oneflow

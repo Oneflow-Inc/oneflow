@@ -29,7 +29,7 @@ void ReduceAddCompTaskNode::BuildExecGphAndRegst() {
   reduce_add_op_conf.set_name(this->logical_node()->SoleOp()->op_name());
   reduce_add_op_conf.set_device_type(this->device_type());
   reduce_add_op_conf.mutable_reduce_add_conf()->set_in_num(in_data_edges_size());
-  std::shared_ptr<Operator> reduce_add_op = ConstructOp(reduce_add_op_conf);
+  std::shared_ptr<Operator> reduce_add_op = ConstructOp(reduce_add_op_conf, &GlobalJobDesc());
   node->mut_op() = reduce_add_op;
   for (const std::string& input_bn : reduce_add_op->input_bns()) {
     std::shared_ptr<RegstDesc> in_regst = GetSoleConsumedRegst(input_bn);

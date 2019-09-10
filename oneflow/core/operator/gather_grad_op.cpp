@@ -13,11 +13,12 @@ void GatherGradOp::InitFromOpConf() {
 
 const PbMessage& GatherGradOp::GetCustomizedConf() const { return op_conf().gather_grad_conf(); }
 
-void GatherGradOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                  const ParallelContext* parallel_ctx) const {
+Maybe<void> GatherGradOp::InferBlobDescs(
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx) const {
   const GatherGradOpConf& conf = op_conf().gather_grad_conf();
   const BlobDesc* indices = GetBlobDesc4BnInOp("indices");
-  CHECK(IsIntegralDataType(indices->data_type()));
+  CHECK_OR_RETURN(IsIntegralDataType(indices->data_type()));
   const BlobDesc* out_diff = GetBlobDesc4BnInOp("out_diff");
   std::vector<int64_t> in_diff_dim_vec;
   in_diff_dim_vec.insert(in_diff_dim_vec.end(), out_diff->shape().dim_vec().cbegin(),
@@ -30,14 +31,15 @@ void GatherGradOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> G
   BlobDesc* in_diff = GetBlobDesc4BnInOp("in_diff");
   in_diff->set_data_type(out_diff->data_type());
   in_diff->mut_shape() = Shape(in_diff_dim_vec);
+  return Maybe<void>::Ok();
 }
 
-void GatherGradOp::GetSbpSignatures(
-    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
+Maybe<void> GatherGradOp::GetSbpSignatures(
+    const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
     SbpSignatureList* sbp_sig_list) const {
   const int64_t gather_axis = op_conf().gather_grad_conf().axis();
-  const int64_t indices_num_axes = LogicalBlobDesc4Ibn("indices").shape().NumAxes();
-  const int64_t out_diff_num_axes = LogicalBlobDesc4Ibn("out_diff").shape().NumAxes();
+  const int64_t indices_num_axes = JUST(LogicalBlobDesc4Ibn("indices"))->shape().NumAxes();
+  const int64_t out_diff_num_axes = JUST(LogicalBlobDesc4Ibn("out_diff"))->shape().NumAxes();
   FOR_RANGE(int64_t, i, 0, indices_num_axes) {
     SbpSignatureBuilder()
         .Split("indices", i)
@@ -60,11 +62,13 @@ void GatherGradOp::GetSbpSignatures(
       .PartialSum("out_diff")
       .PartialSum("in_diff")
       .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+  return Maybe<void>::Ok();
 }
 
-void GatherGradOp::InferHasBatchDim(
-    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
-  *HasBatchDim4BnInOp("in_diff") = false;
+Maybe<void> GatherGradOp::InferBatchAxis(
+    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
+  BatchAxis4BnInOp("in_diff")->clear_value();
+  return Maybe<void>::Ok();
 }
 
 REGISTER_OP(OperatorConf::kGatherGradConf, GatherGradOp);

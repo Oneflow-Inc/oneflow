@@ -96,7 +96,14 @@ Argument XlaOpContext::ArgumentFromString(const std::string &name) const {
 }
 
 bool XlaOpContext::HasAttr(const std::string &attr_name) const {
-  return HasFieldInPbMessage(*param_.op_conf, attr_name);
+  using namespace google::protobuf;
+  const Descriptor *d = param_.op_conf->GetDescriptor();
+  const FieldDescriptor *fd = d->FindFieldByName(attr_name);
+  if (fd && fd->is_optional()) {
+    const Reflection *r = param_.op_conf->GetReflection();
+    return r->HasField(*param_.op_conf, fd);
+  }
+  return fd != nullptr;
 }
 
 template <>

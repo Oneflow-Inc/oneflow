@@ -13,16 +13,18 @@ void GeluOp::InitFromOpConf() {
 
 const PbMessage& GeluOp::GetCustomizedConf() const { return op_conf().gelu_conf(); }
 
-void GeluOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                            const ParallelContext* parallel_ctx) const {
+Maybe<void> GeluOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                                   const ParallelContext* parallel_ctx) const {
   *GetBlobDesc4BnInOp("out") = *GetBlobDesc4BnInOp("in");
+  return Maybe<void>::Ok();
 }
 
-void GeluOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
+Maybe<void> GeluOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
   SbpSignatureBuilder()
       .Split(input_bns(), 0)
       .Split(output_bns(), 0)
       .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+  return Maybe<void>::Ok();
 }
 
 REGISTER_OP(OperatorConf::kGeluConf, GeluOp);

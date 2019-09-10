@@ -7,16 +7,6 @@
 
 namespace oneflow {
 
-namespace {
-
-LogicalBlobId GenUnCloneLbi(const LogicalBlobId& lbi) {
-  LogicalBlobId ret(lbi);
-  ret.set_clone_id(-1);
-  return ret;
-}
-
-}  // namespace
-
 RegstDesc::RegstDesc() {
   regst_desc_id_ = Global<IDMgr>::Get()->NewRegstDescId();
   producer_ = nullptr;
@@ -77,19 +67,14 @@ void RegstDesc::CopyBlobDescWithoutAddLbi(const RegstDesc* rhs) {
   CHECK_EQ(is_locked_, false);
   for (const auto& pair : lbi2blob_desc_) {
     auto rhs_it = rhs->lbi2blob_desc_.find(pair.first);
-    if (rhs_it == rhs->lbi2blob_desc_.end()) {
-      auto un_clone_it = rhs->lbi2blob_desc_.find(GenUnCloneLbi(pair.first));
-      if (un_clone_it != rhs->lbi2blob_desc_.end()) { *(pair.second) = *(un_clone_it->second); }
-    } else {
-      *(pair.second) = *(rhs_it->second);
-    }
+    if (rhs_it != rhs->lbi2blob_desc_.end()) { *(pair.second) = *(rhs_it->second); }
   }
 }
 
 BlobDesc* RegstDesc::AddLbi(const LogicalBlobId& lbi) {
   CHECK_EQ(is_locked_, false);
   CHECK(lbi2blob_desc_.find(lbi) == lbi2blob_desc_.end());
-  BlobDesc* blob_desc = new BlobDesc;
+  BlobDesc* blob_desc = new BlobDesc(GlobalJobDesc().DefaultDataType());
   lbi2blob_desc_[lbi].reset(blob_desc);
   return blob_desc;
 }
@@ -218,6 +203,12 @@ void InitCtrlRegstDesc(int64_t producer_task_id, RegstDescProto* ctrl_regst_prot
   ctrl_regst_proto->set_enable_mem_sharing(false);
   ctrl_regst_proto->set_mem_shared_id(-1);
   ctrl_regst_proto->set_mem_shared_offset(-1);
+}
+
+MemoryCase MakeHostMemCase() {
+  MemoryCase mem_case;
+  mem_case.mutable_host_mem();
+  return mem_case;
 }
 
 }  // namespace oneflow

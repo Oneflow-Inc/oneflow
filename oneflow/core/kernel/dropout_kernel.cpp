@@ -6,8 +6,7 @@
 namespace oneflow {
 
 template<DeviceType device_type, typename T>
-void DropoutKernel<device_type, T>::VirtualKernelInit(const ParallelContext* parallel_ctx,
-                                                      DeviceCtx* device_ctx) {
+void DropoutKernel<device_type, T>::VirtualKernelInit(DeviceCtx* device_ctx) {
   const auto& dropout_conf = this->op_conf().dropout_conf();
   int64_t seed = GetCurTime();
   if (dropout_conf.has_seed()) { seed = dropout_conf.seed(); }
@@ -18,7 +17,7 @@ template<DeviceType device_type, typename T>
 void DropoutKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   int64_t elem_cnt = BnInOp2Blob("in")->shape().elem_cnt();
-  if (Global<JobDesc>::Get()->IsTrain()) {
+  if (this->job_desc().IsTrain()) {
     Dropout(ctx.device_ctx, elem_cnt, this->op_conf().dropout_conf().rate(),
             BnInOp2Blob("in")->dptr<T>(), BnInOp2Blob("random_mask")->mut_dptr<float>(),
             BnInOp2Blob("out")->mut_dptr<T>());
@@ -29,27 +28,11 @@ void DropoutKernel<device_type, T>::ForwardDataContent(
 }
 
 template<DeviceType device_type, typename T>
-void DropoutKernel<device_type, T>::BackwardDataContent(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  DropoutBackward(ctx.device_ctx, BnInOp2Blob("out_diff")->shape().elem_cnt(),
-                  this->op_conf().dropout_conf().rate(), BnInOp2Blob("out_diff")->dptr<T>(),
-                  BnInOp2Blob("random_mask")->dptr<float>(), BnInOp2Blob("in_diff")->mut_dptr<T>());
-}
-
-template<DeviceType device_type, typename T>
 void DropoutKernel<device_type, T>::Dropout(DeviceCtx* ctx, const int64_t n, float dropout_rate,
                                             const T* in, float* random_mask, T* out) const {
   random_generator_->Uniform(n, random_mask);
   DropoutKernelUtil<device_type, T>::MaskAndScale(ctx, n, dropout_rate, 1 / (1 - dropout_rate), in,
                                                   random_mask, out);
-}
-
-template<DeviceType device_type, typename T>
-void DropoutKernel<device_type, T>::DropoutBackward(DeviceCtx* ctx, const int64_t n,
-                                                    float dropout_rate, const T* dy,
-                                                    const float* random_mask, T* dx) const {
-  DropoutKernelUtil<device_type, T>::MaskAndScale(ctx, n, dropout_rate, 1 / (1 - dropout_rate), dy,
-                                                  random_mask, dx);
 }
 
 template<typename T>
@@ -62,9 +45,11 @@ struct DropoutKernelUtil<DeviceType::kCPU, T> final {
 
 #define INITIATE_DROPOUT_KERNEL_UTIL_CPU(T, type_proto) \
   template struct DropoutKernelUtil<DeviceType::kCPU, T>;
-OF_PP_FOR_EACH_TUPLE(INITIATE_DROPOUT_KERNEL_UTIL_CPU, ARITHMETIC_DATA_TYPE_SEQ);
+OF_PP_FOR_EACH_TUPLE(INITIATE_DROPOUT_KERNEL_UTIL_CPU,
+                     ARITHMETIC_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ);
 #undef INITIATE_DROPOUT_KERNEL_UTIL_CPU
 
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kDropoutConf, DropoutKernel, ARITHMETIC_DATA_TYPE_SEQ);
+ADD_DEFAULT_KERNEL_CREATOR_WITH_GPU_HALF(OperatorConf::kDropoutConf, DropoutKernel,
+                                         ARITHMETIC_DATA_TYPE_SEQ);
 
 }  // namespace oneflow

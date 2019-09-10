@@ -26,13 +26,13 @@ Resource GetResource() {
 void New() {
   JobDescProto proto;
   *proto.mutable_resource() = GetResource();
-  Global<JobDesc>::New(proto);
+  TODO();
   Global<IDMgr>::New();
 }
 
 void Delete() {
   Global<IDMgr>::Delete();
-  Global<JobDesc>::Delete();
+  TODO();
 }
 
 }  // namespace

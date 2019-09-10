@@ -24,14 +24,15 @@ struct ConvBiasGradKernelUtil<DeviceType::kGPU, T> final {
     } else {
       UNIMPLEMENTED();
     }
-    CudaCheck(cudnnConvolutionBackwardBias(ctx->cudnn_handle(), OnePtr<T>::value, dy_desc->Get(),
-                                           dy->dptr<T>(), ZeroPtr<T>::value, bias_diff_desc->Get(),
-                                           bias_diff->mut_dptr<T>()));
+    CudaCheck(cudnnConvolutionBackwardBias(ctx->cudnn_handle(), CudnnSPOnePtr<T>(), dy_desc->Get(),
+                                           dy->dptr<T>(), CudnnSPZeroPtr<T>(),
+                                           bias_diff_desc->Get(), bias_diff->mut_dptr<T>()));
   }
 };
 
 #define INSTANTIATE_CONV_BIAS_GRAD_KERNEL_UTIL(type_cpp, type_proto) \
   template struct ConvBiasGradKernelUtil<DeviceType::kGPU, type_cpp>;
-OF_PP_FOR_EACH_TUPLE(INSTANTIATE_CONV_BIAS_GRAD_KERNEL_UTIL, FLOATING_DATA_TYPE_SEQ)
+OF_PP_FOR_EACH_TUPLE(INSTANTIATE_CONV_BIAS_GRAD_KERNEL_UTIL,
+                     FLOATING_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ)
 
 }  // namespace oneflow

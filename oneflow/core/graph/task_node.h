@@ -5,11 +5,11 @@
 #include "oneflow/core/job/id_manager.h"
 #include "oneflow/core/job/task.pb.h"
 #include "oneflow/core/operator/operator.h"
+#include "oneflow/core/common/auto_registration_factory.h"
 
 namespace oneflow {
 
 bool IsForwardTaskType(TaskType);
-bool IsBackwardTaskType(TaskType);
 bool IsMdUpdtTaskType(TaskType);
 
 RegstDescProto* FindOrCreateProducedCtrlRegstDesc(TaskProto* task_proto,
@@ -74,15 +74,16 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
 
   // Others
   virtual TaskType GetTaskType() const { return TaskType::kInvalid; }
-  std::string VisualStr() const override;
+  virtual std::string VisualStr() const override;
   virtual bool IsMeaningLess();
   virtual void ToProto(TaskProto*);
-  virtual bool IsPersistence() const { return false; }
+  virtual bool IsIndependent() const { return false; }
   void BindEdgeWithProducedRegst(TaskEdge*, const std::string& name);
   virtual int64_t MemZoneId121() const;  // TODO: there is bug for reduce task node
   void BuildCtrlRegstDescIfNeed(TaskNode* dst_node);
   RegstDesc* BuildCtrlRegstDesc(TaskNode* dst_node);
   RegstDesc* BuildCtrlRegstDesc(TaskNode* dst_node, std::string* name);
+  std::shared_ptr<Shape> GetFastestInputOutputTimeShape() const;
 
   void ForEachInDataEdge(const std::function<void(TaskEdge*)>& Handler) const;
   void ForEachOutDataEdge(const std::function<void(TaskEdge*)>& Handler) const;
@@ -108,6 +109,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   virtual void InitProducedRegstMemCase(RegstDesc* regst);
   virtual void InitProducedRegstMemCase(MemoryCase*);
   virtual void PinConsumedRegstMemCase(MemoryCase*);
+  void ConsumeRegst(const std::string& name);
   void ConsumeRegst(const std::string& name, std::shared_ptr<RegstDesc>);
   bool IsAllConsumedDataRegstLocked();
   ExecGraph& mut_exec_gph() { return exec_gph_; }
@@ -117,7 +119,6 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   virtual void BuildExecGphAndRegst() = 0;
   virtual void LockRegsts();
   void FixRegisterNumRange();
-  virtual void FixPackedBlobDescOfProducedRegst() {}
 
   virtual int64_t AllocateLocalWorkStreamId();
 
@@ -161,6 +162,28 @@ class TaskEdge final : public Edge<TaskNode, TaskEdge> {
 };
 
 extern std::map<TaskType, std::string> task_type2color;
+extern std::map<TaskType, std::string> task_type2type_str;
+
+struct IndependentThreadNum4TaskType final {
+  IndependentThreadNum4TaskType(size_t num) : has_func_(false), num_(num) {}
+  IndependentThreadNum4TaskType(std::function<size_t()> get_num)
+      : has_func_(true), get_num_(get_num) {}
+  operator size_t() { return has_func_ ? get_num_() : num_; }
+
+ private:
+  bool has_func_;
+  size_t num_;
+  std::function<size_t()> get_num_;
+};
+
+#define REGISTER_INDEPENDENT_THREAD_NUM(task_type, num)            \
+  REGISTER_CLASS_CREATOR(task_type, IndependentThreadNum4TaskType, \
+                         ([] { return new IndependentThreadNum4TaskType(num); }))
+
+struct TickTockTaskType final {};
+
+#define REGISTER_TICK_TOCK_TASK_TYPE(task_type) \
+  REGISTER_CLASS_CREATOR(task_type, TickTockTaskType, ([] { return new TickTockTaskType; }))
 
 }  // namespace oneflow
 

@@ -28,26 +28,6 @@ void EmbeddingLookupKernel<device_type, T>::BackwardDataContent(
                       sizeof(T) * in_blob->shape().elem_cnt());
 }
 
-template<DeviceType device_type, typename T>
-void EmbeddingLookupKernel<device_type, T>::InitModelBlobsWithRandomSeed(
-    DeviceCtx* ctx, std::mt19937* random_seed_gen,
-    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  KernelUtil<device_type, T>::InitializeWithProperConf(
-      ctx, GetMsgPtrFromPbMessage(this->op_conf().embedding_lookup_conf(), "weight_initializer"),
-      (*random_seed_gen)(), BnInOp2Blob("weight"));
-}
-
-template<DeviceType device_type, typename T>
-void EmbeddingLookupKernel<device_type, T>::InitModelBlobsWithDir(
-    DeviceCtx* ctx, int32_t part_id, int32_t part_num, const std::string& model_load_dir,
-    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  Blob* weight_blob = BnInOp2Blob("weight");
-  int32_t table_size = this->op_conf().embedding_lookup_conf().table_size();
-  int32_t units = this->op_conf().embedding_lookup_conf().units();
-  KernelUtil<device_type, T>::InitializeWithDir(ctx, part_id, part_num, model_load_dir, weight_blob,
-                                                "weight", table_size, units);
-}
-
 template<typename T>
 class EmbeddingLookupKernelUtil<DeviceType::kCPU, T> final {
  public:

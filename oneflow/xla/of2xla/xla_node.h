@@ -8,6 +8,9 @@
 namespace oneflow {
 namespace mola {
 
+std::string DeviceTypeToBackend(DeviceType device_type);
+DeviceType BackendToDeviceType(const std::string &backend);
+
 class XlaNode;
 class XlaGraph;
 
@@ -63,8 +66,7 @@ class XlaNode {
   void ClearInEdges() { in_edges_.clear(); };
   void ClearOutEdges() { out_edges_.clear(); };
 
-  const OpNode *node() const { return node_; }
-  const Operator *op() const { return &node_->op(); }
+  const Operator *op() const { return op_; }
   int64_t unique_id() const { return unique_id_; }
   int64_t cluster_id() const {return cluster_id_; }
   const std::string &backend() const { return backend_; }
@@ -97,23 +99,20 @@ class XlaNode {
   bool IsArgumentNode() const;
   bool IsInArgumentNode() const;
   bool IsOutArgumentNode() const;
-
-  typedef std::function<BlobDesc*(const LogicalBlobId &)> GetBlobDescFunc;
-  virtual void InferBlobDescs(GetBlobDescFunc func,
-                              const ParallelContext* parallel_ctx) const;
+  bool IsReachable(const XlaNode &dst_node) const;
 
  protected:
   friend class XlaGraph;
   // XlaNode only can be created by XlaGraph
-  XlaNode() : node_(nullptr), unique_id_(-1), cluster_id_(-1),
+  XlaNode() : op_(nullptr), unique_id_(-1), cluster_id_(-1),
               sub_graph_(nullptr) {}
-  explicit XlaNode(const OpNode *op_node);
+  explicit XlaNode(const Operator *op);
   virtual ~XlaNode() {}
 
   std::list<XlaEdge *> in_edges_;
   std::list<XlaEdge *> out_edges_;
   // The internal op node which is not holded by this xla node
-  const OpNode *node_;
+  const Operator *op_;
   // Each node has a unique id related to it's index in the graph's nodes
   int64_t unique_id_;
   // Each compiled node has a cluster id if the cluster it belongs is valid.
@@ -135,9 +134,6 @@ class XlaNode {
 
 class XlaArgumentNode : public XlaNode {
  public:
-  void InferBlobDescs(XlaNode::GetBlobDescFunc func,
-                      const ParallelContext* parallel_ctx) const override;
-
   const PbMessage &proto_conf() const override { return arg_conf_; }
 
  private:
@@ -145,8 +141,7 @@ class XlaArgumentNode : public XlaNode {
   XlaArgumentNode() = default;
   virtual ~XlaArgumentNode() = default;
 
-  explicit XlaArgumentNode(const XlaLaunchOpConf::Argument &arg_conf,
-                           DeviceType device_type);
+  explicit XlaArgumentNode(const XlaLaunchOpConf::Argument &arg_conf);
 
   XlaLaunchOpConf::Argument arg_conf_;
 };

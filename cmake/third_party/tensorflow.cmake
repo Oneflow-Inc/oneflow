@@ -4,10 +4,10 @@ if (WITH_XLA)
 
 set(TENSORFLOW_BUILD_CMD --define with_xla_support=true)
 if (RELEASE_VERSION)
-  set(TENSORFLOW_BUILD_CMD -c opt ${BUILD_CMD})
+  set(TENSORFLOW_BUILD_CMD -c opt ${TENSORFLOW_BUILD_CMD})
   set(TENSORFLOW_GENFILE_DIR k8-opt)
 else()
-  set(TENSORFLOW_BUILD_CMD --copt=-g -c dbg ${BUILD_CMD})
+  set(TENSORFLOW_BUILD_CMD --copt=-g -c dbg ${TENSORFLOW_BUILD_CMD})
   set(TENSORFLOW_GENFILE_DIR k8-dbg)
 endif()
 
@@ -20,7 +20,8 @@ message(STATUS ${TENSORFLOW_BUILD_CMD})
 
 set(TENSORFLOW_PROJECT  tensorflow)
 set(TENSORFLOW_GIT_URL  https://github.com/tensorflow/tensorflow.git)
-set(TENSORFLOW_GIT_TAG  master)
+#set(TENSORFLOW_GIT_TAG  master)
+set(TENSORFLOW_GIT_TAG  80c04b80ad66bf95aa3f41d72a6bba5e84a99622)
 set(TENSORFLOW_SOURCES_DIR ${THIRD_PARTY_DIR}/tensorflow)
 set(TENSORFLOW_SRCS_DIR ${TENSORFLOW_SOURCES_DIR}/src/tensorflow)
 set(TENSORFLOW_INC_DIR  ${TENSORFLOW_SOURCES_DIR}/src/tensorflow)
@@ -31,7 +32,7 @@ set(TENSORFLOW_DEST_DIR ${TENSORFLOW_SRCS_DIR}/tensorflow/compiler/jit)
 set(TENSORFLOW_GEN_DIR ${TENSORFLOW_SRCS_DIR}/bazel-out/${TENSORFLOW_GENFILE_DIR}/genfiles)
 set(TENSORFLOW_EXTERNAL_DIR ${TENSORFLOW_SRCS_DIR}/bazel-tensorflow/external)
 set(THIRD_ABSL_DIR ${TENSORFLOW_EXTERNAL_DIR}/com_google_absl)
-set(THIRD_PROTOBUF_DIR ${TENSORFLOW_EXTERNAL_DIR}/protobuf_archive/src)
+set(THIRD_PROTOBUF_DIR ${TENSORFLOW_EXTERNAL_DIR}/com_google_protobuf/src)
 set(THIRD_BORINGSSL_DIR ${TENSORFLOW_EXTERNAL_DIR}/boringssl/src)
 set(THIRD_SNAPPY_DIR ${TENSORFLOW_EXTERNAL_DIR}/snappy)
 
@@ -53,16 +54,16 @@ list(APPEND TENSORFLOW_XLA_INCLUDE_DIR
 )
 
 if (THIRD_PARTY)
-ExternalProject_Add(
-  ${TENSORFLOW_PROJECT}
-  PREFIX ${TENSORFLOW_SOURCES_DIR}
-  GIT_REPOSITORY ${TENSORFLOW_GIT_URL}
-  GIT_TAG ${TENSORFLOW_GIT_TAG}
-  CONFIGURE_COMMAND cp -r ${XLA_BUILD_PATH} ${TENSORFLOW_DEST_DIR}
-  BUILD_COMMAND cd ${TENSORFLOW_SRCS_DIR} &&
-                bazel build ${TENSORFLOW_BUILD_CMD} -j 20 //tensorflow/compiler/jit/xla_lib:libxla_core.so
-  INSTALL_COMMAND ""
-)
+  ExternalProject_Add(
+    ${TENSORFLOW_PROJECT}
+    PREFIX ${TENSORFLOW_SOURCES_DIR}
+    GIT_REPOSITORY ${TENSORFLOW_GIT_URL}
+    GIT_TAG ${TENSORFLOW_GIT_TAG}
+    CONFIGURE_COMMAND cp -r ${XLA_BUILD_PATH} ${TENSORFLOW_DEST_DIR}
+    BUILD_COMMAND cd ${TENSORFLOW_SRCS_DIR} &&
+                  bazel build ${TENSORFLOW_BUILD_CMD} -j 20 //tensorflow/compiler/jit/xla_lib:libxla_core.so
+    INSTALL_COMMAND ""
+  )
 endif(THIRD_PARTY)
 
 endif(WITH_XLA)

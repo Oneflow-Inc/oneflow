@@ -13,10 +13,8 @@ class ReduceMeanGradOp final : public Operator {
 
   void InitFromOpConf() override;
   const PbMessage& GetCustomizedConf() const override;
-  bool NeedInBlobWhenBackward() const override { return false; }
-  bool NeedOutBlobWhenBackward() const override { return false; }
-  void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                      const ParallelContext* parallel_ctx) const override;
+  Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                             const ParallelContext* parallel_ctx) const override;
 
  private:
 };

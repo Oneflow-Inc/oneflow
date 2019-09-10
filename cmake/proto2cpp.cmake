@@ -6,6 +6,7 @@ function(RELATIVE_PROTOBUF_GENERATE_CPP SRCS HDRS ROOT_DIR)
   
   set(${SRCS})
   set(${HDRS})
+  set(of_proto_dir "${PROJECT_BINARY_DIR}/python_scripts")
   foreach(FIL ${ARGN})
     set(ABS_FIL ${ROOT_DIR}/${FIL})
     get_filename_component(FIL_WE ${FIL} NAME_WE)
@@ -18,11 +19,14 @@ function(RELATIVE_PROTOBUF_GENERATE_CPP SRCS HDRS ROOT_DIR)
     add_custom_command(
       OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/${REL_DIR}/${FIL_WE}.pb.cc"
              "${CMAKE_CURRENT_BINARY_DIR}/${REL_DIR}/${FIL_WE}.pb.h"
+             "${of_proto_dir}/${REL_DIR}/${FIL_WE}_pb2.py"
       COMMAND  ${PROTOBUF_PROTOC_EXECUTABLE}
       ARGS --cpp_out  ${CMAKE_CURRENT_BINARY_DIR} -I ${ROOT_DIR} ${ABS_FIL} -I ${PROTOBUF_INCLUDE_DIR}
       COMMAND  ${PROTOBUF_PROTOC_EXECUTABLE}
-      ARGS --python_out  ${PROJECT_BINARY_DIR}/pyproto -I ${ROOT_DIR} ${ABS_FIL} -I ${PROTOBUF_INCLUDE_DIR}
-      COMMAND ${CMAKE_COMMAND} -E touch ${PROJECT_BINARY_DIR}/pyproto/${REL_DIR}/__init__.py
+      ARGS --python_out  ${of_proto_dir} -I ${ROOT_DIR} ${ABS_FIL} -I ${PROTOBUF_INCLUDE_DIR}
+      
+      COMMAND ${CMAKE_COMMAND}
+      ARGS -E touch ${of_proto_dir}/${REL_DIR}/__init__.py
       
       DEPENDS ${ABS_FIL}
       COMMENT "Running Protocol Buffer Compiler on ${FIL}"

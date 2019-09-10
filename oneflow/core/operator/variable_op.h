@@ -8,34 +8,23 @@ namespace oneflow {
 class VariableOp final : public Operator {
  public:
   OF_DISALLOW_COPY_AND_MOVE(VariableOp);
-  VariableOp()
-      : Operator(),
-        is_fw_inplace_(std::make_unique<bool>(false)),
-        is_bw_inplace_(std::make_unique<bool>(false)) {}
+  VariableOp() : Operator() {}
   ~VariableOp() = default;
 
   void InitFromOpConf() override;
   const PbMessage& GetCustomizedConf() const override;
-  bool NeedInBlobWhenBackward() const override { return false; }
-  bool NeedOutBlobWhenBackward() const override { return false; }
-  void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                      const ParallelContext* parallel_ctx) const override;
-
-  void set_is_fw_inplace(bool val) const { *is_fw_inplace_ = val; }
-  void set_is_bw_inplace(bool val) const { *is_bw_inplace_ = val; }
+  Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                             const ParallelContext* parallel_ctx) const override;
 
  private:
-  void InferSbpSignature(SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
-                         const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
-                         std::function<const SbpInferHint&(const std::string&)> SbpInferHint4Ibn,
-                         const ParallelDesc& parallel_desc) const override;
-  void InferHasBatchDim(std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const override;
-  void GetSbpSignatures(SbpSignatureList* sbp_sig_list) const override;
-  void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                            const ParallelContext*, KernelConf*) const override;
-
-  std::unique_ptr<bool> is_fw_inplace_;
-  std::unique_ptr<bool> is_bw_inplace_;
+  Maybe<void> InferSbpSignature(
+      SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
+      const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
+      std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
+      const ParallelDesc& parallel_desc) const override;
+  Maybe<void> InferBatchAxis(
+      std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override;
+  Maybe<void> GetSbpSignatures(SbpSignatureList* sbp_sig_list) const override;
 };
 
 }  // namespace oneflow
