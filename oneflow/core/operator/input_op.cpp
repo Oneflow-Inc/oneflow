@@ -40,6 +40,17 @@ Maybe<void> InputOp::InferBatchAxis(
   return Maybe<void>::Ok();
 }
 
+Maybe<void> InputOp::InferSbpSignature(
+    SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
+    const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
+    std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
+    const ParallelDesc& parallel_desc) const {
+  SbpSignatureList sbp_sig_list;
+  JUST(GetSbpSignatures(&sbp_sig_list));
+  *sbp_signature = sbp_sig_list.sbp_signature(0);
+  return Maybe<void>::Ok();
+}
+
 Maybe<void> InputOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
   InterfaceOpUtil::GetInputLikeOpSbpSignature(op_conf().input_conf().blob_conf(), input_bns(),
                                               output_bns(),

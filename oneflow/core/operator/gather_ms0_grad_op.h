@@ -1,21 +1,20 @@
-#ifndef ONEFLOW_CORE_OPERATOR_INPUT_OP_H_
-#define ONEFLOW_CORE_OPERATOR_INPUT_OP_H_
+#ifndef ONEFLOW_CORE_OPERATOR_GATHER_MS0_GRAD_OP_H_
+#define ONEFLOW_CORE_OPERATOR_GATHER_MS0_GRAD_OP_H_
 
 #include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
 
-class InputOp final : public Operator {
+class GatherMs0GradOp final : public Operator {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(InputOp);
-  InputOp() : Operator() {}
-  ~InputOp() = default;
+  OF_DISALLOW_COPY_AND_MOVE(GatherMs0GradOp);
+  GatherMs0GradOp() = default;
+  ~GatherMs0GradOp() override = default;
 
   void InitFromOpConf() override;
   const PbMessage& GetCustomizedConf() const override;
   Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                             const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature,
-                             int64_t record_piece_size) const override;
+                             const ParallelContext* parallel_ctx) const override;
 
  private:
   Maybe<void> InferSbpSignature(
@@ -24,6 +23,10 @@ class InputOp final : public Operator {
       std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
       const ParallelDesc& parallel_desc) const override;
 
+  void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                            const ParallelContext* parallel_ctx,
+                            KernelConf* kernel_conf) const override;
+
   Maybe<void> InferBatchAxis(
       std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override;
   Maybe<void> GetSbpSignatures(SbpSignatureList* sbp_sig_list) const override;
@@ -31,4 +34,4 @@ class InputOp final : public Operator {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_OPERATOR_INPUT_OP_H_
+#endif  // ONEFLOW_CORE_OPERATOR_GATHER_MS0_GRAD_OP_H_

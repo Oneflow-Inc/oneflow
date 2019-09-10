@@ -66,9 +66,9 @@ Maybe<void> JobBuildAndInferCtx::InferOpOutSbpParallel(Operator* op,
   for (const std::string& ibn : op->input_bns()) {
     const LogicalBlobId& lbi = op->BnInOp2Lbi(ibn);
     CHECK_OR_RETURN(lbi2logical_blob_desc_.find(lbi) != lbi2logical_blob_desc_.end())
-        << JobBuildAndInferError::kLogicalBlobNameNotExist
-        << "when infer op_name: " << op->op_name() << " consumed op_name: " << lbi.op_name()
-        << " blob_name: " << lbi.blob_name() << " not infer blob desc";
+        << JobBuildAndInferError::kLogicalBlobNameNotExist << "when infer op_name: \""
+        << op->op_name() << "\", consumed op_name: \"" << lbi.op_name() << "\", blob_name: \""
+        << lbi.blob_name() << "\" not infer blob desc";
     const BlobDesc* logical_blob_desc = lbi2logical_blob_desc_.at(lbi).get();
     CHECK_OR_RETURN(lbi2sbp_parallel_from_producer_view_.find(lbi)
                     != lbi2sbp_parallel_from_producer_view_.end())

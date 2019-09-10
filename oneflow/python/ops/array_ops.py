@@ -35,6 +35,12 @@ def gather(
             raise NotImplementedError
         else:
             raise AttributeError
+    elif params.has_split_axis_for_consumer() and params.split_axis_for_consumer is 0:
+        assert axis == 0
+        assert batch_dims == 0
+        setattr(op_conf.gather_ms0_conf, "in", params.logical_blob_name)
+        op_conf.gather_ms0_conf.indices = indices.logical_blob_name
+        op_conf.gather_ms0_conf.out = "out"
     else:
         setattr(op_conf.gather_conf, "in", params.logical_blob_name)
         op_conf.gather_conf.indices = indices.logical_blob_name
@@ -46,7 +52,6 @@ def gather(
     lbi.op_name = op_conf.name
     lbi.blob_name = "out"
     return remote_blob_util.RemoteBlob(lbi)
-
 
 @oneflow_export("reshape")
 def reshape(x, shape, name=None):
