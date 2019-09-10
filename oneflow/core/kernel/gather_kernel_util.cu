@@ -30,7 +30,11 @@ __global__ void GatherForwardGpu(int64_t elem_cnt, const K* indices, int64_t num
   CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
     const int64_t in_offset =
         GetInOffset<K>(i, indices, num_indices, gather_dim_size, inner_dim_size, offset);
-    out[i] = in_offset < 0 ? 0 : in[in_offset];
+    if (in_offset < 0) {
+      out[i] = 0;
+    } else {
+      out[i] = in[in_offset];
+    }
   }
 }
 
