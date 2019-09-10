@@ -31,9 +31,9 @@ void SegmentSumGradOp::GetSbpSignatures(
     const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
     SbpSignatureList* sbp_sig_list) const {
   SbpSignatureBuilder()
-      .Split("in_dff", 0)
-      .Split("out_diff", 0)
-      .MakeSplitSignatureListBuilder(LogicalBlobDesc4Ibn("out_idff").shape().NumAxes())
+      .Split(input_bns(), 0)
+      .Split(output_bns(), 0)
+      .MakeSplitSignatureListBuilder(LogicalBlobDesc4Ibn("out_diff").shape().NumAxes())
       .Build(sbp_sig_list);
 }
 

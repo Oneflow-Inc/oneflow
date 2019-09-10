@@ -88,7 +88,7 @@ void LossOp::GetSbpSignatures(
   SbpSignatureBuilder()
       .Split(input_bns(), 0)
       .Split(output_bns(), 0)
-      .PartialSum({"loss_instance_num", "reduction_coefficient"})
+      .PartialSum({"loss_instance_num"})//, "reduction_coefficient"})
       .Build(sbp_sig_list->mutable_sbp_signature()->Add());
 }
 
