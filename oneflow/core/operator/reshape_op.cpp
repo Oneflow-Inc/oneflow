@@ -45,6 +45,7 @@ Maybe<void> ReshapeOp::GetSbpSignatures(
   return GetReshapeSbpSignatures(in_shape, *out_shape, input_bns(), output_bns(),
                                  parallel_desc.parallel_num(), sbp_sig_list);
 }
+
 REGISTER_OP(OperatorConf::kReshapeConf, ReshapeOp);
 
 }  // namespace oneflow
