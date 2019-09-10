@@ -17,7 +17,7 @@ class OpNode final : public Node<OpNode, OpEdge> {
   OF_DISALLOW_COPY_AND_MOVE(OpNode);
   explicit OpNode(const ParallelDesc& parallel_desc, const OperatorConf& op_conf)
       : parallel_desc_(parallel_desc),
-        op_(ConstructOp(op_conf, parallel_desc.device_type())),
+        op_(ConstructOp(op_conf, parallel_desc.device_type(), &GlobalJobDesc())),
         ibns_(op_->input_bns().begin(), op_->input_bns().end()) {}
   ~OpNode() = default;
 
@@ -115,12 +115,14 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
   explicit OpGraph(const Job& job) { Init(job); }
   ~OpGraph() = default;
 
-  const OpNode* OpNode4OpName(const std::string& name) const { return op_name2op_node_.at(name); }
+  const OpNode* OpNode4OpName(const std::string& name) const;
 
   std::function<const BlobDesc&(const LogicalBlobId&)> MakeGetterBlobDesc4ModelLbi() const;
 
   int32_t GetModelSplitAxis(const std::string& op_name, const LogicalBlobId& lbi) const;
   BalancedSplitter GetBalancedSplitter(const std::string& op_name, const LogicalBlobId& lbi) const;
+  int64_t GetParallelNum(const std::string& op_name) const;
+  int64_t GetSplitNum(const std::string& op_name, const LogicalBlobId& lbi) const;
   const SbpParallel& GetSbpParallel(const std::string& op_name, const LogicalBlobId& lbi) const;
   DataType GetBlobDataType(const LogicalBlobId& lbi) const;
   const BlobDesc& GetLogicalBlobDesc(const LogicalBlobId& lbi) const;
@@ -160,7 +162,6 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
   std::function<bool(const OpNode*, const OpNode*)> MakePredicatorIsDataOrCtrlReachable() const;
   std::list<OpNode*> DataOrCtrlSourceNodes() const;
 
-  int64_t GetSplitNum(const std::string& op_name, const LogicalBlobId& lbi) const;
   HashMap<std::string, OpNode*> op_name2op_node_;
   HashMap<std::string, HashSet<std::string>> producer_op_name2ctrl_consumer_op_names_;
 };

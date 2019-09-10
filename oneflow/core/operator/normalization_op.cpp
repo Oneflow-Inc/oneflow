@@ -12,33 +12,19 @@ void NormalizationOp::InitFromOpConf() {
   CHECK_LE(conf.momentum(), 1);
   EnrollInputBn("in");
   EnrollOutputBn("out");
-  if (conf.has_moving_mean()) {
-    EnrollInputBn("moving_mean")->set_is_mutable(conf.is_training());
-  } else {
-    EnrollTmpBn("moving_mean");
-  }
-  if (conf.has_moving_variance()) {
-    EnrollInputBn("moving_variance")->set_is_mutable(conf.is_training());
-  } else {
-    EnrollTmpBn("moving_variance");
-  }
+  EnrollInputBn("moving_mean")->set_is_mutable(conf.is_training());
+  EnrollInputBn("moving_variance")->set_is_mutable(conf.is_training());
   if (conf.scale()) {
-    if (conf.has_gamma()) {
-      EnrollInputBn("gamma");
-    } else {
-      EnrollTmpBn("gamma");
-    }
+    CHECK(conf.has_gamma());
+    EnrollInputBn("gamma");
   } else if (DevIsGpuAndEnableCudnn()) {
     EnrollConstBufBn("gamma");
   } else {
     UNIMPLEMENTED();
   }
   if (conf.center()) {
-    if (conf.has_beta()) {
-      EnrollInputBn("beta");
-    } else {
-      EnrollTmpBn("beta");
-    }
+    CHECK(conf.has_beta());
+    EnrollInputBn("beta");
   } else if (DevIsGpuAndEnableCudnn()) {
     EnrollConstBufBn("beta");
   } else {
@@ -82,8 +68,8 @@ Maybe<void> NormalizationOp::InferBlobDescs(
   };
   (conf.has_moving_mean() ? CheckParamBlobDesc : SetParamBlobDesc)("moving_mean");
   (conf.has_moving_variance() ? CheckParamBlobDesc : SetParamBlobDesc)("moving_variance");
-  (conf.has_beta() ? CheckParamBlobDesc : SetParamBlobDesc)("beta");
-  (conf.has_gamma() ? CheckParamBlobDesc : SetParamBlobDesc)("gamma");
+  if (conf.center()) { CheckParamBlobDesc("beta"); }
+  if (conf.scale()) { CheckParamBlobDesc("gamma"); }
   if (conf.is_training()) {
     SetParamBlobDesc("mean");
     SetParamBlobDesc("inv_variance");
@@ -94,8 +80,10 @@ Maybe<void> NormalizationOp::InferBlobDescs(
 Maybe<void> NormalizationOp::InferBatchAxis(
     std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
   *BatchAxis4BnInOp("out") = *BatchAxis4BnInOp("in");
-  BatchAxis4BnInOp("mean")->clear_value();
-  BatchAxis4BnInOp("inv_variance")->clear_value();
+  if (op_conf().normalization_conf().is_training()) {
+    BatchAxis4BnInOp("mean")->clear_value();
+    BatchAxis4BnInOp("inv_variance")->clear_value();
+  }
   return Maybe<void>::Ok();
 }
 

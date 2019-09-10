@@ -139,6 +139,8 @@ message VariableKernelConf {
 
 message RecordLoadKernelConf {
   required int64 device_piece_size = 1;
+  required int64 parallel_id = 2;
+  required int64 parallel_num = 3;
 }
 
 message PReluAlphaGradKernelConf {
@@ -155,6 +157,14 @@ message ConvDataGradKernelConf {
 
 message ShapeElemCntKernelConf {
   repeated int32 axis = 1;
+}
+
+message GatherMs0KernelConf {
+  required int64 offset = 1;
+}
+
+message GatherMs0GradKernelConf {
+  required int64 offset = 1;
 }
 
 message KernelConf {
@@ -202,5 +212,7 @@ message KernelConf {
     ConvFilterGradKernelConf conv_filter_grad_conf = 410;
     ConvDataGradKernelConf conv_data_grad_conf = 411;
     ShapeElemCntKernelConf shape_elem_cnt_conf = 412;
+    GatherMs0KernelConf gather_ms0_conf = 413;
+    GatherMs0GradKernelConf gather_ms0_grad_conf = 414;
   }
 }

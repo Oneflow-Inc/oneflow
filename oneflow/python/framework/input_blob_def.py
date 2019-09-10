@@ -18,7 +18,13 @@ class input_blob_def(blob_desc.BlobDesc):
                  dtype = data_type_util.kFloat,
                  is_dynamic = False,
                  batch_axis = 0,
-                 split_axis = undefined):
+                 split_axis = undefined,
+                 name = None):
+        lbi = lbi_util.LogicalBlobId()
+        if name is None: name = id_util.UniqueStr("Input_")
+        lbi.op_name = name
+        lbi.blob_name = "out"
+        blob_desc.BlobDesc.__init__(self,lbi)
         assert type(shape) is tuple
         for dim in shape: assert type(dim) is int
         self.shape_ = shape
@@ -26,9 +32,6 @@ class input_blob_def(blob_desc.BlobDesc):
         self.is_dynamic_ = is_dynamic
         self.batch_axis_ = batch_axis
         self.split_axis_ = split_axis
-        self.lbi_ = lbi_util.LogicalBlobId()
-        self.lbi_.op_name = id_util.UniqueStr("Input_")
-        self.lbi_.blob_name = "out"
 
     @property
     def static_shape(self): return self.shape_
@@ -43,23 +46,15 @@ class input_blob_def(blob_desc.BlobDesc):
     def batch_axis(self): return self.batch_axis_
 
     @property
-    def split_axis(self): return self.split_axis_
-
-    @property
     def is_dynamic(self): return self.is_dynamic_
 
-    @property
-    def lbi(self): return self.lbi_
-        
-    @property
-    def op_name(self): return self.lbi_.op_name
+    def split(self, split_axis):
+        assert split_axis is not undefined
+        assert type(split_axis) is int or split_axis is None or split_axis == False
+        return input_blob_def(shape = self.shape_, dtype = self.dtype_,               \
+                        is_dynamic = self.is_dynamic_, batch_axis = self.batch_axis_, \
+                        split_axis = split_axis, name = self.lbi.op_name)
 
-    @property
-    def blob_name(self): return self.lbi_.blob_name
-
-    @property
-    def logical_blob_name(self): return self.op_name + "/" + self.blob_name
-    
     def ToInterfaceBlobConf(self):
         interface_blob_conf = op_conf_util.InterfaceBlobConf()
         interface_blob_conf.shape.dim.extend(self.shape_)
@@ -82,10 +77,10 @@ class input_blob_def(blob_desc.BlobDesc):
             pass
         return interface_blob_conf
 
-    def __add__(self, rhs): 
+    def __add__(self, rhs):
         return oneflow.math.add(self, rhs)
-        
-    def __radd__(self, lhs): 
+
+    def __radd__(self, lhs):
         return oneflow.math.add(lhs, self)
 
     def __sub__(self, rhs):

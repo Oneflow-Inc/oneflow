@@ -157,10 +157,14 @@ void SetBoxingOpConfBySbpParallel(
     split_conf->set_axis(out_sbp.split_parallel().axis());
     CHECK(is_out_boxing_task_node ^ is_in_boxing_task_node);
     if (is_out_boxing_task_node) {
-      BalancedSplitter in_bs = Global<OpGraph>::Get()->GetBalancedSplitter(in_op.op_name(), lbi);
+      int64_t total_split_num_of_out_op =
+          Global<OpGraph>::Get()->GetSplitNum(out_op.op_name(), lbi);
+      int64_t in_parallel_num = Global<OpGraph>::Get()->GetParallelNum(in_op.op_name());
+      BalancedSplitter in_bs(total_split_num_of_out_op, in_parallel_num);
       Range in_range =
           in_bs.At(sorted_in_edges.front().parallel_id_min, sorted_in_edges.back().parallel_id_max);
-      BalancedSplitter out_bs = Global<OpGraph>::Get()->GetBalancedSplitter(out_op.op_name(), lbi);
+      int64_t out_parallel_num = Global<OpGraph>::Get()->GetParallelNum(out_op.op_name());
+      BalancedSplitter out_bs(total_split_num_of_out_op, out_parallel_num);
       for (const BoxingTaskNode::EdgeInfo& out_edge : sorted_out_edges) {
         Range out_range = out_bs.At(out_edge.parallel_id_min, out_edge.parallel_id_max);
         Range intersectant_range = FindIntersectant(in_range, out_range);
@@ -274,7 +278,7 @@ std::shared_ptr<Operator> BoxingTaskNode::NewBoxingOp(
   boxing_conf->set_in_num(sorted_in_edges.size());
   boxing_conf->set_out_num(sorted_out_edges.size());
   (this->*method)(lbi, sorted_in_edges, in_logical, sorted_out_edges, out_logical, boxing_conf);
-  return ConstructOp(op_conf);
+  return ConstructOp(op_conf, &GlobalJobDesc());
 }
 
 void BoxingTaskNode::InferProducedDataRegstTimeShape() { NaiveInferProducedDataRegstTimeShape(); }

@@ -18,15 +18,11 @@ from contextlib import contextmanager
 
 from oneflow.python.oneflow_export import oneflow_export
 
-@oneflow_export('get_cur_job_conf_builder')
-def get_cur_job_conf_builder():
-    return config_util.JobConfigProtoBuilder(compile_context.cur_job_conf)
-
 def Compile(job_set, job_func):
     job_conf = job_util.JobConfigProto()
     job_conf.job_name = job_func.__name__
     with compile_context.CurJobConf(job_conf), job_builder.JobBuildAndInferCtx(job_conf.job_name):
-        _CompileJob(job_conf, job_func, config_util.inited_config_proto)
+        _CompileJob(job_conf, job_func, config_util.default_config_proto)
         job_builder.CurCtxSetJobConfIfNotSet(job_conf)
         assert job_builder.CurCtxHasJobConf()
         job_builder.CurCtxCheckJob()
@@ -34,17 +30,20 @@ def Compile(job_set, job_func):
 def _CompileJob(job_conf, func, config):
     device_type, machine_dev_ids = placement_util.GetDefaultMachineDeviceIds(config.resource)
     func.__oneflow_input_blob_defs__ = _GetArgDefault(func)
+    def IsValidBlob(blob):
+        return isinstance(blob, input_blob_def.input_blob_def) \
+            or isinstance(blob, remote_blob_util.RemoteBlob)
     with placement_util.DevicePriorPlacementScope(device_type, machine_dev_ids):
-        with _SetJobConfBeforeInferOp(job_conf), _AddInputOpBeforeNonInputOp(func):
-            ret_remote_blobs = func()
+        with _SetJobConfBeforeInferOp(job_conf) as set_job_conf:
+            with _AddInputOpBeforeNonInputOp(func, set_job_conf): ret_remote_blobs = func()
         if ret_remote_blobs is None:
             func.__oneflow_output_remote_blobs__ = None 
-        elif isinstance(ret_remote_blobs, remote_blob_util.RemoteBlob):
+        elif IsValidBlob(ret_remote_blobs):
             func.__oneflow_output_remote_blobs__ = ops.RetOpByRemoteBlob(ret_remote_blobs)
         elif isinstance(ret_remote_blobs, tuple) or isinstance(ret_remote_blobs, list):
             func.__oneflow_output_remote_blobs__ = []
             for remote_blob in ret_remote_blobs:
-                assert isinstance(remote_blob, remote_blob_util.RemoteBlob)
+                assert IsValidBlob(remote_blob)
                 output_remote_blob = ops.RetOpByRemoteBlob(remote_blob)
                 func.__oneflow_output_remote_blobs__.append(output_remote_blob)
             if isinstance(ret_remote_blobs, tuple):
@@ -62,14 +61,15 @@ def _SetJobConfBeforeInferOp(job_conf):
         job_builder.CurCtxSetJobConfIfNotSet(job_conf)
         job_conf_has_set.set_value(True)
     with compile_context.BeforeNonInputOpBuildAndInferHook(SetJobconf):
-        yield None
+        yield SetJobconf
     if job_conf_has_set.value == False: SetJobconf()
 
 @contextmanager
-def _AddInputOpBeforeNonInputOp(func):
+def _AddInputOpBeforeNonInputOp(func, do_before_infer_input_op):
     input_op_add_and_infered = Box(False)
     def AddAndInferInputOp():
         if input_op_add_and_infered.value: return
+        do_before_infer_input_op()
         for blob_desc in func.__oneflow_input_blob_defs__:
             assert isinstance(blob_desc, input_blob_def.input_blob_def)
             ops.InputOpByBlobDesc(blob_desc)

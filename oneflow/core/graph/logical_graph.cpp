@@ -51,7 +51,7 @@ void LogicalGraph::NaiveBuildFwStruct(
     CHECK(parallel_desc_ptr_it != name2parallel_desc.end());
     const std::shared_ptr<ParallelDesc>& parallel_desc_ptr = parallel_desc_ptr_it->second;
     cur_op_conf.set_device_type(parallel_desc_ptr->device_type());
-    std::shared_ptr<Operator> cur_op = ConstructOp(cur_op_conf);
+    std::shared_ptr<Operator> cur_op = ConstructOp(cur_op_conf, &GlobalJobDesc());
     LogicalNode* cur_node = cur_op->NewProperLogicalNode();
     if (cur_node->TypeName() == "PackForward" || cur_node->TypeName() == "UnpackForward") {
       CHECK_EQ(0, GlobalJobDesc().job_conf().piece_size() % parallel_desc_ptr->parallel_num());
@@ -200,7 +200,8 @@ void LogicalGraph::AddNcclReduceScatterAndAllGather(LogicalNode* src, LogicalNod
   nccl_reduce_scatter_op_conf.set_device_type(src_pd->device_type());
   nccl_reduce_scatter_op_conf.mutable_nccl_reduce_scatter_conf();
   NcclReduceScatterLogicalNode* nccl_reduce_scatter_node = NewNode<NcclReduceScatterLogicalNode>();
-  nccl_reduce_scatter_node->mut_op_vec() = {ConstructOp(nccl_reduce_scatter_op_conf)};
+  nccl_reduce_scatter_node->mut_op_vec() = {
+      ConstructOp(nccl_reduce_scatter_op_conf, &GlobalJobDesc())};
   nccl_reduce_scatter_node->mut_parallel_desc() = src_pd;
   nccl_reduce_scatter_node->mut_rank_ctx() = rank_ctx;
   Connect<LogicalNode>(src, NewEdge(), nccl_reduce_scatter_node);
@@ -210,7 +211,7 @@ void LogicalGraph::AddNcclReduceScatterAndAllGather(LogicalNode* src, LogicalNod
   nccl_all_gather_op_conf.set_device_type(src_pd->device_type());
   nccl_all_gather_op_conf.mutable_nccl_all_gather_conf();
   NcclAllGatherLogicalNode* nccl_all_gather_node = NewNode<NcclAllGatherLogicalNode>();
-  nccl_all_gather_node->mut_op_vec() = {ConstructOp(nccl_all_gather_op_conf)};
+  nccl_all_gather_node->mut_op_vec() = {ConstructOp(nccl_all_gather_op_conf, &GlobalJobDesc())};
   nccl_all_gather_node->mut_parallel_desc() = src_pd;
   nccl_all_gather_node->mut_rank_ctx() = rank_ctx;
   Connect<LogicalNode>(nccl_all_gather_node, NewEdge(), dst);
@@ -225,7 +226,7 @@ void LogicalGraph::AddNcclAllReduce(LogicalNode* src, LogicalNode* dst) {
   nccl_all_reduce_op_conf.set_device_type(src_pd->device_type());
   nccl_all_reduce_op_conf.mutable_nccl_all_reduce_conf();
   NcclAllReduceLogicalNode* nccl_all_reduce_node = NewNode<NcclAllReduceLogicalNode>();
-  nccl_all_reduce_node->mut_op_vec() = {ConstructOp(nccl_all_reduce_op_conf)};
+  nccl_all_reduce_node->mut_op_vec() = {ConstructOp(nccl_all_reduce_op_conf, &GlobalJobDesc())};
   nccl_all_reduce_node->mut_parallel_desc() = src_pd;
   nccl_all_reduce_node->mut_rank_ctx() = ReduceRankCtx().CtxWithScatter(src_pd->parallel_num());
   Connect<LogicalNode>(src, NewEdge(), nccl_all_reduce_node);
@@ -248,7 +249,7 @@ void LogicalGraph::AddReduceScatterAddGatherNodes(LogicalNode* src, LogicalNode*
   reduce_scatter_op_conf.set_name("reduce_scatter_" + NewUniqueId());
   reduce_scatter_op_conf.set_device_type(src_pd->device_type());
   reduce_scatter_op_conf.mutable_reduce_scatter_conf();
-  reduce_scatter_node->mut_op_vec() = {ConstructOp(reduce_scatter_op_conf)};
+  reduce_scatter_node->mut_op_vec() = {ConstructOp(reduce_scatter_op_conf, &GlobalJobDesc())};
   reduce_scatter_node->mut_parallel_desc() = src_pd;
   reduce_scatter_node->mut_rank_ctx() = current_rank_ctx;
   Connect<LogicalNode>(src, NewEdge(), reduce_scatter_node);
@@ -258,7 +259,7 @@ void LogicalGraph::AddReduceScatterAddGatherNodes(LogicalNode* src, LogicalNode*
   reduce_add_op_conf.set_name("reduce_add_" + NewUniqueId());
   reduce_add_op_conf.set_device_type(src_pd->device_type());
   reduce_add_op_conf.mutable_reduce_add_conf();
-  reduce_add_node->mut_op_vec() = {ConstructOp(reduce_add_op_conf)};
+  reduce_add_node->mut_op_vec() = {ConstructOp(reduce_add_op_conf, &GlobalJobDesc())};
   reduce_add_node->mut_parallel_desc() = src_pd;
   reduce_add_node->mut_rank_ctx() = current_rank_ctx;
   Connect<LogicalNode>(reduce_scatter_node, NewEdge(), reduce_add_node);
@@ -268,7 +269,7 @@ void LogicalGraph::AddReduceScatterAddGatherNodes(LogicalNode* src, LogicalNode*
   reduce_gather_op_conf.set_name("reduce_gather_" + NewUniqueId());
   reduce_gather_op_conf.set_device_type(src_pd->device_type());
   reduce_gather_op_conf.mutable_reduce_gather_conf();
-  reduce_gather_node->mut_op_vec() = {ConstructOp(reduce_gather_op_conf)};
+  reduce_gather_node->mut_op_vec() = {ConstructOp(reduce_gather_op_conf, &GlobalJobDesc())};
   reduce_gather_node->mut_parallel_desc() = src_pd;
   reduce_gather_node->mut_rank_ctx() = current_rank_ctx;
 

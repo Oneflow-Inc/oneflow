@@ -24,7 +24,7 @@ Maybe<OptInt64> GetSplitAxis(const VariableOpConf& variable_conf) {
 void VariableOp::InitFromOpConf() {
   CHECK(op_conf().has_variable_conf());
   if (op_conf().variable_conf().has_tick()) { EnrollInputBn("tick", false); }
-  EnrollOutputBn("out", GlobalJobDesc().IsTrain())->set_is_mutable(true);
+  EnrollOutputBn("out", job_desc().IsTrain())->set_is_mutable(true);
 }
 
 const PbMessage& VariableOp::GetCustomizedConf() const { return op_conf().variable_conf(); }
@@ -33,12 +33,11 @@ Maybe<void> VariableOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   const VariableOpConf& variable_conf = op_conf().variable_conf();
-  OF_CHECK(GlobalJobDesc().job_conf().has_default_initializer_conf()
-           || variable_conf.has_initializer());
+  OF_CHECK(job_desc().job_conf().has_default_initializer_conf() || variable_conf.has_initializer());
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   out_blob_desc->mut_shape() = Shape(variable_conf.shape());
   out_blob_desc->set_data_type(variable_conf.has_data_type() ? variable_conf.data_type()
-                                                             : GlobalJobDesc().DefaultDataType());
+                                                             : job_desc().DefaultDataType());
   const auto& opt_split_axis = JUST(GetSplitAxis(variable_conf));
   if (opt_split_axis->has_value()) {
     int32_t model_split_axis = opt_split_axis->value();
