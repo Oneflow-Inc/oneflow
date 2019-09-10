@@ -25,17 +25,23 @@ Maybe<void> ReshapeLikeOp::InferBlobDescs(
 Maybe<void> ReshapeLikeOp::GetSbpSignatures(
     const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
     SbpSignatureList* sbp_sig_list) const {
+  const auto& in_shape = JUST(LogicalBlobDesc4Ibn("x"))->shape();
+  const auto& out_shape = JUST(LogicalBlobDesc4Ibn("like"))->shape();
+  if (in_shape.At(0) == in_shape.At(0)) {
+    SbpSignatureBuilder()
+        .Split(input_bns(), 0)
+        .Split(output_bns(), 0)
+        .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+  }
   HashMap<int, int> squeezed_group_start_in_axis2out_axis;
   HashMap<int, int> x_squeezed_axis2original_axis;
   HashMap<int, int> y_squeezed_axis2original_axis;
   {
-    const auto& x_shape = JUST(LogicalBlobDesc4Ibn("x"))->shape();
-    const auto& y_shape = JUST(LogicalBlobDesc4Ibn("like"))->shape();
-    Shape squeezed_x_shape;
-    Shape squeezed_y_shape;
-    Squeeze(x_shape, &squeezed_x_shape, &x_squeezed_axis2original_axis);
-    Squeeze(y_shape, &squeezed_y_shape, &y_squeezed_axis2original_axis);
-    GetGroupStartInAxis2OutAxis(squeezed_x_shape, squeezed_y_shape,
+    Shape squeezed_in_shape;
+    Shape squeezed_out_shape;
+    Squeeze(in_shape, &squeezed_in_shape, &x_squeezed_axis2original_axis);
+    Squeeze(out_shape, &squeezed_out_shape, &y_squeezed_axis2original_axis);
+    GetGroupStartInAxis2OutAxis(squeezed_in_shape, squeezed_out_shape,
                                 &squeezed_group_start_in_axis2out_axis);
   }
   for (const auto& pair : squeezed_group_start_in_axis2out_axis) {

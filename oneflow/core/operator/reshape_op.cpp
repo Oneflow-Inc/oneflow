@@ -19,7 +19,6 @@ Maybe<void> ReshapeOp::InferBlobDescs(
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
   *out_blob_desc = *in_blob_desc;
-
   const ReshapeOpConf& conf = op_conf().reshape_conf();
   CHECK_GE_OR_RETURN(conf.shape().dim_size(), 1);
   std::vector<int64_t> dim_vec = {conf.shape().dim().begin(), conf.shape().dim().end()};
@@ -41,13 +40,18 @@ Maybe<void> ReshapeOp::InferBlobDescs(
 Maybe<void> ReshapeOp::GetSbpSignatures(
     const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
     SbpSignatureList* sbp_sig_list) const {
+  const auto& in_shape = JUST(LogicalBlobDesc4Ibn("in"))->shape();
+  const auto& out_shape = JUST(GetLogicalOutBlobShape(in_shape, op_conf().reshape_conf().shape()));
+  if (in_shape.At(0) == in_shape.At(0)) {
+    SbpSignatureBuilder()
+        .Split(input_bns(), 0)
+        .Split(output_bns(), 0)
+        .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+  }
   HashMap<int, int> squeezed_group_start_in_axis2out_axis;
   HashMap<int, int> in_squeezed_axis2original_axis;
   HashMap<int, int> out_squeezed_axis2original_axis;
   {
-    const auto& in_shape = JUST(LogicalBlobDesc4Ibn("in"))->shape();
-    const auto& out_shape =
-        JUST(GetLogicalOutBlobShape(in_shape, op_conf().reshape_conf().shape()));
     Shape squeezed_in_shape;
     Shape squeezed_out_shape;
     Squeeze(in_shape, &squeezed_in_shape, &in_squeezed_axis2original_axis);
