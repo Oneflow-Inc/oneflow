@@ -24,10 +24,11 @@ Maybe<void> ReshapeLikeOp::InferBlobDescs(
 
 Maybe<void> ReshapeLikeOp::GetSbpSignatures(
     const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
-    SbpSignatureList* sbp_sig_list) const {
+    const ParallelDesc& parallel_desc, SbpSignatureList* sbp_sig_list) const {
   const auto& x_shape = JUST(LogicalBlobDesc4Ibn("x"))->shape();
   const auto& like_shape = JUST(LogicalBlobDesc4Ibn("like"))->shape();
-  return GetReshapeSbpSignatures(x_shape, like_shape, input_bns(), output_bns(), sbp_sig_list);
+  return GetReshapeSbpSignatures(x_shape, like_shape, input_bns(), output_bns(),
+                                 parallel_desc.parallel_num(), sbp_sig_list);
 }
 
 REGISTER_OP(OperatorConf::kReshapeLikeConf, ReshapeLikeOp);

@@ -13,7 +13,7 @@ Maybe<void> GetGroupStartInAxis2OutAxis(const Shape& in_shape, const Shape& out_
 Maybe<void> GetReshapeSbpSignatures(const Shape& in_shape, const Shape& out_shape,
                                     const PbRpf<std::string>& input_bns,
                                     const PbRpf<std::string>& output_bns,
-                                    SbpSignatureList* sbp_sig_list);
+                                    const int64_t parallel_num, SbpSignatureList* sbp_sig_list);
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_OPERATOR_RESHAPE_UTIL_H_

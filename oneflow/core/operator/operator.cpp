@@ -133,8 +133,8 @@ Maybe<void> Operator::InferOutputBlobTimeShape(
 
 Maybe<void> Operator::GetSbpSignaturesIf(
     const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
-    SbpSignatureList* sbp_sig_list) const {
-  JUST(GetSbpSignatures(LogicalBlobDesc4Ibn, sbp_sig_list));
+    const ParallelDesc& parallel_desc, SbpSignatureList* sbp_sig_list) const {
+  JUST(GetSbpSignatures(LogicalBlobDesc4Ibn, parallel_desc, sbp_sig_list));
   SbpSignatureBuilder()
       .Broadcast(input_bns())
       .Broadcast(output_bns())
@@ -171,7 +171,7 @@ Maybe<void> Operator::InferSbpSignature(
     return Maybe<const BlobDesc*>(&(sbp_infer_hint->logical_blob_desc()));
   };
   SbpSignatureList sbp_sig_list;
-  JUST(GetSbpSignaturesIf(LogicalBlobDesc4Ibn, &sbp_sig_list));
+  JUST(GetSbpSignaturesIf(LogicalBlobDesc4Ibn, parallel_desc, &sbp_sig_list));
   // filter sbp signatures by sbp signature conf
   SbpSignatureList filtered_sbp_sigs_by_conf;
   FilterSbpSignatureList(sbp_sig_list, sbp_sig_conf, &filtered_sbp_sigs_by_conf);

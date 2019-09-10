@@ -48,6 +48,7 @@ Maybe<void> Squeeze(const Shape& origin, Shape* shape,
 }
 
 Maybe<void> GetGroupStartInAxis2OutAxis(const Shape& in_shape, const Shape& out_shape,
+                                        const int64_t parallel_num,
                                         HashMap<int, int>* group_start_in_axis2out_axis) {
   CHECK_NE_OR_RETURN(in_shape.NumAxes(), 0);
   CHECK_NE_OR_RETURN(out_shape.NumAxes(), 0);
@@ -60,7 +61,9 @@ Maybe<void> GetGroupStartInAxis2OutAxis(const Shape& in_shape, const Shape& out_
     } else if (in_shape.Count(in_axis) > out_shape.Count(out_axis)) {
       --out_axis;
     } else {
-      if (in_shape.At(in_axis) == out_shape.At(out_axis)) {
+      if (in_shape.At(in_axis) == out_shape.At(out_axis)
+          || (in_shape.Count(in_axis) % parallel_num == 0
+              && out_shape.Count(out_axis) % parallel_num == 0)) {
         (*group_start_in_axis2out_axis)[in_axis] = out_axis;
       }
       --in_axis;
@@ -78,13 +81,7 @@ Maybe<void> GetGroupStartInAxis2OutAxis(const Shape& in_shape, const Shape& out_
 Maybe<void> GetReshapeSbpSignatures(const Shape& in_shape, const Shape& out_shape,
                                     const PbRpf<std::string>& input_bns,
                                     const PbRpf<std::string>& output_bns,
-                                    SbpSignatureList* sbp_sig_list) {
-  if (in_shape.At(0) == in_shape.At(0)) {
-    SbpSignatureBuilder()
-        .Split(input_bns, 0)
-        .Split(output_bns, 0)
-        .Build(sbp_sig_list->mutable_sbp_signature()->Add());
-  }
+                                    const int64_t parallel_num, SbpSignatureList* sbp_sig_list) {
   HashMap<int, int> squeezed_group_start_in_axis2out_axis;
   HashMap<int, int> in_squeezed_axis2original_axis;
   HashMap<int, int> out_squeezed_axis2original_axis;
@@ -93,7 +90,7 @@ Maybe<void> GetReshapeSbpSignatures(const Shape& in_shape, const Shape& out_shap
     Shape squeezed_out_shape;
     Squeeze(in_shape, &squeezed_in_shape, &in_squeezed_axis2original_axis);
     Squeeze(out_shape, &squeezed_out_shape, &out_squeezed_axis2original_axis);
-    GetGroupStartInAxis2OutAxis(squeezed_in_shape, squeezed_out_shape,
+    GetGroupStartInAxis2OutAxis(squeezed_in_shape, squeezed_out_shape, parallel_num,
                                 &squeezed_group_start_in_axis2out_axis);
   }
   for (const auto& pair : squeezed_group_start_in_axis2out_axis) {

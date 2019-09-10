@@ -154,11 +154,16 @@ class Operator {
 
   Maybe<void> GetSbpSignaturesIf(
       const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
-      SbpSignatureList* sbp_sig_list) const;
+      const ParallelDesc& parallel_desc, SbpSignatureList* sbp_sig_list) const;
 
   const JobDesc& job_desc() const { return *job_desc_; }
 
  protected:
+  virtual Maybe<void> GetSbpSignatures(
+      const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
+      const ParallelDesc& parallel_desc, SbpSignatureList* sbp_sig_list) const {
+    return GetSbpSignatures(LogicalBlobDesc4Ibn, sbp_sig_list);
+  }
   virtual Maybe<void> GetSbpSignatures(
       const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
       SbpSignatureList* sbp_sig_list) const {
