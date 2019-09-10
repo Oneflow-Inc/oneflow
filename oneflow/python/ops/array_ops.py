@@ -1,5 +1,8 @@
 from __future__ import absolute_import
 
+from functools import reduce
+import operator
+
 import oneflow as flow
 import oneflow.python.framework.compile_context as compile_context
 import oneflow.python.framework.remote_blob as remote_blob_util
@@ -48,6 +51,18 @@ def gather(
 @oneflow_export("reshape")
 def reshape(x, shape, name=None):
     assert isinstance(shape, tuple) or isinstance(shape, list)
+    shape = list(shape)
+    assert all(dim == -1 or dim > 0 for dim in shape)
+    assert shape.count(-1) <= 1
+    dim_index_need_infer = shape.index(-1) if shape.count(-1) == 1 else None
+    if dim_index_need_infer is not None:
+        assert (reduce(operator.mul, x.shape, 1) %
+                reduce(operator.mul, shape, 1)) == 0
+        shape[dim_index_need_infer] = int(
+            abs(reduce(operator.mul, x.shape, 1) / reduce(operator.mul, shape, 1)))
+    else:
+        assert reduce(operator.mul, x.shape, 1) == reduce(
+            operator.mul, shape, 1)
     op_conf = op_conf_util.OperatorConf()
     op_conf.name = id_util.UniqueStr("Reshape_")
     setattr(op_conf.reshape_conf, "in", x.logical_blob_name)
@@ -112,7 +127,7 @@ def slice(input_, begin, size, name=None):
 
     slice_conf_list = []
     # ignore first dimension because it's not supported yet
-    for b, s, d in zip(begin, size, input_.static_shape)[1:]:
+    for b, s, d in list(zip(begin, size, input_.static_shape))[1:]:
         slice_conf = op_conf_util.DimSliceConf()
         if b < -d or b > d - 1:
             raise ValueError(
@@ -185,6 +200,29 @@ def constant(
         op_conf.constant_conf.shape.dim.extend(list(shape))
 
     setattr(op_conf.constant_conf, "out", "out")
+    compile_context.CurJobAddOp(op_conf)
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = "out"
+    return remote_blob_util.RemoteBlob(lbi)
+
+
+@oneflow_export('concat')
+def concat(values,
+           axis,
+           name=None):
+    op_conf = op_conf_util.OperatorConf()
+    setattr(
+        op_conf,
+        "name",
+        name if name is not None else id_util.UniqueStr("Concat_"),
+    )
+    op_conf.concat_conf.out = "out"
+    if not isinstance(values, (list, tuple)):
+        values = [values]
+    getattr(op_conf.concat_conf, "in").extend(
+        [v.logical_blob_name for v in values])
+    op_conf.concat_conf.axis = axis
     compile_context.CurJobAddOp(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
     lbi.op_name = op_conf.name
