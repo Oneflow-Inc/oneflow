@@ -9,7 +9,7 @@ void TickComputeActor::VirtualCompActorInit(const TaskProto& task_proto) {
 
 void TickComputeActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
   HandleProducedNaiveDataRegstToConsumer([&](Regst* out_regst) {
-    out_regst->set_piece_id(piece_id_);
+    out_regst->set_piece_id(piece_id_++);
     return true;
   });
 }

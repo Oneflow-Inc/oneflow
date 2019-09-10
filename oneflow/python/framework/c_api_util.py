@@ -3,7 +3,7 @@ from __future__ import absolute_import
 from oneflow.core.job.inter_user_job_info_pb2 import InterUserJobInfo
 import oneflow.core.job.job_set_pb2 as job_set_util
 from google.protobuf import text_format
-import oneflow_internal
+import oneflow.oneflow_internal as oneflow_internal
 import oneflow.python.framework.runtime_context as runtime_ctx
 
 def IsOpTypeCaseCpuSupportOnly(op_type_case):
@@ -31,6 +31,6 @@ def LaunchJob(job_instance):
 
 def DestroyGlobalOneflow():
     oneflow_internal.DestroyGlobalOneflow()
-    
+
 def DestroyGlobalEnvironment():
     oneflow_internal.DestroyGlobalEnvironment()
