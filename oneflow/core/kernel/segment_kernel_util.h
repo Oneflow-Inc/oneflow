@@ -29,14 +29,9 @@ struct SegmentKernelUtil final {
     const Shape out_inner_shape = ClipDim0(out);
 
     FOR_RANGE(int32_t, index, 0, in->shape().At(0)) {  
-      int64_t in_offset = index * in_inner_shape.elem_cnt();
-      int64_t id_offset = index * id_inner_shape.elem_cnt();
-      int64_t out_offset = index * out_inner_shape.elem_cnt();
-
-      const auto cur_in_ptr = in->dptr<T>() + in_offset;
-      const auto cur_id_ptr = segment_ids->dptr<K>() + id_offset;
-      auto cur_out_ptr = out->mut_dptr<T>() + out_offset;
-
+      const auto cur_in_ptr = in->dptr<T>() + index * in_inner_shape.elem_cnt();
+      const auto cur_id_ptr = segment_ids->dptr<K>() + index * id_inner_shape.elem_cnt();
+      auto cur_out_ptr = out->mut_dptr<T>() + index * out_inner_shape.elem_cnt();
       SegmentKernelUtilImpl<device_type, T, K>::SegmentSumForward(
         ctx, in_inner_shape, cur_in_ptr, cur_id_ptr, unique_ids_num, cur_out_ptr);
     }
@@ -49,14 +44,9 @@ struct SegmentKernelUtil final {
     const Shape out_inner_shape = ClipDim0(out);
 
     FOR_RANGE(int32_t, index, 0, in->shape().At(0)) {
-      int64_t in_offset = index * in_inner_shape.elem_cnt();
-      int64_t id_offset = index * id_inner_shape.elem_cnt();
-      int64_t out_offset = index * out_inner_shape.elem_cnt();
-
-      const auto cur_in_ptr = in->dptr<T>() + in_offset;
-      const auto cur_id_ptr = segment_ids->dptr<K>() + id_offset;
-      auto cur_out_ptr = out->mut_dptr<T>() + out_offset;
-
+      const auto cur_in_ptr = in->dptr<T>() + index * in_inner_shape.elem_cnt();
+      const auto cur_id_ptr = segment_ids->dptr<K>() + index * id_inner_shape.elem_cnt();
+      auto cur_out_ptr = out->mut_dptr<T>() + index * out_inner_shape.elem_cnt();
       SegmentKernelUtilImpl<device_type, T, K>::SegmentSumBackward(ctx, in_inner_shape,
         id_inner_shape, cur_in_ptr, cur_id_ptr, cur_out_ptr);
     }
