@@ -22,7 +22,7 @@ void RandomFillBlob(DeviceCtx* ctx, DeviceType device_type, const InitializerCon
 }  // namespace
 
 template<DeviceType device_type>
-void DecodeRandomKernel<device_type>::VirtualKernelInit(const ParallelContext*) {
+void DecodeRandomKernel<device_type>::VirtualKernelInit() {
   gen_.reset(new std::mt19937(this->kernel_conf().decode_random_conf().random_seed()));
   dis_.reset(new std::uniform_int_distribution<uint32_t>());
   is_init_ = false;

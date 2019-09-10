@@ -2,33 +2,18 @@
 
 namespace oneflow {
 
-std::shared_ptr<ErrorProto> GenJobBuildAndInferError(JobBuildAndInferError err_code,
-                                                     std::string msg) {
-  auto err = std::make_shared<ErrorProto>();
-  err->set_msg(msg);
-  err->set_job_build_and_infer_error(err_code);
-  return err;
-}
-
 JobBuildAndInferCtx::JobBuildAndInferCtx(Job* job, int64_t job_id) : job_(job), job_id_(job_id) {
   is_job_conf_frozen_ = false;
   has_job_conf_ = false;
 }
 
 Maybe<void> JobBuildAndInferCtx::SetJobConf(const JobConfigProto& job_conf) {
-  if (is_job_conf_frozen_) {
-    return GenJobBuildAndInferError(JobBuildAndInferError::kJobConfFrozen, "");
-  }
-  if (has_job_conf_) {
-    return GenJobBuildAndInferError(JobBuildAndInferError::kJobConfRepeatedSet, "");
-  }
+  CHECK_OR_RETURN(!is_job_conf_frozen_) << JobBuildAndInferError::kJobConfFrozen;
+  CHECK_OR_RETURN(!has_job_conf_) << JobBuildAndInferError::kJobConfRepeatedSet;
   has_job_conf_ = true;
-  if (job_->job_conf().job_name() != job_conf.job_name()) {
-    return GenJobBuildAndInferError(
-        JobBuildAndInferError::kJobNameNotEqual,
-        "job name you set: " + job_conf.job_name()
-            + " not equal to origin job name: " + job_->job_conf().job_name());
-  }
+  CHECK_EQ_OR_RETURN(job_->job_conf().job_name(), job_conf.job_name())
+      << JobBuildAndInferError::kJobNameNotEqual << "job name you set: " << job_conf.job_name()
+      << " not equal to origin job name: " << job_->job_conf().job_name();
   job_->mutable_job_conf()->CopyFrom(job_conf);
   CHECK_ISNULL(Global<JobDesc>::Get());
   Global<JobDesc>::New(job_conf, job_id_);
@@ -80,87 +65,40 @@ Maybe<void> JobBuildAndInferCtx::InferOpOutSbpParallel(Operator* op,
   HashMap<std::string, SbpInferHint> ibn2sbp_infer_hint;
   for (const std::string& ibn : op->input_bns()) {
     const LogicalBlobId& lbi = op->BnInOp2Lbi(ibn);
-    if (lbi2logical_blob_desc_.find(lbi) == lbi2logical_blob_desc_.end()) {
-      return GenJobBuildAndInferError(
-          JobBuildAndInferError::kLogicalBlobNameNotExist,
-          "when infer op_name: " + op->op_name() + " consumed op_name: " + lbi.op_name()
-              + " blob_name: " + lbi.blob_name() + " not infer blob desc");
-    }
+    CHECK_OR_RETURN(lbi2logical_blob_desc_.find(lbi) != lbi2logical_blob_desc_.end())
+        << JobBuildAndInferError::kLogicalBlobNameNotExist
+        << "when infer op_name: " << op->op_name() << " consumed op_name: " << lbi.op_name()
+        << " blob_name: " << lbi.blob_name() << " not infer blob desc";
     const BlobDesc* logical_blob_desc = lbi2logical_blob_desc_.at(lbi).get();
-    if (lbi2sbp_parallel_from_producer_view_.find(lbi)
-        == lbi2sbp_parallel_from_producer_view_.end()) {
-      return GenJobBuildAndInferError(
-          JobBuildAndInferError::kLogicalBlobNameNotExist,
-          "when infer op_name: " + op->op_name() + " consumed op_name: " + lbi.op_name()
-              + " blob_name: " + lbi.blob_name() + " not infer split axis");
-    }
+    CHECK_OR_RETURN(lbi2sbp_parallel_from_producer_view_.find(lbi)
+                    != lbi2sbp_parallel_from_producer_view_.end())
+        << JobBuildAndInferError::kLogicalBlobNameNotExist
+        << "when infer op_name: " << op->op_name() << " consumed op_name: " << lbi.op_name()
+        << " blob_name: " << lbi.blob_name() << " not infer split axis";
     const SbpParallel& sbp_parallel = lbi2sbp_parallel_from_producer_view_.at(lbi);
     ibn2sbp_infer_hint.emplace(ibn, SbpInferHint(&parallel_desc, logical_blob_desc, sbp_parallel));
   }
-  auto SbpInferHint4Ibn = [&](const std::string& ibn) -> Maybe<const SbpInferHint*> {
-    auto it = ibn2sbp_infer_hint.find(ibn);
-    if (it == ibn2sbp_infer_hint.end()) {
-      return Error::CheckFailed() << "cannot find corresponding SbpInferHint for input_blob_name : "
-                                  << ibn;
-    }
-    return &(it->second);
+
+  auto GetBatchAxis4Lbi = [&](const LogicalBlobId& lbi) -> const OptInt64& {
+    return lbi2batch_axis_.at(lbi);
   };
-  std::function<int32_t(const SbpSignature&)> CalcOrderValue4SbpSig;
-  if (sbp_sig_conf.bn_in_op2sbp_parallel().empty()) {
-    auto OrderValue4HasBatchAxis = [&](const std::string& bn,
-                                       const SbpParallel& sbp_parallel) -> int32_t {
-      const auto& batch_axis = lbi2batch_axis_.at(op->BnInOp2Lbi(bn));
-      return -1
-             * (batch_axis.has_value() && sbp_parallel.has_split_parallel()
-                && sbp_parallel.split_parallel().axis() == batch_axis.value());
-    };
-    auto OrderValue4HasNoBatchAxis = [&](const std::string& ibn,
-                                         const SbpParallel& sbp_parallel) -> int32_t {
-      return -2
-             * (lbi2batch_axis_.at(op->BnInOp2Lbi(ibn)).has_value() == false
-                && CHECK_JUST(SbpInferHint4Ibn(ibn))->sbp_parallel().has_split_parallel() == false
-                && sbp_parallel.has_split_parallel() == false);
-    };
-    CalcOrderValue4SbpSig = [&](const SbpSignature& sbp_signature) -> int32_t {
-      int32_t order_value = 0;
-      for (const auto& ibn : op->input_bns()) {
-        const auto& sbp_parallel_it = sbp_signature.bn_in_op2sbp_parallel().find(ibn);
-        CHECK(sbp_parallel_it != sbp_signature.bn_in_op2sbp_parallel().end());
-        order_value += OrderValue4HasBatchAxis(ibn, sbp_parallel_it->second);
-        order_value += OrderValue4HasNoBatchAxis(ibn, sbp_parallel_it->second);
-      }
-      for (const auto& obn : op->output_bns()) {
-        const auto& sbp_parallel_it = sbp_signature.bn_in_op2sbp_parallel().find(obn);
-        CHECK(sbp_parallel_it != sbp_signature.bn_in_op2sbp_parallel().end());
-        order_value += OrderValue4HasBatchAxis(obn, sbp_parallel_it->second);
-      }
-      return order_value;
-    };
-  } else {
-    CalcOrderValue4SbpSig = [](const SbpSignature&) -> int32_t { return 0; };
-  }
-  JUST(op->InferSbpSignatureIf(sbp_sig_to_infer, sbp_sig_conf, CalcOrderValue4SbpSig,
-                               SbpInferHint4Ibn, parallel_desc));
+
+  CHECK_JUST(InferOpSbpSignature(*op, sbp_sig_conf, parallel_desc, ibn2sbp_infer_hint,
+                                 GetBatchAxis4Lbi, sbp_sig_to_infer));
 
   const auto& bn2sbp_parallel = sbp_sig_to_infer->bn_in_op2sbp_parallel();
   for (const auto& obn : op->output_bns()) {
     const LogicalBlobId& lbi = op->BnInOp2Lbi(obn);
-    if (bn2sbp_parallel.find(obn) == bn2sbp_parallel.end()) {
-      return GenJobBuildAndInferError(
-          JobBuildAndInferError::kBlobSplitAxisInferError,
-          "op_name: " + lbi.op_name() + " blob_name: " + lbi.blob_name() + " not infer split axis");
-    }
-    if (lbi2sbp_parallel_from_producer_view_.emplace(lbi, bn2sbp_parallel.at(obn)).second
-        == false) {
-      return GenJobBuildAndInferError(JobBuildAndInferError::kBlobSplitAxisInferError,
-                                      "op_name: " + lbi.op_name() + " blob_name: " + lbi.blob_name()
-                                          + " infer split axis repeated");
-    }
-    if (lbi2parallel_desc_from_producer_view_.emplace(lbi, parallel_desc).second == false) {
-      return GenJobBuildAndInferError(JobBuildAndInferError::kBlobSplitAxisInferError,
-                                      "op_name: " + lbi.op_name() + " blob_name: " + lbi.blob_name()
-                                          + " add parallel desc repeated");
-    }
+    CHECK_OR_RETURN(bn2sbp_parallel.find(obn) != bn2sbp_parallel.end())
+        << JobBuildAndInferError::kBlobSplitAxisInferError << "op_name: " << lbi.op_name()
+        << " blob_name: " << lbi.blob_name() << " not infer split axis";
+    CHECK_OR_RETURN(
+        lbi2sbp_parallel_from_producer_view_.emplace(lbi, bn2sbp_parallel.at(obn)).second)
+        << JobBuildAndInferError::kBlobSplitAxisInferError << "op_name: " << lbi.op_name()
+        << " blob_name: " << lbi.blob_name() << " infer split axis repeated";
+    CHECK_OR_RETURN(lbi2parallel_desc_from_producer_view_.emplace(lbi, parallel_desc).second)
+        << JobBuildAndInferError::kBlobSplitAxisInferError << "op_name: " << lbi.op_name()
+        << " blob_name: " << lbi.blob_name() << " add parallel desc repeated";
   }
   return Maybe<void>::Ok();
 }
@@ -169,12 +107,10 @@ Maybe<void> JobBuildAndInferCtx::GenOpProducedEmptyLogicalBlobDesc(Operator* op)
   // check consumed blob
   for (const std::string& consumed_bn : op->input_bns()) {
     const LogicalBlobId& lbi = op->BnInOp2Lbi(consumed_bn);
-    if (lbi2logical_blob_desc_.find(lbi) == lbi2logical_blob_desc_.end()) {
-      return GenJobBuildAndInferError(JobBuildAndInferError::kLogicalBlobNameNotExist,
-                                      "op_name: " + op->op_name()
-                                          + " consumed_op_name:" + lbi.op_name()
-                                          + " blob_name: " + lbi.blob_name() + " not exist");
-    }
+    CHECK_OR_RETURN(lbi2logical_blob_desc_.find(lbi) != lbi2logical_blob_desc_.end())
+        << JobBuildAndInferError::kLogicalBlobNameNotExist << "op_name: " << op->op_name()
+        << " consumed_op_name:" << lbi.op_name() << " blob_name: " << lbi.blob_name()
+        << " not exist";
   }
 
   // create produced blob
@@ -184,11 +120,9 @@ Maybe<void> JobBuildAndInferCtx::GenOpProducedEmptyLogicalBlobDesc(Operator* op)
   produced_bns.insert(produced_bns.end(), op->const_buf_bns().begin(), op->const_buf_bns().end());
   for (const std::string& produced_bn : produced_bns) {
     const LogicalBlobId& lbi = op->BnInOp2Lbi(produced_bn);
-    if (lbi2logical_blob_desc_.find(lbi) != lbi2logical_blob_desc_.end()) {
-      return GenJobBuildAndInferError(
-          JobBuildAndInferError::kLogicalBlobNameRepeated,
-          "op_name: " + lbi.op_name() + " blob_name: " + lbi.blob_name() + " is repeated");
-    }
+    CHECK_OR_RETURN(lbi2logical_blob_desc_.find(lbi) == lbi2logical_blob_desc_.end())
+        << JobBuildAndInferError::kLogicalBlobNameRepeated << "op_name: " << lbi.op_name()
+        << " blob_name: " << lbi.blob_name() << " is repeated";
     lbi2logical_blob_desc_.emplace(lbi, std::make_unique<BlobDesc>(DataType::kInvalidDataType));
   }
   return Maybe<void>::Ok();
@@ -203,12 +137,11 @@ Maybe<void> JobBuildAndInferCtx::CheckOpBlobSplitability(Operator* op, const Sbp
       const BlobDesc& logical_blob_desc = *(lbi2logical_blob_desc_.at(lbi).get());
       int64_t num_axes = logical_blob_desc.shape().NumAxes();
       if (axis < 0) { axis += num_axes; }
-      if (axis < 0 || axis >= num_axes || logical_blob_desc.shape().At(axis) < parallel_num) {
-        return GenJobBuildAndInferError(
-            JobBuildAndInferError::kUnknownJobBuildAndInferError,
-            "op_name: " + lbi.op_name() + " blob_name: " + lbi.blob_name()
-                + " cannot split blob by parallel_num: " + std::to_string(parallel_num));
-      }
+      CHECK_OR_RETURN(axis >= 0 && axis < num_axes
+                      && logical_blob_desc.shape().At(axis) >= parallel_num)
+          << JobBuildAndInferError::kUnknownJobBuildAndInferError << "op_name: " << lbi.op_name()
+          << " blob_name: " << lbi.blob_name()
+          << " cannot split blob by parallel_num: " << std::to_string(parallel_num);
     }
   }
   return Maybe<void>::Ok();
@@ -217,21 +150,15 @@ Maybe<void> JobBuildAndInferCtx::CheckOpBlobSplitability(Operator* op, const Sbp
 // TODO(): add handle error of same interface op blob between jobs
 Maybe<void> JobBuildAndInferCtx::AddAndInferOp(const OperatorConf& op_conf,
                                                const ParallelConf& parallel_conf) {
-  if (!has_job_conf_) {
-    return GenJobBuildAndInferError(JobBuildAndInferError::kJobConfNotSet, "");
-  }
+  CHECK_OR_RETURN(has_job_conf_) << JobBuildAndInferError::kJobConfNotSet;
   if (!is_job_conf_frozen_) { is_job_conf_frozen_ = true; }
-
   const std::string& op_name = op_conf.name();
-  if (op_name2op_.find(op_name) != op_name2op_.end()) {
-    return GenJobBuildAndInferError(
-        JobBuildAndInferError::kOpNameExist,
-        "op_name: " + op_name + " already exist in job: " + job_->job_conf().job_name());
-  }
-  if (op_conf.device_type() == DeviceType::kInvalidDevice) {
-    return GenJobBuildAndInferError(JobBuildAndInferError::kOpConfDeviceTypeNoSet,
-                                    "op_name: " + op_name + " not set device type");
-  }
+  CHECK_OR_RETURN(op_name2op_.find(op_name) == op_name2op_.end())
+      << JobBuildAndInferError::kOpNameExist << "op_name: " << op_name
+      << " already exist in job: " << job_->job_conf().job_name();
+  CHECK_NE_OR_RETURN(op_conf.device_type(), DeviceType::kInvalidDevice)
+      << JobBuildAndInferError::kOpConfDeviceTypeNoSet << "op_name: " << op_name
+      << " not set device type";
 
   JUST(AddOpNameParallelConf2Placement(op_name, parallel_conf));
 
@@ -270,8 +197,8 @@ Maybe<void> JobBuildAndInferCtx::AddAndInferOp(const OperatorConf& op_conf,
   parallel_ctx.set_parallel_id(0);
   parallel_ctx.set_parallel_num(1);
   parallel_ctx.set_policy(ParallelPolicy::kDataParallel);
-  JUST(op->InferOutBlobDescsIf(GetBlobDesc4BnInOp, &parallel_ctx, job_->job_conf().piece_size(),
-                               [](OpContext*) {}));
+  JUST(op->InferOutBlobDescsIf(GetBlobDesc4BnInOp, &parallel_ctx, &sbp_sig_to_infer,
+                               job_->job_conf().piece_size(), [](OpContext*) {}));
 
   // check splitability
   JUST(CheckOpBlobSplitability(op, sbp_sig_to_infer, parallel_desc.parallel_num()));
@@ -280,58 +207,42 @@ Maybe<void> JobBuildAndInferCtx::AddAndInferOp(const OperatorConf& op_conf,
 }
 
 Maybe<void> JobBuildAndInferCtx::AddLossLogicalBlobName(const std::string& lbn) {
-  if (!(job_->job_conf().has_train_conf())) {
-    return GenJobBuildAndInferError(JobBuildAndInferError::kUnknownJobBuildAndInferError,
-                                    "job has not TrainConf when add loss logical blob name");
-  }
+  CHECK_OR_RETURN(job_->job_conf().has_train_conf())
+      << JobBuildAndInferError::kUnknownJobBuildAndInferError
+      << "job has not TrainConf when add loss logical blob name";
   job_->mutable_job_conf()->mutable_train_conf()->add_loss_lbn(lbn);
   return Maybe<void>::Ok();
 }
 
 bool JobBuildAndInferCtx::HasJobConf() const { return has_job_conf_; }
 
-#define GEN_ERROR_WHEN_GET_INFO_FROM_LBN(info_src)                                                 \
-  if (lbn.find('/') == std::string::npos) {                                                        \
-    return GenJobBuildAndInferError(JobBuildAndInferError::kLogicalBlobNameInvalid, "lbn:" + lbn); \
-  }                                                                                                \
-  LogicalBlobId lbi = GenLogicalBlobId(lbn);                                                       \
-  if (info_src.find(lbi) == info_src.end()) {                                                      \
-    return GenJobBuildAndInferError(JobBuildAndInferError::kLogicalBlobNameNotExist,               \
-                                    "lbn:" + lbn);                                                 \
-  }
-
 Maybe<Shape> JobBuildAndInferCtx::GetStaticShape(const std::string& lbn) const {
-  GEN_ERROR_WHEN_GET_INFO_FROM_LBN(lbi2logical_blob_desc_);
-  return lbi2logical_blob_desc_.at(lbi)->shape();
+  JUST(CheckLbnValidAndExist(lbn));
+  return lbi2logical_blob_desc_.at(GenLogicalBlobId(lbn))->shape();
 }
 
 Maybe<DataType> JobBuildAndInferCtx::GetDataType(const std::string& lbn) const {
-  GEN_ERROR_WHEN_GET_INFO_FROM_LBN(lbi2logical_blob_desc_);
-  return lbi2logical_blob_desc_.at(lbi)->data_type();
+  JUST(CheckLbnValidAndExist(lbn));
+  return lbi2logical_blob_desc_.at(GenLogicalBlobId(lbn))->data_type();
 }
 
 Maybe<OptInt64> JobBuildAndInferCtx::GetBatchAxis(const std::string& lbn) const {
-  GEN_ERROR_WHEN_GET_INFO_FROM_LBN(lbi2batch_axis_);
-  return lbi2batch_axis_.at(lbi);
+  JUST(CheckLbnValidAndExist(lbn));
+  return lbi2batch_axis_.at(GenLogicalBlobId(lbn));
 }
 
 Maybe<OptInt64> JobBuildAndInferCtx::GetSplitAxisFromProducerView(const std::string& lbn) const {
-  if (lbn.find('/') == std::string::npos) {
-    return GenJobBuildAndInferError(JobBuildAndInferError::kLogicalBlobNameInvalid, "lbn:" + lbn);
-  }
-  LogicalBlobId lbi = GenLogicalBlobId(lbn);
+  JUST(CheckLbnValidAndExist(lbn));
   OptInt64 ret;
-  auto sbp_it = lbi2sbp_parallel_from_producer_view_.find(lbi);
-  if (sbp_it != lbi2sbp_parallel_from_producer_view_.end() || sbp_it->second.has_split_parallel()) {
-    ret.set_value(sbp_it->second.split_parallel().axis());
-  }
+  const auto& sbp = lbi2sbp_parallel_from_producer_view_.at(GenLogicalBlobId(lbn));
+  if (sbp.has_split_parallel()) { ret.set_value(sbp.split_parallel().axis()); }
   return ret;
 }
 
 Maybe<const ParallelDesc*> JobBuildAndInferCtx::GetParallelDescFromProducerView(
     const std::string& lbn) const {
-  GEN_ERROR_WHEN_GET_INFO_FROM_LBN(lbi2parallel_desc_from_producer_view_);
-  return &(lbi2parallel_desc_from_producer_view_.at(lbi));
+  JUST(CheckLbnValidAndExist(lbn));
+  return &(lbi2parallel_desc_from_producer_view_.at(GenLogicalBlobId(lbn)));
 }
 
 Maybe<void> JobBuildAndInferCtx::CheckJob() const {
@@ -344,32 +255,24 @@ Maybe<void> JobBuildAndInferCtx::CheckPlacement() const {
   HashSet<std::string> op_names_in_net;
   HashSet<std::string> op_names_in_placement;
   for (const OperatorConf& op_conf : job_->net().op()) {
-    if (!(op_names_in_net.insert(op_conf.name()).second)) {
-      return GenJobBuildAndInferError(JobBuildAndInferError::kOpNameExist,
-                                      "op_name: " + op_conf.name() + " already exist in job: "
-                                          + job_->job_conf().job_name() + " net");
-    }
+    CHECK_OR_RETURN(op_names_in_net.insert(op_conf.name()).second)
+        << JobBuildAndInferError::kOpNameExist << "op_name: " << op_conf.name()
+        << " already exist in job: " << job_->job_conf().job_name() << " net";
   }
   for (const PlacementGroup& placement_group : job_->placement().placement_group()) {
     for (const std::string& op_name : placement_group.op_set().op_name()) {
-      if (!(op_names_in_placement.insert(op_name).second)) {
-        return GenJobBuildAndInferError(JobBuildAndInferError::kOpNameExist,
-                                        "op_name: " + op_name + " already exist in job: "
-                                            + job_->job_conf().job_name() + " placement");
-      }
+      CHECK_OR_RETURN(op_names_in_placement.insert(op_name).second)
+          << JobBuildAndInferError::kOpNameExist << "op_name: " << op_name
+          << " already exist in job: " << job_->job_conf().job_name() << " placement";
     }
   }
-  if (op_names_in_net.size() != op_names_in_placement.size()) {
-    return GenJobBuildAndInferError(
-        JobBuildAndInferError::kPlacementError,
-        "job: " + job_->job_conf().job_name() + " op number not equal between net and placement");
-  }
+  CHECK_EQ_OR_RETURN(op_names_in_net.size(), op_names_in_placement.size())
+      << JobBuildAndInferError::kPlacementError << "job: " << job_->job_conf().job_name()
+      << " op number not equal between net and placement";
   for (const std::string& op_name : op_names_in_net) {
-    if (op_names_in_placement.find(op_name) == op_names_in_placement.end()) {
-      return GenJobBuildAndInferError(JobBuildAndInferError::kPlacementError,
-                                      "job: " + job_->job_conf().job_name() + " op_name: " + op_name
-                                          + " defined in net cannot find its placement");
-    }
+    CHECK_OR_RETURN(op_names_in_placement.find(op_name) != op_names_in_placement.end())
+        << JobBuildAndInferError::kPlacementError << "job: " << job_->job_conf().job_name()
+        << " op_name: " << op_name << " defined in net cannot find its placement";
   }
   return Maybe<void>::Ok();
 }
@@ -378,6 +281,24 @@ Maybe<void> JobBuildAndInferCtx::CheckJobConf() const {
   if (job_->job_conf().job_type_case() == JobConfigProto::JOB_TYPE_NOT_SET) {
     return Error::JobTypeNotSet() << "job_type not set, please set predict_conf or train_conf";
   }
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> JobBuildAndInferCtx::CheckLbnValidAndExist(const std::string& lbn) const {
+  CHECK_OR_RETURN(lbn.find('/') != std::string::npos)
+      << JobBuildAndInferError::kLogicalBlobNameInvalid << "lbn:" << lbn;
+  LogicalBlobId lbi = GenLogicalBlobId(lbn);
+
+#define CHECK_HAS_LBI_KEY(info_src)                     \
+  CHECK_OR_RETURN(info_src.find(lbi) != info_src.end()) \
+      << JobBuildAndInferError::kLogicalBlobNameNotExist << "lbn:" << lbn;
+
+  CHECK_HAS_LBI_KEY(lbi2logical_blob_desc_);
+  CHECK_HAS_LBI_KEY(lbi2sbp_parallel_from_producer_view_);
+  CHECK_HAS_LBI_KEY(lbi2batch_axis_);
+  CHECK_HAS_LBI_KEY(lbi2parallel_desc_from_producer_view_);
+#undef CHECK_HAS_LBI_KEY
+
   return Maybe<void>::Ok();
 }
 

@@ -41,7 +41,6 @@ void GenerateBackwardOpConf(
       ReshapeOpConf* reshape_op_conf = reshape_op.mutable_reshape_conf();
       reshape_op_conf->set_in(GenLogicalBlobName(op.BnInOp2Lbi("in")));
       reshape_op_conf->set_out("out");
-      reshape_op_conf->set_has_dim0_in_shape(true);
       reshape_op_conf->mutable_shape()->add_dim(-1);
       reshape_op_conf->mutable_shape()->add_dim(in_shape.Count(1));
       op_confs->push_back(reshape_op);

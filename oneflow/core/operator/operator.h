@@ -98,25 +98,32 @@ class Operator {
   // Read: shape of input_blobs
   // Write: shape of output_blobs
   Maybe<void> InferBlobDescsIf(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                               const ParallelContext*, int64_t record_piece_size,
+                               const ParallelContext*, const SbpSignature* sbp_signature,
+                               int64_t record_piece_size,
                                std::function<void(OpContext*)> EnrollOpCtx) const;
   virtual Maybe<void> InferBlobDescs(
       std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*,
-      int64_t record_piece_size, std::function<void(OpContext*)> EnrollOpCtx) const;
+      const SbpSignature* sbp_signature, int64_t record_piece_size,
+      std::function<void(OpContext*)> EnrollOpCtx) const;
   virtual Maybe<void> InferBlobDescs(
       std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*,
-      int64_t record_piece_size) const;
+      const SbpSignature* sbp_signature, int64_t record_piece_size) const;
+  virtual Maybe<void> InferBlobDescs(
+      std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*,
+      const SbpSignature* sbp_signature) const;
   virtual Maybe<void> InferBlobDescs(
       std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
       const ParallelContext*) const;
 
   Maybe<void> InferOutBlobDescsIf(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                  const ParallelContext*, int64_t record_piece_size,
+                                  const ParallelContext*, const SbpSignature* sbp_signature,
+                                  int64_t record_piece_size,
                                   std::function<void(OpContext*)> EnrollOpCtx) const;
 
   virtual Maybe<void> InferOutBlobDescs(
       std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*,
-      int64_t record_piece_size, std::function<void(OpContext*)> EnrollOpCtx) const;
+      const SbpSignature* sbp_signature, int64_t record_piece_size,
+      std::function<void(OpContext*)> EnrollOpCtx) const;
 
   Maybe<void> InferBatchAxisIf(
       const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
@@ -363,6 +370,12 @@ inline Maybe<bool> GetSbpParallelInLbnOrNothing(const std::string& lbn_with_spli
   }
   return true;
 }
+
+Maybe<void> InferOpSbpSignature(
+    const Operator& op, const SbpSignature& sbp_sig_conf, const ParallelDesc& parallel_desc,
+    const HashMap<std::string, SbpInferHint>& ibn2sbp_infer_hint,
+    std::function<const OptInt64&(const LogicalBlobId&)> GetBatchAxis4Lbi,
+    SbpSignature* sbp_sig_to_infer);
 
 }  // namespace oneflow
 
