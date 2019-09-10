@@ -224,12 +224,12 @@ def sigmoid(x, name=None):
     return remote_blob_util.RemoteBlob(lbi)
 
 @oneflow_export("math.segment_sum")
-def segment_sum(data, segment_ids, unique_segment_ids, name=None):
+def segment_sum(data, segment_ids, unique_ids_num, name=None):
     op_conf = op_conf_util.OperatorConf()
     setattr(op_conf, "name", name if name is not None else id_util.UniqueStr("SegmentSum_"))
     setattr(op_conf.segment_sum_conf, "in", data.logical_blob_name)
     setattr(op_conf.segment_sum_conf, "segment_ids", segment_ids.logical_blob_name)
-    setattr(op_conf.segment_sum_conf, "unique_segment_ids", unique_segment_ids.logical_blob_name)
+    setattr(op_conf.segment_sum_conf, "unique_ids_num", unique_ids_num)
     setattr(op_conf.segment_sum_conf, "out", "out")
     compile_context.CurJobAddOp(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
