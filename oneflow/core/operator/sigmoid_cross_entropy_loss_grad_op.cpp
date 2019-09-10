@@ -60,7 +60,7 @@ Maybe<void> SigmoidCrossEntropyLossGradOp::GetSbpSignatures(
       .Split(input_bns(), 0)
       .Split(output_bns(), 0)
       .MakeSplitSignatureListBuilder(
-          JUST(LogicalBlobDesc4Ibn("prediction")).shape().NumAxes())
+          JUST(LogicalBlobDesc4Ibn("prediction"))->shape().NumAxes())
       .Build(sbp_sig_list);
   return Maybe<void>::Ok();
 }
