@@ -10,6 +10,10 @@ Maybe<void> Squeeze(const Shape& origin, Shape* shape,
                     HashMap<int, int>* squeezed_axis2origin_axis);
 Maybe<void> GetGroupStartInAxis2OutAxis(const Shape& in_shape, const Shape& out_shape,
                                         HashMap<int, int>* group_start_in_axis2out_axis);
+Maybe<void> GetReshapeSbpSignatures(const Shape& in_shape, const Shape& out_shape,
+                                    const PbRpf<std::string>& input_bns,
+                                    const PbRpf<std::string>& output_bns,
+                                    SbpSignatureList* sbp_sig_list);
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_OPERATOR_RESHAPE_UTIL_H_

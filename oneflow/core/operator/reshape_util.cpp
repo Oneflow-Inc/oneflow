@@ -74,4 +74,41 @@ Maybe<void> GetGroupStartInAxis2OutAxis(const Shape& in_shape, const Shape& out_
   OF_CHECK_EQ(in_axis == 0 && out_axis == 0, false);
   return Maybe<void>::Ok();
 }
+
+Maybe<void> GetReshapeSbpSignatures(const Shape& in_shape, const Shape& out_shape,
+                                    const PbRpf<std::string>& input_bns,
+                                    const PbRpf<std::string>& output_bns,
+                                    SbpSignatureList* sbp_sig_list) {
+  if (in_shape.At(0) == in_shape.At(0)) {
+    SbpSignatureBuilder()
+        .Split(input_bns, 0)
+        .Split(output_bns, 0)
+        .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+  }
+  HashMap<int, int> squeezed_group_start_in_axis2out_axis;
+  HashMap<int, int> in_squeezed_axis2original_axis;
+  HashMap<int, int> out_squeezed_axis2original_axis;
+  {
+    Shape squeezed_in_shape;
+    Shape squeezed_out_shape;
+    Squeeze(in_shape, &squeezed_in_shape, &in_squeezed_axis2original_axis);
+    Squeeze(out_shape, &squeezed_out_shape, &out_squeezed_axis2original_axis);
+    GetGroupStartInAxis2OutAxis(squeezed_in_shape, squeezed_out_shape,
+                                &squeezed_group_start_in_axis2out_axis);
+  }
+  for (const auto& pair : squeezed_group_start_in_axis2out_axis) {
+    int64_t start_in_axis = in_squeezed_axis2original_axis.at(pair.first);
+    int64_t start_out_axis = out_squeezed_axis2original_axis.at(pair.second);
+    SbpSignatureBuilder()
+        .Split(input_bns, start_in_axis)
+        .Split(output_bns, start_out_axis)
+        .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+  }
+  SbpSignatureBuilder()
+      .PartialSum(input_bns)
+      .PartialSum(output_bns)
+      .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+  return Maybe<void>::Ok();
+}
+
 }  // namespace oneflow
