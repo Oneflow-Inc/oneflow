@@ -299,18 +299,18 @@ def sparse_softmax_cross_entropy_with_logits(
         name if name is not None else id_util.UniqueStr("SigmoidCrossEntropy_"),
     )
     setattr(
-        op_conf.sigmoid_cross_entropy_conf,
+        op_conf.sigmoid_cross_entropy_loss_conf,
         "prediction",
         logits.logical_blob_name,
     )
     setattr(
-        op_conf.sigmoid_cross_entropy_conf, "label", labels.logical_blob_name
+        op_conf.sigmoid_cross_entropy_loss_conf, "label", labels.logical_blob_name
     )
-    setattr(op_conf.sigmoid_cross_entropy_conf, "out", "out")
+    setattr(op_conf.sigmoid_cross_entropy_loss_conf, "loss", "loss")
     compile_context.CurJobAddOp(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
     lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
+    lbi.blob_name = "loss"
     return remote_blob_util.RemoteBlob(lbi)
 
 
