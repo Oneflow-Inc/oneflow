@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_CORE_OPERATOR_RESHAPE_UTIL_H_
-#define ONEFLOW_CORE_OPERATOR_RESHAPE_UTIL_H_
+#ifndef ONEFLOW_CORE_OPERATOR_RESHAPE_OP_UTIL_H_
+#define ONEFLOW_CORE_OPERATOR_RESHAPE_OP_UTIL_H_
 
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/job/sbp_signature_builder.h"
@@ -21,4 +21,4 @@ struct ReshapeOpUtil {
 };
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_OPERATOR_RESHAPE_UTIL_H_
+#endif  // ONEFLOW_CORE_OPERATOR_RESHAPE_OP_UTIL_H_
