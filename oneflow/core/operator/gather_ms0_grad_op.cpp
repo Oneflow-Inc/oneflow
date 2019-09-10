@@ -41,6 +41,7 @@ Maybe<void> GatherMs0GradOp::InferSbpSignature(
     const ParallelDesc& parallel_desc) const {
   SbpSignatureList sbp_sig_list;
   JUST(GetSbpSignatures(&sbp_sig_list));
+  CHECK_EQ(sbp_sig_list.sbp_signature_size(), 1);
   *sbp_signature = sbp_sig_list.sbp_signature(0);
   return Maybe<void>::Ok();
 }
@@ -64,9 +65,8 @@ void GatherMs0GradOp::VirtualGenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
   const GatherMs0GradOpConf& conf = op_conf().gather_ms0_grad_conf();
-  int64_t offset = BalancedSplitter(conf.gather_dim_size(), parallel_ctx->parallel_num())
-                       .At(parallel_ctx->parallel_id())
-                       .begin();
+  BalancedSplitter bs(conf.gather_dim_size(), parallel_ctx->parallel_num());
+  int64_t offset = bs.At(parallel_ctx->parallel_id()).begin();
   kernel_conf->mutable_gather_ms0_grad_conf()->set_offset(offset);
 }
 

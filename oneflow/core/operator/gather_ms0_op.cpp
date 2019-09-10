@@ -35,6 +35,7 @@ Maybe<void> GatherMs0Op::InferSbpSignature(
     const ParallelDesc& parallel_desc) const {
   SbpSignatureList sbp_sig_list;
   JUST(GetSbpSignatures(&sbp_sig_list));
+  CHECK_EQ(sbp_sig_list.sbp_signature_size(), 1);
   *sbp_signature = sbp_sig_list.sbp_signature(0);
   return Maybe<void>::Ok();
 }
