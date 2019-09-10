@@ -15,8 +15,7 @@ void GatherMs0Kernel<device_type, T>::ForwardDataContent(
   const Blob* in = BnInOp2Blob("in");
   Blob* out = BnInOp2Blob("out");
   const int64_t offset = this->kernel_conf().gather_ms0_conf().offset();
-  GatherKernelUtil<device_type, T>::Forward(ctx.device_ctx, indices, in,
-                                            this->kernel_conf().gather_conf().axis(), out, offset);
+  GatherKernelUtil<device_type, T>::Forward(ctx.device_ctx, indices, in, 0, out, offset);
 }
 
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kGatherMs0Conf, GatherMs0Kernel, FLOATING_DATA_TYPE_SEQ);

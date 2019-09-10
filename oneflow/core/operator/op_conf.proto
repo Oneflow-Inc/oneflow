@@ -1084,7 +1084,8 @@ message GatherOpConf {
 
 message GatherMs0OpConf {
   required string in = 1;
-  required string out = 2;
+  required string indices = 2;
+  required string out = 3;
 }
 
 message GatherGradOpConf {
