@@ -1,6 +1,6 @@
 #include "oneflow/core/operator/reshape_like_op.h"
 #include "oneflow/core/job/sbp_signature_builder.h"
-#include "oneflow/core/operator/reshape_util.h"
+#include "oneflow/core/operator/reshape_op_util.h"
 
 namespace oneflow {
 
@@ -27,8 +27,8 @@ Maybe<void> ReshapeLikeOp::GetSbpSignatures(
     const ParallelDesc& parallel_desc, SbpSignatureList* sbp_sig_list) const {
   const auto& x_shape = JUST(LogicalBlobDesc4Ibn("x"))->shape();
   const auto& like_shape = JUST(LogicalBlobDesc4Ibn("like"))->shape();
-  return GetReshapeSbpSignatures(x_shape, like_shape, input_bns(), output_bns(),
-                                 parallel_desc.parallel_num(), sbp_sig_list);
+  return ReshapeOpUtil::GetReshapeSbpSignatures(x_shape, like_shape, input_bns(), output_bns(),
+                                                parallel_desc.parallel_num(), sbp_sig_list);
 }
 
 REGISTER_OP(OperatorConf::kReshapeLikeConf, ReshapeLikeOp);
