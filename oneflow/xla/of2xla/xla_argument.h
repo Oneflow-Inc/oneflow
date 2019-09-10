@@ -31,6 +31,12 @@ class Argument {
 
   Shape shape() const { return blob_desc_.shape(); }
 
+  ShapeProto shape_proto() const {
+    ShapeProto proto;
+    blob_desc_.shape().ToProto(&proto);
+    return proto;
+  }
+
   std::string blob_name() const {
     return BlobName(blob_id_);
   }

@@ -80,7 +80,7 @@ void BuildSubGraphPass::Run() {
 
     std::unordered_map<int64_t, XlaNode *> sub_graph_nodes;
     for (XlaNode *n : kv.second) {
-      XlaNode *node = sub_graph->AddNode(n->node());
+      XlaNode *node = sub_graph->AddNode(n->op());
       sub_graph_nodes[n->unique_id()] = node;
       
       // Rebuild inputs if the end node of input edges has been changed,

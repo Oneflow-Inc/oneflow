@@ -162,7 +162,7 @@ void JobBuilder::AddOrMutOpsOnlyOnce(const ParallelConf& parallel_conf,
 void JobBuilder::ForEachOperator(const std::function<void(const Operator&)>& Handler) const {
   for (const auto& pair : op_name2op_conf_) {
     DeviceType device_type = ParallelDesc(*op_name2parallel_conf_.at(pair.first)).device_type();
-    std::shared_ptr<Operator> op = ConstructOp(*pair.second, device_type);
+    std::shared_ptr<Operator> op = ConstructOp(*pair.second, device_type, &GlobalJobDesc());
     Handler(*op);
   }
 }

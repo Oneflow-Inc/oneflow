@@ -27,7 +27,8 @@ const PbMessage& SoftmaxGradOp::GetCustomizedConf() const { return op_conf().sof
 
 Maybe<void> SoftmaxGradOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx) const {
+    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature,
+    int64_t record_piece_size, std::function<void(OpContext*)> EnrollOpCtx) const {
   // dy
   const BlobDesc* dy_blob_desc = GetBlobDesc4BnInOp("dy");
   // dx
@@ -36,33 +37,35 @@ Maybe<void> SoftmaxGradOp::InferBlobDescs(
   if (op_conf().softmax_grad_conf().has_transpose_y()) {
     *GetBlobDesc4BnInOp("transpose_dy") = *GetBlobDesc4BnInOp("transpose_y");
   }
-  op_context_.reset(NewSoftmaxGradOpCtx(dx_blob_desc->shape()));
+  SoftmaxGradOpCtx* op_ctx = NewSoftmaxGradOpCtx(dx_blob_desc->shape());
   // 1D blob store tmp calculate result
   BlobDesc* bw_tmp_blob_desc = GetBlobDesc4BnInOp("bw_softmax_num");
-  bw_tmp_blob_desc->mut_shape() = Shape({op_context_->transpose_rows});
+  bw_tmp_blob_desc->mut_shape() = Shape({op_ctx->transpose_rows});
   bw_tmp_blob_desc->set_data_type(dx_blob_desc->data_type());
   // temp storage for RowMax etc.
   BlobDesc* bw_buf_blob_desc = GetBlobDesc4BnInOp("bw_buf");
   bw_buf_blob_desc->mut_shape() =
       Shape({static_cast<int64_t>(RtBlobDesc(*dx_blob_desc).ByteSizeOfDataContentField())});
   bw_buf_blob_desc->set_data_type(DataType::kChar);
+  EnrollOpCtx(op_ctx);
   return Maybe<void>::Ok();
 }
 
 void SoftmaxGradOp::VirtualGenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
+    const ParallelContext* parallel_ctx, KernelConf* kernel_conf, const OpContext* op_ctx) const {
   SoftmaxKernelConf* conf = kernel_conf->mutable_softmax_conf();
-  conf->set_axis(op_context_->axis);
-  conf->set_transpose_rows(op_context_->transpose_rows);
-  conf->set_transpose_cols(op_context_->transpose_cols);
-  conf->set_need_transpose(op_context_->need_transpose);
-  if (op_context_->need_transpose) {
+  const SoftmaxGradOpCtx* softmax_grad_ctx = static_cast<const SoftmaxGradOpCtx*>(op_ctx);
+  conf->set_axis(softmax_grad_ctx->axis);
+  conf->set_transpose_rows(softmax_grad_ctx->transpose_rows);
+  conf->set_transpose_cols(softmax_grad_ctx->transpose_cols);
+  conf->set_need_transpose(softmax_grad_ctx->need_transpose);
+  if (softmax_grad_ctx->need_transpose) {
     PbRf<int32_t>* perm = conf->mutable_perm();
-    perm->Reserve(op_context_->dims);
-    for (size_t i = 0; i < op_context_->dims; ++i) { perm->Add(i); }
-    (*perm)[op_context_->axis] = op_context_->dims - 1;
-    (*perm)[op_context_->dims - 1] = op_context_->axis;
+    perm->Reserve(softmax_grad_ctx->dims);
+    for (size_t i = 0; i < softmax_grad_ctx->dims; ++i) { perm->Add(i); }
+    (*perm)[softmax_grad_ctx->axis] = softmax_grad_ctx->dims - 1;
+    (*perm)[softmax_grad_ctx->dims - 1] = softmax_grad_ctx->axis;
   }
 }
 

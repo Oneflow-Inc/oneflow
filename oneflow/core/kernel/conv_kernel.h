@@ -76,7 +76,7 @@ class ConvKernelImplByIm2Col : public ConvKernelIf<device_type, T> {
   ~ConvKernelImplByIm2Col() = default;
 
  protected:
-  void VirtualKernelInit(const ParallelContext*) override;
+  void VirtualKernelInit() override;
   void DoForwardDataContent(DeviceCtx*, const Blob* in_blob, const Blob* weight_blob,
                             Blob* out_blob,
                             std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
@@ -121,8 +121,8 @@ class ConvKernel<DeviceType::kGPU, T> final : public ConvKernelImplByIm2Col<Devi
   ~ConvKernel() = default;
 
  private:
-  void VirtualKernelInit(const ParallelContext*) override;
-  void KernelInitWithCudnn(const ParallelContext*);
+  void VirtualKernelInit() override;
+  void KernelInitWithCudnn();
 
   void DoForwardDataContent(DeviceCtx*, const Blob* in_blob, const Blob* weight_blob,
                             Blob* out_blob,
@@ -158,8 +158,8 @@ class ConvKernel<DeviceType::kGPU, float16> final : public ConvKernelIf<DeviceTy
   ~ConvKernel() = default;
 
  private:
-  void VirtualKernelInit(const ParallelContext*) override;
-  void KernelInitWithCudnn(const ParallelContext*);
+  void VirtualKernelInit() override;
+  void KernelInitWithCudnn();
 
   void DoForwardDataContent(DeviceCtx*, const Blob* in_blob, const Blob* weight_blob,
                             Blob* out_blob,

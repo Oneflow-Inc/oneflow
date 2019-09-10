@@ -17,7 +17,7 @@ class OpNode final : public Node<OpNode, OpEdge> {
   OF_DISALLOW_COPY_AND_MOVE(OpNode);
   explicit OpNode(const ParallelDesc& parallel_desc, const OperatorConf& op_conf)
       : parallel_desc_(parallel_desc),
-        op_(ConstructOp(op_conf, parallel_desc.device_type())),
+        op_(ConstructOp(op_conf, parallel_desc.device_type(), &GlobalJobDesc())),
         ibns_(op_->input_bns().begin(), op_->input_bns().end()) {}
   ~OpNode() = default;
 
@@ -115,7 +115,7 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
   explicit OpGraph(const Job& job) { Init(job); }
   ~OpGraph() = default;
 
-  const OpNode* OpNode4OpName(const std::string& name) const { return op_name2op_node_.at(name); }
+  const OpNode* OpNode4OpName(const std::string& name) const;
 
   std::function<const BlobDesc&(const LogicalBlobId&)> MakeGetterBlobDesc4ModelLbi() const;
 

@@ -31,7 +31,7 @@ extern const std::string _XlaArgumentOpType;
 extern const std::string _XlaInArgumentPrefix;
 extern const std::string _XlaOutArgumentPrefix;
 
-static std::string DeviceTypeToBackend(DeviceType device_type) {
+std::string DeviceTypeToBackend(DeviceType device_type) {
   switch (device_type) {
     case DeviceType::kGPU:
       return "CUDA";
@@ -44,18 +44,28 @@ static std::string DeviceTypeToBackend(DeviceType device_type) {
   }
 }
 
-XlaNode::XlaNode(const OpNode *op_node) : node_(op_node), unique_id_(-1),
-                                          cluster_id_(-1), sub_graph_(nullptr) {
-  backend_ = DeviceTypeToBackend(op_node->op().device_type());
-  op_name_ = op_node->op().op_name();
-  op_type_ = ExtractOpTypeAsString(op_node->op().op_conf());
+DeviceType BackendToDeviceType(const std::string &backend) {
+  if (backend == "CUDA") {
+    return DeviceType::kGPU;
+  } else if (backend == "CPU") {
+    return DeviceType::kCPU;
+  } else {
+    return DeviceType::kCPU;
+  }
+}
+
+XlaNode::XlaNode(const Operator *op) : op_(op), unique_id_(-1),
+                                       cluster_id_(-1), sub_graph_(nullptr) {
+  backend_ = DeviceTypeToBackend(op_->device_type());
+  op_name_ = op_->op_name();
+  op_type_ = ExtractOpTypeAsString(op_->op_conf());
   // Setup input and output logical blob ids
-  for (const std::string &bn : op_node->op().input_bns()) {
-    const LogicalBlobId &lbi = op_node->op().BnInOp2Lbi(bn);
+  for (const std::string &bn : op_->input_bns()) {
+    const LogicalBlobId &lbi = op_->BnInOp2Lbi(bn);
     inputs_.emplace(bn, lbi);
   }
-  for (const std::string &bn : op_node->op().output_bns()) {
-    const LogicalBlobId &lbi = op_node->op().BnInOp2Lbi(bn);
+  for (const std::string &bn : op_->output_bns()) {
+    const LogicalBlobId &lbi = op_->BnInOp2Lbi(bn);
     outputs_.emplace(bn, lbi);
   }
 }
@@ -84,15 +94,6 @@ void XlaNode::EraseOutEdge(const XlaEdge *edge) {
     return e->unique_id() == edge->unique_id() &&
            e->argument() == edge->argument();
   });
-}
-
-void XlaNode::InferBlobDescs(GetBlobDescFunc func,
-                             const ParallelContext* parallel_ctx) const {
-  auto inner_get_blob_desc_fn = [&](const std::string &bn) -> BlobDesc* {
-    const LogicalBlobId &lbi = op()->BnInOp2Lbi(bn);
-    return func(lbi);
-  };
-  CHECK_JUST(op()->InferBlobDescs(inner_get_blob_desc_fn, parallel_ctx));
 }
 
 bool XlaNode::IsSourceNode() const {
@@ -156,19 +157,13 @@ std::vector<std::string> XlaNode::output_bns() const {
   return output_bns;
 }
 
-XlaArgumentNode::XlaArgumentNode(const XlaLaunchOpConf::Argument &arg_conf,
-                                 DeviceType device_type)
+XlaArgumentNode::XlaArgumentNode(const XlaLaunchOpConf::Argument &arg_conf)
     : XlaNode(), arg_conf_(arg_conf) {
   this->op_type_ = _XlaArgumentOpType;
   this->op_name_ = arg_conf.name();
-  this->backend_ = DeviceTypeToBackend(device_type);
+  this->backend_ = DeviceTypeToBackend(arg_conf.device_type());
   this->inputs_.emplace("in", BlobId(arg_conf.in()));
   this->outputs_.emplace("out", BlobId(arg_conf.out()));
-}
-
-void XlaArgumentNode::InferBlobDescs(
-    GetBlobDescFunc func, const ParallelContext* parallel_ctx) const {
-  *(func(this->outputs_.at("out"))) = *func(this->inputs_.at("in"));
 }
 
 bool IsNodeInput(const XlaNode *node, const LogicalBlobId &lbi) {

@@ -65,19 +65,12 @@ void ConvOp<NDims>::InitFromOpConf() {
 
   EnrollInputBn("in");
   EnrollOutputBn("out");
-  if (GetValFromCustomizedConf<std::string>("weight").empty()) {
-    EnrollTmpBn("weight");
-  } else {
-    EnrollInputBn("weight");
-  }
+  EnrollInputBn("weight");
   EnrollTmpBn("fw_cudnn_buf");
   EnrollTmpBn("fw_col_buf");
   if (GetValFromCustomizedConf<bool>("use_bias")) {
-    if (GetValFromCustomizedConf<std::string>("bias").empty()) {
-      EnrollTmpBn("bias");
-    } else {
-      EnrollInputBn("bias");
-    }
+    CHECK(!GetValFromCustomizedConf<std::string>("bias").empty());
+    EnrollInputBn("bias");
     EnrollConstBufBn("bias_multiplier");
   }
 }
@@ -85,14 +78,14 @@ void ConvOp<NDims>::InitFromOpConf() {
 template<int32_t NDims>
 Maybe<void> ConvOp<NDims>::InferOutBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx, int64_t record_piece_size,
-    std::function<void(OpContext*)> EnrollOpCtx) const {
+    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature,
+    int64_t record_piece_size, std::function<void(OpContext*)> EnrollOpCtx) const {
   const std::string& data_format = GetValFromCustomizedConf<std::string>("data_format");
 
   // in
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
   CHECK_EQ_OR_RETURN(in_blob_desc->shape().NumAxes(), NDims + 2);
-  // CHECK_EQ(in_blob_desc->data_type(), GlobalJobDesc().DefaultDataType());
+  // CHECK_EQ(in_blob_desc->data_type(), job_desc().DefaultDataType());
 
   // out
   int64_t data_num = in_blob_desc->shape().At(0);
@@ -117,14 +110,14 @@ Maybe<void> ConvOp<NDims>::InferOutBlobDescs(
 template<int32_t NDims>
 Maybe<void> ConvOp<NDims>::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx, int64_t record_piece_size,
-    std::function<void(OpContext*)> EnrollOpCtx) const {
+    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature,
+    int64_t record_piece_size, std::function<void(OpContext*)> EnrollOpCtx) const {
   const std::string& data_format = GetValFromCustomizedConf<std::string>("data_format");
 
   // in
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
   CHECK_EQ_OR_RETURN(in_blob_desc->shape().NumAxes(), NDims + 2);
-  // CHECK_EQ(in_blob_desc->data_type(), GlobalJobDesc().DefaultDataType());
+  // CHECK_EQ(in_blob_desc->data_type(), job_desc().DefaultDataType());
 
   // out
   int64_t data_num = in_blob_desc->shape().At(0);
@@ -150,19 +143,11 @@ Maybe<void> ConvOp<NDims>::InferBlobDescs(
   for (size_t i = 0; i < NDims; ++i) {
     weight_shape[dhw_offset + i] = GetPbRfFromCustomizedConf<int32_t>("kernel_size").Get(i);
   }
-  if (GetValFromCustomizedConf<std::string>("weight").empty()) {
-    GetBlobDesc4BnInOp("weight")->mut_shape() = Shape(weight_shape);
-  } else {
-    CHECK_EQ_OR_RETURN(GetBlobDesc4BnInOp("weight")->shape(), Shape(weight_shape));
-  }
+  CHECK_EQ_OR_RETURN(GetBlobDesc4BnInOp("weight")->shape(), Shape(weight_shape));
 
   if (GetValFromCustomizedConf<bool>("use_bias")) {
     // bias and bias_multiplier
-    if (GetValFromCustomizedConf<std::string>("bias").empty()) {
-      GetBlobDesc4BnInOp("bias")->mut_shape() = Shape({filters});
-    } else {
-      CHECK_EQ_OR_RETURN(GetBlobDesc4BnInOp("bias")->shape(), Shape({filters}));
-    }
+    CHECK_EQ_OR_RETURN(GetBlobDesc4BnInOp("bias")->shape(), Shape({filters}));
     if (DevIsGpuAndEnableCudnn() == false) {
       std::vector<int64_t> bias_mul_shape(NDims + 1, 1);
       for (size_t i = 0; i != NDims; ++i) { bias_mul_shape[i + 1] = out_shape[dhw_offset + i]; }

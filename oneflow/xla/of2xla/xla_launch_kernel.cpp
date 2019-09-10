@@ -55,7 +55,7 @@ void XlaLaunchKernel<device_type>::BuildLocalExecutable(
   }
 
   if (!(*compile_result)) {
-    mola::XlaLaunchGraph graph(launch_conf, device_type);
+    mola::XlaLaunchGraph graph(launch_conf, &this->job_desc());
 
     // Pass a fake local `ParallelContext` to the compiler in order to get
     // the shape of arguments by `InferBlobDescs`

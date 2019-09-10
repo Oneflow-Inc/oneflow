@@ -12,7 +12,7 @@ class PrintKernel final : public KernelIf<DeviceType::kCPU> {
   ~PrintKernel() = default;
 
  private:
-  void VirtualKernelInit(const ParallelContext*) override;
+  void VirtualKernelInit() override;
   void Forward(const KernelCtx&, std::function<Blob*(const std::string&)>) const override;
 
   std::unique_ptr<PersistentOutStream> out_stream_;

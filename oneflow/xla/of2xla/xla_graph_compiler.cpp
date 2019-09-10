@@ -26,6 +26,10 @@ XlaGraphCompiler::XlaGraphCompiler(
     : client_(client), builder_(builder), graph_(graph),
       entry_names_(entry_blob_names), return_names_(return_blob_names),
       alias_input_output_(alias_input_output) {
+  const std::vector<Argument> arguments = graph_->Arguments();
+  for (const Argument &argument : arguments) {
+    arguments_.emplace(argument.blob_name(), argument);
+  }
   CHECK_EQ(entry_blobs.size(), entry_blob_names.size());
 
   std::unordered_map<std::string, BlobDesc> blob_descs;
@@ -36,13 +40,9 @@ XlaGraphCompiler::XlaGraphCompiler(
                        runtime_desc.has_data_id_field(),
                        runtime_desc.has_col_num_field(),
                        runtime_desc.max_col_num());
-    blob_descs.emplace(entry_blob_names[i], blob_desc);
-  }
-  graph_->InferBlobDescs(&blob_descs, &parallel_ctx);
-
-  for (const auto &pair : blob_descs) {
-    LogicalBlobId lbi = BlobId(pair.first);
-    arguments_.emplace(pair.first, Argument(lbi, pair.second));
+    LogicalBlobId blob_id = BlobId(entry_blob_names[i]);
+    // TODO(hjchen2): Check blob shape and data type if existed
+    arguments_.emplace(entry_blob_names[i], Argument(blob_id, blob_desc));
   }
 }
 

@@ -1,6 +1,5 @@
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/job_completer/job_completer.h"
-#include "oneflow/core/job_completer/autovar.h"
 #include "oneflow/core/job_completer/autograd.h"
 #include "oneflow/core/job_completer/autotick.h"
 #include "oneflow/core/job_completer/add_keep_header_only_op_conf.h"
@@ -346,7 +345,6 @@ void JobCompleter::Complete(Job* job) const {
   // replace facade op
   WithOpGraphAndMutJobBuilder(job, &ReplaceFacade);
   // complete variable ops
-  WithOpGraphAndMutJobBuilder(job, &AutoVar);
   WithOpGraphAndMutJobBuilder(job, &SetDefaultVariableConf);
   if (GlobalJobDesc().IsTrain()) {
     WithOpGraphAndMutJob(job, &TieUpChainHeadersUnReachableFromAnyVariableOps);

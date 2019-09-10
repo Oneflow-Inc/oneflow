@@ -6,21 +6,13 @@ namespace oneflow {
 
 void FullyConnectedOp::InitFromOpConf() {
   CHECK(op_conf().has_fully_connected_conf());
-  const auto& conf = op_conf().fully_connected_conf();
   EnrollInputBn("in");
   EnrollOutputBn("out");
-  if (conf.has_weight()) {
-    EnrollInputBn("weight");
-  } else {
-    EnrollTmpBn("weight");
-  }
+  EnrollInputBn("weight");
 
   if (op_conf().fully_connected_conf().use_bias()) {
-    if (conf.has_bias()) {
-      EnrollInputBn("bias");
-    } else {
-      EnrollTmpBn("bias");
-    }
+    CHECK(op_conf().fully_connected_conf().has_bias());
+    EnrollInputBn("bias");
     EnrollConstBufBn("bias_multiplier");
   }
 }
@@ -35,7 +27,7 @@ Maybe<void> FullyConnectedOp::InferBlobDescs(
   // useful vars
   const FullyConnectedOpConf& conf = op_conf().fully_connected_conf();
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
-  CHECK_EQ_OR_RETURN(in_blob_desc->data_type(), GlobalJobDesc().DefaultDataType());
+  CHECK_EQ_OR_RETURN(in_blob_desc->data_type(), job_desc().DefaultDataType());
   int32_t units = conf.units();
   if (parallel_ctx->policy() == kModelParallel) {
     BalancedSplitter splitter(units, parallel_ctx->parallel_num());
@@ -47,20 +39,12 @@ Maybe<void> FullyConnectedOp::InferBlobDescs(
   out_blob_desc->mut_shape() = Shape({in_blob_desc->shape().At(0), units});
 
   // weight
-  if (conf.has_weight()) {
-    CHECK_EQ_OR_RETURN(GetBlobDesc4BnInOp("weight")->shape(),
-                       Shape({units, in_blob_desc->shape().Count(1)}));
-  } else {
-    GetBlobDesc4BnInOp("weight")->mut_shape() = Shape({units, in_blob_desc->shape().Count(1)});
-  }
+  CHECK_EQ_OR_RETURN(GetBlobDesc4BnInOp("weight")->shape(),
+                     Shape({units, in_blob_desc->shape().Count(1)}));
 
   if (conf.use_bias()) {
     // bias
-    if (conf.has_bias()) {
-      CHECK_EQ_OR_RETURN(GetBlobDesc4BnInOp("bias")->shape(), Shape({1, units}));
-    } else {
-      GetBlobDesc4BnInOp("bias")->mut_shape() = Shape({1, units});
-    }
+    CHECK_EQ_OR_RETURN(GetBlobDesc4BnInOp("bias")->shape(), Shape({1, units}));
 
     // bias_multiplier
     GetBlobDesc4BnInOp("bias_multiplier")->mut_shape() = Shape({in_blob_desc->shape().At(0), 1});

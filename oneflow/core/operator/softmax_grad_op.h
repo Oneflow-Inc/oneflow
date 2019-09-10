@@ -23,7 +23,9 @@ class SoftmaxGradOp final : public Operator {
   const PbMessage& GetCustomizedConf() const override;
 
   Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                      const ParallelContext* parallel_ctx) const override;
+                             const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature,
+                             int64_t record_piece_size,
+                             std::function<void(OpContext*)> EnrollOpCtx) const override;
 
  private:
   Maybe<void> InferBatchAxis(
@@ -34,10 +36,8 @@ class SoftmaxGradOp final : public Operator {
   Maybe<void> GetSbpSignatures(SbpSignatureList* sbp_sig_list) const override;
 
   void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                            const ParallelContext*, KernelConf*) const override;
+                            const ParallelContext*, KernelConf*, const OpContext*) const override;
   SoftmaxGradOpCtx* NewSoftmaxGradOpCtx(const Shape& in_shape) const;
-
-  mutable std::unique_ptr<SoftmaxGradOpCtx> op_context_;
 };
 
 }  // namespace oneflow

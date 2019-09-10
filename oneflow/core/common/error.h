@@ -37,6 +37,12 @@ Error&& operator<<(Error&& error, const T& x) {
   return std::move(error);
 }
 
+template<>
+inline Error&& operator<<(Error&& error, const JobBuildAndInferError& x) {
+  error->set_job_build_and_infer_error(x);
+  return std::move(error);
+}
+
 // for LOG(ERROR)
 Error&& operator<=(const std::string& log_str, Error&& error);
 
