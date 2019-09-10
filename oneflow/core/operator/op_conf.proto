@@ -1097,12 +1097,25 @@ message GatherOpConf {
   optional int64 axis = 4 [default = 0];
 }
 
+message GatherMs0OpConf {
+  required string in = 1;
+  required string indices = 2;
+  required string out = 3;
+}
+
 message GatherGradOpConf {
   required string out_diff = 1;
   required string indices = 2;
   required string in_diff = 3;
   required int64 axis = 4;
   required int64 gather_dim_size = 5;
+}
+
+message GatherMs0GradOpConf {
+  required string out_diff = 1;
+  required string indices = 2;
+  required string in_diff = 3;
+  required int64 gather_dim_size = 4;
 }
 
 message BatchGatherOpConf {
@@ -1605,6 +1618,8 @@ message OperatorConf {
     PReluDataGradOpConf prelu_data_grad_conf = 299;
     PReluAlphaGradOpConf prelu_alpha_grad_conf = 300;
     ModelLoadOpConf model_load_conf = 301;
+    GatherMs0OpConf gather_ms0_conf = 302;
+    GatherMs0GradOpConf gather_ms0_grad_conf = 303;
 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;
