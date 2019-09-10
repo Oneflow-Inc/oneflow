@@ -287,7 +287,7 @@ def sparse_softmax_cross_entropy_with_logits(
     return remote_blob_util.RemoteBlob(lbi)
 
 @oneflow_export("nn.sigmoid_cross_entropy_with_logits")
-def sparse_softmax_cross_entropy_with_logits(
+def sigmoid_cross_entropy_with_logits(
     labels=None, logits=None, name=None
 ):
     assert labels is not None
