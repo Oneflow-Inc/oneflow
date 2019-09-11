@@ -37,6 +37,15 @@ class BlobDesc(object):
         raise NotImplementedError
 
     @property
+    def split_axis_for_consumer(self):
+        assert self.split_axis_ is undefined or type(self.split_axis_) is int \
+            or self.split_axis_ is None or self.split_axis_ == False
+        return self.split_axis_
+    
+    def has_split_axis_for_consumer(self):
+        return self.split_axis_ is not undefined
+
+    @property
     def logical_blob_name(self):
         if self.split_axis_ is undefined:
             return self.lbn_
