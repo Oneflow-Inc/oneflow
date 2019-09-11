@@ -99,6 +99,48 @@ class TestResNet50(TestNet):
     self.print_report()
 
 
+class TestVgg16(TestNet):
+  """
+    Vgg16 Tester
+  """
+  def set_params(self):
+    self.net = 'vgg16'
+    self.tf_loss_dir = os.path.join("/dataset/PNGS/cnns_model_for_test/tf_loss", self.net)
+    self.of_loss_dir = os.path.join("./of_loss", self.net)
+
+  def test_1n1c(self):
+    self.run_and_compare(1)
+
+  def test_1n4c(self):
+    self.run_and_compare(4)
+
+  def test_2n8c(self):
+    self.run_and_compare(4, 2, "192.168.1.12,192.168.1.14")
+
+  def test_report(self):
+    self.print_report()
+
+
+class TestInceptionV3(TestNet):
+  """
+    InceptionV3 Tester
+  """
+  def set_params(self):
+    self.net = 'inceptionv3'
+    self.tf_loss_dir = os.path.join("/dataset/PNGS/cnns_model_for_test/tf_loss", self.net)
+    self.of_loss_dir = os.path.join("./of_loss", self.net)
+
+  def test_1n1c(self):
+    self.run_and_compare(1)
+
+  def test_1n4c(self):
+    self.run_and_compare(4)
+
+  def test_2n8c(self):
+    self.run_and_compare(4, 2, "192.168.1.12,192.168.1.14")
+
+  def test_report(self):
+    self.print_report()
 
 if __name__ == '__main__':
   unittest.main()

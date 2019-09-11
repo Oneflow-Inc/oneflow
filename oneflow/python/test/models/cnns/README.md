@@ -10,12 +10,32 @@ python -m unittest run_cnns_test
 
 ## Test a specific net:
 ```
-python -m unittest cnns_test.TestAlexNet
+# alexnet
+python -m unittest run_cnns_test.TestAlexNet
+
+# resnet50
+python -m unittest run_cnns_test.TestResNet50
+
+# inceptionv3
+python -m unittest run_cnns_test.TestInceptionV3
+
+# vgg16
+python -m unittest run_cnns_test.TestVgg16
 ```
 
 ## Test a specific case for a specific net: 
 ```
-python -m unittest cnns_test.TestAlexNet.test_1n1c
+# test alexnet on 1 gpu, 1 machine(node)
+python -m unittest run_cnns_test.TestAlexNet.test_1n1c
+
+# test alexnet on 4 gpu, 1 machine(node)
+python -m unittest run_cnns_test.TestAlexNet.test_1n4c
+
+# test alexnet on 4 gpu, 8 machine(node)
+python -m unittest run_cnns_test.TestAlexNet.test_2n8c
+
+# print the test report
+python -m unittest run_cnns_test.TestAlexNet.test_report 
 ```
 
 ## Print test report
