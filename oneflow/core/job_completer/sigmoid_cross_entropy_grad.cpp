@@ -11,7 +11,7 @@ void GenerateBackwardOpConf(
   if (DiffLbi4BnInOp("prediction") != nullptr) {
     OperatorConf sigmoid_cross_entropy_loss_grad_op;
     sigmoid_cross_entropy_loss_grad_op.set_name(op.op_name() + "_grad");
-    
+
     SigmoidCrossEntropyLossGradOpConf* sigmoid_cross_entropy_loss_grad_op_conf =
         sigmoid_cross_entropy_loss_grad_op.mutable_sigmoid_cross_entropy_loss_grad_conf();
     sigmoid_cross_entropy_loss_grad_op_conf->set_label(GenLogicalBlobName(op.BnInOp2Lbi("label")));

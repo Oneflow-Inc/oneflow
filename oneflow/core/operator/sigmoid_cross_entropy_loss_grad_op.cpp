@@ -19,7 +19,6 @@ LossKernelConf* SigmoidCrossEntropyLossGradOp::GetMutLossKernelConf(KernelConf* 
   return kernel_conf->mutable_sigmoid_cross_entropy_loss_grad_conf()->mutable_loss_conf();
 }
 
-
 void SigmoidCrossEntropyLossGradOp::VirtualGenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
@@ -33,9 +32,7 @@ void SigmoidCrossEntropyLossGradOp::VirtualGenKernelConf(
   }
   conf->set_weight_scalar(GetValFromCustomizedConf<float>("weight_scalar"));
   conf->set_reduction(static_cast<ScalarReductionType>(GetEnumFromCustomizedConf("reduction")));
-
 }
-
 
 Maybe<void> SigmoidCrossEntropyLossGradOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
@@ -49,22 +46,20 @@ Maybe<void> SigmoidCrossEntropyLossGradOp::InferBlobDescs(
   CHECK_EQ_OR_RETURN(pred_blob_desc->shape(), label_blob_desc->shape());
 
   BlobDesc* loss_diff_blob_desc = GetBlobDesc4BnInOp("prediction_diff");
-  *loss_diff_blob_desc = *pred_blob_desc; 
+  *loss_diff_blob_desc = *pred_blob_desc;
   return Maybe<void>::Ok();
 }
 
 Maybe<void> SigmoidCrossEntropyLossGradOp::GetSbpSignatures(
-     const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
-     SbpSignatureList* sbp_sig_list) const {
+    const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
+    SbpSignatureList* sbp_sig_list) const {
   SbpSignatureBuilder()
       .Split(input_bns(), 0)
       .Split(output_bns(), 0)
-      .MakeSplitSignatureListBuilder(
-          JUST(LogicalBlobDesc4Ibn("prediction"))->shape().NumAxes())
+      .MakeSplitSignatureListBuilder(JUST(LogicalBlobDesc4Ibn("prediction"))->shape().NumAxes())
       .Build(sbp_sig_list);
   return Maybe<void>::Ok();
 }
-
 
 REGISTER_OP(OperatorConf::kSigmoidCrossEntropyLossGradConf, SigmoidCrossEntropyLossGradOp);
 

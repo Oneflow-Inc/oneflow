@@ -23,7 +23,7 @@ Maybe<void> SegmentSumOp::InferBlobDescs(
   // input data's dim0 == segment ids' dim0
   CHECK_EQ_OR_RETURN(in_blob->shape().At(0), segment_ids_blob->shape().At(0));
   CHECK_EQ_OR_RETURN(segment_ids_blob->shape().NumAxes(), 2);
-  
+
   auto dims = in_blob->shape().dim_vec();
   dims[1] = unique_ids_count;
   BlobDesc* out_blob = GetBlobDesc4BnInOp("out");

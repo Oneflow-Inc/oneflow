@@ -18,22 +18,21 @@ __global__ void SigmoidCrossEntropyLossBackward(const int64_t n, const PredType*
 
 }  // namespace
 
-template <typename PredType, typename LabelType>
+template<typename PredType, typename LabelType>
 struct SigmoidCrossEntropyLossGradKernelUtil<DeviceType::kGPU, PredType, LabelType> {
-  
-  static void Backward(DeviceCtx* ctx, const SigmoidCrossEntropyLossGradOpConf& conf, const int64_t n,
-                       const PredType* prediction, const LabelType* label, PredType* pred_diff) {
+  static void Backward(DeviceCtx* ctx, const SigmoidCrossEntropyLossGradOpConf& conf,
+                       const int64_t n, const PredType* prediction, const LabelType* label,
+                       PredType* pred_diff) {
     SigmoidCrossEntropyLossBackward<PredType>
         <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
             n, prediction, label, pred_diff);
-    }
+  }
 };
 
 #define INSTANTIATE_SIGMOID_CROSS_ENTROPY_LOSS_GRAD_KERNEL_UTIL(data_type_pair, label_type_pair) \
-  template struct SigmoidCrossEntropyLossGradKernelUtil<                                        \
+  template struct SigmoidCrossEntropyLossGradKernelUtil<                                         \
       DeviceType::kGPU, OF_PP_PAIR_FIRST(data_type_pair), OF_PP_PAIR_FIRST(label_type_pair)>;
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_SIGMOID_CROSS_ENTROPY_LOSS_GRAD_KERNEL_UTIL,
                                  FLOATING_DATA_TYPE_SEQ, INT_DATA_TYPE_SEQ)
-
 
 }  // namespace oneflow

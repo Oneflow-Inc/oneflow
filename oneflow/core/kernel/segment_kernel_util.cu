@@ -62,20 +62,16 @@ __global__ void SegmentSumGradKernel(const int in_diff_outer_dim_size, const int
 template<typename T, typename K>
 struct SegmentKernelUtilImpl<DeviceType::kGPU, T, K> final {
   static void SegmentSumForward(DeviceCtx* ctx, const Shape& in_shape, const T* in,
-                               const K* segment_ids, const int32_t unique_ids_num, T* out);
-  static void SegmentSumBackward(DeviceCtx*ctx, const Shape& out_diff_shape, 
+                                const K* segment_ids, const int32_t unique_ids_num, T* out);
+  static void SegmentSumBackward(DeviceCtx* ctx, const Shape& out_diff_shape,
                                  const Shape& segment_ids_shape, const T* out_diff,
                                  const K* segment_ids, T* in_diff);
 };
 
-
-template <typename T, typename K>
-void SegmentKernelUtilImpl<DeviceType::kGPU, T, K>::SegmentSumForward(DeviceCtx* ctx, 
-                                                    const Shape& data_shape,
-                                                    const T* in,
-                                                    const K* segment_ids,
-                                                    const int32_t unique_ids_num,
-                                                    T* out){
+template<typename T, typename K>
+void SegmentKernelUtilImpl<DeviceType::kGPU, T, K>::SegmentSumForward(
+    DeviceCtx* ctx, const Shape& data_shape, const T* in, const K* segment_ids,
+    const int32_t unique_ids_num, T* out) {
   const int32_t input_total_size = data_shape.elem_cnt();
   const int32_t input_outer_dim_size = data_shape.At(0);
   const int32_t inner_dim_size = input_total_size / input_outer_dim_size;

@@ -1,27 +1,26 @@
 #include "oneflow/core/kernel/sigmoid_cross_entropy_loss_grad_kernel.h"
 
-
 namespace oneflow {
 
-
-template <DeviceType device_type, typename PredType, typename LabelType>
-void SigmoidCrossEntropyLossGradKernel<device_type, PredType, LabelType>::VirtualLossForwardDataContent(
-       const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const SigmoidCrossEntropyLossGradOpConf& conf = 
-          this->op_conf().sigmoid_cross_entropy_loss_grad_conf();
+template<DeviceType device_type, typename PredType, typename LabelType>
+void SigmoidCrossEntropyLossGradKernel<device_type, PredType, LabelType>::
+    VirtualLossForwardDataContent(const KernelCtx& ctx,
+                                  std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  const SigmoidCrossEntropyLossGradOpConf& conf =
+      this->op_conf().sigmoid_cross_entropy_loss_grad_conf();
 
   const Blob* prediction = BnInOp2Blob("prediction");
   const Blob* label = BnInOp2Blob("label");
   Blob* pred_diff = BnInOp2Blob("prediction_diff");
-  
+
   const int64_t inner_dim_size = label->shape().Count(1);
   FOR_RANGE(int64_t, data_index, 0, prediction->shape().At(0)) {
-    const int64_t offset =  data_index * inner_dim_size;
+    const int64_t offset = data_index * inner_dim_size;
     const PredType* cur_pred = prediction->dptr<PredType>() + offset;
     const LabelType* cur_label = label->dptr<LabelType>() + offset;
     PredType* cur_pred_diff = pred_diff->mut_dptr<PredType>() + offset;
     SigmoidCrossEntropyLossGradKernelUtil<device_type, PredType, LabelType>::Backward(
-      ctx.device_ctx, conf, inner_dim_size, cur_pred, cur_label, cur_pred_diff);
+        ctx.device_ctx, conf, inner_dim_size, cur_pred, cur_label, cur_pred_diff);
   }
 }
 
@@ -32,10 +31,8 @@ SigmoidCrossEntropyLossGradKernel<device_type, PredType, LabelType>::GetLossKern
   return kernel_conf.sigmoid_cross_entropy_loss_grad_conf().loss_conf();
 }
 
-
 template<typename PredType, typename LabelType>
 struct SigmoidCrossEntropyLossGradKernelUtil<DeviceType::kCPU, PredType, LabelType> {
-  
   static void Backward(DeviceCtx* ctx, const SigmoidCrossEntropyLossGradOpConf& conf,
                        const int64_t n, const PredType* prediction, const LabelType* label,
                        PredType* pred_diff) {
@@ -46,19 +43,19 @@ struct SigmoidCrossEntropyLossGradKernelUtil<DeviceType::kCPU, PredType, LabelTy
     }
   }
 };
- 
+
 namespace {
 
 Kernel* CreateSigmoidCrossEntropyLossGradKernel(const KernelConf& kernel_conf) {
   static const HashMap<std::string, std::function<Kernel*()>> creators = {
-#define SIGMOID_CROSS_ENTROPY_LOSS_GRAD_KERNEL_ENTRY(device_type, pred_type_pair, label_type_pair)      \
+#define SIGMOID_CROSS_ENTROPY_LOSS_GRAD_KERNEL_ENTRY(device_type, pred_type_pair, label_type_pair) \
   {GetHashKey(device_type, OF_PP_PAIR_SECOND(pred_type_pair), OF_PP_PAIR_SECOND(label_type_pair)), \
    []() {                                                                                          \
-     return new SigmoidCrossEntropyLossGradKernel<device_type, OF_PP_PAIR_FIRST(pred_type_pair),       \
-                                                 OF_PP_PAIR_FIRST(label_type_pair)>();                \
+     return new SigmoidCrossEntropyLossGradKernel<device_type, OF_PP_PAIR_FIRST(pred_type_pair),   \
+                                                  OF_PP_PAIR_FIRST(label_type_pair)>();            \
    }},
-      OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(SIGMOID_CROSS_ENTROPY_LOSS_GRAD_KERNEL_ENTRY, DEVICE_TYPE_SEQ,
-                                       FLOATING_DATA_TYPE_SEQ, INT_DATA_TYPE_SEQ)};
+      OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(SIGMOID_CROSS_ENTROPY_LOSS_GRAD_KERNEL_ENTRY,
+                                       DEVICE_TYPE_SEQ, FLOATING_DATA_TYPE_SEQ, INT_DATA_TYPE_SEQ)};
   return creators.at(
       GetHashKey(kernel_conf.op_attribute().op_conf().device_type(),
                  kernel_conf.sigmoid_cross_entropy_loss_grad_conf().loss_conf().prediction_type(),
@@ -67,8 +64,7 @@ Kernel* CreateSigmoidCrossEntropyLossGradKernel(const KernelConf& kernel_conf) {
 
 }  // namespace
 
-
 REGISTER_KERNEL_CREATOR(OperatorConf::kSigmoidCrossEntropyLossGradConf,
                         CreateSigmoidCrossEntropyLossGradKernel);
 
-} // namespace oneflow
+}  // namespace oneflow
