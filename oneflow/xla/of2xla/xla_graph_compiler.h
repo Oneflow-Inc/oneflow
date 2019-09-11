@@ -26,16 +26,18 @@ struct CompilationResult {
 
 class XlaGraphCompiler {
  public:
-  XlaGraphCompiler(xla::LocalClient *client, xla::XlaBuilder *builder,
-                   XlaGraph *graph, ParallelContext parallel_ctx,
-                   const std::vector<Blob *> &entry_blobs,
-                   const std::vector<std::string> &entry_blob_names,
-                   const std::vector<std::string> &return_blob_names,
-                   const bool alias_input_output);
+  XlaGraphCompiler(xla::LocalClient *client, xla::XlaBuilder *builder);
 
-  CompilationResult Compile();
+  CompilationResult Compile(const XlaGraph *graph,
+                            const std::vector<Blob *> &entry_blobs,
+                            const std::vector<Blob *> &return_blobs,
+                            const std::vector<std::string> &entry_blob_names,
+                            const std::vector<std::string> &return_blob_names,
+                            const bool alias_input_output);
 
+ private:
   void BuildComputation(
+      const XlaGraph *graph,
       const std::unordered_map<Argument, XlaOprand> &entry_oprands,
       const std::vector<Argument> &return_arguments,
       xla::Shape *output_shape, xla::XlaComputation *computation);
@@ -43,28 +45,27 @@ class XlaGraphCompiler {
   void BuildExecutable(const CompilationResult &result,
                        std::unique_ptr<xla::LocalExecutable> *executable);
 
- private:
   void SetupEntryOprands(
       const std::vector<std::string> &entry_names,
       std::unordered_map<Argument, XlaOprand> *entry_oprands,
       std::vector<xla::Shape> *input_shapes);
 
-  void SetupParamArguments(
+  void SetupNodeArguments(
       const XlaNode *node,
       const std::unordered_map<std::string, Argument> &arguments,
       XlaOpContext::Param *param);
+
+  void BuildArguments(
+    const XlaGraph *graph,
+    const std::vector<Blob *> &entry_blobs,
+    const std::vector<Blob *> &return_blobs,
+    const std::vector<std::string> &entry_blob_names,
+    const std::vector<std::string> &return_blob_names);
 
  private:
   xla::LocalClient *client_;
 
   xla::XlaBuilder *builder_;
-
-  XlaGraph *graph_;
-
-  std::vector<std::string> entry_names_;
-  std::vector<std::string> return_names_;
-
-  bool alias_input_output_;
 
   std::unordered_map<std::string, Argument> arguments_;
 };
