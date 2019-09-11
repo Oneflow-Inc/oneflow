@@ -746,7 +746,6 @@ message ReshapeOpConf {
   required string in = 1;
   required string out = 2;
   required ShapeProto shape = 3;
-  optional bool has_dim0_in_shape = 4 [default = true];
 }
 
 message ReshapeLikeOpConf {
@@ -1108,12 +1107,25 @@ message GatherOpConf {
   optional int64 axis = 4 [default = 0];
 }
 
+message GatherMs0OpConf {
+  required string in = 1;
+  required string indices = 2;
+  required string out = 3;
+}
+
 message GatherGradOpConf {
   required string out_diff = 1;
   required string indices = 2;
   required string in_diff = 3;
   required int64 axis = 4;
   required int64 gather_dim_size = 5;
+}
+
+message GatherMs0GradOpConf {
+  required string out_diff = 1;
+  required string indices = 2;
+  required string in_diff = 3;
+  required int64 gather_dim_size = 4;
 }
 
 message BatchGatherOpConf {
@@ -1632,6 +1644,8 @@ message OperatorConf {
     SegmentSumOpConf segment_sum_conf = 302;
     SegmentSumGradOpConf segment_sum_grad_conf = 303;
     SigmoidCrossEntropyLossGradOpConf sigmoid_cross_entropy_loss_grad_conf = 304; 
+    GatherMs0OpConf gather_ms0_conf = 305;
+    GatherMs0GradOpConf gather_ms0_grad_conf = 306;
 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;
