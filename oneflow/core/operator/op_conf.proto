@@ -1378,11 +1378,11 @@ message TotalLossInstanceNumOpConf {
   required string out = 2;
 }
 
-message BatchGatherGradOpConf {
-  required string out_diff = 1;
-  required string indices = 2;
-  required string in_diff = 3;
-  required int64 gather_dim_size = 4;
+message UnsortedSegmentSumOpConf {
+  required string data = 1;
+  required string segment_ids = 2;
+  required string out = 3;
+  required int64 num_segments = 4;
 }
 
 message ShapeElemCntAxisConf {
@@ -1620,7 +1620,7 @@ message OperatorConf {
     BroadcastDivGradOpConf broadcast_div_grad_conf= 276;
     BroadcastLikeOpConf broadcast_like_conf = 277;
     SoftmaxGradOpConf softmax_grad_conf = 278;
-    BatchGatherGradOpConf batch_gather_grad_conf = 279;
+    UnsortedSegmentSumOpConf unsorted_segment_sum_conf = 279;
     ReduceMeanGradOpConf reduce_mean_grad_conf = 280;
     NormalizationGradOpConf normalization_grad_conf = 282;
     ConvBiasGradOpConf conv_bias_grad_conf = 283;
