@@ -1,0 +1,97 @@
+syntax = "proto2";
+package oneflow;
+
+import "oneflow/core/common/data_type.proto";
+import "oneflow/core/record/image.proto";
+
+message ImageNetDatasetCatalog {
+  required string image_dir = 1;
+}
+
+message COCODatasetCatalog {
+  required string annotation_file = 1;
+  required string image_dir = 2;
+  optional bool group_by_aspect_ratio = 3 [default = true];
+}
+
+message WideDeepDatasetCatalog {
+  required string feature_fields_file = 1;
+  required string feature_index_list_file = 2;
+  required string data_path = 3;
+  optional bool shuffle_before_repeat = 4 [default = true];
+}
+
+message DatasetProto {
+  repeated string fields = 1;
+  required string dataset_dir = 2;
+  optional bool shuffle = 3 [default = true];
+  optional int64 random_seed = 4 [default = 123456];
+  oneof dataset_catalog {
+    ImageNetDatasetCatalog image_net = 100;
+    COCODatasetCatalog coco = 101;
+    WideDeepDatasetCatalog wide_deep = 102;
+  }
+}
+
+message DatasetCluster {
+  map<string, DatasetProto> dataset_map = 1;
+}
+
+message DataCodec {
+  oneof codec {
+    DataCodecRaw raw = 1;
+    DataCodecImage image = 2;
+    DataCodecBytesList bytes_list = 3;
+  }
+}
+
+message DataCodecRaw {
+  optional bool variable_length = 1 [default = false];
+}
+
+message DataCodecImage {
+  repeated ImagePreprocess preprocess = 1;
+}
+
+message DataCodecBytesList {
+  optional int32 max_byte_size = 1 [default = 1048576];
+}
+
+enum DataCase {
+  kInvalidDataCase = 0;
+  kImage = 1;
+  kLabel = 2;
+  kBoundingBox = 3;
+  kSegmentation = 4;
+  kObjectLabel = 5;
+}
+
+message DataFieldProto {
+  required DataType data_type = 1;
+  required DataCodec data_codec = 2;
+  required DataCase data_case = 3;
+}
+
+message DataInstanceProto {
+  map<string, DataFieldProto> fields = 1;
+}
+
+message DataTransformProto {
+  repeated string field_name = 1;
+  oneof transform {
+    ResizeTransform resize = 10;
+    TargetResizeTransform target_resize = 11;
+  }
+}
+
+message ResizeTransform {
+  required int32 height = 1;
+  required int32 width = 2;
+  optional bool keep_aspect_ratio = 3 [default = false];
+  optional string padding_method = 4;
+}
+
+message TargetResizeTransform {
+  required int32 target_size = 1;
+  required int32 max_size = 2;
+}
