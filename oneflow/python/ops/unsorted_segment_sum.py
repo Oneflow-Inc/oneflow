@@ -1,9 +1,5 @@
 from __future__ import absolute_import
 
-from functools import reduce
-import operator
-
-import oneflow as flow
 import oneflow.python.framework.compile_context as compile_context
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.id_util as id_util
