@@ -493,6 +493,12 @@ message AdamModelUpdateConf {
   optional bool do_bias_correction = 4 [default = false];
 }
 
+message LazyAdamModelUpdateConf {
+  optional float beta1 = 1 [default = 0.9];
+  optional float beta2 = 2 [default = 0.999];
+  optional float epsilon = 3 [default = 1e-8];
+}
+
 message ExponentialDecayConf {
   required int64 decay_batches = 1;
   required double decay_rate = 2;
@@ -585,6 +591,7 @@ message NormalModelUpdateOpUserConf {
     RMSPropModelUpdateConf rmsprop_conf = 1002;
     LARSModelUpdateConf lars_conf = 1003;
     AdamModelUpdateConf adam_conf = 1004;
+    LazyAdamModelUpdateConf lazy_adam_conf = 1005;
   }
 }
 
@@ -646,6 +653,21 @@ message LARSModelUpdateOpConf {
 }
 
 message AdamModelUpdateOpConf {
+  required NormalModelUpdateOpUserConf user_conf = 1;
+  required string m = 2;
+  required string v = 3;
+  optional string beta1_t = 4;
+  optional string beta2_t = 5;
+  required string model_diff = 6;
+  required string total_instance_num_diff = 7;
+  required string model = 8;
+  required string train_step = 9;
+  required string learning_rate = 10;
+  required float l1 = 11;
+  required float l2 = 12;
+}
+
+message LazyAdamModelUpdateOpConf {
   required NormalModelUpdateOpUserConf user_conf = 1;
   required string m = 2;
   required string v = 3;
@@ -1553,6 +1575,7 @@ message OperatorConf {
     SwitchOutputOpConf switch_output_conf = 145;
     ReturnOpConf return_conf = 146;
     PartialTickOpConf partial_tick_conf = 147;
+    LazyAdamModelUpdateOpConf lazy_adam_model_update_conf = 148;
 
     // domain op
     TupleIdentityOpConf tuple_identity_conf = 200;
