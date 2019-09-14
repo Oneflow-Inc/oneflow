@@ -8,18 +8,18 @@ import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 
 from oneflow.python.oneflow_export import oneflow_export
 
-@oneflow_export("batch_unsorted_segment_sum")
-def batch_unsorted_segment_sum(
+@oneflow_export("unsorted_batch_segment_sum")
+def unsorted_batch_segment_sum(
     data, segment_ids, num_segments, name=None
 ):
-    if name is None: name = id_util.UniqueStr("BatchUnsortedSegmentSum_")
+    if name is None: name = id_util.UniqueStr("UnsortedBatchSegmentSum_")
 
     op_conf = op_conf_util.OperatorConf()
     op_conf.name = name
-    op_conf.batch_unsorted_segment_sum_conf.data = data.logical_blob_name
-    op_conf.batch_unsorted_segment_sum_conf.segment_ids = segment_ids.logical_blob_name
-    op_conf.batch_unsorted_segment_sum_conf.num_segments = num_segments
-    op_conf.batch_unsorted_segment_sum_conf.out = "out"
+    op_conf.unsorted_batch_segment_sum_conf.data = data.logical_blob_name
+    op_conf.unsorted_batch_segment_sum_conf.segment_ids = segment_ids.logical_blob_name
+    op_conf.unsorted_batch_segment_sum_conf.num_segments = num_segments
+    op_conf.unsorted_batch_segment_sum_conf.out = "out"
 
     compile_context.CurJobAddOp(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()

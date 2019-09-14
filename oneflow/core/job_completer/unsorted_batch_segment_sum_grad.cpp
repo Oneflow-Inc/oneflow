@@ -7,7 +7,7 @@ namespace {
 void GenerateBackwardOpConf(
     const Operator& op, std::vector<OperatorConf>* op_confs,
     const std::function<LogicalBlobId*(const std::string&)>& DiffLbi4BnInOp) {
-  CHECK(op.op_conf().has_batch_unsorted_segment_sum_conf());
+  CHECK(op.op_conf().has_unsorted_batch_segment_sum_conf());
   if (DiffLbi4BnInOp("data") != nullptr) {
     OperatorConf batch_gather;
     batch_gather.set_name("System-AutoGrad-" + op.op_name());
@@ -23,6 +23,6 @@ void GenerateBackwardOpConf(
 
 }  // namespace
 
-REGISTER_OP_GRAD(OperatorConf::kBatchUnsortedSegmentSumConf, &GenerateBackwardOpConf);
+REGISTER_OP_GRAD(OperatorConf::kUnsortedBatchSegmentSumConf, &GenerateBackwardOpConf);
 
 }  // namespace oneflow
