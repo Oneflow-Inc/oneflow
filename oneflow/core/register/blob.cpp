@@ -1,8 +1,6 @@
 #include "oneflow/core/register/blob.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/kernel/kernel_util.h"
-#include "oneflow/core/job/runtime_context.h"
-#include "oneflow/core/common/preprocessor.h"
 
 namespace oneflow {
 
@@ -28,7 +26,6 @@ void Blob::Init(Regst* regst, const RtBlobDesc* blob_desc, char* header_ptr, cha
   dim2_valid_num_ptr_ = header_pod_ptr_.MutTensorPtr<int64_t>(FieldKey::kDim2ValidNum, nullptr);
   record_id_in_device_piece_ptr_ =
       header_pod_ptr_.MutTensorPtr<int64_t>(FieldKey::kRecordIdInDevicePiece, nullptr);
-  loss_instance_num_ptr_ = header_pod_ptr_.MutTensorPtr<float>(FieldKey::kLossInstanceNum, nullptr);
   dptr_ = body_ptr;
   dynamic_shape_ = blob_desc->shape();
   record_num_ = -1;
@@ -128,16 +125,6 @@ void Blob::set_record_id_in_device_piece(int64_t no, int64_t val) {
   CHECK_LT(no, static_shape().At(0));
   CHECK_GE(val, 0);
   record_id_in_device_piece_ptr_[no] = val;
-}
-
-float Blob::loss_instance_num() const {
-  CHECK_NOTNULL(loss_instance_num_ptr_);
-  return *loss_instance_num_ptr_;
-}
-
-void Blob::set_loss_instance_num(float val) {
-  CHECK_NOTNULL(loss_instance_num_ptr_);
-  *loss_instance_num_ptr_ = val;
 }
 
 void Blob::set_dim2_valid_num(int64_t dim0_idx, int64_t dim1_idx, int64_t val) {
