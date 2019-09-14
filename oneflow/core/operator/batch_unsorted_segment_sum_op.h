@@ -1,15 +1,15 @@
-#ifndef ONEFLOW_CORE_OPERATOR_UNSORTED_SEGMENT_SUM_OP_H_
-#define ONEFLOW_CORE_OPERATOR_UNSORTED_SEGMENT_SUM_OP_H_
+#ifndef ONEFLOW_CORE_OPERATOR_BATCH_UNSORTED_SEGMENT_SUM_OP_H_
+#define ONEFLOW_CORE_OPERATOR_BATCH_UNSORTED_SEGMENT_SUM_OP_H_
 
 #include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
 
-class UnsortedSegmentSumOp final : public Operator {
+class BatchUnsortedSegmentSumOp final : public Operator {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(UnsortedSegmentSumOp);
-  UnsortedSegmentSumOp() = default;
-  ~UnsortedSegmentSumOp() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(BatchUnsortedSegmentSumOp);
+  BatchUnsortedSegmentSumOp() = default;
+  ~BatchUnsortedSegmentSumOp() override = default;
 
   void InitFromOpConf() override;
   const PbMessage& GetCustomizedConf() const override;
@@ -28,4 +28,4 @@ class UnsortedSegmentSumOp final : public Operator {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_OPERATOR_UNSORTED_SEGMENT_SUM_OP_H_
+#endif  // ONEFLOW_CORE_OPERATOR_BATCH_UNSORTED_SEGMENT_SUM_OP_H_

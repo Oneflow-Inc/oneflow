@@ -1,23 +1,23 @@
-#include "oneflow/core/operator/unsorted_segment_sum_op.h"
+#include "oneflow/core/operator/batch_unsorted_segment_sum_op.h"
 #include "oneflow/core/job/sbp_signature_builder.h"
 
 namespace oneflow {
 
-void UnsortedSegmentSumOp::InitFromOpConf() {
-  CHECK(op_conf().has_unsorted_segment_sum_conf());
+void BatchUnsortedSegmentSumOp::InitFromOpConf() {
+  CHECK(op_conf().has_batch_unsorted_segment_sum_conf());
   EnrollInputBn("segment_ids", false);
   EnrollInputBn("data");
   EnrollOutputBn("out");
 }
 
-const PbMessage& UnsortedSegmentSumOp::GetCustomizedConf() const {
-  return op_conf().unsorted_segment_sum_conf();
+const PbMessage& BatchUnsortedSegmentSumOp::GetCustomizedConf() const {
+  return op_conf().batch_unsorted_segment_sum_conf();
 }
 
-Maybe<void> UnsortedSegmentSumOp::InferBlobDescs(
+Maybe<void> BatchUnsortedSegmentSumOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
-  const int64_t num_segments = op_conf().unsorted_segment_sum_conf().num_segments();
+  const int64_t num_segments = op_conf().batch_unsorted_segment_sum_conf().num_segments();
   CHECK_GE_OR_RETURN(num_segments, 1);
   const BlobDesc* data = GetBlobDesc4BnInOp("data");
   const BlobDesc* segment_ids = GetBlobDesc4BnInOp("segment_ids");
@@ -37,11 +37,11 @@ Maybe<void> UnsortedSegmentSumOp::InferBlobDescs(
   return Maybe<void>::Ok();
 }
 
-Maybe<void> UnsortedSegmentSumOp::GetSbpSignatures(
+Maybe<void> BatchUnsortedSegmentSumOp::GetSbpSignatures(
     const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
     SbpSignatureList* sbp_sig_list) const {
   const int64_t indices_num_axes = JUST(LogicalBlobDesc4Ibn("segment_ids"))->shape().NumAxes();
-  OF_CHECK_GT(indices_num_axes, 1) << "UnsortedSegmentSumOp: indices_num_axes equals "
+  OF_CHECK_GT(indices_num_axes, 1) << "BatchUnsortedSegmentSumOp: indices_num_axes equals "
                                    << indices_num_axes << " (should be bigger than 1).";
   FOR_RANGE(int64_t, i, 0, indices_num_axes - 1) {
     SbpSignatureBuilder()
@@ -53,6 +53,6 @@ Maybe<void> UnsortedSegmentSumOp::GetSbpSignatures(
   return Maybe<void>::Ok();
 }
 
-REGISTER_OP(OperatorConf::kUnsortedSegmentSumConf, UnsortedSegmentSumOp);
+REGISTER_OP(OperatorConf::kBatchUnsortedSegmentSumConf, BatchUnsortedSegmentSumOp);
 
 }  // namespace oneflow
