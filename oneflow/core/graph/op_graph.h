@@ -150,7 +150,6 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
   void InitEdges();
   void InitProducerOpName2CtrlConsumerOpNames(const Job& job);
   void CheckIsDAG() const;
-  void FixOpParallelDesc() const;
   void InferTimeShape() const;
   void InferOpNodeSbpSignature(OpNode* op_node, const SbpSignature& sbp_sig_conf) const;
   void InferOpNodeLogicalBlobDesc(OpNode* op_node) const;
