@@ -19,6 +19,7 @@ def unsorted_segment_sum(
     op_conf.unsorted_segment_sum_conf.data = data.logical_blob_name
     op_conf.unsorted_segment_sum_conf.segment_ids = segment_ids.logical_blob_name
     op_conf.unsorted_segment_sum_conf.num_segments = num_segments
+    op_conf.unsorted_segment_sum_conf.axis = 0
     op_conf.unsorted_segment_sum_conf.out = "out"
 
     compile_context.CurJobAddOp(op_conf)
