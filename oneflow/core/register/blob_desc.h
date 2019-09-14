@@ -53,9 +53,6 @@ class BlobDesc {
   bool has_record_id_in_device_piece_field() const { return has_record_id_in_device_piece_; }
   void set_has_record_id_in_device_piece_field(bool val);
 
-  bool has_loss_instance_num_field() const { return has_loss_instance_num_; }
-  void set_has_loss_instance_num_field(bool val);
-
   bool has_col_num_field() const { return has_col_num_; }
   void set_has_col_num_field(bool val);
 
@@ -81,7 +78,6 @@ class BlobDesc {
   void Dim1ValidNumToProto(StructPodDesc* header_pod_desc) const;
   void Dim2ValidNumToProto(StructPodDesc* header_pod_desc) const;
   void RecordIdInDevicePieceToProto(StructPodDesc* header_pod_desc) const;
-  void LossInstanceNumToProto(StructPodDesc* header_pod_desc) const;
 
   // meta
   bool header_is_opaque_;
@@ -94,7 +90,6 @@ class BlobDesc {
   bool has_dim1_valid_num_;
   bool has_dim2_valid_num_;
   bool has_record_id_in_device_piece_;
-  bool has_loss_instance_num_;
   int64_t max_col_num_;
 
   FieldDesc body_field_;

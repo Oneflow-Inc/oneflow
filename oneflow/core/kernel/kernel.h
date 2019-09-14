@@ -138,26 +138,6 @@ class KernelIf : public Kernel {
   bool EnableCudnn() const { return op_conf().enable_cudnn(); }
 };
 
-template<DeviceType device_type, typename ModelType>
-class KernelIfWithModel : virtual public KernelIf<device_type> {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(KernelIfWithModel);
-  virtual ~KernelIfWithModel() = default;
-
- protected:
-  KernelIfWithModel() = default;
-};
-
-template<DeviceType device_type, typename T>
-class KernelIfWithActivation : virtual public KernelIf<device_type> {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(KernelIfWithActivation);
-  virtual ~KernelIfWithActivation() = default;
-
- protected:
-  KernelIfWithActivation() = default;
-};
-
 #define REGISTER_KERNEL(k, KernelType) \
   REGISTER_CLASS_WITH_ARGS(k, Kernel, KernelType, const KernelConf&)
 #define REGISTER_KERNEL_CREATOR(k, f) REGISTER_CLASS_CREATOR(k, Kernel, f, const KernelConf&)

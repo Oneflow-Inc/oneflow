@@ -5,7 +5,7 @@
 namespace oneflow {
 
 template<DeviceType device_type, typename T>
-class MultiplyKernel final : public KernelIfWithModel<device_type, T> {
+class MultiplyKernel final : public KernelIf<device_type> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(MultiplyKernel);
   MultiplyKernel() = default;
@@ -19,4 +19,4 @@ class MultiplyKernel final : public KernelIfWithModel<device_type, T> {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOE_CORE_KERNEL_MULTIPLY_KERNEL_H_
+#endif  // ONEFLOW_CORE_KERNEL_MULTIPLY_KERNEL_H_

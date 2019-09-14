@@ -15,7 +15,6 @@ BlobDesc::BlobDesc(const Shape& shape, DataType data_type, bool has_data_id, boo
       has_dim1_valid_num_(false),
       has_dim2_valid_num_(false),
       has_record_id_in_device_piece_(false),
-      has_loss_instance_num_(false),
       max_col_num_(max_col_num),
       body_field_(shape, data_type),
       is_body_disabled_(false) {}
@@ -37,7 +36,6 @@ void BlobDesc::InitFromProto(const BlobDescProto& proto) {
     has_dim1_valid_num_ = false;
     has_dim2_valid_num_ = false;
     has_record_id_in_device_piece_ = false;
-    has_loss_instance_num_ = false;
     opaque_header_ = FieldDesc(proto.header().opaque_header());
   } else {
     CHECK(proto.header().has_field_header());
@@ -48,7 +46,6 @@ void BlobDesc::InitFromProto(const BlobDescProto& proto) {
     has_dim1_valid_num_ = header_pod_desc_.HasField(FieldKey::kDim1ValidNum);
     has_dim2_valid_num_ = header_pod_desc_.HasField(FieldKey::kDim2ValidNum);
     has_record_id_in_device_piece_ = header_pod_desc_.HasField(FieldKey::kRecordIdInDevicePiece);
-    has_loss_instance_num_ = header_pod_desc_.HasField(FieldKey::kLossInstanceNum);
   }
   if (proto.has_dim0_inner_shape()) {
     dim0_inner_shape_.reset(new Shape(proto.dim0_inner_shape()));
@@ -64,7 +61,6 @@ BlobDesc::BlobDesc(const StructPodDesc& header_pod_desc, int64_t header_byte_siz
       has_dim1_valid_num_(false),
       has_dim2_valid_num_(false),
       has_record_id_in_device_piece_(false),
-      has_loss_instance_num_(false),
       max_col_num_(max_col_num),
       body_field_(shape, data_type),
       is_body_disabled_(false) {
@@ -108,11 +104,6 @@ void BlobDesc::set_has_record_id_in_device_piece_field(bool val) {
   has_record_id_in_device_piece_ = val;
 }
 
-void BlobDesc::set_has_loss_instance_num_field(bool val) {
-  CHECK(!header_is_opaque_);
-  has_loss_instance_num_ = val;
-}
-
 Shape& BlobDesc::mut_dim0_inner_shape() {
   CHECK(!header_is_opaque_);
   if (!dim0_inner_shape_) { dim0_inner_shape_.reset(new Shape()); }
@@ -152,10 +143,6 @@ void BlobDesc::RecordIdInDevicePieceToProto(StructPodDesc* header_pod_desc) cons
                             TensorPodDesc(shape, DataType::kInt64));
 }
 
-void BlobDesc::LossInstanceNumToProto(StructPodDesc* header_pod_desc) const {
-  header_pod_desc->AddField(FieldKey::kLossInstanceNum, TensorPodDesc({1}, DataType::kFloat));
-}
-
 void BlobDesc::HeaderToProto(BlobDescProto* proto) const {
   proto->mutable_header()->set_max_col_num(max_col_num_);
   if (!header_is_opaque_) {
@@ -167,7 +154,6 @@ void BlobDesc::HeaderToProto(BlobDescProto* proto) const {
     if (has_dim1_valid_num_field()) { Dim1ValidNumToProto(&header_pod_desc); }
     if (has_dim2_valid_num_field()) { Dim2ValidNumToProto(&header_pod_desc); }
     if (has_record_id_in_device_piece_field()) { RecordIdInDevicePieceToProto(&header_pod_desc); }
-    if (has_loss_instance_num_field()) { LossInstanceNumToProto(&header_pod_desc); }
     header_pod_desc.ToProto(proto->mutable_header()->mutable_header_pod_desc());
   } else {
     opaque_header_.ToProto(proto->mutable_header()->mutable_opaque_header());
@@ -189,8 +175,8 @@ bool BlobDesc::operator==(const BlobDesc& rhs) const {
          && has_dim1_valid_num_ == rhs.has_dim1_valid_num_
          && has_dim2_valid_num_ == rhs.has_dim2_valid_num_
          && has_record_id_in_device_piece_ == rhs.has_record_id_in_device_piece_
-         && has_loss_instance_num_ == rhs.has_loss_instance_num_ && max_col_num_ == rhs.max_col_num_
-         && body_field_ == rhs.body_field_ && is_body_disabled_ == rhs.is_body_disabled_;
+         && max_col_num_ == rhs.max_col_num_ && body_field_ == rhs.body_field_
+         && is_body_disabled_ == rhs.is_body_disabled_;
 }
 
 BlobDesc& BlobDesc::operator=(const BlobDesc& blob_desc) {
@@ -211,7 +197,6 @@ void BlobDesc::CopyMetaFrom(const BlobDesc& rhs) {
   has_dim1_valid_num_ = rhs.has_dim1_valid_num_;
   has_dim2_valid_num_ = rhs.has_dim2_valid_num_;
   has_record_id_in_device_piece_ = rhs.has_record_id_in_device_piece_;
-  has_loss_instance_num_ = rhs.has_loss_instance_num_;
   max_col_num_ = rhs.max_col_num_;
   body_field_ = rhs.body_field_;
   if (rhs.dim0_inner_shape_) {

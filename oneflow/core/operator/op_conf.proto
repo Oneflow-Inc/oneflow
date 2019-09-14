@@ -1135,12 +1135,12 @@ message GatherMs0OpConf {
   required string out = 3;
 }
 
-message GatherGradOpConf {
-  required string out_diff = 1;
-  required string indices = 2;
-  required string in_diff = 3;
+message UnsortedSegmentSumOpConf {
+  required string data = 1;
+  required string segment_ids = 2;
+  required string out = 3;
   required int64 axis = 4;
-  required int64 gather_dim_size = 5;
+  required int64 num_segments = 5;
 }
 
 message GatherMs0GradOpConf {
@@ -1639,7 +1639,7 @@ message OperatorConf {
     LayerNormGradOpConf layer_norm_grad_conf = 272;
     LayerNormParamGradOpConf layer_norm_param_grad_conf = 273;
     SparseCrossEntropyGradOpConf sparse_cross_entropy_grad_conf= 274;
-    GatherGradOpConf gather_grad_conf = 275;
+    UnsortedSegmentSumOpConf unsorted_segment_sum_conf = 275;
     BroadcastDivGradOpConf broadcast_div_grad_conf= 276;
     BroadcastLikeOpConf broadcast_like_conf = 277;
     SoftmaxGradOpConf softmax_grad_conf = 278;

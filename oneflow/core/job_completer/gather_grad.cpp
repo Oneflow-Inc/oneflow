@@ -17,18 +17,18 @@ void GenerateBackwardOpConf(
             : op.op_conf().gather_conf().axis();
     CHECK_GE(axis, 0);
     CHECK_LT(axis, in_logical_blob_desc.shape().NumAxes());
-    const int64_t gather_dim_size = in_logical_blob_desc.shape().At(axis);
-    OperatorConf gather_grad_op;
-    gather_grad_op.set_name("System-AutoGrad-" + op.op_name());
-    GatherGradOpConf* conf = gather_grad_op.mutable_gather_grad_conf();
+    const int64_t num_segments = in_logical_blob_desc.shape().At(axis);
+    OperatorConf unsorted_segment_sum_op;
+    unsorted_segment_sum_op.set_name("System-AutoGrad-" + op.op_name());
+    UnsortedSegmentSumOpConf* conf = unsorted_segment_sum_op.mutable_unsorted_segment_sum_conf();
     conf->set_axis(axis);
-    conf->set_gather_dim_size(gather_dim_size);
-    conf->set_indices(GenLogicalBlobName(op.BnInOp2Lbi("indices")));
-    conf->set_out_diff(GenLogicalBlobName(*DiffLbi4BnInOp("out")));
-    conf->set_in_diff("in_diff");
-    op_confs->push_back(gather_grad_op);
-    DiffLbi4BnInOp("in")->set_op_name(gather_grad_op.name());
-    DiffLbi4BnInOp("in")->set_blob_name(conf->in_diff());
+    conf->set_num_segments(num_segments);
+    conf->set_segment_ids(GenLogicalBlobName(op.BnInOp2Lbi("indices")));
+    conf->set_data(GenLogicalBlobName(*DiffLbi4BnInOp("out")));
+    conf->set_out("out");
+    op_confs->push_back(unsorted_segment_sum_op);
+    DiffLbi4BnInOp("in")->set_op_name(unsorted_segment_sum_op.name());
+    DiffLbi4BnInOp("in")->set_blob_name(conf->out());
   }
 }
 

@@ -37,7 +37,8 @@ const PbMessage& LazyAdamModelUpdateOp::GetCustomizedConf() const {
   return op_conf().lazy_adam_model_update_conf();
 }
 
-REGISTER_CLASS(NormalModelUpdateOpUserConf::kLazyAdamConf, NormalModelUpdtOp, LazyAdamModelUpdateOp);
+REGISTER_CLASS(NormalModelUpdateOpUserConf::kLazyAdamConf, NormalModelUpdtOp,
+               LazyAdamModelUpdateOp);
 
 REGISTER_OP(OperatorConf::kLazyAdamModelUpdateConf, LazyAdamModelUpdateOp);
 
