@@ -1368,7 +1368,7 @@ message TotalLossInstanceNumOpConf {
   required string out = 2;
 }
 
-message UnsortedSegmentSumOpConf {
+message UnsortedBatchSegmentSumOpConf {
   required string data = 1;
   required string segment_ids = 2;
   required string out = 3;
@@ -1597,7 +1597,7 @@ message OperatorConf {
     BroadcastDivGradOpConf broadcast_div_grad_conf= 276;
     BroadcastLikeOpConf broadcast_like_conf = 277;
     SoftmaxGradOpConf softmax_grad_conf = 278;
-    UnsortedSegmentSumOpConf unsorted_segment_sum_conf = 279;
+    UnsortedBatchSegmentSumOpConf unsorted_batch_segment_sum_conf = 279;
     ReduceMeanGradOpConf reduce_mean_grad_conf = 280;
     NormalizationGradOpConf normalization_grad_conf = 282;
     ConvBiasGradOpConf conv_bias_grad_conf = 283;
