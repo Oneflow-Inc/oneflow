@@ -69,6 +69,7 @@ Maybe<void> UnsortedSegmentSumOp::GetSbpSignatures(
 
 Maybe<void> UnsortedSegmentSumOp::InferBatchAxis(
     std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
+  OF_CHECK(*BatchAxis4BnInOp("data") == *BatchAxis4BnInOp("segment_ids"));
   BatchAxis4BnInOp("out")->clear_value();
   return Maybe<void>::Ok();
 }
