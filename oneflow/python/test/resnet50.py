@@ -85,7 +85,7 @@ def _data_load(data_dir):
     )
 
     return flow.data.decode_ofrecord(
-        data_dir,
+        data_dir, g_args.batch_size,
         (label_blob_conf, image_blob_conf),
         data_part_num=g_args.data_part_num,
         name="decode",
@@ -291,7 +291,6 @@ def _set_trainable(trainable):
 
 @flow.function
 def TrainNet():
-    flow.config.train.batch_size(g_args.batch_size)
     flow.config.train.primary_lr(0.0032)
     flow.config.train.model_update_conf(dict(naive_conf={}))
 
@@ -308,7 +307,6 @@ def evaluate():
 
 
 def main():
-    flow.config.piece_size(g_args.batch_size)
     flow.config.default_data_type(flow.float)
     flow.config.gpu_device_num(g_args.gpu_num_per_node)
     flow.config.grpc_use_no_signal()

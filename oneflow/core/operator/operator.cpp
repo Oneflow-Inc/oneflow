@@ -60,22 +60,14 @@ const std::string& Operator::SoleTbn() const {
 Maybe<void> Operator::InferBlobDescsIf(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature,
-    int64_t record_piece_size, std::function<void(OpContext*)> EnrollOpCtx) const {
-  return InferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx, sbp_signature, record_piece_size,
-                        EnrollOpCtx);
+    std::function<void(OpContext*)> EnrollOpCtx) const {
+  return InferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx, sbp_signature, EnrollOpCtx);
 }
 
 Maybe<void> Operator::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature,
-    int64_t record_piece_size, std::function<void(OpContext*)> EnrollOpCtx) const {
-  return InferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx, sbp_signature, record_piece_size);
-}
-
-Maybe<void> Operator::InferBlobDescs(
-    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature,
-    int64_t record_piece_size) const {
+    std::function<void(OpContext*)> EnrollOpCtx) const {
   return InferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx, sbp_signature);
 }
 
@@ -95,19 +87,17 @@ Maybe<void> Operator::InferBlobDescs(
 Maybe<void> Operator::InferOutBlobDescsIf(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature,
-    int64_t record_piece_size, std::function<void(OpContext*)> EnrollOpCtx) const {
-  return InferOutBlobDescs(GetBlobDesc4BnInOp, parallel_ctx, sbp_signature, record_piece_size,
-                           EnrollOpCtx);
+    std::function<void(OpContext*)> EnrollOpCtx) const {
+  return InferOutBlobDescs(GetBlobDesc4BnInOp, parallel_ctx, sbp_signature, EnrollOpCtx);
 }
 
 Maybe<void> Operator::InferOutBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature,
-    int64_t record_piece_size, std::function<void(OpContext*)> EnrollOpCtx) const {
+    std::function<void(OpContext*)> EnrollOpCtx) const {
   // TODO() separate InferOut and InferTmp
   // At present, only conv_op infer out blob separately
-  return InferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx, sbp_signature, record_piece_size,
-                        EnrollOpCtx);
+  return InferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx, sbp_signature, EnrollOpCtx);
 }
 
 Maybe<void> Operator::InferOutputBlobTimeShapeIf(

@@ -30,7 +30,7 @@ LogicalNode* ReduceConcatOp::NewProperLogicalNode() const {
 Maybe<void> ReduceConcatOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature,
-    int64_t record_piece_size, std::function<void(OpContext*)> EnrollOpCtx) const {
+    std::function<void(OpContext*)> EnrollOpCtx) const {
   const BlobDesc* first_in_blob = GetBlobDesc4BnInOp(input_bns().Get(0));
   const DataType data_type = first_in_blob->data_type();
   for (int32_t i = 1; i < op_conf().reduce_concat_conf().in_num(); ++i) {

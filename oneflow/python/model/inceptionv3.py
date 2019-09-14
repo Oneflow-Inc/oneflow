@@ -14,7 +14,6 @@ _MODEL_SAVE_DIR = "./model_save-{}".format(
 parser = argparse.ArgumentParser(description="flags for multi-node and resource")
 parser.add_argument("-g", "--gpu_num_per_node", type=int, default=1, required=False)
 parser.add_argument("-b", "--batch_size", type=int, default=2, required=False)
-parser.add_argument("-p", "--piece_size", type=int, default=2, required=False)
 parser.add_argument(
     "-m", "--multinode", default=False, action="store_true", required=False
 )
@@ -103,7 +102,7 @@ def _data_load_layer(data_dir):
         "class/label", shape=(), dtype=flow.int32, codec=flow.data.RawCodec()
     )
     return flow.data.decode_ofrecord(
-        data_dir, (image_blob_conf, label_blob_conf), data_part_num=32, name="decode"
+        data_dir, args.batch_size, (image_blob_conf, label_blob_conf), data_part_num=32, name="decode"
     )
 
 
@@ -566,7 +565,6 @@ def InceptionV3(images, labels, trainable=True):
 
 @flow.function
 def TrainNet():
-    flow.config.train.batch_size(args.batch_size)
     flow.config.train.primary_lr(0.0001)
     flow.config.train.model_update_conf(dict(naive_conf={}))
 
@@ -579,7 +577,6 @@ def TrainNet():
 if __name__ == "__main__":
     flow.config.gpu_device_num(args.gpu_num_per_node)
     flow.config.ctrl_port(9678)
-    flow.config.piece_size(args.piece_size)
     flow.config.default_data_type(flow.float)
 
     if args.multinode:

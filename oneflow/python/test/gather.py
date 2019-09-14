@@ -43,7 +43,6 @@ def gather_ms0(
 
 @oneflow.function
 def train_gather(idx=oneflow.input_blob_def((2,), dtype=oneflow.int32)):
-    oneflow.config.train.batch_size(1)
     oneflow.config.train.model_update_conf(dict(naive_conf={}))
     oneflow.config.train.primary_lr(1)
     w = oneflow.get_variable("w0", shape=(2,), dtype=oneflow.float32)
@@ -53,7 +52,6 @@ def train_gather(idx=oneflow.input_blob_def((2,), dtype=oneflow.int32)):
 
 @oneflow.function
 def train_gather_ms0(idx=oneflow.input_blob_def((2,), dtype=oneflow.int32, split_axis=None)):
-    oneflow.config.train.batch_size(1)
     oneflow.config.train.model_update_conf(dict(naive_conf={}))
     oneflow.config.train.primary_lr(1)
     w = oneflow.get_variable("w1", shape=(2,), dtype=oneflow.float32, split_axis=0).split(0)
@@ -168,7 +166,6 @@ def _test_train_gather():
 
 if __name__ == '__main__':
     oneflow.config.gpu_device_num(2)
-    oneflow.config.piece_size(1)
     oneflow.config.default_data_type(oneflow.float)
     oneflow.config.default_initializer_conf(dict(constant_conf=dict(value=10)))
     _gather_test_case_1()
