@@ -303,7 +303,6 @@ void OpGraph::Init(const Job& job) {
   InitEdges();
   InitProducerOpName2CtrlConsumerOpNames(job);
   CheckIsDAG();
-  FixOpParallelDesc();
   InferTimeShape();
   InferLogicalBlobDesc(job);
   ForEachEdge([](OpEdge* edge) { edge->InitDistributeHierarchyInfo(); });
@@ -362,11 +361,6 @@ void OpGraph::InitProducerOpName2CtrlConsumerOpNames(const Job& job) {
       CHECK(consumer_op_names->emplace(op_conf.name()).second);
     }
   }
-}
-
-void OpGraph::FixOpParallelDesc() const {
-  // TODO() : outdated, delete
-  ForEachNode([&](OpNode* node) { node->op().FixParallelDesc(node->mut_parallel_desc()); });
 }
 
 void OpGraph::InferTimeShape() const {
