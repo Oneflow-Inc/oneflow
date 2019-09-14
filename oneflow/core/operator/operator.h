@@ -146,7 +146,6 @@ class Operator {
       const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
       std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
       const ParallelDesc& parallel_desc) const;
-  void FixParallelDesc(ParallelDesc* pr_desc) const;
   void GenKernelConf(
       std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, bool is_forward,
       const ParallelContext*, KernelConf*, const OpContext*,
@@ -210,7 +209,6 @@ class Operator {
     AddValInPbRf<T>(customized_conf, field_name, val);
   }
 
-  virtual void VirtualFixParallelDesc(ParallelDesc* pr_desc) const {}
   virtual void VirtualGenKernelConf(
       std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*,
       KernelConf*, const OpContext*,
