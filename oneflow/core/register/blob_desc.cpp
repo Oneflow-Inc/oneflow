@@ -175,8 +175,8 @@ bool BlobDesc::operator==(const BlobDesc& rhs) const {
          && has_dim1_valid_num_ == rhs.has_dim1_valid_num_
          && has_dim2_valid_num_ == rhs.has_dim2_valid_num_
          && has_record_id_in_device_piece_ == rhs.has_record_id_in_device_piece_
-         && max_col_num_ == rhs.max_col_num_
-         && body_field_ == rhs.body_field_ && is_body_disabled_ == rhs.is_body_disabled_;
+         && max_col_num_ == rhs.max_col_num_ && body_field_ == rhs.body_field_
+         && is_body_disabled_ == rhs.is_body_disabled_;
 }
 
 BlobDesc& BlobDesc::operator=(const BlobDesc& blob_desc) {
