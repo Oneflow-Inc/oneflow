@@ -247,11 +247,4 @@ std::unique_ptr<const Kernel> ConstructKernel(const JobDesc* job_desc, const Ker
 
 OF_PP_FOR_EACH_TUPLE(INSTANTIATE_KERNEL_IF, DEVICE_TYPE_SEQ);
 
-#define INSTANTIATE_KERNEL_IF_SUBCLASS(device_type, data_type_pair)                \
-  template class KernelIfWithModel<device_type, OF_PP_PAIR_FIRST(data_type_pair)>; \
-  template class KernelIfWithActivation<device_type, OF_PP_PAIR_FIRST(data_type_pair)>;
-
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_KERNEL_IF_SUBCLASS, DEVICE_TYPE_SEQ,
-                                 FLOATING_DATA_TYPE_SEQ);
-
 }  // namespace oneflow
