@@ -26,11 +26,25 @@ void OptimizerParamBuilder::BuilderImpl::ApplyBuild<OptimizerMode::kAdam>() {
   conf->set_weight(GetNodeAttr<std::string>(node_, "model"));
   conf->set_m(GetNodeAttr<std::string>(node_, "m"));
   conf->set_v(GetNodeAttr<std::string>(node_, "v"));
+
   // conf->set_beta1(GetNodeAttr<std::string>(node_, "beta1_t"));
   // conf->set_beta2(GetNodeAttr<std::string>(node_, "beta2_t"));
-  //conf->set_beta1(GetNodeAttr<float>(node_, "beta1"));
-  //conf->set_beta2(GetNodeAttr<float>(node_, "beta2"));
-  //conf->set_epsilon(GetNodeAttr<float>(node_, "epsilon"));
+  const auto *user_conf = dynamic_cast<NormalModelUpdateOpUserConf *>(
+        GetNodeAttr<PbMessage *>(node_, "user_conf"));
+  CHECK_NOTNULL(user_conf);
+  if (user_conf->has_adam_conf()) {
+    const float epsilon = user_conf->adam_conf().epsilon();
+    conf->set_epsilon(epsilon);
+    const float beta1 = user_conf->adam_conf().beta1();
+    conf->set_beta1(beta1);
+    const float beta2 = user_conf->adam_conf().beta2();
+    conf->set_beta2(beta2);
+  }
+
+  const std::string op_name = op_conf_->name();
+  (*update_vars_)[conf->weight()] = absl::StrCat(op_name, "/", conf->out());
+  (*update_vars_)[conf->m()] = absl::StrCat(op_name, "/", conf->out_m());
+  (*update_vars_)[conf->v()] = absl::StrCat(op_name, "/", conf->out_v());
 }
 
 /*static*/ void OptimizerParamBuilder::ApplyOptimizerModeVisitor(
@@ -45,15 +59,17 @@ void OptimizerParamBuilder::BuilderImpl::ApplyBuild<OptimizerMode::kAdam>() {
 }
 
 /*static*/ OperatorConf OptimizerParamBuilder::Build(
-                                        const OptimizerMode &mode,
-                                        const mola::XlaNode *node,
-                                        const std::string &gradient,
-                                        const std::string &total_instances,
-                                        const std::string &learning_rate) {
+    const OptimizerMode &mode,
+    const mola::XlaNode *node,
+    const std::string &gradient,
+    const std::string &total_instances,
+    const std::string &learning_rate,
+    std::unordered_map<std::string, std::string> *update_vars) {
   OperatorConf op_conf;
-  ApplyOptimizerModeVisitor(mode, BuilderImpl(node, gradient, total_instances,
-                                              learning_rate, &op_conf));
   op_conf.set_name(node->op_name());
+  ApplyOptimizerModeVisitor(mode, BuilderImpl(node, gradient, total_instances,
+                                              learning_rate, &op_conf,
+                                              update_vars));
   return op_conf;
 }
 

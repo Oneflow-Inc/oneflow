@@ -12,7 +12,7 @@ void XlaLaunchOp::InitFromOpConf() {
 
   int inputs_num = op_conf().xla_launch_conf().in().size();
   for (int i = 0; i < inputs_num; ++i) {
-    EnrollInputBn(absl::StrCat("in_", i))->set_is_mutable(true);
+    EnrollInputBn(absl::StrCat("in_", i));
   }
   EnrollRepeatedOutputBn("out");
 

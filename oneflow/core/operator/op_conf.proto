@@ -1475,10 +1475,6 @@ message AdamOptimizerOpConf {
   optional float epsilon = 14 [default = 1e-8];
 }
 
-message FakeConsumeOpConf {
-  repeated string in = 1;
-}
-
 message XlaLaunchOpConf {
   message Argument {
     required string name = 1;
@@ -1649,7 +1645,6 @@ message OperatorConf {
 
     ClipGradientOpConf clip_gradient_conf = 401;
     AdamOptimizerOpConf adam_optimizer_conf = 403;
-    FakeConsumeOpConf fake_consume_conf = 404;
     XlaLaunchOpConf xla_launch_conf = 410;
 
     // math op

@@ -16,20 +16,24 @@ typedef enum class {
 
 class OptimizerParamBuilder {
  public:
-  static OperatorConf Build(const OptimizerMode &mode,
-                            const mola::XlaNode *node,
-                            const std::string &gradient,
-                            const std::string &total_instances,
-                            const std::string &learning_rate);
+  static OperatorConf Build(
+            const OptimizerMode &mode,
+            const mola::XlaNode *node,
+            const std::string &gradient,
+            const std::string &total_instances,
+            const std::string &learning_rate,
+            std::unordered_map<std::string, std::string> *update_vars);
 
  private:
   class BuilderImpl {
    public:
     BuilderImpl(const mola::XlaNode *node, const std::string &gradient,
                 const std::string &total_instances,
-                const std::string &learning_rate, OperatorConf *op_conf)
+                const std::string &learning_rate, OperatorConf *op_conf,
+                std::unordered_map<std::string, std::string> *update_vars)
         : node_(node), gradient_(gradient), total_instances_(total_instances),
-      learning_rate_(learning_rate), op_conf_(op_conf) {}
+          learning_rate_(learning_rate), op_conf_(op_conf),
+          update_vars_(update_vars) {}
     
     template<OptimizerMode mode>
     void ApplyBuild();
@@ -40,6 +44,7 @@ class OptimizerParamBuilder {
     const std::string &total_instances_;
     const std::string &learning_rate_;
     OperatorConf *op_conf_;
+    std::unordered_map<std::string, std::string> *update_vars_;
   };
 
   static void ApplyOptimizerModeVisitor(const OptimizerMode &mode,
