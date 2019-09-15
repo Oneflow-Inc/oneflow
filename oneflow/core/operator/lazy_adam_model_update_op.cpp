@@ -18,8 +18,6 @@ void LazyAdamModelUpdateOp::MdUpdtVirtualInitFromOpConf() {
 Maybe<void> LazyAdamModelUpdateOp::MdUpdtVirtualInferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
-  const auto& lazy_adam_conf =
-    op_conf().lazy_adam_model_update_conf().user_conf().lazy_adam_conf();
   const BlobDesc* model_blob_desc = GetBlobDesc4BnInOp("model");
   CHECK_EQ_OR_RETURN(model_blob_desc->data_type(), job_desc().DefaultDataType());
   CHECK_EQ_OR_RETURN(model_blob_desc->has_data_id_field(), false);
