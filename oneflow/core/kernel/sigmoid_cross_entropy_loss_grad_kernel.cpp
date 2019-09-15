@@ -13,15 +13,10 @@ void SigmoidCrossEntropyLossGradKernel<device_type, PredType, LabelType>::
   const Blob* label = BnInOp2Blob("label");
   Blob* pred_diff = BnInOp2Blob("prediction_diff");
 
-  const int64_t inner_dim_size = label->shape().Count(1);
-  FOR_RANGE(int64_t, data_index, 0, prediction->shape().At(0)) {
-    const int64_t offset = data_index * inner_dim_size;
-    const PredType* cur_pred = prediction->dptr<PredType>() + offset;
-    const LabelType* cur_label = label->dptr<LabelType>() + offset;
-    PredType* cur_pred_diff = pred_diff->mut_dptr<PredType>() + offset;
-    SigmoidCrossEntropyLossGradKernelUtil<device_type, PredType, LabelType>::Backward(
-        ctx.device_ctx, conf, inner_dim_size, cur_pred, cur_label, cur_pred_diff);
-  }
+  SigmoidCrossEntropyLossGradKernelUtil<device_type, PredType, LabelType>::Backward(
+      ctx.device_ctx, conf, predication->shape().elem_cnt(),
+      prediction->dptr<PredType>(), label->dptr<LabelType>(),
+      pred_diff->mut_dptr<PredType>());
 }
 
 template<DeviceType device_type, typename PredType, typename LabelType>
