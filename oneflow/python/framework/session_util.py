@@ -9,7 +9,7 @@ import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.runtime_context as runtime_ctx
 import oneflow.python.framework.config_util as config_util
 import oneflow.python.framework.job_set_util as job_set_util
-from oneflow.python.framework.out_remote_blobs_result_box import OutRemoteBlobsResultBox
+from oneflow.python.framework.out_remote_blobs_status import OutRemoteBlobsStatus
 from oneflow.python.oneflow_export import oneflow_export
 
 def try_init_default_session(func):
@@ -56,17 +56,17 @@ class Session(object):
     def Run(self, job_func, *arg):
         remote_blobs = runtime.LaunchJob(job_func, *arg)
         if remote_blobs is None: return
-        return OutRemoteBlobsResultBox().SetResult(remote_blobs).Inited()
+        return OutRemoteBlobsStatus().SetResult(remote_blobs).Inited()
 
     def Map(self, job_func, feed_data):
-        result_box = OutRemoteBlobsResultBox()
+        status = OutRemoteBlobsStatus()
         for x in feed_data:
             if not (isinstance(x, list) or isinstance(x, tuple)): x = [x]
             remote_blobs = runtime.LaunchJob(job_func, *x)
             assert remote_blobs is not None
-            result_box.AddResult(remote_blobs)
-        result_box.Inited()
-        return result_box
+            status.AddResult(remote_blobs)
+        status.Inited()
+        return status
 
     def NoReturnRun(self, job_func, *arg):
         runtime.LaunchJob(job_func, *arg)

@@ -4,7 +4,7 @@ import threading
 import oneflow.python.framework.inter_user_job_util as inter_user_job_util
 import oneflow.python.framework.remote_blob as remote_blob_util
 
-class OutRemoteBlobsResultBox(object):
+class OutRemoteBlobsStatus(object):
     def __init__(self):
         self.cond_var_ = threading.Condition()
         self.out_remote_blob_pullers_ = []
