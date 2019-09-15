@@ -40,8 +40,6 @@ class Kernel {
 
   virtual void InitConstBufBlobs(DeviceCtx* ctx,
                                  std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
-  virtual ActivationType GetActivationType() const { return ActivationType::kNone; }
-
   virtual void Forward(const KernelCtx& ctx,
                        std::function<Blob*(const std::string&)> BnInOp2Blob) const;
   virtual void ForwardDataContent(const KernelCtx& ctx,
@@ -74,7 +72,6 @@ class Kernel {
                                    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
     UNIMPLEMENTED();
   }
-  virtual void ForwardActivation(const KernelCtx& ctx, Blob* out_blob) const {}
   virtual void BackwardDataContent(const KernelCtx& ctx,
                                    std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
   virtual bool NeedForwardIfBlobEmpty() const { return false; }
