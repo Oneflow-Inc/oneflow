@@ -133,7 +133,8 @@ class BlobConf(object):
 
 
 @oneflow_export("data.decode_ofrecord")
-def decode_ofrecord(ofrecord_dir, blobs, data_part_num=-1, name=None):
+def decode_ofrecord(ofrecord_dir, blobs, data_part_num=-1, part_name_prefix="part-",
+                    part_name_suffix_length=-1, name=None):
     if name is None:
         name = id_util.UniqueStr("Decode_")
 
@@ -144,6 +145,8 @@ def decode_ofrecord(ofrecord_dir, blobs, data_part_num=-1, name=None):
 
     op_conf.decode_ofrecord_conf.data_dir = ofrecord_dir
     op_conf.decode_ofrecord_conf.data_part_num = data_part_num
+    op_conf.decode_ofrecord_conf.part_name_prefix = part_name_prefix
+    op_conf.decode_ofrecord_conf.part_name_suffix_length = part_name_suffix_length
     for blob_conf in blobs:
         op_conf.decode_ofrecord_conf.blob.extend([blob_conf.to_proto()])
         lbi = logical_blob_id_util.LogicalBlobId()
