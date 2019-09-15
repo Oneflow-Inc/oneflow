@@ -192,11 +192,6 @@ Maybe<void> Operator::InferSbpSignature(
   return Maybe<void>::Ok();
 }
 
-void Operator::FixParallelDesc(ParallelDesc* pr_desc) const {
-  // TODO(): outdated, delete
-  VirtualFixParallelDesc(pr_desc);
-}
-
 static bool HasBlobDescWithField(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const PbRpf<std::string>& bn_in_ops, bool (BlobDesc::*has_field)() const) {
@@ -236,14 +231,6 @@ static bool HaveSameDim0InnerShape(
     }
   });
   return ret;
-}
-
-ActivationType Operator::GetActivationType() const {
-  if (HasFieldInCustomizedConf("activation")) {
-    return static_cast<ActivationType>(GetEnumFromCustomizedConf("activation"));
-  } else {
-    return ActivationType::kNone;
-  }
 }
 
 void Operator::GenKernelConf(

@@ -29,7 +29,6 @@ class RtBlobDesc {
   bool has_dim1_valid_num_field() const;
   bool has_dim2_valid_num_field() const;
   bool has_record_id_in_device_piece_field() const;
-  bool has_loss_instance_num_field() const;
   bool is_body_disabled() const;
   const StructPodDesc& header_pod_desc() const { return header_pod_desc_; }
 

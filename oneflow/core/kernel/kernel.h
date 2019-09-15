@@ -40,8 +40,6 @@ class Kernel {
 
   virtual void InitConstBufBlobs(DeviceCtx* ctx,
                                  std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
-  virtual ActivationType GetActivationType() const { return ActivationType::kNone; }
-
   virtual void Forward(const KernelCtx& ctx,
                        std::function<Blob*(const std::string&)> BnInOp2Blob) const;
   virtual void ForwardDataContent(const KernelCtx& ctx,
@@ -74,7 +72,6 @@ class Kernel {
                                    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
     UNIMPLEMENTED();
   }
-  virtual void ForwardActivation(const KernelCtx& ctx, Blob* out_blob) const {}
   virtual void BackwardDataContent(const KernelCtx& ctx,
                                    std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
   virtual bool NeedForwardIfBlobEmpty() const { return false; }
@@ -136,26 +133,6 @@ class KernelIf : public Kernel {
                  void (Blob::*Copy)(DeviceCtx*, const Blob*)) const;
 
   bool EnableCudnn() const { return op_conf().enable_cudnn(); }
-};
-
-template<DeviceType device_type, typename ModelType>
-class KernelIfWithModel : virtual public KernelIf<device_type> {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(KernelIfWithModel);
-  virtual ~KernelIfWithModel() = default;
-
- protected:
-  KernelIfWithModel() = default;
-};
-
-template<DeviceType device_type, typename T>
-class KernelIfWithActivation : virtual public KernelIf<device_type> {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(KernelIfWithActivation);
-  virtual ~KernelIfWithActivation() = default;
-
- protected:
-  KernelIfWithActivation() = default;
 };
 
 #define REGISTER_KERNEL(k, KernelType) \
