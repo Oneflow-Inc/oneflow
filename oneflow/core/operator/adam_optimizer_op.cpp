@@ -46,9 +46,9 @@ void AdamOptimizerOp::InitFromOpConf() {
   for (const std::string &bn : input_bns) {
     EnrollInputBn(bn, false);
   }
-  EnrollInputBn("m")->set_is_mutable(true);
-  EnrollInputBn("v")->set_is_mutable(true);
-  EnrollInputBn("weight")->set_is_mutable(true);
+  EnrollInputBn("m");
+  EnrollInputBn("v");
+  EnrollInputBn("weight");
   EnrollOutputBn("out")->set_mutable_inplace_ibn("weight");
   EnrollOutputBn("out_m")->set_mutable_inplace_ibn("m");
   EnrollOutputBn("out_v")->set_mutable_inplace_ibn("v");

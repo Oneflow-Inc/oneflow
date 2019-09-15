@@ -30,13 +30,16 @@ class OptimizerRewritor {
                                     const std::string &total_instances,
                                     const ClipConf &clip_conf);
 
-  OperatorConf *BuildOptimizerOp(const mola::XlaNode *node,
-                                 const std::string &gradient,
-                                 const std::string &total_instances,
-                                 const std::string &learning_rate);
+  OperatorConf *BuildOptimizerOp(
+      const mola::XlaNode *node,
+      const std::string &gradient,
+      const std::string &total_instances,
+      const std::string &learning_rate,
+      std::unordered_map<std::string, std::string> *update_vars);
 
-  OperatorConf *BuildFakeConsumeOp(const std::string &node_name,
-                                   const std::vector<std::string> &inputs);
+  std::vector<OperatorConf *> BuildAssignOps(
+      const std::string &node_name,
+      const std::unordered_map<std::string, std::string> &update_vars);
 
   std::vector<std::string> GetControlInOpNames(const mola::XlaNode *node) const;
 
@@ -85,32 +88,36 @@ OperatorConf *OptimizerRewritor::BuildClipGradientOp(
 }
 
 OperatorConf *OptimizerRewritor::BuildOptimizerOp(
-                                const mola::XlaNode *node,
-                                const std::string &gradient,
-                                const std::string &total_instances,
-                                const std::string &learning_rate) {
+                    const mola::XlaNode *node,
+                    const std::string &gradient,
+                    const std::string &total_instances,
+                    const std::string &learning_rate,
+                    std::unordered_map<std::string, std::string> *update_vars) {
   OptimizerMode mode = GetOptimizerModeIfModelUpdate(node);
   CHECK_NE(mode, OptimizerMode::kInvalid);
   OperatorConf op_conf = OptimizerParamBuilder::Build(
-      mode, node, gradient, total_instances, learning_rate);
+      mode, node, gradient, total_instances, learning_rate, update_vars);
 
   ParallelConf parallel_conf = builder_->GetParallelConf(node->op_name());
   builder_->AddOrMutOpsOnlyOnce(parallel_conf, {op_conf});
   return builder_->MutableOpConf(op_conf.name());
 }
 
-OperatorConf *OptimizerRewritor::BuildFakeConsumeOp(
-                                const std::string &node_name,
-                                const std::vector<std::string> &inputs) {
-  OperatorConf op_conf;
-  op_conf.set_name(absl::StrCat(node_name, "-fake_consume"));
-  for (const std::string &input : inputs) {
-    op_conf.mutable_fake_consume_conf()->add_in(input);
-  }
+std::vector<OperatorConf *> OptimizerRewritor::BuildAssignOps(
+            const std::string &node_name,
+            const std::unordered_map<std::string, std::string> &update_vars) {
+  std::vector<OperatorConf *> assign_ops;
+  for (const auto &p : update_vars) {
+    OperatorConf op_conf;
+    op_conf.set_name(absl::StrCat(node_name, "-assign-", assign_ops.size()));
+    op_conf.mutable_assign_conf()->set_ref(p.first);
+    op_conf.mutable_assign_conf()->set_value(p.second);
 
-  ParallelConf parallel_conf = builder_->GetParallelConf(node_name);
-  builder_->AddOps(parallel_conf, {op_conf});
-  return builder_->MutableOpConf(op_conf.name());
+    ParallelConf parallel_conf = builder_->GetParallelConf(node_name);
+    builder_->AddOps(parallel_conf, {op_conf});
+    assign_ops.push_back(builder_->MutableOpConf(op_conf.name()));
+  }
+  return std::move(assign_ops);
 }
 
 std::vector<std::string> OptimizerRewritor::GetControlInOpNames(
@@ -160,17 +167,15 @@ void OptimizerRewritor::Run() {
       model_diff = absl::StrCat(clip_conf->name(), "/out");
     }
 
+    std::unordered_map<std::string, std::string> update_vars;
+
     OperatorConf *optimizer_conf = BuildOptimizerOp(
-        node, model_diff, total_instances, learning_rate);
+        node, model_diff, total_instances, learning_rate, &update_vars);
     operator_confs.push_back(optimizer_conf);
 
-    // Currently each model update operator will result in a fake consumer
-    // TODO(hjchen2): Only one global final fake consume operator maybe better.
-    std::vector<std::string> consume_inputs{
-        absl::StrCat(optimizer_conf->name(), "/out"),
-        absl::StrCat(optimizer_conf->name(), "/out_m"),
-        absl::StrCat(optimizer_conf->name(), "/out_v")};
-    BuildFakeConsumeOp(node->op_name(), consume_inputs);
+    // Currently each model update operator will result in some extra assign
+    // operands to update model and momentum etc.
+    BuildAssignOps(node->op_name(), update_vars);
 
     if (control_in_op_names.size() > 0) {
       for (OperatorConf *op_conf : operator_confs) {
