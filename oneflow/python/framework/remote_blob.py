@@ -20,6 +20,7 @@ class RemoteBlob(blob_desc.BlobDesc):
 
     def split(self, split_axis):
         assert split_axis is not undefined
+        assert type(split_axis) is int or split_axis is None or split_axis == False
         ret = RemoteBlob(self.lbi_)
         ret.split_axis_ = split_axis
         return ret

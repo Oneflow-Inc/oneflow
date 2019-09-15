@@ -58,7 +58,6 @@ void LogicalGraph::NaiveBuildFwStruct(
     }
     AddAllocatedNode(cur_node);
     cur_node->mut_op_vec() = {cur_op};
-    cur_node->SoleOp()->FixParallelDesc(parallel_desc_ptr.get());
     cur_node->mut_parallel_desc() = parallel_desc_ptr;
     {
       const auto& name2shape = job_.helper().op_name2op_time_shape();

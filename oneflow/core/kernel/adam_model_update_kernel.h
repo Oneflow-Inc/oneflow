@@ -1,5 +1,5 @@
 #ifndef ONEFLOW_CORE_KERNEL_ADAM_MODEL_UPDATE_KERNEL_H_
-#define ONEFLOW_CORE_KERNEL_ADAM_MODEL_UDPATE_KERNEL_H_
+#define ONEFLOW_CORE_KERNEL_ADAM_MODEL_UPDATE_KERNEL_H_
 
 #include "oneflow/core/kernel/normal_model_update_kernel.h"
 

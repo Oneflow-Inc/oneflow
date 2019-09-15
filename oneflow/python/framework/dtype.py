@@ -4,7 +4,9 @@ import numpy as np
 
 char = data_type_pb2.kChar
 float = data_type_pb2.kFloat
+float32 = float
 double = data_type_pb2.kDouble
+float64 = double
 int8 = data_type_pb2.kInt8
 int32 = data_type_pb2.kInt32
 int64 = data_type_pb2.kInt64

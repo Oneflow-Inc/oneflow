@@ -1,15 +1,15 @@
-#ifndef ONEFLOW_CORE_OPERATOR_BATCH_GATHER_GRAD_OP_H_
-#define ONEFLOW_CORE_OPERATOR_BATCH_GATHER_GRAD_OP_H_
+#ifndef ONEFLOW_CORE_OPERATOR_UNSORTED_BATCH_SEGMENT_SUM_OP_H_
+#define ONEFLOW_CORE_OPERATOR_UNSORTED_BATCH_SEGMENT_SUM_OP_H_
 
 #include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
 
-class BatchGatherGradOp final : public Operator {
+class UnsortedBatchSegmentSumOp final : public Operator {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(BatchGatherGradOp);
-  BatchGatherGradOp() = default;
-  ~BatchGatherGradOp() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(UnsortedBatchSegmentSumOp);
+  UnsortedBatchSegmentSumOp() = default;
+  ~UnsortedBatchSegmentSumOp() override = default;
 
   void InitFromOpConf() override;
   const PbMessage& GetCustomizedConf() const override;
@@ -28,4 +28,4 @@ class BatchGatherGradOp final : public Operator {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_OPERATOR_BATCH_GATHER_GRAD_OP_H_
+#endif  // ONEFLOW_CORE_OPERATOR_UNSORTED_BATCH_SEGMENT_SUM_OP_H_

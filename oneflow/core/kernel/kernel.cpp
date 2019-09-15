@@ -25,44 +25,6 @@ void ClearBlobDim0ValidNumIfNeed(const PbRpf<std::string>& bns,
   }
 }
 
-void CheckLossInstanceNumField(const PbRpf<std::string>& bns,
-                               const std::function<Blob*(const std::string&)>& BnInOp2Blob,
-                               bool expected) {
-  for (const std::string& bn : bns) {
-    const Blob* blob = BnInOp2Blob(bn);
-    if (blob != nullptr) { CHECK_EQ(blob->has_loss_instance_num_field(), expected); }
-  }
-}
-
-bool NeedCopyLossInstanceNum(const PbRpf<std::string>& from_bns, const PbRpf<std::string>& to_bns,
-                             const std::function<Blob*(const std::string&)>& BnInOp2Blob) {
-  const auto& first_bn_has_loss_instance_num_it =
-      std::find_if(from_bns.cbegin(), from_bns.cend(), [&BnInOp2Blob](const std::string& bn) {
-        const Blob* blob = BnInOp2Blob(bn);
-        return blob != nullptr && blob->has_loss_instance_num_field();
-      });
-  const bool need_copy_loss_instance_num = first_bn_has_loss_instance_num_it != from_bns.end();
-  CheckLossInstanceNumField(from_bns, BnInOp2Blob, need_copy_loss_instance_num);
-  CheckLossInstanceNumField(to_bns, BnInOp2Blob, need_copy_loss_instance_num);
-  return need_copy_loss_instance_num;
-}
-
-void NaiveCopyLossInstanceNum(const PbRpf<std::string>& from_bns, const PbRpf<std::string>& to_bns,
-                              const std::function<Blob*(const std::string&)>& BnInOp2Blob) {
-  CHECK_GT(from_bns.size(), 0);
-  CHECK(BnInOp2Blob(from_bns.Get(0))->has_loss_instance_num_field());
-  const float loss_instance_num = BnInOp2Blob(from_bns.Get(0))->loss_instance_num();
-  const float loss_instance_num_epsilon = 1e-8;
-  FOR_RANGE(int32_t, i, 1, from_bns.size()) {
-    CHECK_LT(std::fabs(BnInOp2Blob(from_bns.Get(i))->loss_instance_num() - loss_instance_num),
-             loss_instance_num_epsilon);
-  }
-  FOR_RANGE(int32_t, i, 0, to_bns.size()) {
-    Blob* blob = BnInOp2Blob(to_bns.Get(i));
-    if (blob != nullptr) { blob->set_loss_instance_num(loss_instance_num); }
-  }
-}
-
 }  // namespace
 
 void Kernel::Init(const JobDesc* job_desc, const KernelConf& kernel_conf, DeviceCtx* device_ctx) {
@@ -133,13 +95,6 @@ void Kernel::Forward(const KernelCtx& ctx,
     ForwardRecordIdInDevicePiece(ctx, BnInOp2Blob);
   }
   ForwardDataContent(ctx, BnInOp2Blob);
-  if (GetActivationType() != ActivationType::kNone) {
-    const PbRpf<std::string> obns = this->op_attribute().output_bns();
-    CHECK_EQ(obns.size(), 1);
-
-    Blob* out_blob = BnInOp2Blob(obns[0]);
-    ForwardActivation(ctx, out_blob);
-  }
   if (kernel_conf_.need_do_opaque_header()) {
     ForwardPackedHeader(ctx, BnInOp2Blob);
   } else {
@@ -246,12 +201,5 @@ std::unique_ptr<const Kernel> ConstructKernel(const JobDesc* job_desc, const Ker
 #define INSTANTIATE_KERNEL_IF(device_type) template class KernelIf<device_type>;
 
 OF_PP_FOR_EACH_TUPLE(INSTANTIATE_KERNEL_IF, DEVICE_TYPE_SEQ);
-
-#define INSTANTIATE_KERNEL_IF_SUBCLASS(device_type, data_type_pair)                \
-  template class KernelIfWithModel<device_type, OF_PP_PAIR_FIRST(data_type_pair)>; \
-  template class KernelIfWithActivation<device_type, OF_PP_PAIR_FIRST(data_type_pair)>;
-
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_KERNEL_IF_SUBCLASS, DEVICE_TYPE_SEQ,
-                                 FLOATING_DATA_TYPE_SEQ);
 
 }  // namespace oneflow

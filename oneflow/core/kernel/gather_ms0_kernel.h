@@ -1,16 +1,16 @@
-#ifndef ONEFLOW_CORE_KERNEL_GATHER_GRAD_KERNEL_H_
-#define ONEFLOW_CORE_KERNEL_GATHER_GRAD_KERNEL_H_
+#ifndef ONEFLOW_CORE_KERNEL_GATHER_MS0_KERNEL_H_
+#define ONEFLOW_CORE_KERNEL_GATHER_MS0_KERNEL_H_
 
 #include "oneflow/core/kernel/kernel.h"
 
 namespace oneflow {
 
 template<DeviceType device_type, typename T>
-class GatherGradKernel final : public KernelIf<device_type> {
+class GatherMs0Kernel final : public KernelIf<device_type> {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(GatherGradKernel);
-  GatherGradKernel() = default;
-  ~GatherGradKernel() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(GatherMs0Kernel);
+  GatherMs0Kernel() = default;
+  ~GatherMs0Kernel() override = default;
 
  private:
   const PbMessage& GetCustomizedOpConf() const override;
@@ -20,4 +20,4 @@ class GatherGradKernel final : public KernelIf<device_type> {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_KERNEL_GATHER_GRAD_KERNEL_H_
+#endif  // ONEFLOW_CORE_KERNEL_GATHER_MS0_KERNEL_H_

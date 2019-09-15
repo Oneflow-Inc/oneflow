@@ -32,8 +32,6 @@ class Operator {
   void InitFromOpConf(const OperatorConf& op_conf);
   virtual void InitFromOpConf() = 0;
 
-  ActivationType GetActivationType() const;
-
   virtual LogicalNode* NewProperLogicalNode() const;
 
   virtual bool IsLossOp() const { return false; }
@@ -146,19 +144,25 @@ class Operator {
       const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
       std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
       const ParallelDesc& parallel_desc) const;
-  void FixParallelDesc(ParallelDesc* pr_desc) const;
-  void GenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                     bool is_forward, const ParallelContext*, KernelConf*, const OpContext*) const;
+  void GenKernelConf(
+      std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, bool is_forward,
+      const ParallelContext*, KernelConf*, const OpContext*,
+      std::function<const BlobDesc&(const std::string&)> LogicalBlobDesc4BnInOp) const;
   const InputBlobModifier& InputBlobModifier4Ibn(const std::string& ibn) const;
   const OutputBlobModifier& OutputBlobModifier4Obn(const std::string& obn) const;
 
   Maybe<void> GetSbpSignaturesIf(
       const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
-      SbpSignatureList* sbp_sig_list) const;
+      const ParallelDesc& parallel_desc, SbpSignatureList* sbp_sig_list) const;
 
   const JobDesc& job_desc() const { return *job_desc_; }
 
  protected:
+  virtual Maybe<void> GetSbpSignatures(
+      const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
+      const ParallelDesc& parallel_desc, SbpSignatureList* sbp_sig_list) const {
+    return GetSbpSignatures(LogicalBlobDesc4Ibn, sbp_sig_list);
+  }
   virtual Maybe<void> GetSbpSignatures(
       const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
       SbpSignatureList* sbp_sig_list) const {
@@ -203,7 +207,11 @@ class Operator {
     AddValInPbRf<T>(customized_conf, field_name, val);
   }
 
-  virtual void VirtualFixParallelDesc(ParallelDesc* pr_desc) const {}
+  virtual void VirtualGenKernelConf(
+      std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*,
+      KernelConf*, const OpContext*,
+      std::function<const BlobDesc&(const std::string&)> LogicalBlobDesc4BnInOp) const;
+
   virtual void VirtualGenKernelConf(
       std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*,
       KernelConf*, const OpContext*) const;
