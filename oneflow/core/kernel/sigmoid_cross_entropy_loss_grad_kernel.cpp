@@ -14,9 +14,8 @@ void SigmoidCrossEntropyLossGradKernel<device_type, PredType, LabelType>::
   Blob* pred_diff = BnInOp2Blob("prediction_diff");
 
   SigmoidCrossEntropyLossGradKernelUtil<device_type, PredType, LabelType>::Backward(
-      ctx.device_ctx, conf, predication->shape().elem_cnt(),
-      prediction->dptr<PredType>(), label->dptr<LabelType>(),
-      pred_diff->mut_dptr<PredType>());
+      ctx.device_ctx, conf, prediction->shape().elem_cnt(), prediction->dptr<PredType>(),
+      label->dptr<LabelType>(), pred_diff->mut_dptr<PredType>());
 }
 
 template<DeviceType device_type, typename PredType, typename LabelType>
