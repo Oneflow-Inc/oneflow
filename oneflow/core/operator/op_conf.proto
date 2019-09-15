@@ -812,6 +812,11 @@ message ForeignOutputOpConf {
   required string ofblob_buffer_name = 3;
 }
 
+message ForeignWatchOpConf {
+  repeated string in = 1;
+  required string handler_uuid = 2;
+}
+
 message InitializeWithSnapshotConf {
   required string path = 1;
   optional string key = 2;
@@ -1523,6 +1528,7 @@ message OperatorConf {
     SwitchOutputOpConf switch_output_conf = 145;
     ReturnOpConf return_conf = 146;
     PartialTickOpConf partial_tick_conf = 147;
+    ForeignWatchOpConf foreign_watch_conf = 148;
 
     // domain op
     TupleIdentityOpConf tuple_identity_conf = 200;
