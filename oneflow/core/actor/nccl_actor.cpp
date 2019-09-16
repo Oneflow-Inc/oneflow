@@ -1,5 +1,6 @@
 #include "oneflow/core/job/nccl_comm_manager.h"
 #include "oneflow/core/device/nccl_device_context.h"
+#include "oneflow/core/actor/naive_actor.h"
 
 namespace oneflow {
 
