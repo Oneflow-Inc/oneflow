@@ -23,8 +23,8 @@ __global__ void UpdateModelGpu(int64_t n, const float* learning_rate, T l1, T l2
 }
 
 template<typename T>
-__global__ void UpdateBetaTGpu(const int64_t* train_step, const T beta1, const T beta2,
-                               T* beta1_t, T* beta2_t) {
+__global__ void UpdateBetaTGpu(const int64_t* train_step, const T beta1, const T beta2, T* beta1_t,
+                               T* beta2_t) {
   *beta1_t *= beta1;
   *beta2_t *= beta2;
 }
@@ -39,10 +39,7 @@ class LazyAdamMdUpdateKernelUtil<DeviceType::kGPU, T> final {
                           T* beta2_t, T* model_diff, T* model, T* m, T* v) {
     UpdateModelGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
         n, learning_rate, l1, l2, beta1, beta2, epsilon, beta1_t, beta2_t, model_diff, model, m, v);
-    UpdateBetaTGpu<T>
-      <<<1, 1, 0, ctx->cuda_stream()>>>(train_step, beta1, beta2, beta1_t, beta2_t);
-    
-  
+    UpdateBetaTGpu<T><<<1, 1, 0, ctx->cuda_stream()>>>(train_step, beta1, beta2, beta1_t, beta2_t);
   }
 };
 
