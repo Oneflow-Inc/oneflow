@@ -7,7 +7,7 @@ import oneflow.core.common.data_type_pb2 as data_type_util
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.register.logical_blob_id_pb2 as lbi_util
 import oneflow.python.framework.id_util as id_util
-import oneflow.python.framework.parallel as parallel_util
+import oneflow.python.framework.distribute as distribute_util
 
 from oneflow.python.oneflow_export import oneflow_export
 import oneflow
@@ -18,7 +18,7 @@ class input_blob_def(blob_desc.BlobDesc):
                  dtype = data_type_util.kFloat,
                  is_dynamic = False,
                  batch_axis = 0,
-                 parallel = parallel_util.auto(),
+                 distribute = distribute_util.auto(),
                  name = None):
         lbi = lbi_util.LogicalBlobId()
         if name is None: name = id_util.UniqueStr("Input_")
@@ -31,7 +31,7 @@ class input_blob_def(blob_desc.BlobDesc):
         self.dtype_ = dtype
         self.is_dynamic_ = is_dynamic
         self.batch_axis_ = batch_axis
-        self.parallel_for_consumer_ = parallel
+        self.distribute_ = distribute
 
     @property
     def static_shape(self): return self.shape_
@@ -48,10 +48,10 @@ class input_blob_def(blob_desc.BlobDesc):
     @property
     def is_dynamic(self): return self.is_dynamic_
 
-    def parallel(self, parallel):
+    def with_distribute(self, distribute):
         return input_blob_def(shape = self.shape_, dtype = self.dtype_,               \
                         is_dynamic = self.is_dynamic_, batch_axis = self.batch_axis_, \
-                        parallel = parallel, name = self.lbi.op_name)
+                        distribute = distribute, name = self.lbi.op_name)
 
     def ToInterfaceBlobConf(self):
         interface_blob_conf = op_conf_util.InterfaceBlobConf()
@@ -66,9 +66,9 @@ class input_blob_def(blob_desc.BlobDesc):
         else:
             assert self.batch_axis_ is None or self.batch_axis_ is False
             interface_blob_conf.batch_axis.ClearField("value")
-        if type(self.parallel_for_consumer_) is parallel_util.SplitParallel:
-            interface_blob_conf.split_axis.value = self.parallel_for_consumer_.axis
-        elif type(self.parallel_for_consumer_) is parallel_util.BroadcastParallel:
+        if type(self.distribute_) is distribute_util.SplitParallel:
+            interface_blob_conf.split_axis.value = self.distribute_.axis
+        elif type(self.distribute_) is distribute_util.BroadcastParallel:
             interface_blob_conf.split_axis.ClearField("value")
         else:
             # do nothing

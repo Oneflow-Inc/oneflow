@@ -2,7 +2,7 @@ from __future__ import absolute_import
 
 import oneflow.python.framework.compile_context as compile_context
 import oneflow.python.framework.remote_blob as remote_blob_util
-import oneflow.python.framework.parallel as parallel_util
+import oneflow.python.framework.distribute as distribute_util
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 
@@ -18,7 +18,7 @@ def get_variable(
     trainable=None,
     model_name=None,
     random_seed=None,
-    parallel=parallel_util.broadcast(),
+    distribute=distribute_util.broadcast(),
 ):
     assert isinstance(name, str)
     name = compile_context._get_variable_prefix() + name
@@ -40,8 +40,8 @@ def get_variable(
             op_conf.trainable = trainable
         if model_name is not None:
             op_conf.variable_conf.model_name = model_name
-        if type(parallel) is parallel_util.SplitParallel:
-            op_conf.variable_conf.split_axis.value = parallel.axis
+        if type(distribute) is distribute_util.SplitParallel:
+            op_conf.variable_conf.split_axis.value = distribute.axis
         else:
             op_conf.variable_conf.split_axis.ClearField("value")
 

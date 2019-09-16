@@ -1,13 +1,13 @@
 from __future__ import absolute_import
 
 import oneflow.core.common.data_type_pb2 as data_type_util
-import oneflow.python.framework.parallel as parallel_util
+import oneflow.python.framework.distribute as distribute_util
 
 class BlobDesc(object):
     def __init__(self, lbi):
         self.lbi_ = lbi
         self.lbn_ = lbi.op_name + "/" + lbi.blob_name
-        self.parallel_for_consumer_ = parallel_util.auto()
+        self.distribute_ = distribute_util.auto()
 
     @property
     def lbi(self): return self.lbi_
@@ -33,21 +33,21 @@ class BlobDesc(object):
     def is_dynamic(self):
         raise NotImplementedError
 
-    def parallel(self, parallel):
+    def with_distribute(self, distribute):
         raise NotImplementedError
 
     @property
-    def parallel_for_consumer(self):
-        parallel_util.assert_is_valid_parallel(self.parallel_for_consumer_)
-        return self.parallel_for_consumer_
+    def distribute(self):
+        distribute_util.assert_is_valid_distribute(self.distribute_)
+        return self.distribute_
     
     @property
     def logical_blob_name(self):
-        if type(self.parallel_for_consumer_) is parallel_util.AutoParallel:
+        if type(self.distribute_) is distribute_util.AutoParallel:
             return self.lbn_
-        elif type(self.parallel_for_consumer_) is parallel_util.SplitParallel:
-            return self.lbn_ + ":S" + str(self.parallel_for_consumer_.axis)
-        elif type(self.parallel_for_consumer_) is parallel_util.BroadcastParallel:
+        elif type(self.distribute_) is distribute_util.SplitParallel:
+            return self.lbn_ + ":S" + str(self.distribute_.axis)
+        elif type(self.distribute_) is distribute_util.BroadcastParallel:
             return self.lbn_ + ":B"
         else:
             raise NotImplementedError

@@ -17,10 +17,10 @@ class RemoteBlob(blob_desc.BlobDesc):
     @property
     def dtype(self): return job_builder.GetDataType(self.job_name_, self.lbn_)
 
-    def parallel(self, parallel):
-        oneflow.parallel.assert_is_valid_parallel(parallel)
+    def with_distribute(self, distribute):
+        oneflow.distribute.assert_is_valid_distribute(distribute)
         ret = RemoteBlob(self.lbi_)
-        ret.parallel_for_consumer_ = parallel
+        ret.distribute_ = distribute
         return ret
 
     def pull(self):

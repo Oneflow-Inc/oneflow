@@ -6,7 +6,7 @@ import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.compile_context as compile_context
 import oneflow.python.framework.remote_blob as remote_blob_util
-import oneflow.python.framework.parallel as parallel_util
+import oneflow.python.framework.distribute as distribute_util
 from oneflow.python.oneflow_export import oneflow_export
 
 
@@ -20,7 +20,7 @@ def dense(
     bias_initializer=None,
     trainable=True,
     name=None,
-    model_parallel=parallel_util.broadcast(),
+    model_distribute=distribute_util.broadcast(),
 ):
     in_shape = inputs.static_shape
     in_num_axes = len(in_shape)
@@ -29,12 +29,12 @@ def dense(
     name_prefix = name if name is not None else id_util.UniqueStr("Dense_")
     inputs = flow.reshape(inputs, (-1, in_shape[-1])) if in_num_axes > 2 else inputs
 
-    assert model_parallel is parallel_util.auto() or \
-        model_parallel is parallel_util.broadcast() or \
-        model_parallel is parallel_util.split(0)
+    assert model_distribute is distribute_util.auto() or \
+        model_distribute is distribute_util.broadcast() or \
+        model_distribute is distribute_util.split(0)
 
-    if model_parallel is parallel_util.split(0):
-        assert in_num_axes is 2 # model parallel is hard for reshape split dim 1
+    if model_distribute is distribute_util.split(0):
+        assert in_num_axes is 2 # model distribute is hard for reshape split dim 1
 
     weight = flow.get_variable(
         name="{}-weight".format(name_prefix),
@@ -47,8 +47,8 @@ def dense(
         ),
         trainable=trainable,
         model_name="weight",
-        parallel=model_parallel)
-    weight = weight.parallel(model_parallel)
+        distribute=model_distribute)
+    weight = weight.with_distribute(model_distribute)
 
     out = flow.matmul(
         a=inputs, b=weight, transpose_b=True, name="{}_matmul".format(name_prefix)
@@ -65,8 +65,8 @@ def dense(
             ),
             trainable=trainable,
             model_name="bias",
-            parallel=model_parallel)
-        bias = bias.parallel(model_parallel)
+            distribute=model_distribute)
+        bias = bias.with_distribute(model_distribute)
         out = flow.nn.bias_add(out, bias, name="{}_bias_add".format(name_prefix))
     out = activation(out) if activation is not None else out
     out = flow.reshape(out, in_shape[:-1] + (units,)) if in_num_axes > 2 else out
@@ -100,7 +100,7 @@ def layer_norm(
             initializer=flow.constant_initializer(0.0),
             trainable=trainable,
             model_name="weight",
-            parallel=parallel_util.broadcast(),
+            distribute=distribute_util.broadcast(),
         )
         setattr(op_conf.layer_norm_conf, "beta", beta.logical_blob_name)
     if scale:
@@ -111,7 +111,7 @@ def layer_norm(
             initializer=flow.constant_initializer(1.0),
             trainable=trainable,
             model_name="weight",
-            parallel=parallel_util.broadcast(),
+            distribute=distribute_util.broadcast(),
         )
         setattr(op_conf.layer_norm_conf, "gamma", gamma.logical_blob_name)
     setattr(op_conf, "name", name)
@@ -157,7 +157,7 @@ def batch_normalization(
             dtype=inputs.dtype,
             initializer=beta_initializer or flow.zeros_initializer(),
             trainable=trainable,
-            parallel=parallel_util.broadcast(),
+            distribute=distribute_util.broadcast(),
         )
 
     if scale:
@@ -167,7 +167,7 @@ def batch_normalization(
             dtype=inputs.dtype,
             initializer=gamma_initializer or flow.ones_initializer(),
             trainable=trainable,
-            parallel=parallel_util.broadcast(),
+            distribute=distribute_util.broadcast(),
         )
 
     moving_mean = flow.get_variable(
@@ -176,7 +176,7 @@ def batch_normalization(
         dtype=inputs.dtype,
         initializer=moving_mean_initializer or flow.zeros_initializer(),
         trainable=trainable,
-        parallel=parallel_util.broadcast(),
+        distribute=distribute_util.broadcast(),
     )
 
     moving_variance = flow.get_variable(
@@ -185,7 +185,7 @@ def batch_normalization(
         dtype=inputs.dtype,
         initializer=moving_variance_initializer or flow.ones_initializer(),
         trainable=trainable,
-        parallel=parallel_util.broadcast(),
+        distribute=distribute_util.broadcast(),
     )
 
     op_conf = op_conf_util.OperatorConf()
