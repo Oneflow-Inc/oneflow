@@ -83,7 +83,8 @@ def _data_load_layer(data_dir):
   )
 
   return flow.data.decode_ofrecord(
-    data_dir, (label_blob_conf, image_blob_conf), data_part_num=8, name="decode"
+    data_dir, (label_blob_conf, image_blob_conf),
+    batch_size=8, data_part_num=8, name="decode"
   )
 
 
@@ -157,7 +158,6 @@ def alexnet(images, labels, trainable=True):
 
 @flow.function
 def alexnet_train_job():
-  flow.config.train.batch_size(8)
   flow.config.train.primary_lr(0.00001)
   flow.config.train.model_update_conf(dict(naive_conf={}))
 
@@ -181,7 +181,6 @@ if __name__ == "__main__":
   flow.config.gpu_device_num(args.gpu_num_per_node)
   flow.config.ctrl_port(9788)
 
-  flow.config.piece_size(8)
   flow.config.default_data_type(flow.float)
 
   if args.multinode:

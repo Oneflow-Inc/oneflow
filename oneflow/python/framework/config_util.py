@@ -195,11 +195,6 @@ def collect_act_event(val = True):
     assert type(val) is int
     default_config_proto.profile_conf.collect_act_event = val
 
-@oneflow_export('config.piece_size')
-def set_piece_size(value):
-    _SetJobConfAttr(lambda x:x, 'piece_size', value)
-    return oneflow.config
-
 @oneflow_export('config.total_batch_num')
 def set_total_batch_num(value):
     _SetJobConfAttr(lambda x:x, 'total_batch_num', value)
@@ -321,11 +316,6 @@ def set_enable_auto_mixed_precision(value = True):
 @oneflow_export('config.concurrency_width')
 def set_concurrency_width(value):
     _SetJobConfAttr(lambda x:x, 'concurrency_width', value)
-    return oneflow.config
-
-@oneflow_export('config.train.batch_size')
-def set_batch_size(value):
-    _SetJobConfAttr(lambda job_conf: job_conf.train_conf, 'batch_size', value)
     return oneflow.config
 
 @oneflow_export('config.train.model_update_conf')
