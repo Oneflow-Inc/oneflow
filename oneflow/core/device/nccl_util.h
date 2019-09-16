@@ -9,6 +9,7 @@
 namespace oneflow {
 
 #ifdef WITH_CUDA
+
 inline ncclDataType_t GetNcclDataType(const DataType& dt) {
   switch (dt) {
 #define NCCL_DATA_TYPE_CASE(dtype) \
@@ -24,6 +25,7 @@ inline ncclDataType_t GetNcclDataType(const DataType& dt) {
 }
 
 void NcclCheck(ncclResult_t error);
+
 #endif  // WITH_CUDA
 
 }  // namespace oneflow

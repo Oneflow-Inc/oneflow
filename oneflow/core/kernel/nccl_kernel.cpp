@@ -18,13 +18,13 @@ class NcclReduceScatterKernel : public KernelIf<DeviceType::kGPU> {
     const Blob* in = BnInOp2Blob("in");
     Blob* out = BnInOp2Blob("out");
     const int64_t elem_cnt = out->shape().elem_cnt();
-    const void* send = in->dptr();
-    void* recv = out->mut_dptr();
+    const void* send_ptr = in->dptr();
+    void* recv_ptr = out->mut_dptr();
     const DataType data_type = in->data_type();
     auto* device_ctx = dynamic_cast<NcclDeviceCtx*>(ctx.device_ctx);
     CHECK_NOTNULL(device_ctx);
-    device_ctx->Enqueue([device_ctx, send, recv, elem_cnt, data_type] {
-      NcclCheck(ncclReduceScatter(send, recv, elem_cnt, GetNcclDataType(data_type), ncclSum,
+    device_ctx->Enqueue([device_ctx, send_ptr, recv_ptr, elem_cnt, data_type] {
+      NcclCheck(ncclReduceScatter(send_ptr, recv_ptr, elem_cnt, GetNcclDataType(data_type), ncclSum,
                                   device_ctx->nccl_handle(), device_ctx->cuda_stream()));
     });
   }
@@ -42,13 +42,13 @@ class NcclAllGatherKernel : public KernelIf<DeviceType::kGPU> {
     const Blob* in = BnInOp2Blob("in");
     Blob* out = BnInOp2Blob("out");
     const int64_t elem_cnt = in->shape().elem_cnt();
-    const void* send = in->dptr();
-    void* recv = out->mut_dptr();
+    const void* send_ptr = in->dptr();
+    void* recv_ptr = out->mut_dptr();
     const DataType data_type = in->data_type();
     auto* device_ctx = dynamic_cast<NcclDeviceCtx*>(ctx.device_ctx);
     CHECK_NOTNULL(device_ctx);
-    device_ctx->Enqueue([device_ctx, send, recv, elem_cnt, data_type] {
-      NcclCheck(ncclAllGather(send, recv, elem_cnt, GetNcclDataType(data_type),
+    device_ctx->Enqueue([device_ctx, send_ptr, recv_ptr, elem_cnt, data_type] {
+      NcclCheck(ncclAllGather(send_ptr, recv_ptr, elem_cnt, GetNcclDataType(data_type),
                               device_ctx->nccl_handle(), device_ctx->cuda_stream()));
     });
   }
@@ -66,13 +66,13 @@ class NcclAllReduceKernel : public KernelIf<DeviceType::kGPU> {
     const Blob* in = BnInOp2Blob("in");
     Blob* out = BnInOp2Blob("out");
     const int64_t elem_cnt = in->shape().elem_cnt();
-    const void* send = in->dptr();
-    void* recv = out->mut_dptr();
+    const void* send_ptr = in->dptr();
+    void* recv_ptr = out->mut_dptr();
     const DataType data_type = in->data_type();
     auto* device_ctx = dynamic_cast<NcclDeviceCtx*>(ctx.device_ctx);
     CHECK_NOTNULL(device_ctx);
-    device_ctx->Enqueue([device_ctx, send, recv, elem_cnt, data_type] {
-      NcclCheck(ncclAllReduce(send, recv, elem_cnt, GetNcclDataType(data_type), ncclSum,
+    device_ctx->Enqueue([device_ctx, send_ptr, recv_ptr, elem_cnt, data_type] {
+      NcclCheck(ncclAllReduce(send_ptr, recv_ptr, elem_cnt, GetNcclDataType(data_type), ncclSum,
                               device_ctx->nccl_handle(), device_ctx->cuda_stream()));
     });
   }

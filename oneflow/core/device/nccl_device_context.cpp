@@ -8,15 +8,17 @@ namespace oneflow {
 NcclDeviceCtx::NcclDeviceCtx(ncclComm_t nccl_handler) : nccl_handler_(nccl_handler) {
   int32_t dev_id;
   NcclCheck(ncclCommCuDevice(nccl_handler_, &dev_id));
-  CudaCurrentDeviceGuard dev_guard(dev_id);
-  CudaCheck(cudaStreamCreate(&cuda_stream_));
+  {
+    CudaCurrentDeviceGuard dev_guard(dev_id);
+    CudaCheck(cudaStreamCreate(&cuda_stream_));
+  }
   cpu_task_poller_ = std::thread([this, dev_id] {
-    CudaCurrentDeviceGuard poller_dev_guard(dev_id);
+    CudaCurrentDeviceGuard dev_guard(dev_id);
     std::function<void()> task;
     while (cpu_task_chan_.Receive(&task) == kChannelStatusSuccess) { task(); }
   });
   gpu_cb_event_poller_ = std::thread([this, dev_id]() {
-    CudaCurrentDeviceGuard poller_dev_guard(dev_id);
+    CudaCurrentDeviceGuard dev_guard(dev_id);
     CudaCBEvent cb_event;
     while (gpu_cb_event_chan_.Receive(&cb_event) == kChannelStatusSuccess) {
       CudaCheck(cudaEventSynchronize(cb_event.event));
