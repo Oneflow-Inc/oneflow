@@ -812,6 +812,11 @@ message ForeignOutputOpConf {
   required string ofblob_buffer_name = 3;
 }
 
+message ForeignWatchOpConf {
+  repeated string in = 1;
+  required string handler_uuid = 2;
+}
+
 message InitializeWithSnapshotConf {
   required string path = 1;
   optional string key = 2;
@@ -894,6 +899,7 @@ message RecordLoadOpConf {
   optional string part_name_prefix = 5 [default = "part-"];
   optional int32 part_name_suffix_length = 6 [default = -1];
   optional RandomShuffleConf random_shuffle_conf = 7;
+  required int64 batch_size = 8;
 }
 
 message BlobConf {
@@ -913,6 +919,7 @@ message DecodeOFRecordOpConf {
   optional string in = 5;
   repeated BlobConf blob = 6;
   optional RandomShuffleConf random_shuffle_conf = 7;
+  required int64 batch_size = 8;
 }
 
 message DecodeRandomOpConf {
@@ -921,6 +928,7 @@ message DecodeRandomOpConf {
   required ShapeProto shape = 3;
   required DataType data_type = 4;
   required InitializerConf data_initializer = 5;
+  required int64 batch_size = 8;
 }
 
 message NormalizationOpConf {
@@ -1259,7 +1267,6 @@ message ConstantOpConf {
   optional ShapeProto shape = 3;
   optional DataType data_type = 4;
   optional InitializerConf initializer = 5;
-  optional bool use_device_piece_size_as_dim0 = 6 [default = false];
 }
 
 message OneHotOpConf {
@@ -1523,6 +1530,7 @@ message OperatorConf {
     SwitchOutputOpConf switch_output_conf = 145;
     ReturnOpConf return_conf = 146;
     PartialTickOpConf partial_tick_conf = 147;
+    ForeignWatchOpConf foreign_watch_conf = 148;
 
     // domain op
     TupleIdentityOpConf tuple_identity_conf = 200;

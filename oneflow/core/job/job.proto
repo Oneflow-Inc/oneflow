@@ -12,7 +12,6 @@ import "oneflow/core/common/shape.proto";
 import "oneflow/core/job/sbp_parallel.proto";
 
 message TrainConf {
-  required int64 batch_size = 1; // batch_size % piece_size = 0
   required NormalModelUpdateOpUserConf model_update_conf = 3;
   repeated string loss_lbn = 6;
   optional int32 loss_scale_factor = 7 [default = 1];
@@ -47,7 +46,6 @@ message JobConfigProto {
     TrainConf train_conf = 3;
     PredictConf predict_conf = 4;
   }
-  optional int64 piece_size = 5 [default = 1];
   optional int64 total_batch_num = 7 [default = 1];
   optional DataType default_data_type = 8 [default = kFloat]; // kFloat or kDouble
   optional int32 max_data_id_length = 9 [default = 0];
