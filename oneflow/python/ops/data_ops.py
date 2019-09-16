@@ -134,11 +134,6 @@ class BlobConf(object):
 
 @oneflow_export("data.decode_ofrecord")
 def decode_ofrecord(ofrecord_dir, blobs,
-                    data_part_num=-1,
-                    part_name_prefix="part-",
-                    part_name_suffix_length=-1,
-                    name=None):
-def decode_ofrecord(ofrecord_dir, blobs,
                     batch_size=1,
                     data_part_num=-1,
                     part_name_prefix="part-",
