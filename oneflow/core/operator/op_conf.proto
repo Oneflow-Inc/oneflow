@@ -110,7 +110,6 @@ message Conv1DOpConf {
   repeated int32 kernel_size = 6;
   repeated int32 strides = 7;
   repeated int32 dilation_rate = 8;
-  // optional ActivationType activation = 9 [default = kNone];
   optional bool use_bias = 10 [default = true];
   required string weight = 13;
   optional string bias = 14;
@@ -125,7 +124,6 @@ message Conv2DOpConf {
   repeated int32 kernel_size = 6;
   repeated int32 strides = 7;
   repeated int32 dilation_rate = 8;
-  // optional ActivationType activation = 9 [default = kNone];
   optional bool use_bias = 10 [default = true];
   required string weight = 13;
   optional string bias = 14;
@@ -140,7 +138,6 @@ message Conv3DOpConf {
   repeated int32 kernel_size = 6;
   repeated int32 strides = 7;
   repeated int32 dilation_rate = 8;
-  // optional ActivationType activation = 9 [default = kNone];
   optional bool use_bias = 10 [default = true];
   required string weight = 13;
   optional string bias = 14;
@@ -185,7 +182,6 @@ message FullyConnectedOpConf {
   // out
   required string out = 4;
   required int32 units = 5;
-  // optional ActivationType activation = 6 [default = kNone];
   optional bool use_bias = 7 [default = true];
   optional InitializerConf weight_initializer = 8;
   optional InitializerConf bias_initializer = 9;
@@ -756,7 +752,6 @@ message EmbeddingLookupOpConf {
 message AddOpConf {
   repeated string in = 1;
   required string out = 2;
-  // optional ActivationType activation = 3 [default = kNone];
 }
 
 message MaximumOpConf {
@@ -815,6 +810,11 @@ message SwitchOutputOpConf {
 message ForeignOutputOpConf {
   required string in = 1;
   required string ofblob_buffer_name = 3;
+}
+
+message ForeignWatchOpConf {
+  repeated string in = 1;
+  required string handler_uuid = 2;
 }
 
 message InitializeWithSnapshotConf {
@@ -943,7 +943,6 @@ message NormalizationOpConf {
   optional float gamma_init = 9 [default = 1.0];
   optional float mean_init = 10 [default = 0.0];
   optional float variance_init = 11 [default = 1.0];
-  // optional ActivationType activation = 13 [default = kNone];
   required string moving_mean = 14;
   required string moving_variance = 15;
   optional string beta = 16;
@@ -1231,7 +1230,6 @@ message LayerNormOpConf {
 
   optional bool center = 8 [default = true];
   optional bool scale = 9 [default = true];
-  // optional ActivationType activation = 10 [default = kNone];
   optional int64 begin_norm_axis = 11 [default = 1];
   optional int64 begin_params_axis = 12 [default = -1];
   optional double epsilon = 13 [default = 1e-5];
@@ -1532,6 +1530,7 @@ message OperatorConf {
     SwitchOutputOpConf switch_output_conf = 145;
     ReturnOpConf return_conf = 146;
     PartialTickOpConf partial_tick_conf = 147;
+    ForeignWatchOpConf foreign_watch_conf = 148;
 
     // domain op
     TupleIdentityOpConf tuple_identity_conf = 200;

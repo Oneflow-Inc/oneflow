@@ -35,7 +35,7 @@ nodes = [{'addr':'192.168.1.16'},{'addr':'192.168.1.15'}]
 def _blob_conf(name, shape, dtype=flow.int32):
   return flow.data.BlobConf(name=name, shape=shape, dtype=dtype, codec=flow.data.RawCodec())
 
-def BertDecoder(batch_size, data_dir='', data_part_num=1, seq_length=128, max_predictions_per_seq=20):
+def BertDecoder(data_dir='', batch_size=1, data_part_num=1, seq_length=128, max_predictions_per_seq=20):
   blob_confs = []
   blob_confs.append(_blob_conf('input_ids', [seq_length]))
   blob_confs.append(_blob_conf('next_sentence_labels', [1]))
@@ -44,7 +44,8 @@ def BertDecoder(batch_size, data_dir='', data_part_num=1, seq_length=128, max_pr
   blob_confs.append(_blob_conf('masked_lm_ids', [max_predictions_per_seq]))
   blob_confs.append(_blob_conf('masked_lm_positions', [max_predictions_per_seq]))
   blob_confs.append(_blob_conf('masked_lm_weights', [max_predictions_per_seq], flow.float))
-  return flow.data.decode_ofrecord(data_dir, batch_size, blob_confs, name="decode", data_part_num=data_part_num)
+  return flow.data.decode_ofrecord(data_dir, blob_confs,
+                                   batch_size=batch_size, name="decode", data_part_num=data_part_num)
 
 def BuildPreTrainNet(batch_size, data_part_num, seq_length=128, max_position_embeddings=512,
                      num_hidden_layers=12, num_attention_heads=12,
@@ -54,7 +55,7 @@ def BuildPreTrainNet(batch_size, data_part_num, seq_length=128, max_position_emb
   hidden_size = 64 * num_attention_heads#, H = 64, size per head
   intermediate_size = hidden_size * 4
 
-  decoders = BertDecoder(batch_size, args.train_dir, data_part_num, seq_length, max_predictions_per_seq)
+  decoders = BertDecoder(args.train_dir, batch_size, data_part_num, seq_length, max_predictions_per_seq)
 
   input_ids = decoders[0]
   next_sentence_labels = decoders[1]

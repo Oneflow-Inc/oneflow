@@ -93,7 +93,8 @@ def _data_load_layer(data_dir):
     )
 
     return flow.data.decode_ofrecord(
-        data_dir, 12, (label_blob_conf, image_blob_conf), data_part_num=8, name="decode"
+        data_dir, (label_blob_conf, image_blob_conf),
+        batch_size=12, data_part_num=8, name="decode"
     )
 
 

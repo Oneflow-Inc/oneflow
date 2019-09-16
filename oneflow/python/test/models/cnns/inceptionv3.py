@@ -107,7 +107,8 @@ def _data_load_layer(data_dir):
         "class/label", shape=(), dtype=flow.int32, codec=flow.data.RawCodec()
     )
     return flow.data.decode_ofrecord(
-        data_dir, args.batch_size, (image_blob_conf, label_blob_conf), data_part_num=32, name="decode"
+        data_dir, (image_blob_conf, label_blob_conf),
+        batch_size=args.batch_size, data_part_num=32, name="decode"
     )
 
 

@@ -85,10 +85,8 @@ def _data_load(data_dir):
     )
 
     return flow.data.decode_ofrecord(
-        data_dir, g_args.batch_size,
-        (label_blob_conf, image_blob_conf),
-        data_part_num=g_args.data_part_num,
-        name="decode",
+        data_dir, (label_blob_conf, image_blob_conf),
+        batch_size=g_args.batch_size, data_part_num=g_args.data_part_num, name="decode",
     )
 
 

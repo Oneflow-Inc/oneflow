@@ -223,14 +223,6 @@ static bool HaveSameDim0InnerShape(
   return ret;
 }
 
-ActivationType Operator::GetActivationType() const {
-  if (HasFieldInCustomizedConf("activation")) {
-    return static_cast<ActivationType>(GetEnumFromCustomizedConf("activation"));
-  } else {
-    return ActivationType::kNone;
-  }
-}
-
 void Operator::GenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, bool is_forward,
     const ParallelContext* parallel_ctx, KernelConf* kernel_conf, const OpContext* op_ctx,
