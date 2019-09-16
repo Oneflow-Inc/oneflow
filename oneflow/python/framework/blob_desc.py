@@ -1,13 +1,13 @@
 from __future__ import absolute_import
 
 import oneflow.core.common.data_type_pb2 as data_type_util
-import oneflow.python.framework.undefined as undefined
+import oneflow.python.framework.parallel as parallel_util
 
 class BlobDesc(object):
     def __init__(self, lbi):
         self.lbi_ = lbi
         self.lbn_ = lbi.op_name + "/" + lbi.blob_name
-        self.split_axis_ = undefined
+        self.parallel_for_consumer_ = parallel_util.auto()
 
     @property
     def lbi(self): return self.lbi_
@@ -33,25 +33,21 @@ class BlobDesc(object):
     def is_dynamic(self):
         raise NotImplementedError
 
-    def split(self, split_axis):
+    def parallel(self, parallel):
         raise NotImplementedError
 
     @property
-    def split_axis_for_consumer(self):
-        assert self.split_axis_ is undefined or type(self.split_axis_) is int \
-            or self.split_axis_ is None or self.split_axis_ == False
-        return self.split_axis_
+    def parallel_for_consumer(self):
+        parallel_util.assert_is_valid_parallel(self.parallel_for_consumer_)
+        return self.parallel_for_consumer_
     
-    def has_split_axis_for_consumer(self):
-        return self.split_axis_ is not undefined
-
     @property
     def logical_blob_name(self):
-        if self.split_axis_ is undefined:
+        if type(self.parallel_for_consumer_) is parallel_util.AutoParallel:
             return self.lbn_
-        elif type(self.split_axis_) is int:
-            return self.lbn_ + ":S" + str(self.split_axis_)
-        elif self.split_axis_ is None or self.split_axis_ is False:
+        elif type(self.parallel_for_consumer_) is parallel_util.SplitParallel:
+            return self.lbn_ + ":S" + str(self.parallel_for_consumer_.axis)
+        elif type(self.parallel_for_consumer_) is parallel_util.BroadcastParallel:
             return self.lbn_ + ":B"
         else:
             raise NotImplementedError

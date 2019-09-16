@@ -7,7 +7,7 @@ import oneflow.core.common.data_type_pb2 as data_type_util
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.register.logical_blob_id_pb2 as lbi_util
 import oneflow.python.framework.id_util as id_util
-import oneflow.python.framework.undefined as undefined
+import oneflow.python.framework.parallel as parallel_util
 
 from oneflow.python.oneflow_export import oneflow_export
 import oneflow
@@ -18,7 +18,7 @@ class input_blob_def(blob_desc.BlobDesc):
                  dtype = data_type_util.kFloat,
                  is_dynamic = False,
                  batch_axis = 0,
-                 split_axis = undefined,
+                 parallel = parallel_util.auto(),
                  name = None):
         lbi = lbi_util.LogicalBlobId()
         if name is None: name = id_util.UniqueStr("Input_")
@@ -31,7 +31,7 @@ class input_blob_def(blob_desc.BlobDesc):
         self.dtype_ = dtype
         self.is_dynamic_ = is_dynamic
         self.batch_axis_ = batch_axis
-        self.split_axis_ = split_axis
+        self.parallel_for_consumer_ = parallel
 
     @property
     def static_shape(self): return self.shape_
@@ -48,12 +48,10 @@ class input_blob_def(blob_desc.BlobDesc):
     @property
     def is_dynamic(self): return self.is_dynamic_
 
-    def split(self, split_axis):
-        assert split_axis is not undefined
-        assert type(split_axis) is int or split_axis is None or split_axis == False
+    def parallel(self, parallel):
         return input_blob_def(shape = self.shape_, dtype = self.dtype_,               \
                         is_dynamic = self.is_dynamic_, batch_axis = self.batch_axis_, \
-                        split_axis = split_axis, name = self.lbi.op_name)
+                        parallel = parallel, name = self.lbi.op_name)
 
     def ToInterfaceBlobConf(self):
         interface_blob_conf = op_conf_util.InterfaceBlobConf()
@@ -68,9 +66,9 @@ class input_blob_def(blob_desc.BlobDesc):
         else:
             assert self.batch_axis_ is None or self.batch_axis_ is False
             interface_blob_conf.batch_axis.ClearField("value")
-        if type(self.split_axis_) is int:
-            interface_blob_conf.split_axis.value = self.split_axis_
-        elif self.split_axis_ is None or self.split_axis_ is False:
+        if type(self.parallel_for_consumer_) is parallel_util.SplitParallel:
+            interface_blob_conf.split_axis.value = self.parallel_for_consumer_.axis
+        elif type(self.parallel_for_consumer_) is parallel_util.BroadcastParallel:
             interface_blob_conf.split_axis.ClearField("value")
         else:
             # do nothing

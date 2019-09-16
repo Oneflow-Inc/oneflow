@@ -27,11 +27,11 @@ def gather_test_job_3(
 
 @oneflow.function
 def gather_ms0(
-    a=oneflow.input_blob_def((2, 3, 4), batch_axis=None, split_axis=0),
-    b=oneflow.input_blob_def((2, 2), dtype=oneflow.int32, split_axis=None)
+    a=oneflow.input_blob_def((2, 3, 4), batch_axis=None, parallel=oneflow.parallel.split(axis=0)),
+    b=oneflow.input_blob_def((2, 2), dtype=oneflow.int32, parallel=oneflow.parallel.broadcast())
 ):
     r"""gather_ms0 test job (batch_dims==axis)"""
-    return oneflow.gather(a.split(0), b)
+    return oneflow.gather(a.parallel(oneflow.parallel.split(axis=0)), b)
 
 # @oneflow.function
 # def gather_test_job_4(
@@ -51,10 +51,14 @@ def train_gather(idx=oneflow.input_blob_def((2,), dtype=oneflow.int32)):
     return loss
 
 @oneflow.function
-def train_gather_ms0(idx=oneflow.input_blob_def((2,), dtype=oneflow.int32, split_axis=None)):
+def train_gather_ms0(idx=oneflow.input_blob_def((2,), dtype=oneflow.int32, parallel=oneflow.parallel.broadcast())):
     oneflow.config.train.model_update_conf(dict(naive_conf={}))
     oneflow.config.train.primary_lr(1)
-    w = oneflow.get_variable("w1", shape=(2,), dtype=oneflow.float32, split_axis=0).split(0)
+    w = oneflow.get_variable("w1",
+                             shape=(2,),
+                             dtype=oneflow.float32,
+                             parallel=oneflow.parallel.split(axis=0))
+    w = w.parallel(oneflow.parallel.split(axis=0))
     loss = oneflow.gather(w, idx)
     oneflow.losses.add_loss(loss)
     return loss
