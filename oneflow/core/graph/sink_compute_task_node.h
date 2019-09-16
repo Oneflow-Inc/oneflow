@@ -16,6 +16,7 @@ class SinkCompTaskNode : public CompTaskNode {
   void ConsumeAllRegsts() override;
   void BuildExecGphAndRegst() override;
   void InferProducedDataRegstTimeShape() final{};
+  void GenerateNonCtrlRegstHandlerProto(TaskProto*) const override;
 };
 
 }  // namespace oneflow

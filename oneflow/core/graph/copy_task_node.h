@@ -20,6 +20,7 @@ class CopyTaskNode : public TaskNode {
 
  private:
   void InferProducedDataRegstTimeShape() final;
+  void GenerateNonCtrlRegstHandlerProto(TaskProto*) const override;
 };
 
 class CopyHdTaskNode final : public CopyTaskNode {
