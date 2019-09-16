@@ -38,7 +38,9 @@ void LayerNormOp::InitFromOpConf() {
 Maybe<void> LayerNormOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
+  /* outdate
   CHECK_OR_RETURN(parallel_ctx->policy() != kModelParallel);
+  */
   const BlobDesc* in = GetBlobDesc4BnInOp("in");
   *GetBlobDesc4BnInOp("out") = *in;
   const LayerNormOpConf& conf = op_conf().layer_norm_conf();

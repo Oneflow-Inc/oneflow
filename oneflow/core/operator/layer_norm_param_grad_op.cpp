@@ -22,7 +22,9 @@ void LayerNormParamGradOp::InitFromOpConf() {
 Maybe<void> LayerNormParamGradOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
+  /* outdate()  get model parallel by sbp
   CHECK_OR_RETURN(parallel_ctx->policy() != kModelParallel);
+  */
   const LayerNormParamGradOpConf& conf = op_conf().layer_norm_param_grad_conf();
   const BlobDesc* dy = GetBlobDesc4BnInOp("dy");
   if (conf.has_beta_diff() || conf.has_gamma_diff()) {

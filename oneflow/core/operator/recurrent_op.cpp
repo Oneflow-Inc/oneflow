@@ -40,10 +40,12 @@ Maybe<void> RecurrentOp::InferBlobDescs(
     // *GetBlobDesc4BnInOp("h0") = BlobDesc(h0_shape);
     TODO_THEN_RETURN();
   }
+  /* outdate()
   if (parallel_ctx->policy() == kModelParallel) {
     BalancedSplitter splitter(hidden_size, parallel_ctx->parallel_num());
     hidden_size = splitter.At(parallel_ctx->parallel_id()).size();
   }
+  */
   // out
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   *out_blob_desc = *in_blob_desc;
@@ -51,7 +53,10 @@ Maybe<void> RecurrentOp::InferBlobDescs(
   // recurrent_out
   BlobDesc* rec_out_blob_desc = GetBlobDesc4BnInOp("rec_out");
   *rec_out_blob_desc = *out_blob_desc;
+
+  /* outdate()
   if (parallel_ctx->policy() == kDataParallel) { rec_out_blob_desc->set_max_col_num(1); }
+  */
 
   return VirtualInferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx);
 }

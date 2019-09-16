@@ -23,10 +23,12 @@ Maybe<void> EmbeddingLookupOp::InferBlobDescs(
   CHECK_EQ_OR_RETURN(in_blob_desc->data_type(), DataType::kInt32);
   int32_t units = conf.units();
   int32_t table_size = conf.table_size();
+  /* outdate
   if (parallel_ctx->policy() == kModelParallel) {
     BalancedSplitter splitter(units, parallel_ctx->parallel_num());
     units = splitter.At(parallel_ctx->parallel_id()).size();
   }
+  */
   // out
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   *out_blob_desc = *in_blob_desc;

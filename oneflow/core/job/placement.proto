@@ -3,12 +3,6 @@ package oneflow;
 
 import "oneflow/core/operator/op_conf.proto";
 
-enum ParallelPolicy {
-  kInvalidParallel = 0;
-  kDataParallel = 1;
-  kModelParallel = 2;
-}
-
 message RankContext {
   required int64 rank_set_id = 1;
   required int64 rank_id = 2;
@@ -18,13 +12,11 @@ message RankContext {
 message ParallelContext {
   required int64 parallel_id = 1;
   required int64 parallel_num = 2;
-  required ParallelPolicy policy = 3;
-  optional RankContext rank_ctx = 4;
+  optional RankContext rank_ctx = 3;
 }
 
 message ParallelConf {
-  required ParallelPolicy policy = 1;
-  repeated string device_name = 2;
+  repeated string device_name = 1;
 }
 
 message PlacementGroup {

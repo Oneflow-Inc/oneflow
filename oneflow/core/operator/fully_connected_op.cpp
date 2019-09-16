@@ -29,10 +29,12 @@ Maybe<void> FullyConnectedOp::InferBlobDescs(
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
   CHECK_EQ_OR_RETURN(in_blob_desc->data_type(), job_desc().DefaultDataType());
   int32_t units = conf.units();
+  /*
   if (parallel_ctx->policy() == kModelParallel) {
     BalancedSplitter splitter(units, parallel_ctx->parallel_num());
     units = splitter.At(parallel_ctx->parallel_id()).size();
   }
+  */
   // out
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   *out_blob_desc = *in_blob_desc;
