@@ -35,10 +35,6 @@ class XlaLaunchKernel : public KernelIf<device_type> {
                         const xla::Shape &output_shape,
                         bool block_host_until_done) const;
 
-  std::vector<Blob *> RealIOBuffers(
-      const std::vector<Blob *> &input_blobs,
-      const std::vector<Blob *> &output_blobs) const;
-
   mutable std::shared_ptr<mola::XlaCompilationCache> compilation_cache_;
 };
 
