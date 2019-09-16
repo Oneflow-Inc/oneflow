@@ -73,6 +73,18 @@ class DecodeOpActor final : public OpActor {
 };
 REGISTER_NEW_ACTOR(TaskType::kDecode, DecodeOpActor);
 
+class LossPrintOpActor final : public OpActor {
+ public:
+  void InitMsgHandler() override { OF_SET_OP_ACTOR_MSG_HANDLER(this, &OpActor::HandlerNormal); }
+  void InitOtherVal() override {
+    std::shared_ptr<double> timestamp = std::make_shared<double>();
+    *timestamp = 0.0;
+    set_other_val(timestamp);
+  }
+  void SetOtherVal4CurAct(void* other) override {}
+};
+REGISTER_NEW_ACTOR(TaskType::kLossPrint, LossPrintOpActor);
+
 }  // namespace actor
 
 }  // namespace oneflow
