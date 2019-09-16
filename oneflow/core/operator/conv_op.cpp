@@ -79,13 +79,13 @@ template<int32_t NDims>
 Maybe<void> ConvOp<NDims>::InferOutBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature,
-    int64_t record_piece_size, std::function<void(OpContext*)> EnrollOpCtx) const {
+    std::function<void(OpContext*)> EnrollOpCtx) const {
   const std::string& data_format = GetValFromCustomizedConf<std::string>("data_format");
 
   // in
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
   CHECK_EQ_OR_RETURN(in_blob_desc->shape().NumAxes(), NDims + 2);
-  // CHECK_EQ(in_blob_desc->data_type(), GlobalJobDesc().DefaultDataType());
+  // CHECK_EQ(in_blob_desc->data_type(), job_desc().DefaultDataType());
 
   // out
   int64_t data_num = in_blob_desc->shape().At(0);
@@ -111,13 +111,13 @@ template<int32_t NDims>
 Maybe<void> ConvOp<NDims>::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature,
-    int64_t record_piece_size, std::function<void(OpContext*)> EnrollOpCtx) const {
+    std::function<void(OpContext*)> EnrollOpCtx) const {
   const std::string& data_format = GetValFromCustomizedConf<std::string>("data_format");
 
   // in
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
   CHECK_EQ_OR_RETURN(in_blob_desc->shape().NumAxes(), NDims + 2);
-  // CHECK_EQ(in_blob_desc->data_type(), GlobalJobDesc().DefaultDataType());
+  // CHECK_EQ(in_blob_desc->data_type(), job_desc().DefaultDataType());
 
   // out
   int64_t data_num = in_blob_desc->shape().At(0);

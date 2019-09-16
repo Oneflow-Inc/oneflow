@@ -13,11 +13,12 @@ const PbMessage& RecordLoadOp::GetCustomizedConf() const { return op_conf().reco
 
 Maybe<void> RecordLoadOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature,
-    int64_t record_piece_size) const {
+    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
-  CHECK_EQ_OR_RETURN(record_piece_size % parallel_ctx->parallel_num(), 0);
-  out_blob_desc->mut_shape() = Shape({record_piece_size / parallel_ctx->parallel_num()});
+  int64_t batch_size = op_conf().record_load_conf().batch_size();
+  OF_CHECK_GE(batch_size, parallel_ctx->parallel_num());
+  CHECK_EQ_OR_RETURN(batch_size % parallel_ctx->parallel_num(), 0);
+  out_blob_desc->mut_shape() = Shape({batch_size / parallel_ctx->parallel_num()});
   out_blob_desc->set_data_type(kOFRecord);
   return Maybe<void>::Ok();
 }
@@ -27,6 +28,8 @@ void RecordLoadOp::VirtualGenKernelConf(
     const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
   int64_t device_piece_size = GetBlobDesc4BnInOp("out")->shape().At(0);
   kernel_conf->mutable_record_load_conf()->set_device_piece_size(device_piece_size);
+  kernel_conf->mutable_record_load_conf()->set_parallel_id(parallel_ctx->parallel_id());
+  kernel_conf->mutable_record_load_conf()->set_parallel_num(parallel_ctx->parallel_num());
 }
 
 Maybe<void> RecordLoadOp::InferBatchAxis(

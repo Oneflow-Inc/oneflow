@@ -17,7 +17,7 @@ class OpNode final : public Node<OpNode, OpEdge> {
   OF_DISALLOW_COPY_AND_MOVE(OpNode);
   explicit OpNode(const ParallelDesc& parallel_desc, const OperatorConf& op_conf)
       : parallel_desc_(parallel_desc),
-        op_(ConstructOp(op_conf, parallel_desc.device_type())),
+        op_(ConstructOp(op_conf, parallel_desc.device_type(), &GlobalJobDesc())),
         ibns_(op_->input_bns().begin(), op_->input_bns().end()) {}
   ~OpNode() = default;
 
@@ -150,7 +150,6 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
   void InitEdges();
   void InitProducerOpName2CtrlConsumerOpNames(const Job& job);
   void CheckIsDAG() const;
-  void FixOpParallelDesc() const;
   void InferTimeShape() const;
   void InferOpNodeSbpSignature(OpNode* op_node, const SbpSignature& sbp_sig_conf) const;
   void InferOpNodeLogicalBlobDesc(OpNode* op_node) const;

@@ -303,7 +303,6 @@ void OpGraph::Init(const Job& job) {
   InitEdges();
   InitProducerOpName2CtrlConsumerOpNames(job);
   CheckIsDAG();
-  FixOpParallelDesc();
   InferTimeShape();
   InferLogicalBlobDesc(job);
   ForEachEdge([](OpEdge* edge) { edge->InitDistributeHierarchyInfo(); });
@@ -364,11 +363,6 @@ void OpGraph::InitProducerOpName2CtrlConsumerOpNames(const Job& job) {
   }
 }
 
-void OpGraph::FixOpParallelDesc() const {
-  // TODO() : outdated, delete
-  ForEachNode([&](OpNode* node) { node->op().FixParallelDesc(node->mut_parallel_desc()); });
-}
-
 void OpGraph::InferTimeShape() const {
   TopoForEachNode([&](OpNode* op_node) {
     ParallelContext parallel_ctx;
@@ -393,51 +387,12 @@ void OpGraph::InferOpNodeSbpSignature(OpNode* op_node, const SbpSignature& sbp_s
     const auto& sbp = producer->SbpParallel4Lbi(lbi);
     ibn2sbp_infer_hint.emplace(ibn, SbpInferHint(parallel_desc, logical_blob_desc, sbp));
   }
-  SbpSignature* sbp_signature = op_node->mut_sbp_signature();
-  auto SbpInferHint4Ibn = [&](const std::string& ibn) -> Maybe<const SbpInferHint*> {
-    auto it = ibn2sbp_infer_hint.find(ibn);
-    if (it == ibn2sbp_infer_hint.end()) {
-      return Error::CheckFailed() << "cannot find corresponding SbpInferHint for input_blob_name : "
-                                  << ibn;
-    }
-    return &(it->second);
+  auto GetBatchAxis4Lbi = [&](const LogicalBlobId& lbi) -> const OptInt64& {
+    return op_node->BatchAxis4Lbi(lbi);
   };
-  std::function<int32_t(const SbpSignature&)> CalcOrderValue4SbpSig;
-  if (sbp_sig_conf.bn_in_op2sbp_parallel().empty()) {
-    auto OrderValue4HasBatchAxis = [&](const std::string& bn,
-                                       const SbpParallel& sbp_parallel) -> int32_t {
-      const auto& batch_axis = op_node->BatchAxis4Lbi(op_node->op().BnInOp2Lbi(bn));
-      return -1
-             * (batch_axis.has_value() && sbp_parallel.has_split_parallel()
-                && sbp_parallel.split_parallel().axis() == batch_axis.value());
-    };
-    auto OrderValue4HasNoBatchAxis = [&](const std::string& ibn,
-                                         const SbpParallel& sbp_parallel) -> int32_t {
-      return -2
-             * (op_node->BatchAxis4Lbi(op_node->op().BnInOp2Lbi(ibn)).has_value() == false
-                && CHECK_JUST(SbpInferHint4Ibn(ibn))->sbp_parallel().has_split_parallel() == false
-                && sbp_parallel.has_split_parallel() == false);
-    };
-    CalcOrderValue4SbpSig = [&](const SbpSignature& sbp_signature) -> int32_t {
-      int32_t order_value = 0;
-      for (const auto& ibn : op_node->op().input_bns()) {
-        const auto& sbp_parallel_it = sbp_signature.bn_in_op2sbp_parallel().find(ibn);
-        CHECK(sbp_parallel_it != sbp_signature.bn_in_op2sbp_parallel().end());
-        order_value += OrderValue4HasBatchAxis(ibn, sbp_parallel_it->second);
-        order_value += OrderValue4HasNoBatchAxis(ibn, sbp_parallel_it->second);
-      }
-      for (const auto& obn : op_node->op().output_bns()) {
-        const auto& sbp_parallel_it = sbp_signature.bn_in_op2sbp_parallel().find(obn);
-        CHECK(sbp_parallel_it != sbp_signature.bn_in_op2sbp_parallel().end());
-        order_value += OrderValue4HasBatchAxis(obn, sbp_parallel_it->second);
-      }
-      return order_value;
-    };
-  } else {
-    CalcOrderValue4SbpSig = [](const SbpSignature&) -> int32_t { return 0; };
-  }
-  CHECK_JUST(op_node->op().InferSbpSignatureIf(sbp_signature, sbp_sig_conf, CalcOrderValue4SbpSig,
-                                               SbpInferHint4Ibn, op_node->parallel_desc()));
+  CHECK_JUST(InferOpSbpSignature(op_node->op(), sbp_sig_conf, op_node->parallel_desc(),
+                                 ibn2sbp_infer_hint, GetBatchAxis4Lbi,
+                                 op_node->mut_sbp_signature()));
 }
 
 void OpGraph::InferOpNodeLogicalBlobDesc(OpNode* op_node) const {
@@ -464,9 +419,8 @@ void OpGraph::InferOpNodeLogicalBlobDesc(OpNode* op_node) const {
     parallel_ctx.set_parallel_id(parallel_id);
     parallel_ctx.set_parallel_num(parallel_num);
     parallel_ctx.set_policy(op_node->parallel_desc().policy());
-    CHECK_JUST(
-        op_node->op().InferBlobDescsIf(BlobDesc4BnInOp, &parallel_ctx, &op_node->sbp_signature(),
-                                       GlobalJobDesc().RecordPieceSize(), [](OpContext*) {}));
+    CHECK_JUST(op_node->op().InferBlobDescsIf(BlobDesc4BnInOp, &parallel_ctx,
+                                              &op_node->sbp_signature(), [](OpContext*) {}));
   }
   op_node->ConcatLogicalOutputBlobDesc();
 }
@@ -636,10 +590,8 @@ std::function<const BlobDesc&(const LogicalBlobId&)> OpGraph::MakeGetterBlobDesc
     // the real important data we want to get is:
     // a) model blobs' byte size;
     // b) number of axes of blobs' body shape;
-    // Hence the argument record_piece_size can be any positive number
-    CHECK_JUST(op_node->op().InferBlobDescsIf(MutUnparalleledBlobDesc4BnInOp, &parallel_ctx,
-                                              &sbp_signature, GlobalJobDesc().RecordPieceSize(),
-                                              [](OpContext*) {}));
+    CHECK_JUST(op_node->op().InferOutBlobDescsIf(MutUnparalleledBlobDesc4BnInOp, &parallel_ctx,
+                                                 &sbp_signature, [](OpContext*) {}));
   });
   auto model_lbi2blob_desc = std::make_shared<HashMap<LogicalBlobId, std::unique_ptr<BlobDesc>>>();
   ForEachNode([&](OpNode* op_node) {

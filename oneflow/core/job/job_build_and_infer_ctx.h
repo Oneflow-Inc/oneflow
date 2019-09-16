@@ -12,9 +12,6 @@
 
 namespace oneflow {
 
-std::shared_ptr<ErrorProto> GenJobBuildAndInferError(JobBuildAndInferError err_code,
-                                                     std::string msg);
-
 class JobBuildAndInferCtx {
  public:
   OF_DISALLOW_COPY_AND_MOVE(JobBuildAndInferCtx);
@@ -45,6 +42,7 @@ class JobBuildAndInferCtx {
   Maybe<void> CheckOpBlobSplitability(Operator*, const SbpSignature&, int64_t parallel_num);
   Maybe<void> CheckPlacement() const;
   Maybe<void> CheckJobConf() const;
+  Maybe<void> CheckLbnValidAndExist(const std::string& lbn) const;
 
   Job* job_;
   int64_t job_id_;

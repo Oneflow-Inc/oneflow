@@ -11,6 +11,11 @@ import oneflow.oneflow_internal as oneflow_internal
 import oneflow.python.framework.runtime_context as runtime_ctx
 from oneflow.python.framework.job_build_and_infer_error import JobBuildAndInferError
 
+def RegisterWatcherOnlyOnce(watcher):
+    error_str = oneflow_internal.RegisterWatcherOnlyOnce(watcher)
+    error = text_format.Parse(error_str, error_util.ErrorProto())
+    if error.HasField("error_type"): raise JobBuildAndInferError(error)
+
 def IsOpTypeCaseCpuSupportOnly(op_type_case):
     ret, error_str = oneflow_internal.IsOpTypeCaseCpuSupportOnly(op_type_case)
     error = text_format.Parse(error_str, error_util.ErrorProto())
