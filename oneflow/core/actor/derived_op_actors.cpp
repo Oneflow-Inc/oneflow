@@ -1,5 +1,6 @@
 #include "oneflow/core/actor/op_actor.h"
 #include "oneflow/core/actor/regst_handler.h"
+#include "oneflow/core/kernel/decode_ofrecord_kernel.h"
 
 namespace oneflow {
 
@@ -49,6 +50,27 @@ class SourceOpActor final : public OpActor {
   void SetOtherVal4CurAct(void*) override {}
 };
 REGISTER_NEW_ACTOR(TaskType::kDecodeRandom, SourceOpActor);
+
+class DecodeOpActor final : public OpActor {
+ public:
+  void InitMsgHandler() override { OF_SET_OP_ACTOR_MSG_HANDLER(this, &OpActor::HandlerNormal); }
+  void InitOtherVal() override {
+    std::shared_ptr<DecodeStatus> decode_status = std::make_shared<DecodeStatus>();
+    decode_status->cur_col_id_ = 0;
+    decode_status->max_col_id_ = 0;
+    set_other_val(std::shared_ptr<void>(decode_status));
+  }
+  void SetOtherVal4CurAct(void* other) override {
+    DecodeStatus* decode_status = static_cast<DecodeStatus*>(other);
+    if (decode_status->cur_col_id_ == decode_status->max_col_id_) {
+      decode_status->cur_col_id_ = 0;
+      decode_status->max_col_id_ = 0;
+    } else {
+      (decode_status->cur_col_id_) += 1;
+    }
+  }
+};
+REGISTER_NEW_ACTOR(TaskType::kDecode, DecodeOpActor);
 
 }  // namespace actor
 

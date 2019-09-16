@@ -19,6 +19,7 @@ class DecodeCompTaskNode final : public CompTaskNode {
 
  private:
   void InferProducedDataRegstTimeShape() override;
+  void GenerateNonCtrlRegstHandlerProto(TaskProto*) const override;
 };
 
 }  // namespace oneflow
