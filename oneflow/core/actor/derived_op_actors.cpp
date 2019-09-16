@@ -51,6 +51,7 @@ class SourceOpActor final : public OpActor {
   void SetOtherVal4CurAct(void*) override {}
 };
 REGISTER_NEW_ACTOR(TaskType::kDecodeRandom, SourceOpActor);
+REGISTER_NEW_ACTOR(TaskType::kRecordLoad, SourceOpActor);
 
 class DecodeOpActor final : public OpActor {
  public:
