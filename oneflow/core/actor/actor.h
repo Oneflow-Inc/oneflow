@@ -198,6 +198,7 @@ class Actor {
     return std::make_pair(RegstNameType::kCustomized, HashSet<std::string>{});
   }
   virtual void AsyncSendCustomizedConsumedRegstMsgToProducer() {}
+  virtual bool IsKernelLaunchImmediate() const { return true; }
 
   const JobDesc* job_desc_;
   int64_t actor_id_;
