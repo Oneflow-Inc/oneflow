@@ -90,12 +90,10 @@ Maybe<void> ConvOp<NDims>::InferOutBlobDescs(
   // out
   int64_t data_num = in_blob_desc->shape().At(0);
   int32_t filters = GetValFromCustomizedConf<int32_t>("filters");
-  /* outdate
-  if (parallel_ctx->policy() == kModelParallel) {
-    BalancedSplitter splitter(filters, parallel_ctx->parallel_num());
-    filters = splitter.At(parallel_ctx->parallel_id()).size();
-  }
-  */
+  // only support data parallel
+  CHECK_OR_RETURN(parallel_ctx->parallel_num() == 1
+                  || sbp_signature->bn_in_op2sbp_parallel().at("weight").has_broadcast_parallel());
+
   std::vector<int64_t> out;
   GetOutAndPad(in_blob_desc->shape(), GetCustomizedConf(), &out, nullptr, nullptr);
   std::vector<int64_t> out_shape = {data_num, filters};
@@ -124,12 +122,10 @@ Maybe<void> ConvOp<NDims>::InferBlobDescs(
   // out
   int64_t data_num = in_blob_desc->shape().At(0);
   int32_t filters = GetValFromCustomizedConf<int32_t>("filters");
-  /* outdate
-  if (parallel_ctx->policy() == kModelParallel) {
-    BalancedSplitter splitter(filters, parallel_ctx->parallel_num());
-    filters = splitter.At(parallel_ctx->parallel_id()).size();
-  }
-  */
+
+  // only support data parallel
+  CHECK_OR_RETURN(sbp_signature->bn_in_op2sbp_parallel().at("weight").has_broadcast_parallel());
+
   std::vector<int64_t> out;
   GetOutAndPad(in_blob_desc->shape(), GetCustomizedConf(), &out, nullptr, nullptr);
   std::vector<int64_t> out_shape = {data_num, filters};
