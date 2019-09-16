@@ -40,7 +40,7 @@ def get_variable(
             op_conf.trainable = trainable
         if model_name is not None:
             op_conf.variable_conf.model_name = model_name
-        if type(distribute) is distribute_util.SplitParallel:
+        if type(distribute) is distribute_util.SplitDistribute:
             op_conf.variable_conf.split_axis.value = distribute.axis
         else:
             op_conf.variable_conf.split_axis.ClearField("value")

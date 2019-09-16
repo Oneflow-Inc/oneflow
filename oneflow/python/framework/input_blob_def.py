@@ -66,9 +66,9 @@ class input_blob_def(blob_desc.BlobDesc):
         else:
             assert self.batch_axis_ is None or self.batch_axis_ is False
             interface_blob_conf.batch_axis.ClearField("value")
-        if type(self.distribute_) is distribute_util.SplitParallel:
+        if type(self.distribute_) is distribute_util.SplitDistribute:
             interface_blob_conf.split_axis.value = self.distribute_.axis
-        elif type(self.distribute_) is distribute_util.BroadcastParallel:
+        elif type(self.distribute_) is distribute_util.BroadcastDistribute:
             interface_blob_conf.split_axis.ClearField("value")
         else:
             # do nothing

@@ -43,11 +43,11 @@ class BlobDesc(object):
     
     @property
     def logical_blob_name(self):
-        if type(self.distribute_) is distribute_util.AutoParallel:
+        if type(self.distribute_) is distribute_util.AutoDistribute:
             return self.lbn_
-        elif type(self.distribute_) is distribute_util.SplitParallel:
+        elif type(self.distribute_) is distribute_util.SplitDistribute:
             return self.lbn_ + ":S" + str(self.distribute_.axis)
-        elif type(self.distribute_) is distribute_util.BroadcastParallel:
+        elif type(self.distribute_) is distribute_util.BroadcastDistribute:
             return self.lbn_ + ":B"
         else:
             raise NotImplementedError
