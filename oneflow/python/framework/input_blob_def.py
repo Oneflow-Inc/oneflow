@@ -21,9 +21,11 @@ class input_blob_def(blob_desc.BlobDesc):
                  dtype = data_type_util.kFloat,
                  is_dynamic = False,
                  batch_axis = 0,
-                 split_axis = undefined):
+                 split_axis = undefined,
+                 name = None):
         lbi = lbi_util.LogicalBlobId()
-        lbi.op_name = id_util.UniqueStr("Input_")
+        if name is None: name = id_util.UniqueStr("Input_")
+        lbi.op_name = name
         lbi.blob_name = "out"
         blob_desc.BlobDesc.__init__(self,lbi)
         assert type(shape) is tuple
@@ -51,9 +53,10 @@ class input_blob_def(blob_desc.BlobDesc):
 
     def split(self, split_axis):
         assert split_axis is not undefined
+        assert type(split_axis) is int or split_axis is None or split_axis == False
         return input_blob_def(shape = self.shape_, dtype = self.dtype_,               \
                         is_dynamic = self.is_dynamic_, batch_axis = self.batch_axis_, \
-                        split_axis = split_axis)
+                        split_axis = split_axis, name = self.lbi.op_name)
 
     def ToInterfaceBlobConf(self):
         interface_blob_conf = op_conf_util.InterfaceBlobConf()

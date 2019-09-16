@@ -54,7 +54,7 @@ Maybe<void> DecodeOFRecordOp::InferBlobDescs(
     FOR_RANGE(size_t, j, 1, dim_vec.size()) { dim_vec[j] = blob_conf.shape().dim(j - 1); }
     out_blob_desc->mut_shape() = Shape(dim_vec);
     out_blob_desc->set_data_type(blob_conf.data_type());
-    out_blob_desc->set_has_data_id_field(GlobalJobDesc().SizeOfOneDataId() > 0);
+    out_blob_desc->set_has_data_id_field(job_desc().SizeOfOneDataId() > 0);
     out_blob_desc->set_has_col_num_field(blob_conf.max_sequence_size() > 1);
     out_blob_desc->set_max_col_num(blob_conf.max_sequence_size());
     const auto& encode = blob_conf.encode_case();

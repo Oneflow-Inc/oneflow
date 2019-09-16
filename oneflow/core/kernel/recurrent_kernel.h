@@ -6,7 +6,7 @@
 namespace oneflow {
 
 template<DeviceType device_type, typename T>
-class RecurrentKernel : public KernelIfWithModel<device_type, T> {
+class RecurrentKernel : public KernelIf<device_type> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(RecurrentKernel);
   virtual ~RecurrentKernel() = default;
@@ -22,7 +22,7 @@ class RecurrentKernel : public KernelIfWithModel<device_type, T> {
 
   void ForwardColNum(const KernelCtx&, std::function<Blob*(const std::string&)>) const override;
   void ForwardDataId(const KernelCtx&, std::function<Blob*(const std::string&)>) const override;
-  void VirtualKernelInit(const ParallelContext*) override;
+  void VirtualKernelInit() override;
 
  private:
   bool need_external_h0_;

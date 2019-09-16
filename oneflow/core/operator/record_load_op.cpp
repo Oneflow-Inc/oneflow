@@ -27,6 +27,8 @@ void RecordLoadOp::VirtualGenKernelConf(
     const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
   int64_t device_piece_size = GetBlobDesc4BnInOp("out")->shape().At(0);
   kernel_conf->mutable_record_load_conf()->set_device_piece_size(device_piece_size);
+  kernel_conf->mutable_record_load_conf()->set_parallel_id(parallel_ctx->parallel_id());
+  kernel_conf->mutable_record_load_conf()->set_parallel_num(parallel_ctx->parallel_num());
 }
 
 Maybe<void> RecordLoadOp::InferBatchAxis(

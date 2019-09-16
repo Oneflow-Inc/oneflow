@@ -15,7 +15,7 @@ class DecodeRandomKernel final : public KernelIf<device_type> {
  private:
   void Forward(const KernelCtx& ctx,
                std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
-  void VirtualKernelInit(const ParallelContext*) override;
+  void VirtualKernelInit() override;
   uint32_t GenNextRandomSeed() const;
 
   std::unique_ptr<std::mt19937> gen_;
