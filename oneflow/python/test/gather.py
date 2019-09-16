@@ -27,11 +27,11 @@ def gather_test_job_3(
 
 @oneflow.function
 def gather_ms0(
-    a=oneflow.input_blob_def((2, 3, 4), batch_axis=None, split_axis=0),
-    b=oneflow.input_blob_def((2, 2), dtype=oneflow.int32, split_axis=None)
+    a=oneflow.input_blob_def((2, 3, 4), batch_axis=None, distribute=oneflow.distribute.split(axis=0)),
+    b=oneflow.input_blob_def((2, 2), dtype=oneflow.int32, distribute=oneflow.distribute.broadcast())
 ):
     r"""gather_ms0 test job (batch_dims==axis)"""
-    return oneflow.gather(a.split(0), b)
+    return oneflow.gather(a.with_split_distribute(axis=0), b)
 
 # @oneflow.function
 # def gather_test_job_4(
@@ -43,7 +43,6 @@ def gather_ms0(
 
 @oneflow.function
 def train_gather(idx=oneflow.input_blob_def((2,), dtype=oneflow.int32)):
-    oneflow.config.train.batch_size(1)
     oneflow.config.train.model_update_conf(dict(naive_conf={}))
     oneflow.config.train.primary_lr(1)
     w = oneflow.get_variable("w0", shape=(2,), dtype=oneflow.float32)
@@ -52,11 +51,14 @@ def train_gather(idx=oneflow.input_blob_def((2,), dtype=oneflow.int32)):
     return loss
 
 @oneflow.function
-def train_gather_ms0(idx=oneflow.input_blob_def((2,), dtype=oneflow.int32, split_axis=None)):
-    oneflow.config.train.batch_size(1)
+def train_gather_ms0(idx=oneflow.input_blob_def((2,), dtype=oneflow.int32, distribute=oneflow.distribute.broadcast())):
     oneflow.config.train.model_update_conf(dict(naive_conf={}))
     oneflow.config.train.primary_lr(1)
-    w = oneflow.get_variable("w1", shape=(2,), dtype=oneflow.float32, split_axis=0).split(0)
+    w = oneflow.get_variable("w1",
+                             shape=(2,),
+                             dtype=oneflow.float32,
+                             distribute=oneflow.distribute.split(axis=0))
+    w = w.with_split_distribute(axis=0)
     loss = oneflow.gather(w, idx)
     oneflow.losses.add_loss(loss)
     return loss
@@ -168,7 +170,6 @@ def _test_train_gather():
 
 if __name__ == '__main__':
     oneflow.config.gpu_device_num(2)
-    oneflow.config.piece_size(1)
     oneflow.config.default_data_type(oneflow.float)
     oneflow.config.default_initializer_conf(dict(constant_conf=dict(value=10)))
     _gather_test_case_1()

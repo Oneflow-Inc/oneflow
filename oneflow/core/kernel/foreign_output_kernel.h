@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_CORE_KERNEL_FOREIGN_INPUT_KERNEL_H_
-#define ONEFLOW_CORE_KERNEL_FOREIGN_INPUT_KERNEL_H_
+#ifndef ONEFLOW_CORE_KERNEL_FOREIGN_OUTPUT_KERNEL_H_
+#define ONEFLOW_CORE_KERNEL_FOREIGN_OUTPUT_KERNEL_H_
 
 #include "oneflow/core/kernel/kernel.h"
 
@@ -18,4 +18,4 @@ class ForeignOutputKernel final : public KernelIf<DeviceType::kCPU> {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_KERNEL_FOREIGN_INPUT_KERNEL_H_
+#endif  // ONEFLOW_CORE_KERNEL_FOREIGN_OUTPUT_KERNEL_H_

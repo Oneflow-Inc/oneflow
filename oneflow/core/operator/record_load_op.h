@@ -15,8 +15,8 @@ class RecordLoadOp final : public Operator {
   void InitFromOpConf() override;
   const PbMessage& GetCustomizedConf() const override;
   Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                             const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature,
-                             int64_t record_piece_size) const override;
+                             const ParallelContext* parallel_ctx,
+                             const SbpSignature* sbp_signature) const override;
   void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                             const ParallelContext*, KernelConf*) const override;
 

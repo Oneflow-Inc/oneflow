@@ -27,8 +27,9 @@ Maybe<void> ReshapeLikeOp::GetSbpSignatures(
     const ParallelDesc& parallel_desc, SbpSignatureList* sbp_sig_list) const {
   const auto& x_shape = JUST(LogicalBlobDesc4Ibn("x"))->shape();
   const auto& like_shape = JUST(LogicalBlobDesc4Ibn("like"))->shape();
-  return ReshapeOpUtil::GetReshapeSbpSignatures(x_shape, like_shape, input_bns(), output_bns(),
-                                                parallel_desc.parallel_num(), sbp_sig_list);
+  return ReshapeOpUtil::GetReshapeSbpSignatures(
+      x_shape, like_shape, StdVec2PbRpf<std::string>({"x"}),
+      StdVec2PbRpf<std::string>({"like", "y"}), parallel_desc.parallel_num(), sbp_sig_list);
 }
 
 REGISTER_OP(OperatorConf::kReshapeLikeConf, ReshapeLikeOp);

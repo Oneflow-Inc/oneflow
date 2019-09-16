@@ -110,7 +110,6 @@ message Conv1DOpConf {
   repeated int32 kernel_size = 6;
   repeated int32 strides = 7;
   repeated int32 dilation_rate = 8;
-  // optional ActivationType activation = 9 [default = kNone];
   optional bool use_bias = 10 [default = true];
   required string weight = 13;
   optional string bias = 14;
@@ -125,7 +124,6 @@ message Conv2DOpConf {
   repeated int32 kernel_size = 6;
   repeated int32 strides = 7;
   repeated int32 dilation_rate = 8;
-  // optional ActivationType activation = 9 [default = kNone];
   optional bool use_bias = 10 [default = true];
   required string weight = 13;
   optional string bias = 14;
@@ -140,7 +138,6 @@ message Conv3DOpConf {
   repeated int32 kernel_size = 6;
   repeated int32 strides = 7;
   repeated int32 dilation_rate = 8;
-  // optional ActivationType activation = 9 [default = kNone];
   optional bool use_bias = 10 [default = true];
   required string weight = 13;
   optional string bias = 14;
@@ -185,7 +182,6 @@ message FullyConnectedOpConf {
   // out
   required string out = 4;
   required int32 units = 5;
-  // optional ActivationType activation = 6 [default = kNone];
   optional bool use_bias = 7 [default = true];
   optional InitializerConf weight_initializer = 8;
   optional InitializerConf bias_initializer = 9;
@@ -787,7 +783,6 @@ message EmbeddingLookupOpConf {
 message AddOpConf {
   repeated string in = 1;
   required string out = 2;
-  // optional ActivationType activation = 3 [default = kNone];
 }
 
 message MaximumOpConf {
@@ -846,6 +841,11 @@ message SwitchOutputOpConf {
 message ForeignOutputOpConf {
   required string in = 1;
   required string ofblob_buffer_name = 3;
+}
+
+message ForeignWatchOpConf {
+  repeated string in = 1;
+  required string handler_uuid = 2;
 }
 
 message InitializeWithSnapshotConf {
@@ -930,6 +930,7 @@ message RecordLoadOpConf {
   optional string part_name_prefix = 5 [default = "part-"];
   optional int32 part_name_suffix_length = 6 [default = -1];
   optional RandomShuffleConf random_shuffle_conf = 7;
+  required int64 batch_size = 8;
 }
 
 message BlobConf {
@@ -949,6 +950,7 @@ message DecodeOFRecordOpConf {
   optional string in = 5;
   repeated BlobConf blob = 6;
   optional RandomShuffleConf random_shuffle_conf = 7;
+  required int64 batch_size = 8;
 }
 
 message DecodeRandomOpConf {
@@ -957,6 +959,7 @@ message DecodeRandomOpConf {
   required ShapeProto shape = 3;
   required DataType data_type = 4;
   required InitializerConf data_initializer = 5;
+  required int64 batch_size = 8;
 }
 
 message NormalizationOpConf {
@@ -971,7 +974,6 @@ message NormalizationOpConf {
   optional float gamma_init = 9 [default = 1.0];
   optional float mean_init = 10 [default = 0.0];
   optional float variance_init = 11 [default = 1.0];
-  // optional ActivationType activation = 13 [default = kNone];
   required string moving_mean = 14;
   required string moving_variance = 15;
   optional string beta = 16;
@@ -1260,7 +1262,6 @@ message LayerNormOpConf {
 
   optional bool center = 8 [default = true];
   optional bool scale = 9 [default = true];
-  // optional ActivationType activation = 10 [default = kNone];
   optional int64 begin_norm_axis = 11 [default = 1];
   optional int64 begin_params_axis = 12 [default = -1];
   optional double epsilon = 13 [default = 1e-5];
@@ -1298,7 +1299,6 @@ message ConstantOpConf {
   optional ShapeProto shape = 3;
   optional DataType data_type = 4;
   optional InitializerConf initializer = 5;
-  optional bool use_device_piece_size_as_dim0 = 6 [default = false];
 }
 
 message OneHotOpConf {
@@ -1576,6 +1576,7 @@ message OperatorConf {
     ReturnOpConf return_conf = 146;
     PartialTickOpConf partial_tick_conf = 147;
     LazyAdamModelUpdateOpConf lazy_adam_model_update_conf = 148;
+    ForeignWatchOpConf foreign_watch_conf = 149;
 
     // domain op
     TupleIdentityOpConf tuple_identity_conf = 200;

@@ -95,13 +95,6 @@ void Kernel::Forward(const KernelCtx& ctx,
     ForwardRecordIdInDevicePiece(ctx, BnInOp2Blob);
   }
   ForwardDataContent(ctx, BnInOp2Blob);
-  if (GetActivationType() != ActivationType::kNone) {
-    const PbRpf<std::string> obns = this->op_attribute().output_bns();
-    CHECK_EQ(obns.size(), 1);
-
-    Blob* out_blob = BnInOp2Blob(obns[0]);
-    ForwardActivation(ctx, out_blob);
-  }
   if (kernel_conf_.need_do_opaque_header()) {
     ForwardPackedHeader(ctx, BnInOp2Blob);
   } else {

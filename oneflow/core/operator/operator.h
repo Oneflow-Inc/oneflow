@@ -32,8 +32,6 @@ class Operator {
   void InitFromOpConf(const OperatorConf& op_conf);
   virtual void InitFromOpConf() = 0;
 
-  ActivationType GetActivationType() const;
-
   virtual LogicalNode* NewProperLogicalNode() const;
 
   virtual bool IsLossOp() const { return false; }
@@ -99,15 +97,10 @@ class Operator {
   // Write: shape of output_blobs
   Maybe<void> InferBlobDescsIf(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                const ParallelContext*, const SbpSignature* sbp_signature,
-                               int64_t record_piece_size,
                                std::function<void(OpContext*)> EnrollOpCtx) const;
   virtual Maybe<void> InferBlobDescs(
       std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*,
-      const SbpSignature* sbp_signature, int64_t record_piece_size,
-      std::function<void(OpContext*)> EnrollOpCtx) const;
-  virtual Maybe<void> InferBlobDescs(
-      std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*,
-      const SbpSignature* sbp_signature, int64_t record_piece_size) const;
+      const SbpSignature* sbp_signature, std::function<void(OpContext*)> EnrollOpCtx) const;
   virtual Maybe<void> InferBlobDescs(
       std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*,
       const SbpSignature* sbp_signature) const;
@@ -117,13 +110,11 @@ class Operator {
 
   Maybe<void> InferOutBlobDescsIf(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                   const ParallelContext*, const SbpSignature* sbp_signature,
-                                  int64_t record_piece_size,
                                   std::function<void(OpContext*)> EnrollOpCtx) const;
 
   virtual Maybe<void> InferOutBlobDescs(
       std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*,
-      const SbpSignature* sbp_signature, int64_t record_piece_size,
-      std::function<void(OpContext*)> EnrollOpCtx) const;
+      const SbpSignature* sbp_signature, std::function<void(OpContext*)> EnrollOpCtx) const;
 
   Maybe<void> InferBatchAxisIf(
       const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
