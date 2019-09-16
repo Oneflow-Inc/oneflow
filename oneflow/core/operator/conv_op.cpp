@@ -124,7 +124,8 @@ Maybe<void> ConvOp<NDims>::InferBlobDescs(
   int32_t filters = GetValFromCustomizedConf<int32_t>("filters");
 
   // only support data parallel
-  CHECK_OR_RETURN(sbp_signature->bn_in_op2sbp_parallel().at("weight").has_broadcast_parallel());
+  CHECK_OR_RETURN(parallel_ctx->parallel_num() == 1
+                  || sbp_signature->bn_in_op2sbp_parallel().at("weight").has_broadcast_parallel());
 
   std::vector<int64_t> out;
   GetOutAndPad(in_blob_desc->shape(), GetCustomizedConf(), &out, nullptr, nullptr);
