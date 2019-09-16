@@ -24,7 +24,7 @@ const PbMessage& SoftmaxOp::GetCustomizedConf() const { return op_conf().softmax
 Maybe<void> SoftmaxOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature,
-    int64_t record_piece_size, std::function<void(OpContext*)> EnrollOpCtx) const {
+    std::function<void(OpContext*)> EnrollOpCtx) const {
   // in
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
   // out

@@ -27,7 +27,6 @@ class JobDesc final {
   bool EnableCudnn() const { return job_conf_.enable_cudnn(); }
   bool IsTrain() const { return job_conf_.has_train_conf(); }
   bool IsPredict() const { return job_conf_.has_predict_conf(); }
-  int64_t RecordPieceSize() const { return job_conf_.piece_size(); }
   int64_t piece_num_of_experiment_phase() const;
   bool enable_experiment_run() const;
   bool enable_mem_sharing() const { return job_conf_.enable_mem_sharing(); }
@@ -53,7 +52,6 @@ class JobDesc final {
 
   // Train conf
   int64_t TotalBatchNum() const;
-  int64_t BatchSize() const;
   int64_t NumOfPiecesInBatch() const;
   float weight_l1() const;
   float bias_l1() const;

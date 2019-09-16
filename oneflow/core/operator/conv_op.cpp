@@ -79,7 +79,7 @@ template<int32_t NDims>
 Maybe<void> ConvOp<NDims>::InferOutBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature,
-    int64_t record_piece_size, std::function<void(OpContext*)> EnrollOpCtx) const {
+    std::function<void(OpContext*)> EnrollOpCtx) const {
   const std::string& data_format = GetValFromCustomizedConf<std::string>("data_format");
 
   // in
@@ -111,7 +111,7 @@ template<int32_t NDims>
 Maybe<void> ConvOp<NDims>::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature,
-    int64_t record_piece_size, std::function<void(OpContext*)> EnrollOpCtx) const {
+    std::function<void(OpContext*)> EnrollOpCtx) const {
   const std::string& data_format = GetValFromCustomizedConf<std::string>("data_format");
 
   // in
