@@ -36,6 +36,12 @@ class BlobDesc(object):
     def with_distribute(self, distribute):
         raise NotImplementedError
 
+    def with_split_distribute(self, axis):
+        return self.with_distribute(distribute_util.split(axis))
+    
+    def with_broadcast_distribute(self):
+        return self.with_distribute(distribute_util.broadcast())
+
     @property
     def distribute(self):
         distribute_util.assert_is_valid_distribute(self.distribute_)

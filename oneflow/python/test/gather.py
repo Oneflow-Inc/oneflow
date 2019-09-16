@@ -31,7 +31,7 @@ def gather_ms0(
     b=oneflow.input_blob_def((2, 2), dtype=oneflow.int32, distribute=oneflow.distribute.broadcast())
 ):
     r"""gather_ms0 test job (batch_dims==axis)"""
-    return oneflow.gather(a.with_distribute(oneflow.distribute.split(axis=0)), b)
+    return oneflow.gather(a.with_split_distribute(axis=0), b)
 
 # @oneflow.function
 # def gather_test_job_4(
@@ -58,7 +58,7 @@ def train_gather_ms0(idx=oneflow.input_blob_def((2,), dtype=oneflow.int32, distr
                              shape=(2,),
                              dtype=oneflow.float32,
                              distribute=oneflow.distribute.split(axis=0))
-    w = w.with_distribute(oneflow.distribute.split(axis=0))
+    w = w.with_split_distribute(axis=0)
     loss = oneflow.gather(w, idx)
     oneflow.losses.add_loss(loss)
     return loss
