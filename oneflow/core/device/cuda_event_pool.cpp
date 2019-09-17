@@ -16,7 +16,8 @@ int32_t GetCurrentDevice() {
 
 CudaEventPool::CudaEventPool() {
   CudaCheck(cudaGetDeviceCount(&dev_cnt_));
-  mutex_vec_.resize(dev_cnt_);
+  std::vector<std::mutex> mutex_vec(dev_cnt_);
+  mutex_vec_.swap(mutex_vec);
   event_queue_vec_.resize(dev_cnt_);
 }
 
