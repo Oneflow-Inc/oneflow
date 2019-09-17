@@ -14,7 +14,6 @@ const PbMessage& ConstantOp::GetCustomizedConf() const { return op_conf().consta
 Maybe<void> ConstantOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
-  CHECK_EQ_OR_RETURN(parallel_ctx->policy(), ParallelPolicy::kDataParallel);
   const ConstantOpConf& conf = op_conf().constant_conf();
   const DataType& data_type =
       conf.has_data_type() ? conf.data_type() : job_desc().DefaultDataType();
