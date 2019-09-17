@@ -193,9 +193,7 @@ void BuildConstantOpAsTotalLossInstanceNum(
     constant_conf->set_data_type(loss_blob_desc.data_type());
     int64_t elem_cnt = loss_blob_desc.shape().elem_cnt();
     constant_conf->mutable_initializer()->mutable_constant_int_conf()->set_value(elem_cnt);
-    ParallelConf parallel_conf = pair.first.parallel_conf();
-    parallel_conf.set_policy(ParallelPolicy::kDataParallel);
-    job_builder->AddOps(parallel_conf, {constant_op_conf});
+    job_builder->AddOps(pair.first.parallel_conf(), {constant_op_conf});
     job_builder->MutSbpParallel4Oba(GenOpBlobArg(constant_op_conf.name(), "out"))
         ->mutable_broadcast_parallel();
     parallel_desc2total_loss_instance_num_lbi->emplace(
@@ -243,7 +241,6 @@ void AddTotalLossInstanceNumOpConfForDynamicDim0(
     total_loss_instance_num_conf->set_out("out");
 
     ParallelConf parallel_conf;
-    parallel_conf.set_policy(kDataParallel);
     parallel_conf.add_device_name("0:cpu:0");
     job_builder->AddOps(parallel_conf, {op_conf});
 

@@ -15,7 +15,7 @@ def add(x, y, name=None):
         return scalar_add(y, x, name)
     elif isinstance(y, (int, float)):
         return scalar_add(x, y, name)
-    elif x.static_shape == y.static_shape:
+    elif x.static_shape == y.static_shape and x.batch_axis == y.batch_axis:
         return element_wise_add(x, y, name)
     else:
         return broadcast_add(x, y, name)

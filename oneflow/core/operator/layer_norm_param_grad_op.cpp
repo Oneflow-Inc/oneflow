@@ -21,8 +21,7 @@ void LayerNormParamGradOp::InitFromOpConf() {
 
 Maybe<void> LayerNormParamGradOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx) const {
-  CHECK_OR_RETURN(parallel_ctx->policy() != kModelParallel);
+    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
   const LayerNormParamGradOpConf& conf = op_conf().layer_norm_param_grad_conf();
   const BlobDesc* dy = GetBlobDesc4BnInOp("dy");
   if (conf.has_beta_diff() || conf.has_gamma_diff()) {
@@ -56,6 +55,8 @@ Maybe<void> LayerNormParamGradOp::InferBlobDescs(
   }
   if (conf.has_normalized_diff()) { *GetBlobDesc4BnInOp("normalized_diff") = *dy; }
   if (conf.has_gamma()) {
+    CHECK_OR_RETURN(parallel_ctx->parallel_num() == 1
+                    || sbp_signature->bn_in_op2sbp_parallel().at("gamma").has_broadcast_parallel());
     const BlobDesc* gamma = GetBlobDesc4BnInOp("gamma");
     CHECK_EQ_OR_RETURN(gamma->data_type(), dy->data_type());
     CHECK_EQ_OR_RETURN(gamma->shape(), param_shape);

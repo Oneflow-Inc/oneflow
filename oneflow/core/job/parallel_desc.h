@@ -26,7 +26,6 @@ class ParallelDesc final {
 
   // Getters
   DeviceType device_type() const { return device_type_; }
-  ParallelPolicy policy() const { return parallel_conf_.policy(); }
   const std::vector<int64_t>& sorted_machine_ids() const { return sorted_machine_ids_; }
   const std::vector<int64_t>& sorted_dev_phy_ids(int64_t machine_id) const {
     return machine_id2sorted_dev_phy_ids_.at(machine_id);
@@ -36,11 +35,9 @@ class ParallelDesc final {
   const ParallelConf& parallel_conf() const { return parallel_conf_; }
 
   // Setters
-  void set_policy(ParallelPolicy val) { parallel_conf_.set_policy(val); }
   void set_device_type(DeviceType device_type);
 
-  bool EqualsIgnoringPolicy(const ParallelDesc& rhs) const;
-  bool EqualsIgnoringPolicyAndDeviceType(const ParallelDesc& rhs) const;
+  bool EqualsIgnoringDeviceType(const ParallelDesc& rhs) const;
   bool Equals(const ParallelDesc& rhs) const;
   bool operator==(const ParallelDesc& rhs) const { return Equals(rhs); }
   bool operator!=(const ParallelDesc& rhs) const { return !(*this == rhs); }
