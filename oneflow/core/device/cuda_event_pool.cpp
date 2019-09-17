@@ -29,7 +29,7 @@ CudaEventPool::~CudaEventPool() {
 }
 
 cudaEvent_t CudaEventPool::Get() {
-  int32_t device = GetCurrentDevice();
+  const int32_t device = GetCurrentDevice();
   CHECK_LT(device, dev_cnt_);
   {
     std::lock_guard<std::mutex> lock(mutex_vec_.at(device));
@@ -46,7 +46,7 @@ cudaEvent_t CudaEventPool::Get() {
 }
 
 void CudaEventPool::Put(cudaEvent_t event) {
-  int32_t device = GetCurrentDevice();
+  const int32_t device = GetCurrentDevice();
   CHECK_LT(device, dev_cnt_);
   std::lock_guard<std::mutex> lock(mutex_vec_.at(device));
   event_queue_vec_.at(device).push_back(event);
