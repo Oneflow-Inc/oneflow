@@ -74,6 +74,7 @@ void Compiler::Compile(Job* job, Plan* plan, bool need_job_complete) const {
     mola::OptimizeOptions options;
     options.graph = &graph;
     options.minimum_nodes_in_cluster = 2;
+    options.maximum_nodes_in_cluster = 50;
 
     mola::RunOptimizePass("MarkClusterId", options);
     mola::RunOptimizePass("BuildSubGraph", options);
