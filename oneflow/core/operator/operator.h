@@ -35,8 +35,6 @@ class Operator {
   virtual LogicalNode* NewProperLogicalNode() const;
 
   virtual bool IsLossOp() const { return false; }
-  virtual bool IsRecurrentOp() const { return false; }
-  virtual bool IsEmbeddingLookupOp() const { return false; }
   virtual bool IsAllOutputConst() const { return false; }
 
   // bn_in_op <-> lbi

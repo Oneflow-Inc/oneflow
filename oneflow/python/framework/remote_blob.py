@@ -17,6 +17,9 @@ class RemoteBlob(blob_desc.BlobDesc):
     @property
     def dtype(self): return job_builder.GetDataType(self.job_name_, self.lbn_)
 
+    @property
+    def batch_axis(self): return job_builder.GetBatchAxis(self.job_name_, self.lbn_)
+
     def with_distribute(self, distribute):
         oneflow.distribute.assert_is_valid_distribute(distribute)
         ret = RemoteBlob(self.lbi_)

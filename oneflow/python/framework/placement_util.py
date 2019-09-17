@@ -86,7 +86,6 @@ def _MakeParallelConf(device_tag, machine_device_ids):
         device_names.append("%s:%s:%s" % (pair[0], device_tag, pair[1]))
 
     parallel_conf = placement_proto.ParallelConf()
-    parallel_conf.policy = placement_proto.kDataParallel
     parallel_conf.device_name.extend(device_names)
     return parallel_conf
 

@@ -119,13 +119,7 @@ void AddFuncForFindBldBoxingOpConfMthd(const std::string& k, BldBoxingOpConfMthd
 #define REGISTER_BLD_BOXING_OP_CONF_MTHD(k, v) COMMAND(AddFuncForFindBldBoxingOpConfMthd(k, v))
 
 BldSubTskGphMthd BldSubTskGphToNormalMdUpdt(const LogicalNode*, const LogicalNode* updt) {
-  if (updt->parallel_desc()->policy() == kDataParallel) {
-    return &TaskGraph::BldSubTskGphByBoxing;
-  } else if (updt->parallel_desc()->policy() == kModelParallel) {
-    return &TaskGraph::BldSubTskGphByOneToOne;
-  } else {
-    UNIMPLEMENTED();
-  }
+  TODO();  // outdate
 }
 
 using FuncForFindLbis =
@@ -193,7 +187,6 @@ void LogicalNode::GenSortedCompTaskNodes(
       comp_task_node->set_machine_id(machine_id);
       comp_task_node->mut_parallel_ctx()->set_parallel_id(parallel_idx++);
       comp_task_node->mut_parallel_ctx()->set_parallel_num(parallel_num);
-      comp_task_node->mut_parallel_ctx()->set_policy(parallel_desc_->policy());
 
       const IDMgr* id_mgr = Global<IDMgr>::Get();
       if (parallel_desc_->device_type() == DeviceType::kGPU) {
@@ -262,7 +255,6 @@ BldSubTskGphMthd GetMthdForBldSubTskGph(const LogicalNode* src_node, const Logic
     if (src_node->SoleOp()->op_conf().has_record_load_conf()
         && dst_node->SoleOp()->op_conf().has_tick_conf()) {
       CHECK(src_pd->parallel_num() == dst_pd->parallel_num());
-      CHECK(src_pd->policy() == kDataParallel && dst_pd->policy() == kDataParallel);
     }
     auto IsTickNode = [&](const LogicalNode* node) {
       return IsClassRegistered<IsTickTockOpTypeCase>(node->SoleOp()->op_conf().op_type_case());

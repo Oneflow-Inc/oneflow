@@ -22,7 +22,7 @@ void OpEdge::InitIsStrict121() { is_strict_121_ = CalcIsStrict121Connected(); }
 bool OpEdge::CalcIsStrict121Connected() const {
   OpNode* src = src_node();
   OpNode* dst = dst_node();
-  if (!src->parallel_desc().EqualsIgnoringPolicy(dst->parallel_desc())) { return false; }
+  if (!src->parallel_desc().Equals(dst->parallel_desc())) { return false; }
   if (src->IsTimeShapeIdentity() == false) { return false; }
   if (dst->IsTimeShapeIdentity() == false) { return false; }
   if (*src->GetInputOutputFastestTimeShape() != *src->GetInputOutputFastestTimeShape()) {
@@ -368,7 +368,6 @@ void OpGraph::InferTimeShape() const {
     ParallelContext parallel_ctx;
     parallel_ctx.set_parallel_id(0);
     parallel_ctx.set_parallel_num(op_node->parallel_desc().parallel_num());
-    parallel_ctx.set_policy(op_node->parallel_desc().policy());
     auto GetInputBlobTimeShape = [&](const std::string& bn_in_op) {
       return op_node->GetInputBlobTimeShape(bn_in_op);
     };
@@ -418,7 +417,6 @@ void OpGraph::InferOpNodeLogicalBlobDesc(OpNode* op_node) const {
     ParallelContext parallel_ctx;
     parallel_ctx.set_parallel_id(parallel_id);
     parallel_ctx.set_parallel_num(parallel_num);
-    parallel_ctx.set_policy(op_node->parallel_desc().policy());
     CHECK_JUST(op_node->op().InferBlobDescsIf(BlobDesc4BnInOp, &parallel_ctx,
                                               &op_node->sbp_signature(), [](OpContext*) {}));
   }
@@ -569,7 +567,6 @@ std::function<const BlobDesc&(const LogicalBlobId&)> OpGraph::MakeGetterBlobDesc
     ParallelContext parallel_ctx;
     parallel_ctx.set_parallel_id(0);
     parallel_ctx.set_parallel_num(1);
-    parallel_ctx.set_policy(op_node->parallel_desc().policy());
     SbpSignature sbp_signature;
     for (const auto& ibn : op_node->op().input_bns()) {
       (*sbp_signature.mutable_bn_in_op2sbp_parallel())[ibn].mutable_split_parallel()->set_axis(0);
