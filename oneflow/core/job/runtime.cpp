@@ -10,6 +10,7 @@
 #include "oneflow/core/actor/act_event_logger.h"
 #include "oneflow/core/graph/task_node.h"
 #include "oneflow/core/device/cuda_util.h"
+#include "oneflow/core/device/cuda_event_pool.h"
 
 namespace oneflow {
 
@@ -104,6 +105,7 @@ void Runtime::NewAllGlobal(const Plan& plan, size_t total_piece_num, bool is_exp
   }
 #ifdef WITH_CUDA
   InitGlobalCudaDeviceProp();
+  Global<CudaEventPool>::New();
 #endif
   Global<MemoryAllocator>::New();
   Global<RegstMgr>::New(plan);
@@ -124,6 +126,9 @@ void Runtime::DeleteAllGlobal() {
   Global<ActorMsgBus>::Delete();
   Global<RegstMgr>::Delete();
   Global<MemoryAllocator>::Delete();
+#ifdef WITH_CUDA
+  Global<CudaEventPool>::Delete();
+#endif  // WITH_CUDA
   Global<CommNet>::Delete();
   Global<ActEventLogger>::Delete();
   Global<RuntimeCtx>::Delete();
