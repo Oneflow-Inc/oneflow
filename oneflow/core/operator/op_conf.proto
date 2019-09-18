@@ -1144,6 +1144,13 @@ message BroadcastDivGradOpConf {
   optional string temp_storage = 5 [default = "temp_storage"];
 }
 
+message BroadcastEqualOpConf {
+  required string a = 1;
+  required string b = 2;
+  required string out = 3;
+  optional bool is_const = 4 [default = false];
+}
+
 message BiasAddOpConf {
   // inputs
   required string a = 1;
@@ -1585,6 +1592,7 @@ message OperatorConf {
     RsqrtOpConf rsqrt_conf = 506;
     ScalarAddOpConf scalar_add_conf = 507;
     ScalarMulOpConf scalar_mul_conf = 508;
+    BroadcastEqualOpConf broadcast_equal_conf = 509;
 
     // mutable input op
     AxpyOpConf axpy_conf = 752;
