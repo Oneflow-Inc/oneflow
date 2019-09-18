@@ -50,6 +50,12 @@ Error Error::Unimplemented() {
   return error;
 }
 
+Error Error::BoxingNotSupported() {
+  auto error = std::make_shared<ErrorProto>();
+  error->mutable_unimplemented_error();
+  return error;
+}
+
 Error&& operator<=(const std::string& log_str, Error&& error) {
   LOG(ERROR) << log_str << error->msg();
   return std::move(error);
