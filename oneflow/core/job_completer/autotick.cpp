@@ -358,7 +358,7 @@ void AutoSinkTick(const OpGraph& op_graph, JobBuilder* job_builder) {
     size_t out_cnt = 0;
     op_graph.ForEachDataAndCtrlOutNode(op_node, [&](OpNode*) { ++out_cnt; });
     if (out_cnt > 0) { return; }
-    CHECK(op_node->op().op_conf().has_tick_conf());
+    CHECK(op_node->op().op_conf().has_device_tick_conf());
     CHECK(*op_node->out_blob_time_shape() == src_time_shape);
     CHECK(tick_lbis.emplace(op_node->op().BnInOp2Lbi(op_node->op().SoleObn())).second);
   });
