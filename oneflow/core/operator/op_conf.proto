@@ -1262,6 +1262,11 @@ message TickOpConf {
   required string out = 2;
 }
 
+message DeviceTickOpConf {
+  repeated string tick = 1;
+  required string out = 2;
+}
+
 message WaitAndSendIdsOpConf {
   required string out = 1;
   required string wait_buffer_name = 2;
@@ -1488,6 +1493,7 @@ message OperatorConf {
     ReturnOpConf return_conf = 146;
     PartialTickOpConf partial_tick_conf = 147;
     ForeignWatchOpConf foreign_watch_conf = 148;
+    DeviceTickOpConf device_tick_conf = 149;
 
     // domain op
     TupleIdentityOpConf tuple_identity_conf = 200;
