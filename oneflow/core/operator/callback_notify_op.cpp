@@ -26,13 +26,14 @@ Maybe<void> CallbackNotifyOp::InferBlobDescs(
   return Maybe<void>::Ok();
 }
 
-Maybe<void> CallbackNotifyOp::InferHasBatchDim(
-    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
+Maybe<void> CallbackNotifyOp::InferBatchAxis(
+    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
   return Maybe<void>::Ok();
 }
 
-void CallbackNotifyOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
+Maybe<void> CallbackNotifyOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
   SbpSignatureBuilder().Split(input_bns(), 0).Build(sbp_sig_list->mutable_sbp_signature()->Add());
+  return Maybe<void>::Ok();
 }
 
 REGISTER_CPU_OP(OperatorConf::kCallbackNotifyConf, CallbackNotifyOp);

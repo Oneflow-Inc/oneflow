@@ -27,24 +27,32 @@ Maybe<void> BiasAddOp::InferBlobDescs(
   CHECK_EQ_OR_RETURN(a_blob_desc->shape().At(bias_add_axis), b_blob_desc->shape().At(0));
 
   *GetBlobDesc4BnInOp("out") = *a_blob_desc;
-  *GetBlobDesc4BnInOp("bias_multiplier") = *a_blob_desc;
-  GetBlobDesc4BnInOp("bias_multiplier")->mut_shape() = Shape({a_blob_desc->shape().At(0), 1});
+  if (bias_add_axis == a_blob_desc->shape().NumAxes() - 1) {
+    *GetBlobDesc4BnInOp("bias_multiplier") = *a_blob_desc;
+    GetBlobDesc4BnInOp("bias_multiplier")->mut_shape() =
+        Shape({a_blob_desc->shape().Count(0, bias_add_axis)});
+  }
   return Maybe<void>::Ok();
 }
 
-void BiasAddOp::GetSbpSignatures(
-    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
+Maybe<void> BiasAddOp::GetSbpSignatures(
+    const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
     SbpSignatureList* sbp_sig_list) const {
-  SbpSignatureBuilder()
-      .Split("a", 0)
-      .Broadcast("b")
-      .Split(output_bns(), 0)
-      .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+  int32_t axis = op_conf().bias_add_conf().axis();
+  for (int i = 0; i < JUST(LogicalBlobDesc4Ibn("a"))->shape().NumAxes(); ++i) {
+    if (i == axis) { continue; }
+    SbpSignatureBuilder()
+        .Split("a", i)
+        .Broadcast("b")
+        .Split(output_bns(), i)
+        .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+  }
   SbpSignatureBuilder()
       .Split("b", 0)
-      .Broadcast("a")
-      .Split(output_bns(), 1)
+      .Split("a", axis)
+      .Split(output_bns(), axis)
       .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+  return Maybe<void>::Ok();
 }
 
 REGISTER_OP(OperatorConf::kBiasAddConf, BiasAddOp);

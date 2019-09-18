@@ -14,15 +14,17 @@ Maybe<void> TickOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> 
   return Maybe<void>::Ok();
 }
 
-Maybe<void> TickOp::InferHasBatchDim(
-    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
-  *HasBatchDim4BnInOp("out") = false;
+Maybe<void> TickOp::InferBatchAxis(
+    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
+  BatchAxis4BnInOp("out")->clear_value();
   return Maybe<void>::Ok();
 }
 
-void TickOp::GetSbpSignatures(
-    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
-    SbpSignatureList* sbp_sig_list) const {}
+Maybe<void> TickOp::GetSbpSignatures(
+    const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
+    SbpSignatureList* sbp_sig_list) const {
+  return Maybe<void>::Ok();
+}
 
 REGISTER_OP_SAME_OUTPUT_BLOB_MEM_BLOCK_NUM(OperatorConf::kTickConf, 2);
 REGISTER_OP(OperatorConf::kTickConf, TickOp);

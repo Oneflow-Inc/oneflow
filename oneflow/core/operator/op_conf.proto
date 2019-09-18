@@ -39,7 +39,8 @@ message RandomNormalInitializerConf {
 }
 
 message TruncatedNormalInitializerConf {
-  optional float std = 1 [default = 1];
+  optional float mean = 1 [default = 0.0];
+  optional float std = 2 [default = 0.05];
 }
 
 enum VarianceNorm {
@@ -48,12 +49,20 @@ enum VarianceNorm {
   kAverage = 2;
 }
 
+enum RandomDistribution {
+  kRandomUniform = 0;
+  kRandomNormal = 1;
+  kTruncatedNormal = 2;
+}
+
 message XavierInitializerConf {
   required VarianceNorm variance_norm = 1;
+  required string data_format = 2;
 }
 
 message MsraInitializerConf {
   required VarianceNorm variance_norm = 1;
+  required string data_format = 2;
 }
 
 //output[D_0 ... D_(axis - 1) i D_(axis + 1) ... D_n] = start + i * stride
@@ -69,6 +78,12 @@ message IntRangeInitializerConf {
   optional int64 axis = 3 [default = -1];
 }
 
+message VarianceScalingInitializerConf {
+  required float scale = 1;
+  required VarianceNorm variance_norm = 2;
+  required RandomDistribution distribution = 3;
+  required string data_format = 4;
+}
 
 message InitializerConf {
   oneof type {
@@ -82,6 +97,7 @@ message InitializerConf {
     MsraInitializerConf msra_conf = 8;
     RangeInitializerConf range_conf = 9;
     IntRangeInitializerConf int_range_conf = 10;
+    VarianceScalingInitializerConf variance_scaling_conf = 11;
   }
 }
 
@@ -94,11 +110,8 @@ message Conv1DOpConf {
   repeated int32 kernel_size = 6;
   repeated int32 strides = 7;
   repeated int32 dilation_rate = 8;
-  optional ActivationType activation = 9 [default = kNone];
   optional bool use_bias = 10 [default = true];
-  optional InitializerConf weight_initializer = 11;
-  optional InitializerConf bias_initializer = 12;
-  optional string weight = 13;
+  required string weight = 13;
   optional string bias = 14;
 }
 
@@ -111,11 +124,8 @@ message Conv2DOpConf {
   repeated int32 kernel_size = 6;
   repeated int32 strides = 7;
   repeated int32 dilation_rate = 8;
-  optional ActivationType activation = 9 [default = kNone];
   optional bool use_bias = 10 [default = true];
-  optional InitializerConf weight_initializer = 11;
-  optional InitializerConf bias_initializer = 12;
-  optional string weight = 13;
+  required string weight = 13;
   optional string bias = 14;
 }
 
@@ -128,11 +138,8 @@ message Conv3DOpConf {
   repeated int32 kernel_size = 6;
   repeated int32 strides = 7;
   repeated int32 dilation_rate = 8;
-  optional ActivationType activation = 9 [default = kNone];
   optional bool use_bias = 10 [default = true];
-  optional InitializerConf weight_initializer = 11;
-  optional InitializerConf bias_initializer = 12;
-  optional string weight = 13;
+  required string weight = 13;
   optional string bias = 14;
 }
 
@@ -165,20 +172,6 @@ message ConvBiasGradOpConf {
   required string bias_diff = 2;
   required string data_format = 3;
   required int64 num_spatial_dims = 4;
-}
-
-message FullyConnectedOpConf {
-  // in
-  required string in = 1;
-  optional string weight = 2;
-  optional string bias = 3;
-  // out
-  required string out = 4;
-  required int32 units = 5;
-  optional ActivationType activation = 6 [default = kNone];
-  optional bool use_bias = 7 [default = true];
-  optional InitializerConf weight_initializer = 8;
-  optional InitializerConf bias_initializer = 9;
 }
 
 message AveragePooling1DOpConf {
@@ -279,7 +272,7 @@ message PReluOpConf {
   required string data_format = 3;
   optional bool channel_shared = 4 [default = false];
   optional float alpha_init = 5 [default = 0.25];
-  optional string alpha = 6;
+  required string alpha = 6;
 }
 
 message PReluDataGradOpConf {
@@ -574,7 +567,7 @@ message NormalModelUpdateOpConf {
   required string model_diff = 2;
   required string total_instance_num_diff = 3;
   required string model = 4;
-  required string global_step = 5;
+  required string train_step = 5;
   required string learning_rate = 6;
   required float l1 = 7;
   required float l2 = 8;
@@ -585,7 +578,7 @@ message NaiveModelUpdateOpConf {
   required string model_diff = 2;
   required string total_instance_num_diff = 3;
   required string model = 4;
-  required string global_step = 5;
+  required string train_step = 5;
   required string learning_rate = 6;
   required float l1 = 7;
   required float l2 = 8;
@@ -597,7 +590,7 @@ message MomentumModelUpdateOpConf {
   required string model_diff = 3;
   required string total_instance_num_diff = 4;
   required string model = 5;
-  required string global_step = 6;
+  required string train_step = 6;
   required string learning_rate = 7;
   required float l1 = 8;
   required float l2 = 9;
@@ -608,7 +601,7 @@ message RMSPropModelUpdateOpConf {
   required string model_diff = 2;
   required string total_instance_num_diff = 3;
   required string model = 4;
-  required string global_step = 5;
+  required string train_step = 5;
   required string learning_rate = 6;
   required float l1 = 7;
   required float l2 = 8;
@@ -620,7 +613,7 @@ message LARSModelUpdateOpConf {
   required string model_diff = 3;
   required string total_instance_num_diff = 4;
   required string model = 5;
-  required string global_step = 6;
+  required string train_step = 6;
   required string learning_rate = 7;
   required float l1 = 8;
   required float l2 = 9;
@@ -635,16 +628,13 @@ message AdamModelUpdateOpConf {
   required string model_diff = 6;
   required string total_instance_num_diff = 7;
   required string model = 8;
-  required string global_step = 9;
+  required string train_step = 9;
   required string learning_rate = 10;
   required float l1 = 11;
   required float l2 = 12;
 }
 
 message AccumulateOpConf {
-}
-
-message EmbeddingLookupAccumulateOpConf {
 }
 
 message PrintRecordConf {
@@ -658,11 +648,6 @@ message PrintOpConf {
   required string print_dir = 2;
   optional string part_name_prefix = 3 [default = "part-"];
   optional int32 part_name_suffix_length = 4 [default = -1];
-}
-
-message LogCounterOpConf {
-  required string in = 1;
-  optional int32 interval = 2 [default = 1];
 }
 
 message GeluOpConf {
@@ -709,30 +694,10 @@ message ReduceMeanGradOpConf {
   optional string temp_storage = 5 [default = "temp_storage"];
 }
 
-message BasicRnnOpConf {
-  required string in = 1;
-  optional string init_hidden = 2;
-  required string out = 3;
-  required int32 hidden_size = 4;
-  optional ActivationType activation = 6 [default = kTanH];
-
-  optional InitializerConf init_hidden_initializer = 7;
-  optional InitializerConf bias_initializer = 8;
-  optional InitializerConf i2h_weight_initializer = 9;
-  optional InitializerConf h2h_weight_initializer = 10;
-
-  optional bool is_init_hidden_trainable = 11 [default = true];
-  optional bool use_bias = 12 [default = true];
-}
-
-message BasicLstmOpConf {
-}
-
 message ReshapeOpConf {
   required string in = 1;
   required string out = 2;
   required ShapeProto shape = 3;
-  optional bool has_dim0_in_shape = 4 [default = true];
 }
 
 message ReshapeLikeOpConf {
@@ -741,18 +706,9 @@ message ReshapeLikeOpConf {
   required string like = 3;
 }
 
-message EmbeddingLookupOpConf {
-  required string ids = 1;
-  required string out = 2;
-  required int32 units = 3;
-  required int32 table_size = 4;
-  optional InitializerConf weight_initializer = 5;
-}
-
 message AddOpConf {
   repeated string in = 1;
   required string out = 2;
-  optional ActivationType activation = 3 [default = kNone];
 }
 
 message MaximumOpConf {
@@ -768,16 +724,13 @@ message CastOpConf {
 
 message InterfaceBlobConf {
   required ShapeProto shape = 1;
-  optional DataType data_type = 2;
+  required DataType data_type = 2;
   optional ShapeProto dim0_inner_shape = 3;
   optional bool has_dim0_valid_num = 4;
   optional bool has_dim1_valid_num = 5;
   optional bool has_dim2_valid_num = 6;
-  oneof split_or_broadcast {
-    int32 split_axis = 7;
-    bool broadcast = 8;
-  }
-  optional bool has_batch_dim = 9 [default = true];
+  optional OptInt64 split_axis = 7;
+  required OptInt64 batch_axis = 8;
 }
 
 message InputOpConf {
@@ -816,15 +769,28 @@ message ForeignOutputOpConf {
   required string ofblob_buffer_name = 3;
 }
 
+message ForeignWatchOpConf {
+  repeated string in = 1;
+  required string handler_uuid = 2;
+}
+
+message InitializeWithSnapshotConf {
+  required string path = 1;
+  optional string key = 2;
+}
+
 message VariableOpConf {
   optional string tick = 1;
   required string out = 2;
   required ShapeProto shape = 3;
   optional DataType data_type = 4;
-  optional InitializerConf initializer = 5;
-  optional string model_name = 6 [default = "weight"];
-  optional int32 model_split_axis = 7 [default = 0];
-  optional int64 random_seed = 8;
+  oneof initialize {
+    InitializerConf initializer = 5;
+    InitializeWithSnapshotConf initialize_with_snapshot = 6;
+  }
+  optional string model_name = 7 [default = "weight"];
+  required OptInt64 split_axis = 8;
+  optional int64 random_seed = 9;
 }
 
 message LocalResponseNormalizationOpConf {
@@ -886,9 +852,11 @@ message RecordLoadOpConf {
   optional string tick  = 1;
   required string out = 2;
   required string data_dir = 3;
-  optional string part_name_prefix = 4 [default = "part-"];
-  optional int32 part_name_suffix_length = 5 [default = -1];
-  optional RandomShuffleConf random_shuffle_conf = 6;
+  required int32 data_part_num = 4;
+  optional string part_name_prefix = 5 [default = "part-"];
+  optional int32 part_name_suffix_length = 6 [default = -1];
+  optional RandomShuffleConf random_shuffle_conf = 7;
+  required int64 batch_size = 8;
 }
 
 message BlobConf {
@@ -902,11 +870,13 @@ message BlobConf {
 
 message DecodeOFRecordOpConf {
   required string data_dir = 1;
-  optional string part_name_prefix = 2 [default = "part-"];
-  optional int32 part_name_suffix_length = 3 [default = -1];
-  optional string in = 4;
-  repeated BlobConf blob = 5;
-  optional RandomShuffleConf random_shuffle_conf = 6;
+  required int32 data_part_num = 2; // piece_size % data_part_num = 0
+  optional string part_name_prefix = 3 [default = "part-"];
+  optional int32 part_name_suffix_length = 4 [default = -1];
+  optional string in = 5;
+  repeated BlobConf blob = 6;
+  optional RandomShuffleConf random_shuffle_conf = 7;
+  required int64 batch_size = 8;
 }
 
 message DecodeRandomOpConf {
@@ -915,19 +885,7 @@ message DecodeRandomOpConf {
   required ShapeProto shape = 3;
   required DataType data_type = 4;
   required InitializerConf data_initializer = 5;
-}
-
-message DefineTestBlobOpConf {
-  optional string tick = 1;
-  required string out = 2;
-  required ShapeProto shape = 3;
-  required DataType data_type = 4;
-  optional ShapeProto dim0_inner_shape = 5;
-  optional int64 dim0_valid_num = 6;
-  optional int64 dim1_valid_num = 7;
-  optional int64 dim2_valid_num = 8;
-  repeated int64 record_id_in_device_piece = 9;
-  optional bool has_diff = 10 [default = false];
+  required int64 batch_size = 8;
 }
 
 message NormalizationOpConf {
@@ -942,9 +900,8 @@ message NormalizationOpConf {
   optional float gamma_init = 9 [default = 1.0];
   optional float mean_init = 10 [default = 0.0];
   optional float variance_init = 11 [default = 1.0];
-  optional ActivationType activation = 13 [default = kNone];
-  optional string moving_mean = 14;
-  optional string moving_variance = 15;
+  required string moving_mean = 14;
+  required string moving_variance = 15;
   optional string beta = 16;
   optional string gamma = 17;
   optional string mean = 18 [default = "mean"];
@@ -1099,12 +1056,25 @@ message GatherOpConf {
   optional int64 axis = 4 [default = 0];
 }
 
-message GatherGradOpConf {
+message GatherMs0OpConf {
+  required string in = 1;
+  required string indices = 2;
+  required string out = 3;
+}
+
+message UnsortedSegmentSumOpConf {
+  required string data = 1;
+  required string segment_ids = 2;
+  required string out = 3;
+  required int64 axis = 4;
+  required int64 num_segments = 5;
+}
+
+message GatherMs0GradOpConf {
   required string out_diff = 1;
   required string indices = 2;
   required string in_diff = 3;
-  required int64 axis = 4;
-  required int64 gather_dim_size = 5;
+  required int64 gather_dim_size = 4;
 }
 
 message BatchGatherOpConf {
@@ -1217,7 +1187,6 @@ message LayerNormOpConf {
 
   optional bool center = 8 [default = true];
   optional bool scale = 9 [default = true];
-  optional ActivationType activation = 10 [default = kNone];
   optional int64 begin_norm_axis = 11 [default = 1];
   optional int64 begin_params_axis = 12 [default = -1];
   optional double epsilon = 13 [default = 1e-5];
@@ -1255,24 +1224,6 @@ message ConstantOpConf {
   optional ShapeProto shape = 3;
   optional DataType data_type = 4;
   optional InitializerConf initializer = 5;
-  optional bool use_device_piece_size_as_dim0 = 6 [default = false];
-}
-
-message DebugOpConf {
-  required string in = 1;
-  required string out = 2;
-  optional string in_blob_dump_dir = 3;
-  optional string out_diff_blob_dump_dir = 4;
-  optional string part_name_prefix = 5 [default = "part-"];
-  optional int32 part_name_suffix_length = 6 [default = -1];
-  oneof const_out {
-    string const_out_feature_load_filepath = 7;
-    Feature const_out_feature = 8;
-  }
-  oneof const_in_diff {
-    string const_in_diff_feature_load_filepath = 9;
-    Feature const_in_diff_feature = 10;
-  }
 }
 
 message OneHotOpConf {
@@ -1374,11 +1325,11 @@ message TotalLossInstanceNumOpConf {
   required string out = 2;
 }
 
-message BatchGatherGradOpConf {
-  required string out_diff = 1;
-  required string indices = 2;
-  required string in_diff = 3;
-  required int64 gather_dim_size = 4;
+message UnsortedBatchSegmentSumOpConf {
+  required string data = 1;
+  required string segment_ids = 2;
+  required string out = 3;
+  required int64 num_segments = 4;
 }
 
 message ShapeElemCntAxisConf {
@@ -1425,10 +1376,17 @@ message EveryNthOpConf {
 }
 
 message ModelInitOpConf {
-  optional string tick = 1;
-  required string out = 2;
-  required string variable_op_name = 3;
-  required VariableOpConf original_variable_conf = 4;
+  required string tick = 1;
+  repeated string out = 2;
+  repeated string variable_op_name = 3;
+  repeated VariableOpConf original_variable_conf = 4;
+}
+
+message ModelLoadOpConf {
+  required string path = 1;
+  repeated string out = 2;
+  repeated string variable_op_name = 3;
+  repeated VariableOpConf original_variable_conf = 4;
 }
 
 message AllReduceFacadeOpConf {
@@ -1462,13 +1420,14 @@ message AssignOpConf {
   required string value = 2;
 }
 
-message SnapshotOpConf {
-  repeated string in = 1;
-  repeated string lbn = 2;
+message ModelSaveOpConf {
+  required string path = 1;
+  repeated string in = 2;
+  repeated string key = 3;
 }
 
 message LearningRateScheduleOpConf {
-  required string global_step = 1;
+  required string train_step = 1;
   required string out = 2;
   required float learning_rate = 3;
   optional LearningRateDecayConf learning_rate_decay = 4;
@@ -1477,7 +1436,6 @@ message LearningRateScheduleOpConf {
 
 message OperatorConf {
   required string name = 1;
-  optional string model_load_dir = 2;
   optional bool trainable = 3 [default = true];
   optional DeviceType device_type = 4 [default = kInvalidDevice];
   optional bool enable_cudnn = 5;
@@ -1529,13 +1487,12 @@ message OperatorConf {
     SwitchOutputOpConf switch_output_conf = 145;
     ReturnOpConf return_conf = 146;
     PartialTickOpConf partial_tick_conf = 147;
+    ForeignWatchOpConf foreign_watch_conf = 148;
 
     // domain op
     TupleIdentityOpConf tuple_identity_conf = 200;
     TransposeOpConf transpose_conf = 201;
     ReshapeOpConf reshape_conf = 202;
-    BasicRnnOpConf basic_rnn_conf = 203;
-    FullyConnectedOpConf fully_connected_conf = 204;
     Conv1DOpConf conv_1d_conf = 205;
     Conv2DOpConf conv_2d_conf = 206;
     Conv3DOpConf conv_3d_conf = 207;
@@ -1545,8 +1502,6 @@ message OperatorConf {
     MaxPooling2DOpConf max_pooling_2d_conf = 211;
     AveragePooling3DOpConf average_pooling_3d_conf = 212;
     MaxPooling3DOpConf max_pooling_3d_conf = 213;
-    EmbeddingLookupOpConf embedding_lookup_conf = 214;
-    EmbeddingLookupAccumulateOpConf embedding_lookup_accumulate_conf = 215;
     LocalResponseNormalizationOpConf local_response_normalization_conf = 216;
     NormalizationOpConf normalization_conf = 217;
     DropoutOpConf dropout_conf = 218;
@@ -1565,11 +1520,9 @@ message OperatorConf {
     SparseSoftmaxCrossEntropyLossOpConf sparse_softmax_cross_entropy_loss_conf = 231;
     AccuracyOpConf accuracy_conf = 232;
     PrintOpConf print_conf = 233;
-    DefineTestBlobOpConf define_test_blob_conf = 236;
     PackOpConf pack_conf = 237;
     UnpackOpConf unpack_conf = 238;
     RepeatOpConf repeat_conf = 239;
-    LogCounterOpConf log_counter_conf = 240;
     GeluOpConf gelu_conf = 241;
     GatherOpConf gather_conf = 242;
     BatchGatherOpConf batch_gather_conf = 243;
@@ -1577,7 +1530,6 @@ message OperatorConf {
     BiasAddOpConf bias_add_conf = 253;
     LayerNormOpConf layer_norm_conf = 254;
     ConstantOpConf constant_conf = 255;
-    DebugOpConf debug_conf = 256;
     SigmoidCrossEntropyLossOpConf sigmoid_cross_entropy_loss_conf = 257;
     OneHotOpConf one_hot_conf = 258;
     IdentityLossOpConf identity_loss_conf = 259;
@@ -1595,11 +1547,11 @@ message OperatorConf {
     LayerNormGradOpConf layer_norm_grad_conf = 272;
     LayerNormParamGradOpConf layer_norm_param_grad_conf = 273;
     SparseCrossEntropyGradOpConf sparse_cross_entropy_grad_conf= 274;
-    GatherGradOpConf gather_grad_conf = 275;
+    UnsortedSegmentSumOpConf unsorted_segment_sum_conf = 275;
     BroadcastDivGradOpConf broadcast_div_grad_conf= 276;
     BroadcastLikeOpConf broadcast_like_conf = 277;
     SoftmaxGradOpConf softmax_grad_conf = 278;
-    BatchGatherGradOpConf batch_gather_grad_conf = 279;
+    UnsortedBatchSegmentSumOpConf unsorted_batch_segment_sum_conf = 279;
     ReduceMeanGradOpConf reduce_mean_grad_conf = 280;
     NormalizationGradOpConf normalization_grad_conf = 282;
     ConvBiasGradOpConf conv_bias_grad_conf = 283;
@@ -1615,10 +1567,13 @@ message OperatorConf {
     SplitLikeOpConf split_like_conf = 294;
     SigmoidGradOpConf sigmoid_grad_conf = 295;
     AssignOpConf assign_conf = 296;
-    SnapshotOpConf snapshot_conf = 297;
+    ModelSaveOpConf model_save_conf = 297;
     LearningRateScheduleOpConf learning_rate_schedule_conf = 298;
     PReluDataGradOpConf prelu_data_grad_conf = 299;
     PReluAlphaGradOpConf prelu_alpha_grad_conf = 300;
+    ModelLoadOpConf model_load_conf = 301;
+    GatherMs0OpConf gather_ms0_conf = 302;
+    GatherMs0GradOpConf gather_ms0_grad_conf = 303;
 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;

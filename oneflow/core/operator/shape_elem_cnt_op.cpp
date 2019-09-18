@@ -61,16 +61,16 @@ void ShapeElemCntOp::VirtualGenKernelConf(
                                                                  inclusive_axis.end()};
 }
 
-Maybe<void> ShapeElemCntOp::InferHasBatchDim(
-    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
-  *HasBatchDim4BnInOp("y") = false;
+Maybe<void> ShapeElemCntOp::InferBatchAxis(
+    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
+  BatchAxis4BnInOp("y")->clear_value();
   return Maybe<void>::Ok();
 }
 
-void ShapeElemCntOp::GetSbpSignatures(
-    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
+Maybe<void> ShapeElemCntOp::GetSbpSignatures(
+    const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
     SbpSignatureList* sbp_sig_list) const {
-  int32_t num_axes = LogicalBlobDesc4Ibn("x").shape().NumAxes();
+  int32_t num_axes = JUST(LogicalBlobDesc4Ibn("x"))->shape().NumAxes();
   const auto& inclusive_axes = GetInclusiveAxes(op_conf().shape_elem_cnt_conf(), num_axes);
   auto IsReducedAxis = ReduceSbpUtil::MakePredicatorIsReducedAxis(inclusive_axes, num_axes);
   FOR_RANGE(int64_t, i, 0, num_axes) {
@@ -86,6 +86,7 @@ void ShapeElemCntOp::GetSbpSignatures(
           .Build(sbp_sig_list->mutable_sbp_signature()->Add());
     }
   }
+  return Maybe<void>::Ok();
 }
 
 REGISTER_OP(OperatorConf::kShapeElemCntConf, ShapeElemCntOp);

@@ -17,17 +17,18 @@ const PbMessage& SparseCrossEntropyGradOp::GetCustomizedConf() const {
 
 Maybe<void> SparseCrossEntropyGradOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx, int64_t record_piece_size,
+    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature,
     std::function<void(OpContext*)> EnrollOpCtx) const {
   *GetBlobDesc4BnInOp("prediction_diff") = *GetBlobDesc4BnInOp("prediction");
   return Maybe<void>::Ok();
 }
 
-void SparseCrossEntropyGradOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
+Maybe<void> SparseCrossEntropyGradOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
   SbpSignatureBuilder()
       .Split(input_bns(), 0)
       .Split(output_bns(), 0)
       .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+  return Maybe<void>::Ok();
 }
 
 REGISTER_OP(OperatorConf::kSparseCrossEntropyGradConf, SparseCrossEntropyGradOp);

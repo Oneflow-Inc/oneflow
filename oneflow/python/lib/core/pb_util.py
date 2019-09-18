@@ -21,3 +21,23 @@ def PythonDict2PbMessage(value, msg):
  
     extend_dict(value, msg)
     return msg
+
+def MergePbMessage(dst, src):
+    assert type(dst) is type(src)
+    for field in dst.DESCRIPTOR.fields:
+        field_name = field.name
+        if field.containing_oneof is not None:
+            if dst.WhichOneof(field.containing_oneof.name) is not None: continue
+            src_field_name = src.WhichOneof(field.containing_oneof.name)
+            if src_field_name is None: continue
+            if field_name != src_field_name: continue
+        else:
+            if dst.HasField(field_name): continue
+            if not src.HasField(field_name): continue
+        _MergePbMessageField(dst, src, field)
+
+def _MergePbMessageField(dst, src, field):
+    if field.message_type is None:
+        setattr(dst, field.name, getattr(src, field.name))
+    else:
+        MergePbMessage(getattr(dst, field.name), getattr(src, field.name))

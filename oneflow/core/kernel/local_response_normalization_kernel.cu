@@ -3,8 +3,7 @@
 namespace oneflow {
 
 template<typename T>
-void LocalResponseNormalizationKernel<DeviceType::kGPU, T>::VirtualKernelInit(
-    const ParallelContext*) {
+void LocalResponseNormalizationKernel<DeviceType::kGPU, T>::VirtualKernelInit() {
   const PbRf<int64_t>& shape = GetPbRfFromPbMessage<int64_t>(
       GetValFromPbMessage<const PbMessage&>(this->kernel_conf().local_response_normalization_conf(),
                                             "batch"),

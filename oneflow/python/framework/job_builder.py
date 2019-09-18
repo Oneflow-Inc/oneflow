@@ -11,7 +11,7 @@ class JobBuildAndInferCtx(object):
 
     def __exit__(self, *args):
         _Close(self.job_name_)
-        
+
 def GetCurCtxJobName():
     return c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
 
@@ -24,17 +24,11 @@ def CurCtxSetJobConfIfNotSet(job_config_proto):
         c_api_util.CurJobBuildAndInferCtx_SetJobConf(job_config_proto)
         job_conf_inited = True
 
-def CurCtxAddAndInferInputOp(op_conf_proto):
-    return c_api_util.CurJobBuildAndInferCtx_AddAndInferInputOp(op_conf_proto)
-
-def CurCtxAddAndInferNonInputOp(op_conf_proto):
-    return c_api_util.CurJobBuildAndInferCtx_AddAndInferNonInputOp(op_conf_proto)
+def CurCtxAddAndInferOp(op_conf_proto, parallel_conf_proto):
+    return c_api_util.CurJobBuildAndInferCtx_AddAndInferOp(op_conf_proto, parallel_conf_proto)
 
 def CurCtxAddLossLogicalBlobName(lbn):
     return c_api_util.CurJobBuildAndInferCtx_AddLossLogicalBlobName(lbn)
-
-def CurCtxAddPlacementGroup(placement_group_proto):
-    return c_api_util.CurJobBuildAndInferCtx_AddPlacementGroup(placement_group_proto)
 
 def CurCtxHasJobConf():
     return c_api_util.CurJobBuildAndInferCtx_HasJobConf()
@@ -45,14 +39,11 @@ def GetStaticShape(job_name, lbn):
 def GetDataType(job_name, lbn):
     return c_api_util.JobBuildAndInferCtx_GetDataType(job_name, lbn)
 
-def GetHasBatchDim(job_name, lbn):
-    return c_api_util.JobBuildAndInferCtx_GetHasBatchDim(job_name, lbn)
+def GetBatchAxis(job_name, lbn):
+    return c_api_util.JobBuildAndInferCtx_GetBatchAxis(job_name, lbn)
 
-def GetHasSplitDimFromProducerView(job_name, lbn):
-    return c_api_util.JobBuildAndInferCtx_GetHasSplitDimFromProducerView(job_name, lbn)
-
-def GetSplitDimFromProducerView(job_name, lbn):
-    return c_api_util.JobBuildAndInferCtx_GetSplitDimFromProducerView(job_name, lbn)
+def GetSplitAxisFromProducerView(job_name, lbn):
+    return c_api_util.JobBuildAndInferCtx_GetSplitAxisFromProducerView(job_name, lbn)
 
 def GetParallelConfFromProducerView(job_name, lbn):
     return c_api_util.JobBuildAndInferCtx_GetParallelConfFromProducerView(job_name, lbn)

@@ -40,17 +40,18 @@ void RngNormal(const int64_t elem_cnt, const T mean, const T std, uint32_t rando
 }
 
 template<typename T>
-void RngTruncatedNormal(const int64_t elem_cnt, const T std, uint32_t random_seed, T* dptr) {
+void RngTruncatedNormal(const int64_t elem_cnt, const T mean, const T std, uint32_t random_seed,
+                        T* dptr) {
   CHECK_GE(elem_cnt, 0);
   CHECK(dptr);
   CHECK_GT(std, 0.0);
   T truncated_value = 2 * std;
   std::mt19937 generator(random_seed);
-  std::normal_distribution<T> random_distribution(0, std);
+  std::normal_distribution<T> random_distribution(mean, std);
   int64_t index = 0;
   while (true) {
     T val = random_distribution(generator);
-    if (std::abs(val) < truncated_value) {
+    if (std::abs(val - mean) < truncated_value) {
       dptr[index++] = val;
       if (index >= elem_cnt) { break; }
     }
@@ -93,8 +94,8 @@ template<typename T>
 void TruncatedNormalInitializer(const TruncatedNormalInitializerConf& initializer_conf,
                                 uint32_t random_seed, Blob* blob) {
   CHECK(blob->shape().elem_cnt());
-  RngTruncatedNormal<T>(blob->shape().elem_cnt(), static_cast<T>(initializer_conf.std()),
-                        random_seed, blob->mut_dptr<T>());
+  RngTruncatedNormal<T>(blob->shape().elem_cnt(), static_cast<T>(initializer_conf.mean()),
+                        static_cast<T>(initializer_conf.std()), random_seed, blob->mut_dptr<T>());
 }
 
 template<typename T>
@@ -124,22 +125,47 @@ T GenInitialFan(VarianceNorm variance_norm, Blob* blob, const std::string& data_
 
 template<typename T>
 void XavierInitializer(const XavierInitializerConf& initializer_conf, uint32_t random_seed,
-                       Blob* blob, const std::string& data_format) {
+                       Blob* blob) {
   CHECK(blob->shape().elem_cnt());
   VarianceNorm variance_norm = static_cast<VarianceNorm>(initializer_conf.variance_norm());
-  T scale = std::sqrt(static_cast<T>(3) / GenInitialFan<T>(variance_norm, blob, data_format));
+  T scale = std::sqrt(static_cast<T>(3)
+                      / GenInitialFan<T>(variance_norm, blob, initializer_conf.data_format()));
   RngUniform<T>(blob->shape().elem_cnt(), static_cast<T>(-scale), static_cast<T>(scale),
                 random_seed, blob->mut_dptr<T>());
 }
 
 template<typename T>
-void MsraInitializer(const MsraInitializerConf& initializer_conf, uint32_t random_seed, Blob* blob,
-                     const std::string& data_format) {
+void MsraInitializer(const MsraInitializerConf& initializer_conf, uint32_t random_seed,
+                     Blob* blob) {
   CHECK(blob->shape().elem_cnt());
   VarianceNorm variance_norm = static_cast<VarianceNorm>(initializer_conf.variance_norm());
-  T std = std::sqrt(static_cast<T>(2) / GenInitialFan<T>(variance_norm, blob, data_format));
+  T std = std::sqrt(static_cast<T>(2)
+                    / GenInitialFan<T>(variance_norm, blob, initializer_conf.data_format()));
   RngNormal<T>(blob->shape().elem_cnt(), GetZeroVal<T>(), static_cast<T>(std), random_seed,
                blob->mut_dptr<T>());
+}
+
+template<typename T>
+void VarianceScalingInitializer(const VarianceScalingInitializerConf& initializer_conf,
+                                uint32_t random_seed, Blob* blob) {
+  CHECK(blob->shape().elem_cnt());
+  VarianceNorm variance_norm = static_cast<VarianceNorm>(initializer_conf.variance_norm());
+  T scale = static_cast<T>(initializer_conf.scale())
+            / GenInitialFan<T>(variance_norm, blob, initializer_conf.data_format());
+  RandomDistribution distribution =
+      static_cast<RandomDistribution>(initializer_conf.distribution());
+  if (kTruncatedNormal == distribution) {
+    T stddev = std::sqrt(scale) / static_cast<T>(0.87962566103423978f);
+    RngTruncatedNormal<T>(blob->shape().elem_cnt(), GetZeroVal<T>(), stddev, random_seed,
+                          blob->mut_dptr<T>());
+  } else if (kRandomNormal == distribution) {
+    T stddev = std::sqrt(scale);
+    RngNormal<T>(blob->shape().elem_cnt(), GetZeroVal<T>(), stddev, random_seed,
+                 blob->mut_dptr<T>());
+  } else {
+    T limit = std::sqrt(static_cast<T>(3.0) * scale);
+    RngUniform<T>(blob->shape().elem_cnt(), -limit, limit, random_seed, blob->mut_dptr<T>());
+  }
 }
 
 template<typename T>
@@ -309,20 +335,6 @@ KU_IF_METHOD Transpose(DeviceCtx* ctx, const int32_t num_axis, const Shape& x_sh
     IncreaseIndex(x_shape.dim_vec().data(), x_index_digits);
   }
 }
-KU_IF_METHOD InitializeWithDir(DeviceCtx* ctx, int32_t part_id, int32_t part_num,
-                               const std::string& model_dir, Blob* blob,
-                               const std::string& bn_in_op, int32_t dim_num,
-                               int64_t num_in_each_dim) {
-  int64_t blob_size = blob->ByteSizeOfDataContentField();
-  int64_t byte_size_of_each_dim = num_in_each_dim * sizeof(T);
-  std::string file_path = JoinPath(model_dir, bn_in_op);
-  uint64_t file_size = SnapshotFS()->GetFileSize(file_path);
-  CHECK_EQ(file_size, dim_num * byte_size_of_each_dim);
-  BalancedSplitter splitter = BalancedSplitter(dim_num, part_num);
-  int64_t begin_pos = splitter.At(part_id).begin() * byte_size_of_each_dim;
-  PersistentInStream in_stream(SnapshotFS(), file_path, begin_pos);
-  in_stream.Read(blob->mut_dptr<char>(), blob_size);
-}
 KU_IF_METHOD Set(DeviceCtx* ctx, const T value, T* addr) { *addr = value; }
 KU_IF_METHOD Replicate(DeviceCtx* ctx, const int64_t n, T* y, const T* x) {
   for (int64_t i = 0; i < n; ++i) { y[i] = *x; }
@@ -490,11 +502,6 @@ KU_FLOATING_METHOD Addition(DeviceCtx* ctx, const int64_t n, T* out, const T* in
 
 KU_FLOATING_METHOD InitializeWithConf(DeviceCtx* ctx, const InitializerConf& initializer_conf,
                                       uint32_t random_seed, Blob* blob) {
-  InitializeWithConf(ctx, initializer_conf, random_seed, blob, "");
-}
-KU_FLOATING_METHOD InitializeWithConf(DeviceCtx* ctx, const InitializerConf& initializer_conf,
-                                      uint32_t random_seed, Blob* blob,
-                                      const std::string& data_format) {
   if (initializer_conf.has_constant_conf()) {
     ConstantInitializer<T>(static_cast<T>(initializer_conf.constant_conf().value()), blob);
   } else if (initializer_conf.has_constant_int_conf()) {
@@ -506,11 +513,13 @@ KU_FLOATING_METHOD InitializeWithConf(DeviceCtx* ctx, const InitializerConf& ini
   } else if (initializer_conf.has_truncated_normal_conf()) {
     TruncatedNormalInitializer<T>(initializer_conf.truncated_normal_conf(), random_seed, blob);
   } else if (initializer_conf.has_xavier_conf()) {
-    XavierInitializer<T>(initializer_conf.xavier_conf(), random_seed, blob, data_format);
+    XavierInitializer<T>(initializer_conf.xavier_conf(), random_seed, blob);
   } else if (initializer_conf.has_msra_conf()) {
-    MsraInitializer<T>(initializer_conf.msra_conf(), random_seed, blob, data_format);
+    MsraInitializer<T>(initializer_conf.msra_conf(), random_seed, blob);
   } else if (initializer_conf.has_range_conf()) {
     RangeInitializer<T>(initializer_conf.range_conf(), random_seed, blob);
+  } else if (initializer_conf.has_variance_scaling_conf()) {
+    VarianceScalingInitializer<T>(initializer_conf.variance_scaling_conf(), random_seed, blob);
   } else {
     UNIMPLEMENTED();
   }
@@ -539,11 +548,6 @@ KU_INTEGRAL_METHOD InitializeWithConf(DeviceCtx* ctx, const InitializerConf& ini
   } else {
     UNIMPLEMENTED();
   }
-}
-KU_INTEGRAL_METHOD InitializeWithConf(DeviceCtx* ctx, const InitializerConf& initializer_conf,
-                                      uint32_t random_seed, Blob* blob,
-                                      const std::string& data_format) {
-  InitializeWithConf(ctx, initializer_conf, random_seed, blob);
 }
 
 #define INSTANTIATE_KERNEL_UTIL(type_cpp, type_proto)                                \

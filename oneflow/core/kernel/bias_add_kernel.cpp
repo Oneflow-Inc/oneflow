@@ -10,18 +10,18 @@ void BiasAddKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* a_blob = BnInOp2Blob("a");
   const Blob* b_blob = BnInOp2Blob("b");
-  const Blob* bias_mul_blob = BnInOp2Blob("bias_multiplier");
   Blob* out_blob = BnInOp2Blob("out");
 
   const BiasAddOpConf& op_conf = this->op_conf().bias_add_conf();
   if (op_conf.axis() == a_blob->shape().NumAxes() - 1) {
     // out = bias_multiplier * b + a
+    const Blob* bias_mul_blob = BnInOp2Blob("bias_multiplier");
     Memcpy<device_type>(ctx.device_ctx, out_blob->mut_dptr<T>(), a_blob->dptr<T>(),
                         a_blob->ByteSizeOfDataContentField());
-    NewKernelUtil<device_type>::OFGemm(ctx.device_ctx, CblasNoTrans, CblasNoTrans,
-                                       out_blob->shape().At(0), out_blob->shape().At(1), 1,
-                                       GetOneVal<T>(), bias_mul_blob->dptr<T>(), b_blob->dptr<T>(),
-                                       GetOneVal<T>(), out_blob->mut_dptr<T>());
+    NewKernelUtil<device_type>::OFGemm(
+        ctx.device_ctx, CblasNoTrans, CblasNoTrans, bias_mul_blob->shape().elem_cnt(),
+        b_blob->shape().elem_cnt(), 1, GetOneVal<T>(), bias_mul_blob->dptr<T>(), b_blob->dptr<T>(),
+        GetOneVal<T>(), out_blob->mut_dptr<T>());
   } else {
     const int32_t bias_add_axis = this->op_conf().bias_add_conf().axis();
     BiasAddUtil<device_type, T>::BiasAddNCX(ctx.device_ctx, a_blob->shape(), bias_add_axis,
@@ -33,10 +33,13 @@ void BiasAddKernel<device_type, T>::ForwardDataContent(
 template<DeviceType device_type, typename T>
 void BiasAddKernel<device_type, T>::InitConstBufBlobs(
     DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  InitializerConf bias_multiplier_initializer_conf;
-  bias_multiplier_initializer_conf.mutable_constant_conf()->set_value(1.0f);
-  NewKernelUtil<device_type>::InitializeWithConstConf(
-      ctx, bias_multiplier_initializer_conf.constant_conf(), BnInOp2Blob("bias_multiplier"));
+  Blob* bias_mul_blob = BnInOp2Blob("bias_multiplier");
+  if (bias_mul_blob) {
+    InitializerConf bias_multiplier_initializer_conf;
+    bias_multiplier_initializer_conf.mutable_constant_conf()->set_value(1.0f);
+    NewKernelUtil<device_type>::InitializeWithConstConf(
+        ctx, bias_multiplier_initializer_conf.constant_conf(), bias_mul_blob);
+  }
 }
 
 template<DeviceType device_type, typename T>

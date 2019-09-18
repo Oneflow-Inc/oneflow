@@ -4,12 +4,12 @@
 
 namespace oneflow {
 
-void PrintKernel::VirtualKernelInit(const ParallelContext* parallel_ctx) {
+void PrintKernel::VirtualKernelInit() {
   const auto& conf = op_conf().print_conf();
   const std::string& root_path = conf.print_dir();
   OfCallOnce(root_path, SnapshotFS(), &fs::FileSystem::RecursivelyCreateDir);
   int32_t part_name_suffix_length = conf.part_name_suffix_length();
-  std::string num = std::to_string(parallel_ctx->parallel_id());
+  std::string num = "0";  // TODO() useless kernel
   int32_t zero_count = std::max(part_name_suffix_length - static_cast<int32_t>(num.length()), 0);
   std::string file_path =
       JoinPath(root_path, conf.part_name_prefix() + std::string(zero_count, '0') + num);

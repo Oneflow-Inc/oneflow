@@ -59,18 +59,30 @@ enum JobBuildAndInferError {
   kOpNameExist = 450;
   kOpConfDeviceTypeNoSet = 460;
   kPlacementError = 470;
+  kBlobSplitAxisInferError = 480;
   kUnknownJobBuildAndInferError = 500;
 }
 
-message ProtoParseFailedError {
-}
+message ProtoParseFailedError { }
 
-message Error {
+message CheckFailed { }
+
+message TodoError { }
+
+message UnimplementedError { }
+
+message UnkownError { }
+
+message ErrorProto {
   optional string msg = 1 [default = ""];
   oneof error_type {
     ConfigAssertFailedError config_assert_failed_error = 2;
     ConfigResourceUnavailableError config_resource_unavailable_error = 3;
     JobBuildAndInferError job_build_and_infer_error = 4;
     ProtoParseFailedError proto_parse_failed_error = 5;
+    CheckFailed check_failed = 6;
+    TodoError todo_error = 7;
+    UnimplementedError unimplemented_error = 8;
+    UnkownError unknown_error = 100;
   }
 }

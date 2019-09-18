@@ -409,7 +409,6 @@ void TaskGraph::EnableMemSharingInReduceStruct() {
   ForEachNode([&](TaskNode* node) {
     ReduceIdentityCompTaskNode* identity_node = dynamic_cast<ReduceIdentityCompTaskNode*>(node);
     if (!identity_node) { return; }
-    if (identity_node->parallel_ctx()->policy() != ParallelPolicy::kDataParallel) { return; }
     if (identity_node->device_type() != DeviceType::kGPU) { return; }
     if (identity_node->parallel_ctx()->parallel_num() < 2) { return; }
     std::list<TaskNode*> reduce_task_nodes = CollectReduceTaskNode(identity_node);

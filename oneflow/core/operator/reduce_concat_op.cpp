@@ -29,7 +29,7 @@ LogicalNode* ReduceConcatOp::NewProperLogicalNode() const {
 
 Maybe<void> ReduceConcatOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx, int64_t record_piece_size,
+    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature,
     std::function<void(OpContext*)> EnrollOpCtx) const {
   const BlobDesc* first_in_blob = GetBlobDesc4BnInOp(input_bns().Get(0));
   const DataType data_type = first_in_blob->data_type();
@@ -75,20 +75,22 @@ void ReduceConcatOp::VirtualGenKernelConf(
   CHECK_EQ(reduce_concat_op_ctx->out_blob_elem_cnt, out_blob_elem_cnt);
 }
 
-Maybe<void> ReduceConcatOp::InferHasBatchDim(
-    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
-  for (const auto& ibn : input_bns()) { CHECK_EQ_OR_RETURN(*HasBatchDim4BnInOp(ibn), false); }
-  *HasBatchDim4BnInOp("out") = false;
+Maybe<void> ReduceConcatOp::InferBatchAxis(
+    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
+  for (const auto& ibn : input_bns()) {
+    CHECK_EQ_OR_RETURN(BatchAxis4BnInOp(ibn)->has_value(), false);
+  }
+  BatchAxis4BnInOp("out")->clear_value();
   return Maybe<void>::Ok();
 }
 
 Maybe<void> ReduceConcatOp::InferSbpSignature(
     SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
     const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
-    std::function<const SbpInferHint&(const std::string&)> SbpInferHint4Ibn,
+    std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
     const ParallelDesc& parallel_desc) const {
   for (const auto& ibn : input_bns()) {
-    CHECK_OR_RETURN(SbpInferHint4Ibn(ibn).sbp_parallel().has_partial_sum_parallel());
+    CHECK_OR_RETURN(JUST(SbpInferHint4Ibn(ibn))->sbp_parallel().has_partial_sum_parallel());
   }
   SbpSignatureBuilder().PartialSum(input_bns()).PartialSum(output_bns()).Build(sbp_signature);
   return Maybe<void>::Ok();

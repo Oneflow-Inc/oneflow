@@ -15,15 +15,18 @@ class ReshapeOp final : public Operator {
   const PbMessage& GetCustomizedConf() const override;
 
   Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                             const ParallelContext* parallel_ctx) const override;
+                             const ParallelContext* parallel_ctx,
+                             const SbpSignature* sbp_signature) const override;
 
  private:
-  Maybe<void> InferHasBatchDim(
-      std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const override {
-    return NaiveInferHasBatchDim(HasBatchDim4BnInOp);
+  Maybe<void> InferBatchAxis(
+      std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override {
+    return NaiveInferBatchAxis(BatchAxis4BnInOp);
   }
 
-  void GetSbpSignatures(SbpSignatureList* sbp_sig_list) const override;
+  Maybe<void> GetSbpSignatures(
+      const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
+      const ParallelDesc& parallel_desc, SbpSignatureList* sbp_sig_list) const override;
 };
 
 }  // namespace oneflow

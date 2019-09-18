@@ -29,7 +29,7 @@ Maybe<void> TupleIdentityOp::InferBlobDescs(
 Maybe<void> TupleIdentityOp::InferSbpSignature(
     SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
     const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
-    std::function<const SbpInferHint&(const std::string&)> SbpInferHint4Ibn,
+    std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
     const ParallelDesc& parallel_desc) const {
   auto* bn2sbp = sbp_signature->mutable_bn_in_op2sbp_parallel();
   const auto& bn2conf_sbp = sbp_sig_conf.bn_in_op2sbp_parallel();
@@ -37,7 +37,7 @@ Maybe<void> TupleIdentityOp::InferSbpSignature(
     const SbpParallel* sbp_parallel = nullptr;
     const auto& conf_sbp_it = bn2conf_sbp.find(output_bns().Get(i));
     if (conf_sbp_it == bn2conf_sbp.end()) {
-      sbp_parallel = &SbpInferHint4Ibn(input_bns().Get(i)).sbp_parallel();
+      sbp_parallel = &(JUST(SbpInferHint4Ibn(input_bns().Get(i)))->sbp_parallel());
     } else {
       sbp_parallel = &conf_sbp_it->second;
     }
@@ -47,10 +47,10 @@ Maybe<void> TupleIdentityOp::InferSbpSignature(
   return Maybe<void>::Ok();
 }
 
-Maybe<void> TupleIdentityOp::InferHasBatchDim(
-    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
+Maybe<void> TupleIdentityOp::InferBatchAxis(
+    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
   FOR_RANGE(int32_t, i, 0, input_bns().size()) {
-    *HasBatchDim4BnInOp(output_bns().Get(i)) = *HasBatchDim4BnInOp(input_bns().Get(i));
+    *BatchAxis4BnInOp(output_bns().Get(i)) = *BatchAxis4BnInOp(input_bns().Get(i));
   }
   return Maybe<void>::Ok();
 }

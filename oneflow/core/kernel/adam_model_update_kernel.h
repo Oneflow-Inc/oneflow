@@ -1,5 +1,5 @@
 #ifndef ONEFLOW_CORE_KERNEL_ADAM_MODEL_UPDATE_KERNEL_H_
-#define ONEFLOW_CORE_KERNEL_ADAM_MODEL_UDPATE_KERNEL_H_
+#define ONEFLOW_CORE_KERNEL_ADAM_MODEL_UPDATE_KERNEL_H_
 
 #include "oneflow/core/kernel/normal_model_update_kernel.h"
 
@@ -15,7 +15,7 @@ class AdamMdUpdateKernel final : public NormalMdUpdateKernel<device_type, T> {
  private:
   const PbMessage& GetCustomizedOpConf() const override;
   void UpdateModel(DeviceCtx* ctx, const T* batch_instance_num_ptr, T l1, T l2,
-                   const int64_t* global_step, const float* learning_rate,
+                   const int64_t* train_step, const float* learning_rate,
                    std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 };
 
@@ -23,9 +23,9 @@ template<DeviceType device_type, typename T>
 class AdamMdUpdateKernelUtil final {
  public:
   static void UpdateModel(DeviceCtx*, int64_t n, const float* learning_rate, T l1, T l2, T beta1,
-                          T beta2, T epsilon, bool do_bias_correction, const int64_t* global_step,
+                          T beta2, T epsilon, bool do_bias_correction, const int64_t* train_step,
                           const T* beta1_t, const T* beta2_t, T* model_diff, T* model, T* m, T* v);
-  static void DoBiasCorrection(DeviceCtx*, const int64_t* global_step, T beta1, T beta2, T* beta1_t,
+  static void DoBiasCorrection(DeviceCtx*, const int64_t* train_step, T beta1, T beta2, T* beta1_t,
                                T* beta2_t);
 };
 

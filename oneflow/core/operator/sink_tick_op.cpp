@@ -16,16 +16,17 @@ Maybe<void> SinkTickOp::InferBlobDescs(
   return Maybe<void>::Ok();
 }
 
-Maybe<void> SinkTickOp::InferHasBatchDim(
-    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
-  *HasBatchDim4BnInOp("out") = false;
+Maybe<void> SinkTickOp::InferBatchAxis(
+    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
+  BatchAxis4BnInOp("out")->clear_value();
   return Maybe<void>::Ok();
 }
 
 const PbMessage& SinkTickOp::GetCustomizedConf() const { return op_conf().sink_tick_conf(); }
 
-void SinkTickOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
+Maybe<void> SinkTickOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
   SbpSignatureBuilder().Broadcast(input_bns()).Build(sbp_sig_list->mutable_sbp_signature()->Add());
+  return Maybe<void>::Ok();
 }
 
 REGISTER_CPU_OP(OperatorConf::kSinkTickConf, SinkTickOp);

@@ -15,8 +15,7 @@ def test_max_pool2d():
     flow.init(config)
 
     def MaxPool2DTestJob(input=flow.input_blob_def((10, 1000, 1000, 3))):
-        job_conf = flow.get_cur_job_conf_builder()
-        job_conf.batch_size(10).data_part_num(1).default_data_type(flow.float)
+        flow.config.default_data_type(flow.float)
         return flow.nn.max_pool2d(
             input, ksize=[10, 10], strides=[10], padding="VALID", data_format="NHWC"
         )
@@ -47,8 +46,7 @@ def test_avg_pool2d():
     flow.init(config)
 
     def AveragePool2DTestJob(input=flow.input_blob_def((10, 1000, 1000, 3))):
-        job_conf = flow.get_cur_job_conf_builder()
-        job_conf.batch_size(10).data_part_num(1).default_data_type(flow.float)
+        flow.config.default_data_type(flow.float)
         return flow.nn.avg_pool2d(
             input, ksize=[10], strides=[10, 10], padding="VALID", data_format="NHWC"
         )
@@ -79,8 +77,7 @@ def test_max_pool3d():
     flow.init(config)
 
     def MaxPool3DTestJob(input=flow.input_blob_def((10, 100, 100, 100, 3))):
-        job_conf = flow.get_cur_job_conf_builder()
-        job_conf.batch_size(10).data_part_num(1).default_data_type(flow.float)
+        flow.config.default_data_type(flow.float)
         return flow.nn.max_pool3d(
             input,
             ksize=[10, 10, 10],
@@ -115,8 +112,7 @@ def test_avg_pool3d():
     flow.init(config)
 
     def AveragePool3DTestJob(input=flow.input_blob_def((10, 100, 100, 100, 3))):
-        job_conf = flow.get_cur_job_conf_builder()
-        job_conf.batch_size(10).data_part_num(1).default_data_type(flow.float)
+        flow.config.default_data_type(flow.float)
         return flow.nn.avg_pool3d(
             input,
             ksize=[10],

@@ -5,24 +5,17 @@ import numpy as np
 tf.enable_eager_execution()
 assert tf.executing_eagerly()
 
+flow.config.gpu_device_num(1)
+
+@flow.function
+def MatmulTestJob(a=flow.input_blob_def(a_shape), b=flow.input_blob_def(b_shape)):
+    return flow.matmul(a, b, transpose_a, transpose_b)
 
 def test_matmul(a_shape, b_shape, transpose_a=False, transpose_b=False):
     a = np.random.random_sample(a_shape).astype(np.float32)
     b = np.random.random_sample(b_shape).astype(np.float32)
 
-    # OneFlow
-    config = flow.ConfigProtoBuilder()
-    config.gpu_device_num(1)
-    flow.init(config)
-
-    def MatmulTestJob(a=flow.input_blob_def(a_shape), b=flow.input_blob_def(b_shape)):
-        job_conf = flow.get_cur_job_conf_builder()
-        job_conf.batch_size(1).data_part_num(1).default_data_type(flow.float)
-        return flow.matmul(a, b, transpose_a, transpose_b)
-
-    flow.add_job(MatmulTestJob)
-    with flow.Session() as sess:
-        of_out = sess.run(MatmulTestJob, a, b).get()
+    of_out = MatmulTestJob(a, b).get()
 
     # TensorFlow
     tf_out = tf.matmul(tf.Variable(a), tf.Variable(b), transpose_a, transpose_b).numpy()

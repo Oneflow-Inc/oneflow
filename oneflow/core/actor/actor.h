@@ -9,7 +9,6 @@
 #include "oneflow/core/job/task.pb.h"
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/kernel/kernel_context.h"
-#include "oneflow/core/persistence/snapshot_manager.h"
 #include "oneflow/core/register/register_manager.h"
 #include "oneflow/core/thread/thread_context.h"
 #include "oneflow/core/actor/register_slot.h"
@@ -20,7 +19,7 @@ enum class ColIdOrder { kUnCertain = 0, kAscending, kDescending };
 
 bool IsFirstRegstInPieceWithOrder(const Regst*, ColIdOrder);
 bool IsLastRegstInPieceWithOrder(const Regst*, ColIdOrder);
-bool NeedModelSave(const JobDesc& job_desc, int64_t model_version_id);
+inline bool NeedModelSave(const JobDesc& job_desc, int64_t model_version_id) { return false; }
 
 class Actor {
  public:

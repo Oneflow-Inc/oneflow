@@ -23,7 +23,7 @@ void ConvFilterGradOp::InitFromOpConf() {
 
 Maybe<void> ConvFilterGradOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx, int64_t record_piece_size,
+    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature,
     std::function<void(OpContext*)> EnrollOpCtx) const {
   const ConvFilterGradOpConf& conf = this->op_conf().conv_filter_grad_conf();
   const ConvConf& conv_conf = conf.conv_conf();
@@ -90,22 +90,22 @@ void ConvFilterGradOp::VirtualGenKernelConf(
   }
 }
 
-Maybe<void> ConvFilterGradOp::InferHasBatchDim(
-    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
-  CHECK_OR_RETURN(*HasBatchDim4BnInOp("dy"));
-  CHECK_OR_RETURN(*HasBatchDim4BnInOp("x"));
-  *HasBatchDim4BnInOp("filter_diff") = false;
+Maybe<void> ConvFilterGradOp::InferBatchAxis(
+    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
+  CHECK_OR_RETURN(*BatchAxis4BnInOp("dy") == *BatchAxis4BnInOp("x"));
+  BatchAxis4BnInOp("filter_diff")->clear_value();
   return Maybe<void>::Ok();
 }
 
-void ConvFilterGradOp::GetSbpSignatures(
-    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
+Maybe<void> ConvFilterGradOp::GetSbpSignatures(
+    const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
     SbpSignatureList* sbp_sig_list) const {
   SbpSignatureBuilder()
       .Split("dy", 0)
       .Split("x", 0)
       .PartialSum("filter_diff")
       .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+  return Maybe<void>::Ok();
 }
 
 REGISTER_OP(OperatorConf::kConvFilterGradConf, ConvFilterGradOp);

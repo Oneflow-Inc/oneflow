@@ -24,7 +24,7 @@ void ConvDataGradOp::InitFromOpConf() {
 
 Maybe<void> ConvDataGradOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx, int64_t record_piece_size,
+    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature,
     std::function<void(OpContext*)> EnrollOpCtx) const {
   const ConvDataGradOpConf& conf = this->op_conf().conv_data_grad_conf();
   const ConvConf& conv_conf = conf.conv_conf();
@@ -76,17 +76,16 @@ void ConvDataGradOp::VirtualGenKernelConf(
   }
 }
 
-Maybe<void> ConvDataGradOp::InferHasBatchDim(
-    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
-  CHECK_OR_RETURN(*HasBatchDim4BnInOp("dy"));
-  CHECK_OR_RETURN(*HasBatchDim4BnInOp("x_like"));
-  CHECK_OR_RETURN(*HasBatchDim4BnInOp("filter") == false);
-  *HasBatchDim4BnInOp("dx") = true;
+Maybe<void> ConvDataGradOp::InferBatchAxis(
+    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
+  CHECK_OR_RETURN(*BatchAxis4BnInOp("dy") == *BatchAxis4BnInOp("x_like"));
+  CHECK_OR_RETURN(BatchAxis4BnInOp("filter")->has_value() == false);
+  *BatchAxis4BnInOp("dx") = *BatchAxis4BnInOp("dy");
   return Maybe<void>::Ok();
 }
 
-void ConvDataGradOp::GetSbpSignatures(
-    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
+Maybe<void> ConvDataGradOp::GetSbpSignatures(
+    const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
     SbpSignatureList* sbp_sig_list) const {
   SbpSignatureBuilder()
       .Split("dy", 0)
@@ -94,6 +93,7 @@ void ConvDataGradOp::GetSbpSignatures(
       .Split("x_like", 0)
       .Split("dx", 0)
       .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+  return Maybe<void>::Ok();
 }
 
 REGISTER_OP(OperatorConf::kConvDataGradConf, ConvDataGradOp);

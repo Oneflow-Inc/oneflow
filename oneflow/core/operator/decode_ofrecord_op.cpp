@@ -7,8 +7,8 @@ namespace oneflow {
 
 namespace {
 
-int64_t GetDim0(int64_t record_piece_size, const ParallelContext& parallel_ctx) {
-  BalancedSplitter bs(record_piece_size, parallel_ctx.parallel_num());
+int64_t GetDim0(int64_t batch_size, const ParallelContext& parallel_ctx) {
+  BalancedSplitter bs(batch_size, parallel_ctx.parallel_num());
   return bs.At(parallel_ctx.parallel_id()).size();
 }
 
@@ -22,8 +22,7 @@ void DecodeOFRecordOp::InitFromOpConf() {
     EnrollOutputBn("out_" + std::to_string(i), false);
   }
   if (conf.part_name_suffix_length() != -1) {
-    CHECK_GE(conf.part_name_suffix_length(),
-             std::to_string(GlobalJobDesc().job_conf().data_part_num() - 1).length());
+    CHECK_GE(conf.part_name_suffix_length(), std::to_string(conf.data_part_num() - 1).length());
   }
 }
 
@@ -39,8 +38,9 @@ const PbMessage& DecodeOFRecordOp::GetCustomizedConf() const {
 
 Maybe<void> DecodeOFRecordOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx, int64_t record_piece_size) const {
-  int64_t dim0 = GetDim0(record_piece_size, *parallel_ctx);
+    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
+  int64_t batch_size = op_conf().decode_ofrecord_conf().batch_size();
+  int64_t dim0 = GetDim0(batch_size, *parallel_ctx);
   if (op_conf().decode_ofrecord_conf().has_in()) {
     BlobDesc* in_blob_desc = GetBlobDesc4BnInOp(SoleIbn());
     CHECK_EQ(dim0, in_blob_desc->shape().At(0));
@@ -54,7 +54,7 @@ Maybe<void> DecodeOFRecordOp::InferBlobDescs(
     FOR_RANGE(size_t, j, 1, dim_vec.size()) { dim_vec[j] = blob_conf.shape().dim(j - 1); }
     out_blob_desc->mut_shape() = Shape(dim_vec);
     out_blob_desc->set_data_type(blob_conf.data_type());
-    out_blob_desc->set_has_data_id_field(GlobalJobDesc().SizeOfOneDataId() > 0);
+    out_blob_desc->set_has_data_id_field(job_desc().SizeOfOneDataId() > 0);
     out_blob_desc->set_has_col_num_field(blob_conf.max_sequence_size() > 1);
     out_blob_desc->set_max_col_num(blob_conf.max_sequence_size());
     const auto& encode = blob_conf.encode_case();
@@ -74,20 +74,22 @@ LogicalBlobId DecodeOFRecordOp::obn2lbi(const std::string& output_bn) const {
   return ret;
 }
 
-Maybe<void> DecodeOFRecordOp::InferHasBatchDim(
-    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
+Maybe<void> DecodeOFRecordOp::InferBatchAxis(
+    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
   if (op_conf().decode_ofrecord_conf().has_in()) {
-    CHECK_OR_RETURN(*HasBatchDim4BnInOp(SoleIbn()));
+    CHECK_OR_RETURN(BatchAxis4BnInOp(SoleIbn())->has_value());
+    CHECK_EQ_OR_RETURN(BatchAxis4BnInOp(SoleIbn())->value(), 0);
   }
-  for (const auto& obn : output_bns()) { *HasBatchDim4BnInOp(obn) = true; }
+  for (const auto& obn : output_bns()) { BatchAxis4BnInOp(obn)->set_value(0); }
   return Maybe<void>::Ok();
 }
 
-void DecodeOFRecordOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
+Maybe<void> DecodeOFRecordOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
   SbpSignatureBuilder()
       .Split(input_bns(), 0)
       .Split(output_bns(), 0)
       .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+  return Maybe<void>::Ok();
 }
 
 REGISTER_CPU_OP(OperatorConf::kDecodeOfrecordConf, DecodeOFRecordOp);

@@ -18,7 +18,7 @@ const PbMessage& LARSMdUpdateKernel<device_type, T>::GetCustomizedOpConf() const
 
 template<DeviceType device_type, typename T>
 void LARSMdUpdateKernel<device_type, T>::UpdateModel(
-    DeviceCtx* ctx, const T* batch_instance_num_ptr, T l1, T l2, const int64_t* global_step,
+    DeviceCtx* ctx, const T* batch_instance_num_ptr, T l1, T l2, const int64_t* train_step,
     const float* learning_rate, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* model_diff_blob = BnInOp2Blob("model_diff");
   Blob* model_blob = BnInOp2Blob("model");
@@ -30,7 +30,7 @@ void LARSMdUpdateKernel<device_type, T>::UpdateModel(
   LARSMdUpdateKernelUtil<device_type, T>::UpdateModel(
       ctx, model_blob->shape().elem_cnt(), batch_instance_num_ptr, learning_rate, l1, l2,
       static_cast<T>(lars_conf.momentum_beta()), static_cast<T>(lars_conf.epsilon()),
-      static_cast<T>(lars_conf.lars_coefficient()), global_step, model_diff_blob->dptr<T>(),
+      static_cast<T>(lars_conf.lars_coefficient()), train_step, model_diff_blob->dptr<T>(),
       model_blob->mut_dptr<T>(), momentum_blob->mut_dptr<T>(), data_tmp_blob->mut_dptr<T>());
 }
 
@@ -39,7 +39,7 @@ class LARSMdUpdateKernelUtil<DeviceType::kCPU, T> final {
  public:
   static void UpdateModel(DeviceCtx* ctx, int64_t n, const T* batch_instance_num_ptr,
                           const float* learning_rate, T l1, T l2, T momentum_beta, T epsilon,
-                          T lars_coefficient, const int64_t* global_step, const T* model_diff,
+                          T lars_coefficient, const int64_t* train_step, const T* model_diff,
                           T* model, T* momentum, T* data_tmp) {
     T model_norm = 0;
     T model_diff_norm = 0;
@@ -50,7 +50,7 @@ class LARSMdUpdateKernelUtil<DeviceType::kCPU, T> final {
     model_norm = std::sqrt(model_norm / n);
     model_diff_norm = std::sqrt(model_diff_norm / n);
     T local_learning_rate = 0;
-    if (*global_step == 0) {
+    if (*train_step == 0) {
       local_learning_rate =
           *learning_rate * lars_coefficient * model_norm / (epsilon + model_diff_norm);
     } else {

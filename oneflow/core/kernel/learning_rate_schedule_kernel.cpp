@@ -163,13 +163,13 @@ double GetDecayedLearningRate(const LearningRateDecayConf& conf, double lr, int6
 void LearningRateScheduleKernel::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const LearningRateScheduleOpConf& conf = this->op_conf().learning_rate_schedule_conf();
-  const int64_t global_step = *BnInOp2Blob("global_step")->dptr<int64_t>();
-  const int64_t next_model_vid = global_step + 1;
+  const int64_t train_step = *BnInOp2Blob("train_step")->dptr<int64_t>();
+  const int64_t next_model_vid = train_step + 1;
   float learning_rate = conf.learning_rate();
   if (TriggerWarmup(conf, learning_rate, next_model_vid)) {
     learning_rate = GetWarmupLearningRate(conf.warmup_conf(), learning_rate, next_model_vid);
   } else if (conf.has_learning_rate_decay()) {
-    learning_rate = GetDecayedLearningRate(conf.learning_rate_decay(), learning_rate, global_step);
+    learning_rate = GetDecayedLearningRate(conf.learning_rate_decay(), learning_rate, train_step);
   }
   *BnInOp2Blob("out")->mut_dptr<float>() = learning_rate;
 }

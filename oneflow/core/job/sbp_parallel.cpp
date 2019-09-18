@@ -61,19 +61,20 @@ double ComputCopyCostBetweenTwoSbpParallel(const SbpInferHint& producer_sbp_infe
 
 double ComputeIbnCopyCost4SbpSig(
     const PbRpf<std::string>& ibns,
-    const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
+    const std::function<Maybe<const SbpInferHint*>(const std::string&)>& SbpInferHint4Ibn,
     const SbpSignature& sbp_signature) {
   double cost = 0;
   for (const auto& ibn : ibns) {
     const auto& consumer_sbp_parallel = sbp_signature.bn_in_op2sbp_parallel().find(ibn)->second;
-    cost += ComputCopyCostBetweenTwoSbpParallel(SbpInferHint4Ibn(ibn), consumer_sbp_parallel);
+    cost += ComputCopyCostBetweenTwoSbpParallel(*CHECK_JUST(SbpInferHint4Ibn(ibn)),
+                                                consumer_sbp_parallel);
   }
   return cost;
 }
 
 std::function<double(const SbpSignature*)> MakeGetterIbnCopyCost4SbpSig(
     const PbRpf<std::string>& ibns,
-    const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
+    const std::function<Maybe<const SbpInferHint*>(const std::string&)>& SbpInferHint4Ibn,
     const SbpSignatureList& sbp_sig_list) {
   auto sbp_sig2ibn_copy_cast = std::make_shared<HashMap<const SbpSignature*, double>>();
   for (const auto& sbp_signature : sbp_sig_list.sbp_signature()) {
@@ -99,7 +100,7 @@ std::function<int32_t(const SbpSignature* sbp_sig)> MakeGetterOrderValue4SbpSig(
 
 void SortSbpSignatureListByCopyCost(
     const SbpSignatureList& sbp_sig_list, const PbRpf<std::string>& ibns,
-    const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
+    const std::function<Maybe<const SbpInferHint*>(const std::string&)>& SbpInferHint4Ibn,
     const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
     std::vector<const SbpSignature*>* sorted_sbp_signatures) {
   auto OrderValue4SbpSig = MakeGetterOrderValue4SbpSig(sbp_sig_list, CalcOrderValue4SbpSig);

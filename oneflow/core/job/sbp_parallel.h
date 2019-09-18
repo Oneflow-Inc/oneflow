@@ -20,7 +20,7 @@ void FilterSbpSignatureList(const SbpSignatureList& sbp_sig_list, const SbpSigna
 
 void SortSbpSignatureListByCopyCost(
     const SbpSignatureList& sbp_sig_list, const PbRpf<std::string>& ibns,
-    const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
+    const std::function<Maybe<const SbpInferHint*>(const std::string&)>& SbpInferHint4Ibn,
     const std::function<int32_t(const SbpSignature&)>& OrderValue4SbpSig,
     std::vector<const SbpSignature*>* sorted_sbp_signatures);
 

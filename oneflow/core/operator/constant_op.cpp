@@ -13,16 +13,11 @@ const PbMessage& ConstantOp::GetCustomizedConf() const { return op_conf().consta
 
 Maybe<void> ConstantOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx, int64_t record_piece_size) const {
-  CHECK_EQ_OR_RETURN(parallel_ctx->policy(), ParallelPolicy::kDataParallel);
+    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
   const ConstantOpConf& conf = op_conf().constant_conf();
   const DataType& data_type =
-      conf.has_data_type() ? conf.data_type() : GlobalJobDesc().DefaultDataType();
+      conf.has_data_type() ? conf.data_type() : job_desc().DefaultDataType();
   std::vector<int64_t> dim_vec;
-  if (conf.use_device_piece_size_as_dim0()) {
-    CHECK_EQ_OR_RETURN(record_piece_size % parallel_ctx->parallel_num(), 0);
-    dim_vec.push_back(record_piece_size / parallel_ctx->parallel_num());
-  }
   if (conf.has_shape()) {
     dim_vec.insert(dim_vec.end(), conf.shape().dim().cbegin(), conf.shape().dim().cend());
   }
@@ -55,17 +50,18 @@ void ConstantOp::VirtualGenKernelConf(
   kernel_conf->set_data_type(data_type);
 }
 
-Maybe<void> ConstantOp::InferHasBatchDim(
-    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
-  *HasBatchDim4BnInOp("out") = false;
+Maybe<void> ConstantOp::InferBatchAxis(
+    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
+  BatchAxis4BnInOp("out")->clear_value();
   return Maybe<void>::Ok();
 }
 
-void ConstantOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
+Maybe<void> ConstantOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
   SbpSignatureBuilder()
       .Broadcast(input_bns())
       .Broadcast(output_bns())
       .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+  return Maybe<void>::Ok();
 }
 
 REGISTER_OP(OperatorConf::kConstantConf, ConstantOp);

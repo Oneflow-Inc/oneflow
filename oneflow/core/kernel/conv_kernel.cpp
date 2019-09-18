@@ -47,8 +47,7 @@ const int32_t ConvKernelIf<device_type, T>::OpKernelDim() const {
 }
 
 template<DeviceType device_type, typename T>
-void ConvKernelImplByIm2Col<device_type, T>::VirtualKernelInit(
-    const ParallelContext* parallel_ctx) {
+void ConvKernelImplByIm2Col<device_type, T>::VirtualKernelInit() {
   const std::string& data_format =
       this->template GetValFromCustomizedOpConf<std::string>("data_format");
   if (data_format == "channels_first") {

@@ -21,18 +21,12 @@ void LayerNormOp::InitFromOpConf() {
   EnrollInputBn("in");
   EnrollOutputBn("out");
   if (conf.center()) {
-    if (conf.has_beta()) {
-      EnrollInputBn("beta");
-    } else {
-      EnrollTmpBn("beta");
-    }
+    CHECK(conf.has_beta());
+    EnrollInputBn("beta");
   }
   if (conf.scale()) {
-    if (conf.has_gamma()) {
-      EnrollInputBn("gamma");
-    } else {
-      EnrollTmpBn("gamma");
-    }
+    CHECK(conf.has_gamma());
+    EnrollInputBn("gamma");
     EnrollOutputBn("normalized", false);
   }
   EnrollOutputBn("mean", false);
@@ -43,8 +37,7 @@ void LayerNormOp::InitFromOpConf() {
 
 Maybe<void> LayerNormOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx) const {
-  CHECK_OR_RETURN(parallel_ctx->policy() != kModelParallel);
+    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
   const BlobDesc* in = GetBlobDesc4BnInOp("in");
   *GetBlobDesc4BnInOp("out") = *in;
   const LayerNormOpConf& conf = op_conf().layer_norm_conf();
@@ -56,26 +49,18 @@ Maybe<void> LayerNormOp::InferBlobDescs(
   if (param_shape_dim_vec.empty()) { param_shape_dim_vec.push_back(1); }
   const Shape param_shape(param_shape_dim_vec);
   if (conf.center()) {
-    if (conf.has_beta()) {
-      const BlobDesc* beta = GetBlobDesc4BnInOp("beta");
-      CHECK_EQ_OR_RETURN(beta->shape(), param_shape);
-      CHECK_EQ_OR_RETURN(beta->data_type(), in->data_type());
-    } else {
-      BlobDesc* beta = GetBlobDesc4BnInOp("beta");
-      beta->mut_shape() = param_shape;
-      beta->set_data_type(in->data_type());
-    }
+    CHECK_OR_RETURN(parallel_ctx->parallel_num() == 1
+                    || sbp_signature->bn_in_op2sbp_parallel().at("beta").has_broadcast_parallel());
+    const BlobDesc* beta = GetBlobDesc4BnInOp("beta");
+    CHECK_EQ_OR_RETURN(beta->shape(), param_shape);
+    CHECK_EQ_OR_RETURN(beta->data_type(), in->data_type());
   }
   if (conf.scale()) {
-    if (conf.has_gamma()) {
-      const BlobDesc* gamma = GetBlobDesc4BnInOp("gamma");
-      CHECK_EQ_OR_RETURN(gamma->shape(), param_shape);
-      CHECK_EQ_OR_RETURN(gamma->data_type(), in->data_type());
-    } else {
-      BlobDesc* gamma = GetBlobDesc4BnInOp("gamma");
-      gamma->mut_shape() = param_shape;
-      gamma->set_data_type(in->data_type());
-    }
+    CHECK_OR_RETURN(parallel_ctx->parallel_num() == 1
+                    || sbp_signature->bn_in_op2sbp_parallel().at("gamma").has_broadcast_parallel());
+    const BlobDesc* gamma = GetBlobDesc4BnInOp("gamma");
+    CHECK_EQ_OR_RETURN(gamma->shape(), param_shape);
+    CHECK_EQ_OR_RETURN(gamma->data_type(), in->data_type());
     *GetBlobDesc4BnInOp("normalized") = *in;
   }
   const int64_t begin_norm_axis = ShiftNegativeAxisIfNeed(in->shape(), conf.begin_norm_axis());
@@ -93,18 +78,19 @@ Maybe<void> LayerNormOp::InferBlobDescs(
   return Maybe<void>::Ok();
 }
 
-Maybe<void> LayerNormOp::InferHasBatchDim(
-    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
-  for (const auto& obn : output_bns()) { *HasBatchDim4BnInOp(obn) = true; }
+Maybe<void> LayerNormOp::InferBatchAxis(
+    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
+  for (const auto& obn : output_bns()) { *BatchAxis4BnInOp(obn) = *BatchAxis4BnInOp("in"); }
   return Maybe<void>::Ok();
 }
 
-void LayerNormOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
+Maybe<void> LayerNormOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
   SbpSignatureBuilder()
       .Split(input_bns(), 0)
       .Split(output_bns(), 0)
       .Broadcast({"gamma", "beta"})
       .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+  return Maybe<void>::Ok();
 }
 
 REGISTER_OP(OperatorConf::kLayerNormConf, LayerNormOp);

@@ -21,10 +21,9 @@ class Kernel {
 
   const JobDesc& job_desc() const { return *job_desc_; }
 
-  void Init(const JobDesc* job_desc, const ParallelContext*, const KernelConf&, DeviceCtx*);
+  void Init(const JobDesc* job_desc, const KernelConf&, DeviceCtx*);
 
-  void InitModelAndConstBuf(const KernelCtx& ctx, const ParallelContext* parallel_ctx,
-                            const Snapshot*,
+  void InitModelAndConstBuf(const KernelCtx& ctx,
                             std::function<Blob*(const std::string&)> BnInOp2Blob) const;
 
   void Launch(const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const;
@@ -35,18 +34,12 @@ class Kernel {
 
  protected:
   Kernel() = default;
-  const InitializerConf* GetInitializerFromPbMessage(const PbMessage& msg,
-                                                     const std::string& field) const;
-  virtual void VirtualKernelInit(const ParallelContext* parallel_ctx, DeviceCtx* device_ctx) {
-    VirtualKernelInit(parallel_ctx);
-  }
-  virtual void VirtualKernelInit(const ParallelContext*) {}
+  virtual void VirtualKernelInit(DeviceCtx* device_ctx) { VirtualKernelInit(); }
+  virtual void VirtualKernelInit() {}
   const KernelConf& kernel_conf() const { return kernel_conf_; }
 
   virtual void InitConstBufBlobs(DeviceCtx* ctx,
                                  std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
-  virtual ActivationType GetActivationType() const { return ActivationType::kNone; }
-
   virtual void Forward(const KernelCtx& ctx,
                        std::function<Blob*(const std::string&)> BnInOp2Blob) const;
   virtual void ForwardDataContent(const KernelCtx& ctx,
@@ -79,7 +72,6 @@ class Kernel {
                                    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
     UNIMPLEMENTED();
   }
-  virtual void ForwardActivation(const KernelCtx& ctx, Blob* out_blob) const {}
   virtual void BackwardDataContent(const KernelCtx& ctx,
                                    std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
   virtual bool NeedForwardIfBlobEmpty() const { return false; }
@@ -143,28 +135,8 @@ class KernelIf : public Kernel {
   bool EnableCudnn() const { return op_conf().enable_cudnn(); }
 };
 
-template<DeviceType device_type, typename ModelType>
-class KernelIfWithModel : virtual public KernelIf<device_type> {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(KernelIfWithModel);
-  virtual ~KernelIfWithModel() = default;
-
- protected:
-  KernelIfWithModel() = default;
-};
-
-template<DeviceType device_type, typename T>
-class KernelIfWithActivation : virtual public KernelIf<device_type> {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(KernelIfWithActivation);
-  virtual ~KernelIfWithActivation() = default;
-
- protected:
-  KernelIfWithActivation() = default;
-};
-
-std::unique_ptr<const Kernel> ConstructKernel(const JobDesc*, const ParallelContext*,
-                                              const KernelConf&, DeviceCtx*);
+std::unique_ptr<const Kernel> ConstructKernel(const JobDesc* job_desc, const KernelConf&,
+                                              DeviceCtx*);
 
 }  // namespace oneflow
 

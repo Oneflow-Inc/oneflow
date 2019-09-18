@@ -25,20 +25,20 @@ LogicalNode* AllReduceFacadeOp::NewProperLogicalNode() const {
   return new AllReduceFacadeLogicalNode();
 }
 
-Maybe<void> AllReduceFacadeOp::InferHasBatchDim(
-    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
-  CHECK_EQ_OR_RETURN(*HasBatchDim4BnInOp("in"), false);
-  *HasBatchDim4BnInOp("out") = false;
+Maybe<void> AllReduceFacadeOp::InferBatchAxis(
+    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
+  CHECK_EQ_OR_RETURN(BatchAxis4BnInOp("in")->has_value(), false);
+  BatchAxis4BnInOp("out")->clear_value();
   return Maybe<void>::Ok();
 }
 
 Maybe<void> AllReduceFacadeOp::InferSbpSignature(
     SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
     const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
-    std::function<const SbpInferHint&(const std::string&)> SbpInferHint4Ibn,
+    std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
     const ParallelDesc& parallel_desc) const {
   for (const auto& ibn : input_bns()) {
-    CHECK_OR_RETURN(SbpInferHint4Ibn(ibn).sbp_parallel().has_partial_sum_parallel());
+    CHECK_OR_RETURN(JUST(SbpInferHint4Ibn(ibn))->sbp_parallel().has_partial_sum_parallel());
   }
   SbpSignatureBuilder().PartialSum(input_bns()).Broadcast(output_bns()).Build(sbp_signature);
   return Maybe<void>::Ok();

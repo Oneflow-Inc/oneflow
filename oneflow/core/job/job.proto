@@ -12,12 +12,10 @@ import "oneflow/core/common/shape.proto";
 import "oneflow/core/job/sbp_parallel.proto";
 
 message TrainConf {
-  required int64 batch_size = 1; // batch_size % piece_size = 0
   required NormalModelUpdateOpUserConf model_update_conf = 3;
-  required int32 num_of_batches_in_snapshot = 5;
   repeated string loss_lbn = 6;
   optional int32 loss_scale_factor = 7 [default = 1];
-  optional string global_step_lbn = 8;
+  optional string train_step_lbn = 8;
   optional string primary_lr_lbn = 9;
   optional string secondary_lr_lbn = 10;
 
@@ -48,18 +46,22 @@ message JobConfigProto {
     TrainConf train_conf = 3;
     PredictConf predict_conf = 4;
   }
-  optional int64 piece_size = 5 [default = 1];
-  required int32 data_part_num = 6; // piece_size % data_part_num = 0
   optional int64 total_batch_num = 7 [default = 1];
   optional DataType default_data_type = 8 [default = kFloat]; // kFloat or kDouble
   optional int32 max_data_id_length = 9 [default = 0];
-  optional InitializerConf default_initializer_conf = 10;
+  oneof default_initialize_conf {
+    InitializerConf default_initializer_conf = 10;
+    string default_initialize_with_snapshot_path = 11;
+  }
 
   optional ExperimentalRunConf exp_run_conf = 100;
 
   optional bool enable_cudnn = 200 [default = true];
   optional int64 cudnn_buf_limit_mbyte = 201 [default = 1024];  // 1GByte
-
+  optional int32 cudnn_conv_force_fwd_algo = 202;
+  optional int32 cudnn_conv_force_bwd_data_algo = 203;
+  optional int32 cudnn_conv_force_bwd_filter_algo = 204;
+  
   optional bool enable_mem_sharing = 300 [default = true];
   optional bool enable_inplace = 301 [default = true];
 
@@ -99,7 +101,7 @@ message ParallelBlobConf {
   required BlobDescProto logical_blob_desc_conf = 1;
   required ParallelConf parallel_conf = 2;
   required SbpParallel sbp_conf = 3;
-  required bool has_batch_dim = 4;
+  required OptInt64 batch_axis = 4;
 }
 
 message JobHelperConf {
@@ -107,7 +109,7 @@ message JobHelperConf {
   map<string, OpNameRelations> tag2op_name_relations = 2;
   map<string, OpTimeShape> op_name2op_time_shape = 3;
   map<string, BlobDescProto> lbn2logical_blob_desc = 4;
-  repeated LogicalBlobId batch_dim_lbis = 6;
+  map<string, OptInt64> lbn2batch_axis = 6;
   optional OpBlobArgPairs identical_sbp_oba_pairs = 7;
 }
 

@@ -8,8 +8,7 @@ config.gpu_device_num(1)
 flow.init(config)
 
 def GetVariableJob():
-    job_conf = flow.get_cur_job_conf_builder()
-    job_conf.batch_size(1).data_part_num(1).default_data_type(flow.float)
+    flow.config.default_data_type(flow.float)
     v1 = flow.get_variable(name = 'v1', shape = (5,2), dtype = data_type_conf_util.kFloat, initializer = flow.random_uniform_initializer(min=0, max=10)) 
     v2 = flow.get_variable(name = 'v1') 
     return v2 

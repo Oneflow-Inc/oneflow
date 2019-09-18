@@ -27,7 +27,7 @@ const PbMessage& SoftmaxGradOp::GetCustomizedConf() const { return op_conf().sof
 
 Maybe<void> SoftmaxGradOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx, int64_t record_piece_size,
+    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature,
     std::function<void(OpContext*)> EnrollOpCtx) const {
   // dy
   const BlobDesc* dy_blob_desc = GetBlobDesc4BnInOp("dy");
@@ -87,11 +87,12 @@ SoftmaxGradOpCtx* SoftmaxGradOp::NewSoftmaxGradOpCtx(const Shape& dx_shape) cons
   return op_ctx;
 }
 
-void SoftmaxGradOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
+Maybe<void> SoftmaxGradOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
   SbpSignatureBuilder()
       .Split(input_bns(), 0)
       .Split(output_bns(), 0)
       .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+  return Maybe<void>::Ok();
 }
 
 REGISTER_OP(OperatorConf::kSoftmaxGradConf, SoftmaxGradOp);

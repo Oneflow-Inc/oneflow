@@ -98,6 +98,12 @@ PbMessage* MutableMessageInPbMessage(PbMessage*, int field_index);
 PbMessage* MutableRepeatedMessageInPbMessage(PbMessage* msg, const std::string& field_name,
                                              int index);
 
+// Get/Replace str val maybe repeated;  field_name with index is like "name_0"
+std::pair<std::string, int32_t> GetFieldNameAndIndex4StrVal(const std::string& fd_name_with_idx);
+std::string GetStrValInPbFdOrPbRpf(const PbMessage& msg, const std::string& fd_name_may_have_idx);
+void ReplaceStrValInPbFdOrPbRpf(PbMessage* msg, const std::string& fd_name_may_have_idx,
+                                const std::string& old_val, const std::string& new_val);
+
 // Add In PbMessage RepeatedField
 
 template<typename T>

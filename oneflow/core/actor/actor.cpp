@@ -30,11 +30,6 @@ bool IsLastRegstInPieceWithOrder(const Regst* regst, ColIdOrder order) {
          || (order == ColIdOrder::kDescending && regst->col_id() == 0);
 }
 
-bool NeedModelSave(const JobDesc& job_desc, int64_t model_version_id) {
-  return model_version_id + 1 == job_desc.TotalBatchNum()
-         || (model_version_id + 1) % job_desc.NumOfBatchesInSnapshot() == 0;
-}
-
 void Actor::Init(const JobDesc* job_desc, const TaskProto& task_proto,
                  const ThreadCtx& thread_ctx) {
   job_desc_ = job_desc;
@@ -46,7 +41,7 @@ void Actor::Init(const JobDesc* job_desc, const TaskProto& task_proto,
   }
   for (const ExecNodeProto& node : task_proto.exec_sequence().exec_node()) {
     ExecKernel ek;
-    ek.kernel = ConstructKernel(job_desc_, parallel_ctx(), node.kernel_conf(), device_ctx_.get());
+    ek.kernel = ConstructKernel(job_desc_, node.kernel_conf(), device_ctx_.get());
     ek.bn_in_op2regst_desc_id = PbMap2HashMap(node.bn_in_op2regst_desc_id());
     exec_kernel_vec_.push_back(std::move(ek));
   }

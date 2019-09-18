@@ -22,7 +22,6 @@ void LayerNormGradOp::InitFromOpConf() {
 Maybe<void> LayerNormGradOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
-  CHECK_OR_RETURN(parallel_ctx->policy() != kModelParallel);
   const LayerNormGradOpConf& conf = op_conf().layer_norm_grad_conf();
   const BlobDesc* dy = GetBlobDesc4BnInOp("dy");
   CHECK_GE_OR_RETURN(conf.begin_norm_axis(), 1);
@@ -62,11 +61,12 @@ Maybe<void> LayerNormGradOp::InferBlobDescs(
   return Maybe<void>::Ok();
 }
 
-void LayerNormGradOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
+Maybe<void> LayerNormGradOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
   SbpSignatureBuilder()
       .Split(input_bns(), 0)
       .Split(output_bns(), 0)
       .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+  return Maybe<void>::Ok();
 }
 
 REGISTER_OP(OperatorConf::kLayerNormGradConf, LayerNormGradOp);

@@ -5,10 +5,9 @@
 
 namespace oneflow {
 
-void DecodeOFRecordKernel::VirtualKernelInit(const ParallelContext* parallel_ctx) {
+void DecodeOFRecordKernel::VirtualKernelInit() {
   random_seed_gen_.reset(new std::mt19937(kernel_conf().decode_ofrecord_conf().random_seed()));
   distribution_.reset(new std::uniform_int_distribution<int32_t>(0, 1024 * 1024));
-  parallel_num_ = parallel_ctx->parallel_num();
 }
 
 int32_t DecodeOFRecordKernel::NextRandomInt() const { return (*distribution_)(*random_seed_gen_); }

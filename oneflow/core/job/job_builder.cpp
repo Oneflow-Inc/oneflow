@@ -18,21 +18,6 @@ std::function<const ParallelConf*(const std::string&)> MakeGetterParallelConf4Op
   };
 }
 
-void SetBnValInOpTypeConf(PbMessage* pb_msg, const std::string& bn, const std::string& old_val,
-                          const std::string& new_val) {
-  const PbFd* fd = pb_msg->GetDescriptor()->FindFieldByName(bn);
-  if (fd) {
-    CHECK_EQ(GetValFromPbMessage<std::string>(*pb_msg, bn), old_val);
-    SetValInPbMessage<std::string>(pb_msg, bn, new_val);
-  } else {
-    const std::pair<std::string, int32_t> prefix_idx = GenUnRepeatedBn(bn);
-    CHECK_EQ(GetPbRpfFromPbMessage<std::string>(*pb_msg, prefix_idx.first).Get(prefix_idx.second),
-             old_val);
-    PbRpf<std::string>* rpf = MutPbRpfFromPbMessage<std::string>(pb_msg, prefix_idx.first);
-    *rpf->Mutable(prefix_idx.second) = new_val;
-  }
-}
-
 JobBuilder::JobBuilder(Job* job) : job_(job) {
   FOR_RANGE(int32_t, i, 0, job->net().op_size()) {
     CHECK(op_name2op_conf_.emplace(job->net().op(i).name(), job->mutable_net()->mutable_op(i))
@@ -119,7 +104,7 @@ void JobBuilder::AddOrMutOpsOnlyOnce(const ParallelConf& parallel_conf,
 void JobBuilder::ForEachOperator(const std::function<void(const Operator&)>& Handler) const {
   for (const auto& pair : op_name2op_conf_) {
     DeviceType device_type = ParallelDesc(*op_name2parallel_conf_.at(pair.first)).device_type();
-    std::shared_ptr<Operator> op = ConstructOp(*pair.second, device_type);
+    std::shared_ptr<Operator> op = ConstructOp(*pair.second, device_type, &GlobalJobDesc());
     Handler(*op);
   }
 }

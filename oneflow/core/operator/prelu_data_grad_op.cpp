@@ -22,19 +22,19 @@ Maybe<void> PReluDataGradOp::InferBlobDescs(
   return Maybe<void>::Ok();
 }
 
-Maybe<void> PReluDataGradOp::InferHasBatchDim(
-    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
-  CHECK_OR_RETURN(*HasBatchDim4BnInOp("dy"));
-  CHECK_OR_RETURN(*HasBatchDim4BnInOp("x"));
-  CHECK_OR_RETURN(*HasBatchDim4BnInOp("alpha") == false);
-  *HasBatchDim4BnInOp("dx") = true;
+Maybe<void> PReluDataGradOp::InferBatchAxis(
+    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
+  CHECK_OR_RETURN(*BatchAxis4BnInOp("dy") == *BatchAxis4BnInOp("x"));
+  CHECK_EQ_OR_RETURN(BatchAxis4BnInOp("alpha")->has_value(), false);
+  *BatchAxis4BnInOp("dx") = *BatchAxis4BnInOp("dy");
   return Maybe<void>::Ok();
 }
-void PReluDataGradOp::GetSbpSignatures(
-    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
+Maybe<void> PReluDataGradOp::GetSbpSignatures(
+    const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
     SbpSignatureList* sbp_sig_list) const {
   SbpSignatureBuilder().Split("dy", 0).Broadcast("alpha").Split("x", 0).Split("dx", 0).Build(
       sbp_sig_list->mutable_sbp_signature()->Add());
+  return Maybe<void>::Ok();
 }
 
 REGISTER_OP(OperatorConf::kPreluDataGradConf, PReluDataGradOp);
