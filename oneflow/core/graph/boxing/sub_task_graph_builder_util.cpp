@@ -21,7 +21,6 @@ ParallelDesc SubTskGphBuilderUtil::CloneParallelDescWithNewDeviceType(const Para
   }
   for (const int64_t machine_id : src.sorted_machine_ids()) {
     for (const int64_t device_id : src.sorted_dev_phy_ids(machine_id)) {
-      new_conf.set_policy(src.policy());
       new_conf.add_device_name(std::to_string(machine_id) + ":" + device_tag + ":"
                                + std::to_string(device_id));
     }
