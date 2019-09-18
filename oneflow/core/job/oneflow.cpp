@@ -152,6 +152,8 @@ void CompileCurJobOnMaster(Job* job, Plan* improved_plan, bool need_job_complete
 
 void MergePlanWithoutGenNetTopo(Plan* plan, const Plan& other) {
   plan->mutable_task()->MergeFrom(other.task());
+  plan->mutable_mem_block()->MergeFrom(other.mem_block());
+  plan->mutable_chunk()->MergeFrom(other.chunk());
   for (const auto& pair : other.job_confs().job_id2job_conf()) {
     CHECK(plan->mutable_job_confs()->mutable_job_id2job_conf()->insert(pair).second);
   }
@@ -757,7 +759,8 @@ void CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan) {
   }
   if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
     // only has user job in jobs and sub_plans in this time
-    InterJobMemSharingUtil::MergeMemBlockBetweenSubPlans(jobs, &sub_plans);
+    std::vector<HashSet<int64_t>> reuse_mem_job_groups =
+        InterJobMemSharingUtil::GetMutualExclusionJobGroups(jobs);
     HashMap<std::string, ParallelBlobConf> push_op_name2parallel_blob_conf;
     FilterOpName2ParallelBlobConf({OperatorConf::kInputConf}, &jobs,
                                   &push_op_name2parallel_blob_conf);
@@ -827,6 +830,7 @@ void CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan) {
       CompileMainJob(&main_job, critical_section_sink_lbi, sub_plans.size(), &main_plan);
     }
     LinkMainPlan(plan, main_plan, identity_tick_op_names);
+    InterJobMemSharingUtil::MergeReusedChunkAndRefineOffsetSize(plan, reuse_mem_job_groups);
     TeePersistentLogStream::Create("merged_plan")->Write(*plan);
     PlanUtil::ToDotFile(*plan, "/dot/merged_plan.dot");
     PushPlan("merged_plan", *plan);

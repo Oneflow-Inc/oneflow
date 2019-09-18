@@ -75,59 +75,6 @@ std::vector<HashSet<int64_t>> InitJobId2MutualExclusionJobIds(const std::vector<
   return job_id2mutual_exclusion_ids;
 }
 
-std::vector<HashSet<int64_t>> GetMutualExclusionJobGroups(const std::vector<Job>& jobs) {
-  int64_t job_size = jobs.size();
-  std::vector<HashSet<int64_t>> job_groups;
-  if (Global<const JobMemSharingStrategy>::Get()->has_mem_sharing_priority()) {
-    job_groups.push_back(HashSet<int64_t>());
-    FOR_RANGE(int64_t, i, 0, job_size) { job_groups.front().emplace(i); }
-    return job_groups;
-  }
-
-  // default using parallelism_priority strategy
-  std::vector<HashSet<int64_t>> job_id2mutual_exclusion_ids = InitJobId2MutualExclusionJobIds(jobs);
-  std::vector<HashSet<int64_t>> job_id2enable_parallel_ids(job_size);
-  FOR_RANGE(int64_t, i, 0, job_size) {
-    FOR_RANGE(int64_t, j, 0, job_size) {
-      if (job_id2mutual_exclusion_ids[i].find(j) == job_id2mutual_exclusion_ids[i].end()) {
-        job_id2enable_parallel_ids[i].emplace(j);
-      }
-    }
-  }
-  int64_t mem_share_group_num = 0;
-  std::vector<int64_t> job_id2mem_share_group_id(job_size, -1);
-  FOR_RANGE(int64_t, this_job_id, 0, job_size) {
-    HashSet<int64_t> mem_share_group_id_used;
-    for (int64_t enable_parallel_job_id : job_id2enable_parallel_ids[this_job_id]) {
-      int64_t group_id = job_id2mem_share_group_id[enable_parallel_job_id];
-      if (group_id != -1) { mem_share_group_id_used.emplace(group_id); }
-    }
-    FOR_RANGE(int64_t, this_group_id, 0, mem_share_group_num) {
-      if (mem_share_group_id_used.find(this_group_id) == mem_share_group_id_used.end()) {
-        job_id2mem_share_group_id[this_job_id] = this_group_id;
-        break;
-      }
-    }
-    if (job_id2mem_share_group_id[this_job_id] == -1) {
-      job_id2mem_share_group_id[this_job_id] = mem_share_group_num;
-      ++mem_share_group_num;
-      CHECK_LE(mem_share_group_num, job_size);
-    }
-  }
-
-  job_groups.resize(mem_share_group_num);
-  FOR_RANGE(int64_t, this_job_id, 0, job_size) {
-    job_groups[job_id2mem_share_group_id[this_job_id]].emplace(this_job_id);
-  }
-  {
-    HashSet<int64_t> job_id_unique_check;
-    for (auto& job_group : job_groups) {
-      for (int64_t job_id : job_group) { CHECK(job_id_unique_check.emplace(job_id).second); }
-    }
-  }
-  return job_groups;
-}
-
 int64_t GenMemZoneUniqueId(int64_t machine_id, const MemoryCase& mem_case) {
   int64_t mem_zone_id = 1024;
   if (mem_case.has_host_mem()) {
@@ -193,6 +140,65 @@ std::vector<std::unique_ptr<MbiInfo>> InitMemBlockId2MbiInfo(std::vector<Plan>* 
 
 }  // namespace
 
+void InterJobMemSharingUtil::MergeReusedChunkAndRefineOffsetSize(
+    Plan* plan, const std::vector<HashSet<int64_t>>& reuse_mem_job_groups) {
+  TODO();
+}
+
+std::vector<HashSet<int64_t>> InterJobMemSharingUtil::GetMutualExclusionJobGroups(
+    const std::vector<Job>& jobs) {
+  int64_t job_size = jobs.size();
+  std::vector<HashSet<int64_t>> job_groups;
+  if (Global<const JobMemSharingStrategy>::Get()->has_mem_sharing_priority()) {
+    job_groups.push_back(HashSet<int64_t>());
+    FOR_RANGE(int64_t, i, 0, job_size) { job_groups.front().emplace(i); }
+    return job_groups;
+  }
+
+  // default using parallelism_priority strategy
+  std::vector<HashSet<int64_t>> job_id2mutual_exclusion_ids = InitJobId2MutualExclusionJobIds(jobs);
+  std::vector<HashSet<int64_t>> job_id2enable_parallel_ids(job_size);
+  FOR_RANGE(int64_t, i, 0, job_size) {
+    FOR_RANGE(int64_t, j, 0, job_size) {
+      if (job_id2mutual_exclusion_ids[i].find(j) == job_id2mutual_exclusion_ids[i].end()) {
+        job_id2enable_parallel_ids[i].emplace(j);
+      }
+    }
+  }
+  int64_t mem_share_group_num = 0;
+  std::vector<int64_t> job_id2mem_share_group_id(job_size, -1);
+  FOR_RANGE(int64_t, this_job_id, 0, job_size) {
+    HashSet<int64_t> mem_share_group_id_used;
+    for (int64_t enable_parallel_job_id : job_id2enable_parallel_ids[this_job_id]) {
+      int64_t group_id = job_id2mem_share_group_id[enable_parallel_job_id];
+      if (group_id != -1) { mem_share_group_id_used.emplace(group_id); }
+    }
+    FOR_RANGE(int64_t, this_group_id, 0, mem_share_group_num) {
+      if (mem_share_group_id_used.find(this_group_id) == mem_share_group_id_used.end()) {
+        job_id2mem_share_group_id[this_job_id] = this_group_id;
+        break;
+      }
+    }
+    if (job_id2mem_share_group_id[this_job_id] == -1) {
+      job_id2mem_share_group_id[this_job_id] = mem_share_group_num;
+      ++mem_share_group_num;
+      CHECK_LE(mem_share_group_num, job_size);
+    }
+  }
+
+  job_groups.resize(mem_share_group_num);
+  FOR_RANGE(int64_t, this_job_id, 0, job_size) {
+    job_groups[job_id2mem_share_group_id[this_job_id]].emplace(this_job_id);
+  }
+  {
+    HashSet<int64_t> job_id_unique_check;
+    for (auto& job_group : job_groups) {
+      for (int64_t job_id : job_group) { CHECK(job_id_unique_check.emplace(job_id).second); }
+    }
+  }
+  return job_groups;
+}
+
 void InterJobMemSharingUtil::BindInterfaceMemBlockId(const std::vector<Job>& jobs,
                                                      std::vector<Plan>* sub_plans) {
   for (const auto& pair : GetInterfaceOpName2JobIds(jobs)) {
@@ -256,7 +262,8 @@ void InterJobMemSharingUtil::MergeMemBlockBetweenSubPlans(const std::vector<Job>
     int64_t mzuid = mem_block_id2mbi_info[mem_block_id]->mzuid;
     job_id2mzuid2mem_block_ids[job_id][mzuid].emplace(mem_block_id);
   }
-  std::vector<HashSet<int64_t>> job_groups = GetMutualExclusionJobGroups(jobs);
+  std::vector<HashSet<int64_t>> job_groups =
+      InterJobMemSharingUtil::GetMutualExclusionJobGroups(jobs);
 
   auto MergeMemBlockIdR2L = [&](int32_t lhs, int32_t rhs) {
     CHECK_NE(lhs, rhs);
