@@ -7,6 +7,7 @@ import "oneflow/core/record/image.proto";
 import "oneflow/core/record/record.proto";
 import "oneflow/core/job/resource.proto";
 import "oneflow/core/register/logical_blob_id.proto";
+import "oneflow/core/register/tensor_slice_view.proto";
 
 enum ActivationType {
   kNone = 0;
@@ -1434,6 +1435,22 @@ message LearningRateScheduleOpConf {
   optional WarmupConf warmup_conf = 5;
 }
 
+message SliceBoxingConf {
+  required LogicalBlobId lbi = 1;
+  repeated TensorSliceViewProto in_slice = 2;
+  required TensorSliceViewProto out_slice = 3;
+  optional ShapeProto out_shape = 4;
+}
+
+message SliceBoxingCopyOpConf {
+  required SliceBoxingConf slice_boxing_conf = 1;
+}
+
+message SliceBoxingAddOpConf {
+  required SliceBoxingConf slice_boxing_conf = 1;
+}
+
+
 message OperatorConf {
   required string name = 1;
   optional bool trainable = 3 [default = true];
@@ -1488,6 +1505,8 @@ message OperatorConf {
     ReturnOpConf return_conf = 146;
     PartialTickOpConf partial_tick_conf = 147;
     ForeignWatchOpConf foreign_watch_conf = 148;
+    SliceBoxingCopyOpConf slice_boxing_copy_conf = 149;
+    SliceBoxingAddOpConf slice_boxing_add_conf = 150;
 
     // domain op
     TupleIdentityOpConf tuple_identity_conf = 200;
