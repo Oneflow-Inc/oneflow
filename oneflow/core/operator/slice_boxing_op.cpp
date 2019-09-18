@@ -50,6 +50,7 @@ Maybe<void> SliceBoxingOp::InferBlobDescs(
     out->mut_shape() = out_slice.shape();
   }
   VirtualInferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx);
+  return Maybe<void>::Ok();
 }
 
 const PbMessage& SliceBoxingCopyOp::GetCustomizedConf() const {
