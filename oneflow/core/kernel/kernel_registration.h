@@ -115,6 +115,11 @@ void ExportProtoFromKernelRegistry(KernelRegValProto*);
       []() { return new __VA_ARGS__(); });                                               \
   }  // namespace
 
+#define REGISTER_KERNEL_HELPER_CPU_FLOATING(op_type, kernel)               \
+  REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(op_type, DeviceType::kCPU, float,  \
+                                        kernel<DeviceType::kCPU, float>)   \
+  REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(op_type, DeviceType::kCPU, double, \
+                                        kernel<DeviceType::kCPU, double>)
 #define REGISTER_KERNEL_HELPER_GPU_FLOATING(op_type, kernel)               \
   REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(op_type, DeviceType::kGPU, float,  \
                                         kernel<DeviceType::kGPU, float>)   \

@@ -19,5 +19,6 @@ const PbMessage& ConstantKernel<device_type, T>::GetCustomizedOpConf() const {
 }
 
 REGISTER_KERNEL_HELPER_GPU_FLOATING(OperatorConf::kConstantConf, ConstantKernel);
+REGISTER_KERNEL_HELPER_CPU_FLOATING(OperatorConf::kConstantConf, ConstantKernel);
 
 }  // namespace oneflow
