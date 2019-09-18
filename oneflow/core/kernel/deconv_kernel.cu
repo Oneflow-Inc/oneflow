@@ -15,6 +15,10 @@ class DeconvGPUKernel final : public KernelIf<DeviceType::kGPU> {
   ~DeconvGPUKernel() = default;
 
  private:
+  const PbMessage& GetCustomizedOpConf() const override {
+    return this->op_conf().deconv_conf();
+  }
+  
   void VirtualKernelInit() override {
     const int32_t num_spatial_dims = this->op_conf().deconv_conf().conv_conf().num_spatial_dims();
     Shape x_shape(this->kernel_conf().deconv_conf().in());
