@@ -32,37 +32,6 @@ struct DeconvOpCtx : public OpContext {
 #endif  //  WITH_CUDA
 };
 
-template<int32_t NDims>
-class DeconvOp : public Operator {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(DeconvOp);
-  DeconvOp() = default;
-  virtual ~DeconvOp() = default;
-
-  void InitFromOpConf() override;
-  void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                      const ParallelContext*, int64_t record_piece_size,
-                      std::function<void(OpContext*)> EnrollOpCtx) const override;
-  void InferBwBufBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                           const ParallelContext*, const OpContext*) const override;
-  int32_t OutputBlobModelSplitAxis(
-      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-      const std::string& obn) const override;
-
- private:
-  PbMessage* MutableCustomizedKernelConf(KernelConf*) const override;
-  void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInop,
-                            const ParallelContext*, KernelConf*, const OpContext*) const override;
-  void GenKernelConfWithCudnn(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInop,
-                              KernelConf* kernel_conf, DeconvKernelConf* deconv_conf,
-                              const OpContext*) const;
-#ifdef WITH_CUDA
-  void InferCudnnAlgo(std::function<const BlobDesc*(const std::string)> GetBlobDesc4BnInop,
-                      CudnnConvAlgoCtx* deconv_ctx, const int64_t device_id) const;
-#endif  // WITH_CUDA
-  bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { return false; }
-};
-
 }  //  namespace oneflow
 
 #endif  // ONEFLOW_CORE_OPERATOR_DECONV_OP_H_
