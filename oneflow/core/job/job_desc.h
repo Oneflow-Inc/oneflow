@@ -42,6 +42,7 @@ class JobDesc final {
   bool use_nccl_inter_node_communication() const {
     return job_conf_.use_nccl_inter_node_communication();
   }
+  bool use_boxing_v2() const { return job_conf_.use_boxing_v2(); }
   bool enable_all_reduce_group() const { return job_conf_.enable_all_reduce_group(); }
   int64_t all_reduce_group_num() const;
   int64_t all_reduce_group_min_byte() const;

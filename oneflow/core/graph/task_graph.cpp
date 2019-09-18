@@ -592,6 +592,18 @@ void TaskGraph::SetAreaIdForNewNodes(const LogicalNode* src_logical,
   void TaskGraph::method_name BLD_SUB_TSK_GPH_MTHD_ARGS()
 
 DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxing) {
+  if (GlobalJobDesc().use_boxing_v2()) {
+    BldSubTskGphByBoxingV2(src_logical, dst_logical, sorted_src_comp_tasks, sorted_dst_comp_tasks,
+                           logical2sorted_in_box, logical2sorted_out_box, std::move(MutBufTask),
+                           std::move(AllocateCpuThrdIdEvenly));
+  } else {
+    BldSubTskGphByBoxingV1(src_logical, dst_logical, sorted_src_comp_tasks, sorted_dst_comp_tasks,
+                           logical2sorted_in_box, logical2sorted_out_box, std::move(MutBufTask),
+                           std::move(AllocateCpuThrdIdEvenly));
+  }
+}
+
+DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxingV1) {
   std::vector<TaskNode*>* sorted_out_box = nullptr;
   if (logical2sorted_out_box->find(src_logical) == logical2sorted_out_box->end()) {
     BuildOutBoxing(src_logical, sorted_src_comp_tasks, &((*logical2sorted_out_box)[src_logical]),
@@ -610,6 +622,8 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxing) {
     for (TaskNode* dst_box : *sorted_in_box) { ConnectWithCopyCommNetIfNeed(src_box, dst_box); }
   }
 }
+
+DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxingV2) { UNIMPLEMENTED(); }
 
 DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByOneToOne) {
   CHECK_EQ(sorted_src_comp_tasks.size(), sorted_dst_comp_tasks.size());

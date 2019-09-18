@@ -34,6 +34,8 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
 #define DECLARE_BLD_SUB_TASK_GRAPH_METHOD(method_name) void method_name BLD_SUB_TSK_GPH_MTHD_ARGS();
 
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxing);
+  DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxingV1);
+  DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxingV2);
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByOneToOne);
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByRecordLoadToTick);
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBroadcastToBroadcast);
