@@ -1,0 +1,26 @@
+syntax = "proto2";
+package oneflow;
+
+enum MemDurable {
+  kMemStable = 1;
+  kMemTemp = 2;
+}
+
+message MemBlockProto {
+  required int64 mem_block_id = 1;
+  repeated int64 job_ids = 2;
+  required int64 mem_zone_unique_id = 3;
+  required MemDurable mem_durable = 4;
+  required int64 chunk_id = 5;
+  required int64 chunk_offset = 6;
+  required int64 size = 7;
+}
+
+message ChunkProto {
+  required int64 chunk_id = 1;
+  repeated int64 job_ids = 2;
+  required int64 mem_zone_unique_id = 3;
+  required MemDurable mem_durable = 4;
+  required int64 size = 5;
+}
+
