@@ -15,7 +15,8 @@ class DeviceTickOp final : public Operator {
   void InitFromOpConf() override;
   Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                              const ParallelContext* parallel_ctx) const override;
-  const PbMessage& GetCustomizedConf() const override { return op_conf().tick_conf(); }
+  const PbMessage& GetCustomizedConf() const override { return op_conf().device_tick_conf(); }
+  LogicalNode* NewProperLogicalNode() const override { return new DeviceTickLogicalNode; }
 
  private:
   Maybe<void> InferBatchAxis(
