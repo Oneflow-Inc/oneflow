@@ -64,7 +64,7 @@ class DeconvGPUKernel final : public KernelIf<DeviceType::kGPU> {
   void ForwardDataContent(const KernelCtx& ctx,
                           std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
     const Blob* x_blob = BnInOp2Blob("x");
-    const Blob* weight_blob = BnInOp2Blob("weight");
+    const Blob* filter_blob = BnInOp2Blob("filter");
     const Blob* bias_blob = BnInOp2Blob("bias");
     Blob* y_blob = BnInOp2Blob("y");
     Blob* cudnn_buf = BnInOp2Blob("cudnn_buf");
@@ -72,7 +72,7 @@ class DeconvGPUKernel final : public KernelIf<DeviceType::kGPU> {
     size_t buf_size = cudnn_buf ? cudnn_buf->ByteSizeOfDataContentField() : 0;
     CudaCheck(cudnnConvolutionBackwardData(
         ctx.device_ctx->cudnn_handle(), CudnnSPOnePtr<T>(), this->filter_desc_->Get(),
-        weight_blob->dptr<T>(), this->x_desc_->Get(), x_blob->dptr<T>(), this->deconv_desc_->Get(),
+        filter_blob->dptr<T>(), this->x_desc_->Get(), x_blob->dptr<T>(), this->deconv_desc_->Get(),
         static_cast<cudnnConvolutionBwdDataAlgo_t>(
             this->kernel_conf().deconv_conf().cudnn_bwd_data_algo()),
         buf_ptr, buf_size, CudnnSPZeroPtr<T>(), this->y_desc_->Get(), y_blob->mut_dptr<T>()));
