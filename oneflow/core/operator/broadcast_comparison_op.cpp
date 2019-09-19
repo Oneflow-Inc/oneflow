@@ -1,6 +1,3 @@
-#ifndef ONEFLOW_CORE_OPERATOR_BROADCAST_EQUAL_OP_H_
-#define ONEFLOW_CORE_OPERATOR_BROADCAST_EQUAL_OP_H_
-
 #include "oneflow/core/operator/broadcast_binary_op.h"
 
 namespace oneflow {
@@ -11,9 +8,11 @@ class BroadcastEqualOp final : public BroadcastBinaryOp {
   BroadcastEqualOp() = default;
   ~BroadcastEqualOp() = default;
 
-  const PbMessage& GetCustomizedConf() const override;
+  const PbMessage& GetCustomizedConf() const override {
+    return op_conf().broadcast_equal_conf();
+  }
 };
 
-}  // namespace oneflow
+REGISTER_OP(OperatorConf::kBroadcastEqualConf, BroadcastEqualOp);
 
-#endif  // ONEFLOW_CORE_OPERATOR_BROADCAST_EQUAL_OP_H_
+}  // namespace oneflow
