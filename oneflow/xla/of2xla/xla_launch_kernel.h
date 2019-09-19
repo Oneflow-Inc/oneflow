@@ -4,6 +4,7 @@
 #include "oneflow/core/kernel/kernel.h"
 
 #include "oneflow/xla/of2xla/xla_compilation_cache.h"
+#include "oneflow/xla/of2xla/xla_launch_attr.h"
 #include "oneflow/xla/of2xla/xla_launch_context.h"
 #include "oneflow/xla/of2xla/xla_graph_compiler.h"
 
@@ -34,6 +35,13 @@ class XlaLaunchKernel : public KernelIf<device_type> {
                         std::vector<Blob *> &output_blobs,
                         const xla::Shape &output_shape,
                         bool block_host_until_done) const;
+
+  void AliasMutableInputsAndOutputs(
+    const mola::LaunchAttrHelper &attr,
+    const std::vector<Blob *> &entry_blobs,
+    const std::vector<std::string> &entry_blob_names,
+    std::vector<Blob *> *return_blobs,
+    std::vector<std::string> *return_blob_names) const;
 
   mutable std::shared_ptr<mola::XlaCompilationCache> compilation_cache_;
 };

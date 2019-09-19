@@ -13,9 +13,9 @@ class AdamOptimizerOp : public Operator {
   Maybe<void> InferBlobDescs(
       std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
       const ParallelContext* parallel_ctx) const override {
-    *GetBlobDesc4BnInOp("out") = *GetBlobDesc4BnInOp("weight");
-    *GetBlobDesc4BnInOp("out_m") = *GetBlobDesc4BnInOp("m");
-    *GetBlobDesc4BnInOp("out_v") = *GetBlobDesc4BnInOp("v");
+//    *GetBlobDesc4BnInOp("out") = *GetBlobDesc4BnInOp("weight");
+//    *GetBlobDesc4BnInOp("out_m") = *GetBlobDesc4BnInOp("m");
+//    *GetBlobDesc4BnInOp("out_v") = *GetBlobDesc4BnInOp("v");
     return Maybe<void>::Ok();
   }
 
@@ -26,9 +26,9 @@ class AdamOptimizerOp : public Operator {
     for (const auto& ibn : input_bns()) {
       CHECK_OR_RETURN(!BatchAxis4BnInOp(ibn)->has_value());
     }
-    *BatchAxis4BnInOp("out") = OptInt64();
-    *BatchAxis4BnInOp("out_m") = OptInt64();
-    *BatchAxis4BnInOp("out_v") = OptInt64();
+//    *BatchAxis4BnInOp("out") = OptInt64();
+//    *BatchAxis4BnInOp("out_m") = OptInt64();
+//    *BatchAxis4BnInOp("out_v") = OptInt64();
     return Maybe<void>::Ok();
   }
 
@@ -49,9 +49,9 @@ void AdamOptimizerOp::InitFromOpConf() {
   EnrollInputBn("m");
   EnrollInputBn("v");
   EnrollInputBn("weight");
-  EnrollOutputBn("out")->set_mutable_inplace_ibn("weight");
-  EnrollOutputBn("out_m")->set_mutable_inplace_ibn("m");
-  EnrollOutputBn("out_v")->set_mutable_inplace_ibn("v");
+//  EnrollOutputBn("out")->set_mutable_inplace_ibn("weight");
+//  EnrollOutputBn("out_m")->set_mutable_inplace_ibn("m");
+//  EnrollOutputBn("out_v")->set_mutable_inplace_ibn("v");
 }
 
 const PbMessage& AdamOptimizerOp::GetCustomizedConf() const {
@@ -67,7 +67,8 @@ Maybe<void> AdamOptimizerOp::GetSbpSignatures(
   const Shape &weight_shape = JUST(LogicalBlobDesc4Ibn("weight"))->shape();
   for (int i = 0; i < weight_shape.NumAxes(); ++i) {
     SbpSignatureBuilder()
-        .Split({"out", "out_m", "out_v", "gradient", "weight", "m", "v"}, i)
+//        .Split({"out", "out_m", "out_v", "gradient", "weight", "m", "v"}, i)
+        .Split({"gradient", "weight", "m", "v"}, i)
         .Broadcast({"instance_num_diff", "learning_rate"})
         .Build(sbp_sig_list->mutable_sbp_signature()->Add());
   }

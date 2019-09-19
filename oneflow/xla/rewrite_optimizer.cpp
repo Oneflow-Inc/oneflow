@@ -175,7 +175,7 @@ void OptimizerRewritor::Run() {
 
     // Currently each model update operator will result in some extra assign
     // operands to update model and momentum etc.
-    BuildAssignOps(node->op_name(), update_vars);
+    // BuildAssignOps(node->op_name(), update_vars);
 
     if (control_in_op_names.size() > 0) {
       for (OperatorConf *op_conf : operator_confs) {

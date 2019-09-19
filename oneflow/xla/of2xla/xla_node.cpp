@@ -184,5 +184,15 @@ bool IsNodeOutput(const XlaNode *node, const LogicalBlobId &lbi) {
   return false;
 }
 
+bool IsMutableArgument(const XlaNode *node, const Argument &argument) {
+  const auto &mutable_bns = GetMutableVariables(node->op_type());
+  for (const std::string &bn : mutable_bns) {
+    if (argument.blob_name() == BlobName(node->Input(bn))) {
+      return true;
+    }
+  }
+  return false;
+}
+
 }  // namespace mola
 }  // namespace oneflow

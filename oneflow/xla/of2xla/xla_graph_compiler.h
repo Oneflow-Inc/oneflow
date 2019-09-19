@@ -19,8 +19,6 @@ struct CompilationResult {
 
   xla::XlaComputation computation;
 
-  bool alias_input_output;
-
   std::unique_ptr<xla::LocalExecutable> executable;
 };
 
@@ -32,8 +30,7 @@ class XlaGraphCompiler {
                             const std::vector<Blob *> &entry_blobs,
                             const std::vector<Blob *> &return_blobs,
                             const std::vector<std::string> &entry_blob_names,
-                            const std::vector<std::string> &return_blob_names,
-                            const bool alias_input_output);
+                            const std::vector<std::string> &return_blob_names);
 
  private:
   void BuildComputation(

@@ -4,9 +4,9 @@
 #include "oneflow/xla/of2xla/xla_utility.h"
 #include "oneflow/xla/of2xla/xla_graph_compiler.h"
 #include "oneflow/xla/of2xla/xla_compilation_cache.h"
+#include "oneflow/xla/of2xla/xla_launch_attr.h"
 #include "oneflow/xla/of2xla/xla_launch_context.h"
 #include "oneflow/xla/of2xla/xla_launch_scope.h"
-
 #include "oneflow/xla/of2xla/xla_launch_kernel.h"
 
 namespace oneflow {
@@ -40,8 +40,7 @@ void XlaLaunchKernel<device_type>::BuildLocalExecutable(
     mola::XlaGraphCompiler compiler(launch_ctx->client(),
                                     launch_ctx->builder());
     *result = compiler.Compile(&graph, entry_blobs, return_blobs,
-                               entry_blob_names, return_blob_names,
-                               false/*alias_input_output*/);
+                               entry_blob_names, return_blob_names);
     // Record new compilation result
     compilation_cache_->Record(signature, result);
     // Get compilation result from cache
@@ -128,13 +127,29 @@ void XlaLaunchKernel<device_type>::LaunchExecutable(
 }
 
 template <DeviceType device_type>
+void XlaLaunchKernel<device_type>::AliasMutableInputsAndOutputs(
+    const mola::LaunchAttrHelper &attr,
+    const std::vector<Blob *> &entry_blobs,
+    const std::vector<std::string> &entry_blob_names,
+    std::vector<Blob *> *return_blobs,
+    std::vector<std::string> *return_blob_names) const {
+  CHECK_EQ(entry_blobs.size(), entry_blob_names.size());
+  for (int i = 0; i < entry_blobs.size(); ++i) {
+    const std::string &entry_name = entry_blob_names[i];
+    if (attr.IsMutableArg(entry_name)) {
+      return_blobs->push_back(entry_blobs[i]);
+      return_blob_names->push_back(attr.OutputArg(entry_name));
+    }
+  }
+}
+
+template <DeviceType device_type>
 void XlaLaunchKernel<device_type>::ForwardDataContent(
     const KernelCtx &ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   // Prepare input and output buffers and their names
   std::vector<Blob *> entry_blobs, return_blobs;
   std::vector<std::string> entry_blob_names, return_blob_names;
-
   for (const auto& input_bn : this->op_attribute().input_bns()) {
     Blob* in_blob = BnInOp2Blob(input_bn);
     entry_blobs.push_back(in_blob);
@@ -146,6 +161,11 @@ void XlaLaunchKernel<device_type>::ForwardDataContent(
     return_blobs.push_back(out_blob);
     return_blob_names.push_back(output_bn);
   }
+  CHECK(this->op_conf().has_xla_launch_conf());
+  const auto &launch_conf = this->op_conf().xla_launch_conf();
+  mola::LaunchAttrHelper attr_helper(launch_conf.attr());
+  AliasMutableInputsAndOutputs(attr_helper, entry_blobs, entry_blob_names,
+                               &return_blobs, &return_blob_names);
   
   mola::XlaLaunchContext launch_ctx(this->op_conf().name(), ctx.device_ctx,
                                     device_type, 1 /*intra_op_num_threads*/);
@@ -156,19 +176,13 @@ void XlaLaunchKernel<device_type>::ForwardDataContent(
                         << TF_CPP_VLOG_LEVEL_REQUARED(2);
   auto *executable = compile_result->executable.get();
   
-  if (compile_result->alias_input_output) {
-    // Gather outputs as entry parameters if input and output aliased
-    entry_blobs.insert(entry_blobs.end(), return_blobs.begin(),
-                       return_blobs.end());
-  } else {
-    std::vector<int64_t> allocation_indices;
-    xla::ResultAllocationIndices(executable, &allocation_indices);
-    CHECK_EQ(return_blobs.size(), allocation_indices.size());
-    // Populate output blobs to reuse the buffers in allocator. This helps
-    // to reduce memory occupancy and avoid extra copy between temporary
-    // buffers and output buffers
-    launch_ctx.PopulateResultBuffers(return_blobs, allocation_indices);
-  }
+  std::vector<int64_t> allocation_indices;
+  xla::ResultAllocationIndices(executable, &allocation_indices);
+  CHECK_EQ(return_blobs.size(), allocation_indices.size());
+  // Populate output blobs to reuse the buffers in allocator. This helps
+  // to reduce memory occupancy and avoid extra copy between temporary
+  // buffers and output buffers
+  launch_ctx.PopulateResultBuffers(return_blobs, allocation_indices);
 
   // Launch executable synchronously for CPU, or asynchronously for GPU
   bool block_host_until_done = true;

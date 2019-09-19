@@ -121,11 +121,9 @@ CompilationResult XlaGraphCompiler::Compile(
     const std::vector<Blob *> &entry_blobs,
     const std::vector<Blob *> &return_blobs,
     const std::vector<std::string> &entry_blob_names,
-    const std::vector<std::string> &return_blob_names,
-    const bool alias_input_output) {
+    const std::vector<std::string> &return_blob_names) {
   CHECK_NOTNULL(graph);
   CompilationResult result;
-  result.alias_input_output = alias_input_output;
 
   BuildArguments(graph, entry_blobs, return_blobs, entry_blob_names,
                  return_blob_names);
@@ -135,12 +133,6 @@ CompilationResult XlaGraphCompiler::Compile(
   int argument_index = entry_blob_names.size();
   std::vector<Argument> return_arguments(return_size);
   for (int i = 0; i < return_size; ++i, ++argument_index) {
-    // Alias outputs to input arguments to update in-place
-    if (alias_input_output) {
-      builder_->SetUpAlias({i}/*output_index*/, argument_index/*param_number*/,
-                           {}/*param_index*/);
-      input_names.push_back(return_blob_names[i]);
-    }
     return_arguments[i] = arguments_.at(return_blob_names[i]);
   }
   std::unordered_map<Argument, XlaOprand> entry_oprands;
