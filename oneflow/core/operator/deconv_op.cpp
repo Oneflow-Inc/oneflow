@@ -231,10 +231,9 @@ class DeconvOp : public Operator {
       const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
       SbpSignatureList* sbp_sig_list) const override {
     SbpSignatureBuilder()
-        .Split("dy", 0)
+        .Split("x", 0)
         .Broadcast("filter")
-        .Split("x_like", 0)
-        .Split("dx", 0)
+        .Split("y", 0)
         .Build(sbp_sig_list->mutable_sbp_signature()->Add());
     return Maybe<void>::Ok();
   }
