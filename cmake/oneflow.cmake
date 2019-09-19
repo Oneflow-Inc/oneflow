@@ -46,7 +46,7 @@ endforeach()
 
 file(GLOB_RECURSE oneflow_all_src "${PROJECT_SOURCE_DIR}/oneflow/core/*.*" "${PROJECT_SOURCE_DIR}/oneflow/python/*.*")
 if (WITH_XLA)
-  file(GLOB_RECURSE oneflow_xla_src "${PROJECT_SOURCE_DIR}/oneflow/xla/*.*")
+  file(GLOB_RECURSE oneflow_xla_src "${PROJECT_SOURCE_DIR}/oneflow/engine/*.*")
   list(APPEND oneflow_all_src ${oneflow_xla_src})
 endif()
 

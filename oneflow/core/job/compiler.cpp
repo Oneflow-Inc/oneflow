@@ -5,10 +5,10 @@
 #include "oneflow/core/job_completer/job_completer.h"
 
 #ifdef WITH_XLA
-#include "oneflow/xla/rewrite_optimizer.h"
-#include "oneflow/xla/rebuild_job.h"
-#include "oneflow/xla/of2xla/xla_graph.h"
-#include "oneflow/xla/of2xla/pass/xla_optimize_pass.h"
+#include "oneflow/engine/xla/rewrite_optimizer.h"
+#include "oneflow/engine/pass/rebuild_clustered_job.h"
+#include "oneflow/engine/xla/of2xla/xla_graph.h"
+#include "oneflow/engine/pass/optimize_pass.h"
 
 DEFINE_bool(use_xla_jit, true, "Option to use xla jit");
 #endif  // WITH_XLA
@@ -77,7 +77,7 @@ void Compiler::Compile(Job* job, Plan* plan, bool need_job_complete) const {
     mola::RunOptimizePass("MarkClusterId", options);
     mola::RunOptimizePass("BuildSubGraph", options);
     // Rebuild Job
-    RebuildXlaCompiledJob(graph, job);
+    RebuildClusteredJob(graph, job);
 
     TeePersistentLogStream::Create(
         absl::StrCat("job_with_xla", job_desc.job_id()))->Write(*job);

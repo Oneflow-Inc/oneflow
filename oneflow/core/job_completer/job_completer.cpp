@@ -14,7 +14,7 @@
 #include "oneflow/core/job_completer/auto_learning_rate.h"
 
 #ifdef WITH_XLA
-#include "oneflow/xla/rewrite_optimizer.h"
+#include "oneflow/engine/xla/rewrite_optimizer.h"
 DECLARE_bool(use_xla_jit);
 #endif  // WITH_XLA
 

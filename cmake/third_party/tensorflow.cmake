@@ -26,7 +26,7 @@ set(TENSORFLOW_SOURCES_DIR ${THIRD_PARTY_DIR}/tensorflow)
 set(TENSORFLOW_SRCS_DIR ${TENSORFLOW_SOURCES_DIR}/src/tensorflow)
 set(TENSORFLOW_INC_DIR  ${TENSORFLOW_SOURCES_DIR}/src/tensorflow)
 
-set(XLA_BUILD_PATH  ${PROJECT_SOURCE_DIR}/oneflow/xla/xla_lib)
+set(XLA_BUILD_PATH  ${PROJECT_SOURCE_DIR}/oneflow/engine/xla/xla_lib)
 set(TENSORFLOW_DEST_DIR ${TENSORFLOW_SRCS_DIR}/tensorflow/compiler/jit)
 
 set(TENSORFLOW_GEN_DIR ${TENSORFLOW_SRCS_DIR}/bazel-out/${TENSORFLOW_GENFILE_DIR}/genfiles)
