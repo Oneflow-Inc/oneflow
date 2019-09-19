@@ -28,8 +28,8 @@ class DeconvGPUKernel final : public KernelIf<DeviceType::kGPU> {
     this->x_desc_.reset(new CudnnTensorDesc(GetDataType<T>::value, x_shape, data_format));
     this->y_desc_.reset(new CudnnTensorDesc(GetDataType<T>::value, y_shape, data_format));
     this->filter_desc_.reset(new CudnnFilterDesc(GetDataType<T>::value, weight_shape, data_format));
-    this->deconv_desc_.reset(
-        new CudnnDeconvDesc(GetDataType<T>::value, x_shape, this->GetCustomizedOpConf()));
+    this->deconv_desc_.reset(new CudnnDeconvDesc(GetDataType<T>::value, x_shape,
+                                                 this->op_conf().deconv_conf().conv_conf()));
     if (this->template GetValFromCustomizedOpConf<bool>("use_bias")) {
       int32_t filters = this->template GetValFromCustomizedOpConf<int32_t>("filters");
       if (num_spatial_dims == 2) {

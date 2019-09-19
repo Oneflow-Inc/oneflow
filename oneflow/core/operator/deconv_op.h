@@ -16,8 +16,7 @@ class CudnnDeconvDesc final {
   CudnnDeconvDesc() = delete;
   ~CudnnDeconvDesc();
 
-  CudnnDeconvDesc(const DataType& data_type, const Shape& in_blob_shape,
-                  const PbMessage& deconv_conf);
+  CudnnDeconvDesc(const DataType&, const Shape&, const ConvConf&);
 
   const cudnnConvolutionDescriptor_t& Get() const { return val_; }
 
