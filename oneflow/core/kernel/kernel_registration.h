@@ -8,6 +8,7 @@
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/core/kernel/kernel.pb.h"
+#include "oneflow/core/kernel/kernel_reg_value.pb.h"
 
 namespace oneflow {
 
@@ -24,14 +25,22 @@ class KernelConstraint {
   KernelConstraint() = default;
   virtual ~KernelConstraint() = default;
 
-  virtual bool IsMatched(const KernelConf&) = 0;
-  virtual size_t PriorityLevel() { return 0; }  // big number means high priority
+  virtual bool IsMatched(const KernelConf&) const = 0;
+  virtual size_t PriorityLevel() const { return 0; }  // big number means high priority
+  virtual void ToProto(KernelRegValProto::RegVal*) const = 0;
+};
+
+class NoConstraint final : public KernelConstraint {
+ public:
+  bool IsMatched(const KernelConf&) const override { return true; }
+  void ToProto(KernelRegValProto::RegVal*) const override;
 };
 
 class DeviceAndDTypeConstraint final : public KernelConstraint {
  public:
   DeviceAndDTypeConstraint(DeviceType dev, DataType dtype) : dev_(dev), dtype_(dtype) {}
-  bool IsMatched(const KernelConf&) override;
+  bool IsMatched(const KernelConf&) const override;
+  void ToProto(KernelRegValProto::RegVal*) const override;
 
  private:
   DeviceType dev_;
@@ -41,10 +50,24 @@ class DeviceAndDTypeConstraint final : public KernelConstraint {
 class DeviceConstraint final : public KernelConstraint {
  public:
   DeviceConstraint(DeviceType dev) : dev_(dev) {}
-  bool IsMatched(const KernelConf&) override;
+  bool IsMatched(const KernelConf&) const override;
+  void ToProto(KernelRegValProto::RegVal*) const override;
 
  private:
   DeviceType dev_;
+};
+
+class PredAndLabelConstraint final : public KernelConstraint {
+ public:
+  PredAndLabelConstraint(DeviceType dev, DataType pred_type, DataType label_type)
+      : dev_(dev), pred_type_(pred_type), label_type_(label_type) {}
+  bool IsMatched(const KernelConf&) const override;
+  void ToProto(KernelRegValProto::RegVal*) const override;
+
+ private:
+  DeviceType dev_;
+  DataType pred_type_;
+  DataType label_type_;
 };
 
 }  // namespace constraint
@@ -56,23 +79,58 @@ struct KernelRegistrar final {
 
 Kernel* CreateKernel(const KernelConf& kernel_conf);
 
+void ExportProtoFromKernelRegistry(KernelRegValProto*);
+
 }  // namespace kernel_registration
+
+#define REGISTER_KERNEL_WITH_NOTHING(op_type, ...)                                 \
+  namespace {                                                                      \
+  static kernel_registration::KernelRegistrar OF_PP_CAT(g_registrar, __COUNTER__)( \
+      op_type, new kernel_registration::constraint::NoConstraint(),                \
+      []() { return new __VA_ARGS__(); });                                         \
+  }  // namespace
 
 #define REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(op_type, device, dtype, ...)                      \
   namespace {                                                                                   \
-  static kernel_registration::KernelRegistrar OF_PP_CAT(g_registrar, __LINE__)(                 \
+  static kernel_registration::KernelRegistrar OF_PP_CAT(g_registrar, __COUNTER__)(              \
       op_type,                                                                                  \
       new kernel_registration::constraint::DeviceAndDTypeConstraint(device,                     \
                                                                     GetDataType<dtype>::value), \
       []() { return new __VA_ARGS__(); });                                                      \
   }  // namespace
 
-#define REGISTER_KERNEL_WITH_DEVICE(op_type, device, ...)                       \
-  namespace {                                                                   \
-  static kernel_registration::KernelRegistrar OF_PP_CAT(g_registrar, __LINE__)( \
-      op_type, new kernel_registration::constraint::DeviceConstraint(device),   \
-      []() { return new __VA_ARGS__(); });                                      \
+#define REGISTER_KERNEL_WITH_DEVICE(op_type, device, ...)                          \
+  namespace {                                                                      \
+  static kernel_registration::KernelRegistrar OF_PP_CAT(g_registrar, __COUNTER__)( \
+      op_type, new kernel_registration::constraint::DeviceConstraint(device),      \
+      []() { return new __VA_ARGS__(); });                                         \
   }  // namespace
+
+#define REGISTER_KERNEL_WITH_PRED_AND_LABEL(op_type, device, pred_type, label_type, ...)           \
+  namespace {                                                                                      \
+  static kernel_registration::KernelRegistrar OF_PP_CAT(g_registrar, __COUNTER__)(                 \
+      op_type,                                                                                     \
+      new kernel_registration::constraint::PredAndLabelConstraint(device,                          \
+                                                                  GetDataType<pred_type>::value,   \
+                                                                  GetDataType<label_type>::value), \
+      []() { return new __VA_ARGS__(); });                                                         \
+  }  // namespace
+
+#define REGISTER_KERNEL_HELPER_CPU_FLOATING(op_type, kernel)               \
+  REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(op_type, DeviceType::kCPU, float,  \
+                                        kernel<DeviceType::kCPU, float>)   \
+  REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(op_type, DeviceType::kCPU, double, \
+                                        kernel<DeviceType::kCPU, double>)
+
+#define REGISTER_KERNEL_HELPER_GPU_FLOATING(op_type, kernel)               \
+  REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(op_type, DeviceType::kGPU, float,  \
+                                        kernel<DeviceType::kGPU, float>)   \
+  REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(op_type, DeviceType::kGPU, double, \
+                                        kernel<DeviceType::kGPU, double>)
+
+#define REGISTER_KERNEL_HELPER_GPU_HALF(op_type, kernel)                    \
+  REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(op_type, DeviceType::kGPU, float16, \
+                                        kernel<DeviceType::kGPU, float16>)
 
 }  // namespace oneflow
 
