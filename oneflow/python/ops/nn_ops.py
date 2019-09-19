@@ -322,3 +322,86 @@ def dropout(x, noise_shape=None, seed=None, name=None, rate=None):
     lbi.op_name = op_conf.name
     lbi.blob_name = "out"
     return remote_blob_util.RemoteBlob(lbi)
+
+
+@oneflow_export("nn.conv2d_transpose")
+def deconv2d(
+    value=None,
+    filter=None,
+    output_shape=None,
+    strides=None,
+    padding='SAME',
+    data_format='NHWC',
+    name=None,
+    input=None,
+    filters=None,
+    dilations=None
+):
+  """2d transposed convolution
+  Args:
+    value: 4-d `Blob`
+    filter: filter of transposed convolution, usually a variable
+    output_shape: Not supported yet
+    strides: `int` or `int list`
+    padding: `'VALID'` or `'SAME'`
+    data_format: `'NHWC'` or `'NCHW'`
+    name: This operator's name
+    input: Alias for value
+    filters: Alias for filter
+    dilations: Not supported yet
+  Returns:
+    A `Blob` with the same type as `value`.
+  Raises:
+    ValueError: shapes of `filter` and `input` must match.
+  """
+  assert value is not None ^ input is not None, "only one of input and value could be not None"
+  assert output_shape is None, "output_shape not supported yet"
+  assert dilations is None, "dilations not supported yet"
+  assert len(input.static_shape) == 4
+  assert len(filters.static_shape) == 4
+
+   if isinstance(strides, (list, tuple)):
+        assert len(strides) == 2, ValueError(
+            "strides length must be 2 when passed as a list."
+        )
+    elif isinstance(strides, int):
+        strides = [strides, strides]
+    else:
+        raise ValueError("strides must be an int or a list.")
+
+    if padding.upper() != "SAME" and padding.upper() != "VALID":
+        raise ValueError('padding must be "SAME" or "VALID".')
+
+    if data_format.upper() != "NCHW" and data_format.upper() != "NHWC":
+        raise ValueError('data_format must be "NHWC" or "NCHW".')
+
+    channel_pos = (
+        "channels_first" if data_format.startswith("NC") else "channels_last"
+    )
+
+    op_conf = op_conf_util.OperatorConf()
+    setattr(op_conf, "name",
+            name if name is not None else id_util.UniqueStr("Deconv2d_"))
+    setattr(op_conf.deconv_conf, "in", input.logical_blob_name)
+    op_conf.deconv_conf.out = "out"
+    op_conf.deconv_conf.filter = filters.logical_blob_name
+    op_conf.deconv_conf.filters = filters.static_shape[0]
+    op_conf.deconv_conf.conv_conf.padding = padding.lower()
+    op_conf.deconv_conf.conv_conf.data_format = channel_pos
+    if channel_pos == "channels_first":
+        op_conf.deconv_conf.conv_conf.kernel_size.extend(
+            filters.static_shape[2:4])
+    elif channel_pos == "channels_last":
+        op_conf.deconv_conf.conv_conf.kernel_size.extend(
+            filters.static_shape[-3:-1])
+    else:
+        raise ValueError("invalid data_format")
+    op_conf.deconv_conf.conv_conf.strides.extend(strides)
+    op_conf.deconv_conf.conv_conf.dilation_rate.extend(dilations)
+    op_conf.deconv_conf.use_bias = False
+
+    compile_context.CurJobAddOp(op_conf)
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = "out"
+    return remote_blob_util.RemoteBlob(lbi)
