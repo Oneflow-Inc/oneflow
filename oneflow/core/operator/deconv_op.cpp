@@ -229,4 +229,6 @@ class DeconvOp : public Operator {
   }
 };
 
+REGISTER_OP(OperatorConf::kDeconvConf, DeconvOp);
+
 }  // namespace oneflow
