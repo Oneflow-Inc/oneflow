@@ -759,7 +759,7 @@ void CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan) {
   }
   if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
     // only has user job in jobs and sub_plans in this time
-    std::vector<HashSet<int64_t>> reuse_mem_job_groups =
+    std::vector<HashSet<int64_t>> reuse_mem_user_job_groups =
         InterJobMemSharingUtil::GetMutualExclusionJobGroups(jobs);
     HashMap<std::string, ParallelBlobConf> push_op_name2parallel_blob_conf;
     FilterOpName2ParallelBlobConf({OperatorConf::kInputConf}, &jobs,
@@ -830,7 +830,7 @@ void CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan) {
       CompileMainJob(&main_job, critical_section_sink_lbi, sub_plans.size(), &main_plan);
     }
     LinkMainPlan(plan, main_plan, identity_tick_op_names);
-    InterJobMemSharingUtil::MergeReusedChunkAndRefineOffsetSize(plan, reuse_mem_job_groups);
+    InterJobMemSharingUtil::MergeAndCleanChunkBlock(plan, reuse_mem_user_job_groups);
     TeePersistentLogStream::Create("merged_plan")->Write(*plan);
     PlanUtil::ToDotFile(*plan, "/dot/merged_plan.dot");
     PushPlan("merged_plan", *plan);

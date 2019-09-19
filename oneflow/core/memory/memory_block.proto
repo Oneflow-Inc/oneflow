@@ -1,26 +1,30 @@
 syntax = "proto2";
 package oneflow;
 
-enum MemDurable {
+import "oneflow/core/memory/memory_case.proto";
+
+enum MemoryDurable {
+  kMemInvalidDurableType = 0;
   kMemStable = 1;
   kMemTemp = 2;
 }
 
 message MemBlockProto {
   required int64 mem_block_id = 1;
-  repeated int64 job_ids = 2;
-  required int64 mem_zone_unique_id = 3;
-  required MemDurable mem_durable = 4;
-  required int64 chunk_id = 5;
-  required int64 chunk_offset = 6;
-  required int64 size = 7;
+  repeated int64 job_id = 2;
+  required int64 machine_id = 3;
+  required MemoryCase mem_case = 4;
+  required MemoryDurable mem_durable = 5;
+  optional int64 chunk_id = 6 [default = -1];
+  optional int64 chunk_offset = 7[default = -1];
+  required int64 size = 8;
 }
 
 message ChunkProto {
   required int64 chunk_id = 1;
-  repeated int64 job_ids = 2;
-  required int64 mem_zone_unique_id = 3;
-  required MemDurable mem_durable = 4;
+  repeated int64 job_id = 2;
+  required int64 machine_id = 3;
+  required MemoryCase mem_case = 4;
   required int64 size = 5;
 }
 

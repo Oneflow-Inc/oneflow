@@ -15,8 +15,8 @@ struct InterJobMemSharingUtil {
 
   static std::vector<HashSet<int64_t>> GetMutualExclusionJobGroups(const std::vector<Job>& jobs);
 
-  static void MergeReusedChunkAndRefineOffsetSize(
-      Plan* plan, const std::vector<HashSet<int64_t>>& reuse_mem_job_groups);
+  static void MergeAndCleanChunkBlock(Plan* plan,
+                                      const std::vector<HashSet<int64_t>>& reuse_mem_job_groups);
 };
 
 }  // namespace oneflow
