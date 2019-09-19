@@ -31,6 +31,7 @@ class Kernel {
   const LogicalBlobId& BnInOp2Lbi(const std::string& bn_in_op) const;
   const OperatorConf& op_conf() const { return op_attribute().op_conf(); }
   const OpAttribute& op_attribute() const { return kernel_conf().op_attribute(); }
+  bool IsKernelLaunchSynchronized() const { return true; }
 
  protected:
   Kernel() = default;

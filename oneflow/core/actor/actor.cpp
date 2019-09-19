@@ -46,6 +46,11 @@ void Actor::Init(const JobDesc* job_desc, const TaskProto& task_proto,
     exec_kernel_vec_.push_back(std::move(ek));
   }
 
+  is_kernel_launch_synchronized_ =
+      std::all_of(exec_kernel_vec_.cbegin(), exec_kernel_vec_.cend(),
+                  [](const ExecKernel& ek) { return ek.kernel->IsKernelLaunchSynchronized(); });
+  if (!is_kernel_launch_synchronized_) { CHECK_EQ(exec_kernel_vec_.size(), 1); }
+
   remaining_eord_cnt_ = 0;
   msg_handler_ = nullptr;
   eord_regst_desc_ids_.clear();
@@ -618,8 +623,9 @@ int Actor::TryUpdtStateAsProducedRegst(Regst* regst) {
 }
 
 void Actor::EnqueueAsyncMsg(const ActorMsg& msg) {
-  if (GetGlobalWorkStreamId()
-      == Global<IDMgr>::Get()->GlobalWorkStreamId4ActorId(msg.dst_actor_id())) {
+  if (is_kernel_launch_synchronized_
+      && GetGlobalWorkStreamId()
+             == Global<IDMgr>::Get()->GlobalWorkStreamId4ActorId(msg.dst_actor_id())) {
     Global<ActorMsgBus>::Get()->SendMsg(msg);
   } else {
     async_msg_queue_.push_back(msg);
