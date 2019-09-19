@@ -1,6 +1,3 @@
-#ifndef ONEFLOW_CORE_KERNEL_PIECE_SLICE_KERNEL_H_
-#define ONEFLOW_CORE_KERNEL_PIECE_SLICE_KERNEL_H_
-
 #include "oneflow/core/kernel/kernel.h"
 
 namespace oneflow {
@@ -45,5 +42,3 @@ class PieceSliceKernel final : public KernelIf<device_type> {
 };
 
 }  // namespace oneflow
-
-#endif  // ONEFLOW_CORE_KERNEL_PIECE_SLICE_KERNEL_H_
