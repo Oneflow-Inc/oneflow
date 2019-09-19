@@ -4,6 +4,7 @@
 #include "oneflow/core/kernel/rmsprop_model_update_kernel.h"
 #include "oneflow/core/kernel/lars_model_update_kernel.h"
 #include "oneflow/core/kernel/adam_model_update_kernel.h"
+#include "oneflow/core/kernel/lazy_adam_model_update_kernel.h"
 
 namespace oneflow {
 
