@@ -1466,19 +1466,6 @@ message LearningRateScheduleOpConf {
   optional WarmupConf warmup_conf = 5;
 }
 
-message SegmentSumOpConf {
-  required string in = 1;
-  required string segment_ids = 2;
-  required int32 unique_ids_num = 3;
-  required string out = 4;
-}
-
-message SegmentSumGradOpConf {
-  required string out_diff = 1;
-  required string segment_ids = 2;
-  required string in_diff = 3;
-}
-
 message OperatorConf {
   required string name = 1;
   optional bool trainable = 3 [default = true];
@@ -1618,8 +1605,6 @@ message OperatorConf {
     PReluDataGradOpConf prelu_data_grad_conf = 299;
     PReluAlphaGradOpConf prelu_alpha_grad_conf = 300;
     ModelLoadOpConf model_load_conf = 301;
-    SegmentSumOpConf segment_sum_conf = 302;
-    SegmentSumGradOpConf segment_sum_grad_conf = 303;
     SigmoidCrossEntropyLossGradOpConf sigmoid_cross_entropy_loss_grad_conf = 304; 
     GatherMs0OpConf gather_ms0_conf = 305;
     GatherMs0GradOpConf gather_ms0_grad_conf = 306;
