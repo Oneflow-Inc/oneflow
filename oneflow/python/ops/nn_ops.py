@@ -354,7 +354,10 @@ def deconv2d(
     Raises:
     ValueError: shapes of `filter` and `input` must match.
     """
-    assert value is not None ^ input is not None, "only one of input and value could be not None"
+    assert (value is not None) ^ (
+        input is not None), "only one of `input` and `value` could be not None"
+    assert (filter is not None) ^ (
+        filters is not None), "only one of `filter` and `filters` could be not None"
     assert output_shape is None, "output_shape not supported yet"
     assert dilations is None, "dilations not supported yet"
     assert len(input.static_shape) == 4
