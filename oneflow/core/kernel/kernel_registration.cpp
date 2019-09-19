@@ -83,7 +83,9 @@ KernelRegistrar::KernelRegistrar(const OperatorConf::OpTypeCase& op_type,
 
 Kernel* CreateKernel(const KernelConf& kernel_conf) {
   auto op_type = kernel_conf.op_attribute().op_conf().op_type_case();
-  const auto& registry_vals = MutKernelRegistry()->at(op_type);
+  auto kernel_registry = MutKernelRegistry();
+  if (kernel_registry->find(op_type) == kernel_registry->end()) { return nullptr; }
+  const auto& registry_vals = kernel_registry->at(op_type);
 
   Kernel* ret = nullptr;
   bool is_matched = false;
