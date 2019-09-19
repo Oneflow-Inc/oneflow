@@ -23,13 +23,54 @@ HashMap<OperatorConf::OpTypeCase, std::vector<KernelRegistryVal>>* MutKernelRegi
 
 namespace constraint {
 
-bool DeviceAndDTypeConstraint::IsMatched(const KernelConf& kernel_conf) {
+void NoConstraint::ToProto(KernelRegValProto::RegVal* val) const {
+  *(val->mutable_device_and_dtypes()->Add()) = KernelRegValProto::Device7DType();
+}
+
+bool DeviceAndDTypeConstraint::IsMatched(const KernelConf& kernel_conf) const {
   return (dev_ == kernel_conf.op_attribute().op_conf().device_type()
           && dtype_ == kernel_conf.data_type());
 }
 
-bool DeviceConstraint::IsMatched(const KernelConf& kernel_conf) {
+void DeviceAndDTypeConstraint::ToProto(KernelRegValProto::RegVal* val) const {
+  KernelRegValProto::Device7DType proto;
+  proto.set_device(dev_);
+  proto.add_dtype(dtype_);
+  *(val->mutable_device_and_dtypes()->Add()) = proto;
+}
+
+bool DeviceConstraint::IsMatched(const KernelConf& kernel_conf) const {
   return dev_ == kernel_conf.op_attribute().op_conf().device_type();
+}
+
+void DeviceConstraint::ToProto(KernelRegValProto::RegVal* val) const {
+  KernelRegValProto::Device7DType proto;
+  proto.set_device(dev_);
+  *(val->mutable_device_and_dtypes()->Add()) = proto;
+}
+
+bool PredAndLabelConstraint::IsMatched(const KernelConf& kernel_conf) const {
+  DataType pred_type;
+  DataType label_type;
+  LossKernelConf loss_conf;
+  if (kernel_conf.kernel_type_case() == KernelConf::kSparseSoftmaxCrossEntropyLossConf) {
+    pred_type = kernel_conf.sparse_softmax_cross_entropy_loss_conf().loss_conf().prediction_type();
+    label_type = kernel_conf.sparse_softmax_cross_entropy_loss_conf().loss_conf().label_type();
+  } else if (kernel_conf.kernel_type_case() == KernelConf::kAccuracyConf) {
+    pred_type = kernel_conf.accuracy_conf().prediction_type();
+    label_type = kernel_conf.accuracy_conf().label_type();
+  } else {
+    UNIMPLEMENTED();
+  }
+  return (pred_type == pred_type_ && label_type == label_type_);
+}
+
+void PredAndLabelConstraint::ToProto(KernelRegValProto::RegVal* val) const {
+  KernelRegValProto::Device7DType proto;
+  proto.set_device(dev_);
+  proto.add_dtype(pred_type_);
+  proto.add_dtype(label_type_);
+  *(val->mutable_device_and_dtypes()->Add()) = proto;
 }
 
 }  // namespace constraint
@@ -56,6 +97,15 @@ Kernel* CreateKernel(const KernelConf& kernel_conf) {
     }
   }
   return ret;
+}
+
+void ExportProtoFromKernelRegistry(KernelRegValProto* proto) {
+  auto* creators = MutKernelRegistry();
+  for (const auto& pair : *creators) {
+    KernelRegValProto::RegVal reg_val_proto;
+    for (const auto& registry_val : pair.second) { registry_val.cons->ToProto(&reg_val_proto); }
+    proto->mutable_kernel2reg_val()->insert({static_cast<int64_t>(pair.first), reg_val_proto});
+  }
 }
 
 }  // namespace kernel_registration
