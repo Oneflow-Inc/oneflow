@@ -98,13 +98,10 @@ class DeconvOp : public Operator {
   const PbMessage& GetCustomizedConf() const override { return op_conf().deconv_conf(); }
 
   void InitFromOpConf() override {
-    StrFieldTolower("data_format");
-    StrFieldTolower("padding");
-
     EnrollInputBn("x");
     EnrollOutputBn("y");
     EnrollInputBn("filter");
-    if (GetValFromCustomizedConf<bool>("use_bias")) { EnrollInputBn("bias"); }
+    if (op_conf().deconv_conf().use_bias()) { EnrollInputBn("bias"); }
     EnrollTmpBn("cudnn_buf");
   }
 
@@ -165,6 +162,7 @@ class DeconvOp : public Operator {
       cudnn_buf->mut_shape() = Shape({static_cast<int64_t>(buf_size)});
     }
 #endif  // WITH_CUDA
+    return Maybe<void>::Ok();
   }
 
  private:
