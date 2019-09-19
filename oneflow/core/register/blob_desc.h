@@ -79,21 +79,9 @@ class BlobDesc {
   void Dim2ValidNumToProto(StructPodDesc* header_pod_desc) const;
   void RecordIdInDevicePieceToProto(StructPodDesc* header_pod_desc) const;
 
-  // meta
-  bool header_is_opaque_;
-  FieldDesc opaque_header_;
   StructPodDesc header_pod_desc_;
-
-  bool has_data_id_;
-  bool has_col_num_;
-  bool has_dim0_valid_num_;
-  bool has_dim1_valid_num_;
-  bool has_dim2_valid_num_;
-  bool has_record_id_in_device_piece_;
-  int64_t max_col_num_;
-
   FieldDesc body_field_;
-  std::unique_ptr<Shape> dim0_inner_shape_;
+  std::unique_ptr<Shape> static_shape_;
 
   // meta
   bool is_body_disabled_;
