@@ -12,7 +12,7 @@
 #include "oneflow/core/common/util.h"
 namespace oneflow {
 
-#define ARITHMETIC_BINARY_FUNC_NAME_SEQ (Add)(Sub)(Mul)(Div)
+#define ARITHMETIC_BINARY_FUNC_NAME_SEQ (Add)(Sub)(Mul)(Div)(EQ)(NE)(GT)(GE)(LT)(LE)
 
 #define PREPEND_PREFIX_BINARY_FUNC(name) OF_PP_CAT(BinaryFunc, name)
 #define ARITHMETIC_BINARY_FUNC_SEQ \
@@ -22,12 +22,19 @@ namespace oneflow {
 #define REDUCE_BINARY_FUNC_SEQ \
   OF_PP_SEQ_MAP(PREPEND_PREFIX_BINARY_FUNC, REDUCE_BINARY_FUNC_NAME_SEQ)
 
-#define SPECIALIZE_CONST_TYPE_BINARY_FUNC(func_struct)           \
-  template<typename T>                                           \
-  struct func_struct<const T> final {                            \
-    static OF_DEVICE_FUNC const T Invoke(const T x, const T y) { \
-      return func_struct<T>::Invoke(x, y);                       \
-    }                                                            \
+template<template<typename> class BinaryFunc, typename T>
+struct BinaryFuncTrait final {
+  typedef typename std::remove_const<decltype(
+      BinaryFunc<T>::Invoke(*(const T*)nullptr, *(const T*)nullptr))>::type return_type;
+};
+
+#define SPECIALIZE_CONST_TYPE_BINARY_FUNC(func_struct)                                        \
+  template<typename T>                                                                        \
+  struct func_struct<const T> final {                                                         \
+    static OF_DEVICE_FUNC const typename BinaryFuncTrait<func_struct, T>::return_type Invoke( \
+        const T x, const T y) {                                                               \
+      return func_struct<T>::Invoke(x, y);                                                    \
+    }                                                                                         \
   }
 
 template<typename T>
@@ -71,6 +78,42 @@ struct BinaryFuncMin final {
   static OF_DEVICE_FUNC const T Invoke(const T x, const T y) { return x < y ? x : y; }
 };
 SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncMin);
+
+template<typename T>
+struct BinaryFuncEQ final {
+  static OF_DEVICE_FUNC const int8_t Invoke(const T x, const T y) { return x == y; }
+};
+SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncEQ);
+
+template<typename T>
+struct BinaryFuncNE final {
+  static OF_DEVICE_FUNC const int8_t Invoke(const T x, const T y) { return x != y; }
+};
+SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncNE);
+
+template<typename T>
+struct BinaryFuncGT final {
+  static OF_DEVICE_FUNC const int8_t Invoke(const T x, const T y) { return x > y; }
+};
+SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncGT);
+
+template<typename T>
+struct BinaryFuncGE final {
+  static OF_DEVICE_FUNC const int8_t Invoke(const T x, const T y) { return x >= y; }
+};
+SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncGE);
+
+template<typename T>
+struct BinaryFuncLT final {
+  static OF_DEVICE_FUNC const int8_t Invoke(const T x, const T y) { return x < y; }
+};
+SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncLT);
+
+template<typename T>
+struct BinaryFuncLE final {
+  static OF_DEVICE_FUNC const int8_t Invoke(const T x, const T y) { return x <= y; }
+};
+SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncLE);
 
 #define NO_HALF_UTIL_FOUND         \
   printf("cuda arch must >= 530"); \
