@@ -1,0 +1,18 @@
+syntax = "proto2";
+package oneflow;
+
+import "oneflow/core/common/data_type.proto";
+import "oneflow/core/common/device_type.proto";
+
+message KernelRegValProto {
+  message Device7DType {
+    optional DeviceType device = 1;
+    repeated DataType dtype = 2;
+  }
+
+  message RegVal {
+    repeated Device7DType device_and_dtypes = 1;
+  }
+
+  map<int64, RegVal> kernel2reg_val = 1;
+}
