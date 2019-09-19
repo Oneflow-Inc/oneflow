@@ -1434,6 +1434,11 @@ message LearningRateScheduleOpConf {
   optional WarmupConf warmup_conf = 5;
 }
 
+message PieceSliceOpConf {
+  required string in = 1;
+  repeated string out = 2;
+}
+
 message OperatorConf {
   required string name = 1;
   optional bool trainable = 3 [default = true];
@@ -1574,6 +1579,7 @@ message OperatorConf {
     ModelLoadOpConf model_load_conf = 301;
     GatherMs0OpConf gather_ms0_conf = 302;
     GatherMs0GradOpConf gather_ms0_grad_conf = 303;
+    PieceSliceOpConf piece_slice_conf = 304;
 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;
