@@ -88,7 +88,7 @@ __device__ bool BilinearInterpolateDiff(const T bin_diff_avg, const int64_t heig
 
 template<typename T>
 __launch_bounds__(kCudaThreadsNumPerBlock) __global__
-    void RoIAlignForward(const int64_t nthreads, const T* in_dptr, const T* rois_dptr,
+    void RoiAlignForward(const int64_t nthreads, const T* in_dptr, const T* rois_dptr,
                          const float spatial_scale, const int32_t sampling_ratio,
                          const int64_t channel_num, const int64_t height, const int64_t width,
                          const int64_t pooled_height, const int64_t pooled_width, T* out_dptr) {
@@ -132,7 +132,7 @@ __launch_bounds__(kCudaThreadsNumPerBlock) __global__
 
 template<typename T>
 __launch_bounds__(kCudaThreadsNumPerBlock) __global__
-    void RoIAlignBackward(const int64_t nthreads, const T* out_diff_dptr, const T* rois_dptr,
+    void RoiAlignBackward(const int64_t nthreads, const T* out_diff_dptr, const T* rois_dptr,
                           const float spatial_scale, const int32_t sampling_ratio,
                           const int64_t channel_num, const int64_t height, const int64_t width,
                           const int64_t pooled_height, const int64_t pooled_width,
@@ -195,21 +195,21 @@ __launch_bounds__(kCudaThreadsNumPerBlock) __global__
 }  // namespace
 
 template<typename T>
-struct RoIAlignKernelUtil<DeviceType::kGPU, T> {
-  static void Forward(const KernelCtx& ctx, const RoIAlignOpConf& conf, const Blob* in_blob,
+struct RoiAlignKernelUtil<DeviceType::kGPU, T> {
+  static void Forward(const KernelCtx& ctx, const RoiAlignConf& conf, const Blob* in_blob,
                       const Blob* rois_blob, Blob* out_blob) {
     const int64_t elem_cnt = out_blob->shape().elem_cnt();
-    RoIAlignForward<T><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
+    RoiAlignForward<T><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
                          ctx.device_ctx->cuda_stream()>>>(
         elem_cnt, in_blob->dptr<T>(), rois_blob->dptr<T>(), conf.spatial_scale(),
         conf.sampling_ratio(), in_blob->shape().At(1), in_blob->shape().At(2),
         in_blob->shape().At(3), conf.pooled_h(), conf.pooled_w(), out_blob->mut_dptr<T>());
   }
 
-  static void Backward(const KernelCtx& ctx, const RoIAlignOpConf& conf, const Blob* out_diff_blob,
+  static void Backward(const KernelCtx& ctx, const RoiAlignConf& conf, const Blob* out_diff_blob,
                        const Blob* rois_blob, Blob* in_diff_blob) {
     const int64_t elem_cnt = out_diff_blob->shape().elem_cnt();
-    RoIAlignBackward<T><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
+    RoiAlignBackward<T><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
                           ctx.device_ctx->cuda_stream()>>>(
         elem_cnt, out_diff_blob->dptr<T>(), rois_blob->dptr<T>(), conf.spatial_scale(),
         conf.sampling_ratio(), in_diff_blob->shape().At(1), in_diff_blob->shape().At(2),
@@ -217,8 +217,56 @@ struct RoIAlignKernelUtil<DeviceType::kGPU, T> {
   }
 };
 
-#define INSTANTIATE_ROI_ALIGN_KERNEL_UTIL(type_cpp, type_proto) \
-  template class RoIAlignKernelUtil<DeviceType::kGPU, type_cpp>;
-OF_PP_FOR_EACH_TUPLE(INSTANTIATE_ROI_ALIGN_KERNEL_UTIL, FLOATING_DATA_TYPE_SEQ);
+template<typename T>
+class RoiAlignGPUKernel final : public KernelIf<DeviceType::kGPU> {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(RoiAlignGPUKernel);
+  RoiAlignGPUKernel() = default;
+  ~RoiAlignGPUKernel() = default;
+
+  void ForwardDataContent(const KernelCtx& ctx,
+                          std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
+    const Blob* in_blob = BnInOp2Blob("x");
+    const Blob* rois_blob = BnInOp2Blob("rois");
+    Blob* out_blob = BnInOp2Blob("y");
+    RoiAlignKernelUtil<DeviceType::kGPU, T>::Forward(
+        ctx, this->op_conf().roi_align_conf().roi_align_conf(), in_blob, rois_blob, out_blob);
+  }
+};
+
+#define REGISTER_ROIALIGN_GPU_KERNEL(dtype)                                                   \
+  REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kRoiAlignConf, DeviceType::kGPU, dtype, \
+                                        RoiAlignGPUKernel<dtype>)
+
+REGISTER_ROIALIGN_GPU_KERNEL(float);
+REGISTER_ROIALIGN_GPU_KERNEL(double);
+
+template<typename T>
+class RoiAlignGradGPUKernel final : public KernelIf<DeviceType::kGPU> {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(RoiAlignGradGPUKernel);
+  RoiAlignGradGPUKernel() = default;
+  ~RoiAlignGradGPUKernel() = default;
+
+  void ForwardDataContent(const KernelCtx& ctx,
+                          std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
+    Blob* in_diff_blob = BnInOp2Blob("dx");
+    if (in_diff_blob == nullptr) { return; }
+    Memset<DeviceType::kGPU>(ctx.device_ctx, in_diff_blob->mut_dptr<T>(), 0,
+                             in_diff_blob->ByteSizeOfDataContentField());
+    const Blob* out_diff_blob = BnInOp2Blob("dy");
+    const Blob* rois_blob = BnInOp2Blob("rois");
+    RoiAlignKernelUtil<DeviceType::kGPU, T>::Backward(
+        ctx, this->op_conf().roi_align_grad_conf().roi_align_conf(), out_diff_blob, rois_blob,
+        in_diff_blob);
+  }
+};
+
+#define REGISTER_ROIALIGN_GRAD_GPU_KERNEL(dtype)                                                  \
+  REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kRoiAlignGradConf, DeviceType::kGPU, dtype, \
+                                        RoiAlignGradGPUKernel<dtype>)
+
+REGISTER_ROIALIGN_GRAD_GPU_KERNEL(float);
+REGISTER_ROIALIGN_GRAD_GPU_KERNEL(double);
 
 }  // namespace oneflow
