@@ -337,8 +337,8 @@ def deconv2d(
     filters=None,
     dilations=None
 ):
-  """2d transposed convolution
-  Args:
+    r"""2d transposed convolution
+    Args:
     value: 4-d `Blob`
     filter: filter of transposed convolution, usually a variable
     output_shape: Not supported yet
@@ -349,18 +349,18 @@ def deconv2d(
     input: Alias for value
     filters: Alias for filter
     dilations: Not supported yet
-  Returns:
+    Returns:
     A `Blob` with the same type as `value`.
-  Raises:
+    Raises:
     ValueError: shapes of `filter` and `input` must match.
-  """
-  assert value is not None ^ input is not None, "only one of input and value could be not None"
-  assert output_shape is None, "output_shape not supported yet"
-  assert dilations is None, "dilations not supported yet"
-  assert len(input.static_shape) == 4
-  assert len(filters.static_shape) == 4
+    """
+    assert value is not None ^ input is not None, "only one of input and value could be not None"
+    assert output_shape is None, "output_shape not supported yet"
+    assert dilations is None, "dilations not supported yet"
+    assert len(input.static_shape) == 4
+    assert len(filters.static_shape) == 4
 
-   if isinstance(strides, (list, tuple)):
+    if isinstance(strides, (list, tuple)):
         assert len(strides) == 2, ValueError(
             "strides length must be 2 when passed as a list."
         )
