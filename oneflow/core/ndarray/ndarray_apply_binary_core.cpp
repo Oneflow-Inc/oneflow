@@ -5,8 +5,9 @@ namespace oneflow {
 
 template<typename T, template<typename> class binary_func>
 struct NdarrayApplyBinaryCoreWrapper<DeviceType::kCPU, T, binary_func> final {
-  static void Apply(DeviceCtx* ctx, const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& a,
-                    const XpuVarNdarray<const T>& b) {
+  static void Apply(DeviceCtx* ctx,
+                    const XpuVarNdarray<typename BinaryFuncTrait<binary_func, T>::return_type>& y,
+                    const XpuVarNdarray<const T>& a, const XpuVarNdarray<const T>& b) {
     NdarrayApplyBinaryCore<T, binary_func>::Apply(y.shape().ElemNum(), y.ptr(), a.ptr(), b.ptr());
   }
   static void InplaceApply(DeviceCtx* ctx, const XpuVarNdarray<T>& y,
