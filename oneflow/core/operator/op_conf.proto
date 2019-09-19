@@ -234,7 +234,6 @@ message MaxPooling3DOpConf {
   repeated int32 strides = 6;
 }
 
-
 message PoolingConf {
   required int32 num_spatial_dims = 1;
   // "avg" or "max"
@@ -1045,7 +1044,6 @@ message MultiplyOpConf {
   required string in_1 = 2;
   required string out = 4;
 }
-
 
 enum Norm {
   L1 = 1;
