@@ -29,7 +29,7 @@ void BroadcastEqualKernel<device_type, T>::ForwardDataContent(
       XpuVarNdarray<const T>(a_blob, num_axes), XpuVarNdarray<const T>(b_blob, num_axes));
 }
 
-#define REGISTER_BROADCAST_COMPARISION_KERNEL(op_name, dev, dtype)                                    \
+#define REGISTER_BROADCAST_COMPARISION_KERNEL(op_name, dev, dtype)                  \
   REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::k##op_name##Conf, dev, dtype, \
                                         op_name##Kernel<dev, dtype>)
 

@@ -8,9 +8,7 @@ class BroadcastEqualOp final : public BroadcastBinaryOp {
   BroadcastEqualOp() = default;
   ~BroadcastEqualOp() = default;
 
-  const PbMessage& GetCustomizedConf() const override {
-    return op_conf().broadcast_equal_conf();
-  }
+  const PbMessage& GetCustomizedConf() const override { return op_conf().broadcast_equal_conf(); }
 };
 
 REGISTER_OP(OperatorConf::kBroadcastEqualConf, BroadcastEqualOp);
