@@ -178,10 +178,6 @@ message DeconvKernelConf {
   optional int32 cudnn_bwd_data_algo = 8 [default = -1];
 }
 
-message DeconvDataGradKernelConf {
-  optional int32 cudnn_fwd_algo = 1 [default = -1];
-}
-
 message KernelConf {
   required OpAttribute op_attribute = 1;
   required bool is_forward = 2;
@@ -228,6 +224,5 @@ message KernelConf {
     GatherMs0KernelConf gather_ms0_conf = 413;
     GatherMs0GradKernelConf gather_ms0_grad_conf = 414;
     DeconvKernelConf deconv_conf = 415;
-    DeconvDataGradKernelConf deconv_data_grad_conf = 416;
   }
 }

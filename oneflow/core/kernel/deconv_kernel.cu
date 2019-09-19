@@ -15,10 +15,8 @@ class DeconvGPUKernel final : public KernelIf<DeviceType::kGPU> {
   ~DeconvGPUKernel() = default;
 
  private:
-  const PbMessage& GetCustomizedOpConf() const override {
-    return this->op_conf().deconv_conf();
-  }
-  
+  const PbMessage& GetCustomizedOpConf() const override { return this->op_conf().deconv_conf(); }
+
   void VirtualKernelInit() override {
     const int32_t num_spatial_dims = this->op_conf().deconv_conf().conv_conf().num_spatial_dims();
     Shape x_shape(this->kernel_conf().deconv_conf().in());
@@ -30,8 +28,8 @@ class DeconvGPUKernel final : public KernelIf<DeviceType::kGPU> {
     this->x_desc_.reset(new CudnnTensorDesc(GetDataType<T>::value, x_shape, data_format));
     this->y_desc_.reset(new CudnnTensorDesc(GetDataType<T>::value, y_shape, data_format));
     this->filter_desc_.reset(new CudnnFilterDesc(GetDataType<T>::value, weight_shape, data_format));
-    this->deconv_desc_.reset(
-        new CudnnDeconvDesc(GetDataType<T>::value, x_shape, this->GetCustomizedOpConf()));
+    this->deconv_desc_.reset(new CudnnDeconvDesc(GetDataType<T>::value, x_shape,
+                                                 this->op_conf().deconv_conf().conv_conf()));
     if (this->template GetValFromCustomizedOpConf<bool>("use_bias")) {
       int32_t filters = this->template GetValFromCustomizedOpConf<int32_t>("filters");
       if (num_spatial_dims == 2) {
@@ -62,19 +60,18 @@ class DeconvGPUKernel final : public KernelIf<DeviceType::kGPU> {
     }
   }
 
-void ForwardDataContent(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
+  void ForwardDataContent(const KernelCtx& ctx,
+                          std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
     const Blob* x_blob = BnInOp2Blob("x");
     const Blob* weight_blob = BnInOp2Blob("weight");
     const Blob* bias_blob = BnInOp2Blob("bias");
     Blob* y_blob = BnInOp2Blob("y");
-    Blob* buf = BnInOp2Blob("buf");
-    void* buf_ptr = buf ? buf->mut_dptr() : nullptr;
-    size_t buf_size = buf ? buf->ByteSizeOfDataContentField() : 0;
+    Blob* cudnn_buf = BnInOp2Blob("cudnn_buf");
+    void* buf_ptr = cudnn_buf ? cudnn_buf->mut_dptr() : nullptr;
+    size_t buf_size = cudnn_buf ? cudnn_buf->ByteSizeOfDataContentField() : 0;
     CudaCheck(cudnnConvolutionBackwardData(
-      ctx.device_ctx->cudnn_handle(), CudnnSPOnePtr<T>(), this->filter_desc_->Get(),
-        weight_blob->dptr<T>(), this->x_desc_->Get(), x_blob->dptr<T>(),
-        this->deconv_desc_->Get(),
+        ctx.device_ctx->cudnn_handle(), CudnnSPOnePtr<T>(), this->filter_desc_->Get(),
+        weight_blob->dptr<T>(), this->x_desc_->Get(), x_blob->dptr<T>(), this->deconv_desc_->Get(),
         static_cast<cudnnConvolutionBwdDataAlgo_t>(
             this->kernel_conf().deconv_conf().cudnn_bwd_data_algo()),
         buf_ptr, buf_size, CudnnSPZeroPtr<T>(), this->y_desc_->Get(), y_blob->mut_dptr<T>()));
@@ -93,8 +90,9 @@ void ForwardDataContent(
   mutable std::unique_ptr<CudnnTensorDesc> bias_desc_;
 };
 
-#define REGISTER_DECONV_GPU_KERNEL(dtype) \
-  REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kDeconvConf, DeviceType::kGPU, dtype, DeconvGPUKernel<dtype>)
+#define REGISTER_DECONV_GPU_KERNEL(dtype)                                                   \
+  REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kDeconvConf, DeviceType::kGPU, dtype, \
+                                        DeconvGPUKernel<dtype>)
 
 REGISTER_DECONV_GPU_KERNEL(float);
 REGISTER_DECONV_GPU_KERNEL(double);
