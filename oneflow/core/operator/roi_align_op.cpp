@@ -27,7 +27,6 @@ class RoiAlignOp final : public Operator {
     const BlobDesc* rois_blob_desc = GetBlobDesc4BnInOp("rois");
     CHECK_EQ(rois_blob_desc->shape().NumAxes(), 2);
     CHECK_EQ(rois_blob_desc->shape().At(1), 5);
-    CHECK(rois_blob_desc->has_dim0_inner_shape());
     // out: (R, C, pool_h, pool_w)
     BlobDesc* y_blob_desc = GetBlobDesc4BnInOp("y");
     *y_blob_desc = *rois_blob_desc;
@@ -85,7 +84,6 @@ class RoiAlignGradOp final : public Operator {
     const BlobDesc* rois_blob_desc = GetBlobDesc4BnInOp("rois");
     CHECK_EQ_OR_RETURN(rois_blob_desc->shape().NumAxes(), 2);
     CHECK_EQ_OR_RETURN(rois_blob_desc->shape().At(1), 5);
-    CHECK_OR_RETURN(rois_blob_desc->has_dim0_inner_shape());
     // out: (R, C, pool_h, pool_w)
     BlobDesc* dy_blob_desc = GetBlobDesc4BnInOp("dy");
     const Shape& y_shape = Shape({rois_blob_desc->shape().At(0), x_like_blob_desc->shape().At(1),
