@@ -104,3 +104,6 @@ class input_blob_def(blob_desc.BlobDesc):
 
     def __div__(self, rhs):
         return oneflow.math.divide(self, rhs)
+
+    def __eq__(self, rhs):
+        return oneflow.math.equal(self, rhs)
