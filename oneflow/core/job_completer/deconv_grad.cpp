@@ -70,7 +70,7 @@ void GenerateBackwardOpConf(
     //   UNIMPLEMENTED();
     // }
 
-    if (Ndims == 1){
+    if (Ndims == 1) {
       Conv1DOpConf* conf = data_grad_op.mutable_conv_1d_conf();
       conf->set_in(out_diff_lbn);
       conf->set_weight(GenLogicalBlobName(op.BnInOp2Lbi("filter")));
@@ -88,7 +88,7 @@ void GenerateBackwardOpConf(
       op_confs->push_back(data_grad_op);
       in_diff_lbi->set_op_name(data_grad_op.name());
       in_diff_lbi->set_blob_name(conf->out());
-    }else if(Ndims == 2){
+    } else if (Ndims == 2) {
       Conv2DOpConf* conf = data_grad_op.mutable_conv_2d_conf();
       conf->set_in(out_diff_lbn);
       conf->set_weight(GenLogicalBlobName(op.BnInOp2Lbi("filter")));
@@ -106,7 +106,7 @@ void GenerateBackwardOpConf(
       op_confs->push_back(data_grad_op);
       in_diff_lbi->set_op_name(data_grad_op.name());
       in_diff_lbi->set_blob_name(conf->out());
-    }else if(Ndims == 3){
+    } else if (Ndims == 3) {
       Conv3DOpConf* conf = data_grad_op.mutable_conv_3d_conf();
       conf->set_in(out_diff_lbn);
       conf->set_weight(GenLogicalBlobName(op.BnInOp2Lbi("filter")));
@@ -124,7 +124,7 @@ void GenerateBackwardOpConf(
       op_confs->push_back(data_grad_op);
       in_diff_lbi->set_op_name(data_grad_op.name());
       in_diff_lbi->set_blob_name(conf->out());
-    }else{
+    } else {
       UNIMPLEMENTED();
     }
   }
@@ -133,6 +133,5 @@ void GenerateBackwardOpConf(
 }  // namespace
 
 REGISTER_OP_GRAD(OperatorConf::kDeconvConf, &GenerateBackwardOpConf);
-
 
 }  // namespace oneflow
