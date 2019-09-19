@@ -47,23 +47,6 @@ void GetOutAndPad(const Shape& in_blob_shape, const ConvConf& conv_conf, std::ve
   }
 }
 
-#ifdef WITH_CUDA
-template<typename AlgoPerfType, typename AlgoType>
-void FindBestConvAlgo(
-    std::function<void(int* num)> GetAlgoMaxCnt,
-    std::function<void(int req_num, int* returned_num, AlgoPerfType* results, void* ws)>
-        FindAlgoHandler,
-    AlgoType* algo, void* work_space) {
-  int max_algo_num;
-  int returned_algo_num;
-  GetAlgoMaxCnt(&max_algo_num);
-  AlgoPerfType* perf_results = new AlgoPerfType[max_algo_num];
-  FindAlgoHandler(max_algo_num, &returned_algo_num, perf_results, work_space);
-  *algo = perf_results[0].algo;
-  delete[] perf_results;
-}
-#endif  // WITH_CUDA
-
 }  // namespace
 
 #ifdef WITH_CUDA
@@ -103,6 +86,36 @@ class DeconvOp : public Operator {
     EnrollInputBn("filter");
     if (op_conf().deconv_conf().use_bias()) { EnrollInputBn("bias"); }
     EnrollTmpBn("cudnn_buf");
+  }
+
+  Maybe<void> InferOutBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                             const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature,
+                             std::function<void(OpContext*)> EnrollOpCtx) const override {
+    const DeconvOpConf& conf = op_conf().deconv_conf();
+    const ConvConf& conv_conf = op_conf().deconv_conf().conv_conf();
+    CHECK_OR_RETURN(DevIsGpuAndEnableCudnn()) << "CUDNN is required for Deconv";
+    const std::string& data_format = conv_conf.data_format();
+
+    const BlobDesc* x_blob_desc = GetBlobDesc4BnInOp("x");
+    CHECK_EQ_OR_RETURN(x_blob_desc->shape().NumAxes(), NDims() + 2);
+    CHECK_EQ_OR_RETURN(x_blob_desc->data_type(), Global<JobDesc>::Get()->DefaultDataType());
+
+    int64_t data_num = x_blob_desc->shape().At(0);
+    int64_t channels = x_blob_desc->shape().At(1);
+    int32_t filters = conf.filters();
+    std::vector<int64_t> out;
+    GetOutAndPad(x_blob_desc->shape(), conv_conf, &out, nullptr, nullptr);
+    std::vector<int64_t> y_shape = {data_num, filters};
+    size_t dhw_offset = DhwOffset(data_format);
+    for (size_t i = 0; i < NDims(); ++i) {
+      y_shape.insert(y_shape.begin() + dhw_offset + i, out[i]);
+    }
+    BlobDesc* y_blob_desc = GetBlobDesc4BnInOp("y");
+    *y_blob_desc = *x_blob_desc;
+    y_blob_desc->mut_shape() = Shape(y_shape);
+
+    if (conf.use_bias()) { GetBlobDesc4BnInOp("bias")->mut_shape() = Shape({filters, 1}); }
+    return Maybe<void>::Ok();
   }
 
   Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
