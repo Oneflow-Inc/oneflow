@@ -91,7 +91,45 @@ int64_t GenMemZoneUniqueId(int64_t machine_id, const MemoryCase& mem_case) {
 
 void InterJobMemSharingUtil::MergeAndCleanChunkBlock(
     Plan* plan, const std::vector<HashSet<int64_t>>& reuse_mem_job_groups) {
-  TODO();
+  HashMap<int64_t, ChunkProto> chunk_id2chunk;
+  HashMap<int64_t, MemBlockProto> mem_block_id2mem_block;
+  // mzuid = memory zone unique id
+  HashMap<int64_t, HashMap<int64_t, int64_t>> job_id2mzuid2chunk_id;
+  HashMap<int64_t, HashSet<MemBlockProto*>> chunk_id2mem_blocks;
+  for(const auto& chunk : plan->chunk()) {
+    CHECK(chunk_id2chunk.emplace(chunk.chun_id(), chunk).second);
+  }
+  plan->clear_chunk();
+  for(const auto& mem_block : plan->mem_block()) {
+    CHECK(mem_block_id2mem_block.emplace(mem_block.mem_block_id(), mem_block).second);
+  }
+  plan->clear_mem_block();
+
+  for(const auto& pair : mem_block_id2mem_block) {
+    MemBlockProto* mem_block = &(pair.second);
+    if(mem_block->mem_durable() == MemoryDurable::kMemStable) {
+      CHECK(mem_block->has_chunk_id() == false);
+      CHECK(mem_block->has_chunk_offset() == false);
+      continue;
+    }
+    CHECK(mem_block->mem_durable() == MemoryDurable::kMemTemp);
+    CHECK(mem_block->has_chunk_id() && mem_block->chunk_id() >= 0);
+    CHECK(mem_block->has_chunk_offset() && mem_block->chunk_offset() >= 0);
+    CHECK(chunk_id2mem_blocks[mem_block->chunk_id()].insert(mem_block).second);
+  }
+
+  // merge chunk and delete useless chunk
+  for(const auto& pair : chunk_id2chunk) {
+    const ChunkProto& chunk = pair.second;
+    const MemoryCase& mem_case = chunk.mem_case();
+    // only reused mem in cuda device
+    if(mem_case.has_host_mem())  {continue;}
+    int64_t mzuid = GenMemZoneUniqueId(chunk.machin_id(), mem_case);
+    CHECK_EQ(chunk.job_id_size(), 1);
+    CHECK(job_id2mzuid2chunk_id[chunk.job_id(0)].emplace(mzuid, chunk.chunk_id()).second);
+  }
+
+  // TODO()
 }
 
 std::vector<HashSet<int64_t>> InterJobMemSharingUtil::GetMutualExclusionJobGroups(
