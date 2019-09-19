@@ -337,8 +337,8 @@ def deconv2d(
     filters=None,
     dilations=None
 ):
-  """2d transposed convolution
-  Args:
+    r"""2d transposed convolution
+    Args:
     value: 4-d `Blob`
     filter: filter of transposed convolution, usually a variable
     output_shape: Not supported yet
@@ -349,18 +349,23 @@ def deconv2d(
     input: Alias for value
     filters: Alias for filter
     dilations: Not supported yet
-  Returns:
+    Returns:
     A `Blob` with the same type as `value`.
-  Raises:
+    Raises:
     ValueError: shapes of `filter` and `input` must match.
-  """
-  assert value is not None ^ input is not None, "only one of input and value could be not None"
-  assert output_shape is None, "output_shape not supported yet"
-  assert dilations is None, "dilations not supported yet"
-  assert len(input.static_shape) == 4
-  assert len(filters.static_shape) == 4
+    """
+    assert (value is not None) ^ (
+        input is not None), "only one of `input` and `value` could be not None"
+    assert (filter is not None) ^ (
+        filters is not None), "only one of `filter` and `filters` could be not None"
+    filters = filters or filter
+    input = input or value
+    assert output_shape is None, "output_shape not supported yet"
+    assert dilations is None, "dilations not supported yet"
+    assert len(input.static_shape) == 4
+    assert len(filters.static_shape) == 4
 
-   if isinstance(strides, (list, tuple)):
+    if isinstance(strides, (list, tuple)):
         assert len(strides) == 2, ValueError(
             "strides length must be 2 when passed as a list."
         )
@@ -382,16 +387,17 @@ def deconv2d(
     op_conf = op_conf_util.OperatorConf()
     setattr(op_conf, "name",
             name if name is not None else id_util.UniqueStr("Deconv2d_"))
-    setattr(op_conf.deconv_conf, "in", input.logical_blob_name)
-    op_conf.deconv_conf.out = "out"
+    op_conf.deconv_conf.x = input.logical_blob_name
+    op_conf.deconv_conf.y = "out"
     op_conf.deconv_conf.filter = filters.logical_blob_name
-    op_conf.deconv_conf.filters = filters.static_shape[0]
     op_conf.deconv_conf.conv_conf.padding = padding.lower()
     op_conf.deconv_conf.conv_conf.data_format = channel_pos
     if channel_pos == "channels_first":
+        op_conf.deconv_conf.filters = filters.static_shape[1]
         op_conf.deconv_conf.conv_conf.kernel_size.extend(
             filters.static_shape[2:4])
     elif channel_pos == "channels_last":
+        op_conf.deconv_conf.filters = filters.static_shape[3]
         op_conf.deconv_conf.conv_conf.kernel_size.extend(
             filters.static_shape[-3:-1])
     else:
@@ -399,7 +405,7 @@ def deconv2d(
     op_conf.deconv_conf.conv_conf.strides.extend(strides)
     op_conf.deconv_conf.conv_conf.dilation_rate.extend(dilations)
     op_conf.deconv_conf.use_bias = False
-
+    op_conf.deconv_conf.conv_conf.num_spatial_dims = 2
     compile_context.CurJobAddOp(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
     lbi.op_name = op_conf.name
