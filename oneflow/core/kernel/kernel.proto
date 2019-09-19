@@ -224,6 +224,5 @@ message KernelConf {
     GatherMs0KernelConf gather_ms0_conf = 413;
     GatherMs0GradKernelConf gather_ms0_grad_conf = 414;
     DeconvKernelConf deconv_conf = 415;
-    DeconvDataGradKernelConf deconv_data_grad_conf = 416;
   }
 }
