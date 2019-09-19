@@ -33,8 +33,8 @@ class Kernel {
   const OpAttribute& op_attribute() const { return kernel_conf().op_attribute(); }
   /*
    * return true means all below must be guaranteed when `Launch` function return:
-   * 1) all out blob header has been set
-   * 2) all asynchronous task has been queued
+   * 1) all out blob header has been set (e.g. SyncSetHeadKernel)
+   * 2) all asynchronous task has been queued (e.g. NCCL related kernel)
    */
   virtual bool IsKernelLaunchSynchronized() const { return true; }
 
