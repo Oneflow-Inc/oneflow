@@ -178,10 +178,6 @@ message DeconvKernelConf {
   optional int32 cudnn_bwd_data_algo = 8 [default = -1];
 }
 
-message DeconvDataGradKernelConf {
-  optional int32 cudnn_fwd_algo = 1 [default = -1];
-}
-
 message KernelConf {
   required OpAttribute op_attribute = 1;
   required bool is_forward = 2;
