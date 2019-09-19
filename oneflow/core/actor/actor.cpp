@@ -662,11 +662,13 @@ std::unique_ptr<Actor> NewActor(const TaskProto& task_proto, const ThreadCtx& th
 }
 
 void Actor::AsyncSendQueuedMsg() {
-  std::deque<ActorMsg> msgs;
-  msgs.swap(async_msg_queue_);
-  device_ctx_->AddCallBack([msgs]() {
-    for (const ActorMsg& msg : msgs) { Global<ActorMsgBus>::Get()->SendMsg(msg); }
-  });
+  if (!async_msg_queue_.empty()) {
+    std::deque<ActorMsg> msgs;
+    msgs.swap(async_msg_queue_);
+    device_ctx_->AddCallBack([msgs]() {
+      for (const ActorMsg& msg : msgs) { Global<ActorMsgBus>::Get()->SendMsg(msg); }
+    });
+  }
 }
 
 }  // namespace oneflow

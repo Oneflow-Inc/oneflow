@@ -235,7 +235,6 @@ message MaxPooling3DOpConf {
   repeated int32 strides = 6;
 }
 
-
 message PoolingConf {
   required int32 num_spatial_dims = 1;
   // "avg" or "max"
@@ -381,6 +380,15 @@ message SigmoidCrossEntropyLossOpConf {
   optional string weight = 8;
 }
 
+message SigmoidCrossEntropyLossGradOpConf {
+  required string prediction = 1;
+  required string label = 2;
+  required string loss_diff = 3;
+  required string prediction_diff = 4;
+  optional float weight_scalar = 5 [default = 1.0];
+  optional ScalarReductionType reduction = 6 [default = kSumOverN];
+}
+
 message IdentityLossOpConf {
   required string prediction = 1;
   required string loss = 2;
@@ -466,6 +474,12 @@ message AdamModelUpdateConf {
   optional float beta2 = 2 [default = 0.999];
   optional float epsilon = 3 [default = 1e-8];
   optional bool do_bias_correction = 4 [default = false];
+}
+
+message LazyAdamModelUpdateConf {
+  optional float beta1 = 1 [default = 0.9];
+  optional float beta2 = 2 [default = 0.999];
+  optional float epsilon = 3 [default = 1e-8];
 }
 
 message ExponentialDecayConf {
@@ -560,6 +574,7 @@ message NormalModelUpdateOpUserConf {
     RMSPropModelUpdateConf rmsprop_conf = 1002;
     LARSModelUpdateConf lars_conf = 1003;
     AdamModelUpdateConf adam_conf = 1004;
+    LazyAdamModelUpdateConf lazy_adam_conf = 1005;
   }
 }
 
@@ -621,6 +636,21 @@ message LARSModelUpdateOpConf {
 }
 
 message AdamModelUpdateOpConf {
+  required NormalModelUpdateOpUserConf user_conf = 1;
+  required string m = 2;
+  required string v = 3;
+  optional string beta1_t = 4;
+  optional string beta2_t = 5;
+  required string model_diff = 6;
+  required string total_instance_num_diff = 7;
+  required string model = 8;
+  required string train_step = 9;
+  required string learning_rate = 10;
+  required float l1 = 11;
+  required float l2 = 12;
+}
+
+message LazyAdamModelUpdateOpConf {
   required NormalModelUpdateOpUserConf user_conf = 1;
   required string m = 2;
   required string v = 3;
@@ -1504,9 +1534,10 @@ message OperatorConf {
     SwitchOutputOpConf switch_output_conf = 145;
     ReturnOpConf return_conf = 146;
     PartialTickOpConf partial_tick_conf = 147;
-    ForeignWatchOpConf foreign_watch_conf = 148;
-    SliceBoxingCopyOpConf slice_boxing_copy_conf = 149;
-    SliceBoxingAddOpConf slice_boxing_add_conf = 150;
+    LazyAdamModelUpdateOpConf lazy_adam_model_update_conf = 148;
+    ForeignWatchOpConf foreign_watch_conf = 149;
+    SliceBoxingCopyOpConf slice_boxing_copy_conf = 150;
+    SliceBoxingAddOpConf slice_boxing_add_conf = 151;
 
     // domain op
     TupleIdentityOpConf tuple_identity_conf = 200;
@@ -1591,8 +1622,9 @@ message OperatorConf {
     PReluDataGradOpConf prelu_data_grad_conf = 299;
     PReluAlphaGradOpConf prelu_alpha_grad_conf = 300;
     ModelLoadOpConf model_load_conf = 301;
-    GatherMs0OpConf gather_ms0_conf = 302;
-    GatherMs0GradOpConf gather_ms0_grad_conf = 303;
+    SigmoidCrossEntropyLossGradOpConf sigmoid_cross_entropy_loss_grad_conf = 304; 
+    GatherMs0OpConf gather_ms0_conf = 305;
+    GatherMs0GradOpConf gather_ms0_grad_conf = 306;
 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;

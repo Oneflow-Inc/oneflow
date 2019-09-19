@@ -50,7 +50,7 @@ args = parser.parse_args()
 def _blob_conf(name, shape, dtype=flow.int32):
   return flow.data.BlobConf(name=name, shape=shape, dtype=dtype, codec=flow.data.RawCodec())
 
-def BertDecoder(data_dir, batch_size, data_part_num, seq_length, max_predictions_per_seq):
+def BertDecoder(data_dir, batch_size=1, data_part_num=1, seq_length=128, max_predictions_per_seq=20):
   blob_confs = []
   blob_confs.append(_blob_conf('input_ids', [seq_length]))
   blob_confs.append(_blob_conf('next_sentence_labels', [1]))
