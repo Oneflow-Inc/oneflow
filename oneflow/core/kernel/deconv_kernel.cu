@@ -18,20 +18,21 @@ class DeconvGPUKernel final : public KernelIf<DeviceType::kGPU> {
   const PbMessage& GetCustomizedOpConf() const override { return this->op_conf().deconv_conf(); }
 
   void VirtualKernelInit() override {
+    const DeconvOpConf& op_conf = this->op_conf().deconv_conf();
+    const ConvConf& conv_conf = this->op_conf().deconv_conf().conv_conf();
     const int32_t num_spatial_dims = this->op_conf().deconv_conf().conv_conf().num_spatial_dims();
     Shape x_shape(this->kernel_conf().deconv_conf().in());
     Shape y_shape(this->kernel_conf().deconv_conf().out());
     Shape weight_shape(this->kernel_conf().deconv_conf().weight());
 
-    const std::string& data_format =
-        this->template GetValFromCustomizedOpConf<std::string>("data_format");
+    const std::string& data_format = conv_conf.data_format();
     this->x_desc_.reset(new CudnnTensorDesc(GetDataType<T>::value, x_shape, data_format));
     this->y_desc_.reset(new CudnnTensorDesc(GetDataType<T>::value, y_shape, data_format));
     this->filter_desc_.reset(new CudnnFilterDesc(GetDataType<T>::value, weight_shape, data_format));
     this->deconv_desc_.reset(new CudnnDeconvDesc(GetDataType<T>::value, x_shape,
                                                  this->op_conf().deconv_conf().conv_conf()));
-    if (this->template GetValFromCustomizedOpConf<bool>("use_bias")) {
-      int32_t filters = this->template GetValFromCustomizedOpConf<int32_t>("filters");
+    if (op_conf.use_bias()) {
+      int32_t filters = op_conf.filters();
       if (num_spatial_dims == 2) {
         if (data_format == "channels_first") {
           this->bias_desc_.reset(

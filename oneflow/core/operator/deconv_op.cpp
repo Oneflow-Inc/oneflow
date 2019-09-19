@@ -89,8 +89,9 @@ class DeconvOp : public Operator {
   }
 
   Maybe<void> InferOutBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                             const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature,
-                             std::function<void(OpContext*)> EnrollOpCtx) const override {
+                                const ParallelContext* parallel_ctx,
+                                const SbpSignature* sbp_signature,
+                                std::function<void(OpContext*)> EnrollOpCtx) const override {
     const DeconvOpConf& conf = op_conf().deconv_conf();
     const ConvConf& conv_conf = op_conf().deconv_conf().conv_conf();
     CHECK_OR_RETURN(DevIsGpuAndEnableCudnn()) << "CUDNN is required for Deconv";
@@ -101,7 +102,6 @@ class DeconvOp : public Operator {
     CHECK_EQ_OR_RETURN(x_blob_desc->data_type(), Global<JobDesc>::Get()->DefaultDataType());
 
     int64_t data_num = x_blob_desc->shape().At(0);
-    int64_t channels = x_blob_desc->shape().At(1);
     int32_t filters = conf.filters();
     std::vector<int64_t> out;
     GetOutAndPad(x_blob_desc->shape(), conv_conf, &out, nullptr, nullptr);
