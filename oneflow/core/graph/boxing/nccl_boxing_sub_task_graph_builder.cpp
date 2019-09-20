@@ -23,7 +23,7 @@ Maybe<void> NcclBoxingSubTskGphBuilder::Build(
   if (SubTskGphBuilderUtil::BlobHasDynamicShape(logical_blob_desc)) {
     return Error::BoxingNotSupported();
   }
-  if (logical_blob_desc.shape().elem_cnt() < 1024 * 1024) { return Error::BoxingNotSupported(); }
+  if (logical_blob_desc.shape().elem_cnt() < 1024) { return Error::BoxingNotSupported(); }
   if (dst_parallel_desc.device_type() != DeviceType::kGPU) { return Error::BoxingNotSupported(); }
   if (dst_parallel_desc.parallel_num() <= 1) { return Error::BoxingNotSupported(); }
   if (SubTskGphBuilderUtil::IsBoxingP2B(src_sbp_parallel, dst_sbp_parallel)) {
