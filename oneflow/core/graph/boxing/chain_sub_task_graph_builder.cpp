@@ -5,7 +5,7 @@ namespace oneflow {
 namespace {
 
 bool IsBoxingNotSupported(const Maybe<void>& status) {
-  return status.error()->has_boxing_error()
+  return !status.IsOk() && status.error()->has_boxing_error()
          && status.error()->boxing_error() == BoxingError::kNotSupported;
 }
 
