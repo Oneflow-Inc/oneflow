@@ -1434,6 +1434,17 @@ message LearningRateScheduleOpConf {
   optional WarmupConf warmup_conf = 5;
 }
 
+message DeconvOpConf {
+    required string x = 1;
+    required string y = 2;
+    required string filter = 3;
+    required int32 filters = 4;
+    required ConvConf conv_conf = 5;
+    optional bool use_bias = 6 [default = true];
+    optional InitializerConf weight_initializer = 7;
+    optional InitializerConf bias_initializer = 8;
+}
+
 message OperatorConf {
   required string name = 1;
   optional bool trainable = 3 [default = true];
@@ -1574,6 +1585,7 @@ message OperatorConf {
     ModelLoadOpConf model_load_conf = 301;
     GatherMs0OpConf gather_ms0_conf = 302;
     GatherMs0GradOpConf gather_ms0_grad_conf = 303;
+    DeconvOpConf deconv_conf = 304;
 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;
