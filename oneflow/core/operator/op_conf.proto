@@ -1468,7 +1468,13 @@ message RoiAlignGradOpConf {
   required RoiAlignConf roi_align_conf = 5;
 }
 
-message LogicalAndOpConf {}
+message LogicalAndOpConf {
+  // in
+  required string lhs = 1;
+  required string rhs = 2;
+  // out
+  required string out = 3;
+}
 
 message WhereOpConf {}
 

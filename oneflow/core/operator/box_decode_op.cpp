@@ -11,7 +11,7 @@ class BoxDecodeOp final : public Operator {
   void InitFromOpConf() override;
   const PbMessage& GetCustomizedConf() const override { return this->op_conf().box_decode_conf(); }
   Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                      const ParallelContext* parallel_ctx) const override;
+                             const ParallelContext* parallel_ctx) const override;
 };
 
 void BoxDecodeOp::InitFromOpConf() {
@@ -21,8 +21,9 @@ void BoxDecodeOp::InitFromOpConf() {
   EnrollOutputBn("boxes", false);
 }
 
-Maybe<void> BoxDecodeOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                 const ParallelContext* parallel_ctx) const {
+Maybe<void> BoxDecodeOp::InferBlobDescs(
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx) const {
   // input: ref_boxes (N, 4)
   const BlobDesc* ref_boxes = GetBlobDesc4BnInOp("ref_boxes");
   CHECK_EQ_OR_RETURN(ref_boxes->shape().NumAxes(), 2);
