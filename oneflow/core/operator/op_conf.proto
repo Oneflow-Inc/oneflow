@@ -1476,23 +1476,68 @@ message LogicalAndOpConf {
   required string out = 3;
 }
 
-message WhereOpConf {}
+message WhereOpConf {
+  // in
+  required string condition = 1;
+  required string lhs = 2;
+  required string rhs = 3;
+  // out
+  required string out = 4;
+}
 
-message ClipByValueOpConf {}
+message ClipByValueOpConf {
+  // in
+  required string in = 1;
+  // conf
+  optional float min_val = 2;
+  optional float max_val = 3;
+  // out
+  required string out = 4;
+}
 
-message ConstantLikeOpConf {}
+message ConstantLikeOpConf {
+  required string in = 1;
+  required float scalar = 2;
+  required string out = 3;
+}
 
-message LocalNonzeroOpConf {}
+message LocalNonzeroOpConf {
+  required string in = 1;
+  required string out = 2;
+}
 
-message SqueezeOpConf {}
+message SqueezeOpConf {
+  required string in = 1;
+  required string out = 2;
+  repeated int32 axis = 3;
+}
 
-message ExpandDimsOpConf {}
+message ExpandDimsOpConf {
+  required string in = 1;
+  required string out = 2;
+  required int32 axis = 3;
+}
 
-message LocalGatherOpConf {}
+message LocalGatherOpConf {
+  required string in = 1;
+  required string indices = 2;
+  required string out = 3;
+  optional int64 axis = 4 [default = 0];
+}
 
-message LocalScatterNdUpdateOpConf {}
+message LocalScatterNdUpdateOpConf {
+  // in
+  required string in = 1;
+  required string indices = 2;
+  required string updates = 3;
+  // out
+  required string out = 4;
+}
 
-message PieceSliceV2OpConf {}
+message PieceSliceV2OpConf {
+  required string in = 1;
+  repeated string out = 2;
+}
 
 message MaskrcnnPositiveNegativeSampleOpConf {
   // in

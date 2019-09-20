@@ -1,4 +1,4 @@
-#include "oneflow/core/operator/logical_and_op.h"
+#include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
 void LogicalAndOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
