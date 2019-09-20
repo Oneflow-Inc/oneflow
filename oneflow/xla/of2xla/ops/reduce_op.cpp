@@ -17,9 +17,15 @@ class ReduceOp : public XlaOpCompiler {
     CHECK(!keep_dims) << "Currently not support keep_dims option.";
 
     std::vector<int> axis = ctx->GetAttr<std::vector<int>>("axis");
+    Shape in_shape = ctx->InputShape("in");
+    for (int i = 0; i < axis.size(); ++i) {
+      if (axis[i] < 0) {
+        axis[i] += in_shape.NumAxes();
+      }
+    }
+
     xla::XlaOp input = ctx->Input("in");
     if (axis.size() == 0) {
-      Shape in_shape = ctx->InputShape("in");
       std::vector<int64_t> dim_vec{1};
       dim_vec.insert(dim_vec.end(), in_shape.dim_vec().begin(),
                      in_shape.dim_vec().end());

@@ -80,7 +80,7 @@ void BuildSubGraphPass::Run() {
 
     std::unordered_map<int64_t, XlaNode *> sub_graph_nodes;
     for (XlaNode *n : kv.second) {
-      XlaNode *node = sub_graph->AddNode(n->node());
+      XlaNode *node = sub_graph->AddNode(n->op());
       sub_graph_nodes[n->unique_id()] = node;
       
       // Rebuild inputs if the end node of input edges has been changed,
@@ -134,7 +134,6 @@ void BuildSubGraphPass::DivideArgumentNodes(XlaGraph *sub_graph) {
     }
   }
   // Start to divide nodes
-  std::unordered_set<Argument> divided_args;
   int argument_id = 0;
   for (XlaNode *node : argument_nodes) {
     std::list<XlaEdge *> in_edges = node->in_edges();
@@ -145,14 +144,15 @@ void BuildSubGraphPass::DivideArgumentNodes(XlaGraph *sub_graph) {
     node->ClearInEdges();
     node->ClearOutEdges();
 
+    std::unordered_map<Argument, XlaNode *> divided_args;
     for (XlaEdge *edge : in_edges) {
       const Argument &arg = edge->argument();
       if (node->in_edges().size() == 0) {
         node->set_op_name(absl::StrCat(_XlaOutArgumentPrefix, argument_id++));
-        node->AddInEdge(edge);
-        divided_args.insert(arg);
+        divided_args.emplace(arg, node);
       }
-      if (divided_args.insert(arg).second) {
+      const auto &it = divided_args.find(arg);
+      if (it == divided_args.end()) {
         XlaNode *argument = sub_graph->AddNode();
         argument->set_op_type(_XlaArgumentOpType);
         argument->set_op_name(absl::StrCat(_XlaOutArgumentPrefix,
@@ -160,6 +160,11 @@ void BuildSubGraphPass::DivideArgumentNodes(XlaGraph *sub_graph) {
         argument->set_backend(node->backend());
         argument->AddInEdge(edge);
         edge->UpdateEndNode(argument);
+        divided_args.emplace(arg, argument);
+      } else {
+        XlaNode *consumer = it->second;
+        edge->UpdateEndNode(consumer);
+        consumer->AddInEdge(edge);
       }
     }
 
@@ -167,10 +172,10 @@ void BuildSubGraphPass::DivideArgumentNodes(XlaGraph *sub_graph) {
       const Argument &arg = edge->argument();
       if (node->out_edges().size() == 0) {
         node->set_op_name(absl::StrCat(_XlaInArgumentPrefix, argument_id++));
-        node->AddOutEdge(edge);
-        divided_args.insert(arg);
+        divided_args.emplace(arg, node);
       }
-      if (divided_args.insert(arg).second) {
+      const auto &it = divided_args.find(arg);
+      if (it == divided_args.end()) {
         XlaNode *argument = sub_graph->AddNode();
         argument->set_op_type(_XlaArgumentOpType);
         argument->set_op_name(absl::StrCat(_XlaInArgumentPrefix,
@@ -178,6 +183,11 @@ void BuildSubGraphPass::DivideArgumentNodes(XlaGraph *sub_graph) {
         argument->set_backend(node->backend());
         argument->AddOutEdge(edge);
         edge->UpdateStartNode(argument);
+        divided_args.emplace(arg, argument);
+      } else {
+        XlaNode *producer = it->second;
+        edge->UpdateStartNode(producer);
+        producer->AddOutEdge(edge);
       }
     }
   }

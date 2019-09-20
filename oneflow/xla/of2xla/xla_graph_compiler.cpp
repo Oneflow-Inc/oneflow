@@ -17,47 +17,21 @@
 namespace oneflow {
 namespace mola {
 
-XlaGraphCompiler::XlaGraphCompiler(
-    xla::LocalClient *client, xla::XlaBuilder *builder, XlaGraph *graph,
-    ParallelContext parallel_ctx, const std::vector<Blob *> &entry_blobs,
-    const std::vector<std::string> &entry_blob_names,
-    const std::vector<std::string> &return_blob_names,
-    const bool alias_input_output)
-    : client_(client), builder_(builder), graph_(graph),
-      entry_names_(entry_blob_names), return_names_(return_blob_names),
-      alias_input_output_(alias_input_output) {
-  CHECK_EQ(entry_blobs.size(), entry_blob_names.size());
-
-  std::unordered_map<std::string, BlobDesc> blob_descs;
-  for (int i = 0; i < entry_blobs.size(); ++i) {
-    const RtBlobDesc &runtime_desc = entry_blobs[i]->blob_desc();
-    BlobDesc blob_desc(runtime_desc.shape(),
-                       runtime_desc.data_type(),
-                       runtime_desc.has_data_id_field(),
-                       runtime_desc.has_col_num_field(),
-                       runtime_desc.max_col_num());
-    blob_descs.emplace(entry_blob_names[i], blob_desc);
-  }
-  graph_->InferBlobDescs(&blob_descs, &parallel_ctx);
-
-  for (const auto &pair : blob_descs) {
-    LogicalBlobId lbi = BlobId(pair.first);
-    arguments_.emplace(pair.first, Argument(lbi, pair.second));
-  }
-}
+XlaGraphCompiler::XlaGraphCompiler(xla::LocalClient *client,
+                                   xla::XlaBuilder *builder)
+    : client_(client), builder_(builder) {}
 
 void XlaGraphCompiler::BuildComputation(
+    const XlaGraph *graph,
     const std::unordered_map<Argument, XlaOprand> &entry_oprands,
     const std::vector<Argument> &return_arguments,
     xla::Shape *output_shape, xla::XlaComputation *computation) {
   // All operator's output oprands collector
   std::unordered_map<Argument, XlaOprand> all_outputs(entry_oprands);
 
-  TopologyVisit(*graph_, [&](const XlaNode *node) {
+  TopologyVisit(*graph, [&](const XlaNode *node) {
     const std::string &backend = node->backend();
     const std::string &op_type = node->op_type();
-    // Create operator compiler
-    auto op_compiler = CreateXlaOpCompiler(backend, op_type);
 
     // Setup input oprands from outputs of previous nodes
     std::unordered_map<Argument, XlaOprand> input_oprands;
@@ -68,6 +42,11 @@ void XlaGraphCompiler::BuildComputation(
       input_oprands.emplace(argument, oprand);
     }
 
+    xla::OpMetadata metadata;
+    metadata.set_op_type(op_type);
+    metadata.set_op_name(node->op_name());
+    builder_->SetOpMetadata(metadata);
+
     // Setup XlaOpContext Param to build a XlaOpContext
     XlaOpContext::Param param;
     param.backend = backend;
@@ -76,11 +55,14 @@ void XlaGraphCompiler::BuildComputation(
     param.builder = builder_;
     param.num_outputs = node->output_bns().size();
 
-    SetupParamArguments(node, arguments_, &param);
+    SetupNodeArguments(node, arguments_, &param);
 
     // Do compile and lower the operator computation to HLO instructions
+    auto op_compiler = CreateXlaOpCompiler(backend, op_type);
     XlaOpContext op_context(param);
     op_compiler->Compile(&op_context);
+
+    builder_->ClearOpMetadata();
 
     // Always insert new output into `all_outputs`
     const auto &outputs = op_context.outputs();
@@ -134,30 +116,34 @@ void XlaGraphCompiler::BuildExecutable(
   DLOG(INFO) << "BuildExecutable done";
 }
 
-CompilationResult XlaGraphCompiler::Compile() {
-  CHECK_NOTNULL(graph_);
-
+CompilationResult XlaGraphCompiler::Compile(
+    const XlaGraph *graph,
+    const std::vector<Blob *> &entry_blobs,
+    const std::vector<Blob *> &return_blobs,
+    const std::vector<std::string> &entry_blob_names,
+    const std::vector<std::string> &return_blob_names,
+    const std::vector<xla::XlaBuilder::InputOutputAlias> &aliases) {
+  CHECK_NOTNULL(graph);
   CompilationResult result;
-  result.alias_input_output = alias_input_output_;
+  for (const xla::XlaBuilder::InputOutputAlias& alias : aliases) {
+    builder_->SetUpAlias(alias.output_index, alias.param_number,
+                         alias.param_index);
+  }
 
-  std::vector<std::string> input_names = entry_names_;
-  const int return_size = return_names_.size();
-  int argument_index = entry_names_.size();
+  BuildArguments(graph, entry_blobs, return_blobs, entry_blob_names,
+                 return_blob_names);
+  std::vector<std::string> input_names = entry_blob_names;
+  const int return_size = return_blob_names.size();
+  int argument_index = entry_blob_names.size();
   std::vector<Argument> return_arguments(return_size);
   for (int i = 0; i < return_size; ++i, ++argument_index) {
-    // Alias outputs to input arguments to update in-place
-    if (alias_input_output_) {
-      builder_->SetUpAlias({i}/*output_index*/, argument_index/*param_number*/,
-                           {}/*param_index*/);
-      input_names.push_back(return_names_[i]);
-    }
-    return_arguments[i] = arguments_.at(return_names_[i]);
+    return_arguments[i] = arguments_.at(return_blob_names[i]);
   }
   std::unordered_map<Argument, XlaOprand> entry_oprands;
   SetupEntryOprands(input_names, &entry_oprands, &result.xla_input_shapes);
 
-  BuildComputation(entry_oprands, return_arguments, &result.xla_output_shape,
-                   &result.computation);
+  BuildComputation(graph, entry_oprands, return_arguments,
+                   &result.xla_output_shape, &result.computation);
 
   BuildExecutable(result, &result.executable);
   
@@ -180,7 +166,7 @@ void XlaGraphCompiler::SetupEntryOprands(
   }
 }
 
-void XlaGraphCompiler::SetupParamArguments(
+void XlaGraphCompiler::SetupNodeArguments(
     const XlaNode *node,
     const std::unordered_map<std::string, Argument> &arguments,
     XlaOpContext::Param *param) {
@@ -194,6 +180,43 @@ void XlaGraphCompiler::SetupParamArguments(
     op_arguments.emplace(out, arguments.at(arg_name));
   }
   param->arguments = std::move(op_arguments);
+}
+
+void XlaGraphCompiler::BuildArguments(
+    const XlaGraph *graph,
+    const std::vector<Blob *> &entry_blobs,
+    const std::vector<Blob *> &return_blobs,
+    const std::vector<std::string> &entry_blob_names,
+    const std::vector<std::string> &return_blob_names) {
+  const std::vector<Argument> arguments = graph->Arguments();
+  for (const Argument &argument : arguments) {
+    arguments_.emplace(argument.blob_name(), argument);
+  }
+
+  CHECK_EQ(entry_blobs.size(), entry_blob_names.size());
+  CHECK_EQ(return_blobs.size(), return_blob_names.size());
+  for (int i = 0; i < entry_blobs.size(); ++i) {
+    const RtBlobDesc &runtime_desc = entry_blobs[i]->blob_desc();
+    BlobDesc blob_desc(runtime_desc.shape(),
+                       runtime_desc.data_type(),
+                       runtime_desc.has_data_id_field(),
+                       runtime_desc.has_col_num_field(),
+                       runtime_desc.max_col_num());
+    LogicalBlobId blob_id = BlobId(entry_blob_names[i]);
+    // TODO(hjchen2): Check blob shape and data type if existed
+    arguments_.emplace(entry_blob_names[i], Argument(blob_id, blob_desc));
+  }
+  for (int i = 0; i < return_blobs.size(); ++i) {
+    const RtBlobDesc &runtime_desc = return_blobs[i]->blob_desc();
+    BlobDesc blob_desc(runtime_desc.shape(),
+                       runtime_desc.data_type(),
+                       runtime_desc.has_data_id_field(),
+                       runtime_desc.has_col_num_field(),
+                       runtime_desc.max_col_num());
+    LogicalBlobId blob_id = BlobId(return_blob_names[i]);
+    // TODO(hjchen2): Check blob shape and data type if existed
+    arguments_.emplace(return_blob_names[i], Argument(blob_id, blob_desc));
+  }
 }
 
 }  // namespace mola

@@ -1,7 +1,7 @@
 #include "oneflow/core/device/cuda_stream_handle.h"
 #include "oneflow/core/device/cuda_util.h"
-#include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/machine_context.h"
+#include "oneflow/core/device/cuda_event_pool.h"
 
 namespace oneflow {
 
@@ -34,6 +34,16 @@ const cublasHandle_t* CudaStreamHandle::cublas_pmd_handle() {
   return cublas_pmd_handle_.get();
 }
 
+const cublasHandle_t* CudaStreamHandle::cublas_tensor_op_math_handle() {
+  if (!cublas_tensor_op_math_handle_) {
+    cublas_tensor_op_math_handle_.reset(new cublasHandle_t);
+    CudaCheck(cublasCreate(cublas_tensor_op_math_handle_.get()));
+    CudaCheck(cublasSetStream(*cublas_tensor_op_math_handle_, *cuda_stream()));
+    CudaCheck(cublasSetMathMode(*cublas_tensor_op_math_handle_, CUBLAS_TENSOR_OP_MATH));
+  }
+  return cublas_tensor_op_math_handle_.get();
+}
+
 const cudnnHandle_t* CudaStreamHandle::cudnn_handle() {
   if (!cudnn_handle_) {
     cudnn_handle_.reset(new cudnnHandle_t);
@@ -45,9 +55,8 @@ const cudnnHandle_t* CudaStreamHandle::cudnn_handle() {
 
 void CudaStreamHandle::AddCallBack(std::function<void()> callback) {
   CudaCBEvent cb_event;
-  cb_event.callback = callback;
-  CudaCheck(
-      cudaEventCreateWithFlags(&(cb_event.event), cudaEventBlockingSync | cudaEventDisableTiming));
+  cb_event.callback = std::move(callback);
+  cb_event.event = Global<CudaEventPool>::Get()->Get();
   CudaCheck(cudaEventRecord(cb_event.event, *cuda_stream()));
   cb_event_chan_->Send(cb_event);
 }

@@ -53,20 +53,15 @@ void ExecNode::ToProto(bool is_forward, const ParallelContext* parallel_ctx,
 
 void ExecNode::InferBlobDescs(const ParallelContext* parallel_ctx) {
   auto GetBlobDesc4BnInOp = GetBlobDesc4BnInOpFunc();
-  op_->InferBlobDescsIf(GetBlobDesc4BnInOp, parallel_ctx, Global<JobDesc>::Get()->RecordPieceSize(),
-                        [this](OpContext* op_ctx) { op_ctx_.reset(op_ctx); });
+  const SbpSignature* sbp_signature = nullptr;
+  {
+    const OpNode* op_node = Global<OpGraph>::Get()->OpNode4OpName(op()->op_name());
+    if (op_node != nullptr) { sbp_signature = &op_node->sbp_signature(); }
+  }
+  CHECK_JUST(op_->InferBlobDescsIf(GetBlobDesc4BnInOp, parallel_ctx, sbp_signature,
+                                   GlobalJobDesc().RecordPieceSize(),
+                                   [this](OpContext* op_ctx) { op_ctx_.reset(op_ctx); }));
   Global<OpGraph>::Get()->CheckBlobDescs(op_->op_name(), GetBlobDesc4BnInOp, parallel_ctx);
-}
-
-void ExecNode::InferBwBufBlobDescs(const ParallelContext* parallel_ctx) {
-  op_->InferBwBufBlobDescsIf(GetBlobDesc4BnInOpFunc(), parallel_ctx, op_context());
-}
-
-void ExecNode::InferDiffBlobDescsWithoutFwNode(const ParallelContext* parallel_ctx) {
-  op_->InferDiffBlobDescsWithoutFwBlob(GetBlobDesc4BnInOpFunc(), parallel_ctx);
-}
-void ExecNode::FixInDiffBlobDescs(const ParallelContext* parallel_ctx) {
-  op_->FixInDiffBlobDescs(GetBlobDesc4BnInOpFunc(), parallel_ctx);
 }
 
 std::function<BlobDesc*(const std::string&)> ExecNode::GetBlobDesc4BnInOpFunc() const {

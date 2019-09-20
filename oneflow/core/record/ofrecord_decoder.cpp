@@ -105,7 +105,7 @@ int32_t OFRecordDecoder<encode_case, T>::ReadColNum(DeviceCtx* ctx, Blob* in_blo
 template<EncodeCase encode_case, typename T>
 void OFRecordDecoder<encode_case, T>::ReadDataId(DeviceCtx* ctx, Blob* in_blob,
                                                  Blob* out_blob) const {
-  int64_t max_data_id_size = Global<JobDesc>::Get()->SizeOfOneDataId();
+  int64_t max_data_id_size = GlobalJobDesc().SizeOfOneDataId();
   int32_t i = 0;
   RecordBlob<OFRecord> record_blob(in_blob);
   record_blob.ForEachRecord([&](const OFRecord& record) {

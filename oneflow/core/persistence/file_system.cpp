@@ -2,6 +2,7 @@
 #include <errno.h>
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/job/job_desc.h"
+#include "oneflow/core/job/job_set.pb.h"
 #include "oneflow/core/persistence/hadoop/hadoop_file_system.h"
 #include "oneflow/core/persistence/posix/posix_file_system.h"
 #include "oneflow/core/persistence/windows/windows_file_system.h"
@@ -120,6 +121,6 @@ fs::FileSystem* GetFS(const FileSystemConf& file_system_conf) {
   }
 }
 
-fs::FileSystem* DataFS() { return GetFS(Global<JobDesc>::Get()->data_fs_conf()); }
-fs::FileSystem* SnapshotFS() { return GetFS(Global<JobDesc>::Get()->snapshot_fs_conf()); }
+fs::FileSystem* DataFS() { return GetFS(Global<const IOConf>::Get()->data_fs_conf()); }
+fs::FileSystem* SnapshotFS() { return GetFS(Global<const IOConf>::Get()->snapshot_fs_conf()); }
 }  // namespace oneflow

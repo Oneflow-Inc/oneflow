@@ -6,10 +6,7 @@ namespace oneflow {
 
 void UnpackForwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
   ProduceRegst("out", false);
-  ForEachOutDataEdge([&](TaskEdge* edge) {
-    const LogicalNode* succ_logical = GetOneSuccLogicalNodeOnEdge(edge);
-    if (succ_logical->TypeName() != "UnpackBackward") { BindEdgeWithProducedRegst(edge, "out"); }
-  });
+  ForEachOutDataEdge([&](TaskEdge* edge) { BindEdgeWithProducedRegst(edge, "out"); });
 }
 
 void UnpackForwardCompTaskNode::ConsumeAllRegsts() {

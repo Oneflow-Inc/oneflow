@@ -7,11 +7,19 @@
 
 namespace oneflow {
 
-void AutoTick(const OpGraph& op_graph, Job* job);
+void AutoSourceTick(const OpGraph& op_graph, JobBuilder* job_builder);
+void AddTickForTimeShape(const OpGraph& op_graph, JobBuilder* job_builder);
+void AutoSinkTick(const OpGraph& op_graph, JobBuilder* job_builder);
+void AddGlobalTotalJobCriticalSection(const Job& job);
+void AddGlobalInputCriticalSections(const OpGraph& op_graph, JobBuilder* job_builder);
+void AddGlobalOutputCriticalSections(const OpGraph& op_graph, JobBuilder* job_builder);
 
 class MutOpConTickInputHelper {
  public:
-  virtual bool IsTickInputBound() const = 0;
+  bool IsTickInputBound() const {
+    return !op_conf_->ctrl_in_op_name().empty() || VirtualIsTickInputBound();
+  }
+  virtual bool VirtualIsTickInputBound() const = 0;
   virtual OperatorConf NewTickInputBoundOpConf(const std::string& lbn) const = 0;
   void InitFromOpConf(const OperatorConf& op_conf) { op_conf_ = &op_conf; }
 

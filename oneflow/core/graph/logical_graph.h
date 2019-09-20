@@ -20,65 +20,35 @@ class LogicalGraph final : public Graph<LogicalNode, LogicalEdge> {
   LogicalGraph(const Job& job);
 
   const char* TypeName() const override { return "LogicalGraph"; }
-  int64_t total_mbn_num() const { return total_mbn_num_; }
 
   void ForEachNecessaryCtrlEdge(
       const std::function<void(const LogicalNode* src, const LogicalNode* dst,
                                int64_t ctrl_regst_num)>& Handler) const;
 
  private:
-  struct BackwardCloneInfo {
-    LogicalNode* succ_node;
-    LogicalBlobId lbi;
-    std::vector<LogicalEdge*> edges;
-  };
-  struct ReduceCtx {
-    int32_t order_in_logical_graph;
-    std::vector<LogicalNode*> fw_logicals;
-    std::vector<LogicalNode*> bw_logicals;
-    std::vector<LogicalNode*> md_diff_acc_logicals;
-    std::vector<LogicalNode*> md_updt_logicals;
-  };
   template<typename LogicalNodeType>
   void ForEachLogicalNode(std::function<void(LogicalNodeType*)> Handler);
-  void GroupNodesForReduceStruct();
 
   void BuildFwStruct();
   void NaiveBuildFwStruct(HashMap<std::string, std::vector<LogicalNode*>>* op_name2nodes);
-  void FixSharedModelNodes(const HashMap<std::string, std::vector<LogicalNode*>>& op_name2nodes);
   void LinkUnpackFw2PackFw(const HashMap<std::string, std::vector<LogicalNode*>>& op_name2nodes);
-  void BuildBwStruct();
-  void NaiveBuildBwStruct();
-  void AddBackwardClone();
-  void AddOneBackwardClone(const BackwardCloneInfo& clone_info);
 
   void MergeEdge();
   void SetNodeDataLbi();
-  void BuildLossPrintStruct();
-  void BuildAccuracyPrintStruct();
-  void BuildModelStruct(bool is_train);
   void AddReduceScatterAddGatherNodes(LogicalNode* src, LogicalNode* dst,
                                       const ReduceRankCtx& prev_rank_ctx);
   void AddAllReduce(LogicalNode* src, LogicalNode* dst);
   void AddNcclAllReduce(LogicalNode* src, LogicalNode* dst);
   void AddNcclReduceScatterAndAllGather(LogicalNode* src, LogicalNode* dst);
-  void BuildReduceStruct(const ReduceCtx& reduce_ctx);
-  void SetupNormalMdUpdtOp();
-  MdSaveLogicalNode* BuildMdSaveStructIfNeed(LogicalNode* need_save_logical);
-  NormalMdUpdtLogicalNode* BuildNormalMdUpdtAndMdSaveStruct(bool is_train,
-                                                            ForwardLogicalNode* fw_logical);
   void ReplaceAllReduceFacades();
 
-  void ConnectFwToBw();
   void UpdateEdge2Ibn(const LogicalEdge* edge, const std::string& ibn);
   void UpdateEdge2Obn(const LogicalEdge* edge, const std::string& obn);
 
   bool MustHaveModelDiffAcc();
 
   Job job_;
-  int64_t total_mbn_num_;
 
-  std::vector<std::vector<const LogicalNode*>> fw_node_groups_;
   HashMap<const LogicalEdge*, std::string> edge2ibn_;
   HashMap<const LogicalEdge*, std::string> edge2obn_;
 };

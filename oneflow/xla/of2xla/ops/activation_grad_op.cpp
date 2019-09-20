@@ -15,7 +15,7 @@ class TanhGradOp : public XlaOpCompiler {
   void Compile(XlaOpContext *ctx) override {
     xla::XlaOp y = ctx->Input("y");
     xla::XlaOp dy = ctx->Input("dy");
-    xla::XlaOp one = xla::ScalarLike(y, 1.0);
+    xla::XlaOp one = xla::ScalarLike(y, 1.f);
     // dx = dy * (1 - y * y)
     xla::XlaOp dx = dy * (one - (y * y));
     ctx->SetOutput("dx", dx);
@@ -28,12 +28,11 @@ class GeluGradOp : public XlaOpCompiler {
   void Compile(XlaOpContext *ctx) override {
     xla::XlaOp x = ctx->Input("x");
     xla::XlaOp dy = ctx->Input("dy");
-    xla::XlaOp dot_5 = xla::ScalarLike(x, 0.5);
-    xla::XlaOp one = xla::ScalarLike(x, 1.0);
-    xla::XlaOp two = xla::ScalarLike(x, 2.0);
+    xla::XlaOp dot_5 = xla::ScalarLike(x, 0.5f);
+    xla::XlaOp inv_sqrt2 = xla::ScalarLike(x, std::sqrt(0.5f));
+    xla::XlaOp one = xla::ScalarLike(x, 1.f);
 
-    xla::XlaOp inv_sqrt2 = xla::Sqrt(dot_5);
-    xla::XlaOp coef = xla::Sqrt(two / xla::Acos(xla::Neg(one)));
+    xla::XlaOp coef = xla::ScalarLike(x, std::sqrt(2.f / std::acos(-1.f)));
     // coef = 1 + erf(sqrt(0.5) * x) + x * coef * exp(-0.5 * x * x)
     coef = one + xla::Erf(inv_sqrt2 * x) +
         (x * coef * xla::Exp(xla::Neg(dot_5) * x * x));

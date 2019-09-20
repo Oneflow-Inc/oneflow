@@ -22,7 +22,9 @@ void HingeLossKernel<device_type, PredType, LabelType>::VirtualLossForwardDataCo
       tmp_blob->mut_dptr<PredType>(), tmp_storage_blob->mut_dptr<PredType>(),
       loss_blob->mut_dptr<PredType>());
   // if predict_diff_blob is not null, then do backward
-  Blob* prediction_diff_blob = BnInOp2Blob(GenDiffBn("prediction"));
+  TODO();  // no input_diff_bns
+  Blob* prediction_diff_blob = nullptr;
+  // Blob* prediction_diff_blob = BnInOp2Blob(GenDiffBn("prediction"));
   if (prediction_diff_blob != nullptr) {
     HingeLossKernelUtil<device_type, PredType, LabelType>::Backward(
         ctx.device_ctx, piece_size, pre_dim, tmp_diff_blob->mut_dptr<PredType>(),

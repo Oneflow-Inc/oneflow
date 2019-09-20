@@ -125,10 +125,24 @@ DEFINE_BLD_BOXING_OP_CONF_METHOD(BoxingTaskNode, AddAndClone) {
   conf->mutable_clone_box();
 }
 
+DEFINE_BLD_BOXING_OP_CONF_METHOD(BoxingTaskNode, PartialTick2SinkTick) {
+  CHECK(sorted_out_edges.size() == 1);
+  CHECK(in_logical->SoleOp()->op_conf().has_partial_tick_conf());
+  CHECK(out_logical->SoleOp()->op_conf().has_sink_tick_conf());
+  conf->mutable_add_box();
+  conf->mutable_clone_box();
+}
+
 void SetBoxingOpConfBySbpParallel(
     BoxingOpConf* conf, const LogicalBlobId& lbi, const Operator& in_op, const Operator& out_op,
-    const std::vector<BoxingTaskNode::EdgeInfo>& sorted_edges,
+    const std::vector<BoxingTaskNode::EdgeInfo>& sorted_in_edges,
+    const std::vector<BoxingTaskNode::EdgeInfo>& sorted_out_edges,
+    const bool is_out_boxing_task_node, const bool is_in_boxing_task_node,
     const std::function<SbpParallel(const std::string&, const LogicalBlobId&)>& GetSbpParallel) {
+  CHECK(in_op.op_conf().has_tick_conf() == false);
+  CHECK(in_op.op_conf().has_source_tick_conf() == false);
+  CHECK(out_op.op_conf().has_tick_conf() == false);
+  CHECK(out_op.op_conf().has_sink_tick_conf() == false);
   SbpParallel in_sbp = GetSbpParallel(in_op.op_name(), lbi);
   if (in_sbp.has_split_parallel()) {
     conf->mutable_concat_box()->set_axis(in_sbp.split_parallel().axis());
@@ -141,8 +155,27 @@ void SetBoxingOpConfBySbpParallel(
   if (out_sbp.has_split_parallel()) {
     BoxSplitConf* split_conf = conf->mutable_split_box();
     split_conf->set_axis(out_sbp.split_parallel().axis());
-    const auto& bs = Global<OpGraph>::Get()->GetBalancedSplitter(out_op.op_name(), lbi);
-    SetBoxSplitPart(sorted_edges, bs, split_conf);
+    CHECK(is_out_boxing_task_node ^ is_in_boxing_task_node);
+    if (is_out_boxing_task_node) {
+      int64_t total_split_num_of_out_op =
+          Global<OpGraph>::Get()->GetSplitNum(out_op.op_name(), lbi);
+      int64_t in_parallel_num = Global<OpGraph>::Get()->GetParallelNum(in_op.op_name());
+      BalancedSplitter in_bs(total_split_num_of_out_op, in_parallel_num);
+      Range in_range =
+          in_bs.At(sorted_in_edges.front().parallel_id_min, sorted_in_edges.back().parallel_id_max);
+      int64_t out_parallel_num = Global<OpGraph>::Get()->GetParallelNum(out_op.op_name());
+      BalancedSplitter out_bs(total_split_num_of_out_op, out_parallel_num);
+      for (const BoxingTaskNode::EdgeInfo& out_edge : sorted_out_edges) {
+        Range out_range = out_bs.At(out_edge.parallel_id_min, out_edge.parallel_id_max);
+        Range intersectant_range = FindIntersectant(in_range, out_range);
+        split_conf->add_part_num(intersectant_range.size());
+      }
+    } else if (is_in_boxing_task_node) {
+      const auto& bs = Global<OpGraph>::Get()->GetBalancedSplitter(out_op.op_name(), lbi);
+      SetBoxSplitPart(sorted_out_edges, bs, split_conf);
+    } else {
+      UNIMPLEMENTED();
+    }
   } else if (out_sbp.has_broadcast_parallel()) {
     conf->mutable_clone_box();
   } else {
@@ -151,19 +184,14 @@ void SetBoxingOpConfBySbpParallel(
 }
 
 DEFINE_BLD_BOXING_OP_CONF_METHOD(BoxingTaskNode, FwSbpParallel) {
+  bool is_out_boxing_task_node = dynamic_cast<OutBoxingTaskNode*>(this) != nullptr;
+  bool is_in_boxing_task_node = dynamic_cast<InBoxingTaskNode*>(this) != nullptr;
   SetBoxingOpConfBySbpParallel(conf, lbi, *in_logical->SoleOp(), *out_logical->SoleOp(),
-                               sorted_out_edges,
+                               sorted_in_edges, sorted_out_edges, is_out_boxing_task_node,
+                               is_in_boxing_task_node,
                                [&](const std::string& op_name, const LogicalBlobId& lbi) {
                                  return Global<OpGraph>::Get()->GetSbpParallel(op_name, lbi);
                                });
-}
-
-DEFINE_BLD_BOXING_OP_CONF_METHOD(BoxingTaskNode, BwSbpParallel) {
-  SetBoxingOpConfBySbpParallel(
-      conf, lbi, *in_logical->SoleOp(), *out_logical->SoleOp(), sorted_out_edges,
-      [&](const std::string& op_name, const LogicalBlobId& lbi) {
-        return GetDualSbpParallel(Global<OpGraph>::Get()->GetSbpParallel(op_name, lbi));
-      });
 }
 
 void BoxingTaskNode::InitLogical2SortedEdgeInfo(
@@ -229,10 +257,10 @@ void BoxingTaskNode::BuildWithLogicalPair(const LogicalNode* in_logical,
       }
       node->BindBnWithRegst(obn, regst);
     }
-    for (const std::string& dtbn : node->op()->data_tmp_bns()) {
+    for (const std::string& tbn : node->op()->tmp_bns()) {
       CHECK_EQ(lbi.is_packed_id(), false);
-      middle_regst->AddLbi(node->op()->BnInOp2Lbi(dtbn));
-      node->BindBnWithRegst(dtbn, middle_regst);
+      middle_regst->AddLbi(node->op()->BnInOp2Lbi(tbn));
+      node->BindBnWithRegst(tbn, middle_regst);
     }
     if (lbi.is_packed_id() == false) { node->InferBlobDescs(nullptr); }
   }
@@ -250,7 +278,7 @@ std::shared_ptr<Operator> BoxingTaskNode::NewBoxingOp(
   boxing_conf->set_in_num(sorted_in_edges.size());
   boxing_conf->set_out_num(sorted_out_edges.size());
   (this->*method)(lbi, sorted_in_edges, in_logical, sorted_out_edges, out_logical, boxing_conf);
-  return ConstructOp(op_conf);
+  return ConstructOp(op_conf, &GlobalJobDesc());
 }
 
 void BoxingTaskNode::InferProducedDataRegstTimeShape() { NaiveInferProducedDataRegstTimeShape(); }

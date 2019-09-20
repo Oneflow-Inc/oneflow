@@ -59,6 +59,8 @@ class XlaOpCompilerRegistry {
   };
 
   typedef std::unordered_map<std::string, XlaBackendRegistry> XlaBackendFactory;
+  typedef std::vector<std::string> StringVec;
+  typedef std::unordered_map<std::string, StringVec> XlaMutableFactory;
 
   static void Register(const std::string &backend, const std::string &type,
                        CreatorFunc creator) {
@@ -89,9 +91,28 @@ class XlaOpCompilerRegistry {
     return registered;
   }
 
+  static void SetMutableVariables(const std::string &type,
+                                 const std::vector<std::string> &variables) {
+    XlaMutableFactory *factory = XlaOpCompilerRegistry::MutableFactory();
+    factory->emplace(type, variables);
+  }
+
+  static const StringVec &GetMutableVariables(const std::string &type) {
+    XlaMutableFactory *factory = XlaOpCompilerRegistry::MutableFactory();
+    if (factory->count(type) == 0) {
+      factory->emplace(type, StringVec{});
+    }
+    return factory->at(type);
+  }
+
  private:
   static XlaBackendFactory *Factory() {
     static XlaBackendFactory *factory = new XlaBackendFactory;
+    return factory;
+  }
+
+  static XlaMutableFactory *MutableFactory() {
+    static XlaMutableFactory *factory = new XlaMutableFactory;
     return factory;
   }
 };
@@ -99,30 +120,54 @@ class XlaOpCompilerRegistry {
 template <typename OpCompiler>
 class XlaOpCompilerRegistrar {
  public:
-  XlaOpCompilerRegistrar(const std::string &backend, const std::string &type) {
+  XlaOpCompilerRegistrar(const std::string &type)
+      : backend_(""), type_(type) {
     auto creator = []() -> XlaOpCompiler* { return new OpCompiler; };
-    XlaOpCompilerRegistry::Register(backend, type, creator);
+    XlaOpCompilerRegistry::Register("CPU", type_, creator);
+    XlaOpCompilerRegistry::Register("CUDA", type_, creator);
   }
+
+  XlaOpCompilerRegistrar(const std::string &backend, const std::string &type)
+      : backend_(backend), type_(type) {
+    auto creator = []() -> XlaOpCompiler* { return new OpCompiler; };
+    XlaOpCompilerRegistry::Register(backend_, type_, creator);
+  }
+
+  XlaOpCompilerRegistrar& MutableVariables(
+      const std::vector<std::string> &variables) {
+    XlaOpCompilerRegistry::SetMutableVariables(type_, variables);
+    return *this;
+  }
+
+private:
+  std::string backend_;
+  std::string type_;
 };
 
 #define REGISTER_XLA_OP_COMPILER(Type, OpCompiler) \
-  REGISTER_XLA_CPU_OP_COMPILER(Type, OpCompiler);  \
-  REGISTER_XLA_CUDA_OP_COMPILER(Type, OpCompiler);
+  static XlaOpCompilerRegistrar<OpCompiler>                      \
+      g_xla_all__##Type##__op_compiler __attribute__((unused)) = \
+      XlaOpCompilerRegistrar<OpCompiler>(#Type)
 
-#define REGISTER_XLA_CPU_OP_COMPILER(Type, OpCompiler)              \
-  static XlaOpCompilerRegistrar<OpCompiler>                         \
-      g_xla_cpu__##Type##__op_compiler __attribute__((unused)) =    \
+#define REGISTER_XLA_CPU_OP_COMPILER(Type, OpCompiler)           \
+  static XlaOpCompilerRegistrar<OpCompiler>                      \
+      g_xla_cpu__##Type##__op_compiler __attribute__((unused)) = \
       XlaOpCompilerRegistrar<OpCompiler>("CPU", #Type)
 
-#define REGISTER_XLA_CUDA_OP_COMPILER(Type, OpCompiler)             \
-  static XlaOpCompilerRegistrar<OpCompiler>                         \
-      g_xla_gpu__##Type##__op_compiler __attribute__((unused)) =    \
+#define REGISTER_XLA_CUDA_OP_COMPILER(Type, OpCompiler)          \
+  static XlaOpCompilerRegistrar<OpCompiler>                      \
+      g_xla_gpu__##Type##__op_compiler __attribute__((unused)) = \
       XlaOpCompilerRegistrar<OpCompiler>("CUDA", #Type)
 
 
 inline bool IsOpCompilerRegistered(const std::string &backend,
                                    const std::string &op_type) {
   return XlaOpCompilerRegistry::IsRegistered(backend, op_type);
+}
+
+inline const std::vector<std::string> &GetMutableVariables(
+    const std::string &op_type) {
+  return XlaOpCompilerRegistry::GetMutableVariables(op_type);
 }
 
 inline std::shared_ptr<XlaOpCompiler> CreateXlaOpCompiler(

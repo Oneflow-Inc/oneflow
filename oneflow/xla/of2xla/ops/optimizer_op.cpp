@@ -18,10 +18,19 @@ class AdamOptimizerOp : public XlaOpCompiler {
 void AdamOptimizerOp::Compile(XlaOpContext *ctx) {
   xla::XlaOp instance_num = ctx->Input("instance_num_diff");
   xla::XlaOp learning_rate = ctx->Input("learning_rate");
-  xla::XlaOp gradient = ctx->Input("gradient") / instance_num;
   xla::XlaOp weight = ctx->Input("weight");
   xla::XlaOp m = ctx->Input("m");
   xla::XlaOp v = ctx->Input("v");
+  Shape gradient_shape = ctx->InputShape("gradient");
+  if (gradient_shape.NumAxes() > 1) {
+    std::vector<long long> bcast_sizes;
+    for (int i = 0; i < gradient_shape.NumAxes() - 1; ++i) {
+      bcast_sizes.push_back(gradient_shape.At(i));
+    }
+    instance_num = xla::Broadcast(instance_num, bcast_sizes);
+    learning_rate = xla::Broadcast(learning_rate, bcast_sizes);
+  }
+  xla::XlaOp gradient = ctx->Input("gradient") / instance_num;
 
   xla::XlaOp one = One(ctx->builder(), ctx->InputType("m"));
   float beta1_val = ctx->GetAttr<float>("beta1");
@@ -30,8 +39,10 @@ void AdamOptimizerOp::Compile(XlaOpContext *ctx) {
   xla::XlaOp beta2 = xla::ScalarLike(v, beta2_val);
   m = beta1 * m + (one - beta1) * gradient;
   v = beta2 * v + (one - beta2) * gradient * gradient;
-  ctx->SetOutput("out_m", m);
-  ctx->SetOutput("out_v", v);
+  ctx->SetOutput("m", m);
+  ctx->SetOutput("v", v);
+  // ctx->SetOutput("out_m", m);
+  // ctx->SetOutput("out_v", v);
 
   float epsilon_val = ctx->GetAttr<float>("epsilon");
   xla::XlaOp epsilon = xla::ScalarLike(v,  epsilon_val);
@@ -47,10 +58,12 @@ void AdamOptimizerOp::Compile(XlaOpContext *ctx) {
     xla::XlaOp l2 = xla::ScalarLike(gradient, l2_val);
     gradient = gradient + l2 * weight;
   }
-  ctx->SetOutput("out", weight - learning_rate * gradient);
+  ctx->SetOutput("weight", weight - learning_rate * gradient);
+  // ctx->SetOutput("out", weight - learning_rate * gradient);
 }
 
-REGISTER_XLA_OP_COMPILER(AdamOptimizer, AdamOptimizerOp);
+REGISTER_XLA_OP_COMPILER(AdamOptimizer, AdamOptimizerOp)
+    .MutableVariables({"weight", "m", "v"});
 
 }  // namespace mola
 }  // namespace oneflow

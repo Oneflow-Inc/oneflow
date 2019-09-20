@@ -30,18 +30,16 @@ class OptimizerRewritor {
                                     const std::string &total_instances,
                                     const ClipConf &clip_conf);
 
-  OperatorConf *BuildLearningRateShedulerOp(
-                                const std::string &node_name,
-                                const float learning_rate,
-                                const NormalModelUpdateOpUserConf &update_conf);
+  OperatorConf *BuildOptimizerOp(
+      const mola::XlaNode *node,
+      const std::string &gradient,
+      const std::string &total_instances,
+      const std::string &learning_rate,
+      std::unordered_map<std::string, std::string> *update_vars);
 
-  OperatorConf *BuildOptimizerOp(const mola::XlaNode *node,
-                                 const std::string &gradient,
-                                 const std::string &total_instances,
-                                 const std::string &learning_rate);
-
-  OperatorConf *BuildFakeConsumeOp(const std::string &node_name,
-                                   const std::vector<std::string> &inputs);
+  std::vector<OperatorConf *> BuildAssignOps(
+      const std::string &node_name,
+      const std::unordered_map<std::string, std::string> &update_vars);
 
   std::vector<std::string> GetControlInOpNames(const mola::XlaNode *node) const;
 
@@ -89,59 +87,37 @@ OperatorConf *OptimizerRewritor::BuildClipGradientOp(
   return builder_->MutableOpConf(op_conf.name());
 }
 
-OperatorConf *OptimizerRewritor::BuildLearningRateShedulerOp(
-                            const std::string &node_name,
-                            const float learning_rate,
-                            const NormalModelUpdateOpUserConf &update_conf) {
-  OperatorConf op_conf;
-  op_conf.set_name(absl::StrCat(node_name, "-lr_sheduler"));
-  LearningRateShedulerOpConf *conf = op_conf.mutable_lr_sheduler_conf();
-  conf->set_out("out");
-  conf->set_base_learning_rate(learning_rate);
-
-  if (update_conf.has_warmup_conf()) {
-    conf->set_use_warmup(true);
-    OptimizerParamBuilder::SetupWarmupParam(conf, update_conf.warmup_conf());
-  } else {
-    conf->set_use_warmup(false);
-  }
-  if (update_conf.has_learning_rate_decay()) {
-    const auto &lr_decay_conf = update_conf.learning_rate_decay();
-    OptimizerParamBuilder::SetupLearningRateDecayParam(conf, lr_decay_conf);
-  }
-
-  ParallelConf parallel_conf = builder_->GetParallelConf(node_name);
-  builder_->AddOps(parallel_conf, {op_conf});
-  return builder_->MutableOpConf(op_conf.name());
-}
-
 OperatorConf *OptimizerRewritor::BuildOptimizerOp(
-                                const mola::XlaNode *node,
-                                const std::string &gradient,
-                                const std::string &total_instances,
-                                const std::string &learning_rate) {
+                    const mola::XlaNode *node,
+                    const std::string &gradient,
+                    const std::string &total_instances,
+                    const std::string &learning_rate,
+                    std::unordered_map<std::string, std::string> *update_vars) {
   OptimizerMode mode = GetOptimizerModeIfModelUpdate(node);
   CHECK_NE(mode, OptimizerMode::kInvalid);
   OperatorConf op_conf = OptimizerParamBuilder::Build(
-      mode, node, gradient, total_instances, learning_rate);
+      mode, node, gradient, total_instances, learning_rate, update_vars);
 
   ParallelConf parallel_conf = builder_->GetParallelConf(node->op_name());
-  builder_->AddOrMutOps(parallel_conf, {op_conf});
+  builder_->AddOrMutOpsOnlyOnce(parallel_conf, {op_conf});
   return builder_->MutableOpConf(op_conf.name());
 }
 
-OperatorConf *OptimizerRewritor::BuildFakeConsumeOp(
-                                const std::string &node_name,
-                                const std::vector<std::string> &inputs) {
-  OperatorConf op_conf;
-  op_conf.set_name(absl::StrCat(node_name, "-fake_consume"));
-  for (const std::string &input : inputs) {
-    op_conf.mutable_fake_consume_conf()->add_in(input);
-  }
+std::vector<OperatorConf *> OptimizerRewritor::BuildAssignOps(
+            const std::string &node_name,
+            const std::unordered_map<std::string, std::string> &update_vars) {
+  std::vector<OperatorConf *> assign_ops;
+  for (const auto &p : update_vars) {
+    OperatorConf op_conf;
+    op_conf.set_name(absl::StrCat(node_name, "-assign-", assign_ops.size()));
+    op_conf.mutable_assign_conf()->set_ref(p.first);
+    op_conf.mutable_assign_conf()->set_value(p.second);
 
-  ParallelConf parallel_conf = builder_->GetParallelConf(node_name);
-  builder_->AddOps(parallel_conf, {op_conf});
-  return builder_->MutableOpConf(op_conf.name());
+    ParallelConf parallel_conf = builder_->GetParallelConf(node_name);
+    builder_->AddOps(parallel_conf, {op_conf});
+    assign_ops.push_back(builder_->MutableOpConf(op_conf.name()));
+  }
+  return std::move(assign_ops);
 }
 
 std::vector<std::string> OptimizerRewritor::GetControlInOpNames(
@@ -170,10 +146,12 @@ void OptimizerRewritor::Run() {
       continue;
     }
     using mola::GetNodeAttr;
-    float learning_rate = GetNodeAttr<float>(node, "learning_rate");
-    std::string model_diff = GetNodeAttr<std::string>(node, "model_diff");
+    using mola::GetNodeAttrAsString;
+    std::string learning_rate = GetNodeAttrAsString(node, "learning_rate");
+    std::string model_diff = GetNodeAttrAsString(node, "model_diff");
     std::string total_instances =
-        GetNodeAttr<std::string>(node, "total_instance_num_diff");
+        GetNodeAttrAsString(node, "total_instance_num_diff");
+    std::string train_step = GetNodeAttrAsString(node, "train_step");
 
     auto control_in_op_names = GetControlInOpNames(node);
     std::vector<OperatorConf *> operator_confs;
@@ -189,26 +167,15 @@ void OptimizerRewritor::Run() {
       model_diff = absl::StrCat(clip_conf->name(), "/out");
     }
 
-    // TODO(hjchen2): learning_rate maybe a untrainable variable
-    // Always build a learning rate sheduler operator even if using const
-    // learning rate
-    OperatorConf *lr_shedule_conf = BuildLearningRateShedulerOp(
-        node->op_name(), learning_rate, *user_conf);
-    operator_confs.push_back(lr_shedule_conf);
+    std::unordered_map<std::string, std::string> update_vars;
 
-    std::string lr_shedule_output =
-        absl::StrCat(lr_shedule_conf->name(), "/out");
     OperatorConf *optimizer_conf = BuildOptimizerOp(
-        node, model_diff, total_instances, lr_shedule_output);
+        node, model_diff, total_instances, learning_rate, &update_vars);
     operator_confs.push_back(optimizer_conf);
 
-    // Currently each model update operator will result in a fake consumer
-    // TODO(hjchen2): Only one global final fake consume operator maybe better.
-    std::vector<std::string> consume_inputs{
-        absl::StrCat(optimizer_conf->name(), "/out"),
-        absl::StrCat(optimizer_conf->name(), "/out_m"),
-        absl::StrCat(optimizer_conf->name(), "/out_v")};
-    BuildFakeConsumeOp(node->op_name(), consume_inputs);
+    // Currently each model update operator will result in some extra assign
+    // operands to update model and momentum etc.
+    // BuildAssignOps(node->op_name(), update_vars);
 
     if (control_in_op_names.size() > 0) {
       for (OperatorConf *op_conf : operator_confs) {

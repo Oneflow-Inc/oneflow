@@ -28,7 +28,11 @@ int64_t IDMgr::GetCpuDeviceThrdId(int64_t dev_phy_id) const {
 int64_t IDMgr::CommNetThrdId() const {
   return gpu_device_num_ * GetCudaWorkTypeSize() + cpu_device_num_;
 }
-int64_t IDMgr::BasePersistenceThrdId() const { return CommNetThrdId() + 1; }
+int64_t IDMgr::TickTockThrdId() const { return CommNetThrdId() + 1; }
+int64_t IDMgr::BaseIndependentThrdId() const { return base_independent_thrd_id_; }
+void IDMgr::UpdateBaseIndependentThrdId(int64_t val) {
+  if (val >= base_independent_thrd_id_) { base_independent_thrd_id_ = val + 1; }
+}
 
 int64_t IDMgr::NewTaskId(int64_t machine_id, int64_t thrd_id, int64_t local_work_stream_id) {
   int64_t machine_thrd_id = GetMachineThrdId(machine_id, thrd_id);
@@ -101,14 +105,15 @@ int64_t IDMgr::AllocateChainId(int64_t global_work_stream_id) {
 }
 
 IDMgr::IDMgr() {
-  const Resource& resource = Global<JobDesc>::Get()->resource();
-  CHECK_LT(resource.machine_size(), static_cast<int64_t>(1) << machine_id_bit_num_);
-  gpu_device_num_ = resource.gpu_device_num();
-  cpu_device_num_ = resource.cpu_device_num();
+  CHECK_LT(Global<ResourceDesc>::Get()->TotalMachineNum(), static_cast<int64_t>(1)
+                                                               << machine_id_bit_num_);
+  gpu_device_num_ = Global<ResourceDesc>::Get()->GpuDeviceNum();
+  cpu_device_num_ = Global<ResourceDesc>::Get()->CpuDeviceNum();
   CHECK_LT(gpu_device_num_ + cpu_device_num_, (static_cast<int64_t>(1) << thread_id_bit_num_) - 3);
   regst_desc_id_count_ = 0;
   mem_shared_id_count_ = 0;
   mem_block_id_count_ = 0;
+  base_independent_thrd_id_ = TickTockThrdId() + 1;
 }
 
 int64_t IDMgr::GetMachineThrdId(int64_t machine_id, int64_t thrd_id) {

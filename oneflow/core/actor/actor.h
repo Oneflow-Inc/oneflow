@@ -9,7 +9,6 @@
 #include "oneflow/core/job/task.pb.h"
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/kernel/kernel_context.h"
-#include "oneflow/core/persistence/snapshot_manager.h"
 #include "oneflow/core/register/register_manager.h"
 #include "oneflow/core/thread/thread_context.h"
 #include "oneflow/core/actor/register_slot.h"
@@ -20,14 +19,16 @@ enum class ColIdOrder { kUnCertain = 0, kAscending, kDescending };
 
 bool IsFirstRegstInPieceWithOrder(const Regst*, ColIdOrder);
 bool IsLastRegstInPieceWithOrder(const Regst*, ColIdOrder);
-bool NeedModelSave(int64_t model_version_id);
+inline bool NeedModelSave(const JobDesc& job_desc, int64_t model_version_id) { return false; }
 
 class Actor {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Actor);
   virtual ~Actor() = default;
 
-  void Init(const TaskProto&, const ThreadCtx&);
+  const JobDesc& job_desc() const { return *job_desc_; }
+
+  void Init(const JobDesc* job_desc, const TaskProto&, const ThreadCtx&);
 
   // 1: success, and actor finish
   // 0: success, and actor not finish
@@ -49,6 +50,7 @@ class Actor {
   Actor() = default;
   const ParallelContext* parallel_ctx() const { return parallel_ctx_.get(); }
   bool ReceiveAllEordMsg() const { return remaining_eord_cnt_ == 0; }
+  bool ReceiveEordMsg(int64_t regst_desc_id) const;
   DeviceType GetDeviceType() const;
   virtual void VirtualActorInit(const TaskProto&) {}
   int64_t Name2SoleRegstDescId(const std::string& name) const;
@@ -125,6 +127,8 @@ class Actor {
     return GetNaiveOrInplaceCurWriteable(Name2SoleRegstDescId(name));
   }
   Regst* GetSoleProducedRegst4RegstDescId(int64_t regst_desc_id) const;
+  void ForEachProducedRegst(const std::function<void(Regst*)>&) const;
+  int64_t HandleRegstToConsumer(Regst* regst, std::function<bool(int64_t)> IsAllowedActor);
 
  private:
   int64_t GetGlobalWorkStreamId() const;
@@ -172,7 +176,6 @@ class Actor {
   virtual void VirtualAsyncSendNaiveConsumedRegstMsgToProducer();
   void AsyncSendConsumedCtrlRegstMsgToProducer();
   void AsyncSendProducedCtrlRegstMsgToConsumer();
-  int64_t HandleRegstToConsumer(Regst* regst, std::function<bool(int64_t)> IsAllowedActor);
 
   // Customized Consumed virtual func
   virtual void ForEachCurCustomizedReadableRegst(std::function<void(const Regst*)>) const {}
@@ -196,6 +199,7 @@ class Actor {
   }
   virtual void AsyncSendCustomizedConsumedRegstMsgToProducer() {}
 
+  const JobDesc* job_desc_;
   int64_t actor_id_;
   int64_t act_id_;
   std::unique_ptr<ParallelContext> parallel_ctx_;
@@ -223,9 +227,9 @@ class Actor {
   bool is_inplace_consumed_eord_;
   HashMap<int64_t, int64_t> inplace_regst_desc_id_in2out_;
   HashMap<int64_t, int64_t> inplace_regst_desc_id_out2in_;
-};
 
-class ScopedActEventRecorder;
+  std::deque<ActorMsg> async_actor_msg_deque_;
+};
 
 std::unique_ptr<Actor> NewActor(const TaskProto&, const ThreadCtx&);
 

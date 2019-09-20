@@ -24,7 +24,12 @@ foreach(LIBRARY_NAME ${GFLAGS_LIBRARY_NAMES})
 endforeach()
 
 if (THIRD_PARTY)
-  
+
+# TODO: investigate if these three lines are necessary
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS_DEBUG} -fPIC")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS_RELEASE} -fPIC")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
+
 ExternalProject_Add(gflags
     PREFIX gflags
     URL ${gflags_URL}
@@ -35,6 +40,7 @@ ExternalProject_Add(gflags
         -DCMAKE_BUILD_TYPE:STRING=${CMAKE_BUILD_TYPE}
         -DCMAKE_CXX_FLAGS_DEBUG:STRING=${CMAKE_CXX_FLAGS_DEBUG}
         -DCMAKE_CXX_FLAGS_RELEASE:STRING=${CMAKE_CXX_FLAGS_RELEASE}
+        -DCMAKE_CXX_FLAGS:STRING=-fPIC
         -DGFLAGS_NAMESPACE:STRING=gflags
 )
 

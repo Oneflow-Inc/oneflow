@@ -1,5 +1,4 @@
 #include "oneflow/core/graph/repeat_forward_compute_task_node.h"
-#include "oneflow/core/graph/repeat_backward_compute_task_node.h"
 #include "oneflow/core/graph/logical_node.h"
 #include "oneflow/core/operator/repeat_op.h"
 
@@ -11,10 +10,7 @@ void RepeatForwardCompTaskNode::ConsumeAllRegsts() {
 
 void RepeatForwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
   std::shared_ptr<RegstDesc> out_regst = ProduceRegst("out", false, 1, 1);
-  ForEachOutDataEdge([&](TaskEdge* edge) {
-    if (edge->dst_node()->GetTaskType() == TaskType::kRepeatBackward) { return; }
-    edge->AddRegst("out", out_regst);
-  });
+  ForEachOutDataEdge([&](TaskEdge* edge) { edge->AddRegst("out", out_regst); });
 }
 
 void RepeatForwardCompTaskNode::BuildExecGphAndRegst() {

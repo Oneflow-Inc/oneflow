@@ -20,18 +20,14 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   const char* TypeName() const override { return "TaskGraph"; }
   void RemoveEmptyRegsts();
   void AddOrderingCtrlEdgeInSameChain();
-  void AddReduceSequenceCtrlEdges();
   void AddMdUpdtCtrlEdgesWithinReduceSplitNode();
   void AddReduceNoBwForwardNodeOverlapingCtrlEdges();
 
   void EnableMemSharingInReduceStruct();
-  void EnableMemSharingAfterAllManualSetForMdUpdt();
-  void EnableMemSharingInVariableOp();
   void EnableInplaceMemSharing(const std::function<bool(const LogicalBlobId&, const std::string&)>&
                                    IsLbiAllConsumersReachableToOpName);
 
   void AddOrderCtrlEdgeBetweenCopyAndMdUpdt();
-  void RmUselessConsumeRelationshipBetweenFwBw();
   void AcyclicTopoForEachNode(std::function<void(TaskNode* node)> Handler) const;
   void MdUpdtDelayedTopoForEachNode(std::function<void(TaskNode* node)> Handler) const;
 
@@ -60,7 +56,7 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
       std::function<TaskNode*(int64_t machine_id, int32_t mem_zone_id)> GetBufTask,
       std::function<TaskNode*(int64_t machine_id, int32_t mem_zone_id, TaskNode*)> SetBufTask,
       bool use_buf_task_node);
-  TaskNode* AddCopyH2DTaskTo(TaskNode*);
+  TaskNode* TryAddCopyH2DTaskTo(TaskNode*);
   TaskNode* AddCopyD2HTaskFrom(TaskNode*);
   TaskNode* AddCopyCommNetTaskBetween(TaskNode* src, TaskNode* dst);
   void BuildOutBoxing(
@@ -81,7 +77,7 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   void MergeChainAndSetOrderInGraphForEachNode();
   void BuildCtrlRegstDescInSameChain();
 
-  void GeneratePersistenceThrdId(
+  void GenerateIndependentThrdId(
       const std::vector<std::pair<int64_t, CompTaskNode*>>& persistence_nodes);
 
   // inplace
@@ -100,6 +96,7 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   std::unique_ptr<const LogicalGraph> logical_gph_;
   std::vector<TaskNode*> ordered_task_nodes_;
 };
+
 bool IsBackEdge(TaskNode* src, TaskNode* dst);
 
 }  // namespace oneflow

@@ -3,9 +3,9 @@
 namespace oneflow {
 
 void HingeLossOp::VirtualInitFromOpConf() {
-  EnrollDataTmpBn("tmp");
-  EnrollDataTmpBn("tmp_diff");
-  EnrollDataTmpBn("tmp_storage");  // used by GPU
+  EnrollTmpBn("tmp");
+  EnrollTmpBn("tmp_diff");
+  EnrollTmpBn("tmp_storage");  // used by GPU
 }
 
 const PbMessage& HingeLossOp::GetCustomizedConf() const { return op_conf().hinge_loss_conf(); }
@@ -14,7 +14,7 @@ LossKernelConf* HingeLossOp::GetMutLossKernelConf(KernelConf* kernel_conf) const
   return kernel_conf->mutable_hinge_loss_conf()->mutable_loss_conf();
 }
 
-void HingeLossOp::VirtualInferBlobDescs(
+Maybe<void> HingeLossOp::VirtualInferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   const BlobDesc* pred_blob_desc = GetBlobDesc4BnInOp("prediction");
@@ -26,6 +26,7 @@ void HingeLossOp::VirtualInferBlobDescs(
   OF_HINGE_LOSS_INFER_TMP_BLOB_DESC(tmp_diff);
   OF_HINGE_LOSS_INFER_TMP_BLOB_DESC(tmp_storage);
 #undef OF_HINGE_LOSS_INFER_TMP_BLOB_DESC
+  return Maybe<void>::Ok();
 }
 
 REGISTER_OP(OperatorConf::kHingeLossConf, HingeLossOp);

@@ -6,7 +6,7 @@ namespace oneflow {
 
 void AccuracyCompTaskNode::ProduceAllRegstsAndBindEdges() {
   ProduceRegst("accuracy", false);
-  ProduceRegst("data_tmp", true);
+  ProduceRegst("tmp", true);
   ForEachOutDataEdge([&](TaskEdge* edge) { BindEdgeWithProducedRegst(edge, "accuracy"); });
 }
 
@@ -28,7 +28,7 @@ void AccuracyCompTaskNode::BuildExecGphAndRegst() {
     accuracy_regst->AddLbi(accuracy_op->BnInOp2Lbi(obn));
     accuracy_node->BindBnWithRegst(obn, accuracy_regst);
   }
-  accuracy_node->AddBnToRegstAndBindIt(&Operator::data_tmp_bns, GetProducedRegst("data_tmp"));
+  accuracy_node->AddBnToRegstAndBindIt(&Operator::tmp_bns, GetProducedRegst("tmp"));
   accuracy_node->InferBlobDescs(parallel_ctx());
 }
 

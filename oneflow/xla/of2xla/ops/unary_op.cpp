@@ -23,10 +23,11 @@ REGISTER_XLA_OP_COMPILER(Tanh, ApplyUnaryOp<op::Tanh>);
 
 struct Gelu {
   xla::XlaOp operator()(const xla::XlaOp &x) {
-    xla::XlaOp dot_5 = xla::ScalarLike(x, 0.5);
-    xla::XlaOp one = xla::ScalarLike(x, 1.0);
+    xla::XlaOp dot_5 = xla::ScalarLike(x, 0.5f);
+    xla::XlaOp inv_sqrt2 = xla::ScalarLike(x, std::sqrt(0.5f));
+    xla::XlaOp one = xla::ScalarLike(x, 1.f);
     // cdf = erf(sqrt(0.5) * x)
-    xla::XlaOp cdf = xla::Erf(xla::Mul(xla::Sqrt(dot_5), x));
+    xla::XlaOp cdf = xla::Erf(xla::Mul(inv_sqrt2, x));
     // return 0.5 * x * (1.0 + cdf)
     return xla::Mul(xla::Mul(dot_5, x), xla::Add(one, cdf));
   }

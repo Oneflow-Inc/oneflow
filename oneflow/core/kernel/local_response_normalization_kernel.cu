@@ -3,8 +3,7 @@
 namespace oneflow {
 
 template<typename T>
-void LocalResponseNormalizationKernel<DeviceType::kGPU, T>::VirtualKernelInit(
-    const ParallelContext*) {
+void LocalResponseNormalizationKernel<DeviceType::kGPU, T>::VirtualKernelInit() {
   const PbRf<int64_t>& shape = GetPbRfFromPbMessage<int64_t>(
       GetValFromPbMessage<const PbMessage&>(this->kernel_conf().local_response_normalization_conf(),
                                             "batch"),
@@ -22,7 +21,7 @@ void LocalResponseNormalizationKernel<DeviceType::kGPU, T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   CudaCheck(cudnnLRNCrossChannelForward(
       ctx.device_ctx->cudnn_handle(), normalize_desc_->Get(), CUDNN_LRN_CROSS_CHANNEL_DIM1,
-      OnePtr<T>::value, batch_desc_->Get(), BnInOp2Blob("in")->dptr(), ZeroPtr<T>::value,
+      CudnnSPOnePtr<T>(), batch_desc_->Get(), BnInOp2Blob("in")->dptr(), CudnnSPZeroPtr<T>(),
       batch_desc_->Get(), BnInOp2Blob("out")->mut_dptr()));
 }
 
@@ -31,9 +30,9 @@ void LocalResponseNormalizationKernel<DeviceType::kGPU, T>::BackwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   CudaCheck(cudnnLRNCrossChannelBackward(
       ctx.device_ctx->cudnn_handle(), normalize_desc_->Get(), CUDNN_LRN_CROSS_CHANNEL_DIM1,
-      OnePtr<T>::value, batch_desc_->Get(), BnInOp2Blob("out")->dptr(), batch_desc_->Get(),
+      CudnnSPOnePtr<T>(), batch_desc_->Get(), BnInOp2Blob("out")->dptr(), batch_desc_->Get(),
       BnInOp2Blob("out_diff")->dptr(), batch_desc_->Get(), BnInOp2Blob("in")->dptr(),
-      ZeroPtr<T>::value, batch_desc_->Get(), BnInOp2Blob("in_diff")->mut_dptr()));
+      CudnnSPZeroPtr<T>(), batch_desc_->Get(), BnInOp2Blob("in_diff")->mut_dptr()));
 }
 
 #define INSTANTIATE_LOCAL_RESPONSE_NORMALIZATION_KERNEL(type_cpp, type_proto) \

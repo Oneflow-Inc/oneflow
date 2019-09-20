@@ -11,23 +11,15 @@ LossKernelConf* IdentityLossOp::GetMutLossKernelConf(KernelConf* kernel_conf) co
   return kernel_conf->mutable_identity_loss_conf()->mutable_loss_conf();
 }
 
-void IdentityLossOp::VirtualInitFromOpConf() {
-  if (Global<JobDesc>::Get()->IsTrain()) { EnrollConstBufBn("ones"); }
-}
-
-void IdentityLossOp::VirtualInferBlobDescs(
+Maybe<void> IdentityLossOp::VirtualInferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   const BlobDesc* prediction = GetBlobDesc4BnInOp("prediction");
   *GetBlobDesc4BnInOp("loss") = *prediction;
-  if (Global<JobDesc>::Get()->IsTrain()) {
-    BlobDesc* ones = GetBlobDesc4BnInOp("ones");
-    ones->set_data_type(prediction->data_type());
-    ones->mut_shape() = prediction->shape();
-  }
+  return Maybe<void>::Ok();
 }
 
-void IdentityLossOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
+Maybe<void> IdentityLossOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
   SbpSignatureBuilder()
       .Split(input_bns(), 0)
       .Split(output_bns(), 0)
@@ -36,6 +28,7 @@ void IdentityLossOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
       .PartialSum(input_bns())
       .PartialSum(output_bns())
       .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+  return Maybe<void>::Ok();
 }
 
 REGISTER_OP(OperatorConf::kIdentityLossConf, IdentityLossOp);

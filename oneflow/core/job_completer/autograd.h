@@ -7,10 +7,11 @@
 
 namespace oneflow {
 
-void AutoGrad(const OpGraph& op_graph, Job* job,
+void AutoGrad(const OpGraph& op_graph, JobBuilder* job_builder,
               HashMap<LogicalBlobId, LogicalBlobId>* out_lbi2out_diff_lbi);
 void AddTotalLossInstanceNumOpConf(
-    const OpGraph& op_graph, Job* job, const HashMap<LogicalBlobId, LogicalBlobId>& lbi2diff_lbi,
+    const OpGraph& op_graph, JobBuilder* job_builder,
+    const HashMap<LogicalBlobId, LogicalBlobId>& lbi2diff_lbi,
     std::function<const LogicalBlobId&(const ParallelDesc&)>* LossInstanceNum4ParallelDesc);
 void GenerateBackwardOpConfIf(const Operator&, std::vector<OperatorConf>*,
                               const std::function<LogicalBlobId*(const std::string&)>&);

@@ -13,7 +13,7 @@ class BoxingKernel final : public KernelIf<DeviceType::kCPU> {
   ~BoxingKernel() = default;
 
  private:
-  void VirtualKernelInit(const ParallelContext*) override;
+  void VirtualKernelInit() override;
   void ForwardDataContent(const KernelCtx&,
                           std::function<Blob*(const std::string&)>) const override;
   template<typename Iter>
@@ -33,8 +33,6 @@ class BoxingKernel final : public KernelIf<DeviceType::kCPU> {
 
   void SetColId(const KernelCtx&, std::function<Blob*(const std::string&)>) const;
   void SetMaxColId(const KernelCtx&, std::function<Blob*(const std::string&)>) const;
-  void ForwardLossInstanceNum(const KernelCtx& ctx,
-                              std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 
   PbRpf<std::string> ibn_0_;
   PbRpf<std::string> obn_0_;

@@ -19,9 +19,8 @@ class XlaGraph {
   const XlaNode *Node(int64_t node_id) const;
 
   XlaNode *AddNode();
-  XlaNode *AddNode(const OpNode *op_node);
-  XlaNode *AddArgumentNode(const XlaLaunchOpConf::Argument &arg_conf,
-                           DeviceType device_type);
+  XlaNode *AddNode(const Operator *op);
+  XlaNode *AddArgumentNode(const XlaLaunchOpConf::Argument &arg_conf);
   XlaEdge *AddEdge(XlaNode *start, XlaNode *end);
 
   // Create a subgraph for node that unique id is `node_id`
@@ -34,9 +33,7 @@ class XlaGraph {
   XlaEdge *Connect(XlaNode *start, XlaNode *end, const Argument &arg);
   void Disconnect(XlaEdge *edge);
 
-  virtual void InferBlobDescs(
-      std::unordered_map<std::string, BlobDesc> *blob_descs,
-      const ParallelContext* parallel_ctx);
+  std::vector<Argument> Arguments() const;
 
  private:
   void BuildEdges();
@@ -58,8 +55,8 @@ class XlaGraph {
 class XlaLaunchGraph : public XlaGraph {
  public:
   explicit XlaLaunchGraph(const XlaLaunchOpConf &launch_conf,
-                          DeviceType device_type)
-      : launch_conf_(launch_conf), device_type_(device_type) {
+                          const JobDesc *job_desc)
+      : launch_conf_(launch_conf), job_desc_(job_desc) {
     SetupArguments();
     BuildLaunchGraph();
   }
@@ -81,8 +78,10 @@ class XlaLaunchGraph : public XlaGraph {
   void BuildLaunchGraph();
 
   const XlaLaunchOpConf &launch_conf_;
-  DeviceType device_type_;
-  std::vector<std::shared_ptr<OpNode> > allocated_opnodes_;
+
+  const JobDesc *job_desc_;
+
+  std::vector<std::shared_ptr<Operator> > allocated_ops_;
   // "fc/out" --> "fc/out"
   std::unordered_map<std::string, LogicalBlobId> inputs_;
   // "out0" --> "fc/out"

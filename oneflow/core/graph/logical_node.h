@@ -7,11 +7,19 @@
 #include "oneflow/core/graph/reduce_rank_context.h"
 #include "oneflow/core/graph/pack_forward_task_node.h"
 #include "oneflow/core/graph/unpack_forward_task_node.h"
-#include "oneflow/core/graph/unpack_backward_task_node.h"
+#include "oneflow/core/graph/wait_and_send_ids_compute_task_node.h"
+#include "oneflow/core/graph/foreign_input_compute_task_node.h"
+#include "oneflow/core/graph/foreign_output_compute_task_node.h"
+#include "oneflow/core/graph/callback_notify_compute_task_node.h"
+#include "oneflow/core/graph/reentrant_lock_compute_task_node.h"
+#include "oneflow/core/graph/source_tick_compute_task_node.h"
+#include "oneflow/core/graph/tick_compute_task_node.h"
+#include "oneflow/core/graph/acc_tick_compute_task_node.h"
 #include "oneflow/core/graph/repeat_forward_compute_task_node.h"
-#include "oneflow/core/graph/repeat_backward_compute_task_node.h"
 #include "oneflow/core/graph/acc_compute_task_node.h"
 #include "oneflow/core/graph/every_nth_compute_task_node.h"
+#include "oneflow/core/graph/case_compute_task_node.h"
+#include "oneflow/core/graph/esac_compute_task_node.h"
 
 namespace oneflow {
 
@@ -41,14 +49,6 @@ class LogicalNode : public Node<LogicalNode, LogicalEdge> {
     in_blob_fastest_time_shape_.reset(time_shape);
   }
 
-  // shared_model_nodes_
-  std::shared_ptr<const std::vector<LogicalNode*>> shared_model_nodes() const {
-    return shared_model_nodes_;
-  }
-  std::shared_ptr<const std::vector<LogicalNode*>>& mut_shared_model_nodes() {
-    return shared_model_nodes_;
-  }
-
   // Lbis
   size_t produced_batch_dim_lbis_cnt() const { return produced_batch_dim_lbis_cnt_; }
   size_t consumed_batch_dim_lbis_cnt() const { return consumed_batch_dim_lbis_cnt_; }
@@ -61,9 +61,6 @@ class LogicalNode : public Node<LogicalNode, LogicalEdge> {
   // util
   virtual std::string TypeName() const = 0;
   std::string VisualStr() const;
-  bool HasOpWithModelOrConstModelBlob() const;
-  bool HasOpWithModelBlob() const;
-  bool HasOpWithForwardModelBlob() const;
   void GenSortedCompTaskNodes(std::function<int64_t(const TaskNode*)> AllocateCpuThrdIdEvenly,
                               std::vector<std::pair<int64_t, CompTaskNode*>>* nodes,
                               std::function<void(CompTaskNode*)>) const;
@@ -82,7 +79,6 @@ class LogicalNode : public Node<LogicalNode, LogicalEdge> {
 
   std::vector<std::shared_ptr<Operator>> op_vec_;
   std::shared_ptr<const ParallelDesc> parallel_desc_;
-  std::shared_ptr<const std::vector<LogicalNode*>> shared_model_nodes_;
 
   HashMap<const LogicalNode*, std::vector<LogicalBlobId>> dst2data_lbis_;
   std::unique_ptr<const Shape> in_blob_fastest_time_shape_;
@@ -141,30 +137,16 @@ BldBoxingOpConfMthd GetMthdForBldBoxingOpConf(const LogicalNode* src, const Logi
   ~class_name() = default;                   \
   OVERRIDE_PURE_VIRTUAL_METHOD();
 
-class BackwardLogicalNode;
-
 class ForwardLogicalNode : public LogicalNode {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ForwardLogicalNode);
-  ForwardLogicalNode() : bw_node_(nullptr) {}
+  ForwardLogicalNode() = default;
   virtual ~ForwardLogicalNode() = default;
-
-  BackwardLogicalNode* bw_node() const { return bw_node_; }
-
-  BackwardLogicalNode* NewBackwardNode();
-
- protected:
-  virtual BackwardLogicalNode* NewCorrectBackwardNode() = 0;
-
- private:
-  BackwardLogicalNode* bw_node_;
 };
 
 class NormalForwardLogicalNode final : public ForwardLogicalNode {
  public:
   LOGICAL_NODE_BOILERPLATE(NormalForwardLogicalNode);
-
-  BackwardLogicalNode* NewCorrectBackwardNode() override;
 
  private:
 };
@@ -172,8 +154,6 @@ class NormalForwardLogicalNode final : public ForwardLogicalNode {
 class OptimizerLogicalNode final : public ForwardLogicalNode {
  public:
   LOGICAL_NODE_BOILERPLATE(OptimizerLogicalNode);
-
-  BackwardLogicalNode* NewCorrectBackwardNode() override;
 
  private:
 };
@@ -198,7 +178,6 @@ int64_t NewAreaId();
     LOGICAL_NODE_WITH_NEW_AREA_ID_BOILERPLATE(name)                 \
                                                                     \
    private:                                                         \
-    BackwardLogicalNode* NewCorrectBackwardNode() override;         \
   }
 
 DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(UnpackForward);
@@ -211,36 +190,8 @@ class PackForwardLogicalNode final : public ForwardLogicalNode {
   void set_related_unpack(UnpackForwardLogicalNode* val) { related_unpack_ = val; }
 
  private:
-  BackwardLogicalNode* NewCorrectBackwardNode() override;
-
   UnpackForwardLogicalNode* related_unpack_;
 };
-
-class BackwardLogicalNode : public LogicalNode {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(BackwardLogicalNode);
-  BackwardLogicalNode() : fw_node_(nullptr) {}
-  virtual ~BackwardLogicalNode() = default;
-
-  ForwardLogicalNode* fw_node() const { return fw_node_; }
-
- private:
-  friend class ForwardLogicalNode;
-
-  ForwardLogicalNode* fw_node_;
-};
-
-class NormalBackwardLogicalNode final : public BackwardLogicalNode {
- public:
-  LOGICAL_NODE_BOILERPLATE(NormalBackwardLogicalNode);
-};
-
-#define DECLARE_DERIVED_BACKWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(name) \
-  class name##LogicalNode final : public BackwardLogicalNode {       \
-    LOGICAL_NODE_WITH_NEW_AREA_ID_BOILERPLATE(name);                 \
-  }
-
-DECLARE_DERIVED_BACKWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(UnpackBackward);
 
 #define DECLARE_NAIVE_LOGICAL_NODE(name)  \
   class name final : public LogicalNode { \
@@ -253,34 +204,7 @@ DECLARE_NAIVE_LOGICAL_NODE(DecodeLogicalNode);
 DECLARE_NAIVE_LOGICAL_NODE(DecodeRandomLogicalNode);
 DECLARE_NAIVE_LOGICAL_NODE(PrintLogicalNode);
 DECLARE_NAIVE_LOGICAL_NODE(LossLogicalNode);
-DECLARE_NAIVE_LOGICAL_NODE(LossAccLogicalNode);
-DECLARE_NAIVE_LOGICAL_NODE(LossPrintLogicalNode);
 DECLARE_NAIVE_LOGICAL_NODE(AccuracyLogicalNode);
-DECLARE_NAIVE_LOGICAL_NODE(AccuracyAccLogicalNode);
-DECLARE_NAIVE_LOGICAL_NODE(AccuracyPrintLogicalNode);
-
-class NormalMdUpdtLogicalNode final : public LogicalNode {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(NormalMdUpdtLogicalNode);
-  NormalMdUpdtLogicalNode() : random_seed_(NewRandomSeed()), order_in_reduce_group_(0) {}
-  ~NormalMdUpdtLogicalNode() = default;
-
-  OVERRIDE_PURE_VIRTUAL_METHOD();
-  bool MayConsumeModelDiff() const override { return true; }
-
-  int order_in_reduce_group() const { return order_in_reduce_group_; }
-  void set_order_in_reduce_group(int order_in_reduce_group) {
-    order_in_reduce_group_ = order_in_reduce_group;
-  }
-
- private:
-  void FixCompTaskNode(CompTaskNode*) const override;
-
-  uint32_t random_seed_;
-  int order_in_reduce_group_;
-};
-
-DECLARE_NAIVE_LOGICAL_NODE(MdSaveLogicalNode);
 
 class MdDiffAccLogicalNode final : public LogicalNode {
  public:
@@ -326,10 +250,19 @@ DECLARE_REDUCE_LOGICAL_NODE(ReduceAddLogicalNode, false);
 DECLARE_REDUCE_LOGICAL_NODE(NcclAllGatherLogicalNode, false);
 DECLARE_REDUCE_LOGICAL_NODE(NcclReduceScatterLogicalNode, true);
 
+DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(WaitAndSendIds);
+DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(ForeignInput);
+DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(ForeignOutput);
+DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(CallbackNotify);
+DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(ReentrantLock);
+DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(SourceTick);
+DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(AccTick);
+DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(Tick);
 DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(RepeatForward);
 DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(Acc);
-DECLARE_DERIVED_BACKWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(RepeatBackward);
 DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(EveryNth);
+DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(Case);
+DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(Esac);
 
 #define DECLARE_BEFORE_OR_AFTER_ALLREDUCE_REDUCE_NODE(class_name, may_consume_md_diff) \
   class class_name final : public ReduceLogicalNode {                                  \

@@ -19,7 +19,7 @@ class BasicRnnKernel final : public RecurrentKernel<device_type, T> {
   ~BasicRnnKernel() = default;
 
  private:
-  void VirtualKernelInit(const ParallelContext*) override;
+  void VirtualKernelInit() override;
   const PbMessage& GetRecurrentOpConf() const override;
   bool HasInitHiddenInitializer() const override;
   void ForwardDataContent(const KernelCtx&,
@@ -28,11 +28,6 @@ class BasicRnnKernel final : public RecurrentKernel<device_type, T> {
                            std::function<Blob*(const std::string&)>) const override;
   void InitConstBufBlobs(DeviceCtx*,
                          std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
-  void VirtualInitModelBlobsWithRandomSeed(DeviceCtx*, std::mt19937*,
-                                           std::function<Blob*(const std::string&)>) const override;
-  void VirtualInitModelBlobsWithDir(
-      DeviceCtx*, int32_t part_id, int32_t part_num, const std::string& model_load_dir,
-      std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 
  private:
   FwActivationFunc<device_type, T> activation_fw_func_;
