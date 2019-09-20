@@ -207,16 +207,21 @@ void FoldSubgraphBuilder::buildXlaLaunchAttribute(
       argument_proto->set_device_type(device_type);
       // Usually one argument node has either inputs or outputs
       CHECK(node->in_edges().size() == 0 || node->out_edges().size() == 0);
+      bool is_mutable = false;
       // Build inputs or outputs for the argument nodes
       for (const XlaEdge *edge : node->out_edges()) {
         const Argument &argument = edge->argument();
         argument_proto->set_in(argument.blob_name());
         argument_proto->set_out(argument.blob_name());
+        is_mutable |= IsMutableArgument(edge->end(), argument);
       }
       for (const XlaEdge *edge : node->in_edges()) {
         const Argument &argument = edge->argument();
         argument_proto->set_in(argument.blob_name());
         argument_proto->set_out(argument.blob_name());
+      }
+      if (is_mutable) {
+        argument_proto->set_is_mutable(true);
       }
 
       // Restore the batch axis that have batch dimension, so that it's no need

@@ -148,6 +148,7 @@ class XlaArgumentNode : public XlaNode {
 
 bool IsNodeInput(const XlaNode *node, const LogicalBlobId &lbi);
 bool IsNodeOutput(const XlaNode *node, const LogicalBlobId &lbi);
+bool IsMutableArgument(const XlaNode *node, const Argument &argument);
 
 }  // namespace mola
 }  // namespace oneflow

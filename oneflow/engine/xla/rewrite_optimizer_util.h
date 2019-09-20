@@ -29,7 +29,7 @@ class OptimizerParamBuilder {
                 const std::string &total_instances,
                 const std::string &learning_rate, OperatorConf *op_conf)
         : node_(node), gradient_(gradient), total_instances_(total_instances),
-      learning_rate_(learning_rate), op_conf_(op_conf) {}
+          learning_rate_(learning_rate), op_conf_(op_conf) {}
     
     template<OptimizerMode mode>
     void ApplyBuild();
@@ -43,7 +43,7 @@ class OptimizerParamBuilder {
   };
 
   static void ApplyOptimizerModeVisitor(const OptimizerMode &mode,
-                                       BuilderImpl builder);
+                                        BuilderImpl builder);
 };
 
 }  // namespace oneflow

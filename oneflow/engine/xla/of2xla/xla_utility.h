@@ -2,6 +2,8 @@
 #define ONEFLOW_ENGINE_XLA_OF2XLA_XLA_UTILITY_H_
 
 #include <string>
+#include <string.h>
+#include <stdlib.h>
 #include "glog/logging.h"
 #include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/core/operator/operator.h"
@@ -48,4 +50,18 @@ LogicalBlobId BlobId(const std::string &blob_name);
 #define TF_CPP_VLOG_LEVEL_REQUARED(level) \
   "Set env TF_CPP_MIN_VLOG_LEVEL=" #level " to see the details."
 
+<<<<<<< HEAD:oneflow/engine/xla/of2xla/xla_utility.h
 #endif  // ONEFLOW_ENGINE_XLA_OF2XLA_XLA_UTILITY_H_  
+=======
+// Refer to glog `src/base/commandlineflags.h`
+#define EnvToString(envname, dflt)   \
+  (!getenv(#envname) ? (dflt) : getenv(#envname))
+
+#define EnvToBool(envname, dflt)   \
+  (!getenv(#envname) ? (dflt) : memchr("tTyY1\0", getenv(#envname)[0], 6) != NULL)
+
+#define EnvToInt(envname, dflt)  \
+  (!getenv(#envname) ? (dflt) : strtol(getenv(#envname), NULL, 10))
+
+#endif  // ONEFLOW_CORE_COMPILER_OF2XLA_XLA_UTILITY_H_
+>>>>>>> c06c4e60c1eb805cec1c6daed375e9762196aa92:oneflow/xla/of2xla/xla_utility.h

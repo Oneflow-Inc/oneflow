@@ -11,11 +11,14 @@ void XlaLaunchOp::InitFromOpConf() {
   CHECK(op_conf().has_xla_launch_conf());
 
   int inputs_num = op_conf().xla_launch_conf().in().size();
+  int outputs_num = op_conf().xla_launch_conf().out().size();
   for (int i = 0; i < inputs_num; ++i) {
     EnrollInputBn(absl::StrCat("in_", i))->set_is_mutable(true);
+    // EnrollInputBn(absl::StrCat("in_", i));
   }
-  EnrollRepeatedOutputBn("out");
-
+  if (outputs_num > 0) {
+    EnrollRepeatedOutputBn("out");
+  }
   // Setup subgraph
   subgraph_.reset(new mola::XlaLaunchGraph(
       op_conf().xla_launch_conf(), &this->job_desc()));

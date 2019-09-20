@@ -10,7 +10,8 @@
 #include "oneflow/engine/xla/of2xla/xla_graph.h"
 #include "oneflow/engine/pass/optimize_pass.h"
 
-DEFINE_bool(use_xla_jit, true, "Option to use xla jit");
+DEFINE_bool(use_xla_jit, EnvToBool(FLAGS_use_xla_jit, false),
+            "Option to use xla jit");
 #endif  // WITH_XLA
 
 namespace oneflow {
@@ -73,6 +74,7 @@ void Compiler::Compile(Job* job, Plan* plan, bool need_job_complete) const {
     mola::OptimizeOptions options;
     options.graph = &graph;
     options.minimum_nodes_in_cluster = 2;
+//    options.maximum_nodes_in_cluster = 50;
 
     mola::RunOptimizePass("MarkClusterId", options);
     mola::RunOptimizePass("BuildSubGraph", options);

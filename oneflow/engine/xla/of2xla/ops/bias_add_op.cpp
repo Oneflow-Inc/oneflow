@@ -23,7 +23,7 @@ class BiasAddOp : public XlaOpCompiler {
   }
 };
 
-REGISTER_XLA_OP_COMPILER(BiasAdd, BiasAddOp)
+REGISTER_XLA_OP_COMPILER(BiasAdd, BiasAddOp);
 
 }  // namespace mola
 }  // namespace oneflow

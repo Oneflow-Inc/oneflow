@@ -170,22 +170,6 @@ void XlaLaunchGraph::SetupArguments() {
   }
 }
 
-static ParallelDesc DefaultParallelDesc(DeviceType device_type_) {
-  ParallelConf conf;
-  conf.clear_device_name();
-  switch (device_type_) {
-    case DeviceType::kCPU:
-      conf.mutable_device_name()->Add()->assign("0:cpu:0");
-      break;
-    case DeviceType::kGPU:
-      conf.mutable_device_name()->Add()->assign("0:gpu:0");
-      break;
-    default:
-      UNIMPLEMENTED();
-  }
-  return ParallelDesc(conf);
-}
-
 void XlaLaunchGraph::BuildLaunchGraph() {
   std::unordered_map<LogicalBlobId, XlaNode *> lbi2producer;
   for (XlaNode *node : this->Nodes()) {
@@ -194,7 +178,6 @@ void XlaLaunchGraph::BuildLaunchGraph() {
     }
   }
   // Add normal nodes
-  ParallelDesc parallel_desc = DefaultParallelDesc(kGPU);
   for (const auto &node_conf : launch_conf_.attr().node()) {
     std::shared_ptr<Operator> op = ConstructOp(node_conf, job_desc_);
     allocated_ops_.push_back(op);
