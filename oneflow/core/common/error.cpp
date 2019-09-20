@@ -52,7 +52,7 @@ Error Error::Unimplemented() {
 
 Error Error::BoxingNotSupported() {
   auto error = std::make_shared<ErrorProto>();
-  error->mutable_unimplemented_error();
+  error->set_boxing_error(BoxingError::kNotSupported);
   return error;
 }
 
