@@ -96,18 +96,18 @@ void InterJobMemSharingUtil::MergeAndCleanChunkBlock(
   // mzuid = memory zone unique id
   HashMap<int64_t, HashMap<int64_t, int64_t>> job_id2mzuid2chunk_id;
   HashMap<int64_t, HashSet<MemBlockProto*>> chunk_id2mem_blocks;
-  for(const auto& chunk : plan->chunk()) {
-    CHECK(chunk_id2chunk.emplace(chunk.chun_id(), chunk).second);
+  for (const auto& chunk : plan->chunk()) {
+    CHECK(chunk_id2chunk.emplace(chunk.chunk_id(), chunk).second);
   }
   plan->clear_chunk();
-  for(const auto& mem_block : plan->mem_block()) {
+  for (const auto& mem_block : plan->mem_block()) {
     CHECK(mem_block_id2mem_block.emplace(mem_block.mem_block_id(), mem_block).second);
   }
   plan->clear_mem_block();
 
-  for(const auto& pair : mem_block_id2mem_block) {
+  for (auto& pair : mem_block_id2mem_block) {
     MemBlockProto* mem_block = &(pair.second);
-    if(mem_block->mem_durable() == MemoryDurable::kMemStable) {
+    if (mem_block->mem_durable() == MemoryDurable::kMemStable) {
       CHECK(mem_block->has_chunk_id() == false);
       CHECK(mem_block->has_chunk_offset() == false);
       continue;
@@ -119,17 +119,60 @@ void InterJobMemSharingUtil::MergeAndCleanChunkBlock(
   }
 
   // merge chunk and delete useless chunk
-  for(const auto& pair : chunk_id2chunk) {
+  for (const auto& pair : chunk_id2chunk) {
     const ChunkProto& chunk = pair.second;
     const MemoryCase& mem_case = chunk.mem_case();
     // only reused mem in cuda device
-    if(mem_case.has_host_mem())  {continue;}
-    int64_t mzuid = GenMemZoneUniqueId(chunk.machin_id(), mem_case);
+    if (mem_case.has_host_mem()) { continue; }
+    int64_t mzuid = GenMemZoneUniqueId(chunk.machine_id(), mem_case);
     CHECK_EQ(chunk.job_id_size(), 1);
     CHECK(job_id2mzuid2chunk_id[chunk.job_id(0)].emplace(mzuid, chunk.chunk_id()).second);
   }
 
-  // TODO()
+  auto MergeMemChunkIdR2L = [&](int64_t left_chunk_id, int64_t right_chunk_id) {
+    CHECK_NE(left_chunk_id, right_chunk_id);
+    ChunkProto* chunk_l = &(chunk_id2chunk.at(left_chunk_id));
+    ChunkProto* chunk_r = &(chunk_id2chunk.at(right_chunk_id));
+    CHECK_GE(chunk_l->job_id_size(), 1);
+    CHECK_EQ(chunk_r->job_id_size(), 1);
+    CHECK_EQ(chunk_l->machine_id(), chunk_r->machine_id());
+    CHECK(chunk_l->mem_case() == chunk_r->mem_case());
+    CHECK_GT(chunk_l->mem_size(), 0);
+    CHECK_GT(chunk_r->mem_size(), 0);
+    for (MemBlockProto* mem_block : chunk_id2mem_blocks[right_chunk_id]) {
+      mem_block->set_chunk_id(left_chunk_id);
+    }
+    chunk_l->add_job_id(chunk_r->job_id(0));
+    chunk_l->set_mem_size(std::max(chunk_l->mem_size(), chunk_r->mem_size()));
+    chunk_id2chunk.erase(chunk_id2chunk.find(right_chunk_id));
+  };
+  auto InitMzuid2JobIdsInJobGroup =
+      [&](const HashSet<int64_t>& job_group) -> HashMap<int64_t, HashSet<int64_t>> {
+    HashMap<int64_t, HashSet<int64_t>> mzuid2job_ids;
+    for (int64_t job_id : job_group) {
+      for (const auto& pair : job_id2mzuid2chunk_id[job_id]) {
+        CHECK(mzuid2job_ids[pair.first].emplace(job_id).second);
+      }
+    }
+    return mzuid2job_ids;
+  };
+  for (const HashSet<int64_t>& job_group : reuse_mem_job_groups) {
+    if (job_group.size() <= 1) { continue; }
+    HashMap<int64_t, HashSet<int64_t>> mzuid2job_ids = InitMzuid2JobIdsInJobGroup(job_group);
+    for (const auto& pair : mzuid2job_ids) {
+      const HashSet<int64_t>& job_ids = pair.second;
+      if (job_ids.size() <= 1) { continue; }
+      int64_t mzuid = pair.first;
+      int64_t merged_job_id = *(job_ids.begin());
+      for (int64_t job_id : job_ids) {
+        if (job_id == merged_job_id) { continue; }
+        MergeMemChunkIdR2L(job_id2mzuid2chunk_id[merged_job_id].at(mzuid),
+                           job_id2mzuid2chunk_id[job_id].at(mzuid));
+      }
+    }
+  }
+
+  // TODO() for clean useless mem_block, check chunk
 }
 
 std::vector<HashSet<int64_t>> InterJobMemSharingUtil::GetMutualExclusionJobGroups(

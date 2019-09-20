@@ -17,7 +17,7 @@ message MemBlockProto {
   required MemoryDurable mem_durable = 5;
   optional int64 chunk_id = 6 [default = -1];
   optional int64 chunk_offset = 7[default = -1];
-  required int64 size = 8;
+  required int64 mem_size = 8;
 }
 
 message ChunkProto {
@@ -25,6 +25,6 @@ message ChunkProto {
   repeated int64 job_id = 2;
   required int64 machine_id = 3;
   required MemoryCase mem_case = 4;
-  required int64 size = 5;
+  required int64 mem_size = 5;
 }
 
