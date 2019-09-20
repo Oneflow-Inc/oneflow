@@ -626,8 +626,6 @@ void Actor::AsyncSendMsg(const ActorMsg& msg) {
     callback();
   } else {
     // device_ctx_->AddCallBack(callback);
-    // LOG(INFO) << "src actor id: " << actor_id() << ", dst actor id: "
-    //           << msg.dst_actor_id();
     async_actor_msg_deque_.push_back(msg);
   }
 }
