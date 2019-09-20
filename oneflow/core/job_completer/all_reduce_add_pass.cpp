@@ -207,7 +207,8 @@ void AddReduceSplitOpConf(
     CHECK(ibn != "");
     PbMessage* md_updt_conf =
         MutableMessageInPbMessage(&md_updt_op_conf, md_updt_op_conf.op_type_case());
-    SetBnValInOpTypeConf(md_updt_conf, ibn, GenLogicalBlobName(lbi), GenLogicalBlobName(new_lbi));
+    ReplaceStrValInPbFdOrPbRpf(md_updt_conf, ibn, GenLogicalBlobName(lbi),
+                               GenLogicalBlobName(new_lbi));
     job_builder->MutOpsOnlyOnce({md_updt_op_conf});
   };
 

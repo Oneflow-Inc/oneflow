@@ -1,76 +1,158 @@
 #ifndef ONEFLOW_CORE_COMMON_MAYBE_H_
 #define ONEFLOW_CORE_COMMON_MAYBE_H_
 
-#include "oneflow/core/common/util.h"
+#include <glog/logging.h>
+#include <google/protobuf/text_format.h>
 #include "oneflow/core/common/either_ptr.h"
-#include "oneflow/core/common/error.pb.h"
+#include "oneflow/core/common/shared_or_plain.h"
+#include "oneflow/core/common/error.h"
+#include "oneflow/core/common/preprocessor.h"
 
 namespace oneflow {
 
 template<typename T>
-class MaybeBase {
+class Maybe final {
  public:
-  MaybeBase(const std::shared_ptr<const Error>& error) : data_or_error_(error) {}
-  MaybeBase(const std::shared_ptr<T>& data) : data_or_error_(data) {}
-  MaybeBase(const MaybeBase<T>&) = default;
-  virtual ~MaybeBase() = default;
+  Maybe(const T& data) : data_or_error_(std::make_shared<T>(data)) {}
+  Maybe(const Error& error) : data_or_error_(error.error_proto()) {}
+  Maybe(const std::shared_ptr<T>& data) : data_or_error_(data) {}
+  Maybe(const std::shared_ptr<ErrorProto>& error) : data_or_error_(error) {}
+  Maybe(const Maybe<T>&) = default;
+  Maybe(Maybe<T>&&) = default;
+  ~Maybe() = default;
 
-  bool Ok() const { return data_or_error_.template Has<T>(); }
-  const std::shared_ptr<T>& data() const { return data_or_error_.template Get<T>(); }
-  const Error& error() const { return *data_or_error_.template Get<const Error>(); }
+  bool IsOk() const { return data_or_error_.template Has<T>(); }
+  std::shared_ptr<T> Data_YouAreNotAllowedToCallThisFuncOutsideThisFile() const {
+    return data_or_error_.template Get<T>();
+  }
+  std::shared_ptr<ErrorProto> error() const { return data_or_error_.template Get<ErrorProto>(); }
+
+  T GetDataAndSerializedErrorProto(std::string* error_str, const T& default_for_error) const {
+    if (IsOk()) {
+      google::protobuf::TextFormat::PrintToString(ErrorProto(), error_str);
+      return *Data_YouAreNotAllowedToCallThisFuncOutsideThisFile();
+    } else {
+      google::protobuf::TextFormat::PrintToString(*error(), error_str);
+      return default_for_error;
+    }
+  }
 
  private:
-  EitherPtr<T, const Error> data_or_error_;
-};
-
-template<typename T>
-class Maybe final : public MaybeBase<T> {
- public:
-  Maybe(const Error& error) : MaybeBase<T>(std::make_shared<const Error>(error)) {}
-  Maybe(const T& data) : MaybeBase<T>(std::make_shared<T>(data)) {}
-  Maybe(const std::shared_ptr<const Error>& error) : MaybeBase<T>(error) {}
-  Maybe(const std::shared_ptr<T>& data) : MaybeBase<T>(data) {}
-  Maybe(const Error* error) : MaybeBase<T>(std::shared_ptr<const Error>(error)) {}
-  Maybe(T* data) : MaybeBase<T>(std::shared_ptr<T>(data)) {}
-  Maybe(const Maybe<T>&) = default;
-  ~Maybe() override = default;
+  EitherPtr<T, ErrorProto> data_or_error_;
 };
 
 template<>
-class Maybe<void> final : public MaybeBase<void> {
+class Maybe<void> final {
  public:
-  Maybe() : MaybeBase<void>(std::shared_ptr<void>()) {}
-  Maybe(const Error& error) : MaybeBase<void>(std::make_shared<const Error>(error)) {}
-  Maybe(const std::shared_ptr<const Error>& error) : MaybeBase<void>(error) {}
-  Maybe(const Error* error) : MaybeBase<void>(std::shared_ptr<const Error>(error)) {}
+  Maybe(const Error& error) : error_or_plain_(error.error_proto()) { CheckError(); }
+  Maybe(const std::shared_ptr<ErrorProto>& error) : error_or_plain_(error) { CheckError(); }
   Maybe(const Maybe<void>&) = default;
-  ~Maybe() override = default;
+  Maybe(Maybe<void>&&) = default;
+  ~Maybe() = default;
+
+  static Maybe<void> Ok() { return Maybe<void>(); }
+
+  bool IsOk() const { return error_or_plain_.IsPlain(); }
+  void Data_YouAreNotAllowedToCallThisFuncOutsideThisFile() const {}
+  std::shared_ptr<ErrorProto> error() const { return error_or_plain_.shared_ptr(); }
+
+  void GetDataAndSerializedErrorProto(std::string* error_str) const {
+    if (IsOk()) {
+      google::protobuf::TextFormat::PrintToString(ErrorProto(), error_str);
+    } else {
+      google::protobuf::TextFormat::PrintToString(*error(), error_str);
+    }
+  }
+
+ private:
+  Maybe() : error_or_plain_(nullptr) {}
+  void CheckError() const { CHECK_NE(error()->error_type_case(), ErrorProto::ERROR_TYPE_NOT_SET); }
+
+  SharedOrPlain<ErrorProto, void*> error_or_plain_;
 };
+
+#define SPECIALIZE_PLAIN_MAYBE(T)                                                                \
+  class Maybe<T> final {                                                                         \
+   public:                                                                                       \
+    Maybe(T data) : error_or_plain_(data) {}                                                     \
+    Maybe(const Error& error) : error_or_plain_(error.error_proto()) { CheckError(); }           \
+    Maybe(const std::shared_ptr<ErrorProto>& error) : error_or_plain_(error) { CheckError(); }   \
+    Maybe(const Maybe<T>&) = default;                                                            \
+    Maybe(Maybe<T>&&) = default;                                                                 \
+    ~Maybe() = default;                                                                          \
+                                                                                                 \
+    bool IsOk() const { return error_or_plain_.IsPlain(); }                                      \
+    T Data_YouAreNotAllowedToCallThisFuncOutsideThisFile() const {                               \
+      return error_or_plain_.plain_data();                                                       \
+    }                                                                                            \
+    std::shared_ptr<ErrorProto> error() const { return error_or_plain_.shared_ptr(); }           \
+                                                                                                 \
+    T GetDataAndSerializedErrorProto(std::string* error_str, const T& default_for_error) const { \
+      if (IsOk()) {                                                                              \
+        google::protobuf::TextFormat::PrintToString(ErrorProto(), error_str);                    \
+        return Data_YouAreNotAllowedToCallThisFuncOutsideThisFile();                             \
+      } else {                                                                                   \
+        google::protobuf::TextFormat::PrintToString(*error(), error_str);                        \
+        return default_for_error;                                                                \
+      }                                                                                          \
+    }                                                                                            \
+                                                                                                 \
+   private:                                                                                      \
+    void CheckError() const {                                                                    \
+      CHECK_NE(error()->error_type_case(), ErrorProto::ERROR_TYPE_NOT_SET);                      \
+    }                                                                                            \
+                                                                                                 \
+    SharedOrPlain<ErrorProto, T> error_or_plain_;                                                \
+  }
+
+template<typename T>
+SPECIALIZE_PLAIN_MAYBE(T*);
+
+#define SPECIALIZE_BASIC_DATA_TYPE_MAYBE(T) \
+  template<>                                \
+  SPECIALIZE_PLAIN_MAYBE(T)
+
+SPECIALIZE_BASIC_DATA_TYPE_MAYBE(bool);
+SPECIALIZE_BASIC_DATA_TYPE_MAYBE(char);
+SPECIALIZE_BASIC_DATA_TYPE_MAYBE(unsigned char);
+SPECIALIZE_BASIC_DATA_TYPE_MAYBE(short);
+SPECIALIZE_BASIC_DATA_TYPE_MAYBE(unsigned short);
+SPECIALIZE_BASIC_DATA_TYPE_MAYBE(int);
+SPECIALIZE_BASIC_DATA_TYPE_MAYBE(unsigned int);
+SPECIALIZE_BASIC_DATA_TYPE_MAYBE(long);
+SPECIALIZE_BASIC_DATA_TYPE_MAYBE(unsigned long);
+SPECIALIZE_BASIC_DATA_TYPE_MAYBE(long long);
+SPECIALIZE_BASIC_DATA_TYPE_MAYBE(unsigned long long);
+SPECIALIZE_BASIC_DATA_TYPE_MAYBE(float);
+SPECIALIZE_BASIC_DATA_TYPE_MAYBE(double);
+
+#undef SPECIALIZE_BASIC_DATA_TYPE_MAYBE
+#undef SPECIALIZE_PLAIN_MAYBE
 
 template<typename T>
 inline Maybe<T> MaybeFuncSafeCallWrapper(Maybe<T>&& maybe) {
   return maybe;
 }
 
-#define __MAYBE_CALL_LOC__ __FILE__ ":" OF_PP_STRINGIZE(__LINE__) "\n"
+#define __LOC__ __FILE__ ":" OF_PP_STRINGIZE(__LINE__) "\n"
 
 #if defined(__GNUC__) || defined(__CUDACC__) || defined(__clang__)
 
-#define TRY(...) MaybeFuncSafeCallWrapper(__VA_ARGS__)
-#define JUST(...)                                              \
-  ({                                                           \
-    const auto& maybe = MaybeFuncSafeCallWrapper(__VA_ARGS__); \
-    if (maybe.Ok() == false) {                                 \
-      LOG(INFO) << "maybe failed:" << __MAYBE_CALL_LOC__;      \
-      return maybe;                                            \
-    }                                                          \
-    maybe.data();                                              \
+#define TRY(...) MaybeFuncSafeCallWrapper(std::move(__VA_ARGS__))
+#define JUST(...)                                                         \
+  ({                                                                      \
+    const auto& maybe = MaybeFuncSafeCallWrapper(std::move(__VA_ARGS__)); \
+    if (!maybe.IsOk()) {                                                  \
+      LOG(INFO) << "maybe failed:" << __LOC__;                            \
+      return maybe.error();                                               \
+    }                                                                     \
+    maybe.Data_YouAreNotAllowedToCallThisFuncOutsideThisFile();           \
   })
-#define CHECK_JUST(...)                                        \
-  ({                                                           \
-    const auto& maybe = MaybeFuncSafeCallWrapper(__VA_ARGS__); \
-    CHECK(maybe.Ok());                                         \
-    maybe.data();                                              \
+#define CHECK_JUST(...)                                                   \
+  ({                                                                      \
+    const auto& maybe = MaybeFuncSafeCallWrapper(std::move(__VA_ARGS__)); \
+    CHECK(maybe.IsOk());                                                  \
+    maybe.Data_YouAreNotAllowedToCallThisFuncOutsideThisFile();           \
   })
 
 #else
@@ -78,5 +160,44 @@ inline Maybe<T> MaybeFuncSafeCallWrapper(Maybe<T>&& maybe) {
 #endif
 
 }  // namespace oneflow
+
+#define OF_CHECK(expr) \
+  if (!(expr))         \
+  return __LOC__ <= Error::CheckFailed() << " Check failed: " << OF_PP_STRINGIZE(expr) << "\t"
+
+#define OF_CHECK_NOTNULL(ptr) OF_CHECK(ptr != nullptr)
+#define OF_CHECK_ISNULL(ptr) OF_CHECK(ptr == nullptr)
+#define OF_CHECK_STREQ(lhs, rhs) OF_CHECK_EQ(std::string(lhs), std::string(rhs))
+#define OF_CHECK_STRNE(lhs, rhs) OF_CHECK_NE(std::string(lhs), std::string(rhs))
+
+#define OF_CHECK_EQ(lhs, rhs) OF_CHECK((lhs) == (rhs)) << "(" << (lhs) << " vs " << (rhs) << ") "
+#define OF_CHECK_NE(lhs, rhs) OF_CHECK((lhs) != (rhs)) << "(" << (lhs) << " vs " << (rhs) << ") "
+#define OF_CHECK_GT(lhs, rhs) OF_CHECK((lhs) > (rhs)) << "(" << (lhs) << " vs " << (rhs) << ") "
+#define OF_CHECK_GE(lhs, rhs) OF_CHECK((lhs) >= (rhs)) << "(" << (lhs) << " vs " << (rhs) << ") "
+#define OF_CHECK_LT(lhs, rhs) OF_CHECK((lhs) < (rhs)) << "(" << (lhs) << " vs " << (rhs) << ") "
+#define OF_CHECK_LE(lhs, rhs) OF_CHECK((lhs) <= (rhs)) << "(" << (lhs) << " vs " << (rhs) << ") "
+
+#define OF_TODO() return __LOC__ <= Error::Todo()
+#define OF_UNIMPLEMENTED() return __LOC__ <= Error::Unimplemented()
+
+#define CHECK_OR_RETURN(expr) OF_CHECK(expr)
+
+#define CHECK_EQ_OR_RETURN(lhs, rhs) OF_CHECK_EQ(lhs, rhs)
+
+#define CHECK_GE_OR_RETURN(lhs, rhs) OF_CHECK_GE(lhs, rhs)
+
+#define CHECK_GT_OR_RETURN(lhs, rhs) OF_CHECK_GT(lhs, rhs)
+
+#define CHECK_LE_OR_RETURN(lhs, rhs) OF_CHECK_LE(lhs, rhs)
+
+#define CHECK_LT_OR_RETURN(lhs, rhs) OF_CHECK_LT(lhs, rhs)
+
+#define CHECK_NE_OR_RETURN(lhs, rhs) OF_CHECK_NE(lhs, rhs)
+
+#define CHECK_STREQ_OR_RETURN(lhs, rhs) OF_CHECK_STREQ(lhs, rhs)
+
+#define TODO_THEN_RETURN() OF_TODO()
+
+#define UNIMPLEMENTED_THEN_RETURN() OF_UNIMPLEMENTED()
 
 #endif  // ONEFLOW_CORE_COMMON_MAYBE_H_

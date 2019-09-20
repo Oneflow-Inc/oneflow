@@ -10,25 +10,28 @@ void ReentrantLockOp::InitFromOpConf() {
   EnrollOutputBn("out", false);
 }
 
-void ReentrantLockOp::InferBlobDescs(
+Maybe<void> ReentrantLockOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
-  CHECK_EQ(parallel_ctx->parallel_num(), 1);
+  CHECK_EQ_OR_RETURN(parallel_ctx->parallel_num(), 1);
   BlobDesc* out = GetBlobDesc4BnInOp("out");
   out->mut_shape() = Shape({1});
   const DataType data_type = GetBlobDesc4BnInOp("out")->data_type();
-  CHECK(IsIntegralDataType(data_type));
+  CHECK_OR_RETURN(IsIntegralDataType(data_type));
   out->set_data_type(data_type);
+  return Maybe<void>::Ok();
 }
 
-void ReentrantLockOp::InferHasBatchDim(
-    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
-  NaiveInferHasBatchDim(HasBatchDim4BnInOp);
+Maybe<void> ReentrantLockOp::InferBatchAxis(
+    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
+  return NaiveInferBatchAxis(BatchAxis4BnInOp);
 }
 
-void ReentrantLockOp::GetSbpSignatures(
-    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
-    SbpSignatureList* sbp_sig_list) const {}
+Maybe<void> ReentrantLockOp::GetSbpSignatures(
+    const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
+    SbpSignatureList* sbp_sig_list) const {
+  return Maybe<void>::Ok();
+}
 
 LogicalNode* ReentrantLockOp::NewProperLogicalNode() const {
   return new ReentrantLockLogicalNode();

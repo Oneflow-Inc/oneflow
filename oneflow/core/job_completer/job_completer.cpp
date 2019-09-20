@@ -1,6 +1,5 @@
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/job_completer/job_completer.h"
-#include "oneflow/core/job_completer/autovar.h"
 #include "oneflow/core/job_completer/autograd.h"
 #include "oneflow/core/job_completer/autotick.h"
 #include "oneflow/core/job_completer/add_keep_header_only_op_conf.h"
@@ -13,6 +12,8 @@
 #include "oneflow/core/job_completer/auto_mixed_precision.h"
 #include "oneflow/core/job_completer/non_distributed_optimizer_pass.h"
 #include "oneflow/core/job_completer/nccl_tuple_broadcast_reduce_sequence_pass.h"
+#include "oneflow/core/job_completer/auto_train_step.h"
+#include "oneflow/core/job_completer/auto_learning_rate.h"
 
 namespace oneflow {
 
@@ -200,7 +201,7 @@ void AddIdentityOpAndReconnect(
       std::string lbn_check = GenLogicalBlobName(lbi);
       std::string identity_out_lbn = GenLogicalBlobName(old_lbi2new_lbi.at(lbi));
       for (const std::string& ibn : edge->lbi2ibns().at(lbi)) {
-        SetBnValInOpTypeConf(op_type_conf, ibn, lbn_check, identity_out_lbn);
+        ReplaceStrValInPbFdOrPbRpf(op_type_conf, ibn, lbn_check, identity_out_lbn);
         const auto& sbp_parallel = edge->dst_node()->SbpParallel4BnInOp(ibn);
         const auto& sbp_iter = old_lbi2sbp_parallel.find(lbi);
         if (sbp_iter == old_lbi2sbp_parallel.end()) {
@@ -302,9 +303,9 @@ void SetCtrlInOpName4VariableOp(const OpGraph& op_graph, JobBuilder* job_builder
   });
 }
 
-void SetOpTimeShape7BatchDimLbis(const OpGraph& op_graph, JobBuilder* job_builder) {
+void SetOpTimeShape7BatchAxisLbis(const OpGraph& op_graph, JobBuilder* job_builder) {
   op_graph.DumpOpTimeShape(job_builder);
-  op_graph.DumpBatchDimLbi(job_builder);
+  op_graph.DumpBatchAxisLbi(job_builder);
 }
 
 void RewriteBoxingWithAllReduce(const OpGraph& op_graph, JobBuilder* job_builder) {
@@ -331,33 +332,6 @@ void EnableAutoMixedPrecision(const OpGraph& op_graph, JobBuilder* job_builder) 
       .Apply(op_graph, job_builder);
 }
 
-void FixInputOpParallelConf(Job* job) {
-  JobBuilder job_builder(job);
-  HashSet<std::string> input_op_names;
-  for (const auto& op_conf : job->net().op()) {
-    if (op_conf.has_input_conf()) { CHECK(input_op_names.emplace(op_conf.name()).second); }
-  }
-  HashSet<std::string> updated_op_names;
-  job_builder.ForEachOperator([&](const Operator& op) {
-    for (const auto& ibn : op.input_bns()) {
-      const LogicalBlobId& lbi = op.BnInOp2Lbi(ibn);
-      if (input_op_names.find(lbi.op_name()) == input_op_names.end()) { continue; }
-      if (updated_op_names.find(lbi.op_name()) != updated_op_names.end()) { continue; }
-      job_builder.MutParallelConfOnlyOnce(lbi.op_name(),
-                                          job_builder.ParallelConf4OpName(op.op_name()));
-    }
-  });
-}
-
-void FixReturnOpParallelConf(Job* job) {
-  JobBuilder job_builder(job);
-  for (const auto& op_conf : job->net().op()) {
-    if (op_conf.has_return_conf() == false) { continue; }
-    LogicalBlobId lbi = GenLogicalBlobId(op_conf.return_conf().in());
-    job_builder.MutParallelConfOnlyOnce(op_conf.name(),
-                                        job_builder.ParallelConf4OpName(lbi.op_name()));
-  }
-}
 void EnableNonDistributedOptimizer(const OpGraph& op_graph, JobBuilder* job_builder) {
   if (!GlobalJobDesc().enable_non_distributed_optimizer()) { return; }
   CHECK(GlobalJobDesc().enable_nccl());
@@ -374,12 +348,13 @@ void JobCompleter::Complete(Job* job) const {
   // replace facade op
   WithOpGraphAndMutJobBuilder(job, &ReplaceFacade);
   // complete variable ops
-  WithOpGraphAndMutJobBuilder(job, &AutoVar);
   WithOpGraphAndMutJobBuilder(job, &SetDefaultVariableConf);
   if (GlobalJobDesc().IsTrain()) {
     WithOpGraphAndMutJob(job, &TieUpChainHeadersUnReachableFromAnyVariableOps);
     WithOpGraphAndMutJobBuilder(job, &EnableAutoMixedPrecision);
     WithOpGraphAndMutJobBuilder(job, &EnableNonDistributedOptimizer);
+    WithOpGraphAndMutJob(job, &AutoTrainStep);
+    WithOpGraphAndMutJob(job, &AutoLearningRate);
     // complete ops for trainning
     WithOpGraphAndMutJobBuilder(job, &GenerateOpConf4Trainning);
     WithOpGraphAndMutJobBuilder(job, &MakeNcclTupleBroadcastReduceSequence);
@@ -398,7 +373,7 @@ void JobCompleter::Complete(Job* job) const {
   WithOpGraphAndMutJobBuilder(job, &AddGlobalInputCriticalSections);
   WithOpGraphAndMutJobBuilder(job, &AddGlobalOutputCriticalSections);
   WithOpGraphAndMutJobBuilder(job, &DumpLogicalBlobDescAndSbpSignature);
-  WithOpGraphAndMutJobBuilder(job, &SetOpTimeShape7BatchDimLbis);
+  WithOpGraphAndMutJobBuilder(job, &SetOpTimeShape7BatchAxisLbis);
   CheckOpGraph(OpGraph(*job));
 }
 

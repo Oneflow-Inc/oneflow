@@ -27,8 +27,6 @@ class CaseKernel final : public KernelIf<DeviceType::kCPU> {
   CaseKernel() = default;
   ~CaseKernel() override = default;
 
-  void Init(const KernelConf& kernel_conf);
-
  private:
   void ForwardDataContent(const KernelCtx&,
                           std::function<Blob*(const std::string&)>) const override;

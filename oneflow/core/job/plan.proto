@@ -18,7 +18,6 @@ message JobConfs {
 
 message Plan {
   repeated TaskProto task = 1;
-  required int64 total_mbn_num = 2;
-  required NetTopo net_topo = 3;
-  required JobConfs job_confs = 4;
+  required NetTopo net_topo = 2;
+  required JobConfs job_confs = 3;
 }

@@ -14,28 +14,29 @@ void MatmulOp::InitFromOpConf() {
 
 const PbMessage& MatmulOp::GetCustomizedConf() const { return op_conf().matmul_conf(); }
 
-void MatmulOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                              const ParallelContext* parallel_ctx) const {
+Maybe<void> MatmulOp::InferBlobDescs(
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx) const {
   const MatmulOpConf& conf = op_conf().matmul_conf();
   BlobDesc* a_blob_desc = GetBlobDesc4BnInOp("a");
   BlobDesc* b_blob_desc = GetBlobDesc4BnInOp("b");
-  CHECK_EQ(a_blob_desc->shape().NumAxes(), b_blob_desc->shape().NumAxes());
-  CHECK_GE(a_blob_desc->shape().NumAxes(), 2);
+  CHECK_EQ_OR_RETURN(a_blob_desc->shape().NumAxes(), b_blob_desc->shape().NumAxes());
+  CHECK_GE_OR_RETURN(a_blob_desc->shape().NumAxes(), 2);
   size_t num_axes = a_blob_desc->shape().NumAxes();
   if (conf.transpose_a()) {
-    CHECK(!a_blob_desc->has_dim0_valid_num_field());
-    CHECK(!a_blob_desc->has_dim1_valid_num_field());
-    CHECK(!a_blob_desc->has_dim2_valid_num_field());
+    CHECK_OR_RETURN(!a_blob_desc->has_dim0_valid_num_field());
+    CHECK_OR_RETURN(!a_blob_desc->has_dim1_valid_num_field());
+    CHECK_OR_RETURN(!a_blob_desc->has_dim2_valid_num_field());
   }
   if (conf.transpose_b()) {
-    CHECK(!b_blob_desc->has_dim0_valid_num_field());
-    CHECK(!b_blob_desc->has_dim1_valid_num_field());
-    CHECK(!b_blob_desc->has_dim2_valid_num_field());
+    CHECK_OR_RETURN(!b_blob_desc->has_dim0_valid_num_field());
+    CHECK_OR_RETURN(!b_blob_desc->has_dim1_valid_num_field());
+    CHECK_OR_RETURN(!b_blob_desc->has_dim2_valid_num_field());
   }
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   *out_blob_desc = *a_blob_desc;
   FOR_RANGE(int32_t, i, 0, num_axes - 2) {
-    CHECK_EQ(a_blob_desc->shape().At(i), b_blob_desc->shape().At(i));
+    CHECK_EQ_OR_RETURN(a_blob_desc->shape().At(i), b_blob_desc->shape().At(i));
   }
   int64_t a_dim_index = conf.transpose_a() ? num_axes - 1 : num_axes - 2;
   out_blob_desc->mut_shape().Set(num_axes - 2, a_blob_desc->shape().At(a_dim_index));
@@ -43,7 +44,8 @@ void MatmulOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBl
   out_blob_desc->mut_shape().Set(num_axes - 1, b_blob_desc->shape().At(b_dim_index));
   int64_t a_mid_dim_index = conf.transpose_a() ? num_axes - 2 : num_axes - 1;
   int64_t b_mid_dim_index = conf.transpose_b() ? num_axes - 1 : num_axes - 2;
-  CHECK_EQ(a_blob_desc->shape().At(a_mid_dim_index), b_blob_desc->shape().At(b_mid_dim_index));
+  CHECK_EQ_OR_RETURN(a_blob_desc->shape().At(a_mid_dim_index),
+                     b_blob_desc->shape().At(b_mid_dim_index));
   if (device_type() == DeviceType::kGPU && num_axes >= 3) {
     int batch_num = a_blob_desc->shape().Count(0, num_axes - 2);
     // Assume gpu address is 64 bit
@@ -53,39 +55,49 @@ void MatmulOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBl
     fw_buf_blob_desc->set_data_type(DataType::kInt64);
     fw_buf_blob_desc->set_has_data_id_field(false);
   }
+  return Maybe<void>::Ok();
 }
 
-void MatmulOp::InferHasBatchDim(
+Maybe<void> MatmulOp::InferBatchAxis(
     const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
-    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
+    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
   const MatmulOpConf& conf = op_conf().matmul_conf();
   int32_t num_axes = LogicalBlobDesc4Ibn("a").shape().NumAxes();
   if (num_axes > 2) {
-    CHECK(*HasBatchDim4BnInOp("a"));
-    CHECK(*HasBatchDim4BnInOp("b"));
-    *HasBatchDim4BnInOp("out") = true;
-  } else if (num_axes == 2) {
-    if (*HasBatchDim4BnInOp("a") == false) {
-      *HasBatchDim4BnInOp("out") = false;
+    if (BatchAxis4BnInOp("a")->has_value()) {
+      *BatchAxis4BnInOp("out") = *BatchAxis4BnInOp("a");
+    } else if (BatchAxis4BnInOp("b")->has_value()) {
+      *BatchAxis4BnInOp("out") = *BatchAxis4BnInOp("b");
     } else {
-      if (conf.transpose_a()) {
-        CHECK(*HasBatchDim4BnInOp("b"));
-        CHECK(!conf.transpose_b());
-        *HasBatchDim4BnInOp("out") = false;
-      } else {
-        *HasBatchDim4BnInOp("out") = true;
-      }
+      BatchAxis4BnInOp("out")->clear_value();
+    }
+  } else if (num_axes == 2) {
+    OptInt64 a_batch_axis(*BatchAxis4BnInOp("a"));
+    if (a_batch_axis.has_value() && conf.transpose_a()) {
+      a_batch_axis.set_value(1 - a_batch_axis.value());
+    }
+    OptInt64 b_batch_axis(*BatchAxis4BnInOp("b"));
+    if (b_batch_axis.has_value() && conf.transpose_b()) {
+      b_batch_axis.set_value(1 - b_batch_axis.value());
+    }
+    if (a_batch_axis.has_value() && a_batch_axis.value() == 0) {
+      *BatchAxis4BnInOp("out") = a_batch_axis;
+    } else if (b_batch_axis.has_value() && b_batch_axis.value() == 1) {
+      *BatchAxis4BnInOp("out") = b_batch_axis;
+    } else {
+      BatchAxis4BnInOp("out")->clear_value();
     }
   } else {
-    UNIMPLEMENTED();
+    UNIMPLEMENTED_THEN_RETURN();
   }
+  return Maybe<void>::Ok();
 }
 
-void MatmulOp::GetSbpSignatures(
-    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
+Maybe<void> MatmulOp::GetSbpSignatures(
+    const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
     SbpSignatureList* sbp_sig_list) const {
   const MatmulOpConf& conf = op_conf().matmul_conf();
-  int32_t num_axes = LogicalBlobDesc4Ibn("a").shape().NumAxes();
+  int32_t num_axes = JUST(LogicalBlobDesc4Ibn("a"))->shape().NumAxes();
   if (num_axes > 2) {
     SbpSignatureBuilder()
         .Split(input_bns(), 0)
@@ -127,8 +139,12 @@ void MatmulOp::GetSbpSignatures(
         .PartialSum(output_bns())
         .Build(sbp_sig_list->mutable_sbp_signature()->Add());
   } else {
-    UNIMPLEMENTED();
+    std::shared_ptr<ErrorProto> err;
+    err->set_msg("MatMulOp: number of axis is " + std::to_string(num_axes) + " (not supported).");
+    err->mutable_check_failed();
+    return err;
   }
+  return Maybe<void>::Ok();
 }
 
 REGISTER_OP(OperatorConf::kMatmulConf, MatmulOp);

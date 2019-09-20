@@ -20,7 +20,6 @@ class JobDesc final {
   // Common
   int64_t job_id() const { return job_id_; }
   const std::string& job_name() const { return job_conf_.job_name(); }
-  const PbRpf<std::string>& arg_op_name() const { return job_conf_.arg_op_name(); }
   int64_t concurrency_width() const { return job_conf_.concurrency_width(); }
   const JobConfigProto& job_conf() const { return job_conf_; }
   DataType DefaultDataType() const { return job_conf_.default_data_type(); }
@@ -28,16 +27,8 @@ class JobDesc final {
   bool EnableCudnn() const { return job_conf_.enable_cudnn(); }
   bool IsTrain() const { return job_conf_.has_train_conf(); }
   bool IsPredict() const { return job_conf_.has_predict_conf(); }
-  int64_t RecordPieceSize() const { return job_conf_.piece_size(); }
   int64_t piece_num_of_experiment_phase() const;
   bool enable_experiment_run() const;
-  float available_zone_mem_ratio() const;
-  size_t persistence_buf_byte() const;
-  size_t reserved_host_mem_byte() const;
-  size_t reserved_device_mem_byte() const;
-  bool save_downloaded_file_to_local_fs() const;
-  size_t rdma_mem_block_byte() const;
-  size_t rdma_recv_msg_buf_byte() const;
   bool enable_mem_sharing() const { return job_conf_.enable_mem_sharing(); }
   bool enable_inplace() const { return job_conf_.enable_inplace(); }
   bool enable_true_half_config_when_conv() const {
@@ -47,10 +38,6 @@ class JobDesc final {
     return job_conf_.enable_float_compute_for_half_gemm();
   }
   bool enable_auto_mixed_precision() const { return job_conf_.enable_auto_mixed_precision(); }
-  const FileSystemConf& data_fs_conf() const;
-  const FileSystemConf& snapshot_fs_conf() const;
-  bool enable_write_snapshot() const;
-  bool write_snapshot_to_master() const { return snapshot_fs_conf().has_localfs_conf(); }
   bool enable_nccl() const { return job_conf_.enable_nccl(); }
   bool use_nccl_inter_node_communication() const {
     return job_conf_.use_nccl_inter_node_communication();
@@ -70,19 +57,12 @@ class JobDesc final {
   int64_t cudnn_buf_limit_mbyte() const { return job_conf_.cudnn_buf_limit_mbyte(); }
 
   // Train conf
-  int32_t NumOfBatchesInSnapshot() const;
   int64_t TotalBatchNum() const;
-  int32_t PieceNumOfPrintLoss() const;
-  int32_t PieceNumOfPrintAccuracy() const;
-  int64_t BatchSize() const;
   int64_t NumOfPiecesInBatch() const;
-  float primary_lr() const;
-  float secondary_lr() const;
   float weight_l1() const;
   float bias_l1() const;
   float weight_l2() const;
   float bias_l2() const;
-  int32_t DataPartNum() const;
   int32_t loss_scale_factor() const;
 
  private:

@@ -5,8 +5,8 @@ from oneflow.core.job.dlnet_conf_pb2 import DLNetConf
 from google.protobuf import text_format;
 from oneflow.python.deprecated.blob import Blob
 import oneflow.python.ops.op_util as op_util
-import oneflow.python.framework.placement_context as placement_ctx
 import oneflow.python.framework.compile_context as compile_ctx
+import oneflow.python.framework.job_builder as job_builder
 import oneflow.core.operator.op_conf_pb2 as op_conf_pb2;
 import oneflow.core.common.data_type_pb2 as data_type_pb;
 import oneflow.core.common.data_type_pb2 as dt
@@ -23,12 +23,13 @@ RepeatedScalarContainer = type(getattr(op_conf_pb2.AddOpConf(), 'in'));
 # deprecated
 @oneflow_export('deprecated.get_cur_job_dlnet_builder')
 def get_cur_job_dlnet_builder():
-    global _cur_job2dl_net_builder
-    if id(compile_ctx.cur_job) not in _cur_job2dl_net_builder:
-        _cur_job2dl_net_builder[id(compile_ctx.cur_job)] = DLNet(compile_ctx.cur_job.net)
-    return _cur_job2dl_net_builder[id(compile_ctx.cur_job)]
+    global _job_name2dl_net_builder
+    job_name = job_builder.GetCurCtxJobName()
+    if job_name not in _job_name2dl_net_builder:
+        _job_name2dl_net_builder[job_name] = DLNet(DLNetConf())
+    return _job_name2dl_net_builder[job_name]
 
-_cur_job2dl_net_builder = {}
+_job_name2dl_net_builder = {}
 
 class DLNet(object):
     def __init__(self, dl_net_conf):
@@ -374,6 +375,23 @@ class DLNet(object):
         self.CreateOperator('BlobDump', name, [], [], **kw);
         return None;
 
+    def Multiply(self, in0_blob, in1_blob, name=None, **kw):
+        kw['in_0'] = in0_blob.logical_blob_name
+        kw['in_1'] = in1_blob.logical_blob_name
+        kw['out'] = 'out'
+        name = self._GetVariableName(name, util.GetCurFuncName());
+        self.CreateOperator(util.GetCurFuncName(), name, [], [], **kw)
+        return Blob(self, '{}/out'.format(name))
+
+    def SegmentSum(self, in_blob, segment_ids_blob, unique_ids_num, name=None, **kw):
+        kw['segment_ids'] = segment_ids_blob.logical_blob_name
+        kw['unique_ids_num'] = unique_ids_num
+        kw['in'] = in_blob.logical_blob_name
+        kw['out'] = 'out'
+        name = self._GetVariableName(name, util.GetCurFuncName());
+        self.CreateOperator(util.GetCurFuncName(), name, [], [], **kw)
+        return Blob(self, '{}/out'.format(name))
+
     def Gather(self, in_blob, indices_blob, name=None, **kw):
         kw['indices'] = indices_blob.logical_blob_name
         kw['in'] = in_blob.logical_blob_name
@@ -432,8 +450,17 @@ class DLNet(object):
     def ScalarMul(self, in_blob, scalar, name=None, **kw):
         return self._ScalarBinaryOp(util.GetCurFuncName(), in_blob, scalar, name, **kw);
 
-    def ReduceSum(self, in_blob, name=None, **kw):
-        return self._SoleOutputOperator(util.GetCurFuncName(), in_blob, name, **kw);
+    def ReduceSum(self, in_blob, axis=None, keep_dims=None, name=None, **kw):
+        kw['in'] = in_blob.logical_blob_name
+        if axis is not None:
+            kw['axis'] = axis
+        if keep_dims is not None:
+            kw['keep_dims'] = keep_dims
+
+        kw['out'] = 'out'
+        name = self._GetVariableName(name, util.GetCurFuncName())
+        self.CreateOperator(util.GetCurFuncName(), name, [], [], **kw)
+        return Blob(self, '{}/out'.format(name))
 
     def ReduceMean(self, in_blob, name=None, **kw):
         return self._SoleOutputOperator(util.GetCurFuncName(), in_blob, name, **kw);
@@ -505,6 +532,14 @@ class DLNet(object):
         name = self._GetVariableName(name, util.GetCurFuncName())
         self.CreateOperator(util.GetCurFuncName(), name, [], [], **kw)
         return Blob(self, '{}/out'.format(name))
+
+    def SigmoidCrossEntropyLoss(self, prediction, label, name=None, **kw):
+        kw['prediction'] = prediction.logical_blob_name
+        kw['label'] = label.logical_blob_name
+        kw['loss'] = 'loss'
+        name = self._GetVariableName(name, util.GetCurFuncName())
+        self.CreateOperator(util.GetCurFuncName(), name, [], [], **kw)
+        return Blob(self, '{}/loss'.format(name))
 
     def IdentityLoss(self, prediction,  name=None, **kw):
         kw['prediction'] = prediction.logical_blob_name
@@ -598,7 +633,7 @@ class DLNet(object):
     def CreateOperator(self, op_type_name, op_name, input_lbn, output_bn, **kw):
         op_conf = self.dl_net_conf_.op.add()
         ret = _CreateOperator(op_conf, op_type_name, op_name, input_lbn, output_bn, kw)
-        placement_ctx.CurPlacementGroupAddOpConf(op_conf)
+        compile_ctx.CurJobAddOp(op_conf)
         return op_conf
 
     def __str__(self):

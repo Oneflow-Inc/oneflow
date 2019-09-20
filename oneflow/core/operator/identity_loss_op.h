@@ -14,11 +14,11 @@ class IdentityLossOp final : public LossOp {
   const PbMessage& GetCustomizedConf() const override;
 
  private:
-  void GetSbpSignatures(SbpSignatureList* sbp_sig_list) const override;
+  Maybe<void> GetSbpSignatures(SbpSignatureList* sbp_sig_list) const override;
 
   LossKernelConf* GetMutLossKernelConf(KernelConf*) const override;
-  void VirtualInferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                             const ParallelContext* parallel_ctx) const override;
+  Maybe<void> VirtualInferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                                    const ParallelContext* parallel_ctx) const override;
 };
 
 }  // namespace oneflow

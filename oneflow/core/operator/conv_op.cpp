@@ -65,41 +65,68 @@ void ConvOp<NDims>::InitFromOpConf() {
 
   EnrollInputBn("in");
   EnrollOutputBn("out");
-  if (GetValFromCustomizedConf<std::string>("weight").empty()) {
-    EnrollTmpBn("weight");
-  } else {
-    EnrollInputBn("weight");
-  }
+  EnrollInputBn("weight");
   EnrollTmpBn("fw_cudnn_buf");
   EnrollTmpBn("fw_col_buf");
   if (GetValFromCustomizedConf<bool>("use_bias")) {
-    if (GetValFromCustomizedConf<std::string>("bias").empty()) {
-      EnrollTmpBn("bias");
-    } else {
-      EnrollInputBn("bias");
-    }
+    CHECK(!GetValFromCustomizedConf<std::string>("bias").empty());
+    EnrollInputBn("bias");
     EnrollConstBufBn("bias_multiplier");
   }
 }
 
 template<int32_t NDims>
-void ConvOp<NDims>::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                   const ParallelContext* parallel_ctx, int64_t record_piece_size,
-                                   std::function<void(OpContext*)> EnrollOpCtx) const {
+Maybe<void> ConvOp<NDims>::InferOutBlobDescs(
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature,
+    std::function<void(OpContext*)> EnrollOpCtx) const {
   const std::string& data_format = GetValFromCustomizedConf<std::string>("data_format");
 
   // in
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
-  CHECK_EQ(in_blob_desc->shape().NumAxes(), NDims + 2);
-  // CHECK_EQ(in_blob_desc->data_type(), GlobalJobDesc().DefaultDataType());
+  CHECK_EQ_OR_RETURN(in_blob_desc->shape().NumAxes(), NDims + 2);
+  // CHECK_EQ(in_blob_desc->data_type(), job_desc().DefaultDataType());
 
   // out
   int64_t data_num = in_blob_desc->shape().At(0);
   int32_t filters = GetValFromCustomizedConf<int32_t>("filters");
-  if (parallel_ctx->policy() == kModelParallel) {
-    BalancedSplitter splitter(filters, parallel_ctx->parallel_num());
-    filters = splitter.At(parallel_ctx->parallel_id()).size();
+  // only support data parallel
+  CHECK_OR_RETURN(parallel_ctx->parallel_num() == 1
+                  || sbp_signature->bn_in_op2sbp_parallel().at("weight").has_broadcast_parallel());
+
+  std::vector<int64_t> out;
+  GetOutAndPad(in_blob_desc->shape(), GetCustomizedConf(), &out, nullptr, nullptr);
+  std::vector<int64_t> out_shape = {data_num, filters};
+  size_t dhw_offset = DhwOffset(data_format);
+  for (size_t i = 0; i < NDims; ++i) {
+    out_shape.insert(out_shape.begin() + dhw_offset + i, out[i]);
   }
+  BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
+  *out_blob_desc = *in_blob_desc;
+  out_blob_desc->mut_shape() = Shape(out_shape);
+  return Maybe<void>::Ok();
+}
+
+template<int32_t NDims>
+Maybe<void> ConvOp<NDims>::InferBlobDescs(
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature,
+    std::function<void(OpContext*)> EnrollOpCtx) const {
+  const std::string& data_format = GetValFromCustomizedConf<std::string>("data_format");
+
+  // in
+  const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
+  CHECK_EQ_OR_RETURN(in_blob_desc->shape().NumAxes(), NDims + 2);
+  // CHECK_EQ(in_blob_desc->data_type(), job_desc().DefaultDataType());
+
+  // out
+  int64_t data_num = in_blob_desc->shape().At(0);
+  int32_t filters = GetValFromCustomizedConf<int32_t>("filters");
+
+  // only support data parallel
+  CHECK_OR_RETURN(parallel_ctx->parallel_num() == 1
+                  || sbp_signature->bn_in_op2sbp_parallel().at("weight").has_broadcast_parallel());
+
   std::vector<int64_t> out;
   GetOutAndPad(in_blob_desc->shape(), GetCustomizedConf(), &out, nullptr, nullptr);
   std::vector<int64_t> out_shape = {data_num, filters};
@@ -117,19 +144,11 @@ void ConvOp<NDims>::InferBlobDescs(std::function<BlobDesc*(const std::string&)> 
   for (size_t i = 0; i < NDims; ++i) {
     weight_shape[dhw_offset + i] = GetPbRfFromCustomizedConf<int32_t>("kernel_size").Get(i);
   }
-  if (GetValFromCustomizedConf<std::string>("weight").empty()) {
-    GetBlobDesc4BnInOp("weight")->mut_shape() = Shape(weight_shape);
-  } else {
-    CHECK_EQ(GetBlobDesc4BnInOp("weight")->shape(), Shape(weight_shape));
-  }
+  CHECK_EQ_OR_RETURN(GetBlobDesc4BnInOp("weight")->shape(), Shape(weight_shape));
 
   if (GetValFromCustomizedConf<bool>("use_bias")) {
     // bias and bias_multiplier
-    if (GetValFromCustomizedConf<std::string>("bias").empty()) {
-      GetBlobDesc4BnInOp("bias")->mut_shape() = Shape({filters});
-    } else {
-      CHECK_EQ(GetBlobDesc4BnInOp("bias")->shape(), Shape({filters}));
-    }
+    CHECK_EQ_OR_RETURN(GetBlobDesc4BnInOp("bias")->shape(), Shape({filters}));
     if (DevIsGpuAndEnableCudnn() == false) {
       std::vector<int64_t> bias_mul_shape(NDims + 1, 1);
       for (size_t i = 0; i != NDims; ++i) { bias_mul_shape[i + 1] = out_shape[dhw_offset + i]; }
@@ -161,6 +180,7 @@ void ConvOp<NDims>::InferBlobDescs(std::function<BlobDesc*(const std::string&)> 
     fw_cudnn_buf->set_data_type(DataType::kChar);
   }
 #endif  // WITH_CUDA
+  return Maybe<void>::Ok();
 }
 
 template<int32_t NDims>
@@ -277,20 +297,22 @@ void ConvOp<NDims>::InferCudnnAlgo(
 #endif  // WITH_CUDA
 
 template<int32_t NDims>
-void ConvOp<NDims>::InferHasBatchDim(
-    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
-  *HasBatchDim4BnInOp("out") = *HasBatchDim4BnInOp("in");
+Maybe<void> ConvOp<NDims>::InferBatchAxis(
+    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
+  *BatchAxis4BnInOp("out") = *BatchAxis4BnInOp("in");
+  return Maybe<void>::Ok();
 }
 
 template<int32_t NDims>
-void ConvOp<NDims>::GetSbpSignatures(
-    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
+Maybe<void> ConvOp<NDims>::GetSbpSignatures(
+    const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
     SbpSignatureList* sbp_sig_list) const {
   SbpSignatureBuilder()
       .Split("in", 0)
       .Broadcast({"weight", "bias"})
       .Split("out", 0)
       .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+  return Maybe<void>::Ok();
 }
 
 template class ConvOp<1>;

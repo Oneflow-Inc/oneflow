@@ -6,17 +6,18 @@ namespace oneflow {
 void AddOp::VirtualInitFromOpConf() { CHECK(op_conf().has_add_conf()); }
 const PbMessage& AddOp::GetCustomizedConf() const { return op_conf().add_conf(); }
 
-void AddOp::InferHasBatchDim(std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
+Maybe<void> AddOp::InferBatchAxis(
+    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
   for (const auto& ibn : input_bns()) {
-    CHECK_EQ(*HasBatchDim4BnInOp(ibn), *HasBatchDim4BnInOp(input_bns().Get(0)));
+    CHECK_OR_RETURN(*BatchAxis4BnInOp(ibn) == *BatchAxis4BnInOp(input_bns().Get(0)));
   }
-  NaiveInferHasBatchDim(HasBatchDim4BnInOp);
+  return NaiveInferBatchAxis(BatchAxis4BnInOp);
 }
 
-void AddOp::GetSbpSignatures(
-    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
+Maybe<void> AddOp::GetSbpSignatures(
+    const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
     SbpSignatureList* sbp_sig_list) const {
-  int64_t num_axes = LogicalBlobDesc4Ibn(input_bns().Get(0)).shape().NumAxes();
+  int64_t num_axes = JUST(LogicalBlobDesc4Ibn(input_bns().Get(0)))->shape().NumAxes();
   SbpSignatureBuilder()
       .Split(input_bns(), 0)
       .Split(output_bns(), 0)
@@ -26,6 +27,7 @@ void AddOp::GetSbpSignatures(
       .PartialSum(input_bns())
       .PartialSum(output_bns())
       .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+  return Maybe<void>::Ok();
 }
 
 REGISTER_OP(OperatorConf::kAddConf, AddOp);

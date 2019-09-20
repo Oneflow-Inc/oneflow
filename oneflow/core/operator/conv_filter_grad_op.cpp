@@ -21,9 +21,9 @@ void ConvFilterGradOp::InitFromOpConf() {
   }
 }
 
-void ConvFilterGradOp::InferBlobDescs(
+Maybe<void> ConvFilterGradOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx, int64_t record_piece_size,
+    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature,
     std::function<void(OpContext*)> EnrollOpCtx) const {
   const ConvFilterGradOpConf& conf = this->op_conf().conv_filter_grad_conf();
   const ConvConf& conv_conf = conf.conv_conf();
@@ -31,11 +31,11 @@ void ConvFilterGradOp::InferBlobDescs(
   const BlobDesc* x = GetBlobDesc4BnInOp("x");
   BlobDesc* filter_diff = GetBlobDesc4BnInOp("filter_diff");
   const int32_t num_spatial_dims = conf.conv_conf().num_spatial_dims();
-  CHECK_GE(num_spatial_dims, 1);
-  CHECK_LE(num_spatial_dims, 3);
-  CHECK_EQ(dy->shape().NumAxes(), num_spatial_dims + 2);
-  CHECK_EQ(x->shape().NumAxes(), num_spatial_dims + 2);
-  CHECK_EQ(x->data_type(), dy->data_type());
+  CHECK_GE_OR_RETURN(num_spatial_dims, 1);
+  CHECK_LE_OR_RETURN(num_spatial_dims, 3);
+  CHECK_EQ_OR_RETURN(dy->shape().NumAxes(), num_spatial_dims + 2);
+  CHECK_EQ_OR_RETURN(x->shape().NumAxes(), num_spatial_dims + 2);
+  CHECK_EQ_OR_RETURN(x->data_type(), dy->data_type());
   std::vector<int64_t> filter_diff_dim_vec;
   if (conv_conf.data_format() == "channels_first") {
     filter_diff_dim_vec.push_back(dy->shape().At(1));
@@ -48,7 +48,7 @@ void ConvFilterGradOp::InferBlobDescs(
                                conv_conf.kernel_size().cend());
     filter_diff_dim_vec.push_back(x->shape().dim_vec().back());
   } else {
-    UNIMPLEMENTED();
+    UNIMPLEMENTED_THEN_RETURN();
   }
   filter_diff->mut_shape() = Shape(filter_diff_dim_vec);
   filter_diff->set_data_type(x->data_type());
@@ -57,20 +57,21 @@ void ConvFilterGradOp::InferBlobDescs(
 #ifdef WITH_CUDA
     ConvOpCtx* conv_op_ctx = new ConvOpCtx();
     EnrollOpCtx(conv_op_ctx);
-    CHECK(Global<CudnnConvCtxCache>::Get()->FindCudnnConvAlgoCtxWithConfig(
+    CHECK_OR_RETURN(Global<CudnnConvCtxCache>::Get()->FindCudnnConvAlgoCtxWithConfig(
         *x, *dy, *filter_diff, conv_conf, cudnn_buf_limit_byte(),
         &conv_op_ctx->cudnn_conv_algo_ctx));
-    CHECK(conv_op_ctx->cudnn_conv_algo_ctx.bwd_filter_algo_found);
+    CHECK_OR_RETURN(conv_op_ctx->cudnn_conv_algo_ctx.bwd_filter_algo_found);
     BlobDesc* cudnn_buf = GetBlobDesc4BnInOp("buf");
     cudnn_buf->set_data_type(DataType::kChar);
     size_t buf_size = std::max(size_t(1), conv_op_ctx->cudnn_conv_algo_ctx.bwd_filter_ws_size);
     cudnn_buf->mut_shape() = Shape({static_cast<int64_t>(buf_size)});
 #else
-    UNIMPLEMENTED();
+    UNIMPLEMENTED_THEN_RETURN();
 #endif
   } else {
-    UNIMPLEMENTED();
+    UNIMPLEMENTED_THEN_RETURN();
   }
+  return Maybe<void>::Ok();
 }
 
 void ConvFilterGradOp::VirtualGenKernelConf(
@@ -89,21 +90,22 @@ void ConvFilterGradOp::VirtualGenKernelConf(
   }
 }
 
-void ConvFilterGradOp::InferHasBatchDim(
-    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
-  CHECK(*HasBatchDim4BnInOp("dy"));
-  CHECK(*HasBatchDim4BnInOp("x"));
-  *HasBatchDim4BnInOp("filter_diff") = false;
+Maybe<void> ConvFilterGradOp::InferBatchAxis(
+    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
+  CHECK_OR_RETURN(*BatchAxis4BnInOp("dy") == *BatchAxis4BnInOp("x"));
+  BatchAxis4BnInOp("filter_diff")->clear_value();
+  return Maybe<void>::Ok();
 }
 
-void ConvFilterGradOp::GetSbpSignatures(
-    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
+Maybe<void> ConvFilterGradOp::GetSbpSignatures(
+    const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
     SbpSignatureList* sbp_sig_list) const {
   SbpSignatureBuilder()
       .Split("dy", 0)
       .Split("x", 0)
       .PartialSum("filter_diff")
       .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+  return Maybe<void>::Ok();
 }
 
 REGISTER_OP(OperatorConf::kConvFilterGradConf, ConvFilterGradOp);

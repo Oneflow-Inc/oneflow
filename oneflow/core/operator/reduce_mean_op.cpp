@@ -13,8 +13,8 @@ void ReduceMeanOp::InitFromOpConf() {
 
 const PbMessage& ReduceMeanOp::GetCustomizedConf() const { return op_conf().reduce_mean_conf(); }
 
-void ReduceMeanOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                  const ParallelContext*) const {
+Maybe<void> ReduceMeanOp::InferBlobDescs(
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*) const {
   const ReduceMeanOpConf& conf = op_conf().reduce_mean_conf();
   const BlobDesc* in_blob = GetBlobDesc4BnInOp("in");
   *GetBlobDesc4BnInOp("fw_tmp") = *in_blob;
@@ -35,19 +35,26 @@ void ReduceMeanOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> G
       out_blob->mut_shape() = reduced_shape.RemoveOnes(axis_vec);
     }
   }
+  return Maybe<void>::Ok();
 }
 
-void ReduceMeanOp::InferHasBatchDim(
-    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
+Maybe<void> ReduceMeanOp::InferBatchAxis(
+    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
   const auto& reduced_axes = op_conf().reduce_mean_conf().axis();
   HashSet<int64_t> conf_axes = {reduced_axes.begin(), reduced_axes.end()};
-  *HasBatchDim4BnInOp("out") = !(conf_axes.empty() || (conf_axes.find(0) != conf_axes.end()));
+  if (BatchAxis4BnInOp("in")->has_value() && !conf_axes.empty()
+      && conf_axes.find(BatchAxis4BnInOp("in")->value()) == conf_axes.end()) {
+    *BatchAxis4BnInOp("out") = *BatchAxis4BnInOp("in");
+  } else {
+    BatchAxis4BnInOp("out")->clear_value();
+  }
+  return Maybe<void>::Ok();
 }
 
-void ReduceMeanOp::GetSbpSignatures(
-    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
+Maybe<void> ReduceMeanOp::GetSbpSignatures(
+    const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
     SbpSignatureList* sbp_sig_list) const {
-  int32_t num_axes = LogicalBlobDesc4Ibn("in").shape().NumAxes();
+  int32_t num_axes = JUST(LogicalBlobDesc4Ibn("in"))->shape().NumAxes();
   auto IsReducedAxis =
       ReduceSbpUtil::MakePredicatorIsReducedAxis(op_conf().reduce_mean_conf().axis(), num_axes);
   FOR_RANGE(int64_t, i, 0, num_axes) {
@@ -63,6 +70,7 @@ void ReduceMeanOp::GetSbpSignatures(
           .Build(sbp_sig_list->mutable_sbp_signature()->Add());
     }
   }
+  return Maybe<void>::Ok();
 }
 
 REGISTER_OP(OperatorConf::kReduceMeanConf, ReduceMeanOp);

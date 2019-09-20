@@ -277,10 +277,6 @@ std::function<const HashMap<int64_t, double>&(int64_t)> MakeGetterPathDurations4
   };
 }
 
-uint64_t NumOfPiecesInSnapshot() {
-  return GlobalJobDesc().NumOfBatchesInSnapshot() * GlobalJobDesc().NumOfPiecesInBatch();
-}
-
 std::function<const HashMap<int64_t, double>&(int64_t)> MakeGetterPathIIScales4RegstDescId(
     const ChainActGraph& graph) {
   auto regst_desc_id2consumer_id2ii_scale =

@@ -11,15 +11,10 @@ class NcclTupleBroadcastKernel final : public KernelIf<DeviceType::kGPU> {
   ~NcclTupleBroadcastKernel() override = default;
 
  private:
-  void VirtualKernelInit(const ParallelContext*) override;
+  void VirtualKernelInit() override {}
   void ForwardDataContent(const KernelCtx&,
                           std::function<Blob*(const std::string&)>) const override;
-  ParallelContext parallel_ctx_;
 };
-
-void NcclTupleBroadcastKernel::VirtualKernelInit(const ParallelContext* ctx) {
-  parallel_ctx_ = *ctx;
-}
 
 namespace {
 
@@ -34,9 +29,10 @@ struct BlobGroup {
 void NcclTupleBroadcastKernel::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const NcclTupleBroadcastOpConf& conf = this->op_conf().nccl_tuple_broadcast_conf();
+  const auto& parallel_ctx = this->kernel_conf().nccl_tuple_broadcast_conf().parallel_ctx();
   //  NcclCheck(ncclGroupStart());
   //  FOR_RANGE(int64_t, i, 0, conf.out_size()) {
-  //    const void* send = conf.root(i) == parallel_ctx_.rank_ctx().rank_id()
+  //    const void* send = conf.root(i) == parallel_ctx.rank_ctx().rank_id()
   //                           ? BnInOp2Blob(GenRepeatedBn("in", i))->dptr()
   //                           : nullptr;
   //    Blob* out = BnInOp2Blob(GenRepeatedBn("out", i));
@@ -47,12 +43,11 @@ void NcclTupleBroadcastKernel::ForwardDataContent(
   //                            ctx.device_ctx->cuda_stream()));
   //  }
   //  NcclCheck(ncclGroupEnd());
-
   std::vector<BlobGroup> groups;
   FOR_RANGE(int64_t, i, 0, conf.out_size()) {
     const int64_t root_i = conf.root(i);
     Blob* out_i = BnInOp2Blob(GenRepeatedBn("out", i));
-    if (root_i == parallel_ctx_.rank_ctx().rank_id()) {
+    if (root_i == parallel_ctx.rank_ctx().rank_id()) {
       const Blob* in_i = BnInOp2Blob(GenRepeatedBn("in", i));
       out_i->CopyDataContentFrom(ctx.device_ctx, in_i);
     }
@@ -69,7 +64,7 @@ void NcclTupleBroadcastKernel::ForwardDataContent(
   }
   NcclCheck(ncclGroupStart());
   for (BlobGroup group : groups) {
-    const void* send = group.root == parallel_ctx_.rank_ctx().rank_id() ? group.out_ptr : nullptr;
+    const void* send = group.root == parallel_ctx.rank_ctx().rank_id() ? group.out_ptr : nullptr;
     NcclCheck(ncclBroadcast(send, group.out_ptr, group.out_size, GetNcclDataType(DataType::kChar),
                             group.root, ctx.device_ctx->nccl_handle(),
                             ctx.device_ctx->cuda_stream()));

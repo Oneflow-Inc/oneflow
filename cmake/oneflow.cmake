@@ -169,14 +169,14 @@ RELATIVE_SWIG_GENERATE_CPP(SWIG_SRCS SWIG_HDRS
                               ${PROJECT_SOURCE_DIR}
                               ${of_all_rel_swigs})
 if(${CMAKE_VERSION} VERSION_LESS "3.14") 
-  if(NOT IS_DIRECTORY ${Python_NumPy_INCLUDE_DIRS})
-    message(FATAL_ERROR "Python_NumPy_INCLUDE_DIRS not set. You could get it by running \"numpy.get_include()\" in python")
-  endif()
   find_package(PythonLibs)
   if(NOT PYTHONLIBS_FOUND)
     message(FATAL_ERROR "python include files and libraries not found")
   endif()
   message("-- Python Version: " ${PYTHONLIBS_VERSION_STRING})
+  if(NOT IS_DIRECTORY ${Python_NumPy_INCLUDE_DIRS})
+    message(FATAL_ERROR "Python_NumPy_INCLUDE_DIRS not set. You could get it by running \"numpy.get_include()\" in python")
+  endif()
   include_directories(${PYTHON_INCLUDE_DIRS} ${Python_NumPy_INCLUDE_DIRS})
 elseif(PY3)
   find_package (Python3 COMPONENTS Development NumPy)
@@ -209,6 +209,11 @@ foreach(oneflow_python_file ${oneflow_all_python_file})
     "${oneflow_python_file}"
     "${of_pyscript_dir}/${oneflow_python_rel_file_path}")
 endforeach()
+
+# get_property(include_dirs DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY INCLUDE_DIRECTORIES)
+# foreach(dir ${include_dirs})
+#   message("-I'${dir}' ")
+# endforeach()
 
 # build main
 set(RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/bin)

@@ -34,6 +34,12 @@ std::string DeviceTag4DeviceType(DeviceType device_type) {
   return "";
 }
 
+Maybe<DeviceType> DeviceType4DeviceTag(const std::string& device_tag) {
+  if (device_tag == "cpu") { return DeviceType::kCPU; }
+  if (device_tag == "gpu") { return DeviceType::kGPU; }
+  return Error::DeviceTagNotFound() << "device tag `" << device_tag << "' not found";
+}
+
 ParallelDesc::ParallelDesc(const ParallelConf& user_conf) : parallel_conf_(user_conf) {
   HashSet<int64_t> machine_id_set;
   device_type_ = DeviceType::kInvalidDevice;
@@ -75,15 +81,11 @@ ParallelDesc::ParallelDesc(const ParallelConf& user_conf) : parallel_conf_(user_
 }
 
 bool ParallelDesc::Equals(const ParallelDesc& rhs) const {
-  return EqualsIgnoringPolicy(rhs) && policy() == rhs.policy();
-}
-
-bool ParallelDesc::EqualsIgnoringPolicy(const ParallelDesc& rhs) const {
   return device_type_ == rhs.device_type_ && sorted_machine_ids_ == rhs.sorted_machine_ids_
          && machine_id2sorted_dev_phy_ids_ == rhs.machine_id2sorted_dev_phy_ids_;
 }
 
-bool ParallelDesc::EqualsIgnoringPolicyAndDeviceType(const ParallelDesc& rhs) const {
+bool ParallelDesc::EqualsIgnoringDeviceType(const ParallelDesc& rhs) const {
   return sorted_machine_ids_ == rhs.sorted_machine_ids_
          && machine_id2sorted_dev_phy_ids_ == rhs.machine_id2sorted_dev_phy_ids_;
 }
@@ -140,13 +142,21 @@ int64_t ParallelDesc::DeviceIdForParallelId(int64_t parallel_id) const {
 
 std::tuple<int32_t, int32_t> GetPartIdAndPartNumFromParallelCtx(
     const ParallelContext* parallel_ctx) {
-  if (parallel_ctx->policy() == kDataParallel) {
-    return std::make_tuple(0, 1);
-  } else if (parallel_ctx->policy() == kModelParallel) {
-    return std::make_tuple(parallel_ctx->parallel_id(), parallel_ctx->parallel_num());
-  } else {
-    UNIMPLEMENTED();
+  return std::make_tuple(parallel_ctx->parallel_id(), parallel_ctx->parallel_num());
+}
+
+ParallelConf GenParallelConfOfCpuZeroOnMaster() {
+  ParallelConf parallel_conf;
+  parallel_conf.add_device_name("0:cpu:0");
+  return parallel_conf;
+}
+
+ParallelConf GenParallelConfOfCpuZeroOnAllMachines() {
+  ParallelConf parallel_conf;
+  FOR_RANGE(int64_t, i, 0, Global<ResourceDesc>::Get()->TotalMachineNum()) {
+    parallel_conf.add_device_name(std::to_string(i) + ":cpu:0");
   }
+  return parallel_conf;
 }
 
 }  // namespace oneflow

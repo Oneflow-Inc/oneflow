@@ -12,20 +12,21 @@ Shape GetFlatShape(const Shape& shape, int64_t axis) {
 }
 
 template<DeviceType device_type, typename T, typename K>
-void GatherForward(DeviceCtx* ctx, const Blob* indices, const Blob* in, int64_t axis, Blob* out) {
+void GatherForward(DeviceCtx* ctx, const Blob* indices, const Blob* in, int64_t axis, Blob* out,
+                   const int64_t offset) {
   const Shape flat_in_shape = GetFlatShape(in->shape(), axis);
   GatherKernelUtilImpl<device_type, T, K>::Forward(ctx, indices->dptr<K>(),
                                                    indices->shape().elem_cnt(), in->dptr<T>(),
-                                                   flat_in_shape, out->mut_dptr<T>());
+                                                   flat_in_shape, out->mut_dptr<T>(), offset);
 }
 
 template<DeviceType device_type, typename T, typename K>
 void GatherBackward(DeviceCtx* ctx, const Blob* indices, const Blob* out_diff, int64_t axis,
-                    Blob* in_diff) {
+                    Blob* in_diff, const int64_t offset) {
   const Shape flat_in_shape = GetFlatShape(in_diff->shape(), axis);
   GatherKernelUtilImpl<device_type, T, K>::Backward(
       ctx, indices->dptr<K>(), indices->shape().elem_cnt(), out_diff->dptr<T>(), flat_in_shape,
-      in_diff->mut_dptr<T>());
+      in_diff->mut_dptr<T>(), offset);
 }
 
 template<DeviceType device_type, typename T>
@@ -45,40 +46,59 @@ struct GatherSwitchUtil final {
 template<DeviceType device_type, typename T>
 void GatherKernelUtil<device_type, T>::Forward(DeviceCtx* ctx, const Blob* indices, const Blob* in,
                                                const int64_t axis, Blob* out) {
-  GatherSwitchUtil<device_type, T>::SwitchGatherForward(SwitchCase(indices->data_type()), ctx,
-                                                        indices, in, axis, out);
+  GatherKernelUtil<device_type, T>::Forward(ctx, indices, in, axis, out, 0);
 }
 
 template<DeviceType device_type, typename T>
 void GatherKernelUtil<device_type, T>::Backward(DeviceCtx* ctx, const Blob* indices,
                                                 const Blob* out_diff, const int64_t axis,
                                                 Blob* in_diff) {
+  GatherKernelUtil<device_type, T>::Backward(ctx, indices, out_diff, axis, in_diff, 0);
+}
+
+template<DeviceType device_type, typename T>
+void GatherKernelUtil<device_type, T>::Forward(DeviceCtx* ctx, const Blob* indices, const Blob* in,
+                                               const int64_t axis, Blob* out,
+                                               const int64_t offset) {
+  GatherSwitchUtil<device_type, T>::SwitchGatherForward(SwitchCase(indices->data_type()), ctx,
+                                                        indices, in, axis, out, offset);
+}
+
+template<DeviceType device_type, typename T>
+void GatherKernelUtil<device_type, T>::Backward(DeviceCtx* ctx, const Blob* indices,
+                                                const Blob* out_diff, const int64_t axis,
+                                                Blob* in_diff, const int64_t offset) {
   GatherSwitchUtil<device_type, T>::SwitchGatherBackward(SwitchCase(indices->data_type()), ctx,
-                                                         indices, out_diff, axis, in_diff);
+                                                         indices, out_diff, axis, in_diff, offset);
 }
 
 template<typename T, typename K>
 struct GatherKernelUtilImpl<DeviceType::kCPU, T, K> final {
   static void Forward(DeviceCtx* ctx, const K* indices, int64_t num_indices, const T* in,
-                      const Shape& flat_in_shape, T* out);
+                      const Shape& flat_in_shape, T* out, const int64_t offset);
   static void Backward(DeviceCtx* ctx, const K* indices, int64_t num_indices, const T* out_diff,
-                       const Shape& flat_in_shape, T* in_diff);
+                       const Shape& flat_in_shape, T* in_diff, const int64_t offset);
 };
 
 template<typename T, typename K>
 void GatherKernelUtilImpl<DeviceType::kCPU, T, K>::Forward(DeviceCtx* ctx, const K* indices,
                                                            int64_t num_indices, const T* in,
-                                                           const Shape& flat_in_shape, T* out) {
+                                                           const Shape& flat_in_shape, T* out,
+                                                           const int64_t offset) {
   const int64_t outer_dim_size = flat_in_shape.At(0);
   const int64_t gather_dim_size = flat_in_shape.At(1);
   const int64_t inner_dim_size = flat_in_shape.At(2);
   FOR_RANGE(int64_t, outer_idx, 0, outer_dim_size) {
     FOR_RANGE(int64_t, i, 0, num_indices) {
-      const int64_t idx = indices[i];
-      CHECK(idx >= 0 && idx < gather_dim_size);
-      const T* from = in + outer_idx * gather_dim_size * inner_dim_size + idx * inner_dim_size;
+      CHECK_GE(indices[i], 0);
+      const int64_t idx = indices[i] - offset;
       T* to = out + outer_idx * num_indices * inner_dim_size + i * inner_dim_size;
-      std::copy(from, from + inner_dim_size, to);
+      if (idx >= 0 && idx < gather_dim_size) {
+        const T* from = in + outer_idx * gather_dim_size * inner_dim_size + idx * inner_dim_size;
+        std::copy(from, from + inner_dim_size, to);
+      } else {
+        std::memset(to, 0, inner_dim_size * sizeof(K));
+      }
     }
   }
 }
@@ -86,18 +106,20 @@ void GatherKernelUtilImpl<DeviceType::kCPU, T, K>::Forward(DeviceCtx* ctx, const
 template<typename T, typename K>
 void GatherKernelUtilImpl<DeviceType::kCPU, T, K>::Backward(DeviceCtx* ctx, const K* indices,
                                                             int64_t num_indices, const T* out_diff,
-                                                            const Shape& flat_in_shape,
-                                                            T* in_diff) {
+                                                            const Shape& flat_in_shape, T* in_diff,
+                                                            const int64_t offset) {
   const int64_t outer_dim_size = flat_in_shape.At(0);
   const int64_t gather_dim_size = flat_in_shape.At(1);
   const int64_t inner_dim_size = flat_in_shape.At(2);
   FOR_RANGE(int64_t, outer_idx, 0, outer_dim_size) {
     FOR_RANGE(int64_t, i, 0, num_indices) {
-      const int64_t idx = indices[i];
-      CHECK(idx >= 0 && idx < gather_dim_size);
-      const T* from = out_diff + outer_idx * num_indices * inner_dim_size + i * inner_dim_size;
+      CHECK_GE(indices[i], 0);
+      const int64_t idx = indices[i] - offset;
       T* to = in_diff + outer_idx * gather_dim_size * inner_dim_size + idx * inner_dim_size;
-      std::transform(from, from + inner_dim_size, to, to, std::plus<T>());
+      if (idx >= 0 && idx < gather_dim_size) {
+        const T* from = out_diff + outer_idx * num_indices * inner_dim_size + i * inner_dim_size;
+        std::transform(from, from + inner_dim_size, to, to, std::plus<T>());
+      }
     }
   }
 }

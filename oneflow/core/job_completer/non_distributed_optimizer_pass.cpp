@@ -26,7 +26,6 @@ ParallelConf NonDistributedParallelConf4ParallelId(const ParallelDesc& pd,
   device_name += std::to_string(pd.DeviceIdForParallelId(parallel_id));
   ParallelConf parallel_conf;
   *parallel_conf.mutable_device_name()->Add() = device_name;
-  parallel_conf.set_policy(pd.policy());
   return parallel_conf;
 }
 
@@ -60,7 +59,7 @@ void NonDistributedOptimizerPass::Apply(const OpGraph& op_graph, JobBuilder* bui
       if (cur_node->op().output_bns().size() != 1) { break; }
       const std::string& sole_obn = cur_node->op().output_bns().Get(0);
       if (!cur_node->SbpParallel4BnInOp(sole_obn).has_broadcast_parallel()) { break; }
-      if (cur_node->HasBatchDim4Lbi(cur_node->op().BnInOp2Lbi(sole_obn))) { break; }
+      if (cur_node->BatchAxis4Lbi(cur_node->op().BnInOp2Lbi(sole_obn)).has_value()) { break; }
       op_seq_without_batch_dim.push_back(cur_node);
       if (cur_node->out_edges().size() == 1) {
         cur_node = cur_node->SoleOutEdge()->dst_node();
@@ -163,7 +162,7 @@ void NonDistributedOptimizerPass::Apply(const OpGraph& op_graph, JobBuilder* bui
             if (dst->op().BnInOp2Lbi(ibn) == lbi) {
               PbMessage* dst_op_type_conf = MutableMessageInPbMessage(
                   &op_node2op_conf.at(dst), op_node2op_conf.at(dst).op_type_case());
-              SetBnValInOpTypeConf(dst_op_type_conf, ibn, GenLogicalBlobName(lbi), new_lbn);
+              ReplaceStrValInPbFdOrPbRpf(dst_op_type_conf, ibn, GenLogicalBlobName(lbi), new_lbn);
             }
           }
         });

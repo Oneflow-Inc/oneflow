@@ -11,26 +11,19 @@ from oneflow.core.job.job_set_pb2 import ConfigProto
 from oneflow.python.oneflow_export import oneflow_export
 import oneflow.python.framework.config_util as config_util
 
-@oneflow_export('deprecated.init_worker_and_master')
-def init_worker_and_master(config_proto):
-    import oneflow
-    oneflow.deprecated.init_worker(config_proto)
-    oneflow.init(config_proto)
-
-
 @oneflow_export('deprecated.init_worker')
-def init_worker(config_proto, scp_binary = True, use_uuid = True):
-    if isinstance(config_proto, config_util.ConfigProtoBuilder):
-        config_proto = config_proto.config_proto
-    assert isinstance(config_proto, ConfigProto)
-    config_util.TryCompleteDefaultConfigProto(config_proto)
-    assert type(config_proto) is job_set_util.ConfigProto
+def init_worker(scp_binary = True, use_uuid = True):
+    assert type(config_util.default_config_proto) is job_set_util.ConfigProto
+    config_util.defautl_config_proto_mutable = False
+    config_proto = config_util.default_config_proto
     resource = config_proto.resource
     assert len(resource.machine) > 0
     assert type(scp_binary) is bool
     assert type(use_uuid) is bool
     oneflow_worker_path = os.getenv("ONEFLOW_WORKER_BIN")
-    assert os.path.isfile(oneflow_worker_path)
+    assert oneflow_worker_path is not None, "please set env ONEFLOW_WORKER_BIN"
+    assert os.path.isfile(
+        oneflow_worker_path), "binary oneflow_worker not found, please check your environment variable ONEFLOW_WORKER_BIN, path: {}".format(oneflow_worker_path)
     global _temp_run_dir
     if use_uuid:
         assert scp_binary is True
@@ -55,9 +48,9 @@ def init_worker(config_proto, scp_binary = True, use_uuid = True):
 
 
 @oneflow_export('deprecated.delete_worker')
-def delete_worker(config_proto):
-    if isinstance(config_proto, config_util.ConfigProtoBuilder):
-        config_proto = config_proto.config_proto
+def delete_worker():
+    assert config_util.config_proto_mutable == False
+    config_proto = config_util.default_config_proto
     assert isinstance(config_proto, ConfigProto)
     assert type(config_proto) is job_set_util.ConfigProto
     global _temp_run_dir

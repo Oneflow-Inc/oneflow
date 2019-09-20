@@ -35,8 +35,9 @@ void GatherOp::InitFromOpConf() {
 
 const PbMessage& GatherOp::GetCustomizedConf() const { return op_conf().gather_conf(); }
 
-void GatherOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                              const ParallelContext* parallel_ctx) const {
+Maybe<void> GatherOp::InferBlobDescs(
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx) const {
   const BlobDesc* indices = GetBlobDesc4BnInOp("indices");
   CHECK(IsIntegralDataType(indices->data_type()));
   CHECK_GT(indices->shape().NumAxes(), 0);
@@ -45,7 +46,9 @@ void GatherOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBl
   const int64_t axis = GetGatherAxis(op_conf().gather_conf(), in);
   BlobDesc* out = GetBlobDesc4BnInOp("out");
   *out = *in;
+  out->set_has_dim0_valid_num_field(indices->has_dim0_valid_num_field());
   out->mut_shape() = Shape(GatherGetOutShape(in->shape(), indices->shape(), axis));
+  return Maybe<void>::Ok();
 }
 
 void GatherOp::VirtualGenKernelConf(
@@ -55,14 +58,14 @@ void GatherOp::VirtualGenKernelConf(
   kernel_conf->mutable_gather_conf()->set_axis(axis);
 }
 
-void GatherOp::GetSbpSignatures(
-    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
+Maybe<void> GatherOp::GetSbpSignatures(
+    const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
     SbpSignatureList* sbp_sig_list) const {
-  const int64_t in_num_axes = LogicalBlobDesc4Ibn("in").shape().NumAxes();
+  const int64_t in_num_axes = JUST(LogicalBlobDesc4Ibn("in"))->shape().NumAxes();
   const int64_t gather_axis = GetGatherAxis(op_conf().gather_conf(), in_num_axes);
   CHECK_GE(gather_axis, 0);
   CHECK_LT(gather_axis, in_num_axes);
-  const int64_t indices_num_axes = LogicalBlobDesc4Ibn("indices").shape().NumAxes();
+  const int64_t indices_num_axes = JUST(LogicalBlobDesc4Ibn("indices"))->shape().NumAxes();
   FOR_RANGE(int64_t, i, 0, indices_num_axes) {
     SbpSignatureBuilder()
         .Split("indices", i)
@@ -78,6 +81,7 @@ void GatherOp::GetSbpSignatures(
         .Split("out", i < gather_axis ? i : i + indices_num_axes - 1)
         .Build(sbp_sig_list->mutable_sbp_signature()->Add());
   }
+  return Maybe<void>::Ok();
 }
 
 REGISTER_OP(OperatorConf::kGatherConf, GatherOp);

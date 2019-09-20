@@ -158,21 +158,17 @@ void NormalForwardCompActor::UpdateModelRegstPtr(Regst* regst) {
 void NormalForwardCompActor::AsyncInitModelAndConstBuf() {
   for (const ExecKernel& exec_kernel : exec_kernel_vec()) {
     KernelCtx kernel_ctx = GenDefaultKernelCtx();
-    exec_kernel.kernel->InitModelAndConstBuf(
-        kernel_ctx, parallel_ctx(), Global<SnapshotMgr>::Get()->GetReadableSnapshot(),
-        [&](const std::string& bn_in_op) {
-          const LogicalBlobId& lbi = exec_kernel.kernel->BnInOp2Lbi(bn_in_op);
-          Blob* blob = nullptr;
-          if (model_regst_) { blob = model_regst_->GetBlobByLbi(lbi); }
-          if (blob == nullptr && const_model_regst_) {
-            blob = const_model_regst_->GetBlobByLbi(lbi);
-          }
-          if (blob == nullptr && const_buf_regst_) { blob = const_buf_regst_->GetBlobByLbi(lbi); }
-          if (blob == nullptr && forward_model_regst_desc_id_ != -1) {
-            blob = GetNaiveCurWriteable(forward_model_regst_desc_id_)->GetBlobByLbi(lbi);
-          }
-          return blob;
-        });
+    exec_kernel.kernel->InitModelAndConstBuf(kernel_ctx, [&](const std::string& bn_in_op) {
+      const LogicalBlobId& lbi = exec_kernel.kernel->BnInOp2Lbi(bn_in_op);
+      Blob* blob = nullptr;
+      if (model_regst_) { blob = model_regst_->GetBlobByLbi(lbi); }
+      if (blob == nullptr && const_model_regst_) { blob = const_model_regst_->GetBlobByLbi(lbi); }
+      if (blob == nullptr && const_buf_regst_) { blob = const_buf_regst_->GetBlobByLbi(lbi); }
+      if (blob == nullptr && forward_model_regst_desc_id_ != -1) {
+        blob = GetNaiveCurWriteable(forward_model_regst_desc_id_)->GetBlobByLbi(lbi);
+      }
+      return blob;
+    });
   }
 }
 
@@ -213,7 +209,7 @@ void NormalForwardCompActor::SendConstBufInitMsgToBwActor() {
   CHECK_EQ(0, ReadingCnt4ProducedRegst(const_buf_regst_));
   const_buf_regst_->set_act_id(act_id());
   for (int64_t consumer : const_buf_regst_->consumers_actor_id()) {
-    AsyncSendMsg(ActorMsg::BuildRegstMsgToConsumer(actor_id(), consumer, const_buf_regst_));
+    EnqueueAsyncMsg(ActorMsg::BuildRegstMsgToConsumer(actor_id(), consumer, const_buf_regst_));
   }
   IncreaseReadingCnt4ProducedRegst(const_buf_regst_, const_buf_regst_->consumers_actor_id().size());
   IncreaseTotalReadingCnt(const_buf_regst_->consumers_actor_id().size());

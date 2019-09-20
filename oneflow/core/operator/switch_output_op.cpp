@@ -11,42 +11,46 @@ void SwitchOutputOp::InitFromOpConf() {
   EnrollOutputBn("out");
 }
 
-void SwitchOutputOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                    const ParallelContext* parallel_ctx) const {
+Maybe<void> SwitchOutputOp::InferBlobDescs(
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx) const {
   const BlobDesc& in_index_blob_desc = *GetBlobDesc4BnInOp("in_index");
-  CHECK(in_index_blob_desc.shape() == Shape({1LL}));
-  CHECK_EQ(in_index_blob_desc.data_type(), DataType::kInt32);
+  CHECK_OR_RETURN(in_index_blob_desc.shape() == Shape({1LL}));
+  CHECK_EQ_OR_RETURN(in_index_blob_desc.data_type(), DataType::kInt32);
   const BlobDesc& first_in_blob_desc = *GetBlobDesc4BnInOp(GenRepeatedBn("in", 0));
   FOR_RANGE(int64_t, i, 0, op_conf().switch_output_conf().in_size()) {
-    CHECK(*GetBlobDesc4BnInOp(GenRepeatedBn("in", i)) == first_in_blob_desc);
+    CHECK_OR_RETURN(*GetBlobDesc4BnInOp(GenRepeatedBn("in", i)) == first_in_blob_desc);
   }
   InterfaceOpUtil::InferOutBlobDesc(op_conf().switch_output_conf().blob_conf(),
                                     GetBlobDesc4BnInOp("out"), parallel_ctx);
-  CHECK(*GetBlobDesc4BnInOp("out") == first_in_blob_desc);
+  CHECK_OR_RETURN(*GetBlobDesc4BnInOp("out") == first_in_blob_desc);
+  return Maybe<void>::Ok();
 }
 
 const PbMessage& SwitchOutputOp::GetCustomizedConf() const {
   return op_conf().switch_output_conf();
 }
 
-void SwitchOutputOp::InferHasBatchDim(
-    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
-  CHECK_EQ(*HasBatchDim4BnInOp("in_index"), false);
-  bool first_in_has_batch_dim = *HasBatchDim4BnInOp(GenRepeatedBn("in", 0));
+Maybe<void> SwitchOutputOp::InferBatchAxis(
+    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
+  CHECK_EQ(BatchAxis4BnInOp("in_index")->has_value(), false);
+  const OptInt64& first_in_batch_axis = *BatchAxis4BnInOp(GenRepeatedBn("in", 0));
   FOR_RANGE(int64_t, i, 0, op_conf().switch_output_conf().in_size()) {
-    CHECK_EQ(*HasBatchDim4BnInOp(GenRepeatedBn("in", i)), first_in_has_batch_dim);
+    CHECK_OR_RETURN(*BatchAxis4BnInOp(GenRepeatedBn("in", i)) == first_in_batch_axis);
   }
-  InterfaceOpUtil::InferHasBatchDim(op_conf().switch_output_conf().blob_conf(),
-                                    HasBatchDim4BnInOp("out"));
-  CHECK(*HasBatchDim4BnInOp("out") == first_in_has_batch_dim);
+  InterfaceOpUtil::InferBatchAxis(op_conf().switch_output_conf().blob_conf(),
+                                  BatchAxis4BnInOp("out"));
+  CHECK_OR_RETURN(*BatchAxis4BnInOp("out") == first_in_batch_axis);
+  return Maybe<void>::Ok();
 }
 
-void SwitchOutputOp::GetSbpSignatures(
-    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
+Maybe<void> SwitchOutputOp::GetSbpSignatures(
+    const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
     SbpSignatureList* sbp_sig_list) const {
   InterfaceOpUtil::GetOutputLikeOpSbpSignature(op_conf().switch_output_conf().blob_conf(),
                                                input_bns(), output_bns(),
                                                sbp_sig_list->mutable_sbp_signature()->Add());
+  return Maybe<void>::Ok();
 }
 
 REGISTER_OP(OperatorConf::kSwitchOutputConf, SwitchOutputOp);
