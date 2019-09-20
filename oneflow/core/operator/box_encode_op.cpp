@@ -10,7 +10,7 @@ class BoxEncodeOp final : public Operator {
   void InitFromOpConf() override;
   const PbMessage& GetCustomizedConf() const override { return this->op_conf().box_encode_conf(); }
   Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                      const ParallelContext* parallel_ctx) const override;
+                             const ParallelContext* parallel_ctx) const override;
 };
 
 void BoxEncodeOp::InitFromOpConf() {
@@ -20,8 +20,9 @@ void BoxEncodeOp::InitFromOpConf() {
   EnrollOutputBn("boxes_delta", false);
 }
 
-Maybe<void> BoxEncodeOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                 const ParallelContext* parallel_ctx) const {
+Maybe<void> BoxEncodeOp::InferBlobDescs(
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx) const {
   // input: ref_boxes (N, 4)
   const BlobDesc* ref_boxes = GetBlobDesc4BnInOp("ref_boxes");
   CHECK_EQ_OR_RETURN(ref_boxes->shape().NumAxes(), 2);
