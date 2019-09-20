@@ -84,6 +84,7 @@ class TopKOp final : public Operator {
   void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                             const ParallelContext*, KernelConf* kernel_conf) const override {
     kernel_conf->set_data_type(GetBlobDesc4BnInOp("in")->data_type());
+    // TODO: update kernel conf
   }
 };
 
