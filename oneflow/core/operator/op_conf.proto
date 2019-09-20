@@ -1445,6 +1445,29 @@ message DeconvOpConf {
     optional InitializerConf bias_initializer = 8;
 }
 
+message RoiAlignConf {
+  required int32 pooled_h = 4;
+  required int32 pooled_w = 5;
+  optional float spatial_scale = 6 [default = 0.0625]; // 1/16
+  optional int32 sampling_ratio = 7 [default = 2]; // adaptive if negative
+  optional string data_format = 8 [default = "channels_first"];
+}
+
+message RoiAlignOpConf {
+  required string x = 1;
+  required string rois = 2;
+  required string y = 3;
+  required RoiAlignConf roi_align_conf = 4;
+}
+
+message RoiAlignGradOpConf {
+  required string dy = 1;
+  required string x_like = 2;
+  required string rois = 3;
+  required string dx = 4;
+  required RoiAlignConf roi_align_conf = 5;
+}
+
 message OperatorConf {
   required string name = 1;
   optional bool trainable = 3 [default = true];
@@ -1586,6 +1609,8 @@ message OperatorConf {
     GatherMs0OpConf gather_ms0_conf = 302;
     GatherMs0GradOpConf gather_ms0_grad_conf = 303;
     DeconvOpConf deconv_conf = 304;
+    RoiAlignOpConf roi_align_conf = 305;
+    RoiAlignGradOpConf roi_align_grad_conf = 306;
 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;
