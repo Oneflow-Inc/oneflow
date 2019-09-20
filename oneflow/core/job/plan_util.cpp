@@ -168,6 +168,7 @@ void PlanUtil::ToDotFile(const Plan& plan, const std::string& filepath) {
       log_stream << "#}\n";
     }
     // rank for system task over job
+    /*
     if (machine_id == 0) {
       const auto& rank_list = GenNodeRank(plan);
       for (const auto& current_list : rank_list) {
@@ -176,6 +177,7 @@ void PlanUtil::ToDotFile(const Plan& plan, const std::string& filepath) {
         log_stream << "}\n";
       }
     }
+    */
     log_stream << "}\n";
   }
 
