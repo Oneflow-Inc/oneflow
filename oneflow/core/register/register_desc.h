@@ -52,16 +52,16 @@ class RegstDesc final {
   // mem
   const MemoryCase& mem_case() const { return mem_case_; }
   MemoryCase* mut_mem_case() { return &mem_case_; }
-  bool enable_mem_sharing() { return enable_mem_sharing_; }
-  void set_enable_mem_sharing(bool enable_mem_sharing) { enable_mem_sharing_ = enable_mem_sharing; }
-  int64_t mem_shared_offset() const;
-  void set_mem_shared_offset(int64_t val) { mem_shared_offset_ = val; }
+  bool enable_reuse_mem() { return enable_reuse_mem_; }
+  void set_enable_reuse_mem(bool enable_reuse_mem) { enable_reuse_mem_ = enable_reuse_mem; }
+  int64_t mem_block_offset() const;
+  void set_mem_block_offset(int64_t val) { mem_block_offset_ = val; }
   void set_hint_inplace_consumed_regst_desc_id(int64_t val) {
     hint_inplace_consumed_regst_desc_id_ = val;
   }
-  int32_t mem_shared_id() const { return mem_shared_id_; }
-  void set_mem_shared_id(int32_t val) { mem_shared_id_ = val; }
-  bool HasSetMemSharedId() { return mem_shared_id_ != -1; }
+  int32_t mem_block_id() const { return mem_block_id_; }
+  void set_mem_block_id(int32_t val) { mem_block_id_ = val; }
+  bool HasSetMemSharedId() { return mem_block_id_ != -1; }
   void CopyMemSharedInfoFrom(const RegstDesc*);
 
   const std::shared_ptr<Shape>& data_regst_time_shape() const {
@@ -97,9 +97,9 @@ class RegstDesc final {
 
   MemoryCase mem_case_;
   RegstDescTypeProto regst_desc_type_;
-  bool enable_mem_sharing_;
-  int32_t mem_shared_id_;
-  int64_t mem_shared_offset_;
+  bool enable_reuse_mem_;
+  int32_t mem_block_id_;
+  int64_t mem_block_offset_;
   int32_t hint_inplace_consumed_regst_desc_id_;
 
   std::shared_ptr<Shape> data_regst_time_shape_;

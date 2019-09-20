@@ -18,8 +18,8 @@ namespace oneflow {
 namespace {
 
 bool IsSharableRegstWithoutConsumer(const RegstDescProto& regst_desc) {
-  return regst_desc.mem_shared_id() == -1 && regst_desc.consumer_task_id_size() == 0
-         && regst_desc.enable_mem_sharing();
+  return regst_desc.mem_block_id() == -1 && regst_desc.consumer_task_id_size() == 0
+         && regst_desc.enable_reuse_mem();
 }
 
 bool IsConsumersAndProducerInSameChain(const RegstDescProto& regst_desc,
@@ -52,7 +52,7 @@ void ForEachSameColoredStreamRegstDescWithoutConsumer(
     const Plan& plan,
     const std::function<void(const std::vector<const RegstDescProto*>&)>& Handler) {
   auto GetProducerTaskId = [](const RegstDescProto* regst_desc, HashSet<int64_t>* ret_actor_ids) {
-    CHECK(regst_desc->enable_mem_sharing());
+    CHECK(regst_desc->enable_reuse_mem());
     ret_actor_ids->insert(regst_desc->producer_task_id());
   };
   ForEachSharableStreamRegstDescsWithoutConsumer(
@@ -105,8 +105,8 @@ void ForEachSameColoredChainRegstDescWithConsumer(
     return plan_task_graph.TaskProto4TaskId(task_id)->task_set_info().chain_id();
   };
   auto IsSharableRegstWithConsumer = [&](const RegstDescProto& regst_desc) {
-    return regst_desc.mem_shared_id() == -1 && regst_desc.consumer_task_id_size() > 0
-           && regst_desc.enable_mem_sharing() && regst_desc.register_num() == 1
+    return regst_desc.mem_block_id() == -1 && regst_desc.consumer_task_id_size() > 0
+           && regst_desc.enable_reuse_mem() && regst_desc.register_num() == 1
            && IsConsumersAndProducerInSameChain(regst_desc, ChainId4TaskId);
   };
   SharableMemBlockGraph sharable_mem_block_gph(plan_task_graph, IsSharableRegstWithConsumer);
@@ -146,7 +146,7 @@ void ForEachSameColoredChainRegstDescWithConsumer(
   };
   auto ComputeLifetimeSameChainActorIds = [&](const RegstDescProto* regst_desc,
                                               HashSet<int64_t>* ret_actor_ids) {
-    CHECK(regst_desc->enable_mem_sharing());
+    CHECK(regst_desc->enable_reuse_mem());
     ret_actor_ids->clear();
     for (const RegstDescProto* member : header2members.at(regst_desc)) {
       plan_task_graph.ComputeLifetimeSameChainActorIds(member, ret_actor_ids);
@@ -167,9 +167,9 @@ void ForEachImprovedMemSharedId(const PlanTaskGraph& plan_task_graph,
                                 const std::function<void(int64_t, int64_t)>& Handler) {
   const Plan& plan = plan_task_graph.plan();
   auto HandleMemSharedId = [&](const std::vector<const RegstDescProto*>& regst_descs) {
-    int64_t mem_shared_id = Global<IDMgr>::Get()->NewMemSharedId();
+    int64_t mem_block_id = Global<IDMgr>::Get()->NewMemSharedId();
     for (const RegstDescProto* regst_desc : regst_descs) {
-      Handler(regst_desc->regst_desc_id(), mem_shared_id);
+      Handler(regst_desc->regst_desc_id(), mem_block_id);
     }
   };
   ForEachSameColoredStreamRegstDescWithoutConsumer(plan, HandleMemSharedId);
@@ -210,22 +210,22 @@ uint64_t CalcMemoryConsumed(
     const std::function<const HashMap<int64_t, double>&(int64_t)>& PathIIScales4RegstDescId,
     double ii) {
   uint64_t mem_consuming = 0;
-  HashMap<int64_t, uint64_t> mem_shared_id2max_regst_desc_mem_bytes;
+  HashMap<int64_t, uint64_t> mem_block_id2max_regst_desc_mem_bytes;
   for (const RegstDescProto* regst_desc : regst_descs) {
     uint64_t regst_num =
         CalcRegstNum(*regst_desc, PathDurations4RegstDescId, ii, PathIIScales4RegstDescId);
     uint64_t total_byte_size = RtRegstDesc(*regst_desc).TotalMainByteSize4AllRegst();
-    if (regst_desc->mem_shared_id() == -1) {
+    if (regst_desc->mem_block_id() == -1) {
       mem_consuming += RoundUp(total_byte_size, kCudaMemAllocAlignSize);
     } else {
-      total_byte_size += regst_desc->mem_shared_offset();
+      total_byte_size += regst_desc->mem_block_offset();
       CHECK_EQ(regst_num, 1);
-      int32_t mem_shared_id = regst_desc->mem_shared_id();
-      auto& max_bytes = mem_shared_id2max_regst_desc_mem_bytes[mem_shared_id];
+      int32_t mem_block_id = regst_desc->mem_block_id();
+      auto& max_bytes = mem_block_id2max_regst_desc_mem_bytes[mem_block_id];
       max_bytes = std::max(max_bytes, total_byte_size);
     }
   }
-  for (const auto& pair : mem_shared_id2max_regst_desc_mem_bytes) {
+  for (const auto& pair : mem_block_id2max_regst_desc_mem_bytes) {
     mem_consuming += RoundUp(pair.second, kCudaMemAllocAlignSize);
   }
   return mem_consuming;
@@ -386,9 +386,9 @@ void SetInplaceConsumedRegstDescId(
       if (regst_desc->has_hint_inplace_consumed_regst_desc_id()) {
         int64_t hint = regst_desc->hint_inplace_consumed_regst_desc_id();
         const RegstDescProto* in_regst_desc = regst_desc_id2regst_desc.at(hint);
-        if (in_regst_desc->mem_shared_id() != -1
-            && in_regst_desc->mem_shared_id() == regst_desc->mem_shared_id()
-            && in_regst_desc->mem_shared_offset() == regst_desc->mem_shared_offset()) {
+        if (in_regst_desc->mem_block_id() != -1
+            && in_regst_desc->mem_block_id() == regst_desc->mem_block_id()
+            && in_regst_desc->mem_block_offset() == regst_desc->mem_block_offset()) {
           CHECK_EQ(in_regst_desc->register_num(), regst_desc->register_num());
           regst_desc->set_inplace_consumed_regst_desc_id(hint);
         }
@@ -402,10 +402,10 @@ void SetUniqueMemSharedId4UnsharedRegst(Plan* plan) {
     TaskProto* task = plan->mutable_task(i);
     for (auto& pair : *task->mutable_produced_regst_desc()) {
       RegstDescProto* regst_desc = &pair.second;
-      if (regst_desc->mem_shared_id() == -1) {
-        CHECK_EQ(regst_desc->mem_shared_offset(), -1);
-        regst_desc->set_mem_shared_id(Global<IDMgr>::Get()->NewMemSharedId());
-        regst_desc->set_mem_shared_offset(0);
+      if (regst_desc->mem_block_id() == -1) {
+        CHECK_EQ(regst_desc->mem_block_offset(), -1);
+        regst_desc->set_mem_block_id(Global<IDMgr>::Get()->NewMemSharedId());
+        regst_desc->set_mem_block_offset(0);
       }
     }
   }
@@ -536,10 +536,10 @@ void Improver::ForEachInferredMemSharingCriticalSection(
   HashMap<int32_t, std::vector<const RegstDescProto*>> mem_sharing_id2regst_descs;
   for (const auto& task : plan.task()) {
     for (const auto& pair : task.produced_regst_desc()) {
-      int32_t mem_shared_id = pair.second.mem_shared_id();
-      if (mem_shared_id > start_mem_shared_id_ && pair.second.consumer_task_id_size() > 0) {
-        CHECK(pair.second.enable_mem_sharing());
-        mem_sharing_id2regst_descs[mem_shared_id].push_back(&pair.second);
+      int32_t mem_block_id = pair.second.mem_block_id();
+      if (mem_block_id > start_mem_block_id_ && pair.second.consumer_task_id_size() > 0) {
+        CHECK(pair.second.enable_reuse_mem());
+        mem_sharing_id2regst_descs[mem_block_id].push_back(&pair.second);
       }
     }
   }
@@ -556,7 +556,7 @@ void Improver::ForEachInferredMemSharingCriticalSection(
 }
 
 void Improver::Init(const AvailableMemDesc& amd, const Plan& naive_plan) {
-  start_mem_shared_id_ = Global<IDMgr>::Get()->NewMemSharedId();
+  start_mem_block_id_ = Global<IDMgr>::Get()->NewMemSharedId();
   amd_ = amd;
   record_load_task_num_.assign(Global<ResourceDesc>::Get()->TotalMachineNum(), 0);
   for (const TaskProto& task_proto : naive_plan.task()) {
@@ -607,9 +607,9 @@ Plan Improver::ImproveMemSharedId(const Plan& naive_plan) const {
   PlanTaskGraph plan_task_graph(naive_plan);
   {
     auto regst_desc_id2regst_desc = MakeRegstDescId2RegstDesc(&plan);
-    ForEachImprovedMemSharedId(plan_task_graph, [&](int64_t regst_desc_id, int64_t mem_shared_id) {
-      regst_desc_id2regst_desc->at(regst_desc_id)->set_mem_shared_id(mem_shared_id);
-      regst_desc_id2regst_desc->at(regst_desc_id)->set_mem_shared_offset(0);
+    ForEachImprovedMemSharedId(plan_task_graph, [&](int64_t regst_desc_id, int64_t mem_block_id) {
+      regst_desc_id2regst_desc->at(regst_desc_id)->set_mem_block_id(mem_block_id);
+      regst_desc_id2regst_desc->at(regst_desc_id)->set_mem_block_offset(0);
     });
     SetInplaceConsumedRegstDescId(&plan, *regst_desc_id2regst_desc);
   }

@@ -248,14 +248,19 @@ def set_cudnn_conv_force_bwd_filter_algo(value):
     _SetJobConfAttr(lambda x:x, 'cudnn_conv_force_bwd_filter_algo', value)
     return oneflow.config
 
-@oneflow_export('config.enable_mem_sharing')
-def set_enable_mem_sharing(value = True):
-    _SetJobConfAttr(lambda x:x, 'enable_mem_sharing', value)
+@oneflow_export('config.enable_reused_mem')
+def set_enable_reused_mem(value = True):
+    _SetJobConfAttr(lambda x:x, 'enable_reused_mem', value)
     return oneflow.config
 
 @oneflow_export('config.enable_inplace')
 def set_enable_inplace(value = True):
     _SetJobConfAttr(lambda x:x, 'enable_inplace', value)
+    return oneflow.config
+
+@oneflow_export('config.enable_inplace_in_reduce_struct')
+def set_enable_inplace_in_reduce_struct(value = True):
+    _SetJobConfAttr(lambda x:x, 'enable_inplace_in_reduce_struct', value)
     return oneflow.config
 
 @oneflow_export('config.enable_nccl')

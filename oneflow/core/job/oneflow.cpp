@@ -554,13 +554,13 @@ void FinishGlobalCriticalSectionDesc(const std::vector<Plan>& plans) {
         auto* mem_block_ids = &(*sole_op_name2mem_block_ids)[op_name];
         for (const auto& pair : task.produced_regst_desc()) {
           if (NeedAllocateMemory(pair.second.regst_desc_type())) {
-            mem_block_ids->emplace(pair.second.mem_shared_id());
+            mem_block_ids->emplace(pair.second.mem_block_id());
           }
         }
       }
       for (const auto& pair : task.produced_regst_desc()) {
         if (NeedAllocateMemory(pair.second.regst_desc_type())) {
-          job_id_mem_block_ids->emplace(pair.second.mem_shared_id());
+          job_id_mem_block_ids->emplace(pair.second.mem_block_id());
         }
       }
     }

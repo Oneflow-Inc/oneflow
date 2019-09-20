@@ -62,8 +62,9 @@ message JobConfigProto {
   optional int32 cudnn_conv_force_bwd_data_algo = 203;
   optional int32 cudnn_conv_force_bwd_filter_algo = 204;
   
-  optional bool enable_mem_sharing = 300 [default = true];
+  optional bool enable_reuse_mem = 300 [default = true];
   optional bool enable_inplace = 301 [default = true];
+  optional bool enable_inplace_in_reduce_struct = 302 [default = true];
 
   optional bool enable_nccl = 400 [default = true];
   optional bool use_nccl_inter_node_communication = 401 [default = true];

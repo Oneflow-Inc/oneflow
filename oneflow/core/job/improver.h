@@ -12,7 +12,7 @@ namespace oneflow {
 class Improver final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Improver);
-  Improver() : start_mem_shared_id_(-1) {}
+  Improver() : start_mem_block_id_(-1) {}
   ~Improver() = default;
 
   Plan Improve(const AvailableMemDesc& amd, const Plan& naive_plan,
@@ -50,7 +50,7 @@ class Improver final {
       const std::function<const HashMap<int64_t, double>&(int64_t)>& Duration4RegstDescId,
       const MemZoneRegstDescs& mz_regst_descs) const;
 
-  int32_t start_mem_shared_id_;
+  int32_t start_mem_block_id_;
   AvailableMemDesc amd_;
   std::vector<int32_t> record_load_task_num_;
 };

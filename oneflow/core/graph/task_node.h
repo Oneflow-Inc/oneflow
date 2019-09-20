@@ -98,13 +98,13 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   size_t out_data_edges_size() const;
 
  protected:
-  std::shared_ptr<RegstDesc> ProduceRegst(const std::string& name, bool enable_mem_sharing);
-  std::shared_ptr<RegstDesc> ProduceRegst(const std::string& name, bool enable_mem_sharing,
+  std::shared_ptr<RegstDesc> ProduceRegst(const std::string& name, bool enable_reused_mem);
+  std::shared_ptr<RegstDesc> ProduceRegst(const std::string& name, bool enable_reused_mem,
                                           int32_t min_register_num, int32_t max_register_num);
-  std::shared_ptr<RegstDesc> ProduceRegst(const std::string& name, bool enable_mem_sharing,
+  std::shared_ptr<RegstDesc> ProduceRegst(const std::string& name, bool enable_reused_mem,
                                           int32_t min_register_num, int32_t max_register_num,
                                           const RegstDescTypeProto&);
-  std::shared_ptr<RegstDesc> NewProducedRegst(bool enable_mem_sharing, int32_t min_register_num,
+  std::shared_ptr<RegstDesc> NewProducedRegst(bool enable_reused_mem, int32_t min_register_num,
                                               int32_t max_register_num, const RegstDescTypeProto&);
   virtual void InitProducedRegstMemCase(RegstDesc* regst);
   virtual void InitProducedRegstMemCase(MemoryCase*);
