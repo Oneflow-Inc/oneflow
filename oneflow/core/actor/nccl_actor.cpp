@@ -11,8 +11,6 @@ class NcclActor final : public NaiveActor {
   NcclActor() = default;
   ~NcclActor() override = default;
 
-  bool IsKernelLaunchImmediate() const override { return false; }
-
  private:
   void InitDeviceCtx(const ThreadCtx& thread_ctx) override;
 };
