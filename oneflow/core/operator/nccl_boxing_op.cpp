@@ -89,4 +89,8 @@ class NcclBoxingAllReduceOp : public NcclBoxingOp {
   }
 };
 
+REGISTER_OP(OperatorConf::kNcclBoxingReduceScatterConf, NcclBoxingReduceScatterOp);
+REGISTER_OP(OperatorConf::kNcclBoxingAllGatherConf, NcclBoxingAllGatherOp);
+REGISTER_OP(OperatorConf::kNcclBoxingAllReduceConf, NcclBoxingAllReduceOp);
+
 }  // namespace oneflow
