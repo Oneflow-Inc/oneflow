@@ -49,7 +49,7 @@ struct NdarrayUtil final {
       const XpuVarNdarray<const T>& a, const XpuVarNdarray<const T>& b) {                      \
     return ApplyBinary<BinaryFunc##func_name>(ctx, y, a, b);                                   \
   }
-  OF_PP_FOR_EACH_ATOMIC(DEFINE_BINARY_FUNC, ARITHMETIC_BINARY_FUNC_NAME_SEQ)
+  OF_PP_FOR_EACH_ATOMIC(DEFINE_BINARY_FUNC, BINARY_FUNC_NAME_SEQ)
 #undef DEFINE_BINARY_FUNC
 
 #define DEFINE_BROADCAST_UNARY_FUNC(func_name)                                               \
@@ -69,7 +69,7 @@ struct NdarrayUtil final {
       const XpuVarNdarray<const T>& a, const XpuVarNdarray<const T>& b) {                      \
     return BroadcastApplyBinary<BinaryFunc##func_name>(ctx, y, a, b);                          \
   }
-  OF_PP_FOR_EACH_ATOMIC(DEFINE_BROADCAST_BINARY_FUNC, ARITHMETIC_BINARY_FUNC_NAME_SEQ)
+  OF_PP_FOR_EACH_ATOMIC(DEFINE_BROADCAST_BINARY_FUNC, BINARY_FUNC_NAME_SEQ)
 #undef DEFINE_BROADCAST_BINARY_FUNC
 
 #define DEFINE_INPLACE_UNARY_FUNC(func_name)                                  \
