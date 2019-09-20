@@ -29,12 +29,14 @@ def dense(
     name_prefix = name if name is not None else id_util.UniqueStr("Dense_")
     inputs = flow.reshape(inputs, (-1, in_shape[-1])) if in_num_axes > 2 else inputs
 
-    assert model_distribute is distribute_util.auto() or \
-        model_distribute is distribute_util.broadcast() or \
-        model_distribute is distribute_util.split(0)
+    assert (
+        model_distribute is distribute_util.auto()
+        or model_distribute is distribute_util.broadcast()
+        or model_distribute is distribute_util.split(0)
+    )
 
     if model_distribute is distribute_util.split(0):
-        assert in_num_axes is 2 # model distribute is hard for reshape split dim 1
+        assert in_num_axes is 2  # model distribute is hard for reshape split dim 1
 
     weight = flow.get_variable(
         name="{}-weight".format(name_prefix),
@@ -47,7 +49,8 @@ def dense(
         ),
         trainable=trainable,
         model_name="weight",
-        distribute=model_distribute)
+        distribute=model_distribute,
+    )
     weight = weight.with_distribute(model_distribute)
 
     out = flow.matmul(
@@ -65,13 +68,64 @@ def dense(
             ),
             trainable=trainable,
             model_name="bias",
-            distribute=model_distribute)
+            distribute=model_distribute,
+        )
         bias = bias.with_distribute(model_distribute)
         out = flow.nn.bias_add(out, bias, name="{}_bias_add".format(name_prefix))
     out = activation(out) if activation is not None else out
     out = flow.reshape(out, in_shape[:-1] + (units,)) if in_num_axes > 2 else out
 
     return out
+
+
+@oneflow_export("layers.conv2d")
+def conv2d(
+    inputs,
+    filters,
+    kernel_size=1,
+    strides=1,
+    padding="VALID",
+    data_format="NCHW",
+    dilation_rate=1,
+    activation=None,
+    use_bias=True,
+    kernel_initializer=None,
+    bias_initializer=None,
+    trainable=True,
+    name=None,
+):
+    name_prefix = name if name is not None else id_util.UniqueStr("Conv2D_")
+    if isinstance(kernel_size, int):
+        kernel_size = (kernel_size, kernel_size)
+    else:
+        kernel_size = tuple(kernel_size)
+    weight_shape = (filters, inputs.static_shape[1]) + (kernel_size, kernel_size)
+    weight = flow.get_variable(
+        name_prefix + "-weight",
+        shape=weight_shape,
+        dtype=inputs.dtype,
+        initializer=kernel_initializer,
+    )
+    output = flow.nn.conv2d(
+        inputs, weight, strides, padding, data_format, dilation_rate, name
+    )
+    if use_bias:
+        bias = flow.get_variable(
+            name_prefix + "-bias",
+            shape=(filters,),
+            dtype=inputs.dtype,
+            initializer=bias_initializer,
+        )
+    output = flow.nn.bias_add(output, bias, data_format)
+
+    # TODO: support more activations
+    if activation is not None:
+        if activation == op_conf_util.kRelu:
+            output = flow.keras.activations.relu(output)
+        else:
+            raise NotImplementedError
+
+    return output
 
 
 @oneflow_export("layers.layer_norm")
@@ -85,10 +139,12 @@ def layer_norm(
     name=None,
 ):
     op_conf = op_conf_util.OperatorConf()
-    name = name if name is not None else id_util.UniqueStr(
-        "LayerNorm_")
-    begin_params_axis = begin_params_axis if begin_params_axis >= 0 else len(
-        inputs.shape) + begin_params_axis
+    name = name if name is not None else id_util.UniqueStr("LayerNorm_")
+    begin_params_axis = (
+        begin_params_axis
+        if begin_params_axis >= 0
+        else len(inputs.shape) + begin_params_axis
+    )
     param_shape = inputs.shape[begin_params_axis:]
     if len(param_shape) is 0:
         param_shape = (1,)
@@ -197,13 +253,9 @@ def batch_normalization(
     setattr(op_conf.normalization_conf, "epsilon", epsilon)
     setattr(op_conf.normalization_conf, "center", center)
     setattr(op_conf.normalization_conf, "scale", scale)
+    setattr(op_conf.normalization_conf, "moving_mean", moving_mean.logical_blob_name)
     setattr(
-        op_conf.normalization_conf, "moving_mean", moving_mean.logical_blob_name
-    )
-    setattr(
-        op_conf.normalization_conf,
-        "moving_variance",
-        moving_variance.logical_blob_name,
+        op_conf.normalization_conf, "moving_variance", moving_variance.logical_blob_name
     )
     if beta:
         setattr(op_conf.normalization_conf, "beta", beta.logical_blob_name)
