@@ -21,12 +21,14 @@ class XlaLaunchKernel : public KernelIf<device_type> {
       const KernelCtx &ctx,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 
-  void BuildLocalExecutable(mola::XlaLaunchContext *launch_ctx,
-                            const std::vector<Blob *> &entry_blobs,
-                            const std::vector<Blob *> &return_blobs,
-                            const std::vector<std::string> &entry_blob_names,
-                            const std::vector<std::string> &return_blob_names,
-                            mola::CompilationResult **compile_result) const;
+  void BuildLocalExecutable(
+      mola::XlaLaunchContext *launch_ctx,
+      const std::vector<Blob *> &entry_blobs,
+      const std::vector<Blob *> &return_blobs,
+      const std::vector<std::string> &entry_blob_names,
+      const std::vector<std::string> &return_blob_names,
+      const std::vector<xla::XlaBuilder::InputOutputAlias> &aliases,
+      mola::CompilationResult **compile_result) const;
 
   void LaunchExecutable(mola::XlaLaunchContext *launch_ctx,
                         xla::LocalExecutable *executable,
@@ -41,7 +43,8 @@ class XlaLaunchKernel : public KernelIf<device_type> {
     const std::vector<Blob *> &entry_blobs,
     const std::vector<std::string> &entry_blob_names,
     std::vector<Blob *> *return_blobs,
-    std::vector<std::string> *return_blob_names) const;
+    std::vector<std::string> *return_blob_names,
+    std::vector<xla::XlaBuilder::InputOutputAlias> *aliases) const;
 
   mutable std::shared_ptr<mola::XlaCompilationCache> compilation_cache_;
 };

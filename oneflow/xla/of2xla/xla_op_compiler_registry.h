@@ -123,7 +123,7 @@ class XlaOpCompilerRegistrar {
   XlaOpCompilerRegistrar(const std::string &type)
       : backend_(""), type_(type) {
     auto creator = []() -> XlaOpCompiler* { return new OpCompiler; };
-    // XlaOpCompilerRegistry::Register("CPU", type_, creator);
+    XlaOpCompilerRegistry::Register("CPU", type_, creator);
     XlaOpCompilerRegistry::Register("CUDA", type_, creator);
   }
 

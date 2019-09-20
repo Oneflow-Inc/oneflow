@@ -121,13 +121,17 @@ CompilationResult XlaGraphCompiler::Compile(
     const std::vector<Blob *> &entry_blobs,
     const std::vector<Blob *> &return_blobs,
     const std::vector<std::string> &entry_blob_names,
-    const std::vector<std::string> &return_blob_names) {
+    const std::vector<std::string> &return_blob_names,
+    const std::vector<xla::XlaBuilder::InputOutputAlias> &aliases) {
   CHECK_NOTNULL(graph);
   CompilationResult result;
+  for (const xla::XlaBuilder::InputOutputAlias& alias : aliases) {
+    builder_->SetUpAlias(alias.output_index, alias.param_number,
+                         alias.param_index);
+  }
 
   BuildArguments(graph, entry_blobs, return_blobs, entry_blob_names,
                  return_blob_names);
-
   std::vector<std::string> input_names = entry_blob_names;
   const int return_size = return_blob_names.size();
   int argument_index = entry_blob_names.size();

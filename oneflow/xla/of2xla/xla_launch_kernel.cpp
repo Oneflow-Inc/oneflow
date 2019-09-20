@@ -18,6 +18,7 @@ void XlaLaunchKernel<device_type>::BuildLocalExecutable(
     const std::vector<Blob *> &return_blobs,
     const std::vector<std::string> &entry_blob_names,
     const std::vector<std::string> &return_blob_names,
+    const std::vector<xla::XlaBuilder::InputOutputAlias> &aliases,
     mola::CompilationResult **compile_result) const {
   if (!compilation_cache_) {
     compilation_cache_.reset(new mola::XlaCompilationCache);
@@ -40,7 +41,8 @@ void XlaLaunchKernel<device_type>::BuildLocalExecutable(
     mola::XlaGraphCompiler compiler(launch_ctx->client(),
                                     launch_ctx->builder());
     *result = compiler.Compile(&graph, entry_blobs, return_blobs,
-                               entry_blob_names, return_blob_names);
+                               entry_blob_names, return_blob_names,
+                               aliases);
     // Record new compilation result
     compilation_cache_->Record(signature, result);
     // Get compilation result from cache
@@ -118,7 +120,7 @@ void XlaLaunchKernel<device_type>::LaunchExecutable(
     if (buffer.opaque()) {
       CHECK_EQ(buffer.opaque(), output->mut_dptr());
       // Memcpy<device_type>(launch_ctx->device_ctx(), output->mut_dptr(),
-      //                    buffer.opaque(), output->ByteSizeOfDataContentField());
+      //                     buffer.opaque(), output->ByteSizeOfDataContentField());
     }
     // Maybe release result buffer. If we asynchronously launch the executable,
     // then we must not release this buffer here.
@@ -132,11 +134,14 @@ void XlaLaunchKernel<device_type>::AliasMutableInputsAndOutputs(
     const std::vector<Blob *> &entry_blobs,
     const std::vector<std::string> &entry_blob_names,
     std::vector<Blob *> *return_blobs,
-    std::vector<std::string> *return_blob_names) const {
+    std::vector<std::string> *return_blob_names,
+    std::vector<xla::XlaBuilder::InputOutputAlias> *aliases) const {
   CHECK_EQ(entry_blobs.size(), entry_blob_names.size());
   for (int i = 0; i < entry_blobs.size(); ++i) {
     const std::string &entry_name = entry_blob_names[i];
     if (attr.IsMutableArg(entry_name)) {
+      aliases->push_back({{static_cast<int>(return_blobs->size())}/*output_index*/,
+                          i/*param_number=*/, /*param_index=*/{}});
       return_blobs->push_back(entry_blobs[i]);
       return_blob_names->push_back(attr.OutputArg(entry_name));
     }
@@ -161,17 +166,20 @@ void XlaLaunchKernel<device_type>::ForwardDataContent(
     return_blobs.push_back(out_blob);
     return_blob_names.push_back(output_bn);
   }
+  
   CHECK(this->op_conf().has_xla_launch_conf());
   const auto &launch_conf = this->op_conf().xla_launch_conf();
   mola::LaunchAttrHelper attr_helper(launch_conf.attr());
+  std::vector<xla::XlaBuilder::InputOutputAlias> aliases;
   AliasMutableInputsAndOutputs(attr_helper, entry_blobs, entry_blob_names,
-                               &return_blobs, &return_blob_names);
+                               &return_blobs, &return_blob_names, &aliases);
   
   mola::XlaLaunchContext launch_ctx(this->op_conf().name(), ctx.device_ctx,
                                     device_type, 1 /*intra_op_num_threads*/);
   mola::CompilationResult *compile_result = nullptr;
   BuildLocalExecutable(&launch_ctx, entry_blobs, return_blobs,
-                       entry_blob_names, return_blob_names, &compile_result);
+                       entry_blob_names, return_blob_names, aliases,
+                       &compile_result);
   CHECK(compile_result) << "Executable built failed. "
                         << TF_CPP_VLOG_LEVEL_REQUARED(2);
   auto *executable = compile_result->executable.get();

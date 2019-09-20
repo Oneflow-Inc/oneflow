@@ -26,11 +26,13 @@ class XlaGraphCompiler {
  public:
   XlaGraphCompiler(xla::LocalClient *client, xla::XlaBuilder *builder);
 
-  CompilationResult Compile(const XlaGraph *graph,
-                            const std::vector<Blob *> &entry_blobs,
-                            const std::vector<Blob *> &return_blobs,
-                            const std::vector<std::string> &entry_blob_names,
-                            const std::vector<std::string> &return_blob_names);
+  CompilationResult Compile(
+      const XlaGraph *graph,
+      const std::vector<Blob *> &entry_blobs,
+      const std::vector<Blob *> &return_blobs,
+      const std::vector<std::string> &entry_blob_names,
+      const std::vector<std::string> &return_blob_names,
+      const std::vector<xla::XlaBuilder::InputOutputAlias> &aliases);
 
  private:
   void BuildComputation(
