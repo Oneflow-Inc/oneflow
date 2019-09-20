@@ -13,7 +13,7 @@ class CalcIoUMatrixOp final : public Operator {
     return this->op_conf().calc_iou_matrix_conf();
   }
   Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                      const ParallelContext* parallel_ctx) const override;
+                             const ParallelContext* parallel_ctx) const override;
 };
 
 void CalcIoUMatrixOp::InitFromOpConf() {
