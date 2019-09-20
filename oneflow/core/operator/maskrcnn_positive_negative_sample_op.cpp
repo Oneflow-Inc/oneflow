@@ -1,4 +1,4 @@
-#include "oneflow/core/operator/maskrcnn_positive_negative_sample_op.h"
+#include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
 
@@ -9,9 +9,11 @@ class MaskrcnnPositiveNegativeSampleOp final : public Operator {
   ~MaskrcnnPositiveNegativeSampleOp() = default;
 
   void InitFromOpConf() override;
-  const PbMessage& GetCustomizedConf() const override { return this->op_conf().maskrcnn_positive_negative_sample_conf(); }
-  void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                      const ParallelContext* parallel_ctx) const override;
+  const PbMessage& GetCustomizedConf() const override {
+    return this->op_conf().maskrcnn_positive_negative_sample_conf();
+  }
+  Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                             const ParallelContext* parallel_ctx) const override;
 };
 
 void MaskrcnnPositiveNegativeSampleOp::InitFromOpConf() {
@@ -22,11 +24,7 @@ void MaskrcnnPositiveNegativeSampleOp::InitFromOpConf() {
   EnrollOutputBn("sampled_neg_inds", false);
 }
 
-const PbMessage& MaskrcnnPositiveNegativeSampleOp::GetCustomizedConf() const {
-  return this->op_conf().maskrcnn_positive_negative_sample_conf();
-}
-
-void MaskrcnnPositiveNegativeSampleOp::InferBlobDescs(
+Maybe<void> MaskrcnnPositiveNegativeSampleOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   const auto conf = op_conf().maskrcnn_positive_negative_sample_conf();
