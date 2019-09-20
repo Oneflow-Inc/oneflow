@@ -166,8 +166,12 @@ bool MarkClusterIdPass::TryToFuseWithParentCluster(
 
 void MarkClusterIdPass::Run() {
   XlaGraph *graph = this->optimize_options_.graph;
+  int32_t minimum_nodes_in_cluster =
+      this->optimize_options_.minimum_nodes_in_cluster;
+  int32_t maximum_nodes_in_cluster =
+      this->optimize_options_.maximum_nodes_in_cluster;
 
-  TopologyVisit(*graph, [this](XlaNode *node) -> void {
+  TopologyVisit(*graph, [&, this](XlaNode *node) -> void {
     if (!node->IsCompiled()) {
       return;
     }
@@ -185,7 +189,8 @@ void MarkClusterIdPass::Run() {
       for (const auto &it : candidate_edges) {
         int64_t cluster_id = it.first;
         const std::vector<XlaEdge *> &edges = it.second;
-        if (TryToFuseWithParentCluster(node, cluster_id, edges)) {
+        if (clusters_[cluster_id].size() < maximum_nodes_in_cluster &&
+            TryToFuseWithParentCluster(node, cluster_id, edges)) {
           node_cluster_ids_[node] = cluster_id;
           return true;
         }
@@ -204,10 +209,6 @@ void MarkClusterIdPass::Run() {
   // TODO(hjchen2) merge clusters
 
   // Clear invalid cluster
-  int32_t minimum_nodes_in_cluster =
-      this->optimize_options_.minimum_nodes_in_cluster;
-  int32_t maximum_nodes_in_cluster =
-      this->optimize_options_.maximum_nodes_in_cluster;
   for (Cluster &cluster : clusters_) {
     if (cluster.size() < minimum_nodes_in_cluster ||
         cluster.size() > maximum_nodes_in_cluster) {

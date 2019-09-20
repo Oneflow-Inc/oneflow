@@ -58,7 +58,9 @@ Status ResultAllocationIndices(LocalExecutable *local_executable,
   std::unordered_map<int, int> allocation_order;
   for (int i = 0; i < assignment->Allocations().size(); ++i) {
     const BufferAllocation& allocation = assignment->GetAllocation(i);
-    if (allocation.maybe_live_out() || allocation.IsPreallocatedTempBuffer()) {
+    if ((allocation.maybe_live_out() ||
+        allocation.IsPreallocatedTempBuffer()) &&
+        !allocation.is_entry_computation_parameter()) {
       allocation_order.emplace(i, allocation_order.size());
     }
   }

@@ -20,7 +20,7 @@ class FullyConnectedOp : public XlaOpCompiler {
   }
 };
 
-REGISTER_XLA_OP_COMPILER(FullyConnected, FullyConnectedOp)
+REGISTER_XLA_OP_COMPILER(FullyConnected, FullyConnectedOp);
 
 }  // namespace mola
 }  // namespace oneflow
