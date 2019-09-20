@@ -40,11 +40,6 @@ void OptimizerParamBuilder::BuilderImpl::ApplyBuild<OptimizerMode::kAdam>() {
     const float beta2 = user_conf->adam_conf().beta2();
     conf->set_beta2(beta2);
   }
-
-  const std::string op_name = op_conf_->name();
-  (*update_vars_)[conf->weight()] = absl::StrCat(op_name, "/", conf->out());
-  (*update_vars_)[conf->m()] = absl::StrCat(op_name, "/", conf->out_m());
-  (*update_vars_)[conf->v()] = absl::StrCat(op_name, "/", conf->out_v());
 }
 
 /*static*/ void OptimizerParamBuilder::ApplyOptimizerModeVisitor(
@@ -63,13 +58,11 @@ void OptimizerParamBuilder::BuilderImpl::ApplyBuild<OptimizerMode::kAdam>() {
     const mola::XlaNode *node,
     const std::string &gradient,
     const std::string &total_instances,
-    const std::string &learning_rate,
-    std::unordered_map<std::string, std::string> *update_vars) {
+    const std::string &learning_rate) {
   OperatorConf op_conf;
   op_conf.set_name(node->op_name());
   ApplyOptimizerModeVisitor(mode, BuilderImpl(node, gradient, total_instances,
-                                              learning_rate, &op_conf,
-                                              update_vars));
+                                              learning_rate, &op_conf));
   return op_conf;
 }
 
