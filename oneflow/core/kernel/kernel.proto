@@ -178,6 +178,10 @@ message DeconvKernelConf {
   optional int32 cudnn_bwd_data_algo = 8 [default = -1];
 }
 
+message TopKConf {
+  required int32 temp_storage_bytes = 1;
+}
+
 message KernelConf {
   required OpAttribute op_attribute = 1;
   required bool is_forward = 2;
@@ -224,5 +228,6 @@ message KernelConf {
     GatherMs0KernelConf gather_ms0_conf = 413;
     GatherMs0GradKernelConf gather_ms0_grad_conf = 414;
     DeconvKernelConf deconv_conf = 415;
+    TopKConf top_k_conf = 416;
   }
 }
