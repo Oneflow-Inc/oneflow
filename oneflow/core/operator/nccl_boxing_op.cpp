@@ -15,11 +15,11 @@ class NcclBoxingOp : public Operator {
 
  private:
   LogicalBlobId ibn2lbi(const std::string& input_bn) const override {
-    return GetValFromCustomizedConf<LogicalBlobId>("lbi");
+    return GetMsgFromCustomizedConf<const LogicalBlobId&>("lbi");
   }
 
   LogicalBlobId obn2lbi(const std::string& output_bn) const override {
-    return GetValFromCustomizedConf<LogicalBlobId>("lbi");
+    return GetMsgFromCustomizedConf<const LogicalBlobId&>("lbi");
   }
 };
 
