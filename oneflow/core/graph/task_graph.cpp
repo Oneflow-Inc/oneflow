@@ -10,6 +10,10 @@
 #include "oneflow/core/graph/reduce_identity_task_node.h"
 #include "oneflow/core/operator/variable_op.h"
 #include "oneflow/core/operator/constant_op.h"
+#include "oneflow/core/graph/op_graph.h"
+#include "oneflow/core/graph/boxing/sub_task_graph_builder_context.h"
+#include "oneflow/core/graph/boxing/sub_task_graph_builder.h"
+#include "oneflow/core/graph/boxing/chain_sub_task_graph_builder.h"
 
 namespace oneflow {
 
@@ -623,7 +627,36 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxingV1) {
   }
 }
 
-DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxingV2) { UNIMPLEMENTED(); }
+DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxingV2) {
+  const auto connected_edge_it = std::find_if(
+      src_logical->out_edges().cbegin(), src_logical->out_edges().cend(),
+      [&](const LogicalEdge* edge) -> bool { return edge->dst_node() == dst_logical; });
+  CHECK(connected_edge_it != src_logical->out_edges().cend());
+  for (const LogicalBlobId& lbi : (*connected_edge_it)->lbis()) {
+    const SbpParallel& src_sbp_parallel =
+        Global<OpGraph>::Get()->GetSbpParallel(src_logical->SoleOp()->op_name(), lbi);
+    const SbpParallel& dst_sbp_parallel =
+        Global<OpGraph>::Get()->GetSbpParallel(dst_logical->SoleOp()->op_name(), lbi);
+    const std::shared_ptr<const ParallelDesc>& src_parallel_desc = src_logical->parallel_desc();
+    const std::shared_ptr<const ParallelDesc>& dst_parallel_desc = dst_logical->parallel_desc();
+    const BlobDesc& blob_desc = Global<OpGraph>::Get()->GetLogicalBlobDesc(lbi);
+    SubTskGphBuilderCtx ctx(this);
+    std::vector<std::shared_ptr<SubTskGphBuilder>> builders;
+    Maybe<void> status = ChainSubTskGphBuilder(builders).Build(
+        &ctx, sorted_src_comp_tasks, sorted_dst_comp_tasks, *src_parallel_desc, *dst_parallel_desc,
+        lbi, blob_desc, src_sbp_parallel, dst_sbp_parallel);
+    if (!status.IsOk()) {
+      if (status.error()->has_boxing_error()
+          && status.error()->boxing_error() == BoxingError::kNotSupported) {
+        BldSubTskGphByBoxingV1(src_logical, dst_logical, sorted_src_comp_tasks,
+                               sorted_dst_comp_tasks, logical2sorted_in_box, logical2sorted_out_box,
+                               std::move(MutBufTask), std::move(AllocateCpuThrdIdEvenly));
+      } else {
+        UNIMPLEMENTED();
+      }
+    }
+  }
+}
 
 DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByOneToOne) {
   CHECK_EQ(sorted_src_comp_tasks.size(), sorted_dst_comp_tasks.size());
