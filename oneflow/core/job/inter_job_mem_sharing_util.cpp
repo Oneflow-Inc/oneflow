@@ -87,25 +87,14 @@ int64_t GenMemZoneUniqueId(int64_t machine_id, const MemoryCase& mem_case) {
   return (machine_id << 32) | mem_zone_id;
 }
 
-}  // namespace
-
-void InterJobMemSharingUtil::MergeAndCleanChunkBlock(
-    Plan* plan, const std::vector<HashSet<int64_t>>& reuse_mem_job_groups) {
-  HashMap<int64_t, ChunkProto> chunk_id2chunk;
-  HashMap<int64_t, MemBlockProto> mem_block_id2mem_block;
+void MergeReusedChunk(HashMap<int64_t, ChunkProto>* chunk_id2chunk,
+                      HashMap<int64_t, MemBlockProto>* mem_block_id2mem_block,
+                      const std::vector<HashSet<int64_t>>& reuse_mem_job_groups) {
   // mzuid = memory zone unique id
   HashMap<int64_t, HashMap<int64_t, int64_t>> job_id2mzuid2chunk_id;
   HashMap<int64_t, HashSet<MemBlockProto*>> chunk_id2mem_blocks;
-  for (const auto& chunk : plan->chunk()) {
-    CHECK(chunk_id2chunk.emplace(chunk.chunk_id(), chunk).second);
-  }
-  plan->clear_chunk();
-  for (const auto& mem_block : plan->mem_block()) {
-    CHECK(mem_block_id2mem_block.emplace(mem_block.mem_block_id(), mem_block).second);
-  }
-  plan->clear_mem_block();
 
-  for (auto& pair : mem_block_id2mem_block) {
+  for (auto& pair : *mem_block_id2mem_block) {
     MemBlockProto* mem_block = &(pair.second);
     if (mem_block->mem_durable() == MemoryDurable::kMemStable) {
       CHECK(mem_block->has_chunk_id() == false);
@@ -119,7 +108,7 @@ void InterJobMemSharingUtil::MergeAndCleanChunkBlock(
   }
 
   // merge chunk and delete useless chunk
-  for (const auto& pair : chunk_id2chunk) {
+  for (const auto& pair : *chunk_id2chunk) {
     const ChunkProto& chunk = pair.second;
     const MemoryCase& mem_case = chunk.mem_case();
     // only reused mem in cuda device
@@ -131,8 +120,8 @@ void InterJobMemSharingUtil::MergeAndCleanChunkBlock(
 
   auto MergeMemChunkIdR2L = [&](int64_t left_chunk_id, int64_t right_chunk_id) {
     CHECK_NE(left_chunk_id, right_chunk_id);
-    ChunkProto* chunk_l = &(chunk_id2chunk.at(left_chunk_id));
-    ChunkProto* chunk_r = &(chunk_id2chunk.at(right_chunk_id));
+    ChunkProto* chunk_l = &(chunk_id2chunk->at(left_chunk_id));
+    ChunkProto* chunk_r = &(chunk_id2chunk->at(right_chunk_id));
     CHECK_GE(chunk_l->job_id_size(), 1);
     CHECK_EQ(chunk_r->job_id_size(), 1);
     CHECK_EQ(chunk_l->machine_id(), chunk_r->machine_id());
@@ -144,7 +133,7 @@ void InterJobMemSharingUtil::MergeAndCleanChunkBlock(
     }
     chunk_l->add_job_id(chunk_r->job_id(0));
     chunk_l->set_mem_size(std::max(chunk_l->mem_size(), chunk_r->mem_size()));
-    chunk_id2chunk.erase(chunk_id2chunk.find(right_chunk_id));
+    chunk_id2chunk->erase(chunk_id2chunk->find(right_chunk_id));
   };
   auto InitMzuid2JobIdsInJobGroup =
       [&](const HashSet<int64_t>& job_group) -> HashMap<int64_t, HashSet<int64_t>> {
@@ -171,6 +160,26 @@ void InterJobMemSharingUtil::MergeAndCleanChunkBlock(
       }
     }
   }
+}
+
+void CleanUselessBlockAndCheckValid() {}
+
+}  // namespace
+
+void InterJobMemSharingUtil::MergeAndCleanChunkBlock(
+    Plan* plan, const std::vector<HashSet<int64_t>>& reuse_mem_job_groups) {
+  HashMap<int64_t, ChunkProto> chunk_id2chunk;
+  HashMap<int64_t, MemBlockProto> mem_block_id2mem_block;
+  for (const auto& chunk : plan->chunk()) {
+    CHECK(chunk_id2chunk.emplace(chunk.chunk_id(), chunk).second);
+  }
+  plan->clear_chunk();
+  for (const auto& mem_block : plan->mem_block()) {
+    CHECK(mem_block_id2mem_block.emplace(mem_block.mem_block_id(), mem_block).second);
+  }
+  plan->clear_mem_block();
+
+  MergeReusedChunk(&chunk_id2chunk, &mem_block_id2mem_block, reuse_mem_job_groups);
 
   // TODO() for clean useless mem_block, check chunk
 }
