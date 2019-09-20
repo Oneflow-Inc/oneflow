@@ -6,7 +6,15 @@ namespace oneflow {
 
 #ifdef WITH_CUDA
 
-class NcclReduceScatterKernel : public KernelIf<DeviceType::kGPU> {
+class NcclKernel : public KernelIf<DeviceType::kGPU> {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(NcclKernel);
+  NcclKernel() = default;
+  ~NcclKernel() override = default;
+  bool IsKernelLaunchSynchronized() const override { return false; }
+};
+
+class NcclReduceScatterKernel : public NcclKernel {
  public:
   OF_DISALLOW_COPY_AND_MOVE(NcclReduceScatterKernel);
   NcclReduceScatterKernel() = default;
@@ -30,7 +38,7 @@ class NcclReduceScatterKernel : public KernelIf<DeviceType::kGPU> {
   }
 };
 
-class NcclAllGatherKernel : public KernelIf<DeviceType::kGPU> {
+class NcclAllGatherKernel : public NcclKernel {
  public:
   OF_DISALLOW_COPY_AND_MOVE(NcclAllGatherKernel);
   NcclAllGatherKernel() = default;
@@ -54,7 +62,7 @@ class NcclAllGatherKernel : public KernelIf<DeviceType::kGPU> {
   }
 };
 
-class NcclAllReduceKernel : public KernelIf<DeviceType::kGPU> {
+class NcclAllReduceKernel : public NcclKernel {
  public:
   OF_DISALLOW_COPY_AND_MOVE(NcclAllReduceKernel);
   NcclAllReduceKernel() = default;
