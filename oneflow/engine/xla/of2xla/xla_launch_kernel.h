@@ -4,6 +4,7 @@
 #include "oneflow/core/kernel/kernel.h"
 
 #include "oneflow/engine/xla/of2xla/xla_compilation_cache.h"
+#include "oneflow/engine/xla/of2xla/xla_launch_attr.h"i
 #include "oneflow/engine/xla/of2xla/xla_launch_context.h"
 #include "oneflow/engine/xla/of2xla/xla_graph_compiler.h"
 
