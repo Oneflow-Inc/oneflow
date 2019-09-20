@@ -1,5 +1,6 @@
 #include "oneflow/core/job/inter_job_mem_sharing_util.h"
 #include "oneflow/core/common/str_util.h"
+#include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/memory/memory_case_util.h"
 #include "oneflow/core/register/runtime_register_desc.h"
 #include "oneflow/core/job/id_manager.h"
@@ -129,6 +130,8 @@ void MergeReusedChunk(HashMap<int64_t, ChunkProto>* chunk_id2chunk,
     CHECK_GT(chunk_l->mem_size(), 0);
     CHECK_GT(chunk_r->mem_size(), 0);
     for (MemBlockProto* mem_block : chunk_id2mem_blocks[right_chunk_id]) {
+      CHECK_EQ(mem_block->machine_id(), chunk_l->machine_id());
+      CHECK(mem_block->mem_case() == chunk_l->mem_case());
       mem_block->set_chunk_id(left_chunk_id);
     }
     chunk_l->add_job_id(chunk_r->job_id(0));
@@ -162,7 +165,76 @@ void MergeReusedChunk(HashMap<int64_t, ChunkProto>* chunk_id2chunk,
   }
 }
 
-void CleanUselessBlockAndCheckValid() {}
+void CleanUselessBlockAndCheckValid(const PbRpf<TaskProto>& tasks,
+                                    HashMap<int64_t, ChunkProto>* chunk_id2chunk,
+                                    HashMap<int64_t, MemBlockProto>* mem_block_id2mem_block) {
+  HashSet<int64_t> valid_mem_block_ids;
+  for (const TaskProto& task : tasks) {
+    for (const auto& pair : task.produced_regst_desc()) {
+      const RegstDescProto& regst = pair.second;
+      RtRegstDesc rt_regst(regst);
+      int64_t regst_size = rt_regst.TotalMainByteSize4AllRegst();
+      CHECK(mem_block_id2mem_block->find(regst.mem_block_id()) != mem_block_id2mem_block->end());
+      const MemBlockProto& mem_block = mem_block_id2mem_block->at(regst.mem_block_id());
+      CHECK_GE(mem_block.mem_size(), regst.mem_block_offset() + regst_size);
+      CHECK_EQ(task.machine_id(), mem_block.machine_id());
+      CHECK_EQ(mem_block.mem_durable(), regst.mem_durable());
+      CHECK(mem_block.mem_case() == regst.mem_case());
+      valid_mem_block_ids.insert(regst.mem_block_id());
+
+      // separated_header
+      int64_t separated_header_mem_size = rt_regst.TotalSeparatedHeaderByteSize4AllRegst();
+      if (separated_header_mem_size > 0) {
+        CHECK(regst.has_separated_header_mem_block_id());
+        CHECK_NE(regst.separated_header_mem_block_id(), -1);
+        CHECK(mem_block_id2mem_block->find(regst.separated_header_mem_block_id())
+              != mem_block_id2mem_block->end());
+        const MemBlockProto& header_mem_block =
+            mem_block_id2mem_block->at(regst.separated_header_mem_block_id());
+        CHECK_EQ(header_mem_block.mem_size(), separated_header_mem_size);
+        CHECK_EQ(task.machine_id(), header_mem_block.machine_id());
+        CHECK(header_mem_block.mem_case()
+              == MemoryCaseUtil::GetHostPinnedMemoryCaseForRegstSeparatedHeader(regst.mem_case()));
+        CHECK_EQ(mem_block.mem_durable(), MemoryDurable::kMemStable);
+        valid_mem_block_ids.insert(regst.separated_header_mem_block_id());
+      }
+    }
+  }
+  HashSet<int64_t> useless_mem_block_ids;
+  HashSet<int64_t> valid_chunk_ids;
+  HashMap<int64_t, HashSet<int64_t>> chunk_id2job_ids;
+  for (const auto& pair : *chunk_id2chunk) {
+    for (int64_t job_id : pair.second.job_id()) {
+      CHECK(chunk_id2job_ids[pair.first].insert(job_id).second);
+    }
+  }
+  for (const auto& pair : *mem_block_id2mem_block) {
+    if (valid_mem_block_ids.find(pair.first) == valid_mem_block_ids.end()) {
+      CHECK(useless_mem_block_ids.insert(pair.first).second);
+      continue;
+    }
+    const MemBlockProto& mem_block = pair.second;
+    if (mem_block.has_chunk_id()) {
+      CHECK(mem_block.has_chunk_offset());
+      CHECK(mem_block.mem_durable() == MemoryDurable::kMemTemp);
+      CHECK(chunk_id2chunk->find(mem_block.chunk_id()) != chunk_id2chunk->end());
+      const ChunkProto& chunk = chunk_id2chunk->at(mem_block.chunk_id());
+      CHECK_GE(chunk.mem_size(), mem_block.chunk_offset() + mem_block.mem_size());
+      CHECK_EQ(mem_block.job_id_size(), 1);
+      CHECK_GE(chunk.job_id_size(), 1);
+      const HashSet<int64_t>& chunk_job_ids = chunk_id2job_ids.at(chunk.chunk_id());
+      CHECK(chunk_job_ids.find(mem_block.job_id(0)) != chunk_job_ids.end());
+      valid_chunk_ids.insert(mem_block.chunk_id());
+    }
+  }
+  // all chunk are valid in this time
+  CHECK_EQ(valid_chunk_ids.size(), chunk_id2chunk->size());
+
+  // erase useless mem block
+  for (int64_t useless_block_id : useless_mem_block_ids) {
+    mem_block_id2mem_block->erase(useless_block_id);
+  }
+}
 
 }  // namespace
 
@@ -181,7 +253,10 @@ void InterJobMemSharingUtil::MergeAndCleanChunkBlock(
 
   MergeReusedChunk(&chunk_id2chunk, &mem_block_id2mem_block, reuse_mem_job_groups);
 
-  // TODO() for clean useless mem_block, check chunk
+  CleanUselessBlockAndCheckValid(plan->task(), &chunk_id2chunk, &mem_block_id2mem_block);
+
+  for (const auto& pair : mem_block_id2mem_block) { *(plan->add_mem_block()) = pair.second; }
+  for (const auto& pair : chunk_id2chunk) { *(plan->add_chunk()) = pair.second; }
 }
 
 std::vector<HashSet<int64_t>> InterJobMemSharingUtil::GetMutualExclusionJobGroups(
@@ -297,6 +372,7 @@ void InterJobMemSharingUtil::BindInterfaceMemBlockId(const std::vector<Job>& job
                    RtRegstDesc(*regst_desc).TotalSeparatedHeaderByteSize4AllRegst());
           CHECK_NE(first_regst_desc->separated_header_mem_block_id(), -1);
           // separated header must have same mem case (same host cuda pinned mem device id)
+          CHECK(first_regst_desc->mem_case() == regst_desc->mem_case());
           regst_desc->set_separated_header_mem_block_id(
               first_regst_desc->separated_header_mem_block_id());
         }
