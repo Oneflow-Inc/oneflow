@@ -8,11 +8,6 @@ void NcclBoxingTaskNode::Init(int64_t machine_id, int64_t dev_phy_id,
   set_thrd_id(Global<IDMgr>::Get()->GetGpuNcclThrdId(dev_phy_id));
   set_area_id(AreaType::kMdUpdtArea);
   parallel_ctx_ = parallel_ctx;
-  if (!parallel_ctx_.has_rank_ctx()) {
-    parallel_ctx_.mutable_rank_ctx()->set_rank_id(parallel_ctx_.parallel_id());
-    parallel_ctx_.mutable_rank_ctx()->set_rank_num(parallel_ctx_.parallel_num());
-    parallel_ctx_.mutable_rank_ctx()->set_rank_set_id(NewNodeId() << 32);
-  }
   lbi_ = lbi;
 }
 
