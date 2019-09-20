@@ -40,6 +40,7 @@ Maybe<void> BroadcastBinaryOp::InferBlobDescs(
     }
     out_blob_desc->mut_shape() = out_shape;
   }
+  JUST(VirtualInferBlobDescs(GetBlobDesc4BnInOp));
   return Maybe<void>::Ok();
 }
 
