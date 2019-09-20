@@ -1468,6 +1468,49 @@ message RoiAlignGradOpConf {
   required RoiAlignConf roi_align_conf = 5;
 }
 
+message LogicalAndOpConf {}
+
+message WhereOpConf {}
+
+message ClipByValueOpConf {}
+
+message ConstantLikeOpConf {}
+
+message LocalNonzeroOpConf {}
+
+message SqueezeOpConf {}
+
+message ExpandDimsOpConf {}
+
+message LocalGatherOpConf {}
+
+message LocalScatterNdUpdateOpConf {}
+
+message PieceSliceV2OpConf {}
+
+message MaskrcnnPositiveNegativeSampleOpConf {}
+
+message CalcIoUMatrixOpConf {}
+
+message BoxEncodeOpConf {}
+
+message BoxDecodeOpConf {}
+
+message LevelMapOpConf {}
+
+message AnchorGenerateOpConf {}
+
+message IdentifyNonSmallBoxesOpConf {}
+
+message IdentifyOutsideAnchorsOpConf {}
+
+message ClipBoxesToImageOpConf {}
+
+message ExtractPieceSliceIdOpConf {}
+
+message NonMaximumSuppressionOpConf {}
+
+
 message OperatorConf {
   required string name = 1;
   optional bool trainable = 3 [default = true];
@@ -1608,9 +1651,17 @@ message OperatorConf {
     ModelLoadOpConf model_load_conf = 301;
     GatherMs0OpConf gather_ms0_conf = 302;
     GatherMs0GradOpConf gather_ms0_grad_conf = 303;
-    DeconvOpConf deconv_conf = 304;
-    RoiAlignOpConf roi_align_conf = 305;
-    RoiAlignGradOpConf roi_align_grad_conf = 306;
+    PieceSliceV2OpConf piece_slice_v2_conf = 304;
+    LogicalAndOpConf logical_and_conf = 305;
+    WhereOpConf where_conf = 306;
+    ClipByValueOpConf clip_by_value_conf = 307;
+    ConstantLikeOpConf constant_like_conf = 309;
+    LocalNonzeroOpConf local_nonzero_conf = 310;
+    SqueezeOpConf squeeze_conf = 311;
+    ExpandDimsOpConf expand_dims_conf = 312;
+    DeconvOpConf deconv_conf = 313;
+    LocalGatherOpConf local_gather_conf = 314;
+    LocalScatterNdUpdateOpConf local_scatter_nd_update_conf = 315;
 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;
@@ -1622,6 +1673,21 @@ message OperatorConf {
     RsqrtOpConf rsqrt_conf = 506;
     ScalarAddOpConf scalar_add_conf = 507;
     ScalarMulOpConf scalar_mul_conf = 508;
+
+    // Used for detection network
+    MaskrcnnPositiveNegativeSampleOpConf maskrcnn_positive_negative_sample_conf = 601;
+    CalcIoUMatrixOpConf calc_iou_matrix_conf = 602;
+    BoxEncodeOpConf box_encode_conf = 603;
+    BoxDecodeOpConf box_decode_conf = 604;
+    LevelMapOpConf level_map_conf = 605;
+    AnchorGenerateOpConf anchor_generate_conf = 606;
+    IdentifyNonSmallBoxesOpConf identify_non_small_boxes_conf= 607;
+    IdentifyOutsideAnchorsOpConf identify_outside_anchors_conf = 608;
+    ClipBoxesToImageOpConf clip_boxes_to_image_conf = 609;
+    ExtractPieceSliceIdOpConf extract_piece_slice_id_conf = 610;
+    NonMaximumSuppressionOpConf non_maximum_suppression_conf = 611;
+    RoiAlignOpConf roi_align_conf = 612;
+    RoiAlignGradOpConf roi_align_grad_conf = 613;
 
     // mutable input op
     AxpyOpConf axpy_conf = 752;
