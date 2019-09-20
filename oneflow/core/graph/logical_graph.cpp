@@ -292,7 +292,9 @@ void LogicalGraph::ForEachNecessaryCtrlEdge(
       for (const auto& ctrl_in_op_name : op->op_conf().ctrl_in_op_name()) {
         const LogicalNode* src = op_name2node.at(ctrl_in_op_name);
         CHECK(!IsReachable(dst, src));
-        if (!IsReachable(src, dst)) {
+        if (!IsReachable(src, dst)
+            || (dynamic_cast<const NcclTupleBroadcastLogicalNode*>(src) != nullptr
+                && dynamic_cast<const NcclTupleReduceLogicalNode*>(dst) != nullptr)) {
           CHECK(src->parallel_desc()->EqualsIgnoringDeviceType(*dst->parallel_desc()));
           const Shape* src_time_shape = src->out_blob_time_shape();
           if (src_time_shape == nullptr) { src_time_shape = src->in_blob_fastest_time_shape(); }
