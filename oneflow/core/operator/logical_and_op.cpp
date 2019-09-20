@@ -22,9 +22,7 @@ class LogicalAndOp final : public Operator {
     // input: lhs and rhs
     const BlobDesc* lhs = GetBlobDesc4BnInOp("lhs");
     const BlobDesc* rhs = GetBlobDesc4BnInOp("rhs");
-    CHECK_EQ(lhs->shape(), rhs->shape());
-    CHECK_EQ(lhs->has_dim0_valid_num_field(), rhs->has_dim0_valid_num_field());
-    CHECK_EQ(lhs->has_instance_shape_field(), rhs->has_instance_shape_field());
+    CHECK_EQ_OR_RETURN(lhs->shape(), rhs->shape());
     // output
     *GetBlobDesc4BnInOp("out") = *lhs;
     return Maybe<void>::Ok();
