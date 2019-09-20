@@ -30,16 +30,10 @@ class OptimizerRewritor {
                                     const std::string &total_instances,
                                     const ClipConf &clip_conf);
 
-  OperatorConf *BuildOptimizerOp(
-      const mola::XlaNode *node,
-      const std::string &gradient,
-      const std::string &total_instances,
-      const std::string &learning_rate,
-      std::unordered_map<std::string, std::string> *update_vars);
-
-  std::vector<OperatorConf *> BuildAssignOps(
-      const std::string &node_name,
-      const std::unordered_map<std::string, std::string> &update_vars);
+  OperatorConf *BuildOptimizerOp(const mola::XlaNode *node,
+                                 const std::string &gradient,
+                                 const std::string &total_instances,
+                                 const std::string &learning_rate);
 
   std::vector<std::string> GetControlInOpNames(const mola::XlaNode *node) const;
 
@@ -91,33 +85,15 @@ OperatorConf *OptimizerRewritor::BuildOptimizerOp(
                     const mola::XlaNode *node,
                     const std::string &gradient,
                     const std::string &total_instances,
-                    const std::string &learning_rate,
-                    std::unordered_map<std::string, std::string> *update_vars) {
+                    const std::string &learning_rate) {
   OptimizerMode mode = GetOptimizerModeIfModelUpdate(node);
   CHECK_NE(mode, OptimizerMode::kInvalid);
   OperatorConf op_conf = OptimizerParamBuilder::Build(
-      mode, node, gradient, total_instances, learning_rate, update_vars);
+      mode, node, gradient, total_instances, learning_rate);
 
   ParallelConf parallel_conf = builder_->GetParallelConf(node->op_name());
   builder_->AddOrMutOpsOnlyOnce(parallel_conf, {op_conf});
   return builder_->MutableOpConf(op_conf.name());
-}
-
-std::vector<OperatorConf *> OptimizerRewritor::BuildAssignOps(
-            const std::string &node_name,
-            const std::unordered_map<std::string, std::string> &update_vars) {
-  std::vector<OperatorConf *> assign_ops;
-  for (const auto &p : update_vars) {
-    OperatorConf op_conf;
-    op_conf.set_name(absl::StrCat(node_name, "-assign-", assign_ops.size()));
-    op_conf.mutable_assign_conf()->set_ref(p.first);
-    op_conf.mutable_assign_conf()->set_value(p.second);
-
-    ParallelConf parallel_conf = builder_->GetParallelConf(node_name);
-    builder_->AddOps(parallel_conf, {op_conf});
-    assign_ops.push_back(builder_->MutableOpConf(op_conf.name()));
-  }
-  return std::move(assign_ops);
 }
 
 std::vector<std::string> OptimizerRewritor::GetControlInOpNames(
@@ -167,15 +143,9 @@ void OptimizerRewritor::Run() {
       model_diff = absl::StrCat(clip_conf->name(), "/out");
     }
 
-    std::unordered_map<std::string, std::string> update_vars;
-
     OperatorConf *optimizer_conf = BuildOptimizerOp(
-        node, model_diff, total_instances, learning_rate, &update_vars);
+        node, model_diff, total_instances, learning_rate);
     operator_confs.push_back(optimizer_conf);
-
-    // Currently each model update operator will result in some extra assign
-    // operands to update model and momentum etc.
-    // BuildAssignOps(node->op_name(), update_vars);
 
     if (control_in_op_names.size() > 0) {
       for (OperatorConf *op_conf : operator_confs) {
