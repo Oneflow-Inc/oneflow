@@ -6,7 +6,9 @@ namespace oneflow {
 namespace {
 
 template<typename T, template<typename> class binary_func>
-__global__ void NdarrayApplyBinaryApplyGpu(size_t n, T* y, const T* a, const T* b) {
+__global__ void NdarrayApplyBinaryApplyGpu(size_t n,
+                                           typename BinaryFuncTrait<binary_func, T>::return_type* y,
+                                           const T* a, const T* b) {
   NdarrayApplyBinaryCore<T, binary_func>::Apply(n, y, a, b);
 }
 
@@ -19,8 +21,9 @@ __global__ void NdarrayApplyBinaryInplaceApplyGpu(size_t n, T* y, const T* x) {
 
 template<typename T, template<typename> class binary_func>
 struct NdarrayApplyBinaryCoreWrapper<DeviceType::kGPU, T, binary_func> final {
-  static void Apply(DeviceCtx* ctx, const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& a,
-                    const XpuVarNdarray<const T>& b) {
+  static void Apply(DeviceCtx* ctx,
+                    const XpuVarNdarray<typename BinaryFuncTrait<binary_func, T>::return_type>& y,
+                    const XpuVarNdarray<const T>& a, const XpuVarNdarray<const T>& b) {
     size_t n = y.host_shape().HostElemNum();
     RUN_CUDA_KERNEL((NdarrayApplyBinaryApplyGpu<T, binary_func>), ctx, n, n, y.host_ptr(),
                     a.host_ptr(), b.host_ptr());

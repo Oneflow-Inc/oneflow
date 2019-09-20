@@ -15,6 +15,12 @@ namespace oneflow {
 #define ARITHMETIC_UNARY_FUNC_SEQ \
   OF_PP_SEQ_MAP(PREPEND_PREFIX_UNARY_FUNC, ARITHMETIC_UNARY_FUNC_NAME_SEQ)
 
+template<template<typename> class UnaryFunc, typename T>
+struct UnaryFuncTrait final {
+  typedef typename std::remove_const<decltype(UnaryFunc<T>::Invoke(*(const T*)nullptr))>::type
+      return_type;
+};
+
 #define SPECIALIZE_CONST_TYPE_UNARY_FUNC(func_struct)                                     \
   template<typename T>                                                                    \
   struct func_struct<const T> final {                                                     \
