@@ -24,7 +24,7 @@ void BroadcastEqualKernel<device_type, T>::ForwardDataContent(
   const Blob* b_blob = BnInOp2Blob("b");
   Blob* out_blob = BnInOp2Blob("out");
   size_t num_axes = out_blob->shape().NumAxes();
-  NdarrayUtil<device_type, T>::BroadcastEqual(
+  NdarrayUtil<device_type, T>::BroadcastEQ(
       kernel_ctx.device_ctx, XpuVarNdarray<T>(out_blob, num_axes),
       XpuVarNdarray<const T>(a_blob, num_axes), XpuVarNdarray<const T>(b_blob, num_axes));
 }
@@ -37,5 +37,4 @@ REGISTER_BROADCAST_COMPARISION_KERNEL(BroadcastEqual, DeviceType::kGPU, float);
 REGISTER_BROADCAST_COMPARISION_KERNEL(BroadcastEqual, DeviceType::kGPU, double);
 REGISTER_BROADCAST_COMPARISION_KERNEL(BroadcastEqual, DeviceType::kCPU, float);
 REGISTER_BROADCAST_COMPARISION_KERNEL(BroadcastEqual, DeviceType::kCPU, double);
-REGISTER_BROADCAST_COMPARISION_KERNEL(BroadcastEqual, DeviceType::kGPU, float16);
 }  // namespace oneflow
