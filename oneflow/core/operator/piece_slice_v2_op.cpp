@@ -21,12 +21,6 @@ class PieceSliceV2Op final : public Operator {
                              std::function<void(OpContext*)> EnrollOpCtx) const override {
     const BlobDesc* in = GetBlobDesc4BnInOp(SoleIbn());
     CHECK_OR_RETURN(!in->has_dim0_valid_num_field());
-    const int32_t out_size = op_conf().piece_slice_v2_conf().out_size();
-    // out_size should be equal to in->shape().At(0), but record_piece_size is set to 1 in op_graph,
-    // so we use global device piece size to do this CHECK_OR_RETURN
-    // TODO: fix this
-    // CHECK_EQ(out_size, Global<JobDesc>::Get()->DevicePieceSize4ParallelCtx(*parallel_ctx));
-
     return Maybe<void>::Ok();
   }
 };
