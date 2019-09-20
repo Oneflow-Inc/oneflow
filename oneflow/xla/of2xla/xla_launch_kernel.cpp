@@ -120,7 +120,8 @@ void XlaLaunchKernel<device_type>::LaunchExecutable(
     if (buffer.opaque()) {
       CHECK_EQ(buffer.opaque(), output->mut_dptr());
       // Memcpy<device_type>(launch_ctx->device_ctx(), output->mut_dptr(),
-      //                     buffer.opaque(), output->ByteSizeOfDataContentField());
+      //                     buffer.opaque(),
+      //                     output->ByteSizeOfDataContentField());
     }
     // Maybe release result buffer. If we asynchronously launch the executable,
     // then we must not release this buffer here.
