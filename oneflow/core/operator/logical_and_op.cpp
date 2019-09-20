@@ -1,8 +1,6 @@
 #include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
-void LogicalAndOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                  const ParallelContext* parallel_ctx) const {}
 
 class LogicalAndOp final : public Operator {
  public:
