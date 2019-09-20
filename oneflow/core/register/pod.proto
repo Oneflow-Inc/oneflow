@@ -16,8 +16,8 @@ message StructPodProto {
 
 enum FieldKey {
   kInvalidFieldKey = 0;
-  kLoD = 1;
-  kDense = 2;
+  kDense = 1;
+  kLoD = 2;
 }
 
 message FieldId {

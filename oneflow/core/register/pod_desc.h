@@ -63,6 +63,7 @@ class TensorPodDesc final : public PodDesc {
 
   size_t ByteSize() const override;
   void ToProto(PodProto* pod_proto) const override;
+  void ToProto(TensorPodProto* pod_proto) const override;
   std::unique_ptr<PodDesc> Clone() const override { return std::make_unique<TensorPodDesc>(*this); }
   bool operator==(const PodDesc& rhs) const override;
 
