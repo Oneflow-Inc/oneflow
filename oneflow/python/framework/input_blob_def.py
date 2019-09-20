@@ -107,3 +107,18 @@ class input_blob_def(blob_desc.BlobDesc):
 
     def __eq__(self, rhs):
         return oneflow.math.equal(self, rhs)
+
+    def __ne__(self, rhs):
+        return oneflow.math.not_equal(self, rhs)
+
+    def __lt__(self, rhs):
+        return oneflow.math.less(self, rhs)
+
+    def __le__(self, rhs):
+        return oneflow.math.less_equal(self, rhs)
+
+    def __gt__(self, rhs):
+        return oneflow.math.greater(self, rhs)
+
+    def __ge__(self, rhs):
+        return oneflow.math.greater_equal(self, rhs)
