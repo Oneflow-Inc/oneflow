@@ -1488,7 +1488,17 @@ message LocalScatterNdUpdateOpConf {}
 
 message PieceSliceV2OpConf {}
 
-message MaskrcnnPositiveNegativeSampleOpConf {}
+message MaskrcnnPositiveNegativeSampleOpConf {
+  // in
+  required string pos_inds = 1;
+  required string neg_inds = 2;
+  // config
+  required int32 total_subsample_num = 3;
+  required float pos_fraction = 4;
+  // out
+  required string sampled_pos_inds = 5;
+  required string sampled_neg_inds = 6;
+}
 
 message CalcIoUMatrixOpConf {
   // in
@@ -1498,24 +1508,93 @@ message CalcIoUMatrixOpConf {
   required string iou_matrix = 3;
 }
 
-message BoxEncodeOpConf {}
+message BBoxRegressionWeights {
+  required float weight_x = 1 [default = 1.0];
+  required float weight_y = 2 [default = 1.0];
+  required float weight_w = 3 [default = 1.0];
+  required float weight_h = 4 [default = 1.0];
+}
 
-message BoxDecodeOpConf {}
+message BoxEncodeOpConf {
+  // in
+  required string ref_boxes = 1;
+  required string boxes = 2;
+  // out
+  required string boxes_delta = 3;
+  // conf
+  required BBoxRegressionWeights regression_weights = 4;
+}
 
-message LevelMapOpConf {}
+message BoxDecodeOpConf {
+  // in
+  required string ref_boxes = 1;
+  required string boxes_delta = 2;
+  // out
+  required string boxes = 3;
+  // conf
+  required BBoxRegressionWeights regression_weights = 4;
+}
 
-message AnchorGenerateOpConf {}
+message LevelMapOpConf {
+  // in
+  required string in = 1;
+  // out
+  required string out = 2;
+  // conf
+  required int32 min_level = 3 [default = 2];
+  required int32 max_level = 4 [default = 5];
+  required int32 canonical_level = 5 [default = 4];
+  required float canonical_scale = 6 [default = 224];
+  optional float epsilon = 7 [default = 1e-6];
+}
 
-message IdentifyNonSmallBoxesOpConf {}
+message AnchorGenerateOpConf {
+  // in
+  required string images = 1;
+  // conf
+  required int32 feature_map_stride = 2;
+  repeated float aspect_ratios = 3;
+  repeated float anchor_scales = 4;
+  // out
+  required string anchors = 5;
+}
 
-message IdentifyOutsideAnchorsOpConf {}
+message IdentifyNonSmallBoxesOpConf {
+  required string in = 1;
+  required string out = 2;
+  optional float min_size = 3 [default = 0.0];
+}
 
-message ClipBoxesToImageOpConf {}
+message IdentifyOutsideAnchorsOpConf {
+  // in
+  required string anchors = 1;
+  required string image_size = 2;
+  // out
+  required string out = 3;
+  // conf
+  optional float tolerance = 4 [default = 0.0];
+}
 
-message ExtractPieceSliceIdOpConf {}
+message ClipBoxesToImageOpConf {
+  required string boxes = 1;
+  required string image_size = 2;
+  required string out = 3;
+}
 
-message NonMaximumSuppressionOpConf {}
+message ExtractPieceSliceIdOpConf {
+  repeated string in = 1;
+  repeated string out = 2;
+}
 
+message NonMaximumSuppressionOpConf {
+  // in
+  required string in = 1;
+  // out
+  required string out = 2;
+  // conf
+  optional float nms_iou_threshold = 3 [default = 0.7];
+  optional int32 post_nms_top_n = 4 [default = 1000];
+}
 
 message OperatorConf {
   required string name = 1;
