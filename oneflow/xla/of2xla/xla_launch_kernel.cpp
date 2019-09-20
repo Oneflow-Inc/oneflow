@@ -80,8 +80,8 @@ void XlaLaunchKernel<device_type>::LaunchExecutable(
 
     // Buffer is nullptr if the blob is body disabled. It should be assigned
     // by a real pointer to prevent check failure while runing the XLA
-    // executable, so here we assign the first output buffer to it since it's
-    // sure that this entry should never be modified at any time
+    // executable, so here we assign the first input or output buffer to it
+    // since it's sure that this entry should never be modified at any time
     if (data_size > 0 && !data_ptr) {
       data_ptr = return_blobs[0]->dptr<char>();
     }
