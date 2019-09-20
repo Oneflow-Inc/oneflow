@@ -196,7 +196,6 @@ Maybe<void> JobBuildAndInferCtx::AddAndInferOp(const OperatorConf& op_conf,
   ParallelContext parallel_ctx;
   parallel_ctx.set_parallel_id(0);
   parallel_ctx.set_parallel_num(1);
-  parallel_ctx.set_policy(ParallelPolicy::kDataParallel);
   JUST(op->InferOutBlobDescsIf(GetBlobDesc4BnInOp, &parallel_ctx, &sbp_sig_to_infer,
                                [](OpContext*) {}));
 

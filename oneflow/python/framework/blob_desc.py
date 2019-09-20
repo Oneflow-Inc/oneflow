@@ -30,6 +30,10 @@ class BlobDesc(object):
         raise NotImplementedError
 
     @property
+    def batch_axis(self):
+        raise NotImplementedError
+
+    @property
     def is_dynamic(self):
         raise NotImplementedError
 
@@ -38,7 +42,7 @@ class BlobDesc(object):
 
     def with_split_distribute(self, axis):
         return self.with_distribute(distribute_util.split(axis))
-    
+
     def with_broadcast_distribute(self):
         return self.with_distribute(distribute_util.broadcast())
 
@@ -46,7 +50,7 @@ class BlobDesc(object):
     def distribute(self):
         distribute_util.assert_is_valid_distribute(self.distribute_)
         return self.distribute_
-    
+
     @property
     def logical_blob_name(self):
         if type(self.distribute_) is distribute_util.AutoDistribute:

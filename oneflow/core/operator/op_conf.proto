@@ -174,19 +174,6 @@ message ConvBiasGradOpConf {
   required int64 num_spatial_dims = 4;
 }
 
-message FullyConnectedOpConf {
-  // in
-  required string in = 1;
-  required string weight = 2;
-  optional string bias = 3;
-  // out
-  required string out = 4;
-  required int32 units = 5;
-  optional bool use_bias = 7 [default = true];
-  optional InitializerConf weight_initializer = 8;
-  optional InitializerConf bias_initializer = 9;
-}
-
 message AveragePooling1DOpConf {
   required string in = 1;
   required string out = 2;
@@ -246,7 +233,6 @@ message MaxPooling3DOpConf {
   repeated int32 pool_size = 5;
   repeated int32 strides = 6;
 }
-
 
 message PoolingConf {
   required int32 num_spatial_dims = 1;
@@ -393,6 +379,15 @@ message SigmoidCrossEntropyLossOpConf {
   optional string weight = 8;
 }
 
+message SigmoidCrossEntropyLossGradOpConf {
+  required string prediction = 1;
+  required string label = 2;
+  required string loss_diff = 3;
+  required string prediction_diff = 4;
+  optional float weight_scalar = 5 [default = 1.0];
+  optional ScalarReductionType reduction = 6 [default = kSumOverN];
+}
+
 message IdentityLossOpConf {
   required string prediction = 1;
   required string loss = 2;
@@ -478,6 +473,12 @@ message AdamModelUpdateConf {
   optional float beta2 = 2 [default = 0.999];
   optional float epsilon = 3 [default = 1e-8];
   optional bool do_bias_correction = 4 [default = false];
+}
+
+message LazyAdamModelUpdateConf {
+  optional float beta1 = 1 [default = 0.9];
+  optional float beta2 = 2 [default = 0.999];
+  optional float epsilon = 3 [default = 1e-8];
 }
 
 message ExponentialDecayConf {
@@ -572,6 +573,7 @@ message NormalModelUpdateOpUserConf {
     RMSPropModelUpdateConf rmsprop_conf = 1002;
     LARSModelUpdateConf lars_conf = 1003;
     AdamModelUpdateConf adam_conf = 1004;
+    LazyAdamModelUpdateConf lazy_adam_conf = 1005;
   }
 }
 
@@ -647,10 +649,22 @@ message AdamModelUpdateOpConf {
   required float l2 = 12;
 }
 
-message AccumulateOpConf {
+message LazyAdamModelUpdateOpConf {
+  required NormalModelUpdateOpUserConf user_conf = 1;
+  required string m = 2;
+  required string v = 3;
+  optional string beta1_t = 4;
+  optional string beta2_t = 5;
+  required string model_diff = 6;
+  required string total_instance_num_diff = 7;
+  required string model = 8;
+  required string train_step = 9;
+  required string learning_rate = 10;
+  required float l1 = 11;
+  required float l2 = 12;
 }
 
-message EmbeddingLookupAccumulateOpConf {
+message AccumulateOpConf {
 }
 
 message PrintRecordConf {
@@ -710,25 +724,6 @@ message ReduceMeanGradOpConf {
   optional string temp_storage = 5 [default = "temp_storage"];
 }
 
-message BasicRnnOpConf {
-  required string in = 1;
-  optional string init_hidden = 2;
-  required string out = 3;
-  required int32 hidden_size = 4;
-  optional ActivationType activation = 6 [default = kTanH];
-
-  optional InitializerConf init_hidden_initializer = 7;
-  optional InitializerConf bias_initializer = 8;
-  optional InitializerConf i2h_weight_initializer = 9;
-  optional InitializerConf h2h_weight_initializer = 10;
-
-  optional bool is_init_hidden_trainable = 11 [default = true];
-  optional bool use_bias = 12 [default = true];
-}
-
-message BasicLstmOpConf {
-}
-
 message ReshapeOpConf {
   required string in = 1;
   required string out = 2;
@@ -739,14 +734,6 @@ message ReshapeLikeOpConf {
   required string x = 1;
   required string y = 2;
   required string like = 3;
-}
-
-message EmbeddingLookupOpConf {
-  required string ids = 1;
-  required string out = 2;
-  required int32 units = 3;
-  required int32 table_size = 4;
-  optional InitializerConf weight_initializer = 5;
 }
 
 message AddOpConf {
@@ -1530,14 +1517,13 @@ message OperatorConf {
     SwitchOutputOpConf switch_output_conf = 145;
     ReturnOpConf return_conf = 146;
     PartialTickOpConf partial_tick_conf = 147;
-    ForeignWatchOpConf foreign_watch_conf = 148;
+    LazyAdamModelUpdateOpConf lazy_adam_model_update_conf = 148;
+    ForeignWatchOpConf foreign_watch_conf = 149;
 
     // domain op
     TupleIdentityOpConf tuple_identity_conf = 200;
     TransposeOpConf transpose_conf = 201;
     ReshapeOpConf reshape_conf = 202;
-    BasicRnnOpConf basic_rnn_conf = 203;
-    FullyConnectedOpConf fully_connected_conf = 204;
     Conv1DOpConf conv_1d_conf = 205;
     Conv2DOpConf conv_2d_conf = 206;
     Conv3DOpConf conv_3d_conf = 207;
@@ -1547,8 +1533,6 @@ message OperatorConf {
     MaxPooling2DOpConf max_pooling_2d_conf = 211;
     AveragePooling3DOpConf average_pooling_3d_conf = 212;
     MaxPooling3DOpConf max_pooling_3d_conf = 213;
-    EmbeddingLookupOpConf embedding_lookup_conf = 214;
-    EmbeddingLookupAccumulateOpConf embedding_lookup_accumulate_conf = 215;
     LocalResponseNormalizationOpConf local_response_normalization_conf = 216;
     NormalizationOpConf normalization_conf = 217;
     DropoutOpConf dropout_conf = 218;
@@ -1619,8 +1603,9 @@ message OperatorConf {
     PReluDataGradOpConf prelu_data_grad_conf = 299;
     PReluAlphaGradOpConf prelu_alpha_grad_conf = 300;
     ModelLoadOpConf model_load_conf = 301;
-    GatherMs0OpConf gather_ms0_conf = 302;
-    GatherMs0GradOpConf gather_ms0_grad_conf = 303;
+    SigmoidCrossEntropyLossGradOpConf sigmoid_cross_entropy_loss_grad_conf = 304; 
+    GatherMs0OpConf gather_ms0_conf = 305;
+    GatherMs0GradOpConf gather_ms0_grad_conf = 306;
 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;

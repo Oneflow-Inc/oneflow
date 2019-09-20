@@ -476,7 +476,6 @@ void MakeMainJob(const std::vector<Job>& jobs, Job* main_job,
   critical_section_sink_lbi->set_blob_name("out");
 
   ParallelConf parallel_conf;
-  parallel_conf.set_policy(kDataParallel);
   parallel_conf.add_device_name("0:cpu:0");
   JobBuilder(main_job).AddOps(parallel_conf, op_confs);
   auto* job_conf = main_job->mutable_job_conf();
@@ -637,7 +636,6 @@ void MakePullJob(const std::string& job_name, const std::string& op_name,
     foreign_output_conf->set_in(input_op_conf.name() + "/out");
     foreign_output_conf->set_ofblob_buffer_name(GetForeignOutputBufferName(job_name));
     ParallelConf parallel_conf;
-    parallel_conf.set_policy(kDataParallel);
     parallel_conf.add_device_name("0:cpu:0");
     job_builder.AddOps(parallel_conf, {foreign_output_op_conf});
   }
@@ -666,7 +664,6 @@ void MakePushJob(const std::string& job_name, const std::string& op_name,
     InterfaceOpUtil::InitBlobConf(blob_conf, parallel_blob_conf);
     data_type = blob_conf->data_type();
     ParallelConf parallel_conf;
-    parallel_conf.set_policy(kDataParallel);
     parallel_conf.add_device_name("0:cpu:0");
     job_builder.AddOps(parallel_conf, {foreign_input_op_conf});
   }
@@ -715,7 +712,6 @@ void MakeArgPassJob(const std::string& job_name, const ParallelBlobConf& paralle
     blob_conf->mutable_split_axis()->clear_value();
     blob_conf->mutable_batch_axis()->clear_value();
     ParallelConf parallel_conf;
-    parallel_conf.set_policy(kDataParallel);
     parallel_conf.add_device_name("0:cpu:0");
     job_builder.AddOps(parallel_conf, {foreign_input_op_conf});
   }

@@ -10,32 +10,47 @@ import oneflow as flow
 from pretrain import PreTrain#, Eval
 
 _DATA_DIR = '/dataset/bert/of_wiki_seq_len_128'
-#_DATA_DIR = '/dataset/bert/bert_seq_len_128_repeat1024'
-#_DATA_DIR = '/dataset/bert_regression_test/0'
-#_MODEL_LOAD = "/dataset/model_zoo/bert/of_L-12_H-768_A-12_random_init"
 _MODEL_LOAD = "/dataset/model_zoo/bert_new_snapshot/of_L-12_H-768_A-12_random_init"
 _MODEL_SAVE_DIR = "./model_save-{}".format(
     str(datetime.now().strftime("%Y-%m-%d-%H:%M:%S"))
 )
+NODE_LIST = "192.168.1.15,192.168.1.16"
 parser = argparse.ArgumentParser(description="flags for bert")
-parser.add_argument("-d", "--device_num_per_node", type=int, default=4)
-parser.add_argument("-n", "--node_num", type=int, default=1)
-parser.add_argument("-b", "--batch_size_per_device", type=int, default=24)
-parser.add_argument("-s", "--num_steps", type=int, default=100)
-parser.add_argument("-c", "--copy_binary_to_worker", type=bool, default=True)
-parser.add_argument("-u", "--use_uuid", type=bool, default=False)
-parser.add_argument("-t", "--train_dir", type=str, default=_DATA_DIR, required=False)
-parser.add_argument("-load", "--model_load_dir", type=str, default=_MODEL_LOAD, required=False)
-parser.add_argument("-save", "--model_save_dir", type=str, default=_MODEL_SAVE_DIR, required=False)
-parser.add_argument('--save_checkpoints_steps', default=10000, type=int)
-args = parser.parse_args()
 
-nodes = [{'addr':'192.168.1.16'},{'addr':'192.168.1.15'}]
+# resouce
+parser.add_argument("--gpu_num_per_node", type=int, default=1)
+parser.add_argument("--node_num", type=int, default=1)
+parser.add_argument("--node_list", type=str, default=NODE_LIST)
+
+# train
+parser.add_argument("--learning_rate", type=float, default=1e-4, help="Learning rate")
+parser.add_argument("--weight_l2", type=float, default=0.01, help="weight l2 decay parameter")
+parser.add_argument("--batch_size_per_device", type=int, default=24)
+parser.add_argument("--iter_num", type=int, default=10, help="total iterations to run")
+parser.add_argument("--log_every_n_iter", type=int, default=1, help="print loss every n iteration")
+parser.add_argument("--data_dir", type=str, default=_DATA_DIR)
+parser.add_argument("--data_part_num", type=int, default=32, help="data part number in dataset")
+parser.add_argument("--model_load_dir", type=str, default=_MODEL_LOAD)
+parser.add_argument("--model_save_dir", type=str, default=_MODEL_SAVE_DIR)
+
+# bert
+parser.add_argument("--seq_length", type=int, default=512)
+parser.add_argument("--max_predictions_per_seq", type=int, default=80)
+parser.add_argument("--num_hidden_layers", type=int, default=24)
+parser.add_argument("--num_attention_heads", type=int, default=16)
+parser.add_argument("--max_position_embeddings", type=int, default=512)
+parser.add_argument("--type_vocab_size", type=int, default=2)
+parser.add_argument("--vocab_size", type=int, default=30522)
+parser.add_argument("--attention_probs_dropout_prob", type=float, default=0.1)
+parser.add_argument("--hidden_dropout_prob", type=float, default=0.1)
+parser.add_argument("--hidden_size_per_head", type=int, default=64)
+
+args = parser.parse_args()
 
 def _blob_conf(name, shape, dtype=flow.int32):
   return flow.data.BlobConf(name=name, shape=shape, dtype=dtype, codec=flow.data.RawCodec())
 
-def BertDecoder(data_dir='', batch_size=1, data_part_num=1, seq_length=128, max_predictions_per_seq=20):
+def BertDecoder(data_dir, batch_size=1, data_part_num=1, seq_length=128, max_predictions_per_seq=20):
   blob_confs = []
   blob_confs.append(_blob_conf('input_ids', [seq_length]))
   blob_confs.append(_blob_conf('next_sentence_labels', [1]))
@@ -45,7 +60,9 @@ def BertDecoder(data_dir='', batch_size=1, data_part_num=1, seq_length=128, max_
   blob_confs.append(_blob_conf('masked_lm_positions', [max_predictions_per_seq]))
   blob_confs.append(_blob_conf('masked_lm_weights', [max_predictions_per_seq], flow.float))
   return flow.data.decode_ofrecord(data_dir, blob_confs,
-                                   batch_size=batch_size, name="decode", data_part_num=data_part_num)
+                                   batch_size=batch_size,
+                                   name="decode",
+                                   data_part_num=data_part_num)
 
 def BuildPreTrainNet(batch_size, data_part_num, seq_length=128, max_position_embeddings=512,
                      num_hidden_layers=12, num_attention_heads=12,
@@ -55,7 +72,8 @@ def BuildPreTrainNet(batch_size, data_part_num, seq_length=128, max_position_emb
   hidden_size = 64 * num_attention_heads#, H = 64, size per head
   intermediate_size = hidden_size * 4
 
-  decoders = BertDecoder(args.train_dir, batch_size, data_part_num, seq_length, max_predictions_per_seq)
+  decoders = BertDecoder(args.data_dir, batch_size, data_part_num, seq_length,
+                         max_predictions_per_seq)
 
   input_ids = decoders[0]
   next_sentence_labels = decoders[1]
@@ -110,16 +128,23 @@ _BERT_MODEL_UPDATE_CONF = dict(
 
 @flow.function
 def PretrainJob():
-  total_device_num = args.node_num * args.device_num_per_node
+  total_device_num = args.node_num * args.gpu_num_per_node
   batch_size = total_device_num * args.batch_size_per_device
-  data_part_num = total_device_num #use total_device_num for test
 
-  #flow.config.default_initializer_conf(dict(constant_conf=dict(value=0.0)))
-  flow.config.train.primary_lr(1e-4)
+  flow.config.train.primary_lr(args.learning_rate)
   flow.config.train.model_update_conf(_BERT_MODEL_UPDATE_CONF)
-  flow.config.train.weight_l2(0.01)
+  flow.config.train.weight_l2(args.weight_l2)
 
-  loss = BuildPreTrainNet(batch_size, data_part_num, hidden_dropout_prob=0, attention_probs_dropout_prob=0)
+  loss = BuildPreTrainNet(batch_size, args.data_part_num,
+                          seq_length=args.seq_length,
+                          max_position_embeddings=args.max_position_embeddings,
+                          num_hidden_layers=args.num_hidden_layers,
+                          num_attention_heads=args.num_attention_heads,
+                          hidden_dropout_prob=args.hidden_dropout_prob,
+                          attention_probs_dropout_prob=args.attention_probs_dropout_prob,
+                          vocab_size=args.vocab_size,
+                          type_vocab_size=args.type_vocab_size,
+                          max_predictions_per_seq=args.max_predictions_per_seq)
   flow.losses.add_loss(loss)
   return loss
 
@@ -134,16 +159,22 @@ if __name__ == '__main__':
     print('{} = {}'.format(arg, getattr(args, arg)))
 
   start_time = time.time()
-  flow.config.gpu_device_num(args.device_num_per_node)
+  flow.config.gpu_device_num(args.gpu_num_per_node)
   flow.config.ctrl_port(9788)
   flow.config.data_port(9789)
   flow.config.default_data_type(flow.float)
   flow.config.enable_inplace(False)
 
-  assert args.node_num <= len(nodes)
   if args.node_num > 1:
-    flow.config.machine(nodes[:args.node_num])
-    flow.deprecated.init_worker(scp_binary=args.copy_binary_to_worker, use_uuid=args.use_uuid)
+    flow.config.ctrl_port(12138)
+    nodes = []
+    for n in args.node_list.strip().split(","):
+      addr_dict = {}
+      addr_dict["addr"] = n
+      nodes.append(addr_dict)
+
+    flow.config.machine(nodes)
+
   check_point = flow.train.CheckPoint()
   if args.model_load_dir != '':
     assert os.path.isdir(args.model_load_dir)
@@ -157,28 +188,28 @@ if __name__ == '__main__':
   print('{:>12}  {:14}  {}'.format( "step", "loss", "time"))
   train_start_time = time.time()
   step_time = []
-  for step in range(args.num_steps):
+  for step in range(args.iter_num):
+    if args.model_save_dir != '':
+      if not os.path.exists(args.model_save_dir):
+        os.makedirs(args.model_save_dir)
+      assert args.log_every_n_iter > 0
+      if step % args.log_every_n_iter == 0:
+        snapshot_save_path = os.path.join(args.model_save_dir, 'snapshot_%d'%(step))
+        check_point.save(snapshot_save_path)
+
     loss_mean = PretrainJob().get().mean()
     step_time.append(time.time())
     train_step_time = step_time[step] - step_time[step-1]
     print(fmt_str.format(step, loss_mean, train_step_time))
+  snapshot_save_path = os.path.join(args.model_save_dir, 'last_snapshot')
+  check_point.save(snapshot_save_path)
 
-    if args.model_save_dir != '':
-      if not os.path.exists(args.model_save_dir):
-        os.makedirs(args.model_save_dir)
-      assert args.save_checkpoints_steps > 0
-      if step % args.save_checkpoints_steps == 0:
-        snapshot_save_path = os.path.join(args.model_save_dir, 'snapshot_%d'%(step+1))
-        check_point.save(snapshot_save_path)
-
-  if args.node_num > 1:
-    flow.deprecated.delete_worker()
 
   total_time = step_time[-1] - start_time
   train_time = step_time[-1] - train_start_time
   init_time = train_start_time - start_time
-  mean_batch_time = (step_time[-1] - step_time[0]) / (args.num_steps - 1)
-  total_batch_size = args.node_num * args.device_num_per_node * args.batch_size_per_device
+  mean_batch_time = (step_time[-1] - step_time[0]) / (args.iter_num - 1)
+  total_batch_size = args.node_num * args.gpu_num_per_node * args.batch_size_per_device
   throughput = total_batch_size / mean_batch_time
 
   print('total time', total_time)
