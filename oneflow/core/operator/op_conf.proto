@@ -1490,7 +1490,13 @@ message PieceSliceV2OpConf {}
 
 message MaskrcnnPositiveNegativeSampleOpConf {}
 
-message CalcIoUMatrixOpConf {}
+message CalcIoUMatrixOpConf {
+  // in
+  required string boxes1= 1;
+  required string boxes2= 2;
+  // out
+  required string iou_matrix = 3;
+}
 
 message BoxEncodeOpConf {}
 
