@@ -747,6 +747,16 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceGather2ReduceGather) {
   }
 }
 
+DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByConnectNodeOnSameGpuDevice) {
+  for (CompTaskNode* src : sorted_src_comp_tasks) {
+    for (CompTaskNode* dst : sorted_dst_comp_tasks) {
+      if (src->machine_id() == dst->machine_id() && src->GpuPhyId() == dst->GpuPhyId()) {
+        Connect<TaskNode>(src, NewEdge(), dst);
+      }
+    }
+  }
+}
+
 void TaskGraph::BuildTaskPath(
     CompTaskNode* src, CompTaskNode* dst,
     std::function<TaskNode**(CompTaskNode* src, int64_t machine_id, int32_t mem_zone_id)>
