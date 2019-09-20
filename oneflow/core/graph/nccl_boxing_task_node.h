@@ -24,6 +24,7 @@ class NcclBoxingTaskNode : public TaskNode {
   void ConsumeAllRegsts() final;
   void InferProducedDataRegstTimeShape() final;
   void ToProto(TaskProto*) override;
+  const ParallelContext* parallel_ctx() const override { return &parallel_ctx_; }
 
   ParallelContext parallel_ctx_;
   LogicalBlobId lbi_;
