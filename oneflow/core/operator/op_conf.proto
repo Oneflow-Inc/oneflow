@@ -1759,7 +1759,7 @@ message OperatorConf {
     ScalarAddOpConf scalar_add_conf = 507;
     ScalarMulOpConf scalar_mul_conf = 508;
 
-    // Used for detection network
+    // detection op
     MaskrcnnPositiveNegativeSampleOpConf maskrcnn_positive_negative_sample_conf = 601;
     CalcIoUMatrixOpConf calc_iou_matrix_conf = 602;
     BoxEncodeOpConf box_encode_conf = 603;
