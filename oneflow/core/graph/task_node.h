@@ -161,9 +161,6 @@ class TaskEdge final : public Edge<TaskNode, TaskEdge> {
   HashMap<std::string, std::shared_ptr<RegstDesc>> name_in_producer2regst_;
 };
 
-extern std::map<TaskType, std::string> task_type2color;
-extern std::map<TaskType, std::string> task_type2type_str;
-
 struct IndependentThreadNum4TaskType final {
   IndependentThreadNum4TaskType(size_t num) : has_func_(false), num_(num) {}
   IndependentThreadNum4TaskType(std::function<size_t()> get_num)
