@@ -134,7 +134,6 @@ class RPNLoss(object):
                 self.img_idx = img_idx
                 with flow.deprecated.variable_scope("rpn-loss"):
                     matcher = Matcher(
-                        self.dl_net,
                         self.cfg,
                         self.cfg.RPN.POSITIVE_OVERLAP_THRESHOLD,
                         self.cfg.RPN.NEGATIVE_OVERLAP_THRESHOLD,
@@ -143,42 +142,32 @@ class RPNLoss(object):
                     matched_indices = matcher.build(concated_anchors, gt_boxes, True)
 
                 # exclude outside anchors
-                matched_indices = self.where(
-                    self.identify_outside_anchors(
+                matched_indices = flow.where(
+                    flow.detection.identify_outside_anchors(
                         concated_anchors,
                         resized_image_size_list[img_idx],
                         tolerance=0.0,
                     ),
-                    self.constant_like(matched_indices, int(-2)),
+                    flow..constant_like(matched_indices, int(-2)),
                     matched_indices,
                 )
 
-                pos_inds = self.squeeze(
-                    self.nonzero(
-                        self.greater_equal(
-                            matched_indices,
-                            self.constant_scalar(
-                                matched_indices, 0, data_type_util.kInt32
-                            ),
-                        )
+                pos_inds = flow.squeeze(
+                    flow.local_nonzero(
+                        matched_indices >= flow.constant(value=0, dtype=flow.int32, shape=[1]) 
                     ),
                     axis=[1],
                 )
-                neg_inds = self.squeeze(
-                    self.nonzero(
-                        self.equal(
-                            matched_indices,
-                            self.constant_scalar(
-                                matched_indices, -1, data_type_util.kInt32
-                            ),
-                        )
+                pos_inds = flow.squeeze(
+                    flow.local_nonzero(
+                        matched_indices == flow.constant(value=-1, dtype=flow.int32, shape=[1]) 
                     ),
                     axis=[1],
                 )
 
                 # sampled_pos_inds: [sampled_pos_num,]
                 # sampled_neg_inds: [sampled_neg_num,]
-                sampled_pos_inds, sampled_neg_inds = self.pos_neg_sampler(
+                sampled_pos_inds, sampled_neg_inds = flow.detection.pos_neg_sampler(
                     pos_inds,
                     neg_inds,
                     total_subsample_num=self.cfg.RPN.SUBSAMPLE_NUM_PER_IMG,
@@ -186,12 +175,12 @@ class RPNLoss(object):
                 )
                 # bbox target and bbox pred
                 sampled_bbox_target_list.append(
-                    self.box_encode(
-                        self.gather(
+                    flow.detection.box_encode(
+                        flow.local_gather(
                             resized_gt_box_list[img_idx],
-                            self.gather(matched_indices, sampled_pos_inds),
+                            flow.local_gather(matched_indices, sampled_pos_inds),
                         ),
-                        self.gather(concated_anchors, sampled_pos_inds),
+                        flow.local_gather(concated_anchors, sampled_pos_inds),
                         regression_weights={
                             "weight_x": self.cfg.RPN.WEIGHT_X,
                             "weight_y": self.cfg.RPN.WEIGHT_Y,
@@ -201,52 +190,44 @@ class RPNLoss(object):
                     )
                 )
                 sampled_bbox_pred_list.append(
-                    self.gather(concated_bbox_pred_list[img_idx], sampled_pos_inds)
+                    flow.local_gather(concated_bbox_pred_list[img_idx], sampled_pos_inds)
                 )
                 # cls label and cls logit
-                cls_labels = self.greater_equal(
-                    matched_indices,
-                    self.constant_scalar(matched_indices, 0, data_type_util.kInt32),
-                )
-                sampled_pos_neg_inds = self.concat(
+                cls_labels = matched_indices >= flow.constant(value=0 dtype=flow.int32, shape=[1])
+                sampled_pos_neg_inds = flow.concat(
                     [sampled_pos_inds, sampled_neg_inds], axis=0
                 )
                 sampled_pos_neg_inds_list.append(sampled_pos_neg_inds)
                 sampled_cls_logit_list.append(
-                    self.gather(concated_cls_logit[img_idx], sampled_pos_neg_inds)
+                    flow.local_gather(concated_cls_logit[img_idx], sampled_pos_neg_inds)
                 )
                 sampled_cls_label_list.append(
-                    self.gather(cls_labels, sampled_pos_neg_inds)
+                    flow.local_gather(cls_labels, sampled_pos_neg_inds)
                 )
 
-            total_sample_cnt = self.elem_cnt(
-                self.concat(sampled_pos_neg_inds_list, axis=0)
+            total_sample_cnt = flow.elem_cnt(
+                flow.concat(sampled_pos_neg_inds_list, axis=0)
             )
             # rpn bbox_loss
-            self.identity_loss(
-                self.div(
-                    self.reduce_sum(
-                        self.smooth_l1(
-                            self.concat(sampled_bbox_pred_list, axis=0),
-                            self.concat(sampled_bbox_target_list, axis=0),
-                            beta=1.0 / 9.0,
-                        )
-                    ),
-                    self.cast(total_sample_cnt, data_type=data_type_util.kFloat),
-                )
+            bbox_loss = flow.div(
+                flow.math.reduce_sum(
+                    flow.detection.smooth_l1(
+                        flow.concat.concat(sampled_bbox_pred_list, axis=0),
+                        flow.concat.concat(sampled_bbox_target_list, axis=0),
+                        beta=1.0 / 9.0,
+                    )
+                ),
+                flow.cast(total_sample_cnt, data_type=flow.float),
             )
 
-            # rpn cls loss
-            self.identity_loss(
-                self.div(
-                    self.reduce_sum(
-                        self.binary_cross_entroy(
-                            self.concat(sampled_cls_logit_list, axis=0),
-                            self.concat(sampled_cls_label_list, axis=0),
-                        )
-                    ),
-                    self.cast(total_sample_cnt, data_type=data_type_util.kFloat),
-                )
+            cls_loss = flow.div(
+                flow.math.reduce_sum(
+                    flow.detection.binary_cross_entroy(
+                        flow.concat(sampled_cls_logit_list, axis=0),
+                        flow.concat(sampled_cls_label_list, axis=0),
+                    )
+                ),
+                flow.cast(total_sample_cnt, data_type=flow.float),
             )
 
-        return
+        return bbox_loss, cls_loss

@@ -49,7 +49,7 @@ struct NdarrayUtil final {
       const XpuVarNdarray<const T>& a, const XpuVarNdarray<const T>& b) {                      \
     return ApplyBinary<BinaryFunc##func_name>(ctx, y, a, b);                                   \
   }
-  OF_PP_FOR_EACH_ATOMIC(DEFINE_BINARY_FUNC, ARITHMETIC_BINARY_FUNC_NAME_SEQ)
+  OF_PP_FOR_EACH_ATOMIC(DEFINE_BINARY_FUNC, BINARY_FUNC_NAME_SEQ)
 #undef DEFINE_BINARY_FUNC
 
 #define DEFINE_BROADCAST_UNARY_FUNC(func_name)                                               \
@@ -69,7 +69,7 @@ struct NdarrayUtil final {
       const XpuVarNdarray<const T>& a, const XpuVarNdarray<const T>& b) {                      \
     return BroadcastApplyBinary<BinaryFunc##func_name>(ctx, y, a, b);                          \
   }
-  OF_PP_FOR_EACH_ATOMIC(DEFINE_BROADCAST_BINARY_FUNC, ARITHMETIC_BINARY_FUNC_NAME_SEQ)
+  OF_PP_FOR_EACH_ATOMIC(DEFINE_BROADCAST_BINARY_FUNC, BINARY_FUNC_NAME_SEQ)
 #undef DEFINE_BROADCAST_BINARY_FUNC
 
 #define DEFINE_INPLACE_UNARY_FUNC(func_name)                                  \
@@ -125,6 +125,8 @@ struct NdarrayUtil final {
   template<template<typename> class binary_func>
   static void InplaceBroadcastApply(DeviceCtx* ctx, const XpuVarNdarray<T>& y,
                                     const XpuVarNdarray<const T>& x) {
+    static_assert(std::is_same<T, typename BinaryFuncTrait<binary_func, T>::return_type>::value,
+                  "T must be same with BinaryFuncTrait<binary_func, T>::return_type");
     CHECK_EQ(x.shape().NumAxes(), y.shape().NumAxes());
     return Binary<binary_func>::SwitchInplaceBroadcastApply(SwitchCase(y.shape().NumAxes()), ctx, y,
                                                             x);
@@ -132,12 +134,16 @@ struct NdarrayUtil final {
 
   template<template<typename> class unary_func>
   static void InplaceApply(DeviceCtx* ctx, const XpuVarNdarray<T>& y) {
+    static_assert(std::is_same<T, typename UnaryFuncTrait<unary_func, T>::return_type>::value,
+                  "T must be same with UnaryFuncTrait<unary_func, T>::return_type");
     return NdarrayApplyUnary<device_type, T, unary_func>::InplaceApply(ctx, y);
   }
 
   template<template<typename> class binary_func>
   static void InplaceApply(DeviceCtx* ctx, const XpuVarNdarray<T>& y,
                            const XpuVarNdarray<const T>& x) {
+    static_assert(std::is_same<T, typename BinaryFuncTrait<binary_func, T>::return_type>::value,
+                  "T must be same with BinaryFuncTrait<binary_func, T>::return_type");
     return NdarrayApplyBinary<device_type, T, binary_func>::InplaceApply(ctx, y, x);
   }
 
