@@ -37,6 +37,11 @@ class BlobDesc final {
   bool operator==(const BlobDesc&) const;
   void ToProto(BlobDescProto*) const;
 
+
+  // legacy interface, shouldn't use in new code
+  void CopyMetaFrom(const BlobDesc& other) { CopyFrom(other); }
+  void CopyAllFrom(const BlobDesc& other) { CopyMetaFrom(other); }
+
  private:
   void InitFromProto(const BlobDescProto& proto);
 

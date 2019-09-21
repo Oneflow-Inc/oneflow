@@ -139,6 +139,9 @@ class Blob final {
   }
   const MemoryCase& mem_case() const;
 
+  // legacy interface, shouldn't use in new code
+  size_t ByteSizeOfDataContentField() const { return blob_desc_->RealByteSizeOfBlobBody(); }
+
  private:
   void Init(Regst* regst, const RtBlobDesc* blob_desc, char* header_ptr, char* body_ptr);
   template<typename T>
