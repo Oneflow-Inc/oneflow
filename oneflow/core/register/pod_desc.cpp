@@ -47,9 +47,7 @@ bool TensorPodDesc::operator==(const PodDesc& rhs) const {
   return shape() == tensor_rhs->shape() && data_type() == tensor_rhs->data_type();
 }
 
-void TensorPodDesc::ToProto(PodProto* pod_proto) const {
-  ToProto(pod_proto->mutable_tensor_pod());
-}
+void TensorPodDesc::ToProto(PodProto* pod_proto) const { ToProto(pod_proto->mutable_tensor_pod()); }
 
 void TensorPodDesc::ToProto(TensorPodProto* proto) const {
   shape_.ToProto(proto->mutable_shape());

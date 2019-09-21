@@ -29,8 +29,8 @@ class BlobDesc final {
   DataType data_type() const { return body_.data_type(); }
   void set_data_type(DataType val) { body_.set_data_type(val); }
 
-  bool has_lod() const { return has_lod_; }
-  bool set_has_lod(bool val)  { has_lod_ = val; }
+  int64_t num_of_lod_levels() const { return num_of_lod_levels_; }
+  void set_num_of_lod_levels(int64_t val) { num_of_lod_levels_ = val; }
   bool is_body_disabled() const { return is_body_disabled_; }
   void set_is_body_disabled(bool val) { is_body_disabled_ = val; }
 

@@ -308,6 +308,8 @@ struct KernelUtil<DeviceType::kGPU, T, typename std::enable_if<IsIntegral<T>::va
 
 using CopyBlobFieldMthd = void (Blob::*)(DeviceCtx*, const Blob*);
 
+/*
+
 template<DeviceType device_type, typename Iter>
 void CopyFromIterToIter(DeviceCtx* ctx, Iter& src_it, Iter& dst_it) {
   const char* src_ptr = nullptr;
@@ -473,6 +475,7 @@ class Dim2ValidNumIterator final : public FieldIterator {
 
   size_t GetSizeOfField(Blob* blob) const override { return blob->ByteSizeOfDim2ValidNumField(); }
 };
+*/
 
 template<typename T, typename U>
 typename std::enable_if<std::is_same<T, U>::value>::type CopyElem(const T* in_dptr, U* out_dptr,

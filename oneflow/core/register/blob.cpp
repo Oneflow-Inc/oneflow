@@ -4,6 +4,8 @@
 
 namespace oneflow {
 
+const MemoryCase& Blob::mem_case() const { return regst_->regst_desc()->mem_case(); }
+
 Blob::Blob(Regst* regst, const RtBlobDesc* blob_desc, char* header_ptr) {
   Init(regst, blob_desc, header_ptr, header_ptr + blob_desc->RealByteSizeOfBlobHeader());
 }
@@ -20,10 +22,12 @@ void Blob::Init(Regst* regst, const RtBlobDesc* blob_desc, char* header_ptr, cha
   header_ptr_ = PodPtr(blob_desc_->header_pod_desc(), header_ptr);
 
   {
-    TensorPodDesc dense_shape_desc = header_ptr_.Field(FieldKey::kDense).pod_desc().Cast<TensorPodDesc>();
+    TensorPodDesc dense_shape_desc =
+        header_ptr_.Field(FieldKey::kDense).pod_desc().Cast<TensorPodDesc>();
     CHECK_EQ(1, dense_shape_desc.shape().NumAxes());
-    dense_shape_->Init(header_ptr_.MutTensorPtr<int64_t>(FieldKey::kDense, nullptr),
-        dense_shape_desc.shape().elem_cnt());
+    dense_shape_.Init(header_ptr_.MutTensorPtr<int64_t>(FieldKey::kDense, nullptr),
+                      dense_shape_desc.shape().elem_cnt());
+    dense_shape_.set_shape(blob_desc_->body_shape());
   }
 
   if (header_ptr_.HasField(FieldKey::kLoD)) {
@@ -31,8 +35,8 @@ void Blob::Init(Regst* regst, const RtBlobDesc* blob_desc, char* header_ptr, cha
     CHECK_GT(num_of_lod_levels, 0);
     TensorPodDesc lod_desc = header_ptr_.Field(FieldKey::kLoD).pod_desc().Cast<TensorPodDesc>();
     CHECK_EQ(1, lod_desc.shape().NumAxes());
-    lod_->Init(header_ptr_.MutTensorPtr<int64_t>(FieldKey::kLoD, nullptr), 
-        lod_desc.shape().elem_cnt(), num_of_lod_levels);
+    lod_.Init(header_ptr_.MutTensorPtr<int64_t>(FieldKey::kLoD, nullptr),
+              lod_desc.shape().elem_cnt(), num_of_lod_levels);
   }
 }
 

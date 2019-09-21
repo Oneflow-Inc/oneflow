@@ -8,9 +8,7 @@ RtBlobDesc::RtBlobDesc(const BlobDesc& blob_desc) {
   InitFromProto(blob_desc_proto);
 }
 
-RtBlobDesc::RtBlobDesc(const BlobDescProto& blob_desc_proto) {
-  InitFromProto(blob_desc_proto);
-}
+RtBlobDesc::RtBlobDesc(const BlobDescProto& blob_desc_proto) { InitFromProto(blob_desc_proto); }
 
 void RtBlobDesc::InitFromProto(const BlobDescProto& blob_desc_proto) {
   blob_desc_proto_ = blob_desc_proto;

@@ -36,9 +36,7 @@ class DenseShapeWrapper final {
     CHECK_EQ(num_axes_, val.NumAxes());
     shape_ = val;
     is_shape_inited_ = true;
-    for (size_t i = 0; i < shape_.NumAxes(); ++i) {
-      *(ptr_ + i) = shape_.At(i);
-    }
+    for (size_t i = 0; i < shape_.NumAxes(); ++i) { *(ptr_ + i) = shape_.At(i); }
   }
 
  private:
@@ -74,10 +72,11 @@ class LoDWrapper final {
   void PushLength(int64_t level, int64_t len) {
     is_lod_done_ = false;
     if (lod_cnt_ + 1 + offset_lod_.size() > max_reserved_size_for_lod_) {
-      LOG(FATAL) << "the LoD size is greater than max_reserved_size_for_lod: " << max_reserved_size_for_lod_;
+      LOG(FATAL) << "the LoD size is greater than max_reserved_size_for_lod: "
+                 << max_reserved_size_for_lod_;
     }
-    offset_of_len = offset_lod_.at(level).back() + len;
-    offset_lod_.at(level).pus_back(offset_of_len);
+    int64_t offset_of_len = offset_lod_.at(level).back() + len;
+    offset_lod_.at(level).push_back(offset_of_len);
     lod_cnt_ += 1;
   }
   void SetLoDDone() {
@@ -96,7 +95,7 @@ class LoDWrapper final {
   int64_t max_reserved_size_for_lod_;
 
   std::vector<std::vector<int64_t>> offset_lod_;
-  int64_t lod_cnt_; // attention: no equals to the elem_cnt of offset_lod_
+  int64_t lod_cnt_;  // attention: no equals to the elem_cnt of offset_lod_
   bool is_lod_done_;
 };
 
@@ -108,8 +107,8 @@ class Blob final {
   virtual ~Blob() = default;
 
   DataType data_type() const { return blob_desc_->data_type(); }
-  const void* header_ptr() const { return header_ptr_; }
-  void* mut_header_ptr() { return header_ptr_; }
+  const char* header_ptr() const { return header_ptr_.ptr(); }
+  char* mut_header_ptr() { return header_ptr_.ptr(); }
   const RtBlobDesc& blob_desc() const { return *blob_desc_; }
   const RtBlobDesc* blob_desc_ptr() const { return blob_desc_; }
 
@@ -133,11 +132,22 @@ class Blob final {
       int64_t dim0, Int64s... remainder_dims) {
     return mut_dptr<T>() + GetDptrOffset(0, dim0, remainder_dims...);
   }
-
+  const Shape& static_shape() const { blob_desc_->body_shape(); }
+  const Shape& shape() const {
+    return dense_shape(); // TODO(niuchong): remove this interface
+  }
   const Shape& dense_shape() const { dense_shape_.shape(); }
-  size_t RealByteSizeOfBlobHeader() const { return blob_desc_->RealByteSizeOfBlobHeader(); }
-  size_t AlignedTotalByteSize() const { return blob_desc_->AlignedTotalByteSize(); }
-  const MemoryCase& mem_case() const { return regst_->regst_desc()->mem_case(); }
+  void set_dense_shape(const Shape& shape) { dense_shape_.set_shape(shape); }
+
+  int64_t GetLoDOffset(int64_t level, int64_t pos) { lod_.GetOffset(level, pos); }
+  int64_t GetLoDLength(int64_t level, int64_t pos) { lod_.GetLength(level, pos); }
+  void PushLoDLength(int64_t level, int64_t len) { lod_.PushLength(level, len); }
+  void SetLoDDone() { lod_.SetLoDDone(); }
+
+  size_t AlignedTotalByteSize(size_t align) const {
+    return blob_desc_->AlignedTotalByteSize(align);
+  }
+  const MemoryCase& mem_case() const;
 
  private:
   void Init(Regst* regst, const RtBlobDesc* blob_desc, char* header_ptr, char* body_ptr);

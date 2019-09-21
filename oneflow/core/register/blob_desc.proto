@@ -1,9 +1,7 @@
 syntax = "proto2";
 package oneflow;
 
-import "oneflow/core/register/field_desc.proto";
 import "oneflow/core/register/pod.proto";
-import "oneflow/core/common/shape.proto";
 
 message BlobDescProto {
   required StructPodProto header = 1;

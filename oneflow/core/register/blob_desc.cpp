@@ -5,7 +5,7 @@ namespace oneflow {
 
 std::unique_ptr<BlobDesc> ComputePackedBlobDesc(
     const HashMap<LogicalBlobId, std::unique_ptr<BlobDesc>>& lbi2blob_desc) {
-  //TODO(niuchong) : remove PackedBlob
+  // TODO(niuchong) : remove PackedBlob
   UNIMPLEMENTED();
 }
 
@@ -14,17 +14,12 @@ bool CompareLbiBlobDescPair(const LbiBlobDescPair& lhs, const LbiBlobDescPair& r
 }
 
 BlobDesc::BlobDesc(const Shape& shape, DataType dtype)
-  : body_(shape, dtype),
-    header_(),
-    num_of_lod_levels_(0),
-    is_body_disabled_(false) {
+    : body_(shape, dtype), header_(), num_of_lod_levels_(0), is_body_disabled_(false) {
   Shape shape_of_dense_shape = Shape(std::vector{shape.NumAxes()});
   header_.AddField(FieldKey::kDense, TensorPodDesc(shape_of_dense_shape, DataType::kInt64));
 }
 
-BlobDesc::BlobDesc(const BlobDescProto& proto) {
-  InitFromProto(proto);
-}
+BlobDesc::BlobDesc(const BlobDescProto& proto) { InitFromProto(proto); }
 
 BlobDesc::BlobDesc(const BlobDesc& other) {
   BlobDescProto proto;
