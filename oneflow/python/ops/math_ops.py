@@ -279,114 +279,6 @@ def cast(x, dtype, name=None):
     return remote_blob_util.RemoteBlob(lbi)
 
 
-@oneflow_export("math.broadcast_equal")
-def broadcast_equal(a, b, name=None):
-    op_conf = op_conf_util.OperatorConf()
-    setattr(
-        op_conf,
-        "name",
-        name if name is not None else id_util.UniqueStr("BroadcastEqual_"),
-    )
-    setattr(op_conf.broadcast_equal_conf, "a", a.logical_blob_name)
-    setattr(op_conf.broadcast_equal_conf, "b", b.logical_blob_name)
-    setattr(op_conf.broadcast_equal_conf, "out", "out")
-    compile_context.CurJobAddOp(op_conf)
-    out_lbi = logical_blob_id_util.LogicalBlobId()
-    setattr(out_lbi, "op_name", op_conf.name)
-    setattr(out_lbi, "blob_name", "out")
-    return remote_blob_util.RemoteBlob(out_lbi)
-
-
-@oneflow_export("math.broadcast_not_equal")
-def broadcast_not_equal(a, b, name=None):
-    op_conf = op_conf_util.OperatorConf()
-    setattr(
-        op_conf,
-        "name",
-        name if name is not None else id_util.UniqueStr("BroadcastNotEqual_"),
-    )
-    setattr(op_conf.broadcast_not_equal_conf, "a", a.logical_blob_name)
-    setattr(op_conf.broadcast_not_equal_conf, "b", b.logical_blob_name)
-    setattr(op_conf.broadcast_not_equal_conf, "out", "out")
-    compile_context.CurJobAddOp(op_conf)
-    out_lbi = logical_blob_id_util.LogicalBlobId()
-    setattr(out_lbi, "op_name", op_conf.name)
-    setattr(out_lbi, "blob_name", "out")
-    return remote_blob_util.RemoteBlob(out_lbi)
-
-
-@oneflow_export("math.broadcast_less_than")
-def broadcast_less_than(a, b, name=None):
-    op_conf = op_conf_util.OperatorConf()
-    setattr(
-        op_conf,
-        "name",
-        name if name is not None else id_util.UniqueStr("BroadcastLessThan_"),
-    )
-    setattr(op_conf.broadcast_less_than_conf, "a", a.logical_blob_name)
-    setattr(op_conf.broadcast_less_than_conf, "b", b.logical_blob_name)
-    setattr(op_conf.broadcast_less_than_conf, "out", "out")
-    compile_context.CurJobAddOp(op_conf)
-    out_lbi = logical_blob_id_util.LogicalBlobId()
-    setattr(out_lbi, "op_name", op_conf.name)
-    setattr(out_lbi, "blob_name", "out")
-    return remote_blob_util.RemoteBlob(out_lbi)
-
-
-@oneflow_export("math.broadcast_less_equal")
-def broadcast_less_equal(a, b, name=None):
-    op_conf = op_conf_util.OperatorConf()
-    setattr(
-        op_conf,
-        "name",
-        name if name is not None else id_util.UniqueStr("BroadcastLessEqual_"),
-    )
-    setattr(op_conf.broadcast_less_equal_conf, "a", a.logical_blob_name)
-    setattr(op_conf.broadcast_less_equal_conf, "b", b.logical_blob_name)
-    setattr(op_conf.broadcast_less_equal_conf, "out", "out")
-    compile_context.CurJobAddOp(op_conf)
-    out_lbi = logical_blob_id_util.LogicalBlobId()
-    setattr(out_lbi, "op_name", op_conf.name)
-    setattr(out_lbi, "blob_name", "out")
-    return remote_blob_util.RemoteBlob(out_lbi)
-
-
-@oneflow_export("math.broadcast_greater_than")
-def broadcast_greater_than(a, b, name=None):
-    op_conf = op_conf_util.OperatorConf()
-    setattr(
-        op_conf,
-        "name",
-        name if name is not None else id_util.UniqueStr("BroadcastGreaterThan_"),
-    )
-    setattr(op_conf.broadcast_greater_than_conf, "a", a.logical_blob_name)
-    setattr(op_conf.broadcast_greater_than_conf, "b", b.logical_blob_name)
-    setattr(op_conf.broadcast_greater_than_conf, "out", "out")
-    compile_context.CurJobAddOp(op_conf)
-    out_lbi = logical_blob_id_util.LogicalBlobId()
-    setattr(out_lbi, "op_name", op_conf.name)
-    setattr(out_lbi, "blob_name", "out")
-    return remote_blob_util.RemoteBlob(out_lbi)
-
-
-@oneflow_export("math.broadcast_greater_equal")
-def broadcast_greater_equal(a, b, name=None):
-    op_conf = op_conf_util.OperatorConf()
-    setattr(
-        op_conf,
-        "name",
-        name if name is not None else id_util.UniqueStr("BroadcastGreaterEqual_"),
-    )
-    setattr(op_conf.broadcast_greater_equal_conf, "a", a.logical_blob_name)
-    setattr(op_conf.broadcast_greater_equal_conf, "b", b.logical_blob_name)
-    setattr(op_conf.broadcast_greater_equal_conf, "out", "out")
-    compile_context.CurJobAddOp(op_conf)
-    out_lbi = logical_blob_id_util.LogicalBlobId()
-    setattr(out_lbi, "op_name", op_conf.name)
-    setattr(out_lbi, "blob_name", "out")
-    return remote_blob_util.RemoteBlob(out_lbi)
-
-
 @oneflow_export("math.top_k")
 def top_k(input, k=1, sorted=True, name=None):
     op_conf = op_conf_util.OperatorConf()
@@ -446,3 +338,80 @@ def argsort(values, direction="ASCENDING", name=None):
     setattr(out_lbi, "op_name", op_conf.name)
     setattr(out_lbi, "blob_name", "out")
     return remote_blob_util.RemoteBlob(out_lbi)
+@oneflow_export("math.equal")
+def equal(x, y, name=None):
+    op_conf = op_conf_util.OperatorConf()
+    setattr(op_conf, "name", name if name is not None else id_util.UniqueStr("BroadcastEqual_"))
+    op_conf.broadcast_equal_conf.a = x.logical_blob_name
+    op_conf.broadcast_equal_conf.b = y.logical_blob_name
+    op_conf.broadcast_equal_conf.out = "out"
+    compile_context.CurJobAddOp(op_conf)
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = "out"
+    return remote_blob_util.RemoteBlob(lbi)
+
+@oneflow_export("math.not_equal")
+def equal(x, y, name=None):
+    op_conf = op_conf_util.OperatorConf()
+    setattr(op_conf, "name", name if name is not None else id_util.UniqueStr("BroadcastNotEqual_"))
+    op_conf.broadcast_not_equal_conf.a = x.logical_blob_name
+    op_conf.broadcast_not_equal_conf.b = y.logical_blob_name
+    op_conf.broadcast_not_equal_conf.out = "out"
+    compile_context.CurJobAddOp(op_conf)
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = "out"
+    return remote_blob_util.RemoteBlob(lbi)
+
+@oneflow_export("math.less")
+def equal(x, y, name=None):
+    op_conf = op_conf_util.OperatorConf()
+    setattr(op_conf, "name", name if name is not None else id_util.UniqueStr("BroadcastLessThan_"))
+    op_conf.broadcast_less_than_conf.a = x.logical_blob_name
+    op_conf.broadcast_less_than_conf.b = y.logical_blob_name
+    op_conf.broadcast_less_than_conf.out = "out"
+    compile_context.CurJobAddOp(op_conf)
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = "out"
+    return remote_blob_util.RemoteBlob(lbi)
+
+@oneflow_export("math.less_equal")
+def equal(x, y, name=None):
+    op_conf = op_conf_util.OperatorConf()
+    setattr(op_conf, "name", name if name is not None else id_util.UniqueStr("BroadcastLessEqual_"))
+    op_conf.broadcast_less_equal_conf.a = x.logical_blob_name
+    op_conf.broadcast_less_equal_conf.b = y.logical_blob_name
+    op_conf.broadcast_less_equal_conf.out = "out"
+    compile_context.CurJobAddOp(op_conf)
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = "out"
+    return remote_blob_util.RemoteBlob(lbi)
+
+@oneflow_export("math.greater")
+def equal(x, y, name=None):
+    op_conf = op_conf_util.OperatorConf()
+    setattr(op_conf, "name", name if name is not None else id_util.UniqueStr("BroadcastGreaterThan_"))
+    op_conf.broadcast_greater_than_conf.a = x.logical_blob_name
+    op_conf.broadcast_greater_than_conf.b = y.logical_blob_name
+    op_conf.broadcast_greater_than_conf.out = "out"
+    compile_context.CurJobAddOp(op_conf)
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = "out"
+    return remote_blob_util.RemoteBlob(lbi)
+
+@oneflow_export("math.greater_equal")
+def equal(x, y, name=None):
+    op_conf = op_conf_util.OperatorConf()
+    setattr(op_conf, "name", name if name is not None else id_util.UniqueStr("BroadcastGreaterEqual_"))
+    op_conf.broadcast_greater_equal_conf.a = x.logical_blob_name
+    op_conf.broadcast_greater_equal_conf.b = y.logical_blob_name
+    op_conf.broadcast_greater_equal_conf.out = "out"
+    compile_context.CurJobAddOp(op_conf)
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = "out"
+    return remote_blob_util.RemoteBlob(lbi)
