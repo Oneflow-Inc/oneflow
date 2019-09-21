@@ -44,7 +44,7 @@ def maskrcnn(images, image_sizes, gt_boxes):
     # RPN
     cls_logit_list, bbox_pred_list = rpn_head.build(features)
     if cfg.TRAINING:
-        rpn_loss.build(
+        box_loss, cls_loss = rpn_loss.build(
             anchors, image_size_list, gt_boxes_list, cls_logit_list, bbox_pred_list
         )
     else:
