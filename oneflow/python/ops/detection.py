@@ -337,7 +337,7 @@ def upsample_nearest(inputs, scale, data_format, name=None):
     return remote_blob_util.RemoteBlob(lbi)
 
 
-@oneflow_export("detection.upsample_nearest")
+@oneflow_export("detection.affine_channel")
 def affine_channel(
     inputs,
     axis,
