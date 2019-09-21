@@ -44,6 +44,7 @@ class LocalNonzeroOp final : public Operator {
     out->set_data_type(DataType::kInt32);
     out->set_has_dim0_valid_num_field(true);
     out->mut_dim0_inner_shape() = Shape({1, elem_cnt});
+    return Maybe<void>::Ok();
   }
 
   void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
