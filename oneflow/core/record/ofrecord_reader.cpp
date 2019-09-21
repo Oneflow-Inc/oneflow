@@ -37,19 +37,18 @@ size_t NaiveOFRecordReader::Read(size_t n, OFRecord* allocated_records) {
     }
   }
   if (cur_read == 0) { return 0; }
-  const int64_t thread_num =
-      std::min<int64_t>(Global<ThreadMgr>::Get()->compute_thread_pool()->thread_num(), cur_read);
+  ThreadPool* thread_pool = Global<ThreadMgr>::Get()->compute_thread_pool();
+  const int64_t thread_num = std::min<int64_t>(thread_pool->thread_num(), cur_read);
   BlockingCounter bc(thread_num);
   const BalancedSplitter bs(cur_read, thread_num);
   FOR_RANGE(int64_t, tid, 0, thread_num) {
-    const Range& cur_range = bs.At(tid);
-    Global<ThreadMgr>::Get()->compute_thread_pool()->AddWork(
-        [cur_range, &bc, &chunks, &allocated_records]() {
-          FOR_RANGE(int64_t, i, cur_range.begin(), cur_range.end()) {
-            CHECK(allocated_records[i].ParseFromArray(chunks.at(i).data.get(), chunks.at(i).size));
-          }
-          bc.Decrease();
-        });
+    const Range thrd_range = bs.At(tid);
+    thread_pool->AddWork([thrd_range, &bc, &chunks, &allocated_records]() {
+      FOR_RANGE(int64_t, i, thrd_range.begin(), thrd_range.end()) {
+        CHECK(allocated_records[i].ParseFromArray(chunks.at(i).data.get(), chunks.at(i).size));
+      }
+      bc.Decrease();
+    });
   }
   bc.WaitUntilCntEqualZero();
   num_read_ += cur_read;
