@@ -337,3 +337,17 @@ def expand_dims(input, axis, name=None):
     setattr(out_lbi, "op_name", op_conf.name)
     setattr(out_lbi, "blob_name", "out")
     return remote_blob_util.RemoteBlob(out_lbi)
+
+
+@oneflow_export("piece_slice")
+def piece_slice(input, name=None):
+    op_conf = op_conf_util.OperatorConf()
+    setattr(
+        op_conf, "name", name if name is not None else id_util.UniqueStr("PieceSlice_")
+    )
+    setattr(op_conf.piece_slice_conf, "input", input.logical_blob_name)
+    compile_context.CurJobAddOp(op_conf)
+    out_lbi = logical_blob_id_util.LogicalBlobId()
+    setattr(out_lbi, "op_name", op_conf.name)
+    setattr(out_lbi, "blob_name", "out")
+    return remote_blob_util.RemoteBlob(out_lbi)
