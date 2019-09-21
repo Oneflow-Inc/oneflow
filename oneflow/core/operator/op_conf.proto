@@ -380,6 +380,15 @@ message SigmoidCrossEntropyLossOpConf {
   optional string weight = 8;
 }
 
+message SigmoidCrossEntropyLossGradOpConf {
+  required string prediction = 1;
+  required string label = 2;
+  required string loss_diff = 3;
+  required string prediction_diff = 4;
+  optional float weight_scalar = 5 [default = 1.0];
+  optional ScalarReductionType reduction = 6 [default = kSumOverN];
+}
+
 message IdentityLossOpConf {
   required string prediction = 1;
   required string loss = 2;
@@ -1653,6 +1662,21 @@ message DynamicReshapeOpConf {
   required ShapeProto shape = 3;
 }
 
+message SmoothL1OpConf {
+  required string prediction = 1;
+  required string label = 2;
+  optional float beta = 3 [default = 1.0];
+  optional float scale = 4 [default = 1.0];
+  required string out = 5;
+}
+
+message UpsampleNearestOpConf {
+  required string in = 1;
+  required string out = 2;
+  required int32 scale = 3;
+  required string data_format = 4;
+}
+
 message OperatorConf {
   required string name = 1;
   optional bool trainable = 3 [default = true];
@@ -1805,6 +1829,9 @@ message OperatorConf {
     LocalGatherOpConf local_gather_conf = 314;
     LocalScatterNdUpdateOpConf local_scatter_nd_update_conf = 315;
     DynamicReshapeOpConf dynamic_reshape_conf = 316;
+    SigmoidCrossEntropyLossGradOpConf sigmoid_cross_entropy_loss_grad_conf = 317;
+    SmoothL1OpConf smooth_l1_conf = 318;
+    UpsampleNearestOpConf upsample_nearest_conf = 319;
 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;

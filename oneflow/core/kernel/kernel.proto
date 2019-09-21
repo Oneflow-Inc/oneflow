@@ -46,6 +46,10 @@ message SigmoidCrossEntropyLossKernelConf {
     required LossKernelConf loss_conf = 1;
 }
 
+message SigmoidCrossEntropyLossGradKernelConf {
+    required LossKernelConf loss_conf = 1;
+}
+
 message IdentityLossKernelConf {
   required LossKernelConf loss_conf = 1;
 }
@@ -229,5 +233,6 @@ message KernelConf {
     GatherMs0GradKernelConf gather_ms0_grad_conf = 414;
     DeconvKernelConf deconv_conf = 415;
     TopKConf top_k_conf = 416;
+    SigmoidCrossEntropyLossGradKernelConf sigmoid_cross_entropy_loss_grad_conf = 417;
   }
 }
