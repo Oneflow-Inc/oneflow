@@ -44,10 +44,12 @@ enum TaskType {
   kCallbackNotify = 47;
   kForeignInput = 48;
   kForeignOutput = 49;
-  kSliceBoxing = 50;
-  kNcclBoxingReduceScatter = 51;
-  kNcclBoxingAllGather = 52;
-  kNcclBoxingAllReduce = 53;
+  kNcclTupleBroadcast = 50;
+  kNcclTupleReduce = 51;
+  kSliceBoxing = 52;
+  kNcclBoxingReduceScatter = 53;
+  kNcclBoxingAllGather = 54;
+  kNcclBoxingAllReduce = 55;
 };
 
 enum AreaType {
