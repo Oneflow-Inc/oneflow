@@ -1647,6 +1647,12 @@ message NonMaximumSuppressionOpConf {
   optional int32 post_nms_top_n = 4 [default = 1000];
 }
 
+message DynamicReshapeOpConf {
+  required string in = 1;
+  required string out = 2;
+  required ShapeProto shape = 3;
+}
+
 message OperatorConf {
   required string name = 1;
   optional bool trainable = 3 [default = true];
@@ -1798,6 +1804,7 @@ message OperatorConf {
     DeconvOpConf deconv_conf = 313;
     LocalGatherOpConf local_gather_conf = 314;
     LocalScatterNdUpdateOpConf local_scatter_nd_update_conf = 315;
+    DynamicReshapeOpConf dynamic_reshape_conf = 316;
 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;

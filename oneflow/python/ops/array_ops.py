@@ -79,6 +79,26 @@ def reshape(x, shape, name=None):
     return remote_blob_util.RemoteBlob(lbi)
 
 
+@oneflow_export("dynamic_reshape")
+def dynamic_reshape(x, shape, name=None):
+    assert isinstance(shape, tuple) or isinstance(shape, list)
+    shape = list(shape)
+    op_conf = op_conf_util.OperatorConf()
+    setattr(
+        op_conf.dynamic_reshape_conf,
+        "name",
+        name if name is not None else id_util.UniqueStr("DynamicReshape_"),
+    )
+    setattr(op_conf.dynamic_reshape_conf, "in", x.logical_blob_name)
+    op_conf.dynamic_reshape_conf.shape.dim[:] = list(shape)
+    setattr(op_conf.dynamic_reshape_conf, "out", "out")
+    compile_context.CurJobAddOp(op_conf)
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = "out"
+    return remote_blob_util.RemoteBlob(lbi)
+
+
 @oneflow_export("transpose")
 def transpose(a, perm=None, conjugate=False, name=None):
     assert isinstance(perm, (tuple, list))
