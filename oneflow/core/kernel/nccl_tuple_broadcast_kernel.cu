@@ -11,7 +11,7 @@ class NcclTupleBroadcastKernel final : public KernelIf<DeviceType::kGPU> {
   ~NcclTupleBroadcastKernel() override = default;
 
  private:
-  void VirtualKernelInit() override {}
+  bool IsKernelLaunchSynchronized() const override { return false; }
   void ForwardDataContent(const KernelCtx&,
                           std::function<Blob*(const std::string&)>) const override;
 };
