@@ -14,27 +14,25 @@ class UpsampleNearestOp final : public Operator {
     EnrollOutputBn("out");
   }
 
-  const PbMessage& GetCustomizedConf() const override return op_conf().upsample_nearest_conf();
-}
+  const PbMessage& GetCustomizedConf() const override { return op_conf().upsample_nearest_conf(); }
 
-Maybe<void>
-InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-               const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature,
-               std::function<void(OpContext*)> EnrollOpCtx) const override {
-  *GetBlobDesc4BnInOp("out") = *GetBlobDesc4BnInOp("in");
-  const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
-  BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
-  if (op_conf().upsample_nearest_conf().data_format() != "channels_first"
-      || in_blob_desc->shape().NumAxes() != 4) {
-    LOG(FATAL) << "upsample_nearest only supports NCHW";
+  Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                             const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature,
+                             std::function<void(OpContext*)> EnrollOpCtx) const override {
+    *GetBlobDesc4BnInOp("out") = *GetBlobDesc4BnInOp("in");
+    const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
+    BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
+    if (op_conf().upsample_nearest_conf().data_format() != "channels_first"
+        || in_blob_desc->shape().NumAxes() != 4) {
+      LOG(FATAL) << "upsample_nearest only supports NCHW";
+    }
+    const int32_t scale = op_conf().upsample_nearest_conf().scale();
+    CHECK_GT(scale, 1);
+    out_blob_desc->mut_shape() =
+        Shape({in_blob_desc->shape().At(0), in_blob_desc->shape().At(1),
+               scale * in_blob_desc->shape().At(2), scale * in_blob_desc->shape().At(3)});
+    return Maybe<void>::Ok();
   }
-  const int32_t scale = op_conf().upsample_nearest_conf().scale();
-  CHECK_GT(scale, 1);
-  out_blob_desc->mut_shape() =
-      Shape({in_blob_desc->shape().At(0), in_blob_desc->shape().At(1),
-             scale * in_blob_desc->shape().At(2), scale * in_blob_desc->shape().At(3)});
-  return Maybe<void>::Ok();
-}
 
 };  // namespace oneflow
 
