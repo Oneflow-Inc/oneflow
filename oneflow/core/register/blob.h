@@ -122,16 +122,6 @@ class Blob final {
     CheckDataType<T>();
     return static_cast<T*>(dptr_);
   }
-  template<typename T, typename... Int64s>
-  typename std::enable_if<!std::is_same<T, void>::value, const T*>::type dptr(
-      int64_t dim0, Int64s... remainder_dims) const {
-    return dptr<T>() + GetDptrOffset(0, dim0, remainder_dims...);
-  }
-  template<typename T, typename... Int64s>
-  typename std::enable_if<!std::is_same<T, void>::value, T*>::type mut_dptr(
-      int64_t dim0, Int64s... remainder_dims) {
-    return mut_dptr<T>() + GetDptrOffset(0, dim0, remainder_dims...);
-  }
   const Shape& static_shape() const { blob_desc_->body_shape(); }
   const Shape& shape() const {
     return dense_shape(); // TODO(niuchong): remove this interface
@@ -157,14 +147,6 @@ class Blob final {
                    && blob_desc_->data_type() != DataType::kChar
                    && blob_desc_->data_type() != GetDataType<T>::value))
         << blob_desc_->data_type() << " " << GetDataType<T>::value;
-  }
-  int64_t GetDptrOffset(int32_t index) const { return 0; }
-  template<typename... Int64s>
-  int64_t GetDptrOffset(int32_t index, int64_t cur_dim, Int64s... remainder) const {
-    CHECK_GE(static_shape().NumAxes(), index + 1);
-    CHECK_GE(cur_dim, 0);
-    CHECK_LT(cur_dim, static_shape().At(index));
-    return cur_dim * static_shape().Count(index + 1) + GetDptrOffset(index + 1, remainder...);
   }
 
   Regst* regst_;
