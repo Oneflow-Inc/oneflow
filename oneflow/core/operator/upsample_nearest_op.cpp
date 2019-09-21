@@ -1,4 +1,4 @@
-#include "oneflow/core/operator/upsample_nearest_op.h"
+#include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
 
