@@ -1656,6 +1656,14 @@ message NonMaximumSuppressionOpConf {
   optional int32 post_nms_top_n = 4 [default = 1000];
 }
 
+message SmoothL1OpConf {
+  required string prediction = 1;
+  required string label = 2;
+  optional float beta = 3 [default = 1.0];
+  optional float scale = 4 [default = 1.0];
+  required string out = 5;
+}
+
 message OperatorConf {
   required string name = 1;
   optional bool trainable = 3 [default = true];
@@ -1808,6 +1816,7 @@ message OperatorConf {
     LocalGatherOpConf local_gather_conf = 314;
     LocalScatterNdUpdateOpConf local_scatter_nd_update_conf = 315;
     SigmoidCrossEntropyLossGradOpConf sigmoid_cross_entropy_loss_grad_conf = 316;
+    SmoothL1OpConf smooth_l1_conf = 317;
 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;
