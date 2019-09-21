@@ -1719,6 +1719,11 @@ message UpsampleNearestOpConf {
   required string data_format = 4;
 }
 
+message PieceSliceOpConf {
+  required string in = 1;
+  repeated string out = 2;
+}
+
 message OperatorConf {
   required string name = 1;
   optional bool trainable = 3 [default = true];
@@ -1874,6 +1879,7 @@ message OperatorConf {
     SigmoidCrossEntropyLossGradOpConf sigmoid_cross_entropy_loss_grad_conf = 317;
     SmoothL1OpConf smooth_l1_conf = 318;
     UpsampleNearestOpConf upsample_nearest_conf = 319;
+    PieceSliceOpConf piece_slice_conf = 320;
 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;
