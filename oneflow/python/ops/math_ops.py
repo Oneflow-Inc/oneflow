@@ -266,3 +266,81 @@ def cast(x, dtype, name=None):
     lbi.op_name = op_conf.name
     lbi.blob_name = "out"
     return remote_blob_util.RemoteBlob(lbi)
+
+@oneflow_export("math.equal")
+def equal(x, y, name=None):
+    op_conf = op_conf_util.OperatorConf()
+    setattr(op_conf, "name", name if name is not None else id_util.UniqueStr("BroadcastEqual_"))
+    op_conf.broadcast_equal_conf.a = x.logical_blob_name
+    op_conf.broadcast_equal_conf.b = y.logical_blob_name
+    op_conf.broadcast_equal_conf.out = "out"
+    compile_context.CurJobAddOp(op_conf)
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = "out"
+    return remote_blob_util.RemoteBlob(lbi)
+
+@oneflow_export("math.not_equal")
+def equal(x, y, name=None):
+    op_conf = op_conf_util.OperatorConf()
+    setattr(op_conf, "name", name if name is not None else id_util.UniqueStr("BroadcastNotEqual_"))
+    op_conf.broadcast_not_equal_conf.a = x.logical_blob_name
+    op_conf.broadcast_not_equal_conf.b = y.logical_blob_name
+    op_conf.broadcast_not_equal_conf.out = "out"
+    compile_context.CurJobAddOp(op_conf)
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = "out"
+    return remote_blob_util.RemoteBlob(lbi)
+
+@oneflow_export("math.less")
+def equal(x, y, name=None):
+    op_conf = op_conf_util.OperatorConf()
+    setattr(op_conf, "name", name if name is not None else id_util.UniqueStr("BroadcastLessThan_"))
+    op_conf.broadcast_less_than_conf.a = x.logical_blob_name
+    op_conf.broadcast_less_than_conf.b = y.logical_blob_name
+    op_conf.broadcast_less_than_conf.out = "out"
+    compile_context.CurJobAddOp(op_conf)
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = "out"
+    return remote_blob_util.RemoteBlob(lbi)
+
+@oneflow_export("math.less_equal")
+def equal(x, y, name=None):
+    op_conf = op_conf_util.OperatorConf()
+    setattr(op_conf, "name", name if name is not None else id_util.UniqueStr("BroadcastLessEqual_"))
+    op_conf.broadcast_less_equal_conf.a = x.logical_blob_name
+    op_conf.broadcast_less_equal_conf.b = y.logical_blob_name
+    op_conf.broadcast_less_equal_conf.out = "out"
+    compile_context.CurJobAddOp(op_conf)
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = "out"
+    return remote_blob_util.RemoteBlob(lbi)
+
+@oneflow_export("math.greater")
+def equal(x, y, name=None):
+    op_conf = op_conf_util.OperatorConf()
+    setattr(op_conf, "name", name if name is not None else id_util.UniqueStr("BroadcastGreaterThan_"))
+    op_conf.broadcast_greater_than_conf.a = x.logical_blob_name
+    op_conf.broadcast_greater_than_conf.b = y.logical_blob_name
+    op_conf.broadcast_greater_than_conf.out = "out"
+    compile_context.CurJobAddOp(op_conf)
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = "out"
+    return remote_blob_util.RemoteBlob(lbi)
+
+@oneflow_export("math.greater_equal")
+def equal(x, y, name=None):
+    op_conf = op_conf_util.OperatorConf()
+    setattr(op_conf, "name", name if name is not None else id_util.UniqueStr("BroadcastGreaterEqual_"))
+    op_conf.broadcast_greater_equal_conf.a = x.logical_blob_name
+    op_conf.broadcast_greater_equal_conf.b = y.logical_blob_name
+    op_conf.broadcast_greater_equal_conf.out = "out"
+    compile_context.CurJobAddOp(op_conf)
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = "out"
+    return remote_blob_util.RemoteBlob(lbi)
