@@ -61,7 +61,7 @@ class ResNet(object):
                 filters=self.cfg.BACKBONE.RESNET_STEM_OUT_CHANNELS,
                 kernel_size=[7, 7],
                 strides=[2, 2],
-                padding="VALID",
+                padding="SAME",
                 data_format="NCHW",
                 dilation_rate=[1, 1],
                 trainable=False,
@@ -127,13 +127,13 @@ class ResNet(object):
         if downsample:
             x = flow.layers.conv2d(
                 inputs=inputs,
-                filters=self.cfg.BACKBONE.RESNET_STEM_OUT_CHANNELS,
-                kernel_size=[7, 7],
-                strides=[2, 2],
-                padding="VALID",
+                filters=out_channels,
+                kernel_size=[1, 1],
+                strides=strides,
+                padding="SAME",
                 data_format="NCHW",
                 dilation_rate=[1, 1],
-                trainable=False,
+                trainable=trainable,
                 name="downsample_0",
             )
             downsample_blob = flow.layers.affine_channel(
@@ -145,7 +145,7 @@ class ResNet(object):
             filters=bottleneck_channels,
             kernel_size=[1, 1],
             strides=strides,
-            padding="VALID",
+            padding="SAME",
             data_format="NCHW",
             dilation_rate=[1, 1],
             trainable=trainable,
@@ -160,7 +160,7 @@ class ResNet(object):
             filters=bottleneck_channels,
             kernel_size=[3, 3],
             strides=strides,
-            padding="VALID",
+            padding="SAME",
             data_format="NCHW",
             dilation_rate=[1, 1],
             trainable=trainable,
@@ -172,10 +172,10 @@ class ResNet(object):
 
         conv3 = flow.layers.conv2d(
             inputs=affine2,
-            filters=bottleneck_channels,
+            filters=out_channels,
             kernel_size=[1, 1],
             strides=strides,
-            padding="VALID",
+            padding="SAME",
             data_format="NCHW",
             dilation_rate=[1, 1],
             trainable=trainable,
