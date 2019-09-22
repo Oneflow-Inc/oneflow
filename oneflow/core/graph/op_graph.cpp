@@ -281,6 +281,7 @@ void OpNode::ConcatLogicalOutputBlobDesc() {
 
 void OpNode::CheckBlobDescs(const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
                             const ParallelContext* parallel_ctx) const {
+  return;
   int64_t parallel_id = parallel_ctx->parallel_id();
   auto Check = [&](const std::string& bn) {
     if (bn2parallel_id2blob_desc_.find(bn) == bn2parallel_id2blob_desc_.end()) { return; }
@@ -381,7 +382,7 @@ void OpGraph::InferOpNodeSbpSignature(OpNode* op_node, const SbpSignature& sbp_s
   for (const std::string& ibn : op_node->op().input_bns()) {
     const LogicalBlobId& lbi = op_node->op().BnInOp2Lbi(ibn);
     OpNode* producer = op_node->MutSrcNode4InputBnInOp(ibn);
-    const ParallelDesc* parallel_desc = &op_node->parallel_desc();
+    const ParallelDesc* parallel_desc = &producer->parallel_desc();
     const BlobDesc* logical_blob_desc = &producer->LogicalBlobDesc4Lbi(lbi);
     const auto& sbp = producer->SbpParallel4Lbi(lbi);
     ibn2sbp_infer_hint.emplace(ibn, SbpInferHint(parallel_desc, logical_blob_desc, sbp));

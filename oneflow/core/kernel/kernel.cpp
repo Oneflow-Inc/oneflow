@@ -177,7 +177,8 @@ namespace {
 
 const HashSet<OperatorConf::OpTypeCase>& OpsWithNewKernelRegistry() {
   static HashSet<OperatorConf::OpTypeCase> ops = {
-      OperatorConf::kMatmulConf, OperatorConf::kCastConf, OperatorConf::kAssignConf};
+      OperatorConf::kMatmulConf, OperatorConf::kCastConf, OperatorConf::kNcclTupleBroadcastConf,
+      OperatorConf::kNcclTupleReduceConf, OperatorConf::kAssignConf};
   return ops;
 }
 

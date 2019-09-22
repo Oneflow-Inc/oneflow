@@ -303,6 +303,16 @@ def set_all_reduce_fp16(value = True):
     _SetJobConfAttr(lambda x:x, 'all_reduce_fp16', value)
     return oneflow.config
 
+@oneflow_export('config.enable_non_distributed_optimizer')
+def set_enable_non_distributed_optimizer(value = True):
+    _SetJobConfAttr(lambda x:x, 'enable_non_distributed_optimizer', value)
+    return oneflow.config
+
+@oneflow_export('config.non_distributed_optimizer_group_size_mbyte')
+def set_non_distributed_optimizer_group_size_mbyte(value):
+    _SetJobConfAttr(lambda x:x, 'non_distributed_optimizer_group_size_mbyte', value)
+    return oneflow.config
+
 @oneflow_export('config.enable_true_half_config_when_conv')
 def set_enable_true_half_config_when_conv(value = True):
     _SetJobConfAttr(lambda x:x, 'enable_true_half_config_when_conv', value)
