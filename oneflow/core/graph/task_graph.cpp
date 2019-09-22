@@ -413,7 +413,7 @@ void TaskGraph::EnableInplaceMemSharingInReduceStruct() {
     if (identity_node->parallel_ctx()->parallel_num() < 2) { return; }
     std::list<TaskNode*> reduce_task_nodes = CollectReduceTaskNode(identity_node);
 
-    const int64_t mem_block_id = Global<IDMgr>::Get()->NewMemSharedId();
+    const int64_t mem_block_id = Global<IDMgr>::Get()->NewMemBlockId();
     const int64_t mem_size = CalcModelSize(identity_node);
     ReduceMemSharingCtx ctx(mem_size, mem_block_id);
     for (TaskNode* reduce_node : reduce_task_nodes) {

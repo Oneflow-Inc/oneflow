@@ -110,9 +110,6 @@ void ForEachSameColoredChainRegstDescWithConsumer(
            && IsConsumersAndProducerInSameChain(regst_desc, ChainId4TaskId);
   };
   SharableMemBlockGraph sharable_mem_block_gph(plan_task_graph, IsSharableRegstWithConsumer);
-  sharable_mem_block_gph.ForEachNode([&](const SharableMemBlockNode* sharable_mem_block) {
-    CHECK_EQ(sharable_mem_block->mem_block().mem_reduce_method(), MemReduceMethod::kMemMax);
-  });
   // group regst_descs for pre-colored regst_descs.
   // example:
   // given dlnet: A -> B -> C -> D -> E -> F -> H -> I, where D is a inplace op.
@@ -163,17 +160,17 @@ void ForEachSameColoredChainRegstDescWithConsumer(
                                     ComputeLifetimeSameChainActorIds, AppendGroupMembers);
 }
 
-void ForEachImprovedMemSharedId(const PlanTaskGraph& plan_task_graph,
-                                const std::function<void(int64_t, int64_t)>& Handler) {
+void ForEachInferredMemBlockId(const PlanTaskGraph& plan_task_graph,
+                               const std::function<void(int64_t, int64_t)>& Handler) {
   const Plan& plan = plan_task_graph.plan();
-  auto HandleMemSharedId = [&](const std::vector<const RegstDescProto*>& regst_descs) {
-    int64_t mem_block_id = Global<IDMgr>::Get()->NewMemSharedId();
+  auto HandleMemBlockId = [&](const std::vector<const RegstDescProto*>& regst_descs) {
+    int64_t mem_block_id = Global<IDMgr>::Get()->NewMemBlockId();
     for (const RegstDescProto* regst_desc : regst_descs) {
       Handler(regst_desc->regst_desc_id(), mem_block_id);
     }
   };
-  ForEachSameColoredStreamRegstDescWithoutConsumer(plan, HandleMemSharedId);
-  ForEachSameColoredChainRegstDescWithConsumer(plan_task_graph, HandleMemSharedId);
+  ForEachSameColoredStreamRegstDescWithoutConsumer(plan, HandleMemBlockId);
+  ForEachSameColoredChainRegstDescWithConsumer(plan_task_graph, HandleMemBlockId);
 }
 
 double CalcRegstNum(double regst_desc_duration, double ii, double ii_scale) {
@@ -397,14 +394,14 @@ void SetInplaceConsumedRegstDescId(
   }
 }
 
-void SetUniqueMemSharedId4UnsharedRegst(Plan* plan) {
+void SetUniqueMemBlockId4UnreusedMemRegst(Plan* plan) {
   for (int i = 0; i < plan->task_size(); i++) {
     TaskProto* task = plan->mutable_task(i);
     for (auto& pair : *task->mutable_produced_regst_desc()) {
       RegstDescProto* regst_desc = &pair.second;
       if (regst_desc->mem_block_id() == -1) {
         CHECK_EQ(regst_desc->mem_block_offset(), -1);
-        regst_desc->set_mem_block_id(Global<IDMgr>::Get()->NewMemSharedId());
+        regst_desc->set_mem_block_id(Global<IDMgr>::Get()->NewMemBlockId());
         regst_desc->set_mem_block_offset(0);
       }
     }
@@ -556,7 +553,7 @@ void Improver::ForEachInferredMemSharingCriticalSection(
 }
 
 void Improver::Init(const AvailableMemDesc& amd, const Plan& naive_plan) {
-  start_mem_block_id_ = Global<IDMgr>::Get()->NewMemSharedId();
+  start_mem_block_id_ = Global<IDMgr>::Get()->NewMemBlockId();
   amd_ = amd;
   record_load_task_num_.assign(Global<ResourceDesc>::Get()->TotalMachineNum(), 0);
   for (const TaskProto& task_proto : naive_plan.task()) {
@@ -566,17 +563,17 @@ void Improver::Init(const AvailableMemDesc& amd, const Plan& naive_plan) {
   }
 }
 
-Plan Improver::ImproveMemSharedIdOnly(const AvailableMemDesc& amd, const Plan& naive_plan) {
+Plan Improver::GenAndInferMemBlockIdOnly(const AvailableMemDesc& amd, const Plan& naive_plan) {
   Init(amd, naive_plan);
-  Plan mem_shared_plan = ImproveMemSharedId(naive_plan);
+  Plan complete_plan = GenAndInferMemBlockId(naive_plan);
   // Check if there is any zone out of memory even though all register_num == 1
   MemZoneRegstDescs mz_regst_descs;
-  MakeMemZoneRegstDescs(mem_shared_plan, &mz_regst_descs);
+  MakeMemZoneRegstDescs(complete_plan, &mz_regst_descs);
   HashMap<int64_t, double> zero2one{{0, 1}};
   auto Zero2One = [&](int64_t) -> const HashMap<int64_t, double>& { return zero2one; };
   CHECK(!IsAnyZoneOutOfMemory(mz_regst_descs, Zero2One, Zero2One, 1));
-  SetUniqueMemSharedId4UnsharedRegst(&mem_shared_plan);
-  return mem_shared_plan;
+  SetUniqueMemBlockId4UnreusedMemRegst(&complete_plan);
+  return complete_plan;
 }
 
 Plan Improver::Improve(const AvailableMemDesc& amd, const Plan& naive_plan,
@@ -593,21 +590,21 @@ Plan Improver::Improve(const AvailableMemDesc& amd, const Plan& naive_plan,
   Plan mem_unlimited_plan(naive_plan);
   ForEachImprovedRegstNum(naive_plan, false, base_ii, PathDurations4RegstDescId,
                           PathIIScales4RegstDescId, MakeSetterSetPlanRegstNum(&mem_unlimited_plan));
-  Plan mem_shared_plan = ImproveMemSharedId(mem_unlimited_plan);
-  Plan plan(mem_shared_plan);
-  ForEachImprovedRegstNum(mem_shared_plan, true, base_ii, PathDurations4RegstDescId,
+  Plan complete_plan = GenAndInferMemBlockId(mem_unlimited_plan);
+  Plan plan(complete_plan);
+  ForEachImprovedRegstNum(complete_plan, true, base_ii, PathDurations4RegstDescId,
                           PathIIScales4RegstDescId, MakeSetterSetPlanRegstNum(&plan));
   FixReliantCtrlRegstNum(plan, MakeGetterGetPlanRegstNum(&plan), MakeSetterSetPlanRegstNum(&plan));
-  SetUniqueMemSharedId4UnsharedRegst(&plan);
+  SetUniqueMemBlockId4UnreusedMemRegst(&plan);
   return plan;
 }
 
-Plan Improver::ImproveMemSharedId(const Plan& naive_plan) const {
+Plan Improver::GenAndInferMemBlockId(const Plan& naive_plan) const {
   Plan plan(naive_plan);
   PlanTaskGraph plan_task_graph(naive_plan);
   {
     auto regst_desc_id2regst_desc = MakeRegstDescId2RegstDesc(&plan);
-    ForEachImprovedMemSharedId(plan_task_graph, [&](int64_t regst_desc_id, int64_t mem_block_id) {
+    ForEachInferredMemBlockId(plan_task_graph, [&](int64_t regst_desc_id, int64_t mem_block_id) {
       regst_desc_id2regst_desc->at(regst_desc_id)->set_mem_block_id(mem_block_id);
       regst_desc_id2regst_desc->at(regst_desc_id)->set_mem_block_offset(0);
     });

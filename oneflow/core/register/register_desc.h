@@ -9,7 +9,6 @@ namespace oneflow {
 const int32_t kMaxRegisterNum = std::numeric_limits<int32_t>::max();
 
 void InitCtrlRegstDesc(int64_t producer_task_id, RegstDescProto* ctrl_regst_proto);
-MemoryCase MakeHostMemCase();
 
 class TaskNode;
 
@@ -61,8 +60,8 @@ class RegstDesc final {
   }
   int32_t mem_block_id() const { return mem_block_id_; }
   void set_mem_block_id(int32_t val) { mem_block_id_ = val; }
-  bool HasSetMemSharedId() { return mem_block_id_ != -1; }
-  void CopyMemSharedInfoFrom(const RegstDesc*);
+  bool HasSetMemBlockId() { return mem_block_id_ != -1; }
+  void CopyMemBlockInfoFrom(const RegstDesc*);
 
   const std::shared_ptr<Shape>& data_regst_time_shape() const {
     CHECK(regst_desc_type_.has_data_regst_desc());
@@ -105,23 +104,6 @@ class RegstDesc final {
   std::shared_ptr<Shape> data_regst_time_shape_;
 };
 
-inline bool operator==(const MemBlock& lhs, const MemBlock& rhs) {
-  bool ret = (lhs.mem_block_id() == rhs.mem_block_id());
-  if (ret) { CHECK_EQ(lhs.mem_reduce_method(), rhs.mem_reduce_method()); }
-  return ret;
-}
-
 }  // namespace oneflow
-
-namespace std {
-
-template<>
-struct hash<oneflow::MemBlock> final {
-  size_t operator()(const oneflow::MemBlock& mem_block) const {
-    return hash<int64_t>()(mem_block.mem_block_id());
-  }
-};
-
-}  // namespace std
 
 #endif  // ONEFLOW_CORE_REGISTER_REGISTER_DESC_H_

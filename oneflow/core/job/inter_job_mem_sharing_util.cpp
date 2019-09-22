@@ -55,7 +55,7 @@ std::vector<HashSet<int64_t>> InitJobId2MutualExclusionJobIds(const std::vector<
       }
     }
   }
-  const JobMemSharingStrategy* strategy = Global<const JobMemSharingStrategy>::Get();
+  const InterJobReuseMemStrategy* strategy = Global<const InterJobReuseMemStrategy>::Get();
   if (strategy->has_custom_parallelism()) {
     auto* job_name2job_id = Global<JobName2JobId>::Get();
     for (const auto& group : strategy->custom_parallelism().nonparallel_group()) {
@@ -78,7 +78,7 @@ std::vector<HashSet<int64_t>> InitJobId2MutualExclusionJobIds(const std::vector<
 std::vector<HashSet<int64_t>> GetMutualExclusionJobGroups(const std::vector<Job>& jobs) {
   int64_t job_size = jobs.size();
   std::vector<HashSet<int64_t>> job_groups;
-  if (Global<const JobMemSharingStrategy>::Get()->has_mem_sharing_priority()) {
+  if (Global<const InterJobReuseMemStrategy>::Get()->has_reuse_mem_priority()) {
     job_groups.push_back(HashSet<int64_t>());
     FOR_RANGE(int64_t, i, 0, job_size) { job_groups.front().emplace(i); }
     return job_groups;
@@ -158,7 +158,7 @@ struct MbiInfo {
 };
 
 std::vector<std::unique_ptr<MbiInfo>> InitMemBlockId2MbiInfo(std::vector<Plan>* sub_plans) {
-  int64_t mem_block_id_max = Global<IDMgr>::Get()->NewMemSharedId();
+  int64_t mem_block_id_max = Global<IDMgr>::Get()->NewMemBlockId();
   std::vector<std::unique_ptr<MbiInfo>> mem_block_id2mbi_info(mem_block_id_max);
   for (int64_t job_id = 0; job_id < sub_plans->size(); ++job_id) {
     Plan* sub_plan = &(sub_plans->at(job_id));
@@ -229,7 +229,7 @@ void InterJobMemSharingUtil::BindInterfaceMemBlockId(const std::vector<Job>& job
                    RtRegstDesc(*regst_desc).TotalSeparatedHeaderByteSize4AllRegst());
           if (first_regst_desc->separated_header_mem_block_id() == -1) {
             first_regst_desc->set_separated_header_mem_block_id(
-                Global<IDMgr>::Get()->NewMemSharedId());
+                Global<IDMgr>::Get()->NewMemBlockId());
           }
           regst_desc->set_separated_header_mem_block_id(
               first_regst_desc->separated_header_mem_block_id());

@@ -17,10 +17,10 @@ class Improver final {
 
   Plan Improve(const AvailableMemDesc& amd, const Plan& naive_plan,
                const std::string& act_event_filepath);
-  Plan ImproveMemSharedIdOnly(const AvailableMemDesc& amd, const Plan& naive_plan);
+  Plan GenAndInferMemBlockIdOnly(const AvailableMemDesc& amd, const Plan& naive_plan);
 
  private:
-  Plan ImproveMemSharedId(const Plan& naive_plan) const;
+  Plan GenAndInferMemBlockId(const Plan& naive_plan) const;
   void Init(const AvailableMemDesc& amd, const Plan& naive_plan);
   void ForEachImprovedRegstNum(
       const Plan& plan, bool is_memory_limited, double ii,

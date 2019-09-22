@@ -57,7 +57,7 @@ void RegstDesc::CopyBlobDescFrom(const RegstDesc* rhs) {
   CopyBlobDescWithoutAddLbi(rhs);
 }
 
-void RegstDesc::CopyMemSharedInfoFrom(const RegstDesc* rhs) {
+void RegstDesc::CopyMemBlockInfoFrom(const RegstDesc* rhs) {
   enable_reuse_mem_ = rhs->enable_reuse_mem_;
   mem_block_id_ = rhs->mem_block_id_;
   mem_block_offset_ = rhs->mem_block_offset_;
@@ -203,12 +203,6 @@ void InitCtrlRegstDesc(int64_t producer_task_id, RegstDescProto* ctrl_regst_prot
   ctrl_regst_proto->set_enable_reuse_mem(false);
   ctrl_regst_proto->set_mem_block_id(-1);
   ctrl_regst_proto->set_mem_block_offset(-1);
-}
-
-MemoryCase MakeHostMemCase() {
-  MemoryCase mem_case;
-  mem_case.mutable_host_mem();
-  return mem_case;
 }
 
 }  // namespace oneflow
