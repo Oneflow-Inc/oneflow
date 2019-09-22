@@ -3,6 +3,7 @@ import oneflow.core.operator.op_conf_pb2 as op_conf_util
 from datetime import datetime
 import argparse
 from collections import namedtuple
+from registry import Registry
 
 StageSpec = namedtuple(
     "StageSpec",
@@ -34,7 +35,7 @@ class ResNet(object):
             x = self.build_stem(inputs)
             for i, stage_spec in enumerate(self.stage_specs, 1):
                 stage_channel_relative_factor = 2 ** (stage_spec.index - 1)
-                bootleneck_channels = (
+                bottleneck_channels = (
                     self.stem_out_channels * stage_channel_relative_factor
                 )
                 out_channels = (
