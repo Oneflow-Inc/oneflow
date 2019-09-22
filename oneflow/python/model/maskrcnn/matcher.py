@@ -1,9 +1,7 @@
 class Matcher(object):
-    def __init__(self, dl_net, cfg, fg_iou_threshold, bg_iou_threshold, img_idx):
-        self.cfg = cfg
+    def __init__(self, fg_iou_threshold, bg_iou_threshold):
         self.fg_iou_threshold = fg_iou_threshold
         self.bg_iou_threshold = bg_iou_threshold
-        self.img_idx = img_idx
 
     # anchors: [M, 4]
     # gt_boxes: [G, 4]
