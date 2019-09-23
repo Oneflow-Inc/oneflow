@@ -21,7 +21,7 @@ class DynamicReshapeOp final : public Operator {
     int32_t num_inferred_axis = 0;
     std::vector<int64_t> conf_dim_vec = {conf.shape().dim().begin(), conf.shape().dim().end()};
     std::vector<int64_t> out_dim_vec = {};
-    for (int32_t i = 0; i < dim_vec.size(); ++i) {
+    for (int32_t i = 0; i < conf_dim_vec.size(); ++i) {
       if (conf_dim_vec[i] == -1) {
         inferred_axis = i;
         num_inferred_axis = 1;
