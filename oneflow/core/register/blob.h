@@ -122,9 +122,9 @@ class Blob final {
     CheckDataType<T>();
     return static_cast<T*>(dptr_);
   }
-  const Shape& static_shape() const { blob_desc_->body_shape(); }
+  const Shape& static_shape() const { return blob_desc_->body_shape(); }
   const Shape& shape() const {
-    return dense_shape(); // TODO(niuchong): remove this interface
+    return dense_shape();  // TODO(niuchong): remove this interface
   }
   const Shape& dense_shape() const { dense_shape_.shape(); }
   void set_dense_shape(const Shape& shape) { dense_shape_.set_shape(shape); }
@@ -134,13 +134,14 @@ class Blob final {
   void PushLoDLength(int64_t level, int64_t len) { lod_.PushLength(level, len); }
   void SetLoDDone() { lod_.SetLoDDone(); }
 
-  size_t AlignedTotalByteSize(size_t align) const {
-    return blob_desc_->AlignedTotalByteSize(align);
-  }
+  size_t AlignedTotalByteSize() const { return blob_desc_->AlignedTotalByteSize(); }
   const MemoryCase& mem_case() const;
 
   // legacy interface, shouldn't use in new code
-  size_t ByteSizeOfDataContentField() const { return blob_desc_->RealByteSizeOfBlobBody(); }
+  size_t ByteSizeOfDataContentField() const { return blob_desc_->ByteSizeOfBlobBody(); }
+
+  int32_t record_num() const { return record_num_; }
+  void set_record_num(int32_t val) { record_num_ = val; }
 
  private:
   void Init(Regst* regst, const RtBlobDesc* blob_desc, char* header_ptr, char* body_ptr);
@@ -161,6 +162,9 @@ class Blob final {
 
   DenseShapeWrapper dense_shape_;
   LoDWrapper lod_;
+
+  // TODO(); remove this ugly code
+  int32_t record_num_;
 };
 
 template<typename RecordType>

@@ -42,7 +42,7 @@ void BlobDesc::ToProto(BlobDescProto* proto) const {
 }
 
 BlobDesc& BlobDesc::operator=(const BlobDesc& rhs) {
-  CHECK(rhs.is_body_disabled() == false); // prevent from misuse
+  CHECK(rhs.is_body_disabled() == false);  // prevent from misuse
   this->CopyFrom(rhs);
 }
 
@@ -63,9 +63,12 @@ void BlobDesc::SetLoD(int64_t num_of_lod_levels) {
     max_reserved_size_for_lod += cur_level_size;
   }
 
-  header_.AddField(FieldKey::kLoD, TensorPodDesc(Shape(std::vector<int64_t>{max_reserved_size_for_lod}), DataType::kInt64));
+  header_.AddField(
+      FieldKey::kLoD,
+      TensorPodDesc(Shape(std::vector<int64_t>{max_reserved_size_for_lod}), DataType::kInt64));
   TensorPodDesc* dense_shape_desc = header_.Field(FieldKey::kDenseShap).MutCast<TensorPodDesc>();
-  *(dense_shape_desc->mut_shape()) = Shape(std::vector<int64_t>{shape().NumAxes() - num_of_lod_levels});
+  *(dense_shape_desc->mut_shape()) =
+      Shape(std::vector<int64_t>{shape().NumAxes() - num_of_lod_levels});
 }
 
 bool BlobDesc::operator==(const BlobDesc& rhs) const {

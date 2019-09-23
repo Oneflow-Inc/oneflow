@@ -20,6 +20,8 @@ class BlobDesc final {
   explicit BlobDesc(const BlobDescProto& proto);
   explicit BlobDesc(const BlobDesc&);
 
+  static const int32_t kAlignSize = 256;
+
   BlobDesc& operator=(const BlobDesc&);
 
   void CopyFrom(const BlobDesc&);
@@ -38,7 +40,6 @@ class BlobDesc final {
 
   bool operator==(const BlobDesc&) const;
   void ToProto(BlobDescProto*) const;
-
 
   // legacy interface, shouldn't use in new code
   void CopyMetaFrom(const BlobDesc& other) { CopyFrom(other); }

@@ -28,8 +28,8 @@ class RtBlobDesc final {
 
   size_t ByteSizeOfBlobHeader() const;
   size_t ByteSizeOfBlobBody() const;
-  size_t AlignedByteSizeOfBlobBody(size_t align_size) const;
-  size_t AlignedTotalByteSize(size_t align_size) const;
+  size_t AlignedByteSizeOfBlobBody() const;
+  size_t AlignedTotalByteSize() const;
 
   bool operator==(const RtBlobDesc& rhs) const;
 

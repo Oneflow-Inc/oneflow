@@ -7,6 +7,8 @@
 
 namespace oneflow {
 
+class Blob;
+
 class OfBlob final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(OfBlob);

@@ -21,18 +21,16 @@ size_t RtBlobDesc::ByteSizeOfBlobHeader() const { return header_.ByteSize(); }
 
 size_t RtBlobDesc::ByteSizeOfBlobBody() const { return body_.ByteSize(); }
 
-size_t RtBlobDesc::AlignedByteSizeOfBlobBody(size_t align_size) const {
-  return RoundUp(ByteSizeOfBlobBody(), align_size);
+size_t RtBlobDesc::AlignedByteSizeOfBlobBody() const {
+  return RoundUp(ByteSizeOfBlobBody(), BlobDesc::kAlignSize);
 }
 
-size_t AlignedTotalByteSize(size_t align_size) const {
-  return ByteSizeOfBlobHeader() + AlignedByteSizeOfBlobBody(align_size);
-}
+size_t AlignedTotalByteSize() const { return ByteSizeOfBlobHeader() + AlignedByteSizeOfBlobBody(); }
 
 bool RtBlobDesc::operator==(const RtBlobDesc& rhs) const {
   return (body_ == rhs.body_) && (header_ == rhs.header_)
-    && (num_of_lod_levels_ == rhs.num_of_lod_levels_)
-    && (is_body_disabled_ == rhs.is_body_disabled_);
+         && (num_of_lod_levels_ == rhs.num_of_lod_levels_)
+         && (is_body_disabled_ == rhs.is_body_disabled_);
 }
 
 }  // namespace oneflow

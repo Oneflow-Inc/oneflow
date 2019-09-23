@@ -14,4 +14,14 @@ void Memcpy<DeviceType::kCPU>(DeviceCtx* ctx, void* dst, const void* src, size_t
   memcpy(dst, src, sz);
 }
 
+void WithHostBlobAndStreamSynchronizeEnv(DeviceCtx* ctx, Blob* blob,
+                                         std::function<void(Blob*)> Callback) {
+  char* host_raw_dptr = nullptr;
+  CudaCheck(cudaMallocHost(&host_raw_dptr, blob->AlignedTotalByteSize()));
+  Blob host_blob(nullptr, &blob->blob_desc(), host_raw_dptr);
+  Callback(&host_blob);
+  CudaCheck(cudaStreamSynchronize(ctx->cuda_stream()));
+  CudaCheck(cudaFreeHost(host_raw_dptr));
+}
+
 }  // namespace oneflow
