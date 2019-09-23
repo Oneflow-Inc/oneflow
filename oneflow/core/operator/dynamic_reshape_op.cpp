@@ -29,7 +29,7 @@ class DynamicReshapeOp final : public Operator {
         dim_vec.push_back(dim_vec[i]);
       }
     }
-    CHECK_GT_OR_RETURN(inferred_axis, 0);
+    CHECK_GE_OR_RETURN(inferred_axis, 0);
     CHECK_EQ_OR_RETURN(num_inferred_axis, 1);
     dim_vec.insert(dim_vec.begin() + inferred_axis,
                    in->shape().elem_cnt() / out->shape().elem_cnt());
