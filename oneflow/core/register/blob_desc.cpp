@@ -76,4 +76,10 @@ bool BlobDesc::operator==(const BlobDesc& rhs) const {
   return lhs_proto == rhs_proto;
 }
 
+void BlobDesc::set_num_of_lod_levels(int64_t val) { 
+  CHECK_GT(val, 1);
+  CHECK_LT(val, shape().NumAxes());
+  num_of_lod_levels_ = val;
+}
+
 }  // namespace oneflow
