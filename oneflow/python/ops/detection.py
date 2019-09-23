@@ -328,9 +328,7 @@ def upsample_nearest(inputs, scale, data_format, name=None):
         name if name is not None else id_util.UniqueStr("UpsampleNearest_"),
     )
     assert isinstance(scale, int)
-    setattr(
-        op_conf.non_maximum_suppression_conf, "in", inputs.logical_blob_name
-    )
+    setattr(op_conf.upsample_nearest_conf, "in", inputs.logical_blob_name)
     op_conf.upsample_nearest_conf.scale = scale
     op_conf.upsample_nearest_conf.data_format = data_format
     op_conf.upsample_nearest_conf.out = "out"
