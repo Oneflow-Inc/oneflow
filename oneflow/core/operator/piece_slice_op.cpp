@@ -37,6 +37,7 @@ class PieceSliceOp final : public Operator {
     //   out_i->set_data_type(in->data_type());
     //   out_i->set_has_lod(false);
     // }
+    return Maybe<void>::Ok();
   }
 
  private:
@@ -44,12 +45,16 @@ class PieceSliceOp final : public Operator {
       const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
       std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
     // TODO
+    return Maybe<void>::Ok();
   }
   Maybe<void> GetSbpSignatures(
       const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
       SbpSignatureList* sbp_sig_list) const {
     // TODO
+    return Maybe<void>::Ok();
   }
 };
+
+REGISTER_OP(OperatorConf::kPieceSliceConf, PieceSliceOp);
 
 }  // namespace oneflow
