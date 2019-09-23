@@ -136,8 +136,11 @@ class RPNLoss(object):
 
                 # exclude outside anchors
                 matched_indices = flow.where(
-                    flow.detection.identify_outside_anchors(
-                        anchors, image_size_list[img_idx], tolerance=0.0
+                    flow.reshape(
+                        flow.detection.identify_outside_anchors(
+                            anchors, image_size_list[img_idx], tolerance=0.0
+                        ),
+                        [-1, 1],
                     ),
                     flow.constant_like(matched_indices, int(-2)),
                     matched_indices,
