@@ -179,10 +179,12 @@ def anchor_generate(
         "name",
         name if name is not None else id_util.UniqueStr("AnchorGenerate_"),
     )
-    setattr(op_conf.anchor_generate_conf, "images", inputs.logical_blob_name)
+    assert isinstance(aspect_ratios, (list, tuple))
+    assert isinstance(anchor_scales, (list, tuple))
+    setattr(op_conf.anchor_generate_conf, "images", images.logical_blob_name)
     op_conf.anchor_generate_conf.feature_map_stride = feature_map_stride
-    op_conf.anchor_generate_conf.aspect_ratios = aspect_ratios
-    op_conf.anchor_generate_conf.anchor_scales = anchor_scales
+    op_conf.anchor_generate_conf.aspect_ratios.extend(aspect_ratios) 
+    op_conf.anchor_generate_conf.anchor_scales.extend(anchor_scales)
     op_conf.anchor_generate_conf.anchors = "anchors"
     compile_context.CurJobAddOp(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
