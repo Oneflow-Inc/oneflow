@@ -11,6 +11,29 @@ bool IsBoxingNotSupported(const Maybe<void>& status) {
          && status.error()->boxing_error() == BoxingError::kNotSupported;
 }
 
+template<typename DerivedNodeType>
+void NcclBldSubTskGph(SubTskGphBuilderCtx* ctx,
+                      const std::vector<CompTaskNode*>& sorted_src_comp_tasks,
+                      const std::vector<CompTaskNode*>& sorted_dst_comp_tasks,
+                      const LogicalBlobId& lbi) {
+  const int64_t parallel_num = sorted_dst_comp_tasks.size();
+  const int64_t rank_set_id = NewNodeId() << 32;
+  FOR_RANGE(int64_t, i, 0, parallel_num) {
+    ParallelContext parallel_ctx{};
+    parallel_ctx.set_parallel_id(i);
+    parallel_ctx.set_parallel_num(parallel_num);
+    parallel_ctx.mutable_rank_ctx()->set_rank_id(i);
+    parallel_ctx.mutable_rank_ctx()->set_rank_num(parallel_num);
+    parallel_ctx.mutable_rank_ctx()->set_rank_set_id(rank_set_id);
+    CompTaskNode* src_node = sorted_src_comp_tasks.at(i);
+    CompTaskNode* dst_node = sorted_dst_comp_tasks.at(i);
+    DerivedNodeType* nccl_node = ctx->task_graph()->NewNode<DerivedNodeType>();
+    nccl_node->Init(src_node->machine_id(), src_node->GpuPhyId(), parallel_ctx, lbi);
+    Connect<TaskNode>(src_node, ctx->task_graph()->NewEdge(), nccl_node);
+    Connect<TaskNode>(nccl_node, ctx->task_graph()->NewEdge(), dst_node);
+  }
+}
+
 }  // namespace
 
 Maybe<void> NcclBoxingSubTskGphBuilder::Build(
@@ -27,62 +50,20 @@ Maybe<void> NcclBoxingSubTskGphBuilder::Build(
   if (dst_parallel_desc.device_type() != DeviceType::kGPU) { return Error::BoxingNotSupported(); }
   if (dst_parallel_desc.parallel_num() <= 1) { return Error::BoxingNotSupported(); }
   if (SubTskGphBuilderUtil::IsBoxingP2B(src_sbp_parallel, dst_sbp_parallel)) {
-    const int64_t rank_set_id = NewNodeId() << 32;
-    FOR_RANGE(int64_t, i, 0, dst_parallel_desc.parallel_num()) {
-      ParallelContext parallel_ctx{};
-      parallel_ctx.set_parallel_id(i);
-      parallel_ctx.set_parallel_num(dst_parallel_desc.parallel_num());
-      parallel_ctx.mutable_rank_ctx()->set_rank_id(i);
-      parallel_ctx.mutable_rank_ctx()->set_rank_num(dst_parallel_desc.parallel_num());
-      parallel_ctx.mutable_rank_ctx()->set_rank_set_id(rank_set_id);
-      CompTaskNode* src_node = sorted_src_comp_tasks.at(i);
-      CompTaskNode* dst_node = sorted_dst_comp_tasks.at(i);
-      NcclBoxingAllReduceTaskNode* nccl_node =
-          ctx->task_graph()->NewNode<NcclBoxingAllReduceTaskNode>();
-      nccl_node->Init(src_node->machine_id(), src_node->GpuPhyId(), parallel_ctx, lbi);
-      Connect<TaskNode>(src_node, ctx->task_graph()->NewEdge(), nccl_node);
-      Connect<TaskNode>(nccl_node, ctx->task_graph()->NewEdge(), dst_node);
-    }
+    NcclBldSubTskGph<NcclBoxingAllReduceTaskNode>(ctx, sorted_src_comp_tasks, sorted_dst_comp_tasks,
+                                                  lbi);
     return Maybe<void>::Ok();
   } else if (SubTskGphBuilderUtil::IsBoxingP2S(src_sbp_parallel, dst_sbp_parallel)
              && dst_sbp_parallel.split_parallel().axis() == 0
              && logical_blob_desc.shape().At(0) % dst_parallel_desc.parallel_num() == 0) {
-    const int64_t rank_set_id = NewNodeId() << 32;
-    FOR_RANGE(int64_t, i, 0, dst_parallel_desc.parallel_num()) {
-      ParallelContext parallel_ctx{};
-      parallel_ctx.set_parallel_id(i);
-      parallel_ctx.set_parallel_num(dst_parallel_desc.parallel_num());
-      parallel_ctx.mutable_rank_ctx()->set_rank_id(i);
-      parallel_ctx.mutable_rank_ctx()->set_rank_num(dst_parallel_desc.parallel_num());
-      parallel_ctx.mutable_rank_ctx()->set_rank_set_id(rank_set_id);
-      CompTaskNode* src_node = sorted_src_comp_tasks.at(i);
-      CompTaskNode* dst_node = sorted_dst_comp_tasks.at(i);
-      NcclBoxingReduceScatterTaskNode* nccl_node =
-          ctx->task_graph()->NewNode<NcclBoxingReduceScatterTaskNode>();
-      nccl_node->Init(src_node->machine_id(), src_node->GpuPhyId(), parallel_ctx, lbi);
-      Connect<TaskNode>(src_node, ctx->task_graph()->NewEdge(), nccl_node);
-      Connect<TaskNode>(nccl_node, ctx->task_graph()->NewEdge(), dst_node);
-    }
+    NcclBldSubTskGph<NcclBoxingReduceScatterTaskNode>(ctx, sorted_src_comp_tasks,
+                                                      sorted_dst_comp_tasks, lbi);
     return Maybe<void>::Ok();
   } else if (SubTskGphBuilderUtil::IsBoxingS2B(src_sbp_parallel, dst_sbp_parallel)
              && src_sbp_parallel.split_parallel().axis() == 0
              && logical_blob_desc.shape().At(0) % dst_parallel_desc.parallel_num() == 0) {
-    const int64_t rank_set_id = NewNodeId() << 32;
-    FOR_RANGE(int64_t, i, 0, dst_parallel_desc.parallel_num()) {
-      ParallelContext parallel_ctx{};
-      parallel_ctx.set_parallel_id(i);
-      parallel_ctx.set_parallel_num(dst_parallel_desc.parallel_num());
-      parallel_ctx.mutable_rank_ctx()->set_rank_id(i);
-      parallel_ctx.mutable_rank_ctx()->set_rank_num(dst_parallel_desc.parallel_num());
-      parallel_ctx.mutable_rank_ctx()->set_rank_set_id(rank_set_id);
-      CompTaskNode* src_node = sorted_src_comp_tasks.at(i);
-      CompTaskNode* dst_node = sorted_dst_comp_tasks.at(i);
-      NcclBoxingAllGatherTaskNode* nccl_node =
-          ctx->task_graph()->NewNode<NcclBoxingAllGatherTaskNode>();
-      nccl_node->Init(src_node->machine_id(), src_node->GpuPhyId(), parallel_ctx, lbi);
-      Connect<TaskNode>(src_node, ctx->task_graph()->NewEdge(), nccl_node);
-      Connect<TaskNode>(nccl_node, ctx->task_graph()->NewEdge(), dst_node);
-    }
+    NcclBldSubTskGph<NcclBoxingAllGatherTaskNode>(ctx, sorted_src_comp_tasks, sorted_dst_comp_tasks,
+                                                  lbi);
     return Maybe<void>::Ok();
   } else {
     return Error::BoxingNotSupported();
