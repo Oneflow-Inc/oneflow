@@ -24,7 +24,7 @@ _C.DECODER.MAX_SEGM_BYTES_SIZE_PER_IMAGE = 1048576
 _C.DECODER.FPN_LAYERS = 5
 _C.DECODER.FEATURE_MAP_STRIDE = 4
 _C.DECODER.ASPECT_RATIOS = [0.5, 1.0, 2.0]
-_C.DECODER.ANCHOR_SCALES = 32
+_C.DECODER.ANCHOR_SCALES = [32]
 
 # ---------------------------------------------------------------------------- #
 #  Backbone
