@@ -293,6 +293,9 @@ def local_nonzero(input, name=None):
 
 @oneflow_export("where")
 def where(condition, x, y, name=None):
+    print(condition.shape)
+    print(x.shape)
+    print(y.shape)
     assert condition.shape == x.shape and x.shape == y.shape
     op_conf = op_conf_util.OperatorConf()
     setattr(
@@ -320,10 +323,7 @@ def squeeze(inputs, axis, name=None):
         "name",
         name if name is not None else id_util.UniqueStr("Squeeze_"),
     )
-    for axis_i in axis:
-        if axis_i < 0:
-            axis_i = axis_i + len(inputs.shape)
-        assert axis_i < len(inputs.shape)
+    assert all(axis_i == -1 or axis_i > 0 for axis_i in axis)
     shape = []
     for i, dim in enumerate(inputs.shape):
         if i in axis:
