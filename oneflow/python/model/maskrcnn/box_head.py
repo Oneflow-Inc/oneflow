@@ -13,7 +13,9 @@ class BoxHead(object):
         with flow.deprecated.variable_scope("roi"):
             label_list = []
             proposal_list = []
+            pos_proposal_list = []
             bbox_target_list = []
+            pos_gt_indices_list = []
             for img_idx in range(len(proposals)):
                 with flow.deprecated.variable_scope("matcher"):
                     box_head_matcher = Matcher(
@@ -64,8 +66,14 @@ class BoxHead(object):
                 gt_indices = flow.local_gather(
                     clamped_matched_indices, sampled_pos_neg_inds
                 )
+                pos_gt_indices = flow.local_gather(
+                    clamped_matched_indices, sampled_pos_inds
+                )
                 proposal_per_img = flow.local_gather(
                     proposals[img_idx], sampled_pos_neg_inds
+                )
+                pos_proposal_per_img = flow.local_gather(
+                    proposals[img_idx], sampled_pos_inds
                 )
                 gt_boxes_per_img = flow.local_gather(gt_boxes_list[img_idx], gt_indices)
                 bbox_target_list.append(
@@ -81,6 +89,8 @@ class BoxHead(object):
                     )
                 )
                 proposal_list.append(proposal_per_img)
+                pos_proposal_list.append(pos_proposal_per_img)
+                pos_gt_indices_list.append(pos_gt_indices)
 
             proposals = flow.concat(proposal_list, axis=0)
             img_ids = flow.concat(self.extract_piece_slice_id(proposal_list), axis=0)
@@ -129,11 +139,15 @@ class BoxHead(object):
                 total_elem_cnt,
             )
 
-            return box_head_box_loss, box_head_cls_loss
+            return (
+                box_head_box_loss,
+                box_head_cls_loss,
+                pos_proposal_list,
+                pos_gt_indices_list,
+            )
 
     def box_feature_extractor(self, proposals, img_ids, features):
         levels = self.level_map(proposals)
-        print("box_head levels: " + levels.op_name())
         level_idx_2 = flow.local_nonzero(
             levels == flow.constant_scalar(int(0), flow.int32)
         )
