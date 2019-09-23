@@ -27,7 +27,7 @@ class ResNet(object):
         self.cfg = cfg
         self.stem_out_channels = cfg.BACKBONE.RESNET_STEM_OUT_CHANNELS
         self.stage_specs = _STAGE_SPECS[cfg.BACKBONE.CONV_BODY]
-        self.freeze_at = cfg.BACKBONE.FREEZE_CONV_BODY_A
+        self.freeze_at = cfg.BACKBONE.FREEZE_CONV_BODY_AT
 
     def build(self, inputs):
         features = []
