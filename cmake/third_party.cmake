@@ -61,7 +61,6 @@ set(oneflow_third_party_libs
     ${LIBJPEG_STATIC_LIBRARIES}
     ${OPENCV_STATIC_LIBRARIES}
     ${COCOAPI_STATIC_LIBRARIES}
-    ${TENSORFLOW_XLA_LIBRARIES}
 )
 
 if(WIN32)
@@ -107,13 +106,13 @@ include_directories(
     ${EIGEN_INCLUDE_DIR}
     ${COCOAPI_INCLUDE_DIR}
     ${HALF_INCLUDE_DIR}
-    ${TENSORFLOW_XLA_INCLUDE_DIR}
 )
 
 if (BUILD_CUDA)
   include(cub)
   include(nccl)
 
+  list(APPEND oneflow_third_party_libs -Wl,--whole-archive ${cuda_lib_dir}/libcublas_static.a -Wl,--no-whole-archive)
   list(APPEND oneflow_third_party_libs ${CUDA_LIBRARIES})
   list(APPEND oneflow_third_party_libs ${CUDNN_LIBRARIES})
   list(APPEND oneflow_third_party_libs ${NCCL_STATIC_LIBRARIES})
@@ -148,6 +147,11 @@ if(BUILD_RDMA)
   else()
     message(FATAL_ERROR "UNIMPLEMENTED")
   endif()
+endif()
+
+if(WITH_XLA)
+  include_directories(${TENSORFLOW_XLA_INCLUDE_DIR})
+  list(APPEND oneflow_third_party_libs ${TENSORFLOW_XLA_LIBRARIES})
 endif()
 
 message(STATUS "oneflow_third_party_libs: " ${oneflow_third_party_libs})
