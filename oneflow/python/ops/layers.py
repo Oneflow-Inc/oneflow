@@ -133,13 +133,8 @@ def conv2d(
             else flow.constant_initializer(0),
         )
     output = flow.nn.bias_add(output, bias, data_format)
-
-    # TODO: support more activations
     if activation is not None:
-        if activation == op_conf_util.kRelu:
-            output = flow.keras.activations.relu(output)
-        else:
-            raise NotImplementedError
+        activation(output)
 
     return output
 
