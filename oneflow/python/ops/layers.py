@@ -112,7 +112,6 @@ def conv2d(
         assert isinstance(kernel_size, (list, tuple))
         kernel_size = tuple(kernel_size)
     weight_shape = (filters, inputs.static_shape[1]) + kernel_size
-    print(weight_shape)
     weight = flow.get_variable(
         name_prefix + "-weight",
         shape=weight_shape,
