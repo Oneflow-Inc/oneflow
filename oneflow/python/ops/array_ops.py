@@ -320,9 +320,13 @@ def squeeze(inputs, axis, name=None):
         "name",
         name if name is not None else id_util.UniqueStr("Squeeze_"),
     )
+    for axis_i in axis:
+        if axis_i < 0:
+            axis_i = axis_i + len(inputs.shape)
+        assert axis_i < len(inputs.shape)
     shape = []
     for i, dim in enumerate(inputs.shape):
-        if i == axis:
+        if i in axis:
             assert dim == 1
         else:
             shape.append(dim)
