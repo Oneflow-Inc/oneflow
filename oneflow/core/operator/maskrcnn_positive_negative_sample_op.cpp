@@ -17,7 +17,9 @@ class MaskrcnnPositiveNegativeSampleOp final : public Operator {
  private:
   Maybe<void> InferBatchAxis(
       std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override {
-    return NaiveInferBatchAxis(BatchAxis4BnInOp);
+    BatchAxis4BnInOp("sampled_pos_inds")->clear_value();
+    BatchAxis4BnInOp("sampled_neg_inds")->clear_value();
+    return Maybe<void>::Ok();
   }
 };
 
