@@ -22,7 +22,7 @@ args = parser.parse_args()
 
 def get_numpy_placeholders():
     import numpy as np
-    (N,C,H,W) = (2,3,250,250)
+    (N,C,H,W) = (2,3,256,256)
     R=50
     G=12
     return (
