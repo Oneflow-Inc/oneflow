@@ -281,7 +281,7 @@ def set_use_nccl_inter_node_communication(value = True):
 
 
 @oneflow_export('config.use_boxing_v2')
-def set_use_nccl_inter_node_communication(value=False):
+def use_boxing_v2(value=True):
     _SetJobConfAttr(lambda x: x, 'use_boxing_v2', value)
     return oneflow.config
 
