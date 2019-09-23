@@ -14,7 +14,7 @@ class RPNHead(object):
             for layer_idx, feature in enumerate(layers, 1):
                 x = flow.conv2d(
                     inputs=feature,
-                    filters=256,
+                    filter15s=256,
                     kernel_size=[3, 3],
                     padding="SAME",
                     data_format="NCHW",
@@ -148,7 +148,7 @@ class RPNLoss(object):
                         resized_image_size_list[img_idx],
                         tolerance=0.0,
                     ),
-                    flow..constant_like(matched_indices, int(-2)),
+                    flow.constant_like(matched_indices, int(-2)),
                     matched_indices,
                 )
 
@@ -193,7 +193,7 @@ class RPNLoss(object):
                     flow.local_gather(concated_bbox_pred_list[img_idx], sampled_pos_inds)
                 )
                 # cls label and cls logit
-                cls_labels = matched_indices >= flow.constant(value=0 dtype=flow.int32, shape=[1])
+                cls_labels = matched_indices >= flow.constant(value=0, dtype=flow.int32, shape=[1])
                 sampled_pos_neg_inds = flow.concat(
                     [sampled_pos_inds, sampled_neg_inds], axis=0
                 )

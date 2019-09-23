@@ -11,9 +11,14 @@ parser = argparse.ArgumentParser()
 parser.add_argument(
     "--config_file", default=None, type=str, required=True, help="yaml config file"
 )
+parser.add_argument("-load", "--model_load_dir", type=str, default="", required=False)
 args = parser.parse_args()
 
+# images N,C,H,W
+# image_sizes N,2
+# gt_boxes N,R,4
 
+@flow.function
 def maskrcnn(images, image_sizes, gt_boxes):
     cfg = get_default_cfgs()
     cfg.merge_from_file(args.config_file)
@@ -52,3 +57,15 @@ def maskrcnn(images, image_sizes, gt_boxes):
         pass
 
     return None
+
+if __name__ == "__main__":
+    flow.config.gpu_device_num(args.gpu_num_per_node)
+    flow.config.ctrl_port(9788)
+
+    flow.config.default_data_type(flow.float)
+    check_point = flow.train.CheckPoint()
+    if not args.model_load_dir:
+        check_point.init()
+    else:
+        check_point.load(args.model_load_dir)
+    maskrcnn()
