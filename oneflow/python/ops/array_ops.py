@@ -325,7 +325,7 @@ def squeeze(inputs, axis, name=None):
             assert dim == 1
         else:
             shape.append(dim)
-    reshape(inputs, shape)
+    return reshape(inputs, shape)
 
 
 @oneflow_export("expand_dims")

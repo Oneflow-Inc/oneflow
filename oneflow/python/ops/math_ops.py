@@ -63,7 +63,9 @@ def divide(x, y, name=None):
 def scalar_add(x, operand, name=None):
     op_conf = op_conf_util.OperatorConf()
     setattr(
-        op_conf, "name", name if name is not None else id_util.UniqueStr("ScalarAdd_")
+        op_conf,
+        "name",
+        name if name is not None else id_util.UniqueStr("ScalarAdd_"),
     )
     setattr(op_conf.scalar_add_conf, "in", x.logical_blob_name)
     if isinstance(operand, int):
@@ -149,7 +151,9 @@ def broadcast_mul(x, y, name=None):
 def scalar_mul(x, operand, name=None):
     op_conf = op_conf_util.OperatorConf()
     setattr(
-        op_conf, "name", name if name is not None else id_util.UniqueStr("ScalarMul_")
+        op_conf,
+        "name",
+        name if name is not None else id_util.UniqueStr("ScalarMul_"),
     )
     setattr(op_conf.scalar_mul_conf, "in", x.logical_blob_name)
     if isinstance(operand, int):
@@ -184,7 +188,11 @@ def broadcast_div(x, y, name=None):
 @oneflow_export("math.tanh")
 def tanh(x, name=None):
     op_conf = op_conf_util.OperatorConf()
-    setattr(op_conf, "name", name if name is not None else id_util.UniqueStr("TanH_"))
+    setattr(
+        op_conf,
+        "name",
+        name if name is not None else id_util.UniqueStr("TanH_"),
+    )
     setattr(op_conf.tanh_conf, "in", x.logical_blob_name)
     setattr(op_conf.tanh_conf, "out", "out")
     compile_context.CurJobAddOp(op_conf)
@@ -197,7 +205,11 @@ def tanh(x, name=None):
 @oneflow_export("math.gelu")
 def gelu(x, name=None):
     op_conf = op_conf_util.OperatorConf()
-    setattr(op_conf, "name", name if name is not None else id_util.UniqueStr("Gelu_"))
+    setattr(
+        op_conf,
+        "name",
+        name if name is not None else id_util.UniqueStr("Gelu_"),
+    )
     setattr(op_conf.gelu_conf, "in", x.logical_blob_name)
     setattr(op_conf.gelu_conf, "out", "out")
     compile_context.CurJobAddOp(op_conf)
@@ -210,7 +222,11 @@ def gelu(x, name=None):
 @oneflow_export("math.relu")
 def relu(x, name=None):
     op_conf = op_conf_util.OperatorConf()
-    setattr(op_conf, "name", name if name is not None else id_util.UniqueStr("Relu_"))
+    setattr(
+        op_conf,
+        "name",
+        name if name is not None else id_util.UniqueStr("Relu_"),
+    )
     setattr(op_conf.relu_conf, "in", x.logical_blob_name)
     setattr(op_conf.relu_conf, "out", "out")
     compile_context.CurJobAddOp(op_conf)
@@ -224,7 +240,9 @@ def relu(x, name=None):
 def sigmoid(x, name=None):
     op_conf = op_conf_util.OperatorConf()
     setattr(
-        op_conf, "name", name if name is not None else id_util.UniqueStr("Sigmoid_")
+        op_conf,
+        "name",
+        name if name is not None else id_util.UniqueStr("Sigmoid_"),
     )
     setattr(op_conf.sigmoid_conf, "in", x.logical_blob_name)
     setattr(op_conf.sigmoid_conf, "out", "out")
@@ -239,7 +257,11 @@ def sqrt(x, name=None):
     # TODO: not ready yet
     raise NotImplementedError
     op_conf = op_conf_util.OperatorConf()
-    setattr(op_conf, "name", name if name is not None else id_util.UniqueStr("Sqrt_"))
+    setattr(
+        op_conf,
+        "name",
+        name if name is not None else id_util.UniqueStr("Sqrt_"),
+    )
     setattr(op_conf.sqrt_conf, "in", x.logical_blob_name)
     setattr(op_conf.sqrt_conf, "out", "out")
     compile_context.CurJobAddOp(op_conf)
@@ -253,7 +275,11 @@ def rsqrt(x, name=None):
     # TODO: not ready yet
     raise NotImplementedError
     op_conf = op_conf_util.OperatorConf()
-    setattr(op_conf, "name", name if name is not None else id_util.UniqueStr("Rsqrt_"))
+    setattr(
+        op_conf,
+        "name",
+        name if name is not None else id_util.UniqueStr("Rsqrt_"),
+    )
     setattr(op_conf.rsqrt_conf, "in", x.logical_blob_name)
     setattr(op_conf.rsqrt_conf, "out", "out")
     compile_context.CurJobAddOp(op_conf)
@@ -268,7 +294,11 @@ def cast(x, dtype, name=None):
     if x.dtype == dtype:
         return x
     op_conf = op_conf_util.OperatorConf()
-    setattr(op_conf, "name", name if name is not None else id_util.UniqueStr("Cast_"))
+    setattr(
+        op_conf,
+        "name",
+        name if name is not None else id_util.UniqueStr("Cast_"),
+    )
     setattr(op_conf.cast_conf, "in", x.logical_blob_name)
     setattr(op_conf.cast_conf, "data_type", dtype)
     setattr(op_conf.cast_conf, "out", "out")
@@ -282,7 +312,11 @@ def cast(x, dtype, name=None):
 @oneflow_export("math.top_k")
 def top_k(input, k=1, sorted=True, name=None):
     op_conf = op_conf_util.OperatorConf()
-    setattr(op_conf, "name", name if name is not None else id_util.UniqueStr("TopK_"))
+    setattr(
+        op_conf,
+        "name",
+        name if name is not None else id_util.UniqueStr("TopK_"),
+    )
     setattr(op_conf.top_k_conf, "in", input.logical_blob_name)
     setattr(op_conf.top_k_conf, "k", k)
     setattr(op_conf.top_k_conf, "sorted", sorted)
@@ -298,7 +332,9 @@ def top_k(input, k=1, sorted=True, name=None):
 def logical_and(lhs, rhs, name=None):
     op_conf = op_conf_util.OperatorConf()
     setattr(
-        op_conf, "name", name if name is not None else id_util.UniqueStr("LogicalAnd_")
+        op_conf,
+        "name",
+        name if name is not None else id_util.UniqueStr("LogicalAnd_"),
     )
     setattr(op_conf.logical_and_conf, "lhs", lhs.logical_blob_name)
     setattr(op_conf.logical_and_conf, "rhs", rhs.logical_blob_name)
@@ -313,7 +349,11 @@ def logical_and(lhs, rhs, name=None):
 @oneflow_export("sort")
 def sort(values, direction="ASCENDING", name=None):
     op_conf = op_conf_util.OperatorConf()
-    setattr(op_conf, "name", name if name is not None else id_util.UniqueStr("Sort_"))
+    setattr(
+        op_conf,
+        "name",
+        name if name is not None else id_util.UniqueStr("Sort_"),
+    )
     setattr(op_conf.sort_conf, "in", values.logical_blob_name)
     setattr(op_conf.sort_conf, "dir", direction)  # "ASCENDING" or "DESCENDING"
     setattr(op_conf.sort_conf, "out", "out")
@@ -328,20 +368,30 @@ def sort(values, direction="ASCENDING", name=None):
 def argsort(values, direction="ASCENDING", name=None):
     op_conf = op_conf_util.OperatorConf()
     setattr(
-        op_conf, "name", name if name is not None else id_util.UniqueStr("Argsort_")
+        op_conf,
+        "name",
+        name if name is not None else id_util.UniqueStr("Argsort_"),
     )
     setattr(op_conf.arg_sort_conf, "in", values.logical_blob_name)
-    setattr(op_conf.arg_sort_conf, "dir", direction)  # "ASCENDING" or "DESCENDING"
+    setattr(
+        op_conf.arg_sort_conf, "dir", direction
+    )  # "ASCENDING" or "DESCENDING"
     setattr(op_conf.arg_sort_conf, "out", "out")
     compile_context.CurJobAddOp(op_conf)
     out_lbi = logical_blob_id_util.LogicalBlobId()
     setattr(out_lbi, "op_name", op_conf.name)
     setattr(out_lbi, "blob_name", "out")
     return remote_blob_util.RemoteBlob(out_lbi)
+
+
 @oneflow_export("math.equal")
 def equal(x, y, name=None):
     op_conf = op_conf_util.OperatorConf()
-    setattr(op_conf, "name", name if name is not None else id_util.UniqueStr("BroadcastEqual_"))
+    setattr(
+        op_conf,
+        "name",
+        name if name is not None else id_util.UniqueStr("BroadcastEqual_"),
+    )
     op_conf.broadcast_equal_conf.a = x.logical_blob_name
     op_conf.broadcast_equal_conf.b = y.logical_blob_name
     op_conf.broadcast_equal_conf.out = "out"
@@ -351,10 +401,15 @@ def equal(x, y, name=None):
     lbi.blob_name = "out"
     return remote_blob_util.RemoteBlob(lbi)
 
+
 @oneflow_export("math.not_equal")
-def equal(x, y, name=None):
+def not_equal(x, y, name=None):
     op_conf = op_conf_util.OperatorConf()
-    setattr(op_conf, "name", name if name is not None else id_util.UniqueStr("BroadcastNotEqual_"))
+    setattr(
+        op_conf,
+        "name",
+        name if name is not None else id_util.UniqueStr("BroadcastNotEqual_"),
+    )
     op_conf.broadcast_not_equal_conf.a = x.logical_blob_name
     op_conf.broadcast_not_equal_conf.b = y.logical_blob_name
     op_conf.broadcast_not_equal_conf.out = "out"
@@ -364,10 +419,15 @@ def equal(x, y, name=None):
     lbi.blob_name = "out"
     return remote_blob_util.RemoteBlob(lbi)
 
+
 @oneflow_export("math.less")
-def equal(x, y, name=None):
+def less(x, y, name=None):
     op_conf = op_conf_util.OperatorConf()
-    setattr(op_conf, "name", name if name is not None else id_util.UniqueStr("BroadcastLessThan_"))
+    setattr(
+        op_conf,
+        "name",
+        name if name is not None else id_util.UniqueStr("BroadcastLessThan_"),
+    )
     op_conf.broadcast_less_than_conf.a = x.logical_blob_name
     op_conf.broadcast_less_than_conf.b = y.logical_blob_name
     op_conf.broadcast_less_than_conf.out = "out"
@@ -377,10 +437,15 @@ def equal(x, y, name=None):
     lbi.blob_name = "out"
     return remote_blob_util.RemoteBlob(lbi)
 
+
 @oneflow_export("math.less_equal")
-def equal(x, y, name=None):
+def less_equal(x, y, name=None):
     op_conf = op_conf_util.OperatorConf()
-    setattr(op_conf, "name", name if name is not None else id_util.UniqueStr("BroadcastLessEqual_"))
+    setattr(
+        op_conf,
+        "name",
+        name if name is not None else id_util.UniqueStr("BroadcastLessEqual_"),
+    )
     op_conf.broadcast_less_equal_conf.a = x.logical_blob_name
     op_conf.broadcast_less_equal_conf.b = y.logical_blob_name
     op_conf.broadcast_less_equal_conf.out = "out"
@@ -390,10 +455,17 @@ def equal(x, y, name=None):
     lbi.blob_name = "out"
     return remote_blob_util.RemoteBlob(lbi)
 
+
 @oneflow_export("math.greater")
-def equal(x, y, name=None):
+def greater(x, y, name=None):
     op_conf = op_conf_util.OperatorConf()
-    setattr(op_conf, "name", name if name is not None else id_util.UniqueStr("BroadcastGreaterThan_"))
+    setattr(
+        op_conf,
+        "name",
+        name
+        if name is not None
+        else id_util.UniqueStr("BroadcastGreaterThan_"),
+    )
     op_conf.broadcast_greater_than_conf.a = x.logical_blob_name
     op_conf.broadcast_greater_than_conf.b = y.logical_blob_name
     op_conf.broadcast_greater_than_conf.out = "out"
@@ -403,10 +475,17 @@ def equal(x, y, name=None):
     lbi.blob_name = "out"
     return remote_blob_util.RemoteBlob(lbi)
 
+
 @oneflow_export("math.greater_equal")
-def equal(x, y, name=None):
+def greater_equal(x, y, name=None):
     op_conf = op_conf_util.OperatorConf()
-    setattr(op_conf, "name", name if name is not None else id_util.UniqueStr("BroadcastGreaterEqual_"))
+    setattr(
+        op_conf,
+        "name",
+        name
+        if name is not None
+        else id_util.UniqueStr("BroadcastGreaterEqual_"),
+    )
     op_conf.broadcast_greater_equal_conf.a = x.logical_blob_name
     op_conf.broadcast_greater_equal_conf.b = y.logical_blob_name
     op_conf.broadcast_greater_equal_conf.out = "out"

@@ -7,6 +7,7 @@ import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 from oneflow.python.oneflow_export import oneflow_export
 
+import oneflow as flow
 
 @oneflow_export("constant")
 def constant(value, dtype=None, shape=None, name=None):
