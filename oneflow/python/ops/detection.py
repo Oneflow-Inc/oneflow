@@ -113,8 +113,14 @@ def box_encode(ref_boxes, boxes, regression_weights, name=None):
     op_conf.box_encode_conf.ref_boxes = ref_boxes.logical_blob_name
     op_conf.box_encode_conf.boxes = boxes.logical_blob_name
     op_conf.box_encode_conf.boxes_delta = "boxes_delta"
-    assert isinstance(regression_weights, op_conf_util.BBoxRegressionWeights)
-    op_conf.box_encode_conf.regression_weights = regression_weights
+    regression_weights_proto = op_conf_util.BBoxRegressionWeights()
+    regression_weights_proto.weight_x = regression_weights["weight_x"]
+    regression_weights_proto.weight_y = regression_weights["weight_y"]
+    regression_weights_proto.weight_h = regression_weights["weight_h"]
+    regression_weights_proto.weight_w = regression_weights["weight_w"]
+    op_conf.box_encode_conf.regression_weights.CopyFrom(
+        regression_weights_proto
+    )
     compile_context.CurJobAddOp(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
     lbi.op_name = op_conf.name

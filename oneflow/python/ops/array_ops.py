@@ -293,9 +293,6 @@ def local_nonzero(input, name=None):
 
 @oneflow_export("where")
 def where(condition, x, y, name=None):
-    print(condition.shape)
-    print(x.shape)
-    print(y.shape)
     assert condition.shape == x.shape and x.shape == y.shape
     op_conf = op_conf_util.OperatorConf()
     setattr(
