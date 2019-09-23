@@ -45,7 +45,7 @@ class PieceSliceOp final : public Operator {
   Maybe<void> InferBatchAxis(
       const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
       std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
-    // TODO
+    for (const auto& obn : output_bns()) { *BatchAxis4BnInOp(obn) = *BatchAxis4BnInOp(SoleIbn()); }
     return Maybe<void>::Ok();
   }
   Maybe<void> GetSbpSignatures(
