@@ -117,6 +117,12 @@ def max_mdsave_worker_num(val):
     assert type(val) is int
     default_config_proto.resource.max_mdsave_worker_num = val
 
+@oneflow_export('config.compute_thread_pool_size')
+def max_mdsave_worker_num(val):
+    assert config_proto_mutable == True
+    assert type(val) is int
+    default_config_proto.resource.compute_thread_pool_size = val
+
 @oneflow_export('config.rdma_mem_block_mbyte')
 def rdma_mem_block_mbyte(val):
     assert config_proto_mutable == True
