@@ -1585,11 +1585,6 @@ message LocalScatterNdUpdateOpConf {
   required string out = 4;
 }
 
-message PieceSliceV2OpConf {
-  required string in = 1;
-  repeated string out = 2;
-}
-
 message MaskrcnnPositiveNegativeSampleOpConf {
   // in
   required string pos_inds = 1;
@@ -1864,7 +1859,7 @@ message OperatorConf {
     ModelLoadOpConf model_load_conf = 301;
     GatherMs0OpConf gather_ms0_conf = 302;
     GatherMs0GradOpConf gather_ms0_grad_conf = 303;
-    PieceSliceV2OpConf piece_slice_v2_conf = 304;
+    PieceSliceOpConf piece_slice_conf = 304;
     LogicalAndOpConf logical_and_conf = 305;
     WhereOpConf where_conf = 306;
     ClipByValueOpConf clip_by_value_conf = 307;
@@ -1879,7 +1874,6 @@ message OperatorConf {
     SigmoidCrossEntropyLossGradOpConf sigmoid_cross_entropy_loss_grad_conf = 317;
     SmoothL1OpConf smooth_l1_conf = 318;
     UpsampleNearestOpConf upsample_nearest_conf = 319;
-    PieceSliceOpConf piece_slice_conf = 320;
 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;
