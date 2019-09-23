@@ -71,7 +71,7 @@ class ResNet(object):
             affine = flow.layers.affine_channel(
                 conv1,
                 axis=1,
-                activation=op_conf_util.kRelu,
+                activation=flow.keras.activations.relu,
                 trainable=False,
                 name="bn1",
             )
@@ -81,7 +81,6 @@ class ResNet(object):
                 strides=[2, 2],
                 padding="SAME",
                 data_format="NCHW",
-                trainbale=False,
                 name="pool1",
             )
         return pool
