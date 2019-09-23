@@ -18,17 +18,16 @@ class RtBlobDesc final {
   RtBlobDesc(const BlobDescProto&);
 
   const StructPodDesc& header_pod_desc() const { return header_; }
-  const BlobDescProto& blob_desc_proto() const { return blob_desc_proto_; }
-  bool is_body_disabled() const { return blob_desc_proto().is_body_disabled(); }
-  int64_t num_of_lod_levels() const { return blob_desc_proto().num_of_lod_levels(); }
+  bool is_body_disabled() const { return is_body_disabled_; }
+  int64_t num_of_lod_levels() const { return num_of_lod_levels_; }
 
   DataType data_type() const { return body_.data_type(); }
   int64_t NumAxes() const { return body_.shape().NumAxes(); }
   int64_t Capacity() const { return body_.shape().elem_cnt() * GetSizeOfDataType(data_type()); }
   const Shape& body_shape() const { return body_.shape(); }
 
-  size_t RealByteSizeOfBlobHeader() const;
-  size_t RealByteSizeOfBlobBody() const;
+  size_t ByteSizeOfBlobHeader() const;
+  size_t ByteSizeOfBlobBody() const;
   size_t AlignedByteSizeOfBlobBody(size_t align_size) const;
   size_t AlignedTotalByteSize(size_t align_size) const;
 
@@ -37,9 +36,10 @@ class RtBlobDesc final {
  private:
   void InitFromProto(const BlobDescProto& proto);
 
-  BlobDescProto blob_desc_proto_;
   TensorPodDesc body_;
   StructPodDesc header_;
+  int64_t num_of_lod_levels_;
+  bool is_body_disabled_;
 };
 
 }  // namespace oneflow

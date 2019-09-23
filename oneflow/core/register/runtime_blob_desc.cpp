@@ -3,35 +3,36 @@
 namespace oneflow {
 
 RtBlobDesc::RtBlobDesc(const BlobDesc& blob_desc) {
-  BlobDescProto blob_desc_proto;
-  blob_desc.ToProto(&blob_desc_proto);
-  InitFromProto(blob_desc_proto);
+  BlobDescProto proto;
+  blob_desc.ToProto(&proto);
+  InitFromProto(proto);
 }
 
-RtBlobDesc::RtBlobDesc(const BlobDescProto& blob_desc_proto) { InitFromProto(blob_desc_proto); }
+RtBlobDesc::RtBlobDesc(const BlobDescProto& proto) { InitFromProto(proto); }
 
-void RtBlobDesc::InitFromProto(const BlobDescProto& blob_desc_proto) {
-  blob_desc_proto_ = blob_desc_proto;
-  body_.InitFromProto(blob_desc_proto.body());
-  header_.InitFromProto(blob_desc_proto.header());
+void RtBlobDesc::InitFromProto(const BlobDescProto& proto) {
+  body_.InitFromProto(proto.body());
+  header_.InitFromProto(proto.header());
+  num_of_lod_levels_ = proto.num_of_lod_levels();
+  is_body_disabled_ = proto.is_body_disabled();
 }
 
-size_t RtBlobDesc::RealByteSizeOfBlobHeader() const { return header_.ByteSize(); }
+size_t RtBlobDesc::ByteSizeOfBlobHeader() const { return header_.ByteSize(); }
 
-size_t RtBlobDesc::RealByteSizeOfBlobBody() const { return body_.ByteSize(); }
-
-size_t RtBlobDesc::ByteSizeOfDataContentField() const { return body_desc_.ByteSize(); }
+size_t RtBlobDesc::ByteSizeOfBlobBody() const { return body_.ByteSize(); }
 
 size_t RtBlobDesc::AlignedByteSizeOfBlobBody(size_t align_size) const {
-  return RoundUp(RealByteSizeOfBlobBody(), align_size);
+  return RoundUp(ByteSizeOfBlobBody(), align_size);
 }
 
 size_t AlignedTotalByteSize(size_t align_size) const {
-  return RealByteSizeOfBlobHeader() + AlignedByteSizeOfBlobBody(align_size);
+  return ByteSizeOfBlobHeader() + AlignedByteSizeOfBlobBody(align_size);
 }
 
 bool RtBlobDesc::operator==(const RtBlobDesc& rhs) const {
-  return blob_desc_proto_ == rhs.blob_desc_proto_;
+  return (body_ == rhs.body_) && (header_ == rhs.header_)
+    && (num_of_lod_levels_ == rhs.num_of_lod_levels_)
+    && (is_body_disabled_ == rhs.is_body_disabled_);
 }
 
 }  // namespace oneflow

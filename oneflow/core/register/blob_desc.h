@@ -20,8 +20,10 @@ class BlobDesc final {
   explicit BlobDesc(const BlobDescProto& proto);
   explicit BlobDesc(const BlobDesc&);
 
+  BlobDesc& operator=(const BlobDesc&);
+
   void CopyFrom(const BlobDesc&);
-  void SetLoD(int64_t max_reserved_size_for_lod, int64_t num_of_lod_levels);
+  void SetLoD(int64_t num_of_lod_levels);
 
   const Shape& shape() const { return body_.shape(); }
   Shape* mut_shape() { return body_.mut_shape(); }

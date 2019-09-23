@@ -16,7 +16,7 @@ bool CompareLbiBlobDescPair(const LbiBlobDescPair& lhs, const LbiBlobDescPair& r
 BlobDesc::BlobDesc(const Shape& shape, DataType dtype)
     : body_(shape, dtype), header_(), num_of_lod_levels_(0), is_body_disabled_(false) {
   Shape shape_of_dense_shape = Shape(std::vector{shape.NumAxes()});
-  header_.AddField(FieldKey::kDense, TensorPodDesc(shape_of_dense_shape, DataType::kInt64));
+  header_.AddField(FieldKey::kDenseShap, TensorPodDesc(shape_of_dense_shape, DataType::kInt64));
 }
 
 BlobDesc::BlobDesc(const BlobDescProto& proto) { InitFromProto(proto); }
@@ -41,18 +41,31 @@ void BlobDesc::ToProto(BlobDescProto* proto) const {
   proto->set_is_body_disabled(is_body_disabled_);
 }
 
+BlobDesc& BlobDesc::operator=(const BlobDesc& rhs) {
+  CHECK(rhs.is_body_disabled() == false); // prevent from misuse
+  this->CopyFrom(rhs);
+}
+
 void BlobDesc::CopyFrom(const BlobDesc& other) {
   BlobDescProto proto;
   other.ToProto(&proto);
   this->InitFromProto(proto);
 }
 
-void BlobDesc::SetLoD(int64_t max_reserved_size_for_lod, int64_t num_of_lod_levels) {
+void BlobDesc::SetLoD(int64_t num_of_lod_levels) {
   CHECK_GT(shape().NumAxes(), num_of_lod_levels);
   num_of_lod_levels_ = num_of_lod_levels;
-  header_.AddField(FieldKey::kLoD, TensorPodDesc(max_reserved_size_for_lod, DataType::kInt64));
-  TensorPodDesc* dense_shape_desc = header_.Field(FieldKey::kDense).MutCast<TensorPodDesc>();
-  *(dense_shape_desc->mut_shape()) = Shape(std::vector{shape().NumAxes() - num_of_lod_levels});
+
+  int64_t max_reserved_size_for_lod = 1;
+  int64_t cur_level_size = 1;
+  for (int64_t i = 0; i < num_of_lod_levels_ - 1; ++i) {
+    cur_level_size *= shape().At(i);
+    max_reserved_size_for_lod += cur_level_size;
+  }
+
+  header_.AddField(FieldKey::kLoD, TensorPodDesc(Shape(std::vector<int64_t>{max_reserved_size_for_lod}), DataType::kInt64));
+  TensorPodDesc* dense_shape_desc = header_.Field(FieldKey::kDenseShap).MutCast<TensorPodDesc>();
+  *(dense_shape_desc->mut_shape()) = Shape(std::vector<int64_t>{shape().NumAxes() - num_of_lod_levels});
 }
 
 bool BlobDesc::operator==(const BlobDesc& rhs) const {
