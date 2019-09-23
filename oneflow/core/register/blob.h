@@ -15,88 +15,106 @@ namespace oneflow {
 class RegstMgr;
 class Regst;
 
-class DenseShapeWrapper final {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(DenseShapeWrapper);
-  DenseShapeWrapper() = default;
-  ~DenseShapeWrapper() = default;
+class DenseShapeViewBase {
+ protected:
+  DenseShapeViewBase(PodPtr dense_shape_ptr);
+  DenseShapeViewBase(const DenseShapeViewBase& rhs) : ptr_(rhs.ptr_), num_axes_(rhs.num_axes_) {}
+  virtual ~DenseShapeViewBase() = default;
 
-  void Init(int64_t* ptr, int64_t dense_shape_num_axes) {
-    CHECK_NOTNULL(ptr);
-    ptr_ = ptr;
-    num_axes_ = dense_shape_num_axes;
-    is_shape_inited_ = false;
-  }
-
-  const Shape& shape() const {
-    CHECK(is_shape_inited_);
-    return shape_;
-  }
-  void set_shape(const Shape& val) {
-    CHECK_EQ(num_axes_, val.NumAxes());
-    shape_ = val;
-    is_shape_inited_ = true;
-    for (size_t i = 0; i < shape_.NumAxes(); ++i) { *(ptr_ + i) = shape_.At(i); }
-  }
-
- private:
   int64_t* ptr_;
   int64_t num_axes_;
-
-  Shape shape_;
-  bool is_shape_inited_;
 };
 
-class LoDWrapper final {
+class DenseShapeView final : public DenseShapeViewBase {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(LoDWrapper);
-  ~LoDWrapper() = default;
+  DenseShapeView(const PodPtr& dense_shape_ptr) : DenseShapeViewBase(dense_shape_ptr) {}
+  DenseShapeView(const DenseShapeView& rhs) : DenseShapeViewBase(rhs) {}
+  ~DenseShapeView() = default;
 
-  void Init(int64_t* ptr, int64_t max_reserved_size_for_lod, int64_t num_of_lod_levels) {
-    CHECK_NOTNULL(ptr);
-    ptr_ = ptr;
-    max_reserved_size_for_lod_ = max_reserved_size_for_lod;
-    offset_lod_.resize(num_of_lod_levels);
-    for (std::vector<int64_t>& vec : offset_lod_) { vec.push_back(0); }
-    lod_cnt_ = 0;
-    is_lod_done_ = false;
-  }
+  int64_t NumAxes() const { return num_axes_; }
+  int64_t At(int64_t index) const;
+  int64_t Count(int64_t begin_axis) const;
+  int64_t Count(int64_t begin_axis, int64_t end_axis) const;
+  int64_t elem_cnt() const;
 
-  int64_t GetOffset(int64_t level, int64_t pos) {
-    CHECK(is_lod_done_);
-    return offset_lod_.at(level).at(pos);
-  }
-  int64_t GetLength(int64_t level, int64_t pos) {
-    return GetOffset(level, pos + 1) - GetOffset(level, pos);
-  }
-  void PushLength(int64_t level, int64_t len) {
-    is_lod_done_ = false;
-    if (lod_cnt_ + 1 + offset_lod_.size() > max_reserved_size_for_lod_) {
-      LOG(FATAL) << "the LoD size is greater than max_reserved_size_for_lod: "
-                 << max_reserved_size_for_lod_;
-    }
-    int64_t offset_of_len = offset_lod_.at(level).back() + len;
-    offset_lod_.at(level).push_back(offset_of_len);
-    lod_cnt_ += 1;
-  }
-  void SetLoDDone() {
-    is_lod_done_ = true;
-    size_t i = 0;
-    for (const std::vector<int64_t>& vec : offset_lod_) {
-      for (int64_t offset : vec) {
-        *(ptr_ + i) = offset;
-        i += 1;
-      }
-    }
-  }
+  bool operator==(const DenseShapeView& rhs) const;
+  std::string ToString() const;
+
+  operator Shape() const;
+};
+
+std::ostream& operator<<(std::ostream& out, const DenseShapeView& shape);
+
+class DenseShapeMutView final : public DenseShapeViewBase {
+ public:
+  DenseShapeMutView(PodPtr dense_shape_ptr) : DenseShapeViewBase(dense_shape_ptr) {}
+  DenseShapeMutView(const DenseShapeView& rhs) : DenseShapeViewBase(rhs) {}
+  ~DenseShapeMutView() = default;
+
+  void set_shape(const Shape& val);
+};
+
+class LoDViewBase {
+ protected:
+  typedef std::vector<std::vector<int64_t>> LoDVec;
+
+  LoDViewBase(PodPtr lod_ptr, int64_t num_of_lod_levels);
+  LoDViewBase(const LoDViewBase& rhs) { *this = rhs; }
+  LoDViewBase& operator=(const LoDViewBase& rhs);
+  ~LoDViewBase() = default;
+
+  LoDVec InitOffsetVecFromPtr() const;
+  void FlushOffsetVecToPtr(const LoDVec& offset_lod_vec);
+
+  LoDVec GetLengthLoDVecFromOffsetLoDVec(const LoDVec& offset_lod_vec) const;
+  LoDVec GetOffsetLoDVecFromLengthLoDVec(const LoDVec& length_lod_vec) const;
+
+  int64_t* ptr_;
+  int64_t num_of_lod_levels_;
+  int64_t max_reserved_size_for_lod_;
+};
+
+class OffsetLoDView final : public LoDViewBase {
+ public:
+  OffsetLoDView(const PodPtr& lod_ptr, int64_t num_of_lod_levels)
+      : LoDViewBase(lod_ptr, num_of_lod_levels), offset_lod_vec_() {}
+  OffsetLoDView(const OffsetLoDView& rhs)
+      : LoDViewBase(rhs), offset_lod_vec_(rhs.offset_lod_vec_) {}
+
+  int64_t GetOffset(size_t level, size_t pos);
 
  private:
-  int64_t* ptr_;
-  int64_t max_reserved_size_for_lod_;
+  LoDVec offset_lod_vec_;
+};
 
-  std::vector<std::vector<int64_t>> offset_lod_;
-  int64_t lod_cnt_;  // attention: no equals to the elem_cnt of offset_lod_
-  bool is_lod_done_;
+class OffsetLoDMutView final : public LoDViewBase {
+ public:
+  OffsetLoDMutView(const PodPtr& lod_ptr, int64_t num_of_lod_levels)
+      : LoDViewBase(lod_ptr, num_of_lod_levels) {}
+  OffsetLoDMutView(const OffsetLoDMutView& rhs) : LoDViewBase(rhs) {}
+
+  void SetOffset(const LoDVec& offset_lod_vec);
+};
+
+class LengthLoDView final : public LoDViewBase {
+ public:
+  LengthLoDView(const PodPtr& lod_ptr, int64_t num_of_lod_levels)
+      : LoDViewBase(lod_ptr, num_of_lod_levels), length_lod_vec_() {}
+  LengthLoDView(const LengthLoDView& rhs) : LoDViewBase(rhs) {}
+
+  int64_t GetLength(size_t level, size_t pos);
+
+ private:
+  LoDVec length_lod_vec_;
+};
+
+class LengthLoDMutView final : public LoDViewBase {
+ public:
+  LengthLoDMutView(const PodPtr& lod_ptr, int64_t num_of_lod_levels)
+      : LoDViewBase(lod_ptr, num_of_lod_levels) {}
+  LengthLoDMutView(const LengthLoDMutView& rhs) : LoDViewBase(rhs) {}
+
+  void SetLength(const LoDVec& length_lod_vec);
 };
 
 class Blob final {
@@ -123,16 +141,30 @@ class Blob final {
     return static_cast<T*>(dptr_);
   }
   const Shape& static_shape() const { return blob_desc_->body_shape(); }
-  const Shape& shape() const {
-    return dense_shape();  // TODO(niuchong): remove this interface
+  DenseShapeView dense_shape_view() const {
+    return DenseShapeView(header_ptr_.Field(FieldKey::kDenseShape));
   }
-  const Shape& dense_shape() const { dense_shape_.shape(); }
-  void set_dense_shape(const Shape& shape) { dense_shape_.set_shape(shape); }
+  DenseShapeView shape() const { return dense_shape_view(); }
+  DenseShapeMutView dense_shape_mut_view() {
+    return DenseShapeMutView(header_ptr_.MutField(FieldKey::kDenseShape));
+  }
+  LengthLoDView length_lod_view() const {
+    return LengthLoDView(header_ptr_.Field(FieldKey::kLoD), blob_desc_->num_of_lod_levels());
+  }
+  LengthLoDMutView length_lod_mut_view() {
+    return LengthLoDMutView(header_ptr_.MutField(FieldKey::kLoD), blob_desc_->num_of_lod_levels());
+  }
+  OffsetLoDView offset_lod_view() const {
+    return OffsetLoDView(header_ptr_.Field(FieldKey::kLoD), blob_desc_->num_of_lod_levels());
+  }
+  OffsetLoDMutView offset_lod_mut_view() {
+    return OffsetLoDMutView(header_ptr_.MutField(FieldKey::kLoD), blob_desc_->num_of_lod_levels());
+  }
 
-  int64_t GetLoDOffset(int64_t level, int64_t pos) { lod_.GetOffset(level, pos); }
-  int64_t GetLoDLength(int64_t level, int64_t pos) { lod_.GetLength(level, pos); }
-  void PushLoDLength(int64_t level, int64_t len) { lod_.PushLength(level, len); }
-  void SetLoDDone() { lod_.SetLoDDone(); }
+  void CopyDataContentFrom(DeviceCtx* device_ctx, const Blob* rhs);
+  void CopyValidDataContentFrom(DeviceCtx* device_ctx, const Blob* rhs);
+  void CopyHeaderFrom(DeviceCtx* device_ctx, const Blob* rhs);
+  bool IsShapeEmpty() const { return false; }
 
   size_t AlignedTotalByteSize() const { return blob_desc_->AlignedTotalByteSize(); }
   const MemoryCase& mem_case() const;
@@ -153,15 +185,11 @@ class Blob final {
         << blob_desc_->data_type() << " " << GetDataType<T>::value;
   }
 
-  Regst* regst_;
-  bool is_contiguous_;
+  bool is_header_body_contiguous_;
 
   const RtBlobDesc* blob_desc_;
   void* dptr_;
   PodPtr header_ptr_;
-
-  DenseShapeWrapper dense_shape_;
-  LoDWrapper lod_;
 
   // TODO(); remove this ugly code
   int32_t record_num_;

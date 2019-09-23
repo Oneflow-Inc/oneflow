@@ -52,6 +52,18 @@ class Shape final {
   int64_t elem_cnt_;
 };
 
+Shape CreateReducedShape(const Shape& shape, const std::vector<int64_t>& axis_vec) {
+  return shape.CreateReducedShape(axis_vec);
+}
+
+Shape CreateReducedShapeOrOnesShape(const Shape& shape, const std::vector<int64_t>& axis_vec) {
+  return shape.CreateReducedShapeOrOnesShape(axis_vec);
+}
+
+Shape CreateLeftExtendedShape(const Shape& shape, int ndims_extend_to) {
+  return shape.CreateLeftExtendedShape(ndims_extend_to);
+}
+
 template<typename StreamT>
 void Shape::SerializeWithTextFormat(StreamT& out_stream) const {
   for (int64_t dim : dim_vec_) { out_stream << std::to_string(dim) << ' '; }

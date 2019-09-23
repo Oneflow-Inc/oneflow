@@ -308,8 +308,6 @@ struct KernelUtil<DeviceType::kGPU, T, typename std::enable_if<IsIntegral<T>::va
 
 using CopyBlobFieldMthd = void (Blob::*)(DeviceCtx*, const Blob*);
 
-/*
-
 template<DeviceType device_type, typename Iter>
 void CopyFromIterToIter(DeviceCtx* ctx, Iter& src_it, Iter& dst_it) {
   const char* src_ptr = nullptr;
@@ -360,9 +358,7 @@ class DataContentIterator final {
     Blob* blob = BnInOp2Blob_(bns_->Get(bn_idx_));
     int64_t elem_num = blob->static_shape().Count(axis_);
     std::get<1>(ret) = elem_num * GetSizeOfDataType(blob->data_type());
-    if (blob->IsColValid()) {
-      std::get<0>(ret) = blob->mut_dptr<char>() + seg_idx_ * std::get<1>(ret);
-    }
+    std::get<0>(ret) = blob->mut_dptr<char>() + seg_idx_ * std::get<1>(ret);
     bn_idx_ += 1;
     if (bn_idx_ == bns_->size()) {
       bn_idx_ = 0;
@@ -382,6 +378,7 @@ class DataContentIterator final {
   int32_t axis_;
 };
 
+/*
 class FieldIterator {
  public:
   OF_DISALLOW_COPY_AND_MOVE(FieldIterator);

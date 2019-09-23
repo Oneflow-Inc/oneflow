@@ -35,7 +35,6 @@ void DecodeOFRecordKernel::Forward(const KernelCtx& ctx,
       CHECK_EQ(status->max_col_id_, 0);
       CHECK_EQ(max_col_id, 0);
     }
-    CHECK_LT(status->max_col_id_, out_blob->max_col_num());
   }
   CHECK_GE(status->max_col_id_, 0);
 }
