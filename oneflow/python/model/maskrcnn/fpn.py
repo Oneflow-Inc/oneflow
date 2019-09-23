@@ -50,7 +50,7 @@ class FPN(object):
         )
 
     def interpolate(self, x, name):
-        return flow.upsample_nearest(
+        return flow.detection.upsample_nearest(
             x, name=name, scale=2, data_format="channels_first"
         )
 
