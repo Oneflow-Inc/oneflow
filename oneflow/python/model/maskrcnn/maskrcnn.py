@@ -11,41 +11,45 @@ import argparse
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
-    "--config_file",
-    default=None,
-    type=str,
-    help="yaml config file",
+    "--config_file", default=None, type=str, help="yaml config file"
 )
 parser.add_argument(
     "-load", "--model_load_dir", type=str, default="", required=False
 )
-parser.add_argument("-g", "--gpu_num_per_node", type=int, default=1, required=False)
+parser.add_argument(
+    "-g", "--gpu_num_per_node", type=int, default=1, required=False
+)
 
 args = parser.parse_args()
 
+
 def get_numpy_placeholders():
     import numpy as np
-    (N,C,H,W) = (2,3,256,256)
-    R=50
-    G=12
+
+    (N, C, H, W) = (2, 3, 256, 256)
+    R = 50
+    G = 12
     return (
-        (
-            np.random.randn(N,C,H,W).astype(np.float32),
-            np.random.randn(N,2).astype(np.float32),
-            np.random.randn(N,R,4).astype(np.float32),
-            np.random.randn(N,G).astype(np.int32),
-        ),
-        (
-            flow.input_blob_def((N,C,H,W)),
-            flow.input_blob_def((N, 2)),
-            flow.input_blob_def((N,R,4)),
-            flow.input_blob_def((N,G)),
-        )
+        np.random.randn(N, C, H, W).astype(np.float32),
+        np.random.randn(N, 2).astype(np.float32),
+        np.random.randn(N, R, 4).astype(np.float32),
+        np.random.randn(N, G, 28, 28).astype(np.int8),
+        np.random.randn(N, G).astype(np.int32),
     )
+
+
 placeholders = get_numpy_placeholders()
+
+
 @flow.function
-def maskrcnn(images=placeholders[1][0], image_sizes=placeholders[1][1], gt_boxes=placeholders[1][2], gt_labels=placeholders[1][3]):
-# def maskrcnn(images, image_sizes, gt_boxes, gt_segms, gt_labels):
+def maskrcnn(
+    images=flow.input_blob_def(placeholders[0].shape),
+    image_sizes=flow.input_blob_def(placeholders[1].shape),
+    gt_boxes=flow.input_blob_def(placeholders[2].shape),
+    gt_segms=flow.input_blob_def(placeholders[3].shape),
+    gt_labels=flow.input_blob_def(placeholders[4].shape),
+):
+    # def maskrcnn(images, image_sizes, gt_boxes, gt_segms, gt_labels):
     r"""Mask-RCNN
     Args:
     images: N,C,H,W
@@ -118,4 +122,10 @@ if __name__ == "__main__":
         check_point.init()
     else:
         check_point.load(args.model_load_dir)
-    maskrcnn(images=placeholders[0][0], image_sizes=placeholders[0][1], gt_boxes=placeholders[0][2], gt_labels=placeholders[0][3])
+    maskrcnn(
+        images=placeholders[0],
+        image_sizes=placeholders[1],
+        gt_boxes=placeholders[2],
+        gt_segms=placeholders[3],
+        gt_labels=placeholders[4],
+    )

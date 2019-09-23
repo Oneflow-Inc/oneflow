@@ -96,7 +96,6 @@ class ResNet(object):
         trainable,
     ):
         for block_index in range(block_count):
-            print(block_index)
             if first_stage:
                 strides = [1, 1]
             else:
