@@ -95,21 +95,21 @@ class ResNet(object):
         out_channels,
         trainable,
     ):
+        out = inputs
         for block_index in range(block_count):
             if first_stage:
                 strides = [1, 1]
             else:
                 strides = [2, 2] if block_index == 0 else [1, 1]
-            downsample = True if block_index == 0 else False
             with flow.deprecated.variable_scope(
                 "layer{}_{}".format(stage_index, block_index)
             ):
                 out = self.build_block(
-                    inputs,
+                    out,
                     bottleneck_channels,
                     out_channels,
                     strides=strides,
-                    downsample=downsample,
+                    downsample=block_index == 0,
                     trainable=trainable,
                 )
 
@@ -144,7 +144,7 @@ class ResNet(object):
             inputs=inputs,
             filters=bottleneck_channels,
             kernel_size=[1, 1],
-            strides=strides,
+            strides=[1, 1],
             padding="SAME",
             data_format="NCHW",
             dilation_rate=[1, 1],
@@ -182,7 +182,7 @@ class ResNet(object):
             inputs=affine2,
             filters=out_channels,
             kernel_size=[1, 1],
-            strides=strides,
+            strides=[1, 1],
             padding="SAME",
             data_format="NCHW",
             dilation_rate=[1, 1],
@@ -196,7 +196,6 @@ class ResNet(object):
             trainable=False,
             name="bn3",
         )
-
         return flow.keras.activations.relu(
             (downsample_blob if downsample else inputs) + affine3
         )
