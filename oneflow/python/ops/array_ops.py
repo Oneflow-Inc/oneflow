@@ -314,7 +314,7 @@ def piece_slice(input, name=None):
     setattr(
         op_conf, "name", name if name is not None else id_util.UniqueStr("PieceSlice_")
     )
-    setattr(op_conf.piece_slice_conf, "input", input.logical_blob_name)
+    setattr(op_conf.piece_slice_conf, "in", input.logical_blob_name)
     compile_context.CurJobAddOp(op_conf)
     out_lbi = logical_blob_id_util.LogicalBlobId()
     setattr(out_lbi, "op_name", op_conf.name)
