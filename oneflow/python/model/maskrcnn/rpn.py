@@ -149,7 +149,7 @@ class RPNLoss(object):
                 pos_inds = flow.squeeze(
                     flow.local_nonzero(
                         matched_indices
-                        >= flow._scalar(value=0, dtype=flow.int32)
+                        >= flow.constant_scalar(value=0, dtype=flow.int32)
                     ),
                     axis=[1],
                 )
