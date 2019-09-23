@@ -52,6 +52,13 @@ class LocalNonzeroOp final : public Operator {
                             KernelConf* kernel_conf) const override {
     kernel_conf->set_data_type(GetBlobDesc4BnInOp("in")->data_type());
   }
+
+ private:
+  Maybe<void> InferBatchAxis(
+      std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override {
+    BatchAxis4BnInOp(SoleObn())->set_value(0);
+    return Maybe<void>::Ok();
+  }
 };
 
 REGISTER_OP(OperatorConf::kLocalNonzeroConf, LocalNonzeroOp);
