@@ -34,6 +34,12 @@ class UpsampleNearestOp final : public Operator {
     return Maybe<void>::Ok();
   }
 
+  Maybe<void> InferBatchAxis(
+      std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override {
+    *BatchAxis4BnInOp("out") = *BatchAxis4BnInOp("in");
+    return Maybe<void>::Ok();
+  }
+
 };  // namespace oneflow
 
 REGISTER_OP(OperatorConf::kUpsampleNearestConf, UpsampleNearestOp);
