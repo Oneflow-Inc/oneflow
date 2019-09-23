@@ -4,6 +4,9 @@ import oneflow.core.operator.op_conf_pb2 as op_conf_util
 
 from backbone import Backbone
 from rpn import RPNHead, RPNLoss, RPNProposal
+from box_head import BoxHead
+from mask_head import MaskHead
+
 import argparse
 
 parser = argparse.ArgumentParser()
@@ -42,7 +45,7 @@ def get_numpy_placeholders():
 placeholders = get_numpy_placeholders()
 @flow.function
 def maskrcnn(images=placeholders[1][0], image_sizes=placeholders[1][1], gt_boxes=placeholders[1][2], gt_labels=placeholders[1][3]):
-# def maskrcnn(images, image_sizes, gt_boxes, gt_labels):
+# def maskrcnn(images, image_sizes, gt_boxes, gt_segms, gt_labels):
     r"""Mask-RCNN
     Args:
     images: N,C,H,W
@@ -59,11 +62,13 @@ def maskrcnn(images=placeholders[1][0], image_sizes=placeholders[1][1], gt_boxes
     rpn_head = RPNHead(cfg)
     rpn_loss = RPNLoss(cfg)
     rpn_proposal = RPNProposal(cfg)
-    # box_head = BoxHead(cfg)
+    box_head = BoxHead(cfg)
+    mask_head = MaskHead(cfg)
 
     image_size_list = flow.piece_slice(image_sizes)
     gt_boxes_list = flow.piece_slice(gt_boxes)
     gt_labels_list = flow.piece_slice(gt_labels)
+    gt_segms_list = flow.piece_slice(gt_segms)
 
     anchors = []
     for i in range(cfg.DECODER.FPN_LAYERS):
@@ -84,12 +89,21 @@ def maskrcnn(images=placeholders[1][0], image_sizes=placeholders[1][1], gt_boxes
     rpn_bbox_loss, rpn_objectness_loss = rpn_loss.build(
         anchors, image_size_list, gt_boxes_list, bbox_pred_list, cls_logit_list
     )
-    proposals = rpn_proposal.build(
-        anchors, cls_logit_list, bbox_pred_list, image_size_list, gt_boxes_list
-    )
+    # proposals = rpn_proposal.build(
+    #     anchors, cls_logit_list, bbox_pred_list, image_size_list, gt_boxes_list
+    # )
 
     # Box Head
-    # box_head.build_train(proposals, gt_boxes_list, gt_labels_list, features)
+    # box_loss, cls_loss, pos_proposal_list, pos_gt_indices_list = box_head.build_train(
+    #     proposals, gt_boxes_list, gt_labels_list, features
+    # )
+
+    # Mask Head
+    # mask_loss = mask_head.build_train(
+    #     pos_proposal_list, pos_gt_indices_list, gt_segms_list, gt_labels_list, features
+    # )
+
+    # return rpn_bbox_loss, rpn_objectness_loss, box_loss, cls_loss, mask_loss
 
     return rpn_bbox_loss, rpn_objectness_loss
 
