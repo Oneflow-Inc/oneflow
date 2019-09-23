@@ -107,6 +107,7 @@ class BoxHead(object):
             total_elem_cnt = flow.math.elem_cnt(labels)
             box_head_cls_loss = flow.div(
                 flow.math.reduce_sum(
+                    # TODO: add sparse cross entropy python interface
                     self.dl_net.SparseCrossEntropy(
                         flow.nn.softmax(cls_logits), labels, name="sparse_cross_entropy"
                     )
@@ -147,7 +148,7 @@ class BoxHead(object):
             )
 
     def box_feature_extractor(self, proposals, img_ids, features):
-        levels = self.level_map(proposals)
+        levels = flow.detection.level_map(proposals)
         level_idx_2 = flow.local_nonzero(
             levels == flow.constant_scalar(int(0), flow.int32)
         )
