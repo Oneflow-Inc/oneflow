@@ -13,7 +13,7 @@ class ExtractPieceSliceIdOp final : public Operator {
     return this->op_conf().extract_piece_slice_id_conf();
   }
   Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                      const ParallelContext* parallel_ctx) const override;
+                             const ParallelContext* parallel_ctx) const override;
 
  private:
   virtual void VirtualGenKernelConf(
