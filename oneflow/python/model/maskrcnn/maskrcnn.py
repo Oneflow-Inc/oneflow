@@ -31,7 +31,7 @@ def get_numpy_placeholders():
     G = 12
     return (
         np.random.randn(N, C, H, W).astype(np.float32),
-        np.random.randn(N, 2).astype(np.float32),
+        np.random.randn(N, 2).astype(np.int32),
         np.random.randn(N, R, 4).astype(np.float32),
         np.random.randn(N, G, 28, 28).astype(np.int8),
         np.random.randn(N, G).astype(np.int32),
@@ -44,10 +44,10 @@ placeholders = get_numpy_placeholders()
 @flow.function
 def maskrcnn(
     images=flow.input_blob_def(placeholders[0].shape),
-    image_sizes=flow.input_blob_def(placeholders[1].shape),
+    image_sizes=flow.input_blob_def(placeholders[1].shape, dtype=flow.int32),
     gt_boxes=flow.input_blob_def(placeholders[2].shape),
     gt_segms=flow.input_blob_def(placeholders[3].shape),
-    gt_labels=flow.input_blob_def(placeholders[4].shape),
+    gt_labels=flow.input_blob_def(placeholders[4].shape, dtype=flow.int8),
 ):
     # def maskrcnn(images, image_sizes, gt_boxes, gt_segms, gt_labels):
     r"""Mask-RCNN
@@ -70,7 +70,9 @@ def maskrcnn(
     box_head = BoxHead(cfg)
     mask_head = MaskHead(cfg)
 
-    image_size_list = flow.piece_slice(image_sizes, cfg.TRAINING_CONF.IMG_PER_GPU)
+    image_size_list = flow.piece_slice(
+        image_sizes, cfg.TRAINING_CONF.IMG_PER_GPU
+    )
     gt_boxes_list = flow.piece_slice(gt_boxes, cfg.TRAINING_CONF.IMG_PER_GPU)
     gt_labels_list = flow.piece_slice(gt_labels, cfg.TRAINING_CONF.IMG_PER_GPU)
     gt_segms_list = flow.piece_slice(gt_segms, cfg.TRAINING_CONF.IMG_PER_GPU)
