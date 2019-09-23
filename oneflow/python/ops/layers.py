@@ -27,7 +27,9 @@ def dense(
     assert in_num_axes >= 2
 
     name_prefix = name if name is not None else id_util.UniqueStr("Dense_")
-    inputs = flow.reshape(inputs, (-1, in_shape[-1])) if in_num_axes > 2 else inputs
+    inputs = (
+        flow.reshape(inputs, (-1, in_shape[-1])) if in_num_axes > 2 else inputs
+    )
 
     assert (
         model_distribute is distribute_util.auto()
@@ -36,7 +38,9 @@ def dense(
     )
 
     if model_distribute is distribute_util.split(0):
-        assert in_num_axes is 2  # model distribute is hard for reshape split dim 1
+        assert (
+            in_num_axes is 2
+        )  # model distribute is hard for reshape split dim 1
 
     weight = flow.get_variable(
         name="{}-weight".format(name_prefix),
@@ -54,7 +58,10 @@ def dense(
     weight = weight.with_distribute(model_distribute)
 
     out = flow.matmul(
-        a=inputs, b=weight, transpose_b=True, name="{}_matmul".format(name_prefix)
+        a=inputs,
+        b=weight,
+        transpose_b=True,
+        name="{}_matmul".format(name_prefix),
     )
     if use_bias:
         bias = flow.get_variable(
@@ -71,9 +78,13 @@ def dense(
             distribute=model_distribute,
         )
         bias = bias.with_distribute(model_distribute)
-        out = flow.nn.bias_add(out, bias, name="{}_bias_add".format(name_prefix))
+        out = flow.nn.bias_add(
+            out, bias, name="{}_bias_add".format(name_prefix)
+        )
     out = activation(out) if activation is not None else out
-    out = flow.reshape(out, in_shape[:-1] + (units,)) if in_num_axes > 2 else out
+    out = (
+        flow.reshape(out, in_shape[:-1] + (units,)) if in_num_axes > 2 else out
+    )
 
     return out
 
@@ -98,13 +109,17 @@ def conv2d(
     if isinstance(kernel_size, int):
         kernel_size = (kernel_size, kernel_size)
     else:
+        assert isinstance(kernel_size, (list, tuple))
         kernel_size = tuple(kernel_size)
-    weight_shape = (filters, inputs.static_shape[1]) + (kernel_size, kernel_size)
+    weight_shape = (filters, inputs.static_shape[1]) + kernel_size
+    print(weight_shape)
     weight = flow.get_variable(
         name_prefix + "-weight",
         shape=weight_shape,
         dtype=inputs.dtype,
-        initializer=kernel_initializer,
+        initializer=kernel_initializer
+        if kernel_initializer is not None
+        else flow.constant_initializer(0),
     )
     output = flow.nn.conv2d(
         inputs, weight, strides, padding, data_format, dilation_rate, name
@@ -114,7 +129,9 @@ def conv2d(
             name_prefix + "-bias",
             shape=(filters,),
             dtype=inputs.dtype,
-            initializer=bias_initializer,
+            initializer=bias_initializer
+            if bias_initializer is not None
+            else flow.constant_initializer(0),
         )
     output = flow.nn.bias_add(output, bias, data_format)
 
@@ -253,9 +270,13 @@ def batch_normalization(
     setattr(op_conf.normalization_conf, "epsilon", epsilon)
     setattr(op_conf.normalization_conf, "center", center)
     setattr(op_conf.normalization_conf, "scale", scale)
-    setattr(op_conf.normalization_conf, "moving_mean", moving_mean.logical_blob_name)
     setattr(
-        op_conf.normalization_conf, "moving_variance", moving_variance.logical_blob_name
+        op_conf.normalization_conf, "moving_mean", moving_mean.logical_blob_name
+    )
+    setattr(
+        op_conf.normalization_conf,
+        "moving_variance",
+        moving_variance.logical_blob_name,
     )
     if beta:
         setattr(op_conf.normalization_conf, "beta", beta.logical_blob_name)
