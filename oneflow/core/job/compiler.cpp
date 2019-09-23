@@ -67,11 +67,14 @@ void Compiler::Compile(Job* job, Plan* plan, bool need_job_complete) const {
   }
   task_gph->RemoveEmptyRegsts();
   task_gph->AddOrderingCtrlEdgeInSameChain();
-  task_gph->EnableMemSharingInReduceStruct();
   // TODO: update method for fw bw split
   // if (job_desc.IsTrain() && job_desc.enable_mem_sharing()) {
   //   task_gph->EnableMemSharingAfterAllManualSetForMdUpdt();  // must last mem shared manual set
   // }
+  if (job_desc.enable_inplace_in_reduce_struct()) {
+    task_gph->EnableInplaceMemSharingInReduceStruct();
+  }
+
   if (job_desc.enable_inplace()) {
     auto IsReachable = Global<OpGraph>::Get()->MakePredicatorIsLbiAllConsumersReachableToOpName();
     task_gph->EnableInplaceMemSharing(IsReachable);
