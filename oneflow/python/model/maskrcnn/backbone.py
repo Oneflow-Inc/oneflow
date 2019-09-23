@@ -4,7 +4,7 @@ from fpn import FPN
 
 
 class Backbone(object):
-    def __init__(self, dl_net, cfg):
+    def __init__(self, cfg):
         self.resnet = ResNet(dl_net, cfg)
         self.fpn = FPN(dl_net, cfg)
 
