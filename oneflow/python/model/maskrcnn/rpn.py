@@ -13,9 +13,9 @@ class RPNHead(object):
             cls_logits = []  # list of [N, H_i, W_i, A] wrt. fpn layers
             bbox_preds = []  # list of [N, H_i, W_i, 4A] wrt. fpn layers
             for layer_idx, feature in enumerate(features, 1):
-                x = flow.conv2d(
+                x = flow.layers.conv2d(
                     inputs=feature,
-                    filter15s=256,
+                    filters=256,
                     kernel_size=[3, 3],
                     padding="SAME",
                     data_format="NCHW",
@@ -27,7 +27,7 @@ class RPNHead(object):
                 )
                 cls_logits.append(
                     flow.transpose(
-                        flow.conv2d(
+                        flow.layers.conv2d(
                             x,
                             filters=3,
                             kernel_size=[1, 1],
@@ -44,7 +44,7 @@ class RPNHead(object):
                 )
                 bbox_preds.append(
                     flow.transpose(
-                        flow.conv2d(
+                        flow.layers.conv2d(
                             x,
                             filters=12,
                             kernel_size=[1, 1],
