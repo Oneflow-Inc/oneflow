@@ -22,22 +22,16 @@ class BroadcastLogicalBinaryOp : public BroadcastBinaryOp {
   }
 };
 
-#define DEFINE_BROADCAST_OP_CLASS(camel_case, snake_case)                               \
-  class Broadcast##camel_case##Op final : public BroadcastLogicalBinaryOp {             \
-   public:                                                                              \
-    OF_DISALLOW_COPY_AND_MOVE(Broadcast##camel_case##Op);                               \
-    Broadcast##camel_case##Op() = default;                                              \
-    ~Broadcast##camel_case##Op() = default;                                             \
-    const PbMessage& GetCustomizedConf() const override {                               \
-      return op_conf().broadcast_##snake_case##_conf();                                 \
-    }                                                                                   \
-                                                                                        \
-   private:                                                                             \
-    Maybe<void> InferBatchAxis(                                                         \
-        std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override { \
-      return NaiveInferBatchAxis(BatchAxis4BnInOp);                                     \
-    }                                                                                   \
-  };                                                                                    \
+#define DEFINE_BROADCAST_OP_CLASS(camel_case, snake_case)                   \
+  class Broadcast##camel_case##Op final : public BroadcastLogicalBinaryOp { \
+   public:                                                                  \
+    OF_DISALLOW_COPY_AND_MOVE(Broadcast##camel_case##Op);                   \
+    Broadcast##camel_case##Op() = default;                                  \
+    ~Broadcast##camel_case##Op() = default;                                 \
+    const PbMessage& GetCustomizedConf() const override {                   \
+      return op_conf().broadcast_##snake_case##_conf();                     \
+    }                                                                       \
+  };                                                                        \
   REGISTER_OP(OperatorConf::kBroadcast##camel_case##Conf, Broadcast##camel_case##Op)
 
 DEFINE_BROADCAST_OP_CLASS(Equal, equal);
