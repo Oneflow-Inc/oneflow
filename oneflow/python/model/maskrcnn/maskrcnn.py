@@ -52,10 +52,11 @@ def maskrcnn(
     # def maskrcnn(images, image_sizes, gt_boxes, gt_segms, gt_labels):
     r"""Mask-RCNN
     Args:
-    images: N,C,H,W
-    image_sizes: N,2
-    gt_boxes: N,R,4
-    gt_labels: N,G
+    images: (N, C, H, W)
+    image_sizes: (N, 2)
+    gt_boxes: (N, R, 4)
+    gt_boxes: (N, G, 28, 28)
+    gt_labels: (N, G)
     """
     cfg = get_default_cfgs()
     if args.config_file is not None:
