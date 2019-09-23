@@ -757,7 +757,7 @@ void CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan) {
   }
   if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
     // only has user job in jobs and sub_plans in this time
-    InterJobMemSharingUtil::MergeMemBlockBetweenSubPlans(jobs, &sub_plans);
+    InterJobMemSharingUtil::MergeMemReusedChunkBetweenSubPlans(jobs, &sub_plans);
     HashMap<std::string, ParallelBlobConf> push_op_name2parallel_blob_conf;
     FilterOpName2ParallelBlobConf({OperatorConf::kInputConf}, &jobs,
                                   &push_op_name2parallel_blob_conf);

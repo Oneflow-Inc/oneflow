@@ -140,55 +140,80 @@ int64_t GenMemZoneUniqueId(int64_t machine_id, const MemoryCase& mem_case) {
   return (machine_id << 32) | mem_zone_id;
 }
 
-// mem block id infomation
-struct MbiInfo {
-  MbiInfo() = default;
-  MbiInfo(int64_t mem_size, int64_t mzuid, int64_t job_id) {
-    this->mem_size = mem_size;
-    this->mzuid = mzuid;
-    this->job_id = job_id;
-    regst_descs = std::vector<RegstDescProto*>();
+void MergeReusedChunk(HashMap<int64_t, ChunkProto>* chunk_id2chunk,
+                      HashMap<int64_t, MemBlockProto*>* mem_block_id2mem_block,
+                      const std::vector<HashSet<int64_t>>& reuse_mem_job_groups) {
+  // mzuid = memory zone unique id
+  HashMap<int64_t, HashMap<int64_t, int64_t>> job_id2mzuid2chunk_id;
+  HashMap<int64_t, HashSet<MemBlockProto*>> chunk_id2mem_blocks;
+
+  for (auto& pair : *mem_block_id2mem_block) {
+    MemBlockProto* mem_block = pair.second;
+    if (mem_block->enable_reuse_mem()) {
+      CHECK(mem_block->has_chunk_id() == false);
+      CHECK(mem_block->has_chunk_offset() == false);
+      continue;
+    }
+    CHECK(mem_block->has_chunk_id() && mem_block->chunk_id() >= 0);
+    CHECK(mem_block->has_chunk_offset() && mem_block->chunk_offset() >= 0);
+    CHECK(chunk_id2mem_blocks[mem_block->chunk_id()].insert(mem_block).second);
   }
 
-  int64_t mem_size;
-  // mzuid = memory zone unique id
-  int64_t mzuid;
-  int64_t job_id;
-  std::vector<RegstDescProto*> regst_descs;
-};
+  // merge chunk and delete useless chunk
+  for (const auto& pair : *chunk_id2chunk) {
+    const ChunkProto& chunk = pair.second;
+    const MemoryCase& mem_case = chunk.mem_case();
+    // only reused mem in cuda device
+    if (mem_case.has_host_mem()) { continue; }
+    int64_t mzuid = GenMemZoneUniqueId(chunk.machine_id(), mem_case);
+    CHECK_EQ(chunk.job_id_size(), 1);
+    CHECK(job_id2mzuid2chunk_id[chunk.job_id(0)].emplace(mzuid, chunk.chunk_id()).second);
+  }
 
-std::vector<std::unique_ptr<MbiInfo>> InitMemBlockId2MbiInfo(std::vector<Plan>* sub_plans) {
-  int64_t mem_block_id_max = Global<IDMgr>::Get()->NewMemBlockId();
-  std::vector<std::unique_ptr<MbiInfo>> mem_block_id2mbi_info(mem_block_id_max);
-  for (int64_t job_id = 0; job_id < sub_plans->size(); ++job_id) {
-    Plan* sub_plan = &(sub_plans->at(job_id));
-    for (int64_t i = 0; i < sub_plan->task_size(); ++i) {
-      TaskProto* task = sub_plan->mutable_task(i);
-      for (auto& pair : *(task->mutable_produced_regst_desc())) {
-        RegstDescProto* regst_desc = &pair.second;
-        // only handle memory reused
-        if (!regst_desc->enable_reuse_mem()) { continue; }
-        CHECK(regst_desc->regst_desc_type().has_data_regst_desc());
-        int32_t mem_block_id = regst_desc->mem_block_id();
-        CHECK_GE(mem_block_id, 0);
-        int64_t mem_byte_size =
-            RtRegstDesc(*regst_desc).TotalMainByteSize4AllRegst() + regst_desc->mem_block_offset();
-        CHECK_GT(mem_byte_size, 0);
-        int64_t mzuid = GenMemZoneUniqueId(task->machine_id(), regst_desc->mem_case());
-        if (mem_block_id2mbi_info[mem_block_id] == nullptr) {
-          mem_block_id2mbi_info[mem_block_id].reset(new MbiInfo(mem_byte_size, mzuid, job_id));
-        } else {
-          CHECK_EQ(mem_block_id2mbi_info[mem_block_id]->mzuid, mzuid);
-          CHECK_EQ(mem_block_id2mbi_info[mem_block_id]->job_id, job_id);
-        }
-        // only handle kMemMax
-        mem_block_id2mbi_info[mem_block_id]->mem_size =
-            std::max(mem_block_id2mbi_info[mem_block_id]->mem_size, mem_byte_size);
-        mem_block_id2mbi_info[mem_block_id]->regst_descs.push_back(regst_desc);
+  auto MergeMemChunkIdR2L = [&](int64_t left_chunk_id, int64_t right_chunk_id) {
+    CHECK_NE(left_chunk_id, right_chunk_id);
+    ChunkProto* chunk_l = &(chunk_id2chunk->at(left_chunk_id));
+    ChunkProto* chunk_r = &(chunk_id2chunk->at(right_chunk_id));
+    CHECK_GE(chunk_l->job_id_size(), 1);
+    CHECK_EQ(chunk_r->job_id_size(), 1);
+    CHECK_EQ(chunk_l->machine_id(), chunk_r->machine_id());
+    CHECK(chunk_l->mem_case() == chunk_r->mem_case());
+    CHECK_GT(chunk_l->mem_size(), 0);
+    CHECK_GT(chunk_r->mem_size(), 0);
+    for (MemBlockProto* mem_block : chunk_id2mem_blocks[right_chunk_id]) {
+      CHECK_EQ(mem_block->machine_id(), chunk_l->machine_id());
+      CHECK(mem_block->mem_case() == chunk_l->mem_case());
+      mem_block->set_chunk_id(left_chunk_id);
+    }
+    chunk_l->add_job_id(chunk_r->job_id(0));
+    chunk_l->set_mem_size(std::max(chunk_l->mem_size(), chunk_r->mem_size()));
+    chunk_id2chunk->erase(chunk_id2chunk->find(right_chunk_id));
+  };
+  auto InitMzuid2JobIdsInJobGroup =
+      [&](const HashSet<int64_t>& job_group) -> HashMap<int64_t, HashSet<int64_t>> {
+    HashMap<int64_t, HashSet<int64_t>> mzuid2job_ids;
+    for (int64_t job_id : job_group) {
+      for (const auto& pair : job_id2mzuid2chunk_id[job_id]) {
+        CHECK(mzuid2job_ids[pair.first].emplace(job_id).second);
+      }
+    }
+    return mzuid2job_ids;
+  };
+  for (const HashSet<int64_t>& job_group : reuse_mem_job_groups) {
+    if (job_group.size() <= 1) { continue; }
+    HashMap<int64_t, HashSet<int64_t>> mzuid2job_ids = InitMzuid2JobIdsInJobGroup(job_group);
+    for (const auto& pair : mzuid2job_ids) {
+      const HashSet<int64_t>& job_ids = pair.second;
+      if (job_ids.size() <= 1) { continue; }
+      int64_t mzuid = pair.first;
+      int64_t merged_job_id = *(job_ids.begin());
+      for (int64_t job_id : job_ids) {
+        if (job_id == merged_job_id) { continue; }
+        MergeMemChunkIdR2L(job_id2mzuid2chunk_id[merged_job_id].at(mzuid),
+                           job_id2mzuid2chunk_id[job_id].at(mzuid));
       }
     }
   }
-  return mem_block_id2mbi_info;
 }
 
 }  // namespace
@@ -245,95 +270,30 @@ void InterJobMemSharingUtil::BindInterfaceMemBlockId(const std::vector<Job>& job
   }
 }
 
-
-void InterJobMemSharingUtil::MergeMemBlockAndChunkBetweenSubPlans(const std::vector<Job>& jobs,
-                                                          std::vector<Plan>* sub_plans) {
+void InterJobMemSharingUtil::MergeMemReusedChunkBetweenSubPlans(const std::vector<Job>& jobs,
+                                                                std::vector<Plan>* sub_plans) {
   if (jobs.size() == 1) { return; }
-  std::vector<HashSet<int64_t>> job_groups = GetMutualExclusionJobGroups(jobs);
+  std::vector<HashSet<int64_t>> reuse_mem_job_groups = GetMutualExclusionJobGroups(jobs);
 
-
-
-}
-
-void InterJobMemSharingUtil::MergeMemBlockBetweenSubPlans(const std::vector<Job>& jobs,
-                                                          std::vector<Plan>* sub_plans) {
-  if (jobs.size() == 1) { return; }
-  std::vector<std::unique_ptr<MbiInfo>> mem_block_id2mbi_info = InitMemBlockId2MbiInfo(sub_plans);
-  std::vector<HashMap<int64_t, HashSet<int32_t>>> job_id2mzuid2mem_block_ids(jobs.size());
-  for (int32_t mem_block_id = 0; mem_block_id < mem_block_id2mbi_info.size(); ++mem_block_id) {
-    if (mem_block_id2mbi_info[mem_block_id] == nullptr) { continue; }
-    int64_t job_id = mem_block_id2mbi_info[mem_block_id]->job_id;
-    int64_t mzuid = mem_block_id2mbi_info[mem_block_id]->mzuid;
-    job_id2mzuid2mem_block_ids[job_id][mzuid].emplace(mem_block_id);
+  HashMap<int64_t, ChunkProto> chunk_id2chunk;
+  HashMap<int64_t, MemBlockProto*> mem_block_id2mem_block;
+  for (int64_t i = 0; i < jobs.size(); ++i) {
+    Plan* sub_plan = &(sub_plans->at(i));
+    for (const auto& chunk : sub_plan->chunk()) {
+      CHECK(chunk_id2chunk.emplace(chunk.chunk_id(), chunk).second);
+    }
+    sub_plan->clear_chunk();
+    for (MemBlockProto& mem_block : *sub_plan->mutable_mem_block()) {
+      CHECK(mem_block_id2mem_block.emplace(mem_block.mem_block_id(), &mem_block).second);
+    }
   }
-  std::vector<HashSet<int64_t>> job_groups = GetMutualExclusionJobGroups(jobs);
 
-  auto MergeMemBlockIdR2L = [&](int32_t lhs, int32_t rhs) {
-    CHECK_NE(lhs, rhs);
-    MbiInfo* info_l = mem_block_id2mbi_info[lhs].get();
-    MbiInfo* info_r = mem_block_id2mbi_info[rhs].get();
-    CHECK_NE(info_l->job_id, info_r->job_id);
-    CHECK_EQ(info_l->mzuid, info_r->mzuid);
-    CHECK_GT(info_l->mem_size, 0);
-    CHECK_GT(info_r->mem_size, 0);
-    for (auto* regst_desc : info_r->regst_descs) { regst_desc->set_mem_block_id(lhs); }
-    info_l->mem_size = std::max(info_l->mem_size, info_r->mem_size);
-    mem_block_id2mbi_info[rhs].reset(nullptr);
-  };
+  MergeReusedChunk(&chunk_id2chunk, &mem_block_id2mem_block, reuse_mem_job_groups);
 
-  auto GetMemBlockId7MemSizeList = [&](int64_t job_id, int64_t mzuid) {
-    std::vector<std::pair<int64_t, int64_t>> ret;
-    for (int64_t mem_block_id : job_id2mzuid2mem_block_ids[job_id][mzuid]) {
-      ret.push_back({mem_block_id, mem_block_id2mbi_info[mem_block_id]->mem_size});
-    }
-    std::sort(ret.begin(), ret.end(),
-              [&](const std::pair<int64_t, int64_t>& lhs, const std::pair<int64_t, int64_t>& rhs) {
-                return lhs.second > rhs.second;
-              });
-    return ret;
-  };
-
-  auto InitMzuid2JobIdsInJobGroup = [&](const HashSet<int64_t>& job_group) {
-    HashMap<int64_t, HashSet<int64_t>> mzuid2job_ids;
-    for (int64_t job_id : job_group) {
-      for (const auto& pair : job_id2mzuid2mem_block_ids[job_id]) {
-        CHECK(mzuid2job_ids[pair.first].emplace(job_id).second);
-      }
-    }
-    return mzuid2job_ids;
-  };
-
-  auto FindMaxMemBlockNumJobId = [&](const HashSet<int64_t>& job_group, int64_t mzuid) {
-    int64_t max_mem_block_num_job_id = -1;
-    int32_t max_mem_block_num = 0;
-    for (int64_t job_id : job_group) {
-      if (job_id2mzuid2mem_block_ids[job_id][mzuid].size() > max_mem_block_num) {
-        max_mem_block_num_job_id = job_id;
-        max_mem_block_num = job_id2mzuid2mem_block_ids[job_id][mzuid].size();
-      }
-    }
-    CHECK_NE(max_mem_block_num_job_id, -1);
-    return max_mem_block_num_job_id;
-  };
-
-  for (const auto& job_group : job_groups) {
-    if (job_group.size() <= 1) { continue; }
-    HashMap<int64_t, HashSet<int64_t>> mzuid2job_ids = InitMzuid2JobIdsInJobGroup(job_group);
-    for (const auto& pair : mzuid2job_ids) {
-      const HashSet<int64_t>& job_ids = pair.second;
-      if (job_ids.size() <= 1) { continue; }
-      int64_t mzuid = pair.first;
-      int64_t merge_job_id = FindMaxMemBlockNumJobId(job_ids, mzuid);
-      for (int64_t job_id : job_ids) {
-        if (job_id == merge_job_id) { continue; }
-        auto lhs_info = GetMemBlockId7MemSizeList(merge_job_id, mzuid);
-        auto rhs_info = GetMemBlockId7MemSizeList(job_id, mzuid);
-        CHECK_GE(lhs_info.size(), rhs_info.size());
-        for (int64_t i = 0; i < rhs_info.size(); ++i) {
-          MergeMemBlockIdR2L(lhs_info[i].first, rhs_info[i].first);
-        }
-      }
-    }
+  for (const auto& pair : chunk_id2chunk) {
+    const ChunkProto& chunk = pair.second;
+    CHECK_GE(chunk.job_id_size(), 1);
+    *(sub_plans->at(chunk.job_id(0)).add_chunk()) = chunk;
   }
 }
 
