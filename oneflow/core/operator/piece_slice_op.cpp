@@ -24,7 +24,8 @@ class PieceSliceOp final : public Operator {
     // only used to run compile stage for test, remove later
     FOR_RANGE(int32_t, i, 0, out_size) {
       BlobDesc* out_i = GetBlobDesc4BnInOp(output_bns().Get(i));
-      out_i->mut_shape() = Shape(std::vector<int64_t>(in->shape().dim_vec().begin() + 1, in->shape().dim_vec().end()));
+      out_i->mut_shape() = Shape(
+          std::vector<int64_t>(in->shape().dim_vec().begin() + 1, in->shape().dim_vec().end()));
       out_i->set_data_type(in->data_type());
     }
 
