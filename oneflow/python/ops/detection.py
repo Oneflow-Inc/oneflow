@@ -44,7 +44,9 @@ def roi_align(
     return remote_blob_util.RemoteBlob(lbi)
 
 
-@oneflow_export("detection.maskrcnn_positive_negative_sample", "detection.pos_neg_sampler")
+@oneflow_export(
+    "detection.maskrcnn_positive_negative_sample", "detection.pos_neg_sampler"
+)
 def pos_neg_sampler(
     pos_inds, neg_inds, total_subsample_num, pos_fraction, name=None
 ):
