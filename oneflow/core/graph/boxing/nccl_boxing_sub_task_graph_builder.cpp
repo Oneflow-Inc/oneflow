@@ -6,11 +6,6 @@ namespace oneflow {
 
 namespace {
 
-bool IsBoxingNotSupported(const Maybe<void>& status) {
-  return status.error()->has_boxing_error()
-         && status.error()->boxing_error() == BoxingError::kNotSupported;
-}
-
 template<typename DerivedNodeType>
 void NcclBldSubTskGph(SubTskGphBuilderCtx* ctx,
                       const std::vector<CompTaskNode*>& sorted_src_comp_tasks,
