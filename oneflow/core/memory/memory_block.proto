@@ -3,24 +3,15 @@ package oneflow;
 
 import "oneflow/core/memory/memory_case.proto";
 
-message StableDurationMemory {
-}
-
-message TemporaryDurationMemory {
-  required int64 chunk_id = 1;
-  required int64 chunk_offset = 2;
-}
-
 message MemBlockProto {
   required int64 mem_block_id = 1;
   repeated int64 job_id = 2;
   required int64 machine_id = 3;
   required MemoryCase mem_case = 4;
-  oneof durable_case {
-    StableDurationMemory stable_mem = 5;
-    TemporaryDurationMemory temp_mem = 6;
-  }
-  required int64 mem_size = 7;
+  required bool enable_reuse_mem = 5;
+  optional int64 chunk_id = 6 [default = -1];
+  optional int64 chunk_offset = 7 [default = -1];
+  required int64 mem_size = 8;
 }
 
 message ChunkProto {
