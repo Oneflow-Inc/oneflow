@@ -273,7 +273,7 @@ void AddOutBlobNames(const std::list<XlaEdge *> &out_edges,
 void FoldSubgraphBuilder::BuildXlaLaunchOps() {
   for (int i = 0; i < launch_nodes_.size(); ++i) {
     const XlaNode *node = launch_nodes_[i];
-    // Add xla launch operator
+    // Add mola launch operator
     OperatorConf op_conf; 
     op_conf.set_name(node->op_name());
     DeviceType device_type = mola::BackendToDeviceType(node->backend());
@@ -441,7 +441,7 @@ void FoldSubgraphBuilder::FixupSbpSignatures() {
       (*sbp_signatures)[bn] = edge->sbp_policy(0);
     }
     auto *resource_scope = attr_proto->mutable_resource_scope();
-    // Append sbp signatures to xla launch operator
+    // Append sbp signatures to mola launch operator
     *(resource_scope->mutable_sbp_signatures()) = *sbp_signatures;
     // Append sbp signatures to helper
     builder_->AddSbpSignature(node->op_name(), sbp_conf);
