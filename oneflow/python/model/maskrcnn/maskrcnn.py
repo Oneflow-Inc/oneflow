@@ -70,10 +70,10 @@ def maskrcnn(
     box_head = BoxHead(cfg)
     mask_head = MaskHead(cfg)
 
-    image_size_list = flow.piece_slice(image_sizes)
-    gt_boxes_list = flow.piece_slice(gt_boxes)
-    gt_labels_list = flow.piece_slice(gt_labels)
-    gt_segms_list = flow.piece_slice(gt_segms)
+    image_size_list = flow.piece_slice(image_sizes, cfg.TRAINING_CONF.IMG_PER_GPU)
+    gt_boxes_list = flow.piece_slice(gt_boxes, cfg.TRAINING_CONF.IMG_PER_GPU)
+    gt_labels_list = flow.piece_slice(gt_labels, cfg.TRAINING_CONF.IMG_PER_GPU)
+    gt_segms_list = flow.piece_slice(gt_segms, cfg.TRAINING_CONF.IMG_PER_GPU)
 
     anchors = []
     for i in range(cfg.DECODER.FPN_LAYERS):

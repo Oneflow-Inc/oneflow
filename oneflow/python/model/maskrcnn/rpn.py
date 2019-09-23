@@ -65,9 +65,10 @@ class RPNHead(object):
             for bbox_pred_per_layer in bbox_preds:
                 bbox_pred_list.append(
                     [
-                        flow.dynamic_reshape(x, shape={"dim": [-1, 4]})
+                        flow.dynamic_reshape(x, shape=[-1, 4])
                         for x in flow.piece_slice(
-                            bbox_pred_per_layer, self.cfg.TRAINING_CONF.IMG_PER_GPU
+                            bbox_pred_per_layer,
+                            self.cfg.TRAINING_CONF.IMG_PER_GPU,
                         )
                     ]
                 )
@@ -77,9 +78,10 @@ class RPNHead(object):
             for cls_logit_per_layer in cls_logits:
                 cls_logit_list.append(
                     [
-                        flow.dynamic_reshape(x, shape={"dim": [-1]})
+                        flow.dynamic_reshape(x, shape=[-1])
                         for x in flow.piece_slice(
-                            cls_logit_per_layer, self.cfg.TRAINING_CONF.IMG_PER_GPU
+                            cls_logit_per_layer,
+                            self.cfg.TRAINING_CONF.IMG_PER_GPU,
                         )
                     ]
                 )
@@ -143,7 +145,8 @@ class RPNLoss(object):
 
                 pos_inds = flow.squeeze(
                     flow.local_nonzero(
-                        matched_indices >= flow._scalar(value=0, dtype=flow.int32)
+                        matched_indices
+                        >= flow._scalar(value=0, dtype=flow.int32)
                     ),
                     axis=[1],
                 )
@@ -166,7 +169,9 @@ class RPNLoss(object):
                     flow.detection.box_encode(
                         flow.local_gather(
                             gt_boxes_list[img_idx],
-                            flow.local_gather(matched_indices, sampled_pos_inds),
+                            flow.local_gather(
+                                matched_indices, sampled_pos_inds
+                            ),
                         ),
                         flow.local_gather(anchors, sampled_pos_inds),
                         regression_weights={
@@ -178,7 +183,9 @@ class RPNLoss(object):
                     )
                 )
                 sampled_bbox_pred_list.append(
-                    flow.local_gather(bbox_pred_wrt_img_list[img_idx], sampled_pos_inds)
+                    flow.local_gather(
+                        bbox_pred_wrt_img_list[img_idx], sampled_pos_inds
+                    )
                 )
 
                 cls_labels = matched_indices >= flow.constant_scalar(
@@ -252,15 +259,19 @@ class RPNProposal(object):
                 score_list = []
                 for layer_idx in range(len(cls_logit_list[0])):
                     pre_nms_top_k_inds = flow.math.top_k(
-                        cls_logit_list[img_idx][layer_idx], k=self.cfg.RPN.PRE_NMS_TOP_N
+                        cls_logit_list[img_idx][layer_idx],
+                        k=self.cfg.RPN.PRE_NMS_TOP_N,
                     )
                     score_per_layer = flow.local_gather(
                         cls_logit_list[img_idx][layer_idx], pre_nms_top_k_inds
                     )
                     proposal_per_layer = flow.detection.box_decode(
-                        flow.local_gather(anchors[layer_idx], pre_nms_top_k_inds),
                         flow.local_gather(
-                            bbox_pred_list[img_idx][layer_idx], pre_nms_top_k_inds
+                            anchors[layer_idx], pre_nms_top_k_inds
+                        ),
+                        flow.local_gather(
+                            bbox_pred_list[img_idx][layer_idx],
+                            pre_nms_top_k_inds,
                         ),
                         regression_weights={
                             "weight_x": self.cfg.RPN.WEIGHT_X,
@@ -284,8 +295,12 @@ class RPNProposal(object):
                         ),
                         axis=[1],
                     )
-                    score_per_layer = flow.local_gather(score_per_layer, indices)
-                    proposal_per_layer = flow.local_gather(proposal_per_layer, indices)
+                    score_per_layer = flow.local_gather(
+                        score_per_layer, indices
+                    )
+                    proposal_per_layer = flow.local_gather(
+                        proposal_per_layer, indices
+                    )
 
                     # NMS
                     indices = flow.squeeze(
@@ -298,21 +313,30 @@ class RPNProposal(object):
                         ),
                         axis=[1],
                     )
-                    score_per_layer = flow.local_gather(score_per_layer, indices)
-                    proposal_per_layer = flow.local_gather(proposal_per_layer, indices)
+                    score_per_layer = flow.local_gather(
+                        score_per_layer, indices
+                    )
+                    proposal_per_layer = flow.local_gather(
+                        proposal_per_layer, indices
+                    )
 
                     proposal_list.append(proposal_per_layer)
                     score_list.append(score_per_layer)
 
-                score_in_one_img = flow.absolute_importconcat(score_list, axis=0)
+                score_in_one_img = flow.absolute_importconcat(
+                    score_list, axis=0
+                )
                 proposal_in_one_img = flow.concat(proposal_list, axis=0)
 
                 proposal_in_one_img = flow.local_gather(
                     proposal_in_one_img,
-                    flow.math.top_k(score_in_one_img, k=self.cfg.RPN.POST_NMS_TOP_N),
+                    flow.math.top_k(
+                        score_in_one_img, k=self.cfg.RPN.POST_NMS_TOP_N
+                    ),
                 )
                 proposal_in_one_img = flow.concat(
-                    [proposal_in_one_img, resized_gt_boxes_list[img_idx]], axis=0
+                    [proposal_in_one_img, resized_gt_boxes_list[img_idx]],
+                    axis=0,
                 )
 
                 proposals.append(proposal_in_one_img)
