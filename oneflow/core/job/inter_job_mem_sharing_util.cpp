@@ -245,6 +245,16 @@ void InterJobMemSharingUtil::BindInterfaceMemBlockId(const std::vector<Job>& job
   }
 }
 
+
+void InterJobMemSharingUtil::MergeMemBlockAndChunkBetweenSubPlans(const std::vector<Job>& jobs,
+                                                          std::vector<Plan>* sub_plans) {
+  if (jobs.size() == 1) { return; }
+  std::vector<HashSet<int64_t>> job_groups = GetMutualExclusionJobGroups(jobs);
+
+
+
+}
+
 void InterJobMemSharingUtil::MergeMemBlockBetweenSubPlans(const std::vector<Job>& jobs,
                                                           std::vector<Plan>* sub_plans) {
   if (jobs.size() == 1) { return; }

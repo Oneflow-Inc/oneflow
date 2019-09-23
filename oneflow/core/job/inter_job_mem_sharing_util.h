@@ -11,6 +11,9 @@ struct InterJobMemSharingUtil {
 
   static void MergeMemBlockBetweenSubPlans(const std::vector<Job>& jobs,
                                            std::vector<Plan>* sub_plans);
+  
+  static void MergeMemBlockAndChunkBetweenSubPlans(const std::vector<Job>& jobs,
+                                           std::vector<Plan>* sub_plans);
 };
 
 }  // namespace oneflow
