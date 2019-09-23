@@ -48,7 +48,7 @@ class Matcher(object):
             # iou_matrix_trans: [G, M]
             iou_matrix_trans = flow.detection.calc_iou_matrix(gt_boxes, anchors)
             # gt_matched_iou: [G, 1]
-            gt_matched_iou = flow.batch_gather(
+            gt_matched_iou = flow.gather(
                 params=iou_matrix_trans,
                 indices=flow.math.top_k(iou_matrix_trans, k=1),
                 batch_dims=1,
