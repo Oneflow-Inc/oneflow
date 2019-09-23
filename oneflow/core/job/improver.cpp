@@ -412,7 +412,8 @@ void GenMemBlockAndChunk4Plan(Plan* plan) {
   plan->clear_mem_block();
   plan->clear_chunk();
   HashMap<int64_t, MemBlockProto> mem_block_id2mem_block;
-  HashMap<int64_t, HashMap<MemoryCase, ChunkProto>> machine_id2mem_case2chunk;
+  // mzuid = memory zone unique id
+  HashMap<int64_t, ChunkProto> mzuid2chunk;
 
   auto GenMemBlock4RegstIfNeed = [&](RegstDescProto* regst_desc, int64_t job_id,
                                      int64_t machine_id) {
@@ -460,20 +461,20 @@ void GenMemBlockAndChunk4Plan(Plan* plan) {
   };
 
   auto GenChunk4ReusedMemBlockIfNeed = [&](MemBlockProto* mem_block) {
-    HashMap<MemoryCase, ChunkProto>* mem_case2chunk =
-        &(machine_id2mem_case2chunk[mem_block->machine_id()]);
-    if (mem_case2chunk->find(mem_block->mem_case()) == mem_case2chunk->end()) {
+    int64_t mzuid =
+        MemoryCaseUtil::GenMemZoneUniqueId(mem_block->machine_id(), mem_block->mem_case());
+    if (mzuid2chunk.find(mzuid) == mzuid2chunk.end()) {
       ChunkProto chunk;
       chunk.set_chunk_id(Global<IDMgr>::Get()->NewChunkId());
       chunk.add_job_id(mem_block->job_id(0));
       chunk.set_machine_id(mem_block->machine_id());
       *(chunk.mutable_mem_case()) = mem_block->mem_case();
       chunk.set_mem_size(mem_block->mem_size());
-      CHECK(mem_case2chunk->emplace(mem_block->mem_case(), chunk).second);
+      CHECK(mzuid2chunk.emplace(mzuid, chunk).second);
       mem_block->set_chunk_id(chunk.chunk_id());
       mem_block->set_chunk_offset(0);
     } else {
-      ChunkProto* chunk = &(mem_case2chunk->at(mem_block->mem_case()));
+      ChunkProto* chunk = &(mzuid2chunk.at(mzuid));
       CHECK_EQ(chunk->job_id(0), mem_block->job_id(0));
       mem_block->set_chunk_id(chunk->chunk_id());
       mem_block->set_chunk_offset(chunk->mem_size());
@@ -497,11 +498,7 @@ void GenMemBlockAndChunk4Plan(Plan* plan) {
 
   for (const auto& pair : mem_block_id2mem_block) { *(plan->add_mem_block()) = pair.second; }
 
-  for (const auto& machine_pair : machine_id2mem_case2chunk) {
-    for (const auto& mem_case_pair : machine_pair.second) {
-      *(plan->add_chunk()) = mem_case_pair.second;
-    }
-  }
+  for (const auto& pair : mzuid2chunk) { *(plan->add_chunk()) = pair.second; }
 }
 
 }  // namespace

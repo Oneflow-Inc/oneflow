@@ -128,18 +128,6 @@ std::vector<HashSet<int64_t>> GetMutualExclusionJobGroups(const std::vector<Job>
   return job_groups;
 }
 
-int64_t GenMemZoneUniqueId(int64_t machine_id, const MemoryCase& mem_case) {
-  int64_t mem_zone_id = 1024;
-  if (mem_case.has_host_mem()) {
-    if (mem_case.host_mem().has_cuda_pinned_mem()) {
-      mem_zone_id = 1025 + mem_case.host_mem().cuda_pinned_mem().device_id();
-    }
-  } else {
-    mem_zone_id = mem_case.device_cuda_mem().device_id();
-  }
-  return (machine_id << 32) | mem_zone_id;
-}
-
 void MergeReusedChunk(HashMap<int64_t, ChunkProto>* chunk_id2chunk,
                       HashMap<int64_t, MemBlockProto*>* mem_block_id2mem_block,
                       const std::vector<HashSet<int64_t>>& reuse_mem_job_groups) {
@@ -165,7 +153,7 @@ void MergeReusedChunk(HashMap<int64_t, ChunkProto>* chunk_id2chunk,
     const MemoryCase& mem_case = chunk.mem_case();
     // only reused mem in cuda device
     if (mem_case.has_host_mem()) { continue; }
-    int64_t mzuid = GenMemZoneUniqueId(chunk.machine_id(), mem_case);
+    int64_t mzuid = MemoryCaseUtil::GenMemZoneUniqueId(chunk.machine_id(), mem_case);
     CHECK_EQ(chunk.job_id_size(), 1);
     CHECK(job_id2mzuid2chunk_id[chunk.job_id(0)].emplace(mzuid, chunk.chunk_id()).second);
   }
