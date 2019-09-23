@@ -55,7 +55,8 @@ class Matcher(object):
             )
             update_indices = flow.slice(
                 flow.local_nonzero(iou_matrix_trans == gt_matched_iou),
-                dim_slice_conf=[{"start": 1, "end": 2, "stride": 1}],
+                begin=(None, 1),
+                size=(None, 1),
             )
             matched_indices = flow.local_scatter_nd_update(
                 matched_indices,
