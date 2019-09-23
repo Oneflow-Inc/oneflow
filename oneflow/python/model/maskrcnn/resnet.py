@@ -27,12 +27,12 @@ class ResNet(object):
         self.cfg = cfg
         self.stem_out_channels = cfg.BACKBONE.RESNET_STEM_OUT_CHANNELS
         self.stage_specs = _STAGE_SPECS[cfg.BACKBONE.CONV_BODY]
-        self.freeze_at = cfg.BACKBONE.FREEZE_CONV_BODY_A
+        self.freeze_at = cfg.BACKBONE.FREEZE_CONV_BODY_AT
 
     def build(self, inputs):
         features = []
         with flow.deprecated.variable_scope("body"):
-            x = self.build_stem(inputs)
+            blob = self.build_stem(inputs)
             for i, stage_spec in enumerate(self.stage_specs, 1):
                 stage_channel_relative_factor = 2 ** (stage_spec.index - 1)
                 bottleneck_channels = (
@@ -71,7 +71,7 @@ class ResNet(object):
             affine = flow.layers.affine_channel(
                 conv1,
                 axis=1,
-                activation=op_conf_util.kRelu,
+                activation=flow.keras.activations.relu,
                 trainable=False,
                 name="bn1",
             )
@@ -81,7 +81,6 @@ class ResNet(object):
                 strides=[2, 2],
                 padding="SAME",
                 data_format="NCHW",
-                trainbale=False,
                 name="pool1",
             )
         return pool
@@ -153,7 +152,11 @@ class ResNet(object):
             name="conv1",
         )
         affine1 = flow.layers.affine_channel(
-            conv1, activation=op_conf_util.kRelu, axis=1, trainable=False, name="bn1"
+            conv1,
+            activation=flow.keras.activations.relu,
+            axis=1,
+            trainable=False,
+            name="bn1",
         )
 
         conv2 = flow.layers.conv2d(
@@ -168,7 +171,11 @@ class ResNet(object):
             name="conv2",
         )
         affine2 = flow.layers.affine_channel(
-            conv2, activation=op_conf_util.kRelu, axis=1, trainable=False, name="bn2"
+            conv2,
+            activation=flow.keras.activations.relu,
+            axis=1,
+            trainable=False,
+            name="bn2",
         )
 
         conv3 = flow.layers.conv2d(
@@ -183,7 +190,13 @@ class ResNet(object):
             name="conv3",
         )
         affine3 = flow.layers.affine_channel(
-            conv3, activation=op_conf_util.kRelu, axis=1, trainable=False, name="bn3"
+            conv3,
+            activation=flow.keras.activations.relu,
+            axis=1,
+            trainable=False,
+            name="bn3",
         )
 
-        return flow.keras.relu((downsample_blob if downsample else inputs) + affine3)
+        return flow.keras.activations.relu(
+            (downsample_blob if downsample else inputs) + affine3
+        )

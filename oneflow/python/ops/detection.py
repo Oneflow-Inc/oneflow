@@ -8,6 +8,7 @@ import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 import oneflow.python.framework.distribute as distribute_util
 
 from oneflow.python.oneflow_export import oneflow_export
+import oneflow as flow
 
 
 @oneflow_export("detection.roi_align")
@@ -179,10 +180,12 @@ def anchor_generate(
         "name",
         name if name is not None else id_util.UniqueStr("AnchorGenerate_"),
     )
-    setattr(op_conf.anchor_generate_conf, "images", inputs.logical_blob_name)
+    assert isinstance(aspect_ratios, (list, tuple))
+    assert isinstance(anchor_scales, (list, tuple))
+    setattr(op_conf.anchor_generate_conf, "images", images.logical_blob_name)
     op_conf.anchor_generate_conf.feature_map_stride = feature_map_stride
-    op_conf.anchor_generate_conf.aspect_ratios = aspect_ratios
-    op_conf.anchor_generate_conf.anchor_scales = anchor_scales
+    op_conf.anchor_generate_conf.aspect_ratios.extend(aspect_ratios)
+    op_conf.anchor_generate_conf.anchor_scales.extend(anchor_scales)
     op_conf.anchor_generate_conf.anchors = "anchors"
     compile_context.CurJobAddOp(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
@@ -338,15 +341,15 @@ def upsample_nearest(inputs, scale, data_format, name=None):
     return remote_blob_util.RemoteBlob(lbi)
 
 
-@oneflow_export("detection.affine_channel")
+@oneflow_export("detection.affine_channel", "layers.affine_channel")
 def affine_channel(
     inputs,
     axis,
-    use_bias,
-    scale_initializer,
-    bias_initializer,
-    activation,
-    trainable,
+    use_bias=True,
+    scale_initializer=None,
+    bias_initializer=None,
+    activation=None,
+    trainable=True,
     name=None,
     model_distribute=distribute_util.broadcast(),
 ):
@@ -376,7 +379,7 @@ def affine_channel(
     if use_bias:
         bias = flow.get_variable(
             name="{}-bias".format(name_prefix),
-            shape=(units,),
+            shape=(inputs.shape[axis],),
             dtype=inputs.dtype,
             initializer=(
                 bias_initializer

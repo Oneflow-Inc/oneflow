@@ -1,3 +1,4 @@
+from config import get_default_cfgs
 import oneflow as flow
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 
@@ -6,30 +7,57 @@ from rpn import RPNHead, RPNLoss, RPNProposal
 from box_head import BoxHead
 from mask_head import MaskHead
 
-from config import get_default_cfgs
 import argparse
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
-    "--config_file", default=None, type=str, required=True, help="yaml config file"
+    "--config_file",
+    default=None,
+    type=str,
+    help="yaml config file",
 )
-parser.add_argument("-load", "--model_load_dir", type=str, default="", required=False)
+parser.add_argument(
+    "-load", "--model_load_dir", type=str, default="", required=False
+)
+parser.add_argument("-g", "--gpu_num_per_node", type=int, default=1, required=False)
+
 args = parser.parse_args()
 
-
+def get_numpy_placeholders():
+    import numpy as np
+    (N,C,H,W) = (2,3,250,250)
+    R=50
+    G=12
+    return (
+        (
+            np.random.randn(N,C,H,W).astype(np.float32),
+            np.random.randn(N,2).astype(np.float32),
+            np.random.randn(N,R,4).astype(np.float32),
+            np.random.randn(N,G).astype(np.int32),
+        ),
+        (
+            flow.input_blob_def((N,C,H,W)),
+            flow.input_blob_def((N, 2)),
+            flow.input_blob_def((N,R,4)),
+            flow.input_blob_def((N,G)),
+        )
+    )
+placeholders = get_numpy_placeholders()
 @flow.function
-def maskrcnn(images, image_sizes, gt_boxes, gt_segms, gt_labels):
+def maskrcnn(images=placeholders[1][0], image_sizes=placeholders[1][1], gt_boxes=placeholders[1][2], gt_labels=placeholders[1][3]):
+# def maskrcnn(images, image_sizes, gt_boxes, gt_segms, gt_labels):
     r"""Mask-RCNN
     Args:
     images: N,C,H,W
     image_sizes: N,2
     gt_boxes: N,R,4
+    gt_labels: N,G
     """
     cfg = get_default_cfgs()
-    cfg.merge_from_file(args.config_file)
+    if args.config_file is not None:
+        cfg.merge_from_file(args.config_file)
     cfg.freeze()
     print(cfg)
-
     backbone = Backbone(cfg)
     rpn_head = RPNHead(cfg)
     rpn_loss = RPNLoss(cfg)
@@ -61,21 +89,23 @@ def maskrcnn(images, image_sizes, gt_boxes, gt_segms, gt_labels):
     rpn_bbox_loss, rpn_objectness_loss = rpn_loss.build(
         anchors, image_size_list, gt_boxes_list, bbox_pred_list, cls_logit_list
     )
-    proposals = rpn_proposal.build(
-        anchors, cls_logit_list, bbox_pred_list, image_size_list, gt_boxes_list
-    )
+    # proposals = rpn_proposal.build(
+    #     anchors, cls_logit_list, bbox_pred_list, image_size_list, gt_boxes_list
+    # )
 
     # Box Head
-    box_loss, cls_loss, pos_proposal_list, pos_gt_indices_list = box_head.build_train(
-        proposals, gt_boxes_list, gt_labels_list, features
-    )
+    # box_loss, cls_loss, pos_proposal_list, pos_gt_indices_list = box_head.build_train(
+    #     proposals, gt_boxes_list, gt_labels_list, features
+    # )
 
     # Mask Head
-    mask_loss = mask_head.build_train(
-        pos_proposal_list, pos_gt_indices_list, gt_segms_list, gt_labels_list, features
-    )
+    # mask_loss = mask_head.build_train(
+    #     pos_proposal_list, pos_gt_indices_list, gt_segms_list, gt_labels_list, features
+    # )
 
-    return rpn_bbox_loss, rpn_objectness_loss, box_loss, cls_loss, mask_loss
+    # return rpn_bbox_loss, rpn_objectness_loss, box_loss, cls_loss, mask_loss
+
+    return rpn_bbox_loss, rpn_objectness_loss
 
 
 if __name__ == "__main__":
@@ -88,4 +118,4 @@ if __name__ == "__main__":
         check_point.init()
     else:
         check_point.load(args.model_load_dir)
-    maskrcnn()
+    maskrcnn(images=placeholders[0][0], image_sizes=placeholders[0][1], gt_boxes=placeholders[0][2], gt_labels=placeholders[0][3])
