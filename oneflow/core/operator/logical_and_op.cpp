@@ -27,6 +27,13 @@ class LogicalAndOp final : public Operator {
     *GetBlobDesc4BnInOp("out") = *lhs;
     return Maybe<void>::Ok();
   }
+
+ private:
+  Maybe<void> InferBatchAxis(
+      std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override {
+    return NaiveInferBatchAxis(BatchAxis4BnInOp);
+    return Maybe<void>::Ok();
+  }
 };
 
 REGISTER_OP(OperatorConf::kLogicalAndConf, LogicalAndOp);

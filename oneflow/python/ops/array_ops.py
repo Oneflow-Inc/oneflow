@@ -311,7 +311,7 @@ def where(condition, x, y, name=None):
 
 
 @oneflow_export("squeeze")
-def squeeze(input, axis, name=None):
+def squeeze(inputs, axis, name=None):
     assert isinstance(axis, list)
     op_conf = op_conf_util.OperatorConf()
     setattr(
@@ -319,25 +319,24 @@ def squeeze(input, axis, name=None):
         "name",
         name if name is not None else id_util.UniqueStr("Squeeze_"),
     )
-    setattr(op_conf.squeeze_conf, "input", input.logical_blob_name)
-    op_conf.squeeze_conf.axis.extend(axis)
-    setattr(op_conf.squeeze_conf, "out", "out")
-    compile_context.CurJobAddOp(op_conf)
-    out_lbi = logical_blob_id_util.LogicalBlobId()
-    setattr(out_lbi, "op_name", op_conf.name)
-    setattr(out_lbi, "blob_name", "out")
-    return remote_blob_util.RemoteBlob(out_lbi)
+    shape = []
+    for i, dim in enumerate(inputs.shape):
+        if i == axis:
+            assert dim == 1
+        else:
+            shape.append(dim)
+    return reshape(inputs, shape)
 
 
 @oneflow_export("expand_dims")
-def expand_dims(input, axis, name=None):
+def expand_dims(inputs, axis, name=None):
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf,
         "name",
         name if name is not None else id_util.UniqueStr("ExpandDims_"),
     )
-    setattr(op_conf.expand_dims_conf, "input", input.logical_blob_name)
+    setattr(op_conf.expand_dims_conf, "in", inputs.logical_blob_name)
     setattr(op_conf.expand_dims_conf, "axis", axis)
     setattr(op_conf.expand_dims_conf, "out", "out")
     compile_context.CurJobAddOp(op_conf)

@@ -32,6 +32,13 @@ class ClipByValueOp final : public Operator {
     *GetBlobDesc4BnInOp("out") = *in;
     return Maybe<void>::Ok();
   }
+
+ private:
+  Maybe<void> InferBatchAxis(
+      std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override {
+    return NaiveInferBatchAxis(BatchAxis4BnInOp);
+    return Maybe<void>::Ok();
+  }
 };
 
 REGISTER_OP(OperatorConf::kClipByValueConf, ClipByValueOp);
