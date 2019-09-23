@@ -19,6 +19,10 @@ class IdentifyNonSmallBoxesOp final : public Operator {
   virtual void VirtualGenKernelConf(
       std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*,
       KernelConf*, const OpContext*) const override;
+  Maybe<void> InferBatchAxis(
+      std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override {
+    return NaiveInferBatchAxis(BatchAxis4BnInOp);
+  }
 };
 
 void IdentifyNonSmallBoxesOp::InitFromOpConf() {
