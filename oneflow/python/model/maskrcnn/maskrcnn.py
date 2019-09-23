@@ -26,7 +26,7 @@ args = parser.parse_args()
 def get_numpy_placeholders():
     import numpy as np
 
-    (N, C, H, W) = (2, 3, 256, 256)
+    (N, C, H, W) = (2, 256, 256, 3)
     R = 50
     G = 12
     return (
