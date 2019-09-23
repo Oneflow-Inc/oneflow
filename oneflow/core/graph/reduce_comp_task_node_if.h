@@ -10,14 +10,14 @@ namespace oneflow {
 class ReduceMemSharingCtx final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ReduceMemSharingCtx);
-  ReduceMemSharingCtx(int64_t mem_size, int64_t mem_shared_id)
-      : mem_size_(mem_size), mem_shared_id_(mem_shared_id) {}
+  ReduceMemSharingCtx(int64_t mem_size, int64_t mem_block_id)
+      : mem_size_(mem_size), mem_block_id_(mem_block_id) {}
   ~ReduceMemSharingCtx() = default;
 
   void EnableMemSharing4Regst(RegstDesc* regst, int64_t offset) const {
-    regst->set_enable_mem_sharing(true);
-    regst->set_mem_shared_id(static_cast<int32_t>(mem_shared_id_));
-    regst->set_mem_shared_offset(offset);
+    regst->set_enable_reuse_mem(true);
+    regst->set_mem_block_id(static_cast<int32_t>(mem_block_id_));
+    regst->set_mem_block_offset(offset);
   }
 
   int64_t Offset4RankCtxParallelId(const ReduceRankCtx& rank_ctx, int64_t parallel_id) const {
@@ -37,7 +37,7 @@ class ReduceMemSharingCtx final {
 
  private:
   int64_t mem_size_;
-  int64_t mem_shared_id_;
+  int64_t mem_block_id_;
 };
 
 class ReduceCompTaskNodeIf {

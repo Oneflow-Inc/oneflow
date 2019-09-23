@@ -55,7 +55,7 @@ std::vector<HashSet<int64_t>> InitJobId2MutualExclusionJobIds(const std::vector<
       }
     }
   }
-  const JobMemSharingStrategy* strategy = Global<const JobMemSharingStrategy>::Get();
+  const InterJobReuseMemStrategy* strategy = Global<const InterJobReuseMemStrategy>::Get();
   if (strategy->has_custom_parallelism()) {
     auto* job_name2job_id = Global<JobName2JobId>::Get();
     for (const auto& group : strategy->custom_parallelism().nonparallel_group()) {
@@ -78,7 +78,7 @@ std::vector<HashSet<int64_t>> InitJobId2MutualExclusionJobIds(const std::vector<
 std::vector<HashSet<int64_t>> GetMutualExclusionJobGroups(const std::vector<Job>& jobs) {
   int64_t job_size = jobs.size();
   std::vector<HashSet<int64_t>> job_groups;
-  if (Global<const JobMemSharingStrategy>::Get()->has_mem_sharing_priority()) {
+  if (Global<const InterJobReuseMemStrategy>::Get()->has_reuse_mem_priority()) {
     job_groups.push_back(HashSet<int64_t>());
     FOR_RANGE(int64_t, i, 0, job_size) { job_groups.front().emplace(i); }
     return job_groups;
@@ -158,7 +158,7 @@ struct MbiInfo {
 };
 
 std::vector<std::unique_ptr<MbiInfo>> InitMemBlockId2MbiInfo(std::vector<Plan>* sub_plans) {
-  int64_t mem_block_id_max = Global<IDMgr>::Get()->NewMemSharedId();
+  int64_t mem_block_id_max = Global<IDMgr>::Get()->NewMemBlockId();
   std::vector<std::unique_ptr<MbiInfo>> mem_block_id2mbi_info(mem_block_id_max);
   for (int64_t job_id = 0; job_id < sub_plans->size(); ++job_id) {
     Plan* sub_plan = &(sub_plans->at(job_id));
@@ -167,12 +167,12 @@ std::vector<std::unique_ptr<MbiInfo>> InitMemBlockId2MbiInfo(std::vector<Plan>* 
       for (auto& pair : *(task->mutable_produced_regst_desc())) {
         RegstDescProto* regst_desc = &pair.second;
         // only handle memory reused
-        if (!regst_desc->enable_mem_sharing()) { continue; }
+        if (!regst_desc->enable_reuse_mem()) { continue; }
         CHECK(regst_desc->regst_desc_type().has_data_regst_desc());
-        int32_t mem_block_id = regst_desc->mem_shared_id();
+        int32_t mem_block_id = regst_desc->mem_block_id();
         CHECK_GE(mem_block_id, 0);
         int64_t mem_byte_size =
-            RtRegstDesc(*regst_desc).TotalMainByteSize4AllRegst() + regst_desc->mem_shared_offset();
+            RtRegstDesc(*regst_desc).TotalMainByteSize4AllRegst() + regst_desc->mem_block_offset();
         CHECK_GT(mem_byte_size, 0);
         int64_t mzuid = GenMemZoneUniqueId(task->machine_id(), regst_desc->mem_case());
         if (mem_block_id2mbi_info[mem_block_id] == nullptr) {
@@ -211,16 +211,16 @@ void InterJobMemSharingUtil::BindInterfaceMemBlockId(const std::vector<Job>& job
       FOR_RANGE(int64_t, i, 0, first_vec.size()) {
         CHECK_EQ(task_protos.at(i)->machine_id(), first_vec.at(i)->machine_id());
         RegstDescProto* first_regst_desc = PlanUtil::GetSoleProducedDataRegst(first_vec.at(i));
-        CHECK_EQ(first_regst_desc->mem_shared_offset(), 0);
+        CHECK_EQ(first_regst_desc->mem_block_offset(), 0);
         RegstDescProto* regst_desc = PlanUtil::GetSoleProducedDataRegst(task_protos.at(i));
         MemoryCase common_mem_case;
         CHECK(MemoryCaseUtil::GetCommonMemoryCase(common_mem_case_vec.at(i), regst_desc->mem_case(),
                                                   &common_mem_case));
         common_mem_case_vec[i] = common_mem_case;
-        CHECK(regst_desc->enable_mem_sharing() == false);
-        CHECK_EQ(regst_desc->mem_shared_offset(), 0);
-        CHECK_NE(first_regst_desc->mem_shared_id(), -1);
-        regst_desc->set_mem_shared_id(first_regst_desc->mem_shared_id());
+        CHECK(regst_desc->enable_reuse_mem() == false);
+        CHECK_EQ(regst_desc->mem_block_offset(), 0);
+        CHECK_NE(first_regst_desc->mem_block_id(), -1);
+        regst_desc->set_mem_block_id(first_regst_desc->mem_block_id());
 
         int64_t separated_header_mem_size =
             RtRegstDesc(*first_regst_desc).TotalSeparatedHeaderByteSize4AllRegst();
@@ -229,7 +229,7 @@ void InterJobMemSharingUtil::BindInterfaceMemBlockId(const std::vector<Job>& job
                    RtRegstDesc(*regst_desc).TotalSeparatedHeaderByteSize4AllRegst());
           if (first_regst_desc->separated_header_mem_block_id() == -1) {
             first_regst_desc->set_separated_header_mem_block_id(
-                Global<IDMgr>::Get()->NewMemSharedId());
+                Global<IDMgr>::Get()->NewMemBlockId());
           }
           regst_desc->set_separated_header_mem_block_id(
               first_regst_desc->separated_header_mem_block_id());
@@ -266,7 +266,7 @@ void InterJobMemSharingUtil::MergeMemBlockBetweenSubPlans(const std::vector<Job>
     CHECK_EQ(info_l->mzuid, info_r->mzuid);
     CHECK_GT(info_l->mem_size, 0);
     CHECK_GT(info_r->mem_size, 0);
-    for (auto* regst_desc : info_r->regst_descs) { regst_desc->set_mem_shared_id(lhs); }
+    for (auto* regst_desc : info_r->regst_descs) { regst_desc->set_mem_block_id(lhs); }
     info_l->mem_size = std::max(info_l->mem_size, info_r->mem_size);
     mem_block_id2mbi_info[rhs].reset(nullptr);
   };

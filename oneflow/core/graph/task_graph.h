@@ -23,7 +23,7 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   void AddMdUpdtCtrlEdgesWithinReduceSplitNode();
   void AddReduceNoBwForwardNodeOverlapingCtrlEdges();
 
-  void EnableMemSharingInReduceStruct();
+  void EnableInplaceMemSharingInReduceStruct();
   void EnableInplaceMemSharing(const std::function<bool(const LogicalBlobId&, const std::string&)>&
                                    IsLbiAllConsumersReachableToOpName);
 

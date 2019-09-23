@@ -29,8 +29,11 @@ class JobDesc final {
   bool IsPredict() const { return job_conf_.has_predict_conf(); }
   int64_t piece_num_of_experiment_phase() const;
   bool enable_experiment_run() const;
-  bool enable_mem_sharing() const { return job_conf_.enable_mem_sharing(); }
+  bool enable_reuse_mem() const { return job_conf_.enable_reuse_mem(); }
   bool enable_inplace() const { return job_conf_.enable_inplace(); }
+  bool enable_inplace_in_reduce_struct() const {
+    return job_conf_.enable_inplace_in_reduce_struct();
+  }
   bool enable_true_half_config_when_conv() const {
     return job_conf_.enable_true_half_config_when_conv();
   }
