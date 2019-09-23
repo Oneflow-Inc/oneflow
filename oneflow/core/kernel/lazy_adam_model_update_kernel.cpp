@@ -41,7 +41,9 @@ class LazyAdamMdUpdateKernelUtil<DeviceType::kCPU, T> final {
  public:
   static void UpdateModel(DeviceCtx* ctx, int64_t n, const float* learning_rate, T l1, T l2,
                           T beta1, T beta2, T epsilon, const int64_t* train_step, T* beta1_t,
-                          T* beta2_t, T* model_diff, T* model, T* m, T* v) {}
+                          T* beta2_t, T* model_diff, T* model, T* m, T* v) {
+    UNIMPLEMENTED();
+  }
 };
 
 DEFINE_MDUPDT_KERNEL_CREATOR(LazyAdam);

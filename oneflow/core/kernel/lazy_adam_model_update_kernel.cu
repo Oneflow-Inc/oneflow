@@ -10,15 +10,13 @@ template<typename T>
 __global__ void UpdateModelGpu(int64_t n, const float* learning_rate, T l1, T l2, T beta1, T beta2,
                                T epsilon, const T* beta1_t, const T* beta2_t, T* model_diff,
                                T* model, T* m, T* v) {
+  float local_learning_rate = *learning_rate * sqrt(1 - (*beta2_t)) / (1 - (*beta1_t));
   CUDA_1D_KERNEL_LOOP(i, n) {
     if (abs(model_diff[i]) < 1e-12) { continue; }
     T reg_diff = RegDiff(model_diff[i], l1, l2, model[i]);
     m[i] = beta1 * m[i] + (1 - beta1) * reg_diff;
     v[i] = beta2 * v[i] + (1 - beta2) * reg_diff * reg_diff;
-    // *learning_rate = *learning_rate * sqrt(1 - (*beta2_t)) / (1 - (*beta1_t));
-    model[i] = model[i]
-               - (*learning_rate * sqrt(1 - (*beta2_t)) / (1 - (*beta1_t))) * m[i]
-                     / (sqrt(v[i]) + epsilon);
+    model[i] = model[i] - local_learning_rate * m[i] / (sqrt(v[i]) + epsilon);
   }
 }
 
