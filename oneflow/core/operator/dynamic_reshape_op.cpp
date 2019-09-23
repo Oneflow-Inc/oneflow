@@ -19,21 +19,22 @@ class DynamicReshapeOp final : public Operator {
     const DynamicReshapeOpConf& conf = op_conf().dynamic_reshape_conf();
     int32_t inferred_axis = -1;
     int32_t num_inferred_axis = 0;
-    std::vector<int64_t> dim_vec = {conf.shape().dim().begin(), conf.shape().dim().end()};
+    std::vector<int64_t> conf_dim_vec = {conf.shape().dim().begin(), conf.shape().dim().end()};
+    std::vector<int64_t> out_dim_vec = {};
     for (int32_t i = 0; i < dim_vec.size(); ++i) {
-      if (dim_vec[i] == -1) {
+      if (conf_dim_vec[i] == -1) {
         inferred_axis = i;
         num_inferred_axis = 1;
       } else {
-        CHECK_GT_OR_RETURN(dim_vec[i], 0);
-        dim_vec.push_back(dim_vec[i]);
+        CHECK_GT_OR_RETURN(conf_dim_vec[i], 0);
+        out_dim_vec.push_back(conf_dim_vec[i]);
       }
     }
-    CHECK_GE_OR_RETURN(inferred_axis, 0);
+    CHECK_GT_OR_RETURN(inferred_axis, 0);
     CHECK_EQ_OR_RETURN(num_inferred_axis, 1);
-    dim_vec.insert(dim_vec.begin() + inferred_axis,
+    out_dim_vec.insert(out_dim_vec.begin() + inferred_axis,
                    in->shape().elem_cnt() / out->shape().elem_cnt());
-    out->mut_shape() = Shape(dim_vec);
+    out->mut_shape() = Shape(out_dim_vec);
     return Maybe<void>::Ok();
   }
 
