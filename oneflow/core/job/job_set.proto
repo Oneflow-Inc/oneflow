@@ -3,7 +3,6 @@ package oneflow;
 
 import "oneflow/core/job/job.proto";
 import "oneflow/core/job/resource.proto";
-import "oneflow/core/data/data.proto";
 
 message LocalFsConf {
 }
