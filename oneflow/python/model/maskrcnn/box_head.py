@@ -11,11 +11,14 @@ class BoxHead(object):
     # features: list of [N, C_i, H_i, W_i] wrt. fpn layers
     def build_train(self, proposals, gt_boxes_list, gt_labels_list, features):
         with flow.deprecated.variable_scope("roi"):
+            # used in box_head
             label_list = []
             proposal_list = []
-            pos_proposal_list = []
             bbox_target_list = []
+            # used to generate positive proposals for mask_head
+            pos_proposal_list = []
             pos_gt_indices_list = []
+
             for img_idx in range(len(proposals)):
                 with flow.deprecated.variable_scope("matcher"):
                     box_head_matcher = Matcher(
@@ -49,7 +52,9 @@ class BoxHead(object):
                     [sampled_pos_inds, sampled_neg_inds], axis=0
                 )
 
-                clamped_matched_indices = flow.clip_by_value(matched_indices, 0)
+                clamped_matched_indices = flow.clip_by_value(
+                    t=matched_indices, clip_value_min=0
+                )
                 proposal_gt_labels = flow.local_gather(
                     gt_labels_list[img_idx], clamped_matched_indices
                 )
@@ -77,7 +82,7 @@ class BoxHead(object):
                 )
                 gt_boxes_per_img = flow.local_gather(gt_boxes_list[img_idx], gt_indices)
                 bbox_target_list.append(
-                    self.box_encode(
+                    flow.detection.box_encode(
                         gt_boxes_per_img,
                         proposal_per_img,
                         regression_weights={
@@ -93,7 +98,9 @@ class BoxHead(object):
                 pos_gt_indices_list.append(pos_gt_indices)
 
             proposals = flow.concat(proposal_list, axis=0)
-            img_ids = flow.concat(self.extract_piece_slice_id(proposal_list), axis=0)
+            img_ids = flow.concat(
+                flow.detection.extract_piece_slice_id(proposal_list), axis=0
+            )
             labels = flow.concat(label_list, axis=0)
             bbox_targets = flow.concat(bbox_target_list, axis=0)
 
