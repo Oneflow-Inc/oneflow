@@ -15,6 +15,8 @@ void RtBlobDesc::InitFromProto(const BlobDescProto& proto) {
   header_.InitFromProto(proto.header());
   num_of_lod_levels_ = proto.num_of_lod_levels();
   is_body_disabled_ = proto.is_body_disabled();
+  opaque_header_.InitFromProto(proto.opaque_header());
+  header_is_opaque_ = proto.header_is_opaque();
 }
 
 size_t RtBlobDesc::ByteSizeOfBlobHeader() const { return header_.ByteSize(); }
@@ -32,7 +34,8 @@ size_t RtBlobDesc::AlignedTotalByteSize() const {
 bool RtBlobDesc::operator==(const RtBlobDesc& rhs) const {
   return (body_ == rhs.body_) && (header_ == rhs.header_)
          && (num_of_lod_levels_ == rhs.num_of_lod_levels_)
-         && (is_body_disabled_ == rhs.is_body_disabled_);
+         && (is_body_disabled_ == rhs.is_body_disabled_) && (opaque_header_ == rhs.opaque_header_)
+         && (header_is_opaque_ == rhs.header_is_opaque_);
 }
 
 }  // namespace oneflow

@@ -20,6 +20,7 @@ class RtBlobDesc final {
   const StructPodDesc& header_pod_desc() const { return header_; }
   bool is_body_disabled() const { return is_body_disabled_; }
   int64_t num_of_lod_levels() const { return num_of_lod_levels_; }
+  bool header_is_opaque() const { return header_is_opaque_; }
 
   DataType data_type() const { return body_.data_type(); }
   int64_t NumAxes() const { return body_.shape().NumAxes(); }
@@ -40,6 +41,8 @@ class RtBlobDesc final {
   StructPodDesc header_;
   int64_t num_of_lod_levels_;
   bool is_body_disabled_;
+  TensorPodDesc opaque_header_;
+  bool header_is_opaque_;
 };
 
 }  // namespace oneflow
