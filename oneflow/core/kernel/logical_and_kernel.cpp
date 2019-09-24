@@ -24,7 +24,6 @@ void LogicalAndKernel<device_type, T>::ForwardDataContent(
                                           rhs_blob->dptr<T>(), out_blob->mut_dptr<T>());
 }
 
-
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kLogicalAndConf, LogicalAndKernel, INT_DATA_TYPE_SEQ);
 
 }  // namespace oneflow
