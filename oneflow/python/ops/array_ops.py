@@ -373,7 +373,6 @@ def piece_slice(inputs, output_size, name=None):
 @oneflow_export("elem_cnt")
 def elem_cnt(
     inputs,
-    output_size,
     begin_axis=None,
     end_axis=None,
     data_type=None,
