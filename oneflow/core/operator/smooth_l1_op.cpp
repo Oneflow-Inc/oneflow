@@ -31,6 +31,11 @@ class SmoothL1Op final : public Operator {
     return Maybe<void>::Ok();
   }
 
+ private:
+  Maybe<void> InferBatchAxis(
+      std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override {
+    return NaiveInferBatchAxis(BatchAxis4BnInOp);
+  }
 };  // namespace oneflow
 
 REGISTER_OP(OperatorConf::kSmoothL1Conf, SmoothL1Op);
