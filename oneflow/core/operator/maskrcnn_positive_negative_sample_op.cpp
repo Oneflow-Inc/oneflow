@@ -18,8 +18,8 @@ class MaskrcnnPositiveNegativeSampleOp final : public Operator {
  private:
   Maybe<void> InferBatchAxis(
       std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override {
-    BatchAxis4BnInOp("sampled_pos_inds")->clear_value();
-    BatchAxis4BnInOp("sampled_neg_inds")->clear_value();
+    BatchAxis4BnInOp("sampled_pos_inds")->set_value(0);
+    BatchAxis4BnInOp("sampled_neg_inds")->set_value(0);
     return Maybe<void>::Ok();
   }
 };
@@ -47,8 +47,8 @@ Maybe<void> MaskrcnnPositiveNegativeSampleOp::InferBlobDescs(
   *sampled_pos_inds = *pos_inds;
   sampled_pos_inds->mut_shape() =
       Shape({static_cast<int64_t>(conf.total_subsample_num() * conf.pos_fraction())});
-  sampled_pos_inds->set_has_dim0_valid_num_field(true);
-  sampled_pos_inds->mut_dim0_inner_shape() = Shape({1, sampled_pos_inds->shape().At(0)});
+  // sampled_pos_inds->set_has_dim0_valid_num_field(true);
+  // sampled_pos_inds->mut_dim0_inner_shape() = Shape({1, sampled_pos_inds->shape().At(0)});
   // output: sampled_neg_inds (max_num_neg,)
   BlobDesc* sampled_neg_inds = GetBlobDesc4BnInOp("sampled_neg_inds");
   *sampled_neg_inds = *neg_inds;
