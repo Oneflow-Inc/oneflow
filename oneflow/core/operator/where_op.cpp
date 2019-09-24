@@ -42,6 +42,13 @@ class WhereOp final : public Operator {
     // conf->set_cond_type(GetBlobDesc4BnInOp("condition")->data_type());
     // conf->set_value_type(GetBlobDesc4BnInOp("lhs")->data_type());
   }
+
+ private:
+  Maybe<void> InferBatchAxis(
+      std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override {
+    return NaiveInferBatchAxis(BatchAxis4BnInOp);
+    return Maybe<void>::Ok();
+  }
 };
 
 REGISTER_OP(OperatorConf::kWhereConf, WhereOp);
