@@ -8,7 +8,8 @@ void DataLoadKernel::VirtualKernelInit() {
   const DataLoadOpConf& op_conf = this->op_conf().data_load_conf();
   std::shared_ptr<Dataset> dataset =
       Global<DatasetManager>::Get()->GetOrCreateDataset(op_conf.dataset());
-  data_loader_.reset(new DataLoader(this->kernel_conf().data_load_conf(), dataset, op_conf.batch_cache_size()));
+  data_loader_.reset(
+      new DataLoader(this->kernel_conf().data_load_conf(), dataset, op_conf.batch_cache_size()));
 }
 
 void DataLoadKernel::Forward(const KernelCtx& ctx,

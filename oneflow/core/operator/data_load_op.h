@@ -16,9 +16,9 @@ class DataLoadOp final : public Operator {
   const PbMessage& GetCustomizedConf() const override;
   LogicalNode* NewProperLogicalNode() const override { return new DataLoadLogicalNode; }
 
-  Maybe<void> InferBlobDescs(
-    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const override;
+  Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                             const ParallelContext* parallel_ctx,
+                             const SbpSignature* sbp_signature) const override;
 
  private:
   Maybe<void> InferBatchAxis(

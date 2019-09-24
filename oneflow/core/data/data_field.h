@@ -142,8 +142,8 @@ std::unique_ptr<DataField> MakeDataField(Args&&... args) {
   OF_PP_MAKE_TUPLE_SEQ(DataSourceCase::kLabel)              \
   OF_PP_MAKE_TUPLE_SEQ(DataSourceCase::kObjectBoundingBox)  \
   OF_PP_MAKE_TUPLE_SEQ(DataSourceCase::kObjectSegmentation) \
-  OF_PP_MAKE_TUPLE_SEQ(DataSourceCase::kObjectLabel) \
-  OF_PP_MAKE_TUPLE_SEQ(DataSourceCase::kImageScale) \
+  OF_PP_MAKE_TUPLE_SEQ(DataSourceCase::kObjectLabel)        \
+  OF_PP_MAKE_TUPLE_SEQ(DataSourceCase::kImageScale)         \
   OF_PP_MAKE_TUPLE_SEQ(DataSourceCase::kImageSize)
 
 #define EXTRACT_DATA_TYPE(type, type_val) OF_PP_MAKE_TUPLE_SEQ(type_val)

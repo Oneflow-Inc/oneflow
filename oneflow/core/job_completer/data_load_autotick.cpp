@@ -8,9 +8,7 @@ class MutDataLoadOpConTickInputHelper final : public MutOpConTickInputHelper {
  public:
   MutDataLoadOpConTickInputHelper() : MutOpConTickInputHelper() {}
 
-  bool VirtualIsTickInputBound() const override {
-    return op_conf().data_load_conf().has_tick();
-  }
+  bool VirtualIsTickInputBound() const override { return op_conf().data_load_conf().has_tick(); }
 
   OperatorConf NewTickInputBoundOpConf(const std::string& lbn) const override {
     OperatorConf ret(op_conf());

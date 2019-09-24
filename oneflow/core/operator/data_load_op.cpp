@@ -21,9 +21,7 @@ void DataLoadOp::InitFromOpConf() {
   CHECK(op_conf().has_data_load_conf());
   const DataLoadOpConf& conf = op_conf().data_load_conf();
   if (conf.has_tick()) { EnrollInputBn("tick", false); }
-  FOR_RANGE(int32_t, i, 0, conf.blobs_size()) {
-    EnrollOutputBn("out_" + std::to_string(i), false);
-  }
+  FOR_RANGE(int32_t, i, 0, conf.blobs_size()) { EnrollOutputBn("out_" + std::to_string(i), false); }
 }
 
 const PbMessage& DataLoadOp::GetCustomizedConf() const { return op_conf().data_load_conf(); }
@@ -31,12 +29,12 @@ const PbMessage& DataLoadOp::GetCustomizedConf() const { return op_conf().data_l
 void DataLoadOp::VirtualGenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
-  const DataLoadOpConf& conf = op_conf().data_load_conf(); 
+  const DataLoadOpConf& conf = op_conf().data_load_conf();
   DataLoadKernelConf* this_kernel_conf = kernel_conf->mutable_data_load_conf();
   // Set data_instance
   DataInstanceProto* data_inst = this_kernel_conf->mutable_data_instance();
   for (const BlobConf& blob_conf : conf.blobs()) {
-  // FOR_RANGE(size_t, i, 0, conf.blobs_size()) {
+    // FOR_RANGE(size_t, i, 0, conf.blobs_size()) {
     // const BlobConf& blob_conf = conf.blobs(i);
     DataFieldProto* data_field = data_inst->add_data_fields();
     data_field->set_data_source(blob_conf.data_source());
@@ -75,9 +73,7 @@ Maybe<void> DataLoadOp::InferBlobDescs(
 
 Maybe<void> DataLoadOp::InferBatchAxis(
     std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
-  for (const auto& output_bn : output_bns()) {
-    BatchAxis4BnInOp(output_bn)->set_value(0);
-  }
+  for (const auto& output_bn : output_bns()) { BatchAxis4BnInOp(output_bn)->set_value(0); }
   return Maybe<void>::Ok();
 }
 

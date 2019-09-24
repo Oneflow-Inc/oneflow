@@ -86,8 +86,8 @@ void COCODataset::GetImage(const std::string& image_file_name, DataField* data_f
   auto* image_field = dynamic_cast<ImageDataField*>(data_field);
   CHECK_NOTNULL(image_field);
 
-  auto image_file_path = JoinPath(dataset_proto().dataset_dir(), dataset_proto().coco().image_dir(),
-                                  image_file_name);
+  auto image_file_path =
+      JoinPath(dataset_proto().dataset_dir(), dataset_proto().coco().image_dir(), image_file_name);
   PersistentInStream in_stream(DataFS(), image_file_path);
   std::vector<char> buffer(DataFS()->GetFileSize(image_file_path));
   CHECK_EQ(in_stream.Read(buffer.data(), buffer.size()), 0);
@@ -101,9 +101,7 @@ void COCODataset::GetBbox(const nlohmann::json& bbox_json, DataField* data_field
   CHECK_NOTNULL(bbox_field);
 
   auto& bbox_vec = bbox_field->data();
-  for (const auto& jval : bbox_json) {
-    bbox_vec.push_back(jval.get<float>());
-  }
+  for (const auto& jval : bbox_json) { bbox_vec.push_back(jval.get<float>()); }
 }
 
 void COCODataset::GetLabel(const nlohmann::json& label_json, DataField* data_field) const {
@@ -148,9 +146,7 @@ void COCODataset::GetSegmentation(const nlohmann::json& segmentation, DataField*
     }
   } else if (segmentation.is_array()) {
     for (const auto& segm_array : segmentation) {
-      for (const auto& segm : segm_array) { 
-        segm_field->PushBack(segm.get<float>());
-      }
+      for (const auto& segm : segm_array) { segm_field->PushBack(segm.get<float>()); }
       segm_field->AppendLodLength(2, segm_array.size());
     }
     segm_field->AppendLodLength(1, segmentation.size());

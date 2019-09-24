@@ -17,9 +17,9 @@ class DataLoadKernel final : public KernelIf<DeviceType::kCPU> {
                std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   void VirtualKernelInit() override;
 
-  void WriteDataToBlob(
-      DeviceCtx* ctx, const std::vector<std::unique_ptr<data::DataInstance>>& data_inst_vec,
-      const BlobConf& blob_conf, Blob* out_blob) const;
+  void WriteDataToBlob(DeviceCtx* ctx,
+                       const std::vector<std::unique_ptr<data::DataInstance>>& data_inst_vec,
+                       const BlobConf& blob_conf, Blob* out_blob) const;
 
   std::unique_ptr<data::DataLoader> data_loader_;
 };

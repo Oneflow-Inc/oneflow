@@ -126,16 +126,16 @@ struct DataTransformer<DataSourceCase::kImage, TransformCase::kTargetResize> {
 template<>
 struct DataTransformer<DataSourceCase::kObjectBoundingBox, TransformCase::kTargetResize> {
   static void Apply(DataInstance* data_inst, const DataTransformProto& proto) {
-    DataTransformer<DataSourceCase::kObjectBoundingBox, TransformCase::kResize>::Apply(
-        data_inst, proto);
+    DataTransformer<DataSourceCase::kObjectBoundingBox, TransformCase::kResize>::Apply(data_inst,
+                                                                                       proto);
   }
 };
 
 template<>
 struct DataTransformer<DataSourceCase::kObjectSegmentation, TransformCase::kTargetResize> {
   static void Apply(DataInstance* data_inst, const DataTransformProto& proto) {
-    DataTransformer<DataSourceCase::kObjectSegmentation, TransformCase::kResize>::Apply(
-        data_inst, proto);
+    DataTransformer<DataSourceCase::kObjectSegmentation, TransformCase::kResize>::Apply(data_inst,
+                                                                                        proto);
   }
 };
 
@@ -145,7 +145,7 @@ void DoDataTransform<TransformCase::kResize>(DataInstance* data_inst,
   CHECK(proto.has_resize());
   DataTransformer<DataSourceCase::kImage, TransformCase::kResize>::Apply(data_inst, proto);
   DataTransformer<DataSourceCase::kObjectBoundingBox, TransformCase::kResize>::Apply(data_inst,
-                                                                                    proto);
+                                                                                     proto);
   DataTransformer<DataSourceCase::kObjectSegmentation, TransformCase::kResize>::Apply(data_inst,
                                                                                       proto);
 }
