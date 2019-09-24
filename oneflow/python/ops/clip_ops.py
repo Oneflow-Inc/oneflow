@@ -9,14 +9,16 @@ from oneflow.python.oneflow_export import oneflow_export
 
 
 @oneflow_export("clip_by_value")
-def clip_by_value(t, clip_value_min, clip_value_max, name=None):
+def clip_by_value(t, clip_value_min=None, clip_value_max=None, name=None):
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf, "name", name if name is not None else id_util.UniqueStr("ClipByValue_")
     )
     setattr(op_conf.clip_by_value_conf, "in", t.logical_blob_name)
-    setattr(op_conf.clip_by_value_conf, "min_val", clip_value_min)
-    setattr(op_conf.clip_by_value_conf, "max_val", clip_value_max)
+    if clip_value_min is not None:
+        setattr(op_conf.clip_by_value_conf, "min_val", clip_value_min)
+    if clip_value_max is not None:
+        setattr(op_conf.clip_by_value_conf, "max_val", clip_value_max)
     setattr(op_conf.clip_by_value_conf, "out", "out")
     compile_context.CurJobAddOp(op_conf)
     out_lbi = logical_blob_id_util.LogicalBlobId()
