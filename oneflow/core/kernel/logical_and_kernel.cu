@@ -7,7 +7,7 @@ namespace {
 template<typename T>
 __global__ void GpuForward(const int64_t elem_cnt, const T* lhs_ptr, const T* rhs_ptr, T* out_ptr) {
   CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
-    out_ptr[i] = static_cast<T>(static_cast<bool>(lhs_ptr[i]) & static_cast<bool>(rhs_ptr[i]));
+    out_ptr[i] = static_cast<T>(static_cast<bool>(lhs_ptr[i]) && static_cast<bool>(rhs_ptr[i]));
   }
 }
 
