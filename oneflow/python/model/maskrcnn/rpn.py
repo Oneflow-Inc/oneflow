@@ -127,7 +127,7 @@ class RPNLoss(object):
 
             anchors = flow.concat(anchors_list, axis=0)  # # anchors: [M, 4]
             for img_idx, gt_boxes in enumerate(gt_boxes_list):
-                with flow.deprecated.variable_scope("rpn-loss"):
+                with flow.deprecated.variable_scope("matcher"):
                     rpn_matcher = Matcher(
                         self.cfg.RPN.POSITIVE_OVERLAP_THRESHOLD,
                         self.cfg.RPN.NEGATIVE_OVERLAP_THRESHOLD,
