@@ -48,7 +48,7 @@ void ReduceSplitOp::VirtualGenKernelConf(
 Maybe<void> ReduceSplitOp::InferBatchAxis(
     std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
   CHECK_EQ_OR_RETURN(BatchAxis4BnInOp("in")->has_value(), false);
-  for (const auto& ibn : input_bns()) { BatchAxis4BnInOp(ibn)->clear_value(); }
+  for (const auto& obn : output_bns()) { BatchAxis4BnInOp(obn)->clear_value(); }
   return Maybe<void>::Ok();
 }
 

@@ -9,6 +9,7 @@ namespace oneflow {
 class PodPtr final {
  public:
   PodPtr(const PodDesc& pod_desc, char* ptr) : pod_desc_(&pod_desc), ptr_(ptr) {}
+  PodPtr(const PodPtr&) = default;
   ~PodPtr() = default;
 
   template<typename T>

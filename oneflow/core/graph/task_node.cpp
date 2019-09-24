@@ -23,9 +23,9 @@ void ForEachDataEdge(const std::unordered_set<TaskEdge*>& edges,
 }  // namespace
 
 bool IsForwardTaskType(TaskType tt) {
-  return tt == TaskType::kNormalForward || tt == TaskType::kRecurrentForward
-         || tt == TaskType::kPackForward || tt == TaskType::kUnpackForward
-         || tt == TaskType::kRepeatForward || tt == TaskType::kEveryNth;
+  return tt == TaskType::kNormalForward || tt == TaskType::kPackForward
+         || tt == TaskType::kUnpackForward || tt == TaskType::kRepeatForward
+         || tt == TaskType::kEveryNth;
 }
 bool IsMdUpdtTaskType(TaskType tt) { return tt == TaskType::kNormalMdUpdt; }
 
@@ -267,31 +267,29 @@ void TaskNode::BindEdgeWithProducedRegst(TaskEdge* edge, const std::string& name
   edge->AddRegst(name, GetProducedRegst(name));
 }
 
-std::shared_ptr<RegstDesc> TaskNode::ProduceRegst(const std::string& name,
-                                                  bool enable_mem_sharing) {
-  return ProduceRegst(name, enable_mem_sharing, 1, kMaxRegisterNum);
+std::shared_ptr<RegstDesc> TaskNode::ProduceRegst(const std::string& name, bool enable_reuse_mem) {
+  return ProduceRegst(name, enable_reuse_mem, 1, kMaxRegisterNum);
 }
 
-std::shared_ptr<RegstDesc> TaskNode::ProduceRegst(const std::string& name, bool enable_mem_sharing,
+std::shared_ptr<RegstDesc> TaskNode::ProduceRegst(const std::string& name, bool enable_reuse_mem,
                                                   int32_t min_register_num,
                                                   int32_t max_register_num) {
   RegstDescTypeProto regst_desc_type;
   regst_desc_type.mutable_data_regst_desc();
-  return ProduceRegst(name, enable_mem_sharing, min_register_num, max_register_num,
-                      regst_desc_type);
+  return ProduceRegst(name, enable_reuse_mem, min_register_num, max_register_num, regst_desc_type);
 }
 
-std::shared_ptr<RegstDesc> TaskNode::ProduceRegst(const std::string& name, bool enable_mem_sharing,
+std::shared_ptr<RegstDesc> TaskNode::ProduceRegst(const std::string& name, bool enable_reuse_mem,
                                                   int32_t min_register_num,
                                                   int32_t max_register_num,
                                                   const RegstDescTypeProto& regst_desc_type) {
   auto regst =
-      NewProducedRegst(enable_mem_sharing, min_register_num, max_register_num, regst_desc_type);
+      NewProducedRegst(enable_reuse_mem, min_register_num, max_register_num, regst_desc_type);
   CHECK(produced_regsts_.emplace(name, regst).second);
   return regst;
 }
 
-std::shared_ptr<RegstDesc> TaskNode::NewProducedRegst(bool enable_mem_sharing,
+std::shared_ptr<RegstDesc> TaskNode::NewProducedRegst(bool enable_reuse_mem,
                                                       int32_t min_register_num,
                                                       int32_t max_register_num,
                                                       const RegstDescTypeProto& regst_desc_type) {
@@ -300,7 +298,7 @@ std::shared_ptr<RegstDesc> TaskNode::NewProducedRegst(bool enable_mem_sharing,
   *(regst->mut_regst_desc_type()) = regst_desc_type;
   regst->UpdtMinRegstNumIfNeed(min_register_num);
   regst->UpdtMaxRegstNumIfNeed(max_register_num);
-  regst->set_enable_mem_sharing(GlobalJobDesc().enable_mem_sharing() && enable_mem_sharing);
+  regst->set_enable_reuse_mem(GlobalJobDesc().enable_reuse_mem() && enable_reuse_mem);
   InitProducedRegstMemCase(regst.get());
   return regst;
 }
@@ -362,7 +360,6 @@ void TaskNode::LockRegsts() {
 void TaskNode::FixRegisterNumRange() {
   for (auto& pair : produced_regsts_) {
     RegstDesc* produced_regst = pair.second.get();
-    produced_regst->UpdtMinRegstNumIfNeed(pair.second->MaxColNum());
     bool in_same_stream = true;
     for (const TaskNode* consumer : produced_regst->consumers()) {
       if (consumer->GlobalWorkStreamId() != GlobalWorkStreamId()) {
@@ -491,67 +488,5 @@ TaskEdge* TaskNode::SoleOutDataEdge() const { return GetSoleEdge(&TaskNode::ForE
 size_t TaskNode::in_data_edges_size() const { return GetEdgesSize(&TaskNode::ForEachInDataEdge); }
 
 size_t TaskNode::out_data_edges_size() const { return GetEdgesSize(&TaskNode::ForEachOutDataEdge); }
-
-std::map<TaskType, std::string> task_type2color = {
-    {kInvalid, "0"},        {kNormalForward, "2"},
-    {kWaitAndSendIds, "1"}, {kForeignInput, "1"},
-    {kForeignOutput, "1"},  {kReentrantLock, "1"},
-    {kCallbackNotify, "1"}, {kSourceTick, "1"},
-    {kTick, "1"},           {kAccTick, "1"},
-    {kRecordLoad, "1"},     {kDecode, "1"},
-    {kLoss, "4"},           {kNormalMdUpdt, "6"},
-    {kMdDiffAcc, "7"},      {kCopyHd, "8"},
-    {kCopyCommNet, "9"},    {kBoxing, "10"},
-    {kPrint, "1"},          {kReduceConcat, "2"},
-    {kReduceScatter, "2"},  {kReduceAdd, "2"},
-    {kReduceGather, "2"},   {kReduceSplit, "2"},
-    {kNcclAllReduce, "2"},  {kNcclReduceScatter, "2"},
-    {kNcclAllGather, "2"},  {kAccuracy, "4"},
-    {kDecodeRandom, "1"},   {kPackForward, "11"},
-    {kUnpackForward, "11"}, {kRepeatForward, "2"},
-    {kReduceIdentity, "2"}, {kAcc, "5"},
-    {kOptimizer, "12"},     {kEveryNth, "2"},
-    {kCase, "2"},           {kEsac, "2"},
-    {kDataLoad, "1"}};
-
-std::map<TaskType, std::string> task_type2type_str = {{kInvalid, "kInvalid"},
-                                                      {kNormalForward, "kNormalForward"},
-                                                      {kWaitAndSendIds, "kWaitAndSendIds"},
-                                                      {kForeignInput, "kForeignInput"},
-                                                      {kForeignOutput, "kForeignOutput"},
-                                                      {kReentrantLock, "kReentrantLock"},
-                                                      {kCallbackNotify, "kCallbackNotify"},
-                                                      {kSourceTick, "kSourceTick"},
-                                                      {kTick, "kTick"},
-                                                      {kAccTick, "kAccTick"},
-                                                      {kRecordLoad, "kRecordLoad"},
-                                                      {kDataLoad, "kDataLoad"},
-                                                      {kDecode, "kDecode"},
-                                                      {kLoss, "kLoss"},
-                                                      {kNormalMdUpdt, "kNormalMdUpdt"},
-                                                      {kMdDiffAcc, "kMdDiffAcc"},
-                                                      {kCopyHd, "kCopyHd"},
-                                                      {kCopyCommNet, "kCopyCommNet"},
-                                                      {kBoxing, "kBoxing"},
-                                                      {kPrint, "kPrint"},
-                                                      {kReduceConcat, "kReduceConcat"},
-                                                      {kReduceScatter, "kReduceScatter"},
-                                                      {kReduceAdd, "kReduceAdd"},
-                                                      {kReduceGather, "kReduceGather"},
-                                                      {kReduceSplit, "kReduceSplit"},
-                                                      {kNcclAllReduce, "kNcclAllReduce"},
-                                                      {kNcclReduceScatter, "kNcclReduceScatter"},
-                                                      {kNcclAllGather, "kNcclAllGather"},
-                                                      {kAccuracy, "kAccuracy"},
-                                                      {kDecodeRandom, "kDecodeRandom"},
-                                                      {kPackForward, "kPackForward"},
-                                                      {kUnpackForward, "kUnpackForward"},
-                                                      {kRepeatForward, "kRepeatForward"},
-                                                      {kReduceIdentity, "kReduceIdentity"},
-                                                      {kAcc, "kAcc"},
-                                                      {kOptimizer, "kOptimizer"},
-                                                      {kEveryNth, "kEveryNth"},
-                                                      {kCase, "kCase"},
-                                                      {kEsac, "kEsac"}};
 
 }  // namespace oneflow

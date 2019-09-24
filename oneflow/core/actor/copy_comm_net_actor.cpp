@@ -80,8 +80,8 @@ void CopyCommNetActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
 
 void CopyCommNetActor::AsyncSendCustomizedConsumedRegstMsgToProducer() {
   auto readable_it = piece_id2regst_ctx_.find(next_piece_id_);
-  AsyncSendMsg(ActorMsg::BuildRegstMsgToProducer(actor_id(), readable_it->second.producer,
-                                                 readable_it->second.regst_raw_ptr));
+  EnqueueAsyncMsg(ActorMsg::BuildRegstMsgToProducer(actor_id(), readable_it->second.producer,
+                                                    readable_it->second.regst_raw_ptr));
   piece_id2regst_ctx_.erase(readable_it);
   next_piece_id_ += 1;
 }

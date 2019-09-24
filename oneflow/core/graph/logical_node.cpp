@@ -20,6 +20,8 @@
 #include "oneflow/core/graph/task_graph.h"
 #include "oneflow/core/graph/reduce_identity_task_node.h"
 #include "oneflow/core/graph/op_graph.h"
+#include "oneflow/core/graph/nccl_tuple_broadcast_compute_task_node.h"
+#include "oneflow/core/graph/nccl_tuple_reduce_compute_task_node.h"
 
 namespace oneflow {
 
@@ -120,13 +122,7 @@ void AddFuncForFindBldBoxingOpConfMthd(const std::string& k, BldBoxingOpConfMthd
 #define REGISTER_BLD_BOXING_OP_CONF_MTHD(k, v) COMMAND(AddFuncForFindBldBoxingOpConfMthd(k, v))
 
 BldSubTskGphMthd BldSubTskGphToNormalMdUpdt(const LogicalNode*, const LogicalNode* updt) {
-  if (updt->parallel_desc()->policy() == kDataParallel) {
-    return &TaskGraph::BldSubTskGphByBoxing;
-  } else if (updt->parallel_desc()->policy() == kModelParallel) {
-    return &TaskGraph::BldSubTskGphByOneToOne;
-  } else {
-    UNIMPLEMENTED();
-  }
+  TODO();  // outdate
 }
 
 using FuncForFindLbis =
@@ -194,7 +190,6 @@ void LogicalNode::GenSortedCompTaskNodes(
       comp_task_node->set_machine_id(machine_id);
       comp_task_node->mut_parallel_ctx()->set_parallel_id(parallel_idx++);
       comp_task_node->mut_parallel_ctx()->set_parallel_num(parallel_num);
-      comp_task_node->mut_parallel_ctx()->set_policy(parallel_desc_->policy());
 
       const IDMgr* id_mgr = Global<IDMgr>::Get();
       if (parallel_desc_->device_type() == DeviceType::kGPU) {
@@ -263,7 +258,6 @@ BldSubTskGphMthd GetMthdForBldSubTskGph(const LogicalNode* src_node, const Logic
     if (src_node->SoleOp()->op_conf().has_record_load_conf()
         && dst_node->SoleOp()->op_conf().has_tick_conf()) {
       CHECK(src_pd->parallel_num() == dst_pd->parallel_num());
-      CHECK(src_pd->policy() == kDataParallel && dst_pd->policy() == kDataParallel);
     }
     auto IsTickNode = [&](const LogicalNode* node) {
       return IsClassRegistered<IsTickTockOpTypeCase>(node->SoleOp()->op_conf().op_type_case());
@@ -348,6 +342,21 @@ REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceGather"
 REGISTER_BLD_SUB_TSK_GPH_MTHD("NcclAllGather"
                               "ReduceSplit",
                               &TaskGraph::BldSubTskGphByOneToOne);
+REGISTER_BLD_SUB_TSK_GPH_MTHD("NormalForward"
+                              "NcclTupleBroadcast",
+                              &TaskGraph::BldSubTskGphByConnectNodeOnSameGpuDevice);
+REGISTER_BLD_SUB_TSK_GPH_MTHD("NcclTupleBroadcast"
+                              "NormalForward",
+                              &TaskGraph::BldSubTskGphByOneToOne);
+REGISTER_BLD_SUB_TSK_GPH_MTHD("NormalForward"
+                              "NcclTupleReduce",
+                              &TaskGraph::BldSubTskGphByOneToOne);
+REGISTER_BLD_SUB_TSK_GPH_MTHD("NcclTupleReduce"
+                              "NormalForward",
+                              &TaskGraph::BldSubTskGphByConnectNodeOnSameGpuDevice);
+REGISTER_BLD_SUB_TSK_GPH_MTHD("NcclTupleReduce"
+                              "Optimizer",
+                              &TaskGraph::BldSubTskGphByConnectNodeOnSameGpuDevice);
 
 BldBoxingOpConfMthd GetMthdForBldBoxingOpConf(const LogicalNode* src, const LogicalNode* dst) {
   std::string k = ConcatTypeName(src, dst);
@@ -422,5 +431,20 @@ int32_t ReduceSplitLogicalNode::order_in_logical_graph() const {
     return order_in_logical_graph_;
   }
 }
+std::string NcclTupleBroadcastLogicalNode::TypeName() const { return "NcclTupleBroadcast"; }
+
+CompTaskNode* NcclTupleBroadcastLogicalNode::NewCompTaskNode() const {
+  return new NcclTupleBroadcastCompTaskNode;
+}
+
+int64_t NcclTupleBroadcastLogicalNode::GetAreaId() const { return kMdUpdtArea; }
+
+std::string NcclTupleReduceLogicalNode::TypeName() const { return "NcclTupleReduce"; }
+
+CompTaskNode* NcclTupleReduceLogicalNode::NewCompTaskNode() const {
+  return new NcclTupleReduceCompTaskNode;
+}
+
+int64_t NcclTupleReduceLogicalNode::GetAreaId() const { return kMdUpdtArea; }
 
 }  // namespace oneflow

@@ -16,9 +16,7 @@ void AddGlobalOutputCriticalSections(const OpGraph& op_graph, JobBuilder* job_bu
 
 class MutOpConTickInputHelper {
  public:
-  bool IsTickInputBound() const {
-    return !op_conf_->ctrl_in_op_name().empty() || VirtualIsTickInputBound();
-  }
+  bool IsTickInputBound() const { return VirtualIsTickInputBound(); }
   virtual bool VirtualIsTickInputBound() const = 0;
   virtual OperatorConf NewTickInputBoundOpConf(const std::string& lbn) const = 0;
   void InitFromOpConf(const OperatorConf& op_conf) { op_conf_ = &op_conf; }

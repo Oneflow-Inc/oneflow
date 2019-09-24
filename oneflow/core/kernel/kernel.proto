@@ -5,6 +5,7 @@ import "oneflow/core/common/shape.proto";
 import "oneflow/core/common/data_type.proto";
 import "oneflow/core/operator/op_attribute.proto";
 import "oneflow/core/operator/op_conf.proto";
+import "oneflow/core/job/placement.proto";
 import "oneflow/core/data/data.proto";
 
 message ConvKernelConf {
@@ -26,7 +27,7 @@ message DropoutKernelConf {
   required ShapeProto in = 1;
   required ShapeProto random_mask = 2;
   required ShapeProto out = 3;
-};
+}
 
 message LossKernelConf {
   required DataType prediction_type = 1;
@@ -44,6 +45,10 @@ message SparseCrossEntropyLossKernelConf {
 }
 
 message SigmoidCrossEntropyLossKernelConf {
+    required LossKernelConf loss_conf = 1;
+}
+
+message SigmoidCrossEntropyLossGradKernelConf {
     required LossKernelConf loss_conf = 1;
 }
 
@@ -168,6 +173,14 @@ message GatherMs0GradKernelConf {
   required int64 offset = 1;
 }
 
+message NcclTupleReduceConf {
+  required ParallelContext parallel_ctx = 1;
+}
+
+message NcclTupleBroadcastConf {
+  required ParallelContext parallel_ctx = 1;
+}
+
 message DataLoadKernelConf {
   required DataInstanceProto data_instance = 1;
   repeated DataTransformProto transforms = 2;
@@ -219,8 +232,11 @@ message KernelConf {
     ConvFilterGradKernelConf conv_filter_grad_conf = 410;
     ConvDataGradKernelConf conv_data_grad_conf = 411;
     ShapeElemCntKernelConf shape_elem_cnt_conf = 412;
-    GatherMs0KernelConf gather_ms0_conf = 413;
-    GatherMs0GradKernelConf gather_ms0_grad_conf = 414;
-    DataLoadKernelConf data_load_conf = 415;
+    SigmoidCrossEntropyLossGradKernelConf sigmoid_cross_entropy_loss_grad_conf = 413;
+    GatherMs0KernelConf gather_ms0_conf = 414;
+    GatherMs0GradKernelConf gather_ms0_grad_conf = 415;
+    NcclTupleReduceConf nccl_tuple_reduce_conf = 416;
+    NcclTupleBroadcastConf nccl_tuple_broadcast_conf = 417;
+    DataLoadKernelConf data_load_conf = 418;
   }
 }

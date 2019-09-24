@@ -31,6 +31,12 @@ class Kernel {
   const LogicalBlobId& BnInOp2Lbi(const std::string& bn_in_op) const;
   const OperatorConf& op_conf() const { return op_attribute().op_conf(); }
   const OpAttribute& op_attribute() const { return kernel_conf().op_attribute(); }
+  /*
+   * return true means all below must be guaranteed when `Launch` function return:
+   * 1) all out blob header has been set (e.g. SyncSetHeadKernel)
+   * 2) all asynchronous task has been queued (e.g. NCCL related kernel)
+   */
+  virtual bool IsKernelLaunchSynchronized() const { return true; }
 
  protected:
   Kernel() = default;

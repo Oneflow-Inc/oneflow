@@ -33,11 +33,7 @@ void PackForwardCompTaskNode::BuildExecGphAndRegst() {
   auto GetBlobDescFromRegst = [&](std::shared_ptr<RegstDesc> regst) -> const BlobDesc* {
     const BlobDesc* ret_blob = nullptr;
     regst->ForEachLbi([&](const LogicalBlobId& lbi) {
-      if (ret_blob == nullptr) {
-        ret_blob = regst->GetBlobDesc(lbi);
-      } else {
-        CHECK_EQ(ret_blob->dim0_inner_shape(), regst->GetBlobDesc(lbi)->dim0_inner_shape());
-      }
+      if (ret_blob == nullptr) { ret_blob = regst->GetBlobDesc(lbi); }
     });
     return ret_blob;
   };
@@ -50,9 +46,6 @@ void PackForwardCompTaskNode::BuildExecGphAndRegst() {
   CHECK_NOTNULL(pack_op);
   CHECK_EQ(pack_op->GetPackNum(), related_unpack_in_blob->shape().At(0) / in_blob->shape().At(0));
   out_blob->mut_shape().Set(0, related_unpack_in_blob->shape().At(0));
-  if (out_blob->has_dim0_valid_num_field()) {
-    out_blob->mut_dim0_inner_shape() = related_unpack_in_blob->dim0_inner_shape();
-  }
 }
 
 void PackForwardCompTaskNode::InferProducedDataRegstTimeShape() {

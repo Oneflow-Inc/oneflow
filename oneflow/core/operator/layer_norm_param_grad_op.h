@@ -16,7 +16,8 @@ class LayerNormParamGradOp final : public Operator {
     return op_conf().layer_norm_param_grad_conf();
   }
   Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                             const ParallelContext*) const override;
+                             const ParallelContext*,
+                             const SbpSignature* sbp_signature) const override;
 
  private:
   Maybe<void> InferBatchAxis(

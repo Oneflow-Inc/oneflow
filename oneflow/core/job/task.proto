@@ -8,7 +8,6 @@ import "oneflow/core/job/placement.proto";
 enum TaskType {
   kInvalid = 0;
   kNormalForward = 1;
-  kRecurrentForward = 2;
   kDecode = 5;
   kLoss = 6;
   kNormalMdUpdt = 9;
@@ -46,6 +45,8 @@ enum TaskType {
   kCallbackNotify = 47;
   kForeignInput = 48;
   kForeignOutput = 49;
+  kNcclTupleBroadcast = 50;
+  kNcclTupleReduce = 51;
 };
 
 enum AreaType {

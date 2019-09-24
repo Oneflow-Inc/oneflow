@@ -17,6 +17,9 @@ class RemoteBlob(blob_desc.BlobDesc):
     @property
     def dtype(self): return job_builder.GetDataType(self.job_name_, self.lbn_)
 
+    @property
+    def batch_axis(self): return job_builder.GetBatchAxis(self.job_name_, self.lbn_)
+
     def with_distribute(self, distribute):
         oneflow.distribute.assert_is_valid_distribute(distribute)
         ret = RemoteBlob(self.lbi_)
@@ -55,3 +58,21 @@ class RemoteBlob(blob_desc.BlobDesc):
 
     def __div__(self, rhs):
         return oneflow.math.divide(self, rhs)
+
+    def __eq__(self, rhs):
+        return oneflow.math.equal(self, rhs)
+
+    def __ne__(self, rhs):
+        return oneflow.math.not_equal(self, rhs)
+
+    def __lt__(self, rhs):
+        return oneflow.math.less(self, rhs)
+
+    def __le__(self, rhs):
+        return oneflow.math.less_equal(self, rhs)
+
+    def __gt__(self, rhs):
+        return oneflow.math.greater(self, rhs)
+
+    def __ge__(self, rhs):
+        return oneflow.math.greater_equal(self, rhs)

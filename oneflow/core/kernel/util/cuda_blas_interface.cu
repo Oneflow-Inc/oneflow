@@ -76,9 +76,11 @@ void HGemmWithFloat(DeviceCtx* ctx, const enum CBLAS_ORDER order, enum CBLAS_TRA
 
 std::tuple<int, int, int> CalcMNKForGemm(enum CBLAS_TRANSPOSE trans_a, const Blob* a,
                                          const Blob* c) {
-  int m = c->shape().At(0);
-  int n = c->shape().Count(1);
-  int k = (trans_a == CblasNoTrans) ? a->shape().Count(1) : a->shape().At(0);
+  const auto& a_shape = a->dense_shape_view();
+  const auto& c_shape = c->dense_shape_view();
+  int m = c_shape.At(0);
+  int n = c_shape.Count(1);
+  int k = (trans_a == CblasNoTrans) ? a_shape.Count(1) : a_shape.At(0);
   return std::make_tuple(m, n, k);
 }
 
