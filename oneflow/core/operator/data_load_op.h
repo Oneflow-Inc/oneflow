@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_CORE_OPERATOR_RECORD_LOAD_OP_H_
-#define ONEFLOW_CORE_OPERATOR_RECORD_LOAD_OP_H_
+#ifndef ONEFLOW_CORE_OPERATOR_DATA_LOAD_OP_H_
+#define ONEFLOW_CORE_OPERATOR_DATA_LOAD_OP_H_
 
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/graph/logical_node.h"
@@ -16,9 +16,9 @@ class DataLoadOp final : public Operator {
   const PbMessage& GetCustomizedConf() const override;
   LogicalNode* NewProperLogicalNode() const override { return new DataLoadLogicalNode; }
 
-  Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                             const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature,
-                             int64_t record_piece_size) const override;
+  Maybe<void> InferBlobDescs(
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const override;
 
  private:
   Maybe<void> InferBatchAxis(
@@ -31,4 +31,4 @@ class DataLoadOp final : public Operator {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_OPERATOR_RECORD_LOAD_OP_H_
+#endif  // ONEFLOW_CORE_OPERATOR_DATA_LOAD_OP_H_

@@ -1,8 +1,8 @@
-#ifndef ONEFLOW_CORE_DATASET_COCO_DATASET_H_
-#define ONEFLOW_CORE_DATASET_COCO_DATASET_H_
+#ifndef ONEFLOW_CORE_DATA_COCO_DATASET_H_
+#define ONEFLOW_CORE_DATA_COCO_DATASET_H_
 
 #include "oneflow/core/data/dataset.h"
-#include "json.hpp"
+#include <json.hpp>
 
 namespace oneflow {
 namespace data {
@@ -14,13 +14,14 @@ class COCODataset final : public Dataset {
 
   void Init() override;
   size_t Size() const override { return image_ids_.size(); }
-  std::unique_ptr<OFRecord> EncodeOneRecord(int64_t idx) const override;
-  DataInstance GetDataInstance(int64_t idx) const override;
+  void GetData(int64_t idx, DataInstance* data_inst) const;
   int64_t GetGroupId(int64_t idx) const override;
 
  private:
-  void EncodeImage(int64_t image_id, Feature& feature) const;
-  void EncodeSegmentation(int64_t image_id, Feature& feature) const;
+  void GetImage(const std::string& image_file_name, DataField* data_field) const;
+  void GetBbox(const nlohmann::json& bbox_json, DataField* data_field) const;
+  void GetLabel(const nlohmann::json& label_json, DataField* data_field) const;
+  void GetSegmentation(const nlohmann::json& segmentation, DataField* data_field) const;
 
  private:
   nlohmann::json annotation_json_;
@@ -34,4 +35,4 @@ class COCODataset final : public Dataset {
 }  // namespace data
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_DATASET_COCO_DATASET_H_
+#endif  // ONEFLOW_CORE_DATA_COCO_DATASET_H_

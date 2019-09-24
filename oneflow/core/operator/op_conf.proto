@@ -910,6 +910,17 @@ message BlobConf {
   optional int32 max_sequence_size = 4 [default = 1];
   required EncodeConf encode_case = 5;
   repeated PreprocessConf preprocess = 6;
+  repeated int32 variable_length_axis = 7;
+  optional DataSourceCase data_source = 8;
+}
+
+message DataLoadOpConf {
+  required int64 batch_size = 1;
+  optional string tick = 2;
+  required DatasetProto dataset = 3;
+  repeated BlobConf blobs = 4;
+  repeated DataTransformProto transforms = 5;
+  optional int32 batch_cache_size = 6 [default = 3];
 }
 
 message DecodeOFRecordOpConf {
@@ -1478,14 +1489,6 @@ message LearningRateScheduleOpConf {
   optional WarmupConf warmup_conf = 5;
 }
 
-message DataLoadOpConf {
-  optional string tick = 1;
-  required string out = 2;
-  required string dataset = 3;
-  repeated BlobConf blobs = 4;
-  required DataTransformProto transforms = 5;
-}
-
 message OperatorConf {
   required string name = 1;
   optional bool trainable = 3 [default = true];
@@ -1540,6 +1543,7 @@ message OperatorConf {
     ReturnOpConf return_conf = 146;
     PartialTickOpConf partial_tick_conf = 147;
     ForeignWatchOpConf foreign_watch_conf = 148;
+    DataLoadOpConf data_load_conf = 149;
 
     // domain op
     TupleIdentityOpConf tuple_identity_conf = 200;

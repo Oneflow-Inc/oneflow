@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_CORE_DATASET_RING_QUEUE_H_
-#define ONEFLOW_CORE_DATASET_RING_QUEUE_H
+#ifndef ONEFLOW_CORE_DATA_RING_QUEUE_H_
+#define ONEFLOW_CORE_DATA_RING_QUEUE_H_
 
 #include <thread>
 
@@ -81,4 +81,4 @@ std::unique_ptr<T> RingQueue<T>::SyncDequeue(std::function<bool(const T*)> pred)
 }  // namespace util
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_DATASET_RING_QUEUE_H_
+#endif  // ONEFLOW_CORE_DATA_RING_QUEUE_H_

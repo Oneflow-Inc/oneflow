@@ -1,9 +1,8 @@
 #include "oneflow/core/data/coco_dataset.h"
+#include "oneflow/core/data/data_sampler.h"
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/persistence/file_system.h"
 #include "oneflow/core/persistence/persistent_in_stream.h"
-#include "oneflow/core/record/coco.pb.h"
-#include <opencv2/opencv.hpp>
 
 extern "C" {
 #include "maskApi.h"
@@ -62,76 +61,103 @@ int64_t COCODataset::GetGroupId(int64_t idx) const {
   return 0;
 }
 
-std::unique_ptr<OFRecord> COCODataset::EncodeOneRecord(int64_t idx) const {
-  std::unique_ptr<OFRecord> ofrecord(new OFRecord());
-  // Encode image binary data
+void COCODataset::GetData(int64_t idx, DataInstance* data_inst) const {
+  auto* image_field = data_inst->GetField<DataSourceCase::kImage>();
+  auto* bbox_field = data_inst->GetField<DataSourceCase::kObjectBoundingBox>();
+  auto* segm_field = data_inst->GetField<DataSourceCase::kObjectSegmentation>();
+  auto* label_field = data_inst->GetField<DataSourceCase::kObjectLabel>();
+
   int64_t image_id = image_ids_.at(idx);
-  Feature& image_feature = (*ofrecord->mutable_feature())["image"];
-  EncodeImage(image_id, image_feature);
-  // Encode
-  Feature& segm_feature = (*ofrecord->mutable_feature())["gt_segm"];
-  EncodeSegmentation(image_id, segm_feature);
-  return ofrecord;
-}
-
-void COCODataset::EncodeImage(int64_t image_id, Feature& feature) const {
   const auto& image = image_id2image_.at(image_id);
-  auto image_file_path = JoinPath(dataset_proto().dataset_dir(), dataset_proto().coco().image_dir(),
-                                  image["file_name"].get<std::string>());
-  PersistentInStream in_stream(DataFS(), image_file_path);
-  std::vector<char> buffer(DataFS()->GetFileSize(image_file_path));
-  CHECK_EQ(in_stream.Read(buffer.data(), buffer.size()), 0);
-  feature.ParseFromArray(buffer.data(), buffer.size());
-}
-
-void COCODataset::EncodeSegmentation(int64_t image_id, Feature& feature) const {
-  const auto& anno_ids = image_id2anno_id_.at(image_id);
-  auto* segm_bytes_list = feature.mutable_bytes_list();
-  for (int64_t anno_id : anno_ids) {
-    PolygonList polygon_list;
+  // Get image data
+  GetImage(image["file_name"].get<std::string>(), image_field);
+  for (int64_t anno_id : image_id2anno_id_.at(image_id)) {
     const auto& anno = anno_id2anno_.at(anno_id);
-    if (anno["segmentation"].is_object()) {
-      auto rle_cnt_vec = anno["segmentation"]["counts"].get<std::vector<uint32_t>>();
-      auto h = anno["segmentation"]["size"][0].get<uint32_t>();
-      auto w = anno["segmentation"]["size"][1].get<uint32_t>();
-      size_t total_cnt = 0;
-      for (auto cnt : rle_cnt_vec) { total_cnt += cnt; }
-      CHECK_EQ(total_cnt, h * w);
-
-      std::vector<uint8_t> mask(total_cnt);
-      RLE rle({h, w, rle_cnt_vec.size(), rle_cnt_vec.data()});
-      rleDecode(&rle, mask.data(), mask.size());
-
-      cv::Mat mat(h, w, CV_8UC1, mask.data());
-      std::vector<std::vector<cv::Point>> contours;
-      std::vector<cv::Vec4i> hierarchy;
-      cv::findContours(mat, contours, hierarchy, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_TC89_L1);
-
-      for (const auto& contour : contours) {
-        auto* polygon = polygon_list.add_polygons();
-        for (const auto& point : contour) {
-          polygon->add_value(static_cast<float>(point.x));
-          polygon->add_value(static_cast<float>(point.y));
-        }
-      }
-      // contours hierarchy are not supported yet
-      for (const auto& cnt_ids : hierarchy) {
-        FOR_RANGE(int, i, 0, 4) { CHECK_LT(cnt_ids[i], 0); }
-      }
-    } else if (anno["segmentation"].is_array()) {
-      for (const auto& segm_array : anno["segmentation"]) {
-        auto* polygon = polygon_list.add_polygons();
-        for (const auto& segm : segm_array) { polygon->add_value(segm.get<float>()); }
-      }
-    } else {
-      UNIMPLEMENTED();
-    }
-    segm_bytes_list->add_value(polygon_list.SerializeAsString());
+    // Get bbox data
+    GetBbox(anno["bbox"], bbox_field);
+    // Get segmentation data
+    GetSegmentation(anno["segmentation"], segm_field);
+    // Get object label
+    GetLabel(anno["category_id"], label_field);
   }
 }
 
-DataInstance COCODataset::GetDataInstance(int64_t idx) const {
-  TODO();
+void COCODataset::GetImage(const std::string& image_file_name, DataField* data_field) const {
+  auto* image_field = dynamic_cast<ImageDataField*>(data_field);
+  CHECK_NOTNULL(image_field);
+
+  auto image_file_path = JoinPath(dataset_proto().dataset_dir(), dataset_proto().coco().image_dir(),
+                                  image_file_name);
+  PersistentInStream in_stream(DataFS(), image_file_path);
+  std::vector<char> buffer(DataFS()->GetFileSize(image_file_path));
+  CHECK_EQ(in_stream.Read(buffer.data(), buffer.size()), 0);
+  cv::_InputArray bytes_array(buffer.data(), buffer.size());
+  image_field->data() = cv::imdecode(bytes_array, cv::IMREAD_ANYCOLOR);
+}
+
+void COCODataset::GetBbox(const nlohmann::json& bbox_json, DataField* data_field) const {
+  CHECK(bbox_json.is_array());
+  auto* bbox_field = dynamic_cast<ArrayDataField<float>*>(data_field);
+  CHECK_NOTNULL(bbox_field);
+
+  auto& bbox_vec = bbox_field->data();
+  for (const auto& jval : bbox_json) {
+    bbox_vec.push_back(jval.get<float>());
+  }
+}
+
+void COCODataset::GetLabel(const nlohmann::json& label_json, DataField* data_field) const {
+  CHECK(label_json.is_number_integer());
+  auto* label_field = dynamic_cast<ArrayDataField<int32_t>*>(data_field);
+  CHECK_NOTNULL(label_field);
+  label_field->data().push_back(label_json.get<int32_t>());
+}
+
+void COCODataset::GetSegmentation(const nlohmann::json& segmentation, DataField* data_field) const {
+  auto* segm_field = dynamic_cast<NdarrayDataField<float>*>(data_field);
+  CHECK_NOTNULL(segm_field);
+
+  if (segmentation.is_object()) {
+    auto rle_cnt_vec = segmentation["counts"].get<std::vector<uint32_t>>();
+    auto h = segmentation["size"][0].get<uint32_t>();
+    auto w = segmentation["size"][1].get<uint32_t>();
+    size_t total_cnt = 0;
+    for (auto cnt : rle_cnt_vec) { total_cnt += cnt; }
+    CHECK_EQ(total_cnt, h * w);
+
+    std::vector<uint8_t> mask(total_cnt);
+    RLE rle({h, w, rle_cnt_vec.size(), rle_cnt_vec.data()});
+    rleDecode(&rle, mask.data(), mask.size());
+
+    cv::Mat mat(h, w, CV_8UC1, mask.data());
+    std::vector<std::vector<cv::Point>> contours;
+    std::vector<cv::Vec4i> hierarchy;
+    cv::findContours(mat, contours, hierarchy, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_TC89_L1);
+
+    for (const auto& contour : contours) {
+      for (const auto& point : contour) {
+        segm_field->PushBack(static_cast<float>(point.x));
+        segm_field->PushBack(static_cast<float>(point.y));
+      }
+      segm_field->AppendLodLength(2, contour.size());
+    }
+    segm_field->AppendLodLength(1, contours.size());
+    // contours hierarchy are not supported yet
+    for (const auto& cnt_ids : hierarchy) {
+      FOR_RANGE(int, i, 0, 4) { CHECK_LT(cnt_ids[i], 0); }
+    }
+  } else if (segmentation.is_array()) {
+    for (const auto& segm_array : segmentation) {
+      for (const auto& segm : segm_array) { 
+        segm_field->PushBack(segm.get<float>());
+      }
+      segm_field->AppendLodLength(2, segm_array.size());
+    }
+    segm_field->AppendLodLength(1, segmentation.size());
+  } else {
+    UNIMPLEMENTED();
+  }
+  segm_field->IncreaseLodLength(0, 1);
 }
 
 REGISTER_DATASET(DatasetProto::kCoco, COCODataset);

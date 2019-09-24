@@ -12,7 +12,8 @@ struct AutoRegistrationFactory {
   struct RawRegisterType {
     RawRegisterType(int32_t k) {
       CHECK((AutoRegistrationFactory<Base, Args...>::Get()
-                 .creators_.emplace(k, [](Args&&...) { return new Derived; })
+                 .creators_
+                 .emplace(k, [](Args&&... args) { return new Derived(std::forward<Args>(args)...); })
                  .second))
           << k;
     }

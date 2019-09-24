@@ -7,6 +7,7 @@
 #include "oneflow/core/graph/decode_compute_task_node.h"
 #include "oneflow/core/graph/decode_random_compute_task_node.h"
 #include "oneflow/core/graph/record_load_compute_task_node.h"
+#include "oneflow/core/graph/data_load_compute_task_node.h"
 #include "oneflow/core/graph/reduce_scatter_compute_task_node.h"
 #include "oneflow/core/graph/reduce_add_compute_task_node.h"
 #include "oneflow/core/graph/reduce_gather_compute_task_node.h"
@@ -368,6 +369,7 @@ REGISTER_BLD_BOXING_OP_CONF_MTHD("Tick"
 #define LOGICAL_TYPE_SEQ                                  \
   OF_PP_MAKE_TUPLE_SEQ(NormalForward, kDataForwardArea)   \
   OF_PP_MAKE_TUPLE_SEQ(RecordLoad, kDataPreprocessArea)   \
+  OF_PP_MAKE_TUPLE_SEQ(DataLoad, kDataPreprocessArea)     \
   OF_PP_MAKE_TUPLE_SEQ(Decode, kDataPreprocessArea)       \
   OF_PP_MAKE_TUPLE_SEQ(DecodeRandom, kDataPreprocessArea) \
   OF_PP_MAKE_TUPLE_SEQ(Loss, kDataForwardArea)            \

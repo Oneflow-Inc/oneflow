@@ -511,7 +511,8 @@ std::map<TaskType, std::string> task_type2color = {
     {kUnpackForward, "11"}, {kRepeatForward, "2"},
     {kReduceIdentity, "2"}, {kAcc, "5"},
     {kOptimizer, "12"},     {kEveryNth, "2"},
-    {kCase, "2"},           {kEsac, "2"}};
+    {kCase, "2"},           {kEsac, "2"},
+    {kDataLoad, "1"}};
 
 std::map<TaskType, std::string> task_type2type_str = {{kInvalid, "kInvalid"},
                                                       {kNormalForward, "kNormalForward"},
@@ -524,6 +525,7 @@ std::map<TaskType, std::string> task_type2type_str = {{kInvalid, "kInvalid"},
                                                       {kTick, "kTick"},
                                                       {kAccTick, "kAccTick"},
                                                       {kRecordLoad, "kRecordLoad"},
+                                                      {kDataLoad, "kDataLoad"},
                                                       {kDecode, "kDecode"},
                                                       {kLoss, "kLoss"},
                                                       {kNormalMdUpdt, "kNormalMdUpdt"},

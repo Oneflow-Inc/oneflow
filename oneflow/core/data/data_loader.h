@@ -1,9 +1,11 @@
-#ifndef ONEFLOW_CORE_DATASET_DATA_LOADER_H_
-#define ONEFLOW_CORE_DATASET_DATA_LOADER_H_
+#ifndef ONEFLOW_CORE_DATA_DATA_LOADER_H_
+#define ONEFLOW_CORE_DATA_DATA_LOADER_H_
 
 #include "oneflow/core/data/dataset.h"
-#include "oneflow/core/thread/thread_pool.h"
+#include "oneflow/core/data/data_sampler.h"
 #include "oneflow/core/data/ring_queue.h"
+#include "oneflow/core/thread/thread_pool.h"
+#include "oneflow/core/kernel/kernel.pb.h"
 #include <thread>
 
 namespace oneflow {
@@ -19,13 +21,14 @@ class BatchCollator final {
   size_t GetEmptySlot();
   bool IsFull() const { return cur_slot_ == batch_size_; }
   bool IsReady() const;
-  void Fill(size_t slot, std::unique_ptr<OFRecord>&& record);
-  void ForEach(std::function<void(const OFRecord*)>) const;
+  void Fill(size_t slot, std::unique_ptr<DataInstance>&& data_inst);
+  void ForEach(std::function<void(DataInstance*)>) const;
 
  private:
+  friend class DataLoader;
   size_t batch_size_;
   size_t cur_slot_;
-  std::vector<std::unique_ptr<OFRecord>> batch_;
+  std::vector<std::unique_ptr<DataInstance>> batch_;
 };
 
 class DataLoader final {
@@ -33,11 +36,10 @@ class DataLoader final {
   OF_DISALLOW_COPY_AND_MOVE(DataLoader);
   DataLoader() = delete;
   ~DataLoader();
-  DataLoader(std::shared_ptr<Dataset> dataset, size_t batch_size, size_t qsize,
-             size_t num_replicas, size_t rank);
+  DataLoader(const DataLoadKernelConf& conf, std::shared_ptr<Dataset> dataset, size_t qsize);
 
   void Close() { is_closed_ = true; }
-  void DumpToRecrod(OFRecord* record_array);
+  std::vector<std::unique_ptr<DataInstance>> FetchBatch();
 
  private:
   void LoadBatch();
@@ -47,6 +49,7 @@ class DataLoader final {
   size_t batch_size_;
   std::shared_ptr<Dataset> dataset_;
   DataSamplerContext sampler_ctx_;
+  const DataLoadKernelConf* conf_;
 
   bool is_closed_;
   std::thread load_thrd_;
@@ -57,4 +60,4 @@ class DataLoader final {
 }  // namespace data
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_DATASET_DATA_LOADER_H_
+#endif  // ONEFLOW_CORE_DATA_DATA_LOADER_H_
