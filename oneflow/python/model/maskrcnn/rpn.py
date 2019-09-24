@@ -208,27 +208,20 @@ class RPNLoss(object):
                 flow.concat(sampled_pos_neg_inds_list, axis=0)
             )
 
-            bbox_loss = flow.div(
-                flow.math.reduce_sum(
-                    flow.detection.smooth_l1(
-                        flow.concat.concat(sampled_bbox_pred_list, axis=0),
-                        flow.concat.concat(sampled_bbox_target_list, axis=0),
-                        beta=1.0 / 9.0,
-                    )
-                ),
-                flow.cast(total_sample_cnt, data_type=flow.float),
-            )
+            bbox_loss = flow.math.reduce_sum(
+                flow.detection.smooth_l1(
+                    flow.concat(sampled_bbox_pred_list, axis=0),
+                    flow.concat(sampled_bbox_target_list, axis=0),
+                    beta=1.0 / 9.0,
+                )
+            ) / flow.cast(total_sample_cnt, data_type=flow.float)
 
-            cls_loss = flow.div(
-                flow.math.reduce_sum(
-                    flow.detection.binary_cross_entroy(
-                        flow.concat(sampled_cls_logit_list, axis=0),
-                        flow.concat(sampled_cls_label_list, axis=0),
-                    )
-                ),
-                flow.cast(total_sample_cnt, data_type=flow.float),
-            )
-
+            cls_loss = flow.math.reduce_sum(
+                flow.detection.binary_cross_entroy(
+                    flow.concat(sampled_cls_logit_list, axis=0),
+                    flow.concat(sampled_cls_label_list, axis=0),
+                )
+            ) / flow.cast(total_sample_cnt, data_type=flow.float)
         return bbox_loss, cls_loss
 
 
