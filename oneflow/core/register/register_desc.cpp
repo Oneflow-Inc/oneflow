@@ -111,7 +111,7 @@ void RegstDesc::ForEachLbi(std::function<void(const LogicalBlobId&)> func) const
 void RegstDesc::EraseZeroSizeBlob() {
   EraseIf<LogicalBlobId, std::unique_ptr<BlobDesc>>(
       &lbi2blob_desc_, [](HashMap<LogicalBlobId, std::unique_ptr<BlobDesc>>::iterator it) {
-        return RtBlobDesc(*(it->second)).ByteSizeOfDataContentField() == 0;
+        return RtBlobDesc(*(it->second)).ByteSizeOfBlobBody() == 0;
       });
 }
 
@@ -149,8 +149,8 @@ void RegstDesc::ToProto(RegstDescProto* ret) const {
 }
 
 bool RegstDesc::HasSameMemSize(const RegstDesc* rhs) {
-  return RtBlobDesc(*(packed_blob_desc_.get())).TotalByteSize()
-         == RtBlobDesc(*(rhs->packed_blob_desc_.get())).TotalByteSize();
+  return RtBlobDesc(*(packed_blob_desc_.get())).AlignedTotalByteSize()
+         == RtBlobDesc(*(rhs->packed_blob_desc_.get())).AlignedTotalByteSize();
 }
 
 bool RegstDesc::HasSameBlobDescs(const RegstDesc* rhs) {

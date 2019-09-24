@@ -25,7 +25,7 @@ void LossKernel<device_type, PredType>::ForwardDataContent(
 template<DeviceType device_type, typename PredType>
 void LossKernel<device_type, PredType>::ForwardDim0ValidNum(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  BnInOp2Blob("loss")->CopyDim0ValidNumFrom(ctx.device_ctx, BnInOp2Blob("prediction"));
+  UNIMPLEMENTED();
 }
 
 template<DeviceType device_type, typename PredType>
