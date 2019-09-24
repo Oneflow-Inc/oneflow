@@ -1719,6 +1719,14 @@ message PieceSliceOpConf {
   repeated string out = 2;
 }
 
+message ElementCountOpConf {
+  required string in = 1;
+  required string out = 2;
+  optional int64 begin_axis = 3;
+  optional int64 end_axis = 4;
+  optional DataType data_type = 5;
+}
+
 message OperatorConf {
   required string name = 1;
   optional bool trainable = 3 [default = true];
@@ -1874,6 +1882,7 @@ message OperatorConf {
     SigmoidCrossEntropyLossGradOpConf sigmoid_cross_entropy_loss_grad_conf = 317;
     SmoothL1OpConf smooth_l1_conf = 318;
     UpsampleNearestOpConf upsample_nearest_conf = 319;
+    ElementCountOpConf element_count_conf = 320;
 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;

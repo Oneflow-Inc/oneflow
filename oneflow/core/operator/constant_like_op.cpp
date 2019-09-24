@@ -24,6 +24,7 @@ class ConstantLikeOp final : public Operator {
     *GetBlobDesc4BnInOp("out") = *GetBlobDesc4BnInOp("in");
     return Maybe<void>::Ok();
   }
+
  private:
   Maybe<void> InferBatchAxis(
       std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override {

@@ -11,10 +11,12 @@ class BoxEncodeOp final : public Operator {
   const PbMessage& GetCustomizedConf() const override { return this->op_conf().box_encode_conf(); }
   Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                              const ParallelContext* parallel_ctx) const override;
+
  private:
   Maybe<void> InferBatchAxis(
       std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override {
-    return NaiveInferBatchAxis(BatchAxis4BnInOp);
+    *BatchAxis4BnInOp("boxes_delta") = *BatchAxis4BnInOp("ref_boxes");
+    return Maybe<void>::Ok();
   }
 };
 

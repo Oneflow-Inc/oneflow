@@ -2,70 +2,18 @@
 
 namespace oneflow {
 
-class TupleIdentityOp final : public Operator {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(TupleIdentityOp);
-  TupleIdentityOp() = default;
-  ~TupleIdentityOp() = default;
-
-  void InitFromOpConf() override;
-  const PbMessage& GetCustomizedConf() const override { return op_conf().tuple_identity_conf(); }
-
-  Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                             const ParallelContext* parallel_ctx) const override;
-
- private:
-  void GetOpParallelSignatures(
-      std::vector<std::unique_ptr<const OpParallelSignature>>*) const override;
-  Maybe<void> InferBatchAxis(
-      std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override {
-    return NaiveInferBatchAxis(BatchAxis4BnInOp);
-  }
-};
-
-namespace {
-
-class TupleIdentityOpParallelSignature final : public OpParallelSignature {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(TupleIdentityOpParallelSignature);
-  ~TupleIdentityOpParallelSignature() override = default;
-
-  TupleIdentityOpParallelSignature(const Operator* op) : OpParallelSignature(op) {}
-
-  const std::string Description() const override { return op().op_name() + ": A -> A"; }
-
-  const OpParallelMatchResult GetMatchResult(
-      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
-      const ParallelContext* parallel_ctx) const override {
-    const auto& ibn = op().input_bns().Get(0);
-    if (parallel_ctx->parallel_num() != SbpInferHint4BnInOp(ibn).parallel_num()) {
-      return MakeOpParallelMatchParallelNumError(parallel_ctx->parallel_num(),
-                                                 SbpInferHint4BnInOp(ibn).parallel_num());
-    }
-    return MakeOpParallelMatchSuccess();
-  }
-
-  void GenerateSignature(
-      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
-      HashMap<std::string, SbpParallel>* bn2sbp) const override {
-    FOR_RANGE(int32_t, i, 0, op().input_bns().size()) {
-      const auto& sbp_parallel = SbpInferHint4BnInOp(op().input_bns().Get(i)).sbp_parallel();
-      (*bn2sbp)[op().input_bns().Get(i)] = sbp_parallel;
-      (*bn2sbp)[op().output_bns().Get(i)] = sbp_parallel;
-    }
-  }
-};
-
-}  // namespace
-
 void TupleIdentityOp::InitFromOpConf() {
   CHECK(op_conf().has_tuple_identity_conf());
   int32_t in_size = op_conf().tuple_identity_conf().in_size();
   int32_t out_size = op_conf().tuple_identity_conf().out_size();
   CHECK_GT(in_size, 0);
   CHECK_EQ(in_size, out_size);
-  EnrollInputBn("in", in_size);
-  EnrollOutputBn("out", out_size);
+  EnrollRepeatedInputBn("in", in_size);
+  EnrollRepeatedOutputBn("out", out_size);
+}
+
+const PbMessage& TupleIdentityOp::GetCustomizedConf() const {
+  return op_conf().tuple_identity_conf();
 }
 
 Maybe<void> TupleIdentityOp::InferBlobDescs(
@@ -78,9 +26,33 @@ Maybe<void> TupleIdentityOp::InferBlobDescs(
   return Maybe<void>::Ok();
 }
 
-void TupleIdentityOp::GetOpParallelSignatures(
-    std::vector<std::unique_ptr<const OpParallelSignature>>* op_parallel_signatures) const {
-  op_parallel_signatures->emplace_back(new TupleIdentityOpParallelSignature(this));
+Maybe<void> TupleIdentityOp::InferSbpSignature(
+    SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
+    const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
+    std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
+    const ParallelDesc& parallel_desc) const {
+  auto* bn2sbp = sbp_signature->mutable_bn_in_op2sbp_parallel();
+  const auto& bn2conf_sbp = sbp_sig_conf.bn_in_op2sbp_parallel();
+  FOR_RANGE(int32_t, i, 0, input_bns().size()) {
+    const SbpParallel* sbp_parallel = nullptr;
+    const auto& conf_sbp_it = bn2conf_sbp.find(output_bns().Get(i));
+    if (conf_sbp_it == bn2conf_sbp.end()) {
+      sbp_parallel = &(JUST(SbpInferHint4Ibn(input_bns().Get(i)))->sbp_parallel());
+    } else {
+      sbp_parallel = &conf_sbp_it->second;
+    }
+    (*bn2sbp)[input_bns().Get(i)] = *sbp_parallel;
+    (*bn2sbp)[output_bns().Get(i)] = *sbp_parallel;
+  }
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> TupleIdentityOp::InferBatchAxis(
+    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
+  FOR_RANGE(int32_t, i, 0, input_bns().size()) {
+    *BatchAxis4BnInOp(output_bns().Get(i)) = *BatchAxis4BnInOp(input_bns().Get(i));
+  }
+  return Maybe<void>::Ok();
 }
 
 REGISTER_OP(OperatorConf::kTupleIdentityConf, TupleIdentityOp);

@@ -14,10 +14,12 @@ class ClipBoxesToImageOp final : public Operator {
   }
   Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                              const ParallelContext* parallel_ctx) const override;
+
  private:
   Maybe<void> InferBatchAxis(
       std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override {
-    return NaiveInferBatchAxis(BatchAxis4BnInOp);
+    *BatchAxis4BnInOp("out") = *BatchAxis4BnInOp("boxes");
+    return Maybe<void>::Ok();
   }
 };
 
