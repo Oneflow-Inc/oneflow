@@ -1,4 +1,4 @@
-#include "oneflow/core/operator/element_count_op.h"
+#include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
 class ElementCountOp final : public Operator {
@@ -10,12 +10,13 @@ class ElementCountOp final : public Operator {
   void InitFromOpConf() override;
   const PbMessage& GetCustomizedConf() const override { return op_conf().element_count_conf(); }
   Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                      const ParallelContext* parallel_ctx) const override;
+                             const ParallelContext* parallel_ctx) const override;
 
  private:
   Maybe<void> InferBatchAxis(
       std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override {
-    return NaiveInferBatchAxis(BatchAxis4BnInOp);
+    BatchAxis4BnInOp("out")->clear_value();
+    return Maybe<void>::Ok();
   }
 };
 void ElementCountOp::InitFromOpConf() {
@@ -24,8 +25,9 @@ void ElementCountOp::InitFromOpConf() {
   EnrollOutputBn("out", false);
 }
 
-Maybe<void> ElementCountOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                    const ParallelContext* parallel_ctx) const {
+Maybe<void> ElementCountOp::InferBlobDescs(
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx) const {
   const ElementCountOpConf& conf = op_conf().element_count_conf();
   BlobDesc* out = GetBlobDesc4BnInOp("out");
   out->mut_shape() = Shape({1});
