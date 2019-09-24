@@ -80,7 +80,9 @@ class BoxHead(object):
                 pos_proposal_per_img = flow.local_gather(
                     proposals[img_idx], sampled_pos_inds
                 )
-                gt_boxes_per_img = flow.local_gather(gt_boxes_list[img_idx], gt_indices)
+                gt_boxes_per_img = flow.local_gather(
+                    gt_boxes_list[img_idx], gt_indices
+                )
                 bbox_target_list.append(
                     flow.detection.box_encode(
                         gt_boxes_per_img,
@@ -112,19 +114,23 @@ class BoxHead(object):
 
             # construct cls loss
             total_elem_cnt = flow.math.elem_cnt(labels)
-            box_head_cls_loss = flow.div(
+            box_head_cls_loss = (
                 flow.math.reduce_sum(
                     # TODO: add sparse cross entropy python interface
                     self.dl_net.SparseCrossEntropy(
-                        flow.nn.softmax(cls_logits), labels, name="sparse_cross_entropy"
+                        flow.nn.softmax(cls_logits),
+                        labels,
+                        name="sparse_cross_entropy",
                     )
-                ),
-                total_elem_cnt,
+                )
+                / total_elem_cnt
             )
 
             # construct bbox loss
             total_pos_inds = flow.squeeze(
-                flow.local_nonzero(labels != flow.constant_scalar(int(0), flow.int32)),
+                flow.local_nonzero(
+                    labels != flow.constant_scalar(int(0), flow.int32)
+                ),
                 axis=[1],
             )
             # [R, 81, 4]
@@ -142,10 +148,9 @@ class BoxHead(object):
                 axis=[1],
             )
             bbox_target = flow.local_gather(bbox_targets, total_pos_inds)
-            box_head_box_loss = flow.div(
-                flow.math.reduce_sum(flow.detection.smooth_l1(bbox_pred, bbox_target)),
-                total_elem_cnt,
-            )
+            flow.math.reduce_sum(
+                flow.detection.smooth_l1(bbox_pred, bbox_target)
+            ) / total_elem_cnt
 
             return (
                 box_head_box_loss,
@@ -169,7 +174,8 @@ class BoxHead(object):
             levels == flow.constant_scalar(int(3), flow.int32)
         )
         proposals_with_img_ids = flow.concat(
-            [flow.expand_dims(flow.cast(img_ids, flow.float), 1), proposals], axis=1
+            [flow.expand_dims(flow.cast(img_ids, flow.float), 1), proposals],
+            axis=1,
         )
         roi_features_0 = flow.detection.roi_align(
             in_blob=features[0],
@@ -212,7 +218,8 @@ class BoxHead(object):
             sampling_ratio=self.cfg.BOX_HEAD.SAMPLING_RATIO,
         )
         roi_features = flow.concat(
-            [roi_features_0, roi_features_1, roi_features_2, roi_features_3], axis=0
+            [roi_features_0, roi_features_1, roi_features_2, roi_features_3],
+            axis=0,
         )
         origin_indices = flow.concat(
             [level_idx_2, level_idx_3, level_idx_4, level_idx_5], axis=0

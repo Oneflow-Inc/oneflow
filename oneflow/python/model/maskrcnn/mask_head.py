@@ -13,7 +13,9 @@ class MaskHead(object):
     # gt_segms: list of (G, 7, 7) wrt. images
     # gt_labels: list of (G,) wrt. images
     # features: list of [N, C_i, H_i, W_i] wrt. fpn layers
-    def build_train(self, pos_proposals, pos_gt_indices, gt_segms, gt_labels, features):
+    def build_train(
+        self, pos_proposals, pos_gt_indices, gt_segms, gt_labels, features
+    ):
         with flow.deprecated.variable_scope("mask"):
             img_ids = flow.concat(
                 flow.detection.extract_piece_slice_id(pos_proposals), axis=0
@@ -30,10 +32,14 @@ class MaskHead(object):
             gt_label_list = []
             for img_idx in range(cfg.TRAINING.IMG_PER_GPUl):
                 gt_segm_list.append(
-                    flow.local_gather(gt_segms[img_idxl], pos_gt_indices[img_idx])
+                    flow.local_gather(
+                        gt_segms[img_idxl], pos_gt_indices[img_idx]
+                    )
                 )
                 gt_label_list.append(
-                    flow.local_gather(gt_labels[img_idxl], pos_gt_indices[img_idx])
+                    flow.local_gather(
+                        gt_labels[img_idxl], pos_gt_indices[img_idx]
+                    )
                 )
             gt_segms = flow.concat(gt_segm_list, axis=0)
             gt_labels = flow.concat(gt_label_list, axis=0)
@@ -50,9 +56,11 @@ class MaskHead(object):
                 )
             )
 
-            mask_loss = flow.div(
-                flow.math.reduce_sum(flow.binary_cross_entropy(mask_pred, gt_segms)),
-                elem_cnt,
+            mask_loss = (
+                flow.math.reduce_sum(
+                    flow.binary_cross_entropy(mask_pred, gt_segms)
+                )
+                / elem_cnt
             )
 
             return mask_loss
@@ -72,7 +80,8 @@ class MaskHead(object):
             levels == flow.constant_scalar(int(3), flow.int32)
         )
         proposals_with_img_ids = flow.concat(
-            [flow.expand_dims(flow.cast(img_ids, flow.float), 1), proposals], axis=1
+            [flow.expand_dims(flow.cast(img_ids, flow.float), 1), proposals],
+            axis=1,
         )
         roi_features_0 = flow.detection.roi_align(
             in_blob=features[0],
@@ -115,7 +124,8 @@ class MaskHead(object):
             sampling_ratio=self.cfg.BOX_HEAD.SAMPLING_RATIO,
         )
         roi_features = flow.concat(
-            [roi_features_0, roi_features_1, roi_features_2, roi_features_3], axis=0
+            [roi_features_0, roi_features_1, roi_features_2, roi_features_3],
+            axis=0,
         )
         origin_indices = flow.concat(
             [level_idx_2, level_idx_3, level_idx_4, level_idx_5], axis=0
