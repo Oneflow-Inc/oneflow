@@ -1,5 +1,6 @@
 from __future__ import absolute_import
 
+import oneflow as flow
 import oneflow.python.framework.compile_context as compile_context
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.id_util as id_util
@@ -161,3 +162,37 @@ def decode_ofrecord(ofrecord_dir, blobs,
 
     compile_context.CurJobAddOp(op_conf)
     return tuple(map(lambda x: remote_blob_util.RemoteBlob(x), lbis))
+
+@oneflow_export("data.decode_random")
+def decode_random(shape, dtype, batch_size=1, initializer=None, tick=None, name=None):
+    op_conf = op_conf_util.OperatorConf()
+
+    if name is None:
+        name = id_util.UniqueStr("DecodeRandom_")
+    assert isinstance(name, str)
+    op_conf.name = name
+
+    assert isinstance(shape, (list, tuple))
+    op_conf.decode_random_conf.shape.dim.extend(shape)
+
+    assert dtype is not None
+    setattr(op_conf.decode_random_conf, "data_type", dtype)
+
+    op_conf.decode_random_conf.batch_size = batch_size
+
+    if initializer is not None:
+        op_conf.decode_random_conf.data_initializer.CopyFrom(initializer)
+    else:
+        op_conf.decode_random_conf.data_initializer.CopyFrom(
+                flow.random_uniform_initializer())
+
+    if tick:
+        op_conf.decode_random_conf.tick = tick.logical_blob_name
+    op_conf.decode_random_conf.out = "out"
+
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = "out"
+
+    compile_context.CurJobAddOp(op_conf)
+    return remote_blob_util.RemoteBlob(lbi)
