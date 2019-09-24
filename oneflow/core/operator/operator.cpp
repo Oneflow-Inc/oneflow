@@ -187,13 +187,18 @@ void Operator::GenKernelConf(
     const ParallelContext* parallel_ctx, KernelConf* kernel_conf, const OpContext* op_ctx,
     std::function<const BlobDesc&(const std::string&)> LogicalBlobDesc4BnInOp) const {
   *(kernel_conf->mutable_op_attribute()) = op_attribute_;
-
   kernel_conf->set_is_forward(is_forward);
   DataType data_type = GetDataTypeFromBnInOpVec(GetBlobDesc4BnInOp, output_bns());
   if (data_type == DataType::kInvalidDataType) {
     data_type = GetDataTypeFromBnInOpVec(GetBlobDesc4BnInOp, input_bns());
   }
   kernel_conf->set_data_type(data_type);
+  if (DoAnyBlobDescHasLoD(GetBlobDesc4BnInOp, output_bns())) {
+    kernel_conf->set_need_forward_lod(true);
+  }
+  if (DoAnyBlobDescIsDynamic(GetBlobDesc4BnInOp, output_bns())) {
+    kernel_conf->set_need_forward_dense_shape(true);
+  }
 
   VirtualGenKernelConf(GetBlobDesc4BnInOp, parallel_ctx, kernel_conf, op_ctx,
                        LogicalBlobDesc4BnInOp);
