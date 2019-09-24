@@ -360,7 +360,6 @@ void TaskNode::LockRegsts() {
 void TaskNode::FixRegisterNumRange() {
   for (auto& pair : produced_regsts_) {
     RegstDesc* produced_regst = pair.second.get();
-    produced_regst->UpdtMinRegstNumIfNeed(pair.second->MaxColNum());
     bool in_same_stream = true;
     for (const TaskNode* consumer : produced_regst->consumers()) {
       if (consumer->GlobalWorkStreamId() != GlobalWorkStreamId()) {

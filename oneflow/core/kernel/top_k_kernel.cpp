@@ -10,7 +10,8 @@ void TopKKernel<T>::ForwardDataContent(const KernelCtx& ctx,
   Blob* out_blob = BnInOp2Blob("out");
 
   CHECK_LE(in_blob->shape().elem_cnt(), GetMaxVal<int32_t>());
-  const int32_t instance_size = static_cast<int32_t>(in_blob->shape().dim_vec().back());
+  int32_t in_last_axis = in_blob->shape().NumAxes() - 1;
+  const int32_t instance_size = static_cast<int32_t>(in_blob->shape().At(in_last_axis));
   const int32_t instance_num = static_cast<int32_t>(in_blob->shape().elem_cnt() / instance_size);
   const T* in = in_blob->dptr<T>();
   int32_t* fw_buf = fw_buf_blob->mut_dptr<int32_t>();

@@ -77,7 +77,6 @@ class RegstDesc final {
   bool HasSameMemSize(const RegstDesc*);
 
   // util
-  int32_t MaxColNum() const { return packed_blob_desc_->max_col_num(); }
   void EraseZeroSizeBlob();
   void ToProto(RegstDescProto*) const;
   bool HasSameBlobDescs(const RegstDesc*);

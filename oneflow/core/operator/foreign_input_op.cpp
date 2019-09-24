@@ -5,11 +5,7 @@ namespace oneflow {
 
 namespace {
 
-void CheckOpConf(const OperatorConf& op_conf) {
-  CHECK(op_conf.ctrl_in_op_name().empty());
-  if (op_conf.foreign_input_conf().blob_conf().has_dim1_valid_num()) { TODO(); }
-  if (op_conf.foreign_input_conf().blob_conf().has_dim2_valid_num()) { TODO(); }
-}
+void CheckOpConf(const OperatorConf& op_conf) { CHECK(op_conf.ctrl_in_op_name().empty()); }
 
 }  // namespace
 
@@ -35,11 +31,6 @@ Maybe<void> ForeignInputOp::InferBlobDescs(
     out_blob_desc->set_data_type(conf.data_type());
   } else {
     out_blob_desc->set_data_type(job_desc().DefaultDataType());
-  }
-  out_blob_desc->set_has_dim0_valid_num_field(conf.has_dim0_valid_num());
-  if (conf.has_dim0_inner_shape()) {
-    CHECK_OR_RETURN(conf.has_dim0_valid_num());
-    out_blob_desc->mut_dim0_inner_shape() = Shape(conf.dim0_inner_shape());
   }
   return Maybe<void>::Ok();
 }
