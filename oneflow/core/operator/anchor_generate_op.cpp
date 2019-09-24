@@ -16,7 +16,7 @@ class AnchorGenerateOp final : public Operator {
                              const ParallelContext* parallel_ctx) const override;
   Maybe<void> InferBatchAxis(
       std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override {
-    BatchAxis4BnInOp("anchors")->clear_value();
+    BatchAxis4BnInOp("anchors")->set_value(0);
     return Maybe<void>::Ok();
   }
 };
