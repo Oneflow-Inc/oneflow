@@ -19,6 +19,6 @@ class Blob(RemoteBlob):
     @property
     def logical_blob_name(self):
         return self.logical_blob_name_
-    
+
     def __str__(self):
         return self.logical_blob_name()

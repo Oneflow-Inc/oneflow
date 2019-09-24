@@ -27,20 +27,20 @@ def reset_default_job_set():
     _default_job_set = JobSet()
     _job_set2job_name2job_func[id(_default_job_set)] = {}
 
-@oneflow_export('job_mem_sharing_strategy')
-def job_mem_sharing_strategy(strategy_str, job_set = None, **kwargs):
+@oneflow_export('inter_job_reuse_mem_strategy')
+def inter_job_reuse_mem_strategy(strategy_str, job_set = None, **kwargs):
     assert type(strategy_str) is str
     if job_set == None: job_set = _default_job_set
-    if strategy_str == "mem_sharing_priority":
-        job_set.job_mem_sharing_strategy.mem_sharing_priority.SetInParent()
-        assert job_set.job_mem_sharing_strategy.HasField("mem_sharing_priority")
+    if strategy_str == "reuse_mem_priority":
+        job_set.inter_job_reuse_mem_strategy.reuse_mem_priority.SetInParent()
+        assert job_set.inter_job_reuse_mem_strategy.HasField("reuse_mem_priority")
     elif strategy_str == "parallelism_priority":
-        job_set.job_mem_sharing_strategy.parallelism_priority.SetInParent()
-        assert job_set.job_mem_sharing_strategy.HasField("parallelism_priority")
+        job_set.inter_job_reuse_mem_strategy.parallelism_priority.SetInParent()
+        assert job_set.inter_job_reuse_mem_strategy.HasField("parallelism_priority")
     elif strategy_str == "custom_parallelism":
         assert kwargs["job_name_groups"] is not None
         for job_name_group in kwargs["job_name_groups"]:
-            group = job_set.job_mem_sharing_strategy.custom_parallelism.nonparallel_group.add()
+            group = job_set.inter_job_reuse_mem_strategy.custom_parallelism.nonparallel_group.add()
             for job_name in job_name_group:
                 assert type(job_name) is str
                 group.job_name.append(job_name)

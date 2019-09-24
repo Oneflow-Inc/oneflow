@@ -114,26 +114,26 @@ void PullPlan(const std::string& plan_name, Plan* plan) {
 void CompileCurJobOnMaster(Job* job, Plan* improved_plan, bool need_job_complete) {
   const JobDesc& job_desc = GlobalJobDesc();
   Plan naive_plan;
-  Plan mem_shared_plan;
+  Plan complete_plan;
   double start = GetCurTime();
   if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
     Compiler().Compile(job, &naive_plan, need_job_complete);
     LOG(INFO) << "compile time: " << GetCurTime() - start;
-    mem_shared_plan =
-        Improver().ImproveMemSharedIdOnly(*Global<AvailableMemDesc>::Get(), naive_plan);
+    complete_plan =
+        Improver().GenAndInferMemBlockIdOnly(*Global<AvailableMemDesc>::Get(), naive_plan);
     TeePersistentLogStream::Create("naive_plan")->Write(naive_plan);
-    TeePersistentLogStream::Create("mem_shared_plan")->Write(mem_shared_plan);
+    TeePersistentLogStream::Create("complete_plan")->Write(complete_plan);
     LOG(INFO) << "push_pull_plan:" << GetCurTime() - start;
   }
   if (job_desc.enable_experiment_run()) {
     if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
-      PushPlan("mem_shared_plan", mem_shared_plan);
+      PushPlan("complete_plan", complete_plan);
     } else {
-      PullPlan("mem_shared_plan", &mem_shared_plan);
+      PullPlan("complete_plan", &complete_plan);
     }
     OF_BARRIER();
     // Experiment Runtime
-    { Runtime experiment_run(mem_shared_plan, job_desc.piece_num_of_experiment_phase(), true); }
+    { Runtime experiment_run(complete_plan, job_desc.piece_num_of_experiment_phase(), true); }
     // Improve
     if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
       TeePersistentLogStream::Create("available_mem_desc")->Write(*Global<AvailableMemDesc>::Get());
@@ -145,7 +145,7 @@ void CompileCurJobOnMaster(Job* job, Plan* improved_plan, bool need_job_complete
       TeePersistentLogStream::Create("improved_plan")->Write(*improved_plan);
     }
   } else {
-    *improved_plan = mem_shared_plan;
+    *improved_plan = complete_plan;
   }
   LOG(INFO) << "compile and improve time: " << GetCurTime() - start;
 }
@@ -554,13 +554,13 @@ void FinishGlobalCriticalSectionDesc(const std::vector<Plan>& plans) {
         auto* mem_block_ids = &(*sole_op_name2mem_block_ids)[op_name];
         for (const auto& pair : task.produced_regst_desc()) {
           if (NeedAllocateMemory(pair.second.regst_desc_type())) {
-            mem_block_ids->emplace(pair.second.mem_shared_id());
+            mem_block_ids->emplace(pair.second.mem_block_id());
           }
         }
       }
       for (const auto& pair : task.produced_regst_desc()) {
         if (NeedAllocateMemory(pair.second.regst_desc_type())) {
-          job_id_mem_block_ids->emplace(pair.second.mem_shared_id());
+          job_id_mem_block_ids->emplace(pair.second.mem_block_id());
         }
       }
     }
@@ -836,13 +836,13 @@ void CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan) {
 }  // namespace
 
 GlobalObjectsScope4JobConf::GlobalObjectsScope4JobConf(const JobSet& job_set) {
-  Global<const JobMemSharingStrategy>::New(job_set.job_mem_sharing_strategy());
+  Global<const InterJobReuseMemStrategy>::New(job_set.inter_job_reuse_mem_strategy());
   Global<JobName2JobId>::New();
 }
 
 GlobalObjectsScope4JobConf::~GlobalObjectsScope4JobConf() {
   Global<JobName2JobId>::Delete();
-  Global<const JobMemSharingStrategy>::Delete();
+  Global<const InterJobReuseMemStrategy>::Delete();
 }
 
 Oneflow::Oneflow(const oneflow::JobSet& job_set) {
