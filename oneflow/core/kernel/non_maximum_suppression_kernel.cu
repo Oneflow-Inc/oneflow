@@ -14,7 +14,7 @@ __host__ __device__ __forceinline__ T CeilDiv(T a, T b) {
 template<typename T>
 __host__ __device__ __forceinline__ T IoU(T const* const a, T const* const b) {
   T interS = max(min(a[2], b[2]) - max(a[0], b[0]) + 1, 0.f)
-              * max(min(a[3], b[3]) - max(a[1], b[1]) + 1, 0.f);
+             * max(min(a[3], b[3]) - max(a[1], b[1]) + 1, 0.f);
   T Sa = (a[2] - a[0] + 1) * (a[3] - a[1] + 1);
   T Sb = (b[2] - b[0] + 1) * (b[3] - b[1] + 1);
   return interS / (Sa + Sb - interS);
@@ -22,7 +22,7 @@ __host__ __device__ __forceinline__ T IoU(T const* const a, T const* const b) {
 
 template<typename T>
 __global__ void CalcSuppressionBitmaskMatrix(size_t num_boxes, const float nms_iou_threshold,
-                                              const T* boxes, int64_t* suppression_bmask_matrix) {
+                                             const T* boxes, int64_t* suppression_bmask_matrix) {
   const size_t row = blockIdx.y;
   const size_t col = blockIdx.x;
 
@@ -76,7 +76,7 @@ __global__ void ScanSuppression(const size_t num_boxes, const size_t num_blocks,
 
 template<typename T>
 class NmsGpuKernel final : public KernelIf<DeviceType::kGPU> {
-public:
+ public:
   OF_DISALLOW_COPY_AND_MOVE(NmsGpuKernel);
   NmsGpuKernel() = default;
   ~NmsGpuKernel() = default;
@@ -93,22 +93,22 @@ public:
     size_t num_boxes = bbox_blob->shape().At(0);
     size_t num_keep = std::min<size_t>(num_boxes, op_conf.post_nms_top_n());
     size_t num_blocks = CeilDiv(num_boxes, kBlockSize);
-    Memset<DeviceType::kGPU>(ctx.device_ctx, suppression_ptr, 0, num_boxes * num_blocks * sizeof(int64_t));
+    Memset<DeviceType::kGPU>(ctx.device_ctx, suppression_ptr, 0,
+                             num_boxes * num_blocks * sizeof(int64_t));
     Memset<DeviceType::kGPU>(ctx.device_ctx, keep_ptr, 0, num_boxes * sizeof(int8_t));
 
     dim3 blocks(num_blocks, num_blocks);
     dim3 threads(kBlockSize);
     CalcSuppressionBitmaskMatrix<<<blocks, threads, 0, ctx.device_ctx->cuda_stream()>>>(
         num_boxes, op_conf.nms_iou_threshold(), bbox_ptr, suppression_ptr);
-    ScanSuppression<<<1, num_blocks, num_blocks, ctx.device_ctx->cuda_stream()>>>(num_boxes, num_blocks,
-                                                                       num_keep, suppression_ptr, keep_ptr);
+    ScanSuppression<<<1, num_blocks, num_blocks, ctx.device_ctx->cuda_stream()>>>(
+        num_boxes, num_blocks, num_keep, suppression_ptr, keep_ptr);
   }
 };
 
-#define REGISTER_NMS_GPU_KERNEL(dtype)                                                  \
+#define REGISTER_NMS_GPU_KERNEL(dtype)                                            \
   REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kNonMaximumSuppressionConf, \
-                                        DeviceType::kGPU, dtype, \
-                                        NmsGpuKernel<dtype>)
+                                        DeviceType::kGPU, dtype, NmsGpuKernel<dtype>)
 
 REGISTER_NMS_GPU_KERNEL(float);
 REGISTER_NMS_GPU_KERNEL(double);
