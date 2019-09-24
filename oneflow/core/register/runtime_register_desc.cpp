@@ -35,7 +35,7 @@ const RtBlobDesc* RtRegstDesc::GetRtBlobDescFromLbi(const LogicalBlobId& lbi) co
 }
 
 size_t RtRegstDesc::TotalByteSize4AllRegst() const {
-  return packed_blob_desc_->TotalByteSize() * register_num_;
+  return packed_blob_desc_->AlignedTotalByteSize() * register_num_;
 }
 
 size_t RtRegstDesc::TotalMainByteSize4AllRegst() const {
@@ -53,7 +53,7 @@ size_t RtRegstDesc::MainByteSize4OneRegst() const {
     if (mem_case_.has_device_cuda_mem()) {
       return packed_blob_desc_->ByteSizeOfBlobBody();
     } else {
-      return packed_blob_desc_->TotalByteSize();
+      return packed_blob_desc_->AlignedTotalByteSize();
     }
   }
 }

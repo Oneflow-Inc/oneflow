@@ -25,7 +25,9 @@ size_t RtBlobDesc::AlignedByteSizeOfBlobBody() const {
   return RoundUp(ByteSizeOfBlobBody(), BlobDesc::kAlignSize);
 }
 
-size_t AlignedTotalByteSize() const { return ByteSizeOfBlobHeader() + AlignedByteSizeOfBlobBody(); }
+size_t RtBlobDesc::AlignedTotalByteSize() const {
+  return ByteSizeOfBlobHeader() + AlignedByteSizeOfBlobBody();
+}
 
 bool RtBlobDesc::operator==(const RtBlobDesc& rhs) const {
   return (body_ == rhs.body_) && (header_ == rhs.header_)

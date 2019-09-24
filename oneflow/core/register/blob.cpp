@@ -19,7 +19,7 @@ DenseShapeView::operator Shape() const {
 }
 
 bool DenseShapeView::operator==(const DenseShapeView& rhs) const {
-  if (NumAxes() != rhs.NumAxes) { return false; }
+  if (NumAxes() != rhs.NumAxes()) { return false; }
   FOR_RANGE(int, i, 0, NumAxes()) {
     if (At(i) != rhs.At(i)) { return false; }
   }
@@ -27,20 +27,22 @@ bool DenseShapeView::operator==(const DenseShapeView& rhs) const {
 }
 
 int64_t DenseShapeView::At(int64_t index) const {
-  CHECL_GT(index, 0);
+  CHECK_GT(index, 0);
   CHECK_LT(index, num_axes_);
-  return *(ptr + index);
+  return ptr_[index];
 }
 
 int64_t DenseShapeView::Count(int64_t begin_axis) const { return Count(begin_axis, NumAxes()); }
 
-int64_t DenseShapeView::Count(int64_t begin_axis, end_axis) const {
+int64_t DenseShapeView::Count(int64_t begin_axis, int64_t end_axis) const {
   CHECK(0 <= begin_axis && begin_axis <= end_axis && end_axis <= NumAxes())
       << begin_axis << " " << end_axis;
   int64_t cnt = 1;
   for (int64_t i = begin_axis; i < end_axis; ++i) { cnt *= At(i); }
   return cnt;
 }
+
+int64_t DenseShapeView::elem_cnt() const { return Count(0); }
 
 std::string DenseShapeView::ToString() const {
   std::stringstream ss;
@@ -55,19 +57,17 @@ std::string DenseShapeView::ToString() const {
 }
 
 std::ostream& operator<<(std::ostream& out, const DenseShapeView& shape) {
-  out << shape.DebugStr();
+  out << shape.ToString();
   return out;
 }
 
-void DenseShapeMutView::set_shape(const Shape& val) {
-  CHECK_EQ(num_axes_, val.NumAxes());
-  shape_ = val;
-  is_shape_inited_ = true;
-  for (size_t i = 0; i < shape_.NumAxes(); ++i) { *(ptr_ + i) = shape_.At(i); }
+void DenseShapeMutView::set_shape(const Shape& shape) {
+  CHECK_EQ(num_axes_, shape.NumAxes());
+  for (size_t i = 0; i < shape.NumAxes(); ++i) { ptr_[i] = shape.At(i); }
 }
 
 LoDViewBase::LoDViewBase(PodPtr lod_ptr, int64_t num_of_lod_levels) {
-  ptr_ = lod_ptr_.MutTensorPtr<int64_t>();
+  ptr_ = lod_ptr.MutTensorPtr<int64_t>();
   CHECK_NOTNULL(ptr_);
   num_of_lod_levels_ = num_of_lod_levels;
   const TensorPodDesc& lod_desc = lod_ptr.pod_desc().Cast<TensorPodDesc>();
@@ -75,13 +75,7 @@ LoDViewBase::LoDViewBase(PodPtr lod_ptr, int64_t num_of_lod_levels) {
   max_reserved_size_for_lod_ = lod_desc.shape().At(0);
 }
 
-LoDViewBase& LoDViewBase::operator=(const LoDViewBase& rhs) {
-  ptr_ = rhs.ptr_;
-  num_of_lod_levels_ = rhs.num_of_lod_levels_;
-  max_reserved_size_for_lod_ = rhs.max_reserved_size_for_lod_;
-}
-
-LoDVec LoDViewBase::InitOffsetVecFromPtr() {
+LoDViewBase::LoDVec LoDViewBase::InitOffsetVecFromPtr() const {
   LoDVec offset_vec;
   offset_vec.resize(num_of_lod_levels_);
   size_t cur_lod_level = 0;
@@ -112,6 +106,8 @@ LoDVec LoDViewBase::InitOffsetVecFromPtr() {
   return offset_vec;
 }
 
+LoDViewBase::LoDVec LoDViewBase::InitLengthVecFromPtr() const { TODO(); }
+
 void LoDViewBase::FlushOffsetVecToPtr(const LoDVec& offset_lod_vec) {
   CHECK_EQ(num_of_lod_levels_, offset_lod_vec.size());
   size_t vec_cnt = 0;
@@ -126,7 +122,8 @@ void LoDViewBase::FlushOffsetVecToPtr(const LoDVec& offset_lod_vec) {
   CHECK_LT(vec_cnt, max_reserved_size_for_lod_);
 }
 
-LoDVec LoDViewBase::GetLengthLoDVecFromOffsetLoDVec(const LoDVec& offset_lod_vec) const {
+LoDViewBase::LoDVec LoDViewBase::GetLengthLoDVecFromOffsetLoDVec(
+    const LoDVec& offset_lod_vec) const {
   LoDVec length_lod_vec(offset_lod_vec.size());
   for (size_t i = 0; i < offset_lod_vec.size(); ++i) {
     const std::vector<int64_t>& vec = offset_lod_vec.at(i);
@@ -138,7 +135,8 @@ LoDVec LoDViewBase::GetLengthLoDVecFromOffsetLoDVec(const LoDVec& offset_lod_vec
   return length_lod_vec;
 }
 
-LoDVec LoDViewBase::GetOffsetLoDVecFromLengthLoDVec(const LoDVec& length_lod_vec) const {
+LoDViewBase::LoDVec LoDViewBase::GetOffsetLoDVecFromLengthLoDVec(
+    const LoDVec& length_lod_vec) const {
   LoDVec offset_lod_vec(length_lod_vec.size());
   for (size_t i = 0; i < length_lod_vec.size(); ++i) {
     const std::vector<int64_t>& vec = length_lod_vec.at(i);
@@ -170,59 +168,44 @@ void LengthLoDMutView::SetLength(const LoDVec& length_lod_vec) {
   LoDViewBase::FlushOffsetVecToPtr(GetOffsetLoDVecFromLengthLoDVec(length_lod_vec));
 }
 
-const MemoryCase& Blob::mem_case() const { return regst_->regst_desc()->mem_case(); }
+const MemoryCase& Blob::mem_case() const { return mem_case_; }
 
-Blob::Blob(Regst* regst, const RtBlobDesc* blob_desc, char* header_ptr) {
-  Init(regst, blob_desc, header_ptr, header_ptr + blob_desc->RealByteSizeOfBlobHeader());
+Blob::Blob(const MemoryCase& mem_case, const RtBlobDesc* blob_desc, char* header_ptr) {
+  Init(mem_case, blob_desc, header_ptr, header_ptr + blob_desc->ByteSizeOfBlobHeader());
 }
 
-Blob::Blob(Regst* regst, const RtBlobDesc* blob_desc, char* header_ptr, char* body_ptr) {
-  Init(regst, blob_desc, header_ptr, body_ptr);
+Blob::Blob(const MemoryCase& mem_case, const RtBlobDesc* blob_desc, char* header_ptr,
+           char* body_ptr) {
+  Init(mem_case, blob_desc, header_ptr, body_ptr);
 }
 
-void Blob::Init(Regst* regst, const RtBlobDesc* blob_desc, char* header_ptr, char* body_ptr) {
-  is_header_body_contiguous_ = (body_ptr == header_ptr + blob_desc->RealByteSizeOfBlobHeader());
-  regst_ = regst;
+void Blob::Init(const MemoryCase& mem_case, const RtBlobDesc* blob_desc, char* header_ptr,
+                char* body_ptr) {
+  is_header_body_contiguous_ = (body_ptr == header_ptr + blob_desc->ByteSizeOfBlobHeader());
+  mem_case_ = mem_case;
   blob_desc_ = blob_desc;
   dptr_ = body_ptr;
-  header_ptr_ = PodPtr(blob_desc_->header_pod_desc(), header_ptr);
-
-  {
-    TensorPodDesc dense_shape_desc =
-        header_ptr_.Field(FieldKey::kDenseShap).pod_desc().Cast<TensorPodDesc>();
-    CHECK_EQ(1, dense_shape_desc.shape().NumAxes());
-    dense_shape_.Init(header_ptr_.MutTensorPtr<int64_t>(FieldKey::kDenseShap, nullptr),
-                      dense_shape_desc.shape().elem_cnt());
-    dense_shape_.set_shape(blob_desc_->body_shape());
-  }
-
-  if (header_ptr_.HasField(FieldKey::kLoD)) {
-    int64_t num_of_lod_levels = blob_desc_->blob_desc_proto().num_of_lod_levels();
-    CHECK_GT(num_of_lod_levels, 0);
-    TensorPodDesc lod_desc = header_ptr_.Field(FieldKey::kLoD).pod_desc().Cast<TensorPodDesc>();
-    CHECK_EQ(1, lod_desc.shape().NumAxes());
-    lod_.Init(header_ptr_.MutTensorPtr<int64_t>(FieldKey::kLoD, nullptr),
-              lod_desc.shape().elem_cnt(), num_of_lod_levels);
-  }
+  header_ptr_.reset(new PodPtr(blob_desc_->header_pod_desc(), header_ptr));
 }
 
 void Blob::CopyDataContentFrom(DeviceCtx* device_ctx, const Blob* rhs) {
   if (this == rhs) { return; }
-  AutoMemcpy(device_ctx, mut_dptr(), rhs->dptr(), ByteSizeOfDataContentField(), mem_case(),
+  AutoMemcpy(device_ctx, mut_dptr(), rhs->dptr(), blob_desc_->ByteSizeOfBlobBody(), mem_case(),
              rhs->mem_case());
 }
 
 void Blob::CopyValidDataContentFrom(DeviceCtx* device_ctx, const Blob* rhs) {
   if (this == rhs) { return; }
   CHECK_EQ(rhs->shape().elem_cnt(), shape().elem_cnt());
-  AutoMemcpy(device_ctx, mut_dptr(), rhs->dptr(), ByteSizeOfValidDataContent(), mem_case(),
+  AutoMemcpy(device_ctx, mut_dptr(), rhs->dptr(), blob_desc_->ByteSizeOfBlobBody(), mem_case(),
              rhs->mem_case());
 }
 
 void Blob::CopyHeaderFrom(DeviceCtx* device_ctx, const Blob* rhs) {
-  if (this == rhs || ByteSizeOfBlobHeader() == 0) { return; }
-  CHECK_EQ(ByteSizeOfBlobHeader(), rhs->ByteSizeOfBlobHeader());
-  Memcpy<DeviceType::kCPU>(device_ctx, mut_header_ptr(), rhs->header_ptr(), ByteSizeOfBlobHeader());
+  if (this == rhs || blob_desc().ByteSizeOfBlobHeader() == 0) { return; }
+  CHECK_EQ(blob_desc().ByteSizeOfBlobHeader(), rhs->blob_desc().ByteSizeOfBlobHeader());
+  Memcpy<DeviceType::kCPU>(device_ctx, mut_header_ptr(), rhs->header_ptr(),
+                           blob_desc().ByteSizeOfBlobHeader());
 }
 
 }  // namespace oneflow

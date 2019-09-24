@@ -33,17 +33,6 @@ void LossOp::VirtualGenKernelConf(
 Maybe<void> LossOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                    const ParallelContext* parallel_ctx) const {
   const BlobDesc* pred_blob_desc = GetBlobDesc4BnInOp("prediction");
-  if (HasFieldInCustomizedConf("label")) {
-    const BlobDesc* label_blob_desc = GetBlobDesc4BnInOp("label");
-    CHECK_EQ_OR_RETURN(pred_blob_desc->has_data_id_field(), label_blob_desc->has_data_id_field());
-    CHECK_EQ_OR_RETURN(pred_blob_desc->has_dim0_valid_num_field(),
-                       label_blob_desc->has_dim0_valid_num_field());
-    CHECK_EQ_OR_RETURN(pred_blob_desc->has_dim0_inner_shape(),
-                       label_blob_desc->has_dim0_inner_shape());
-  }
-  if (pred_blob_desc->has_dim0_inner_shape()) {
-    CHECK_EQ_OR_RETURN(pred_blob_desc->dim0_inner_shape().At(0), 1);
-  }
   CHECK_GT_OR_RETURN(pred_blob_desc->shape().NumAxes(), 0);
   // loss
   BlobDesc* loss_blob_desc = GetBlobDesc4BnInOp("loss");
@@ -54,7 +43,6 @@ Maybe<void> LossOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> 
   BlobDesc* loss_instance_num_blob_desc = GetBlobDesc4BnInOp("loss_instance_num");
   loss_instance_num_blob_desc->mut_shape() = Shape({1});
   loss_instance_num_blob_desc->set_data_type(pred_blob_desc->data_type());
-  loss_instance_num_blob_desc->set_has_data_id_field(pred_blob_desc->has_data_id_field());
 
   if (!GetValFromCustomizedConf<std::string>("weight").empty()) {
     // reduction_coefficient

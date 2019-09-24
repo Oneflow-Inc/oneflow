@@ -12,13 +12,10 @@
 
 namespace oneflow {
 
-class RegstMgr;
-class Regst;
-
 class DenseShapeViewBase {
  protected:
   DenseShapeViewBase(PodPtr dense_shape_ptr);
-  DenseShapeViewBase(const DenseShapeViewBase& rhs) : ptr_(rhs.ptr_), num_axes_(rhs.num_axes_) {}
+  DenseShapeViewBase(const DenseShapeViewBase& rhs) = default;
   virtual ~DenseShapeViewBase() = default;
 
   int64_t* ptr_;
@@ -59,11 +56,11 @@ class LoDViewBase {
   typedef std::vector<std::vector<int64_t>> LoDVec;
 
   LoDViewBase(PodPtr lod_ptr, int64_t num_of_lod_levels);
-  LoDViewBase(const LoDViewBase& rhs) { *this = rhs; }
-  LoDViewBase& operator=(const LoDViewBase& rhs);
+  LoDViewBase(const LoDViewBase& rhs) = default;
   ~LoDViewBase() = default;
 
   LoDVec InitOffsetVecFromPtr() const;
+  LoDVec InitLengthVecFromPtr() const;
   void FlushOffsetVecToPtr(const LoDVec& offset_lod_vec);
 
   LoDVec GetLengthLoDVecFromOffsetLoDVec(const LoDVec& offset_lod_vec) const;
@@ -120,13 +117,13 @@ class LengthLoDMutView final : public LoDViewBase {
 class Blob final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Blob);
-  Blob(Regst* regst, const RtBlobDesc* blob_desc, char* header_ptr);
-  Blob(Regst* regst, const RtBlobDesc* blob_desc, char* header_ptr, char* body_ptr);
+  Blob(const MemoryCase& mem_case, const RtBlobDesc* blob_desc, char* header_ptr);
+  Blob(const MemoryCase& mem_case, const RtBlobDesc* blob_desc, char* header_ptr, char* body_ptr);
   virtual ~Blob() = default;
 
   DataType data_type() const { return blob_desc_->data_type(); }
-  const char* header_ptr() const { return header_ptr_.ptr(); }
-  char* mut_header_ptr() { return header_ptr_.ptr(); }
+  const char* header_ptr() const { return header_ptr_->ptr(); }
+  char* mut_header_ptr() { return header_ptr_->ptr(); }
   const RtBlobDesc& blob_desc() const { return *blob_desc_; }
   const RtBlobDesc* blob_desc_ptr() const { return blob_desc_; }
 
@@ -142,23 +139,23 @@ class Blob final {
   }
   const Shape& static_shape() const { return blob_desc_->body_shape(); }
   DenseShapeView dense_shape_view() const {
-    return DenseShapeView(header_ptr_.Field(FieldKey::kDenseShape));
+    return DenseShapeView(header_ptr_->Field(FieldKey::kDenseShape));
   }
   DenseShapeView shape() const { return dense_shape_view(); }
   DenseShapeMutView dense_shape_mut_view() {
-    return DenseShapeMutView(header_ptr_.MutField(FieldKey::kDenseShape));
+    return DenseShapeMutView(header_ptr_->MutField(FieldKey::kDenseShape));
   }
   LengthLoDView length_lod_view() const {
-    return LengthLoDView(header_ptr_.Field(FieldKey::kLoD), blob_desc_->num_of_lod_levels());
+    return LengthLoDView(header_ptr_->Field(FieldKey::kLoD), blob_desc_->num_of_lod_levels());
   }
   LengthLoDMutView length_lod_mut_view() {
-    return LengthLoDMutView(header_ptr_.MutField(FieldKey::kLoD), blob_desc_->num_of_lod_levels());
+    return LengthLoDMutView(header_ptr_->MutField(FieldKey::kLoD), blob_desc_->num_of_lod_levels());
   }
   OffsetLoDView offset_lod_view() const {
-    return OffsetLoDView(header_ptr_.Field(FieldKey::kLoD), blob_desc_->num_of_lod_levels());
+    return OffsetLoDView(header_ptr_->Field(FieldKey::kLoD), blob_desc_->num_of_lod_levels());
   }
   OffsetLoDMutView offset_lod_mut_view() {
-    return OffsetLoDMutView(header_ptr_.MutField(FieldKey::kLoD), blob_desc_->num_of_lod_levels());
+    return OffsetLoDMutView(header_ptr_->MutField(FieldKey::kLoD), blob_desc_->num_of_lod_levels());
   }
 
   void CopyDataContentFrom(DeviceCtx* device_ctx, const Blob* rhs);
@@ -176,7 +173,8 @@ class Blob final {
   void set_record_num(int32_t val) { record_num_ = val; }
 
  private:
-  void Init(Regst* regst, const RtBlobDesc* blob_desc, char* header_ptr, char* body_ptr);
+  void Init(const MemoryCase& mem_case, const RtBlobDesc* blob_desc, char* header_ptr,
+            char* body_ptr);
   template<typename T>
   void CheckDataType() const {
     LOG_IF(FATAL, (std::is_same<T, void>::value == false && std::is_same<T, char>::value == false
@@ -185,11 +183,12 @@ class Blob final {
         << blob_desc_->data_type() << " " << GetDataType<T>::value;
   }
 
+  MemoryCase mem_case_;
   bool is_header_body_contiguous_;
 
   const RtBlobDesc* blob_desc_;
   void* dptr_;
-  PodPtr header_ptr_;
+  std::unique_ptr<PodPtr> header_ptr_;
 
   // TODO(); remove this ugly code
   int32_t record_num_;

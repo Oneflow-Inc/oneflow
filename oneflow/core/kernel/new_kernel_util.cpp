@@ -1,4 +1,5 @@
 #include "oneflow/core/kernel/new_kernel_util.h"
+#include "oneflow/core/memory/memory_case.pb.h"
 
 namespace oneflow {
 
@@ -18,7 +19,7 @@ void WithHostBlobAndStreamSynchronizeEnv(DeviceCtx* ctx, Blob* blob,
                                          std::function<void(Blob*)> Callback) {
   char* host_raw_dptr = nullptr;
   CudaCheck(cudaMallocHost(&host_raw_dptr, blob->AlignedTotalByteSize()));
-  Blob host_blob(nullptr, &blob->blob_desc(), host_raw_dptr);
+  Blob host_blob(MemoryCase(), &blob->blob_desc(), host_raw_dptr);
   Callback(&host_blob);
   CudaCheck(cudaStreamSynchronize(ctx->cuda_stream()));
   CudaCheck(cudaFreeHost(host_raw_dptr));

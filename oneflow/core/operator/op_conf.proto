@@ -725,12 +725,8 @@ message CastOpConf {
 message InterfaceBlobConf {
   required ShapeProto shape = 1;
   required DataType data_type = 2;
-  optional ShapeProto dim0_inner_shape = 3;
-  optional bool has_dim0_valid_num = 4;
-  optional bool has_dim1_valid_num = 5;
-  optional bool has_dim2_valid_num = 6;
-  optional OptInt64 split_axis = 7;
-  required OptInt64 batch_axis = 8;
+  optional OptInt64 split_axis = 3;
+  required OptInt64 batch_axis = 4;
 }
 
 message InputOpConf {

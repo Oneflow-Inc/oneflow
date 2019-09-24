@@ -182,90 +182,11 @@ Maybe<void> Operator::InferSbpSignature(
   return Maybe<void>::Ok();
 }
 
-static bool HasBlobDescWithField(
-    std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const PbRpf<std::string>& bn_in_ops, bool (BlobDesc::*has_field)() const) {
-  for (const std::string& bn_in_op : bn_in_ops) {
-    const BlobDesc* blob_desc = GetBlobDesc4BnInOp(bn_in_op);
-    if (blob_desc && (blob_desc->*has_field)()) { return true; }
-  }
-  return false;
-}
-
-static bool DoAllBlobDescHaveField(
-    std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const PbRpf<std::string>& bn_in_ops, bool (BlobDesc::*has_field)() const) {
-  for (const std::string& bn_in_op : bn_in_ops) {
-    const BlobDesc* blob_desc = GetBlobDesc4BnInOp(bn_in_op);
-    if (blob_desc && !(blob_desc->*has_field)()) { return false; }
-  }
-  return true;
-}
-
-static bool HaveSameDim0InnerShape(
-    std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const PbRpf<std::string>& input_bns, const PbRpf<std::string>& output_bns) {
-  auto ForEachBn = [&](const std::function<void(const std::string&)>& Handler) {
-    for (const auto& bn : input_bns) { Handler(bn); }
-    for (const auto& bn : output_bns) { Handler(bn); }
-  };
-  bool ret = true;
-  std::unique_ptr<Shape> dim0_inner_shape;
-  ForEachBn([&](const std::string& bn) {
-    if (ret == false) { return; }
-    const auto& inner_shape = GetBlobDesc4BnInOp(bn)->dim0_inner_shape();
-    if (dim0_inner_shape) {
-      if (*dim0_inner_shape != inner_shape) { ret = false; }
-    } else {
-      dim0_inner_shape.reset(new Shape(inner_shape));
-    }
-  });
-  return ret;
-}
-
 void Operator::GenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, bool is_forward,
     const ParallelContext* parallel_ctx, KernelConf* kernel_conf, const OpContext* op_ctx,
     std::function<const BlobDesc&(const std::string&)> LogicalBlobDesc4BnInOp) const {
   *(kernel_conf->mutable_op_attribute()) = op_attribute_;
-  if (HasBlobDescWithField(GetBlobDesc4BnInOp, output_bns(), &BlobDesc::header_is_opaque)) {
-    kernel_conf->set_need_do_opaque_header(true);
-  } else {
-    if (HasBlobDescWithField(GetBlobDesc4BnInOp, output_bns(), &BlobDesc::has_data_id_field)) {
-      kernel_conf->set_need_do_data_id(true);
-    }
-    const PbRpf<std::string>* bns = &output_bns();
-    if (IsLossOp()) { bns = &input_bns(); }
-    if (HasBlobDescWithField(GetBlobDesc4BnInOp, *bns, &BlobDesc::has_col_num_field)) {
-      kernel_conf->set_need_do_col_num(true);
-    }
-    if (HasBlobDescWithField(GetBlobDesc4BnInOp, *bns, &BlobDesc::has_dim0_valid_num_field)) {
-      kernel_conf->set_need_do_dim0_valid_num(true);
-      if (DoAllBlobDescHaveField(GetBlobDesc4BnInOp, input_bns(),
-                                 &BlobDesc::has_dim0_valid_num_field)
-          && DoAllBlobDescHaveField(GetBlobDesc4BnInOp, output_bns(),
-                                    &BlobDesc::has_dim0_valid_num_field)
-          && HaveSameDim0InnerShape(GetBlobDesc4BnInOp, input_bns(), output_bns())) {
-        kernel_conf->set_can_naive_do_dim0_valid_num(true);
-      }
-    }
-    if (HasBlobDescWithField(GetBlobDesc4BnInOp, *bns, &BlobDesc::has_dim1_valid_num_field)) {
-      kernel_conf->set_need_do_dim1_valid_num(true);
-    }
-    if (HasBlobDescWithField(GetBlobDesc4BnInOp, *bns, &BlobDesc::has_dim2_valid_num_field)) {
-      kernel_conf->set_need_do_dim2_valid_num(true);
-    }
-    if (HasBlobDescWithField(GetBlobDesc4BnInOp, *bns,
-                             &BlobDesc::has_record_id_in_device_piece_field)) {
-      kernel_conf->set_need_do_record_id_in_device_piece(true);
-      if (DoAllBlobDescHaveField(GetBlobDesc4BnInOp, input_bns(),
-                                 &BlobDesc::has_record_id_in_device_piece_field)
-          && DoAllBlobDescHaveField(GetBlobDesc4BnInOp, output_bns(),
-                                    &BlobDesc::has_record_id_in_device_piece_field)) {
-        kernel_conf->set_can_naive_do_record_id_in_device_piece(true);
-      }
-    }
-  }
 
   kernel_conf->set_is_forward(is_forward);
   DataType data_type = GetDataTypeFromBnInOpVec(GetBlobDesc4BnInOp, output_bns());

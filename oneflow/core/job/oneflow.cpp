@@ -706,9 +706,6 @@ void MakeArgPassJob(const std::string& job_name, const ParallelBlobConf& paralle
     auto* blob_conf = foreign_input_conf->mutable_blob_conf();
     blob_conf->mutable_shape()->add_dim(1);
     blob_conf->set_data_type(DataType::kInt32);
-    blob_conf->set_has_dim0_valid_num(false);
-    blob_conf->set_has_dim1_valid_num(false);
-    blob_conf->set_has_dim2_valid_num(false);
     blob_conf->mutable_split_axis()->clear_value();
     blob_conf->mutable_batch_axis()->clear_value();
     ParallelConf parallel_conf;
