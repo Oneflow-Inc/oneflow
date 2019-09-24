@@ -22,6 +22,11 @@ BlobDesc::BlobDesc(const Shape& shape, DataType dtype)
 BlobDesc::BlobDesc(const BlobDescProto& proto) { InitFromProto(proto); }
 
 BlobDesc::BlobDesc(const BlobDesc& other) {
+  // *body_.mut_shape() = other.body_.shape();
+  // body_.set_data_type(other.body_.data_type());
+  // header_ = other.header_;
+  // num_of_lod_levels_ = other.num_of_lod_levels_;
+  // is_body_disabled_ = other.is_body_disabled_;
   BlobDescProto proto;
   other.ToProto(&proto);
   InitFromProto(proto);
@@ -77,11 +82,14 @@ void BlobDesc::SetLoD(int64_t num_of_lod_levels) {
 }
 
 bool BlobDesc::operator==(const BlobDesc& rhs) const {
-  BlobDescProto lhs_proto;
-  this->ToProto(&lhs_proto);
-  BlobDescProto rhs_proto;
-  this->ToProto(&lhs_proto);
-  return lhs_proto == rhs_proto;
+  // BlobDescProto lhs_proto;
+  // this->ToProto(&lhs_proto);
+  // BlobDescProto rhs_proto;
+  // this->ToProto(&lhs_proto);
+  // return lhs_proto == rhs_proto;
+  return body_ == rhs.body_ && header_ == rhs.header_
+         && num_of_lod_levels_ == rhs.num_of_lod_levels_
+         && is_body_disabled_ == rhs.is_body_disabled_;
 }
 
 }  // namespace oneflow
