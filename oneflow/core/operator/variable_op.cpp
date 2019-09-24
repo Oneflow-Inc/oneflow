@@ -78,7 +78,7 @@ Maybe<void> VariableOp::InferSbpSignature(
 }
 
 REGISTER_OP(OperatorConf::kVariableConf, VariableOp);
-REGISTER_OP_SAME_OUTPUT_BLOB_MEM_BLOCK_NUM(OperatorConf::kVariableConf, 1);
+REGISTER_OP_SAME_OUTPUT_BLOB_REGST_NUM(OperatorConf::kVariableConf, 1);
 REGISTER_INTERFACE_OP(OperatorConf::kVariableConf);
 
 }  // namespace oneflow

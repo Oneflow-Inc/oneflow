@@ -39,5 +39,5 @@ Maybe<void> KeepHeaderOnlyOp::GetSbpSignatures(
 }
 
 REGISTER_OP(OperatorConf::kKeepHeaderOnlyConf, KeepHeaderOnlyOp);
-REGISTER_OP_SAME_OUTPUT_BLOB_MEM_BLOCK_NUM(OperatorConf::kKeepHeaderOnlyConf, 100);
+REGISTER_OP_SAME_OUTPUT_BLOB_REGST_NUM(OperatorConf::kKeepHeaderOnlyConf, 100);
 }  // namespace oneflow
