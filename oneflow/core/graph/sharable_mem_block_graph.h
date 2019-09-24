@@ -18,12 +18,10 @@ class SharableMemBlockNode final : public Node<SharableMemBlockNode, SharableMem
 
   int64_t chain_id() const { return chain_id_; }
   const std::vector<const RegstDescProto*>& regst_descs() const { return regst_descs_; }
-  const MemBlock& mem_block() const { return mem_block_; }
 
  private:
   const int64_t chain_id_;
   const std::vector<const RegstDescProto*> regst_descs_;
-  MemBlock mem_block_;
 };
 
 class SharableMemBlockEdge final : public Edge<SharableMemBlockNode, SharableMemBlockEdge> {

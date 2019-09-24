@@ -16,15 +16,8 @@ Maybe<void> UnpackOp::InferBlobDescs(
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp(SoleObn());
   *out_blob_desc = *in_blob_desc;
   int32_t unpack_num = GetUnpackNum();
-  if (in_blob_desc->has_dim0_inner_shape()) {
-    CHECK_EQ_OR_RETURN(0, unpack_num % in_blob_desc->dim0_inner_shape().At(0));
-    CHECK_EQ_OR_RETURN(0, in_blob_desc->dim0_inner_shape().Count(1)
-                              % (unpack_num / in_blob_desc->dim0_inner_shape().At(0)));
-  } else {
-    CHECK_EQ_OR_RETURN(0, in_blob_desc->shape().At(0) % unpack_num);
-  }
+  CHECK_EQ_OR_RETURN(0, in_blob_desc->shape().At(0) % unpack_num);
   out_blob_desc->mut_shape().Set(0, out_blob_desc->shape().At(0) / unpack_num);
-  out_blob_desc->mut_dim0_inner_shape() = Shape({1, out_blob_desc->shape().At(0)});
   return Maybe<void>::Ok();
 }
 

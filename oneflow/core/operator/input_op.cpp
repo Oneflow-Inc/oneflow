@@ -5,17 +5,6 @@
 
 namespace oneflow {
 
-namespace {
-
-void CheckOpConf(const OperatorConf& op_conf) {
-  if (op_conf.input_conf().has_blob_conf()) {
-    if (op_conf.input_conf().blob_conf().has_dim1_valid_num()) { TODO(); }
-    if (op_conf.input_conf().blob_conf().has_dim2_valid_num()) { TODO(); }
-  }
-}
-
-}  // namespace
-
 void InputOp::InitFromOpConf() {
   CHECK(op_conf().has_input_conf());
   if (op_conf().input_conf().has_tick()) { EnrollInputBn("tick", false); }
@@ -27,7 +16,6 @@ const PbMessage& InputOp::GetCustomizedConf() const { return op_conf().input_con
 Maybe<void> InputOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                     const ParallelContext* parallel_ctx,
                                     const SbpSignature* sbp_signature) const {
-  CheckOpConf(op_conf());
   return InterfaceOpUtil::InferOutBlobDesc(op_conf().input_conf().blob_conf(),
                                            GetBlobDesc4BnInOp("out"), parallel_ctx);
 }
@@ -57,7 +45,7 @@ Maybe<void> InputOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
 }
 
 REGISTER_OP(OperatorConf::kInputConf, InputOp);
-REGISTER_OP_SAME_OUTPUT_BLOB_MEM_BLOCK_NUM(OperatorConf::kInputConf, 1);
+REGISTER_OP_SAME_OUTPUT_BLOB_REGST_NUM(OperatorConf::kInputConf, 1);
 REGISTER_INTERFACE_OP(OperatorConf::kInputConf);
 
 }  // namespace oneflow
