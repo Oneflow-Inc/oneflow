@@ -1009,7 +1009,7 @@ message NcclTupleReduceOpConf {
 
 message ReduceSplitOpConf {
   required int32 out_num = 1;
-  optional string in = 2;
+  required string in = 2;
   repeated string out = 3;
   repeated ShapeProto out_shape = 4;
   optional int32 order_in_graph = 5;
