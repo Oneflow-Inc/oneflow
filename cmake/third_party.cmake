@@ -112,6 +112,7 @@ if (BUILD_CUDA)
   include(cub)
   include(nccl)
 
+  list(APPEND oneflow_third_party_libs -Wl,--whole-archive ${cuda_lib_dir}/libcublas_static.a -Wl,--no-whole-archive)
   list(APPEND oneflow_third_party_libs ${CUDA_LIBRARIES})
   list(APPEND oneflow_third_party_libs ${CUDNN_LIBRARIES})
   list(APPEND oneflow_third_party_libs ${NCCL_STATIC_LIBRARIES})
