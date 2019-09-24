@@ -54,6 +54,9 @@ void BlobDesc::CopyFrom(const BlobDesc& other) {
 }
 
 void BlobDesc::SetLoD(int64_t num_of_lod_levels) {
+  CHECK_GT(num_of_lod_levels, 1);
+  CHECK_LT(num_of_lod_levels, shape().NumAxes());
+
   CHECK_GT(shape().NumAxes(), num_of_lod_levels);
   num_of_lod_levels_ = num_of_lod_levels;
 
@@ -79,12 +82,6 @@ bool BlobDesc::operator==(const BlobDesc& rhs) const {
   BlobDescProto rhs_proto;
   this->ToProto(&lhs_proto);
   return lhs_proto == rhs_proto;
-}
-
-void BlobDesc::set_num_of_lod_levels(int64_t val) {
-  CHECK_GT(val, 1);
-  CHECK_LT(val, shape().NumAxes());
-  num_of_lod_levels_ = val;
 }
 
 }  // namespace oneflow

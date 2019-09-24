@@ -5,114 +5,13 @@
 #include "oneflow/core/job/resource.pb.h"
 #include "oneflow/core/memory/memory_case.pb.h"
 #include "oneflow/core/register/runtime_blob_desc.h"
+#include "oneflow/core/register/dense_shape_view.h"
+#include "oneflow/core/register/lod_view.h"
 #include "oneflow/core/common/range.h"
 #include "oneflow/core/persistence/persistent_in_stream.h"
 #include "oneflow/core/record/record.pb.h"
-#include "oneflow/core/register/pod_ptr.h"
 
 namespace oneflow {
-
-class DenseShapeViewBase {
- protected:
-  DenseShapeViewBase(PodPtr dense_shape_ptr);
-  DenseShapeViewBase(const DenseShapeViewBase& rhs) = default;
-  virtual ~DenseShapeViewBase() = default;
-
-  int64_t* ptr_;
-  int64_t num_axes_;
-};
-
-class DenseShapeView final : public DenseShapeViewBase {
- public:
-  DenseShapeView(const PodPtr& dense_shape_ptr) : DenseShapeViewBase(dense_shape_ptr) {}
-  DenseShapeView(const DenseShapeView& rhs) : DenseShapeViewBase(rhs) {}
-  ~DenseShapeView() = default;
-
-  int64_t NumAxes() const { return num_axes_; }
-  int64_t At(int64_t index) const;
-  int64_t Count(int64_t begin_axis) const;
-  int64_t Count(int64_t begin_axis, int64_t end_axis) const;
-  int64_t elem_cnt() const;
-
-  bool operator==(const DenseShapeView& rhs) const;
-  std::string ToString() const;
-
-  operator Shape() const;
-};
-
-std::ostream& operator<<(std::ostream& out, const DenseShapeView& shape);
-
-class DenseShapeMutView final : public DenseShapeViewBase {
- public:
-  DenseShapeMutView(PodPtr dense_shape_ptr) : DenseShapeViewBase(dense_shape_ptr) {}
-  DenseShapeMutView(const DenseShapeView& rhs) : DenseShapeViewBase(rhs) {}
-  ~DenseShapeMutView() = default;
-
-  void set_shape(const Shape& val);
-};
-
-class LoDViewBase {
- protected:
-  typedef std::vector<std::vector<int64_t>> LoDVec;
-
-  LoDViewBase(PodPtr lod_ptr, int64_t num_of_lod_levels);
-  LoDViewBase(const LoDViewBase& rhs) = default;
-  ~LoDViewBase() = default;
-
-  LoDVec InitOffsetVecFromPtr() const;
-  LoDVec InitLengthVecFromPtr() const;
-  void FlushOffsetVecToPtr(const LoDVec& offset_lod_vec);
-
-  LoDVec GetLengthLoDVecFromOffsetLoDVec(const LoDVec& offset_lod_vec) const;
-  LoDVec GetOffsetLoDVecFromLengthLoDVec(const LoDVec& length_lod_vec) const;
-
-  int64_t* ptr_;
-  int64_t num_of_lod_levels_;
-  int64_t max_reserved_size_for_lod_;
-};
-
-class OffsetLoDView final : public LoDViewBase {
- public:
-  OffsetLoDView(const PodPtr& lod_ptr, int64_t num_of_lod_levels)
-      : LoDViewBase(lod_ptr, num_of_lod_levels), offset_lod_vec_() {}
-  OffsetLoDView(const OffsetLoDView& rhs)
-      : LoDViewBase(rhs), offset_lod_vec_(rhs.offset_lod_vec_) {}
-
-  int64_t GetOffset(size_t level, size_t pos);
-
- private:
-  LoDVec offset_lod_vec_;
-};
-
-class OffsetLoDMutView final : public LoDViewBase {
- public:
-  OffsetLoDMutView(const PodPtr& lod_ptr, int64_t num_of_lod_levels)
-      : LoDViewBase(lod_ptr, num_of_lod_levels) {}
-  OffsetLoDMutView(const OffsetLoDMutView& rhs) : LoDViewBase(rhs) {}
-
-  void SetOffset(const LoDVec& offset_lod_vec);
-};
-
-class LengthLoDView final : public LoDViewBase {
- public:
-  LengthLoDView(const PodPtr& lod_ptr, int64_t num_of_lod_levels)
-      : LoDViewBase(lod_ptr, num_of_lod_levels), length_lod_vec_() {}
-  LengthLoDView(const LengthLoDView& rhs) : LoDViewBase(rhs) {}
-
-  int64_t GetLength(size_t level, size_t pos);
-
- private:
-  LoDVec length_lod_vec_;
-};
-
-class LengthLoDMutView final : public LoDViewBase {
- public:
-  LengthLoDMutView(const PodPtr& lod_ptr, int64_t num_of_lod_levels)
-      : LoDViewBase(lod_ptr, num_of_lod_levels) {}
-  LengthLoDMutView(const LengthLoDMutView& rhs) : LoDViewBase(rhs) {}
-
-  void SetLength(const LoDVec& length_lod_vec);
-};
 
 class Blob final {
  public:
