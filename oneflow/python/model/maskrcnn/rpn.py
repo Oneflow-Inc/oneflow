@@ -218,8 +218,8 @@ class RPNLoss(object):
 
             cls_loss = flow.math.reduce_sum(
                 flow.nn.sigmoid_cross_entropy_with_logits(
-                    flow.concat(sampled_cls_logit_list, axis=0),
                     flow.concat(sampled_cls_label_list, axis=0),
+                    flow.concat(sampled_cls_logit_list, axis=0),
                 )
             ) / flow.cast(total_sample_cnt, dtype=flow.float)
         return bbox_loss, cls_loss
