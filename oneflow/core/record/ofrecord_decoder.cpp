@@ -134,14 +134,14 @@ void OFRecordDecoder<encode_case, T>::ReadDataContent(
   RecordBlob<OFRecord> record_blob(in_blob);
   int64_t one_col_elem_num = out_blob->shape().Count(1);
   int32_t random_seed = NextRandomInt();
-  int32_t thread_num = std::thread::hardware_concurrency() / 4;
-  ThreadPool thread_pool(thread_num);
+  ThreadPool* thread_pool = Global<ThreadMgr>::Get()->compute_thread_pool();
+  int32_t thread_num = thread_pool->thread_num();
   int32_t part_num = std::min(record_blob.record_num(), thread_num);
   if (part_num >= 2) {
     BlockingCounter bc(part_num);
     FOR_RANGE(int32_t, part_id, 0, part_num) {
-      thread_pool.AddWork([&ctx, &in_blob, &blob_conf, &col_id, &out_blob, &bc, part_id, &part_num,
-                           &one_col_elem_num, &random_seed, this]() {
+      thread_pool->AddWork([&ctx, &in_blob, &blob_conf, &col_id, &out_blob, &bc, part_id, &part_num,
+                            &one_col_elem_num, &random_seed, this]() {
         ReadPartDataContent(ctx, in_blob, blob_conf, col_id, out_blob, part_id, part_num,
                             one_col_elem_num, random_seed);
         bc.Decrease();
