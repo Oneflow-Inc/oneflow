@@ -29,7 +29,6 @@ Maybe<void> ConcatOp::InferBlobDescs(
       }
     }
     CHECK_EQ_OR_RETURN(in_i_blob_desc->data_type(), in_0_blob_desc->data_type());
-    CHECK_EQ_OR_RETURN(in_i_blob_desc->has_data_id_field(), in_0_blob_desc->has_data_id_field());
   }
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   *out_blob_desc = *in_0_blob_desc;

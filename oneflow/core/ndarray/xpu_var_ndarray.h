@@ -14,10 +14,11 @@ template<typename T>
 class XpuVarNdarray final : public XpuNdarrayBase<XpuVarNdarray<T>, T> {
  public:
   explicit XpuVarNdarray(const Blob* blob, int ndims_extend_to)
-      : shape_(blob->shape().CreateLeftExtendedShape(ndims_extend_to)),
+      : shape_(CreateLeftExtendedShape(blob->shape(), ndims_extend_to)),
         ptr_(blob->dptr<typename std::remove_const<T>::type>()) {}
   explicit XpuVarNdarray(Blob* blob, int ndims_extend_to)
-      : shape_(blob->shape().CreateLeftExtendedShape(ndims_extend_to)), ptr_(blob->mut_dptr<T>()) {}
+      : shape_(CreateLeftExtendedShape(blob->shape(), ndims_extend_to)),
+        ptr_(blob->mut_dptr<T>()) {}
   XpuVarNdarray(const Shape& shape, T* ptr) : shape_(shape), ptr_(ptr) {}
   ~XpuVarNdarray() = default;
   OF_DEVICE_FUNC ALWAYS_INLINE XpuVarNdarray(const XpuVarNdarray&) = default;

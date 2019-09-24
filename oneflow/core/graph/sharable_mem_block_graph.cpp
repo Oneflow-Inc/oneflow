@@ -34,10 +34,7 @@ void ForEachInplacedRegstDescs(
 
 SharableMemBlockNode::SharableMemBlockNode(int64_t chain_id,
                                            const HashSet<const RegstDescProto*>& regst_descs)
-    : chain_id_(chain_id), regst_descs_(regst_descs.begin(), regst_descs.end()) {
-  mem_block_.set_mem_block_id(Global<IDMgr>::Get()->NewMemBlockId());
-  mem_block_.set_mem_reduce_method(MemReduceMethod::kMemMax);
-}
+    : chain_id_(chain_id), regst_descs_(regst_descs.begin(), regst_descs.end()) {}
 
 SharableMemBlockGraph::SharableMemBlockGraph(
     const PlanTaskGraph& plan_task_gph,

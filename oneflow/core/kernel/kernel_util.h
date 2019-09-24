@@ -358,9 +358,7 @@ class DataContentIterator final {
     Blob* blob = BnInOp2Blob_(bns_->Get(bn_idx_));
     int64_t elem_num = blob->static_shape().Count(axis_);
     std::get<1>(ret) = elem_num * GetSizeOfDataType(blob->data_type());
-    if (blob->IsColValid()) {
-      std::get<0>(ret) = blob->mut_dptr<char>() + seg_idx_ * std::get<1>(ret);
-    }
+    std::get<0>(ret) = blob->mut_dptr<char>() + seg_idx_ * std::get<1>(ret);
     bn_idx_ += 1;
     if (bn_idx_ == bns_->size()) {
       bn_idx_ = 0;
@@ -380,6 +378,7 @@ class DataContentIterator final {
   int32_t axis_;
 };
 
+/*
 class FieldIterator {
  public:
   OF_DISALLOW_COPY_AND_MOVE(FieldIterator);
@@ -473,6 +472,7 @@ class Dim2ValidNumIterator final : public FieldIterator {
 
   size_t GetSizeOfField(Blob* blob) const override { return blob->ByteSizeOfDim2ValidNumField(); }
 };
+*/
 
 template<typename T, typename U>
 typename std::enable_if<std::is_same<T, U>::value>::type CopyElem(const T* in_dptr, U* out_dptr,
@@ -488,21 +488,6 @@ typename std::enable_if<!std::is_same<T, U>::value>::type CopyElem(const T* in_d
 
 template<typename T, typename U>
 void CopyElemOnGpu(DeviceCtx* ctx, const T* in_dptr, U* out_dptr, int64_t elem_num);
-
-// create temporary host blob store initializer result
-#define BEFORE_CPU_INITIALIZE()                                     \
-  RtBlobDesc blob_desc(blob->blob_desc().blob_desc_proto());        \
-  char* host_raw_dptr = nullptr;                                    \
-  CudaCheck(cudaMallocHost(&host_raw_dptr, blob->TotalByteSize())); \
-  std::unique_ptr<Blob> host_blob;                                  \
-  host_blob.reset(new Blob(nullptr, &blob_desc, host_raw_dptr));
-
-// asynchronous copy to device
-#define AFTER_CPU_INITIALIZE()                                                          \
-  Memcpy<DeviceType::kGPU>(ctx, blob->mut_dptr(), host_blob->dptr(),                    \
-                           blob->ByteSizeOfDataContentField(), cudaMemcpyHostToDevice); \
-  CudaCheck(cudaStreamSynchronize(ctx->cuda_stream()));                                 \
-  CudaCheck(cudaFreeHost(host_raw_dptr));
 
 }  // namespace oneflow
 

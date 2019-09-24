@@ -376,7 +376,7 @@ void TaskGraph::AddReduceNoBwForwardNodeOverlapingCtrlEdges() {
   }
 }
 
-void TaskGraph::EnableMemSharingInReduceStruct() {
+void TaskGraph::EnableInplaceMemSharingInReduceStruct() {
   auto GetSuccReduceTaskNode = [](TaskNode* pred) {
     std::vector<TaskNode*> nodes;
     pred->ForEachNodeOnOutDataEdge([&](TaskNode* succ) {
@@ -413,9 +413,9 @@ void TaskGraph::EnableMemSharingInReduceStruct() {
     if (identity_node->parallel_ctx()->parallel_num() < 2) { return; }
     std::list<TaskNode*> reduce_task_nodes = CollectReduceTaskNode(identity_node);
 
-    const int64_t mem_shared_id = Global<IDMgr>::Get()->NewMemSharedId();
+    const int64_t mem_block_id = Global<IDMgr>::Get()->NewMemBlockId();
     const int64_t mem_size = CalcModelSize(identity_node);
-    ReduceMemSharingCtx ctx(mem_size, mem_shared_id);
+    ReduceMemSharingCtx ctx(mem_size, mem_block_id);
     for (TaskNode* reduce_node : reduce_task_nodes) {
       auto reduce_task_node_if = dynamic_cast<ReduceCompTaskNodeIf*>(reduce_node);
       CHECK_NOTNULL(reduce_task_node_if);
@@ -742,6 +742,16 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceGather2ReduceGather) {
     for (CompTaskNode* dst_comp_task : sorted_dst_comp_tasks) {
       if (src_comp_task->machine_id() == dst_comp_task->machine_id()) {
         BuildTaskPath(src_comp_task, dst_comp_task, MutBufTask, true);
+      }
+    }
+  }
+}
+
+DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByConnectNodeOnSameGpuDevice) {
+  for (CompTaskNode* src : sorted_src_comp_tasks) {
+    for (CompTaskNode* dst : sorted_dst_comp_tasks) {
+      if (src->machine_id() == dst->machine_id() && src->GpuPhyId() == dst->GpuPhyId()) {
+        Connect<TaskNode>(src, NewEdge(), dst);
       }
     }
   }

@@ -42,8 +42,8 @@ class LocalNonzeroOp final : public Operator {
     BlobDesc* out = GetBlobDesc4BnInOp("out");
     out->mut_shape() = Shape({elem_cnt, in->shape().NumAxes()});
     out->set_data_type(DataType::kInt32);
-    out->set_has_dim0_valid_num_field(true);
-    out->mut_dim0_inner_shape() = Shape({1, elem_cnt});
+    // out->set_has_dim0_valid_num_field(true);
+    // out->mut_dim0_inner_shape() = Shape({1, elem_cnt});
     return Maybe<void>::Ok();
   }
 

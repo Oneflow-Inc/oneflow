@@ -22,15 +22,6 @@ Maybe<void> SparseCrossEntropyOp::InferBlobDescs(
   const BlobDesc* label_blob_desc = GetBlobDesc4BnInOp("label");
   CHECK_OR_RETURN(IsIntegralDataType(label_blob_desc->data_type()));
   CHECK_OR_RETURN(IsFloatingDataType(pred_blob_desc->data_type()));
-  CHECK_EQ_OR_RETURN(pred_blob_desc->has_data_id_field(), label_blob_desc->has_data_id_field());
-  CHECK_EQ_OR_RETURN(pred_blob_desc->has_dim0_valid_num_field(),
-                     label_blob_desc->has_dim0_valid_num_field());
-  CHECK_EQ_OR_RETURN(pred_blob_desc->has_dim0_inner_shape(),
-                     label_blob_desc->has_dim0_inner_shape());
-  if (pred_blob_desc->has_dim0_inner_shape()) {
-    CHECK_EQ_OR_RETURN(pred_blob_desc->dim0_inner_shape().At(0), 1);
-    CHECK_EQ_OR_RETURN(pred_blob_desc->dim0_inner_shape(), label_blob_desc->dim0_inner_shape());
-  }
   CHECK_GE_OR_RETURN(pred_blob_desc->shape().NumAxes(), 2);
   const int64_t num_out_axes = pred_blob_desc->shape().NumAxes() - 1;
   CHECK_GE_OR_RETURN(label_blob_desc->shape().NumAxes(), num_out_axes);

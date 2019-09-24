@@ -38,9 +38,9 @@ void ReduceGatherOp::VirtualGenKernelConf(
   int64_t offset = 0;
   for (int32_t i = 0; i < op_conf().reduce_gather_conf().in_num(); ++i) {
     reduce_gather_conf->mutable_data_offset()->Add(offset);
-    offset += RtBlobDesc(*(GetBlobDesc4BnInOp(input_bns().Get(i)))).ByteSizeOfDataContentField();
+    offset += RtBlobDesc(*(GetBlobDesc4BnInOp(input_bns().Get(i)))).ByteSizeOfBlobBody();
   }
-  CHECK_EQ(offset, RtBlobDesc(*GetBlobDesc4BnInOp(SoleObn())).ByteSizeOfDataContentField());
+  CHECK_EQ(offset, RtBlobDesc(*GetBlobDesc4BnInOp(SoleObn())).ByteSizeOfBlobBody());
 }
 
 LogicalBlobId ReduceGatherOp::obn2lbi(const std::string& output_bn) const {

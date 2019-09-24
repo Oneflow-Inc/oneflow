@@ -32,6 +32,7 @@ class ResourceDesc final {
   bool enable_numa_aware_cuda_malloc_host() const {
     return resource_.enable_numa_aware_cuda_malloc_host();
   }
+  int32_t ComputeThreadPoolSize() const;
 
  private:
   friend class Global<ResourceDesc>;
