@@ -220,9 +220,6 @@ class DeconvOp : public Operator {
 
   Maybe<void> InferBatchAxis(
       std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override {
-    oneflow::OptInt64* x_split_axis = BatchAxis4BnInOp("x");
-    if (x_split_axis->has_value()) { CHECK_EQ_OR_RETURN(x_split_axis->value(), 0); }
-    CHECK_OR_RETURN(BatchAxis4BnInOp("filter")->has_value() == false);
     *BatchAxis4BnInOp("y") = *BatchAxis4BnInOp("x");
     return Maybe<void>::Ok();
   }

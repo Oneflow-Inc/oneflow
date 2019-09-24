@@ -164,7 +164,9 @@ class Operator {
       const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
       std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
       const ParallelDesc& parallel_desc) const;
-  virtual Maybe<void> GetSbpSignatures(SbpSignatureList* sbp_sig_list) const { UNIMPLEMENTED(); }
+  virtual Maybe<void> GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
+    UNIMPLEMENTED() << " GetSbpSignatures unimplemented, op name: " << op_name();
+  }
 
   int64_t cudnn_buf_limit_byte() const;
 
@@ -245,7 +247,7 @@ class Operator {
   }
   virtual Maybe<void> InferBatchAxis(
       std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
-    UNIMPLEMENTED();
+    UNIMPLEMENTED() << " InferBatchAxis unimplemented, op name: " << op_name();
     return Maybe<void>::Ok();
   }
 
