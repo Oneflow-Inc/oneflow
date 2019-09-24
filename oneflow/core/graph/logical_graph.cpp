@@ -220,7 +220,11 @@ void LogicalGraph::AddNcclAllReduce(LogicalNode* src, LogicalNode* dst) {
   OperatorConf nccl_all_reduce_op_conf{};
   nccl_all_reduce_op_conf.set_name("nccl_all_reduce_" + NewUniqueId());
   nccl_all_reduce_op_conf.set_device_type(src_pd->device_type());
-  nccl_all_reduce_op_conf.mutable_nccl_all_reduce_conf();
+  NcclAllReduceOpConf* nccl_all_reduce_conf =
+      nccl_all_reduce_op_conf.mutable_nccl_all_reduce_conf();
+  nccl_all_reduce_conf->set_in(
+      GenLogicalBlobName(src->SoleOp()->BnInOp2Lbi(src->SoleOp()->SoleObn())));
+  nccl_all_reduce_conf->set_out("out");
   NcclAllReduceLogicalNode* nccl_all_reduce_node = NewNode<NcclAllReduceLogicalNode>();
   nccl_all_reduce_node->mut_op_vec() = {ConstructOp(nccl_all_reduce_op_conf, &GlobalJobDesc())};
   nccl_all_reduce_node->mut_parallel_desc() = src_pd;
