@@ -99,4 +99,8 @@ bool SubTskGphBuilderUtil::BlobHasDynamicShape(const BlobDesc& blob_desc) {
          || blob_desc.has_dim2_valid_num_field();
 }
 
+bool SubTskGphBuilderUtil::IsErrorBoxingNotSupported(const ErrorProto& error) {
+  return error.has_boxing_error() && error.boxing_error() == BoxingError::kNotSupported;
+}
+
 }  // namespace oneflow
