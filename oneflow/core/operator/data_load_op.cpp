@@ -21,7 +21,10 @@ void DataLoadOp::InitFromOpConf() {
   CHECK(op_conf().has_data_load_conf());
   const DataLoadOpConf& conf = op_conf().data_load_conf();
   if (conf.has_tick()) { EnrollInputBn("tick", false); }
-  FOR_RANGE(int32_t, i, 0, conf.blobs_size()) { EnrollOutputBn("out_" + std::to_string(i), false); }
+  FOR_RANGE(int32_t, i, 0, conf.blobs_size()) {
+    CHECK(conf.blobs(i).has_data_source());
+    EnrollOutputBn("out_" + std::to_string(i), false); 
+  }
 }
 
 const PbMessage& DataLoadOp::GetCustomizedConf() const { return op_conf().data_load_conf(); }
@@ -34,8 +37,6 @@ void DataLoadOp::VirtualGenKernelConf(
   // Set data_instance
   DataInstanceProto* data_inst = this_kernel_conf->mutable_data_instance();
   for (const BlobConf& blob_conf : conf.blobs()) {
-    // FOR_RANGE(size_t, i, 0, conf.blobs_size()) {
-    // const BlobConf& blob_conf = conf.blobs(i);
     DataFieldProto* data_field = data_inst->add_data_fields();
     data_field->set_data_source(blob_conf.data_source());
     *data_field->mutable_shape() = blob_conf.shape();
