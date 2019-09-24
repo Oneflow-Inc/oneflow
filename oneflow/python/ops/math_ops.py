@@ -328,8 +328,8 @@ def top_k(input, k=1, sorted=True, name=None):
     return remote_blob_util.RemoteBlob(out_lbi)
 
 
-@oneflow_export("math.logical_and")
-def logical_and(lhs, rhs, name=None):
+@oneflow_export("math.naive_logical_and")
+def naive_logical_and(lhs, rhs, name=None):
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf,
@@ -489,6 +489,25 @@ def greater_equal(x, y, name=None):
     op_conf.broadcast_greater_equal_conf.a = x.logical_blob_name
     op_conf.broadcast_greater_equal_conf.b = y.logical_blob_name
     op_conf.broadcast_greater_equal_conf.out = "out"
+    compile_context.CurJobAddOp(op_conf)
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = "out"
+    return remote_blob_util.RemoteBlob(lbi)
+
+@oneflow_export("math.logical_and")
+def logical_and(x, y, name=None):
+    op_conf = op_conf_util.OperatorConf()
+    setattr(
+        op_conf,
+        "name",
+        name
+        if name is not None
+        else id_util.UniqueStr("BroadcastLogicalAnd_"),
+    )
+    op_conf.broadcast_logical_and_conf.a = x.logical_blob_name
+    op_conf.broadcast_logical_and_conf.b = y.logical_blob_name
+    op_conf.broadcast_logical_and_conf.out = "out"
     compile_context.CurJobAddOp(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
     lbi.op_name = op_conf.name

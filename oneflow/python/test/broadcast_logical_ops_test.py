@@ -38,8 +38,13 @@ def GreaterEqualJob(a=input_blob_def(), b=input_blob_def()):
     flow.config.default_data_type(of_dtype)
     return a >= b
 
-x = np.random.randint(0, 100, shape).astype(dtype)
-y = np.random.randint(0, 100, shape).astype(dtype)
+@flow.function
+def LogicalAndJob(a=input_blob_def(), b=input_blob_def()):
+    flow.config.default_data_type(of_dtype)
+    return flow.math.logical_and(a, b)
+
+x = np.random.randint(0, 2, shape).astype(dtype)
+y = np.random.randint(0, 2, shape).astype(dtype)
 z = None
 print('x = ', x)
 print('y = ', y)
@@ -83,5 +88,12 @@ z = LessEqualJob(x, y).get()
 print (z)
 print('x <= x --------------------------------')
 z = LessEqualJob(x, x).get()
+print (z)
+
+print('x and y --------------------------------')
+z = LogicalAndJob(x, y).get()
+print (z)
+print('x and x --------------------------------')
+z = LogicalAndJob(x, x).get()
 print (z)
 
