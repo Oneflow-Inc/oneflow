@@ -125,7 +125,7 @@ void PlanUtil::ToDotFile(const Plan& plan, const std::string& filepath) {
     }
     node_def += "}}";
     node_def +=
-        ("\",tooltip=\"" + task_type2type_str.at(task_proto.task_type()) + "  "
+        ("\",tooltip=\"" + TaskType_Name(task_proto.task_type()) + "  "
          + std::to_string(task_proto.task_id()) + "-" + std::to_string(task_proto.machine_id())
          + ":" + std::to_string(task_proto.thrd_id()) + ":"
          + std::to_string(task_proto.parallel_ctx().parallel_id())
@@ -142,10 +142,10 @@ void PlanUtil::ToDotFile(const Plan& plan, const std::string& filepath) {
   }
 
   log_stream << "digraph merged_plan_graph {\n";
-  log_stream << "splines=\"ortho\";\n";
-  log_stream << "rankdir=TB;\n";
-  log_stream << "nodesep=1.3;\n";
-  log_stream << "ranksep=1.3;\n";
+  log_stream << "#splines=\"ortho\";\n";
+  log_stream << "#rankdir=TB;\n";
+  log_stream << "#nodesep=1.3;\n";
+  log_stream << "#ranksep=1.3;\n";
   log_stream << "node[color=\"gray\"];\n";
   // sub graph
   for (size_t machine_id = 0; machine_id < machine_num; ++machine_id) {
@@ -157,15 +157,27 @@ void PlanUtil::ToDotFile(const Plan& plan, const std::string& filepath) {
     }
     for (size_t device_id = 0; device_id < gpu_device_num; ++device_id) {
       std::string device_name = machine_name + "_device_" + std::to_string(device_id);
-      log_stream << "subgraph cluster_" << device_name << " { label = \"" << device_name << "\";\n";
-      log_stream << "color=\"skyblue\";\n";
-      log_stream << "fillcolor=\"azure\";\n";
-      log_stream << "style=\"rounded,filled\";\n";
+      log_stream << "#subgraph cluster_" << device_name << " { label = \"" << device_name
+                 << "\";\n";
+      log_stream << "#color=\"skyblue\";\n";
+      log_stream << "#fillcolor=\"azure\";\n";
+      log_stream << "#style=\"rounded,filled\";\n";
       for (const auto& device_node_def : machine_id2device_id2node_list[machine_id][device_id]) {
         log_stream << device_node_def;
       }
-      log_stream << "}\n";
+      log_stream << "#}\n";
     }
+    // rank for system task over job
+    /*
+    if (machine_id == 0) {
+      const auto& rank_list = GenNodeRank(plan);
+      for (const auto& current_list : rank_list) {
+        log_stream << "{ rank = same;";
+        for (const auto& node_name : current_list) { log_stream << node_name << "; "; }
+        log_stream << "}\n";
+      }
+    }
+    */
     log_stream << "}\n";
   }
 

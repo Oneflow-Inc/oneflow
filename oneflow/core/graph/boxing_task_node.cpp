@@ -48,6 +48,7 @@ static void SetBoxSplitPart(const std::vector<BoxingTaskNode::EdgeInfo>& sorted_
                             const BalancedSplitter& bs, BoxSplitConf* split_conf) {
   for (const BoxingTaskNode::EdgeInfo& edge_info : sorted_edges) {
     Range range = bs.At(edge_info.parallel_id_min, edge_info.parallel_id_max);
+    CHECK_GT(range.size(), 0);
     split_conf->add_part_num(range.size());
   }
 }
@@ -156,7 +157,7 @@ void SetBoxingOpConfBySbpParallel(
     BoxSplitConf* split_conf = conf->mutable_split_box();
     split_conf->set_axis(out_sbp.split_parallel().axis());
     CHECK(is_out_boxing_task_node ^ is_in_boxing_task_node);
-    if (is_out_boxing_task_node) {
+    if (is_out_boxing_task_node && in_sbp.has_split_parallel()) {
       int64_t total_split_num_of_out_op =
           Global<OpGraph>::Get()->GetSplitNum(out_op.op_name(), lbi);
       int64_t in_parallel_num = Global<OpGraph>::Get()->GetParallelNum(in_op.op_name());
@@ -168,9 +169,10 @@ void SetBoxingOpConfBySbpParallel(
       for (const BoxingTaskNode::EdgeInfo& out_edge : sorted_out_edges) {
         Range out_range = out_bs.At(out_edge.parallel_id_min, out_edge.parallel_id_max);
         Range intersectant_range = FindIntersectant(in_range, out_range);
+        CHECK_GT(intersectant_range.size(), 0);
         split_conf->add_part_num(intersectant_range.size());
       }
-    } else if (is_in_boxing_task_node) {
+    } else if (is_in_boxing_task_node || in_sbp.has_partial_sum_parallel()) {
       const auto& bs = Global<OpGraph>::Get()->GetBalancedSplitter(out_op.op_name(), lbi);
       SetBoxSplitPart(sorted_out_edges, bs, split_conf);
     } else {

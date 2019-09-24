@@ -29,17 +29,6 @@ message RegstDescTypeProto {
   }
 }
 
-enum MemReduceMethod {
-  kMemInvalidSharedMethod = 0;
-  kMemSum = 1;
-  kMemMax = 2;
-}
-
-message MemBlock {
-  required int64 mem_block_id = 1;
-  optional MemReduceMethod mem_reduce_method = 2 [default = kMemMax];
-}
-
 message RegstDescProto {
   required int64 regst_desc_id = 1;
   required int64 producer_task_id = 2;
@@ -49,10 +38,10 @@ message RegstDescProto {
   required int32 register_num = 6;
   required MemoryCase mem_case = 7;
   required RegstDescTypeProto regst_desc_type = 8;
-  required bool enable_mem_sharing = 9;
-  required int32 mem_shared_id = 10;
-  required int64 mem_shared_offset = 11;
-  optional int32 separated_header_mem_block_id = 12 [default = -1];
+  required bool enable_reuse_mem = 9;
+  required int64 mem_block_id = 10;
+  required int64 mem_block_offset = 11;
+  optional int64 separated_header_mem_block_id = 12 [default = -1];
   optional int64 inplace_consumed_regst_desc_id = 13 [default = -1];
   optional int64 hint_inplace_consumed_regst_desc_id = 14 [default = -1];
 }

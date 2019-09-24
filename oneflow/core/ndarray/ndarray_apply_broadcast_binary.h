@@ -15,22 +15,13 @@ struct NdarrayApplyBroadcastBinary<
     device_type, T, NDIMS, binary_func,
     typename std::enable_if<std::is_same<T, typename DevDType<device_type, T>::type>::value>::type>
     final {
-  static void Apply(DeviceCtx* ctx, const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& a,
-                    const XpuVarNdarray<const T>& b) {
-    using NdarrayAssign = XpuNdarrayAssign<device_type, T>;
+  static void Apply(DeviceCtx* ctx,
+                    const XpuVarNdarray<typename BinaryFuncTrait<binary_func, T>::return_type>& y,
+                    const XpuVarNdarray<const T>& a, const XpuVarNdarray<const T>& b) {
     using BroadcastBinary =
         NdarrayApplyBroadcastBinaryCoreWrapper<device_type, T, NDIMS, binary_func>;
     CheckBroadcastable(y, a, b);
     return BroadcastBinary::Apply(ctx, y, a, b);
-    if (a.shape() == y.shape()) {
-      NdarrayAssign::Assign(ctx, y, a);
-      BroadcastBinary::InplaceApply(ctx, y, b);
-    } else if (b.shape() == y.shape()) {
-      NdarrayAssign::Assign(ctx, y, b);
-      BroadcastBinary::InplaceApply(ctx, y, a);
-    } else {
-      BroadcastBinary::Apply(ctx, y, a, b);
-    }
   }
 
   static void InplaceApply(DeviceCtx* ctx, const XpuVarNdarray<T>& y,
@@ -42,8 +33,9 @@ struct NdarrayApplyBroadcastBinary<
   }
 
  private:
-  static void CheckBroadcastable(const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& a,
-                                 const XpuVarNdarray<const T>& b) {
+  static void CheckBroadcastable(
+      const XpuVarNdarray<typename BinaryFuncTrait<binary_func, T>::return_type>& y,
+      const XpuVarNdarray<const T>& a, const XpuVarNdarray<const T>& b) {
     CHECK_EQ(y.shape().NumAxes(), a.shape().NumAxes());
     CHECK_EQ(y.shape().NumAxes(), b.shape().NumAxes());
     for (int i = 0; i < y.shape().NumAxes(); ++i) {
@@ -61,8 +53,9 @@ struct NdarrayApplyBroadcastBinary<
     typename std::enable_if<!std::is_same<T, typename DevDType<device_type, T>::type>::value>::type>
     final {
   using NewT = typename DevDType<device_type, T>::type;
-  static void Apply(DeviceCtx* ctx, const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& a,
-                    const XpuVarNdarray<const T>& b) {
+  static void Apply(DeviceCtx* ctx,
+                    const XpuVarNdarray<typename BinaryFuncTrait<binary_func, T>::return_type>& y,
+                    const XpuVarNdarray<const T>& a, const XpuVarNdarray<const T>& b) {
     return NdarrayApplyBroadcastBinary<device_type, NewT, NDIMS, binary_func>::Apply(
         ctx, reinterpret_cast<const XpuVarNdarray<NewT>&>(y),
         reinterpret_cast<const XpuVarNdarray<const NewT>&>(a),
