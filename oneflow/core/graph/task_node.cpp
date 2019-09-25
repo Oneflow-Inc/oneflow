@@ -308,14 +308,7 @@ void TaskNode::InitProducedRegstMemCase(RegstDesc* regst) {
 }
 
 void TaskNode::InitProducedRegstMemCase(MemoryCase* mem_case) {
-  if (device_type() == DeviceType::kCPU) {
-    mem_case->mutable_host_mem();
-  } else if (device_type() == DeviceType::kGPU) {
-    mem_case->mutable_device_cuda_mem()->set_device_id(
-        Global<IDMgr>::Get()->GetGpuPhyIdFromThrdId(thrd_id_));
-  } else {
-    UNIMPLEMENTED();
-  }
+  *mem_case = GetDefaultMemCase(this);
 }
 
 void TaskNode::PinConsumedRegstMemCase(MemoryCase* mem_case) {
@@ -441,6 +434,18 @@ RegstDescIdSet* FindOrCreateConsumedCtrlRegstDescIdSet(TaskProto* task_proto,
     CHECK(consumed_regst_desc_id_sets->insert({regst_desc_name, RegstDescIdSet()}).second);
   }
   return &consumed_regst_desc_id_sets->at(regst_desc_name);
+}
+MemoryCase GetDefaultMemCase(const TaskNode* node) {
+  MemoryCase mem_case;
+  if (node->device_type() == DeviceType::kCPU) {
+    mem_case.mutable_host_mem();
+  } else if (node->device_type() == DeviceType::kGPU) {
+    mem_case.mutable_device_cuda_mem()->set_device_id(
+        Global<IDMgr>::Get()->GetGpuPhyIdFromThrdId(node->thrd_id()));
+  } else {
+    UNIMPLEMENTED();
+  }
+  return mem_case;
 }
 
 void TaskNode::ForEachInDataEdge(const std::function<void(TaskEdge*)>& Handler) const {
