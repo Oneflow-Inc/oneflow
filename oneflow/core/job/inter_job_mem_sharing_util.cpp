@@ -204,11 +204,62 @@ void MergeReusedChunk(HashMap<int64_t, ChunkProto>* chunk_id2chunk,
   }
 }
 
-}  // namespace
+void MergeSharedMemBlockR2L(RegstDescProto* lhs, RegstDescProto* rhs,
+                            HashMap<int64_t, MemBlockProto>* mem_block_id2mem_block) {
+  auto CheckValidAndGetMemBlock = [&](int64_t mem_block_id, int64_t mem_size,
+                                      const MemoryCase& mem_case) {
+    CHECK_NE(mem_block_id, -1);
+    CHECK(mem_block_id2mem_block->find(mem_block_id) != mem_block_id2mem_block->end());
+    MemBlockProto* mem_block = &(mem_block_id2mem_block->at(mem_block_id));
+    CHECK(mem_block->enable_reuse_mem() == false);
+    CHECK(mem_block->has_chunk_id() == false);
+    CHECK(mem_block->has_chunk_offset() == false);
+    CHECK_EQ(mem_block->mem_size(), mem_size);
+    CHECK(mem_block->mem_case() == mem_case);
+    return mem_block;
+  };
 
-void InterJobMemSharingUtil::BindInterfaceMemBlockId(const std::vector<Job>& jobs,
-                                                     std::vector<Plan>* sub_plans) {
+  auto MergeAndEraseMemBlock = [&](MemBlockProto* merged_block, MemBlockProto* erased_block) {
+    CHECK_EQ(erased_block->job_id_size(), 1);
+    CHECK_EQ(merged_block->mem_size(), erased_block->mem_size());
+    merged_block->add_job_id(erased_block->job_id(0));
+    CHECK_EQ(mem_block_id2mem_block->erase(erased_block->mem_block_id()), 1);
+  };
+
+  int64_t merged_mem_block_id = lhs->mem_block_id();
+  int64_t erased_mem_block_id = rhs->mem_block_id();
+  CHECK(lhs->enable_reuse_mem() == false && rhs->enable_reuse_mem() == false);
+  CHECK_EQ(lhs->mem_block_offset(), 0);
+  CHECK_EQ(rhs->mem_block_offset(), 0);
+  RtRegstDesc left_rt_regst(*lhs);
+  RtRegstDesc right_rt_regst(*rhs);
+  MemBlockProto* merged_mem_block = CheckValidAndGetMemBlock(
+      merged_mem_block_id, left_rt_regst.TotalMainByteSize4AllRegst(), lhs->mem_case());
+  MemBlockProto* erased_mem_block = CheckValidAndGetMemBlock(
+      erased_mem_block_id, right_rt_regst.TotalMainByteSize4AllRegst(), rhs->mem_case());
+  MergeAndEraseMemBlock(merged_mem_block, erased_mem_block);
+  rhs->set_mem_block_id(merged_mem_block_id);
+
+  int64_t separated_header_mem_size = left_rt_regst.TotalSeparatedHeaderByteSize4AllRegst();
+  if (separated_header_mem_size > 0) {
+    CHECK_EQ(separated_header_mem_size, right_rt_regst.TotalSeparatedHeaderByteSize4AllRegst());
+    int64_t merged_header_id = lhs->separated_header_mem_block_id();
+    int64_t erased_header_id = rhs->separated_header_mem_block_id();
+    MemoryCase header_mem_case =
+        MemoryCaseUtil::GetHostPinnedMemoryCaseForRegstSeparatedHeader(lhs->mem_case());
+    MemBlockProto* merged_header_block =
+        CheckValidAndGetMemBlock(merged_header_id, separated_header_mem_size, header_mem_case);
+    MemBlockProto* erased_header_block =
+        CheckValidAndGetMemBlock(erased_header_id, separated_header_mem_size, header_mem_case);
+    MergeAndEraseMemBlock(merged_header_block, erased_header_block);
+    rhs->set_separated_header_mem_block_id(merged_header_id);
+  }
+}
+
+void MergeSharedInterfaceMemBlock(const std::vector<Job>& jobs, std::vector<Plan>* sub_plans,
+                                  HashMap<int64_t, MemBlockProto>* mem_block_id2mem_block) {
   for (const auto& pair : GetInterfaceOpName2JobIds(jobs)) {
+    if (pair.second.size() <= 1) { continue; }
     std::vector<std::vector<TaskProto*>> same_op_name_sorted_task_protos;
     for (int64_t job_id : pair.second) {
       same_op_name_sorted_task_protos.push_back(
@@ -224,37 +275,50 @@ void InterJobMemSharingUtil::BindInterfaceMemBlockId(const std::vector<Job>& job
       FOR_RANGE(int64_t, i, 0, first_vec.size()) {
         CHECK_EQ(task_protos.at(i)->machine_id(), first_vec.at(i)->machine_id());
         RegstDescProto* first_regst_desc = PlanUtil::GetSoleProducedDataRegst(first_vec.at(i));
-        CHECK_EQ(first_regst_desc->mem_block_offset(), 0);
         RegstDescProto* regst_desc = PlanUtil::GetSoleProducedDataRegst(task_protos.at(i));
+
+        MergeSharedMemBlockR2L(first_regst_desc, regst_desc, mem_block_id2mem_block);
+
         MemoryCase common_mem_case;
         CHECK(MemoryCaseUtil::GetCommonMemoryCase(common_mem_case_vec.at(i), regst_desc->mem_case(),
                                                   &common_mem_case));
         common_mem_case_vec[i] = common_mem_case;
-        CHECK(regst_desc->enable_reuse_mem() == false);
-        CHECK_EQ(regst_desc->mem_block_offset(), 0);
-        CHECK_NE(first_regst_desc->mem_block_id(), -1);
-        regst_desc->set_mem_block_id(first_regst_desc->mem_block_id());
-
-        int64_t separated_header_mem_size =
-            RtRegstDesc(*first_regst_desc).TotalSeparatedHeaderByteSize4AllRegst();
-        if (separated_header_mem_size > 0) {
-          CHECK_EQ(separated_header_mem_size,
-                   RtRegstDesc(*regst_desc).TotalSeparatedHeaderByteSize4AllRegst());
-          if (first_regst_desc->separated_header_mem_block_id() == -1) {
-            first_regst_desc->set_separated_header_mem_block_id(
-                Global<IDMgr>::Get()->NewMemBlockId());
-          }
-          regst_desc->set_separated_header_mem_block_id(
-              first_regst_desc->separated_header_mem_block_id());
-        }
       }
     }
     for (const auto& task_protos : same_op_name_sorted_task_protos) {
       FOR_RANGE(int64_t, i, 0, task_protos.size()) {
-        *PlanUtil::GetSoleProducedDataRegst(task_protos.at(i))->mutable_mem_case() =
+        RegstDescProto* regst_desc = PlanUtil::GetSoleProducedDataRegst(task_protos.at(i));
+        *(regst_desc->mutable_mem_case()) = common_mem_case_vec.at(i);
+        CHECK(mem_block_id2mem_block->find(regst_desc->mem_block_id())
+              != mem_block_id2mem_block->end());
+        *(mem_block_id2mem_block->at(regst_desc->mem_block_id()).mutable_mem_case()) =
             common_mem_case_vec.at(i);
       }
     }
+  }
+}
+
+}  // namespace
+
+void InterJobMemSharingUtil::MergeMemSharedInterfaceMemBlockBetweenSubPlans(
+    const std::vector<Job>& jobs, std::vector<Plan>* sub_plans) {
+  if (jobs.size() == 1) { return; }
+
+  HashMap<int64_t, MemBlockProto> mem_block_id2mem_block;
+  for (int64_t i = 0; i < jobs.size(); ++i) {
+    Plan* sub_plan = &(sub_plans->at(i));
+    for (const MemBlockProto& mem_block : sub_plan->mem_block()) {
+      CHECK(mem_block_id2mem_block.emplace(mem_block.mem_block_id(), mem_block).second);
+    }
+    sub_plan->clear_mem_block();
+  }
+
+  MergeSharedInterfaceMemBlock(jobs, sub_plans, &mem_block_id2mem_block);
+
+  for (const auto& pair : mem_block_id2mem_block) {
+    const MemBlockProto& mem_block = pair.second;
+    CHECK_GE(mem_block.job_id_size(), 1);
+    *(sub_plans->at(mem_block.job_id(0)).add_mem_block()) = mem_block;
   }
 }
 

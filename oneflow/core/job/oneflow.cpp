@@ -814,7 +814,7 @@ void CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan) {
       }
     }
     MakeModelIoJobs(jobs, var_op_name2parallel_blob_conf, [&](Job* job) { CompileHelperJob(job); });
-    InterJobMemSharingUtil::BindInterfaceMemBlockId(jobs, &sub_plans);
+    InterJobMemSharingUtil::MergeMemSharedInterfaceMemBlockBetweenSubPlans(jobs, &sub_plans);
     FinishGlobalCriticalSectionDesc(sub_plans);
     MergeSubPlanWithoutGenNetTopo(plan, sub_plans);
     Plan main_plan;
