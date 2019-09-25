@@ -225,6 +225,14 @@ class RPNLoss(object):
         return bbox_loss, cls_loss
 
 
+def safe_top_k(inputs, k):
+    assert len(inputs.shape) == 1
+    if inputs.shape[0] < k:
+        return flow.math.top_k(inputs, inputs.shape[0])
+    else:
+        return flow.math.top_k(inputs, k)
+
+
 class RPNProposal(object):
     def __init__(self, cfg):
         self.cfg = cfg
@@ -251,7 +259,7 @@ class RPNProposal(object):
                 proposal_list = []
                 score_list = []
                 for layer_idx in range(len(cls_logit_list[0])):
-                    pre_nms_top_k_inds = flow.math.top_k(
+                    pre_nms_top_k_inds = safe_top_k(
                         cls_logit_list[img_idx][layer_idx],
                         k=self.cfg.RPN.PRE_NMS_TOP_N,
                     )
@@ -316,16 +324,12 @@ class RPNProposal(object):
                     proposal_list.append(proposal_per_layer)
                     score_list.append(score_per_layer)
 
-                score_in_one_img = flow.absolute_importconcat(
-                    score_list, axis=0
-                )
+                score_in_one_img = flow.concat(score_list, axis=0)
                 proposal_in_one_img = flow.concat(proposal_list, axis=0)
 
                 proposal_in_one_img = flow.local_gather(
                     proposal_in_one_img,
-                    flow.math.top_k(
-                        score_in_one_img, k=self.cfg.RPN.POST_NMS_TOP_N
-                    ),
+                    safe_top_k(score_in_one_img, k=self.cfg.RPN.POST_NMS_TOP_N),
                 )
                 proposal_in_one_img = flow.concat(
                     [proposal_in_one_img, resized_gt_boxes_list[img_idx]],
