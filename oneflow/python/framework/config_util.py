@@ -117,6 +117,12 @@ def max_mdsave_worker_num(val):
     assert type(val) is int
     default_config_proto.resource.max_mdsave_worker_num = val
 
+@oneflow_export('config.compute_thread_pool_size')
+def max_mdsave_worker_num(val):
+    assert config_proto_mutable == True
+    assert type(val) is int
+    default_config_proto.resource.compute_thread_pool_size = val
+
 @oneflow_export('config.rdma_mem_block_mbyte')
 def rdma_mem_block_mbyte(val):
     assert config_proto_mutable == True
@@ -248,14 +254,19 @@ def set_cudnn_conv_force_bwd_filter_algo(value):
     _SetJobConfAttr(lambda x:x, 'cudnn_conv_force_bwd_filter_algo', value)
     return oneflow.config
 
-@oneflow_export('config.enable_mem_sharing')
-def set_enable_mem_sharing(value = True):
-    _SetJobConfAttr(lambda x:x, 'enable_mem_sharing', value)
+@oneflow_export('config.enable_reused_mem')
+def set_enable_reused_mem(value = True):
+    _SetJobConfAttr(lambda x:x, 'enable_reused_mem', value)
     return oneflow.config
 
 @oneflow_export('config.enable_inplace')
 def set_enable_inplace(value = True):
     _SetJobConfAttr(lambda x:x, 'enable_inplace', value)
+    return oneflow.config
+
+@oneflow_export('config.enable_inplace_in_reduce_struct')
+def set_enable_inplace_in_reduce_struct(value = True):
+    _SetJobConfAttr(lambda x:x, 'enable_inplace_in_reduce_struct', value)
     return oneflow.config
 
 @oneflow_export('config.enable_nccl')
@@ -266,6 +277,11 @@ def set_enable_nccl(value = True):
 @oneflow_export('config.use_nccl_inter_node_communication')
 def set_use_nccl_inter_node_communication(value = True):
     _SetJobConfAttr(lambda x:x, 'use_nccl_inter_node_communication', value)
+    return oneflow.config
+
+@oneflow_export('config.use_boxing_v2')
+def use_boxing_v2(value=True):
+    _SetJobConfAttr(lambda x: x, 'use_boxing_v2', value)
     return oneflow.config
 
 @oneflow_export('config.enable_all_reduce_group')
@@ -296,6 +312,16 @@ def set_all_reduce_group_size_warmup(value):
 @oneflow_export('config.all_reduce_fp16')
 def set_all_reduce_fp16(value = True):
     _SetJobConfAttr(lambda x:x, 'all_reduce_fp16', value)
+    return oneflow.config
+
+@oneflow_export('config.enable_non_distributed_optimizer')
+def set_enable_non_distributed_optimizer(value = True):
+    _SetJobConfAttr(lambda x:x, 'enable_non_distributed_optimizer', value)
+    return oneflow.config
+
+@oneflow_export('config.non_distributed_optimizer_group_size_mbyte')
+def set_non_distributed_optimizer_group_size_mbyte(value):
+    _SetJobConfAttr(lambda x:x, 'non_distributed_optimizer_group_size_mbyte', value)
     return oneflow.config
 
 @oneflow_export('config.enable_true_half_config_when_conv')

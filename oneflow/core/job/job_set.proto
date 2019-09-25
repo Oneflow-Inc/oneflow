@@ -33,7 +33,7 @@ message ProfilerConf {
   optional bool collect_act_event = 1 [default = false];
 }
 
-message MemSharingPriorityStrategy {
+message ReuseMemPriorityStrategy {
 }
 
 message ParallelismPriorityStrategy {
@@ -47,9 +47,9 @@ message CustomParallelismStrategy {
   repeated JobNameGroup nonparallel_group = 1;
 }
 
-message JobMemSharingStrategy {
+message InterJobReuseMemStrategy {
   oneof strategy_case {
-    MemSharingPriorityStrategy mem_sharing_priority = 1;
+    ReuseMemPriorityStrategy reuse_mem_priority = 1;
     ParallelismPriorityStrategy parallelism_priority = 2;
     CustomParallelismStrategy custom_parallelism = 3;
   }
@@ -75,5 +75,5 @@ message ConfigProto {
 
 message JobSet {
   repeated Job job = 1;
-  optional JobMemSharingStrategy job_mem_sharing_strategy = 5;
+  optional InterJobReuseMemStrategy inter_job_reuse_mem_strategy = 5;
 }

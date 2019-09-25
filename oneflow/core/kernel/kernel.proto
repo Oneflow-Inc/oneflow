@@ -5,6 +5,7 @@ import "oneflow/core/common/shape.proto";
 import "oneflow/core/common/data_type.proto";
 import "oneflow/core/operator/op_attribute.proto";
 import "oneflow/core/operator/op_conf.proto";
+import "oneflow/core/job/placement.proto";
 
 message ConvKernelConf {
   required ShapeProto in = 1;
@@ -25,7 +26,7 @@ message DropoutKernelConf {
   required ShapeProto in = 1;
   required ShapeProto random_mask = 2;
   required ShapeProto out = 3;
-};
+}
 
 message LossKernelConf {
   required DataType prediction_type = 1;
@@ -186,6 +187,14 @@ message TopKConf {
   required int32 temp_storage_bytes = 1;
 }
 
+message NcclTupleReduceConf {
+  required ParallelContext parallel_ctx = 1;
+}
+
+message NcclTupleBroadcastConf {
+  required ParallelContext parallel_ctx = 1;
+}
+
 message KernelConf {
   required OpAttribute op_attribute = 1;
   required bool is_forward = 2;
@@ -234,5 +243,7 @@ message KernelConf {
     DeconvKernelConf deconv_conf = 415;
     TopKConf top_k_conf = 416;
     SigmoidCrossEntropyLossGradKernelConf sigmoid_cross_entropy_loss_grad_conf = 417;
+    NcclTupleReduceConf nccl_tuple_reduce_conf = 418;
+    NcclTupleBroadcastConf nccl_tuple_broadcast_conf = 419;
   }
 }

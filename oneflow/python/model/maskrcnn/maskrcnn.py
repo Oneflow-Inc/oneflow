@@ -11,7 +11,7 @@ import argparse
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
-    "--config_file", default=None, type=str, help="yaml config file"
+    "--config_file", "-c", default=None, type=str, help="yaml config file"
 )
 parser.add_argument(
     "-load", "--model_load_dir", type=str, default="", required=False
@@ -43,11 +43,11 @@ placeholders = get_numpy_placeholders()
 
 @flow.function
 def maskrcnn(
-    images=flow.input_blob_def(placeholders[0].shape),
+    images=flow.input_blob_def(placeholders[0].shape, dtype=flow.float32),
     image_sizes=flow.input_blob_def(placeholders[1].shape, dtype=flow.int32),
-    gt_boxes=flow.input_blob_def(placeholders[2].shape),
-    gt_segms=flow.input_blob_def(placeholders[3].shape),
-    gt_labels=flow.input_blob_def(placeholders[4].shape, dtype=flow.int8),
+    gt_boxes=flow.input_blob_def(placeholders[2].shape, dtype=flow.float32),
+    gt_segms=flow.input_blob_def(placeholders[3].shape, dtype=flow.int8),
+    gt_labels=flow.input_blob_def(placeholders[4].shape, dtype=flow.int32),
 ):
     # def maskrcnn(images, image_sizes, gt_boxes, gt_segms, gt_labels):
     r"""Mask-RCNN
@@ -96,28 +96,30 @@ def maskrcnn(
     rpn_bbox_loss, rpn_objectness_loss = rpn_loss.build(
         anchors, image_size_list, gt_boxes_list, bbox_pred_list, cls_logit_list
     )
-    # proposals = rpn_proposal.build(
-    #     anchors, cls_logit_list, bbox_pred_list, image_size_list, gt_boxes_list
-    # )
+    proposals = rpn_proposal.build(
+        anchors, cls_logit_list, bbox_pred_list, image_size_list, gt_boxes_list
+    )
 
     # Box Head
-    # box_loss, cls_loss, pos_proposal_list, pos_gt_indices_list = box_head.build_train(
-    #     proposals, gt_boxes_list, gt_labels_list, features
-    # )
+    box_loss, cls_loss, pos_proposal_list, pos_gt_indices_list = box_head.build_train(
+        proposals, gt_boxes_list, gt_labels_list, features
+    )
 
     # Mask Head
-    # mask_loss = mask_head.build_train(
-    #     pos_proposal_list, pos_gt_indices_list, gt_segms_list, gt_labels_list, features
-    # )
+    mask_loss = mask_head.build_train(
+        pos_proposal_list,
+        pos_gt_indices_list,
+        gt_segms_list,
+        gt_labels_list,
+        features,
+    )
 
-    # return rpn_bbox_loss, rpn_objectness_loss, box_loss, cls_loss, mask_loss
-
-    return rpn_bbox_loss, rpn_objectness_loss
+    return rpn_bbox_loss, rpn_objectness_loss, box_loss, cls_loss, mask_loss
 
 
 if __name__ == "__main__":
     flow.config.gpu_device_num(args.gpu_num_per_node)
-    flow.config.ctrl_port(9788)
+    flow.config.ctrl_port(19788)
 
     flow.config.default_data_type(flow.float)
     check_point = flow.train.CheckPoint()

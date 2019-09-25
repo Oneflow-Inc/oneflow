@@ -23,7 +23,7 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   void AddMdUpdtCtrlEdgesWithinReduceSplitNode();
   void AddReduceNoBwForwardNodeOverlapingCtrlEdges();
 
-  void EnableMemSharingInReduceStruct();
+  void EnableInplaceMemSharingInReduceStruct();
   void EnableInplaceMemSharing(const std::function<bool(const LogicalBlobId&, const std::string&)>&
                                    IsLbiAllConsumersReachableToOpName);
 
@@ -34,6 +34,8 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
 #define DECLARE_BLD_SUB_TASK_GRAPH_METHOD(method_name) void method_name BLD_SUB_TSK_GPH_MTHD_ARGS();
 
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxing);
+  DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxingV1);
+  DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxingV2);
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByOneToOne);
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByRecordLoadToTick);
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBroadcastToBroadcast);
@@ -41,6 +43,7 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceScatter2ReduceAdd);
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceAdd2ReduceGather);
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceGather2ReduceGather);
+  DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByConnectNodeOnSameGpuDevice);
 
  private:
   void AcyclicTopoForEachNode(std::function<bool(TaskNode* node)> IsAllowedStartNode,

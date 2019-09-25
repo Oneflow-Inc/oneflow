@@ -138,8 +138,14 @@ def box_decode(ref_boxes, boxes_delta, regression_weights, name=None):
     )
     op_conf.box_decode_conf.ref_boxes = ref_boxes.logical_blob_name
     op_conf.box_decode_conf.boxes_delta = boxes_delta.logical_blob_name
-    assert isinstance(regression_weights, op_conf_util.BBoxRegressionWeights)
-    op_conf.box_decode_conf.regression_weights = regression_weights
+    regression_weights_proto = op_conf_util.BBoxRegressionWeights()
+    regression_weights_proto.weight_x = regression_weights["weight_x"]
+    regression_weights_proto.weight_y = regression_weights["weight_y"]
+    regression_weights_proto.weight_h = regression_weights["weight_h"]
+    regression_weights_proto.weight_w = regression_weights["weight_w"]
+    op_conf.box_decode_conf.regression_weights.CopyFrom(
+        regression_weights_proto
+    )
     op_conf.box_decode_conf.boxes = "boxes"
     compile_context.CurJobAddOp(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
@@ -189,6 +195,8 @@ def anchor_generate(
         name if name is not None else id_util.UniqueStr("AnchorGenerate_"),
     )
     assert isinstance(aspect_ratios, (list, tuple))
+    if isinstance(anchor_scales, (list, tuple)) == False:
+        anchor_scales = [anchor_scales]
     assert isinstance(anchor_scales, (list, tuple))
     setattr(op_conf.anchor_generate_conf, "images", images.logical_blob_name)
     op_conf.anchor_generate_conf.feature_map_stride = feature_map_stride
@@ -247,7 +255,7 @@ def identify_outside_anchors(anchors, image_size, tolerance=0.0, name=None):
     return remote_blob_util.RemoteBlob(lbi)
 
 
-@oneflow_export("detection.clip_boxes_to_image")
+@oneflow_export("detection.clip_to_image")
 def clip_boxes_to_image(boxes, image_size, name=None):
     op_conf = op_conf_util.OperatorConf()
     setattr(
@@ -266,23 +274,30 @@ def clip_boxes_to_image(boxes, image_size, name=None):
 
 
 @oneflow_export("detection.extract_piece_slice_id")
-def extract_piece_slice_id(inputs, image_size, name=None):
+def extract_piece_slice_id(inputs, name=None):
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf,
         "name",
         name if name is not None else id_util.UniqueStr("ExtractPieceSliceId_"),
     )
-    setattr(op_conf.extract_piece_slice_id_conf, "in", inputs.logical_blob_name)
-    op_conf.extract_piece_slice_id_conf.out = "out"
+    getattr(op_conf.extract_piece_slice_id_conf, "in").extend(
+        [i.logical_blob_name for i in inputs]
+    )
+    op_conf.extract_piece_slice_id_conf.out.extend(
+        ["out_" + str(i) for i in range(len(inputs))]
+    )
     compile_context.CurJobAddOp(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
+    ret = []
+    for i in range(len(inputs)):
+        out_lbi = logical_blob_id_util.LogicalBlobId()
+        setattr(out_lbi, "op_name", op_conf.name)
+        setattr(out_lbi, "blob_name", "out_" + str(i))
+        ret.append(remote_blob_util.RemoteBlob(out_lbi))
+    return tuple(ret)
 
 
-@oneflow_export("detection.non_maximum_suppression")
+@oneflow_export("detection.nms")
 def non_maximum_suppression(
     inputs, nms_iou_threshold=0.7, post_nms_top_n=1000, name=None
 ):

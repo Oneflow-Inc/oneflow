@@ -5,7 +5,6 @@ namespace oneflow {
 template<DeviceType device_type>
 void ReduceSplitKernel<device_type>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  if (device_type == DeviceType::kGPU && this->job_desc().enable_mem_sharing()) { return; }
   const Blob* in_blob = BnInOp2Blob("in");
   const char* src_cur_dptr = in_blob->dptr<char>();
   for (const std::string& obn : this->op_attribute().output_bns()) {

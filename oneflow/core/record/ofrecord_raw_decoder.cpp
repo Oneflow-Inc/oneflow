@@ -16,34 +16,14 @@ void FixInDptrThenCopyElem(DeviceCtx* ctx, const T* in_dptr, int32_t col_id,
 template<typename T>
 bool OFRecordDecoderImpl<EncodeCase::kRaw, T>::HasDim1ValidNumField(
     const EncodeConf& encode_conf) const {
-  CHECK(encode_conf.has_raw());
-  return encode_conf.raw().dim1_varying_length();
+  return false;
 }
 
 template<typename T>
 void OFRecordDecoderImpl<EncodeCase::kRaw, T>::SetDim1ValidNum(const Feature& feature,
                                                                Blob* out_blob,
                                                                int64_t dim0_idx) const {
-  CHECK_GE(out_blob->static_shape().NumAxes(), 2);
-  int64_t elem_num = 0;
-  if (feature.has_bytes_list()) {
-    CHECK_EQ(feature.bytes_list().value_size(), 1);
-    elem_num = feature.bytes_list().value(0).size();
-  }
-#define DEFINE_ONE_ELIF(PbT, CppT)                \
-  else if (feature.has_##PbT##_list()) {          \
-    elem_num = feature.PbT##_list().value_size(); \
-  }
-  DEFINE_ONE_ELIF(float, float)
-  DEFINE_ONE_ELIF(double, double)
-  DEFINE_ONE_ELIF(int32, int32_t)
-#undef DEFINE_ONE_ELIF
-  else {
-    UNIMPLEMENTED();
-  }
-  CHECK_LE(elem_num, out_blob->static_shape().Count(1));
-  CHECK_EQ(elem_num % out_blob->static_shape().Count(2), 0);
-  out_blob->set_dim1_valid_num(dim0_idx, elem_num / out_blob->static_shape().Count(2));
+  UNIMPLEMENTED();
 }
 
 template<typename T>

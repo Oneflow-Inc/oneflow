@@ -161,45 +161,17 @@ void ConcatSplitField(DeviceCtx* ctx, std::function<Blob*(const std::string&)> B
 
 int32_t MaxColIdInBlobs(std::function<Blob*(const std::string&)> BnInOp2Blob,
                         const PbRpf<std::string>& bns) {
-  int32_t max_col_id_in_bns = 0;
-  for (const std::string& bn : bns) {
-    Blob* blob = BnInOp2Blob(bn);
-    max_col_id_in_bns = std::max(max_col_id_in_bns, blob->col_id());
-  }
-  return max_col_id_in_bns;
+  UNIMPLEMENTED();
 }
 
 void SetBlobsColId(std::function<Blob*(const std::string&)> BnInOp2Blob,
                    const PbRpf<std::string>& bns, int32_t col_id) {
-  for (const std::string& bn : bns) { BnInOp2Blob(bn)->set_col_id(col_id); }
+  UNIMPLEMENTED();
 }
 
 void ConcatSplitColId(std::function<Blob*(const std::string&)> BnInOp2Blob,
                       const PbRpf<std::string>& input_bns, const PbRpf<std::string>& output_bns) {
-  auto in_iter = input_bns.begin();
-  auto out_iter = output_bns.begin();
-  int64_t in_data_num = BnInOp2Blob(*in_iter)->static_shape().At(0);
-  int64_t out_data_num = BnInOp2Blob(*out_iter)->static_shape().At(0);
-  int32_t max_col_id = BnInOp2Blob(*in_iter)->col_id();
-  while (in_iter != input_bns.end() && out_iter != input_bns.end()) {
-    if (in_data_num < out_data_num) {
-      ++in_iter;
-      in_data_num += BnInOp2Blob(*in_iter)->static_shape().At(0);
-      max_col_id = std::max(max_col_id, BnInOp2Blob(*in_iter)->col_id());
-    } else if (in_data_num > out_data_num) {
-      BnInOp2Blob(*out_iter)->set_col_id(max_col_id);
-      max_col_id = BnInOp2Blob(*in_iter)->col_id();
-      ++out_iter;
-      out_data_num += BnInOp2Blob(*out_iter)->static_shape().At(0);
-    } else {
-      BnInOp2Blob(*out_iter)->set_col_id(max_col_id);
-      ++in_iter;
-      in_data_num += BnInOp2Blob(*in_iter)->static_shape().At(0);
-      max_col_id = BnInOp2Blob(*in_iter)->col_id();
-      ++out_iter;
-      out_data_num += BnInOp2Blob(*out_iter)->static_shape().At(0);
-    }
-  }
+  UNIMPLEMENTED();
 }
 
 }  // namespace
@@ -283,33 +255,31 @@ void BoxingKernel<T>::ForwardField(const KernelCtx& ctx,
 template<typename T>
 void BoxingKernel<T>::ForwardDataId(const KernelCtx& ctx,
                                     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  ForwardField<DataIdIterator>(ctx, BnInOp2Blob);
+  UNIMPLEMENTED();
 }
 
 template<typename T>
 void BoxingKernel<T>::ForwardColNum(const KernelCtx& ctx,
                                     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  ForwardField<ColNumIterator>(ctx, BnInOp2Blob);
-  SetMaxColId(ctx, BnInOp2Blob);
-  SetColId(ctx, BnInOp2Blob);
+  UNIMPLEMENTED();
 }
 
 template<typename T>
 void BoxingKernel<T>::ForwardDim0ValidNum(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  TODO();
+  UNIMPLEMENTED();
 }
 
 template<typename T>
 void BoxingKernel<T>::ForwardDim1ValidNum(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  ForwardField<Dim1ValidNumIterator>(ctx, BnInOp2Blob);
+  UNIMPLEMENTED();
 }
 
 template<typename T>
 void BoxingKernel<T>::ForwardDim2ValidNum(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  ForwardField<Dim2ValidNumIterator>(ctx, BnInOp2Blob);
+  UNIMPLEMENTED();
 }
 
 template<typename T>
@@ -322,33 +292,13 @@ void BoxingKernel<T>::ForwardRecordIdInDevicePiece(
 template<typename T>
 void BoxingKernel<T>::SetColId(const KernelCtx& ctx,
                                std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const BoxingOpConf& boxing_conf = op_conf().boxing_conf();
-  if (boxing_conf.in_box_case() == BoxingOpConf::kConcatBox
-      && boxing_conf.concat_box().axis() == 0) {
-    if (boxing_conf.out_box_case() == BoxingOpConf::kSplitBox
-        && boxing_conf.split_box().axis() == 0) {
-      ConcatSplitColId(BnInOp2Blob, op_attribute().input_bns(), op_attribute().output_bns());
-    } else {
-      SetBlobsColId(BnInOp2Blob, op_attribute().output_bns(),
-                    MaxColIdInBlobs(BnInOp2Blob, op_attribute().input_bns()));
-    }
-  } else {
-    SetBlobsColId(BnInOp2Blob, op_attribute().output_bns(),
-                  BnInOp2Blob(op_attribute().input_bns(0))->col_id());
-  }
+  TODO();
 }
 
 template<typename T>
 void BoxingKernel<T>::SetMaxColId(const KernelCtx& ctx,
                                   std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  for (const std::string& obn : op_attribute().output_bns()) {
-    int32_t max_col_num_in_blob = 0;
-    Blob* out_blob = BnInOp2Blob(obn);
-    FOR_RANGE(int32_t, i, 0, out_blob->static_shape().At(0)) {
-      max_col_num_in_blob = std::max(max_col_num_in_blob, out_blob->col_num(i));
-    }
-    out_blob->set_max_col_id(max_col_num_in_blob - 1);
-  }
+  TODO();
 }
 
 ADD_CPU_DEFAULT_KERNEL_CREATOR(OperatorConf::kBoxingConf, BoxingKernel, ARITHMETIC_DATA_TYPE_SEQ);

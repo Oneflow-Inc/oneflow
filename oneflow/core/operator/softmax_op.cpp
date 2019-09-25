@@ -39,7 +39,7 @@ Maybe<void> SoftmaxOp::InferBlobDescs(
   // temp storage for RowMax etc.
   BlobDesc* fw_buf_blob_desc = GetBlobDesc4BnInOp("fw_buf");
   fw_buf_blob_desc->mut_shape() =
-      Shape({static_cast<int64_t>(RtBlobDesc(*in_blob_desc).ByteSizeOfDataContentField())});
+      Shape({static_cast<int64_t>(RtBlobDesc(*in_blob_desc).ByteSizeOfBlobBody())});
   fw_buf_blob_desc->set_data_type(DataType::kChar);
   if (op_ctx->need_transpose) {
     // transpose blob

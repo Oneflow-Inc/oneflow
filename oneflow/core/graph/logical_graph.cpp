@@ -220,7 +220,11 @@ void LogicalGraph::AddNcclAllReduce(LogicalNode* src, LogicalNode* dst) {
   OperatorConf nccl_all_reduce_op_conf{};
   nccl_all_reduce_op_conf.set_name("nccl_all_reduce_" + NewUniqueId());
   nccl_all_reduce_op_conf.set_device_type(src_pd->device_type());
-  nccl_all_reduce_op_conf.mutable_nccl_all_reduce_conf();
+  NcclAllReduceOpConf* nccl_all_reduce_conf =
+      nccl_all_reduce_op_conf.mutable_nccl_all_reduce_conf();
+  nccl_all_reduce_conf->set_in(
+      GenLogicalBlobName(src->SoleOp()->BnInOp2Lbi(src->SoleOp()->SoleObn())));
+  nccl_all_reduce_conf->set_out("out");
   NcclAllReduceLogicalNode* nccl_all_reduce_node = NewNode<NcclAllReduceLogicalNode>();
   nccl_all_reduce_node->mut_op_vec() = {ConstructOp(nccl_all_reduce_op_conf, &GlobalJobDesc())};
   nccl_all_reduce_node->mut_parallel_desc() = src_pd;
@@ -292,7 +296,9 @@ void LogicalGraph::ForEachNecessaryCtrlEdge(
       for (const auto& ctrl_in_op_name : op->op_conf().ctrl_in_op_name()) {
         const LogicalNode* src = op_name2node.at(ctrl_in_op_name);
         CHECK(!IsReachable(dst, src));
-        if (!IsReachable(src, dst)) {
+        if (!IsReachable(src, dst)
+            || (dynamic_cast<const NcclTupleBroadcastLogicalNode*>(src) != nullptr
+                && dynamic_cast<const NcclTupleReduceLogicalNode*>(dst) != nullptr)) {
           CHECK(src->parallel_desc()->EqualsIgnoringDeviceType(*dst->parallel_desc()));
           const Shape* src_time_shape = src->out_blob_time_shape();
           if (src_time_shape == nullptr) { src_time_shape = src->in_blob_fastest_time_shape(); }

@@ -62,11 +62,13 @@ message JobConfigProto {
   optional int32 cudnn_conv_force_bwd_data_algo = 203;
   optional int32 cudnn_conv_force_bwd_filter_algo = 204;
   
-  optional bool enable_mem_sharing = 300 [default = true];
+  optional bool enable_reuse_mem = 300 [default = true];
   optional bool enable_inplace = 301 [default = true];
+  optional bool enable_inplace_in_reduce_struct = 302 [default = true];
 
   optional bool enable_nccl = 400 [default = true];
   optional bool use_nccl_inter_node_communication = 401 [default = true];
+  optional bool use_boxing_v2 = 402 [default = false];
 
   optional bool enable_all_reduce_group = 500 [default = true];
   optional int64 all_reduce_group_num = 501 [default = 8];
@@ -84,7 +86,9 @@ message JobConfigProto {
   // You can see the actual number of reduce group is slightly bigger than all_reduce_group_num.
   optional float all_reduce_group_size_warmup = 504 [default = 2];
   optional bool all_reduce_fp16 = 505 [default = true];
-  
+  optional bool enable_non_distributed_optimizer = 506 [default = false];
+  optional int64 non_distributed_optimizer_group_size_mbyte = 507 [default = 100];
+
   optional bool enable_true_half_config_when_conv = 600 [default = false];
   optional bool enable_float_compute_for_half_gemm = 601 [default = true];
   optional bool enable_auto_mixed_precision = 602 [default = false];

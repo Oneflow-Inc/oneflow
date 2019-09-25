@@ -7,20 +7,17 @@ int64_t IDMgr::GetGpuH2DThrdId(int64_t dev_phy_id) const { return gpu_device_num
 int64_t IDMgr::GetGpuD2HThrdId(int64_t dev_phy_id) const {
   return gpu_device_num_ * 2 + dev_phy_id;
 }
-int64_t IDMgr::GetGpuNcclScatterThrdId(int64_t dev_phy_id) const {
+int64_t IDMgr::GetGpuNcclThrdId(int64_t dev_phy_id) const {
   return gpu_device_num_ * 3 + dev_phy_id;
 }
-int64_t IDMgr::GetGpuNcclGatherThrdId(int64_t dev_phy_id) const {
+int64_t IDMgr::GetGpuMixThrdId(int64_t dev_phy_id) const {
   return gpu_device_num_ * 4 + dev_phy_id;
 }
-int64_t IDMgr::GetGpuMixThrdId(int64_t dev_phy_id) const {
+int64_t IDMgr::GetGpuReduceCtrlThrdId(int64_t dev_phy_id) const {
   return gpu_device_num_ * 5 + dev_phy_id;
 }
-int64_t IDMgr::GetGpuReduceCtrlThrdId(int64_t dev_phy_id) const {
-  return gpu_device_num_ * 6 + dev_phy_id;
-}
 int64_t IDMgr::GetGpuMdUpdtThrdId(int64_t dev_phy_id) const {
-  return gpu_device_num_ * 7 + dev_phy_id;
+  return gpu_device_num_ * 6 + dev_phy_id;
 }
 int64_t IDMgr::GetCpuDeviceThrdId(int64_t dev_phy_id) const {
   return gpu_device_num_ * GetCudaWorkTypeSize() + dev_phy_id;
@@ -111,7 +108,6 @@ IDMgr::IDMgr() {
   cpu_device_num_ = Global<ResourceDesc>::Get()->CpuDeviceNum();
   CHECK_LT(gpu_device_num_ + cpu_device_num_, (static_cast<int64_t>(1) << thread_id_bit_num_) - 3);
   regst_desc_id_count_ = 0;
-  mem_shared_id_count_ = 0;
   mem_block_id_count_ = 0;
   base_independent_thrd_id_ = TickTockThrdId() + 1;
 }

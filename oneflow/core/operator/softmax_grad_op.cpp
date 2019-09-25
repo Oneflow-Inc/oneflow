@@ -45,7 +45,7 @@ Maybe<void> SoftmaxGradOp::InferBlobDescs(
   // temp storage for RowMax etc.
   BlobDesc* bw_buf_blob_desc = GetBlobDesc4BnInOp("bw_buf");
   bw_buf_blob_desc->mut_shape() =
-      Shape({static_cast<int64_t>(RtBlobDesc(*dx_blob_desc).ByteSizeOfDataContentField())});
+      Shape({static_cast<int64_t>(RtBlobDesc(*dx_blob_desc).ByteSizeOfBlobBody())});
   bw_buf_blob_desc->set_data_type(DataType::kChar);
   EnrollOpCtx(op_ctx);
   return Maybe<void>::Ok();

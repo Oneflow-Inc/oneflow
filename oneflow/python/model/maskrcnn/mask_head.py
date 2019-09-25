@@ -1,3 +1,6 @@
+import oneflow as flow
+
+
 class MaskHead(object):
     def __init__(self, cfg):
         self.cfg = cfg
@@ -30,22 +33,22 @@ class MaskHead(object):
 
             gt_segm_list = []
             gt_label_list = []
-            for img_idx in range(cfg.TRAINING.IMG_PER_GPUl):
+            for img_idx in range(self.cfg.TRAINING_CONF.IMG_PER_GPU):
                 gt_segm_list.append(
                     flow.local_gather(
-                        gt_segms[img_idxl], pos_gt_indices[img_idx]
+                        gt_segms[img_idx], pos_gt_indices[img_idx]
                     )
                 )
                 gt_label_list.append(
                     flow.local_gather(
-                        gt_labels[img_idxl], pos_gt_indices[img_idx]
+                        gt_labels[img_idx], pos_gt_indices[img_idx]
                     )
                 )
             gt_segms = flow.concat(gt_segm_list, axis=0)
             gt_labels = flow.concat(gt_label_list, axis=0)
-            elem_cnt = flow.math.elem_cnt(gt_labels)
+            elem_cnt = flow.elem_cnt(gt_labels)
 
-            mask_pred = flow.keras.math.sigmoid(
+            mask_pred = flow.keras.activations.sigmoid(
                 flow.squeeze(
                     flow.gather(
                         params=mask_fcn_logits,
@@ -58,7 +61,9 @@ class MaskHead(object):
 
             mask_loss = (
                 flow.math.reduce_sum(
-                    flow.binary_cross_entropy(mask_pred, gt_segms)
+                    flow.nn.sigmoid_cross_entropy_with_logits(
+                        gt_segms, mask_pred
+                    )
                 )
                 / elem_cnt
             )
@@ -84,7 +89,7 @@ class MaskHead(object):
             axis=1,
         )
         roi_features_0 = flow.detection.roi_align(
-            in_blob=features[0],
+            features[0],
             rois=flow.local_gather(
                 proposals_with_img_ids, flow.squeeze(level_idx_2, axis=[1])
             ),
@@ -94,7 +99,7 @@ class MaskHead(object):
             sampling_ratio=self.cfg.BOX_HEAD.SAMPLING_RATIO,
         )
         roi_features_1 = flow.detection.roi_align(
-            in_blob=features[1],
+            features[1],
             rois=flow.local_gather(
                 proposals_with_img_ids, flow.squeeze(level_idx_3, axis=[1])
             ),
@@ -104,7 +109,7 @@ class MaskHead(object):
             sampling_ratio=self.cfg.BOX_HEAD.SAMPLING_RATIO,
         )
         roi_features_2 = flow.detection.roi_align(
-            in_blob=features[2],
+            features[2],
             rois=flow.local_gather(
                 proposals_with_img_ids, flow.squeeze(level_idx_4, axis=[1])
             ),
@@ -114,7 +119,7 @@ class MaskHead(object):
             sampling_ratio=self.cfg.BOX_HEAD.SAMPLING_RATIO,
         )
         roi_features_3 = flow.detection.roi_align(
-            in_blob=features[3],
+            features[3],
             rois=flow.local_gather(
                 proposals_with_img_ids, flow.squeeze(level_idx_5, axis=[1])
             ),
@@ -142,7 +147,7 @@ class MaskHead(object):
                 padding="SAME",
                 data_format="NCHW",
                 dilation_rate=[1, 1],
-                activation=flow.keras.math.relu,
+                activation=flow.keras.activations.relu,
                 use_bias=True,
                 name="fcn{}".format(i),
             )
@@ -150,17 +155,21 @@ class MaskHead(object):
         return x
 
     def mask_predictor(self, x):
-        x = flow.detection.deconv(
+        filter = flow.get_variable(
+            "conv5-weight",
+            shape=(x.static_shape[1], 256, 2, 2),
+            dtype=x.dtype,
+            initializer=flow.constant_initializer(0),
+        )
+        x = flow.nn.conv2d_transpose(
             x,
-            filters=256,
-            kernel_size=[2, 2],
-            data_format="channels_first",
+            filter=filter,
+            data_format="NCHW",
             padding="same",
             strides=[2, 2],
-            activation=flow.keras.math.relu,
             name="conv5",
         )
-
+        x = flow.keras.activations.relu(x)
         x = flow.layers.conv2d(
             x,
             filters=81,

@@ -197,6 +197,12 @@ inline bool operator==(const OpBlobArg& lhs, const OpBlobArg& rhs) {
 
 inline bool operator!=(const OpBlobArg& lhs, const OpBlobArg& rhs) { return !(lhs == rhs); }
 
+inline bool operator==(const BlobDescProto& lhs, const BlobDescProto& rhs) {
+  return PbMd().Equivalent(lhs, rhs);
+}
+
+inline bool operator!=(const BlobDescProto& lhs, const BlobDescProto& rhs) { return !(lhs == rhs); }
+
 // Persistent
 
 PersistentOutStream& operator<<(PersistentOutStream&, const PbMessage&);

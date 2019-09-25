@@ -234,7 +234,6 @@ message MaxPooling3DOpConf {
   repeated int32 strides = 6;
 }
 
-
 message PoolingConf {
   required int32 num_spatial_dims = 1;
   // "avg" or "max"
@@ -476,6 +475,12 @@ message AdamModelUpdateConf {
   optional bool do_bias_correction = 4 [default = false];
 }
 
+message LazyAdamModelUpdateConf {
+  optional float beta1 = 1 [default = 0.9];
+  optional float beta2 = 2 [default = 0.999];
+  optional float epsilon = 3 [default = 1e-8];
+}
+
 message ExponentialDecayConf {
   required int64 decay_batches = 1;
   required double decay_rate = 2;
@@ -568,6 +573,7 @@ message NormalModelUpdateOpUserConf {
     RMSPropModelUpdateConf rmsprop_conf = 1002;
     LARSModelUpdateConf lars_conf = 1003;
     AdamModelUpdateConf adam_conf = 1004;
+    LazyAdamModelUpdateConf lazy_adam_conf = 1005;
   }
 }
 
@@ -629,6 +635,21 @@ message LARSModelUpdateOpConf {
 }
 
 message AdamModelUpdateOpConf {
+  required NormalModelUpdateOpUserConf user_conf = 1;
+  required string m = 2;
+  required string v = 3;
+  optional string beta1_t = 4;
+  optional string beta2_t = 5;
+  required string model_diff = 6;
+  required string total_instance_num_diff = 7;
+  required string model = 8;
+  required string train_step = 9;
+  required string learning_rate = 10;
+  required float l1 = 11;
+  required float l2 = 12;
+}
+
+message LazyAdamModelUpdateOpConf {
   required NormalModelUpdateOpUserConf user_conf = 1;
   required string m = 2;
   required string v = 3;
@@ -734,12 +755,8 @@ message CastOpConf {
 message InterfaceBlobConf {
   required ShapeProto shape = 1;
   required DataType data_type = 2;
-  optional ShapeProto dim0_inner_shape = 3;
-  optional bool has_dim0_valid_num = 4;
-  optional bool has_dim1_valid_num = 5;
-  optional bool has_dim2_valid_num = 6;
-  optional OptInt64 split_axis = 7;
-  required OptInt64 batch_axis = 8;
+  optional OptInt64 split_axis = 3;
+  required OptInt64 batch_axis = 4;
 }
 
 message InputOpConf {
@@ -973,9 +990,26 @@ message NcclReduceScatterOpConf {
 message NcclAllGatherOpConf {
 }
 
+message NcclTupleBroadcastOpConf {
+  optional string tick = 1;
+  repeated string in = 2;
+  repeated string out = 3;
+  repeated int64 root = 4;
+  repeated DataType data_type = 5;
+  repeated ShapeProto shape = 6;
+  optional int64 nccl_order_hint = 7 [default = 0];
+}
+
+message NcclTupleReduceOpConf {
+  repeated string in = 1;
+  repeated string out = 2;
+  repeated int64 root = 3;
+  optional int64 nccl_order_hint = 4 [default = 0];
+}
+
 message ReduceSplitOpConf {
   required int32 out_num = 1;
-  optional string in = 2;
+  required string in = 2;
   repeated string out = 3;
   repeated ShapeProto out_shape = 4;
   optional int32 order_in_graph = 5;
@@ -1733,6 +1767,25 @@ message ElementCountOpConf {
   optional DataType data_type = 5;
 }
 
+message NcclBoxingReduceScatterOpConf {
+  required LogicalBlobId lbi = 1;
+}
+
+message NcclBoxingAllGatherOpConf {
+  required LogicalBlobId lbi = 1;
+}
+
+message NcclBoxingAllReduceOpConf {
+  required LogicalBlobId lbi = 1;
+}
+
+message SyncDynamicResizeOpConf {
+  required string in = 1;
+  required string size = 2;
+  required string out = 3;
+  required int64 axis = 4;
+}
+
 message OperatorConf {
   required string name = 1;
   optional bool trainable = 3 [default = true];
@@ -1785,8 +1838,14 @@ message OperatorConf {
     AccTickOpConf acc_tick_conf = 144;
     SwitchOutputOpConf switch_output_conf = 145;
     ReturnOpConf return_conf = 146;
-    PartialTickOpConf partial_tick_conf = 147;
-    ForeignWatchOpConf foreign_watch_conf = 148;
+    NcclTupleBroadcastOpConf nccl_tuple_broadcast_conf = 147;
+    NcclTupleReduceOpConf nccl_tuple_reduce_conf = 148;
+    PartialTickOpConf partial_tick_conf = 149;
+    LazyAdamModelUpdateOpConf lazy_adam_model_update_conf = 150;
+    ForeignWatchOpConf foreign_watch_conf = 151;
+    NcclBoxingReduceScatterOpConf nccl_boxing_reduce_scatter_conf = 152;
+    NcclBoxingAllGatherOpConf nccl_boxing_all_gather_conf = 153;
+    NcclBoxingAllReduceOpConf nccl_boxing_all_reduce_conf = 154;
 
     // domain op
     TupleIdentityOpConf tuple_identity_conf = 200;
@@ -1889,7 +1948,8 @@ message OperatorConf {
     SmoothL1OpConf smooth_l1_conf = 318;
     UpsampleNearestOpConf upsample_nearest_conf = 319;
     ElementCountOpConf element_count_conf = 320;
-    UpsampleNearestGradOpConf upsample_nearest_grad_conf = 321;
+    SyncDynamicResizeOpConf sync_dynamic_resize_conf = 321;
+    UpsampleNearestGradOpConf upsample_nearest_grad_conf = 322;
 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;

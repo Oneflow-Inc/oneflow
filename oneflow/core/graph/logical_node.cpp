@@ -19,6 +19,8 @@
 #include "oneflow/core/graph/task_graph.h"
 #include "oneflow/core/graph/reduce_identity_task_node.h"
 #include "oneflow/core/graph/op_graph.h"
+#include "oneflow/core/graph/nccl_tuple_broadcast_compute_task_node.h"
+#include "oneflow/core/graph/nccl_tuple_reduce_compute_task_node.h"
 
 namespace oneflow {
 
@@ -203,12 +205,8 @@ void LogicalNode::GenSortedCompTaskNodes(
             comp_task_node->set_thrd_id(id_mgr->GetGpuD2HThrdId(dev_phy_id));
             break;
           }
-          case CudaWorkType::kNcclScatter: {
-            comp_task_node->set_thrd_id(id_mgr->GetGpuNcclScatterThrdId(dev_phy_id));
-            break;
-          }
-          case CudaWorkType::kNcclGather: {
-            comp_task_node->set_thrd_id(id_mgr->GetGpuNcclGatherThrdId(dev_phy_id));
+          case CudaWorkType::kNccl: {
+            comp_task_node->set_thrd_id(id_mgr->GetGpuNcclThrdId(dev_phy_id));
             break;
           }
           case CudaWorkType::kMix: {
@@ -339,6 +337,21 @@ REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceGather"
 REGISTER_BLD_SUB_TSK_GPH_MTHD("NcclAllGather"
                               "ReduceSplit",
                               &TaskGraph::BldSubTskGphByOneToOne);
+REGISTER_BLD_SUB_TSK_GPH_MTHD("NormalForward"
+                              "NcclTupleBroadcast",
+                              &TaskGraph::BldSubTskGphByConnectNodeOnSameGpuDevice);
+REGISTER_BLD_SUB_TSK_GPH_MTHD("NcclTupleBroadcast"
+                              "NormalForward",
+                              &TaskGraph::BldSubTskGphByOneToOne);
+REGISTER_BLD_SUB_TSK_GPH_MTHD("NormalForward"
+                              "NcclTupleReduce",
+                              &TaskGraph::BldSubTskGphByOneToOne);
+REGISTER_BLD_SUB_TSK_GPH_MTHD("NcclTupleReduce"
+                              "NormalForward",
+                              &TaskGraph::BldSubTskGphByConnectNodeOnSameGpuDevice);
+REGISTER_BLD_SUB_TSK_GPH_MTHD("NcclTupleReduce"
+                              "Optimizer",
+                              &TaskGraph::BldSubTskGphByConnectNodeOnSameGpuDevice);
 
 BldBoxingOpConfMthd GetMthdForBldBoxingOpConf(const LogicalNode* src, const LogicalNode* dst) {
   std::string k = ConcatTypeName(src, dst);
@@ -412,5 +425,20 @@ int32_t ReduceSplitLogicalNode::order_in_logical_graph() const {
     return order_in_logical_graph_;
   }
 }
+std::string NcclTupleBroadcastLogicalNode::TypeName() const { return "NcclTupleBroadcast"; }
+
+CompTaskNode* NcclTupleBroadcastLogicalNode::NewCompTaskNode() const {
+  return new NcclTupleBroadcastCompTaskNode;
+}
+
+int64_t NcclTupleBroadcastLogicalNode::GetAreaId() const { return kMdUpdtArea; }
+
+std::string NcclTupleReduceLogicalNode::TypeName() const { return "NcclTupleReduce"; }
+
+CompTaskNode* NcclTupleReduceLogicalNode::NewCompTaskNode() const {
+  return new NcclTupleReduceCompTaskNode;
+}
+
+int64_t NcclTupleReduceLogicalNode::GetAreaId() const { return kMdUpdtArea; }
 
 }  // namespace oneflow
