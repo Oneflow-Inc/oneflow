@@ -1714,6 +1714,12 @@ message UpsampleNearestOpConf {
   required string data_format = 4;
 }
 
+message UpsampleNearestGradOpConf {
+  required string dy = 1;
+  required string dx = 2;
+  required int32 scale = 3;
+}
+
 message PieceSliceOpConf {
   required string in = 1;
   repeated string out = 2;
@@ -1883,6 +1889,7 @@ message OperatorConf {
     SmoothL1OpConf smooth_l1_conf = 318;
     UpsampleNearestOpConf upsample_nearest_conf = 319;
     ElementCountOpConf element_count_conf = 320;
+    UpsampleNearestGradOpConf upsample_nearest_grad_conf = 321;
 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;
