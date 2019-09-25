@@ -25,7 +25,7 @@ bool DenseShapeView::operator==(const DenseShapeView& rhs) const {
 }
 
 int64_t DenseShapeView::At(int64_t index) const {
-  CHECK_GT(index, 0);
+  CHECK_GE(index, 0);
   CHECK_LT(index, num_axes_);
   return ptr_[index];
 }
