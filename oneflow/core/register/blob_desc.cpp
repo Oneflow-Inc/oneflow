@@ -103,6 +103,13 @@ void BlobDesc::CopyFrom(const BlobDesc& other) {
   this->InitFromProto(proto);
 }
 
+//TODO(niuchong) : remove is_body_disabled from blob into register
+void BlobDesc::CopyMetaFrom(const BlobDesc& other) {
+  bool tmp = is_body_disabled_;
+  CopyFrom(other);
+  is_body_disabled_ = tmp;
+}
+
 void BlobDesc::SetLoD(int64_t num_of_lod_levels) {
   CHECK_GT(num_of_lod_levels, 1);
   CHECK_LT(num_of_lod_levels, shape().NumAxes());
