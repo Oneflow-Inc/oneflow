@@ -542,6 +542,7 @@ bool NeedAllocateMemory(const RegstDescTypeProto& regst_desc_type) {
 void FinishGlobalCriticalSectionDesc(const std::vector<Plan>& plans) {
   std::vector<HashMap<std::string, HashSet<int64_t>>> job_id2sole_op_name2mem_block_ids;
   std::vector<HashSet<int64_t>> job_id2mem_block_ids;
+  std::vector<HashSet<int64_t>> job_id2chunk_ids;
   for (const auto& plan : plans) {
     job_id2sole_op_name2mem_block_ids.push_back(HashMap<std::string, HashSet<int64_t>>());
     auto* sole_op_name2mem_block_ids = &job_id2sole_op_name2mem_block_ids.back();
@@ -565,6 +566,13 @@ void FinishGlobalCriticalSectionDesc(const std::vector<Plan>& plans) {
       }
     }
   }
+
+  for (const auto& plan : plans) {
+    for (const auto& chunk : plan.chunk()) {
+      for (int64_t job_id : chunk.job_id()) { job_id2chunk_ids[job_id].insert(chunk.chunk_id()); }
+    }
+  }
+
   HashMap<int64_t, HashSet<int64_t>> job_id2input_output_mem_block_ids;
   auto* critical_section_desc = Global<CriticalSectionDesc>::Get();
   // set mem_block_id for InputOutputCriticalSection
@@ -606,6 +614,8 @@ void FinishGlobalCriticalSectionDesc(const std::vector<Plan>& plans) {
         }
       }
       *critical_section->mutable_mem_block_id() = {mem_block_ids->begin(), mem_block_ids->end()};
+      *critical_section->mutable_chunk_id() = {job_id2chunk_ids[job_id].begin(),
+                                               job_id2chunk_ids[job_id].end()};
     }
   }
   critical_section_desc->Done();
