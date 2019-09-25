@@ -43,7 +43,7 @@ class MaskHead(object):
                 )
             gt_segms = flow.concat(gt_segm_list, axis=0)
             gt_labels = flow.concat(gt_label_list, axis=0)
-            elem_cnt = flow.math.elem_cnt(gt_labels)
+            elem_cnt = flow.elem_cnt(gt_labels)
 
             mask_pred = flow.keras.math.sigmoid(
                 flow.squeeze(
@@ -84,7 +84,7 @@ class MaskHead(object):
             axis=1,
         )
         roi_features_0 = flow.detection.roi_align(
-            in_blob=features[0],
+            features[0],
             rois=flow.local_gather(
                 proposals_with_img_ids, flow.squeeze(level_idx_2, axis=[1])
             ),
@@ -94,7 +94,7 @@ class MaskHead(object):
             sampling_ratio=self.cfg.BOX_HEAD.SAMPLING_RATIO,
         )
         roi_features_1 = flow.detection.roi_align(
-            in_blob=features[1],
+            features[1],
             rois=flow.local_gather(
                 proposals_with_img_ids, flow.squeeze(level_idx_3, axis=[1])
             ),
@@ -104,7 +104,7 @@ class MaskHead(object):
             sampling_ratio=self.cfg.BOX_HEAD.SAMPLING_RATIO,
         )
         roi_features_2 = flow.detection.roi_align(
-            in_blob=features[2],
+            features[2],
             rois=flow.local_gather(
                 proposals_with_img_ids, flow.squeeze(level_idx_4, axis=[1])
             ),
@@ -114,7 +114,7 @@ class MaskHead(object):
             sampling_ratio=self.cfg.BOX_HEAD.SAMPLING_RATIO,
         )
         roi_features_3 = flow.detection.roi_align(
-            in_blob=features[3],
+            features[3],
             rois=flow.local_gather(
                 proposals_with_img_ids, flow.squeeze(level_idx_5, axis=[1])
             ),
