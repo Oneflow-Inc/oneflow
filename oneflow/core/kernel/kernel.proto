@@ -184,19 +184,20 @@ message KernelConf {
   required OpAttribute op_attribute = 1;
   required bool is_forward = 2;
   required DataType data_type = 3;
-  optional bool need_forward_lod = 4 [default = false];
-  optional bool need_forward_dense_shape = 5 [default = false];
+  optional bool need_forward_opaque_header = 4 [default = false];
+  optional bool need_forward_lod = 5 [default = false];
+  optional bool need_forward_dense_shape = 6 [default = false];
 
   // legacy fields
-  optional bool need_do_data_id = 6 [default = false];
-  optional bool need_do_col_num = 7 [default = false];
-  optional bool need_do_opaque_header = 8 [default = false];
-  optional bool need_do_dim0_valid_num = 9 [default = false];
-  optional bool need_do_dim1_valid_num = 10 [default = false];
-  optional bool need_do_dim2_valid_num = 11 [default = false];
-  optional bool need_do_record_id_in_device_piece = 12 [default = false];
-  optional bool can_naive_do_dim0_valid_num = 13 [default = false];
-  optional bool can_naive_do_record_id_in_device_piece = 14 [default = false];
+  optional bool need_do_data_id = 7 [default = false];
+  optional bool need_do_col_num = 8 [default = false];
+  optional bool need_do_opaque_header = 9 [default = false];
+  optional bool need_do_dim0_valid_num = 10 [default = false];
+  optional bool need_do_dim1_valid_num = 11 [default = false];
+  optional bool need_do_dim2_valid_num = 12 [default = false];
+  optional bool need_do_record_id_in_device_piece = 13 [default = false];
+  optional bool can_naive_do_dim0_valid_num = 14 [default = false];
+  optional bool can_naive_do_record_id_in_device_piece = 15 [default = false];
 
   oneof kernel_type {
     SparseSoftmaxCrossEntropyLossKernelConf sparse_softmax_cross_entropy_loss_conf = 101;

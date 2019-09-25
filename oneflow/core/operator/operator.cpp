@@ -17,6 +17,35 @@ DataType GetDataTypeFromBnInOpVec(
   return DataType::kInvalidDataType;
 }
 
+bool DoAnyBlobDescWithMemberFuncTrue(
+    std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const PbRpf<std::string>& bn_in_ops, bool (BlobDesc::*member_func)() const) {
+  for (const std::string& bn_in_op : bn_in_ops) {
+    const BlobDesc* blob_desc = GetBlobDesc4BnInOp(bn_in_op);
+    if (blob_desc && (blob_desc->*member_func)()) { return true; }
+  }
+  return false;
+}
+
+bool DoAllBlobDescWithMemberFuncTrue(
+    std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const PbRpf<std::string>& bn_in_ops, bool (BlobDesc::*member_func)() const) {
+  for (const std::string& bn_in_op : bn_in_ops) {
+    const BlobDesc* blob_desc = GetBlobDesc4BnInOp(bn_in_op);
+    if (blob_desc && !(blob_desc->*member_func)()) { return false; }
+  }
+  return true;
+}
+
+bool DoAnyBlobDescHasLoD(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                         const PbRpf<std::string>& bn_in_ops) {
+  for (const std::string& bn_in_op : bn_in_ops) {
+    const BlobDesc* blob_desc = GetBlobDesc4BnInOp(bn_in_op);
+    if (blob_desc && (blob_desc->num_of_lod_levels() > 0)) { return true; }
+  }
+  return false;
+}
+
 }  // namespace
 
 void Operator::InitFromOpConf(const OperatorConf& op_conf) {
@@ -193,11 +222,17 @@ void Operator::GenKernelConf(
     data_type = GetDataTypeFromBnInOpVec(GetBlobDesc4BnInOp, input_bns());
   }
   kernel_conf->set_data_type(data_type);
-  if (DoAnyBlobDescHasLoD(GetBlobDesc4BnInOp, output_bns())) {
-    kernel_conf->set_need_forward_lod(true);
-  }
-  if (DoAnyBlobDescIsDynamic(GetBlobDesc4BnInOp, output_bns())) {
-    kernel_conf->set_need_forward_dense_shape(true);
+
+  if (DoAnyBlobDescWithMemberFuncTrue(GetBlobDesc4BnInOp, output_bns(),
+                                      &BlobDesc::header_is_opaque)) {
+    kernel_conf->set_need_forward_opaque_header(true);
+  } else {
+    if (DoAnyBlobDescWithMemberFuncTrue(GetBlobDesc4BnInOp, output_bns(), &BlobDesc::is_dynamic)) {
+      kernel_conf->set_need_forward_dense_shape(true);
+    }
+    if (DoAnyBlobDescHasLoD(GetBlobDesc4BnInOp, output_bns())) {
+      kernel_conf->set_need_forward_lod(true);
+    }
   }
 
   VirtualGenKernelConf(GetBlobDesc4BnInOp, parallel_ctx, kernel_conf, op_ctx,
