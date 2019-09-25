@@ -195,6 +195,8 @@ def anchor_generate(
         name if name is not None else id_util.UniqueStr("AnchorGenerate_"),
     )
     assert isinstance(aspect_ratios, (list, tuple))
+    if isinstance(anchor_scales, (list, tuple)) == False:
+        anchor_scales = [anchor_scales]
     assert isinstance(anchor_scales, (list, tuple))
     setattr(op_conf.anchor_generate_conf, "images", images.logical_blob_name)
     op_conf.anchor_generate_conf.feature_map_stride = feature_map_stride
