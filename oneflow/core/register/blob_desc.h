@@ -24,7 +24,6 @@ class BlobDesc final {
 
   BlobDesc& operator=(const BlobDesc&);
 
-  void SetShape(const Shape&);
   void SetLoD(int64_t num_of_lod_levels);
   void SetOpaqueHeader(const StructPodDesc& header_pod_desc);
 
