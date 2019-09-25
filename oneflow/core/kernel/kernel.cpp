@@ -60,33 +60,38 @@ void Kernel::CheckSameDim0ValidNum(
 
 void Kernel::Forward(const KernelCtx& ctx,
                      std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  if (kernel_conf_.need_do_dim0_valid_num()) {
-    CHECK(!kernel_conf_.need_do_opaque_header());
-    ForwardDim0ValidNum(ctx, BnInOp2Blob);
+  // TODO(xfjiang): deal with empty blob
+  // Forward Header
+  if (kernel_conf_.need_forward_dense_shape()) {
+    CHECK_OR_RETURN(!kernel_conf_.need_forward_opaque_header());
+    ForwardDenseShape(ctx, BnInOp2Blob);
   }
-  if (HasEmptyShapeBlob(op_attribute().input_bns(), BnInOp2Blob) && !NeedForwardIfBlobEmpty()) {
-    ClearBlobDim0ValidNumIfNeed(op_attribute().output_bns(), BnInOp2Blob);
-    return;
+  if (kernel_conf_.need_forward_lod()) {
+    CHECK_OR_RETURN(!kernel_conf_.need_forward_opaque_header());
+    CHECK_OR_RETURN(kernel_conf_.need_forward_dense_shape());
+    ForwardLoD(ctx, BnInOp2Blob);
   }
-  if (kernel_conf_.need_do_dim1_valid_num()) {
-    CHECK(!kernel_conf_.need_do_opaque_header());
-    ForwardDim1ValidNum(ctx, BnInOp2Blob);
-  }
-  if (kernel_conf_.need_do_dim2_valid_num()) {
-    CHECK(!kernel_conf_.need_do_opaque_header());
-    ForwardDim2ValidNum(ctx, BnInOp2Blob);
-  }
-  if (kernel_conf_.need_do_record_id_in_device_piece()) {
-    CHECK(!kernel_conf_.need_do_opaque_header());
-    ForwardRecordIdInDevicePiece(ctx, BnInOp2Blob);
-  }
+  if (kernel_conf_.need_forward_opaque_header()) { ForwardOpaqueHeader(ctx, BnInOp2Blob); }
+  // Forward Body
   ForwardDataContent(ctx, BnInOp2Blob);
-  if (kernel_conf_.need_do_opaque_header()) {
-    ForwardPackedHeader(ctx, BnInOp2Blob);
-  } else {
-    if (kernel_conf_.need_do_data_id()) { ForwardDataId(ctx, BnInOp2Blob); }
-    if (kernel_conf_.need_do_col_num()) { ForwardColNum(ctx, BnInOp2Blob); }
-  }
+}
+
+template<DeviceType device_type>
+void KernelIf<device_type>::ForwardOpaqueHeader(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  // TODO
+}
+
+template<DeviceType device_type>
+void KernelIf<device_type>::ForwardDenseShape(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  // TODO
+}
+
+template<DeviceType device_type>
+void KernelIf<device_type>::ForwardLoD(const KernelCtx& ctx,
+                                       std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  // TODO
 }
 
 template<DeviceType device_type>

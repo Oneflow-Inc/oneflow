@@ -231,6 +231,7 @@ void Operator::GenKernelConf(
       kernel_conf->set_need_forward_dense_shape(true);
     }
     if (DoAnyBlobDescHasLoD(GetBlobDesc4BnInOp, output_bns())) {
+      // CHECK_OR_RETURN(kernel_conf->);
       kernel_conf->set_need_forward_lod(true);
     }
   }

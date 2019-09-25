@@ -44,4 +44,27 @@ void Blob::CopyHeaderFrom(DeviceCtx* device_ctx, const Blob* rhs) {
                            blob_desc().ByteSizeOfBlobHeader());
 }
 
+void Blob::CopyDenseShapeFrom(DeviceCtx* device_ctx, const Blob* rhs) {
+  const int64_t dense_shape_byte_size =
+      blob_desc().header_pod_desc().Field(FieldKey::kDenseShape).ByteSize();
+  if (this == rhs || dense_shape_byte_size == 0) { return; }
+  const int64_t rhs_dense_shape_byte_size =
+      rhs->blob_desc().header_pod_desc().Field(FieldKey::kDenseShape).ByteSize();
+  CHECK_EQ_OR_RETURN(dense_shape_byte_size, rhs_dense_shape_byte_size);
+  Memcpy<DeviceType::kCPU>(
+      device_ctx, rhs->mut_header_ptr()->MutTensorPtr<char>(FieldKey::kDenseShape, nullptr),
+      dense_shape_byte_size);
+}
+
+void Blob::CopyLoDFrom(DeviceCtx* device_ctx, const Blob* rhs) {
+  const int64_t lod_byte_size = blob_desc().header_pod_desc().Field(FieldKey::kLoD).ByteSize();
+  if (this == rhs || lod_byte_size == 0) { return; }
+  const int64_t rhs_lod_byte_size =
+      rhs->blob_desc().header_pod_desc().Field(FieldKey::kLoD).ByteSize();
+  CHECK_EQ_OR_RETURN(lod_byte_size, rhs_lod_byte_size);
+  Memcpy<DeviceType::kCPU>(device_ctx,
+                           rhs->mut_header_ptr()->MutTensorPtr<char>(FieldKey::kLoD, nullptr),
+                           lod_byte_size);
+}
+
 }  // namespace oneflow

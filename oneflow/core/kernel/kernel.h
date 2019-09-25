@@ -50,6 +50,18 @@ class Kernel {
                        std::function<Blob*(const std::string&)> BnInOp2Blob) const;
   virtual void ForwardDataContent(const KernelCtx& ctx,
                                   std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
+  virtual void ForwardOpaqueHeader(const KernelCtx& ctx,
+                                   std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+    UNIMPLEMENTED();
+  }
+  virtual void ForwardDenseShape(const KernelCtx& ctx,
+                                 std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+    UNIMPLEMENTED();
+  }
+  virtual void ForwardLoD(const KernelCtx& ctx,
+                          std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+    UNIMPLEMENTED();
+  }
   virtual void ForwardDataId(const KernelCtx& ctx,
                              std::function<Blob*(const std::string&)> BnInOp2Blob) const {
     UNIMPLEMENTED();
@@ -121,6 +133,12 @@ class KernelIf : public Kernel {
  protected:
   KernelIf() = default;
 
+  virtual void ForwardOpaqueHeader(
+      const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  virtual void ForwardDenseShape(
+      const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  virtual void ForwardLoD(const KernelCtx& ctx,
+                          std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   virtual void ForwardDataId(const KernelCtx& ctx,
                              std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   virtual void ForwardColNum(const KernelCtx& ctx,
