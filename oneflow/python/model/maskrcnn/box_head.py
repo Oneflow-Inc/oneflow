@@ -1,6 +1,7 @@
 from matcher import Matcher
 import oneflow as flow
 
+
 class BoxHead(object):
     def __init__(self, cfg):
         self.cfg = cfg
@@ -113,14 +114,11 @@ class BoxHead(object):
             bbox_regression, cls_logits = self.box_predictor(x)
 
             # construct cls loss
-            total_elem_cnt = flow.math.elem_cnt(labels)
+            total_elem_cnt = flow.elem_cnt(labels)
             box_head_cls_loss = (
                 flow.math.reduce_sum(
-                    # TODO: add sparse cross entropy python interface
-                    self.dl_net.SparseCrossEntropy(
-                        flow.nn.softmax(cls_logits),
-                        labels,
-                        name="sparse_cross_entropy",
+                    flow.nn.sparse_softmax_cross_entropy_with_logits(
+                        labels, cls_logits, name="sparse_cross_entropy"
                     )
                 )
                 / total_elem_cnt
@@ -178,7 +176,7 @@ class BoxHead(object):
             axis=1,
         )
         roi_features_0 = flow.detection.roi_align(
-            in_blob=features[0],
+            features[0],
             rois=flow.local_gather(
                 proposals_with_img_ids, flow.squeeze(level_idx_2, axis=[1])
             ),
@@ -188,7 +186,7 @@ class BoxHead(object):
             sampling_ratio=self.cfg.BOX_HEAD.SAMPLING_RATIO,
         )
         roi_features_1 = flow.detection.roi_align(
-            in_blob=features[1],
+            features[1],
             rois=flow.local_gather(
                 proposals_with_img_ids, flow.squeeze(level_idx_3, axis=[1])
             ),
@@ -198,7 +196,7 @@ class BoxHead(object):
             sampling_ratio=self.cfg.BOX_HEAD.SAMPLING_RATIO,
         )
         roi_features_2 = flow.detection.roi_align(
-            in_blob=features[2],
+            features[2],
             rois=flow.local_gather(
                 proposals_with_img_ids, flow.squeeze(level_idx_4, axis=[1])
             ),
@@ -208,7 +206,7 @@ class BoxHead(object):
             sampling_ratio=self.cfg.BOX_HEAD.SAMPLING_RATIO,
         )
         roi_features_3 = flow.detection.roi_align(
-            in_blob=features[3],
+            features[3],
             rois=flow.local_gather(
                 proposals_with_img_ids, flow.squeeze(level_idx_5, axis=[1])
             ),
@@ -254,7 +252,7 @@ class BoxHead(object):
         )
         cls_logits = flow.layers.dense(
             inputs=x,
-            uniti=self.cfg.BOX_HEAD.NUM_CLASSES,
+            units=self.cfg.BOX_HEAD.NUM_CLASSES,
             activation=None,
             use_bias=True,
             name="cls_score",
