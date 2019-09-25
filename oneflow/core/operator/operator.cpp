@@ -184,9 +184,9 @@ Maybe<void> Operator::InferSbpSignature(
 
 namespace {
 
-bool HasBlobDescWithField(
-    std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const PbRpf<std::string>& bn_in_ops, std::function<bool(const BlobDesc*)> Predicator4BlobDesc) {
+bool HasBlobDescWithField(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                          const PbRpf<std::string>& bn_in_ops,
+                          std::function<bool(const BlobDesc*)> Predicator4BlobDesc) {
   for (const std::string& bn_in_op : bn_in_ops) {
     const BlobDesc* blob_desc = GetBlobDesc4BnInOp(bn_in_op);
     if (blob_desc && Predicator4BlobDesc(blob_desc)) { return true; }
@@ -194,7 +194,7 @@ bool HasBlobDescWithField(
   return false;
 }
 
-}
+}  // namespace
 
 void Operator::GenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, bool is_forward,
@@ -203,16 +203,18 @@ void Operator::GenKernelConf(
   *(kernel_conf->mutable_op_attribute()) = op_attribute_;
   kernel_conf->set_is_forward(is_forward);
 
-  if (HasBlobDescWithField(GetBlobDesc4BnInOp, output_bns(),
-        [](const BlobDesc* blob_desc) { return blob_desc->header_is_opaque(); })) {
+  if (HasBlobDescWithField(GetBlobDesc4BnInOp, output_bns(), [](const BlobDesc* blob_desc) {
+        return blob_desc->header_is_opaque();
+      })) {
     kernel_conf->set_need_do_opaque_header(true);
   } else {
     if (HasBlobDescWithField(GetBlobDesc4BnInOp, output_bns(),
-        [](const BlobDesc* blob_desc) { return blob_desc->is_dynamic(); })) {
+                             [](const BlobDesc* blob_desc) { return blob_desc->is_dynamic(); })) {
       kernel_conf->set_need_do_dense_shape(true);
     }
-    if (HasBlobDescWithField(GetBlobDesc4BnInOp, output_bns(),
-        [](const BlobDesc* blob_desc) { return blob_desc->num_of_lod_levels() > 0; })) {
+    if (HasBlobDescWithField(GetBlobDesc4BnInOp, output_bns(), [](const BlobDesc* blob_desc) {
+          return blob_desc->num_of_lod_levels() > 0;
+        })) {
       kernel_conf->set_need_do_lod(true);
     }
   }

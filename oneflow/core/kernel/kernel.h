@@ -49,12 +49,12 @@ class Kernel {
   virtual void Forward(const KernelCtx& ctx,
                        std::function<Blob*(const std::string&)> BnInOp2Blob) const;
   virtual void ForwardHeader(const KernelCtx& ctx,
-                       std::function<Blob*(const std::string&)> BnInOp2Blob) const;
+                             std::function<Blob*(const std::string&)> BnInOp2Blob) const;
   virtual void ForwardLoD(const KernelCtx& ctx,
-                       std::function<Blob*(const std::string&)> BnInOp2Blob) const;
+                          std::function<Blob*(const std::string&)> BnInOp2Blob) const;
   virtual void ForwardDenseShape(const KernelCtx& ctx,
-                       std::function<Blob*(const std::string&)> BnInOp2Blob) const;
-  //TODO(niuchong) : rename ForwardDataContent to ForwardBody
+                                 std::function<Blob*(const std::string&)> BnInOp2Blob) const;
+  // TODO(niuchong) : rename ForwardDataContent to ForwardBody
   virtual void ForwardDataContent(const KernelCtx& ctx,
                                   std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
   virtual void ForwardDataId(const KernelCtx& ctx,
