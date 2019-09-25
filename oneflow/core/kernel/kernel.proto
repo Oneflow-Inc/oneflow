@@ -175,7 +175,7 @@ message GatherMs0GradKernelConf {
 message KernelConf {
   required OpAttribute op_attribute = 1;
   required DataType data_type = 2;
-  required ParallelContext parallel_ctx = 3;
+  optional ParallelContext parallel_ctx = 3;
   optional bool need_do_opaque_header = 4 [default = false];
   optional bool need_do_lod = 5 [default = false];
   optional bool need_do_dense_shape = 6 [default = false];

@@ -30,7 +30,7 @@ struct BlobGroup {
 void NcclTupleBroadcastKernel::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const NcclTupleBroadcastOpConf& conf = this->op_conf().nccl_tuple_broadcast_conf();
-  const auto& parallel_ctx = this->kernel_conf().parallel_ctx();
+  const auto& parallel_ctx = this->parallel_ctx();
   std::vector<BlobGroup> groups;
   FOR_RANGE(int64_t, i, 0, conf.out_size()) {
     const int64_t root_i = conf.root(i);
