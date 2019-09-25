@@ -40,7 +40,13 @@ class Blob final {
   DenseShapeView dense_shape_view() const {
     return DenseShapeView(header_ptr_->Field(FieldKey::kDenseShape));
   }
-  DenseShapeView shape() const { return dense_shape_view(); }
+  Shape shape() const {
+    if (blob_desc().header_is_opaque()) {
+      return static_shape();
+    } else {
+      return dense_shape_view();
+    }
+  }
   DenseShapeMutView dense_shape_mut_view() {
     return DenseShapeMutView(header_ptr_->MutField(FieldKey::kDenseShape));
   }
