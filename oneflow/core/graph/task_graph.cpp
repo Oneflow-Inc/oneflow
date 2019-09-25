@@ -15,10 +15,7 @@
 #include "oneflow/core/graph/boxing/sub_task_graph_builder.h"
 #include "oneflow/core/graph/boxing/chain_sub_task_graph_builder.h"
 #include "oneflow/core/graph/boxing/nccl_boxing_sub_task_graph_builder.h"
-<<<<<<< HEAD
-=======
 #include "oneflow/core/graph/boxing/sub_task_graph_builder_util.h"
->>>>>>> dev_python
 
 namespace oneflow {
 
