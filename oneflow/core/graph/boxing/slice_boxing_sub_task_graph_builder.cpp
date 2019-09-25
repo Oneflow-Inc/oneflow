@@ -86,7 +86,7 @@ Maybe<void> SliceBoxingSubTskGphBuilder::Build(
       UNIMPLEMENTED();
     }
     dst_node->Init(lbi, dst_slice, kSliceBoxingTaskModeCopy, src_node->machine_id(), thrd_id,
-                   MakeHostMemCase());
+                   MemoryCaseUtil::MakeHostMemCase());
     dst_node->ConnectToSrcNodeWithSlice(src_node, NewEdge(), src_slice);
     return dst_node;
   };
@@ -110,8 +110,9 @@ Maybe<void> SliceBoxingSubTskGphBuilder::Build(
         if (SubTskGphBuilderUtil::IsOnSameGPU(in_node, out_node)) {
           out_node->ConnectToSrcNodeWithSlice(in_node, NewEdge(), in_slice);
         } else {
-          TaskNode* proxy_node = ctx->GetProxyNode(in_node, GetDefaultMemCase(in_node),
-                                                   out_node->machine_id(), MakeHostMemCase());
+          TaskNode* proxy_node =
+              ctx->GetProxyNode(in_node, GetDefaultMemCase(in_node), out_node->machine_id(),
+                                MemoryCaseUtil::MakeHostMemCase());
           out_node->ConnectToSrcNodeWithSlice(proxy_node, NewEdge(), in_slice);
         }
       }
@@ -172,13 +173,14 @@ Maybe<void> SliceBoxingSubTskGphBuilder::Build(
                     CudaWorkType::kCopyD2H);
               }
               local_concat_node->Init(lbi, concat_slice, kSliceBoxingTaskModeCopy, in_machine_id,
-                                      local_concat_thrd_id, MakeHostMemCase());
+                                      local_concat_thrd_id, MemoryCaseUtil::MakeHostMemCase());
               for (const int64_t in_id : in_parallel_ids) {
                 local_concat_node->ConnectToSrcNodeWithSlice(in_nodes.at(in_id), NewEdge(),
                                                              in_slices.at(in_id));
               }
-              TaskNode* local_add_proxy_node = ctx->GetProxyNode(
-                  local_concat_node, MakeHostMemCase(), out_node->machine_id(), MakeHostMemCase());
+              TaskNode* local_add_proxy_node =
+                  ctx->GetProxyNode(local_concat_node, MemoryCaseUtil::MakeHostMemCase(),
+                                    out_node->machine_id(), MemoryCaseUtil::MakeHostMemCase());
               out_node->ConnectToSrcNodeWithSlice(local_add_proxy_node, NewEdge(), concat_slice);
             }
           }
@@ -229,12 +231,13 @@ Maybe<void> SliceBoxingSubTskGphBuilder::Build(
                     CudaWorkType::kCopyD2H);
               }
               local_add_node->Init(lbi, out_slice, kSliceBoxingTaskModeAdd, in_machine_id,
-                                   local_add_thrd_id, MakeHostMemCase());
+                                   local_add_thrd_id, MemoryCaseUtil::MakeHostMemCase());
               for (const int64_t in_id : in_parallel_ids) {
                 local_add_node->ConnectToSrcNodeWithSlice(in_nodes.at(in_id), NewEdge(), in_slice);
               }
-              TaskNode* local_add_proxy_node = ctx->GetProxyNode(
-                  local_add_node, MakeHostMemCase(), out_node->machine_id(), MakeHostMemCase());
+              TaskNode* local_add_proxy_node =
+                  ctx->GetProxyNode(local_add_node, MemoryCaseUtil::MakeHostMemCase(),
+                                    out_node->machine_id(), MemoryCaseUtil::MakeHostMemCase());
               out_node->ConnectToSrcNodeWithSlice(local_add_proxy_node, NewEdge(), out_slice);
             }
           }
@@ -285,15 +288,16 @@ Maybe<void> SliceBoxingSubTskGphBuilder::Build(
       if (out_box_nodes.size() == 1) {
         in_box_node =
             ctx->GetProxyNode(out_box_nodes.front(), GetDefaultMemCase(out_box_nodes.front()),
-                              machine_id7out_parallel_ids.first, MakeHostMemCase());
+                              machine_id7out_parallel_ids.first, MemoryCaseUtil::MakeHostMemCase());
       } else {
         auto* add_node = ctx->task_graph()->NewNode<SliceBoxingTaskNode>();
         add_node->Init(lbi, slice, kSliceBoxingTaskModeAdd, machine_id7out_parallel_ids.first,
                        Global<IDMgr>::Get()->PickCpuThrdIdEvenly(machine_id7out_parallel_ids.first),
-                       MakeHostMemCase());
+                       MemoryCaseUtil::MakeHostMemCase());
         for (TaskNode* out_box_node : out_box_nodes) {
-          TaskNode* out_boxing_node_proxy = ctx->GetProxyNode(
-              out_box_node, GetDefaultMemCase(out_box_node), out_machine_id, MakeHostMemCase());
+          TaskNode* out_boxing_node_proxy =
+              ctx->GetProxyNode(out_box_node, GetDefaultMemCase(out_box_node), out_machine_id,
+                                MemoryCaseUtil::MakeHostMemCase());
           add_node->ConnectToSrcNodeWithSlice(out_boxing_node_proxy, NewEdge(), slice);
         }
         in_box_node = add_node;
@@ -301,14 +305,14 @@ Maybe<void> SliceBoxingSubTskGphBuilder::Build(
       for (const int64_t out_id : machine_id7out_parallel_ids.second) {
         MemoryCase mem_case;
         if (out_pd.device_type() == DeviceType::kCPU) {
-          mem_case = MakeHostMemCase();
+          mem_case = MemoryCaseUtil::MakeHostMemCase();
         } else if (out_pd.device_type() == DeviceType::kGPU) {
-          mem_case = MakeCudaMemCase(out_pd.DeviceIdForParallelId(out_id));
+          mem_case = MemoryCaseUtil::MakeCudaMemCase(out_pd.DeviceIdForParallelId(out_id));
         } else {
           UNIMPLEMENTED();
         }
-        (*out_nodes)[out_id] =
-            ctx->GetProxyNode(in_box_node, MakeHostMemCase(), out_machine_id, mem_case);
+        (*out_nodes)[out_id] = ctx->GetProxyNode(in_box_node, MemoryCaseUtil::MakeHostMemCase(),
+                                                 out_machine_id, mem_case);
       }
     }
   };

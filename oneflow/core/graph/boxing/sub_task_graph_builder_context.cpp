@@ -37,7 +37,7 @@ TaskNode* SubTskGphBuilderCtx::GetProxyNode(TaskNode* src_node, const MemoryCase
       return src_node;
     } else if (dst_mem_case.has_device_cuda_mem()) {
       TaskNode* proxy_on_dst_host =
-          GetProxyNode(src_node, src_mem_case, dst_machine_id, MakeHostMemCase());
+          GetProxyNode(src_node, src_mem_case, dst_machine_id, MemoryCaseUtil::MakeHostMemCase());
       CopyHdTaskNode* copy_task = task_graph()->NewNode<CopyHdTaskNode>();
       copy_task->Init(CopyHdOpConf::H2D, proxy_on_dst_host->machine_id(),
                       dst_mem_case.device_cuda_mem().device_id());
@@ -57,8 +57,8 @@ TaskNode* SubTskGphBuilderCtx::GetProxyNode(TaskNode* src_node, const MemoryCase
           UNIMPLEMENTED();
         }
       } else {
-        TaskNode* proxy_on_src_host =
-            GetProxyNode(src_node, src_mem_case, src_node->machine_id(), MakeHostMemCase());
+        TaskNode* proxy_on_src_host = GetProxyNode(src_node, src_mem_case, src_node->machine_id(),
+                                                   MemoryCaseUtil::MakeHostMemCase());
         CopyCommNetTaskNode* copy_comm_net_task = task_graph()->NewNode<CopyCommNetTaskNode>();
         copy_comm_net_task->Init(dst_machine_id, proxy_on_src_host->machine_id());
         Connect<TaskNode>(proxy_on_src_host, task_graph()->NewEdge(), copy_comm_net_task);
