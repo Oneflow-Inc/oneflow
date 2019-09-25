@@ -487,7 +487,7 @@ void AddTotalLossInstanceNumOpConf(
   CHECK_EQ(blob_desc->shape().NumAxes(), 1);
   HashMap<ParallelDesc, int32_t> parallel_desc2optimizer_node_cnt;
   CalcParallelDesc2OptimizerNodeCnt(op_graph, lbi2diff_lbi, &parallel_desc2optimizer_node_cnt);
-  if (blob_desc->num_of_lod_levels() > 0) {
+  if (blob_desc->is_dynamic()) {
     AddTotalLossInstanceNumOpConfForDynamicDim0(parallel_desc2optimizer_node_cnt, loss_lbi2op_node,
                                                 job_builder, LossInstanceNum4ParallelDesc);
   } else {

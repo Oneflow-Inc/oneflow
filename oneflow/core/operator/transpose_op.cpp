@@ -33,6 +33,10 @@ Maybe<void> TransposeOp::InferBlobDescs(
   const PbRf<int32_t>& perm = op_conf().transpose_conf().perm();
   CHECK_EQ_OR_RETURN(perm.size(), in_blob_shape.NumAxes());
   CheckIsPerm(perm);
+  if (perm.Get(0) != 0) { CHECK_OR_RETURN(!in_blob_desc->is_dynamic()); }
+  FOR_RANGE(int, i, 0, perm.size()) {
+    if (i != perm.Get(i)) { OF_CHECK_GT(i, in_blob_desc->num_of_lod_levels()); }
+  }
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   *out_blob_desc = *in_blob_desc;
   FOR_RANGE(size_t, i, 0, perm.size()) {
