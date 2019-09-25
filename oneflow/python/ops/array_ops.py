@@ -90,6 +90,7 @@ def reshape(x, shape, name=None):
 
 @oneflow_export("dynamic_reshape")
 def dynamic_reshape(x, shape, name=None):
+    return reshape(x, shape)
     assert isinstance(shape, tuple) or isinstance(shape, list)
     shape = list(shape)
     op_conf = op_conf_util.OperatorConf()
@@ -99,7 +100,7 @@ def dynamic_reshape(x, shape, name=None):
         name if name is not None else id_util.UniqueStr("DynamicReshape_"),
     )
     setattr(op_conf.dynamic_reshape_conf, "in", x.logical_blob_name)
-    op_conf.dynamic_reshape_conf.shape.dim[:] = list(shape)
+    op_conf.dynamic_reshape_conf.shape.dim.extend(list(shape))
     setattr(op_conf.dynamic_reshape_conf, "out", "out")
     compile_context.CurJobAddOp(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
