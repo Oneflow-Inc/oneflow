@@ -274,7 +274,7 @@ def clip_boxes_to_image(boxes, image_size, name=None):
 
 
 @oneflow_export("detection.extract_piece_slice_id")
-def extract_piece_slice_id(inputs, image_size, name=None):
+def extract_piece_slice_id(inputs, name=None):
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf,
