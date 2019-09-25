@@ -2,23 +2,6 @@
 
 namespace oneflow {
 
-namespace {
-
-bool IsMemoryCaseEquals(const MemoryCase& lhs, const MemoryCase& rhs) {
-  if (lhs.has_host_mem() && rhs.has_host_mem()) {
-    return true;
-  } else if (lhs.has_device_cuda_mem() && rhs.has_device_cuda_mem()
-             && lhs.device_cuda_mem().device_id() == rhs.device_cuda_mem().device_id()) {
-    return true;
-  } else {
-    CHECK(lhs.has_host_mem() || lhs.has_device_cuda_mem());
-    CHECK(rhs.has_host_mem() || rhs.has_device_cuda_mem());
-    return false;
-  }
-}
-
-}  // namespace
-
 SubTskGphBuilderCtx::SubTskGphBuilderCtx(TaskGraph* task_graph) : task_graph_(task_graph) {}
 
 TaskGraph* SubTskGphBuilderCtx::task_graph() { return task_graph_; }
