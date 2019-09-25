@@ -11,7 +11,7 @@ import argparse
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
-    "--config_file", default=None, type=str, help="yaml config file"
+    "--config_file", "-c", default=None, type=str, help="yaml config file"
 )
 parser.add_argument(
     "-load", "--model_load_dir", type=str, default="", required=False
@@ -96,9 +96,9 @@ def maskrcnn(
     rpn_bbox_loss, rpn_objectness_loss = rpn_loss.build(
         anchors, image_size_list, gt_boxes_list, bbox_pred_list, cls_logit_list
     )
-    # proposals = rpn_proposal.build(
-    #     anchors, cls_logit_list, bbox_pred_list, image_size_list, gt_boxes_list
-    # )
+    proposals = rpn_proposal.build(
+        anchors, cls_logit_list, bbox_pred_list, image_size_list, gt_boxes_list
+    )
 
     # Box Head
     # box_loss, cls_loss, pos_proposal_list, pos_gt_indices_list = box_head.build_train(
@@ -117,7 +117,7 @@ def maskrcnn(
 
 if __name__ == "__main__":
     flow.config.gpu_device_num(args.gpu_num_per_node)
-    flow.config.ctrl_port(9788)
+    flow.config.ctrl_port(19788)
 
     flow.config.default_data_type(flow.float)
     check_point = flow.train.CheckPoint()
