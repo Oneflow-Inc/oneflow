@@ -60,8 +60,9 @@ ncclComm_t NcclCommMgr::NcclComm4ActorId(int64_t actor_id) const {
 
 bool NcclCommMgr::IsNcclTaskType(const TaskType& tt) const {
   return tt == TaskType::kNcclAllGather || tt == TaskType::kNcclAllReduce
-         || tt == TaskType::kNcclReduceScatter || tt == TaskType::kNcclTupleBroadcast
-         || tt == TaskType::kNcclTupleReduce;
+         || tt == TaskType::kNcclReduceScatter || tt == TaskType::kNcclBoxingAllGather
+         || tt == TaskType::kNcclBoxingAllReduce || tt == TaskType::kNcclBoxingReduceScatter
+         || tt == TaskType::kNcclTupleBroadcast || tt == TaskType::kNcclTupleReduce;
 }
 
 int32_t NcclCommMgr::GetDeviceId4Task(const TaskProto& task) {
