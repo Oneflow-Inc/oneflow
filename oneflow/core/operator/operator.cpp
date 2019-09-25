@@ -197,12 +197,10 @@ bool HasBlobDescWithField(std::function<const BlobDesc*(const std::string&)> Get
 }  // namespace
 
 void Operator::GenKernelConf(
-    std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, bool is_forward,
+    std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, KernelConf* kernel_conf, const OpContext* op_ctx,
     std::function<const BlobDesc&(const std::string&)> LogicalBlobDesc4BnInOp) const {
   *(kernel_conf->mutable_op_attribute()) = op_attribute_;
-  kernel_conf->set_is_forward(is_forward);
-
   if (HasBlobDescWithField(GetBlobDesc4BnInOp, output_bns(), [](const BlobDesc* blob_desc) {
         return blob_desc->header_is_opaque();
       })) {
