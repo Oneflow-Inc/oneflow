@@ -10,6 +10,12 @@
 #include "oneflow/core/graph/reduce_identity_task_node.h"
 #include "oneflow/core/operator/variable_op.h"
 #include "oneflow/core/operator/constant_op.h"
+#include "oneflow/core/graph/op_graph.h"
+#include "oneflow/core/graph/boxing/sub_task_graph_builder_context.h"
+#include "oneflow/core/graph/boxing/sub_task_graph_builder.h"
+#include "oneflow/core/graph/boxing/chain_sub_task_graph_builder.h"
+#include "oneflow/core/graph/boxing/nccl_boxing_sub_task_graph_builder.h"
+#include "oneflow/core/graph/boxing/sub_task_graph_builder_util.h"
 
 namespace oneflow {
 
@@ -592,6 +598,18 @@ void TaskGraph::SetAreaIdForNewNodes(const LogicalNode* src_logical,
   void TaskGraph::method_name BLD_SUB_TSK_GPH_MTHD_ARGS()
 
 DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxing) {
+  if (GlobalJobDesc().use_boxing_v2()) {
+    BldSubTskGphByBoxingV2(src_logical, dst_logical, sorted_src_comp_tasks, sorted_dst_comp_tasks,
+                           logical2sorted_in_box, logical2sorted_out_box, std::move(MutBufTask),
+                           std::move(AllocateCpuThrdIdEvenly));
+  } else {
+    BldSubTskGphByBoxingV1(src_logical, dst_logical, sorted_src_comp_tasks, sorted_dst_comp_tasks,
+                           logical2sorted_in_box, logical2sorted_out_box, std::move(MutBufTask),
+                           std::move(AllocateCpuThrdIdEvenly));
+  }
+}
+
+DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxingV1) {
   std::vector<TaskNode*>* sorted_out_box = nullptr;
   if (logical2sorted_out_box->find(src_logical) == logical2sorted_out_box->end()) {
     BuildOutBoxing(src_logical, sorted_src_comp_tasks, &((*logical2sorted_out_box)[src_logical]),
@@ -608,6 +626,41 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxing) {
 
   for (TaskNode* src_box : *sorted_out_box) {
     for (TaskNode* dst_box : *sorted_in_box) { ConnectWithCopyCommNetIfNeed(src_box, dst_box); }
+  }
+}
+
+DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxingV2) {
+  const std::vector<LogicalBlobId> lbis = src_logical->GetLbisTo(dst_logical);
+  const auto Fallback = [&]() {
+    BldSubTskGphByBoxingV1(src_logical, dst_logical, sorted_src_comp_tasks, sorted_dst_comp_tasks,
+                           logical2sorted_in_box, logical2sorted_out_box, std::move(MutBufTask),
+                           std::move(AllocateCpuThrdIdEvenly));
+  };
+  if (lbis.size() > 1) {
+    Fallback();
+  } else {
+    CHECK_EQ(lbis.size(), 1);
+    const LogicalBlobId& lbi = lbis.front();
+    const SbpParallel& src_sbp_parallel =
+        Global<OpGraph>::Get()->GetSbpParallel(src_logical->SoleOp()->op_name(), lbi);
+    const SbpParallel& dst_sbp_parallel =
+        Global<OpGraph>::Get()->GetSbpParallel(dst_logical->SoleOp()->op_name(), lbi);
+    const std::shared_ptr<const ParallelDesc>& src_parallel_desc = src_logical->parallel_desc();
+    const std::shared_ptr<const ParallelDesc>& dst_parallel_desc = dst_logical->parallel_desc();
+    const BlobDesc& blob_desc = Global<OpGraph>::Get()->GetLogicalBlobDesc(lbi);
+    SubTskGphBuilderCtx ctx(this);
+    std::vector<std::shared_ptr<SubTskGphBuilder>> builders;
+    builders.emplace_back(new NcclBoxingSubTskGphBuilder());
+    Maybe<void> status = TRY(ChainSubTskGphBuilder(builders).Build(
+        &ctx, sorted_src_comp_tasks, sorted_dst_comp_tasks, *src_parallel_desc, *dst_parallel_desc,
+        lbi, blob_desc, src_sbp_parallel, dst_sbp_parallel));
+    if (!status.IsOk()) {
+      if (SubTskGphBuilderUtil::IsErrorBoxingNotSupported(*status.error())) {
+        Fallback();
+      } else {
+        UNIMPLEMENTED();
+      }
+    }
   }
 }
 

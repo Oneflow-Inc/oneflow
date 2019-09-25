@@ -71,6 +71,10 @@ message TodoError { }
 
 message UnimplementedError { }
 
+enum BoxingError {
+  kNotSupported = 1;
+}
+
 message UnkownError { }
 
 message ErrorProto {
@@ -83,6 +87,7 @@ message ErrorProto {
     CheckFailed check_failed = 6;
     TodoError todo_error = 7;
     UnimplementedError unimplemented_error = 8;
+    BoxingError boxing_error = 9;
     UnkownError unknown_error = 100;
   }
 }
