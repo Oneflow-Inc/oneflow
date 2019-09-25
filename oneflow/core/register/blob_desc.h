@@ -26,6 +26,7 @@ class BlobDesc final {
 
   void CopyFrom(const BlobDesc&);
   void SetLoD(int64_t num_of_lod_levels);
+  void SetOpaqueHeader(const StructPodDesc& header_pod_desc, int64_t header_byte_size);
 
   const Shape& shape() const { return body_.shape(); }
   Shape& mut_shape() { return *body_.mut_shape(); }
@@ -36,6 +37,7 @@ class BlobDesc final {
   int64_t num_of_lod_levels() const { return num_of_lod_levels_; }
   bool is_body_disabled() const { return is_body_disabled_; }
   void set_is_body_disabled(bool val) { is_body_disabled_ = val; }
+  bool header_is_opaque() const { return header_is_opaque_; }
 
   bool operator==(const BlobDesc&) const;
   void ToProto(BlobDescProto*) const;
@@ -51,6 +53,10 @@ class BlobDesc final {
   StructPodDesc header_;
   int64_t num_of_lod_levels_;  // lod: level of details
   bool is_body_disabled_;
+
+  // TODO(niuchong): remove opaque_header
+  TensorPodDesc opaque_header_;
+  bool header_is_opaque_;
 };
 
 std::unique_ptr<BlobDesc> ComputePackedBlobDesc(
