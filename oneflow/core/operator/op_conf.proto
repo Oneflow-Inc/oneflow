@@ -1773,6 +1773,13 @@ message NcclBoxingAllReduceOpConf {
   required LogicalBlobId lbi = 1;
 }
 
+message SyncDynamicResizeOpConf {
+  required string in = 1;
+  required string size = 2;
+  required string out = 3;
+  required int64 axis = 4;
+}
+
 message OperatorConf {
   required string name = 1;
   optional bool trainable = 3 [default = true];
@@ -1935,6 +1942,7 @@ message OperatorConf {
     SmoothL1OpConf smooth_l1_conf = 318;
     UpsampleNearestOpConf upsample_nearest_conf = 319;
     ElementCountOpConf element_count_conf = 320;
+    SyncDynamicResizeOpConf sync_dynamic_resize_conf = 321;
 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;
