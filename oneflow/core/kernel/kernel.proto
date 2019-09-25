@@ -172,13 +172,13 @@ message GatherMs0GradKernelConf {
   required int64 offset = 1;
 }
 
-message NcclTupleReduceConf {	
-  required ParallelContext parallel_ctx = 1;	
-}	
+message NcclTupleReduceConf {
+  required ParallelContext parallel_ctx = 1;
+}
 
-message NcclTupleBroadcastConf {	
-  required ParallelContext parallel_ctx = 1;	
-}	
+message NcclTupleBroadcastConf {
+  required ParallelContext parallel_ctx = 1;
+}
 
 message KernelConf {
   required OpAttribute op_attribute = 1;
