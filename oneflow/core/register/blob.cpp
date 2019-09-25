@@ -22,7 +22,7 @@ void Blob::Init(const MemoryCase& mem_case, const RtBlobDesc* blob_desc, char* h
   blob_desc_ = blob_desc;
   dptr_ = body_ptr;
   header_ptr_.reset(new PodPtr(blob_desc_->header_pod_desc(), header_ptr));
-  if (!blob_desc_.header_is_opaque()) { dense_shape_mut_view().set_shape(static_shape()); }
+  if (!blob_desc_->header_is_opaque()) { dense_shape_mut_view().set_shape(static_shape()); }
 }
 
 void Blob::CopyDataContentFrom(DeviceCtx* device_ctx, const Blob* rhs) {
