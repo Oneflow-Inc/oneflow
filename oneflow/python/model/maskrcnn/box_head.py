@@ -114,6 +114,9 @@ class BoxHead(object):
             bbox_regression, cls_logits = self.box_predictor(x)
 
             # construct cls loss
+            # TODO: handle dynamic shape in sparse_cross_entropy
+            # duplicate labels for 4 times to pass static shape check
+            labels = flow.concat([labels, labels, labels, labels], axis=0)
             total_elem_cnt = flow.elem_cnt(labels)
             box_head_cls_loss = (
                 flow.math.reduce_sum(
@@ -132,11 +135,8 @@ class BoxHead(object):
                 axis=[1],
             )
             # [R, 81, 4]
-            pos_bbox_reg = flow.reshape(
-                flow.local_gather(bbox_regression, total_pos_inds),
-                shape={"dim": [-1, 4]},
-                has_dim0_in_shape=False,
-            )
+            pos_bbox_reg = flow.local_gather(bbox_regression, total_pos_inds)
+            pos_bbox_reg = flow.reshape(pos_bbox_reg, shape=[-1, 81, 4])
             # [R, 1]
             indices = flow.expand_dims(
                 flow.local_gather(labels, total_pos_inds), axis=1
@@ -146,9 +146,12 @@ class BoxHead(object):
                 axis=[1],
             )
             bbox_target = flow.local_gather(bbox_targets, total_pos_inds)
-            flow.math.reduce_sum(
-                flow.detection.smooth_l1(bbox_pred, bbox_target)
-            ) / total_elem_cnt
+            box_head_box_loss = (
+                flow.math.reduce_sum(
+                    flow.detection.smooth_l1(bbox_pred, bbox_target)
+                )
+                / total_elem_cnt
+            )
 
             return (
                 box_head_box_loss,
