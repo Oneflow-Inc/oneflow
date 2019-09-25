@@ -10,8 +10,6 @@ namespace oneflow {
 
 struct SubTskGphBuilderUtil {
   static bool IsDeviceTypeCPUOrGPU(const ParallelDesc& parallel_desc);
-  static ParallelDesc CloneParallelDescWithNewDeviceType(const ParallelDesc& src,
-                                                         DeviceType device_type);
   static std::vector<TensorSliceView> GetTensorSliceView(int64_t parallel_num,
                                                          const SbpParallel& sbp_parallel,
                                                          const BlobDesc& blob_desc);
