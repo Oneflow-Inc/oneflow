@@ -63,15 +63,16 @@ std::function<const TaskProto&(int64_t)> PlanUtil::MakeGetterTaskProto4TaskId(co
   return [task_id2task_proto](int64_t task_id) { return *task_id2task_proto->at(task_id); };
 }
 
-void PlanUtil::CheckMemBlockAndChunkValid(const Plan& plan) {
+void PlanUtil::CleanUselessMemBlockAndCheckValid(Plan* plan) {
   HashMap<int64_t, ChunkProto> chunk_id2chunk;
   HashMap<int64_t, MemBlockProto> mem_block_id2mem_block;
-  for (const auto& chunk : plan.chunk()) {
+  for (const auto& chunk : plan->chunk()) {
     CHECK(chunk_id2chunk.emplace(chunk.chunk_id(), chunk).second);
   }
-  for (const auto& mem_block : plan.mem_block()) {
+  for (const auto& mem_block : plan->mem_block()) {
     CHECK(mem_block_id2mem_block.emplace(mem_block.mem_block_id(), mem_block).second);
   }
+  plan->clear_mem_block();
 
   HashMap<int64_t, HashSet<int64_t>> chunk_id2job_ids;
   HashMap<int64_t, HashSet<int64_t>> mem_block_id2job_ids;
@@ -87,7 +88,7 @@ void PlanUtil::CheckMemBlockAndChunkValid(const Plan& plan) {
   }
 
   HashSet<int64_t> valid_mem_block_ids;
-  for (const TaskProto& task : plan.task()) {
+  for (const TaskProto& task : plan->task()) {
     for (const auto& pair : task.produced_regst_desc()) {
       const RegstDescProto& regst = pair.second;
       RtRegstDesc rt_regst(regst);
@@ -121,9 +122,13 @@ void PlanUtil::CheckMemBlockAndChunkValid(const Plan& plan) {
     }
   }
 
+  HashSet<int64_t> useless_mem_block_ids;
   HashSet<int64_t> valid_chunk_ids;
   for (const auto& pair : mem_block_id2mem_block) {
-    CHECK(valid_mem_block_ids.find(pair.first) != valid_mem_block_ids.end());
+    if (valid_mem_block_ids.find(pair.first) == valid_mem_block_ids.end()) {
+      CHECK(useless_mem_block_ids.insert(pair.first).second);
+      continue;
+    }
     const MemBlockProto& mem_block = pair.second;
     if (mem_block.has_chunk_id()) {
       CHECK(mem_block.has_chunk_offset());
@@ -139,7 +144,12 @@ void PlanUtil::CheckMemBlockAndChunkValid(const Plan& plan) {
     }
   }
   CHECK_EQ(valid_chunk_ids.size(), chunk_id2chunk.size());
-  CHECK_EQ(valid_mem_block_ids.size(), mem_block_id2mem_block.size());
+
+  for (int64_t useless_block_id : useless_mem_block_ids) {
+    mem_block_id2mem_block.erase(useless_block_id);
+  }
+
+  for (const auto& pair : mem_block_id2mem_block) { *(plan->add_mem_block()) = pair.second; }
 }
 
 void PlanUtil::ToDotFile(const Plan& plan, const std::string& filepath) {

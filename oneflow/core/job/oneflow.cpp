@@ -544,7 +544,7 @@ bool NeedAllocateMemory(const RegstDescTypeProto& regst_desc_type) {
 void FinishGlobalCriticalSectionDesc(const std::vector<Plan>& plans) {
   std::vector<HashMap<std::string, HashSet<int64_t>>> job_id2sole_op_name2mem_block_ids;
   std::vector<HashSet<int64_t>> job_id2mem_block_ids;
-  std::vector<HashSet<int64_t>> job_id2chunk_ids;
+  std::vector<HashSet<int64_t>> job_id2chunk_ids(plans.size());
   for (const auto& plan : plans) {
     job_id2sole_op_name2mem_block_ids.push_back(HashMap<std::string, HashSet<int64_t>>());
     auto* sole_op_name2mem_block_ids = &job_id2sole_op_name2mem_block_ids.back();
@@ -570,7 +570,10 @@ void FinishGlobalCriticalSectionDesc(const std::vector<Plan>& plans) {
   }
   for (const auto& plan : plans) {
     for (const auto& chunk : plan.chunk()) {
-      for (int64_t job_id : chunk.job_id()) { job_id2chunk_ids[job_id].insert(chunk.chunk_id()); }
+      for (int64_t job_id : chunk.job_id()) {
+        CHECK_LT(job_id, plans.size());
+        job_id2chunk_ids.at(job_id).insert(chunk.chunk_id());
+      }
     }
   }
 
@@ -615,8 +618,8 @@ void FinishGlobalCriticalSectionDesc(const std::vector<Plan>& plans) {
         }
       }
       *critical_section->mutable_mem_block_id() = {mem_block_ids->begin(), mem_block_ids->end()};
-      *critical_section->mutable_chunk_id() = {job_id2chunk_ids[job_id].begin(),
-                                               job_id2chunk_ids[job_id].end()};
+      *critical_section->mutable_chunk_id() = {job_id2chunk_ids.at(job_id).begin(),
+                                               job_id2chunk_ids.at(job_id).end()};
     }
   }
   critical_section_desc->Done();
@@ -838,7 +841,7 @@ void CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan) {
       CompileMainJob(&main_job, critical_section_sink_lbi, sub_plans.size(), &main_plan);
     }
     LinkMainPlan(plan, main_plan, identity_tick_op_names);
-    PlanUtil::CheckMemBlockAndChunkValid(*plan);
+    PlanUtil::CleanUselessMemBlockAndCheckValid(plan);
     TeePersistentLogStream::Create("merged_plan")->Write(*plan);
     PlanUtil::ToDotFile(*plan, "/dot/merged_plan.dot");
     PushPlan("merged_plan", *plan);

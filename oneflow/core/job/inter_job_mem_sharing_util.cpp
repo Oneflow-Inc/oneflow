@@ -4,6 +4,7 @@
 #include "oneflow/core/register/runtime_register_desc.h"
 #include "oneflow/core/job/id_manager.h"
 #include "oneflow/core/job/plan_util.h"
+#include "oneflow/core/persistence/tee_persistent_log_stream.h"
 
 namespace oneflow {
 
@@ -137,7 +138,7 @@ void MergeReusedChunk(HashMap<int64_t, ChunkProto>* chunk_id2chunk,
 
   for (auto& pair : *mem_block_id2mem_block) {
     MemBlockProto* mem_block = pair.second;
-    if (mem_block->enable_reuse_mem()) {
+    if (mem_block->enable_reuse_mem() == false) {
       CHECK(mem_block->has_chunk_id() == false);
       CHECK(mem_block->has_chunk_offset() == false);
       continue;
@@ -206,6 +207,7 @@ void MergeReusedChunk(HashMap<int64_t, ChunkProto>* chunk_id2chunk,
 
 void MergeSharedMemBlockR2L(RegstDescProto* lhs, RegstDescProto* rhs,
                             HashMap<int64_t, MemBlockProto>* mem_block_id2mem_block) {
+  if (lhs == rhs) { return; }
   auto CheckValidAndGetMemBlock = [&](int64_t mem_block_id, int64_t mem_size,
                                       const MemoryCase& mem_case) {
     CHECK_NE(mem_block_id, -1);
@@ -220,6 +222,7 @@ void MergeSharedMemBlockR2L(RegstDescProto* lhs, RegstDescProto* rhs,
   };
 
   auto MergeAndEraseMemBlock = [&](MemBlockProto* merged_block, MemBlockProto* erased_block) {
+    CHECK_NE(merged_block->mem_block_id(), erased_block->mem_block_id());
     CHECK_EQ(erased_block->job_id_size(), 1);
     CHECK_EQ(merged_block->mem_size(), erased_block->mem_size());
     merged_block->add_job_id(erased_block->job_id(0));
