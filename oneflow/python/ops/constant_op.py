@@ -47,4 +47,8 @@ def constant_scalar(value, dtype=None, name=None):
 
 @oneflow_export("constant_like")
 def constant_like(inputs, value, name=None):
-    return inputs * 0 + 1
+    ret = inputs * 0 + 1
+    if ret.dtype == inputs.dtype:
+        return ret
+    else:
+        return flow.cast(ret, dtype=inputs.dtype)
