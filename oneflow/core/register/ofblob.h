@@ -47,10 +47,14 @@ void OfBlob::AutoMemCopyTo(T* ptr, int64_t len) const {
 template<typename T>
 void OfBlob::AutoMemCopyFrom(const T* ptr, int64_t len) const {
   CHECK_LE(len, blob_->static_shape().elem_cnt());
-  Shape shape(blob_->static_shape());
-  CHECK_EQ(len % shape.Count(1), 0);
-  shape.Set(0, len / shape.Count(1));
-  blob_->dense_shape_mut_view().set_shape(shape);
+  if (blob_->blob_desc().is_dynamic()) {
+    Shape shape(blob_->static_shape());
+    CHECK_EQ(len % shape.Count(1), 0);
+    shape.Set(0, len / shape.Count(1));
+    blob_->dense_shape_mut_view().set_shape(shape);
+  } else {
+    CHECK_EQ(blob_->shape().elem_cnt(), len);
+  }
   CHECK(blob_->data_type() == GetDataType<T>::value);
   AutoMemcpy(device_ctx_, blob_->mut_dptr(), ptr, len * sizeof(T), blob_->mem_case(), mem_case_);
 }

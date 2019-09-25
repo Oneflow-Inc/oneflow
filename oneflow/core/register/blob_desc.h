@@ -3,6 +3,7 @@
 
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/shape.h"
+#include "oneflow/core/common/maybe.h"
 #include "oneflow/core/register/field_desc.h"
 #include "oneflow/core/register/blob_desc.pb.h"
 #include "oneflow/core/register/pod_desc.h"
@@ -24,7 +25,7 @@ class BlobDesc final {
 
   BlobDesc& operator=(const BlobDesc&);
 
-  void SetLoD(int64_t num_of_lod_levels);
+  Maybe<void> SetLoD(int64_t num_of_lod_levels);
   void SetOpaqueHeader(const StructPodDesc& header_pod_desc);
 
   const Shape& shape() const { return body_.shape(); }
