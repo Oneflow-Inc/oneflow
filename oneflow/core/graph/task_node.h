@@ -16,7 +16,6 @@ RegstDescProto* FindOrCreateProducedCtrlRegstDesc(TaskProto* task_proto,
                                                   const std::string& regst_desc_name);
 RegstDescIdSet* FindOrCreateConsumedCtrlRegstDescIdSet(TaskProto* task_proto,
                                                        const std::string& regst_desc_name);
-MemoryCase GetDefaultMemCase(const TaskNode* node);
 
 class TaskEdge;
 

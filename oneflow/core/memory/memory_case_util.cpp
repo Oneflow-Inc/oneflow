@@ -31,10 +31,4 @@ MemoryCase MemoryCaseUtil::MakeHostMemCase() {
   return mem_case;
 }
 
-MemoryCase MemoryCaseUtil::MakeCudaMemCase(int64_t device_id) {
-  MemoryCase mem_case{};
-  mem_case.mutable_device_cuda_mem()->set_device_id(device_id);
-  return mem_case;
-}
-
 }  // namespace oneflow
