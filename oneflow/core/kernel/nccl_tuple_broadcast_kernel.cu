@@ -1,5 +1,6 @@
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/device/nccl_util.h"
+#include "oneflow/core/device/nccl_device_context.h"
 #include "nccl.h"
 
 namespace oneflow {
@@ -11,7 +12,7 @@ class NcclTupleBroadcastKernel final : public KernelIf<DeviceType::kGPU> {
   ~NcclTupleBroadcastKernel() override = default;
 
  private:
-  void VirtualKernelInit() override {}
+  bool IsKernelLaunchSynchronized() const override { return false; }
   void ForwardDataContent(const KernelCtx&,
                           std::function<Blob*(const std::string&)>) const override;
 };
@@ -30,19 +31,6 @@ void NcclTupleBroadcastKernel::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const NcclTupleBroadcastOpConf& conf = this->op_conf().nccl_tuple_broadcast_conf();
   const auto& parallel_ctx = this->kernel_conf().nccl_tuple_broadcast_conf().parallel_ctx();
-  //  NcclCheck(ncclGroupStart());
-  //  FOR_RANGE(int64_t, i, 0, conf.out_size()) {
-  //    const void* send = conf.root(i) == parallel_ctx.rank_ctx().rank_id()
-  //                           ? BnInOp2Blob(GenRepeatedBn("in", i))->dptr()
-  //                           : nullptr;
-  //    Blob* out = BnInOp2Blob(GenRepeatedBn("out", i));
-  //    void* recv = out->mut_dptr();
-  //    NcclCheck(ncclBroadcast(send, recv, out->shape().elem_cnt(),
-  //    GetNcclDataType(out->data_type()),
-  //                            conf.root(i), ctx.device_ctx->nccl_handle(),
-  //                            ctx.device_ctx->cuda_stream()));
-  //  }
-  //  NcclCheck(ncclGroupEnd());
   std::vector<BlobGroup> groups;
   FOR_RANGE(int64_t, i, 0, conf.out_size()) {
     const int64_t root_i = conf.root(i);
@@ -62,14 +50,17 @@ void NcclTupleBroadcastKernel::ForwardDataContent(
       });
     }
   }
-  NcclCheck(ncclGroupStart());
-  for (BlobGroup group : groups) {
-    const void* send = group.root == parallel_ctx.rank_ctx().rank_id() ? group.out_ptr : nullptr;
-    NcclCheck(ncclBroadcast(send, group.out_ptr, group.out_size, GetNcclDataType(DataType::kChar),
-                            group.root, ctx.device_ctx->nccl_handle(),
-                            ctx.device_ctx->cuda_stream()));
-  }
-  NcclCheck(ncclGroupEnd());
+  auto* device_ctx = dynamic_cast<NcclDeviceCtx*>(ctx.device_ctx);
+  CHECK_NOTNULL(device_ctx);
+  device_ctx->Enqueue([device_ctx, groups, parallel_ctx] {
+    NcclCheck(ncclGroupStart());
+    for (BlobGroup group : groups) {
+      const void* send = group.root == parallel_ctx.rank_ctx().rank_id() ? group.out_ptr : nullptr;
+      NcclCheck(ncclBroadcast(send, group.out_ptr, group.out_size, GetNcclDataType(DataType::kChar),
+                              group.root, device_ctx->nccl_handle(), device_ctx->cuda_stream()));
+    }
+    NcclCheck(ncclGroupEnd());
+  });
 }
 
 REGISTER_KERNEL_WITH_DEVICE(OperatorConf::kNcclTupleBroadcastConf, DeviceType::kGPU,
