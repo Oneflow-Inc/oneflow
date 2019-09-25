@@ -9,6 +9,5 @@ message BlobDescProto {
   required int64 num_of_lod_levels = 3;
   required bool is_body_disabled = 4;
   required bool is_dynamic = 5;
-  required TensorPodProto opaque_header = 6;
-  required bool header_is_opaque = 7;
+  required bool header_is_opaque = 6;
 }

@@ -43,7 +43,6 @@ class RtBlobDesc final {
   int64_t num_of_lod_levels_;
   bool is_body_disabled_;
   bool is_dynamic_;
-  TensorPodDesc opaque_header_;
   bool header_is_opaque_;
 };
 
