@@ -68,6 +68,7 @@ message JobConfigProto {
 
   optional bool enable_nccl = 400 [default = true];
   optional bool use_nccl_inter_node_communication = 401 [default = true];
+  optional bool use_boxing_v2 = 402 [default = false];
 
   optional bool enable_all_reduce_group = 500 [default = true];
   optional int64 all_reduce_group_num = 501 [default = 8];
