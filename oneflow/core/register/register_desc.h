@@ -10,6 +10,7 @@ const int32_t kMaxRegisterNum = std::numeric_limits<int32_t>::max();
 
 void InitCtrlRegstDesc(int64_t producer_task_id, RegstDescProto* ctrl_regst_proto);
 MemoryCase MakeHostMemCase();
+MemoryCase MakeCudaMemCase(int64_t device_id);
 
 class TaskNode;
 
