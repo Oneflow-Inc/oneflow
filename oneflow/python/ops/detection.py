@@ -138,8 +138,14 @@ def box_decode(ref_boxes, boxes_delta, regression_weights, name=None):
     )
     op_conf.box_decode_conf.ref_boxes = ref_boxes.logical_blob_name
     op_conf.box_decode_conf.boxes_delta = boxes_delta.logical_blob_name
-    assert isinstance(regression_weights, op_conf_util.BBoxRegressionWeights)
-    op_conf.box_decode_conf.regression_weights = regression_weights
+    regression_weights_proto = op_conf_util.BBoxRegressionWeights()
+    regression_weights_proto.weight_x = regression_weights["weight_x"]
+    regression_weights_proto.weight_y = regression_weights["weight_y"]
+    regression_weights_proto.weight_h = regression_weights["weight_h"]
+    regression_weights_proto.weight_w = regression_weights["weight_w"]
+    op_conf.box_decode_conf.regression_weights.CopyFrom(
+        regression_weights_proto
+    )
     op_conf.box_decode_conf.boxes = "boxes"
     compile_context.CurJobAddOp(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
