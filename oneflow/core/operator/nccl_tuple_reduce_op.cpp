@@ -22,6 +22,9 @@ class NcclTupleReduceOp final : public Operator {
       std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
       const ParallelDesc& parallel_desc) const override;
   LogicalNode* NewProperLogicalNode() const override;
+  void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                            const ParallelContext* parallel_ctx,
+                            KernelConf* kernel_conf) const override;
 };
 
 void NcclTupleReduceOp::InitFromOpConf() {
@@ -71,6 +74,12 @@ Maybe<void> NcclTupleReduceOp::InferSbpSignature(
 
 LogicalNode* NcclTupleReduceOp::NewProperLogicalNode() const {
   return new NcclTupleReduceLogicalNode();
+}
+
+void NcclTupleReduceOp::VirtualGenKernelConf(
+    std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
+  *kernel_conf->mutable_nccl_tuple_reduce_conf()->mutable_parallel_ctx() = *parallel_ctx;
 }
 
 REGISTER_OP(OperatorConf::kNcclTupleReduceConf, NcclTupleReduceOp);

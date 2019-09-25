@@ -22,6 +22,9 @@ class NcclTupleBroadcastOp final : public Operator {
       std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
       const ParallelDesc& parallel_desc) const override;
   LogicalNode* NewProperLogicalNode() const override;
+  void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                            const ParallelContext* parallel_ctx,
+                            KernelConf* kernel_conf) const override;
 };
 
 void NcclTupleBroadcastOp::InitFromOpConf() {
@@ -88,6 +91,12 @@ Maybe<void> NcclTupleBroadcastOp::InferSbpSignature(
 
 LogicalNode* NcclTupleBroadcastOp::NewProperLogicalNode() const {
   return new NcclTupleBroadcastLogicalNode();
+}
+
+void NcclTupleBroadcastOp::VirtualGenKernelConf(
+    std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
+  *kernel_conf->mutable_nccl_tuple_broadcast_conf()->mutable_parallel_ctx() = *parallel_ctx;
 }
 
 REGISTER_OP(OperatorConf::kNcclTupleBroadcastConf, NcclTupleBroadcastOp);

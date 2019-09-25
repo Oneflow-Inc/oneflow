@@ -172,10 +172,17 @@ message GatherMs0GradKernelConf {
   required int64 offset = 1;
 }
 
+message NcclTupleReduceConf {	
+  required ParallelContext parallel_ctx = 1;	
+}	
+
+message NcclTupleBroadcastConf {	
+  required ParallelContext parallel_ctx = 1;	
+}	
+
 message KernelConf {
   required OpAttribute op_attribute = 1;
   required DataType data_type = 2;
-  optional ParallelContext parallel_ctx = 3;
   optional bool need_do_opaque_header = 4 [default = false];
   optional bool need_do_lod = 5 [default = false];
   optional bool need_do_dense_shape = 6 [default = false];
@@ -212,5 +219,7 @@ message KernelConf {
     SigmoidCrossEntropyLossGradKernelConf sigmoid_cross_entropy_loss_grad_conf = 413;
     GatherMs0KernelConf gather_ms0_conf = 414;
     GatherMs0GradKernelConf gather_ms0_grad_conf = 415;
+    NcclTupleReduceConf nccl_tuple_reduce_conf = 416;	
+    NcclTupleBroadcastConf nccl_tuple_broadcast_conf = 417;
   }
 }

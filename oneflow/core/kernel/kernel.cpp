@@ -80,11 +80,6 @@ void Kernel::ForwardDenseShape(const KernelCtx& ctx,
   UNIMPLEMENTED();
 }
 
-const ParallelContext& Kernel::parallel_ctx() const {
-  CHECK(kernel_conf().has_parallel_ctx());
-  return parallel_ctx();
-}
-
 template<DeviceType device_type>
 void KernelIf<device_type>::ForwardDataId(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {

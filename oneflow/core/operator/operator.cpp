@@ -201,7 +201,6 @@ void Operator::GenKernelConf(
     const ParallelContext* parallel_ctx, KernelConf* kernel_conf, const OpContext* op_ctx,
     std::function<const BlobDesc&(const std::string&)> LogicalBlobDesc4BnInOp) const {
   *(kernel_conf->mutable_op_attribute()) = op_attribute_;
-  if (parallel_ctx != nullptr) { *kernel_conf->mutable_parallel_ctx() = *parallel_ctx; }
   if (HasBlobDescWithField(GetBlobDesc4BnInOp, output_bns(), [](const BlobDesc* blob_desc) {
         return blob_desc->header_is_opaque();
       })) {

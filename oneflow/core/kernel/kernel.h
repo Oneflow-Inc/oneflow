@@ -114,8 +114,6 @@ class Kernel {
 
 #undef DEFINE_GET_VAL_FROM_CUSTOMIZED_CONF
 
-  const ParallelContext& parallel_ctx() const;
-
  private:
   const JobDesc* job_desc_;
   KernelConf kernel_conf_;
