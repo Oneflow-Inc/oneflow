@@ -45,8 +45,8 @@ class BlobDesc final {
 
   void CopyFrom(const BlobDesc&);
   // legacy interface, shouldn't use in new code
-  void CopyMetaFrom(const BlobDesc& other) { CopyFrom(other); }
-  void CopyAllFrom(const BlobDesc& other) { CopyMetaFrom(other); }
+  void CopyMetaFrom(const BlobDesc& other);
+  void CopyAllFrom(const BlobDesc& other) { CopyFrom(other); }
 
  private:
   void InitFromProto(const BlobDescProto& proto);
