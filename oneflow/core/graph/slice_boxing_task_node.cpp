@@ -35,7 +35,7 @@ void SliceBoxingTaskNode::Init(const LogicalBlobId& lbi, const TensorSliceView& 
 void SliceBoxingTaskNode::ProduceAllRegstsAndBindEdges() {
   std::shared_ptr<RegstDesc> out_regst_desc = ProduceRegst("out", false, 1, 1);
   this->ForEachOutDataEdge([&](TaskEdge* edge) { edge->AddRegst("out", out_regst_desc); });
-  ProduceRegst("fw_buf", false, 1, 1);
+  ProduceRegst("tmp", false, 1, 1);
 }
 
 void SliceBoxingTaskNode::ConsumeAllRegsts() {
@@ -55,7 +55,7 @@ void SliceBoxingTaskNode::ConsumeAllRegsts() {
 
 void SliceBoxingTaskNode::BuildExecGphAndRegst() {
   ExecNode* node = mut_exec_gph().NewNode();
-  std::shared_ptr<Operator> op = ConstructOp(GetBoxingOpConf());
+  std::shared_ptr<Operator> op = ConstructOp(GetBoxingOpConf(), &GlobalJobDesc());
   node->mut_op() = op;
   FOR_RANGE(size_t, i, 0, op->input_bns().size()) {
     const std::string& ibn = op->input_bns().Get(i);
@@ -65,7 +65,7 @@ void SliceBoxingTaskNode::BuildExecGphAndRegst() {
   std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out");
   out_regst->AddLbi(lbi_);
   node->BindBnWithRegst(op->SoleObn(), out_regst);
-  node->AddBnToRegstAndBindIt(&Operator::fw_buf_bns, GetProducedRegst("fw_buf"));
+  node->AddBnToRegstAndBindIt(&Operator::tmp_bns, GetProducedRegst("tmp"));
   node->InferBlobDescs(parallel_ctx());
 }
 
