@@ -58,8 +58,6 @@ class input_blob_def(blob_desc.BlobDesc):
         interface_blob_conf.shape.dim.extend(self.shape_)
         interface_blob_conf.data_type = self.dtype_
         interface_blob_conf.is_dynamic = self.is_dynamic_
-        if self.is_dynamic_:
-            interface_blob_conf.dim0_inner_shape.dim.extend([1,self.shape_[0]])
         if type(self.batch_axis_) is int:
             assert self.batch_axis_ >= 0
             interface_blob_conf.batch_axis.value = self.batch_axis_
