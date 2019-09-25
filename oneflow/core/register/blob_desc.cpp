@@ -16,7 +16,7 @@ std::unique_ptr<BlobDesc> ComputePackedBlobDesc(
       break;
     }
     RtBlobDesc rt_blob_desc(*(pair.second));
-    CHECK_EQ(0, rt_blob_desc.num_of_lod_levels());
+    CHECK(!rt_blob_desc.is_dynamic());
     CHECK(!rt_blob_desc.is_body_disabled());
     header_byte_size += rt_blob_desc.ByteSizeOfBlobHeader();
     body_byte_size += rt_blob_desc.AlignedByteSizeOfBlobBody();
@@ -38,6 +38,7 @@ BlobDesc::BlobDesc(const Shape& shape, DataType dtype)
       header_(),
       num_of_lod_levels_(0),
       is_body_disabled_(false),
+      is_dynamic_(false),
       opaque_header_(),
       header_is_opaque_(false) {
   Shape shape_of_dense_shape = Shape({shape.NumAxes()});
@@ -57,6 +58,7 @@ void BlobDesc::InitFromProto(const BlobDescProto& proto) {
   header_.InitFromProto(proto.header());
   num_of_lod_levels_ = proto.num_of_lod_levels();
   is_body_disabled_ = proto.is_body_disabled();
+  is_dynamic_ = proto.is_dynamic();
   opaque_header_.InitFromProto(proto.opaque_header());
   header_is_opaque_ = proto.header_is_opaque();
 }
@@ -66,6 +68,7 @@ void BlobDesc::ToProto(BlobDescProto* proto) const {
   header_.ToProto(proto->mutable_header());
   proto->set_num_of_lod_levels(num_of_lod_levels_);
   proto->set_is_body_disabled(is_body_disabled_);
+  proto->set_is_dynamic(is_dynamic_);
   opaque_header_.ToProto(proto->mutable_opaque_header());
   proto->set_header_is_opaque(header_is_opaque_);
 }
@@ -82,12 +85,20 @@ void BlobDesc::CopyFrom(const BlobDesc& other) {
   this->InitFromProto(proto);
 }
 
+void BlobDesc::SetShape(const Shape& shape) {
+  *(body_.mut_shape()) = shape;
+  TensorPodDesc* dense_shape_desc =
+      header_.MutExistedField(FieldKey::kDenseShape)->MutCast<TensorPodDesc>();
+  *(dense_shape_desc->mut_shape()) = Shape(std::vector<int64_t>{shape().NumAxes()});
+}
+
 void BlobDesc::SetLoD(int64_t num_of_lod_levels) {
   CHECK_GT(num_of_lod_levels, 1);
   CHECK_LT(num_of_lod_levels, shape().NumAxes());
 
   CHECK_GT(shape().NumAxes(), num_of_lod_levels);
   num_of_lod_levels_ = num_of_lod_levels;
+  is_dynamic_ = true;
 
   int64_t max_reserved_size_for_lod = 1;
   int64_t cur_level_size = 1;
@@ -101,11 +112,12 @@ void BlobDesc::SetLoD(int64_t num_of_lod_levels) {
       TensorPodDesc(Shape(std::vector<int64_t>{max_reserved_size_for_lod}), DataType::kInt64));
   TensorPodDesc* dense_shape_desc =
       header_.MutExistedField(FieldKey::kDenseShape)->MutCast<TensorPodDesc>();
-  *(dense_shape_desc->mut_shape()) =
-      Shape(std::vector<int64_t>{shape().NumAxes() - num_of_lod_levels});
+  *(dense_shape_desc->mut_shape()) = Shape(
+      std::vector<int64_t>{shape().NumAxes() - num_of_lod_levels + 1});  // 1 for tiled lod dims
 }
 
 void BlobDesc::SetOpaqueHeader(const StructPodDesc& header_pod_desc, int64_t header_byte_size) {
+  CHECK(!is_dynamic_);
   CHECK_EQ(num_of_lod_levels_, 0);
   CHECK_GT(header_byte_size, 0);
   CHECK_EQ(header_pod_desc.ByteSize(), header_byte_size);
@@ -113,6 +125,11 @@ void BlobDesc::SetOpaqueHeader(const StructPodDesc& header_pod_desc, int64_t hea
   *opaque_header_.mut_shape() = Shape(std::vector<int64_t>{header_byte_size});
   opaque_header_.set_data_type(DataType::kChar);
   header_ = header_pod_desc;
+}
+
+void BlobDesc::set_is_dynamic(bool is_dynamic) {
+  if (!is_dynamic) { CHECK_EQ(0, num_of_lod_levels_); }
+  is_dynamic_ = is_dynamic;
 }
 
 bool BlobDesc::operator==(const BlobDesc& rhs) const {

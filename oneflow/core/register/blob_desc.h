@@ -24,13 +24,11 @@ class BlobDesc final {
 
   BlobDesc& operator=(const BlobDesc&);
 
-  void CopyFrom(const BlobDesc&);
+  void SetShape(const Shape&);
   void SetLoD(int64_t num_of_lod_levels);
   void SetOpaqueHeader(const StructPodDesc& header_pod_desc, int64_t header_byte_size);
 
   const Shape& shape() const { return body_.shape(); }
-  Shape& mut_shape() { return *body_.mut_shape(); }
-
   DataType data_type() const { return body_.data_type(); }
   void set_data_type(DataType val) { body_.set_data_type(val); }
 
@@ -38,10 +36,13 @@ class BlobDesc final {
   bool is_body_disabled() const { return is_body_disabled_; }
   void set_is_body_disabled(bool val) { is_body_disabled_ = val; }
   bool header_is_opaque() const { return header_is_opaque_; }
+  bool is_dynamic() const { return is_dynamic_; }
+  void set_is_dynamic(bool);
 
   bool operator==(const BlobDesc&) const;
   void ToProto(BlobDescProto*) const;
 
+  void CopyFrom(const BlobDesc&);
   // legacy interface, shouldn't use in new code
   void CopyMetaFrom(const BlobDesc& other) { CopyFrom(other); }
   void CopyAllFrom(const BlobDesc& other) { CopyMetaFrom(other); }
@@ -53,6 +54,7 @@ class BlobDesc final {
   StructPodDesc header_;
   int64_t num_of_lod_levels_;  // lod: level of details
   bool is_body_disabled_;
+  bool is_dynamic_;
 
   // TODO(niuchong): remove opaque_header
   TensorPodDesc opaque_header_;
