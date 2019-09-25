@@ -24,9 +24,8 @@ class BlobDesc final {
 
   BlobDesc& operator=(const BlobDesc&);
 
-  void CopyFrom(const BlobDesc&);
   void SetLoD(int64_t num_of_lod_levels);
-  void SetOpaqueHeader(const StructPodDesc& header_pod_desc, int64_t header_byte_size);
+  void SetOpaqueHeader(const StructPodDesc& header_pod_desc);
 
   const Shape& shape() const { return body_.shape(); }
   Shape& mut_shape() { return *body_.mut_shape(); }
@@ -37,11 +36,14 @@ class BlobDesc final {
   int64_t num_of_lod_levels() const { return num_of_lod_levels_; }
   bool is_body_disabled() const { return is_body_disabled_; }
   void set_is_body_disabled(bool val) { is_body_disabled_ = val; }
-  bool header_is_opaque() const { return header_is_opaque_; }
+  bool header_is_opaque() const { return opaque_header_ != nullptr; }
+  bool is_dynamic() const { return is_dynamic_; }
+  void set_is_dynamic(bool);
 
   bool operator==(const BlobDesc&) const;
   void ToProto(BlobDescProto*) const;
 
+  void CopyFrom(const BlobDesc&);
   // legacy interface, shouldn't use in new code
   void CopyMetaFrom(const BlobDesc& other) { CopyFrom(other); }
   void CopyAllFrom(const BlobDesc& other) { CopyMetaFrom(other); }
@@ -50,13 +52,12 @@ class BlobDesc final {
   void InitFromProto(const BlobDescProto& proto);
 
   TensorPodDesc body_;
-  StructPodDesc header_;
   int64_t num_of_lod_levels_;  // lod: level of details
   bool is_body_disabled_;
+  bool is_dynamic_;
 
   // TODO(niuchong): remove opaque_header
-  TensorPodDesc opaque_header_;
-  bool header_is_opaque_;
+  std::unique_ptr<StructPodDesc> opaque_header_;
 };
 
 std::unique_ptr<BlobDesc> ComputePackedBlobDesc(
