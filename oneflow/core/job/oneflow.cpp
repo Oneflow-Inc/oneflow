@@ -152,6 +152,8 @@ void CompileCurJobOnMaster(Job* job, Plan* improved_plan, bool need_job_complete
 
 void MergePlanWithoutGenNetTopo(Plan* plan, const Plan& other) {
   plan->mutable_task()->MergeFrom(other.task());
+  plan->mutable_chunk()->MergeFrom(other.chunk());
+  plan->mutable_mem_block()->MergeFrom(other.mem_block());
   for (const auto& pair : other.job_confs().job_id2job_conf()) {
     CHECK(plan->mutable_job_confs()->mutable_job_id2job_conf()->insert(pair).second);
   }
@@ -566,7 +568,6 @@ void FinishGlobalCriticalSectionDesc(const std::vector<Plan>& plans) {
       }
     }
   }
-
   for (const auto& plan : plans) {
     for (const auto& chunk : plan.chunk()) {
       for (int64_t job_id : chunk.job_id()) { job_id2chunk_ids[job_id].insert(chunk.chunk_id()); }
@@ -837,6 +838,7 @@ void CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan) {
       CompileMainJob(&main_job, critical_section_sink_lbi, sub_plans.size(), &main_plan);
     }
     LinkMainPlan(plan, main_plan, identity_tick_op_names);
+    PlanUtil::CheckMemBlockAndChunkValid(*plan);
     TeePersistentLogStream::Create("merged_plan")->Write(*plan);
     PlanUtil::ToDotFile(*plan, "/dot/merged_plan.dot");
     PushPlan("merged_plan", *plan);
