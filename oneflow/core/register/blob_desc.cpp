@@ -103,7 +103,7 @@ void BlobDesc::CopyFrom(const BlobDesc& other) {
   this->InitFromProto(proto);
 }
 
-//TODO(niuchong) : remove is_body_disabled from blob into register
+// TODO(niuchong) : remove is_body_disabled from blob into register
 void BlobDesc::CopyMetaFrom(const BlobDesc& other) {
   bool tmp = is_body_disabled_;
   CopyFrom(other);
