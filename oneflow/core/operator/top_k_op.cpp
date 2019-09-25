@@ -56,8 +56,8 @@ Maybe<void> TopKOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> 
   const BlobDesc* in = GetBlobDesc4BnInOp("in");
   const int32_t instance_size = in->shape().dim_vec().back();
   const int32_t k = op_conf().top_k_conf().k();
-  CHECK_GE(k, 1);
-  CHECK_LE(k, instance_size);
+  CHECK_GE_OR_RETURN(k, 1);
+  CHECK_LE_OR_RETURN(k, instance_size);
 
   if (device_type() == DeviceType::kCPU) {
     if (k > 1) {
