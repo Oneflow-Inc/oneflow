@@ -151,6 +151,17 @@ void KernelIf<device_type>::CopyField(DeviceCtx* ctx,
   }
 }
 
+namespace {
+
+const HashSet<OperatorConf::OpTypeCase>& OpsWithNewKernelRegistry() {
+  static HashSet<OperatorConf::OpTypeCase> ops = {
+      OperatorConf::kMatmulConf, OperatorConf::kCastConf, OperatorConf::kNcclTupleBroadcastConf,
+      OperatorConf::kNcclTupleReduceConf, OperatorConf::kAssignConf};
+  return ops;
+}
+
+}  // namespace
+
 std::unique_ptr<const Kernel> ConstructKernel(const JobDesc* job_desc, const KernelConf& conf,
                                               DeviceCtx* device_ctx) {
   auto op_type = conf.op_attribute().op_conf().op_type_case();
