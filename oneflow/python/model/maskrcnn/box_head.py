@@ -225,6 +225,7 @@ class BoxHead(object):
         roi_features = flow.local_scatter_nd_update(
             flow.constant_like(roi_features, 0), origin_indices, roi_features
         )
+        roi_features = flow.reshape(roi_features, [roi_features.shape[0], -1])
         x = flow.layers.dense(
             inputs=roi_features,
             units=1024,
