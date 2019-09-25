@@ -281,13 +281,20 @@ def extract_piece_slice_id(inputs, name=None):
         "name",
         name if name is not None else id_util.UniqueStr("ExtractPieceSliceId_"),
     )
-    setattr(op_conf.extract_piece_slice_id_conf, "in", inputs.logical_blob_name)
-    op_conf.extract_piece_slice_id_conf.out = "out"
+    getattr(op_conf.extract_piece_slice_id_conf, "in").extend(
+        [i.logical_blob_name for i in inputs]
+    )
+    op_conf.extract_piece_slice_id_conf.out.extend(
+        ["out_" + str(i) for i in range(len(inputs))]
+    )
     compile_context.CurJobAddOp(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
+    ret = []
+    for i in range(len(inputs)):
+        out_lbi = logical_blob_id_util.LogicalBlobId()
+        setattr(out_lbi, "op_name", op_conf.name)
+        setattr(out_lbi, "blob_name", "out_" + str(i))
+        ret.append(remote_blob_util.RemoteBlob(out_lbi))
+    return tuple(ret)
 
 
 @oneflow_export("detection.nms")
