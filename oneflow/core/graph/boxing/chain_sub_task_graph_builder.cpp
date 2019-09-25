@@ -1,15 +1,7 @@
 #include "oneflow/core/graph/boxing/chain_sub_task_graph_builder.h"
+#include "oneflow/core/graph/boxing/sub_task_graph_builder_util.h"
 
 namespace oneflow {
-
-namespace {
-
-bool IsBoxingNotSupported(const Maybe<void>& status) {
-  return !status.IsOk() && status.error()->has_boxing_error()
-         && status.error()->boxing_error() == BoxingError::kNotSupported;
-}
-
-}  // namespace
 
 Maybe<void> ChainSubTskGphBuilder::Build(
     SubTskGphBuilderCtx* ctx, const std::vector<CompTaskNode*>& sorted_src_comp_tasks,
@@ -18,10 +10,10 @@ Maybe<void> ChainSubTskGphBuilder::Build(
     const BlobDesc& logical_blob_desc, const SbpParallel& src_sbp_parallel,
     const SbpParallel& dst_sbp_parallel) const {
   for (const auto& builder : builders_) {
-    Maybe<void> status = builder->Build(ctx, sorted_src_comp_tasks, sorted_dst_comp_tasks,
-                                        src_parallel_desc, dst_parallel_desc, lbi,
-                                        logical_blob_desc, src_sbp_parallel, dst_sbp_parallel);
-    if (IsBoxingNotSupported(status)) {
+    Maybe<void> status = TRY(builder->Build(ctx, sorted_src_comp_tasks, sorted_dst_comp_tasks,
+                                            src_parallel_desc, dst_parallel_desc, lbi,
+                                            logical_blob_desc, src_sbp_parallel, dst_sbp_parallel));
+    if (!status.IsOk() && SubTskGphBuilderUtil::IsErrorBoxingNotSupported(*status.error())) {
       continue;
     } else {
       return status;

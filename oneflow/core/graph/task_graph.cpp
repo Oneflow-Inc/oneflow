@@ -15,6 +15,10 @@
 #include "oneflow/core/graph/boxing/sub_task_graph_builder.h"
 #include "oneflow/core/graph/boxing/chain_sub_task_graph_builder.h"
 #include "oneflow/core/graph/boxing/nccl_boxing_sub_task_graph_builder.h"
+<<<<<<< HEAD
+=======
+#include "oneflow/core/graph/boxing/sub_task_graph_builder_util.h"
+>>>>>>> dev_python
 
 namespace oneflow {
 
@@ -629,11 +633,17 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxingV1) {
 }
 
 DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxingV2) {
-  const auto connected_edge_it = std::find_if(
-      src_logical->out_edges().cbegin(), src_logical->out_edges().cend(),
-      [&](const LogicalEdge* edge) -> bool { return edge->dst_node() == dst_logical; });
-  CHECK(connected_edge_it != src_logical->out_edges().cend());
-  for (const LogicalBlobId& lbi : (*connected_edge_it)->lbis()) {
+  const std::vector<LogicalBlobId> lbis = src_logical->GetLbisTo(dst_logical);
+  const auto Fallback = [&]() {
+    BldSubTskGphByBoxingV1(src_logical, dst_logical, sorted_src_comp_tasks, sorted_dst_comp_tasks,
+                           logical2sorted_in_box, logical2sorted_out_box, std::move(MutBufTask),
+                           std::move(AllocateCpuThrdIdEvenly));
+  };
+  if (lbis.size() > 1) {
+    Fallback();
+  } else {
+    CHECK_EQ(lbis.size(), 1);
+    const LogicalBlobId& lbi = lbis.front();
     const SbpParallel& src_sbp_parallel =
         Global<OpGraph>::Get()->GetSbpParallel(src_logical->SoleOp()->op_name(), lbi);
     const SbpParallel& dst_sbp_parallel =
@@ -644,15 +654,12 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxingV2) {
     SubTskGphBuilderCtx ctx(this);
     std::vector<std::shared_ptr<SubTskGphBuilder>> builders;
     builders.emplace_back(new NcclBoxingSubTskGphBuilder());
-    Maybe<void> status = ChainSubTskGphBuilder(builders).Build(
+    Maybe<void> status = TRY(ChainSubTskGphBuilder(builders).Build(
         &ctx, sorted_src_comp_tasks, sorted_dst_comp_tasks, *src_parallel_desc, *dst_parallel_desc,
-        lbi, blob_desc, src_sbp_parallel, dst_sbp_parallel);
+        lbi, blob_desc, src_sbp_parallel, dst_sbp_parallel));
     if (!status.IsOk()) {
-      if (status.error()->has_boxing_error()
-          && status.error()->boxing_error() == BoxingError::kNotSupported) {
-        BldSubTskGphByBoxingV1(src_logical, dst_logical, sorted_src_comp_tasks,
-                               sorted_dst_comp_tasks, logical2sorted_in_box, logical2sorted_out_box,
-                               std::move(MutBufTask), std::move(AllocateCpuThrdIdEvenly));
+      if (SubTskGphBuilderUtil::IsErrorBoxingNotSupported(*status.error())) {
+        Fallback();
       } else {
         UNIMPLEMENTED();
       }
