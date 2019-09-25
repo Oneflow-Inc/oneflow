@@ -33,22 +33,22 @@ class MaskHead(object):
 
             gt_segm_list = []
             gt_label_list = []
-            for img_idx in range(cfg.TRAINING.IMG_PER_GPUl):
+            for img_idx in range(self.cfg.TRAINING_CONF.IMG_PER_GPU):
                 gt_segm_list.append(
                     flow.local_gather(
-                        gt_segms[img_idxl], pos_gt_indices[img_idx]
+                        gt_segms[img_idx], pos_gt_indices[img_idx]
                     )
                 )
                 gt_label_list.append(
                     flow.local_gather(
-                        gt_labels[img_idxl], pos_gt_indices[img_idx]
+                        gt_labels[img_idx], pos_gt_indices[img_idx]
                     )
                 )
             gt_segms = flow.concat(gt_segm_list, axis=0)
             gt_labels = flow.concat(gt_label_list, axis=0)
             elem_cnt = flow.elem_cnt(gt_labels)
 
-            mask_pred = flow.keras.math.sigmoid(
+            mask_pred = flow.keras.activations.sigmoid(
                 flow.squeeze(
                     flow.gather(
                         params=mask_fcn_logits,
@@ -61,7 +61,9 @@ class MaskHead(object):
 
             mask_loss = (
                 flow.math.reduce_sum(
-                    flow.binary_cross_entropy(mask_pred, gt_segms)
+                    flow.nn.sigmoid_cross_entropy_with_logits(
+                        gt_segms, mask_pred
+                    )
                 )
                 / elem_cnt
             )
@@ -155,7 +157,7 @@ class MaskHead(object):
     def mask_predictor(self, x):
         filter = flow.get_variable(
             "conv5-weight",
-            shape=(x.static_shape[0], 256, 2, 2),
+            shape=(x.static_shape[1], 256, 2, 2),
             dtype=x.dtype,
             initializer=flow.constant_initializer(0),
         )
