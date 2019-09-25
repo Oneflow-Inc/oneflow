@@ -1,3 +1,6 @@
+import oneflow as flow
+
+
 class MaskHead(object):
     def __init__(self, cfg):
         self.cfg = cfg
@@ -142,7 +145,7 @@ class MaskHead(object):
                 padding="SAME",
                 data_format="NCHW",
                 dilation_rate=[1, 1],
-                activation=flow.keras.math.relu,
+                activation=flow.keras.activations.relu,
                 use_bias=True,
                 name="fcn{}".format(i),
             )
@@ -150,17 +153,21 @@ class MaskHead(object):
         return x
 
     def mask_predictor(self, x):
-        x = flow.detection.deconv(
+        filter = flow.get_variable(
+            "conv5-weight",
+            shape=(x.static_shape[0], 256, 2, 2),
+            dtype=x.dtype,
+            initializer=flow.constant_initializer(0),
+        )
+        x = flow.nn.conv2d_transpose(
             x,
-            filters=256,
-            kernel_size=[2, 2],
-            data_format="channels_first",
+            filter=filter,
+            data_format="NCHW",
             padding="same",
             strides=[2, 2],
-            activation=flow.keras.math.relu,
             name="conv5",
         )
-
+        x = flow.keras.activations.relu(x)
         x = flow.layers.conv2d(
             x,
             filters=81,
