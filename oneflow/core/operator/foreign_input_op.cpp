@@ -32,6 +32,8 @@ Maybe<void> ForeignInputOp::InferBlobDescs(
   } else {
     out_blob_desc->set_data_type(job_desc().DefaultDataType());
   }
+  out_blob_desc->set_is_dynamic(conf.is_dynamic());
+  if (conf.has_num_of_lod_levels()) { JUST(out_blob_desc->SetLoD(conf.num_of_lod_levels())); }
   return Maybe<void>::Ok();
 }
 
