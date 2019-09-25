@@ -32,6 +32,8 @@ class IDMgr final {
 
   // MemZoneId
   int64_t CpuMemZoneId() const { return Global<ResourceDesc>::Get()->GpuDeviceNum(); }
+  bool IsCpuMemZone(int64_t mem_zone_id) const { return mem_zone_id == CpuMemZoneId(); }
+  bool IsGpuMemZone(int64_t mem_zone_id) const { return mem_zone_id < gpu_device_num_; }
   int64_t GpuMemZoneId(int64_t dev_phy_id) const { return dev_phy_id; }
   int64_t GetGpuPhyIdFromMemZoneId(int64_t mem_zone_id) const {
     CHECK_LT(mem_zone_id, gpu_device_num_);
