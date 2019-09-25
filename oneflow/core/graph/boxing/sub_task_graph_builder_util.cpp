@@ -8,26 +8,6 @@ bool SubTskGphBuilderUtil::IsDeviceTypeCPUOrGPU(const ParallelDesc& parallel_des
          || parallel_desc.device_type() == DeviceType::kGPU;
 }
 
-ParallelDesc SubTskGphBuilderUtil::CloneParallelDescWithNewDeviceType(const ParallelDesc& src,
-                                                                      DeviceType device_type) {
-  ParallelConf new_conf;
-  std::string device_tag;
-  if (device_type == DeviceType::kCPU) {
-    device_tag = "cpu";
-  } else if (device_type == DeviceType::kGPU) {
-    device_tag = "gpu";
-  } else {
-    UNIMPLEMENTED();
-  }
-  for (const int64_t machine_id : src.sorted_machine_ids()) {
-    for (const int64_t device_id : src.sorted_dev_phy_ids(machine_id)) {
-      new_conf.add_device_name(std::to_string(machine_id) + ":" + device_tag + ":"
-                               + std::to_string(device_id));
-    }
-  }
-  return ParallelDesc(new_conf);
-}
-
 std::vector<TensorSliceView> SubTskGphBuilderUtil::GetTensorSliceView(
     const int64_t parallel_num, const SbpParallel& sbp_parallel, const BlobDesc& blob_desc) {
   std::vector<Range> ranges(blob_desc.shape().NumAxes());
