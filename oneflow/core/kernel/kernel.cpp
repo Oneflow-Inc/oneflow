@@ -30,13 +30,9 @@ void Kernel::InitModelAndConstBuf(const KernelCtx& ctx,
 
 void Kernel::Launch(const KernelCtx& ctx,
                     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  if (kernel_conf_.is_forward()) {
-    gdb::ForwardEnterBreakPoint(op_attribute(), BnInOp2Blob);
-    Forward(ctx, BnInOp2Blob);
-    gdb::ForwardLeaveBreakPoint(op_attribute(), BnInOp2Blob);
-  } else {
-    UNIMPLEMENTED();
-  }
+  gdb::ForwardEnterBreakPoint(op_attribute(), BnInOp2Blob);
+  Forward(ctx, BnInOp2Blob);
+  gdb::ForwardLeaveBreakPoint(op_attribute(), BnInOp2Blob);
 }
 
 const LogicalBlobId& Kernel::BnInOp2Lbi(const std::string& bn_in_op) const {

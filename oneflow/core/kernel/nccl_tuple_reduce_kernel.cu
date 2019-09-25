@@ -20,7 +20,7 @@ class NcclTupleReduceKernel final : public KernelIf<DeviceType::kGPU> {
 void NcclTupleReduceKernel::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const NcclTupleReduceOpConf& conf = this->op_conf().nccl_tuple_reduce_conf();
-  const auto& parallel_ctx = this->kernel_conf().nccl_tuple_reduce_conf().parallel_ctx();
+  const auto& parallel_ctx = this->kernel_conf().parallel_ctx();
   const int64_t num_in_out = conf.out_size();
   std::vector<const void*> send_ptr_vec(num_in_out);
   std::vector<void*> recv_ptr_vec(num_in_out);
