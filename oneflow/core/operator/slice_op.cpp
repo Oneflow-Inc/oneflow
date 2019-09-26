@@ -23,11 +23,10 @@ Maybe<void> SliceOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)>
                                     const ParallelContext* parallel_ctx) const {
   const SliceOpConf& conf = op_conf().slice_conf();
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
-  CHECK_EQ_OR_RETURN(conf.dim_slice_conf_size(), in_blob_desc->shape().NumAxes() - 1);
+  CHECK_EQ_OR_RETURN(conf.dim_slice_conf_size(), in_blob_desc->shape().NumAxes());
   std::vector<int64_t> shape_vec(in_blob_desc->shape().NumAxes());
-  shape_vec[0] = in_blob_desc->shape().At(0);
   FOR_RANGE(size_t, i, 0, conf.dim_slice_conf_size()) {
-    int32_t dim_len = in_blob_desc->shape().At(i + 1);
+    int32_t dim_len = in_blob_desc->shape().At(i);
     const DimSliceConf& dim_slice_conf = conf.dim_slice_conf(i);
     int32_t step = dim_slice_conf.stride();
     CHECK_GT_OR_RETURN(step, 0);
@@ -38,7 +37,7 @@ Maybe<void> SliceOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)>
     CHECK_GE_OR_RETURN(start, 0);
     CHECK_LT_OR_RETURN(start, end);
     CHECK_LE_OR_RETURN(end, dim_len);
-    shape_vec[i + 1] = (end - start - 1) / std::abs(step) + 1;
+    shape_vec[i] = (end - start - 1) / std::abs(step) + 1;
   }
 
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
