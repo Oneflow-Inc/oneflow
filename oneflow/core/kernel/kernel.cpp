@@ -1,6 +1,6 @@
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/common/gdb.h"
-#include "oneflow/core/operator/operator.h"
+#include "oneflow/core/kernel/runtime_blob_shape_infer_helper.h"
 
 namespace oneflow {
 
@@ -18,9 +18,12 @@ void ClearBlobDim0ValidNumIfNeed(const PbRpf<std::string>& bns,
 
 }  // namespace
 
+Kernel::~Kernel() { delete shape_infer_helper_; }
+
 void Kernel::Init(const JobDesc* job_desc, const KernelConf& kernel_conf, DeviceCtx* device_ctx) {
   job_desc_ = job_desc;
   kernel_conf_ = kernel_conf;
+  shape_infer_helper_ = new RuntimeBlobShapeInferHelper(this->op_conf(), &this->job_desc());
   VirtualKernelInit(device_ctx);
 }
 
@@ -79,53 +82,7 @@ void Kernel::ForwardLoD(const KernelCtx& ctx,
 void Kernel::ForwardDenseShape(const KernelCtx& ctx,
                                std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   CHECK_EQ(kernel_conf_.need_do_lod(), false);
-  return NaiveForwardDenseShape(BnInOp2Blob);
-}
-
-void Kernel::NaiveForwardDenseShape(std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
-  auto op = ConstructOp(this->op_conf(), &this->job_desc());
-  HashMap<std::string, std::unique_ptr<BlobDesc>> bn_in_op2blob_desc;
-  HashSet<std::string> ibns;
-  for (const auto& ibn : op->input_bns()) { ibns.insert(ibn); }
-  auto BlobDesc4BnInOp = [&](const std::string& bn_in_op) {
-    BlobDesc* blob_desc = bn_in_op2blob_desc[bn_in_op].get();
-    if (blob_desc == nullptr) {
-      const RtBlobDesc& rt_blob_desc = BnInOp2Blob(bn_in_op)->blob_desc();
-      blob_desc = new BlobDesc(rt_blob_desc.body(), rt_blob_desc.num_of_lod_levels(),
-                               rt_blob_desc.is_body_disabled(), rt_blob_desc.is_dynamic());
-      if (ibns.find(bn_in_op) != ibns.end()) {
-        const Blob* blob = BnInOp2Blob(bn_in_op);
-        CHECK_EQ(blob_desc->shape().NumAxes(), blob->shape().NumAxes());
-        blob_desc->mut_shape() = blob->shape();
-      }
-      bn_in_op2blob_desc[bn_in_op].reset(blob_desc);
-    }
-    return blob_desc;
-  };
-  ParallelContext parallel_ctx;
-  parallel_ctx.set_parallel_id(0);
-  parallel_ctx.set_parallel_num(1);
-  SbpSignature sbp_signature;
-  for (const auto& ibn : op->input_bns()) {
-    (*sbp_signature.mutable_bn_in_op2sbp_parallel())[ibn].mutable_split_parallel()->set_axis(0);
-  }
-  for (const auto& obn : op->output_bns()) {
-    (*sbp_signature.mutable_bn_in_op2sbp_parallel())[obn].mutable_split_parallel()->set_axis(0);
-  }
-  CHECK_JUST(
-      op->InferOutBlobDescsIf(BlobDesc4BnInOp, &parallel_ctx, &sbp_signature, [](OpContext*) {}));
-  for (const auto& obn : op->output_bns()) {
-    auto* blob = BnInOp2Blob(obn);
-    const auto& blob_desc = bn_in_op2blob_desc.at(obn);
-    CHECK_EQ(blob->data_type(), blob_desc->data_type());
-    CHECK_EQ(blob->blob_desc().is_dynamic(), blob_desc->is_dynamic());
-    CHECK_EQ(blob->blob_desc().is_body_disabled(), blob_desc->is_body_disabled());
-    if (blob->blob_desc().is_dynamic()) {
-      blob->dense_shape_mut_view().set_shape(blob_desc->shape());
-    } else {
-      CHECK_EQ(blob->shape(), blob_desc->shape());
-    }
-  }
+  return shape_infer_helper_->InferDenseShape(BnInOp2Blob);
 }
 
 template<DeviceType device_type>
