@@ -9,8 +9,8 @@ template<typename T, typename I, template<typename> class func>
 __global__ void ScatterNdUpdateGpu(int64_t num_segms, int64_t segms_size, int64_t segm_dims,
                                    const I* indices, const int64_t* shape, const T* sparse,
                                    T* dense) {
-  ScatterNdFunctor<T, K, func>::Invoke(num_segms, segms_size, segm_dims, indices,
-                                                         shape, sparse, dense);
+  ScatterNdFunctor<T, I, func>::Invoke(num_segms, segms_size, segm_dims, indices, shape, sparse,
+                                       dense);
 }
 
 }  // namespace
@@ -50,7 +50,7 @@ class ScatterNdUpdateGpuKernel final : public KernelIf<DeviceType::kGPU> {
   }
 };
 
-#define REGISTER_SCATTER_ND_UPDATE_GPU_KERNEL(dtype, itype)                                       \
+#define REGISTER_SCATTER_ND_UPDATE_GPU_KERNEL(dtype, itype)                                      \
   REGISTER_KERNEL_WITH_PRED_AND_LABEL(OperatorConf::kLocalScatterNdUpdateConf, DeviceType::kGPU, \
                                       dtype, itype, ScatterNdUpdateGpuKernel<dtype, itype>)
 
@@ -58,3 +58,5 @@ REGISTER_SCATTER_ND_UPDATE_GPU_KERNEL(float, int32_t);
 REGISTER_SCATTER_ND_UPDATE_GPU_KERNEL(double, int32_t);
 REGISTER_SCATTER_ND_UPDATE_GPU_KERNEL(float, int8_t);
 REGISTER_SCATTER_ND_UPDATE_GPU_KERNEL(double, int8_t);
+
+}  // namespace oneflow
