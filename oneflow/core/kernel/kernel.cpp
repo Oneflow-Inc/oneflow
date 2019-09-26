@@ -83,7 +83,7 @@ void Kernel::ForwardDenseShape(const KernelCtx& ctx,
 }
 
 void Kernel::NaiveForwardDenseShape(std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
-  auto op = ConstructOp(this->op_conf(), this->device_type(), &this->job_desc());
+  auto op = ConstructOp(this->op_conf(), &this->job_desc());
   HashMap<std::string, std::unique_ptr<BlobDesc>> bn_in_op2blob_desc;
   HashSet<std::string> ibns;
   for (const auto& ibn : op->input_bns()) { ibns.insert(ibn); }
