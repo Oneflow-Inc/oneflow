@@ -186,14 +186,14 @@ if __name__ == "__main__":
     else:
         check_point.load(args.model_load_dir)
     if args.debug:
-        eval_mask_rcnn(
+        train_mask_rcnn(
             images=placeholders["images"],
             image_sizes=placeholders["image_sizes"],
             gt_boxes=placeholders["gt_boxes"],
             gt_segms=placeholders["gt_segms"],
             gt_labels=placeholders["gt_labels"],
         )
-        train_mask_rcnn(
+        eval_mask_rcnn(
             images=placeholders["images"],
             image_sizes=placeholders["image_sizes"],
             gt_boxes=placeholders["gt_boxes"],
