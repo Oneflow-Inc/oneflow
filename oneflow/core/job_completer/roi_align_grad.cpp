@@ -26,6 +26,6 @@ void GenerateBackwardOpConf(
 
 }  // namespace
 
-REGISTER_OP_GRAD(OperatorConf::kRoiAlignGradConf, &GenerateBackwardOpConf);
+REGISTER_OP_GRAD(OperatorConf::kRoiAlignConf, &GenerateBackwardOpConf);
 
 }  // namespace oneflow
