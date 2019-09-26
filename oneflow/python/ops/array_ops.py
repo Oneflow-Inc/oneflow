@@ -152,16 +152,15 @@ def slice(input_, begin, size, name=None):
     assert (
         isinstance(size, (list, tuple)) and len(size) == ndims
     ), "size must be a list or tuple whose length is the same with input_'s number of dimensions."
-    assert (
-        begin[0] is None
-    ), "begin not support dim0 slice at present, the first element of begin must be set to None"
-    assert (
-        size[0] is None
-    ), "size not support dim0 slice at present, the first element of size must be set to None"
+    # assert (
+    #     begin[0] is None
+    # ), "begin not support dim0 slice at present, the first element of begin must be set to None"
+    # assert (
+    #     size[0] is None
+    # ), "size not support dim0 slice at present, the first element of size must be set to None"
 
     slice_conf_list = []
-    # ignore first dimension because it's not supported yet
-    for b, s, d in list(zip(begin, size, input_.static_shape))[1:]:
+    for b, s, d in list(zip(begin, size, input_.static_shape)):
         slice_conf = op_conf_util.DimSliceConf()
         if b < -d or b > d - 1:
             raise ValueError(

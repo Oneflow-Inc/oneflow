@@ -25,7 +25,7 @@ Maybe<void> SliceGradOp::InferBlobDescs(
     const ParallelContext* parallel_ctx) const {
   const SliceGradOpConf& conf = op_conf().slice_grad_conf();
   const BlobDesc* like_blob_desc = GetBlobDesc4BnInOp("like");
-  CHECK_EQ_OR_RETURN(conf.dim_slice_conf_size(), like_blob_desc->shape().NumAxes() - 1);
+  CHECK_EQ_OR_RETURN(conf.dim_slice_conf_size(), like_blob_desc->shape().NumAxes());
   GetBlobDesc4BnInOp("dx")->CopyMetaFrom(*like_blob_desc);
   if (op_conf().device_type() == DeviceType::kGPU) {
     BlobDesc* offset_blob_desc = GetBlobDesc4BnInOp("y_to_x_offset");
