@@ -14,12 +14,6 @@ void NormalizationGradKernel<device_type, T>::ForwardDataContent(
 }
 
 template<DeviceType device_type, typename T>
-void NormalizationGradKernel<device_type, T>::BackwardDataContent(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  UNIMPLEMENTED();
-}
-
-template<DeviceType device_type, typename T>
 const PbMessage& NormalizationGradKernel<device_type, T>::GetCustomizedOpConf() const {
   return this->op_conf().normalization_grad_conf();
 }

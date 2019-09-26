@@ -27,19 +27,6 @@ void LocalResponseNormalizationKernel<DeviceType::kCPU, T>::ForwardDataContent(
 }
 
 template<typename T>
-void LocalResponseNormalizationKernel<DeviceType::kCPU, T>::BackwardDataContent(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const auto& conf = kernel_conf().op_attribute().op_conf().local_response_normalization_conf();
-  if (conf.data_format() == "channels_first") {
-    NCHWBackward(ctx, BnInOp2Blob);
-  } else if (conf.data_format() == "channels_last") {
-    NHWCBackward(ctx, BnInOp2Blob);
-  } else {
-    UNIMPLEMENTED();
-  }
-}
-
-template<typename T>
 void LocalResponseNormalizationKernel<DeviceType::kCPU, T>::NCHWForward(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const LocalResponseNormalizationOpConf& lrn_conf =
