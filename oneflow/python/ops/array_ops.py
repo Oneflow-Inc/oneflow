@@ -77,7 +77,7 @@ def reshape(x, shape, name=None):
             operator.mul, shape, 1
         )
     op_conf = op_conf_util.OperatorConf()
-    op_conf.name = id_util.UniqueStr("Reshape_")
+    op_conf.name = id_util.UniqueStr("Reshape_" + x.op_name)
     setattr(op_conf.reshape_conf, "in", x.logical_blob_name)
     op_conf.reshape_conf.shape.dim[:] = list(shape)
     op_conf.reshape_conf.out = "out"
