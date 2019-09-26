@@ -39,6 +39,7 @@ class LogicalGraph final : public Graph<LogicalNode, LogicalEdge> {
                                       const ReduceRankCtx& prev_rank_ctx);
   void AddAllReduce(LogicalNode* src, LogicalNode* dst);
   void AddNcclAllReduce(LogicalNode* src, LogicalNode* dst);
+  void AddNcclHierarchyAllReduce(LogicalNode* src, LogicalNode* dst);
   void AddNcclReduceScatterAndAllGather(LogicalNode* src, LogicalNode* dst);
   void ReplaceAllReduceFacades();
 

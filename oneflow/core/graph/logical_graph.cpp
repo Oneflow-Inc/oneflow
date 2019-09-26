@@ -1,5 +1,4 @@
 #include "oneflow/core/graph/logical_graph.h"
-#include "oneflow/core/graph/task_graph.h"
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/operator/op_conf.pb.h"
@@ -173,8 +172,11 @@ void LogicalGraph::AddAllReduce(LogicalNode* src, LogicalNode* dst) {
   CHECK_EQ(src_pd->parallel_num(), dst_pd->parallel_num());
   CHECK_EQ(src_pd->device_type(), dst_pd->device_type());
   if (GlobalJobDesc().enable_nccl() && src_pd->device_type() == DeviceType::kGPU) {
-    if (src_pd->sorted_machine_ids().size() == 1
-        || GlobalJobDesc().use_nccl_inter_node_communication()) {
+    if (src_pd->sorted_machine_ids().size() > 1 && src_pd->device_num_of_each_machine() > 1
+        && GlobalJobDesc().enable_nccl_hierarchy_all_reduce()) {
+      AddNcclHierarchyAllReduce(src, dst);
+    } else if (src_pd->sorted_machine_ids().size() == 1
+               || GlobalJobDesc().use_nccl_inter_node_communication()) {
       AddNcclAllReduce(src, dst);
     } else if (src_pd->device_num_of_each_machine() == 1) {
       AddReduceScatterAddGatherNodes(src, dst, ReduceRankCtx());
@@ -227,6 +229,51 @@ void LogicalGraph::AddNcclAllReduce(LogicalNode* src, LogicalNode* dst) {
   nccl_all_reduce_node->mut_rank_ctx() = ReduceRankCtx().CtxWithScatter(src_pd->parallel_num());
   Connect<LogicalNode>(src, NewEdge(), nccl_all_reduce_node);
   Connect<LogicalNode>(nccl_all_reduce_node, NewEdge(), dst);
+}
+
+void LogicalGraph::AddNcclHierarchyAllReduce(LogicalNode* src, LogicalNode* dst) {
+  std::shared_ptr<const ParallelDesc> src_pd = src->parallel_desc();
+  const ReduceRankCtx inner_node_ctx =
+      ReduceRankCtx().CtxWithScatter(src_pd->device_num_of_each_machine());
+  const ReduceRankCtx inter_node_ctx =
+      inner_node_ctx.CtxWithScatter(src_pd->sorted_machine_ids().size());
+
+  auto* reduce_scatter_node = NewNode<NcclReduceScatterLogicalNode>();
+  {
+    OperatorConf reduce_scatter_op_conf{};
+    reduce_scatter_op_conf.set_name("nccl_reduce_scatter_" + NewUniqueId());
+    reduce_scatter_op_conf.set_device_type(src_pd->device_type());
+    reduce_scatter_op_conf.mutable_nccl_reduce_scatter_conf();
+    reduce_scatter_node->mut_op_vec() = {ConstructOp(reduce_scatter_op_conf, &GlobalJobDesc())};
+    reduce_scatter_node->mut_parallel_desc() = src_pd;
+    reduce_scatter_node->mut_rank_ctx() = inner_node_ctx;
+  }
+  Connect<LogicalNode>(src, NewEdge(), reduce_scatter_node);
+
+  auto* all_reduce_node = NewNode<NcclAllReduceLogicalNode>();
+  {
+    OperatorConf all_reduce_op_conf{};
+    all_reduce_op_conf.set_name("nccl_all_reduce_" + NewUniqueId());
+    all_reduce_op_conf.set_device_type(src_pd->device_type());
+    all_reduce_op_conf.mutable_nccl_all_reduce_conf();
+    all_reduce_node->mut_op_vec() = {ConstructOp(all_reduce_op_conf, &GlobalJobDesc())};
+    all_reduce_node->mut_parallel_desc() = src_pd;
+    all_reduce_node->mut_rank_ctx() = inter_node_ctx;
+  }
+  Connect<LogicalNode>(reduce_scatter_node, NewEdge(), all_reduce_node);
+
+  auto* all_gather_node = NewNode<NcclAllGatherLogicalNode>();
+  {
+    OperatorConf all_gather_op_conf{};
+    all_gather_op_conf.set_name("nccl_all_gather_" + NewUniqueId());
+    all_gather_op_conf.set_device_type(src_pd->device_type());
+    all_gather_op_conf.mutable_nccl_all_gather_conf();
+    all_gather_node->mut_op_vec() = {ConstructOp(all_gather_op_conf, &GlobalJobDesc())};
+    all_gather_node->mut_parallel_desc() = src_pd;
+    all_gather_node->mut_rank_ctx() = inner_node_ctx;
+  }
+  Connect<LogicalNode>(all_reduce_node, NewEdge(), all_gather_node);
+  Connect<LogicalNode>(all_gather_node, NewEdge(), dst);
 }
 
 void LogicalGraph::AddReduceScatterAddGatherNodes(LogicalNode* src, LogicalNode* dst,

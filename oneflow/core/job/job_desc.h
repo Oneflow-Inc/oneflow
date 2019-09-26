@@ -46,6 +46,9 @@ class JobDesc final {
     return job_conf_.use_nccl_inter_node_communication();
   }
   bool use_boxing_v2() const { return job_conf_.use_boxing_v2(); }
+  bool enable_nccl_hierarchy_all_reduce() const {
+    return job_conf_.enable_nccl_hierarchy_all_reduce();
+  }
   bool enable_all_reduce_group() const { return job_conf_.enable_all_reduce_group(); }
   bool enable_non_distributed_optimizer() const {
     return job_conf_.enable_non_distributed_optimizer();
