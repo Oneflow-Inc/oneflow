@@ -1,6 +1,6 @@
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/kernel/kernel_util.h"
-#include "oneflow/core/kernel/upsample_nearest_kernel.h"
+#include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/kernel/kernel_util.cuh"
 
 namespace oneflow {
@@ -59,30 +59,61 @@ __global__ void UpsampleNearestBackward(const int64_t nthreads, const T* dy_dptr
 }  // namespace
 
 template<typename T>
-struct UpsampleNearestUtil<DeviceType::kGPU, T> {
-  static void Forward(const KernelCtx& ctx, const const float scale_h, const float scale_w,
-                      const bool align_corners, const Blob* in_blob, Blob* out_blob) {
+class UpsampleNearestGPUKernel final : public KernelIf<DeviceType::kGPU> {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(UpsampleNearestGPUKernel);
+  UpsampleNearestGPUKernel() = default;
+  ~UpsampleNearestGPUKernel() = default;
+
+ private:
+  void ForwardDataContent(const KernelCtx& ctx,
+                          std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
+    const Blob* in_blob = BnInOp2Blob("in");
+    Blob* out_blob = BnInOp2Blob("out");
+    const int32_t scale = 1.f / this->op_conf().upsample_nearest_conf().scale();
+
     const int64_t elem_cnt = out_blob->shape().elem_cnt();
     UpsampleNearestForward<T><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
                                 ctx.device_ctx->cuda_stream()>>>(
         elem_cnt, in_blob->dptr<T>(), in_blob->shape().At(1), in_blob->shape().At(2),
-        in_blob->shape().At(3), out_blob->shape().At(2), out_blob->shape().At(3), scale_h, scale_w,
-        align_corners, out_blob->mut_dptr<T>());
+        in_blob->shape().At(3), out_blob->shape().At(2), out_blob->shape().At(3), scale, scale,
+        false, out_blob->mut_dptr<T>());
   }
+};
 
-  static void Backward(const KernelCtx& ctx, const const float scale_h, const float scale_w,
-                       const bool align_corners, const Blob* dy_blob, Blob* dx_blob) {
+template<typename T>
+class UpsampleNearestGradGPUKernel final : public KernelIf<DeviceType::kGPU> {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(UpsampleNearestGradGPUKernel);
+  UpsampleNearestGradGPUKernel() = default;
+  ~UpsampleNearestGradGPUKernel() = default;
+
+ private:
+  void ForwardDataContent(const KernelCtx& ctx,
+                          std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
+    Blob* dx_blob = BnInOp2Blob("dx");
+    if (dx_blob == nullptr) { return; }
+    Memset<DeviceType::kGPU>(ctx.device_ctx, dx_blob->mut_dptr<T>(), 0,
+                             dx_blob->ByteSizeOfDataContentField());
+    const Blob* dy_blob = BnInOp2Blob("dy");
+    const int32_t scale = this->op_conf().upsample_nearest_conf().scale();
+
     const int64_t elem_cnt = dy_blob->shape().elem_cnt();
     UpsampleNearestBackward<T><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
                                  ctx.device_ctx->cuda_stream()>>>(
         elem_cnt, dy_blob->dptr<T>(), dx_blob->shape().At(1), dx_blob->shape().At(2),
-        dx_blob->shape().At(3), dy_blob->shape().At(2), dy_blob->shape().At(3), scale_h, scale_w,
-        align_corners, dx_blob->mut_dptr<T>());
+        dx_blob->shape().At(3), dy_blob->shape().At(2), dy_blob->shape().At(3), scale, scale, false,
+        dx_blob->mut_dptr<T>());
   }
 };
 
-#define INSTANTIATE_UPSAMPLE_NEAREST_KERNEL_UTIL(type_cpp, type_proto) \
-  template class UpsampleNearestUtil<DeviceType::kGPU, type_cpp>;
-OF_PP_FOR_EACH_TUPLE(INSTANTIATE_UPSAMPLE_NEAREST_KERNEL_UTIL, FLOATING_DATA_TYPE_SEQ);
+REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kUpsampleNearestConf, DeviceType::kGPU, float,
+                                      UpsampleNearestGPUKernel<float>)
+REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kUpsampleNearestGradConf, DeviceType::kGPU,
+                                      float, UpsampleNearestGradGPUKernel<float>)
+REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kUpsampleNearestConf, DeviceType::kGPU, double,
+                                      UpsampleNearestGPUKernel<double>)
+REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kUpsampleNearestGradConf, DeviceType::kGPU,
+                                      double, UpsampleNearestGradGPUKernel<double>)
 
 }  // namespace oneflow
