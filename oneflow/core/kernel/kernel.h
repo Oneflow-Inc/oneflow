@@ -14,10 +14,12 @@
 
 namespace oneflow {
 
+class RuntimeBlobShapeInferHelper;
+
 class Kernel {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Kernel);
-  virtual ~Kernel() = default;
+  virtual ~Kernel();
 
   const JobDesc& job_desc() const { return *job_desc_; }
 
@@ -118,6 +120,8 @@ class Kernel {
  private:
   const JobDesc* job_desc_;
   KernelConf kernel_conf_;
+
+  RuntimeBlobShapeInferHelper* shape_infer_helper_;
 };
 
 template<DeviceType device_type>
