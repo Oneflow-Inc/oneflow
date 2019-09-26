@@ -193,6 +193,9 @@ if __name__ == "__main__":
     else:
         check_point.load(args.model_load_dir)
     if args.debug:
+        flow.config.cudnn_conv_force_fwd_algo(0)
+        flow.config.cudnn_conv_force_bwd_data_algo(1)
+        flow.config.cudnn_conv_force_bwd_filter_algo(1)
         train_mask_rcnn(
             images=placeholders["images"],
             image_sizes=placeholders["image_sizes"],
