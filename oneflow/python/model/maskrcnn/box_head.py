@@ -116,7 +116,7 @@ class BoxHead(object):
             # construct cls loss
             # TODO: handle dynamic shape in sparse_cross_entropy
             # duplicate labels for 4 times to pass static shape check
-            labels = flow.concat([labels, labels, labels, labels], axis=0)
+            labels = flow.concat([labels] * 4, axis=0)
             total_elem_cnt = flow.elem_cnt(labels)
             box_head_cls_loss = (
                 flow.math.reduce_sum(

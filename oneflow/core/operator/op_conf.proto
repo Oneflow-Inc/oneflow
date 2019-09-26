@@ -1591,6 +1591,7 @@ message ConstantLikeOpConf {
 message LocalNonzeroOpConf {
   required string in = 1;
   required string out = 2;
+  required string num_nonzero = 3;
 }
 
 message SqueezeOpConf {
