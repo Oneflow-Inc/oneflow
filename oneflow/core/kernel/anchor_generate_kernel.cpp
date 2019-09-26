@@ -18,7 +18,6 @@ class AnchorGenerateKernel final : public KernelIf<DeviceType::kCPU> {
     const int64_t batch_height = images_blob->shape().At(1);
     const int64_t batch_width = images_blob->shape().At(2);
 
-    // output: anchors
     Blob* anchors = BnInOp2Blob("anchors");
     Memset<DeviceType::kCPU>(ctx.device_ctx, anchors->mut_dptr<T>(), 0,
                              anchors->ByteSizeOfDataContentField());
