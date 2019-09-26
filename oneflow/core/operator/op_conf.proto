@@ -1743,6 +1743,14 @@ message SmoothL1OpConf {
   required string out = 5;
 }
 
+message SmoothL1GradOpConf {
+  required string dx = 1;
+  required string label = 2;
+  optional float beta = 3 [default = 1.0];
+  optional float scale = 4 [default = 1.0];
+  required string dy = 5;
+}
+
 message UpsampleNearestOpConf {
   required string in = 1;
   required string out = 2;
@@ -1952,6 +1960,7 @@ message OperatorConf {
     ElementCountOpConf element_count_conf = 320;
     SyncDynamicResizeOpConf sync_dynamic_resize_conf = 321;
     UpsampleNearestGradOpConf upsample_nearest_grad_conf = 322;
+    SmoothL1GradOpConf smooth_l1_grad_conf = 323;
 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;
