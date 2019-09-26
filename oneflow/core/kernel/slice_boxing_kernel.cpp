@@ -69,12 +69,14 @@ void SliceBoxingAddKernel<device_type, T>::ForwardDataContent(
             && out->mem_case().device_cuda_mem().device_id()
                    == in_i->mem_case().device_cuda_mem().device_id());
     if (in_i->shape() == out->shape() && can_direct_access) {
-      Addition<device_type, T>(ctx.device_ctx, out, out, in_i);
+      KernelUtil<device_type, T>::Axpy(ctx.device_ctx, out->shape().elem_cnt(), GetOneVal<T>(),
+                                       in_i->dptr<T>(), 1, out->mut_dptr<T>(), 1);
     } else {
       Blob* buf = BnInOp2Blob("buf");
       this->tensor_slice_copier_vec().at(in_bn_id)->Copy(ctx.device_ctx, *this->memory_copier(),
                                                          buf, in_i);
-      Addition<device_type, T>(ctx.device_ctx, out, out, buf);
+      KernelUtil<device_type, T>::Axpy(ctx.device_ctx, out->shape().elem_cnt(), GetOneVal<T>(),
+                                       buf->dptr<T>(), 1, out->mut_dptr<T>(), 1);
     }
   }
 }
