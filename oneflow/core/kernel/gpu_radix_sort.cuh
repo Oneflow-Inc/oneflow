@@ -3,6 +3,7 @@
 
 #include <cub/cub.cuh>
 #include <glog/logging.h>
+#include "oneflow/core/device/cuda_util.h"
 
 namespace oneflow {
 

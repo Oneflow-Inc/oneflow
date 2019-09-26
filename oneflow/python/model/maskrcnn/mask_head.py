@@ -45,7 +45,9 @@ class MaskHead(object):
                     )
                 )
             gt_segms = flow.concat(gt_segm_list, axis=0)
+            gt_segms = flow.concat([gt_segms] * 4, axis=0)
             gt_labels = flow.concat(gt_label_list, axis=0)
+            gt_labels = flow.concat([gt_labels] * 4, axis=0)
             elem_cnt = flow.elem_cnt(gt_labels)
 
             mask_pred = flow.keras.activations.sigmoid(
@@ -53,7 +55,7 @@ class MaskHead(object):
                     flow.gather(
                         params=mask_fcn_logits,
                         indices=flow.expand_dims(gt_labels, 1),
-                        batch_dims=0,
+                        batch_dims=1,
                     ),
                     axis=[1],
                 )
@@ -93,40 +95,40 @@ class MaskHead(object):
             rois=flow.local_gather(
                 proposals_with_img_ids, flow.squeeze(level_idx_2, axis=[1])
             ),
-            pooled_h=self.cfg.BOX_HEAD.POOLED_H,
-            pooled_w=self.cfg.BOX_HEAD.POOLED_W,
-            spatial_scale=self.cfg.BOX_HEAD.SPATIAL_SCALE / pow(2, 0),
-            sampling_ratio=self.cfg.BOX_HEAD.SAMPLING_RATIO,
+            pooled_h=self.cfg.MASK_HEAD.POOLED_H,
+            pooled_w=self.cfg.MASK_HEAD.POOLED_W,
+            spatial_scale=self.cfg.MASK_HEAD.SPATIAL_SCALE / pow(2, 0),
+            sampling_ratio=self.cfg.MASK_HEAD.SAMPLING_RATIO,
         )
         roi_features_1 = flow.detection.roi_align(
             features[1],
             rois=flow.local_gather(
                 proposals_with_img_ids, flow.squeeze(level_idx_3, axis=[1])
             ),
-            pooled_h=self.cfg.BOX_HEAD.POOLED_H,
-            pooled_w=self.cfg.BOX_HEAD.POOLED_W,
-            spatial_scale=self.cfg.BOX_HEAD.SPATIAL_SCALE / pow(2, 1),
-            sampling_ratio=self.cfg.BOX_HEAD.SAMPLING_RATIO,
+            pooled_h=self.cfg.MASK_HEAD.POOLED_H,
+            pooled_w=self.cfg.MASK_HEAD.POOLED_W,
+            spatial_scale=self.cfg.MASK_HEAD.SPATIAL_SCALE / pow(2, 1),
+            sampling_ratio=self.cfg.MASK_HEAD.SAMPLING_RATIO,
         )
         roi_features_2 = flow.detection.roi_align(
             features[2],
             rois=flow.local_gather(
                 proposals_with_img_ids, flow.squeeze(level_idx_4, axis=[1])
             ),
-            pooled_h=self.cfg.BOX_HEAD.POOLED_H,
-            pooled_w=self.cfg.BOX_HEAD.POOLED_W,
-            spatial_scale=self.cfg.BOX_HEAD.SPATIAL_SCALE / pow(2, 2),
-            sampling_ratio=self.cfg.BOX_HEAD.SAMPLING_RATIO,
+            pooled_h=self.cfg.MASK_HEAD.POOLED_H,
+            pooled_w=self.cfg.MASK_HEAD.POOLED_W,
+            spatial_scale=self.cfg.MASK_HEAD.SPATIAL_SCALE / pow(2, 2),
+            sampling_ratio=self.cfg.MASK_HEAD.SAMPLING_RATIO,
         )
         roi_features_3 = flow.detection.roi_align(
             features[3],
             rois=flow.local_gather(
                 proposals_with_img_ids, flow.squeeze(level_idx_5, axis=[1])
             ),
-            pooled_h=self.cfg.BOX_HEAD.POOLED_H,
-            pooled_w=self.cfg.BOX_HEAD.POOLED_W,
-            spatial_scale=self.cfg.BOX_HEAD.SPATIAL_SCALE / pow(2, 3),
-            sampling_ratio=self.cfg.BOX_HEAD.SAMPLING_RATIO,
+            pooled_h=self.cfg.MASK_HEAD.POOLED_H,
+            pooled_w=self.cfg.MASK_HEAD.POOLED_W,
+            spatial_scale=self.cfg.MASK_HEAD.SPATIAL_SCALE / pow(2, 3),
+            sampling_ratio=self.cfg.MASK_HEAD.SAMPLING_RATIO,
         )
         roi_features = flow.concat(
             [roi_features_0, roi_features_1, roi_features_2, roi_features_3],
