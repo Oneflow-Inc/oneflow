@@ -1,4 +1,5 @@
 #include "oneflow/core/kernel/kernel_registration.h"
+#include "oneflow/core/kernel/kernel.h"
 
 namespace oneflow {
 
