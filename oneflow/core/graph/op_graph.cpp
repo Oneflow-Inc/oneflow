@@ -441,7 +441,7 @@ void OpGraph::InferLogicalBlobDesc(const Job& job) const {
       CHECK(std::find(ibns.begin(), ibns.end(), ibn) != ibns.end());
       return op_node->LogicalBlobDesc4Lbi(op_node->op().BnInOp2Lbi(ibn));
     };
-    op_node->op().InferBatchAxisIf(LogicalBlobDesc4Ibn, BatchAxis4BnInOp);
+    CHECK_JUST(op_node->op().InferBatchAxisIf(LogicalBlobDesc4Ibn, BatchAxis4BnInOp));
     // infer sbp_signature
     SbpSignature sbp_sig_conf;
     {
