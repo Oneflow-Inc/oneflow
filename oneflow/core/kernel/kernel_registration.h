@@ -28,12 +28,14 @@ class KernelConstraint {
   virtual bool IsMatched(const KernelConf&) const = 0;
   virtual size_t PriorityLevel() const { return 0; }  // big number means high priority
   virtual void ToProto(KernelRegValProto::RegVal*) const = 0;
+  virtual DeviceType device_type() const = 0;
 };
 
 class NoConstraint final : public KernelConstraint {
  public:
   bool IsMatched(const KernelConf&) const override { return true; }
   void ToProto(KernelRegValProto::RegVal*) const override;
+  DeviceType device_type() const { return DeviceType::kCPU; }
 };
 
 class DeviceAndDTypeConstraint final : public KernelConstraint {
@@ -41,6 +43,7 @@ class DeviceAndDTypeConstraint final : public KernelConstraint {
   DeviceAndDTypeConstraint(DeviceType dev, DataType dtype) : dev_(dev), dtype_(dtype) {}
   bool IsMatched(const KernelConf&) const override;
   void ToProto(KernelRegValProto::RegVal*) const override;
+  DeviceType device_type() const { return dev_; }
 
  private:
   DeviceType dev_;
@@ -52,6 +55,7 @@ class DeviceConstraint final : public KernelConstraint {
   DeviceConstraint(DeviceType dev) : dev_(dev) {}
   bool IsMatched(const KernelConf&) const override;
   void ToProto(KernelRegValProto::RegVal*) const override;
+  DeviceType device_type() const { return dev_; }
 
  private:
   DeviceType dev_;
@@ -63,6 +67,7 @@ class PredAndLabelConstraint final : public KernelConstraint {
       : dev_(dev), pred_type_(pred_type), label_type_(label_type) {}
   bool IsMatched(const KernelConf&) const override;
   void ToProto(KernelRegValProto::RegVal*) const override;
+  DeviceType device_type() const { return dev_; }
 
  private:
   DeviceType dev_;

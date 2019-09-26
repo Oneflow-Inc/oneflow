@@ -1,4 +1,5 @@
 #include "oneflow/core/kernel/kernel_registration.h"
+#include "oneflow/core/kernel/kernel.h"
 
 namespace oneflow {
 
@@ -7,11 +8,11 @@ namespace kernel_registration {
 namespace {
 
 struct KernelRegistryVal final {
-  CreateFn func;
-  std::shared_ptr<constraint::KernelConstraint> cons;
-
   KernelRegistryVal(CreateFn f, const std::shared_ptr<constraint::KernelConstraint>& c)
       : func(f), cons(c) {}
+
+  CreateFn func;
+  std::shared_ptr<constraint::KernelConstraint> cons;
 };
 
 HashMap<OperatorConf::OpTypeCase, std::vector<KernelRegistryVal>>* MutKernelRegistry() {
@@ -96,6 +97,7 @@ Kernel* CreateKernel(const KernelConf& kernel_conf) {
           << static_cast<size_t>(op_type);
       is_matched = true;
       ret = val.func();
+      ret->set_device_type(val.cons->device_type());
     }
   }
   return ret;

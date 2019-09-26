@@ -27,6 +27,7 @@ class RtBlobDesc final {
   int64_t NumAxes() const { return body_.shape().NumAxes(); }
   int64_t Capacity() const { return body_.shape().elem_cnt() * GetSizeOfDataType(data_type()); }
   const Shape& body_shape() const { return body_.shape(); }
+  const TensorPodDesc& body() const { return body_; }
 
   size_t ByteSizeOfBlobHeader() const;
   size_t ByteSizeOfBlobBody() const;

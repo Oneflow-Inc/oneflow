@@ -38,6 +38,9 @@ class Kernel {
    */
   virtual bool IsKernelLaunchSynchronized() const { return true; }
 
+  void set_device_type(DeviceType val) { device_type_ = val; }
+  DeviceType device_type() const { return device_type_; }
+
  protected:
   Kernel() = default;
   virtual void VirtualKernelInit(DeviceCtx* device_ctx) { VirtualKernelInit(); }
@@ -54,6 +57,7 @@ class Kernel {
                           std::function<Blob*(const std::string&)> BnInOp2Blob) const;
   virtual void ForwardDenseShape(const KernelCtx& ctx,
                                  std::function<Blob*(const std::string&)> BnInOp2Blob) const;
+  void NaiveForwardDenseShape(std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
   // TODO(niuchong) : rename ForwardDataContent to ForwardBody
   virtual void ForwardDataContent(const KernelCtx& ctx,
                                   std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
@@ -116,6 +120,7 @@ class Kernel {
 
  private:
   const JobDesc* job_desc_;
+  DeviceType device_type_;
   KernelConf kernel_conf_;
 };
 
