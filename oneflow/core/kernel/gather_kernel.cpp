@@ -19,5 +19,6 @@ void GatherKernel<device_type, T>::ForwardDataContent(
 }
 
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kGatherConf, GatherKernel, FLOATING_DATA_TYPE_SEQ);
+ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kLocalGatherConf, GatherKernel, FLOATING_DATA_TYPE_SEQ);
 
 }  // namespace oneflow
