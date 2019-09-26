@@ -19,7 +19,7 @@ class SliceBoxingTaskNode final : public TaskNode {
   ~SliceBoxingTaskNode() override = default;
 
   void Init(const LogicalBlobId& lbi, const TensorSliceView& out_slice, SliceBoxingTaskMode mode,
-            int64_t machine_id, int64_t thrd_id, const MemoryCase& mem_case);
+            int64_t machine_id, int64_t thrd_id, int64_t mem_zone_id);
   void Init(const LogicalBlobId& lbi, const TensorSliceView& out_slice, SliceBoxingTaskMode mode,
             int64_t machine_id, int64_t thrd_id);
   void ProduceAllRegstsAndBindEdges() override;
@@ -41,7 +41,7 @@ class SliceBoxingTaskNode final : public TaskNode {
   TensorSliceView out_slice_;
   Shape out_shape_;
   SliceBoxingTaskMode mode_ = kSliceBoxingTaskModeInvalid;
-  MemoryCase mem_case_;
+  int64_t mem_zone_id_;
 };
 
 }  // namespace oneflow

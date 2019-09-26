@@ -86,7 +86,7 @@ Maybe<void> SliceBoxingSubTskGphBuilder::Build(
       UNIMPLEMENTED();
     }
     dst_node->Init(lbi, dst_slice, kSliceBoxingTaskModeCopy, src_node->machine_id(), thrd_id,
-                   MemoryCaseUtil::MakeHostMemCase());
+                   Global<IDMgr>::Get()->CpuMemZoneId());
     dst_node->ConnectToSrcNodeWithSlice(src_node, NewEdge(), src_slice);
     return dst_node;
   };
@@ -173,7 +173,7 @@ Maybe<void> SliceBoxingSubTskGphBuilder::Build(
                     CudaWorkType::kCopyD2H);
               }
               local_concat_node->Init(lbi, concat_slice, kSliceBoxingTaskModeCopy, in_machine_id,
-                                      local_concat_thrd_id, MemoryCaseUtil::MakeHostMemCase());
+                                      local_concat_thrd_id, Global<IDMgr>::Get()->CpuMemZoneId());
               for (const int64_t in_id : in_parallel_ids) {
                 local_concat_node->ConnectToSrcNodeWithSlice(in_nodes.at(in_id), NewEdge(),
                                                              in_slices.at(in_id));
@@ -231,7 +231,7 @@ Maybe<void> SliceBoxingSubTskGphBuilder::Build(
                     CudaWorkType::kCopyD2H);
               }
               local_add_node->Init(lbi, out_slice, kSliceBoxingTaskModeAdd, in_machine_id,
-                                   local_add_thrd_id, MemoryCaseUtil::MakeHostMemCase());
+                                   local_add_thrd_id, Global<IDMgr>::Get()->CpuMemZoneId());
               for (const int64_t in_id : in_parallel_ids) {
                 local_add_node->ConnectToSrcNodeWithSlice(in_nodes.at(in_id), NewEdge(), in_slice);
               }
@@ -293,7 +293,7 @@ Maybe<void> SliceBoxingSubTskGphBuilder::Build(
         auto* add_node = ctx->task_graph()->NewNode<SliceBoxingTaskNode>();
         add_node->Init(lbi, slice, kSliceBoxingTaskModeAdd, machine_id7out_parallel_ids.first,
                        Global<IDMgr>::Get()->PickCpuThrdIdEvenly(machine_id7out_parallel_ids.first),
-                       MemoryCaseUtil::MakeHostMemCase());
+                       Global<IDMgr>::Get()->CpuMemZoneId());
         for (TaskNode* out_box_node : out_box_nodes) {
           TaskNode* out_boxing_node_proxy =
               ctx->GetProxyNode(out_box_node, out_box_node->MemZoneId121(), out_machine_id,

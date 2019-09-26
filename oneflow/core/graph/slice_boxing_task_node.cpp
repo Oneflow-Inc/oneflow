@@ -4,12 +4,12 @@ namespace oneflow {
 
 void SliceBoxingTaskNode::Init(const LogicalBlobId& lbi, const TensorSliceView& out_slice,
                                const SliceBoxingTaskMode mode, int64_t machine_id, int64_t thrd_id,
-                               const MemoryCase& mem_case) {
+                               int64_t mem_zone_id) {
   lbi_ = lbi;
   out_slice_ = out_slice;
   out_shape_ = out_slice.shape();
   mode_ = mode;
-  mem_case_ = mem_case;
+  mem_zone_id_ = mem_zone_id;
   set_machine_id(machine_id);
   set_thrd_id(thrd_id);
   set_area_id(kMdUpdtArea);
@@ -20,16 +20,15 @@ void SliceBoxingTaskNode::Init(const LogicalBlobId& lbi, const TensorSliceView& 
                                int64_t thrd_id) {
   IDMgr* global_id_mgr = Global<IDMgr>::Get();
   DeviceType device_type = global_id_mgr->GetDeviceTypeFromThrdId(thrd_id);
-  MemoryCase memory_case;
+  int64_t mem_zone_id;
   if (device_type == DeviceType::kCPU) {
-    memory_case.mutable_host_mem();
+    mem_zone_id = global_id_mgr->CpuMemZoneId();
   } else if (device_type == DeviceType::kGPU) {
-    memory_case.mutable_device_cuda_mem()->set_device_id(
-        global_id_mgr->GetGpuPhyIdFromThrdId(thrd_id));
+    mem_zone_id = global_id_mgr->GpuMemZoneId(global_id_mgr->GetGpuPhyIdFromThrdId(thrd_id));
   } else {
     UNIMPLEMENTED();
   }
-  Init(lbi, out_slice, mode, machine_id, thrd_id, memory_case);
+  Init(lbi, out_slice, mode, machine_id, thrd_id, mem_zone_id);
 }
 
 void SliceBoxingTaskNode::ProduceAllRegstsAndBindEdges() {
@@ -111,9 +110,16 @@ OperatorConf SliceBoxingTaskNode::GetBoxingOpConf() {
 }
 
 void SliceBoxingTaskNode::InitProducedRegstMemCase(MemoryCase* mem_case) {
-  *mem_case = mem_case_;
-  if (mem_case_.has_host_mem() && device_type() == DeviceType::kGPU) {
-    mem_case->mutable_host_mem()->mutable_cuda_pinned_mem()->set_device_id(GpuPhyId());
+  if (Global<IDMgr>::Get()->IsCpuMemZone(mem_zone_id_)) {
+    HostMemory* host_mem = mem_case->mutable_host_mem();
+    if (device_type() == DeviceType::kGPU) {
+      host_mem->mutable_cuda_pinned_mem()->set_device_id(GpuPhyId());
+    }
+  } else if (Global<IDMgr>::Get()->IsGpuMemZone(mem_zone_id_)) {
+    mem_case->mutable_device_cuda_mem()->set_device_id(
+        Global<IDMgr>::Get()->GetGpuPhyIdFromMemZoneId(mem_zone_id_));
+  } else {
+    UNIMPLEMENTED();
   }
 }
 
