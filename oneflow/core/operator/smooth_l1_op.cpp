@@ -36,7 +36,7 @@ class SmoothL1Op final : public Operator {
       std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override {
     return NaiveInferBatchAxis(BatchAxis4BnInOp);
   }
-};  // namespace oneflow
+};
 
 REGISTER_OP(OperatorConf::kSmoothL1Conf, SmoothL1Op);
 
@@ -78,7 +78,7 @@ class SmoothL1GradOp final : public Operator {
       std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override {
     return NaiveInferBatchAxis(BatchAxis4BnInOp);
   }
-};  // namespace oneflow
+};
 
 REGISTER_OP(OperatorConf::kSmoothL1GradConf, SmoothL1GradOp);
 }  // namespace oneflow

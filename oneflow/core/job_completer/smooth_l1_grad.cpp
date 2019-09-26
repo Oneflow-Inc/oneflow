@@ -14,6 +14,7 @@ void GenerateBackwardOpConf(
     smooth_l1_grad_op.set_name(op.op_name() + "_grad");
     SmoothL1GradOpConf* smooth_l1_grad_op_conf = smooth_l1_grad_op.mutable_smooth_l1_grad_conf();
     smooth_l1_grad_op_conf->set_x(GenLogicalBlobName(op.BnInOp2Lbi("in")));
+    smooth_l1_grad_op_conf->set_label(GenLogicalBlobName(op.BnInOp2Lbi("label")));
     smooth_l1_grad_op_conf->set_dy(GenLogicalBlobName(*DiffLbi4BnInOp("out")));
     smooth_l1_grad_op_conf->set_dx("dx");
     smooth_l1_grad_op_conf->set_beta(smooth_l1_op_conf.beta());
