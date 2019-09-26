@@ -18,20 +18,20 @@ void SmoothL1Kernel<device_type, T>::ForwardDataContent(
 }
 
 template<DeviceType device_type, typename T>
-void SmoothL1Kernel<device_type, T>::BackwardDataContent(
+void SmoothL1GradKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const Blob* out_diff = BnInOp2Blob(GenDiffBn("out"));
-  const Blob* prediction = BnInOp2Blob("prediction");
+  const Blob* dy = BnInOp2Blob("dy");
+  const Blob* x = BnInOp2Blob("x");
   const Blob* label = BnInOp2Blob("label");
-  Blob* prediction_diff_blob = BnInOp2Blob(GenDiffBn("prediction"));
+  Blob* dx_blob = BnInOp2Blob("dx");
   const SmoothL1OpConf& conf = this->op_conf().smooth_l1_conf();
   const float beta = conf.beta();
   const float scale = conf.scale();
-  const int64_t elem_cnt = prediction->shape().elem_cnt();
+  const int64_t elem_cnt = x->shape().elem_cnt();
 
-  SmoothL1KernelUtil<device_type, T>::Backward(ctx.device_ctx, elem_cnt, out_diff->dptr<T>(),
-                                               prediction->dptr<T>(), label->dptr<T>(), beta, scale,
-                                               prediction_diff_blob->mut_dptr<T>());
+  SmoothL1KernelUtil<device_type, T>::Backward(ctx.device_ctx, elem_cnt, dy->dptr<T>(),
+                                               x->dptr<T>(), label->dptr<T>(), beta, scale,
+                                               dx_blob->mut_dptr<T>());
 }
 
 template<typename T>
@@ -48,22 +48,31 @@ struct SmoothL1KernelUtil<DeviceType::kCPU, T> {
       out[i] *= scale;
     }
   }
-  static void Backward(DeviceCtx* ctx, const int64_t elem_cnt, const T* out_diff,
+  static void Backward(DeviceCtx* ctx, const int64_t elem_cnt, const T* dy,
                        const T* prediction, const T* label, const float beta, const float scale,
-                       T* prediction_diff) {
+                       T* dx) {
     for (int64_t i = 0; i < elem_cnt; i++) {
       const T x = prediction[i] - label[i];
       const T abs_x = std::abs(x);
       if (abs_x < beta) {
-        prediction_diff[i] = x / beta;
+        dx[i] = x / beta;
       } else {
-        prediction_diff[i] = (x > ZeroVal<T>::value) - (x < ZeroVal<T>::value);
+        dx[i] = (x > GetZeroVal<T>()) - (x < GetZeroVal<T>());
       }
-      prediction_diff[i] *= scale * out_diff[i];
+      dx[i] *= scale * dy[i];
     }
   }
 };
 
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kSmoothL1Conf, SmoothL1Kernel, FLOATING_DATA_TYPE_SEQ);
+#define REGISTER_SMOOTH_L1_KERNEL(dev, dtype)                                     \
+  REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kSmoothL1Conf, dev, dtype, \
+                                        SmoothL1Kernel<dev, dtype>) \
+  REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kSmoothL1GradConf, dev, dtype, \
+                                        SmoothL1GradKernel<dev, dtype>)
+
+REGISTER_SMOOTH_L1_KERNEL(DeviceType::kGPU, float);
+REGISTER_SMOOTH_L1_KERNEL(DeviceType::kGPU, double);
+REGISTER_SMOOTH_L1_KERNEL(DeviceType::kCPU, float);
+REGISTER_SMOOTH_L1_KERNEL(DeviceType::kCPU, double);
 
 }  // namespace oneflow
