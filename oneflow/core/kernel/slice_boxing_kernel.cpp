@@ -84,6 +84,6 @@ void SliceBoxingAddKernel<device_type, T>::ForwardDataContent(
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kSliceBoxingCopyConf, SliceBoxingCopyKernel,
                            POD_DATA_TYPE_SEQ)
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kSliceBoxingAddConf, SliceBoxingAddKernel,
-                           FLOATING_DATA_TYPE_SEQ)
+                           ARITHMETIC_DATA_TYPE_SEQ)
 
 }  // namespace oneflow
