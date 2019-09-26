@@ -9,7 +9,6 @@ namespace oneflow {
 
 void XlaLaunchOp::InitFromOpConf() {
   CHECK(op_conf().has_xla_launch_conf());
-
   int inputs_num = op_conf().xla_launch_conf().in().size();
   int outputs_num = op_conf().xla_launch_conf().out().size();
   for (int i = 0; i < inputs_num; ++i) {
@@ -31,17 +30,23 @@ const PbMessage &XlaLaunchOp::GetCustomizedConf() const {
 Maybe<void> XlaLaunchOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
+  // Prepare outer input blob descs
+  std::unordered_map<std::string, BlobDesc> blob_descs;
+  for (const std::string &bn : this->input_bns()) {
+    const LogicalBlobId& lbi = this->BnInOp2Lbi(bn);
+    std::string blob_name = BlobName(lbi);
+    blob_descs[blob_name].CopyMetaFrom(*GetBlobDesc4BnInOp(bn));
+  }
+
   const auto &xla_launch_conf = op_conf().xla_launch_conf();
-  const auto &resource_scope = xla_launch_conf.attr().resource_scope();
-  const auto &shapes = resource_scope.shapes();
+  SbpSignature sbp_signature = RestoreSbpSignature(xla_launch_conf);
+  // Inference blob descs in subgraph
+  subgraph_->InferBlobDescs(&blob_descs, *parallel_ctx, sbp_signature);
+
   // Fetch output blob descs
   for (const std::string &bn : this->output_bns()) {
-    LogicalBlobId lbi = subgraph_->Output(bn);
-    std::string blob_name = BlobName(lbi);
-    CHECK_GT(shapes.count(blob_name), 0);
-    BlobDesc *blob_desc = GetBlobDesc4BnInOp(bn);
-    blob_desc->set_data_type(shapes.at(blob_name).data_type());
-    blob_desc->mut_shape() = Shape(shapes.at(blob_name).shape());
+    CHECK_GT(blob_descs.count(bn), 0);
+    *GetBlobDesc4BnInOp(bn) = blob_descs[bn];
   }
   return Maybe<void>::Ok();
 }
@@ -67,17 +72,15 @@ Maybe<void> XlaLaunchOp::InferSbpSignature(
     XlaLaunchOp::SbpInferHint4IbnFunc SbpInferHint4Ibn,
     const ParallelDesc& parallel_desc) const {
   const auto &xla_launch_conf = op_conf().xla_launch_conf();
-  const auto &resource_scope = xla_launch_conf.attr().resource_scope();
-  const auto &sbp_signatures = resource_scope.sbp_signatures();
+  *sbp_signature = RestoreSbpSignature(xla_launch_conf);
+
+  const auto &bn2sbp_parallel = sbp_signature->bn_in_op2sbp_parallel();
   for (const std::string &bn : this->input_bns()) {
-    CHECK_GT(sbp_signatures.count(bn), 0);
+    CHECK_GT(bn2sbp_parallel.count(bn), 0);
   }
   for (const std::string &bn : this->output_bns()) {
-    CHECK_GT(sbp_signatures.count(bn), 0);
+    CHECK_GT(bn2sbp_parallel.count(bn), 0);
   }
-
-  auto *bn2sbp_parallel = sbp_signature->mutable_bn_in_op2sbp_parallel();
-  *bn2sbp_parallel = sbp_signatures;
   return Maybe<void>::Ok();
 }
 

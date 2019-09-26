@@ -28,10 +28,10 @@ class XlaGraphCompiler {
 
   CompilationResult Compile(
       const XlaGraph *graph,
-      const std::vector<Blob *> &entry_blobs,
-      const std::vector<Blob *> &return_blobs,
-      const std::vector<std::string> &entry_blob_names,
-      const std::vector<std::string> &return_blob_names,
+      const std::vector<Argument> &entry_arguments,
+      const std::vector<Argument> &return_arguments,
+      const std::vector<std::string> &entry_names,
+      const std::vector<std::string> &return_names,
       const std::vector<xla::XlaBuilder::InputOutputAlias> &aliases);
 
  private:
@@ -44,7 +44,7 @@ class XlaGraphCompiler {
   void BuildExecutable(const CompilationResult &result,
                        std::unique_ptr<xla::LocalExecutable> *executable);
 
-  void SetupEntryOprands(
+  void BuildEntryParameters(
       const std::vector<std::string> &entry_names,
       std::unordered_map<Argument, XlaOprand> *entry_oprands,
       std::vector<xla::Shape> *input_shapes);
@@ -54,12 +54,12 @@ class XlaGraphCompiler {
       const std::unordered_map<std::string, Argument> &arguments,
       XlaOpContext::Param *param);
 
-  void BuildArguments(
+  void BuildCompilationArguments(
     const XlaGraph *graph,
-    const std::vector<Blob *> &entry_blobs,
-    const std::vector<Blob *> &return_blobs,
-    const std::vector<std::string> &entry_blob_names,
-    const std::vector<std::string> &return_blob_names);
+    const std::vector<Argument> &entry_arguments,
+    const std::vector<Argument> &return_arguments,
+    const std::vector<std::string> &entry_names,
+    const std::vector<std::string> &return_names);
 
  private:
   xla::LocalClient *client_;

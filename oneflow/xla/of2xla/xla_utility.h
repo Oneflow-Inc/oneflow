@@ -19,6 +19,8 @@ std::string BlobName(const LogicalBlobId &lbi);
 
 LogicalBlobId BlobId(const std::string &blob_name);
 
+SbpSignature RestoreSbpSignature(const XlaLaunchOpConf &launch_conf);
+
 }  // namespace oneflow
 
 #define ISNULL(x)  nullptr == (x)

@@ -69,4 +69,12 @@ LogicalBlobId BlobId(const std::string &blob_name) {
   }
 }
 
+SbpSignature RestoreSbpSignature(const XlaLaunchOpConf &launch_conf) {
+  const auto &resource_scope = launch_conf.attr().resource_scope();
+  const auto &sbp_signatures = resource_scope.sbp_signatures();
+  SbpSignature sbp_signature;
+  *(sbp_signature.mutable_bn_in_op2sbp_parallel()) = sbp_signatures;
+  return sbp_signature;
+}
+
 }  // namespace oneflow
