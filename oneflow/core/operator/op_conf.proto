@@ -1761,6 +1761,12 @@ message ElementCountOpConf {
   optional DataType data_type = 5;
 }
 
+message LocalGatherNdOpConf {
+  required string in = 1;
+  required string indices = 2;
+  required string out = 3;
+}
+
 message OperatorConf {
   required string name = 1;
   optional bool trainable = 3 [default = true];
@@ -1920,6 +1926,7 @@ message OperatorConf {
     SmoothL1OpConf smooth_l1_conf = 318;
     UpsampleNearestOpConf upsample_nearest_conf = 319;
     ElementCountOpConf element_count_conf = 320;
+    LocalGatherNdOpConf local_gather_nd_conf = 321;
 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;

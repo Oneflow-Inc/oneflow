@@ -8,6 +8,9 @@
 
 namespace oneflow {
 
+template<DeviceType device_type, typename T, typename I>
+struct GatherNdOnDevice;
+
 template<DeviceType device_type, typename T, typename I, template<typename> class func>
 struct ScatterNdOnDevice;
 
@@ -30,6 +33,16 @@ struct NdIndicesUtil final {
   static void ScatterNdUpdate(DeviceCtx* ctx, const Blob* indices, const Blob* sparse,
                               const int64_t* dense_shape, Blob* dense) {
     ScatterNdApply<ApplyUpdate>(ctx, indices, sparse, dense_shape, dense);
+  }
+
+  static void GatherNd(DeviceCtx* ctx, const Blob* indices, const Blob* dense,
+                       const int64_t* dense_shape, Blob* sparse) {
+    int64_t num_segms = indices->shape().Count(0, indices->shape().NumAxes() - 1);
+    int64_t segm_size = sparse->shape().Count(indices->shape().NumAxes());
+    int64_t segm_dims = indices->shape().At(indices->shape().NumAxes());
+    GatherNdOnDevice<device_type, T, I>::Run(ctx, num_segms, segm_size, segm_dims,
+                                             indices->dptr<I>(), dense_shape, dense->dptr<T>(),
+                                             sparse->mut_dptr<T>());
   }
 
  private:
@@ -68,6 +81,18 @@ struct ScatterNdFunctor {
     XPU_1D_KERNEL_LOOP(idx, elem_cnt) {
       int64_t offset = IndicesOffset<I>::Compute(segms_size, segm_dims, shape, indices, idx);
       func<T>::Invoke(sparse + idx, dense + offset);
+    }
+  }
+};
+
+template<typename T, typename I>
+struct GatherNdFunctor {
+  OF_DEVICE_FUNC static void Invoke(int64_t elem_cnt, int64_t segms_size, int64_t segm_dims,
+                                    const I* indices, const int64_t* shape, const T* dense,
+                                    T* sparse) {
+    XPU_1D_KERNEL_LOOP(i, elem_cnt) {
+      int64_t offset = IndicesOffset<I>::Compute(segms_size, segm_dims, shape, indices, i);
+      sparse[i] = dense[offset];
     }
   }
 };

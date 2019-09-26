@@ -9,16 +9,14 @@ class LocalGatherNdOp final : public Operator {
   ~LocalGatherNdOp() override = default;
 
   void InitFromOpConf() override {
-    CHECK(op_conf().has_local_scatter_nd_update_conf());
+    CHECK(op_conf().has_local_gather_nd_conf());
     EnrollInputBn("in");
     EnrollInputBn("indices", false);
     if (this->device_type() == DeviceType::kGPU) { EnrollTmpBn("shape"); }
     EnrollOutputBn("out");
   }
 
-  const PbMessage& GetCustomizedConf() const override {
-    return op_conf().local_gather_nd_conf();
-  }
+  const PbMessage& GetCustomizedConf() const override { return op_conf().local_gather_nd_conf(); }
 
   Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                              const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature,
@@ -34,7 +32,7 @@ class LocalGatherNdOp final : public Operator {
     std::vector<int64_t> shape_vec = indices->shape().dim_vec();
     shape_vec.pop_back();
     FOR_RANGE(int64_t, i, segm_dims, in->shape().NumAxes()) {
-      shape_vec->push_back(in->shape().At(i));
+      shape_vec.push_back(in->shape().At(i));
     }
 
     BlobDesc* shape = GetBlobDesc4BnInOp("shape");
@@ -52,7 +50,7 @@ class LocalGatherNdOp final : public Operator {
  private:
   Maybe<void> InferBatchAxis(
       std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override {
-    *BatchAxis4BnInOp("out") = 0;
+    *BatchAxis4BnInOp("out") = *BatchAxis4BnInOp("in");
     return Maybe<void>::Ok();
   }
 };
