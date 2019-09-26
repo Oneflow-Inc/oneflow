@@ -449,7 +449,7 @@ void AutoGrad(const OpGraph& op_graph, JobBuilder* job_builder,
         if (out_diff_lbi_it == out_oba2out_diff_lbi.end()) { return nullptr; }
         return &out_diff_lbi_it->second;
       } else {
-        UNIMPLEMENTED();
+        LOG(FATAL) << "diff lbi for bn in op not found, bn: " << op_name << "/" << bn;
       }
     };
     auto LogicalBlobDesc4BnInOp = [&](const std::string& bn) -> const BlobDesc& {
