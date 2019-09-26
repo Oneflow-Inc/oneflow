@@ -42,9 +42,9 @@ struct UpsampleNearestUtil<DeviceType::kCPU, T> {
 
 OF_PP_FOR_EACH_TUPLE(INSTANTIATE_CPU_UPSAMPLE_NEAREST_UTIL, FLOATING_DATA_TYPE_SEQ);
 
-#define REGISTER_UPSAMPLE_NEAREST_KERNEL(dev, dtype)                                    \
-  REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kUpsampleNearestConf, dev, dtype, \
-                                        UpsampleNearestKernel<dev, dtype>) \
+#define REGISTER_UPSAMPLE_NEAREST_KERNEL(dev, dtype)                                        \
+  REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kUpsampleNearestConf, dev, dtype,     \
+                                        UpsampleNearestKernel<dev, dtype>)                  \
   REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kUpsampleNearestGradConf, dev, dtype, \
                                         UpsampleNearestGradKernel<dev, dtype>)
 

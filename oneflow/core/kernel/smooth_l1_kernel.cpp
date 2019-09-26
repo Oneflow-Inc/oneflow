@@ -48,9 +48,8 @@ struct SmoothL1KernelUtil<DeviceType::kCPU, T> {
       out[i] *= scale;
     }
   }
-  static void Backward(DeviceCtx* ctx, const int64_t elem_cnt, const T* dy,
-                       const T* prediction, const T* label, const float beta, const float scale,
-                       T* dx) {
+  static void Backward(DeviceCtx* ctx, const int64_t elem_cnt, const T* dy, const T* prediction,
+                       const T* label, const float beta, const float scale, T* dx) {
     for (int64_t i = 0; i < elem_cnt; i++) {
       const T x = prediction[i] - label[i];
       const T abs_x = std::abs(x);
@@ -64,9 +63,9 @@ struct SmoothL1KernelUtil<DeviceType::kCPU, T> {
   }
 };
 
-#define REGISTER_SMOOTH_L1_KERNEL(dev, dtype)                                     \
-  REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kSmoothL1Conf, dev, dtype, \
-                                        SmoothL1Kernel<dev, dtype>) \
+#define REGISTER_SMOOTH_L1_KERNEL(dev, dtype)                                        \
+  REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kSmoothL1Conf, dev, dtype,     \
+                                        SmoothL1Kernel<dev, dtype>)                  \
   REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kSmoothL1GradConf, dev, dtype, \
                                         SmoothL1GradKernel<dev, dtype>)
 

@@ -20,8 +20,7 @@ __global__ void SmoothL1Forward(const int64_t elem_cnt, const T* prediction, con
 
 template<typename T>
 __global__ void SmoothL1Backward(const int64_t elem_cnt, const T* dy, const T* prediction,
-                                 const T* label, const float beta, const float scale,
-                                 T* dx) {
+                                 const T* label, const float beta, const float scale, T* dx) {
   CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
     const T x = prediction[i] - label[i];
     const T abs_x = std::abs(x);
@@ -44,9 +43,8 @@ struct SmoothL1KernelUtil<DeviceType::kGPU, T> {
         <<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
             elem_cnt, prediction, label, beta, scale, out);
   }
-  static void Backward(DeviceCtx* ctx, const int64_t elem_cnt, const T* dy,
-                       const T* x, const T* label, const float beta, const float scale,
-                       T* dx) {
+  static void Backward(DeviceCtx* ctx, const int64_t elem_cnt, const T* dy, const T* x,
+                       const T* label, const float beta, const float scale, T* dx) {
     SmoothL1Backward<T>
         <<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
             elem_cnt, dy, x, label, beta, scale, dx);
