@@ -43,9 +43,9 @@ class LevelMapGPUKernel final : public KernelIf<DeviceType::kGPU> {
     const int32_t min_level = conf.min_level();
     const int32_t max_level = conf.max_level();
     const float epsilon = conf.epsilon();
-    GpuForward<<<BlocksNum4ThreadsNum(num_boxes), kCudaThreadsNumPerBlock, 0, ctx.device_ctx->cuda_stream()>>>(
-        num_boxes, in_ptr, canonical_level, canonical_scale, min_level, max_level, epsilon,
-        out);
+    GpuForward<<<BlocksNum4ThreadsNum(num_boxes), kCudaThreadsNumPerBlock, 0,
+                 ctx.device_ctx->cuda_stream()>>>(
+        num_boxes, in_ptr, canonical_level, canonical_scale, min_level, max_level, epsilon, out);
   }
 };
 
