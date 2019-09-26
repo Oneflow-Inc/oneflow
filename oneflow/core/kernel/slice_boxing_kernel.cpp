@@ -5,7 +5,7 @@
 namespace oneflow {
 
 template<DeviceType device_type, typename T>
-void SliceBoxingKernel<device_type, T>::VirtualKernelInit(const ParallelContext*) {
+void SliceBoxingKernel<device_type, T>::VirtualKernelInit() {
   memory_copier_.reset(NewDefaultMemoryCopier(device_type));
   const SliceBoxingConf& conf = GetCustomizedBoxingConf();
   const TensorSliceView out_slice(conf.out_slice());
@@ -82,6 +82,6 @@ void SliceBoxingAddKernel<device_type, T>::ForwardDataContent(
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kSliceBoxingCopyConf, SliceBoxingCopyKernel,
                            POD_DATA_TYPE_SEQ)
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kSliceBoxingAddConf, SliceBoxingAddKernel,
-                           ARITHMETIC_DATA_TYPE_SEQ)
+                           FLOATING_DATA_TYPE_SEQ)
 
 }  // namespace oneflow

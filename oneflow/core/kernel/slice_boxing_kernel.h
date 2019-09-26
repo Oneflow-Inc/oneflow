@@ -20,7 +20,7 @@ class SliceBoxingKernel : public KernelIf<device_type> {
   const std::vector<std::shared_ptr<TensorSliceCopier>>& tensor_slice_copier_vec() const;
 
  private:
-  void VirtualKernelInit(const ParallelContext*);
+  void VirtualKernelInit() override;
 
   std::vector<std::shared_ptr<TensorSliceCopier>> tensor_slice_copier_vec_;
   std::unique_ptr<MemoryCopier> memory_copier_;
