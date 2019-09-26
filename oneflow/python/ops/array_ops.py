@@ -138,10 +138,10 @@ def slice(input_, begin, size, name=None):
 
     Args:
         input_: A `Blob`.
-        begin: A list or a tuple, indicate each dimension slice begin, whose length must be equal 
+        begin: A list or a tuple, indicate each dimension slice begin, whose length must be equal
             to input_'s number of dimensions, the first element of beign must be set to None.
             (because oneflow internal slice op do not support slice at dim0 at present)
-        size: A list or a tuple, indicate each dimension slice size, whose length must be equal 
+        size: A list or a tuple, indicate each dimension slice size, whose length must be equal
             to input_'s number of dimensions, the first element of beign must be set to None.
         name: A name for the operation (optional).
     """
@@ -388,6 +388,24 @@ def elem_cnt(inputs, begin_axis=None, end_axis=None, data_type=None, name=None):
     if data_type is not None:
         op_conf.element_count_conf.data_type = data_type
     op_conf.element_count_conf.out = "out"
+    compile_context.CurJobAddOp(op_conf)
+    out_lbi = logical_blob_id_util.LogicalBlobId()
+    setattr(out_lbi, "op_name", op_conf.name)
+    setattr(out_lbi, "blob_name", "out")
+    return remote_blob_util.RemoteBlob(out_lbi)
+
+@oneflow_export("sync_dynamic_resize")
+def sync_dynamic_resize(inputs, size, name=None):
+    op_conf = op_conf_util.OperatorConf()
+    setattr(
+        op_conf,
+        "name",
+        name if name is not None else id_util.UniqueStr("SyncDynamicResize_"),
+    )
+    setattr(op_conf.sync_dynamic_resize_conf, "in", inputs.logical_blob_name)
+    setattr(op_conf.sync_dynamic_resize_conf, "size", size.logical_blob_name)
+    setattr(op_conf.sync_dynamic_resize_conf, "axis", 0)
+    setattr(op_conf.sync_dynamic_resize_conf, "out", "out")
     compile_context.CurJobAddOp(op_conf)
     out_lbi = logical_blob_id_util.LogicalBlobId()
     setattr(out_lbi, "op_name", op_conf.name)
