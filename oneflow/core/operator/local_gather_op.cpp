@@ -62,8 +62,9 @@ class LocalGatherOp final : public Operator {
   void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                             const ParallelContext* parallel_ctx,
                             KernelConf* kernel_conf) const override {
-    // const int64_t axis = GetGatherAxis(op_conf().local_gather_conf(), GetBlobDesc4BnInOp("in"));
-    // kernel_conf->mutable_local_gather_conf()->set_axis(axis);
+    const int64_t axis =
+        GetGatherAxis(op_conf().local_gather_conf(), GetBlobDesc4BnInOp("in")->shape().NumAxes());
+    kernel_conf->mutable_gather_conf()->set_axis(axis);
   }
 
  private:
@@ -72,29 +73,24 @@ class LocalGatherOp final : public Operator {
     return NaiveInferBatchAxis(BatchAxis4BnInOp);
   }
 
-  Maybe<void> GetSbpSignatures(
-      const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
-      SbpSignatureList* sbp_sig_list) const override {
-    const int64_t in_num_axes = JUST(LogicalBlobDesc4Ibn("in"))->shape().NumAxes();
-    const int64_t gather_axis = GetGatherAxis(op_conf().local_gather_conf(), in_num_axes);
-    CHECK_GE(gather_axis, 0);
-    CHECK_LT(gather_axis, in_num_axes);
-    const int64_t indices_num_axes = JUST(LogicalBlobDesc4Ibn("indices"))->shape().NumAxes();
-    FOR_RANGE(int64_t, i, 0, indices_num_axes) {
-      SbpSignatureBuilder()
-          .Split("indices", i)
-          .Broadcast("in")
-          .Split("out", gather_axis + i)
-          .Build(sbp_sig_list->mutable_sbp_signature()->Add());
-    }
-    FOR_RANGE(int64_t, i, 0, in_num_axes) {
-      if (i == gather_axis) { continue; }
-      SbpSignatureBuilder()
-          .Broadcast("indices")
-          .Split("in", i)
-          .Split("out", i < gather_axis ? i : i + indices_num_axes - 1)
-          .Build(sbp_sig_list->mutable_sbp_signature()->Add());
-    }
+  Maybe<void> InferSbpSignature(
+      SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
+      const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
+      std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
+      const ParallelDesc& parallel_desc) const override {
+    SbpSignatureList sbp_sig_list;
+    JUST(GetSbpSignatures(&sbp_sig_list));
+    CHECK_EQ(sbp_sig_list.sbp_signature_size(), 1);
+    *sbp_signature = sbp_sig_list.sbp_signature(0);
+    return Maybe<void>::Ok();
+  }
+
+  Maybe<void> GetSbpSignatures(SbpSignatureList* sbp_sig_list) const override {
+    SbpSignatureBuilder()
+        .Split("indices", 0)
+        .Split("in", 0)
+        .Split("out", 0)
+        .Build(sbp_sig_list->mutable_sbp_signature()->Add());
     return Maybe<void>::Ok();
   }
 };
