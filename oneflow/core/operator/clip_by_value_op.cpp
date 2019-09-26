@@ -11,7 +11,6 @@ class ClipByValueOp final : public Operator {
   void InitFromOpConf() override {
     CHECK(op_conf().has_clip_by_value_conf());
     EnrollInputBn("in");
-    EnrollTmpBn("clip_mask");
     EnrollOutputBn("out");
   }
 
@@ -24,10 +23,6 @@ class ClipByValueOp final : public Operator {
                              std::function<void(OpContext*)> EnrollOpCtx) const override {
     // input
     const BlobDesc* in = GetBlobDesc4BnInOp("in");
-    // data_tmp: clip_mask
-    BlobDesc* clip_mask = GetBlobDesc4BnInOp("clip_mask");
-    *clip_mask = *in;
-    clip_mask->set_data_type(kInt8);
     // output
     *GetBlobDesc4BnInOp("out") = *in;
     return Maybe<void>::Ok();
