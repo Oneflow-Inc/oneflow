@@ -1778,6 +1778,12 @@ message ElementCountOpConf {
   optional DataType data_type = 5;
 }
 
+message LocalGatherNdOpConf {
+  required string in = 1;
+  required string indices = 2;
+  required string out = 3;
+}
+
 message NcclBoxingReduceScatterOpConf {
   required LogicalBlobId lbi = 1;
 }
@@ -1962,6 +1968,7 @@ message OperatorConf {
     SyncDynamicResizeOpConf sync_dynamic_resize_conf = 321;
     UpsampleNearestGradOpConf upsample_nearest_grad_conf = 322;
     SmoothL1GradOpConf smooth_l1_grad_conf = 323;
+    LocalGatherNdOpConf local_gather_nd_conf = 324;
 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;

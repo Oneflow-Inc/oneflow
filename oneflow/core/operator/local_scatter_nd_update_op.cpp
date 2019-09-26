@@ -14,7 +14,7 @@ class LocalScatterNdUpdateOp final : public Operator {
     EnrollInputBn("indices", false);
     EnrollInputBn("updates");
     if (this->device_type() == DeviceType::kGPU) { EnrollTmpBn("shape"); }
-    EnrollOutputBn("out");
+    EnrollOutputBn("out")->set_mutable_inplace_ibn("in");
   }
 
   const PbMessage& GetCustomizedConf() const override {
@@ -36,17 +36,26 @@ class LocalScatterNdUpdateOp final : public Operator {
     const BlobDesc* in = GetBlobDesc4BnInOp("in");
     const BlobDesc* indices = GetBlobDesc4BnInOp("indices");
     const BlobDesc* updates = GetBlobDesc4BnInOp("updates");
-    CHECK_EQ(in->data_type(), updates->data_type());
-    CHECK(IsIntegralDataType(indices->data_type()));
-    const auto indices_dim_vec = indices->shape().dim_vec();
-    if (this->device_type() == DeviceType::kGPU) {
-      // datatmp
-      BlobDesc* shape = GetBlobDesc4BnInOp("shape");
+
+    OF_CHECK_EQ(in->data_type(), updates->data_type());
+    OF_CHECK(IsIntegralDataType(indices->data_type()));
+
+    int64_t segm_dims = indices->shape().At(indices->shape().NumAxes() - 1);
+    OF_CHECK_LE(segm_dims, in->shape().NumAxes());
+    FOR_RANGE(int64_t, i, 0, segm_dims) {
+      OF_CHECK_EQ(indices->shape().At(i), updates->shape().At(i));
+    }
+    FOR_RANGE(int64_t, i, 0, in->shape().NumAxes() - segm_dims) {
+      OF_CHECK_EQ(in->shape().At(i + segm_dims),
+                  updates->shape().At(i + indices->shape().NumAxes() - 1));
+    }
+
+    BlobDesc* shape = GetBlobDesc4BnInOp("shape");
+    if (shape) {
       shape->mut_shape() = Shape({in->shape().NumAxes()});
       shape->set_data_type(DataType::kInt64);
     }
 
-    // output
     *GetBlobDesc4BnInOp("out") = *in;
     return Maybe<void>::Ok();
   }
