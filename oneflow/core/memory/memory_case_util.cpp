@@ -25,10 +25,4 @@ bool MemoryCaseUtil::GetCommonMemoryCase(const MemoryCase& a, const MemoryCase& 
   }
 }
 
-MemoryCase MemoryCaseUtil::MakeHostMemCase() {
-  MemoryCase mem_case{};
-  mem_case.mutable_host_mem();
-  return mem_case;
-}
-
 }  // namespace oneflow

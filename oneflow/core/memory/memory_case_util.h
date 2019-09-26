@@ -24,7 +24,6 @@ inline bool operator==(const MemoryCase& lhs, const MemoryCase& rhs) {
 
 struct MemoryCaseUtil {
   static bool GetCommonMemoryCase(const MemoryCase& a, const MemoryCase& b, MemoryCase* common);
-  static MemoryCase MakeHostMemCase();
 };
 
 }  // namespace oneflow
