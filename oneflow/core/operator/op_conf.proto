@@ -1591,6 +1591,7 @@ message ConstantLikeOpConf {
 message LocalNonzeroOpConf {
   required string in = 1;
   required string out = 2;
+  required string num_nonzero = 3;
 }
 
 message SqueezeOpConf {
@@ -1733,6 +1734,12 @@ message DynamicReshapeOpConf {
   required string in = 1;
   required string out = 2;
   required ShapeProto shape = 3;
+}
+
+message DynamicReshapeLikeOpConf {
+  required string x = 1;
+  required string y = 2;
+  required string like = 3;
 }
 
 message SmoothL1OpConf {
@@ -1969,6 +1976,7 @@ message OperatorConf {
     UpsampleNearestGradOpConf upsample_nearest_grad_conf = 322;
     SmoothL1GradOpConf smooth_l1_grad_conf = 323;
     LocalGatherNdOpConf local_gather_nd_conf = 324;
+    DynamicReshapeLikeOpConf dynamic_reshape_like_conf = 325;
 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;
