@@ -94,7 +94,7 @@ Maybe<void> SliceBoxingSubTskGphBuilder::Build(
                                       const ParallelDesc& in_pd, const ParallelDesc& out_pd,
                                       const SbpParallel& in_sbp, const SbpParallel& out_sbp,
                                       const BlobDesc& blob_desc,
-                                      const std::vector<TaskNode*> in_nodes,
+                                      const std::vector<TaskNode*>& in_nodes,
                                       std::vector<TaskNode*>* out_nodes) {
     CHECK(SubTskGphBuilderUtil::IsBoxingS2B(in_sbp, out_sbp));
     const std::vector<TensorSliceView> in_slices =
@@ -123,7 +123,7 @@ Maybe<void> SliceBoxingSubTskGphBuilder::Build(
       [&ctx, &lbi, &CreateBoxingNode121, &CreateBoxingNodeToHost, &GetBoxingGpuThrdId, &NewEdge](
           const ParallelDesc& in_pd, const ParallelDesc& out_pd, const SbpParallel& in_sbp,
           const SbpParallel& out_sbp, const BlobDesc& blob_desc,
-          const std::vector<TaskNode*> in_nodes, std::vector<TaskNode*>* out_nodes) {
+          const std::vector<TaskNode*>& in_nodes, std::vector<TaskNode*>* out_nodes) {
         CHECK(SubTskGphBuilderUtil::IsBoxingS2S(in_sbp, out_sbp));
         const std::vector<TensorSliceView> in_slices =
             SubTskGphBuilderUtil::GetTensorSliceView(in_pd.parallel_num(), in_sbp, blob_desc);
@@ -191,7 +191,7 @@ Maybe<void> SliceBoxingSubTskGphBuilder::Build(
       [&ctx, &lbi, &CreateBoxingNode121, &CreateBoxingNodeToHost, &GetBoxingGpuThrdId, &NewEdge](
           const ParallelDesc& in_pd, const ParallelDesc& out_pd, const SbpParallel& in_sbp,
           const SbpParallel& out_sbp, const BlobDesc& blob_desc,
-          const std::vector<TaskNode*> in_nodes, std::vector<TaskNode*>* out_nodes) {
+          const std::vector<TaskNode*>& in_nodes, std::vector<TaskNode*>* out_nodes) {
         CHECK(SubTskGphBuilderUtil::IsBoxingP2S(in_sbp, out_sbp));
         const TensorSliceView in_slice =
             SubTskGphBuilderUtil::GetBroadcastTensorSliceView(blob_desc);
@@ -249,7 +249,7 @@ Maybe<void> SliceBoxingSubTskGphBuilder::Build(
                                       const ParallelDesc& in_pd, const ParallelDesc& out_pd,
                                       const SbpParallel& in_sbp, const SbpParallel& out_sbp,
                                       const BlobDesc& blob_desc,
-                                      const std::vector<TaskNode*> in_nodes,
+                                      const std::vector<TaskNode*>& in_nodes,
                                       std::vector<TaskNode*>* out_nodes) {
     CHECK(SubTskGphBuilderUtil::IsBoxingP2B(in_sbp, out_sbp));
     const TensorSliceView slice = SubTskGphBuilderUtil::GetBroadcastTensorSliceView(blob_desc);
@@ -303,16 +303,16 @@ Maybe<void> SliceBoxingSubTskGphBuilder::Build(
         in_box_node = add_node;
       }
       for (const int64_t out_id : machine_id7out_parallel_ids.second) {
-        int64_t mem_case;
+        int64_t mem_zone_id;
         if (out_pd.device_type() == DeviceType::kCPU) {
-          mem_case = Global<IDMgr>::Get()->CpuMemZoneId();
+          mem_zone_id = Global<IDMgr>::Get()->CpuMemZoneId();
         } else if (out_pd.device_type() == DeviceType::kGPU) {
-          mem_case = Global<IDMgr>::Get()->GpuMemZoneId(out_pd.DeviceIdForParallelId(out_id));
+          mem_zone_id = Global<IDMgr>::Get()->GpuMemZoneId(out_pd.DeviceIdForParallelId(out_id));
         } else {
           UNIMPLEMENTED();
         }
         (*out_nodes)[out_id] = ctx->GetProxyNode(in_box_node, Global<IDMgr>::Get()->CpuMemZoneId(),
-                                                 out_machine_id, mem_case);
+                                                 out_machine_id, mem_zone_id);
       }
     }
   };
