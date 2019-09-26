@@ -260,6 +260,7 @@ def local_scatter_nd_update(inputs, indices, updates, name=None):
 
 @oneflow_export("local_gather")
 def local_gather(params, indices, axis=0, name=None):
+    return gather(params, indices, axis, name)
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf,
@@ -342,6 +343,15 @@ def expand_dims(inputs, axis, name=None):
 
 @oneflow_export("piece_slice")
 def piece_slice(inputs, output_size, name=None):
+    expanded_inputs = reshape(inputs, [1] + list(inputs.shape))
+    size = [None, 1] + list(inputs.shape)[1:]
+    ret = []
+    for i in range(output_size):
+        begin = [None, i] + [0] * (len(inputs.shape) - 1)
+        output = slice(expanded_inputs, begin, size)
+        squeezed_output = reshape(output, list(output.shape)[2:])
+        ret.append(squeezed_output)
+    return ret
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf,
