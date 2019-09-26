@@ -182,18 +182,48 @@ Maybe<void> Operator::InferSbpSignature(
   return Maybe<void>::Ok();
 }
 
+namespace {
+
+bool HasBlobDescWithField(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                          const PbRpf<std::string>& bn_in_ops,
+                          std::function<bool(const BlobDesc*)> Predicator4BlobDesc) {
+  for (const std::string& bn_in_op : bn_in_ops) {
+    const BlobDesc* blob_desc = GetBlobDesc4BnInOp(bn_in_op);
+    if (blob_desc && Predicator4BlobDesc(blob_desc)) { return true; }
+  }
+  return false;
+}
+
+}  // namespace
+
 void Operator::GenKernelConf(
-    std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, bool is_forward,
+    std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, KernelConf* kernel_conf, const OpContext* op_ctx,
     std::function<const BlobDesc&(const std::string&)> LogicalBlobDesc4BnInOp) const {
   *(kernel_conf->mutable_op_attribute()) = op_attribute_;
-
-  kernel_conf->set_is_forward(is_forward);
-  DataType data_type = GetDataTypeFromBnInOpVec(GetBlobDesc4BnInOp, output_bns());
-  if (data_type == DataType::kInvalidDataType) {
-    data_type = GetDataTypeFromBnInOpVec(GetBlobDesc4BnInOp, input_bns());
+  if (HasBlobDescWithField(GetBlobDesc4BnInOp, output_bns(), [](const BlobDesc* blob_desc) {
+        return blob_desc->header_is_opaque();
+      })) {
+    kernel_conf->set_need_do_opaque_header(true);
+  } else {
+    if (HasBlobDescWithField(GetBlobDesc4BnInOp, output_bns(),
+                             [](const BlobDesc* blob_desc) { return blob_desc->is_dynamic(); })) {
+      kernel_conf->set_need_do_dense_shape(true);
+    }
+    if (HasBlobDescWithField(GetBlobDesc4BnInOp, output_bns(), [](const BlobDesc* blob_desc) {
+          return blob_desc->num_of_lod_levels() > 0;
+        })) {
+      kernel_conf->set_need_do_lod(true);
+    }
   }
-  kernel_conf->set_data_type(data_type);
+
+  {
+    DataType data_type = GetDataTypeFromBnInOpVec(GetBlobDesc4BnInOp, output_bns());
+    if (data_type == DataType::kInvalidDataType) {
+      data_type = GetDataTypeFromBnInOpVec(GetBlobDesc4BnInOp, input_bns());
+    }
+    kernel_conf->set_data_type(data_type);
+  }
 
   VirtualGenKernelConf(GetBlobDesc4BnInOp, parallel_ctx, kernel_conf, op_ctx,
                        LogicalBlobDesc4BnInOp);
