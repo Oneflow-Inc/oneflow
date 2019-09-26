@@ -30,9 +30,9 @@ void GenerateFacadeImplOpConf(const OpNode& op_node, JobBuilder* job_builder) {
   job_builder->MutOpsOnlyOnce({reduce_sum_op_conf});
 
   const auto& in_blob = op_node.LogicalBlobDesc4Lbi(GenLogicalBlobId(reduce_mean_conf.in()));
-  CHECK_LE(in_blob.num_of_lod_levels(), 1);
+  CHECK_EQ(in_blob.num_of_lod_levels(), 0);
   std::string out_lbi;
-  if (in_blob.num_of_lod_levels() > 0) {  // TODO: && in_blob.has_instance_shape()
+  if (in_blob.is_dynamic()) {  // TODO: && in_blob.has_instance_shape()
     OperatorConf partial_elem_cnt_op_conf;
     partial_elem_cnt_op_conf.set_name("System-Facade-" + op_node.op().op_name()
                                       + "_partial_elem_cnt");

@@ -33,6 +33,11 @@ void LossOp::VirtualGenKernelConf(
 Maybe<void> LossOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                    const ParallelContext* parallel_ctx) const {
   const BlobDesc* pred_blob_desc = GetBlobDesc4BnInOp("prediction");
+  if (HasFieldInCustomizedConf("label")) {
+    const BlobDesc* label_blob_desc = GetBlobDesc4BnInOp("label");
+    CHECK_EQ_OR_RETURN(pred_blob_desc->is_dynamic(), label_blob_desc->is_dynamic());
+  }
+
   CHECK_GT_OR_RETURN(pred_blob_desc->shape().NumAxes(), 0);
   // loss
   BlobDesc* loss_blob_desc = GetBlobDesc4BnInOp("loss");

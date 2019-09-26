@@ -50,6 +50,10 @@ Maybe<void> InterfaceOpUtil::InferOutBlobDesc(const InterfaceBlobConf& blob_conf
   CheckShape(out_blob_desc->shape());
   CHECK_GT(out_blob_desc->mut_shape().At(0), 0);
   out_blob_desc->set_data_type(blob_conf.data_type());
+  out_blob_desc->set_is_dynamic(blob_conf.is_dynamic());
+  if (blob_conf.has_num_of_lod_levels()) {
+    JUST(out_blob_desc->SetLoD(blob_conf.num_of_lod_levels()));
+  }
   const auto& opt_split_axis = GetSplitAxis(blob_conf);
   if (opt_split_axis.has_value()) {
     int64_t split_axis = opt_split_axis.value();
@@ -86,6 +90,8 @@ Maybe<void> InterfaceOpUtil::InitBlobConf(InterfaceBlobConf* blob_conf,
   BlobDesc blob_desc(parallel_blob_conf.logical_blob_desc_conf());
   blob_desc.shape().ToProto(blob_conf->mutable_shape());
   blob_conf->set_data_type(blob_desc.data_type());
+  blob_conf->set_is_dynamic(blob_desc.is_dynamic());
+  blob_conf->set_num_of_lod_levels(blob_desc.num_of_lod_levels());
   if (parallel_blob_conf.sbp_conf().has_split_parallel()) {
     int64_t axis = parallel_blob_conf.sbp_conf().split_parallel().axis();
     blob_conf->mutable_split_axis()->set_value(axis);
