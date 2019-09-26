@@ -352,6 +352,12 @@ REGISTER_BLD_SUB_TSK_GPH_MTHD("NcclTupleReduce"
 REGISTER_BLD_SUB_TSK_GPH_MTHD("NcclTupleReduce"
                               "Optimizer",
                               &TaskGraph::BldSubTskGphByConnectNodeOnSameGpuDevice);
+REGISTER_BLD_SUB_TSK_GPH_MTHD("NcclReduceScatter"
+                              "NcclAllReduce",
+                              &TaskGraph::BldSubTskGphByOneToOne);
+REGISTER_BLD_SUB_TSK_GPH_MTHD("NcclAllReduce"
+                              "NcclAllGather",
+                              &TaskGraph::BldSubTskGphByOneToOne);
 
 BldBoxingOpConfMthd GetMthdForBldBoxingOpConf(const LogicalNode* src, const LogicalNode* dst) {
   std::string k = ConcatTypeName(src, dst);
