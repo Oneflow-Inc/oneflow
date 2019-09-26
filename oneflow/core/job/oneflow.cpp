@@ -58,9 +58,15 @@ std::string sub_plan_key(const std::string& plan_name, int64_t machine_id, int64
   return plan_name + "_" + std::to_string(machine_id) + "_" + std::to_string(thrd_id);
 }
 
+std::string block7chunk_key(const std::string& plan_name, int64_t machine_id) {
+  return plan_name + "_" + std::to_string(machine_id) + "_block7chunk";
+}
+
 void PushPlan(const std::string& plan_name, const Plan& plan) {
   HashMap<int64_t, std::set<int64_t>> machine_id2thrd_id_set;
   HashMap<std::pair<int64_t, int64_t>, std::vector<TaskProto>> mchn_thrd_id2task_protos;
+  HashMap<int64_t, MemBlockAndChunkList> machine_id2block7chunk;
+
   for (const auto& task : plan.task()) {
     machine_id2thrd_id_set[task.machine_id()].insert(task.thrd_id());
     mchn_thrd_id2task_protos[std::make_pair(task.machine_id(), task.thrd_id())].emplace_back(task);
@@ -82,6 +88,16 @@ void PushPlan(const std::string& plan_name, const Plan& plan) {
     *(sub_plan.mutable_task()) = StdVec2PbRpf(pair.second);
     Global<CtrlClient>::Get()->PushKV(sub_plan_key(plan_name, pair.first.first, pair.first.second),
                                       sub_plan);
+  }
+
+  for (const auto& mem_block : plan.mem_block()) {
+    *machine_id2block7chunk[mem_block.machine_id()].add_mem_block() = mem_block;
+  }
+  for (const auto& chunk : plan.chunk()) {
+    *machine_id2block7chunk[chunk.machine_id()].add_chunk() = chunk;
+  }
+  for (const auto& pair : machine_id2block7chunk) {
+    Global<CtrlClient>::Get()->PushKV(block7chunk_key(plan_name, pair.first), pair.second);
   }
 
   Global<CtrlClient>::Get()->PushKV(net_topo_key(plan_name), plan.net_topo());
@@ -109,6 +125,10 @@ void PullPlan(const std::string& plan_name, Plan* plan) {
   JobConfs job_confs;
   Global<CtrlClient>::Get()->PullKV(job_id2job_conf(plan_name), &job_confs);
   *(plan->mutable_job_confs()) = job_confs;
+  MemBlockAndChunkList block7chunk;
+  Global<CtrlClient>::Get()->PullKV(block7chunk_key(plan_name, machine_id), &block7chunk);
+  plan->mutable_mem_block()->CopyFrom(block7chunk.mem_block());
+  plan->mutable_chunk()->CopyFrom(block7chunk.chunk());
 }
 
 void CompileCurJobOnMaster(Job* job, Plan* improved_plan, bool need_job_complete) {
@@ -847,6 +867,7 @@ void CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan) {
     PushPlan("merged_plan", *plan);
   } else {
     PullPlan("merged_plan", plan);
+    TeePersistentLogStream::Create("merged_plan")->Write(*plan);
   }
   OF_BARRIER();
 }

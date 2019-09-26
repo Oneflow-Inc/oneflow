@@ -22,3 +22,7 @@ message ChunkProto {
   required int64 mem_size = 5;
 }
 
+message MemBlockAndChunkList {
+  repeated MemBlockProto mem_block = 1;
+  repeated ChunkProto chunk = 2;
+}
