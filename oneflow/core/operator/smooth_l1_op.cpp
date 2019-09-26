@@ -48,6 +48,7 @@ class SmoothL1GradOp final : public Operator {
 
   void InitFromOpConf() override {
     CHECK(op_conf().has_smooth_l1_grad_conf());
+    EnrollInputBn("x");
     EnrollInputBn("dy");
     EnrollInputBn("label", false);
     EnrollOutputBn("dx");
@@ -58,10 +59,13 @@ class SmoothL1GradOp final : public Operator {
   Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                              const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature,
                              std::function<void(OpContext*)> EnrollOpCtx) const override {
+    const BlobDesc* x = GetBlobDesc4BnInOp("x");
     const BlobDesc* dy = GetBlobDesc4BnInOp("dy");
     const BlobDesc* label = GetBlobDesc4BnInOp("label");
-    CHECK_EQ_OR_RETURN(dy->shape(), label->shape());
-    CHECK_EQ_OR_RETURN(dy->data_type(), label->data_type());
+    CHECK_EQ_OR_RETURN(x->shape(), dy->shape());
+    CHECK_EQ_OR_RETURN(x->data_type(), dy->data_type());
+    CHECK_EQ_OR_RETURN(x->shape(), label->shape());
+    CHECK_EQ_OR_RETURN(x->data_type(), label->data_type());
     CHECK_GE_OR_RETURN(op_conf().smooth_l1_grad_conf().beta(), 0);
 
     // out

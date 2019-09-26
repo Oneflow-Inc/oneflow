@@ -1744,11 +1744,12 @@ message SmoothL1OpConf {
 }
 
 message SmoothL1GradOpConf {
-  required string dx = 1;
+  required string x = 1;
   required string label = 2;
   optional float beta = 3 [default = 1.0];
   optional float scale = 4 [default = 1.0];
   required string dy = 5;
+  required string dx = 6;
 }
 
 message UpsampleNearestOpConf {
