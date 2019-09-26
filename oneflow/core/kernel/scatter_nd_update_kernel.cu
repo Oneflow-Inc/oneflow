@@ -50,9 +50,14 @@ class ScatterNdUpdateGpuKernel final : public KernelIf<DeviceType::kGPU> {
   }
 };
 
-#define REGISTER_SCATTER_ND_UPDATE_GPU_KERNEL(dtype, itype)                                      \
-  REGISTER_KERNEL_WITH_PRED_AND_LABEL(OperatorConf::kLocalScatterNdUpdateConf, DeviceType::kGPU, \
-                                      dtype, itype, ScatterNdUpdateGpuKernel<dtype, itype>)
+#define REGISTER_SCATTER_ND_UPDATE_GPU_KERNEL(dtype, itype)                       \
+  NEW_REGISTER_KERNEL(OperatorConf::kLocalScatterNdUpdateConf,                    \
+                      ScatterNdUpdateGpuKernel<dtype, itype>)                     \
+      .SetIsMatchedPred([](const KernelConf& conf) {                              \
+        return ((conf.op_attribute().op_conf().device_type() == DeviceType::kGPU) \
+                && (conf.data_type() == GetDataType<dtype>::value)                \
+                && (std::is_integral<itype>::value));                             \
+      })
 
 REGISTER_SCATTER_ND_UPDATE_GPU_KERNEL(float, int32_t);
 REGISTER_SCATTER_ND_UPDATE_GPU_KERNEL(double, int32_t);

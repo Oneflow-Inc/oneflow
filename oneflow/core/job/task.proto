@@ -46,6 +46,9 @@ enum TaskType {
   kForeignOutput = 49;
   kNcclTupleBroadcast = 50;
   kNcclTupleReduce = 51;
+  kNcclBoxingReduceScatter = 52;
+  kNcclBoxingAllGather = 53;
+  kNcclBoxingAllReduce = 54;
 };
 
 enum AreaType {

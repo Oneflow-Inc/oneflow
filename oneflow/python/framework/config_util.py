@@ -279,6 +279,11 @@ def set_use_nccl_inter_node_communication(value = True):
     _SetJobConfAttr(lambda x:x, 'use_nccl_inter_node_communication', value)
     return oneflow.config
 
+@oneflow_export('config.use_boxing_v2')
+def use_boxing_v2(value=True):
+    _SetJobConfAttr(lambda x: x, 'use_boxing_v2', value)
+    return oneflow.config
+
 @oneflow_export('config.enable_all_reduce_group')
 def set_enable_all_reduce_group(value = True):
     _SetJobConfAttr(lambda x:x, 'enable_all_reduce_group', value)

@@ -90,6 +90,7 @@ def reshape(x, shape, name=None):
 
 @oneflow_export("dynamic_reshape")
 def dynamic_reshape(x, shape, name=None):
+    return reshape(x, shape)
     assert isinstance(shape, tuple) or isinstance(shape, list)
     shape = list(shape)
     op_conf = op_conf_util.OperatorConf()
@@ -99,7 +100,7 @@ def dynamic_reshape(x, shape, name=None):
         name if name is not None else id_util.UniqueStr("DynamicReshape_"),
     )
     setattr(op_conf.dynamic_reshape_conf, "in", x.logical_blob_name)
-    op_conf.dynamic_reshape_conf.shape.dim[:] = list(shape)
+    op_conf.dynamic_reshape_conf.shape.dim.extend(list(shape))
     setattr(op_conf.dynamic_reshape_conf, "out", "out")
     compile_context.CurJobAddOp(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
@@ -227,7 +228,7 @@ def concat(values, axis, name=None):
 
 
 @oneflow_export("local_scatter_nd_update")
-def local_scatter_nd_update(input, indices, updates, name=None):
+def local_scatter_nd_update(inputs, indices, updates, name=None):
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf,
@@ -236,7 +237,9 @@ def local_scatter_nd_update(input, indices, updates, name=None):
         if name is not None
         else id_util.UniqueStr("LocalScatterNdUpdate_"),
     )
-    setattr(op_conf.local_scatter_nd_update_conf, "in", input.logical_blob_name)
+    setattr(
+        op_conf.local_scatter_nd_update_conf, "in", inputs.logical_blob_name
+    )
     setattr(
         op_conf.local_scatter_nd_update_conf,
         "indices",
@@ -257,6 +260,7 @@ def local_scatter_nd_update(input, indices, updates, name=None):
 
 @oneflow_export("local_gather")
 def local_gather(params, indices, axis=0, name=None):
+    return gather(params, indices, axis, name)
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf,
@@ -332,24 +336,22 @@ def squeeze(inputs, axis, name=None):
 
 @oneflow_export("expand_dims")
 def expand_dims(inputs, axis, name=None):
-    op_conf = op_conf_util.OperatorConf()
-    setattr(
-        op_conf,
-        "name",
-        name if name is not None else id_util.UniqueStr("ExpandDims_"),
-    )
-    setattr(op_conf.expand_dims_conf, "in", inputs.logical_blob_name)
-    setattr(op_conf.expand_dims_conf, "axis", axis)
-    setattr(op_conf.expand_dims_conf, "out", "out")
-    compile_context.CurJobAddOp(op_conf)
-    out_lbi = logical_blob_id_util.LogicalBlobId()
-    setattr(out_lbi, "op_name", op_conf.name)
-    setattr(out_lbi, "blob_name", "out")
-    return remote_blob_util.RemoteBlob(out_lbi)
+    new_shape = list(inputs.shape)
+    new_shape.insert(axis, 1)
+    return reshape(inputs, new_shape)
 
 
 @oneflow_export("piece_slice")
 def piece_slice(inputs, output_size, name=None):
+    expanded_inputs = reshape(inputs, [1] + list(inputs.shape))
+    size = [None, 1] + list(inputs.shape)[1:]
+    ret = []
+    for i in range(output_size):
+        begin = [None, i] + [0] * (len(inputs.shape) - 1)
+        output = slice(expanded_inputs, begin, size)
+        squeezed_output = reshape(output, list(output.shape)[2:])
+        ret.append(squeezed_output)
+    return ret
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf,
@@ -371,13 +373,7 @@ def piece_slice(inputs, output_size, name=None):
 
 
 @oneflow_export("elem_cnt")
-def elem_cnt(
-    inputs,
-    begin_axis=None,
-    end_axis=None,
-    data_type=None,
-    name=None,
-):
+def elem_cnt(inputs, begin_axis=None, end_axis=None, data_type=None, name=None):
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf,

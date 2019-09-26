@@ -21,8 +21,6 @@ class ExtractPieceSliceIdOp final : public Operator {
       KernelConf*, const OpContext*) const override;
   Maybe<void> InferBatchAxis(
       std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override {
-    return NaiveInferBatchAxis(BatchAxis4BnInOp);
-    for (const auto& obn : output_bns()) { *BatchAxis4BnInOp(obn) = *BatchAxis4BnInOp(SoleIbn()); }
     FOR_RANGE(int32_t, i, 0, output_bns().size()) {
       *BatchAxis4BnInOp(output_bns().Get(i)) = *BatchAxis4BnInOp(input_bns().Get(i));
     }

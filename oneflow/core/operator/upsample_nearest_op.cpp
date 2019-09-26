@@ -39,9 +39,47 @@ class UpsampleNearestOp final : public Operator {
     *BatchAxis4BnInOp("out") = *BatchAxis4BnInOp("in");
     return Maybe<void>::Ok();
   }
-
-};  // namespace oneflow
+};
 
 REGISTER_OP(OperatorConf::kUpsampleNearestConf, UpsampleNearestOp);
+
+class UpsampleNearestGradOp final : public Operator {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(UpsampleNearestGradOp);
+  UpsampleNearestGradOp() = default;
+  ~UpsampleNearestGradOp() = default;
+
+  void InitFromOpConf() override {
+    CHECK(op_conf().has_upsample_nearest_grad_conf());
+    EnrollInputBn("dy");
+    EnrollOutputBn("dx");
+  }
+
+  const PbMessage& GetCustomizedConf() const override {
+    return op_conf().upsample_nearest_grad_conf();
+  }
+
+  Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                             const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature,
+                             std::function<void(OpContext*)> EnrollOpCtx) const override {
+    *GetBlobDesc4BnInOp("dx") = *GetBlobDesc4BnInOp("dy");
+    const BlobDesc* dy_blob_desc = GetBlobDesc4BnInOp("dy");
+    BlobDesc* dx_blob_desc = GetBlobDesc4BnInOp("dx");
+    const int32_t scale = op_conf().upsample_nearest_grad_conf().scale();
+    CHECK_GT(scale, 1);
+    dx_blob_desc->mut_shape() =
+        Shape({dy_blob_desc->shape().At(0), dy_blob_desc->shape().At(1),
+               dy_blob_desc->shape().At(2) / scale, dy_blob_desc->shape().At(3) / scale});
+    return Maybe<void>::Ok();
+  }
+
+  Maybe<void> InferBatchAxis(
+      std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override {
+    *BatchAxis4BnInOp("dx") = *BatchAxis4BnInOp("dy");
+    return Maybe<void>::Ok();
+  }
+};
+
+REGISTER_OP(OperatorConf::kUpsampleNearestGradConf, UpsampleNearestGradOp);
 
 }  // namespace oneflow
