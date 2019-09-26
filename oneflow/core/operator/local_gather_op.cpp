@@ -95,6 +95,71 @@ class LocalGatherOp final : public Operator {
   }
 };
 
+class LocalGatherGradOp final : public Operator {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(LocalGatherGradOp);
+  LocalGatherGradOp() = default;
+  ~LocalGatherGradOp() override = default;
+
+  void InitFromOpConf() override {
+    CHECK(op_conf().has_local_gather_grad_conf());
+    EnrollInputBn("segment_ids", false);
+    EnrollInputBn("data");
+    EnrollOutputBn("out");
+  }
+
+  const PbMessage& GetCustomizedConf() const override { return op_conf().local_gather_grad_conf(); }
+
+  Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                             const ParallelContext* parallel_ctx) const override {
+    const LocalGatherGradOpConf& conf = op_conf().local_gather_grad_conf();
+    const BlobDesc* segment_ids = GetBlobDesc4BnInOp("segment_ids");
+    const BlobDesc* data = GetBlobDesc4BnInOp("data");
+
+    CHECK_OR_RETURN(IsIntegralDataType(segment_ids->data_type()));
+    std::vector<int64_t> out_dim_vec;
+    out_dim_vec.insert(out_dim_vec.end(), data->shape().dim_vec().cbegin(),
+                       data->shape().dim_vec().cbegin() + conf.axis());
+    out_dim_vec.push_back(conf.num_segments());
+    out_dim_vec.insert(
+        out_dim_vec.end(),
+        data->shape().dim_vec().cbegin() + conf.axis() + segment_ids->shape().NumAxes(),
+        data->shape().dim_vec().end());
+
+    BlobDesc* out = GetBlobDesc4BnInOp("out");
+    out->set_data_type(data->data_type());
+    out->mut_shape() = Shape(out_dim_vec);
+    return Maybe<void>::Ok();
+  }
+
+ private:
+  Maybe<void> InferBatchAxis(
+      std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override {
+    return NaiveInferBatchAxis(BatchAxis4BnInOp);
+  }
+
+  Maybe<void> GetSbpSignatures(SbpSignatureList* sbp_sig_list) const override {
+    SbpSignatureBuilder()
+        .Split("segment_ids", 0)
+        .Split("data", 0)
+        .Split("out", 0)
+        .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+    return Maybe<void>::Ok();
+  }
+
+  Maybe<void> InferSbpSignature(
+      SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
+      const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
+      std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
+      const ParallelDesc& parallel_desc) const override {
+    SbpSignatureList sbp_sig_list;
+    JUST(GetSbpSignatures(&sbp_sig_list));
+    CHECK_EQ(sbp_sig_list.sbp_signature_size(), 1);
+    *sbp_signature = sbp_sig_list.sbp_signature(0);
+    return Maybe<void>::Ok();
+  }
+};
+
 REGISTER_OP(OperatorConf::kLocalGatherConf, LocalGatherOp);
 
 }  // namespace oneflow

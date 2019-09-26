@@ -1810,6 +1810,14 @@ message SyncDynamicResizeOpConf {
   required int64 axis = 4;
 }
 
+message LocalGatherGradOpConf {
+  required string data = 1;
+  required string segment_ids = 2;
+  required string out = 3;
+  required int64 axis = 4;
+  required int64 num_segments = 5;
+}
+
 message OperatorConf {
   required string name = 1;
   optional bool trainable = 3 [default = true];
@@ -1977,6 +1985,7 @@ message OperatorConf {
     SmoothL1GradOpConf smooth_l1_grad_conf = 323;
     LocalGatherNdOpConf local_gather_nd_conf = 324;
     DynamicReshapeLikeOpConf dynamic_reshape_like_conf = 325;
+    LocalGatherGradOpConf local_gather_grad_conf = 326;
 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;
