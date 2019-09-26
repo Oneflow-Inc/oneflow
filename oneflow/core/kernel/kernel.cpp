@@ -86,30 +86,6 @@ void Kernel::ForwardDenseShape(const KernelCtx& ctx,
 }
 
 template<DeviceType device_type>
-void KernelIf<device_type>::ForwardDataId(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  UNIMPLEMENTED();
-}
-
-template<DeviceType device_type>
-void KernelIf<device_type>::ForwardColNum(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  UNIMPLEMENTED();
-}
-
-template<DeviceType device_type>
-void KernelIf<device_type>::ForwardDim0ValidNum(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  UNIMPLEMENTED();
-}
-
-template<DeviceType device_type>
-void KernelIf<device_type>::ForwardRecordIdInDevicePiece(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  UNIMPLEMENTED();
-}
-
-template<DeviceType device_type>
 void KernelIf<device_type>::ForwardPackedHeader(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   CopyField(ctx.device_ctx, BnInOp2Blob, op_attribute().input_bns(), op_attribute().output_bns(),
