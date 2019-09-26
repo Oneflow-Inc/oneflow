@@ -11,8 +11,7 @@ class DynamicReshapeOp final : public Operator {
   }
   const PbMessage& GetCustomizedConf() const { return op_conf().dynamic_reshape_conf(); }
   Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                             const ParallelContext* parallel_ctx,
-                             const SbpSignature* sbp_signature) const {
+                             const ParallelContext* parallel_ctx) const {
     const DynamicReshapeOpConf& conf = op_conf().dynamic_reshape_conf();
     int32_t inferred_axis = -1;
     Shape out_shape(conf.shape());
@@ -40,8 +39,52 @@ class DynamicReshapeOp final : public Operator {
       std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override {
     return NaiveInferBatchAxis(BatchAxis4BnInOp);
   }
+  Maybe<void> GetSbpSignatures(
+      const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
+      const ParallelDesc& parallel_desc, SbpSignatureList* sbp_sig_list) const override {
+    SbpSignatureBuilder()
+        .Split(input_bns(), 0)
+        .Split(output_bns(), 0)
+        .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+    return Maybe<void>::Ok();
+  }
 };
 
 REGISTER_OP(OperatorConf::kDynamicReshapeConf, DynamicReshapeOp);
+
+class DynamicReshapeLikeOp final : public Operator {
+ public:
+  void InitFromOpConf() {
+    CHECK(op_conf().has_dynamic_reshape_like_conf());
+    EnrollInputBn("x");
+    EnrollOutputBn("y");
+    EnrollInputBn("like", false)->set_use_header_only(true);
+  }
+  const PbMessage& GetCustomizedConf() const { return op_conf().dynamic_reshape_like_conf(); }
+  Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                             const ParallelContext* parallel_ctx) const {
+    CHECK_EQ_OR_RETURN(GetBlobDesc4BnInOp("x")->shape().elem_cnt(),
+                       GetBlobDesc4BnInOp("like")->shape().elem_cnt());
+    GetBlobDesc4BnInOp("y")->CopyMetaFrom(*GetBlobDesc4BnInOp("like"));
+    return Maybe<void>::Ok();
+  }
+
+ private:
+  Maybe<void> InferBatchAxis(
+      std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override {
+    return NaiveInferBatchAxis(BatchAxis4BnInOp);
+  }
+  Maybe<void> GetSbpSignatures(
+      const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
+      const ParallelDesc& parallel_desc, SbpSignatureList* sbp_sig_list) const override {
+    SbpSignatureBuilder()
+        .Split(input_bns(), 0)
+        .Split(output_bns(), 0)
+        .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+    return Maybe<void>::Ok();
+  }
+};
+
+REGISTER_OP(OperatorConf::kDynamicReshapeLikeConf, DynamicReshapeLikeOp);
 
 }  // namespace oneflow
