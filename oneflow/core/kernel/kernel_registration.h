@@ -32,10 +32,10 @@ class KernelConstraint final {
 };
 
 struct KernelRegistryVal final {
+  KernelRegistryVal() : func(), cons() {}
+
   CreateFn func;
   KernelConstraint cons;
-
-  KernelRegistryVal() : func(), cons() {}
 };
 
 class KernelRegistrarBuilder final {
