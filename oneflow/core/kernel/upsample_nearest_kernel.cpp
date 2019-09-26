@@ -44,7 +44,9 @@ OF_PP_FOR_EACH_TUPLE(INSTANTIATE_CPU_UPSAMPLE_NEAREST_UTIL, FLOATING_DATA_TYPE_S
 
 #define REGISTER_UPSAMPLE_NEAREST_KERNEL(dev, dtype)                                    \
   REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kUpsampleNearestConf, dev, dtype, \
-                                        UpsampleNearestKernel<dev, dtype>)
+                                        UpsampleNearestKernel<dev, dtype>) \
+  REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kUpsampleNearestGradConf, dev, dtype, \
+                                        UpsampleNearestGradKernel<dev, dtype>)
 
 REGISTER_UPSAMPLE_NEAREST_KERNEL(DeviceType::kGPU, float);
 REGISTER_UPSAMPLE_NEAREST_KERNEL(DeviceType::kGPU, double);
