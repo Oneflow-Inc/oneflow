@@ -24,6 +24,6 @@ void GenerateBackwardOpConf(
 
 }  // namespace
 
-REGISTER_OP_GRAD(OperatorConf::kBatchGatherConf, &GenerateBackwardOpConf);
+REGISTER_OP_GRAD(OperatorConf::kLocalScatterNdUpdateConf, &GenerateBackwardOpConf);
 
 }  // namespace oneflow
