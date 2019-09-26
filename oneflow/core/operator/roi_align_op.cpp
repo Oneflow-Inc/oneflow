@@ -64,7 +64,7 @@ class RoiAlignGradOp final : public Operator {
   RoiAlignGradOp() = default;
   ~RoiAlignGradOp() = default;
 
-  const PbMessage& GetCustomizedConf() const override { return op_conf().roi_align_conf(); }
+  const PbMessage& GetCustomizedConf() const override { return op_conf().roi_align_grad_conf(); }
 
   void InitFromOpConf() override {
     EnrollInputBn("dy");
