@@ -38,11 +38,8 @@ Maybe<void> SigmoidCrossEntropyLossGradOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   const BlobDesc* pred_blob_desc = GetBlobDesc4BnInOp("prediction");
-
-  const BlobDesc* label_blob_desc = GetBlobDesc4BnInOp("label");
-  // a label must be in {-1, 0, 1} while -1 indicates ignorance
-  CHECK_EQ_OR_RETURN(pred_blob_desc->shape(), label_blob_desc->shape());
-
+  CHECK_EQ_OR_RETURN(pred_blob_desc->shape().elem_cnt(),
+                     GetBlobDesc4BnInOp("label")->shape().elem_cnt());
   BlobDesc* loss_diff_blob_desc = GetBlobDesc4BnInOp("prediction_diff");
   *loss_diff_blob_desc = *pred_blob_desc;
   return Maybe<void>::Ok();
