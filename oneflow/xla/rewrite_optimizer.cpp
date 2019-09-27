@@ -149,7 +149,7 @@ void OptimizerRewritor::Run() {
 
     if (control_in_op_names.size() > 0) {
       for (OperatorConf *op_conf : operator_confs) {
-        // control_in_op_names.push_back(op_conf->name());
+        control_in_op_names.push_back(op_conf->name());
         SetControlInOpNames(op_conf, control_in_op_names);
       }
     }

@@ -54,6 +54,7 @@ Maybe<void> ClipGradientOp::GetSbpSignatures(
     const LogicalBlobDesc4IbnFunc& LogicalBlobDesc4Ibn,
     SbpSignatureList* sbp_sig_list) const {
   const Shape &gradient_shape = JUST(LogicalBlobDesc4Ibn("gradient"))->shape();
+  CHECK_GT(gradient_shape.NumAxes(), 0);
   for (int i = 0; i < gradient_shape.NumAxes(); ++i) {
     SbpSignatureBuilder()
         .Split("gradient", i)
