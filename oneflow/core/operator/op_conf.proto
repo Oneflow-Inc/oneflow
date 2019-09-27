@@ -1824,6 +1824,13 @@ message StackOpConf {
   required int32 axis = 3;
 }
 
+message StackGradOpConf {
+  repeated string like = 1;
+  required string in = 2;
+  repeated string out = 3;
+  required int32 axis = 4;
+}
+
 message OperatorConf {
   required string name = 1;
   optional bool trainable = 3 [default = true];
@@ -1993,6 +2000,7 @@ message OperatorConf {
     DynamicReshapeLikeOpConf dynamic_reshape_like_conf = 325;
     LocalGatherGradOpConf local_gather_grad_conf = 326;
     StackOpConf stack_conf = 327;
+    StackGradOpConf stack_grad_conf = 328;
 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;
