@@ -93,6 +93,7 @@ class ClusterNode {
   const XlaNode *xrt_node() const { return xrt_node_; }
   int64_t id() const { return id_; }
   void set_id(int64_t id) { id_ = id; }
+  std::string name() const { return xrt_node_->op_name(); }
   std::string backend() const { return xrt_node_->backend(); }
   size_t size() const { return folded_nodes_.size(); }
   const util::Set<ClusterNode *> &folded_nodes() const {
@@ -125,6 +126,18 @@ void ClusterNode::EraseOutEdge(const ClusterEdge *edge) {
 }
 
 bool ClusterNode::IsSatisfySbpPolicy() const {
+  // TODO(hjchen2) Fix ReduceSplit
+  util::Map<int64_t, util::Set<ClusterEdge *>> parent_edges;
+  for (ClusterEdge *edge : in_edges_) {
+    int64_t parent_id = edge->start()->id();
+    parent_edges[parent_id].insert(edge);
+    if (absl::StartsWith(edge->start()->name(),
+            "System-Boxing-AllReduce-ReduceSplit") &&
+        parent_edges[parent_id].size() > 1) {
+      return false;
+    }
+  }
+
   util::Map<int64_t, util::Set<bool>> connection_kinds;
   for (ClusterEdge *edge : in_edges_) {
     int64_t parent_id = edge->start()->id();
