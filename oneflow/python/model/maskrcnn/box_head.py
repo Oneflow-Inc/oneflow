@@ -162,9 +162,9 @@ class BoxHead(object):
 
     def box_feature_extractor(self, proposals, img_ids, features):
         levels = flow.detection.level_map(proposals)
-        level_idx_map = {}
+        level_idx_dict = {}
         for (i, scalar) in zip(range(2, 6), range(0, 4)):
-            level_idx_map[i] = flow.local_nonzero(
+            level_idx_dict[i] = flow.local_nonzero(
                 levels == flow.constant_scalar(int(scalar), flow.int32)
             )[0]
         proposals_with_img_ids = flow.concat(
@@ -174,7 +174,7 @@ class BoxHead(object):
         roi_features_0 = flow.detection.roi_align(
             features[0],
             rois=flow.local_gather(
-                proposals_with_img_ids, flow.squeeze(level_idx_map[2], axis=[1])
+                proposals_with_img_ids, flow.squeeze(level_idx_dict[2], axis=[1])
             ),
             pooled_h=self.cfg.BOX_HEAD.POOLED_H,
             pooled_w=self.cfg.BOX_HEAD.POOLED_W,
@@ -184,7 +184,7 @@ class BoxHead(object):
         roi_features_1 = flow.detection.roi_align(
             features[1],
             rois=flow.local_gather(
-                proposals_with_img_ids, flow.squeeze(level_idx_map[3], axis=[1])
+                proposals_with_img_ids, flow.squeeze(level_idx_dict[3], axis=[1])
             ),
             pooled_h=self.cfg.BOX_HEAD.POOLED_H,
             pooled_w=self.cfg.BOX_HEAD.POOLED_W,
@@ -194,7 +194,7 @@ class BoxHead(object):
         roi_features_2 = flow.detection.roi_align(
             features[2],
             rois=flow.local_gather(
-                proposals_with_img_ids, flow.squeeze(level_idx_map[4], axis=[1])
+                proposals_with_img_ids, flow.squeeze(level_idx_dict[4], axis=[1])
             ),
             pooled_h=self.cfg.BOX_HEAD.POOLED_H,
             pooled_w=self.cfg.BOX_HEAD.POOLED_W,
@@ -204,7 +204,7 @@ class BoxHead(object):
         roi_features_3 = flow.detection.roi_align(
             features[3],
             rois=flow.local_gather(
-                proposals_with_img_ids, flow.squeeze(level_idx_map[5], axis=[1])
+                proposals_with_img_ids, flow.squeeze(level_idx_dict[5], axis=[1])
             ),
             pooled_h=self.cfg.BOX_HEAD.POOLED_H,
             pooled_w=self.cfg.BOX_HEAD.POOLED_W,
@@ -216,7 +216,7 @@ class BoxHead(object):
             axis=0,
         )
         origin_indices = flow.concat(
-            [level_idx_map[2], level_idx_map[3], level_idx_map[4], level_idx_map[5]], axis=0
+            [level_idx_dict[2], level_idx_dict[3], level_idx_dict[4], level_idx_dict[5]], axis=0
         )
         roi_features = flow.local_scatter_nd_update(
             flow.constant_like(roi_features, 0), origin_indices, roi_features
