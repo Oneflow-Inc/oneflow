@@ -758,6 +758,8 @@ message InterfaceBlobConf {
   required DataType data_type = 2;
   optional OptInt64 split_axis = 3;
   required OptInt64 batch_axis = 4;
+  optional bool is_dynamic = 5;
+  optional int64 num_of_lod_levels = 6 [default = 0];
 }
 
 message InputOpConf {
@@ -797,7 +799,7 @@ message ForeignOutputOpConf {
 }
 
 message ForeignWatchOpConf {
-  repeated string in = 1;
+  required string in = 1;
   required string handler_uuid = 2;
 }
 
@@ -1531,6 +1533,18 @@ message LearningRateScheduleOpConf {
   optional WarmupConf warmup_conf = 5;
 }
 
+message NcclBoxingReduceScatterOpConf {
+  required LogicalBlobId lbi = 1;
+}
+
+message NcclBoxingAllGatherOpConf {
+  required LogicalBlobId lbi = 1;
+}
+
+message NcclBoxingAllReduceOpConf {
+  required LogicalBlobId lbi = 1;
+}
+
 message OperatorConf {
   required string name = 1;
   optional bool trainable = 3 [default = true];
@@ -1589,6 +1603,9 @@ message OperatorConf {
     PartialTickOpConf partial_tick_conf = 149;
     LazyAdamModelUpdateOpConf lazy_adam_model_update_conf = 150;
     ForeignWatchOpConf foreign_watch_conf = 151;
+    NcclBoxingReduceScatterOpConf nccl_boxing_reduce_scatter_conf = 152;
+    NcclBoxingAllGatherOpConf nccl_boxing_all_gather_conf = 153;
+    NcclBoxingAllReduceOpConf nccl_boxing_all_reduce_conf = 154;
 
     // domain op
     TupleIdentityOpConf tuple_identity_conf = 200;
