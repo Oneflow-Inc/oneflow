@@ -1563,14 +1563,6 @@ message RoiAlignGradOpConf {
   required RoiAlignConf roi_align_conf = 5;
 }
 
-message LogicalAndOpConf {
-  // in
-  required string lhs = 1;
-  required string rhs = 2;
-  // out
-  required string out = 3;
-}
-
 message WhereOpConf {
   // in
   required string condition = 1;
@@ -1979,7 +1971,7 @@ message OperatorConf {
     GatherMs0OpConf gather_ms0_conf = 302;
     GatherMs0GradOpConf gather_ms0_grad_conf = 303;
     PieceSliceOpConf piece_slice_conf = 304;
-    LogicalAndOpConf logical_and_conf = 305;
+    // LogicalAndOpConf logical_and_conf = 305;
     WhereOpConf where_conf = 306;
     ClipByValueOpConf clip_by_value_conf = 307;
     ConstantLikeOpConf constant_like_conf = 309;
