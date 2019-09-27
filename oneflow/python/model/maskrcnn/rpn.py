@@ -147,14 +147,14 @@ class RPNLoss(object):
                     flow.local_nonzero(
                         matched_indices
                         >= flow.constant_scalar(value=0, dtype=flow.int32)
-                    ),
+                    )[0],
                     axis=[1],
                 )
                 neg_inds = flow.squeeze(
                     flow.local_nonzero(
                         matched_indices
                         == flow.constant_scalar(value=-1, dtype=flow.int32)
-                    ),
+                    )[0],
                     axis=[1],
                 )
 
@@ -293,7 +293,7 @@ class RPNProposal(object):
                             flow.detection.identify_non_small_boxes(
                                 proposal_per_layer, min_size=0.0
                             )
-                        ),
+                        )[0],
                         axis=[1],
                     )
                     score_per_layer = flow.local_gather(
@@ -311,7 +311,7 @@ class RPNProposal(object):
                                 nms_iou_threshold=self.cfg.RPN.NMS_THRESH,
                                 post_nms_top_n=self.cfg.RPN.POST_NMS_TOP_N,
                             )
-                        ),
+                        )[0],
                         axis=[1],
                     )
                     score_per_layer = flow.local_gather(
