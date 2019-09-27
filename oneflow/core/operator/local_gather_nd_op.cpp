@@ -18,6 +18,13 @@ class LocalGatherNdOp final : public Operator {
 
   const PbMessage& GetCustomizedConf() const override { return op_conf().local_gather_nd_conf(); }
 
+  void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                            const ParallelContext* parallel_ctx,
+                            KernelConf* kernel_conf) const override {
+    GatherNdUpdateKernelConf* conf = kernel_conf->mutable_gather_nd_update_conf();
+    conf->set_idx_type(GetBlobDesc4BnInOp("indices")->data_type());
+  }
+
   Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                              const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature,
                              std::function<void(OpContext*)> EnrollOpCtx) const override {
