@@ -259,7 +259,6 @@ def local_scatter_nd_update(inputs, indices, updates, name=None):
 
 @oneflow_export("local_gather")
 def local_gather(params, indices, axis=0, name=None):
-    return gather(params, indices, axis, name)
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf,
