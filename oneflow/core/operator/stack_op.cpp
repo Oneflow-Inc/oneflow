@@ -65,4 +65,6 @@ class StackOp final : public Operator {
   }
 };
 
+REGISTER_OP(OperatorConf::kStackConf, StackOp);
+
 }  // namespace oneflow
