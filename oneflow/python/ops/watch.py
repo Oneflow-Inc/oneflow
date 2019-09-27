@@ -13,12 +13,10 @@ from oneflow.python.oneflow_export import oneflow_export
 @oneflow_export("watch")
 def watch(watched, handler):
     assert callable(handler)
-    watched = list(watched) if isinstance(watched, collections.Sized) else [watched]
-    watched_lbn = [x.logical_blob_name for x in watched]
     handler_uuid = str(uuid.uuid1())
     op_conf = op_conf_util.OperatorConf()
     op_conf.name = id_util.UniqueStr("ForeignWatch_")
-    getattr(op_conf.foreign_watch_conf, "in").extend(watched_lbn)
+    setattr(op_conf.foreign_watch_conf, "in", watched.logical_blob_name)
     op_conf.foreign_watch_conf.handler_uuid = handler_uuid
     with oneflow.fixed_placement("cpu", "0:0"): compile_context.CurJobAddOp(op_conf)
     watcher_util.BindUuidAndHandler(handler_uuid, handler)
