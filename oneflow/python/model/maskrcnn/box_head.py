@@ -162,71 +162,30 @@ class BoxHead(object):
     def box_feature_extractor(self, proposals, img_ids, features):
         levels = flow.detection.level_map(proposals)
         level_idx_dict = {}
-        for (i, scalar) in zip(range(2, 6), range(0, 4)):
+        for (i, operand) in zip(range(2, 6), range(0, 4)):
             level_idx_dict[i] = flow.local_nonzero(
-                levels == flow.constant_scalar(int(scalar), flow.int32)
+                levels == flow.constant_scalar(int(operand), flow.int32)
             )[0]
         proposals_with_img_ids = flow.concat(
             [flow.expand_dims(flow.cast(img_ids, flow.float), 1), proposals],
             axis=1,
         )
-        roi_features_0 = flow.detection.roi_align(
-            features[0],
-            rois=flow.local_gather(
-                proposals_with_img_ids,
-                flow.squeeze(level_idx_dict[2], axis=[1]),
-            ),
-            pooled_h=self.cfg.BOX_HEAD.POOLED_H,
-            pooled_w=self.cfg.BOX_HEAD.POOLED_W,
-            spatial_scale=self.cfg.BOX_HEAD.SPATIAL_SCALE / pow(2, 0),
-            sampling_ratio=self.cfg.BOX_HEAD.SAMPLING_RATIO,
-        )
-        roi_features_1 = flow.detection.roi_align(
-            features[1],
-            rois=flow.local_gather(
-                proposals_with_img_ids,
-                flow.squeeze(level_idx_dict[3], axis=[1]),
-            ),
-            pooled_h=self.cfg.BOX_HEAD.POOLED_H,
-            pooled_w=self.cfg.BOX_HEAD.POOLED_W,
-            spatial_scale=self.cfg.BOX_HEAD.SPATIAL_SCALE / pow(2, 1),
-            sampling_ratio=self.cfg.BOX_HEAD.SAMPLING_RATIO,
-        )
-        roi_features_2 = flow.detection.roi_align(
-            features[2],
-            rois=flow.local_gather(
-                proposals_with_img_ids,
-                flow.squeeze(level_idx_dict[4], axis=[1]),
-            ),
-            pooled_h=self.cfg.BOX_HEAD.POOLED_H,
-            pooled_w=self.cfg.BOX_HEAD.POOLED_W,
-            spatial_scale=self.cfg.BOX_HEAD.SPATIAL_SCALE / pow(2, 2),
-            sampling_ratio=self.cfg.BOX_HEAD.SAMPLING_RATIO,
-        )
-        roi_features_3 = flow.detection.roi_align(
-            features[3],
-            rois=flow.local_gather(
-                proposals_with_img_ids,
-                flow.squeeze(level_idx_dict[5], axis=[1]),
-            ),
-            pooled_h=self.cfg.BOX_HEAD.POOLED_H,
-            pooled_w=self.cfg.BOX_HEAD.POOLED_W,
-            spatial_scale=self.cfg.BOX_HEAD.SPATIAL_SCALE / pow(2, 3),
-            sampling_ratio=self.cfg.BOX_HEAD.SAMPLING_RATIO,
-        )
-        roi_features = flow.concat(
-            [roi_features_0, roi_features_1, roi_features_2, roi_features_3],
-            axis=0,
-        )
-        origin_indices = flow.concat(
-            [
-                level_idx_dict[2],
-                level_idx_dict[3],
-                level_idx_dict[4],
-                level_idx_dict[5],
-            ],
-            axis=0,
-        )
+        roi_features_list = []
+        for (level, i) in zip(range(2, 6), range(0, 4)):
+            roi_feature_i = flow.detection.roi_align(
+                features[i],
+                rois=flow.local_gather(
+                    proposals_with_img_ids,
+                    flow.squeeze(level_idx_dict[level], axis=[1]),
+                ),
+                pooled_h=self.cfg.BOX_HEAD.POOLED_H,
+                pooled_w=self.cfg.BOX_HEAD.POOLED_W,
+                spatial_scale=self.cfg.BOX_HEAD.SPATIAL_SCALE / pow(2, i),
+                sampling_ratio=self.cfg.BOX_HEAD.SAMPLING_RATIO,
+            )
+            roi_features_list.append(roi_feature_i)
+        roi_features = flow.concat(roi_features_list, axis=0)
+        origin_indices = flow.concat(list(level_idx_dict.values()), axis=0)
         roi_features = flow.local_scatter_nd_update(
             flow.constant_like(roi_features, 0), origin_indices, roi_features
         )
