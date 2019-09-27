@@ -15,7 +15,7 @@ std::unique_ptr<BlobDesc> ComputePackedBlobDesc(
       break;
     }
     RtBlobDesc rt_blob_desc(*(pair.second));
-    CHECK(!rt_blob_desc.is_dynamic());
+    // CHECK(!rt_blob_desc.is_dynamic());
     CHECK(!rt_blob_desc.is_body_disabled());
     body_byte_size += rt_blob_desc.AlignedByteSizeOfBlobBody();
     *opaque_header_pod_desc.MutStructField(NewFieldId(pair.first)) = rt_blob_desc.header_pod_desc();
