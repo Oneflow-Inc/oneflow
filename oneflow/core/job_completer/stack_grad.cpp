@@ -17,7 +17,7 @@ void GenerateBackwardOpConf(
   stack_grad_conf->set_axis(stack_conf.axis());
   FOR_RANGE(int32_t, i, 0, stack_conf.in_size()) {
     const std::string& ibn_of_stack_op = op.input_bns().Get(i);
-    const std::string& obn = "out_" + i;
+    const std::string& obn = "out_" + std::to_string(i);
     stack_grad_conf->add_like(GenLogicalBlobName(op.BnInOp2Lbi(ibn_of_stack_op)));
     stack_grad_conf->add_out(obn);
     if (DiffLbi4BnInOp(ibn_of_stack_op) != nullptr) {

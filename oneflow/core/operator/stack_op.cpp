@@ -99,7 +99,7 @@ class StackGradOp final : public Operator {
       FOR_RANGE(int64_t, j, 0, in->shape().NumAxes()) {
         if (j != conf.axis()) { OF_CHECK_EQ(like_i->shape().At(j), in->shape().At(j)); }
       }
-      *out_i = *like_i;
+      out_i->CopyMetaFrom(*like_i);
     }
     return Maybe<void>::Ok();
   }
