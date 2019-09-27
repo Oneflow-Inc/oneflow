@@ -14,6 +14,8 @@ class StackOp final : public Operator {
     EnrollOutputBn("out");
   }
 
+  const PbMessage& GetCustomizedConf() const override { return this->op_conf().stack_conf(); }
+
   Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                              const ParallelContext* parallel_ctx) const override {
     const BlobDesc* in_0 = GetBlobDesc4BnInOp(input_bns().Get(0));
@@ -80,6 +82,8 @@ class StackGradOp final : public Operator {
     EnrollInputBn("in");
     EnrollRepeatedOutputBn("out");
   }
+
+  const PbMessage& GetCustomizedConf() const override { return this->op_conf().stack_grad_conf(); }
 
   Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                              const ParallelContext* parallel_ctx) const override {
