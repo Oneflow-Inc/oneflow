@@ -51,7 +51,7 @@ class LocalNonzeroOp final : public Operator {
  private:
   Maybe<void> InferBatchAxis(
       std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override {
-    BatchAxis4BnInOp(SoleObn())->set_value(0);
+    for (const std::string& obn : output_bns()) { BatchAxis4BnInOp(obn)->set_value(0); }
     return Maybe<void>::Ok();
   }
 };

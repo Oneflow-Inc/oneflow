@@ -1818,6 +1818,12 @@ message LocalGatherGradOpConf {
   required int64 num_segments = 5;
 }
 
+message StackOpConf {
+  repeated string in = 1;
+  required string out = 2;
+  required int32 axis = 3;
+}
+
 message OperatorConf {
   required string name = 1;
   optional bool trainable = 3 [default = true];
@@ -1986,6 +1992,7 @@ message OperatorConf {
     LocalGatherNdOpConf local_gather_nd_conf = 324;
     DynamicReshapeLikeOpConf dynamic_reshape_like_conf = 325;
     LocalGatherGradOpConf local_gather_grad_conf = 326;
+    StackOpConf stack_conf = 327;
 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;
