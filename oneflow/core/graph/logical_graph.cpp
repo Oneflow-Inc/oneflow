@@ -173,8 +173,8 @@ void LogicalGraph::AddAllReduce(LogicalNode* src, LogicalNode* dst) {
   CHECK_EQ(src_pd->device_type(), dst_pd->device_type());
   if (GlobalJobDesc().enable_nccl() && src_pd->device_type() == DeviceType::kGPU) {
     if (src_pd->sorted_machine_ids().size() > 1 && src_pd->device_num_of_each_machine() > 1
-        && GlobalJobDesc().enable_nccl_hierarchy_all_reduce()) {
-      AddNcclHierarchyAllReduce(src, dst);
+        && GlobalJobDesc().enable_nccl_hierarchical_all_reduce()) {
+      AddNcclHierarchicalAllReduce(src, dst);
     } else if (src_pd->sorted_machine_ids().size() == 1
                || GlobalJobDesc().use_nccl_inter_node_communication()) {
       AddNcclAllReduce(src, dst);
@@ -231,7 +231,7 @@ void LogicalGraph::AddNcclAllReduce(LogicalNode* src, LogicalNode* dst) {
   Connect<LogicalNode>(nccl_all_reduce_node, NewEdge(), dst);
 }
 
-void LogicalGraph::AddNcclHierarchyAllReduce(LogicalNode* src, LogicalNode* dst) {
+void LogicalGraph::AddNcclHierarchicalAllReduce(LogicalNode* src, LogicalNode* dst) {
   std::shared_ptr<const ParallelDesc> src_pd = src->parallel_desc();
   const ReduceRankCtx inner_node_ctx =
       ReduceRankCtx().CtxWithScatter(src_pd->device_num_of_each_machine());

@@ -284,9 +284,9 @@ def use_boxing_v2(value=True):
     _SetJobConfAttr(lambda x: x, 'use_boxing_v2', value)
     return oneflow.config
 
-@oneflow_export('config.enable_nccl_hierarchy_all_reduce')
-def enable_nccl_hierarchy_all_reduce(value=True):
-    _SetJobConfAttr(lambda x: x, 'enable_nccl_hierarchy_all_reduce', value)
+@oneflow_export('config.enable_nccl_hierarchical_all_reduce')
+def enable_nccl_hierarchical_all_reduce(value=True):
+    _SetJobConfAttr(lambda x: x, 'enable_nccl_hierarchical_all_reduce', value)
     return oneflow.config
 
 @oneflow_export('config.enable_all_reduce_group')
