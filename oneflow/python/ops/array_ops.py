@@ -265,6 +265,8 @@ def local_gather(params, indices, axis=0, name=None):
         "name",
         name if name is not None else id_util.UniqueStr("LocalGather_"),
     )
+    if axis < 0:
+        axis += len(params.shape)
     setattr(op_conf.local_gather_conf, "in", params.logical_blob_name)
     setattr(op_conf.local_gather_conf, "indices", indices.logical_blob_name)
     setattr(op_conf.local_gather_conf, "axis", axis)
