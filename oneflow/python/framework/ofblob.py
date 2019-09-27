@@ -21,13 +21,14 @@ class OfBlob(object):
         return tuple(dst_ndarray.tolist())
 
     def CopyToNdarray(self):
-        dst_ndarray = np.ndarray(self._size, dtype=convert_of_dtype_to_numpy_dtype(self.dtype))
+        dst_ndarray = np.ndarray(self._Size, dtype=convert_of_dtype_to_numpy_dtype(self.dtype))
         method_name = oneflow_internal.Dtype_GetOfBlobCopyToBufferFuncName(self.dtype)
         copy_method = getattr(oneflow_internal, method_name)
         copy_method(self.of_blob_ptr_, dst_ndarray)
         return dst_ndarray.reshape(self.shape)
 
     def CopyFromNdarray(self, src_ndarray):
+        self._SetShape(np.array(src_ndarray.shape, dtype=np.int64))
         of_dtype = convert_of_dtype_to_numpy_dtype(self.dtype)
         assert(of_dtype == src_ndarray.dtype), \
             "of_dtype: %s, numpy.dtype: %s" % (of_dtype, src_ndarray.dtype)
@@ -37,8 +38,13 @@ class OfBlob(object):
         return
 
     @property
-    def _size(self):
+    def _Size(self):
         elem_cnt = 1
         for d in self.shape:
             elem_cnt *= d
         return elem_cnt
+    
+    def _SetShape(self, shape_tensor):
+        assert shape_tensor.dtype == np.int64
+        assert len(shape_tensor) == oneflow_internal.OfBlob_NumAxes(self.of_blob_ptr_)
+        oneflow_internal.OfBlob_CopyShapeFromNumpy(self.of_blob_ptr_, shape_tensor)

@@ -147,33 +147,6 @@ void ConcatSplitDataContent(DeviceCtx* ctx, std::function<Blob*(const std::strin
   }
 }
 
-template<typename Iter>
-void ConcatSplitField(DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob,
-                      const PbRpf<std::string>& concat_bns, int32_t concat_axis,
-                      const PbRpf<std::string>& split_bns, int32_t split_axis) {
-  Iter concat_it(BnInOp2Blob, &concat_bns, concat_axis);
-  Iter split_it(BnInOp2Blob, &split_bns, split_axis);
-  CopyFromIterToIter<DeviceType::kCPU>(ctx, concat_it, split_it);
-  if (split_axis != 0) {
-    CopyFromFirstToOtherBlobs(ctx, BnInOp2Blob, split_bns, Iter::GetCopyBlobFieldMthd());
-  }
-}
-
-int32_t MaxColIdInBlobs(std::function<Blob*(const std::string&)> BnInOp2Blob,
-                        const PbRpf<std::string>& bns) {
-  UNIMPLEMENTED();
-}
-
-void SetBlobsColId(std::function<Blob*(const std::string&)> BnInOp2Blob,
-                   const PbRpf<std::string>& bns, int32_t col_id) {
-  UNIMPLEMENTED();
-}
-
-void ConcatSplitColId(std::function<Blob*(const std::string&)> BnInOp2Blob,
-                      const PbRpf<std::string>& input_bns, const PbRpf<std::string>& output_bns) {
-  UNIMPLEMENTED();
-}
-
 }  // namespace
 
 template<typename T>
@@ -217,88 +190,6 @@ void BoxingKernel<T>::ForwardDataContent(
   } else {
     UNIMPLEMENTED();
   }
-}
-
-template<typename T>
-template<typename Iter>
-void BoxingKernel<T>::ForwardField(const KernelCtx& ctx,
-                                   std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const BoxingOpConf& boxing_conf = op_conf().boxing_conf();
-  if (boxing_conf.in_box_case() == BoxingOpConf::kConcatBox) {
-    if (boxing_conf.out_box_case() == BoxingOpConf::kSplitBox) {
-      ConcatSplitField<Iter>(ctx.device_ctx, BnInOp2Blob, op_attribute().input_bns(),
-                             boxing_conf.concat_box().axis(), op_attribute().output_bns(),
-                             boxing_conf.split_box().axis());
-    } else if (boxing_conf.out_box_case() == BoxingOpConf::kCloneBox) {
-      ConcatSplitField<Iter>(ctx.device_ctx, BnInOp2Blob, op_attribute().input_bns(),
-                             boxing_conf.concat_box().axis(), obn_0_, 0);
-      CopyFromFirstToOtherBlobs(ctx.device_ctx, BnInOp2Blob, op_attribute().output_bns(),
-                                Iter::GetCopyBlobFieldMthd());
-    } else {
-      UNIMPLEMENTED();
-    }
-  } else if (boxing_conf.in_box_case() == BoxingOpConf::kAddBox) {
-    if (boxing_conf.out_box_case() == BoxingOpConf::kSplitBox) {
-      ConcatSplitField<Iter>(ctx.device_ctx, BnInOp2Blob, ibn_0_, 0, op_attribute().output_bns(),
-                             boxing_conf.split_box().axis());
-    } else if (boxing_conf.out_box_case() == BoxingOpConf::kCloneBox) {
-      CopyField(ctx.device_ctx, BnInOp2Blob, BnInOp2Blob(ibn_0_.Get(0)),
-                op_attribute().output_bns(), Iter::GetCopyBlobFieldMthd());
-    } else {
-      UNIMPLEMENTED();
-    }
-  } else {
-    UNIMPLEMENTED();
-  }
-}
-
-template<typename T>
-void BoxingKernel<T>::ForwardDataId(const KernelCtx& ctx,
-                                    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  UNIMPLEMENTED();
-}
-
-template<typename T>
-void BoxingKernel<T>::ForwardColNum(const KernelCtx& ctx,
-                                    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  UNIMPLEMENTED();
-}
-
-template<typename T>
-void BoxingKernel<T>::ForwardDim0ValidNum(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  UNIMPLEMENTED();
-}
-
-template<typename T>
-void BoxingKernel<T>::ForwardDim1ValidNum(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  UNIMPLEMENTED();
-}
-
-template<typename T>
-void BoxingKernel<T>::ForwardDim2ValidNum(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  UNIMPLEMENTED();
-}
-
-template<typename T>
-void BoxingKernel<T>::ForwardRecordIdInDevicePiece(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  // record indexes is not allowed to be passed through boxing op
-  UNIMPLEMENTED();
-}
-
-template<typename T>
-void BoxingKernel<T>::SetColId(const KernelCtx& ctx,
-                               std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  TODO();
-}
-
-template<typename T>
-void BoxingKernel<T>::SetMaxColId(const KernelCtx& ctx,
-                                  std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  TODO();
 }
 
 ADD_CPU_DEFAULT_KERNEL_CREATOR(OperatorConf::kBoxingConf, BoxingKernel, ARITHMETIC_DATA_TYPE_SEQ);
