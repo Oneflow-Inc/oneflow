@@ -36,17 +36,16 @@ class PieceSliceKernel final : public KernelIf<device_type> {
   }
 };
 
-#define REGISTER_PIECE_SLICE_KERNEL(dev, dtype)                                    \
-  REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kPieceSliceConf, dev, dtype, \
-                                        PieceSliceKernel<dev, dtype>)
+#define REGISTER_PIECE_SLICE_KERNEL(dtype)                                    \
+  REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kPieceSliceConf, DeviceType::kCPU, dtype, \
+                                        PieceSliceKernel<DeviceType::kCPU, dtype>) \
+  REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kPieceSliceConf, DeviceType::kGPU, dtype, \
+                                        PieceSliceKernel<DeviceType::kGPU, dtype>)
 
-REGISTER_PIECE_SLICE_KERNEL(DeviceType::kGPU, float);
-REGISTER_PIECE_SLICE_KERNEL(DeviceType::kGPU, double);
-REGISTER_PIECE_SLICE_KERNEL(DeviceType::kCPU, float);
-REGISTER_PIECE_SLICE_KERNEL(DeviceType::kCPU, double);
-REGISTER_PIECE_SLICE_KERNEL(DeviceType::kCPU, int32_t);
-REGISTER_PIECE_SLICE_KERNEL(DeviceType::kCPU, int32_t);
-REGISTER_PIECE_SLICE_KERNEL(DeviceType::kCPU, int64_t);
-REGISTER_PIECE_SLICE_KERNEL(DeviceType::kCPU, int64_t);
+REGISTER_PIECE_SLICE_KERNEL(float);
+REGISTER_PIECE_SLICE_KERNEL(double);
+REGISTER_PIECE_SLICE_KERNEL(int8_t);
+REGISTER_PIECE_SLICE_KERNEL(int32_t);
+REGISTER_PIECE_SLICE_KERNEL(int64_t);
 
 }  // namespace oneflow
