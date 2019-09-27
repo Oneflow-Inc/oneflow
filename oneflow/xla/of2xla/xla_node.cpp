@@ -157,6 +157,18 @@ std::vector<std::string> XlaNode::output_bns() const {
   return output_bns;
 }
 
+void XlaNode::InferBlobDescs(GetBlobDescFunc func,
+                             const ParallelContext &parallel_ctx,
+                             const SbpSignature &sbp_signature) const {
+  auto get_blob_desc_fn = [&](const std::string &bn) -> BlobDesc* {
+    const LogicalBlobId &lbi = op()->BnInOp2Lbi(bn);
+    return func(lbi);
+  };
+  const JobDesc &job_desc = op()->job_desc();
+  op()->InferBlobDescsIf(get_blob_desc_fn, &parallel_ctx, &sbp_signature,
+                         job_desc.RecordPieceSize(), [](OpContext*) {});
+}
+
 XlaArgumentNode::XlaArgumentNode(const XlaLaunchOpConf::Argument &arg_conf)
     : XlaNode(), arg_conf_(arg_conf) {
   this->op_type_ = _XlaArgumentOpType;
@@ -164,6 +176,12 @@ XlaArgumentNode::XlaArgumentNode(const XlaLaunchOpConf::Argument &arg_conf)
   this->backend_ = DeviceTypeToBackend(arg_conf.device_type());
   this->inputs_.emplace("in", BlobId(arg_conf.in()));
   this->outputs_.emplace("out", BlobId(arg_conf.out()));
+}
+
+void XlaArgumentNode::InferBlobDescs(GetBlobDescFunc func,
+                                     const ParallelContext &parallel_ctx,
+                                     const SbpSignature &sbp_signature) const {
+  *(func(this->outputs_.at("out"))) = *func(this->inputs_.at("in"));
 }
 
 bool IsNodeInput(const XlaNode *node, const LogicalBlobId &lbi) {

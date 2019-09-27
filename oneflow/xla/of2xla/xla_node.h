@@ -101,6 +101,11 @@ class XlaNode {
   bool IsOutArgumentNode() const;
   bool IsReachable(const XlaNode &dst_node) const;
 
+  typedef std::function<BlobDesc*(const LogicalBlobId &)> GetBlobDescFunc;
+  virtual void InferBlobDescs(GetBlobDescFunc func,
+                              const ParallelContext &parallel_ctx,
+                              const SbpSignature &sbp_signature) const;
+
  protected:
   friend class XlaGraph;
   // XlaNode only can be created by XlaGraph
@@ -135,6 +140,10 @@ class XlaNode {
 class XlaArgumentNode : public XlaNode {
  public:
   const PbMessage &proto_conf() const override { return arg_conf_; }
+
+  void InferBlobDescs(XlaNode::GetBlobDescFunc func,
+                      const ParallelContext &parallel_ctx,
+                      const SbpSignature &sbp_signature) const override;
 
  private:
   friend class XlaGraph;

@@ -156,6 +156,37 @@ std::vector<Argument> XlaGraph::Arguments() const {
   return std::move(arguments);
 }
 
+void XlaGraph::InferBlobDescs(
+    std::unordered_map<std::string, BlobDesc> *blob_descs,
+    const ParallelContext &parallel_ctx,
+    const SbpSignature &sbp_signature) {
+  TopologyVisit(*this, [&](XlaNode *node) {
+    auto get_blob_desc_fn = [&](const LogicalBlobId &lbi) -> BlobDesc* {
+      std::string blob_name = BlobName(lbi);
+      auto it = blob_descs->find(blob_name);
+      // Check presentness for inputs
+      if (IsNodeInput(node, lbi)) {
+        CHECK(it != blob_descs->end());
+      } else {
+        if (it == blob_descs->end()) {
+          it = blob_descs->emplace(blob_name, BlobDesc()).first;
+        }
+      }
+      return &(it->second);
+    };
+
+    node->InferBlobDescs(get_blob_desc_fn, parallel_ctx, sbp_signature);
+    // Update blob desc on the output edges
+    for (XlaEdge *edge : node->out_edges()) {
+      std::string blob_name = edge->argument().blob_name();
+      auto it = blob_descs->find(blob_name);
+      CHECK(it != blob_descs->end());
+      Argument argument(edge->argument().blob_id(), it->second);
+      edge->UpdateArgument(argument);
+    }
+  });
+}
+
 void XlaLaunchGraph::SetupArguments() {
   // Add argument nodes
   for (const auto &arg_conf : launch_conf_.attr().argument()) {

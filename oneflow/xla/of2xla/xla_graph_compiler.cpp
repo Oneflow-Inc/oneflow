@@ -118,10 +118,10 @@ void XlaGraphCompiler::BuildExecutable(
 
 CompilationResult XlaGraphCompiler::Compile(
     const XlaGraph *graph,
-    const std::vector<Blob *> &entry_blobs,
-    const std::vector<Blob *> &return_blobs,
-    const std::vector<std::string> &entry_blob_names,
-    const std::vector<std::string> &return_blob_names,
+    const std::vector<Argument> &entry_arguments,
+    const std::vector<Argument> &return_arguments,
+    const std::vector<std::string> &entry_names,
+    const std::vector<std::string> &return_names,
     const std::vector<xla::XlaBuilder::InputOutputAlias> &aliases) {
   CHECK_NOTNULL(graph);
   CompilationResult result;
@@ -129,18 +129,10 @@ CompilationResult XlaGraphCompiler::Compile(
     builder_->SetUpAlias(alias.output_index, alias.param_number,
                          alias.param_index);
   }
-
-  BuildArguments(graph, entry_blobs, return_blobs, entry_blob_names,
-                 return_blob_names);
-  std::vector<std::string> input_names = entry_blob_names;
-  const int return_size = return_blob_names.size();
-  int argument_index = entry_blob_names.size();
-  std::vector<Argument> return_arguments(return_size);
-  for (int i = 0; i < return_size; ++i, ++argument_index) {
-    return_arguments[i] = arguments_.at(return_blob_names[i]);
-  }
+  BuildCompilationArguments(graph, entry_arguments, return_arguments,
+                            entry_names, return_names);
   std::unordered_map<Argument, XlaOprand> entry_oprands;
-  SetupEntryOprands(input_names, &entry_oprands, &result.xla_input_shapes);
+  BuildEntryParameters(entry_names, &entry_oprands, &result.xla_input_shapes);
 
   BuildComputation(graph, entry_oprands, return_arguments,
                    &result.xla_output_shape, &result.computation);
@@ -150,7 +142,7 @@ CompilationResult XlaGraphCompiler::Compile(
   return std::move(result);
 }
 
-void XlaGraphCompiler::SetupEntryOprands(
+void XlaGraphCompiler::BuildEntryParameters(
     const std::vector<std::string> &entry_names,
     std::unordered_map<Argument, XlaOprand> *entry_oprands,
     std::vector<xla::Shape> *input_shapes) {
@@ -182,40 +174,24 @@ void XlaGraphCompiler::SetupNodeArguments(
   param->arguments = std::move(op_arguments);
 }
 
-void XlaGraphCompiler::BuildArguments(
+void XlaGraphCompiler::BuildCompilationArguments(
     const XlaGraph *graph,
-    const std::vector<Blob *> &entry_blobs,
-    const std::vector<Blob *> &return_blobs,
-    const std::vector<std::string> &entry_blob_names,
-    const std::vector<std::string> &return_blob_names) {
+    const std::vector<Argument> &entry_arguments,
+    const std::vector<Argument> &return_arguments,
+    const std::vector<std::string> &entry_names,
+    const std::vector<std::string> &return_names) {
+  CHECK_EQ(entry_arguments.size(), entry_names.size());
+  CHECK_EQ(return_arguments.size(), return_names.size());
+  for (int i = 0; i < entry_arguments.size(); ++i) {
+    arguments_.emplace(entry_names[i], entry_arguments[i]);
+  }
+  for (int i = 0; i < return_arguments.size(); ++i) {
+    arguments_.emplace(return_names[i], return_arguments[i]);
+  }
+
   const std::vector<Argument> arguments = graph->Arguments();
   for (const Argument &argument : arguments) {
     arguments_.emplace(argument.blob_name(), argument);
-  }
-
-  CHECK_EQ(entry_blobs.size(), entry_blob_names.size());
-  CHECK_EQ(return_blobs.size(), return_blob_names.size());
-  for (int i = 0; i < entry_blobs.size(); ++i) {
-    const RtBlobDesc &runtime_desc = entry_blobs[i]->blob_desc();
-    BlobDesc blob_desc(runtime_desc.shape(),
-                       runtime_desc.data_type(),
-                       runtime_desc.has_data_id_field(),
-                       runtime_desc.has_col_num_field(),
-                       runtime_desc.max_col_num());
-    LogicalBlobId blob_id = BlobId(entry_blob_names[i]);
-    // TODO(hjchen2): Check blob shape and data type if existed
-    arguments_.emplace(entry_blob_names[i], Argument(blob_id, blob_desc));
-  }
-  for (int i = 0; i < return_blobs.size(); ++i) {
-    const RtBlobDesc &runtime_desc = return_blobs[i]->blob_desc();
-    BlobDesc blob_desc(runtime_desc.shape(),
-                       runtime_desc.data_type(),
-                       runtime_desc.has_data_id_field(),
-                       runtime_desc.has_col_num_field(),
-                       runtime_desc.max_col_num());
-    LogicalBlobId blob_id = BlobId(return_blob_names[i]);
-    // TODO(hjchen2): Check blob shape and data type if existed
-    arguments_.emplace(return_blob_names[i], Argument(blob_id, blob_desc));
   }
 }
 

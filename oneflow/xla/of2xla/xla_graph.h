@@ -35,6 +35,11 @@ class XlaGraph {
 
   std::vector<Argument> Arguments() const;
 
+  virtual void InferBlobDescs(
+      std::unordered_map<std::string, BlobDesc> *blob_descs,
+      const ParallelContext &parallel_ctx,
+      const SbpSignature &sbp_signature);
+
  private:
   void BuildEdges();
 
