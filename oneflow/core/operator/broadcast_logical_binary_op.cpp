@@ -40,5 +40,5 @@ DEFINE_BROADCAST_OP_CLASS(GreaterThan, greater_than);
 DEFINE_BROADCAST_OP_CLASS(GreaterEqual, greater_equal);
 DEFINE_BROADCAST_OP_CLASS(LessThan, less_than);
 DEFINE_BROADCAST_OP_CLASS(LessEqual, less_equal);
-
+DEFINE_BROADCAST_OP_CLASS(LogicalAnd, logical_and);
 }  // namespace oneflow

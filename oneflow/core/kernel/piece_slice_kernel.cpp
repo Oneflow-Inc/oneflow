@@ -36,9 +36,9 @@ class PieceSliceKernel final : public KernelIf<device_type> {
   }
 };
 
-#define REGISTER_PIECE_SLICE_KERNEL(dtype)                                    \
+#define REGISTER_PIECE_SLICE_KERNEL(dtype)                                                      \
   REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kPieceSliceConf, DeviceType::kCPU, dtype, \
-                                        PieceSliceKernel<DeviceType::kCPU, dtype>) \
+                                        PieceSliceKernel<DeviceType::kCPU, dtype>)              \
   REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kPieceSliceConf, DeviceType::kGPU, dtype, \
                                         PieceSliceKernel<DeviceType::kGPU, dtype>)
 

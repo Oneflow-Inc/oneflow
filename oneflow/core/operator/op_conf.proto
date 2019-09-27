@@ -1231,6 +1231,14 @@ message BroadcastGreaterEqualOpConf {
   optional bool is_const = 4 [default = false];
 }
 
+message BroadcastLogicalAndOpConf {
+  required string a = 1;
+  required string b = 2;
+  required string out = 3;
+  optional bool is_const = 4 [default = false];
+}
+
+
 message BiasAddOpConf {
   // inputs
   required string a = 1;
@@ -1553,14 +1561,6 @@ message RoiAlignGradOpConf {
   required string rois = 3;
   required string dx = 4;
   required RoiAlignConf roi_align_conf = 5;
-}
-
-message LogicalAndOpConf {
-  // in
-  required string lhs = 1;
-  required string rhs = 2;
-  // out
-  required string out = 3;
 }
 
 message WhereOpConf {
@@ -1971,7 +1971,7 @@ message OperatorConf {
     GatherMs0OpConf gather_ms0_conf = 302;
     GatherMs0GradOpConf gather_ms0_grad_conf = 303;
     PieceSliceOpConf piece_slice_conf = 304;
-    LogicalAndOpConf logical_and_conf = 305;
+    // LogicalAndOpConf logical_and_conf = 305;
     WhereOpConf where_conf = 306;
     ClipByValueOpConf clip_by_value_conf = 307;
     ConstantLikeOpConf constant_like_conf = 309;
@@ -2010,6 +2010,7 @@ message OperatorConf {
     RsqrtOpConf rsqrt_conf = 512;
     ScalarAddOpConf scalar_add_conf = 513;
     ScalarMulOpConf scalar_mul_conf = 514;
+    BroadcastLogicalAndOpConf broadcast_logical_and_conf = 515;
 
     // detection op
     MaskrcnnPositiveNegativeSampleOpConf maskrcnn_positive_negative_sample_conf = 601;
