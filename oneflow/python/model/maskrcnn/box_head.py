@@ -117,16 +117,15 @@ class BoxHead(object):
             # TODO: handle dynamic shape in sparse_cross_entropy
             # duplicate labels for 4 times to pass static shape check
             labels = flow.concat([labels] * 4, axis=0)
-            total_elem_cnt = flow.elem_cnt(labels)
-            box_head_cls_loss = (
-                flow.math.reduce_sum(
-                    flow.nn.sparse_softmax_cross_entropy_with_logits(
-                        labels, cls_logits, name="sparse_cross_entropy"
-                    )
+            box_head_cls_loss = flow.math.reduce_sum(
+                flow.nn.sparse_softmax_cross_entropy_with_logits(
+                    labels, cls_logits, name="sparse_cross_entropy"
                 )
-                / total_elem_cnt
             )
-
+            total_elem_cnt = flow.elem_cnt(
+                labels, dtype=box_head_cls_loss.dtype
+            )
+            box_head_cls_loss = box_head_cls_loss / total_elem_cnt
             # construct bbox loss
             total_pos_inds = flow.squeeze(
                 flow.local_nonzero(
@@ -174,7 +173,8 @@ class BoxHead(object):
         roi_features_0 = flow.detection.roi_align(
             features[0],
             rois=flow.local_gather(
-                proposals_with_img_ids, flow.squeeze(level_idx_dict[2], axis=[1])
+                proposals_with_img_ids,
+                flow.squeeze(level_idx_dict[2], axis=[1]),
             ),
             pooled_h=self.cfg.BOX_HEAD.POOLED_H,
             pooled_w=self.cfg.BOX_HEAD.POOLED_W,
@@ -184,7 +184,8 @@ class BoxHead(object):
         roi_features_1 = flow.detection.roi_align(
             features[1],
             rois=flow.local_gather(
-                proposals_with_img_ids, flow.squeeze(level_idx_dict[3], axis=[1])
+                proposals_with_img_ids,
+                flow.squeeze(level_idx_dict[3], axis=[1]),
             ),
             pooled_h=self.cfg.BOX_HEAD.POOLED_H,
             pooled_w=self.cfg.BOX_HEAD.POOLED_W,
@@ -194,7 +195,8 @@ class BoxHead(object):
         roi_features_2 = flow.detection.roi_align(
             features[2],
             rois=flow.local_gather(
-                proposals_with_img_ids, flow.squeeze(level_idx_dict[4], axis=[1])
+                proposals_with_img_ids,
+                flow.squeeze(level_idx_dict[4], axis=[1]),
             ),
             pooled_h=self.cfg.BOX_HEAD.POOLED_H,
             pooled_w=self.cfg.BOX_HEAD.POOLED_W,
@@ -204,7 +206,8 @@ class BoxHead(object):
         roi_features_3 = flow.detection.roi_align(
             features[3],
             rois=flow.local_gather(
-                proposals_with_img_ids, flow.squeeze(level_idx_dict[5], axis=[1])
+                proposals_with_img_ids,
+                flow.squeeze(level_idx_dict[5], axis=[1]),
             ),
             pooled_h=self.cfg.BOX_HEAD.POOLED_H,
             pooled_w=self.cfg.BOX_HEAD.POOLED_W,
@@ -216,7 +219,13 @@ class BoxHead(object):
             axis=0,
         )
         origin_indices = flow.concat(
-            [level_idx_dict[2], level_idx_dict[3], level_idx_dict[4], level_idx_dict[5]], axis=0
+            [
+                level_idx_dict[2],
+                level_idx_dict[3],
+                level_idx_dict[4],
+                level_idx_dict[5],
+            ],
+            axis=0,
         )
         roi_features = flow.local_scatter_nd_update(
             flow.constant_like(roi_features, 0), origin_indices, roi_features

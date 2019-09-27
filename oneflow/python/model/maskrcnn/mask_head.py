@@ -48,7 +48,6 @@ class MaskHead(object):
             gt_segms = flow.concat([gt_segms] * 4, axis=0)
             gt_labels = flow.concat(gt_label_list, axis=0)
             gt_labels = flow.concat([gt_labels] * 4, axis=0)
-            elem_cnt = flow.elem_cnt(gt_labels)
 
             mask_pred = flow.keras.activations.sigmoid(
                 flow.squeeze(
@@ -61,15 +60,11 @@ class MaskHead(object):
                 )
             )
 
-            mask_loss = (
-                flow.math.reduce_sum(
-                    flow.nn.sigmoid_cross_entropy_with_logits(
-                        gt_segms, mask_pred
-                    )
-                )
-                / elem_cnt
+            mask_loss = flow.math.reduce_sum(
+                flow.nn.sigmoid_cross_entropy_with_logits(gt_segms, mask_pred)
             )
-
+            elem_cnt = flow.elem_cnt(gt_labels, dtype=mask_loss.dtype)
+            mask_loss = mask_loss / elem_cnt
             return mask_loss
 
     def mask_feature_extractor(self, proposals, img_ids, features):
