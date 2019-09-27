@@ -1493,6 +1493,15 @@ message NcclBoxingAllReduceOpConf {
   required LogicalBlobId lbi = 1;
 }
 
+message NcclHierarchicalReduceOpConf {
+}
+
+message NcclHierarchicalAllReduceOpConf {
+}
+
+message NcclHierarchicalBroadcastOpConf {
+}
+
 message OperatorConf {
   required string name = 1;
   optional bool trainable = 3 [default = true];
@@ -1553,6 +1562,9 @@ message OperatorConf {
     NcclBoxingReduceScatterOpConf nccl_boxing_reduce_scatter_conf = 152;
     NcclBoxingAllGatherOpConf nccl_boxing_all_gather_conf = 153;
     NcclBoxingAllReduceOpConf nccl_boxing_all_reduce_conf = 154;
+    NcclHierarchicalReduceOpConf nccl_hierarchical_reduce_conf = 155;
+    NcclHierarchicalAllReduceOpConf nccl_hierarchical_all_reduce_conf = 156;
+    NcclHierarchicalBroadcastOpConf nccl_hierarchical_broadcast_conf = 157;
 
     // domain op
     TupleIdentityOpConf tuple_identity_conf = 200;
