@@ -425,6 +425,8 @@ def stack(inputs, axis, name=None):
     if axis < 0:
         axis = axis + len(inputs[0].shape)
 
+    assert axis == 0, "Only support dim0 stack now."
+
     op_conf = op_conf_util.OperatorConf()
     setattr(op_conf, "name", name or id_util.UniqueStr("Stack_"))
     getattr(op_conf.stack_conf, "in").extend(

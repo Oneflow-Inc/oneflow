@@ -22,6 +22,7 @@ class StackOp final : public Operator {
     // if (stack_axis < 0) { stack_axis += shape_vec.size(); }
     OF_CHECK_GE(stack_axis, 0);
     OF_CHECK_LT(stack_axis, shape_vec.size());
+    OF_CHECK_EQ(in_0->num_of_lod_levels(), 0);
 
     FOR_RANGE(size_t, i, 1, input_bns().size()) {
       const BlobDesc* in_i = GetBlobDesc4BnInOp(input_bns().Get(i));
