@@ -200,6 +200,14 @@ message WhereKernelConf {
   required DataType value_type = 2;
 }
 
+message ScatterNdUpdateKernelConf {
+  required DataType idx_type = 1;
+}
+
+message GatherNdUpdateKernelConf {
+  required DataType idx_type = 1;
+}
+
 message KernelConf {
   required OpAttribute op_attribute = 1;
   required DataType data_type = 2;
@@ -244,5 +252,7 @@ message KernelConf {
     NcclTupleReduceConf nccl_tuple_reduce_conf = 418;
     NcclTupleBroadcastConf nccl_tuple_broadcast_conf = 419;
     WhereKernelConf where_conf = 425;
+    ScatterNdUpdateKernelConf scatter_nd_update_conf = 426;
+    GatherNdUpdateKernelConf gather_nd_update_conf = 427;
   }
 }

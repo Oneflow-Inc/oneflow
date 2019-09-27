@@ -24,9 +24,8 @@ class LocalScatterNdUpdateOp final : public Operator {
   void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                             const ParallelContext* parallel_ctx,
                             KernelConf* kernel_conf) const override {
-    // LocalScatterNdUpdateConf* conf = kernel_conf->mutable_local_scatter_nd_update_conf();
-    // conf->set_value_type(GetBlobDesc4BnInOp("in")->data_type());
-    // conf->set_indices_type(GetBlobDesc4BnInOp("indices")->data_type());
+    ScatterNdUpdateKernelConf* conf = kernel_conf->mutable_scatter_nd_update_conf();
+    conf->set_idx_type(GetBlobDesc4BnInOp("indices")->data_type());
   }
 
   Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,

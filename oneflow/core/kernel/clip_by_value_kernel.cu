@@ -36,11 +36,11 @@ class ClipByValueGpuKernel final : public KernelIf<DeviceType::kGPU> {
   }
 };
 
-#define MAKE_ENTRY(type_cpp, type_proto)                                         \
-  NEW_REGISTER_KERNEL(OperatorConf::kWhereConf, ClipByValueGpuKernel<type_cpp>)  \
-      .SetIsMatchedPred([](const KernelConf& conf) {                             \
-        return (DeviceType::kGPU == conf.op_attribute().op_conf().device_type()) \
-               && (type_proto == conf.data_type());                              \
+#define MAKE_ENTRY(type_cpp, type_proto)                                              \
+  NEW_REGISTER_KERNEL(OperatorConf::kClipByValueConf, ClipByValueGpuKernel<type_cpp>) \
+      .SetIsMatchedPred([](const KernelConf& conf) {                                  \
+        return (DeviceType::kGPU == conf.op_attribute().op_conf().device_type())      \
+               && (type_proto == conf.data_type());                                   \
       });
 
 OF_PP_FOR_EACH_TUPLE(MAKE_ENTRY, ARITHMETIC_DATA_TYPE_SEQ);

@@ -45,7 +45,7 @@ def roi_align(
 
 
 @oneflow_export(
-    "detection.maskrcnn_positive_negative_sample", "detection.pos_neg_sample"
+    "detection.maskrcnn_positive_negative_sample", "detection.pos_neg_sampler"
 )
 def pos_neg_sampler(
     pos_inds, neg_inds, total_subsample_num, pos_fraction, name=None
