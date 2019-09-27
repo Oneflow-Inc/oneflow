@@ -20,10 +20,6 @@ class LossKernel : public KernelIf<device_type> {
  private:
   void ForwardDataContent(const KernelCtx& ctx,
                           std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
-  void ForwardDim0ValidNum(const KernelCtx& ctx,
-                           std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
-  void ForwardRecordIdInDevicePiece(
-      const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 };
 
 template<DeviceType device_type, typename T>

@@ -15,8 +15,6 @@ class ReduceSumLikeKernel final : public KernelIf<device_type> {
  private:
   void ForwardDataContent(const KernelCtx& ctx,
                           std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
-  void ForwardDim0ValidNum(const KernelCtx& ctx,
-                           std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 };
 
 }  // namespace oneflow
