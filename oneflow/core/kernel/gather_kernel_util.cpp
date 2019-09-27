@@ -135,6 +135,7 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INITIATE_GATHER_KERNEL_UTIL_CPU_IMPL, FLOATING_
   template struct GatherKernelUtil<device_type, OF_PP_PAIR_FIRST(in_type_pair)>;
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INITIATE_GATHER_KERNEL_UTIL, DEVICE_TYPE_SEQ,
                                  FLOATING_DATA_TYPE_SEQ);
+template struct GatherKernelUtil<DeviceType::kGPU, int32_t>;
 #undef INITIATE_GATHER_KERNEL_UTIL
 #if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 700
 template struct GatherKernelUtil<DeviceType::kGPU, float16>;
