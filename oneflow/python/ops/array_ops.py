@@ -294,7 +294,7 @@ def local_nonzero(input, name=None):
         out_lbi = logical_blob_id_util.LogicalBlobId()
         setattr(out_lbi, "op_name", op_conf.name)
         setattr(out_lbi, "blob_name", obn)
-        ret.append(out_lbi)
+        ret.append(remote_blob_util.RemoteBlob(out_lbi))
     return tuple(ret)
 
 
