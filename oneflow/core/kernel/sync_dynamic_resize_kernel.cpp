@@ -3,8 +3,7 @@
 
 namespace oneflow {
 
-template<DeviceType device_type, typename T>
-class SyncDynamicResizeKernel final : public KernelIf<device_type> {
+class SyncDynamicResizeKernel final : public KernelIf<DeviceType::kGPU> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(SyncDynamicResizeKernel);
   SyncDynamicResizeKernel() = default;
@@ -31,5 +30,7 @@ class SyncDynamicResizeKernel final : public KernelIf<device_type> {
     });
   }
 };
+
+REGISTER_KERNEL_WITH_NOTHING(OperatorConf::kSyncDynamicResizeConf, SyncDynamicResizeKernel);
 
 }  // namespace oneflow
