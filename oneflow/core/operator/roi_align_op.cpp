@@ -90,7 +90,7 @@ class RoiAlignGradOp final : public Operator {
                                   roi_align_conf.pooled_h(), roi_align_conf.pooled_w()});
     CHECK_EQ_OR_RETURN(y_shape, dy_blob_desc->shape());
     CHECK_EQ_OR_RETURN(dy_blob_desc->data_type(), x_like_blob_desc->data_type());
-    *GetBlobDesc4BnInOp("dx") = *GetBlobDesc4BnInOp("x_like");
+    GetBlobDesc4BnInOp("dx")->CopyMetaFrom(*GetBlobDesc4BnInOp("x_like"));
     return Maybe<void>::Ok();
   }
 
