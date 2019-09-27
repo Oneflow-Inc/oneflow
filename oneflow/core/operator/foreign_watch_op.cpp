@@ -5,7 +5,7 @@ namespace oneflow {
 
 void ForeignWatchOp::InitFromOpConf() {
   CHECK(op_conf().has_foreign_watch_conf());
-  EnrollRepeatedInputBn("in");
+  EnrollInputBn("in");
 }
 
 Maybe<void> ForeignWatchOp::InferBlobDescs(
