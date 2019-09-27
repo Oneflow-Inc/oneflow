@@ -14,6 +14,8 @@
 #include "oneflow/core/job_completer/nccl_tuple_broadcast_reduce_sequence_pass.h"
 #include "oneflow/core/job_completer/auto_train_step.h"
 #include "oneflow/core/job_completer/auto_learning_rate.h"
+#include "oneflow/core/job_completer/auto_learning_rate.h"
+#include "oneflow/core/job_completer/add_lbi_diff_watcher.h"
 
 namespace oneflow {
 
@@ -122,6 +124,7 @@ void GenerateOpConf4Trainning(const OpGraph& op_graph, JobBuilder* job_builder) 
   LogicalBlobId total_loss_instance_num;
   HashMap<LogicalBlobId, LogicalBlobId> lbi2diff_lbi;
   AutoGrad(op_graph, job_builder, &lbi2diff_lbi);
+  AddLbiDiffWatherOpConfs(lbi2diff_lbi, job_builder);
   std::function<const LogicalBlobId&(const ParallelDesc&)> LossInstanceNum4ParallelDesc;
   AddTotalLossInstanceNumOpConf(op_graph, job_builder, lbi2diff_lbi, &LossInstanceNum4ParallelDesc);
   AddOptimizerOpConf(op_graph, job_builder, lbi2diff_lbi, LossInstanceNum4ParallelDesc);
