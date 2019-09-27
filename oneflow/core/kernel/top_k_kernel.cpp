@@ -113,4 +113,16 @@ class TopKKernel final : public KernelIf<device_type> {
   }
 };
 
+#define REGISTER_TOP_K_KERNEL(dtype)                                                      \
+  REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kTopKConf, DeviceType::kCPU, dtype, \
+                                        TopKKernel<DeviceType::kCPU, dtype>)              \
+  REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kTopKConf, DeviceType::kGPU, dtype, \
+                                        TopKKernel<DeviceType::kGPU, dtype>)
+
+REGISTER_TOP_K_KERNEL(float);
+REGISTER_TOP_K_KERNEL(double);
+REGISTER_TOP_K_KERNEL(int8_t);
+REGISTER_TOP_K_KERNEL(int32_t);
+REGISTER_TOP_K_KERNEL(int64_t);
+
 }  // namespace oneflow

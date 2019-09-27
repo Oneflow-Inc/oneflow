@@ -56,19 +56,16 @@ class NonzeroKernel final : public KernelIf<device_type> {
   }
 };
 
-#define REGISTER_NONZERO_KERNEL(dev, dtype)                                          \
-  REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kLocalNonzeroConf, dev, dtype, \
-                                        NonzeroKernel<dev, dtype>)
+#define REGISTER_NONZERO_KERNEL(dtype)                                                            \
+  REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kLocalNonzeroConf, DeviceType::kCPU, dtype, \
+                                        NonzeroKernel<DeviceType::kCPU, dtype>)                   \
+  REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kLocalNonzeroConf, DeviceType::kGPU, dtype, \
+                                        NonzeroKernel<DeviceType::kGPU, dtype>)
 
-REGISTER_NONZERO_KERNEL(DeviceType::kGPU, float);
-REGISTER_NONZERO_KERNEL(DeviceType::kGPU, double);
-REGISTER_NONZERO_KERNEL(DeviceType::kCPU, float);
-REGISTER_NONZERO_KERNEL(DeviceType::kCPU, double);
-REGISTER_NONZERO_KERNEL(DeviceType::kCPU, int8_t);
-REGISTER_NONZERO_KERNEL(DeviceType::kCPU, int8_t);
-REGISTER_NONZERO_KERNEL(DeviceType::kCPU, int32_t);
-REGISTER_NONZERO_KERNEL(DeviceType::kCPU, int32_t);
-REGISTER_NONZERO_KERNEL(DeviceType::kCPU, int64_t);
-REGISTER_NONZERO_KERNEL(DeviceType::kCPU, int64_t);
+REGISTER_NONZERO_KERNEL(float);
+REGISTER_NONZERO_KERNEL(double);
+REGISTER_NONZERO_KERNEL(int8_t);
+REGISTER_NONZERO_KERNEL(int32_t);
+REGISTER_NONZERO_KERNEL(int64_t);
 
 }  // namespace oneflow
