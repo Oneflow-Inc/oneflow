@@ -5,8 +5,7 @@
 
 namespace oneflow {
 
-void AddLbiDiffWatherOpConfs(const HashMap<LogicalBlobId, LogicalBlobId>& lbi2diff_lbi,
-                             JobBuilder* job_builder);
+void AddLbiDiffWatherOpConfs(Job* job);
 }
 
 #endif  // ONEFLOW_CORE_JOB_COMPLETER_ADD_LBI_DIFF_WATCHER_H_
