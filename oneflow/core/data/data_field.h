@@ -19,6 +19,9 @@ class DataField {
   size_t ToBuffer(void* buffer, DataType data_type) const;
   void SetSource(DataSourceCase dsrc) { data_source_ = dsrc; }
   DataSourceCase Source() const { return data_source_; }
+  virtual void InferShape(const ShapeProto& static_shape, const std::vector<int64_t>& var_axes,
+                          std::vector<int64_t>* shape,
+                          std::vector<std::vector<int64_t>>* lod) const = 0;
 
  private:
   DataSourceCase data_source_;
@@ -31,6 +34,9 @@ class ArrayDataField : public DataField {
 
   const std::vector<T>& data() const { return data_; }
   std::vector<T>& data() { return data_; }
+  void InferShape(const ShapeProto& static_shape, const std::vector<int64_t>& var_axes,
+                  std::vector<int64_t>* shape,
+                  std::vector<std::vector<int64_t>>* lod) const override;
 
  private:
   std::vector<T> data_;
@@ -40,6 +46,9 @@ class ImageDataField : public DataField {
  public:
   const cv::Mat& data() const { return data_; }
   cv::Mat& data() { return data_; }
+  void InferShape(const ShapeProto& static_shape, const std::vector<int64_t>& var_axes,
+                  std::vector<int64_t>* shape,
+                  std::vector<std::vector<int64_t>>* lod) const override;
 
  private:
   cv::Mat data_;
@@ -72,6 +81,9 @@ class NdarrayDataField : public DataField {
   int Levels() const { return lod_len_.size(); }
   std::vector<size_t>& GetLod(int lvl) { return lod_len_.at(lvl); }
   const std::vector<size_t>& GetLod(int lvl) const { return lod_len_.at(lvl); }
+  void InferShape(const ShapeProto& static_shape, const std::vector<int64_t>& var_axes,
+                  std::vector<int64_t>* shape,
+                  std::vector<std::vector<int64_t>>* lod) const override;
 
   T* data() { return data_.get(); }
   const T* data() const { return data_.get(); }

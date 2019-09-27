@@ -8,7 +8,8 @@ void DataLoadCompTaskNode::ConsumeAllRegsts() {
 }
 
 void DataLoadCompTaskNode::ProduceAllRegstsAndBindEdges() {
-  ProduceRegst("out", false);
+  // ProduceRegst("out", false);
+  ProduceRegst("out", false, 2, 2);
   ForEachOutDataEdge([&](TaskEdge* edge) { BindEdgeWithProducedRegst(edge, "out"); });
   // std::shared_ptr<RegstDesc> out_regst = ProduceRegst("out", false, 2, 2);
   // ForEachOutDataEdge([&](TaskEdge* edge) { edge->AddRegst("out", out_regst); });

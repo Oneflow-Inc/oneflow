@@ -23,7 +23,7 @@ void DataLoadOp::InitFromOpConf() {
   if (conf.has_tick()) { EnrollInputBn("tick", false); }
   FOR_RANGE(int32_t, i, 0, conf.blobs_size()) {
     CHECK(conf.blobs(i).has_data_source());
-    EnrollOutputBn("out_" + std::to_string(i), false); 
+    EnrollOutputBn("out_" + std::to_string(i), false);
   }
 }
 
