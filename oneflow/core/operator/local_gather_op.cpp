@@ -161,5 +161,6 @@ class LocalGatherGradOp final : public Operator {
 };
 
 REGISTER_OP(OperatorConf::kLocalGatherConf, LocalGatherOp);
+REGISTER_OP(OperatorConf::kLocalGatherGradConf, LocalGatherGradOp);
 
 }  // namespace oneflow
