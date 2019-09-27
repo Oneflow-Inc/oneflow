@@ -287,11 +287,15 @@ def local_nonzero(input, name=None):
     )
     setattr(op_conf.local_nonzero_conf, "in", input.logical_blob_name)
     setattr(op_conf.local_nonzero_conf, "out", "out")
+    setattr(op_conf.local_nonzero_conf, "num_nonzero", "num_nonzero")
     compile_context.CurJobAddOp(op_conf)
-    out_lbi = logical_blob_id_util.LogicalBlobId()
-    setattr(out_lbi, "op_name", op_conf.name)
-    setattr(out_lbi, "blob_name", "out")
-    return remote_blob_util.RemoteBlob(out_lbi)
+    ret = []
+    for obn in ["out", "num_nonzero"]:
+        out_lbi = logical_blob_id_util.LogicalBlobId()
+        setattr(out_lbi, "op_name", op_conf.name)
+        setattr(out_lbi, "blob_name", obn)
+        ret.append(out_lbi)
+    return tuple(ret)
 
 
 @oneflow_export("where")
@@ -342,15 +346,6 @@ def expand_dims(inputs, axis, name=None):
 
 @oneflow_export("piece_slice")
 def piece_slice(inputs, output_size, name=None):
-    expanded_inputs = reshape(inputs, [1] + list(inputs.shape))
-    size = [None, 1] + list(inputs.shape)[1:]
-    ret = []
-    for i in range(output_size):
-        begin = [None, i] + [0] * (len(inputs.shape) - 1)
-        output = slice(expanded_inputs, begin, size)
-        squeezed_output = reshape(output, list(output.shape)[2:])
-        ret.append(squeezed_output)
-    return ret
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf,
@@ -392,6 +387,7 @@ def elem_cnt(inputs, begin_axis=None, end_axis=None, data_type=None, name=None):
     setattr(out_lbi, "op_name", op_conf.name)
     setattr(out_lbi, "blob_name", "out")
     return remote_blob_util.RemoteBlob(out_lbi)
+
 
 @oneflow_export("sync_dynamic_resize")
 def sync_dynamic_resize(inputs, size, name=None):
