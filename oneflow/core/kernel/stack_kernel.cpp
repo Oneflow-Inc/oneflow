@@ -19,22 +19,22 @@ class StackKernel final : public KernelIf<device_type> {
     //   axis -= lod_levels - 1;
     // }
     const int64_t out_cols = out_blob->shape().Count(axis);
-    const int64_t rows = out_blob->shape().elem_cnt() / cols;
+    const int64_t rows = out_blob->shape().elem_cnt() / out_cols;
     int64_t out_col_offset = 0;
     for (const auto& input_bn : this->op_attribute().input_bns()) {
       const Blob* in_blob = BnInOp2Blob(input_bn);
       const int64_t in_cols = in_blob->shape().Count(axis);
       CHECK_EQ(in_blob->shape().elem_cnt(), rows * in_cols);
-      KernelUtil<device_type, T>::CopyColsRegion(
-          ctx.device_ctx, rows, in_cols, in_blob->dptr<T>(), 0, in_cols,
-          out_blob->mut_dptr<T>(), out_col_offset, out_cols);
+      KernelUtil<device_type, T>::CopyColsRegion(ctx.device_ctx, rows, in_cols, in_blob->dptr<T>(),
+                                                 0, in_cols, out_blob->mut_dptr<T>(),
+                                                 out_col_offset, out_cols);
       out_col_offset += in_cols;
     }
     CHECK_LE(out_col_offset, out_cols);
   }
 };
 
-#define REGISTER_STACK_KERNEL(device, dtype)                                    \
+#define REGISTER_STACK_KERNEL(device, dtype)                                     \
   REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kStackConf, device, dtype, \
                                         StackKernel<device, dtype>)
 
