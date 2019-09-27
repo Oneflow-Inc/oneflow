@@ -28,8 +28,12 @@ void GatherKernel<device_type, T>::ForwardDataContent(
   REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kLocalGatherConf, DeviceType::kGPU, dtype, \
                                         GatherKernel<DeviceType::kGPU, dtype>)
 
+REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kGatherConf, DeviceType::kGPU, int32_t,
+                                      GatherKernel<DeviceType::kGPU, int32_t>)
+REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kLocalGatherConf, DeviceType::kGPU, int32_t,
+                                      GatherKernel<DeviceType::kGPU, int32_t>)
+
 REGISTER_GATHER_KERNELS(float);
 REGISTER_GATHER_KERNELS(double);
-REGISTER_GATHER_KERNELS(int32_t);
 
 }  // namespace oneflow
