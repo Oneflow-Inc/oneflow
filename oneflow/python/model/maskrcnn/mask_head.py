@@ -73,7 +73,7 @@ class MaskHead(object):
         for (i, scalar) in zip(range(2, 6), range(0, 4)):
             level_idx_dict[i] = flow.local_nonzero(
                 levels == flow.constant_scalar(int(scalar), flow.int32)
-            )[0]
+            )
         proposals_with_img_ids = flow.concat(
             [flow.expand_dims(flow.cast(img_ids, flow.float), 1), proposals],
             axis=1,

@@ -54,7 +54,7 @@ class Matcher(object):
                 batch_dims=1,
             )
             update_indices = flow.slice(
-                flow.local_nonzero(iou_matrix_trans == gt_matched_iou)[0],
+                flow.local_nonzero(iou_matrix_trans == gt_matched_iou),
                 begin=(0, 1),
                 size=(-1, 1),
             )
