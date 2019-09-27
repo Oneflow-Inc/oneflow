@@ -69,6 +69,7 @@ class RPNHead(object):
                         for x in flow.piece_slice(
                             bbox_pred_per_layer,
                             self.cfg.TRAINING_CONF.IMG_PER_GPU,
+                            need_bw=True,
                         )
                     ]
                 )
@@ -82,6 +83,7 @@ class RPNHead(object):
                         for x in flow.piece_slice(
                             cls_logit_per_layer,
                             self.cfg.TRAINING_CONF.IMG_PER_GPU,
+                            need_bw=True,
                         )
                     ]
                 )
