@@ -59,6 +59,7 @@ class ScatterNdUpdateGpuKernel final : public KernelIf<DeviceType::kGPU> {
                 && (std::is_integral<itype>::value));                             \
       })
 
+REGISTER_SCATTER_ND_UPDATE_GPU_KERNEL(int32_t, int32_t);
 REGISTER_SCATTER_ND_UPDATE_GPU_KERNEL(float, int32_t);
 REGISTER_SCATTER_ND_UPDATE_GPU_KERNEL(double, int32_t);
 REGISTER_SCATTER_ND_UPDATE_GPU_KERNEL(float, int8_t);

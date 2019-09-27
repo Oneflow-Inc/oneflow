@@ -18,22 +18,6 @@ void GatherKernel<device_type, T>::ForwardDataContent(
                                             this->kernel_conf().gather_conf().axis(), out);
 }
 
-#define REGISTER_GATHER_KERNELS(dtype)                                                           \
-  REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kGatherConf, DeviceType::kCPU, dtype,      \
-                                        GatherKernel<DeviceType::kCPU, dtype>)                   \
-  REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kGatherConf, DeviceType::kGPU, dtype,      \
-                                        GatherKernel<DeviceType::kGPU, dtype>)                   \
-  REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kLocalGatherConf, DeviceType::kCPU, dtype, \
-                                        GatherKernel<DeviceType::kCPU, dtype>)                   \
-  REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kLocalGatherConf, DeviceType::kGPU, dtype, \
-                                        GatherKernel<DeviceType::kGPU, dtype>)
-
-REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kGatherConf, DeviceType::kGPU, int32_t,
-                                      GatherKernel<DeviceType::kGPU, int32_t>)
-REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kLocalGatherConf, DeviceType::kGPU, int32_t,
-                                      GatherKernel<DeviceType::kGPU, int32_t>)
-
-REGISTER_GATHER_KERNELS(float);
-REGISTER_GATHER_KERNELS(double);
+ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kGatherConf, GatherKernel, FLOATING_DATA_TYPE_SEQ);
 
 }  // namespace oneflow
