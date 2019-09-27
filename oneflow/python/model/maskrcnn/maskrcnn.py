@@ -183,17 +183,19 @@ if __name__ == "__main__":
     else:
         check_point.load(args.model_load_dir)
     if args.debug:
-        debug_train(
+        train_loss = debug_train(
             placeholders["images"],
             placeholders["image_sizes"],
             placeholders["gt_boxes"],
             placeholders["gt_segms"],
             placeholders["gt_labels"],
         )
-        debug_eval(
+        print(train_loss)
+        eval_loss = debug_eval(
             placeholders["images"],
             placeholders["image_sizes"],
             placeholders["gt_boxes"],
             placeholders["gt_segms"],
             placeholders["gt_labels"],
         )
+        print(eval_loss)
