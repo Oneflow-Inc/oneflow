@@ -895,8 +895,9 @@ message BlobConf {
   optional int32 max_sequence_size = 4 [default = 1];
   required EncodeConf encode_case = 5;
   repeated PreprocessConf preprocess = 6;
-  repeated int32 variable_length_axis = 7;
+  repeated int32 variable_length_axes = 7;
   optional DataSourceCase data_source = 8;
+  optional bool is_dynamic = 9 [default = false];
 }
 
 message DataLoadOpConf {

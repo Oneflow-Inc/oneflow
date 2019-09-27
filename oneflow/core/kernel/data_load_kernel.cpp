@@ -1,7 +1,24 @@
 #include "oneflow/core/kernel/data_load_kernel.h"
 #include "oneflow/core/data/dataset_manager.h"
+#include "oneflow/core/record/ofrecord_decoder.h"
+#include "oneflow/core/thread/thread_manager.h"
 
 namespace oneflow {
+
+namespace {
+
+void PreprocessBlob(const PreprocessConf& prep_conf, Blob* blob) {
+#define MAKE_ENTRY(T, TVal)                                                 \
+  {GetHashKey(TVal), [](const PreprocessConf& prep_conf, Blob* blob) {      \
+     DoPreprocess<T>(prep_conf, blob->mut_dptr<T>(), blob->static_shape()); \
+   }},
+  static const HashMap<std::string, std::function<void(const PreprocessConf&, Blob*)>>
+      preprocessers = {OF_PP_FOR_EACH_TUPLE(MAKE_ENTRY, ARITHMETIC_DATA_TYPE_SEQ)};
+#undef MAKE_ENTRY
+  preprocessers.at(GetHashKey(blob->data_type()))(prep_conf, blob);
+}
+
+}  // namespace
 
 void DataLoadKernel::VirtualKernelInit() {
   using namespace data;
@@ -15,6 +32,11 @@ void DataLoadKernel::VirtualKernelInit() {
 void DataLoadKernel::Forward(const KernelCtx& ctx,
                              std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   std::vector<std::unique_ptr<data::DataInstance>> batch_data = data_loader_->FetchBatch();
+  FOR_RANGE(int32_t, i, 0, op_attribute().output_bns_size()) {
+    Blob* out_blob = BnInOp2Blob(op_attribute().output_bns(i));
+    const BlobConf& blob_conf = op_conf().data_load_conf().blobs(i);
+    WriteDataToBlob(ctx.device_ctx, batch_data, blob_conf, out_blob);
+  }
 }
 
 void DataLoadKernel::WriteDataToBlob(
@@ -24,59 +46,42 @@ void DataLoadKernel::WriteDataToBlob(
   bool is_contiguous = (blob->blob_desc().num_of_lod_levels() == 0);
   char* dptr = static_cast<char*>(blob->mut_dptr());
   Memset<DeviceType::kCPU>(ctx, dptr, 0, blob->ByteSizeOfDataContentField());
-  std::vector<int64_t> dense_shape;
-  std::vector<std::vector<int64_t>> lod_length;
+  Shape dense_shape;
+  std::vector<std::vector<int64_t>> length_lod;
   if (is_contiguous) {
-    // const DataField* first_data_field = data_inst_vec.at(0)->GetField(blob_conf.data_source());
-    // first_data_field->InferShape();
+    const DataField* first = data_inst_vec.at(0)->GetField(blob_conf.data_source());
+    first->InferShape(blob_conf.shape(), blob_conf.variable_length_axes(), &dense_shape,
+                      &length_lod);
+    const int64_t elem_cnt = dense_shape.elem_cnt();
+    if (!blob->blob_desc().is_dynamic()) {
+      const int64_t exp_elem_cnt =
+          std::accumulate(blob_conf.shape().dim().begin(), blob_conf.shape().dim().end(), 1,
+                          std::multiplies<int64_t>());
+      CHECK_EQ(elem_cnt, exp_elem_cnt);
+    }
+    MultiThreadLoop(data_inst_vec.size(), [&](int64_t n) {
+      const DataField* data_field = data_inst_vec.at(n)->GetField(blob_conf.data_source());
+      data_field->ToBuffer(dptr + n * elem_cnt, blob_conf.data_type());
+      Shape shape;
+      data_field->InferShape(blob_conf.shape(), blob_conf.variable_length_axes(), &shape,
+                             &length_lod);
+      CHECK(dense_shape == shape);
+    });
+    dense_shape.Set(0, data_inst_vec.size());
   } else {
     for (const auto& data_inst_ptr : data_inst_vec) {
       const DataField* data_field = data_inst_ptr->GetField(blob_conf.data_source());
       size_t written_size = data_field->ToBuffer(dptr, blob_conf.data_type());
+      data_field->InferShape(blob_conf.shape(), blob_conf.variable_length_axes(), &dense_shape,
+                             &length_lod);
       dptr += written_size;
     }
   }
-  // MultiThreadLoop(data_inst_vec.size(), [&](int64_t n) {
-  //   const data::DataField* data_field = data_inst_vec.at(n)->GetField(field_name);
-  //   size_t one_inst_size = (dense ? data_field_elem_cnt : out_blob_inst_elem_cnt) * elem_size;
-  //   char* dptr = static_cast<char*>(out_blob->mut_dptr()) + one_inst_size * n;
-  //   size_t written_size = data_field->ToBuffer(dptr, data_inst_proto.fields().at(field_name));
-  //   if (dense) {
-  //     CHECK_EQ(one_inst_size, written_size);
-  //   } else {
-  //     CHECK_GE(one_inst_size, written_size);
-  //     Memset<DeviceType::kCPU>(ctx, dptr + written_size, 0, one_inst_size - written_size);
-  //     if (blob_conf.encode_case().has_raw()) {
-  //       if (out_blob->has_dim1_valid_num_field()) {
-  //         size_t one_col_size = ShapeCount(blob_conf.shape(), 1) * elem_size;
-  //         out_blob->set_dim1_valid_num(n, written_size / one_col_size);
-  //       }
-  //     } else if (blob_conf.encode_case().has_bytes_list()) {
-  //       using DataFieldT = typename data::DataFieldTrait<DataCodec::kBytesList, DataType::kChar,
-  //                                                        DataCase::kSegmentation>::type;
-  //       const auto* spec_field = dynamic_cast<const DataFieldT*>(data_field);
-  //       CHECK_NOTNULL(spec_field);
-  //       if (out_blob->has_dim1_valid_num_field()) {
-  //         size_t one_col_size = spec_field->pb_max_size();
-  //         out_blob->set_dim1_valid_num(n, written_size / one_col_size);
-  //       }
-  //       if (out_blob->has_dim2_valid_num_field()) {
-  //         FOR_RANGE(size_t, i, 0, spec_field->pb_sizes().size()) {
-  //           out_blob->set_dim2_valid_num(n, i, spec_field->pb_sizes().at(i));
-  //         }
-  //       }
-  //     }
-  //   }
-  // });
-  // if (dense) {
-  //   size_t total_written_size = data_field_elem_cnt * data_inst_vec.size() * elem_size;
-  //   Memset<DeviceType::kCPU>(ctx, static_cast<char*>(out_blob->mut_dptr()) + total_written_size,
-  //   0,
-  //                            out_blob->ByteSizeOfDataContentField() - total_written_size);
-  // }
-  // FOR_RANGE(size_t, j, 0, blob_conf.preprocess_size()) {
-  //   PreprocessBlob(blob_conf.preprocess(j), out_blob);
-  // }
+  blob->dense_shape_mut_view().set_shape(dense_shape);
+  blob->length_lod_mut_view().SetLength(length_lod);
+  for (const auto& preprocess_conf : blob_conf.preprocess()) {
+    PreprocessBlob(preprocess_conf, blob);
+  }
 }
 
 REGISTER_KERNEL(OperatorConf::kDataLoadConf, DataLoadKernel);

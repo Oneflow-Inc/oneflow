@@ -56,6 +56,8 @@ void DoScalePreprocess(const ScalePreprocessConf& conf, T* dptr, int64_t n) {
   FOR_RANGE(size_t, i, 0, n) { (*(dptr++)) *= conf.value(); }
 }
 
+}  // namespace
+
 template<typename T>
 void DoPreprocess(const PreprocessConf& conf, T* dptr, const Shape& shape) {
   int64_t n = shape.Count(1);
@@ -69,8 +71,6 @@ void DoPreprocess(const PreprocessConf& conf, T* dptr, const Shape& shape) {
     UNIMPLEMENTED();
   }
 }
-
-}  // namespace
 
 template<EncodeCase encode_case, typename T>
 int32_t OFRecordDecoder<encode_case, T>::DecodeOneCol(
@@ -163,6 +163,7 @@ OFRecordDecoderIf* GetOFRecordDecoder(EncodeCase encode_case, DataType data_type
 #define MAKE_ENTRY(et, dt) \
   {GetHashKey(et, OF_PP_PAIR_SECOND(dt)), new OFRecordDecoderImpl<et, OF_PP_PAIR_FIRST(dt)>},
       OF_PP_FOR_EACH_TUPLE(MAKE_ENTRY, ENCODE_CASE_DATA_TYPE_SEQ_PRODUCT)};
+#undef MAKE_ENTRY
   return obj.at(GetHashKey(encode_case, data_type));
 }
 

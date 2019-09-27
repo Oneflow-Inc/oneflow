@@ -67,6 +67,8 @@ Maybe<void> DataLoadOp::InferBlobDescs(
     FOR_RANGE(size_t, j, 1, dim_vec.size()) { dim_vec[j] = blob_conf.shape().dim(j - 1); }
     out_blob_desc->mut_shape() = Shape(dim_vec);
     out_blob_desc->set_data_type(blob_conf.data_type());
+    out_blob_desc->set_is_dynamic(blob_conf.is_dynamic()
+                                  || blob_conf.variable_length_axes_size() > 1);
   }
 
   return Maybe<void>::Ok();

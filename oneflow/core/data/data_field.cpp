@@ -9,49 +9,48 @@ size_t DataField::ToBuffer(void* buffer, DataType data_type) const {
   return GetDataFieldSerializer(data_source_, data_type)(this, buffer);
 }
 
-void ImageDataField::InferShape(const ShapeProto& static_shape,
-                                const std::vector<int64_t>& var_axes, std::vector<int64_t>* shape,
-                                std::vector<std::vector<int64_t>>* lod) const {
+void ImageDataField::InferShape(const ShapeProto& static_shape, const PbRf<int>& var_axes,
+                                Shape* shape, std::vector<std::vector<int64_t>>* lod) const {
+  CHECK_LE(var_axes.size(), 0);
   int64_t image_height = data_.rows;
   int64_t image_width = data_.cols;
   int64_t channels = data_.depth();
-  if (shape->size() == 0) {
-    shape->resize(4, 1);
-    shape->at(1) = image_height;
-    shape->at(2) = image_width;
-    shape->at(3) = channels;
+  if (shape->NumAxes() == 0) {
+    *shape = Shape::Ones(4);
+    shape->Set(1, image_height);
+    shape->Set(2, image_width);
+    shape->Set(3, channels);
   } else {
-    CHECK_EQ(shape->at(1), image_height);
-    CHECK_EQ(shape->at(2), image_width);
-    CHECK_EQ(shape->at(3), channels);
-    shape->at(0) += 1;
+    CHECK_EQ(shape->At(1), image_height);
+    CHECK_EQ(shape->At(2), image_width);
+    CHECK_EQ(shape->At(3), channels);
+    shape->Set(0, shape->At(0) + 1);
   }
 }
 
 template<typename T>
-void ArrayDataField<T>::InferShape(const ShapeProto& static_shape,
-                                   const std::vector<int64_t>& var_axes,
-                                   std::vector<int64_t>* shape,
-                                   std::vector<std::vector<int64_t>>* lod) const {
+void ArrayDataField<T>::InferShape(const ShapeProto& static_shape, const PbRf<int>& var_axes,
+                                   Shape* shape, std::vector<std::vector<int64_t>>* lod) const {
   CHECK_LE(var_axes.size(), 1);
   bool has_lod = (var_axes.size() == 1);
   if (has_lod) {
-    int64_t need_infer_axis = var_axes.at(0);
+    int64_t need_infer_axis = var_axes.Get(0);
     int64_t fixed = 1;
     int64_t pre_infer_dims = 1;
-    if (shape->size() == 0) { shape->resize(static_shape.dim_size() - need_infer_axis, 0); }
+    if (shape->NumAxes() == 0) { *shape = Shape::Zeros(static_shape.dim_size() - need_infer_axis); }
     FOR_RANGE(int64_t, i, 0, static_shape.dim_size()) {
       if (i < need_infer_axis) { pre_infer_dims *= static_shape.dim(i); }
       if (i != need_infer_axis) { fixed *= static_shape.dim(i); }
     }
     CHECK_EQ(data_.size() % fixed, 0);
     int64_t infered_dims = data_.size() / fixed;
-    shape->at(0) += pre_infer_dims * infered_dims;
+    shape->Set(0, shape->At(0) + pre_infer_dims * infered_dims);
+
     FOR_RANGE(int64_t, i, 1, static_shape.dim_size() - need_infer_axis) {
-      if (shape->at(i) == 0) {
-        shape->at(i) = static_shape.dim(i + need_infer_axis);
+      if (shape->At(i) == 0) {
+        shape->Set(i, static_shape.dim(i + need_infer_axis));
       } else {
-        CHECK_EQ(shape->at(i), static_shape.dim(i + need_infer_axis));
+        CHECK_EQ(shape->At(i), static_shape.dim(i + need_infer_axis));
       }
     }
 
@@ -71,23 +70,21 @@ void ArrayDataField<T>::InferShape(const ShapeProto& static_shape,
       }
     }
   } else {
-    if (shape->size() == 0) { shape->resize(static_shape.dim_size() + 1, 0); }
-    shape->at(0) += 1;
+    if (shape->NumAxes() == 0) { *shape = Shape::Zeros(static_shape.dim_size() + 1); }
+    shape->Set(0, shape->At(0) + 1);
     FOR_RANGE(int64_t, i, 0, static_shape.dim_size()) {
-      if (shape->at(i + 1) == 0) {
-        shape->at(i + 1) = static_shape.dim(i);
+      if (shape->At(i + 1) == 0) {
+        shape->Set(i + 1, static_shape.dim(i));
       } else {
-        CHECK_EQ(shape->at(i + 1), static_shape.dim(i));
+        CHECK_EQ(shape->At(i + 1), static_shape.dim(i));
       }
     }
   }
 }
 
 template<typename T>
-void NdarrayDataField<T>::InferShape(const ShapeProto& static_shape,
-                                     const std::vector<int64_t>& var_axes,
-                                     std::vector<int64_t>* shape,
-                                     std::vector<std::vector<int64_t>>* lod) const {
+void NdarrayDataField<T>::InferShape(const ShapeProto& static_shape, const PbRf<int>& var_axes,
+                                     Shape* shape, std::vector<std::vector<int64_t>>* lod) const {
   TODO();
 }
 
@@ -177,13 +174,11 @@ std::unique_ptr<DataField> CreateDataFieldFromProto(const DataFieldProto& proto)
   return data_field_ptr;
 }
 
-#define INSTANTIATE_INFER_SHAPE_FUNC(dtype, dtype_val)                                            \
-  template void ArrayDataField<dtype>::InferShape(const ShapeProto&, const std::vector<int64_t>&, \
-                                                  std::vector<int64_t>*,                          \
-                                                  std::vector<std::vector<int64_t>>*) const;      \
-  template void NdarrayDataField<dtype>::InferShape(                                              \
-      const ShapeProto&, const std::vector<int64_t>&, std::vector<int64_t>*,                      \
-      std::vector<std::vector<int64_t>>*) const;
+#define INSTANTIATE_INFER_SHAPE_FUNC(dtype, dtype_val)                                           \
+  template void ArrayDataField<dtype>::InferShape(const ShapeProto&, const PbRf<int>&, Shape*,   \
+                                                  std::vector<std::vector<int64_t>>*) const;     \
+  template void NdarrayDataField<dtype>::InferShape(const ShapeProto&, const PbRf<int>&, Shape*, \
+                                                    std::vector<std::vector<int64_t>>*) const;
 
 OF_PP_FOR_EACH_TUPLE(INSTANTIATE_INFER_SHAPE_FUNC, ARITHMETIC_DATA_TYPE_SEQ);
 

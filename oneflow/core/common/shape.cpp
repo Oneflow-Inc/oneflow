@@ -108,6 +108,11 @@ Shape Shape::Ones(const int64_t num_axes) {
   return Shape(dim_vec);
 }
 
+Shape Shape::Zeros(const int64_t num_axes) {
+  std::vector<int64_t> dim_vec(num_axes, 0);
+  return Shape(dim_vec);
+}
+
 Shape Shape::CreateReducedShapeOrOnesShape(const std::vector<int64_t>& axis_vec) const {
   if (axis_vec.empty()) { return Shape::Ones(NumAxes()); }
   return CreateReducedShape(axis_vec);
