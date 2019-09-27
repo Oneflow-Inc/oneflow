@@ -93,7 +93,7 @@ class StackGradOp final : public Operator {
     OF_CHECK_EQ(conf.like_size(), output_bns().size());
 
     FOR_RANGE(size_t, i, 0, output_bns().size()) {
-      const BlobDesc* like_i = GetBlobDesc4BnInOp(conf.like(i));
+      const BlobDesc* like_i = GetBlobDesc4BnInOp(GenRepeatedBn("like", i));
       BlobDesc* out_i = GetBlobDesc4BnInOp(output_bns().Get(i));
       OF_CHECK_EQ(like_i->shape().NumAxes(), in->shape().NumAxes());
       FOR_RANGE(int64_t, j, 0, in->shape().NumAxes()) {
