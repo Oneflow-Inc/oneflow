@@ -6,16 +6,17 @@ flow.config.grpc_use_no_signal()
 
 flow.config.default_data_type(flow.float)
 
-def Print(x, y):
-    print("x: ")
-    print(x)
-    print("y: ")
-    print(y)
+def Print(prefix):
+    def _print(x):
+        print(prefix)
+        print(x)
+    return _print
 
 @flow.function
 def ReluJob(x = flow.input_blob_def((12, 1), is_dynamic=True)):
     y = flow.keras.activations.relu(x)
-    flow.watch([x, y], Print)
+    flow.watch(x, Print("x: "))
+    flow.watch(y, Print("y: "))
     return y
 
 index = [-2, -1, 0, 1, 2]
