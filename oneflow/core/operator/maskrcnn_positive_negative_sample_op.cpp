@@ -47,12 +47,12 @@ Maybe<void> MaskrcnnPositiveNegativeSampleOp::InferBlobDescs(
   *sampled_pos_inds = *pos_inds;
   sampled_pos_inds->mut_shape() =
       Shape({static_cast<int64_t>(conf.total_subsample_num() * conf.pos_fraction())});
-  // sampled_pos_inds->set_has_dim0_valid_num_field(true);
-  // sampled_pos_inds->mut_dim0_inner_shape() = Shape({1, sampled_pos_inds->shape().At(0)});
+  sampled_pos_inds->set_is_dynamic(true);
   // output: sampled_neg_inds (max_num_neg,)
   BlobDesc* sampled_neg_inds = GetBlobDesc4BnInOp("sampled_neg_inds");
   *sampled_neg_inds = *neg_inds;
   sampled_neg_inds->mut_shape() = Shape({conf.total_subsample_num()});
+  sampled_neg_inds->set_is_dynamic(true);
   return Maybe<void>::Ok();
 }
 

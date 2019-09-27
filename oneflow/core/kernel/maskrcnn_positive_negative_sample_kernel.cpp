@@ -27,7 +27,6 @@ class MaskrcnnPositiveNegativeSampleKernel final : public KernelIf<device_type> 
     const int32_t num_pos =
         std::min(static_cast<T>(conf.total_subsample_num() * conf.pos_fraction()),
                  static_cast<T>(pos_inds_blob->shape().elem_cnt()));
-    const Shape shape = pos_inds_blob->shape();
     const int32_t num_neg = std::min(static_cast<T>(conf.total_subsample_num() - num_pos),
                                      static_cast<T>(neg_inds_blob->shape().elem_cnt()));
     AutoMemcpy(ctx.device_ctx, sampled_pos_inds_blob->mut_dptr<T>(), pos_inds_blob->dptr<T>(),
@@ -39,15 +38,16 @@ class MaskrcnnPositiveNegativeSampleKernel final : public KernelIf<device_type> 
   }
 };
 
-#define REGISTER_MASKRCNN_POSITIVE_NEGATIVE_SAMPLE_KERNEL(dev, dtype)                           \
-  REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kMaskrcnnPositiveNegativeSampleConf, dev, \
-                                        dtype, MaskrcnnPositiveNegativeSampleKernel<dev, dtype>)
+#define REGISTER_MASKRCNN_POSITIVE_NEGATIVE_SAMPLE_KERNEL(dtype)                  \
+  REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(                                          \
+      OperatorConf::kMaskrcnnPositiveNegativeSampleConf, DeviceType::kCPU, dtype, \
+      MaskrcnnPositiveNegativeSampleKernel<DeviceType::kCPU, dtype>)              \
+  REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(                                          \
+      OperatorConf::kMaskrcnnPositiveNegativeSampleConf, DeviceType::kGPU, dtype, \
+      MaskrcnnPositiveNegativeSampleKernel<DeviceType::kGPU, dtype>)
 
-REGISTER_MASKRCNN_POSITIVE_NEGATIVE_SAMPLE_KERNEL(DeviceType::kCPU, int8_t);
-REGISTER_MASKRCNN_POSITIVE_NEGATIVE_SAMPLE_KERNEL(DeviceType::kCPU, int8_t);
-REGISTER_MASKRCNN_POSITIVE_NEGATIVE_SAMPLE_KERNEL(DeviceType::kCPU, int32_t);
-REGISTER_MASKRCNN_POSITIVE_NEGATIVE_SAMPLE_KERNEL(DeviceType::kCPU, int32_t);
-REGISTER_MASKRCNN_POSITIVE_NEGATIVE_SAMPLE_KERNEL(DeviceType::kCPU, int64_t);
-REGISTER_MASKRCNN_POSITIVE_NEGATIVE_SAMPLE_KERNEL(DeviceType::kCPU, int64_t);
+REGISTER_MASKRCNN_POSITIVE_NEGATIVE_SAMPLE_KERNEL(int8_t);
+REGISTER_MASKRCNN_POSITIVE_NEGATIVE_SAMPLE_KERNEL(int32_t);
+REGISTER_MASKRCNN_POSITIVE_NEGATIVE_SAMPLE_KERNEL(int64_t);
 
 }  // namespace oneflow
