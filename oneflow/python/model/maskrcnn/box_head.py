@@ -34,13 +34,13 @@ class BoxHead(object):
                 pos_inds = flow.squeeze(
                     flow.local_nonzero(
                         matched_indices >= flow.constant_scalar(0, flow.int32)
-                    ),
+                    )[0],
                     axis=[1],
                 )
                 neg_inds = flow.squeeze(
                     flow.local_nonzero(
                         matched_indices == flow.constant_scalar(-1, flow.int32)
-                    ),
+                    )[0],
                     axis=[1],
                 )
                 sampled_pos_inds, sampled_neg_inds = flow.detection.pos_neg_sampler(
@@ -131,7 +131,7 @@ class BoxHead(object):
             total_pos_inds = flow.squeeze(
                 flow.local_nonzero(
                     labels != flow.constant_scalar(int(0), flow.int32)
-                ),
+                )[0],
                 axis=[1],
             )
             # [R, 81, 4]
@@ -162,18 +162,11 @@ class BoxHead(object):
 
     def box_feature_extractor(self, proposals, img_ids, features):
         levels = flow.detection.level_map(proposals)
-        level_idx_2 = flow.local_nonzero(
-            levels == flow.constant_scalar(int(0), flow.int32)
-        )
-        level_idx_3 = flow.local_nonzero(
-            levels == flow.constant_scalar(int(1), flow.int32)
-        )
-        level_idx_4 = flow.local_nonzero(
-            levels == flow.constant_scalar(int(2), flow.int32)
-        )
-        level_idx_5 = flow.local_nonzero(
-            levels == flow.constant_scalar(int(3), flow.int32)
-        )
+        level_idx_map = {}
+        for (i, scalar) in zip(range(2, 6), range(0, 4)):
+            level_idx_map[i] = flow.local_nonzero(
+                levels == flow.constant_scalar(int(scalar), flow.int32)
+            )[0]
         proposals_with_img_ids = flow.concat(
             [flow.expand_dims(flow.cast(img_ids, flow.float), 1), proposals],
             axis=1,
@@ -181,7 +174,7 @@ class BoxHead(object):
         roi_features_0 = flow.detection.roi_align(
             features[0],
             rois=flow.local_gather(
-                proposals_with_img_ids, flow.squeeze(level_idx_2, axis=[1])
+                proposals_with_img_ids, flow.squeeze(level_idx_map[2], axis=[1])
             ),
             pooled_h=self.cfg.BOX_HEAD.POOLED_H,
             pooled_w=self.cfg.BOX_HEAD.POOLED_W,
@@ -191,7 +184,7 @@ class BoxHead(object):
         roi_features_1 = flow.detection.roi_align(
             features[1],
             rois=flow.local_gather(
-                proposals_with_img_ids, flow.squeeze(level_idx_3, axis=[1])
+                proposals_with_img_ids, flow.squeeze(level_idx_map[3], axis=[1])
             ),
             pooled_h=self.cfg.BOX_HEAD.POOLED_H,
             pooled_w=self.cfg.BOX_HEAD.POOLED_W,
@@ -201,7 +194,7 @@ class BoxHead(object):
         roi_features_2 = flow.detection.roi_align(
             features[2],
             rois=flow.local_gather(
-                proposals_with_img_ids, flow.squeeze(level_idx_4, axis=[1])
+                proposals_with_img_ids, flow.squeeze(level_idx_map[4], axis=[1])
             ),
             pooled_h=self.cfg.BOX_HEAD.POOLED_H,
             pooled_w=self.cfg.BOX_HEAD.POOLED_W,
@@ -211,7 +204,7 @@ class BoxHead(object):
         roi_features_3 = flow.detection.roi_align(
             features[3],
             rois=flow.local_gather(
-                proposals_with_img_ids, flow.squeeze(level_idx_5, axis=[1])
+                proposals_with_img_ids, flow.squeeze(level_idx_map[5], axis=[1])
             ),
             pooled_h=self.cfg.BOX_HEAD.POOLED_H,
             pooled_w=self.cfg.BOX_HEAD.POOLED_W,
@@ -223,7 +216,7 @@ class BoxHead(object):
             axis=0,
         )
         origin_indices = flow.concat(
-            [level_idx_2, level_idx_3, level_idx_4, level_idx_5], axis=0
+            [level_idx_map[2], level_idx_map[3], level_idx_map[4], level_idx_map[5]], axis=0
         )
         roi_features = flow.local_scatter_nd_update(
             flow.constant_like(roi_features, 0), origin_indices, roi_features
