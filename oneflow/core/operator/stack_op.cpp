@@ -66,6 +66,64 @@ class StackOp final : public Operator {
   }
 };
 
+class StackGradOp final : public Operator {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(StackGradOp);
+  StackGradOp() = default;
+  ~StackGradOp() = default;
+
+  void InitFromOpConf() override {
+    CHECK(op_conf().has_stack_grad_conf());
+    FOR_RANGE(int32_t, i, 0, op_conf().stack_grad_conf().like_size()) {
+      EnrollInputBn(GenRepeatedBn("like", i), false)->set_use_header_only(true);
+    }
+    EnrollInputBn("in");
+    EnrollRepeatedOutputBn("out");
+  }
+
+  Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                             const ParallelContext* parallel_ctx) const override {
+    const auto& conf = op_conf().stack_grad_conf();
+    const BlobDesc* in = GetBlobDesc4BnInOp("in");
+    OF_CHECK_EQ(in->num_of_lod_levels(), 0);
+    OF_CHECK_EQ(conf.like_size(), output_bns().size());
+
+    FOR_RANGE(size_t, i, 0, output_bns().size()) {
+      const BlobDesc* like_i = GetBlobDesc4BnInOp(conf.like(i));
+      BlobDesc* out_i = GetBlobDesc4BnInOp(output_bns().Get(i));
+      OF_CHECK_EQ(like_i->shape().NumAxes(), in->shape().NumAxes());
+      FOR_RANGE(int64_t, j, 0, in->shape().NumAxes()) {
+        if (j != conf.axis()) { OF_CHECK_EQ(like_i->shape().At(j), in->shape().At(j)); }
+      }
+      *out_i = *like_i;
+    }
+    return Maybe<void>::Ok();
+  }
+
+ private:
+  Maybe<void> InferBatchAxis(
+      const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
+      std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override {
+    return NaiveInferBatchAxis(BatchAxis4BnInOp);
+  }
+
+  Maybe<void> GetSbpSignatures(
+      const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
+      SbpSignatureList* sbp_sig_list) const override {
+    int64_t stack_axis = op_conf().stack_grad_conf().axis();
+    int64_t num_axes = JUST(LogicalBlobDesc4Ibn(input_bns().Get(0)))->shape().NumAxes();
+    FOR_RANGE(int64_t, i, 0, num_axes) {
+      if (i == stack_axis) { continue; }
+      SbpSignatureBuilder()
+          .Split(input_bns(), i)
+          .Split(output_bns(), i)
+          .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+    }
+    return Maybe<void>::Ok();
+  }
+};
+
 REGISTER_OP(OperatorConf::kStackConf, StackOp);
+REGISTER_OP(OperatorConf::kStackGradConf, StackGradOp);
 
 }  // namespace oneflow
