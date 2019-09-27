@@ -58,6 +58,12 @@ size_t OfBlob_NumAxes(uint64_t of_blob_ptr) {
   return of_blob->NumAxes();
 }
 
+void OfBlob_CopyShapeFromNumpy(uint64_t of_blob_ptr, int64_t* array, int size) {
+  using namespace oneflow;
+  auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
+  return of_blob->CopyShapeFrom(array, size);
+}
+
 void OfBlob_CopyShapeToNumpy(uint64_t of_blob_ptr, int64_t* array, int size) {
   using namespace oneflow;
   auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);

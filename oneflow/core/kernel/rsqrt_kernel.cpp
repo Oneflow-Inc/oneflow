@@ -12,12 +12,6 @@ void RsqrtKernel<device_type, T>::ForwardDataContent(
                                     this->op_conf().rsqrt_conf().epsilon());
 }
 
-template<DeviceType device_type, typename T>
-void RsqrtKernel<device_type, T>::BackwardDataContent(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  TODO();
-}
-
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kRsqrtConf, RsqrtKernel, FLOATING_DATA_TYPE_SEQ);
 
 }  // namespace oneflow
