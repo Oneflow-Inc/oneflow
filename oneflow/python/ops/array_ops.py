@@ -296,7 +296,7 @@ def local_nonzero(input, name=None):
         setattr(out_lbi, "op_name", op_conf.name)
         setattr(out_lbi, "blob_name", obn)
         ret.append(remote_blob_util.RemoteBlob(out_lbi))
-    return tuple(ret)
+    return sync_dynamic_resize(ret[0], ret[1])
 
 
 @oneflow_export("where")

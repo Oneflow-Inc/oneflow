@@ -34,13 +34,13 @@ class BoxHead(object):
                 pos_inds = flow.squeeze(
                     flow.local_nonzero(
                         matched_indices >= flow.constant_scalar(0, flow.int32)
-                    )[0],
+                    ),
                     axis=[1],
                 )
                 neg_inds = flow.squeeze(
                     flow.local_nonzero(
                         matched_indices == flow.constant_scalar(-1, flow.int32)
-                    )[0],
+                    ),
                     axis=[1],
                 )
                 sampled_pos_inds, sampled_neg_inds = flow.detection.pos_neg_sampler(
@@ -130,7 +130,7 @@ class BoxHead(object):
             total_pos_inds = flow.squeeze(
                 flow.local_nonzero(
                     labels != flow.constant_scalar(int(0), flow.int32)
-                )[0],
+                ),
                 axis=[1],
             )
             # [R, 81, 4]
@@ -165,7 +165,7 @@ class BoxHead(object):
         for (i, operand) in zip(range(2, 6), range(0, 4)):
             level_idx_dict[i] = flow.local_nonzero(
                 levels == flow.constant_scalar(int(operand), flow.int32)
-            )[0]
+            )
         proposals_with_img_ids = flow.concat(
             [flow.expand_dims(flow.cast(img_ids, flow.float), 1), proposals],
             axis=1,
