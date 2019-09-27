@@ -393,6 +393,7 @@ def elem_cnt(inputs, begin_axis=None, end_axis=None, data_type=None, name=None):
     setattr(out_lbi, "blob_name", "out")
     return remote_blob_util.RemoteBlob(out_lbi)
 
+
 @oneflow_export("sync_dynamic_resize")
 def sync_dynamic_resize(inputs, size, name=None):
     op_conf = op_conf_util.OperatorConf()
@@ -410,3 +411,25 @@ def sync_dynamic_resize(inputs, size, name=None):
     setattr(out_lbi, "op_name", op_conf.name)
     setattr(out_lbi, "blob_name", "out")
     return remote_blob_util.RemoteBlob(out_lbi)
+
+
+@oneflow_export("stack")
+def stack(inputs, axis, name=None):
+    if not isinstance(inputs, (list, tuple)):
+        inputs = [inputs]
+
+    if axis < 0:
+        axis = axis + len(inputs[0].shape)
+
+    op_conf = op_conf_util.OperatorConf()
+    setattr(op_conf, "name", name or id_util.UniqueStr("Stack_"))
+    getattr(op_conf.stack_conf, "in").extend(
+        [input.logical_blob_name for input in inputs]
+    )
+    setattr(op_conf.stack_conf, "axis", axis)
+    setattr(op_conf.stack_conf, "out", "out")
+    compile_context.CurJobAddOp(op_conf)
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = "out"
+    return remote_blob_util.RemoteBlob(lbi)
