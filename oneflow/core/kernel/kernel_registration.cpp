@@ -56,6 +56,7 @@ Kernel* CreateKernel(const KernelConf& kernel_conf) {
       ret = val.func();
     }
   }
+  // TODO: print more info when failed
   return ret;
 }
 
