@@ -378,25 +378,23 @@ def piece_slice(inputs, output_size, name=None, need_bw=False):
 
 
 @oneflow_export("elem_cnt")
-def elem_cnt(inputs, begin_axis=None, end_axis=None, data_type=None, name=None):
+def elem_cnt(inputs, begin_axis=None, end_axis=None, dtype=None, name=None):
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf,
         "name",
         name if name is not None else id_util.UniqueStr("ElemCnt_"),
     )
-    setattr(op_conf.element_count_conf, "in", inputs.logical_blob_name)
-    if begin_axis is not None:
-        op_conf.element_count_conf.begin_axis = begin_axis
-    if end_axis is not None:
-        op_conf.element_count_conf.end_axis = end_axis
-    if data_type is not None:
-        op_conf.element_count_conf.data_type = data_type
-    op_conf.element_count_conf.out = "out"
+    op_conf.shape_elem_cnt_conf.x = inputs.logical_blob_name
+
+    op_conf.shape_elem_cnt_conf.exclude_axis_conf.SetInParent()
+    if dtype is not None:
+        op_conf.shape_elem_cnt_conf.data_type = dtype
+    op_conf.shape_elem_cnt_conf.y = "y"
     compile_context.CurJobAddOp(op_conf)
     out_lbi = logical_blob_id_util.LogicalBlobId()
     setattr(out_lbi, "op_name", op_conf.name)
-    setattr(out_lbi, "blob_name", "out")
+    setattr(out_lbi, "blob_name", "y")
     return remote_blob_util.RemoteBlob(out_lbi)
 
 
