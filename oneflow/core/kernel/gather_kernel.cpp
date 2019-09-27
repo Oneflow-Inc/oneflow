@@ -30,5 +30,6 @@ void GatherKernel<device_type, T>::ForwardDataContent(
 
 REGISTER_GATHER_KERNELS(float);
 REGISTER_GATHER_KERNELS(double);
+REGISTER_GATHER_KERNELS(int32_t);
 
 }  // namespace oneflow
