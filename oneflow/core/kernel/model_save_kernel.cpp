@@ -16,7 +16,7 @@ void ModelSaveKernel::Forward(const KernelCtx& ctx,
                               std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const ModelSaveOpConf& conf = this->op_conf().model_save_conf();
   const Blob* path_blob = BnInOp2Blob("path");
-  const std::string path(path_blob->dptr<char>(), path_blob->shape().elem_cnt());
+  const std::string path(path_blob->dptr<char>(), path_blob->dense_shape_view().elem_cnt());
   SnapshotWriter writer(path);
   FOR_RANGE(int64_t, i, 0, conf.in_size()) {
     const Blob* in_i = BnInOp2Blob(GenRepeatedBn("in", i));
