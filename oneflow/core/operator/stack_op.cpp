@@ -26,7 +26,7 @@ class StackOp final : public Operator {
     FOR_RANGE(size_t, i, 1, input_bns().size()) {
       const BlobDesc* in_i = GetBlobDesc4BnInOp(input_bns().Get(i));
       OF_CHECK_EQ(in_i->shape().NumAxes(), shape_vec.size());
-      FOR_RANGE(int64_t, j, 0, in_i->shape().NumAxes()) { 
+      FOR_RANGE(int64_t, j, 0, in_i->shape().NumAxes()) {
         if (j == stack_axis) {
           shape_vec.at(j) = std::max(shape_vec.at(j), in_i->shape().At(j));
         } else {
