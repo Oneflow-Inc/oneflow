@@ -98,7 +98,8 @@ struct GatherKernelUtilImpl<DeviceType::kGPU, float16, K> final {
   template struct GatherKernelUtilImpl<DeviceType::kGPU, OF_PP_PAIR_FIRST(in_type_pair), \
                                        OF_PP_PAIR_FIRST(index_type_pair)>;
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INITIATE_GATHER_KERNEL_UTIL_GPU_IMPL,
-                                 FLOATING_DATA_TYPE_SEQ
+                                 FLOATING_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(int32_t,
+                                                                             DataType::kInt32)
 #if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 700
                                      FLOAT16_DATA_TYPE_SEQ
 #endif
