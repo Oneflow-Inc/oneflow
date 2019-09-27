@@ -419,7 +419,6 @@ void MarkClusterIdPass::Run() {
         }
       }
     }
-
     if (!has_changed) {
       break;
     }

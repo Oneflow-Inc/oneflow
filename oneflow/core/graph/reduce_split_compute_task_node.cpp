@@ -26,27 +26,34 @@ void ReduceSplitCompTaskNode::ProduceAllRegstsAndBindEdges() {
     const auto& lbi = reduce_split_op->BnInOp2Lbi(reduce_split_op->output_bns().Get(idx));
     CHECK(lbi2order.emplace(lbi, idx).second);
   }
+  HashMap<int32_t, std::vector<int32_t>> order_bounds;
   ForEachOutDataEdge([&](TaskEdge* edge) {
     TaskNode* dst_node = edge->dst_node();
     CHECK(edge->dst_node()->GetTaskType() == TaskType::kOptimizer
           || edge->dst_node()->GetTaskType() == TaskType::kNormalForward);
     CompTaskNode* mdupdt_node = dynamic_cast<CompTaskNode*>(dst_node);
     std::shared_ptr<Operator> mdupdt_op = mdupdt_node->logical_node()->SoleOp();
-    int32_t order = -1;
+    std::vector<int32_t> order;
     for (const std::string& ibn : mdupdt_op->input_bns()) {
       const auto& order_it = lbi2order.find(mdupdt_op->BnInOp2Lbi(ibn));
-      if (order_it != lbi2order.end()) { order = order_it->second; }
+      if (order_it != lbi2order.end()) { order.push_back(order_it->second); }
     }
-    CHECK_NE(order, -1);
-    EdgeInfo edge_info{edge, order};
+    CHECK_GT(order.size(), 0);
+    EdgeInfo edge_info{edge, order.back()};
     edge_infos.emplace_back(edge_info);
+    order_bounds[order.back()] = std::move(order);
   });
   SortEdges(&edge_infos);
   FOR_RANGE(size_t, idx, 0, edge_infos.size()) {
     std::string out_regst_name = "out_" + std::to_string(idx);
     std::shared_ptr<RegstDesc> out_regst = ProduceRegst(out_regst_name, false, 1, 1);
     edge_infos[idx].edge->AddRegst(out_regst_name, out_regst);
+    const auto &bounds = order_bounds.at(edge_infos[idx].order);
+    for (int32_t order : bounds) {
+      out_order_aliases_.emplace(order, idx);
+    }
   }
+  CHECK_EQ(out_order_aliases_.size(), reduce_split_op->output_bns().size());
 }
 
 void ReduceSplitCompTaskNode::ConsumeAllRegsts() {
@@ -68,7 +75,8 @@ void ReduceSplitCompTaskNode::BuildExecGphAndRegst() {
   node->BindBnWithRegst(reduce_split_op->SoleIbn(), GetSoleConsumedRegst("in"));
 
   FOR_RANGE(size_t, i, 0, reduce_split_op->output_bns().size()) {
-    std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out_" + std::to_string(i));
+    int32_t idx = out_order_aliases_.at(i);
+    std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out_" + std::to_string(idx));
     CHECK(out_regst.get() != nullptr);
     out_regst->AddLbi(reduce_split_op->BnInOp2Lbi(reduce_split_op->output_bns().Get(i)));
     node->BindBnWithRegst(reduce_split_op->output_bns().Get(i), out_regst);
