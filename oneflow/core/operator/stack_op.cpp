@@ -46,7 +46,7 @@ class StackOp final : public Operator {
   Maybe<void> InferBatchAxis(
       const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
       std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override {
-    return NaiveInferBatchAxis(BatchAxis4BnInOp)
+    return NaiveInferBatchAxis(BatchAxis4BnInOp);
   }
 
   Maybe<void> GetSbpSignatures(
