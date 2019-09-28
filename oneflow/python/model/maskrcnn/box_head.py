@@ -114,9 +114,6 @@ class BoxHead(object):
             bbox_regression, cls_logits = self.box_predictor(x)
 
             # construct cls loss
-            # TODO: handle dynamic shape in sparse_cross_entropy
-            # duplicate labels for 4 times to pass static shape check
-            labels = flow.concat([labels] * 4, axis=0)
             box_head_cls_loss = flow.math.reduce_sum(
                 flow.nn.sparse_softmax_cross_entropy_with_logits(
                     labels, cls_logits, name="sparse_cross_entropy"
@@ -184,8 +181,8 @@ class BoxHead(object):
                 sampling_ratio=self.cfg.BOX_HEAD.SAMPLING_RATIO,
             )
             roi_features_list.append(roi_feature_i)
-        roi_features = flow.concat(roi_features_list, axis=0)
-        origin_indices = flow.concat(list(level_idx_dict.values()), axis=0)
+        roi_features = flow.stack(roi_features_list, axis=0)
+        origin_indices = flow.stack(list(level_idx_dict.values()), axis=0)
         roi_features = flow.local_scatter_nd_update(
             flow.constant_like(roi_features, 0), origin_indices, roi_features
         )
