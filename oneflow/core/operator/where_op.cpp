@@ -38,9 +38,9 @@ class WhereOp final : public Operator {
   void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                             const ParallelContext* parallel_ctx,
                             KernelConf* kernel_conf) const override {
-    // WhereKernelConf* conf = kernel_conf->mutable_where_conf();
-    // conf->set_cond_type(GetBlobDesc4BnInOp("condition")->data_type());
-    // conf->set_value_type(GetBlobDesc4BnInOp("lhs")->data_type());
+    WhereKernelConf* conf = kernel_conf->mutable_where_conf();
+    conf->set_cond_type(GetBlobDesc4BnInOp("condition")->data_type());
+    conf->set_value_type(GetBlobDesc4BnInOp("lhs")->data_type());
   }
 
  private:

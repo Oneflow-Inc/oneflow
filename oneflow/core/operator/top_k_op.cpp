@@ -65,6 +65,7 @@ class TopKOp final : public Operator {
         BlobDesc* temp_storage = GetBlobDesc4BnInOp("temp_storage");
         temp_storage->mut_shape() = Shape({temp_storage_bytes});
         temp_storage->set_data_type(DataType::kChar);
+        temp_storage->set_is_dynamic(false);
         TopKOpCtx* top_k_op_ctx = new TopKOpCtx(temp_storage_bytes);
         EnrollOpCtx(top_k_op_ctx);
       }

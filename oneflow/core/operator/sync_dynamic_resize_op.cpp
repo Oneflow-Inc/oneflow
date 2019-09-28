@@ -22,13 +22,13 @@ class SyncDynamicResizeOp : public Operator {
     const SyncDynamicResizeOpConf& conf = op_conf().sync_dynamic_resize_conf();
     CHECK_EQ_OR_RETURN(conf.axis(), 0);
     const BlobDesc* in = GetBlobDesc4BnInOp("in");
-    CHECK_OR_RETURN(in->is_dynamic());
     CHECK_EQ_OR_RETURN(in->num_of_lod_levels(), 0);
     const BlobDesc* size = GetBlobDesc4BnInOp("size");
     CHECK_EQ_OR_RETURN(size->shape().elem_cnt(), 1);
     CHECK_EQ_OR_RETURN(size->data_type(), DataType::kInt64);
     BlobDesc* out = GetBlobDesc4BnInOp("out");
     *out = *in;
+    out->set_is_dynamic(true);
     return Maybe<void>::Ok();
   }
 

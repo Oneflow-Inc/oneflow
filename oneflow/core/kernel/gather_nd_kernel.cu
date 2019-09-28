@@ -49,12 +49,12 @@ class GatherNdGpuKernel final : public KernelIf<DeviceType::kGPU> {
   }
 };
 
-#define REGISTER_GATHER_ND_GPU_KERNEL(dtype, itype)                                      \
-  NEW_REGISTER_KERNEL(OperatorConf::kLocalGatherNdConf, GatherNdGpuKernel<dtype, itype>) \
-      .SetIsMatchedPred([](const KernelConf& conf) {                                     \
-        return ((conf.op_attribute().op_conf().device_type() == DeviceType::kGPU)        \
-                && (conf.data_type() == GetDataType<dtype>::value)                       \
-                && (std::is_integral<itype>::value));                                    \
+#define REGISTER_GATHER_ND_GPU_KERNEL(dtype, itype)                                         \
+  NEW_REGISTER_KERNEL(OperatorConf::kLocalGatherNdConf, GatherNdGpuKernel<dtype, itype>)    \
+      .SetIsMatchedPred([](const KernelConf& conf) {                                        \
+        return ((conf.op_attribute().op_conf().device_type() == DeviceType::kGPU)           \
+                && (conf.data_type() == GetDataType<dtype>::value)                          \
+                && (GetDataType<itype>::value == conf.gather_nd_update_conf().idx_type())); \
       })
 
 REGISTER_GATHER_ND_GPU_KERNEL(float, int32_t);

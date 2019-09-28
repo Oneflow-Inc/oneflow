@@ -63,22 +63,17 @@ class StackGradKernel final : public KernelIf<device_type> {
   }
 };
 
-#define REGISTER_STACK_KERNEL(device, dtype)                                     \
-  REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kStackConf, device, dtype, \
-                                        StackKernel<device, dtype>)
-
-REGISTER_STACK_KERNEL(DeviceType::kGPU, float);
-REGISTER_STACK_KERNEL(DeviceType::kGPU, double);
-REGISTER_STACK_KERNEL(DeviceType::kCPU, float);
-REGISTER_STACK_KERNEL(DeviceType::kCPU, double);
-
-#define REGISTER_STACK_GRAD_KERNEL(device, dtype)                                    \
+#define REGISTER_STACK_KERNEL(device, dtype)                                         \
+  REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kStackConf, device, dtype,     \
+                                        StackKernel<device, dtype>)                  \
   REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kStackGradConf, device, dtype, \
                                         StackGradKernel<device, dtype>)
 
-REGISTER_STACK_GRAD_KERNEL(DeviceType::kGPU, float);
-REGISTER_STACK_GRAD_KERNEL(DeviceType::kGPU, double);
-REGISTER_STACK_GRAD_KERNEL(DeviceType::kCPU, float);
-REGISTER_STACK_GRAD_KERNEL(DeviceType::kCPU, double);
+REGISTER_STACK_KERNEL(DeviceType::kGPU, float);
+REGISTER_STACK_KERNEL(DeviceType::kGPU, double);
+REGISTER_STACK_KERNEL(DeviceType::kGPU, int32_t);
+REGISTER_STACK_KERNEL(DeviceType::kGPU, int8_t);
+REGISTER_STACK_KERNEL(DeviceType::kCPU, float);
+REGISTER_STACK_KERNEL(DeviceType::kCPU, double);
 
 }  // namespace oneflow

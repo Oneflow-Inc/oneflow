@@ -14,6 +14,8 @@ class StackOp final : public Operator {
     EnrollOutputBn("out");
   }
 
+  const PbMessage& GetCustomizedConf() const override { return this->op_conf().stack_conf(); }
+
   Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                              const ParallelContext* parallel_ctx) const override {
     const BlobDesc* in_0 = GetBlobDesc4BnInOp(input_bns().Get(0));
@@ -81,6 +83,8 @@ class StackGradOp final : public Operator {
     EnrollRepeatedOutputBn("out");
   }
 
+  const PbMessage& GetCustomizedConf() const override { return this->op_conf().stack_grad_conf(); }
+
   Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                              const ParallelContext* parallel_ctx) const override {
     const auto& conf = op_conf().stack_grad_conf();
@@ -89,13 +93,13 @@ class StackGradOp final : public Operator {
     OF_CHECK_EQ(conf.like_size(), output_bns().size());
 
     FOR_RANGE(size_t, i, 0, output_bns().size()) {
-      const BlobDesc* like_i = GetBlobDesc4BnInOp(conf.like(i));
+      const BlobDesc* like_i = GetBlobDesc4BnInOp(GenRepeatedBn("like", i));
       BlobDesc* out_i = GetBlobDesc4BnInOp(output_bns().Get(i));
       OF_CHECK_EQ(like_i->shape().NumAxes(), in->shape().NumAxes());
       FOR_RANGE(int64_t, j, 0, in->shape().NumAxes()) {
         if (j != conf.axis()) { OF_CHECK_EQ(like_i->shape().At(j), in->shape().At(j)); }
       }
-      *out_i = *like_i;
+      out_i->CopyMetaFrom(*like_i);
     }
     return Maybe<void>::Ok();
   }
@@ -104,7 +108,8 @@ class StackGradOp final : public Operator {
   Maybe<void> InferBatchAxis(
       const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
       std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override {
-    return NaiveInferBatchAxis(BatchAxis4BnInOp);
+    for (const auto& obn : output_bns()) { *BatchAxis4BnInOp(obn) = *BatchAxis4BnInOp("in"); }
+    return Maybe<void>::Ok();
   }
 
   Maybe<void> GetSbpSignatures(
