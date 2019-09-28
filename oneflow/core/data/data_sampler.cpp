@@ -1,4 +1,4 @@
-#include "oneflow/core/data/data_sampler.h"
+#include "oneflow/core/data/dataset.h"
 #include "oneflow/core/control/ctrl_client.h"
 
 namespace oneflow {

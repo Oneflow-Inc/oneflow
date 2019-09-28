@@ -1,9 +1,6 @@
 #ifndef ONEFLOW_CORE_DATA_DATA_SAMPLER_H_
 #define ONEFLOW_CORE_DATA_DATA_SAMPLER_H_
 
-#include "oneflow/core/data/dataset.h"
-#include "oneflow/core/common/range.h"
-
 namespace oneflow {
 namespace data {
 
@@ -14,6 +11,8 @@ struct DataSamplerContext final {
   size_t iter_;
   size_t count_;
 };
+
+class Dataset;
 
 class DataSampler {
  public:

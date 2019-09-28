@@ -2,12 +2,11 @@
 #define ONEFLOW_CORE_DATA_DATASET_H_
 
 #include "oneflow/core/data/data_instance.h"
+#include "oneflow/core/data/data_sampler.h"
 #include "oneflow/core/common/auto_registration_factory.h"
 
 namespace oneflow {
 namespace data {
-
-class DataSampler;
 
 class Dataset {
  public:
