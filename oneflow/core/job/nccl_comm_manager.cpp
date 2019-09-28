@@ -63,7 +63,9 @@ bool NcclCommMgr::IsNcclTaskType(const TaskType& tt) const {
          || tt == TaskType::kNcclReduceScatter || tt == TaskType::kNcclBoxingAllGather
          || tt == TaskType::kNcclBoxingAllReduce || tt == TaskType::kNcclBoxingReduceScatter
          || tt == TaskType::kNcclReduceScatter || tt == TaskType::kNcclTupleBroadcast
-         || tt == TaskType::kNcclTupleReduce;
+         || tt == TaskType::kNcclTupleReduce || tt == TaskType::kNcclHierarchicalReduce
+         || tt == TaskType::kNcclHierarchicalAllReduce
+         || tt == TaskType::kNcclHierarchicalBroadcast;
 }
 
 int32_t NcclCommMgr::GetDeviceId4Task(const TaskProto& task) {
