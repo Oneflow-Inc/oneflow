@@ -347,6 +347,7 @@ def expand_dims(inputs, axis, name=None):
 
 @oneflow_export("piece_slice")
 def piece_slice(inputs, output_size, name=None, need_bw=False):
+    assert(inputs.shape[0] == output_size)
     if need_bw:
         size = [1] + list(inputs.shape)[1:]	
         ret = []	
