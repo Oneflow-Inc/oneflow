@@ -174,7 +174,7 @@ void LogicalGraph::AddAllReduce(LogicalNode* src, LogicalNode* dst) {
   if (GlobalJobDesc().enable_nccl() && src_pd->device_type() == DeviceType::kGPU) {
     if (src_pd->sorted_machine_ids().size() > 1 && src_pd->device_num_of_each_machine() > 1
         && GlobalJobDesc().enable_nccl_hierarchical_all_reduce()) {
-      AddNcclHierarchicalAllReduce(src, dst);
+      AddNcclHierarchicalAllReduceV2(src, dst);
     } else if (src_pd->sorted_machine_ids().size() == 1
                || GlobalJobDesc().use_nccl_inter_node_communication()) {
       AddNcclAllReduce(src, dst);
@@ -274,6 +274,51 @@ void LogicalGraph::AddNcclHierarchicalAllReduce(LogicalNode* src, LogicalNode* d
   }
   Connect<LogicalNode>(all_reduce_node, NewEdge(), all_gather_node);
   Connect<LogicalNode>(all_gather_node, NewEdge(), dst);
+}
+
+void LogicalGraph::AddNcclHierarchicalAllReduceV2(LogicalNode* src, LogicalNode* dst) {
+  std::shared_ptr<const ParallelDesc> src_pd = src->parallel_desc();
+  const ReduceRankCtx inner_node_ctx =
+      ReduceRankCtx().CtxWithScatter(src_pd->device_num_of_each_machine());
+  const ReduceRankCtx inter_node_ctx =
+      inner_node_ctx.CtxWithScatter(src_pd->sorted_machine_ids().size());
+
+  auto* reduce_node = NewNode<NcclHierarchicalReduceLogicalNode>();
+  {
+    OperatorConf reduce_op_conf{};
+    reduce_op_conf.set_name("nccl_hierarchical_reduce_" + NewUniqueId());
+    reduce_op_conf.set_device_type(src_pd->device_type());
+    reduce_op_conf.mutable_nccl_hierarchical_reduce_conf();
+    reduce_node->mut_op_vec() = {ConstructOp(reduce_op_conf, &GlobalJobDesc())};
+    reduce_node->mut_parallel_desc() = src_pd;
+    reduce_node->mut_rank_ctx() = inner_node_ctx;
+  }
+  Connect<LogicalNode>(src, NewEdge(), reduce_node);
+
+  auto* all_reduce_node = NewNode<NcclHierarchicalAllReduceLogicalNode>();
+  {
+    OperatorConf all_reduce_op_conf{};
+    all_reduce_op_conf.set_name("nccl_hierarchical_all_reduce_" + NewUniqueId());
+    all_reduce_op_conf.set_device_type(src_pd->device_type());
+    all_reduce_op_conf.mutable_nccl_hierarchical_all_reduce_conf();
+    all_reduce_node->mut_op_vec() = {ConstructOp(all_reduce_op_conf, &GlobalJobDesc())};
+    all_reduce_node->mut_parallel_desc() = src_pd;
+    all_reduce_node->mut_rank_ctx() = inter_node_ctx;
+  }
+  Connect<LogicalNode>(reduce_node, NewEdge(), all_reduce_node);
+
+  auto* broadcast_node = NewNode<NcclHierarchicalBroadcastLogicalNode>();
+  {
+    OperatorConf broadcast_op_conf{};
+    broadcast_op_conf.set_name("nccl_hierarchical_broadcast_" + NewUniqueId());
+    broadcast_op_conf.set_device_type(src_pd->device_type());
+    broadcast_op_conf.mutable_nccl_all_gather_conf();
+    broadcast_node->mut_op_vec() = {ConstructOp(broadcast_op_conf, &GlobalJobDesc())};
+    broadcast_node->mut_parallel_desc() = src_pd;
+    broadcast_node->mut_rank_ctx() = inner_node_ctx;
+  }
+  Connect<LogicalNode>(all_reduce_node, NewEdge(), broadcast_node);
+  Connect<LogicalNode>(broadcast_node, NewEdge(), dst);
 }
 
 void LogicalGraph::AddReduceScatterAddGatherNodes(LogicalNode* src, LogicalNode* dst,

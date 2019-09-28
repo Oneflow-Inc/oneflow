@@ -40,6 +40,7 @@ class LogicalGraph final : public Graph<LogicalNode, LogicalEdge> {
   void AddAllReduce(LogicalNode* src, LogicalNode* dst);
   void AddNcclAllReduce(LogicalNode* src, LogicalNode* dst);
   void AddNcclHierarchicalAllReduce(LogicalNode* src, LogicalNode* dst);
+  void AddNcclHierarchicalAllReduceV2(LogicalNode* src, LogicalNode* dst);
   void AddNcclReduceScatterAndAllGather(LogicalNode* src, LogicalNode* dst);
   void ReplaceAllReduceFacades();
 
