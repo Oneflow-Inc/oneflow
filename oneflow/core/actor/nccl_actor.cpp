@@ -32,6 +32,10 @@ REGISTER_ACTOR(TaskType::kNcclBoxingAllReduce, NcclActor);
 REGISTER_ACTOR(TaskType::kNcclBoxingReduceScatter, NcclActor);
 REGISTER_ACTOR(TaskType::kNcclBoxingAllGather, NcclActor);
 
+REGISTER_ACTOR(TaskType::kNcclHierarchicalReduce, NcclActor);
+REGISTER_ACTOR(TaskType::kNcclHierarchicalAllReduce, NcclActor);
+REGISTER_ACTOR(TaskType::kNcclHierarchicalBroadcast, NcclActor);
+
 #endif  // WITH_CUDA
 
 }  // namespace oneflow

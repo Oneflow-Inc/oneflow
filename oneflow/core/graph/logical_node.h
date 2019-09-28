@@ -249,6 +249,9 @@ DECLARE_REDUCE_LOGICAL_NODE(NcclAllReduceLogicalNode, true);
 DECLARE_REDUCE_LOGICAL_NODE(ReduceAddLogicalNode, false);
 DECLARE_REDUCE_LOGICAL_NODE(NcclAllGatherLogicalNode, false);
 DECLARE_REDUCE_LOGICAL_NODE(NcclReduceScatterLogicalNode, true);
+DECLARE_REDUCE_LOGICAL_NODE(NcclHierarchicalReduceLogicalNode, true);
+DECLARE_REDUCE_LOGICAL_NODE(NcclHierarchicalAllReduceLogicalNode, true);
+DECLARE_REDUCE_LOGICAL_NODE(NcclHierarchicalBroadcastLogicalNode, true);
 
 DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(WaitAndSendIds);
 DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(ForeignInput);

@@ -21,6 +21,9 @@
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/graph/nccl_tuple_broadcast_compute_task_node.h"
 #include "oneflow/core/graph/nccl_tuple_reduce_compute_task_node.h"
+#include "oneflow/core/graph/nccl_hierarchical_reduce_compute_task_node.h"
+#include "oneflow/core/graph/nccl_hierarchical_all_reduce_compute_task_node.h"
+#include "oneflow/core/graph/nccl_hierarchical_broadcast_compute_task_node.h"
 
 namespace oneflow {
 
@@ -358,6 +361,18 @@ REGISTER_BLD_SUB_TSK_GPH_MTHD("NcclReduceScatter"
 REGISTER_BLD_SUB_TSK_GPH_MTHD("NcclAllReduce"
                               "NcclAllGather",
                               &TaskGraph::BldSubTskGphByOneToOne);
+REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceIdentity"
+                              "NcclHierarchicalReduce",
+                              &TaskGraph::BldSubTskGphByOneToOne);
+REGISTER_BLD_SUB_TSK_GPH_MTHD("NcclHierarchicalReduce"
+                              "NcclHierarchicalAllReduce",
+                              &TaskGraph::BldSubTskGphByOneToOne);
+REGISTER_BLD_SUB_TSK_GPH_MTHD("NcclHierarchicalAllReduce"
+                              "NcclHierarchicalBroadcast",
+                              &TaskGraph::BldSubTskGphByOneToOne);
+REGISTER_BLD_SUB_TSK_GPH_MTHD("NcclHierarchicalBroadcast"
+                              "ReduceSplit",
+                              &TaskGraph::BldSubTskGphByOneToOne);
 
 BldBoxingOpConfMthd GetMthdForBldBoxingOpConf(const LogicalNode* src, const LogicalNode* dst) {
   std::string k = ConcatTypeName(src, dst);
@@ -376,24 +391,27 @@ REGISTER_BLD_BOXING_OP_CONF_MTHD("Tick"
                                  "Tick",
                                  &BoxingTaskNode::BldBoxingOpConfWithPartialTick2SinkTick);
 
-#define LOGICAL_TYPE_SEQ                                  \
-  OF_PP_MAKE_TUPLE_SEQ(NormalForward, kDataForwardArea)   \
-  OF_PP_MAKE_TUPLE_SEQ(RecordLoad, kDataPreprocessArea)   \
-  OF_PP_MAKE_TUPLE_SEQ(Decode, kDataPreprocessArea)       \
-  OF_PP_MAKE_TUPLE_SEQ(DecodeRandom, kDataPreprocessArea) \
-  OF_PP_MAKE_TUPLE_SEQ(Loss, kDataForwardArea)            \
-  OF_PP_MAKE_TUPLE_SEQ(MdDiffAcc, kDataForwardArea)       \
-  OF_PP_MAKE_TUPLE_SEQ(Print, kPrintArea)                 \
-  OF_PP_MAKE_TUPLE_SEQ(ReduceConcat, kMdUpdtArea)         \
-  OF_PP_MAKE_TUPLE_SEQ(ReduceIdentity, kMdUpdtArea)       \
-  OF_PP_MAKE_TUPLE_SEQ(ReduceScatter, kMdUpdtArea)        \
-  OF_PP_MAKE_TUPLE_SEQ(ReduceAdd, kMdUpdtArea)            \
-  OF_PP_MAKE_TUPLE_SEQ(ReduceGather, kMdUpdtArea)         \
-  OF_PP_MAKE_TUPLE_SEQ(ReduceSplit, kMdUpdtArea)          \
-  OF_PP_MAKE_TUPLE_SEQ(NcclAllReduce, kMdUpdtArea)        \
-  OF_PP_MAKE_TUPLE_SEQ(NcclReduceScatter, kMdUpdtArea)    \
-  OF_PP_MAKE_TUPLE_SEQ(NcclAllGather, kMdUpdtArea)        \
-  OF_PP_MAKE_TUPLE_SEQ(Accuracy, kDataForwardArea)
+#define LOGICAL_TYPE_SEQ                                       \
+  OF_PP_MAKE_TUPLE_SEQ(NormalForward, kDataForwardArea)        \
+  OF_PP_MAKE_TUPLE_SEQ(RecordLoad, kDataPreprocessArea)        \
+  OF_PP_MAKE_TUPLE_SEQ(Decode, kDataPreprocessArea)            \
+  OF_PP_MAKE_TUPLE_SEQ(DecodeRandom, kDataPreprocessArea)      \
+  OF_PP_MAKE_TUPLE_SEQ(Loss, kDataForwardArea)                 \
+  OF_PP_MAKE_TUPLE_SEQ(MdDiffAcc, kDataForwardArea)            \
+  OF_PP_MAKE_TUPLE_SEQ(Print, kPrintArea)                      \
+  OF_PP_MAKE_TUPLE_SEQ(ReduceConcat, kMdUpdtArea)              \
+  OF_PP_MAKE_TUPLE_SEQ(ReduceIdentity, kMdUpdtArea)            \
+  OF_PP_MAKE_TUPLE_SEQ(ReduceScatter, kMdUpdtArea)             \
+  OF_PP_MAKE_TUPLE_SEQ(ReduceAdd, kMdUpdtArea)                 \
+  OF_PP_MAKE_TUPLE_SEQ(ReduceGather, kMdUpdtArea)              \
+  OF_PP_MAKE_TUPLE_SEQ(ReduceSplit, kMdUpdtArea)               \
+  OF_PP_MAKE_TUPLE_SEQ(NcclAllReduce, kMdUpdtArea)             \
+  OF_PP_MAKE_TUPLE_SEQ(NcclReduceScatter, kMdUpdtArea)         \
+  OF_PP_MAKE_TUPLE_SEQ(NcclAllGather, kMdUpdtArea)             \
+  OF_PP_MAKE_TUPLE_SEQ(Accuracy, kDataForwardArea)             \
+  OF_PP_MAKE_TUPLE_SEQ(NcclHierarchicalReduce, kMdUpdtArea)    \
+  OF_PP_MAKE_TUPLE_SEQ(NcclHierarchicalAllReduce, kMdUpdtArea) \
+  OF_PP_MAKE_TUPLE_SEQ(NcclHierarchicalBroadcast, kMdUpdtArea)
 
 #define DEFINE_VIRTUAL_METHOD(x, area_type)                                             \
   std::string x##LogicalNode::TypeName() const { return #x; }                           \
