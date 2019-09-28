@@ -180,6 +180,10 @@ message NcclTupleBroadcastConf {
   required ParallelContext parallel_ctx = 1;
 }
 
+message NcclHierarchicalAllReduceKernelConf {
+  optional bool need_do_all_reduce = 1 [default = false];
+}
+
 message KernelConf {
   required OpAttribute op_attribute = 1;
   required bool is_forward = 2;
@@ -228,5 +232,6 @@ message KernelConf {
     GatherMs0GradKernelConf gather_ms0_grad_conf = 415;
     NcclTupleReduceConf nccl_tuple_reduce_conf = 416;
     NcclTupleBroadcastConf nccl_tuple_broadcast_conf = 417;
+    NcclHierarchicalAllReduceKernelConf nccl_hierarchical_all_reduce_conf = 418;
   }
 }
