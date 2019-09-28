@@ -20,6 +20,8 @@ class DataInstance {
   template<DataSourceCase dsrc>
   const DataField* GetField() const;
   const DataField* GetField(DataSourceCase dsrc) const;
+  template<DataSourceCase dsrc>
+  bool HasField() const;
   bool AddField(std::unique_ptr<DataField>&& data_field_ptr);
   void Transform(const DataTransformProto& trans_proto);
 
@@ -41,6 +43,11 @@ inline DataField* DataInstance::GetField() {
 template<DataSourceCase dsrc>
 inline const DataField* DataInstance::GetField() const {
   return const_cast<const DataField*>(fields_.at(dsrc).get());
+}
+
+template<DataSourceCase dsrc>
+inline bool DataInstance::HasField() const {
+  return fields_.find(dsrc) != fields_.end();
 }
 
 inline bool DataInstance::AddField(std::unique_ptr<DataField>&& data_field_ptr) {

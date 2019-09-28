@@ -74,10 +74,50 @@ void DataLoader::LoadBatch() {
 BatchCollator* DataLoader::GetBatchCollator() {
   auto* collator = batch_queue_.Tail();
   if (collator->IsFull()) {
+    if (IsImageAlignNeeded(collator)) { ImageAlign(collator); }
     batch_queue_.SyncEnqueue(std::unique_ptr<BatchCollator>(new BatchCollator(batch_size_)));
     collator = batch_queue_.Tail();
   }
   return collator;
+}
+
+bool DataLoader::IsImageAlignNeeded(BatchCollator* collator) {
+  return conf_->has_image_alignment()
+         && collator->batch_.back()->HasField<DataSourceCase::kImage>();
+}
+
+void DataLoader::ImageAlign(BatchCollator* collator) {
+  int64_t max_rows = -1;
+  int64_t max_cols = -1;
+  int64_t channels = -1;
+  for (auto& data_inst_ptr : collator->batch_) {
+    auto& image_mat =
+        dynamic_cast<ImageDataField*>(data_inst_ptr->GetField<DataSourceCase::kImage>())->data();
+    max_rows = std::max<int64_t>(max_rows, image_mat.rows);
+    max_cols = std::max<int64_t>(max_cols, image_mat.cols);
+    if (channels == -1) {
+      channels = image_mat.depth();
+    } else {
+      CHECK_EQ(channels, image_mat.depth());
+    }
+  }
+  CHECK_GT(max_rows, 0);
+  CHECK_GT(max_cols, 0);
+  CHECK_GT(channels, 0);
+  max_rows = RoundUp(max_rows, conf_->image_alignment());
+  max_cols = RoundUp(max_cols, conf_->image_alignment());
+
+  for (auto& data_inst_ptr : collator->batch_) {
+    auto* image_field =
+        dynamic_cast<ImageDataField*>(data_inst_ptr->GetField<DataSourceCase::kImage>());
+    CHECK_NOTNULL(image_field);
+    worker_pool_.AddWork([image_field, max_cols, max_rows]() {
+      auto& image_mat = image_field->data();
+      cv::Mat dst = cv::Mat::zeros(cv::Size(max_cols, max_rows), image_mat.type());
+      image_mat.copyTo(dst(cv::Rect(0, 0, image_mat.cols, image_mat.rows)));
+      image_field->data() = dst;
+    });
+  }
 }
 
 }  // namespace data

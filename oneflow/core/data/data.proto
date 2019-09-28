@@ -64,6 +64,7 @@ message ResizeTransform {
 message TargetResizeTransform {
   required int32 target_size = 1;
   required int32 max_size = 2;
+  required int32 alignment = 3;
 }
 
 message DataTransformProto {

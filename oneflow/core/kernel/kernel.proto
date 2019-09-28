@@ -187,6 +187,7 @@ message DataLoadKernelConf {
   required int32 device_batch_size = 3;
   required int32 parallel_num = 4;
   required int32 parallel_id = 5;
+  optional int32 image_alignment = 6;
 }
 
 message KernelConf {

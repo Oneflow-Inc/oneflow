@@ -47,11 +47,9 @@ void DataLoadKernel::WriteDataToBlob(
   char* dptr = static_cast<char*>(blob->mut_dptr());
   Memset<DeviceType::kCPU>(ctx, dptr, 0, blob->ByteSizeOfDataContentField());
   Shape dense_shape;
-  std::vector<std::vector<int64_t>> length_lod;
   if (is_contiguous) {
     const DataField* first = data_inst_vec.at(0)->GetField(blob_conf.data_source());
-    first->InferShape(blob_conf.shape(), blob_conf.variable_length_axes(), &dense_shape,
-                      &length_lod);
+    first->InferShape(blob_conf.shape(), blob_conf.variable_length_axes(), &dense_shape, nullptr);
     const int64_t elem_cnt = dense_shape.elem_cnt();
     if (!blob->blob_desc().is_dynamic()) {
       const int64_t exp_elem_cnt =
@@ -63,12 +61,12 @@ void DataLoadKernel::WriteDataToBlob(
       const DataField* data_field = data_inst_vec.at(n)->GetField(blob_conf.data_source());
       data_field->ToBuffer(dptr + n * elem_cnt, blob_conf.data_type());
       Shape shape;
-      data_field->InferShape(blob_conf.shape(), blob_conf.variable_length_axes(), &shape,
-                             &length_lod);
+      data_field->InferShape(blob_conf.shape(), blob_conf.variable_length_axes(), &shape, nullptr);
       CHECK(dense_shape == shape);
     });
     dense_shape.Set(0, data_inst_vec.size());
   } else {
+    std::vector<std::vector<int64_t>> length_lod;
     for (const auto& data_inst_ptr : data_inst_vec) {
       const DataField* data_field = data_inst_ptr->GetField(blob_conf.data_source());
       size_t written_size = data_field->ToBuffer(dptr, blob_conf.data_type());
@@ -76,9 +74,9 @@ void DataLoadKernel::WriteDataToBlob(
                              &length_lod);
       dptr += written_size;
     }
+    blob->length_lod_mut_view().SetLength(length_lod);
   }
   blob->dense_shape_mut_view().set_shape(dense_shape);
-  blob->length_lod_mut_view().SetLength(length_lod);
   for (const auto& preprocess_conf : blob_conf.preprocess()) {
     PreprocessBlob(preprocess_conf, blob);
   }

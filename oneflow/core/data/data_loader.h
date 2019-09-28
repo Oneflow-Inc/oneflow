@@ -44,6 +44,8 @@ class DataLoader final {
  private:
   void LoadBatch();
   BatchCollator* GetBatchCollator();
+  bool IsImageAlignNeeded(BatchCollator* collator);
+  void ImageAlign(BatchCollator* collator);
 
  private:
   size_t batch_size_;
