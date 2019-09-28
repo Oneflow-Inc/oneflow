@@ -63,9 +63,9 @@ class StackGradKernel final : public KernelIf<device_type> {
   }
 };
 
-#define REGISTER_STACK_KERNEL(device, dtype)                                     \
-  REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kStackConf, device, dtype, \
-                                        StackKernel<device, dtype>) \
+#define REGISTER_STACK_KERNEL(device, dtype)                                         \
+  REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kStackConf, device, dtype,     \
+                                        StackKernel<device, dtype>)                  \
   REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kStackGradConf, device, dtype, \
                                         StackGradKernel<device, dtype>)
 
