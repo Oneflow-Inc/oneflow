@@ -4,8 +4,8 @@ namespace oneflow {
 
 namespace {
 
-int64_t GetGatherAxis(const LocalGatherOpConf& conf, const int64_t num_axes) {
-  const int64_t axis = conf.axis() < 0 ? num_axes + conf.axis() : conf.axis();
+int64_t CheckGatherAxis(const LocalGatherOpConf& conf, const int64_t num_axes) {
+  const int64_t axis = conf.axis();
   CHECK_GE(axis, 0);
   CHECK_LT(axis, num_axes);
   return axis;
@@ -36,7 +36,7 @@ class LocalGatherOp final : public Operator {
     CHECK_GT_OR_RETURN(indices->shape().NumAxes(), 0);
     const BlobDesc* in = GetBlobDesc4BnInOp("in");
     CHECK_GT_OR_RETURN(in->shape().NumAxes(), 0);
-    const int64_t axis = GetGatherAxis(op_conf().local_gather_conf(), in->shape().NumAxes());
+    const int64_t axis = CheckGatherAxis(op_conf().local_gather_conf(), in->shape().NumAxes());
     BlobDesc* out = GetBlobDesc4BnInOp("out");
     *out = *in;
     std::vector<int64_t> dim_vec;
@@ -63,7 +63,7 @@ class LocalGatherOp final : public Operator {
                             const ParallelContext* parallel_ctx,
                             KernelConf* kernel_conf) const override {
     const int64_t axis =
-        GetGatherAxis(op_conf().local_gather_conf(), GetBlobDesc4BnInOp("in")->shape().NumAxes());
+        CheckGatherAxis(op_conf().local_gather_conf(), GetBlobDesc4BnInOp("in")->shape().NumAxes());
     kernel_conf->mutable_gather_conf()->set_axis(axis);
   }
 

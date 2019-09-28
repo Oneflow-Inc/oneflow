@@ -265,6 +265,8 @@ def local_gather(params, indices, axis=0, name=None):
         "name",
         name if name is not None else id_util.UniqueStr("LocalGather_"),
     )
+    if axis < 0:
+        axis += len(params.shape)
     setattr(op_conf.local_gather_conf, "in", params.logical_blob_name)
     setattr(op_conf.local_gather_conf, "indices", indices.logical_blob_name)
     setattr(op_conf.local_gather_conf, "axis", axis)
@@ -294,7 +296,7 @@ def local_nonzero(input, name=None):
         setattr(out_lbi, "op_name", op_conf.name)
         setattr(out_lbi, "blob_name", obn)
         ret.append(remote_blob_util.RemoteBlob(out_lbi))
-    return tuple(ret)
+    return sync_dynamic_resize(ret[0], ret[1])
 
 
 @oneflow_export("where")
@@ -326,7 +328,7 @@ def squeeze(inputs, axis, name=None):
         "name",
         name if name is not None else id_util.UniqueStr("Squeeze_"),
     )
-    assert all(axis_i == -1 or axis_i > 0 for axis_i in axis)
+    assert all(axis_i == -1 or axis_i >= 0 for axis_i in axis)
     shape = []
     for i, dim in enumerate(inputs.shape):
         if i in axis:
@@ -345,15 +347,15 @@ def expand_dims(inputs, axis, name=None):
 
 @oneflow_export("piece_slice")
 def piece_slice(inputs, output_size, name=None, need_bw=False):
+    assert(inputs.shape[0] == output_size)
     if need_bw:
-        expanded_inputs = reshape(inputs, [1] + list(inputs.shape))	
-        size = [-1, 1] + list(inputs.shape)[1:]	
+        size = [1] + list(inputs.shape)[1:]	
         ret = []	
         for i in range(output_size):	
-            begin = [-1, i] + [0] * (len(inputs.shape) - 1)	
-            output = slice(expanded_inputs, begin, size)	
-            squeezed_output = reshape(output, list(output.shape)[2:])	
-            ret.append(squeezed_output)	
+            begin = [i] + [0] * (len(inputs.shape) - 1)	
+            output = slice(inputs, begin, size)	
+            output = squeeze(output, [0])
+            ret.append(output)	
         return ret
     op_conf = op_conf_util.OperatorConf()
     setattr(
@@ -376,25 +378,23 @@ def piece_slice(inputs, output_size, name=None, need_bw=False):
 
 
 @oneflow_export("elem_cnt")
-def elem_cnt(inputs, begin_axis=None, end_axis=None, data_type=None, name=None):
+def elem_cnt(inputs, begin_axis=None, end_axis=None, dtype=None, name=None):
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf,
         "name",
         name if name is not None else id_util.UniqueStr("ElemCnt_"),
     )
-    setattr(op_conf.element_count_conf, "in", inputs.logical_blob_name)
-    if begin_axis is not None:
-        op_conf.element_count_conf.begin_axis = begin_axis
-    if end_axis is not None:
-        op_conf.element_count_conf.end_axis = end_axis
-    if data_type is not None:
-        op_conf.element_count_conf.data_type = data_type
-    op_conf.element_count_conf.out = "out"
+    op_conf.shape_elem_cnt_conf.x = inputs.logical_blob_name
+
+    op_conf.shape_elem_cnt_conf.exclude_axis_conf.SetInParent()
+    if dtype is not None:
+        op_conf.shape_elem_cnt_conf.data_type = dtype
+    op_conf.shape_elem_cnt_conf.y = "y"
     compile_context.CurJobAddOp(op_conf)
     out_lbi = logical_blob_id_util.LogicalBlobId()
     setattr(out_lbi, "op_name", op_conf.name)
-    setattr(out_lbi, "blob_name", "out")
+    setattr(out_lbi, "blob_name", "y")
     return remote_blob_util.RemoteBlob(out_lbi)
 
 

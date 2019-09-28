@@ -52,23 +52,7 @@ def get_numpy_placeholders():
 placeholders = get_numpy_placeholders()
 
 
-def maskrcnn(
-    images=flow.input_blob_def(
-        placeholders["images"].shape, dtype=flow.float32
-    ),
-    image_sizes=flow.input_blob_def(
-        placeholders["image_sizes"].shape, dtype=flow.int32
-    ),
-    gt_boxes=flow.input_blob_def(
-        placeholders["gt_boxes"].shape, dtype=flow.float32
-    ),
-    gt_segms=flow.input_blob_def(
-        placeholders["gt_segms"].shape, dtype=flow.int8
-    ),
-    gt_labels=flow.input_blob_def(
-        placeholders["gt_labels"].shape, dtype=flow.int32
-    ),
-):
+def maskrcnn(images, image_sizes, gt_boxes, gt_segms, gt_labels):
     # def maskrcnn(images, image_sizes, gt_boxes, gt_segms, gt_labels):
     r"""Mask-RCNN
     Args:
@@ -199,20 +183,19 @@ if __name__ == "__main__":
     else:
         check_point.load(args.model_load_dir)
     if args.debug:
-        flow.config.cudnn_conv_force_fwd_algo(0)
-        flow.config.cudnn_conv_force_bwd_data_algo(1)
-        flow.config.cudnn_conv_force_bwd_filter_algo(1)
-        train_mask_rcnn(
-            images=placeholders["images"],
-            image_sizes=placeholders["image_sizes"],
-            gt_boxes=placeholders["gt_boxes"],
-            gt_segms=placeholders["gt_segms"],
-            gt_labels=placeholders["gt_labels"],
+        train_loss = debug_train(
+            placeholders["images"],
+            placeholders["image_sizes"],
+            placeholders["gt_boxes"],
+            placeholders["gt_segms"],
+            placeholders["gt_labels"],
         )
-        eval_mask_rcnn(
-            images=placeholders["images"],
-            image_sizes=placeholders["image_sizes"],
-            gt_boxes=placeholders["gt_boxes"],
-            gt_segms=placeholders["gt_segms"],
-            gt_labels=placeholders["gt_labels"],
+        print(train_loss)
+        eval_loss = debug_eval(
+            placeholders["images"],
+            placeholders["image_sizes"],
+            placeholders["gt_boxes"],
+            placeholders["gt_segms"],
+            placeholders["gt_labels"],
         )
+        print(eval_loss)

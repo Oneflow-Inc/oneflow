@@ -45,10 +45,7 @@ class MaskHead(object):
                     )
                 )
             gt_segms = flow.concat(gt_segm_list, axis=0)
-            gt_segms = flow.concat([gt_segms] * 4, axis=0)
             gt_labels = flow.concat(gt_label_list, axis=0)
-            gt_labels = flow.concat([gt_labels] * 4, axis=0)
-            elem_cnt = flow.elem_cnt(gt_labels)
 
             mask_pred = flow.keras.activations.sigmoid(
                 flow.squeeze(
@@ -61,15 +58,11 @@ class MaskHead(object):
                 )
             )
 
-            mask_loss = (
-                flow.math.reduce_sum(
-                    flow.nn.sigmoid_cross_entropy_with_logits(
-                        gt_segms, mask_pred
-                    )
-                )
-                / elem_cnt
+            mask_loss = flow.math.reduce_sum(
+                flow.nn.sigmoid_cross_entropy_with_logits(gt_segms, mask_pred)
             )
-
+            elem_cnt = flow.elem_cnt(gt_labels, dtype=mask_loss.dtype)
+            mask_loss = mask_loss / elem_cnt
             return mask_loss
 
     def mask_feature_extractor(self, proposals, img_ids, features):
@@ -78,68 +71,27 @@ class MaskHead(object):
         for (i, scalar) in zip(range(2, 6), range(0, 4)):
             level_idx_dict[i] = flow.local_nonzero(
                 levels == flow.constant_scalar(int(scalar), flow.int32)
-            )[0]
+            )
         proposals_with_img_ids = flow.concat(
             [flow.expand_dims(flow.cast(img_ids, flow.float), 1), proposals],
             axis=1,
         )
-        roi_features_0 = flow.detection.roi_align(
-            features[0],
-            rois=flow.local_gather(
-                proposals_with_img_ids,
-                flow.squeeze(level_idx_dict[2], axis=[1]),
-            ),
-            pooled_h=self.cfg.MASK_HEAD.POOLED_H,
-            pooled_w=self.cfg.MASK_HEAD.POOLED_W,
-            spatial_scale=self.cfg.MASK_HEAD.SPATIAL_SCALE / pow(2, 0),
-            sampling_ratio=self.cfg.MASK_HEAD.SAMPLING_RATIO,
-        )
-        roi_features_1 = flow.detection.roi_align(
-            features[1],
-            rois=flow.local_gather(
-                proposals_with_img_ids,
-                flow.squeeze(level_idx_dict[3], axis=[1]),
-            ),
-            pooled_h=self.cfg.MASK_HEAD.POOLED_H,
-            pooled_w=self.cfg.MASK_HEAD.POOLED_W,
-            spatial_scale=self.cfg.MASK_HEAD.SPATIAL_SCALE / pow(2, 1),
-            sampling_ratio=self.cfg.MASK_HEAD.SAMPLING_RATIO,
-        )
-        roi_features_2 = flow.detection.roi_align(
-            features[2],
-            rois=flow.local_gather(
-                proposals_with_img_ids,
-                flow.squeeze(level_idx_dict[4], axis=[1]),
-            ),
-            pooled_h=self.cfg.MASK_HEAD.POOLED_H,
-            pooled_w=self.cfg.MASK_HEAD.POOLED_W,
-            spatial_scale=self.cfg.MASK_HEAD.SPATIAL_SCALE / pow(2, 2),
-            sampling_ratio=self.cfg.MASK_HEAD.SAMPLING_RATIO,
-        )
-        roi_features_3 = flow.detection.roi_align(
-            features[3],
-            rois=flow.local_gather(
-                proposals_with_img_ids,
-                flow.squeeze(level_idx_dict[5], axis=[1]),
-            ),
-            pooled_h=self.cfg.MASK_HEAD.POOLED_H,
-            pooled_w=self.cfg.MASK_HEAD.POOLED_W,
-            spatial_scale=self.cfg.MASK_HEAD.SPATIAL_SCALE / pow(2, 3),
-            sampling_ratio=self.cfg.MASK_HEAD.SAMPLING_RATIO,
-        )
-        roi_features = flow.concat(
-            [roi_features_0, roi_features_1, roi_features_2, roi_features_3],
-            axis=0,
-        )
-        origin_indices = flow.concat(
-            [
-                level_idx_dict[2],
-                level_idx_dict[3],
-                level_idx_dict[4],
-                level_idx_dict[5],
-            ],
-            axis=0,
-        )
+        roi_features_list = []
+        for (level, i) in zip(range(2, 6), range(0, 4)):
+            roi_feature_i = flow.detection.roi_align(
+                features[0],
+                rois=flow.local_gather(
+                    proposals_with_img_ids,
+                    flow.squeeze(level_idx_dict[level], axis=[1]),
+                ),
+                pooled_h=self.cfg.MASK_HEAD.POOLED_H,
+                pooled_w=self.cfg.MASK_HEAD.POOLED_W,
+                spatial_scale=self.cfg.MASK_HEAD.SPATIAL_SCALE / pow(2, i),
+                sampling_ratio=self.cfg.MASK_HEAD.SAMPLING_RATIO,
+            )
+            roi_features_list.append(roi_feature_i)
+        roi_features = flow.stack(roi_features_list, axis=0)
+        origin_indices = flow.stack(list(level_idx_dict.values()), axis=0)
         x = flow.local_scatter_nd_update(
             flow.constant_like(roi_features, 0), origin_indices, roi_features
         )
