@@ -12,6 +12,7 @@
 #include "oneflow/core/job/foreign_job_instance.h"
 #include "oneflow/core/job/inter_user_job_info.pb.h"
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
+#include "oneflow/core/job/lbi_diff_watcher_info.pb.h"
 
 namespace oneflow {
 
@@ -88,12 +89,14 @@ Maybe<void> EnvironmentObjectsScope::Init(const ConfigProto& config_proto) {
     Global<CriticalSectionDesc>::New();
     Global<InterUserJobInfo>::New();
     Global<JobBuildAndInferCtxMgr>::New();
+    Global<LbiDiffWatcherInfo>::New();
   }
   return Maybe<void>::Ok();
 }
 
 EnvironmentObjectsScope::~EnvironmentObjectsScope() {
   if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
+    Global<LbiDiffWatcherInfo>::Delete();
     Global<JobBuildAndInferCtxMgr>::Delete();
     Global<InterUserJobInfo>::Delete();
     Global<CriticalSectionDesc>::Delete();

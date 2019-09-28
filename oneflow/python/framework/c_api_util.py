@@ -96,6 +96,12 @@ def CurJobBuildAndInferCtx_AddLossLogicalBlobName(lbn):
     error_str = oneflow_internal.CurJobBuildAndInferCtx_AddLossLogicalBlobName(lbn)
     error = text_format.Parse(error_str, error_util.ErrorProto())
     if error.HasField("error_type"): raise JobBuildAndInferError(error)
+    
+def CurJobBuildAndInferCtx_AddLbiAndDiffWatcherUuidPair(lbi_and_uuid):
+    serialized = str(text_format.MessageToString(lbi_and_uuid))
+    error_str = oneflow_internal.CurJobBuildAndInferCtx_AddLbiAndDiffWatcherUuidPair(serialized)
+    error = text_format.Parse(error_str, error_util.ErrorProto())
+    if error.HasField("error_type"): raise JobBuildAndInferError(error)
 
 def CurJobBuildAndInferCtx_CheckJob():
     error_str = oneflow_internal.CurJobBuildAndInferCtx_CheckJob()
