@@ -33,6 +33,7 @@ void DataInstance::Transform(const DataTransformProto& trans_proto) {
   switch (trans_proto.transform_case()) {
     MAKE_CASE(DataTransformProto::kResize)
     MAKE_CASE(DataTransformProto::kTargetResize)
+    MAKE_CASE(DataTransformProto::kSegmentationPolyToMask)
     default: { UNIMPLEMENTED(); }
   }
 #undef MAKE_CASE
