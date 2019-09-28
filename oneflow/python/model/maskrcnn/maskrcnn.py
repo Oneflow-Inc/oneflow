@@ -58,9 +58,9 @@ def maskrcnn(images, image_sizes, gt_boxes, gt_segms, gt_labels):
     Args:
     images: (N, H, W, C)
     image_sizes: (N, 2)
-    gt_boxes: (N, R, 4)
-    gt_segms: (N, G, 28, 28)
-    gt_labels: (N, G)
+    gt_boxes: (N, R, 4), dynamic
+    gt_segms: (N, G, 28, 28), dynamic
+    gt_labels: (N, G), dynamic
     """
     cfg = get_default_cfgs()
     if args.config_file is not None:
