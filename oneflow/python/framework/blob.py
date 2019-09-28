@@ -6,7 +6,7 @@ class Blob(object):
     def __init__(self, ndarray):
         self.ndarray_ = ndarray
 
-    def ndarray(): return self.ndarray_
+    def ndarray(self): return self.ndarray_
 
     def __getattr__(self, attr):
         return getattr(self.ndarray_, attr)
