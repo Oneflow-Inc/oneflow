@@ -45,9 +45,7 @@ class MaskHead(object):
                     )
                 )
             gt_segms = flow.concat(gt_segm_list, axis=0)
-            gt_segms = flow.concat([gt_segms] * 4, axis=0)
             gt_labels = flow.concat(gt_label_list, axis=0)
-            gt_labels = flow.concat([gt_labels] * 4, axis=0)
 
             mask_pred = flow.keras.activations.sigmoid(
                 flow.squeeze(
@@ -92,8 +90,8 @@ class MaskHead(object):
                 sampling_ratio=self.cfg.MASK_HEAD.SAMPLING_RATIO,
             )
             roi_features_list.append(roi_feature_i)
-        roi_features = flow.concat(roi_features_list, axis=0)
-        origin_indices = flow.concat(list(level_idx_dict.values()), axis=0)
+        roi_features = flow.stack(roi_features_list, axis=0)
+        origin_indices = flow.stack(list(level_idx_dict.values()), axis=0)
         x = flow.local_scatter_nd_update(
             flow.constant_like(roi_features, 0), origin_indices, roi_features
         )
