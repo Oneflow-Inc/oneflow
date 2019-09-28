@@ -20,7 +20,22 @@ void SliceOp::VirtualGenKernelConf(
 }
 
 Maybe<void> SliceOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                    const ParallelContext* parallel_ctx) const {
+                                    const ParallelContext* parallel_ctx,
+                                    const SbpSignature* sbp_signature,
+                                    std::function<void(OpContext*)> EnrollOpCtx) const {
+  auto ret = InferOutBlobDescs(GetBlobDesc4BnInOp, parallel_ctx, sbp_signature, EnrollOpCtx);
+  if (op_conf().device_type() == DeviceType::kGPU) {
+    BlobDesc* offset_blob_desc = GetBlobDesc4BnInOp("out_to_in_offset");
+    *offset_blob_desc = *GetBlobDesc4BnInOp("out");
+    offset_blob_desc->set_data_type(DataType::kInt64);
+  }
+  return ret;
+}
+
+Maybe<void> SliceOp::InferOutBlobDescs(
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature,
+    std::function<void(OpContext*)> EnrollOpCtx) const {
   const SliceOpConf& conf = op_conf().slice_conf();
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
   CHECK_EQ_OR_RETURN(conf.dim_slice_conf_size(), in_blob_desc->shape().NumAxes());
@@ -43,13 +58,6 @@ Maybe<void> SliceOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)>
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   *out_blob_desc = *in_blob_desc;
   out_blob_desc->mut_shape() = Shape(shape_vec);
-
-  if (op_conf().device_type() == DeviceType::kGPU) {
-    BlobDesc* offset_blob_desc = GetBlobDesc4BnInOp("out_to_in_offset");
-    *offset_blob_desc = *out_blob_desc;
-    offset_blob_desc->set_data_type(DataType::kInt64);
-  }
-  return Maybe<void>::Ok();
 }
 
 Maybe<void> SliceOp::GetSbpSignatures(
