@@ -328,7 +328,7 @@ def squeeze(inputs, axis, name=None):
         "name",
         name if name is not None else id_util.UniqueStr("Squeeze_"),
     )
-    assert all(axis_i == -1 or axis_i > 0 for axis_i in axis)
+    assert all(axis_i == -1 or axis_i >= 0 for axis_i in axis)
     shape = []
     for i, dim in enumerate(inputs.shape):
         if i in axis:
@@ -354,6 +354,7 @@ def piece_slice(inputs, output_size, name=None, need_bw=False):
         for i in range(output_size):	
             begin = [i] + [0] * (len(inputs.shape) - 1)	
             output = slice(inputs, begin, size)	
+            output = squeeze(output, [0])
             ret.append(output)	
         return ret
     op_conf = op_conf_util.OperatorConf()
