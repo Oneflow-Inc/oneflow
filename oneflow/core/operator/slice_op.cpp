@@ -34,9 +34,9 @@ Maybe<void> SliceOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)>
     int32_t end = dim_slice_conf.has_end() ? dim_slice_conf.end() : dim_len;
     if (start < 0) { start += dim_len; }
     if (end < 0) { end += dim_len; }
+    if (end > dim_len) { end = dim_len; }
     CHECK_GE_OR_RETURN(start, 0);
     CHECK_LT_OR_RETURN(start, end);
-    CHECK_LE_OR_RETURN(end, dim_len);
     shape_vec[i] = (end - start - 1) / std::abs(step) + 1;
   }
 
