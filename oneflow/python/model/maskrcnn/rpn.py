@@ -62,14 +62,25 @@ class RPNHead(object):
 
             # list (wrt. fpn layers) of list (wrt. images) of [H_i * W_i * A, 4]
             bbox_pred_list = []
+
+            def piece_slice_with_bw(inputs, output_size, name=None):
+                assert inputs.shape[0] == output_size
+                size = [1] + list(inputs.shape)[1:]
+                ret = []
+                for i in range(output_size):
+                    begin = [i] + [0] * (len(inputs.shape) - 1)
+                    output = flow.slice(inputs, begin, size)
+                    output = flow.squeeze(output, [0])
+                    ret.append(output)
+                return ret
+
             for bbox_pred_per_layer in bbox_preds:
                 bbox_pred_list.append(
                     [
                         flow.dynamic_reshape(x, shape=[-1, 4])
-                        for x in flow.piece_slice(
+                        for x in piece_slice_with_bw(
                             bbox_pred_per_layer,
                             self.cfg.TRAINING_CONF.IMG_PER_GPU,
-                            need_bw=True,
                         )
                     ]
                 )
@@ -80,10 +91,9 @@ class RPNHead(object):
                 cls_logit_list.append(
                     [
                         flow.dynamic_reshape(x, shape=[-1])
-                        for x in flow.piece_slice(
+                        for x in piece_slice_with_bw(
                             cls_logit_per_layer,
                             self.cfg.TRAINING_CONF.IMG_PER_GPU,
-                            need_bw=True,
                         )
                     ]
                 )

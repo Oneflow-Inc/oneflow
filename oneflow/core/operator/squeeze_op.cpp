@@ -13,6 +13,12 @@ class SqueezeOp final : public Operator {
 
   Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                              const ParallelContext* parallel_ctx) const override;
+
+ private:
+  Maybe<void> InferBatchAxis(
+      std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override {
+    return NaiveInferBatchAxis(BatchAxis4BnInOp);
+  }
 };
 
 void SqueezeOp::InitFromOpConf() {
@@ -29,8 +35,6 @@ Maybe<void> SqueezeOp::InferBlobDescs(
   *out = *in;
   std::vector<int64_t> dim_vec = in->shape().dim_vec();
   for (const auto& idx : PbRf2StdVec(op_conf().squeeze_conf().axis())) {
-    // do not allow squeeze the first axis for now
-    CHECK_GT_OR_RETURN(idx, 0);
     CHECK_LT_OR_RETURN(idx, dim_vec.size());
     CHECK_EQ_OR_RETURN(dim_vec[idx], 1);
     dim_vec[idx] = -1;

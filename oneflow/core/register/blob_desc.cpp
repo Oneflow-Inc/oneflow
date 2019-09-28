@@ -85,7 +85,8 @@ void BlobDesc::ToProto(BlobDescProto* proto) const {
       }
       header.AddField(
           FieldKey::kLoD,
-          TensorPodDesc(Shape(std::vector<int64_t>{max_reserved_size_for_lod}), DataType::kInt64));
+          TensorPodDesc(Shape(std::vector<int64_t>{max_reserved_size_for_lod + num_of_lod_levels_}),
+                        DataType::kInt64));
       dense_shape_num_axes = shape().NumAxes() - num_of_lod_levels_ + 1;  // 1 for tiled lod dims
     }
     header.AddField(

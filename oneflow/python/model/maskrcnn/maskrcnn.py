@@ -188,7 +188,7 @@ if __name__ == "__main__":
             placeholders["gt_boxes"],
             placeholders["gt_segms"],
             placeholders["gt_labels"],
-        )
+        ).get()
         print(train_loss)
         eval_loss = debug_eval(
             placeholders["images"],
@@ -196,5 +196,5 @@ if __name__ == "__main__":
             placeholders["gt_boxes"],
             placeholders["gt_segms"],
             placeholders["gt_labels"],
-        )
+        ).get()
         print(eval_loss)

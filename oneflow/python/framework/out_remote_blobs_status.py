@@ -135,6 +135,6 @@ class _RemoteBlobPuller(object):
 
     def AsyncPull(self, pull_cb):
         def PullCallback(of_blob):
-            self.result_ndarray_ = of_blob.CopyToNdarray()
+            self.result_ndarray_ = of_blob.CopyToBlob()
             pull_cb()
         inter_user_job_util.AsyncPull(self.op_name_, PullCallback)

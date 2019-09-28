@@ -16,8 +16,9 @@ const PbMessage& ReshapeOp::GetCustomizedConf() const { return op_conf().reshape
 Maybe<void> ReshapeOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
+  const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
-  BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
+  CHECK_OR_RETURN(in_blob_desc->is_dynamic() == false);
   *out_blob_desc = *in_blob_desc;
   const ReshapeOpConf& conf = op_conf().reshape_conf();
   CHECK_GE_OR_RETURN(conf.shape().dim_size(), 1);

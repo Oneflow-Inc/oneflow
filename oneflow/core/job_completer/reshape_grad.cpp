@@ -8,7 +8,8 @@ void GenerateBackwardOpConf(
     bool is_dynamic_reshape, const Operator& op, std::vector<OperatorConf>* op_confs,
     const std::function<LogicalBlobId*(const std::string&)>& DiffLbi4BnInOp) {
   if (is_dynamic_reshape) {
-    CHECK(op.op_conf().has_dynamic_reshape_conf());
+    CHECK(op.op_conf().has_dynamic_reshape_conf() || op.op_conf().has_squeeze_conf()
+          || op.op_conf().has_expand_dims_conf());
   } else {
     CHECK(op.op_conf().has_reshape_conf());
   }
@@ -49,5 +50,7 @@ void GenerateBackwardOpConf4DynamicReshape(
 
 REGISTER_OP_GRAD(OperatorConf::kReshapeConf, GenerateBackwardOpConf4Reshape);
 REGISTER_OP_GRAD(OperatorConf::kDynamicReshapeConf, GenerateBackwardOpConf4DynamicReshape);
+REGISTER_OP_GRAD(OperatorConf::kSqueezeConf, GenerateBackwardOpConf4DynamicReshape);
+REGISTER_OP_GRAD(OperatorConf::kExpandDimsConf, GenerateBackwardOpConf4DynamicReshape);
 
 }  // namespace oneflow

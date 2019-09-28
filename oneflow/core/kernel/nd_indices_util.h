@@ -39,7 +39,7 @@ struct NdIndicesUtil final {
                        const int64_t* dense_shape, Blob* sparse) {
     int64_t num_segms = indices->shape().Count(0, indices->shape().NumAxes() - 1);
     int64_t segm_size = sparse->shape().Count(indices->shape().NumAxes());
-    int64_t segm_dims = indices->shape().At(indices->shape().NumAxes());
+    int64_t segm_dims = indices->shape().At(indices->shape().NumAxes() - 1);
     GatherNdOnDevice<device_type, T, I>::Run(ctx, num_segms, segm_size, segm_dims,
                                              indices->dptr<I>(), dense_shape, dense->dptr<T>(),
                                              sparse->mut_dptr<T>());
@@ -51,7 +51,7 @@ struct NdIndicesUtil final {
                              const int64_t* dense_shape, Blob* dense) {
     int64_t num_segms = indices->shape().Count(0, indices->shape().NumAxes() - 1);
     int64_t segm_size = sparse->shape().Count(indices->shape().NumAxes());
-    int64_t segm_dims = indices->shape().At(indices->shape().NumAxes());
+    int64_t segm_dims = indices->shape().At(indices->shape().NumAxes() - 1);
     ScatterNdOnDevice<device_type, T, I, func>::Run(ctx, num_segms, segm_size, segm_dims,
                                                     indices->dptr<I>(), dense_shape,
                                                     sparse->dptr<T>(), dense->mut_dptr<T>());
@@ -65,6 +65,7 @@ struct IndicesOffset {
     int64_t offset = 0;
     const auto* cur_ids_ptr = indices + (n / segms_size) * segm_dims;
     FOR_RANGE(int64_t, i, 0, segm_dims) {
+      assert(cur_ids_ptr[i] < shape[i]);
       int64_t stride = segms_size;
       FOR_RANGE(int64_t, j, i + 1, segm_dims) { stride *= shape[j]; }
       offset += cur_ids_ptr[i] * stride;

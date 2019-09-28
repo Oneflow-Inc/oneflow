@@ -35,7 +35,9 @@ class LocalScatterNdUpdateOp final : public Operator {
     const BlobDesc* in = GetBlobDesc4BnInOp("in");
     const BlobDesc* indices = GetBlobDesc4BnInOp("indices");
     const BlobDesc* updates = GetBlobDesc4BnInOp("updates");
-
+    CHECK_EQ_OR_RETURN(in->num_of_lod_levels(), 0);
+    CHECK_EQ_OR_RETURN(indices->num_of_lod_levels(), 0);
+    CHECK_EQ_OR_RETURN(updates->num_of_lod_levels(), 0);
     OF_CHECK_EQ(in->data_type(), updates->data_type());
     OF_CHECK(IsIntegralDataType(indices->data_type()));
 

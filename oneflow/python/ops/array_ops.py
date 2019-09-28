@@ -328,35 +328,42 @@ def squeeze(inputs, axis, name=None):
         "name",
         name if name is not None else id_util.UniqueStr("Squeeze_"),
     )
-    assert all(axis_i == -1 or axis_i > 0 for axis_i in axis)
-    shape = []
-    for i, dim in enumerate(inputs.shape):
-        if i in axis:
-            assert dim == 1
-        else:
-            shape.append(dim)
-    return reshape(inputs, shape)
+    assert all(axis_i == -1 or axis_i >= 0 for axis_i in axis)
+    setattr(op_conf.squeeze_conf, "in", inputs.logical_blob_name)
+    op_conf.squeeze_conf.out = "out"
+    op_conf.squeeze_conf.axis.extend(axis)
+    compile_context.CurJobAddOp(op_conf)
+    out_lbi = logical_blob_id_util.LogicalBlobId()
+    setattr(out_lbi, "op_name", op_conf.name)
+    setattr(out_lbi, "blob_name", "out")
+    return remote_blob_util.RemoteBlob(out_lbi)
 
 
 @oneflow_export("expand_dims")
 def expand_dims(inputs, axis, name=None):
-    new_shape = list(inputs.shape)
-    new_shape.insert(axis, 1)
-    return reshape(inputs, new_shape)
+    assert(isinstance(axis, int))
+    if axis < 0:
+        axis = len(inputs.shape) + axis
+    assert(axis <= len(inputs.shape))
+    op_conf = op_conf_util.OperatorConf()
+    setattr(
+        op_conf,
+        "name",
+        name if name is not None else id_util.UniqueStr("Expandims_"),
+    )
+    setattr(op_conf.expand_dims_conf, "in", inputs.logical_blob_name)
+    op_conf.expand_dims_conf.out = "out"
+    op_conf.expand_dims_conf.axis = axis
+    compile_context.CurJobAddOp(op_conf)
+    out_lbi = logical_blob_id_util.LogicalBlobId()
+    setattr(out_lbi, "op_name", op_conf.name)
+    setattr(out_lbi, "blob_name", "out")
+    return remote_blob_util.RemoteBlob(out_lbi)
 
 
 @oneflow_export("piece_slice")
-def piece_slice(inputs, output_size, name=None, need_bw=False):
-    if need_bw:
-        expanded_inputs = reshape(inputs, [1] + list(inputs.shape))	
-        size = [-1, 1] + list(inputs.shape)[1:]	
-        ret = []	
-        for i in range(output_size):	
-            begin = [-1, i] + [0] * (len(inputs.shape) - 1)	
-            output = slice(expanded_inputs, begin, size)	
-            squeezed_output = reshape(output, list(output.shape)[2:])	
-            ret.append(squeezed_output)	
-        return ret
+def piece_slice(inputs, output_size, name=None):
+    assert(inputs.shape[0] == output_size)
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf,
