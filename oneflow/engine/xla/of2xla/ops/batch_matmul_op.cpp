@@ -5,7 +5,7 @@
 #include "oneflow/engine/xla/of2xla/xla_op_context.h"
 
 namespace oneflow {
-namespace mola {
+namespace mla {
 
 class BatchMatMulOp : public XlaOpCompiler {
  public:
@@ -45,5 +45,5 @@ class BatchMatMulOp : public XlaOpCompiler {
 
 REGISTER_XLA_OP_COMPILER(BatchMatMul, BatchMatMulOp);
 
-}  // namespace mola
+}  // namespace mla
 }  // namespace oneflow

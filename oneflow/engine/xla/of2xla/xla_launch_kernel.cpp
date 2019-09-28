@@ -13,19 +13,19 @@ namespace oneflow {
 
 template <DeviceType device_type>
 void XlaLaunchKernel<device_type>::BuildLocalExecutable(
-    mola::XlaLaunchContext *launch_ctx,
+    mla::XlaLaunchContext *launch_ctx,
     const std::vector<Blob *> &entry_blobs,
     const std::vector<Blob *> &return_blobs,
     const std::vector<std::string> &entry_blob_names,
     const std::vector<std::string> &return_blob_names,
     const std::vector<xla::XlaBuilder::InputOutputAlias> &aliases,
-    mola::CompilationResult **compile_result) const {
+    mla::CompilationResult **compile_result) const {
   if (!compilation_cache_) {
-    compilation_cache_.reset(new mola::XlaCompilationCache);
+    compilation_cache_.reset(new mla::XlaCompilationCache);
   }
 
   const int device_ordinal = launch_ctx->device_ordinal();
-  const mola::Signature signature = mola::ComputeSignature(
+  const mla::Signature signature = mla::ComputeSignature(
       launch_ctx->builder()->name(), device_ordinal, entry_blobs);
   bool force_compile = false;
   if (!force_compile) {
@@ -33,12 +33,12 @@ void XlaLaunchKernel<device_type>::BuildLocalExecutable(
   }
 
   if (!(*compile_result)) {
-    auto result = std::make_shared<mola::CompilationResult>();
+    auto result = std::make_shared<mla::CompilationResult>();
     CHECK(this->op_conf().has_xla_launch_conf())
         << "BuildLocalExecutable need a `XlaLaunchOpConf`.";
     const auto &launch_conf = this->op_conf().xla_launch_conf();
-    mola::XlaLaunchGraph graph(launch_conf, &this->job_desc());
-    mola::XlaGraphCompiler compiler(launch_ctx->client(),
+    mla::XlaLaunchGraph graph(launch_conf, &this->job_desc());
+    mla::XlaGraphCompiler compiler(launch_ctx->client(),
                                     launch_ctx->builder());
     *result = compiler.Compile(&graph, entry_blobs, return_blobs,
                                entry_blob_names, return_blob_names,
@@ -52,7 +52,7 @@ void XlaLaunchKernel<device_type>::BuildLocalExecutable(
 
 template <DeviceType device_type>
 void XlaLaunchKernel<device_type>::LaunchExecutable(
-    mola::XlaLaunchContext *launch_ctx,
+    mla::XlaLaunchContext *launch_ctx,
     xla::LocalExecutable *executable,
     const std::vector<Blob *> &entry_blobs,
     const std::vector<xla::Shape> &input_shapes,
@@ -95,7 +95,7 @@ void XlaLaunchKernel<device_type>::LaunchExecutable(
   }
 
   OF_CHECK_AND_ASSIGN(auto run_result, [&]() {
-    mola::XlaLaunchScope scope(executable, launch_ctx);
+    mla::XlaLaunchScope scope(executable, launch_ctx);
 
     xla::ExecutableRunOptions run_options;
     run_options.set_stream(launch_ctx->stream());
@@ -131,7 +131,7 @@ void XlaLaunchKernel<device_type>::LaunchExecutable(
 
 template <DeviceType device_type>
 void XlaLaunchKernel<device_type>::AliasMutableInputsAndOutputs(
-    const mola::LaunchAttrHelper &attr,
+    const mla::LaunchAttrHelper &attr,
     const std::vector<Blob *> &entry_blobs,
     const std::vector<std::string> &entry_blob_names,
     std::vector<Blob *> *return_blobs,
@@ -170,14 +170,14 @@ void XlaLaunchKernel<device_type>::ForwardDataContent(
   
   CHECK(this->op_conf().has_xla_launch_conf());
   const auto &launch_conf = this->op_conf().xla_launch_conf();
-  mola::LaunchAttrHelper attr_helper(launch_conf.attr());
+  mla::LaunchAttrHelper attr_helper(launch_conf.attr());
   std::vector<xla::XlaBuilder::InputOutputAlias> aliases;
   AliasMutableInputsAndOutputs(attr_helper, entry_blobs, entry_blob_names,
                                &return_blobs, &return_blob_names, &aliases);
   
-  mola::XlaLaunchContext launch_ctx(this->op_conf().name(), ctx.device_ctx,
+  mla::XlaLaunchContext launch_ctx(this->op_conf().name(), ctx.device_ctx,
                                     device_type, 1 /*intra_op_num_threads*/);
-  mola::CompilationResult *compile_result = nullptr;
+  mla::CompilationResult *compile_result = nullptr;
   BuildLocalExecutable(&launch_ctx, entry_blobs, return_blobs,
                        entry_blob_names, return_blob_names, aliases,
                        &compile_result);

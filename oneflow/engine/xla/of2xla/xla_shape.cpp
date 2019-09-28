@@ -8,7 +8,7 @@
 #include "oneflow/engine/xla/of2xla/xla_shape.h"
 
 namespace oneflow {
-namespace mola {
+namespace mla {
 
 Shape XlaShapeToOfShape(const xla::Shape &xla_shape) {
   CHECK(!xla_shape.IsTuple());
@@ -48,5 +48,5 @@ Shape SliceShape(const Shape &shape, size_t start_dim, size_t end_dim) {
   return Shape(slice_shape);
 }
 
-}  // namespace mola
+}  // namespace mla
 }  // namespace oneflow

@@ -4,7 +4,7 @@
 #include "oneflow/engine/xla/of2xla/xla_graph.h"
 
 namespace oneflow {
-namespace mola {
+namespace mla {
 
 struct OptimizeOptions {
   XlaGraph *graph;
@@ -59,7 +59,7 @@ class OptimizePassRegistrar {
 
 void RunOptimizePass(const std::string &pass, OptimizeOptions &options);
 
-}  // namespace mola
+}  // namespace mla
 }  // namespace oneflow
 
 #endif  // ONEFLOW_ENGINE_PASS_OPTIMIZE_PASS_H_

@@ -6,7 +6,7 @@
 #include "oneflow/engine/xla/of2xla/xla_utility.h"
 
 namespace oneflow {
-namespace mola {
+namespace mla {
 
 class Argument {
  public:
@@ -49,20 +49,20 @@ class Argument {
     return blob_id_ == rhs.blob_id_;
   }
 
-  friend struct std::hash<oneflow::mola::Argument>;
+  friend struct std::hash<oneflow::mla::Argument>;
 
  private:
   LogicalBlobId blob_id_;
   BlobDesc blob_desc_;
 };
 
-}  // namespace mola
+}  // namespace mla
 }  // namespace oneflow
 
 namespace std {
 template<>
-struct hash<oneflow::mola::Argument> {
-  size_t operator()(const oneflow::mola::Argument& arg) const {
+struct hash<oneflow::mla::Argument> {
+  size_t operator()(const oneflow::mla::Argument& arg) const {
     return std::hash<oneflow::LogicalBlobId>()(arg.blob_id_);
   }
 };

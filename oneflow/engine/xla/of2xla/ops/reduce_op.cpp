@@ -8,7 +8,7 @@
 #include "oneflow/engine/xla/of2xla/xla_helpers.h"
 
 namespace oneflow {
-namespace mola {
+namespace mla {
 
 class ReduceOp : public XlaOpCompiler {
  public:
@@ -60,5 +60,5 @@ class ReduceSumOp : public ReduceOp {
 
 REGISTER_XLA_OP_COMPILER(ReduceSum, ReduceSumOp);
 
-}  // namespace mola
+}  // namespace mla
 }  // namespace oneflow

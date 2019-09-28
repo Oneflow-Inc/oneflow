@@ -22,15 +22,15 @@ class XlaLaunchKernel : public KernelIf<device_type> {
       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 
   void BuildLocalExecutable(
-      mola::XlaLaunchContext *launch_ctx,
+      mla::XlaLaunchContext *launch_ctx,
       const std::vector<Blob *> &entry_blobs,
       const std::vector<Blob *> &return_blobs,
       const std::vector<std::string> &entry_blob_names,
       const std::vector<std::string> &return_blob_names,
       const std::vector<xla::XlaBuilder::InputOutputAlias> &aliases,
-      mola::CompilationResult **compile_result) const;
+      mla::CompilationResult **compile_result) const;
 
-  void LaunchExecutable(mola::XlaLaunchContext *launch_ctx,
+  void LaunchExecutable(mla::XlaLaunchContext *launch_ctx,
                         xla::LocalExecutable *executable,
                         const std::vector<Blob *> &entry_blobs,
                         const std::vector<xla::Shape> &input_shapes,
@@ -39,14 +39,14 @@ class XlaLaunchKernel : public KernelIf<device_type> {
                         bool block_host_until_done) const;
 
   void AliasMutableInputsAndOutputs(
-    const mola::LaunchAttrHelper &attr,
+    const mla::LaunchAttrHelper &attr,
     const std::vector<Blob *> &entry_blobs,
     const std::vector<std::string> &entry_blob_names,
     std::vector<Blob *> *return_blobs,
     std::vector<std::string> *return_blob_names,
     std::vector<xla::XlaBuilder::InputOutputAlias> *aliases) const;
 
-  mutable std::shared_ptr<mola::XlaCompilationCache> compilation_cache_;
+  mutable std::shared_ptr<mla::XlaCompilationCache> compilation_cache_;
 };
 
 }  // namespace oneflow

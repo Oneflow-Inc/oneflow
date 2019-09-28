@@ -9,7 +9,7 @@
 #include "oneflow/engine/xla/of2xla/xla_launch_context.h"
 
 namespace oneflow {
-namespace mola {
+namespace mla {
 
 class XlaLaunchScope {
  public:
@@ -51,7 +51,7 @@ XlaLaunchScope::~XlaLaunchScope() {
   launch_ctx_->allocator()->UnlockWorkspace();
 }
 
-}  // namespace mola
+}  // namespace mla
 }  // namespace oneflow
 
 #endif  // ONEFLOW_ENGINE_XLA_OF2XLA_XLA_LAUNCH_SCOPE_H_  

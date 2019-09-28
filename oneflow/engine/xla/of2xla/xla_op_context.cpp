@@ -7,7 +7,7 @@
 #include "oneflow/engine/xla/of2xla/xla_op_context.h"
 
 namespace oneflow {
-namespace mola {
+namespace mla {
 
 xla::Shape GetXlaOpShape(const xla::XlaOp &handle) {
   CHECK(!handle.IsUninitialized()) << "XlaOp has not been initialized.";
@@ -133,5 +133,5 @@ std::string XlaOpContext::AttrTypeInOneof(const std::string &oneof_name) const {
   return fd->name();
 }
 
-}  // namespace mola
+}  // namespace mla
 }  // namespace oneflow

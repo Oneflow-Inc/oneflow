@@ -4,7 +4,7 @@
 #include "oneflow/engine/xla/of2xla/xla_graph.h"
 
 namespace oneflow {
-namespace mola {
+namespace mla {
 
 static const BlobDesc &LbiBlobDesc(const OpNode *op_node,
                                    const LogicalBlobId &lbi) {
@@ -209,5 +209,5 @@ void XlaLaunchGraph::BuildLaunchGraph() {
   }
 }
 
-}  // namespace mola
+}  // namespace mla
 }  // namespace oneflow

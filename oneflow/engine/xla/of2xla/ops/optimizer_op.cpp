@@ -8,7 +8,7 @@
 #include "oneflow/engine/xla/of2xla/xla_helpers.h"
 
 namespace oneflow {
-namespace mola {
+namespace mla {
 
 class AdamOptimizerOp : public XlaOpCompiler {
  public:
@@ -65,5 +65,5 @@ void AdamOptimizerOp::Compile(XlaOpContext *ctx) {
 REGISTER_XLA_OP_COMPILER(AdamOptimizer, AdamOptimizerOp)
     .MutableVariables({"weight", "m", "v"});
 
-}  // namespace mola
+}  // namespace mla
 }  // namespace oneflow

@@ -16,7 +16,7 @@ static ParallelContext LocalParallelContext(int device_ordinal) {
   return parallel_ctx;
 }
 
-namespace mola {
+namespace mla {
 
 xla::LocalClient* XlaLaunchResourceMgr::GetOrCreateLocalClient(
     const se::Platform *platform, int intra_op_num_threads) {
@@ -114,5 +114,5 @@ void XlaLaunchContext::PopulateResultBuffers(
   allocator_->PopulateDeviceMemory(device_buffers, allocation_indices);
 }
 
-}  // namespace mola
+}  // namespace mla
 }  // namespace oneflow

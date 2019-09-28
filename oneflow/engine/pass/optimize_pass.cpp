@@ -3,7 +3,7 @@
 #include "oneflow/engine/pass/optimize_pass.h"
 
 namespace oneflow {
-namespace mola {
+namespace mla {
 
 typedef std::unordered_map<std::string, OptimizePass::PassFactory>
     PassFactoryMap;
@@ -31,10 +31,10 @@ OptimizePass *OptimizePass::Create(const std::string &pass_type,
 }
 
 void RunOptimizePass(const std::string &pass, OptimizeOptions &options) {
-  auto optimize_pass = std::shared_ptr<mola::OptimizePass>(
-      mola::OptimizePass::Create(pass, options));
+  auto optimize_pass = std::shared_ptr<mla::OptimizePass>(
+      mla::OptimizePass::Create(pass, options));
   optimize_pass->Run();
 }
 
-}  // namespace mola
+}  // namespace mla
 }  // namespace oneflow

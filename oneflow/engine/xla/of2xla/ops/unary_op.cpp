@@ -8,7 +8,7 @@
 #include "oneflow/engine/xla/of2xla/ops/unary_op.h"
 
 namespace oneflow {
-namespace mola {
+namespace mla {
 
 template <typename UnaryOp>
 class ApplyUnaryOp : public XlaOpCompiler {
@@ -43,5 +43,5 @@ struct Identity {
 
 REGISTER_XLA_OP_COMPILER(Identity, ApplyUnaryOp<Identity>);
 
-}  // namespace mola
+}  // namespace mla
 }  // namespace oneflow

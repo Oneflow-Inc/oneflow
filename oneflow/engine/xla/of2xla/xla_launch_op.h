@@ -30,7 +30,7 @@ class XlaLaunchOp : public Operator {
     SbpInferHint4IbnFunc SbpInferHint4Ibn,
     const ParallelDesc& parallel_desc) const override;
 
-  std::shared_ptr<mola::XlaLaunchGraph> subgraph_;
+  std::shared_ptr<mla::XlaLaunchGraph> subgraph_;
 };
 
 }  // namespace oneflow

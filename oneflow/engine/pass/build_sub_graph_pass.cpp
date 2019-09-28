@@ -7,7 +7,7 @@
 #include "oneflow/engine/xla/of2xla/xla_utility.h"
 
 namespace oneflow {
-namespace mola {
+namespace mla {
 
 extern const std::string _XlaLaunchOpType = "XlaLaunch";
 extern const std::string _XlaArgumentOpType = "XlaArgument";
@@ -245,5 +245,5 @@ void BuildSubGraphPass::RebuildSubgraphOutputs(
 
 REGISTER_OPTIMIZE_PASS(BuildSubGraph, BuildSubGraphPass);
 
-}  // namespace mola
+}  // namespace mla
 }  // namespace oneflow

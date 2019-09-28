@@ -10,7 +10,7 @@
 #include "oneflow/engine/xla/of2xla/xla_op_compiler.h"
 
 namespace oneflow {
-namespace mola {
+namespace mla {
 
 class XlaOpCompilerRegistry {
  public:
@@ -176,7 +176,7 @@ inline std::shared_ptr<XlaOpCompiler> CreateXlaOpCompiler(
       XlaOpCompilerRegistry::Build(backend, op_type));
 }
 
-}  // namespace mola
+}  // namespace mla
 }  // namespace oneflow
 
 #endif  // ONEFLOW_ENGINE_XLA_OF2XLA_XLA_OP_COMPILER_REGISTRY_H_  

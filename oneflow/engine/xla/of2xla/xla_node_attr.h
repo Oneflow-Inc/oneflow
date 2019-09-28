@@ -6,7 +6,7 @@
 #include "oneflow/engine/xla/of2xla/xla_node.h"
 
 namespace oneflow {
-namespace mola {
+namespace mla {
 
 template <typename T>
 T GetNodeAttr(const XlaNode *node, const std::string &attr_name) {
@@ -25,7 +25,7 @@ PbMessagePtr GetNodeAttr<PbMessagePtr>(const XlaNode *node,
 std::string GetNodeAttrAsString(const XlaNode *node,
                                 const std::string &attr_name);
 
-}  // namespace mola
+}  // namespace mla
 }  // namespace oneflow
 
 #endif  // ONEFLOW_ENGINE_XLA_OF2XLA_XLA_NODE_ATTR_H_

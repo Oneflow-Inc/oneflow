@@ -1,7 +1,7 @@
 #include "oneflow/engine/xla/of2xla/xla_compilation_cache.h"
 
 namespace oneflow {
-namespace mola {
+namespace mla {
 
 bool Signature::operator==(const Signature &other) const {
   return this->name == other.name &&
@@ -49,12 +49,12 @@ void XlaCompilationCache::Release() {
   records_.swap(empty_records);
 }
 
-}  // namespace mola
+}  // namespace mla
 }  // namespace oneflow
 
 namespace std {
-size_t hash<oneflow::mola::Signature>::operator()(
-    const oneflow::mola::Signature &signature) const {
+size_t hash<oneflow::mla::Signature>::operator()(
+    const oneflow::mla::Signature &signature) const {
   size_t hash_val = std::hash<std::string>()(signature.name) ^
                     std::hash<int>()(signature.device_ordinal);
   for (const auto &shape : signature.entry_shapes) {

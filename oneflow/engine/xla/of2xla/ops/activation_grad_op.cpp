@@ -8,7 +8,7 @@
 #include "oneflow/engine/xla/of2xla/xla_helpers.h"
 
 namespace oneflow {
-namespace mola {
+namespace mla {
 
 class TanhGradOp : public XlaOpCompiler {
  public:
@@ -42,5 +42,5 @@ class GeluGradOp : public XlaOpCompiler {
 };
 REGISTER_XLA_OP_COMPILER(GeluGrad, GeluGradOp);
 
-}  // namespace mola
+}  // namespace mla
 }  // namespace oneflow

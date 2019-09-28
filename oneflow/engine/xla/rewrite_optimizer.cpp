@@ -17,32 +17,32 @@ namespace oneflow {
 // Rewrite model update ops to optimizer graphs
 class OptimizerRewritor {
  public:
-  OptimizerRewritor(const mola::XlaGraph &graph, Job *job)
+  OptimizerRewritor(const mla::XlaGraph &graph, Job *job)
       : graph_(graph), builder_(std::make_shared<JobBuilder>(job)) {}
 
   virtual void Run();
 
  private:
-  OptimizerMode GetOptimizerModeIfModelUpdate(const mola::XlaNode *node) const;
+  OptimizerMode GetOptimizerModeIfModelUpdate(const mla::XlaNode *node) const;
 
   OperatorConf *BuildClipGradientOp(const std::string &node_name,
                                     const std::string &gradient,
                                     const std::string &total_instances,
                                     const ClipConf &clip_conf);
 
-  OperatorConf *BuildOptimizerOp(const mola::XlaNode *node,
+  OperatorConf *BuildOptimizerOp(const mla::XlaNode *node,
                                  const std::string &gradient,
                                  const std::string &total_instances,
                                  const std::string &learning_rate);
 
-  std::vector<std::string> GetControlInOpNames(const mola::XlaNode *node) const;
+  std::vector<std::string> GetControlInOpNames(const mla::XlaNode *node) const;
 
-  const mola::XlaGraph &graph_;
+  const mla::XlaGraph &graph_;
   std::shared_ptr<JobBuilder> builder_;
 };
 
 OptimizerMode OptimizerRewritor::GetOptimizerModeIfModelUpdate(
-    const mola::XlaNode *node) const {
+    const mla::XlaNode *node) const {
   if (node->op_type() == "NavieModelUpdate") {
     return OptimizerMode::kNaive;
   } else if (node->op_type() == "MomentumModelUpdate") {
@@ -82,7 +82,7 @@ OperatorConf *OptimizerRewritor::BuildClipGradientOp(
 }
 
 OperatorConf *OptimizerRewritor::BuildOptimizerOp(
-                    const mola::XlaNode *node,
+                    const mla::XlaNode *node,
                     const std::string &gradient,
                     const std::string &total_instances,
                     const std::string &learning_rate) {
@@ -97,7 +97,7 @@ OperatorConf *OptimizerRewritor::BuildOptimizerOp(
 }
 
 std::vector<std::string> OptimizerRewritor::GetControlInOpNames(
-    const mola::XlaNode *node) const {
+    const mla::XlaNode *node) const {
   const auto &op_conf = builder_->GetOpConf(node->op_name());
   std::vector<std::string> ctrl_in_op_names;
   for (const std::string &name : op_conf.ctrl_in_op_name()) {
@@ -115,14 +115,14 @@ void SetControlInOpNames(OperatorConf *op_conf,
 }
 
 void OptimizerRewritor::Run() {
-  for (const mola::XlaNode *node : graph_.Nodes()) {
+  for (const mla::XlaNode *node : graph_.Nodes()) {
     OptimizerMode mode = GetOptimizerModeIfModelUpdate(node);
     if (mode == OptimizerMode::kInvalid) {
       // Skip the node if it is not a model update node
       continue;
     }
-    using mola::GetNodeAttr;
-    using mola::GetNodeAttrAsString;
+    using mla::GetNodeAttr;
+    using mla::GetNodeAttrAsString;
     std::string learning_rate = GetNodeAttrAsString(node, "learning_rate");
     std::string model_diff = GetNodeAttrAsString(node, "model_diff");
     std::string total_instances =
@@ -156,7 +156,7 @@ void OptimizerRewritor::Run() {
   }
 }
 
-void RewriteOptimizerGraph(const mola::XlaGraph &graph, Job *job) {
+void RewriteOptimizerGraph(const mla::XlaGraph &graph, Job *job) {
   OptimizerRewritor(graph, job).Run();
 }
 

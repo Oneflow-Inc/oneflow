@@ -7,7 +7,7 @@
 #include "oneflow/core/operator/op_conf.pb.h"
 
 namespace oneflow {
-namespace mola {
+namespace mla {
 
 class LaunchAttrHelper {
  public:
@@ -41,7 +41,7 @@ class LaunchAttrHelper {
   std::unordered_set<std::string> mutable_args_;
 };
 
-}  // namespace mola
+}  // namespace mla
 }  // namespace oneflow
 
 #endif  // ONEFLOW_ENGINE_XLA_OF2XLA_XLA_LAUNCH_ATTR_H_

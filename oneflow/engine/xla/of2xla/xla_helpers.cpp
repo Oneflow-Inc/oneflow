@@ -6,7 +6,7 @@
 #include "oneflow/engine/xla/of2xla/xla_helpers.h"
 
 namespace oneflow {
-namespace mola {
+namespace mla {
 
 std::vector<long long> AsLLongVec(const std::vector<int64_t> &int64_vec) {
   std::vector<long long> llong_vec(int64_vec.size());
@@ -87,5 +87,5 @@ OFXLA_CREATE_BINARY_COMPUTATION_FUNC(Sub);
 OFXLA_CREATE_BINARY_COMPUTATION_FUNC(Mul);
 OFXLA_CREATE_BINARY_COMPUTATION_FUNC(Div);
 
-}  // namespace mola
+}  // namespace mla
 }  // namespace oneflow

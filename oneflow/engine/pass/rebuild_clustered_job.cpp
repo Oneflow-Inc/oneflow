@@ -16,16 +16,16 @@
 
 namespace oneflow {
 
-using XlaNode = mola::XlaNode;
-using XlaEdge = mola::XlaEdge;
-using Argument = mola::Argument;
-using XlaGraph = mola::XlaGraph;
+using XlaNode = mla::XlaNode;
+using XlaEdge = mla::XlaEdge;
+using Argument = mla::Argument;
+using XlaGraph = mla::XlaGraph;
 
-namespace mola {
+namespace mla {
 extern const std::string _XlaLaunchOpType;
 extern const std::string _XlaInArgumentPrefix;
 extern const std::string _XlaOutArgumentPrefix;
-}  // namespace mola
+}  // namespace mla
 
 template <typename T>
 using RepeatedPtrField = google::protobuf::RepeatedPtrField<T>;
@@ -143,7 +143,7 @@ class FoldSubgraphBuilder {
 FoldSubgraphBuilder::FoldSubgraphBuilder(const XlaGraph &graph, Job *job)
     : graph_(graph) {
   for (const XlaNode *node : graph_.Nodes()) {
-    if (node->op_type() == mola::_XlaLaunchOpType) {
+    if (node->op_type() == mla::_XlaLaunchOpType) {
       launch_nodes_.push_back(node);
     }
   }
@@ -203,7 +203,7 @@ void FoldSubgraphBuilder::buildXlaLaunchAttribute(
     } else {
       auto *argument_proto = launch_attr->add_argument();
       argument_proto->set_name(node->op_name());
-      DeviceType device_type = mola::BackendToDeviceType(node->backend());
+      DeviceType device_type = mla::BackendToDeviceType(node->backend());
       argument_proto->set_device_type(device_type);
       // Usually one argument node has either inputs or outputs
       CHECK(node->in_edges().size() == 0 || node->out_edges().size() == 0);
@@ -273,10 +273,10 @@ void AddOutBlobNames(const std::list<XlaEdge *> &out_edges,
 void FoldSubgraphBuilder::BuildXlaLaunchOps() {
   for (int i = 0; i < launch_nodes_.size(); ++i) {
     const XlaNode *node = launch_nodes_[i];
-    // Add mola launch operator
+    // Add mla launch operator
     OperatorConf op_conf; 
     op_conf.set_name(node->op_name());
-    DeviceType device_type = mola::BackendToDeviceType(node->backend());
+    DeviceType device_type = mla::BackendToDeviceType(node->backend());
     op_conf.set_device_type(device_type);
 
     XlaLaunchOpConf *launch_conf = op_conf.mutable_xla_launch_conf();
@@ -368,7 +368,7 @@ void FoldSubgraphBuilder::FixupInOutBlobNames() {
       if (edge->IsControlEdge() || !changed_nodes.insert(end).second) {
         continue;
       }
-      if (end->op_type() == mola::_XlaLaunchOpType) {
+      if (end->op_type() == mla::_XlaLaunchOpType) {
         auto *launch_conf = builder_->MutableOpConf(end->op_name())
                                     ->mutable_xla_launch_conf();
         for (auto &blob_name : *launch_conf->mutable_in()) {
@@ -441,7 +441,7 @@ void FoldSubgraphBuilder::FixupSbpSignatures() {
       (*sbp_signatures)[bn] = edge->sbp_policy(0);
     }
     auto *resource_scope = attr_proto->mutable_resource_scope();
-    // Append sbp signatures to mola launch operator
+    // Append sbp signatures to mla launch operator
     *(resource_scope->mutable_sbp_signatures()) = *sbp_signatures;
     // Append sbp signatures to helper
     builder_->AddSbpSignature(node->op_name(), sbp_conf);

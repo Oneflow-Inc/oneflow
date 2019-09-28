@@ -4,7 +4,7 @@
 #include "tensorflow/compiler/xla/client/xla_builder.h"
 
 namespace oneflow {
-namespace mola {
+namespace mla {
 namespace op {
 
 #define OFXLA_DECLARE_BINARY_OP(op)                     \
@@ -21,7 +21,7 @@ OFXLA_DECLARE_BINARY_OP(Div);
 #undef OFXLA_DECLARE_BINARY_OP
 
 }  // namespace op
-}  // namespace mola
+}  // namespace mla
 }  // namespace oneflow
 
 #endif  // ONEFLOW_ENGINE_XLA_OF2XLA_OPS_BINARY_OP_H_

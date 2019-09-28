@@ -7,7 +7,7 @@
 #include "oneflow/engine/xla/of2xla/ops/binary_op.h"
 
 namespace oneflow {
-namespace mola {
+namespace mla {
 
 template <typename BinaryOp>
 class BcastBinaryOp : public XlaOpCompiler {
@@ -53,5 +53,5 @@ REGISTER_XLA_OP_COMPILER(BcastAdd, BcastBinaryOp<op::Add>);
 REGISTER_XLA_OP_COMPILER(BcastMul, BcastBinaryOp<op::Mul>);
 REGISTER_XLA_OP_COMPILER(BcastDiv, BcastBinaryOp<op::Div>);
 
-}  // namespace mola
+}  // namespace mla
 }  // namespace oneflow

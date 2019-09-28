@@ -8,7 +8,7 @@
 #include "oneflow/engine/xla/of2xla/xla_helpers.h"
 
 namespace oneflow {
-namespace mola {
+namespace mla {
 
 class LayerNormOp : public XlaOpCompiler {
  public:
@@ -176,5 +176,5 @@ REGISTER_XLA_OP_COMPILER(LayerNorm, LayerNormOp);
 REGISTER_XLA_OP_COMPILER(LayerNormParamGrad, LayerNormParamGradOp);
 REGISTER_XLA_OP_COMPILER(LayerNormGrad, LayerNormGradOp);
 
-}  // namespace mola
+}  // namespace mla
 }  // namespace oneflow

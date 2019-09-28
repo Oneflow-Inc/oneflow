@@ -4,7 +4,7 @@
 #include "oneflow/engine/xla/of2xla/xla_op_context.h"
 
 namespace oneflow {
-namespace mola {
+namespace mla {
 
 class XlaArgumentOp : public XlaOpCompiler {
  public:
@@ -16,5 +16,5 @@ class XlaArgumentOp : public XlaOpCompiler {
 
 REGISTER_XLA_OP_COMPILER(XlaArgument, XlaArgumentOp);
 
-}  // namespace mola
+}  // namespace mla
 }  // namespace oneflow

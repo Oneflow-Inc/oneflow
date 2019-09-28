@@ -10,7 +10,7 @@
 #include "oneflow/engine/xla/of2xla/xla_graph.h"
 
 namespace oneflow {
-namespace mola {
+namespace mla {
 
 struct CompilationResult {
   std::vector<xla::Shape> xla_input_shapes;
@@ -69,7 +69,7 @@ class XlaGraphCompiler {
   std::unordered_map<std::string, Argument> arguments_;
 };
 
-}  // namespace mola
+}  // namespace mla
 }  // namespace oneflow
 
 #endif  //ONEFLOW_ENGINE_XLA_OF2XLA_XLA_GRAPH_COMPILER_H_  

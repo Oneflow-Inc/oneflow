@@ -13,20 +13,20 @@
 #include "oneflow/engine/xla/of2xla/xla_graph_compiler.h"
 
 namespace oneflow {
-namespace mola {
+namespace mla {
 struct Signature;
-}  // namespace mola
+}  // namespace mla
 }  // namespace oneflow
 
 namespace std {
 template <>
-struct hash<oneflow::mola::Signature> {
-  size_t operator()(const oneflow::mola::Signature &signature) const; 
+struct hash<oneflow::mla::Signature> {
+  size_t operator()(const oneflow::mla::Signature &signature) const; 
 };
 }  // namespace std
 
 namespace oneflow {
-namespace mola {
+namespace mla {
 
 struct Signature {
   // Builder name
@@ -59,7 +59,7 @@ class XlaCompilationCache {
   std::unordered_map<Signature, std::shared_ptr<CompilationResult>> records_;
 };
 
-}  // namespace mola
+}  // namespace mla
 }  // namespace oneflow
 
 #endif  // ONEFLOW_ENGINE_XLA_OF2XLA_XLA_COMPILATION_CACHE_H_

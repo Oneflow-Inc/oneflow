@@ -15,7 +15,7 @@
 #include "oneflow/engine/xla/of2xla/xla_graph_compiler.h"
 
 namespace oneflow {
-namespace mola {
+namespace mla {
 
 XlaGraphCompiler::XlaGraphCompiler(xla::LocalClient *client,
                                    xla::XlaBuilder *builder)
@@ -219,5 +219,5 @@ void XlaGraphCompiler::BuildArguments(
   }
 }
 
-}  // namespace mola
+}  // namespace mla
 }  // namespace oneflow

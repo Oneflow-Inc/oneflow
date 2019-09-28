@@ -6,7 +6,7 @@
 #include "oneflow/engine/xla/of2xla/xla_shape.h"
 
 namespace oneflow {
-namespace mola {
+namespace mla {
 
 xla::XlaOp One(xla::XlaBuilder *builder, DataType data_type);
 
@@ -44,7 +44,7 @@ xla::XlaComputation CreateMulFunc(DataType data_type);
 
 xla::XlaComputation CreateDivFunc(DataType data_type);
 
-}  // namespace mola
+}  // namespace mla
 }  // namespace oneflow
 
 #endif  //ONEFLOW_ENGINE_XLA_OF2XLA_XLA_HELPERS_H_  

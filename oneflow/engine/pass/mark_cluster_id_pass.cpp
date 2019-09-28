@@ -5,7 +5,7 @@
 #include "oneflow/engine/xla/of2xla/xla_utility.h"
 
 namespace oneflow {
-namespace mola {
+namespace mla {
 
 class MarkClusterIdPass : public OptimizePass {
  public:
@@ -238,5 +238,5 @@ void MarkClusterIdPass::Cluster::Merge(
 
 REGISTER_OPTIMIZE_PASS(MarkClusterId, MarkClusterIdPass);
 
-}  // namespace mola
+}  // namespace mla
 }  // namespace oneflow

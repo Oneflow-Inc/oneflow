@@ -6,7 +6,7 @@
 #include "oneflow/engine/xla/of2xla/xla_helpers.h"
 
 namespace oneflow {
-namespace mola {
+namespace mla {
 
 class ReshapeOp : public XlaOpCompiler {
  public:
@@ -56,5 +56,5 @@ class ReshapeLikeOp : public XlaOpCompiler {
 
 REGISTER_XLA_OP_COMPILER(ReshapeLike, ReshapeLikeOp);
 
-}  // namespace mola
+}  // namespace mla
 }  // namespace oneflow

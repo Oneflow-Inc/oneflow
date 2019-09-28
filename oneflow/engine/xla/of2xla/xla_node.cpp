@@ -5,7 +5,7 @@
 #include "oneflow/engine/xla/of2xla/xla_op_compiler_registry.h"
 
 namespace oneflow {
-namespace mola {
+namespace mla {
 
 const SbpParallel &XlaEdge::sbp_policy(int index) const {
   CHECK_LT(index, 2);
@@ -194,5 +194,5 @@ bool IsMutableArgument(const XlaNode *node, const Argument &argument) {
   return false;
 }
 
-}  // namespace mola
+}  // namespace mla
 }  // namespace oneflow

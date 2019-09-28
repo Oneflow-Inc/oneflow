@@ -10,7 +10,7 @@ namespace oneflow {
 // the job, We will add several xla launch operators in the job, and remove the
 // folded nodes. In xla launch operator, we wll reconstruct the subgraph and
 // insert argument nodes if necessary.
-void RebuildClusteredJob(const mola::XlaGraph &graph, Job *job);
+void RebuildClusteredJob(const mla::XlaGraph &graph, Job *job);
 
 }  // namespace oneflow
 

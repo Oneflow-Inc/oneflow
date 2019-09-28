@@ -4,7 +4,7 @@
 #include "oneflow/engine/xla/of2xla/xla_op_context.h"
 
 namespace oneflow {
-namespace mola {
+namespace mla {
 
 class TransposeOp : public XlaOpCompiler {
  public:
@@ -39,5 +39,5 @@ class TransposeOp : public XlaOpCompiler {
 
 REGISTER_XLA_OP_COMPILER(Transpose, TransposeOp);
 
-}  // namespace mola
+}  // namespace mla
 }  // namespace oneflow

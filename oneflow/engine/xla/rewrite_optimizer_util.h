@@ -17,7 +17,7 @@ typedef enum class {
 class OptimizerParamBuilder {
  public:
   static OperatorConf Build(const OptimizerMode &mode,
-                            const mola::XlaNode *node,
+                            const mla::XlaNode *node,
                             const std::string &gradient,
                             const std::string &total_instances,
                             const std::string &learning_rate);
@@ -25,7 +25,7 @@ class OptimizerParamBuilder {
  private:
   class BuilderImpl {
    public:
-    BuilderImpl(const mola::XlaNode *node, const std::string &gradient,
+    BuilderImpl(const mla::XlaNode *node, const std::string &gradient,
                 const std::string &total_instances,
                 const std::string &learning_rate, OperatorConf *op_conf)
         : node_(node), gradient_(gradient), total_instances_(total_instances),
@@ -35,7 +35,7 @@ class OptimizerParamBuilder {
     void ApplyBuild();
 
    private:
-    const mola::XlaNode *node_;
+    const mla::XlaNode *node_;
     const std::string &gradient_;
     const std::string &total_instances_;
     const std::string &learning_rate_;

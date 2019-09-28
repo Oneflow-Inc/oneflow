@@ -8,7 +8,7 @@
 #include "tensorflow/stream_executor/platform.h"
 
 namespace oneflow {
-namespace mola {
+namespace mla {
 
 namespace se = tensorflow::se;
 
@@ -75,7 +75,7 @@ class MemoryPoolRegistarr {
       _device_memory_pool_##Derived##_ __attribute__((unused)) = \
       MemoryPoolRegistarr<Derived>(PlatformId)
 
-}  // namespace mola
+}  // namespace mla
 }  // namespace oneflow
 
 #endif  // ONEFLOW_XLA_OF2XLA_MEMORY_DEVICE_MEMORY_POOL_H_

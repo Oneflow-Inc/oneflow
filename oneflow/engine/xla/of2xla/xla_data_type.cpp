@@ -4,7 +4,7 @@
 #include "oneflow/engine/xla/of2xla/xla_data_type.h"
 
 namespace oneflow {
-namespace mola {
+namespace mla {
 
 xla::PrimitiveType DataTypeToPrimitiveType(DataType data_type) {
   switch (data_type) { 
@@ -28,5 +28,5 @@ xla::PrimitiveType DataTypeToPrimitiveType(DataType data_type) {
   }
 }
 
-}  // namespace mola
+}  // namespace mla
 }  // namespace oneflow

@@ -7,7 +7,7 @@
 namespace oneflow {
 
 // Rewrite model update operator to optimizer graph
-void RewriteOptimizerGraph(const mola::XlaGraph &graph, Job *job);
+void RewriteOptimizerGraph(const mla::XlaGraph &graph, Job *job);
 
 }  // namespace oneflow
 

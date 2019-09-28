@@ -4,7 +4,7 @@
 #include "oneflow/engine/xla/of2xla/memory/device_memory_pool.h"
 
 namespace oneflow {
-namespace mola {
+namespace mla {
 namespace memory {
 
 class CpuMemoryPool : public DeviceMemoryPool {
@@ -139,5 +139,5 @@ static MemPoolFactoryMap* GlobalMemPoolFactories() {
   factories->emplace(platform_id, factory);
 }
 
-}  // namespace mola
+}  // namespace mla
 }  // namespace oneflow

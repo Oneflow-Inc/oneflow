@@ -10,7 +10,7 @@
 #include "oneflow/engine/xla/of2xla/xla_argument.h"
 
 namespace oneflow {
-namespace mola {
+namespace mla {
 
 class XlaOprand {
  public:
@@ -127,7 +127,7 @@ Shape XlaOpContext::GetAttr<Shape>(const std::string &attr_name) const;
 template <>
 void XlaOpContext::SetAttr<Shape>(const std::string &attr_name,
                                   const Shape &value);
-}  // namespace mola
+}  // namespace mla
 }  // namespace oneflow
 
 #endif  // ONEFLOW_ENGINE_XLA_OF2XLA_XLA_OP_CONTEXT_H_  

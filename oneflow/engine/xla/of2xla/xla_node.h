@@ -6,7 +6,7 @@
 #include "oneflow/core/graph/op_graph.h"
 
 namespace oneflow {
-namespace mola {
+namespace mla {
 
 std::string DeviceTypeToBackend(DeviceType device_type);
 DeviceType BackendToDeviceType(const std::string &backend);
@@ -150,7 +150,7 @@ bool IsNodeInput(const XlaNode *node, const LogicalBlobId &lbi);
 bool IsNodeOutput(const XlaNode *node, const LogicalBlobId &lbi);
 bool IsMutableArgument(const XlaNode *node, const Argument &argument);
 
-}  // namespace mola
+}  // namespace mla
 }  // namespace oneflow
 
 #endif  // ONEFLOW_ENGINE_XLA_OF2XLA_XLA_NODE_H_

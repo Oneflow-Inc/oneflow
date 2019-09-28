@@ -7,7 +7,7 @@
 #include "oneflow/engine/xla/of2xla/memory/device_memory_pool.h"
 
 namespace oneflow {
-namespace mola {
+namespace mla {
 
 class DeviceBufferAllocator {
  public:
@@ -52,7 +52,7 @@ class DeviceBufferAllocator {
   std::shared_ptr<DeviceMemoryPool> mem_pool_;
 };
 
-}  // namespace mola
+}  // namespace mla
 }  // namespace oneflow
 
 #endif  // ONEFLOW_XLA_OF2XLA_MEMORY_DEVICE_BUFFER_ALLOCATOR_H_

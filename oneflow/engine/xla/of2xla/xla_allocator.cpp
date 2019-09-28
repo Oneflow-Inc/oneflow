@@ -6,7 +6,7 @@
 #include "oneflow/engine/xla/of2xla/xla_allocator.h"
 
 namespace oneflow {
-namespace mola {
+namespace mla {
 
 inline size_t Align(int alignment, size_t size) {
   return (size + alignment - 1) / alignment * alignment;
@@ -80,5 +80,5 @@ void XlaAllocator::PopulateDeviceMemory(
   }
 }
 
-}  // namespace mola
+}  // namespace mla
 }  // namespace oneflow

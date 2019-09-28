@@ -10,7 +10,7 @@ void OptimizerParamBuilder::BuilderImpl::ApplyBuild() {
 
 template <>
 void OptimizerParamBuilder::BuilderImpl::ApplyBuild<OptimizerMode::kAdam>() {
-  using mola::GetNodeAttr;
+  using mla::GetNodeAttr;
   AdamOptimizerOpConf *conf = op_conf_->mutable_adam_optimizer_conf();
   float l1_weight_decay = GetNodeAttr<float>(node_, "l1");
   float l2_weight_decay = GetNodeAttr<float>(node_, "l2");
@@ -55,7 +55,7 @@ void OptimizerParamBuilder::BuilderImpl::ApplyBuild<OptimizerMode::kAdam>() {
 
 /*static*/ OperatorConf OptimizerParamBuilder::Build(
     const OptimizerMode &mode,
-    const mola::XlaNode *node,
+    const mla::XlaNode *node,
     const std::string &gradient,
     const std::string &total_instances,
     const std::string &learning_rate) {

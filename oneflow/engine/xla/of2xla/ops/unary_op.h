@@ -5,7 +5,7 @@
 #include "oneflow/engine/xla/of2xla/xla_data_type.h"
 
 namespace oneflow {
-namespace mola {
+namespace mla {
 namespace op {
 
 #define OFXLA_DECLARE_UNARY_OP(op)               \
@@ -22,7 +22,7 @@ OFXLA_DECLARE_UNARY_OP(Tanh);
 #undef OFXLA_DECLARE_UNARY_OP
 
 }  // namespace op
-}  // namespace mola
+}  // namespace mla
 }  // namespace oneflow
 
 #endif  // ONEFLOW_ENGINE_XLA_OF2XLA_OPS_UNARY_OP_H_  

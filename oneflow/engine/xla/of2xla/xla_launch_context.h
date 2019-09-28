@@ -15,7 +15,7 @@
 #include "oneflow/engine/xla/of2xla/xla_allocator.h"
 
 namespace oneflow {
-namespace mola {
+namespace mla {
 
 class XlaLaunchResourceMgr {
  public:
@@ -75,7 +75,7 @@ class XlaLaunchContext {
   ParallelContext parallel_ctx_;
 };
 
-}  // namespace mola
+}  // namespace mla
 }  // namespace oneflow
 
 #endif  // ONEFLOW_ENGINE_XLA_OF2XLA_XLA_COMPLATION_CONTEXT_H_

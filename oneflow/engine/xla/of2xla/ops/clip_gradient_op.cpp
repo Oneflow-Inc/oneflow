@@ -8,7 +8,7 @@
 #include "oneflow/engine/xla/of2xla/xla_helpers.h"
 
 namespace oneflow {
-namespace mola {
+namespace mla {
 
 class ClipGradientOp : public XlaOpCompiler {
  public:
@@ -53,5 +53,5 @@ void ClipGradientOp::Compile(XlaOpContext *ctx) {
 
 REGISTER_XLA_OP_COMPILER(ClipGradient, ClipGradientOp);
 
-}  // namespace mola
+}  // namespace mla
 }  // namespace oneflow

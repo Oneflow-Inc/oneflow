@@ -1,7 +1,7 @@
 #include "oneflow/engine/xla/of2xla/xla_node_attr.h"
 
 namespace oneflow {
-namespace mola {
+namespace mla {
 
 template <>
 Shape GetNodeAttr<Shape>(const XlaNode *node, const std::string &attr_name) {
@@ -22,5 +22,5 @@ std::string GetNodeAttrAsString(const XlaNode *node,
   return GetNodeAttr<std::string>(node, attr_name);
 }
 
-}  // namespace mola
+}  // namespace mla
 }  // namespace oneflow

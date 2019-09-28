@@ -8,7 +8,7 @@
 #include "oneflow/engine/xla/of2xla/memory/device_buffer_allocator.h"
 
 namespace oneflow {
-namespace mola {
+namespace mla {
 
 namespace se = tensorflow::se;
 using uint64 = tensorflow::uint64;
@@ -48,7 +48,7 @@ class XlaAllocator : public se::DeviceMemoryAllocator {
   std::vector<AllocationBuffer> populated_buffers_;
 };
 
-}  // namespace mola
+}  // namespace mla
 }  // namespace oneflow
 
 #endif  // ONEFLOW_ENGINE_XLA_OF2XLA_XLA_ALLOCATOR_H_

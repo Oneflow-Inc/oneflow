@@ -20,7 +20,7 @@ void XlaLaunchOp::InitFromOpConf() {
     EnrollRepeatedOutputBn("out");
   }
   // Setup subgraph
-  subgraph_.reset(new mola::XlaLaunchGraph(
+  subgraph_.reset(new mla::XlaLaunchGraph(
       op_conf().xla_launch_conf(), &this->job_desc()));
 }
 

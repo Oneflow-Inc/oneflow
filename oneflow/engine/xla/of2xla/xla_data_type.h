@@ -5,12 +5,12 @@
 #include "oneflow/core/common/data_type.pb.h"
 
 namespace oneflow {
-namespace mola {
+namespace mla {
 
 // Convert oneflow `DataType` to xla `PrimitiveType`
 xla::PrimitiveType DataTypeToPrimitiveType(DataType data_type);
 
-}  // namespace mola
+}  // namespace mla
 }  // namespace oneflow
 
 #endif

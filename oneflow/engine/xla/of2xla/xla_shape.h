@@ -7,7 +7,7 @@
 #include "oneflow/core/common/data_type.pb.h"
 
 namespace oneflow {
-namespace mola {
+namespace mla {
 
 Shape XlaShapeToOfShape(const xla::Shape &xla_shape);
 
@@ -18,7 +18,7 @@ xla::Shape OfShapeToXlaShape(const Shape &shape, xla::PrimitiveType type);
 // Returns shape[start_dim:end_dim]
 Shape SliceShape(const Shape &shape, size_t start_dim, size_t end_dim);
 
-}  // namespace mola
+}  // namespace mla
 }  // namespace oneflow
 
 #endif  // ONEFLOW_ENGINE_XLA_OF2XLA_XLA_SHAPE_H_

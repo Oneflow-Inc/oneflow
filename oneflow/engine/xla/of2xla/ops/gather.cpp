@@ -6,7 +6,7 @@
 #include "oneflow/engine/xla/of2xla/xla_op_context.h"
 
 namespace oneflow {
-namespace mola {
+namespace mla {
 
 xla::XlaOp GenericGather(const xla::XlaOp &input, const xla::XlaOp &indices,
                          const Shape &input_shape, const Shape &indices_shape,
@@ -85,5 +85,5 @@ class BatchGatherOp : public GatherOp {
 REGISTER_XLA_OP_COMPILER(Gather, GatherOp);
 REGISTER_XLA_OP_COMPILER(BatchGather, BatchGatherOp);
 
-}  // namespace mola
+}  // namespace mla
 }  // namespace oneflow

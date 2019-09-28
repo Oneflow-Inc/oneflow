@@ -70,14 +70,14 @@ void Compiler::Compile(Job* job, Plan* plan, bool need_job_complete) const {
       absl::StrCat("job_without_xla", job_desc.job_id()))->Write(*job);
   if (FLAGS_use_xla_jit) {
     LOG(INFO) << "Compile the job with XLA JIT support.";
-    mola::XlaGraph graph(Global<OpGraph>::Get());
-    mola::OptimizeOptions options;
+    mla::XlaGraph graph(Global<OpGraph>::Get());
+    mla::OptimizeOptions options;
     options.graph = &graph;
     options.minimum_nodes_in_cluster = 2;
 //    options.maximum_nodes_in_cluster = 50;
 
-    mola::RunOptimizePass("MarkClusterId", options);
-    mola::RunOptimizePass("BuildSubGraph", options);
+    mla::RunOptimizePass("MarkClusterId", options);
+    mla::RunOptimizePass("BuildSubGraph", options);
     // Rebuild Job
     RebuildClusteredJob(graph, job);
 

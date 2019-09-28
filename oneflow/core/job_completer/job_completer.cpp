@@ -133,7 +133,7 @@ void GenerateOpConf4Trainning(const OpGraph& op_graph, JobBuilder* job_builder) 
 }
 
 void RewriteOptimizerOp(const OpGraph& op_graph, Job* job) {
-  mola::XlaGraph graph(&op_graph);
+  mla::XlaGraph graph(&op_graph);
   RewriteOptimizerGraph(graph, job);
 }
 
