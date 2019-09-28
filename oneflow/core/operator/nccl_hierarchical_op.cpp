@@ -54,10 +54,10 @@ class NcclHierarchicalAllReduceOp final : public NcclHierarchicalOp {
   void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                             const ParallelContext* parallel_ctx,
                             KernelConf* kernel_conf) const override {
-    const ParallelDesc& pd =
-        Global<OpGraph>::Get()->OpNode4OpName(this->op_name())->parallel_desc();
     kernel_conf->mutable_nccl_hierarchical_all_reduce_conf()->set_need_do_all_reduce(
-        parallel_ctx->parallel_id() % pd.device_num_of_each_machine() == 0);
+        parallel_ctx->parallel_id()
+            % op_conf().nccl_hierarchical_all_reduce_conf().device_num_of_each_node()
+        == 0);
   }
 };
 

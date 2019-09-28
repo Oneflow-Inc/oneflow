@@ -301,6 +301,8 @@ void LogicalGraph::AddNcclHierarchicalAllReduceV2(LogicalNode* src, LogicalNode*
     all_reduce_op_conf.set_name("nccl_hierarchical_all_reduce_" + NewUniqueId());
     all_reduce_op_conf.set_device_type(src_pd->device_type());
     all_reduce_op_conf.mutable_nccl_hierarchical_all_reduce_conf();
+    all_reduce_op_conf.mutable_nccl_hierarchical_all_reduce_conf()->set_device_num_of_each_node(
+        src_pd->device_num_of_each_machine());
     all_reduce_node->mut_op_vec() = {ConstructOp(all_reduce_op_conf, &GlobalJobDesc())};
     all_reduce_node->mut_parallel_desc() = src_pd;
     all_reduce_node->mut_rank_ctx() = inter_node_ctx;
