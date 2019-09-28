@@ -3,6 +3,7 @@ from __future__ import absolute_import
 import oneflow.core.common.data_type_pb2 as dtype_util
 from oneflow.python.framework.dtype import convert_of_dtype_to_numpy_dtype
 import oneflow.oneflow_internal as oneflow_internal
+import oneflow.python.framework.blob as blob_util
 import numpy as np
 
 class OfBlob(object):
@@ -19,6 +20,8 @@ class OfBlob(object):
         dst_ndarray = np.ndarray(num_axes, dtype=np.int64)
         oneflow_internal.OfBlob_CopyShapeToNumpy(self.of_blob_ptr_, dst_ndarray)
         return tuple(dst_ndarray.tolist())
+
+    def CopyToBlob(self): return blob_util.Blob(self.CopyToNdarray())
 
     def CopyToNdarray(self):
         dst_ndarray = np.ndarray(self._Size, dtype=convert_of_dtype_to_numpy_dtype(self.dtype))
