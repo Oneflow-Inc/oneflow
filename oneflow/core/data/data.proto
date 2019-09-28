@@ -42,6 +42,7 @@ enum DataSourceCase {
   kObjectLabel = 5;
   kImageScale = 6;
   kImageSize = 7;
+  kObjectSegmentationMask = 8;
 }
 
 message DataFieldProto {
@@ -67,9 +68,15 @@ message TargetResizeTransform {
   required int32 alignment = 3;
 }
 
+message SegmentationPolygonListToMask {
+  required int32 mask_h = 1;
+  required int32 mask_w = 2;
+}
+
 message DataTransformProto {
   oneof transform {
     ResizeTransform resize = 1;
     TargetResizeTransform target_resize = 2;
+    SegmentationPolygonListToMask segmentation_poly_to_mask = 3;
   }
 }

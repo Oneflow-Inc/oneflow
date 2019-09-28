@@ -2,6 +2,12 @@
 #define ONEFLOW_CORE_DATA_DATA_TRANSFORM_H_
 
 #include "oneflow/core/data/data_instance.h"
+#include "oneflow/core/common/util.h"
+#include <fenv.h>
+
+extern "C" {
+#include "maskApi.h"
+}
 
 namespace oneflow {
 namespace data {
@@ -140,6 +146,78 @@ struct DataTransformer<DataSourceCase::kObjectSegmentation, TransformCase::kTarg
 };
 
 template<>
+struct DataTransformer<DataSourceCase::kObjectSegmentation,
+                       TransformCase::kSegmentationPolyToMask> {
+  using BboxFieldT = typename DataFieldTrait<DataSourceCase::kObjectBoundingBox>::type;
+  using SegmPolyFieldT = typename DataFieldTrait<DataSourceCase::kObjectSegmentation>::type;
+  using SegmMaskFieldT = typename DataFieldTrait<DataSourceCase::kObjectSegmentationMask>::type;
+  using T = typename BboxFieldT::data_type;
+  using MaskT = typename SegmMaskFieldT::data_type;
+
+  static void Apply(DataInstance* data_inst, const DataTransformProto& proto) {
+    auto* bbox =
+        dynamic_cast<BboxFieldT*>(data_inst->GetField<DataSourceCase::kObjectBoundingBox>());
+    auto* segm_poly =
+        dynamic_cast<SegmPolyFieldT*>(data_inst->GetField<DataSourceCase::kObjectSegmentation>());
+    if (!bbox || !segm_poly) { return; }
+    auto* segm_mask_field = data_inst->GetOrCreateField<DataSourceCase::kObjectSegmentationMask>();
+    auto* segm_mask = dynamic_cast<SegmMaskFieldT*>(segm_mask_field);
+    CHECK_NOTNULL(segm_mask);
+
+    int32_t mask_h = proto.segmentation_poly_to_mask().mask_h();
+    int32_t mask_w = proto.segmentation_poly_to_mask().mask_w();
+    T bbox_w = bbox->data().at(2) - bbox->data().at(0);
+    T bbox_h = bbox->data().at(3) - bbox->data().at(1);
+    T scale_w = static_cast<T>(mask_w) / std::max(GetOneVal<T>(), bbox_w);
+    T scale_h = static_cast<T>(mask_h) / std::max(GetOneVal<T>(), bbox_h);
+    segm_mask->data().resize(segm_poly->GetLod(0).at(0) * mask_h * mask_w, 0);
+
+    std::vector<double> segm_poly_resized;
+    T* poly_dptr = segm_poly->data();
+    const auto& points_vec = segm_poly->GetLod(segm_poly->Levels() - 1);
+    for (size_t points : points_vec) {
+      FOR_RANGE(size_t, i, 0, points) {
+        if (i % 2 == 0) {
+          segm_poly_resized.push_back((poly_dptr[i] - bbox->data().at(0)) * scale_w);
+        } else {
+          segm_poly_resized.push_back((poly_dptr[i] - bbox->data().at(1)) * scale_h);
+        }
+      }
+      poly_dptr += points;
+    }
+
+    double* poly_resized_dptr = segm_poly_resized.data();
+    MaskT* mask_dptr = segm_mask->data().data();
+    size_t obj_poly_begin = 0;
+    const auto& polys_vec = segm_poly->GetLod(1);
+    for (size_t polys : polys_vec) {
+      FOR_RANGE(size_t, i, 0, polys) {
+        std::vector<uint8_t> mask_vec(mask_h * mask_w);
+        size_t poly_points = points_vec.at(obj_poly_begin + i);
+        CHECK_EQ(poly_points % 2, 0);
+        PolygonXy2ColMajorMask(poly_resized_dptr, poly_points / 2, mask_h, mask_w, mask_vec.data());
+        std::transform(mask_vec.cbegin(), mask_vec.cend(), mask_dptr, mask_dptr,
+                       std::bit_or<MaskT>());
+        poly_resized_dptr += poly_points;
+      }
+      obj_poly_begin += polys;
+      mask_dptr += mask_h * mask_w;
+    }
+  }
+
+  static void PolygonXy2ColMajorMask(const double* point, size_t num_points, size_t mask_h,
+                                     size_t mask_w, uint8_t* mask) {
+    RLE rle;
+    const int fe_excepts = fegetexcept();
+    CHECK_NE(fedisableexcept(fe_excepts), -1);
+    rleFrPoly(&rle, point, num_points, mask_h, mask_w);
+    CHECK_NE(feenableexcept(fe_excepts), -1);
+    rleDecode(&rle, mask, 1);
+    rleFree(&rle);
+  }
+};
+
+template<>
 void DoDataTransform<TransformCase::kResize>(DataInstance* data_inst,
                                              const DataTransformProto& proto) {
   CHECK(proto.has_resize());
@@ -161,12 +239,21 @@ void DoDataTransform<TransformCase::kTargetResize>(DataInstance* data_inst,
       data_inst, proto);
 }
 
+template<>
+void DoDataTransform<TransformCase::kSegmentationPolyToMask>(DataInstance* data_inst,
+                                                             const DataTransformProto& proto) {
+  CHECK(proto.has_segmentation_poly_to_mask());
+  DataTransformer<DataSourceCase::kObjectSegmentation,
+                  TransformCase::kSegmentationPolyToMask>::Apply(data_inst, proto);
+}
+
 }  // namespace data
 }  // namespace oneflow
 
-#define DATA_TRANSFORM_SEQ                          \
-  OF_PP_MAKE_TUPLE_SEQ(DataTransformProto::kResize) \
-  OF_PP_MAKE_TUPLE_SEQ(DataTransformProto::kTargetResize)
+#define DATA_TRANSFORM_SEQ                                \
+  OF_PP_MAKE_TUPLE_SEQ(DataTransformProto::kResize)       \
+  OF_PP_MAKE_TUPLE_SEQ(DataTransformProto::kTargetResize) \
+  OF_PP_MAKE_TUPLE_SEQ(DataTransformProto::kSegmentationPolyToMask)
 
 #define DATA_FIELD_TRANSFORM_TUPLE_SEQ                                    \
   OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(OF_PP_MAKE_TUPLE_SEQ, DATA_SOURCE_SEQ, \
