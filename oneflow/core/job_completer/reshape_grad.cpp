@@ -49,5 +49,7 @@ void GenerateBackwardOpConf4DynamicReshape(
 
 REGISTER_OP_GRAD(OperatorConf::kReshapeConf, GenerateBackwardOpConf4Reshape);
 REGISTER_OP_GRAD(OperatorConf::kDynamicReshapeConf, GenerateBackwardOpConf4DynamicReshape);
+REGISTER_OP_GRAD(OperatorConf::kSqueezeConf, GenerateBackwardOpConf4DynamicReshape);
+REGISTER_OP_GRAD(OperatorConf::kExpandDimsConf, GenerateBackwardOpConf4DynamicReshape);
 
 }  // namespace oneflow
