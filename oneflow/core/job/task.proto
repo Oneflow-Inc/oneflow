@@ -49,6 +49,9 @@ enum TaskType {
   kNcclBoxingReduceScatter = 52;
   kNcclBoxingAllGather = 53;
   kNcclBoxingAllReduce = 54;
+  kNcclHierarchicalReduce = 55;
+  kNcclHierarchicalAllReduce = 56;
+  kNcclHierarchicalBroadcast = 57;
 };
 
 enum AreaType {
