@@ -312,7 +312,7 @@ void LogicalGraph::AddNcclHierarchicalAllReduceV2(LogicalNode* src, LogicalNode*
     OperatorConf broadcast_op_conf{};
     broadcast_op_conf.set_name("nccl_hierarchical_broadcast_" + NewUniqueId());
     broadcast_op_conf.set_device_type(src_pd->device_type());
-    broadcast_op_conf.mutable_nccl_all_gather_conf();
+    broadcast_op_conf.mutable_nccl_hierarchical_broadcast_conf();
     broadcast_node->mut_op_vec() = {ConstructOp(broadcast_op_conf, &GlobalJobDesc())};
     broadcast_node->mut_parallel_desc() = src_pd;
     broadcast_node->mut_rank_ctx() = inner_node_ctx;
