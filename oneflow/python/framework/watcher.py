@@ -24,7 +24,7 @@ class _Watcher(oneflow_internal.ForeignWatcher):
 
 def _WatcherHandler(handler_uuid, of_blob_ptr):
     assert handler_uuid in _uuid2handler
-    _uuid2handler[handler_uuid](ofblob.OfBlob(of_blob_ptr).CopyToNdarray())
+    _uuid2handler[handler_uuid](ofblob.OfBlob(of_blob_ptr).CopyToBlob())
 
 _global_watcher = _Watcher()
 c_api_util.RegisterWatcherOnlyOnce(_global_watcher)
