@@ -58,6 +58,7 @@ Maybe<void> SliceOp::InferOutBlobDescs(
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   *out_blob_desc = *in_blob_desc;
   out_blob_desc->mut_shape() = Shape(shape_vec);
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> SliceOp::GetSbpSignatures(
