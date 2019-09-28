@@ -37,11 +37,11 @@ args = parser.parse_args()
 def get_numpy_placeholders():
     import numpy as np
 
-    (N, C, H, W) = (2, 64, 64, 3)
+    (N, H, W, C) = (2, 64, 64, 3)
     R = 50
     G = 12
     return {
-        "images": np.random.randn(N, C, H, W).astype(np.float32),
+        "images": np.random.randn(N, H, W, C).astype(np.float32),
         "image_sizes": np.random.randn(N, 2).astype(np.int32),
         "gt_boxes": np.random.randn(N, R, 4).astype(np.float32),
         "gt_segms": np.random.randn(N, G, 28, 28).astype(np.int8),
@@ -56,10 +56,10 @@ def maskrcnn(images, image_sizes, gt_boxes, gt_segms, gt_labels):
     # def maskrcnn(images, image_sizes, gt_boxes, gt_segms, gt_labels):
     r"""Mask-RCNN
     Args:
-    images: (N, C, H, W)
+    images: (N, H, W, C)
     image_sizes: (N, 2)
     gt_boxes: (N, R, 4)
-    gt_boxes: (N, G, 28, 28)
+    gt_segms: (N, G, 28, 28)
     gt_labels: (N, G)
     """
     cfg = get_default_cfgs()
@@ -80,7 +80,6 @@ def maskrcnn(images, image_sizes, gt_boxes, gt_segms, gt_labels):
     gt_boxes_list = flow.piece_slice(gt_boxes, cfg.TRAINING_CONF.IMG_PER_GPU)
     gt_labels_list = flow.piece_slice(gt_labels, cfg.TRAINING_CONF.IMG_PER_GPU)
     gt_segms_list = flow.piece_slice(gt_segms, cfg.TRAINING_CONF.IMG_PER_GPU)
-
     anchors = []
     for i in range(cfg.DECODER.FPN_LAYERS):
         anchors.append(
