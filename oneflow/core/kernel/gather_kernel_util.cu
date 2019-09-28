@@ -159,7 +159,6 @@ class LocalGatherGPUKernel final : public KernelIf<DeviceType::kGPU> {
     const Blob* indices = BnInOp2Blob("indices");
     CHECK_EQ(indices->data_type(), DataType::kInt32);
     const Blob* in = BnInOp2Blob("in");
-    CHECK_EQ(in->data_type(), DataType::kInt8);
     Blob* out = BnInOp2Blob("out");
     const int64_t num_indices = indices->shape().elem_cnt();
     const Shape flat_in_shape =
