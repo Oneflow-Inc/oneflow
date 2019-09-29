@@ -100,7 +100,7 @@ def bias_add(value, bias, data_format=None, name=None):
     bias_extended_shape[bias_add_axis] = value.shape[bias_add_axis]
     assert bias_extended_shape[bias_add_axis] == bias.shape[0]
 
-    if len(value.shape) == 2 and len(bias) == 1 and bias_add_axis == 1:
+    if len(value.shape) == 2 and len(bias.shape) == 1 and bias_add_axis == 1:
         op_conf = op_conf_util.OperatorConf()
         setattr(op_conf, "name", name)
         setattr(op_conf.bias_add_conf, "a", value.logical_blob_name)
