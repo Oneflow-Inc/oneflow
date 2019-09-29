@@ -379,7 +379,7 @@ bool IsOpOnlyCpuSupported(OperatorConf::OpTypeCase op_type_case) {
 }
 
 std::shared_ptr<Operator> ConstructOp(const OperatorConf& op_conf, const JobDesc* job_desc) {
-  Operator* rptr = NewObj<Operator>(op_conf.op_type_case());
+  Operator* rptr = NewObj<Operator>(op_conf.op_type_case(), op_conf);
   if (IsOpOnlyCpuSupported(op_conf.op_type_case())) {
     CHECK_EQ(op_conf.device_type(), DeviceType::kCPU);
   }

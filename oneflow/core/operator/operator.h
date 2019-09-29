@@ -287,12 +287,12 @@ struct IsInterfaceOpConf4OpTypeCase final {};
 #define REGISTER_OP(op_type_case, OpType)                                       \
   REGISTER_CLASS_CREATOR(op_type_case, OnlyCpuSupportPredicator,                \
                          ([] { return new OnlyCpuSupportPredicator(false); })); \
-  REGISTER_CLASS(op_type_case, Operator, OpType)
+  REGISTER_CLASS_WITH_ARGS(op_type_case, Operator, OpType, const OperatorConf&)
 
 #define REGISTER_CPU_OP(op_type_case, OpType)                                  \
   REGISTER_CLASS_CREATOR(op_type_case, OnlyCpuSupportPredicator,               \
                          ([] { return new OnlyCpuSupportPredicator(true); })); \
-  REGISTER_CLASS(op_type_case, Operator, OpType)
+  REGISTER_CLASS_WITH_ARGS(op_type_case, Operator, OpType, const OperatorConf&)
 
 #define REGISTER_OP_CREATOR(op_type_case, creator)                              \
   REGISTER_CLASS_CREATOR(op_type_case, OnlyCpuSupportPredicator,                \

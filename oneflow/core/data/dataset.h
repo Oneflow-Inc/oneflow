@@ -31,11 +31,30 @@ class Dataset {
   std::vector<int64_t> data_seq_;
 };
 
+#define DATASET_CASE_SEQ                                            \
+  OF_PP_MAKE_TUPLE_SEQ(DatasetProto::DatasetCatalogCase::kImageNet) \
+  OF_PP_MAKE_TUPLE_SEQ(DatasetProto::DatasetCatalogCase::kCoco)
+
+#define REGISTER_DATASET_CREATOR(k, f) REGISTER_CLASS_CREATOR(k, Dataset, f, const DatasetProto&)
+
+#define MAKE_DATASET_CREATOR_ENTRY(dataset_class, dataset_case) \
+  {dataset_case, [](const DatasetProto& proto) -> Dataset* { return new dataset_class(proto); }},
+
+#define REGISTER_DATASET(dataset_case, dataset_derived_class)                                     \
+  namespace {                                                                                     \
+                                                                                                  \
+  Dataset* OF_PP_CAT(CreateDataset, __LINE__)(const DatasetProto& proto) {                        \
+    static const HashMap<DatasetProto::DatasetCatalogCase,                                        \
+                         std::function<Dataset*(const DatasetProto& proto)>, std::hash<int>>      \
+        creators = {OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_DATASET_CREATOR_ENTRY,                  \
+                                                     (dataset_derived_class), DATASET_CASE_SEQ)}; \
+    return creators.at(proto.dataset_catalog_case())(proto);                                      \
+  }                                                                                               \
+                                                                                                  \
+  REGISTER_DATASET_CREATOR(dataset_case, OF_PP_CAT(CreateDataset, __LINE__));                     \
+  }
+
 }  // namespace data
 }  // namespace oneflow
-
-#define REGISTER_DATASET(k, DerivedDatasetClass) \
-  REGISTER_CLASS_WITH_ARGS(k, Dataset, DerivedDatasetClass, const DatasetProto&)
-#define REGISTER_DATASET_CREATOR(k, f) REGISTER_CLASS_CREATOR(k, Dataset, f, const DatasetProto&)
 
 #endif  // ONEFLOW_CORE_DATA_DATASET_H_
