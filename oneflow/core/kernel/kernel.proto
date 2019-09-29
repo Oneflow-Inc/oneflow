@@ -187,6 +187,14 @@ message TopKConf {
   required int32 temp_storage_bytes = 1;
 }
 
+message SortConf {
+  required int32 temp_storage_bytes = 1;
+}
+
+message ArgSortConf {
+  required int32 temp_storage_bytes = 1;
+}
+
 message NcclTupleReduceConf {
   required ParallelContext parallel_ctx = 1;
 }
@@ -248,11 +256,13 @@ message KernelConf {
     GatherMs0GradKernelConf gather_ms0_grad_conf = 414;
     DeconvKernelConf deconv_conf = 415;
     TopKConf top_k_conf = 416;
-    SigmoidCrossEntropyLossGradKernelConf sigmoid_cross_entropy_loss_grad_conf = 417;
-    NcclTupleReduceConf nccl_tuple_reduce_conf = 418;
-    NcclTupleBroadcastConf nccl_tuple_broadcast_conf = 419;
-    WhereKernelConf where_conf = 425;
-    ScatterNdUpdateKernelConf scatter_nd_update_conf = 426;
-    GatherNdUpdateKernelConf gather_nd_update_conf = 427;
+    SortConf sort_conf = 417;
+    ArgSortConf arg_sort_conf = 418;
+    SigmoidCrossEntropyLossGradKernelConf sigmoid_cross_entropy_loss_grad_conf = 419;
+    NcclTupleReduceConf nccl_tuple_reduce_conf = 420;
+    NcclTupleBroadcastConf nccl_tuple_broadcast_conf = 421;
+    WhereKernelConf where_conf = 422;
+    ScatterNdUpdateKernelConf scatter_nd_update_conf = 423;
+    GatherNdUpdateKernelConf gather_nd_update_conf = 424;
   }
 }
