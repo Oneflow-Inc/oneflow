@@ -4,5 +4,5 @@ package oneflow;
 message LodTree {
   required int64 offset = 1;
   required int64 length = 2;
-  repeated LodTree sub_tree = 3;
+  repeated LodTree children = 3;
 }
