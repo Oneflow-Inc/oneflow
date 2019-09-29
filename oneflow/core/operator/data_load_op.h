@@ -14,6 +14,7 @@ class DataLoadOp final : public Operator {
 
   void InitFromOpConf() override;
   const PbMessage& GetCustomizedConf() const override;
+  LogicalBlobId obn2lbi(const std::string& output_bn) const override;
   LogicalNode* NewProperLogicalNode() const override { return new DataLoadLogicalNode; }
 
   Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,

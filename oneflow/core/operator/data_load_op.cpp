@@ -29,6 +29,15 @@ void DataLoadOp::InitFromOpConf() {
 
 const PbMessage& DataLoadOp::GetCustomizedConf() const { return op_conf().data_load_conf(); }
 
+LogicalBlobId DataLoadOp::obn2lbi(const std::string& output_bn) const {
+  CHECK_STREQ(output_bn.substr(0, 4).c_str(), "out_");
+  LogicalBlobId ret;
+  ret.set_op_name(op_name());
+  ret.set_blob_name(
+      op_conf().data_load_conf().blobs(oneflow_cast<int32_t>(output_bn.substr(4))).name());
+  return ret;
+}
+
 void DataLoadOp::VirtualGenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
