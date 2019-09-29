@@ -156,7 +156,7 @@ void TreeLodHelper::UpdateInnerNode(LodTree* lod_tree) {
   }
 }
 
-void TreeLodMutView::set_lod_tree(LodTree&& lod_tree) const {
+void TreeLodMutView::UpdateLod(LodTree&& lod_tree) const {
   int64_t* ptr = ptr_;
   FOR_RANGE(int, level, 0, num_of_lod_levels_) {
     ptr[0] = 0;
@@ -169,6 +169,46 @@ void TreeLodMutView::set_lod_tree(LodTree&& lod_tree) const {
       ptr[i + 1] = ptr[i] + length;
     }
     ptr += cur_level_subtrees.size() + 1;
+  }
+  CHECK_LT(ptr, ptr_ + max_reserved_size_for_lod_);
+}
+
+void CoordinateLodMutView::UpdateLod(
+    const CoordinateLodMutView::Coordinate2OffsetLength& coord2offset_length) const {
+  for (const auto& pair : coord2offset_length) {
+    CHECK_EQ(pair.first.size(), num_of_lod_levels_ - 1);
+  }
+  LodTree lod_tree;
+  MakeLodTree(coord2offset_length, &lod_tree);
+  TreeLodHelper::UpdateInnerNode(&lod_tree);
+  TreeLodMutView(lod_ptr_, num_of_lod_levels_).UpdateLod(std::move(lod_tree));
+}
+
+void CoordinateLodMutView::MakeLodTree(
+    const CoordinateLodMutView::Coordinate2OffsetLength& coord2offset_length,
+    LodTree* lod_tree) const {
+  CHECK(!coord2offset_length.empty());
+  if (coord2offset_length.size() == 1) {
+    CHECK_EQ(coord2offset_length.begin()->first.size(), 0);
+    lod_tree->set_offset(coord2offset_length.begin()->second.first);
+    lod_tree->set_length(coord2offset_length.begin()->second.second);
+    return;
+  }
+  HashMap<int64_t, Coordinate2OffsetLength> dim2sub_coord2offset_length;
+  std::set<int64_t> dim_idx_set;
+  for (const auto& pair : coord2offset_length) {
+    int64_t key = pair.first.at(0);
+    dim_idx_set.insert(key);
+    std::vector<int64_t> remainder_coord{pair.first.begin() + 1, pair.first.end()};
+    CHECK(dim2sub_coord2offset_length[key].emplace(remainder_coord, pair.second).second);
+  }
+  std::vector<int64_t> ordered_dim_idxs(dim_idx_set.begin(), dim_idx_set.end());
+  FOR_RANGE(int64_t, i, 0, ordered_dim_idxs.size()) {
+    CHECK_EQ(i, ordered_dim_idxs.at(i));
+    lod_tree->mutable_children()->Add();
+  }
+  for (const auto& pair : dim2sub_coord2offset_length) {
+    MakeLodTree(pair.second, lod_tree->mutable_children(pair.first));
   }
 }
 

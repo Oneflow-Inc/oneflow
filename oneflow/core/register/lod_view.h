@@ -100,18 +100,24 @@ class TreeLodMutView final : public LoDViewBase {
       : LoDViewBase(lod_ptr, num_of_lod_levels) {}
   TreeLodMutView(const TreeLodMutView& rhs) = default;
 
-  void set_lod_tree(LodTree&& lod_tree) const;
+  void UpdateLod(LodTree&& lod_tree) const;
 };
 
 class CoordinateLodMutView final : public LoDViewBase {
  public:
   CoordinateLodMutView(const PodPtr& lod_ptr, int64_t num_of_lod_levels)
-      : LoDViewBase(lod_ptr, num_of_lod_levels) {}
+      : LoDViewBase(lod_ptr, num_of_lod_levels), lod_ptr_(lod_ptr) {}
   CoordinateLodMutView(const CoordinateLodMutView& rhs) = default;
 
-  using CoordOffsetLength = std::tuple<std::vector<int64_t>, int64_t, int64_t>;
+  using Coordinate = std::vector<int64_t>;
+  using OffsetLength = std::pair<int64_t, int64_t>;
+  using Coordinate2OffsetLength = std::map<Coordinate, OffsetLength>;
+  void UpdateLod(const Coordinate2OffsetLength& coord2offset_length) const;
 
-  void set_lod_tree(const std::vector<CoordOffsetLength>& corrd_offset_lengths) const;
+ private:
+  void MakeLodTree(const Coordinate2OffsetLength& coord2offset_length, LodTree*) const;
+
+  PodPtr lod_ptr_;
 };
 
 }  // namespace oneflow
