@@ -276,7 +276,7 @@ class DataLoader(object):
 
     def __call__(self, name):
         assert hasattr(
-            self, "outputs"
+            self, "_outputs"
         ), "Call DataLoader.init first before get blob"
         return self._outputs[name]
 
