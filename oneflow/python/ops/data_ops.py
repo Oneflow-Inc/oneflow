@@ -7,6 +7,7 @@ import oneflow.python.framework.id_util as id_util
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.record.image_pb2 as image_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
+import oneflow.core.data.data_pb2 as data_util
 
 from oneflow.python.oneflow_export import oneflow_export
 
@@ -134,12 +135,15 @@ class BlobConf(object):
 
 
 @oneflow_export("data.decode_ofrecord")
-def decode_ofrecord(ofrecord_dir, blobs,
-                    batch_size=1,
-                    data_part_num=-1,
-                    part_name_prefix="part-",
-                    part_name_suffix_length=-1,
-                    name=None):
+def decode_ofrecord(
+    ofrecord_dir,
+    blobs,
+    batch_size=1,
+    data_part_num=-1,
+    part_name_prefix="part-",
+    part_name_suffix_length=-1,
+    name=None,
+):
     if name is None:
         name = id_util.UniqueStr("Decode_")
 
@@ -152,7 +156,9 @@ def decode_ofrecord(ofrecord_dir, blobs,
     op_conf.decode_ofrecord_conf.data_part_num = data_part_num
     op_conf.decode_ofrecord_conf.batch_size = batch_size
     op_conf.decode_ofrecord_conf.part_name_prefix = part_name_prefix
-    op_conf.decode_ofrecord_conf.part_name_suffix_length = part_name_suffix_length
+    op_conf.decode_ofrecord_conf.part_name_suffix_length = (
+        part_name_suffix_length
+    )
     for blob_conf in blobs:
         op_conf.decode_ofrecord_conf.blob.extend([blob_conf.to_proto()])
         lbi = logical_blob_id_util.LogicalBlobId()
@@ -163,8 +169,11 @@ def decode_ofrecord(ofrecord_dir, blobs,
     compile_context.CurJobAddOp(op_conf)
     return tuple(map(lambda x: remote_blob_util.RemoteBlob(x), lbis))
 
+
 @oneflow_export("data.decode_random")
-def decode_random(shape, dtype, batch_size=1, initializer=None, tick=None, name=None):
+def decode_random(
+    shape, dtype, batch_size=1, initializer=None, tick=None, name=None
+):
     op_conf = op_conf_util.OperatorConf()
 
     if name is None:
@@ -184,7 +193,8 @@ def decode_random(shape, dtype, batch_size=1, initializer=None, tick=None, name=
         op_conf.decode_random_conf.data_initializer.CopyFrom(initializer)
     else:
         op_conf.decode_random_conf.data_initializer.CopyFrom(
-                flow.random_uniform_initializer())
+            flow.random_uniform_initializer()
+        )
 
     if tick:
         op_conf.decode_random_conf.tick = tick.logical_blob_name
@@ -196,3 +206,145 @@ def decode_random(shape, dtype, batch_size=1, initializer=None, tick=None, name=
 
     compile_context.CurJobAddOp(op_conf)
     return remote_blob_util.RemoteBlob(lbi)
+
+
+@oneflow_export("data.COCODataset")
+class COCODataset(object):
+    def __init__(
+        self,
+        dataset_dir,
+        annotation_file,
+        image_dir,
+        random_seed,
+        shuffle=True,
+        group_by_aspect_ratio=True,
+    ):
+        self.__dict__.update(locals())
+        del self.self
+
+    def to_proto(self, proto=None):
+        if proto is None:
+            proto = data_util.DatasetProto()
+
+        proto.dataset_dir = self.dataset_dir
+        proto.shuffle = self.shuffle
+        proto.random_seed = self.random_seed
+        proto.coco.annotation_file = self.annotation_file
+        proto.coco.image_dir = self.image_dir
+        proto.coco.group_by_aspect_ratio = self.group_by_aspect_ratio
+        return proto
+
+
+@oneflow_export("data.TargetResizeTransform")
+class TargetResizeTransform(object):
+    def __init__(self, target_size, max_size, alignment):
+        self.__dict__.update(locals())
+        del self.self
+
+    def to_proto(self, proto=None):
+        if proto is None:
+            proto = data_util.DataTransformProto()
+
+        proto.target_resize.target_size = self.target_size
+        proto.target_resize.max_size = self.max_size
+        proto.target_resize.alignment = self.alignment
+        return proto
+
+
+@oneflow_export("data.SegmentationPolygonListToMask")
+class SegmentationPolygonListToMask(object):
+    def __init__(self, mask_h, mask_w):
+        self.mask_h = mask_h
+        self.mask_w = mask_w
+
+    def to_proto(self, proto=None):
+        if proto is None:
+            proto = data_util.DataTransformProto()
+
+        proto.segmentation_poly_to_mask.mask_w = self.mask_w
+        proto.segmentation_poly_to_mask.mask_h = self.mask_h
+
+
+@oneflow_export("data.DataLoader")
+class DataLoader(object):
+    def __init__(self, dataset, batch_size, batch_cache_size):
+        self.dataset = dataset
+        self.batch_size = batch_size
+        self.batch_cache_size = batch_cache_size
+        self.blobs = []
+        self.transforms = []
+
+    def __call__(self, name):
+        assert hasattr(
+            self, "outputs"
+        ), "Call DataLoader.init first before get blob"
+        return self.outputs[name]
+
+    @property
+    def batch_size(self):
+        return self.batch_size
+
+    @batch_size.setter
+    def batch_size(self, bs):
+        self.batch_size = bs
+
+    def add_blob(
+        self,
+        name,
+        data_source,
+        shape,
+        dtype,
+        variable_length_axes,
+        is_dynamic=False,
+    ):
+        self.blobs.append(
+            dict(
+                name,
+                data_source,
+                shape,
+                dtype,
+                variable_length_axes or [],
+                is_dynamic,
+            )
+        )
+
+    def add_transform(self, transform):
+        self.transforms.append(transform)
+
+    def init(self, name=None):
+        if name is None:
+            name = id_util.UniqueStr("DecodeRandom_")
+        assert isinstance(name, str)
+
+        self.outputs = {}
+
+        op_conf = op_conf_util.OperatorConf()
+        op_conf.name = name
+        op_conf.data_load_conf.batch_size = self.batch_size
+        op_conf.data_load_conf.batch_cache_size = self.batch_cache_size
+        self.dataset.to_proto(op_conf.data_load_conf.dataset)
+        op_conf.data_load_conf.transforms.extend(
+            [transform.to_proto() for transform in self.transforms]
+        )
+        for blob in self.blobs:
+            blob_conf = op_conf_util.BlobConf()
+            blob_conf.name = blob["name"]
+            blob_conf.data_source = blob["data_source"]
+            blob_conf.shape.dim.extend(blob["shape"])
+            blob_conf.data_type = blob["dtype"]
+            encode_conf = op_conf_util.EncodeConf()
+            if blob_conf.data_source == data_util.DataSourceCase.kImage:
+                encode_conf.jpeg.SetInParent()
+            else:
+                encode_conf.raw.SetInParent()
+            blob_conf.encode_case = encode_conf
+            blob_conf.variable_length_axes.extend(blob["variable_length_axes"])
+            blob_conf.is_dynamic = blob["is_dynamic"]
+            op_conf.data_load_conf.blobs.extend([blob_conf])
+
+            lbi = logical_blob_id_util.LogicalBlobId()
+            lbi.op_name = op_conf.name
+            lbi.blob_name = blob_conf.name
+            self.outputs[blob_conf.name] = remote_blob_util.RemoteBlob(lbi)
+
+        compile_context.CurJobAddOp(op_conf)

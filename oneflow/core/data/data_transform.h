@@ -186,8 +186,8 @@ struct DataTransformer<DataSourceCase::kObjectSegmentation,
       poly_dptr += points;
     }
 
-    double* poly_resized_dptr = segm_poly_resized.data();
     MaskT* mask_dptr = segm_mask->data().data();
+    double* poly_resized_dptr = segm_poly_resized.data();
     size_t obj_poly_begin = 0;
     const auto& polys_vec = segm_poly->GetLod(1);
     for (size_t polys : polys_vec) {
