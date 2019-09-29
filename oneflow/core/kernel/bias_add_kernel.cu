@@ -37,9 +37,10 @@ struct BiasAddUtil<DeviceType::kGPU, float16> final {
 
 #define INITIATE_BIAS_ADD_KERNEL_UTIL_GPU_IMPL(type_cpp, type_proto) \
   template struct BiasAddUtil<DeviceType::kGPU, type_cpp>;
-OF_PP_FOR_EACH_TUPLE(INITIATE_BIAS_ADD_KERNEL_UTIL_GPU_IMPL, ARITHMETIC_DATA_TYPE_SEQ
+OF_PP_FOR_EACH_TUPLE(INITIATE_BIAS_ADD_KERNEL_UTIL_GPU_IMPL,
+                     ARITHMETIC_DATA_TYPE_SEQ
 #if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 700
-                                                                 FLOAT16_DATA_TYPE_SEQ
+                         FLOAT16_DATA_TYPE_SEQ HALF_DATA_TYPE_SEQ
 #endif
 );
 #undef INITIATE_BIAS_ADD_KERNEL_UTIL_GPU_IMPL
