@@ -29,8 +29,9 @@ template<>
 struct BiasAddUtil<DeviceType::kGPU, float16> final {
   static void BiasAdd(DeviceCtx* ctx, int64_t outer_size, int64_t bias_size, int64_t inner_size,
                       const float16* x, const float16* bias, float16* y) {
-    BiasAddUtil<DeviceType::kGPU, half>::BiasAdd(ctx, outer_size, bias_size, inner_size, x, bias,
-                                                 y);
+    BiasAddUtil<DeviceType::kGPU, half>::BiasAdd(
+        ctx, outer_size, bias_size, inner_size, reinterpret_cast<const half*>(x),
+        reinterpret_cast<const half*>(bias), reinterpret_cast<half*>(y));
   }
 };
 #endif
