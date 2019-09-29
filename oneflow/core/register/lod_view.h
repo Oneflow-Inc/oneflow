@@ -2,6 +2,7 @@
 #define ONEFLOW_CORE_REGISTER_LOD_VIEW_H_
 
 #include "oneflow/core/register/pod_ptr.h"
+#include "oneflow/core/register/lod_tree.pb.h"
 
 namespace oneflow {
 
@@ -65,6 +66,46 @@ class LengthLoDMutView final : public LoDViewBase {
   LengthLoDMutView(const LengthLoDMutView& rhs) : LoDViewBase(rhs) {}
 
   void SetLength(const LoDVec& length_lod_vec);
+};
+
+class TreeLodView final : public LoDViewBase {
+ public:
+  TreeLodView(const PodPtr& lod_ptr, int64_t num_of_lod_levels)
+      : LoDViewBase(lod_ptr, num_of_lod_levels) {
+    Init();
+  }
+  TreeLodView(const TreeLodView& rhs) = default;
+
+  const LodTree& lod_tree() const { return lod_tree_; }
+
+ private:
+  void Init();
+
+  LodTree lod_tree_;
+};
+
+class TreeLodMutView final : public LoDViewBase {
+ public:
+  TreeLodMutView(const PodPtr& lod_ptr, int64_t num_of_lod_levels)
+      : LoDViewBase(lod_ptr, num_of_lod_levels) {
+    Init();
+  }
+  TreeLodMutView(const TreeLodMutView& rhs) = default;
+
+  void set_lod_tree(const LodTree& lod_tree) const;
+};
+
+class CoordinateLodMutView final : public LoDViewBase {
+ public:
+  CoordinateLodMutView(const PodPtr& lod_ptr, int64_t num_of_lod_levels)
+      : LoDViewBase(lod_ptr, num_of_lod_levels) {
+    Init();
+  }
+  CoordinateLodMutView(const CoordinateLodMutView& rhs) = default;
+
+  using CoordOffsetLength = std::tuple<std::vector<int64_t>, int64_t, int64_t>;
+
+  void set_lod_tree(const std::vector<CoordOffsetLength>& corrd_offset_lengths) const;
 };
 
 }  // namespace oneflow
