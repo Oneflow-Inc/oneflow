@@ -1238,6 +1238,19 @@ message BroadcastLogicalAndOpConf {
   optional bool is_const = 4 [default = false];
 }
 
+message BroadcastMinOpConf {
+  required string a = 1;
+  required string b = 2;
+  required string out = 3;
+  optional bool is_const = 4 [default = false];
+}
+
+message BroadcastMaxOpConf {
+  required string a = 1;
+  required string b = 2;
+  required string out = 3;
+  optional bool is_const = 4 [default = false];
+}
 
 message BiasAddOpConf {
   // inputs
@@ -2019,12 +2032,14 @@ message OperatorConf {
     BroadcastLessEqualOpConf broadcast_less_equal_conf = 507;
     BroadcastGreaterThanOpConf broadcast_greater_than_conf = 508;
     BroadcastGreaterEqualOpConf broadcast_greater_equal_conf = 509;
-    SquareOpConf square_conf = 510;
-    SqrtOpConf sqrt_conf = 511;
-    RsqrtOpConf rsqrt_conf = 512;
-    ScalarAddOpConf scalar_add_conf = 513;
-    ScalarMulOpConf scalar_mul_conf = 514;
-    BroadcastLogicalAndOpConf broadcast_logical_and_conf = 515;
+    BroadcastLogicalAndOpConf broadcast_logical_and_conf = 510;
+    BroadcastMinOpConf broadcast_min_conf = 511;
+    BroadcastMaxOpConf broadcast_max_conf = 512;
+    SquareOpConf square_conf = 513;
+    SqrtOpConf sqrt_conf = 514;
+    RsqrtOpConf rsqrt_conf = 515;
+    ScalarAddOpConf scalar_add_conf = 516;
+    ScalarMulOpConf scalar_mul_conf = 517;
 
     // detection op
     MaskrcnnPositiveNegativeSampleOpConf maskrcnn_positive_negative_sample_conf = 601;
