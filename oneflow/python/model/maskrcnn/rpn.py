@@ -2,6 +2,19 @@ import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow as flow
 from matcher import Matcher
 
+def _Conv2d(inputs, filters, kernel_size, name, activation=flow.keras.activations.sigmoid):
+    return flow.layers.conv2d(
+               inputs=inputs,
+               filters=filters,
+               kernel_size=[kernel_size, kernel_size],
+               padding="SAME",
+               data_format="NCHW",
+               strides=[1, 1],
+               dilation_rate=[1, 1],
+               activation=activation,
+               use_bias=True,
+               name=name
+           )
 
 class RPNHead(object):
     def __init__(self, cfg):
@@ -10,59 +23,6 @@ class RPNHead(object):
     # features: list of [C_i, H_i, W_i] wrt. fpn layers
     def build(self, features):
         with flow.deprecated.variable_scope("rpn-head"):
-            cls_logits = []  # list of [N, H_i, W_i, A] wrt. fpn layers
-            bbox_preds = []  # list of [N, H_i, W_i, 4A] wrt. fpn layers
-            for layer_idx, feature in enumerate(features, 1):
-                x = flow.layers.conv2d(
-                    inputs=feature,
-                    filters=256,
-                    kernel_size=[3, 3],
-                    padding="SAME",
-                    data_format="NCHW",
-                    strides=[1, 1],
-                    dilation_rate=[1, 1],
-                    activation=flow.keras.activations.relu,
-                    use_bias=True,
-                    name="conv{}".format(layer_idx),
-                )
-                cls_logits.append(
-                    flow.transpose(
-                        flow.layers.conv2d(
-                            x,
-                            filters=3,
-                            kernel_size=[1, 1],
-                            padding="SAME",
-                            data_format="NCHW",
-                            strides=[1, 1],
-                            dilation_rate=[1, 1],
-                            use_bias=True,
-                            activation=flow.keras.activations.sigmoid,
-                            name="cls_logit{}".format(layer_idx),
-                        ),
-                        perm=[0, 2, 3, 1],
-                    )
-                )
-                bbox_preds.append(
-                    flow.transpose(
-                        flow.layers.conv2d(
-                            x,
-                            filters=12,
-                            kernel_size=[1, 1],
-                            padding="SAME",
-                            data_format="NCHW",
-                            strides=[1, 1],
-                            dilation_rate=[1, 1],
-                            use_bias=True,
-                            activation=flow.keras.activations.sigmoid,
-                            name="bbox_pred{}".format(layer_idx),
-                        ),
-                        perm=[0, 2, 3, 1],
-                    )
-                )
-
-            # list (wrt. fpn layers) of list (wrt. images) of [H_i * W_i * A, 4]
-            bbox_pred_list = []
-
             def piece_slice_with_bw(inputs, output_size, name=None):
                 assert inputs.shape[0] == output_size
                 size = [1] + list(inputs.shape)[1:]
@@ -74,30 +34,30 @@ class RPNHead(object):
                     ret.append(output)
                 return ret
 
-            for bbox_pred_per_layer in bbox_preds:
-                bbox_pred_list.append(
-                    [
-                        flow.dynamic_reshape(x, shape=[-1, 4])
-                        for x in piece_slice_with_bw(
-                            bbox_pred_per_layer,
-                            self.cfg.TRAINING_CONF.IMG_PER_GPU,
-                        )
-                    ]
-                )
-
+            # list (wrt. fpn layers) of list (wrt. images) of [H_i * W_i * A, 4]
+            bbox_pred_list = []
             # list (wrt. fpn layer) of list (wrt. images) of [H_i * W_i * A]
             cls_logit_list = []
-            for cls_logit_per_layer in cls_logits:
-                cls_logit_list.append(
-                    [
-                        flow.dynamic_reshape(x, shape=[-1])
-                        for x in piece_slice_with_bw(
-                            cls_logit_per_layer,
-                            self.cfg.TRAINING_CONF.IMG_PER_GPU,
-                        )
-                    ]
+            for layer_i, feature in enumerate(features, 1):
+                x = _Conv2d(feature, 256, 3, "conv{}".format(layer_i), flow.keras.activations.relu)
+
+                cls_logits = flow.transpose(
+                    _Conv2d(x, 3, 1, "cls_logit{}".format(layer_i)),
+                    perm=[0, 2, 3, 1]
+                )
+                bbox_preds = flow.transpose(
+                    _Conv2d(x, 12, 1, "bbox_pred{}".format(layer_i)),
+                    perm=[0, 2, 3, 1],
                 )
 
+                cls_logit_list.append([
+                    flow.dynamic_reshape(x, shape=[-1])
+                    for x in piece_slice_with_bw(cls_logits, self.cfg.TRAINING_CONF.IMG_PER_GPU)
+                ])
+                bbox_pred_list.append([
+                    flow.dynamic_reshape(x, shape=[-1, 4])
+                    for x in piece_slice_with_bw(bbox_preds, self.cfg.TRAINING_CONF.IMG_PER_GPU)
+                ])
         return cls_logit_list, bbox_pred_list
 
 
@@ -219,6 +179,7 @@ class RPNLoss(object):
             total_sample_cnt = flow.elem_cnt(
                 flow.concat(sampled_pos_neg_inds_list, axis=0)
             )
+            total_sample_cnt = flow.cast(total_sample_cnt, flow.float)
 
             bbox_loss = flow.math.reduce_sum(
                 flow.detection.smooth_l1(
@@ -226,14 +187,14 @@ class RPNLoss(object):
                     flow.concat(sampled_bbox_target_list, axis=0),
                     beta=1.0 / 9.0,
                 )
-            ) / flow.cast(total_sample_cnt, dtype=flow.float)
+            ) / total_sample_cnt
 
             cls_loss = flow.math.reduce_sum(
                 flow.nn.sigmoid_cross_entropy_with_logits(
                     flow.concat(sampled_cls_label_list, axis=0),
                     flow.concat(sampled_cls_logit_list, axis=0),
                 )
-            ) / flow.cast(total_sample_cnt, dtype=flow.float)
+            ) / total_sample_cnt
         return bbox_loss, cls_loss
 
 
@@ -270,20 +231,20 @@ class RPNProposal(object):
             for img_idx in range(len(image_size_list)):
                 proposal_list = []
                 score_list = []
-                for layer_idx in range(len(cls_logit_list[0])):
+                for layer_i in range(len(cls_logit_list[0])):
                     pre_nms_top_k_inds = safe_top_k(
-                        cls_logit_list[img_idx][layer_idx],
+                        cls_logit_list[img_idx][layer_i],
                         k=self.cfg.RPN.PRE_NMS_TOP_N,
                     )
                     score_per_layer = flow.local_gather(
-                        cls_logit_list[img_idx][layer_idx], pre_nms_top_k_inds
+                        cls_logit_list[img_idx][layer_i], pre_nms_top_k_inds
                     )
                     proposal_per_layer = flow.detection.box_decode(
                         flow.local_gather(
-                            anchors[layer_idx], pre_nms_top_k_inds
+                            anchors[layer_i], pre_nms_top_k_inds
                         ),
                         flow.local_gather(
-                            bbox_pred_list[img_idx][layer_idx],
+                            bbox_pred_list[img_idx][layer_i],
                             pre_nms_top_k_inds,
                         ),
                         regression_weights={
