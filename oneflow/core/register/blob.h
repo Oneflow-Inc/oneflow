@@ -66,10 +66,10 @@ class Blob final {
     return TreeLodView(header_ptr_->Field(FieldKey::kLoD), blob_desc_->num_of_lod_levels());
   }
   TreeLodMutView tree_lod_mut_view() const {
-    return TreeLodMutView(header_ptr_->Field(FieldKey::kLoD), blob_desc_->num_of_lod_levels());
+    return TreeLodMutView(header_ptr_->MutField(FieldKey::kLoD), blob_desc_->num_of_lod_levels());
   }
   CoordinateLodMutView coord_lod_mut_view() const {
-    return CoordinateLodMutView(header_ptr_->Field(FieldKey::kLoD),
+    return CoordinateLodMutView(header_ptr_->MutField(FieldKey::kLoD),
                                 blob_desc_->num_of_lod_levels());
   }
 
