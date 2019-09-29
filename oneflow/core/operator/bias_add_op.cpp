@@ -9,7 +9,6 @@ void BiasAddOp::InitFromOpConf() {
   EnrollInputBn("a");
   EnrollInputBn("b");
   EnrollOutputBn("out")->set_mutable_inplace_ibn("a");
-  EnrollConstBufBn("bias_multiplier");
 }
 
 const PbMessage& BiasAddOp::GetCustomizedConf() const { return op_conf().bias_add_conf(); }
@@ -27,11 +26,6 @@ Maybe<void> BiasAddOp::InferBlobDescs(
   CHECK_EQ_OR_RETURN(a_blob_desc->shape().At(bias_add_axis), b_blob_desc->shape().At(0));
 
   *GetBlobDesc4BnInOp("out") = *a_blob_desc;
-  if (bias_add_axis == a_blob_desc->shape().NumAxes() - 1) {
-    *GetBlobDesc4BnInOp("bias_multiplier") = *a_blob_desc;
-    GetBlobDesc4BnInOp("bias_multiplier")->mut_shape() =
-        Shape({a_blob_desc->shape().Count(0, bias_add_axis)});
-  }
   return Maybe<void>::Ok();
 }
 
