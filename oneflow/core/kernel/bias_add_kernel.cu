@@ -8,7 +8,7 @@ template<typename T>
 __global__ void BiasAddGpu(const int64_t elem_cnt, const int64_t bias_size,
                            const int64_t inner_size, const T* x, const T* bias, T* y) {
   const int64_t block_size = bias_size * inner_size;
-  CUDA_1D_KERNEL_LOOP(i, elem_cnt) { y[i] = x[i] + bias[i % block_size / inner_size]; }
+  CUDA_1D_KERNEL_LOOP(i, elem_cnt) { y[i] = x[i] + bias[(i % block_size) / inner_size]; }
 }
 
 }  // namespace
