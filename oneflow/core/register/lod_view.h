@@ -87,9 +87,7 @@ class TreeLodView final : public LoDViewBase {
 class TreeLodMutView final : public LoDViewBase {
  public:
   TreeLodMutView(const PodPtr& lod_ptr, int64_t num_of_lod_levels)
-      : LoDViewBase(lod_ptr, num_of_lod_levels) {
-    Init();
-  }
+      : LoDViewBase(lod_ptr, num_of_lod_levels) {}
   TreeLodMutView(const TreeLodMutView& rhs) = default;
 
   void set_lod_tree(const LodTree& lod_tree) const;
@@ -98,9 +96,7 @@ class TreeLodMutView final : public LoDViewBase {
 class CoordinateLodMutView final : public LoDViewBase {
  public:
   CoordinateLodMutView(const PodPtr& lod_ptr, int64_t num_of_lod_levels)
-      : LoDViewBase(lod_ptr, num_of_lod_levels) {
-    Init();
-  }
+      : LoDViewBase(lod_ptr, num_of_lod_levels) {}
   CoordinateLodMutView(const CoordinateLodMutView& rhs) = default;
 
   using CoordOffsetLength = std::tuple<std::vector<int64_t>, int64_t, int64_t>;
