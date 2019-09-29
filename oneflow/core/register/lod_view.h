@@ -68,6 +68,16 @@ class LengthLoDMutView final : public LoDViewBase {
   void SetLength(const LoDVec& length_lod_vec);
 };
 
+struct TreeLodHelper final {
+  static void FindLevelNodes(int64_t expected_level, LodTree* lod_tree,
+                             std::vector<LodTree*>* leaves);
+  static void UpdateInnerNode(LodTree* lod_tree);
+
+ private:
+  static void FindLevelNodes(int64_t expected_level, int64_t cur_level, LodTree* lod_tree,
+                             std::vector<LodTree*>* leaves);
+};
+
 class TreeLodView final : public LoDViewBase {
  public:
   TreeLodView(const PodPtr& lod_ptr, int64_t num_of_lod_levels)
@@ -80,7 +90,7 @@ class TreeLodView final : public LoDViewBase {
 
  private:
   void Init();
-
+  void InitTree();
   LodTree lod_tree_;
 };
 
@@ -90,7 +100,7 @@ class TreeLodMutView final : public LoDViewBase {
       : LoDViewBase(lod_ptr, num_of_lod_levels) {}
   TreeLodMutView(const TreeLodMutView& rhs) = default;
 
-  void set_lod_tree(const LodTree& lod_tree) const;
+  void set_lod_tree(LodTree&& lod_tree) const;
 };
 
 class CoordinateLodMutView final : public LoDViewBase {

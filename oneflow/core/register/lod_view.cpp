@@ -102,4 +102,74 @@ void LengthLoDMutView::SetLength(const LoDVec& length_lod_vec) {
   LoDViewBase::FlushOffsetVecToPtr(GetOffsetLoDVecFromLengthLoDVec(length_lod_vec));
 }
 
+void TreeLodView::Init() {
+  InitTree();
+  TreeLodHelper::UpdateInnerNode(&lod_tree_);
+}
+
+void TreeLodView::InitTree() {
+  int64_t* ptr = ptr_;
+  FOR_RANGE(int, level, 0, num_of_lod_levels_) {
+    CHECK_EQ(ptr[0], 0);
+    std::vector<LodTree*> cur_level_subtrees;
+    TreeLodHelper::FindLevelNodes(level, &lod_tree_, &cur_level_subtrees);
+    FOR_RANGE(int64_t, i, 0, cur_level_subtrees.size()) {
+      int64_t length = ptr[i + 1] - ptr[i];
+      LodTree* lod_tree = cur_level_subtrees.at(i);
+      if (level == num_of_lod_levels_ - 1) {
+        lod_tree->set_offset(ptr[i]);
+        lod_tree->set_length(length);
+      } else {
+        FOR_RANGE(int64_t, _, 0, length) { lod_tree->mutable_children()->Add(); }
+      }
+    }
+    ptr += cur_level_subtrees.size() + 1;
+  }
+}
+
+void TreeLodHelper::FindLevelNodes(int64_t expected_level, LodTree* lod_tree,
+                                   std::vector<LodTree*>* leaves) {
+  return TreeLodHelper::FindLevelNodes(expected_level, 0, lod_tree, leaves);
+}
+
+void TreeLodHelper::FindLevelNodes(int64_t expected_level, int64_t cur_level, LodTree* lod_tree,
+                                   std::vector<LodTree*>* leaves) {
+  if (expected_level == cur_level) {
+    leaves->push_back(lod_tree);
+  } else {
+    FOR_RANGE(int64_t, i, 0, lod_tree->children_size()) {
+      TreeLodHelper::FindLevelNodes(expected_level, cur_level + 1, lod_tree->mutable_children(i),
+                                    leaves);
+    }
+  }
+}
+
+void TreeLodHelper::UpdateInnerNode(LodTree* lod_tree) {
+  FOR_RANGE(int64_t, i, 0, lod_tree->children_size()) {
+    LodTree* child = lod_tree->mutable_children(i);
+    UpdateInnerNode(child);
+    if (i == 0) {
+      lod_tree->set_offset(child->offset());
+      lod_tree->set_length(0);
+    }
+    lod_tree->set_length(lod_tree->length() + child->length());
+  }
+}
+
+void TreeLodMutView::set_lod_tree(LodTree&& lod_tree) const {
+  int64_t* ptr = ptr_;
+  FOR_RANGE(int, level, 0, num_of_lod_levels_) {
+    ptr[0] = 0;
+    std::vector<LodTree*> cur_level_subtrees;
+    TreeLodHelper::FindLevelNodes(level, &lod_tree, &cur_level_subtrees);
+    FOR_RANGE(int64_t, i, 0, cur_level_subtrees.size()) {
+      LodTree* lod_tree = cur_level_subtrees.at(i);
+      int64_t length = lod_tree->children_size();
+      if (level == num_of_lod_levels_ - 1) { length = lod_tree->length(); }
+      ptr[i + 1] = ptr[i] + length;
+    }
+    ptr += cur_level_subtrees.size() + 1;
+  }
+}
+
 }  // namespace oneflow
