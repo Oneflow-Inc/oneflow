@@ -268,25 +268,25 @@ class SegmentationPolygonListToMask(object):
 @oneflow_export("data.DataLoader")
 class DataLoader(object):
     def __init__(self, dataset, batch_size, batch_cache_size):
-        self.dataset = dataset
-        self.batch_size = batch_size
-        self.batch_cache_size = batch_cache_size
-        self.blobs = []
-        self.transforms = []
+        self._dataset = dataset
+        self._batch_size = batch_size
+        self._batch_cache_size = batch_cache_size
+        self._blobs = []
+        self._transforms = []
 
     def __call__(self, name):
         assert hasattr(
             self, "outputs"
         ), "Call DataLoader.init first before get blob"
-        return self.outputs[name]
+        return self._outputs[name]
 
     @property
     def batch_size(self):
-        return self.batch_size
+        return self._batch_size
 
     @batch_size.setter
     def batch_size(self, bs):
-        self.batch_size = bs
+        self._batch_size = bs
 
     def add_blob(
         self,
@@ -294,50 +294,48 @@ class DataLoader(object):
         data_source,
         shape,
         dtype,
-        variable_length_axes,
+        variable_length_axes=None,
         is_dynamic=False,
     ):
-        self.blobs.append(
+        self._blobs.append(
             dict(
-                name,
-                data_source,
-                shape,
-                dtype,
-                variable_length_axes or [],
-                is_dynamic,
+                name=name,
+                data_source=data_source,
+                shape=shape,
+                dtype=dtype,
+                variable_length_axes=variable_length_axes or [],
+                is_dynamic=is_dynamic,
             )
         )
 
     def add_transform(self, transform):
-        self.transforms.append(transform)
+        self._transforms.append(transform)
 
     def init(self, name=None):
         if name is None:
-            name = id_util.UniqueStr("DecodeRandom_")
+            name = id_util.UniqueStr("DataLoad_")
         assert isinstance(name, str)
 
-        self.outputs = {}
+        self._outputs = {}
 
         op_conf = op_conf_util.OperatorConf()
         op_conf.name = name
-        op_conf.data_load_conf.batch_size = self.batch_size
-        op_conf.data_load_conf.batch_cache_size = self.batch_cache_size
-        self.dataset.to_proto(op_conf.data_load_conf.dataset)
+        op_conf.data_load_conf.batch_size = self._batch_size
+        op_conf.data_load_conf.batch_cache_size = self._batch_cache_size
+        self._dataset.to_proto(op_conf.data_load_conf.dataset)
         op_conf.data_load_conf.transforms.extend(
-            [transform.to_proto() for transform in self.transforms]
+            [transform.to_proto() for transform in self._transforms]
         )
-        for blob in self.blobs:
+        for blob in self._blobs:
             blob_conf = op_conf_util.BlobConf()
             blob_conf.name = blob["name"]
             blob_conf.data_source = blob["data_source"]
             blob_conf.shape.dim.extend(blob["shape"])
             blob_conf.data_type = blob["dtype"]
-            encode_conf = op_conf_util.EncodeConf()
             if blob_conf.data_source == data_util.DataSourceCase.kImage:
-                encode_conf.jpeg.SetInParent()
+                blob_conf.encode_case.jpeg.SetInParent()
             else:
-                encode_conf.raw.SetInParent()
-            blob_conf.encode_case = encode_conf
+                blob_conf.encode_case.raw.SetInParent()
             blob_conf.variable_length_axes.extend(blob["variable_length_axes"])
             blob_conf.is_dynamic = blob["is_dynamic"]
             op_conf.data_load_conf.blobs.extend([blob_conf])
@@ -345,6 +343,6 @@ class DataLoader(object):
             lbi = logical_blob_id_util.LogicalBlobId()
             lbi.op_name = op_conf.name
             lbi.blob_name = blob_conf.name
-            self.outputs[blob_conf.name] = remote_blob_util.RemoteBlob(lbi)
+            self._outputs[blob_conf.name] = remote_blob_util.RemoteBlob(lbi)
 
         compile_context.CurJobAddOp(op_conf)
