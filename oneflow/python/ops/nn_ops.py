@@ -99,9 +99,22 @@ def bias_add(value, bias, data_format=None, name=None):
     bias_extended_shape = [1] * len(value.shape)
     bias_extended_shape[bias_add_axis] = value.shape[bias_add_axis]
     assert bias_extended_shape[bias_add_axis] == bias.shape[0]
-    bias = oneflow.reshape(bias, bias_extended_shape)
 
-    return value + bias
+    if len(value.shape) == 2 and len(bias) == 1 and bias_add_axis == 1:
+        op_conf = op_conf_util.OperatorConf()
+        setattr(op_conf, "name", name)
+        setattr(op_conf.bias_add_conf, "a", value.logical_blob_name)
+        setattr(op_conf.bias_add_conf, "b", bias.logical_blob_name)
+        setattr(op_conf.bias_add_conf, "out", "out")
+        setattr(op_conf.bias_add_conf, "axis", 1)
+        compile_context.CurJobAddOp(op_conf)
+        lbi = logical_blob_id_util.LogicalBlobId()
+        lbi.op_name = op_conf.name
+        lbi.blob_name = "out"
+        return remote_blob_util.RemoteBlob(lbi)
+    else:
+        bias = oneflow.reshape(bias, bias_extended_shape)
+        return value + bias
 
 
 @oneflow_export("nn.max_pool1d")
