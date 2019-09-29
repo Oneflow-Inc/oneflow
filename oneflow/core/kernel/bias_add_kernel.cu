@@ -24,7 +24,24 @@ struct BiasAddUtil<DeviceType::kGPU, T> {
   }
 };
 
-template struct BiasAddUtil<DeviceType::kGPU, float>;
-template struct BiasAddUtil<DeviceType::kGPU, double>;
+#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 700
+template<>
+struct BiasAddUtil<DeviceType::kGPU, float16> final {
+  static void BiasAdd(DeviceCtx* ctx, int64_t outer_size, int64_t bias_size, int64_t inner_size,
+                      const T* x, const T* bias, T* y) {
+    BiasAddUtil<DeviceType::kGPU, half>::BiasAdd(ctx, outer_size, bias_size, inner_size, x, bias,
+                                                 y);
+  }
+};
+#endif
+
+#define INITIATE_BIAS_ADD_KERNEL_UTIL_GPU_IMPL(in_type_pair) \
+  template struct BiasAddUtil<DeviceType::kGPU, OF_PP_PAIR_FIRST(in_type_pair)>;
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INITIATE_BIAS_ADD_KERNEL_UTIL_GPU_IMPL, ARITHMETIC_DATA_TYPE_SEQ
+#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 700
+                                                                             FLOAT16_DATA_TYPE_SEQ
+#endif
+);
+#undef INITIATE_BIAS_ADD_KERNEL_UTIL_GPU_IMPL
 
 }  // namespace oneflow
