@@ -9,10 +9,9 @@ namespace data {
 
 class COCODataset final : public Dataset {
  public:
-  explicit COCODataset(const DatasetProto& proto) : Dataset(proto) {}
-  virtual ~COCODataset() = default;
+  explicit COCODataset(const DatasetProto& proto);
+  virtual ~COCODataset() override = default;
 
-  void Init() override;
   size_t Size() const override { return image_ids_.size(); }
   void GetData(int64_t idx, DataInstance* data_inst) const;
   int64_t GetGroupId(int64_t idx) const override;

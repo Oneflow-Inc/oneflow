@@ -15,7 +15,6 @@ class Dataset {
   explicit Dataset(const DatasetProto& proto);
   virtual ~Dataset() = default;
 
-  virtual void Init() {}
   virtual size_t Size() const = 0;
   virtual void GetData(int64_t idx, DataInstance* data) const = 0;
   virtual int64_t GetGroupId(int64_t idx) const { UNIMPLEMENTED(); }
@@ -27,8 +26,6 @@ class Dataset {
  private:
   const DatasetProto* dataset_proto_;
   std::unique_ptr<DataSampler> sampler_;
-
-  std::vector<int64_t> data_seq_;
 };
 
 #define DATASET_CASE_SEQ                                            \

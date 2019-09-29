@@ -1,5 +1,4 @@
 #include "oneflow/core/data/coco_dataset.h"
-#include "oneflow/core/data/data_sampler.h"
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/persistence/file_system.h"
 #include "oneflow/core/persistence/persistent_in_stream.h"
@@ -11,12 +10,12 @@ extern "C" {
 namespace oneflow {
 namespace data {
 
-void COCODataset::Init() {
-  CHECK_EQ(dataset_proto().dataset_catalog_case(), DatasetProto::kCoco);
-  const COCODatasetCatalog& coco_dataset = dataset_proto().coco();
+COCODataset::COCODataset(const DatasetProto& proto) : Dataset(proto) {
+  CHECK_EQ(proto.dataset_catalog_case(), DatasetProto::kCoco);
+  const COCODatasetCatalog& coco_dataset = proto.coco();
   if (coco_dataset.group_by_aspect_ratio()) { sampler().reset(new GroupedDataSampler(this)); }
   PersistentInStream in_stream(
-      DataFS(), JoinPath(dataset_proto().dataset_dir(), coco_dataset.annotation_file()));
+      DataFS(), JoinPath(proto.dataset_dir(), coco_dataset.annotation_file()));
   std::string json_str;
   std::string line;
   while (in_stream.ReadLine(&line) == 0) { json_str += line; }

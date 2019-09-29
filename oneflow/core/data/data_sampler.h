@@ -27,6 +27,7 @@ class DataSampler {
   void NotifyIndexSequenceRanOut(size_t epoch, size_t count, size_t iter);
 
   const std::vector<int64_t>& GetEpochIndexSequence(size_t epoch) const;
+  const std::vector<int64_t>& TryGetEpochIndexSequence(size_t epoch);
   Dataset* dataset() { return dataset_; }
 
  private:

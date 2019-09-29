@@ -37,6 +37,13 @@ const std::vector<int64_t>& DataSampler::GetEpochIndexSequence(size_t epoch) con
   return epoch2index_seq_.at(epoch);
 }
 
+const std::vector<int64_t>& DataSampler::TryGetEpochIndexSequence(size_t epoch) {
+  if (epoch2index_seq_.find(epoch) == epoch2index_seq_.end()) { 
+    GenNewEpochIndexSequence(epoch);
+  }
+  return epoch2index_seq_.at(epoch);
+}
+
 std::vector<int64_t> DataSampler::FetchBatchIndexSequence(DataSamplerContext* ctx,
                                                           size_t batch_size) {
   std::vector<int64_t> batch_index_seq(batch_size);
@@ -47,8 +54,9 @@ std::vector<int64_t> DataSampler::FetchBatchIndexSequence(DataSamplerContext* ct
       ctx->epoch_ += 1;
       ctx->iter_ %= dataset()->Size();
       ctx->count_ = 0;
+      GenNewEpochIndexSequence(ctx->epoch_);
     }
-    batch_index_seq[i] = GetEpochIndexSequence(ctx->epoch_).at(ctx->iter_);
+    batch_index_seq[i] = TryGetEpochIndexSequence(ctx->epoch_).at(ctx->iter_);
     ctx->iter_ += 1;
     ctx->count_ += 1;
     i += 1;
@@ -68,7 +76,7 @@ std::vector<int64_t> GroupedDataSampler::FetchBatchIndexSequence(DataSamplerCont
   size_t i = 0;
   size_t j = ctx->iter_;
   size_t epoch = ctx->epoch_;
-  int64_t group_id = group_ids_.at(GetEpochIndexSequence(epoch).at(j));
+  int64_t group_id = group_ids_.at(TryGetEpochIndexSequence(epoch).at(j));
   while (i < batch_size) {
     if (j >= dataset()->Size()) {
       epoch += 1;
