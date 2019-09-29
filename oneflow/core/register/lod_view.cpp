@@ -102,20 +102,20 @@ void LengthLoDMutView::SetLength(const LoDVec& length_lod_vec) {
   LoDViewBase::FlushOffsetVecToPtr(GetOffsetLoDVecFromLengthLoDVec(length_lod_vec));
 }
 
-void TreeLodView::Init() {
+void TreeLoDView::Init() {
   InitTree();
-  TreeLodHelper::UpdateInnerNode(&lod_tree_);
+  TreeLoDHelper::UpdateInnerNode(&lod_tree_);
 }
 
-void TreeLodView::InitTree() {
+void TreeLoDView::InitTree() {
   int64_t* ptr = ptr_;
   FOR_RANGE(int, level, 0, num_of_lod_levels_) {
     CHECK_EQ(ptr[0], 0);
-    std::vector<LodTree*> cur_level_subtrees;
-    TreeLodHelper::FindLevelNodes(level, &lod_tree_, &cur_level_subtrees);
+    std::vector<LoDTree*> cur_level_subtrees;
+    TreeLoDHelper::FindLevelNodes(level, &lod_tree_, &cur_level_subtrees);
     FOR_RANGE(int64_t, i, 0, cur_level_subtrees.size()) {
       int64_t length = ptr[i + 1] - ptr[i];
-      LodTree* lod_tree = cur_level_subtrees.at(i);
+      LoDTree* lod_tree = cur_level_subtrees.at(i);
       if (level == num_of_lod_levels_ - 1) {
         lod_tree->set_offset(ptr[i]);
         lod_tree->set_length(length);
@@ -127,26 +127,26 @@ void TreeLodView::InitTree() {
   }
 }
 
-void TreeLodHelper::FindLevelNodes(int64_t expected_level, LodTree* lod_tree,
-                                   std::vector<LodTree*>* leaves) {
-  return TreeLodHelper::FindLevelNodes(expected_level, 0, lod_tree, leaves);
+void TreeLoDHelper::FindLevelNodes(int64_t expected_level, LoDTree* lod_tree,
+                                   std::vector<LoDTree*>* leaves) {
+  return TreeLoDHelper::FindLevelNodes(expected_level, 0, lod_tree, leaves);
 }
 
-void TreeLodHelper::FindLevelNodes(int64_t expected_level, int64_t cur_level, LodTree* lod_tree,
-                                   std::vector<LodTree*>* leaves) {
+void TreeLoDHelper::FindLevelNodes(int64_t expected_level, int64_t cur_level, LoDTree* lod_tree,
+                                   std::vector<LoDTree*>* leaves) {
   if (expected_level == cur_level) {
     leaves->push_back(lod_tree);
   } else {
     FOR_RANGE(int64_t, i, 0, lod_tree->children_size()) {
-      TreeLodHelper::FindLevelNodes(expected_level, cur_level + 1, lod_tree->mutable_children(i),
+      TreeLoDHelper::FindLevelNodes(expected_level, cur_level + 1, lod_tree->mutable_children(i),
                                     leaves);
     }
   }
 }
 
-void TreeLodHelper::UpdateInnerNode(LodTree* lod_tree) {
+void TreeLoDHelper::UpdateInnerNode(LoDTree* lod_tree) {
   FOR_RANGE(int64_t, i, 0, lod_tree->children_size()) {
-    LodTree* child = lod_tree->mutable_children(i);
+    LoDTree* child = lod_tree->mutable_children(i);
     UpdateInnerNode(child);
     if (i == 0) {
       lod_tree->set_offset(child->offset());
@@ -156,14 +156,14 @@ void TreeLodHelper::UpdateInnerNode(LodTree* lod_tree) {
   }
 }
 
-void TreeLodMutView::UpdateLod(LodTree&& lod_tree) const {
+void TreeLoDMutView::UpdateLoD(LoDTree&& lod_tree) const {
   int64_t* ptr = ptr_;
   FOR_RANGE(int, level, 0, num_of_lod_levels_) {
     ptr[0] = 0;
-    std::vector<LodTree*> cur_level_subtrees;
-    TreeLodHelper::FindLevelNodes(level, &lod_tree, &cur_level_subtrees);
+    std::vector<LoDTree*> cur_level_subtrees;
+    TreeLoDHelper::FindLevelNodes(level, &lod_tree, &cur_level_subtrees);
     FOR_RANGE(int64_t, i, 0, cur_level_subtrees.size()) {
-      LodTree* lod_tree = cur_level_subtrees.at(i);
+      LoDTree* lod_tree = cur_level_subtrees.at(i);
       int64_t length = lod_tree->children_size();
       if (level == num_of_lod_levels_ - 1) { length = lod_tree->length(); }
       ptr[i + 1] = ptr[i] + length;
@@ -173,20 +173,20 @@ void TreeLodMutView::UpdateLod(LodTree&& lod_tree) const {
   CHECK_LT(ptr, ptr_ + max_reserved_size_for_lod_);
 }
 
-void CoordinateLodMutView::UpdateLod(
-    const CoordinateLodMutView::Coordinate2OffsetLength& coord2offset_length) const {
+void CoordinateLoDMutView::UpdateLoD(
+    const CoordinateLoDMutView::Coordinate2OffsetLength& coord2offset_length) const {
   for (const auto& pair : coord2offset_length) {
     CHECK_EQ(pair.first.size(), num_of_lod_levels_ - 1);
   }
-  LodTree lod_tree;
-  MakeLodTree(coord2offset_length, &lod_tree);
-  TreeLodHelper::UpdateInnerNode(&lod_tree);
-  TreeLodMutView(lod_ptr_, num_of_lod_levels_).UpdateLod(std::move(lod_tree));
+  LoDTree lod_tree;
+  MakeLoDTree(coord2offset_length, &lod_tree);
+  TreeLoDHelper::UpdateInnerNode(&lod_tree);
+  TreeLoDMutView(lod_ptr_, num_of_lod_levels_).UpdateLoD(std::move(lod_tree));
 }
 
-void CoordinateLodMutView::MakeLodTree(
-    const CoordinateLodMutView::Coordinate2OffsetLength& coord2offset_length,
-    LodTree* lod_tree) const {
+void CoordinateLoDMutView::MakeLoDTree(
+    const CoordinateLoDMutView::Coordinate2OffsetLength& coord2offset_length,
+    LoDTree* lod_tree) const {
   CHECK(!coord2offset_length.empty());
   if (coord2offset_length.size() == 1) {
     CHECK_EQ(coord2offset_length.begin()->first.size(), 0);
@@ -208,7 +208,7 @@ void CoordinateLodMutView::MakeLodTree(
     lod_tree->mutable_children()->Add();
   }
   for (const auto& pair : dim2sub_coord2offset_length) {
-    MakeLodTree(pair.second, lod_tree->mutable_children(pair.first));
+    MakeLoDTree(pair.second, lod_tree->mutable_children(pair.first));
   }
 }
 
