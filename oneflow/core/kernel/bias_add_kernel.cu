@@ -23,25 +23,9 @@ struct BiasAddUtil<DeviceType::kGPU, T> {
   }
 };
 
-#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 700
-template<>
-struct BiasAddUtil<DeviceType::kGPU, float16> final {
-  static void BiasAdd(DeviceCtx* ctx, int64_t outer_size, int64_t bias_size, int64_t inner_size,
-                      const float16* x, const float16* bias, float16* y) {
-    const int64_t elem_cnt = outer_size * bias_size * inner_size;
-    BiasAddGpu<<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-        elem_cnt, bias_size, inner_size, reinterpret_cast<const half*>(x),
-        reinterpret_cast<const half*>(bias), reinterpret_cast<half*>(y));
-  }
-};
-#endif
-
 #define INITIATE_BIAS_ADD_KERNEL_UTIL_GPU_IMPL(type_cpp, type_proto) \
   template struct BiasAddUtil<DeviceType::kGPU, type_cpp>;
-OF_PP_FOR_EACH_TUPLE(INITIATE_BIAS_ADD_KERNEL_UTIL_GPU_IMPL, ARITHMETIC_DATA_TYPE_SEQ
-#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 700
-                                                                 FLOAT16_DATA_TYPE_SEQ
-#endif
+OF_PP_FOR_EACH_TUPLE(INITIATE_BIAS_ADD_KERNEL_UTIL_GPU_IMPL, ARITHMETIC_DATA_TYPE_SEQ)
 );
 #undef INITIATE_BIAS_ADD_KERNEL_UTIL_GPU_IMPL
 

@@ -38,7 +38,7 @@ struct BiasAddUtil<DeviceType::kCPU, T> {
   }
 };
 
-ADD_DEFAULT_KERNEL_CREATOR_WITH_GPU_HALF(OperatorConf::kBiasAddConf, BiasAddKernel,
+ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kBiasAddConf, BiasAddKernel,
                                          ARITHMETIC_DATA_TYPE_SEQ);
 
 }  // namespace oneflow
