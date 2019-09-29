@@ -33,8 +33,7 @@ class RPNHead(object):
                     output = flow.squeeze(output, [0])
                     ret.append(output)
                 return ret
-            #cls_logits list of [N, H_i, W_i, A] wrt. fpn layers
-            #bbox_preds list of [N, H_i, W_i, 4A] wrt. fpn layers
+
             # list (wrt. fpn layers) of list (wrt. images) of [H_i * W_i * A, 4]
             bbox_pred_list = []
             # list (wrt. fpn layer) of list (wrt. images) of [H_i * W_i * A]
