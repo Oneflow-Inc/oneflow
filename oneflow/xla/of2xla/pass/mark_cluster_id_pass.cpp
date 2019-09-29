@@ -27,9 +27,15 @@ class ClusterEdge {
 
   ClusterNode *start() const { return start_; }
   ClusterNode *end() const { return end_; }
+
   bool is_control_edge() const { return is_control_edge_; }
   void set_is_control_edge(bool is_control_edge) {
     is_control_edge_ = is_control_edge;
+  }
+
+  bool is_fusion_disabled() const { return is_fusion_disabled_; }
+  void set_is_fusion_disabled(bool is_fusion_disabled) {
+    is_fusion_disabled_ = is_fusion_disabled;
   }
 
   bool IsIdentity() const {
@@ -55,6 +61,7 @@ class ClusterEdge {
   SbpParallel sbp_policy_[2];
   Shape time_shape_[2];
   bool is_control_edge_ = false;
+  bool is_fusion_disabled_ = false;
 };
 
 class ClusterNode {
@@ -93,6 +100,7 @@ class ClusterNode {
   const XlaNode *xrt_node() const { return xrt_node_; }
   int64_t id() const { return id_; }
   void set_id(int64_t id) { id_ = id; }
+  std::string type() const { return xrt_node_->op_type(); }
   std::string name() const { return xrt_node_->op_name(); }
   std::string backend() const { return xrt_node_->backend(); }
   size_t size() const { return folded_nodes_.size(); }
@@ -306,9 +314,13 @@ class MarkClusterIdPass : public XlaOptimizePass {
   bool IsSatisfySbpPolicy(const ClusterEdge *edge) const;
   bool IsSatisfyTimeShape(const ClusterEdge *edge) const;
 
+  util::Set<ClusterNode *> FindAllParents(ClusterNode *node);
+
   bool TryToFuseWithParent(ClusterNode *children, ClusterNode *parent);
 
   void BuildClusterNodesAndEdges();
+
+  void DetermineFusionDisabledEdges();
 
   void RemoveInvalidClusterNodes();
 
@@ -347,8 +359,9 @@ bool MarkClusterIdPass::TryToFuseWithParent(ClusterNode *children,
   bool can_fusion = true;
   for (const ClusterEdge *edge : children->in_edges()) {
     if (edge->start() == parent) {
-      can_fusion = can_fusion && IsSatisfyBackend(edge) &&
-                   IsSatisfySbpPolicy(edge) && IsSatisfyTimeShape(edge);
+      can_fusion = can_fusion && !edge->is_fusion_disabled() &&
+                   IsSatisfyBackend(edge) && IsSatisfySbpPolicy(edge) &&
+                   IsSatisfyTimeShape(edge);
     }
   }
 
@@ -392,6 +405,45 @@ void MarkClusterIdPass::BuildClusterNodesAndEdges() {
   }
 }
 
+util::Set<ClusterNode *> MarkClusterIdPass::FindAllParents(ClusterNode *node) {
+  std::unordered_set<ClusterNode *> visited;
+  std::queue<ClusterNode *> visit_queue;
+  visit_queue.push(node);
+
+  while (!visit_queue.empty()) {
+    ClusterNode *n = visit_queue.front();
+    visit_queue.pop();
+    for (ClusterEdge *edge : n->in_edges()) {
+      ClusterNode *p = edge->start();
+      if (visited.insert(p).second) {
+        visit_queue.push(p);
+      }
+    }
+  }
+  return std::move(visited);
+}
+
+void MarkClusterIdPass::DetermineFusionDisabledEdges() {
+  util::Set<std::string> io_types{"ReduceConcat"};
+  std::vector<ClusterNode *> io_nodes;
+  for (ClusterNode *node : Nodes()) {
+    if (io_types.count(node->type())) {
+      io_nodes.push_back(node);
+    }
+  }
+
+  for (ClusterNode *node : io_nodes) {
+    util::Set<ClusterNode *> parents = FindAllParents(node);
+    for (ClusterNode *p : parents) {
+      for (ClusterEdge *e : p->out_edges()) {
+        if (!parents.count(e->end())) {
+          e->set_is_fusion_disabled(true);
+        }
+      }
+    }
+  }
+}
+
 template <>
 struct GraphTrait<MarkClusterIdPass> {
   typedef ClusterNode *pNodeType;
@@ -405,6 +457,8 @@ void MarkClusterIdPass::Run() {
   CHECK(allocated_nodes_.empty());
 
   BuildClusterNodesAndEdges();
+
+  DetermineFusionDisabledEdges();
 
   int32_t iter_count = 10;
   for (int i = 0; i < iter_count; ++i) {
@@ -422,6 +476,7 @@ void MarkClusterIdPass::Run() {
       for (ClusterEdge *edge : node->in_edges()) {
         candidate_parents.insert(edge->start());
       }
+
       for (ClusterNode *parent : candidate_parents) {
         if (parent->IsCompiled() &&
             (parent->size() + node->size()) <= maximum_nodes &&

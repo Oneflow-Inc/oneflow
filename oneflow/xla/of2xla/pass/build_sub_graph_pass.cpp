@@ -1,5 +1,7 @@
 #include <unordered_map>
 #include <unordered_set>
+#include <iostream>
+#include <fstream>
 #include "absl/strings/str_cat.h"
 #include "oneflow/xla/of2xla/xla_node.h"
 #include "oneflow/xla/of2xla/xla_graph.h"
@@ -35,6 +37,7 @@ class BuildSubGraphPass : public XlaOptimizePass {
                          std::unordered_map<int64_t, XlaNode *> *launch_nodes);
 
   void DivideArgumentNodes(XlaGraph *sub_graph);
+  void DumpSubgraphs(const XlaGraph *graph, const std::string &path);
 };
 
 void BuildSubGraphPass::Run() {
@@ -98,6 +101,8 @@ void BuildSubGraphPass::Run() {
   for (const XlaNode *node : graph->Nodes()) {
     CHECK(!node->IsReachable(*node));
   }
+
+  DumpSubgraphs(graph, "./dump_subgraph");
 }
 
 void BuildSubGraphPass::CreateLaunchNodes(
@@ -239,6 +244,17 @@ void BuildSubGraphPass::RebuildSubgraphOutputs(
         XlaNode *end = (*sub_graph_nodes)[start_id];
         sub_graph->Connect(node, end, e->argument());
       }
+    }
+  }
+}
+
+void BuildSubGraphPass::DumpSubgraphs(const XlaGraph *graph,
+                                      const std::string &path) {
+  for (const XlaNode *node : graph->Nodes()) {
+    if (node->op_type() == _XlaLaunchOpType) {
+      std::string file = absl::StrCat(path, "/cluster_", node->cluster_id());
+      std::ofstream ost(file.c_str());
+      ost << node->sub_graph()->ToDot();
     }
   }
 }

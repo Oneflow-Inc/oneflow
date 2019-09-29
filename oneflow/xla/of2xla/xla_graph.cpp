@@ -156,6 +156,20 @@ std::vector<Argument> XlaGraph::Arguments() const {
   return std::move(arguments);
 }
 
+std::string XlaGraph::ToDot() const {
+  std::stringstream ost;
+  ost << "digraph {\n";
+  for (const XlaNode *node : this->Nodes()) {
+    ost << "\"" << node->unique_id() << "\" [label=\"" << node->op_name()
+        << "\"]\n";
+  }
+  for (const XlaEdge *edge : edges_) {
+    ost << "\"" << edge->start()->unique_id() << "\" -> "
+        << "\"" << edge->end()->unique_id() << "\"\n";
+  }
+  return ost.str();
+}
+
 void XlaGraph::InferBlobDescs(
     std::unordered_map<std::string, BlobDesc> *blob_descs,
     const ParallelContext &parallel_ctx,

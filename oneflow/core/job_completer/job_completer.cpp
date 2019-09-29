@@ -132,10 +132,12 @@ void GenerateOpConf4Trainning(const OpGraph& op_graph, JobBuilder* job_builder) 
   UpdateOpSbpSignatureHint(op_graph, job_builder);
 }
 
+#ifdef WITH_XLA
 void RewriteOptimizerOp(const OpGraph& op_graph, Job* job) {
   mola::XlaGraph graph(&op_graph);
   RewriteOptimizerGraph(graph, job);
 }
+#endif
 
 std::function<ParallelConf*(const std::string&)> MakeGetterMutParallelConf4OpName(
     Placement* placement) {
@@ -356,9 +358,8 @@ void JobCompleter::Complete(Job* job) const {
 #ifdef WITH_XLA
     if (FLAGS_use_xla_jit) {
       WithOpGraphAndMutJob(job, &RewriteOptimizerOp);
-      const JobDesc& job_desc = GlobalJobDesc();
       TeePersistentLogStream::Create(
-      absl::StrCat("job_rewrite_optimizer", job_desc.job_id()))->Write(*job);
+      absl::StrCat("job_rewrite_optimizer", GlobalJobDesc().job_id()))->Write(*job);
     }
 #endif
     WithOpGraphAndMutJobBuilder(job, &RewriteBoxingWithAllReduce);
