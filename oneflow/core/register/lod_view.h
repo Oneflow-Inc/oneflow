@@ -68,54 +68,54 @@ class LengthLoDMutView final : public LoDViewBase {
   void SetLength(const LoDVec& length_lod_vec);
 };
 
-struct TreeLodHelper final {
-  static void FindLevelNodes(int64_t expected_level, LodTree* lod_tree,
-                             std::vector<LodTree*>* leaves);
-  static void UpdateInnerNode(LodTree* lod_tree);
+struct TreeLoDHelper final {
+  static void FindLevelNodes(int64_t expected_level, LoDTree* lod_tree,
+                             std::vector<LoDTree*>* leaves);
+  static void UpdateInnerNode(LoDTree* lod_tree);
 
  private:
-  static void FindLevelNodes(int64_t expected_level, int64_t cur_level, LodTree* lod_tree,
-                             std::vector<LodTree*>* leaves);
+  static void FindLevelNodes(int64_t expected_level, int64_t cur_level, LoDTree* lod_tree,
+                             std::vector<LoDTree*>* leaves);
 };
 
-class TreeLodView final : public LoDViewBase {
+class TreeLoDView final : public LoDViewBase {
  public:
-  TreeLodView(const PodPtr& lod_ptr, int64_t num_of_lod_levels)
+  TreeLoDView(const PodPtr& lod_ptr, int64_t num_of_lod_levels)
       : LoDViewBase(lod_ptr, num_of_lod_levels) {
     Init();
   }
-  TreeLodView(const TreeLodView& rhs) = default;
+  TreeLoDView(const TreeLoDView& rhs) = default;
 
-  const LodTree& lod_tree() const { return lod_tree_; }
+  const LoDTree& lod_tree() const { return lod_tree_; }
 
  private:
   void Init();
   void InitTree();
-  LodTree lod_tree_;
+  LoDTree lod_tree_;
 };
 
-class TreeLodMutView final : public LoDViewBase {
+class TreeLoDMutView final : public LoDViewBase {
  public:
-  TreeLodMutView(const PodPtr& lod_ptr, int64_t num_of_lod_levels)
+  TreeLoDMutView(const PodPtr& lod_ptr, int64_t num_of_lod_levels)
       : LoDViewBase(lod_ptr, num_of_lod_levels) {}
-  TreeLodMutView(const TreeLodMutView& rhs) = default;
+  TreeLoDMutView(const TreeLoDMutView& rhs) = default;
 
-  void UpdateLod(LodTree&& lod_tree) const;
+  void UpdateLoD(LoDTree&& lod_tree) const;
 };
 
-class CoordinateLodMutView final : public LoDViewBase {
+class CoordinateLoDMutView final : public LoDViewBase {
  public:
-  CoordinateLodMutView(const PodPtr& lod_ptr, int64_t num_of_lod_levels)
+  CoordinateLoDMutView(const PodPtr& lod_ptr, int64_t num_of_lod_levels)
       : LoDViewBase(lod_ptr, num_of_lod_levels), lod_ptr_(lod_ptr) {}
-  CoordinateLodMutView(const CoordinateLodMutView& rhs) = default;
+  CoordinateLoDMutView(const CoordinateLoDMutView& rhs) = default;
 
   using Coordinate = std::vector<int64_t>;
   using OffsetLength = std::pair<int64_t, int64_t>;
   using Coordinate2OffsetLength = std::map<Coordinate, OffsetLength>;
-  void UpdateLod(const Coordinate2OffsetLength& coord2offset_length) const;
+  void UpdateLoD(const Coordinate2OffsetLength& coord2offset_length) const;
 
  private:
-  void MakeLodTree(const Coordinate2OffsetLength& coord2offset_length, LodTree*) const;
+  void MakeLoDTree(const Coordinate2OffsetLength& coord2offset_length, LoDTree*) const;
 
   PodPtr lod_ptr_;
 };
