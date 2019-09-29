@@ -56,7 +56,7 @@ def _data_load(data_dir):
 
     return flow.data.decode_ofrecord(
         data_dir, (label_blob_conf, image_blob_conf),
-        batch_size=arg.batch_size, data_part_num=args.data_part_num, name="decode",
+        batch_size=args.batch_size, data_part_num=args.data_part_num, name="decode",
     )
 
 
@@ -325,7 +325,7 @@ def main():
         #     print(fmt_str.format(i, "eval loss:", eval))
 
         #     check_point.save(MODEL_SAVE + "_" + str(i))
-    
+
     # save loss to file
     loss_file = "{}n{}c.npy".format(str(num_nodes), str(args.gpu_num_per_node * num_nodes))
     loss_path = "./of_loss/resnet50"
