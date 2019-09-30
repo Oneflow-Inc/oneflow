@@ -23,7 +23,7 @@ struct PReluAlphaGradKernelUtil<DeviceType::kGPU, T> {
     if (conf.channel_shared()) {
       KernelUtil<DeviceType::kGPU, T>::Sum(
           ctx.device_ctx, elem_cnt, alpha_grad_buf_blob->dptr<T>(), alpha_grad_blob->mut_dptr<T>(),
-          bw_buf_blob->mut_dptr<T>(), bw_buf_blob->ByteSizeOfDataContentField());
+          bw_buf_blob->mut_dptr<T>(), bw_buf_blob->ByteSizeOfBlobBody());
     } else {
       KernelUtil<DeviceType::kGPU, T>::Transpose(
           ctx.device_ctx, alpha_grad_buf_blob->shape().NumAxes(), alpha_grad_buf_blob->shape(),
@@ -36,14 +36,14 @@ struct PReluAlphaGradKernelUtil<DeviceType::kGPU, T> {
         KernelUtil<DeviceType::kGPU, T>::RowSum(
             ctx.device_ctx, channel_num, bw_buf_blob->shape().Count(1), bw_buf_blob->dptr<T>(),
             alpha_grad_blob->mut_dptr<T>(), alpha_grad_buf_blob->mut_dptr<T>(),
-            alpha_grad_buf_blob->ByteSizeOfDataContentField());
+            alpha_grad_buf_blob->ByteSizeOfBlobBody());
       } else if (conf.data_format() == "channels_last") {
         const int64_t channel_num = dy_blob->shape().At(x_blob->shape().NumAxes() - 1);
         CHECK_EQ(channel_num, bw_buf_blob->shape().At(0));
         KernelUtil<DeviceType::kGPU, T>::RowSum(
             ctx.device_ctx, channel_num, bw_buf_blob->shape().Count(1), bw_buf_blob->dptr<T>(),
             alpha_grad_blob->mut_dptr<T>(), alpha_grad_buf_blob->mut_dptr<T>(),
-            alpha_grad_buf_blob->ByteSizeOfDataContentField());
+            alpha_grad_buf_blob->ByteSizeOfBlobBody());
       } else {
         UNIMPLEMENTED();
       }
