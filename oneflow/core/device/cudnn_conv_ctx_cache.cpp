@@ -54,9 +54,9 @@ bool CudnnConvCtxCache::InferCudnnConvAlgoCtxWithConfig(
   void* out_dptr = nullptr;
   void* filter_dptr = nullptr;
   void* work_space = nullptr;
-  CudaCheck(cudaMalloc(&in_dptr, RtBlobDesc(in_blob_desc).ByteSizeOfBlobBody()));
-  CudaCheck(cudaMalloc(&filter_dptr, RtBlobDesc(filter_blob_desc).ByteSizeOfBlobBody()));
-  CudaCheck(cudaMalloc(&out_dptr, RtBlobDesc(out_blob_desc).ByteSizeOfBlobBody()));
+  CudaCheck(cudaMalloc(&in_dptr, RtBlobDesc(in_blob_desc).AlignedByteSizeOfBlobBody()));
+  CudaCheck(cudaMalloc(&filter_dptr, RtBlobDesc(filter_blob_desc).AlignedByteSizeOfBlobBody()));
+  CudaCheck(cudaMalloc(&out_dptr, RtBlobDesc(out_blob_desc).AlignedByteSizeOfBlobBody()));
   CudaCheck(cudaMalloc(&work_space, max_buf_size));
   int32_t algo_max_cnt;
   int32_t found_algo_cnt;

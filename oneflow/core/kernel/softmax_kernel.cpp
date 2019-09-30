@@ -73,12 +73,12 @@ void SoftmaxKernel<device_type, T>::ForwardDataContent(
     Transpose<device_type, T>(ctx.device_ctx, in_blob, transpose_in_blob, conf.perm());
     SoftmaxComputeProb<device_type, T>(ctx.device_ctx, n, w, transpose_in_blob->dptr<T>(), tmp,
                                        transpose_out_blob->mut_dptr<T>(), buf_blob->mut_dptr(),
-                                       buf_blob->ByteSizeOfDataContentField());
+                                       buf_blob->ByteSizeOfBlobBody());
     Transpose<device_type, T>(ctx.device_ctx, transpose_out_blob, out_blob, conf.perm());
   } else {
     SoftmaxComputeProb<device_type, T>(ctx.device_ctx, n, w, in_blob->dptr<T>(), tmp,
                                        out_blob->mut_dptr<T>(), buf_blob->mut_dptr(),
-                                       buf_blob->ByteSizeOfDataContentField());
+                                       buf_blob->ByteSizeOfBlobBody());
   }
 }
 

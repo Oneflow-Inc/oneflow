@@ -253,7 +253,7 @@ class RoiAlignGradGPUKernel final : public KernelIf<DeviceType::kGPU> {
     Blob* in_diff_blob = BnInOp2Blob("dx");
     if (in_diff_blob == nullptr) { return; }
     Memset<DeviceType::kGPU>(ctx.device_ctx, in_diff_blob->mut_dptr<T>(), 0,
-                             in_diff_blob->ByteSizeOfDataContentField());
+                             in_diff_blob->ByteSizeOfBlobBody());
     const Blob* out_diff_blob = BnInOp2Blob("dy");
     const Blob* rois_blob = BnInOp2Blob("rois");
     RoiAlignKernelUtil<DeviceType::kGPU, T>::Backward(

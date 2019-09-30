@@ -55,7 +55,7 @@ void ConvKernel<DeviceType::kGPU, float16>::DoForwardDataContent(
   CHECK(this->EnableCudnn());
   Blob* fw_cudnn_buf = BnInOp2Blob("fw_cudnn_buf");
   void* fw_cudnn_buf_ptr = fw_cudnn_buf ? fw_cudnn_buf->mut_dptr() : nullptr;
-  size_t fw_cudnn_buf_size = fw_cudnn_buf ? fw_cudnn_buf->ByteSizeOfDataContentField() : 0;
+  size_t fw_cudnn_buf_size = fw_cudnn_buf ? fw_cudnn_buf->ByteSizeOfBlobBody() : 0;
   CudaCheck(cudnnConvolutionForward(
       device_ctx->cudnn_handle(), CudnnSPOnePtr<float16>(), this->in_desc_->Get(),
       in_blob->dptr<float16>(), this->filter_desc_->Get(), weight_blob->dptr<float16>(),
@@ -170,7 +170,7 @@ void ConvKernel<DeviceType::kGPU, T>::DoForwardDataContentWithCudnn(
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   Blob* fw_cudnn_buf = BnInOp2Blob("fw_cudnn_buf");
   void* fw_cudnn_buf_ptr = fw_cudnn_buf ? fw_cudnn_buf->mut_dptr() : nullptr;
-  size_t fw_cudnn_buf_size = fw_cudnn_buf ? fw_cudnn_buf->ByteSizeOfDataContentField() : 0;
+  size_t fw_cudnn_buf_size = fw_cudnn_buf ? fw_cudnn_buf->ByteSizeOfBlobBody() : 0;
   CudaCheck(cudnnConvolutionForward(
       device_ctx->cudnn_handle(), CudnnSPOnePtr<T>(), this->in_desc_->Get(), in_blob->dptr<T>(),
       this->filter_desc_->Get(), weight_blob->dptr<T>(), this->conv_desc_->Get(),
@@ -193,7 +193,7 @@ void ConvKernel<DeviceType::kGPU, T>::WeightBackwardWithCudnn(
   const Blob* weight_blob = BnInOp2Blob("weight");
   Blob* bw_cudnn_buf = BnInOp2Blob("bw_cudnn_buf");
   void* bw_cudnn_buf_ptr = bw_cudnn_buf ? bw_cudnn_buf->mut_dptr() : nullptr;
-  size_t bw_cudnn_buf_size = bw_cudnn_buf ? bw_cudnn_buf->ByteSizeOfDataContentField() : 0;
+  size_t bw_cudnn_buf_size = bw_cudnn_buf ? bw_cudnn_buf->ByteSizeOfBlobBody() : 0;
   if (this->op_conf().trainable()) {
     CudaCheck(cudnnConvolutionBackwardFilter(
         device_ctx->cudnn_handle(), CudnnSPOnePtr<T>(), this->in_desc_->Get(), in_blob->dptr<T>(),

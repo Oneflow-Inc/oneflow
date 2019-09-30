@@ -71,8 +71,8 @@ class Blob final {
   size_t AlignedTotalByteSize() const { return blob_desc_->AlignedTotalByteSize(); }
   const MemoryCase& mem_case() const;
 
-  // legacy interface, shouldn't use in new code
-  size_t ByteSizeOfDataContentField() const { return blob_desc_->ByteSizeOfBlobBody(); }
+  size_t ByteSizeOfBlobBody() const { return blob_desc_->ByteSizeOfBlobBody(); }
+  size_t AlignedByteSizeOfBlobBody() const { return blob_desc_->AlignedByteSizeOfBlobBody(); }
 
   int32_t record_num() const { return record_num_; }
   void set_record_num(int32_t val) { record_num_ = val; }

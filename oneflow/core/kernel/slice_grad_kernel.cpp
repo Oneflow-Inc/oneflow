@@ -29,7 +29,7 @@ void SliceGradKernel<DeviceType::kCPU, T>::ForwardDataContent(
   CHECK_EQ(dy_blob->shape().NumAxes(), dx_blob->shape().NumAxes());
 
   Memset<DeviceType::kCPU>(ctx.device_ctx, dx_blob->mut_dptr<T>(), 0,
-                           dx_blob->ByteSizeOfDataContentField());
+                           dx_blob->ByteSizeOfBlobBody());
 
   switch (dx_blob->shape().NumAxes()) {
 // clang-format off
