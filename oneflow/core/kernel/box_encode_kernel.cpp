@@ -10,14 +10,6 @@ class BoxEncodeKernel final : public KernelIf<device_type> {
   ~BoxEncodeKernel() = default;
 
  private:
-  void ForwardDenseShape(const KernelCtx& ctx,
-                         std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
-    const Blob* ref_boxes_blob = BnInOp2Blob("ref_boxes");
-    const Blob* boxes_blob = BnInOp2Blob("boxes");
-    const int32_t num_boxes = ref_boxes_blob->shape().At(0);
-    CHECK_EQ(num_boxes, boxes_blob->shape().At(0));
-    BnInOp2Blob("boxes_delta")->dense_shape_mut_view().set_shape(Shape{num_boxes, 4});
-  }
   void ForwardDataContent(const KernelCtx& ctx,
                           std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
     const Blob* ref_boxes_blob = BnInOp2Blob("ref_boxes");
