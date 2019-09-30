@@ -10,20 +10,25 @@ __global__ void DecodeGpu(const int32_t num_boxes, const T* ref_boxes_ptr, const
                           const float weight_h, T* boxes_ptr) {
   const T TO_REMOVE = 1.0;
   CUDA_1D_KERNEL_LOOP(i, num_boxes) {
-    const T ref_box_x1 = ref_boxes_ptr[i * 4];
-    const T ref_box_y1 = ref_boxes_ptr[i * 4 + 1];
-    const T ref_box_width = ref_boxes_ptr[i * 4 + 2] - ref_box_x1 + TO_REMOVE;
-    const T ref_box_height = ref_boxes_ptr[i * 4 + 3] - ref_box_y1 + TO_REMOVE;
-    const T box_ctr_x =
-        boxes_delta_ptr[i * 4] / weight_x * ref_box_width + ref_box_x1 + 0.5 * ref_box_width;
-    const T box_ctr_y =
-        boxes_delta_ptr[i * 4 + 1] / weight_y * ref_box_height + ref_box_y1 + 0.5 * ref_box_height;
-    const T box_width = exp(boxes_delta_ptr[i * 4 + 2] / weight_w) * ref_box_width;
-    const T box_height = exp(boxes_delta_ptr[i * 4 + 3] / weight_h) * ref_box_height;
-    boxes_ptr[i * 4] = box_ctr_x - 0.5 * box_width;
-    boxes_ptr[i * 4 + 1] = box_ctr_y - 0.5 * box_height;
-    boxes_ptr[i * 4 + 2] = box_ctr_x + 0.5 * box_width - 1;
-    boxes_ptr[i * 4 + 3] = box_ctr_y + 0.5 * box_height - 1;
+    const T dx = boxes_delta_ptr[i * 4] / weight_x;
+    const T dy = boxes_delta_ptr[i * 4 + 1] / weight_y;
+    const T dw = boxes_delta_ptr[i * 4 + 2] / weight_w;
+    const T dh = boxes_delta_ptr[i * 4 + 3] / weight_h;
+
+    const T ref_box_width = ref_boxes_ptr[i * 4 + 2] - ref_boxes_ptr[i * 4] + TO_REMOVE;
+    const T ref_box_height = ref_boxes_ptr[i * 4 + 3] - ref_boxes_ptr[i * 4 + 1] + TO_REMOVE;
+    const T ref_box_ctr_x = ref_boxes_ptr[i * 4] + 0.5 * ref_box_width;
+    const T ref_box_ctr_y = ref_boxes_ptr[i * 4 + 1] + 0.5 * ref_box_height;
+
+    const T pred_box_ctr_x = dx * ref_box_width + ref_box_ctr_x;
+    const T pred_box_ctr_y = dy * ref_box_height + ref_box_ctr_y;
+    const T pred_box_w = exp(dw) * ref_box_width;
+    const T pred_box_h = exp(dh) * ref_box_height;
+
+    boxes_ptr[i * 4] = pred_box_ctr_x - 0.5 * pred_box_w;
+    boxes_ptr[i * 4 + 1] = pred_box_ctr_y - 0.5 * pred_box_h;
+    boxes_ptr[i * 4 + 2] = pred_box_ctr_x + 0.5 * pred_box_w - 1.0;
+    boxes_ptr[i * 4 + 3] = pred_box_ctr_y + 0.5 * pred_box_h - 1.0;
   }
 }
 
