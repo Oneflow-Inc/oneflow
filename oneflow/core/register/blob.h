@@ -62,6 +62,16 @@ class Blob final {
   OffsetLoDMutView offset_lod_mut_view() {
     return OffsetLoDMutView(header_ptr_->MutField(FieldKey::kLoD), blob_desc_->num_of_lod_levels());
   }
+  TreeLoDView tree_lod_view() const {
+    return TreeLoDView(header_ptr_->Field(FieldKey::kLoD), blob_desc_->num_of_lod_levels());
+  }
+  TreeLoDMutView tree_lod_mut_view() const {
+    return TreeLoDMutView(header_ptr_->MutField(FieldKey::kLoD), blob_desc_->num_of_lod_levels());
+  }
+  CoordinateLoDMutView coord_lod_mut_view() const {
+    return CoordinateLoDMutView(header_ptr_->MutField(FieldKey::kLoD),
+                                blob_desc_->num_of_lod_levels());
+  }
 
   void CopyDataContentFrom(DeviceCtx* device_ctx, const Blob* rhs);
   void CopyValidDataContentFrom(DeviceCtx* device_ctx, const Blob* rhs);

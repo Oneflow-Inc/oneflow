@@ -9,11 +9,13 @@ from oneflow.python.oneflow_export import oneflow_export
 
 import oneflow as flow
 
+
 @oneflow_export("constant")
 def constant(value, dtype=None, shape=None, name=None):
     op_conf = op_conf_util.OperatorConf()
     setattr(
-        op_conf, "name", name if name is not None else id_util.UniqueStr("Constant_")
+        op_conf, "name", name if name is not None else id_util.UniqueStr(
+            "Constant_")
     )
     assert value is not None
     assert dtype is not None
