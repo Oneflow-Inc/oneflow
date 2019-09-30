@@ -1,0 +1,8 @@
+syntax = "proto2";
+package oneflow;
+
+message LoDTree {
+  required int64 offset = 1;
+  required int64 length = 2;
+  repeated LoDTree children = 3;
+}
