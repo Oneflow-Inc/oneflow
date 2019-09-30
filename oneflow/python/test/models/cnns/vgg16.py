@@ -44,7 +44,8 @@ parser.add_argument("-load", "--model_load_dir", type=str,
 parser.add_argument(
     "-save", "--model_save_dir", type=str, default=_MODEL_SAVE_DIR, required=False
 )
-
+parser.add_argument("-dn", "--data_part_num", type=int, default=32, required=False)
+parser.add_argument("-b", "--batch_size", type=int, default=8, required=False)
 args = parser.parse_args()
 
 
