@@ -142,7 +142,7 @@ class input_blob_def(blob_desc.BlobDesc):
         def GetElemCnt(shape): return reduce(lambda x, y: x * y, shape, 1)
         assert len(ndarray.shape) == len(self.shape)
         if self.is_dynamic:
-            assert GetElemCnt(ndarray.shape) < GetElemCnt(self.shape)
+            assert GetElemCnt(ndarray.shape) <= GetElemCnt(self.shape)
         else:
             assert ndarray.shape == self.shape
 
