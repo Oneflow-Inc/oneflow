@@ -33,7 +33,12 @@ void RuntimeBlobShapeInferHelper::InferDenseShape(
     if (updated_input_blobs.find(blob_desc) == updated_input_blobs.end()
         && ibns_.find(bn_in_op) != ibns_.end()) {
       const Blob* blob = BnInOp2Blob(bn_in_op);
-      CHECK_EQ(blob_desc->shape().NumAxes(), blob->shape().NumAxes());
+      if (blob_desc->num_of_lod_levels() > 0) {
+        CHECK_EQ(blob_desc->shape().NumAxes(),
+                 blob->shape().NumAxes() + (blob_desc->num_of_lod_levels() - 1));
+      } else {
+        CHECK_EQ(blob_desc->shape().NumAxes(), blob->shape().NumAxes());
+      }
       blob_desc->mut_shape() =
           CreateLeftExtendedShape(blob->shape(), blob->static_shape().NumAxes());
       updated_input_blobs.insert(blob_desc);
