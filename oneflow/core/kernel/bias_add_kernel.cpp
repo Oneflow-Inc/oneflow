@@ -17,7 +17,7 @@ void BiasAddKernel<device_type, T>::ForwardDataContent(
     // out = bias_multiplier * b + a
     const Blob* bias_mul_blob = BnInOp2Blob("bias_multiplier");
     Memcpy<device_type>(ctx.device_ctx, out_blob->mut_dptr<T>(), a_blob->dptr<T>(),
-                        a_blob->ByteSizeOfDataContentField());
+                        a_blob->ByteSizeOfBlobBody());
     NewKernelUtil<device_type>::OFGemm(
         ctx.device_ctx, CblasNoTrans, CblasNoTrans, bias_mul_blob->shape().elem_cnt(),
         b_blob->shape().elem_cnt(), 1, GetOneVal<T>(), bias_mul_blob->dptr<T>(), b_blob->dptr<T>(),

@@ -19,7 +19,7 @@ class SyncDynamicResizeKernel final : public KernelIf<DeviceType::kGPU> {
     const Blob* in = BnInOp2Blob("in");
     const Blob* size = BnInOp2Blob("size");
     Blob* out = BnInOp2Blob("out");
-    AutoMemcpy(ctx.device_ctx, out->mut_dptr(), in->dptr(), in->ByteSizeOfDataContentField(),
+    AutoMemcpy(ctx.device_ctx, out->mut_dptr(), in->dptr(), in->ByteSizeOfBlobBody(),
                out->mem_case(), in->mem_case());
     AutoMemcpy(ctx.device_ctx, size_on_cpu.get(), size->dptr(), sizeof(int64_t), MakeHostMemCase(),
                size->mem_case());

@@ -32,7 +32,7 @@ struct IdentifyOutsideAnchorsUtil<DeviceType::kCPU, T> final {
     const int32_t* image_size_dptr = image_size_blob->dptr<int32_t>();
     int8_t* identification_dptr = identification_blob->mut_dptr<int8_t>();
     Memset<DeviceType::kCPU>(ctx, identification_dptr, 0,
-                             identification_blob->ByteSizeOfDataContentField());
+                             identification_blob->ByteSizeOfBlobBody());
     FOR_RANGE(int32_t, i, 0, num_anchors) {
       const T* cur_anchor_ptr = anchors_dptr + i * 4;
       if (cur_anchor_ptr[0] < -tolerance || cur_anchor_ptr[1] < -tolerance

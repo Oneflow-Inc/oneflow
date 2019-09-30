@@ -30,7 +30,7 @@ struct IdentifyOutsideAnchorsUtil<DeviceType::kGPU, T> {
     const int32_t* image_size_dptr = image_size_blob->dptr<int32_t>();
     int8_t* identification_dptr = identification_blob->mut_dptr<int8_t>();
     Memset<DeviceType::kGPU>(ctx, identification_dptr, 0,
-                             identification_blob->ByteSizeOfDataContentField());
+                             identification_blob->ByteSizeOfBlobBody());
     IdentifyOutsideAnchorsGpu<<<BlocksNum4ThreadsNum(anchors_blob->shape().At(0)),
                                 kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
         anchors_dptr, num_anchors, image_size_dptr, tolerance, identification_dptr);

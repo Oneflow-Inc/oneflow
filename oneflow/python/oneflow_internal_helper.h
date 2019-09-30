@@ -15,16 +15,8 @@
 #include "oneflow/core/control/cluster_control.h"
 #include "oneflow/core/job/job_set_compile_ctx.h"
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
-#include "oneflow/core/job/foreign_watcher.h"
 
 namespace oneflow {
-
-Maybe<void> RegisterWatcherOnlyOnce(ForeignWatcher* watcher) {
-  OF_CHECK_ISNULL(Global<ForeignWatcher>::Get()) << "foreign watcher registered";
-  // no delete
-  Global<ForeignWatcher>::SetAllocated(watcher);
-  return Maybe<void>::Ok();
-}
 
 Maybe<bool> IsOpTypeCaseCpuSupportOnly(int64_t op_type_case) {
   using namespace oneflow;
