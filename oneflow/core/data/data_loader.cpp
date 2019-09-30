@@ -73,11 +73,11 @@ void DataLoader::LoadBatch() {
 
 BatchCollator* DataLoader::GetBatchCollator() {
   auto* collator = batch_queue_.Tail();
-  if (collator->IsFull()) {
-    if (IsImageAlignNeeded(collator)) { ImageAlign(collator); }
+  if (collator == nullptr) {
     batch_queue_.SyncEnqueue(std::unique_ptr<BatchCollator>(new BatchCollator(batch_size_)));
     collator = batch_queue_.Tail();
   }
+  if (collator->IsFull() && IsImageAlignNeeded(collator)) { ImageAlign(collator); }
   return collator;
 }
 

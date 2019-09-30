@@ -13,7 +13,6 @@ namespace data {
 COCODataset::COCODataset(const DatasetProto& proto) : Dataset(proto) {
   CHECK_EQ(proto.dataset_catalog_case(), DatasetProto::kCoco);
   const COCODatasetCatalog& coco_dataset = proto.coco();
-  if (coco_dataset.group_by_aspect_ratio()) { sampler().reset(new GroupedDataSampler(this)); }
   PersistentInStream in_stream(
       DataFS(), JoinPath(proto.dataset_dir(), coco_dataset.annotation_file()));
   std::string json_str;
@@ -48,6 +47,7 @@ COCODataset::COCODataset(const DatasetProto& proto) : Dataset(proto) {
     ++contiguous_id;
     CHECK(category_id2contiguous_id_.emplace(category_id, contiguous_id).second);
   }
+  if (coco_dataset.group_by_aspect_ratio()) { sampler().reset(new GroupedDataSampler(this)); }
 }
 
 int64_t COCODataset::GetGroupId(int64_t idx) const {

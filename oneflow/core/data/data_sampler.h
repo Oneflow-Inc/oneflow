@@ -40,6 +40,7 @@ class DataSampler {
 class GroupedDataSampler : public DataSampler {
  public:
   GroupedDataSampler(Dataset* dataset);
+  ~GroupedDataSampler() override = default;
   virtual std::vector<int64_t> FetchBatchIndexSequence(DataSamplerContext* ctx,
                                                        size_t batch_size) override;
 

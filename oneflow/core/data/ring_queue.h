@@ -9,7 +9,7 @@ namespace util {
 template<typename T>
 class RingQueue final {
  public:
-  RingQueue(size_t qsize) : queue_(qsize), head_(0), tail_(0) {}
+  RingQueue(size_t qsize) : queue_(qsize), head_(0), tail_(0), is_closed_(false) {}
 
   void Enqueue(std::unique_ptr<T>&& item);
   void SyncEnqueue(std::unique_ptr<T>&& item);
