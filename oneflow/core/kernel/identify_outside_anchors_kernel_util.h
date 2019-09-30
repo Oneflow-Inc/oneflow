@@ -1,3 +1,6 @@
+#ifndef ONEFLOW_CORE_KERNEL_IDENTIFY_OUTSIDE_ANCHORS_KERNEL_UTIL_H_
+#define ONEFLOW_CORE_KERNEL_IDENTIFY_OUTSIDE_ANCHORS_KERNEL_UTIL_H_
+
 #include "oneflow/core/kernel/kernel.h"
 
 namespace oneflow {
@@ -10,3 +13,5 @@ struct IdentifyOutsideAnchorsUtil final {
 };
 
 }  // namespace oneflow
+
+#endif
