@@ -4,7 +4,6 @@
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/common/maybe.h"
-#include "oneflow/core/register/field_desc.h"
 #include "oneflow/core/register/blob_desc.pb.h"
 #include "oneflow/core/register/pod_desc.h"
 #include "oneflow/core/job/job_desc.h"
