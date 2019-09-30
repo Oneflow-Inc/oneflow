@@ -14,7 +14,7 @@ void ReduceGatherKernel<device_type>::ForwardDataContent(
   char* dst_cur_dptr = out_blob->mut_dptr<char>();
   dst_cur_dptr += this->kernel_conf().reduce_gather_conf().data_offset().Get(in_bn_id);
   Blob* in_blob = BnInOp2Blob(this->op_attribute().input_bns().Get(in_bn_id));
-  size_t in_byte_size = in_blob->ByteSizeOfDataContentField();
+  size_t in_byte_size = in_blob->ByteSizeOfBlobBody();
   Memcpy<device_type>(ctx.device_ctx, dst_cur_dptr, in_blob->dptr<char>(), in_byte_size);
 }
 

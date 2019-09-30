@@ -26,7 +26,7 @@ void LARSMdUpdateKernel<device_type, T>::UpdateModel(
   Blob* data_tmp_blob = BnInOp2Blob("lars_data_tmp");
   const LARSModelUpdateConf& lars_conf = GetLARSModelUpdateConf(this->op_conf());
   Memset<device_type>(ctx, data_tmp_blob->mut_dptr<T>(), 0,
-                      data_tmp_blob->ByteSizeOfDataContentField());
+                      data_tmp_blob->ByteSizeOfBlobBody());
   LARSMdUpdateKernelUtil<device_type, T>::UpdateModel(
       ctx, model_blob->shape().elem_cnt(), batch_instance_num_ptr, learning_rate, l1, l2,
       static_cast<T>(lars_conf.momentum_beta()), static_cast<T>(lars_conf.epsilon()),

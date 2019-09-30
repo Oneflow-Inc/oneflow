@@ -16,7 +16,7 @@ struct ConvDataGradKernelUtil<DeviceType::kGPU, T> final {
         ctx->cudnn_handle(), CudnnSPOnePtr<T>(), filter_desc.Get(), filter->dptr<T>(),
         dy_desc.Get(), dy->dptr<T>(), conv_desc.Get(),
         static_cast<cudnnConvolutionBwdDataAlgo_t>(kernel_conf.cudnn_bwd_data_algo()),
-        buf->mut_dptr(), buf->ByteSizeOfDataContentField(), CudnnSPZeroPtr<T>(), dx_desc.Get(),
+        buf->mut_dptr(), buf->ByteSizeOfBlobBody(), CudnnSPZeroPtr<T>(), dx_desc.Get(),
         dx->mut_dptr<T>()));
   }
 };

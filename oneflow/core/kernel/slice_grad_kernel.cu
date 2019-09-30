@@ -21,7 +21,7 @@ void SliceGradKernel<DeviceType::kGPU, T>::ForwardDataContent(
   Blob* dx_blob = BnInOp2Blob("dx");
   const int64_t num_output = dy_blob->shape().elem_cnt();
   Memset<DeviceType::kGPU>(ctx.device_ctx, dx_blob->mut_dptr<T>(), 0,
-                           dx_blob->ByteSizeOfDataContentField());
+                           dx_blob->ByteSizeOfBlobBody());
   SliceBackwardGpu<T><<<BlocksNum4ThreadsNum(num_output), kCudaThreadsNumPerBlock, 0,
                         ctx.device_ctx->cuda_stream()>>>(
       num_output, offset_blob->dptr<int64_t>(), dy_blob->dptr<T>(), dx_blob->mut_dptr<T>());

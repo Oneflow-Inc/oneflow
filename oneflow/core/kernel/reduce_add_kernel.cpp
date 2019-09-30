@@ -20,7 +20,7 @@ void ReduceAddKernel<device_type, T>::ForwardDataContent(
                                      out_blob->mut_dptr<T>(), 1);
   } else {
     Memcpy<device_type>(ctx.device_ctx, out_blob->mut_dptr<char>(), in_blob->dptr<char>(),
-                        out_blob->ByteSizeOfDataContentField());
+                        out_blob->ByteSizeOfBlobBody());
   }
 }
 
