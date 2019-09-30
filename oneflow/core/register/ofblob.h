@@ -19,6 +19,10 @@ class OfBlob final {
 
   int data_type() const { return blob_->data_type(); }
   size_t NumAxes() const { return blob_->shape().NumAxes(); }
+  size_t num_of_lod_levels() const { return blob_->blob_desc().num_of_lod_levels(); }
+  bool is_dynamic() const { return blob_->blob_desc().is_dynamic(); }
+  LoDTree GetLoDTree() const;
+  void SetLoDTree(const LoDTree& lod_tree) const;
   void CopyShapeTo(int64_t* ptr, int64_t num_axis) const;
   void CopyShapeFrom(const int64_t* ptr, int64_t num_axis) const;
 
@@ -68,6 +72,21 @@ void OfBlob::AutoMemCopyFrom(const T* ptr, int64_t len) const {
   CHECK_EQ(blob_->shape().elem_cnt(), len);
   CHECK(blob_->data_type() == GetDataType<T>::value);
   AutoMemcpy(device_ctx_, blob_->mut_dptr(), ptr, len * sizeof(T), blob_->mem_case(), mem_case_);
+}
+
+inline LoDTree OfBlob::GetLoDTree() const {
+  CHECK(blob_->blob_desc().num_of_lod_levels());
+  LoDTree lod_tree = blob_->tree_lod_view().lod_tree();
+  CHECK_EQ(lod_tree.offset(), 0);
+  CHECK_EQ(lod_tree.length(), blob_->shape().At(0));
+  return lod_tree;
+}
+
+inline void OfBlob::SetLoDTree(const LoDTree& lod_tree) const {
+  CHECK(blob_->blob_desc().num_of_lod_levels());
+  CHECK_EQ(lod_tree.offset(), 0);
+  CHECK_EQ(lod_tree.length(), blob_->shape().At(0));
+  blob_->tree_lod_mut_view().UpdateLoD(lod_tree);
 }
 
 }  // namespace oneflow

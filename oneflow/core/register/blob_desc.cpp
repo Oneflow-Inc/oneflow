@@ -78,6 +78,7 @@ void BlobDesc::ToProto(BlobDescProto* proto) const {
         cur_level_size *= shape().At(i);
         max_reserved_size_for_lod += cur_level_size;
       }
+      max_reserved_size_for_lod += num_of_lod_levels_;
       header.AddField(
           FieldKey::kLoD,
           TensorPodDesc(Shape(std::vector<int64_t>{max_reserved_size_for_lod}), DataType::kInt64));

@@ -22,7 +22,16 @@ void Blob::Init(const MemoryCase& mem_case, const RtBlobDesc* blob_desc, char* h
   blob_desc_ = blob_desc;
   dptr_ = body_ptr;
   header_ptr_.reset(new PodPtr(blob_desc_->header_pod_desc(), header_ptr));
-  if (!blob_desc_->header_is_opaque()) { dense_shape_mut_view().set_shape(static_shape()); }
+  if (!blob_desc_->header_is_opaque()) {
+    std::vector<int64_t> dim_vec = static_shape().dim_vec();
+    if (blob_desc->num_of_lod_levels() > 0) {
+      CHECK_GT(blob_desc->num_of_lod_levels(), 1);
+      int64_t dim0 = 1;
+      FOR_RANGE(int64_t, i, 0, blob_desc->num_of_lod_levels()) { dim0 *= dim_vec.at(i); }
+      dim_vec = {dim_vec.begin() + blob_desc->num_of_lod_levels() - 1, dim_vec.end()};
+    }
+    dense_shape_mut_view().set_shape(Shape(dim_vec));
+  }
 }
 
 void Blob::CopyDataContentFrom(DeviceCtx* device_ctx, const Blob* rhs) {
