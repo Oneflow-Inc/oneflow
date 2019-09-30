@@ -233,10 +233,10 @@ void LogicalGraph::AddNcclAllReduce(LogicalNode* src, LogicalNode* dst) {
 
 void LogicalGraph::AddNcclHierarchicalAllReduce(LogicalNode* src, LogicalNode* dst) {
   std::shared_ptr<const ParallelDesc> src_pd = src->parallel_desc();
-  const ReduceRankCtx inner_node_ctx =
+  const ReduceRankCtx intra_node_ctx =
       ReduceRankCtx().CtxWithScatter(src_pd->device_num_of_each_machine());
   const ReduceRankCtx inter_node_ctx =
-      inner_node_ctx.CtxWithScatter(src_pd->sorted_machine_ids().size());
+      intra_node_ctx.CtxWithScatter(src_pd->sorted_machine_ids().size());
 
   auto* reduce_scatter_node = NewNode<NcclReduceScatterLogicalNode>();
   {
@@ -246,7 +246,7 @@ void LogicalGraph::AddNcclHierarchicalAllReduce(LogicalNode* src, LogicalNode* d
     reduce_scatter_op_conf.mutable_nccl_reduce_scatter_conf();
     reduce_scatter_node->mut_op_vec() = {ConstructOp(reduce_scatter_op_conf, &GlobalJobDesc())};
     reduce_scatter_node->mut_parallel_desc() = src_pd;
-    reduce_scatter_node->mut_rank_ctx() = inner_node_ctx;
+    reduce_scatter_node->mut_rank_ctx() = intra_node_ctx;
   }
   Connect<LogicalNode>(src, NewEdge(), reduce_scatter_node);
 
@@ -270,7 +270,7 @@ void LogicalGraph::AddNcclHierarchicalAllReduce(LogicalNode* src, LogicalNode* d
     all_gather_op_conf.mutable_nccl_all_gather_conf();
     all_gather_node->mut_op_vec() = {ConstructOp(all_gather_op_conf, &GlobalJobDesc())};
     all_gather_node->mut_parallel_desc() = src_pd;
-    all_gather_node->mut_rank_ctx() = inner_node_ctx;
+    all_gather_node->mut_rank_ctx() = intra_node_ctx;
   }
   Connect<LogicalNode>(all_reduce_node, NewEdge(), all_gather_node);
   Connect<LogicalNode>(all_gather_node, NewEdge(), dst);
