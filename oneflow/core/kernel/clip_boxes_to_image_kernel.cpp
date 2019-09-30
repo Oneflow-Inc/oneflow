@@ -10,10 +10,6 @@ class ClipBoxesToImageKernel final : public KernelIf<device_type> {
   ~ClipBoxesToImageKernel() = default;
 
  private:
-  void ForwardDenseShape(const KernelCtx& ctx,
-                         std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
-    BnInOp2Blob("out")->dense_shape_mut_view().set_shape({BnInOp2Blob("in")->shape().At(0), 4});
-  }
   void ForwardDataContent(const KernelCtx& ctx,
                           std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
     const Blob* boxes_blob = BnInOp2Blob("boxes");
