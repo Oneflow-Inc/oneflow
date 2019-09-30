@@ -69,7 +69,7 @@ class DeconvGPUKernel final : public KernelIf<DeviceType::kGPU> {
     Blob* y_blob = BnInOp2Blob("y");
     Blob* cudnn_buf = BnInOp2Blob("cudnn_buf");
     void* buf_ptr = cudnn_buf ? cudnn_buf->mut_dptr() : nullptr;
-    size_t buf_size = cudnn_buf ? cudnn_buf->ByteSizeOfDataContentField() : 0;
+    size_t buf_size = cudnn_buf ? cudnn_buf->ByteSizeOfBlobBody() : 0;
     CudaCheck(cudnnConvolutionBackwardData(
         ctx.device_ctx->cudnn_handle(), CudnnSPOnePtr<T>(), this->filter_desc_->Get(),
         filter_blob->dptr<T>(), this->x_desc_->Get(), x_blob->dptr<T>(), this->deconv_desc_->Get(),

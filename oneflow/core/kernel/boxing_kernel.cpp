@@ -21,7 +21,7 @@ void CalcSumOfBlobs(DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnI
   const Blob* src_blob_0 = BnInOp2Blob(src_bns.Get(0));
   Blob* dst_blob = BnInOp2Blob(dst_bn);
   Memcpy<DeviceType::kCPU>(ctx, dst_blob->mut_dptr(), src_blob_0->dptr(),
-                           src_blob_0->ByteSizeOfDataContentField());
+                           src_blob_0->ByteSizeOfBlobBody());
   FOR_RANGE(size_t, i, 1, src_bns.size()) {
     Blob* src_blob_i = BnInOp2Blob(src_bns.Get(i));
     KernelUtil<DeviceType::kCPU, T>::Axpy(ctx, dst_blob->static_shape().elem_cnt(), 1.0,
