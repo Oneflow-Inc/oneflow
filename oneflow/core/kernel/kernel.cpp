@@ -81,7 +81,6 @@ void Kernel::ForwardLoD(const KernelCtx& ctx,
 
 void Kernel::ForwardDenseShape(const KernelCtx& ctx,
                                std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  CHECK_EQ(kernel_conf_.need_do_lod(), false);
   return shape_infer_helper_->InferDenseShape(BnInOp2Blob);
 }
 
