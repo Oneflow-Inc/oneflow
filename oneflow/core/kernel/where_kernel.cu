@@ -12,20 +12,6 @@ __global__ void GpuForward(const int64_t elem_cnt, const CondType* condition_ptr
   }
 }
 
-template<typename CondType, typename T>
-__global__ void GpuBackward(const int64_t elem_cnt, const CondType* condition_ptr,
-                            const T* out_diff_ptr, T* lhs_diff_ptr, T* rhs_diff_ptr) {
-  CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
-    if (static_cast<bool>(condition_ptr[i])) {
-      lhs_diff_ptr[i] = out_diff_ptr[i];
-      rhs_diff_ptr[i] = 0;
-    } else {
-      lhs_diff_ptr[i] = 0;
-      rhs_diff_ptr[i] = out_diff_ptr[i];
-    }
-  }
-}
-
 }  // namespace
 
 template<typename CondType, typename T>
@@ -47,7 +33,6 @@ class WhereGpuKernel final : public KernelIf<DeviceType::kGPU> {
     CHECK_EQ(rhs_blob->shape(), shape);
     CHECK_EQ(out_blob->shape(), shape);
     const int64_t elem_cnt = shape.elem_cnt();
-
     GpuForward<<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
                  ctx.device_ctx->cuda_stream()>>>(elem_cnt, condition_blob->dptr<CondType>(),
                                                   lhs_blob->dptr<T>(), rhs_blob->dptr<T>(),
