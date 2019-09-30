@@ -2,6 +2,35 @@
 
 namespace oneflow {
 
+namespace {
+
+template<typename T>
+T* GetChild(T* parent, int64_t idx);
+
+template<>
+LoDTree* GetChild<LoDTree>(LoDTree* parent, int64_t idx) {
+  return parent->mutable_children(idx);
+}
+
+template<>
+const LoDTree* GetChild<const LoDTree>(const LoDTree* parent, int64_t idx) {
+  return &parent->children(idx);
+}
+
+template<typename T>
+void FindLevelLoDNode(int64_t expected_level, int64_t cur_level, T* lod_tree,
+                      std::vector<T*>* leaves) {
+  if (expected_level == cur_level) {
+    leaves->push_back(lod_tree);
+  } else {
+    FOR_RANGE(int64_t, i, 0, lod_tree->children_size()) {
+      FindLevelLoDNode(expected_level, cur_level + 1, GetChild<T>(lod_tree, i), leaves);
+    }
+  }
+}
+
+}  // namespace
+
 LoDViewBase::LoDViewBase(PodPtr lod_ptr, int64_t num_of_lod_levels) {
   ptr_ = lod_ptr.MutTensorPtr<int64_t>();
   CHECK_NOTNULL(ptr_);
@@ -112,7 +141,7 @@ void TreeLoDView::InitTree() {
   FOR_RANGE(int, level, 0, num_of_lod_levels_) {
     CHECK_EQ(ptr[0], 0);
     std::vector<LoDTree*> cur_level_subtrees;
-    TreeLoDHelper::FindLevelNodes(level, &lod_tree_, &cur_level_subtrees);
+    TreeLoDHelper::FindLevelMutNodes(level, &lod_tree_, &cur_level_subtrees);
     FOR_RANGE(int64_t, i, 0, cur_level_subtrees.size()) {
       int64_t length = ptr[i + 1] - ptr[i];
       LoDTree* lod_tree = cur_level_subtrees.at(i);
@@ -127,21 +156,14 @@ void TreeLoDView::InitTree() {
   }
 }
 
-void TreeLoDHelper::FindLevelNodes(int64_t expected_level, LoDTree* lod_tree,
-                                   std::vector<LoDTree*>* leaves) {
-  return TreeLoDHelper::FindLevelNodes(expected_level, 0, lod_tree, leaves);
+void TreeLoDHelper::FindLevelMutNodes(int64_t expected_level, LoDTree* lod_tree,
+                                      std::vector<LoDTree*>* leaves) {
+  return FindLevelLoDNode<LoDTree>(expected_level, 0, lod_tree, leaves);
 }
 
-void TreeLoDHelper::FindLevelNodes(int64_t expected_level, int64_t cur_level, LoDTree* lod_tree,
-                                   std::vector<LoDTree*>* leaves) {
-  if (expected_level == cur_level) {
-    leaves->push_back(lod_tree);
-  } else {
-    FOR_RANGE(int64_t, i, 0, lod_tree->children_size()) {
-      TreeLoDHelper::FindLevelNodes(expected_level, cur_level + 1, lod_tree->mutable_children(i),
-                                    leaves);
-    }
-  }
+void TreeLoDHelper::FindLevelNodes(int64_t expected_level, const LoDTree* lod_tree,
+                                   std::vector<const LoDTree*>* leaves) {
+  return FindLevelLoDNode<const LoDTree>(expected_level, 0, lod_tree, leaves);
 }
 
 void TreeLoDHelper::UpdateInnerNode(LoDTree* lod_tree) {
@@ -156,14 +178,14 @@ void TreeLoDHelper::UpdateInnerNode(LoDTree* lod_tree) {
   }
 }
 
-void TreeLoDMutView::UpdateLoD(LoDTree&& lod_tree) const {
+void TreeLoDMutView::UpdateLoD(const LoDTree& lod_tree) const {
   int64_t* ptr = ptr_;
   FOR_RANGE(int, level, 0, num_of_lod_levels_) {
     ptr[0] = 0;
-    std::vector<LoDTree*> cur_level_subtrees;
+    std::vector<const LoDTree*> cur_level_subtrees;
     TreeLoDHelper::FindLevelNodes(level, &lod_tree, &cur_level_subtrees);
     FOR_RANGE(int64_t, i, 0, cur_level_subtrees.size()) {
-      LoDTree* lod_tree = cur_level_subtrees.at(i);
+      const LoDTree* lod_tree = cur_level_subtrees.at(i);
       int64_t length = lod_tree->children_size();
       if (level == num_of_lod_levels_ - 1) { length = lod_tree->length(); }
       ptr[i + 1] = ptr[i] + length;
@@ -181,7 +203,7 @@ void CoordinateLoDMutView::UpdateLoD(
   LoDTree lod_tree;
   MakeLoDTree(coord2offset_length, &lod_tree);
   TreeLoDHelper::UpdateInnerNode(&lod_tree);
-  TreeLoDMutView(lod_ptr_, num_of_lod_levels_).UpdateLoD(std::move(lod_tree));
+  TreeLoDMutView(lod_ptr_, num_of_lod_levels_).UpdateLoD(lod_tree);
 }
 
 void CoordinateLoDMutView::MakeLoDTree(
