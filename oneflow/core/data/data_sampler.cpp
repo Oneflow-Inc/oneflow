@@ -38,9 +38,7 @@ const std::vector<int64_t>& DataSampler::GetEpochIndexSequence(size_t epoch) con
 }
 
 const std::vector<int64_t>& DataSampler::TryGetEpochIndexSequence(size_t epoch) {
-  if (epoch2index_seq_.find(epoch) == epoch2index_seq_.end()) { 
-    GenNewEpochIndexSequence(epoch);
-  }
+  if (epoch2index_seq_.find(epoch) == epoch2index_seq_.end()) { GenNewEpochIndexSequence(epoch); }
   return epoch2index_seq_.at(epoch);
 }
 

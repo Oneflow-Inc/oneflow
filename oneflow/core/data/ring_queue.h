@@ -16,10 +16,11 @@ class RingQueue final {
   std::unique_ptr<T> Dequeue();
   std::unique_ptr<T> SyncDequeue();
   std::unique_ptr<T> SyncDequeue(std::function<bool(const T*)> pred);
-  bool IsFull() { return head_ == tail_ && queue_.at(head_); }
-  bool IsEmpty() { return head_ == tail_ && !queue_.at(head_); }
+  bool IsFull() const { return head_ == tail_ && queue_.at(head_); }
+  bool IsEmpty() const { return head_ == tail_ && !queue_.at(head_); }
   T* Head() const { return queue_.at(head_).get(); }
   T* Tail() const { return queue_.at(tail_).get(); }
+  T* Last() const;
   void Close() { is_closed_ = true; }
 
  private:
@@ -31,6 +32,12 @@ class RingQueue final {
   std::condition_variable full_cv_;
   std::condition_variable empty_cv_;
 };
+
+template<typename T>
+inline T* RingQueue<T>::Last() const {
+  if (this->IsEmpty()) { return nullptr; }
+  return queue_.at(tail_ > 0 ? tail_ - 1 : queue_.size() - 1).get();
+}
 
 template<typename T>
 void RingQueue<T>::Enqueue(std::unique_ptr<T>&& item) {
@@ -47,7 +54,7 @@ void RingQueue<T>::SyncEnqueue(std::unique_ptr<T>&& item) {
   std::unique_lock<std::mutex> lck(mtx_);
   full_cv_.wait(lck, [this] { return !IsFull() || is_closed_; });
   if (is_closed_) { return; }
-  Enqueue(std::forward<std::unique_ptr<T>>(item));
+  Enqueue(std::move(item));
 }
 
 template<typename T>

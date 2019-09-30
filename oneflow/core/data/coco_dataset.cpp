@@ -13,8 +13,8 @@ namespace data {
 COCODataset::COCODataset(const DatasetProto& proto) : Dataset(proto) {
   CHECK_EQ(proto.dataset_catalog_case(), DatasetProto::kCoco);
   const COCODatasetCatalog& coco_dataset = proto.coco();
-  PersistentInStream in_stream(
-      DataFS(), JoinPath(proto.dataset_dir(), coco_dataset.annotation_file()));
+  PersistentInStream in_stream(DataFS(),
+                               JoinPath(proto.dataset_dir(), coco_dataset.annotation_file()));
   std::string json_str;
   std::string line;
   while (in_stream.ReadLine(&line) == 0) { json_str += line; }
@@ -83,7 +83,7 @@ void COCODataset::GetData(int64_t idx, DataInstance* data_inst) const {
 
 void COCODataset::GetImage(const std::string& image_file_name, DataField* data_field) const {
   auto* image_field = dynamic_cast<ImageDataField*>(data_field);
-  CHECK_NOTNULL(image_field);
+  if (!image_field) { return; }
 
   auto image_file_path =
       JoinPath(dataset_proto().dataset_dir(), dataset_proto().coco().image_dir(), image_file_name);
@@ -97,7 +97,7 @@ void COCODataset::GetImage(const std::string& image_file_name, DataField* data_f
 void COCODataset::GetBbox(const nlohmann::json& bbox_json, DataField* data_field) const {
   CHECK(bbox_json.is_array());
   auto* bbox_field = dynamic_cast<ArrayDataField<float>*>(data_field);
-  CHECK_NOTNULL(bbox_field);
+  if (!bbox_field) { return; }
 
   auto& bbox_vec = bbox_field->data();
   for (const auto& jval : bbox_json) { bbox_vec.push_back(jval.get<float>()); }
@@ -106,13 +106,13 @@ void COCODataset::GetBbox(const nlohmann::json& bbox_json, DataField* data_field
 void COCODataset::GetLabel(const nlohmann::json& label_json, DataField* data_field) const {
   CHECK(label_json.is_number_integer());
   auto* label_field = dynamic_cast<ArrayDataField<int32_t>*>(data_field);
-  CHECK_NOTNULL(label_field);
+  if (!label_field) { return; }
   label_field->data().push_back(label_json.get<int32_t>());
 }
 
 void COCODataset::GetSegmentation(const nlohmann::json& segmentation, DataField* data_field) const {
   auto* segm_field = dynamic_cast<NdarrayDataField<float>*>(data_field);
-  CHECK_NOTNULL(segm_field);
+  if (!segm_field) { return; }
 
   if (segmentation.is_object()) {
     auto rle_cnt_vec = segmentation["counts"].get<std::vector<uint32_t>>();

@@ -67,17 +67,17 @@ void DataLoader::LoadBatch() {
       dataset_->GetData(idx, data_inst.get());
       for (const auto& trans_proto : conf_->transforms()) { data_inst->Transform(trans_proto); }
       collator->Fill(slot, std::move(data_inst));
+      if (IsImageAlignNeeded(collator) && collator->IsReady()) { ImageAlign(collator); }
     });
   }
 }
 
 BatchCollator* DataLoader::GetBatchCollator() {
-  auto* collator = batch_queue_.Tail();
-  if (collator == nullptr) {
+  auto* collator = batch_queue_.Last();
+  if (!collator || collator->IsFull()) {
     batch_queue_.SyncEnqueue(std::unique_ptr<BatchCollator>(new BatchCollator(batch_size_)));
-    collator = batch_queue_.Tail();
+    collator = batch_queue_.Last();
   }
-  if (collator->IsFull() && IsImageAlignNeeded(collator)) { ImageAlign(collator); }
   return collator;
 }
 

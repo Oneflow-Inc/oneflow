@@ -30,19 +30,23 @@ class DataInstance {
 };
 
 inline const DataField* DataInstance::GetField(DataSourceCase dsrc) const {
+  if (fields_.find(dsrc) == fields_.end()) { return nullptr; }
   return const_cast<const DataField*>(fields_.at(dsrc).get());
 }
 
-inline DataField* DataInstance::GetField(DataSourceCase dsrc) { return fields_.at(dsrc).get(); }
-
-template<DataSourceCase dsrc>
-inline DataField* DataInstance::GetField() {
+inline DataField* DataInstance::GetField(DataSourceCase dsrc) {
+  if (fields_.find(dsrc) == fields_.end()) { return nullptr; }
   return fields_.at(dsrc).get();
 }
 
 template<DataSourceCase dsrc>
+inline DataField* DataInstance::GetField() {
+  return GetField(dsrc);
+}
+
+template<DataSourceCase dsrc>
 inline const DataField* DataInstance::GetField() const {
-  return const_cast<const DataField*>(fields_.at(dsrc).get());
+  return GetField(dsrc);
 }
 
 template<DataSourceCase dsrc>
