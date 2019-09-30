@@ -229,6 +229,11 @@ def set_exp_run_conf(value):
     pb_util.PythonDict2PbMessage(value, _GetJobConfAttr(lambda x:x, 'exp_run_conf'))
     return oneflow.config
 
+@oneflow_export('config.use_memory_allocation_algorithm_v2')
+def set_use_memory_allocation_algorithm_v2(value = True):
+    _SetJobConfAttr(lambda x:x, 'use_memory_allocation_algorithm_v2', value)
+    return oneflow.config
+
 @oneflow_export('config.enable_cudnn')
 def set_enable_cudnn(value = True):
     _SetJobConfAttr(lambda x:x, 'enable_cudnn', value)

@@ -601,24 +601,28 @@ Plan Improver::Improve(const AvailableMemDesc& amd, const Plan& naive_plan,
 
 Plan Improver::GenAndInferMemBlockId(const Plan& naive_plan) const {
   Plan plan(naive_plan);
-  PlanTaskGraph plan_task_graph(naive_plan);
-  {
-    auto regst_desc_id2regst_desc = MakeRegstDescId2RegstDesc(&plan);
-    ForEachInferredMemBlockId(plan_task_graph, [&](int64_t regst_desc_id, int64_t mem_block_id) {
-      regst_desc_id2regst_desc->at(regst_desc_id)->set_mem_block_id(mem_block_id);
-      regst_desc_id2regst_desc->at(regst_desc_id)->set_mem_block_offset(0);
-    });
-    SetInplaceConsumedRegstDescId(&plan, *regst_desc_id2regst_desc);
-  }
-  {
-    auto OrderInGraph4TaskId = [&](int64_t task_id) {
-      return plan_task_graph.TaskProto4TaskId(task_id)->task_set_info().order_in_graph();
-    };
-    auto IsReachable = [&](int64_t src_task_id, int64_t dst_task_id) {
-      return plan_task_graph.IsReachableInSameArea(src_task_id, dst_task_id);
-    };
-    ForEachInferredMemSharingCriticalSection(plan, OrderInGraph4TaskId,
-                                             MakeSetterAddCtrlRegst(&plan, IsReachable));
+  if (GlobalJobDesc().use_memory_allocation_algorithm_v2()) {
+    TODO();
+  } else {
+    PlanTaskGraph plan_task_graph(naive_plan);
+    {
+      auto regst_desc_id2regst_desc = MakeRegstDescId2RegstDesc(&plan);
+      ForEachInferredMemBlockId(plan_task_graph, [&](int64_t regst_desc_id, int64_t mem_block_id) {
+        regst_desc_id2regst_desc->at(regst_desc_id)->set_mem_block_id(mem_block_id);
+        regst_desc_id2regst_desc->at(regst_desc_id)->set_mem_block_offset(0);
+      });
+      SetInplaceConsumedRegstDescId(&plan, *regst_desc_id2regst_desc);
+    }
+    {
+      auto OrderInGraph4TaskId = [&](int64_t task_id) {
+        return plan_task_graph.TaskProto4TaskId(task_id)->task_set_info().order_in_graph();
+      };
+      auto IsReachable = [&](int64_t src_task_id, int64_t dst_task_id) {
+        return plan_task_graph.IsReachableInSameArea(src_task_id, dst_task_id);
+      };
+      ForEachInferredMemSharingCriticalSection(plan, OrderInGraph4TaskId,
+                                               MakeSetterAddCtrlRegst(&plan, IsReachable));
+    }
   }
   return plan;
 }
