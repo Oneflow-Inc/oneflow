@@ -2,7 +2,6 @@
 #define ONEFLOW_CORE_REGISTER_RUNTIME_BLOB_DESC_H_
 
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/register/field_desc.h"
 #include "oneflow/core/register/blob_desc.h"
 #include "oneflow/core/register/blob_desc.pb.h"
 

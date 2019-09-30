@@ -10,10 +10,6 @@ class IdentifyOutsideAnchorsKernel final : public KernelIf<device_type> {
   ~IdentifyOutsideAnchorsKernel() = default;
 
  private:
-  void ForwardDenseShape(const KernelCtx& ctx,
-                         std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
-    BnInOp2Blob("out")->dense_shape_mut_view().set_shape({BnInOp2Blob("in")->shape().At(0)});
-  }
   void ForwardDataContent(const KernelCtx& ctx,
                           std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
     IdentifyOutsideAnchorsUtil<device_type, T>::IdentifyOutsideAnchors(
