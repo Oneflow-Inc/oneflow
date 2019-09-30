@@ -38,7 +38,7 @@ void Shape::ToProto(ShapeProto* ret) const {
 }
 
 void Shape::Set(int64_t index, int64_t val) {
-  dim_vec_[index] = val;
+  dim_vec_.at(index) = val;
   UpdateElemCnt();
 }
 
@@ -74,9 +74,9 @@ std::vector<int64_t> Shape::ShiftNegativeAxis(const std::vector<int64_t>& axis_v
   const int64_t num_axes = this->NumAxes();
   std::vector<int64_t> ret = axis_vec;
   for (int64_t i = 0; i < axis_vec.size(); i++) {
-    if (axis_vec[i] < 0) { ret[i] += num_axes; }
-    CHECK_LT(ret[i], num_axes);
-    CHECK_GE(ret[i], 0);
+    if (axis_vec.at(i) < 0) { ret.at(i) += num_axes; }
+    CHECK_LT(ret.at(i), num_axes);
+    CHECK_GE(ret.at(i), 0);
   }
   return ret;
 }
@@ -84,7 +84,7 @@ std::vector<int64_t> Shape::ShiftNegativeAxis(const std::vector<int64_t>& axis_v
 Shape Shape::CreateReducedShape(const std::vector<int64_t>& axis_vec) const {
   CHECK_EQ(axis_vec.empty(), false);
   std::vector<int64_t> dim_vec = this->dim_vec();
-  for (const int64_t& axis : ShiftNegativeAxis(axis_vec)) { dim_vec[axis] = 1; }
+  for (const int64_t& axis : ShiftNegativeAxis(axis_vec)) { dim_vec.at(axis) = 1; }
   return Shape(dim_vec);
 }
 
@@ -93,9 +93,9 @@ Shape Shape::RemoveOnes(const std::vector<int64_t>& axis_vec) const {
   const std::vector<int64_t> axis_vec_shifted = ShiftNegativeAxis(axis_vec);
   for (int64_t i = 0; i < this->dim_vec().size(); i++) {
     if (std::find(axis_vec_shifted.begin(), axis_vec_shifted.end(), i) == axis_vec_shifted.end()) {
-      dim_vec.push_back(this->dim_vec()[i]);
+      dim_vec.push_back(this->dim_vec().at(i));
     } else {
-      CHECK_EQ(this->dim_vec()[i], 1);
+      CHECK_EQ(this->dim_vec().at(i), 1);
     }
   }
   if (dim_vec.empty()) { dim_vec.push_back(1); }
@@ -117,10 +117,10 @@ std::vector<int64_t> Shape::Axes4BroadcastTo(const Shape& broadcast_shape) const
   std::vector<int64_t> broadcast_axis_vec;
   CHECK_EQ(broadcast_shape.NumAxes(), NumAxes());
   for (int64_t i = 0; i < NumAxes(); i++) {
-    if (this->dim_vec()[i] != broadcast_shape.dim_vec()[i] && this->dim_vec()[i] == 1) {
+    if (this->dim_vec().at(i) != broadcast_shape.dim_vec().at(i) && this->dim_vec().at(i) == 1) {
       broadcast_axis_vec.push_back(i);
     } else {
-      CHECK_EQ(this->dim_vec()[i], broadcast_shape.dim_vec()[i]);
+      CHECK_EQ(this->dim_vec().at(i), broadcast_shape.dim_vec().at(i));
     }
   }
   CHECK(!broadcast_axis_vec.empty());
