@@ -15,6 +15,7 @@
 #include "oneflow/core/control/cluster_control.h"
 #include "oneflow/core/job/job_set_compile_ctx.h"
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
+#include "oneflow/core/job/foreign_watcher.h"
 
 namespace oneflow {
 
