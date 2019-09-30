@@ -18,6 +18,13 @@
 
 namespace oneflow {
 
+Maybe<void> RegisterWatcherOnlyOnce(ForeignWatcher* watcher) {
+  OF_CHECK_ISNULL(Global<ForeignWatcher>::Get()) << "foreign watcher registered";
+  // no delete
+  Global<ForeignWatcher>::SetAllocated(watcher);
+  return Maybe<void>::Ok();
+}
+
 Maybe<bool> IsOpTypeCaseCpuSupportOnly(int64_t op_type_case) {
   using namespace oneflow;
   using OnlyCpuSupport = OnlyCpuSupportPredicator;
