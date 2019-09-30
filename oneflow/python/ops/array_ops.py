@@ -446,3 +446,20 @@ def stack(inputs, axis, name=None):
     lbi.op_name = op_conf.name
     lbi.blob_name = "out"
     return remote_blob_util.RemoteBlob(lbi)
+
+
+@oneflow_export("assign")
+def assign(ref, value, begin_axis=None, end_axis=None, dtype=None, name=None):
+    op_conf = op_conf_util.OperatorConf()
+    setattr(
+        op_conf,
+        "name",
+        name if name is not None else id_util.UniqueStr("Assign_"),
+    )
+    op_conf.assign_conf.ref = ref.logical_blob_name
+    op_conf.assign_conf.value = value.logical_blob_name
+    compile_context.CurJobAddOp(op_conf)
+    out_lbi = logical_blob_id_util.LogicalBlobId()
+    setattr(out_lbi, "op_name", op_conf.name)
+    setattr(out_lbi, "blob_name", "y")
+    return remote_blob_util.RemoteBlob(out_lbi)
