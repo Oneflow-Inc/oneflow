@@ -36,8 +36,7 @@ void LocalResponseNormalizationKernel<DeviceType::kCPU, T>::NCHWForward(
   Blob* out_blob = BnInOp2Blob("out");
   Blob* ps_blob = BnInOp2Blob("padded_square");
   Blob* nc_blob = BnInOp2Blob("normalize_coef");
-  Memset<DeviceType::kCPU>(ctx.device_ctx, ps_blob->mut_dptr(), 0,
-                           ps_blob->ByteSizeOfBlobBody());
+  Memset<DeviceType::kCPU>(ctx.device_ctx, ps_blob->mut_dptr(), 0, ps_blob->ByteSizeOfBlobBody());
 
   T* ps_dptr = ps_blob->mut_dptr<T>();
   T* nc_dptr = nc_blob->mut_dptr<T>();
@@ -83,8 +82,7 @@ void LocalResponseNormalizationKernel<DeviceType::kCPU, T>::NCHWBackward(
   const Shape& in_shape = in_blob->shape();
   const Blob* out_blob = BnInOp2Blob("out");
   Blob* ps_blob = BnInOp2Blob("padded_square");
-  Memset<DeviceType::kCPU>(ctx.device_ctx, ps_blob->mut_dptr(), 0,
-                           ps_blob->ByteSizeOfBlobBody());
+  Memset<DeviceType::kCPU>(ctx.device_ctx, ps_blob->mut_dptr(), 0, ps_blob->ByteSizeOfBlobBody());
 
   const T* out_diff_dptr = BnInOp2Blob("out_diff")->dptr<T>();
   T* in_diff_dptr = BnInOp2Blob("in_diff")->mut_dptr<T>();
@@ -139,8 +137,7 @@ void LocalResponseNormalizationKernel<DeviceType::kCPU, T>::NHWCForward(
   Blob* out_blob = BnInOp2Blob("out");
   Blob* padded_square_blob = BnInOp2Blob("padded_square");
   Blob* normalize_coef_blob = BnInOp2Blob("normalize_coef");
-  Memset<DeviceType::kCPU>(ctx.device_ctx, out_blob->mut_dptr(), 0,
-                           out_blob->ByteSizeOfBlobBody());
+  Memset<DeviceType::kCPU>(ctx.device_ctx, out_blob->mut_dptr(), 0, out_blob->ByteSizeOfBlobBody());
   Memset<DeviceType::kCPU>(ctx.device_ctx, padded_square_blob->mut_dptr(), 0,
                            padded_square_blob->ByteSizeOfBlobBody());
   Memset<DeviceType::kCPU>(ctx.device_ctx, normalize_coef_blob->mut_dptr(), 0,
