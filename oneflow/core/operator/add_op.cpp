@@ -9,8 +9,6 @@ const PbMessage& AddOp::GetCustomizedConf() const { return op_conf().add_conf();
 Maybe<void> AddOp::InferBatchAxis(
     std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
   for (const auto& ibn : input_bns()) {
-    const auto* ai = BatchAxis4BnInOp(ibn);
-    const auto* a0 = BatchAxis4BnInOp(input_bns().Get(0));
     CHECK_OR_RETURN(*BatchAxis4BnInOp(ibn) == *BatchAxis4BnInOp(input_bns().Get(0)));
   }
   return NaiveInferBatchAxis(BatchAxis4BnInOp);
