@@ -32,6 +32,7 @@ class WhereOp final : public Operator {
     CHECK_EQ_OR_RETURN(lhs->data_type(), rhs->data_type());
     // output
     *GetBlobDesc4BnInOp("out") = *lhs;
+
     return Maybe<void>::Ok();
   }
 
