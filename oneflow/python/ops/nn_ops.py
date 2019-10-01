@@ -280,8 +280,8 @@ def sparse_softmax_cross_entropy_with_logits(
     lbi.blob_name = "out"
     return remote_blob_util.RemoteBlob(lbi)
 
-@oneflow_export("nn.sigmoid_cross_entropy_with_logits")
-def sigmoid_cross_entropy_with_logits(
+@oneflow_export("deprecated.nn.sigmoid_cross_entropy_with_logits")
+def sigmoid_cross_entropy_with_logits_deprecated(
     labels=None, logits=None, name=None
 ):
     assert labels is not None
@@ -307,7 +307,28 @@ def sigmoid_cross_entropy_with_logits(
     lbi.blob_name = "loss"
     return remote_blob_util.RemoteBlob(lbi)
 
-    
+@oneflow_export("nn.sigmoid_cross_entropy_with_logits")
+def sigmoid_cross_entropy_with_logits(
+    labels=None, logits=None, name=None
+):
+    assert labels is not None
+    assert logits is not None
+    op_conf = op_conf_util.OperatorConf()
+    setattr(
+        op_conf,
+        "name",
+        name if name is not None else id_util.UniqueStr("SigmoidCrossEntropy_"),
+    )
+    op_conf.sigmoid_cross_entropy_conf.prediction = logits.logical_blob_name
+    op_conf.sigmoid_cross_entropy_conf.label = labels.logical_blob_name
+    op_conf.sigmoid_cross_entropy_conf.loss = "loss"
+    op_conf.sigmoid_cross_entropy_conf.label_type = labels.dtype
+    compile_context.CurJobAddOp(op_conf)
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = "loss"
+    return remote_blob_util.RemoteBlob(lbi)
+
 def _GetSequence(value, n, name):
     """Formats value from input"""
     if value is None:
