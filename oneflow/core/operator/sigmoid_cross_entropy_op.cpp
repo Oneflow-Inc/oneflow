@@ -23,7 +23,7 @@ class SigmoidCrossEntropyOp final : public Operator {
   Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                              const ParallelContext* parallel_ctx) const override {
     CHECK_EQ_OR_RETURN(op_conf().sigmoid_cross_entropy_conf().label_type(),
-                       GetBlobDesc4BnInOp("prediction")->data_type());
+                       GetBlobDesc4BnInOp("label")->data_type());
     *GetBlobDesc4BnInOp("loss") = *GetBlobDesc4BnInOp("prediction");
     return Maybe<void>::Ok();
   }
@@ -69,7 +69,7 @@ class SigmoidCrossEntropyGradOp final : public Operator {
   Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                              const ParallelContext* parallel_ctx) const override {
     CHECK_EQ_OR_RETURN(op_conf().sigmoid_cross_entropy_grad_conf().label_type(),
-                       GetBlobDesc4BnInOp("prediction")->data_type());
+                       GetBlobDesc4BnInOp("label")->data_type());
     *GetBlobDesc4BnInOp("loss") = *GetBlobDesc4BnInOp("prediction");
     return Maybe<void>::Ok();
   }
