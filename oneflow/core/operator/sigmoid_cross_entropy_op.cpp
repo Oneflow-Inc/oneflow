@@ -10,7 +10,7 @@ class SigmoidCrossEntropyOp final : public Operator {
   ~SigmoidCrossEntropyOp() = default;
 
   void InitFromOpConf() override {
-    CHECK(op_conf().has_sigmoid_cross_entropy_loss_conf());
+    CHECK(op_conf().has_sigmoid_cross_entropy_conf());
     EnrollInputBn("prediction");
     EnrollInputBn("label", false);
     EnrollOutputBn("loss");
@@ -22,6 +22,8 @@ class SigmoidCrossEntropyOp final : public Operator {
 
   Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                              const ParallelContext* parallel_ctx) const override {
+    CHECK_EQ_OR_RETURN(op_conf().sigmoid_cross_entropy_conf().label_type(),
+                       GetBlobDesc4BnInOp("prediction")->data_type());
     *GetBlobDesc4BnInOp("loss") = *GetBlobDesc4BnInOp("prediction");
     return Maybe<void>::Ok();
   }
@@ -46,5 +48,51 @@ class SigmoidCrossEntropyOp final : public Operator {
 };
 
 REGISTER_OP(OperatorConf::kSigmoidCrossEntropyConf, SigmoidCrossEntropyOp);
+
+class SigmoidCrossEntropyGradOp final : public Operator {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(SigmoidCrossEntropyGradOp);
+  SigmoidCrossEntropyGradOp() = default;
+  ~SigmoidCrossEntropyGradOp() = default;
+
+  void InitFromOpConf() override {
+    CHECK(op_conf().has_sigmoid_cross_entropy_grad_conf());
+    EnrollInputBn("prediction");
+    EnrollInputBn("label", false);
+    EnrollOutputBn("prediction_diff");
+  }
+
+  const PbMessage& GetCustomizedConf() const override {
+    return op_conf().sigmoid_cross_entropy_grad_conf();
+  }
+
+  Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                             const ParallelContext* parallel_ctx) const override {
+    CHECK_EQ_OR_RETURN(op_conf().sigmoid_cross_entropy_grad_conf().label_type(),
+                       GetBlobDesc4BnInOp("prediction")->data_type());
+    *GetBlobDesc4BnInOp("loss") = *GetBlobDesc4BnInOp("prediction");
+    return Maybe<void>::Ok();
+  }
+
+ private:
+  Maybe<void> InferBatchAxis(
+      std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override {
+    return NaiveInferBatchAxis(BatchAxis4BnInOp);
+  }
+
+  Maybe<void> GetSbpSignatures(
+      const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
+      SbpSignatureList* sbp_sig_list) const {
+    SbpSignatureBuilder()
+        .Split(input_bns(), 0)
+        .Split(output_bns(), 0)
+        .MakeSplitSignatureListBuilder(
+            JUST(LogicalBlobDesc4Ibn(input_bns().Get(0)))->shape().NumAxes())
+        .Build(sbp_sig_list);
+    return Maybe<void>::Ok();
+  }
+};
+
+REGISTER_OP(OperatorConf::kSigmoidCrossEntropyGradConf, SigmoidCrossEntropyGradOp);
 
 }  // namespace oneflow
