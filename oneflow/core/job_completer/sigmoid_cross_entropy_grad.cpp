@@ -53,6 +53,6 @@ void GenerateBackwardOpConf(
 }  // namespace
 
 REGISTER_OP_GRAD(OperatorConf::kSigmoidCrossEntropyLossConf, &GenerateBackwardOpConfDeprecated);
-REGISTER_OP_GRAD(OperatorConf::kSigmoidCrossEntropyConf, &GenerateBackwardOpConfDeprecated);
+REGISTER_OP_GRAD(OperatorConf::kSigmoidCrossEntropyConf, &GenerateBackwardOpConf);
 
 }  // namespace oneflow
