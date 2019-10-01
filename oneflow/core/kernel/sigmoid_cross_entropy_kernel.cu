@@ -43,14 +43,44 @@ class SigmoidCrossEntropyGpuKernel final : public KernelIf<DeviceType::kGPU> {
   }
 };
 
-#define REGISTER_SIGMOID_CROSS_ENTROPY_GPU_KERNEL(dtype, ltype)                                   \
-  NEW_REGISTER_KERNEL(OperatorConf::kSigmoidCrossEntropyConf,                                     \
-                      SigmoidCrossEntropyGpuKernel<dtype, ltype>)                                 \
-      .SetIsMatchedPred([](const KernelConf& conf) {                                              \
-        return ((conf.op_attribute().op_conf().device_type() == DeviceType::kGPU)                 \
-                && (conf.data_type() == GetDataType<dtype>::value)                                \
-                && (GetDataType<ltype>::value                                                     \
-                    == conf.op_attribute().op_conf().sigmoid_cross_entropy_conf().label_type())); \
+template<typename PredType, typename LabelType>
+class SigmoidCrossEntropyGradGpuKernel final : public KernelIf<DeviceType::kGPU> {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(SigmoidCrossEntropyGradGpuKernel);
+  SigmoidCrossEntropyGradGpuKernel() = default;
+  ~SigmoidCrossEntropyGradGpuKernel() override = default;
+
+ private:
+  void ForwardDataContent(const KernelCtx& ctx,
+                          std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
+    const Blob* prediction = BnInOp2Blob("prediction");
+    const Blob* label = BnInOp2Blob("label");
+    Blob* pred_diff = BnInOp2Blob("prediction_diff");
+    const int64_t n = prediction->shape().elem_cnt();
+    SigmoidCrossEntropyLossBackward<PredType>
+        <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx.device_ctx->cuda_stream()>>>(
+            n, prediction->dptr<PredType>(), label->dptr<LabelType>(),
+            pred_diff->mut_dptr<PredType>());
+  }
+};
+
+#define REGISTER_SIGMOID_CROSS_ENTROPY_GPU_KERNEL(dtype, ltype)                                    \
+  NEW_REGISTER_KERNEL(OperatorConf::kSigmoidCrossEntropyConf,                                      \
+                      SigmoidCrossEntropyGpuKernel<dtype, ltype>)                                  \
+      .SetIsMatchedPred([](const KernelConf& conf) {                                               \
+        return ((conf.op_attribute().op_conf().device_type() == DeviceType::kGPU)                  \
+                && (conf.data_type() == GetDataType<dtype>::value)                                 \
+                && (GetDataType<ltype>::value                                                      \
+                    == conf.op_attribute().op_conf().sigmoid_cross_entropy_conf().label_type()));  \
+      });                                                                                          \
+  NEW_REGISTER_KERNEL(OperatorConf::kSigmoidCrossEntropyGradConf,                                  \
+                      SigmoidCrossEntropyGradGpuKernel<dtype, ltype>)                              \
+      .SetIsMatchedPred([](const KernelConf& conf) {                                               \
+        return (                                                                                   \
+            (conf.op_attribute().op_conf().device_type() == DeviceType::kGPU)                      \
+            && (conf.data_type() == GetDataType<dtype>::value)                                     \
+            && (GetDataType<ltype>::value                                                          \
+                == conf.op_attribute().op_conf().sigmoid_cross_entropy_grad_conf().label_type())); \
       })
 
 REGISTER_SIGMOID_CROSS_ENTROPY_GPU_KERNEL(float, int32_t);
