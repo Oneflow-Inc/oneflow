@@ -70,14 +70,14 @@ class UpsampleNearestGPUKernel final : public KernelIf<DeviceType::kGPU> {
                           std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
     const Blob* in_blob = BnInOp2Blob("in");
     Blob* out_blob = BnInOp2Blob("out");
-    const int32_t scale = 1.f / this->op_conf().upsample_nearest_conf().scale();
+    const int32_t scale = this->op_conf().upsample_nearest_conf().scale();
 
     const int64_t elem_cnt = out_blob->shape().elem_cnt();
     UpsampleNearestForward<T><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
                                 ctx.device_ctx->cuda_stream()>>>(
         elem_cnt, in_blob->dptr<T>(), in_blob->shape().At(1), in_blob->shape().At(2),
-        in_blob->shape().At(3), out_blob->shape().At(2), out_blob->shape().At(3), scale, scale,
-        false, out_blob->mut_dptr<T>());
+        in_blob->shape().At(3), out_blob->shape().At(2), out_blob->shape().At(3), 1.f / scale,
+        1.f / scale, false, out_blob->mut_dptr<T>());
   }
 };
 
@@ -96,14 +96,14 @@ class UpsampleNearestGradGPUKernel final : public KernelIf<DeviceType::kGPU> {
     Memset<DeviceType::kGPU>(ctx.device_ctx, dx_blob->mut_dptr<T>(), 0,
                              dx_blob->ByteSizeOfBlobBody());
     const Blob* dy_blob = BnInOp2Blob("dy");
-    const int32_t scale = this->op_conf().upsample_nearest_conf().scale();
+    const int32_t scale = this->op_conf().upsample_nearest_grad_conf().scale();
 
     const int64_t elem_cnt = dy_blob->shape().elem_cnt();
     UpsampleNearestBackward<T><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
                                  ctx.device_ctx->cuda_stream()>>>(
         elem_cnt, dy_blob->dptr<T>(), dx_blob->shape().At(1), dx_blob->shape().At(2),
-        dx_blob->shape().At(3), dy_blob->shape().At(2), dy_blob->shape().At(3), scale, scale, false,
-        dx_blob->mut_dptr<T>());
+        dx_blob->shape().At(3), dy_blob->shape().At(2), dy_blob->shape().At(3), 1.f / scale,
+        1.f / scale, false, dx_blob->mut_dptr<T>());
   }
 };
 
