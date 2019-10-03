@@ -1567,7 +1567,7 @@ message DeconvOpConf {
     optional InitializerConf bias_initializer = 8;
 }
 
-message RoiAlignConf {
+message RoiAlignArgs {
   required int32 pooled_h = 4;
   required int32 pooled_w = 5;
   optional float spatial_scale = 6 [default = 0.0625]; // 1/16
@@ -1579,7 +1579,7 @@ message RoiAlignOpConf {
   required string x = 1;
   required string rois = 2;
   required string y = 3;
-  required RoiAlignConf roi_align_conf = 4;
+  required RoiAlignArgs roi_align_args = 4;
 }
 
 message RoiAlignGradOpConf {
@@ -1587,7 +1587,7 @@ message RoiAlignGradOpConf {
   required string x_like = 2;
   required string rois = 3;
   required string dx = 4;
-  required RoiAlignConf roi_align_conf = 5;
+  required RoiAlignArgs roi_align_args = 5;
 }
 
 message WhereOpConf {
