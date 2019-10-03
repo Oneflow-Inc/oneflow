@@ -14,5 +14,5 @@ def AsyncPull(op_name, pull_data_cb):
     c_api_util.LaunchJob(job_instance.MakePullJobInstance(pull_job_name, op_name, pull_data_cb))
     
 def MakePushCallback(ndarray):
-    return lambda ofblob: ofblob.CopyFromNdarray(ndarray)
+    return lambda ofblob: ofblob.CopyFromNdarrayOrNestedNdarrayList(ndarray)
 

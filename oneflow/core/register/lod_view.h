@@ -84,7 +84,7 @@ class TreeLoDView final : public LoDViewBase {
   }
   TreeLoDView(const TreeLoDView& rhs) = default;
 
-  const LoDTree& lod_tree() const { return lod_tree_; }
+  LoDTree lod_tree() const { return lod_tree_; }
 
  private:
   void Init();
