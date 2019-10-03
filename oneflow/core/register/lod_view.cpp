@@ -192,7 +192,8 @@ void TreeLoDMutView::UpdateLoD(const LoDTree& lod_tree) const {
     }
     ptr += cur_level_subtrees.size() + 1;
   }
-  CHECK_LT(ptr, ptr_ + max_reserved_size_for_lod_);
+  CHECK_LE(ptr, ptr_ + max_reserved_size_for_lod_)
+      << "max_reserved_size_for_lod_: " << max_reserved_size_for_lod_;
 }
 
 void CoordinateLoDMutView::UpdateLoD(
