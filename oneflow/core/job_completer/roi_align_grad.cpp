@@ -17,8 +17,8 @@ void GenerateBackwardOpConf(
     roi_align_grad_op_conf->set_rois(GenLogicalBlobName(op.BnInOp2Lbi("rois")));
     roi_align_grad_op_conf->set_dy(GenLogicalBlobName(*DiffLbi4BnInOp("y")));
     roi_align_grad_op_conf->set_dx("dx");
-    *roi_align_grad_op_conf->mutable_roi_align_conf() =
-        op.op_conf().roi_align_conf().roi_align_conf();
+    *roi_align_grad_op_conf->mutable_roi_align_args() =
+        op.op_conf().roi_align_conf().roi_align_args();
     op_confs->push_back(roi_align_grad_op);
     DiffLbi4BnInOp("x")->set_op_name(roi_align_grad_op.name());
     DiffLbi4BnInOp("x")->set_blob_name("dx");
