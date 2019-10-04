@@ -389,15 +389,15 @@ void MarkClusterIdPass::BuildClusterNodesAndEdges() {
   };
   for (ClusterNode *start : root_nodes_) {
     const XlaNode *xrt_node = start->xrt_node();
-    for (const XlaEdge *xla_edge : xrt_node->out_edges()) {
-      int64_t unique_id = xla_edge->end()->unique_id();
+    for (const XlaEdge *edge : xrt_node->out_edges()) {
+      int64_t unique_id = edge->end()->unique_id();
       ClusterNode *end = cluster_nodes[unique_id];
       auto cluster_edge = BuildClusterEdge(start, end);
-      cluster_edge->set_is_control_edge(xla_edge->IsControlEdge());
-      cluster_edge->set_start_sbp_policy(xla_edge->sbp_policy(0));
-      cluster_edge->set_end_sbp_policy(xla_edge->sbp_policy(1));
-      cluster_edge->set_start_time_shape(xla_edge->time_shape(0));
-      cluster_edge->set_end_time_shape(xla_edge->time_shape(1));  
+      cluster_edge->set_is_control_edge(edge->IsControlEdge());
+      cluster_edge->set_start_sbp_policy(edge->sbp_policy(0));
+      cluster_edge->set_end_sbp_policy(edge->sbp_policy(1));
+      cluster_edge->set_start_time_shape(edge->time_shape(0));
+      cluster_edge->set_end_time_shape(edge->time_shape(1));  
       start->AddOutEdge(cluster_edge.get());
       end->AddInEdge(cluster_edge.get());
       allocated_edges_.push_back(cluster_edge);

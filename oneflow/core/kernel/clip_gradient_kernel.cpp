@@ -18,7 +18,6 @@ typedef std::function<Blob*(const std::string&)> BnInOp2BlobFunc;
 template<DeviceType device_type, typename T>
 void ClipGradientKernel<device_type, T>::Forward(
     const KernelCtx& ctx, BnInOp2BlobFunc BnInOp2Blob) const {
-  // LOG(INFO) << "Run ClipGradientKernel";
   // TODO(hjchen2)
   LOG(FATAL) << "ClipGradient is only used for XLA.";
 }

@@ -39,6 +39,7 @@ static std::unordered_map<int32_t, std::string> op_type2string_map = {
   {OP_TYPE_CASE(AdamOptimizer), "AdamOptimizer"},
   {OP_TYPE_CASE(ClipGradient), "ClipGradient"},
   {OP_TYPE_CASE(ReduceConcat), "ReduceConcat"},
+  {OP_TYPE_CASE(ReduceSplit), "ReduceSplit"},
   // TODO(hjchen2)
 };
 

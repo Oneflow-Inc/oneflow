@@ -27,7 +27,6 @@ template<DeviceType device_type, typename T>
 void AdamOptimizerKernel<device_type, T>::Forward(
     const KernelCtx& ctx, BnInOp2BlobFunc BnInOp2Blob) const {
   // TODO(hjchen2)
-  // LOG(INFO) << "Run AdamOptimizerKernel";
   LOG(FATAL) << "AdamOptimizer is only used for XLA.";
 }
 

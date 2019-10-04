@@ -1,4 +1,5 @@
 #include "oneflow/core/operator/operator.h"
+#include "oneflow/core/graph/logical_node.h"
 
 namespace oneflow {
 
@@ -14,6 +15,10 @@ class AdamOptimizerOp : public Operator {
       std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
       const ParallelContext* parallel_ctx) const override {
     return Maybe<void>::Ok();
+  }
+
+  LogicalNode* NewProperLogicalNode() const override {
+    return new OptimizerLogicalNode;
   }
 
  private:

@@ -26,6 +26,8 @@ extern const std::string _XlaInArgumentPrefix;
 extern const std::string _XlaOutArgumentPrefix;
 }  // namespace mola
 
+static const std::string _ReduceSplitType = "ReduceSplit";
+
 template <typename T>
 using RepeatedPtrField = google::protobuf::RepeatedPtrField<T>;
 
@@ -74,6 +76,7 @@ class FoldSubgraphBuilder {
   void BuildImpl() {
     CHECK(builder_);
     // Rebuilding folded job should takes the below steps in order
+    InferIsAfterAllReduce();
     // 1.Add XlaLaunch operator in the job
     BuildXlaLaunchOps();
     // 2.Replace control_in_op_name by XlaLaunch name if the operator
@@ -89,6 +92,8 @@ class FoldSubgraphBuilder {
     // 6.Finally remove the folded operators
     RemoveLaunchFoldedOps();
   }
+
+  void InferIsAfterAllReduce();
 
   void buildXlaLaunchAttribute(const XlaGraph *sub_graph,
                                XlaLaunchOpConf::Attribute *launch_attr);
@@ -130,9 +135,12 @@ class FoldSubgraphBuilder {
 
   void RemoveLaunchFoldedOps();
 
+  bool IsAfterAllReduce(const XlaNode *node);
+
  private:
   const XlaGraph &graph_;
   std::shared_ptr<JobBuilder> builder_;
+  std::unordered_set<const XlaNode *> after_allreduce_nodes_;
   // Launch nodes
   std::vector<const XlaNode *> launch_nodes_;
   // Folded nodes except for argument nodes for each launch nodes
@@ -281,6 +289,10 @@ void FoldSubgraphBuilder::BuildXlaLaunchOps() {
     XlaLaunchOpConf *launch_conf = op_conf.mutable_xla_launch_conf();
     AddInBlobNames(node->in_edges(), launch_conf);
     AddOutBlobNames(node->out_edges(), launch_conf);
+
+    if (IsAfterAllReduce(node)) {
+      launch_conf->set_is_model_update(true);
+    }
 
     buildXlaLaunchAttribute(node->sub_graph(), launch_conf->mutable_attr());
 
@@ -455,6 +467,21 @@ void FoldSubgraphBuilder::RemoveLaunchFoldedOps() {
       }
     }
   }
+}
+
+void FoldSubgraphBuilder::InferIsAfterAllReduce() {
+  TopologyVisit(graph_, [this](const XlaNode *node) {
+    for (const XlaEdge *edge : node->in_edges()) {
+      const XlaNode *start = edge->start();
+      if (IsAfterAllReduce(start) || start->op_type() == _ReduceSplitType) {
+        after_allreduce_nodes_.insert(node);
+      }
+    }
+  });
+}
+
+bool FoldSubgraphBuilder::IsAfterAllReduce(const XlaNode *node) {
+  return after_allreduce_nodes_.count(node) > 0;
 }
 
 void RebuildXlaCompiledJob(const XlaGraph &graph, Job *job) {
