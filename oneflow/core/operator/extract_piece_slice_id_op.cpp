@@ -48,6 +48,7 @@ Maybe<void> ExtractPieceSliceIdOp::InferBlobDescs(
     BlobDesc* out_i = GetBlobDesc4BnInOp(output_bns().Get(i));
     out_i->mut_shape() = Shape({in_i->shape().At(0)});
     out_i->set_data_type(DataType::kInt32);
+    out_i->set_is_dynamic(in_i->is_dynamic());
   }
   return Maybe<void>::Ok();
 }
