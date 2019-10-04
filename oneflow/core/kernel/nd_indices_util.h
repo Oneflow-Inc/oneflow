@@ -38,7 +38,7 @@ struct NdIndicesUtil final {
   static void GatherNd(DeviceCtx* ctx, const Blob* indices, const Blob* dense,
                        const int64_t* dense_shape, Blob* sparse) {
     int64_t num_segms = indices->shape().Count(0, indices->shape().NumAxes() - 1);
-    int64_t segm_size = sparse->shape().Count(indices->shape().NumAxes());
+    int64_t segm_size = sparse->shape().Count(indices->shape().NumAxes() - 1);
     int64_t segm_dims = indices->shape().At(indices->shape().NumAxes() - 1);
     GatherNdOnDevice<device_type, T, I>::Run(ctx, num_segms, segm_size, segm_dims,
                                              indices->dptr<I>(), dense_shape, dense->dptr<T>(),
@@ -50,7 +50,7 @@ struct NdIndicesUtil final {
   static void ScatterNdApply(DeviceCtx* ctx, const Blob* indices, const Blob* sparse,
                              const int64_t* dense_shape, Blob* dense) {
     int64_t num_segms = indices->shape().Count(0, indices->shape().NumAxes() - 1);
-    int64_t segm_size = sparse->shape().Count(indices->shape().NumAxes());
+    int64_t segm_size = sparse->shape().Count(indices->shape().NumAxes() - 1);
     int64_t segm_dims = indices->shape().At(indices->shape().NumAxes() - 1);
     ScatterNdOnDevice<device_type, T, I, func>::Run(ctx, num_segms, segm_size, segm_dims,
                                                     indices->dptr<I>(), dense_shape,
