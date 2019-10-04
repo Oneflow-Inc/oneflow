@@ -40,6 +40,8 @@ class ScatterNdUpdateGpuKernel final : public KernelIf<DeviceType::kGPU> {
     Blob* shape_blob = BnInOp2Blob("shape");
     Blob* out_blob = BnInOp2Blob("out");
 
+    out_blob->CopyDataContentFrom(ctx.device_ctx, BnInOp2Blob("in"));
+
     FOR_RANGE(size_t, i, 0, out_blob->shape().NumAxes()) {
       KernelUtil<DeviceType::kGPU, int64_t>::Set(ctx.device_ctx, out_blob->shape().At(i),
                                                  shape_blob->mut_dptr<int64_t>() + i);
