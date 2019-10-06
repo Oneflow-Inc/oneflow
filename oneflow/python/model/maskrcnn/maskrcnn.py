@@ -1,11 +1,11 @@
-from config import get_default_cfgs
 import oneflow as flow
-import oneflow.core.operator.op_conf_pb2 as op_conf_util
 
+from config import get_default_cfgs
 from backbone import Backbone
 from rpn import RPNHead, RPNLoss, RPNProposal
 from box_head import BoxHead
 from mask_head import MaskHead
+# from artificial_data import ArtificialData
 
 import argparse
 
@@ -32,6 +32,7 @@ parser.add_argument(
 )
 
 args = parser.parse_args()
+# debug_data = ArtificialData("/tmp/shared_with_zwx/data.pkl", 64)
 
 
 def get_numpy_placeholders():
@@ -140,6 +141,11 @@ def debug_train(
     gt_labels=flow.input_blob_def(
         placeholders["gt_labels"].shape, dtype=flow.int32
     ),
+    # images=debug_data.blob_def("images"),
+    # image_sizes=debug_data.blob_def("image_size"),
+    # gt_boxes=debug_data.blob_def("gt_bbox"),
+    # gt_segms=debug_data.blob_def("gt_segm"),
+    # gt_labels=debug_data.blob_def("gt_labels"),
 ):
     flow.config.train.primary_lr(0.00001)
     flow.config.train.model_update_conf(dict(naive_conf={}))
@@ -189,6 +195,13 @@ if __name__ == "__main__":
             placeholders["gt_segms"],
             placeholders["gt_labels"],
         ).get()
+        # train_loss = debug_train(
+        #     debug_data.blob("images"),
+        #     debug_data.blob("image_size"),
+        #     debug_data.blob("gt_bbox"),
+        #     debug_data.blob("gt_segm"),
+        #     debug_data.blob("gt_labels"),
+        # ).get()
         print(train_loss)
         eval_loss = debug_eval(
             placeholders["images"],
