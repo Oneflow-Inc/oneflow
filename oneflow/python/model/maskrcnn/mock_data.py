@@ -2,7 +2,7 @@ import oneflow as flow
 import pickle as pk
 
 
-class ArtificialData(object):
+class MockData(object):
     def __init__(self, data_file, max_objs_per_img):
         with open(data_file, "rb") as f:
             self._data = pk.load(f)
