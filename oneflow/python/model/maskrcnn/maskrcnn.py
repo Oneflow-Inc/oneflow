@@ -92,6 +92,7 @@ def maskrcnn(images, image_sizes, gt_boxes, gt_segms, gt_labels):
         )
 
     # Backbone
+    # CHECK_POINT: fpn features
     features = backbone.build(images)
 
     # RPN
