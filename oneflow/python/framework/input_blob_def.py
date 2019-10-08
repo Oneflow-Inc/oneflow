@@ -35,7 +35,7 @@ class input_blob_def(blob_desc.BlobDesc):
         self.is_dynamic_ = is_dynamic
         if num_of_lod_levels > 0:
             assert num_of_lod_levels > 1
-            assert num_of_lod_levels < len(shape)
+            assert num_of_lod_levels <= len(shape)
         self.num_of_lod_levels_ = num_of_lod_levels
         self.batch_axis_ = batch_axis
         self.distribute_ = distribute

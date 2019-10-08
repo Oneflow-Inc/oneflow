@@ -2,7 +2,7 @@ import oneflow as flow
 import pickle as pk
 
 
-class ArtificialData(object):
+class MockData(object):
     def __init__(self, data_file, max_objs_per_img):
         with open(data_file, "rb") as f:
             self._data = pk.load(f)
@@ -33,9 +33,11 @@ class ArtificialData(object):
             segm_mask_shape = [
                 len(self._data["gt_segm"]),
                 self._max_objs_per_img,
-            ] + self._data["gt_segm"][0].shape[1:]
+            ] + list(self._data["gt_segm"][0].shape[1:])
             return flow.input_blob_def(
-                shape=segm_mask_shape, dtype=flow.float32, num_of_lod_levels=2
+                shape=tuple(segm_mask_shape),
+                dtype=flow.float32,
+                num_of_lod_levels=2,
             )
         else:
             raise ValueError("Blob is nonexistent")
