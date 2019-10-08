@@ -22,6 +22,17 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 set(oneflow_cmake_dir ${PROJECT_SOURCE_DIR}/cmake)
 
+set(THIRD_PARTY_DIR "${PROJECT_SOURCE_DIR}/third_party"
+  CACHE PATH "Where the third party headers and libs are put")
+
+# Modules
+list(APPEND CMAKE_MODULE_PATH ${oneflow_cmake_dir}/third_party)
+list(APPEND CMAKE_MODULE_PATH ${oneflow_cmake_dir})
+include(util)
+include(proto2cpp)
+include(swig)
+include(third_party)
+
 if(WIN32)
   set(CMAKE_BUILD_TYPE Debug)
   add_definitions(-DNOMINMAX -D_WIN32_WINNT=0x0A00 -DLANG_CXX11 -DCOMPILER_MSVC -D__VERSION__=\"MSVC\")
@@ -68,17 +79,6 @@ else()
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
   endif()
 endif()
-
-set(THIRD_PARTY_DIR "${PROJECT_SOURCE_DIR}/third_party"
-  CACHE PATH "Where the third party headers and libs are put")
-
-# Modules
-list(APPEND CMAKE_MODULE_PATH ${oneflow_cmake_dir}/third_party)
-list(APPEND CMAKE_MODULE_PATH ${oneflow_cmake_dir})
-include(util)
-include(proto2cpp)
-include(swig)
-include(third_party)
 
 if (THIRD_PARTY)
   add_custom_target(prepare_oneflow_third_party ALL DEPENDS ${oneflow_third_party_dependencies})
