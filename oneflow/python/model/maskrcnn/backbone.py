@@ -10,7 +10,6 @@ class Backbone(object):
 
     def build(self, in_blob):
         with flow.deprecated.variable_scope("backbone"):
-            encoded_tp = flow.transpose(in_blob, perm=[0, 3, 1, 2])
-            features = self.resnet.build(encoded_tp)
+            features = self.resnet.build(in_blob)
             layer_features = self.fpn.build(features)
         return layer_features
