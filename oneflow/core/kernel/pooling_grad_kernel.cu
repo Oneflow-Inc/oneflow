@@ -1,7 +1,6 @@
-#include "oneflow/core/kernel/kernel_util.h"
-#include "oneflow/core/kernel/pooling_grad_kernel.h"
+#include "oneflow/core/kernel/pooling_kernel_util.h"
+#include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/operator/operator_util.h"
-#include "oneflow/core/kernel/pooling_kernel.h"
 
 namespace oneflow {
 
@@ -26,7 +25,7 @@ void InferPoolingParams(const int32_t num_spatial_dims, const PoolingConf& pooli
 }  // namespace
 
 template<typename T>
-struct PoolingGradKernelUtil<DeviceType::kGPU, T> final {
+struct PoolingGradKernelUtil final {
   static void Compute(DeviceCtx* ctx, const PoolingConf& pooling_conf, const Blob* dy_blob,
                       const Blob* y_blob, const Blob* x_blob, Blob* dx_blob) {
     std::string data_format = pooling_conf.data_format();
@@ -57,9 +56,36 @@ struct PoolingGradKernelUtil<DeviceType::kGPU, T> final {
   }
 };
 
-#define INSTANTIATE_POOLING_GRAD_KERNEL_UTIL(type_cpp, type_proto) \
-  template struct PoolingGradKernelUtil<DeviceType::kGPU, type_cpp>;
-OF_PP_FOR_EACH_TUPLE(INSTANTIATE_POOLING_GRAD_KERNEL_UTIL,
-                     FLOATING_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ)
+template<typename T>
+class PoolingGradKernel final : public KernelIf<DeviceType::kGPU> {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(PoolingGradKernel);
+  PoolingGradKernel() = default;
+  ~PoolingGradKernel() = default;
+
+ private:
+  const PbMessage& GetCustomizedOpConf() const override {
+    return this->op_conf().pooling_grad_conf();
+  }
+  void ForwardDataContent(const KernelCtx& ctx,
+                          std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
+    Blob* dx_blob = BnInOp2Blob("dx");
+    if (dx_blob == nullptr) { return; }
+    const PoolingConf& pooling_conf = this->op_conf().pooling_grad_conf().pooling_conf();
+    if (pooling_conf.pool_mode() == "max") {
+      Memset<DeviceType::kGPU>(ctx.device_ctx, dx_blob->mut_dptr(), 0,
+                               dx_blob->ByteSizeOfBlobBody());
+    }
+    PoolingGradKernelUtil<T>::Compute(ctx.device_ctx, pooling_conf, BnInOp2Blob("dy"),
+                                      BnInOp2Blob("y"), BnInOp2Blob("x"), dx_blob);
+  }
+};
+
+REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kPoolingGradConf, DeviceType::kGPU, float,
+                                      PoolingGradKernel<float>);
+REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kPoolingGradConf, DeviceType::kGPU, double,
+                                      PoolingGradKernel<double>);
+REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kPoolingGradConf, DeviceType::kGPU, float16,
+                                      PoolingGradKernel<float16>);
 
 }  // namespace oneflow
