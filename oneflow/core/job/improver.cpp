@@ -3,6 +3,7 @@
 #include "oneflow/core/graph/task_node.h"
 #include "oneflow/core/register/register_desc.pb.h"
 #include "oneflow/core/register/register_manager.h"
+#include "oneflow/core/job/in_job_mem_sharing_util.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/profiler.h"
@@ -602,14 +603,16 @@ Plan Improver::Improve(const AvailableMemDesc& amd, const Plan& naive_plan,
 Plan Improver::GenAndInferMemBlockId(const Plan& naive_plan) const {
   Plan plan(naive_plan);
   PlanTaskGraph plan_task_graph(naive_plan);
-  if (GlobalJobDesc().use_memory_allocation_algorithm_v2()) {
-    TODO();
-  } else {
+  {
     auto regst_desc_id2regst_desc = MakeRegstDescId2RegstDesc(&plan);
-    ForEachInferredMemBlockId(plan_task_graph, [&](int64_t regst_desc_id, int64_t mem_block_id) {
-      regst_desc_id2regst_desc->at(regst_desc_id)->set_mem_block_id(mem_block_id);
-      regst_desc_id2regst_desc->at(regst_desc_id)->set_mem_block_offset(0);
-    });
+    if (GlobalJobDesc().use_memory_allocation_algorithm_v2()) {
+      InJobMemSharingUtil::InferMemBlockId4MemReusedRegst(&plan, plan_task_graph);
+    } else {
+      ForEachInferredMemBlockId(plan_task_graph, [&](int64_t regst_desc_id, int64_t mem_block_id) {
+        regst_desc_id2regst_desc->at(regst_desc_id)->set_mem_block_id(mem_block_id);
+        regst_desc_id2regst_desc->at(regst_desc_id)->set_mem_block_offset(0);
+      });
+    }
     SetInplaceConsumedRegstDescId(&plan, *regst_desc_id2regst_desc);
   }
   {
