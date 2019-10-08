@@ -219,6 +219,7 @@ if __name__ == "__main__":
                 debug_data.blob("gt_segm"),
                 debug_data.blob("gt_labels"),
             ).get()
+            print(train_loss)
         else:
             train_loss = debug_train(
                 placeholders["images"],
@@ -227,12 +228,12 @@ if __name__ == "__main__":
                 placeholders["gt_segms"],
                 placeholders["gt_labels"],
             ).get()
-        print(train_loss)
-        eval_loss = debug_eval(
-            placeholders["images"],
-            placeholders["image_sizes"],
-            placeholders["gt_boxes"],
-            placeholders["gt_segms"],
-            placeholders["gt_labels"],
-        ).get()
-        print(eval_loss)
+            print(train_loss)
+            eval_loss = debug_eval(
+                placeholders["images"],
+                placeholders["image_sizes"],
+                placeholders["gt_boxes"],
+                placeholders["gt_segms"],
+                placeholders["gt_labels"],
+            ).get()
+            print(eval_loss)
