@@ -13,8 +13,8 @@ class StackKernel final : public KernelIf<device_type> {
   void ForwardDataContent(const KernelCtx& ctx,
                           std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
     Blob* out_blob = BnInOp2Blob("out");
-    // const int64_t lod_levels = out_blob->blob_desc().num_of_lod_levels();
     int64_t axis = this->op_conf().stack_conf().axis();
+    // const int64_t lod_levels = out_blob->blob_desc().num_of_lod_levels();
     // if (lod_levels > 1) {
     //   axis -= lod_levels - 1;
     // }
@@ -31,6 +31,26 @@ class StackKernel final : public KernelIf<device_type> {
       out_col_offset += in_cols;
     }
     CHECK_LE(out_col_offset, out_cols);
+  }
+
+  void ForwardDenseShape(const KernelCtx& ctx,
+                         std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
+    const Blob* in_0 = BnInOp2Blob(this->op_attribute().input_bns().Get(0));
+    std::vector<int64_t> shape_vec = in_0->shape().dim_vec();
+    int64_t stack_axis = this->op_conf().stack_conf().axis();
+
+    FOR_RANGE(size_t, i, 1, this->op_attribute().input_bns().size()) {
+      const Blob* in_i = BnInOp2Blob(this->op_attribute().input_bns().Get(i));
+      CHECK_EQ(in_i->shape().NumAxes(), shape_vec.size());
+      FOR_RANGE(int64_t, j, 0, in_i->shape().NumAxes()) {
+        if (j == stack_axis) {
+          shape_vec.at(j) += in_i->shape().At(j);
+        } else {
+          CHECK_EQ(in_i->shape().At(j), shape_vec.at(j));
+        }
+      }
+    }
+    BnInOp2Blob("out")->dense_shape_mut_view().set_shape(Shape(shape_vec));
   }
 };
 
