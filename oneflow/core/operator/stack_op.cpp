@@ -18,10 +18,10 @@ class StackOp final : public Operator {
 
   Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                              const ParallelContext* parallel_ctx) const override {
+    // TODO: support dim > 0 stack (lod)
     const BlobDesc* in_0 = GetBlobDesc4BnInOp(input_bns().Get(0));
     std::vector<int64_t> shape_vec = in_0->shape().dim_vec();
     int64_t stack_axis = op_conf().stack_conf().axis();
-    // if (stack_axis < 0) { stack_axis += shape_vec.size(); }
     OF_CHECK_GE(stack_axis, 0);
     OF_CHECK_LT(stack_axis, shape_vec.size());
     OF_CHECK_EQ(in_0->num_of_lod_levels(), 0);
@@ -40,7 +40,7 @@ class StackOp final : public Operator {
     }
 
     BlobDesc* out = GetBlobDesc4BnInOp("out");
-    *out = *in_0;
+    out->CopyMetaFrom(*in_0);
     out->mut_shape() = Shape(shape_vec);
     return Maybe<void>::Ok();
   }

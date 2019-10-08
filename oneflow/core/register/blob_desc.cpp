@@ -120,7 +120,7 @@ void BlobDesc::CopyMetaFrom(const BlobDesc& other) {
 Maybe<void> BlobDesc::SetLoD(int64_t num_of_lod_levels) {
   if (num_of_lod_levels == 0) { return Maybe<void>::Ok(); }
   OF_CHECK_GT(num_of_lod_levels, 1);
-  OF_CHECK_LT(num_of_lod_levels, shape().NumAxes());
+  OF_CHECK_LE(num_of_lod_levels, shape().NumAxes());
   num_of_lod_levels_ = num_of_lod_levels;
   is_dynamic_ = true;
   return Maybe<void>::Ok();
