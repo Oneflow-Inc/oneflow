@@ -154,6 +154,7 @@ def debug_train(
 ):
     flow.config.train.primary_lr(0.00001)
     flow.config.train.model_update_conf(dict(naive_conf={}))
+    images = flow.transpose(images, perm=[0, 3, 1, 2])
     outputs = maskrcnn(images, image_sizes, gt_boxes, gt_segms, gt_labels)
     for loss in outputs:
         flow.losses.add_loss(loss)
@@ -194,6 +195,7 @@ def debug_eval(
         placeholders["gt_labels"].shape, dtype=flow.int32
     ),
 ):
+    images = flow.transpose(images, perm=[0, 3, 1, 2])
     outputs = maskrcnn(images, image_sizes, gt_boxes, gt_segms, gt_labels)
     return outputs
 
@@ -217,6 +219,7 @@ if __name__ == "__main__":
                 debug_data.blob("gt_segm"),
                 debug_data.blob("gt_labels"),
             ).get()
+            print(train_loss)
         else:
             train_loss = debug_train(
                 placeholders["images"],
@@ -225,12 +228,12 @@ if __name__ == "__main__":
                 placeholders["gt_segms"],
                 placeholders["gt_labels"],
             ).get()
-        print(train_loss)
-        eval_loss = debug_eval(
-            placeholders["images"],
-            placeholders["image_sizes"],
-            placeholders["gt_boxes"],
-            placeholders["gt_segms"],
-            placeholders["gt_labels"],
-        ).get()
-        print(eval_loss)
+            print(train_loss)
+            eval_loss = debug_eval(
+                placeholders["images"],
+                placeholders["image_sizes"],
+                placeholders["gt_boxes"],
+                placeholders["gt_segms"],
+                placeholders["gt_labels"],
+            ).get()
+            print(eval_loss)
