@@ -64,7 +64,7 @@ class StackGradKernel final : public KernelIf<device_type> {
  private:
   void ForwardDataContent(const KernelCtx& ctx,
                           std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
-    const Blob* in_blob = BnInOp2Blob("out");
+    const Blob* in_blob = BnInOp2Blob("in");
     int64_t axis = this->op_conf().stack_grad_conf().axis();
 
     const int64_t in_cols = in_blob->shape().Count(axis);
