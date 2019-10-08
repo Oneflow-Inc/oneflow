@@ -1,7 +1,35 @@
-#include "oneflow/core/operator/pooling_op.h"
-#include "oneflow/core/job/sbp_signature_builder.h"
-
+#include "oneflow/core/operator/operator.h"
+#include "oneflow/core/operator/operator_util.h"
 namespace oneflow {
+
+class PoolingOp : public Operator {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(PoolingOp);
+  PoolingOp() = default;
+  virtual ~PoolingOp() = default;
+
+  void InitFromOpConf() override;
+
+  Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                             const ParallelContext* parallel_ctx) const override;
+
+ protected:
+  virtual int32_t GetDim() const = 0;
+  void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                            const ParallelContext* parallel_ctx,
+                            KernelConf* kernel_conf) const override;
+
+ private:
+  void CheckPoolSizeAndStrides() const;
+  Shape GetOutShape(int64_t in_n, int64_t in_c, const std::vector<int64_t>& out) const;
+  Maybe<void> InferBatchAxis(
+      std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override {
+    return NaiveInferBatchAxis(BatchAxis4BnInOp);
+  }
+  Maybe<void> GetSbpSignatures(
+      const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
+      SbpSignatureList* sbp_sig_list) const override;
+};
 
 void PoolingOp::InitFromOpConf() {
   std::string padding_mthd = GetValFromCustomizedConf<std::string>("padding");
@@ -138,5 +166,120 @@ Maybe<void> PoolingOp::GetSbpSignatures(
       sbp_sig_list->mutable_sbp_signature()->Add());
   return Maybe<void>::Ok();
 }
+
+template<int32_t NDims>
+class PoolingNdOp : virtual public PoolingOp {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(PoolingNdOp);
+  PoolingNdOp() = default;
+  virtual ~PoolingNdOp() = default;
+
+ private:
+  int32_t GetDim() const override { return NDims; }
+};
+
+namespace max_pooling {
+
+class MaxPoolingOp : virtual public PoolingOp {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(MaxPoolingOp);
+  MaxPoolingOp() = default;
+  virtual ~MaxPoolingOp() = default;
+
+ private:
+  PbMessage* MutableCustomizedKernelConf(KernelConf* kernel_conf) const {
+    return kernel_conf->mutable_max_pooling_conf();
+  }
+};
+
+class MaxPooling1DOp final : public PoolingNdOp<1>, public MaxPoolingOp {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(MaxPooling1DOp);
+  MaxPooling1DOp() = default;
+  ~MaxPooling1DOp() = default;
+
+  const PbMessage& GetCustomizedConf() const override { return op_conf().max_pooling_1d_conf(); }
+};
+
+REGISTER_OP(OperatorConf::kMaxPooling1DConf, MaxPooling1DOp);
+
+class MaxPooling2DOp final : public PoolingNdOp<2>, public MaxPoolingOp {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(MaxPooling2DOp);
+  MaxPooling2DOp() = default;
+  ~MaxPooling2DOp() = default;
+
+  const PbMessage& GetCustomizedConf() const override { return op_conf().max_pooling_2d_conf(); }
+};
+
+REGISTER_OP(OperatorConf::kMaxPooling2DConf, MaxPooling2DOp);
+
+class MaxPooling3DOp final : public PoolingNdOp<3>, public MaxPoolingOp {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(MaxPooling3DOp);
+  MaxPooling3DOp() = default;
+  ~MaxPooling3DOp() = default;
+
+  const PbMessage& GetCustomizedConf() const override { return op_conf().max_pooling_3d_conf(); }
+};
+
+REGISTER_OP(OperatorConf::kMaxPooling3DConf, MaxPooling3DOp);
+
+}  // namespace max_pooling
+
+namespace average_pooling {
+
+class AveragePoolingOp : virtual public PoolingOp {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(AveragePoolingOp);
+  AveragePoolingOp() = default;
+  virtual ~AveragePoolingOp() = default;
+
+ private:
+  PbMessage* MutableCustomizedKernelConf(KernelConf* kernel_conf) const override {
+    return kernel_conf->mutable_average_pooling_conf();
+  }
+};
+
+class AveragePooling1DOp final : public PoolingNdOp<1>, public AveragePoolingOp {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(AveragePooling1DOp);
+  AveragePooling1DOp() = default;
+  ~AveragePooling1DOp() = default;
+
+  const PbMessage& GetCustomizedConf() const override {
+    return op_conf().average_pooling_1d_conf();
+  }
+};
+
+REGISTER_OP(OperatorConf::kAveragePooling1DConf, AveragePooling1DOp);
+
+class AveragePooling2DOp final : public PoolingNdOp<2>, public AveragePoolingOp {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(AveragePooling2DOp);
+  AveragePooling2DOp() = default;
+  ~AveragePooling2DOp() = default;
+
+  const PbMessage& GetCustomizedConf() const override {
+    return op_conf().average_pooling_2d_conf();
+  }
+};
+
+REGISTER_OP(OperatorConf::kAveragePooling2DConf, AveragePooling2DOp);
+
+class AveragePooling3DOp final : public PoolingNdOp<3>, public AveragePoolingOp {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(AveragePooling3DOp);
+  AveragePooling3DOp() = default;
+  ~AveragePooling3DOp() = default;
+
+  const PbMessage& GetCustomizedConf() const override {
+    return op_conf().average_pooling_3d_conf();
+  }
+};
+
+REGISTER_OP(OperatorConf::kAveragePooling3DConf, AveragePooling3DOp);
+
+}  // namespace average_pooling
 
 }  // namespace oneflow
