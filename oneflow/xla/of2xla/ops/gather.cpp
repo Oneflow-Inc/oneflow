@@ -53,9 +53,7 @@ xla::XlaOp GenericGatherGrad(const xla::XlaOp& buffer, const xla::XlaOp& updates
   // the indices to update. Otherwise the indices are all scalars.
   int64_t num_index_dims = 1;
   if (indices_are_vectors) {
-    //CHECK_NE(indices_dims, 0);
     num_index_dims = indices_dims.back();
-    //CHECK_LE(num_index_dims, buffer_shape.rank());
     indices_dims.remove_suffix(1);
   }
 
@@ -68,12 +66,6 @@ xla::XlaOp GenericGatherGrad(const xla::XlaOp& buffer, const xla::XlaOp& updates
   if (num_indices == 0) {
     return buffer;
   }
-
-  // If any of the indexed dimensions are zero in the buffer, the update cannot
-  // succeed since it updates a slice of size 1.
-  //for (int64_t i = 0; i < num_index_dims; ++i) {
-  //  CHECK_NE(xla::ShapeUtil::GetDimension(buffer_shape, i), 0);
-  //}
 
   xla::ScatterDimensionNumbers dim_numbers;
   dim_numbers.set_index_vector_dim(indices_are_vectors 
