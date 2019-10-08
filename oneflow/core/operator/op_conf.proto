@@ -1486,6 +1486,12 @@ message IdentityOpConf {
   required string out = 2;
 }
 
+message SleepOpConf {
+  required string in = 1;
+  required string out = 2;
+  required int64 seconds = 3;
+}
+
 message CaseOpConf {
   required string in = 1;
   repeated string out = 2;
@@ -1680,6 +1686,7 @@ message OperatorConf {
     SigmoidCrossEntropyLossGradOpConf sigmoid_cross_entropy_loss_grad_conf = 304; 
     GatherMs0OpConf gather_ms0_conf = 305;
     GatherMs0GradOpConf gather_ms0_grad_conf = 306;
+    SleepOpConf sleep_conf = 307;
 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;
