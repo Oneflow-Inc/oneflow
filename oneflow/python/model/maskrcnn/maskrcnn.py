@@ -1,6 +1,8 @@
+# must import get cfg before importing oneflow
+from config import get_default_cfgs
+
 import oneflow as flow
 
-from config import get_default_cfgs
 from backbone import Backbone
 from rpn import RPNHead, RPNLoss, RPNProposal
 from box_head import BoxHead
