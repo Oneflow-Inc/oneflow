@@ -32,6 +32,7 @@ class ResNet(object):
     def build(self, inputs):
         features = []
         with flow.deprecated.variable_scope("body"):
+            # CHECK_POINT: stem out
             blob = self.build_stem(inputs)
             for i, stage_spec in enumerate(self.stage_specs, 1):
                 stage_channel_relative_factor = 2 ** (stage_spec.index - 1)
@@ -41,6 +42,7 @@ class ResNet(object):
                 out_channels = (
                     self.stem_out_channels * stage_channel_relative_factor * 4
                 )
+                # CHECK_POINT: stage out
                 blob = self.build_stage(
                     blob,
                     stage_index=stage_spec.index,
