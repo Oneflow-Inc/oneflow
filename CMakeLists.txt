@@ -16,6 +16,11 @@ else()
   project(oneflow C CXX)
 endif()
 
+if(NOT RELEASE_VERSION)
+  set(CUDNN_STATIC OFF CACHE BOOL "")
+  set(CUDA_NVCC_GENCODE "arch=compute_75,code=sm_75" "arch=compute_75,code=compute_75" CACHE STRING "")
+endif()
+
 enable_testing()
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
