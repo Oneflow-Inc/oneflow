@@ -5,6 +5,7 @@ from backbone import Backbone
 from rpn import RPNHead, RPNLoss, RPNProposal
 from box_head import BoxHead
 from mask_head import MaskHead
+
 # from artificial_data import ArtificialData
 
 import argparse
@@ -54,7 +55,6 @@ placeholders = get_numpy_placeholders()
 
 
 def maskrcnn(images, image_sizes, gt_boxes, gt_segms, gt_labels):
-    # def maskrcnn(images, image_sizes, gt_boxes, gt_segms, gt_labels):
     r"""Mask-RCNN
     Args:
     images: (N, H, W, C)
