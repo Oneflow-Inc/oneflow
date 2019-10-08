@@ -18,7 +18,7 @@ endif()
 
 if(NOT RELEASE_VERSION)
   set(CUDNN_STATIC OFF CACHE BOOL "")
-  set(CUDA_NVCC_GENCODE "arch=compute_75,code=sm_75" "arch=compute_75,code=compute_75" CACHE STRING "")
+  set(CUDA_NVCC_GENCODES "arch=compute_75,code=sm_75" "arch=compute_75,code=compute_75" CACHE STRING "")
 endif()
 
 enable_testing()
