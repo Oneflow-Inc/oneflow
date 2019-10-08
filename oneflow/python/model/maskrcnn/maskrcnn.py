@@ -6,8 +6,6 @@ from rpn import RPNHead, RPNLoss, RPNProposal
 from box_head import BoxHead
 from mask_head import MaskHead
 
-# from artificial_data import ArtificialData
-
 import argparse
 
 parser = argparse.ArgumentParser()
@@ -31,9 +29,19 @@ parser.add_argument(
 parser.add_argument(
     "-rpn", "--rpn_only", default=False, action="store_true", required=False
 )
+parser.add_argument(
+    "-md", "--mock_dataset", default=False, action="store_true", required=False
+)
 
 args = parser.parse_args()
-# debug_data = ArtificialData("/tmp/shared_with_zwx/data.pkl", 64)
+
+
+debug_data = None
+
+if args.mock_dataset:
+    from mock_data import MockData
+
+    debug_data = MockData("/tmp/shared_with_zwx/data.pkl", 64)
 
 
 def get_numpy_placeholders():
@@ -141,11 +149,22 @@ def debug_train(
     gt_labels=flow.input_blob_def(
         placeholders["gt_labels"].shape, dtype=flow.int32
     ),
-    # images=debug_data.blob_def("images"),
-    # image_sizes=debug_data.blob_def("image_size"),
-    # gt_boxes=debug_data.blob_def("gt_bbox"),
-    # gt_segms=debug_data.blob_def("gt_segm"),
-    # gt_labels=debug_data.blob_def("gt_labels"),
+):
+    flow.config.train.primary_lr(0.00001)
+    flow.config.train.model_update_conf(dict(naive_conf={}))
+    outputs = maskrcnn(images, image_sizes, gt_boxes, gt_segms, gt_labels)
+    for loss in outputs:
+        flow.losses.add_loss(loss)
+    return outputs
+
+
+@flow.function
+def mock_train(
+    images=debug_data.blob_def("images"),
+    image_sizes=debug_data.blob_def("image_size"),
+    gt_boxes=debug_data.blob_def("gt_bbox"),
+    gt_segms=debug_data.blob_def("gt_segm"),
+    gt_labels=debug_data.blob_def("gt_labels"),
 ):
     flow.config.train.primary_lr(0.00001)
     flow.config.train.model_update_conf(dict(naive_conf={}))
@@ -188,20 +207,22 @@ if __name__ == "__main__":
     else:
         check_point.load(args.model_load_dir)
     if args.debug:
-        train_loss = debug_train(
-            placeholders["images"],
-            placeholders["image_sizes"],
-            placeholders["gt_boxes"],
-            placeholders["gt_segms"],
-            placeholders["gt_labels"],
-        ).get()
-        # train_loss = debug_train(
-        #     debug_data.blob("images"),
-        #     debug_data.blob("image_size"),
-        #     debug_data.blob("gt_bbox"),
-        #     debug_data.blob("gt_segm"),
-        #     debug_data.blob("gt_labels"),
-        # ).get()
+        if args.mock_dataset:
+            train_loss = mock_train(
+                debug_data.blob("images"),
+                debug_data.blob("image_size"),
+                debug_data.blob("gt_bbox"),
+                debug_data.blob("gt_segm"),
+                debug_data.blob("gt_labels"),
+            ).get()
+        else:
+            train_loss = debug_train(
+                placeholders["images"],
+                placeholders["image_sizes"],
+                placeholders["gt_boxes"],
+                placeholders["gt_segms"],
+                placeholders["gt_labels"],
+            ).get()
         print(train_loss)
         eval_loss = debug_eval(
             placeholders["images"],
