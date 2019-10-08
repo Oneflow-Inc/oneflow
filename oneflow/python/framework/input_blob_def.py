@@ -9,6 +9,7 @@ import oneflow.core.register.logical_blob_id_pb2 as lbi_util
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.distribute as distribute_util
 from oneflow.python.oneflow_export import oneflow_export
+from functools import reduce
 import numpy as np
 import collections
 import oneflow
@@ -34,7 +35,7 @@ class input_blob_def(blob_desc.BlobDesc):
         self.is_dynamic_ = is_dynamic
         if num_of_lod_levels > 0:
             assert num_of_lod_levels > 1
-            assert num_of_lod_levels < len(shape)
+            assert num_of_lod_levels <= len(shape)
         self.num_of_lod_levels_ = num_of_lod_levels
         self.batch_axis_ = batch_axis
         self.distribute_ = distribute
@@ -162,4 +163,3 @@ class input_blob_def(blob_desc.BlobDesc):
                 for x in ndarray_nested_list:
                     RecursiveCheckNdarray(axis + 1, x)
         RecursiveCheckNdarray(0, ndarray_nested_list)
-
