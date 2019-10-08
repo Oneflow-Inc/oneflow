@@ -36,7 +36,7 @@ class MockData(object):
             ] + list(self._data["gt_segm"][0].shape[1:])
             return flow.input_blob_def(
                 shape=tuple(segm_mask_shape),
-                dtype=flow.float32,
+                dtype=flow.int8,
                 num_of_lod_levels=2,
             )
         else:
