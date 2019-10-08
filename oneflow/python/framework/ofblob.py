@@ -88,7 +88,7 @@ class OfBlob(object):
                 assert dense_ndarray.value.shape[1:] == sub_ndarray_nested_list.shape[1:],\
                     "lhs: %s, rhs: %s" %(dense_ndarray.value.shape[1:], \
                                          sub_ndarray_nested_list.shape[1:])
-                dense_ndarray.set_value(np.vstack((dense_ndarray.value, sub_ndarray_nested_list)))
+                dense_ndarray.set_value(np.concatenate((dense_ndarray.value, sub_ndarray_nested_list)))
             else:
                 assert isinstance(sub_ndarray_nested_list, (list, tuple))
                 idx = 0
