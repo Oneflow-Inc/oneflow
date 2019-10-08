@@ -49,6 +49,12 @@ void CastKernel<device_type>::ForwardDataContent(
                                         ctx.device_ctx, in_blob, out_blob);
 }
 
+template<DeviceType device_type>
+void CastKernel<device_type>::ForwardLoD(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  BnInOp2Blob("out")->tree_lod_mut_view().UpdateLoD(BnInOp2Blob("in")->tree_lod_view().lod_tree());
+}
+
 REGISTER_KERNEL_WITH_DEVICE(OperatorConf::kCastConf, DeviceType::kCPU,
                             CastKernel<DeviceType::kCPU>);
 REGISTER_KERNEL_WITH_DEVICE(OperatorConf::kCastConf, DeviceType::kGPU,
