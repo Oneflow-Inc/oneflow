@@ -388,6 +388,20 @@ message SigmoidCrossEntropyLossGradOpConf {
   optional ScalarReductionType reduction = 6 [default = kSumOverN];
 }
 
+message SigmoidCrossEntropyOpConf {
+  required string prediction = 1;
+  required string label = 2;
+  required string loss = 3;
+  required DataType label_type = 4;
+}
+
+message SigmoidCrossEntropyGradOpConf {
+  required string prediction = 1;
+  required string label = 2;
+  required string prediction_diff = 3;
+  required DataType label_type = 4;
+}
+
 message IdentityLossOpConf {
   required string prediction = 1;
   required string loss = 2;
@@ -1553,7 +1567,7 @@ message DeconvOpConf {
     optional InitializerConf bias_initializer = 8;
 }
 
-message RoiAlignConf {
+message RoiAlignArgs {
   required int32 pooled_h = 4;
   required int32 pooled_w = 5;
   optional float spatial_scale = 6 [default = 0.0625]; // 1/16
@@ -1565,7 +1579,7 @@ message RoiAlignOpConf {
   required string x = 1;
   required string rois = 2;
   required string y = 3;
-  required RoiAlignConf roi_align_conf = 4;
+  required RoiAlignArgs roi_align_args = 4;
 }
 
 message RoiAlignGradOpConf {
@@ -1573,7 +1587,7 @@ message RoiAlignGradOpConf {
   required string x_like = 2;
   required string rois = 3;
   required string dx = 4;
-  required RoiAlignConf roi_align_conf = 5;
+  required RoiAlignArgs roi_align_args = 5;
 }
 
 message WhereOpConf {
@@ -2020,6 +2034,8 @@ message OperatorConf {
     StackGradOpConf stack_grad_conf = 328;
     SortOpConf sort_conf = 329;
     ArgSortOpConf arg_sort_conf = 330;
+    SigmoidCrossEntropyOpConf sigmoid_cross_entropy_conf = 331;
+    SigmoidCrossEntropyGradOpConf sigmoid_cross_entropy_grad_conf = 332;
 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;

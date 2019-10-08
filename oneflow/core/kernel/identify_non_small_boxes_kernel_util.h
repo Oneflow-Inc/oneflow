@@ -1,3 +1,6 @@
+#ifndef ONEFLOW_CORE_KERNEL_IDENTIFY_NON_SMALL_BOXES_KERNEL_UTIL_H_
+#define ONEFLOW_CORE_KERNEL_IDENTIFY_NON_SMALL_BOXES_KERNEL_UTIL_H_
+
 #include "oneflow/core/kernel/kernel.h"
 
 namespace oneflow {
@@ -9,3 +12,5 @@ struct IdentifyNonSmallBoxesUtil {
 };
 
 }  // namespace oneflow
+
+#endif

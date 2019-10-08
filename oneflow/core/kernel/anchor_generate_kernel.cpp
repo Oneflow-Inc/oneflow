@@ -62,10 +62,10 @@ class AnchorGenerateKernel final : public KernelIf<DeviceType::kCPU> {
       FOR_RANGE(int32_t, w, 0, feature_map_width) {
         auto* cur_anchor_ptr = anchors_ptr + (h * feature_map_width + w) * num_anchors * 4;
         FOR_RANGE(int32_t, i, 0, num_anchors) {
-          cur_anchor_ptr[0] = base_anchors_vec[i * 4 + 0] + w * feature_map_stride;  // x1
-          cur_anchor_ptr[1] = base_anchors_vec[i * 4 + 1] + h * feature_map_stride;  // y1
-          cur_anchor_ptr[2] = base_anchors_vec[i * 4 + 2] + w * feature_map_stride;  // x2
-          cur_anchor_ptr[3] = base_anchors_vec[i * 4 + 3] + h * feature_map_stride;  // y2
+          cur_anchor_ptr[i * 4 + 0] = base_anchors_vec[i * 4 + 0] + w * feature_map_stride;  // x1
+          cur_anchor_ptr[i * 4 + 1] = base_anchors_vec[i * 4 + 1] + h * feature_map_stride;  // y1
+          cur_anchor_ptr[i * 4 + 2] = base_anchors_vec[i * 4 + 2] + w * feature_map_stride;  // x2
+          cur_anchor_ptr[i * 4 + 3] = base_anchors_vec[i * 4 + 3] + h * feature_map_stride;  // y2
         }
       }
     }

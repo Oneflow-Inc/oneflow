@@ -32,11 +32,11 @@ def roi_align(
     op_conf.roi_align_conf.x = x.logical_blob_name
     op_conf.roi_align_conf.rois = rois.logical_blob_name
     op_conf.roi_align_conf.y = "out"
-    op_conf.roi_align_conf.roi_align_conf.pooled_h = pooled_h
-    op_conf.roi_align_conf.roi_align_conf.pooled_w = pooled_w
-    op_conf.roi_align_conf.roi_align_conf.spatial_scale = float(spatial_scale)
-    op_conf.roi_align_conf.roi_align_conf.sampling_ratio = int(sampling_ratio)
-    op_conf.roi_align_conf.roi_align_conf.data_format = "channels_first"
+    op_conf.roi_align_conf.roi_align_args.pooled_h = pooled_h
+    op_conf.roi_align_conf.roi_align_args.pooled_w = pooled_w
+    op_conf.roi_align_conf.roi_align_args.spatial_scale = float(spatial_scale)
+    op_conf.roi_align_conf.roi_align_args.sampling_ratio = int(sampling_ratio)
+    op_conf.roi_align_conf.roi_align_args.data_format = "channels_first"
     compile_context.CurJobAddOp(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
     lbi.op_name = op_conf.name

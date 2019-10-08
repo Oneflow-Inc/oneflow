@@ -33,8 +33,14 @@ void RuntimeBlobShapeInferHelper::InferDenseShape(
     if (updated_input_blobs.find(blob_desc) == updated_input_blobs.end()
         && ibns_.find(bn_in_op) != ibns_.end()) {
       const Blob* blob = BnInOp2Blob(bn_in_op);
-      CHECK_EQ(blob_desc->shape().NumAxes(), blob->shape().NumAxes());
-      blob_desc->mut_shape() = blob->shape();
+      if (blob_desc->num_of_lod_levels() > 0) {
+        CHECK_EQ(blob_desc->shape().NumAxes(),
+                 blob->shape().NumAxes() + (blob_desc->num_of_lod_levels() - 1));
+      } else {
+        CHECK_EQ(blob_desc->shape().NumAxes(), blob->shape().NumAxes());
+      }
+      blob_desc->mut_shape() =
+          CreateLeftExtendedShape(blob->shape(), blob->static_shape().NumAxes());
       updated_input_blobs.insert(blob_desc);
     }
     return blob_desc;
@@ -48,7 +54,13 @@ void RuntimeBlobShapeInferHelper::InferDenseShape(
     CHECK_EQ(blob->blob_desc().is_dynamic(), blob_desc->is_dynamic());
     CHECK_EQ(blob->blob_desc().is_body_disabled(), blob_desc->is_body_disabled());
     if (blob->blob_desc().is_dynamic()) {
-      blob->dense_shape_mut_view().set_shape(blob_desc->shape());
+      Shape shape(blob_desc->shape());
+      int64_t num_of_lod_levels = blob->blob_desc().num_of_lod_levels();
+      if (num_of_lod_levels > 0) {
+        FOR_RANGE(int, i, 0, num_of_lod_levels - 1) { CHECK_EQ(shape.At(i), 1); }
+        shape = Shape({shape.dim_vec().begin() + num_of_lod_levels - 1, shape.dim_vec().end()});
+      }
+      blob->dense_shape_mut_view().set_shape(shape);
     } else {
       CHECK_EQ(blob->shape(), blob_desc->shape());
     }

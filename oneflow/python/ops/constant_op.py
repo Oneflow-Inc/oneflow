@@ -9,11 +9,13 @@ from oneflow.python.oneflow_export import oneflow_export
 
 import oneflow as flow
 
+
 @oneflow_export("constant")
 def constant(value, dtype=None, shape=None, name=None):
     op_conf = op_conf_util.OperatorConf()
     setattr(
-        op_conf, "name", name if name is not None else id_util.UniqueStr("Constant_")
+        op_conf, "name", name if name is not None else id_util.UniqueStr(
+            "Constant_")
     )
     assert value is not None
     assert dtype is not None
@@ -46,9 +48,18 @@ def constant_scalar(value, dtype=None, name=None):
 
 
 @oneflow_export("constant_like")
-def constant_like(inputs, value, name=None):
-    ret = inputs * 0 + 1
-    if ret.dtype == inputs.dtype:
-        return ret
-    else:
-        return flow.cast(ret, dtype=inputs.dtype)
+def constant_like(input, value, name=None):
+    op_conf = op_conf_util.OperatorConf()
+    setattr(
+        op_conf,
+        "name",
+        name if name is not None else id_util.UniqueStr("ConstantLike_"),
+    )
+    setattr(op_conf.constant_like_conf, "in", input.logical_blob_name)
+    setattr(op_conf.constant_like_conf, "scalar", value)
+    setattr(op_conf.constant_like_conf, "out", "out")
+    compile_context.CurJobAddOp(op_conf)
+    out_lbi = logical_blob_id_util.LogicalBlobId()
+    setattr(out_lbi, "op_name", op_conf.name)
+    setattr(out_lbi, "blob_name", "out")
+    return remote_blob_util.RemoteBlob(out_lbi)

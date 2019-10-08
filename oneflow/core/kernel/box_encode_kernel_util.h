@@ -1,3 +1,6 @@
+#ifndef ONEFLOW_CORE_KERNEL_BOX_ENCODE_KERNEL_UTIL_H_
+#define ONEFLOW_CORE_KERNEL_BOX_ENCODE_KERNEL_UTIL_H_
+
 #include "oneflow/core/kernel/kernel.h"
 
 namespace oneflow {
@@ -10,3 +13,5 @@ struct BoxEncodeUtil {
 };
 
 }  // namespace oneflow
+
+#endif
