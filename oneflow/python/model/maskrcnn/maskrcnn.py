@@ -255,7 +255,7 @@ def debug_rcnn_eval(
 
 if __name__ == "__main__":
     flow.config.gpu_device_num(terminal_args.gpu_num_per_node)
-    flow.config.ctrl_port(19782)
+    flow.config.ctrl_port(19781)
 
     flow.config.default_data_type(flow.float)
     check_point = flow.train.CheckPoint()
@@ -265,14 +265,15 @@ if __name__ == "__main__":
         check_point.load(terminal_args.model_load_dir)
     if terminal_args.debug:
         if terminal_args.mock_dataset:
-            train_loss = mock_train(
-                debug_data.blob("images"),
-                debug_data.blob("image_size"),
-                debug_data.blob("gt_bbox"),
-                debug_data.blob("gt_segm"),
-                debug_data.blob("gt_labels"),
-            ).get()
-            print(train_loss)
+            for i in range(10):
+                train_loss = mock_train(
+                    debug_data.blob("images"),
+                    debug_data.blob("image_size"),
+                    debug_data.blob("gt_bbox"),
+                    debug_data.blob("gt_segm"),
+                    debug_data.blob("gt_labels"),
+                ).get()
+                print(train_loss)
         else:
             train_loss = debug_train(
                 placeholders["images"],
