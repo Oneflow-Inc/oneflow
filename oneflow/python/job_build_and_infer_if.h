@@ -66,6 +66,18 @@ long long JobBuildAndInferCtx_GetDataType(const std::string& job_name, const std
       .GetDataAndSerializedErrorProto(error_str, 0LL);
 }
 
+bool JobBuildAndInferCtx_IsDynamic(const std::string& job_name, const std::string& lbn,
+                                   std::string* error_str) {
+  return oneflow::JobBuildAndInferCtx_IsDynamic(job_name, lbn)
+      .GetDataAndSerializedErrorProto(error_str, false);
+}
+
+long long JobBuildAndInferCtx_GetNumOfLoDLevels(const std::string& job_name, const std::string& lbn,
+                                                std::string* error_str) {
+  return oneflow::JobBuildAndInferCtx_GetNumOfLoDLevels(job_name, lbn)
+      .GetDataAndSerializedErrorProto(error_str, 0LL);
+}
+
 std::string JobBuildAndInferCtx_GetBatchAxis(const std::string& job_name, const std::string& lbn,
                                              std::string* error_str) {
   return oneflow::JobBuildAndInferCtx_GetBatchAxis(job_name, lbn)

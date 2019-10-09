@@ -42,6 +42,12 @@ def GetStaticShape(job_name, lbn):
 def GetDataType(job_name, lbn):
     return c_api_util.JobBuildAndInferCtx_GetDataType(job_name, lbn)
 
+def IsDynamic(job_name, lbn):
+    return c_api_util.JobBuildAndInferCtx_IsDynamic(job_name, lbn)
+
+def GetNumOfLoDLevels(job_name, lbn):
+    return c_api_util.JobBuildAndInferCtx_GetNumOfLoDLevels(job_name, lbn)
+
 def GetBatchAxis(job_name, lbn):
     return c_api_util.JobBuildAndInferCtx_GetBatchAxis(job_name, lbn)
 
