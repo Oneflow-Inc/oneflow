@@ -85,9 +85,12 @@ def maskrcnn(images, image_sizes, gt_boxes, gt_segms, gt_labels):
     box_head = BoxHead(cfg)
     mask_head = MaskHead(cfg)
 
-    image_size_list = flow.piece_slice(
-        image_sizes, cfg.TRAINING_CONF.IMG_PER_GPU
-    )
+    image_size_list = [
+        flow.squeeze(
+            flow.local_gather(image_sizes, flow.constant(i, dtype=flow.int32)),
+            [0],
+        ) for i in range(image_sizes.shape[0])
+    ]
     gt_boxes_list = flow.piece_slice(gt_boxes, cfg.TRAINING_CONF.IMG_PER_GPU)
     gt_labels_list = flow.piece_slice(gt_labels, cfg.TRAINING_CONF.IMG_PER_GPU)
     gt_segms_list = flow.piece_slice(gt_segms, cfg.TRAINING_CONF.IMG_PER_GPU)
