@@ -132,7 +132,7 @@ class BoxHead(object):
             )
             # [R, 81, 4]
             pos_bbox_reg = flow.local_gather(bbox_regression, total_pos_inds)
-            pos_bbox_reg = flow.reshape(pos_bbox_reg, shape=[-1, 81, 4])
+            pos_bbox_reg = flow.dynamic_reshape(pos_bbox_reg, shape=[-1, 81, 4])
             # [R, 1]
             indices = flow.expand_dims(
                 flow.local_gather(labels, total_pos_inds), axis=1
@@ -155,6 +155,13 @@ class BoxHead(object):
                 pos_proposal_list,
                 pos_gt_indices_list,
             )
+
+    def build_eval(self, proposals, features):
+        image_ids = flow.detection.extract_piece_slice_id(proposals)
+        x = self.box_feature_extractor(proposals, image_ids, features)
+        cls_logits, box_pred = self.predictor(x)
+
+        return cls_logits, box_pred
 
     def box_feature_extractor(self, proposals, img_ids, features):
         levels = flow.detection.level_map(proposals)
@@ -186,7 +193,7 @@ class BoxHead(object):
         roi_features = flow.local_scatter_nd_update(
             flow.constant_like(roi_features, 0), origin_indices, roi_features
         )
-        roi_features = flow.reshape(roi_features, [roi_features.shape[0], -1])
+        roi_features = flow.dynamic_reshape(roi_features, [roi_features.shape[0], -1])
         x = flow.layers.dense(
             inputs=roi_features,
             units=1024,

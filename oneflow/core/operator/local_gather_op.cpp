@@ -34,6 +34,7 @@ class LocalGatherOp final : public Operator {
     const BlobDesc* indices = GetBlobDesc4BnInOp("indices");
     CHECK_OR_RETURN(IsIntegralDataType(indices->data_type()));
     CHECK_GT_OR_RETURN(indices->shape().NumAxes(), 0);
+    CHECK_EQ_OR_RETURN(indices->num_of_lod_levels(), 0);
     const BlobDesc* in = GetBlobDesc4BnInOp("in");
     CHECK_GT_OR_RETURN(in->shape().NumAxes(), 0);
     const int64_t axis = CheckGatherAxis(op_conf().local_gather_conf(), in->shape().NumAxes());
@@ -47,15 +48,7 @@ class LocalGatherOp final : public Operator {
     dim_vec.insert(dim_vec.end(), in->shape().dim_vec().cbegin() + axis + 1,
                    in->shape().dim_vec().end());
     out->mut_shape() = Shape(dim_vec);
-    // if (axis == 0 && indices->has_dim0_valid_num_field()) {
-    //   out->set_has_dim0_valid_num_field(true);
-    //   out->mut_dim0_inner_shape() = Shape({1, indices->shape().At(0)});
-    // } else if (axis > 0 && in->has_dim0_valid_num_field()) {
-    //   out->set_has_dim0_valid_num_field(true);
-    //   out->mut_dim0_inner_shape() = Shape({1, in->shape().At(0)});
-    // } else {
-    //   out->set_has_dim0_valid_num_field(false);
-    // }
+    out->set_is_dynamic(indices->is_dynamic());
     return Maybe<void>::Ok();
   }
 
