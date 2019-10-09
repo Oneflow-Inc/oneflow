@@ -25,11 +25,10 @@ class RPNHead(object):
         with flow.deprecated.variable_scope("rpn-head"):
             def piece_slice_with_bw(inputs, output_size, name=None):
                 assert inputs.shape[0] == output_size
-                size = [1] + list(inputs.shape)[1:]
                 ret = []
                 for i in range(output_size):
-                    begin = [i] + [0] * (len(inputs.shape) - 1)
-                    output = flow.slice(inputs, begin, size)
+                    indices = flow.constant(i, dtype=flow.int32)
+                    output = flow.local_gather(inputs, indices)
                     output = flow.squeeze(output, [0])
                     ret.append(output)
                 return ret
