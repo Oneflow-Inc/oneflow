@@ -1,7 +1,9 @@
 #include "oneflow/core/job/in_job_mem_sharing_util.h"
+#include "oneflow/core/common/blocking_counter.h"
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/job/id_manager.h"
+#include "oneflow/core/thread/thread_pool.h"
 
 namespace oneflow {
 
@@ -145,6 +147,19 @@ void GenRegstApplyReleaseQueueAndRegstMutualExclusions(
   CHECK(remain_regsts.empty());
 }
 
+struct MemBlockResultInfo {
+  int64_t mem_block_size;
+  HashMap<int64_t, int64_t> regst_desc_id2offset;
+};
+
+void SelectAlgorithmGenMemBlockOffset4Regsts(
+    int64_t algorithm_id, const std::vector<HashSet<RegstDescProto*>>& apply_regsts_queue,
+    const std::vector<HashSet<RegstDescProto*>>& release_regsts_queue,
+    const HashMap<RegstDescProto*, HashSet<RegstDescProto*>>& regst2mutual_exclusion_regsts,
+    MemBlockResultInfo* result) {
+  TODO();
+}
+
 }  // namespace
 
 void InJobMemSharingUtil::InferMemBlockId4MemReusedRegst(Plan* plan) {
@@ -172,8 +187,35 @@ void InJobMemSharingUtil::InferMemBlockId4MemReusedRegst(Plan* plan) {
         &mem_chain2inplace_consumer_regst_descs[pair.first]);
   }
 
-  TODO();
-  // step 2: multi-thread run 5 algorithm for each mem chain
+  // step 2: multi-thread run several algorithm for each mem chain
+  HashMap<int64_t, std::vector<MemBlockResultInfo>> mem_chain2results;
+  {
+    int64_t cpu_num = std::thread::hardware_concurrency();
+    const int64_t algorithm_num = 2;
+    int64_t work_size = mem_chain2sorted_tasks.size() * algorithm_num;
+    int64_t thread_pool_size = std::min<int64_t>(work_size, cpu_num);
+    BlockingCounter counter(work_size);
+    ThreadPool thread_pool(thread_pool_size);
+    for (const auto& pair : mem_chain2sorted_tasks) {
+      int64_t mem_chain_id = pair.first;
+      std::vector<MemBlockResultInfo>* results = &mem_chain2results[mem_chain_id];
+      results->resize(algorithm_num);
+      for (int64_t algorithm_id = 0; algorithm_id < algorithm_num; ++algorithm_id) {
+        MemBlockResultInfo* result = &(results->at(algorithm_id));
+        thread_pool.AddWork([algorithm_id, mem_chain_id, &mem_chain2task2apply_regsts,
+                             &mem_chain2task2release_regsts,
+                             &mem_chain2regst2mutual_exclusion_regsts, result, &counter]() {
+          SelectAlgorithmGenMemBlockOffset4Regsts(
+              algorithm_id, mem_chain2task2apply_regsts.at(mem_chain_id),
+              mem_chain2task2release_regsts.at(mem_chain_id),
+              mem_chain2regst2mutual_exclusion_regsts.at(mem_chain_id), result);
+          counter.Decrease();
+        });
+      }
+    }
+    counter.WaitUntilCntEqualZero();
+  }
+
   // step 3: choose best one for each mem chain and set offset for inplace consumer regst
   /*
   {
