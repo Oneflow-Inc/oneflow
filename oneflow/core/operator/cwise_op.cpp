@@ -3,7 +3,7 @@
 namespace oneflow {
 
 void CWiseOp::InitFromOpConf() {
-  EnrollRepeatedInputBn("in");
+  EnrollRepeatedInputBn("in", false);
   EnrollOutputBn("out")->set_mutable_inplace_ibn("in_0");
   VirtualInitFromOpConf();
 }
