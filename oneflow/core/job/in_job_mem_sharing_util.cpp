@@ -129,11 +129,6 @@ void GenRegstApplyReleaseQueueAndRegstMutualExclusions(
 
   HashSet<RegstDescProto*> remain_regsts;
   for (int64_t i = 0; i < sorted_tasks->size(); ++i) {
-    for (RegstDescProto* release_regst : release_regsts_queue->at(i)) {
-      auto it = remain_regsts.find(release_regst);
-      CHECK(it != remain_regsts.end());
-      remain_regsts.erase(it);
-    }
     for (RegstDescProto* apply_regst : apply_regsts_queue->at(i)) {
       for (RegstDescProto* remain_regst : remain_regsts) {
         CHECK((*regst2mutual_exclusion_regsts)[apply_regst].insert(remain_regst).second);
@@ -141,7 +136,13 @@ void GenRegstApplyReleaseQueueAndRegstMutualExclusions(
       }
       CHECK(remain_regsts.insert(apply_regst).second);
     }
+    for (RegstDescProto* release_regst : release_regsts_queue->at(i)) {
+      auto it = remain_regsts.find(release_regst);
+      CHECK(it != remain_regsts.end());
+      remain_regsts.erase(it);
+    }
   }
+  CHECK(remain_regsts.empty());
 }
 
 }  // namespace
