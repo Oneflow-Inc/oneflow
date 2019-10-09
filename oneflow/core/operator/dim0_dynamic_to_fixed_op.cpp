@@ -9,19 +9,21 @@ class Dim0DynamicToFixedOp final : public Operator {
   ~Dim0DynamicToFixedOp() = default;
 
   void InitFromOpConf() override {
-    CHECK(op_conf().has_get_dim0_mask_conf());
-    int32_t in_size = op_conf().get_dim0_mask_conf().in_size();
-    int32_t out_size = op_conf().get_dim0_mask_conf().out_size();
+    CHECK(op_conf().has_dim0_dynamic_to_fixed_conf());
+    int32_t in_size = op_conf().dim0_dynamic_to_fixed_conf().in_size();
+    int32_t out_size = op_conf().dim0_dynamic_to_fixed_conf().out_size();
     CHECK_GT(in_size, 0);
     CHECK_EQ(in_size, out_size);
     EnrollRepeatedInputBn("in", in_size, false);
     EnrollRepeatedOutputBn("out", out_size);
     EnrollOutputBn("mask");
   }
-  const PbMessage& GetCustomizedConf() const override { return op_conf().get_dim0_mask_conf(); }
+  const PbMessage& GetCustomizedConf() const override {
+    return op_conf().dim0_dynamic_to_fixed_conf();
+  }
   Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                              const ParallelContext* parallel_ctx) const override {
-    int32_t bn_size = op_conf().get_dim0_mask_conf().in_size();
+    int32_t bn_size = op_conf().dim0_dynamic_to_fixed_conf().in_size();
     int64_t dim0_val = -1;
     FOR_RANGE(int32_t, i, 0, bn_size) {
       const BlobDesc* cur_in = GetBlobDesc4BnInOp(GenRepeatedBn("in", i));
@@ -50,8 +52,10 @@ class Dim0DynamicToFixedOp final : public Operator {
       const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
       std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override {
     FOR_RANGE(int32_t, i, 0, input_bns().size()) {
-      *BatchAxis4BnInOp(output_bns().Get(i)) = *BatchAxis4BnInOp(input_bns().Get(i));
+      OF_CHECK(*BatchAxis4BnInOp(GenRepeatedBn("in", i)) == *BatchAxis4BnInOp(input_bns().Get(0)));
+      *BatchAxis4BnInOp(GenRepeatedBn("out", i)) = *BatchAxis4BnInOp(GenRepeatedBn("in", i));
     }
+    OF_CHECK(*BatchAxis4BnInOp("mask") == *BatchAxis4BnInOp(input_bns().Get(0)));
     return Maybe<void>::Ok();
   }
   Maybe<void> GetSbpSignatures(

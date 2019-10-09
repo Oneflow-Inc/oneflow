@@ -52,6 +52,7 @@ class Dim0DynamicToFixedCpuKernel : public KernelIf<DeviceType::kCPU> {
   }
 };
 
-REGISTER_KERNEL_WITH_DEVICE(OperatorConf::kDim0DynamicToFixedConf, DeviceType::kCPU, Dim0DynamicToFixedCpuKernel);
+REGISTER_KERNEL_WITH_DEVICE(OperatorConf::kDim0DynamicToFixedConf, DeviceType::kCPU,
+                            Dim0DynamicToFixedCpuKernel);
 
 }  // namespace oneflow
