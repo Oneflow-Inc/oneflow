@@ -39,7 +39,7 @@ debug_data = None
 if terminal_args.mock_dataset:
     from mock_data import MockData
 
-    debug_data = MockData("/tmp/shared_with_zwx/data.pkl", 64)
+    debug_data = MockData("/tmp/shared_with_zwx/data_600x100_2_image.pkl", 64)
 
 
 def get_numpy_placeholders():
@@ -54,6 +54,17 @@ def get_numpy_placeholders():
         "gt_boxes": np.random.randn(N, R, 4).astype(np.float32),
         "gt_segms": np.random.randn(N, G, 28, 28).astype(np.int8),
         "gt_labels": np.random.randn(N, G).astype(np.int32),
+        "rpn_proposals": np.random.randn(1000, 4).astype(np.float32),
+        "fpn_feature_map1": np.random.randn(1, 256, 512, 512).astype(
+            np.float32
+        ),
+        "fpn_feature_map2": np.random.randn(1, 256, 256, 256).astype(
+            np.float32
+        ),
+        "fpn_feature_map3": np.random.randn(1, 256, 128, 128).astype(
+            np.float32
+        ),
+        "fpn_feature_map4": np.random.randn(1, 256, 64, 64).astype(np.float32),
     }
 
 
@@ -99,7 +110,7 @@ def maskrcnn_train(images, image_sizes, gt_boxes, gt_segms, gt_labels):
     for i in range(cfg.DECODER.FPN_LAYERS):
         anchors.append(
             flow.detection.anchor_generate(
-                images=images,
+                images=flow.transpose(images, perm=[0, 2, 3, 1]),
                 feature_map_stride=cfg.DECODER.FEATURE_MAP_STRIDE * pow(2, i),
                 aspect_ratios=cfg.DECODER.ASPECT_RATIOS,
                 anchor_scales=cfg.DECODER.ANCHOR_SCALES * pow(2, i),
@@ -217,9 +228,41 @@ def mock_train(
     return outputs
 
 
+# @flow.function
+def debug_rcnn_eval(
+    rpn_proposals=flow.input_blob_def(
+        placeholders["rpn_proposals"].shape, dtype=flow.float32
+    ),
+    fpn_fm1=flow.input_blob_def(
+        placeholders["fpn_feature_map1"].shape, dtype=flow.float32
+    ),
+    fpn_fm2=flow.input_blob_def(
+        placeholders["fpn_feature_map2"].shape, dtype=flow.float32
+    ),
+    fpn_fm3=flow.input_blob_def(
+        placeholders["fpn_feature_map3"].shape, dtype=flow.float32
+    ),
+    fpn_fm4=flow.input_blob_def(
+        placeholders["fpn_feature_map4"].shape, dtype=flow.float32
+    ),
+):
+    cfg = get_default_cfgs()
+    if terminal_args.config_file is not None:
+        cfg.merge_from_file(terminal_args.config_file)
+    cfg.freeze()
+    print(cfg)
+    box_head = BoxHead(cfg)
+    image_ids = flow.detection.extract_piece_slice_id([rpn_proposals])
+    x = box_head.box_feature_extractor(
+        rpn_proposals, image_ids, [fpn_fm1, fpn_fm2, fpn_fm3, fpn_fm4]
+    )
+    cls_logits, box_pred = box_head.predictor(x)
+    return outputs
+
+
 if __name__ == "__main__":
     flow.config.gpu_device_num(terminal_args.gpu_num_per_node)
-    flow.config.ctrl_port(19782)
+    flow.config.ctrl_port(19781)
 
     flow.config.default_data_type(flow.float)
     check_point = flow.train.CheckPoint()
@@ -229,14 +272,15 @@ if __name__ == "__main__":
         check_point.load(terminal_args.model_load_dir)
     if terminal_args.debug:
         if terminal_args.mock_dataset:
-            train_loss = mock_train(
-                debug_data.blob("images"),
-                debug_data.blob("image_size"),
-                debug_data.blob("gt_bbox"),
-                debug_data.blob("gt_segm"),
-                debug_data.blob("gt_labels"),
-            ).get()
-            print(train_loss)
+            for i in range(10):
+                train_loss = mock_train(
+                    debug_data.blob("images"),
+                    debug_data.blob("image_size"),
+                    debug_data.blob("gt_bbox"),
+                    debug_data.blob("gt_segm"),
+                    debug_data.blob("gt_labels"),
+                ).get()
+                print(train_loss)
         else:
             train_loss = debug_train(
                 placeholders["images"],

@@ -18,7 +18,9 @@ void ClearBlobDim0ValidNumIfNeed(const PbRpf<std::string>& bns,
 
 }  // namespace
 
-Kernel::~Kernel() { delete shape_infer_helper_; }
+Kernel::~Kernel() {
+  if (shape_infer_helper_ != nullptr) { delete shape_infer_helper_; }
+}
 
 void Kernel::Init(const JobDesc* job_desc, const KernelConf& kernel_conf, DeviceCtx* device_ctx) {
   job_desc_ = job_desc;

@@ -30,6 +30,8 @@ template<DeviceType device_type>
 void SleepKernel<device_type>::ForwardDataContent(
     const KernelCtx &ctx, std::function<Blob *(const std::string &)> BnInOp2Blob) const {
   CheckSizeAndCopyBlob(ctx.device_ctx, BnInOp2Blob("out"), BnInOp2Blob("in"));
+  LOG(INFO) << this->op_conf().name() << " starts sleeping for "
+            << this->op_conf().sleep_conf().seconds() << " seconds";
   std::this_thread::sleep_for(std::chrono::seconds(this->op_conf().sleep_conf().seconds()));
 }
 
