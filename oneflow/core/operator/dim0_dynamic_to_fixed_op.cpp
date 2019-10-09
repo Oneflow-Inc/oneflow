@@ -2,11 +2,11 @@
 
 namespace oneflow {
 
-class GetDim0MaskOp final : public Operator {
+class Dim0DynamicToFixedOp final : public Operator {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(GetDim0MaskOp);
-  GetDim0MaskOp() = default;
-  ~GetDim0MaskOp() = default;
+  OF_DISALLOW_COPY_AND_MOVE(Dim0DynamicToFixedOp);
+  Dim0DynamicToFixedOp() = default;
+  ~Dim0DynamicToFixedOp() = default;
 
   void InitFromOpConf() override {
     CHECK(op_conf().has_get_dim0_mask_conf());
@@ -65,6 +65,6 @@ class GetDim0MaskOp final : public Operator {
   }
 };
 
-REGISTER_CPU_OP(OperatorConf::kGetDim0MaskConf, GetDim0MaskOp);
+REGISTER_CPU_OP(OperatorConf::kDim0DynamicToFixedConf, Dim0DynamicToFixedOp);
 
 }  // namespace oneflow

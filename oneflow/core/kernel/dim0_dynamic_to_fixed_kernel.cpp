@@ -4,11 +4,11 @@
 
 namespace oneflow {
 
-class GetDim0MaskCpuKernel : public KernelIf<DeviceType::kCPU> {
+class Dim0DynamicToFixedCpuKernel : public KernelIf<DeviceType::kCPU> {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(GetDim0MaskCpuKernel);
-  GetDim0MaskCpuKernel() = default;
-  ~GetDim0MaskCpuKernel() = default;
+  OF_DISALLOW_COPY_AND_MOVE(Dim0DynamicToFixedCpuKernel);
+  Dim0DynamicToFixedCpuKernel() = default;
+  ~Dim0DynamicToFixedCpuKernel() = default;
 
  private:
   void ForwardDenseShape(const KernelCtx& ctx,
@@ -52,6 +52,6 @@ class GetDim0MaskCpuKernel : public KernelIf<DeviceType::kCPU> {
   }
 };
 
-REGISTER_KERNEL_WITH_DEVICE(OperatorConf::kGetDim0MaskConf, DeviceType::kCPU, GetDim0MaskCpuKernel);
+REGISTER_KERNEL_WITH_DEVICE(OperatorConf::kDim0DynamicToFixedConf, DeviceType::kCPU, Dim0DynamicToFixedCpuKernel);
 
 }  // namespace oneflow
