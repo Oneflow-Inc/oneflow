@@ -120,6 +120,7 @@ class LocalGatherGradOp final : public Operator {
         data->shape().dim_vec().end());
 
     BlobDesc* out = GetBlobDesc4BnInOp("out");
+    *out = *data;
     out->set_data_type(data->data_type());
     out->mut_shape() = Shape(out_dim_vec);
     return Maybe<void>::Ok();
