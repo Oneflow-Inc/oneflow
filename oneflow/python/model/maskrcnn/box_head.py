@@ -156,6 +156,13 @@ class BoxHead(object):
                 pos_gt_indices_list,
             )
 
+    def build_eval(self, proposals, features):
+        image_ids = flow.detection.extract_piece_slice_id(proposals)
+        x = self.box_feature_extractor(proposals, image_ids, features)
+        cls_logits, box_pred = self.predictor(x)
+
+        return cls_logits, box_pred
+
     def box_feature_extractor(self, proposals, img_ids, features):
         levels = flow.detection.level_map(proposals)
         level_idx_dict = {}
