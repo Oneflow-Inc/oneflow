@@ -8,7 +8,7 @@ namespace oneflow {
 namespace {
 
 void CheckSizeAndCopyBlob(DeviceCtx *ctx, Blob *dst, const Blob *src) {
-  CHECK_EQ(src->ByteSizeOfDataContentField(), dst->ByteSizeOfDataContentField());
+  CHECK_EQ(src->ByteSizeOfBlobBody(), dst->ByteSizeOfBlobBody());
   dst->CopyDataContentFrom(ctx, src);
 }
 
