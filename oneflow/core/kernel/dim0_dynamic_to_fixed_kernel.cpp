@@ -13,7 +13,7 @@ class Dim0DynamicToFixedCpuKernel : public KernelIf<DeviceType::kCPU> {
  private:
   void ForwardDenseShape(const KernelCtx& ctx,
                          std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
-    // do nothing cuz we want remove dense_shape
+    // do nothing cuz we want remove dynamic dense_shape
   }
   void ForwardDataContent(const KernelCtx& ctx,
                           std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
