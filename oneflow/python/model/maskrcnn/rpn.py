@@ -305,10 +305,11 @@ class RPNProposal(object):
                     proposal_in_one_img,
                     safe_top_k(score_in_one_img, k=self.cfg.RPN.POST_NMS_TOP_N),
                 )
-                proposal_in_one_img = flow.concat(
-                    [proposal_in_one_img, resized_gt_boxes_list[img_idx]],
-                    axis=0,
-                )
+                if self.cfg.TRAINING is True:
+                    proposal_in_one_img = flow.concat(
+                        [proposal_in_one_img, resized_gt_boxes_list[img_idx]],
+                        axis=0,
+                    )   
 
                 proposals.append(proposal_in_one_img)
 

@@ -14,12 +14,8 @@ parser = argparse.ArgumentParser()
 parser.add_argument(
     "--config_file", "-c", default=None, type=str, help="yaml config file"
 )
-parser.add_argument(
-    "-load", "--model_load_dir", type=str, default="", required=False
-)
-parser.add_argument(
-    "-g", "--gpu_num_per_node", type=int, default=1, required=False
-)
+parser.add_argument("-load", "--model_load_dir", type=str, default="", required=False)
+parser.add_argument("-g", "--gpu_num_per_node", type=int, default=1, required=False)
 parser.add_argument(
     "-d",
     "--debug",
@@ -64,7 +60,7 @@ def get_numpy_placeholders():
 placeholders = get_numpy_placeholders()
 
 
-def maskrcnn(images, image_sizes, gt_boxes, gt_segms, gt_labels):
+def maskrcnn_train(images, image_sizes, gt_boxes, gt_segms, gt_labels):
     r"""Mask-RCNN
     Args:
     images: (N, H, W, C)
@@ -92,9 +88,9 @@ def maskrcnn(images, image_sizes, gt_boxes, gt_segms, gt_labels):
 
     image_size_list = [
         flow.squeeze(
-            flow.local_gather(image_sizes, flow.constant(i, dtype=flow.int32)),
-            [0],
-        ) for i in range(image_sizes.shape[0])
+            flow.local_gather(image_sizes, flow.constant(i, dtype=flow.int32)), [0]
+        )
+        for i in range(image_sizes.shape[0])
     ]
     gt_boxes_list = flow.piece_slice(gt_boxes, cfg.TRAINING_CONF.IMG_PER_GPU)
     gt_labels_list = flow.piece_slice(gt_labels, cfg.TRAINING_CONF.IMG_PER_GPU)
@@ -133,63 +129,75 @@ def maskrcnn(images, image_sizes, gt_boxes, gt_segms, gt_labels):
 
     # Mask Head
     mask_loss = mask_head.build_train(
-        pos_proposal_list,
-        pos_gt_indices_list,
-        gt_segms_list,
-        gt_labels_list,
-        features,
+        pos_proposal_list, pos_gt_indices_list, gt_segms_list, gt_labels_list, features
     )
 
     return rpn_bbox_loss, rpn_objectness_loss, box_loss, cls_loss, mask_loss
 
 
+def maskrcnn_eval(images, image_sizes):
+    cfg = get_default_cfgs()
+    if terminal_args.config_file is not None:
+        cfg.merge_from_file(terminal_args.config_file)
+    cfg.freeze()
+    print(cfg)
+    backbone = Backbone(cfg)
+    rpn_head = RPNHead(cfg)
+    rpn_proposal = RPNProposal(cfg)
+    box_head = BoxHead(cfg)
+    mask_head = MaskHead(cfg)
+
+    image_size_list = [
+        flow.squeeze(
+            flow.local_gather(image_sizes, flow.constant(i, dtype=flow.int32)), [0]
+        )
+        for i in range(image_sizes.shape[0])
+    ]
+    anchors = []
+    for i in range(cfg.DECODER.FPN_LAYERS):
+        anchors.append(
+            flow.detection.anchor_generate(
+                images=images,
+                feature_map_stride=cfg.DECODER.FEATURE_MAP_STRIDE * pow(2, i),
+                aspect_ratios=cfg.DECODER.ASPECT_RATIOS,
+                anchor_scales=cfg.DECODER.ANCHOR_SCALES * pow(2, i),
+            )
+        )
+
+    # Backbone
+    features = backbone.build(images)
+
+    # RPN
+    cls_logit_list, bbox_pred_list = rpn_head.build(features)
+    proposals = rpn_proposal.build(
+        anchors, cls_logit_list, bbox_pred_list, image_size_list, None
+    )
+
+    # Box Head
+    cls_logits, box_pred = box_head.build_eval(proposals, features)
+
+    # Mask Head
+    mask_logits = mask_head.build_eval(proposals, features)
+
+    return cls_logits, box_pred, mask_lgoits 
+
+
 # @flow.function
 def debug_train(
-    images=flow.input_blob_def(
-        placeholders["images"].shape, dtype=flow.float32
-    ),
+    images=flow.input_blob_def(placeholders["images"].shape, dtype=flow.float32),
     image_sizes=flow.input_blob_def(
         placeholders["image_sizes"].shape, dtype=flow.int32
     ),
-    gt_boxes=flow.input_blob_def(
-        placeholders["gt_boxes"].shape, dtype=flow.float32
-    ),
-    gt_segms=flow.input_blob_def(
-        placeholders["gt_segms"].shape, dtype=flow.int8
-    ),
-    gt_labels=flow.input_blob_def(
-        placeholders["gt_labels"].shape, dtype=flow.int32
-    ),
+    gt_boxes=flow.input_blob_def(placeholders["gt_boxes"].shape, dtype=flow.float32),
+    gt_segms=flow.input_blob_def(placeholders["gt_segms"].shape, dtype=flow.int8),
+    gt_labels=flow.input_blob_def(placeholders["gt_labels"].shape, dtype=flow.int32),
 ):
     flow.config.train.primary_lr(0.00001)
     flow.config.train.model_update_conf(dict(naive_conf={}))
     images = flow.transpose(images, perm=[0, 3, 1, 2])
-    outputs = maskrcnn(images, image_sizes, gt_boxes, gt_segms, gt_labels)
+    outputs = maskrcnn_train(images, image_sizes, gt_boxes, gt_segms, gt_labels)
     for loss in outputs:
         flow.losses.add_loss(loss)
-    return outputs
-
-
-# @flow.function
-def debug_eval(
-    images=flow.input_blob_def(
-        placeholders["images"].shape, dtype=flow.float32
-    ),
-    image_sizes=flow.input_blob_def(
-        placeholders["image_sizes"].shape, dtype=flow.int32
-    ),
-    gt_boxes=flow.input_blob_def(
-        placeholders["gt_boxes"].shape, dtype=flow.float32
-    ),
-    gt_segms=flow.input_blob_def(
-        placeholders["gt_segms"].shape, dtype=flow.int8
-    ),
-    gt_labels=flow.input_blob_def(
-        placeholders["gt_labels"].shape, dtype=flow.int32
-    ),
-):
-    images = flow.transpose(images, perm=[0, 3, 1, 2])
-    outputs = maskrcnn(images, image_sizes, gt_boxes, gt_segms, gt_labels)
     return outputs
 
 
@@ -203,7 +211,7 @@ def mock_train(
 ):
     flow.config.train.primary_lr(0.00001)
     flow.config.train.model_update_conf(dict(naive_conf={}))
-    outputs = maskrcnn(images, image_sizes, gt_boxes, gt_segms, gt_labels)
+    outputs = maskrcnn_train(images, image_sizes, gt_boxes, gt_segms, gt_labels)
     for loss in outputs:
         flow.losses.add_loss(loss)
     return outputs
