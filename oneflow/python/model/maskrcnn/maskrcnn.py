@@ -78,6 +78,11 @@ def maskrcnn(images, image_sizes, gt_boxes, gt_segms, gt_labels):
     gt_segms: (N, G, 28, 28), dynamic
     gt_labels: (N, G), dynamic
     """
+    assert images.is_dynamic == True
+    assert image_sizes.is_dynamic == False
+    assert gt_boxes.num_of_lod_levels == 2
+    assert gt_segms.num_of_lod_levels == 2
+    assert gt_labels.num_of_lod_levels == 2
     cfg = get_default_cfgs()
     if terminal_args.config_file is not None:
         cfg.merge_from_file(terminal_args.config_file)
@@ -90,9 +95,12 @@ def maskrcnn(images, image_sizes, gt_boxes, gt_segms, gt_labels):
     box_head = BoxHead(cfg)
     mask_head = MaskHead(cfg)
 
-    image_size_list = flow.piece_slice(
-        image_sizes, cfg.TRAINING_CONF.IMG_PER_GPU
-    )
+    image_size_list = [
+        flow.squeeze(
+            flow.local_gather(image_sizes, flow.constant(i, dtype=flow.int32)),
+            [0],
+        ) for i in range(image_sizes.shape[0])
+    ]
     gt_boxes_list = flow.piece_slice(gt_boxes, cfg.TRAINING_CONF.IMG_PER_GPU)
     gt_labels_list = flow.piece_slice(gt_labels, cfg.TRAINING_CONF.IMG_PER_GPU)
     gt_segms_list = flow.piece_slice(gt_segms, cfg.TRAINING_CONF.IMG_PER_GPU)
@@ -237,7 +245,7 @@ def debug_rcnn_eval(
 
 if __name__ == "__main__":
     flow.config.gpu_device_num(terminal_args.gpu_num_per_node)
-    flow.config.ctrl_port(19781)
+    flow.config.ctrl_port(19782)
 
     flow.config.default_data_type(flow.float)
     check_point = flow.train.CheckPoint()
