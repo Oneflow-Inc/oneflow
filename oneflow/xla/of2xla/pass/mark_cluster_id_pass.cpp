@@ -135,16 +135,16 @@ void ClusterNode::EraseOutEdge(const ClusterEdge *edge) {
 
 bool ClusterNode::IsSatisfySbpPolicy() const {
   // TODO(hjchen2) Fix ReduceSplit
-  util::Map<int64_t, util::Set<ClusterEdge *>> parent_edges;
-  for (ClusterEdge *edge : in_edges_) {
-    int64_t parent_id = edge->start()->id();
-    parent_edges[parent_id].insert(edge);
-    if (absl::StartsWith(edge->start()->name(),
-            "System-Boxing-AllReduce-ReduceSplit") &&
-        parent_edges[parent_id].size() > 1) {
-      return false;
-    }
-  }
+//  util::Map<int64_t, util::Set<ClusterEdge *>> parent_edges;
+//  for (ClusterEdge *edge : in_edges_) {
+//    int64_t parent_id = edge->start()->id();
+//    parent_edges[parent_id].insert(edge);
+//    if (absl::StartsWith(edge->start()->name(),
+//            "System-Boxing-AllReduce-ReduceSplit") &&
+//        parent_edges[parent_id].size() > 1) {
+//      return false;
+//    }
+//  }
 
   util::Map<int64_t, util::Set<bool>> connection_kinds;
   for (ClusterEdge *edge : in_edges_) {
@@ -204,11 +204,11 @@ class ClusterMergeNode : public ClusterNode {
   virtual ~ClusterMergeNode() { Fallback(); }
 
   void Fallback() {
-    for (const EdgeSnapshot &snapshot : involved_edges_) {
+    for (const EdgeSnapshot &snapshot : snapshot_edges_) {
       snapshot.edge->UpdateStartNode(snapshot.from);
       snapshot.edge->UpdateEndNode(snapshot.to);
     }
-    involved_edges_.clear();
+    snapshot_edges_.clear();
   }
 
   void Complete() {
@@ -220,14 +220,14 @@ class ClusterMergeNode : public ClusterNode {
   void BuildInputEdges() {
     for (ClusterEdge *edge : lhs_->in_edges()) {
       if (edge->start() != rhs_) {
-        InvolveEdge(edge);
+        SnapshotEdge(edge);
         edge->UpdateEndNode(this);
         AddInEdge(edge);
       }
     }
     for (ClusterEdge *edge : rhs_->in_edges()) {
       if (edge->start() != lhs_) {
-        InvolveEdge(edge);
+        SnapshotEdge(edge);
         edge->UpdateEndNode(this);
         AddInEdge(edge);
       }
@@ -237,31 +237,31 @@ class ClusterMergeNode : public ClusterNode {
   void BuildOutputEdges() {
     for (ClusterEdge *edge : lhs_->out_edges()) {
       if (edge->end() != rhs_) {
-        InvolveEdge(edge);
+        SnapshotEdge(edge);
         edge->UpdateStartNode(this);
         AddOutEdge(edge);
       }
     }
     for (ClusterEdge *edge : rhs_->out_edges()) {
       if (edge->end() != lhs_) {
-        InvolveEdge(edge);
+        SnapshotEdge(edge);
         edge->UpdateStartNode(this);
         AddOutEdge(edge);
       }
     }
   }
 
-  void InvolveEdge(ClusterEdge *edge) {
+  void SnapshotEdge(ClusterEdge *edge) {
     EdgeSnapshot snapshot;
     snapshot.from = edge->start();
     snapshot.to = edge->end();
     snapshot.edge = edge;
-    involved_edges_.push_back(snapshot);
+    snapshot_edges_.push_back(snapshot);
   }
 
   ClusterNode *lhs_;
   ClusterNode *rhs_;
-  std::vector<EdgeSnapshot> involved_edges_;
+  std::vector<EdgeSnapshot> snapshot_edges_;
 };
 
 void ClusterNode::Merge(ClusterNode &other) {
@@ -474,7 +474,15 @@ void MarkClusterIdPass::Run() {
     for (ClusterNode *node : ordered_nodes) {
       util::Set<ClusterNode *> candidate_parents;
       for (ClusterEdge *edge : node->in_edges()) {
-        candidate_parents.insert(edge->start());
+        ClusterNode *parent = edge->start();
+        if (parent->type() == "ReduceSplit") {
+          for (ClusterEdge *e : parent->out_edges()) {
+            if (node != e->end()) {
+              candidate_parents.insert(e->end());
+            }
+          }
+        }
+        candidate_parents.insert(parent);
       }
 
       for (ClusterNode *parent : candidate_parents) {

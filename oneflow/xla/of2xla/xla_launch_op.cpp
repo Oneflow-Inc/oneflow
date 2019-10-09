@@ -9,9 +9,9 @@ namespace oneflow {
 
 void XlaLaunchOp::InitFromOpConf() {
   CHECK(op_conf().has_xla_launch_conf());
-  const auto &launch_conf = op_conf().xla_launch_conf();
-  int inputs_num = launch_conf.in().size();
-  int outputs_num = launch_conf.out().size();
+  const auto &xla_launch_conf = op_conf().xla_launch_conf();
+  int inputs_num = xla_launch_conf.in().size();
+  int outputs_num = xla_launch_conf.out().size();
   for (int i = 0; i < inputs_num; ++i) {
     EnrollInputBn(absl::StrCat("in_", i))->set_is_mutable(true);
     // EnrollInputBn(absl::StrCat("in_", i));
@@ -19,10 +19,8 @@ void XlaLaunchOp::InitFromOpConf() {
   if (outputs_num > 0) {
     EnrollRepeatedOutputBn("out");
   }
-  is_model_update_ = launch_conf.is_model_update();
   // Setup subgraph
-  subgraph_.reset(new mola::XlaLaunchGraph(
-      op_conf().xla_launch_conf(), &this->job_desc()));
+  subgraph_.reset(new mola::XlaLaunchGraph(xla_launch_conf, &this->job_desc()));
 }
 
 const PbMessage &XlaLaunchOp::GetCustomizedConf() const {

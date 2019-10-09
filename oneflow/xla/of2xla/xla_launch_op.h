@@ -19,7 +19,9 @@ class XlaLaunchOp : public Operator {
       const ParallelContext* parallel_ctx) const override;
 
   LogicalNode* NewProperLogicalNode() const override {
-    if (is_model_update_) {
+    const auto &xla_launch_conf = op_conf().xla_launch_conf();
+    const bool is_model_update = xla_launch_conf.is_model_update();
+    if (is_model_update) {
       return new OptimizerLogicalNode;
     }
     return new NormalForwardLogicalNode;
@@ -38,7 +40,6 @@ class XlaLaunchOp : public Operator {
     SbpInferHint4IbnFunc SbpInferHint4Ibn,
     const ParallelDesc& parallel_desc) const override;
 
-  bool is_model_update_ = false;
   std::shared_ptr<mola::XlaLaunchGraph> subgraph_;
 };
 

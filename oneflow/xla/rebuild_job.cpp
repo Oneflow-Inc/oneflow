@@ -246,14 +246,14 @@ void FoldSubgraphBuilder::buildXlaLaunchAttribute(
       }
     }
 
-    // Restore output shapes
-    auto &shapes = *(resource_scope->mutable_shapes());
-    for (const XlaEdge *edge : node->out_edges()) {
-      const Argument &argument = edge->argument();
-      const std::string blob_name = argument.blob_name();
-      *(shapes[blob_name].mutable_shape()) = argument.shape_proto();
-      shapes[blob_name].set_data_type(argument.data_type());
-    }
+    // // Restore output shapes
+    // auto &shapes = *(resource_scope->mutable_shapes());
+    // for (const XlaEdge *edge : node->out_edges()) {
+    //   const Argument &argument = edge->argument();
+    //   const std::string blob_name = argument.blob_name();
+    //   *(shapes[blob_name].mutable_shape()) = argument.shape_proto();
+    //   shapes[blob_name].set_data_type(argument.data_type());
+    // }
   }
 }
 

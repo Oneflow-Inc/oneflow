@@ -232,8 +232,8 @@ void XlaLaunchGraph::BuildLaunchGraph() {
     }
   }
 
-  const auto &resource_scope = launch_conf_.attr().resource_scope();
-  const auto &shapes = resource_scope.shapes();
+  // const auto &resource_scope = launch_conf_.attr().resource_scope();
+  // const auto &shapes = resource_scope.shapes();
   // Add edges
   for (const auto &node : this->Nodes()) {
     for (const std::string &bn : node->input_bns()) {
@@ -243,10 +243,10 @@ void XlaLaunchGraph::BuildLaunchGraph() {
       // Input argument node input lbi maybe equal to output lbi, so here we
       // add edge only if `it->second != node` to avoid node-self ring
       if (it != lbi2producer.end() && it->second != node) {
-        const auto &shape = shapes.at(blob_name);
+        // const auto &shape = shapes.at(blob_name);
         BlobDesc blob_desc;
-        blob_desc.set_data_type(shape.data_type());
-        blob_desc.mut_shape() = Shape(shape.shape());
+        // blob_desc.set_data_type(shape.data_type());
+        // blob_desc.mut_shape() = Shape(shape.shape());
         Argument argument(lbi, blob_desc);
         this->Connect(it->second, node, argument);
       }
