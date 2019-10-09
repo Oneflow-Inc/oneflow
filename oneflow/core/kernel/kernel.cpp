@@ -4,20 +4,6 @@
 
 namespace oneflow {
 
-namespace {
-
-void CheckSameRecordIdInDevicePiece(const PbRpf<std::string>& bns,
-                                    const std::function<Blob*(const std::string&)>& BnInOp2Blob) {
-  TODO();
-}
-
-void ClearBlobDim0ValidNumIfNeed(const PbRpf<std::string>& bns,
-                                 const std::function<Blob*(const std::string&)>& BnInOp2Blob) {
-  TODO();
-}
-
-}  // namespace
-
 Kernel::~Kernel() {
   if (shape_infer_helper_ != nullptr) { delete shape_infer_helper_; }
 }
