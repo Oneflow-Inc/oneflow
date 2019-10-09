@@ -14,7 +14,7 @@ class GetDim0MaskOp final : public Operator {
     int32_t out_size = op_conf().get_dim0_mask_conf().out_size();
     CHECK_GT(in_size, 0);
     CHECK_EQ(in_size, out_size);
-    EnrollRepeatedInputBn("in", in_size);
+    EnrollRepeatedInputBn("in", in_size, false);
     EnrollRepeatedOutputBn("out", out_size);
     EnrollOutputBn("mask");
   }
