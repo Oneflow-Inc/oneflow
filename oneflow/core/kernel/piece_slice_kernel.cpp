@@ -24,8 +24,6 @@ class PieceSliceKernel final : public KernelIf<device_type> {
   }
   void ForwardDataContent(const KernelCtx& ctx,
                           std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
-    // DEBUG: shenghang
-    // return;
     const Blob* in_blob = BnInOp2Blob("in");
     const int32_t instance_byte_size = in_blob->shape().Count(1) * sizeof(T);
     FOR_RANGE(size_t, i, 0, in_blob->length_lod_view().GetLength(0, 0)) {
