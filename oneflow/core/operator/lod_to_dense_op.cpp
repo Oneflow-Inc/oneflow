@@ -35,7 +35,7 @@ Maybe<void> LoDToDenseOp::InferBlobDescs(
   OF_CHECK(in_blob_desc.is_dynamic());
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   *out_blob_desc = in_blob_desc;
-  out_blob_desc->SetLoD(0);
+  out_blob_desc->ClearLoD();
   {
     const auto& in_dim_vec = in_blob_desc.shape().dim_vec();
     std::vector<int64_t> dim_vec{in_blob_desc.shape().Count(0, num_of_lod_levels)};

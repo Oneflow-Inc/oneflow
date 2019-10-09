@@ -31,6 +31,7 @@ class BlobDesc final {
 
   BlobDesc& operator=(const BlobDesc&);
 
+  void ClearLoD() { num_of_lod_levels_ = 0; }
   Maybe<void> SetLoD(int64_t num_of_lod_levels);
   void SetOpaqueHeader(const StructPodDesc& header_pod_desc);
 
