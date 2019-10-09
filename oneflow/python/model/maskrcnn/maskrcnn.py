@@ -43,7 +43,7 @@ debug_data = None
 if terminal_args.mock_dataset:
     from mock_data import MockData
 
-    debug_data = MockData("/tmp/shared_with_zwx/data.pkl", 64)
+    debug_data = MockData("/tmp/shared_with_zwx/data_600x100_2_image.pkl", 64)
 
 
 def get_numpy_placeholders():
