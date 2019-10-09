@@ -9,6 +9,8 @@ namespace oneflow {
 
 namespace {
 
+const size_t kMemReuseAlgorithmNum = 2;
+
 int64_t GenDeviceUniqueId(int64_t machine_id, int64_t device_id) {
   return (machine_id << 32) | device_id;
 }
@@ -149,11 +151,11 @@ void GenRegstApplyReleaseQueueAndRegstMutualExclusions(
 
 struct MemBlockResultInfo {
   int64_t mem_block_size;
-  HashMap<int64_t, int64_t> regst_desc_id2offset;
+  HashMap<RegstDescProto*, int64_t> regst_desc2offset;
 };
 
 void SelectAlgorithmGenMemBlockOffset4Regsts(
-    int64_t algorithm_id, const std::vector<HashSet<RegstDescProto*>>& apply_regsts_queue,
+    int64_t algo_id, const std::vector<HashSet<RegstDescProto*>>& apply_regsts_queue,
     const std::vector<HashSet<RegstDescProto*>>& release_regsts_queue,
     const HashMap<RegstDescProto*, HashSet<RegstDescProto*>>& regst2mutual_exclusion_regsts,
     MemBlockResultInfo* result) {
@@ -191,22 +193,21 @@ void InJobMemSharingUtil::InferMemBlockId4MemReusedRegst(Plan* plan) {
   HashMap<int64_t, std::vector<MemBlockResultInfo>> mem_chain2results;
   {
     int64_t cpu_num = std::thread::hardware_concurrency();
-    const int64_t algorithm_num = 2;
-    int64_t work_size = mem_chain2sorted_tasks.size() * algorithm_num;
+    int64_t work_size = mem_chain2sorted_tasks.size() * kMemReuseAlgorithmNum;
     int64_t thread_pool_size = std::min<int64_t>(work_size, cpu_num);
     BlockingCounter counter(work_size);
     ThreadPool thread_pool(thread_pool_size);
     for (const auto& pair : mem_chain2sorted_tasks) {
       int64_t mem_chain_id = pair.first;
       std::vector<MemBlockResultInfo>* results = &mem_chain2results[mem_chain_id];
-      results->resize(algorithm_num);
-      for (int64_t algorithm_id = 0; algorithm_id < algorithm_num; ++algorithm_id) {
-        MemBlockResultInfo* result = &(results->at(algorithm_id));
-        thread_pool.AddWork([algorithm_id, mem_chain_id, &mem_chain2task2apply_regsts,
+      results->resize(kMemReuseAlgorithmNum);
+      for (int64_t algo_id = 0; algo_id < kMemReuseAlgorithmNum; ++algo_id) {
+        MemBlockResultInfo* result = &(results->at(algo_id));
+        thread_pool.AddWork([algo_id, mem_chain_id, &mem_chain2task2apply_regsts,
                              &mem_chain2task2release_regsts,
                              &mem_chain2regst2mutual_exclusion_regsts, result, &counter]() {
           SelectAlgorithmGenMemBlockOffset4Regsts(
-              algorithm_id, mem_chain2task2apply_regsts.at(mem_chain_id),
+              algo_id, mem_chain2task2apply_regsts.at(mem_chain_id),
               mem_chain2task2release_regsts.at(mem_chain_id),
               mem_chain2regst2mutual_exclusion_regsts.at(mem_chain_id), result);
           counter.Decrease();
@@ -217,29 +218,27 @@ void InJobMemSharingUtil::InferMemBlockId4MemReusedRegst(Plan* plan) {
   }
 
   // step 3: choose best one for each mem chain and set offset for inplace consumer regst
-  /*
-  {
-    int64_t cpu_num = std::thread::hardware_concurrency();
-    int64_t thread_pool_size = std::min<int64_t>(mem_chain2sorted_tasks.size(), cpu_num);
-    BlockingCounter counter(mem_chain2sorted_tasks.size());
-    ThreadPool thread_pool(thread_pool_size);
-    for(const auto& pair : mem_chain2sorted_tasks) {
-      std::vector<TaskProto*>* sorted_tasks = &pair.second;
-      std::vector<std::list<RegstDescProto*>>* apply_regsts_queue =
-  &mem_chain2task2apply_regsts[pair.first]; std::vector<std::list<RegstDescProto*>>*
-  release_regsts_queue = &mem_chain2task2release_regsts[pair.first]; HashMap<RegstDescProto*,
-  std::vector<RegstDescProto*>>* regst2mutual_exclusion_regsts =
-  &mem_chain2regst2mutual_exclusion_regsts[pair.first]; thread_pool.AddWork([sorted_tasks,
-  apply_regsts_queue, release_regsts_queue, regst2mutual_exclusion_regsts, &counter] () {
-        GenRegstApplyReleaseQueueAndRegstMutualExclusions(sorted_tasks,
-            apply_regsts_queue, release_regsts_queue, regst2mutual_exclusion_regsts);
-        counter.Decrease();
-      });
+  for (const auto& pair : mem_chain2results) {
+    const std::vector<MemBlockResultInfo>& results = pair.second;
+    int64_t best_algo_id = 0;
+    for (int64_t algo_id = 0; algo_id < kMemReuseAlgorithmNum; ++algo_id) {
+      CHECK_GT(results.at(algo_id).mem_block_size, 0);
+      if (results.at(algo_id).mem_block_size < results.at(best_algo_id).mem_block_size) {
+        best_algo_id = algo_id;
+      }
     }
-    counter.WaitUntilCntEqualZero();
+    LOG(INFO) << "mem reuse algorithm choose result : algorithm " << best_algo_id
+              << " is best in mem_chain " << pair.first;
+    int64_t mem_block_id = Global<IDMgr>::Get()->NewMemBlockId();
+    const MemBlockResultInfo& best_result = results.at(best_algo_id);
+    for (const auto& regst_offset_pair : best_result.regst_desc2offset) {
+      RegstDescProto* regst_desc = regst_offset_pair.first;
+      int64_t offset = regst_offset_pair.second;
+      CHECK_EQ(regst_desc->mem_block_id(), -1);
+      regst_desc->set_mem_block_id(mem_block_id);
+      regst_desc->set_mem_block_offset(offset);
+    }
   }
-  */
-  TODO();
 }
 
 }  // namespace oneflow
