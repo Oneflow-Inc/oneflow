@@ -14,7 +14,6 @@
 #include "oneflow/core/job_completer/nccl_tuple_broadcast_reduce_sequence_pass.h"
 #include "oneflow/core/job_completer/auto_train_step.h"
 #include "oneflow/core/job_completer/auto_learning_rate.h"
-#include "oneflow/core/job_completer/auto_learning_rate.h"
 #include "oneflow/core/job_completer/add_lbi_diff_watcher.h"
 
 namespace oneflow {

@@ -225,6 +225,16 @@ Maybe<DataType> JobBuildAndInferCtx::GetDataType(const std::string& lbn) const {
   return lbi2logical_blob_desc_.at(GenLogicalBlobId(lbn))->data_type();
 }
 
+Maybe<bool> JobBuildAndInferCtx::IsDynamic(const std::string& lbn) const {
+  JUST(CheckLbnValidAndExist(lbn));
+  return lbi2logical_blob_desc_.at(GenLogicalBlobId(lbn))->is_dynamic();
+}
+
+Maybe<long long> JobBuildAndInferCtx::GetNumOfLoDLevels(const std::string& lbn) const {
+  JUST(CheckLbnValidAndExist(lbn));
+  return lbi2logical_blob_desc_.at(GenLogicalBlobId(lbn))->num_of_lod_levels();
+}
+
 Maybe<OptInt64> JobBuildAndInferCtx::GetBatchAxis(const std::string& lbn) const {
   JUST(CheckLbnValidAndExist(lbn));
   return lbi2batch_axis_.at(GenLogicalBlobId(lbn));
