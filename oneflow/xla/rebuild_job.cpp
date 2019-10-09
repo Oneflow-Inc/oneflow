@@ -140,11 +140,11 @@ class FoldSubgraphBuilder {
  private:
   const XlaGraph &graph_;
   std::shared_ptr<JobBuilder> builder_;
-  std::unordered_set<const XlaNode *> after_allreduce_nodes_;
   // Launch nodes
   std::vector<const XlaNode *> launch_nodes_;
   // Folded nodes except for argument nodes for each launch nodes
   std::vector<std::vector<const XlaNode *>> folded_nodes_;
+  std::unordered_set<const XlaNode *> after_allreduce_nodes_;
 };
 
 FoldSubgraphBuilder::FoldSubgraphBuilder(const XlaGraph &graph, Job *job)
