@@ -9,6 +9,10 @@ option(BUILD_CUDA "" ON)
 option(RELEASE_VERSION "" ON)
 option(PY3 "" OFF)
 
+if(NOT RELEASE_VERSION)
+  set(CUDNN_STATIC OFF CACHE BOOL "")
+endif()
+
 # Project
 if(THIRD_PARTY)
   project(third_party C CXX)
@@ -34,7 +38,6 @@ include(swig)
 include(third_party)
 
 if(NOT RELEASE_VERSION)
-  set(CUDNN_STATIC OFF CACHE BOOL "")
   if(CUDA_VERSION VERSION_GREATER_EQUAL "10.0")
     set(CUDA_NVCC_GENCODES "arch=compute_75,code=sm_75" "arch=compute_75,code=compute_75" CACHE STRING "")
   else()
