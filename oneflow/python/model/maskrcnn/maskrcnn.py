@@ -73,6 +73,11 @@ def maskrcnn(images, image_sizes, gt_boxes, gt_segms, gt_labels):
     gt_segms: (N, G, 28, 28), dynamic
     gt_labels: (N, G), dynamic
     """
+    assert images.is_dynamic == True
+    assert image_sizes.is_dynamic == False
+    assert gt_boxes.num_of_lod_levels == 2
+    assert gt_segms.num_of_lod_levels == 2
+    assert gt_labels.num_of_lod_levels == 2
     cfg = get_default_cfgs()
     if terminal_args.config_file is not None:
         cfg.merge_from_file(terminal_args.config_file)
@@ -206,7 +211,7 @@ def mock_train(
 
 if __name__ == "__main__":
     flow.config.gpu_device_num(terminal_args.gpu_num_per_node)
-    flow.config.ctrl_port(19781)
+    flow.config.ctrl_port(19782)
 
     flow.config.default_data_type(flow.float)
     check_point = flow.train.CheckPoint()
