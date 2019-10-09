@@ -11,7 +11,7 @@ class MockData(object):
     def blob_def(self, blob_name):
         if blob_name == "images":
             return flow.input_blob_def(
-                shape=self._data["images"].shape, dtype=flow.float32
+                shape=self._data["images"].shape, dtype=flow.float32, is_dynamic=True
             )
         elif blob_name == "image_size":
             return flow.input_blob_def(

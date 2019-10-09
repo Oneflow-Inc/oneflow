@@ -32,8 +32,7 @@ Maybe<void> SplitLikeOp::InferBlobDescs(
     }
     dim_sum += like_i_blob_desc->shape().At(split_axis);
     BlobDesc* output_i_blob_desc = GetBlobDesc4BnInOp(output_bns().Get(i));
-    output_i_blob_desc->set_data_type(like_i_blob_desc->data_type());
-    output_i_blob_desc->mut_shape() = like_i_blob_desc->shape();
+    output_i_blob_desc->CopyMetaFrom(*like_i_blob_desc);
   }
   CHECK_EQ_OR_RETURN(dim_sum, in_dim_vec.at(split_axis));
   return Maybe<void>::Ok();
