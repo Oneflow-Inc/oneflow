@@ -66,13 +66,13 @@ std::function<const TaskProto&(int64_t)> PlanUtil::MakeGetterTaskProto4TaskId(co
 void PlanUtil::CleanUselessMemBlockAndCheckValid(Plan* plan) {
   HashMap<int64_t, ChunkProto> chunk_id2chunk;
   HashMap<int64_t, MemBlockProto> mem_block_id2mem_block;
-  for (const auto& chunk : plan->chunk()) {
+  for (const auto& chunk : plan->block_chunk_list().chunk()) {
     CHECK(chunk_id2chunk.emplace(chunk.chunk_id(), chunk).second);
   }
-  for (const auto& mem_block : plan->mem_block()) {
+  for (const auto& mem_block : plan->block_chunk_list().mem_block()) {
     CHECK(mem_block_id2mem_block.emplace(mem_block.mem_block_id(), mem_block).second);
   }
-  plan->clear_mem_block();
+  plan->mutable_block_chunk_list()->clear_mem_block();
 
   HashMap<int64_t, HashSet<int64_t>> chunk_id2job_ids;
   HashMap<int64_t, HashSet<int64_t>> mem_block_id2job_ids;
@@ -149,7 +149,9 @@ void PlanUtil::CleanUselessMemBlockAndCheckValid(Plan* plan) {
     mem_block_id2mem_block.erase(useless_block_id);
   }
 
-  for (const auto& pair : mem_block_id2mem_block) { *(plan->add_mem_block()) = pair.second; }
+  for (const auto& pair : mem_block_id2mem_block) {
+    *(plan->mutable_block_chunk_list()->add_mem_block()) = pair.second;
+  }
 }
 
 void PlanUtil::ToDotFile(const Plan& plan, const std::string& filepath) {

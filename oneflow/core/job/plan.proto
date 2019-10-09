@@ -19,8 +19,7 @@ message JobConfs {
 
 message Plan {
   repeated TaskProto task = 1;
-  repeated MemBlockProto mem_block = 2;
-  repeated ChunkProto chunk = 3;
-  required NetTopo net_topo = 4;
-  required JobConfs job_confs = 5;
+  required MemBlockAndChunkList block_chunk_list = 2;
+  required NetTopo net_topo = 3;
+  required JobConfs job_confs = 4;
 }

@@ -21,13 +21,13 @@ void CheckBlobInRegstNotDisabled(const RegstDescProto& regst_desc) {
 RegstMgr::RegstMgr(const Plan& plan) {
   int64_t this_machine_id = Global<MachineCtx>::Get()->this_machine_id();
   HashMap<int64_t, char*> chunk_id2ptr;
-  for (const ChunkProto& chunk : plan.chunk()) {
+  for (const ChunkProto& chunk : plan.block_chunk_list().chunk()) {
     if (chunk.machine_id() != this_machine_id) { continue; }
     if (chunk.mem_size() == 0) { continue; }
     char* chunk_ptr = Global<MemoryAllocator>::Get()->Allocate(chunk.mem_case(), chunk.mem_size());
     CHECK(chunk_id2ptr.emplace(chunk.chunk_id(), chunk_ptr).second);
   }
-  for (const MemBlockProto& mem_block : plan.mem_block()) {
+  for (const MemBlockProto& mem_block : plan.block_chunk_list().mem_block()) {
     if (mem_block.machine_id() != this_machine_id) { continue; }
     if (mem_block.mem_size() == 0) { continue; }
     char* mem_block_ptr = nullptr;

@@ -10,10 +10,12 @@ namespace oneflow {
 
 namespace {
 
-std::vector<TaskProto*> SortSameOpNameTaskProtos(const std::string& op_name, Plan* plan) {
+std::vector<TaskProto*> SortSameOpNameTaskProtos(const std::string& op_name, Plan* plan,
+                                                 int64_t job_id) {
   std::vector<TaskProto*> task_protos;
   FOR_RANGE(int64_t, i, 0, plan->task_size()) {
     TaskProto* task = plan->mutable_task(i);
+    if (task->job_id() != job_id) { continue; }
     if (task->exec_sequence().exec_node_size() == 1) {
       const KernelConf& kernel_conf = task->exec_sequence().exec_node(0).kernel_conf();
       if (op_name == kernel_conf.op_attribute().op_conf().name()) {
@@ -259,14 +261,13 @@ void MergeSharedMemBlockR2L(RegstDescProto* lhs, RegstDescProto* rhs,
   }
 }
 
-void MergeSharedInterfaceMemBlock(const std::vector<Job>& jobs, std::vector<Plan>* sub_plans,
+void MergeSharedInterfaceMemBlock(const std::vector<Job>& jobs, Plan* plan,
                                   HashMap<int64_t, MemBlockProto>* mem_block_id2mem_block) {
   for (const auto& pair : GetInterfaceOpName2JobIds(jobs)) {
     if (pair.second.size() <= 1) { continue; }
     std::vector<std::vector<TaskProto*>> same_op_name_sorted_task_protos;
     for (int64_t job_id : pair.second) {
-      same_op_name_sorted_task_protos.push_back(
-          SortSameOpNameTaskProtos(pair.first, &sub_plans->at(job_id)));
+      same_op_name_sorted_task_protos.push_back(SortSameOpNameTaskProtos(pair.first, plan, job_id));
     }
     const auto& first_vec = same_op_name_sorted_task_protos.at(0);
     std::vector<MemoryCase> common_mem_case_vec(first_vec.size());
@@ -303,52 +304,43 @@ void MergeSharedInterfaceMemBlock(const std::vector<Job>& jobs, std::vector<Plan
 
 }  // namespace
 
-void InterJobMemSharingUtil::MergeMemSharedInterfaceMemBlockBetweenSubPlans(
-    const std::vector<Job>& jobs, std::vector<Plan>* sub_plans) {
+void InterJobMemSharingUtil::MergeMemSharedInterfaceMemBlockBetweenJobs(
+    const std::vector<Job>& jobs, Plan* plan) {
   if (jobs.size() == 1) { return; }
 
   HashMap<int64_t, MemBlockProto> mem_block_id2mem_block;
-  for (int64_t i = 0; i < jobs.size(); ++i) {
-    Plan* sub_plan = &(sub_plans->at(i));
-    for (const MemBlockProto& mem_block : sub_plan->mem_block()) {
-      CHECK(mem_block_id2mem_block.emplace(mem_block.mem_block_id(), mem_block).second);
-    }
-    sub_plan->clear_mem_block();
+  for (const auto& mem_block : plan->block_chunk_list().mem_block()) {
+    CHECK(mem_block_id2mem_block.emplace(mem_block.mem_block_id(), mem_block).second);
   }
+  plan->mutable_block_chunk_list()->clear_mem_block();
 
-  MergeSharedInterfaceMemBlock(jobs, sub_plans, &mem_block_id2mem_block);
+  MergeSharedInterfaceMemBlock(jobs, plan, &mem_block_id2mem_block);
 
   for (const auto& pair : mem_block_id2mem_block) {
-    const MemBlockProto& mem_block = pair.second;
-    CHECK_GE(mem_block.job_id_size(), 1);
-    *(sub_plans->at(mem_block.job_id(0)).add_mem_block()) = mem_block;
+    *(plan->mutable_block_chunk_list()->add_mem_block()) = pair.second;
   }
 }
 
-void InterJobMemSharingUtil::MergeMemReusedChunkBetweenSubPlans(const std::vector<Job>& jobs,
-                                                                std::vector<Plan>* sub_plans) {
-  if (jobs.size() == 1) { return; }
-  std::vector<HashSet<int64_t>> reuse_mem_job_groups = GetMutualExclusionJobGroups(jobs);
+void InterJobMemSharingUtil::MergeMemReusedChunkBetweenUserJobs(const std::vector<Job>& jobs,
+                                                                Plan* plan, int64_t user_job_size) {
+  if (user_job_size == 1) { return; }
+  std::vector<Job> user_jobs(jobs.begin(), jobs.begin() + user_job_size);
+  std::vector<HashSet<int64_t>> reuse_mem_job_groups = GetMutualExclusionJobGroups(user_jobs);
 
   HashMap<int64_t, ChunkProto> chunk_id2chunk;
   HashMap<int64_t, MemBlockProto*> mem_block_id2mem_block;
-  for (int64_t i = 0; i < jobs.size(); ++i) {
-    Plan* sub_plan = &(sub_plans->at(i));
-    for (const auto& chunk : sub_plan->chunk()) {
-      CHECK(chunk_id2chunk.emplace(chunk.chunk_id(), chunk).second);
-    }
-    sub_plan->clear_chunk();
-    for (MemBlockProto& mem_block : *sub_plan->mutable_mem_block()) {
-      CHECK(mem_block_id2mem_block.emplace(mem_block.mem_block_id(), &mem_block).second);
-    }
+  for (const auto& chunk : plan->block_chunk_list().chunk()) {
+    CHECK(chunk_id2chunk.emplace(chunk.chunk_id(), chunk).second);
+  }
+  plan->mutable_block_chunk_list()->clear_chunk();
+  for (MemBlockProto& mem_block : *plan->mutable_block_chunk_list()->mutable_mem_block()) {
+    CHECK(mem_block_id2mem_block.emplace(mem_block.mem_block_id(), &mem_block).second);
   }
 
   MergeReusedChunk(&chunk_id2chunk, &mem_block_id2mem_block, reuse_mem_job_groups);
 
   for (const auto& pair : chunk_id2chunk) {
-    const ChunkProto& chunk = pair.second;
-    CHECK_GE(chunk.job_id_size(), 1);
-    *(sub_plans->at(chunk.job_id(0)).add_chunk()) = chunk;
+    *(plan->mutable_block_chunk_list()->add_chunk()) = pair.second;
   }
 }
 

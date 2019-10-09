@@ -409,8 +409,6 @@ void SetUniqueMemBlockId4UnreusedMemRegst(Plan* plan) {
 }
 
 void GenMemBlockAndChunk4Plan(Plan* plan) {
-  plan->clear_mem_block();
-  plan->clear_chunk();
   HashMap<int64_t, MemBlockProto> mem_block_id2mem_block;
   // mzuid = memory zone unique id
   HashMap<int64_t, ChunkProto> mzuid2chunk;
@@ -496,9 +494,13 @@ void GenMemBlockAndChunk4Plan(Plan* plan) {
     if (mem_block->enable_reuse_mem()) { GenChunk4ReusedMemBlockIfNeed(mem_block); }
   }
 
-  for (const auto& pair : mem_block_id2mem_block) { *(plan->add_mem_block()) = pair.second; }
+  for (const auto& pair : mem_block_id2mem_block) {
+    *(plan->mutable_block_chunk_list()->add_mem_block()) = pair.second;
+  }
 
-  for (const auto& pair : mzuid2chunk) { *(plan->add_chunk()) = pair.second; }
+  for (const auto& pair : mzuid2chunk) {
+    *(plan->mutable_block_chunk_list()->add_chunk()) = pair.second;
+  }
 }
 
 }  // namespace
