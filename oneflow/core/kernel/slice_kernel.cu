@@ -32,8 +32,9 @@ void SliceKernel<DeviceType::kGPU, T>::ForwardDataContent(
 template<typename T>
 void SliceKernel<DeviceType::kGPU, T>::InitConstBufBlobs(
     DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  Shape in_shape(this->kernel_conf().slice_conf().in_shape());
-  InitOut2InOffsetFromHost(ctx, in_shape, BnInOp2Blob("out_to_in_offset"));
+  // TODO: debug by shenghang comment code below to speed up actor initialization
+  // Shape in_shape(this->kernel_conf().slice_conf().in_shape());
+  // InitOut2InOffsetFromHost(ctx, in_shape, BnInOp2Blob("out_to_in_offset"));
 }
 
 template<typename T>

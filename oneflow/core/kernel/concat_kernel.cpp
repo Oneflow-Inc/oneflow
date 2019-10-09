@@ -8,6 +8,8 @@ void ConcatKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const int32_t axis = this->op_conf().concat_conf().axis();
   Blob* out_blob = BnInOp2Blob("out");
+  std::chrono::milliseconds timespan(111605); // or whatever
+  std::this_thread::sleep_for(timespan);
   const int64_t row_num = out_blob->shape().elem_cnt() / out_blob->shape().Count(axis);
   const int64_t out_col_num = out_blob->shape().Count(axis);
   int64_t out_col_offset = 0;
