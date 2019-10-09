@@ -418,7 +418,7 @@ def affine_channel(
     out = activation(out) if activation is not None else out
     return out
 
-@oneflow_export("detection.dim0_dynamic_to_fixed")
+@oneflow_export("dim0_dynamic_to_fixed")
 def dim0_dynamic_to_fixed(inputs, name=None):
     op_conf = op_conf_util.OperatorConf()
     setattr(

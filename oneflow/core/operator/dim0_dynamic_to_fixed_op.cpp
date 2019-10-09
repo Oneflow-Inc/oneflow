@@ -55,7 +55,7 @@ class Dim0DynamicToFixedOp final : public Operator {
       OF_CHECK(*BatchAxis4BnInOp(GenRepeatedBn("in", i)) == *BatchAxis4BnInOp(input_bns().Get(0)));
       *BatchAxis4BnInOp(GenRepeatedBn("out", i)) = *BatchAxis4BnInOp(GenRepeatedBn("in", i));
     }
-    OF_CHECK(*BatchAxis4BnInOp("mask") == *BatchAxis4BnInOp(input_bns().Get(0)));
+    *BatchAxis4BnInOp("mask") = *BatchAxis4BnInOp(input_bns().Get(0));
     return Maybe<void>::Ok();
   }
   Maybe<void> GetSbpSignatures(
