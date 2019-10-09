@@ -9,7 +9,7 @@ namespace oneflow {
 
 namespace {
 
-const size_t kMemReuseAlgorithmNum = 2;
+const size_t kMemReuseAlgorithmNum = 3;
 
 int64_t GenDeviceUniqueId(int64_t machine_id, int64_t device_id) {
   return (machine_id << 32) | device_id;
@@ -154,12 +154,38 @@ struct MemBlockResultInfo {
   HashMap<RegstDescProto*, int64_t> regst_desc2offset;
 };
 
+void MemReusedAlgorithm0_OfColorImproved(
+    const HashMap<RegstDescProto*, HashSet<RegstDescProto*>>& regst2mutual_exclusion_regsts,
+    MemBlockResultInfo* result) {
+  TODO();
+}
+
+void MemReusedAlgorithm1_TfBfcImproved(
+    const std::vector<HashSet<RegstDescProto*>>& apply_regsts_queue,
+    const std::vector<HashSet<RegstDescProto*>>& release_regsts_queue, MemBlockResultInfo* result) {
+  TODO();
+}
+
+void MemReusedAlgorithm2_MinOrderGrowth(
+    const HashMap<RegstDescProto*, HashSet<RegstDescProto*>>& regst2mutual_exclusion_regsts,
+    MemBlockResultInfo* result) {
+  // idea by LiKe
+  TODO();
+}
+
 void SelectAlgorithmGenMemBlockOffset4Regsts(
     int64_t algo_id, const std::vector<HashSet<RegstDescProto*>>& apply_regsts_queue,
     const std::vector<HashSet<RegstDescProto*>>& release_regsts_queue,
     const HashMap<RegstDescProto*, HashSet<RegstDescProto*>>& regst2mutual_exclusion_regsts,
     MemBlockResultInfo* result) {
-  TODO();
+  switch (algo_id) {
+    case 0: MemReusedAlgorithm0_OfColorImproved(regst2mutual_exclusion_regsts, result); break;
+    case 1:
+      MemReusedAlgorithm1_TfBfcImproved(apply_regsts_queue, release_regsts_queue, result);
+      break;
+    case 2: MemReusedAlgorithm2_MinOrderGrowth(regst2mutual_exclusion_regsts, result); break;
+    default: UNIMPLEMENTED();
+  }
 }
 
 }  // namespace
@@ -222,7 +248,10 @@ void InJobMemSharingUtil::InferMemBlockId4MemReusedRegst(Plan* plan) {
     const std::vector<MemBlockResultInfo>& results = pair.second;
     int64_t best_algo_id = 0;
     for (int64_t algo_id = 0; algo_id < kMemReuseAlgorithmNum; ++algo_id) {
-      CHECK_GT(results.at(algo_id).mem_block_size, 0);
+      if (!mem_chain2mem_reused_regsts.at(pair.first).empty()) {
+        CHECK_GT(results.at(algo_id).mem_block_size, 0);
+        CHECK(!results.at(algo_id).regst_desc2offset.empty());
+      }
       if (results.at(algo_id).mem_block_size < results.at(best_algo_id).mem_block_size) {
         best_algo_id = algo_id;
       }
