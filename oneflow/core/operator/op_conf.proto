@@ -1492,6 +1492,11 @@ message SleepOpConf {
   required int64 seconds = 3;
 }
 
+message LoDToDenseOpConf {
+  required string in = 1;
+  required string out = 2;
+}
+
 message CaseOpConf {
   required string in = 1;
   repeated string out = 2;
@@ -1687,6 +1692,7 @@ message OperatorConf {
     GatherMs0OpConf gather_ms0_conf = 305;
     GatherMs0GradOpConf gather_ms0_grad_conf = 306;
     SleepOpConf sleep_conf = 307;
+    LoDToDenseOpConf lod_to_dense_conf = 308;
 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;
