@@ -436,9 +436,12 @@ def dim0_dynamic_to_fixed(inputs, name=None):
     compile_context.CurJobAddOp(op_conf)
 
     ret = []
-    for i in range(len(inputs)):
+    for i in range(len(inputs) + 1):
         out_lbi = logical_blob_id_util.LogicalBlobId()
         setattr(out_lbi, "op_name", op_conf.name)
-        setattr(out_lbi, "blob_name", "out_" + str(i))
+        if i == len(inputs):
+            setattr(out_lbi, "blob_name", "mask")
+        else:
+            setattr(out_lbi, "blob_name", "out_" + str(i))
         ret.append(remote_blob_util.RemoteBlob(out_lbi))
     return tuple(ret)
