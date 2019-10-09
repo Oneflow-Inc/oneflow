@@ -58,6 +58,11 @@ def get_numpy_placeholders():
         "gt_boxes": np.random.randn(N, R, 4).astype(np.float32),
         "gt_segms": np.random.randn(N, G, 28, 28).astype(np.int8),
         "gt_labels": np.random.randn(N, G).astype(np.int32),
+        "rpn_proposals": np.random.randn(1000, 4).astype(np.float32),
+        "fpn_feature_map1": np.random.randn(1, 256, 512, 512).astype(np.float32),
+        "fpn_feature_map2": np.random.randn(1, 256, 256, 256).astype(np.float32),
+        "fpn_feature_map3": np.random.randn(1, 256, 128, 128).astype(np.float32),
+        "fpn_feature_map4": np.random.randn(1, 256, 64, 64).astype(np.float32),
     }
 
 
@@ -198,6 +203,35 @@ def mock_train(
     outputs = maskrcnn(images, image_sizes, gt_boxes, gt_segms, gt_labels)
     for loss in outputs:
         flow.losses.add_loss(loss)
+    return outputs
+
+@flow.function
+def debug_rcnn_eval(
+    rpn_proposals=flow.input_blob_def(
+        placeholders["rpn_proposals"].shape, dtype=flow.float32
+    ),
+    fpn_fm1=flow.input_blob_def(
+        placeholders["fpn_feature_map1"].shape, dtype=flow.float32
+    ),
+    fpn_fm2=flow.input_blob_def(
+        placeholders["fpn_feature_map2"].shape, dtype=flow.float32
+    ),
+    fpn_fm3=flow.input_blob_def(
+        placeholders["fpn_feature_map3"].shape, dtype=flow.float32
+    ),
+    fpn_fm4=flow.input_blob_def(
+        placeholders["fpn_feature_map4"].shape, dtype=flow.float32
+    ),
+):
+    cfg = get_default_cfgs()
+    if terminal_args.config_file is not None:
+        cfg.merge_from_file(terminal_args.config_file)
+    cfg.freeze()
+    print(cfg)
+    box_head = BoxHead(cfg)
+    image_ids = flow.detection.extract_piece_slice_id([rpn_proposals])
+    x = box_head.box_feature_extractor(rpn_proposals, image_ids, [fpn_fm1, fpn_fm2, fpn_fm3, fpn_fm4])
+    cls_logits, box_pred = box_head.predictor(x)
     return outputs
 
 
