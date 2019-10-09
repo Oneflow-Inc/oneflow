@@ -90,7 +90,6 @@ def reshape(x, shape, name=None):
 
 @oneflow_export("dynamic_reshape")
 def dynamic_reshape(x, shape, name=None):
-    return reshape(x, shape)
     assert isinstance(shape, tuple) or isinstance(shape, list)
     shape = list(shape)
     op_conf = op_conf_util.OperatorConf()
