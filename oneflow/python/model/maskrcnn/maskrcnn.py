@@ -190,7 +190,7 @@ def maskrcnn_eval(images, image_sizes):
     # Mask Head
     mask_logits = mask_head.build_eval(proposals, features)
 
-    return cls_logits, box_pred, mask_lgoits 
+    return cls_logits, box_pred, mask_logits 
 
 
 # @flow.function
