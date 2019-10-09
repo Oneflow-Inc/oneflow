@@ -42,6 +42,7 @@ void GenMemChainTasksAndRegsts(
       if (regst_desc->mem_case().has_device_cuda_mem()
           && regst_desc->mem_case().device_cuda_mem().device_id() == device_id
           && regst_desc->enable_reuse_mem() && regst_desc->register_num() == 1
+          && regst_desc->mem_block_id() == -1 && regst_desc->mem_block_offset() == -1
           && regst_desc->regst_desc_type().has_data_regst_desc()
           && Shape(regst_desc->regst_desc_type().data_regst_desc().time_shape()) == meta_shape) {
         CHECK((*device_unique_id2regsts)[device_unique_id].insert(regst_desc).second);
@@ -62,9 +63,9 @@ void GenMemChainTasksAndRegsts(
 void GenRegstApplyReleaseQueueAndRegstMutualExclusions(
     const std::vector<TaskProto*>* sorted_tasks, const HashSet<RegstDescProto*>* mem_reused_regsts,
     const HashMap<int64_t, RegstDescProto*>* regst_desc_id2regst_desc,
-    std::vector<std::list<RegstDescProto*>>* apply_regsts_queue,
-    std::vector<std::list<RegstDescProto*>>* release_regsts_queue,
-    HashMap<RegstDescProto*, std::vector<RegstDescProto*>>* regst2mutual_exclusion_regsts,
+    std::vector<HashSet<RegstDescProto*>>* apply_regsts_queue,
+    std::vector<HashSet<RegstDescProto*>>* release_regsts_queue,
+    HashMap<RegstDescProto*, HashSet<RegstDescProto*>>* regst2mutual_exclusion_regsts,
     HashSet<RegstDescProto*>* inplace_consumer_regst_descs) {
   apply_regsts_queue->clear();
   release_regsts_queue->clear();
@@ -103,8 +104,9 @@ void GenRegstApplyReleaseQueueAndRegstMutualExclusions(
         continue;
       }
     }
-    apply_regsts_queue->at(task_id2sorted_id.at(regst_desc->producer_task_id()))
-        .push_back(regst_desc);
+    CHECK(apply_regsts_queue->at(task_id2sorted_id.at(regst_desc->producer_task_id()))
+              .insert(regst_desc)
+              .second);
     CHECK(regst_desc_id2release_index
               .emplace(regst_desc->regst_desc_id(), FindLastReleaseIndexInSortedTasks(regst_desc))
               .second);
@@ -119,12 +121,27 @@ void GenRegstApplyReleaseQueueAndRegstMutualExclusions(
         std::max(regst_desc_id2release_index.at(inplaced_regst_desc_id),
                  FindLastReleaseIndexInSortedTasks(inplace_consumer_regst_desc));
   }
-
   for (const auto& pair : regst_desc_id2release_index) {
-    release_regsts_queue->at(pair.second).push_back(regst_desc_id2regst_desc->at(pair.first));
+    CHECK(release_regsts_queue->at(pair.second)
+              .insert(regst_desc_id2regst_desc->at(pair.first))
+              .second);
   }
 
-  TODO();  // gen regst 2 mutual exclusion regsts
+  HashSet<RegstDescProto*> remain_regsts;
+  for (int64_t i = 0; i < sorted_tasks->size(); ++i) {
+    for (RegstDescProto* release_regst : release_regsts_queue->at(i)) {
+      auto it = remain_regsts.find(release_regst);
+      CHECK(it != remain_regsts.end());
+      remain_regsts.erase(it);
+    }
+    for (RegstDescProto* apply_regst : apply_regsts_queue->at(i)) {
+      for (RegstDescProto* remain_regst : remain_regsts) {
+        CHECK((*regst2mutual_exclusion_regsts)[apply_regst].insert(remain_regst).second);
+        CHECK((*regst2mutual_exclusion_regsts)[remain_regst].insert(apply_regst).second);
+      }
+      CHECK(remain_regsts.insert(apply_regst).second);
+    }
+  }
 }
 
 }  // namespace
@@ -138,9 +155,9 @@ void InJobMemSharingUtil::InferMemBlockId4MemReusedRegst(Plan* plan) {
   HashMap<int64_t, RegstDescProto*> regst_desc_id2regst_desc;
   GenRegstDescId2RegstDesc(plan, &regst_desc_id2regst_desc);
   // info for algorithm
-  HashMap<int64_t, std::vector<std::list<RegstDescProto*>>> mem_chain2task2apply_regsts;
-  HashMap<int64_t, std::vector<std::list<RegstDescProto*>>> mem_chain2task2release_regsts;
-  HashMap<int64_t, HashMap<RegstDescProto*, std::vector<RegstDescProto*>>>
+  HashMap<int64_t, std::vector<HashSet<RegstDescProto*>>> mem_chain2task2apply_regsts;
+  HashMap<int64_t, std::vector<HashSet<RegstDescProto*>>> mem_chain2task2release_regsts;
+  HashMap<int64_t, HashMap<RegstDescProto*, HashSet<RegstDescProto*>>>
       mem_chain2regst2mutual_exclusion_regsts;
   // info for inplace
   HashMap<int64_t, HashSet<RegstDescProto*>> mem_chain2inplace_consumer_regst_descs;
