@@ -17,7 +17,7 @@ class DynamicReshapeOp final : public Operator {
     Shape out_shape(conf.shape());
     if (out_shape.NumAxes() == 1) {
       CHECK_EQ_OR_RETURN(-1, out_shape.At(0));
-      out_shape = Shape({in.shape().Count()})
+      out_shape = Shape({in.shape().Count()});
     } else {
       int32_t inferred_axis = -1;
       std::vector<int64_t> tmp_dim_vec;
