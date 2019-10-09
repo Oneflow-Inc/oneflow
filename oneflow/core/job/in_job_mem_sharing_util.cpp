@@ -154,10 +154,61 @@ struct MemBlockResultInfo {
   HashMap<RegstDescProto*, int64_t> regst_desc2offset;
 };
 
+class MemBlockBuffer final {
+ public:
+  MemBlockBuffer(int64_t size) : buffer_size_(size) {
+    Piece start_piece;
+    start_piece.offset = 0;
+    start_piece.size = size;
+    start_piece.is_free = true;
+    piece_list_.push_back(start_piece);
+  }; 
+  ~MemBlockBuffer() = default;
+
+  void Occupy(int64_t offset, int64_t size) {
+    for
+  }
+
+  void FindFreeOffset(int64_t size) {
+  }
+
+  int64_t buffer_size() { return buffer_size_; }
+
+ private:
+  struct Piece {
+    int64_t offset;
+    int64_t size;
+    bool is_free;
+  }
+
+  std::list<Piece> piece_list_;
+  int64_t buffer_size_;
+};
+
+
+
 void MemReusedAlgorithm0_OfColorImproved(
     const HashMap<RegstDescProto*, HashSet<RegstDescProto*>>& regst2mutual_exclusion_regsts,
     MemBlockResultInfo* result) {
-  TODO();
+  result->regst_desc2offset.clear();
+  std::vector<RegstDescProto*> order;
+  int64_t buffer_size = 1;
+  HashMap<RegstDescProto*, int64_t> regst_desc2size;
+  for(const auto& pair : regst2mutual_exclusion_regsts) {
+    order.push_back(pair.first);
+    CHECK(regst_desc2size.emplace(pair.first, RtRegstDesc(*pair.first).TotalMainByteSize4AllRegst()).second);
+  }
+  std::sort(order.begin(), order.end(), [&](const RegstDescProto* lhs, const RegstDescProto* rhs) {
+              return regst_desc2size.at(lhs) > regst_desc2size.at(rhs));
+            });
+  for(RegstDescProto* regst_desc : order) {
+
+    for(RegstDescProto* mutual_regst : regst2mutual_exclusion_regsts.at(regst_desc)) {
+      
+    }
+  }
+
+  result->mem_block_size = buffer_size;
 }
 
 void MemReusedAlgorithm1_TfBfcImproved(
