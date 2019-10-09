@@ -22,13 +22,11 @@ void ConvDataGradOp::InitFromOpConf() {
   }
 }
 
-template<int32_t NDims>
-Maybe<void> ConvOp<NDims>::InferOutBlobDescs(
+Maybe<void> ConvDataGradOp::InferOutBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature,
     std::function<void(OpContext*)> EnrollOpCtx) const {
   const ConvDataGradOpConf& conf = this->op_conf().conv_data_grad_conf();
-  const ConvConf& conv_conf = conf.conv_conf();
   const BlobDesc* dy = GetBlobDesc4BnInOp("dy");
   const BlobDesc* x_like = GetBlobDesc4BnInOp("x_like");
   const int32_t num_spatial_dims = conf.conv_conf().num_spatial_dims();
