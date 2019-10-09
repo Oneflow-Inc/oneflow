@@ -32,6 +32,9 @@ void LoDToDenseKernel<device_type>::ForwardDataContent(
   std::this_thread::sleep_for(std::chrono::seconds(this->op_conf().sleep_conf().seconds()));
 }
 
-ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kLodToDenseConf, LoDToDenseKernel);
+REGISTER_KERNEL_WITH_DEVICE(OperatorConf::kLodToDenseConf, DeviceType::kCPU,
+                            LoDToDenseKernel<DeviceType::kCPU>);
+REGISTER_KERNEL_WITH_DEVICE(OperatorConf::kLodToDenseConf, DeviceType::kGPU,
+                            LoDToDenseKernel<DeviceType::kGPU>);
 
 }  // namespace oneflow
