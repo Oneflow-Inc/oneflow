@@ -238,6 +238,17 @@ void InJobMemSharingUtil::InferMemBlockId4MemReusedRegst(Plan* plan) {
       regst_desc->set_mem_block_id(mem_block_id);
       regst_desc->set_mem_block_offset(offset);
     }
+    // set inplace
+    for (RegstDescProto* inplace_consumer_regst_desc :
+         mem_chain2inplace_consumer_regst_descs.at(pair.first)) {
+      CHECK_EQ(inplace_consumer_regst_desc->mem_block_id(), -1);
+      RegstDescProto* inplaced_regst_desc = regst_desc_id2regst_desc.at(
+          inplace_consumer_regst_desc->hint_inplace_consumed_regst_desc_id());
+      CHECK_EQ(inplaced_regst_desc->mem_block_id(), mem_block_id);
+      CHECK_NE(inplaced_regst_desc->mem_block_offset(), -1);
+      inplace_consumer_regst_desc->set_mem_block_id(inplaced_regst_desc->mem_block_id());
+      inplace_consumer_regst_desc->set_mem_block_offset(inplaced_regst_desc->mem_block_offset());
+    }
   }
 }
 
