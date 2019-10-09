@@ -1,3 +1,6 @@
+from functools import reduce
+import operator
+
 from matcher import Matcher
 import oneflow as flow
 
@@ -193,7 +196,7 @@ class BoxHead(object):
         roi_features = flow.local_scatter_nd_update(
             flow.constant_like(roi_features, 0), origin_indices, roi_features
         )
-        roi_features = flow.dynamic_reshape(roi_features, [roi_features.shape[0], -1])
+        roi_features = flow.dynamic_reshape(roi_features, [-1, reduce(operator.mul, roi_features.shape[1:], 1)])
         x = flow.layers.dense(
             inputs=roi_features,
             units=1024,
