@@ -14,7 +14,7 @@ void ImageDataField::InferShape(const ShapeProto& static_shape, const PbRf<int>&
   CHECK_LE(var_axes.size(), 0);
   int64_t image_height = data_.rows;
   int64_t image_width = data_.cols;
-  int64_t channels = data_.depth();
+  int64_t channels = data_.channels();
   if (shape->NumAxes() == 0) {
     *shape = Shape::Ones(4);
     shape->Set(1, image_height);

@@ -97,9 +97,9 @@ void DataLoader::ImageAlign(BatchCollator* collator) {
     max_rows = std::max<int64_t>(max_rows, image_mat.rows);
     max_cols = std::max<int64_t>(max_cols, image_mat.cols);
     if (channels == -1) {
-      channels = image_mat.depth();
+      channels = image_mat.channels();
     } else {
-      CHECK_EQ(channels, image_mat.depth());
+      CHECK_EQ(channels, image_mat.channels());
     }
   }
   CHECK_GT(max_rows, 0);
