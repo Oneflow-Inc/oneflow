@@ -402,6 +402,12 @@ message ConcatOpConf {
   required int32 axis = 3;
 }
 
+message DistributeConcatOpConf {
+  repeated string in = 1;
+  required string out = 2;
+  required int32 axis = 3;
+}
+
 message SplitLikeOpConf {
   required string in = 1;
   repeated string like = 2;
@@ -1604,7 +1610,8 @@ message OperatorConf {
     NcclBoxingReduceScatterOpConf nccl_boxing_reduce_scatter_conf = 152;
     NcclBoxingAllGatherOpConf nccl_boxing_all_gather_conf = 153;
     NcclBoxingAllReduceOpConf nccl_boxing_all_reduce_conf = 154;
-
+    DistributeConcatOpConf distribute_concat_conf = 155;
+    
     // domain op
     TupleIdentityOpConf tuple_identity_conf = 200;
     TransposeOpConf transpose_conf = 201;
