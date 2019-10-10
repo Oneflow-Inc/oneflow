@@ -6,7 +6,7 @@ namespace oneflow {
 namespace {
 
 void CheckSizeAndCopyBlob(DeviceCtx *ctx, Blob *dst, const Blob *src) {
-  CHECK_EQ(src->ByteSizeOfDataContentField(), dst->ByteSizeOfDataContentField());
+  CHECK_EQ(src->ByteSizeOfBlobBody(), dst->ByteSizeOfBlobBody());
   dst->CopyDataContentFrom(ctx, src);
 }
 
@@ -48,7 +48,7 @@ const Blob *DistributeConcatKernel<device_type>::GetInBlob(
   const Blob *in_blob = nullptr;
   FOR_RANGE(int, i, 0, this->op_attribute().input_bns().size()) {
     const Blob *cur_blob = BnInOp2Blob(this->op_attribute().input_bns().Get(i));
-    if (cur_blob != nullptr) {
+    if (cur_blob != nullptr && cur_blob != in_blob) {
       CHECK_ISNULL(in_blob);
       in_blob = cur_blob;
     }

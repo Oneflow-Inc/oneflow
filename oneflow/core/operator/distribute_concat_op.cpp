@@ -146,5 +146,6 @@ int32_t DistributeConcatOp::FixAxis(const int32_t axis, const int64_t num_axes) 
 }
 
 REGISTER_OP(OperatorConf::kDistributeConcatConf, DistributeConcatOp);
+REGISTER_DISABLE_INPUT_BOXING_GROUP(OperatorConf::kDistributeConcatConf);
 
 }  // namespace oneflow
