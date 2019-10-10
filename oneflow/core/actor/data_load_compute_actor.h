@@ -12,6 +12,7 @@ class DataLoadActor final : public CompActor {
   ~DataLoadActor() = default;
 
  private:
+  void VirtualCompActorInit(const TaskProto&) override;
   void Act() override;
   void VirtualAsyncSendNaiveProducedRegstMsgToConsumer() override;
 };

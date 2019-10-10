@@ -2,6 +2,10 @@
 
 namespace oneflow {
 
+void DataLoadActor::VirtualCompActorInit(const TaskProto& task_proto) {
+  OF_SET_MSG_HANDLER(&DataLoadActor::HandlerNormal);
+}
+
 void DataLoadActor::Act() { AsyncLaunchKernel(GenDefaultKernelCtx()); }
 
 void DataLoadActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
