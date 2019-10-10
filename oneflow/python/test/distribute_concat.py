@@ -19,7 +19,7 @@ def DistributeConcat(
   with flow.device_prior_placement("gpu", "0:0"):
     a = flow.math.relu(a)
     b = flow.math.relu(b)
-  ret = flow.distribute_concat([a, b])
+  ret = flow.debug.distribute_concat([a, b])
   print ret.shape
 
 index = [-1, 0, 1, 2, 3]
