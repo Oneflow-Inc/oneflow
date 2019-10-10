@@ -237,7 +237,7 @@ def debug_train(
     return outputs
 
 
-@flow.function
+# @flow.function
 def mock_train(
     images=debug_data.blob_def("images"),
     image_sizes=debug_data.blob_def("image_size"),
@@ -253,22 +253,30 @@ def mock_train(
     return outputs
 
 
-# @flow.function
+@flow.function
 def debug_rcnn_eval(
     rpn_proposals=flow.input_blob_def(
-        placeholders["rpn_proposals"].shape, dtype=flow.float32
+        placeholders["rpn_proposals"].shape, dtype=flow.float32, is_dynamic=True
     ),
     fpn_fm1=flow.input_blob_def(
-        placeholders["fpn_feature_map1"].shape, dtype=flow.float32
+        placeholders["fpn_feature_map1"].shape,
+        dtype=flow.float32,
+        is_dynamic=True,
     ),
     fpn_fm2=flow.input_blob_def(
-        placeholders["fpn_feature_map2"].shape, dtype=flow.float32
+        placeholders["fpn_feature_map2"].shape,
+        dtype=flow.float32,
+        is_dynamic=True,
     ),
     fpn_fm3=flow.input_blob_def(
-        placeholders["fpn_feature_map3"].shape, dtype=flow.float32
+        placeholders["fpn_feature_map3"].shape,
+        dtype=flow.float32,
+        is_dynamic=True,
     ),
     fpn_fm4=flow.input_blob_def(
-        placeholders["fpn_feature_map4"].shape, dtype=flow.float32
+        placeholders["fpn_feature_map4"].shape,
+        dtype=flow.float32,
+        is_dynamic=True,
     ),
 ):
     cfg = get_default_cfgs()
@@ -277,12 +285,14 @@ def debug_rcnn_eval(
     cfg.freeze()
     print(cfg)
     box_head = BoxHead(cfg)
-    image_ids = flow.detection.extract_piece_slice_id([rpn_proposals])
+    image_ids = flow.concat(
+        flow.detection.extract_piece_slice_id([rpn_proposals]), axis=0
+    )
     x = box_head.box_feature_extractor(
         rpn_proposals, image_ids, [fpn_fm1, fpn_fm2, fpn_fm3, fpn_fm4]
     )
-    cls_logits, box_pred = box_head.predictor(x)
-    return outputs
+    cls_logits, box_pred = box_head.box_predictor(x)
+    return cls_logits, box_pred
 
 
 if __name__ == "__main__":
@@ -296,11 +306,25 @@ if __name__ == "__main__":
     else:
         check_point.load(terminal_args.model_load_dir)
     if terminal_args.debug:
-        if terminal_args.mock_dataset:
+        # if terminal_args.mock_dataset:
+        if False:
             if terminal_args.rpn_only:
-                print("{:>8} {:>16} {:>16}".format("iter", "rpn_bbox_loss", "rpn_obj_loss"))
+                print(
+                    "{:>8} {:>16} {:>16}".format(
+                        "iter", "rpn_bbox_loss", "rpn_obj_loss"
+                    )
+                )
             else:
-                print("{:>8} {:>16} {:>16} {:>16} {:>16} {:>16}".format("iter", "rpn_bbox_loss", "rpn_obj_loss", "box_loss", "cls_loss", "mask_loss"))
+                print(
+                    "{:>8} {:>16} {:>16} {:>16} {:>16} {:>16}".format(
+                        "iter",
+                        "rpn_bbox_loss",
+                        "rpn_obj_loss",
+                        "box_loss",
+                        "cls_loss",
+                        "mask_loss",
+                    )
+                )
             for i in range(10):
                 train_loss = mock_train(
                     debug_data.blob("images"),
@@ -316,20 +340,30 @@ if __name__ == "__main__":
                 print(fmt_str.format(*print_loss))
         elif terminal_args.rcnn_eval:
             import numpy as np
-            rpn_proposals = np.load("/home/xfjiang/rcnn_eval_fake_data/rpn_proposals.npy")
-            fpn_feature_map1 = np.load("/home/xfjiang/rcnn_eval_fake_data/fpn_fm1.npy")
-            fpn_feature_map2 = np.load("/home/xfjiang/rcnn_eval_fake_data/fpn_fm2.npy")
-            fpn_feature_map3 = np.load("/home/xfjiang/rcnn_eval_fake_data/fpn_fm3.npy")
-            fpn_feature_map4 = np.load("/home/xfjiang/rcnn_eval_fake_data/fpn_fm4.npy")
-            for i in range(10):
-                results = debug_rcnn_eval(
-                    rpn_proposals,
-                    fpn_feature_map1,
-                    fpn_feature_map2,
-                    fpn_feature_map3,
-                    fpn_feature_map4,
-                ).get()
-                print(results)
+
+            rpn_proposals = np.load(
+                "/home/xfjiang/rcnn_eval_fake_data/rpn_proposals.npy"
+            )
+            fpn_feature_map1 = np.load(
+                "/home/xfjiang/rcnn_eval_fake_data/fpn_fm1.npy"
+            )
+            fpn_feature_map2 = np.load(
+                "/home/xfjiang/rcnn_eval_fake_data/fpn_fm2.npy"
+            )
+            fpn_feature_map3 = np.load(
+                "/home/xfjiang/rcnn_eval_fake_data/fpn_fm3.npy"
+            )
+            fpn_feature_map4 = np.load(
+                "/home/xfjiang/rcnn_eval_fake_data/fpn_fm4.npy"
+            )
+            results = debug_rcnn_eval(
+                rpn_proposals,
+                fpn_feature_map1,
+                fpn_feature_map2,
+                fpn_feature_map3,
+                fpn_feature_map4,
+            ).get()
+            print(results)
         else:
             train_loss = debug_train(
                 placeholders["images"],
