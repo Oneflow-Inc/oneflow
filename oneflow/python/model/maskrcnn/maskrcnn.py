@@ -210,34 +210,7 @@ def maskrcnn_eval(images, image_sizes):
     return cls_logits, box_pred, mask_logits
 
 
-# @flow.function
-def debug_train(
-    images=flow.input_blob_def(
-        placeholders["images"].shape, dtype=flow.float32
-    ),
-    image_sizes=flow.input_blob_def(
-        placeholders["image_sizes"].shape, dtype=flow.int32
-    ),
-    gt_boxes=flow.input_blob_def(
-        placeholders["gt_boxes"].shape, dtype=flow.float32
-    ),
-    gt_segms=flow.input_blob_def(
-        placeholders["gt_segms"].shape, dtype=flow.int8
-    ),
-    gt_labels=flow.input_blob_def(
-        placeholders["gt_labels"].shape, dtype=flow.int32
-    ),
-):
-    flow.config.train.primary_lr(0.00001)
-    flow.config.train.model_update_conf(dict(naive_conf={}))
-    images = flow.transpose(images, perm=[0, 3, 1, 2])
-    outputs = maskrcnn_train(images, image_sizes, gt_boxes, gt_segms, gt_labels)
-    for loss in outputs:
-        flow.losses.add_loss(loss)
-    return outputs
-
-
-# @flow.function
+@flow.function
 def mock_train(
     images=debug_data.blob_def("images"),
     image_sizes=debug_data.blob_def("image_size"),
@@ -253,7 +226,7 @@ def mock_train(
     return outputs
 
 
-@flow.function
+# @flow.function
 def debug_rcnn_eval(
     rpn_proposals=flow.input_blob_def(
         placeholders["rpn_proposals"].shape, dtype=flow.float32, is_dynamic=True
@@ -306,8 +279,7 @@ if __name__ == "__main__":
     else:
         check_point.load(terminal_args.model_load_dir)
     if terminal_args.debug:
-        # if terminal_args.mock_dataset:
-        if False:
+        if terminal_args.mock_dataset:
             if terminal_args.rpn_only:
                 print(
                     "{:>8} {:>16} {:>16}".format(
@@ -365,19 +337,4 @@ if __name__ == "__main__":
             ).get()
             print(results)
         else:
-            train_loss = debug_train(
-                placeholders["images"],
-                placeholders["image_sizes"],
-                placeholders["gt_boxes"],
-                placeholders["gt_segms"],
-                placeholders["gt_labels"],
-            ).get()
-            print(train_loss)
-            eval_loss = debug_eval(
-                placeholders["images"],
-                placeholders["image_sizes"],
-                placeholders["gt_boxes"],
-                placeholders["gt_segms"],
-                placeholders["gt_labels"],
-            ).get()
-            print(eval_loss)
+            print("no job to run")
