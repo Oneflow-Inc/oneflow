@@ -24,13 +24,13 @@ Maybe<void> UnsortedBatchSegmentSumOp::InferBlobDescs(
   CHECK_OR_RETURN(IsIntegralDataType(segment_ids->data_type()));
   CHECK_GE_OR_RETURN(segment_ids->shape().NumAxes(), 1);
   CHECK_GE_OR_RETURN(data->shape().NumAxes(), segment_ids->shape().NumAxes());
-  std::vector<int64_t> out_dim_vec;
-  out_dim_vec.insert(out_dim_vec.end(), segment_ids->shape().dim_vec().cbegin(),
-                     segment_ids->shape().dim_vec().cend() - 1);
-  out_dim_vec.push_back(num_segments);
-  out_dim_vec.insert(out_dim_vec.end(),
-                     data->shape().dim_vec().cbegin() + segment_ids->shape().NumAxes(),
-                     data->shape().dim_vec().cend());
+  CHECK_EQ(segment_ids->is_dynamic(), data->is_dynamic());
+  FOR_RANGE(int64_t, i, 0, segment_ids->shape().NumAxes() - 1) {
+    CHECK_EQ_OR_RETURN(segment_ids->shape().At(i), data->shape().At(i));
+  }
+
+  std::vector<int64_t> out_dim_vec(data->shape().dim_vec());
+  out_dim_vec.at(segment_ids->shape().NumAxes() - 1) = num_segments;
   BlobDesc* out = GetBlobDesc4BnInOp("out");
   *out = *data;
   out->mut_shape() = Shape(out_dim_vec);

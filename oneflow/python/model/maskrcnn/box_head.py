@@ -1,3 +1,6 @@
+from functools import reduce
+import operator
+
 from matcher import Matcher
 import oneflow as flow
 
@@ -156,6 +159,13 @@ class BoxHead(object):
                 pos_gt_indices_list,
             )
 
+    def build_eval(self, proposals, features):
+        image_ids = flow.detection.extract_piece_slice_id(proposals)
+        x = self.box_feature_extractor(proposals, image_ids, features)
+        cls_logits, box_pred = self.predictor(x)
+
+        return cls_logits, box_pred
+
     def box_feature_extractor(self, proposals, img_ids, features):
         levels = flow.detection.level_map(proposals)
         level_idx_dict = {}
@@ -186,7 +196,7 @@ class BoxHead(object):
         roi_features = flow.local_scatter_nd_update(
             flow.constant_like(roi_features, 0), origin_indices, roi_features
         )
-        roi_features = flow.dynamic_reshape(roi_features, [roi_features.shape[0], -1])
+        roi_features = flow.dynamic_reshape(roi_features, [-1, reduce(operator.mul, roi_features.shape[1:], 1)])
         x = flow.layers.dense(
             inputs=roi_features,
             units=1024,

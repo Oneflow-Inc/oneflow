@@ -99,7 +99,6 @@ class DeconvOp : public Operator {
 
     const BlobDesc* x_blob_desc = GetBlobDesc4BnInOp("x");
     CHECK_EQ_OR_RETURN(x_blob_desc->shape().NumAxes(), NDims() + 2);
-    CHECK_EQ_OR_RETURN(x_blob_desc->data_type(), Global<JobDesc>::Get()->DefaultDataType());
 
     int64_t data_num = x_blob_desc->shape().At(0);
     int32_t filters = conf.filters();
@@ -128,7 +127,6 @@ class DeconvOp : public Operator {
 
     const BlobDesc* x_blob_desc = GetBlobDesc4BnInOp("x");
     CHECK_EQ_OR_RETURN(x_blob_desc->shape().NumAxes(), NDims() + 2);
-    CHECK_EQ_OR_RETURN(x_blob_desc->data_type(), Global<JobDesc>::Get()->DefaultDataType());
 
     int64_t data_num = x_blob_desc->shape().At(0);
     int64_t channels = x_blob_desc->shape().At(1);

@@ -78,6 +78,17 @@ Maybe<long long> JobBuildAndInferCtx_GetDataType(const std::string& job_name,
   return *JUST(ctx->GetDataType(lbn));
 }
 
+Maybe<bool> JobBuildAndInferCtx_IsDynamic(const std::string& job_name, const std::string& lbn) {
+  auto* ctx = JUST(Global<JobBuildAndInferCtxMgr>::Get()->FindJobBuildAndInferCtx(job_name));
+  return ctx->IsDynamic(lbn);
+}
+
+Maybe<long long> JobBuildAndInferCtx_GetNumOfLoDLevels(const std::string& job_name,
+                                                       const std::string& lbn) {
+  auto* ctx = JUST(Global<JobBuildAndInferCtxMgr>::Get()->FindJobBuildAndInferCtx(job_name));
+  return ctx->GetNumOfLoDLevels(lbn);
+}
+
 Maybe<std::string> JobBuildAndInferCtx_GetBatchAxis(const std::string& job_name,
                                                     const std::string& lbn) {
   auto* ctx = JUST(Global<JobBuildAndInferCtxMgr>::Get()->FindJobBuildAndInferCtx(job_name));
