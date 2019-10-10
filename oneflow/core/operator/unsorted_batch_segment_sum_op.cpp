@@ -17,6 +17,7 @@ const PbMessage& UnsortedBatchSegmentSumOp::GetCustomizedConf() const {
 Maybe<void> UnsortedBatchSegmentSumOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
+  // TODO: fix when input in fw is dynamic at gather axis dim
   const int64_t num_segments = op_conf().unsorted_batch_segment_sum_conf().num_segments();
   CHECK_GE_OR_RETURN(num_segments, 1);
   const BlobDesc* data = GetBlobDesc4BnInOp("data");
