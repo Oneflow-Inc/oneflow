@@ -34,7 +34,6 @@ void DataSampler::CheckIndexSequenceRanOut(DataSamplerContext* ctx) {
   std::unique_lock<std::mutex> lck(mtx_);
   auto count_it = epoch2consumed_count_.find(ctx->epoch_);
   CHECK(count_it != epoch2consumed_count_.end());
-  std::get<1>(*count_it) += ctx->count_;
   count_it->second += ctx->count_;
   CHECK_LE(count_it->second, max_count_);
   if (count_it->second == max_count_) { 
