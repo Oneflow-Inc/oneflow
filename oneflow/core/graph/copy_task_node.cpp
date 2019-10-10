@@ -23,8 +23,15 @@ void CopyTaskNode::ProduceAllRegstsAndBindEdges() {
         && (src_node_type == TaskType::kReduceScatter || src_node_type == TaskType::kReduceAdd)) {
       out_regst = ProduceRegst(name, false, 1, 1);
     }
+    if (out_regst == nullptr) {
+      // normal copy hd task can reuse mem
+      out_regst = ProduceRegst(name, true);
+    }
   }
-  if (out_regst == nullptr) { out_regst = ProduceRegst(name, false); }
+  if (out_regst == nullptr) {
+    // copy comm_net task cannot reuse mem
+    out_regst = ProduceRegst(name, false);
+  }
   ForEachOutDataEdge([&](TaskEdge* edge) { edge->AddRegst(name, out_regst); });
 }
 

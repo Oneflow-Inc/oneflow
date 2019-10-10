@@ -3,6 +3,7 @@ package oneflow;
 
 import "oneflow/core/job/task.proto";
 import "oneflow/core/job/job.proto";
+import "oneflow/core/memory/memory_block.proto";
 
 message MachineIds {
   repeated int64 machine_id = 1;
@@ -18,6 +19,7 @@ message JobConfs {
 
 message Plan {
   repeated TaskProto task = 1;
-  required NetTopo net_topo = 2;
-  required JobConfs job_confs = 3;
+  required MemBlockAndChunkList block_chunk_list = 2;
+  required NetTopo net_topo = 3;
+  required JobConfs job_confs = 4;
 }
