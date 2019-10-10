@@ -272,6 +272,10 @@ if __name__ == "__main__":
         check_point.load(terminal_args.model_load_dir)
     if terminal_args.debug:
         if terminal_args.mock_dataset:
+            if terminal_args.rpn_only:
+                print("{:>12} {:>12} {:>12}".format("iter", "rpn_bbox_loss", "rpn_objectness_loss"))
+            else:
+                print("{:>12} {:>12} {:>12} {:>12} {:>12} {:>12}".format("iter", "rpn_bbox_loss", "rpn_objectness_loss", "box_loss", "cls_loss", "mask_loss"))
             for i in range(10):
                 train_loss = mock_train(
                     debug_data.blob("images"),
@@ -280,7 +284,11 @@ if __name__ == "__main__":
                     debug_data.blob("gt_segm"),
                     debug_data.blob("gt_labels"),
                 ).get()
-                print(train_loss)
+                fmt_str = "{:>12}" + "{:>12.10f} " * len(train_loss)
+                print_loss = [i]
+                for loss in train_loss:
+                    print_loss.append(loss.mean())
+                print(fmt_str.format(*print_loss))
         else:
             train_loss = debug_train(
                 placeholders["images"],
