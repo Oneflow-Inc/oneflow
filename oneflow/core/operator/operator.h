@@ -148,6 +148,8 @@ class Operator {
 
   const JobDesc& job_desc() const { return *job_desc_; }
 
+  void ForEachBnInOp(std::function<void(const std::string&)>) const;
+
  protected:
   virtual Maybe<void> GetSbpSignatures(
       const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,

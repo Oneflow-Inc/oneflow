@@ -132,6 +132,13 @@ Maybe<void> Operator::GetSbpSignaturesIf(
   return Maybe<void>::Ok();
 }
 
+void Operator::ForEachBnInOp(std::function<void(const std::string&)> Handler) const {
+  for (const std::string& bn_in_op : input_bns()) { Handler(bn_in_op); }
+  for (const std::string& bn_in_op : output_bns()) { Handler(bn_in_op); }
+  for (const std::string& bn_in_op : const_buf_bns()) { Handler(bn_in_op); }
+  for (const std::string& bn_in_op : tmp_bns()) { Handler(bn_in_op); }
+}
+
 Maybe<void> Operator::InferSbpSignatureIf(
     SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
     const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
