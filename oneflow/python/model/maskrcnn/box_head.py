@@ -193,12 +193,13 @@ class BoxHead(object):
             roi_features_list.append(roi_feature_i)
         roi_features = flow.stack(roi_features_list, axis=0)
         origin_indices = flow.stack(list(level_idx_dict.values()), axis=0)
-        roi_features = flow.local_scatter_nd_update(
-            flow.constant_like(roi_features, 0), origin_indices, roi_features
+        roi_features_reorder = flow.local_gather(roi_features, origin_indices)
+        roi_features_flat = flow.dynamic_reshape(
+            roi_features_reorder,
+            [-1, reduce(operator.mul, roi_features_reorder.shape[1:], 1)],
         )
-        roi_features = flow.dynamic_reshape(roi_features, [-1, reduce(operator.mul, roi_features.shape[1:], 1)])
         x = flow.layers.dense(
-            inputs=roi_features,
+            inputs=roi_features_flat,
             units=1024,
             activation=flow.keras.activations.relu,
             use_bias=True,
