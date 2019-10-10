@@ -1845,7 +1845,7 @@ message LocalGatherGradOpConf {
   required string segment_ids = 2;
   required string out = 3;
   required int64 axis = 4;
-  required int64 num_segments = 5;
+  required string like = 5;
 }
 
 message StackOpConf {

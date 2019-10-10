@@ -17,12 +17,11 @@ void GenerateBackwardOpConf(
             : op.op_conf().local_gather_conf().axis();
     CHECK_GE(axis, 0);
     CHECK_LT(axis, in_logical_blob_desc.shape().NumAxes());
-    const int64_t num_segments = in_logical_blob_desc.shape().At(axis);
     OperatorConf op_conf;
     op_conf.set_name("System-AutoGrad-" + op.op_name());
     auto* conf = op_conf.mutable_local_gather_grad_conf();
     conf->set_axis(axis);
-    conf->set_num_segments(num_segments);
+    conf->set_like(GenLogicalBlobName(op.BnInOp2Lbi("in")));
     conf->set_segment_ids(GenLogicalBlobName(op.BnInOp2Lbi("indices")));
     conf->set_data(GenLogicalBlobName(*DiffLbi4BnInOp("out")));
     conf->set_out("out");
