@@ -3,9 +3,8 @@
 namespace oneflow {
 namespace data {
 
-Dataset::Dataset(const DatasetProto& dataset_proto) : sampler_(new DataSampler(this)) {
-  dataset_proto_ = &dataset_proto;
-}
+Dataset::Dataset(const DatasetProto& dataset_proto)
+    : dataset_proto_(&dataset_proto), sampler_(new DataSampler(this)) {}
 
 }  // namespace data
 }  // namespace oneflow
