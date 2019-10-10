@@ -40,6 +40,7 @@ DataLoader::DataLoader(const DataLoadKernelConf& conf, std::shared_ptr<Dataset> 
   sampler_ctx_.epoch_ = 0;
   sampler_ctx_.iter_ = conf.parallel_id();
   sampler_ctx_.count_ = 0;
+  dataset_->GetSampler()->SubmitContext(&sampler_ctx_);
   load_thrd_ = std::thread([this] {
     while (!is_closed_) { LoadBatch(); }
   });

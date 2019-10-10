@@ -19,21 +19,30 @@ class DataSampler {
   OF_DISALLOW_COPY_AND_MOVE(DataSampler);
   DataSampler() = delete;
   virtual ~DataSampler() = default;
-  DataSampler(Dataset* dataset) : dataset_(dataset) {}
+  DataSampler(Dataset* dataset);
 
+  void SubmitContext(DataSamplerContext* ctx);
   virtual std::vector<int64_t> FetchBatchIndexSequence(DataSamplerContext* ctx, size_t batch_size);
-  void GenNewEpochIndexSequence(size_t epoch);
-  void DeleteEpochIndexSequence(size_t epoch);
-  void NotifyIndexSequenceRanOut(size_t epoch, size_t count, size_t iter);
 
-  const std::vector<int64_t>& GetEpochIndexSequence(size_t epoch) const;
-  const std::vector<int64_t>& TryGetEpochIndexSequence(size_t epoch);
+ protected:
+  void GenNewEpochIndexSequence(size_t epoch);
+  void AcquireGenNewEpochIndexSequence(size_t epoch);
+  void CheckIndexSequenceRanOut(DataSamplerContext* ctx);
+  const std::vector<int64_t>& AcquireGetOrGenEpochIndexSequence(size_t epoch);
+  std::vector<int64_t>& GetEpochIndexSequence(size_t epoch) {
+    return epoch2index_seq_.at(epoch);
+  }
+  const std::vector<int64_t>& GetEpochIndexSequence(size_t epoch) const {
+    return epoch2index_seq_.at(epoch);
+  }
   Dataset* dataset() { return dataset_; }
 
  private:
   Dataset* dataset_;
+  size_t max_count_;
   HashMap<size_t, std::vector<int64_t>> epoch2index_seq_;
-
+  HashMap<size_t, size_t> epoch2consumed_count_;
+  std::mt19937 gen_;
   std::mutex mtx_;
 };
 
