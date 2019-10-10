@@ -49,6 +49,7 @@ class LocalGatherNdOp final : public Operator {
     }
 
     BlobDesc* out = GetBlobDesc4BnInOp("out");
+    out->set_is_dynamic(in->is_dynamic() || indices->is_dynamic());
     out->mut_shape() = Shape(shape_vec);
     out->set_data_type(in->data_type());
     return Maybe<void>::Ok();
