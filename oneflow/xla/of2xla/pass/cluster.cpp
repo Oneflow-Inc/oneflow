@@ -170,6 +170,16 @@ bool ClusterNode::TryMerge(ClusterNode &other) {
   return true;
 }
 
+bool IsNodeDirectChildren(const ClusterNode *parent,
+                          const ClusterNode *children) {
+  for (const ClusterEdge *edge : parent->out_edges()) {
+    if (edge->end() == children) {
+      return true;
+    }
+  }
+  return false;
+}
+
 bool IsNoClusterNode(const ClusterNode *node) {
   return node->type() == "NoClusterNode";
 }

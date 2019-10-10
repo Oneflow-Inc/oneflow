@@ -71,13 +71,11 @@ void Compiler::Compile(Job* job, Plan* plan, bool need_job_complete) const {
   if (FLAGS_use_xla_jit) {
     LOG(INFO) << "Compile the job with XLA JIT support.";
     mola::XlaGraph graph(Global<OpGraph>::Get());
-    mola::OptimizeOptions options;
+    auto options = mola::CreateDefaultOptimizeOptions();
     options.graph = &graph;
-    options.minimum_nodes_in_cluster = 1;
-    options.maximum_nodes_in_cluster = 50;
-
     mola::RunOptimizePass("MarkClusterId", options);
     mola::RunOptimizePass("BuildSubGraph", options);
+
     // Rebuild Job
     RebuildXlaCompiledJob(graph, job);
 

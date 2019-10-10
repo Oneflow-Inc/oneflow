@@ -149,6 +149,9 @@ class NoClusterNode : public ClusterNode {
   std::string backend_;
 };
 
+bool IsNodeDirectChildren(const ClusterNode *parent,
+                          const ClusterNode *children);
+
 bool IsNoClusterNode(const ClusterNode *node);
 
 }  // namespace mola

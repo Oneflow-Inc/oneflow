@@ -38,7 +38,7 @@ class MarkClusterIdPass : public XlaOptimizePass {
 
   void AddNoNodeForBetterClustering();
 
-  void EncapsulateClusterSubgraphs();
+  void ClusteringSubgraphs();
 
   void RemoveInvalidClusterNodes();
 
@@ -57,9 +57,7 @@ class MarkClusterIdPass : public XlaOptimizePass {
 };
 
 bool MarkClusterIdPass::IsSatisfyBackend(const ClusterEdge *edge) const {
-  return edge->start()->backend() == "AnyBackend" ||
-         edge->end()->backend() == "AnyBackend" ||
-         edge->start()->backend() == edge->end()->backend();
+  return edge->start()->backend() == edge->end()->backend();
 }
 
 bool MarkClusterIdPass::IsSatisfySbpPolicy(const ClusterEdge *edge) const {
@@ -82,6 +80,16 @@ bool MarkClusterIdPass::TryToFuseWithParent(ClusterNode *children,
       can_fusion = can_fusion && !edge->is_fusion_disabled() &&
                    IsSatisfyBackend(edge) && IsSatisfySbpPolicy(edge) &&
                    IsSatisfyTimeShape(edge);
+    }
+  }
+
+  bool strict_clustering = this->optimize_options_.strict_clustering;
+  if (strict_clustering) {
+    for (const ClusterEdge *edge : parent->out_edges()) {
+      if (edge->end() != children &&
+          !IsNodeDirectChildren(children, edge->end())) {
+        can_fusion = false;
+      }
     }
   }
 
@@ -214,9 +222,9 @@ struct GraphTrait<MarkClusterIdPass> {
   typedef ClusterEdge *pEdgeType;
 };
 
-void MarkClusterIdPass::EncapsulateClusterSubgraphs() {
+void MarkClusterIdPass::ClusteringSubgraphs() {
   int32_t maximum_nodes =
-      this->optimize_options_.maximum_nodes_in_cluster;
+      this->optimize_options_.clustering_maximum_nodes;
   int32_t iter_count = 10;
   for (int i = 0; i < iter_count; ++i) {
     bool has_changed = false;
@@ -283,9 +291,9 @@ void MarkClusterIdPass::AddNoNodeForBetterClustering() {
 
 void MarkClusterIdPass::RemoveInvalidClusterNodes() {
   int32_t minimum_nodes =
-      this->optimize_options_.minimum_nodes_in_cluster;
+      this->optimize_options_.clustering_minimum_nodes;
   int32_t maximum_nodes =
-      this->optimize_options_.maximum_nodes_in_cluster;
+      this->optimize_options_.clustering_maximum_nodes;
 
   std::vector<ClusterNode *> removing_clusters;
   for (ClusterNode *node : root_nodes_) {
@@ -331,7 +339,7 @@ void MarkClusterIdPass::Run() {
   AddNoNodeForBetterClustering();
 
   // Clustering nodes iteratively
-  EncapsulateClusterSubgraphs();
+  ClusteringSubgraphs();
 
   RemoveInvalidClusterNodes();
 

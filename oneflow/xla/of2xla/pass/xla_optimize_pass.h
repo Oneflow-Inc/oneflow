@@ -12,8 +12,11 @@ struct OptimizeOptions {
   // If the number of nodes contained by a cluster is less than
   // `minimum_nodes_in_cluster`, then this cluster will be given up and
   // not compiled.
-  int32_t minimum_nodes_in_cluster = 0x1;
-  int32_t maximum_nodes_in_cluster = 0x7fffffff;
+  int32_t clustering_minimum_nodes = 0x1;
+  int32_t clustering_maximum_nodes = 0x7fffffff;
+
+  // Option to clustering with strict dependencies analysis.
+  bool strict_clustering = true;
 
   bool ignore_sbp_policy = false;
   bool ignore_time_shape = false;
@@ -56,6 +59,7 @@ class XlaOptimizePassRegistrar {
       _xla_optimize_pass_##PassType##_ __attribute__((unused)) =  \
       XlaOptimizePassRegistrar<OptimizePassClass>(#PassType);
 
+OptimizeOptions CreateDefaultOptimizeOptions();
 
 void RunOptimizePass(const std::string &pass, OptimizeOptions &options);
 
