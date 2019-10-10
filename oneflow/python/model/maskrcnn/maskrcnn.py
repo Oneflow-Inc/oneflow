@@ -284,7 +284,7 @@ if __name__ == "__main__":
                     debug_data.blob("gt_segm"),
                     debug_data.blob("gt_labels"),
                 ).get()
-                fmt_str = "{:>8}" + "{:>16.10f} " * len(train_loss)
+                fmt_str = "{:>8} " + "{:>16.10f} " * len(train_loss)
                 print_loss = [i]
                 for loss in train_loss:
                     print_loss.append(loss.mean())
