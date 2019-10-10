@@ -14,8 +14,12 @@ parser = argparse.ArgumentParser()
 parser.add_argument(
     "--config_file", "-c", default=None, type=str, help="yaml config file"
 )
-parser.add_argument("-load", "--model_load_dir", type=str, default="", required=False)
-parser.add_argument("-g", "--gpu_num_per_node", type=int, default=1, required=False)
+parser.add_argument(
+    "-load", "--model_load_dir", type=str, default="", required=False
+)
+parser.add_argument(
+    "-g", "--gpu_num_per_node", type=int, default=1, required=False
+)
 parser.add_argument(
     "-d",
     "--debug",
@@ -29,6 +33,13 @@ parser.add_argument(
 )
 parser.add_argument(
     "-md", "--mock_dataset", default=False, action="store_true", required=False
+)
+parser.add_argument(
+    "-rcnn_eval",
+    "--rcnn_eval",
+    default=False,
+    action="store_true",
+    required=False,
 )
 
 terminal_args = parser.parse_args()
@@ -99,7 +110,8 @@ def maskrcnn_train(images, image_sizes, gt_boxes, gt_segms, gt_labels):
 
     image_size_list = [
         flow.squeeze(
-            flow.local_gather(image_sizes, flow.constant(i, dtype=flow.int32)), [0]
+            flow.local_gather(image_sizes, flow.constant(i, dtype=flow.int32)),
+            [0],
         )
         for i in range(image_sizes.shape[0])
     ]
@@ -140,7 +152,11 @@ def maskrcnn_train(images, image_sizes, gt_boxes, gt_segms, gt_labels):
 
     # Mask Head
     mask_loss = mask_head.build_train(
-        pos_proposal_list, pos_gt_indices_list, gt_segms_list, gt_labels_list, features
+        pos_proposal_list,
+        pos_gt_indices_list,
+        gt_segms_list,
+        gt_labels_list,
+        features,
     )
 
     return rpn_bbox_loss, rpn_objectness_loss, box_loss, cls_loss, mask_loss
@@ -160,7 +176,8 @@ def maskrcnn_eval(images, image_sizes):
 
     image_size_list = [
         flow.squeeze(
-            flow.local_gather(image_sizes, flow.constant(i, dtype=flow.int32)), [0]
+            flow.local_gather(image_sizes, flow.constant(i, dtype=flow.int32)),
+            [0],
         )
         for i in range(image_sizes.shape[0])
     ]
@@ -190,18 +207,26 @@ def maskrcnn_eval(images, image_sizes):
     # Mask Head
     mask_logits = mask_head.build_eval(proposals, features)
 
-    return cls_logits, box_pred, mask_logits 
+    return cls_logits, box_pred, mask_logits
 
 
 # @flow.function
 def debug_train(
-    images=flow.input_blob_def(placeholders["images"].shape, dtype=flow.float32),
+    images=flow.input_blob_def(
+        placeholders["images"].shape, dtype=flow.float32
+    ),
     image_sizes=flow.input_blob_def(
         placeholders["image_sizes"].shape, dtype=flow.int32
     ),
-    gt_boxes=flow.input_blob_def(placeholders["gt_boxes"].shape, dtype=flow.float32),
-    gt_segms=flow.input_blob_def(placeholders["gt_segms"].shape, dtype=flow.int8),
-    gt_labels=flow.input_blob_def(placeholders["gt_labels"].shape, dtype=flow.int32),
+    gt_boxes=flow.input_blob_def(
+        placeholders["gt_boxes"].shape, dtype=flow.float32
+    ),
+    gt_segms=flow.input_blob_def(
+        placeholders["gt_segms"].shape, dtype=flow.int8
+    ),
+    gt_labels=flow.input_blob_def(
+        placeholders["gt_labels"].shape, dtype=flow.int32
+    ),
 ):
     flow.config.train.primary_lr(0.00001)
     flow.config.train.model_update_conf(dict(naive_conf={}))
@@ -262,7 +287,7 @@ def debug_rcnn_eval(
 
 if __name__ == "__main__":
     flow.config.gpu_device_num(terminal_args.gpu_num_per_node)
-    flow.config.ctrl_port(19781)
+    flow.config.ctrl_port(19878)
 
     flow.config.default_data_type(flow.float)
     check_point = flow.train.CheckPoint()
@@ -281,6 +306,22 @@ if __name__ == "__main__":
                     debug_data.blob("gt_labels"),
                 ).get()
                 print(train_loss)
+        elif terminal_args.rcnn_eval:
+            import numpy as np
+            rpn_proposals = np.load("/home/xfjiang/rcnn_eval_fake_data/rpn_proposals.npy")
+            fpn_feature_map1 = np.load("/home/xfjiang/rcnn_eval_fake_data/fpn_fm1.npy")
+            fpn_feature_map2 = np.load("/home/xfjiang/rcnn_eval_fake_data/fpn_fm2.npy")
+            fpn_feature_map3 = np.load("/home/xfjiang/rcnn_eval_fake_data/fpn_fm3.npy")
+            fpn_feature_map4 = np.load("/home/xfjiang/rcnn_eval_fake_data/fpn_fm4.npy")
+            for i in range(10):
+                results = debug_rcnn_eval(
+                    rpn_proposals,
+                    fpn_feature_map1,
+                    fpn_feature_map2,
+                    fpn_feature_map3,
+                    fpn_feature_map4,
+                ).get()
+                print(results)
         else:
             train_loss = debug_train(
                 placeholders["images"],
