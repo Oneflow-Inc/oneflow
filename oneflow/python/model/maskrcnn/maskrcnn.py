@@ -279,7 +279,33 @@ if __name__ == "__main__":
     else:
         check_point.load(terminal_args.model_load_dir)
     if terminal_args.debug:
-        if terminal_args.mock_dataset:
+        if terminal_args.rcnn_eval:
+            import numpy as np
+
+            rpn_proposals = np.load(
+                "/home/xfjiang/rcnn_eval_fake_data/rpn_proposals.npy"
+            )
+            fpn_feature_map1 = np.load(
+                "/home/xfjiang/rcnn_eval_fake_data/fpn_fm1.npy"
+            )
+            fpn_feature_map2 = np.load(
+                "/home/xfjiang/rcnn_eval_fake_data/fpn_fm2.npy"
+            )
+            fpn_feature_map3 = np.load(
+                "/home/xfjiang/rcnn_eval_fake_data/fpn_fm3.npy"
+            )
+            fpn_feature_map4 = np.load(
+                "/home/xfjiang/rcnn_eval_fake_data/fpn_fm4.npy"
+            )
+            results = debug_rcnn_eval(
+                rpn_proposals,
+                fpn_feature_map1,
+                fpn_feature_map2,
+                fpn_feature_map3,
+                fpn_feature_map4,
+            ).get()
+            print(results)
+        elif terminal_args.mock_dataset:
             if terminal_args.rpn_only:
                 print(
                     "{:>8} {:>16} {:>16}".format(
@@ -310,31 +336,5 @@ if __name__ == "__main__":
                 for loss in train_loss:
                     print_loss.append(loss.mean())
                 print(fmt_str.format(*print_loss))
-        elif terminal_args.rcnn_eval:
-            import numpy as np
-
-            rpn_proposals = np.load(
-                "/home/xfjiang/rcnn_eval_fake_data/rpn_proposals.npy"
-            )
-            fpn_feature_map1 = np.load(
-                "/home/xfjiang/rcnn_eval_fake_data/fpn_fm1.npy"
-            )
-            fpn_feature_map2 = np.load(
-                "/home/xfjiang/rcnn_eval_fake_data/fpn_fm2.npy"
-            )
-            fpn_feature_map3 = np.load(
-                "/home/xfjiang/rcnn_eval_fake_data/fpn_fm3.npy"
-            )
-            fpn_feature_map4 = np.load(
-                "/home/xfjiang/rcnn_eval_fake_data/fpn_fm4.npy"
-            )
-            results = debug_rcnn_eval(
-                rpn_proposals,
-                fpn_feature_map1,
-                fpn_feature_map2,
-                fpn_feature_map3,
-                fpn_feature_map4,
-            ).get()
-            print(results)
         else:
             print("no job to run")
