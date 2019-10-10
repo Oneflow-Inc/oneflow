@@ -69,6 +69,7 @@ Maybe<void> JobBuildAndInferCtx::InferOpOutSbpParallel(Operator* op,
         << JobBuildAndInferError::kLogicalBlobNameNotExist << "when infer op_name: \""
         << op->op_name() << "\", consumed op_name: \"" << lbi.op_name() << "\", blob_name: \""
         << lbi.blob_name() << "\" not infer blob desc";
+    const ParallelDesc* pd = &lbi2parallel_desc_from_producer_view_.at(lbi);
     const BlobDesc* logical_blob_desc = lbi2logical_blob_desc_.at(lbi).get();
     CHECK_OR_RETURN(lbi2sbp_parallel_from_producer_view_.find(lbi)
                     != lbi2sbp_parallel_from_producer_view_.end())
@@ -76,7 +77,7 @@ Maybe<void> JobBuildAndInferCtx::InferOpOutSbpParallel(Operator* op,
         << "when infer op_name: " << op->op_name() << " consumed op_name: " << lbi.op_name()
         << " blob_name: " << lbi.blob_name() << " not infer split axis";
     const SbpParallel& sbp_parallel = lbi2sbp_parallel_from_producer_view_.at(lbi);
-    ibn2sbp_infer_hint.emplace(ibn, SbpInferHint(&parallel_desc, logical_blob_desc, sbp_parallel));
+    ibn2sbp_infer_hint.emplace(ibn, SbpInferHint(pd, logical_blob_desc, sbp_parallel));
   }
 
   auto GetBatchAxis4Lbi = [&](const LogicalBlobId& lbi) -> const OptInt64& {
