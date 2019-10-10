@@ -210,62 +210,70 @@ def maskrcnn_eval(images, image_sizes):
     return cls_logits, box_pred, mask_logits
 
 
-@flow.function
-def mock_train(
-    images=debug_data.blob_def("images"),
-    image_sizes=debug_data.blob_def("image_size"),
-    gt_boxes=debug_data.blob_def("gt_bbox"),
-    gt_segms=debug_data.blob_def("gt_segm"),
-    gt_labels=debug_data.blob_def("gt_labels"),
-):
-    flow.config.train.primary_lr(0.00001)
-    flow.config.train.model_update_conf(dict(naive_conf={}))
-    outputs = maskrcnn_train(images, image_sizes, gt_boxes, gt_segms, gt_labels)
-    for loss in outputs:
-        flow.losses.add_loss(loss)
-    return outputs
+if terminal_args.mock_dataset:
+
+    @flow.function
+    def mock_train(
+        images=debug_data.blob_def("images"),
+        image_sizes=debug_data.blob_def("image_size"),
+        gt_boxes=debug_data.blob_def("gt_bbox"),
+        gt_segms=debug_data.blob_def("gt_segm"),
+        gt_labels=debug_data.blob_def("gt_labels"),
+    ):
+        flow.config.train.primary_lr(0.00001)
+        flow.config.train.model_update_conf(dict(naive_conf={}))
+        outputs = maskrcnn_train(
+            images, image_sizes, gt_boxes, gt_segms, gt_labels
+        )
+        for loss in outputs:
+            flow.losses.add_loss(loss)
+        return outputs
 
 
-# @flow.function
-def debug_rcnn_eval(
-    rpn_proposals=flow.input_blob_def(
-        placeholders["rpn_proposals"].shape, dtype=flow.float32, is_dynamic=True
-    ),
-    fpn_fm1=flow.input_blob_def(
-        placeholders["fpn_feature_map1"].shape,
-        dtype=flow.float32,
-        is_dynamic=True,
-    ),
-    fpn_fm2=flow.input_blob_def(
-        placeholders["fpn_feature_map2"].shape,
-        dtype=flow.float32,
-        is_dynamic=True,
-    ),
-    fpn_fm3=flow.input_blob_def(
-        placeholders["fpn_feature_map3"].shape,
-        dtype=flow.float32,
-        is_dynamic=True,
-    ),
-    fpn_fm4=flow.input_blob_def(
-        placeholders["fpn_feature_map4"].shape,
-        dtype=flow.float32,
-        is_dynamic=True,
-    ),
-):
-    cfg = get_default_cfgs()
-    if terminal_args.config_file is not None:
-        cfg.merge_from_file(terminal_args.config_file)
-    cfg.freeze()
-    print(cfg)
-    box_head = BoxHead(cfg)
-    image_ids = flow.concat(
-        flow.detection.extract_piece_slice_id([rpn_proposals]), axis=0
-    )
-    x = box_head.box_feature_extractor(
-        rpn_proposals, image_ids, [fpn_fm1, fpn_fm2, fpn_fm3, fpn_fm4]
-    )
-    cls_logits, box_pred = box_head.box_predictor(x)
-    return cls_logits, box_pred
+if terminal_args.rcnn_eval:
+
+    @flow.function
+    def debug_rcnn_eval(
+        rpn_proposals=flow.input_blob_def(
+            placeholders["rpn_proposals"].shape,
+            dtype=flow.float32,
+            is_dynamic=True,
+        ),
+        fpn_fm1=flow.input_blob_def(
+            placeholders["fpn_feature_map1"].shape,
+            dtype=flow.float32,
+            is_dynamic=True,
+        ),
+        fpn_fm2=flow.input_blob_def(
+            placeholders["fpn_feature_map2"].shape,
+            dtype=flow.float32,
+            is_dynamic=True,
+        ),
+        fpn_fm3=flow.input_blob_def(
+            placeholders["fpn_feature_map3"].shape,
+            dtype=flow.float32,
+            is_dynamic=True,
+        ),
+        fpn_fm4=flow.input_blob_def(
+            placeholders["fpn_feature_map4"].shape,
+            dtype=flow.float32,
+            is_dynamic=True,
+        ),
+    ):
+        cfg = get_default_cfgs()
+        if terminal_args.config_file is not None:
+            cfg.merge_from_file(terminal_args.config_file)
+        cfg.freeze()
+        print(cfg)
+        box_head = BoxHead(cfg)
+        image_ids = flow.concat(
+            flow.detection.extract_piece_slice_id([rpn_proposals]), axis=0
+        )
+        x = box_head.box_feature_extractor(
+            rpn_proposals, image_ids, [fpn_fm1, fpn_fm2, fpn_fm3, fpn_fm4]
+        )
+        cls_logits, box_pred = box_head.box_predictor(x)
+        return cls_logits, box_pred
 
 
 if __name__ == "__main__":
@@ -336,5 +344,3 @@ if __name__ == "__main__":
                 for loss in train_loss:
                     print_loss.append(loss.mean())
                 print(fmt_str.format(*print_loss))
-        else:
-            print("no job to run")
