@@ -114,7 +114,7 @@ class LocalGatherGradOp final : public Operator {
     std::vector<int64_t> out_dim_vec;
     out_dim_vec.insert(out_dim_vec.end(), data->shape().dim_vec().cbegin(),
                        data->shape().dim_vec().cbegin() + conf.axis());
-    out_dim_vec.push_back(GetBlobDesc4BnInOp("segment_ids")->shape().At(conf.axis()));
+    out_dim_vec.push_back(GetBlobDesc4BnInOp("like")->shape().At(conf.axis()));
     out_dim_vec.insert(
         out_dim_vec.end(),
         data->shape().dim_vec().cbegin() + conf.axis() + segment_ids->shape().NumAxes(),
