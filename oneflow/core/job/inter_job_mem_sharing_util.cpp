@@ -10,9 +10,9 @@ namespace oneflow {
 
 namespace {
 
-HashMap<std::string, HashMap<int64_t, std::vector<TaskProto*>>> GetOpName2JobId2TaskProtos(
-    Plan* plan, const HashSet<std::string>& op_names) {
-  HashMap<std::string, HashMap<int64_t, std::vector<TaskProto*>>> op_name2job_id2task_protos;
+void GetOpName2JobId2TaskProtos(
+    Plan* plan, const HashSet<std::string>& op_names,
+    HashMap<std::string, HashMap<int64_t, std::vector<TaskProto*>>>* op_name2job_id2task_protos) {
   for (int64_t i = 0; i < plan->task_size(); ++i) {
     TaskProto* task = plan->mutable_task(i);
     if (task->exec_sequence().exec_node_size() == 1) {
@@ -20,11 +20,11 @@ HashMap<std::string, HashMap<int64_t, std::vector<TaskProto*>>> GetOpName2JobId2
       std::string op_name = kernel_conf.op_attribute().op_conf().name();
       if (op_names.find(op_name) != op_names.end()) {
         CHECK(task->has_parallel_ctx());
-        op_name2job_id2task_protos[op_name][task->job_id()].push_back(task);
+        (*op_name2job_id2task_protos)[op_name][task->job_id()].push_back(task);
       }
     }
   }
-  for (auto& op2job_task_pair : op_name2job_id2task_protos) {
+  for (auto& op2job_task_pair : *op_name2job_id2task_protos) {
     for (auto& job2task_pair : op2job_task_pair.second) {
       std::vector<TaskProto*>& task_protos = job2task_pair.second;
       std::sort(task_protos.begin(), task_protos.end(),
@@ -33,7 +33,6 @@ HashMap<std::string, HashMap<int64_t, std::vector<TaskProto*>>> GetOpName2JobId2
                 });
     }
   }
-  return op_name2job_id2task_protos;
 }
 
 HashMap<std::string, HashSet<int64_t>> GetInterfaceOpName2JobIds(const std::vector<Job>& jobs) {
@@ -273,8 +272,8 @@ void MergeSharedInterfaceMemBlock(const std::vector<Job>& jobs, Plan* plan,
       GetInterfaceOpName2JobIds(jobs);
   HashSet<std::string> interface_op_names;
   for (const auto& pair : interface_op_name2job_ids) { interface_op_names.insert(pair.first); }
-  HashMap<std::string, HashMap<int64_t, std::vector<TaskProto*>>> op_name2job_id2task_protos =
-      GetOpName2JobId2TaskProtos(plan, interface_op_names);
+  HashMap<std::string, HashMap<int64_t, std::vector<TaskProto*>>> op_name2job_id2task_protos;
+  GetOpName2JobId2TaskProtos(plan, interface_op_names, &op_name2job_id2task_protos);
 
   for (const auto& op_job_pair : interface_op_name2job_ids) {
     if (op_job_pair.second.size() <= 1) { continue; }
