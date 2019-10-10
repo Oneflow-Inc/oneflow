@@ -46,6 +46,11 @@ long long DeviceType4DeviceTag(const std::string& device_tag, std::string* error
                                       static_cast<long long>(oneflow::DeviceType::kInvalidDevice));
 }
 
+long long ParallelNum4ParallelConf(const std::string& parallel_conf, std::string* error_str) {
+  return oneflow::GetParallelNum4ParallelConf(parallel_conf)
+      .GetDataAndSerializedErrorProto(error_str, 0LL);
+}
+
 int Ofblob_GetDataType(uint64_t of_blob_ptr) {
   using namespace oneflow;
   auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
