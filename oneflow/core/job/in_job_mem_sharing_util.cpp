@@ -3,13 +3,14 @@
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/job/id_manager.h"
+#include "oneflow/core/register/runtime_register_desc.h"
 #include "oneflow/core/thread/thread_pool.h"
 
 namespace oneflow {
 
 namespace {
 
-const size_t kMemReuseAlgorithmNum = 3;
+const size_t kMemReuseAlgorithmNum = 1;
 
 int64_t GenDeviceUniqueId(int64_t machine_id, int64_t device_id) {
   return (machine_id << 32) | device_id;
@@ -158,56 +159,132 @@ class MemBlockBuffer final {
  public:
   MemBlockBuffer(int64_t size) : buffer_size_(size) {
     Piece start_piece;
-    start_piece.offset = 0;
-    start_piece.size = size;
+    start_piece.begin = 0;
+    start_piece.end = size;
     start_piece.is_free = true;
     piece_list_.push_back(start_piece);
-  }; 
+  };
   ~MemBlockBuffer() = default;
 
-  void Occupy(int64_t offset, int64_t size) {
-    for
-  }
-
-  void FindFreeOffset(int64_t size) {
-  }
-
-  int64_t buffer_size() { return buffer_size_; }
+  void Occupy(int64_t begin, int64_t end);
+  int64_t FindFreeOffset(int64_t size, int64_t* offset);
 
  private:
-  struct Piece {
-    int64_t offset;
-    int64_t size;
-    bool is_free;
+  void CheckValid() {
+    CHECK(piece_list_.size() >= 1);
+    CHECK(piece_list_.begin()->begin == 0);
+    CHECK(std::prev(piece_list_.end())->end == buffer_size_);
+    for (auto it = std::next(piece_list_.begin()); it != piece_list_.end(); ++it) {
+      auto pre_it = std::prev(it);
+      CHECK(pre_it->begin < pre_it->end && pre_it->end == it->begin);
+    }
   }
+
+  void MergePieceAndCheckValid() {
+    CheckValid();
+    for (auto it = std::next(piece_list_.begin()); it != piece_list_.end(); ++it) {
+      auto pre_it = std::prev(it);
+      if (it->is_free == pre_it->is_free) {
+        it->begin = pre_it->begin;
+        CHECK(piece_list_.erase(pre_it) == it);
+      }
+    }
+    CheckValid();
+  }
+
+  struct Piece {
+    int64_t begin;
+    int64_t end;
+    bool is_free;
+  };
 
   std::list<Piece> piece_list_;
   int64_t buffer_size_;
 };
 
+void MemBlockBuffer::Occupy(int64_t begin, int64_t end) {
+  CHECK(begin < end && end <= buffer_size_);
+  for (auto it = piece_list_.begin(); it != piece_list_.end(); ++it) {
+    if (it->end <= begin) { continue; }
+    if (end <= it->begin) { break; }
+    if (it->is_free) {
+      if (begin != it->begin) {
+        CHECK(it->begin < begin);
+        CHECK(begin < it->end);
+        Piece free_piece;
+        free_piece.begin = it->begin;
+        free_piece.end = begin;
+        free_piece.is_free = true;
+        it->begin = begin;
+        it = piece_list_.insert(it, free_piece);
+      } else if (end < it->end) {
+        Piece busy_piece;
+        busy_piece.begin = it->begin;
+        busy_piece.end = end;
+        busy_piece.is_free = false;
+        it->begin = end;
+        it = piece_list_.insert(it, busy_piece);
+        begin = end;
+      } else {
+        it->is_free = false;
+        begin = it->end;
+      }
+    } else {
+      begin = it->end;
+      end = std::max(begin, end);
+    }
+  }
+  MergePieceAndCheckValid();
+}
 
+int64_t MemBlockBuffer::FindFreeOffset(int64_t size, int64_t* offset) {
+  CheckValid();
+  for (auto it = piece_list_.begin(); it != piece_list_.end(); ++it) {
+    if (it->is_free && (it->end - it->begin) >= size) {
+      *offset = it->begin;
+      return buffer_size_;
+    }
+  }
+  auto last_it = std::prev(piece_list_.end());
+  if (last_it->is_free) {
+    *offset = last_it->begin;
+    return buffer_size_ + size - (last_it->end - last_it->begin);
+  } else {
+    *offset = buffer_size_;
+    return buffer_size_ + size;
+  }
+}
 
 void MemReusedAlgorithm0_OfColorImproved(
     const HashMap<RegstDescProto*, HashSet<RegstDescProto*>>& regst2mutual_exclusion_regsts,
     MemBlockResultInfo* result) {
-  result->regst_desc2offset.clear();
+  HashMap<RegstDescProto*, int64_t>* regst_desc2offset = &(result->regst_desc2offset);
+  regst_desc2offset->clear();
   std::vector<RegstDescProto*> order;
-  int64_t buffer_size = 1;
+  int64_t buffer_size = 256;
   HashMap<RegstDescProto*, int64_t> regst_desc2size;
-  for(const auto& pair : regst2mutual_exclusion_regsts) {
+  for (const auto& pair : regst2mutual_exclusion_regsts) {
     order.push_back(pair.first);
-    CHECK(regst_desc2size.emplace(pair.first, RtRegstDesc(*pair.first).TotalMainByteSize4AllRegst()).second);
+    CHECK(regst_desc2size.emplace(pair.first, RtRegstDesc(*pair.first).TotalMainByteSize4AllRegst())
+              .second);
   }
-  std::sort(order.begin(), order.end(), [&](const RegstDescProto* lhs, const RegstDescProto* rhs) {
-              return regst_desc2size.at(lhs) > regst_desc2size.at(rhs));
-            });
-  for(RegstDescProto* regst_desc : order) {
-
-    for(RegstDescProto* mutual_regst : regst2mutual_exclusion_regsts.at(regst_desc)) {
-      
+  std::sort(order.begin(), order.end(), [&](RegstDescProto* lhs, RegstDescProto* rhs) {
+    return regst_desc2size.at(lhs) > regst_desc2size.at(rhs);
+  });
+  for (RegstDescProto* regst_desc : order) {
+    MemBlockBuffer buffer(buffer_size);
+    for (RegstDescProto* mutual_regst : regst2mutual_exclusion_regsts.at(regst_desc)) {
+      if (regst_desc2offset->find(mutual_regst) != regst_desc2offset->end()) {
+        int64_t begin = regst_desc2offset->at(mutual_regst);
+        int64_t end = begin + regst_desc2size.at(mutual_regst);
+        buffer.Occupy(begin, end);
+      }
     }
+    int64_t offset = -1;
+    buffer_size = buffer.FindFreeOffset(regst_desc2size.at(regst_desc), &offset);
+    CHECK(offset >= 0 && offset < buffer_size);
+    CHECK(regst_desc2offset->emplace(regst_desc, offset).second);
   }
-
   result->mem_block_size = buffer_size;
 }
 
