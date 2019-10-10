@@ -77,14 +77,14 @@ class FoldSubgraphBuilder {
     CHECK(builder_);
     // Rebuilding folded job should takes the below steps in order
     InferIsAfterAllReduce();
-    // 1.Add XlaLaunch operator in the job
+    // 1.Add XlaLaunch operator to the job
     BuildXlaLaunchOps();
     // 2.Replace control_in_op_name by XlaLaunch name if the operator
     //   has been folded by a XlaLaunch operator
     FixupControlInOpNames();
-    // 3.Add time shape for the XlaLaunch operators
+    // 3.Add time shape for XlaLaunch operators
     FixupTimeShapes();
-    // 4.Add sbp parallel strategy for the XlaLaunch operators
+    // 4.Add sbp parallel strategy for XlaLaunch operators
     FixupSbpSignatures();
     // 5.Fixup input blob names for all operators if it's input has
     //   been folded, and fixup it's outputs
@@ -290,7 +290,7 @@ void FoldSubgraphBuilder::BuildXlaLaunchOps() {
     AddInBlobNames(node->in_edges(), launch_conf);
     AddOutBlobNames(node->out_edges(), launch_conf);
 
-    if (IsAfterAllReduce(node)) {
+    if (IsAfterAllReduce(node) && node->out_edges().size() == 0) {
       launch_conf->set_is_model_update(true);
     }
 

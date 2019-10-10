@@ -254,7 +254,7 @@ void BuildSubGraphPass::DumpSubgraphs(const XlaGraph *graph,
     if (node->op_type() == _XlaLaunchOpType) {
       std::string file = absl::StrCat(path, "/cluster_", node->cluster_id());
       std::ofstream ost(file.c_str());
-      ost << node->sub_graph()->ToDot();
+      if (ost.good()) ost << node->sub_graph()->ToDot();
     }
   }
 }

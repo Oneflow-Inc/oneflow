@@ -228,7 +228,9 @@ void MarkClusterIdPass::EncapsulateClusterSubgraphs() {
       ordered_nodes.push_back(node);
     });
 
-    for (ClusterNode *node : ordered_nodes) {
+    // for (ClusterNode *node : ordered_nodes) {
+    for (int i = ordered_nodes.size() - 1; i >= 0; --i) {
+      ClusterNode *node = ordered_nodes[i];
       util::Set<ClusterNode *> candidate_parents;
       for (ClusterEdge *edge : node->in_edges()) {
         candidate_parents.insert(edge->start());
