@@ -273,9 +273,9 @@ if __name__ == "__main__":
     if terminal_args.debug:
         if terminal_args.mock_dataset:
             if terminal_args.rpn_only:
-                print("{:>8} {:>16} {:>16}".format("iter", "rpn_bbox_loss", "rpn_objectness_loss"))
+                print("{:>8} {:>16} {:>16}".format("iter", "rpn_bbox_loss", "rpn_obj_loss"))
             else:
-                print("{:>8} {:>16} {:>16} {:>16} {:>16} {:>16}".format("iter", "rpn_bbox_loss", "rpn_objectness_loss", "box_loss", "cls_loss", "mask_loss"))
+                print("{:>8} {:>16} {:>16} {:>16} {:>16} {:>16}".format("iter", "rpn_bbox_loss", "rpn_obj_loss", "box_loss", "cls_loss", "mask_loss"))
             for i in range(10):
                 train_loss = mock_train(
                     debug_data.blob("images"),
