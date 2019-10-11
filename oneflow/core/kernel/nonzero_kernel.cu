@@ -49,16 +49,21 @@ __global__ void CalcOutIndexFromFlatIndex(const int32_t* nnz, Strides<NDims> str
   }
 }
 
+template<typename T>
+struct IsNonZero {
+  OF_DEVICE_FUNC bool operator()(const T& val) const { return (val != static_cast<T>(0)); }
+};
+
 }  // namespace
 
 template<typename T, typename OutputIter>
 cudaError_t CubSelectFlagged(cudaStream_t stream, int num_items, void* tmp, size_t& tmp_bytes,
                              const T* flags, OutputIter out, int32_t* num_selected) {
-  bool convert_to_bool = std::is_convertible<T, bool>::value;
-  CHECK(convert_to_bool);
+  IsNonZero<T> is_nonzero;
+  cub::TransformInputIterator<bool, IsNonZero<T>, const T*> flag_iter(flags, is_nonzero);
   cub::CountingInputIterator<int32_t> flat_index_counter(0);
-  return cub::DeviceSelect::Flagged(tmp, tmp_bytes, flat_index_counter, flags, out, num_selected,
-                                    num_items, stream, false);
+  return cub::DeviceSelect::Flagged(tmp, tmp_bytes, flat_index_counter, flag_iter, out,
+                                    num_selected, num_items, stream, false);
 }
 
 template<typename T, size_t NDims>
