@@ -53,6 +53,7 @@ class JobDesc final {
   int64_t non_distributed_optimizer_group_size_mbyte() const {
     return job_conf_.non_distributed_optimizer_group_size_mbyte();
   }
+  bool disable_all_reduce_sequence() const { return job_conf_.disable_all_reduce_sequence(); }
   int64_t all_reduce_group_num() const;
   int64_t all_reduce_group_min_byte() const;
   float all_reduce_group_size_warmup() const;
