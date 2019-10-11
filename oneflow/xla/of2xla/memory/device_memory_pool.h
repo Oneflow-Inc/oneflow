@@ -55,7 +55,7 @@ class DeviceMemoryPool {
 
   int device_ordinal_;
 
-  // Limited size for buffer size. If limit is not requared, then set it -1
+  // Limited size for buffer size. If limit is not required, then set it -1
   int64_t limited_memory_size_ = -1;
 };
 
