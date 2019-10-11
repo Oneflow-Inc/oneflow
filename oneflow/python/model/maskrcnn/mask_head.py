@@ -125,6 +125,13 @@ class MaskHead(object):
             dtype=x.dtype,
             initializer=flow.constant_initializer(0),
         )
+        bias = flow.get_variable(
+            name="conv5-bias",
+            shape=(256,),
+            dtype=x.dtype,
+            initializer=flow.constant_initializer(0),
+            model_name="bias",
+        )
         x = flow.nn.conv2d_transpose(
             x,
             filter=filter,
@@ -133,6 +140,7 @@ class MaskHead(object):
             strides=[2, 2],
             name="conv5",
         )
+        x = flow.nn.bias_add(x, bias, "NCHW")
         x = flow.keras.activations.relu(x)
         x = flow.layers.conv2d(
             x,

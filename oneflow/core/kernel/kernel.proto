@@ -216,6 +216,10 @@ message GatherNdUpdateKernelConf {
   required DataType idx_type = 1;
 }
 
+message NonzeroGpuKernelConf {
+  required int32 num_axes = 1;
+}
+
 message KernelConf {
   required OpAttribute op_attribute = 1;
   required DataType data_type = 2;
@@ -264,5 +268,6 @@ message KernelConf {
     WhereKernelConf where_conf = 422;
     ScatterNdUpdateKernelConf scatter_nd_update_conf = 423;
     GatherNdUpdateKernelConf gather_nd_update_conf = 424;
+    NonzeroGpuKernelConf nonzero_gpu_kernel_conf = 425;
   }
 }
