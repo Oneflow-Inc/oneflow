@@ -25,7 +25,7 @@ class SyncDynamicResizeOp : public Operator {
     CHECK_EQ_OR_RETURN(in->num_of_lod_levels(), 0);
     const BlobDesc* size = GetBlobDesc4BnInOp("size");
     CHECK_EQ_OR_RETURN(size->shape().elem_cnt(), 1);
-    CHECK_EQ_OR_RETURN(size->data_type(), DataType::kInt64);
+    CHECK_EQ_OR_RETURN(size->data_type(), DataType::kInt32);
     BlobDesc* out = GetBlobDesc4BnInOp("out");
     *out = *in;
     out->set_is_dynamic(true);
