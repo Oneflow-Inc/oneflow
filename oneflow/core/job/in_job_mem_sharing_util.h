@@ -2,11 +2,12 @@
 #define ONEFLOW_CORE_JOB_IN_JOB_MEM_SHARING_UTIL_H_
 
 #include "oneflow/core/job/plan.pb.h"
+#include "oneflow/core/graph/plan_task_graph.h"
 
 namespace oneflow {
 
 struct InJobMemSharingUtil {
-  static void InferMemBlockId4MemReusedRegst(Plan* plan);
+  static void InferMemBlockId4MemReusedRegst(Plan* plan, const PlanTaskGraph& plan_task_graph);
 };
 
 }  // namespace oneflow

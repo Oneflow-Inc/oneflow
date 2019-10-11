@@ -703,7 +703,7 @@ Plan Improver::GenAndInferMemBlockId(const Plan& naive_plan) const {
   {
     auto regst_desc_id2regst_desc = MakeRegstDescId2RegstDesc(&plan);
     if (GlobalJobDesc().use_memory_allocation_algorithm_v2()) {
-      InJobMemSharingUtil::InferMemBlockId4MemReusedRegst(&plan);
+      InJobMemSharingUtil::InferMemBlockId4MemReusedRegst(&plan, plan_task_graph);
     } else {
       ForEachInferredMemBlockId(plan_task_graph, [&](int64_t regst_desc_id, int64_t mem_block_id) {
         regst_desc_id2regst_desc->at(regst_desc_id)->set_mem_block_id(mem_block_id);

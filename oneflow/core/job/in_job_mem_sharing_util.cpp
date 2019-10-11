@@ -28,20 +28,28 @@ void GenRegstDescId2RegstDesc(Plan* plan,
   }
 }
 
-void GenMemChainTasksAndRegsts(
-    Plan* plan, HashMap<int64_t, std::vector<TaskProto*>>* device_unique_id2tasks,
-    HashMap<int64_t, HashSet<RegstDescProto*>>* device_unique_id2regsts) {
+struct MemoryChain {
+  int64_t mem_chain_id;
+  std::vector<TaskProto*> sorted_tasks;
+  HashSet<RegstDescProto*> mem_reused_regsts;
+  int64_t sole_source_task_id;
+  int64_t sole_sink_task_id;
+  int64_t source_order;
+};
+
+void InitMemoryChains(Plan* plan,
+                      HashMap<int64_t, HashMap<int64_t, MemoryChain>>* device2chain2mem_chain) {
   Shape meta_shape({GlobalJobDesc().TotalBatchNum(), GlobalJobDesc().NumOfPiecesInBatch()});
-  device_unique_id2tasks->clear();
-  device_unique_id2regsts->clear();
   for (int64_t i = 0; i < plan->task_size(); ++i) {
     TaskProto* task = plan->mutable_task(i);
     int64_t machine_id = task->machine_id();
     DeviceType device_type = Global<IDMgr>::Get()->GetDeviceTypeFromThrdId(task->thrd_id());
-    if (device_type == DeviceType::kCPU) { continue; }
+    if (device_type != DeviceType::kGPU) { continue; }
     int64_t device_id = Global<IDMgr>::Get()->GetGpuPhyIdFromThrdId(task->thrd_id());
     int64_t device_unique_id = GenDeviceUniqueId(machine_id, device_id);
-    (*device_unique_id2tasks)[device_unique_id].push_back(task);
+    MemoryChain* mem_chain =
+        &((*device2chain2mem_chain)[device_unique_id][task->task_set_info().chain_id()]);
+    mem_chain->sorted_tasks.push_back(task);
     for (auto& pair : *(task->mutable_produced_regst_desc())) {
       RegstDescProto* regst_desc = &pair.second;
       if (regst_desc->mem_case().has_device_cuda_mem()
@@ -50,29 +58,40 @@ void GenMemChainTasksAndRegsts(
           && regst_desc->mem_block_id() == -1 && regst_desc->mem_block_offset() == -1
           && regst_desc->regst_desc_type().has_data_regst_desc()
           && Shape(regst_desc->regst_desc_type().data_regst_desc().time_shape()) == meta_shape) {
-        CHECK((*device_unique_id2regsts)[device_unique_id].insert(regst_desc).second);
+        CHECK(mem_chain->mem_reused_regsts.insert(regst_desc).second);
       }
     }
   }
-  HashSet<int64_t> useless_tasks;
-  for (auto& pair : *device_unique_id2tasks) {
-    if (device_unique_id2regsts->find(pair.first) == device_unique_id2regsts->end()) {
-      useless_tasks.insert(pair.first);
+  for (auto& device_pair : *device2chain2mem_chain) {
+    HashMap<int64_t, MemoryChain>* chain2mem_chain = &device_pair.second;
+    HashSet<int64_t> useless_chain_ids;
+    for (auto& pair : *chain2mem_chain) {
+      if (pair.second.mem_reused_regsts.empty()) { useless_chain_ids.insert(pair.first); }
     }
+    for (int64_t chain_id : useless_chain_ids) { chain2mem_chain->erase(chain_id); }
+    for (auto& pair : *chain2mem_chain) {
+      MemoryChain* mem_chain = &pair.second;
+      std::sort(mem_chain->sorted_tasks.begin(), mem_chain->sorted_tasks.end(),
+                [&](const TaskProto* lhs, const TaskProto* rhs) {
+                  int64_t lhs_order_in_graph = lhs->task_set_info().order_in_graph();
+                  int64_t rhs_order_in_graph = rhs->task_set_info().order_in_graph();
+                  CHECK_NE(lhs_order_in_graph, rhs_order_in_graph);
+                  return lhs_order_in_graph < rhs_order_in_graph;
+                });
+    }
+    TODO();  // set info
   }
-  for (int64_t device_unique_id : useless_tasks) {
-    device_unique_id2tasks->erase(device_unique_id);
-  }
+}
 
-  for (auto& pair : *device_unique_id2tasks) {
-    std::sort(pair.second.begin(), pair.second.end(),
-              [&](const TaskProto* lhs, const TaskProto* rhs) {
-                int64_t lhs_order_in_graph = lhs->task_set_info().order_in_graph();
-                int64_t rhs_order_in_graph = rhs->task_set_info().order_in_graph();
-                CHECK_NE(lhs_order_in_graph, rhs_order_in_graph);
-                return lhs_order_in_graph < rhs_order_in_graph;
-              });
-  }
+void GenMemChainTasksAndRegsts(
+    Plan* plan, const PlanTaskGraph& plan_task_graph,
+    HashMap<int64_t, std::vector<TaskProto*>>* mem_chain2sorted_tasks,
+    HashMap<int64_t, HashSet<RegstDescProto*>>* mem_chain2mem_reused_regsts) {
+  mem_chain2sorted_tasks->clear();
+  mem_chain2mem_reused_regsts->clear();
+  HashMap<int64_t, HashMap<int64_t, MemoryChain>> device2chain2mem_chain;
+  InitMemoryChains(plan, &device2chain2mem_chain);
+  TODO();
 }
 
 void GenRegstApplyReleaseQueueAndRegstMutualExclusions(
@@ -328,11 +347,13 @@ void SelectAlgorithmGenMemBlockOffset4Regsts(
 
 }  // namespace
 
-void InJobMemSharingUtil::InferMemBlockId4MemReusedRegst(Plan* plan) {
+void InJobMemSharingUtil::InferMemBlockId4MemReusedRegst(Plan* plan,
+                                                         const PlanTaskGraph& plan_task_graph) {
   // 1 device 1 mem chain
   HashMap<int64_t, std::vector<TaskProto*>> mem_chain2sorted_tasks;
   HashMap<int64_t, HashSet<RegstDescProto*>> mem_chain2mem_reused_regsts;
-  GenMemChainTasksAndRegsts(plan, &mem_chain2sorted_tasks, &mem_chain2mem_reused_regsts);
+  GenMemChainTasksAndRegsts(plan, plan_task_graph, &mem_chain2sorted_tasks,
+                            &mem_chain2mem_reused_regsts);
   if (mem_chain2mem_reused_regsts.empty()) { return; }
   HashMap<int64_t, RegstDescProto*> regst_desc_id2regst_desc;
   GenRegstDescId2RegstDesc(plan, &regst_desc_id2regst_desc);
