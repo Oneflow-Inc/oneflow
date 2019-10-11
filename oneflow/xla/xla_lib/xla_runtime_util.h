@@ -3,9 +3,12 @@
 
 #include <vector>
 
+#include "tensorflow/stream_executor/stream.h"
 #include "tensorflow/compiler/xla/client/local_client.h"
 
 namespace xla {
+
+void SwapGpuStreamHandle(se::Stream *stream, void **gpu_stream);
 
 size_t CalcWorkspaceByteSize(LocalExecutable *local_executable);
 
