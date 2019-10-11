@@ -24,10 +24,12 @@ class StackOp final : public Operator {
     int64_t stack_axis = op_conf().stack_conf().axis();
     OF_CHECK_GE(stack_axis, 0);
     OF_CHECK_LT(stack_axis, shape_vec.size());
+    OF_CHECK(in_0->is_dynamic());
     OF_CHECK_EQ(in_0->num_of_lod_levels(), 0);
 
     FOR_RANGE(size_t, i, 1, input_bns().size()) {
       const BlobDesc* in_i = GetBlobDesc4BnInOp(input_bns().Get(i));
+      OF_CHECK_EQ(in_i->is_dynamic(), in_0->is_dynamic());
       OF_CHECK_EQ(in_i->shape().NumAxes(), shape_vec.size());
       FOR_RANGE(int64_t, j, 0, in_i->shape().NumAxes()) {
         if (j == stack_axis) {
@@ -95,6 +97,7 @@ class StackGradOp final : public Operator {
     FOR_RANGE(size_t, i, 0, output_bns().size()) {
       const BlobDesc* like_i = GetBlobDesc4BnInOp(GenRepeatedBn("like", i));
       BlobDesc* out_i = GetBlobDesc4BnInOp(output_bns().Get(i));
+      OF_CHECK_EQ(like_i->is_dynamic(), in->is_dynamic());
       OF_CHECK_EQ(like_i->shape().NumAxes(), in->shape().NumAxes());
       FOR_RANGE(int64_t, j, 0, in->shape().NumAxes()) {
         if (j != conf.axis()) { OF_CHECK_EQ(like_i->shape().At(j), in->shape().At(j)); }

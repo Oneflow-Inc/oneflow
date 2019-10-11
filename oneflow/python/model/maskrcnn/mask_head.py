@@ -16,7 +16,9 @@ class MaskHead(object):
     # gt_segms: list of (G, 7, 7) wrt. images
     # gt_labels: list of (G,) wrt. images
     # features: list of [N, C_i, H_i, W_i] wrt. fpn layers
-    def build_train(self, pos_proposals, pos_gt_indices, gt_segms, gt_labels, features):
+    def build_train(
+        self, pos_proposals, pos_gt_indices, gt_segms, gt_labels, features
+    ):
         with flow.deprecated.variable_scope("mask"):
             img_ids = flow.concat(
                 flow.detection.extract_piece_slice_id(pos_proposals), axis=0
@@ -33,10 +35,14 @@ class MaskHead(object):
             gt_label_list = []
             for img_idx in range(self.cfg.TRAINING_CONF.IMG_PER_GPU):
                 gt_segm_list.append(
-                    flow.local_gather(gt_segms[img_idx], pos_gt_indices[img_idx])
+                    flow.local_gather(
+                        gt_segms[img_idx], pos_gt_indices[img_idx]
+                    )
                 )
                 gt_label_list.append(
-                    flow.local_gather(gt_labels[img_idx], pos_gt_indices[img_idx])
+                    flow.local_gather(
+                        gt_labels[img_idx], pos_gt_indices[img_idx]
+                    )
                 )
             gt_segms = flow.concat(gt_segm_list, axis=0)
             gt_labels = flow.concat(gt_label_list, axis=0)
@@ -74,7 +80,8 @@ class MaskHead(object):
                 levels == flow.constant_scalar(int(scalar), flow.int32)
             )
         proposals_with_img_ids = flow.concat(
-            [flow.expand_dims(flow.cast(img_ids, flow.float), 1), proposals], axis=1
+            [flow.expand_dims(flow.cast(img_ids, flow.float), 1), proposals],
+            axis=1,
         )
         roi_features_list = []
         for (level, i) in zip(range(2, 6), range(0, 4)):
@@ -92,8 +99,8 @@ class MaskHead(object):
             roi_features_list.append(roi_feature_i)
         roi_features = flow.stack(roi_features_list, axis=0)
         origin_indices = flow.stack(list(level_idx_dict.values()), axis=0)
-        x = flow.local_scatter_nd_update(
-            flow.constant_like(roi_features, 0), origin_indices, roi_features
+        x = flow.local_gather(
+            roi_features, flow.squeeze(origin_indices, axis=[1])
         )
         for i in range(1, 5):
             x = flow.layers.conv2d(

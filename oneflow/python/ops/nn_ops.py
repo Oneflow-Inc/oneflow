@@ -82,6 +82,7 @@ def conv2d(
 
 @oneflow_export("nn.bias_add")
 def bias_add(value, bias, data_format=None, name=None):
+    # TODO: name unused, fix it
     if name is None:
         name = id_util.UniqueStr("BiasAdd_")
 

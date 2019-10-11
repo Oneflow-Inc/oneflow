@@ -1,3 +1,6 @@
+from functools import reduce
+import operator
+
 from matcher import Matcher
 import oneflow as flow
 
@@ -164,23 +167,42 @@ class BoxHead(object):
         return cls_logits, box_pred
 
     def box_feature_extractor(self, proposals, img_ids, features):
-        levels = flow.detection.level_map(proposals)
-        level_idx_dict = {}
-        for (i, operand) in zip(range(2, 6), range(0, 4)):
-            level_idx_dict[i] = flow.local_nonzero(
-                levels == flow.constant_scalar(int(operand), flow.int32)
-            )
         proposals_with_img_ids = flow.concat(
             [flow.expand_dims(flow.cast(img_ids, flow.float), 1), proposals],
             axis=1,
         )
+        levels = flow.detection.level_map(proposals)
+
+        def Save(name):
+            def _save(x):
+                import numpy as np
+
+                np.save("./eval_dump/" + name, x.ndarray())
+
+            return _save
+
+        # CHECK_POINT
+        flow.watch(levels, Save("levels"))
+
+        level_idx_dict = {}
+        for (i, level_idx) in zip(range(2, 6), range(0, 4)):
+            level_idx_dict[i] = flow.squeeze(
+                flow.local_nonzero(
+                    levels == flow.constant_scalar(int(level_idx), flow.int32)
+                ),
+                axis=[1],
+            )
+
+        # CHECK_POINT
+        for idx, level_indices in level_idx_dict.items():
+            flow.watch(level_indices, Save("level_indices_{}".format(idx)))
+
         roi_features_list = []
         for (level, i) in zip(range(2, 6), range(0, 4)):
             roi_feature_i = flow.detection.roi_align(
                 features[i],
                 rois=flow.local_gather(
-                    proposals_with_img_ids,
-                    flow.squeeze(level_idx_dict[level], axis=[1]),
+                    proposals_with_img_ids, level_idx_dict[level]
                 ),
                 pooled_h=self.cfg.BOX_HEAD.POOLED_H,
                 pooled_w=self.cfg.BOX_HEAD.POOLED_W,
@@ -188,14 +210,30 @@ class BoxHead(object):
                 sampling_ratio=self.cfg.BOX_HEAD.SAMPLING_RATIO,
             )
             roi_features_list.append(roi_feature_i)
+
+        # CHECK_POINT
+        for idx in range(len(roi_features_list)):
+            flow.watch(
+                roi_features_list[idx], Save("roi_feature_{}".format(idx))
+            )
+
+
         roi_features = flow.stack(roi_features_list, axis=0)
+
+        flow.watch(roi_features, Save("roi_features"))
+
         origin_indices = flow.stack(list(level_idx_dict.values()), axis=0)
-        roi_features = flow.local_scatter_nd_update(
-            flow.constant_like(roi_features, 0), origin_indices, roi_features
+        roi_features_reorder = flow.local_gather(roi_features, origin_indices)
+
+        # CHECK_POINT
+        flow.watch(roi_features_reorder, Save("roi_features_reorder"))
+
+        roi_features_flat = flow.dynamic_reshape(
+            roi_features_reorder,
+            [-1, reduce(operator.mul, roi_features_reorder.shape[1:], 1)],
         )
-        roi_features = flow.dynamic_reshape(roi_features, [roi_features.shape[0], -1])
         x = flow.layers.dense(
-            inputs=roi_features,
+            inputs=roi_features_flat,
             units=1024,
             activation=flow.keras.activations.relu,
             use_bias=True,
