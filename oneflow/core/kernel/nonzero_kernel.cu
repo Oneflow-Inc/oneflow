@@ -1,52 +1,59 @@
 #include "oneflow/core/kernel/kernel.h"
+#include "oneflow/core/kernel/nonzero_kernel_util.cuh"
+#include <cub/cub.cuh>
 
 namespace oneflow {
 
 namespace {
 
-__device__ void SetIndex(int64_t offset, const int64_t num_elem, const int64_t* shape_ptr,
-                         const int64_t shape_dim, int32_t* index_ptr) {
-  int64_t dim_elem_cnt = num_elem;
-  for (int64_t i = 0; i < shape_dim; ++i) {
-    dim_elem_cnt /= shape_ptr[i];
-    index_ptr[i] = static_cast<int32_t>(offset / dim_elem_cnt);
-    offset %= dim_elem_cnt;
-  }
-}
-
 template<typename T>
-__global__ void LocalNonzeroForwardGpu(const int64_t num_elem, const T* in_ptr,
-                                       const int64_t* shape_ptr, const int64_t shape_dim,
-                                       int32_t* out_ptr, int64_t* num_nonzero_ptr) {
-  int64_t num_nonzero = 0;
-  for (int64_t i = 0; i < num_elem; ++i) {
-    if (in_ptr[i] != GetZeroVal<T>()) {
-      SetIndex(i, num_elem, shape_ptr, shape_dim, out_ptr + num_nonzero * shape_dim);
-      num_nonzero += 1;
-    }
-  }
-  *num_nonzero_ptr = num_nonzero;
-}
+struct IsNonzero {
+  bool operator()(const T& x) const { return (x != static_cast<T>(0)); }
+};
 
 }  // namespace
 
 template<typename T>
-void GpuNonzero(DeviceCtx* ctx, const Blob* in_blob, Blob* shape_blob, Blob* out_blob,
-                Blob* num_nonzero_blob) {
-  FOR_RANGE(int64_t, i, 0, shape_blob->shape().elem_cnt()) {
-    KernelUtil<DeviceType::kGPU, int64_t>::Set(ctx, in_blob->shape().At(i),
-                                               shape_blob->mut_dptr<int64_t>() + i);
-  }
-  LocalNonzeroForwardGpu<<<1, 1, 0, ctx->cuda_stream()>>>(
-      in_blob->shape().elem_cnt(), in_blob->dptr<T>(), shape_blob->dptr<int64_t>(),
-      shape_blob->shape().elem_cnt(), out_blob->mut_dptr<int32_t>(),
-      num_nonzero_blob->mut_dptr<int64_t>());
+cudaError_t CubReduceCount(void* tmp, size_t& tmp_bytes, const T* in, int32_t* out, int num_items,
+                           cudaStream_t stream) {
+  IsNonzero<T> is_nonzero;
+  cub::TransformInputIterator<bool, IsNonzero<T>, const T*> in_iter(in, is_nonzero);
+  return cub::DeviceReduce::Sum(tmp, tmp_bytes, in_iter, out, num_items, stream, false);
+  return cudaSuccess;
 }
 
-#define INSTANTIATE_GPU_NONZERO(T, type_proto)                                        \
-  template void GpuNonzero<T>(DeviceCtx * ctx, const Blob* in_blob, Blob* shape_blob, \
-                              Blob* out_blob, Blob* num_nonzero_blob);
-OF_PP_FOR_EACH_TUPLE(INSTANTIATE_GPU_NONZERO, ARITHMETIC_DATA_TYPE_SEQ)
-#undef INSTANTIATE_GPU_NONZERO
+template<typename T>
+class NonzeroGpuKernel : public KernelIf<DeviceType::kGPU> {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(NonzeroGpuKernel);
+  NonzeroGpuKernel() = default;
+  ~NonzeroGpuKernel() = default;
+
+ private:
+  void ForwardDenseShape(const KernelCtx& ctx,
+                         std::function<Blob*(const std::string&)> BnInOp2Blob) const override {}
+  void ForwardDataContent(const KernelCtx& ctx,
+                          std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
+    const Blob* in_blob = BnInOp2Blob("in");
+
+    Blob* num_nonzero_blob = BnInOp2Blob("num_nonzero");
+    Blob* nnz_tmp_blob = BnInOp2Blob("nnz_tmp");
+    size_t tmp_bytes = nnz_tmp_blob->shape().elem_cnt();
+    CudaCheck(CubReduceCount<T>(nnz_tmp_blob->mut_dptr(), tmp_bytes, in_blob->dptr<T>(),
+                                num_nonzero_blob->mut_dptr<int32_t>(), in_blob->shape().elem_cnt(),
+                                ctx.device_ctx->cuda_stream()));
+
+    Blob* out_blob = BnInOp2Blob("out");
+  }
+};
+
+#define REGISTER_NONZERO_GPU_KERNEL(dtype)                                                        \
+  REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kLocalNonzeroConf, DeviceType::kGPU, dtype, \
+                                        NonzeroGpuKernel<dtype>)
+
+REGISTER_NONZERO_GPU_KERNEL(float);
+REGISTER_NONZERO_GPU_KERNEL(double);
+REGISTER_NONZERO_GPU_KERNEL(int32_t);
+REGISTER_NONZERO_GPU_KERNEL(int64_t);
 
 }  // namespace oneflow

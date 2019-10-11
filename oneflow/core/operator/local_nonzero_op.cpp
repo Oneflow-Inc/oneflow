@@ -1,6 +1,18 @@
 #include "oneflow/core/operator/operator.h"
+#include "oneflow/core/kernel/nonzero_kernel_util.cuh"
 
 namespace oneflow {
+
+namespace {
+
+template<typename T>
+Maybe<void> InferCubReduceCountTmpSize(size_t* tmp_bytes, int32_t input_size) {
+  cudaError_t err = CubReduceCount<T>(nullptr, *tmp_bytes, nullptr, nullptr, input_size, 0);
+  OF_CHECK_EQ(err, cudaSuccess) << cudaGetErrorString(err);
+  return Maybe<void>::Ok();
+}
+
+}  // namespace
 
 class LocalNonzeroOp final : public Operator {
  public:
@@ -14,6 +26,8 @@ class LocalNonzeroOp final : public Operator {
     if (this->device_type() == DeviceType::kGPU) { EnrollTmpBn("shape"); }
     EnrollOutputBn("out", false);
     EnrollOutputBn("num_nonzero", false);
+    EnrollTmpBn("nnz_tmp");
+    EnrollTmpBn("out_tmp");
   }
 
   const PbMessage& GetCustomizedConf() const override {
@@ -39,6 +53,31 @@ class LocalNonzeroOp final : public Operator {
     BlobDesc* num_nonzero = GetBlobDesc4BnInOp("num_nonzero");
     num_nonzero->mut_shape() = Shape({1});
     num_nonzero->set_data_type(DataType::kInt64);
+
+    {
+      size_t tmp_bytes = 0;
+      switch (in->data_type()) {
+        case DataType::kFloat:
+          InferCubReduceCountTmpSize<float>(&tmp_bytes, in->shape().elem_cnt());
+          break;
+        case DataType::kDouble:
+          InferCubReduceCountTmpSize<double>(&tmp_bytes, in->shape().elem_cnt());
+          break;
+        case DataType::kInt32:
+          InferCubReduceCountTmpSize<int32_t>(&tmp_bytes, in->shape().elem_cnt());
+          break;
+        case DataType::kInt64:
+          InferCubReduceCountTmpSize<int64_t>(&tmp_bytes, in->shape().elem_cnt());
+          break;
+        default:
+          OF_UNIMPLEMENTED() << "Nonzero Op/Kernel do not support "
+                             << static_cast<int>(in->data_type());
+          OF_CHECK_GT(tmp_bytes, 0) << "tmp_bytes should be greater than zero.";
+          BlobDesc* nnz_tmp = GetBlobDesc4BnInOp("nnz_tmp");
+          nnz_tmp->mut_shape() = Shape(std::vector<int64_t>{static_cas<int64_t>(tmp_bytes)});
+          nnz_tmp->set_data_type(DataType::kChar);
+      }
+    }
 
     return Maybe<void>::Ok();
   }
