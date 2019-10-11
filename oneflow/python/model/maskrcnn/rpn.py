@@ -272,7 +272,7 @@ class RPNProposal(object):
                 for layer_i in range(len(cls_logit_list[0])):
                     pre_nms_top_k_inds = safe_top_k(
                         cls_logit_list[img_idx][layer_i],
-                        k=self.cfg.RPN.PRE_NMS_TOP_N,
+                        k=self.cfg.RPN.TOP_N_PER_FM_TRAIN,
                     )
                     score_per_layer = flow.local_gather(
                         cls_logit_list[img_idx][layer_i], pre_nms_top_k_inds
@@ -317,7 +317,7 @@ class RPNProposal(object):
                             flow.detection.nms(
                                 proposal_per_layer,
                                 nms_iou_threshold=self.cfg.RPN.NMS_THRESH,
-                                post_nms_top_n=self.cfg.RPN.POST_NMS_TOP_N,
+                                post_nms_top_n=self.cfg.RPN.NMS_TOP_N_TRAIN,
                             )
                         ),
                         axis=[1],
@@ -337,7 +337,7 @@ class RPNProposal(object):
 
                 proposal_in_one_img = flow.local_gather(
                     proposal_in_one_img,
-                    safe_top_k(score_in_one_img, k=self.cfg.RPN.POST_NMS_TOP_N),
+                    safe_top_k(score_in_one_img, k=self.cfg.RPN.TOP_N_PER_IMG_TRAIN),
                 )
                 if self.cfg.TRAINING is True:
                     proposal_in_one_img = flow.concat(
