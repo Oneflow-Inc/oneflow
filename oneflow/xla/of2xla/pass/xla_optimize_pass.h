@@ -1,17 +1,17 @@
 #ifndef ONEFLOW_CORE_COMPILER_OF2XLA_PASS_XLA_OPTIMIZE_PASS_H_
 #define ONEFLOW_CORE_COMPILER_OF2XLA_PASS_XLA_OPTIMIZE_PASS_H_
 
+#include "oneflow/core/job/job.pb.h"  // Job
 #include "oneflow/xla/of2xla/xla_graph.h"
 
 namespace oneflow {
 namespace mola {
 
-struct OptimizeOptions {
-  XlaGraph *graph;
-  // Minimum node number in each cluster in `XlaClusterCompiledOps` pass.
-  // If the number of nodes contained by a cluster is less than
-  // `minimum_nodes_in_cluster`, then this cluster will be given up and
-  // not compiled.
+struct ClusteringOptions {
+  // Minimum node number in each cluster after clustering. If the number of
+  // nodes contained by a cluster is less than `clustering_minimum_nodes`
+  // or grater than `clustering_maximum_nodes`, then this cluster will be
+  // given up and not compiled.
   int32_t clustering_minimum_nodes = 0x1;
   int32_t clustering_maximum_nodes = 0x7fffffff;
 
@@ -22,10 +22,19 @@ struct OptimizeOptions {
   bool ignore_time_shape = false;
 };
 
+struct OptimizeOptions {
+  // Job is required by `RebuildCompiledJobPass` and `RewriteOptimizerPass`
+  Job *job;
+
+  XlaGraph *graph;
+
+  ClusteringOptions clustering_options;
+};
+
 class XlaOptimizePass {
  public:
   XlaOptimizePass(const OptimizeOptions &options)
-      : optimize_options_(options) {}
+      : options_(options) {}
 
   virtual ~XlaOptimizePass() {}
 
@@ -40,7 +49,7 @@ class XlaOptimizePass {
   static void Register(const std::string &pass_type, PassFactory factory);
 
  protected:
-  OptimizeOptions optimize_options_;
+  OptimizeOptions options_;
 };
 
 template <typename OptimizePassClass>

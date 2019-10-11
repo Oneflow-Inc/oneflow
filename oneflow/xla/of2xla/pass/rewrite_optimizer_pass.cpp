@@ -1,16 +1,16 @@
-#include "glog/logging.h"
-#include "absl/strings/str_cat.h"
-#include "absl/strings/str_split.h"
 #include <string>
 #include <vector>
+#include "absl/strings/str_cat.h"
+#include "absl/strings/str_split.h"
+#include "glog/logging.h"
 
 #include "oneflow/core/job/job.pb.h"
 #include "oneflow/core/job/job_builder.h"
 #include "oneflow/xla/of2xla/xla_utility.h"
 #include "oneflow/xla/of2xla/xla_graph.h"
 #include "oneflow/xla/of2xla/xla_node_attr.h"
-#include "oneflow/xla/rewrite_optimizer_util.h"
-#include "oneflow/xla/rewrite_optimizer.h"
+#include "oneflow/xla/of2xla/pass/rewrite_optimizer.h"
+#include "oneflow/xla/of2xla/pass/xla_optimize_pass.h"
 
 namespace oneflow {
 
@@ -156,8 +156,23 @@ void OptimizerRewritor::Run() {
   }
 }
 
-void RewriteOptimizerGraph(const mola::XlaGraph &graph, Job *job) {
-  OptimizerRewritor(graph, job).Run();
-}
+namespace mola {
 
+// Rewrite model update operator to optimizer graph
+class RewriteOptimizerPass : public XlaOptimizePass {
+ public:
+  RewriteOptimizerPass(const OptimizeOptions &options)
+      : XlaOptimizePass(options) {}
+
+  void Run() override {
+    CHECK(this->options_.graph) <<
+        "Graph is required by `RewriteOptimizerPass`.";
+    CHECK(this->options_.job) << "Job is required by `RewriteOptimizerPass`.";
+    OptimizerRewritor(*(this->options_.graph), this->options_.job).Run();
+  }
+};
+
+REGISTER_OPTIMIZE_PASS(RewriteOptimizer, RewriteOptimizerPass);
+
+}  // namespace mola
 }  // namespace oneflow

@@ -1,5 +1,5 @@
 #include "oneflow/xla/of2xla/xla_node_attr.h"
-#include "oneflow/xla/rewrite_optimizer_util.h"
+#include "oneflow/xla/of2xla/pass/rewrite_optimizer.h"
 
 namespace oneflow {
 

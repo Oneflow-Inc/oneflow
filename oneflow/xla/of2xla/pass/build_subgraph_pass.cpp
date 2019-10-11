@@ -41,7 +41,8 @@ class BuildSubGraphPass : public XlaOptimizePass {
 };
 
 void BuildSubGraphPass::Run() {
-  XlaGraph *graph = this->optimize_options_.graph;
+  XlaGraph *graph = this->options_.graph;
+  CHECK(graph) << "Graph is required by running BuildSubGraphPass.";
   // Create xla launch nodes
   std::unordered_map<int64_t, XlaNode *> launch_nodes;
   CreateLaunchNodes(graph, &launch_nodes);

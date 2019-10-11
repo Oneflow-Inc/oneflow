@@ -1,30 +1,24 @@
 #include <string>
+#include <unordered_map>
 #include <vector>
 #include <list>
-#include <unordered_map>
-#include "glog/logging.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_split.h"
+#include "glog/logging.h"
 
 #include "oneflow/core/job/job.pb.h"
 #include "oneflow/core/job/job_builder.h"
 #include "oneflow/xla/of2xla/xla_utility.h"
 #include "oneflow/xla/of2xla/xla_graph.h"
 #include "oneflow/xla/of2xla/xla_argument.h"
-#include "oneflow/xla/rebuild_job.h"
+#include "oneflow/xla/of2xla/pass/xla_optimize_pass.h"
 
 namespace oneflow {
-
-using XlaNode = mola::XlaNode;
-using XlaEdge = mola::XlaEdge;
-using Argument = mola::Argument;
-using XlaGraph = mola::XlaGraph;
-
 namespace mola {
+
 extern const std::string _XlaLaunchOpType;
 extern const std::string _XlaInArgumentPrefix;
 extern const std::string _XlaOutArgumentPrefix;
-}  // namespace mola
 
 static const std::string _ReduceSplitType = "ReduceSplit";
 
@@ -150,7 +144,7 @@ class FoldSubgraphBuilder {
 FoldSubgraphBuilder::FoldSubgraphBuilder(const XlaGraph &graph, Job *job)
     : graph_(graph) {
   for (const XlaNode *node : graph_.Nodes()) {
-    if (node->op_type() == mola::_XlaLaunchOpType) {
+    if (node->op_type() == _XlaLaunchOpType) {
       launch_nodes_.push_back(node);
     }
   }
@@ -210,7 +204,7 @@ void FoldSubgraphBuilder::buildXlaLaunchAttribute(
     } else {
       auto *argument_proto = launch_attr->add_argument();
       argument_proto->set_name(node->op_name());
-      DeviceType device_type = mola::BackendToDeviceType(node->backend());
+      DeviceType device_type = BackendToDeviceType(node->backend());
       argument_proto->set_device_type(device_type);
       // Usually one argument node has either inputs or outputs
       CHECK(node->in_edges().size() == 0 || node->out_edges().size() == 0);
@@ -283,7 +277,7 @@ void FoldSubgraphBuilder::BuildXlaLaunchOps() {
     // Add xla launch operator
     OperatorConf op_conf; 
     op_conf.set_name(node->op_name());
-    DeviceType device_type = mola::BackendToDeviceType(node->backend());
+    DeviceType device_type = BackendToDeviceType(node->backend());
     op_conf.set_device_type(device_type);
 
     XlaLaunchOpConf *launch_conf = op_conf.mutable_xla_launch_conf();
@@ -379,7 +373,7 @@ void FoldSubgraphBuilder::FixupInOutBlobNames() {
       if (edge->IsControlEdge() || !changed_nodes.insert(end).second) {
         continue;
       }
-      if (end->op_type() == mola::_XlaLaunchOpType) {
+      if (end->op_type() == _XlaLaunchOpType) {
         auto *launch_conf = builder_->MutableOpConf(end->op_name())
                                     ->mutable_xla_launch_conf();
         for (auto &blob_name : *launch_conf->mutable_in()) {
@@ -484,8 +478,25 @@ bool FoldSubgraphBuilder::IsAfterAllReduce(const XlaNode *node) {
   return after_allreduce_nodes_.count(node) > 0;
 }
 
-void RebuildXlaCompiledJob(const XlaGraph &graph, Job *job) {
-  FoldSubgraphBuilder(graph, job).Build();
-}
+// Rebuild job according to the nodes folded xla graph. In order to rebuild
+// the job, We will add several xla launch operators in the job, and remove the
+// folded nodes. In xla launch operator, we wll reconstruct the subgraph and
+// insert argument nodes if necessary.
+class RebuildCompiledJobPass : public XlaOptimizePass {
+ public:
+  RebuildCompiledJobPass(const OptimizeOptions &options)
+      : XlaOptimizePass(options) {}
 
+  void Run() override {
+    CHECK(this->options_.graph) <<
+        "Graph is required by `RebuildCompiledJobPass`.";
+    CHECK(this->options_.job) <<
+        "Job is required by `RebuildCompiledJobPass`.";
+    FoldSubgraphBuilder(*(this->options_.graph), this->options_.job).Build();
+  }
+};
+
+REGISTER_OPTIMIZE_PASS(RebuildCompiledJob, RebuildCompiledJobPass);
+
+}  // namespace mola
 }  // namespace oneflow

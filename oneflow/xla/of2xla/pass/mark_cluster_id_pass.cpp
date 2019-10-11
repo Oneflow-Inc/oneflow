@@ -45,7 +45,7 @@ class MarkClusterIdPass : public XlaOptimizePass {
   // Rerank cluster id start by 0
   void RerankClusterIds();
 
-  void WriteClusterInfoToGraph(XlaGraph *graph);
+  void DumpClusterInfoToGraph();
 
   // Root cluster nodes
   util::Set<ClusterNode *> root_nodes_;
@@ -61,13 +61,13 @@ bool MarkClusterIdPass::IsSatisfyBackend(const ClusterEdge *edge) const {
 }
 
 bool MarkClusterIdPass::IsSatisfySbpPolicy(const ClusterEdge *edge) const {
-  return this->optimize_options_.ignore_sbp_policy ||
+  return this->options_.clustering_options.ignore_sbp_policy ||
          edge->is_control_edge() ||
          (edge->start_sbp_policy() == edge->end_sbp_policy());
 }
 
 bool MarkClusterIdPass::IsSatisfyTimeShape(const ClusterEdge *edge) const {
-  return this->optimize_options_.ignore_time_shape ||
+  return this->options_.clustering_options.ignore_time_shape ||
          edge->is_control_edge() ||
          (edge->start_time_shape() == edge->end_time_shape());
 }
@@ -83,8 +83,8 @@ bool MarkClusterIdPass::TryToFuseWithParent(ClusterNode *children,
     }
   }
 
-  bool strict_clustering = this->optimize_options_.strict_clustering;
-  if (strict_clustering) {
+  const auto &options = this->options_.clustering_options;
+  if (options.strict_clustering) {
     for (const ClusterEdge *edge : parent->out_edges()) {
       if (edge->end() != children &&
           !IsNodeDirectChildren(children, edge->end())) {
@@ -100,10 +100,11 @@ bool MarkClusterIdPass::TryToFuseWithParent(ClusterNode *children,
 }
 
 void MarkClusterIdPass::BuildClusterNodesAndEdges() {
-  XlaGraph *graph = this->optimize_options_.graph;
+  CHECK(this->options_.graph) <<
+      "Graph is required by running MarkClusterIdPass.";
   util::Map<int64_t, ClusterNode *> cluster_nodes;
 
-  TopologyVisit(*graph, [&](XlaNode *node) -> void {
+  TopologyVisit(*(this->options_.graph), [&](XlaNode *node) {
     int64_t cluster_id = allocated_nodes_.size();
     auto cluster_node = std::make_shared<ClusterNode>(node, cluster_id);
     allocated_nodes_.push_back(cluster_node);
@@ -224,7 +225,7 @@ struct GraphTrait<MarkClusterIdPass> {
 
 void MarkClusterIdPass::ClusteringSubgraphs() {
   int32_t maximum_nodes =
-      this->optimize_options_.clustering_maximum_nodes;
+      this->options_.clustering_options.clustering_maximum_nodes;
   int32_t iter_count = 10;
   for (int i = 0; i < iter_count; ++i) {
     bool has_changed = false;
@@ -291,9 +292,9 @@ void MarkClusterIdPass::AddNoNodeForBetterClustering() {
 
 void MarkClusterIdPass::RemoveInvalidClusterNodes() {
   int32_t minimum_nodes =
-      this->optimize_options_.clustering_minimum_nodes;
+      this->options_.clustering_options.clustering_minimum_nodes;
   int32_t maximum_nodes =
-      this->optimize_options_.clustering_maximum_nodes;
+      this->options_.clustering_options.clustering_maximum_nodes;
 
   std::vector<ClusterNode *> removing_clusters;
   for (ClusterNode *node : root_nodes_) {
@@ -317,7 +318,8 @@ void MarkClusterIdPass::RerankClusterIds() {
   }
 }
 
-void MarkClusterIdPass::WriteClusterInfoToGraph(XlaGraph *graph) {
+void MarkClusterIdPass::DumpClusterInfoToGraph() {
+  XlaGraph *graph = this->options_.graph;
   for (const ClusterNode *node : root_nodes_) {
     for (const ClusterNode *folded_node : node->folded_nodes()) {
       if (!IsNoClusterNode(folded_node)) {
@@ -345,7 +347,7 @@ void MarkClusterIdPass::Run() {
 
   RerankClusterIds();
 
-  WriteClusterInfoToGraph(this->optimize_options_.graph);
+  DumpClusterInfoToGraph();
 }
 
 REGISTER_OPTIMIZE_PASS(MarkClusterId, MarkClusterIdPass);
