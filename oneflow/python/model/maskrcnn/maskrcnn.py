@@ -344,20 +344,3 @@ if __name__ == "__main__":
                 for loss in train_loss:
                     print_loss.append(loss.mean())
                 print(fmt_str.format(*print_loss))
-        else:
-            train_loss = debug_train(
-                placeholders["images"],
-                placeholders["image_sizes"],
-                placeholders["gt_boxes"],
-                placeholders["gt_segms"],
-                placeholders["gt_labels"],
-            ).get()
-            print(train_loss)
-            eval_loss = debug_eval(
-                placeholders["images"],
-                placeholders["image_sizes"],
-                placeholders["gt_boxes"],
-                placeholders["gt_segms"],
-                placeholders["gt_labels"],
-            ).get()
-            print(eval_loss)
