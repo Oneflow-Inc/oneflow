@@ -74,7 +74,7 @@ class LocalNonzeroOp final : public Operator {
                              << static_cast<int>(in->data_type());
           OF_CHECK_GT(tmp_bytes, 0) << "tmp_bytes should be greater than zero.";
           BlobDesc* nnz_tmp = GetBlobDesc4BnInOp("nnz_tmp");
-          nnz_tmp->mut_shape() = Shape(std::vector<int64_t>{static_cas<int64_t>(tmp_bytes)});
+          nnz_tmp->mut_shape() = Shape(std::vector<int64_t>{static_cast<int64_t>(tmp_bytes)});
           nnz_tmp->set_data_type(DataType::kChar);
       }
     }
