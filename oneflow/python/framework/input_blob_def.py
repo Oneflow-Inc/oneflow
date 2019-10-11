@@ -57,6 +57,9 @@ class input_blob_def(blob_desc.BlobDesc):
 
     @property
     def num_of_lod_levels(self): return self.num_of_lod_levels_
+    
+    @property
+    def parallel_conf(self): return None
 
     def with_distribute(self, distribute):
         return input_blob_def(shape = self.shape_, dtype = self.dtype_,               \

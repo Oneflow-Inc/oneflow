@@ -9,6 +9,8 @@ from box_head import BoxHead
 from mask_head import MaskHead
 
 import argparse
+from datetime import datetime
+import os
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
@@ -43,6 +45,18 @@ parser.add_argument(
 )
 parser.add_argument(
     "-eval", "--eval", default=False, action="store_true", required=False
+)
+parser.add_argument(
+    "-cp", "--ctrl_port", type=int, default=19765, required=False
+)
+parser.add_argument(
+    "-save",
+    "--model_save_dir",
+    type=str,
+    default="./model_save-{}".format(
+        str(datetime.now().strftime("%Y-%m-%d--%H-%M-%S"))
+    ),
+    required=False,
 )
 
 terminal_args = parser.parse_args()
@@ -302,7 +316,7 @@ if terminal_args.rcnn_eval:
 
 if __name__ == "__main__":
     flow.config.gpu_device_num(terminal_args.gpu_num_per_node)
-    flow.config.ctrl_port(19765)
+    flow.config.ctrl_port(terminal_args.ctrl_port)
 
     flow.config.default_data_type(flow.float)
     check_point = flow.train.CheckPoint()
@@ -361,6 +375,14 @@ if __name__ == "__main__":
                     )
                 )
             for i in range(10):
+                if i % 10 == 0:
+                    if not os.path.exists(terminal_args.model_save_dir):
+                        os.makedirs(terminal_args.model_save_dir)
+                    model_dst = os.path.join(
+                        terminal_args.model_save_dir, "iter-" + str(i)
+                    )
+                    print("saving models to {}".format(model_dst))
+                    check_point.save(model_dst)
                 train_loss = mock_train(
                     debug_data.blob("images"),
                     debug_data.blob("image_size"),

@@ -44,7 +44,7 @@ def _MakeModelInitJobFunc():
 
 def _MakeModelLoadJobFunc(path):
     def push_cb(blob):
-        blob.CopyFromNdarray(np.frombuffer(path.encode('ascii'), dtype=np.int8))
+        blob.CopyFromNdarrayOrNestedNdarrayList(np.frombuffer(path.encode('ascii'), dtype=np.int8))
 
     def finish_cb():
         pass
@@ -56,7 +56,7 @@ def _MakeModelLoadJobFunc(path):
 
 def _MakeModelSaveJobFunc(path):
     def push_cb(blob):
-        blob.CopyFromNdarray(np.frombuffer(path.encode('ascii'), dtype=np.int8))
+        blob.CopyFromNdarrayOrNestedNdarrayList(np.frombuffer(path.encode('ascii'), dtype=np.int8))
 
     def finish_cb():
         pass

@@ -104,6 +104,8 @@ def conv2d(
     bias_initializer=None,
     trainable=True,
     name=None,
+    weight_name=None,
+    bias_name=None,
 ):
     name_prefix = name if name is not None else id_util.UniqueStr("Conv2D_")
     if isinstance(kernel_size, int):
@@ -113,7 +115,7 @@ def conv2d(
         kernel_size = tuple(kernel_size)
     weight_shape = (filters, inputs.static_shape[1]) + kernel_size
     weight = flow.get_variable(
-        name_prefix + "-weight",
+        weight_name if weight_name else name_prefix + "-weight",
         shape=weight_shape,
         dtype=inputs.dtype,
         initializer=kernel_initializer
@@ -125,14 +127,14 @@ def conv2d(
     )
     if use_bias:
         bias = flow.get_variable(
-            name_prefix + "-bias",
+            bias_name if bias_name else name_prefix + "-bias",
             shape=(filters,),
             dtype=inputs.dtype,
             initializer=bias_initializer
             if bias_initializer is not None
             else flow.constant_initializer(0),
         )
-    output = flow.nn.bias_add(output, bias, data_format)
+        output = flow.nn.bias_add(output, bias, data_format)
     if activation is not None:
         activation(output)
 

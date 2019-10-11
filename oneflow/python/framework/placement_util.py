@@ -7,16 +7,16 @@ import oneflow.python.framework.compile_context as compile_context
 import oneflow.python.ops.op_util as op_util
 import oneflow.python.framework.device_util as device_util
 import oneflow.python.framework.job_builder as job_builder
+import oneflow.python.framework.c_api_util as c_api_util
+import collections
 from oneflow.python.oneflow_export import oneflow_export
 
 class PlacementScope(object):
     def __init__(self, device_tag, machine_device_ids):
         self.device_tag_ = device_tag
+        if isinstance(machine_device_ids, (list, tuple)) == False:
+            machine_device_ids = [machine_device_ids]
         self.machine_device_ids_ = machine_device_ids
-        self.op_confs_ = []
-
-    def AppendOpConf(self, op_conf):
-        self.op_confs_.append(op_conf)
 
     def ParallelConf4OpConf(self, op_conf):
         return _MakeParallelConf(self.GetDeviceTag4OpConf(op_conf), self.machine_device_ids)
@@ -27,23 +27,25 @@ class PlacementScope(object):
     def GetDeviceTag4OpConf(self, op_conf):
         raise NotImplementedError
 
+    def GetParallelNum(self):
+        parallel_conf = _MakeParallelConf(self.device_tag_, self.machine_device_ids)
+        return c_api_util.ParallelNum4ParallelConf(parallel_conf)
+
     @property
     def default_device_tag(self): return self.device_tag_
 
     @property
     def machine_device_ids(self): return self.machine_device_ids_
 
-    @property
-    def op_confs(self): return self.op_confs_
-
     def __enter__(self):
         placement_context.PlacementScopeStackPush(self)
 
-    def ParallelConfAndOpNames(self):
-        raise NotImplementedError
-
     def __exit__(self, *args):
         assert self == placement_context.PlacementScopeStackPop()
+
+@oneflow_export('current_placement_scope.parallel_size')
+def cur_placement_scope_parallel_num():
+    return placement_context.PlacementScopeStackTop().GetParallelNum()
 
 @oneflow_export('fixed_placement')
 class FixedPlacementScope(PlacementScope):
@@ -51,10 +53,6 @@ class FixedPlacementScope(PlacementScope):
         PlacementScope.__init__(self, device_tag, machine_device_ids)
 
     def GetDeviceTag4OpConf(self, op_conf): return self.default_device_tag
-
-    def ParallelConfAndOpNames(self):
-        parallel_conf = _MakeParallelConf(self.default_device_tag, self.machine_device_ids)
-        yield parallel_conf, map(lambda op_conf: op_conf.name, self.op_confs)
 
 @oneflow_export('device_prior_placement')
 class DevicePriorPlacementScope(PlacementScope):
@@ -65,23 +63,14 @@ class DevicePriorPlacementScope(PlacementScope):
         if op_util.IsOpConfOnlyCpuSupported(op_conf): return "cpu"
         return self.default_device_tag
 
-    def ParallelConfAndOpNames(self):
-        device_tag2op_names = {}
-        for op_conf in self.op_confs:
-            device_tag = self.GetDeviceTag4OpConf(op_conf)
-            if device_tag not in device_tag2op_names: device_tag2op_names[device_tag] = []
-            device_tag2op_names[device_tag].append(op_conf.name)
-        for device_tag, op_names in device_tag2op_names.items():
-            if len(op_names) == 0: continue
-            parallel_conf = _MakeParallelConf(device_tag, self.machine_device_ids)
-            yield parallel_conf, op_names
-
 def _MakeParallelConf(device_tag, machine_device_ids):
-    if isinstance(machine_device_ids, str): machine_device_ids = [machine_device_ids]
+    assert isinstance(machine_device_ids, collections.Sized)
     device_names = []
     for machine_device_id in machine_device_ids:
-        assert isinstance(machine_device_id, str)
-        assert re.match("^\d+:\d+(-\d+)?$", machine_device_id) is not None
+        assert isinstance(machine_device_id, str), \
+            "type of machine_device_id (%s) is not string" % type(machine_device_id)
+        assert re.match("^\d+:\d+(-\d+)?$", machine_device_id) is not None, \
+            "machine_device_id: %s is not valid" % machine_device_id
         pair = machine_device_id.split(':')
         device_names.append("%s:%s:%s" % (pair[0], device_tag, pair[1]))
 

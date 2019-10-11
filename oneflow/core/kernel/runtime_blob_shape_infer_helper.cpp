@@ -19,17 +19,18 @@ RuntimeBlobShapeInferHelper::RuntimeBlobShapeInferHelper(const OperatorConf& op_
 void RuntimeBlobShapeInferHelper::InferDenseShape(
     std::function<Blob*(const std::string&)> BnInOp2Blob) {
   HashSet<const BlobDesc*> updated_input_blobs;
-  auto BlobDesc4BnInOp = [&](const std::string& bn_in_op) {
+  auto BlobDesc4BnInOp = [&](const std::string& bn_in_op) -> BlobDesc* {
     BlobDesc* blob_desc = bn_in_op2blob_desc_.at(bn_in_op).get();
+    const Blob* blob = BnInOp2Blob(bn_in_op);
+    if (blob == nullptr) { return nullptr; }
     if (blob_desc == nullptr) {
-      const RtBlobDesc& rt_blob_desc = BnInOp2Blob(bn_in_op)->blob_desc();
+      const RtBlobDesc& rt_blob_desc = blob->blob_desc();
       blob_desc = new BlobDesc(rt_blob_desc.body(), rt_blob_desc.num_of_lod_levels(),
                                rt_blob_desc.is_body_disabled(), rt_blob_desc.is_dynamic());
       bn_in_op2blob_desc_.at(bn_in_op).reset(blob_desc);
     }
     if (updated_input_blobs.find(blob_desc) == updated_input_blobs.end()
         && ibns_.find(bn_in_op) != ibns_.end()) {
-      const Blob* blob = BnInOp2Blob(bn_in_op);
       if (blob_desc->num_of_lod_levels() > 0) {
         CHECK_EQ(blob_desc->shape().NumAxes(),
                  blob->shape().NumAxes() + (blob_desc->num_of_lod_levels() - 1));
@@ -46,6 +47,7 @@ void RuntimeBlobShapeInferHelper::InferDenseShape(
                                       [](OpContext*) {}));
   for (const auto& obn : op_->output_bns()) {
     auto* blob = BnInOp2Blob(obn);
+    if (blob == nullptr) { continue; }
     const auto& blob_desc = bn_in_op2blob_desc_.at(obn);
     CHECK_EQ(blob->data_type(), blob_desc->data_type());
     CHECK_EQ(blob->blob_desc().is_dynamic(), blob_desc->is_dynamic());

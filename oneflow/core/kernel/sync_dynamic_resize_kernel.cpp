@@ -15,13 +15,13 @@ class SyncDynamicResizeKernel final : public KernelIf<DeviceType::kGPU> {
                           std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
     const SyncDynamicResizeOpConf& conf = this->op_conf().sync_dynamic_resize_conf();
     CHECK_EQ(conf.axis(), 0);
-    std::shared_ptr<int64_t> size_on_cpu(new int64_t);
+    std::shared_ptr<int32_t> size_on_cpu(new int32_t);
     const Blob* in = BnInOp2Blob("in");
     const Blob* size = BnInOp2Blob("size");
     Blob* out = BnInOp2Blob("out");
     AutoMemcpy(ctx.device_ctx, out->mut_dptr(), in->dptr(), in->ByteSizeOfBlobBody(),
                out->mem_case(), in->mem_case());
-    AutoMemcpy(ctx.device_ctx, size_on_cpu.get(), size->dptr(), sizeof(int64_t), MakeHostMemCase(),
+    AutoMemcpy(ctx.device_ctx, size_on_cpu.get(), size->dptr(), sizeof(int32_t), MakeHostMemCase(),
                size->mem_case());
     ctx.device_ctx->AddCallBack([out, size_on_cpu, conf]() {
       Shape shape = out->dense_shape_view();
