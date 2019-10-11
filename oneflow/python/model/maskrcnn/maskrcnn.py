@@ -41,6 +41,9 @@ parser.add_argument(
     action="store_true",
     required=False,
 )
+parser.add_argument(
+    "-eval", "--eval", default=False, action="store_true", required=False
+)
 
 terminal_args = parser.parse_args()
 
@@ -230,6 +233,27 @@ if terminal_args.mock_dataset:
         return outputs
 
 
+if terminal_args.eval:
+
+    @flow.function
+    def maskrcnn_eval(
+        images=flow.input_blob_def(
+            placeholders["images"].shape, dtype=flow.float32, is_dynamic=True
+        ),
+        images_size=flow.input_blob_def(
+            placeholders["images_size"].shape,
+            dtype=flow.float32,
+            is_dynamic=True,
+        ),
+    ):
+        cfg = get_default_cfgs()
+        if terminal_args.config_file is not None:
+            cfg.merge_from_file(terminal_args.config_file)
+        cfg.freeze()
+        print(cfg)
+        return maskrcnn_eval(images, images_size)
+
+
 if terminal_args.rcnn_eval:
 
     @flow.function
@@ -313,6 +337,11 @@ if __name__ == "__main__":
                 fpn_feature_map4,
             ).get()
             print(results)
+        elif terminal_args.eval:
+            # TODO: load images and images_size from PyTorch
+            images = None
+            images_size = None
+            results = maskrcnn_eval(images, images_size)
         elif terminal_args.mock_dataset:
             if terminal_args.rpn_only:
                 print(

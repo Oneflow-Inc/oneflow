@@ -247,6 +247,14 @@ def safe_top_k(inputs, k):
 class RPNProposal(object):
     def __init__(self, cfg):
         self.cfg = cfg
+        if cfg.TRAINING:
+            self.top_n_per_fm = cfg.RPN.TOP_N_PER_FM_TRAIN
+            self.nms_top_n = cfg.RPN.NMS_TOP_N_TRAIN
+            self.top_n_per_img = cfg.RPN.TOP_N_PER_IMG_TRAIN
+        else:
+            self.top_n_per_fm = cfg.RPN.TOP_N_PER_FM_TEST
+            self.nms_top_n = cfg.RPN.NMS_TOP_N_TEST
+            self.top_n_per_img = cfg.RPN.TOP_N_PER_IMG_TEST
 
     # anchors_list: list of [num_anchors_i, 4] wrt. fpn layers
     # image_size_list: list of [2,] wrt. images
@@ -272,7 +280,7 @@ class RPNProposal(object):
                 for layer_i in range(len(cls_logit_list[0])):
                     pre_nms_top_k_inds = safe_top_k(
                         cls_logit_list[img_idx][layer_i],
-                        k=self.cfg.RPN.TOP_N_PER_FM_TRAIN,
+                        k=self.top_n_per_fm,
                     )
                     score_per_layer = flow.local_gather(
                         cls_logit_list[img_idx][layer_i], pre_nms_top_k_inds
@@ -317,7 +325,7 @@ class RPNProposal(object):
                             flow.detection.nms(
                                 proposal_per_layer,
                                 nms_iou_threshold=self.cfg.RPN.NMS_THRESH,
-                                post_nms_top_n=self.cfg.RPN.NMS_TOP_N_TRAIN,
+                                post_nms_top_n=self.nms_top_n,
                             )
                         ),
                         axis=[1],
@@ -337,7 +345,7 @@ class RPNProposal(object):
 
                 proposal_in_one_img = flow.local_gather(
                     proposal_in_one_img,
-                    safe_top_k(score_in_one_img, k=self.cfg.RPN.TOP_N_PER_IMG_TRAIN),
+                    safe_top_k(score_in_one_img, k=self.top_n_per_img),
                 )
                 if self.cfg.TRAINING is True:
                     proposal_in_one_img = flow.concat(
