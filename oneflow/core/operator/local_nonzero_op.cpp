@@ -33,6 +33,24 @@ class LocalNonzeroOp final : public Operator {
     return this->op_conf().local_nonzero_conf();
   }
 
+  Maybe<void> InferOutBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                                const ParallelContext*, const SbpSignature*,
+                                std::function<void(OpContext*)> EnrollOpCtx) const override {
+    // input
+    const BlobDesc* in = GetBlobDesc4BnInOp("in");
+    const int32_t elem_cnt = in->shape().elem_cnt();
+    // output
+    BlobDesc* out = GetBlobDesc4BnInOp("out");
+    *out = *in;
+    out->mut_shape() = Shape({elem_cnt, in->shape().NumAxes()});
+    out->set_data_type(DataType::kInt32);
+    // nnz
+    BlobDesc* num_nonzero = GetBlobDesc4BnInOp("num_nonzero");
+    num_nonzero->mut_shape() = Shape({1});
+    num_nonzero->set_data_type(DataType::kInt32);
+    return Maybe<void>::Ok();
+  }
+
   Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                              const ParallelContext*) const override {
     // input
@@ -40,6 +58,7 @@ class LocalNonzeroOp final : public Operator {
     const int32_t elem_cnt = in->shape().elem_cnt();
     // output
     BlobDesc* out = GetBlobDesc4BnInOp("out");
+    *out = *in;
     out->mut_shape() = Shape({elem_cnt, in->shape().NumAxes()});
     out->set_data_type(DataType::kInt32);
     // nnz

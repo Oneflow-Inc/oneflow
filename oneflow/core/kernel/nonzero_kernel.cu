@@ -69,8 +69,6 @@ class NonzeroGpuKernel : public KernelIf<DeviceType::kGPU> {
   ~NonzeroGpuKernel() = default;
 
  private:
-  void ForwardDenseShape(const KernelCtx& ctx,
-                         std::function<Blob*(const std::string&)> BnInOp2Blob) const override {}
   void ForwardDataContent(const KernelCtx& ctx,
                           std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
     const Blob* in_blob = BnInOp2Blob("in");
@@ -96,7 +94,7 @@ class NonzeroGpuKernel : public KernelIf<DeviceType::kGPU> {
 
       Strides<NDims> strides;
       strides.val[NDims - 1] = 1;
-      for (size_t i = NDims - 2; i >= 0; i--) {
+      for (int32_t i = NDims - 2; i >= 0; i--) {
         strides.val[i] = strides.val[i + 1] * in_blob->shape().At(i + 1);
       }
       // TODO(niuchong): BlockNum can be changed to improve perf
