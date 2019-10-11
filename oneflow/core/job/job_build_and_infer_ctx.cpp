@@ -199,6 +199,16 @@ Maybe<void> JobBuildAndInferCtx::AddAndInferOp(const OperatorConf& op_conf,
   parallel_ctx.set_parallel_num(1);
   JUST(op->InferOutBlobDescsIf(GetBlobDesc4BnInOp, &parallel_ctx, &sbp_sig_to_infer,
                                [](OpContext*) {}));
+  auto ParallelDesc4Obn = [&](const std::string& obn) -> ParallelDesc* {
+    const auto& lbi = op->BnInOp2Lbi(obn);
+    auto iter = lbi2parallel_desc_from_producer_view_.find(lbi);
+    if (iter == lbi2parallel_desc_from_producer_view_.end()) {
+      iter = lbi2parallel_desc_from_producer_view_.emplace(lbi, parallel_desc).first;
+    }
+    return &iter->second;
+  };
+  JUST(op->InferOutParallelDescIf(ParallelDesc4Obn, GetBlobDesc4BnInOp, parallel_desc,
+                                  &sbp_sig_to_infer));
 
   // check splitability
   JUST(CheckOpBlobSplitability(op, sbp_sig_to_infer, parallel_desc.parallel_num()));
