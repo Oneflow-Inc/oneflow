@@ -176,8 +176,11 @@ class BoxHead(object):
         def Save(name):
             def _save(x):
                 import numpy as np
-
-                np.save("./eval_dump/" + name, x.ndarray())
+                import os
+                path = "eval_dump/"
+                if not os.path.exists(path):
+                    os.mkdir(path)
+                np.save(path + name, x.ndarray())
 
             return _save
 
