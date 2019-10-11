@@ -69,6 +69,7 @@ class ResNet(object):
                 dilation_rate=[1, 1],
                 trainable=False,
                 name="conv1",
+                use_bias=False,
             )
             affine = flow.layers.affine_channel(
                 conv1,
@@ -137,6 +138,7 @@ class ResNet(object):
                 dilation_rate=[1, 1],
                 trainable=trainable,
                 name="downsample_0",
+                use_bias=False,
             )
             downsample_blob = flow.layers.affine_channel(
                 x, axis=1, trainable=False, name="downsample_1"
@@ -152,6 +154,7 @@ class ResNet(object):
             dilation_rate=[1, 1],
             trainable=trainable,
             name="conv1",
+            use_bias=False,
         )
         affine1 = flow.layers.affine_channel(
             conv1,
@@ -171,6 +174,7 @@ class ResNet(object):
             dilation_rate=[1, 1],
             trainable=trainable,
             name="conv2",
+            use_bias=False,
         )
         affine2 = flow.layers.affine_channel(
             conv2,
@@ -190,6 +194,7 @@ class ResNet(object):
             dilation_rate=[1, 1],
             trainable=trainable,
             name="conv3",
+            use_bias=False,
         )
         affine3 = flow.layers.affine_channel(
             conv3,
