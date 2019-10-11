@@ -41,7 +41,6 @@ class DataLoader final {
   std::shared_ptr<BatchDataInstance> FetchBatch();
 
  protected:
-  std::shared_ptr<BatchDataInstance> AcquireGetBatch(size_t batch_size);
   void LoadBatch();
   void Close();
   bool IsImageAlignNeeded(size_t& alignment);
@@ -53,7 +52,9 @@ class DataLoader final {
 
   std::shared_ptr<Dataset> dataset_;
   DataSamplerContext sampler_ctx_;
+  Buffer<int64_t> indices_buffer_;
   Buffer<std::shared_ptr<BatchDataInstance>> batch_buffer_;
+  std::queue<std::shared_ptr<BatchDataInstance>> batch_queue_;
 
   bool is_closed_;
   std::thread load_thrd_;

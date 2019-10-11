@@ -7,6 +7,7 @@ namespace data {
 DataLoader::DataLoader(const DataLoadOpConf& op_conf, const DataLoadKernelConf& kernel_conf)
     : op_conf_(op_conf),
       kernel_conf_(kernel_conf),
+      indices_buffer_(op_conf.batch_cache_size() * kernel_conf.device_batch_size()),
       batch_buffer_(op_conf.batch_cache_size()),
       is_closed_(false),
       worker_pool_(std::thread::hardware_concurrency() / 4) {
@@ -34,37 +35,45 @@ void DataLoader::Close() {
 
 std::shared_ptr<BatchDataInstance> DataLoader::FetchBatch() {
   std::shared_ptr<BatchDataInstance> batch_data_inst_ptr(nullptr);
-  batch_buffer_.ReceiveIf(
-      &batch_data_inst_ptr,
-      [](const std::shared_ptr<BatchDataInstance>& batch) { return batch->IsReady(); });
-  return batch_data_inst_ptr;
-}
-
-std::shared_ptr<BatchDataInstance> DataLoader::AcquireGetBatch(size_t batch_size) {
-  auto batch_data_inst_ptr = std::make_shared<BatchDataInstance>(batch_size);
-  batch_buffer_.Send(batch_data_inst_ptr);
+  batch_buffer_.Receive(&batch_data_inst_ptr);
   return batch_data_inst_ptr;
 }
 
 void DataLoader::LoadBatch() {
+  // Step 1: fetch data indices of one batch from dataset
   std::vector<int64_t> batch_idx_seq = dataset_->FetchBatchIndexSequence(
       &sampler_ctx_, kernel_conf_.device_batch_size());
-  auto batch_data_inst_ptr = AcquireGetBatch(batch_idx_seq.size());
-  FOR_RANGE(size_t, i, 0, batch_idx_seq.size()) {
-    int64_t data_idx = batch_idx_seq.at(i);
-    worker_pool_.AddWork([=]() {
-      DataInstance* data_inst = batch_data_inst_ptr->Get(i);
-      data_inst->InitFromProto(kernel_conf_.data_instance());
-      dataset_->GetData(data_idx, data_inst);
-      for (const auto& trans_proto : op_conf_.transforms()) { data_inst->Transform(trans_proto); }
-      batch_data_inst_ptr->IncreaseFillCount();
-
+  // Step 2: send idx to indices_buffer
+  for (int64_t data_idx : batch_idx_seq) {
+    indices_buffer_.Send(data_idx);
+  }
+  // Step 3: push empty batch to batch_queue
+  auto batch_data_inst_ptr = std::make_shared<BatchDataInstance>(batch_idx_seq.size());
+  batch_queue_.push(batch_data_inst_ptr);
+  // Step 4: add data filling work to thread pool
+  FOR_RANGE(size_t, idx_in_batch, 0, batch_idx_seq.size()) {\
+    worker_pool_.AddWork([this, idx_in_batch, batch_data_inst_ptr]() {
+      int64_t data_idx = -1;
+      if (indices_buffer_.Receive(&data_idx) == BufferStatus::kBufferStatusSuccess) {
+        DataInstance* data_inst = batch_data_inst_ptr->Get(idx_in_batch);
+        data_inst->InitFromProto(kernel_conf_.data_instance());
+        dataset_->GetData(data_idx, data_inst);
+        for (const auto& trans_proto : op_conf_.transforms()) { data_inst->Transform(trans_proto); }
+        batch_data_inst_ptr->IncreaseFillCount();
+      }
       // TODO: implement ImageAlign with batch transform
       size_t image_alignment = 1;
       if (IsImageAlignNeeded(image_alignment) && batch_data_inst_ptr->IsReady()) {
         ImageAlign(batch_data_inst_ptr, image_alignment);
       }
     });
+  }
+  // Step 5: try get ready batch data from queue
+  if (!batch_queue_.empty() && batch_queue_.front()->IsReady()) {
+    auto ready_batch_data_ptr = batch_queue_.front();
+    batch_queue_.pop();
+    // Step 6: send batch_data to batch_buffer
+    batch_buffer_.Send(ready_batch_data_ptr);
   }
 }
 
