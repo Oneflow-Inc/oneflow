@@ -26,6 +26,10 @@ class RemoteBlob(blob_desc.BlobDesc):
     @property
     def num_of_lod_levels(self): return job_builder.GetNumOfLoDLevels(self.job_name_, self.lbn_)
 
+    @property
+    def parallel_conf(self):
+        return job_builder.GetParallelConfFromProducerView(self.job_name_, self.lbn_)
+
     def with_distribute(self, distribute):
         oneflow.distribute.assert_is_valid_distribute(distribute)
         ret = RemoteBlob(self.lbi_)

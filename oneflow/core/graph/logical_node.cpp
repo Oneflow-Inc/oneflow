@@ -6,6 +6,8 @@
 #include "oneflow/core/graph/print_compute_task_node.h"
 #include "oneflow/core/graph/decode_compute_task_node.h"
 #include "oneflow/core/graph/decode_random_compute_task_node.h"
+#include "oneflow/core/graph/distribute_concat_compute_task_node.h"
+#include "oneflow/core/graph/distribute_split_compute_task_node.h"
 #include "oneflow/core/graph/record_load_compute_task_node.h"
 #include "oneflow/core/graph/reduce_scatter_compute_task_node.h"
 #include "oneflow/core/graph/reduce_add_compute_task_node.h"
@@ -277,6 +279,12 @@ BldSubTskGphMthd GetMthdForBldSubTskGph(const LogicalNode* src_node, const Logic
   }
   std::string k = ConcatTypeName(src_node, dst_node);
   auto it = GetFuncForFindBldSubTskGphMthd()->find(k);
+  if (it == GetFuncForFindBldSubTskGphMthd()->end()) {
+    it = GetFuncForFindBldSubTskGphMthd()->find(src_node->TypeName() + "*");
+  }
+  if (it == GetFuncForFindBldSubTskGphMthd()->end()) {
+    it = GetFuncForFindBldSubTskGphMthd()->find("*" + dst_node->TypeName());
+  }
   if (it != GetFuncForFindBldSubTskGphMthd()->end()) { return it->second(src_node, dst_node); }
   if (src_pd->parallel_num() == dst_pd->parallel_num()
       && IsConnectedLbisAllSameSbpParallel(src_node, dst_node)) {
@@ -353,6 +361,14 @@ REGISTER_BLD_SUB_TSK_GPH_MTHD("NcclTupleReduce"
                               "Optimizer",
                               &TaskGraph::BldSubTskGphByConnectNodeOnSameGpuDevice);
 
+REGISTER_BLD_SUB_TSK_GPH_MTHD("*"
+                              "DistributeConcat",
+                              &TaskGraph::BldSubTskGphByPartialInLbiConnect);
+
+REGISTER_BLD_SUB_TSK_GPH_MTHD("DistributeSplit"
+                              "*",
+                              &TaskGraph::BldSubTskGphByPartialOutLbiConnect);
+
 BldBoxingOpConfMthd GetMthdForBldBoxingOpConf(const LogicalNode* src, const LogicalNode* dst) {
   std::string k = ConcatTypeName(src, dst);
   auto it = GetFuncForFindBldBoxingOpConfMthd()->find(k);
@@ -370,23 +386,25 @@ REGISTER_BLD_BOXING_OP_CONF_MTHD("Tick"
                                  "Tick",
                                  &BoxingTaskNode::BldBoxingOpConfWithPartialTick2SinkTick);
 
-#define LOGICAL_TYPE_SEQ                                  \
-  OF_PP_MAKE_TUPLE_SEQ(NormalForward, kDataForwardArea)   \
-  OF_PP_MAKE_TUPLE_SEQ(RecordLoad, kDataPreprocessArea)   \
-  OF_PP_MAKE_TUPLE_SEQ(Decode, kDataPreprocessArea)       \
-  OF_PP_MAKE_TUPLE_SEQ(DecodeRandom, kDataPreprocessArea) \
-  OF_PP_MAKE_TUPLE_SEQ(Loss, kDataForwardArea)            \
-  OF_PP_MAKE_TUPLE_SEQ(MdDiffAcc, kDataForwardArea)       \
-  OF_PP_MAKE_TUPLE_SEQ(Print, kPrintArea)                 \
-  OF_PP_MAKE_TUPLE_SEQ(ReduceConcat, kMdUpdtArea)         \
-  OF_PP_MAKE_TUPLE_SEQ(ReduceIdentity, kMdUpdtArea)       \
-  OF_PP_MAKE_TUPLE_SEQ(ReduceScatter, kMdUpdtArea)        \
-  OF_PP_MAKE_TUPLE_SEQ(ReduceAdd, kMdUpdtArea)            \
-  OF_PP_MAKE_TUPLE_SEQ(ReduceGather, kMdUpdtArea)         \
-  OF_PP_MAKE_TUPLE_SEQ(ReduceSplit, kMdUpdtArea)          \
-  OF_PP_MAKE_TUPLE_SEQ(NcclAllReduce, kMdUpdtArea)        \
-  OF_PP_MAKE_TUPLE_SEQ(NcclReduceScatter, kMdUpdtArea)    \
-  OF_PP_MAKE_TUPLE_SEQ(NcclAllGather, kMdUpdtArea)        \
+#define LOGICAL_TYPE_SEQ                                   \
+  OF_PP_MAKE_TUPLE_SEQ(NormalForward, kDataForwardArea)    \
+  OF_PP_MAKE_TUPLE_SEQ(DistributeConcat, kDataForwardArea) \
+  OF_PP_MAKE_TUPLE_SEQ(DistributeSplit, kDataForwardArea)  \
+  OF_PP_MAKE_TUPLE_SEQ(RecordLoad, kDataPreprocessArea)    \
+  OF_PP_MAKE_TUPLE_SEQ(Decode, kDataPreprocessArea)        \
+  OF_PP_MAKE_TUPLE_SEQ(DecodeRandom, kDataPreprocessArea)  \
+  OF_PP_MAKE_TUPLE_SEQ(Loss, kDataForwardArea)             \
+  OF_PP_MAKE_TUPLE_SEQ(MdDiffAcc, kDataForwardArea)        \
+  OF_PP_MAKE_TUPLE_SEQ(Print, kPrintArea)                  \
+  OF_PP_MAKE_TUPLE_SEQ(ReduceConcat, kMdUpdtArea)          \
+  OF_PP_MAKE_TUPLE_SEQ(ReduceIdentity, kMdUpdtArea)        \
+  OF_PP_MAKE_TUPLE_SEQ(ReduceScatter, kMdUpdtArea)         \
+  OF_PP_MAKE_TUPLE_SEQ(ReduceAdd, kMdUpdtArea)             \
+  OF_PP_MAKE_TUPLE_SEQ(ReduceGather, kMdUpdtArea)          \
+  OF_PP_MAKE_TUPLE_SEQ(ReduceSplit, kMdUpdtArea)           \
+  OF_PP_MAKE_TUPLE_SEQ(NcclAllReduce, kMdUpdtArea)         \
+  OF_PP_MAKE_TUPLE_SEQ(NcclReduceScatter, kMdUpdtArea)     \
+  OF_PP_MAKE_TUPLE_SEQ(NcclAllGather, kMdUpdtArea)         \
   OF_PP_MAKE_TUPLE_SEQ(Accuracy, kDataForwardArea)
 
 #define DEFINE_VIRTUAL_METHOD(x, area_type)                                             \

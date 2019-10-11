@@ -178,6 +178,13 @@ def JobBuildAndInferCtx_GetParallelConfFromProducerView(job_name, lbn):
     if error.HasField("error_type"): raise JobBuildAndInferError(error)
     return text_format.Parse(parallel_conf, placment_util.ParallelConf())
 
+def ParallelNum4ParallelConf(parallel_conf):
+    serialized_parallel_conf = str(text_format.MessageToString(parallel_conf))
+    parallel_num, error_str = oneflow_internal.ParallelNum4ParallelConf(serialized_parallel_conf)
+    error = text_format.Parse(error_str, error_util.ErrorProto())
+    if error.HasField("error_type"): raise JobBuildAndInferError(error)
+    return parallel_num
+
 def DeviceType4DeviceTag(device_tag):
     device_tag = str(device_tag)
     device_type, error_str = oneflow_internal.DeviceType4DeviceTag(device_tag)

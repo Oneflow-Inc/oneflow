@@ -35,6 +35,24 @@ Maybe<void> JobBuildAndInferCtx::AddOpNameParallelConf2Placement(
   return Maybe<void>::Ok();
 }
 
+Maybe<void> JobBuildAndInferCtx::AddLbiParallelConf2BlobPlacement(
+    const Operator* op, std::function<ParallelDesc*(const std::string&)> ParallelDesc4Obn) {
+  for (const auto& obn : op->output_bns()) {
+    const auto& parallel_desc = *ParallelDesc4Obn(obn);
+    auto iter = parallel_desc2blob_placement_group_.find(parallel_desc);
+    if (iter == parallel_desc2blob_placement_group_.end()) {
+      auto* blob_pg = job_->mutable_placement()->add_blob_placement_group();
+      *blob_pg->mutable_parallel_conf() = parallel_desc.parallel_conf();
+      iter = parallel_desc2blob_placement_group_.emplace(parallel_desc, blob_pg).first;
+    }
+    const auto& lbi = op->BnInOp2Lbi(obn);
+    OF_CHECK(std::find(iter->second->lbi().begin(), iter->second->lbi().end(), lbi)
+             == iter->second->lbi().end());
+    *iter->second->add_lbi() = lbi;
+  }
+  return Maybe<void>::Ok();
+}
+
 Maybe<void> JobBuildAndInferCtx::DecodeSplitHint7AddOp7AddSbpSigConf2Job(
     Operator* op, SbpSignature* sbp_sig_conf) {
   OperatorConf op_conf_without_split_hint = op->op_conf();
@@ -69,6 +87,7 @@ Maybe<void> JobBuildAndInferCtx::InferOpOutSbpParallel(Operator* op,
         << JobBuildAndInferError::kLogicalBlobNameNotExist << "when infer op_name: \""
         << op->op_name() << "\", consumed op_name: \"" << lbi.op_name() << "\", blob_name: \""
         << lbi.blob_name() << "\" not infer blob desc";
+    const ParallelDesc* pd = &lbi2parallel_desc_from_producer_view_.at(lbi);
     const BlobDesc* logical_blob_desc = lbi2logical_blob_desc_.at(lbi).get();
     CHECK_OR_RETURN(lbi2sbp_parallel_from_producer_view_.find(lbi)
                     != lbi2sbp_parallel_from_producer_view_.end())
@@ -76,7 +95,7 @@ Maybe<void> JobBuildAndInferCtx::InferOpOutSbpParallel(Operator* op,
         << "when infer op_name: " << op->op_name() << " consumed op_name: " << lbi.op_name()
         << " blob_name: " << lbi.blob_name() << " not infer split axis";
     const SbpParallel& sbp_parallel = lbi2sbp_parallel_from_producer_view_.at(lbi);
-    ibn2sbp_infer_hint.emplace(ibn, SbpInferHint(&parallel_desc, logical_blob_desc, sbp_parallel));
+    ibn2sbp_infer_hint.emplace(ibn, SbpInferHint(pd, logical_blob_desc, sbp_parallel));
   }
 
   auto GetBatchAxis4Lbi = [&](const LogicalBlobId& lbi) -> const OptInt64& {
@@ -130,18 +149,24 @@ Maybe<void> JobBuildAndInferCtx::GenOpProducedEmptyLogicalBlobDesc(Operator* op)
 
 Maybe<void> JobBuildAndInferCtx::CheckOpBlobSplitability(Operator* op, const SbpSignature& sbp_sig,
                                                          int64_t parallel_num) {
+  HashSet<std::string> obns(op->output_bns().begin(), op->output_bns().end());
+  auto GetParallelNum = [&](const std::string& bn_in_op) {
+    if (obns.find(bn_in_op) == obns.end()) { return parallel_num; }
+    return lbi2parallel_desc_from_producer_view_.at(op->BnInOp2Lbi(bn_in_op)).parallel_num();
+  };
   for (const auto& pair : sbp_sig.bn_in_op2sbp_parallel()) {
     if (pair.second.has_split_parallel()) {
       int64_t axis = pair.second.split_parallel().axis();
       const LogicalBlobId& lbi = op->BnInOp2Lbi(pair.first);
+      int64_t blob_parallel_num = GetParallelNum(pair.first);
       const BlobDesc& logical_blob_desc = *(lbi2logical_blob_desc_.at(lbi).get());
       int64_t num_axes = logical_blob_desc.shape().NumAxes();
       if (axis < 0) { axis += num_axes; }
       CHECK_OR_RETURN(axis >= 0 && axis < num_axes
-                      && logical_blob_desc.shape().At(axis) >= parallel_num)
+                      && logical_blob_desc.shape().At(axis) >= blob_parallel_num)
           << JobBuildAndInferError::kUnknownJobBuildAndInferError << "op_name: " << lbi.op_name()
           << " blob_name: " << lbi.blob_name()
-          << " cannot split blob by parallel_num: " << std::to_string(parallel_num);
+          << " cannot split blob by parallel_num: " << std::to_string(blob_parallel_num);
     }
   }
   return Maybe<void>::Ok();
@@ -198,7 +223,17 @@ Maybe<void> JobBuildAndInferCtx::AddAndInferOp(const OperatorConf& op_conf,
   parallel_ctx.set_parallel_num(1);
   JUST(op->InferOutBlobDescsIf(GetBlobDesc4BnInOp, &parallel_ctx, &sbp_sig_to_infer,
                                [](OpContext*) {}));
-
+  auto ParallelDesc4Obn = [&](const std::string& obn) -> ParallelDesc* {
+    const auto& lbi = op->BnInOp2Lbi(obn);
+    auto iter = lbi2parallel_desc_from_producer_view_.find(lbi);
+    if (iter == lbi2parallel_desc_from_producer_view_.end()) {
+      iter = lbi2parallel_desc_from_producer_view_.emplace(lbi, parallel_desc).first;
+    }
+    return &iter->second;
+  };
+  JUST(op->InferOutParallelDescIf(ParallelDesc4Obn, GetBlobDesc4BnInOp, parallel_desc,
+                                  &sbp_sig_to_infer));
+  JUST(AddLbiParallelConf2BlobPlacement(op, ParallelDesc4Obn));
   // check splitability
   JUST(CheckOpBlobSplitability(op, sbp_sig_to_infer, parallel_desc.parallel_num()));
 

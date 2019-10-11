@@ -114,6 +114,15 @@ class Operator {
       std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*,
       const SbpSignature* sbp_signature, std::function<void(OpContext*)> EnrollOpCtx) const;
 
+  Maybe<void> InferOutParallelDescIf(
+      std::function<ParallelDesc*(const std::string&)> ParallelDesc4Obn,
+      std::function<const BlobDesc*(const std::string&)> LogicalBlobDesc4Ibn, const ParallelDesc&,
+      const SbpSignature*) const;
+  virtual Maybe<void> InferOutParallelDesc(
+      std::function<ParallelDesc*(const std::string&)> ParallelDesc4Obn,
+      std::function<const BlobDesc*(const std::string&)> LogicalBlobDesc4Ibn, const ParallelDesc&,
+      const SbpSignature*) const;
+
   Maybe<void> InferBatchAxisIf(
       const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
       std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
@@ -286,8 +295,6 @@ struct RuntimeRegstNum4OpSameOutputBlob final {
   size_t num_;
 };
 
-struct IsInterfaceOpConf4OpTypeCase final {};
-
 #define REGISTER_OP(op_type_case, OpType)                                       \
   REGISTER_CLASS_CREATOR(op_type_case, OnlyCpuSupportPredicator,                \
                          ([] { return new OnlyCpuSupportPredicator(false); })); \
@@ -307,9 +314,17 @@ struct IsInterfaceOpConf4OpTypeCase final {};
   REGISTER_CLASS_CREATOR(op_type_case, RuntimeRegstNum4OpSameOutputBlob, \
                          ([] { return new RuntimeRegstNum4OpSameOutputBlob(num); }))
 
+struct IsInterfaceOpConf4OpTypeCase final {};
+
 #define REGISTER_INTERFACE_OP(op_type_case)                          \
   REGISTER_CLASS_CREATOR(op_type_case, IsInterfaceOpConf4OpTypeCase, \
                          ([] { return new IsInterfaceOpConf4OpTypeCase(); }))
+
+struct DisableInputBoxingGroup final {};
+
+#define REGISTER_DISABLE_INPUT_BOXING_GROUP(op_type_case)       \
+  REGISTER_CLASS_CREATOR(op_type_case, DisableInputBoxingGroup, \
+                         ([] { return new DisableInputBoxingGroup(); }))
 
 struct IsTickTockOpTypeCase final {};
 
