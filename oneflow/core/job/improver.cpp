@@ -620,7 +620,7 @@ Plan Improver::GenAndInferMemBlockId(const Plan& naive_plan) const {
       return plan_task_graph.TaskProto4TaskId(task_id)->task_set_info().order_in_graph();
     };
     auto IsReachable = [&](int64_t src_task_id, int64_t dst_task_id) {
-      return plan_task_graph.IsReachableInSameArea(src_task_id, dst_task_id);
+      return plan_task_graph.IsReachable(src_task_id, dst_task_id);
     };
     ForEachInferredMemBlockCriticalSection(plan, OrderInGraph4TaskId,
                                            MakeSetterAddCtrlRegst(&plan, IsReachable));

@@ -54,6 +54,16 @@ void GenMemChainTasksAndRegsts(
       }
     }
   }
+  HashSet<int64_t> useless_tasks;
+  for (auto& pair : *device_unique_id2tasks) {
+    if (device_unique_id2regsts->find(pair.first) == device_unique_id2regsts->end()) {
+      useless_tasks.insert(pair.first);
+    }
+  }
+  for (int64_t device_unique_id : useless_tasks) {
+    device_unique_id2tasks->erase(device_unique_id);
+  }
+
   for (auto& pair : *device_unique_id2tasks) {
     std::sort(pair.second.begin(), pair.second.end(),
               [&](const TaskProto* lhs, const TaskProto* rhs) {
@@ -323,7 +333,7 @@ void InJobMemSharingUtil::InferMemBlockId4MemReusedRegst(Plan* plan) {
   HashMap<int64_t, std::vector<TaskProto*>> mem_chain2sorted_tasks;
   HashMap<int64_t, HashSet<RegstDescProto*>> mem_chain2mem_reused_regsts;
   GenMemChainTasksAndRegsts(plan, &mem_chain2sorted_tasks, &mem_chain2mem_reused_regsts);
-  if (mem_chain2sorted_tasks.size() == 0) { return; }
+  if (mem_chain2mem_reused_regsts.empty()) { return; }
   HashMap<int64_t, RegstDescProto*> regst_desc_id2regst_desc;
   GenRegstDescId2RegstDesc(plan, &regst_desc_id2regst_desc);
   // info for algorithm
@@ -335,9 +345,9 @@ void InJobMemSharingUtil::InferMemBlockId4MemReusedRegst(Plan* plan) {
   HashMap<int64_t, HashSet<RegstDescProto*>> mem_chain2inplace_consumer_regst_descs;
 
   // step 1: generate regst apply/release queue AND regst mutual exclusions
-  for (const auto& pair : mem_chain2sorted_tasks) {
+  for (const auto& pair : mem_chain2mem_reused_regsts) {
     GenRegstApplyReleaseQueueAndRegstMutualExclusions(
-        &pair.second, &mem_chain2mem_reused_regsts.at(pair.first), &regst_desc_id2regst_desc,
+        &mem_chain2sorted_tasks.at(pair.first), &pair.second, &regst_desc_id2regst_desc,
         &mem_chain2task2apply_regsts[pair.first], &mem_chain2task2release_regsts[pair.first],
         &mem_chain2regst2mutual_exclusion_regsts[pair.first],
         &mem_chain2inplace_consumer_regst_descs[pair.first]);
@@ -347,11 +357,11 @@ void InJobMemSharingUtil::InferMemBlockId4MemReusedRegst(Plan* plan) {
   HashMap<int64_t, std::vector<MemBlockResultInfo>> mem_chain2results;
   {
     int64_t cpu_num = std::thread::hardware_concurrency();
-    int64_t work_size = mem_chain2sorted_tasks.size() * kMemReuseAlgorithmNum;
+    int64_t work_size = mem_chain2mem_reused_regsts.size() * kMemReuseAlgorithmNum;
     int64_t thread_pool_size = std::min<int64_t>(work_size, cpu_num);
     BlockingCounter counter(work_size);
     ThreadPool thread_pool(thread_pool_size);
-    for (const auto& pair : mem_chain2sorted_tasks) {
+    for (const auto& pair : mem_chain2mem_reused_regsts) {
       int64_t mem_chain_id = pair.first;
       std::vector<MemBlockResultInfo>* results = &mem_chain2results[mem_chain_id];
       results->resize(kMemReuseAlgorithmNum);
