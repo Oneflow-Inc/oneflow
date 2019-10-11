@@ -17,7 +17,9 @@ struct OutputIterByNDims {
   typedef std::random_access_iterator_tag iterator_category;
 
   OutputIterByNDims(int32_t* ptr, int32_t index_max_size)
-      : ptr_(ptr), index_max_size_(index_max_size) {}
+      : ptr_(ptr), index_max_size_(index_max_size) {
+    CHECK_GT(NDims, 1);
+  }
 
   OF_DEVICE_FUNC int32_t& operator[](int i) {
     assert(0 <= i && i < index_max_size_);
@@ -28,6 +30,24 @@ struct OutputIterByNDims {
   int32_t* ptr_;
   int32_t index_max_size_;
 };
+
+template<size_t NDims>
+struct Strides {
+  int32_t val[NDims];
+};
+
+template<size_t NDims>
+__global__ void CalcOutIndexFromFlatIndex(const int32_t* nnz, Strides<NDims> strides,
+                                          int32_t* output) {
+  int32_t num_nonzero = __ldg(nnz);
+  CUDA_1D_KERNEL_LOOP(i, num_nonzero) {
+    int32_t flat_index_val = __ldg(output + i * NDims);
+    for (int j = 0; j < NDims; ++j) {
+      *(output + i * NDims + j) = flat_index_val / strides.val[j];
+      flat_index_val %= strides.val[j];
+    }
+  }
+}
 
 }  // namespace
 
@@ -73,6 +93,16 @@ class NonzeroGpuKernel : public KernelIf<DeviceType::kGPU> {
       CudaCheck(CubSelectFlagged<T, OutputIterByNDims<NDims>>(
           ctx.device_ctx->cuda_stream(), elem_cnt, out_tmp_blob->mut_dptr(), tmp_bytes,
           in_blob->dptr<T>(), out_iter, num_nonzero_blob->mut_dptr<int32_t>()));
+
+      Strides<NDims> strides;
+      strides.val[NDims - 1] = 1;
+      for (size_t i = NDims - 2; i >= 0; i--) {
+        strides.val[i] = strides.val[i + 1] * in_blob->shape().At(i + 1);
+      }
+      // TODO(niuchong): BlockNum can be changed to improve perf
+      CalcOutIndexFromFlatIndex<NDims>
+          <<<128, kCudaThreadsNumPerBlock, 0, ctx.device_ctx->cuda_stream()>>>(
+              num_nonzero_blob->dptr<int32_t>(), strides, out_blob->mut_dptr<int32_t>());
     }
   }
 };
