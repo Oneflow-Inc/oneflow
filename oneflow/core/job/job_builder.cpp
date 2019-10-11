@@ -30,6 +30,12 @@ JobBuilder::JobBuilder(Job* job) : job_(job) {
           op_name2parallel_conf_.emplace(op_name, placemnt_group->mutable_parallel_conf()).second);
     }
   }
+  FOR_RANGE(int32_t, i, 0, job->placement().blob_placement_group_size()) {
+    auto* blob_pg = job->mutable_placement()->mutable_blob_placement_group(i);
+    for (const auto& lbi : blob_pg->lbi()) {
+      CHECK(lbi2blob_parallel_conf_.emplace(lbi, blob_pg->mutable_parallel_conf()).second);
+    }
+  }
 }
 
 const OperatorConf& JobBuilder::OpConf4OpName(const std::string& op_name) const {
@@ -38,6 +44,10 @@ const OperatorConf& JobBuilder::OpConf4OpName(const std::string& op_name) const 
 
 const ParallelConf& JobBuilder::ParallelConf4OpName(const std::string& op_name) const {
   return *op_name2parallel_conf_.at(op_name);
+}
+
+const ParallelConf& JobBuilder::ParallelConf4Lbi(const LogicalBlobId& lbi) const {
+  return *lbi2blob_parallel_conf_.at(lbi);
 }
 
 void JobBuilder::AddOps(const ParallelConf& parallel_conf,

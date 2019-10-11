@@ -224,5 +224,6 @@ REGISTER_ACTOR(TaskType::kPrint, NormalForwardCompActor);
 REGISTER_ACTOR(TaskType::kForeignInput, NormalForwardCompActor);
 REGISTER_ACTOR(TaskType::kForeignOutput, NormalForwardCompActor);
 REGISTER_ACTOR(TaskType::kDistributeConcat, NormalForwardCompActor);
+REGISTER_ACTOR(TaskType::kDistributeSplit, NormalForwardCompActor);
 
 }  // namespace oneflow
