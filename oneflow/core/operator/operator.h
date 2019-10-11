@@ -114,6 +114,15 @@ class Operator {
       std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*,
       const SbpSignature* sbp_signature, std::function<void(OpContext*)> EnrollOpCtx) const;
 
+  Maybe<void> InferOutParallelDescIf(
+      std::function<ParallelDesc*(const std::string&)> ParallelDesc4Obn,
+      std::function<const BlobDesc*(const std::string&)> LogicalBlobDesc4Ibn, const ParallelDesc&,
+      const SbpSignature*) const;
+  virtual Maybe<void> InferOutParallelDesc(
+      std::function<ParallelDesc*(const std::string&)> ParallelDesc4Obn,
+      std::function<const BlobDesc*(const std::string&)> LogicalBlobDesc4Ibn, const ParallelDesc&,
+      const SbpSignature*) const;
+
   Maybe<void> InferBatchAxisIf(
       const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
       std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
