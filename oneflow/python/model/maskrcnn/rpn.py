@@ -9,6 +9,8 @@ def _Conv2d(
     kernel_size,
     name,
     activation=flow.keras.activations.sigmoid,
+    weight_name=None,
+    bias_name=None,
 ):
     return flow.layers.conv2d(
         inputs=inputs,
@@ -21,6 +23,8 @@ def _Conv2d(
         activation=activation,
         use_bias=True,
         name=name,
+        weight_name=weight_name,
+        bias_name=bias_name,
     )
 
 
@@ -53,14 +57,30 @@ class RPNHead(object):
                     3,
                     "conv{}".format(layer_i),
                     flow.keras.activations.relu,
+                    weight_name="conv_weight-weight",
+                    bias_name="conv_bias-bias",
                 )
 
                 cls_logits = flow.transpose(
-                    _Conv2d(x, 3, 1, "cls_logit{}".format(layer_i)),
+                    _Conv2d(
+                        x,
+                        3,
+                        1,
+                        "cls_logit{}".format(layer_i),
+                        weight_name="cls_logits_weight-weight",
+                        bias_name="cls_logits_bias-bias",
+                    ),
                     perm=[0, 2, 3, 1],
                 )
                 bbox_preds = flow.transpose(
-                    _Conv2d(x, 12, 1, "bbox_pred{}".format(layer_i)),
+                    _Conv2d(
+                        x,
+                        12,
+                        1,
+                        "bbox_pred{}".format(layer_i),
+                        weight_name="bbox_pred_weight-weight",
+                        bias_name="bbox_pred_bias-bias",
+                    ),
                     perm=[0, 2, 3, 1],
                 )
 
@@ -247,6 +267,14 @@ def safe_top_k(inputs, k):
 class RPNProposal(object):
     def __init__(self, cfg):
         self.cfg = cfg
+        if cfg.TRAINING:
+            self.top_n_per_fm = cfg.RPN.TOP_N_PER_FM_TRAIN
+            self.nms_top_n = cfg.RPN.NMS_TOP_N_TRAIN
+            self.top_n_per_img = cfg.RPN.TOP_N_PER_IMG_TRAIN
+        else:
+            self.top_n_per_fm = cfg.RPN.TOP_N_PER_FM_TEST
+            self.nms_top_n = cfg.RPN.NMS_TOP_N_TEST
+            self.top_n_per_img = cfg.RPN.TOP_N_PER_IMG_TEST
 
     # anchors_list: list of [num_anchors_i, 4] wrt. fpn layers
     # image_size_list: list of [2,] wrt. images
@@ -271,8 +299,7 @@ class RPNProposal(object):
                 score_list = []
                 for layer_i in range(len(cls_logit_list[0])):
                     pre_nms_top_k_inds = safe_top_k(
-                        cls_logit_list[img_idx][layer_i],
-                        k=self.cfg.RPN.PRE_NMS_TOP_N,
+                        cls_logit_list[img_idx][layer_i], k=self.top_n_per_fm
                     )
                     score_per_layer = flow.local_gather(
                         cls_logit_list[img_idx][layer_i], pre_nms_top_k_inds
@@ -317,7 +344,7 @@ class RPNProposal(object):
                             flow.detection.nms(
                                 proposal_per_layer,
                                 nms_iou_threshold=self.cfg.RPN.NMS_THRESH,
-                                post_nms_top_n=self.cfg.RPN.POST_NMS_TOP_N,
+                                post_nms_top_n=self.nms_top_n,
                             )
                         ),
                         axis=[1],
@@ -337,13 +364,13 @@ class RPNProposal(object):
 
                 proposal_in_one_img = flow.local_gather(
                     proposal_in_one_img,
-                    safe_top_k(score_in_one_img, k=self.cfg.RPN.POST_NMS_TOP_N),
+                    safe_top_k(score_in_one_img, k=self.top_n_per_img),
                 )
                 if self.cfg.TRAINING is True:
                     proposal_in_one_img = flow.concat(
                         [proposal_in_one_img, resized_gt_boxes_list[img_idx]],
                         axis=0,
-                    )   
+                    )
 
                 proposals.append(proposal_in_one_img)
 

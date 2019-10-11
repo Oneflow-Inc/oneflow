@@ -6,13 +6,17 @@ _C.TRAINING = True
 #  Decoder
 # ---------------------------------------------------------------------------- #
 _C.DECODER = CN()
-# Dataset for train or evaluation
-_C.DECODER.DATA_DIR = "/dataset/mask_rcnn/sample_1_train"
+# Dataset for train and test
+_C.DECODER.DATA_DIR_TRAIN = "/dataset/mask_rcnn/sample_1_train"
+_C.DECODER.DATA_DIR_TEST = "/dataset/mask_rcnn/sample_1_train"
 # Static shape to store images, should walk through the dataset to find it
-_C.DECODER.IMAGE_STATIC_SIZE = [1344, 800]
+_C.DECODER.IMAGE_STATIC_SIZE_TRAIN = [1344, 800]
+_C.DECODER.IMAGE_STATIC_SIZE_TEST = [1344, 800]
 # Preprocess params: target resize
-_C.DECODER.RESIZE_TARGET_SIZE = 800
-_C.DECODER.RESIZE_MAX_SIZE = 1333
+_C.DECODER.RESIZE_TARGET_SIZE_TRAIN = 800
+_C.DECODER.RESIZE_MAX_SIZE_TRAIN = 1333
+_C.DECODER.RESIZE_TARGET_SIZE_TEST = 800
+_C.DECODER.RESIZE_MAX_SIZE_TEST = 1333
 # Preprocess params: norm by channel
 _C.DECODER.PREPROCESS_NORMAL_MEAN = [102.9801, 115.9465, 122.7717]
 _C.DECODER.PREPROCESS_NORMAL_STD = [1.0, 1.0, 1.0]
@@ -52,10 +56,13 @@ _C.RPN.WEIGHT_H = 1.0
 _C.RPN.RANDOM_SUBSAMPLE = False
 
 # RPN post processor
-_C.RPN.PRE_NMS_TOP_N = 2000
-_C.RPN.POST_NMS_TOP_N = 2000
+_C.RPN.TOP_N_PER_FM_TRAIN = 2000
+_C.RPN.NMS_TOP_N_TRAIN = 2000
+_C.RPN.TOP_N_PER_IMG_TRAIN = 2000
+_C.RPN.TOP_N_PER_FM_TEST = 2000
+_C.RPN.NMS_TOP_N_TEST = 2000
+_C.RPN.TOP_N_PER_IMG_TEST = 2000
 _C.RPN.NMS_THRESH = 0.7
-_C.RPN.TOP_N_PER_IMG = 2000
 
 # ---------------------------------------------------------------------------- #
 #  BOX Head

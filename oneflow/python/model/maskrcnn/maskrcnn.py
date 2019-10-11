@@ -9,6 +9,8 @@ from box_head import BoxHead
 from mask_head import MaskHead
 
 import argparse
+from datetime import datetime
+import os
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
@@ -41,6 +43,21 @@ parser.add_argument(
     action="store_true",
     required=False,
 )
+parser.add_argument(
+    "-eval", "--eval", default=False, action="store_true", required=False
+)
+parser.add_argument(
+    "-cp", "--ctrl_port", type=int, default=19765, required=False
+)
+parser.add_argument(
+    "-save",
+    "--model_save_dir",
+    type=str,
+    default="./model_save-{}".format(
+        str(datetime.now().strftime("%Y-%m-%d--%H-%M-%S"))
+    ),
+    required=False,
+)
 
 terminal_args = parser.parse_args()
 
@@ -65,7 +82,7 @@ def get_numpy_placeholders():
         "gt_boxes": np.random.randn(N, R, 4).astype(np.float32),
         "gt_segms": np.random.randn(N, G, 28, 28).astype(np.int8),
         "gt_labels": np.random.randn(N, G).astype(np.int32),
-        "rpn_proposals": np.random.randn(1000, 4).astype(np.float32),
+        "rpn_proposals": np.random.randn(2000, 4).astype(np.float32),
         "fpn_feature_map1": np.random.randn(1, 256, 512, 512).astype(
             np.float32
         ),
@@ -230,6 +247,27 @@ if terminal_args.mock_dataset:
         return outputs
 
 
+if terminal_args.eval:
+
+    @flow.function
+    def maskrcnn_eval(
+        images=flow.input_blob_def(
+            placeholders["images"].shape, dtype=flow.float32, is_dynamic=True
+        ),
+        images_size=flow.input_blob_def(
+            placeholders["images_size"].shape,
+            dtype=flow.float32,
+            is_dynamic=True,
+        ),
+    ):
+        cfg = get_default_cfgs()
+        if terminal_args.config_file is not None:
+            cfg.merge_from_file(terminal_args.config_file)
+        cfg.freeze()
+        print(cfg)
+        return maskrcnn_eval(images, images_size)
+
+
 if terminal_args.rcnn_eval:
 
     @flow.function
@@ -278,7 +316,7 @@ if terminal_args.rcnn_eval:
 
 if __name__ == "__main__":
     flow.config.gpu_device_num(terminal_args.gpu_num_per_node)
-    flow.config.ctrl_port(19878)
+    flow.config.ctrl_port(terminal_args.ctrl_port)
 
     flow.config.default_data_type(flow.float)
     check_point = flow.train.CheckPoint()
@@ -291,19 +329,19 @@ if __name__ == "__main__":
             import numpy as np
 
             rpn_proposals = np.load(
-                "/home/xfjiang/rcnn_eval_fake_data/rpn_proposals.npy"
+                "/home/xfjiang/rcnn_eval_fake_data/iter_0/rpn/final_proposals_img_0.(1000, 4).npy"
             )
             fpn_feature_map1 = np.load(
-                "/home/xfjiang/rcnn_eval_fake_data/fpn_fm1.npy"
+                "/home/xfjiang/rcnn_eval_fake_data/iter_0/backbone/CHECK_POINT_fpn_feature.layer1.(1, 256, 320, 200).npy"
             )
             fpn_feature_map2 = np.load(
-                "/home/xfjiang/rcnn_eval_fake_data/fpn_fm2.npy"
+                "/home/xfjiang/rcnn_eval_fake_data/iter_0/backbone/CHECK_POINT_fpn_feature.layer2.(1, 256, 160, 100).npy"
             )
             fpn_feature_map3 = np.load(
-                "/home/xfjiang/rcnn_eval_fake_data/fpn_fm3.npy"
+                "/home/xfjiang/rcnn_eval_fake_data/iter_0/backbone/CHECK_POINT_fpn_feature.layer3.(1, 256, 80, 50).npy"
             )
             fpn_feature_map4 = np.load(
-                "/home/xfjiang/rcnn_eval_fake_data/fpn_fm4.npy"
+                "/home/xfjiang/rcnn_eval_fake_data/iter_0/backbone/CHECK_POINT_fpn_feature.layer4.(1, 256, 40, 25).npy"
             )
             results = debug_rcnn_eval(
                 rpn_proposals,
@@ -313,6 +351,11 @@ if __name__ == "__main__":
                 fpn_feature_map4,
             ).get()
             print(results)
+        elif terminal_args.eval:
+            # TODO: load images and images_size from PyTorch
+            images = None
+            images_size = None
+            results = maskrcnn_eval(images, images_size)
         elif terminal_args.mock_dataset:
             if terminal_args.rpn_only:
                 print(
@@ -332,6 +375,14 @@ if __name__ == "__main__":
                     )
                 )
             for i in range(10):
+                if i % 10 == 0:
+                    if not os.path.exists(terminal_args.model_save_dir):
+                        os.makedirs(terminal_args.model_save_dir)
+                    model_dst = os.path.join(
+                        terminal_args.model_save_dir, "iter-" + str(i)
+                    )
+                    print("saving models to {}".format(model_dst))
+                    check_point.save(model_dst)
                 train_loss = mock_train(
                     debug_data.blob("images"),
                     debug_data.blob("image_size"),
