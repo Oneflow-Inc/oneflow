@@ -51,14 +51,6 @@ void DataLoadOp::VirtualGenKernelConf(
     *data_field->mutable_shape() = blob_conf.shape();
     data_field->set_dtype(blob_conf.data_type());
   }
-  // Set transforms
-  for (const auto& trans_conf : conf.transforms()) {
-    *this_kernel_conf->add_transforms() = trans_conf;
-    // Set image alignment
-    if (trans_conf.has_target_resize()) {
-      this_kernel_conf->set_image_alignment(trans_conf.target_resize().alignment());
-    }
-  }
   // Set parallel info
   int64_t device_batch_size = GetDeviceBatchSize(conf.batch_size(), parallel_ctx);
   this_kernel_conf->set_device_batch_size(device_batch_size);

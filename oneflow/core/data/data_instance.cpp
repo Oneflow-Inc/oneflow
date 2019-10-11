@@ -4,7 +4,7 @@
 namespace oneflow {
 namespace data {
 
-DataInstance::DataInstance(const DataInstanceProto& proto) {
+void DataInstance::InitFromProto(const DataInstanceProto& proto) {
   for (const auto& field_proto : proto.data_fields()) {
     auto data_field_ptr = CreateDataFieldFromProto(field_proto);
     CHECK(AddField(std::move(data_field_ptr)));

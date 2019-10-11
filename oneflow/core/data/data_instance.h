@@ -9,7 +9,7 @@ namespace data {
 class DataInstance {
  public:
   DataInstance() = default;
-  DataInstance(const DataInstanceProto& proto);
+  void InitFromProto(const DataInstanceProto& proto);
 
   template<DataSourceCase dsrc, typename... Args>
   DataField* GetOrCreateField(Args&&... args);

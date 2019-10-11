@@ -5,58 +5,59 @@
 #include "oneflow/core/data/data_sampler.h"
 #include "oneflow/core/data/ring_queue.h"
 #include "oneflow/core/thread/thread_pool.h"
+#include "oneflow/core/common/buffer.h"
+#include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/core/kernel/kernel.pb.h"
 #include <thread>
 
 namespace oneflow {
 namespace data {
 
-class BatchCollator final {
+class BatchDataInstance final {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(BatchCollator);
-  BatchCollator() = delete;
-  ~BatchCollator() = default;
-  BatchCollator(size_t batch_size) : batch_size_(batch_size), cur_slot_(0), batch_(batch_size) {}
+  OF_DISALLOW_COPY_AND_MOVE(BatchDataInstance);
+  BatchDataInstance(size_t batch_size) : data_inst_vec_(batch_size), fill_count_(0) {}
+  ~BatchDataInstance() = default;
 
-  size_t GetEmptySlot();
-  bool IsFull() const { return cur_slot_ == batch_size_; }
-  bool IsReady() const;
-  void Fill(size_t slot, std::unique_ptr<DataInstance>&& data_inst);
-  void ForEach(std::function<void(DataInstance*)>) const;
+  DataInstance* Get(size_t idx_in_batch) { return &(data_inst_vec_.at(idx_in_batch)); }
+  size_t Size() const { return data_inst_vec_.size(); }
+  void IncreaseFillCount() { fill_count_ += 1; }
+  bool IsReady() { return data_inst_vec_.size() == fill_count_.load(); }
+  void ForEach(std::function<void(DataInstance*)> handler) {
+    for (auto& data_inst : data_inst_vec_) { handler(&data_inst); }
+  }
 
  private:
-  friend class DataLoader;
-  size_t batch_size_;
-  size_t cur_slot_;
-  std::vector<std::unique_ptr<DataInstance>> batch_;
+  std::vector<DataInstance> data_inst_vec_;
+  std::atomic<size_t> fill_count_;
 };
 
 class DataLoader final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(DataLoader);
-  DataLoader() = delete;
+  DataLoader(const DataLoadOpConf& op_conf, const DataLoadKernelConf& kernel_conf);
   ~DataLoader();
-  DataLoader(const DataLoadKernelConf& conf, std::shared_ptr<Dataset> dataset, size_t qsize);
 
-  void Close() { is_closed_ = true; }
-  std::vector<std::unique_ptr<DataInstance>> FetchBatch();
+  std::shared_ptr<BatchDataInstance> FetchBatch();
 
- private:
+ protected:
+  std::shared_ptr<BatchDataInstance> AcquireGetBatch(size_t batch_size);
   void LoadBatch();
-  BatchCollator* GetBatchCollator();
-  bool IsImageAlignNeeded(BatchCollator* collator);
-  void ImageAlign(BatchCollator* collator);
+  void Close();
+  bool IsImageAlignNeeded(size_t& alignment);
+  void ImageAlign(std::shared_ptr<BatchDataInstance> batch_data_inst_ptr, size_t alignment);
 
  private:
-  size_t batch_size_;
+  DataLoadOpConf op_conf_;
+  DataLoadKernelConf kernel_conf_;
+
   std::shared_ptr<Dataset> dataset_;
   DataSamplerContext sampler_ctx_;
-  const DataLoadKernelConf* conf_;
+  Buffer<std::shared_ptr<BatchDataInstance>> batch_buffer_;
 
   bool is_closed_;
   std::thread load_thrd_;
   ThreadPool worker_pool_;
-  util::RingQueue<BatchCollator> batch_queue_;
 };
 
 }  // namespace data

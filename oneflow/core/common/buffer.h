@@ -17,6 +17,7 @@ class Buffer final {
   BufferStatus Send(const T& item);
   BufferStatus Receive(T* item);
   BufferStatus TryReceive(T* item);
+  BufferStatus ReceiveIf(T* item, std::function<bool(const T&)> pred);
   void Close();
 
  private:
@@ -52,6 +53,17 @@ template<typename T>
 BufferStatus Buffer<T>::TryReceive(T* item) {
   std::unique_lock<std::mutex> lock(mutex_);
   if (queue_.empty()) { return is_closed_ ? kBufferStatusErrorClosed : kBufferStatusEmpty; }
+  *item = queue_.front();
+  queue_.pop();
+  if (queue_.size() < max_len_) { cond_.notify_all(); }
+  return kBufferStatusSuccess;
+}
+
+template<typename T>
+BufferStatus Buffer<T>::ReceiveIf(T* item, std::function<bool(const T&)> pred) {
+  std::unique_lock<std::mutex> lock(mutex_);
+  cond_.wait(lock, [this, pred]() { return (!queue_.empty() && pred(queue_.front())) || is_closed_; });
+  if (queue_.empty()) { return kBufferStatusErrorClosed; }
   *item = queue_.front();
   queue_.pop();
   if (queue_.size() < max_len_) { cond_.notify_all(); }
