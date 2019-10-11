@@ -18,6 +18,8 @@ int64_t InferKeyValueOutByteSize(const Shape& shape, DataType data_type) {
 
 }  // namespace
 
+size_t InferTempStorageForCUBArgmaxAtCompile(int32_t num_row, int32_t num_col, DataType data_type);
+
 class ArgmaxOp final : public Operator {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ArgmaxOp);
@@ -38,9 +40,11 @@ class ArgmaxOp final : public Operator {
     // input
     const BlobDesc* in = GetBlobDesc4BnInOp("in");
     // fw_buf: temp_storage
-    int64_t temp_storage_bytes = 100;
     BlobDesc* temp_storage = GetBlobDesc4BnInOp("temp_storage");
-    temp_storage->mut_shape() = Shape({temp_storage_bytes});
+    int32_t num_col = in->shape().dim_vec().back();
+    int32_t num_row = in->shape().elem_cnt() / num_col;
+    temp_storage->mut_shape() = Shape({static_cast<int64_t>(
+        InferTempStorageForCUBArgmaxAtCompile(num_row, num_col, in->data_type()))});
     temp_storage->set_data_type(DataType::kChar);
     temp_storage->set_is_dynamic(false);
     // fw_buf: key_value_out

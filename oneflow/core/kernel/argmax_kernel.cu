@@ -44,24 +44,12 @@ class ArgmaxGpuKernel : public KernelIf<DeviceType::kGPU> {
     cub::TransformInputIterator<int32_t, SegmentOffsetCreator, cub::CountingInputIterator<int32_t>>
         segment_offsets_t(counting_iter, SegmentOffsetCreator(num_col));
 
-    size_t rt_inferred_temp_storage_bytes = -1;
-    auto err = cub::DeviceSegmentedReduce::ArgMax(
-        /* d_temp_storage */ static_cast<void*>(NULL),
-        /* temp_storage_bytes */ rt_inferred_temp_storage_bytes,
-        /* d_in */ static_cast<T*>(NULL),
-        /* d_out */ static_cast<cub::KeyValuePair<int32_t, T>*>(NULL),
-        /* num_segments */ num_row,
-        /* d_begin_offsets */ segment_offsets_t,
-        /* d_end_offsets */ segment_offsets_t + 1,
-        /* stream */ ctx.device_ctx->cuda_stream());
-    CudaCheck(err);
-    CHECK_LE(rt_inferred_temp_storage_bytes, temp_storage_blob->shape().elem_cnt());
-
     cub::KeyValuePair<int32_t, T>* key_value_out_ptr =
         reinterpret_cast<cub::KeyValuePair<int32_t, T>*>(key_value_out_blob->mut_dptr<char>());
-    err = cub::DeviceSegmentedReduce::ArgMax(
+    size_t temp_storage_bytes = temp_storage_blob->shape().elem_cnt();
+    auto err = cub::DeviceSegmentedReduce::ArgMax(
         /* d_temp_storage */ temp_storage_blob->mut_dptr<char>(),
-        /* temp_storage_bytes */ rt_inferred_temp_storage_bytes,
+        /* temp_storage_bytes */ temp_storage_bytes,
         /* d_in */ in_blob->dptr<T>(),
         /* d_out */ key_value_out_ptr,
         /* num_segments */ num_row,
