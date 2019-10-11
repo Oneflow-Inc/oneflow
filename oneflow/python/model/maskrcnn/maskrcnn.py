@@ -48,9 +48,15 @@ parser.add_argument(
 )
 parser.add_argument(
     "-cp", "--ctrl_port", type=int, default=19765, required=False
-)     
+)
 parser.add_argument(
-    "-save", "--model_save_dir", type=str, default="./model_save-{}".format(str(datetime.now().strftime("%Y-%m-%d--%H-%M-%S"))), required=False
+    "-save",
+    "--model_save_dir",
+    type=str,
+    default="./model_save-{}".format(
+        str(datetime.now().strftime("%Y-%m-%d--%H-%M-%S"))
+    ),
+    required=False,
 )
 
 terminal_args = parser.parse_args()
@@ -372,7 +378,11 @@ if __name__ == "__main__":
                 if i % 10 == 0:
                     if not os.path.exists(terminal_args.model_save_dir):
                         os.makedirs(terminal_args.model_save_dir)
-                    check_point.save(os.path.join(terminal_args.model_save_dir, "iter-" + str(i)))
+                    model_dst = os.path.join(
+                        terminal_args.model_save_dir, "iter-" + str(i)
+                    )
+                    print("saving models to {}".format(model_dst))
+                    check_point.save(model_dst)
                 train_loss = mock_train(
                     debug_data.blob("images"),
                     debug_data.blob("image_size"),
