@@ -38,6 +38,8 @@ class ParallelDesc final {
   // Setters
   void set_device_type(DeviceType device_type);
 
+  ParallelConf GetParallelIdOnlyParallelConf(int64_t parallel_id) const;
+
   bool EqualsIgnoringDeviceType(const ParallelDesc& rhs) const;
   bool Equals(const ParallelDesc& rhs) const;
   bool operator==(const ParallelDesc& rhs) const { return Equals(rhs); }

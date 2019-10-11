@@ -17,10 +17,6 @@ class PlacementScope(object):
         if isinstance(machine_device_ids, (list, tuple)) == False:
             machine_device_ids = [machine_device_ids]
         self.machine_device_ids_ = machine_device_ids
-        self.op_confs_ = []
-
-    def AppendOpConf(self, op_conf):
-        self.op_confs_.append(op_conf)
 
     def ParallelConf4OpConf(self, op_conf):
         return _MakeParallelConf(self.GetDeviceTag4OpConf(op_conf), self.machine_device_ids)
@@ -41,14 +37,8 @@ class PlacementScope(object):
     @property
     def machine_device_ids(self): return self.machine_device_ids_
 
-    @property
-    def op_confs(self): return self.op_confs_
-
     def __enter__(self):
         placement_context.PlacementScopeStackPush(self)
-
-    def ParallelConfAndOpNames(self):
-        raise NotImplementedError
 
     def __exit__(self, *args):
         assert self == placement_context.PlacementScopeStackPop()
@@ -64,10 +54,6 @@ class FixedPlacementScope(PlacementScope):
 
     def GetDeviceTag4OpConf(self, op_conf): return self.default_device_tag
 
-    def ParallelConfAndOpNames(self):
-        parallel_conf = _MakeParallelConf(self.default_device_tag, self.machine_device_ids)
-        yield parallel_conf, map(lambda op_conf: op_conf.name, self.op_confs)
-
 @oneflow_export('device_prior_placement')
 class DevicePriorPlacementScope(PlacementScope):
     def __init__(self, device_tag, machine_device_ids):
@@ -76,17 +62,6 @@ class DevicePriorPlacementScope(PlacementScope):
     def GetDeviceTag4OpConf(self, op_conf):
         if op_util.IsOpConfOnlyCpuSupported(op_conf): return "cpu"
         return self.default_device_tag
-
-    def ParallelConfAndOpNames(self):
-        device_tag2op_names = {}
-        for op_conf in self.op_confs:
-            device_tag = self.GetDeviceTag4OpConf(op_conf)
-            if device_tag not in device_tag2op_names: device_tag2op_names[device_tag] = []
-            device_tag2op_names[device_tag].append(op_conf.name)
-        for device_tag, op_names in device_tag2op_names.items():
-            if len(op_names) == 0: continue
-            parallel_conf = _MakeParallelConf(device_tag, self.machine_device_ids)
-            yield parallel_conf, op_names
 
 def _MakeParallelConf(device_tag, machine_device_ids):
     assert isinstance(machine_device_ids, collections.Sized)

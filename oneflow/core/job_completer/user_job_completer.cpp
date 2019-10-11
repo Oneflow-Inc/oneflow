@@ -156,8 +156,7 @@ void FixReturnOpParallelConf(Job* job) {
   for (const auto& op_conf : job->net().op()) {
     if (op_conf.has_return_conf() == false) { continue; }
     LogicalBlobId lbi = GenLogicalBlobId(op_conf.return_conf().in());
-    job_builder.MutParallelConfOnlyOnce(op_conf.name(),
-                                        job_builder.ParallelConf4OpName(lbi.op_name()));
+    job_builder.MutParallelConfOnlyOnce(op_conf.name(), job_builder.ParallelConf4Lbi(lbi));
   }
 }
 

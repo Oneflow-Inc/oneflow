@@ -146,6 +146,15 @@ Maybe<void> ParallelDesc::SanityCheck() {
   return Maybe<void>::Ok();
 }
 
+ParallelConf ParallelDesc::GetParallelIdOnlyParallelConf(int64_t parallel_id) const {
+  ParallelConf parallel_conf;
+  std::string device_tag = DeviceTag4DeviceType(device_type());
+  std::string machine_id = std::to_string(MachineIdForParallelId(parallel_id));
+  std::string device_id = std::to_string(DeviceIdForParallelId(parallel_id));
+  parallel_conf.add_device_name(machine_id + ":" + device_tag + ":" + device_id);
+  return parallel_conf;
+}
+
 int64_t ParallelDesc::MachineIdForParallelId(int64_t parallel_id) const {
   return parallel_id2machine_id_.at(parallel_id);
 }

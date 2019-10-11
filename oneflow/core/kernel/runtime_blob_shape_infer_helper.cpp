@@ -47,6 +47,7 @@ void RuntimeBlobShapeInferHelper::InferDenseShape(
                                       [](OpContext*) {}));
   for (const auto& obn : op_->output_bns()) {
     auto* blob = BnInOp2Blob(obn);
+    if (blob == nullptr) { continue; }
     const auto& blob_desc = bn_in_op2blob_desc_.at(obn);
     CHECK_EQ(blob->data_type(), blob_desc->data_type());
     CHECK_EQ(blob->blob_desc().is_dynamic(), blob_desc->is_dynamic());
