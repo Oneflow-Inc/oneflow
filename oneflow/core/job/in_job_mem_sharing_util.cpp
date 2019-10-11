@@ -79,8 +79,23 @@ void InitMemoryChains(Plan* plan,
                   return lhs_order_in_graph < rhs_order_in_graph;
                 });
     }
-    TODO();  // set info
   }
+}
+
+bool TryMergeMemChain2MergedChains(
+    std::vector<MemoryChain*>* merged_chains, MemoryChain* mem_chain,
+    const std::function<bool(const MemoryChain*, const MemoryChain*)>& IsStrictOrderL2R) {
+  for (MemoryChain* merged_chain : *merged_chains) {
+    if (IsStrictOrderL2R(merged_chain, mem_chain)) {
+      merged_chain->sorted_tasks.insert(merged_chain->sorted_tasks.end(),
+                                        mem_chain->sorted_tasks.begin(),
+                                        mem_chain->sorted_tasks.end());
+      merged_chain->mem_reused_regsts.insert(mem_chain->mem_reused_regsts.begin(),
+                                             mem_chain->mem_reused_regsts.end());
+      return true;
+    }
+  }
+  return false;
 }
 
 void GenMemChainTasksAndRegsts(
@@ -91,7 +106,50 @@ void GenMemChainTasksAndRegsts(
   mem_chain2mem_reused_regsts->clear();
   HashMap<int64_t, HashMap<int64_t, MemoryChain>> device2chain2mem_chain;
   InitMemoryChains(plan, &device2chain2mem_chain);
-  TODO();
+
+  auto IsStrictOrderL2R = [&](const MemoryChain* lhs, const MemoryChain* rhs) -> bool {
+    const TaskProto* l_chain_sink_task_node = lhs->sorted_tasks.back();
+    const TaskProto* r_chain_source_task_node = rhs->sorted_tasks.front();
+    CHECK_LT(l_chain_sink_task_node->task_set_info().order_in_graph(),
+             r_chain_source_task_node->task_set_info().order_in_graph());
+    return plan_task_graph.IsReachable(l_chain_sink_task_node->task_id(),
+                                       r_chain_source_task_node->task_id());
+  };
+
+  int64_t mem_chain_id = 0;
+
+  for (auto& device_chain_pair : device2chain2mem_chain) {
+    if (device_chain_pair.second.empty()) { continue; }
+    // sort
+    std::vector<MemoryChain*> mem_chains;
+    std::vector<MemoryChain*> merged_chains;
+    for (auto& pair : device_chain_pair.second) { mem_chains.push_back(&pair.second); }
+    std::sort(mem_chains.begin(), mem_chains.end(), [&](MemoryChain* lhs, MemoryChain* rhs) {
+      int64_t lhs_order_in_graph = lhs->sorted_tasks.front()->task_set_info().order_in_graph();
+      int64_t rhs_order_in_graph = rhs->sorted_tasks.front()->task_set_info().order_in_graph();
+      CHECK_NE(lhs_order_in_graph, rhs_order_in_graph);
+      return lhs_order_in_graph < rhs_order_in_graph;
+    });
+    // merge
+    for (MemoryChain* mem_chain : mem_chains) {
+      if (!TryMergeMemChain2MergedChains(&merged_chains, mem_chain, IsStrictOrderL2R)) {
+        merged_chains.push_back(mem_chain);
+      }
+    }
+    for (MemoryChain* merged_chain : merged_chains) {
+      std::vector<TaskProto*>* sorted_tasks = &((*mem_chain2sorted_tasks)[mem_chain_id]);
+      CHECK(sorted_tasks->empty());
+      sorted_tasks->insert(sorted_tasks->end(), merged_chain->sorted_tasks.begin(),
+                           merged_chain->sorted_tasks.end());
+      HashSet<RegstDescProto*>* mem_reused_regsts = &((*mem_chain2mem_reused_regsts)[mem_chain_id]);
+      CHECK(mem_reused_regsts->empty());
+      mem_reused_regsts->insert(merged_chain->mem_reused_regsts.begin(),
+                                merged_chain->mem_reused_regsts.end());
+      ++mem_chain_id;
+    }
+  }
+
+  CHECK_EQ(mem_chain2sorted_tasks->size(), mem_chain2mem_reused_regsts->size());
 }
 
 void GenRegstApplyReleaseQueueAndRegstMutualExclusions(
@@ -164,16 +222,15 @@ void GenRegstApplyReleaseQueueAndRegstMutualExclusions(
   HashSet<RegstDescProto*> remain_regsts;
   for (int64_t i = 0; i < sorted_tasks->size(); ++i) {
     for (RegstDescProto* apply_regst : apply_regsts_queue->at(i)) {
+      CHECK(regst2mutual_exclusion_regsts->emplace(apply_regst, HashSet<RegstDescProto*>()).second);
       for (RegstDescProto* remain_regst : remain_regsts) {
-        CHECK((*regst2mutual_exclusion_regsts)[apply_regst].insert(remain_regst).second);
-        CHECK((*regst2mutual_exclusion_regsts)[remain_regst].insert(apply_regst).second);
+        CHECK(regst2mutual_exclusion_regsts->at(apply_regst).insert(remain_regst).second);
+        CHECK(regst2mutual_exclusion_regsts->at(remain_regst).insert(apply_regst).second);
       }
       CHECK(remain_regsts.insert(apply_regst).second);
     }
     for (RegstDescProto* release_regst : release_regsts_queue->at(i)) {
-      auto it = remain_regsts.find(release_regst);
-      CHECK(it != remain_regsts.end());
-      remain_regsts.erase(it);
+      CHECK_EQ(remain_regsts.erase(release_regst), 1);
     }
   }
   CHECK(remain_regsts.empty());
@@ -404,21 +461,25 @@ void InJobMemSharingUtil::InferMemBlockId4MemReusedRegst(Plan* plan,
 
   // step 3: choose best one for each mem chain and set offset for inplace consumer regst
   for (const auto& pair : mem_chain2results) {
+    CHECK(!mem_chain2mem_reused_regsts.at(pair.first).empty());
+    CHECK(!mem_chain2sorted_tasks.at(pair.first).empty());
     const std::vector<MemBlockResultInfo>& results = pair.second;
     int64_t best_algo_id = 0;
     for (int64_t algo_id = 0; algo_id < kMemReuseAlgorithmNum; ++algo_id) {
-      if (!mem_chain2mem_reused_regsts.at(pair.first).empty()) {
-        CHECK_GT(results.at(algo_id).mem_block_size, 0);
-        CHECK(!results.at(algo_id).regst_desc2offset.empty());
-      }
+      CHECK_GT(results.at(algo_id).mem_block_size, 0);
+      CHECK(!results.at(algo_id).regst_desc2offset.empty());
       if (results.at(algo_id).mem_block_size < results.at(best_algo_id).mem_block_size) {
         best_algo_id = algo_id;
       }
     }
     LOG(INFO) << "mem reuse algorithm choose result : algorithm " << best_algo_id
-              << " is best in mem_chain " << pair.first;
+              << " is best in mem_chain " << pair.first
+              << " use mem_block_size =  " << results.at(best_algo_id).mem_block_size;
     int64_t mem_block_id = Global<IDMgr>::Get()->NewMemBlockId();
     const MemBlockResultInfo& best_result = results.at(best_algo_id);
+    CHECK_EQ(mem_chain2mem_reused_regsts.at(pair.first).size(),
+             (best_result.regst_desc2offset.size()
+              + mem_chain2inplace_consumer_regst_descs.at(pair.first).size()));
     for (const auto& regst_offset_pair : best_result.regst_desc2offset) {
       RegstDescProto* regst_desc = regst_offset_pair.first;
       int64_t offset = regst_offset_pair.second;
