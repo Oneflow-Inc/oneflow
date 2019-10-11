@@ -17,20 +17,6 @@ load("//tensorflow/compiler/xla:xla.bzl", "xla_proto_library")
 load("@local_config_cuda//cuda:build_defs.bzl", "if_cuda")
 
 cc_library(
-    name = "swap_gpu_stream",
-    srcs = [
-        "swap_gpu_stream.cc",
-        "swap_gpu_stream.h",
-    ],
-    visibility = ["//visibility:public"],
-    deps = [
-        "//tensorflow/stream_executor:stream",
-        "//tensorflow/compiler/xla/service/gpu:gpu_executable",
-        "@local_config_cuda//cuda:cuda_headers",
-    ],
-)
-
-cc_library(
     name = "xla_runtime_util",
     srcs = [
         "xla_runtime_util.cc",
@@ -38,6 +24,7 @@ cc_library(
     ],
     visibility = ["//visibility:public"],
     deps = [
+        "//tensorflow/stream_executor:stream",
         "//tensorflow/compiler/xla/client:local_client",
         "//tensorflow/compiler/xla/service/cpu:cpu_executable",
         "//tensorflow/compiler/xla/service/gpu:gpu_executable",
@@ -70,7 +57,6 @@ tf_cc_shared_object(
         "//tensorflow/core:lib",
         "@com_google_absl//absl/strings",
     ] + if_cuda([
-        ":swap_gpu_stream",
         "//tensorflow/compiler/xla/service:gpu_plugin",
 #        "//tensorflow/compiler/jit:xla_gpu_jit",
     ]),

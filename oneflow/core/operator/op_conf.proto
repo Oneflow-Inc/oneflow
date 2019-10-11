@@ -1477,8 +1477,8 @@ message XlaLaunchOpConf {
     required string name = 1;
     required string in = 2;
     required string out = 3;
-    optional bool is_mutable = 4 [default = false];
-    required DeviceType device_type = 5;
+    required DeviceType device_type = 4;
+    optional bool is_mutable = 5 [default = false];
   }
   message ResourceScope {
     message Shape {
@@ -1497,6 +1497,7 @@ message XlaLaunchOpConf {
   repeated string in = 1;
   repeated string out = 2;
   required Attribute attr = 3;
+  optional bool is_model_update = 4 [default = false];
 }
 
 message OperatorConf {

@@ -1,3 +1,4 @@
+#include "tensorflow/stream_executor/gpu/gpu_stream.h"
 #include "tensorflow/compiler/xla/shape_tree.h"
 #include "tensorflow/compiler/xla/status_macros.h"
 #include "tensorflow/compiler/xla/service/hlo_value.h"
@@ -8,6 +9,13 @@
 #include "tensorflow/compiler/jit/xla_lib/xla_runtime_util.h"
 
 namespace xla {
+
+void SwapGpuStreamHandle(se::Stream *stream, void **gpu_stream) {
+  void **cuda_stream = se::gpu::AsGpuStream(stream)->GpuStreamMemberHack();
+  void *tmp_stream = *cuda_stream;
+  *cuda_stream = *gpu_stream;
+  *gpu_stream = tmp_stream;
+}
 
 inline size_t Align(int alignment, size_t size) {
   return (size + alignment - 1) / alignment * alignment;

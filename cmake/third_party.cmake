@@ -112,7 +112,11 @@ if (BUILD_CUDA)
   include(cub)
   include(nccl)
 
-  list(APPEND oneflow_third_party_libs -Wl,--whole-archive ${cuda_lib_dir}/libcublas_static.a -Wl,--no-whole-archive)
+  if (WITH_XLA)
+    # Fix conflicts between tensorflow cublas dso and oneflow static cublas.
+    # TODO(hjchen2) Should commit a issue about this fix.
+    list(APPEND oneflow_third_party_libs -Wl,--whole-archive ${cuda_lib_dir}/libcublas_static.a -Wl,--no-whole-archive)
+  endif()
   list(APPEND oneflow_third_party_libs ${CUDA_LIBRARIES})
   list(APPEND oneflow_third_party_libs ${CUDNN_LIBRARIES})
   list(APPEND oneflow_third_party_libs ${NCCL_STATIC_LIBRARIES})

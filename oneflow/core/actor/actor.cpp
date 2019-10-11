@@ -4,6 +4,8 @@
 
 namespace oneflow {
 
+static const int32_t ACTOR_MESSAGE_SENT_INTERVAL = 20;
+
 namespace {
 
 void CheckInplaceRegstDescId(const TaskProto& task_proto) {
@@ -369,11 +371,13 @@ void Actor::ActUntilFail() {
     AsyncSendCustomizedConsumedRegstMsgToProducer();
     AsyncSendNaiveConsumedRegstMsgToProducer();
 
-    std::deque<ActorMsg> msgs;
-    msgs.swap(async_actor_msg_deque_);
-    device_ctx_->AddCallBack([msgs]() {
-      for (const ActorMsg& msg : msgs) { Global<ActorMsgBus>::Get()->SendMsg(msg); }
-    });
+    if (async_actor_msg_deque_.size() > 0 ) {
+      std::deque<ActorMsg> msgs;
+      msgs.swap(async_actor_msg_deque_);
+      device_ctx_->AddCallBack([msgs]() {
+        for (const ActorMsg& msg : msgs) { Global<ActorMsgBus>::Get()->SendMsg(msg); }
+      });
+    }
   }
 }
 
@@ -627,6 +631,13 @@ void Actor::AsyncSendMsg(const ActorMsg& msg) {
   } else {
     // device_ctx_->AddCallBack(callback);
     async_actor_msg_deque_.push_back(msg);
+    if (async_actor_msg_deque_.size() >= ACTOR_MESSAGE_SENT_INTERVAL) {
+      std::deque<ActorMsg> msgs;
+      msgs.swap(async_actor_msg_deque_);
+      device_ctx_->AddCallBack([msgs]() {
+        for (const ActorMsg& msg : msgs) { Global<ActorMsgBus>::Get()->SendMsg(msg); }
+      });
+    }
   }
 }
 

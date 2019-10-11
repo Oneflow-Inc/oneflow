@@ -22,8 +22,13 @@ class XlaLaunchResourceMgr {
   static xla::LocalClient *GetOrCreateLocalClient(
       const se::Platform *platform, int intra_op_num_threads);
 
+  struct StreamId {
+    se::Stream *stream;
+    uint64_t id;
+  };
+
   static DeviceBufferAllocator *GetOrCreateBufferAllocator(
-      const se::Platform *platform, se::Stream *stream, int device_ordinal);
+      const se::Platform *platform, const StreamId &stream, int device_ordinal);
   
   static Eigen::ThreadPoolDevice *GetOrCreateEigenHostDevice();
 };
@@ -69,6 +74,8 @@ class XlaLaunchContext {
   DeviceCtx *device_ctx_;
   DeviceType device_type_;
   int device_ordinal_ = -1;
+
+  uint64_t stream_id_ = 0;
 
   Eigen::ThreadPoolDevice *host_device_;
 

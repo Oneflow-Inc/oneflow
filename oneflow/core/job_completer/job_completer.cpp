@@ -14,7 +14,7 @@
 #include "oneflow/core/job_completer/auto_learning_rate.h"
 
 #ifdef WITH_XLA
-#include "oneflow/xla/rewrite_optimizer.h"
+#include "oneflow/xla/of2xla/pass/xla_optimize_pass.h"
 DECLARE_bool(use_xla_jit);
 #endif  // WITH_XLA
 
@@ -132,10 +132,18 @@ void GenerateOpConf4Trainning(const OpGraph& op_graph, JobBuilder* job_builder) 
   UpdateOpSbpSignatureHint(op_graph, job_builder);
 }
 
+#ifdef WITH_XLA
 void RewriteOptimizerOp(const OpGraph& op_graph, Job* job) {
   mola::XlaGraph graph(&op_graph);
-  RewriteOptimizerGraph(graph, job);
+  auto options = mola::CreateDefaultOptimizeOptions();
+  options.graph = &graph;
+  options.job = job;
+  mola::RunOptimizePass("RewriteOptimizer", options);
+
+  TeePersistentLogStream::Create(
+  absl::StrCat("job_rewrite_optimizer", GlobalJobDesc().job_id()))->Write(*job);
 }
+#endif
 
 std::function<ParallelConf*(const std::string&)> MakeGetterMutParallelConf4OpName(
     Placement* placement) {
@@ -356,9 +364,6 @@ void JobCompleter::Complete(Job* job) const {
 #ifdef WITH_XLA
     if (FLAGS_use_xla_jit) {
       WithOpGraphAndMutJob(job, &RewriteOptimizerOp);
-      const JobDesc& job_desc = GlobalJobDesc();
-      TeePersistentLogStream::Create(
-      absl::StrCat("job_rewrite_optimizer", job_desc.job_id()))->Write(*job);
     }
 #endif
     WithOpGraphAndMutJobBuilder(job, &RewriteBoxingWithAllReduce);
