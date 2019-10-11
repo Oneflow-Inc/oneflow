@@ -14,7 +14,7 @@ from oneflow.python.oneflow_export import oneflow_export
 class PlacementScope(object):
     def __init__(self, device_tag, machine_device_ids):
         self.device_tag_ = device_tag
-        if isinstance(machine_device_ids, collections.Sized) == False:
+        if isinstance(machine_device_ids, (list, tuple)) == False:
             machine_device_ids = [machine_device_ids]
         self.machine_device_ids_ = machine_device_ids
         self.op_confs_ = []
