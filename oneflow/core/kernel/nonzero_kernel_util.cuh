@@ -6,9 +6,9 @@
 
 namespace oneflow {
 
-template<typename T>
-cudaError_t CubReduceCount(void* tmp, size_t& tmp_bytes, const T* in, int32_t* out, int num_items,
-                           cudaStream_t stream);
+template<typename T, typename OutputIter>
+cudaError_t CubSelectFlagged(cudaStream_t stream, int num_items, void* tmp, size_t& tmp_bytes,
+                             const T* flags, OutputIter out, int32_t* num_selected);
 
 }  // namespace oneflow
 

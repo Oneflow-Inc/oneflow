@@ -6,23 +6,42 @@ namespace oneflow {
 
 namespace {
 
-template<typename T>
-struct IsNonzero {
-  bool operator()(const T& x) const { return (x != static_cast<T>(0)); }
+template<size_t NDims>
+struct OutputIterByNDims {
+  // Required iterator traits
+  typedef OutputIterByNDims self_type;
+  typedef std::ptrdiff_t difference_type;
+  typedef void value_type;
+  typedef void pointer;
+  typedef int32_t& reference;
+  typedef std::random_access_iterator_tag iterator_category;
+
+  OutputIterByNDims(int32_t* ptr, int32_t index_max_size)
+      : ptr_(ptr), index_max_size_(index_max_size) {}
+
+  OF_DEVICE_FUNC int32_t& operator[](int i) {
+    assert(0 <= i && i < index_max_size_);
+    return *(ptr_ + (i * NDims));
+  }
+
+ private:
+  int32_t* ptr_;
+  int32_t index_max_size_;
 };
 
 }  // namespace
 
-template<typename T>
-cudaError_t CubReduceCount(void* tmp, size_t& tmp_bytes, const T* in, int32_t* out, int num_items,
-                           cudaStream_t stream) {
-  IsNonzero<T> is_nonzero;
-  cub::TransformInputIterator<bool, IsNonzero<T>, const T*> in_iter(in, is_nonzero);
-  return cub::DeviceReduce::Sum(tmp, tmp_bytes, in_iter, out, num_items, stream, false);
-  return cudaSuccess;
+template<typename T, typename OutputIter>
+cudaError_t CubSelectFlagged(cudaStream_t stream, int num_items, void* tmp, size_t& tmp_bytes,
+                             const T* flags, OutputIter out, int32_t* num_selected) {
+  bool convert_to_bool = std::is_convertible<T, bool>::value;
+  CHECK(convert_to_bool);
+  cub::CountingInputIterator<int32_t> flat_index_counter(0);
+  return cub::DeviceSelect::Flagged(tmp, tmp_bytes, flat_index_counter, flags, out, num_selected,
+                                    num_items, stream, false);
 }
 
-template<typename T>
+template<typename T, size_t NDims>
 class NonzeroGpuKernel : public KernelIf<DeviceType::kGPU> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(NonzeroGpuKernel);
@@ -35,25 +54,44 @@ class NonzeroGpuKernel : public KernelIf<DeviceType::kGPU> {
   void ForwardDataContent(const KernelCtx& ctx,
                           std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
     const Blob* in_blob = BnInOp2Blob("in");
+    int32_t elem_cnt = in_blob->shape().elem_cnt();
 
     Blob* num_nonzero_blob = BnInOp2Blob("num_nonzero");
-    Blob* nnz_tmp_blob = BnInOp2Blob("nnz_tmp");
-    size_t tmp_bytes = nnz_tmp_blob->shape().elem_cnt();
-    CudaCheck(CubReduceCount<T>(nnz_tmp_blob->mut_dptr(), tmp_bytes, in_blob->dptr<T>(),
-                                num_nonzero_blob->mut_dptr<int32_t>(), in_blob->shape().elem_cnt(),
-                                ctx.device_ctx->cuda_stream()));
 
     Blob* out_blob = BnInOp2Blob("out");
+    Blob* out_tmp_blob = BnInOp2Blob("out_tmp");
+    CHECK_EQ(elem_cnt, out_blob->shape().At(0));
+    size_t tmp_bytes = out_tmp_blob->shape().elem_cnt();
+    int32_t num_selected = 0;
+    if (NDims == 1) {
+      CudaCheck(CubSelectFlagged<T, int32_t*>(ctx.device_ctx->cuda_stream(), elem_cnt,
+                                              out_tmp_blob->mut_dptr(), tmp_bytes,
+                                              in_blob->dptr<T>(), out_blob->mut_dptr<int32_t>(),
+                                              num_nonzero_blob->mut_dptr<int32_t>()));
+    } else {
+      OutputIterByNDims<NDims> out_iter(out_blob->mut_dptr<int32_t>(), elem_cnt);
+      CudaCheck(CubSelectFlagged<T, OutputIterByNDims<NDims>>(
+          ctx.device_ctx->cuda_stream(), elem_cnt, out_tmp_blob->mut_dptr(), tmp_bytes,
+          in_blob->dptr<T>(), out_iter, num_nonzero_blob->mut_dptr<int32_t>()));
+    }
   }
 };
 
-#define REGISTER_NONZERO_GPU_KERNEL(dtype)                                                        \
-  REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kLocalNonzeroConf, DeviceType::kGPU, dtype, \
-                                        NonzeroGpuKernel<dtype>)
+#define REGISTER_NONZERO_GPU_KERNEL_WITH_NDIMS(dtype, ndims)                           \
+  NEW_REGISTER_KERNEL(OperatorConf::kLocalNonzeroConf, NonzeroGpuKernel<dtype, ndims>) \
+      .SetIsMatchedPred([](const KernelConf& conf) {                                   \
+        return (DeviceType::kGPU == conf.op_attribute().op_conf().device_type())       \
+               && (GetDataType<dtype>::value == conf.data_type())                      \
+               && (ndims == conf.nonzero_gpu_kernel_conf().num_axes());                \
+      });
+
+#define REGISTER_NONZERO_GPU_KERNEL(dtype)          \
+  REGISTER_NONZERO_GPU_KERNEL_WITH_NDIMS(dtype, 1); \
+  REGISTER_NONZERO_GPU_KERNEL_WITH_NDIMS(dtype, 2); \
+  REGISTER_NONZERO_GPU_KERNEL_WITH_NDIMS(dtype, 3);
 
 REGISTER_NONZERO_GPU_KERNEL(float);
-REGISTER_NONZERO_GPU_KERNEL(double);
+REGISTER_NONZERO_GPU_KERNEL(int8_t);
 REGISTER_NONZERO_GPU_KERNEL(int32_t);
-REGISTER_NONZERO_GPU_KERNEL(int64_t);
 
 }  // namespace oneflow
