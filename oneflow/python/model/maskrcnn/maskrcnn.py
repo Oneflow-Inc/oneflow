@@ -244,6 +244,8 @@ if terminal_args.mock_dataset:
     ):
         flow.config.train.primary_lr(0.00001)
         flow.config.train.model_update_conf(dict(naive_conf={}))
+        # TODO: distribute map only support remote blob for now, so identity is required here
+        image_sizes = flow.identity(image_sizes)
         outputs = maskrcnn_train(
             images, image_sizes, gt_boxes, gt_segms, gt_labels
         )
