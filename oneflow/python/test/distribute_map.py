@@ -17,8 +17,8 @@ def DistributeConcat(a = flow.input_blob_def((2, 5), is_dynamic=True)):
   with flow.device_prior_placement("gpu", "0:0"):
     b = flow.identity(a)
     print(b.parallel_conf)
-  ret = flow.advance.distribute_concat([b, b])
-  ret = flow.advance.distribute_map(ret, flow.math.relu)
+  ret = flow.advanced.distribute_concat([b, b])
+  ret = flow.advanced.distribute_map(ret, flow.math.relu)
   print ret.shape
 
 index = [-1, 0, 1, 2, 3]
