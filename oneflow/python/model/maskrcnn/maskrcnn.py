@@ -375,7 +375,7 @@ if __name__ == "__main__":
                     )
                 )
             for i in range(10):
-                if i % 10 == 0:
+                if i == 0 or (i + 1) % 10 == 0:
                     if not os.path.exists(terminal_args.model_save_dir):
                         os.makedirs(terminal_args.model_save_dir)
                     model_dst = os.path.join(
