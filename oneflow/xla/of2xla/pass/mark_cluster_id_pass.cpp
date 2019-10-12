@@ -8,6 +8,9 @@
 namespace oneflow {
 namespace mola {
 
+static const std::string _ReduceSplitType = "ReduceSplit";
+static const std::string _ReduceConcatType = "ReduceConcat";
+
 class MarkClusterIdPass : public XlaOptimizePass {
  public:
   MarkClusterIdPass(const OptimizeOptions &options)
@@ -25,8 +28,6 @@ class MarkClusterIdPass : public XlaOptimizePass {
   bool IsSatisfySbpPolicy(const ClusterEdge *edge) const;
   bool IsSatisfyTimeShape(const ClusterEdge *edge) const;
 
-  util::Set<ClusterNode *> FindAllParents(ClusterNode *node) const;
-  util::Set<ClusterNode *> FindAllChildrens(ClusterNode *node) const;
   void DisableExtraPreDependence(const std::string &type);
   void DisableExtraPostDependence(const std::string &type);
 
@@ -134,8 +135,10 @@ void MarkClusterIdPass::BuildClusterNodesAndEdges() {
   }
 }
 
-util::Set<ClusterNode *> MarkClusterIdPass::FindAllParents(
-    ClusterNode *node) const {
+template <typename VisitEdgesFn, typename VisitNodeFn>
+util::Set<ClusterNode *> VisitNodes(ClusterNode *node,
+                                    VisitEdgesFn edges_func,
+                                    VisitNodeFn node_func) {
   std::unordered_set<ClusterNode *> visited;
   std::queue<ClusterNode *> visit_queue;
   visit_queue.push(node);
@@ -143,27 +146,8 @@ util::Set<ClusterNode *> MarkClusterIdPass::FindAllParents(
   while (!visit_queue.empty()) {
     ClusterNode *n = visit_queue.front();
     visit_queue.pop();
-    for (ClusterEdge *edge : n->in_edges()) {
-      ClusterNode *p = edge->start();
-      if (visited.insert(p).second) {
-        visit_queue.push(p);
-      }
-    }
-  }
-  return std::move(visited);
-}
-
-util::Set<ClusterNode *> MarkClusterIdPass::FindAllChildrens(
-    ClusterNode *node) const {
-  std::unordered_set<ClusterNode *> visited;
-  std::queue<ClusterNode *> visit_queue;
-  visit_queue.push(node);
-
-  while (!visit_queue.empty()) {
-    ClusterNode *n = visit_queue.front();
-    visit_queue.pop();
-    for (ClusterEdge *edge : n->out_edges()) {
-      ClusterNode *p = edge->end();
+    for (ClusterEdge *edge : edges_func(n)) {
+      ClusterNode *p = node_func(edge);
       if (visited.insert(p).second) {
         visit_queue.push(p);
       }
@@ -181,7 +165,10 @@ void MarkClusterIdPass::DisableExtraPreDependence(const std::string &type) {
   }
 
   for (ClusterNode *node : reference_nodes) {
-    util::Set<ClusterNode *> parents = FindAllParents(node);
+    util::Set<ClusterNode *> parents =
+        VisitNodes(node,
+                   [](ClusterNode *node) { return node->in_edges(); },
+                   [](ClusterEdge *edge) { return edge->start(); });
     for (ClusterNode *p : parents) {
       for (ClusterEdge *e : p->out_edges()) {
         if (!parents.count(e->end())) {
@@ -201,7 +188,10 @@ void MarkClusterIdPass::DisableExtraPostDependence(const std::string &type) {
   }
 
   for (ClusterNode *node : reference_nodes) {
-    util::Set<ClusterNode *> childrens = FindAllChildrens(node);
+    util::Set<ClusterNode *> childrens =
+      VisitNodes(node,
+                 [](ClusterNode *node) { return node->out_edges(); },
+                 [](ClusterEdge *edge) { return edge->end(); });
     for (ClusterNode *p : childrens) {
       for (ClusterEdge *e : p->in_edges()) {
         if (!childrens.count(e->start())) {
@@ -213,8 +203,8 @@ void MarkClusterIdPass::DisableExtraPostDependence(const std::string &type) {
 }
 
 void MarkClusterIdPass::DetermineFusionDisabledEdges() {
-  DisableExtraPreDependence("ReduceConcat");
-  DisableExtraPostDependence("ReduceSplit");
+  DisableExtraPreDependence(_ReduceConcatType);
+  DisableExtraPostDependence(_ReduceSplitType);
 }
 
 template <>
@@ -226,6 +216,7 @@ struct GraphTrait<MarkClusterIdPass> {
 void MarkClusterIdPass::ClusteringSubgraphs() {
   int32_t maximum_nodes =
       this->options_.clustering_options.clustering_maximum_nodes;
+
   int32_t iter_count = 10;
   for (int i = 0; i < iter_count; ++i) {
     bool has_changed = false;
@@ -271,7 +262,7 @@ void MarkClusterIdPass::AddNoNodeForBetterClustering() {
 
   for (ClusterNode *start : root_nodes_) {
     util::Set<ClusterNode *> childrens;
-    if (start->type() == "ReduceSplit") {
+    if (start->type() == _ReduceSplitType) {
       for (ClusterEdge *edge : start->out_edges()) {
         childrens.insert(edge->end());
       }
