@@ -39,7 +39,7 @@ void GenerateBackwardOpConf4DistributeSplit(
   concat_op_conf->set_axis(distribute_split_conf.axis());
   const bool has_diff_0 = DiffLbi4BnInOp(op.input_bns().Get(0)) != nullptr;
   FOR_RANGE(int32_t, i, 0, distribute_split_conf.out_size()) {
-    const std::string& obn_of_distribute_split_op = op.input_bns().Get(i);
+    const std::string& obn_of_distribute_split_op = op.out_bns().Get(i);
     const bool has_diff_i = DiffLbi4BnInOp(obn_of_distribute_split_op) != nullptr;
     CHECK(has_diff_i == has_diff_0);
     if (has_diff_i) {
