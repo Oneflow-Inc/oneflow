@@ -119,7 +119,70 @@ struct NdarrayUtil final {
       const XpuVarNdarray<const T>& a, const XpuVarNdarray<const T>& b) {
     CHECK_EQ(a.shape().NumAxes(), y.shape().NumAxes());
     CHECK_EQ(b.shape().NumAxes(), y.shape().NumAxes());
-    return Binary<binary_func>::SwitchBroadcastApply(SwitchCase(y.shape().NumAxes()), ctx, y, a, b);
+    int64_t num_axes = y.shape().NumAxes();
+    std::vector<int64_t> ndims_list(num_axes);
+    ndims_list.at(0) = 0;
+
+    auto IsXpuShapeContinuesOne = [&](const XpuShape& shape, int64_t index) -> bool {
+      CHECK(index > 0 && index < shape.NumAxes());
+      return shape.At(index) == 1 && shape.At(index - 1) == 1;
+    };
+
+    auto IsXpuShapeBothContinuesMultiAndEqual = [&](const XpuShape& lhs, const XpuShape& rhs,
+                                                    int64_t index) -> bool {
+      CHECK(index > 0 && index < lhs.NumAxes() && index < rhs.NumAxes());
+      return lhs.At(index) > 1 && lhs.At(index - 1) > 1 && lhs.At(index) == rhs.At(index)
+             && lhs.At(index - 1) == rhs.At(index - 1);
+    };
+
+    for (int64_t i = 1; i < num_axes; ++i) {
+      if (IsXpuShapeContinuesOne(a.shape(), i) || IsXpuShapeContinuesOne(b.shape(), i)
+          || IsXpuShapeBothContinuesMultiAndEqual(a.shape(), b.shape(), i)) {
+        ndims_list.at(i) = ndims_list.at(i - 1);
+      } else {
+        ndims_list.at(i) = ndims_list.at(i - 1) + 1;
+      }
+    }
+
+    int64_t merged_num_axes = ndims_list.back() + 1;
+    CHECK_LE(merged_num_axes, num_axes);
+
+    if (merged_num_axes == num_axes) {
+      return Binary<binary_func>::SwitchBroadcastApply(SwitchCase(y.shape().NumAxes()), ctx, y, a,
+                                                       b);
+
+    } else {
+      std::vector<int64_t> shape_a(merged_num_axes);
+      std::vector<int64_t> shape_b(merged_num_axes);
+      std::vector<int64_t> shape_y(merged_num_axes);
+      int64_t merged_i = 0;
+      for (int64_t i = 0; i < num_axes; ++i) {
+        if (i == 0) {
+          shape_a.at(0) = a.shape().At(0);
+          shape_b.at(0) = b.shape().At(0);
+          shape_y.at(0) = y.shape().At(0);
+          continue;
+        }
+        if (ndims_list.at(i) == ndims_list.at(i - 1)) {
+          shape_a.at(merged_i) *= a.shape().At(i);
+          shape_b.at(merged_i) *= b.shape().At(i);
+          shape_y.at(merged_i) *= y.shape().At(i);
+        } else {
+          ++merged_i;
+          shape_a.at(merged_i) = a.shape().At(i);
+          shape_b.at(merged_i) = b.shape().At(i);
+          shape_y.at(merged_i) = y.shape().At(i);
+        }
+      }
+      CHECK_EQ(merged_i, merged_num_axes - 1);
+      XpuVarNdarray<const T> reshape_a(Shape(shape_a), a.host_ptr());
+      XpuVarNdarray<const T> reshape_b(Shape(shape_b), b.host_ptr());
+      XpuVarNdarray<typename BinaryFuncTrait<binary_func, T>::return_type> reshape_y(Shape(shape_y),
+                                                                                     y.host_ptr());
+
+      return Binary<binary_func>::SwitchBroadcastApply(SwitchCase(reshape_y.shape().NumAxes()), ctx,
+                                                       reshape_y, reshape_a, reshape_b);
+    }
   }
 
   template<template<typename> class binary_func>
