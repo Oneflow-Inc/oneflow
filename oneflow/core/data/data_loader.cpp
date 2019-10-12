@@ -40,8 +40,8 @@ std::shared_ptr<DataLoader::BatchDataInstance> DataLoader::FetchBatch() {
 }
 
 void DataLoader::LoadBatch() {
-  std::vector<int64_t> batch_idx_seq = dataset_->FetchBatchIndexSequence(
-      &sampler_ctx_, kernel_conf_.device_batch_size());
+  std::vector<int64_t> batch_idx_seq =
+      dataset_->FetchBatchIndexSequence(&sampler_ctx_, kernel_conf_.device_batch_size());
 
   BatchDataInstance batch_data(batch_idx_seq.size());
   auto batch_data_inst_ptr = std::make_shared<BatchDataInstance>(std::move(batch_data));
@@ -77,16 +77,14 @@ bool DataLoader::IsImageAlignNeeded(size_t& alignment) {
   return false;
 }
 
-void DataLoader::ImageAlign(BatchDataInstance* batch_data_inst,
-                            size_t alignment) {
+void DataLoader::ImageAlign(BatchDataInstance* batch_data_inst, size_t alignment) {
   int64_t max_rows = -1;
   int64_t max_cols = -1;
   int64_t channels = -1;
   bool has_image_field = true;
 
   for (DataInstance& data_inst : *batch_data_inst) {
-    auto* image_field =
-        dynamic_cast<ImageDataField*>(data_inst.GetField<DataSourceCase::kImage>());
+    auto* image_field = dynamic_cast<ImageDataField*>(data_inst.GetField<DataSourceCase::kImage>());
     if (image_field == nullptr) {
       has_image_field = false;
       break;
@@ -110,8 +108,7 @@ void DataLoader::ImageAlign(BatchDataInstance* batch_data_inst,
 
   BlockingCounter bc(batch_data_inst->size());
   for (DataInstance& data_inst : *batch_data_inst) {
-    auto* image_field =
-        dynamic_cast<ImageDataField*>(data_inst.GetField<DataSourceCase::kImage>());
+    auto* image_field = dynamic_cast<ImageDataField*>(data_inst.GetField<DataSourceCase::kImage>());
     CHECK_NOTNULL(image_field);
     worker_pool_.AddWork([image_field, max_cols, max_rows, &bc]() {
       auto& image_mat = image_field->data();

@@ -18,11 +18,8 @@ class Dataset {
   virtual size_t Size() const = 0;
   virtual void GetData(int64_t idx, DataInstance* data) const = 0;
   virtual int64_t GetGroupId(int64_t idx) const { UNIMPLEMENTED(); }
-  void SubmitSamplerContext(DataSamplerContext* ctx) { 
-    sampler_->SubmitContext(ctx);
-  }
-  std::vector<int64_t> FetchBatchIndexSequence(DataSamplerContext* ctx,
-                                               size_t batch_size) {
+  void SubmitSamplerContext(DataSamplerContext* ctx) { sampler_->SubmitContext(ctx); }
+  std::vector<int64_t> FetchBatchIndexSequence(DataSamplerContext* ctx, size_t batch_size) {
     return sampler_->FetchBatchIndexSequence(ctx, batch_size);
   }
 

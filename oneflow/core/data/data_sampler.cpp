@@ -36,7 +36,7 @@ void DataSampler::CheckIndexSequenceRanOut(DataSamplerContext* ctx) {
   CHECK(count_it != epoch2consumed_count_.end());
   count_it->second += ctx->count_;
   CHECK_LE(count_it->second, max_count_);
-  if (count_it->second == max_count_) { 
+  if (count_it->second == max_count_) {
     auto it = epoch2index_seq_.find(ctx->epoch_);
     CHECK(it != epoch2index_seq_.end());
     epoch2index_seq_.erase(it);

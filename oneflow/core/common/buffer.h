@@ -62,7 +62,8 @@ BufferStatus Buffer<T>::TryReceive(T* item) {
 template<typename T>
 BufferStatus Buffer<T>::ReceiveIf(T* item, std::function<bool(const T&)> pred) {
   std::unique_lock<std::mutex> lock(mutex_);
-  cond_.wait(lock, [this, pred]() { return (!queue_.empty() && pred(queue_.front())) || is_closed_; });
+  cond_.wait(lock,
+             [this, pred]() { return (!queue_.empty() && pred(queue_.front())) || is_closed_; });
   if (queue_.empty()) { return kBufferStatusErrorClosed; }
   *item = queue_.front();
   queue_.pop();
