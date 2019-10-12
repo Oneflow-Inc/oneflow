@@ -49,11 +49,12 @@ void DataLoader::LoadBatch() {
   BlockingCounter bc(batch_idx_seq.size());
   FOR_RANGE(size_t, idx_in_batch, 0, batch_idx_seq.size()) {
     int64_t data_idx = batch_idx_seq.at(idx_in_batch);
-    worker_pool_.AddWork([this, data_idx, idx_in_batch, batch_data_inst_ptr]() {
+    worker_pool_.AddWork([this, data_idx, idx_in_batch, batch_data_inst_ptr, &bc]() {
       DataInstance* data_inst = &(batch_data_inst_ptr->at(idx_in_batch));
       data_inst->InitFromProto(kernel_conf_.data_instance());
       dataset_->GetData(data_idx, data_inst);
       for (const auto& trans_proto : op_conf_.transforms()) { data_inst->Transform(trans_proto); }
+      bc.Decrease();
     });
   }
   bc.WaitUntilCntEqualZero();
@@ -112,11 +113,12 @@ void DataLoader::ImageAlign(BatchDataInstance* batch_data_inst,
     auto* image_field =
         dynamic_cast<ImageDataField*>(data_inst.GetField<DataSourceCase::kImage>());
     CHECK_NOTNULL(image_field);
-    worker_pool_.AddWork([=]() {
+    worker_pool_.AddWork([image_field, max_cols, max_rows, &bc]() {
       auto& image_mat = image_field->data();
       cv::Mat dst = cv::Mat::zeros(cv::Size(max_cols, max_rows), image_mat.type());
       image_mat.copyTo(dst(cv::Rect(0, 0, image_mat.cols, image_mat.rows)));
       image_field->data() = dst;
+      bc.Decrease();
     });
   }
   bc.WaitUntilCntEqualZero();
