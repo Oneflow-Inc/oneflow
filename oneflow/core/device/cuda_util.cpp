@@ -51,7 +51,7 @@ cudaDeviceProp global_device_prop;
 }  // namespace
 
 void InitGlobalCudaDeviceProp() {
-  CudaCheck(cudaGetDeviceProperties(&global_device_prop, 0));
+  cudaGetDeviceProperties(&global_device_prop, 0);
   if (IsCuda9OnTuringDevice()) {
     LOG(WARNING)
         << "CUDA 9 running on Turing device has known issues, consider upgrading to CUDA 10";
