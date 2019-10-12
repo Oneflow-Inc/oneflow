@@ -27,14 +27,12 @@ Maybe<void> RegisterWatcherOnlyOnce(ForeignWatcher* watcher) {
 }
 
 Maybe<bool> IsOpTypeCaseCpuSupportOnly(int64_t op_type_case) {
-  using namespace oneflow;
   using OnlyCpuSupport = OnlyCpuSupportPredicator;
   OF_CHECK(IsClassRegistered<OnlyCpuSupport>(op_type_case)) << ": op_type_case = " << op_type_case;
   return static_cast<bool>(*std::unique_ptr<OnlyCpuSupport>(NewObj<OnlyCpuSupport>(op_type_case)));
 }
 
 Maybe<void> InitEnvironmentBySerializedConfigProto(const std::string& config_proto_str) {
-  using namespace oneflow;
   ConfigProto config_proto;
   OF_CHECK(google::protobuf::TextFormat::ParseFromString(config_proto_str, &config_proto))
       << "InitEnvironmentBySerializedConfigProto(): failed to parse config_proto: "
@@ -66,7 +64,6 @@ Maybe<void> InitEnvironmentBySerializedConfigProto(const std::string& config_pro
 }
 
 Maybe<void> InitGlobalOneflow() {
-  using namespace oneflow;
   OF_CHECK(Global<MachineCtx>::Get()->IsThisMachineMaster());
   ClusterControl::MasterSendSessionStart();
   const JobSet& job_set = Global<JobBuildAndInferCtxMgr>::Get()->job_set();
@@ -80,7 +77,6 @@ Maybe<void> InitGlobalOneflow() {
 }
 
 Maybe<std::string> GetSerializedInterUserJobInfo() {
-  using namespace oneflow;
   OF_CHECK(Global<MachineCtx>::Get()->IsThisMachineMaster());
   OF_CHECK_NOTNULL(Global<Oneflow>::Get());
   OF_CHECK_NOTNULL(Global<InterUserJobInfo>::Get());
@@ -90,7 +86,6 @@ Maybe<std::string> GetSerializedInterUserJobInfo() {
 }
 
 Maybe<void> LaunchJob(const std::shared_ptr<oneflow::ForeignJobInstance>& cb) {
-  using namespace oneflow;
   OF_CHECK(Global<MachineCtx>::Get()->IsThisMachineMaster());
   OF_CHECK_NOTNULL(Global<Oneflow>::Get());
   const auto& job_name = cb->job_name();
@@ -108,7 +103,6 @@ Maybe<void> LaunchJob(const std::shared_ptr<oneflow::ForeignJobInstance>& cb) {
 }
 
 Maybe<void> DestroyGlobalOneflow() {
-  using namespace oneflow;
   if (Global<Oneflow>::Get() == nullptr) { return Maybe<void>::Ok(); }
   OF_CHECK(Global<MachineCtx>::Get()->IsThisMachineMaster());
   OF_CHECK_NOTNULL(Global<Oneflow>::Get());
@@ -119,7 +113,6 @@ Maybe<void> DestroyGlobalOneflow() {
 }
 
 Maybe<void> DestroyGlobalEnvironment() {
-  using namespace oneflow;
   if (Global<EnvironmentObjectsScope>::Get() == nullptr) { return Maybe<void>::Ok(); }
   OF_CHECK(Global<MachineCtx>::Get()->IsThisMachineMaster());
   ClusterControl::MasterSendHaltAndWaitAck();
@@ -129,6 +122,13 @@ Maybe<void> DestroyGlobalEnvironment() {
 
 Maybe<long long> GetDeviceType4DeviceTag(const std::string& device_tag) {
   return *JUST(DeviceType4DeviceTag(device_tag));
+}
+
+Maybe<std::string> GetSerializedMachineId2DeviceIdListOFRecord(
+    const std::string& parallel_conf_str) {
+  ParallelConf parallel_conf;
+  OF_CHECK(TxtString2PbMessage(parallel_conf_str, &parallel_conf)) << "parallel conf parse failed";
+  return PbMessage2TxtString(*JUST(ParseMachineAndDeviceIdList(parallel_conf)));
 }
 
 namespace {
