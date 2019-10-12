@@ -1891,6 +1891,18 @@ message Dim0DynamicToFixedOpConf {
   required string mask = 3;
 }
 
+message ReduceMaxOpConf {
+  required string in = 1;
+  required string out = 2;
+  repeated int32 axis = 3;
+  optional bool keep_dims = 4 [default = false];
+}
+
+message ArgmaxOpConf {
+  required string in = 1;
+  required string out = 2;
+}
+
 message OperatorConf {
   required string name = 1;
   optional bool trainable = 3 [default = true];
@@ -2090,6 +2102,8 @@ message OperatorConf {
     RsqrtOpConf rsqrt_conf = 515;
     ScalarAddOpConf scalar_add_conf = 516;
     ScalarMulOpConf scalar_mul_conf = 517;
+    ReduceMaxOpConf reduce_max_conf = 518;
+    ArgmaxOpConf argmax_conf = 519;
 
     // detection op
     MaskrcnnPositiveNegativeSampleOpConf maskrcnn_positive_negative_sample_conf = 601;
