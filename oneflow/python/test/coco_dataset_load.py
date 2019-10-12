@@ -43,7 +43,7 @@ parser.add_argument(
 parser.add_argument(
     "-i", "--image_dir", type=str, default=COCO_IMAGE_DIR, required=False
 )
-parser.add_argument("-b", "--batch_size", type=int, default=1, required=False)
+parser.add_argument("-b", "--batch_size", type=int, default=2, required=False)
 parser.add_argument(
     "-bc", "--batch_cache_size", type=int, default=3, required=False
 )
@@ -76,7 +76,7 @@ def coco_data_load_job():
         data_util.DataSourceCase.kObjectBoundingBox,
         shape=(256, 4),
         dtype=flow.float,
-        variable_length_axes=(0),
+        variable_length_axes=(0,),
         is_dynamic=True,
     )
     data_loader.add_blob(
@@ -84,7 +84,7 @@ def coco_data_load_job():
         data_util.DataSourceCase.kObjectLabel,
         shape=(256,),
         dtype=flow.int32,
-        variable_length_axes=(0),
+        variable_length_axes=(0,),
         is_dynamic=True,
     )
     data_loader.add_transform(flow.data.TargetResizeTransform(800, 1333, 32))
@@ -101,6 +101,9 @@ def main():
     # flow.config.ctrl_port(9788)
     flow.config.default_data_type(flow.float)
     image, gt_bbox, gt_labels = coco_data_load_job().get()
+    np.save("image", image.ndarray())
+    np.save("gt_bbox", gt_bbox.ndarray())
+    np.save("gt_labels", gt_labels.ndarray())
 
 
 if __name__ == "__main__":

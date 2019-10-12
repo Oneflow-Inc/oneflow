@@ -74,6 +74,9 @@ Maybe<void> DataLoadOp::InferBlobDescs(
     out_blob_desc->set_data_type(blob_conf.data_type());
     out_blob_desc->set_is_dynamic(blob_conf.is_dynamic()
                                   || blob_conf.variable_length_axes_size() > 1);
+    if (blob_conf.variable_length_axes_size() > 0) { 
+      out_blob_desc->SetLoD(blob_conf.variable_length_axes_size() + 1);
+    }
   }
 
   return Maybe<void>::Ok();
