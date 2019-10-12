@@ -7,7 +7,7 @@ import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 
 from oneflow.python.oneflow_export import oneflow_export
 
-@oneflow_export("advance.distribute_concat", "debug.distribute_concat")
+@oneflow_export("advanced.distribute_concat", "debug.distribute_concat")
 def distribute_concat(xs, axis=0, name=None):
     import oneflow
     assert oneflow.placement.current_scope().parallel_size == len(xs)
