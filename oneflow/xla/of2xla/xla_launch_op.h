@@ -19,8 +19,8 @@ class XlaLaunchOp : public Operator {
       const ParallelContext* parallel_ctx) const override;
 
   LogicalNode* NewProperLogicalNode() const override {
-    const auto &xla_launch_conf = op_conf().xla_launch_conf();
-    const bool is_model_update = xla_launch_conf.is_model_update();
+    const auto &launch_conf = op_conf().xla_launch_conf();
+    const bool is_model_update = launch_conf.attr().is_model_update();
     if (is_model_update) {
       return new OptimizerLogicalNode;
     }

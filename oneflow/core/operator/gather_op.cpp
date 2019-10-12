@@ -46,6 +46,7 @@ Maybe<void> GatherOp::InferBlobDescs(
   const int64_t axis = GetGatherAxis(op_conf().gather_conf(), in);
   BlobDesc* out = GetBlobDesc4BnInOp("out");
   *out = *in;
+  out->set_has_dim0_valid_num_field(indices->has_dim0_valid_num_field());
   out->mut_shape() = Shape(GatherGetOutShape(in->shape(), indices->shape(), axis));
   return Maybe<void>::Ok();
 }

@@ -1,5 +1,9 @@
 #include "oneflow/python/oneflow_internal_helper.h"
 
+void RegisterWatcherOnlyOnce(oneflow::ForeignWatcher* watcher, std::string* error_str) {
+  return oneflow::RegisterWatcherOnlyOnce(watcher).GetDataAndSerializedErrorProto(error_str);
+}
+
 bool IsOpTypeCaseCpuSupportOnly(int64_t op_type_case, std::string* error_str) {
   return oneflow::IsOpTypeCaseCpuSupportOnly(op_type_case)
       .GetDataAndSerializedErrorProto(error_str, false);

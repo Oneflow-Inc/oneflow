@@ -1,9 +1,9 @@
 #ifndef ONEFLOW_CORE_COMPILER_OF2XLA_XLA_OP_COMPILER_REGISTRY_H_
 #define ONEFLOW_CORE_COMPILER_OF2XLA_XLA_OP_COMPILER_REGISTRY_H_
 
+#include <unordered_map>
 #include <string>
 #include <vector>
-#include <unordered_map>
 #include <memory>
 #include "glog/logging.h"
 

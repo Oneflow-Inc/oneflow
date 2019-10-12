@@ -79,7 +79,7 @@ template<int32_t NDims>
 Maybe<void> ConvOp<NDims>::InferOutBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature,
-    int64_t record_piece_size, std::function<void(OpContext*)> EnrollOpCtx) const {
+    std::function<void(OpContext*)> EnrollOpCtx) const {
   const std::string& data_format = GetValFromCustomizedConf<std::string>("data_format");
 
   // in
@@ -90,10 +90,10 @@ Maybe<void> ConvOp<NDims>::InferOutBlobDescs(
   // out
   int64_t data_num = in_blob_desc->shape().At(0);
   int32_t filters = GetValFromCustomizedConf<int32_t>("filters");
-  if (parallel_ctx->policy() == kModelParallel) {
-    BalancedSplitter splitter(filters, parallel_ctx->parallel_num());
-    filters = splitter.At(parallel_ctx->parallel_id()).size();
-  }
+  // only support data parallel
+  CHECK_OR_RETURN(parallel_ctx->parallel_num() == 1
+                  || sbp_signature->bn_in_op2sbp_parallel().at("weight").has_broadcast_parallel());
+
   std::vector<int64_t> out;
   GetOutAndPad(in_blob_desc->shape(), GetCustomizedConf(), &out, nullptr, nullptr);
   std::vector<int64_t> out_shape = {data_num, filters};
@@ -111,7 +111,7 @@ template<int32_t NDims>
 Maybe<void> ConvOp<NDims>::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature,
-    int64_t record_piece_size, std::function<void(OpContext*)> EnrollOpCtx) const {
+    std::function<void(OpContext*)> EnrollOpCtx) const {
   const std::string& data_format = GetValFromCustomizedConf<std::string>("data_format");
 
   // in
@@ -122,10 +122,11 @@ Maybe<void> ConvOp<NDims>::InferBlobDescs(
   // out
   int64_t data_num = in_blob_desc->shape().At(0);
   int32_t filters = GetValFromCustomizedConf<int32_t>("filters");
-  if (parallel_ctx->policy() == kModelParallel) {
-    BalancedSplitter splitter(filters, parallel_ctx->parallel_num());
-    filters = splitter.At(parallel_ctx->parallel_id()).size();
-  }
+
+  // only support data parallel
+  CHECK_OR_RETURN(parallel_ctx->parallel_num() == 1
+                  || sbp_signature->bn_in_op2sbp_parallel().at("weight").has_broadcast_parallel());
+
   std::vector<int64_t> out;
   GetOutAndPad(in_blob_desc->shape(), GetCustomizedConf(), &out, nullptr, nullptr);
   std::vector<int64_t> out_shape = {data_num, filters};

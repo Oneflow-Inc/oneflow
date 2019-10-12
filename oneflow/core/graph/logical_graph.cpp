@@ -53,12 +53,8 @@ void LogicalGraph::NaiveBuildFwStruct(
     cur_op_conf.set_device_type(parallel_desc_ptr->device_type());
     std::shared_ptr<Operator> cur_op = ConstructOp(cur_op_conf, &GlobalJobDesc());
     LogicalNode* cur_node = cur_op->NewProperLogicalNode();
-    if (cur_node->TypeName() == "PackForward" || cur_node->TypeName() == "UnpackForward") {
-      CHECK_EQ(0, GlobalJobDesc().job_conf().piece_size() % parallel_desc_ptr->parallel_num());
-    }
     AddAllocatedNode(cur_node);
     cur_node->mut_op_vec() = {cur_op};
-    cur_node->SoleOp()->FixParallelDesc(parallel_desc_ptr.get());
     cur_node->mut_parallel_desc() = parallel_desc_ptr;
     {
       const auto& name2shape = job_.helper().op_name2op_time_shape();
@@ -296,8 +292,10 @@ void LogicalGraph::ForEachNecessaryCtrlEdge(
       for (const auto& ctrl_in_op_name : op->op_conf().ctrl_in_op_name()) {
         const LogicalNode* src = op_name2node.at(ctrl_in_op_name);
         CHECK(!IsReachable(dst, src));
-        if (!IsReachable(src, dst)) {
-          CHECK(src->parallel_desc()->EqualsIgnoringPolicyAndDeviceType(*dst->parallel_desc()));
+        if (!IsReachable(src, dst)
+            || (dynamic_cast<const NcclTupleBroadcastLogicalNode*>(src) != nullptr
+                && dynamic_cast<const NcclTupleReduceLogicalNode*>(dst) != nullptr)) {
+          CHECK(src->parallel_desc()->EqualsIgnoringDeviceType(*dst->parallel_desc()));
           const Shape* src_time_shape = src->out_blob_time_shape();
           if (src_time_shape == nullptr) { src_time_shape = src->in_blob_fastest_time_shape(); }
           CHECK_NOTNULL(src_time_shape);

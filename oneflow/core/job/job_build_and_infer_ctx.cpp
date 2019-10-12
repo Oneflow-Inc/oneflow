@@ -66,9 +66,9 @@ Maybe<void> JobBuildAndInferCtx::InferOpOutSbpParallel(Operator* op,
   for (const std::string& ibn : op->input_bns()) {
     const LogicalBlobId& lbi = op->BnInOp2Lbi(ibn);
     CHECK_OR_RETURN(lbi2logical_blob_desc_.find(lbi) != lbi2logical_blob_desc_.end())
-        << JobBuildAndInferError::kLogicalBlobNameNotExist
-        << "when infer op_name: " << op->op_name() << " consumed op_name: " << lbi.op_name()
-        << " blob_name: " << lbi.blob_name() << " not infer blob desc";
+        << JobBuildAndInferError::kLogicalBlobNameNotExist << "when infer op_name: \""
+        << op->op_name() << "\", consumed op_name: \"" << lbi.op_name() << "\", blob_name: \""
+        << lbi.blob_name() << "\" not infer blob desc";
     const BlobDesc* logical_blob_desc = lbi2logical_blob_desc_.at(lbi).get();
     CHECK_OR_RETURN(lbi2sbp_parallel_from_producer_view_.find(lbi)
                     != lbi2sbp_parallel_from_producer_view_.end())
@@ -196,9 +196,8 @@ Maybe<void> JobBuildAndInferCtx::AddAndInferOp(const OperatorConf& op_conf,
   ParallelContext parallel_ctx;
   parallel_ctx.set_parallel_id(0);
   parallel_ctx.set_parallel_num(1);
-  parallel_ctx.set_policy(ParallelPolicy::kDataParallel);
   JUST(op->InferOutBlobDescsIf(GetBlobDesc4BnInOp, &parallel_ctx, &sbp_sig_to_infer,
-                               job_->job_conf().piece_size(), [](OpContext*) {}));
+                               [](OpContext*) {}));
 
   // check splitability
   JUST(CheckOpBlobSplitability(op, sbp_sig_to_infer, parallel_desc.parallel_num()));

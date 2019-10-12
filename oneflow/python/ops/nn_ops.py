@@ -5,6 +5,7 @@ import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.id_util as id_util
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
+import oneflow
 from oneflow.python.oneflow_export import oneflow_export
 
 import collections
@@ -97,17 +98,17 @@ def bias_add(value, bias, data_format=None, name=None):
             )
 
     op_conf = op_conf_util.OperatorConf()
-    op_conf.name = name
-    op_conf.bias_add_conf.a = value.logical_blob_name
-    op_conf.bias_add_conf.b = bias.logical_blob_name
-    op_conf.bias_add_conf.axis = bias_add_axis
-    op_conf.bias_add_conf.out = "out"
-
+    setattr(op_conf, "name", name)
+    setattr(op_conf.bias_add_conf, "a", value.logical_blob_name)
+    setattr(op_conf.bias_add_conf, "b", bias.logical_blob_name)
+    setattr(op_conf.bias_add_conf, "out", "out")
+    setattr(op_conf.bias_add_conf, "axis", bias_add_axis)
     compile_context.CurJobAddOp(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
     lbi.op_name = op_conf.name
     lbi.blob_name = "out"
     return remote_blob_util.RemoteBlob(lbi)
+
 
 
 @oneflow_export("nn.max_pool1d")
@@ -284,6 +285,33 @@ def sparse_softmax_cross_entropy_with_logits(
     lbi = logical_blob_id_util.LogicalBlobId()
     lbi.op_name = op_conf.name
     lbi.blob_name = "out"
+    return remote_blob_util.RemoteBlob(lbi)
+
+@oneflow_export("nn.sigmoid_cross_entropy_with_logits")
+def sigmoid_cross_entropy_with_logits(
+    labels=None, logits=None, name=None
+):
+    assert labels is not None
+    assert logits is not None
+    op_conf = op_conf_util.OperatorConf()
+    setattr(
+        op_conf,
+        "name",
+        name if name is not None else id_util.UniqueStr("SigmoidCrossEntropy_"),
+    )
+    setattr(
+        op_conf.sigmoid_cross_entropy_loss_conf,
+        "prediction",
+        logits.logical_blob_name,
+    )
+    setattr(
+        op_conf.sigmoid_cross_entropy_loss_conf, "label", labels.logical_blob_name
+    )
+    setattr(op_conf.sigmoid_cross_entropy_loss_conf, "loss", "loss")
+    compile_context.CurJobAddOp(op_conf)
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = "loss"
     return remote_blob_util.RemoteBlob(lbi)
 
 
