@@ -3,8 +3,8 @@
 
 #include <unordered_map>
 #include <unordered_set>
-#include "oneflow/xla/of2xla/xla_graph.h"
 #include "oneflow/xla/of2xla/xla_utility.h"
+#include "oneflow/xla/of2xla/xla_graph.h"
 
 namespace oneflow {
 namespace mola {

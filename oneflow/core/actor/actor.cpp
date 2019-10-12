@@ -48,6 +48,11 @@ void Actor::Init(const JobDesc* job_desc, const TaskProto& task_proto,
     exec_kernel_vec_.push_back(std::move(ek));
   }
 
+  is_kernel_launch_synchronized_ =
+      std::all_of(exec_kernel_vec_.cbegin(), exec_kernel_vec_.cend(),
+                  [](const ExecKernel& ek) { return ek.kernel->IsKernelLaunchSynchronized(); });
+  if (!is_kernel_launch_synchronized_) { CHECK_EQ(exec_kernel_vec_.size(), 1); }
+
   remaining_eord_cnt_ = 0;
   msg_handler_ = nullptr;
   eord_regst_desc_ids_.clear();
@@ -371,13 +376,7 @@ void Actor::ActUntilFail() {
     AsyncSendCustomizedConsumedRegstMsgToProducer();
     AsyncSendNaiveConsumedRegstMsgToProducer();
 
-    if (async_actor_msg_deque_.size() > 0 ) {
-      std::deque<ActorMsg> msgs;
-      msgs.swap(async_actor_msg_deque_);
-      device_ctx_->AddCallBack([msgs]() {
-        for (const ActorMsg& msg : msgs) { Global<ActorMsgBus>::Get()->SendMsg(msg); }
-      });
-    }
+    AsyncSendQueuedMsg();
   }
 }
 
@@ -425,7 +424,8 @@ void Actor::AsyncSendConsumedCtrlRegstMsgToProducer() {
       Regst* regst = reg_deq.at(i);
       // must access regst before sending it to producer
       regst_desc_ids.push_back(regst->regst_desc_id());
-      AsyncSendMsg(ActorMsg::BuildRegstMsgToProducer(actor_id_, regst->producer_actor_id(), regst));
+      EnqueueAsyncMsg(
+          ActorMsg::BuildRegstMsgToProducer(actor_id_, regst->producer_actor_id(), regst));
     }
   });
   naive_consumed_rs_.PopFrontRegsts(regst_desc_ids);
@@ -453,7 +453,7 @@ int64_t Actor::HandleRegstToConsumer(Regst* regst, std::function<bool(int64_t)> 
   int64_t real_consumer_cnt = 0;
   for (int64_t consumer : regst->consumers_actor_id()) {
     if (!IsAllowedActor(consumer)) { continue; }
-    AsyncSendMsg(ActorMsg::BuildRegstMsgToConsumer(actor_id_, consumer, regst));
+    EnqueueAsyncMsg(ActorMsg::BuildRegstMsgToConsumer(actor_id_, consumer, regst));
     real_consumer_cnt += 1;
   }
   total_reading_cnt_ += real_consumer_cnt;
@@ -559,7 +559,8 @@ void Actor::HandleConsumedNaiveDataRegstToProducer(std::function<bool(Regst*)> I
       if (IsAllowedRegst(regst) == false) { return; }
       // must access regst before sending it to producer
       regst_desc_ids.push_back(regst->regst_desc_id());
-      AsyncSendMsg(ActorMsg::BuildRegstMsgToProducer(actor_id_, regst->producer_actor_id(), regst));
+      EnqueueAsyncMsg(
+          ActorMsg::BuildRegstMsgToProducer(actor_id_, regst->producer_actor_id(), regst));
     }
   });
   naive_consumed_rs_.PopFrontRegsts(regst_desc_ids);
@@ -585,7 +586,7 @@ void Actor::AsyncSendRegstMsgToProducer(Regst* regst) {
 void Actor::AsyncSendRegstMsgToProducer(Regst* regst, int64_t producer) {
   // must access regst before sending it to producer
   int64_t regst_desc_id = regst->regst_desc_id();
-  AsyncSendMsg(ActorMsg::BuildRegstMsgToProducer(actor_id_, producer, regst));
+  EnqueueAsyncMsg(ActorMsg::BuildRegstMsgToProducer(actor_id_, producer, regst));
   naive_consumed_rs_.TryPopFrontRegst(regst_desc_id);
 }
 
@@ -623,20 +624,15 @@ int Actor::TryUpdtStateAsProducedRegst(Regst* regst) {
   return 0;
 }
 
-void Actor::AsyncSendMsg(const ActorMsg& msg) {
-  std::function<void()> callback = [msg]() { Global<ActorMsgBus>::Get()->SendMsg(msg); };
-  if (GetGlobalWorkStreamId()
-      == Global<IDMgr>::Get()->GlobalWorkStreamId4ActorId(msg.dst_actor_id())) {
-    callback();
+void Actor::EnqueueAsyncMsg(const ActorMsg& msg) {
+  if (is_kernel_launch_synchronized_
+      && GetGlobalWorkStreamId()
+             == Global<IDMgr>::Get()->GlobalWorkStreamId4ActorId(msg.dst_actor_id())) {
+    Global<ActorMsgBus>::Get()->SendMsg(msg);
   } else {
-    // device_ctx_->AddCallBack(callback);
-    async_actor_msg_deque_.push_back(msg);
-    if (async_actor_msg_deque_.size() >= ACTOR_MESSAGE_SENT_INTERVAL) {
-      std::deque<ActorMsg> msgs;
-      msgs.swap(async_actor_msg_deque_);
-      device_ctx_->AddCallBack([msgs]() {
-        for (const ActorMsg& msg : msgs) { Global<ActorMsgBus>::Get()->SendMsg(msg); }
-      });
+    async_msg_queue_.push_back(msg);
+    if (async_msg_queue_.size() >= ACTOR_MESSAGE_SENT_INTERVAL) {
+      AsyncSendQueuedMsg();
     }
   }
 }
@@ -674,6 +670,16 @@ std::unique_ptr<Actor> NewActor(const TaskProto& task_proto, const ThreadCtx& th
   const auto& job_descs = *Global<RuntimeJobDescs>::Get();
   rptr->Init(&job_descs.job_desc(task_proto.job_id()), task_proto, thread_ctx);
   return std::unique_ptr<Actor>(rptr);
+}
+
+void Actor::AsyncSendQueuedMsg() {
+  if (!async_msg_queue_.empty()) {
+    std::deque<ActorMsg> msgs;
+    msgs.swap(async_msg_queue_);
+    device_ctx_->AddCallBack([msgs]() {
+      for (const ActorMsg& msg : msgs) { Global<ActorMsgBus>::Get()->SendMsg(msg); }
+    });
+  }
 }
 
 }  // namespace oneflow

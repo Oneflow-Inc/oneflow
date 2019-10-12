@@ -46,12 +46,6 @@ Maybe<void> GetSbpSignature(const InterfaceBlobConf& blob_conf, const PbRpf<std:
 Maybe<void> InterfaceOpUtil::InferOutBlobDesc(const InterfaceBlobConf& blob_conf,
                                               BlobDesc* out_blob_desc,
                                               const ParallelContext* parallel_ctx) {
-  return InferOutBlobDesc(blob_conf, out_blob_desc, parallel_ctx, 0);
-}
-Maybe<void> InterfaceOpUtil::InferOutBlobDesc(const InterfaceBlobConf& blob_conf,
-                                              BlobDesc* out_blob_desc,
-                                              const ParallelContext* parallel_ctx,
-                                              int64_t record_piece_size) {
   out_blob_desc->mut_shape() = Shape(blob_conf.shape());
   CheckShape(out_blob_desc->shape());
   CHECK_GT(out_blob_desc->mut_shape().At(0), 0);

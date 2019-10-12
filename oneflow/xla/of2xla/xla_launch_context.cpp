@@ -12,7 +12,6 @@ static ParallelContext LocalParallelContext(int device_ordinal) {
   ParallelContext parallel_ctx;
   parallel_ctx.set_parallel_id(device_ordinal);
   parallel_ctx.set_parallel_num(1);
-  parallel_ctx.set_policy(kDataParallel);
   return parallel_ctx;
 }
 

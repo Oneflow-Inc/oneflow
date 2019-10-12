@@ -12,16 +12,18 @@ namespace oneflow {
 
 template<DeviceType device_type, typename T, int NDIMS, template<typename> class binary_func>
 struct NdarrayApplyBroadcastBinaryCoreWrapper final {
-  static void Apply(DeviceCtx* ctx, const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& a,
-                    const XpuVarNdarray<const T>& b);
+  static void Apply(DeviceCtx* ctx,
+                    const XpuVarNdarray<typename BinaryFuncTrait<binary_func, T>::return_type>& y,
+                    const XpuVarNdarray<const T>& a, const XpuVarNdarray<const T>& b);
   static void InplaceApply(DeviceCtx* ctx, const XpuVarNdarray<T>& y,
                            const XpuVarNdarray<const T>& x);
 };
 
 template<typename T, int NDIMS, template<typename> class binary_func>
 struct NdarrayApplyBroadcastBinaryCore final {
-  OF_DEVICE_FUNC static void Apply(const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& a,
-                                   const XpuVarNdarray<const T>& b) {
+  OF_DEVICE_FUNC static void Apply(
+      const XpuVarNdarray<typename BinaryFuncTrait<binary_func, T>::return_type>& y,
+      const XpuVarNdarray<const T>& a, const XpuVarNdarray<const T>& b) {
     const auto& ret =
         a.Broadcast(y.shape()).template BinaryFunc<binary_func>(b.Broadcast(y.shape()));
     y.template Assign<NDIMS>(ret);

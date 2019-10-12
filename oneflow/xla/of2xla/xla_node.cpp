@@ -157,16 +157,24 @@ std::vector<std::string> XlaNode::output_bns() const {
   return output_bns;
 }
 
-void XlaNode::InferBlobDescs(GetBlobDescFunc func,
+void XlaNode::InferBlobDescs(GetBlobDescFunc blob_desc_func,
                              const ParallelContext &parallel_ctx,
                              const SbpSignature &sbp_signature) const {
-  auto get_blob_desc_fn = [&](const std::string &bn) -> BlobDesc* {
+  SbpSignature local_sbp_signature;
+  auto &sbp_detail = *(local_sbp_signature.mutable_bn_in_op2sbp_parallel());
+  for (const auto &name : input_bns()) {
+    sbp_detail[name].mutable_split_parallel()->set_axis(0);
+  }
+  for (const auto &name : output_bns()) {
+    sbp_detail[name].mutable_split_parallel()->set_axis(0);
+  }
+
+  auto blob_desc_func_internal = [&](const std::string &bn) {
     const LogicalBlobId &lbi = op()->BnInOp2Lbi(bn);
-    return func(lbi);
+    return blob_desc_func(lbi);
   };
-  const JobDesc &job_desc = op()->job_desc();
-  op()->InferBlobDescsIf(get_blob_desc_fn, &parallel_ctx, &sbp_signature,
-                         job_desc.RecordPieceSize(), [](OpContext*) {});
+  op()->InferBlobDescsIf(blob_desc_func_internal, &parallel_ctx,
+                         &local_sbp_signature, [](OpContext*) {});
 }
 
 XlaArgumentNode::XlaArgumentNode(const XlaLaunchOpConf::Argument &arg_conf)

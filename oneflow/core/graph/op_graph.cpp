@@ -22,7 +22,7 @@ void OpEdge::InitIsStrict121() { is_strict_121_ = CalcIsStrict121Connected(); }
 bool OpEdge::CalcIsStrict121Connected() const {
   OpNode* src = src_node();
   OpNode* dst = dst_node();
-  if (!src->parallel_desc().EqualsIgnoringPolicy(dst->parallel_desc())) { return false; }
+  if (!src->parallel_desc().Equals(dst->parallel_desc())) { return false; }
   if (src->IsTimeShapeIdentity() == false) { return false; }
   if (dst->IsTimeShapeIdentity() == false) { return false; }
   if (*src->GetInputOutputFastestTimeShape() != *src->GetInputOutputFastestTimeShape()) {
@@ -281,6 +281,7 @@ void OpNode::ConcatLogicalOutputBlobDesc() {
 
 void OpNode::CheckBlobDescs(const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
                             const ParallelContext* parallel_ctx) const {
+  return;
   int64_t parallel_id = parallel_ctx->parallel_id();
   auto Check = [&](const std::string& bn) {
     if (bn2parallel_id2blob_desc_.find(bn) == bn2parallel_id2blob_desc_.end()) { return; }
@@ -303,7 +304,6 @@ void OpGraph::Init(const Job& job) {
   InitEdges();
   InitProducerOpName2CtrlConsumerOpNames(job);
   CheckIsDAG();
-  FixOpParallelDesc();
   InferTimeShape();
   InferLogicalBlobDesc(job);
   ForEachEdge([](OpEdge* edge) { edge->InitDistributeHierarchyInfo(); });
@@ -364,17 +364,11 @@ void OpGraph::InitProducerOpName2CtrlConsumerOpNames(const Job& job) {
   }
 }
 
-void OpGraph::FixOpParallelDesc() const {
-  // TODO() : outdated, delete
-  ForEachNode([&](OpNode* node) { node->op().FixParallelDesc(node->mut_parallel_desc()); });
-}
-
 void OpGraph::InferTimeShape() const {
   TopoForEachNode([&](OpNode* op_node) {
     ParallelContext parallel_ctx;
     parallel_ctx.set_parallel_id(0);
     parallel_ctx.set_parallel_num(op_node->parallel_desc().parallel_num());
-    parallel_ctx.set_policy(op_node->parallel_desc().policy());
     auto GetInputBlobTimeShape = [&](const std::string& bn_in_op) {
       return op_node->GetInputBlobTimeShape(bn_in_op);
     };
@@ -388,7 +382,7 @@ void OpGraph::InferOpNodeSbpSignature(OpNode* op_node, const SbpSignature& sbp_s
   for (const std::string& ibn : op_node->op().input_bns()) {
     const LogicalBlobId& lbi = op_node->op().BnInOp2Lbi(ibn);
     OpNode* producer = op_node->MutSrcNode4InputBnInOp(ibn);
-    const ParallelDesc* parallel_desc = &op_node->parallel_desc();
+    const ParallelDesc* parallel_desc = &producer->parallel_desc();
     const BlobDesc* logical_blob_desc = &producer->LogicalBlobDesc4Lbi(lbi);
     const auto& sbp = producer->SbpParallel4Lbi(lbi);
     ibn2sbp_infer_hint.emplace(ibn, SbpInferHint(parallel_desc, logical_blob_desc, sbp));
@@ -424,10 +418,8 @@ void OpGraph::InferOpNodeLogicalBlobDesc(OpNode* op_node) const {
     ParallelContext parallel_ctx;
     parallel_ctx.set_parallel_id(parallel_id);
     parallel_ctx.set_parallel_num(parallel_num);
-    parallel_ctx.set_policy(op_node->parallel_desc().policy());
-    CHECK_JUST(
-        op_node->op().InferBlobDescsIf(BlobDesc4BnInOp, &parallel_ctx, &op_node->sbp_signature(),
-                                       GlobalJobDesc().RecordPieceSize(), [](OpContext*) {}));
+    CHECK_JUST(op_node->op().InferBlobDescsIf(BlobDesc4BnInOp, &parallel_ctx,
+                                              &op_node->sbp_signature(), [](OpContext*) {}));
   }
   op_node->ConcatLogicalOutputBlobDesc();
 }
@@ -576,7 +568,6 @@ std::function<const BlobDesc&(const LogicalBlobId&)> OpGraph::MakeGetterBlobDesc
     ParallelContext parallel_ctx;
     parallel_ctx.set_parallel_id(0);
     parallel_ctx.set_parallel_num(1);
-    parallel_ctx.set_policy(op_node->parallel_desc().policy());
     SbpSignature sbp_signature;
     for (const auto& ibn : op_node->op().input_bns()) {
       (*sbp_signature.mutable_bn_in_op2sbp_parallel())[ibn].mutable_split_parallel()->set_axis(0);
@@ -597,10 +588,8 @@ std::function<const BlobDesc&(const LogicalBlobId&)> OpGraph::MakeGetterBlobDesc
     // the real important data we want to get is:
     // a) model blobs' byte size;
     // b) number of axes of blobs' body shape;
-    // Hence the argument record_piece_size can be any positive number
-    CHECK_JUST(op_node->op().InferBlobDescsIf(MutUnparalleledBlobDesc4BnInOp, &parallel_ctx,
-                                              &sbp_signature, GlobalJobDesc().RecordPieceSize(),
-                                              [](OpContext*) {}));
+    CHECK_JUST(op_node->op().InferOutBlobDescsIf(MutUnparalleledBlobDesc4BnInOp, &parallel_ctx,
+                                                 &sbp_signature, [](OpContext*) {}));
   });
   auto model_lbi2blob_desc = std::make_shared<HashMap<LogicalBlobId, std::unique_ptr<BlobDesc>>>();
   ForEachNode([&](OpNode* op_node) {

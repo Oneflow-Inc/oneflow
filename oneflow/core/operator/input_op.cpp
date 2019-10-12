@@ -26,17 +26,26 @@ const PbMessage& InputOp::GetCustomizedConf() const { return op_conf().input_con
 
 Maybe<void> InputOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                     const ParallelContext* parallel_ctx,
-                                    const SbpSignature* sbp_signature,
-                                    int64_t record_piece_size) const {
+                                    const SbpSignature* sbp_signature) const {
   CheckOpConf(op_conf());
   return InterfaceOpUtil::InferOutBlobDesc(op_conf().input_conf().blob_conf(),
-                                           GetBlobDesc4BnInOp("out"), parallel_ctx,
-                                           record_piece_size);
+                                           GetBlobDesc4BnInOp("out"), parallel_ctx);
 }
 
 Maybe<void> InputOp::InferBatchAxis(
     std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
   *BatchAxis4BnInOp("out") = op_conf().input_conf().blob_conf().batch_axis();
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> InputOp::InferSbpSignature(
+    SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
+    const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
+    std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
+    const ParallelDesc& parallel_desc) const {
+  SbpSignatureList sbp_sig_list;
+  JUST(GetSbpSignatures(&sbp_sig_list));
+  *sbp_signature = sbp_sig_list.sbp_signature(0);
   return Maybe<void>::Ok();
 }
 
@@ -48,7 +57,7 @@ Maybe<void> InputOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
 }
 
 REGISTER_OP(OperatorConf::kInputConf, InputOp);
-REGISTER_OP_SAME_OUTPUT_BLOB_MEM_BLOCK_NUM(OperatorConf::kInputConf, 1);
+REGISTER_OP_SAME_OUTPUT_BLOB_REGST_NUM(OperatorConf::kInputConf, 1);
 REGISTER_INTERFACE_OP(OperatorConf::kInputConf);
 
 }  // namespace oneflow

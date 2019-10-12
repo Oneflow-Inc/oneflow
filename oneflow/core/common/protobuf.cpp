@@ -190,8 +190,7 @@ std::pair<std::string, int32_t> GetFieldNameAndIndex4StrVal(const std::string& f
   return std::make_pair(field_name, idx);
 }
 
-const std::string& GetStrValInPbFdOrPbRpf(const PbMessage& msg,
-                                          const std::string& fd_name_may_have_idx) {
+std::string GetStrValInPbFdOrPbRpf(const PbMessage& msg, const std::string& fd_name_may_have_idx) {
   const PbFd* fd = msg.GetDescriptor()->FindFieldByName(fd_name_may_have_idx);
   if (fd) {
     return GetValFromPbMessage<std::string>(msg, fd_name_may_have_idx);

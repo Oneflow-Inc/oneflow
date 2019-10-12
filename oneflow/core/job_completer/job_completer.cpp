@@ -10,6 +10,8 @@
 #include "oneflow/core/job_completer/all_reduce_sequence_pass.h"
 #include "oneflow/core/job_completer/group_boxing_by_dst_parallel.h"
 #include "oneflow/core/job_completer/auto_mixed_precision.h"
+#include "oneflow/core/job_completer/non_distributed_optimizer_pass.h"
+#include "oneflow/core/job_completer/nccl_tuple_broadcast_reduce_sequence_pass.h"
 #include "oneflow/core/job_completer/auto_train_step.h"
 #include "oneflow/core/job_completer/auto_learning_rate.h"
 
@@ -325,7 +327,8 @@ void SetOpTimeShape7BatchAxisLbis(const OpGraph& op_graph, JobBuilder* job_build
 }
 
 void RewriteBoxingWithAllReduce(const OpGraph& op_graph, JobBuilder* job_builder) {
-  if (GlobalJobDesc().enable_all_reduce_group()) {
+  if (!GlobalJobDesc().enable_non_distributed_optimizer()
+      && GlobalJobDesc().enable_all_reduce_group()) {
     AllReduceAddPass().Apply(op_graph, job_builder);
   }
 }
@@ -347,6 +350,16 @@ void EnableAutoMixedPrecision(const OpGraph& op_graph, JobBuilder* job_builder) 
       .Apply(op_graph, job_builder);
 }
 
+void EnableNonDistributedOptimizer(const OpGraph& op_graph, JobBuilder* job_builder) {
+  if (!GlobalJobDesc().enable_non_distributed_optimizer()) { return; }
+  CHECK(GlobalJobDesc().enable_nccl());
+  NonDistributedOptimizerPass().Apply(op_graph, job_builder);
+}
+
+void MakeNcclTupleBroadcastReduceSequence(const OpGraph& op_graph, JobBuilder* job_builder) {
+  NcclTupleBroadcastReduceSequencePass().Apply(op_graph, job_builder);
+}
+
 }  // namespace
 
 void JobCompleter::Complete(Job* job) const {
@@ -357,6 +370,7 @@ void JobCompleter::Complete(Job* job) const {
   if (GlobalJobDesc().IsTrain()) {
     WithOpGraphAndMutJob(job, &TieUpChainHeadersUnReachableFromAnyVariableOps);
     WithOpGraphAndMutJobBuilder(job, &EnableAutoMixedPrecision);
+    WithOpGraphAndMutJobBuilder(job, &EnableNonDistributedOptimizer);
     WithOpGraphAndMutJob(job, &AutoTrainStep);
     WithOpGraphAndMutJob(job, &AutoLearningRate);
     // complete ops for trainning
@@ -366,6 +380,7 @@ void JobCompleter::Complete(Job* job) const {
       WithOpGraphAndMutJob(job, &RewriteOptimizerOp);
     }
 #endif
+    WithOpGraphAndMutJobBuilder(job, &MakeNcclTupleBroadcastReduceSequence);
     WithOpGraphAndMutJobBuilder(job, &RewriteBoxingWithAllReduce);
     WithOpGraphAndMutJobBuilder(job, &MakeAllReduceSequence);
   }

@@ -92,18 +92,6 @@ class FoldSubgraphBuilder {
   void buildXlaLaunchAttribute(const XlaGraph *sub_graph,
                                XlaLaunchOpConf::Attribute *launch_attr);
 
-  void FixSubgraphInArgumentsBlobNames(
-      const XlaGraph *sub_graph,
-      const std::string &launch_op_name,
-      XlaLaunchOpConf *launch_conf,
-      const std::unordered_map<std::string, std::string> &fixed_blob_names);
-
-  void FixSubgraphOutArgumentsBlobNames(
-    const XlaGraph *sub_graph,
-    const std::string &launch_op_name,
-    XlaLaunchOpConf *launch_conf,
-    const std::unordered_map<std::string, std::string> &fixed_blob_names);
-
   XlaLaunchOpConf::Argument *MutableArgumentConf(
       XlaLaunchOpConf *launch_conf, const std::string &argument_name) {
     XlaLaunchOpConf::Argument *argument_conf = nullptr;
@@ -116,6 +104,18 @@ class FoldSubgraphBuilder {
     }
     return argument_conf;
   }
+
+  void FixSubgraphInArgumentsBlobNames(
+      const XlaGraph *sub_graph,
+      const std::string &launch_op_name,
+      XlaLaunchOpConf *launch_conf,
+      const std::unordered_map<std::string, std::string> &fixed_blob_names);
+
+  void FixSubgraphOutArgumentsBlobNames(
+      const XlaGraph *sub_graph,
+      const std::string &launch_op_name,
+      XlaLaunchOpConf *launch_conf,
+      const std::unordered_map<std::string, std::string> &fixed_blob_names);
 
   void BuildXlaLaunchOps();
 
@@ -225,8 +225,8 @@ void FoldSubgraphBuilder::buildXlaLaunchAttribute(
         argument_proto->set_is_mutable(true);
       }
 
-      // Restore the batch axis that have batch dimension, so that it's no need
-      // to infer `HasBatchAxis` for `XlaLaunch` operators. In practice it's hard
+      // Store the batch axis that have batch dimension, so that it's no need to
+      // infer `HasBatchAxis` for `XlaLaunch` operators. In practice it's hard
       // to infer `HasBatchAxis` since the operators to be infered have been
       // folded. Normally we have to infer `HasBatchAxis` before `SbpSignature`
       // and `BlobDesc`, and `HasBatchAxis` replies on the front operators
@@ -240,7 +240,7 @@ void FoldSubgraphBuilder::buildXlaLaunchAttribute(
       }
     }
 
-    // // Restore output shapes
+    // // Store output shapes
     // auto &shapes = *(resource_scope->mutable_shapes());
     // for (const XlaEdge *edge : node->out_edges()) {
     //   const Argument &argument = edge->argument();
@@ -284,11 +284,11 @@ void FoldSubgraphBuilder::BuildXlaLaunchOps() {
     AddInBlobNames(node->in_edges(), launch_conf);
     AddOutBlobNames(node->out_edges(), launch_conf);
 
-    if (IsAfterAllReduce(node) && node->out_edges().size() == 0) {
-      launch_conf->set_is_model_update(true);
-    }
-
     buildXlaLaunchAttribute(node->sub_graph(), launch_conf->mutable_attr());
+
+    if (IsAfterAllReduce(node) && node->out_edges().size() == 0) {
+      launch_conf->mutable_attr()->set_is_model_update(true);
+    }
 
     CHECK_GT(folded_nodes_[i].size(), 0);
     ParallelConf parallel_conf = builder_->GetParallelConf(
@@ -479,9 +479,9 @@ bool FoldSubgraphBuilder::IsAfterAllReduce(const XlaNode *node) {
 }
 
 // Rebuild job according to the nodes folded xla graph. In order to rebuild
-// the job, We will add several xla launch operators in the job, and remove the
-// folded nodes. In xla launch operator, we wll reconstruct the subgraph and
-// insert argument nodes if necessary.
+// the job, We will add several launch operators in the job, and remove the
+// folded operators. In each launch operator, we wll reconstruct the subgraph
+// and insert argument nodes if necessary.
 class RebuildCompiledJobPass : public XlaOptimizePass {
  public:
   RebuildCompiledJobPass(const OptimizeOptions &options)
