@@ -321,6 +321,7 @@ void DumpLogicalBlobDescAndSbpSignature(const OpGraph& op_graph, JobBuilder* job
 }
 
 void MakeAllReduceSequence(const OpGraph& op_graph, JobBuilder* job_builder) {
+  if (GlobalJobDesc().disable_all_reduce_sequence()) { return; }
   AllReduceSequencePass().Apply(op_graph, job_builder);
 }
 
