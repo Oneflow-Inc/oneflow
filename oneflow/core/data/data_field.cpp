@@ -1,90 +1,81 @@
 #include "oneflow/core/data/data_field.h"
 #include "oneflow/core/kernel/kernel_util.h"
+#include "oneflow/core/register/lod_view.h"
 #include <glog/logging.h>
 
 namespace oneflow {
+
 namespace data {
+
+namespace {
+
+void BuildLodTree(const int64_t level, const int64_t max_level, const int64_t elem_cnt,
+                  const Shape& shape, LoDTree* node, int64_t& offset) {
+  if (level < max_level) {
+    FOR_RANGE(int64_t, i, 0, shape.At(level)) {
+      auto* child = node->mutable_children()->Add();
+      BuildLodTree(level + 1, max_level, elem_cnt, shape, child, offset);
+    }
+    TreeLoDHelper::UpdateInnerNode(node);
+  } else {
+    int64_t n = shape.Count(0, max_level);
+    int64_t m = shape.Count(max_level + 1);
+    int64_t fixed = n * m;
+    CHECK_EQ(elem_cnt % fixed, 0);
+    int64_t length = elem_cnt / fixed;
+    node->set_length(length);
+    node->set_offset(offset);
+    offset += length * m;
+  }
+}
+
+}  // namespace
 
 size_t DataField::ToBuffer(void* buffer, DataType data_type) const {
   return GetDataFieldSerializer(data_source_, data_type)(this, buffer);
 }
 
-void ImageDataField::InferShape(const ShapeProto& static_shape, const PbRf<int>& var_axes,
-                                Shape* shape, std::vector<std::vector<int64_t>>* lod) const {
+void ImageDataField::InferShape(const ShapeProto& shape_proto, const PbRf<int>& var_axes,
+                                Shape* shape, LoDTree* lod_tree) const {
   CHECK_LE(var_axes.size(), 0);
-  int64_t image_height = data_.rows;
-  int64_t image_width = data_.cols;
-  int64_t channels = data_.channels();
-  if (shape->NumAxes() == 0) {
-    *shape = Shape::Ones(4);
-    shape->Set(1, image_height);
-    shape->Set(2, image_width);
-    shape->Set(3, channels);
-  } else {
-    CHECK_EQ(shape->At(1), image_height);
-    CHECK_EQ(shape->At(2), image_width);
-    CHECK_EQ(shape->At(3), channels);
-    shape->Set(0, shape->At(0) + 1);
-  }
+  CHECK(lod_tree == nullptr);
+
+  *shape = Shape(shape_proto);
+  CHECK_EQ(shape->NumAxes(), 3);
+  shape->Set(0, data_.rows);
+  shape->Set(1, data_.cols);
+  shape->Set(2, data_.channels());
 }
 
 template<typename T>
-void ArrayDataField<T>::InferShape(const ShapeProto& static_shape, const PbRf<int>& var_axes,
-                                   Shape* shape, std::vector<std::vector<int64_t>>* lod) const {
-  CHECK_LE(var_axes.size(), 1);
-  bool has_lod = (var_axes.size() == 1);
-  if (has_lod) {
-    int64_t need_infer_axis = var_axes.Get(0);
-    int64_t fixed = 1;
-    int64_t pre_infer_dims = 1;
-    if (shape->NumAxes() == 0) { *shape = Shape::Zeros(static_shape.dim_size() - need_infer_axis); }
-    FOR_RANGE(int64_t, i, 0, static_shape.dim_size()) {
-      if (i < need_infer_axis) { pre_infer_dims *= static_shape.dim(i); }
-      if (i != need_infer_axis) { fixed *= static_shape.dim(i); }
+void ArrayDataField<T>::InferShape(const ShapeProto& shape_proto, const PbRf<int>& var_axes,
+                                   Shape* shape, LoDTree* lod_tree) const {
+  if (lod_tree) {
+    CHECK_EQ(var_axes.size(), 1);
+    int64_t lod_axis = var_axes.Get(0);
+    Shape static_shape(shape_proto);
+
+    *shape = Shape::Ones(shape_proto.dim_size() - lod_axis);
+    FOR_RANGE(int64_t, i, lod_axis + 1, shape_proto.dim_size()) {
+      shape->Set(i - lod_axis, shape_proto.dim(i));
     }
+    int64_t fixed = static_shape.elem_cnt() / static_shape.At(lod_axis);
     CHECK_EQ(data_.size() % fixed, 0);
-    int64_t infered_dims = data_.size() / fixed;
-    shape->Set(0, shape->At(0) + pre_infer_dims * infered_dims);
+    int64_t var_len = data_.size() / fixed;
+    shape->Set(0, var_len * static_shape.Count(0, lod_axis));
 
-    FOR_RANGE(int64_t, i, 1, static_shape.dim_size() - need_infer_axis) {
-      if (shape->At(i) == 0) {
-        shape->Set(i, static_shape.dim(i + need_infer_axis));
-      } else {
-        CHECK_EQ(shape->At(i), static_shape.dim(i + need_infer_axis));
-      }
-    }
-
-    if (lod->size() == 0) {
-      lod->resize(need_infer_axis + 2, {});
-      lod->at(0).push_back(0);
-    }
-    lod->at(0).at(0) += 1;
-    lod->at(1).push_back(static_shape.dim(0));
-    FOR_RANGE(int64_t, i, 1, need_infer_axis + 1) {
-      FOR_RANGE(int64_t, j, 0, static_shape.dim(i - 1)) {
-        if (i == need_infer_axis) {
-          lod->at(i + 1).push_back(infered_dims);
-        } else {
-          lod->at(i + 1).push_back(static_shape.dim(i));
-        }
-      }
-    }
+    int64_t offset = 0;
+    BuildLodTree(0, lod_axis, data_.size(), static_shape, lod_tree, offset);
   } else {
-    if (shape->NumAxes() == 0) { *shape = Shape::Zeros(static_shape.dim_size() + 1); }
-    shape->Set(0, shape->At(0) + 1);
-    FOR_RANGE(int64_t, i, 0, static_shape.dim_size()) {
-      if (shape->At(i + 1) == 0) {
-        shape->Set(i + 1, static_shape.dim(i));
-      } else {
-        CHECK_EQ(shape->At(i + 1), static_shape.dim(i));
-      }
-    }
+    CHECK_EQ(var_axes.size(), 0);
+    *shape = Shape(shape_proto);
+    CHECK_EQ(shape->elem_cnt(), data_.size());
   }
 }
 
 template<typename T>
-void NdarrayDataField<T>::InferShape(const ShapeProto& static_shape, const PbRf<int>& var_axes,
-                                     Shape* shape, std::vector<std::vector<int64_t>>* lod) const {
+void NdarrayDataField<T>::InferShape(const ShapeProto& shape_proto, const PbRf<int>& var_axes,
+                                     Shape* shape, LoDTree* lod_tree) const {
   TODO();
 }
 
@@ -175,10 +166,12 @@ std::unique_ptr<DataField> CreateDataFieldFromProto(const DataFieldProto& proto)
 }
 
 #define INSTANTIATE_INFER_SHAPE_FUNC(dtype, dtype_val)                                           \
-  template void ArrayDataField<dtype>::InferShape(const ShapeProto&, const PbRf<int>&, Shape*,   \
-                                                  std::vector<std::vector<int64_t>>*) const;     \
-  template void NdarrayDataField<dtype>::InferShape(const ShapeProto&, const PbRf<int>&, Shape*, \
-                                                    std::vector<std::vector<int64_t>>*) const;
+  template void ArrayDataField<dtype>::InferShape(                                               \
+      const ShapeProto& shape_proto, const PbRf<int>& var_axes, Shape* shape, LoDTree* lod_tree) \
+      const;                                                                                     \
+  template void NdarrayDataField<dtype>::InferShape(                                             \
+      const ShapeProto& shape_proto, const PbRf<int>& var_axes, Shape* shape, LoDTree* lod_tree) \
+      const;
 
 OF_PP_FOR_EACH_TUPLE(INSTANTIATE_INFER_SHAPE_FUNC, ARITHMETIC_DATA_TYPE_SEQ);
 

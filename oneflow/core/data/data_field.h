@@ -6,6 +6,7 @@
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/common/shape.h"
+#include "oneflow/core/register/lod_tree.pb.h"
 #include <opencv2/opencv.hpp>
 
 namespace oneflow {
@@ -21,8 +22,8 @@ class DataField {
   size_t ToBuffer(void* buffer, DataType data_type) const;
   void SetSource(DataSourceCase dsrc) { data_source_ = dsrc; }
   DataSourceCase Source() const { return data_source_; }
-  virtual void InferShape(const ShapeProto& static_shape, const PbRf<int>& var_axes, Shape* shape,
-                          std::vector<std::vector<int64_t>>* lod) const = 0;
+  virtual void InferShape(const ShapeProto& shape_proto, const PbRf<int>& var_axes, Shape* shape,
+                          LoDTree* lod_tree) const = 0;
 
  private:
   DataSourceCase data_source_;
@@ -35,8 +36,8 @@ class ArrayDataField : public DataField {
 
   const std::vector<T>& data() const { return data_; }
   std::vector<T>& data() { return data_; }
-  void InferShape(const ShapeProto& static_shape, const PbRf<int>& var_axes, Shape* shape,
-                  std::vector<std::vector<int64_t>>* lod) const override;
+  void InferShape(const ShapeProto& shape_proto, const PbRf<int>& var_axes, Shape* shape,
+                  LoDTree* lod_tree) const override;
 
  private:
   std::vector<T> data_;
@@ -46,8 +47,8 @@ class ImageDataField : public DataField {
  public:
   const cv::Mat& data() const { return data_; }
   cv::Mat& data() { return data_; }
-  void InferShape(const ShapeProto& static_shape, const PbRf<int>& var_axes, Shape* shape,
-                  std::vector<std::vector<int64_t>>* lod) const override;
+  void InferShape(const ShapeProto& shape_proto, const PbRf<int>& var_axes, Shape* shape,
+                  LoDTree* lod_tree) const override;
 
  private:
   cv::Mat data_;
@@ -80,8 +81,8 @@ class NdarrayDataField : public DataField {
   int Levels() const { return lod_len_.size(); }
   std::vector<size_t>& GetLod(int lvl) { return lod_len_.at(lvl); }
   const std::vector<size_t>& GetLod(int lvl) const { return lod_len_.at(lvl); }
-  void InferShape(const ShapeProto& static_shape, const PbRf<int>& var_axes, Shape* shape,
-                  std::vector<std::vector<int64_t>>* lod) const override;
+  void InferShape(const ShapeProto& shape_proto, const PbRf<int>& var_axes, Shape* shape,
+                  LoDTree* lod_tree) const override;
 
   T* data() { return data_.get(); }
   const T* data() const { return data_.get(); }

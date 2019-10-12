@@ -1,6 +1,7 @@
 #include "oneflow/core/kernel/data_load_kernel.h"
 #include "oneflow/core/record/ofrecord_decoder.h"
 #include "oneflow/core/thread/thread_manager.h"
+#include "oneflow/core/register/lod_view.h"
 
 namespace oneflow {
 
@@ -59,20 +60,32 @@ void DataLoadKernel::WriteDataToBlob(DeviceCtx* ctx,
       data_field->InferShape(blob_conf.shape(), blob_conf.variable_length_axes(), &shape, nullptr);
       CHECK(dense_shape == shape);
     });
+    dense_shape = dense_shape.CreateLeftExtendedShape(dense_shape.NumAxes() + 1);
     dense_shape.Set(0, batch_data->size());
   } else {
-    std::vector<std::vector<int64_t>> length_lod;
+    LoDTree lod_tree;
     for (DataInstance& data_inst : *batch_data) {
       const DataField* data_field = data_inst.GetField(blob_conf.data_source());
       size_t written_size = data_field->ToBuffer(dptr, blob_conf.data_type());
-      data_field->InferShape(blob_conf.shape(), blob_conf.variable_length_axes(), &dense_shape,
-                             &length_lod);
       dptr += written_size;
+
+      Shape inst_shape;
+      LoDTree* inst_lod_tree = lod_tree.mutable_children()->Add();
+      data_field->InferShape(blob_conf.shape(), blob_conf.variable_length_axes(), &inst_shape,
+                             inst_lod_tree);
+      if (dense_shape.elem_cnt() == 0) {
+        dense_shape = inst_shape;
+      } else {
+        FOR_RANGE(int64_t, i, 1, dense_shape.NumAxes()) {
+          CHECK_EQ(dense_shape.At(i), inst_shape.At(i));
+        }
+        dense_shape.Set(0, dense_shape.At(0) + inst_shape.At(0));
+      }
     }
-    blob->length_lod_mut_view().SetLength(length_lod);
+    blob->tree_lod_mut_view().UpdateLoD(lod_tree);
   }
   blob->dense_shape_mut_view().set_shape(dense_shape);
-  // TODO: implement all preprocessor with transform
+  // TODO: implement all preprocessor with transforma or batch transform
   for (const auto& preprocess_conf : blob_conf.preprocess()) {
     PreprocessBlob(preprocess_conf, blob);
   }
