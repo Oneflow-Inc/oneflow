@@ -28,8 +28,11 @@ class PlacementScope(object):
         raise NotImplementedError
 
     def GetParallelNum(self):
-        parallel_conf = _MakeParallelConf(self.device_tag_, self.machine_device_ids)
-        return c_api_util.ParallelNum4ParallelConf(parallel_conf)
+        parallel_conf = _MakeParallelConf(self.device_tag_, self.machine_device_ids_)
+        ofrecord = _GetMachineId2DeviceIdListOFRecord(parallel_conf)
+        size = 0
+        for k, v in ofrecord.feature.items(): size += len(v.int32_list.value)
+        return size
 
     @property
     def default_device_tag(self): return self.device_tag_
@@ -95,3 +98,12 @@ def GetCpuDefaultMachineDeviceIds(resource):
     assert len(resource.machine) > 0
     assert resource.HasField('cpu_device_num')
     return ["%s:0-%s" % (m.id, resource.cpu_device_num - 1) for m in resource.machine]
+
+def _GetMachineId2DeviceIdListOFRecord(parallel_conf):
+    parallel_conf_str = str(parallel_conf)
+    if parallel_conf_str not in _parallel_conf_str2ofrecord:
+        of_record = c_api_util.GetMachine2DeviceIdListOFRecordFromParallelConf(parallel_conf)
+        _parallel_conf_str2ofrecord[parallel_conf_str] = of_record
+    return _parallel_conf_str2ofrecord[parallel_conf_str]
+
+_parallel_conf_str2ofrecord = {}
