@@ -58,6 +58,9 @@ parser.add_argument(
     ),
     required=False,
 )
+parser.add_argument(
+    "-v", "--verbose", default=False, action="store_true", required=False
+)
 
 terminal_args = parser.parse_args()
 
@@ -116,8 +119,10 @@ def maskrcnn_train(images, image_sizes, gt_boxes, gt_segms, gt_labels):
     cfg = get_default_cfgs()
     if terminal_args.config_file is not None:
         cfg.merge_from_file(terminal_args.config_file)
+        print("merged config from {}".format(terminal_args.config_file))
     cfg.freeze()
-    print(cfg)
+    if terminal_args.verbose:
+        print(cfg)
     backbone = Backbone(cfg)
     rpn_head = RPNHead(cfg)
     rpn_loss = RPNLoss(cfg)
@@ -375,7 +380,8 @@ if __name__ == "__main__":
                     )
                 )
             for i in range(10):
-                if i == 0 or (i + 1) % 10 == 0:
+
+                def save_model():
                     if not os.path.exists(terminal_args.model_save_dir):
                         os.makedirs(terminal_args.model_save_dir)
                     model_dst = os.path.join(
@@ -383,6 +389,10 @@ if __name__ == "__main__":
                     )
                     print("saving models to {}".format(model_dst))
                     check_point.save(model_dst)
+
+                if i == 0:
+                    save_model()
+
                 train_loss = mock_train(
                     debug_data.blob("images"),
                     debug_data.blob("image_size"),
@@ -395,3 +405,6 @@ if __name__ == "__main__":
                 for loss in train_loss:
                     print_loss.append(loss.mean())
                 print(fmt_str.format(*print_loss))
+                
+                if (i + 1) % 10 == 0:
+                    save_model()
