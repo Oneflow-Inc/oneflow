@@ -6,6 +6,7 @@
 #include "oneflow/core/data/ring_queue.h"
 #include "oneflow/core/thread/thread_pool.h"
 #include "oneflow/core/common/buffer.h"
+#include "oneflow/core/common/channel.h"
 #include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/core/kernel/kernel.pb.h"
 #include <thread>
@@ -13,27 +14,10 @@
 namespace oneflow {
 namespace data {
 
-class BatchDataInstance final {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(BatchDataInstance);
-  BatchDataInstance(size_t batch_size) : data_inst_vec_(batch_size), fill_count_(0) {}
-  ~BatchDataInstance() = default;
-
-  DataInstance* Get(size_t idx_in_batch) { return &(data_inst_vec_.at(idx_in_batch)); }
-  size_t Size() const { return data_inst_vec_.size(); }
-  void IncreaseFillCount() { fill_count_ += 1; }
-  bool IsReady() { return data_inst_vec_.size() == fill_count_.load(); }
-  void ForEach(std::function<void(DataInstance*)> handler) {
-    for (auto& data_inst : data_inst_vec_) { handler(&data_inst); }
-  }
-
- private:
-  std::vector<DataInstance> data_inst_vec_;
-  std::atomic<size_t> fill_count_;
-};
-
 class DataLoader final {
  public:
+  using BatchDataInstance = std::vector<DataInstance>;
+
   OF_DISALLOW_COPY_AND_MOVE(DataLoader);
   DataLoader(const DataLoadOpConf& op_conf, const DataLoadKernelConf& kernel_conf);
   ~DataLoader();
@@ -44,7 +28,7 @@ class DataLoader final {
   void LoadBatch();
   void Close();
   bool IsImageAlignNeeded(size_t& alignment);
-  void ImageAlign(std::shared_ptr<BatchDataInstance> batch_data_inst_ptr, size_t alignment);
+  void ImageAlign(BatchDataInstance* batch_data_inst, size_t alignment);
 
  private:
   DataLoadOpConf op_conf_;
@@ -52,9 +36,8 @@ class DataLoader final {
 
   std::shared_ptr<Dataset> dataset_;
   DataSamplerContext sampler_ctx_;
-  Buffer<int64_t> indices_buffer_;
+
   Buffer<std::shared_ptr<BatchDataInstance>> batch_buffer_;
-  std::queue<std::shared_ptr<BatchDataInstance>> batch_queue_;
 
   bool is_closed_;
   std::thread load_thrd_;
