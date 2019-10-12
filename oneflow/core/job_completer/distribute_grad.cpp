@@ -19,10 +19,10 @@ void GenerateBackwardOpConf4DistributeConcat(
     const std::string& ibn_of_distribute_concat_op = op.input_bns().Get(i);
     const std::string& obn = "out_" + std::to_string(i);
     split_op_conf->add_out(obn);
-    CHECK(DiffLbi4BnInOp(ibn_of_distribute_concat_op) == DiffLbi4BnInOp(op.input_bns().Get(0)));
-    if (DiffLbi4BnInOp(ibn_of_distribute_concat_op) == nullptr) { return; }
-    DiffLbi4BnInOp(ibn_of_distribute_concat_op)->set_op_name(split_op.name());
-    DiffLbi4BnInOp(ibn_of_distribute_concat_op)->set_blob_name(obn);
+    if (DiffLbi4BnInOp(ibn_of_distribute_concat_op) != nullptr) {
+      DiffLbi4BnInOp(ibn_of_distribute_concat_op)->set_op_name(split_op.name());
+      DiffLbi4BnInOp(ibn_of_distribute_concat_op)->set_blob_name(obn);
+    }
   }
   op_confs->push_back(split_op);
 }
@@ -37,9 +37,10 @@ void GenerateBackwardOpConf4DistributeSplit(
   concat_op.set_name(op.op_conf().name() + "_grad");
   DistributeConcatOpConf* concat_op_conf = concat_op.mutable_distribute_concat_conf();
   concat_op_conf->set_axis(distribute_split_conf.axis());
+  const bool has_diff = DiffLbi4BnInOp(op.input_bns().Get(0)) != nullptr;
   FOR_RANGE(int32_t, i, 0, distribute_split_conf.out_size()) {
     const std::string& obn_of_distribute_split_op = op.input_bns().Get(i);
-    CHECK(DiffLbi4BnInOp(obn_of_distribute_split_op) == DiffLbi4BnInOp(op.input_bns().Get(0)));
+    CHECK((DiffLbi4BnInOp(obn_of_distribute_split_op) == nullptr) == has_diff);
     concat_op_conf->add_in(GenLogicalBlobName(*DiffLbi4BnInOp(obn_of_distribute_split_op)));
   }
   concat_op_conf->set_out("out");
