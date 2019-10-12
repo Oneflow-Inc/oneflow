@@ -9,7 +9,7 @@ namespace oneflow {
 static std::unordered_map<int32_t, std::string> op_type2string_map = {
   {OP_TYPE_CASE(Matmul),  "MatMul"},
   {OP_TYPE_CASE(Relu), "Relu"},
-  {OP_TYPE_CASE(FullyConnected), "FullyConnected"},
+  // {OP_TYPE_CASE(FullyConnected), "FullyConnected"},
   {OP_TYPE_CASE(BiasAdd), "BiasAdd"},
   {OP_TYPE_CASE(Reshape), "Reshape"},
   {OP_TYPE_CASE(Identity), "Identity"},
@@ -38,6 +38,8 @@ static std::unordered_map<int32_t, std::string> op_type2string_map = {
   {OP_TYPE_CASE(AdamModelUpdate), "AdamModelUpdate"},
   {OP_TYPE_CASE(AdamOptimizer), "AdamOptimizer"},
   {OP_TYPE_CASE(ClipGradient), "ClipGradient"},
+  {OP_TYPE_CASE(ReduceConcat), "ReduceConcat"},
+  {OP_TYPE_CASE(ReduceSplit), "ReduceSplit"},
   // TODO(hjchen2)
 };
 

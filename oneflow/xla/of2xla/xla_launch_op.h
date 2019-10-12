@@ -2,8 +2,9 @@
 #define ONEFLOW_CORE_COMPILER_OF2XLA_XLA_LAUNCH_OP_H_
 
 #include <unordered_map>
-#include "oneflow/core/operator/operator.h"
 #include "oneflow/xla/of2xla/xla_graph.h"
+#include "oneflow/core/graph/logical_node.h"
+#include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
 
@@ -16,6 +17,15 @@ class XlaLaunchOp : public Operator {
   Maybe<void> InferBlobDescs(
       std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
       const ParallelContext* parallel_ctx) const override;
+
+  LogicalNode* NewProperLogicalNode() const override {
+    const auto &launch_conf = op_conf().xla_launch_conf();
+    const bool is_model_update = launch_conf.attr().is_model_update();
+    if (is_model_update) {
+      return new OptimizerLogicalNode;
+    }
+    return new NormalForwardLogicalNode;
+  }
 
  private:
   Maybe<void> InferBatchAxis(

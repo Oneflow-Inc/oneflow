@@ -5,11 +5,11 @@
 #include <string.h>
 #include <stdlib.h>
 #include "glog/logging.h"
-#include "oneflow/core/operator/op_conf.pb.h"
-#include "oneflow/core/operator/operator.h"
-#include "oneflow/core/register/blob.h"
 
 #include "tensorflow/compiler/xla/util.h"
+#include "oneflow/core/register/blob.h"
+#include "oneflow/core/operator/op_conf.pb.h"
+#include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
 

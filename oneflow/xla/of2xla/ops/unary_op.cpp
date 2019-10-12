@@ -41,7 +41,7 @@ struct Identity {
   }
 };
 
-REGISTER_XLA_OP_COMPILER(Identity, ApplyUnaryOp<Identity>);
+// REGISTER_XLA_OP_COMPILER(Identity, ApplyUnaryOp<Identity>);
 
 }  // namespace mola
 }  // namespace oneflow

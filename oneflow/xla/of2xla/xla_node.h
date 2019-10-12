@@ -2,8 +2,8 @@
 #define ONEFLOW_CORE_COMPILER_OF2XLA_XLA_NODE_H_
 
 #include <list>
-#include "oneflow/xla/of2xla/xla_argument.h"
 #include "oneflow/core/graph/op_graph.h"
+#include "oneflow/xla/of2xla/xla_argument.h"
 
 namespace oneflow {
 namespace mola {
@@ -102,7 +102,7 @@ class XlaNode {
   bool IsReachable(const XlaNode &dst_node) const;
 
   typedef std::function<BlobDesc*(const LogicalBlobId &)> GetBlobDescFunc;
-  virtual void InferBlobDescs(GetBlobDescFunc func,
+  virtual void InferBlobDescs(GetBlobDescFunc blob_desc_func,
                               const ParallelContext &parallel_ctx,
                               const SbpSignature &sbp_signature) const;
 
@@ -141,7 +141,7 @@ class XlaArgumentNode : public XlaNode {
  public:
   const PbMessage &proto_conf() const override { return arg_conf_; }
 
-  void InferBlobDescs(XlaNode::GetBlobDescFunc func,
+  void InferBlobDescs(XlaNode::GetBlobDescFunc blob_desc_func,
                       const ParallelContext &parallel_ctx,
                       const SbpSignature &sbp_signature) const override;
 

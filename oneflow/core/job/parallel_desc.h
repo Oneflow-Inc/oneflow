@@ -26,7 +26,6 @@ class ParallelDesc final {
 
   // Getters
   DeviceType device_type() const { return device_type_; }
-  ParallelPolicy policy() const { return parallel_conf_.policy(); }
   const std::vector<int64_t>& sorted_machine_ids() const { return sorted_machine_ids_; }
   const std::vector<int64_t>& sorted_dev_phy_ids(int64_t machine_id) const {
     return machine_id2sorted_dev_phy_ids_.at(machine_id);
@@ -36,15 +35,15 @@ class ParallelDesc final {
   const ParallelConf& parallel_conf() const { return parallel_conf_; }
 
   // Setters
-  void set_policy(ParallelPolicy val) { parallel_conf_.set_policy(val); }
   void set_device_type(DeviceType device_type);
 
-  bool EqualsIgnoringPolicy(const ParallelDesc& rhs) const;
-  bool EqualsIgnoringPolicyAndDeviceType(const ParallelDesc& rhs) const;
+  bool EqualsIgnoringDeviceType(const ParallelDesc& rhs) const;
   bool Equals(const ParallelDesc& rhs) const;
   bool operator==(const ParallelDesc& rhs) const { return Equals(rhs); }
   bool operator!=(const ParallelDesc& rhs) const { return !(*this == rhs); }
   bool Equals(const ParallelDesc* rhs) const { return Equals(*rhs); }
+  int64_t MachineIdForParallelId(int64_t parallel_id) const;
+  int64_t DeviceIdForParallelId(int64_t parallel_id) const;
 
  private:
   void ClearUp();
@@ -56,6 +55,8 @@ class ParallelDesc final {
   HashMap<int64_t, std::vector<int64_t>> machine_id2sorted_dev_phy_ids_;
   int64_t parallel_num_;
   int64_t device_num_of_each_machine_;
+  HashMap<int64_t, int64_t> parallel_id2machine_id_;
+  HashMap<int64_t, int64_t> parallel_id2device_id_;
 };
 
 inline bool operator==(const ParallelConf& lhs, const ParallelConf& rhs) {

@@ -12,11 +12,24 @@ static ParallelContext LocalParallelContext(int device_ordinal) {
   ParallelContext parallel_ctx;
   parallel_ctx.set_parallel_id(device_ordinal);
   parallel_ctx.set_parallel_num(1);
-  parallel_ctx.set_policy(kDataParallel);
   return parallel_ctx;
 }
 
 namespace mola {
+
+struct StreamIdHash {
+  size_t operator()(const XlaLaunchResourceMgr::StreamId &stream) const {
+    return std::hash<uint64_t>()(reinterpret_cast<uint64_t>(stream.stream)) ^
+           std::hash<uint64_t>()(stream.id);
+  }
+};
+
+struct StreamIdEqual {
+  bool operator()(const XlaLaunchResourceMgr::StreamId &lhs,
+                  const XlaLaunchResourceMgr::StreamId &rhs) const {
+    return (lhs.stream == rhs.stream) && (lhs.id == rhs.id);
+  }
+};
 
 xla::LocalClient* XlaLaunchResourceMgr::GetOrCreateLocalClient(
     const se::Platform *platform, int intra_op_num_threads) {
@@ -32,13 +45,15 @@ xla::LocalClient* XlaLaunchResourceMgr::GetOrCreateLocalClient(
 }
 
 DeviceBufferAllocator *XlaLaunchResourceMgr::GetOrCreateBufferAllocator(
-    const se::Platform *platform, se::Stream *stream, int device_ordinal) {
-  static std::unordered_map<uint64_t, DeviceBufferAllocator *> allocators;
+    const se::Platform *platform, const StreamId &stream_id,
+    int device_ordinal) {
+  static std::unordered_map<StreamId, DeviceBufferAllocator *,
+                            StreamIdHash, StreamIdEqual> allocators;
   static std::mutex mutex;
-  uint64_t stream_id = reinterpret_cast<uint64_t>(stream);
   if (allocators.count(stream_id) == 0) {
     std::lock_guard<std::mutex> lock(mutex);
     while (allocators.count(stream_id) == 0) {
+      se::Stream *stream = stream_id.stream;
       std::shared_ptr<DeviceMemoryPool> mem_pool =
           DeviceMemoryPool::NewMemoryPool(platform, stream, device_ordinal);
       allocators.emplace(stream_id, new DeviceBufferAllocator(mem_pool));
@@ -62,8 +77,11 @@ xla::LocalClient *XlaLaunchContext::NewLocalClient(
 
 XlaAllocator *XlaLaunchContext::NewAllocator(const se::Platform *platform,
                                              int device_ordinal) {
+  XlaLaunchResourceMgr::StreamId stream_id;
+  stream_id.stream = stream_.get();
+  stream_id.id = stream_id_;
   DeviceBufferAllocator *buffer_allocator =
-      XlaLaunchResourceMgr::GetOrCreateBufferAllocator(platform, stream_.get(),
+      XlaLaunchResourceMgr::GetOrCreateBufferAllocator(platform, stream_id,
                                                        device_ordinal);
   return new XlaAllocator(platform, buffer_allocator);
 }
@@ -77,7 +95,7 @@ XlaLaunchContext::XlaLaunchContext(const std::string &builder_name,
                                    DeviceType device_type,
                                    int intra_op_num_threads)
     : device_ctx_(device_ctx), device_type_(device_type), device_ordinal_(0),
-      host_device_(NewEigenHostDevice()) {
+      stream_id_(0), host_device_(NewEigenHostDevice()) {
   builder_ = std::make_shared<xla::XlaBuilder>(absl::StrCat("XlaBuilder_",
                                                             builder_name));
   se::Platform::Id platform_id = nullptr;
@@ -88,6 +106,7 @@ XlaLaunchContext::XlaLaunchContext(const std::string &builder_name,
 #ifdef WITH_CUDA
     CudaCheck(cudaGetDevice(&device_ordinal_));
 #endif
+    stream_id_ = reinterpret_cast<uint64_t>(device_ctx->cuda_stream());
   }
   CHECK(platform_id) << "Platform Id should not be nullptr. Please check "
                         "your device type.";

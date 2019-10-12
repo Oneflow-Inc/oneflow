@@ -10,9 +10,6 @@ namespace oneflow {
 struct InterfaceOpUtil final {
   static Maybe<void> InferOutBlobDesc(const InterfaceBlobConf& blob_conf, BlobDesc* out_blob_desc,
                                       const ParallelContext* parallel_ctx);
-  static Maybe<void> InferOutBlobDesc(const InterfaceBlobConf& blob_conf, BlobDesc* out_blob_desc,
-                                      const ParallelContext* parallel_ctx,
-                                      int64_t record_piece_size);
   static Maybe<void> InferBatchAxis(const InterfaceBlobConf& blob_conf, OptInt64* batch_axis);
   static Maybe<void> GetInputLikeOpSbpSignature(const InterfaceBlobConf& blob_conf,
                                                 const PbRpf<std::string>& input_bns,

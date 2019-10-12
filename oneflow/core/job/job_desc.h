@@ -27,11 +27,13 @@ class JobDesc final {
   bool EnableCudnn() const { return job_conf_.enable_cudnn(); }
   bool IsTrain() const { return job_conf_.has_train_conf(); }
   bool IsPredict() const { return job_conf_.has_predict_conf(); }
-  int64_t RecordPieceSize() const { return job_conf_.piece_size(); }
   int64_t piece_num_of_experiment_phase() const;
   bool enable_experiment_run() const;
-  bool enable_mem_sharing() const { return job_conf_.enable_mem_sharing(); }
+  bool enable_reuse_mem() const { return job_conf_.enable_reuse_mem(); }
   bool enable_inplace() const { return job_conf_.enable_inplace(); }
+  bool enable_inplace_in_reduce_struct() const {
+    return job_conf_.enable_inplace_in_reduce_struct();
+  }
   bool enable_true_half_config_when_conv() const {
     return job_conf_.enable_true_half_config_when_conv();
   }
@@ -43,7 +45,15 @@ class JobDesc final {
   bool use_nccl_inter_node_communication() const {
     return job_conf_.use_nccl_inter_node_communication();
   }
+  bool use_boxing_v2() const { return job_conf_.use_boxing_v2(); }
   bool enable_all_reduce_group() const { return job_conf_.enable_all_reduce_group(); }
+  bool enable_non_distributed_optimizer() const {
+    return job_conf_.enable_non_distributed_optimizer();
+  }
+  int64_t non_distributed_optimizer_group_size_mbyte() const {
+    return job_conf_.non_distributed_optimizer_group_size_mbyte();
+  }
+  bool disable_all_reduce_sequence() const { return job_conf_.disable_all_reduce_sequence(); }
   int64_t all_reduce_group_num() const;
   int64_t all_reduce_group_min_byte() const;
   float all_reduce_group_size_warmup() const;
@@ -53,7 +63,6 @@ class JobDesc final {
 
   // Train conf
   int64_t TotalBatchNum() const;
-  int64_t BatchSize() const;
   int64_t NumOfPiecesInBatch() const;
   float weight_l1() const;
   float bias_l1() const;

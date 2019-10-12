@@ -10,11 +10,13 @@
 #include "oneflow/core/job_completer/all_reduce_sequence_pass.h"
 #include "oneflow/core/job_completer/group_boxing_by_dst_parallel.h"
 #include "oneflow/core/job_completer/auto_mixed_precision.h"
+#include "oneflow/core/job_completer/non_distributed_optimizer_pass.h"
+#include "oneflow/core/job_completer/nccl_tuple_broadcast_reduce_sequence_pass.h"
 #include "oneflow/core/job_completer/auto_train_step.h"
 #include "oneflow/core/job_completer/auto_learning_rate.h"
 
 #ifdef WITH_XLA
-#include "oneflow/xla/rewrite_optimizer.h"
+#include "oneflow/xla/of2xla/pass/xla_optimize_pass.h"
 DECLARE_bool(use_xla_jit);
 #endif  // WITH_XLA
 
@@ -132,10 +134,18 @@ void GenerateOpConf4Trainning(const OpGraph& op_graph, JobBuilder* job_builder) 
   UpdateOpSbpSignatureHint(op_graph, job_builder);
 }
 
+#ifdef WITH_XLA
 void RewriteOptimizerOp(const OpGraph& op_graph, Job* job) {
   mola::XlaGraph graph(&op_graph);
-  RewriteOptimizerGraph(graph, job);
+  auto options = mola::CreateDefaultOptimizeOptions();
+  options.graph = &graph;
+  options.job = job;
+  mola::RunOptimizePass("RewriteOptimizer", options);
+
+  TeePersistentLogStream::Create(
+  absl::StrCat("job_rewrite_optimizer", GlobalJobDesc().job_id()))->Write(*job);
 }
+#endif
 
 std::function<ParallelConf*(const std::string&)> MakeGetterMutParallelConf4OpName(
     Placement* placement) {
@@ -317,7 +327,8 @@ void SetOpTimeShape7BatchAxisLbis(const OpGraph& op_graph, JobBuilder* job_build
 }
 
 void RewriteBoxingWithAllReduce(const OpGraph& op_graph, JobBuilder* job_builder) {
-  if (GlobalJobDesc().enable_all_reduce_group()) {
+  if (!GlobalJobDesc().enable_non_distributed_optimizer()
+      && GlobalJobDesc().enable_all_reduce_group()) {
     AllReduceAddPass().Apply(op_graph, job_builder);
   }
 }
@@ -328,6 +339,7 @@ void DumpLogicalBlobDescAndSbpSignature(const OpGraph& op_graph, JobBuilder* job
 }
 
 void MakeAllReduceSequence(const OpGraph& op_graph, JobBuilder* job_builder) {
+  if (GlobalJobDesc().disable_all_reduce_sequence()) { return; }
   AllReduceSequencePass().Apply(op_graph, job_builder);
 }
 
@@ -337,6 +349,16 @@ void EnableAutoMixedPrecision(const OpGraph& op_graph, JobBuilder* job_builder) 
   AutoMixedPrecision(AutoMixedPrecisionLists::WhiteList(), AutoMixedPrecisionLists::BlackList(),
                      AutoMixedPrecisionLists::GrayList(), AutoMixedPrecisionLists::ClearList())
       .Apply(op_graph, job_builder);
+}
+
+void EnableNonDistributedOptimizer(const OpGraph& op_graph, JobBuilder* job_builder) {
+  if (!GlobalJobDesc().enable_non_distributed_optimizer()) { return; }
+  CHECK(GlobalJobDesc().enable_nccl());
+  NonDistributedOptimizerPass().Apply(op_graph, job_builder);
+}
+
+void MakeNcclTupleBroadcastReduceSequence(const OpGraph& op_graph, JobBuilder* job_builder) {
+  NcclTupleBroadcastReduceSequencePass().Apply(op_graph, job_builder);
 }
 
 }  // namespace
@@ -349,6 +371,7 @@ void JobCompleter::Complete(Job* job) const {
   if (GlobalJobDesc().IsTrain()) {
     WithOpGraphAndMutJob(job, &TieUpChainHeadersUnReachableFromAnyVariableOps);
     WithOpGraphAndMutJobBuilder(job, &EnableAutoMixedPrecision);
+    WithOpGraphAndMutJobBuilder(job, &EnableNonDistributedOptimizer);
     WithOpGraphAndMutJob(job, &AutoTrainStep);
     WithOpGraphAndMutJob(job, &AutoLearningRate);
     // complete ops for trainning
@@ -356,11 +379,9 @@ void JobCompleter::Complete(Job* job) const {
 #ifdef WITH_XLA
     if (FLAGS_use_xla_jit) {
       WithOpGraphAndMutJob(job, &RewriteOptimizerOp);
-      const JobDesc& job_desc = GlobalJobDesc();
-      TeePersistentLogStream::Create(
-      absl::StrCat("job_rewrite_optimizer", job_desc.job_id()))->Write(*job);
     }
 #endif
+    WithOpGraphAndMutJobBuilder(job, &MakeNcclTupleBroadcastReduceSequence);
     WithOpGraphAndMutJobBuilder(job, &RewriteBoxingWithAllReduce);
     WithOpGraphAndMutJobBuilder(job, &MakeAllReduceSequence);
   }

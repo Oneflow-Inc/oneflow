@@ -5,8 +5,6 @@
 #include "oneflow/core/job_completer/job_completer.h"
 
 #ifdef WITH_XLA
-#include "oneflow/xla/rewrite_optimizer.h"
-#include "oneflow/xla/rebuild_job.h"
 #include "oneflow/xla/of2xla/xla_graph.h"
 #include "oneflow/xla/of2xla/pass/xla_optimize_pass.h"
 
@@ -66,20 +64,19 @@ void Compiler::Compile(Job* job, Plan* plan, bool need_job_complete) const {
   Global<OpGraph>::Get()->ToDotWithFilePath("optimized_dlnet_op_graph.dot");
 
 #ifdef WITH_XLA
-  TeePersistentLogStream::Create(
-      absl::StrCat("job_without_xla", job_desc.job_id()))->Write(*job);
   if (FLAGS_use_xla_jit) {
-    LOG(INFO) << "Compile the job with XLA JIT support.";
-    mola::XlaGraph graph(Global<OpGraph>::Get());
-    mola::OptimizeOptions options;
-    options.graph = &graph;
-    options.minimum_nodes_in_cluster = 1;
-    options.maximum_nodes_in_cluster = 50;
+    VLOG(2) << "Compile the job with XLA JIT support.";
+    TeePersistentLogStream::Create(
+        absl::StrCat("job_without_xla", job_desc.job_id()))->Write(*job);
 
+    mola::XlaGraph graph(Global<OpGraph>::Get());
+    auto options = mola::CreateDefaultOptimizeOptions();
+    options.graph = &graph;
     mola::RunOptimizePass("MarkClusterId", options);
     mola::RunOptimizePass("BuildSubGraph", options);
     // Rebuild Job
-    RebuildXlaCompiledJob(graph, job);
+    options.job = job;
+    mola::RunOptimizePass("RebuildCompiledJob", options);
 
     TeePersistentLogStream::Create(
         absl::StrCat("job_with_xla", job_desc.job_id()))->Write(*job);
@@ -101,11 +98,14 @@ void Compiler::Compile(Job* job, Plan* plan, bool need_job_complete) const {
   }
   task_gph->RemoveEmptyRegsts();
   task_gph->AddOrderingCtrlEdgeInSameChain();
-  task_gph->EnableMemSharingInReduceStruct();
   // TODO: update method for fw bw split
   // if (job_desc.IsTrain() && job_desc.enable_mem_sharing()) {
   //   task_gph->EnableMemSharingAfterAllManualSetForMdUpdt();  // must last mem shared manual set
   // }
+  if (job_desc.enable_inplace_in_reduce_struct()) {
+    task_gph->EnableInplaceMemSharingInReduceStruct();
+  }
+
   if (job_desc.enable_inplace()) {
     auto IsReachable = Global<OpGraph>::Get()->MakePredicatorIsLbiAllConsumersReachableToOpName();
     task_gph->EnableInplaceMemSharing(IsReachable);

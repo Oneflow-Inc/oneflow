@@ -3,6 +3,10 @@
 
 namespace oneflow {
 
+void DecodeRandomActor::VirtualCompActorInit(const TaskProto& task_proto) {
+  OF_SET_MSG_HANDLER(&DecodeRandomActor::HandlerNormal);
+}
+
 void DecodeRandomActor::Act() { AsyncLaunchKernel(GenDefaultKernelCtx()); }
 
 void DecodeRandomActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {

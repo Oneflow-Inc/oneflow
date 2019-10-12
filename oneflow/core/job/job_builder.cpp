@@ -137,6 +137,17 @@ void JobBuilder::MutParallelConfOnlyOnce(const std::string& op_name,
   *placement_group->mutable_parallel_conf() = parallel_conf;
 }
 
+void JobBuilder::DelOps(const std::vector<OperatorConf>& op_confs) {
+  for (const auto& op_conf : op_confs) {
+    const std::string& op_name = op_conf.name();
+    op_name2op_conf_.erase(op_name);
+    auto* op_list = job_->mutable_net()->mutable_op();
+    auto it = std::remove_if(op_list->begin(), op_list->end(),
+                             [&](const OperatorConf& conf) { return conf.name() == op_name; });
+    if (it != op_list->end()) { op_list->erase(it); }
+  }
+}
+
 void JobBuilder::MutOpsOnlyOnce(const std::vector<OperatorConf>& op_confs) {
   for (const auto& op_conf : op_confs) {
     CHECK(modified_op_conf_op_names_.emplace(op_conf.name()).second);

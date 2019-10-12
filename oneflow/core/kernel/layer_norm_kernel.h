@@ -6,8 +6,7 @@
 namespace oneflow {
 
 template<DeviceType device_type, typename T>
-class LayerNormKernel final : public KernelIfWithModel<device_type, T>,
-                              public KernelIfWithActivation<device_type, T> {
+class LayerNormKernel final : public KernelIf<device_type> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(LayerNormKernel);
   LayerNormKernel() = default;

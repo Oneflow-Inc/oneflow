@@ -3,7 +3,6 @@ from __future__ import absolute_import
 import oneflow.python.framework.blob_desc as blob_desc
 import oneflow.python.framework.inter_user_job_util as inter_user_job_util
 import oneflow.python.framework.job_builder as job_builder
-import oneflow.python.framework.undefined as undefined
 import oneflow.core.common.data_type_pb2 as data_type_util
 import oneflow
 
@@ -18,10 +17,13 @@ class RemoteBlob(blob_desc.BlobDesc):
     @property
     def dtype(self): return job_builder.GetDataType(self.job_name_, self.lbn_)
 
-    def split(self, split_axis):
-        assert split_axis is not undefined
+    @property
+    def batch_axis(self): return job_builder.GetBatchAxis(self.job_name_, self.lbn_)
+
+    def with_distribute(self, distribute):
+        oneflow.distribute.assert_is_valid_distribute(distribute)
         ret = RemoteBlob(self.lbi_)
-        ret.split_axis_ = split_axis
+        ret.distribute_ = distribute
         return ret
 
     def pull(self):
