@@ -56,10 +56,10 @@ def _SetJobConfBeforeInferOp(job_conf):
     job_conf_has_set = Box(False)
     def SetJobconf():
         if job_conf_has_set.value: return
+        job_conf_has_set.set_value(True)
         config_util.TryCompleteDefaultJobConfigProto(job_conf)
         pb_util.MergePbMessage(job_conf, config_util.default_job_conf)
         job_builder.CurCtxSetJobConfIfNotSet(job_conf)
-        job_conf_has_set.set_value(True)
     with compile_context.BeforeNonInputOpBuildAndInferHook(SetJobconf):
         yield SetJobconf
     if job_conf_has_set.value == False: SetJobconf()
@@ -69,11 +69,11 @@ def _AddInputOpBeforeNonInputOp(func, do_before_infer_input_op):
     input_op_add_and_infered = Box(False)
     def AddAndInferInputOp():
         if input_op_add_and_infered.value: return
+        input_op_add_and_infered.set_value(True)
         do_before_infer_input_op()
         for blob_desc in func.__oneflow_input_blob_defs__:
             assert isinstance(blob_desc, input_blob_def.input_blob_def)
             ops.InputOpByBlobDesc(blob_desc)
-        input_op_add_and_infered.set_value(True)
     with compile_context.BeforeNonInputOpBuildAndInferHook(AddAndInferInputOp):
         yield None
     if input_op_add_and_infered.value == False: AddAndInferInputOp()
