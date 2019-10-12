@@ -40,7 +40,7 @@ void DataLoadKernel::WriteDataToBlob(DeviceCtx* ctx,
   using namespace data;
   bool is_contiguous = (blob->blob_desc().num_of_lod_levels() == 0);
   char* dptr = static_cast<char*>(blob->mut_dptr());
-  Memset<DeviceType::kCPU>(ctx, dptr, 0, blob->ByteSizeOfDataContentField());
+  Memset<DeviceType::kCPU>(ctx, dptr, 0, blob->AlignedByteSizeOfBlobBody());
   Shape dense_shape;
   if (is_contiguous) {
     const DataField* first = batch_data->at(0).GetField(blob_conf.data_source());
