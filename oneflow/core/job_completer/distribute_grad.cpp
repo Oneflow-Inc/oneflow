@@ -42,7 +42,7 @@ void GenerateBackwardOpConf4DistributeSplit(
     const std::string& obn_of_distribute_split_op = op.input_bns().Get(i);
     const bool has_diff_i = DiffLbi4BnInOp(obn_of_distribute_split_op) != nullptr;
     CHECK(has_diff_i == has_diff_0);
-    if (DiffLbi4BnInOp(obn_of_distribute_split_op) != nullptr) {
+    if (has_diff_i) {
       concat_op_conf->add_in(GenLogicalBlobName(*DiffLbi4BnInOp(obn_of_distribute_split_op)));
     }
   }
