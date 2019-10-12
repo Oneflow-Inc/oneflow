@@ -48,9 +48,9 @@ class PlacementScope(object):
     def __exit__(self, *args):
         assert self == placement_context.PlacementScopeStackPop()
 
-@oneflow_export('current_placement_scope.parallel_size')
-def cur_placement_scope_parallel_num():
-    return placement_context.PlacementScopeStackTop().parallel_size
+@oneflow_export('placement.current_scope')
+def cur_placement_scope():
+    return placement_context.PlacementScopeStackTop()
 
 @oneflow_export('fixed_placement')
 class FixedPlacementScope(PlacementScope):
@@ -104,13 +104,14 @@ def GetCpuDefaultMachineDeviceIds(resource):
 def _MakeMachineId2DeviceIdList(parallel_conf):
     parallel_conf_str = str(parallel_conf)
     if parallel_conf_str not in _parallel_conf_str2ofrecord:
-        of_record = c_api_util.GetMachine2DeviceIdListOFRecordFromParallelConf(parallel_conf)
-        _parallel_conf_str2ofrecord[parallel_conf_str] = of_record
+        ofrecord = c_api_util.GetMachine2DeviceIdListOFRecordFromParallelConf(parallel_conf)
+        _parallel_conf_str2ofrecord[parallel_conf_str] = \
+                {int(k) : list(v.int32_list.value) for k, v in ofrecord.feature.items()}
     return _parallel_conf_str2ofrecord[parallel_conf_str]
 
-def _GetParallelSize(ofrecord):
+def _GetParallelSize(key2list):
     size = 0
-    for k, v in ofrecord.feature.items(): size += len(v.int32_list.value)
+    for k, v in key2list.items(): size += len(v)
     return size
 
 _parallel_conf_str2ofrecord = {}
