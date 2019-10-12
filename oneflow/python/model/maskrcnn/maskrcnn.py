@@ -37,6 +37,9 @@ parser.add_argument(
     "-md", "--mock_dataset", default=False, action="store_true", required=False
 )
 parser.add_argument(
+    "-mp", "--mock_dataset_path", type=str, default="/tmp/shared_with_zwx/data_600x100_2_image.pkl", required=False
+)
+parser.add_argument(
     "-rcnn_eval",
     "--rcnn_eval",
     default=False,
@@ -70,7 +73,7 @@ debug_data = None
 if terminal_args.mock_dataset:
     from mock_data import MockData
 
-    debug_data = MockData("/tmp/shared_with_zwx/data_600x100_2_image.pkl", 64)
+    debug_data = MockData(terminal_args.mock_dataset_path, 64)
 
 
 def get_numpy_placeholders():
