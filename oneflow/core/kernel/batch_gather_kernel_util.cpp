@@ -22,7 +22,7 @@ void BatchGatherForward(DeviceCtx* ctx, const Blob* in, const Blob* indices, Blo
 
 template<DeviceType device_type, typename T, typename K>
 void BatchGatherBackward(DeviceCtx* ctx, const Blob* out_diff, const Blob* indices, Blob* in_diff) {
-  Memset<device_type>(ctx, in_diff->mut_dptr<T>(), 0, in_diff->ByteSizeOfDataContentField());
+  Memset<device_type>(ctx, in_diff->mut_dptr<T>(), 0, in_diff->ByteSizeOfBlobBody());
   const int64_t axis = indices->shape().NumAxes() - 1;
   const Shape flat_out_diff_shape = GetFlatShape(out_diff->shape(), axis);
   BatchGatherKernelUtilImpl<device_type, T, K>::Backward(

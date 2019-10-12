@@ -51,7 +51,7 @@ size_t RtRegstDesc::MainByteSize4OneRegst() const {
     }
   } else {
     if (mem_case_.has_device_cuda_mem()) {
-      return packed_blob_desc_->ByteSizeOfBlobBody();
+      return packed_blob_desc_->AlignedByteSizeOfBlobBody();
     } else {
       return packed_blob_desc_->AlignedTotalByteSize();
     }
@@ -85,7 +85,7 @@ void RtRegstDesc::ForEachBlobDescOffsetInOnRegst(
   for (const LbiBlobDescPair& lbi : lbis) {
     Handler(lbi, cur_body_offset, cur_header_offset);
     const RtBlobDesc* blob_desc = GetRtBlobDescFromLbi(lbi.lbi());
-    cur_body_offset += blob_desc->ByteSizeOfBlobBody();
+    cur_body_offset += blob_desc->AlignedByteSizeOfBlobBody();
     cur_header_offset += blob_desc->ByteSizeOfBlobHeader();
   }
 }

@@ -21,8 +21,8 @@ void WithHostBlobAndStreamSynchronizeEnv(DeviceCtx* ctx, Blob* blob,
   CudaCheck(cudaMallocHost(&host_raw_dptr, blob->AlignedTotalByteSize()));
   Blob host_blob(MemoryCase(), &blob->blob_desc(), host_raw_dptr);
   Callback(&host_blob);
-  Memcpy<DeviceType::kGPU>(ctx, blob->mut_dptr(), host_blob.dptr(),
-                           blob->ByteSizeOfDataContentField(), cudaMemcpyHostToDevice);
+  Memcpy<DeviceType::kGPU>(ctx, blob->mut_dptr(), host_blob.dptr(), blob->ByteSizeOfBlobBody(),
+                           cudaMemcpyHostToDevice);
   CudaCheck(cudaStreamSynchronize(ctx->cuda_stream()));
   CudaCheck(cudaFreeHost(host_raw_dptr));
 }

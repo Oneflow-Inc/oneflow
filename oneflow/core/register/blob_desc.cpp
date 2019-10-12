@@ -41,6 +41,11 @@ BlobDesc::BlobDesc(const Shape& shape, DataType dtype)
 BlobDesc::BlobDesc(const BlobDescProto& proto) { InitFromProto(proto); }
 
 BlobDesc::BlobDesc(const BlobDesc& other) {
+  // *body_.mut_shape() = other.body_.shape();
+  // body_.set_data_type(other.body_.data_type());
+  // header_ = other.header_;
+  // num_of_lod_levels_ = other.num_of_lod_levels_;
+  // is_body_disabled_ = other.is_body_disabled_;
   BlobDescProto proto;
   other.ToProto(&proto);
   InitFromProto(proto);
@@ -81,7 +86,8 @@ void BlobDesc::ToProto(BlobDescProto* proto) const {
       max_reserved_size_for_lod += num_of_lod_levels_;
       header.AddField(
           FieldKey::kLoD,
-          TensorPodDesc(Shape(std::vector<int64_t>{max_reserved_size_for_lod}), DataType::kInt64));
+          TensorPodDesc(Shape(std::vector<int64_t>{max_reserved_size_for_lod + num_of_lod_levels_}),
+                        DataType::kInt64));
       dense_shape_num_axes = shape().NumAxes() - num_of_lod_levels_ + 1;  // 1 for tiled lod dims
     }
     header.AddField(
@@ -114,7 +120,7 @@ void BlobDesc::CopyMetaFrom(const BlobDesc& other) {
 Maybe<void> BlobDesc::SetLoD(int64_t num_of_lod_levels) {
   if (num_of_lod_levels == 0) { return Maybe<void>::Ok(); }
   OF_CHECK_GT(num_of_lod_levels, 1);
-  OF_CHECK_LT(num_of_lod_levels, shape().NumAxes());
+  OF_CHECK_LE(num_of_lod_levels, shape().NumAxes());
   num_of_lod_levels_ = num_of_lod_levels;
   is_dynamic_ = true;
   return Maybe<void>::Ok();

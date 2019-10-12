@@ -22,6 +22,24 @@ void ConvDataGradOp::InitFromOpConf() {
   }
 }
 
+Maybe<void> ConvDataGradOp::InferOutBlobDescs(
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature,
+    std::function<void(OpContext*)> EnrollOpCtx) const {
+  const ConvDataGradOpConf& conf = this->op_conf().conv_data_grad_conf();
+  const BlobDesc* dy = GetBlobDesc4BnInOp("dy");
+  const BlobDesc* x_like = GetBlobDesc4BnInOp("x_like");
+  const int32_t num_spatial_dims = conf.conv_conf().num_spatial_dims();
+  CHECK_GE_OR_RETURN(num_spatial_dims, 1);
+  CHECK_LE_OR_RETURN(num_spatial_dims, 3);
+  CHECK_EQ_OR_RETURN(dy->shape().NumAxes(), num_spatial_dims + 2);
+  CHECK_EQ_OR_RETURN(x_like->shape().NumAxes(), num_spatial_dims + 2);
+  CHECK_EQ_OR_RETURN(x_like->data_type(), dy->data_type());
+  BlobDesc* dx = GetBlobDesc4BnInOp("dx");
+  dx->CopyMetaFrom(*x_like);
+  return Maybe<void>::Ok();
+}
+
 Maybe<void> ConvDataGradOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature,

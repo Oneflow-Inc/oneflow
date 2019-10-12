@@ -14,7 +14,7 @@ void UnsortedSegmentSumKernel<device_type, T>::ForwardDataContent(
   const Blob* segment_ids = BnInOp2Blob("segment_ids");
   const Blob* data = BnInOp2Blob("data");
   Blob* out = BnInOp2Blob("out");
-  Memset<device_type>(ctx.device_ctx, out->mut_dptr<T>(), 0, out->ByteSizeOfDataContentField());
+  Memset<device_type>(ctx.device_ctx, out->mut_dptr<T>(), 0, out->ByteSizeOfBlobBody());
   GatherKernelUtil<device_type, T>::Backward(
       ctx.device_ctx, segment_ids, data, this->op_conf().unsorted_segment_sum_conf().axis(), out);
 }
@@ -35,6 +35,7 @@ Kernel* CreateUnsortedSegmentSumKernel(const KernelConf& kernel_conf) {
 }
 
 REGISTER_KERNEL_CREATOR(OperatorConf::kUnsortedSegmentSumConf, CreateUnsortedSegmentSumKernel);
+REGISTER_KERNEL_CREATOR(OperatorConf::kLocalGatherGradConf, CreateUnsortedSegmentSumKernel);
 }  // namespace
 
 }  // namespace oneflow

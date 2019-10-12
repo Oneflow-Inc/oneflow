@@ -19,7 +19,8 @@ class BroadcastLikeOp final : public Operator {
  private:
   Maybe<void> InferBatchAxis(
       std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override {
-    return NaiveInferBatchAxis(BatchAxis4BnInOp);
+    *BatchAxis4BnInOp("y") = *BatchAxis4BnInOp("like");
+    return Maybe<void>::Ok();
   }
   Maybe<void> GetSbpSignatures(
       const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,

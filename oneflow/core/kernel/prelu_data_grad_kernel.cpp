@@ -7,8 +7,7 @@ void PReluDataGradKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   Blob* dx_blob = BnInOp2Blob("dx");
   if (dx_blob == nullptr) { return; }
-  Memset<device_type>(ctx.device_ctx, dx_blob->mut_dptr<T>(), 0,
-                      dx_blob->ByteSizeOfDataContentField());
+  Memset<device_type>(ctx.device_ctx, dx_blob->mut_dptr<T>(), 0, dx_blob->ByteSizeOfBlobBody());
   PReluDataGradKernelUtil<device_type, T>::Compute(ctx, this->op_conf().prelu_data_grad_conf(),
                                                    BnInOp2Blob("x"), BnInOp2Blob("alpha"),
                                                    BnInOp2Blob("dy"), dx_blob);

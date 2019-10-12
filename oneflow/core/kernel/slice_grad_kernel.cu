@@ -21,7 +21,7 @@ void SliceGradKernel<DeviceType::kGPU, T>::ForwardDataContent(
   Blob* dx_blob = BnInOp2Blob("dx");
   const int64_t num_output = dy_blob->shape().elem_cnt();
   Memset<DeviceType::kGPU>(ctx.device_ctx, dx_blob->mut_dptr<T>(), 0,
-                           dx_blob->ByteSizeOfDataContentField());
+                           dx_blob->ByteSizeOfBlobBody());
   SliceBackwardGpu<T><<<BlocksNum4ThreadsNum(num_output), kCudaThreadsNumPerBlock, 0,
                         ctx.device_ctx->cuda_stream()>>>(
       num_output, offset_blob->dptr<int64_t>(), dy_blob->dptr<T>(), dx_blob->mut_dptr<T>());
@@ -50,12 +50,10 @@ void SliceGradKernel<DeviceType::kGPU, T>::InitOut2InOffsetFromHost(DeviceCtx* c
         index = index % dim_elem_cnt;
         int64_t start = 0;
         int64_t stride = 1;
-        if (j > 0) {
-          const DimSliceConf& dim_slice_conf = conf.dim_slice_conf(j - 1);
-          if (dim_slice_conf.has_start()) { start = dim_slice_conf.start(); }
-          if (start < 0) { start += host_blob->shape().At(j); }
-          stride = dim_slice_conf.stride();
-        }
+        const DimSliceConf& dim_slice_conf = conf.dim_slice_conf(j);
+        if (dim_slice_conf.has_start()) { start = dim_slice_conf.start(); }
+        if (start < 0) { start += host_blob->shape().At(j); }
+        stride = dim_slice_conf.stride();
         offset += (start + dim_i * stride) * in_shape.Count(j + 1);
       }
       host_blob_ptr[i] = offset;

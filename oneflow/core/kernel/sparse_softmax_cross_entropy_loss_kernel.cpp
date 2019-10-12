@@ -21,8 +21,7 @@ void SparseSoftmaxCrossEntropyLossKernel<device_type, PredType, LabelType>::
   PredType* loss = loss_blob->mut_dptr<PredType>();
   // forward
   SoftmaxComputeProb<device_type, PredType>(ctx.device_ctx, n, w, pred, loss, prob,
-                                            buf_blob->mut_dptr(),
-                                            buf_blob->ByteSizeOfDataContentField());
+                                            buf_blob->mut_dptr(), buf_blob->ByteSizeOfBlobBody());
   SparseCrossEntropyLossKernelUtil<device_type, PredType, LabelType>::Forward(ctx.device_ctx, n, w,
                                                                               prob, label, loss);
 }

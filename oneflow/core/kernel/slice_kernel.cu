@@ -52,12 +52,10 @@ void SliceKernel<DeviceType::kGPU, T>::InitOut2InOffsetFromHost(DeviceCtx* ctx,
         index = index % dim_elem_cnt;
         int64_t start = 0;
         int64_t stride = 1;
-        if (j > 0) {
-          const DimSliceConf& dim_slice_conf = conf.dim_slice_conf(j - 1);
-          if (dim_slice_conf.has_start()) { start = dim_slice_conf.start(); }
-          if (start < 0) { start += host_blob->shape().At(j); }
-          stride = dim_slice_conf.stride();
-        }
+        const DimSliceConf& dim_slice_conf = conf.dim_slice_conf(j);
+        if (dim_slice_conf.has_start()) { start = dim_slice_conf.start(); }
+        if (start < 0) { start += host_blob->shape().At(j); }
+        stride = dim_slice_conf.stride();
         offset += (start + dim_i * stride) * in_shape.Count(j + 1);
       }
       host_blob_ptr[i] = offset;

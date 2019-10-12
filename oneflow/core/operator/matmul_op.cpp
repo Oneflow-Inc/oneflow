@@ -24,11 +24,11 @@ Maybe<void> MatmulOp::InferBlobDescs(
   CHECK_GE_OR_RETURN(a_blob_desc->shape().NumAxes(), 2);
   size_t num_axes = a_blob_desc->shape().NumAxes();
   if (conf.transpose_a()) {
-    CHECK_OR_RETURN(!a_blob_desc->is_dynamic());
+    // CHECK_OR_RETURN(!a_blob_desc->is_dynamic());
     CHECK_EQ_OR_RETURN(a_blob_desc->num_of_lod_levels(), 0);
   }
   if (conf.transpose_b()) {
-    CHECK_OR_RETURN(!b_blob_desc->is_dynamic());
+    // CHECK_OR_RETURN(!b_blob_desc->is_dynamic());
     CHECK_EQ_OR_RETURN(b_blob_desc->num_of_lod_levels(), 0);
   }
 

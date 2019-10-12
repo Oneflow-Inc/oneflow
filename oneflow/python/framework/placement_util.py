@@ -14,16 +14,27 @@ from oneflow.python.oneflow_export import oneflow_export
 class PlacementScope(object):
     def __init__(self, device_tag, machine_device_ids):
         self.device_tag_ = device_tag
-        if isinstance(machine_device_ids, collections.Sized) == False:
+        if isinstance(machine_device_ids, (list, tuple)) == False:
             machine_device_ids = [machine_device_ids]
         self.machine_device_ids_ = machine_device_ids
-        self.op_confs_ = []
+        self.default_parallel_conf_ = _MakeParallelConf(self.device_tag_, self.machine_device_ids_)
+        self.machine_id2device_id_list_ = _MakeMachineId2DeviceIdList(self.default_parallel_conf_)
+        self.parallel_size_ = _GetParallelSize(self.machine_id2device_id_list_)
 
-    def AppendOpConf(self, op_conf):
-        self.op_confs_.append(op_conf)
+    @property
+    def default_device_tag(self): return self.device_tag_
+    
+    @property
+    def default_parallel_conf(self): return self.default_parallel_conf_
+
+    @property
+    def machine_id2device_id_list(self): return self.machine_id2device_id_list_
+
+    @property
+    def parallel_size(self): return self.parallel_size_
 
     def ParallelConf4OpConf(self, op_conf):
-        return _MakeParallelConf(self.GetDeviceTag4OpConf(op_conf), self.machine_device_ids)
+        return _MakeParallelConf(self.GetDeviceTag4OpConf(op_conf), self.machine_device_ids_)
 
     def GetDeviceType4OpConf(self, op_conf):
         return device_util.DeviceType4DeviceTag(self.GetDeviceTag4OpConf(op_conf))
@@ -31,31 +42,15 @@ class PlacementScope(object):
     def GetDeviceTag4OpConf(self, op_conf):
         raise NotImplementedError
 
-    def GetParallelNum(self):
-        parallel_conf = _MakeParallelConf(self.device_tag_, self.machine_device_ids)
-        return c_api_util.ParallelNum4ParallelConf(parallel_conf)
-
-    @property
-    def default_device_tag(self): return self.device_tag_
-
-    @property
-    def machine_device_ids(self): return self.machine_device_ids_
-
-    @property
-    def op_confs(self): return self.op_confs_
-
     def __enter__(self):
         placement_context.PlacementScopeStackPush(self)
-
-    def ParallelConfAndOpNames(self):
-        raise NotImplementedError
 
     def __exit__(self, *args):
         assert self == placement_context.PlacementScopeStackPop()
 
-@oneflow_export('current_placement_scope.parallel_size')
-def cur_placement_scope_parallel_num():
-    return placement_context.PlacementScopeStackTop().GetParallelNum()
+@oneflow_export('placement.current_scope')
+def cur_placement_scope():
+    return placement_context.PlacementScopeStackTop()
 
 @oneflow_export('fixed_placement')
 class FixedPlacementScope(PlacementScope):
@@ -63,10 +58,6 @@ class FixedPlacementScope(PlacementScope):
         PlacementScope.__init__(self, device_tag, machine_device_ids)
 
     def GetDeviceTag4OpConf(self, op_conf): return self.default_device_tag
-
-    def ParallelConfAndOpNames(self):
-        parallel_conf = _MakeParallelConf(self.default_device_tag, self.machine_device_ids)
-        yield parallel_conf, map(lambda op_conf: op_conf.name, self.op_confs)
 
 @oneflow_export('device_prior_placement')
 class DevicePriorPlacementScope(PlacementScope):
@@ -76,17 +67,6 @@ class DevicePriorPlacementScope(PlacementScope):
     def GetDeviceTag4OpConf(self, op_conf):
         if op_util.IsOpConfOnlyCpuSupported(op_conf): return "cpu"
         return self.default_device_tag
-
-    def ParallelConfAndOpNames(self):
-        device_tag2op_names = {}
-        for op_conf in self.op_confs:
-            device_tag = self.GetDeviceTag4OpConf(op_conf)
-            if device_tag not in device_tag2op_names: device_tag2op_names[device_tag] = []
-            device_tag2op_names[device_tag].append(op_conf.name)
-        for device_tag, op_names in device_tag2op_names.items():
-            if len(op_names) == 0: continue
-            parallel_conf = _MakeParallelConf(device_tag, self.machine_device_ids)
-            yield parallel_conf, op_names
 
 def _MakeParallelConf(device_tag, machine_device_ids):
     assert isinstance(machine_device_ids, collections.Sized)
@@ -120,3 +100,18 @@ def GetCpuDefaultMachineDeviceIds(resource):
     assert len(resource.machine) > 0
     assert resource.HasField('cpu_device_num')
     return ["%s:0-%s" % (m.id, resource.cpu_device_num - 1) for m in resource.machine]
+
+def _MakeMachineId2DeviceIdList(parallel_conf):
+    parallel_conf_str = str(parallel_conf)
+    if parallel_conf_str not in _parallel_conf_str2ofrecord:
+        ofrecord = c_api_util.GetMachine2DeviceIdListOFRecordFromParallelConf(parallel_conf)
+        _parallel_conf_str2ofrecord[parallel_conf_str] = \
+                {int(k) : list(v.int32_list.value) for k, v in ofrecord.feature.items()}
+    return _parallel_conf_str2ofrecord[parallel_conf_str]
+
+def _GetParallelSize(key2list):
+    size = 0
+    for k, v in key2list.items(): size += len(v)
+    return size
+
+_parallel_conf_str2ofrecord = {}

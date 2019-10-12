@@ -112,10 +112,9 @@ void ConvKernelImplByIm2Col<device_type, T>::WeightBackward(
   const Blob* weight_blob = BnInOp2Blob("weight");
   Blob* bw_col_buf_blob = BnInOp2Blob("bw_col_buf");
   Memset<device_type>(ctx, weight_diff_blob->mut_dptr<T>(), 0,
-                      weight_diff_blob->ByteSizeOfDataContentField());
+                      weight_diff_blob->ByteSizeOfBlobBody());
   if (in_diff_blob != nullptr) {
-    Memset<device_type>(ctx, in_diff_blob->mut_dptr<T>(), 0,
-                        in_diff_blob->ByteSizeOfDataContentField());
+    Memset<device_type>(ctx, in_diff_blob->mut_dptr<T>(), 0, in_diff_blob->ByteSizeOfBlobBody());
   }
   FOR_RANGE(int64_t, i, 0, out_shape_.At(0)) {
     im2col_func_(this->OpKernelDim(), ctx, GetImgDptr<T>(in_blob, i), in_shape_, weight_shape_,
@@ -159,8 +158,7 @@ void ConvKernelImplByIm2Col<device_type, T>::BiasBackward(
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   CHECK(this->op_conf().trainable());
   const Blob* bias_mul_blob = BnInOp2Blob("bias_multiplier");
-  Memset<device_type>(ctx, bias_diff_blob->mut_dptr<T>(), 0,
-                      bias_diff_blob->ByteSizeOfDataContentField());
+  Memset<device_type>(ctx, bias_diff_blob->mut_dptr<T>(), 0, bias_diff_blob->ByteSizeOfBlobBody());
 
   FOR_RANGE(int64_t, i, 0, out_shape_.At(0)) {
     // channels first:  bias' += out' * bias_mul

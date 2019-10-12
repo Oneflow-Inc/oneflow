@@ -55,18 +55,22 @@ Maybe<void> DistributeConcatOp::InferBlobDescs(
     return Maybe<void>::Ok();
   }
   const auto& conf = op_conf().distribute_concat_conf();
-  const BlobDesc* in_0_blob_desc = nullptr;
+  const BlobDesc* first_blob_desc = nullptr;
+  int first_blob_desc_idx = -1;
   FOR_RANGE(int, i, 0, input_bns().size()) {
-    in_0_blob_desc = GetBlobDesc4BnInOp(input_bns().Get(i));
-    if (in_0_blob_desc != nullptr) { break; }
+    first_blob_desc = GetBlobDesc4BnInOp(input_bns().Get(i));
+    if (first_blob_desc != nullptr) {
+      first_blob_desc_idx = i;
+      break;
+    }
   }
-  CHECK_NOTNULL(in_0_blob_desc);
-  std::vector<int64_t> out_dim_vec = in_0_blob_desc->shape().dim_vec();
+  CHECK_NOTNULL(first_blob_desc);
+  std::vector<int64_t> out_dim_vec = first_blob_desc->shape().dim_vec();
   int32_t concat_axis = FixAxis(conf.axis(), out_dim_vec.size());
-  for (size_t i = 1; i < input_bns().size(); ++i) {
+  for (size_t i = 0; i < input_bns().size(); ++i) {
     const BlobDesc* in_i_blob_desc = GetBlobDesc4BnInOp(input_bns().Get(i));
     if (in_i_blob_desc == nullptr) { continue; }
-    if (in_0_blob_desc == in_i_blob_desc) { continue; }
+    if (first_blob_desc_idx == i) { continue; }
     for (int64_t j = 0; j < in_i_blob_desc->shape().NumAxes(); ++j) {
       if (j == concat_axis) {
         out_dim_vec[j] += in_i_blob_desc->shape().At(j);
@@ -74,10 +78,10 @@ Maybe<void> DistributeConcatOp::InferBlobDescs(
         CHECK_EQ_OR_RETURN(out_dim_vec[j], in_i_blob_desc->shape().At(j));
       }
     }
-    CHECK_EQ_OR_RETURN(in_i_blob_desc->data_type(), in_0_blob_desc->data_type());
+    CHECK_EQ_OR_RETURN(in_i_blob_desc->data_type(), first_blob_desc->data_type());
   }
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
-  *out_blob_desc = *in_0_blob_desc;
+  *out_blob_desc = *first_blob_desc;
   out_blob_desc->mut_shape() = Shape(out_dim_vec);
   return Maybe<void>::Ok();
 }
@@ -146,5 +150,6 @@ int32_t DistributeConcatOp::FixAxis(const int32_t axis, const int64_t num_axes) 
 }
 
 REGISTER_OP(OperatorConf::kDistributeConcatConf, DistributeConcatOp);
+REGISTER_DISABLE_INPUT_BOXING_GROUP(OperatorConf::kDistributeConcatConf);
 
 }  // namespace oneflow

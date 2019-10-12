@@ -100,6 +100,22 @@ Maybe<void> Operator::InferOutBlobDescs(
   return InferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx, sbp_signature, EnrollOpCtx);
 }
 
+Maybe<void> Operator::InferOutParallelDescIf(
+    std::function<ParallelDesc*(const std::string&)> ParallelDesc4Obn,
+    std::function<const BlobDesc*(const std::string&)> LogicalBlobDesc4Ibn,
+    const ParallelDesc& op_parallel_desc, const SbpSignature* sbp_signature) const {
+  return InferOutParallelDesc(ParallelDesc4Obn, LogicalBlobDesc4Ibn, op_parallel_desc,
+                              sbp_signature);
+}
+
+Maybe<void> Operator::InferOutParallelDesc(
+    std::function<ParallelDesc*(const std::string&)> ParallelDesc4Obn,
+    std::function<const BlobDesc*(const std::string&)> LogicalBlobDesc4Ibn,
+    const ParallelDesc& op_parallel_desc, const SbpSignature* sbp_signature) const {
+  for (const auto& obn : output_bns()) { *ParallelDesc4Obn(obn) = op_parallel_desc; }
+  return Maybe<void>::Ok();
+}
+
 Maybe<void> Operator::InferOutputBlobTimeShapeIf(
     std::function<const Shape*(const std::string&)> GetTimeShape4BnInOp,
     const ParallelContext* parallel_ctx, Shape* time_shape) const {
@@ -130,6 +146,13 @@ Maybe<void> Operator::GetSbpSignaturesIf(
       .Broadcast(output_bns())
       .Build(sbp_sig_list->mutable_sbp_signature()->Add());
   return Maybe<void>::Ok();
+}
+
+void Operator::ForEachBnInOp(std::function<void(const std::string&)> Handler) const {
+  for (const std::string& bn_in_op : input_bns()) { Handler(bn_in_op); }
+  for (const std::string& bn_in_op : output_bns()) { Handler(bn_in_op); }
+  for (const std::string& bn_in_op : const_buf_bns()) { Handler(bn_in_op); }
+  for (const std::string& bn_in_op : tmp_bns()) { Handler(bn_in_op); }
 }
 
 Maybe<void> Operator::InferSbpSignatureIf(

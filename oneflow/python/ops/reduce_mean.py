@@ -14,7 +14,9 @@ import collections
 def reduce_mean(input_tensor, axis=None, keepdims=False, name=None):
     op_conf = op_conf_util.OperatorConf()
     setattr(
-        op_conf, "name", name if name is not None else id_util.UniqueStr("ReduceMean_")
+        op_conf,
+        "name",
+        name if name is not None else id_util.UniqueStr("ReduceMean_"),
     )
     setattr(op_conf.reduce_mean_conf, "in", input_tensor.logical_blob_name)
     setattr(op_conf.reduce_mean_conf, "out", "out")

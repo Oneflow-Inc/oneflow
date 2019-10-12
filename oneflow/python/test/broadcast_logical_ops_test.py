@@ -1,38 +1,50 @@
 import oneflow as flow
 import numpy as np
+from oneflow.python.framework.dtype import convert_of_dtype_to_numpy_dtype
+
+of_dtype = flow.int32
+dtype = convert_of_dtype_to_numpy_dtype(of_dtype)
+flow.config.default_data_type(of_dtype)
+shape = (5, 2)
+def input_blob_def(): return flow.input_blob_def(shape, dtype=of_dtype)
 
 @flow.function
-def EqualJob(a=flow.input_blob_def((5, 2)), b=flow.input_blob_def((5, 2))):
-    flow.config.default_data_type(flow.float)
+def EqualJob(a=input_blob_def(), b=input_blob_def()):
+    flow.config.default_data_type(of_dtype)
     return a == b
 
 @flow.function
-def NotEqualJob(a=flow.input_blob_def((5, 2)), b=flow.input_blob_def((5, 2))):
-    flow.config.default_data_type(flow.float)
+def NotEqualJob(a=input_blob_def(), b=input_blob_def()):
+    flow.config.default_data_type(of_dtype)
     return a != b
 
 @flow.function
-def LessJob(a=flow.input_blob_def((5, 2)), b=flow.input_blob_def((5, 2))):
-    flow.config.default_data_type(flow.float)
+def LessJob(a=input_blob_def(), b=input_blob_def()):
+    flow.config.default_data_type(of_dtype)
     return a < b
 
 @flow.function
-def LessEqualJob(a=flow.input_blob_def((5, 2)), b=flow.input_blob_def((5, 2))):
-    flow.config.default_data_type(flow.float)
+def LessEqualJob(a=input_blob_def(), b=input_blob_def()):
+    flow.config.default_data_type(of_dtype)
     return a <= b
 
 @flow.function
-def GreaterJob(a=flow.input_blob_def((5, 2)), b=flow.input_blob_def((5, 2))):
-    flow.config.default_data_type(flow.float)
+def GreaterJob(a=input_blob_def(), b=input_blob_def()):
+    flow.config.default_data_type(of_dtype)
     return a > b
 
 @flow.function
-def GreaterEqualJob(a=flow.input_blob_def((5, 2)), b=flow.input_blob_def((5, 2))):
-    flow.config.default_data_type(flow.float)
+def GreaterEqualJob(a=input_blob_def(), b=input_blob_def()):
+    flow.config.default_data_type(of_dtype)
     return a >= b
 
-x = np.random.rand(5, 2).astype(np.float32)
-y = np.random.rand(5, 2).astype(np.float32)
+@flow.function
+def LogicalAndJob(a=input_blob_def(), b=input_blob_def()):
+    flow.config.default_data_type(of_dtype)
+    return flow.math.logical_and(a, b)
+
+x = np.random.randint(0, 2, shape).astype(dtype)
+y = np.random.randint(0, 2, shape).astype(dtype)
 z = None
 print('x = ', x)
 print('y = ', y)
@@ -76,5 +88,12 @@ z = LessEqualJob(x, y).get()
 print (z)
 print('x <= x --------------------------------')
 z = LessEqualJob(x, x).get()
+print (z)
+
+print('x and y --------------------------------')
+z = LogicalAndJob(x, y).get()
+print (z)
+print('x and x --------------------------------')
+z = LogicalAndJob(x, x).get()
 print (z)
 
