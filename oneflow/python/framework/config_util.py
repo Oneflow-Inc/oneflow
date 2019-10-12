@@ -319,6 +319,11 @@ def set_enable_non_distributed_optimizer(value = True):
     _SetJobConfAttr(lambda x:x, 'enable_non_distributed_optimizer', value)
     return oneflow.config
 
+@oneflow_export('config.disable_all_reduce_sequence')
+def disable_all_reduce_sequence(value=True):
+    _SetJobConfAttr(lambda x: x, 'disable_all_reduce_sequence', value)
+    return oneflow.config
+
 @oneflow_export('config.non_distributed_optimizer_group_size_mbyte')
 def set_non_distributed_optimizer_group_size_mbyte(value):
     _SetJobConfAttr(lambda x:x, 'non_distributed_optimizer_group_size_mbyte', value)
