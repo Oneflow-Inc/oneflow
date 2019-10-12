@@ -183,7 +183,7 @@ void XlaGraph::InferBlobDescs(
         CHECK(it != blob_descs->end());
       } else {
         if (it == blob_descs->end()) {
-          it = blob_descs->emplace(blob_name, BlobDesc()).first;
+          it = blob_descs->emplace(blob_name, BlobDesc(kFloat)).first;
         }
       }
       return &(it->second);
@@ -244,7 +244,7 @@ void XlaLaunchGraph::BuildLaunchGraph() {
       // add edge only if `it->second != node` to avoid node-self ring
       if (it != lbi2producer.end() && it->second != node) {
         // const auto &shape = shapes.at(blob_name);
-        BlobDesc blob_desc;
+        BlobDesc blob_desc(job_desc_->DefaultDataType());
         // blob_desc.set_data_type(shape.data_type());
         // blob_desc.mut_shape() = Shape(shape.shape());
         Argument argument(lbi, blob_desc);
