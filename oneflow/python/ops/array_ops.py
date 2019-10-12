@@ -55,6 +55,13 @@ def gather(
     return remote_blob_util.RemoteBlob(lbi)
 
 
+@oneflow_export("local_gather")
+def local_gather(params, indices, axis=0, name=None):
+    def gather_lambda(params, indices):
+        return gather(params, indices, axis=axis, name=name)
+    return flow.advance.distribute_map((params, indices), gather_lambda)
+
+    
 @oneflow_export("reshape")
 def reshape(x, shape, name=None):
     assert isinstance(shape, tuple) or isinstance(shape, list)
@@ -254,13 +261,6 @@ def local_scatter_nd_update(inputs, indices, updates, name=None):
     setattr(out_lbi, "op_name", op_conf.name)
     setattr(out_lbi, "blob_name", "out")
     return remote_blob_util.RemoteBlob(out_lbi)
-
-
-@oneflow_export("local_gather")
-def local_gather(params, indices, axis=0, name=None):
-    def gather_lambda(params, indices):
-        return gather(params, indices, axis=axis, name=name)
-    return flow.advance.distribute_map((params, indices), gather_lambda)
 
 
 @oneflow_export("local_nonzero")
