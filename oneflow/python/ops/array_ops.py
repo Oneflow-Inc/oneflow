@@ -59,7 +59,7 @@ def gather(
 def local_gather(params, indices, axis=0, name=None):
     def gather_lambda(params, indices):
         return gather(params, indices, axis=axis, name=name)
-    return flow.advance.distribute_map((params, indices), gather_lambda)
+    return flow.advanced.distribute_map((params, indices), gather_lambda)
 
     
 @oneflow_export("reshape")
