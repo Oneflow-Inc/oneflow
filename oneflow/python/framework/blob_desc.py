@@ -2,12 +2,17 @@ from __future__ import absolute_import
 
 import oneflow.core.common.data_type_pb2 as data_type_util
 import oneflow.python.framework.distribute as distribute_util
+import oneflow.python.lib.core.traceinfo as traceinfo
 
 class BlobDesc(object):
     def __init__(self, lbi):
         self.lbi_ = lbi
         self.lbn_ = lbi.op_name + "/" + lbi.blob_name
         self.distribute_ = distribute_util.auto()
+        self.location_ = traceinfo.GetStackInfoExcludeOneflowPythonFile()
+
+    @property
+    def location(self): return self.location_
 
     @property
     def lbi(self): return self.lbi_
