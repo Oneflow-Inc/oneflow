@@ -3,7 +3,6 @@ package oneflow;
 
 import "oneflow/core/common/data_type.proto";
 import "oneflow/core/common/shape.proto";
-import "oneflow/core/record/record.proto";
 
 message ImageNetDatasetCatalog {
   required string image_dir = 1;
@@ -13,6 +12,7 @@ message COCODatasetCatalog {
   required string annotation_file = 1;
   required string image_dir = 2;
   optional bool group_by_aspect_ratio = 3 [default = true];
+  optional int64 max_segm_poly_points = 4 [default = 1024];
 }
 
 message WideDeepDatasetCatalog {

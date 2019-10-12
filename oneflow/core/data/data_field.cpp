@@ -141,7 +141,9 @@ std::unique_ptr<DataField> CreateDataFieldFromProto(const DataFieldProto& proto)
       data_field_ptr.reset(new ImageDataField());
       break;
     }
-    case DataSourceCase::kLabel: {
+    case DataSourceCase::kLabel:
+    case DataSourceCase::kObjectLabel: 
+    case DataSourceCase::kImageSize: {
       data_field_ptr.reset(new ArrayDataField<int32_t>());
       break;
     }
@@ -155,8 +157,8 @@ std::unique_ptr<DataField> CreateDataFieldFromProto(const DataFieldProto& proto)
       data_field_ptr.reset(new NdarrayDataField<float>(max_elem_cnt));
       break;
     }
-    case DataSourceCase::kObjectLabel: {
-      data_field_ptr.reset(new ArrayDataField<int32_t>());
+    case DataSourceCase::kObjectSegmentationMask: {
+      data_field_ptr.reset(new ArrayDataField<int8_t>());
       break;
     }
     default: { UNIMPLEMENTED(); }

@@ -11,18 +11,6 @@ void DataInstance::InitFromProto(const DataInstanceProto& proto) {
   }
 }
 
-template<DataSourceCase dsrc, typename... Args>
-DataField* DataInstance::GetOrCreateField(Args&&... args) {
-  if (fields_.find(dsrc) == fields_.end()) {
-    using DataFieldT = typename DataFieldTrait<dsrc>::type;
-    std::unique_ptr<DataField> data_field_ptr;
-    data_field_ptr.reset(new DataFieldT(std::forward<Args>(args)...));
-    data_field_ptr->SetSource(dsrc);
-    AddField(std::move(data_field_ptr));
-  }
-  return fields_.at(dsrc).get();
-}
-
 void DataInstance::Transform(const DataTransformProto& trans_proto) {
 #define MAKE_CASE(trans)                       \
   case trans: {                                \

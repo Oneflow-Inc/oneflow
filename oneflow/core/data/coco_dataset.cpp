@@ -63,8 +63,14 @@ int64_t COCODataset::GetGroupId(int64_t idx) const {
 void COCODataset::GetData(int64_t idx, DataInstance* data_inst) const {
   auto* image_field = data_inst->GetField<DataSourceCase::kImage>();
   auto* bbox_field = data_inst->GetField<DataSourceCase::kObjectBoundingBox>();
-  auto* segm_field = data_inst->GetField<DataSourceCase::kObjectSegmentation>();
   auto* label_field = data_inst->GetField<DataSourceCase::kObjectLabel>();
+  DataField* segm_field = nullptr;
+  if (data_inst->HasField<DataSourceCase::kObjectSegmentationMask>()) {
+    segm_field = data_inst->GetOrCreateField<DataSourceCase::kObjectSegmentation>(
+        dataset_proto().coco().max_segm_poly_points());
+  } else {
+    segm_field = data_inst->GetField<DataSourceCase::kObjectSegmentation>();
+  }
 
   int64_t image_id = image_ids_.at(idx);
   const auto& image = image_id2image_.at(image_id);

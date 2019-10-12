@@ -263,6 +263,7 @@ class SegmentationPolygonListToMask(object):
 
         proto.segmentation_poly_to_mask.mask_w = self.mask_w
         proto.segmentation_poly_to_mask.mask_h = self.mask_h
+        return proto
 
 
 @oneflow_export("data.DataLoader")
@@ -297,6 +298,8 @@ class DataLoader(object):
         variable_length_axes=None,
         is_dynamic=False,
     ):
+        variable_length_axes = variable_length_axes or []
+        assert isinstance(variable_length_axes, (tuple, list))
         self._blobs.append(
             dict(
                 name=name,

@@ -72,9 +72,15 @@ def coco_data_load_job():
         is_dynamic=True,
     )
     data_loader.add_blob(
+        "image_size",
+        data_util.DataSourceCase.kImageSize,
+        shape=(2,),
+        dtype=flow.int32,
+    )
+    data_loader.add_blob(
         "gt_bbox",
         data_util.DataSourceCase.kObjectBoundingBox,
-        shape=(256, 4),
+        shape=(64, 4),
         dtype=flow.float,
         variable_length_axes=(0,),
         is_dynamic=True,
@@ -82,17 +88,28 @@ def coco_data_load_job():
     data_loader.add_blob(
         "gt_labels",
         data_util.DataSourceCase.kObjectLabel,
-        shape=(256,),
+        shape=(64,),
         dtype=flow.int32,
         variable_length_axes=(0,),
         is_dynamic=True,
     )
+    data_loader.add_blob(
+        "gt_segm",
+        data_util.DataSourceCase.kObjectSegmentationMask,
+        shape=(64, 14, 14),
+        dtype=flow.int8,
+        variable_length_axes=(0,),
+        is_dynamic=True,
+    )
     data_loader.add_transform(flow.data.TargetResizeTransform(800, 1333, 32))
+    data_loader.add_transform(flow.data.SegmentationPolygonListToMask(14, 14))
     data_loader.init()
     return (
         data_loader("image"),
+        data_loader("image_size"),
         data_loader("gt_bbox"),
         data_loader("gt_labels"),
+        data_loader("gt_segm"),
     )
 
 
@@ -100,10 +117,12 @@ def main():
     # flow.config.gpu_device_num(args.gpu_num_per_node)
     # flow.config.ctrl_port(9788)
     flow.config.default_data_type(flow.float)
-    image, gt_bbox, gt_labels = coco_data_load_job().get()
+    image, image_size, gt_bbox, gt_labels, gt_segm = coco_data_load_job().get()
     np.save("image", image.ndarray())
+    np.save("image_size", image_size.ndarray())
     np.save("gt_bbox", gt_bbox.ndarray())
     np.save("gt_labels", gt_labels.ndarray())
+    np.save("gt_segm", gt_segm.ndarray())
 
 
 if __name__ == "__main__":

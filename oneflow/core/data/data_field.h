@@ -59,10 +59,11 @@ class NdarrayDataField : public DataField {
  public:
   typedef T data_type;
 
-  NdarrayDataField(size_t max_length) : data_(new T[max_length]), total_length_(0) {}
+  NdarrayDataField(size_t max_length)
+      : data_(new T[max_length]), capacity_(max_length), total_length_(0) {}
 
   void PushBack(T val) {
-    CHECK_LT(total_length_, sizeof(*data_.get()) / sizeof(T));
+    CHECK_LT(total_length_, capacity_);
     data_.get()[total_length_] = val;
     total_length_ += 1;
   }
@@ -90,6 +91,7 @@ class NdarrayDataField : public DataField {
 
  private:
   std::unique_ptr<T[]> data_;
+  size_t capacity_;
   size_t total_length_;
   std::vector<std::vector<size_t>> lod_len_;
 };

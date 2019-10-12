@@ -58,6 +58,18 @@ inline bool DataInstance::AddField(std::unique_ptr<DataField>&& data_field_ptr) 
   return fields_.emplace(data_field_ptr->Source(), std::move(data_field_ptr)).second;
 }
 
+template<DataSourceCase dsrc, typename... Args>
+DataField* DataInstance::GetOrCreateField(Args&&... args) {
+  if (fields_.find(dsrc) == fields_.end()) {
+    using DataFieldT = typename DataFieldTrait<dsrc>::type;
+    std::unique_ptr<DataField> data_field_ptr;
+    data_field_ptr.reset(new DataFieldT(std::forward<Args>(args)...));
+    data_field_ptr->SetSource(dsrc);
+    AddField(std::move(data_field_ptr));
+  }
+  return fields_.at(dsrc).get();
+}
+
 }  // namespace data
 }  // namespace oneflow
 
