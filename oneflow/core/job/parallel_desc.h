@@ -11,18 +11,19 @@ namespace oneflow {
 
 std::string DeviceTag4DeviceType(DeviceType device_type);
 Maybe<DeviceType> DeviceType4DeviceTag(const std::string& device_tag);
+Maybe<long long> GetParallelNum4ParallelConf(const std::string& parallel_conf_str);
 
-void ParseDeviceNameConf(const std::string& device_name, int64_t* mchn_id, std::string* device_tag,
-                         std::string* device_id_str);
+Maybe<void> ParseDeviceNameConf(const std::string& device_name, int64_t* mchn_id,
+                                std::string* device_tag, std::string* device_id_str);
 
 class ParallelDesc final {
  public:
   // OF_DISALLOW_COPY_AND_MOVE(ParallelDesc);
-  ParallelDesc() = delete;
   ~ParallelDesc() = default;
 
   ParallelDesc(const ParallelDesc&) = default;
   ParallelDesc(const ParallelConf& user_conf);
+  Maybe<void> MaybeInit(const ParallelConf& user_conf);
 
   // Getters
   DeviceType device_type() const { return device_type_; }
@@ -46,8 +47,10 @@ class ParallelDesc final {
   int64_t DeviceIdForParallelId(int64_t parallel_id) const;
 
  private:
+  friend Maybe<long long> GetParallelNum4ParallelConf(const std::string& parallel_conf_str);
+  ParallelDesc() = default;
   void ClearUp();
-  void SanityCheck();
+  Maybe<void> SanityCheck();
 
   DeviceType device_type_;
   ParallelConf parallel_conf_;

@@ -4,21 +4,9 @@
 
 namespace oneflow {
 
-namespace {
-
-void CheckSameRecordIdInDevicePiece(const PbRpf<std::string>& bns,
-                                    const std::function<Blob*(const std::string&)>& BnInOp2Blob) {
-  TODO();
+Kernel::~Kernel() {
+  if (shape_infer_helper_ != nullptr) { delete shape_infer_helper_; }
 }
-
-void ClearBlobDim0ValidNumIfNeed(const PbRpf<std::string>& bns,
-                                 const std::function<Blob*(const std::string&)>& BnInOp2Blob) {
-  TODO();
-}
-
-}  // namespace
-
-Kernel::~Kernel() { delete shape_infer_helper_; }
 
 void Kernel::Init(const JobDesc* job_desc, const KernelConf& kernel_conf, DeviceCtx* device_ctx) {
   job_desc_ = job_desc;
@@ -81,7 +69,6 @@ void Kernel::ForwardLoD(const KernelCtx& ctx,
 
 void Kernel::ForwardDenseShape(const KernelCtx& ctx,
                                std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  CHECK_EQ(kernel_conf_.need_do_lod(), false);
   return shape_infer_helper_->InferDenseShape(BnInOp2Blob);
 }
 

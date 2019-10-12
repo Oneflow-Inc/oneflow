@@ -37,6 +37,14 @@ class BlobDesc(object):
     def is_dynamic(self):
         raise NotImplementedError
 
+    @property
+    def num_of_lod_levels(self):
+        raise NotImplementedError
+    
+    @property
+    def parallel_conf(self):
+        raise NotImplementedError
+
     def with_distribute(self, distribute):
         raise NotImplementedError
 

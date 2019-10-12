@@ -41,7 +41,7 @@ class Kernel {
   virtual bool IsKernelLaunchSynchronized() const { return true; }
 
  protected:
-  Kernel() = default;
+  Kernel() : job_desc_(nullptr), shape_infer_helper_(nullptr) {}
   virtual void VirtualKernelInit(DeviceCtx* device_ctx) { VirtualKernelInit(); }
   virtual void VirtualKernelInit() {}
   const KernelConf& kernel_conf() const { return kernel_conf_; }
@@ -93,9 +93,8 @@ class Kernel {
 
  private:
   const JobDesc* job_desc_;
-  KernelConf kernel_conf_;
-
   RuntimeBlobShapeInferHelper* shape_infer_helper_;
+  KernelConf kernel_conf_;
 };
 
 template<DeviceType device_type>
