@@ -10,7 +10,7 @@ from oneflow.python.oneflow_export import oneflow_export
 @oneflow_export("advance.distribute_split", "debug.distribute_split")
 def distribute_split(x, axis=0, name=None):
     import oneflow
-    if name is None: name = id_util.UniqueStr("DistributeConcat_")
+    if name is None: name = id_util.UniqueStr("DistributeSplit_")
     op_conf = op_conf_util.OperatorConf()
     op_conf.name = name
     setattr(op_conf.distribute_split_conf, "in", x.logical_blob_name)
