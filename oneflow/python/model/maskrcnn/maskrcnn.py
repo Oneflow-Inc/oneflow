@@ -58,6 +58,9 @@ parser.add_argument(
     ),
     required=False,
 )
+parser.add_argument(
+    "-v", "--verbose", default=False, action="store_true", required=False
+)
 
 terminal_args = parser.parse_args()
 
@@ -116,8 +119,10 @@ def maskrcnn_train(images, image_sizes, gt_boxes, gt_segms, gt_labels):
     cfg = get_default_cfgs()
     if terminal_args.config_file is not None:
         cfg.merge_from_file(terminal_args.config_file)
+        print("merged config from {}".format(terminal_args.config_file))
     cfg.freeze()
-    print(cfg)
+    if terminal_args.verbose:
+        print(cfg)
     backbone = Backbone(cfg)
     rpn_head = RPNHead(cfg)
     rpn_loss = RPNLoss(cfg)
