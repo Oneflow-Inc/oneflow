@@ -380,7 +380,8 @@ if __name__ == "__main__":
                     )
                 )
             for i in range(10):
-                if i == 0 or (i + 1) % 10 == 0:
+
+                def save_model():
                     if not os.path.exists(terminal_args.model_save_dir):
                         os.makedirs(terminal_args.model_save_dir)
                     model_dst = os.path.join(
@@ -388,6 +389,10 @@ if __name__ == "__main__":
                     )
                     print("saving models to {}".format(model_dst))
                     check_point.save(model_dst)
+
+                if i == 0:
+                    save_model()
+
                 train_loss = mock_train(
                     debug_data.blob("images"),
                     debug_data.blob("image_size"),
@@ -400,3 +405,6 @@ if __name__ == "__main__":
                 for loss in train_loss:
                     print_loss.append(loss.mean())
                 print(fmt_str.format(*print_loss))
+                
+                if (i + 1) % 10 == 0:
+                    save_model()
