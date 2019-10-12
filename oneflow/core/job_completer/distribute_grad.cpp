@@ -48,7 +48,7 @@ void GenerateBackwardOpConf4DistributeSplit(
   }
   concat_op_conf->set_out("out");
   if (DiffLbi4BnInOp("in") != nullptr) {
-    CHECK_GT(concat_op_conf->in_size(), 0);
+    CHECK_GT(concat_op_conf->in_size(), distribute_split_conf.out_size());
     DiffLbi4BnInOp("in")->set_op_name(concat_op.name());
     DiffLbi4BnInOp("in")->set_blob_name("out");
     op_confs->push_back(concat_op);
