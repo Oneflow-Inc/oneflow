@@ -2,22 +2,6 @@
 
 namespace oneflow {
 
-namespace {
-
-int64_t InferKeyValueOutByteSize(const Shape& shape, DataType data_type) {
-  int32_t bytes = 0;
-  switch (data_type) {
-    case DataType::kFloat: bytes = sizeof(float); break;
-    case DataType::kDouble: bytes = sizeof(double); break;
-    case DataType::kInt32: bytes = sizeof(int32_t); break;
-    case DataType::kInt8: bytes = sizeof(int8_t); break;
-    default: UNIMPLEMENTED(); break;
-  }
-  return shape.Count(0, shape.NumAxes() - 1) * (bytes + sizeof(int32_t));
-}
-
-}  // namespace
-
 size_t InferTempStorageForCUBArgmaxAtCompile(int32_t num_row, int32_t num_col, DataType data_type);
 
 class ArgmaxOp final : public Operator {
@@ -49,7 +33,9 @@ class ArgmaxOp final : public Operator {
     temp_storage->set_is_dynamic(false);
     // fw_buf: key_value_out
     BlobDesc* key_value_out = GetBlobDesc4BnInOp("key_value_out");
-    key_value_out->mut_shape() = Shape({InferKeyValueOutByteSize(in->shape(), in->data_type())});
+    key_value_out->mut_shape() =
+        Shape({in->shape().Count(0, in->shape().NumAxes() - 1)
+               * static_cast<int64_t>(GetSizeOfDataType(in->data_type()) + sizeof(int32_t))});
     key_value_out->set_data_type(DataType::kChar);
     key_value_out->set_is_dynamic(in->is_dynamic());
     // output
