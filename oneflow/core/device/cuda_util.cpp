@@ -64,7 +64,7 @@ int32_t GetSMCudaMaxBlocksNum() {
 }
 
 bool IsCuda9OnTuringDevice() {
-  return __CUDA_API_VERSION == 9000 && __CUDA_API_VERSION < 9020 && global_device_prop.major == 7
+  return CUDA_VERSION >= 9000 && CUDA_VERSION < 9020 && global_device_prop.major == 7
          && global_device_prop.minor == 5;
 }
 
