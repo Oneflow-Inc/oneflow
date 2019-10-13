@@ -17,7 +17,8 @@ class COCODataset final : public Dataset {
   int64_t GetGroupId(int64_t idx) const override;
 
  private:
-  void GetImage(const std::string& image_file_name, DataField* data_field) const;
+  void GetImage(const nlohmann::json& image_json, DataField* image_field,
+                DataField* image_size_field) const;
   void GetBbox(const nlohmann::json& bbox_json, DataField* data_field) const;
   void GetLabel(const nlohmann::json& label_json, DataField* data_field) const;
   void GetSegmentation(const nlohmann::json& segmentation, DataField* data_field) const;

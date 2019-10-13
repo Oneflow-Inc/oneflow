@@ -62,6 +62,7 @@ int64_t COCODataset::GetGroupId(int64_t idx) const {
 
 void COCODataset::GetData(int64_t idx, DataInstance* data_inst) const {
   auto* image_field = data_inst->GetField<DataSourceCase::kImage>();
+  auto* image_size_field = data_inst->GetField<DataSourceCase::kImageSize>();
   auto* bbox_field = data_inst->GetField<DataSourceCase::kObjectBoundingBox>();
   auto* label_field = data_inst->GetField<DataSourceCase::kObjectLabel>();
   DataField* segm_field = nullptr;
@@ -73,9 +74,8 @@ void COCODataset::GetData(int64_t idx, DataInstance* data_inst) const {
   }
 
   int64_t image_id = image_ids_.at(idx);
-  const auto& image = image_id2image_.at(image_id);
   // Get image data
-  GetImage(image["file_name"].get<std::string>(), image_field);
+  GetImage(image_id2image_.at(image_id), image_field, image_size_field);
   for (int64_t anno_id : image_id2anno_id_.at(image_id)) {
     const auto& anno = anno_id2anno_.at(anno_id);
     // Get bbox data
@@ -87,17 +87,24 @@ void COCODataset::GetData(int64_t idx, DataInstance* data_inst) const {
   }
 }
 
-void COCODataset::GetImage(const std::string& image_file_name, DataField* data_field) const {
-  auto* image_field = dynamic_cast<ImageDataField*>(data_field);
-  if (!image_field) { return; }
-
-  auto image_file_path =
-      JoinPath(dataset_proto().dataset_dir(), dataset_proto().coco().image_dir(), image_file_name);
-  PersistentInStream in_stream(DataFS(), image_file_path);
-  std::vector<char> buffer(DataFS()->GetFileSize(image_file_path));
-  CHECK_EQ(in_stream.Read(buffer.data(), buffer.size()), 0);
-  cv::_InputArray bytes_array(buffer.data(), buffer.size());
-  image_field->data() = cv::imdecode(bytes_array, cv::IMREAD_ANYCOLOR);
+void COCODataset::GetImage(const nlohmann::json& image_json, DataField* image_field,
+                           DataField* image_size_field) const {
+  auto* image = dynamic_cast<ImageDataField*>(image_field);
+  auto* image_size = dynamic_cast<ArrayDataField<int32_t>*>(image_size_field);
+  if (image) {
+    auto image_file_path =
+        JoinPath(dataset_proto().dataset_dir(), dataset_proto().coco().image_dir(),
+                 image_json["file_name"].get<std::string>());
+    PersistentInStream in_stream(DataFS(), image_file_path);
+    std::vector<char> buffer(DataFS()->GetFileSize(image_file_path));
+    CHECK_EQ(in_stream.Read(buffer.data(), buffer.size()), 0);
+    cv::_InputArray bytes_array(buffer.data(), buffer.size());
+    image->data() = cv::imdecode(bytes_array, cv::IMREAD_ANYCOLOR);
+  }
+  if (image_size) {
+    image_size->data().push_back(image_json["height"].get<int32_t>());
+    image_size->data().push_back(image_json["width"].get<int32_t>());
+  }
 }
 
 void COCODataset::GetBbox(const nlohmann::json& bbox_json, DataField* data_field) const {

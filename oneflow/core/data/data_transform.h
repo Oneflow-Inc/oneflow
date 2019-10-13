@@ -93,7 +93,9 @@ template<>
 struct DataTransformer<DataSourceCase::kImage, TransformCase::kTargetResize> {
   using ImageFieldT = typename DataFieldTrait<DataSourceCase::kImage>::type;
   using ScaleFieldT = typename DataFieldTrait<DataSourceCase::kImageScale>::type;
+  using ImageSizeFieldT = typename DataFieldTrait<DataSourceCase::kImageSize>::type;
   using T = typename ScaleFieldT::data_type;
+  using SizeT = typename ImageSizeFieldT::data_type;
 
   static void Apply(DataInstance* data_inst, const DataTransformProto& proto) {
     auto* image_field = dynamic_cast<ImageFieldT*>(data_inst->GetField<DataSourceCase::kImage>());
@@ -101,6 +103,8 @@ struct DataTransformer<DataSourceCase::kImage, TransformCase::kTargetResize> {
     auto* field = data_inst->GetOrCreateField<DataSourceCase::kImageScale>();
     auto* scale_field = dynamic_cast<ScaleFieldT*>(field);
     CHECK_NOTNULL(scale_field);
+    auto* image_size_field =
+        dynamic_cast<ImageSizeFieldT*>(data_inst->GetField<DataSourceCase::kImageSize>());
 
     int32_t target_size = proto.target_resize().target_size();
     int32_t max_size = proto.target_resize().max_size();
@@ -123,7 +127,13 @@ struct DataTransformer<DataSourceCase::kImage, TransformCase::kTargetResize> {
     CHECK(std::max(image_height, image_width) == max_size
           || std::min(image_height, image_width) == target_size);
 
+    if (image_size_field) {
+      image_size_field->data().at(0) = static_cast<SizeT>(image_height);
+      image_size_field->data().at(1) = static_cast<SizeT>(image_width);
+    }
+
     auto& scale_vec = scale_field->data();
+    scale_vec.clear();
     scale_vec.push_back(static_cast<T>(image_height) / static_cast<T>(origin_image_height));
     scale_vec.push_back(static_cast<T>(image_width) / static_cast<T>(origin_image_width));
   }
