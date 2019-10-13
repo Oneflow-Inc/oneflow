@@ -49,7 +49,15 @@ bool CudnnConvCtxCache::InferCudnnConvAlgoCtxWithConfig(
   CudnnFilterDesc filter_desc(data_type, filter_blob_desc.shape(), format);
   CudnnConvDesc conv_desc(GetConvDescDataType(data_type), in_blob_desc.shape(), conf);
   cudnnHandle_t cudnn_handle;
+  if (IsCuda9OnTuringDevice()) {
+    CudaCheck(cudaDeviceSynchronize());
+    CudaCheck(cudaGetLastError());
+  }
   CudaCheck(cudnnCreate(&cudnn_handle));
+  if (IsCuda9OnTuringDevice()) {
+    CudaCheck(cudaDeviceSynchronize());
+    cudaGetLastError();
+  }
   void* in_dptr = nullptr;
   void* out_dptr = nullptr;
   void* filter_dptr = nullptr;
