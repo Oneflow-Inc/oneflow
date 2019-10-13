@@ -158,11 +158,11 @@ void GenRegstApplyReleaseQueueAndRegstMutualExclusions(
     std::vector<HashSet<RegstDescProto*>>* apply_regsts_queue,
     std::vector<HashSet<RegstDescProto*>>* release_regsts_queue,
     HashMap<RegstDescProto*, HashSet<RegstDescProto*>>* regst2mutual_exclusion_regsts,
-    HashSet<RegstDescProto*>* inplace_consumer_regst_descs) {
+    HashMap<RegstDescProto*, RegstDescProto*>* consumer2inplaced_regst) {
   apply_regsts_queue->clear();
   release_regsts_queue->clear();
   regst2mutual_exclusion_regsts->clear();
-  inplace_consumer_regst_descs->clear();
+  consumer2inplaced_regst->clear();
   apply_regsts_queue->resize(sorted_tasks->size());
   release_regsts_queue->resize(sorted_tasks->size());
   HashMap<int64_t, int64_t> task_id2sorted_id;
@@ -185,17 +185,30 @@ void GenRegstApplyReleaseQueueAndRegstMutualExclusions(
     return release_index;
   };
 
-  HashMap<int64_t, int64_t> regst_desc_id2release_index;
-  for (RegstDescProto* regst_desc : *mem_reused_regsts) {
-    if (regst_desc->has_hint_inplace_consumed_regst_desc_id()
-        && regst_desc->hint_inplace_consumed_regst_desc_id() != -1) {
-      RegstDescProto* inplaced_regst_desc =
-          regst_desc_id2regst_desc->at(regst_desc->hint_inplace_consumed_regst_desc_id());
-      if (mem_reused_regsts->find(inplaced_regst_desc) != mem_reused_regsts->end()) {
-        CHECK(inplace_consumer_regst_descs->insert(regst_desc).second);
-        continue;
+  auto TryFindFirstInplacedRegstDesc = [&](RegstDescProto* consumer_regst) -> RegstDescProto* {
+    RegstDescProto* inplaced_regst = nullptr;
+    while (consumer_regst->has_hint_inplace_consumed_regst_desc_id()
+           && consumer_regst->hint_inplace_consumed_regst_desc_id() != -1) {
+      RegstDescProto* hint_inplaced_regst =
+          regst_desc_id2regst_desc->at(consumer_regst->hint_inplace_consumed_regst_desc_id());
+      if (mem_reused_regsts->find(hint_inplaced_regst) != mem_reused_regsts->end()) {
+        inplaced_regst = hint_inplaced_regst;
+        consumer_regst = hint_inplaced_regst;
+      } else {
+        break;
       }
     }
+    return inplaced_regst;
+  };
+
+  HashMap<int64_t, int64_t> regst_desc_id2release_index;
+  for (RegstDescProto* regst_desc : *mem_reused_regsts) {
+    RegstDescProto* inplaced_regst_desc = TryFindFirstInplacedRegstDesc(regst_desc);
+    if (inplaced_regst_desc != nullptr) {
+      CHECK(consumer2inplaced_regst->emplace(regst_desc, inplaced_regst_desc).second);
+      continue;
+    }
+
     CHECK(apply_regsts_queue->at(task_id2sorted_id.at(regst_desc->producer_task_id()))
               .insert(regst_desc)
               .second);
@@ -204,14 +217,14 @@ void GenRegstApplyReleaseQueueAndRegstMutualExclusions(
               .second);
   }
   // inplace extend regst release index
-  for (RegstDescProto* inplace_consumer_regst_desc : *inplace_consumer_regst_descs) {
-    int64_t inplaced_regst_desc_id =
-        inplace_consumer_regst_desc->hint_inplace_consumed_regst_desc_id();
+  for (auto pair : *consumer2inplaced_regst) {
+    RegstDescProto* consumer_regst_desc = pair.first;
+    int64_t inplaced_regst_desc_id = pair.second->regst_desc_id();
     CHECK(regst_desc_id2release_index.find(inplaced_regst_desc_id)
           != regst_desc_id2release_index.end());
     regst_desc_id2release_index.at(inplaced_regst_desc_id) =
         std::max(regst_desc_id2release_index.at(inplaced_regst_desc_id),
-                 FindLastReleaseIndexInSortedTasks(inplace_consumer_regst_desc));
+                 FindLastReleaseIndexInSortedTasks(consumer_regst_desc));
   }
   for (const auto& pair : regst_desc_id2release_index) {
     CHECK(release_regsts_queue->at(pair.second)
@@ -420,7 +433,7 @@ void InJobMemSharingUtil::InferMemBlockId4MemReusedRegst(Plan* plan,
   HashMap<int64_t, HashMap<RegstDescProto*, HashSet<RegstDescProto*>>>
       mem_chain2regst2mutual_exclusion_regsts;
   // info for inplace
-  HashMap<int64_t, HashSet<RegstDescProto*>> mem_chain2inplace_consumer_regst_descs;
+  HashMap<int64_t, HashMap<RegstDescProto*, RegstDescProto*>> mem_chain2consumer2inplaced_regst;
 
   // step 1: generate regst apply/release queue AND regst mutual exclusions
   for (const auto& pair : mem_chain2mem_reused_regsts) {
@@ -428,7 +441,7 @@ void InJobMemSharingUtil::InferMemBlockId4MemReusedRegst(Plan* plan,
         &mem_chain2sorted_tasks.at(pair.first), &pair.second, &regst_desc_id2regst_desc,
         &mem_chain2task2apply_regsts[pair.first], &mem_chain2task2release_regsts[pair.first],
         &mem_chain2regst2mutual_exclusion_regsts[pair.first],
-        &mem_chain2inplace_consumer_regst_descs[pair.first]);
+        &mem_chain2consumer2inplaced_regst[pair.first]);
   }
 
   // step 2: multi-thread run several algorithm for each mem chain
@@ -479,7 +492,7 @@ void InJobMemSharingUtil::InferMemBlockId4MemReusedRegst(Plan* plan,
     const MemBlockResultInfo& best_result = results.at(best_algo_id);
     CHECK_EQ(mem_chain2mem_reused_regsts.at(pair.first).size(),
              (best_result.regst_desc2offset.size()
-              + mem_chain2inplace_consumer_regst_descs.at(pair.first).size()));
+              + mem_chain2consumer2inplaced_regst.at(pair.first).size()));
     for (const auto& regst_offset_pair : best_result.regst_desc2offset) {
       RegstDescProto* regst_desc = regst_offset_pair.first;
       int64_t offset = regst_offset_pair.second;
@@ -488,15 +501,14 @@ void InJobMemSharingUtil::InferMemBlockId4MemReusedRegst(Plan* plan,
       regst_desc->set_mem_block_offset(offset);
     }
     // set inplace
-    for (RegstDescProto* inplace_consumer_regst_desc :
-         mem_chain2inplace_consumer_regst_descs.at(pair.first)) {
-      CHECK_EQ(inplace_consumer_regst_desc->mem_block_id(), -1);
-      RegstDescProto* inplaced_regst_desc = regst_desc_id2regst_desc.at(
-          inplace_consumer_regst_desc->hint_inplace_consumed_regst_desc_id());
+    for (auto& consumer_inplace_pair : mem_chain2consumer2inplaced_regst.at(pair.first)) {
+      RegstDescProto* consumer_regst_desc = consumer_inplace_pair.first;
+      CHECK_EQ(consumer_regst_desc->mem_block_id(), -1);
+      RegstDescProto* inplaced_regst_desc = consumer_inplace_pair.second;
       CHECK_EQ(inplaced_regst_desc->mem_block_id(), mem_block_id);
       CHECK_NE(inplaced_regst_desc->mem_block_offset(), -1);
-      inplace_consumer_regst_desc->set_mem_block_id(inplaced_regst_desc->mem_block_id());
-      inplace_consumer_regst_desc->set_mem_block_offset(inplaced_regst_desc->mem_block_offset());
+      consumer_regst_desc->set_mem_block_id(inplaced_regst_desc->mem_block_id());
+      consumer_regst_desc->set_mem_block_offset(inplaced_regst_desc->mem_block_offset());
     }
   }
 }
