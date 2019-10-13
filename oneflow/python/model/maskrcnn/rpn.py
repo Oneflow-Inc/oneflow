@@ -9,7 +9,7 @@ def _Conv2d(
     filters,
     kernel_size,
     name,
-    activation=flow.keras.activations.sigmoid,
+    activation=None,
     weight_name=None,
     bias_name=None,
 ):
@@ -57,10 +57,24 @@ class RPNHead(object):
                     256,
                     3,
                     "conv{}".format(layer_i),
-                    flow.keras.activations.relu,
+                    activation=flow.keras.activations.relu,
                     weight_name="conv_weight-weight",
                     bias_name="conv_bias-bias",
                 )
+
+                def mask_lambda(x):
+                    idx = layer_i
+                    path = (
+                        "dump/" + "head_conv" + "-" + str(idx) + "_" + x.op_name
+                    )
+
+                    def dump(blob):
+                        np.save(path, blob.ndarray())
+
+                    return dump
+
+                flow.watch(x, mask_lambda(x))
+
                 cls_logits = _Conv2d(
                     x,
                     3,
