@@ -1,6 +1,7 @@
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/thread/thread_manager.h"
 #include "oneflow/core/common/balanced_splitter.h"
+#include "oneflow/core/kernel/top_k_kernel_util.h"
 
 namespace oneflow {
 
@@ -41,6 +42,11 @@ void ForwardPartDataContentTopK(const T* in_ptr, int32_t* indices_ptr, const Ran
 }
 
 }  // namespace
+
+template<>
+struct TopKKernelUtil<DeviceType::kCPU> {
+  static int32_t ExtractBlobK(const Blob* k_blob) { return *k_blob->dptr<int32_t>(); }
+};
 
 template<typename T>
 void GpuHeapSelectionTopK(DeviceCtx* ctx, const T* in_ptr, int32_t instance_num,
@@ -103,11 +109,13 @@ class TopKKernel final : public KernelIf<device_type> {
   void ForwardDataContent(const KernelCtx& ctx,
                           std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
     const Blob* in_blob = BnInOp2Blob("in");
+    const Blob* k_blob = BnInOp2Blob("blob_k");
     Blob* out_blob = BnInOp2Blob("out");
     int32_t instance_size = in_blob->shape().dim_vec().back();
     int32_t instance_num = in_blob->shape().elem_cnt() / instance_size;
-    int32_t k = this->op_conf().top_k_conf().k();
-    // TODO: extract blob_k
+    int32_t conf_k = this->op_conf().top_k_conf().k();
+    int32_t blob_k = TopKKernelUtil<device_type>::ExtractBlobK(k_blob);
+    int32_t k = std::min(conf_k, blob_k);
     CHECK_LE(k, instance_size);
     const T* in_ptr = in_blob->dptr<T>();
     int32_t* out_ptr = out_blob->mut_dptr<int32_t>();

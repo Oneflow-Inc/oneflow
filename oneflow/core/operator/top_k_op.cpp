@@ -19,6 +19,7 @@ class TopKOp final : public Operator {
   void InitFromOpConf() override {
     CHECK(op_conf().has_top_k_conf());
     EnrollInputBn("in", false);
+    EnrollInputBn("blob_k", false);
     const int32_t k = op_conf().top_k_conf().k();
     if (device_type() == DeviceType::kCPU) {
       if (k > 1) { EnrollTmpBn("indices"); }
@@ -38,10 +39,12 @@ class TopKOp final : public Operator {
                              std::function<void(OpContext*)> EnrollOpCtx) const override {
     // input
     const BlobDesc* in = GetBlobDesc4BnInOp("in");
+    const BlobDesc* blob_k = GetBlobDesc4BnInOp("blob_k");
     const int32_t instance_size = in->shape().dim_vec().back();
     const int32_t k = op_conf().top_k_conf().k();
     CHECK_GE_OR_RETURN(k, 1);
     CHECK_LE_OR_RETURN(k, instance_size);
+    CHECK_EQ_OR_RETURN(blob_k->shape().elem_cnt(), 1);
     if (device_type() == DeviceType::kCPU) {
       if (k > 1) {
         // tmp: indices

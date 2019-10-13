@@ -4,6 +4,7 @@
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/kernel/kernel_util.cuh"
+#include "oneflow/core/kernel/top_k_kernel_util.h"
 
 namespace oneflow {
 
@@ -78,6 +79,15 @@ __global__ void RadixSortTopKWriteToOutputKernel(const int32_t* sorted_indices_p
 }
 
 }  // namespace
+
+template<>
+struct TopKKernelUtil<DeviceType::kGPU> {
+  static int32_t ExtractBlobK(const Blob* k_blob) {
+    int32_t k;
+    CudaCheck(cudaMemcpy(&k, k_blob->dptr<int32_t>(), sizeof(int32_t), cudaMemcpyDeviceToHost));
+    return k;
+  }
+};
 
 template<typename T>
 void GpuHeapSelectionTopK(DeviceCtx* ctx, const T* in_ptr, int32_t instance_num,
