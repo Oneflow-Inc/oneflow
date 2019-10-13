@@ -377,11 +377,11 @@ if __name__ == "__main__":
                 print(
                     "{:>8} {:>16} {:>16} {:>16} {:>16} {:>16}".format(
                         "iter",
-                        "rpn_bbox_loss",
-                        "rpn_obj_loss",
-                        "box_loss",
-                        "cls_loss",
-                        "mask_loss",
+                        "loss_rpn_box_reg",
+                        "loss_objectness",
+                        "loss_box_reg",
+                        "loss_classifier",
+                        "loss_mask",
                     )
                 )
             for i in range(10):
