@@ -4,7 +4,7 @@ namespace oneflow {
 
 void DumpVersionInfo() {
 #ifdef WITH_GIT_VERSION
-  LOG(INFO) << "OneFLow Version: " << GetOneFlowGitVersion();
+  LOG(INFO) << "OneFlow Version: " << GetOneFlowGitVersion();
 #endif  // WITH_GIT_VERSION
 }
 
