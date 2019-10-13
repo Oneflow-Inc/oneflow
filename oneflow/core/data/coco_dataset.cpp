@@ -27,19 +27,37 @@ COCODataset::COCODataset(const DatasetProto& proto) : Dataset(proto) {
     image_ids_.push_back(id);
     CHECK(image_id2image_.emplace(id, image).second);
   }
-  std::sort(image_ids_.begin(), image_ids_.end());
   // build anno map
+  HashSet<int64_t> to_remove_image_ids;
   for (const auto& anno : annotation_json_["annotations"]) {
     int64_t id = anno["id"].get<int64_t>();
     int64_t image_id = anno["image_id"].get<int64_t>();
-    CHECK(anno_id2anno_.emplace(id, anno).second);
-    image_id2anno_id_[image_id].push_back(id);
+    int64_t category_id = anno["category_id"].get<int64_t>();
+    bool is_valid_anno = true;
+    // remove image with category_id > 80
+    if (category_id > 80) {
+      to_remove_image_ids.insert(image_id);
+      is_valid_anno = false;
+    }
+    if (is_valid_anno) {
+      CHECK(anno_id2anno_.emplace(id, anno).second);
+      image_id2anno_id_[image_id].push_back(id);
+    }
   }
+  // remove images whose anno is invalid
+  std::remove_if(image_ids_.begin(), image_ids_.end(), [&to_remove_image_ids](int64_t image_id) {
+    return to_remove_image_ids.find(image_id) != to_remove_image_ids.end();
+  });
+  // sort image ids for reproducible results
+  std::sort(image_ids_.begin(), image_ids_.end());
   // build categories map
   std::vector<int32_t> category_ids;
   for (const auto& cate : annotation_json_["categories"]) {
     int32_t id = cate["id"].get<int32_t>();
-    category_ids.push_back(id);
+    // TODO: make 80 configurable
+    if (id <= 80) {
+      category_ids.push_back(id);
+    }
   }
   std::sort(category_ids.begin(), category_ids.end());
   int32_t contiguous_id = 0;
@@ -49,7 +67,6 @@ COCODataset::COCODataset(const DatasetProto& proto) : Dataset(proto) {
   }
   if (coco_dataset.group_by_aspect_ratio()) { sampler().reset(new GroupedDataSampler(this)); }
 }
-
 int64_t COCODataset::GetGroupId(int64_t idx) const {
   int64_t image_id = image_ids_.at(idx);
   const auto& image_info = image_id2image_.at(image_id);
@@ -85,6 +102,7 @@ void COCODataset::GetData(int64_t idx, DataInstance* data_inst) const {
     // Get object label
     GetLabel(anno["category_id"], label_field);
   }
+  std::cout << "data_idx: " << idx << ", image_id: " << image_id << std::endl;
 }
 
 void COCODataset::GetImage(const nlohmann::json& image_json, DataField* image_field,
