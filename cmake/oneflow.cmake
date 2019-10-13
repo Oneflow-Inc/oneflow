@@ -137,6 +137,7 @@ add_custom_command(
         DEPENDS of_git_version_create_dir)
 add_custom_target(of_git_version
         DEPENDS ${OF_GIT_VERSION_DUMMY_FILE})
+list(APPEND of_all_obj_cc ${OF_GIT_VERSION_FILE})
 
 # proto obj lib
 add_custom_target(make_pyproto_dir ALL
