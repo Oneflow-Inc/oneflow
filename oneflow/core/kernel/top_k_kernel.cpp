@@ -107,6 +107,7 @@ class TopKKernel final : public KernelIf<device_type> {
     int32_t instance_size = in_blob->shape().dim_vec().back();
     int32_t instance_num = in_blob->shape().elem_cnt() / instance_size;
     int32_t k = this->op_conf().top_k_conf().k();
+    CHECK_LE(k, instance_size);
     const T* in_ptr = in_blob->dptr<T>();
     int32_t* out_ptr = out_blob->mut_dptr<int32_t>();
 
