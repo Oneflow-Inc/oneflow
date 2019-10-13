@@ -3,10 +3,8 @@
 
 #include "oneflow/core/data/dataset.h"
 #include "oneflow/core/data/data_sampler.h"
-#include "oneflow/core/data/ring_queue.h"
 #include "oneflow/core/thread/thread_pool.h"
 #include "oneflow/core/common/buffer.h"
-#include "oneflow/core/common/channel.h"
 #include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/core/kernel/kernel.pb.h"
 #include <thread>
