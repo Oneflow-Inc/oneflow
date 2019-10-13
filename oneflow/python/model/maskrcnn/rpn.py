@@ -1,7 +1,7 @@
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow as flow
 from matcher import Matcher
-
+import numpy as np
 
 def _Conv2d(
     inputs,
@@ -60,30 +60,38 @@ class RPNHead(object):
                     weight_name="conv_weight-weight",
                     bias_name="conv_bias-bias",
                 )
-
-                cls_logits = flow.transpose(
-                    _Conv2d(
-                        x,
-                        3,
-                        1,
-                        "cls_logit{}".format(layer_i),
-                        weight_name="cls_logits_weight-weight",
-                        bias_name="cls_logits_bias-bias",
-                    ),
-                    perm=[0, 2, 3, 1],
+                cls_logits = _Conv2d(
+                    x,
+                    3,
+                    1,
+                    "cls_logit{}".format(layer_i),
+                    weight_name="cls_logits_weight-weight",
+                    bias_name="cls_logits_bias-bias",
                 )
-                bbox_preds = flow.transpose(
-                    _Conv2d(
-                        x,
-                        12,
-                        1,
-                        "bbox_pred{}".format(layer_i),
-                        weight_name="bbox_pred_weight-weight",
-                        bias_name="bbox_pred_bias-bias",
-                    ),
-                    perm=[0, 2, 3, 1],
-                )
-
+                def mask_lambda(x):
+                    idx = layer_i
+                    path = "dump/" + "cls_logits" + "-" + str(idx) + "_" + x.op_name 
+                    def dump(blob):
+                        np.save(path, blob.ndarray())
+                    return dump
+                flow.watch(cls_logits, mask_lambda(cls_logits))
+                cls_logits = flow.transpose(cls_logits, perm=[0, 2, 3, 1])
+                bbox_preds = _Conv2d(
+                    x,
+                    12,
+                    1,
+                    "bbox_pred{}".format(layer_i),
+                    weight_name="bbox_pred_weight-weight",
+                    bias_name="bbox_pred_bias-bias",
+                )                
+                def mask_lambda(x):
+                    idx = layer_i
+                    path = "dump/" + "bbox_preds" + "-" + str(idx) + "_" + x.op_name 
+                    def dump(blob):
+                        np.save(path, blob.ndarray())
+                    return dump
+                flow.watch(bbox_preds, mask_lambda(bbox_preds))
+                bbox_preds = flow.transpose(bbox_preds, perm=[0, 2, 3, 1])
                 cls_logit_list.append(
                     [
                         flow.dynamic_reshape(x, shape=[-1])
