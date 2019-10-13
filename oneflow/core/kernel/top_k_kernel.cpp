@@ -85,7 +85,9 @@ class TopKKernel final : public KernelIf<device_type> {
                          std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
     const Blob* in_blob = BnInOp2Blob("in");
     Shape shape = static_cast<Shape>(in_blob->dense_shape_view());
-    const int32_t k = this->op_conf().top_k_conf().k();
+    // temp solution: we allow k > instance_size
+    int32_t k = std::min(static_cast<int64_t>(this->op_conf().top_k_conf().k()),
+                         in_blob->shape().dim_vec().back());
     shape.Set(shape.NumAxes() - 1, k);
     BnInOp2Blob("out")->dense_shape_mut_view().set_shape(shape);
     if (this->op_conf().device_type() == DeviceType::kCPU) {
@@ -106,8 +108,9 @@ class TopKKernel final : public KernelIf<device_type> {
     Blob* out_blob = BnInOp2Blob("out");
     int32_t instance_size = in_blob->shape().dim_vec().back();
     int32_t instance_num = in_blob->shape().elem_cnt() / instance_size;
-    int32_t k = this->op_conf().top_k_conf().k();
-    CHECK_LE(k, instance_size);
+    // temp solution: we allow k > instance_size
+    // CHECK_LE(k, instance_size)
+    int32_t k = std::min(static_cast<int32_t>(this->op_conf().top_k_conf().k()), instance_size);
     const T* in_ptr = in_blob->dptr<T>();
     int32_t* out_ptr = out_blob->mut_dptr<int32_t>();
 
