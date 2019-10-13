@@ -173,44 +173,46 @@ struct DataTransformer<DataSourceCase::kObjectSegmentation,
     auto* segm_mask_field = data_inst->GetOrCreateField<DataSourceCase::kObjectSegmentationMask>();
     auto* segm_mask = dynamic_cast<SegmMaskFieldT*>(segm_mask_field);
     CHECK_NOTNULL(segm_mask);
+    CHECK_EQ(segm_poly->Levels(), 3);
 
     int32_t mask_h = proto.segmentation_poly_to_mask().mask_h();
     int32_t mask_w = proto.segmentation_poly_to_mask().mask_w();
-    T bbox_w = bbox->data().at(2) - bbox->data().at(0);
-    T bbox_h = bbox->data().at(3) - bbox->data().at(1);
-    T scale_w = static_cast<T>(mask_w) / std::max(GetOneVal<T>(), bbox_w);
-    T scale_h = static_cast<T>(mask_h) / std::max(GetOneVal<T>(), bbox_h);
-    segm_mask->data().resize(segm_poly->GetLod(0).at(0) * mask_h * mask_w, 0);
-
-    std::vector<double> segm_poly_resized;
-    T* poly_dptr = segm_poly->data();
-    const auto& points_vec = segm_poly->GetLod(segm_poly->Levels() - 1);
-    for (size_t points : points_vec) {
-      FOR_RANGE(size_t, i, 0, points) {
-        if (i % 2 == 0) {
-          segm_poly_resized.push_back((poly_dptr[i] - bbox->data().at(0)) * scale_w);
-        } else {
-          segm_poly_resized.push_back((poly_dptr[i] - bbox->data().at(1)) * scale_h);
-        }
-      }
-      poly_dptr += points;
-    }
-
-    MaskT* mask_dptr = segm_mask->data().data();
-    double* poly_resized_dptr = segm_poly_resized.data();
-    size_t obj_poly_begin = 0;
     const auto& polys_vec = segm_poly->GetLod(1);
-    for (size_t polys : polys_vec) {
-      FOR_RANGE(size_t, i, 0, polys) {
-        std::vector<uint8_t> mask_vec(mask_h * mask_w);
-        size_t poly_points = points_vec.at(obj_poly_begin + i);
+    const auto& points_vec = segm_poly->GetLod(2);
+
+    T* poly_dptr = segm_poly->data();
+    segm_mask->data().resize(segm_poly->GetLod(0).at(0) * mask_h * mask_w, 0);
+    MaskT* mask_dptr = segm_mask->data().data();
+    size_t polys_offset = 0;
+    FOR_RANGE(size_t, i, 0, polys_vec.size()) {
+      T bbox_x1 = bbox->data().at(i * 4 + 0);
+      T bbox_y1 = bbox->data().at(i * 4 + 1);
+      T bbox_x2 = bbox->data().at(i * 4 + 2);
+      T bbox_y2 = bbox->data().at(i * 4 + 3);
+      T scale_w = static_cast<T>(mask_w) / std::max(GetOneVal<T>(), bbox_x2 - bbox_x1);
+      T scale_h = static_cast<T>(mask_h) / std::max(GetOneVal<T>(), bbox_y2 - bbox_y1);
+      size_t polys = polys_vec.at(i);
+      FOR_RANGE(size_t, j, 0, polys) {
+        size_t poly_points = points_vec.at(polys_offset + j);
         CHECK_EQ(poly_points % 2, 0);
-        PolygonXy2ColMajorMask(poly_resized_dptr, poly_points / 2, mask_h, mask_w, mask_vec.data());
+        // resized points coord into box
+        std::vector<double> poly_points_resized(poly_points);
+        FOR_RANGE(size_t, k, 0, poly_points) {
+          if (k % 2 == 0) {
+            poly_points_resized.at(k) = (poly_dptr[k] - bbox_x1) * scale_w;
+          } else {
+            poly_points_resized.at(k) = (poly_dptr[k] - bbox_y1) * scale_h;
+          }
+        }
+        poly_dptr += poly_points;
+        // convert poly points to mask
+        std::vector<uint8_t> mask_vec(mask_h * mask_w);
+        PolygonXy2ColMajorMask(poly_points_resized.data(), poly_points / 2, mask_h, mask_w,
+                               mask_vec.data());
         std::transform(mask_vec.cbegin(), mask_vec.cend(), mask_dptr, mask_dptr,
                        std::bit_or<MaskT>());
-        poly_resized_dptr += poly_points;
       }
-      obj_poly_begin += polys;
+      polys_offset += polys;
       mask_dptr += mask_h * mask_w;
     }
   }
