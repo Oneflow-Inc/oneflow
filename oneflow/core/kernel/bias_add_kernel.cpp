@@ -38,6 +38,24 @@ struct BiasAddUtil<DeviceType::kCPU, T> {
   }
 };
 
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kBiasAddConf, BiasAddKernel, ARITHMETIC_DATA_TYPE_SEQ);
+#define INSTANTIATE_BIAS_ADD_KERNEL_UTIL(type_cpp, type_proto) \
+  template struct BiasAddUtil<DeviceType::kCPU, type_cpp>;
+OF_PP_FOR_EACH_TUPLE(INSTANTIATE_BIAS_ADD_KERNEL_UTIL, ARITHMETIC_DATA_TYPE_SEQ)
+
+#define REGISTER_BIAS_ADD_KERNEL(dev, dtype)                                    \
+  REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kBiasAddConf, dev, dtype, \
+                                        BiasAddKernel<dev, dtype>)
+
+REGISTER_BIAS_ADD_KERNEL(DeviceType::kGPU, float);
+REGISTER_BIAS_ADD_KERNEL(DeviceType::kGPU, double);
+REGISTER_BIAS_ADD_KERNEL(DeviceType::kGPU, int8_t);
+REGISTER_BIAS_ADD_KERNEL(DeviceType::kGPU, int32_t);
+REGISTER_BIAS_ADD_KERNEL(DeviceType::kGPU, int64_t);
+
+REGISTER_BIAS_ADD_KERNEL(DeviceType::kCPU, float);
+REGISTER_BIAS_ADD_KERNEL(DeviceType::kCPU, double);
+REGISTER_BIAS_ADD_KERNEL(DeviceType::kCPU, int8_t);
+REGISTER_BIAS_ADD_KERNEL(DeviceType::kCPU, int32_t);
+REGISTER_BIAS_ADD_KERNEL(DeviceType::kCPU, int64_t);
 
 }  // namespace oneflow

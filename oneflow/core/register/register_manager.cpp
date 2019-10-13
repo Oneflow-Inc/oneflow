@@ -19,93 +19,35 @@ void CheckBlobInRegstNotDisabled(const RegstDescProto& regst_desc) {
 }  // namespace
 
 RegstMgr::RegstMgr(const Plan& plan) {
-  std::list<const RegstDescProto*> regst_protos;
-  for (const TaskProto& task : plan.task()) {
-    if (task.machine_id() != Global<MachineCtx>::Get()->this_machine_id()) { continue; }
-    for (const auto& pair : task.produced_regst_desc()) { regst_protos.push_back(&pair.second); }
+  int64_t this_machine_id = Global<MachineCtx>::Get()->this_machine_id();
+  HashMap<int64_t, char*> chunk_id2ptr;
+  for (const ChunkProto& chunk : plan.block_chunk_list().chunk()) {
+    if (chunk.machine_id() != this_machine_id) { continue; }
+    if (chunk.mem_size() == 0) { continue; }
+    char* chunk_ptr = Global<MemoryAllocator>::Get()->Allocate(chunk.mem_case(), chunk.mem_size());
+    CHECK(chunk_id2ptr.emplace(chunk.chunk_id(), chunk_ptr).second);
   }
-  InitFromRegstProtoList(regst_protos);
-}
-
-RegstMgr::RegstMgr(const std::list<const RegstDescProto*>& regst_protos) {
-  InitFromRegstProtoList(regst_protos);
-}
-
-void RegstMgr::InitFromRegstProtoList(const std::list<const RegstDescProto*>& regst_protos) {
-  std::vector<const RegstDescProto*> sorted_regst_protos(regst_protos.begin(), regst_protos.end());
-  std::list<const RegstDescProto*> shared_separated_header_mem_regst_protos;
-  for (const RegstDescProto* regst_desc : regst_protos) {
-    CHECK_NE(regst_desc->mem_block_id(), -1);
-    CHECK_NE(regst_desc->mem_block_offset(), -1);
-    CHECK(
-        regst_desc_id2rt_regst_desc_
-            .emplace(regst_desc->regst_desc_id(), std::make_unique<const RtRegstDesc>(*regst_desc))
-            .second);
-    if (regst_desc->separated_header_mem_block_id() != -1) {
-      shared_separated_header_mem_regst_protos.push_back(regst_desc);
-    }
-  }
-  InitSeparatedHeaderMemBlock(shared_separated_header_mem_regst_protos);
-  auto GetMemSize4Regst = [&](const RegstDescProto* regst_desc) {
-    size_t ret =
-        regst_desc_id2rt_regst_desc_.at(regst_desc->regst_desc_id())->TotalMainByteSize4AllRegst()
-        + regst_desc->mem_block_offset();
-    if (regst_desc->regst_desc_type().has_ctrl_regst_desc()
-        || regst_desc->regst_desc_type().data_regst_desc().packed_blob_desc().is_body_disabled()) {
-      CHECK_EQ(ret, 0);
-    }
-    return ret;
-  };
-  std::sort(sorted_regst_protos.begin(), sorted_regst_protos.end(),
-            [&](const RegstDescProto* lhs, const RegstDescProto* rhs) {
-              return (lhs->mem_block_id() < rhs->mem_block_id())
-                     || (lhs->mem_block_id() == rhs->mem_block_id()
-                         && GetMemSize4Regst(lhs) > GetMemSize4Regst(rhs));
-            });
-  int32_t last_mem_block_id = -1;
-  char* main_mem_ptr = nullptr;
-  for (const RegstDescProto* regst_desc : sorted_regst_protos) {
-    if (regst_desc->regst_desc_type().has_data_regst_desc() == false) { continue; }
-    size_t mem_size = GetMemSize4Regst(regst_desc);
-    int32_t current_mem_block_id = regst_desc->mem_block_id();
-    if (current_mem_block_id != last_mem_block_id) {
-      if (mem_size == 0) {
-        main_mem_ptr = nullptr;
-      } else {
-        main_mem_ptr = Global<MemoryAllocator>::Get()->Allocate(regst_desc->mem_case(),
-                                                                GetMemSize4Regst(regst_desc));
-      }
-    }
-    CHECK(regst_desc_id2main_mem_ptr_.emplace(regst_desc->regst_desc_id(), main_mem_ptr).second);
-    last_mem_block_id = current_mem_block_id;
-  }
-}
-
-void RegstMgr::InitSeparatedHeaderMemBlock(const std::list<const RegstDescProto*>& regst_protos) {
-  HashMap<int64_t, int64_t> separated_header_mem_block_id2size;
-  HashMap<int64_t, char*> separated_header_mem_block_id2ptr;
-  for (const RegstDescProto* regst_desc : regst_protos) {
-    int64_t mem_size = regst_desc_id2rt_regst_desc_.at(regst_desc->regst_desc_id())
-                           ->TotalSeparatedHeaderByteSize4AllRegst();
-    CHECK_GT(mem_size, 0);
-    int64_t block_id = regst_desc->separated_header_mem_block_id();
-    CHECK_NE(block_id, -1);
-    if (separated_header_mem_block_id2size.find(block_id)
-        == separated_header_mem_block_id2size.end()) {
-      separated_header_mem_block_id2size.emplace(block_id, mem_size);
-      MemoryCase host_mem_case;
-      host_mem_case.mutable_host_mem();
-      char* separated_header_mem_ptr =
-          Global<MemoryAllocator>::Get()->Allocate(host_mem_case, mem_size);
-      separated_header_mem_block_id2ptr.emplace(block_id, separated_header_mem_ptr);
-      CHECK(regst_desc_id2separated_header_mem_ptr_
-                .emplace(regst_desc->regst_desc_id(), separated_header_mem_ptr)
-                .second);
+  for (const MemBlockProto& mem_block : plan.block_chunk_list().mem_block()) {
+    if (mem_block.machine_id() != this_machine_id) { continue; }
+    if (mem_block.mem_size() == 0) { continue; }
+    char* mem_block_ptr = nullptr;
+    if (mem_block.has_chunk_id()) {
+      CHECK(mem_block.has_chunk_offset());
+      CHECK(chunk_id2ptr.find(mem_block.chunk_id()) != chunk_id2ptr.end());
+      mem_block_ptr = chunk_id2ptr.at(mem_block.chunk_id()) + mem_block.chunk_offset();
     } else {
-      CHECK_EQ(separated_header_mem_block_id2size.at(block_id), mem_size);
+      mem_block_ptr =
+          Global<MemoryAllocator>::Get()->Allocate(mem_block.mem_case(), mem_block.mem_size());
+    }
+    CHECK(mem_block_id2ptr_.emplace(mem_block.mem_block_id(), mem_block_ptr).second);
+  }
+  for (const TaskProto& task : plan.task()) {
+    if (task.machine_id() != this_machine_id) { continue; }
+    for (const auto& pair : task.produced_regst_desc()) {
+      const RegstDescProto& regst_desc = pair.second;
       CHECK(
-          regst_desc_id2separated_header_mem_ptr_
-              .emplace(regst_desc->regst_desc_id(), separated_header_mem_block_id2ptr.at(block_id))
+          regst_desc_id2rt_regst_desc_
+              .emplace(regst_desc.regst_desc_id(), std::make_unique<const RtRegstDesc>(regst_desc))
               .second);
     }
   }
@@ -118,13 +60,13 @@ void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto,
   const RtRegstDesc* rt_regst_desc = regst_desc_id2rt_regst_desc_.at(regst_desc_id).get();
   char* main_mem_ptr = nullptr;
   char* separated_header_mem_ptr = nullptr;
-  if (regst_desc_id2main_mem_ptr_.find(regst_desc_id) != regst_desc_id2main_mem_ptr_.end()) {
-    main_mem_ptr = regst_desc_id2main_mem_ptr_.at(regst_desc_id);
-    main_mem_ptr += regst_desc_proto.mem_block_offset();
+  int64_t mem_block_id = regst_desc_proto.mem_block_id();
+  int64_t header_block_id = regst_desc_proto.separated_header_mem_block_id();
+  if (mem_block_id != -1 && mem_block_id2ptr_.find(mem_block_id) != mem_block_id2ptr_.end()) {
+    main_mem_ptr = mem_block_id2ptr_.at(mem_block_id) + regst_desc_proto.mem_block_offset();
   }
-  if (regst_desc_id2separated_header_mem_ptr_.find(regst_desc_id)
-      != regst_desc_id2separated_header_mem_ptr_.end()) {
-    separated_header_mem_ptr = regst_desc_id2separated_header_mem_ptr_.at(regst_desc_id);
+  if (header_block_id != -1 && mem_block_id2ptr_.find(header_block_id) != mem_block_id2ptr_.end()) {
+    separated_header_mem_ptr = mem_block_id2ptr_.at(header_block_id);
   }
   std::vector<LbiBlobDescPair> lbi_pairs;
   if (regst_desc_type.has_data_regst_desc()) {
@@ -168,10 +110,7 @@ void RegstMgr::NewBlobsInOneRegst(const std::vector<LbiBlobDescPair>& lbis, Regs
   if (separated_header_mem_size > 0) {
     MemoryCase host_mem_case;
     host_mem_case.mutable_host_mem();
-    if (separated_header_mem_ptr == nullptr) {
-      separated_header_mem_ptr =
-          Global<MemoryAllocator>::Get()->Allocate(host_mem_case, separated_header_mem_size);
-    }
+    CHECK(separated_header_mem_ptr != nullptr);
     regst->packed_blob_.reset(
         new Blob(regst, packed_blob_desc, separated_header_mem_ptr, main_mem_ptr));
     cur_header_pointer = separated_header_mem_ptr;

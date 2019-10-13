@@ -29,6 +29,7 @@ const int32_t kCudaMaxBlocksNum = 4096;
 
 int32_t GetSMCudaMaxBlocksNum();
 void InitGlobalCudaDeviceProp();
+bool IsCuda9OnTuringDevice();
 
 inline int32_t BlocksNum4ThreadsNum(const int32_t n) {
   return std::min((n + kCudaThreadsNumPerBlock - 1) / kCudaThreadsNumPerBlock, kCudaMaxBlocksNum);
