@@ -156,7 +156,8 @@ def maskrcnn_train(images, image_sizes, gt_boxes, gt_segms, gt_labels):
 
     # Backbone
     # CHECK_POINT: fpn features
-    features = backbone.build(images)
+    with flow.watch_scope(blob_watched):
+        features = backbone.build(images)
 
     # RPN
     cls_logit_list, bbox_pred_list = rpn_head.build(features)
@@ -234,7 +235,7 @@ def maskrcnn_eval(images, image_sizes):
 
     return cls_logits, box_pred, mask_logits
 
-
+blob_watched, diff_blob_watched = {}, {}
 if terminal_args.mock_dataset:
 
     @flow.function
@@ -405,6 +406,15 @@ if __name__ == "__main__":
                     debug_data.blob("gt_segm"),
                     debug_data.blob("gt_labels"),
                 ).get()
+
+                for lbn, blob_data in blob_watched.items():
+                    print(lbn)
+                    import numpy as np
+                    save_path = os.path.join("dump", lbn)
+                    if not os.path.exists(save_path):
+                        os.makedirs(save_path)
+                    np.save(save_path, blob_data["blob"].ndarray())
+
                 fmt_str = "{:>8} " + "{:>16.10f} " * len(train_loss)
                 print_loss = [i]
                 for loss in train_loss:
