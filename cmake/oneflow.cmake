@@ -137,6 +137,7 @@ add_custom_command(
         DEPENDS of_git_version_create_dir)
 add_custom_target(of_git_version
         DEPENDS ${OF_GIT_VERSION_DUMMY_FILE})
+set_source_files_properties(${OF_GIT_VERSION_FILE} PROPERTIES GENERATED TRUE)
 list(APPEND of_all_obj_cc ${OF_GIT_VERSION_FILE})
 
 # proto obj lib
