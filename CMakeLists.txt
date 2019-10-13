@@ -8,6 +8,7 @@ option(BUILD_RDMA "" OFF)
 option(BUILD_CUDA "" ON)
 option(RELEASE_VERSION "" ON)
 option(PY3 "" OFF)
+option(BUILD_GIT_VERSION "" ON)
 
 # Project
 if(THIRD_PARTY)

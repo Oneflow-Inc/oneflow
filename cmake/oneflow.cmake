@@ -125,20 +125,23 @@ foreach(source_file ${of_all_obj_cc} ${of_main_cc} ${of_all_test_cc} ${of_python
 endforeach()
 
 # generate version
-set(OF_GIT_VERSION_DIR ${CMAKE_CURRENT_BINARY_DIR}/of_git_version)
-set(OF_GIT_VERSION_FILE ${OF_GIT_VERSION_DIR}/version.cpp)
-set(OF_GIT_VERSION_DUMMY_FILE ${OF_GIT_VERSION_DIR}/_version.cpp)
-add_custom_target(of_git_version_create_dir
-        COMMAND ${CMAKE_COMMAND} -E make_directory ${OF_GIT_VERSION_DIR})
-add_custom_command(
-        OUTPUT ${OF_GIT_VERSION_DUMMY_FILE}
-        COMMAND ${CMAKE_COMMAND} -DOF_GIT_VERSION_FILE=${OF_GIT_VERSION_FILE}
-          -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/git_version.cmake
-        DEPENDS of_git_version_create_dir)
-add_custom_target(of_git_version
-        DEPENDS ${OF_GIT_VERSION_DUMMY_FILE})
-set_source_files_properties(${OF_GIT_VERSION_FILE} PROPERTIES GENERATED TRUE)
-list(APPEND of_all_obj_cc ${OF_GIT_VERSION_FILE})
+if(BUILD_GIT_VERSION)
+  set(OF_GIT_VERSION_DIR ${CMAKE_CURRENT_BINARY_DIR}/of_git_version)
+  set(OF_GIT_VERSION_FILE ${OF_GIT_VERSION_DIR}/version.cpp)
+  set(OF_GIT_VERSION_DUMMY_FILE ${OF_GIT_VERSION_DIR}/_version.cpp)
+  add_custom_target(of_git_version_create_dir
+          COMMAND ${CMAKE_COMMAND} -E make_directory ${OF_GIT_VERSION_DIR})
+  add_custom_command(
+          OUTPUT ${OF_GIT_VERSION_DUMMY_FILE}
+          COMMAND ${CMAKE_COMMAND} -DOF_GIT_VERSION_FILE=${OF_GIT_VERSION_FILE}
+            -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/git_version.cmake
+          DEPENDS of_git_version_create_dir)
+  add_custom_target(of_git_version
+          DEPENDS ${OF_GIT_VERSION_DUMMY_FILE})
+  set_source_files_properties(${OF_GIT_VERSION_FILE} PROPERTIES GENERATED TRUE)
+  list(APPEND of_all_obj_cc ${OF_GIT_VERSION_FILE})
+  add_definitions(-DWITH_GIT_VERSION)
+endif()
 
 # proto obj lib
 add_custom_target(make_pyproto_dir ALL
@@ -162,7 +165,9 @@ include_directories(${PROJECT_BINARY_DIR})
 oneflow_add_library(of_ccobj ${of_all_obj_cc})
 target_link_libraries(of_ccobj ${oneflow_third_party_libs})
 add_dependencies(of_ccobj of_protoobj)
-add_dependencies(of_ccobj of_git_version)
+if (BUILD_GIT_VERSION)
+  add_dependencies(of_ccobj of_git_version)
+endif()
 if (USE_CLANG_FORMAT)
   add_dependencies(of_ccobj of_format)
 endif()
