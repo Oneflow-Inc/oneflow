@@ -12,6 +12,7 @@
 #include "oneflow/core/job/foreign_job_instance.h"
 #include "oneflow/core/job/inter_user_job_info.pb.h"
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
+#include "oneflow/core/job/version.h"
 
 namespace oneflow {
 
@@ -66,6 +67,7 @@ EnvironmentObjectsScope::EnvironmentObjectsScope() {}
 
 Maybe<void> EnvironmentObjectsScope::Init(const ConfigProto& config_proto) {
   flags_and_log_scope_.reset(new FlagsAndLogScope(config_proto, "oneflow"));
+  DumpVersionInfo();
   Global<ResourceDesc>::New(config_proto.resource());
   Global<const IOConf>::New(config_proto.io_conf());
   Global<const ProfilerConf>::New(config_proto.profiler_conf());
