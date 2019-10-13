@@ -111,9 +111,13 @@ void COCODataset::GetBbox(const nlohmann::json& bbox_json, DataField* data_field
   CHECK(bbox_json.is_array());
   auto* bbox_field = dynamic_cast<ArrayDataField<float>*>(data_field);
   if (!bbox_field) { return; }
-
+  // COCO bounding box format is [left, top, width, height]
+  // we need format xyxy
   auto& bbox_vec = bbox_field->data();
-  for (const auto& jval : bbox_json) { bbox_vec.push_back(jval.get<float>()); }
+  bbox_vec.push_back(bbox_json[0].get<float>());
+  bbox_vec.push_back(bbox_json[1].get<float>());
+  bbox_vec.push_back(bbox_json[2].get<float>() + bbox_json[0].get<float>());
+  bbox_vec.push_back(bbox_json[3].get<float>() + bbox_json[1].get<float>());
 }
 
 void COCODataset::GetLabel(const nlohmann::json& label_json, DataField* data_field) const {
