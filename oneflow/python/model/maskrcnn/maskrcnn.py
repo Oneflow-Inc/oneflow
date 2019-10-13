@@ -157,7 +157,15 @@ def maskrcnn_train(images, image_sizes, gt_boxes, gt_segms, gt_labels):
     # Backbone
     # CHECK_POINT: fpn features
     features = backbone.build(images)
-
+    import numpy as np
+    for i, feature in enumerate(features):
+        def mask_lambda(x):
+            idx = i
+            path = "dump/" + "feat_" + str(idx) + "_" + x.op_name 
+            def dump(blob):
+                 np.save(path, blob.ndarray())
+            return dump
+        flow.watch(feature, mask_lambda(feature))
     # RPN
     cls_logit_list, bbox_pred_list = rpn_head.build(features)
     rpn_bbox_loss, rpn_objectness_loss = rpn_loss.build(
@@ -384,9 +392,10 @@ if __name__ == "__main__":
                         "loss_mask",
                     )
                 )
-            for i in range(0):
+            for i in range(1):
 
                 def save_model():
+                    return
                     if not os.path.exists(terminal_args.model_save_dir):
                         os.makedirs(terminal_args.model_save_dir)
                     model_dst = os.path.join(
@@ -396,7 +405,6 @@ if __name__ == "__main__":
                     check_point.save(model_dst)
 
                 if i == 0:
-                    pass
                     save_model()
 
                 train_loss = mock_train(
@@ -422,5 +430,4 @@ if __name__ == "__main__":
                 print(fmt_str.format(*print_loss))
                 
                 if (i + 1) % 10 == 0:
-                    pass
                     save_model()

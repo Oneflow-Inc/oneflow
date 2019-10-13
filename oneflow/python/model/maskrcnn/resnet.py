@@ -4,6 +4,7 @@ from datetime import datetime
 import argparse
 from collections import namedtuple
 from registry import Registry
+import numpy as np
 
 StageSpec = namedtuple(
     "StageSpec",
@@ -34,6 +35,17 @@ class ResNet(object):
         with flow.deprecated.variable_scope("body"):
             # CHECK_POINT: stem out
             blob = self.build_stem(inputs)
+            import numpy as np
+
+            def mask_lambda(x):
+                path = "dump/" + "stem_out"
+
+                def dump(blob):
+                    np.save(path, blob.ndarray())
+
+                return dump
+
+            flow.watch(blob, mask_lambda(blob))
             for i, stage_spec in enumerate(self.stage_specs, 1):
                 stage_channel_relative_factor = 2 ** (stage_spec.index - 1)
                 bottleneck_channels = (
@@ -52,6 +64,18 @@ class ResNet(object):
                     out_channels=out_channels,
                     trainable=(False if i < self.freeze_at else True),
                 )
+                import numpy as np
+
+                def mask_lambda(x):
+                    idx = i
+                    path = "dump/" + "stage_" + str(idx)
+
+                    def dump(b):
+                        np.save(path, b.ndarray())
+
+                    return dump
+
+                flow.watch(blob, mask_lambda(blob))
                 if stage_spec.return_features:
                     features.append(blob)
 
@@ -156,6 +180,17 @@ class ResNet(object):
             name="conv1",
             use_bias=False,
         )
+
+        def mask_lambda(x):
+            path = "dump/" + x.op_name + "-conv1"
+
+            def dump(b):
+                np.save(path, b.ndarray())
+
+            return dump
+
+        flow.watch(conv1, mask_lambda(conv1))
+
         affine1 = flow.layers.affine_channel(
             conv1,
             activation=flow.keras.activations.relu,
@@ -164,6 +199,15 @@ class ResNet(object):
             name="bn1",
         )
 
+        def mask_lambda(x):
+            path = "dump/" + x.op_name + "-bn1"
+
+            def dump(b):
+                np.save(path, b.ndarray())
+
+            return dump
+
+        flow.watch(affine1, mask_lambda(affine1))
         conv2 = flow.layers.conv2d(
             inputs=affine1,
             filters=bottleneck_channels,
@@ -184,6 +228,16 @@ class ResNet(object):
             name="bn2",
         )
 
+        def mask_lambda(x):
+            path = "dump/" + x.op_name + "-bn2"
+
+            def dump(b):
+                np.save(path, b.ndarray())
+
+            return dump
+
+        flow.watch(affine2, mask_lambda(affine2))
+
         conv3 = flow.layers.conv2d(
             inputs=affine2,
             filters=out_channels,
@@ -197,11 +251,7 @@ class ResNet(object):
             use_bias=False,
         )
         affine3 = flow.layers.affine_channel(
-            conv3,
-            activation=flow.keras.activations.relu,
-            axis=1,
-            trainable=False,
-            name="bn3",
+            conv3, activation=None, axis=1, trainable=False, name="bn3"
         )
         return flow.keras.activations.relu(
             (downsample_blob if downsample else inputs) + affine3
