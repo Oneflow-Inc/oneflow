@@ -17,6 +17,7 @@ class Matcher(object):
             op_name = x.op_name
 
             def dump(blob):
+                return
                 print(op_name, "anchors shape", blob.shape)
 
             return dump
@@ -27,6 +28,7 @@ class Matcher(object):
             op_name = x.op_name
 
             def dump(blob):
+                return
                 print(op_name, "gt_boxes shape", blob.shape)
 
             return dump
@@ -38,6 +40,7 @@ class Matcher(object):
             op_name = x.op_name
 
             def dump(blob):
+                return
                 print(op_name, "iou_matrix shape", blob.shape)
 
             return dump

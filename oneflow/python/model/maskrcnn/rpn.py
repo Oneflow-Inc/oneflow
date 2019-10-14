@@ -237,6 +237,7 @@ class RPNLoss(object):
                     flow.constant_like(matched_indices, int(-2)),
                     matched_indices,
                 )
+                assert(matched_indices.is_dynamic)
                 def mask_lambda(x):
                     idx = img_idx
                     path = (
@@ -262,7 +263,28 @@ class RPNLoss(object):
                     ),
                     axis=[1],
                 )
+                def mask_lambda(x):
+                    idx = img_idx
+                    path = (
+                        "dump/" + x.op_name + "-" + "pos_inds" + "-img_idx-" + str(idx)
+                    )
 
+                    def dump(blob):
+                        np.save(path, blob.ndarray())
+
+                    return dump
+                flow.watch(pos_inds, mask_lambda(pos_inds))
+                def mask_lambda(x):
+                    idx = img_idx
+                    path = (
+                        "dump/" + x.op_name + "-" + "neg_inds" + "-img_idx-" + str(idx)
+                    )
+
+                    def dump(blob):
+                        np.save(path, blob.ndarray())
+
+                    return dump
+                flow.watch(neg_inds, mask_lambda(neg_inds))
                 # CHECK_POINT: sampled_pos_inds, sampled_neg_inds
                 sampled_pos_inds, sampled_neg_inds = flow.detection.pos_neg_sampler(
                     pos_inds,
