@@ -51,6 +51,7 @@ Maybe<void> AnchorGenerateOp::InferBlobDescs(
   BlobDesc* anchors = GetBlobDesc4BnInOp("anchors");
   anchors->set_data_type(images->data_type());
   anchors->mut_shape() = Shape({num_anchors, 4});
+  anchors->set_is_dynamic(images->is_dynamic());
   return Maybe<void>::Ok();
 }
 
