@@ -217,7 +217,17 @@ class RPNLoss(object):
                         self.cfg.RPN.NEGATIVE_OVERLAP_THRESHOLD,
                     )
                     matched_indices = rpn_matcher.build(anchors, gt_boxes, True)
+                    def mask_lambda(x):
+                        idx = img_idx
+                        path = (
+                            "dump/" + x.op_name + "-" + "matched_indices_before_where" + "-img_idx-" + str(idx)
+                        )
 
+                        def dump(blob):
+                            np.save(path, blob.ndarray())
+
+                        return dump
+                    flow.watch(matched_indices, mask_lambda(matched_indices))
                 # exclude outside anchors
                 # CHECK_POINT: matched_indices
                 matched_indices = flow.where(
