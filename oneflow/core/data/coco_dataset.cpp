@@ -46,10 +46,12 @@ COCODataset::COCODataset(const DatasetProto& proto) : Dataset(proto) {
     if (!ImageHasValidAnnotations(image_id)) { to_remove_image_ids.insert(image_id); }
   }
   // remove images whose anno is invalid
-  image_ids_.erase(std::remove_if(
-      image_ids_.begin(), image_ids_.end(), [&to_remove_image_ids](int64_t image_id) {
-        return to_remove_image_ids.find(image_id) != to_remove_image_ids.end();
-      }), image_ids_.end());
+  image_ids_.erase(std::remove_if(image_ids_.begin(), image_ids_.end(),
+                                  [&to_remove_image_ids](int64_t image_id) {
+                                    return to_remove_image_ids.find(image_id)
+                                           != to_remove_image_ids.end();
+                                  }),
+                   image_ids_.end());
   // sort image ids for reproducible results
   std::sort(image_ids_.begin(), image_ids_.end());
   // build categories map
