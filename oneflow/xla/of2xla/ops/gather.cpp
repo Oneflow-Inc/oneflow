@@ -204,7 +204,7 @@ REGISTER_XLA_OP_COMPILER(GatherGrad, GatherGradOp);
 class UnsortedBatchSegmentSumOp : public XlaOpCompiler {
 public:
   void Compile(XlaOpContext* ctx) override {
-    xla::XlaOp data = ctx->Input("data");  //in
+    xla::XlaOp data = ctx->Input("data");  
     xla::XlaOp segment_ids = ctx->Input("segment_ids");
     Shape data_shape = ctx->InputShape("data");  
     Shape segment_ids_shape = ctx->InputShape("segment_ids"); 
@@ -212,45 +212,31 @@ public:
     int64_t num_segments = ctx->GetAttr<int64_t>("num_segments");
     std::vector<int64_t> data_dim_vec = data_shape.dim_vec();
     std::vector<int64_t> buffer_dim_vec;
-     // out is out 
-    // buffer_shape
- //   buffer_dim_vec.insert(
- //       buffer_dim_vec.end(),
- //       segment_ids_shape.dim_vec().cbegin(),
- //       segment_ids_shape.dim_vec().cend() - 1);
- //   buffer_dim_vec.push_back(num_segments);
- //   buffer_dim_vec.insert(
- //       buffer_dim_vec.end(),
- //       data_shape.dim_vec().cbegin() + segment_ids_shape.NumAxes(),
- //       data_shape.dim_vec().cend());
- 
-   buffer_dim_vec = {num_segments};
+    
     buffer_dim_vec.insert(
         buffer_dim_vec.end(),
-        data_dim_vec.cbegin() + segment_ids_shape.dim_vec().size(),
-        data_dim_vec.cend());
+        segment_ids_shape.dim_vec().cbegin(),
+        segment_ids_shape.dim_vec().cend() - 1);
+    buffer_dim_vec.push_back(num_segments);
+    buffer_dim_vec.insert(
+        buffer_dim_vec.end(),
+        data_shape.dim_vec().cbegin() + segment_ids_shape.NumAxes(),
+        data_shape.dim_vec().cend());
             
-   // const int64_t num_elems =
-  //      segment_ids_shape.NumAxes() > 0 ? segment_ids_shape.At(0) : 1;
-  //  const int64_t num_dims =
-  //      segment_ids_shape.NumAxes() > 1 ? segment_ids_shape.At(1) : 1;
-    
-
-
-    // default_value
+    const int64_t num_elems =
+        segment_ids_shape.NumAxes() > 0 ? segment_ids_shape.At(0) : 1;
+    const int64_t num_dims =
+        segment_ids_shape.NumAxes() > 1 ? segment_ids_shape.At(1) : 1;
     
     xla::XlaOp default_value = Zeros(ctx->builder(), Shape(buffer_dim_vec), data_type);
-    //int64_t default_value = 0;
     xla::XlaBuilder* builder = ctx->builder();
     std::vector<long long> buffer_dim_vecs(buffer_dim_vec.size());
 
-  //  if (data_shape.NumAxes() == 0 && num_elems != 1) {
-  //    data = xla::Broadcast(data, {num_elems});
-  //  }
+    if (data_shape.NumAxes() == 0 && num_elems != 1) {
+      data = xla::Broadcast(data, {num_elems});
+    }
 
     xla::XlaOp buffer = xla::Broadcast(default_value, buffer_dim_vecs);
-
-   // xla::XlaOp buffer = Zeros(ctx->builder(), Shape(buffer_dim_vec), updates_data_type);
     auto combiner = [](xla::XlaOp x, xla::XlaOp y, xla::XlaBuilder*) { return xla::Add(x, y);}; 
     ctx->SetOutput("out", GenericGatherGrad(buffer, data, segment_ids , false, combiner, builder));
     
