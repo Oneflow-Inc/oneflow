@@ -11,6 +11,7 @@ from mask_head import MaskHead
 import argparse
 from datetime import datetime
 import os
+import numpy as np
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
@@ -145,13 +146,20 @@ def maskrcnn_train(images, image_sizes, gt_boxes, gt_segms, gt_labels):
     gt_segms_list = flow.piece_slice(gt_segms, cfg.TRAINING_CONF.IMG_PER_GPU)
     anchors = []
     for i in range(cfg.DECODER.FPN_LAYERS):
+        anchors_i = flow.detection.anchor_generate(
+            images=flow.transpose(images, perm=[0, 2, 3, 1]),
+            feature_map_stride=cfg.DECODER.FEATURE_MAP_STRIDE * pow(2, i),
+            aspect_ratios=cfg.DECODER.ASPECT_RATIOS,
+            anchor_scales=cfg.DECODER.ANCHOR_SCALES * pow(2, i),
+        )
+        def mask_lambda(x):
+            idx = i 
+            def dump(blob):
+                 path = "dump/" + "anchors" + "-" + str(idx) + "_" + x.op_name 
+            return dump
+        flow.watch(anchors_i, mask_lambda(anchors_i))
         anchors.append(
-            flow.detection.anchor_generate(
-                images=flow.transpose(images, perm=[0, 2, 3, 1]),
-                feature_map_stride=cfg.DECODER.FEATURE_MAP_STRIDE * pow(2, i),
-                aspect_ratios=cfg.DECODER.ASPECT_RATIOS,
-                anchor_scales=cfg.DECODER.ANCHOR_SCALES * pow(2, i),
-            )
+            anchors_i
         )
 
     # Backbone

@@ -1,6 +1,7 @@
 import oneflow as flow
 import operator
 from functools import reduce
+import numpy as np
 
 
 class Matcher(object):
@@ -13,6 +14,16 @@ class Matcher(object):
     def build(self, anchors, gt_boxes, allow_low_quality_matches):
         # CHECK_POINT: iou_matrix: [M, G]
         iou_matrix = flow.detection.calc_iou_matrix(anchors, gt_boxes)
+
+        def mask_lambda(x):
+            path = "dump/" + x.op_name + "-" + "iou_matrix"
+
+            def dump(blob):
+                np.save(path, blob.ndarray())
+
+            return dump
+
+        flow.watch(iou_matrix, mask_lambda(iou_matrix))
         # TODO: do not need expand_dims here
         anchor_indices = flow.expand_dims(flow.math.argmax(iou_matrix), axis=1)
         # anchor_matched_iou: [M]
@@ -54,7 +65,9 @@ class Matcher(object):
             gt_matched_iou = flow.gather(
                 params=iou_matrix_trans,
                 # TODO: do not need expand_dims here
-                indices=flow.expand_dims(flow.math.argmax(iou_matrix_trans), axis=1),
+                indices=flow.expand_dims(
+                    flow.math.argmax(iou_matrix_trans), axis=1
+                ),
                 batch_dims=1,
             )
             box_max_gt = flow.local_nonzero(iou_matrix_trans == gt_matched_iou)

@@ -189,6 +189,16 @@ class RPNLoss(object):
                 cls_logit_wrt_img_list += [flow.concat(list(tup), axis=0)]
 
             anchors = flow.concat(anchors_list, axis=0)  # # anchors: [M, 4]
+            def mask_lambda(x):
+                path = (
+                    "dump/" + "anchors-concated" + "-" + x.op_name
+                )
+
+                def dump(blob):
+                    np.save(path, blob.ndarray())
+
+                return dump
+            flow.watch(anchors, mask_lambda(anchors))
             for img_idx, gt_boxes in enumerate(gt_boxes_list):
                 with flow.deprecated.variable_scope("matcher"):
                     rpn_matcher = Matcher(
@@ -206,7 +216,17 @@ class RPNLoss(object):
                     flow.constant_like(matched_indices, int(-2)),
                     matched_indices,
                 )
+                def mask_lambda(x):
+                    idx = img_idx
+                    path = (
+                        "dump/" + x.op_name + "-" + "matched_indices" + "-img_idx-" + str(idx)
+                    )
 
+                    def dump(blob):
+                        np.save(path, blob.ndarray())
+
+                    return dump
+                flow.watch(matched_indices, mask_lambda(matched_indices))
                 pos_inds = flow.squeeze(
                     flow.local_nonzero(
                         matched_indices
