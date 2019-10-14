@@ -19,25 +19,15 @@ class PieceSliceOp final : public Operator {
   Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                              const ParallelContext* parallel_ctx) const override {
     const BlobDesc* in = GetBlobDesc4BnInOp(SoleIbn());
-
-    // only used to run compile stage for test, remove later
+    CHECK_EQ_OR_RETURN(in->num_of_lod_levels(), 2);
+    auto dim_vec = in->shape().dim_vec();
+    dim_vec.erase(dim_vec.begin());
     FOR_RANGE(int32_t, i, 0, op_conf().piece_slice_conf().out_size()) {
       BlobDesc* out_i = GetBlobDesc4BnInOp(output_bns().Get(i));
-      out_i->mut_shape() = Shape(
-          std::vector<int64_t>(in->shape().dim_vec().begin() + 1, in->shape().dim_vec().end()));
+      out_i->mut_shape() = Shape(dim_vec);
       out_i->set_data_type(in->data_type());
+      out_i->set_is_dynamic(true);
     }
-
-    // correct logits
-    // CHECK_EQ_OR_RETURN(in->num_of_lod_levels(), 2);
-    // auto dim_vec = in->shape().dim_vec();
-    // dim_vec.erase(dim_vec.begin());
-    // FOR_RANGE(int32_t, i, 0, op_conf().piece_slice_conf().out_size()) {
-    //   BlobDesc* out_i = GetBlobDesc4BnInOp(output_bns().Get(i));
-    //   out_i->mut_shape() = Shape(dim_vec);
-    //   out_i->set_data_type(in->data_type());
-    //   out_i->set_is_dynamic(true);
-    // }
 
     return Maybe<void>::Ok();
   }
