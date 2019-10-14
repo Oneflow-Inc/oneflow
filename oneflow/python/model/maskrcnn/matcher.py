@@ -11,7 +11,7 @@ class Matcher(object):
     # anchors: [M, 4]
     # gt_boxes: [G, 4]
     def build(self, anchors, gt_boxes, allow_low_quality_matches):
-        # iou_matrix: [M, G]
+        # CHECK_POINT: iou_matrix: [M, G]
         iou_matrix = flow.detection.calc_iou_matrix(anchors, gt_boxes)
         # TODO: do not need expand_dims here
         anchor_indices = flow.expand_dims(flow.math.argmax(iou_matrix), axis=1)
