@@ -366,6 +366,7 @@ def expand_dims(inputs, axis, name=None):
 @oneflow_export("piece_slice")
 def piece_slice(inputs, output_size, name=None):
     assert(inputs.shape[0] == output_size)
+    assert(inputs.num_of_lod_levels() == 2)
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf,
