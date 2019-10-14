@@ -274,32 +274,68 @@ class RPNLoss(object):
             )
             total_sample_cnt = flow.cast(total_sample_cnt, flow.float)
 
+            bbox_pred = flow.concat(sampled_bbox_pred_list, axis=0)
+            bbox_target = flow.concat(sampled_bbox_target_list, axis=0)
+            def mask_lambda(x):
+                path = (
+                    "dump/" + "-" + x.op_name + "-" + "bbox_pred"
+                )
+
+                def dump(blob):
+                    np.save(path, blob.ndarray())
+
+                return dump
+
+            flow.watch(bbox_pred, mask_lambda(bbox_pred))
+            def mask_lambda(x):
+                path = (
+                    "dump/" + "-" + x.op_name + "-" + "bbox_target"
+                )
+
+                def dump(blob):
+                    np.save(path, blob.ndarray())
+
+                return dump
+            flow.watch(bbox_target, mask_lambda(bbox_target))
             bbox_loss = (
                 flow.math.reduce_sum(
                     flow.detection.smooth_l1(
-                        flow.concat(
-                            sampled_bbox_pred_list, axis=0
-                        ),  # CHECK_POINT: bbox_pred
-                        flow.concat(
-                            sampled_bbox_target_list, axis=0
-                        ),  # CHECK_POINT: bbox_target
+                        bbox_pred,  # CHECK_POINT: bbox_pred
+                        bbox_target,  # CHECK_POINT: bbox_target
                         beta=1.0 / 9.0,
                     )
                 )
                 / total_sample_cnt
             )
+            cls_label = flow.concat(sampled_cls_label_list, axis=0)
+            cls_logit = flow.concat(sampled_cls_logit_list, axis=0)
+            def mask_lambda(x):
+                path = (
+                    "dump/" + "-" + x.op_name + "-" + "cls_label"
+                )
 
+                def dump(blob):
+                    np.save(path, blob.ndarray())
+
+                return dump
+
+            flow.watch(cls_label, mask_lambda(cls_label))
+            def mask_lambda(x):
+                path = (
+                    "dump/" + "-" + x.op_name + "-" + "cls_logit"
+                )
+
+                def dump(blob):
+                    np.save(path, blob.ndarray())
+
+                return dump
+            flow.watch(cls_logit, mask_lambda(cls_logit))
             cls_loss = (
                 flow.math.reduce_sum(
                     flow.nn.sigmoid_cross_entropy_with_logits(
-                        flow.concat(
-                            sampled_cls_label_list, axis=0
-                        ),  # CHECK_POINT: cls label
-                        flow.concat(
-                            sampled_cls_logit_list, axis=0
-                        ),  # CHECK_POINT: cls logit
-                    )
-                )
+                        cls_label,  # CHECK_POINT: cls label
+                        cls_logit,  # CHECK_POINT: cls logit
+                ))
                 / total_sample_cnt
             )
         return bbox_loss, cls_loss
