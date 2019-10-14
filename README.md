@@ -72,14 +72,13 @@ or you can just clone source code and submodules step by step
   Run the following command to build third-parties.
 
   ```shell
-  nproc=`cat /proc/cpuinfo | grep "processor" | wc -l`
   cd build && cmake -DTHIRD_PARTY=ON ..
-  make -j$nproc
+  make -j$(nproc)
   ```
 
   If the downloading error occurred, you should go back to the previous step to reinstall the cmake, then clean the file CMakeCache.txt and build the third-parties again.
 
-- Build oneflow
+- Build Oneflow
 
   ```shell
   cmake .. \
@@ -88,10 +87,10 @@ or you can just clone source code and submodules step by step
   -DPYTHON_INCLUDE_DIR=your_python_include_dir \
   -DPython_NumPy_INCLUDE_DIRS=your_numpy_include_dir
   
-  make -j$nproc
+  make -j$(nproc)
   ```
 
-- XLA doc
+- XLA documents
 
-  You can check this [doc]() to obtain more details abot how to use XLA.
+  You can check this [doc]() to obtain more details about how to use XLA.
 
