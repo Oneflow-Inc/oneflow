@@ -66,12 +66,9 @@ struct DataTransformer<DataSourceCase::kObjectSegmentation, TransformCase::kResi
         dynamic_cast<ScaleFieldT*>(data_inst->GetField<DataSourceCase::kImageScale>());
     CHECK_NOTNULL(scale_field);
 
-    auto& scale_vec = scale_field->data();
     T* dptr = segm_field->data();
-    auto& last_lod_vec = segm_field->GetLod(segm_field->Levels() - 1);
-    for (size_t elems : last_lod_vec) {
-      FOR_RANGE(size_t, i, 0, elems) { *dptr *= scale_vec.at(i % 2); }
-      dptr += elems;
+    FOR_RANGE(size_t, i, 0, segm_field->total_length()) {
+      dptr[i] *= scale_field->data().at(i % 2);
     }
   }
 };
