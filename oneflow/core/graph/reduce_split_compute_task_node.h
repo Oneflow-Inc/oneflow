@@ -24,8 +24,6 @@ class ReduceSplitCompTaskNode final : public CompTaskNode, public ReduceCompTask
  private:
   void BuildExecGphAndRegst() override;
   void InferProducedDataRegstTimeShape() override;
-
-  HashMap<int32_t, int32_t> out_order_aliases_;
 };
 
 }  // namespace oneflow
