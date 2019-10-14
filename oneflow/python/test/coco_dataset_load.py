@@ -6,9 +6,9 @@ import argparse
 
 from datetime import datetime
 
-COCO_DATASET_DIR = "/dataset/coco"
-COCO_ANNOTATIONS_FILE = "annotations/instances_val2014.json"
-COCO_IMAGE_DIR = "val2014"
+COCO_DATASET_DIR = "/dataset/mscoco_2017"
+COCO_ANNOTATIONS_FILE = "annotations/instances_val2017.json"
+COCO_IMAGE_DIR = "val2017"
 RANDOM_SEED = 297157
 
 parser = argparse.ArgumentParser(description="flags for data loader")
@@ -43,9 +43,9 @@ parser.add_argument(
 parser.add_argument(
     "-i", "--image_dir", type=str, default=COCO_IMAGE_DIR, required=False
 )
-parser.add_argument("-b", "--batch_size", type=int, default=2, required=False)
+parser.add_argument("-b", "--batch_size", type=int, default=1, required=False)
 parser.add_argument(
-    "-bc", "--batch_cache_size", type=int, default=3, required=False
+    "-bc", "--batch_cache_size", type=int, default=1, required=False
 )
 
 args = parser.parse_args()
@@ -96,13 +96,13 @@ def coco_data_load_job():
     data_loader.add_blob(
         "gt_segm",
         data_util.DataSourceCase.kObjectSegmentationMask,
-        shape=(64, 14, 14),
+        shape=(64, 28, 28),
         dtype=flow.int8,
         variable_length_axes=(0,),
         is_dynamic=True,
     )
     data_loader.add_transform(flow.data.TargetResizeTransform(800, 1333, 32))
-    data_loader.add_transform(flow.data.SegmentationPolygonListToMask(14, 14))
+    data_loader.add_transform(flow.data.SegmentationPolygonListToMask(28, 28))
     data_loader.init()
     return (
         data_loader("image"),
@@ -116,7 +116,9 @@ def coco_data_load_job():
 def main():
     # flow.config.gpu_device_num(args.gpu_num_per_node)
     # flow.config.ctrl_port(9788)
+    flow.config.exp_run_conf({"enable_experiment_run": False})
     flow.config.default_data_type(flow.float)
+
     image, image_size, gt_bbox, gt_labels, gt_segm = coco_data_load_job().get()
     np.save("image", image.ndarray())
     np.save("image_size", image_size.ndarray())

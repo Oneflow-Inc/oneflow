@@ -33,21 +33,23 @@ COCODataset::COCODataset(const DatasetProto& proto) : Dataset(proto) {
     int64_t id = anno["id"].get<int64_t>();
     int64_t image_id = anno["image_id"].get<int64_t>();
     int64_t category_id = anno["category_id"].get<int64_t>();
-    bool is_valid_anno = true;
     // remove image with category_id > 80
     if (category_id > 80) {
       to_remove_image_ids.insert(image_id);
-      is_valid_anno = false;
-    }
-    if (is_valid_anno) {
+    } else {
       CHECK(anno_id2anno_.emplace(id, anno).second);
       image_id2anno_id_[image_id].push_back(id);
     }
   }
+  // TODO: add config
+  for (int64_t image_id : image_ids_) {
+    if (!ImageHasValidAnnotations(image_id)) { to_remove_image_ids.insert(image_id); }
+  }
   // remove images whose anno is invalid
-  std::remove_if(image_ids_.begin(), image_ids_.end(), [&to_remove_image_ids](int64_t image_id) {
-    return to_remove_image_ids.find(image_id) != to_remove_image_ids.end();
-  });
+  image_ids_.erase(std::remove_if(
+      image_ids_.begin(), image_ids_.end(), [&to_remove_image_ids](int64_t image_id) {
+        return to_remove_image_ids.find(image_id) != to_remove_image_ids.end();
+      }), image_ids_.end());
   // sort image ids for reproducible results
   std::sort(image_ids_.begin(), image_ids_.end());
   // build categories map
@@ -55,9 +57,7 @@ COCODataset::COCODataset(const DatasetProto& proto) : Dataset(proto) {
   for (const auto& cate : annotation_json_["categories"]) {
     int32_t id = cate["id"].get<int32_t>();
     // TODO: make 80 configurable
-    if (id <= 80) {
-      category_ids.push_back(id);
-    }
+    if (id <= 80) { category_ids.push_back(id); }
   }
   std::sort(category_ids.begin(), category_ids.end());
   int32_t contiguous_id = 0;
@@ -67,6 +67,39 @@ COCODataset::COCODataset(const DatasetProto& proto) : Dataset(proto) {
   }
   if (coco_dataset.group_by_aspect_ratio()) { sampler().reset(new GroupedDataSampler(this)); }
 }
+
+bool COCODataset::ImageHasValidAnnotations(int64_t image_id) const {
+  // image has no annotations
+  if (image_id2anno_id_.find(image_id) == image_id2anno_id_.end()) { return false; }
+  const std::vector<int64_t>& anno_id_vec = image_id2anno_id_.at(image_id);
+  // if it's empty, there is no annotation
+  if (anno_id_vec.size() == 0) { return false; }
+
+  bool bbox_area_all_close_to_zero = true;
+  size_t visible_keypoints_count = 0;
+  for (int64_t anno_id : anno_id_vec) {
+    const auto& anno = anno_id2anno_.at(anno_id);
+    if (anno["bbox"][2] > 1 && anno["bbox"][3] > 1) { bbox_area_all_close_to_zero = false; }
+    if (anno.contains("keypoints")) {
+      const auto& keypoints = anno["keypoints"];
+      CHECK_EQ(keypoints.size() % 3, 0);
+      FOR_RANGE(size_t, i, 0, keypoints.size() / 3) {
+        int32_t keypoints_label = keypoints[i * 3 + 2].get<int32_t>();
+        if (keypoints_label > 0) { visible_keypoints_count += 1; }
+      }
+    }
+  }
+  // check if all boxes have close to zero area
+  if (bbox_area_all_close_to_zero) { return false; }
+  // keypoints task have a slight different critera for considering
+  // if an annotation is valid
+  if (!anno_id2anno_.at(anno_id_vec.at(0)).contains("keypoints")) { return true; }
+  // for keypoint detection tasks, only consider valid images those
+  // containing at least min_keypoints_per_image
+  if (visible_keypoints_count >= kMinKeypointsPerImage) { return true; }
+  return false;
+}
+
 int64_t COCODataset::GetGroupId(int64_t idx) const {
   int64_t image_id = image_ids_.at(idx);
   const auto& image_info = image_id2image_.at(image_id);
@@ -102,7 +135,6 @@ void COCODataset::GetData(int64_t idx, DataInstance* data_inst) const {
     // Get object label
     GetLabel(anno["category_id"], label_field);
   }
-  std::cout << "data_idx: " << idx << ", image_id: " << image_id << std::endl;
 }
 
 void COCODataset::GetImage(const nlohmann::json& image_json, DataField* image_field,
@@ -142,6 +174,7 @@ void COCODataset::GetLabel(const nlohmann::json& label_json, DataField* data_fie
   CHECK(label_json.is_number_integer());
   auto* label_field = dynamic_cast<ArrayDataField<int32_t>*>(data_field);
   if (!label_field) { return; }
+  // TODO: add config to get contiguous_category_id
   label_field->data().push_back(label_json.get<int32_t>());
 }
 

@@ -17,6 +17,7 @@ class COCODataset final : public Dataset {
   int64_t GetGroupId(int64_t idx) const override;
 
  private:
+  bool ImageHasValidAnnotations(int64_t image_id) const;
   void GetImage(const nlohmann::json& image_json, DataField* image_field,
                 DataField* image_size_field) const;
   void GetBbox(const nlohmann::json& bbox_json, DataField* data_field) const;
@@ -24,6 +25,8 @@ class COCODataset final : public Dataset {
   void GetSegmentation(const nlohmann::json& segmentation, DataField* data_field) const;
 
  private:
+  static const int32_t kMinKeypointsPerImage = 10;
+
   nlohmann::json annotation_json_;
   std::vector<int64_t> image_ids_;
   HashMap<int64_t, const nlohmann::json&> image_id2image_;
