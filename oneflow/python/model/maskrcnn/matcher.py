@@ -13,7 +13,36 @@ class Matcher(object):
     # gt_boxes: [G, 4]
     def build(self, anchors, gt_boxes, allow_low_quality_matches):
         # CHECK_POINT: iou_matrix: [M, G]
+        def mask_lambda(x):
+            op_name = x.op_name
+
+            def dump(blob):
+                print(op_name, "anchors shape", blob.shape)
+
+            return dump
+
+        flow.watch(anchors, mask_lambda(anchors))
+
+        def mask_lambda(x):
+            op_name = x.op_name
+
+            def dump(blob):
+                print(op_name, "gt_boxes shape", blob.shape)
+
+            return dump
+
+        flow.watch(gt_boxes, mask_lambda(gt_boxes))
         iou_matrix = flow.detection.calc_iou_matrix(anchors, gt_boxes)
+
+        def mask_lambda(x):
+            op_name = x.op_name
+
+            def dump(blob):
+                print(op_name, "iou_matrix shape", blob.shape)
+
+            return dump
+
+        flow.watch(iou_matrix, mask_lambda(iou_matrix))
 
         def mask_lambda(x):
             path = "dump/" + x.op_name + "-" + "iou_matrix"

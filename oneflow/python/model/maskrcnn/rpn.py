@@ -200,6 +200,17 @@ class RPNLoss(object):
                 return dump
             flow.watch(anchors, mask_lambda(anchors))
             for img_idx, gt_boxes in enumerate(gt_boxes_list):
+                def mask_lambda(x):
+                    idx = img_idx
+                    path = (
+                        "dump/" + x.op_name + "-" + "gt_boxes" + "-img_idx-" + str(idx)
+                    )
+
+                    def dump(blob):
+                        np.save(path, blob.ndarray())
+
+                    return dump
+                flow.watch(gt_boxes, mask_lambda(gt_boxes))
                 with flow.deprecated.variable_scope("matcher"):
                     rpn_matcher = Matcher(
                         self.cfg.RPN.POSITIVE_OVERLAP_THRESHOLD,
