@@ -1,5 +1,6 @@
 import oneflow as flow
 import pickle as pk
+import numpy as np
 
 
 class MockData(object):
@@ -11,7 +12,9 @@ class MockData(object):
     def blob_def(self, blob_name):
         if blob_name == "images":
             return flow.input_blob_def(
-                shape=self._data["images"].shape, dtype=flow.float32, is_dynamic=True
+                shape=self._data["images"].shape,
+                dtype=flow.float32,
+                is_dynamic=True,
             )
         elif blob_name == "image_size":
             return flow.input_blob_def(
@@ -43,4 +46,9 @@ class MockData(object):
             raise ValueError("Blob is nonexistent")
 
     def blob(self, blob_name):
+        if blob_name == "image_size":
+            return np.concatenate(
+                (self._data[blob_name][:, 1:2], self._data[blob_name][:, 0:1]),
+                axis=1,
+            )
         return self._data[blob_name]
