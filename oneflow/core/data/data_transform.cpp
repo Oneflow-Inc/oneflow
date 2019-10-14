@@ -27,6 +27,7 @@ struct DataTransformer<DataSourceCase::kImage, TransformCase::kResize> {
 
     auto* scale_field = data_inst->GetOrCreateField<DataSourceCase::kImageScale>();
     auto& scale_vec = dynamic_cast<ScaleFieldT*>(scale_field)->data();
+    scale_vec.clear();
     scale_vec.push_back(static_cast<T>(target_height) / static_cast<T>(origin_height));
     scale_vec.push_back(static_cast<T>(target_width) / static_cast<T>(origin_width));
   }
@@ -48,7 +49,9 @@ struct DataTransformer<DataSourceCase::kObjectBoundingBox, TransformCase::kResiz
 
     auto& bbox_vec = bbox_field->data();
     auto& scale_vec = scale_field->data();
-    FOR_RANGE(size_t, i, 0, bbox_vec.size()) { bbox_vec.at(i) *= scale_vec.at(i % 2); }
+    // image scale (h_scale, w_scale)
+    // bbox format (x, y, x, y)
+    FOR_RANGE(size_t, i, 0, bbox_vec.size()) { bbox_vec.at(i) *= scale_vec.at((i + 1) % 2); }
   }
 };
 
@@ -66,9 +69,11 @@ struct DataTransformer<DataSourceCase::kObjectSegmentation, TransformCase::kResi
         dynamic_cast<ScaleFieldT*>(data_inst->GetField<DataSourceCase::kImageScale>());
     CHECK_NOTNULL(scale_field);
 
+    // image scale (h_scale, w_scale)
+    // segm poly format (x, y, x, y, ...)
     T* dptr = segm_field->data();
     FOR_RANGE(size_t, i, 0, segm_field->total_length()) {
-      dptr[i] *= scale_field->data().at(i % 2);
+      dptr[i] *= scale_field->data().at((i + 1) % 2);
     }
   }
 };
@@ -94,19 +99,16 @@ struct DataTransformer<DataSourceCase::kImage, TransformCase::kTargetResize> {
     int32_t max_size = proto.target_resize().max_size();
     CHECK_GT(target_size, 0);
     CHECK_GE(max_size, target_size);
+
     auto& image = image_field->data();
     int32_t origin_image_height = image.rows;
     int32_t origin_image_width = image.cols;
-    int32_t image_size_min = std::min(origin_image_height, origin_image_width);
-    int32_t image_size_max = std::max(origin_image_height, origin_image_width);
-    float scale = static_cast<float>(target_size) / image_size_min;
-    if (std::round(scale * image_size_max) > max_size) {
-      scale = static_cast<float>(max_size) / image_size_max;
-    }
-    cv::resize(image, image, cv::Size(), scale, scale, cv::INTER_LINEAR);
+    int32_t image_height = 0;
+    int32_t image_width = 0;
+    GetSize(target_size, max_size, origin_image_height, origin_image_width, image_height,
+            image_width);
+    cv::resize(image, image, cv::Size(image_width, image_height), 0, 0, cv::INTER_LINEAR);
 
-    int32_t image_height = image.rows;
-    int32_t image_width = image.cols;
     CHECK_LE(std::max(image_height, image_width), max_size);
     CHECK(std::max(image_height, image_width) == max_size
           || std::min(image_height, image_width) == target_size);
@@ -120,6 +122,32 @@ struct DataTransformer<DataSourceCase::kImage, TransformCase::kTargetResize> {
     scale_vec.clear();
     scale_vec.push_back(static_cast<T>(image_height) / static_cast<T>(origin_image_height));
     scale_vec.push_back(static_cast<T>(image_width) / static_cast<T>(origin_image_width));
+  }
+
+  static void GetSize(const int32_t target_size, const int32_t max_size, const int32_t o_h,
+                      const int32_t o_w, int32_t& h, int32_t& w) {
+    // set round to banker's rounding
+    int saved_round_way = std::fegetround();
+    CHECK_EQ(std::fesetround(FE_TONEAREST), 0);
+
+    float size_min = std::min<float>(o_h, o_w);
+    float size_max = std::max<float>(o_h, o_w);
+    float size_min_resized = static_cast<float>(target_size);
+    float size_max_resized = (size_max / size_min) * size_min_resized;
+    if (size_max_resized > max_size) {
+      size_max_resized = static_cast<float>(max_size);
+      size_min_resized = std::nearbyint(size_max_resized * size_min / size_max);
+    }
+
+    if (o_w < o_h) {
+      w = static_cast<int32_t>(size_min_resized);
+      h = static_cast<int32_t>(size_max_resized);
+    } else {
+      h = static_cast<int32_t>(size_min_resized);
+      w = static_cast<int32_t>(size_max_resized);
+    }
+
+    std::fesetround(saved_round_way);
   }
 };
 
