@@ -229,6 +229,28 @@ class RPNLoss(object):
                     total_subsample_num=self.cfg.RPN.SUBSAMPLE_NUM_PER_IMG,
                     pos_fraction=self.cfg.RPN.FOREGROUND_FRACTION,
                 )
+                def mask_lambda(x):
+                    idx = img_idx
+                    path = (
+                        "dump/" + x.op_name + "-" + "sampled_pos_inds" + "-img_idx-" + str(idx)
+                    )
+
+                    def dump(blob):
+                        np.save(path, blob.ndarray())
+
+                    return dump
+                flow.watch(sampled_pos_inds, mask_lambda(sampled_pos_inds))
+                def mask_lambda(x):
+                    idx = img_idx
+                    path = (
+                        "dump/" + x.op_name + "-" + "sampled_neg_inds" + "-img_idx-" + str(idx)
+                    )
+
+                    def dump(blob):
+                        np.save(path, blob.ndarray())
+
+                    return dump
+                flow.watch(sampled_neg_inds, mask_lambda(sampled_neg_inds))
 
                 sampled_bbox_target_list.append(
                     flow.detection.box_encode(
