@@ -8,7 +8,7 @@ def _Conv2d(
     filters,
     kernel_size,
     name,
-    activation=flow.keras.activations.sigmoid,
+    activation=None,
     weight_name=None,
     bias_name=None,
 ):

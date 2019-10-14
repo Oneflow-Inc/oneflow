@@ -197,11 +197,7 @@ class ResNet(object):
             use_bias=False,
         )
         affine3 = flow.layers.affine_channel(
-            conv3,
-            activation=flow.keras.activations.relu,
-            axis=1,
-            trainable=False,
-            name="bn3",
+            conv3, activation=None, axis=1, trainable=False, name="bn3"
         )
         return flow.keras.activations.relu(
             (downsample_blob if downsample else inputs) + affine3
