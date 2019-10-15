@@ -468,9 +468,22 @@ class RPNProposal(object):
                 proposal_list = []
                 score_list = []
                 for layer_i in range(len(cls_logit_list)):
+                    cls_logits = cls_logit_list[layer_i][img_idx]
+                    assert(cls_logits.is_dynamic)
                     pre_nms_top_k_inds = flow.math.top_k(
-                        cls_logit_list[layer_i][img_idx], k=self.top_n_per_fm
+                        cls_logits, k=self.top_n_per_fm
                     )
+                    # TODO: dump pre_nms_top_k_inds
+                    def mask_lambda(x):
+                        path = (
+                            "dump/" + x.op_name + "-" + "pre_nms_top_k_inds" + "-img_idx-" + str(img_idx) + "-layer_i-" + str(layer_i)
+                        )
+
+                        def dump(blob):
+                            np.save(path, blob.ndarray())
+
+                        return dump
+                    flow.watch(pre_nms_top_k_inds, mask_lambda(pre_nms_top_k_inds))
                     score_per_layer = flow.local_gather(
                         cls_logit_list[layer_i][img_idx], pre_nms_top_k_inds
                     )
@@ -486,7 +499,16 @@ class RPNProposal(object):
                             "weight_w": self.cfg.RPN.WEIGHT_W,
                         },
                     )
+                    def mask_lambda(x):
+                        path = (
+                            "dump/" + "proposals_after_decode_img_{}_layer_{}".format(str(img_idx), str(layer_i))
+                        )
 
+                        def dump(blob):
+                            np.save(path, blob.ndarray())
+
+                        return dump
+                    flow.watch(proposal_per_layer, mask_lambda(proposal_per_layer))
                     # clip to img
                     proposal_per_layer = flow.detection.clip_to_image(
                         proposal_per_layer, image_size_list[img_idx]
@@ -501,13 +523,32 @@ class RPNProposal(object):
                         ),
                         axis=[1],
                     )
+                    def mask_lambda(x):
+                        path = (
+                            "dump/" + x.op_name + "-" + "indices_after_identify_non_small_boxes" + "-img_idx-" + str(img_idx) + "-layer_i-" + str(layer_i)
+                        )
+
+                        def dump(blob):
+                            np.save(path, blob.ndarray())
+
+                        return dump
+                    flow.watch(indices, mask_lambda(indices))
                     score_per_layer = flow.local_gather(
                         score_per_layer, indices
                     )
                     proposal_per_layer = flow.local_gather(
                         proposal_per_layer, indices
                     )
+                    def mask_lambda(x):
+                        path = (
+                            "dump/" + x.op_name + "-" + "proposal_per_layer_after_identify_non_small_boxes" + "-img_idx-" + str(img_idx) + "-layer_i-" + str(layer_i)
+                        )
 
+                        def dump(blob):
+                            np.save(path, blob.ndarray())
+
+                        return dump
+                    flow.watch(proposal_per_layer, mask_lambda(proposal_per_layer))
                     # NMS
                     indices = flow.squeeze(
                         flow.local_nonzero(
@@ -519,6 +560,16 @@ class RPNProposal(object):
                         ),
                         axis=[1],
                     )
+                    def mask_lambda(x):
+                        path = (
+                            "dump/" + x.op_name + "-" + "indices_after_nms" + "-img_idx-" + str(img_idx) + "-layer_i-" + str(layer_i)
+                        )
+
+                        def dump(blob):
+                            np.save(path, blob.ndarray())
+
+                        return dump
+                    flow.watch(indices, mask_lambda(indices))
                     score_per_layer = flow.local_gather(
                         score_per_layer, indices
                     )
