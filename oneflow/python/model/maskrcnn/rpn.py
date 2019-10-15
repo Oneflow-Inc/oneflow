@@ -536,6 +536,16 @@ class RPNProposal(object):
                     score_per_layer = flow.local_gather(
                         score_per_layer, indices
                     )
+                    def mask_lambda(x):
+                        path = (
+                            "dump/" + x.op_name + "-" + "score_per_layer" + "-img_idx-" + str(img_idx) + "-layer_i-" + str(layer_i)
+                        )
+
+                        def dump(blob):
+                            np.save(path, blob.ndarray())
+
+                        return dump
+                    flow.watch(score_per_layer, mask_lambda(score_per_layer))
                     proposal_per_layer = flow.local_gather(
                         proposal_per_layer, indices
                     )
