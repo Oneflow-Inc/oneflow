@@ -303,6 +303,9 @@ def local_nonzero(input, name=None):
 
 @oneflow_export("where")
 def where(condition, x, y, name=None):
+    assert(x.is_dynamic)
+    assert(y.is_dynamic)
+    assert(condition.is_dynamic)
     assert condition.shape == x.shape and x.shape == y.shape
     op_conf = op_conf_util.OperatorConf()
     setattr(
