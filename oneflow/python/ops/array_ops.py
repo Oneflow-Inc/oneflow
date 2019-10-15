@@ -36,7 +36,7 @@ def gather(
             raise NotImplementedError
         else:
             raise AttributeError
-    elif params.distribute is distribute_util.split(0):
+    elif params.has_batch_axis() == False and params.distribute is distribute_util.split(0):
         assert axis == 0
         assert batch_dims == 0
         setattr(op_conf.gather_ms0_conf, "in", params.logical_blob_name)
