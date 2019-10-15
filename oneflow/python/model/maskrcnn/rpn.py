@@ -228,6 +228,17 @@ class RPNLoss(object):
 
                         return dump
                     flow.watch(matched_indices, mask_lambda(matched_indices))
+                def mask_lambda(x):
+                    idx = img_idx
+                    path = (
+                        "dump/" + x.op_name + "-" + "image_size" + "-img_idx-" + str(idx)
+                    )
+
+                    def dump(blob):
+                        np.save(path, blob.ndarray())
+
+                    return dump
+                flow.watch(image_size_list[img_idx], mask_lambda(image_size_list[img_idx]))
                 # exclude outside anchors
                 # CHECK_POINT: matched_indices
                 matched_indices = flow.where(
