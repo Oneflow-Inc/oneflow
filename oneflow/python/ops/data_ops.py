@@ -253,16 +253,11 @@ class TargetResizeTransform(object):
 
 @oneflow_export("data.SegmentationPolygonListToMask")
 class SegmentationPolygonListToMask(object):
-    def __init__(self, mask_h, mask_w):
-        self.mask_h = mask_h
-        self.mask_w = mask_w
-
     def to_proto(self, proto=None):
         if proto is None:
             proto = data_util.DataTransformProto()
 
-        proto.segmentation_poly_to_mask.mask_w = self.mask_w
-        proto.segmentation_poly_to_mask.mask_h = self.mask_h
+        proto.segmentation_poly_to_mask.SetInParent()
         return proto
 
 

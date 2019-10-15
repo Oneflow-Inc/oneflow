@@ -16,7 +16,7 @@ void BuildLodTree(const int64_t level, const int64_t max_level, const int64_t el
       auto* child = node->mutable_children()->Add();
       BuildLodTree(level + 1, max_level, elem_cnt, shape, child, offset);
     }
-    TreeLoDHelper::UpdateInnerNode(node);
+    // TreeLoDHelper::UpdateInnerNode(node);
   } else {
     int64_t n = shape.Count(0, max_level);
     int64_t m = shape.Count(max_level + 1);
@@ -27,6 +27,39 @@ void BuildLodTree(const int64_t level, const int64_t max_level, const int64_t el
     node->set_offset(offset);
     offset += length * m;
   }
+}
+
+void BuildLodTreeFromShape(const int64_t max_level, const int64_t elem_cnt, const Shape& shape,
+                           LoDTree* lod_tree) {
+  int64_t offset = 0;
+  BuildLodTree(0, max_level, elem_cnt, shape, lod_tree, offset);
+  TreeLoDHelper::UpdateInnerNode(lod_tree);
+}
+
+// TODO: Implementation of BuildLodTreeFromNestedVector is similar to
+// codes in TreeLoDView::Init(), consider make a general indenpendent impl
+
+void BuildLodTreeFromNestedVector(const std::vector<std::vector<size_t>>& lod_nested_vec,
+                                  LoDTree* lod_tree) {
+  int64_t offset = 0;
+  FOR_RANGE(size_t, level, 0, lod_nested_vec.size()) {
+    std::vector<LoDTree*> cur_level_subtrees;
+    TreeLoDHelper::FindLevelMutNodes(level, lod_tree, &cur_level_subtrees);
+    CHECK_EQ(lod_nested_vec.at(level).size(), cur_level_subtrees.size());
+
+    FOR_RANGE(int64_t, i, 0, cur_level_subtrees.size()) {
+      int64_t length = lod_nested_vec.at(level).at(i);
+      LoDTree* sub_tree = cur_level_subtrees.at(i);
+      if (level == lod_nested_vec.size() - 1) {
+        sub_tree->set_offset(offset);
+        sub_tree->set_length(length);
+        offset += length;
+      } else {
+        FOR_RANGE(int64_t, _, 0, length) { sub_tree->mutable_children()->Add(); }
+      }
+    }
+  }
+  TreeLoDHelper::UpdateInnerNode(lod_tree);
 }
 
 }  // namespace
@@ -52,6 +85,7 @@ void ArrayDataField<T>::InferShape(const ShapeProto& shape_proto, const PbRf<int
                                    Shape* shape, LoDTree* lod_tree) const {
   if (lod_tree) {
     CHECK_EQ(var_axes.size(), 1);
+    CHECK_NOTNULL(lod_tree);
     int64_t lod_axis = var_axes.Get(0);
     Shape static_shape(shape_proto);
 
@@ -64,8 +98,7 @@ void ArrayDataField<T>::InferShape(const ShapeProto& shape_proto, const PbRf<int
     int64_t var_len = data_.size() / fixed;
     shape->Set(0, var_len * static_shape.Count(0, lod_axis));
 
-    int64_t offset = 0;
-    BuildLodTree(0, lod_axis, data_.size(), static_shape, lod_tree, offset);
+    BuildLodTreeFromShape(lod_axis, data_.size(), static_shape, lod_tree);
   } else {
     CHECK_EQ(var_axes.size(), 0);
     *shape = Shape(shape_proto);
@@ -76,7 +109,20 @@ void ArrayDataField<T>::InferShape(const ShapeProto& shape_proto, const PbRf<int
 template<typename T>
 void NdarrayDataField<T>::InferShape(const ShapeProto& shape_proto, const PbRf<int>& var_axes,
                                      Shape* shape, LoDTree* lod_tree) const {
-  TODO();
+  CHECK_NOTNULL(lod_tree);
+  CHECK_EQ(var_axes.size(), lod_len_.size());
+  Shape static_shape(shape_proto);
+  CHECK_LE(lod_len_.size(), static_shape.NumAxes());
+
+  std::vector<int64_t> var_axes_vec(var_axes.begin(), var_axes.end());
+  Shape shape_dense = static_shape.CreateReducedShape(var_axes_vec);
+  *shape =
+      shape_dense.RemoveOnes(std::vector<int64_t>(var_axes_vec.begin(), var_axes_vec.end() - 1));
+  const auto& last_level_length_vec = lod_len_.at(lod_len_.size() - 1);
+  shape->Set(0, std::accumulate(last_level_length_vec.begin(), last_level_length_vec.end(), 0,
+                                std::plus<size_t>()));
+
+  BuildLodTreeFromNestedVector(lod_len_, lod_tree);
 }
 
 template<typename K, typename T>
@@ -154,11 +200,12 @@ std::unique_ptr<DataField> CreateDataFieldFromProto(const DataFieldProto& proto)
     }
     case DataSourceCase::kObjectSegmentation: {
       int64_t max_elem_cnt = Shape(proto.shape()).elem_cnt();
-      data_field_ptr.reset(new NdarrayDataField<float>(max_elem_cnt));
+      data_field_ptr.reset(new NdarrayDataField<double>(max_elem_cnt));
       break;
     }
     case DataSourceCase::kObjectSegmentationMask: {
-      data_field_ptr.reset(new ArrayDataField<int8_t>());
+      int64_t max_elem_cnt = Shape(proto.shape()).elem_cnt();
+      data_field_ptr.reset(new NdarrayDataField<int8_t>(max_elem_cnt));
       break;
     }
     default: { UNIMPLEMENTED(); }

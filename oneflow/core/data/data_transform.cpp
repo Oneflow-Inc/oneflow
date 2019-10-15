@@ -170,63 +170,48 @@ struct DataTransformer<DataSourceCase::kObjectSegmentation, TransformCase::kTarg
 template<>
 struct DataTransformer<DataSourceCase::kObjectSegmentation,
                        TransformCase::kSegmentationPolyToMask> {
-  using BboxFieldT = typename DataFieldTrait<DataSourceCase::kObjectBoundingBox>::type;
+  using ImageSizeFieldT = typename DataFieldTrait<DataSourceCase::kImageSize>::type;
   using SegmPolyFieldT = typename DataFieldTrait<DataSourceCase::kObjectSegmentation>::type;
   using SegmMaskFieldT = typename DataFieldTrait<DataSourceCase::kObjectSegmentationMask>::type;
-  using T = typename BboxFieldT::data_type;
+  using T = typename SegmPolyFieldT::data_type;
   using MaskT = typename SegmMaskFieldT::data_type;
 
   static void Apply(DataInstance* data_inst, const DataTransformProto& proto) {
-    auto* bbox =
-        dynamic_cast<BboxFieldT*>(data_inst->GetField<DataSourceCase::kObjectBoundingBox>());
+    auto* image_size =
+        dynamic_cast<ImageSizeFieldT*>(data_inst->GetField<DataSourceCase::kImageSize>());
     auto* segm_poly =
         dynamic_cast<SegmPolyFieldT*>(data_inst->GetField<DataSourceCase::kObjectSegmentation>());
-    if (!bbox || !segm_poly) { return; }
-    auto* segm_mask_field = data_inst->GetOrCreateField<DataSourceCase::kObjectSegmentationMask>();
-    auto* segm_mask = dynamic_cast<SegmMaskFieldT*>(segm_mask_field);
-    CHECK_NOTNULL(segm_mask);
+    auto* segm_mask = dynamic_cast<SegmMaskFieldT*>(
+        data_inst->GetField<DataSourceCase::kObjectSegmentationMask>());
+    if (!image_size || !segm_poly || !segm_mask) { return; }
     CHECK_EQ(segm_poly->Levels(), 3);
 
-    int32_t mask_h = proto.segmentation_poly_to_mask().mask_h();
-    int32_t mask_w = proto.segmentation_poly_to_mask().mask_w();
     const auto& polys_vec = segm_poly->GetLod(1);
     const auto& points_vec = segm_poly->GetLod(2);
+    const size_t image_height = image_size->data().at(0);
+    const size_t image_width = image_size->data().at(1);
 
     T* poly_dptr = segm_poly->data();
-    segm_mask->data().resize(segm_poly->GetLod(0).at(0) * mask_h * mask_w, 0);
-    MaskT* mask_dptr = segm_mask->data().data();
+    MaskT* mask_dptr = segm_mask->data();
     size_t polys_offset = 0;
     FOR_RANGE(size_t, i, 0, polys_vec.size()) {
-      T bbox_x1 = bbox->data().at(i * 4 + 0);
-      T bbox_y1 = bbox->data().at(i * 4 + 1);
-      T bbox_x2 = bbox->data().at(i * 4 + 2);
-      T bbox_y2 = bbox->data().at(i * 4 + 3);
-      T scale_w = static_cast<T>(mask_w) / std::max(GetOneVal<T>(), bbox_x2 - bbox_x1);
-      T scale_h = static_cast<T>(mask_h) / std::max(GetOneVal<T>(), bbox_y2 - bbox_y1);
       size_t polys = polys_vec.at(i);
       FOR_RANGE(size_t, j, 0, polys) {
         size_t poly_points = points_vec.at(polys_offset + j);
-        CHECK_EQ(poly_points % 2, 0);
-        // resized points coord into box
-        std::vector<double> poly_points_resized(poly_points);
-        FOR_RANGE(size_t, k, 0, poly_points) {
-          if (k % 2 == 0) {
-            poly_points_resized.at(k) = (poly_dptr[k] - bbox_x1) * scale_w;
-          } else {
-            poly_points_resized.at(k) = (poly_dptr[k] - bbox_y1) * scale_h;
-          }
-        }
-        poly_dptr += poly_points;
         // convert poly points to mask
-        std::vector<uint8_t> mask_vec(mask_h * mask_w);
-        PolygonXy2ColMajorMask(poly_points_resized.data(), poly_points / 2, mask_h, mask_w,
-                               mask_vec.data());
+        std::vector<uint8_t> mask_vec(image_height * image_width);
+        PolygonXy2ColMajorMask(poly_dptr, poly_points, image_height, image_width, mask_vec.data());
         std::transform(mask_vec.cbegin(), mask_vec.cend(), mask_dptr, mask_dptr,
                        std::bit_or<MaskT>());
+        poly_dptr += poly_points * 2;
       }
       polys_offset += polys;
-      mask_dptr += mask_h * mask_w;
+      mask_dptr += image_height * image_width;
+      // set lod
+      segm_mask->AppendLodLength(1, image_height);
+      FOR_RANGE(size_t, i, 0, image_height) { segm_mask->AppendLodLength(2, image_width); }
     }
+    segm_mask->AppendLodLength(0, polys_vec.size());
   }
 
   static void PolygonXy2ColMajorMask(const double* point, size_t num_points, size_t mask_h,

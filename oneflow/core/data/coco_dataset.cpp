@@ -181,7 +181,10 @@ void COCODataset::GetLabel(const nlohmann::json& label_json, DataField* data_fie
 }
 
 void COCODataset::GetSegmentation(const nlohmann::json& segmentation, DataField* data_field) const {
-  auto* segm_field = dynamic_cast<NdarrayDataField<float>*>(data_field);
+  using DataFieldT = typename DataFieldTrait<DataSourceCase::kObjectSegmentation>::type;
+  using T = typename DataFieldT::data_type;
+
+  auto* segm_field = dynamic_cast<DataFieldT*>(data_field);
   if (!segm_field) { return; }
 
   if (segmentation.is_object()) {
@@ -203,8 +206,8 @@ void COCODataset::GetSegmentation(const nlohmann::json& segmentation, DataField*
 
     for (const auto& contour : contours) {
       for (const auto& point : contour) {
-        segm_field->PushBack(static_cast<float>(point.x));
-        segm_field->PushBack(static_cast<float>(point.y));
+        segm_field->PushBack(static_cast<T>(point.x));
+        segm_field->PushBack(static_cast<T>(point.y));
       }
       segm_field->AppendLodLength(2, contour.size());
     }
@@ -215,8 +218,9 @@ void COCODataset::GetSegmentation(const nlohmann::json& segmentation, DataField*
     }
   } else if (segmentation.is_array()) {
     for (const auto& segm_array : segmentation) {
-      for (const auto& segm : segm_array) { segm_field->PushBack(segm.get<float>()); }
-      segm_field->AppendLodLength(2, segm_array.size());
+      CHECK_EQ(segm_array.size() % 2, 0);
+      for (const auto& segm : segm_array) { segm_field->PushBack(segm.get<T>()); }
+      segm_field->AppendLodLength(2, segm_array.size() / 2);
     }
     segm_field->AppendLodLength(1, segmentation.size());
   } else {

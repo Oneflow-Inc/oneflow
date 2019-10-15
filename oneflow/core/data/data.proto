@@ -68,8 +68,6 @@ message TargetResizeTransform {
 }
 
 message SegmentationPolygonListToMask {
-  required int32 mask_h = 1;
-  required int32 mask_w = 2;
 }
 
 message DataTransformProto {

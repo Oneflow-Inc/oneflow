@@ -116,12 +116,12 @@ struct DataFieldTrait<DataSourceCase::kObjectBoundingBox> {
 
 template<>
 struct DataFieldTrait<DataSourceCase::kObjectSegmentation> {
-  typedef NdarrayDataField<float> type;
+  typedef NdarrayDataField<double> type;
 };
 
 template<>
 struct DataFieldTrait<DataSourceCase::kObjectSegmentationMask> {
-  typedef ArrayDataField<int8_t> type;
+  typedef NdarrayDataField<int8_t> type;
 };
 
 template<>

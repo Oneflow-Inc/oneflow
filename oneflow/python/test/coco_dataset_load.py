@@ -95,14 +95,22 @@ def coco_data_load_job():
     )
     data_loader.add_blob(
         "gt_segm",
+        data_util.DataSourceCase.kObjectSegmentation,
+        shape=(64, 2, 256, 2),
+        dtype=flow.double,
+        variable_length_axes=(0, 1, 2),
+        is_dynamic=True,
+    )
+    data_loader.add_blob(
+        "gt_segm_mask",
         data_util.DataSourceCase.kObjectSegmentationMask,
-        shape=(64, 28, 28),
+        shape=(64, 1344, 800),
         dtype=flow.int8,
-        variable_length_axes=(0,),
+        variable_length_axes=(0, 1, 2),
         is_dynamic=True,
     )
     data_loader.add_transform(flow.data.TargetResizeTransform(800, 1333, 32))
-    data_loader.add_transform(flow.data.SegmentationPolygonListToMask(28, 28))
+    data_loader.add_transform(flow.data.SegmentationPolygonListToMask())
     data_loader.init()
     return (
         data_loader("image"),
@@ -110,6 +118,7 @@ def coco_data_load_job():
         data_loader("gt_bbox"),
         data_loader("gt_labels"),
         data_loader("gt_segm"),
+        data_loader("gt_segm_mask"),
     )
 
 
@@ -119,12 +128,15 @@ def main():
     flow.config.exp_run_conf({"enable_experiment_run": False})
     flow.config.default_data_type(flow.float)
 
-    image, image_size, gt_bbox, gt_labels, gt_segm = coco_data_load_job().get()
+    image, image_size, gt_bbox, gt_labels, gt_segm, gt_segm_mask = (
+        coco_data_load_job().get()
+    )
     np.save("image", image.ndarray())
     np.save("image_size", image_size.ndarray())
     np.save("gt_bbox", gt_bbox.ndarray())
     np.save("gt_labels", gt_labels.ndarray())
     np.save("gt_segm", gt_segm.ndarray())
+    np.save("gt_segm_mask", gt_segm_mask.ndarray())
 
 
 if __name__ == "__main__":
