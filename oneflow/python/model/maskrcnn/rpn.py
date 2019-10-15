@@ -536,7 +536,16 @@ class RPNProposal(object):
                     proposal_per_layer = flow.local_gather(
                         proposal_per_layer, indices
                     )
+                    def mask_lambda(x):
+                        path = (
+                            "dump/" + x.op_name + "-" + "proposal_per_layer" + "-img_idx-" + str(img_idx) + "-layer_i-" + str(layer_i)
+                        )
 
+                        def dump(blob):
+                            np.save(path, blob.ndarray())
+
+                        return dump
+                    flow.watch(proposal_per_layer, mask_lambda(proposal_per_layer))
                     proposal_list.append(proposal_per_layer)
                     score_list.append(score_per_layer)
 
@@ -552,7 +561,16 @@ class RPNProposal(object):
                         [proposal_in_one_img, resized_gt_boxes_list[img_idx]],
                         axis=0,
                     )
+                def mask_lambda(x):
+                    path = (
+                        "dump/" + "-" + x.op_name + "-" + "proposal_in_one_img" + "-img_idx-" + str(img_idx)
+                    )
 
+                    def dump(blob):
+                        np.save(path, blob.ndarray())
+
+                    return dump
+                flow.watch(proposal_in_one_img, mask_lambda(proposal_in_one_img))
                 proposals.append(proposal_in_one_img)
 
             return proposals
