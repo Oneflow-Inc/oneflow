@@ -160,9 +160,10 @@ class BoxHead(object):
             )
 
     def build_eval(self, proposals, features):
-        image_ids = flow.detection.extract_piece_slice_id(proposals)
-        x = self.box_feature_extractor(proposals, image_ids, features)
-        cls_logits, box_pred = self.predictor(x)
+        with flow.deprecated.variable_scope("roi"):
+            image_ids = flow.detection.extract_piece_slice_id(proposals)
+            x = self.box_feature_extractor(proposals, image_ids, features)
+            cls_logits, box_pred = self.predictor(x)
 
         return cls_logits, box_pred
 
@@ -257,7 +258,7 @@ class BoxHead(object):
             use_bias=True,
             name="fc7",
         )
-
+        
         return x
 
     def box_predictor(self, x):
