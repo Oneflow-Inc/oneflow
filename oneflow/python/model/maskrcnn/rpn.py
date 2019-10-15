@@ -296,7 +296,7 @@ class RPNProposal(object):
                     proposal_per_layer = flow.detection.box_decode(
                         flow.local_gather(anchors[layer_i], pre_nms_top_k_inds),
                         flow.local_gather(
-                            bbox_pred_list[img_idx][layer_i], pre_nms_top_k_inds
+                            bbox_pred_list[layer_i][img_idx], pre_nms_top_k_inds
                         ),
                         regression_weights={
                             "weight_x": self.cfg.RPN.WEIGHT_X,
