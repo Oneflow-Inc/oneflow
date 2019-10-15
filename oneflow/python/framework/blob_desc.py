@@ -40,6 +40,12 @@ class BlobDesc(object):
     def batch_axis(self):
         raise NotImplementedError
 
+    def has_batch_axis(self):
+        batch_axis = self.batch_axis
+        ret = batch_axis is not None
+        if ret: assert type(batch_axis) is int
+        return ret
+
     @property
     def is_dynamic(self):
         raise NotImplementedError
