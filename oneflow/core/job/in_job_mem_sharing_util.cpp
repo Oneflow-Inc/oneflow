@@ -29,12 +29,8 @@ void GenRegstDescId2RegstDesc(Plan* plan,
 }
 
 struct MemoryChain {
-  int64_t mem_chain_id;
   std::vector<TaskProto*> sorted_tasks;
   HashSet<RegstDescProto*> mem_reused_regsts;
-  int64_t sole_source_task_id;
-  int64_t sole_sink_task_id;
-  int64_t source_order;
 };
 
 void InitMemoryChains(Plan* plan,
