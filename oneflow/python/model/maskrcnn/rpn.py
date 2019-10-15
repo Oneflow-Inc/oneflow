@@ -256,14 +256,6 @@ class RPNLoss(object):
         return bbox_loss, cls_loss
 
 
-def safe_top_k(inputs, k):
-    assert len(inputs.shape) == 1
-    if inputs.shape[0] < k:
-        return flow.math.top_k(inputs, inputs.shape[0])
-    else:
-        return flow.math.top_k(inputs, k)
-
-
 class RPNProposal(object):
     def __init__(self, cfg):
         self.cfg = cfg
@@ -290,19 +282,16 @@ class RPNProposal(object):
         resized_gt_boxes_list,
     ):
         with flow.deprecated.variable_scope("rpn-postprocess"):
-            cls_logit_list = list(zip(*cls_logit_list))
-            bbox_pred_list = list(zip(*bbox_pred_list))
-
             proposals = []
             for img_idx in range(len(image_size_list)):
                 proposal_list = []
                 score_list = []
-                for layer_i in range(len(cls_logit_list[0])):
-                    pre_nms_top_k_inds = safe_top_k(
-                        cls_logit_list[img_idx][layer_i], k=self.top_n_per_fm
+                for layer_i in range(len(cls_logit_list)):
+                    pre_nms_top_k_inds = flow.math.top_k(
+                        cls_logit_list[layer_i][img_idx], k=self.top_n_per_fm
                     )
                     score_per_layer = flow.local_gather(
-                        cls_logit_list[img_idx][layer_i], pre_nms_top_k_inds
+                        cls_logit_list[layer_i][img_idx], pre_nms_top_k_inds
                     )
                     proposal_per_layer = flow.detection.box_decode(
                         flow.local_gather(anchors[layer_i], pre_nms_top_k_inds),
@@ -364,7 +353,7 @@ class RPNProposal(object):
 
                 proposal_in_one_img = flow.local_gather(
                     proposal_in_one_img,
-                    safe_top_k(score_in_one_img, k=self.top_n_per_img),
+                    flow.math.top_k(score_in_one_img, k=self.top_n_per_img),
                 )
                 if self.cfg.TRAINING is True:
                     proposal_in_one_img = flow.concat(
