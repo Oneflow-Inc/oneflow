@@ -39,16 +39,17 @@ xla::XlaOp GenericGather(const xla::XlaOp &input, const xla::XlaOp &indices,
 
   return xla::Gather(input, indices, dim_numbers, slice_sizes);
 }
-xla::XlaOp GenericGatherGrad(const xla::XlaOp& buffer, const xla::XlaOp& updates,
-                      const xla::XlaOp& indices, bool indices_are_vectors,
-                      const std::function<xla::XlaOp
-                        (xla::XlaOp, xla::XlaOp, xla::XlaBuilder*)>& combiner,
-                      xla::XlaBuilder* builder) {
+xla::XlaOp GenericGatherGrad(
+    const xla::XlaOp& buffer, const xla::XlaOp& updates,
+    const xla::XlaOp& indices, bool indices_are_vectors,
+    const std::function<
+        xla::XlaOp(xla::XlaOp, xla::XlaOp, xla::XlaBuilder*)>& combiner,
+    xla::XlaBuilder* builder) {
   OF_CHECK_AND_ASSIGN(xla::Shape buffer_shape, builder->GetShape(buffer));
   OF_CHECK_AND_ASSIGN(xla::Shape updates_shape, builder->GetShape(updates));
   OF_CHECK_AND_ASSIGN(xla::Shape indices_shape, builder->GetShape(indices));
   absl::Span<const long long> indices_dims =
-        xla::AsInt64Slice(indices_shape.dimensions());
+      xla::AsInt64Slice(indices_shape.dimensions());
 
   // If the indices are N-dimensional, the minor dimension of indices contains
   // the indices to update. Otherwise the indices are all scalars.
@@ -70,8 +71,8 @@ xla::XlaOp GenericGatherGrad(const xla::XlaOp& buffer, const xla::XlaOp& updates
 
   xla::ScatterDimensionNumbers dim_numbers;
   dim_numbers.set_index_vector_dim(indices_are_vectors
-                                 ? indices_shape.dimensions_size() - 1
-                                 : indices_shape.dimensions_size());
+                                   ? indices_shape.dimensions_size() - 1
+                                   : indices_shape.dimensions_size());
 
   int64_t updates_rank = updates_shape.rank();
   int64_t buffer_rank = buffer_shape.rank();
@@ -94,7 +95,7 @@ xla::XlaOp GenericGatherGrad(const xla::XlaOp& buffer, const xla::XlaOp& updates
   if (updates_rank > 0) {
     for (int64_t i = (updates_rank - num_window_dims_in_updates);
     i < updates_rank; ++i) {
-    dim_numbers.add_update_window_dims(i);
+      dim_numbers.add_update_window_dims(i);
     }
   }
 
@@ -185,18 +186,19 @@ public:
     CHECK_LT(axis, updates_dim_vec.size());
     std::vector<int64_t> buffer_dim_vec;
 
-    for(int i = 0; i < axis; ++i) {
+    for (int i = 0; i < axis; ++i) {
       buffer_dim_vec.push_back(updates_dim_vec[i]);
     }
     buffer_dim_vec.push_back(gather_dim_size);
-    for(int i = axis + indices_dim_vec.size(); i < updates_dim_vec.size(); ++i) {
+    for (int i = axis + indices_dim_vec.size(); i < updates_dim_vec.size(); ++i) {
       buffer_dim_vec.push_back(updates_dim_vec[i]);
     }
 
     xla::XlaOp buffer = Zeros(ctx->builder(), Shape(buffer_dim_vec),
         updates_data_type);
-    auto combiner = [](xla::XlaOp x, xla::XlaOp y, xla::XlaBuilder*)
-      { return xla::Add(x, y);};
+    auto combiner = [](xla::XlaOp x, xla::XlaOp y, xla::XlaBuilder*) {
+      return xla::Add(x, y);
+    };
     ctx->SetOutput("in_diff",
         GenericGatherGrad(buffer, updates, indices, true, combiner, builder));
   }
@@ -216,8 +218,8 @@ public:
     std::vector<int64_t> buffer_dim_vec = InitBufferDimVec(ctx);
 
     buffer_dim_vec.push_back(num_segments);
-    for(int i = Axis(ctx) + segment_ids_shape.NumAxes();
-                                      i < data_shape.dim_vec().size(); ++i) {
+    for (int i = Axis(ctx) + segment_ids_shape.NumAxes();
+        i < data_shape.dim_vec().size(); ++i) {
       buffer_dim_vec.push_back(data_shape.dim_vec()[i]);
     }
 
@@ -229,13 +231,14 @@ public:
     }
 
     xla::XlaOp default_value =
-                       Zeros(ctx->builder(), Shape(buffer_dim_vec), data_type);
+        Zeros(ctx->builder(), Shape(buffer_dim_vec), data_type);
     xla::XlaBuilder* builder = ctx->builder();
     std::vector<long long> buffer_dim_vecs(buffer_dim_vec.size());
 
     xla::XlaOp buffer = xla::Broadcast(default_value, buffer_dim_vecs);
-    auto combiner = [](xla::XlaOp x, xla::XlaOp y, xla::XlaBuilder*)
-      { return xla::Add(x, y);};
+    auto combiner = [](xla::XlaOp x, xla::XlaOp y, xla::XlaBuilder*) { 
+      return xla::Add(x, y);
+    };
     ctx->SetOutput("out",
         GenericGatherGrad(buffer, data, segment_ids, false, combiner, builder));
   }
@@ -244,11 +247,11 @@ public:
   }
   virtual std::vector<int64_t> InitBufferDimVec(XlaOpContext *ctx) const {
     std::vector<int64_t> buffer_dim_vec;
-    std::vector<int64_t> data_dim_vec = ctx->InputShape("data").dim_vec();
-    for(int i = 0; i < ctx->GetAttr<int64_t>("axis"); ++i) {
+    const std::vector<int64_t> &data_dim_vec = ctx->InputShape("data").dim_vec();
+    for (int i = 0; i < ctx->GetAttr<int64_t>("axis"); ++i) {
       buffer_dim_vec.push_back(data_dim_vec[i]);
     }
-    return buffer_dim_vec;
+    return std::move(buffer_dim_vec);
   }
 };
 
