@@ -55,7 +55,7 @@ or you can just clone source code and submodules step by step
 
 - Update cmake
 
-  This is needed only if the installed cmake does not support https protocol to download .tgz from URL. You can try to skip this step, and back here to reinstall cmake if you had encountered a downloading error while building the third-parties.
+  It is needed only if CMake installed does not support downloading .tgz file from URL with https protocol. Skip this step, just go back here to reinstall CMake if you encountered a downloading error while building the third-parties.
 
   Download cmake(>=3.7) from [here](https://cmake.org/download/) , configure and install it by the following command:
 
@@ -76,7 +76,7 @@ or you can just clone source code and submodules step by step
   make -j$(nproc)
   ```
 
-  If the downloading error occurred, you should back to the previous step to reinstall the cmake, then clean the file CMakeCache.txt and build the third-parties once again.
+  If the downloading error occurred, you should go back to the previous step to reinstall the cmake, then clean the file CMakeCache.txt and build the third-parties once again.
 
 - Build Oneflow
 
