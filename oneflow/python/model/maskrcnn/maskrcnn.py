@@ -239,6 +239,7 @@ def maskrcnn_eval(images, image_sizes):
     return cls_logits, box_pred, mask_logits
 
 
+blob_watched = {}
 if terminal_args.mock_dataset:
 
     @flow.function
@@ -416,6 +417,14 @@ if __name__ == "__main__":
                 for loss in train_loss:
                     print_loss.append(loss.mean())
                 print(fmt_str.format(*print_loss))
+                if not os.path.exists("saver"):
+                    os.makedirs("saver")
+                for lbn, blob_data in blob_watched.items():
+                    import numpy as np
 
+                    np.save(
+                        "saver/" + blob_data["blob_def"].op_name,
+                        blob_data["blob"].ndarray(),
+                    )
                 if (i + 1) % 10 == 0:
                     save_model()
