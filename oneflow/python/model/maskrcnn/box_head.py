@@ -160,9 +160,10 @@ class BoxHead(object):
             )
 
     def build_eval(self, proposals, features):
-        image_ids = flow.detection.extract_piece_slice_id(proposals)
-        x = self.box_feature_extractor(proposals, image_ids, features)
-        cls_logits, box_pred = self.predictor(x)
+        with flow.deprecated.variable_scope("roi"):
+            image_ids = flow.detection.extract_piece_slice_id(proposals)
+            x = self.box_feature_extractor(proposals, image_ids, features)
+            cls_logits, box_pred = self.predictor(x)
 
         return cls_logits, box_pred
 
@@ -177,6 +178,7 @@ class BoxHead(object):
             def _save(x):
                 import numpy as np
                 import os
+
                 path = "eval_dump/"
                 if not os.path.exists(path):
                     os.mkdir(path)
@@ -220,13 +222,20 @@ class BoxHead(object):
                 roi_features_list[idx], Save("roi_feature_{}".format(idx))
             )
 
-
         roi_features = flow.stack(roi_features_list, axis=0)
 
         flow.watch(roi_features, Save("roi_features"))
 
         origin_indices = flow.stack(list(level_idx_dict.values()), axis=0)
-        roi_features_reorder = flow.local_gather(roi_features, origin_indices)
+
+        flow.watch(origin_indices, Save("origin_indices"))
+
+        # roi_features_reorder = flow.local_gather(roi_features, origin_indices)
+        roi_features_reorder = flow.local_scatter_nd_update(
+            flow.constant_like(roi_features, float(0)),
+            flow.expand_dims(origin_indices, axis=1),
+            roi_features,
+        )
 
         # CHECK_POINT
         flow.watch(roi_features_reorder, Save("roi_features_reorder"))
@@ -249,7 +258,7 @@ class BoxHead(object):
             use_bias=True,
             name="fc7",
         )
-
+        
         return x
 
     def box_predictor(self, x):

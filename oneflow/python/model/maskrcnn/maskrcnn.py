@@ -330,13 +330,14 @@ if terminal_args.rcnn_eval:
         cfg.freeze()
         print(cfg)
         box_head = BoxHead(cfg)
-        image_ids = flow.concat(
-            flow.detection.extract_piece_slice_id([rpn_proposals]), axis=0
-        )
-        x = box_head.box_feature_extractor(
-            rpn_proposals, image_ids, [fpn_fm1, fpn_fm2, fpn_fm3, fpn_fm4]
-        )
-        cls_logits, box_pred = box_head.box_predictor(x)
+        with flow.deprecated.variable_scope("roi"):
+            image_ids = flow.concat(
+                flow.detection.extract_piece_slice_id([rpn_proposals]), axis=0
+            )
+            x = box_head.box_feature_extractor(
+                rpn_proposals, image_ids, [fpn_fm1, fpn_fm2, fpn_fm3, fpn_fm4]
+            )
+            cls_logits, box_pred = box_head.box_predictor(x)
         return cls_logits, box_pred
 
 
