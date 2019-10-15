@@ -5,7 +5,7 @@
 
 namespace oneflow {
 
-void AddLbiDiffWatcherOpConfs(Job* job);
+void AddLbiDiffWatherOpConfs(Job* job);
 }
 
 #endif  // ONEFLOW_CORE_JOB_COMPLETER_ADD_LBI_DIFF_WATCHER_H_

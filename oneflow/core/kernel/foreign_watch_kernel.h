@@ -5,15 +5,13 @@
 
 namespace oneflow {
 
-template<DeviceType device_type>
-class ForeignWatchKernel final : public KernelIf<device_type> {
+class ForeignWatchKernel final : public KernelIf<DeviceType::kCPU> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ForeignWatchKernel);
   ForeignWatchKernel() = default;
   ~ForeignWatchKernel() = default;
 
  private:
-  void WithInBlob(DeviceCtx* device_ctx, Blob* blob, std::function<void(Blob*)> Handler) const;
   void ForwardDataContent(const KernelCtx& ctx,
                           std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 };
