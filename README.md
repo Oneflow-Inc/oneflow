@@ -47,7 +47,7 @@ or you can just clone source code and submodules step by step
 
 - Install bazel
 
-  Download and Install bazel from [here](https://docs.bazel.build/versions/master/install-os-x.html) , and version 0.24.1 is recommended. You can confirm bazel is installed successfully by running the following command:
+  Download and install bazel from [here](https://docs.bazel.build/versions/1.0.0/bazel-overview.html) , and version 0.24.1 is recommended. You can confirm bazel is installed successfully by running the following command:
 
   ```shell
   bazel version
@@ -55,9 +55,9 @@ or you can just clone source code and submodules step by step
 
 - Update cmake
 
-  This is only needed if the installed cmake does not support https protocol to download .tgz from URL. You can go back and reinstall cmake if you had encountered an downloading error while building the third-parties.
+  It is needed only if CMake installed does not support downloading .tgz file from URL with https protocol. Skip this step, just go back here to reinstall CMake if you encountered a downloading error while building the third-parties.
 
-  Download cmake from [here](https://cmake.org/download/) , configure and install it by the following command:
+  Download cmake(>=3.7) from [here](https://cmake.org/download/) , configure and install it by the following command:
 
   ```shell
   # Install curl develop toolkit
@@ -76,7 +76,7 @@ or you can just clone source code and submodules step by step
   make -j$(nproc)
   ```
 
-  If the downloading error occurred, you should go back to the previous step to reinstall the cmake, then clean the file CMakeCache.txt and build the third-parties again.
+  If the downloading error occurred, you should go back to the previous step to reinstall the cmake, then clean the file CMakeCache.txt and build the third-parties once again.
 
 - Build Oneflow
 
@@ -92,5 +92,5 @@ or you can just clone source code and submodules step by step
 
 - XLA documents
 
-  You can check this [doc]() to obtain more details about how to use XLA.
+  You can check this [doc](./oneflow/xla/of2xla/doc/index.md) to obtain more details about how to use XLA.
 
