@@ -48,7 +48,7 @@ class LocalGatherOp final : public Operator {
     dim_vec.insert(dim_vec.end(), in->shape().dim_vec().cbegin() + axis + 1,
                    in->shape().dim_vec().end());
     out->mut_shape() = Shape(dim_vec);
-    out->set_is_dynamic(indices->is_dynamic());
+    out->set_is_dynamic(in->is_dynamic() || indices->is_dynamic());
     return Maybe<void>::Ok();
   }
 
@@ -106,24 +106,10 @@ class LocalGatherGradOp final : public Operator {
 
   Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                              const ParallelContext* parallel_ctx) const override {
-    const LocalGatherGradOpConf& conf = op_conf().local_gather_grad_conf();
     const BlobDesc* segment_ids = GetBlobDesc4BnInOp("segment_ids");
-    const BlobDesc* data = GetBlobDesc4BnInOp("data");
-
     CHECK_OR_RETURN(IsIntegralDataType(segment_ids->data_type()));
-    std::vector<int64_t> out_dim_vec;
-    out_dim_vec.insert(out_dim_vec.end(), data->shape().dim_vec().cbegin(),
-                       data->shape().dim_vec().cbegin() + conf.axis());
-    out_dim_vec.push_back(GetBlobDesc4BnInOp("like")->shape().At(conf.axis()));
-    out_dim_vec.insert(
-        out_dim_vec.end(),
-        data->shape().dim_vec().cbegin() + conf.axis() + segment_ids->shape().NumAxes(),
-        data->shape().dim_vec().end());
-
     BlobDesc* out = GetBlobDesc4BnInOp("out");
-    *out = *data;
-    out->set_data_type(data->data_type());
-    out->mut_shape() = Shape(out_dim_vec);
+    out->CopyMetaFrom(*GetBlobDesc4BnInOp("like"));
     return Maybe<void>::Ok();
   }
 
