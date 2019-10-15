@@ -81,6 +81,27 @@ class TopKKernel final : public KernelIf<device_type> {
   ~TopKKernel() = default;
 
  private:
+  void ForwardDenseShape(const KernelCtx& ctx,
+                         std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
+    const Blob* in_blob = BnInOp2Blob("in");
+    Shape shape = static_cast<Shape>(in_blob->dense_shape_view());
+    // temp solution: we allow k > instance_size
+    int32_t k = std::min(static_cast<int64_t>(this->op_conf().top_k_conf().k()),
+                         in_blob->shape().dim_vec().back());
+    shape.Set(shape.NumAxes() - 1, k);
+    BnInOp2Blob("out")->dense_shape_mut_view().set_shape(shape);
+    if (this->op_conf().device_type() == DeviceType::kCPU) {
+      if (k > 1) { BnInOp2Blob("indices")->dense_shape_mut_view().set_shape(in_blob->shape()); }
+    } else if (this->op_conf().device_type() == DeviceType::kGPU) {
+      if (k > 128) {
+        BnInOp2Blob("indices")->dense_shape_mut_view().set_shape(in_blob->shape());
+        BnInOp2Blob("sorted_in")->dense_shape_mut_view().set_shape(in_blob->shape());
+        BnInOp2Blob("sorted_indices")->dense_shape_mut_view().set_shape(in_blob->shape());
+      }
+    } else {
+      UNIMPLEMENTED();
+    }
+  }
   void ForwardDataContent(const KernelCtx& ctx,
                           std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
     const Blob* in_blob = BnInOp2Blob("in");
