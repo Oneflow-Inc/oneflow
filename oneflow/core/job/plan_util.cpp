@@ -114,7 +114,7 @@ void PlanUtil::CleanUselessMemBlockAndCheckValid(Plan* plan) {
         CHECK_EQ(task.machine_id(), header_mem_block.machine_id());
         CHECK(header_mem_block.mem_case()
               == MemoryCaseUtil::GetHostPinnedMemoryCaseForRegstSeparatedHeader(regst.mem_case()));
-        CHECK(mem_block.enable_reuse_mem() == false);
+        CHECK(header_mem_block.enable_reuse_mem() == false);
         const auto& header_block_job_ids = mem_block_id2job_ids[header_block_id];
         CHECK(header_block_job_ids.find(task.job_id()) != header_block_job_ids.end());
         valid_mem_block_ids.insert(regst.separated_header_mem_block_id());
