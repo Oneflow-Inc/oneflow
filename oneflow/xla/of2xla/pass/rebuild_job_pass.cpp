@@ -1,17 +1,17 @@
+#include <list>
 #include <string>
 #include <unordered_map>
 #include <vector>
-#include <list>
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_split.h"
 #include "glog/logging.h"
 
 #include "oneflow/core/job/job.pb.h"
 #include "oneflow/core/job/job_builder.h"
-#include "oneflow/xla/of2xla/xla_utility.h"
-#include "oneflow/xla/of2xla/xla_graph.h"
-#include "oneflow/xla/of2xla/xla_argument.h"
 #include "oneflow/xla/of2xla/pass/xla_optimize_pass.h"
+#include "oneflow/xla/of2xla/xla_argument.h"
+#include "oneflow/xla/of2xla/xla_graph.h"
+#include "oneflow/xla/of2xla/xla_utility.h"
 
 namespace oneflow {
 namespace mola {
@@ -44,13 +44,12 @@ int GetRepeatedIndex(const std::string &input) {
 void SetOpInputBlobName(OperatorConf *op_conf, const std::string &input,
                         const std::string &blob_name,
                         const std::string &fixed_blob_name) {
-  auto *spec_conf = MutableMessageInPbMessage(
-                          op_conf, op_conf->op_type_case());
+  auto *spec_conf = MutableMessageInPbMessage(op_conf, op_conf->op_type_case());
   switch (op_conf->op_type_case()) {
     case OperatorConf::kPrintConf: {
       int index = GetRepeatedIndex(input);
-      *(op_conf->mutable_print_conf()->mutable_in(index)->mutable_lbn())
-          = fixed_blob_name;
+      *(op_conf->mutable_print_conf()->mutable_in(index)->mutable_lbn()) =
+          fixed_blob_name;
       break;
     }
     default:
@@ -65,7 +64,7 @@ class FoldSubgraphBuilder {
   virtual ~FoldSubgraphBuilder() {}
 
   void Build() { BuildImpl(); }
-  
+
  private:
   void BuildImpl() {
     CHECK(builder_);
@@ -106,14 +105,12 @@ class FoldSubgraphBuilder {
   }
 
   void FixSubgraphInArgumentsBlobNames(
-      const XlaGraph *sub_graph,
-      const std::string &launch_op_name,
+      const XlaGraph *sub_graph, const std::string &launch_op_name,
       XlaLaunchOpConf *launch_conf,
       const std::unordered_map<std::string, std::string> &fixed_blob_names);
 
   void FixSubgraphOutArgumentsBlobNames(
-      const XlaGraph *sub_graph,
-      const std::string &launch_op_name,
+      const XlaGraph *sub_graph, const std::string &launch_op_name,
       XlaLaunchOpConf *launch_conf,
       const std::unordered_map<std::string, std::string> &fixed_blob_names);
 
@@ -163,8 +160,7 @@ FoldSubgraphBuilder::FoldSubgraphBuilder(const XlaGraph &graph, Job *job)
 }
 
 void FoldSubgraphBuilder::FixSubgraphInArgumentsBlobNames(
-    const XlaGraph *sub_graph,
-    const std::string &launch_op_name,
+    const XlaGraph *sub_graph, const std::string &launch_op_name,
     XlaLaunchOpConf *launch_conf,
     const std::unordered_map<std::string, std::string> &fixed_blob_names) {
   for (const auto *node : sub_graph->Nodes()) {
@@ -179,8 +175,7 @@ void FoldSubgraphBuilder::FixSubgraphInArgumentsBlobNames(
 }
 
 void FoldSubgraphBuilder::FixSubgraphOutArgumentsBlobNames(
-    const XlaGraph *sub_graph,
-    const std::string &launch_op_name,
+    const XlaGraph *sub_graph, const std::string &launch_op_name,
     XlaLaunchOpConf *launch_conf,
     const std::unordered_map<std::string, std::string> &fixed_blob_names) {
   for (const auto *node : sub_graph->Nodes()) {
@@ -188,7 +183,8 @@ void FoldSubgraphBuilder::FixSubgraphOutArgumentsBlobNames(
       auto *argument_conf = MutableArgumentConf(launch_conf, node->op_name());
       const auto &it = fixed_blob_names.find(argument_conf->out());
       if (it != fixed_blob_names.end()) {
-        // argument_conf->set_out(absl::StrCat(launch_op_name, "/", it->second));
+        // argument_conf->set_out(absl::StrCat(launch_op_name, "/",
+        // it->second));
         argument_conf->set_out(it->second);
       }
     }
@@ -262,7 +258,7 @@ void AddInBlobNames(const std::list<XlaEdge *> &in_edges,
 }
 
 void AddOutBlobNames(const std::list<XlaEdge *> &out_edges,
-                    XlaLaunchOpConf *launch_conf) {
+                     XlaLaunchOpConf *launch_conf) {
   for (const XlaEdge *edge : out_edges) {
     if (!edge->IsControlEdge()) {
       const Argument &arg = edge->argument();
@@ -275,7 +271,7 @@ void FoldSubgraphBuilder::BuildXlaLaunchOps() {
   for (int i = 0; i < launch_nodes_.size(); ++i) {
     const XlaNode *node = launch_nodes_[i];
     // Add xla launch operator
-    OperatorConf op_conf; 
+    OperatorConf op_conf;
     op_conf.set_name(node->op_name());
     DeviceType device_type = BackendToDeviceType(node->backend());
     op_conf.set_device_type(device_type);
@@ -291,14 +287,13 @@ void FoldSubgraphBuilder::BuildXlaLaunchOps() {
     }
 
     CHECK_GT(folded_nodes_[i].size(), 0);
-    ParallelConf parallel_conf = builder_->GetParallelConf(
-        folded_nodes_[i][0]->op_name());
+    ParallelConf parallel_conf =
+        builder_->GetParallelConf(folded_nodes_[i][0]->op_name());
     // TODO(hjchen2) check parallel conf over all folded nodes
 
     builder_->AddOps(parallel_conf, {op_conf});
   }
 }
-
 
 void FoldSubgraphBuilder::FixupControlInOpNames() {
   CHECK_EQ(launch_nodes_.size(), folded_nodes_.size());
@@ -347,8 +342,8 @@ void FoldSubgraphBuilder::FixupControlInOpNames() {
 void FoldSubgraphBuilder::FixupInOutBlobNames() {
   for (const XlaNode *node : launch_nodes_) {
     std::string launch_op_name = node->op_name();
-    auto *launch_conf = builder_->MutableOpConf(launch_op_name)
-                                ->mutable_xla_launch_conf();
+    auto *launch_conf =
+        builder_->MutableOpConf(launch_op_name)->mutable_xla_launch_conf();
     std::unordered_map<std::string, std::string> fixed_blob_names;
     // Fix output blob names
     for (int i = 0; i < launch_conf->out().size(); ++i) {
@@ -374,13 +369,13 @@ void FoldSubgraphBuilder::FixupInOutBlobNames() {
         continue;
       }
       if (end->op_type() == _XlaLaunchOpType) {
-        auto *launch_conf = builder_->MutableOpConf(end->op_name())
-                                    ->mutable_xla_launch_conf();
+        auto *launch_conf =
+            builder_->MutableOpConf(end->op_name())->mutable_xla_launch_conf();
         for (auto &blob_name : *launch_conf->mutable_in()) {
           const auto &it = fixed_blob_names.find(blob_name);
           if (it != fixed_blob_names.end()) {
-            std::string fixed_blob_name = absl::StrCat(launch_op_name, "/",
-                                                       it->second);
+            std::string fixed_blob_name =
+                absl::StrCat(launch_op_name, "/", it->second);
             blob_name = fixed_blob_name;
           }
         }
@@ -395,8 +390,8 @@ void FoldSubgraphBuilder::FixupInOutBlobNames() {
           std::string blob_name = BlobName(lbi);
           const auto &it = fixed_blob_names.find(blob_name);
           if (it != fixed_blob_names.end()) {
-            std::string fixed_blob_name = absl::StrCat(launch_op_name, "/",
-                                                       it->second);
+            std::string fixed_blob_name =
+                absl::StrCat(launch_op_name, "/", it->second);
             // Fix input blob name for normal node
             SetOpInputBlobName(op_conf, input, blob_name, fixed_blob_name);
           }
@@ -412,8 +407,8 @@ void FoldSubgraphBuilder::FixupInOutBlobNames() {
 void FoldSubgraphBuilder::FixupTimeShapes() {
   for (int i = 0; i < launch_nodes_.size(); ++i) {
     CHECK_GT(folded_nodes_[i].size(), 0);
-    OpTimeShape time_shape = builder_->GetTimeShape(
-        folded_nodes_[i][0]->op_name());
+    OpTimeShape time_shape =
+        builder_->GetTimeShape(folded_nodes_[i][0]->op_name());
     // TODO(hjchen2) check time shape for all folded nodes
 
     builder_->AddTimeShape(launch_nodes_[i]->op_name(), time_shape);
@@ -488,10 +483,9 @@ class RebuildCompiledJobPass : public XlaOptimizePass {
       : XlaOptimizePass(options) {}
 
   void Run() override {
-    CHECK(this->options_.graph) <<
-        "Graph is required by `RebuildCompiledJobPass`.";
-    CHECK(this->options_.job) <<
-        "Job is required by `RebuildCompiledJobPass`.";
+    CHECK(this->options_.graph)
+        << "Graph is required by `RebuildCompiledJobPass`.";
+    CHECK(this->options_.job) << "Job is required by `RebuildCompiledJobPass`.";
     FoldSubgraphBuilder(*(this->options_.graph), this->options_.job).Build();
   }
 };

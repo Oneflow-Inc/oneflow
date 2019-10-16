@@ -9,8 +9,7 @@ bool Signature::operator==(const Signature &other) const {
          this->entry_shapes == other.entry_shapes;
 }
 
-Signature ComputeSignature(const std::string &name,
-                           const int device_ordinal,
+Signature ComputeSignature(const std::string &name, const int device_ordinal,
                            const std::vector<Blob *> &entry_blobs) {
   Signature signature;
   signature.name = name;

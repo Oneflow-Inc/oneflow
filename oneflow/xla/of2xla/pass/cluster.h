@@ -3,8 +3,8 @@
 
 #include <unordered_map>
 #include <unordered_set>
-#include "oneflow/xla/of2xla/xla_utility.h"
 #include "oneflow/xla/of2xla/xla_graph.h"
+#include "oneflow/xla/of2xla/xla_utility.h"
 
 namespace oneflow {
 namespace mola {
@@ -56,7 +56,7 @@ class ClusterEdge {
   Shape end_time_shape() const { return time_shape_[1]; }
   void set_start_time_shape(const Shape &shape) { time_shape_[0] = shape; }
   void set_end_time_shape(const Shape &shape) { time_shape_[1] = shape; }
-  
+
  protected:
   ClusterNode *start_;
   ClusterNode *end_;
@@ -87,11 +87,11 @@ class ClusterNode {
   void EraseOutEdge(const ClusterEdge *edge);
   void ClearInEdges() { in_edges_.clear(); }
   void ClearOutEdges() { out_edges_.clear(); }
-  
+
   void FoldNodes(const util::Set<ClusterNode *> &nodes) {
     folded_nodes_.insert(nodes.begin(), nodes.end());
   }
-  
+
   void Merge(ClusterNode &other);
   bool TryMerge(ClusterNode &other);
   bool IsReachable(const ClusterNode &target);
@@ -99,9 +99,7 @@ class ClusterNode {
   bool IsSourceNode() const { return in_edges_.empty(); }
   virtual bool IsCompiled() const { return xrt_node_->IsCompiled(); }
 
-  bool operator==(const ClusterNode &other) const {
-    return id_ == other.id_;
-  }
+  bool operator==(const ClusterNode &other) const { return id_ == other.id_; }
 
   const XlaNode *xrt_node() const { return xrt_node_; }
   int64_t id() const { return id_; }
@@ -111,9 +109,7 @@ class ClusterNode {
   virtual std::string backend() const { return xrt_node_->backend(); }
 
   size_t size() const { return folded_nodes_.size(); }
-  const util::Set<ClusterNode *> &folded_nodes() const {
-    return folded_nodes_;
-  }
+  const util::Set<ClusterNode *> &folded_nodes() const { return folded_nodes_; }
   util::Set<ClusterNode *> &folded_nodes() { return folded_nodes_; }
 
  protected:

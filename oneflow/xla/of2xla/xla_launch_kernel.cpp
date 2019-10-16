@@ -1,20 +1,19 @@
-#include "tensorflow/compiler/xla/client/local_client.h"
-#include "tensorflow/compiler/tf2xla/tf2xla_util.h"  // GetXLARandomSeed
-#include "tensorflow/compiler/jit/xla_lib/xla_runtime_util.h"
-#include "oneflow/xla/of2xla/xla_utility.h"
-#include "oneflow/xla/of2xla/xla_graph_compiler.h"
+#include "oneflow/xla/of2xla/xla_launch_kernel.h"
 #include "oneflow/xla/of2xla/xla_compilation_cache.h"
+#include "oneflow/xla/of2xla/xla_graph_compiler.h"
 #include "oneflow/xla/of2xla/xla_launch_attr.h"
 #include "oneflow/xla/of2xla/xla_launch_context.h"
 #include "oneflow/xla/of2xla/xla_launch_scope.h"
-#include "oneflow/xla/of2xla/xla_launch_kernel.h"
+#include "oneflow/xla/of2xla/xla_utility.h"
+#include "tensorflow/compiler/jit/xla_lib/xla_runtime_util.h"
+#include "tensorflow/compiler/tf2xla/tf2xla_util.h"  // GetXLARandomSeed
+#include "tensorflow/compiler/xla/client/local_client.h"
 
 namespace oneflow {
 
 template <DeviceType device_type>
 void XlaLaunchKernel<device_type>::BuildLocalExecutable(
-    mola::XlaLaunchContext *launch_ctx,
-    const std::vector<Blob *> &entry_blobs,
+    mola::XlaLaunchContext *launch_ctx, const std::vector<Blob *> &entry_blobs,
     const std::vector<Blob *> &return_blobs,
     const std::vector<std::string> &entry_names,
     const std::vector<std::string> &return_names,
@@ -42,8 +41,7 @@ void XlaLaunchKernel<device_type>::BuildLocalExecutable(
     std::vector<mola::Argument> entry_arguments, return_arguments;
     for (int i = 0; i < entry_blobs.size(); ++i) {
       const RtBlobDesc &runtime_desc = entry_blobs[i]->blob_desc();
-      BlobDesc blob_desc(runtime_desc.shape(),
-                         runtime_desc.data_type(),
+      BlobDesc blob_desc(runtime_desc.shape(), runtime_desc.data_type(),
                          runtime_desc.has_data_id_field(),
                          runtime_desc.has_col_num_field(),
                          runtime_desc.max_col_num());
@@ -53,8 +51,7 @@ void XlaLaunchKernel<device_type>::BuildLocalExecutable(
     }
     for (int i = 0; i < return_blobs.size(); ++i) {
       const RtBlobDesc &runtime_desc = return_blobs[i]->blob_desc();
-      BlobDesc blob_desc(runtime_desc.shape(),
-                         runtime_desc.data_type(),
+      BlobDesc blob_desc(runtime_desc.shape(), runtime_desc.data_type(),
                          runtime_desc.has_data_id_field(),
                          runtime_desc.has_col_num_field(),
                          runtime_desc.max_col_num());
@@ -62,7 +59,7 @@ void XlaLaunchKernel<device_type>::BuildLocalExecutable(
       // TODO(hjchen2): Check blob shape and data type if existed
       return_arguments.push_back(mola::Argument(blob_id, blob_desc));
     }
- 
+
     /* InferBlobDesc */ {
       std::unordered_map<std::string, BlobDesc> blob_descs;
       for (int i = 0; i < entry_arguments.size(); ++i) {
@@ -70,7 +67,7 @@ void XlaLaunchKernel<device_type>::BuildLocalExecutable(
         blob_descs.emplace(arg.blob_name(), arg.blob_desc());
       }
       SbpSignature sbp_signature = RestoreSbpSignature(launch_conf);
-  
+
       // Pass a fake local `ParallelContext` in order to inference
       // the shape of arguments by graph `InferBlobDescs`
       const ParallelContext &parallel_ctx = launch_ctx->parallel_ctx();
@@ -90,8 +87,7 @@ void XlaLaunchKernel<device_type>::BuildLocalExecutable(
 
 template <DeviceType device_type>
 void XlaLaunchKernel<device_type>::LaunchExecutable(
-    mola::XlaLaunchContext *launch_ctx,
-    xla::LocalExecutable *executable,
+    mola::XlaLaunchContext *launch_ctx, xla::LocalExecutable *executable,
     const std::vector<Blob *> &entry_blobs,
     const std::vector<xla::Shape> &input_shapes,
     std::vector<Blob *> &return_blobs, const xla::Shape &output_shape,
@@ -108,7 +104,7 @@ void XlaLaunchKernel<device_type>::LaunchExecutable(
   std::vector<std::shared_ptr<xla::ShapedBuffer>> shaped_buffers(argument_size);
   std::vector<xla::ShapedBuffer *> arguments(argument_size);
   for (int i = 0; i < input_shapes.size(); ++i) {
-    const xla::Shape& shape = input_shapes[i];
+    const xla::Shape &shape = input_shapes[i];
     const xla::Shape on_device_shape =
         client->backend().transfer_manager()->HostShapeToDeviceShape(shape);
     CHECK(!on_device_shape.IsTuple()) << "Tuple shape is not allowed for input "
@@ -126,8 +122,8 @@ void XlaLaunchKernel<device_type>::LaunchExecutable(
     se::DeviceMemoryBase memory_base =
         se::DeviceMemoryBase(const_cast<char *>(data_ptr), data_size);
     shaped_buffers[i] = std::make_shared<xla::ShapedBuffer>(
-        /*on_host_shape=*/shape, /*on_device_shape=*/shape,
-        client->platform(), device_ordinal);
+        /*on_host_shape=*/shape, /*on_device_shape=*/shape, client->platform(),
+        device_ordinal);
     shaped_buffers[i]->set_buffer(memory_base, /*index=*/{});
     arguments[i] = shaped_buffers[i].get();
   }
@@ -169,18 +165,18 @@ void XlaLaunchKernel<device_type>::LaunchExecutable(
 
 template <DeviceType device_type>
 void XlaLaunchKernel<device_type>::AliasMutableInputsAndOutputs(
-    const mola::LaunchAttrHelper &attr,
-    const std::vector<Blob *> &entry_blobs,
+    const mola::LaunchAttrHelper &attr, const std::vector<Blob *> &entry_blobs,
     const std::vector<std::string> &entry_names,
-    std::vector<Blob *> *return_blobs,
-    std::vector<std::string> *return_names,
+    std::vector<Blob *> *return_blobs, std::vector<std::string> *return_names,
     std::vector<xla::XlaBuilder::InputOutputAlias> *aliases) const {
   CHECK_EQ(entry_blobs.size(), entry_names.size());
   for (int i = 0; i < entry_blobs.size(); ++i) {
     const std::string &entry_name = entry_names[i];
     if (attr.IsMutableArg(entry_name)) {
-      aliases->push_back({{static_cast<int>(return_blobs->size())}/*output_index*/,
-                          i/*param_number=*/, /*param_index=*/{}});
+      aliases->push_back(
+          {{static_cast<int>(return_blobs->size())} /*output_index*/,
+           i /*param_number=*/,
+           /*param_index=*/{}});
       return_blobs->push_back(entry_blobs[i]);
       return_names->push_back(attr.OutputArg(entry_name));
     }
@@ -190,29 +186,29 @@ void XlaLaunchKernel<device_type>::AliasMutableInputsAndOutputs(
 template <DeviceType device_type>
 void XlaLaunchKernel<device_type>::ForwardDataContent(
     const KernelCtx &ctx,
-    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+    std::function<Blob *(const std::string &)> BnInOp2Blob) const {
   // Prepare input and output buffers and their names
   std::vector<Blob *> entry_blobs, return_blobs;
   std::vector<std::string> entry_names, return_names;
-  for (const auto& input_bn : this->op_attribute().input_bns()) {
-    Blob* in_blob = BnInOp2Blob(input_bn);
+  for (const auto &input_bn : this->op_attribute().input_bns()) {
+    Blob *in_blob = BnInOp2Blob(input_bn);
     entry_blobs.push_back(in_blob);
-    const LogicalBlobId& lbi = this->BnInOp2Lbi(input_bn);
+    const LogicalBlobId &lbi = this->BnInOp2Lbi(input_bn);
     entry_names.push_back(BlobName(lbi));
   }
-  for (const auto& output_bn : this->op_attribute().output_bns()) {
-    Blob* out_blob = BnInOp2Blob(output_bn);
+  for (const auto &output_bn : this->op_attribute().output_bns()) {
+    Blob *out_blob = BnInOp2Blob(output_bn);
     return_blobs.push_back(out_blob);
     return_names.push_back(output_bn);
   }
-  
+
   CHECK(this->op_conf().has_xla_launch_conf());
   const auto &launch_conf = this->op_conf().xla_launch_conf();
   mola::LaunchAttrHelper attr_helper(launch_conf.attr());
   std::vector<xla::XlaBuilder::InputOutputAlias> aliases;
   AliasMutableInputsAndOutputs(attr_helper, entry_blobs, entry_names,
                                &return_blobs, &return_names, &aliases);
-  
+
   mola::XlaLaunchContext launch_ctx(this->op_conf().name(), ctx.device_ctx,
                                     device_type, 1 /*intra_op_num_threads*/);
   mola::CompilationResult *compile_result = nullptr;
@@ -221,7 +217,7 @@ void XlaLaunchKernel<device_type>::ForwardDataContent(
   CHECK(compile_result) << "Executable built failed. "
                         << TF_CPP_VLOG_LEVEL_REQUARED(2);
   auto *executable = compile_result->executable.get();
-  
+
   std::vector<int64_t> allocation_indices;
   xla::ResultAllocationIndices(executable, &allocation_indices);
   CHECK_EQ(return_blobs.size(), allocation_indices.size());

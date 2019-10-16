@@ -2,16 +2,16 @@
 #define ONEFLOW_CORE_COMPILER_OF2XLA_XLA_LAUNCH_OP_H_
 
 #include <unordered_map>
-#include "oneflow/xla/of2xla/xla_graph.h"
 #include "oneflow/core/graph/logical_node.h"
 #include "oneflow/core/operator/operator.h"
+#include "oneflow/xla/of2xla/xla_graph.h"
 
 namespace oneflow {
 
 class XlaLaunchOp : public Operator {
  public:
   void InitFromOpConf() override;
-  
+
   const PbMessage& GetCustomizedConf() const override;
 
   Maybe<void> InferBlobDescs(
@@ -19,7 +19,7 @@ class XlaLaunchOp : public Operator {
       const ParallelContext* parallel_ctx) const override;
 
   LogicalNode* NewProperLogicalNode() const override {
-    const auto &launch_conf = op_conf().xla_launch_conf();
+    const auto& launch_conf = op_conf().xla_launch_conf();
     const bool is_model_update = launch_conf.attr().is_model_update();
     if (is_model_update) {
       return new OptimizerLogicalNode;
@@ -28,17 +28,16 @@ class XlaLaunchOp : public Operator {
   }
 
  private:
-  Maybe<void> InferBatchAxis(
-    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp)
-    const override;
+  Maybe<void> InferBatchAxis(std::function<OptInt64*(const std::string&)>
+                                 BatchAxis4BnInOp) const override;
 
   typedef std::function<Maybe<const SbpInferHint*>(const std::string&)>
       SbpInferHint4IbnFunc;
   Maybe<void> InferSbpSignature(
-    SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
-    const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
-    SbpInferHint4IbnFunc SbpInferHint4Ibn,
-    const ParallelDesc& parallel_desc) const override;
+      SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
+      const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
+      SbpInferHint4IbnFunc SbpInferHint4Ibn,
+      const ParallelDesc& parallel_desc) const override;
 
   std::shared_ptr<mola::XlaLaunchGraph> subgraph_;
 };

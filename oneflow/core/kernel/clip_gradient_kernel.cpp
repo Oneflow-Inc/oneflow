@@ -10,14 +10,13 @@ class ClipGradientKernel : public KernelIf<device_type> {
 
  private:
   typedef std::function<Blob*(const std::string&)> BnInOp2BlobFunc;
-  void Forward(const KernelCtx& ctx,
-               BnInOp2BlobFunc BnInOp2Blob) const override;
+  void Forward(const KernelCtx& ctx, BnInOp2BlobFunc BnInOp2Blob) const override;
 };
 
 typedef std::function<Blob*(const std::string&)> BnInOp2BlobFunc;
 template<DeviceType device_type, typename T>
-void ClipGradientKernel<device_type, T>::Forward(
-    const KernelCtx& ctx, BnInOp2BlobFunc BnInOp2Blob) const {
+void ClipGradientKernel<device_type, T>::Forward(const KernelCtx& ctx,
+                                                 BnInOp2BlobFunc BnInOp2Blob) const {
   // TODO(hjchen2)
   LOG(FATAL) << "ClipGradient is only used for XLA.";
 }

@@ -1,12 +1,12 @@
 #ifndef ONEFLOW_CORE_COMPILER_OF2XLA_XLA_COMPILATION_CACHE_H_
 #define ONEFLOW_CORE_COMPILER_OF2XLA_XLA_COMPILATION_CACHE_H_
 
-#include <string>
-#include <memory>
-#include <vector>
-#include <unordered_map>
-#include <mutex>
 #include <functional>
+#include <memory>
+#include <mutex>
+#include <string>
+#include <unordered_map>
+#include <vector>
 
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/register/blob.h"
@@ -21,7 +21,7 @@ struct Signature;
 namespace std {
 template <>
 struct hash<oneflow::mola::Signature> {
-  size_t operator()(const oneflow::mola::Signature &signature) const; 
+  size_t operator()(const oneflow::mola::Signature &signature) const;
 };
 }  // namespace std
 
@@ -47,7 +47,7 @@ Signature ComputeSignature(const std::string &name, const int device_ordinal,
 class XlaCompilationCache {
  public:
   CompilationResult *GetRecord(const Signature &signature) const;
-  
+
   void Record(const Signature &signature,
               const std::shared_ptr<CompilationResult> &result);
 
