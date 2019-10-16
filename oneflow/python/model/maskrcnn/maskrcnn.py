@@ -37,7 +37,11 @@ parser.add_argument(
     "-md", "--mock_dataset", default=False, action="store_true", required=False
 )
 parser.add_argument(
-    "-mp", "--mock_dataset_path", type=str, default="/tmp/shared_with_zwx/data_600x100_2_image.pkl", required=False
+    "-mp",
+    "--mock_dataset_path",
+    type=str,
+    default="/tmp/shared_with_zwx/data_600x100_2_image.pkl",
+    required=False,
 )
 parser.add_argument(
     "-rcnn_eval",
@@ -64,7 +68,7 @@ parser.add_argument(
 parser.add_argument(
     "-v", "--verbose", default=False, action="store_true", required=False
 )
-
+parser.add_argument("-i", "--iter_num", type=int, default=10, required=False)
 terminal_args = parser.parse_args()
 
 
@@ -385,9 +389,10 @@ if __name__ == "__main__":
                         "loss_mask",
                     )
                 )
-            for i in range(10):
+            for i in range(terminal_args.iter_num):
 
                 def save_model():
+                    return
                     if not os.path.exists(terminal_args.model_save_dir):
                         os.makedirs(terminal_args.model_save_dir)
                     model_dst = os.path.join(
@@ -411,6 +416,6 @@ if __name__ == "__main__":
                 for loss in train_loss:
                     print_loss.append(loss.mean())
                 print(fmt_str.format(*print_loss))
-                
+
                 if (i + 1) % 10 == 0:
                     save_model()
