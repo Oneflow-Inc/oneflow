@@ -1,13 +1,13 @@
-#include "glog/logging.h"
-#include "tensorflow/compiler/xla/xla_data.pb.h"
-#include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/xla/of2xla/xla_data_type.h"
+#include "glog/logging.h"
+#include "oneflow/core/common/data_type.pb.h"
+#include "tensorflow/compiler/xla/xla_data.pb.h"
 
 namespace oneflow {
 namespace mola {
 
 xla::PrimitiveType DataTypeToPrimitiveType(DataType data_type) {
-  switch (data_type) { 
+  switch (data_type) {
     case oneflow::kFloat:
       return xla::F32;
     case oneflow::kDouble:

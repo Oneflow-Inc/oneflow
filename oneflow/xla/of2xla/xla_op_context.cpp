@@ -1,10 +1,10 @@
-#include "tensorflow/compiler/xla/status.h"
-#include "tensorflow/compiler/xla/shape.h"
-#include "tensorflow/compiler/xla/client/xla_builder.h"
+#include "oneflow/xla/of2xla/xla_op_context.h"
+#include "oneflow/xla/of2xla/xla_argument.h"
 #include "oneflow/xla/of2xla/xla_shape.h"
 #include "oneflow/xla/of2xla/xla_utility.h"
-#include "oneflow/xla/of2xla/xla_argument.h"
-#include "oneflow/xla/of2xla/xla_op_context.h"
+#include "tensorflow/compiler/xla/client/xla_builder.h"
+#include "tensorflow/compiler/xla/shape.h"
+#include "tensorflow/compiler/xla/status.h"
 
 namespace oneflow {
 namespace mola {
@@ -33,9 +33,9 @@ XlaOprand XlaOprand::XlaOp(xla::XlaOp handle) {
 xla::XlaOp XlaOprand::AsXlaOp(xla::XlaBuilder *builder) const {
   CHECK(initialized_) << "XlaOprand has not been initialized.";
   if (handle_.IsUninitialized()) {
-//    LiteralSlice literal;
-//    HostTensorToBorrowingLiteral(constant_value_, &literal);
-//    return xla::ConstantLiteral(builder, literal);
+    //    LiteralSlice literal;
+    //    HostTensorToBorrowingLiteral(constant_value_, &literal);
+    //    return xla::ConstantLiteral(builder, literal);
   }
   CHECK_EQ(builder, handle_.builder())
       << "Mismatched builders in XlaOprand::AsXlaOp";
@@ -126,7 +126,7 @@ std::string XlaOpContext::AttrTypeInOneof(const std::string &oneof_name) const {
   const Descriptor *d = param_.op_conf->GetDescriptor();
   const OneofDescriptor *ofd = d->FindOneofByName(oneof_name);
   const Reflection *r = param_.op_conf->GetReflection();
-  
+
   CHECK(ofd) << "Message has no oneof field named " << oneof_name;
   const google::protobuf::FieldDescriptor *fd =
       r->GetOneofFieldDescriptor(*(param_.op_conf), ofd);

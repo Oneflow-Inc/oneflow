@@ -1,9 +1,9 @@
-#include "tensorflow/compiler/xla/client/xla_builder.h"
-#include "tensorflow/compiler/xla/client/lib/math.h"
-#include "tensorflow/compiler/xla/client/lib/constants.h"
-#include "oneflow/xla/of2xla/xla_op_compiler_registry.h"
 #include "oneflow/xla/of2xla/xla_op_compiler.h"
+#include "oneflow/xla/of2xla/xla_op_compiler_registry.h"
 #include "oneflow/xla/of2xla/xla_op_context.h"
+#include "tensorflow/compiler/xla/client/lib/constants.h"
+#include "tensorflow/compiler/xla/client/lib/math.h"
+#include "tensorflow/compiler/xla/client/xla_builder.h"
 
 #include "oneflow/xla/of2xla/ops/unary_op.h"
 
@@ -36,9 +36,7 @@ struct Gelu {
 REGISTER_XLA_OP_COMPILER(Gelu, ApplyUnaryOp<Gelu>);
 
 struct Identity {
-  xla::XlaOp operator()(const xla::XlaOp &x) {
-    return x;
-  }
+  xla::XlaOp operator()(const xla::XlaOp &x) { return x; }
 };
 
 // REGISTER_XLA_OP_COMPILER(Identity, ApplyUnaryOp<Identity>);

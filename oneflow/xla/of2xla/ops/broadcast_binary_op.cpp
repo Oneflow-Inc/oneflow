@@ -1,10 +1,10 @@
-#include "tensorflow/compiler/xla/client/xla_builder.h"
-#include "oneflow/xla/of2xla/xla_op_compiler_registry.h"
 #include "oneflow/xla/of2xla/xla_op_compiler.h"
+#include "oneflow/xla/of2xla/xla_op_compiler_registry.h"
 #include "oneflow/xla/of2xla/xla_op_context.h"
+#include "tensorflow/compiler/xla/client/xla_builder.h"
 
-#include "oneflow/xla/of2xla/xla_helpers.h"
 #include "oneflow/xla/of2xla/ops/binary_op.h"
+#include "oneflow/xla/of2xla/xla_helpers.h"
 
 namespace oneflow {
 namespace mola {
@@ -23,20 +23,20 @@ class BcastBinaryOp : public XlaOpCompiler {
     xla::XlaOp a = Reshape(ctx->Input("a"), shape_a);
     xla::XlaOp b = Reshape(ctx->Input("b"), shape_b);
 
-//    std::vector<long long> bcast_dimensions_a(axes);
-//    std::vector<long long> bcast_dimensions_b(axes);
-//    for (int i = 0; i < axes; ++i) {
-//      int64_t dim = std::max(shape_a.At(i), shape_b.At(i));
-//      bcast_dimensions_a[i] = dim / shape_a.At(i);
-//      bcast_dimensions_b[i] = dim / shape_b.At(i);
-//    }
-//
-//    if (NeedBroadcast(bcast_dimensions_a)) {
-//      a = xla::Broadcast(a, bcast_dimensions_a);
-//    }
-//    if (NeedBroadcast(bcast_dimensions_b)) {
-//      b = xla::Broadcast(b, bcast_dimensions_b);
-//    }
+    //    std::vector<long long> bcast_dimensions_a(axes);
+    //    std::vector<long long> bcast_dimensions_b(axes);
+    //    for (int i = 0; i < axes; ++i) {
+    //      int64_t dim = std::max(shape_a.At(i), shape_b.At(i));
+    //      bcast_dimensions_a[i] = dim / shape_a.At(i);
+    //      bcast_dimensions_b[i] = dim / shape_b.At(i);
+    //    }
+    //
+    //    if (NeedBroadcast(bcast_dimensions_a)) {
+    //      a = xla::Broadcast(a, bcast_dimensions_a);
+    //    }
+    //    if (NeedBroadcast(bcast_dimensions_b)) {
+    //      b = xla::Broadcast(b, bcast_dimensions_b);
+    //    }
     ctx->SetOutput("out", BinaryOp()(a, b));
   }
 

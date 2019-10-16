@@ -1,9 +1,9 @@
-#include "tensorflow/compiler/xla/client/xla_builder.h"
+#include "oneflow/xla/of2xla/xla_op_compiler.h"
+#include "oneflow/xla/of2xla/xla_op_compiler_registry.h"
+#include "oneflow/xla/of2xla/xla_op_context.h"
 #include "tensorflow/compiler/xla/client/lib/matrix.h"
 #include "tensorflow/compiler/xla/client/lib/slicing.h"
-#include "oneflow/xla/of2xla/xla_op_compiler_registry.h"
-#include "oneflow/xla/of2xla/xla_op_compiler.h"
-#include "oneflow/xla/of2xla/xla_op_context.h"
+#include "tensorflow/compiler/xla/client/xla_builder.h"
 
 #include "oneflow/xla/of2xla/xla_helpers.h"
 
@@ -139,8 +139,7 @@ class GatherOp : public XlaOpCompiler {
     if (batch_dims > 0) {
       output = xla::TorchIndexSelect(input, indices, axis, batch_dims);
     } else {
-      output = GenericGather(input, indices, input_shape, indices_shape,
-                             axis);
+      output = GenericGather(input, indices, input_shape, indices_shape, axis);
     }
     ctx->SetOutput("out", output);
   }
@@ -148,9 +147,7 @@ class GatherOp : public XlaOpCompiler {
   virtual int GatherAxis(XlaOpContext *ctx) const {
     return ctx->GetAttr<int64_t>("axis");
   }
-  virtual int GatherBatchDims(XlaOpContext *ctx) const {
-    return 0;
-  }
+  virtual int GatherBatchDims(XlaOpContext *ctx) const { return 0; }
 };
 
 class BatchGatherOp : public GatherOp {

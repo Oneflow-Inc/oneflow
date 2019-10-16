@@ -6,11 +6,11 @@
 
 #include "oneflow/core/job/job.pb.h"
 #include "oneflow/core/job/job_builder.h"
-#include "oneflow/xla/of2xla/xla_utility.h"
-#include "oneflow/xla/of2xla/xla_graph.h"
-#include "oneflow/xla/of2xla/xla_node_attr.h"
 #include "oneflow/xla/of2xla/pass/rewrite_optimizer.h"
 #include "oneflow/xla/of2xla/pass/xla_optimize_pass.h"
+#include "oneflow/xla/of2xla/xla_graph.h"
+#include "oneflow/xla/of2xla/xla_node_attr.h"
+#include "oneflow/xla/of2xla/xla_utility.h"
 
 namespace oneflow {
 
@@ -59,10 +59,8 @@ OptimizerMode OptimizerRewritor::GetOptimizerModeIfModelUpdate(
 }
 
 OperatorConf *OptimizerRewritor::BuildClipGradientOp(
-                                const std::string &node_name,
-                                const std::string &gradient,
-                                const std::string &total_instances,
-                                const ClipConf &clip_conf) {
+    const std::string &node_name, const std::string &gradient,
+    const std::string &total_instances, const ClipConf &clip_conf) {
   OperatorConf op_conf;
   op_conf.set_name(absl::StrCat(node_name, "-clip_gradient"));
   ClipGradientOpConf *conf = op_conf.mutable_clip_gradient_conf();
@@ -75,17 +73,15 @@ OperatorConf *OptimizerRewritor::BuildClipGradientOp(
     float global_norm = clip_conf.clip_by_global_norm().global_norm();
     conf->set_global_norm(global_norm);
   }
-  
+
   ParallelConf parallel_conf = builder_->GetParallelConf(node_name);
   builder_->AddOps(parallel_conf, {op_conf});
   return builder_->MutableOpConf(op_conf.name());
 }
 
 OperatorConf *OptimizerRewritor::BuildOptimizerOp(
-                    const mola::XlaNode *node,
-                    const std::string &gradient,
-                    const std::string &total_instances,
-                    const std::string &learning_rate) {
+    const mola::XlaNode *node, const std::string &gradient,
+    const std::string &total_instances, const std::string &learning_rate) {
   OptimizerMode mode = GetOptimizerModeIfModelUpdate(node);
   CHECK_NE(mode, OptimizerMode::kInvalid);
   OperatorConf op_conf = OptimizerParamBuilder::Build(
@@ -136,15 +132,14 @@ void OptimizerRewritor::Run() {
     CHECK_NOTNULL(user_conf);
     // Create clip gradient operator if `has_clip_conf`
     if (user_conf->has_clip_conf()) {
-      OperatorConf *clip_conf = BuildClipGradientOp(node->op_name(), model_diff,
-                                                    total_instances,
-                                                    user_conf->clip_conf());
+      OperatorConf *clip_conf = BuildClipGradientOp(
+          node->op_name(), model_diff, total_instances, user_conf->clip_conf());
       operator_confs.push_back(clip_conf);
       model_diff = absl::StrCat(clip_conf->name(), "/out");
     }
 
-    OperatorConf *optimizer_conf = BuildOptimizerOp(
-        node, model_diff, total_instances, learning_rate);
+    OperatorConf *optimizer_conf =
+        BuildOptimizerOp(node, model_diff, total_instances, learning_rate);
     operator_confs.push_back(optimizer_conf);
 
     if (control_in_op_names.size() > 0) {
@@ -165,8 +160,8 @@ class RewriteOptimizerPass : public XlaOptimizePass {
       : XlaOptimizePass(options) {}
 
   void Run() override {
-    CHECK(this->options_.graph) <<
-        "Graph is required by `RewriteOptimizerPass`.";
+    CHECK(this->options_.graph)
+        << "Graph is required by `RewriteOptimizerPass`.";
     CHECK(this->options_.job) << "Job is required by `RewriteOptimizerPass`.";
     OptimizerRewritor(*(this->options_.graph), this->options_.job).Run();
   }

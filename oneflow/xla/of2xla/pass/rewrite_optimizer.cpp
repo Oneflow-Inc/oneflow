@@ -1,5 +1,5 @@
-#include "oneflow/xla/of2xla/xla_node_attr.h"
 #include "oneflow/xla/of2xla/pass/rewrite_optimizer.h"
+#include "oneflow/xla/of2xla/xla_node_attr.h"
 
 namespace oneflow {
 
@@ -27,7 +27,7 @@ void OptimizerParamBuilder::BuilderImpl::ApplyBuild<OptimizerMode::kAdam>() {
   // conf->set_beta1(GetNodeAttr<std::string>(node_, "beta1_t"));
   // conf->set_beta2(GetNodeAttr<std::string>(node_, "beta2_t"));
   const auto *user_conf = dynamic_cast<NormalModelUpdateOpUserConf *>(
-        GetNodeAttr<PbMessage *>(node_, "user_conf"));
+      GetNodeAttr<PbMessage *>(node_, "user_conf"));
   CHECK_NOTNULL(user_conf);
   if (user_conf->has_adam_conf()) {
     const float epsilon = user_conf->adam_conf().epsilon();
@@ -51,10 +51,8 @@ void OptimizerParamBuilder::BuilderImpl::ApplyBuild<OptimizerMode::kAdam>() {
 }
 
 /*static*/ OperatorConf OptimizerParamBuilder::Build(
-    const OptimizerMode &mode,
-    const mola::XlaNode *node,
-    const std::string &gradient,
-    const std::string &total_instances,
+    const OptimizerMode &mode, const mola::XlaNode *node,
+    const std::string &gradient, const std::string &total_instances,
     const std::string &learning_rate) {
   OperatorConf op_conf;
   op_conf.set_name(node->op_name());

@@ -1,10 +1,10 @@
 #ifndef ONEFLOW_CORE_COMPILER_OF2XLA_XLA_SHAPE_H_
 #define ONEFLOW_CORE_COMPILER_OF2XLA_XLA_SHAPE_H_
 
+#include "oneflow/core/common/data_type.pb.h"
+#include "oneflow/core/common/shape.h"
 #include "tensorflow/compiler/xla/shape.h"
 #include "tensorflow/compiler/xla/xla_data.pb.h"
-#include "oneflow/core/common/shape.h"
-#include "oneflow/core/common/data_type.pb.h"
 
 namespace oneflow {
 namespace mola {
