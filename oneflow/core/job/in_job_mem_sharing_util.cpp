@@ -10,7 +10,7 @@ namespace oneflow {
 
 namespace {
 
-const size_t kMemReuseAlgorithmNum = 1;
+const size_t kMemReuseAlgorithmNum = 2;
 
 int64_t GenDeviceUniqueId(int64_t machine_id, int64_t device_id) {
   return (machine_id << 32) | device_id;
@@ -414,7 +414,7 @@ class BfcAllocator final {
   void MergeFreePieceAndCheckValid() {
     for (auto it = std::next(piece_list_.begin()); it != piece_list_.end(); ++it) {
       auto pre_it = std::prev(it);
-      if (it->is_free == pre_it->is_free) {
+      if (it->is_free && pre_it->is_free) {
         it->begin = pre_it->begin;
         CHECK(piece_list_.erase(pre_it) == it);
       }
