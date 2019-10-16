@@ -1,7 +1,7 @@
-#include "tensorflow/stream_executor/host/host_platform_id.h"
-#include "tensorflow/stream_executor/cuda/cuda_platform_id.h"
-#include "oneflow/core/device/cuda_util.h"
 #include "oneflow/xla/of2xla/memory/device_memory_pool.h"
+#include "oneflow/core/device/cuda_util.h"
+#include "tensorflow/stream_executor/cuda/cuda_platform_id.h"
+#include "tensorflow/stream_executor/host/host_platform_id.h"
 
 namespace oneflow {
 namespace mola {
@@ -90,12 +90,12 @@ void DeviceMemoryPool::Reserve(size_t size) {
   if (limited_memory_size_ > -1) {
     CHECK_LT(size, limited_memory_size_);
   }
-  
+
   while (size > capacity_) {
     // Block host to ensure that all the launched kernels depend on this
     // memory buffer have been executed completely
     CHECK(stream_->BlockHostUntilDone().ok());
-  
+
     ReleaseImpl();
 
     ReserveImpl(size);
@@ -113,7 +113,7 @@ void DeviceMemoryPool::Release() {
 typedef DeviceMemoryPool::MemPoolFactory MemPoolFactory;
 typedef std::unordered_map<se::Platform::Id, MemPoolFactory> MemPoolFactoryMap;
 
-static MemPoolFactoryMap* GlobalMemPoolFactories() {
+static MemPoolFactoryMap *GlobalMemPoolFactories() {
   static MemPoolFactoryMap factories;
   return &factories;
 }

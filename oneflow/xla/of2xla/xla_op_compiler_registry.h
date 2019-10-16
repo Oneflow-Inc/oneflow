@@ -1,10 +1,10 @@
 #ifndef ONEFLOW_CORE_COMPILER_OF2XLA_XLA_OP_COMPILER_REGISTRY_H_
 #define ONEFLOW_CORE_COMPILER_OF2XLA_XLA_OP_COMPILER_REGISTRY_H_
 
-#include <unordered_map>
-#include <string>
-#include <vector>
 #include <memory>
+#include <string>
+#include <unordered_map>
+#include <vector>
 #include "glog/logging.h"
 
 #include "oneflow/xla/of2xla/xla_op_compiler.h"
@@ -14,7 +14,7 @@ namespace mola {
 
 class XlaOpCompilerRegistry {
  public:
-  typedef XlaOpCompiler* (*CreatorFunc)();
+  typedef XlaOpCompiler *(*CreatorFunc)();
 
   struct XlaBackendRegistry {
     void Register(const std::string &type, CreatorFunc creator) {
@@ -27,7 +27,9 @@ class XlaOpCompilerRegistry {
       return creator_map_[type];
     }
 
-    CreatorFunc operator[](const std::string &type) { return this->Build(type); }
+    CreatorFunc operator[](const std::string &type) {
+      return this->Build(type);
+    }
 
     bool IsRegistered(const std::string &type) {
       return (creator_map_.count(type) > 0) ? true : false;
@@ -46,9 +48,14 @@ class XlaOpCompilerRegistry {
     std::string DebugString() {
       const auto all_register_types = ListAllRegisteredTypes();
       int size = all_register_types.size();
-      std::string debug_str = "All registered types for backend " + backend_ + " (";
-      for (int i = 0; i < size - 1; ++i) { debug_str += all_register_types[i] + ", "; }
-      if (size > 0) { debug_str += all_register_types[size - 1]; }
+      std::string debug_str =
+          "All registered types for backend " + backend_ + " (";
+      for (int i = 0; i < size - 1; ++i) {
+        debug_str += all_register_types[i] + ", ";
+      }
+      if (size > 0) {
+        debug_str += all_register_types[size - 1];
+      }
       debug_str += ")";
       return debug_str;
     }
@@ -81,7 +88,8 @@ class XlaOpCompilerRegistry {
     return Build(backend)[type]();
   }
 
-  static bool IsRegistered(const std::string &backend, const std::string &type) {
+  static bool IsRegistered(const std::string &backend,
+                           const std::string &type) {
     bool registered = false;
     XlaBackendFactory *factory = XlaOpCompilerRegistry::Factory();
     if (factory->count(backend) > 0) {
@@ -92,7 +100,7 @@ class XlaOpCompilerRegistry {
   }
 
   static void SetMutableVariables(const std::string &type,
-                                 const std::vector<std::string> &variables) {
+                                  const std::vector<std::string> &variables) {
     XlaMutableFactory *factory = XlaOpCompilerRegistry::MutableFactory();
     factory->emplace(type, variables);
   }
@@ -120,45 +128,42 @@ class XlaOpCompilerRegistry {
 template <typename OpCompiler>
 class XlaOpCompilerRegistrar {
  public:
-  XlaOpCompilerRegistrar(const std::string &type)
-      : backend_(""), type_(type) {
-    auto creator = []() -> XlaOpCompiler* { return new OpCompiler; };
+  XlaOpCompilerRegistrar(const std::string &type) : backend_(""), type_(type) {
+    auto creator = []() -> XlaOpCompiler * { return new OpCompiler; };
     XlaOpCompilerRegistry::Register("CPU", type_, creator);
     XlaOpCompilerRegistry::Register("CUDA", type_, creator);
   }
 
   XlaOpCompilerRegistrar(const std::string &backend, const std::string &type)
       : backend_(backend), type_(type) {
-    auto creator = []() -> XlaOpCompiler* { return new OpCompiler; };
+    auto creator = []() -> XlaOpCompiler * { return new OpCompiler; };
     XlaOpCompilerRegistry::Register(backend_, type_, creator);
   }
 
-  XlaOpCompilerRegistrar& MutableVariables(
+  XlaOpCompilerRegistrar &MutableVariables(
       const std::vector<std::string> &variables) {
     XlaOpCompilerRegistry::SetMutableVariables(type_, variables);
     return *this;
   }
 
-private:
+ private:
   std::string backend_;
   std::string type_;
 };
 
-#define REGISTER_XLA_OP_COMPILER(Type, OpCompiler) \
-  static XlaOpCompilerRegistrar<OpCompiler>                      \
-      g_xla_all__##Type##__op_compiler __attribute__((unused)) = \
-      XlaOpCompilerRegistrar<OpCompiler>(#Type)
+#define REGISTER_XLA_OP_COMPILER(Type, OpCompiler)                           \
+  static XlaOpCompilerRegistrar<OpCompiler> g_xla_all__##Type##__op_compiler \
+      __attribute__((unused)) = XlaOpCompilerRegistrar<OpCompiler>(#Type)
 
-#define REGISTER_XLA_CPU_OP_COMPILER(Type, OpCompiler)           \
-  static XlaOpCompilerRegistrar<OpCompiler>                      \
-      g_xla_cpu__##Type##__op_compiler __attribute__((unused)) = \
-      XlaOpCompilerRegistrar<OpCompiler>("CPU", #Type)
+#define REGISTER_XLA_CPU_OP_COMPILER(Type, OpCompiler)                       \
+  static XlaOpCompilerRegistrar<OpCompiler> g_xla_cpu__##Type##__op_compiler \
+      __attribute__((unused)) =                                              \
+          XlaOpCompilerRegistrar<OpCompiler>("CPU", #Type)
 
-#define REGISTER_XLA_CUDA_OP_COMPILER(Type, OpCompiler)          \
-  static XlaOpCompilerRegistrar<OpCompiler>                      \
-      g_xla_gpu__##Type##__op_compiler __attribute__((unused)) = \
-      XlaOpCompilerRegistrar<OpCompiler>("CUDA", #Type)
-
+#define REGISTER_XLA_CUDA_OP_COMPILER(Type, OpCompiler)                      \
+  static XlaOpCompilerRegistrar<OpCompiler> g_xla_gpu__##Type##__op_compiler \
+      __attribute__((unused)) =                                              \
+          XlaOpCompilerRegistrar<OpCompiler>("CUDA", #Type)
 
 inline bool IsOpCompilerRegistered(const std::string &backend,
                                    const std::string &op_type) {

@@ -68,7 +68,7 @@ class XlaNode {
 
   const Operator *op() const { return op_; }
   int64_t unique_id() const { return unique_id_; }
-  int64_t cluster_id() const {return cluster_id_; }
+  int64_t cluster_id() const { return cluster_id_; }
   const std::string &backend() const { return backend_; }
   const std::string &op_type() const { return op_type_; }
   const std::string &op_name() const { return op_name_; }
@@ -85,7 +85,7 @@ class XlaNode {
   XlaGraph *sub_graph() const { return sub_graph_; }
 
   virtual const PbMessage &proto_conf() const {
-      return this->op()->GetCustomizedConf();
+    return this->op()->GetCustomizedConf();
   }
 
   void set_cluster_id(int64_t cluster_id) { cluster_id_ = cluster_id; }
@@ -101,7 +101,7 @@ class XlaNode {
   bool IsOutArgumentNode() const;
   bool IsReachable(const XlaNode &dst_node) const;
 
-  typedef std::function<BlobDesc*(const LogicalBlobId &)> GetBlobDescFunc;
+  typedef std::function<BlobDesc *(const LogicalBlobId &)> GetBlobDescFunc;
   virtual void InferBlobDescs(GetBlobDescFunc blob_desc_func,
                               const ParallelContext &parallel_ctx,
                               const SbpSignature &sbp_signature) const;
@@ -109,8 +109,8 @@ class XlaNode {
  protected:
   friend class XlaGraph;
   // XlaNode only can be created by XlaGraph
-  XlaNode() : op_(nullptr), unique_id_(-1), cluster_id_(-1),
-              sub_graph_(nullptr) {}
+  XlaNode()
+      : op_(nullptr), unique_id_(-1), cluster_id_(-1), sub_graph_(nullptr) {}
   explicit XlaNode(const Operator *op);
   virtual ~XlaNode() {}
 

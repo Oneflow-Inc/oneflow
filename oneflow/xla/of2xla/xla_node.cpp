@@ -1,8 +1,8 @@
+#include "oneflow/xla/of2xla/xla_node.h"
 #include <unordered_set>
 #include "absl/strings/str_split.h"
-#include "oneflow/xla/of2xla/xla_utility.h"
-#include "oneflow/xla/of2xla/xla_node.h"
 #include "oneflow/xla/of2xla/xla_op_compiler_registry.h"
+#include "oneflow/xla/of2xla/xla_utility.h"
 
 namespace oneflow {
 namespace mola {
@@ -54,8 +54,8 @@ DeviceType BackendToDeviceType(const std::string &backend) {
   }
 }
 
-XlaNode::XlaNode(const Operator *op) : op_(op), unique_id_(-1),
-                                       cluster_id_(-1), sub_graph_(nullptr) {
+XlaNode::XlaNode(const Operator *op)
+    : op_(op), unique_id_(-1), cluster_id_(-1), sub_graph_(nullptr) {
   backend_ = DeviceTypeToBackend(op_->device_type());
   op_name_ = op_->op_name();
   op_type_ = ExtractOpTypeAsString(op_->op_conf());
@@ -96,17 +96,11 @@ void XlaNode::EraseOutEdge(const XlaEdge *edge) {
   });
 }
 
-bool XlaNode::IsSourceNode() const {
-  return in_edges_.size() == 0;
-}
+bool XlaNode::IsSourceNode() const { return in_edges_.size() == 0; }
 
-bool XlaNode::IsFinishNode() const {
-  return out_edges_.size() == 0;
-}
+bool XlaNode::IsFinishNode() const { return out_edges_.size() == 0; }
 
-bool XlaNode::IsArgumentNode() const {
-  return op_type_ == _XlaArgumentOpType;
-}
+bool XlaNode::IsArgumentNode() const { return op_type_ == _XlaArgumentOpType; }
 
 bool XlaNode::IsInArgumentNode() const {
   return IsArgumentNode() && absl::StartsWith(op_name_, _XlaInArgumentPrefix);
@@ -141,10 +135,9 @@ bool XlaNode::IsReachable(const XlaNode &dst_node) const {
 
 std::vector<std::string> XlaNode::input_bns() const {
   std::vector<std::string> input_bns(inputs_.size());
-  std::transform(inputs_.begin(), inputs_.end(), input_bns.begin(),
-                 [](const std::pair<std::string, LogicalBlobId> &in) {
-                   return in.first;
-                 });
+  std::transform(
+      inputs_.begin(), inputs_.end(), input_bns.begin(),
+      [](const std::pair<std::string, LogicalBlobId> &in) { return in.first; });
   return input_bns;
 }
 
@@ -174,7 +167,7 @@ void XlaNode::InferBlobDescs(GetBlobDescFunc blob_desc_func,
     return blob_desc_func(lbi);
   };
   op()->InferBlobDescsIf(blob_desc_func_internal, &parallel_ctx,
-                         &local_sbp_signature, [](OpContext*) {});
+                         &local_sbp_signature, [](OpContext *) {});
 }
 
 XlaArgumentNode::XlaArgumentNode(const XlaLaunchOpConf::Argument &arg_conf)

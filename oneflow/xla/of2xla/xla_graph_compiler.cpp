@@ -1,18 +1,18 @@
-#include "glog/logging.h"
+#include "oneflow/xla/of2xla/xla_graph_compiler.h"
 #include "absl/strings/str_cat.h"
-#include "tensorflow/compiler/xla/service/service.h"
-#include "tensorflow/compiler/xla/client/local_client.h"
-#include "tensorflow/compiler/xla/client/xla_builder.h"
+#include "glog/logging.h"
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/register/blob.h"
-#include "oneflow/xla/of2xla/xla_utility.h"
-#include "oneflow/xla/of2xla/xla_shape.h"
-#include "oneflow/xla/of2xla/xla_op_compiler_registry.h"
 #include "oneflow/xla/of2xla/xla_argument.h"
-#include "oneflow/xla/of2xla/xla_op_context.h"
-#include "oneflow/xla/of2xla/xla_op_compiler.h"
 #include "oneflow/xla/of2xla/xla_graph.h"
-#include "oneflow/xla/of2xla/xla_graph_compiler.h"
+#include "oneflow/xla/of2xla/xla_op_compiler.h"
+#include "oneflow/xla/of2xla/xla_op_compiler_registry.h"
+#include "oneflow/xla/of2xla/xla_op_context.h"
+#include "oneflow/xla/of2xla/xla_shape.h"
+#include "oneflow/xla/of2xla/xla_utility.h"
+#include "tensorflow/compiler/xla/client/local_client.h"
+#include "tensorflow/compiler/xla/client/xla_builder.h"
+#include "tensorflow/compiler/xla/service/service.h"
 
 namespace oneflow {
 namespace mola {
@@ -24,8 +24,8 @@ XlaGraphCompiler::XlaGraphCompiler(xla::LocalClient *client,
 void XlaGraphCompiler::BuildComputation(
     const XlaGraph *graph,
     const std::unordered_map<Argument, XlaOprand> &entry_oprands,
-    const std::vector<Argument> &return_arguments,
-    xla::Shape *output_shape, xla::XlaComputation *computation) {
+    const std::vector<Argument> &return_arguments, xla::Shape *output_shape,
+    xla::XlaComputation *computation) {
   // All operator's output oprands collector
   std::unordered_map<Argument, XlaOprand> all_outputs(entry_oprands);
 
@@ -87,12 +87,12 @@ void XlaGraphCompiler::BuildComputation(
   // TODO(hjchen2) Remove debug logging
   VLOG(4) << computation->proto().DebugString();
 
-  OF_CHECK_AND_ASSIGN(const auto& program_shape,
+  OF_CHECK_AND_ASSIGN(const auto &program_shape,
                       computation->GetProgramShape());
   *output_shape = program_shape.result();
   for (int i = 0; i < return_vals.size(); ++i) {
-    xla::Shape* output_sub_shape = xla::ShapeUtil::GetMutableSubshape(
-        output_shape, {i});
+    xla::Shape *output_sub_shape =
+        xla::ShapeUtil::GetMutableSubshape(output_shape, {i});
     xla::LayoutUtil::SetToDefaultLayout(output_sub_shape);
   }
 }
@@ -100,7 +100,7 @@ void XlaGraphCompiler::BuildComputation(
 void XlaGraphCompiler::BuildExecutable(
     const CompilationResult &result,
     std::unique_ptr<xla::LocalExecutable> *executable) {
-  std::vector<const xla::Shape*> argument_layouts(
+  std::vector<const xla::Shape *> argument_layouts(
       result.xla_input_shapes.size());
   for (int i = 0; i < result.xla_input_shapes.size(); ++i) {
     argument_layouts[i] = &result.xla_input_shapes[i];
@@ -117,15 +117,14 @@ void XlaGraphCompiler::BuildExecutable(
 }
 
 CompilationResult XlaGraphCompiler::Compile(
-    const XlaGraph *graph,
-    const std::vector<Argument> &entry_arguments,
+    const XlaGraph *graph, const std::vector<Argument> &entry_arguments,
     const std::vector<Argument> &return_arguments,
     const std::vector<std::string> &entry_names,
     const std::vector<std::string> &return_names,
     const std::vector<xla::XlaBuilder::InputOutputAlias> &aliases) {
   CHECK_NOTNULL(graph);
   CompilationResult result;
-  for (const xla::XlaBuilder::InputOutputAlias& alias : aliases) {
+  for (const xla::XlaBuilder::InputOutputAlias &alias : aliases) {
     builder_->SetUpAlias(alias.output_index, alias.param_number,
                          alias.param_index);
   }
@@ -138,7 +137,7 @@ CompilationResult XlaGraphCompiler::Compile(
                    &result.xla_output_shape, &result.computation);
 
   BuildExecutable(result, &result.executable);
-  
+
   return std::move(result);
 }
 
@@ -152,8 +151,8 @@ void XlaGraphCompiler::BuildEntryParameters(
     input_shapes->push_back(shape);
 
     // Treat any input as xla Parameter
-    xla::XlaOp handle = xla::Parameter(builder_, i, shape,
-                                       absl::StrCat("arg", i));
+    xla::XlaOp handle =
+        xla::Parameter(builder_, i, shape, absl::StrCat("arg", i));
     entry_oprands->emplace(arg, XlaOprand::XlaOp(handle));
   }
 }
@@ -175,8 +174,7 @@ void XlaGraphCompiler::SetupNodeArguments(
 }
 
 void XlaGraphCompiler::BuildCompilationArguments(
-    const XlaGraph *graph,
-    const std::vector<Argument> &entry_arguments,
+    const XlaGraph *graph, const std::vector<Argument> &entry_arguments,
     const std::vector<Argument> &return_arguments,
     const std::vector<std::string> &entry_names,
     const std::vector<std::string> &return_names) {

@@ -8,8 +8,8 @@ namespace oneflow {
 
 const static std::string kProducedLbi2ConsumedDiffLbi = "produced_lbi2consumed_diff_lbi";
 
-std::function<const ParallelConf*(const std::string&)> MakeGetterParallelConf4OpName(
-    const Placement& placement);
+std::function<const ParallelConf *(const std::string &)> MakeGetterParallelConf4OpName(
+    const Placement &placement);
 
 class SbpParallel;
 class LogicalBlobId;
@@ -18,35 +18,34 @@ class Operator;
 class JobBuilder final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(JobBuilder);
-  explicit JobBuilder(Job* job);
+  explicit JobBuilder(Job *job);
   ~JobBuilder() = default;
-  
-  const Job& job() const { return *job_; }
-  JobHelperConf* mutable_helper() { return job_->mutable_helper(); }
-  SbpConf* mutable_sbp_conf() { return job_->mutable_sbp_conf(); }
 
-  const OperatorConf& OpConf4OpName(const std::string& op_name) const;
-  const ParallelConf& ParallelConf4OpName(const std::string& op_name) const;
-  void AddOps(const ParallelConf& parallel_conf, const std::vector<OperatorConf>& op_confs);
+  const Job &job() const { return *job_; }
+  JobHelperConf *mutable_helper() { return job_->mutable_helper(); }
+  SbpConf *mutable_sbp_conf() { return job_->mutable_sbp_conf(); }
+
+  const OperatorConf &OpConf4OpName(const std::string &op_name) const;
+  const ParallelConf &ParallelConf4OpName(const std::string &op_name) const;
+  void AddOps(const ParallelConf &parallel_conf, const std::vector<OperatorConf> &op_confs);
   void RemoveOp(const std::string &op_name);
 
-  void MutOpsOnlyOnce(const std::vector<OperatorConf>& op_confs);
-  void MutParallelConfOnlyOnce(const std::string& op_name, const ParallelConf& parallel_conf);
-  void AddOrMutOpsOnlyOnce(const ParallelConf& parallel_conf,
-                           const std::vector<OperatorConf>& op_confs);
-  void DelOps(const std::vector<OperatorConf>& op_confs);
-  SbpParallel* MutSbpParallel4Oba(const OpBlobArg& oba) const;
-  void BindIdenticalSbpOpBlobArgPair(const OpBlobArg& first, const OpBlobArg& second);
+  void MutOpsOnlyOnce(const std::vector<OperatorConf> &op_confs);
+  void MutParallelConfOnlyOnce(const std::string &op_name, const ParallelConf &parallel_conf);
+  void AddOrMutOpsOnlyOnce(const ParallelConf &parallel_conf,
+                           const std::vector<OperatorConf> &op_confs);
+  void DelOps(const std::vector<OperatorConf> &op_confs);
+  SbpParallel *MutSbpParallel4Oba(const OpBlobArg &oba) const;
+  void BindIdenticalSbpOpBlobArgPair(const OpBlobArg &first, const OpBlobArg &second);
 
-  void ForEachOperator(const std::function<void(const Operator&)>& Handler) const;
+  void ForEachOperator(const std::function<void(const Operator &)> &Handler) const;
 
   OperatorConf *MutableOpConf(const std::string &op_name);
   const OperatorConf &GetOpConf(const std::string &op_name);
 
   SbpSignature *MutableSbpSignature(const std::string &op_name);
-  const SbpSignature& GetSbpSignature(const std::string &op_name) const;
-  void AddSbpSignature(const std::string &op_name,
-                       const SbpSignature &sbp_signature);
+  const SbpSignature &GetSbpSignature(const std::string &op_name) const;
+  void AddSbpSignature(const std::string &op_name, const SbpSignature &sbp_signature);
 
   ParallelConf *MutableParallelConf(const std::string &op_name);
   const ParallelConf &GetParallelConf(const std::string &op_name) const;
@@ -59,16 +58,14 @@ class JobBuilder final {
   OptInt64 *MutableBatchAxis(const std::string &lbn);
   const OptInt64 &GetBatchAxis(const std::string &lbn) const;
   void AddBatchAxis(const std::string &lbn, const OptInt64 &axis);
-  bool HasBatchAxis(const std::string &lbn) const {
-    return lbn2batch_axis_.count(lbn) > 0;
-  }
+  bool HasBatchAxis(const std::string &lbn) const { return lbn2batch_axis_.count(lbn) > 0; }
 
  private:
-  PlacementGroup* FindPlacementGroup(const std::string& op_name) const;
+  PlacementGroup *FindPlacementGroup(const std::string &op_name) const;
 
-  Job* job_;
-  HashMap<std::string, OperatorConf*> op_name2op_conf_;
-  HashMap<std::string, ParallelConf*> op_name2parallel_conf_;
+  Job *job_;
+  HashMap<std::string, OperatorConf *> op_name2op_conf_;
+  HashMap<std::string, ParallelConf *> op_name2parallel_conf_;
   HashSet<std::string> modified_op_conf_op_names_;
   HashSet<std::string> modified_parallel_conf_op_names_;
 

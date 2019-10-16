@@ -33,13 +33,12 @@ struct OptimizeOptions {
 
 class XlaOptimizePass {
  public:
-  XlaOptimizePass(const OptimizeOptions &options)
-      : options_(options) {}
+  XlaOptimizePass(const OptimizeOptions &options) : options_(options) {}
 
   virtual ~XlaOptimizePass() {}
 
   virtual void Run() = 0;
-  
+
   // Create an OptimizePass instance by pass type
   static XlaOptimizePass *Create(const std::string &pass_type,
                                  const OptimizeOptions &options);
@@ -56,17 +55,17 @@ template <typename OptimizePassClass>
 class XlaOptimizePassRegistrar {
  public:
   XlaOptimizePassRegistrar(const std::string &pass_type) {
-    auto factory = [](const OptimizeOptions &options) -> OptimizePassClass* {
-        return new OptimizePassClass(options);
+    auto factory = [](const OptimizeOptions &options) -> OptimizePassClass * {
+      return new OptimizePassClass(options);
     };
     XlaOptimizePass::Register(pass_type, factory);
   }
 };
 
-#define REGISTER_OPTIMIZE_PASS(PassType, OptimizePassClass)       \
-  static XlaOptimizePassRegistrar<OptimizePassClass>              \
-      _xla_optimize_pass_##PassType##_ __attribute__((unused)) =  \
-      XlaOptimizePassRegistrar<OptimizePassClass>(#PassType);
+#define REGISTER_OPTIMIZE_PASS(PassType, OptimizePassClass)      \
+  static XlaOptimizePassRegistrar<OptimizePassClass>             \
+      _xla_optimize_pass_##PassType##_ __attribute__((unused)) = \
+          XlaOptimizePassRegistrar<OptimizePassClass>(#PassType);
 
 OptimizeOptions CreateDefaultOptimizeOptions();
 
