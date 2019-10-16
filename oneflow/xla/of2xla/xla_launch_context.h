@@ -6,21 +6,21 @@
 #include "unsupported/Eigen/CXX11/Tensor"
 #include "unsupported/Eigen/CXX11/ThreadPool"
 
-#include "oneflow/core/device/device_context.h"
-#include "oneflow/core/job/placement.pb.h"  // ParallelContext
-#include "oneflow/core/job/resource.pb.h"   // DeviceType
-#include "oneflow/xla/of2xla/xla_allocator.h"
-#include "tensorflow/compiler/xla/client/local_client.h"
-#include "tensorflow/compiler/xla/client/xla_builder.h"
 #include "tensorflow/stream_executor/stream.h"
+#include "tensorflow/compiler/xla/client/xla_builder.h"
+#include "tensorflow/compiler/xla/client/local_client.h"
+#include "oneflow/core/job/resource.pb.h"  // DeviceType
+#include "oneflow/core/job/placement.pb.h"  // ParallelContext
+#include "oneflow/core/device/device_context.h"
+#include "oneflow/xla/of2xla/xla_allocator.h"
 
 namespace oneflow {
 namespace mola {
 
 class XlaLaunchResourceMgr {
  public:
-  static xla::LocalClient *GetOrCreateLocalClient(const se::Platform *platform,
-                                                  int intra_op_num_threads);
+  static xla::LocalClient *GetOrCreateLocalClient(
+      const se::Platform *platform, int intra_op_num_threads);
 
   struct StreamId {
     se::Stream *stream;
@@ -29,14 +29,15 @@ class XlaLaunchResourceMgr {
 
   static DeviceBufferAllocator *GetOrCreateBufferAllocator(
       const se::Platform *platform, const StreamId &stream, int device_ordinal);
-
+  
   static Eigen::ThreadPoolDevice *GetOrCreateEigenHostDevice();
 };
 
 class XlaLaunchContext {
  public:
   explicit XlaLaunchContext(const std::string &builder_name,
-                            DeviceCtx *device_ctx, DeviceType device_type,
+                            DeviceCtx *device_ctx, 
+                            DeviceType device_type,
                             int intra_op_num_threads);
 
   xla::LocalClient *client() const { return client_; }
@@ -61,7 +62,7 @@ class XlaLaunchContext {
                                    int num_threads);
   XlaAllocator *NewAllocator(const se::Platform *platform, int device_ordinal);
 
-  Eigen::ThreadPoolDevice *NewEigenHostDevice();
+  Eigen::ThreadPoolDevice* NewEigenHostDevice();
 
   xla::LocalClient *client_;
   std::shared_ptr<xla::XlaBuilder> builder_;

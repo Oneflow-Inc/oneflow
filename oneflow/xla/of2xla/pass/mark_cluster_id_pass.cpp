@@ -1,9 +1,9 @@
 #include <unordered_map>
 #include <unordered_set>
-#include "oneflow/xla/of2xla/pass/cluster.h"
-#include "oneflow/xla/of2xla/pass/xla_optimize_pass.h"
 #include "oneflow/xla/of2xla/xla_graph.h"
 #include "oneflow/xla/of2xla/xla_utility.h"
+#include "oneflow/xla/of2xla/pass/cluster.h"
+#include "oneflow/xla/of2xla/pass/xla_optimize_pass.h"
 
 namespace oneflow {
 namespace mola {
@@ -19,7 +19,9 @@ class MarkClusterIdPass : public XlaOptimizePass {
   void Run() override;
 
   // Add for `TopologyVisit`
-  const util::Set<ClusterNode *> &Nodes() const { return root_nodes_; }
+  const util::Set<ClusterNode *> &Nodes() const {
+    return root_nodes_;
+  }
 
  private:
   bool IsSatisfyBackend(const ClusterEdge *edge) const;
@@ -99,8 +101,8 @@ bool MarkClusterIdPass::TryToFuseWithParent(ClusterNode *children,
 }
 
 void MarkClusterIdPass::BuildClusterNodesAndEdges() {
-  CHECK(this->options_.graph)
-      << "Graph is required by running MarkClusterIdPass.";
+  CHECK(this->options_.graph) <<
+      "Graph is required by running MarkClusterIdPass.";
   util::Map<int64_t, ClusterNode *> cluster_nodes;
 
   TopologyVisit(*(this->options_.graph), [&](XlaNode *node) {
@@ -111,8 +113,8 @@ void MarkClusterIdPass::BuildClusterNodesAndEdges() {
     cluster_nodes.emplace(node->unique_id(), cluster_node.get());
   });
 
-  auto BuildClusterEdge = [](ClusterNode *start,
-                             ClusterNode *end) -> std::shared_ptr<ClusterEdge> {
+  auto BuildClusterEdge = [](ClusterNode *start, ClusterNode *end)
+      -> std::shared_ptr<ClusterEdge> {
     return std::make_shared<ClusterEdge>(start, end);
   };
   for (ClusterNode *start : root_nodes_) {
@@ -125,7 +127,7 @@ void MarkClusterIdPass::BuildClusterNodesAndEdges() {
       cluster_edge->set_start_sbp_policy(edge->sbp_policy(0));
       cluster_edge->set_end_sbp_policy(edge->sbp_policy(1));
       cluster_edge->set_start_time_shape(edge->time_shape(0));
-      cluster_edge->set_end_time_shape(edge->time_shape(1));
+      cluster_edge->set_end_time_shape(edge->time_shape(1));  
       start->AddOutEdge(cluster_edge.get());
       end->AddInEdge(cluster_edge.get());
       allocated_edges_.push_back(cluster_edge);
@@ -134,7 +136,8 @@ void MarkClusterIdPass::BuildClusterNodesAndEdges() {
 }
 
 template <typename VisitEdgesFn, typename VisitNodeFn>
-util::Set<ClusterNode *> VisitNodes(ClusterNode *node, VisitEdgesFn edges_func,
+util::Set<ClusterNode *> VisitNodes(ClusterNode *node,
+                                    VisitEdgesFn edges_func,
                                     VisitNodeFn node_func) {
   std::unordered_set<ClusterNode *> visited;
   std::queue<ClusterNode *> visit_queue;
@@ -163,7 +166,8 @@ void MarkClusterIdPass::DisableExtraPreDependence(const std::string &type) {
 
   for (ClusterNode *node : reference_nodes) {
     util::Set<ClusterNode *> parents =
-        VisitNodes(node, [](ClusterNode *node) { return node->in_edges(); },
+        VisitNodes(node,
+                   [](ClusterNode *node) { return node->in_edges(); },
                    [](ClusterEdge *edge) { return edge->start(); });
     for (ClusterNode *p : parents) {
       for (ClusterEdge *e : p->out_edges()) {
@@ -185,8 +189,9 @@ void MarkClusterIdPass::DisableExtraPostDependence(const std::string &type) {
 
   for (ClusterNode *node : reference_nodes) {
     util::Set<ClusterNode *> childrens =
-        VisitNodes(node, [](ClusterNode *node) { return node->out_edges(); },
-                   [](ClusterEdge *edge) { return edge->end(); });
+      VisitNodes(node,
+                 [](ClusterNode *node) { return node->out_edges(); },
+                 [](ClusterEdge *edge) { return edge->end(); });
     for (ClusterNode *p : childrens) {
       for (ClusterEdge *e : p->in_edges()) {
         if (!childrens.count(e->start())) {
@@ -248,8 +253,8 @@ void MarkClusterIdPass::ClusteringSubgraphs() {
 }
 
 void MarkClusterIdPass::AddNoNodeForBetterClustering() {
-  auto BuildControlEdge = [](ClusterNode *start,
-                             ClusterNode *end) -> std::shared_ptr<ClusterEdge> {
+  auto BuildControlEdge = [](ClusterNode *start, ClusterNode *end)
+    -> std::shared_ptr<ClusterEdge> {
     auto cluster_edge = std::make_shared<ClusterEdge>(start, end);
     cluster_edge->set_is_control_edge(true);
     return std::move(cluster_edge);

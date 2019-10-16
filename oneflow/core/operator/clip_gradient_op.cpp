@@ -10,19 +10,23 @@ class ClipGradientOp : public Operator {
   void InitFromOpConf() override;
   const PbMessage& GetCustomizedConf() const override;
 
-  Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                             const ParallelContext* parallel_ctx) const override;
+  Maybe<void> InferBlobDescs(
+      std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+      const ParallelContext* parallel_ctx) const override;
 
  private:
   typedef std::function<OptInt64*(const std::string&)> BatchAxis4BnInOpFunc;
-  Maybe<void> InferBatchAxis(BatchAxis4BnInOpFunc BatchAxis4BnInOp) const override {
+  Maybe<void> InferBatchAxis(
+      BatchAxis4BnInOpFunc BatchAxis4BnInOp) const override {
     *BatchAxis4BnInOp("out") = *BatchAxis4BnInOp("gradient");
     return Maybe<void>::Ok();
   }
 
-  typedef std::function<Maybe<const BlobDesc*>(const std::string&)> LogicalBlobDesc4IbnFunc;
-  Maybe<void> GetSbpSignatures(const LogicalBlobDesc4IbnFunc& LogicalBlobDesc4Ibn,
-                               SbpSignatureList* sbp_sig_list) const override;
+  typedef std::function<Maybe<const BlobDesc*>(const std::string&)>
+      LogicalBlobDesc4IbnFunc;
+  Maybe<void> GetSbpSignatures(
+      const LogicalBlobDesc4IbnFunc& LogicalBlobDesc4Ibn,
+      SbpSignatureList* sbp_sig_list) const override;
 };
 
 void ClipGradientOp::InitFromOpConf() {
@@ -44,10 +48,12 @@ Maybe<void> ClipGradientOp::InferBlobDescs(
   return Maybe<void>::Ok();
 }
 
-typedef std::function<Maybe<const BlobDesc*>(const std::string&)> LogicalBlobDesc4IbnFunc;
-Maybe<void> ClipGradientOp::GetSbpSignatures(const LogicalBlobDesc4IbnFunc& LogicalBlobDesc4Ibn,
-                                             SbpSignatureList* sbp_sig_list) const {
-  const Shape& gradient_shape = JUST(LogicalBlobDesc4Ibn("gradient"))->shape();
+typedef std::function<Maybe<const BlobDesc*>(const std::string&)>
+      LogicalBlobDesc4IbnFunc;
+Maybe<void> ClipGradientOp::GetSbpSignatures(
+    const LogicalBlobDesc4IbnFunc& LogicalBlobDesc4Ibn,
+    SbpSignatureList* sbp_sig_list) const {
+  const Shape &gradient_shape = JUST(LogicalBlobDesc4Ibn("gradient"))->shape();
   CHECK_GT(gradient_shape.NumAxes(), 0);
   for (int i = 0; i < gradient_shape.NumAxes(); ++i) {
     SbpSignatureBuilder()

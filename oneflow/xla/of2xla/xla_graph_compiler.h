@@ -1,13 +1,13 @@
 #ifndef ONEFLOW_CORE_COMPILER_OF2XLA_XLA_GRAPH_COMPILER_H_
 #define ONEFLOW_CORE_COMPILER_OF2XLA_XLA_GRAPH_COMPILER_H_
 
-#include "oneflow/core/register/blob.h"
-#include "oneflow/xla/of2xla/xla_graph.h"
-#include "oneflow/xla/of2xla/xla_op_context.h"
-#include "oneflow/xla/of2xla/xla_utility.h"
+#include "tensorflow/compiler/xla/service/service.h"
 #include "tensorflow/compiler/xla/client/local_client.h"
 #include "tensorflow/compiler/xla/client/xla_builder.h"
-#include "tensorflow/compiler/xla/service/service.h"
+#include "oneflow/core/register/blob.h"
+#include "oneflow/xla/of2xla/xla_utility.h"
+#include "oneflow/xla/of2xla/xla_op_context.h"
+#include "oneflow/xla/of2xla/xla_graph.h"
 
 namespace oneflow {
 namespace mola {
@@ -27,7 +27,8 @@ class XlaGraphCompiler {
   XlaGraphCompiler(xla::LocalClient *client, xla::XlaBuilder *builder);
 
   CompilationResult Compile(
-      const XlaGraph *graph, const std::vector<Argument> &entry_arguments,
+      const XlaGraph *graph,
+      const std::vector<Argument> &entry_arguments,
       const std::vector<Argument> &return_arguments,
       const std::vector<std::string> &entry_names,
       const std::vector<std::string> &return_names,
@@ -37,8 +38,8 @@ class XlaGraphCompiler {
   void BuildComputation(
       const XlaGraph *graph,
       const std::unordered_map<Argument, XlaOprand> &entry_oprands,
-      const std::vector<Argument> &return_arguments, xla::Shape *output_shape,
-      xla::XlaComputation *computation);
+      const std::vector<Argument> &return_arguments,
+      xla::Shape *output_shape, xla::XlaComputation *computation);
 
   void BuildExecutable(const CompilationResult &result,
                        std::unique_ptr<xla::LocalExecutable> *executable);
@@ -53,11 +54,12 @@ class XlaGraphCompiler {
       const std::unordered_map<std::string, Argument> &arguments,
       XlaOpContext::Param *param);
 
-  void BuildCompilationArguments(const XlaGraph *graph,
-                                 const std::vector<Argument> &entry_arguments,
-                                 const std::vector<Argument> &return_arguments,
-                                 const std::vector<std::string> &entry_names,
-                                 const std::vector<std::string> &return_names);
+  void BuildCompilationArguments(
+    const XlaGraph *graph,
+    const std::vector<Argument> &entry_arguments,
+    const std::vector<Argument> &return_arguments,
+    const std::vector<std::string> &entry_names,
+    const std::vector<std::string> &return_names);
 
  private:
   xla::LocalClient *client_;

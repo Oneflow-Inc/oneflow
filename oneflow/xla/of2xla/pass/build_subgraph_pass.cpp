@@ -1,12 +1,12 @@
-#include <fstream>
-#include <iostream>
 #include <unordered_map>
 #include <unordered_set>
+#include <iostream>
+#include <fstream>
 #include "absl/strings/str_cat.h"
-#include "oneflow/xla/of2xla/pass/xla_optimize_pass.h"
-#include "oneflow/xla/of2xla/xla_graph.h"
 #include "oneflow/xla/of2xla/xla_node.h"
+#include "oneflow/xla/of2xla/xla_graph.h"
 #include "oneflow/xla/of2xla/xla_utility.h"
+#include "oneflow/xla/of2xla/pass/xla_optimize_pass.h"
 
 namespace oneflow {
 namespace mola {
@@ -26,12 +26,12 @@ class BuildSubGraphPass : public XlaOptimizePass {
 
  private:
   void RebuildSubgraphInputs(
-      XlaNode *node, XlaNode *n, XlaGraph *sub_graph,
-      std::unordered_map<int64_t, XlaNode *> *sub_graph_nodes);
+    XlaNode *node, XlaNode *n, XlaGraph *sub_graph,
+    std::unordered_map<int64_t, XlaNode *> *sub_graph_nodes);
 
   void RebuildSubgraphOutputs(
-      XlaNode *node, XlaNode *n, XlaGraph *sub_graph,
-      std::unordered_map<int64_t, XlaNode *> *sub_graph_nodes);
+    XlaNode *node, XlaNode *n, XlaGraph *sub_graph,
+    std::unordered_map<int64_t, XlaNode *> *sub_graph_nodes);
 
   void CreateLaunchNodes(XlaGraph *graph,
                          std::unordered_map<int64_t, XlaNode *> *launch_nodes);
@@ -86,7 +86,7 @@ void BuildSubGraphPass::Run() {
     for (XlaNode *n : kv.second) {
       XlaNode *node = sub_graph->AddNode(n->op());
       sub_graph_nodes[n->unique_id()] = node;
-
+      
       // Rebuild inputs if the end node of input edges has been changed,
       // otherwise repair input for the node of the subgraph
       RebuildSubgraphInputs(node, n, sub_graph, &sub_graph_nodes);
@@ -115,7 +115,7 @@ void BuildSubGraphPass::CreateLaunchNodes(
       cluster_ids.emplace(cluster_id, node->backend());
     }
   }
-
+  
   for (const auto &pair : cluster_ids) {
     int64_t cluster_id = pair.first;
     XlaNode *launch_node = graph->AddNode();
@@ -161,8 +161,8 @@ void BuildSubGraphPass::DivideArgumentNodes(XlaGraph *sub_graph) {
       if (it == divided_args.end()) {
         XlaNode *argument = sub_graph->AddNode();
         argument->set_op_type(_XlaArgumentOpType);
-        argument->set_op_name(
-            absl::StrCat(_XlaOutArgumentPrefix, argument_id++));
+        argument->set_op_name(absl::StrCat(_XlaOutArgumentPrefix,
+                                           argument_id++));
         argument->set_backend(node->backend());
         argument->AddInEdge(edge);
         edge->UpdateEndNode(argument);
@@ -184,8 +184,8 @@ void BuildSubGraphPass::DivideArgumentNodes(XlaGraph *sub_graph) {
       if (it == divided_args.end()) {
         XlaNode *argument = sub_graph->AddNode();
         argument->set_op_type(_XlaArgumentOpType);
-        argument->set_op_name(
-            absl::StrCat(_XlaInArgumentPrefix, argument_id++));
+        argument->set_op_name(absl::StrCat(_XlaInArgumentPrefix,
+                                           argument_id++));
         argument->set_backend(node->backend());
         argument->AddOutEdge(edge);
         edge->UpdateStartNode(argument);

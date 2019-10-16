@@ -2,8 +2,8 @@
 #define ONEFLOW_CORE_COMPILER_OF2XLA_XLA_ALLOCATOR_H_
 
 #include "tensorflow/compiler/xla/statusor.h"
-#include "tensorflow/core/framework/allocator.h"
 #include "tensorflow/stream_executor/device_memory_allocator.h"
+#include "tensorflow/core/framework/allocator.h"
 
 #include "oneflow/xla/of2xla/memory/device_buffer_allocator.h"
 
@@ -14,8 +14,8 @@ namespace se = tensorflow::se;
 using uint64 = tensorflow::uint64;
 
 class XlaAllocator : public se::DeviceMemoryAllocator {
- public:
-  explicit XlaAllocator(const se::Platform *platform,
+ public:  
+  explicit XlaAllocator(const se::Platform* platform,
                         DeviceBufferAllocator *allocator);
   virtual ~XlaAllocator();
 

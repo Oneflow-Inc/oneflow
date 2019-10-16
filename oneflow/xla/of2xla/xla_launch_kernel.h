@@ -4,9 +4,9 @@
 #include "oneflow/core/kernel/kernel.h"
 
 #include "oneflow/xla/of2xla/xla_compilation_cache.h"
-#include "oneflow/xla/of2xla/xla_graph_compiler.h"
 #include "oneflow/xla/of2xla/xla_launch_attr.h"
 #include "oneflow/xla/of2xla/xla_launch_context.h"
+#include "oneflow/xla/of2xla/xla_graph_compiler.h"
 
 namespace oneflow {
 
@@ -19,7 +19,7 @@ class XlaLaunchKernel : public KernelIf<device_type> {
  private:
   void ForwardDataContent(
       const KernelCtx &ctx,
-      std::function<Blob *(const std::string &)> BnInOp2Blob) const override;
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 
   void BuildLocalExecutable(
       mola::XlaLaunchContext *launch_ctx,
@@ -39,12 +39,12 @@ class XlaLaunchKernel : public KernelIf<device_type> {
                         bool block_host_until_done) const;
 
   void AliasMutableInputsAndOutputs(
-      const mola::LaunchAttrHelper &attr,
-      const std::vector<Blob *> &entry_blobs,
-      const std::vector<std::string> &entry_blob_names,
-      std::vector<Blob *> *return_blobs,
-      std::vector<std::string> *return_blob_names,
-      std::vector<xla::XlaBuilder::InputOutputAlias> *aliases) const;
+    const mola::LaunchAttrHelper &attr,
+    const std::vector<Blob *> &entry_blobs,
+    const std::vector<std::string> &entry_blob_names,
+    std::vector<Blob *> *return_blobs,
+    std::vector<std::string> *return_blob_names,
+    std::vector<xla::XlaBuilder::InputOutputAlias> *aliases) const;
 
   mutable std::shared_ptr<mola::XlaCompilationCache> compilation_cache_;
 };
@@ -52,3 +52,4 @@ class XlaLaunchKernel : public KernelIf<device_type> {
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_COMPILER_OF2XLA_XLA_LAUNCH_KERNEL_H_
+

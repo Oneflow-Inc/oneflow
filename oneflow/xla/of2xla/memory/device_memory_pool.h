@@ -4,8 +4,8 @@
 #include <functional>
 #include "glog/logging.h"
 
-#include "tensorflow/stream_executor/platform.h"
 #include "tensorflow/stream_executor/stream.h"
+#include "tensorflow/stream_executor/platform.h"
 
 namespace oneflow {
 namespace mola {
@@ -14,7 +14,7 @@ namespace se = tensorflow::se;
 
 class DeviceMemoryPool {
  public:
-  DeviceMemoryPool() = delete;
+  DeviceMemoryPool() = delete; 
   virtual ~DeviceMemoryPool() {}
 
   static std::shared_ptr<DeviceMemoryPool> NewMemoryPool(
@@ -35,9 +35,7 @@ class DeviceMemoryPool {
 
  protected:
   explicit DeviceMemoryPool(se::Stream *stream, int device_ordinal)
-      : mem_buffer_(nullptr),
-        capacity_(0),
-        stream_(stream),
+      : mem_buffer_(nullptr), capacity_(0), stream_(stream),
         device_ordinal_(device_ordinal) {}
 
   virtual void ReserveImpl(size_t size) = 0;
@@ -65,16 +63,17 @@ template <typename Derived>
 class MemoryPoolRegistarr {
  public:
   MemoryPoolRegistarr(const se::Platform::Id &platform_id) {
-    auto factory = [](se::Stream *stream, int device_ordinal) -> Derived * {
+    auto factory = [](se::Stream *stream, int device_ordinal) -> Derived* {
       return new Derived(stream, device_ordinal);
     };
     DeviceMemoryPool::RegisterFactory(platform_id, factory);
   }
 };
 
-#define REGISTER_XLA_MEMORY_POOL(PlatformId, Derived)                  \
-  static MemoryPoolRegistarr<Derived> _device_memory_pool_##Derived##_ \
-      __attribute__((unused)) = MemoryPoolRegistarr<Derived>(PlatformId)
+#define REGISTER_XLA_MEMORY_POOL(PlatformId, Derived)            \
+  static MemoryPoolRegistarr<Derived>                            \
+      _device_memory_pool_##Derived##_ __attribute__((unused)) = \
+      MemoryPoolRegistarr<Derived>(PlatformId)
 
 }  // namespace mola
 }  // namespace oneflow

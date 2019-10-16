@@ -1,9 +1,9 @@
-#include "oneflow/xla/of2xla/xla_op_compiler.h"
-#include "oneflow/xla/of2xla/xla_op_compiler_registry.h"
-#include "oneflow/xla/of2xla/xla_op_context.h"
-#include "tensorflow/compiler/xla/client/lib/constants.h"
-#include "tensorflow/compiler/xla/client/lib/math.h"
 #include "tensorflow/compiler/xla/client/xla_builder.h"
+#include "tensorflow/compiler/xla/client/lib/math.h"
+#include "tensorflow/compiler/xla/client/lib/constants.h"
+#include "oneflow/xla/of2xla/xla_op_compiler_registry.h"
+#include "oneflow/xla/of2xla/xla_op_compiler.h"
+#include "oneflow/xla/of2xla/xla_op_context.h"
 
 #include "oneflow/xla/of2xla/xla_helpers.h"
 
@@ -45,13 +45,13 @@ void AdamOptimizerOp::Compile(XlaOpContext *ctx) {
   // ctx->SetOutput("out_v", v);
 
   float epsilon_val = ctx->GetAttr<float>("epsilon");
-  xla::XlaOp epsilon = xla::ScalarLike(v, epsilon_val);
+  xla::XlaOp epsilon = xla::ScalarLike(v,  epsilon_val);
   gradient = m / (xla::Sqrt(v) + epsilon);
 
   float l1_val = ctx->GetAttr<float>("l1");
   float l2_val = ctx->GetAttr<float>("l2");
   if (std::abs(l1_val) > 1e-6) {
-    xla::XlaOp l1 = xla::ScalarLike(gradient, l1_val);
+    xla::XlaOp l1 = xla::ScalarLike(gradient, l1_val); 
     gradient = gradient + l1 * xla::Sign(weight);
   }
   if (std::abs(l2_val) > 1e-6) {

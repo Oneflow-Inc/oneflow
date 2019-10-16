@@ -36,7 +36,9 @@ void NormalForwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
 
 void NormalForwardCompTaskNode::ConsumeAllRegsts() {
   ForEachInDataEdge([&](TaskEdge* edge) {
-    for (const auto& regst : edge->GetRegsts()) { ConsumeRegst("in", regst); }
+    for (const auto &regst : edge->GetRegsts()) {
+      ConsumeRegst("in", regst);
+    }
   });
 }
 

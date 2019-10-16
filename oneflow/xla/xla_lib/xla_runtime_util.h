@@ -3,8 +3,8 @@
 
 #include <vector>
 
-#include "tensorflow/compiler/xla/client/local_client.h"
 #include "tensorflow/stream_executor/stream.h"
+#include "tensorflow/compiler/xla/client/local_client.h"
 
 namespace xla {
 

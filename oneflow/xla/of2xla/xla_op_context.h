@@ -2,12 +2,12 @@
 #define ONEFLOW_CORE_COMPILER_OF2XLA_XLA_OP_CONTEXT_H_
 
 #include <unordered_map>
-#include "oneflow/core/common/data_type.h"
+#include "tensorflow/compiler/xla/shape.h"
+#include "tensorflow/compiler/xla/client/xla_builder.h"
 #include "oneflow/core/common/protobuf.h"
+#include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/shape.h"
 #include "oneflow/xla/of2xla/xla_argument.h"
-#include "tensorflow/compiler/xla/client/xla_builder.h"
-#include "tensorflow/compiler/xla/shape.h"
 
 namespace oneflow {
 namespace mola {
@@ -79,7 +79,7 @@ class XlaOpContext {
   Shape InputShape(const std::string &name) const;
   // Return output `name` shape as Shape
   Shape OutputShape(const std::string &name) const;
-
+ 
   // Input data type
   DataType InputType(const std::string &name) const;
   // Output data type

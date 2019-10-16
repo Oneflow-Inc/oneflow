@@ -1,11 +1,11 @@
 #ifndef ONEFLOW_CORE_COMPILER_OF2XLA_XLA_LAUNCH_SCOPE_H_
 #define ONEFLOW_CORE_COMPILER_OF2XLA_XLA_LAUNCH_SCOPE_H_
 
-#include "oneflow/core/device/device_context.h"
-#include "oneflow/core/job/resource.pb.h"  // DeviceType
-#include "oneflow/xla/of2xla/xla_launch_context.h"
-#include "oneflow/xla/of2xla/xla_utility.h"
 #include "tensorflow/compiler/jit/xla_lib/xla_runtime_util.h"
+#include "oneflow/core/job/resource.pb.h"  // DeviceType
+#include "oneflow/core/device/device_context.h"
+#include "oneflow/xla/of2xla/xla_utility.h"
+#include "oneflow/xla/of2xla/xla_launch_context.h"
 
 namespace oneflow {
 namespace mola {
@@ -31,7 +31,7 @@ XlaLaunchScope::XlaLaunchScope(xla::LocalExecutable *executable,
   if (launch_ctx_->device_type() == DeviceType::kGPU) {
     auto *device_ctx = launch_ctx_->device_ctx();
     cuda_stream_ = const_cast<void **>(
-        reinterpret_cast<void *const *>(&(device_ctx->cuda_stream())));
+      reinterpret_cast<void * const*>(&(device_ctx->cuda_stream())));
     xla::SwapGpuStreamHandle(launch_ctx_->stream(), cuda_stream_);
   }
 

@@ -18,7 +18,9 @@ void DecodeOFRecordOp::InitFromOpConf() {
   CHECK(op_conf().has_decode_ofrecord_conf());
   if (op_conf().decode_ofrecord_conf().has_in()) { EnrollInputBn("in", false); }
   const DecodeOFRecordOpConf& conf = op_conf().decode_ofrecord_conf();
-  for (int32_t i = 0; i < conf.blob_size(); ++i) { EnrollOutputBn(conf.blob(i).name(), false); }
+  for (int32_t i = 0; i < conf.blob_size(); ++i) {
+    EnrollOutputBn(conf.blob(i).name(), false);
+  }
   if (conf.part_name_suffix_length() != -1) {
     CHECK_GE(conf.part_name_suffix_length(), std::to_string(conf.data_part_num() - 1).length());
   }
