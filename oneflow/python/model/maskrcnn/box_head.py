@@ -328,6 +328,16 @@ class BoxHead(object):
             roi_features_reorder,
             [-1, reduce(operator.mul, roi_features_reorder.shape[1:], 1)],
         )
+
+        def mask_lambda(x):
+            path = "dump/roi_head/" + "fc6_in_diff"
+
+            def dump(blob):
+                np.save(path, blob.ndarray())
+
+            return dump
+
+        flow.watch_diff(roi_features_flat, mask_lambda(roi_features_flat))
         x = flow.layers.dense(
             inputs=roi_features_flat,
             units=1024,
