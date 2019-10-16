@@ -250,6 +250,13 @@ struct MemBlockResultInfo {
   HashMap<RegstDescProto*, int64_t> regst_desc2offset;
 };
 
+struct Piece {
+  int64_t begin;
+  int64_t end;
+  bool is_free;
+};
+using PieceIt = std::list<Piece>::iterator;
+
 class MemBlockBuffer final {
  public:
   MemBlockBuffer(int64_t size) : buffer_size_(size) {
@@ -286,12 +293,6 @@ class MemBlockBuffer final {
     }
     CheckValid();
   }
-
-  struct Piece {
-    int64_t begin;
-    int64_t end;
-    bool is_free;
-  };
 
   std::list<Piece> piece_list_;
   int64_t buffer_size_;
@@ -383,10 +384,137 @@ void MemReusedAlgorithm0_OfColorImproved(
   result->mem_block_size = buffer_size;
 }
 
+class BfcAllocator final {
+ public:
+  BfcAllocator(int64_t size) : buffer_size_(size) {
+    Piece start_piece;
+    start_piece.begin = 0;
+    start_piece.end = size;
+    start_piece.is_free = true;
+    piece_list_.push_back(start_piece);
+  };
+  ~BfcAllocator() = default;
+
+  int64_t AllocateRaw(int64_t size);
+  void DeallocateRaw(int64_t offset, int64_t size);
+  int64_t buffer_size() const { return buffer_size_; }
+
+ private:
+  void CheckValid() {
+    CHECK(piece_list_.size() >= 1);
+    CHECK(piece_list_.front().begin == 0);
+    CHECK(piece_list_.back().end == buffer_size_);
+    for (auto it = std::next(piece_list_.begin()); it != piece_list_.end(); ++it) {
+      auto pre_it = std::prev(it);
+      CHECK(pre_it->begin < pre_it->end && pre_it->end == it->begin);
+      CHECK(!(pre_it->is_free && it->is_free));
+    }
+  }
+
+  void MergeFreePieceAndCheckValid() {
+    for (auto it = std::next(piece_list_.begin()); it != piece_list_.end(); ++it) {
+      auto pre_it = std::prev(it);
+      if (it->is_free == pre_it->is_free) {
+        it->begin = pre_it->begin;
+        CHECK(piece_list_.erase(pre_it) == it);
+      }
+    }
+    CheckValid();
+  }
+
+  std::list<Piece> piece_list_;
+  int64_t buffer_size_;
+  HashMap<int64_t, PieceIt> offset2occupied_piece_;
+};
+
+int64_t BfcAllocator::AllocateRaw(int64_t size) {
+  int64_t offset = -1;
+  PieceIt candidate_piece = piece_list_.end();
+  for (auto it = piece_list_.begin(); it != piece_list_.end(); ++it) {
+    int64_t piece_size = it->end - it->begin;
+    if (it->is_free && piece_size >= size
+        && (candidate_piece == piece_list_.end()
+            || piece_size < (candidate_piece->end - candidate_piece->begin))) {
+      candidate_piece = it;
+    }
+  }
+  if (candidate_piece == piece_list_.end()) {
+    auto last_it = std::prev(piece_list_.end());
+    if (last_it->is_free) {
+      offset = last_it->begin;
+      buffer_size_ += size - (last_it->end - last_it->begin);
+      last_it->end = buffer_size_;
+      last_it->is_free = false;
+      CHECK(offset2occupied_piece_.emplace(offset, last_it).second);
+    } else {
+      offset = last_it->end;
+      buffer_size_ += size;
+      Piece new_piece;
+      new_piece.begin = last_it->end;
+      new_piece.end = buffer_size_;
+      new_piece.is_free = false;
+      piece_list_.push_back(new_piece);
+      CHECK(offset2occupied_piece_.emplace(offset, std::prev(piece_list_.end())).second);
+    }
+  } else {
+    int64_t piece_size = candidate_piece->end - candidate_piece->begin;
+    offset = candidate_piece->begin;
+    if (piece_size > size) {
+      Piece new_piece;
+      new_piece.begin = candidate_piece->begin;
+      new_piece.end = candidate_piece->begin + size;
+      new_piece.is_free = false;
+      candidate_piece->begin = new_piece.end;
+      PieceIt new_it = piece_list_.insert(candidate_piece, new_piece);
+      CHECK(offset2occupied_piece_.emplace(offset, new_it).second);
+    } else {
+      CHECK_EQ(size, piece_size);
+      candidate_piece->is_free = false;
+      CHECK(offset2occupied_piece_.emplace(offset, candidate_piece).second);
+    }
+  }
+  CheckValid();
+  CHECK_NE(offset, -1);
+  CHECK(offset2occupied_piece_.find(offset) != offset2occupied_piece_.end());
+  return offset;
+}
+
+void BfcAllocator::DeallocateRaw(int64_t offset, int64_t size) {
+  CHECK(offset2occupied_piece_.find(offset) != offset2occupied_piece_.end());
+  PieceIt occupied_piece = offset2occupied_piece_.at(offset);
+  CHECK(occupied_piece->is_free == false);
+  CHECK_EQ((occupied_piece->end - occupied_piece->begin), size);
+  occupied_piece->is_free = true;
+  CHECK(offset2occupied_piece_.erase(offset) == 1);
+  MergeFreePieceAndCheckValid();
+}
+
 void MemReusedAlgorithm1_TfBfcImproved(
     const std::vector<HashSet<RegstDescProto*>>& apply_regsts_queue,
     const std::vector<HashSet<RegstDescProto*>>& release_regsts_queue, MemBlockResultInfo* result) {
-  TODO();
+  HashMap<RegstDescProto*, int64_t>* regst_desc2offset = &(result->regst_desc2offset);
+  regst_desc2offset->clear();
+  int64_t buffer_size = 256;
+  BfcAllocator bfc_allocator(buffer_size);
+
+  auto GetRegstSize = [](const RegstDescProto* regst) -> int64_t {
+    return RtRegstDesc(*regst).TotalMainByteSize4AllRegst();
+  };
+
+  CHECK_EQ(apply_regsts_queue.size(), release_regsts_queue.size());
+  for (int64_t i = 0; i < apply_regsts_queue.size(); ++i) {
+    for (RegstDescProto* apply_regst : apply_regsts_queue.at(i)) {
+      CHECK(regst_desc2offset
+                ->emplace(apply_regst, bfc_allocator.AllocateRaw(GetRegstSize(apply_regst)))
+                .second);
+    }
+    for (RegstDescProto* release_regst : release_regsts_queue.at(i)) {
+      CHECK(regst_desc2offset->find(release_regst) != regst_desc2offset->end());
+      bfc_allocator.DeallocateRaw(regst_desc2offset->at(release_regst),
+                                  GetRegstSize(release_regst));
+    }
+  }
+  result->mem_block_size = bfc_allocator.buffer_size();
 }
 
 void MemReusedAlgorithm2_MinOrderGrowth(
