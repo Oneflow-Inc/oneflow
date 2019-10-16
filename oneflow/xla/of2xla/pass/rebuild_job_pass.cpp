@@ -222,17 +222,18 @@ void FoldSubgraphBuilder::buildXlaLaunchAttribute(
       }
 
       // Store the batch axis that have batch dimension, so that it's no need to
-      // infer `HasBatchAxis` for `XlaLaunch` operators. In practice it's hard
-      // to infer `HasBatchAxis` since the operators to be infered have been
-      // folded. Normally we have to infer `HasBatchAxis` before `SbpSignature`
-      // and `BlobDesc`, and `HasBatchAxis` replies on the front operators
-      // `BlobDesc`. Therefor we probably could not infer `HasBatchAxis` for the
-      // folded operators because their inputs `BlobDesc` were not infered since
-      // the front operators have been folded as well
+      // infer `HasBatchAxis4Lbn` for `XlaLaunch` operators. In practice it's
+      // hard to infer `HasBatchAxis4Lbn` since the operators to be infered have
+      // been folded. Normally we have to infer `HasBatchAxis4Lbn` before
+      // `SbpSignature` and `BlobDesc`, and `HasBatchAxis4Lbn` replies on the
+      // front operators `BlobDesc`. Therefor we probably could not infer
+      // `HasBatchAxis4Lbn` for the folded operators because their inputs
+      // `BlobDesc` were not infered since the front operators have been folded
+      // as well
       const std::string &argument_out = argument_proto->out();
-      if (builder_->HasBatchAxis(argument_out)) {
+      if (builder_->HasBatchAxis4Lbn(argument_out)) {
         auto *batch_axis = resource_scope->mutable_batch_axis();
-        (*batch_axis)[argument_out] = builder_->GetBatchAxis(argument_out);
+        (*batch_axis)[argument_out] = builder_->BatchAxis4Lbn(argument_out);
       }
     }
 
@@ -287,8 +288,8 @@ void FoldSubgraphBuilder::BuildXlaLaunchOps() {
     }
 
     CHECK_GT(folded_nodes_[i].size(), 0);
-    ParallelConf parallel_conf =
-        builder_->GetParallelConf(folded_nodes_[i][0]->op_name());
+    const ParallelConf &parallel_conf =
+        builder_->ParallelConf4OpName(folded_nodes_[i][0]->op_name());
     // TODO(hjchen2) check parallel conf over all folded nodes
 
     builder_->AddOps(parallel_conf, {op_conf});
@@ -318,7 +319,7 @@ void FoldSubgraphBuilder::FixupControlInOpNames() {
   };
 
   for (const XlaNode *node : graph_.Nodes()) {
-    auto *op_conf = builder_->MutableOpConf(node->op_name());
+    auto *op_conf = builder_->MutableOpConf4OpName(node->op_name());
     if (node->sub_graph() == nullptr) {
       auto ctrl_in_op_names = op_conf->ctrl_in_op_name();
       op_conf->clear_ctrl_in_op_name();
@@ -330,7 +331,8 @@ void FoldSubgraphBuilder::FixupControlInOpNames() {
         if (sub_node->IsArgumentNode()) {
           continue;
         }
-        const auto &folded_op_conf = builder_->GetOpConf(sub_node->op_name());
+        const auto &folded_op_conf =
+            builder_->OpConf4OpName(sub_node->op_name());
         for (const auto &op_name : folded_op_conf.ctrl_in_op_name()) {
           AddControlInOpName(op_conf, op_name);
         }
@@ -342,8 +344,8 @@ void FoldSubgraphBuilder::FixupControlInOpNames() {
 void FoldSubgraphBuilder::FixupInOutBlobNames() {
   for (const XlaNode *node : launch_nodes_) {
     std::string launch_op_name = node->op_name();
-    auto *launch_conf =
-        builder_->MutableOpConf(launch_op_name)->mutable_xla_launch_conf();
+    auto *launch_conf = builder_->MutableOpConf4OpName(launch_op_name)
+                            ->mutable_xla_launch_conf();
     std::unordered_map<std::string, std::string> fixed_blob_names;
     // Fix output blob names
     for (int i = 0; i < launch_conf->out().size(); ++i) {
@@ -353,10 +355,10 @@ void FoldSubgraphBuilder::FixupInOutBlobNames() {
 
       launch_conf->mutable_out()->Mutable(i)->assign(fixed_blob_name);
       // Append to `batch_axis`
-      if (builder_->HasBatchAxis(blob_name)) {
+      if (builder_->HasBatchAxis4Lbn(blob_name)) {
         fixed_blob_name = absl::StrCat(launch_op_name, "/", fixed_blob_name);
-        builder_->AddBatchAxis(fixed_blob_name,
-                               builder_->GetBatchAxis(blob_name));
+        builder_->AddBatchAxis4Lbn(fixed_blob_name,
+                                   builder_->BatchAxis4Lbn(blob_name));
       }
     }
 
@@ -369,8 +371,8 @@ void FoldSubgraphBuilder::FixupInOutBlobNames() {
         continue;
       }
       if (end->op_type() == _XlaLaunchOpType) {
-        auto *launch_conf =
-            builder_->MutableOpConf(end->op_name())->mutable_xla_launch_conf();
+        auto *launch_conf = builder_->MutableOpConf4OpName(end->op_name())
+                                ->mutable_xla_launch_conf();
         for (auto &blob_name : *launch_conf->mutable_in()) {
           const auto &it = fixed_blob_names.find(blob_name);
           if (it != fixed_blob_names.end()) {
@@ -384,7 +386,7 @@ void FoldSubgraphBuilder::FixupInOutBlobNames() {
                                         launch_conf, fixed_blob_names);
       } else {
         // TODO(hjchen2) Current implementation is ugly
-        auto *op_conf = builder_->MutableOpConf(end->op_name());
+        auto *op_conf = builder_->MutableOpConf4OpName(end->op_name());
         for (const std::string &input : end->op()->input_bns()) {
           const LogicalBlobId &lbi = end->op()->BnInOp2Lbi(input);
           std::string blob_name = BlobName(lbi);
@@ -407,17 +409,17 @@ void FoldSubgraphBuilder::FixupInOutBlobNames() {
 void FoldSubgraphBuilder::FixupTimeShapes() {
   for (int i = 0; i < launch_nodes_.size(); ++i) {
     CHECK_GT(folded_nodes_[i].size(), 0);
-    OpTimeShape time_shape =
-        builder_->GetTimeShape(folded_nodes_[i][0]->op_name());
+    const OpTimeShape &time_shape =
+        builder_->TimeShape4OpName(folded_nodes_[i][0]->op_name());
     // TODO(hjchen2) check time shape for all folded nodes
 
-    builder_->AddTimeShape(launch_nodes_[i]->op_name(), time_shape);
+    builder_->AddTimeShape4OpName(launch_nodes_[i]->op_name(), time_shape);
   }
 }
 
 void FoldSubgraphBuilder::FixupSbpSignatures() {
   for (const XlaNode *node : launch_nodes_) {
-    OperatorConf *op_conf = builder_->MutableOpConf(node->op_name());
+    OperatorConf *op_conf = builder_->MutableOpConf4OpName(node->op_name());
     std::shared_ptr<Operator> op = ConstructOp(*op_conf, &GlobalJobDesc());
     std::unordered_map<std::string, std::string> blob_names;
     for (const std::string &bn : op->input_bns()) {
@@ -444,7 +446,7 @@ void FoldSubgraphBuilder::FixupSbpSignatures() {
     // Append sbp signatures to xla launch operator
     *(resource_scope->mutable_sbp_signatures()) = *sbp_signatures;
     // Append sbp signatures to helper
-    builder_->AddSbpSignature(node->op_name(), sbp_conf);
+    builder_->AddSbpSignature4OpName(node->op_name(), sbp_conf);
   }
 }
 
@@ -452,7 +454,7 @@ void FoldSubgraphBuilder::RemoveLaunchFoldedOps() {
   for (const XlaNode *node : launch_nodes_) {
     for (const XlaNode *sub_node : node->sub_graph()->Nodes()) {
       if (!sub_node->IsArgumentNode()) {
-        builder_->RemoveOp(sub_node->op_name());
+        builder_->RemoveOpByName(sub_node->op_name());
       }
     }
   }

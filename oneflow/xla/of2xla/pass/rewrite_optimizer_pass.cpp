@@ -74,9 +74,9 @@ OperatorConf *OptimizerRewritor::BuildClipGradientOp(
     conf->set_global_norm(global_norm);
   }
 
-  ParallelConf parallel_conf = builder_->GetParallelConf(node_name);
+  const ParallelConf &parallel_conf = builder_->ParallelConf4OpName(node_name);
   builder_->AddOps(parallel_conf, {op_conf});
-  return builder_->MutableOpConf(op_conf.name());
+  return builder_->MutableOpConf4OpName(op_conf.name());
 }
 
 OperatorConf *OptimizerRewritor::BuildOptimizerOp(
@@ -87,14 +87,15 @@ OperatorConf *OptimizerRewritor::BuildOptimizerOp(
   OperatorConf op_conf = OptimizerParamBuilder::Build(
       mode, node, gradient, total_instances, learning_rate);
 
-  ParallelConf parallel_conf = builder_->GetParallelConf(node->op_name());
+  const ParallelConf &parallel_conf =
+      builder_->ParallelConf4OpName(node->op_name());
   builder_->AddOrMutOpsOnlyOnce(parallel_conf, {op_conf});
-  return builder_->MutableOpConf(op_conf.name());
+  return builder_->MutableOpConf4OpName(op_conf.name());
 }
 
 std::vector<std::string> OptimizerRewritor::GetControlInOpNames(
     const mola::XlaNode *node) const {
-  const auto &op_conf = builder_->GetOpConf(node->op_name());
+  const auto &op_conf = builder_->OpConf4OpName(node->op_name());
   std::vector<std::string> ctrl_in_op_names;
   for (const std::string &name : op_conf.ctrl_in_op_name()) {
     ctrl_in_op_names.push_back(name);

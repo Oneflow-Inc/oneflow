@@ -240,9 +240,11 @@ class UnsortedSegmentSumOp : public XlaOpCompiler {
     ctx->SetOutput("out", GenericGatherGrad(buffer, data, segment_ids, false,
                                             combiner, builder));
   }
+
   virtual int Axis(XlaOpContext *ctx) const {
     return ctx->GetAttr<int64_t>("axis");
   }
+
   virtual std::vector<int64_t> InitBufferDimVec(XlaOpContext *ctx) const {
     std::vector<int64_t> buffer_dim_vec;
     const std::vector<int64_t> data_dim_vec = ctx->InputShape("data").dim_vec();
@@ -256,6 +258,7 @@ class UnsortedSegmentSumOp : public XlaOpCompiler {
 class UnsortedBatchSegmentSumOp : public UnsortedSegmentSumOp {
  public:
   int Axis(XlaOpContext *ctx) const override { return 0; }
+
   std::vector<int64_t> InitBufferDimVec(XlaOpContext *ctx) const override {
     return {ctx->InputShape("segment_ids").At(0)};
   }

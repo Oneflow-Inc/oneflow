@@ -43,12 +43,14 @@ JobBuilder::JobBuilder(Job *job) : job_(job) {
   }
 }
 
-const OperatorConf &JobBuilder::OpConf4OpName(const std::string &op_name) const {
-  return *op_name2op_conf_.at(op_name);
+OperatorConf *JobBuilder::MutableOpConf4OpName(const std::string &op_name) {
+  const auto &it = op_name2op_conf_.find(op_name);
+  CHECK(it != op_name2op_conf_.end());
+  return it->second;
 }
 
-const ParallelConf &JobBuilder::ParallelConf4OpName(const std::string &op_name) const {
-  return *op_name2parallel_conf_.at(op_name);
+const OperatorConf &JobBuilder::OpConf4OpName(const std::string &op_name) const {
+  return *op_name2op_conf_.at(op_name);
 }
 
 void JobBuilder::AddOps(const ParallelConf &parallel_conf,
@@ -64,41 +66,6 @@ void JobBuilder::AddOps(const ParallelConf &parallel_conf,
     CHECK(op_name2parallel_conf_.emplace(op_conf.name(), placemnt_group->mutable_parallel_conf())
               .second);
   }
-}
-
-void JobBuilder::RemoveOp(const std::string &op_name) {
-  // Update placement
-  auto placement_group = job_->placement().placement_group();
-  job_->mutable_placement()->clear_placement_group();
-  for (const PlacementGroup &place : placement_group) {
-    PlacementGroup p;
-    OpNameSet *op_set = p.mutable_op_set();
-    for (const std::string &name : place.op_set().op_name()) {
-      if (name != op_name) { op_set->add_op_name(name); }
-    }
-
-    *(p.mutable_parallel_conf()) = place.parallel_conf();
-    if (op_set->op_name().size() > 0) { *(job_->mutable_placement()->add_placement_group()) = p; }
-  }
-  // Update net
-  DLNetConf net = job_->net();
-  job_->mutable_net()->clear_op();
-  for (const OperatorConf &op_conf : net.op()) {
-    if (op_conf.name() != op_name) { *(job_->mutable_net()->add_op()) = op_conf; }
-  }
-  // Update Sbp
-  auto *sbp_conf = job_->mutable_sbp_conf()->mutable_op_name2sbp_signature_conf();
-  if (sbp_conf->count(op_name) > 0) { sbp_conf->erase(op_name); }
-  // Update time shape
-  auto *time_shape_conf = job_->mutable_helper()->mutable_op_name2op_time_shape();
-  if (time_shape_conf->count(op_name) > 0) { time_shape_conf->erase(op_name); }
-  // Update batch dim lbis
-  // Update builder
-  JobBuilder builder(job_);
-  op_name2op_conf_.swap(builder.op_name2op_conf_);
-  op_name2parallel_conf_.swap(builder.op_name2parallel_conf_);
-  op_name2sbp_signature_conf_.swap(builder.op_name2sbp_signature_conf_);
-  lbn2batch_axis_.swap(builder.lbn2batch_axis_);
 }
 
 PlacementGroup *JobBuilder::FindPlacementGroup(const std::string &op_name) const {
@@ -125,15 +92,47 @@ void JobBuilder::MutParallelConfOnlyOnce(const std::string &op_name,
   *placement_group->mutable_parallel_conf() = parallel_conf;
 }
 
-void JobBuilder::DelOps(const std::vector<OperatorConf> &op_confs) {
-  for (const auto &op_conf : op_confs) {
-    const std::string &op_name = op_conf.name();
-    op_name2op_conf_.erase(op_name);
-    auto *op_list = job_->mutable_net()->mutable_op();
-    auto it = std::remove_if(op_list->begin(), op_list->end(),
-                             [&](const OperatorConf &conf) { return conf.name() == op_name; });
-    if (it != op_list->end()) { op_list->erase(it); }
+void JobBuilder::RemoveOpByName(const std::string &op_name) {
+  // Update net
+  DLNetConf net = job_->net();
+  job_->mutable_net()->clear_op();
+  for (const OperatorConf &op_conf : net.op()) {
+    if (op_conf.name() != op_name) { *(job_->mutable_net()->add_op()) = op_conf; }
   }
+  // Update placement
+  auto placement_group = job_->placement().placement_group();
+  job_->mutable_placement()->clear_placement_group();
+  for (const PlacementGroup &place : placement_group) {
+    PlacementGroup p;
+    OpNameSet *op_set = p.mutable_op_set();
+    for (const std::string &name : place.op_set().op_name()) {
+      if (name != op_name) { op_set->add_op_name(name); }
+    }
+
+    *(p.mutable_parallel_conf()) = place.parallel_conf();
+    if (op_set->op_name().size() > 0) { *(job_->mutable_placement()->add_placement_group()) = p; }
+  }
+  // Update Sbp
+  auto *sbp_conf = job_->mutable_sbp_conf()->mutable_op_name2sbp_signature_conf();
+  if (sbp_conf->count(op_name) > 0) { sbp_conf->erase(op_name); }
+  // Update time shape
+  auto *time_shape_conf = job_->mutable_helper()->mutable_op_name2op_time_shape();
+  if (time_shape_conf->count(op_name) > 0) { time_shape_conf->erase(op_name); }
+  // Update batch dim lbis
+  // Update builder
+  JobBuilder builder(job_);
+  op_name2op_conf_.swap(builder.op_name2op_conf_);
+  op_name2parallel_conf_.swap(builder.op_name2parallel_conf_);
+  op_name2sbp_signature_conf_.swap(builder.op_name2sbp_signature_conf_);
+  lbn2batch_axis_.swap(builder.lbn2batch_axis_);
+}
+
+void JobBuilder::DelOps(const std::vector<std::string> &op_names) {
+  for (const auto &op_name : op_names) { RemoveOpByName(op_name); }
+}
+
+void JobBuilder::DelOps(const std::vector<OperatorConf> &op_confs) {
+  for (const auto &op_conf : op_confs) { RemoveOpByName(op_conf.name()); }
 }
 
 void JobBuilder::MutOpsOnlyOnce(const std::vector<OperatorConf> &op_confs) {
@@ -166,6 +165,28 @@ void JobBuilder::ForEachOperator(const std::function<void(const Operator &)> &Ha
   }
 }
 
+ParallelConf *JobBuilder::MutableParallelConf4OpName(const std::string &op_name) {
+  const auto &it = op_name2parallel_conf_.find(op_name);
+  CHECK(it != op_name2parallel_conf_.end());
+  return it->second;
+}
+
+const ParallelConf &JobBuilder::ParallelConf4OpName(const std::string &op_name) const {
+  return *op_name2parallel_conf_.at(op_name);
+}
+
+void JobBuilder::AddParallelConf4OpName(const std::string &op_name,
+                                        const ParallelConf &parallel_conf) {
+  bool update = (op_name2parallel_conf_.count(op_name) == 0);
+  if (update) {
+    // update `op_name2parallel_conf_`
+    PlacementGroup *group = job_->mutable_placement()->add_placement_group();
+    group->mutable_op_set()->add_op_name(op_name);
+    *(group->mutable_parallel_conf()) = parallel_conf;
+    op_name2parallel_conf_[op_name] = group->mutable_parallel_conf();
+  }
+}
+
 SbpParallel *JobBuilder::MutSbpParallel4Oba(const OpBlobArg &oba) const {
   auto *sbp_sig = &(*job_->mutable_sbp_conf()->mutable_op_name2sbp_signature_conf())[oba.op_name()];
   return &(*sbp_sig->mutable_bn_in_op2sbp_parallel())[oba.bn_in_op()];
@@ -177,29 +198,20 @@ void JobBuilder::BindIdenticalSbpOpBlobArgPair(const OpBlobArg &first, const OpB
   *pair->mutable_second() = second;
 }
 
-OperatorConf *JobBuilder::MutableOpConf(const std::string &op_name) {
-  const auto &it = op_name2op_conf_.find(op_name);
-  CHECK(it != op_name2op_conf_.end());
-  return it->second;
-}
-
-const OperatorConf &JobBuilder::GetOpConf(const std::string &op_name) {
-  return *const_cast<const OperatorConf *>(MutableOpConf(op_name));
-}
-
-SbpSignature *JobBuilder::MutableSbpSignature(const std::string &op_name) {
+SbpSignature *JobBuilder::MutableSbpSignature4OpName(const std::string &op_name) {
   const auto &it = op_name2sbp_signature_conf_.find(op_name);
   CHECK(it != op_name2sbp_signature_conf_.end());
   return it->second;
 }
 
-const SbpSignature &JobBuilder::GetSbpSignature(const std::string &op_name) const {
+const SbpSignature &JobBuilder::SbpSignature4OpName(const std::string &op_name) const {
   const auto &it = op_name2sbp_signature_conf_.find(op_name);
   CHECK(it != op_name2sbp_signature_conf_.end());
   return *(it->second);
 }
 
-void JobBuilder::AddSbpSignature(const std::string &op_name, const SbpSignature &sbp_signature) {
+void JobBuilder::AddSbpSignature4OpName(const std::string &op_name,
+                                        const SbpSignature &sbp_signature) {
   const auto &it = op_name2sbp_signature_conf_.find(op_name);
   if (it != op_name2sbp_signature_conf_.end()) {
     *(it->second) = sbp_signature;
@@ -211,42 +223,19 @@ void JobBuilder::AddSbpSignature(const std::string &op_name, const SbpSignature 
   op_name2sbp_signature_conf_.emplace(op_name, &(*op_name2sbp_signature_conf)[op_name]);
 }
 
-const ParallelConf &JobBuilder::GetParallelConf(const std::string &op_name) const {
-  const auto &it = op_name2parallel_conf_.find(op_name);
-  CHECK(it != op_name2parallel_conf_.end());
-  return *(it->second);
-}
-
-ParallelConf *JobBuilder::MutableParallelConf(const std::string &op_name) {
-  const auto &it = op_name2parallel_conf_.find(op_name);
-  CHECK(it != op_name2parallel_conf_.end());
-  return it->second;
-}
-
-void JobBuilder::AddParallelConf(const std::string &op_name, const ParallelConf &parallel_conf) {
-  bool update = (op_name2parallel_conf_.count(op_name) == 0);
-  if (update) {
-    // update `op_name2parallel_conf_`
-    PlacementGroup *group = job_->mutable_placement()->add_placement_group();
-    group->mutable_op_set()->add_op_name(op_name);
-    *(group->mutable_parallel_conf()) = parallel_conf;
-    op_name2parallel_conf_[op_name] = group->mutable_parallel_conf();
-  }
-}
-
-OpTimeShape *JobBuilder::MutableTimeShape(const std::string &op_name) {
+OpTimeShape *JobBuilder::MutableTimeShape4OpName(const std::string &op_name) {
   const auto &it = op_name2time_shapes_.find(op_name);
   CHECK(it != op_name2time_shapes_.end());
   return it->second;
 }
 
-const OpTimeShape &JobBuilder::GetTimeShape(const std::string &op_name) const {
+const OpTimeShape &JobBuilder::TimeShape4OpName(const std::string &op_name) const {
   const auto &it = op_name2time_shapes_.find(op_name);
   CHECK(it != op_name2time_shapes_.end());
   return *(it->second);
 }
 
-void JobBuilder::AddTimeShape(const std::string &op_name, const OpTimeShape &time_shape) {
+void JobBuilder::AddTimeShape4OpName(const std::string &op_name, const OpTimeShape &time_shape) {
   bool update = (op_name2time_shapes_.count(op_name) == 0);
   if (update) {
     auto *time_shape_conf = job_->mutable_helper()->mutable_op_name2op_time_shape();
@@ -255,19 +244,19 @@ void JobBuilder::AddTimeShape(const std::string &op_name, const OpTimeShape &tim
   }
 }
 
-OptInt64 *JobBuilder::MutableBatchAxis(const std::string &lbn) {
+OptInt64 *JobBuilder::MutableBatchAxis4Lbn(const std::string &lbn) {
   const auto &it = lbn2batch_axis_.find(lbn);
   CHECK(it != lbn2batch_axis_.end());
   return it->second;
 }
 
-const OptInt64 &JobBuilder::GetBatchAxis(const std::string &lbn) const {
+const OptInt64 &JobBuilder::BatchAxis4Lbn(const std::string &lbn) const {
   const auto &it = lbn2batch_axis_.find(lbn);
   CHECK(it != lbn2batch_axis_.end());
   return *(it->second);
 }
 
-void JobBuilder::AddBatchAxis(const std::string &lbn, const OptInt64 &axis) {
+void JobBuilder::AddBatchAxis4Lbn(const std::string &lbn, const OptInt64 &axis) {
   bool update =
       (lbn2batch_axis_.count(lbn) == 0) || (lbn2batch_axis_[lbn]->value() != axis.value());
   if (update) {
