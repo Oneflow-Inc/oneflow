@@ -1,15 +1,17 @@
 import oneflow as flow
-import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.data.data_pb2 as data_util
 import numpy as np
+import pickle as pkl
 import argparse
 
+from termcolor import colored
 from datetime import datetime
 
 COCO_DATASET_DIR = "/dataset/mscoco_2017"
 COCO_ANNOTATIONS_FILE = "annotations/instances_val2017.json"
 COCO_IMAGE_DIR = "val2017"
 RANDOM_SEED = 297157
+COMPARE_DATA = "data.pkl"  # batch_size == 2 data from pytorch
 
 parser = argparse.ArgumentParser(description="flags for data loader")
 # parser.add_argument("-g", "--gpu_num_per_node", type=int, default=1, required=False)
@@ -43,9 +45,15 @@ parser.add_argument(
 parser.add_argument(
     "-i", "--image_dir", type=str, default=COCO_IMAGE_DIR, required=False
 )
-parser.add_argument("-b", "--batch_size", type=int, default=1, required=False)
+parser.add_argument("-b", "--batch_size", type=int, default=2, required=False)
 parser.add_argument(
-    "-bc", "--batch_cache_size", type=int, default=1, required=False
+    "-bc", "--batch_cache_size", type=int, default=3, required=False
+)
+parser.add_argument(
+    "-s", "--save_results", type=bool, default=False, required=False
+)
+parser.add_argument(
+    "-cp", "--compare_results", type=bool, default=True, required=False
 )
 
 args = parser.parse_args()
@@ -122,6 +130,27 @@ def coco_data_load_job():
     )
 
 
+def compare(data, valid, name=None):
+    name = name or "unknown"
+    if valid.shape != data.shape:
+        print(
+            colored(
+                "shape not identical: {} vs {}".format(valid.shape, data.shape),
+                "red",
+            )
+        )
+        return
+
+    if np.allclose(valid, data):
+        if np.array_equal(valid, data):
+            print(colored("{} identical".format(name), "green"))
+        else:
+            print(colored("{} allclose".format(name), "blue"))
+        return
+    else:
+        print(colored("{} not close".format(name), "red"))
+
+
 def main():
     # flow.config.gpu_device_num(args.gpu_num_per_node)
     # flow.config.ctrl_port(9788)
@@ -131,12 +160,63 @@ def main():
     image, image_size, gt_bbox, gt_labels, gt_segm, gt_segm_mask = (
         coco_data_load_job().get()
     )
-    np.save("image", image.ndarray())
-    np.save("image_size", image_size.ndarray())
-    np.save("gt_bbox", gt_bbox.ndarray())
-    np.save("gt_labels", gt_labels.ndarray())
-    np.save("gt_segm", gt_segm.ndarray())
-    np.save("gt_segm_mask", gt_segm_mask.ndarray())
+
+    if args.save_results:
+        np.save("image", image.ndarray())
+        np.save("image_size", image_size.ndarray())
+        np.save("gt_bbox", gt_bbox.ndarray())
+        np.save("gt_labels", gt_labels.ndarray())
+        np.save("gt_segm", gt_segm.ndarray())
+        np.save("gt_segm_mask", gt_segm_mask.ndarray())
+
+    if args.compare_results:
+        with open(COMPARE_DATA, "rb") as f:
+            data = pkl.load(f)
+
+        # compare image_size
+        # of image_size format (height, width)
+        # compare data image_size format (width, height)
+        compare(
+            image_size.ndarray(),
+            np.concatenate(
+                [data["image_size"][:, 1:2], data["image_size"][:, 0:1]], axis=1
+            ),
+            name="image_size",
+        )
+
+        # compare gt_bbox
+        compare(
+            gt_bbox.ndarray(),
+            np.concatenate(data["gt_bbox"], axis=0),
+            name="gt_bbox",
+        )
+
+        # compare gt_labels
+        compare(
+            gt_labels.ndarray(),
+            np.concatenate(data["gt_labels"], axis=0),
+            name="gt_labels",
+        )
+
+        # compare gt_segm
+        def flat_polys(polys):
+            poly_arrays = []
+            for img_polys in polys:
+                for obj_poly_list in img_polys:
+                    for obj_poly in obj_poly_list:
+                        poly_arrays.append(np.array(obj_poly).reshape(-1, 2))
+            return np.concatenate(poly_arrays, axis=0)
+
+        compare(gt_segm.ndarray(), flat_polys(data["gt_segm"]), name="gt_segm")
+
+        # compare gt_segm_mask
+        compare(
+            gt_segm_mask.ndarray(),
+            np.concatenate(
+                [m.reshape(-1) for m in data["gt_segm_mask"]], axis=0
+            ),
+            name="gt_segm_mask",
+        )
 
 
 if __name__ == "__main__":
