@@ -1,4 +1,6 @@
 #include "oneflow/core/data/data_transform.h"
+#include "oneflow/core/kernel/kernel_context.h"
+#include "oneflow/core/kernel/kernel_util.h"
 #include <fenv.h>
 
 extern "C" {
@@ -196,15 +198,26 @@ struct DataTransformer<DataSourceCase::kObjectSegmentation,
     size_t polys_offset = 0;
     FOR_RANGE(size_t, i, 0, polys_vec.size()) {
       size_t polys = polys_vec.at(i);
+      std::vector<MaskT> mask_merge_vec(image_height * image_width, 0);
       FOR_RANGE(size_t, j, 0, polys) {
         size_t poly_points = points_vec.at(polys_offset + j);
         // convert poly points to mask
-        std::vector<uint8_t> mask_vec(image_height * image_width);
+        std::vector<uint8_t> mask_vec(mask_merge_vec.size(), 0);
         PolygonXy2ColMajorMask(poly_dptr, poly_points, image_height, image_width, mask_vec.data());
-        std::transform(mask_vec.cbegin(), mask_vec.cend(), mask_dptr, mask_dptr,
-                       std::bit_or<MaskT>());
+        std::transform(mask_vec.cbegin(), mask_vec.cend(), mask_merge_vec.begin(),
+                       mask_merge_vec.begin(), std::bit_or<MaskT>());
         poly_dptr += poly_points * 2;
       }
+      // cocoapi output mask is col-major, convert it to row-major
+      KernelCtx ctx;
+      std::vector<int32_t> perm_vec({1, 0});
+      KernelUtil<DeviceType::kCPU, MaskT>::Transpose(
+          ctx.device_ctx, 2,
+          Shape({static_cast<int64_t>(image_width), static_cast<int64_t>(image_height)}),
+          Shape({static_cast<int64_t>(image_height), static_cast<int64_t>(image_width)}),
+          PbRf<int32_t>(perm_vec.begin(), perm_vec.end()), image_height * image_width,
+          mask_merge_vec.data(), mask_dptr);
+      // iter change
       polys_offset += polys;
       mask_dptr += image_height * image_width;
       // set lod

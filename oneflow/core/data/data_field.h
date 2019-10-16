@@ -60,7 +60,9 @@ class NdarrayDataField : public DataField {
   typedef T data_type;
 
   NdarrayDataField(size_t max_length)
-      : data_(new T[max_length]), capacity_(max_length), total_length_(0) {}
+      : data_(new T[max_length]), capacity_(max_length), total_length_(0) {
+    std::memset(data_.get(), 0, capacity_ * sizeof(T));
+  }
 
   void PushBack(T val) {
     CHECK_LT(total_length_, capacity_);
