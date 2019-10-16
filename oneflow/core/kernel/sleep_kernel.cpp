@@ -22,6 +22,7 @@ class SleepKernel final : public KernelIf<device_type> {
   ~SleepKernel() = default;
 
  private:
+  bool IsStateless() const override { return false; }
   void ForwardDataContent(const KernelCtx &,
                           std::function<Blob *(const std::string &)>) const override;
   void ForwardLoD(const KernelCtx &ctx,

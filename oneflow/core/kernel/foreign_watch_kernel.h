@@ -13,6 +13,7 @@ class ForeignWatchKernel final : public KernelIf<device_type> {
   ~ForeignWatchKernel() = default;
 
  private:
+  bool IsStateless() const override { return false; }
   void WithInBlob(DeviceCtx* device_ctx, Blob* blob, std::function<void(Blob*)> Handler) const;
   void ForwardDataContent(const KernelCtx& ctx,
                           std::function<Blob*(const std::string&)> BnInOp2Blob) const override;

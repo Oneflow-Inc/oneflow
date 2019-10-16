@@ -31,13 +31,13 @@ const LogicalBlobId& Kernel::BnInOp2Lbi(const std::string& bn_in_op) const {
   return op_attribute().bn_in_op2lbi().at(bn_in_op);
 }
 
-bool Kernel::HasEmptyShapeBlob(const PbRpf<std::string>& bns,
-                               const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
+bool Kernel::IsAllBlobEmpty(const PbRpf<std::string>& bns,
+                            const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
   for (const auto& bn : bns) {
     Blob* blob = BnInOp2Blob(bn);
-    if (blob && blob->IsShapeEmpty()) { return true; }
+    if (blob && !blob->IsShapeEmpty()) { return false; }
   }
-  return false;
+  return true;
 }
 
 void Kernel::CheckSameDim0ValidNum(
@@ -49,13 +49,7 @@ void Kernel::CheckSameDim0ValidNum(
 void Kernel::Forward(const KernelCtx& ctx,
                      std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   ForwardHeader(ctx, BnInOp2Blob);
-  if (HasEmptyShapeBlob(op_attribute().input_bns(), BnInOp2Blob)) {
-    LOG(WARNING) << "Op " << this->op_conf().name() << " has empty input blob";
-    if (!NeedForwardIfBlobEmpty()) {
-      LOG(WARNING) << "Skip kernel launch: " << this->op_conf().name();
-      return;
-    }
-  }
+  if (IsAllBlobEmpty(op_attribute().output_bns(), BnInOp2Blob) && IsStateless()) { return; }
   ForwardDataContent(ctx, BnInOp2Blob);
 }
 
