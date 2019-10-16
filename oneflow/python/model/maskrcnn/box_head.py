@@ -3,6 +3,7 @@ import operator
 
 from matcher import Matcher
 import oneflow as flow
+import numpy as np
 
 
 class BoxHead(object):
@@ -34,6 +35,20 @@ class BoxHead(object):
                         gt_boxes_list[img_idx],
                         allow_low_quality_matches=False,
                     )
+
+                def mask_lambda(x):
+                    import os
+
+                    if not os.path.exists("dump/roi_head"):
+                        os.makedirs("dump/roi_head")
+                    path = "dump/roi_head/" + "matched_idxs_" + str(img_idx)
+
+                    def dump(blob):
+                        np.save(path, blob.ndarray())
+
+                    return dump
+
+                flow.watch(matched_indices, mask_lambda(matched_indices))
                 pos_inds = flow.squeeze(
                     flow.local_nonzero(
                         matched_indices >= flow.constant_scalar(0, flow.int32)
@@ -104,6 +119,40 @@ class BoxHead(object):
                 pos_gt_indices_list.append(pos_gt_indices)
 
             proposals = flow.concat(proposal_list, axis=0)
+            for i, subsampled_proposals_img_i in enumerate(proposal_list):
+
+                def mask_lambda(x):
+                    import os
+
+                    if not os.path.exists("dump/roi_head"):
+                        os.makedirs("dump/roi_head")
+                    path = (
+                        "dump/roi_head/" + "subsampled_proposals_img_" + str(i)
+                    )
+
+                    def dump(blob):
+                        np.save(path, blob.ndarray())
+
+                    return dump
+
+                flow.watch(
+                    subsampled_proposals_img_i,
+                    mask_lambda(subsampled_proposals_img_i),
+                )
+
+            def mask_lambda(x):
+                import os
+
+                if not os.path.exists("dump/roi_head"):
+                    os.makedirs("dump/roi_head")
+                path = "dump/roi_head/" + "proposals"
+
+                def dump(blob):
+                    np.save(path, blob.ndarray())
+
+                return dump
+
+            flow.watch(proposals, mask_lambda(proposals))
             img_ids = flow.concat(
                 flow.detection.extract_piece_slice_id(proposal_list), axis=0
             )
@@ -116,6 +165,25 @@ class BoxHead(object):
             # box predictor
             bbox_regression, cls_logits = self.box_predictor(x)
 
+            def mask_lambda(x):
+                path = "dump/" + "bbox_regression" + "-" + x.op_name
+
+                def dump(blob):
+                    np.save(path, blob.ndarray())
+
+                return dump
+
+            flow.watch(bbox_regression, mask_lambda(bbox_regression))
+
+            def mask_lambda(x):
+                path = "dump/" + "cls_logits" + "-" + x.op_name
+
+                def dump(blob):
+                    np.save(path, blob.ndarray())
+
+                return dump
+
+            flow.watch(cls_logits, mask_lambda(cls_logits))
             # construct cls loss
             box_head_cls_loss = flow.math.reduce_sum(
                 flow.nn.sparse_softmax_cross_entropy_with_logits(
@@ -177,6 +245,7 @@ class BoxHead(object):
             def _save(x):
                 import numpy as np
                 import os
+
                 path = "eval_dump/"
                 if not os.path.exists(path):
                     os.mkdir(path)
@@ -220,14 +289,38 @@ class BoxHead(object):
                 roi_features_list[idx], Save("roi_feature_{}".format(idx))
             )
 
-
         roi_features = flow.stack(roi_features_list, axis=0)
 
         flow.watch(roi_features, Save("roi_features"))
 
         origin_indices = flow.stack(list(level_idx_dict.values()), axis=0)
-        roi_features_reorder = flow.local_gather(roi_features, origin_indices)
+        for level, idx_in_level in enumerate(level_idx_dict.values()):
 
+            def mask_lambda(x):
+                path = "dump/" + "box_head_idx_in_level" + "-" + str(level)
+
+                def dump(blob):
+                    np.save(path, blob.ndarray())
+
+                return dump
+
+            flow.watch(idx_in_level, mask_lambda(idx_in_level))
+
+        def mask_lambda(x):
+            path = "dump/" + "origin_indices"
+
+            def dump(blob):
+                np.save(path, blob.ndarray())
+
+            return dump
+
+        flow.watch(origin_indices, mask_lambda(origin_indices))
+        # roi_features_reorder = flow.local_gather(roi_features, origin_indices)
+        roi_features_reorder = flow.local_scatter_nd_update(
+            flow.constant_like(roi_features, float(0)),
+            flow.expand_dims(origin_indices, axis=1),
+            roi_features,
+        )
         # CHECK_POINT
         flow.watch(roi_features_reorder, Save("roi_features_reorder"))
 
@@ -249,7 +342,7 @@ class BoxHead(object):
             use_bias=True,
             name="fc7",
         )
-
+        flow.watch(x, Save("fc7"))
         return x
 
     def box_predictor(self, x):
