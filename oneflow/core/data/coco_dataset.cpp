@@ -166,10 +166,14 @@ void COCODataset::GetBbox(const nlohmann::json& bbox_json, DataField* data_field
   // COCO bounding box format is [left, top, width, height]
   // we need format xyxy
   auto& bbox_vec = bbox_field->data();
+  const auto to_remove = GetOneVal<float>();
+  const auto min_size = GetZeroVal<float>();
   bbox_vec.push_back(bbox_json[0].get<float>());
   bbox_vec.push_back(bbox_json[1].get<float>());
-  bbox_vec.push_back(bbox_json[2].get<float>() + bbox_json[0].get<float>());
-  bbox_vec.push_back(bbox_json[3].get<float>() + bbox_json[1].get<float>());
+  bbox_vec.push_back(bbox_json[0].get<float>()
+                     + std::max(bbox_json[2].get<float>() - to_remove, min_size));
+  bbox_vec.push_back(bbox_json[1].get<float>()
+                     + std::max(bbox_json[3].get<float>() - to_remove, min_size));
 }
 
 void COCODataset::GetLabel(const nlohmann::json& label_json, DataField* data_field) const {

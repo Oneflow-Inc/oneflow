@@ -70,6 +70,11 @@ class NdarrayDataField : public DataField {
     total_length_ += 1;
   }
 
+  void IncreaseDataLength(size_t len) {
+    total_length_ += len;
+    CHECK_LT(total_length_, capacity_);
+  }
+
   void AppendLodLength(size_t lvl, size_t len) {
     if (lod_len_.size() <= lvl) { lod_len_.resize(lvl + 1); }
     lod_len_.at(lvl).push_back(len);

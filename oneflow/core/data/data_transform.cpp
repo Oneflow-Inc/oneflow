@@ -220,6 +220,7 @@ struct DataTransformer<DataSourceCase::kObjectSegmentation,
       // iter change
       polys_offset += polys;
       mask_dptr += image_height * image_width;
+      segm_mask->IncreaseDataLength(image_height * image_width);
       // set lod
       segm_mask->AppendLodLength(1, image_height);
       FOR_RANGE(size_t, i, 0, image_height) { segm_mask->AppendLodLength(2, image_width); }

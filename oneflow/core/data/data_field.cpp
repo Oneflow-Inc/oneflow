@@ -162,7 +162,7 @@ struct DataFieldSerializer<NdarrayDataField<K>, T> {
     const auto* field = dynamic_cast<const NdarrayDataField<K>*>(data_field);
     CHECK_NOTNULL(field);
     CopyElem(field->data(), buffer, field->total_length());
-    return field->total_length();
+    return field->total_length() * sizeof(T);
   }
 };
 
