@@ -9,6 +9,7 @@
 #include "oneflow/core/device/device_context.h"
 #include "oneflow/core/job/placement.pb.h"  // ParallelContext
 #include "oneflow/core/job/resource.pb.h"   // DeviceType
+#include "oneflow/core/register/blob.h"
 #include "oneflow/xla/of2xla/xla_allocator.h"
 #include "tensorflow/compiler/xla/client/local_client.h"
 #include "tensorflow/compiler/xla/client/xla_builder.h"

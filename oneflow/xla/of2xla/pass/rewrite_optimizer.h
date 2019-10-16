@@ -2,6 +2,7 @@
 #define ONEFLOW_XLA_OF2XLA_PASS_REWRITE_OPTIMIZER_H_
 
 #include "oneflow/core/operator/op_conf.pb.h"
+#include "oneflow/xla/of2xla/xla_node.h"
 
 namespace oneflow {
 
