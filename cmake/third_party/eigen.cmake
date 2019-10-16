@@ -3,9 +3,18 @@ include (ExternalProject)
 set(EIGEN_INCLUDE_DIR ${THIRD_PARTY_DIR}/eigen/include/eigen3)
 set(EIGEN_INSTALL_DIR ${THIRD_PARTY_DIR}/eigen)
 
-set(EIGEN_URL ${CMAKE_CURRENT_BINARY_DIR}/third_party/eigen/src/eigen)
+if(WITH_XLA)
+  #set(EIGEN_URL "https://storage.googleapis.com/mirror.tensorflow.org/bitbucket.org/eigen/eigen/get/8071cda5714d.tar.gz")
+  set(EIGEN_URL "https://bitbucket.org/eigen/eigen/get/8071cda5714d.tar.gz")
+else()
+  set(EIGEN_URL ${CMAKE_CURRENT_BINARY_DIR}/third_party/eigen/src/eigen)
+endif()
 
-add_definitions(-DEIGEN_NO_AUTOMATIC_RESIZING -DEIGEN_NO_MALLOC -DEIGEN_USE_GPU)
+add_definitions(-DEIGEN_NO_AUTOMATIC_RESIZING -DEIGEN_USE_GPU)
+if (NOT WITH_XLA)
+add_definitions(-DEIGEN_NO_MALLOC)
+endif()
+#add_definitions(-DEIGEN_NO_AUTOMATIC_RESIZING -DEIGEN_NO_MALLOC -DEIGEN_USE_GPU)
 
 if (THIRD_PARTY)
   
