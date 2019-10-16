@@ -8,8 +8,7 @@
 #include "oneflow/xla/of2xla/xla_graph.h"
 #include "oneflow/xla/of2xla/pass/xla_optimize_pass.h"
 
-DEFINE_bool(use_xla_jit, EnvToBool(FLAGS_use_xla_jit, false),
-            "Option to use xla jit");
+DEFINE_bool(use_xla_jit, EnvToBool(FLAGS_use_xla_jit, false), "Option to use xla jit");
 #endif  // WITH_XLA
 
 namespace oneflow {
@@ -66,8 +65,7 @@ void Compiler::Compile(Job* job, Plan* plan, bool need_job_complete) const {
 #ifdef WITH_XLA
   if (FLAGS_use_xla_jit) {
     VLOG(2) << "Compile the job with XLA JIT support.";
-    TeePersistentLogStream::Create(
-        absl::StrCat("job_without_xla", job_desc.job_id()))->Write(*job);
+    TeePersistentLogStream::Create(absl::StrCat("job_without_xla", job_desc.job_id()))->Write(*job);
 
     mola::XlaGraph graph(Global<OpGraph>::Get());
     auto options = mola::CreateDefaultOptimizeOptions();
@@ -78,8 +76,7 @@ void Compiler::Compile(Job* job, Plan* plan, bool need_job_complete) const {
     options.job = job;
     mola::RunOptimizePass("RebuildCompiledJob", options);
 
-    TeePersistentLogStream::Create(
-        absl::StrCat("job_with_xla", job_desc.job_id()))->Write(*job);
+    TeePersistentLogStream::Create(absl::StrCat("job_with_xla", job_desc.job_id()))->Write(*job);
     Global<OpGraph>::Delete();
     Global<OpGraph>::New(*job);
   }

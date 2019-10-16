@@ -1,11 +1,11 @@
-#include <vector>
-#include "tensorflow/compiler/xla/shape.h"
-#include "tensorflow/compiler/xla/layout_util.h"
-#include "tensorflow/compiler/xla/shape_util.h"
-#include "oneflow/core/common/shape.h"
-#include "oneflow/core/common/data_type.h"
-#include "oneflow/xla/of2xla/xla_data_type.h"
 #include "oneflow/xla/of2xla/xla_shape.h"
+#include <vector>
+#include "oneflow/core/common/data_type.h"
+#include "oneflow/core/common/shape.h"
+#include "oneflow/xla/of2xla/xla_data_type.h"
+#include "tensorflow/compiler/xla/layout_util.h"
+#include "tensorflow/compiler/xla/shape.h"
+#include "tensorflow/compiler/xla/shape_util.h"
 
 namespace oneflow {
 namespace mola {

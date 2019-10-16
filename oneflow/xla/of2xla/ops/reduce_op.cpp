@@ -1,9 +1,9 @@
-#include "tensorflow/compiler/xla/client/xla_builder.h"
+#include "oneflow/xla/of2xla/xla_op_compiler.h"
+#include "oneflow/xla/of2xla/xla_op_compiler_registry.h"
+#include "oneflow/xla/of2xla/xla_op_context.h"
 #include "tensorflow/compiler/xla/client/lib/matrix.h"
 #include "tensorflow/compiler/xla/client/lib/slicing.h"
-#include "oneflow/xla/of2xla/xla_op_compiler_registry.h"
-#include "oneflow/xla/of2xla/xla_op_compiler.h"
-#include "oneflow/xla/of2xla/xla_op_context.h"
+#include "tensorflow/compiler/xla/client/xla_builder.h"
 
 #include "oneflow/xla/of2xla/xla_helpers.h"
 
@@ -36,9 +36,10 @@ class ReduceOp : public XlaOpCompiler {
 
     xla::XlaBuilder *builder = ctx->builder();
     DataType data_type = ctx->InputType("in");
-    ctx->SetOutput("out", xla::Reduce(
-        input, InitValue(builder, data_type), Reduction(data_type),
-        std::vector<long long>{axis.begin(), axis.end()}));
+    ctx->SetOutput(
+        "out",
+        xla::Reduce(input, InitValue(builder, data_type), Reduction(data_type),
+                    std::vector<long long>{axis.begin(), axis.end()}));
   }
 
   virtual xla::XlaOp InitValue(xla::XlaBuilder *builder,

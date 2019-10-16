@@ -13,8 +13,8 @@ template <>
 PbMessagePtr GetNodeAttr<PbMessagePtr>(const XlaNode *node,
                                        const std::string &attr_name) {
   DCHECK(HasFieldInPbMessage(node->proto_conf(), attr_name));
-  return const_cast<PbMessagePtr>(&GetMessageInPbMessage(node->proto_conf(),
-                                                         attr_name));
+  return const_cast<PbMessagePtr>(
+      &GetMessageInPbMessage(node->proto_conf(), attr_name));
 }
 
 std::string GetNodeAttrAsString(const XlaNode *node,
