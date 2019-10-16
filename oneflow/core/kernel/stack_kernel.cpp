@@ -10,6 +10,7 @@ class StackKernel final : public KernelIf<device_type> {
   ~StackKernel() = default;
 
  private:
+  bool NeedForwardIfBlobEmpty() const override { return true; }
   void ForwardDataContent(const KernelCtx& ctx,
                           std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
     Blob* out_blob = BnInOp2Blob("out");

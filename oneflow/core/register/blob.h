@@ -76,7 +76,7 @@ class Blob final {
   void CopyDataContentFrom(DeviceCtx* device_ctx, const Blob* rhs);
   void CopyValidDataContentFrom(DeviceCtx* device_ctx, const Blob* rhs);
   void CopyHeaderFrom(DeviceCtx* device_ctx, const Blob* rhs);
-  bool IsShapeEmpty() const { return false; }
+  bool IsShapeEmpty() const;
 
   size_t AlignedTotalByteSize() const { return blob_desc_->AlignedTotalByteSize(); }
   const MemoryCase& mem_case() const;

@@ -49,6 +49,13 @@ void Kernel::CheckSameDim0ValidNum(
 void Kernel::Forward(const KernelCtx& ctx,
                      std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   ForwardHeader(ctx, BnInOp2Blob);
+  if (HasEmptyShapeBlob(op_attribute().input_bns(), BnInOp2Blob)) {
+    LOG(WARNING) << "Op " << this->op_conf().name() << " has empty input blob";
+    if (!NeedForwardIfBlobEmpty()) {
+      LOG(WARNING) << "Skip kernel launch: " << this->op_conf().name();
+      return;
+    }
+  }
   ForwardDataContent(ctx, BnInOp2Blob);
 }
 
