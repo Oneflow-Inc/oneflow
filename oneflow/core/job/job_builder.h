@@ -26,39 +26,39 @@ class JobBuilder final {
   SbpConf *mutable_sbp_conf() { return job_->mutable_sbp_conf(); }
 
   const OperatorConf &OpConf4OpName(const std::string &op_name) const;
-  const ParallelConf &ParallelConf4OpName(const std::string &op_name) const;
-  void AddOps(const ParallelConf &parallel_conf, const std::vector<OperatorConf> &op_confs);
-  void RemoveOp(const std::string &op_name);
+  OperatorConf *MutableOpConf4OpName(const std::string &op_name);
 
+  void AddOps(const ParallelConf &parallel_conf, const std::vector<OperatorConf> &op_confs);
   void MutOpsOnlyOnce(const std::vector<OperatorConf> &op_confs);
   void MutParallelConfOnlyOnce(const std::string &op_name, const ParallelConf &parallel_conf);
   void AddOrMutOpsOnlyOnce(const ParallelConf &parallel_conf,
                            const std::vector<OperatorConf> &op_confs);
+
+  void RemoveOpByName(const std::string &op_name);
+  void DelOps(const std::vector<std::string> &op_names);
   void DelOps(const std::vector<OperatorConf> &op_confs);
+
   SbpParallel *MutSbpParallel4Oba(const OpBlobArg &oba) const;
   void BindIdenticalSbpOpBlobArgPair(const OpBlobArg &first, const OpBlobArg &second);
 
   void ForEachOperator(const std::function<void(const Operator &)> &Handler) const;
 
-  OperatorConf *MutableOpConf(const std::string &op_name);
-  const OperatorConf &GetOpConf(const std::string &op_name);
+  const ParallelConf &ParallelConf4OpName(const std::string &op_name) const;
+  ParallelConf *MutableParallelConf4OpName(const std::string &op_name);
+  void AddParallelConf4OpName(const std::string &op_name, const ParallelConf &parallel_conf);
 
-  SbpSignature *MutableSbpSignature(const std::string &op_name);
-  const SbpSignature &GetSbpSignature(const std::string &op_name) const;
-  void AddSbpSignature(const std::string &op_name, const SbpSignature &sbp_signature);
+  const SbpSignature &SbpSignature4OpName(const std::string &op_name) const;
+  SbpSignature *MutableSbpSignature4OpName(const std::string &op_name);
+  void AddSbpSignature4OpName(const std::string &op_name, const SbpSignature &sbp_signature);
 
-  ParallelConf *MutableParallelConf(const std::string &op_name);
-  const ParallelConf &GetParallelConf(const std::string &op_name) const;
-  void AddParallelConf(const std::string &op_name, const ParallelConf &parallel_conf);
+  const OpTimeShape &TimeShape4OpName(const std::string &op_name) const;
+  OpTimeShape *MutableTimeShape4OpName(const std::string &op_name);
+  void AddTimeShape4OpName(const std::string &op_name, const OpTimeShape &time_shape);
 
-  OpTimeShape *MutableTimeShape(const std::string &op_name);
-  const OpTimeShape &GetTimeShape(const std::string &op_name) const;
-  void AddTimeShape(const std::string &op_name, const OpTimeShape &time_shape);
-
-  OptInt64 *MutableBatchAxis(const std::string &lbn);
-  const OptInt64 &GetBatchAxis(const std::string &lbn) const;
-  void AddBatchAxis(const std::string &lbn, const OptInt64 &axis);
-  bool HasBatchAxis(const std::string &lbn) const { return lbn2batch_axis_.count(lbn) > 0; }
+  const OptInt64 &BatchAxis4Lbn(const std::string &lbn) const;
+  OptInt64 *MutableBatchAxis4Lbn(const std::string &lbn);
+  void AddBatchAxis4Lbn(const std::string &lbn, const OptInt64 &axis);
+  bool HasBatchAxis4Lbn(const std::string &lbn) const { return lbn2batch_axis_.count(lbn) > 0; }
 
  private:
   PlacementGroup *FindPlacementGroup(const std::string &op_name) const;
