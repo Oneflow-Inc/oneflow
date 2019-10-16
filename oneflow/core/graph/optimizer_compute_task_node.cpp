@@ -4,7 +4,9 @@
 namespace oneflow {
 
 void OptimizerCompTaskNode::ConsumeAllRegsts() {
-  ForEachInDataEdge([&](TaskEdge* edge) { ConsumeRegst("in", edge->GetSoleRegst()); });
+  ForEachInDataEdge([&](TaskEdge* edge) {
+    for (const auto& regst : edge->GetRegsts()) { ConsumeRegst("in", regst); }
+  });
 }
 
 void OptimizerCompTaskNode::ProduceAllRegstsAndBindEdges() { ProduceRegst("tmp", false, 1, 1); }
