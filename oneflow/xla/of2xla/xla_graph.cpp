@@ -1,7 +1,7 @@
-#include "oneflow/xla/of2xla/xla_graph.h"
 #include "oneflow/core/graph/op_graph.h"
-#include "oneflow/xla/of2xla/xla_argument.h"
 #include "oneflow/xla/of2xla/xla_utility.h"
+#include "oneflow/xla/of2xla/xla_argument.h"
+#include "oneflow/xla/of2xla/xla_graph.h"
 
 namespace oneflow {
 namespace mola {
@@ -38,7 +38,7 @@ XlaGraph::XlaGraph(const OpGraph *op_graph) {
 
   std::unordered_map<LogicalBlobId, XlaNode *> producer;
   for (XlaNode *node : Nodes()) {
-    for (const std::string &bn : node->output_bns()) {
+    for (const std::string &bn  : node->output_bns()) {
       producer.emplace(node->Output(bn), node);
     }
   }
@@ -172,9 +172,10 @@ std::string XlaGraph::ToDot() const {
 
 void XlaGraph::InferBlobDescs(
     std::unordered_map<std::string, BlobDesc> *blob_descs,
-    const ParallelContext &parallel_ctx, const SbpSignature &sbp_signature) {
+    const ParallelContext &parallel_ctx,
+    const SbpSignature &sbp_signature) {
   TopologyVisit(*this, [&](XlaNode *node) {
-    auto get_blob_desc_fn = [&](const LogicalBlobId &lbi) -> BlobDesc * {
+    auto get_blob_desc_fn = [&](const LogicalBlobId &lbi) -> BlobDesc* {
       std::string blob_name = BlobName(lbi);
       auto it = blob_descs->find(blob_name);
       // Check presentness for inputs

@@ -142,8 +142,8 @@ void RewriteOptimizerOp(const OpGraph& op_graph, Job* job) {
   options.job = job;
   mola::RunOptimizePass("RewriteOptimizer", options);
 
-  TeePersistentLogStream::Create(absl::StrCat("job_rewrite_optimizer", GlobalJobDesc().job_id()))
-      ->Write(*job);
+  TeePersistentLogStream::Create(
+  absl::StrCat("job_rewrite_optimizer", GlobalJobDesc().job_id()))->Write(*job);
 }
 #endif
 
@@ -377,7 +377,9 @@ void JobCompleter::Complete(Job* job) const {
     // complete ops for trainning
     WithOpGraphAndMutJobBuilder(job, &GenerateOpConf4Trainning);
 #ifdef WITH_XLA
-    if (FLAGS_use_xla_jit) { WithOpGraphAndMutJob(job, &RewriteOptimizerOp); }
+    if (FLAGS_use_xla_jit) {
+      WithOpGraphAndMutJob(job, &RewriteOptimizerOp);
+    }
 #endif
     WithOpGraphAndMutJobBuilder(job, &MakeNcclTupleBroadcastReduceSequence);
     WithOpGraphAndMutJobBuilder(job, &RewriteBoxingWithAllReduce);

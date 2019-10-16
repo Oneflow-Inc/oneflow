@@ -1,8 +1,8 @@
-#include "oneflow/xla/of2xla/xla_op_compiler.h"
-#include "oneflow/xla/of2xla/xla_op_compiler_registry.h"
-#include "oneflow/xla/of2xla/xla_op_context.h"
-#include "tensorflow/compiler/xla/client/lib/matrix.h"
 #include "tensorflow/compiler/xla/client/xla_builder.h"
+#include "tensorflow/compiler/xla/client/lib/matrix.h"
+#include "oneflow/xla/of2xla/xla_op_compiler_registry.h"
+#include "oneflow/xla/of2xla/xla_op_compiler.h"
+#include "oneflow/xla/of2xla/xla_op_context.h"
 
 namespace oneflow {
 namespace mola {
@@ -36,9 +36,9 @@ class BatchMatMulOp : public XlaOpCompiler {
 
     // auto lhs = transpose_a ? xla::Transpose(a, permute_a) : a;
     // auto rhs = transpose_b ? xla::Transpose(b, permute_b) : b;
-
+    
     // ctx->SetOutput("out", xla::BatchDot(lhs, rhs));
-
+  
     ctx->SetOutput("out", xla::BatchDot(a, transpose_a, b, transpose_b));
   }
 };

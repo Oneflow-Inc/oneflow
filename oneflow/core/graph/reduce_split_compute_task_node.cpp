@@ -48,7 +48,7 @@ void ReduceSplitCompTaskNode::BuildExecGphAndRegst() {
   node->BindBnWithRegst(reduce_split_op->SoleIbn(), GetSoleConsumedRegst("in"));
 
   FOR_RANGE(size_t, i, 0, reduce_split_op->output_bns().size()) {
-    std::string blob_name = "out_" + std::to_string(i);
+    std::string blob_name =  "out_" + std::to_string(i);
     std::shared_ptr<RegstDesc> out_regst = GetProducedRegst(blob_name);
     CHECK(out_regst.get() != nullptr);
     out_regst->AddLbi(reduce_split_op->BnInOp2Lbi(blob_name));
@@ -62,7 +62,7 @@ void ReduceSplitCompTaskNode::EnableMemSharingInReduce(const ReduceMemSharingCtx
   std::shared_ptr<Operator> reduce_split_op = this->logical_node()->SoleOp();
   int64_t offset = 0;
   for (int i = 0; i < reduce_split_op->output_bns().size(); ++i) {
-    RegstDesc* out_regst = GetProducedRegst("out_" + std::to_string(i)).get();
+    RegstDesc *out_regst = GetProducedRegst("out_" + std::to_string(i)).get();
     ctx.EnableMemSharing4Regst(out_regst, offset);
     offset += InferRegstSize(*out_regst);
   }

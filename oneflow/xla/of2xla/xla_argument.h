@@ -26,7 +26,7 @@ class Argument {
     blob_desc_.CopyAllFrom(other.blob_desc_);
     return *this;
   }
-
+ 
   DataType data_type() const { return blob_desc_.data_type(); }
 
   Shape shape() const { return blob_desc_.shape(); }
@@ -37,7 +37,9 @@ class Argument {
     return proto;
   }
 
-  std::string blob_name() const { return BlobName(blob_id_); }
+  std::string blob_name() const {
+    return BlobName(blob_id_);
+  }
 
   const LogicalBlobId &blob_id() const { return blob_id_; }
 
@@ -58,9 +60,9 @@ class Argument {
 }  // namespace oneflow
 
 namespace std {
-template <>
+template<>
 struct hash<oneflow::mola::Argument> {
-  size_t operator()(const oneflow::mola::Argument &arg) const {
+  size_t operator()(const oneflow::mola::Argument& arg) const {
     return std::hash<oneflow::LogicalBlobId>()(arg.blob_id_);
   }
 };

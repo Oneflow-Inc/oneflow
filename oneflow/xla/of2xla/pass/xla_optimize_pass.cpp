@@ -1,6 +1,6 @@
-#include "oneflow/xla/of2xla/pass/xla_optimize_pass.h"
 #include <unordered_map>
 #include "glog/logging.h"
+#include "oneflow/xla/of2xla/pass/xla_optimize_pass.h"
 
 DEFINE_int32(clustering_minimum_nodes,
              EnvToInt(FLAGS_clustering_minimum_nodes, 1),
@@ -35,8 +35,8 @@ void XlaOptimizePass::Register(const std::string &pass_type,
 XlaOptimizePass *XlaOptimizePass::Create(const std::string &pass_type,
                                          const OptimizeOptions &options) {
   PassFactoryMap *factories = GlobalPassFactory();
-  CHECK_GT(factories->count(pass_type), 0)
-      << "Pass (" << pass_type << ") has not been registered.";
+  CHECK_GT(factories->count(pass_type), 0) << "Pass (" << pass_type
+                                           << ") has not been registered.";
   return (*factories)[pass_type](options);
 }
 
@@ -45,7 +45,7 @@ OptimizeOptions CreateDefaultOptimizeOptions() {
   options.clustering_minimum_nodes = FLAGS_clustering_minimum_nodes;
   options.clustering_maximum_nodes = FLAGS_clustering_maximum_nodes;
   options.strict_clustering = FLAGS_strict_clustering;
-
+  
   OptimizeOptions optimize_options;
   optimize_options.clustering_options = options;
   return optimize_options;

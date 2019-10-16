@@ -39,7 +39,8 @@ class XlaGraph {
 
   virtual void InferBlobDescs(
       std::unordered_map<std::string, BlobDesc> *blob_descs,
-      const ParallelContext &parallel_ctx, const SbpSignature &sbp_signature);
+      const ParallelContext &parallel_ctx,
+      const SbpSignature &sbp_signature);
 
  private:
   void BuildEdges();
@@ -146,12 +147,13 @@ void TopologyVisit(GraphType &graph, UserFunc func) {
   while (!visit_queue.empty()) {
     pNodeType node = visit_queue.front();
     visit_queue.pop();
-    {  // Run user function
+    { // Run user function
       func(node);
     }
     for (pEdgeType edge : node->out_edges()) {
       pNodeType end = edge->end();
-      if (IsAllInputsVisited(end) && visited.insert(end).second) {
+      if (IsAllInputsVisited(end) &&
+          visited.insert(end).second) {
         visit_queue.push(end);
       }
     }

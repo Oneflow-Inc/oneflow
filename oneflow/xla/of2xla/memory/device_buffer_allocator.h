@@ -1,8 +1,8 @@
 #ifndef ONEFLOW_CORE_XLA_OF2XLA_MEMORY_DEVICE_BUFFER_ALLOCATOR_H_
 #define ONEFLOW_CORE_XLA_OF2XLA_MEMORY_DEVICE_BUFFER_ALLOCATOR_H_
 
-#include <condition_variable>
 #include <mutex>
+#include <condition_variable>
 
 #include "oneflow/xla/of2xla/memory/device_memory_pool.h"
 
@@ -46,7 +46,7 @@ class DeviceBufferAllocator {
   volatile uint64_t lock_count_ = 0;
 
   std::mutex mutex_;
-
+ 
   std::condition_variable cond_;
 
   std::shared_ptr<DeviceMemoryPool> mem_pool_;

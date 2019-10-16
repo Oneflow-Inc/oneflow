@@ -1,9 +1,9 @@
-#include "oneflow/xla/of2xla/xla_op_compiler.h"
-#include "oneflow/xla/of2xla/xla_op_compiler_registry.h"
-#include "oneflow/xla/of2xla/xla_op_context.h"
-#include "tensorflow/compiler/xla/client/lib/constants.h"
-#include "tensorflow/compiler/xla/client/lib/math.h"
 #include "tensorflow/compiler/xla/client/xla_builder.h"
+#include "tensorflow/compiler/xla/client/lib/math.h"
+#include "tensorflow/compiler/xla/client/lib/constants.h"
+#include "oneflow/xla/of2xla/xla_op_compiler_registry.h"
+#include "oneflow/xla/of2xla/xla_op_compiler.h"
+#include "oneflow/xla/of2xla/xla_op_context.h"
 
 #include "oneflow/xla/of2xla/xla_helpers.h"
 
@@ -68,11 +68,11 @@ void LayerNormOp::Compile(XlaOpContext *ctx) {
   // output = Reshape(output, Shape({batch_dims, norm_dims}));
   if (ctx->GetAttr<bool>("scale")) {
     CHECK_EQ(gamma_shape, ctx->InputShape("gamma"));
-    output = xla::Mul(output, ctx->Input("gamma"), {3} /*broadcast dim*/);
+    output = xla::Mul(output, ctx->Input("gamma"), {3}/*broadcast dim*/);
   }
   if (ctx->GetAttr<bool>("center")) {
     CHECK_EQ(gamma_shape, ctx->InputShape("beta"));
-    output = xla::Add(output, ctx->Input("beta"), {3} /*broadcast dim*/);
+    output = xla::Add(output, ctx->Input("beta"), {3}/*broadcast dim*/);
   }
   ctx->SetOutput("out", Reshape(output, input_shape));
 }
@@ -88,8 +88,8 @@ class LayerNormGradOp : public XlaOpCompiler {
                            double epsilon) {
     // Feature index is 1 for NCHW
     int feature_index = 1;
-    return xla::BatchNormGrad(activations, scale, mean, variance, grad, epsilon,
-                              feature_index);
+    return xla::BatchNormGrad(
+        activations, scale, mean, variance, grad, epsilon, feature_index);
   }
 };
 
@@ -156,14 +156,14 @@ void LayerNormParamGradOp::Compile(XlaOpContext *ctx) {
   if (ctx->HasAttr("gamma_diff")) {
     xla::XlaOp normalized = ctx->Input("normalized");
     xla::XlaOp gamma_grad = normalized * output_grad;
-    gamma_grad =
-        xla::Reduce(gamma_grad, Zero(builder, data_type), add_func, batch_dims);
+    gamma_grad = xla::Reduce(gamma_grad, Zero(builder, data_type), add_func,
+                             batch_dims);
     ctx->SetOutput("gamma_diff", gamma_grad);
   }
   if (ctx->HasAttr("normalized_diff")) {
     xla::XlaOp normalized_grad;
     if (ctx->HasAttr("gamma")) {
-      xla::XlaOp gamma = ctx->Input("gamma");
+      xla::XlaOp gamma = ctx->Input("gamma"); 
       normalized_grad = xla::Mul(output_grad, gamma, norm_dims);
     } else {
       normalized_grad = output_grad;
