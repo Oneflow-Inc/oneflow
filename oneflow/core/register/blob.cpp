@@ -54,6 +54,6 @@ void Blob::CopyHeaderFrom(DeviceCtx* device_ctx, const Blob* rhs) {
                            blob_desc().ByteSizeOfBlobHeader());
 }
 
-void Blob::IsShapeEmpty() const { return shape().elem_cnt() == 0; }
+bool Blob::IsShapeEmpty() const { return shape().elem_cnt() == 0; }
 
 }  // namespace oneflow
