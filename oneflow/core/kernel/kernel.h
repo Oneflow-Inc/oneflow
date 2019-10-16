@@ -67,8 +67,8 @@ class Kernel {
   virtual bool IsStateless() const { return true; }
   virtual const PbMessage& GetCustomizedOpConf() const { UNIMPLEMENTED(); }
   virtual const PbMessage& GetCustomizedKernelConf() const { UNIMPLEMENTED(); }
-  bool HasEmptyShapeBlob(const PbRpf<std::string>& bns,
-                         const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
+  bool IsAllBlobEmpty(const PbRpf<std::string>& bns,
+                      const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
   void CheckSameDim0ValidNum(const PbRpf<std::string>& bns,
                              const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
 
