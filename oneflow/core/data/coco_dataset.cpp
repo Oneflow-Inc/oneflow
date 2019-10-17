@@ -105,10 +105,10 @@ bool COCODataset::ImageHasValidAnnotations(int64_t image_id) const {
 int64_t COCODataset::GetGroupId(int64_t idx) const {
   int64_t image_id = image_ids_.at(idx);
   const auto& image_info = image_id2image_.at(image_id);
-  int64_t image_height = image_info["height"].get<int64_t>();
-  int64_t image_width = image_info["width"].get<int64_t>();
+  float image_height = image_info["height"].get<float>();
+  float image_width = image_info["width"].get<float>();
   float aspect_ratio = image_height * 1.0f / image_width;
-  if (aspect_ratio > 1.0f) { return 1; }
+  if (aspect_ratio >= 1.0f) { return 1; }
   return 0;
 }
 

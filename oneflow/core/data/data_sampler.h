@@ -53,6 +53,7 @@ class GroupedDataSampler : public DataSampler {
 
  private:
   std::vector<int64_t> group_ids_;
+  HashMap<size_t, HashSet<int64_t>> epoch2fetched_indices_;
 };
 
 }  // namespace data
