@@ -135,7 +135,7 @@ def conv2d(
             else flow.constant_initializer(0),
         )
         output = flow.nn.bias_add(
-            output, bias, data_format, name_prefix + "-bias_add"
+            output, bias, data_format, name=name_prefix + "-bias_add"
         )
     if activation is not None:
         output = activation(output, name=name_prefix + "-activation")
