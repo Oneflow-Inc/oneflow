@@ -180,13 +180,14 @@ def maskrcnn_train(images, image_sizes, gt_boxes, gt_segms, gt_labels):
     )
 
     # Mask Head
-    mask_loss = mask_head.build_train(
-        pos_proposal_list,
-        pos_gt_indices_list,
-        gt_segms_list,
-        gt_labels_list,
-        features,
-    )
+    with flow.watch_scope(blob_watched, diff_blob_watched):
+        mask_loss = mask_head.build_train(
+            pos_proposal_list,
+            pos_gt_indices_list,
+            gt_segms_list,
+            gt_labels_list,
+            features,
+        )
 
     return rpn_bbox_loss, rpn_objectness_loss, box_loss, cls_loss, mask_loss
 
@@ -239,7 +240,7 @@ def maskrcnn_eval(images, image_sizes):
     return cls_logits, box_pred, mask_logits
 
 
-blob_watched = {}
+blob_watched, diff_blob_watched = {}, {}
 if terminal_args.mock_dataset:
 
     @flow.function
@@ -417,13 +418,26 @@ if __name__ == "__main__":
                 for loss in train_loss:
                     print_loss.append(loss.mean())
                 print(fmt_str.format(*print_loss))
-                if not os.path.exists("saver"):
-                    os.makedirs("saver")
+                saver_path = os.path.join("saver", "fw", str(i))
+                diff_saver_path = os.path.join("saver", "bw", str(i))
+                if not os.path.exists(saver_path):
+                    os.makedirs(saver_path)
+                if not os.path.exists(diff_saver_path):
+                    os.makedirs(diff_saver_path)
                 for lbn, blob_data in blob_watched.items():
                     import numpy as np
 
                     np.save(
-                        "saver/" + blob_data["blob_def"].op_name,
+                        os.path.join(saver_path, blob_data["blob_def"].op_name),
+                        blob_data["blob"].ndarray(),
+                    )
+                for lbn, blob_data in diff_blob_watched.items():
+                    import numpy as np
+
+                    np.save(
+                        os.path.join(
+                            diff_saver_path, blob_data["blob_def"].op_name
+                        ),
                         blob_data["blob"].ndarray(),
                     )
                 if (i + 1) % 10 == 0:
