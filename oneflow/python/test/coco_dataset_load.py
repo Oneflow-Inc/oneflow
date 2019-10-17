@@ -2,10 +2,10 @@ import oneflow as flow
 import oneflow.core.data.data_pb2 as data_util
 import numpy as np
 import pickle as pkl
+import time
 import argparse
 
 from termcolor import colored
-from datetime import datetime
 
 COCO_DATASET_DIR = "/dataset/mscoco_2017"
 COCO_ANNOTATIONS_FILE = "annotations/instances_val2017.json"
@@ -50,10 +50,14 @@ parser.add_argument(
     "-bc", "--batch_cache_size", type=int, default=3, required=False
 )
 parser.add_argument(
-    "-s", "--save_results", type=bool, default=True, required=False
+    "-s", "--save_results", default=False, action="store_true", required=False
 )
 parser.add_argument(
-    "-cp", "--compare_results", type=bool, default=True, required=False
+    "-cp",
+    "--compare_results",
+    default=False,
+    action="store_true",
+    required=False,
 )
 
 args = parser.parse_args()
@@ -78,6 +82,12 @@ def coco_data_load_job():
         shape=(1344, 800, 3),
         dtype=flow.float,
         is_dynamic=True,
+    )
+    data_loader.add_blob(
+        "image_id",
+        data_util.DataSourceCase.kImageId,
+        shape=(1,),
+        dtype=flow.int64,
     )
     data_loader.add_blob(
         "image_size",
@@ -125,6 +135,7 @@ def coco_data_load_job():
     data_loader.init()
     return (
         data_loader("image"),
+        data_loader("image_id"),
         data_loader("image_size"),
         data_loader("gt_bbox"),
         data_loader("gt_labels"),
@@ -154,13 +165,13 @@ def compare(data, valid, name=None):
         print(colored("{} not close".format(name), "red"))
 
 
-def main():
+def compare_test_case():
     # flow.config.gpu_device_num(args.gpu_num_per_node)
     # flow.config.ctrl_port(9788)
     flow.config.exp_run_conf({"enable_experiment_run": False})
     flow.config.default_data_type(flow.float)
 
-    image, image_size, gt_bbox, gt_labels, gt_segm, gt_segm_mask = (
+    image, image_id, image_size, gt_bbox, gt_labels, gt_segm, gt_segm_mask = (
         coco_data_load_job().get()
     )
 
@@ -172,55 +183,99 @@ def main():
         np.save("gt_segm", gt_segm.ndarray())
         np.save("gt_segm_mask", gt_segm_mask.ndarray())
 
-    if args.compare_results:
-        with open(COMPARE_DATA, "rb") as f:
-            data = pkl.load(f)
+    with open(COMPARE_DATA, "rb") as f:
+        data = pkl.load(f)
 
-        # compare image_size
-        # of image_size format (height, width)
-        # compare data image_size format (width, height)
-        compare(
-            image_size.ndarray(),
-            np.concatenate(
-                [data["image_size"][:, 1:2], data["image_size"][:, 0:1]], axis=1
-            ),
-            name="image_size",
+    # compare images
+    diff = image - np.transpose(data["images"], (0, 2, 3, 1))
+    max_diff = np.max(diff)
+    if max_diff <= 1.0:
+        print(colored("image max diff is: {}".format(max_diff), "blue"))
+    else:
+        print(colored("image max diff is: {}".format(max_diff), "red"))
+
+    # compare image_size
+    # of image_size format (height, width)
+    # compare data image_size format (width, height)
+    compare(
+        image_size.ndarray(),
+        np.concatenate(
+            [data["image_size"][:, 1:2], data["image_size"][:, 0:1]], axis=1
+        ),
+        name="image_size",
+    )
+
+    # compare gt_bbox
+    compare(
+        gt_bbox.ndarray(),
+        np.concatenate(data["gt_bbox"], axis=0),
+        name="gt_bbox",
+    )
+
+    # compare gt_labels
+    compare(
+        gt_labels.ndarray(),
+        np.concatenate(data["gt_labels"], axis=0),
+        name="gt_labels",
+    )
+
+    # compare gt_segm
+    def flat_polys(polys):
+        poly_arrays = []
+        for img_polys in polys:
+            for obj_poly_list in img_polys:
+                for obj_poly in obj_poly_list:
+                    poly_arrays.append(np.array(obj_poly).reshape(-1, 2))
+        return np.concatenate(poly_arrays, axis=0)
+
+    compare(gt_segm.ndarray(), flat_polys(data["gt_segm"]), name="gt_segm")
+
+    # compare gt_segm_mask
+    compare(
+        gt_segm_mask.ndarray(),
+        np.concatenate([m.reshape(-1) for m in data["gt_segm_mask"]], axis=0),
+        name="gt_segm_mask",
+    )
+
+
+cur_step = 0
+start_time_list = []
+
+
+def profile_async_test_case():
+    def profile_callback(results):
+        global cur_step
+        # (image, image_size, gt_bbox, gt_labels, gt_segm, gt_segm_mask) = results
+        print(
+            "{:<10}{:>12}".format(
+                cur_step, time.time() - start_time_list[cur_step]
+            )
         )
+        cur_step += 1
 
-        # compare gt_bbox
-        compare(
-            gt_bbox.ndarray(),
-            np.concatenate(data["gt_bbox"], axis=0),
-            name="gt_bbox",
+    print("{:<10}{:>12}".format("iter", "time"))
+    for i in range(10):
+        coco_data_load_job().async_get(profile_callback)
+        start_time_list.append(time.time())
+
+
+def profile_test_case():
+    print("{:<10}{:<25}{:>12}".format("iter", "image_id", "time"))
+    start_time = time.time()
+    for i in range(10):
+        results = coco_data_load_job().get()
+        image_id = np.squeeze(results[1].ndarray(), axis=1).tolist()
+        step_time = time.time()
+        print(
+            "{:<10}{:<25}{:>12}".format(
+                i, str(image_id), step_time - start_time
+            )
         )
-
-        # compare gt_labels
-        compare(
-            gt_labels.ndarray(),
-            np.concatenate(data["gt_labels"], axis=0),
-            name="gt_labels",
-        )
-
-        # compare gt_segm
-        def flat_polys(polys):
-            poly_arrays = []
-            for img_polys in polys:
-                for obj_poly_list in img_polys:
-                    for obj_poly in obj_poly_list:
-                        poly_arrays.append(np.array(obj_poly).reshape(-1, 2))
-            return np.concatenate(poly_arrays, axis=0)
-
-        compare(gt_segm.ndarray(), flat_polys(data["gt_segm"]), name="gt_segm")
-
-        # compare gt_segm_mask
-        compare(
-            gt_segm_mask.ndarray(),
-            np.concatenate(
-                [m.reshape(-1) for m in data["gt_segm_mask"]], axis=0
-            ),
-            name="gt_segm_mask",
-        )
+        start_time = step_time
 
 
 if __name__ == "__main__":
-    main()
+    if args.compare_results:
+        compare_test_case()
+    else:
+        profile_test_case()
