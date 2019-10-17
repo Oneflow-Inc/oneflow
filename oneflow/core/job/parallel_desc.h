@@ -80,12 +80,15 @@ namespace std {
 template<>
 struct hash<oneflow::ParallelDesc> {
   size_t operator()(const oneflow::ParallelDesc& pr) const {
-    std::string str;
+    size_t ret = 0;
+    int i = 0;
+    int shift_roundtrip = (sizeof(size_t) / 2);
     for (int machine_id : pr.sorted_machine_ids()) {
-      str += "::" + std::to_string(machine_id) + ":";
-      for (int dev_id : pr.sorted_dev_phy_ids(machine_id)) { str += std::to_string(dev_id) + ","; }
+      int shift = i++ % shift_roundtrip;
+      ret ^= machine_id << shift_roundtrip << shift;
+      ret ^= pr.sorted_dev_phy_ids(machine_id).size() << shift;
     }
-    return hash<std::string>()(str);
+    return hash<size_t>()(ret);
   }
 };
 
