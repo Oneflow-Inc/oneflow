@@ -445,9 +445,7 @@ if __name__ == "__main__":
                 fpn_feature_map3,
                 fpn_feature_map4,
             ).get()
-            print(type(results))
             print(results)
-            np.save("results.npy", results.ndarray())
         elif terminal_args.eval:
             # TODO: load images and images_size from PyTorch
             images = None

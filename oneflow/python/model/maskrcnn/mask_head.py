@@ -73,18 +73,6 @@ class MaskHead(object):
         return mask_logits
 
     def mask_feature_extractor(self, proposals, img_ids, features):
-        def Save(name):
-            def _save(x):
-                import numpy as np
-                import os
-
-                path = "eval_dump/"
-                if not os.path.exists(path):
-                    os.mkdir(path)
-                np.save(path + name, x.ndarray())
-
-            return _save
-
         proposals_with_img_ids = flow.concat(
             [flow.expand_dims(flow.cast(img_ids, flow.float), 1), proposals],
             axis=1,
@@ -99,9 +87,6 @@ class MaskHead(object):
                 axis=[1],
             )
 
-        for idx, level_indices in level_idx_dict.items():
-            flow.watch(level_indices, Save("level_indices_{}".format(idx)))
-
         roi_features_list = []
         for (level, i) in zip(range(2, 6), range(0, 4)):
             roi_feature_i = flow.detection.roi_align(
@@ -115,11 +100,6 @@ class MaskHead(object):
                 sampling_ratio=self.cfg.MASK_HEAD.SAMPLING_RATIO,
             )
             roi_features_list.append(roi_feature_i)
-
-        for idx in range(len(roi_features_list)):
-            flow.watch(
-                roi_features_list[idx], Save("roi_feature_{}".format(idx))
-            )
 
         roi_features = flow.stack(roi_features_list, axis=0)
         origin_indices = flow.stack(list(level_idx_dict.values()), axis=0)
