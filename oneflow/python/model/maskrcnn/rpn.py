@@ -268,11 +268,15 @@ class RPNProposal(object):
             self.nms_top_n = cfg.RPN.NMS_TOP_N_TEST
             self.top_n_per_img = cfg.RPN.TOP_N_PER_IMG_TEST
 
-    # anchors_list: list of [num_anchors_i, 4] wrt. fpn layers
+    # args:
+    # anchors: list of [num_anchors_i, 4] wrt. fpn layers
     # image_size_list: list of [2,] wrt. images
     # gt_boxes_list: list of [num_gt_boxes, 4] wrt. images
     # bbox_pred_list: list (wrt. fpn layers) of list (wrt. images) of [H_i * W_i * A, 4]
     # cls_logit_list: list (wrt. fpn layer) of list (wrt. images) of [H_i * W_i * A]
+    # 
+    # outputs:
+    # proposals: list of [R, 4] wrt. images
     def build(
         self,
         anchors,
@@ -356,6 +360,7 @@ class RPNProposal(object):
                     flow.math.top_k(score_in_one_img, k=self.top_n_per_img),
                 )
                 if self.cfg.TRAINING is True:
+                    assert resized_gt_boxes_list is not None
                     proposal_in_one_img = flow.concat(
                         [proposal_in_one_img, resized_gt_boxes_list[img_idx]],
                         axis=0,
