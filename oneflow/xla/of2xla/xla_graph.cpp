@@ -167,6 +167,7 @@ std::string XlaGraph::ToDot() const {
     ost << "\"" << edge->start()->unique_id() << "\" -> "
         << "\"" << edge->end()->unique_id() << "\"\n";
   }
+  ost << "}";
   return ost.str();
 }
 
