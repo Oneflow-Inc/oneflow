@@ -47,15 +47,13 @@ class MaskHead(object):
             gt_segms = flow.concat(gt_segm_list, axis=0)
             gt_labels = flow.concat(gt_label_list, axis=0)
 
-            mask_pred = flow.keras.activations.sigmoid(
-                flow.squeeze(
-                    flow.gather(
-                        params=mask_fcn_logits,
-                        indices=flow.expand_dims(gt_labels, 1),
-                        batch_dims=1,
-                    ),
-                    axis=[1],
-                )
+            mask_pred = flow.squeeze(
+                flow.gather(
+                    params=mask_fcn_logits,
+                    indices=flow.expand_dims(gt_labels, 1),
+                    batch_dims=1,
+                ),
+                axis=[1],
             )
 
             mask_loss = flow.math.reduce_sum(
