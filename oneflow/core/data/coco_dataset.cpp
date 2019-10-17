@@ -33,6 +33,8 @@ COCODataset::COCODataset(const DatasetProto& proto) : Dataset(proto) {
     int64_t id = anno["id"].get<int64_t>();
     int64_t image_id = anno["image_id"].get<int64_t>();
     int64_t category_id = anno["category_id"].get<int64_t>();
+    // ignore crowd object for now
+    if (anno["iscrowd"].get<int>() == 1) { continue; }
     // remove image with category_id > 80
     if (category_id > 80) {
       to_remove_image_ids.insert(image_id);
@@ -200,7 +202,7 @@ void COCODataset::GetSegmentation(const nlohmann::json& segmentation, DataField*
     for (auto cnt : rle_cnt_vec) { total_cnt += cnt; }
     CHECK_EQ(total_cnt, h * w);
 
-    std::vector<uint8_t> mask(total_cnt);
+    std::vector<uint8_t> mask(total_cnt, 0);
     RLE rle({h, w, rle_cnt_vec.size(), rle_cnt_vec.data()});
     rleDecode(&rle, mask.data(), mask.size());
 
