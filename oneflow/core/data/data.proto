@@ -70,10 +70,16 @@ message TargetResizeTransform {
 message SegmentationPolygonListToMask {
 }
 
+message ImageNormalizeByChannel {
+  repeated float mean = 1;
+  repeated float std = 2;
+}
+
 message DataTransformProto {
   oneof transform {
     ResizeTransform resize = 1;
     TargetResizeTransform target_resize = 2;
     SegmentationPolygonListToMask segmentation_poly_to_mask = 3;
+    ImageNormalizeByChannel image_normalize_by_channel = 4;
   }
 }

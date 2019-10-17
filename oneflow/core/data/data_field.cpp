@@ -142,17 +142,29 @@ struct DataFieldSerializer<ImageDataField, T> {
     const auto* field = dynamic_cast<const ImageDataField*>(data_field);
     CHECK_NOTNULL(field);
     const auto& image_mat = field->data();
-    const int64_t total_pixels = image_mat.total() * image_mat.channels();
+
+    int channels = image_mat.channels();
+    int rows = image_mat.rows;
+    int cols = image_mat.cols * channels;
     if (image_mat.isContinuous()) {
-      CopyElem(image_mat.data, buffer, total_pixels);
-    } else {
-      FOR_RANGE(size_t, i, 0, image_mat.rows) {
-        size_t one_row_size = image_mat.cols * image_mat.channels();
-        CopyElem(image_mat.ptr<uint8_t>(i), buffer, one_row_size);
-        buffer += one_row_size;
-      }
+      cols *= rows;
+      rows = 1;
     }
-    return total_pixels * sizeof(T);
+    FOR_RANGE(int, i, 0, rows) {
+      switch (image_mat.depth()) {
+        case CV_8U: {
+          CopyElem(image_mat.ptr<uint8_t>(i), buffer, cols);
+          break;
+        }
+        case CV_32F: {
+          CopyElem(image_mat.ptr<float>(i), buffer, cols);
+          break;
+        }
+        default: { UNIMPLEMENTED(); }
+      }
+      buffer += cols;
+    }
+    return rows * cols * sizeof(T);
   }
 };
 

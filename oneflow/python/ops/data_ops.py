@@ -261,6 +261,32 @@ class SegmentationPolygonListToMask(object):
         return proto
 
 
+@oneflow_export("data.ImageNormalizeByChannel")
+class ImageNormalizeByChannel(object):
+    r"""note: normalize by channel, channel color space is BGR"""
+    def __init__(self, mean, std=1.0):
+        if isinstance(mean, (int, float)):
+            mean = (float(mean), float(mean), float(mean))
+
+        if isinstance(std, (int, float)):
+            std = (float(std), float(std), float(std))
+
+        assert isinstance(mean, (tuple, list))
+        assert isinstance(std, (tuple, list))
+        assert len(mean) == len(std)
+
+        self.mean = mean
+        self.std = std
+
+    def to_proto(self, proto=None):
+        if proto is None:
+            proto = data_util.DataTransformProto()
+
+        proto.image_normalize_by_channel.mean.extend(list(self.mean))
+        proto.image_normalize_by_channel.std.extend(list(self.std))
+        return proto
+
+
 @oneflow_export("data.DataLoader")
 class DataLoader(object):
     def __init__(self, dataset, batch_size, batch_cache_size):

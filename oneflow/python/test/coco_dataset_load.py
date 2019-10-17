@@ -50,7 +50,7 @@ parser.add_argument(
     "-bc", "--batch_cache_size", type=int, default=3, required=False
 )
 parser.add_argument(
-    "-s", "--save_results", type=bool, default=False, required=False
+    "-s", "--save_results", type=bool, default=True, required=False
 )
 parser.add_argument(
     "-cp", "--compare_results", type=bool, default=True, required=False
@@ -119,6 +119,9 @@ def coco_data_load_job():
     )
     data_loader.add_transform(flow.data.TargetResizeTransform(800, 1333, 32))
     data_loader.add_transform(flow.data.SegmentationPolygonListToMask())
+    data_loader.add_transform(
+        flow.data.ImageNormalizeByChannel((102.9801, 115.9465, 122.7717))
+    )
     data_loader.init()
     return (
         data_loader("image"),

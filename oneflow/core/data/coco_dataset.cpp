@@ -151,7 +151,8 @@ void COCODataset::GetImage(const nlohmann::json& image_json, DataField* image_fi
     std::vector<char> buffer(DataFS()->GetFileSize(image_file_path));
     CHECK_EQ(in_stream.Read(buffer.data(), buffer.size()), 0);
     cv::_InputArray bytes_array(buffer.data(), buffer.size());
-    image->data() = cv::imdecode(bytes_array, cv::IMREAD_ANYCOLOR);
+    image->data() = cv::imdecode(bytes_array, cv::IMREAD_ANYCOLOR | cv::IMREAD_ANYDEPTH);
+    CHECK_EQ(image->data().depth(), CV_8U);
   }
   if (image_size) {
     image_size->data().push_back(image_json["height"].get<int32_t>());

@@ -241,6 +241,38 @@ struct DataTransformer<DataSourceCase::kObjectSegmentation,
 };
 
 template<>
+struct DataTransformer<DataSourceCase::kImage, TransformCase::kImageNormalizeByChannel> {
+  using ImageFieldT = typename DataFieldTrait<DataSourceCase::kImage>::type;
+
+  static void Apply(DataInstance* data_inst, const DataTransformProto& proto) {
+    auto* image_field = dynamic_cast<ImageFieldT*>(data_inst->GetField<DataSourceCase::kImage>());
+    if (!image_field) { return; }
+
+    auto& image_mat = image_field->data();
+    int channels = image_mat.channels();
+    CHECK_EQ(proto.image_normalize_by_channel().mean_size(), channels);
+    CHECK_EQ(proto.image_normalize_by_channel().std_size(), channels);
+    int rows = image_mat.rows;
+    int cols = image_mat.cols * channels;
+    if (image_mat.isContinuous()) {
+      cols *= rows;
+      rows = 1;
+    }
+
+    image_mat.convertTo(image_mat, CV_32F);
+    FOR_RANGE(int, i, 0, rows) {
+      float* pixel = image_mat.ptr<float>(i);
+      FOR_RANGE(int, j, 0, cols) {
+        float mean = proto.image_normalize_by_channel().mean(j % channels);
+        float std = proto.image_normalize_by_channel().std(j % channels);
+        CHECK_GT(std, 0.0f);
+        pixel[j] = (pixel[j] - mean) / std;
+      }
+    }
+  }
+};
+
+template<>
 void DoDataTransform<TransformCase::kResize>(DataInstance* data_inst,
                                              const DataTransformProto& proto) {
   CHECK(proto.has_resize());
@@ -270,6 +302,14 @@ void DoDataTransform<TransformCase::kSegmentationPolyToMask>(DataInstance* data_
                   TransformCase::kSegmentationPolyToMask>::Apply(data_inst, proto);
 }
 
+template<>
+void DoDataTransform<TransformCase::kImageNormalizeByChannel>(DataInstance* data_inst,
+                                                              const DataTransformProto& proto) {
+  CHECK(proto.has_image_normalize_by_channel());
+  DataTransformer<DataSourceCase::kImage, TransformCase::kImageNormalizeByChannel>::Apply(data_inst,
+                                                                                          proto);
+}
+
 void DataTransform(DataInstance* data_inst, const DataTransformProto& trans_proto) {
 #define MAKE_CASE(trans)                            \
   case trans: {                                     \
@@ -281,6 +321,7 @@ void DataTransform(DataInstance* data_inst, const DataTransformProto& trans_prot
     MAKE_CASE(DataTransformProto::kResize)
     MAKE_CASE(DataTransformProto::kTargetResize)
     MAKE_CASE(DataTransformProto::kSegmentationPolyToMask)
+    MAKE_CASE(DataTransformProto::kImageNormalizeByChannel)
     default: { UNIMPLEMENTED(); }
   }
 #undef MAKE_CASE
