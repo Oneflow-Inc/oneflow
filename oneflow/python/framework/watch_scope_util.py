@@ -36,7 +36,9 @@ def watch_scope(blob_watcher_dict, diff_blob_watcher_dict = None):
 
 def _MakeStoreBlobCallback(storage, blob_def):
     lbn = blob_def.logical_blob_name
-    storage[lbn]["blob_def"] = blob_def
     def StoreFunc(x):
+        if lbn not in storage:
+            storage[lbn] = {}
+        storage[lbn]["blob_def"] = blob_def
         storage[lbn]["blob"] = x
     return StoreFunc
