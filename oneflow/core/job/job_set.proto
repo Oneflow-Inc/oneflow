@@ -27,6 +27,7 @@ message IOConf {
   required FileSystemConf snapshot_fs_conf = 2;
   optional bool save_downloaded_file_to_local_fs = 3 [default = false];
   optional uint64 persistence_buf_byte = 4 [default = 67108864]; // 64M
+  optional bool enable_model_io_v2 = 5 [default = false];
 }
 
 message ProfilerConf {

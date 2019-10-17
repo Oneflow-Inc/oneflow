@@ -72,6 +72,20 @@ static bool IsProducedLbisAllBroadcastParallel(const LogicalNode* src_node,
   return *predicators.begin();
 }
 
+bool IsConsumedLbisAllBroadcastParallel(const LogicalNode* src_node, const LogicalNode* dst_node) {
+  const LogicalEdge* connect_edge = GetConnectedEdge(src_node, dst_node);
+  CHECK_NOTNULL(connect_edge);
+  CHECK_GT(connect_edge->lbis().size(), 0);
+  const std::string& dst_op_name = dst_node->SoleOp()->op_name();
+  HashSet<bool> predicators;
+  for (const LogicalBlobId& lbi : connect_edge->lbis()) {
+    const auto& dst_sbp = Global<OpGraph>::Get()->GetSbpParallel(dst_op_name, lbi);
+    predicators.insert(dst_sbp.has_broadcast_parallel());
+  }
+  CHECK_EQ(predicators.size(), 1);
+  return *predicators.begin();
+}
+
 bool HasSoleIdentityOp(const LogicalNode* logical_node) {
   const auto& op_conf = logical_node->SoleOp()->op_conf();
   return logical_node->op_vec().size() == 1 && op_conf.has_tuple_identity_conf();
@@ -281,6 +295,9 @@ BldSubTskGphMthd GetMthdForBldSubTskGph(const LogicalNode* src_node, const Logic
   if (src_pd->parallel_num() == dst_pd->parallel_num()
       && IsConnectedLbisAllSameSbpParallel(src_node, dst_node)) {
     return &TaskGraph::BldSubTskGphByOneToOne;
+  }
+  if (src_pd->parallel_num() == 1 && IsConsumedLbisAllBroadcastParallel(src_node, dst_node)) {
+    return &TaskGraph::BldSubTskGphByBroadcastToBroadcast;
   }
   if (IsProducedLbisAllBroadcastParallel(src_node, dst_node)) {
     return &TaskGraph::BldSubTskGphBySelectOneSourceToSoleSink;

@@ -40,13 +40,18 @@ TensorSliceCopier::TensorSliceCopier(const TensorSliceView& dst_view,
                                      const TensorSliceView& src_view, const DataType data_type)
     : TensorSliceCopier(dst_view, src_view, dst_view.Intersect(src_view), data_type) {}
 
+void TensorSliceCopier::Copy(DeviceCtx* ctx, const MemoryCopier& copier, void* dst,
+                             const void* src) const {
+  copier.Copy(ctx, dst, src, memory_copy_nd_desc_);
+}
+
 void TensorSliceCopier::Copy(DeviceCtx* ctx, const MemoryCopier& copier, Blob* dst_blob,
                              const Blob* src_blob) const {
   CHECK_EQ(dst_blob->data_type(), data_type_);
   CHECK_EQ(src_blob->data_type(), data_type_);
   CHECK_EQ(dst_view_.shape().elem_cnt(), dst_blob->shape().elem_cnt());
   CHECK_EQ(src_view_.shape().elem_cnt(), src_blob->shape().elem_cnt());
-  copier.Copy(ctx, dst_blob->mut_dptr(), src_blob->dptr(), memory_copy_nd_desc_);
+  Copy(ctx, copier, dst_blob->mut_dptr(), src_blob->dptr());
 }
 
 }  // namespace oneflow

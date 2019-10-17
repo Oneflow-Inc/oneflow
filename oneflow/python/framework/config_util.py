@@ -165,6 +165,12 @@ def persistence_buf_byte(val):
     assert type(val) is int
     default_config_proto.io_conf.persistence_buf_byte = val
 
+@oneflow_export('config.enable_model_io_v2')
+def enable_model_io_v2(val):
+    assert config_proto_mutable == True
+    assert type(val) is bool
+    default_config_proto.io_conf.enable_model_io_v2 = val
+
 @oneflow_export('config.log_dir')
 def log_dir(val):
     assert config_proto_mutable == True

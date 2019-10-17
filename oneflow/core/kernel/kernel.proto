@@ -6,6 +6,7 @@ import "oneflow/core/common/data_type.proto";
 import "oneflow/core/operator/op_attribute.proto";
 import "oneflow/core/operator/op_conf.proto";
 import "oneflow/core/job/placement.proto";
+import "oneflow/core/register/tensor_slice_view.proto";
 
 message ConvKernelConf {
   required ShapeProto in = 1;
@@ -180,6 +181,11 @@ message NcclTupleBroadcastConf {
   required ParallelContext parallel_ctx = 1;
 }
 
+message ModelIoV2KernelConf {
+  repeated TensorSliceViewProto slice_view = 1;
+  required ParallelContext parallel_ctx = 2;
+}
+
 message KernelConf {
   required OpAttribute op_attribute = 1;
   required bool is_forward = 2;
@@ -228,5 +234,6 @@ message KernelConf {
     GatherMs0GradKernelConf gather_ms0_grad_conf = 415;
     NcclTupleReduceConf nccl_tuple_reduce_conf = 416;
     NcclTupleBroadcastConf nccl_tuple_broadcast_conf = 417;
+    ModelIoV2KernelConf model_io_v2_conf = 418;
   }
 }

@@ -17,6 +17,7 @@ class TensorSliceCopier final {
                     DataType data_type);
   virtual ~TensorSliceCopier() = default;
 
+  void Copy(DeviceCtx* ctx, const MemoryCopier& copier, void* dst, const void* src) const;
   void Copy(DeviceCtx* ctx, const MemoryCopier& copier, Blob* dst_blob, const Blob* src_blob) const;
 
  private:
