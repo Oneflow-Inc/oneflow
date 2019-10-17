@@ -375,8 +375,8 @@ if terminal_args.mask_head_eval:
             x = mask_head.mask_feature_extractor(
                 detections, image_ids, [fpn_fm1, fpn_fm2, fpn_fm3, fpn_fm4]
             )
-            # mask_logits = mask_head.mask_predictor(x)
-        return x
+            mask_logits = mask_head.mask_predictor(x)
+        return mask_logits
 
 
 if __name__ == "__main__":

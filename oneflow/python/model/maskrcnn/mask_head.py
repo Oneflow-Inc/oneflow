@@ -105,7 +105,7 @@ class MaskHead(object):
         roi_features_list = []
         for (level, i) in zip(range(2, 6), range(0, 4)):
             roi_feature_i = flow.detection.roi_align(
-                features[0],
+                features[i],
                 rois=flow.local_gather(
                     proposals_with_img_ids, level_idx_dict[level]
                 ),
@@ -121,28 +121,28 @@ class MaskHead(object):
                 roi_features_list[idx], Save("roi_feature_{}".format(idx))
             )
 
-        # roi_features = flow.stack(roi_features_list, axis=0)
-        # origin_indices = flow.stack(list(level_idx_dict.values()), axis=0)
-        # x = flow.local_scatter_nd_update(
-        #     flow.constant_like(roi_features, float(0)),
-        #     flow.expand_dims(origin_indices, axis=1),
-        #     roi_features,
-        # )
-        # for i in range(1, 5):
-        #     x = flow.layers.conv2d(
-        #         inputs=x,
-        #         filters=256,
-        #         kernel_size=[3, 3],
-        #         strides=[1, 1],
-        #         padding="SAME",
-        #         data_format="NCHW",
-        #         dilation_rate=[1, 1],
-        #         activation=flow.keras.activations.relu,
-        #         use_bias=True,
-        #         name="fcn{}".format(i),
-        #     )
+        roi_features = flow.stack(roi_features_list, axis=0)
+        origin_indices = flow.stack(list(level_idx_dict.values()), axis=0)
+        x = flow.local_scatter_nd_update(
+            flow.constant_like(roi_features, float(0)),
+            flow.expand_dims(origin_indices, axis=1),
+            roi_features,
+        )
+        for i in range(1, 5):
+            x = flow.layers.conv2d(
+                inputs=x,
+                filters=256,
+                kernel_size=[3, 3],
+                strides=[1, 1],
+                padding="SAME",
+                data_format="NCHW",
+                dilation_rate=[1, 1],
+                activation=flow.keras.activations.relu,
+                use_bias=True,
+                name="fcn{}".format(i),
+            )
 
-        return roi_features_list[0]
+        return x
 
     def mask_predictor(self, x):
         filter = flow.get_variable(
