@@ -16,7 +16,7 @@
 #include "oneflow/core/job_completer/auto_learning_rate.h"
 
 #ifdef WITH_XLA
-#include "oneflow/xla/of2xla/pass/xla_optimize_pass.h"
+#include "oneflow/xrt/of2xla/pass/xla_optimize_pass.h"
 DECLARE_bool(use_xla_jit);
 #endif  // WITH_XLA
 

@@ -92,5 +92,5 @@ or you can just clone source code and submodules step by step
 
 - XLA documents
 
-  You can check this [doc](./oneflow/xla/of2xla/doc/index.md) to obtain more details about how to use XLA.
+  You can check this [doc](./oneflow/xrt/doc/xla/index.md) to obtain more details about how to use XLA.
 

@@ -5,8 +5,8 @@
 #include "oneflow/core/job_completer/job_completer.h"
 
 #ifdef WITH_XLA
-#include "oneflow/xla/of2xla/xla_graph.h"
-#include "oneflow/xla/of2xla/pass/xla_optimize_pass.h"
+#include "oneflow/xrt/of2xla/xla_graph.h"
+#include "oneflow/xrt/of2xla/pass/xla_optimize_pass.h"
 
 DEFINE_bool(use_xla_jit, EnvToBool(FLAGS_use_xla_jit, false), "Option to use xla jit");
 #endif  // WITH_XLA

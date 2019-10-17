@@ -32,7 +32,7 @@ set(TENSORFLOW_SOURCES_DIR ${THIRD_PARTY_DIR}/tensorflow)
 set(TENSORFLOW_SRCS_DIR ${TENSORFLOW_SOURCES_DIR}/src/tensorflow)
 set(TENSORFLOW_INC_DIR  ${TENSORFLOW_SOURCES_DIR}/src/tensorflow)
 
-set(XLA_LIB_DIR  ${PROJECT_SOURCE_DIR}/oneflow/xla/xla_lib)
+set(PATCHES_DIR  ${PROJECT_SOURCE_DIR}/oneflow/xrt/patches)
 set(TENSORFLOW_JIT_DIR ${TENSORFLOW_SRCS_DIR}/tensorflow/compiler/jit)
 
 set(TENSORFLOW_GEN_DIR ${TENSORFLOW_SRCS_DIR}/bazel-out/${TENSORFLOW_GENFILE_DIR}/genfiles)
@@ -64,7 +64,8 @@ if (THIRD_PARTY)
     PREFIX ${TENSORFLOW_SOURCES_DIR}
     GIT_REPOSITORY ${TENSORFLOW_GIT_URL}
     GIT_TAG ${TENSORFLOW_GIT_TAG}
-    CONFIGURE_COMMAND cp -r ${XLA_LIB_DIR} ${TENSORFLOW_JIT_DIR}
+    PATCH_COMMAND patch -p1 < ${PATCHES_DIR}/xla.patch
+    CONFIGURE_COMMAND ""
     BUILD_COMMAND cd ${TENSORFLOW_SRCS_DIR} &&
                   bazel build ${TENSORFLOW_BUILD_CMD} -j 20 //tensorflow/compiler/jit/xla_lib:libxla_core.so
     INSTALL_COMMAND ""
