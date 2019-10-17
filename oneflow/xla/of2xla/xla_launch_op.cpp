@@ -2,6 +2,7 @@
 #include "absl/strings/str_split.h"
 #include "oneflow/core/job/sbp_signature_builder.h"
 #include "oneflow/xla/of2xla/xla_graph.h"
+#include "oneflow/xla/of2xla/xla_launch_attr.h"
 #include "oneflow/xla/of2xla/xla_node.h"
 #include "oneflow/xla/of2xla/xla_utility.h"
 
@@ -10,11 +11,14 @@ namespace oneflow {
 void XlaLaunchOp::InitFromOpConf() {
   CHECK(op_conf().has_xla_launch_conf());
   const auto &xla_launch_conf = op_conf().xla_launch_conf();
+  mola::LaunchAttrHelper attr_helper(xla_launch_conf.attr());
   int inputs_num = xla_launch_conf.in().size();
   int outputs_num = xla_launch_conf.out().size();
   for (int i = 0; i < inputs_num; ++i) {
-    EnrollInputBn(absl::StrCat("in_", i))->set_is_mutable(true);
-    // EnrollInputBn(absl::StrCat("in_", i));
+    const std::string &input = xla_launch_conf.in().at(i);
+    // bool is_mutable = true;
+    bool is_mutable = attr_helper.IsMutableArg(input);
+    EnrollInputBn(absl::StrCat("in_", i))->set_is_mutable(is_mutable);
   }
   if (outputs_num > 0) {
     EnrollRepeatedOutputBn("out");
