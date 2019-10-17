@@ -102,7 +102,7 @@ def bias_add(value, bias, data_format=None, name=None):
     assert bias_extended_shape[bias_add_axis] == bias.shape[0]
     bias = oneflow.reshape(bias, bias_extended_shape)
 
-    return value + bias
+    return oneflow.math.add(value, bias, name=name)
 
 
 @oneflow_export("nn.max_pool1d")
