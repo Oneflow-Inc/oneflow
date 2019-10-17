@@ -73,23 +73,41 @@ class MaskHead(object):
         return mask_logits
 
     def mask_feature_extractor(self, proposals, img_ids, features):
-        levels = flow.detection.level_map(proposals)
-        level_idx_dict = {}
-        for (i, scalar) in zip(range(2, 6), range(0, 4)):
-            level_idx_dict[i] = flow.local_nonzero(
-                levels == flow.constant_scalar(int(scalar), flow.int32)
-            )
+        def Save(name):
+            def _save(x):
+                import numpy as np
+                import os
+
+                path = "eval_dump/"
+                if not os.path.exists(path):
+                    os.mkdir(path)
+                np.save(path + name, x.ndarray())
+
+            return _save
+
         proposals_with_img_ids = flow.concat(
             [flow.expand_dims(flow.cast(img_ids, flow.float), 1), proposals],
             axis=1,
         )
+        levels = flow.detection.level_map(proposals)
+        level_idx_dict = {}
+        for (i, scalar) in zip(range(2, 6), range(0, 4)):
+            level_idx_dict[i] = flow.squeeze(
+                flow.local_nonzero(
+                    levels == flow.constant_scalar(int(scalar), flow.int32)
+                ),
+                axis=[1],
+            )
+
+        for idx, level_indices in level_idx_dict.items():
+            flow.watch(level_indices, Save("level_indices_{}".format(idx)))
+
         roi_features_list = []
         for (level, i) in zip(range(2, 6), range(0, 4)):
             roi_feature_i = flow.detection.roi_align(
                 features[0],
                 rois=flow.local_gather(
-                    proposals_with_img_ids,
-                    flow.squeeze(level_idx_dict[level], axis=[1]),
+                    proposals_with_img_ids, level_idx_dict[level]
                 ),
                 pooled_h=self.cfg.MASK_HEAD.POOLED_H,
                 pooled_w=self.cfg.MASK_HEAD.POOLED_W,
@@ -97,26 +115,34 @@ class MaskHead(object):
                 sampling_ratio=self.cfg.MASK_HEAD.SAMPLING_RATIO,
             )
             roi_features_list.append(roi_feature_i)
-        roi_features = flow.stack(roi_features_list, axis=0)
-        origin_indices = flow.stack(list(level_idx_dict.values()), axis=0)
-        x = flow.local_gather(
-            roi_features, flow.squeeze(origin_indices, axis=[1])
-        )
-        for i in range(1, 5):
-            x = flow.layers.conv2d(
-                inputs=x,
-                filters=256,
-                kernel_size=[3, 3],
-                strides=[1, 1],
-                padding="SAME",
-                data_format="NCHW",
-                dilation_rate=[1, 1],
-                activation=flow.keras.activations.relu,
-                use_bias=True,
-                name="fcn{}".format(i),
+
+        for idx in range(len(roi_features_list)):
+            flow.watch(
+                roi_features_list[idx], Save("roi_feature_{}".format(idx))
             )
 
-        return x
+        # roi_features = flow.stack(roi_features_list, axis=0)
+        # origin_indices = flow.stack(list(level_idx_dict.values()), axis=0)
+        # x = flow.local_scatter_nd_update(
+        #     flow.constant_like(roi_features, float(0)),
+        #     flow.expand_dims(origin_indices, axis=1),
+        #     roi_features,
+        # )
+        # for i in range(1, 5):
+        #     x = flow.layers.conv2d(
+        #         inputs=x,
+        #         filters=256,
+        #         kernel_size=[3, 3],
+        #         strides=[1, 1],
+        #         padding="SAME",
+        #         data_format="NCHW",
+        #         dilation_rate=[1, 1],
+        #         activation=flow.keras.activations.relu,
+        #         use_bias=True,
+        #         name="fcn{}".format(i),
+        #     )
+
+        return roi_features_list[0]
 
     def mask_predictor(self, x):
         filter = flow.get_variable(
