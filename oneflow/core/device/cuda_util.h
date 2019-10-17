@@ -34,10 +34,12 @@ int32_t GetSMCudaMaxBlocksNum();
 void InitGlobalCudaDeviceProp();
 
 inline int32_t BlocksNum4ThreadsNum(const int32_t n) {
+  CHECK_GT(n, 0);
   return std::min((n + kCudaThreadsNumPerBlock - 1) / kCudaThreadsNumPerBlock, kCudaMaxBlocksNum);
 }
 
 inline int32_t SMBlocksNum4ThreadsNum(const int32_t n) {
+  CHECK_GT(n, 0);
   return std::min((n + kCudaThreadsNumPerBlock - 1) / kCudaThreadsNumPerBlock,
                   GetSMCudaMaxBlocksNum());
 }

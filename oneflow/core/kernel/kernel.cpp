@@ -4,6 +4,19 @@
 
 namespace oneflow {
 
+namespace {
+
+bool IsAllBlobEmpty(const PbRpf<std::string>& bns,
+                    const std::function<Blob*(const std::string&)>& BnInOp2Blob) {
+  for (const auto& bn : bns) {
+    Blob* blob = BnInOp2Blob(bn);
+    if (blob && !blob->IsBodyEmpty()) { return false; }
+  }
+  return true;
+}
+
+}  // namespace
+
 Kernel::~Kernel() {
   if (shape_infer_helper_ != nullptr) { delete shape_infer_helper_; }
 }
@@ -31,15 +44,6 @@ const LogicalBlobId& Kernel::BnInOp2Lbi(const std::string& bn_in_op) const {
   return op_attribute().bn_in_op2lbi().at(bn_in_op);
 }
 
-bool Kernel::HasEmptyShapeBlob(const PbRpf<std::string>& bns,
-                               const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
-  for (const auto& bn : bns) {
-    Blob* blob = BnInOp2Blob(bn);
-    if (blob && blob->IsShapeEmpty()) { return true; }
-  }
-  return false;
-}
-
 void Kernel::CheckSameDim0ValidNum(
     const PbRpf<std::string>& bns,
     const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
@@ -49,6 +53,7 @@ void Kernel::CheckSameDim0ValidNum(
 void Kernel::Forward(const KernelCtx& ctx,
                      std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   ForwardHeader(ctx, BnInOp2Blob);
+  if (IsAllBlobEmpty(op_attribute().output_bns(), BnInOp2Blob) && IsStateless()) { return; }
   ForwardDataContent(ctx, BnInOp2Blob);
 }
 
