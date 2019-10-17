@@ -77,12 +77,13 @@ class MaskHead(object):
         )
         levels = flow.detection.level_map(proposals)
         level_idx_dict = {}
-        for (i, scalar) in zip(range(2, 6), range(0, 4)):
-            level_idx_dict[i] = flow.squeeze(
+        for (level, scalar) in zip(range(2, 6), range(0, 4)):
+            level_idx_dict[level] = flow.squeeze(
                 flow.local_nonzero(
                     levels == flow.constant_scalar(int(scalar), flow.int32)
                 ),
                 axis=[1],
+                name="squeeze_level_idx_" + str(scalar),
             )
 
         roi_features_list = []
@@ -96,11 +97,16 @@ class MaskHead(object):
                 pooled_w=self.cfg.MASK_HEAD.POOLED_W,
                 spatial_scale=self.cfg.MASK_HEAD.SPATIAL_SCALE / pow(2, i),
                 sampling_ratio=self.cfg.MASK_HEAD.SAMPLING_RATIO,
+                name="roi_align_" + str(i),
             )
             roi_features_list.append(roi_feature_i)
 
-        roi_features = flow.stack(roi_features_list, axis=0)
-        origin_indices = flow.stack(list(level_idx_dict.values()), axis=0)
+        roi_features = flow.stack(
+            roi_features_list, axis=0, name="stack_roi_features"
+        )
+        origin_indices = flow.stack(
+            list(level_idx_dict.values()), axis=0, name="stack_origin_indices"
+        )
         x = flow.local_scatter_nd_update(
             flow.constant_like(roi_features, float(0)),
             flow.expand_dims(origin_indices, axis=1),
