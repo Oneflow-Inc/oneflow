@@ -212,6 +212,20 @@ def maskrcnn_eval(images, image_sizes):
     box_head = BoxHead(cfg)
     mask_head = MaskHead(cfg)
 
+    def Save(name):
+            def _save(x):
+                import numpy as np
+                import os
+
+                path = "eval_dump/"
+                if not os.path.exists(path):
+                    os.mkdir(path)
+                np.save(path + name, x.ndarray())
+
+            return _save
+
+    flow.watch(images, Save("images"))
+
     image_size_list = [
         flow.squeeze(
             flow.local_gather(image_sizes, flow.constant(i, dtype=flow.int32)),
@@ -223,7 +237,7 @@ def maskrcnn_eval(images, image_sizes):
     for i in range(cfg.DECODER.FPN_LAYERS):
         anchors.append(
             flow.detection.anchor_generate(
-                images=images,
+                images=flow.transpose(images, perm=[0, 2, 3, 1]),
                 feature_map_stride=cfg.DECODER.FEATURE_MAP_STRIDE * pow(2, i),
                 aspect_ratios=cfg.DECODER.ASPECT_RATIOS,
                 anchor_scales=cfg.DECODER.ANCHOR_SCALES * pow(2, i),
@@ -232,6 +246,9 @@ def maskrcnn_eval(images, image_sizes):
 
     # Backbone
     features = backbone.build(images)
+    
+    for idx, feature in enumerate(features):
+        flow.watch(feature, Save("feature_{}".format(idx)))
 
     # RPN
     cls_logit_list, bbox_pred_list = rpn_head.build(features)
@@ -240,12 +257,13 @@ def maskrcnn_eval(images, image_sizes):
     )
 
     # Box Head
-    cls_logits, box_pred = box_head.build_eval(proposals, features)
+    cls_logits, box_regressions = box_head.build_eval(proposals, features)
 
     # Mask Head
-    mask_logits = mask_head.build_eval(proposals, features)
+    # TODO: get proposals from box_head post-processors
+    # mask_logits = mask_head.build_eval(proposals, features)
 
-    return cls_logits, box_pred, mask_logits
+    return tuple(proposals) + (cls_logits,) + (box_regressions,)
 
 
 blob_watched, diff_blob_watched = {}, {}
@@ -274,14 +292,12 @@ if terminal_args.mock_dataset:
 if terminal_args.eval:
 
     @flow.function
-    def maskrcnn_eval(
+    def maskrcnn_eval_job(
         images=flow.input_blob_def(
-            placeholders["images"].shape, dtype=flow.float32, is_dynamic=True
+            (1, 3, 800, 1344), dtype=flow.float, is_dynamic=True
         ),
-        images_size=flow.input_blob_def(
-            placeholders["images_size"].shape,
-            dtype=flow.float32,
-            is_dynamic=True,
+        image_sizes=flow.input_blob_def(
+            (1, 2), dtype=flow.int32, is_dynamic=False
         ),
     ):
         cfg = get_default_cfgs()
@@ -289,7 +305,7 @@ if terminal_args.eval:
             cfg.merge_from_file(terminal_args.config_file)
         cfg.freeze()
         print(cfg)
-        return maskrcnn_eval(images, images_size)
+        return maskrcnn_eval(images, image_sizes)
 
 
 if terminal_args.rcnn_eval:
@@ -337,6 +353,7 @@ if terminal_args.rcnn_eval:
             )
             cls_logits, box_pred = box_head.box_predictor(x)
         return cls_logits, box_pred
+
 
 if terminal_args.mask_head_eval:
 
@@ -449,10 +466,20 @@ if __name__ == "__main__":
             ).get()
             print(results)
         elif terminal_args.eval:
-            # TODO: load images and images_size from PyTorch
-            images = None
-            images_size = None
-            results = maskrcnn_eval(images, images_size)
+            import numpy as np
+
+            images = np.load(
+                "/tmp/shared_with_jxf/maskrcnn_eval_input_data/images.npy"
+            )
+            image_sizes = np.load(
+                "/tmp/shared_with_jxf/maskrcnn_eval_input_data/image_sizes.npy"
+            )
+            proposals, cls_logits, box_regressions = maskrcnn_eval_job(
+                images, image_sizes
+            ).get()
+            np.save("box_head_cls_logits", cls_logits.ndarray())
+            np.save("box_head_box_regressions", box_regressions.ndarray())
+            np.save("proposals", proposals.ndarray())
         elif terminal_args.mock_dataset:
             if terminal_args.rpn_only:
                 print(
