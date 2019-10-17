@@ -204,6 +204,7 @@ void BuildSubGraphPass::RebuildSubgraphInputs(
     std::unordered_map<int64_t, XlaNode *> *sub_graph_nodes) {
   for (XlaEdge *e : n->in_edges()) {
     int64_t start_id = e->start()->unique_id();
+    // Check if the edge had been redirected
     if (e->end()->unique_id() != n->unique_id()) {
       XlaNode *argument = nullptr;
       if (sub_graph_nodes->count(start_id) == 0) {
@@ -228,8 +229,10 @@ void BuildSubGraphPass::RebuildSubgraphOutputs(
     XlaNode *node, XlaNode *n, XlaGraph *sub_graph,
     std::unordered_map<int64_t, XlaNode *> *sub_graph_nodes) {
   for (XlaEdge *e : n->out_edges()) {
-    int64_t start_id = e->start()->unique_id();
-    if (e->start()->unique_id() != node->unique_id()) {
+    // Check if the edge had been redirected
+    if (e->start()->unique_id() != n->unique_id()) {
+      // start_id is the launch node id
+      int64_t start_id = e->start()->unique_id();
       XlaNode *argument = nullptr;
       if (sub_graph_nodes->count(start_id) == 0) {
         argument = sub_graph->AddNode();
@@ -241,8 +244,9 @@ void BuildSubGraphPass::RebuildSubgraphOutputs(
       }
       sub_graph->Connect(node, argument, e->argument());
     } else {
-      if (sub_graph_nodes->count(start_id) != 0) {
-        XlaNode *end = (*sub_graph_nodes)[start_id];
+      int64_t end_id = e->end()->unique_id();
+      if (sub_graph_nodes->count(end_id) != 0) {
+        XlaNode *end = (*sub_graph_nodes)[end_id];
         sub_graph->Connect(node, end, e->argument());
       }
     }
