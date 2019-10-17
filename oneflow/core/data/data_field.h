@@ -146,6 +146,11 @@ struct DataFieldTrait<DataSourceCase::kImageSize> {
   typedef ArrayDataField<int32_t> type;
 };
 
+template<>
+struct DataFieldTrait<DataSourceCase::kImageId> {
+  typedef ArrayDataField<int64_t> type;
+};
+
 template<typename DataFieldT, typename T>
 struct DataFieldSerializer;
 
@@ -170,7 +175,8 @@ std::unique_ptr<DataField> MakeDataField(Args&&... args) {
   OF_PP_MAKE_TUPLE_SEQ(DataSourceCase::kObjectSegmentationMask) \
   OF_PP_MAKE_TUPLE_SEQ(DataSourceCase::kObjectLabel)            \
   OF_PP_MAKE_TUPLE_SEQ(DataSourceCase::kImageScale)             \
-  OF_PP_MAKE_TUPLE_SEQ(DataSourceCase::kImageSize)
+  OF_PP_MAKE_TUPLE_SEQ(DataSourceCase::kImageSize)              \
+  OF_PP_MAKE_TUPLE_SEQ(DataSourceCase::kImageId)
 
 #define EXTRACT_DATA_TYPE(type, type_val) OF_PP_MAKE_TUPLE_SEQ(type_val)
 

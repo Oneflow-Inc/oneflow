@@ -199,6 +199,10 @@ std::unique_ptr<DataField> CreateDataFieldFromProto(const DataFieldProto& proto)
       data_field_ptr.reset(new ImageDataField());
       break;
     }
+    case DataSourceCase::kImageId: {
+      data_field_ptr.reset(new ArrayDataField<int64_t>());
+      break;
+    }
     case DataSourceCase::kLabel:
     case DataSourceCase::kObjectLabel:
     case DataSourceCase::kImageSize: {

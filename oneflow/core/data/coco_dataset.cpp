@@ -128,6 +128,9 @@ void COCODataset::GetData(int64_t idx, DataInstance* data_inst) const {
   }
 
   int64_t image_id = image_ids_.at(idx);
+  auto* image_id_field =
+      dynamic_cast<ArrayDataField<int64_t>*>(data_inst->GetField<DataSourceCase::kImageId>());
+  if (image_id_field) { image_id_field->data().push_back(image_id); }
   // Get image data
   GetImage(image_id2image_.at(image_id), image_field, image_size_field);
   for (int64_t anno_id : image_id2anno_id_.at(image_id)) {
