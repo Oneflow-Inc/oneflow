@@ -46,6 +46,7 @@ Maybe<void> NonMaximumSuppressionOp::InferBlobDescs(
   fw_tmp_blob_desc->set_data_type(DataType::kInt64);
   // out
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
+  out_blob_desc->set_is_dynamic(in_blob_desc->is_dynamic());
   out_blob_desc->mut_shape() = Shape({num_boxes});
   out_blob_desc->set_data_type(DataType::kInt8);
   return Maybe<void>::Ok();
