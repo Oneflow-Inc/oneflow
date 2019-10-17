@@ -41,7 +41,6 @@ class LocalNonzeroOp final : public Operator {
     const int32_t elem_cnt = in->shape().elem_cnt();
     // output
     BlobDesc* out = GetBlobDesc4BnInOp("out");
-    *out = *in;
     out->mut_shape() = Shape({elem_cnt, in->shape().NumAxes()});
     out->set_data_type(DataType::kInt32);
     // nnz
@@ -58,7 +57,6 @@ class LocalNonzeroOp final : public Operator {
     const int32_t elem_cnt = in->shape().elem_cnt();
     // output
     BlobDesc* out = GetBlobDesc4BnInOp("out");
-    *out = *in;
     out->mut_shape() = Shape({elem_cnt, in->shape().NumAxes()});
     out->set_data_type(DataType::kInt32);
     // nnz

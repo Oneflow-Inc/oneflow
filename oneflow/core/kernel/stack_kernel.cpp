@@ -25,9 +25,11 @@ class StackKernel final : public KernelIf<device_type> {
       const Blob* in_blob = BnInOp2Blob(input_bn);
       const int64_t in_cols = in_blob->shape().Count(axis);
       CHECK_EQ(in_blob->shape().elem_cnt(), rows * in_cols);
-      KernelUtil<device_type, T>::CopyColsRegion(ctx.device_ctx, rows, in_cols, in_blob->dptr<T>(),
-                                                 0, in_cols, out_blob->mut_dptr<T>(),
-                                                 out_col_offset, out_cols);
+      if (rows * in_cols > 0) {
+        KernelUtil<device_type, T>::CopyColsRegion(
+            ctx.device_ctx, rows, in_cols, in_blob->dptr<T>(), 0, in_cols, out_blob->mut_dptr<T>(),
+            out_col_offset, out_cols);
+      }
       out_col_offset += in_cols;
     }
     CHECK_LE(out_col_offset, out_cols);
@@ -74,6 +76,7 @@ class StackGradKernel final : public KernelIf<device_type> {
       Blob* out_blob = BnInOp2Blob(obn);
       const int64_t out_cols = out_blob->shape().Count(axis);
       CHECK_EQ(out_blob->shape().elem_cnt(), rows * out_cols);
+      // TODO: deal with empty blobs
       KernelUtil<device_type, T>::CopyColsRegion(ctx.device_ctx, rows, out_cols, in_blob->dptr<T>(),
                                                  in_col_offset, in_cols, out_blob->mut_dptr<T>(), 0,
                                                  out_cols);
