@@ -196,14 +196,14 @@ def maskrcnn_train(images, image_sizes, gt_boxes, gt_segms, gt_labels):
     )
 
     # Mask Head
-    with flow.watch_scope(blob_watched):
-        mask_loss = mask_head.build_train(
-            pos_proposal_list,
-            pos_gt_indices_list,
-            gt_segms_list,
-            gt_labels_list,
-            features,
-        )
+    # with flow.watch_scope(blob_watched):
+    mask_loss = mask_head.build_train(
+        pos_proposal_list,
+        pos_gt_indices_list,
+        gt_segms_list,
+        gt_labels_list,
+        features,
+    )
 
     return rpn_bbox_loss, rpn_objectness_loss, box_loss, cls_loss, mask_loss
 
