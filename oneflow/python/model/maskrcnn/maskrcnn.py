@@ -14,7 +14,7 @@ import os
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
-    "--config_file", "-c", default=None, type=str, help="yaml config file"
+    "-c", "--config_file", default=None, type=str, help="yaml config file"
 )
 parser.add_argument(
     "-load", "--model_load_dir", type=str, default="", required=False
@@ -212,20 +212,6 @@ def maskrcnn_eval(images, image_sizes):
     box_head = BoxHead(cfg)
     mask_head = MaskHead(cfg)
 
-    def Save(name):
-            def _save(x):
-                import numpy as np
-                import os
-
-                path = "eval_dump/"
-                if not os.path.exists(path):
-                    os.mkdir(path)
-                np.save(path + name, x.ndarray())
-
-            return _save
-
-    flow.watch(images, Save("images"))
-
     image_size_list = [
         flow.squeeze(
             flow.local_gather(image_sizes, flow.constant(i, dtype=flow.int32)),
@@ -246,7 +232,7 @@ def maskrcnn_eval(images, image_sizes):
 
     # Backbone
     features = backbone.build(images)
-    
+
     for idx, feature in enumerate(features):
         flow.watch(feature, Save("feature_{}".format(idx)))
 
@@ -294,17 +280,12 @@ if terminal_args.eval:
     @flow.function
     def maskrcnn_eval_job(
         images=flow.input_blob_def(
-            (1, 3, 800, 1344), dtype=flow.float, is_dynamic=True
+            (1, 3, 1280, 800), dtype=flow.float, is_dynamic=True
         ),
         image_sizes=flow.input_blob_def(
             (1, 2), dtype=flow.int32, is_dynamic=False
         ),
     ):
-        cfg = get_default_cfgs()
-        if terminal_args.config_file is not None:
-            cfg.merge_from_file(terminal_args.config_file)
-        cfg.freeze()
-        print(cfg)
         return maskrcnn_eval(images, image_sizes)
 
 
@@ -351,7 +332,8 @@ if terminal_args.rcnn_eval:
             x = box_head.box_feature_extractor(
                 rpn_proposals, image_ids, [fpn_fm1, fpn_fm2, fpn_fm3, fpn_fm4]
             )
-            cls_logits, box_pred = box_head.box_predictor(x)
+            box_pred, cls_logits = box_head.box_predictor(x)
+        
         return cls_logits, box_pred
 
 
@@ -465,6 +447,7 @@ if __name__ == "__main__":
                 fpn_feature_map4,
             ).get()
             print(results)
+            np.save("mask_logits", results.ndarray())
         elif terminal_args.eval:
             import numpy as np
 
@@ -474,12 +457,12 @@ if __name__ == "__main__":
             image_sizes = np.load(
                 "/tmp/shared_with_jxf/maskrcnn_eval_input_data/image_sizes.npy"
             )
+            results = maskrcnn_eval_job(
+                images, image_sizes
+            ).get()
             proposals, cls_logits, box_regressions = maskrcnn_eval_job(
                 images, image_sizes
             ).get()
-            np.save("box_head_cls_logits", cls_logits.ndarray())
-            np.save("box_head_box_regressions", box_regressions.ndarray())
-            np.save("proposals", proposals.ndarray())
         elif terminal_args.mock_dataset:
             if terminal_args.rpn_only:
                 print(
