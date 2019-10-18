@@ -23,9 +23,10 @@ message WideDeepDatasetCatalog {
 }
 
 message DatasetProto {
-  required string dataset_dir = 1;
-  optional bool shuffle = 2 [default = true];
-  optional int64 random_seed = 3 [default = 123456];
+  required string name = 1;
+  required string dataset_dir = 2;
+  optional bool shuffle = 3 [default = true];
+  optional int64 random_seed = 4 [default = 123456];
   oneof dataset_catalog {
     ImageNetDatasetCatalog image_net = 100;
     COCODatasetCatalog coco = 101;

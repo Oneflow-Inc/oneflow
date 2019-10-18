@@ -218,7 +218,9 @@ class COCODataset(object):
         random_seed,
         shuffle=True,
         group_by_aspect_ratio=True,
+        name=None,
     ):
+        name = name or id_util.UniqueStr("COCODataset_")
         self.__dict__.update(locals())
         del self.self
 
@@ -226,6 +228,7 @@ class COCODataset(object):
         if proto is None:
             proto = data_util.DatasetProto()
 
+        proto.name = self.name
         proto.dataset_dir = self.dataset_dir
         proto.shuffle = self.shuffle
         proto.random_seed = self.random_seed

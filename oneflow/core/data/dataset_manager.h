@@ -11,14 +11,13 @@ class DatasetManager final {
   OF_DISALLOW_COPY_AND_MOVE(DatasetManager);
   DatasetManager() = default;
   ~DatasetManager() = default;
-  std::shared_ptr<Dataset> Get(DatasetProto::DatasetCatalogCase cat) const {
-    return dataset_cat2dataset_.at(cat);
+  std::shared_ptr<Dataset> Get(const std::string& dataset_name) const {
+    return dataset_map_.at(dataset_name);
   }
   std::shared_ptr<Dataset> GetOrCreateDataset(const DatasetProto& proto);
 
  private:
-  HashMap<DatasetProto::DatasetCatalogCase, std::shared_ptr<Dataset>, std::hash<int>>
-      dataset_cat2dataset_;
+  HashMap<std::string, std::shared_ptr<Dataset>> dataset_map_;
   std::mutex mtx_;
 };
 
