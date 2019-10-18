@@ -39,7 +39,6 @@ class DataLoader final {
 
   bool is_closed_;
   std::thread load_thrd_;
-  ThreadPool worker_pool_;
 };
 
 }  // namespace data

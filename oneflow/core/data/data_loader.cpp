@@ -1,6 +1,7 @@
 #include "oneflow/core/data/data_loader.h"
 #include "oneflow/core/data/dataset_manager.h"
 #include "oneflow/core/common/blocking_counter.h"
+#include "oneflow/core/thread/thread_manager.h"
 
 namespace oneflow {
 namespace data {
@@ -9,8 +10,7 @@ DataLoader::DataLoader(const DataLoadOpConf& op_conf, const DataLoadKernelConf& 
     : op_conf_(op_conf),
       kernel_conf_(kernel_conf),
       batch_buffer_(op_conf.batch_cache_size()),
-      is_closed_(false),
-      worker_pool_(std::thread::hardware_concurrency() / 4) {
+      is_closed_(false) {
   dataset_ = Global<DatasetManager>::Get()->GetOrCreateDataset(op_conf.dataset());
   sampler_ctx_.num_replicas_ = kernel_conf.parallel_num();
   sampler_ctx_.rank_ = kernel_conf.parallel_id();
@@ -53,18 +53,16 @@ void DataLoader::LoadBatch() {
   BatchDataInstance batch_data(batch_idx_seq.size());
   auto batch_data_inst_ptr = std::make_shared<BatchDataInstance>(std::move(batch_data));
 
-  BlockingCounter bc(batch_idx_seq.size());
-  FOR_RANGE(size_t, idx_in_batch, 0, batch_idx_seq.size()) {
-    int64_t data_idx = batch_idx_seq.at(idx_in_batch);
-    worker_pool_.AddWork([this, data_idx, idx_in_batch, batch_data_inst_ptr, &bc]() {
-      DataInstance* data_inst = &(batch_data_inst_ptr->at(idx_in_batch));
-      data_inst->InitFromProto(kernel_conf_.data_instance());
-      dataset_->GetData(data_idx, data_inst);
-      for (const auto& trans_proto : op_conf_.transforms()) { data_inst->Transform(trans_proto); }
-      bc.Decrease();
-    });
-  }
-  bc.WaitUntilCntEqualZero();
+  MultiThreadLoop(batch_idx_seq.size(),
+                  [this, batch_data_inst_ptr, &batch_idx_seq](size_t idx_in_batch) {
+                    DataInstance* data_inst = &(batch_data_inst_ptr->at(idx_in_batch));
+                    data_inst->InitFromProto(kernel_conf_.data_instance());
+                    int64_t data_idx = batch_idx_seq.at(idx_in_batch);
+                    dataset_->GetData(data_idx, data_inst);
+                    for (const auto& trans_proto : op_conf_.transforms()) {
+                      data_inst->Transform(trans_proto);
+                    }
+                  });
 
   // TODO: implement ImageAlign with batch transform
   size_t image_alignment = 1;
@@ -113,19 +111,15 @@ void DataLoader::ImageAlign(BatchDataInstance* batch_data_inst, size_t alignment
   max_rows = RoundUp(max_rows, alignment);
   max_cols = RoundUp(max_cols, alignment);
 
-  BlockingCounter bc(batch_data_inst->size());
-  for (DataInstance& data_inst : *batch_data_inst) {
+  MultiThreadLoop(batch_data_inst->size(), [batch_data_inst, max_rows, max_cols](size_t i) {
+    DataInstance& data_inst = batch_data_inst->at(i);
     auto* image_field = dynamic_cast<ImageDataField*>(data_inst.GetField<DataSourceCase::kImage>());
     CHECK_NOTNULL(image_field);
-    worker_pool_.AddWork([image_field, max_cols, max_rows, &bc]() {
-      auto& image_mat = image_field->data();
-      cv::Mat dst = cv::Mat::zeros(cv::Size(max_cols, max_rows), image_mat.type());
-      image_mat.copyTo(dst(cv::Rect(0, 0, image_mat.cols, image_mat.rows)));
-      image_field->data() = dst;
-      bc.Decrease();
-    });
-  }
-  bc.WaitUntilCntEqualZero();
+    auto& image_mat = image_field->data();
+    cv::Mat dst = cv::Mat::zeros(cv::Size(max_cols, max_rows), image_mat.type());
+    image_mat.copyTo(dst(cv::Rect(0, 0, image_mat.cols, image_mat.rows)));
+    image_field->data() = dst;
+  });
 }
 
 }  // namespace data
