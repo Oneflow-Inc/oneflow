@@ -30,6 +30,13 @@ DataLoader::~DataLoader() {
 
 void DataLoader::Close() {
   is_closed_ = true;
+  bool buffer_drained = false;
+  while (!buffer_drained) {
+    std::shared_ptr<BatchDataInstance> abandoned_batch_data(nullptr);
+    auto status = batch_buffer_.TryReceive(&abandoned_batch_data);
+    CHECK_NE(status, BufferStatus::kBufferStatusErrorClosed);
+    buffer_drained = (status == BufferStatus::kBufferStatusEmpty);
+  }
   batch_buffer_.Close();
 }
 
