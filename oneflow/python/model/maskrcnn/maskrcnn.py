@@ -40,7 +40,7 @@ parser.add_argument(
     "-mp",
     "--mock_dataset_path",
     type=str,
-    default="/tmp/shared_with_zwx/data_600x100_2_image.pkl",
+    default="/tmp/shared_with_zwx/mock_data_600x1000_b2.pkl",
     required=False,
 )
 parser.add_argument(
@@ -129,7 +129,11 @@ def maskrcnn_train(images, image_sizes, gt_boxes, gt_segms, gt_labels):
     assert images.is_dynamic == True
     assert image_sizes.is_dynamic == False
     assert gt_boxes.num_of_lod_levels == 2
-    assert gt_segms.num_of_lod_levels == 2
+    # if it is mask target projected, num_of_lod_levels is 0
+    if gt_segms.num_of_lod_levels is 0:
+         assert gt_segms.is_dynamic == True
+    else:
+        assert gt_segms.num_of_lod_levels == 2
     assert gt_labels.num_of_lod_levels == 2
     cfg = get_default_cfgs()
     if terminal_args.config_file is not None:
@@ -154,7 +158,11 @@ def maskrcnn_train(images, image_sizes, gt_boxes, gt_segms, gt_labels):
     ]
     gt_boxes_list = flow.piece_slice(gt_boxes, cfg.TRAINING_CONF.IMG_PER_GPU)
     gt_labels_list = flow.piece_slice(gt_labels, cfg.TRAINING_CONF.IMG_PER_GPU)
-    gt_segms_list = flow.piece_slice(gt_segms, cfg.TRAINING_CONF.IMG_PER_GPU)
+    gt_segms_list = None
+    if gt_segms.num_of_lod_levels is 2:
+        gt_segms_list = flow.piece_slice(gt_segms, cfg.TRAINING_CONF.IMG_PER_GPU)
+    else:
+        gt_segms_list = gt_segms
     anchors = []
     for i in range(cfg.DECODER.FPN_LAYERS):
         anchors.append(
@@ -188,7 +196,7 @@ def maskrcnn_train(images, image_sizes, gt_boxes, gt_segms, gt_labels):
     )
 
     # Mask Head
-    # with flow.watch_scope(blob_watched, diff_blob_watched):
+    # with flow.watch_scope(blob_watched):
     mask_loss = mask_head.build_train(
         pos_proposal_list,
         pos_gt_indices_list,
@@ -260,7 +268,7 @@ if terminal_args.mock_dataset:
         images=debug_data.blob_def("images"),
         image_sizes=debug_data.blob_def("image_size"),
         gt_boxes=debug_data.blob_def("gt_bbox"),
-        gt_segms=debug_data.blob_def("gt_segm"),
+        gt_segms=debug_data.blob_def("segm_mask_targets"),
         gt_labels=debug_data.blob_def("gt_labels"),
     ):
         flow.config.train.primary_lr(0.00001)
@@ -500,7 +508,7 @@ if __name__ == "__main__":
                     debug_data.blob("images"),
                     debug_data.blob("image_size"),
                     debug_data.blob("gt_bbox"),
-                    debug_data.blob("gt_segm"),
+                    debug_data.blob("segm_mask_targets"),
                     debug_data.blob("gt_labels"),
                 ).get()
                 fmt_str = "{:>8} " + "{:>16.10f} " * len(train_loss)
@@ -508,26 +516,30 @@ if __name__ == "__main__":
                 for loss in train_loss:
                     print_loss.append(loss.mean())
                 print(fmt_str.format(*print_loss))
-                saver_path = os.path.join("saver", "fw", str(i))
-                diff_saver_path = os.path.join("saver", "bw", str(i))
+                saver_path = os.path.join("saver", "iter" + str(i), "fw")
+                diff_saver_path = os.path.join("saver", "iter" + str(i), "bw")
                 if not os.path.exists(saver_path):
                     os.makedirs(saver_path)
                 if not os.path.exists(diff_saver_path):
                     os.makedirs(diff_saver_path)
                 for lbn, blob_data in blob_watched.items():
                     import numpy as np
-
+                    blob_def = blob_data["blob_def"]
+                    op_saver_path = os.path.join(saver_path, blob_def.op_name)
+                    if not os.path.exists(op_saver_path):
+                        os.makedirs(op_saver_path)
                     np.save(
-                        os.path.join(saver_path, blob_data["blob_def"].op_name),
+                        os.path.join(op_saver_path, blob_def.blob_name),
                         blob_data["blob"].ndarray(),
                     )
                 for lbn, blob_data in diff_blob_watched.items():
                     import numpy as np
-
+                    blob_def = blob_data["blob_def"]
+                    op_saver_path = os.path.join(diff_saver_path, blob_def.op_name)
+                    if not os.path.exists(op_saver_path):
+                        os.makedirs(op_saver_path)
                     np.save(
-                        os.path.join(
-                            diff_saver_path, blob_data["blob_def"].op_name
-                        ),
+                        os.path.join(op_saver_path, blob_def.blob_name),
                         blob_data["blob"].ndarray(),
                     )
                 if (i + 1) % 10 == 0:
