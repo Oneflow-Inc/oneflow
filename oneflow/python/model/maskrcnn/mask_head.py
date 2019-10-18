@@ -64,9 +64,13 @@ class MaskHead(object):
             return mask_loss
 
     def build_eval(self, proposals, features):
-        image_ids = flow.detection.extract_piece_slice_id(proposals)
-        x = self.mask_feature_extractor(proposals, image_ids, features)
-        mask_logits = self.predictor(x)
+        with flow.deprecated.variable_scope("mask"):
+            image_ids = flow.concat(
+                flow.detection.extract_piece_slice_id(proposals), axis=0
+            )
+            proposals = flow.concat(proposals, axis=0)
+            x = self.mask_feature_extractor(proposals, image_ids, features)
+            mask_logits = self.mask_predictor(x)
 
         return mask_logits
 
