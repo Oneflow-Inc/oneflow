@@ -8,11 +8,9 @@ namespace {
 
 int64_t GetDeviceBatchSize(const int64_t batch_size, const ParallelContext* parallel_ctx) {
   int64_t parallel_num = parallel_ctx->parallel_num();
-  int64_t parallel_id = parallel_ctx->parallel_id();
   CHECK_GE(batch_size, parallel_num);
   CHECK_EQ(batch_size % parallel_num, 0);
-  BalancedSplitter bs(batch_size, parallel_num);
-  return bs.At(parallel_id).size();
+  return batch_size / parallel_num;
 }
 
 }  // namespace
