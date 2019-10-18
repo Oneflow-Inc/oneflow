@@ -34,18 +34,25 @@ class MaskHead(object):
             gt_segm_list = []
             gt_label_list = []
             for img_idx in range(self.cfg.TRAINING_CONF.IMG_PER_GPU):
-                gt_segm_list.append(
-                    flow.local_gather(
-                        gt_segms[img_idx], pos_gt_indices[img_idx]
+                # if it is mask target projected, not need to do piece_slice
+                if isinstance(gt_segms, list):
+                    gt_segm_list.append(
+                        flow.local_gather(
+                            gt_segms[img_idx], pos_gt_indices[img_idx]
+                        )
                     )
-                )
                 gt_label_list.append(
                     flow.local_gather(
                         gt_labels[img_idx], pos_gt_indices[img_idx]
                     )
                 )
-            gt_segms = flow.concat(gt_segm_list, axis=0)
-            gt_labels = flow.concat(gt_label_list, axis=0)
+            if isinstance(gt_segms, list):
+                gt_segms = flow.concat(
+                    gt_segm_list, axis=0, name="concat_gt_segms"
+                )
+            gt_labels = flow.concat(
+                gt_label_list, axis=0, name="concat_gt_labels"
+            )
 
             mask_pred = flow.squeeze(
                 flow.gather(
@@ -54,6 +61,7 @@ class MaskHead(object):
                     batch_dims=1,
                 ),
                 axis=[1],
+                name="squeeze_mask_pred",
             )
 
             mask_loss = flow.math.reduce_sum(
@@ -151,7 +159,7 @@ class MaskHead(object):
             name="conv5",
         )
         x = flow.nn.bias_add(x, bias, "NCHW")
-        x = flow.keras.activations.relu(x)
+        x = flow.keras.activations.relu(x, name="conv5_relu")
         x = flow.layers.conv2d(
             x,
             filters=81,
