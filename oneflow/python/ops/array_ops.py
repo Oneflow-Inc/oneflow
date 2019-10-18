@@ -36,7 +36,7 @@ def gather(
             raise NotImplementedError
         else:
             raise AttributeError
-    elif params.distribute is distribute_util.split(0):
+    elif params.has_batch_axis() == False and params.distribute is distribute_util.split(0):
         assert axis == 0
         assert batch_dims == 0
         setattr(op_conf.gather_ms0_conf, "in", params.logical_blob_name)
@@ -57,9 +57,26 @@ def gather(
 
 @oneflow_export("local_gather")
 def local_gather(params, indices, axis=0, name=None):
+    op_conf = op_conf_util.OperatorConf()
+    setattr(
+        op_conf,
+        "name",
+        name if name is not None else id_util.UniqueStr("LocalGather_"),
+    )
+    if axis < 0:
+        axis += len(params.shape)
+    setattr(op_conf.local_gather_conf, "in", params.logical_blob_name)
+    setattr(op_conf.local_gather_conf, "indices", indices.logical_blob_name)
+    setattr(op_conf.local_gather_conf, "axis", axis)
+    setattr(op_conf.local_gather_conf, "out", "out")
+    compile_context.CurJobAddOp(op_conf)
+    out_lbi = logical_blob_id_util.LogicalBlobId()
+    setattr(out_lbi, "op_name", op_conf.name)
+    setattr(out_lbi, "blob_name", "out")
+    return remote_blob_util.RemoteBlob(out_lbi)
     def gather_lambda(params, indices):
         return gather(params, indices, axis=axis, name=name)
-    return flow.advance.distribute_map((params, indices), gather_lambda)
+    return flow.advanced.distribute_map((params, indices), gather_lambda)
 
     
 @oneflow_export("reshape")
@@ -349,6 +366,7 @@ def expand_dims(inputs, axis, name=None):
 @oneflow_export("piece_slice")
 def piece_slice(inputs, output_size, name=None):
     assert(inputs.shape[0] == output_size)
+    assert(inputs.num_of_lod_levels == 2)
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf,

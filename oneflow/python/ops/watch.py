@@ -25,7 +25,7 @@ def watch(watched, handler = None):
     op_conf.name = id_util.UniqueStr("ForeignWatch_")
     setattr(op_conf.foreign_watch_conf, "in", watched.logical_blob_name)
     op_conf.foreign_watch_conf.handler_uuid = handler_uuid
-    with oneflow.fixed_placement("cpu", "0:0"): compile_context.CurJobAddOp(op_conf)
+    compile_context.CurJobAddOp(op_conf, watched.parallel_conf)
     watcher_util.BindUuidAndHandler(handler_uuid, handler)
 
 @oneflow_export("watch_diff")

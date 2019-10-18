@@ -77,15 +77,17 @@ class NonzeroGpuKernel : public KernelIf<DeviceType::kGPU> {
   void ForwardDataContent(const KernelCtx& ctx,
                           std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
     const Blob* in_blob = BnInOp2Blob("in");
-    int32_t elem_cnt = in_blob->shape().elem_cnt();
-
     Blob* num_nonzero_blob = BnInOp2Blob("num_nonzero");
-
     Blob* out_blob = BnInOp2Blob("out");
     Blob* out_tmp_blob = BnInOp2Blob("out_tmp");
-    CHECK_EQ(elem_cnt, out_blob->shape().At(0));
-    size_t tmp_bytes = out_tmp_blob->shape().elem_cnt();
-    int32_t num_selected = 0;
+    int32_t elem_cnt = in_blob->shape().elem_cnt();
+    CHECK_LE(elem_cnt, out_blob->shape().At(0));
+
+    size_t tmp_bytes = 0;
+    CudaCheck(CubSelectFlagged<T, int32_t*>(ctx.device_ctx->cuda_stream(), elem_cnt, nullptr,
+                                            tmp_bytes, nullptr, nullptr, nullptr));
+    CHECK_LE(tmp_bytes, out_tmp_blob->static_shape().elem_cnt());
+
     if (NDims == 1) {
       CudaCheck(CubSelectFlagged<T, int32_t*>(ctx.device_ctx->cuda_stream(), elem_cnt,
                                               out_tmp_blob->mut_dptr(), tmp_bytes,

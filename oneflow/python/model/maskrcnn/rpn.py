@@ -8,7 +8,7 @@ def _Conv2d(
     filters,
     kernel_size,
     name,
-    activation=flow.keras.activations.sigmoid,
+    activation=None,
     weight_name=None,
     bias_name=None,
 ):
@@ -256,14 +256,6 @@ class RPNLoss(object):
         return bbox_loss, cls_loss
 
 
-def safe_top_k(inputs, k):
-    assert len(inputs.shape) == 1
-    if inputs.shape[0] < k:
-        return flow.math.top_k(inputs, inputs.shape[0])
-    else:
-        return flow.math.top_k(inputs, k)
-
-
 class RPNProposal(object):
     def __init__(self, cfg):
         self.cfg = cfg
@@ -276,11 +268,15 @@ class RPNProposal(object):
             self.nms_top_n = cfg.RPN.NMS_TOP_N_TEST
             self.top_n_per_img = cfg.RPN.TOP_N_PER_IMG_TEST
 
-    # anchors_list: list of [num_anchors_i, 4] wrt. fpn layers
+    # args:
+    # anchors: list of [num_anchors_i, 4] wrt. fpn layers
     # image_size_list: list of [2,] wrt. images
     # gt_boxes_list: list of [num_gt_boxes, 4] wrt. images
     # bbox_pred_list: list (wrt. fpn layers) of list (wrt. images) of [H_i * W_i * A, 4]
     # cls_logit_list: list (wrt. fpn layer) of list (wrt. images) of [H_i * W_i * A]
+    # 
+    # outputs:
+    # proposals: list of [R, 4] wrt. images
     def build(
         self,
         anchors,
@@ -290,24 +286,21 @@ class RPNProposal(object):
         resized_gt_boxes_list,
     ):
         with flow.deprecated.variable_scope("rpn-postprocess"):
-            cls_logit_list = list(zip(*cls_logit_list))
-            bbox_pred_list = list(zip(*bbox_pred_list))
-
             proposals = []
             for img_idx in range(len(image_size_list)):
                 proposal_list = []
                 score_list = []
-                for layer_i in range(len(cls_logit_list[0])):
-                    pre_nms_top_k_inds = safe_top_k(
-                        cls_logit_list[img_idx][layer_i], k=self.top_n_per_fm
+                for layer_i in range(len(cls_logit_list)):
+                    pre_nms_top_k_inds = flow.math.top_k(
+                        cls_logit_list[layer_i][img_idx], k=self.top_n_per_fm
                     )
                     score_per_layer = flow.local_gather(
-                        cls_logit_list[img_idx][layer_i], pre_nms_top_k_inds
+                        cls_logit_list[layer_i][img_idx], pre_nms_top_k_inds
                     )
                     proposal_per_layer = flow.detection.box_decode(
                         flow.local_gather(anchors[layer_i], pre_nms_top_k_inds),
                         flow.local_gather(
-                            bbox_pred_list[img_idx][layer_i], pre_nms_top_k_inds
+                            bbox_pred_list[layer_i][img_idx], pre_nms_top_k_inds
                         ),
                         regression_weights={
                             "weight_x": self.cfg.RPN.WEIGHT_X,
@@ -364,9 +357,10 @@ class RPNProposal(object):
 
                 proposal_in_one_img = flow.local_gather(
                     proposal_in_one_img,
-                    safe_top_k(score_in_one_img, k=self.top_n_per_img),
+                    flow.math.top_k(score_in_one_img, k=self.top_n_per_img),
                 )
                 if self.cfg.TRAINING is True:
+                    assert resized_gt_boxes_list is not None
                     proposal_in_one_img = flow.concat(
                         [proposal_in_one_img, resized_gt_boxes_list[img_idx]],
                         axis=0,

@@ -410,8 +410,10 @@ void OpGraph::InferOpNodeSbpSignature(OpNode* op_node, const SbpSignature& sbp_s
     OpNode* producer = op_node->MutSrcNode4InputBnInOp(ibn);
     const ParallelDesc* parallel_desc = &producer->parallel_desc();
     const BlobDesc* logical_blob_desc = &producer->LogicalBlobDesc4Lbi(lbi);
-    const auto& sbp = producer->SbpParallel4Lbi(lbi);
-    ibn2sbp_infer_hint.emplace(ibn, SbpInferHint(parallel_desc, logical_blob_desc, sbp));
+    const SbpParallel* sbp = &producer->SbpParallel4Lbi(lbi);
+    const OptInt64* batch_axis = &producer->BatchAxis4Lbi(lbi);
+    ibn2sbp_infer_hint.emplace(ibn,
+                               SbpInferHint(parallel_desc, logical_blob_desc, sbp, batch_axis));
   }
   auto GetBatchAxis4Lbi = [&](const LogicalBlobId& lbi) -> const OptInt64& {
     return op_node->BatchAxis4Lbi(lbi);
