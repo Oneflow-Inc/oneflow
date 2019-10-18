@@ -67,7 +67,9 @@ class MaskHead(object):
             mask_loss = flow.math.reduce_sum(
                 flow.nn.sigmoid_cross_entropy_with_logits(gt_segms, mask_pred)
             )
-            elem_cnt = flow.elem_cnt(gt_labels, dtype=mask_loss.dtype)
+            elem_cnt = flow.elem_cnt(gt_labels, dtype=mask_loss.dtype) * (
+                gt_segms.shape[1] * gt_segms.shape[2]
+            )
             mask_loss = mask_loss / elem_cnt
             return mask_loss
 
