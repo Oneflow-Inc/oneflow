@@ -35,8 +35,6 @@ void SplitAndParseAs(const std::string& text, const std::string& delims,
   Split(text, delims, [&Func](std::string&& s) { Func(oneflow_cast<T>(s)); });
 }
 
-std::vector<std::string> StrSplit(const std::string str, const std::string& delims);
-
 // Return true if path is absolute.
 inline bool IsAbsolutePath(const std::string& path) { return !path.empty() && path[0] == '/'; }
 
@@ -88,43 +86,6 @@ std::string CleanPath(const std::string& path);
 template<typename... T>
 std::string GetHashKey(const T&... args) {
   return internal::GetHashKeyImpl({args...});
-}
-
-// trim from start (inplace)
-inline void LeftTrim(std::string& str) {
-  str.erase(str.begin(),
-            std::find_if(str.begin(), str.end(), [](unsigned char c) { return !std::isspace(c); }));
-}
-
-// trim from end (in place)
-inline void RightTrim(std::string& str) {
-  str.erase(std::find_if(str.rbegin(), str.rend(), [](unsigned char c) { return !std::isspace(c); })
-                .base(),
-            str.end());
-}
-
-// trim from both ends (inplace)
-inline void Trim(std::string& str) {
-  LeftTrim(str);
-  RightTrim(str);
-}
-
-// trim from start (copying)
-inline std::string LeftTrimCopy(std::string str) {
-  LeftTrim(str);
-  return str;
-}
-
-// trim from end (copying)
-inline std::string RightTrimCopy(std::string str) {
-  RightTrim(str);
-  return str;
-}
-
-// trim from both ends (copying)
-inline std::string TrimCopy(std::string str) {
-  Trim(str);
-  return str;
 }
 
 }  // namespace oneflow

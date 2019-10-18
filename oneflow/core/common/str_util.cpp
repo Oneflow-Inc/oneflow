@@ -21,19 +21,6 @@ void Split(const std::string& text, const std::string& delims,
   }
 }
 
-std::vector<std::string> StrSplit(const std::string& str, const std::string& delims = " ") {
-  std::vector<std::string> tokens;
-  std::size_t current, previous = 0;
-  current = str.find_first_of(delims);
-  while (current != std::string::npos) {
-    tokens.emplace_back(str.substr(previous, current - previous));
-    previous = current + 1;
-    current = str.find_first_of(delims, previous);
-  }
-  tokens.emplace_back(str.substr(previous, current - previous));
-  return tokens;
-}
-
 std::string Dirname(const std::string& path) {
   size_t found = path.rfind('/');
   if (found == std::string::npos) { return ""; }
