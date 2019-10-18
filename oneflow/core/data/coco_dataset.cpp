@@ -35,6 +35,19 @@ COCODataset::COCODataset(const DatasetProto& proto) : Dataset(proto) {
     int64_t category_id = anno["category_id"].get<int64_t>();
     // ignore crowd object for now
     if (anno["iscrowd"].get<int>() == 1) { continue; }
+    // check if empty bbox, bbox format is (left, top, width, height)
+    const auto bbox = anno["bbox"];
+    CHECK_GT(bbox[2].get<float>(), 0);
+    CHECK_GT(bbox[3].get<float>(), 0);
+    // check if invalid segmentation
+    const auto segm = anno["segmentation"];
+    if (segm.is_array()) {
+      for (const auto& poly : segm) {
+        // at least 3 points can compose a polygon
+        // every point needs 2 element (x, y) to present
+        CHECK_GT(poly.size(), 6);
+      }
+    }
     // remove image with category_id > 80
     if (category_id > 80) {
       to_remove_image_ids.insert(image_id);
@@ -132,11 +145,12 @@ void COCODataset::GetData(int64_t idx, DataInstance* data_inst) const {
       dynamic_cast<ArrayDataField<int64_t>*>(data_inst->GetField<DataSourceCase::kImageId>());
   if (image_id_field) { image_id_field->data().push_back(image_id); }
   // Get image data
-  GetImage(image_id2image_.at(image_id), image_field, image_size_field);
+  const auto& image = image_id2image_.at(image_id);
+  GetImage(image, image_field, image_size_field);
   for (int64_t anno_id : image_id2anno_id_.at(image_id)) {
     const auto& anno = anno_id2anno_.at(anno_id);
     // Get bbox data
-    GetBbox(anno["bbox"], bbox_field);
+    GetBbox(anno["bbox"], image, bbox_field);
     // Get segmentation data
     GetSegmentation(anno["segmentation"], segm_field);
     // Get object label
@@ -165,7 +179,8 @@ void COCODataset::GetImage(const nlohmann::json& image_json, DataField* image_fi
   }
 }
 
-void COCODataset::GetBbox(const nlohmann::json& bbox_json, DataField* data_field) const {
+void COCODataset::GetBbox(const nlohmann::json& bbox_json, const nlohmann::json& image_json,
+                          DataField* data_field) const {
   CHECK(bbox_json.is_array());
   auto* bbox_field = dynamic_cast<ArrayDataField<float>*>(data_field);
   if (!bbox_field) { return; }
@@ -174,12 +189,26 @@ void COCODataset::GetBbox(const nlohmann::json& bbox_json, DataField* data_field
   auto& bbox_vec = bbox_field->data();
   const auto to_remove = GetOneVal<float>();
   const auto min_size = GetZeroVal<float>();
-  bbox_vec.push_back(bbox_json[0].get<float>());
-  bbox_vec.push_back(bbox_json[1].get<float>());
-  bbox_vec.push_back(bbox_json[0].get<float>()
-                     + std::max(bbox_json[2].get<float>() - to_remove, min_size));
-  bbox_vec.push_back(bbox_json[1].get<float>()
-                     + std::max(bbox_json[3].get<float>() - to_remove, min_size));
+  float left = bbox_json[0].get<float>();
+  float top = bbox_json[1].get<float>();
+  float right = left + std::max(bbox_json[2].get<float>() - to_remove, min_size);
+  float bottom = top + std::max(bbox_json[3].get<float>() - to_remove, min_size);
+  // clip to image
+  float image_height = image_json["height"].get<float>();
+  float image_width = image_json["width"].get<float>();
+  left = std::max(left, 0.0f);
+  CHECK_LT(left, image_width - to_remove);
+  top = std::max(top, 0.0f);
+  CHECK_LT(top, image_height - to_remove);
+  right = std::min(right, image_width - to_remove);
+  CHECK_GT(right, left);
+  bottom = std::min(bottom, image_height - to_remove);
+  CHECK_GT(bottom, top);
+  // push to data_field
+  bbox_vec.push_back(left);
+  bbox_vec.push_back(top);
+  bbox_vec.push_back(right);
+  bbox_vec.push_back(bottom);
 }
 
 void COCODataset::GetLabel(const nlohmann::json& label_json, DataField* data_field) const {
