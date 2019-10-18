@@ -88,6 +88,7 @@ void DataLoadKernel::WriteDataToBlob(DeviceCtx* ctx,
   }
   blob->dense_shape_mut_view().set_shape(dense_shape);
   // TODO: implement all preprocessor with transforma or batch transform
+  // some of preprocessor could be implemented by op
   for (const auto& preprocess_conf : blob_conf.preprocess()) {
     PreprocessBlob(preprocess_conf, blob);
   }
