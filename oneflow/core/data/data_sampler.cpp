@@ -25,11 +25,6 @@ void DataSampler::GenNewEpochIndexSequence(size_t epoch) {
   CHECK(epoch2consumed_count_.emplace(epoch, 0).second);
 }
 
-void DataSampler::AcquireGenNewEpochIndexSequence(size_t epoch) {
-  std::unique_lock<std::mutex> lck(mtx_);
-  GenNewEpochIndexSequence(epoch);
-}
-
 void DataSampler::CheckIndexSequenceRanOut(DataSamplerContext* ctx) {
   std::unique_lock<std::mutex> lck(mtx_);
   auto count_it = epoch2consumed_count_.find(ctx->epoch_);
@@ -88,15 +83,14 @@ std::vector<int64_t> GroupedDataSampler::FetchBatchIndexSequence(DataSamplerCont
   while (fetch_count < batch_size) {
     if (iter >= dataset()->Size()) {
       epoch += 1;
-      AcquireGenNewEpochIndexSequence(epoch);
       iter %= dataset()->Size();
     }
+    int64_t index = AcquireGetOrGenEpochIndexSequence(epoch).at(iter);
     // create feteched indices cache of current epoch if needed
     if (epoch2fetched_indices_.find(epoch) == epoch2fetched_indices_.end()) {
       epoch2fetched_indices_.emplace(epoch, HashSet<int64_t>{});
     }
     auto& fetched_indices = epoch2fetched_indices_.at(epoch);
-    int64_t index = AcquireGetOrGenEpochIndexSequence(epoch).at(iter);
     // skip fetched indices
     if (fetched_indices.find(index) == fetched_indices.end()) {
       if (group_id == -1) { group_id = group_ids_.at(index); }

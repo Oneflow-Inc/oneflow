@@ -26,7 +26,6 @@ class DataSampler {
 
  protected:
   void GenNewEpochIndexSequence(size_t epoch);
-  void AcquireGenNewEpochIndexSequence(size_t epoch);
   void CheckIndexSequenceRanOut(DataSamplerContext* ctx);
   const std::vector<int64_t>& AcquireGetOrGenEpochIndexSequence(size_t epoch);
   std::vector<int64_t>& GetEpochIndexSequence(size_t epoch) { return epoch2index_seq_.at(epoch); }
