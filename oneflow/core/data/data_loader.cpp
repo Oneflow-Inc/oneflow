@@ -19,7 +19,7 @@ DataLoader::DataLoader(const DataLoadOpConf& op_conf, const DataLoadKernelConf& 
   sampler_ctx_.count_ = 0;
   dataset_->SubmitSamplerContext(&sampler_ctx_);
   load_thrd_ = std::thread([this] {
-    while (!is_closed_) { LoadBatch(); }
+    while (!is_closed_.load()) { LoadBatch(); }
   });
 }
 
@@ -29,7 +29,7 @@ DataLoader::~DataLoader() {
 }
 
 void DataLoader::Close() {
-  is_closed_ = true;
+  is_closed_.store(true);
   bool buffer_drained = false;
   while (!buffer_drained) {
     std::shared_ptr<BatchDataInstance> abandoned_batch_data(nullptr);

@@ -37,7 +37,7 @@ class DataLoader final {
 
   Buffer<std::shared_ptr<BatchDataInstance>> batch_buffer_;
 
-  bool is_closed_;
+  std::atomic<bool> is_closed_;
   std::thread load_thrd_;
 };
 
