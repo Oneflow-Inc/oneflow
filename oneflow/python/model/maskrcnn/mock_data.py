@@ -42,6 +42,11 @@ class MockData(object):
                 dtype=flow.int8,
                 num_of_lod_levels=2,
             )
+        elif blob_name == "segm_mask_targets":
+            segm_mask_shape = (128,) + self._data["segm_mask_targets"].shape[1:]
+            return flow.input_blob_def(
+                shape=segm_mask_shape, dtype=flow.float32, is_dynamic=True
+            )
         else:
             raise ValueError("Blob is nonexistent")
 
