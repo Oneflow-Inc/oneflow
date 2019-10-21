@@ -4,13 +4,9 @@
 namespace oneflow {
 
 void DropoutOp::InitFromOpConf() {
-  if (op_conf().dropout_conf().has_noise_shape()) { TODO(); }
-  double dropout_rate = op_conf().dropout_conf().rate();
-  CHECK_GE(dropout_rate, 0);
-  CHECK_LT(dropout_rate, 1);
   EnrollInputBn("in");
+  EnrollInputBn("mask", false);
   EnrollOutputBn("out");
-  if (job_desc().IsTrain()) { EnrollOutputBn("random_mask"); }
 }
 
 const PbMessage& DropoutOp::GetCustomizedConf() const { return op_conf().dropout_conf(); }
@@ -18,19 +14,14 @@ const PbMessage& DropoutOp::GetCustomizedConf() const { return op_conf().dropout
 Maybe<void> DropoutOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
-  // CHECK_EQ(op_conf().dropout_conf().noise_shape().dim_size(),
-  //          GetBlobDesc4BnInOp("in")->shape().NumAxes());
   *GetBlobDesc4BnInOp("out") = *GetBlobDesc4BnInOp("in");
-  if (job_desc().IsTrain()) {
-    *GetBlobDesc4BnInOp("random_mask") = *GetBlobDesc4BnInOp("in");
-    GetBlobDesc4BnInOp("random_mask")->set_data_type(DataType::kFloat);
-  }
+  CHECK_OR_RETURN(GetBlobDesc4BnInOp("mask")->shape() == GetBlobDesc4BnInOp("in")->shape());
   return Maybe<void>::Ok();
 }
 
 Maybe<void> DropoutOp::InferBatchAxis(
     std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
-  for (const auto& obn : output_bns()) { *BatchAxis4BnInOp(obn) = *BatchAxis4BnInOp(SoleIbn()); }
+  for (const auto& obn : output_bns()) { *BatchAxis4BnInOp(obn) = *BatchAxis4BnInOp("in"); }
   return Maybe<void>::Ok();
 }
 
