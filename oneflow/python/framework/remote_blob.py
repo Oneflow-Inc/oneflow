@@ -8,8 +8,8 @@ import oneflow.core.common.data_type_pb2 as data_type_util
 import oneflow
 
 class RemoteBlob(blob_desc.BlobDesc):
-    def __init__(self, lbi):
-        blob_desc.BlobDesc.__init__(self, lbi)
+    def __init__(self, lbi, **kw):
+        blob_desc.BlobDesc.__init__(self, lbi, **kw)
         self.job_name_ = job_builder.GetCurCtxJobName()
         watch_scope_util.TryWatchOnce(self)
 
@@ -31,12 +31,6 @@ class RemoteBlob(blob_desc.BlobDesc):
     @property
     def parallel_conf(self):
         return job_builder.GetParallelConfFromProducerView(self.job_name_, self.lbn_)
-
-    def with_distribute(self, distribute):
-        oneflow.distribute.assert_is_valid_distribute(distribute)
-        ret = RemoteBlob(self.lbi_)
-        ret.distribute_ = distribute
-        return ret
 
     def pull(self):
         return inter_user_job_util.pull(self)

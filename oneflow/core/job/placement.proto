@@ -3,7 +3,6 @@ package oneflow;
 
 import "oneflow/core/operator/op_conf.proto";
 import "oneflow/core/register/logical_blob_id.proto";
-import "oneflow/core/record/record.proto";
 
 message RankContext {
   required int64 rank_set_id = 1;
