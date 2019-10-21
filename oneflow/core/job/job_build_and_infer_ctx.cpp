@@ -316,6 +316,14 @@ Maybe<bool> JobBuildAndInferCtx::IsDynamic(const std::string& lbn) const {
   return lbi2logical_blob_desc_.at(GenLogicalBlobId(lbn))->is_dynamic();
 }
 
+Maybe<bool> JobBuildAndInferCtx::DisableBoxing(const std::string& lbn) const {
+  JUST(CheckLbnValidAndExist(lbn));
+  LogicalBlobId lbi(GenLogicalBlobId(lbn));
+  const auto& iter = lbi2disable_boxing_.find(lbi);
+  OF_CHECK(iter != lbi2disable_boxing_.end());
+  return iter->second;
+}
+
 Maybe<long long> JobBuildAndInferCtx::GetNumOfLoDLevels(const std::string& lbn) const {
   JUST(CheckLbnValidAndExist(lbn));
   return lbi2logical_blob_desc_.at(GenLogicalBlobId(lbn))->num_of_lod_levels();
