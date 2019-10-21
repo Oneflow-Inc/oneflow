@@ -355,7 +355,7 @@ def dropout(x, noise_shape=None, seed=None, name=None, rate=None):
         mask_op_conf.random_mask_like_conf.noise_shape.dim.extend(list(noise_shape))
     if seed is not None:
         setattr(mask_op_conf.random_mask_like_conf, "seed", seed)
-    assert rate is not None
+    assert rate is not None and rate >= 0.0 and rate < 1.0
     setattr(mask_op_conf.random_mask_like_conf, "rate", rate)
     compile_context.CurJobAddOp(mask_op_conf)
     mask_lbi = logical_blob_id_util.LogicalBlobId()
@@ -364,6 +364,7 @@ def dropout(x, noise_shape=None, seed=None, name=None, rate=None):
     mask_blob = remote_blob_util.RemoteBlob(mask_lbi)
 
     setattr(op_conf.dropout_conf, "mask", mask_blob.logical_blob_name)
+    setattr(op_conf.dropout_conf, "scale", 1.0 / (1.0 - rate))
 
     compile_context.CurJobAddOp(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()

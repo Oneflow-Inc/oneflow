@@ -15,6 +15,7 @@ void GenerateBackwardOpConf(
     dropout_grad_op_conf->set_mask(GenLogicalBlobName(op.BnInOp2Lbi("mask")));
     dropout_grad_op_conf->set_dy(GenLogicalBlobName(*DiffLbi4BnInOp("out")));
     dropout_grad_op_conf->set_dx("dx");
+    dropout_grad_op_conf->set_scale(op.op_conf().dropout_conf().scale());
     op_confs->push_back(dropout_grad_op);
     DiffLbi4BnInOp("in")->set_op_name(dropout_grad_op.name());
     DiffLbi4BnInOp("in")->set_blob_name("dx");

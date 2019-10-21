@@ -4,6 +4,7 @@
 namespace oneflow {
 
 void DropoutOp::InitFromOpConf() {
+  CHECK_GT(op_conf().dropout_conf().scale(), 1);
   EnrollInputBn("in");
   EnrollInputBn("mask", false);
   EnrollOutputBn("out");

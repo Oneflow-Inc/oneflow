@@ -3,7 +3,6 @@
 
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/kernel/kernel_context.h"
-#include "oneflow/core/kernel/random_generator.h"
 
 namespace oneflow {
 
@@ -23,14 +22,12 @@ class DropoutKernel final : public KernelIf<device_type> {
   // y = dropout(x, random_mask, dropout_rate)
   void Dropout(DeviceCtx* ctx, const int64_t n, float dropout_rate, const T* x, float* random_mask,
                T* y) const;
-
-  std::unique_ptr<RandomGenerator<device_type>> random_generator_;
 };
 
 template<DeviceType device_type, typename T, typename U = void>
 struct DropoutKernelUtil final {
-  static void MaskAndScale(DeviceCtx* ctx, const int64_t n, float threshold, float scale,
-                           const T* x, const float* random_mask, T* y);
+  static void MaskAndScale(DeviceCtx* ctx, const int64_t n, float scale,
+                           const T* x, const int8_t* random_mask, T* y);
 };
 
 }  // namespace oneflow

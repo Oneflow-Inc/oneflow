@@ -967,12 +967,14 @@ message DropoutOpConf {
   required string mask = 1;
   required string in = 2;
   required string out = 3;
+  required float scale = 4;
 }
 
 message DropoutGradOpConf {
   required string mask = 1;
   required string dy = 2;
   required string dx = 3;
+  required float scale = 4;
 }
 
 message TransposeOpConf {
