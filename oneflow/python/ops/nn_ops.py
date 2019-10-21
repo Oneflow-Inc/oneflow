@@ -348,7 +348,7 @@ def dropout(x, noise_shape=None, seed=None, name=None, rate=None):
     # random mask like op
     mask_op_conf = op_conf_util.OperatorConf()
     mask_op_conf.name = "RandomMask4" + op_conf.name;
-    setattr(mask_op_conf.random_mask_like_conf, "in", x.logical_blob_name)
+    setattr(mask_op_conf.random_mask_like_conf, "like", x.logical_blob_name)
     setattr(mask_op_conf.random_mask_like_conf, "out", "out")
     if noise_shape is not None:
         assert isinstance(noise_shape, (list, tuple))
