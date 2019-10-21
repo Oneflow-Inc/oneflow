@@ -55,12 +55,21 @@ class BlobDesc(object):
         raise NotImplementedError
 
     @property
+    def disable_boxing(self):
+        return self.disable_boxing_
+
+    @property
     def num_of_lod_levels(self):
         raise NotImplementedError
     
     @property
     def parallel_conf(self):
         raise NotImplementedError
+
+    def with_boxing_disabled(self, val = True):
+        ret = self.Clone()
+        ret.disable_boxing_ = val
+        return ret
 
     def with_distribute(self, distribute):
         ret = self.Clone()

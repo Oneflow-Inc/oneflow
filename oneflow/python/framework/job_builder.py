@@ -45,6 +45,9 @@ def GetDataType(job_name, lbn):
 def IsDynamic(job_name, lbn):
     return c_api_util.JobBuildAndInferCtx_IsDynamic(job_name, lbn)
 
+def DisableBoxing(job_name, lbn):
+    return c_api_util.JobBuildAndInferCtx_DisableBoxing(job_name, lbn)
+
 def GetNumOfLoDLevels(job_name, lbn):
     return c_api_util.JobBuildAndInferCtx_GetNumOfLoDLevels(job_name, lbn)
 

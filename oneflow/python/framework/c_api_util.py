@@ -140,6 +140,14 @@ def JobBuildAndInferCtx_IsDynamic(job_name, lbn):
     if error.HasField("error_type"): raise JobBuildAndInferError(error)
     return ret
 
+def JobBuildAndInferCtx_DisableBoxing(job_name, lbn):
+    job_name = str(job_name)
+    lbn = str(lbn)
+    ret, error_str = oneflow_internal.JobBuildAndInferCtx_DisableBoxing(job_name, lbn)
+    error = text_format.Parse(error_str, error_util.ErrorProto())
+    if error.HasField("error_type"): raise JobBuildAndInferError(error)
+    return ret
+
 def JobBuildAndInferCtx_GetNumOfLoDLevels(job_name, lbn):
     job_name = str(job_name)
     lbn = str(lbn)
