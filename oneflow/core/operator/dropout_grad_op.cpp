@@ -4,11 +4,8 @@
 namespace oneflow {
 
 void DropoutGradOp::InitFromOpConf() {
-  double dropout_rate = op_conf().dropout_conf().rate();
-  CHECK_GE(dropout_rate, 0);
-  CHECK_LT(dropout_rate, 1);
   EnrollInputBn("dy");
-  EnrollInputBn("random_mask");
+  EnrollInputBn("mask");
   EnrollOutputBn("dx");
 }
 
@@ -19,7 +16,7 @@ Maybe<void> DropoutGradOp::InferBlobDescs(
     const ParallelContext* parallel_ctx) const {
   BlobDesc* dy_desc = GetBlobDesc4BnInOp("dy");
   *GetBlobDesc4BnInOp("dx") = *dy_desc;
-  CHECK_EQ_OR_RETURN(dy_desc->shape(), GetBlobDesc4BnInOp("random_mask")->shape());
+  CHECK_EQ_OR_RETURN(dy_desc->shape(), GetBlobDesc4BnInOp("mask")->shape());
   return Maybe<void>::Ok();
 }
 
