@@ -10,7 +10,7 @@ namespace oneflow {
 
 namespace {
 
-const size_t kMemReuseAlgorithmNum = 2;
+const size_t kMemReuseAlgorithmNum = 1;
 
 int64_t GenDeviceUniqueId(int64_t machine_id, int64_t device_id) {
   return (machine_id << 32) | device_id;
