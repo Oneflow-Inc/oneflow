@@ -35,11 +35,21 @@ class JobBuildAndInferCtx {
   Maybe<void> CheckJob() const;
 
  private:
+  Maybe<ParallelConf> InferOpParallelConf(
+      const Operator& op, const ParallelConf& origin_parallel_conf,
+      const HashMap<std::string, bool>& ibn2disable_boxing) const;
   Maybe<void> AddOpNameParallelConf2Placement(const std::string& op_name,
                                               const ParallelConf& parallel_conf);
+  void InitIbn2DisableBoxing(const Operator& op, HashMap<std::string, bool>* ibn2disable_boxing);
+  void UpdateLbi2DisableBoxing(const Operator& op,
+                               const HashMap<std::string, bool>& ibn2disable_boxing);
   Maybe<void> AddLbiParallelConf2BlobPlacement(
       const Operator* op, std::function<ParallelDesc*(const std::string&)> ParallelDesc4Obn);
-  Maybe<void> DecodeSplitHint7AddOp7AddSbpSigConf2Job(Operator*, SbpSignature*);
+  Maybe<OperatorConf> DecodeLbiHintAndReturnNewOpConf(
+      const Operator& op, SbpSignature* sbp_sig_conf,
+      HashMap<std::string, bool>* ibn2disable_boxing) const;
+  void AddOp7AddSbpSigConf2Job(const OperatorConf& operator_conf,
+                               const SbpSignature& sbp_signature) const;
   Maybe<void> InferOpOutSbpParallel(Operator*, const SbpSignature&, const ParallelDesc&,
                                     SbpSignature*);
   Maybe<void> GenOpProducedEmptyLogicalBlobDesc(Operator* op);
@@ -54,6 +64,7 @@ class JobBuildAndInferCtx {
   HashMap<LogicalBlobId, std::unique_ptr<BlobDesc>> lbi2logical_blob_desc_;
   HashMap<LogicalBlobId, SbpParallel> lbi2sbp_parallel_from_producer_view_;
   HashMap<LogicalBlobId, ParallelDesc> lbi2parallel_desc_from_producer_view_;
+  HashMap<LogicalBlobId, bool> lbi2disable_boxing_;
   HashMap<std::string, std::shared_ptr<Operator>> op_name2op_;
   HashMap<ParallelDesc, PlacementGroup*> parallel_desc2placement_group_;
   HashMap<ParallelDesc, BlobPlacementGroup*> parallel_desc2blob_placement_group_;
