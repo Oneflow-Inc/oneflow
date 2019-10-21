@@ -1,0 +1,63 @@
+from __future__ import absolute_import
+
+import os
+import re
+import sys
+import commands
+import shutil
+
+from setuptools import find_packages
+from setuptools import setup
+from setuptools.dist import Distribution
+
+REQUIRED_PACKAGES = [
+    'numpy',
+    'protobuf',
+]
+
+
+class BinaryDistribution(Distribution):
+
+    def has_ext_modules(self):
+        return True
+
+packages = find_packages("build/python_scripts")
+package_dir = {
+    '':'build/python_scripts',
+}
+
+package_data = {'oneflow': ['_oneflow_internal.so']}
+
+if '${WITH_XLA}' == 'ON':
+  packages += ['oneflow.libs']
+
+  libs_path = '${PROJECT_SOURCE_DIR}/python_scripts/oneflow/libs'
+  if os.path.exists(libs_path):
+      shutil.rmtree(libs_path)
+  os.makedirs(libs_path)
+
+  package_dir['oneflow.libs'] = libs_path
+  package_data['oneflow.libs'] = ['libtensorflow_framework.so.1', 'libxla_core.so']
+  shutil.copy('${TENSORFLOW_XLA_FRAMEWORK_LIB}', libs_path)
+  shutil.copy('${TENSORFLOW_XLA_CORE_LIB}', libs_path)
+  oneflow_internal_lib = "build/python_scripts/oneflow/_oneflow_internal.so"
+  command = "patchelf --print-rpath " + oneflow_internal_lib
+  result = commands.getstatusoutput(command)
+  if result[0] != 0:
+      raise Exception("Patchelf print rpath failed. command: %s" % command)
+  command = ("patchelf --set-rpath '$ORIGIN/:$ORIGIN/libs/:%s' %s" %
+      (result[1], oneflow_internal_lib))
+  if commands.getstatusoutput(command)[0] != 0:
+      raise Exception("Patchelf set rpath failed. command: %s" % command)
+
+setup(
+    name='oneflow',
+    version='0.0.1',
+    url='https://www.oneflow.org/',
+    install_requires=REQUIRED_PACKAGES,
+    packages=packages,
+    package_dir=package_dir,
+    package_data=package_data,
+    zip_safe=False,
+    distclass=BinaryDistribution,
+)

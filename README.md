@@ -53,6 +53,12 @@ or you can just clone source code and submodules step by step
   bazel version
   ```
 
+- Install patchelf
+
+  ```shell
+  sudo yum install -y patchelf
+  ```
+
 - Update cmake
 
   It is needed only if CMake installed does not support downloading .tgz file from URL with https protocol. Skip this step, just go back here to reinstall CMake if you encountered a downloading error while building the third-parties.
@@ -61,7 +67,7 @@ or you can just clone source code and submodules step by step
 
   ```shell
   # Install curl develop toolkit
-  sudo yum install libcurl-devel
+  sudo yum install -y libcurl-devel
  
   # install cmake
   cd cmake && ./bootstrap --system-curl --prefix=$your_path && make install
