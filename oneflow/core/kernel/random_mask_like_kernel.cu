@@ -13,13 +13,12 @@ __global__ void GenMaskGpu(const int64_t n, float threshold, const float* random
 }  // namespace
 
 template<>
-struct RandomMaskLikeKernelUtil<DeviceType::kGPU> final {
-  static void GenMask(DeviceCtx* ctx, const int64_t n, float threshold, const float* random_tmp,
-                      int8_t* mask) {
-    GenMaskGpu<<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-        n, threshold, random_tmp, mask);
-  }
-};
+void RandomMaskLikeKernelUtil<DeviceType::kGPU>::GenMask(DeviceCtx* ctx, const int64_t n,
+                                                         float threshold, const float* random_tmp,
+                                                         int8_t* mask) {
+  GenMaskGpu<<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+      n, threshold, random_tmp, mask);
+}
 
 template struct RandomMaskLikeKernelUtil<DeviceType::kGPU>;
 
