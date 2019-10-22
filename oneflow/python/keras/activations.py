@@ -30,9 +30,10 @@ def relu(x, alpha=0.0, max_value=None, threshold=0.0, name=None):
 
 
 @oneflow_export("keras.activations.gelu")
-def gelu(x):
+def gelu(x, name=None):
     op_conf = op_conf_util.OperatorConf()
-    op_conf.name = id_util.UniqueStr("Gelu_")
+    if name is None: name = id_util.UniqueStr("Gelu_")
+    op_conf.name = name
     setattr(op_conf.gelu_conf, "in", x.logical_blob_name)
     op_conf.gelu_conf.out = "out"
     compile_context.CurJobAddOp(op_conf)
@@ -43,9 +44,10 @@ def gelu(x):
 
 
 @oneflow_export("keras.activations.tanh")
-def tanh(x):
+def tanh(x, name=None):
     op_conf = op_conf_util.OperatorConf()
-    op_conf.name = id_util.UniqueStr("Tanh_")
+    if name is None: name = id_util.UniqueStr("Tanh_")
+    op_conf.name = name
     setattr(op_conf.tanh_conf, "in", x.logical_blob_name)
     op_conf.tanh_conf.out = "out"
     compile_context.CurJobAddOp(op_conf)
@@ -56,9 +58,10 @@ def tanh(x):
 
 
 @oneflow_export("keras.activations.sigmoid")
-def sigmoid(x):
+def sigmoid(x, name=None):
     op_conf = op_conf_util.OperatorConf()
-    op_conf.name = id_util.UniqueStr("Sigmoid_")
+    if name is None: name = id_util.UniqueStr("Sigmoid_")
+    op_conf.name = name
     setattr(op_conf.sigmoid_conf, "in", x.logical_blob_name)
     op_conf.sigmoid_conf.out = "out"
     compile_context.CurJobAddOp(op_conf)
