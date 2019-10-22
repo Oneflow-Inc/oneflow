@@ -28,7 +28,8 @@ const AMPList& AutoMixedPrecisionLists::GrayList() {
                               OperatorConf::kBroadcastSubConf,
                               OperatorConf::kBroadcastMulConf,
                               OperatorConf::kBroadcastDivConf,
-                              OperatorConf::kLayerNormConf};
+                              OperatorConf::kLayerNormConf,
+                              OperatorConf::kDropoutConf};
   return gray_list;
 }
 

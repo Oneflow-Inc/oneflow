@@ -34,7 +34,19 @@ OF_PP_FOR_EACH_TUPLE(INITIATE_DROPOUT_KERNEL_UTIL_CPU,
                      ARITHMETIC_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ);
 #undef INITIATE_DROPOUT_KERNEL_UTIL_CPU
 
-ADD_DEFAULT_KERNEL_CREATOR_WITH_GPU_HALF(OperatorConf::kDropoutConf, DropoutKernel,
-                                         ARITHMETIC_DATA_TYPE_SEQ);
+#define REGISTER_DROPOUT_KERNEL(dev, dtype)                                     \
+  REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kDropoutConf, dev, dtype, \
+                                        DropoutKernel<dev, dtype>)
 
+REGISTER_DROPOUT_KERNEL(DeviceType::kGPU, float);
+REGISTER_DROPOUT_KERNEL(DeviceType::kGPU, double);
+REGISTER_DROPOUT_KERNEL(DeviceType::kGPU, int8_t);
+REGISTER_DROPOUT_KERNEL(DeviceType::kGPU, int32_t);
+REGISTER_DROPOUT_KERNEL(DeviceType::kGPU, int64_t);
+REGISTER_DROPOUT_KERNEL(DeviceType::kGPU, float16);
+REGISTER_DROPOUT_KERNEL(DeviceType::kCPU, float);
+REGISTER_DROPOUT_KERNEL(DeviceType::kCPU, double);
+REGISTER_DROPOUT_KERNEL(DeviceType::kCPU, int8_t);
+REGISTER_DROPOUT_KERNEL(DeviceType::kCPU, int32_t);
+REGISTER_DROPOUT_KERNEL(DeviceType::kCPU, int64_t);
 }  // namespace oneflow
