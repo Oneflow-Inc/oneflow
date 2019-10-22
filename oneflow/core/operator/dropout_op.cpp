@@ -16,7 +16,8 @@ Maybe<void> DropoutOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   *GetBlobDesc4BnInOp("out") = *GetBlobDesc4BnInOp("in");
-  CHECK_OR_RETURN(GetBlobDesc4BnInOp("mask")->shape() == GetBlobDesc4BnInOp("in")->shape());
+  CHECK_EQ_OR_RETURN(GetBlobDesc4BnInOp("mask")->shape(), GetBlobDesc4BnInOp("in")->shape());
+  CHECK_EQ_OR_RETURN(GetBlobDesc4BnInOp("mask")->data_type(), DataType::kInt8);
   return Maybe<void>::Ok();
 }
 
