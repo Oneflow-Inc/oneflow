@@ -126,12 +126,13 @@ void RegstDesc::ToProto(RegstDescProto* ret) const {
     packed_blob_desc_->ToProto(data_regst_desc_proto->mutable_packed_blob_desc());
     const int size_in_packed = data_regst_desc_proto->packed_blob_desc().header().field_size();
     for (const auto& pair : lbi2blob_desc_) {
-      LbiBlobDescPair* pb_pair = data_regst_desc_proto->mutable_lbi2blob_desc()->Add();
+        LbiBlobDescPair *pb_pair;
+        pb_pair = data_regst_desc_proto->mutable_lbi2blob_desc()->Add();
       *(pb_pair->mutable_lbi()) = pair.first;
       pair.second->ToProto(pb_pair->mutable_blob_desc());
     }
-    int size_in_lib2blob_desc = data_regst_desc_proto->lbi2blob_desc_size();
-    CHECK_EQ(size_in_packed, size_in_lib2blob_desc);
+    int size_in_lbi2blob_desc = data_regst_desc_proto->lbi2blob_desc_size();
+    CHECK_EQ(size_in_packed, size_inbi2blob_desc);
     CHECK(data_regst_time_shape_);
     data_regst_time_shape_->ToProto(data_regst_desc_proto->mutable_time_shape());
   } else if (regst_desc_type_.has_ctrl_regst_desc()) {
