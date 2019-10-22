@@ -33,28 +33,34 @@ class ModelInitV2Op : public Operator {
   void InitFromOpConf() override {
     CHECK(op_conf().has_model_init_v2_conf());
     EnrollInputBn("ref", false)->set_is_mutable(true);
+    EnrollOutputBn("out", false);
+    EnrollInputBn("tick", false);
   }
 
   const PbMessage& GetCustomizedConf() const override { return op_conf().model_init_v2_conf(); }
 
   Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                              const ParallelContext* parallel_ctx) const override {
+    BlobDesc* out = GetBlobDesc4BnInOp("out");
+    out->set_data_type(DataType::kFloat);
+    out->mut_shape() = Shape({1});
     return Maybe<void>::Ok();
   }
 
  private:
   Maybe<void> InferBatchAxis(
       std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override {
+    BatchAxis4BnInOp("out")->set_value(0);
     return Maybe<void>::Ok();
   }
 
   Maybe<void> GetSbpSignatures(
       const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
       SbpSignatureList* sbp_sig_list) const override {
-    SbpSignatureBuilder()
-        .Split("ref", 0)
-        .MakeSplitSignatureListBuilder(JUST(LogicalBlobDesc4Ibn("ref"))->shape().NumAxes())
-        .Build(sbp_sig_list);
+    FOR_RANGE(int64_t, i, 0, JUST(LogicalBlobDesc4Ibn("ref"))->shape().NumAxes()) {
+      SbpSignatureBuilder().Split("ref", i).Split("out", 0).Broadcast("tick").Build(
+          sbp_sig_list->mutable_sbp_signature()->Add());
+    }
     return Maybe<void>::Ok();
   }
 
@@ -74,18 +80,24 @@ class ModelLoadV2Op : public Operator {
     CHECK(op_conf().has_model_load_v2_conf());
     EnrollInputBn("path", false);
     EnrollInputBn("ref", false)->set_is_mutable(true);
+    EnrollOutputBn("out", false);
+    EnrollInputBn("tick", false);
   }
 
   const PbMessage& GetCustomizedConf() const override { return op_conf().model_load_v2_conf(); }
 
   Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                              const ParallelContext* parallel_ctx) const override {
+    BlobDesc* out = GetBlobDesc4BnInOp("out");
+    out->set_data_type(DataType::kFloat);
+    out->mut_shape() = Shape({1});
     return Maybe<void>::Ok();
   }
 
  private:
   Maybe<void> InferBatchAxis(
       std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override {
+    BatchAxis4BnInOp("out")->set_value(0);
     return Maybe<void>::Ok();
   }
 
@@ -93,8 +105,12 @@ class ModelLoadV2Op : public Operator {
       const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
       SbpSignatureList* sbp_sig_list) const override {
     FOR_RANGE(int64_t, i, 0, JUST(LogicalBlobDesc4Ibn("ref"))->shape().NumAxes()) {
-      SbpSignatureBuilder().Broadcast("path").Split("ref", i).Build(
-          sbp_sig_list->mutable_sbp_signature()->Add());
+      SbpSignatureBuilder()
+          .Broadcast("path")
+          .Split("ref", i)
+          .Split("out", 0)
+          .Broadcast("tick")
+          .Build(sbp_sig_list->mutable_sbp_signature()->Add());
     }
     return Maybe<void>::Ok();
   }
@@ -120,6 +136,7 @@ class ModelSaveV2Op final : public Operator {
     EnrollInputBn("path", false);
     EnrollInputBn("in", false);
     EnrollOutputBn("out", false);
+    EnrollInputBn("tick", false);
   }
 
   const PbMessage& GetCustomizedConf() const override { return op_conf().model_save_v2_conf(); }
@@ -135,7 +152,7 @@ class ModelSaveV2Op final : public Operator {
  private:
   Maybe<void> InferBatchAxis(
       std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override {
-    BatchAxis4BnInOp("out")->clear_value();
+    BatchAxis4BnInOp("out")->set_value(0);
     return Maybe<void>::Ok();
   }
 
@@ -143,8 +160,12 @@ class ModelSaveV2Op final : public Operator {
       const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
       SbpSignatureList* sbp_sig_list) const override {
     FOR_RANGE(int64_t, i, 0, JUST(LogicalBlobDesc4Ibn("in"))->shape().NumAxes()) {
-      SbpSignatureBuilder().Broadcast("path").Split("in", i).Split("out", 0).Build(
-          sbp_sig_list->mutable_sbp_signature()->Add());
+      SbpSignatureBuilder()
+          .Broadcast("path")
+          .Split("in", i)
+          .Split("out", 0)
+          .Broadcast("tick")
+          .Build(sbp_sig_list->mutable_sbp_signature()->Add());
     }
     return Maybe<void>::Ok();
   };

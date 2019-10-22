@@ -841,7 +841,7 @@ void CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan) {
                         [&](Job* job) { CompileHelperJob(job); });
     } else {
       MakeModelIoJobs(jobs, var_op_name2parallel_blob_conf,
-                       [&](Job* job) { CompileHelperJob(job); });
+                      [&](Job* job) { CompileHelperJob(job); });
     }
     MergeSubPlanWithoutGenNetTopo(plan, sub_plans);
     InterJobMemSharingUtil::MergeMemReusedChunkBetweenUserJobs(jobs, plan, user_job_size);

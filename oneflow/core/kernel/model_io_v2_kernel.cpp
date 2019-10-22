@@ -176,8 +176,10 @@ class ModelInitV2Kernel final : public KernelIf<device_type> {
   ~ModelInitV2Kernel() override = default;
 
  private:
+  void VirtualKernelInit() override { counter_.reset(new int64_t(0)); }
   void Forward(const KernelCtx& ctx,
                std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
+    const ParallelContext& parallel_ctx = this->kernel_conf().model_io_v2_conf().parallel_ctx();
     const ModelInitV2OpConf& conf = this->op_conf().model_init_v2_conf();
     Blob* ref = BnInOp2Blob("ref");
     const VariableOpConf& original_variable_conf = conf.original_variable_conf();
@@ -185,6 +187,25 @@ class ModelInitV2Kernel final : public KernelIf<device_type> {
     const DataType data_type = ref->data_type();
     const std::string& var_lbn =
         GenLogicalBlobName(conf.variable_op_name(), original_variable_conf.out());
+    const auto MakeModelInitWaitKey = [&](const int64_t parallel_id) {
+      return "ModelInitWaitKey-" + var_lbn + "-" + std::to_string(parallel_id) + "-Counter-"
+             + std::to_string(*counter_);
+    };
+    std::string lock_key;
+    std::string wait_key;
+    if (parallel_ctx.parallel_id() != parallel_ctx.parallel_num() - 1) {
+      lock_key = MakeModelInitWaitKey(parallel_ctx.parallel_id());
+    }
+    if (parallel_ctx.parallel_id() != 0) {
+      wait_key = MakeModelInitWaitKey(parallel_ctx.parallel_id() - 1);
+    }
+    if (!lock_key.empty()) {
+      CHECK_EQ(Global<CtrlClient>::Get()->TryLock(lock_key), TryLockResult::kLocked);
+    }
+    const std::string barrier_key =
+        "ModelInitBarrierKey-" + var_lbn + "-Counter-" + std::to_string(*counter_);
+    Global<CtrlClient>::Get()->Barrier(barrier_key, parallel_ctx.parallel_num());
+    if (!wait_key.empty()) { Global<CtrlClient>::Get()->WaitUntilDone(wait_key); }
     const TensorSliceView slice = GetPartSlice(this->kernel_conf());
     AutoSyncBlobAccessor<device_type> ref_accessor(ctx.device_ctx, ref, false, true);
     if (original_variable_conf.has_initializer()) {
@@ -212,7 +233,10 @@ class ModelInitV2Kernel final : public KernelIf<device_type> {
     } else {
       UNIMPLEMENTED();
     }
+    if (!lock_key.empty()) { Global<CtrlClient>::Get()->NotifyDone(lock_key); }
+    *counter_ += 1;
   }
+  std::unique_ptr<int64_t> counter_;
 };
 
 ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kModelInitV2Conf, ModelInitV2Kernel);
@@ -252,8 +276,10 @@ class ModelSaveV2Kernel final : public KernelIf<device_type> {
   ~ModelSaveV2Kernel() override = default;
 
  private:
+  void VirtualKernelInit() override { counter_.reset(new int64_t(0)); }
   void Forward(const KernelCtx& ctx,
                std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
+    *counter_ += 1;
     const ModelSaveV2OpConf& conf = this->op_conf().model_save_v2_conf();
     const Blob* path_blob = BnInOp2Blob("path");
     Blob* in_blob = BnInOp2Blob("in");
@@ -273,7 +299,8 @@ class ModelSaveV2Kernel final : public KernelIf<device_type> {
     writer.Write(key, in_accessor.host_blob());
     if (!is_broadcast) {
       const int64_t parallel_num = parallel_ctx.parallel_num();
-      Global<CtrlClient>::Get()->Barrier(snapshot_path + "-" + var_lbn, parallel_num);
+      Global<CtrlClient>::Get()->Barrier(
+          snapshot_path + "-" + var_lbn + "-Counter-" + std::to_string(*counter_), parallel_num);
       if (parallel_ctx.parallel_id() != 0) { return; }
       TensorSliceView total_slice(logical_blob_shape);
       OnDemandHostBlob total_blob(logical_blob_shape, data_type);
@@ -289,6 +316,8 @@ class ModelSaveV2Kernel final : public KernelIf<device_type> {
       writer.Write(var_lbn, total_blob.blob());
     }
   }
+
+  std::unique_ptr<int64_t> counter_;
 };
 
 ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kModelSaveV2Conf, ModelSaveV2Kernel);
