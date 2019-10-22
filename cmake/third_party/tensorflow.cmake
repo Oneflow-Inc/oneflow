@@ -72,4 +72,7 @@ if (THIRD_PARTY)
   )
 endif(THIRD_PARTY)
 
+set(TENSORFLOW_XLA_FRAMEWORK_LIB ${TENSORFLOW_SRCS_DIR}/bazel-bin/tensorflow/libtensorflow_framework.so.1)
+set(TENSORFLOW_XLA_CORE_LIB ${TENSORFLOW_SRCS_DIR}/bazel-bin/tensorflow/compiler/jit/xla_lib/libxla_core.so)
+
 endif(WITH_XLA)

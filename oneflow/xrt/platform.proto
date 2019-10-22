@@ -1,0 +1,17 @@
+syntax = "proto2";
+
+package oneflow.xrt;
+
+enum XrtDevice {
+  CPU_X86 = 1;
+  GPU_CUDA = 2;
+  GPU_CL = 3;
+  CPU_ARM = 4;
+  GPU_ARM = 5;
+}
+
+enum XrtEngine {
+  XLA = 1;
+  TENSORRT = 2;
+  TVM = 3;
+}

@@ -5,8 +5,8 @@
 #include "oneflow/core/job_completer/job_completer.h"
 
 #ifdef WITH_XLA
-#include "oneflow/xrt/of2xla/xla_graph.h"
-#include "oneflow/xrt/of2xla/pass/xla_optimize_pass.h"
+#include "absl/strings/str_cat.h"
+#include "oneflow/xrt/xrt_api.h"
 
 DEFINE_bool(use_xla_jit, EnvToBool(FLAGS_use_xla_jit, false), "Option to use xla jit");
 #endif  // WITH_XLA
@@ -67,14 +67,13 @@ void Compiler::Compile(Job* job, Plan* plan, bool need_job_complete) const {
     VLOG(2) << "Compile the job with XLA JIT support.";
     TeePersistentLogStream::Create(absl::StrCat("job_without_xla", job_desc.job_id()))->Write(*job);
 
-    mola::XlaGraph graph(Global<OpGraph>::Get());
-    auto options = mola::CreateDefaultOptimizeOptions();
-    options.graph = &graph;
-    mola::RunOptimizePass("MarkClusterId", options);
-    mola::RunOptimizePass("BuildSubGraph", options);
+    auto graph = xrt::BuildXrtGraph(Global<OpGraph>::Get());
+    auto options = xrt::CreateDefaultXrtPassOptions();
+    xrt::RunXrtPass("MarkClusterId", graph.get(), options);
+    xrt::RunXrtPass("BuildSubGraph", graph.get(), options);
+
     // Rebuild Job
-    options.job = job;
-    mola::RunOptimizePass("RebuildCompiledJob", options);
+    xrt::RunXrtPass("RebuildCompiledJob", graph.get(), options, job);
 
     TeePersistentLogStream::Create(absl::StrCat("job_with_xla", job_desc.job_id()))->Write(*job);
     Global<OpGraph>::Delete();

@@ -16,7 +16,8 @@
 #include "oneflow/core/job_completer/auto_learning_rate.h"
 
 #ifdef WITH_XLA
-#include "oneflow/xrt/of2xla/pass/xla_optimize_pass.h"
+#include "absl/strings/str_cat.h"
+#include "oneflow/xrt/xrt_api.h"
 DECLARE_bool(use_xla_jit);
 #endif  // WITH_XLA
 
@@ -136,11 +137,9 @@ void GenerateOpConf4Trainning(const OpGraph& op_graph, JobBuilder* job_builder) 
 
 #ifdef WITH_XLA
 void RewriteOptimizerOp(const OpGraph& op_graph, Job* job) {
-  mola::XlaGraph graph(&op_graph);
-  auto options = mola::CreateDefaultOptimizeOptions();
-  options.graph = &graph;
-  options.job = job;
-  mola::RunOptimizePass("RewriteOptimizer", options);
+  auto graph = xrt::BuildXrtGraph(&op_graph);
+  auto options = xrt::CreateDefaultXrtPassOptions();
+  xrt::RunXrtPass("RewriteOptimizer", graph.get(), options, job);
 
   TeePersistentLogStream::Create(absl::StrCat("job_rewrite_optimizer", GlobalJobDesc().job_id()))
       ->Write(*job);
