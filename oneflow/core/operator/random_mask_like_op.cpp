@@ -22,9 +22,9 @@ Maybe<void> RandomMaskLikeOp::InferBlobDescs(
     const ParallelContext* parallel_ctx) const {
   // CHECK_EQ(op_conf().random_mask_like_conf().noise_shape().dim_size(),
   //          GetBlobDesc4BnInOp("in")->shape().NumAxes());
-  *GetBlobDesc4BnInOp("out") = *GetBlobDesc4BnInOp("like");
-  *GetBlobDesc4BnInOp("random_tmp") = *GetBlobDesc4BnInOp("like");
+  GetBlobDesc4BnInOp("out")->CopyMetaFrom(*GetBlobDesc4BnInOp("like"));
   GetBlobDesc4BnInOp("out")->set_data_type(DataType::kInt8);
+  GetBlobDesc4BnInOp("random_tmp")->CopyMetaFrom(*GetBlobDesc4BnInOp("like"));
   GetBlobDesc4BnInOp("random_tmp")->set_data_type(DataType::kFloat);
   return Maybe<void>::Ok();
 }

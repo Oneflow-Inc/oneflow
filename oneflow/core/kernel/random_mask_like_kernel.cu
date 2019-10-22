@@ -7,7 +7,7 @@ namespace {
 
 __global__ void GenMaskGpu(const int64_t n, float threshold, const float* random_tmp,
                            int8_t* mask) {
-  CUDA_1D_KERNEL_LOOP(i, n) { mask[i] = random_tmp[i] >= threshold; }
+  CUDA_1D_KERNEL_LOOP(i, n) { mask[i] = random_tmp[i] > threshold; }
 }
 
 }  // namespace

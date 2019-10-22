@@ -17,7 +17,7 @@ template<DeviceType device_type>
 void RandomMaskLikeKernel<device_type>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   if (this->job_desc().IsTrain()) {
-    int64_t elem_cnt = BnInOp2Blob("like")->shape().elem_cnt();
+    int64_t elem_cnt = BnInOp2Blob("out")->shape().elem_cnt();
     float* random_tmp = BnInOp2Blob("random_tmp")->mut_dptr<float>();
     int8_t* mask = BnInOp2Blob("out")->mut_dptr<int8_t>();
     random_generator_->Uniform(elem_cnt, random_tmp);
@@ -32,7 +32,7 @@ template<>
 struct RandomMaskLikeKernelUtil<DeviceType::kCPU> final {
   static void GenMask(DeviceCtx* ctx, const int64_t n, float threshold, const float* random_tmp,
                       int8_t* mask) {
-    for (int64_t i = 0; i < n; ++i) { mask[i] = random_tmp[i] >= threshold; }
+    for (int64_t i = 0; i < n; ++i) { mask[i] = random_tmp[i] > threshold; }
   }
 };
 
