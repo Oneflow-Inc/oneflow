@@ -1,6 +1,7 @@
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/register/tensor_slice_copier.h"
 #include "oneflow/core/device/cpu_device_context.h"
+#include "oneflow/core/job/machine_context.h"
 
 namespace oneflow {
 
@@ -187,44 +188,42 @@ class ModelInitV2Kernel final : public KernelIf<device_type> {
     const DataType data_type = ref->data_type();
     const std::string& var_lbn =
         GenLogicalBlobName(conf.variable_op_name(), original_variable_conf.out());
-    const auto MakeModelInitWaitKey = [&](const int64_t parallel_id) {
-      return "ModelInitWaitKey-" + var_lbn + "-" + std::to_string(parallel_id) + "-Counter-"
-             + std::to_string(*counter_);
-    };
-    std::string lock_key;
-    std::string wait_key;
-    if (parallel_ctx.parallel_id() != parallel_ctx.parallel_num() - 1) {
-      lock_key = MakeModelInitWaitKey(parallel_ctx.parallel_id());
-    }
-    if (parallel_ctx.parallel_id() != 0) {
-      wait_key = MakeModelInitWaitKey(parallel_ctx.parallel_id() - 1);
-    }
-    if (!lock_key.empty()) {
-      CHECK_EQ(Global<CtrlClient>::Get()->TryLock(lock_key), TryLockResult::kLocked);
-    }
-    const std::string barrier_key =
-        "ModelInitBarrierKey-" + var_lbn + "-Counter-" + std::to_string(*counter_);
-    Global<CtrlClient>::Get()->Barrier(barrier_key, parallel_ctx.parallel_num());
-    if (!wait_key.empty()) { Global<CtrlClient>::Get()->WaitUntilDone(wait_key); }
     const TensorSliceView slice = GetPartSlice(this->kernel_conf());
     AutoSyncBlobAccessor<device_type> ref_accessor(ctx.device_ctx, ref, false, true);
+    std::shared_ptr<OnDemandHostBlob> logical_blob;
     if (original_variable_conf.has_initializer()) {
-      Blob* logical_blob = nullptr;
-      std::unique_ptr<OnDemandHostBlob> on_demand_host_logical_blob;
-      if (ref_accessor.host_blob()->shape() == logical_blob_shape) {
-        logical_blob = ref_accessor.host_blob();
-      } else {
-        on_demand_host_logical_blob.reset(new OnDemandHostBlob(logical_blob_shape, data_type));
-        logical_blob = on_demand_host_logical_blob->blob();
+      const std::string blob_cache_key =
+          "ModelInitBlobCache-" + var_lbn + "-Machine-"
+          + std::to_string(Global<MachineCtx>::Get()->this_machine_id()) + "-Counter-"
+          + std::to_string(*counter_);
+      const std::string barrier_key =
+          "ModelInitBarrier-" + var_lbn + "-Counter-" + std::to_string(*counter_);
+      OfCallOnce(blob_cache_key, [&]() {
+        OnDemandHostBlob* on_demand_host_logical_blob =
+            new OnDemandHostBlob(logical_blob_shape, data_type);
+        std::mt19937 random_seed_gen(original_variable_conf.random_seed());
+        InitializeWithConfUtil::SwitchInitializeWithConf(
+            SwitchCase(data_type), original_variable_conf.initializer(), random_seed_gen(),
+            on_demand_host_logical_blob->blob());
+        {
+          std::lock_guard<std::mutex> lock(blob_cache_mutex_);
+          blob_cache_[blob_cache_key].reset(on_demand_host_logical_blob);
+        }
+      });
+      {
+        std::lock_guard<std::mutex> lock(blob_cache_mutex_);
+        logical_blob = blob_cache_.at(blob_cache_key);
       }
-      std::mt19937 random_seed_gen(original_variable_conf.random_seed());
-      InitializeWithConfUtil::SwitchInitializeWithConf(SwitchCase(data_type),
-                                                       original_variable_conf.initializer(),
-                                                       random_seed_gen(), logical_blob);
-      if (on_demand_host_logical_blob) {
-        HostSliceCopy(ref_accessor.host_blob(), slice, on_demand_host_logical_blob->blob(),
-                      TensorSliceView(logical_blob_shape));
+      Global<CtrlClient>::Get()->Barrier(barrier_key, parallel_ctx.parallel_num());
+      {
+        std::lock_guard<std::mutex> lock(blob_cache_mutex_);
+        if (blob_cache_.find(blob_cache_key) != blob_cache_.end()) {
+          blob_cache_.erase(blob_cache_key);
+        }
       }
+      HostSliceCopy(ref_accessor.host_blob(), slice, logical_blob->blob(),
+                    TensorSliceView(logical_blob_shape));
+      logical_blob.reset();
     } else if (original_variable_conf.has_initialize_with_snapshot()) {
       const auto& snapshot_conf = original_variable_conf.initialize_with_snapshot();
       const std::string key = snapshot_conf.has_key() ? snapshot_conf.key() : var_lbn;
@@ -233,10 +232,13 @@ class ModelInitV2Kernel final : public KernelIf<device_type> {
     } else {
       UNIMPLEMENTED();
     }
-    if (!lock_key.empty()) { Global<CtrlClient>::Get()->NotifyDone(lock_key); }
     *counter_ += 1;
   }
+
   std::unique_ptr<int64_t> counter_;
+
+  static HashMap<std::string, std::shared_ptr<OnDemandHostBlob>> blob_cache_;
+  static std::mutex blob_cache_mutex_;
 };
 
 ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kModelInitV2Conf, ModelInitV2Kernel);
@@ -316,7 +318,6 @@ class ModelSaveV2Kernel final : public KernelIf<device_type> {
       writer.Write(var_lbn, total_blob.blob());
     }
   }
-
   std::unique_ptr<int64_t> counter_;
 };
 
