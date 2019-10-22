@@ -14,20 +14,14 @@ class DropoutKernel final : public KernelIf<device_type> {
   ~DropoutKernel() = default;
 
  private:
-  void VirtualKernelInit(DeviceCtx*) override;
   void ForwardDataContent(const KernelCtx&,
                           std::function<Blob*(const std::string&)>) const override;
-
-  // random_mask = random_uniform(0, 1)
-  // y = dropout(x, random_mask, dropout_rate)
-  void Dropout(DeviceCtx* ctx, const int64_t n, float dropout_rate, const T* x, float* random_mask,
-               T* y) const;
 };
 
 template<DeviceType device_type, typename T, typename U = void>
 struct DropoutKernelUtil final {
-  static void MaskAndScale(DeviceCtx* ctx, const int64_t n, float scale,
-                           const T* x, const int8_t* random_mask, T* y);
+  static void MaskAndScale(DeviceCtx* ctx, const int64_t n, float scale, const T* x,
+                           const int8_t* mask, T* y);
 };
 
 }  // namespace oneflow

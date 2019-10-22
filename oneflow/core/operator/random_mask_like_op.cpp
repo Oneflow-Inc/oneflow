@@ -13,7 +13,9 @@ void RandomMaskLikeOp::InitFromOpConf() {
   EnrollOutputBn("out", false);
 }
 
-const PbMessage& RandomMaskLikeOp::GetCustomizedConf() const { return op_conf().random_mask_like_conf(); 
+const PbMessage& RandomMaskLikeOp::GetCustomizedConf() const {
+  return op_conf().random_mask_like_conf();
+}
 
 Maybe<void> RandomMaskLikeOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,

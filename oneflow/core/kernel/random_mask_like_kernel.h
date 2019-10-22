@@ -24,7 +24,8 @@ class RandomMaskLikeKernel final : public KernelIf<device_type> {
 
 template<DeviceType device_type>
 struct RandomMaskLikeKernelUtil final {
-  static void GenMask(DeviceCtx* ctx, const int64_t n, float threshold, const float* random_tmp, int8_t* mask);
+  static void GenMask(DeviceCtx* ctx, const int64_t n, float threshold, const float* random_tmp,
+                      int8_t* mask);
 };
 
 }  // namespace oneflow

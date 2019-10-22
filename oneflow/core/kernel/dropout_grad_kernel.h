@@ -17,8 +17,6 @@ class DropoutGradKernel final : public KernelIf<device_type> {
  private:
   void ForwardDataContent(const KernelCtx&,
                           std::function<Blob*(const std::string&)>) const override;
-  void DropoutBackward(DeviceCtx* ctx, const int64_t n, float dropout_rate, const T* dy,
-                       const float* random_mask, T* dx) const;
 };
 
 }  // namespace oneflow

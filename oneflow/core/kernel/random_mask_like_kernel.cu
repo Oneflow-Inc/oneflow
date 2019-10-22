@@ -5,7 +5,8 @@ namespace oneflow {
 
 namespace {
 
-__global__ void GenMaskGpu(const int64_t n, float threshold, const float* random_tmp, int8_t* mask) {
+__global__ void GenMaskGpu(const int64_t n, float threshold, const float* random_tmp,
+                           int8_t* mask) {
   CUDA_1D_KERNEL_LOOP(i, n) { mask[i] = random_tmp[i] >= threshold; }
 }
 
@@ -13,7 +14,8 @@ __global__ void GenMaskGpu(const int64_t n, float threshold, const float* random
 
 template<>
 struct RandomMaskLikeKernelUtil<DeviceType::kGPU> final {
-  static void GenMask(DeviceCtx* ctx, const int64_t n, float threshold, const float* random_tmp, int8_t* mask) {
+  static void GenMask(DeviceCtx* ctx, const int64_t n, float threshold, const float* random_tmp,
+                      int8_t* mask) {
     GenMaskGpu<<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
         n, threshold, random_tmp, mask);
   }
