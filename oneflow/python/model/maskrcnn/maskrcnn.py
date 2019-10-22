@@ -241,9 +241,6 @@ def maskrcnn_eval(images, image_sizes):
     # Backbone
     features = backbone.build(images)
 
-    for idx, feature in enumerate(features):
-        flow.watch(feature, Save("feature_{}".format(idx)))
-
     # RPN
     cls_logit_list, bbox_pred_list = rpn_head.build(features)
     proposals = rpn_proposal.build(
