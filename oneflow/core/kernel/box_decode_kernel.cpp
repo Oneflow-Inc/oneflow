@@ -21,23 +21,26 @@ class BoxDecodeKernel final : public KernelIf<device_type> {
     CHECK_EQ(ref_boxes_blob->shape().NumAxes(), 2);
     CHECK_EQ(ref_boxes_blob->shape().At(1), 4);
     CHECK_EQ(boxes_delta_blob->shape().NumAxes(), 2);
-    CHECK_EQ(boxes_delta_blob->shape().At(1), 4);
-    const int32_t num_boxes = ref_boxes_blob->shape().At(0);
-    CHECK_EQ(num_boxes, boxes_delta_blob->shape().At(0));
+    CHECK_EQ(boxes_delta_blob->shape().At(0), ref_boxes_blob->shape().At(0));
+    CHECK_EQ(boxes_delta_blob->shape().At(1) % 4, 0);
+    const int32_t num_ref_boxes = ref_boxes_blob->shape().At(0);
+    const int32_t num_boxes_delta = boxes_delta_blob->shape().elem_cnt() / 4;
     const T* ref_boxes_ptr = ref_boxes_blob->dptr<T>();
     const T* boxes_delta_ptr = boxes_delta_blob->dptr<T>();
     T* boxes_ptr = boxes_blob->mut_dptr<T>();
-    BoxDecodeUtil<device_type, T>::Decode(
-        ctx.device_ctx, num_boxes, ref_boxes_ptr, boxes_delta_ptr, reg_weights.weight_x(),
-        reg_weights.weight_y(), reg_weights.weight_w(), reg_weights.weight_h(), boxes_ptr);
+    BoxDecodeUtil<device_type, T>::Decode(ctx.device_ctx, num_boxes_delta, num_ref_boxes,
+                                          ref_boxes_ptr, boxes_delta_ptr, reg_weights.weight_x(),
+                                          reg_weights.weight_y(), reg_weights.weight_w(),
+                                          reg_weights.weight_h(), boxes_ptr);
   }
 };
 
 template<typename T>
 struct BoxDecodeUtil<DeviceType::kCPU, T> {
-  static void Decode(DeviceCtx* ctx, const int32_t num_boxes, const T* ref_boxes_ptr,
-                     const T* boxes_delta_ptr, const float weight_x, const float weight_y,
-                     const float weight_w, const float weight_h, T* boxes_ptr) {
+  static void Decode(DeviceCtx* ctx, const int32_t num_boxes_delta, const int32_t num_ref_boxes,
+                     const T* ref_boxes_ptr, const T* boxes_delta_ptr, const float weight_x,
+                     const float weight_y, const float weight_w, const float weight_h,
+                     T* boxes_ptr) {
     UNIMPLEMENTED();
   }
 };
