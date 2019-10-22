@@ -14,7 +14,7 @@ import os
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
-    "--config_file", "-c", default=None, type=str, help="yaml config file"
+    "-c", "--config_file", default=None, type=str, help="yaml config file"
 )
 parser.add_argument(
     "-load", "--model_load_dir", type=str, default="", required=False
@@ -40,7 +40,7 @@ parser.add_argument(
     "-mp",
     "--mock_dataset_path",
     type=str,
-    default="/tmp/shared_with_zwx/data_600x100_2_image.pkl",
+    default="/tmp/shared_with_zwx/mock_data_600x1000_b2.pkl",
     required=False,
 )
 parser.add_argument(
@@ -129,7 +129,11 @@ def maskrcnn_train(images, image_sizes, gt_boxes, gt_segms, gt_labels):
     assert images.is_dynamic == True
     assert image_sizes.is_dynamic == False
     assert gt_boxes.num_of_lod_levels == 2
-    assert gt_segms.num_of_lod_levels == 2
+    # if it is mask target projected, num_of_lod_levels is 0
+    if gt_segms.num_of_lod_levels is 0:
+         assert gt_segms.is_dynamic == True
+    else:
+        assert gt_segms.num_of_lod_levels == 2
     assert gt_labels.num_of_lod_levels == 2
     cfg = get_default_cfgs()
     if terminal_args.config_file is not None:
@@ -154,7 +158,11 @@ def maskrcnn_train(images, image_sizes, gt_boxes, gt_segms, gt_labels):
     ]
     gt_boxes_list = flow.piece_slice(gt_boxes, cfg.TRAINING_CONF.IMG_PER_GPU)
     gt_labels_list = flow.piece_slice(gt_labels, cfg.TRAINING_CONF.IMG_PER_GPU)
-    gt_segms_list = flow.piece_slice(gt_segms, cfg.TRAINING_CONF.IMG_PER_GPU)
+    gt_segms_list = None
+    if gt_segms.num_of_lod_levels is 2:
+        gt_segms_list = flow.piece_slice(gt_segms, cfg.TRAINING_CONF.IMG_PER_GPU)
+    else:
+        gt_segms_list = gt_segms
     anchors = []
     for i in range(cfg.DECODER.FPN_LAYERS):
         anchors.append(
@@ -188,7 +196,7 @@ def maskrcnn_train(images, image_sizes, gt_boxes, gt_segms, gt_labels):
     )
 
     # Mask Head
-    # with flow.watch_scope(blob_watched, diff_blob_watched):
+    # with flow.watch_scope(blob_watched):
     mask_loss = mask_head.build_train(
         pos_proposal_list,
         pos_gt_indices_list,
@@ -223,7 +231,7 @@ def maskrcnn_eval(images, image_sizes):
     for i in range(cfg.DECODER.FPN_LAYERS):
         anchors.append(
             flow.detection.anchor_generate(
-                images=images,
+                images=flow.transpose(images, perm=[0, 2, 3, 1]),
                 feature_map_stride=cfg.DECODER.FEATURE_MAP_STRIDE * pow(2, i),
                 aspect_ratios=cfg.DECODER.ASPECT_RATIOS,
                 anchor_scales=cfg.DECODER.ANCHOR_SCALES * pow(2, i),
@@ -233,6 +241,9 @@ def maskrcnn_eval(images, image_sizes):
     # Backbone
     features = backbone.build(images)
 
+    for idx, feature in enumerate(features):
+        flow.watch(feature, Save("feature_{}".format(idx)))
+
     # RPN
     cls_logit_list, bbox_pred_list = rpn_head.build(features)
     proposals = rpn_proposal.build(
@@ -240,12 +251,13 @@ def maskrcnn_eval(images, image_sizes):
     )
 
     # Box Head
-    cls_logits, box_pred = box_head.build_eval(proposals, features)
+    cls_logits, box_regressions = box_head.build_eval(proposals, features)
 
     # Mask Head
-    mask_logits = mask_head.build_eval(proposals, features)
+    # TODO: get proposals from box_head post-processors
+    # mask_logits = mask_head.build_eval(proposals, features)
 
-    return cls_logits, box_pred, mask_logits
+    return tuple(proposals) + (cls_logits,) + (box_regressions,)
 
 
 blob_watched, diff_blob_watched = {}, {}
@@ -256,7 +268,7 @@ if terminal_args.mock_dataset:
         images=debug_data.blob_def("images"),
         image_sizes=debug_data.blob_def("image_size"),
         gt_boxes=debug_data.blob_def("gt_bbox"),
-        gt_segms=debug_data.blob_def("gt_segm"),
+        gt_segms=debug_data.blob_def("segm_mask_targets"),
         gt_labels=debug_data.blob_def("gt_labels"),
     ):
         flow.config.train.primary_lr(0.00001)
@@ -274,22 +286,15 @@ if terminal_args.mock_dataset:
 if terminal_args.eval:
 
     @flow.function
-    def maskrcnn_eval(
+    def maskrcnn_eval_job(
         images=flow.input_blob_def(
-            placeholders["images"].shape, dtype=flow.float32, is_dynamic=True
+            (1, 3, 1280, 800), dtype=flow.float, is_dynamic=True
         ),
-        images_size=flow.input_blob_def(
-            placeholders["images_size"].shape,
-            dtype=flow.float32,
-            is_dynamic=True,
+        image_sizes=flow.input_blob_def(
+            (1, 2), dtype=flow.int32, is_dynamic=False
         ),
     ):
-        cfg = get_default_cfgs()
-        if terminal_args.config_file is not None:
-            cfg.merge_from_file(terminal_args.config_file)
-        cfg.freeze()
-        print(cfg)
-        return maskrcnn_eval(images, images_size)
+        return maskrcnn_eval(images, image_sizes)
 
 
 if terminal_args.rcnn_eval:
@@ -335,8 +340,10 @@ if terminal_args.rcnn_eval:
             x = box_head.box_feature_extractor(
                 rpn_proposals, image_ids, [fpn_fm1, fpn_fm2, fpn_fm3, fpn_fm4]
             )
-            cls_logits, box_pred = box_head.box_predictor(x)
+            box_pred, cls_logits = box_head.box_predictor(x)
+        
         return cls_logits, box_pred
+
 
 if terminal_args.mask_head_eval:
 
@@ -448,11 +455,22 @@ if __name__ == "__main__":
                 fpn_feature_map4,
             ).get()
             print(results)
+            np.save("mask_logits", results.ndarray())
         elif terminal_args.eval:
-            # TODO: load images and images_size from PyTorch
-            images = None
-            images_size = None
-            results = maskrcnn_eval(images, images_size)
+            import numpy as np
+
+            images = np.load(
+                "/tmp/shared_with_jxf/maskrcnn_eval_input_data/images.npy"
+            )
+            image_sizes = np.load(
+                "/tmp/shared_with_jxf/maskrcnn_eval_input_data/image_sizes.npy"
+            )
+            results = maskrcnn_eval_job(
+                images, image_sizes
+            ).get()
+            proposals, cls_logits, box_regressions = maskrcnn_eval_job(
+                images, image_sizes
+            ).get()
         elif terminal_args.mock_dataset:
             if terminal_args.rpn_only:
                 print(
@@ -490,7 +508,7 @@ if __name__ == "__main__":
                     debug_data.blob("images"),
                     debug_data.blob("image_size"),
                     debug_data.blob("gt_bbox"),
-                    debug_data.blob("gt_segm"),
+                    debug_data.blob("segm_mask_targets"),
                     debug_data.blob("gt_labels"),
                 ).get()
                 fmt_str = "{:>8} " + "{:>16.10f} " * len(train_loss)
@@ -498,26 +516,30 @@ if __name__ == "__main__":
                 for loss in train_loss:
                     print_loss.append(loss.mean())
                 print(fmt_str.format(*print_loss))
-                saver_path = os.path.join("saver", "fw", str(i))
-                diff_saver_path = os.path.join("saver", "bw", str(i))
+                saver_path = os.path.join("saver", "iter" + str(i), "fw")
+                diff_saver_path = os.path.join("saver", "iter" + str(i), "bw")
                 if not os.path.exists(saver_path):
                     os.makedirs(saver_path)
                 if not os.path.exists(diff_saver_path):
                     os.makedirs(diff_saver_path)
                 for lbn, blob_data in blob_watched.items():
                     import numpy as np
-
+                    blob_def = blob_data["blob_def"]
+                    op_saver_path = os.path.join(saver_path, blob_def.op_name)
+                    if not os.path.exists(op_saver_path):
+                        os.makedirs(op_saver_path)
                     np.save(
-                        os.path.join(saver_path, blob_data["blob_def"].op_name),
+                        os.path.join(op_saver_path, blob_def.blob_name),
                         blob_data["blob"].ndarray(),
                     )
                 for lbn, blob_data in diff_blob_watched.items():
                     import numpy as np
-
+                    blob_def = blob_data["blob_def"]
+                    op_saver_path = os.path.join(diff_saver_path, blob_def.op_name)
+                    if not os.path.exists(op_saver_path):
+                        os.makedirs(op_saver_path)
                     np.save(
-                        os.path.join(
-                            diff_saver_path, blob_data["blob_def"].op_name
-                        ),
+                        os.path.join(op_saver_path, blob_def.blob_name),
                         blob_data["blob"].ndarray(),
                     )
                 if (i + 1) % 10 == 0:
