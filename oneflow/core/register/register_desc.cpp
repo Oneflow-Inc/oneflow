@@ -132,7 +132,7 @@ void RegstDesc::ToProto(RegstDescProto* ret) const {
       pair.second->ToProto(pb_pair->mutable_blob_desc());
     }
     int size_in_lbi2blob_desc = data_regst_desc_proto->lbi2blob_desc_size();
-    CHECK_EQ(size_in_packed, size_inbi2blob_desc);
+    CHECK_EQ(size_in_packed, size_in_lbi2blob_desc);
     CHECK(data_regst_time_shape_);
     data_regst_time_shape_->ToProto(data_regst_desc_proto->mutable_time_shape());
   } else if (regst_desc_type_.has_ctrl_regst_desc()) {
