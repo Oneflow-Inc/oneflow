@@ -1777,7 +1777,7 @@ message NonMaximumSuppressionOpConf {
   required string out = 2;
   // conf
   optional float nms_iou_threshold = 3 [default = 0.7];
-  optional int32 post_nms_top_n = 4 [default = 1000];
+  optional int32 post_nms_top_n = 4 [default = -1];
 }
 
 message DynamicReshapeOpConf {

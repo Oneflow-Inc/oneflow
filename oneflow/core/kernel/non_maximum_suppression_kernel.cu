@@ -91,7 +91,10 @@ class NmsGpuKernel final : public KernelIf<DeviceType::kGPU> {
     int8_t* keep_ptr = BnInOp2Blob("out")->mut_dptr<int8_t>();
 
     size_t num_boxes = bbox_blob->shape().At(0);
-    size_t num_keep = std::min<size_t>(num_boxes, op_conf.post_nms_top_n());
+    size_t num_keep = num_boxes;
+    if (op_conf.post_nms_top_n() > 0) {
+      num_keep = std::min<size_t>(num_keep, op_conf.post_nms_top_n());
+    }
     size_t num_blocks = CeilDiv(num_boxes, kBlockSize);
     Memset<DeviceType::kGPU>(ctx.device_ctx, suppression_ptr, 0,
                              num_boxes * num_blocks * sizeof(int64_t));
