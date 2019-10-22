@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 # must import get cfg before importing oneflow
 from config import get_default_cfgs
 
@@ -7,6 +8,9 @@ from backbone import Backbone
 from rpn import RPNHead, RPNLoss, RPNProposal
 from box_head import BoxHead
 from mask_head import MaskHead
+
+from post_processor.bounding_box import BoxList
+from post_processor.box_head_inference import PostProcessor
 
 import argparse
 from datetime import datetime
@@ -51,7 +55,7 @@ parser.add_argument(
     required=False,
 )
 parser.add_argument(
-    "-eval", "--eval", default=False, action="store_true", required=False
+    "-eval", "--eval", default=True, action="store_true", required=False
 )
 parser.add_argument(
     "-mask_head_eval",
@@ -208,7 +212,7 @@ def maskrcnn_train(images, image_sizes, gt_boxes, gt_segms, gt_labels):
     return rpn_bbox_loss, rpn_objectness_loss, box_loss, cls_loss, mask_loss
 
 
-def maskrcnn_eval(images, image_sizes):
+def maskrcnn_eval_box_head(images, image_sizes):
     cfg = get_default_cfgs()
     if terminal_args.config_file is not None:
         cfg.merge_from_file(terminal_args.config_file)
@@ -241,8 +245,8 @@ def maskrcnn_eval(images, image_sizes):
     # Backbone
     features = backbone.build(images)
 
-    for idx, feature in enumerate(features):
-        flow.watch(feature, Save("feature_{}".format(idx)))
+    #for idx, feature in enumerate(features):
+    #    flow.watch(feature, Save("feature_{}".format(idx)))
 
     # RPN
     cls_logit_list, bbox_pred_list = rpn_head.build(features)
@@ -252,12 +256,12 @@ def maskrcnn_eval(images, image_sizes):
 
     # Box Head
     cls_logits, box_regressions = box_head.build_eval(proposals, features)
-
+    cls_prob = flow.nn.sigmoid(cls_logit_list)
     # Mask Head
     # TODO: get proposals from box_head post-processors
     # mask_logits = mask_head.build_eval(proposals, features)
 
-    return tuple(proposals) + (cls_logits,) + (box_regressions,)
+    return (proposals, cls_prob, box_regressions)
 
 
 blob_watched, diff_blob_watched = {}, {}
@@ -287,14 +291,10 @@ if terminal_args.eval:
 
     @flow.function
     def maskrcnn_eval_job(
-        images=flow.input_blob_def(
-            (1, 3, 1280, 800), dtype=flow.float, is_dynamic=True
-        ),
-        image_sizes=flow.input_blob_def(
-            (1, 2), dtype=flow.int32, is_dynamic=False
-        ),
+        images=flow.input_blob_def((1, 3, 1280, 800), dtype=flow.float, is_dynamic=True),
+        image_sizes=flow.input_blob_def((1, 2), dtype=flow.int32, is_dynamic=False),
     ):
-        return maskrcnn_eval(images, image_sizes)
+        return maskrcnn_eval_box_head(images, image_sizes)
 
 
 if terminal_args.rcnn_eval:
@@ -465,12 +465,16 @@ if __name__ == "__main__":
             image_sizes = np.load(
                 "/tmp/shared_with_jxf/maskrcnn_eval_input_data/image_sizes.npy"
             )
-            results = maskrcnn_eval_job(
-                images, image_sizes
-            ).get()
-            proposals, cls_logits, box_regressions = maskrcnn_eval_job(
-                images, image_sizes
-            ).get()
+            proposals, cls_prob, box_regressions = maskrcnn_eval_job(images, image_sizes).get()
+
+            boxes = []
+            for proposal,img in zip(proposals, image_sizes):
+              width, height = img['width'], img['height']
+              bbox = BoxList(proposal, (width, height), mode="xyxy")
+              boxes.append(bbox)
+            postprocessor = PostProcessor()
+            res = postprocessor.forward((cls_prob, box_regressions), boxes)
+
         elif terminal_args.mock_dataset:
             if terminal_args.rpn_only:
                 print(
