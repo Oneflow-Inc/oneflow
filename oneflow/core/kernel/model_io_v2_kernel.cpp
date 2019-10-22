@@ -241,6 +241,12 @@ class ModelInitV2Kernel final : public KernelIf<device_type> {
   static std::mutex blob_cache_mutex_;
 };
 
+template<DeviceType device_type>
+std::mutex ModelInitV2Kernel<device_type>::blob_cache_mutex_;
+
+template<DeviceType device_type>
+HashMap<std::string, std::shared_ptr<OnDemandHostBlob>> ModelInitV2Kernel<device_type>::blob_cache_;
+
 ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kModelInitV2Conf, ModelInitV2Kernel);
 
 template<DeviceType device_type>
