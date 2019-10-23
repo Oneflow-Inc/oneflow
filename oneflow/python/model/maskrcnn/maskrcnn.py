@@ -55,7 +55,7 @@ parser.add_argument(
     required=False,
 )
 parser.add_argument(
-    "-eval", "--eval", default=True, action="store_true", required=False
+    "-eval", "--eval", default=False, action="store_true", required=False
 )
 parser.add_argument(
     "-mask_head_eval",
