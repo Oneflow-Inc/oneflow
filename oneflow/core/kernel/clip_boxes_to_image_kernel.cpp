@@ -14,12 +14,11 @@ class ClipBoxesToImageKernel final : public KernelIf<device_type> {
                           std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
     const Blob* boxes_blob = BnInOp2Blob("boxes");
     const Blob* image_size_blob = BnInOp2Blob("image_size");
-    CHECK_EQ(boxes_blob->shape().NumAxes(), 2);
-    CHECK_EQ(boxes_blob->shape().At(1), 4);
+    CHECK_EQ(boxes_blob->shape().elem_cnt() % 4, 0);
     CHECK_EQ(image_size_blob->shape().NumAxes(), 1);
     CHECK_EQ(image_size_blob->shape().At(0), 2);
     ClipBoxesToImageUtil<device_type, T>::ClipBoxes(
-        ctx.device_ctx, boxes_blob->shape().At(0), boxes_blob->dptr<T>(),
+        ctx.device_ctx, boxes_blob->shape().elem_cnt() / 4, boxes_blob->dptr<T>(),
         image_size_blob->dptr<int32_t>(), BnInOp2Blob("out")->mut_dptr<T>());
   }
 };
