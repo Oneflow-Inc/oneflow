@@ -37,6 +37,8 @@ size_t InferTempStorageForCUBArgmax(int32_t num_row, int32_t num_col) {
       /* d_end_offsets */ segment_offsets_t + 1,
       /* stream */ cuda_stream);
   CudaCheck(err);
+  CudaCheck(cudaStreamSynchronize(cuda_stream));
+  if (temp_storage_bytes == 0) { temp_storage_bytes = 1; }
   CudaCheck(cudaStreamDestroy(cuda_stream));
 
   return temp_storage_bytes;
@@ -54,8 +56,8 @@ struct InferTempStorageForCUBArgmaxSwitchUtil final {
 };
 
 size_t InferTempStorageForCUBArgmaxAtCompile(int32_t num_row, int32_t num_col, DataType data_type) {
-  InferTempStorageForCUBArgmaxSwitchUtil::SwitchInferTempStorageForCUBArgmax(SwitchCase(data_type),
-                                                                             num_row, num_col);
+  return InferTempStorageForCUBArgmaxSwitchUtil::SwitchInferTempStorageForCUBArgmax(
+      SwitchCase(data_type), num_row, num_col);
 }
 
 }  // namespace oneflow
