@@ -125,7 +125,10 @@ void RegstDesc::ToProto(RegstDescProto* ret) const {
         ret->mutable_regst_desc_type()->mutable_data_regst_desc();
     packed_blob_desc_->ToProto(data_regst_desc_proto->mutable_packed_blob_desc());
     const int size_in_packed = data_regst_desc_proto->packed_blob_desc().header().field_size();
+    bool has_temp_storage = false;
+    bool has_key_value_out = false;
     for (const auto& pair : lbi2blob_desc_) {
+      if (pair.first.blob_name() == )
       LbiBlobDescPair* pb_pair;
       pb_pair = data_regst_desc_proto->mutable_lbi2blob_desc()->Add();
       *(pb_pair->mutable_lbi()) = pair.first;
