@@ -5,6 +5,19 @@ from matcher import Matcher
 import oneflow as flow
 
 
+def Save(name):
+    def _save(x):
+        import numpy as np
+        import os
+
+        path = "eval_dump/"
+        if not os.path.exists(path):
+            os.mkdir(path)
+        np.save(path + name, x.ndarray())
+
+    return _save
+
+
 class BoxHead(object):
     def __init__(self, cfg):
         self.cfg = cfg
@@ -189,8 +202,6 @@ class BoxHead(object):
 
             return _save
 
-        # CHECK_POINT
-
         level_idx_dict = {}
         for (i, level_idx) in zip(range(2, 6), range(0, 4)):
             level_idx_dict[i] = flow.squeeze(
@@ -199,8 +210,6 @@ class BoxHead(object):
                 ),
                 axis=[1],
             )
-
-        # CHECK_POINT
 
         roi_features_list = []
         for (level, i) in zip(range(2, 6), range(0, 4)):
@@ -216,20 +225,15 @@ class BoxHead(object):
             )
             roi_features_list.append(roi_feature_i)
 
-        # CHECK_POINT
-
         roi_features = flow.stack(roi_features_list, axis=0)
 
         origin_indices = flow.stack(list(level_idx_dict.values()), axis=0)
 
-        # roi_features_reorder = flow.local_gather(roi_features, origin_indices)
         roi_features_reorder = flow.local_scatter_nd_update(
             flow.constant_like(roi_features, float(0)),
             flow.expand_dims(origin_indices, axis=1),
             roi_features,
         )
-
-        # CHECK_POINT
 
         roi_features_flat = flow.dynamic_reshape(
             roi_features_reorder,
@@ -269,3 +273,40 @@ class BoxHead(object):
         )
 
         return bbox_regression, cls_logits
+
+    # cls_logits: [R, 81], R = sum(R'_i)
+    # box_regressions: [R, 324], R = sum(R'_i)
+    # rpn_proposals_list: list of [R'_i, 4] wrt. images
+    # image_size_list: list of [2,] wrt. images
+    def build_post_processor(
+        self, cls_logits, box_regressions, rpn_proposals_list, image_size_list
+    ):
+        cls_probs = flow.nn.softmax(cls_logits)
+        concat_rpn_proposals = flow.concat(rpn_proposals_list, axis=0)
+        concat_proposals = flow.detection.box_decode(
+            concat_rpn_proposals,
+            box_regressions,
+            regression_weights={
+                "weight_x": 10.0,
+                "weight_y": 10.0,
+                "weight_h": 5.0,
+                "weight_w": 5.0,
+            },
+        )
+        proposals_list = flow.detection.maskrcnn_split(
+            concat_proposals, rpn_proposals_list
+        )
+        cls_probs_list = flow.detection.maskrcnn_split(
+            cls_probs, rpn_proposals_list
+        )
+        assert (
+            len(proposals_list) == len(cls_probs_list) == len(image_size_list)
+        )
+        for img_idx, (proposals, cls_probs, image_sie) in enumerate(
+            zip(proposals_list, cls_probs_list, image_size_list)
+        ):
+            flow.watch(proposals, Save("xxx_proposals_{}".format(img_idx)))
+            flow.watch(cls_probs, Save("xxx_cls_probs_{}".format(img_idx)))
+            flow.watch(image_sie, Save("xxx_image_size_{}".format(img_idx)))
+
+        return None
