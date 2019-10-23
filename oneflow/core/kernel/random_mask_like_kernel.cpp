@@ -38,6 +38,8 @@ struct RandomMaskLikeKernelUtil<DeviceType::kCPU> final {
 
 template struct RandomMaskLikeKernelUtil<DeviceType::kCPU>;
 
-ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kRandomMaskLikeConf, RandomMaskLikeKernel);
-
+REGISTER_KERNEL_WITH_DEVICE(OperatorConf::kRandomMaskLikeConf, DeviceType::kCPU,
+                            RandomMaskLikeKernel<DeviceType::kCPU>);
+REGISTER_KERNEL_WITH_DEVICE(OperatorConf::kRandomMaskLikeConf, DeviceType::kGPU,
+                            RandomMaskLikeKernel<DeviceType::kGPU>);
 }  // namespace oneflow

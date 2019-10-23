@@ -182,7 +182,8 @@ const HashSet<OperatorConf::OpTypeCase>& OpsWithNewKernelRegistry() {
                                                   OperatorConf::kNcclTupleReduceConf,
                                                   OperatorConf::kAssignConf,
                                                   OperatorConf::kBiasAddConf,
-                                                  OperatorConf::kDropoutConf};
+                                                  OperatorConf::kDropoutConf,
+                                                  OperatorConf::kRandomMaskLikeConf};
   return ops;
 }
 
