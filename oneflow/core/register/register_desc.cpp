@@ -111,7 +111,9 @@ void RegstDesc::ForEachLbi(std::function<void(const LogicalBlobId&)> func) const
 void RegstDesc::EraseZeroSizeBlob() {
   EraseIf<LogicalBlobId, std::unique_ptr<BlobDesc>>(
       &lbi2blob_desc_, [](HashMap<LogicalBlobId, std::unique_ptr<BlobDesc>>::iterator it) {
-        return RtBlobDesc(*(it->second)).ByteSizeOfBlobBody() == 0;
+        const bool ret = RtBlobDesc(*(it->second)).ByteSizeOfBlobBody() == 0;
+        if (ret) { LOG(INFO) << it->first.op_name() << "/" << it->first.op_name() << " erased"; }
+        return ret;
       });
 }
 
