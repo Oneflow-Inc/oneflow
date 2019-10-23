@@ -244,7 +244,7 @@ void GenRegstAllocFreeQueueAndRegstMutualExclusions(
 }
 
 struct MemBlockResultInfo {
-  int64_t mem_block_size;
+  size_t mem_block_size;
   HashMap<RegstDescProto*, int64_t> regst_desc2offset;
 };
 
@@ -257,7 +257,7 @@ using PieceIt = std::list<Piece>::iterator;
 
 class MemBlockBuffer final {
  public:
-  MemBlockBuffer(int64_t size) : buffer_size_(size) {
+  MemBlockBuffer(size_t size) : buffer_size_(size) {
     Piece start_piece;
     start_piece.begin = 0;
     start_piece.end = size;
@@ -267,7 +267,7 @@ class MemBlockBuffer final {
   ~MemBlockBuffer() = default;
 
   void Occupy(int64_t begin, int64_t end);
-  int64_t FindFreeOffset(int64_t size, int64_t* offset);
+  void FindFreeOffsetAndNewBufferSize(int64_t size, int64_t* offset, size_t* new_buffer_size);
 
  private:
   void CheckValid() {
@@ -293,7 +293,7 @@ class MemBlockBuffer final {
   }
 
   std::list<Piece> piece_list_;
-  int64_t buffer_size_;
+  size_t buffer_size_;
 };
 
 void MemBlockBuffer::Occupy(int64_t begin, int64_t end) {
@@ -331,21 +331,23 @@ void MemBlockBuffer::Occupy(int64_t begin, int64_t end) {
   MergePieceAndCheckValid();
 }
 
-int64_t MemBlockBuffer::FindFreeOffset(int64_t size, int64_t* offset) {
+void MemBlockBuffer::FindFreeOffsetAndNewBufferSize(int64_t size, int64_t* offset,
+                                                    size_t* new_buffer_size) {
   CheckValid();
   for (auto it = piece_list_.begin(); it != piece_list_.end(); ++it) {
     if (it->is_free && (it->end - it->begin) >= size) {
       *offset = it->begin;
-      return buffer_size_;
+      *new_buffer_size = buffer_size_;
+      return;
     }
   }
   auto last_it = std::prev(piece_list_.end());
   if (last_it->is_free) {
     *offset = last_it->begin;
-    return buffer_size_ + size - (last_it->end - last_it->begin);
+    *new_buffer_size = buffer_size_ + size - (last_it->end - last_it->begin);
   } else {
     *offset = buffer_size_;
-    return buffer_size_ + size;
+    *new_buffer_size = buffer_size_ + size;
   }
 }
 
@@ -355,7 +357,7 @@ void MemReusedAlgorithm0_OfColorImproved(
   HashMap<RegstDescProto*, int64_t>* regst_desc2offset = &(result->regst_desc2offset);
   regst_desc2offset->clear();
   std::vector<RegstDescProto*> order;
-  int64_t buffer_size = 256;
+  size_t buffer_size = 256;
   HashMap<RegstDescProto*, int64_t> regst_desc2size;
   for (const auto& pair : regst2mutual_exclusion_regsts) {
     order.push_back(pair.first);
@@ -375,7 +377,7 @@ void MemReusedAlgorithm0_OfColorImproved(
       }
     }
     int64_t offset = -1;
-    buffer_size = buffer.FindFreeOffset(regst_desc2size.at(regst_desc), &offset);
+    buffer.FindFreeOffsetAndNewBufferSize(regst_desc2size.at(regst_desc), &offset, &buffer_size);
     CHECK(offset >= 0 && offset < buffer_size);
     CHECK(regst_desc2offset->emplace(regst_desc, offset).second);
   }
