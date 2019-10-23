@@ -196,30 +196,38 @@ struct InferTempStorageForSortingKeysDescendingSwitchUtil final {
 // FIX ME: should also pass value_data_type param here, use int64_t for now
 size_t InferTempStorageForSortingPairsAscendingAtCompile(int32_t num_row, int32_t num_col,
                                                          DataType key_data_type) {
-  return InferTempStorageForSortingPairsAscendingSwitchUtil::
+  size_t return_size_t = InferTempStorageForSortingPairsAscendingSwitchUtil::
       SwitchInferTempStorageForSortingPairsAscending(SwitchCase(key_data_type), num_row, num_col);
+  LOG(INFO) << "return_size_t in cu" << return_size_t;
+  return return_size_t;
 }
 
 // Infer temp storage for sorting key-value pairs in descending order at compile stage
 // FIX ME: should also pass value_data_type param here, use int64_t for now
 size_t InferTempStorageForSortingPairsDescendingAtCompile(int32_t num_row, int32_t num_col,
                                                           DataType key_data_type) {
-  return InferTempStorageForSortingPairsDescendingSwitchUtil::
+  size_t return_size_t = InferTempStorageForSortingPairsDescendingSwitchUtil::
       SwitchInferTempStorageForSortingPairsDescending(SwitchCase(key_data_type), num_row, num_col);
+  LOG(INFO) << "return_size_t in cu" << return_size_t;
+  return return_size_t;
 }
 
 // Infer temp storage for sorting keys in ascending order at compile stage
 size_t InferTempStorageForSortingKeysAscendingAtCompile(int32_t num_row, int32_t num_col,
                                                         DataType key_data_type) {
-  return InferTempStorageForSortingKeysAscendingSwitchUtil::
+  size_t return_size_t = InferTempStorageForSortingKeysAscendingSwitchUtil::
       SwitchInferTempStorageForSortingKeysAscending(SwitchCase(key_data_type), num_row, num_col);
+  LOG(INFO) << "return_size_t in cu" << return_size_t;
+  return return_size_t;
 }
 
 // Infer temp storage for sorting keys in descending order at compile stage
 size_t InferTempStorageForSortingKeysDescendingAtCompile(int32_t num_row, int32_t num_col,
                                                          DataType key_data_type) {
-  return InferTempStorageForSortingKeysDescendingSwitchUtil::
+  size_t return_size_t = InferTempStorageForSortingKeysDescendingSwitchUtil::
       SwitchInferTempStorageForSortingKeysDescending(SwitchCase(key_data_type), num_row, num_col);
+  LOG(INFO) << "return_size_t in cu" << return_size_t;
+  return return_size_t;
 }
 
 }  // namespace oneflow
