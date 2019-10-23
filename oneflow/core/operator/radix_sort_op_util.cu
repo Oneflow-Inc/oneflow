@@ -198,7 +198,7 @@ size_t InferTempStorageForSortingPairsAscendingAtCompile(int32_t num_row, int32_
                                                          DataType key_data_type) {
   size_t return_size_t = InferTempStorageForSortingPairsAscendingSwitchUtil::
       SwitchInferTempStorageForSortingPairsAscending(SwitchCase(key_data_type), num_row, num_col);
-  LOG(INFO) << "return_size_t in cu" << return_size_t;
+  LOG(INFO) << "return_size_t in cu: " << return_size_t;
   return return_size_t;
 }
 
@@ -208,7 +208,7 @@ size_t InferTempStorageForSortingPairsDescendingAtCompile(int32_t num_row, int32
                                                           DataType key_data_type) {
   size_t return_size_t = InferTempStorageForSortingPairsDescendingSwitchUtil::
       SwitchInferTempStorageForSortingPairsDescending(SwitchCase(key_data_type), num_row, num_col);
-  LOG(INFO) << "return_size_t in cu" << return_size_t;
+  LOG(INFO) << "return_size_t in cu: " << return_size_t;
   return return_size_t;
 }
 
@@ -217,7 +217,7 @@ size_t InferTempStorageForSortingKeysAscendingAtCompile(int32_t num_row, int32_t
                                                         DataType key_data_type) {
   size_t return_size_t = InferTempStorageForSortingKeysAscendingSwitchUtil::
       SwitchInferTempStorageForSortingKeysAscending(SwitchCase(key_data_type), num_row, num_col);
-  LOG(INFO) << "return_size_t in cu" << return_size_t;
+  LOG(INFO) << "return_size_t in cu: " << return_size_t;
   return return_size_t;
 }
 
@@ -226,7 +226,7 @@ size_t InferTempStorageForSortingKeysDescendingAtCompile(int32_t num_row, int32_
                                                          DataType key_data_type) {
   size_t return_size_t = InferTempStorageForSortingKeysDescendingSwitchUtil::
       SwitchInferTempStorageForSortingKeysDescending(SwitchCase(key_data_type), num_row, num_col);
-  LOG(INFO) << "return_size_t in cu" << return_size_t;
+  LOG(INFO) << "return_size_t in cu: " << return_size_t;
   return return_size_t;
 }
 
