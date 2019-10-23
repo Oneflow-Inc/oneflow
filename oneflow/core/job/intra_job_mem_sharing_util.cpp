@@ -168,17 +168,17 @@ void GenRegstAllocFreeQueueAndRegstMutualExclusions(
   }
 
   auto FindLastFreeIndexInSortedTasks = [&](RegstDescProto* regst_desc) -> int64_t {
-    // temp regst will set release index as same as apply index
-    int64_t release_index = task_id2sorted_id.at(regst_desc->producer_task_id());
+    // temp regst will set free index as same as alloc index
+    int64_t free_index = task_id2sorted_id.at(regst_desc->producer_task_id());
     for (int64_t consumer_task_id : regst_desc->consumer_task_id()) {
-      // if consumer is not in this mem chain, set release index = last index
+      // if consumer is not in this mem chain, set free index = last index
       int64_t this_sorted_index = sorted_tasks->size() - 1;
       if (task_id2sorted_id.find(consumer_task_id) != task_id2sorted_id.end()) {
         this_sorted_index = task_id2sorted_id.at(consumer_task_id);
       }
-      release_index = std::max(release_index, this_sorted_index);
+      free_index = std::max(free_index, this_sorted_index);
     }
-    return release_index;
+    return free_index;
   };
 
   auto TryFindFirstInplacedRegstDesc = [&](RegstDescProto* consumer_regst) -> RegstDescProto* {
@@ -197,7 +197,7 @@ void GenRegstAllocFreeQueueAndRegstMutualExclusions(
     return inplaced_regst;
   };
 
-  HashMap<int64_t, int64_t> regst_desc_id2release_index;
+  HashMap<int64_t, int64_t> regst_desc_id2free_index;
   for (RegstDescProto* regst_desc : *mem_reused_regsts) {
     RegstDescProto* inplaced_regst_desc = TryFindFirstInplacedRegstDesc(regst_desc);
     if (inplaced_regst_desc != nullptr) {
@@ -208,37 +208,36 @@ void GenRegstAllocFreeQueueAndRegstMutualExclusions(
     CHECK(alloc_regsts_queue->at(task_id2sorted_id.at(regst_desc->producer_task_id()))
               .insert(regst_desc)
               .second);
-    CHECK(regst_desc_id2release_index
+    CHECK(regst_desc_id2free_index
               .emplace(regst_desc->regst_desc_id(), FindLastFreeIndexInSortedTasks(regst_desc))
               .second);
   }
-  // inplace extend regst release index
+  // inplace extend regst free index
   for (auto pair : *consumer2inplaced_regst) {
     RegstDescProto* consumer_regst_desc = pair.first;
     int64_t inplaced_regst_desc_id = pair.second->regst_desc_id();
-    CHECK(regst_desc_id2release_index.find(inplaced_regst_desc_id)
-          != regst_desc_id2release_index.end());
-    regst_desc_id2release_index.at(inplaced_regst_desc_id) =
-        std::max(regst_desc_id2release_index.at(inplaced_regst_desc_id),
+    CHECK(regst_desc_id2free_index.find(inplaced_regst_desc_id) != regst_desc_id2free_index.end());
+    regst_desc_id2free_index.at(inplaced_regst_desc_id) =
+        std::max(regst_desc_id2free_index.at(inplaced_regst_desc_id),
                  FindLastFreeIndexInSortedTasks(consumer_regst_desc));
   }
-  for (const auto& pair : regst_desc_id2release_index) {
+  for (const auto& pair : regst_desc_id2free_index) {
     CHECK(
         free_regsts_queue->at(pair.second).insert(regst_desc_id2regst_desc->at(pair.first)).second);
   }
 
   HashSet<RegstDescProto*> remain_regsts;
   for (int64_t i = 0; i < sorted_tasks->size(); ++i) {
-    for (RegstDescProto* apply_regst : alloc_regsts_queue->at(i)) {
-      CHECK(regst2mutual_exclusion_regsts->emplace(apply_regst, HashSet<RegstDescProto*>()).second);
+    for (RegstDescProto* alloc_regst : alloc_regsts_queue->at(i)) {
+      CHECK(regst2mutual_exclusion_regsts->emplace(alloc_regst, HashSet<RegstDescProto*>()).second);
       for (RegstDescProto* remain_regst : remain_regsts) {
-        CHECK(regst2mutual_exclusion_regsts->at(apply_regst).insert(remain_regst).second);
-        CHECK(regst2mutual_exclusion_regsts->at(remain_regst).insert(apply_regst).second);
+        CHECK(regst2mutual_exclusion_regsts->at(alloc_regst).insert(remain_regst).second);
+        CHECK(regst2mutual_exclusion_regsts->at(remain_regst).insert(alloc_regst).second);
       }
-      CHECK(remain_regsts.insert(apply_regst).second);
+      CHECK(remain_regsts.insert(alloc_regst).second);
     }
-    for (RegstDescProto* release_regst : free_regsts_queue->at(i)) {
-      CHECK_EQ(remain_regsts.erase(release_regst), 1);
+    for (RegstDescProto* free_regst : free_regsts_queue->at(i)) {
+      CHECK_EQ(remain_regsts.erase(free_regst), 1);
     }
   }
   CHECK(remain_regsts.empty());
@@ -502,15 +501,14 @@ void MemReusedAlgorithm1_TfBfcImproved(
 
   CHECK_EQ(alloc_regsts_queue.size(), free_regsts_queue.size());
   for (int64_t i = 0; i < alloc_regsts_queue.size(); ++i) {
-    for (RegstDescProto* apply_regst : alloc_regsts_queue.at(i)) {
+    for (RegstDescProto* alloc_regst : alloc_regsts_queue.at(i)) {
       CHECK(regst_desc2offset
-                ->emplace(apply_regst, bfc_allocator.AllocateRaw(GetRegstSize(apply_regst)))
+                ->emplace(alloc_regst, bfc_allocator.AllocateRaw(GetRegstSize(alloc_regst)))
                 .second);
     }
-    for (RegstDescProto* release_regst : free_regsts_queue.at(i)) {
-      CHECK(regst_desc2offset->find(release_regst) != regst_desc2offset->end());
-      bfc_allocator.DeallocateRaw(regst_desc2offset->at(release_regst),
-                                  GetRegstSize(release_regst));
+    for (RegstDescProto* free_regst : free_regsts_queue.at(i)) {
+      CHECK(regst_desc2offset->find(free_regst) != regst_desc2offset->end());
+      bfc_allocator.DeallocateRaw(regst_desc2offset->at(free_regst), GetRegstSize(free_regst));
     }
   }
   result->mem_block_size = bfc_allocator.buffer_size();
@@ -549,18 +547,18 @@ void IntraJobMemSharingUtil::InferMemBlockId4MemReusedRegst(Plan* plan,
   HashMap<int64_t, RegstDescProto*> regst_desc_id2regst_desc;
   GenRegstDescId2RegstDesc(plan, &regst_desc_id2regst_desc);
   // info for algorithm
-  HashMap<int64_t, std::vector<HashSet<RegstDescProto*>>> mem_chain2task2apply_regsts;
-  HashMap<int64_t, std::vector<HashSet<RegstDescProto*>>> mem_chain2task2release_regsts;
+  HashMap<int64_t, std::vector<HashSet<RegstDescProto*>>> mem_chain2task2alloc_regsts;
+  HashMap<int64_t, std::vector<HashSet<RegstDescProto*>>> mem_chain2task2free_regsts;
   HashMap<int64_t, HashMap<RegstDescProto*, HashSet<RegstDescProto*>>>
       mem_chain2regst2mutual_exclusion_regsts;
   // info for inplace
   HashMap<int64_t, HashMap<RegstDescProto*, RegstDescProto*>> mem_chain2consumer2inplaced_regst;
 
-  // step 1: generate regst apply/release queue AND regst mutual exclusions
+  // step 1: generate regst alloc/free queue AND regst mutual exclusions
   for (const auto& pair : mem_chain2mem_reused_regsts) {
     GenRegstAllocFreeQueueAndRegstMutualExclusions(
         &mem_chain2sorted_tasks.at(pair.first), &pair.second, &regst_desc_id2regst_desc,
-        &mem_chain2task2apply_regsts[pair.first], &mem_chain2task2release_regsts[pair.first],
+        &mem_chain2task2alloc_regsts[pair.first], &mem_chain2task2free_regsts[pair.first],
         &mem_chain2regst2mutual_exclusion_regsts[pair.first],
         &mem_chain2consumer2inplaced_regst[pair.first]);
   }
@@ -579,12 +577,12 @@ void IntraJobMemSharingUtil::InferMemBlockId4MemReusedRegst(Plan* plan,
       results->resize(kMemReuseAlgorithmNum);
       for (int64_t algo_id = 0; algo_id < kMemReuseAlgorithmNum; ++algo_id) {
         MemBlockResultInfo* result = &(results->at(algo_id));
-        thread_pool.AddWork([algo_id, mem_chain_id, &mem_chain2task2apply_regsts,
-                             &mem_chain2task2release_regsts,
-                             &mem_chain2regst2mutual_exclusion_regsts, result, &counter]() {
+        thread_pool.AddWork([algo_id, mem_chain_id, &mem_chain2task2alloc_regsts,
+                             &mem_chain2task2free_regsts, &mem_chain2regst2mutual_exclusion_regsts,
+                             result, &counter]() {
           SelectAlgorithmGenMemBlockOffset4Regsts(
-              algo_id, mem_chain2task2apply_regsts.at(mem_chain_id),
-              mem_chain2task2release_regsts.at(mem_chain_id),
+              algo_id, mem_chain2task2alloc_regsts.at(mem_chain_id),
+              mem_chain2task2free_regsts.at(mem_chain_id),
               mem_chain2regst2mutual_exclusion_regsts.at(mem_chain_id), result);
           counter.Decrease();
         });
