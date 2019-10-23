@@ -1,4 +1,4 @@
-#include "oneflow/core/job/in_job_mem_sharing_util.h"
+#include "oneflow/core/job/intra_job_mem_sharing_util.h"
 #include "oneflow/core/common/blocking_counter.h"
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/common/shape.h"

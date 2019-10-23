@@ -3,7 +3,7 @@
 #include "oneflow/core/graph/task_node.h"
 #include "oneflow/core/register/register_desc.pb.h"
 #include "oneflow/core/register/register_manager.h"
-#include "oneflow/core/job/in_job_mem_sharing_util.h"
+#include "oneflow/core/job/intra_job_mem_sharing_util.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/profiler.h"
