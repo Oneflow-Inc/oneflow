@@ -148,7 +148,7 @@ void GenMemChainTasksAndRegsts(
   CHECK_EQ(mem_chain2sorted_tasks->size(), mem_chain2mem_reused_regsts->size());
 }
 
-void GenRegstApplyReleaseQueueAndRegstMutualExclusions(
+void GenRegstAllocFreeQueueAndRegstMutualExclusions(
     const std::vector<TaskProto*>* sorted_tasks, const HashSet<RegstDescProto*>* mem_reused_regsts,
     const HashMap<int64_t, RegstDescProto*>* regst_desc_id2regst_desc,
     std::vector<HashSet<RegstDescProto*>>* alloc_regsts_queue,
@@ -167,7 +167,7 @@ void GenRegstApplyReleaseQueueAndRegstMutualExclusions(
     CHECK(task_id2sorted_id.emplace(task->task_id(), i).second);
   }
 
-  auto FindLastReleaseIndexInSortedTasks = [&](RegstDescProto* regst_desc) -> int64_t {
+  auto FindLastFreeIndexInSortedTasks = [&](RegstDescProto* regst_desc) -> int64_t {
     // temp regst will set release index as same as apply index
     int64_t release_index = task_id2sorted_id.at(regst_desc->producer_task_id());
     for (int64_t consumer_task_id : regst_desc->consumer_task_id()) {
@@ -209,7 +209,7 @@ void GenRegstApplyReleaseQueueAndRegstMutualExclusions(
               .insert(regst_desc)
               .second);
     CHECK(regst_desc_id2release_index
-              .emplace(regst_desc->regst_desc_id(), FindLastReleaseIndexInSortedTasks(regst_desc))
+              .emplace(regst_desc->regst_desc_id(), FindLastFreeIndexInSortedTasks(regst_desc))
               .second);
   }
   // inplace extend regst release index
@@ -220,7 +220,7 @@ void GenRegstApplyReleaseQueueAndRegstMutualExclusions(
           != regst_desc_id2release_index.end());
     regst_desc_id2release_index.at(inplaced_regst_desc_id) =
         std::max(regst_desc_id2release_index.at(inplaced_regst_desc_id),
-                 FindLastReleaseIndexInSortedTasks(consumer_regst_desc));
+                 FindLastFreeIndexInSortedTasks(consumer_regst_desc));
   }
   for (const auto& pair : regst_desc_id2release_index) {
     CHECK(
@@ -558,7 +558,7 @@ void IntraJobMemSharingUtil::InferMemBlockId4MemReusedRegst(Plan* plan,
 
   // step 1: generate regst apply/release queue AND regst mutual exclusions
   for (const auto& pair : mem_chain2mem_reused_regsts) {
-    GenRegstApplyReleaseQueueAndRegstMutualExclusions(
+    GenRegstAllocFreeQueueAndRegstMutualExclusions(
         &mem_chain2sorted_tasks.at(pair.first), &pair.second, &regst_desc_id2regst_desc,
         &mem_chain2task2apply_regsts[pair.first], &mem_chain2task2release_regsts[pair.first],
         &mem_chain2regst2mutual_exclusion_regsts[pair.first],
