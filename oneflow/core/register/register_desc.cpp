@@ -131,11 +131,11 @@ void RegstDesc::ToProto(RegstDescProto* ret) const {
     bool has_key_value_out = false;
     for (const auto& pair : lbi2blob_desc_) {
       if (pair.first.blob_name() == "key_value_out") {
-        CHECK_EQ(size_in_packed, lbi2blob_desc_.size());
+        // CHECK_EQ(size_in_packed, lbi2blob_desc_.size());
         has_key_value_out = true;
       }
       if (pair.first.blob_name() == "temp_storage") {
-        CHECK_EQ(size_in_packed, lbi2blob_desc_.size());
+        // CHECK_EQ(size_in_packed, lbi2blob_desc_.size());
         has_temp_storage = true;
       }
     }
@@ -149,7 +149,7 @@ void RegstDesc::ToProto(RegstDescProto* ret) const {
     CHECK_EQ(size_in_lbi2blob_desc, lbi2blob_desc_.size());
     if (has_key_value_out) {
       LOG(INFO) << "CHECK triggered";
-      CHECK_EQ(size_in_packed, size_in_lbi2blob_desc);
+      // CHECK_EQ(size_in_packed, size_in_lbi2blob_desc);
     }
     CHECK(data_regst_time_shape_);
     data_regst_time_shape_->ToProto(data_regst_desc_proto->mutable_time_shape());
