@@ -1777,7 +1777,7 @@ message NonMaximumSuppressionOpConf {
   required string out = 2;
   // conf
   optional float nms_iou_threshold = 3 [default = 0.7];
-  optional int32 post_nms_top_n = 4 [default = 1000];
+  optional int32 post_nms_top_n = 4 [default = -1];
 }
 
 message DynamicReshapeOpConf {
@@ -1901,6 +1901,12 @@ message ReduceMaxOpConf {
 message ArgmaxOpConf {
   required string in = 1;
   required string out = 2;
+}
+
+message MaskrcnnSplitOpConf {
+  required string in = 1;
+  repeated string segm = 2;
+  repeated string out = 3;
 }
 
 message OperatorConf {
@@ -2119,6 +2125,7 @@ message OperatorConf {
     NonMaximumSuppressionOpConf non_maximum_suppression_conf = 611;
     RoiAlignOpConf roi_align_conf = 612;
     RoiAlignGradOpConf roi_align_grad_conf = 613;
+    MaskrcnnSplitOpConf maskrcnn_split_conf = 614;
 
     // mutable input op
     AxpyOpConf axpy_conf = 752;

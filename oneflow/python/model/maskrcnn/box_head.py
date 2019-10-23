@@ -190,7 +190,6 @@ class BoxHead(object):
             return _save
 
         # CHECK_POINT
-        flow.watch(levels, Save("levels"))
 
         level_idx_dict = {}
         for (i, level_idx) in zip(range(2, 6), range(0, 4)):
@@ -202,8 +201,6 @@ class BoxHead(object):
             )
 
         # CHECK_POINT
-        for idx, level_indices in level_idx_dict.items():
-            flow.watch(level_indices, Save("level_indices_{}".format(idx)))
 
         roi_features_list = []
         for (level, i) in zip(range(2, 6), range(0, 4)):
@@ -220,18 +217,10 @@ class BoxHead(object):
             roi_features_list.append(roi_feature_i)
 
         # CHECK_POINT
-        for idx in range(len(roi_features_list)):
-            flow.watch(
-                roi_features_list[idx], Save("roi_feature_{}".format(idx))
-            )
 
         roi_features = flow.stack(roi_features_list, axis=0)
 
-        flow.watch(roi_features, Save("roi_features"))
-
         origin_indices = flow.stack(list(level_idx_dict.values()), axis=0)
-
-        flow.watch(origin_indices, Save("origin_indices"))
 
         # roi_features_reorder = flow.local_gather(roi_features, origin_indices)
         roi_features_reorder = flow.local_scatter_nd_update(
@@ -241,7 +230,6 @@ class BoxHead(object):
         )
 
         # CHECK_POINT
-        flow.watch(roi_features_reorder, Save("roi_features_reorder"))
 
         roi_features_flat = flow.dynamic_reshape(
             roi_features_reorder,
