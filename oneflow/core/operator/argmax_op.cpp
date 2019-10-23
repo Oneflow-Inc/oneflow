@@ -27,8 +27,10 @@ class ArgmaxOp final : public Operator {
     BlobDesc* temp_storage = GetBlobDesc4BnInOp("temp_storage");
     int32_t num_col = in->shape().dim_vec().back();
     int32_t num_row = in->shape().elem_cnt() / num_col;
-    temp_storage->mut_shape() = Shape({static_cast<int64_t>(
-        InferTempStorageForCUBArgmaxAtCompile(num_row, num_col, in->data_type()))});
+    const int64_t temp_storage_size = static_cast<int64_t>(
+        InferTempStorageForCUBArgmaxAtCompile(num_row, num_col, in->data_type()));
+    LOG(INFO) << "temp_storage_size: " << temp_storage_size;
+    temp_storage->mut_shape() = Shape({temp_storage_size});
     temp_storage->set_data_type(DataType::kChar);
     temp_storage->set_is_dynamic(false);
     // fw_buf: key_value_out
