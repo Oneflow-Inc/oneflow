@@ -151,16 +151,16 @@ void GenMemChainTasksAndRegsts(
 void GenRegstApplyReleaseQueueAndRegstMutualExclusions(
     const std::vector<TaskProto*>* sorted_tasks, const HashSet<RegstDescProto*>* mem_reused_regsts,
     const HashMap<int64_t, RegstDescProto*>* regst_desc_id2regst_desc,
-    std::vector<HashSet<RegstDescProto*>>* apply_regsts_queue,
-    std::vector<HashSet<RegstDescProto*>>* release_regsts_queue,
+    std::vector<HashSet<RegstDescProto*>>* alloc_regsts_queue,
+    std::vector<HashSet<RegstDescProto*>>* free_regsts_queue,
     HashMap<RegstDescProto*, HashSet<RegstDescProto*>>* regst2mutual_exclusion_regsts,
     HashMap<RegstDescProto*, RegstDescProto*>* consumer2inplaced_regst) {
-  apply_regsts_queue->clear();
-  release_regsts_queue->clear();
+  alloc_regsts_queue->clear();
+  free_regsts_queue->clear();
   regst2mutual_exclusion_regsts->clear();
   consumer2inplaced_regst->clear();
-  apply_regsts_queue->resize(sorted_tasks->size());
-  release_regsts_queue->resize(sorted_tasks->size());
+  alloc_regsts_queue->resize(sorted_tasks->size());
+  free_regsts_queue->resize(sorted_tasks->size());
   HashMap<int64_t, int64_t> task_id2sorted_id;
   for (int64_t i = 0; i < sorted_tasks->size(); ++i) {
     TaskProto* task = sorted_tasks->at(i);
@@ -205,7 +205,7 @@ void GenRegstApplyReleaseQueueAndRegstMutualExclusions(
       continue;
     }
 
-    CHECK(apply_regsts_queue->at(task_id2sorted_id.at(regst_desc->producer_task_id()))
+    CHECK(alloc_regsts_queue->at(task_id2sorted_id.at(regst_desc->producer_task_id()))
               .insert(regst_desc)
               .second);
     CHECK(regst_desc_id2release_index
@@ -223,14 +223,13 @@ void GenRegstApplyReleaseQueueAndRegstMutualExclusions(
                  FindLastReleaseIndexInSortedTasks(consumer_regst_desc));
   }
   for (const auto& pair : regst_desc_id2release_index) {
-    CHECK(release_regsts_queue->at(pair.second)
-              .insert(regst_desc_id2regst_desc->at(pair.first))
-              .second);
+    CHECK(
+        free_regsts_queue->at(pair.second).insert(regst_desc_id2regst_desc->at(pair.first)).second);
   }
 
   HashSet<RegstDescProto*> remain_regsts;
   for (int64_t i = 0; i < sorted_tasks->size(); ++i) {
-    for (RegstDescProto* apply_regst : apply_regsts_queue->at(i)) {
+    for (RegstDescProto* apply_regst : alloc_regsts_queue->at(i)) {
       CHECK(regst2mutual_exclusion_regsts->emplace(apply_regst, HashSet<RegstDescProto*>()).second);
       for (RegstDescProto* remain_regst : remain_regsts) {
         CHECK(regst2mutual_exclusion_regsts->at(apply_regst).insert(remain_regst).second);
@@ -238,7 +237,7 @@ void GenRegstApplyReleaseQueueAndRegstMutualExclusions(
       }
       CHECK(remain_regsts.insert(apply_regst).second);
     }
-    for (RegstDescProto* release_regst : release_regsts_queue->at(i)) {
+    for (RegstDescProto* release_regst : free_regsts_queue->at(i)) {
       CHECK_EQ(remain_regsts.erase(release_regst), 1);
     }
   }
@@ -490,8 +489,8 @@ void BfcAllocator::DeallocateRaw(int64_t offset, int64_t size) {
 }
 
 void MemReusedAlgorithm1_TfBfcImproved(
-    const std::vector<HashSet<RegstDescProto*>>& apply_regsts_queue,
-    const std::vector<HashSet<RegstDescProto*>>& release_regsts_queue, MemBlockResultInfo* result) {
+    const std::vector<HashSet<RegstDescProto*>>& alloc_regsts_queue,
+    const std::vector<HashSet<RegstDescProto*>>& free_regsts_queue, MemBlockResultInfo* result) {
   HashMap<RegstDescProto*, int64_t>* regst_desc2offset = &(result->regst_desc2offset);
   regst_desc2offset->clear();
   int64_t buffer_size = 256;
@@ -501,14 +500,14 @@ void MemReusedAlgorithm1_TfBfcImproved(
     return RtRegstDesc(*regst).TotalMainByteSize4AllRegst();
   };
 
-  CHECK_EQ(apply_regsts_queue.size(), release_regsts_queue.size());
-  for (int64_t i = 0; i < apply_regsts_queue.size(); ++i) {
-    for (RegstDescProto* apply_regst : apply_regsts_queue.at(i)) {
+  CHECK_EQ(alloc_regsts_queue.size(), free_regsts_queue.size());
+  for (int64_t i = 0; i < alloc_regsts_queue.size(); ++i) {
+    for (RegstDescProto* apply_regst : alloc_regsts_queue.at(i)) {
       CHECK(regst_desc2offset
                 ->emplace(apply_regst, bfc_allocator.AllocateRaw(GetRegstSize(apply_regst)))
                 .second);
     }
-    for (RegstDescProto* release_regst : release_regsts_queue.at(i)) {
+    for (RegstDescProto* release_regst : free_regsts_queue.at(i)) {
       CHECK(regst_desc2offset->find(release_regst) != regst_desc2offset->end());
       bfc_allocator.DeallocateRaw(regst_desc2offset->at(release_regst),
                                   GetRegstSize(release_regst));
@@ -525,15 +524,13 @@ void MemReusedAlgorithm2_MinOrderGrowth(
 }
 
 void SelectAlgorithmGenMemBlockOffset4Regsts(
-    int64_t algo_id, const std::vector<HashSet<RegstDescProto*>>& apply_regsts_queue,
-    const std::vector<HashSet<RegstDescProto*>>& release_regsts_queue,
+    int64_t algo_id, const std::vector<HashSet<RegstDescProto*>>& alloc_regsts_queue,
+    const std::vector<HashSet<RegstDescProto*>>& free_regsts_queue,
     const HashMap<RegstDescProto*, HashSet<RegstDescProto*>>& regst2mutual_exclusion_regsts,
     MemBlockResultInfo* result) {
   switch (algo_id) {
     case 0: MemReusedAlgorithm0_OfColorImproved(regst2mutual_exclusion_regsts, result); break;
-    case 1:
-      MemReusedAlgorithm1_TfBfcImproved(apply_regsts_queue, release_regsts_queue, result);
-      break;
+    case 1: MemReusedAlgorithm1_TfBfcImproved(alloc_regsts_queue, free_regsts_queue, result); break;
     case 2: MemReusedAlgorithm2_MinOrderGrowth(regst2mutual_exclusion_regsts, result); break;
     default: UNIMPLEMENTED();
   }
@@ -542,7 +539,7 @@ void SelectAlgorithmGenMemBlockOffset4Regsts(
 }  // namespace
 
 void IntraJobMemSharingUtil::InferMemBlockId4MemReusedRegst(Plan* plan,
-                                                         const PlanTaskGraph& plan_task_graph) {
+                                                            const PlanTaskGraph& plan_task_graph) {
   // 1 device 1 mem chain
   HashMap<int64_t, std::vector<TaskProto*>> mem_chain2sorted_tasks;
   HashMap<int64_t, HashSet<RegstDescProto*>> mem_chain2mem_reused_regsts;
