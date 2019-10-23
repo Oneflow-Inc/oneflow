@@ -302,11 +302,11 @@ class BoxHead(object):
         assert (
             len(proposals_list) == len(cls_probs_list) == len(image_size_list)
         )
-        for img_idx, (proposals, cls_probs, image_sie) in enumerate(
+        for img_idx, (proposals, cls_probs, image_size) in enumerate(
             zip(proposals_list, cls_probs_list, image_size_list)
         ):
             flow.watch(proposals, Save("xxx_proposals_{}".format(img_idx)))
             flow.watch(cls_probs, Save("xxx_cls_probs_{}".format(img_idx)))
-            flow.watch(image_sie, Save("xxx_image_size_{}".format(img_idx)))
+            flow.watch(image_size, Save("xxx_image_size_{}".format(img_idx)))
 
         return None
