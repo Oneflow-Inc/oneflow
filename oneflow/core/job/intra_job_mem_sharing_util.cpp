@@ -396,7 +396,7 @@ class BfcAllocator final {
   ~BfcAllocator() = default;
 
   int64_t AllocateRaw(int64_t size);
-  void DeallocateRaw(int64_t offset, int64_t size);
+  void FreeRaw(int64_t offset, int64_t size);
   int64_t buffer_size() const { return buffer_size_; }
 
  private:
@@ -479,7 +479,7 @@ int64_t BfcAllocator::AllocateRaw(int64_t size) {
   return offset;
 }
 
-void BfcAllocator::DeallocateRaw(int64_t offset, int64_t size) {
+void BfcAllocator::FreeRaw(int64_t offset, int64_t size) {
   CHECK(offset2occupied_piece_.find(offset) != offset2occupied_piece_.end());
   PieceIt occupied_piece = offset2occupied_piece_.at(offset);
   CHECK(occupied_piece->is_free == false);
@@ -510,7 +510,7 @@ void MemReusedAlgorithm1_TfBfcImproved(
     }
     for (RegstDescProto* free_regst : free_regsts_queue.at(i)) {
       CHECK(regst_desc2offset->find(free_regst) != regst_desc2offset->end());
-      bfc_allocator.DeallocateRaw(regst_desc2offset->at(free_regst), GetRegstSize(free_regst));
+      bfc_allocator.FreeRaw(regst_desc2offset->at(free_regst), GetRegstSize(free_regst));
     }
   }
   result->mem_block_size = bfc_allocator.buffer_size();
