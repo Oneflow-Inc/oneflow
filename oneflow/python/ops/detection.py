@@ -418,6 +418,7 @@ def affine_channel(
     out = activation(out) if activation is not None else out
     return out
 
+
 @oneflow_export("dim0_dynamic_to_fixed")
 def dim0_dynamic_to_fixed(inputs, name=None):
     op_conf = op_conf_util.OperatorConf()
@@ -445,3 +446,28 @@ def dim0_dynamic_to_fixed(inputs, name=None):
             setattr(out_lbi, "blob_name", "out_" + str(i))
         ret.append(remote_blob_util.RemoteBlob(out_lbi))
     return tuple(ret)
+
+
+@oneflow_export("detection.maskrcnn_split")
+def maskrcnn_split(input, segms, name=None):
+    op_conf = op_conf_util.OperatorConf()
+    setattr(
+        op_conf,
+        "name",
+        name if name is not None else id_util.UniqueStr("MaskrcnnSplit_"),
+    )
+    setattr(op_conf.maskrcnn_split_conf, "in", input.logical_blob_name)
+    op_conf.maskrcnn_split_conf.segm[:] = [
+        segm.logical_blob_name for segm in segms
+    ]
+    op_conf.maskrcnn_split_conf.out[:] = [
+        "out_" + str(i) for i in range(len(segms))
+    ]
+    compile_context.CurJobAddOp(op_conf)
+    ret = []
+    for i in range(len(segms)):
+        out_lbi = logical_blob_id_util.LogicalBlobId()
+        setattr(out_lbi, "op_name", op_conf.name)
+        setattr(out_lbi, "blob_name", "out_" + str(i))
+        ret.append(remote_blob_util.RemoteBlob(out_lbi))
+    return ret

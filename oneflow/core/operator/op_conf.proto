@@ -1903,6 +1903,12 @@ message ArgmaxOpConf {
   required string out = 2;
 }
 
+message MaskrcnnSplitOpConf {
+  required string in = 1;
+  repeated string segm = 2;
+  repeated string out = 3;
+}
+
 message OperatorConf {
   required string name = 1;
   optional bool trainable = 3 [default = true];
@@ -2119,6 +2125,7 @@ message OperatorConf {
     NonMaximumSuppressionOpConf non_maximum_suppression_conf = 611;
     RoiAlignOpConf roi_align_conf = 612;
     RoiAlignGradOpConf roi_align_grad_conf = 613;
+    MaskrcnnSplitOpConf maskrcnn_split_conf = 614;
 
     // mutable input op
     AxpyOpConf axpy_conf = 752;
