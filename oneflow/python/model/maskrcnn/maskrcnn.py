@@ -1,4 +1,3 @@
-from __future__ import absolute_import
 # must import get cfg before importing oneflow
 from config import get_default_cfgs
 
@@ -11,6 +10,7 @@ from mask_head import MaskHead
 
 from post_processor.bounding_box import BoxList
 from post_processor.box_head_inference import PostProcessor
+from post_processor.mask_head_inference import MaskPostProcessor
 
 import argparse
 from datetime import datetime
@@ -307,8 +307,7 @@ if terminal_args.eval:
 
     @flow.function
     def maskrcnn_mask_head_eval_job(
-        detections=input_blob_def('detections'),
-        fpn_fm0=input_blob_def('fpn_feature_map0'),
+        detections=input_blob_def('detections'),#repeat this line for multy images
         fpn_fm1=input_blob_def('fpn_feature_map1'),
         fpn_fm2=input_blob_def('fpn_feature_map2'),
         fpn_fm3=input_blob_def('fpn_feature_map3'),
@@ -316,14 +315,7 @@ if terminal_args.eval:
     ):
         cfg = get_default_cfgs()
         mask_head = MaskHead(cfg)
-        with flow.deprecated.variable_scope("mask"):
-            image_ids = flow.concat(
-                flow.detection.extract_piece_slice_id([detections]), axis=0
-            )
-            x = mask_head.mask_feature_extractor(
-                detections, image_ids, [fpn_fm0, fpn_fm1, fpn_fm2, fpn_fm3, fpn_fm4]
-            )
-            mask_logits = mask_head.mask_predictor(x)
+        mask_logits = mask_head.build_eval([detections], [fpn_fm1, fpn_fm2, fpn_fm3, fpn_fm4])
         return flow.math.sigmoid(mask_logits)
 
 
@@ -351,7 +343,7 @@ if terminal_args.rcnn_eval:
                 rpn_proposals, image_ids, [fpn_fm1, fpn_fm2, fpn_fm3, fpn_fm4]
             )
             box_pred, cls_logits = box_head.box_predictor(x)
-        
+
         return cls_logits, box_pred
 
 
@@ -455,17 +447,35 @@ if __name__ == "__main__":
             image_sizes = np.load(
                 "/tmp/shared_with_jxf/maskrcnn_eval_input_data/image_sizes.npy"
             )
+            image_num = image_sizes.shape[0]
+
             results = maskrcnn_box_head_eval_job(images, image_sizes).get()
             cls_probs = results[-2]
             box_regressions = results[-1]
+            fpn_feature_map = []
+            for i in range(4):
+                fpn_feature_map.append(results[image_num + i])
 
             boxes = []
-            for proposal, img in zip(results[:image_sizes.shape[0]], image_sizes):
+            for proposal, img in zip(results[:image_num], image_sizes):
               bbox = BoxList(proposal.ndarray(), img, mode="xyxy")
               boxes.append(bbox)
             postprocessor = PostProcessor()
-            res = postprocessor.forward((cls_probs.ndarray(), box_regressions.ndarray()), boxes)
-            #proposals, cls_probs, box_regressions = maskrcnn_mask_head_eval_job(images, image_sizes).get()
+            results = postprocessor.forward((cls_probs.ndarray(), box_regressions.ndarray()), boxes)
+
+            detections = []
+            for result in results:
+                detections.append(result.bbox)
+            mask_prob = maskrcnn_mask_head_eval_job(
+                detections[0],
+                fpn_feature_map[0],
+                fpn_feature_map[1],
+                fpn_feature_map[2],
+                fpn_feature_map[3],
+            ).get()
+
+            mask_postprocessor = MaskPostProcessor()
+            predictions = mask_postprocessor.forward(mask_prob, results)
             print('dkdk')
 
         elif terminal_args.mock_dataset:
