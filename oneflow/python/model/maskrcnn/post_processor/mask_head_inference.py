@@ -20,7 +20,6 @@ class MaskPostProcessor():
     """
 
     def __init__(self, masker=None):
-        super(MaskPostProcessor, self).__init__()
         self.masker = masker
 
     def forward(self, x, boxes):

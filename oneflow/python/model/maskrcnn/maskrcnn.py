@@ -454,7 +454,7 @@ if __name__ == "__main__":
             box_regressions = results[-1]
             fpn_feature_map = []
             for i in range(4):
-                fpn_feature_map.append(results[image_num + i])
+                fpn_feature_map.append(results[image_num + i].ndarray())
 
             boxes = []
             for proposal, img in zip(results[:image_num], image_sizes):
@@ -475,7 +475,7 @@ if __name__ == "__main__":
             ).get()
 
             mask_postprocessor = MaskPostProcessor()
-            predictions = mask_postprocessor.forward(mask_prob, results)
+            predictions = mask_postprocessor.forward(mask_prob.ndarray(), results)
             print('dkdk')
 
         elif terminal_args.mock_dataset:
