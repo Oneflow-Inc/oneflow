@@ -11,10 +11,15 @@ from mask_head import MaskHead
 from post_processor.bounding_box import BoxList
 from post_processor.box_head_inference import PostProcessor
 from post_processor.mask_head_inference import MaskPostProcessor
+from post_processor.coco import COCODataset
+from post_processor.coco_eval import do_coco_evaluation
+
+from pycocotools.coco import COCO
 
 import argparse
 from datetime import datetime
 import os
+os.environ["CUDA_VISIBLE_DEVICES"]="3"
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
@@ -85,10 +90,10 @@ terminal_args = parser.parse_args()
 
 debug_data = None
 
-if terminal_args.mock_dataset:
-    from mock_data import MockData
+#if terminal_args.mock_dataset:
+from mock_data import MockData
 
-    debug_data = MockData(terminal_args.mock_dataset_path, 64)
+debug_data = MockData(terminal_args.mock_dataset_path, 64)
 
 
 def get_numpy_placeholders():
@@ -105,6 +110,8 @@ def get_numpy_placeholders():
         "gt_labels": np.random.randn(N, G).astype(np.int32),
         "rpn_proposals": np.random.randn(2000, 4).astype(np.float32),
         "detections": np.random.randn(2000, 4).astype(np.float32),
+        "detection0": np.random.randn(1000, 4).astype(np.float32),
+        "detection1": np.random.randn(1000, 4).astype(np.float32),
         "fpn_feature_map1": np.random.randn(1, 256, 512, 512).astype(
             np.float32
         ),
@@ -300,14 +307,15 @@ if terminal_args.eval:
 
     @flow.function
     def maskrcnn_box_head_eval_job(
-        images=flow.input_blob_def((1, 3, 1280, 800), dtype=flow.float, is_dynamic=True),
-        image_sizes=flow.input_blob_def((1, 2), dtype=flow.int32, is_dynamic=False),
+        images=flow.input_blob_def((2, 3, 1280, 800), dtype=flow.float, is_dynamic=True),
+        image_sizes=flow.input_blob_def((2, 2), dtype=flow.int32, is_dynamic=False),
     ):
         return maskrcnn_eval_box_head(images, image_sizes)
 
     @flow.function
     def maskrcnn_mask_head_eval_job(
-        detections=input_blob_def('detections'),#repeat this line for multy images
+        detection0=input_blob_def('detection0'),
+        detection1=input_blob_def('detection1'),
         fpn_fm1=input_blob_def('fpn_feature_map1'),
         fpn_fm2=input_blob_def('fpn_feature_map2'),
         fpn_fm3=input_blob_def('fpn_feature_map3'),
@@ -315,7 +323,7 @@ if terminal_args.eval:
     ):
         cfg = get_default_cfgs()
         mask_head = MaskHead(cfg)
-        mask_logits = mask_head.build_eval([detections], [fpn_fm1, fpn_fm2, fpn_fm3, fpn_fm4])
+        mask_logits = mask_head.build_eval([detection0, detection1], [fpn_fm1, fpn_fm2, fpn_fm3, fpn_fm4])
         return flow.math.sigmoid(mask_logits)
 
 
@@ -441,12 +449,8 @@ if __name__ == "__main__":
         elif terminal_args.eval:
             import numpy as np
 
-            images = np.load(
-                "/tmp/shared_with_jxf/maskrcnn_eval_input_data/images.npy"
-            )
-            image_sizes = np.load(
-                "/tmp/shared_with_jxf/maskrcnn_eval_input_data/image_sizes.npy"
-            )
+            images = debug_data.blob("images")
+            image_sizes = debug_data.blob("image_size")
             image_num = image_sizes.shape[0]
 
             results = maskrcnn_box_head_eval_job(images, image_sizes).get()
@@ -468,6 +472,7 @@ if __name__ == "__main__":
                 detections.append(result.bbox)
             mask_prob = maskrcnn_mask_head_eval_job(
                 detections[0],
+                detections[1],
                 fpn_feature_map[0],
                 fpn_feature_map[1],
                 fpn_feature_map[2],
@@ -476,7 +481,20 @@ if __name__ == "__main__":
 
             mask_postprocessor = MaskPostProcessor()
             predictions = mask_postprocessor.forward(mask_prob.ndarray(), results)
-            print('dkdk')
+
+            #coco = COCO('/dataset/coco_2_images/annotations/sample_2_instances_val2017.json')
+            #imgs = coco.loadImgs(coco.getImgIds())
+            ann_file = '/dataset/coco_2_images/annotations/sample_2_instances_val2017.json'
+            dataset = COCODataset(ann_file)
+            do_coco_evaluation(
+                dataset,
+                predictions,
+                box_only=False,
+                output_folder='./output',
+                iou_types=['bbox', 'segm'],
+                expected_results=(),
+                expected_results_sigma_tol=4,
+            )
 
         elif terminal_args.mock_dataset:
             if terminal_args.rpn_only:

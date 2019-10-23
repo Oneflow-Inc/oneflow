@@ -2,7 +2,7 @@ import logging
 import tempfile
 import os
 import numpy as np
-import _pickle as pkl#may be use numpy later
+#import _pickle as pkl#may be use numpy later
 from collections import OrderedDict
 from tqdm import tqdm
 
@@ -35,8 +35,8 @@ def do_coco_evaluation(
                 res.results["box_proposal"][key] = stats["ar"].item()
         logger.info(res)
         check_expected_results(res, expected_results, expected_results_sigma_tol)
-        if output_folder:
-            pkl.dump(res, open(os.path.join(output_folder, "box_proposals.pth"), 'wb'))
+        #if output_folder:
+        #    pkl.dump(res, open(os.path.join(output_folder, "box_proposals.pth"), 'wb'))
         return
     logger.info("Preparing results for COCO format")
     coco_results = {}

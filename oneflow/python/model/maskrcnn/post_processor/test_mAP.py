@@ -7,7 +7,6 @@ from coco_eval import do_coco_evaluation
 
 from pycocotools.coco import COCO
 ann_file = '/dataset/mscoco_2017/annotations/sample_2_instances_val2017.json'
-cfg_file = 'e2e_mask_rcnn_R_50_FPN_1x_xuan.yaml'
 
 coco = COCO(ann_file)
 imgs = coco.loadImgs(coco.getImgIds())
