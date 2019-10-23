@@ -168,7 +168,7 @@ class BoxHead(object):
             x = self.box_feature_extractor(proposals, image_ids, features)
             box_pred, cls_logits = self.box_predictor(x)
 
-        return cls_logits, box_pred
+        return flow.softmax(cls_logits, -1), box_pred
 
     def box_feature_extractor(self, proposals, img_ids, features):
         proposals_with_img_ids = flow.concat(

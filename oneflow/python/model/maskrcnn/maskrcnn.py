@@ -255,13 +255,19 @@ def maskrcnn_eval_box_head(images, image_sizes):
     )
 
     # Box Head
-    cls_logits, box_regressions = box_head.build_eval(proposals, features)
-    cls_prob = flow.nn.sigmoid(cls_logit_list)
+    cls_probs, box_regressions = box_head.build_eval(proposals, features)
+    #proposals = flow.concat(proposals, axis=0)
     # Mask Head
     # TODO: get proposals from box_head post-processors
     # mask_logits = mask_head.build_eval(proposals, features)
 
-    return (proposals, cls_prob, box_regressions)
+    #return (proposals, cls_probs, box_regressions)
+    return tuple(proposals) + tuple(features) + (cls_probs,) + (box_regressions,)
+
+#def maskrcnn_eval_mask_head(proposals, features):
+#    cfg = get_default_cfgs()
+#    mask_head = MaskHead(cfg)
+#    return mask_head.build_eval(proposals, features)
 
 
 blob_watched, diff_blob_watched = {}, {}
@@ -287,45 +293,49 @@ if terminal_args.mock_dataset:
         return outputs
 
 
+def input_blob_def(bn):
+    return flow.input_blob_def(placeholders[bn].shape, dtype=flow.float32, is_dynamic=True)
+
 if terminal_args.eval:
 
     @flow.function
-    def maskrcnn_eval_job(
+    def maskrcnn_box_head_eval_job(
         images=flow.input_blob_def((1, 3, 1280, 800), dtype=flow.float, is_dynamic=True),
         image_sizes=flow.input_blob_def((1, 2), dtype=flow.int32, is_dynamic=False),
     ):
         return maskrcnn_eval_box_head(images, image_sizes)
+
+    @flow.function
+    def maskrcnn_mask_head_eval_job(
+        detections=input_blob_def('detections'),
+        fpn_fm0=input_blob_def('fpn_feature_map0'),
+        fpn_fm1=input_blob_def('fpn_feature_map1'),
+        fpn_fm2=input_blob_def('fpn_feature_map2'),
+        fpn_fm3=input_blob_def('fpn_feature_map3'),
+        fpn_fm4=input_blob_def('fpn_feature_map4'),
+    ):
+        cfg = get_default_cfgs()
+        mask_head = MaskHead(cfg)
+        with flow.deprecated.variable_scope("mask"):
+            image_ids = flow.concat(
+                flow.detection.extract_piece_slice_id([detections]), axis=0
+            )
+            x = mask_head.mask_feature_extractor(
+                detections, image_ids, [fpn_fm0, fpn_fm1, fpn_fm2, fpn_fm3, fpn_fm4]
+            )
+            mask_logits = mask_head.mask_predictor(x)
+        return flow.math.sigmoid(mask_logits)
 
 
 if terminal_args.rcnn_eval:
 
     @flow.function
     def debug_rcnn_eval(
-        rpn_proposals=flow.input_blob_def(
-            placeholders["rpn_proposals"].shape,
-            dtype=flow.float32,
-            is_dynamic=True,
-        ),
-        fpn_fm1=flow.input_blob_def(
-            placeholders["fpn_feature_map1"].shape,
-            dtype=flow.float32,
-            is_dynamic=True,
-        ),
-        fpn_fm2=flow.input_blob_def(
-            placeholders["fpn_feature_map2"].shape,
-            dtype=flow.float32,
-            is_dynamic=True,
-        ),
-        fpn_fm3=flow.input_blob_def(
-            placeholders["fpn_feature_map3"].shape,
-            dtype=flow.float32,
-            is_dynamic=True,
-        ),
-        fpn_fm4=flow.input_blob_def(
-            placeholders["fpn_feature_map4"].shape,
-            dtype=flow.float32,
-            is_dynamic=True,
-        ),
+        rpn_proposals=input_blob_def('rpn_proposals'),
+        fpn_fm1=input_blob_def('fpn_feature_map1'),
+        fpn_fm2=input_blob_def('fpn_feature_map2'),
+        fpn_fm3=input_blob_def('fpn_feature_map3'),
+        fpn_fm4=input_blob_def('fpn_feature_map4'),
     ):
         cfg = get_default_cfgs()
         if terminal_args.config_file is not None:
@@ -349,31 +359,11 @@ if terminal_args.mask_head_eval:
 
     @flow.function
     def debug_mask_head_eval(
-        detections=flow.input_blob_def(
-            placeholders["detections"].shape,
-            dtype=flow.float32,
-            is_dynamic=True,
-        ),
-        fpn_fm1=flow.input_blob_def(
-            placeholders["fpn_feature_map1"].shape,
-            dtype=flow.float32,
-            is_dynamic=True,
-        ),
-        fpn_fm2=flow.input_blob_def(
-            placeholders["fpn_feature_map2"].shape,
-            dtype=flow.float32,
-            is_dynamic=True,
-        ),
-        fpn_fm3=flow.input_blob_def(
-            placeholders["fpn_feature_map3"].shape,
-            dtype=flow.float32,
-            is_dynamic=True,
-        ),
-        fpn_fm4=flow.input_blob_def(
-            placeholders["fpn_feature_map4"].shape,
-            dtype=flow.float32,
-            is_dynamic=True,
-        ),
+        detections=input_blob_def('detections'),
+        fpn_fm1=input_blob_def('fpn_feature_map1'),
+        fpn_fm2=input_blob_def('fpn_feature_map2'),
+        fpn_fm3=input_blob_def('fpn_feature_map3'),
+        fpn_fm4=input_blob_def('fpn_feature_map4'),
     ):
         cfg = get_default_cfgs()
         if terminal_args.config_file is not None:
@@ -465,15 +455,18 @@ if __name__ == "__main__":
             image_sizes = np.load(
                 "/tmp/shared_with_jxf/maskrcnn_eval_input_data/image_sizes.npy"
             )
-            proposals, cls_prob, box_regressions = maskrcnn_eval_job(images, image_sizes).get()
+            results = maskrcnn_box_head_eval_job(images, image_sizes).get()
+            cls_probs = results[-2]
+            box_regressions = results[-1]
 
             boxes = []
-            for proposal,img in zip(proposals, image_sizes):
-              width, height = img['width'], img['height']
-              bbox = BoxList(proposal, (width, height), mode="xyxy")
+            for proposal, img in zip(results[:image_sizes.shape[0]], image_sizes):
+              bbox = BoxList(proposal.ndarray(), img, mode="xyxy")
               boxes.append(bbox)
             postprocessor = PostProcessor()
-            res = postprocessor.forward((cls_prob, box_regressions), boxes)
+            res = postprocessor.forward((cls_probs.ndarray(), box_regressions.ndarray()), boxes)
+            #proposals, cls_probs, box_regressions = maskrcnn_mask_head_eval_job(images, image_sizes).get()
+            print('dkdk')
 
         elif terminal_args.mock_dataset:
             if terminal_args.rpn_only:
