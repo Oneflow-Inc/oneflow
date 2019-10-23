@@ -138,6 +138,7 @@ void RegstDesc::ToProto(RegstDescProto* ret) const {
     int size_in_lbi2blob_desc = data_regst_desc_proto->lbi2blob_desc_size();
     CHECK_EQ(size_in_lbi2blob_desc, lbi2blob_desc_.size());
     if (size_in_lbi2blob_desc > 1 && has_temp_storage && has_key_value_out) {
+      LOG(INFO) << "CHECK triggered";
       CHECK_EQ(size_in_packed, size_in_lbi2blob_desc);
     }
     CHECK(data_regst_time_shape_);
