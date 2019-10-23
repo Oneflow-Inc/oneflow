@@ -8,8 +8,8 @@ namespace oneflow {
 namespace {
 
 template<typename T>
-__global__ typename std::enable_if<!IsFloat16<T>::value>::type MaskAndScaleGpu(
-    const int64_t n, float scale, const T* x, const int8_t* mask, T* y) {
+__global__ void MaskAndScaleGpu(const int64_t n, float scale, const T* x, const int8_t* mask,
+                                T* y) {
   CUDA_1D_KERNEL_LOOP(i, n) { y[i] = x[i] * static_cast<T>(mask[i]) * scale; }
 }
 
@@ -36,8 +36,7 @@ __global__ void GenMaskGpu(const int64_t n, float threshold, const float* random
 }  // namespace
 
 template<typename T>
-struct DropoutKernelUtil<DeviceType::kGPU, T, typename std::enable_if<!IsFloat16<T>::value>::type>
-    final {
+struct DropoutKernelUtil<DeviceType::kGPU, T> final {
   static void MaskAndScale(DeviceCtx* ctx, const int64_t n, float scale, const T* x,
                            const int8_t* mask, T* y) {
     MaskAndScaleGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
@@ -45,16 +44,14 @@ struct DropoutKernelUtil<DeviceType::kGPU, T, typename std::enable_if<!IsFloat16
   }
 };
 
-template<typename T>
-struct DropoutKernelUtil<DeviceType::kGPU, T, typename std::enable_if<IsFloat16<T>::value>::type>
-    final {
-  static void MaskAndScale(DeviceCtx* ctx, const int64_t n, float scale, const T* x,
-                           const int8_t* mask, T* y) {
-    MaskAndScaleGpu<half>
-        <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-            n, scale, reinterpret_cast<const half*>(x), mask, reinterpret_cast<half*>(y));
-  }
-};
+template<>
+void DropoutKernelUtil<DeviceType::kGPU, float16>::MaskAndScale(DeviceCtx* ctx, const int64_t n,
+                                                                float scale, const float16* x,
+                                                                const int8_t* mask, float16* y) {
+  MaskAndScaleGpu<half>
+      <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+          n, scale, reinterpret_cast<const half*>(x), mask, reinterpret_cast<half*>(y));
+}
 
 template<>
 void RandomMaskLikeKernelUtil<DeviceType::kGPU>::GenMask(DeviceCtx* ctx, const int64_t n,
@@ -68,8 +65,8 @@ template struct RandomMaskLikeKernelUtil<DeviceType::kGPU>;
 
 #define INITIATE_DROPOUT_KERNEL_UTIL_GPU(T, type_proto) \
   template struct DropoutKernelUtil<DeviceType::kGPU, T>;
-OF_PP_FOR_EACH_TUPLE(INITIATE_DROPOUT_KERNEL_UTIL_GPU,
-                     ARITHMETIC_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ);
+OF_PP_FOR_EACH_TUPLE(INITIATE_DROPOUT_KERNEL_UTIL_GPU, ARITHMETIC_DATA_TYPE_SEQ);
 #undef INITIATE_DROPOUT_KERNEL_UTIL_GPU
+template struct DropoutKernelUtil<DeviceType::kGPU, float16>;
 
 }  // namespace oneflow
