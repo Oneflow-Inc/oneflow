@@ -112,7 +112,7 @@ void RegstDesc::EraseZeroSizeBlob() {
   EraseIf<LogicalBlobId, std::unique_ptr<BlobDesc>>(
       &lbi2blob_desc_, [](HashMap<LogicalBlobId, std::unique_ptr<BlobDesc>>::iterator it) {
         const bool ret = RtBlobDesc(*(it->second)).ByteSizeOfBlobBody() == 0;
-        if (ret) { LOG(INFO) << it->first.op_name() << "/" << it->first.op_name() << " erased"; }
+        if (ret) { LOG(INFO) << it->first.op_name() << "/" << it->first.blob_name() << " erased"; }
         return ret;
       });
 }
