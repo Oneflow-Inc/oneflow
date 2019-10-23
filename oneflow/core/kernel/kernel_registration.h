@@ -60,18 +60,18 @@ Kernel* CreateKernel(const KernelConf& kernel_conf);
 
 #define REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(op_type, device, dtype, ...)                      \
   namespace {                                                                                   \
-  static kernel_registration::KernelRegistrar OF_PP_CAT(g_registrar, __LINE__)(                 \
+  static kernel_registration::KernelRegistrar OF_PP_CAT(g_registrar, __COUNTER__)(              \
       op_type,                                                                                  \
       new kernel_registration::constraint::DeviceAndDTypeConstraint(device,                     \
                                                                     GetDataType<dtype>::value), \
       []() { return new __VA_ARGS__(); });                                                      \
   }  // namespace
 
-#define REGISTER_KERNEL_WITH_DEVICE(op_type, device, ...)                       \
-  namespace {                                                                   \
-  static kernel_registration::KernelRegistrar OF_PP_CAT(g_registrar, __LINE__)( \
-      op_type, new kernel_registration::constraint::DeviceConstraint(device),   \
-      []() { return new __VA_ARGS__(); });                                      \
+#define REGISTER_KERNEL_WITH_DEVICE(op_type, device, ...)                          \
+  namespace {                                                                      \
+  static kernel_registration::KernelRegistrar OF_PP_CAT(g_registrar, __COUNTER__)( \
+      op_type, new kernel_registration::constraint::DeviceConstraint(device),      \
+      []() { return new __VA_ARGS__(); });                                         \
   }  // namespace
 
 }  // namespace oneflow
