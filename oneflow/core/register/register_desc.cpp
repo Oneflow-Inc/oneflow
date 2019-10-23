@@ -66,7 +66,7 @@ void RegstDesc::CopyMemBlockInfoFrom(const RegstDesc* rhs) {
 void RegstDesc::CopyBlobDescWithoutAddLbi(const RegstDesc* rhs) {
   CHECK_EQ(is_locked_, false);
   for (const auto& pair : lbi2blob_desc_) {
-    const auto rhs_it = rhs->lbi2blob_desc_.find(pair.first);
+    auto rhs_it = rhs->lbi2blob_desc_.find(pair.first);
     if (rhs_it != rhs->lbi2blob_desc_.end()) { *(pair.second) = *(rhs_it->second); }
   }
 }
@@ -89,7 +89,7 @@ bool RegstDesc::HasLbi(const LogicalBlobId& lbi) const {
 
 BlobDesc* RegstDesc::MutBlobDesc(const LogicalBlobId& lbi) {
   if (lbi.is_packed_id()) { return packed_blob_desc_.get(); }
-  const auto it = lbi2blob_desc_.find(lbi);
+  auto it = lbi2blob_desc_.find(lbi);
   if (it != lbi2blob_desc_.end()) {
     return it->second.get();
   } else {
@@ -111,9 +111,7 @@ void RegstDesc::ForEachLbi(std::function<void(const LogicalBlobId&)> func) const
 void RegstDesc::EraseZeroSizeBlob() {
   EraseIf<LogicalBlobId, std::unique_ptr<BlobDesc>>(
       &lbi2blob_desc_, [](HashMap<LogicalBlobId, std::unique_ptr<BlobDesc>>::iterator it) {
-        const bool ret = RtBlobDesc(*(it->second)).ByteSizeOfBlobBody() == 0;
-        if (ret) { LOG(INFO) << it->first.op_name() << "/" << it->first.blob_name() << " erased"; }
-        return ret;
+        return RtBlobDesc(*(it->second)).ByteSizeOfBlobBody() == 0;
       });
 }
 
@@ -126,30 +124,10 @@ void RegstDesc::ToProto(RegstDescProto* ret) const {
     DataRegstDesc* data_regst_desc_proto =
         ret->mutable_regst_desc_type()->mutable_data_regst_desc();
     packed_blob_desc_->ToProto(data_regst_desc_proto->mutable_packed_blob_desc());
-    const int size_in_packed = data_regst_desc_proto->packed_blob_desc().header().field_size();
-    bool has_temp_storage = false;
-    bool has_key_value_out = false;
     for (const auto& pair : lbi2blob_desc_) {
-      if (pair.first.blob_name() == "key_value_out") {
-        // CHECK_EQ(size_in_packed, lbi2blob_desc_.size());
-        has_key_value_out = true;
-      }
-      if (pair.first.blob_name() == "temp_storage") {
-        // CHECK_EQ(size_in_packed, lbi2blob_desc_.size());
-        has_temp_storage = true;
-      }
-    }
-    for (const auto& pair : lbi2blob_desc_) {
-      LbiBlobDescPair* pb_pair;
-      pb_pair = data_regst_desc_proto->mutable_lbi2blob_desc()->Add();
+      LbiBlobDescPair* pb_pair = data_regst_desc_proto->mutable_lbi2blob_desc()->Add();
       *(pb_pair->mutable_lbi()) = pair.first;
       pair.second->ToProto(pb_pair->mutable_blob_desc());
-    }
-    int size_in_lbi2blob_desc = data_regst_desc_proto->lbi2blob_desc_size();
-    CHECK_EQ(size_in_lbi2blob_desc, lbi2blob_desc_.size());
-    if (has_key_value_out) {
-      LOG(INFO) << "CHECK triggered";
-      // CHECK_EQ(size_in_packed, size_in_lbi2blob_desc);
     }
     CHECK(data_regst_time_shape_);
     data_regst_time_shape_->ToProto(data_regst_desc_proto->mutable_time_shape());

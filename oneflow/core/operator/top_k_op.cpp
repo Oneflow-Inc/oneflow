@@ -63,7 +63,6 @@ class TopKOp final : public Operator {
         // tmp: temp_storage
         int64_t temp_storage_bytes = InferTempStorageForSortingPairsDescendingAtCompile(
             in->shape().elem_cnt() / instance_size, instance_size, in->data_type());
-        LOG(INFO) << "temp_storage_bytes: " << temp_storage_bytes;
         BlobDesc* temp_storage = GetBlobDesc4BnInOp("temp_storage");
         temp_storage->mut_shape() = Shape({temp_storage_bytes});
         temp_storage->set_data_type(DataType::kChar);

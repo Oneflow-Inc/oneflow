@@ -39,7 +39,6 @@ size_t InferTempStorageForCUBArgmax(int32_t num_row, int32_t num_col) {
   CudaCheck(err);
   CudaCheck(cudaStreamSynchronize(cuda_stream));
   if (temp_storage_bytes == 0) { temp_storage_bytes = 1; }
-  LOG(INFO) << "temp_storage_bytes in cu: " << temp_storage_bytes;
   CudaCheck(cudaStreamDestroy(cuda_stream));
 
   return temp_storage_bytes;
