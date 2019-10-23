@@ -1,56 +1,82 @@
+#include "oneflow/core/common/preprocessor.h"
+#include "oneflow/core/kernel/random_generator.h"
 #include "oneflow/core/kernel/dropout_kernel.h"
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/common/data_type.h"
-#include "oneflow/core/common/preprocessor.h"
 
 namespace oneflow {
 
 template<DeviceType device_type, typename T>
-void DropoutKernel<device_type, T>::ForwardDataContent(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  int64_t elem_cnt = BnInOp2Blob("in")->shape().elem_cnt();
-  if (this->job_desc().IsTrain()) {
-    DropoutKernelUtil<device_type, T>::MaskAndScale(
-        ctx.device_ctx, elem_cnt, this->op_conf().dropout_conf().scale(),
-        BnInOp2Blob("in")->dptr<T>(), BnInOp2Blob("mask")->dptr<int8_t>(),
-        BnInOp2Blob("out")->mut_dptr<T>());
-  } else {
-    Memcpy<device_type>(ctx.device_ctx, BnInOp2Blob("out")->mut_dptr<void>(),
-                        BnInOp2Blob("in")->dptr<void>(), elem_cnt * sizeof(T));
+class DropoutKernel final : public KernelIf<device_type> {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(DropoutKernel);
+  DropoutKernel() = default;
+  ~DropoutKernel() = default;
+
+ private:
+  void ForwardDataContent(const KernelCtx& ctx,
+                          std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
+    int64_t elem_cnt = BnInOp2Blob("in")->shape().elem_cnt();
+    if (this->job_desc().IsTrain()) {
+      DropoutKernelUtil<device_type, T>::MaskAndScale(
+          ctx.device_ctx, elem_cnt, this->op_conf().dropout_conf().scale(),
+          BnInOp2Blob("in")->dptr<T>(), BnInOp2Blob("mask")->dptr<int8_t>(),
+          BnInOp2Blob("out")->mut_dptr<T>());
+    } else {
+      Memcpy<device_type>(ctx.device_ctx, BnInOp2Blob("out")->mut_dptr<void>(),
+                          BnInOp2Blob("in")->dptr<void>(), elem_cnt * sizeof(T));
+    }
   }
-}
+};
 
 template<DeviceType device_type, typename T>
-void DropoutGradKernel<device_type, T>::ForwardDataContent(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  DropoutKernelUtil<device_type, T>::MaskAndScale(
-      ctx.device_ctx, BnInOp2Blob("dy")->shape().elem_cnt(),
-      this->op_conf().dropout_grad_conf().scale(), BnInOp2Blob("dy")->dptr<T>(),
-      BnInOp2Blob("mask")->dptr<int8_t>(), BnInOp2Blob("dx")->mut_dptr<T>());
-}
+class DropoutGradKernel final : public KernelIf<device_type> {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(DropoutGradKernel);
+  DropoutGradKernel() = default;
+  ~DropoutGradKernel() = default;
 
-template<DeviceType device_type>
-void RandomMaskLikeKernel<device_type>::VirtualKernelInit(DeviceCtx* device_ctx) {
-  const auto& random_mask_like_conf = this->op_conf().random_mask_like_conf();
-  int64_t seed = GetCurTime();
-  if (random_mask_like_conf.has_seed()) { seed = random_mask_like_conf.seed(); }
-  random_generator_.reset(new RandomGenerator<device_type>(seed, device_ctx));
-}
-
-template<DeviceType device_type>
-void RandomMaskLikeKernel<device_type>::ForwardDataContent(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  if (this->job_desc().IsTrain()) {
-    int64_t elem_cnt = BnInOp2Blob("out")->shape().elem_cnt();
-    float* random_tmp = BnInOp2Blob("random_tmp")->mut_dptr<float>();
-    int8_t* mask = BnInOp2Blob("out")->mut_dptr<int8_t>();
-    random_generator_->Uniform(elem_cnt, random_tmp);
-    RandomMaskLikeKernelUtil<device_type>::GenMask(
-        ctx.device_ctx, elem_cnt, this->op_conf().random_mask_like_conf().rate(), random_tmp, mask);
-  } else {
-    // do nothing
+ private:
+  void ForwardDataContent(const KernelCtx& ctx,
+                          std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
+    DropoutKernelUtil<device_type, T>::MaskAndScale(
+        ctx.device_ctx, BnInOp2Blob("dy")->shape().elem_cnt(),
+        this->op_conf().dropout_grad_conf().scale(), BnInOp2Blob("dy")->dptr<T>(),
+        BnInOp2Blob("mask")->dptr<int8_t>(), BnInOp2Blob("dx")->mut_dptr<T>());
   }
-}
+};
+
+template<DeviceType device_type>
+class RandomMaskLikeKernel final : public KernelIf<device_type> {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(RandomMaskLikeKernel);
+  RandomMaskLikeKernel() = default;
+  ~RandomMaskLikeKernel() = default;
+
+ private:
+  void VirtualKernelInit(DeviceCtx* device_ctx) override {
+    const auto& random_mask_like_conf = this->op_conf().random_mask_like_conf();
+    int64_t seed = GetCurTime();
+    if (random_mask_like_conf.has_seed()) { seed = random_mask_like_conf.seed(); }
+    random_generator_.reset(new RandomGenerator<device_type>(seed, device_ctx));
+  }
+  void ForwardDataContent(const KernelCtx& ctx,
+                          std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
+    if (this->job_desc().IsTrain()) {
+      int64_t elem_cnt = BnInOp2Blob("out")->shape().elem_cnt();
+      float* random_tmp = BnInOp2Blob("random_tmp")->mut_dptr<float>();
+      int8_t* mask = BnInOp2Blob("out")->mut_dptr<int8_t>();
+      random_generator_->Uniform(elem_cnt, random_tmp);
+      RandomMaskLikeKernelUtil<device_type>::GenMask(ctx.device_ctx, elem_cnt,
+                                                     this->op_conf().random_mask_like_conf().rate(),
+                                                     random_tmp, mask);
+    } else {
+      // do nothing
+    }
+  }
+
+  std::unique_ptr<RandomGenerator<device_type>> random_generator_;
+};
 
 template<typename T>
 struct DropoutKernelUtil<DeviceType::kCPU, T> final {
@@ -76,27 +102,21 @@ OF_PP_FOR_EACH_TUPLE(INITIATE_DROPOUT_KERNEL_UTIL_CPU,
                      ARITHMETIC_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ);
 #undef INITIATE_DROPOUT_KERNEL_UTIL_CPU
 
-#define REGISTER_DROPOUT_KERNEL(dev, dtype)                                     \
-  REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kDropoutConf, dev, dtype, \
-                                        DropoutKernel<dev, dtype>)
-REGISTER_DROPOUT_KERNEL(DeviceType::kGPU, float);
-REGISTER_DROPOUT_KERNEL(DeviceType::kGPU, double);
-REGISTER_DROPOUT_KERNEL(DeviceType::kGPU, int8_t);
-REGISTER_DROPOUT_KERNEL(DeviceType::kGPU, int32_t);
-REGISTER_DROPOUT_KERNEL(DeviceType::kGPU, int64_t);
-REGISTER_DROPOUT_KERNEL(DeviceType::kGPU, float16);
-REGISTER_DROPOUT_KERNEL(DeviceType::kCPU, float);
-REGISTER_DROPOUT_KERNEL(DeviceType::kCPU, double);
-REGISTER_DROPOUT_KERNEL(DeviceType::kCPU, int8_t);
-REGISTER_DROPOUT_KERNEL(DeviceType::kCPU, int32_t);
-REGISTER_DROPOUT_KERNEL(DeviceType::kCPU, int64_t);
+#define REGISTER_DROPOUT_AND_GRAD_KERNEL(dev, dtype_pair)                                 \
+  REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kDropoutConf, dev,                  \
+                                        OF_PP_PAIR_FIRST(dtype_pair),                     \
+                                        DropoutKernel<dev, OF_PP_PAIR_FIRST(dtype_pair)>) \
+  REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kDropoutGradConf, dev,              \
+                                        OF_PP_PAIR_FIRST(dtype_pair),                     \
+                                        DropoutGradKernel<dev, OF_PP_PAIR_FIRST(dtype_pair)>)
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_DROPOUT_AND_GRAD_KERNEL, DEVICE_TYPE_SEQ,
+                                 ARITHMETIC_DATA_TYPE_SEQ)
+REGISTER_DROPOUT_AND_GRAD_KERNEL(DeviceType::kGPU, (float16, DataType::kFloat16));
+#undef REGISTER_DROPOUT_AND_GRAD_KERNEL
 
 REGISTER_KERNEL_WITH_DEVICE(OperatorConf::kRandomMaskLikeConf, DeviceType::kCPU,
                             RandomMaskLikeKernel<DeviceType::kCPU>);
 REGISTER_KERNEL_WITH_DEVICE(OperatorConf::kRandomMaskLikeConf, DeviceType::kGPU,
                             RandomMaskLikeKernel<DeviceType::kGPU>);
-
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kDropoutGradConf, DropoutGradKernel,
-                           ARITHMETIC_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ);
 
 }  // namespace oneflow

@@ -27,7 +27,7 @@ class DropoutOp final : public Operator {
  private:
   Maybe<void> InferBatchAxis(
       std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override {
-    for (const auto& obn : output_bns()) { *BatchAxis4BnInOp(obn) = *BatchAxis4BnInOp("in"); }
+    *BatchAxis4BnInOp(SoleObn()) = *BatchAxis4BnInOp("in");
     return Maybe<void>::Ok();
   }
 
@@ -95,7 +95,7 @@ class RandomMaskLikeOp final : public Operator {
  private:
   Maybe<void> InferBatchAxis(
       std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override {
-    for (const auto& obn : output_bns()) { *BatchAxis4BnInOp(obn) = *BatchAxis4BnInOp(SoleIbn()); }
+    *BatchAxis4BnInOp(SoleObn()) = *BatchAxis4BnInOp(SoleIbn());
     return Maybe<void>::Ok();
   }
   Maybe<void> GetSbpSignatures(
@@ -118,10 +118,12 @@ Maybe<void> RandomMaskLikeOp::InferBlobDescs(
     const ParallelContext* parallel_ctx) const {
   // CHECK_EQ(op_conf().random_mask_like_conf().noise_shape().dim_size(),
   //          GetBlobDesc4BnInOp("in")->shape().NumAxes());
-  GetBlobDesc4BnInOp("out")->CopyMetaFrom(*GetBlobDesc4BnInOp("like"));
-  GetBlobDesc4BnInOp("out")->set_data_type(DataType::kInt8);
-  GetBlobDesc4BnInOp("random_tmp")->CopyMetaFrom(*GetBlobDesc4BnInOp("like"));
-  GetBlobDesc4BnInOp("random_tmp")->set_data_type(DataType::kFloat);
+  BlobDesc* out = GetBlobDesc4BnInOp("out");
+  out->CopyMetaFrom(*GetBlobDesc4BnInOp("like"));
+  out->set_data_type(DataType::kInt8);
+  BlobDesc* random_tmp = GetBlobDesc4BnInOp("random_tmp");
+  random_tmp->CopyMetaFrom(*GetBlobDesc4BnInOp("like"));
+  random_tmp->set_data_type(DataType::kFloat);
   return Maybe<void>::Ok();
 }
 
