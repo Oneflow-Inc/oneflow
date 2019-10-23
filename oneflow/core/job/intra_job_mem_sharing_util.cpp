@@ -541,7 +541,7 @@ void SelectAlgorithmGenMemBlockOffset4Regsts(
 
 }  // namespace
 
-void InJobMemSharingUtil::InferMemBlockId4MemReusedRegst(Plan* plan,
+void IntraJobMemSharingUtil::InferMemBlockId4MemReusedRegst(Plan* plan,
                                                          const PlanTaskGraph& plan_task_graph) {
   // 1 device 1 mem chain
   HashMap<int64_t, std::vector<TaskProto*>> mem_chain2sorted_tasks;

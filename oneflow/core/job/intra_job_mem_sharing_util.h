@@ -6,7 +6,7 @@
 
 namespace oneflow {
 
-struct InJobMemSharingUtil {
+struct IntraJobMemSharingUtil {
   static void InferMemBlockId4MemReusedRegst(Plan* plan, const PlanTaskGraph& plan_task_graph);
 };
 
