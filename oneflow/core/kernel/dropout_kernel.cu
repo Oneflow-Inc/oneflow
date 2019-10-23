@@ -28,6 +28,11 @@ __global__ void MaskAndScaleGpu<half>(const int64_t n, float scale, const half* 
 #endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)*/
 }
 
+__global__ void GenMaskGpu(const int64_t n, float threshold, const float* random_tmp,
+                           int8_t* mask) {
+  CUDA_1D_KERNEL_LOOP(i, n) { mask[i] = random_tmp[i] > threshold; }
+}
+
 }  // namespace
 
 template<typename T>
@@ -50,6 +55,16 @@ struct DropoutKernelUtil<DeviceType::kGPU, T, typename std::enable_if<IsFloat16<
             n, scale, reinterpret_cast<const half*>(x), mask, reinterpret_cast<half*>(y));
   }
 };
+
+template<>
+void RandomMaskLikeKernelUtil<DeviceType::kGPU>::GenMask(DeviceCtx* ctx, const int64_t n,
+                                                         float threshold, const float* random_tmp,
+                                                         int8_t* mask) {
+  GenMaskGpu<<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+      n, threshold, random_tmp, mask);
+}
+
+template struct RandomMaskLikeKernelUtil<DeviceType::kGPU>;
 
 #define INITIATE_DROPOUT_KERNEL_UTIL_GPU(T, type_proto) \
   template struct DropoutKernelUtil<DeviceType::kGPU, T>;
