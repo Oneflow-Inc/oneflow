@@ -33,7 +33,7 @@ size_t InferTempStorageForSortingPairsAscending(int32_t num_row, int32_t num_col
       /* end_bit */ sizeof(KeyType) * 8,
       /* stream */ cuda_stream);
   CudaCheck(err);
-
+  CudaCheck(cudaStreamSynchronize(cuda_stream));
   CudaCheck(cudaStreamDestroy(cuda_stream));
 
   return temp_storage_bytes;
@@ -79,7 +79,7 @@ size_t InferTempStorageForSortingPairsDescending(int32_t num_row, int32_t num_co
       /* end_bit */ sizeof(KeyType) * 8,
       /* stream */ cuda_stream);
   CudaCheck(err);
-
+  CudaCheck(cudaStreamSynchronize(cuda_stream));
   CudaCheck(cudaStreamDestroy(cuda_stream));
 
   return temp_storage_bytes;
@@ -122,7 +122,7 @@ size_t InferTempStorageForSortingKeysAscending(int32_t num_row, int32_t num_col)
       /* end_bit */ sizeof(KeyType) * 8,
       /* stream */ cuda_stream);
   CudaCheck(err);
-
+  CudaCheck(cudaStreamSynchronize(cuda_stream));
   CudaCheck(cudaStreamDestroy(cuda_stream));
 
   return temp_storage_bytes;
@@ -165,7 +165,7 @@ size_t InferTempStorageForSortingKeysDescending(int32_t num_row, int32_t num_col
       /* end_bit */ sizeof(KeyType) * 8,
       /* stream */ cuda_stream);
   CudaCheck(err);
-
+  CudaCheck(cudaStreamSynchronize(cuda_stream));
   CudaCheck(cudaStreamDestroy(cuda_stream));
 
   return temp_storage_bytes;
