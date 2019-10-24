@@ -1,4 +1,4 @@
-#include "oneflow/core/kernel/slice_kernel.h"
+#include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/ndarray/cpu_ndarray_builder.h"
 
 namespace oneflow {
@@ -19,31 +19,8 @@ int64_t GetStride(const DimSliceConf& conf) { return conf.stride(); }
 
 }  // namespace
 
-template<typename T>
-void SliceKernel<DeviceType::kCPU, T>::ForwardDataContent(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const SliceOpConf& conf = this->op_conf().slice_conf();
-  const Blob* in_blob = BnInOp2Blob("in");
-  Blob* out_blob = BnInOp2Blob("out");
-  CHECK_EQ(in_blob->shape().NumAxes(), out_blob->shape().NumAxes());
-
-  switch (out_blob->shape().NumAxes()) {
-// clang-format off
-#define MAKE_CASE(num_axes)                                                                   \
-    case num_axes: {                                                                          \
-      NdarraySliceUtil<T, num_axes>::Forward(ctx.device_ctx, conf.dim_slice_conf(), in_blob,  \
-                                             out_blob);                                       \
-      break;                                                                                  \
-    }
-    MAKE_CASE(2);
-    MAKE_CASE(3);
-#undef MAKE_CASE
-    // clang-format on
-    default: { UNIMPLEMENTED(); }
-  }
-}
-
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kSliceConf, SliceKernel, ARITHMETIC_DATA_TYPE_SEQ);
+template<typename T, size_t NDIMS>
+struct NdarraySliceUtil;
 
 template<typename T>
 struct NdarraySliceUtil<T, 2> final {
@@ -102,5 +79,84 @@ struct NdarraySliceUtil<T, 3> final {
         .CopyFrom(out_diff_ndarray({}, {}, {}));
   }
 };
+
+template<typename T>
+class SliceCpuKernel final : public KernelIf<DeviceType::kCPU> {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(SliceCpuKernel);
+  SliceCpuKernel() = default;
+  ~SliceCpuKernel() = default;
+
+ private:
+  void ForwardDataContent(const KernelCtx& ctx,
+                          std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
+    const SliceOpConf& conf = this->op_conf().slice_conf();
+    const Blob* in_blob = BnInOp2Blob("in");
+    Blob* out_blob = BnInOp2Blob("out");
+    CHECK_EQ(in_blob->shape().NumAxes(), out_blob->shape().NumAxes());
+
+    switch (out_blob->shape().NumAxes()) {
+// clang-format off
+    #define MAKE_CASE(num_axes)                                                                 \
+      case num_axes: {                                                                          \
+        NdarraySliceUtil<T, num_axes>::Forward(ctx.device_ctx, conf.dim_slice_conf(), in_blob,  \
+                                              out_blob);                                        \
+        break;                                                                                  \
+      }
+      MAKE_CASE(2);
+      MAKE_CASE(3);
+    #undef MAKE_CASE
+      // clang-format on
+      default: { UNIMPLEMENTED(); }
+    }
+  }
+};
+
+template<typename T>
+class SliceGradCpuKernel final : public KernelIf<DeviceType::kCPU> {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(SliceGradCpuKernel);
+  SliceGradCpuKernel() = default;
+  ~SliceGradCpuKernel() = default;
+
+ private:
+  void ForwardDataContent(const KernelCtx& ctx,
+                          std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
+    const SliceGradOpConf& conf = this->op_conf().slice_grad_conf();
+    const Blob* dy_blob = BnInOp2Blob("dy");
+    Blob* dx_blob = BnInOp2Blob("dx");
+    CHECK_EQ(dy_blob->shape().NumAxes(), dx_blob->shape().NumAxes());
+
+    Memset<DeviceType::kCPU>(ctx.device_ctx, dx_blob->mut_dptr<T>(), 0,
+                             dx_blob->ByteSizeOfBlobBody());
+
+    switch (dx_blob->shape().NumAxes()) {
+// clang-format off
+    #define MAKE_CASE(num_axes)                                                         \
+      case num_axes: {                                                                  \
+        NdarraySliceUtil<T, num_axes>::Backward(ctx.device_ctx, conf.dim_slice_conf(),  \
+                                                dy_blob, dx_blob);                      \
+        break;                                                                          \
+      }
+      MAKE_CASE(2);
+      MAKE_CASE(3);
+    #undef MAKE_CASE
+      // clang-format on
+      default: { UNIMPLEMENTED(); }
+    }
+  }
+};
+
+#define REGISTER_SLICE_CPU_KERNEL(dtype)                                                       \
+  REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kSliceConf, DeviceType::kCPU, dtype,     \
+                                        SliceCpuKernel<dtype>)                                 \
+  REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kSliceGradConf, DeviceType::kCPU, dtype, \
+                                        SliceGradCpuKernel<dtype>)
+
+REGISTER_SLICE_CPU_KERNEL(float);
+REGISTER_SLICE_CPU_KERNEL(double);
+REGISTER_SLICE_CPU_KERNEL(int8_t);
+REGISTER_SLICE_CPU_KERNEL(int32_t);
+REGISTER_SLICE_CPU_KERNEL(int64_t);
 
 }  // namespace oneflow
