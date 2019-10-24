@@ -22,7 +22,7 @@ void Blob::Init(const MemoryCase& mem_case, const RtBlobDesc* blob_desc, char* h
   blob_desc_ = blob_desc;
   dptr_ = body_ptr;
   header_ptr_.reset(new PodPtr(blob_desc_->header_pod_desc(), header_ptr));
-  dynamic_shape_.reset(new Symbol<Shape>(Symbol<Shape>::Of(static_shape())));
+  dynamic_shape_.reset(new Symbol<Shape>(static_shape()));
   dynamic_shape_mutex_.reset(new std::mutex());
   if (!blob_desc_->header_is_opaque()) {
     std::vector<int64_t> dim_vec = static_shape().dim_vec();
@@ -38,17 +38,17 @@ void Blob::Init(const MemoryCase& mem_case, const RtBlobDesc* blob_desc, char* h
 
 const Symbol<Shape>& Blob::shape_sym() const {
   // this line of code is not a typo
-  if (dynamic_shape_->HasValue()) { return *dynamic_shape_; }
+  if (*dynamic_shape_) { return *dynamic_shape_; }
   std::unique_lock<std::mutex> lock(*dynamic_shape_mutex_);
-  if (dynamic_shape_->HasValue()) { return *dynamic_shape_; }
-  *dynamic_shape_ = Symbol<Shape>::Of(dense_shape_view());
+  if (*dynamic_shape_) { return *dynamic_shape_; }
+  dynamic_shape_->reset(dense_shape_view());
   return *dynamic_shape_;
 }
 
 DenseShapeMutView Blob::dense_shape_mut_view() {
   {
     std::unique_lock<std::mutex> lock(*dynamic_shape_mutex_);
-    dynamic_shape_->Clear();
+    dynamic_shape_->reset();
   }
   return DenseShapeMutView(header_ptr_->MutField(FieldKey::kDenseShape));
 }
