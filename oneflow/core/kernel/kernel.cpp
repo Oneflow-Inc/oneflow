@@ -22,9 +22,17 @@ void Kernel::InitModelAndConstBuf(const KernelCtx& ctx,
 
 void Kernel::Launch(const KernelCtx& ctx,
                     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  gdb::ForwardEnterBreakPoint(op_attribute(), BnInOp2Blob);
-  Forward(ctx, BnInOp2Blob);
-  gdb::ForwardLeaveBreakPoint(op_attribute(), BnInOp2Blob);
+  HashMap<std::string, Blob*> bn_in_op2blob;
+  auto CachedBnInOp2Blob = [&](const std::string& bn_in_op) -> Blob* {
+    auto iter = bn_in_op2blob.find(bn_in_op);
+    if (iter == bn_in_op2blob.end()) {
+      iter = bn_in_op2blob.emplace(bn_in_op, BnInOp2Blob(bn_in_op)).first;
+    }
+    return iter->second;
+  };
+  gdb::ForwardEnterBreakPoint(op_attribute(), CachedBnInOp2Blob);
+  Forward(ctx, CachedBnInOp2Blob);
+  gdb::ForwardLeaveBreakPoint(op_attribute(), CachedBnInOp2Blob);
 }
 
 const LogicalBlobId& Kernel::BnInOp2Lbi(const std::string& bn_in_op) const {

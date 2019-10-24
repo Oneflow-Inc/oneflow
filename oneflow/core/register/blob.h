@@ -10,6 +10,7 @@
 #include "oneflow/core/common/range.h"
 #include "oneflow/core/persistence/persistent_in_stream.h"
 #include "oneflow/core/record/record.pb.h"
+#include "oneflow/core/common/symbol.h"
 
 namespace oneflow {
 
@@ -22,7 +23,6 @@ class Blob final {
 
   DataType data_type() const { return blob_desc_->data_type(); }
   const char* header_ptr() const { return header_ptr_->ptr(); }
-  char* mut_header_ptr() { return header_ptr_->ptr(); }
   const RtBlobDesc& blob_desc() const { return *blob_desc_; }
   const RtBlobDesc* blob_desc_ptr() const { return blob_desc_; }
 
@@ -40,16 +40,9 @@ class Blob final {
   DenseShapeView dense_shape_view() const {
     return DenseShapeView(header_ptr_->Field(FieldKey::kDenseShape));
   }
-  Shape shape() const {
-    if (blob_desc().header_is_opaque()) {
-      return static_shape();
-    } else {
-      return dense_shape_view();
-    }
-  }
-  DenseShapeMutView dense_shape_mut_view() {
-    return DenseShapeMutView(header_ptr_->MutField(FieldKey::kDenseShape));
-  }
+  const Symbol<Shape> shape_sym() const;
+  const Shape& shape() const { return *shape_sym(); }
+  DenseShapeMutView dense_shape_mut_view();
   LengthLoDView length_lod_view() const {
     return LengthLoDView(header_ptr_->Field(FieldKey::kLoD), blob_desc_->num_of_lod_levels());
   }
@@ -104,7 +97,8 @@ class Blob final {
   const RtBlobDesc* blob_desc_;
   void* dptr_;
   std::unique_ptr<PodPtr> header_ptr_;
-
+  std::unique_ptr<Symbol<Shape>> dynamic_shape_;
+  std::unique_ptr<std::mutex> dynamic_shape_mutex_;
   // TODO(); remove this ugly code
   int32_t record_num_;
 };

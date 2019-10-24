@@ -22,6 +22,8 @@ void Blob::Init(const MemoryCase& mem_case, const RtBlobDesc* blob_desc, char* h
   blob_desc_ = blob_desc;
   dptr_ = body_ptr;
   header_ptr_.reset(new PodPtr(blob_desc_->header_pod_desc(), header_ptr));
+  dynamic_shape_.reset(new Symbol<Shape>(Symbol<Shape>::Of(static_shape())));
+  dynamic_shape_mutex_.reset(new std::mutex());
   if (!blob_desc_->header_is_opaque()) {
     std::vector<int64_t> dim_vec = static_shape().dim_vec();
     if (blob_desc->num_of_lod_levels() > 0) {
@@ -32,6 +34,23 @@ void Blob::Init(const MemoryCase& mem_case, const RtBlobDesc* blob_desc, char* h
     }
     dense_shape_mut_view().set_shape(Shape(dim_vec));
   }
+}
+
+const Symbol<Shape> Blob::shape_sym() const {
+  // this line of code is not a typo
+  if (dynamic_shape_->HasValue()) { return *dynamic_shape_; }
+  std::unique_lock<std::mutex> lock(*dynamic_shape_mutex_);
+  if (dynamic_shape_->HasValue()) { return *dynamic_shape_; }
+  *dynamic_shape_ = Symbol<Shape>::Of(dense_shape_view());
+  return *dynamic_shape_;
+}
+
+DenseShapeMutView Blob::dense_shape_mut_view() {
+  {
+    std::unique_lock<std::mutex> lock(*dynamic_shape_mutex_);
+    dynamic_shape_->Clear();
+  }
+  return DenseShapeMutView(header_ptr_->MutField(FieldKey::kDenseShape));
 }
 
 void Blob::CopyDataContentFrom(DeviceCtx* device_ctx, const Blob* rhs) {
@@ -50,7 +69,7 @@ void Blob::CopyValidDataContentFrom(DeviceCtx* device_ctx, const Blob* rhs) {
 void Blob::CopyHeaderFrom(DeviceCtx* device_ctx, const Blob* rhs) {
   if (this == rhs || blob_desc().ByteSizeOfBlobHeader() == 0) { return; }
   CHECK_EQ(blob_desc().ByteSizeOfBlobHeader(), rhs->blob_desc().ByteSizeOfBlobHeader());
-  Memcpy<DeviceType::kCPU>(device_ctx, mut_header_ptr(), rhs->header_ptr(),
+  Memcpy<DeviceType::kCPU>(device_ctx, header_ptr_->ptr(), rhs->header_ptr(),
                            blob_desc().ByteSizeOfBlobHeader());
 }
 
