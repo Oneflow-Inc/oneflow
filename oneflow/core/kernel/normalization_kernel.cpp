@@ -26,7 +26,7 @@ template<DeviceType device_type, typename T>
 void NormalizationKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const NormalizationOpConf& conf = this->op_conf().normalization_conf();
-  if (this->op_conf().trainable()) {
+  if (this->op_conf().trainable() && conf.is_training()) {
     NormalizationKernelUtil<device_type, T>::ForwardTraining(
         ctx.device_ctx, BnInOp2Blob("in"), BnInOp2Blob("gamma"), BnInOp2Blob("beta"),
         BnInOp2Blob("out"), BnInOp2Blob("moving_mean"), BnInOp2Blob("moving_variance"),
