@@ -36,7 +36,7 @@ void Blob::Init(const MemoryCase& mem_case, const RtBlobDesc* blob_desc, char* h
   }
 }
 
-const Symbol<Shape> Blob::shape_sym() const {
+const Symbol<Shape>& Blob::shape_sym() const {
   // this line of code is not a typo
   if (dynamic_shape_->HasValue()) { return *dynamic_shape_; }
   std::unique_lock<std::mutex> lock(*dynamic_shape_mutex_);
