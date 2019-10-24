@@ -4,44 +4,30 @@ namespace oneflow {
 
 namespace {
 
-template<typename T, typename K>
-__device__ T BilinearInterpolate(const K* input, const int height, const int width, T y, T x) {
-  if (y < -1.0 || y > height || x < -1.0 || x > width) { return 0; }
+template<typename T>
+__device__ __forceinline__ T Round(T x);
 
-  int y_low = (y <= 0) ? 0 : y;
-  int x_low = (x <= 0) ? 0 : x;
-  int y_high = 0;
-  int x_high = 0;
+template<>
+__device__ __forceinline__ float Round(float x) {
+  return rintf(x);
+}
 
-  if (y_low >= height - 1) {
-    y_low = height - 1;
-    y_high = y_low;
-    y = static_cast<T>(y_low);
-  } else {
-    y_high = y_low + 1;
-  }
+template<>
+__device__ __forceinline__ double Round(double x) {
+  return rint(x);
+}
 
-  if (x_low >= width - 1) {
-    x_low = width - 1;
-    x_high = x_low;
-    x = static_cast<T>(x_low);
-  } else {
-    x_high = x_low + 1;
-  }
+template<typename T>
+__device__ __forceinline__ T Floor(T x);
 
-  const T ly = y - y_low;
-  const T lx = x - x_low;
-  const T hy = GetOneVal<T>() - ly;
-  const T hx = GetOneVal<T>() - lx;
+template<>
+__device__ __forceinline__ float Floor(float x) {
+  return floorf(x);
+}
 
-  // https://en.wikipedia.org/wiki/Bilinear_interpolation
-  const int q11 = y_low * width + x_low;
-  const int q21 = y_low * width + x_high;
-  const int q12 = y_high * width + x_low;
-  const int q22 = y_high * width + x_high;
-  // no 1 / (x_high - x_low) * (y_high - y_low) because it will always be 1
-  return hy * hx * static_cast<T>(input[q11]) + hy * lx * static_cast<T>(input[q21])
-         + ly * hx * static_cast<T>(input[q12]) + ly * lx * static_cast<T>(input[q22]);
+template<>
+__device__ __forceinline__ double Floor(double x) {
+  return floor(x);
 }
 
 template<typename T>
@@ -55,31 +41,39 @@ __launch_bounds__(kCudaThreadsNumPerBlock) __global__
     const int h = (index / mask_width) % mask_height;
     const int w = index % mask_width;
 
-    const T roi_x_min = rois[n * 4 + 0];
-    const T roi_y_min = rois[n * 4 + 1];
-    const T roi_x_max = rois[n * 4 + 2];
-    const T roi_y_max = rois[n * 4 + 3];
-
-    const T roi_height = max(roi_y_max - roi_y_min, GetOneVal<T>());
-    const T roi_width = max(roi_x_max - roi_x_min, GetOneVal<T>());
-    const T bin_height = static_cast<T>(roi_height) / static_cast<T>(mask_height);
-    const T bin_width = static_cast<T>(roi_width) / static_cast<T>(mask_width);
-    const int bin_grid_height = ceil(roi_height / mask_height);
-    const int bin_grid_width = ceil(roi_width / mask_width);
+    const T roi_x_min = Round(rois[n * 4 + 0]);
+    const T roi_y_min = Round(rois[n * 4 + 1]);
+    const T roi_x_max = Round(rois[n * 4 + 2]);
+    const T roi_y_max = Round(rois[n * 4 + 3]);
+    assert(roi_x_min >= 0);
+    assert(roi_y_min >= 0);
+    assert(roi_x_max <= width - GetOneVal<T>());
+    assert(roi_y_max <= height - GetOneVal<T>());
+    assert(roi_x_min <= roi_x_max - GetOneVal<T>());
+    assert(roi_y_min <= roi_y_max - GetOneVal<T>());
+    const T roi_height = roi_y_max - roi_y_min;
+    const T roi_width = roi_x_max - roi_x_min;
+    const T bin_height = roi_height / static_cast<T>(mask_height);
+    const T bin_width = roi_width / static_cast<T>(mask_width);
 
     const int8_t* cur_mask = masks + (n * channels + c) * height * width;
-    T out_val = static_cast<T>(0.0f);
-    FOR_RANGE(int64_t, grid_i, 0, bin_grid_height) {
-      // + .5f for center position
-      const T y = roi_y_min + h * bin_height
-                  + static_cast<T>(grid_i + 0.5f) * bin_height / static_cast<T>(bin_grid_height);
-      FOR_RANGE(int64_t, grid_j, 0, bin_grid_width) {
-        const T x = roi_x_min + w * bin_width
-                    + static_cast<T>(grid_j + 0.5f) * bin_width / static_cast<T>(bin_grid_width);
-        out_val += BilinearInterpolate(cur_mask, height, width, y, x);
-      }
-    }
-    output[index] = out_val;
+    const T x_center = roi_x_min + static_cast<T>((w + 0.5f) * bin_width - 0.5f);
+    const T y_center = roi_y_min + static_cast<T>((h + 0.5f) * bin_height - 0.5f);
+    const int x_low = static_cast<int>(Floor(x_center));
+    const int y_low = static_cast<int>(Floor(y_center));
+    const int x_high = x_low < width - 1 ? x_low + 1 : x_low;
+    const int y_high = y_low < height - 1 ? y_low + 1 : y_low;
+    const T x_w2 = x_center - static_cast<T>(x_low);
+    const T y_w2 = y_center - static_cast<T>(y_low);
+    const T x_w1 = GetOneVal<T>() - x_w2;
+    const T y_w1 = GetOneVal<T>() - y_w2;
+    const int n11 = y_low * width + x_low;
+    const int n12 = y_low * width + x_high;
+    const int n21 = y_high * width + x_low;
+    const int n22 = y_high * width + x_high;
+    output[index] =
+        y_w1 * (x_w1 * static_cast<T>(cur_mask[n11]) + x_w2 * static_cast<T>(cur_mask[n12]))
+        + y_w2 * (x_w1 * static_cast<T>(cur_mask[n21]) + x_w2 * static_cast<T>(cur_mask[n22]));
   }
 }
 
