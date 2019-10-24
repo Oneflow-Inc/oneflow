@@ -11,7 +11,7 @@ class MasksCropAndResizeOp final : public Operator {
   void InitFromOpConf() override {
     CHECK(op_conf().has_masks_crop_and_resize_conf());
     EnrollInputBn("masks", false);
-    EnrollInputBn("boxes", false);
+    EnrollInputBn("rois", false);
     EnrollOutputBn("out");
   }
 
@@ -58,5 +58,7 @@ class MasksCropAndResizeOp final : public Operator {
     return Maybe<void>::Ok();
   }
 };
+
+REGISTER_OP(OperatorConf::kMasksCropAndResizeConf, MasksCropAndResizeOp);
 
 }  // namespace oneflow
