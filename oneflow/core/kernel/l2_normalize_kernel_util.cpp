@@ -4,8 +4,8 @@ namespace oneflow {
 
 template<typename T>
 struct L2NormalizeKernelUtil<kCPU, T> {
-  static void Normalize(DeviceCtx* ctx, const int32_t axis, const float epsilon,
-                        const Blob* in_blob, Blob* square_x_sum_blob, Blob* out_blob) {
+  static void Forward(DeviceCtx* ctx, const int32_t axis, const float epsilon, const Blob* in_blob,
+                      Blob* square_x_sum_blob, Blob* out_blob) {
     const int32_t c = in_blob->shape().At(axis);
     const int32_t n = in_blob->shape().elem_cnt() / c;
     const int32_t d = in_blob->shape().Count(axis + 1);
@@ -28,9 +28,9 @@ struct L2NormalizeKernelUtil<kCPU, T> {
     }
   }
 
-  static void NormalizeGrad(DeviceCtx* ctx, const int32_t axis, const float epsilon,
-                            const Blob* out_blob, const Blob* out_diff_blob,
-                            const Blob* square_x_sum_blob, Blob* in_diff_blob) {
+  static void Backward(DeviceCtx* ctx, const int32_t axis, const float epsilon,
+                       const Blob* out_blob, const Blob* out_diff_blob,
+                       const Blob* square_x_sum_blob, Blob* in_diff_blob) {
     CHECK_GE(axis, 0);
     const int32_t c = out_blob->shape().At(axis);
     const int32_t n = out_blob->shape().elem_cnt() / c;

@@ -14,6 +14,12 @@ const PbMessage& WhereXGradOp::GetCustomizedConf() const { return op_conf().wher
 Maybe<void> WhereXGradOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
+  const BlobDesc* condition_blob_desc = GetBlobDesc4BnInOp("condition");
+  const BlobDesc* out_diff_blob_desc = GetBlobDesc4BnInOp("out_diff");
+  CHECK_EQ_OR_RETURN(condition_blob_desc->shape().NumAxes(), out_diff_blob_desc->shape().NumAxes());
+  FOR_RANGE(int64_t, i, 0, condition_blob_desc->shape().NumAxes()) {
+    CHECK_EQ_OR_RETURN(condition_blob_desc->shape().At(i), out_diff_blob_desc->shape().At(i));
+  }
   *GetBlobDesc4BnInOp("x_diff") = *GetBlobDesc4BnInOp("out_diff");
   return Maybe<void>::Ok();
 }

@@ -22,7 +22,6 @@ class ReduceMaxOp final : public Operator {
   Maybe<void> GetSbpSignatures(
       const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
       SbpSignatureList* sbp_sig_list) const override;
-  // LogicalBlobId ibn2lbi(const std::string& input_bn) const override;
 };
 
 }  // namespace oneflow

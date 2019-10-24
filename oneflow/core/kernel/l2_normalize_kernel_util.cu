@@ -70,8 +70,8 @@ __global__ void L2NormalizeBackward(const int32_t n, const int32_t c, const int3
 
 template<typename T>
 struct L2NormalizeKernelUtil<kGPU, T> {
-  static void Normalize(DeviceCtx* ctx, const int32_t axis, const float epsilon,
-                        const Blob* in_blob, Blob* square_x_sum_blob, Blob* out_blob) {
+  static void Forward(DeviceCtx* ctx, const int32_t axis, const float epsilon, const Blob* in_blob,
+                      Blob* square_x_sum_blob, Blob* out_blob) {
     int32_t c = in_blob->shape().At(axis);
     int32_t n = in_blob->shape().elem_cnt() / c;
     int32_t d = in_blob->shape().Count(axis + 1);
@@ -81,9 +81,9 @@ struct L2NormalizeKernelUtil<kGPU, T> {
                                                out_blob->mut_dptr<T>());
   }
 
-  static void NormalizeGrad(DeviceCtx* ctx, const int32_t axis, const float epsilon,
-                            const Blob* out_blob, const Blob* out_diff_blob,
-                            const Blob* square_x_sum_blob, Blob* in_diff_blob) {
+  static void Backward(DeviceCtx* ctx, const int32_t axis, const float epsilon,
+                       const Blob* out_blob, const Blob* out_diff_blob,
+                       const Blob* square_x_sum_blob, Blob* in_diff_blob) {
     int32_t c = out_blob->shape().At(axis);
     int32_t n = out_blob->shape().elem_cnt() / c;
     int32_t d = out_blob->shape().Count(axis + 1);

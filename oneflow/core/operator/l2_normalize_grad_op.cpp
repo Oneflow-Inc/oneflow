@@ -26,12 +26,6 @@ Maybe<void> L2NormalizeGradOp::InferBlobDescs(
   return Maybe<void>::Ok();
 }
 
-Maybe<void> L2NormalizeGradOp::InferBatchAxis(
-    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
-  for (const auto& obn : output_bns()) { *BatchAxis4BnInOp(obn) = *BatchAxis4BnInOp("dy"); }
-  return Maybe<void>::Ok();
-}
-
 Maybe<void> L2NormalizeGradOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
   SbpSignatureBuilder()
       .Split(input_bns(), 0)

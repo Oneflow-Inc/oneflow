@@ -14,6 +14,15 @@ const PbMessage& WhereOp::GetCustomizedConf() const { return op_conf().where_con
 
 Maybe<void> WhereOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                     const ParallelContext* parallel_ctx) const {
+  const BlobDesc* condition_blob_desc = GetBlobDesc4BnInOp("condition");
+  const BlobDesc* x_blob_desc = GetBlobDesc4BnInOp("x");
+  const BlobDesc* y_blob_desc = GetBlobDesc4BnInOp("y");
+  CHECK_EQ_OR_RETURN(condition_blob_desc->shape().NumAxes(), x_blob_desc->shape().NumAxes());
+  CHECK_EQ_OR_RETURN(condition_blob_desc->shape().NumAxes(), y_blob_desc->shape().NumAxes());
+  FOR_RANGE(int64_t, i, 0, condition_blob_desc->shape().NumAxes()) {
+    CHECK_EQ_OR_RETURN(condition_blob_desc->shape().At(i), x_blob_desc->shape().At(i));
+    CHECK_EQ_OR_RETURN(condition_blob_desc->shape().At(i), y_blob_desc->shape().At(i));
+  }
   *GetBlobDesc4BnInOp("out") = *GetBlobDesc4BnInOp("x");
   return Maybe<void>::Ok();
 }

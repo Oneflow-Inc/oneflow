@@ -1,5 +1,5 @@
 #include "oneflow/core/kernel/where_x_grad_kernel.h"
-#include "oneflow/core/kernel/where_kernel.h"
+#include "oneflow/core/kernel/where_kernel_util.h"
 
 namespace oneflow {
 
