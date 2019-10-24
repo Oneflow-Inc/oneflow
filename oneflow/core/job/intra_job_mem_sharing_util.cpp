@@ -149,21 +149,20 @@ void GenMemChainTasksAndRegsts(
 }
 
 void GenRegstAllocFreeQueueAndRegstMutualExclusions(
-    const std::vector<TaskProto*>* sorted_tasks, const HashSet<RegstDescProto*>* mem_reused_regsts,
-    const HashMap<int64_t, RegstDescProto*>* regst_desc_id2regst_desc,
-    std::vector<HashSet<RegstDescProto*>>* alloc_regsts_queue,
-    std::vector<HashSet<RegstDescProto*>>* free_regsts_queue,
+    const std::vector<TaskProto*>& sorted_tasks, const HashSet<RegstDescProto*>& mem_reused_regsts,
+    const HashMap<int64_t, RegstDescProto*>& regst_desc_id2regst_desc,
+    std::vector<HashSet<RegstDescProto*>>* alloc_regsts_timeline,
+    std::vector<HashSet<RegstDescProto*>>* free_regsts_timeline,
     HashMap<RegstDescProto*, HashSet<RegstDescProto*>>* regst2mutual_exclusion_regsts,
     HashMap<RegstDescProto*, RegstDescProto*>* consumer2inplaced_regst) {
-  alloc_regsts_queue->clear();
-  free_regsts_queue->clear();
-  regst2mutual_exclusion_regsts->clear();
-  consumer2inplaced_regst->clear();
-  alloc_regsts_queue->resize(sorted_tasks->size());
-  free_regsts_queue->resize(sorted_tasks->size());
+  CHECK(alloc_regsts_timeline->empty() && free_regsts_timeline->empty());
+  CHECK(regst2mutual_exclusion_regsts->empty());
+  CHECK(consumer2inplaced_regst->empty());
+  alloc_regsts_timeline->resize(sorted_tasks.size());
+  free_regsts_timeline->resize(sorted_tasks.size());
   HashMap<int64_t, int64_t> task_id2sorted_id;
-  for (int64_t i = 0; i < sorted_tasks->size(); ++i) {
-    TaskProto* task = sorted_tasks->at(i);
+  for (int64_t i = 0; i < sorted_tasks.size(); ++i) {
+    TaskProto* task = sorted_tasks.at(i);
     CHECK(task_id2sorted_id.emplace(task->task_id(), i).second);
   }
 
@@ -172,7 +171,7 @@ void GenRegstAllocFreeQueueAndRegstMutualExclusions(
     int64_t free_index = task_id2sorted_id.at(regst_desc->producer_task_id());
     for (int64_t consumer_task_id : regst_desc->consumer_task_id()) {
       // if consumer is not in this mem chain, set free index = last index
-      int64_t this_sorted_index = sorted_tasks->size() - 1;
+      int64_t this_sorted_index = sorted_tasks.size() - 1;
       if (task_id2sorted_id.find(consumer_task_id) != task_id2sorted_id.end()) {
         this_sorted_index = task_id2sorted_id.at(consumer_task_id);
       }
@@ -186,8 +185,8 @@ void GenRegstAllocFreeQueueAndRegstMutualExclusions(
     while (consumer_regst->has_hint_inplace_consumed_regst_desc_id()
            && consumer_regst->hint_inplace_consumed_regst_desc_id() != -1) {
       RegstDescProto* hint_inplaced_regst =
-          regst_desc_id2regst_desc->at(consumer_regst->hint_inplace_consumed_regst_desc_id());
-      if (mem_reused_regsts->find(hint_inplaced_regst) != mem_reused_regsts->end()) {
+          regst_desc_id2regst_desc.at(consumer_regst->hint_inplace_consumed_regst_desc_id());
+      if (mem_reused_regsts.find(hint_inplaced_regst) != mem_reused_regsts.end()) {
         inplaced_regst = hint_inplaced_regst;
         consumer_regst = hint_inplaced_regst;
       } else {
@@ -198,14 +197,14 @@ void GenRegstAllocFreeQueueAndRegstMutualExclusions(
   };
 
   HashMap<int64_t, int64_t> regst_desc_id2free_index;
-  for (RegstDescProto* regst_desc : *mem_reused_regsts) {
+  for (RegstDescProto* regst_desc : mem_reused_regsts) {
     RegstDescProto* inplaced_regst_desc = TryFindFirstInplacedRegstDesc(regst_desc);
     if (inplaced_regst_desc != nullptr) {
       CHECK(consumer2inplaced_regst->emplace(regst_desc, inplaced_regst_desc).second);
       continue;
     }
 
-    CHECK(alloc_regsts_queue->at(task_id2sorted_id.at(regst_desc->producer_task_id()))
+    CHECK(alloc_regsts_timeline->at(task_id2sorted_id.at(regst_desc->producer_task_id()))
               .insert(regst_desc)
               .second);
     CHECK(regst_desc_id2free_index
@@ -222,13 +221,14 @@ void GenRegstAllocFreeQueueAndRegstMutualExclusions(
                  FindLastFreeIndexInSortedTasks(consumer_regst_desc));
   }
   for (const auto& pair : regst_desc_id2free_index) {
-    CHECK(
-        free_regsts_queue->at(pair.second).insert(regst_desc_id2regst_desc->at(pair.first)).second);
+    CHECK(free_regsts_timeline->at(pair.second)
+              .insert(regst_desc_id2regst_desc.at(pair.first))
+              .second);
   }
 
   HashSet<RegstDescProto*> remain_regsts;
-  for (int64_t i = 0; i < sorted_tasks->size(); ++i) {
-    for (RegstDescProto* alloc_regst : alloc_regsts_queue->at(i)) {
+  for (int64_t i = 0; i < sorted_tasks.size(); ++i) {
+    for (RegstDescProto* alloc_regst : alloc_regsts_timeline->at(i)) {
       CHECK(regst2mutual_exclusion_regsts->emplace(alloc_regst, HashSet<RegstDescProto*>()).second);
       for (RegstDescProto* remain_regst : remain_regsts) {
         CHECK(regst2mutual_exclusion_regsts->at(alloc_regst).insert(remain_regst).second);
@@ -236,7 +236,7 @@ void GenRegstAllocFreeQueueAndRegstMutualExclusions(
       }
       CHECK(remain_regsts.insert(alloc_regst).second);
     }
-    for (RegstDescProto* free_regst : free_regsts_queue->at(i)) {
+    for (RegstDescProto* free_regst : free_regsts_timeline->at(i)) {
       CHECK_EQ(remain_regsts.erase(free_regst), 1);
     }
   }
@@ -395,6 +395,7 @@ class BfcAllocator final {
   };
   ~BfcAllocator() = default;
 
+  // Return offset of the buffer for this allocate size memory
   int64_t AllocateRaw(int64_t size);
   void FreeRaw(int64_t offset, int64_t size);
   int64_t buffer_size() const { return buffer_size_; }
@@ -432,10 +433,11 @@ int64_t BfcAllocator::AllocateRaw(int64_t size) {
   PieceIt candidate_piece = piece_list_.end();
   for (auto it = piece_list_.begin(); it != piece_list_.end(); ++it) {
     int64_t piece_size = it->end - it->begin;
-    if (it->is_free && piece_size >= size
-        && (candidate_piece == piece_list_.end()
-            || piece_size < (candidate_piece->end - candidate_piece->begin))) {
-      candidate_piece = it;
+    if (it->is_free && piece_size >= size) {
+      if (candidate_piece == piece_list_.end()
+          || piece_size < (candidate_piece->end - candidate_piece->begin)) {
+        candidate_piece = it;
+      }
     }
   }
   if (candidate_piece == piece_list_.end()) {
@@ -490,25 +492,25 @@ void BfcAllocator::FreeRaw(int64_t offset, int64_t size) {
 }
 
 void MemReusedAlgorithm1_TfBfcImproved(
-    const std::vector<HashSet<RegstDescProto*>>& alloc_regsts_queue,
-    const std::vector<HashSet<RegstDescProto*>>& free_regsts_queue, MemBlockResultInfo* result) {
+    const std::vector<HashSet<RegstDescProto*>>& alloc_regsts_timeline,
+    const std::vector<HashSet<RegstDescProto*>>& free_regsts_timeline, MemBlockResultInfo* result) {
   HashMap<RegstDescProto*, int64_t>* regst_desc2offset = &(result->regst_desc2offset);
   regst_desc2offset->clear();
-  int64_t buffer_size = 256;
+  int64_t buffer_size = 1;
   BfcAllocator bfc_allocator(buffer_size);
 
   auto GetRegstSize = [](const RegstDescProto* regst) -> int64_t {
     return RtRegstDesc(*regst).TotalMainByteSize4AllRegst();
   };
 
-  CHECK_EQ(alloc_regsts_queue.size(), free_regsts_queue.size());
-  for (int64_t i = 0; i < alloc_regsts_queue.size(); ++i) {
-    for (RegstDescProto* alloc_regst : alloc_regsts_queue.at(i)) {
+  CHECK_EQ(alloc_regsts_timeline.size(), free_regsts_timeline.size());
+  for (int64_t i = 0; i < alloc_regsts_timeline.size(); ++i) {
+    for (RegstDescProto* alloc_regst : alloc_regsts_timeline.at(i)) {
       CHECK(regst_desc2offset
                 ->emplace(alloc_regst, bfc_allocator.AllocateRaw(GetRegstSize(alloc_regst)))
                 .second);
     }
-    for (RegstDescProto* free_regst : free_regsts_queue.at(i)) {
+    for (RegstDescProto* free_regst : free_regsts_timeline.at(i)) {
       CHECK(regst_desc2offset->find(free_regst) != regst_desc2offset->end());
       bfc_allocator.FreeRaw(regst_desc2offset->at(free_regst), GetRegstSize(free_regst));
     }
@@ -524,13 +526,15 @@ void MemReusedAlgorithm2_MinOrderGrowth(
 }
 
 void SelectAlgorithmGenMemBlockOffset4Regsts(
-    int64_t algo_id, const std::vector<HashSet<RegstDescProto*>>& alloc_regsts_queue,
-    const std::vector<HashSet<RegstDescProto*>>& free_regsts_queue,
+    int64_t algo_id, const std::vector<HashSet<RegstDescProto*>>& alloc_regsts_timeline,
+    const std::vector<HashSet<RegstDescProto*>>& free_regsts_timeline,
     const HashMap<RegstDescProto*, HashSet<RegstDescProto*>>& regst2mutual_exclusion_regsts,
     MemBlockResultInfo* result) {
   switch (algo_id) {
     case 0: MemReusedAlgorithm0_OfColorImproved(regst2mutual_exclusion_regsts, result); break;
-    case 1: MemReusedAlgorithm1_TfBfcImproved(alloc_regsts_queue, free_regsts_queue, result); break;
+    case 1:
+      MemReusedAlgorithm1_TfBfcImproved(alloc_regsts_timeline, free_regsts_timeline, result);
+      break;
     case 2: MemReusedAlgorithm2_MinOrderGrowth(regst2mutual_exclusion_regsts, result); break;
     default: UNIMPLEMENTED();
   }
@@ -559,7 +563,7 @@ void IntraJobMemSharingUtil::InferMemBlockId4MemReusedRegst(Plan* plan,
   // step 1: generate regst alloc/free queue AND regst mutual exclusions
   for (const auto& pair : mem_chain2mem_reused_regsts) {
     GenRegstAllocFreeQueueAndRegstMutualExclusions(
-        &mem_chain2sorted_tasks.at(pair.first), &pair.second, &regst_desc_id2regst_desc,
+        mem_chain2sorted_tasks.at(pair.first), pair.second, regst_desc_id2regst_desc,
         &mem_chain2task2alloc_regsts[pair.first], &mem_chain2task2free_regsts[pair.first],
         &mem_chain2regst2mutual_exclusion_regsts[pair.first],
         &mem_chain2consumer2inplaced_regst[pair.first]);
