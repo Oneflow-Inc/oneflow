@@ -1,22 +1,24 @@
-#include "oneflow/core/operator/rsqrt_op.h"
+#include "oneflow/core/operator/where_op.h"
 
 namespace oneflow {
 
-void RsqrtOp::InitFromOpConf() {
-  CHECK(op_conf().has_rsqrt_conf());
-  EnrollInputBn("in");
+void WhereOp::InitFromOpConf() {
+  CHECK(op_conf().has_where_conf());
+  EnrollInputBn("condition", false);
+  EnrollInputBn("x");
+  EnrollInputBn("y");
   EnrollOutputBn("out");
 }
 
-const PbMessage& RsqrtOp::GetCustomizedConf() const { return op_conf().rsqrt_conf(); }
+const PbMessage& WhereOp::GetCustomizedConf() const { return op_conf().where_conf(); }
 
-Maybe<void> RsqrtOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+Maybe<void> WhereOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                     const ParallelContext* parallel_ctx) const {
-  *GetBlobDesc4BnInOp("out") = *GetBlobDesc4BnInOp("in");
+  *GetBlobDesc4BnInOp("out") = *GetBlobDesc4BnInOp("x");
   return Maybe<void>::Ok();
 }
 
-Maybe<void> RsqrtOp::GetSbpSignatures(
+Maybe<void> WhereOp::GetSbpSignatures(
     const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
     SbpSignatureList* sbp_sig_list) const {
   SbpSignatureBuilder()
@@ -28,6 +30,6 @@ Maybe<void> RsqrtOp::GetSbpSignatures(
   return Maybe<void>::Ok();
 }
 
-REGISTER_OP(OperatorConf::kRsqrtConf, RsqrtOp);
+REGISTER_OP(OperatorConf::kWhereConf, WhereOp);
 
 }  // namespace oneflow

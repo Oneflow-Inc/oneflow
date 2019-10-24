@@ -1,15 +1,15 @@
-#ifndef ONEFLOW_CORE_OPERATOR_RSQRT_H_
-#define ONEFLOW_CORE_OPERATOR_RSQRT_H_
+#ifndef ONEFLOW_CORE_OPERATOR_EXP_OP_H_
+#define ONEFLOW_CORE_OPERATOR_EXP_OP_H_
 
 #include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
 
-class RsqrtOp final : public Operator {
+class ExpOp final : public Operator {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(RsqrtOp);
-  RsqrtOp() = default;
-  ~RsqrtOp() = default;
+  OF_DISALLOW_COPY_AND_MOVE(ExpOp);
+  ExpOp() = default;
+  ~ExpOp() = default;
 
   void InitFromOpConf() override;
   const PbMessage& GetCustomizedConf() const override;
@@ -29,4 +29,4 @@ class RsqrtOp final : public Operator {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_OPERATOR_RSQRT_H_
+#endif  // ONEFLOW_CORE_OPERATOR_EXP_OP_H_

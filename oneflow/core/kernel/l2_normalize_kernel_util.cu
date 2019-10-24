@@ -1,7 +1,7 @@
-#include "oneflow/core/kernel/l2_normalize_kernel.h"
+#include "oneflow/core/kernel/l2_normalize_kernel_util.h"
+#include "oneflow/core/kernel/kernel_util.h"
 #include <cub/cub.cuh>
 #include <math.h>
-
 namespace oneflow {
 
 namespace {
@@ -69,35 +69,34 @@ __global__ void L2NormalizeBackward(const int32_t n, const int32_t c, const int3
 }  // namespace
 
 template<typename T>
-struct L2NormalizeKernelUtil<DeviceType::kGPU, T> {
-  static void Forward(DeviceCtx* ctx, const L2NormalizeOpConf& conf, const Blob* in_blob,
-                      Blob* square_x_sum_blob, Blob* out_blob) {
-    int32_t axis = conf.axis() >= 0 ? conf.axis() : conf.axis() + in_blob->shape().NumAxes();
+struct L2NormalizeKernelUtil<kGPU, T> {
+  static void Normalize(DeviceCtx* ctx, const int32_t axis, const float epsilon,
+                        const Blob* in_blob, Blob* square_x_sum_blob, Blob* out_blob) {
     int32_t c = in_blob->shape().At(axis);
     int32_t n = in_blob->shape().elem_cnt() / c;
     int32_t d = in_blob->shape().Count(axis + 1);
     L2NormalizeForward<<<std::min(n, kCudaMaxBlocksNum), kCudaThreadsNumPerBlock, 0,
-                         ctx->cuda_stream()>>>(n, c, d, static_cast<T>(conf.epsilon()),
-                                               in_blob->dptr<T>(), square_x_sum_blob->mut_dptr<T>(),
+                         ctx->cuda_stream()>>>(n, c, d, static_cast<T>(epsilon), in_blob->dptr<T>(),
+                                               square_x_sum_blob->mut_dptr<T>(),
                                                out_blob->mut_dptr<T>());
   }
 
-  static void Backward(DeviceCtx* ctx, const L2NormalizeOpConf& conf, const Blob* out_blob,
-                       const Blob* out_diff_blob, const Blob* square_x_sum_blob,
-                       Blob* in_diff_blob) {
-    int32_t axis = conf.axis() >= 0 ? conf.axis() : conf.axis() + out_blob->shape().NumAxes();
+  static void NormalizeGrad(DeviceCtx* ctx, const int32_t axis, const float epsilon,
+                            const Blob* out_blob, const Blob* out_diff_blob,
+                            const Blob* square_x_sum_blob, Blob* in_diff_blob) {
     int32_t c = out_blob->shape().At(axis);
     int32_t n = out_blob->shape().elem_cnt() / c;
     int32_t d = out_blob->shape().Count(axis + 1);
     L2NormalizeBackward<<<std::min(n, kCudaMaxBlocksNum), kCudaThreadsNumPerBlock, 0,
                           ctx->cuda_stream()>>>(
-        n, c, d, static_cast<T>(conf.epsilon()), out_blob->dptr<T>(), out_diff_blob->dptr<T>(),
+        n, c, d, static_cast<T>(epsilon), out_blob->dptr<T>(), out_diff_blob->dptr<T>(),
         square_x_sum_blob->dptr<T>(), in_diff_blob->mut_dptr<T>());
   }
 };
 
-#define INSTANTIATE_L2_NORMALIZE_KERNEL_UTIL(type_cpp, type_proto) \
+#define INSTANTIATE_L2_NORMALIZE_KERNEL_UTIL_GPU(type_cpp, type_proto) \
   template struct L2NormalizeKernelUtil<DeviceType::kGPU, type_cpp>;
-OF_PP_FOR_EACH_TUPLE(INSTANTIATE_L2_NORMALIZE_KERNEL_UTIL, FLOATING_DATA_TYPE_SEQ)
+OF_PP_FOR_EACH_TUPLE(INSTANTIATE_L2_NORMALIZE_KERNEL_UTIL_GPU, ARITHMETIC_DATA_TYPE_SEQ)
+#undef INSTANTIATE_L2_NORMALIZE_KERNEL_UTIL_GPU
 
 }  // namespace oneflow

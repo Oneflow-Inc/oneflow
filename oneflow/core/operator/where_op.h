@@ -1,15 +1,15 @@
-#ifndef ONEFLOW_CORE_OPERATOR_RSQRT_H_
-#define ONEFLOW_CORE_OPERATOR_RSQRT_H_
+#ifndef ONEFLOW_CORE_OPERATOR_WHERE_OP_H_
+#define ONEFLOW_CORE_OPERATOR_WHERE_OP_H_
 
 #include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
 
-class RsqrtOp final : public Operator {
+class WhereOp final : public Operator {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(RsqrtOp);
-  RsqrtOp() = default;
-  ~RsqrtOp() = default;
+  OF_DISALLOW_COPY_AND_MOVE(WhereOp);
+  WhereOp() = default;
+  ~WhereOp() = default;
 
   void InitFromOpConf() override;
   const PbMessage& GetCustomizedConf() const override;
@@ -22,6 +22,7 @@ class RsqrtOp final : public Operator {
       std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override {
     return NaiveInferBatchAxis(BatchAxis4BnInOp);
   }
+
   Maybe<void> GetSbpSignatures(
       const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
       SbpSignatureList* sbp_sig_list) const override;
@@ -29,4 +30,4 @@ class RsqrtOp final : public Operator {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_OPERATOR_RSQRT_H_
+#endif  // ONEFLOW_CORE_OPERATOR_WHERE_OP_H_
