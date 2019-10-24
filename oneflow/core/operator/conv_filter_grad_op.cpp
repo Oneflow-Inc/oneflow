@@ -39,14 +39,14 @@ Maybe<void> ConvFilterGradOp::InferBlobDescs(
   std::vector<int64_t> filter_diff_dim_vec;
   if (conv_conf.data_format() == "channels_first") {
     filter_diff_dim_vec.push_back(dy->shape().At(1));
-    filter_diff_dim_vec.push_back(x->shape().At(1));
+    filter_diff_dim_vec.push_back(x->shape().At(1) / conv_conf.group_num());
     filter_diff_dim_vec.insert(filter_diff_dim_vec.end(), conv_conf.kernel_size().cbegin(),
                                conv_conf.kernel_size().cend());
   } else if (conv_conf.data_format() == "channels_last") {
     filter_diff_dim_vec.push_back(dy->shape().dim_vec().back());
     filter_diff_dim_vec.insert(filter_diff_dim_vec.end(), conv_conf.kernel_size().cbegin(),
                                conv_conf.kernel_size().cend());
-    filter_diff_dim_vec.push_back(x->shape().dim_vec().back());
+    filter_diff_dim_vec.push_back(x->shape().dim_vec().back() / conv_conf.group_num());
   } else {
     UNIMPLEMENTED_THEN_RETURN();
   }

@@ -113,6 +113,7 @@ message Conv1DOpConf {
   optional bool use_bias = 10 [default = true];
   required string weight = 13;
   optional string bias = 14;
+  optional int32 group_num = 15 [default = 1];
 }
 
 message Conv2DOpConf {
@@ -127,6 +128,7 @@ message Conv2DOpConf {
   optional bool use_bias = 10 [default = true];
   required string weight = 13;
   optional string bias = 14;
+  optional int32 group_num = 15 [default = 1];
 }
 
 message Conv3DOpConf {
@@ -141,6 +143,7 @@ message Conv3DOpConf {
   optional bool use_bias = 10 [default = true];
   required string weight = 13;
   optional string bias = 14;
+  optional int32 group_num = 15 [default = 1];
 }
 
 message ConvConf {
@@ -150,6 +153,7 @@ message ConvConf {
   repeated int32 kernel_size = 4;
   repeated int32 strides = 5;
   repeated int32 dilation_rate = 6;
+  optional int32 group_num = 15 [default = 1];
 }
 
 message ConvDataGradOpConf {

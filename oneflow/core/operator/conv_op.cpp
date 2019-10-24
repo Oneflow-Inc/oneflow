@@ -55,11 +55,17 @@ CudnnConvDesc::CudnnConvDesc(const DataType& data_type, const Shape& in_blob_sha
         val_, opkernel_dim, pad_large_side.data(), strides.data(), dilation_rate.data(),
         CUDNN_CROSS_CORRELATION, GetCudnnDataType(data_type)));
   }
+  const int32_t group_num = GetValFromPbMessage<int32_t>(conv_conf, "group_num");
+  CHECK_GT(group_num, 0);
+  if (group_num != 1) { CudaCheck(cudnnSetConvolutionGroupCount(val_, group_num)); }
 }
 #endif  // WITH_CUDA
 
 template<int32_t NDims>
 void ConvOp<NDims>::InitFromOpConf() {
+  if (GetValFromCustomizedConf<int32_t>("group_num") != 1 && !DevIsGpuAndEnableCudnn()) {
+    UNIMPLEMENTED();
+  }
   StrFieldTolower("data_format");
   StrFieldTolower("padding");
 
@@ -141,6 +147,17 @@ Maybe<void> ConvOp<NDims>::InferBlobDescs(
   // weight
   std::vector<int64_t> weight_shape(in_blob_desc->shape().dim_vec());
   weight_shape[0] = filters;
+  int32_t group_num = GetValFromCustomizedConf<int32_t>("group_num");
+  CHECK_GT(group_num, 0);
+  if (data_format == "channels_first") {
+    CHECK_LE(group_num, weight_shape[1]);
+    weight_shape[1] = weight_shape[1] / group_num;
+  } else if (data_format == "channels_last") {
+    CHECK_LE(group_num, weight_shape[-1]);
+    weight_shape[-1] = weight_shape[-1] / group_num;
+  } else {
+    UNIMPLEMENTED();
+  }
   for (size_t i = 0; i < NDims; ++i) {
     weight_shape[dhw_offset + i] = GetPbRfFromCustomizedConf<int32_t>("kernel_size").Get(i);
   }
