@@ -8,7 +8,6 @@
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/core/kernel/kernel.pb.h"
-#include "oneflow/core/kernel/kernel_reg_value.pb.h"
 
 namespace oneflow {
 
@@ -57,8 +56,6 @@ struct KernelRegistrar final {
 };
 
 Kernel* CreateKernel(const KernelConf& kernel_conf);
-
-void ExportProtoFromKernelRegistry(KernelRegValProto*);
 
 }  // namespace kernel_registration
 
