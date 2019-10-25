@@ -1,6 +1,8 @@
 #ifndef ONEFLOW_CORE_COMMON_SYMBOL_H_
 #define ONEFLOW_CORE_COMMON_SYMBOL_H_
 
+#include "oneflow/core/common/hash_eq_trait_ptr.h"
+
 namespace oneflow {
 
 template<typename T>
@@ -25,48 +27,25 @@ class Symbol final {
 };
 
 template<typename T>
-class HashEqTraitPtr final {
- public:
-  HashEqTraitPtr(const HashEqTraitPtr<T>&) = default;
-  HashEqTraitPtr(T* ptr, size_t hash_value) : ptr_(ptr), hash_value_(hash_value) {}
-  ~HashEqTraitPtr() = default;
-
-  T* ptr() const { return ptr_; }
-  size_t hash_value() const { return hash_value_; }
-
-  bool operator==(const HashEqTraitPtr<T>& rhs) const { return *ptr_ == *rhs.ptr_; }
-
- private:
-  T* ptr_;
-  size_t hash_value_;
-};
-
-template<typename T>
 const T* Symbol<T>::FindOrInsertPtr(const T& obj) {
   static std::unordered_set<HashEqTraitPtr<const T>> cached_objs;
+  static std::mutex mutex;
   size_t hash_value = std::hash<T>()(obj);
   {
     HashEqTraitPtr<const T> obj_ptr_wraper(&obj, hash_value);
+    std::unique_lock<std::mutex> lock(mutex);
     auto iter = cached_objs.find(obj_ptr_wraper);
     if (iter != cached_objs.end()) { return iter->ptr(); }
   }
-  static std::mutex mutex;
-  HashEqTraitPtr<const T> new_obj_ptr_wraper(new T(obj), hash_value);
-  std::unique_lock<std::mutex> lock(mutex);
-  auto iter = cached_objs.find(new_obj_ptr_wraper);
-  if (iter == cached_objs.end()) { iter = cached_objs.emplace(new_obj_ptr_wraper).first; }
-  return iter->ptr();
+  {
+    HashEqTraitPtr<const T> new_obj_ptr_wraper(new T(obj), hash_value);
+    std::unique_lock<std::mutex> lock(mutex);
+    auto iter = cached_objs.find(new_obj_ptr_wraper);
+    if (iter == cached_objs.end()) { iter = cached_objs.emplace(new_obj_ptr_wraper).first; }
+    return iter->ptr();
+  }
 }
 
 }  // namespace oneflow
-
-namespace std {
-
-template<typename T>
-struct hash<oneflow::HashEqTraitPtr<T>> final {
-  size_t operator()(const oneflow::HashEqTraitPtr<T>& ptr) const { return ptr.hash_value(); }
-};
-
-}  // namespace std
 
 #endif  // ONEFLOW_CORE_COMMON_SYMBOL_H_
