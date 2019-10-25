@@ -44,6 +44,7 @@ enum DataSourceCase {
   kImageSize = 7;
   kObjectSegmentationMask = 8;
   kImageId = 9;
+  kObjectSegmentationAlignedMask = 10;
 }
 
 message DataFieldProto {

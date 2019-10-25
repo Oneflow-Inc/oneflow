@@ -203,15 +203,16 @@ std::unique_ptr<DataField> MakeDataField(Args&&... args) {
 }  // namespace data
 }  // namespace oneflow
 
-#define DATA_SOURCE_SEQ                                         \
-  OF_PP_MAKE_TUPLE_SEQ(DataSourceCase::kImage)                  \
-  OF_PP_MAKE_TUPLE_SEQ(DataSourceCase::kLabel)                  \
-  OF_PP_MAKE_TUPLE_SEQ(DataSourceCase::kObjectBoundingBox)      \
-  OF_PP_MAKE_TUPLE_SEQ(DataSourceCase::kObjectSegmentation)     \
-  OF_PP_MAKE_TUPLE_SEQ(DataSourceCase::kObjectSegmentationMask) \
-  OF_PP_MAKE_TUPLE_SEQ(DataSourceCase::kObjectLabel)            \
-  OF_PP_MAKE_TUPLE_SEQ(DataSourceCase::kImageScale)             \
-  OF_PP_MAKE_TUPLE_SEQ(DataSourceCase::kImageSize)              \
+#define DATA_SOURCE_SEQ                                               \
+  OF_PP_MAKE_TUPLE_SEQ(DataSourceCase::kImage)                        \
+  OF_PP_MAKE_TUPLE_SEQ(DataSourceCase::kLabel)                        \
+  OF_PP_MAKE_TUPLE_SEQ(DataSourceCase::kObjectBoundingBox)            \
+  OF_PP_MAKE_TUPLE_SEQ(DataSourceCase::kObjectSegmentation)           \
+  OF_PP_MAKE_TUPLE_SEQ(DataSourceCase::kObjectSegmentationMask)       \
+  OF_PP_MAKE_TUPLE_SEQ(DataSourceCase::kObjectSegmentationAlignedMask) \
+  OF_PP_MAKE_TUPLE_SEQ(DataSourceCase::kObjectLabel)                  \
+  OF_PP_MAKE_TUPLE_SEQ(DataSourceCase::kImageScale)                   \
+  OF_PP_MAKE_TUPLE_SEQ(DataSourceCase::kImageSize)                    \
   OF_PP_MAKE_TUPLE_SEQ(DataSourceCase::kImageId)
 
 #define EXTRACT_DATA_TYPE(type, type_val) OF_PP_MAKE_TUPLE_SEQ(type_val)

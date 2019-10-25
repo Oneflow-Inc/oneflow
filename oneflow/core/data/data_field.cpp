@@ -252,6 +252,11 @@ std::unique_ptr<DataField> CreateDataFieldFromProto(const DataFieldProto& proto)
       data_field_ptr.reset(new NdarrayDataField<int8_t>(max_elem_cnt));
       break;
     }
+    case DataSourceCase::kObjectSegmentationAlignedMask: {
+      int64_t max_elem_cnt = Shape(proto.shape()).elem_cnt();
+      data_field_ptr.reset(new TensorArrayDataField<int8_t>(max_elem_cnt));
+      break;
+    }
     default: { UNIMPLEMENTED(); }
   }
   data_field_ptr->SetSource(proto.data_source());
