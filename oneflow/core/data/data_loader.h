@@ -25,8 +25,6 @@ class DataLoader final {
  protected:
   void LoadBatch();
   void Close();
-  bool IsImageAlignNeeded(size_t& alignment);
-  void ImageAlign(BatchDataInstance* batch_data_inst, size_t alignment);
 
  private:
   DataLoadOpConf op_conf_;

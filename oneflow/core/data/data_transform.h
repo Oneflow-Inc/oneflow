@@ -8,11 +8,17 @@ namespace oneflow {
 namespace data {
 
 void DataTransform(DataInstance* data_inst, const DataTransformProto& trans_proto);
+void BatchTransform(std::shared_ptr<std::vector<DataInstance>> batch_data_inst_ptr,
+                    const DataTransformProto& trans_proto);
 
 using TransformCase = DataTransformProto::TransformCase;
 
 template<TransformCase trans>
 void DoDataTransform(DataInstance* data_inst, const DataTransformProto& proto);
+
+template<TransformCase trans>
+void DoBatchTransform(std::shared_ptr<std::vector<DataInstance>> batch_data_inst_ptr,
+                      const DataTransformProto& proto);
 
 template<DataSourceCase dsrc, TransformCase trans>
 struct DataTransformer;
