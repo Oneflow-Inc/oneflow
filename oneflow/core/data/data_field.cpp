@@ -16,7 +16,6 @@ void BuildLodTree(const int64_t level, const int64_t max_level, const int64_t el
       auto* child = node->mutable_children()->Add();
       BuildLodTree(level + 1, max_level, elem_cnt, shape, child, offset);
     }
-    // TreeLoDHelper::UpdateInnerNode(node);
   } else {
     int64_t n = shape.Count(0, max_level);
     int64_t m = shape.Count(max_level + 1);
@@ -38,7 +37,6 @@ void BuildLodTreeFromShape(const int64_t max_level, const int64_t elem_cnt, cons
 
 // TODO: Implementation of BuildLodTreeFromNestedVector is similar to
 // codes in TreeLoDView::Init(), consider make a general indenpendent impl
-
 void BuildLodTreeFromNestedVector(const std::vector<std::vector<size_t>>& lod_nested_vec,
                                   LoDTree* lod_tree) {
   int64_t offset = 0;
@@ -134,10 +132,11 @@ void TensorArrayDataField<T>::InferShape(const ShapeProto& shape_proto, const Pb
   CHECK_EQ(var_axis, 0);
 
   Shape static_shape(shape_proto);
-  *shape = Shape(this->shape());
-  CHECK_GE(static_shape.Count(var_axis + 1), shape->elem_cnt());
-  CHECK_EQ(this->size() % shape->elem_cnt(), 0);
-  int length = this->size() / shape->elem_cnt();
+  std::vector<int64_t> shape_vec = this->shape();
+  int64_t length = this->ArrayLength();
+  shape_vec.insert(shape_vec.begin(), length);
+  *shape = Shape(shape_vec);
+  CHECK_GE(static_shape.Count(var_axis + 1), shape->Count(1));
   CHECK_GE(static_shape.At(var_axis), length);
   lod_tree->set_length(length);
   lod_tree->set_offset(0);

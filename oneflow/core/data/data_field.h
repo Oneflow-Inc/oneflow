@@ -108,8 +108,7 @@ class TensorArrayDataField : public DataField {
  public:
   typedef T data_type;
 
-  TensorArrayDataField(size_t max_size)
-      : data_(new T[max_size]), capacity_(max_size), size_(0) {
+  TensorArrayDataField(size_t max_size) : data_(new T[max_size]), capacity_(max_size), size_(0) {
     std::memset(data_.get(), 0, capacity_ * sizeof(T));
   }
 
@@ -117,13 +116,24 @@ class TensorArrayDataField : public DataField {
     size_ += size;
     CHECK_LT(size_, capacity_);
   }
+  template<typename... I>
+  auto SetShape(I... dims)
+      -> std::enable_if_t<std::conjunction<std::is_convertible<int, I>...>::value> {
+    tensor_shape_ = {dims...};
+  }
+  size_t ArrayLength() const {
+    int64_t tensor_elem_cnt =
+        std::accumulate(tensor_shape_.begin(), tensor_shape_.end(), 1, std::multiplies<int64_t>());
+    CHECK_EQ(size_ % tensor_elem_cnt, 0);
+    return size_ / static_cast<size_t>(tensor_elem_cnt);
+  }
   void InferShape(const ShapeProto& shape_proto, const PbRf<int>& var_axes, Shape* shape,
                   LoDTree* lod_tree) const override;
 
   T* data() { return data_.get(); }
   const T* data() const { return data_.get(); }
-  std::vector<int64_t>& shape() { return shape_; }
-  const std::vector<int64_t>& shape() const { return shape_; }
+  std::vector<int64_t>& shape() { return tensor_shape_; }
+  const std::vector<int64_t>& shape() const { return tensor_shape_; }
   size_t size() const { return size_; }
   size_t capacity() const { return capacity_; }
 
@@ -131,7 +141,7 @@ class TensorArrayDataField : public DataField {
   std::unique_ptr<T[]> data_;
   size_t capacity_;
   size_t size_;
-  std::vector<int64_t> shape_;
+  std::vector<int64_t> tensor_shape_;
 };
 
 template<DataSourceCase dsrc>
