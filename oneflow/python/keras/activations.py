@@ -36,7 +36,7 @@ def gelu(x):
     return remote_blob_util.RemoteBlob(lbi)
 
 @oneflow_export('keras.activations.gelu_v2')
-def gelu_v2(x)
+def gelu_v2(x):
     return 0.5 * (1.0 + flow.tanh((np.sqrt(2 / np.pi) * (x + 0.044715 * x * x * x))))
 
 @oneflow_export('keras.activations.tanh')
