@@ -1,22 +1,28 @@
-#ifndef ONEFLOW_CORE_OPERATOR_DROPOUT_GRAD_OP_H_
-#define ONEFLOW_CORE_OPERATOR_DROPOUT_GRAD_OP_H_
+#ifndef ONEFLOW_CORE_OPERATOR_SIGMOID_CROSS_ENTROPY_LOSS_GRAD_OP_H_
+#define ONEFLOW_CORE_OPERATOR_SIGMOID_CROSS_ENTROPY_LOSS_GRAD_OP_H_
 
 #include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
 
-class DropoutGradOp final : public Operator {
+class SigmoidCrossEntropyLossGradOp final : public Operator {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(DropoutGradOp);
-  DropoutGradOp() = default;
-  ~DropoutGradOp() = default;
+  OF_DISALLOW_COPY_AND_MOVE(SigmoidCrossEntropyLossGradOp);
+  SigmoidCrossEntropyLossGradOp() = default;
+  ~SigmoidCrossEntropyLossGradOp() = default;
 
   void InitFromOpConf() override;
   const PbMessage& GetCustomizedConf() const override;
   Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                              const ParallelContext* parallel_ctx) const override;
 
+ protected:
+  void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                            const ParallelContext* parallel_ctx,
+                            KernelConf* kernel_conf) const override;
+
  private:
+  LossKernelConf* GetMutLossKernelConf(KernelConf*) const;
   Maybe<void> InferBatchAxis(
       std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override {
     return NaiveInferBatchAxis(BatchAxis4BnInOp);
@@ -29,4 +35,4 @@ class DropoutGradOp final : public Operator {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_OPERATOR_DROPOUT_GRAD_OP_H_
+#endif  // ONEFLOW_CORE_OPERATOR_SIGMOID_CROSS_ENTROPY_LOSS_GRAD_OP_H_

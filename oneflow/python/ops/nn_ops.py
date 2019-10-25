@@ -96,12 +96,19 @@ def bias_add(value, bias, data_format=None, name=None):
             raise ValueError(
                 "data_format must be of the form `N...C` or `NC...`"
             )
-    bias_extended_shape = [1] * len(value.shape)
-    bias_extended_shape[bias_add_axis] = value.shape[bias_add_axis]
-    assert bias_extended_shape[bias_add_axis] == bias.shape[0]
-    bias = oneflow.reshape(bias, bias_extended_shape)
 
-    return value + bias
+    op_conf = op_conf_util.OperatorConf()
+    setattr(op_conf, "name", name)
+    setattr(op_conf.bias_add_conf, "a", value.logical_blob_name)
+    setattr(op_conf.bias_add_conf, "b", bias.logical_blob_name)
+    setattr(op_conf.bias_add_conf, "out", "out")
+    setattr(op_conf.bias_add_conf, "axis", bias_add_axis)
+    compile_context.CurJobAddOp(op_conf)
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = "out"
+    return remote_blob_util.RemoteBlob(lbi)
+
 
 
 @oneflow_export("nn.max_pool1d")
@@ -280,6 +287,33 @@ def sparse_softmax_cross_entropy_with_logits(
     lbi.blob_name = "out"
     return remote_blob_util.RemoteBlob(lbi)
 
+@oneflow_export("nn.sigmoid_cross_entropy_with_logits")
+def sigmoid_cross_entropy_with_logits(
+    labels=None, logits=None, name=None
+):
+    assert labels is not None
+    assert logits is not None
+    op_conf = op_conf_util.OperatorConf()
+    setattr(
+        op_conf,
+        "name",
+        name if name is not None else id_util.UniqueStr("SigmoidCrossEntropy_"),
+    )
+    setattr(
+        op_conf.sigmoid_cross_entropy_loss_conf,
+        "prediction",
+        logits.logical_blob_name,
+    )
+    setattr(
+        op_conf.sigmoid_cross_entropy_loss_conf, "label", labels.logical_blob_name
+    )
+    setattr(op_conf.sigmoid_cross_entropy_loss_conf, "loss", "loss")
+    compile_context.CurJobAddOp(op_conf)
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = "loss"
+    return remote_blob_util.RemoteBlob(lbi)
+
 
 def _GetSequence(value, n, name):
     """Formats value from input"""
@@ -303,6 +337,7 @@ def _GetSequence(value, n, name):
 
 @oneflow_export("nn.dropout")
 def dropout(x, noise_shape=None, seed=None, name=None, rate=None):
+    # dropout op
     op_conf = op_conf_util.OperatorConf()
     if name is None:
         op_conf.name = id_util.UniqueStr("Dropout_")
@@ -310,13 +345,27 @@ def dropout(x, noise_shape=None, seed=None, name=None, rate=None):
         op_conf.name = name
     setattr(op_conf.dropout_conf, "in", x.logical_blob_name)
     setattr(op_conf.dropout_conf, "out", "out")
+    # random mask like op
+    mask_op_conf = op_conf_util.OperatorConf()
+    mask_op_conf.name = "RandomMask4" + op_conf.name;
+    setattr(mask_op_conf.random_mask_like_conf, "like", x.logical_blob_name)
+    setattr(mask_op_conf.random_mask_like_conf, "out", "out")
     if noise_shape is not None:
         assert isinstance(noise_shape, (list, tuple))
-        op_conf.dropout_conf.noise_shape.dim.extend(list(noise_shape))
+        mask_op_conf.random_mask_like_conf.noise_shape.dim.extend(list(noise_shape))
     if seed is not None:
-        setattr(op_conf.dropout_conf, "seed", seed)
-    assert rate is not None
-    setattr(op_conf.dropout_conf, "rate", rate)
+        setattr(mask_op_conf.random_mask_like_conf, "seed", seed)
+    assert rate is not None and rate >= 0.0 and rate < 1.0
+    setattr(mask_op_conf.random_mask_like_conf, "rate", rate)
+    compile_context.CurJobAddOp(mask_op_conf)
+    mask_lbi = logical_blob_id_util.LogicalBlobId()
+    mask_lbi.op_name = mask_op_conf.name
+    mask_lbi.blob_name = "out"
+    mask_blob = remote_blob_util.RemoteBlob(mask_lbi)
+
+    setattr(op_conf.dropout_conf, "mask", mask_blob.logical_blob_name)
+    setattr(op_conf.dropout_conf, "scale", 1.0 / (1.0 - rate))
+
     compile_context.CurJobAddOp(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
     lbi.op_name = op_conf.name

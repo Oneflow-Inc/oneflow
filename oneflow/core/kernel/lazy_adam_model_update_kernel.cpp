@@ -1,0 +1,54 @@
+#include "oneflow/core/kernel/lazy_adam_model_update_kernel.h"
+#include "oneflow/core/kernel/normal_model_update_kernel.cuh"
+
+namespace oneflow {
+
+namespace {
+
+const LazyAdamModelUpdateConf& GetLazyAdamModelUpdateConf(const OperatorConf& op_conf) {
+  return op_conf.lazy_adam_model_update_conf().user_conf().lazy_adam_conf();
+}
+
+}  // namespace
+
+template<DeviceType device_type, typename T>
+const PbMessage& LazyAdamMdUpdateKernel<device_type, T>::GetCustomizedOpConf() const {
+  return this->op_conf().lazy_adam_model_update_conf();
+}
+
+template<DeviceType device_type, typename T>
+void LazyAdamMdUpdateKernel<device_type, T>::UpdateModel(
+    DeviceCtx* ctx, const T* batch_instance_num_ptr, T l1, T l2, const int64_t* train_step,
+    const float* learning_rate, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  Blob* model_blob = BnInOp2Blob("model");
+  Blob* m_blob = BnInOp2Blob("m");
+  Blob* v_blob = BnInOp2Blob("v");
+  Blob* beta1_t_blob = BnInOp2Blob("beta1_t");
+  Blob* beta2_t_blob = BnInOp2Blob("beta2_t");
+  const auto& lazy_adam_conf = GetLazyAdamModelUpdateConf(this->op_conf());
+  KernelUtil<device_type, T>::Div(ctx, model_blob->shape().elem_cnt(),
+                                  BnInOp2Blob("model_diff")->mut_dptr<T>(), batch_instance_num_ptr);
+  LazyAdamMdUpdateKernelUtil<device_type, T>::UpdateModel(
+      ctx, model_blob->shape().elem_cnt(), learning_rate, l1, l2,
+      static_cast<T>(lazy_adam_conf.beta1()), static_cast<T>(lazy_adam_conf.beta2()),
+      static_cast<T>(lazy_adam_conf.epsilon()), train_step, beta1_t_blob->mut_dptr<T>(),
+      beta2_t_blob->mut_dptr<T>(), BnInOp2Blob("model_diff")->mut_dptr<T>(),
+      model_blob->mut_dptr<T>(), m_blob->mut_dptr<T>(), v_blob->mut_dptr<T>());
+}
+
+template<typename T>
+class LazyAdamMdUpdateKernelUtil<DeviceType::kCPU, T> final {
+ public:
+  static void UpdateModel(DeviceCtx* ctx, int64_t n, const float* learning_rate, T l1, T l2,
+                          T beta1, T beta2, T epsilon, const int64_t* train_step, T* beta1_t,
+                          T* beta2_t, T* model_diff, T* model, T* m, T* v) {
+    UNIMPLEMENTED();
+  }
+};
+
+DEFINE_MDUPDT_KERNEL_CREATOR(LazyAdam);
+
+ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kLazyAdamModelUpdateConf, LazyAdamMdUpdateKernel,
+                           FLOATING_DATA_TYPE_SEQ);
+
+}  // namespace oneflow

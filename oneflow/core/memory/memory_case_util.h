@@ -2,6 +2,7 @@
 #define ONEFLOW_CORE_MEMORY_MEMORY_CASE_UTIL_H_
 
 #include "oneflow/core/memory/memory_case.pb.h"
+#include "oneflow/core/common/util.h"
 
 namespace oneflow {
 
@@ -24,6 +25,10 @@ inline bool operator==(const MemoryCase& lhs, const MemoryCase& rhs) {
 
 struct MemoryCaseUtil {
   static bool GetCommonMemoryCase(const MemoryCase& a, const MemoryCase& b, MemoryCase* common);
+
+  static MemoryCase GetHostPinnedMemoryCaseForRegstSeparatedHeader(const MemoryCase& mem_case);
+
+  static int64_t GenMemZoneUniqueId(int64_t machine_id, const MemoryCase& mem_case);
 };
 
 }  // namespace oneflow

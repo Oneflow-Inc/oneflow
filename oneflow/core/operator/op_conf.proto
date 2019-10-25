@@ -234,7 +234,6 @@ message MaxPooling3DOpConf {
   repeated int32 strides = 6;
 }
 
-
 message PoolingConf {
   required int32 num_spatial_dims = 1;
   // "avg" or "max"
@@ -380,6 +379,15 @@ message SigmoidCrossEntropyLossOpConf {
   optional string weight = 8;
 }
 
+message SigmoidCrossEntropyLossGradOpConf {
+  required string prediction = 1;
+  required string label = 2;
+  required string loss_diff = 3;
+  required string prediction_diff = 4;
+  optional float weight_scalar = 5 [default = 1.0];
+  optional ScalarReductionType reduction = 6 [default = kSumOverN];
+}
+
 message IdentityLossOpConf {
   required string prediction = 1;
   required string loss = 2;
@@ -465,6 +473,12 @@ message AdamModelUpdateConf {
   optional float beta2 = 2 [default = 0.999];
   optional float epsilon = 3 [default = 1e-8];
   optional bool do_bias_correction = 4 [default = false];
+}
+
+message LazyAdamModelUpdateConf {
+  optional float beta1 = 1 [default = 0.9];
+  optional float beta2 = 2 [default = 0.999];
+  optional float epsilon = 3 [default = 1e-8];
 }
 
 message ExponentialDecayConf {
@@ -559,6 +573,7 @@ message NormalModelUpdateOpUserConf {
     RMSPropModelUpdateConf rmsprop_conf = 1002;
     LARSModelUpdateConf lars_conf = 1003;
     AdamModelUpdateConf adam_conf = 1004;
+    LazyAdamModelUpdateConf lazy_adam_conf = 1005;
   }
 }
 
@@ -620,6 +635,21 @@ message LARSModelUpdateOpConf {
 }
 
 message AdamModelUpdateOpConf {
+  required NormalModelUpdateOpUserConf user_conf = 1;
+  required string m = 2;
+  required string v = 3;
+  optional string beta1_t = 4;
+  optional string beta2_t = 5;
+  required string model_diff = 6;
+  required string total_instance_num_diff = 7;
+  required string model = 8;
+  required string train_step = 9;
+  required string learning_rate = 10;
+  required float l1 = 11;
+  required float l2 = 12;
+}
+
+message LazyAdamModelUpdateOpConf {
   required NormalModelUpdateOpUserConf user_conf = 1;
   required string m = 2;
   required string v = 3;
@@ -925,20 +955,26 @@ message NormalizationGradOpConf {
   required float epsilon = 10;
 }
 
-message DropoutOpConf {
-  required string in = 1;
+message RandomMaskLikeOpConf {
+  required string like = 1;
   required string out = 2;
   required double rate = 3;
   optional ShapeProto noise_shape = 4;
   optional int64 seed = 5;
-  optional string random_mask = 6 [default = "random_mask"];
+}
+
+message DropoutOpConf {
+  required string mask = 1;
+  required string in = 2;
+  required string out = 3;
+  required float scale = 4;
 }
 
 message DropoutGradOpConf {
-  required string random_mask = 1;
+  required string mask = 1;
   required string dy = 2;
   required string dx = 3;
-  required double rate = 4;
+  required float scale = 4;
 }
 
 message TransposeOpConf {
@@ -962,6 +998,23 @@ message NcclReduceScatterOpConf {
 }
 
 message NcclAllGatherOpConf {
+}
+
+message NcclTupleBroadcastOpConf {
+  optional string tick = 1;
+  repeated string in = 2;
+  repeated string out = 3;
+  repeated int64 root = 4;
+  repeated DataType data_type = 5;
+  repeated ShapeProto shape = 6;
+  optional int64 nccl_order_hint = 7 [default = 0];
+}
+
+message NcclTupleReduceOpConf {
+  repeated string in = 1;
+  repeated string out = 2;
+  repeated int64 root = 3;
+  optional int64 nccl_order_hint = 4 [default = 0];
 }
 
 message ReduceSplitOpConf {
@@ -1434,6 +1487,18 @@ message LearningRateScheduleOpConf {
   optional WarmupConf warmup_conf = 5;
 }
 
+message NcclBoxingReduceScatterOpConf {
+  required LogicalBlobId lbi = 1;
+}
+
+message NcclBoxingAllGatherOpConf {
+  required LogicalBlobId lbi = 1;
+}
+
+message NcclBoxingAllReduceOpConf {
+  required LogicalBlobId lbi = 1;
+}
+
 message OperatorConf {
   required string name = 1;
   optional bool trainable = 3 [default = true];
@@ -1486,8 +1551,14 @@ message OperatorConf {
     AccTickOpConf acc_tick_conf = 144;
     SwitchOutputOpConf switch_output_conf = 145;
     ReturnOpConf return_conf = 146;
-    PartialTickOpConf partial_tick_conf = 147;
-    ForeignWatchOpConf foreign_watch_conf = 148;
+    NcclTupleBroadcastOpConf nccl_tuple_broadcast_conf = 147;
+    NcclTupleReduceOpConf nccl_tuple_reduce_conf = 148;
+    PartialTickOpConf partial_tick_conf = 149;
+    LazyAdamModelUpdateOpConf lazy_adam_model_update_conf = 150;
+    ForeignWatchOpConf foreign_watch_conf = 151;
+    NcclBoxingReduceScatterOpConf nccl_boxing_reduce_scatter_conf = 152;
+    NcclBoxingAllGatherOpConf nccl_boxing_all_gather_conf = 153;
+    NcclBoxingAllReduceOpConf nccl_boxing_all_reduce_conf = 154;
 
     // domain op
     TupleIdentityOpConf tuple_identity_conf = 200;
@@ -1502,6 +1573,7 @@ message OperatorConf {
     MaxPooling2DOpConf max_pooling_2d_conf = 211;
     AveragePooling3DOpConf average_pooling_3d_conf = 212;
     MaxPooling3DOpConf max_pooling_3d_conf = 213;
+    RandomMaskLikeOpConf random_mask_like_conf = 214;
     LocalResponseNormalizationOpConf local_response_normalization_conf = 216;
     NormalizationOpConf normalization_conf = 217;
     DropoutOpConf dropout_conf = 218;
@@ -1572,8 +1644,9 @@ message OperatorConf {
     PReluDataGradOpConf prelu_data_grad_conf = 299;
     PReluAlphaGradOpConf prelu_alpha_grad_conf = 300;
     ModelLoadOpConf model_load_conf = 301;
-    GatherMs0OpConf gather_ms0_conf = 302;
-    GatherMs0GradOpConf gather_ms0_grad_conf = 303;
+    SigmoidCrossEntropyLossGradOpConf sigmoid_cross_entropy_loss_grad_conf = 304; 
+    GatherMs0OpConf gather_ms0_conf = 305;
+    GatherMs0GradOpConf gather_ms0_grad_conf = 306;
 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;

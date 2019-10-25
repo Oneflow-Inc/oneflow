@@ -42,6 +42,8 @@ class ParallelDesc final {
   bool operator==(const ParallelDesc& rhs) const { return Equals(rhs); }
   bool operator!=(const ParallelDesc& rhs) const { return !(*this == rhs); }
   bool Equals(const ParallelDesc* rhs) const { return Equals(*rhs); }
+  int64_t MachineIdForParallelId(int64_t parallel_id) const;
+  int64_t DeviceIdForParallelId(int64_t parallel_id) const;
 
  private:
   void ClearUp();
@@ -53,6 +55,8 @@ class ParallelDesc final {
   HashMap<int64_t, std::vector<int64_t>> machine_id2sorted_dev_phy_ids_;
   int64_t parallel_num_;
   int64_t device_num_of_each_machine_;
+  HashMap<int64_t, int64_t> parallel_id2machine_id_;
+  HashMap<int64_t, int64_t> parallel_id2device_id_;
 };
 
 inline bool operator==(const ParallelConf& lhs, const ParallelConf& rhs) {
@@ -76,12 +80,15 @@ namespace std {
 template<>
 struct hash<oneflow::ParallelDesc> {
   size_t operator()(const oneflow::ParallelDesc& pr) const {
-    std::string str;
+    size_t ret = 0;
+    int i = 0;
+    int shift_roundtrip = (sizeof(size_t) / 2);
     for (int machine_id : pr.sorted_machine_ids()) {
-      str += "::" + std::to_string(machine_id) + ":";
-      for (int dev_id : pr.sorted_dev_phy_ids(machine_id)) { str += std::to_string(dev_id) + ","; }
+      int shift = i++ % shift_roundtrip;
+      ret ^= machine_id << shift_roundtrip << shift;
+      ret ^= pr.sorted_dev_phy_ids(machine_id).size() << shift;
     }
-    return hash<std::string>()(str);
+    return hash<size_t>()(ret);
   }
 };
 
