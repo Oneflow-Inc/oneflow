@@ -41,7 +41,7 @@ class Blob final {
     return DenseShapeView(header_ptr_->Field(FieldKey::kDenseShape));
   }
   const Symbol<Shape>& shape_sym() const;
-  const Shape& shape() const { return *shape_sym(); }
+  const Shape& shape() const;
   DenseShapeMutView dense_shape_mut_view();
   LengthLoDView length_lod_view() const {
     return LengthLoDView(header_ptr_->Field(FieldKey::kLoD), blob_desc_->num_of_lod_levels());

@@ -45,6 +45,11 @@ const Symbol<Shape>& Blob::shape_sym() const {
   return *dynamic_shape_;
 }
 
+const Shape& Blob::shape() const {
+  if (blob_desc().is_dynamic() == false) { return static_shape(); }
+  return *shape_sym();
+}
+
 DenseShapeMutView Blob::dense_shape_mut_view() {
   {
     std::unique_lock<std::mutex> lock(*dynamic_shape_mutex_);
