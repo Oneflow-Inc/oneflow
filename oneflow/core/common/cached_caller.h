@@ -26,22 +26,20 @@ class CachedCaller final {
     size_t hash_value = std::hash<Arg>()(arg);
     {
       HashEqTraitPtr<const Arg> ptr_wraper(&arg, hash_value);
-      std::unique_lock<std::mutex> lock(mutex_);
+      std::lock_guard<std::mutex> lock(mutex_);
       auto iter = cache_.find(ptr_wraper);
       if (iter != cache_.end()) { return iter->second; }
     }
     {
       HashEqTraitPtr<const Arg> ptr_wraper(new Arg(arg), hash_value);
-      std::unique_lock<std::mutex> lock(mutex_);
-      auto iter = cache_.find(ptr_wraper);
-      if (iter == cache_.end()) { iter = cache_.emplace(ptr_wraper, f_(arg)).first; }
-      return iter->second;
+      std::lock_guard<std::mutex> lock(mutex_);
+      return cache_.emplace(ptr_wraper, f_(arg)).first->second;
     }
   }
 
  private:
   void Clear() {
-    std::unique_lock<std::mutex> lock(mutex_);
+    std::lock_guard<std::mutex> lock(mutex_);
     for (const auto& pair : cache_) { delete pair.first.ptr(); }
     cache_.clear();
   }

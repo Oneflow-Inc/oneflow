@@ -33,16 +33,14 @@ const T* Symbol<T>::FindOrInsertPtr(const T& obj) {
   size_t hash_value = std::hash<T>()(obj);
   {
     HashEqTraitPtr<const T> obj_ptr_wraper(&obj, hash_value);
-    std::unique_lock<std::mutex> lock(mutex);
+    std::lock_guard<std::mutex> lock(mutex);
     auto iter = cached_objs.find(obj_ptr_wraper);
     if (iter != cached_objs.end()) { return iter->ptr(); }
   }
   {
     HashEqTraitPtr<const T> new_obj_ptr_wraper(new T(obj), hash_value);
-    std::unique_lock<std::mutex> lock(mutex);
-    auto iter = cached_objs.find(new_obj_ptr_wraper);
-    if (iter == cached_objs.end()) { iter = cached_objs.emplace(new_obj_ptr_wraper).first; }
-    return iter->ptr();
+    std::lock_guard<std::mutex> lock(mutex);
+    return cached_objs.emplace(new_obj_ptr_wraper).first->ptr();
   }
 }
 
