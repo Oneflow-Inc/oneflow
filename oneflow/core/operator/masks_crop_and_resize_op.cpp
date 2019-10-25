@@ -52,7 +52,7 @@ class MasksCropAndResizeOp final : public Operator {
   Maybe<void> GetSbpSignatures(SbpSignatureList* sbp_sig_list) const override {
     SbpSignatureBuilder()
         .Split("masks", 0)
-        .Split("boxes", 0)
+        .Split("rois", 0)
         .Split("out", 0)
         .Build(sbp_sig_list->mutable_sbp_signature()->Add());
     return Maybe<void>::Ok();
