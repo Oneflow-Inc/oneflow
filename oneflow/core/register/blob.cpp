@@ -39,9 +39,10 @@ void Blob::Init(const MemoryCase& mem_case, const RtBlobDesc* blob_desc, char* h
 const Symbol<Shape>& Blob::shape_sym() const {
   // this line of code is not a typo
   if (*dynamic_shape_) { return *dynamic_shape_; }
-  std::unique_lock<std::mutex> lock(*dynamic_shape_mutex_);
+  Shape shape(dense_shape_view());
+  std::lock_guard<std::mutex> lock(*dynamic_shape_mutex_);
   if (*dynamic_shape_) { return *dynamic_shape_; }
-  dynamic_shape_->reset(dense_shape_view());
+  dynamic_shape_->reset(shape);
   return *dynamic_shape_;
 }
 
@@ -52,7 +53,7 @@ const Shape& Blob::shape() const {
 
 DenseShapeMutView Blob::dense_shape_mut_view() {
   {
-    std::unique_lock<std::mutex> lock(*dynamic_shape_mutex_);
+    std::lock_guard<std::mutex> lock(*dynamic_shape_mutex_);
     dynamic_shape_->reset();
   }
   return DenseShapeMutView(header_ptr_->MutField(FieldKey::kDenseShape));
