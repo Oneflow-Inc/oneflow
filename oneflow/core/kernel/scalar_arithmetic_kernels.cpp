@@ -86,5 +86,6 @@ REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kScalarAddConf, DeviceType::
                                       ScalarAddKernel<DeviceType::kGPU, float16>);
 
 #undef REGISTER_WITH_NAME_AND_DTYPE
+#undef REGISTER_SCALAR_ARITHMETIC_KERNEL
 
 }  // namespace oneflow
