@@ -121,17 +121,18 @@ def coco_data_load_job():
     )
     data_loader.add_blob(
         "gt_segm_mask",
-        data_util.DataSourceCase.kObjectSegmentationMask,
+        data_util.DataSourceCase.kObjectSegmentationAlignedMask,
         shape=(64, 1344, 800),
         dtype=flow.int8,
-        variable_length_axes=(0, 1, 2),
+        variable_length_axes=(0,),
         is_dynamic=True,
     )
-    data_loader.add_transform(flow.data.TargetResizeTransform(800, 1333, 32))
-    data_loader.add_transform(flow.data.SegmentationPolygonListToMask())
+    data_loader.add_transform(flow.data.TargetResizeTransform(800, 1333))
     data_loader.add_transform(
         flow.data.ImageNormalizeByChannel((102.9801, 115.9465, 122.7717))
     )
+    data_loader.add_transform(flow.data.ImageAlign(32))
+    data_loader.add_transform(flow.data.SegmentationPolygonListToAlignedMask())
     data_loader.init()
     return (
         data_loader("image"),
