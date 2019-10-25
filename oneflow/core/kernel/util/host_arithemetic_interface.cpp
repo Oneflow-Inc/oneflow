@@ -106,6 +106,7 @@ void ArithemeticIf<DeviceType::kCPU>::InitializeWithConstConf(
 MUL_BY_SCALAR(float);
 MUL_BY_SCALAR(double);
 MUL_BY_SCALAR(int32_t);
+MUL_BY_SCALAR(int64_t);
 
 #undef MUL_BY_SCALAR
 
@@ -118,6 +119,7 @@ MUL_BY_SCALAR(int32_t);
 ADD_BY_SCALAR(float);
 ADD_BY_SCALAR(double);
 ADD_BY_SCALAR(int32_t);
+ADD_BY_SCALAR(int64_t);
 
 #undef ADD_BY_SCALAR
 

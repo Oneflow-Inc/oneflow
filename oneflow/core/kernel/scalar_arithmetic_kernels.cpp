@@ -44,6 +44,7 @@ class ScalarMulKernel final : public KernelIf<device_type> {
 REGISTER_WITH_NAME_AND_DTYPE(Mul, float);
 REGISTER_WITH_NAME_AND_DTYPE(Mul, double);
 REGISTER_WITH_NAME_AND_DTYPE(Mul, int32_t);
+REGISTER_WITH_NAME_AND_DTYPE(Mul, int64_t);
 
 REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kScalarMulConf, DeviceType::kGPU, float16,
                                       ScalarMulKernel<DeviceType::kGPU, float16>);
@@ -81,6 +82,7 @@ class ScalarAddKernel final : public KernelIf<device_type> {
 REGISTER_WITH_NAME_AND_DTYPE(Add, float);
 REGISTER_WITH_NAME_AND_DTYPE(Add, double);
 REGISTER_WITH_NAME_AND_DTYPE(Add, int32_t);
+REGISTER_WITH_NAME_AND_DTYPE(Add, int64_t);
 
 REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kScalarAddConf, DeviceType::kGPU, float16,
                                       ScalarAddKernel<DeviceType::kGPU, float16>);

@@ -164,6 +164,7 @@ __global__ void MulByScalarGpu<half>(const int64_t n, const half* x, const half 
 MUL_BY_SCALAR(float)
 MUL_BY_SCALAR(double)
 MUL_BY_SCALAR(int32_t)
+MUL_BY_SCALAR(int64_t)
 
 #undef MUL_BY_SCALAR
 
@@ -201,6 +202,7 @@ __global__ void AddByScalarGpu<half>(const int64_t n, const half* x, const half 
 ADD_BY_SCALAR(float)
 ADD_BY_SCALAR(double)
 ADD_BY_SCALAR(int32_t)
+ADD_BY_SCALAR(int64_t)
 
 #undef ADD_BY_SCALAR
 
