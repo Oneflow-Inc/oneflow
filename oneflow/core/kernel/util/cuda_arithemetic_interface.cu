@@ -173,4 +173,41 @@ void ArithemeticIf<DeviceType::kGPU>::MulByScalar(DeviceCtx* ctx, const int64_t 
       n, reinterpret_cast<const half*>(x), float16_2half(y), reinterpret_cast<half*>(z));
 }
 
+namespace {
+
+template<typename T>
+__global__ void AddByScalarGpu(const int64_t n, const T* x, const T y, T* z) {
+  CUDA_1D_KERNEL_LOOP(i, n) { z[i] = x[i] + y; }
+}
+
+template<>
+__global__ void AddByScalarGpu<half>(const int64_t n, const half* x, const half y, half* z) {
+#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
+  CUDA_1D_KERNEL_LOOP(i, n) { z[i] = __hadd(x[i], y); }
+#else
+  HALF_CHECK_FAILED;
+#endif  // __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
+}
+
+}  // namespace
+
+#define ADD_BY_SCALAR(T)                                                                           \
+  void ArithemeticIf<DeviceType::kGPU>::AddByScalar(DeviceCtx* ctx, const int64_t n, const T* x,   \
+                                                    const T y, T* z) {                             \
+    AddByScalarGpu<T>                                                                              \
+        <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y, z); \
+  }
+
+ADD_BY_SCALAR(float)
+ADD_BY_SCALAR(double)
+ADD_BY_SCALAR(int32_t)
+
+#undef ADD_BY_SCALAR
+
+void ArithemeticIf<DeviceType::kGPU>::AddByScalar(DeviceCtx* ctx, const int64_t n, const float16* x,
+                                                  const float16 y, float16* z) {
+  AddByScalarGpu<half><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+      n, reinterpret_cast<const half*>(x), float16_2half(y), reinterpret_cast<half*>(z));
+}
+
 }  // namespace oneflow

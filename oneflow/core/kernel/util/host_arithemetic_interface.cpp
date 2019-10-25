@@ -109,4 +109,16 @@ MUL_BY_SCALAR(int32_t);
 
 #undef MUL_BY_SCALAR
 
+#define ADD_BY_SCALAR(T)                                                                         \
+  void ArithemeticIf<DeviceType::kCPU>::AddByScalar(DeviceCtx* ctx, const int64_t n, const T* x, \
+                                                    const T y, T* z) {                           \
+    for (int64_t i = 0; i < n; ++i) { z[i] = x[i] + y; }                                         \
+  }
+
+ADD_BY_SCALAR(float);
+ADD_BY_SCALAR(double);
+ADD_BY_SCALAR(int32_t);
+
+#undef ADD_BY_SCALAR
+
 }  // namespace oneflow
