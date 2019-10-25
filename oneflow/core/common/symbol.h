@@ -23,7 +23,7 @@ class Symbol final {
  private:
   static const T* FindOrInsertPtr(const T& obj);
 
-  const T* ptr_;
+  std::atomic<const T*> ptr_;
 };
 
 template<typename T>
