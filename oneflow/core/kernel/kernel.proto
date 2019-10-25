@@ -124,10 +124,6 @@ message HingeLossKernelConf {
   required LossKernelConf loss_conf = 1;
 }
 
-message SliceKernelConf {
-  required ShapeProto in_shape = 1;
-}
-
 message ConstantKernelConf {
   required InitializerConf initializer = 1;
   required uint32 random_seed = 2;
@@ -245,29 +241,28 @@ message KernelConf {
     ReduceConcatKernelConf reduce_concat_conf = 351;
     ReduceSplitKernelConf reduce_split_conf = 352;
     AccuracyKernelConf accuracy_conf = 401;
-    SliceKernelConf slice_conf = 402;
-    ConstantKernelConf constant_conf = 403;
-    SigmoidCrossEntropyLossKernelConf sigmoid_cross_entropy_loss_conf = 404;
-    IdentityLossKernelConf identity_loss_conf = 405;
-    GatherKernelConf gather_conf = 406;
-    VariableKernelConf variable_conf = 407;
-    RecordLoadKernelConf record_load_conf = 408;
-    PReluAlphaGradKernelConf prelu_alpha_grad_conf = 409;
-    ConvFilterGradKernelConf conv_filter_grad_conf = 410;
-    ConvDataGradKernelConf conv_data_grad_conf = 411;
-    ShapeElemCntKernelConf shape_elem_cnt_conf = 412;
-    GatherMs0KernelConf gather_ms0_conf = 413;
-    GatherMs0GradKernelConf gather_ms0_grad_conf = 414;
-    DeconvKernelConf deconv_conf = 415;
-    TopKConf top_k_conf = 416;
-    SortConf sort_conf = 417;
-    ArgSortConf arg_sort_conf = 418;
-    SigmoidCrossEntropyLossGradKernelConf sigmoid_cross_entropy_loss_grad_conf = 419;
-    NcclTupleReduceConf nccl_tuple_reduce_conf = 420;
-    NcclTupleBroadcastConf nccl_tuple_broadcast_conf = 421;
-    WhereKernelConf where_conf = 422;
-    ScatterNdUpdateKernelConf scatter_nd_update_conf = 423;
-    GatherNdUpdateKernelConf gather_nd_update_conf = 424;
-    NonzeroGpuKernelConf nonzero_gpu_kernel_conf = 425;
+    ConstantKernelConf constant_conf = 402;
+    SigmoidCrossEntropyLossKernelConf sigmoid_cross_entropy_loss_conf = 403;
+    IdentityLossKernelConf identity_loss_conf = 404;
+    GatherKernelConf gather_conf = 405;
+    VariableKernelConf variable_conf = 406;
+    RecordLoadKernelConf record_load_conf = 407;
+    PReluAlphaGradKernelConf prelu_alpha_grad_conf = 408;
+    ConvFilterGradKernelConf conv_filter_grad_conf = 409;
+    ConvDataGradKernelConf conv_data_grad_conf = 410;
+    ShapeElemCntKernelConf shape_elem_cnt_conf = 411;
+    GatherMs0KernelConf gather_ms0_conf = 412;
+    GatherMs0GradKernelConf gather_ms0_grad_conf = 413;
+    DeconvKernelConf deconv_conf = 414;
+    TopKConf top_k_conf = 415;
+    SortConf sort_conf = 416;
+    ArgSortConf arg_sort_conf = 417;
+    SigmoidCrossEntropyLossGradKernelConf sigmoid_cross_entropy_loss_grad_conf = 418;
+    NcclTupleReduceConf nccl_tuple_reduce_conf = 419;
+    NcclTupleBroadcastConf nccl_tuple_broadcast_conf = 420;
+    WhereKernelConf where_conf = 421;
+    ScatterNdUpdateKernelConf scatter_nd_update_conf = 422;
+    GatherNdUpdateKernelConf gather_nd_update_conf = 423;
+    NonzeroGpuKernelConf nonzero_gpu_kernel_conf = 424;
   }
 }

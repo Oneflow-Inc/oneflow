@@ -36,7 +36,9 @@ def gather(
             raise NotImplementedError
         else:
             raise AttributeError
-    elif params.has_batch_axis() == False and params.distribute is distribute_util.split(0):
+    elif params.has_batch_axis() == False and params.distribute is distribute_util.split(
+        0
+    ):
         assert axis == 0
         assert batch_dims == 0
         setattr(op_conf.gather_ms0_conf, "in", params.logical_blob_name)
@@ -74,11 +76,13 @@ def local_gather(params, indices, axis=0, name=None):
     setattr(out_lbi, "op_name", op_conf.name)
     setattr(out_lbi, "blob_name", "out")
     return remote_blob_util.RemoteBlob(out_lbi)
+
     def gather_lambda(params, indices):
         return gather(params, indices, axis=axis, name=name)
+
     return flow.advanced.distribute_map((params, indices), gather_lambda)
 
-    
+
 @oneflow_export("reshape")
 def reshape(x, shape, name=None):
     assert isinstance(shape, tuple) or isinstance(shape, list)
@@ -227,6 +231,35 @@ def slice(input_, begin, size, name=None):
     return remote_blob_util.RemoteBlob(lbi)
 
 
+@oneflow_export("slice_v2")
+# slice_confs: list of tuple/list (begin, end, stride)
+def slice(input, slice_confs, name=None):
+    op_conf = op_conf_util.OperatorConf()
+    setattr(
+        op_conf,
+        "name",
+        name if name is not None else id_util.UniqueStr("SliceV2_"),
+    )
+    setattr(op_conf.slice_conf, "in", input.logical_blob_name)
+    setattr(op_conf.slice_conf, "out", "out")
+    slice_conf_list = []
+    for dim_slice_conf in slice_confs:
+        assert isinstance(dim_slice_conf, tuple) or isinstance(dim_slice_conf, list)
+        # TODO: For now we force user to config all args (begin, end, stride)
+        assert len(dim_slice_conf) == 3
+        slice_conf = op_conf_util.DimSliceConf()
+        slice_conf.start = dim_slice_conf[0]
+        slice_conf.end = dim_slice_conf[1]
+        slice_conf.stride = dim_slice_conf[2]
+        slice_conf_list.append(slice_conf)
+    op_conf.slice_conf.dim_slice_conf.extend(slice_conf_list)
+    compile_context.CurJobAddOp(op_conf)
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = "out"
+    return remote_blob_util.RemoteBlob(lbi)
+
+
 @oneflow_export("concat")
 def concat(values, axis, name=None):
     op_conf = op_conf_util.OperatorConf()
@@ -343,10 +376,10 @@ def squeeze(inputs, axis, name=None):
 
 @oneflow_export("expand_dims")
 def expand_dims(inputs, axis, name=None):
-    assert(isinstance(axis, int))
+    assert isinstance(axis, int)
     if axis < 0:
         axis = len(inputs.shape) + axis
-    assert(axis <= len(inputs.shape))
+    assert axis <= len(inputs.shape)
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf,
@@ -365,8 +398,8 @@ def expand_dims(inputs, axis, name=None):
 
 @oneflow_export("piece_slice")
 def piece_slice(inputs, output_size, name=None):
-    assert(inputs.shape[0] == output_size)
-    assert(inputs.num_of_lod_levels == 2)
+    assert inputs.shape[0] == output_size
+    assert inputs.num_of_lod_levels == 2
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf,
