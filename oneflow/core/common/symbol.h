@@ -44,6 +44,11 @@ const T* Symbol<T>::FindOrInsertPtr(const T& obj) {
   }
 }
 
+template<typename T>
+Symbol<T> SymbolOf(const T& obj) {
+  return Symbol<T>(obj);
+}
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_COMMON_SYMBOL_H_
