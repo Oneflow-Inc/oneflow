@@ -241,6 +241,69 @@ struct DataTransformer<DataSourceCase::kObjectSegmentation,
   }
 };
 
+// to simplify the implementation of model, pad mask the same way with image
+template<>
+struct DataTransformer<DataSourceCase::kObjectSegmentation,
+                       TransformCase::kSegmentationPolyToAlignedMask> {
+  using ImageFieldT = typename DataFieldTrait<DataSourceCase::kImage>::type;
+  using SegmPolyFieldT = typename DataFieldTrait<DataSourceCase::kObjectSegmentation>::type;
+  using SegmPaddedMaskFieldT =
+      typename DataFieldTrait<DataSourceCase::kObjectSegmentationAlignedMask>::type;
+  using T = typename SegmPolyFieldT::data_type;
+  using MaskT = typename SegmPaddedMaskFieldT::data_type;
+
+  static void Apply(DataInstance* data_inst, const DataTransformProto& proto) {
+    auto* image = dynamic_cast<ImageFieldT*>(data_inst->GetField<DataSourceCase::kImage>());
+    auto* segm_poly =
+        dynamic_cast<SegmPolyFieldT*>(data_inst->GetField<DataSourceCase::kObjectSegmentation>());
+    auto* segm_mask = dynamic_cast<SegmPaddedMaskFieldT*>(
+        data_inst->GetField<DataSourceCase::kObjectSegmentationAlignedMask>());
+    if (!image || !segm_poly || !segm_mask) { return; }
+    CHECK_EQ(segm_poly->Levels(), 3);
+
+    const auto& polys_vec = segm_poly->GetLod(1);
+    const auto& points_vec = segm_poly->GetLod(2);
+    const int image_height = image->data().rows;
+    const int image_width = image->data().cols;
+
+    T* poly_dptr = segm_poly->data();
+    MaskT* mask_dptr = segm_mask->data();
+    size_t polys_offset = 0;
+    FOR_RANGE(size_t, i, 0, polys_vec.size()) {
+      size_t polys = polys_vec.at(i);
+      std::vector<MaskT> overlap_mask_vec(image_height * image_width, 0);
+      FOR_RANGE(size_t, j, 0, polys) {
+        size_t poly_points = points_vec.at(polys_offset + j);
+        // convert poly points to mask
+        std::vector<uint8_t> mask_vec(overlap_mask_vec.size(), 0);
+        DataTransformer<
+            DataSourceCase::kObjectSegmentation,
+            TransformCase::kSegmentationPolyToMask>::PolygonXy2ColMajorMask(poly_dptr, poly_points,
+                                                                            image_height,
+                                                                            image_width,
+                                                                            mask_vec.data());
+        std::transform(mask_vec.cbegin(), mask_vec.cend(), overlap_mask_vec.begin(),
+                       overlap_mask_vec.begin(), std::bit_or<MaskT>());
+        poly_dptr += poly_points * 2;
+      }
+      // cocoapi output mask is col-major, convert it to row-major
+      KernelCtx ctx;
+      std::vector<int32_t> perm_vec({1, 0});
+      KernelUtil<DeviceType::kCPU, MaskT>::Transpose(
+          ctx.device_ctx, 2,
+          Shape({static_cast<int64_t>(image_width), static_cast<int64_t>(image_height)}),
+          Shape({static_cast<int64_t>(image_height), static_cast<int64_t>(image_width)}),
+          PbRf<int32_t>(perm_vec.begin(), perm_vec.end()), image_height * image_width,
+          overlap_mask_vec.data(), mask_dptr);
+      // iter change
+      polys_offset += polys;
+      mask_dptr += overlap_mask_vec.size();
+      segm_mask->IncreaseSize(overlap_mask_vec.size());
+    }
+    segm_mask->SetShape(image_height, image_width);
+  }
+};
+
 template<>
 struct DataTransformer<DataSourceCase::kImage, TransformCase::kImageNormalizeByChannel> {
   using ImageFieldT = typename DataFieldTrait<DataSourceCase::kImage>::type;
@@ -304,6 +367,14 @@ void DoDataTransform<TransformCase::kSegmentationPolyToMask>(DataInstance* data_
 }
 
 template<>
+void DoDataTransform<TransformCase::kSegmentationPolyToAlignedMask>(
+    DataInstance* data_inst, const DataTransformProto& proto) {
+  CHECK(proto.has_segmentation_poly_to_aligned_mask());
+  DataTransformer<DataSourceCase::kObjectSegmentation,
+                  TransformCase::kSegmentationPolyToAlignedMask>::Apply(data_inst, proto);
+}
+
+template<>
 void DoDataTransform<TransformCase::kImageNormalizeByChannel>(DataInstance* data_inst,
                                                               const DataTransformProto& proto) {
   CHECK(proto.has_image_normalize_by_channel());
@@ -324,6 +395,7 @@ void DoDataTransform<TransformCase::kImageNormalizeByChannel>(DataInstance* data
 DEFINE_MULTI_THREAD_BATCH_TRANSFORM(TransformCase::kResize)
 DEFINE_MULTI_THREAD_BATCH_TRANSFORM(TransformCase::kTargetResize)
 DEFINE_MULTI_THREAD_BATCH_TRANSFORM(TransformCase::kSegmentationPolyToMask)
+DEFINE_MULTI_THREAD_BATCH_TRANSFORM(TransformCase::kSegmentationPolyToAlignedMask)
 DEFINE_MULTI_THREAD_BATCH_TRANSFORM(TransformCase::kImageNormalizeByChannel)
 
 template<>
@@ -401,6 +473,7 @@ void BatchTransform(std::shared_ptr<std::vector<DataInstance>> batch_data_inst_p
     MAKE_CASE(DataTransformProto::kResize)
     MAKE_CASE(DataTransformProto::kTargetResize)
     MAKE_CASE(DataTransformProto::kSegmentationPolyToMask)
+    MAKE_CASE(DataTransformProto::kSegmentationPolyToAlignedMask)
     MAKE_CASE(DataTransformProto::kImageNormalizeByChannel)
     MAKE_CASE(DataTransformProto::kImageAlign)
     default: { UNIMPLEMENTED(); }
