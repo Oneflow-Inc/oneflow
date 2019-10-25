@@ -61,6 +61,13 @@ parser.add_argument(
     required=False,
 )
 parser.add_argument(
+    "-box_head_post_processor",
+    "--box_head_post_processor",
+    default=False,
+    action="store_true",
+    required=False,
+)
+parser.add_argument(
     "-cp", "--ctrl_port", type=int, default=19765, required=False
 )
 parser.add_argument(
@@ -131,7 +138,7 @@ def maskrcnn_train(images, image_sizes, gt_boxes, gt_segms, gt_labels):
     assert gt_boxes.num_of_lod_levels == 2
     # if it is mask target projected, num_of_lod_levels is 0
     if gt_segms.num_of_lod_levels is 0:
-         assert gt_segms.is_dynamic == True
+        assert gt_segms.is_dynamic == True
     else:
         assert gt_segms.num_of_lod_levels == 2
     assert gt_labels.num_of_lod_levels == 2
@@ -160,7 +167,9 @@ def maskrcnn_train(images, image_sizes, gt_boxes, gt_segms, gt_labels):
     gt_labels_list = flow.piece_slice(gt_labels, cfg.TRAINING_CONF.IMG_PER_GPU)
     gt_segms_list = None
     if gt_segms.num_of_lod_levels is 2:
-        gt_segms_list = flow.piece_slice(gt_segms, cfg.TRAINING_CONF.IMG_PER_GPU)
+        gt_segms_list = flow.piece_slice(
+            gt_segms, cfg.TRAINING_CONF.IMG_PER_GPU
+        )
     else:
         gt_segms_list = gt_segms
     anchors = []
@@ -241,23 +250,20 @@ def maskrcnn_eval(images, image_sizes):
     # Backbone
     features = backbone.build(images)
 
-    for idx, feature in enumerate(features):
-        flow.watch(feature, Save("feature_{}".format(idx)))
-
     # RPN
     cls_logit_list, bbox_pred_list = rpn_head.build(features)
-    proposals = rpn_proposal.build(
+    rpn_proposals = rpn_proposal.build(
         anchors, cls_logit_list, bbox_pred_list, image_size_list, None
     )
 
     # Box Head
-    cls_logits, box_regressions = box_head.build_eval(proposals, features)
+    cls_logits, box_regressions = box_head.build_eval(rpn_proposals, features)
 
     # Mask Head
     # TODO: get proposals from box_head post-processors
     # mask_logits = mask_head.build_eval(proposals, features)
 
-    return tuple(proposals) + (cls_logits,) + (box_regressions,)
+    return tuple(rpn_proposals) + (cls_logits,) + (box_regressions,)
 
 
 blob_watched, diff_blob_watched = {}, {}
@@ -341,7 +347,7 @@ if terminal_args.rcnn_eval:
                 rpn_proposals, image_ids, [fpn_fm1, fpn_fm2, fpn_fm3, fpn_fm4]
             )
             box_pred, cls_logits = box_head.box_predictor(x)
-        
+
         return cls_logits, box_pred
 
 
@@ -390,6 +396,45 @@ if terminal_args.mask_head_eval:
             )
             mask_logits = mask_head.mask_predictor(x)
         return mask_logits
+
+
+if terminal_args.box_head_post_processor:
+
+    @flow.function
+    def debug_box_head_post_processor_job(
+        rpn_proposals_0=flow.input_blob_def(
+            (1000, 4), dtype=flow.float32, is_dynamic=True
+        ),
+        rpn_proposals_1=flow.input_blob_def(
+            (1000, 4), dtype=flow.float32, is_dynamic=True
+        ),
+        cls_logits=flow.input_blob_def(
+            (2000, 81), dtype=flow.float32, is_dynamic=True
+        ),
+        box_regressions=flow.input_blob_def(
+            (2000, 324), dtype=flow.float32, is_dynamic=True
+        ),
+        image_size_0=flow.input_blob_def(
+            (2,), dtype=flow.int32, is_dynamic=False
+        ),
+        image_size_1=flow.input_blob_def(
+            (2,), dtype=flow.int32, is_dynamic=False
+        ),
+    ):
+        cfg = get_default_cfgs()
+        if terminal_args.config_file is not None:
+            cfg.merge_from_file(terminal_args.config_file)
+        cfg.freeze()
+        print(cfg)
+        box_head = BoxHead(cfg)
+        with flow.deprecated.variable_scope("roi"):
+            ret = box_head.build_post_processor(
+                cls_logits=cls_logits,
+                box_regressions=box_regressions,
+                rpn_proposals_list=[rpn_proposals_0, rpn_proposals_1],
+                image_size_list=[image_size_0, image_size_1],
+            )
+        return ret
 
 
 if __name__ == "__main__":
@@ -456,6 +501,36 @@ if __name__ == "__main__":
             ).get()
             print(results)
             np.save("mask_logits", results.ndarray())
+        elif terminal_args.box_head_post_processor:
+            import numpy as np
+
+            rpn_proposals_0 = np.load(
+                "/tmp/shared_with_jxf/box_head_post_processor/rpn_proposals_0.(1000, 4).npy"
+            )
+            rpn_proposals_1 = np.load(
+                "/tmp/shared_with_jxf/box_head_post_processor/rpn_proposals_1.(1000, 4).npy"
+            )
+            cls_logits = np.load(
+                "/tmp/shared_with_jxf/box_head_post_processor/cls_logits.(2000, 81).npy"
+            )
+            box_regressions = np.load(
+                "/tmp/shared_with_jxf/box_head_post_processor/box_regressions.(2000, 324).npy"
+            )
+            image_size_0 = np.load(
+                "/tmp/shared_with_jxf/box_head_post_processor/image_size_0.npy"
+            )
+            image_size_1 = np.load(
+                "/tmp/shared_with_jxf/box_head_post_processor/image_size_1.npy"
+            )
+
+            debug_box_head_post_processor_job(
+                rpn_proposals_0,
+                rpn_proposals_1,
+                cls_logits,
+                box_regressions,
+                image_size_0,
+                image_size_1,
+            )
         elif terminal_args.eval:
             import numpy as np
 
@@ -465,9 +540,7 @@ if __name__ == "__main__":
             image_sizes = np.load(
                 "/tmp/shared_with_jxf/maskrcnn_eval_input_data/image_sizes.npy"
             )
-            results = maskrcnn_eval_job(
-                images, image_sizes
-            ).get()
+            results = maskrcnn_eval_job(images, image_sizes).get()
             proposals, cls_logits, box_regressions = maskrcnn_eval_job(
                 images, image_sizes
             ).get()
@@ -524,6 +597,7 @@ if __name__ == "__main__":
                     os.makedirs(diff_saver_path)
                 for lbn, blob_data in blob_watched.items():
                     import numpy as np
+
                     blob_def = blob_data["blob_def"]
                     op_saver_path = os.path.join(saver_path, blob_def.op_name)
                     if not os.path.exists(op_saver_path):
@@ -534,8 +608,11 @@ if __name__ == "__main__":
                     )
                 for lbn, blob_data in diff_blob_watched.items():
                     import numpy as np
+
                     blob_def = blob_data["blob_def"]
-                    op_saver_path = os.path.join(diff_saver_path, blob_def.op_name)
+                    op_saver_path = os.path.join(
+                        diff_saver_path, blob_def.op_name
+                    )
                     if not os.path.exists(op_saver_path):
                         os.makedirs(op_saver_path)
                     np.save(

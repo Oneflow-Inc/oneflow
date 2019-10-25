@@ -418,6 +418,7 @@ def affine_channel(
     out = activation(out) if activation is not None else out
     return out
 
+
 @oneflow_export("dim0_dynamic_to_fixed")
 def dim0_dynamic_to_fixed(inputs, name=None):
     op_conf = op_conf_util.OperatorConf()
@@ -445,3 +446,52 @@ def dim0_dynamic_to_fixed(inputs, name=None):
             setattr(out_lbi, "blob_name", "out_" + str(i))
         ret.append(remote_blob_util.RemoteBlob(out_lbi))
     return tuple(ret)
+
+
+@oneflow_export("detection.maskrcnn_split")
+def maskrcnn_split(input, segms, name=None):
+    op_conf = op_conf_util.OperatorConf()
+    setattr(
+        op_conf,
+        "name",
+        name if name is not None else id_util.UniqueStr("MaskrcnnSplit_"),
+    )
+    setattr(op_conf.maskrcnn_split_conf, "in", input.logical_blob_name)
+    op_conf.maskrcnn_split_conf.segm[:] = [
+        segm.logical_blob_name for segm in segms
+    ]
+    op_conf.maskrcnn_split_conf.out[:] = [
+        "out_" + str(i) for i in range(len(segms))
+    ]
+    compile_context.CurJobAddOp(op_conf)
+    ret = []
+    for i in range(len(segms)):
+        out_lbi = logical_blob_id_util.LogicalBlobId()
+        setattr(out_lbi, "op_name", op_conf.name)
+        setattr(out_lbi, "blob_name", "out_" + str(i))
+        ret.append(remote_blob_util.RemoteBlob(out_lbi))
+    return ret
+
+
+@oneflow_export("detection.masks_crop_and_resize")
+def masks_crop_and_resize(masks, rois, mask_h, mask_w, name=None):
+    assert len(masks.shape) == 4
+    assert len(rois.shape) == 2
+    assert masks.shape[0] == rois.shape[0]
+    assert isinstance(mask_h, int)
+    assert isinstance(mask_w, int)
+
+    name = name or id_util.UniqueStr("masks_crop_and_resize_")
+    op_conf = op_conf_util.OperatorConf()
+    op_conf.name = name
+    op_conf.masks_crop_and_resize_conf.masks = masks.logical_blob_name
+    op_conf.masks_crop_and_resize_conf.rois = rois.logical_blob_name
+    op_conf.masks_crop_and_resize_conf.mask_height = mask_h
+    op_conf.masks_crop_and_resize_conf.mask_width = mask_w
+    op_conf.masks_crop_and_resize_conf.out = "out"
+    compile_context.CurJobAddOp(op_conf)
+
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = "out"
+    return remote_blob_util.RemoteBlob(lbi)
