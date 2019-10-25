@@ -125,6 +125,24 @@ void NdarrayDataField<T>::InferShape(const ShapeProto& shape_proto, const PbRf<i
   BuildLodTreeFromNestedVector(lod_len_, lod_tree);
 }
 
+template<typename T>
+void TensorArrayDataField<T>::InferShape(const ShapeProto& shape_proto, const PbRf<int>& var_axes,
+                                         Shape* shape, LoDTree* lod_tree) const {
+  CHECK_EQ(var_axes.size(), 1);
+  CHECK_NOTNULL(lod_tree);
+  int var_axis = var_axes.Get(0);
+  CHECK_EQ(var_axis, 0);
+
+  Shape static_shape(shape_proto);
+  *shape = Shape(this->shape());
+  CHECK_GE(static_shape.Count(var_axis + 1), shape->elem_cnt());
+  CHECK_EQ(this->size() % shape->elem_cnt(), 0);
+  int length = this->size() / shape->elem_cnt();
+  CHECK_GE(static_shape.At(var_axis), length);
+  lod_tree->set_length(length);
+  lod_tree->set_offset(0);
+}
+
 template<typename K, typename T>
 struct DataFieldSerializer<ArrayDataField<K>, T> {
   static size_t Apply(const DataField* data_field, T* buffer) {
@@ -175,6 +193,16 @@ struct DataFieldSerializer<NdarrayDataField<K>, T> {
     CHECK_NOTNULL(field);
     CopyElem(field->data(), buffer, field->total_length());
     return field->total_length() * sizeof(T);
+  }
+};
+
+template<typename K, typename T>
+struct DataFieldSerializer<TensorArrayDataField<K>, T> {
+  static size_t Apply(const DataField* data_field, T* buffer) {
+    const auto* field = dynamic_cast<const TensorArrayDataField<K>*>(data_field);
+    CHECK_NOTNULL(field);
+    CopyElem(field->data(), buffer, field->size());
+    return field->size() * sizeof(T);
   }
 };
 
@@ -235,6 +263,9 @@ std::unique_ptr<DataField> CreateDataFieldFromProto(const DataFieldProto& proto)
       const ShapeProto& shape_proto, const PbRf<int>& var_axes, Shape* shape, LoDTree* lod_tree) \
       const;                                                                                     \
   template void NdarrayDataField<dtype>::InferShape(                                             \
+      const ShapeProto& shape_proto, const PbRf<int>& var_axes, Shape* shape, LoDTree* lod_tree) \
+      const;                                                                                     \
+  template void TensorArrayDataField<dtype>::InferShape(                                         \
       const ShapeProto& shape_proto, const PbRf<int>& var_axes, Shape* shape, LoDTree* lod_tree) \
       const;
 

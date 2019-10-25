@@ -103,6 +103,37 @@ class NdarrayDataField : public DataField {
   std::vector<std::vector<size_t>> lod_len_;
 };
 
+template<typename T>
+class TensorArrayDataField : public DataField {
+ public:
+  typedef T data_type;
+
+  TensorArrayDataField(size_t max_size)
+      : data_(new T[max_size]), capacity_(max_size), size_(0) {
+    std::memset(data_.get(), 0, capacity_ * sizeof(T));
+  }
+
+  void IncreaseSize(size_t size) {
+    size_ += size;
+    CHECK_LT(size_, capacity_);
+  }
+  void InferShape(const ShapeProto& shape_proto, const PbRf<int>& var_axes, Shape* shape,
+                  LoDTree* lod_tree) const override;
+
+  T* data() { return data_.get(); }
+  const T* data() const { return data_.get(); }
+  std::vector<int64_t>& shape() { return shape_; }
+  const std::vector<int64_t>& shape() const { return shape_; }
+  size_t size() const { return size_; }
+  size_t capacity() const { return capacity_; }
+
+ private:
+  std::unique_ptr<T[]> data_;
+  size_t capacity_;
+  size_t size_;
+  std::vector<int64_t> shape_;
+};
+
 template<DataSourceCase dsrc>
 struct DataFieldTrait;
 
@@ -129,6 +160,11 @@ struct DataFieldTrait<DataSourceCase::kObjectSegmentation> {
 template<>
 struct DataFieldTrait<DataSourceCase::kObjectSegmentationMask> {
   typedef NdarrayDataField<int8_t> type;
+};
+
+template<>
+struct DataFieldTrait<DataSourceCase::kObjectSegmentationAlignedMask> {
+  typedef TensorArrayDataField<int8_t> type;
 };
 
 template<>
