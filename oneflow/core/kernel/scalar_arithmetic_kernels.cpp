@@ -33,20 +33,20 @@ class ScalarMulKernel final : public KernelIf<device_type> {
   }
 };
 
-#define REGISTER_SCALAR_MUL_KERNEL(dtype)                                                      \
-  REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kScalarMulConf, DeviceType::kCPU, dtype, \
-                                        ScalarMulKernel<DeviceType::kCPU, dtype>);             \
-  REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kScalarMulConf, DeviceType::kGPU, dtype, \
-                                        ScalarMulKernel<DeviceType::kGPU, dtype>);
+#define REGISTER_SCALAR_ARITHMETIC_KERNEL(name, dev, dtype)                            \
+  REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kScalar##name##Conf, dev, dtype, \
+                                        Scalar##name##Kernel<dev, dtype>);
 
-REGISTER_SCALAR_MUL_KERNEL(float);
-REGISTER_SCALAR_MUL_KERNEL(double);
-REGISTER_SCALAR_MUL_KERNEL(int32_t);
+#define REGISTER_WITH_NAME_AND_DTYPE(name, dtype)                  \
+  REGISTER_SCALAR_ARITHMETIC_KERNEL(name, DeviceType::kCPU, dtype) \
+  REGISTER_SCALAR_ARITHMETIC_KERNEL(name, DeviceType::kGPU, dtype)
+
+REGISTER_WITH_NAME_AND_DTYPE(Mul, float);
+REGISTER_WITH_NAME_AND_DTYPE(Mul, double);
+REGISTER_WITH_NAME_AND_DTYPE(Mul, int32_t);
 
 REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kScalarMulConf, DeviceType::kGPU, float16,
                                       ScalarMulKernel<DeviceType::kGPU, float16>);
-
-#undef REGISTER_SCALAR_MUL_KERNEL
 
 template<DeviceType device_type, typename T>
 class ScalarAddKernel final : public KernelIf<device_type> {
@@ -60,7 +60,7 @@ class ScalarAddKernel final : public KernelIf<device_type> {
                           std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
     const Blob* in_blob = BnInOp2Blob("in");
     Blob* out_blob = BnInOp2Blob("out");
-    T scalar_operand = 0;
+    T scalar_operand = static_cast<T>(0);
     const auto& conf = this->op_conf().scalar_add_conf();
     if (conf.has_int_operand()) {
       scalar_operand = static_cast<T>(conf.int_operand());
@@ -77,5 +77,14 @@ class ScalarAddKernel final : public KernelIf<device_type> {
     return this->op_conf().scalar_add_conf();
   }
 };
+
+REGISTER_WITH_NAME_AND_DTYPE(Add, float);
+REGISTER_WITH_NAME_AND_DTYPE(Add, double);
+REGISTER_WITH_NAME_AND_DTYPE(Add, int32_t);
+
+REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kScalarAddConf, DeviceType::kGPU, float16,
+                                      ScalarAddKernel<DeviceType::kGPU, float16>);
+
+#undef REGISTER_WITH_NAME_AND_DTYPE
 
 }  // namespace oneflow
