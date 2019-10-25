@@ -240,9 +240,9 @@ class COCODataset(object):
 
 @oneflow_export("data.TargetResizeTransform")
 class TargetResizeTransform(object):
-    def __init__(self, target_size, max_size, alignment):
-        self.__dict__.update(locals())
-        del self.self
+    def __init__(self, target_size, max_size):
+        self.target_size = target_size
+        self.max_size = max_size
 
     def to_proto(self, proto=None):
         if proto is None:
@@ -250,7 +250,6 @@ class TargetResizeTransform(object):
 
         proto.target_resize.target_size = self.target_size
         proto.target_resize.max_size = self.max_size
-        proto.target_resize.alignment = self.alignment
         return proto
 
 
@@ -264,9 +263,20 @@ class SegmentationPolygonListToMask(object):
         return proto
 
 
+@oneflow_export("data.SegmentationPolygonListToAlignedMask")
+class SegmentationPolygonListToAlignedMask(object):
+    def to_proto(self, proto=None):
+        if proto is None:
+            proto = data_util.DataTransformProto()
+
+        proto.segmentation_poly_to_aligned_mask.SetInParent()
+        return proto
+
+
 @oneflow_export("data.ImageNormalizeByChannel")
 class ImageNormalizeByChannel(object):
     r"""note: normalize by channel, channel color space is BGR"""
+
     def __init__(self, mean, std=1.0):
         if isinstance(mean, (int, float)):
             mean = (float(mean), float(mean), float(mean))
@@ -287,6 +297,19 @@ class ImageNormalizeByChannel(object):
 
         proto.image_normalize_by_channel.mean.extend(list(self.mean))
         proto.image_normalize_by_channel.std.extend(list(self.std))
+        return proto
+
+
+@oneflow_export("data.ImageAlign")
+class ImageAlign(object):
+    def __init__(self, alignment):
+        self.alignment = alignment
+
+    def to_proto(self, proto=None):
+        if proto is None:
+            proto = data_util.DataTransformProto()
+
+        proto.image_align.alignment = self.alignment
         return proto
 
 
@@ -336,12 +359,30 @@ class DataLoader(object):
         )
 
     def add_transform(self, transform):
+        if isinstance(transform, SegmentationPolygonListToAlignedMask):
+            if not any([isinstance(t, ImageAlign) for t in self._transforms]):
+                raise ValueError(
+                    "Need do ImageAlign before SegmentationPolygonListToAlignedMask"
+                )
+
         self._transforms.append(transform)
 
     def init(self, name=None):
         if name is None:
             name = id_util.UniqueStr("DataLoad_")
         assert isinstance(name, str)
+
+        target_resize_order = -1
+        image_align_order = -1
+        for i, transform in enumerate(self._transforms):
+            if isinstance(transform, TargetResizeTransform):
+                target_resize_order = i
+
+            if isinstance(transform, ImageAlign):
+                image_align_order = i
+
+        if target_resize_order >= 0 and target_resize_order > image_align_order:
+            raise ValueError("Need do ImageAlign after TargetResizeTransform")
 
         self._outputs = {}
 
