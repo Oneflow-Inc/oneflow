@@ -223,6 +223,10 @@ void Operator::GenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, KernelConf* kernel_conf, const OpContext* op_ctx,
     std::function<const BlobDesc&(const std::string&)> LogicalBlobDesc4BnInOp) const {
+  for (const auto& ibn : input_bns()) {
+    DataType dtype = LogicalBlobDesc4BnInOp(ibn).data_type();
+    (*kernel_conf->mutable_dtype_signature()->mutable_bn_in_op2dtype())[ibn] = dtype;
+  }
   *(kernel_conf->mutable_op_attribute()) = op_attribute_;
   if (HasBlobDescWithField(GetBlobDesc4BnInOp, output_bns(), [](const BlobDesc* blob_desc) {
         return blob_desc->header_is_opaque();
@@ -451,6 +455,17 @@ Maybe<void> Operator::NaiveInferBatchAxis(
   return Maybe<void>::Ok();
 }
 
+Symbol<OperatorConf> GetOpConfWithoutOpNameAndLbn() const {
+  OperatorConf op_conf(op_conf());
+  op_conf.set_name("");
+  PbMessage* op_type_conf = MutableMessageInPbMessage(&op_conf, op_conf.op_type_case());
+  for (const auto& ibn : input_bns()) {
+    const std::string& lbn = GetStrValInPbFdOrPbRpf(*op_type_conf, ibn);
+    ReplaceStrValInPbFdOrPbRpf(op_type_conf, ibn, lbn, "");
+  }
+  return SymbolOf(OperatorConf);
+}
+
 LogicalBlobId GenLogicalBlobId(const std::string& lbn) {
   LogicalBlobId lbi;
   size_t pos = lbn.find('/');
@@ -543,6 +558,10 @@ Maybe<void> InferOpSbpSignature(
   JUST(op.InferSbpSignatureIf(sbp_sig_to_infer, sbp_sig_conf, CalcOrderValue4SbpSig,
                               SbpInferHint4Ibn, parallel_desc));
   return Maybe<void>::Ok();
+}
+
+bool operator==(const OperatorConf& lhs, const OperatorConf& rhs) {
+  return PbMd().Equals(lhs, rhs);
 }
 
 }  // namespace oneflow

@@ -226,6 +226,7 @@ message KernelConf {
   optional bool need_do_opaque_header = 4 [default = false];
   optional bool need_do_lod = 5 [default = false];
   optional bool need_do_dense_shape = 6 [default = false];
+  required DTypeSignature dtype_signature = 7;
 
   oneof kernel_type {
     SparseSoftmaxCrossEntropyLossKernelConf sparse_softmax_cross_entropy_loss_conf = 101;
