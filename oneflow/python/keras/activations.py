@@ -1,5 +1,7 @@
 from __future__ import absolute_import
 
+import oneflow as flow
+import numpy as np
 import oneflow.python.framework.compile_context as compile_context
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.id_util as id_util
@@ -37,7 +39,7 @@ def gelu(x):
 
 @oneflow_export('keras.activations.gelu_v2')
 def gelu_v2(x):
-    return 0.5 * (1.0 + flow.tanh((np.sqrt(2 / np.pi) * (x + 0.044715 * x * x * x))))
+    return 0.5 * (1.0 + flow.keras.activations.tanh((np.sqrt(2 / np.pi) * (x + 0.044715 * x * x * x))))
 
 @oneflow_export('keras.activations.tanh')
 def tanh(x):
