@@ -6,22 +6,14 @@
 
 namespace oneflow {
 
-template<typename F>
+template<typename Ret, typename Arg>
 class CachedCaller final {
  public:
-  CachedCaller(size_t max_size, F f) : max_size_(max_size), f_(f) {}
-  CachedCaller(const CachedCaller& rhs)
-      : max_size_(rhs.max_size_), f_(rhs.f_), cache_(rhs.cache_) {}
+  CachedCaller(size_t max_size) : max_size_(max_size) {}
+  CachedCaller(const CachedCaller& rhs) : max_size_(rhs.max_size_), cache_(rhs.cache_) {}
   ~CachedCaller() { Clear(); }
 
-  static_assert(std::tuple_size<typename function_traits<F>::args_type>::value == 1,
-                "only sole argument functions supported");
-  using RawRet = typename function_traits<F>::return_type;
-  using RawArg = typename std::tuple_element<0, typename function_traits<F>::args_type>::type;
-  using R = typename std::remove_const<typename std::remove_reference<RawRet>::type>::type;
-  using Arg = typename std::remove_const<typename std::remove_reference<RawArg>::type>::type;
-
-  const R& operator()(const Arg& arg) {
+  const Ret& operator()(const std::function<Ret(const Arg&)>& f, const Arg& arg) {
     if (cache_.size() >= max_size_) { Clear(); }
     size_t hash_value = std::hash<Arg>()(arg);
     {
@@ -33,7 +25,7 @@ class CachedCaller final {
     {
       HashEqTraitPtr<const Arg> ptr_wraper(new Arg(arg), hash_value);
       std::lock_guard<std::mutex> lock(mutex_);
-      return cache_.emplace(ptr_wraper, f_(arg)).first->second;
+      return cache_.emplace(ptr_wraper, f(arg)).first->second;
     }
   }
 
@@ -45,15 +37,9 @@ class CachedCaller final {
   }
 
   const size_t max_size_;
-  F f_;
-  std::unordered_map<HashEqTraitPtr<const Arg>, R> cache_;
+  std::unordered_map<HashEqTraitPtr<const Arg>, Ret> cache_;
   std::mutex mutex_;
 };
-
-template<typename F>
-CachedCaller<F> MakeCachedCaller(size_t max_size, F f) {
-  return CachedCaller<F>(max_size, f);
-}
 
 }  // namespace oneflow
 
