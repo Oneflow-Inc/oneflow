@@ -2,6 +2,7 @@ import oneflow as flow
 import oneflow.core.common.data_type_pb2 as data_type_util
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import math
+from args import *
 
 class BertBackbone(object):
 
@@ -318,7 +319,10 @@ def GetActivation(name):
   elif name == 'tanh':
     return flow.keras.activations.tanh
   elif name == 'gelu':
-    return flow.keras.activations.gelu
+    if args.enable_auto_mixed_precision:
+      return flow.keras.activations.gelu_v2
+    else:
+      return flow.keras.activations.gelu
   else:
     raise Exception("unsupported activation")
 
