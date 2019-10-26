@@ -12,8 +12,8 @@ namespace oneflow {
 struct OpInferCacheKey final {
   const JobDesc* job_desc;
   Symbol<OperatorConf> op_conf_sym;
-  HashMap<std::string, Symbol<Shape>> ibn2shape_sym;
   Symbol<DTypeSignature> dtype_signature_sym;
+  HashMap<std::string, Symbol<Shape>> ibn2shape_sym;
 };
 
 struct OpInferCacheValue final {
@@ -21,9 +21,13 @@ struct OpInferCacheValue final {
 };
 
 inline bool operator==(const OpInferCacheKey& lhs, const OpInferCacheKey& rhs) {
-  return lhs.job_desc == rhs.job_desc && lhs.op_conf_sym == rhs.op_conf_sym
-         && lhs.ibn2shape_sym == rhs.ibn2shape_sym
-         && lhs.dtype_signature_sym == rhs.dtype_signature_sym;
+	return lhs.job_desc == rhs.job_desc && lhs.op_conf_sym == rhs.op_conf_sym
+		&& lhs.dtype_signature_sym == rhs.dtype_signature_sym
+		&& lhs.ibn2shape_sym == rhs.ibn2shape_sym;
+}
+
+inline bool operator!=(const OpInferCacheKey& lhs, const OpInferCacheKey& rhs) {
+	return !(lhs == rhs);
 }
 
 }  // namespace oneflow

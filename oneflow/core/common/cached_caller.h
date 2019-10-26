@@ -6,51 +6,59 @@
 
 namespace oneflow {
 
-template<typename Ret, typename Arg>
-class CachedCaller final {
- public:
-  CachedCaller(size_t max_size) : max_size_(max_size) {}
-  CachedCaller(const CachedCaller& rhs) : max_size_(rhs.max_size_), cache_(rhs.cache_) {}
-  ~CachedCaller() { Clear(); }
+template<typename T>
+void DeleteAndClear(T** ptr, size_t obj_cnt) {
+	static const size_t kThreshold = 4096;
+	if (obj_cnt <= kThreshold) {
+		delete ptr;
+	} else {
+		std::thread([](T* ptr){ delete ptr; }, *ptr);
+	}
+	*ptr = nullptr;
+}
 
-  const Ret& operator()(const std::function<Ret(const Arg&)>& f, const Arg& arg) {
-    if (cache_.size() >= max_size_) { Clear(); }
-    size_t hash_value = std::hash<Arg>()(arg);
-    {
-      HashEqTraitPtr<const Arg> ptr_wraper(&arg, hash_value);
-      std::lock_guard<std::mutex> lock(mutex_);
-      auto iter = cache_.find(ptr_wraper);
-      if (iter != cache_.end()) { return iter->second; }
-    }
-    {
-      HashEqTraitPtr<const Arg> ptr_wraper(new Arg(arg), hash_value);
-      std::lock_guard<std::mutex> lock(mutex_);
-      return cache_.emplace(ptr_wraper, f(arg)).first->second;
-    }
-  }
+bool IsThreadLocalCacheEnabled();
 
- private:
-  void Clear() {
-    std::lock_guard<std::mutex> lock(mutex_);
-    for (const auto& pair : cache_) { delete pair.first.ptr(); }
-    cache_.clear();
-  }
-
-  const size_t max_size_;
-  std::unordered_map<HashEqTraitPtr<const Arg>, Ret> cache_;
-  std::mutex mutex_;
-};
+template<
+    typename F, typename Ret = typename function_traits<F>::return_type,
+    typename RawArg = typename std::tuple_element<0, typename function_traits<F>::args_type>::type,
+    typename Arg = typename std::remove_const<typename std::remove_reference<RawArg>::type>::type>
+Ret ThreadLocalCachedCall(size_t max_size, F f, const Arg& arg) {
+	if (IsThreadLocalCacheEnabled() == false) { return f(arg); }	
+	using HashMap = std::unordered_map<HashEqTraitPtr<const Arg>, Ret>;
+	using KeyStorage = std::list<std::unique_ptr<Arg>>;
+  static thread_local HashMap* cache = nullptr;
+  static thread_local KeyStorage* key_storage = nullptr;
+	if (cache != nullptr && cache->size() >= max_size) {
+		DeleteAndClear(&cache, cache->size());
+		DeleteAndClear(&key_storage, cache->size());
+	}
+	if (cache == nullptr) {
+		cache = new HashMap();
+		key_storage = new KeyStorage();
+	}
+	size_t hash_value = std::hash<Arg>()(arg);
+	{
+		HashEqTraitPtr<const Arg> ptr_wrapper(&arg, hash_value);
+		const auto& iter = cache->find(ptr_wrapper);
+		if (iter != cache->end()) { return iter->second; }
+	}
+	Arg* new_arg = new Arg(arg);
+	key_storage->emplace_back(new_arg);
+	HashEqTraitPtr<const Arg> ptr_wrapper(new_arg, hash_value);
+	return cache->emplace(ptr_wrapper, f(*new_arg)).first->second;
+}
 
 template<
     typename F, typename Ret = typename function_traits<F>::return_type,
     typename RawArg = typename std::tuple_element<0, typename function_traits<F>::args_type>::type,
     typename Arg = typename std::remove_const<typename std::remove_reference<RawArg>::type>::type>
 std::function<Ret(const Arg&)> WithResultCached(F f) {
-  auto cached = std::make_shared<std::unordered_map<Arg, Ret>>();
-  return [cached, f](const Arg& arg) -> Ret {
-    const auto& iter = cached->find(arg);
-    if (iter != cached->end()) { return iter->second; }
-    return cached->emplace(arg, f(arg)).first->second;
+  auto cache = std::make_shared<std::unordered_map<Arg, Ret>>();
+  return [cache, f](const Arg& arg) -> Ret {
+    const auto& iter = cache->find(arg);
+    if (iter != cache->end()) { return iter->second; }
+    return cache->emplace(arg, f(arg)).first->second;
   };
 }
 

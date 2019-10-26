@@ -16,7 +16,8 @@ class Symbol final {
   operator bool() const { return ptr_ != nullptr; }
   const T* operator->() const { return ptr_; }
   const T& operator*() const { return *ptr_; }
-  bool operator==(const Symbol<T>& rhs) { return ptr_ == rhs.ptr_; }
+  bool operator==(const Symbol<T>& rhs) const { return ptr_ == rhs.ptr_; }
+  bool operator!=(const Symbol<T>& rhs) const { return ptr_ == rhs.ptr_; }
   size_t hash_value() const { return std::hash<const T*>()(ptr_); }
 
   void reset() { ptr_ = nullptr; }
@@ -30,20 +31,25 @@ class Symbol final {
 
 template<typename T>
 const T* Symbol<T>::FindOrInsertPtr(const T& obj) {
-  static std::unordered_set<HashEqTraitPtr<const T>> cached_objs;
-  static std::mutex mutex;
+	using HashSet = std::unordered_set<HashEqTraitPtr<const T>>; 
+  static HashSet cached_objs;
+	static thread_local std::unordered_map<HashEqTraitPtr<const T>, const T*> obj2ptr;
+
   size_t hash_value = std::hash<T>()(obj);
+	HashEqTraitPtr<const T> obj_ptr_wraper(&obj, hash_value);
   {
-    HashEqTraitPtr<const T> obj_ptr_wraper(&obj, hash_value);
-    std::lock_guard<std::mutex> lock(mutex);
-    auto iter = cached_objs.find(obj_ptr_wraper);
-    if (iter != cached_objs.end()) { return iter->ptr(); }
+    auto iter = obj2ptr.find(obj_ptr_wraper);
+    if (iter != obj2ptr.end()) { return iter->second; }
   }
+	const T* ptr;
   {
+    static std::mutex mutex;
     HashEqTraitPtr<const T> new_obj_ptr_wraper(new T(obj), hash_value);
     std::lock_guard<std::mutex> lock(mutex);
-    return cached_objs.emplace(new_obj_ptr_wraper).first->ptr();
+    ptr = cached_objs.emplace(new_obj_ptr_wraper).first->ptr();
   }
+	obj2ptr[obj_ptr_wraper] = ptr;
+	return ptr;
 }
 
 template<typename T>

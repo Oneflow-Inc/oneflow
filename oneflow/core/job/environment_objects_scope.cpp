@@ -14,7 +14,6 @@
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 #include "oneflow/core/job/lbi_diff_watcher_info.pb.h"
 #include "oneflow/core/operator/op_infer_cache.h"
-#include "oneflow/core/common/cached_caller.h"
 
 namespace oneflow {
 
@@ -69,8 +68,6 @@ EnvironmentObjectsScope::EnvironmentObjectsScope() {}
 
 Maybe<void> EnvironmentObjectsScope::Init(const ConfigProto& config_proto) {
   flags_and_log_scope_.reset(new FlagsAndLogScope(config_proto, "oneflow"));
-  size_t caller_cache_max_size = config_proto.resource().default_caller_cache_max_size();
-  Global<CachedCaller<OpInferCacheValue, OpInferCacheKey>>::New(caller_cache_max_size);
   Global<ResourceDesc>::New(config_proto.resource());
   Global<const IOConf>::New(config_proto.io_conf());
   Global<const ProfilerConf>::New(config_proto.profiler_conf());
@@ -115,7 +112,6 @@ EnvironmentObjectsScope::~EnvironmentObjectsScope() {
   Global<const IOConf>::Delete();
   Global<ResourceDesc>::Delete();
   flags_and_log_scope_.reset();
-  Global<CachedCaller<OpInferCacheValue, OpInferCacheKey>>::Delete();
 }
 
 }  // namespace oneflow

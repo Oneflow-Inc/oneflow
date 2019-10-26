@@ -1,12 +1,13 @@
 #include "oneflow/core/kernel/runtime_blob_shape_infer_helper.h"
 #include "oneflow/core/register/blob.h"
 #include "oneflow/core/common/cached_caller.h"
+#include "oneflow/core/job/resource_desc.h"
 
 namespace oneflow {
 
 namespace {
 
-const size_t kCallCacheSize = 1024 * 1024 * 1024;
+const size_t kCallCacheSize = 128 * 1024 * 1024;
 
 Symbol<Shape> _CreateLeftExtendedShapeSym(const std::pair<Symbol<Shape>, int>& pair) {
   if (pair.first->NumAxes() == pair.second) { return pair.first; }
@@ -15,8 +16,8 @@ Symbol<Shape> _CreateLeftExtendedShapeSym(const std::pair<Symbol<Shape>, int>& p
 
 Symbol<Shape> CreateLeftExtendedShapeSym(Symbol<Shape> shape_sym, int num_axes) {
   CHECK_LE(shape_sym->NumAxes(), num_axes);
-  static CachedCaller<Symbol<Shape>, std::pair<Symbol<Shape>, int>> CachedCall(kCallCacheSize);
-  return CachedCall(&_CreateLeftExtendedShapeSym, std::make_pair(shape_sym, num_axes));
+	return ThreadLocalCachedCall(kCallCacheSize, &_CreateLeftExtendedShapeSym,
+															 std::make_pair(shape_sym, num_axes));
 }
 
 Symbol<Shape> _CreateLeftOnesStrippedShapeSym(const std::pair<Symbol<Shape>, int>& pair) {
@@ -28,8 +29,8 @@ Symbol<Shape> _CreateLeftOnesStrippedShapeSym(const std::pair<Symbol<Shape>, int
 
 Symbol<Shape> CreateLeftOnesStrippedShapeSym(Symbol<Shape> shape_sym, int num_left_ones) {
   CHECK_GE(num_left_ones, 0);
-  static CachedCaller<Symbol<Shape>, std::pair<Symbol<Shape>, int>> CachedCall(kCallCacheSize);
-  return CachedCall(&_CreateLeftOnesStrippedShapeSym, std::make_pair(shape_sym, num_left_ones));
+	return ThreadLocalCachedCall(kCallCacheSize, &_CreateLeftOnesStrippedShapeSym,
+															 std::make_pair(shape_sym, num_left_ones));
 }
 
 }  // namespace
@@ -77,7 +78,7 @@ BlobDesc* RuntimeBlobShapeInferHelper::BlobDesc4BnInOp(const std::string& bn_in_
 void RuntimeBlobShapeInferHelper::InferDenseShape(
     std::function<Blob*(const std::string&)> BnInOp2Blob) {
   UpdateOpInferCacheKey(BnInOp2Blob);
-  auto Infer = [&](const OpInferCacheKey& key) -> OpInferCacheValue {
+  auto Infer = [&](const OpInferCacheKey& key) -> std::shared_ptr<const OpInferCacheValue> {
     auto CachedBlobDesc4BnInOp = WithResultCached([&](const std::string& bn_in_op) -> BlobDesc* {
       const Blob* blob = BnInOp2Blob(bn_in_op);
       if (blob == nullptr) { return nullptr; }
@@ -89,20 +90,21 @@ void RuntimeBlobShapeInferHelper::InferDenseShape(
     });
     CHECK_JUST(op_->InferOutBlobDescsIf(CachedBlobDesc4BnInOp, &parallel_ctx_, &sbp_signature_,
                                         [](OpContext*) {}));
-    OpInferCacheValue ret;
+		auto* ret = new OpInferCacheValue();
     for (const auto& obn : op_->output_bns()) {
       const auto& blob_desc = bn_in_op2blob_desc_.at(obn);
-      ret.obn2shape_sym[obn].reset(blob_desc->shape());
+      ret->obn2shape_sym[obn].reset(blob_desc->shape());
       auto* blob = BnInOp2Blob(obn);
       if (blob == nullptr) { continue; }
       CHECK_EQ(blob->data_type(), blob_desc->data_type());
       CHECK_EQ(blob->blob_desc().is_dynamic(), blob_desc->is_dynamic());
       CHECK_EQ(blob->blob_desc().is_body_disabled(), blob_desc->is_body_disabled());
     }
-    return ret;
+    return std::shared_ptr<const OpInferCacheValue>(ret);
   };
-  const OpInferCacheValue& shape_infer_result = Infer(op_infer_cache_key_);
-  const auto& obn2shape_sym = shape_infer_result.obn2shape_sym;
+	size_t cache_size = Global<ResourceDesc>::Get()->thread_local_cache_max_size(); 
+  const auto& shape_infer_ret = ThreadLocalCachedCall(cache_size, Infer, op_infer_cache_key_);
+  const auto& obn2shape_sym = shape_infer_ret->obn2shape_sym;
   for (const auto& obn : op_->output_bns()) {
     auto* blob = BnInOp2Blob(obn);
     if (blob == nullptr) { continue; }
