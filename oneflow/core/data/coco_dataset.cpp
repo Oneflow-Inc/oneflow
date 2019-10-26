@@ -37,8 +37,13 @@ COCODataset::COCODataset(const DatasetProto& proto) : Dataset(proto) {
     if (anno["iscrowd"].get<int>() == 1) { continue; }
     // check if empty bbox, bbox format is (left, top, width, height)
     const auto bbox = anno["bbox"];
-    CHECK_GT(bbox[2].get<float>(), 0);
-    CHECK_GT(bbox[3].get<float>(), 0);
+    if (!(bbox[2].get<float>() > 0.0f && bbox[3].get<float>() > 0.0f)) {
+      LOG(INFO) << "coco dataset ignore too small bbox, image_id: " << image_id
+                << ", anno_id: " << id << ", bbox: (" << bbox[0].get<float>() << ","
+                << bbox[1].get<float>() << "," << bbox[2].get<float>() << ","
+                << bbox[3].get<float>() << ")";
+      continue;
+    }
     // check if invalid segmentation
     const auto segm = anno["segmentation"];
     if (segm.is_array()) {
@@ -58,7 +63,10 @@ COCODataset::COCODataset(const DatasetProto& proto) : Dataset(proto) {
   }
   // TODO: add config
   for (int64_t image_id : image_ids_) {
-    if (!ImageHasValidAnnotations(image_id)) { to_remove_image_ids.insert(image_id); }
+    if (!ImageHasValidAnnotations(image_id)) {
+      // LOG(INFO) << "coco dataset image has no valid annotations, image_id: " << image_id;
+      to_remove_image_ids.insert(image_id);
+    }
   }
   // remove images whose anno is invalid
   image_ids_.erase(std::remove_if(image_ids_.begin(), image_ids_.end(),
@@ -170,8 +178,11 @@ void COCODataset::GetImage(const nlohmann::json& image_json, DataField* image_fi
     std::vector<char> buffer(DataFS()->GetFileSize(image_file_path));
     CHECK_EQ(in_stream.Read(buffer.data(), buffer.size()), 0);
     cv::_InputArray bytes_array(buffer.data(), buffer.size());
-    image->data() = cv::imdecode(bytes_array, cv::IMREAD_ANYCOLOR | cv::IMREAD_ANYDEPTH);
-    CHECK_EQ(image->data().depth(), CV_8U);
+    auto& image_mat = image->data();
+    image_mat = cv::imdecode(bytes_array, cv::IMREAD_ANYCOLOR | cv::IMREAD_ANYDEPTH);
+    CHECK_EQ(image_mat.depth(), CV_8U);
+    if (image_mat.channels() != 3) { cv::cvtColor(image_mat, image_mat, CV_GRAY2BGR); }
+    CHECK_EQ(image_mat.channels(), 3);
   }
   if (image_size) {
     image_size->data().push_back(image_json["height"].get<int32_t>());

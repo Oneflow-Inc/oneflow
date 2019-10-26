@@ -313,6 +313,7 @@ struct DataTransformer<DataSourceCase::kImage, TransformCase::kImageNormalizeByC
     if (!image_field) { return; }
 
     auto& image_mat = image_field->data();
+    CHECK_EQ(image_mat.type(), CV_8UC3);
     int channels = image_mat.channels();
     CHECK_EQ(proto.image_normalize_by_channel().mean_size(), channels);
     CHECK_EQ(proto.image_normalize_by_channel().std_size(), channels);
