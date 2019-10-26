@@ -175,23 +175,23 @@ message NcclTupleBroadcastConf {
 }
 
 message AdditiveAngularMarginConf {
-  required int64 lower_bound = 1;
+  optional int64 lower_bound = 1 [default = 0];
 }
 
 message AdditiveAngularMarginGradConf {
-  required int64 lower_bound = 1;
+  optional int64 lower_bound = 1 [default = 0];
 }
 
 message SparseSoftmaxCrossEntropyGradConf {
-  required int64 lower_bound = 1;
+  optional int64 lower_bound = 1 [default = 0];
 }
 
 message SparseCrossEntropyConf {
-  required int64 lower_bound = 1;
+  optional int64 lower_bound = 1 [default = 0];
 }
 
 message SparseCrossEntropyGradConf {
-  required int64 lower_bound = 1;
+  optional int64 lower_bound = 1 [default = 0];
 }
 
 message KernelConf {
