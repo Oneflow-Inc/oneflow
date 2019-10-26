@@ -14,6 +14,7 @@
 #include "oneflow/core/job_completer/nccl_tuple_broadcast_reduce_sequence_pass.h"
 #include "oneflow/core/job_completer/auto_train_step.h"
 #include "oneflow/core/job_completer/auto_learning_rate.h"
+#include "oneflow/core/job_completer/sparse_softmax_cross_entropy_pass.h"
 
 namespace oneflow {
 
@@ -116,6 +117,11 @@ void UpdateOpSbpSignatureHint(const OpGraph& op_graph, JobBuilder* job_builder) 
   op_graph.ForEachNode(
       [&](OpNode* op_node) { BindIdenticalSbpObaPairsBetweenIbns(*op_node, job_builder); });
   SetSbpSignatureHintByIdenticalSbpObaPairs(op_graph, job_builder);
+}
+
+void SplitSparseSoftmaxCrossEntropy4ModelParallel(const OpGraph& op_graph,
+                                                  JobBuilder* job_builder) {
+  SparseSoftmaxCrossEntropyPass().Apply(op_graph, job_builder);
 }
 
 void GenerateOpConf4Trainning(const OpGraph& op_graph, JobBuilder* job_builder) {
@@ -358,6 +364,7 @@ void JobCompleter::Complete(Job* job) const {
     WithOpGraphAndMutJob(job, &AutoLearningRate);
     // complete ops for trainning
     WithOpGraphAndMutJobBuilder(job, &GenerateOpConf4Trainning);
+    WithOpGraphAndMutJobBuilder(job, &SplitSparseSoftmaxCrossEntropy4ModelParallel);
     WithOpGraphAndMutJobBuilder(job, &MakeNcclTupleBroadcastReduceSequence);
     WithOpGraphAndMutJobBuilder(job, &RewriteBoxingWithAllReduce);
     WithOpGraphAndMutJobBuilder(job, &MakeAllReduceSequence);
