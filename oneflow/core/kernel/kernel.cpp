@@ -1,5 +1,6 @@
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/common/gdb.h"
+#include "oneflow/core/common/cached_caller.h"
 #include "oneflow/core/kernel/runtime_blob_shape_infer_helper.h"
 
 namespace oneflow {
@@ -24,7 +25,8 @@ Kernel::~Kernel() {
 void Kernel::Init(const JobDesc* job_desc, const KernelConf& kernel_conf, DeviceCtx* device_ctx) {
   job_desc_ = job_desc;
   kernel_conf_ = kernel_conf;
-  shape_infer_helper_ = new RuntimeBlobShapeInferHelper(this->op_conf(), &this->job_desc());
+  shape_infer_helper_ =
+      new RuntimeBlobShapeInferHelper(this->op_conf(), this->kernel_conf(), &this->job_desc());
   VirtualKernelInit(device_ctx);
 }
 
@@ -35,14 +37,7 @@ void Kernel::InitModelAndConstBuf(const KernelCtx& ctx,
 
 void Kernel::Launch(const KernelCtx& ctx,
                     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  HashMap<std::string, Blob*> bn_in_op2blob;
-  auto CachedBnInOp2Blob = [&](const std::string& bn_in_op) -> Blob* {
-    auto iter = bn_in_op2blob.find(bn_in_op);
-    if (iter == bn_in_op2blob.end()) {
-      iter = bn_in_op2blob.emplace(bn_in_op, BnInOp2Blob(bn_in_op)).first;
-    }
-    return iter->second;
-  };
+  auto CachedBnInOp2Blob = WithResultCached(BnInOp2Blob);
   gdb::ForwardEnterBreakPoint(op_attribute(), CachedBnInOp2Blob);
   Forward(ctx, CachedBnInOp2Blob);
   gdb::ForwardLeaveBreakPoint(op_attribute(), CachedBnInOp2Blob);

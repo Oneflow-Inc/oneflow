@@ -223,10 +223,12 @@ void Operator::GenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, KernelConf* kernel_conf, const OpContext* op_ctx,
     std::function<const BlobDesc&(const std::string&)> LogicalBlobDesc4BnInOp) const {
-  for (const auto& ibn : input_bns()) {
-    DataType dtype = LogicalBlobDesc4BnInOp(ibn).data_type();
-    (*kernel_conf->mutable_dtype_signature()->mutable_bn_in_op2dtype())[ibn] = dtype;
-  }
+  auto* dtype_signature = kernel_conf->mutable_dtype_signature();
+  for (const std::string& ibn : input_bns()) {
+    const BlobDesc* blob_desc = GetBlobDesc4BnInOp(ibn);
+    if (blob_desc == nullptr) { continue; }
+    (*dtype_signature->mutable_name2dtype())[ibn] = blob_desc->data_type();
+  };
   *(kernel_conf->mutable_op_attribute()) = op_attribute_;
   if (HasBlobDescWithField(GetBlobDesc4BnInOp, output_bns(), [](const BlobDesc* blob_desc) {
         return blob_desc->header_is_opaque();
@@ -455,15 +457,16 @@ Maybe<void> Operator::NaiveInferBatchAxis(
   return Maybe<void>::Ok();
 }
 
-Symbol<OperatorConf> GetOpConfWithoutOpNameAndLbn() const {
-  OperatorConf op_conf(op_conf());
+Symbol<OperatorConf> Operator::GetOpConfWithoutOpNameAndLbn() const {
+  OperatorConf op_conf(this->op_conf());
   op_conf.set_name("");
   PbMessage* op_type_conf = MutableMessageInPbMessage(&op_conf, op_conf.op_type_case());
   for (const auto& ibn : input_bns()) {
+    if (!HasStrFieldInPbFdOrPbRpf(*op_type_conf, ibn)) { continue; }
     const std::string& lbn = GetStrValInPbFdOrPbRpf(*op_type_conf, ibn);
     ReplaceStrValInPbFdOrPbRpf(op_type_conf, ibn, lbn, "");
   }
-  return SymbolOf(OperatorConf);
+  return SymbolOf(op_conf);
 }
 
 LogicalBlobId GenLogicalBlobId(const std::string& lbn) {

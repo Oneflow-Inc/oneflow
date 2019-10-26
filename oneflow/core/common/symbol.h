@@ -10,12 +10,14 @@ class Symbol final {
  public:
   Symbol() : ptr_(nullptr) {}
   Symbol(const T& obj) : ptr_(FindOrInsertPtr(obj)) {}
-  Symbol(const Symbol<T>&) = default;
+  Symbol(const Symbol<T>& rhs) = default;
   ~Symbol() = default;
 
   operator bool() const { return ptr_ != nullptr; }
   const T* operator->() const { return ptr_; }
   const T& operator*() const { return *ptr_; }
+  bool operator==(const Symbol<T>& rhs) { return ptr_ == rhs.ptr_; }
+  size_t hash_value() const { return std::hash<const T*>()(ptr_); }
 
   void reset() { ptr_ = nullptr; }
   void reset(const T& obj) { ptr_ = FindOrInsertPtr(obj); }
@@ -23,7 +25,7 @@ class Symbol final {
  private:
   static const T* FindOrInsertPtr(const T& obj);
 
-  std::atomic<const T*> ptr_;
+  const T* ptr_;
 };
 
 template<typename T>
@@ -50,5 +52,14 @@ Symbol<T> SymbolOf(const T& obj) {
 }
 
 }  // namespace oneflow
+
+namespace std {
+
+template<typename T>
+struct hash<oneflow::Symbol<T>> final {
+  size_t operator()(const oneflow::Symbol<T>& symbol) const { return symbol.hash_value(); }
+};
+
+}  // namespace std
 
 #endif  // ONEFLOW_CORE_COMMON_SYMBOL_H_

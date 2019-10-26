@@ -392,6 +392,6 @@ struct hash<oneflow::OperatorConf> final {
   }
 };
 
-}
+}  // namespace std
 
 #endif  // ONEFLOW_CORE_OPERATOR_OPERATOR_H_

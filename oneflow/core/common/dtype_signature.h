@@ -1,7 +1,7 @@
 #ifndef ONEFLOW_CORE_REGISTER_DTYPE_SIGNATURE_H_
 #define ONEFLOW_CORE_REGISTER_DTYPE_SIGNATURE_H_
 
-#include "oneflow/core/register/dtype_signature.pb.h"
+#include "oneflow/core/common/dtype_signature.pb.h"
 #include "oneflow/core/common/protobuf.h"
 
 namespace oneflow {
@@ -10,7 +10,7 @@ inline bool operator==(const DTypeSignature& lhs, const DTypeSignature& rhs) {
   return PbMd().Equals(lhs, rhs);
 }
 
-}
+}  // namespace oneflow
 
 namespace std {
 
@@ -23,6 +23,6 @@ struct hash<oneflow::DTypeSignature> final {
   }
 };
 
-}
+}  // namespace std
 
 #endif  // ONEFLOW_CORE_REGISTER_DTYPE_SIGNATURE_H_

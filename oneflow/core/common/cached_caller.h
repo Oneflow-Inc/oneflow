@@ -41,6 +41,19 @@ class CachedCaller final {
   std::mutex mutex_;
 };
 
+template<
+    typename F, typename Ret = typename function_traits<F>::return_type,
+    typename RawArg = typename std::tuple_element<0, typename function_traits<F>::args_type>::type,
+    typename Arg = typename std::remove_const<typename std::remove_reference<RawArg>::type>::type>
+std::function<Ret(const Arg&)> WithResultCached(F f) {
+  auto cached = std::make_shared<std::unordered_map<Arg, Ret>>();
+  return [cached, f](const Arg& arg) -> Ret {
+    const auto& iter = cached->find(arg);
+    if (iter != cached->end()) { return iter->second; }
+    return cached->emplace(arg, f(arg)).first->second;
+  };
+}
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_COMMON_CACHED_CALLER_H_

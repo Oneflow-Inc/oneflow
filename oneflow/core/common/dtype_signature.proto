@@ -4,5 +4,5 @@ package oneflow;
 import "oneflow/core/common/data_type.proto";
 
 message DTypeSignature {
-  map<string, DataType> bn_in_op2dtype;
+  map<string, DataType> name2dtype = 1;
 }
