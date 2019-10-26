@@ -32,14 +32,16 @@ template<DeviceType device_type, typename T>
 void AdditiveAngularMarginKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const float margin = GetValFromPbMessage<float>(this->GetCustomizedOpConf(), "margin");
-  const int64_t lower_bound = this->kernel_conf().additive_angular_margin_conf().lower_bound();
+  int64_t lower_bound = 0;
+  if (this->kernel_conf().has_additive_angular_margin_conf()) {
+    lower_bound = this->kernel_conf().additive_angular_margin_conf().lower_bound();
+  }
   BnInOp2Blob("out")->CopyDataContentFrom(ctx.device_ctx, BnInOp2Blob("in"));
   Memset<device_type>(ctx.device_ctx, BnInOp2Blob("sin_theta_data")->mut_dptr<T>(), 0,
                       BnInOp2Blob("sin_theta_data")->ByteSizeOfDataContentField());
   AdditiveAngularMarginKernelUtil<device_type, T>::Forward(
-      ctx.device_ctx, BnInOp2Blob("in"), BnInOp2Blob("label"), lower_bound,
-      static_cast<T>(cos(margin)), static_cast<T>(sin(margin)), BnInOp2Blob("sin_theta_data"),
-      BnInOp2Blob("out"));
+      ctx.device_ctx, lower_bound, static_cast<T>(cos(margin)), static_cast<T>(sin(margin)),
+      BnInOp2Blob("in"), BnInOp2Blob("label"), BnInOp2Blob("sin_theta_data"), BnInOp2Blob("out"));
 }
 
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kAdditiveAngularMarginConf, AdditiveAngularMarginKernel,

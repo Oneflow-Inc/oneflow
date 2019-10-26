@@ -32,12 +32,14 @@ template<DeviceType device_type, typename T>
 void AdditiveAngularMarginGradKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const float margin = GetValFromPbMessage<float>(this->GetCustomizedOpConf(), "margin");
-  const int64_t lower_bound = this->kernel_conf().additive_angular_margin_grad_conf().lower_bound();
+  int64_t lower_bound = 0;
+  if (this->kernel_conf().has_additive_angular_margin_grad_conf()) {
+    lower_bound = this->kernel_conf().additive_angular_margin_grad_conf().lower_bound();
+  }
   BnInOp2Blob("dx")->CopyDataContentFrom(ctx.device_ctx, BnInOp2Blob("dy"));
   AdditiveAngularMarginKernelUtil<device_type, T>::Backward(
-      ctx.device_ctx, BnInOp2Blob("dy"), lower_bound, static_cast<T>(cos(margin)),
-      static_cast<T>(sin(margin)), BnInOp2Blob("label"), BnInOp2Blob("sin_theta_data"),
-      BnInOp2Blob("dx"));
+      ctx.device_ctx, lower_bound, static_cast<T>(cos(margin)), static_cast<T>(sin(margin)),
+      BnInOp2Blob("dy"), BnInOp2Blob("label"), BnInOp2Blob("sin_theta_data"), BnInOp2Blob("dx"));
 }
 
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kAdditiveAngularMarginGradConf,

@@ -36,7 +36,10 @@ void SparseCrossEntropyGradKernel<device_type, T>::ForwardDataContent(
   const Blob* label = BnInOp2Blob("label");
   const Blob* dy = BnInOp2Blob("dy");
   Blob* prediction_diff = BnInOp2Blob("prediction_diff");
-  const int64_t lower_bound = this->kernel_conf().sparse_cross_entropy_grad_conf().lower_bound();
+  int64_t lower_bound = 0;
+  if (this->kernel_conf().has_sparse_cross_entropy_grad_conf()) {
+    lower_bound = this->kernel_conf().sparse_cross_entropy_grad_conf().lower_bound();
+  }
   SparseCrossEntropyUntil<device_type, T>::SwitchBackward(SwitchCase(label->data_type()),
                                                           ctx.device_ctx, lower_bound, prediction,
                                                           label, dy, prediction_diff);

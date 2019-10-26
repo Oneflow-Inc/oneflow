@@ -34,8 +34,10 @@ void SparseSoftmaxCrossEntropyGradKernel<device_type, T>::ForwardDataContent(
   const Blob* label_blob = BnInOp2Blob("label");
   const Blob* prob_blob = BnInOp2Blob("prob");
   Blob* dx_blob = BnInOp2Blob("dx");
-  const int64_t lower_bound =
-      this->kernel_conf().sparse_softmax_cross_entropy_grad_conf().lower_bound();
+  int64_t lower_bound = 0;
+  if (this->kernel_conf().has_sparse_softmax_cross_entropy_grad_conf()) {
+    lower_bound = this->kernel_conf().sparse_softmax_cross_entropy_grad_conf().lower_bound();
+  }
   SparseSoftmaxCrossEntropyUntil<device_type, T>::SwitchBackward(
       SwitchCase(label_blob->data_type()), ctx.device_ctx, lower_bound, dy_blob, label_blob,
       prob_blob, dx_blob);

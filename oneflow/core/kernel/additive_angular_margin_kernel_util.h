@@ -8,19 +8,19 @@ namespace oneflow {
 template<DeviceType device_type, typename T, typename K>
 struct AdditiveAngularMarginKernelUtilImpl final {
   static void Forward(DeviceCtx* ctx, const int64_t batch_num, const int64_t labels_num,
-                      const T* in, const K* label, const int64_t lower_bound, const T cos_m,
-                      const T sin_m, T* sin_theta_data, T* out);
+                      const int64_t lower_bound, const T cos_m, const T sin_m, const T* in,
+                      const K* label, T* sin_theta_data, T* out);
   static void Backward(DeviceCtx* ctx, const int64_t batch_num, const int64_t labels_num,
-                       const T* out_diff, const K* label, const int64_t lower_bound, const T cos_m,
-                       const T sin_m, const T* sin_theta_data, T* in_diff);
+                       const int64_t lower_bound, const T cos_m, const T sin_m, const T* out_diff,
+                       const K* label, const T* sin_theta_data, T* in_diff);
 };
 
 template<DeviceType device_type, typename T>
 struct AdditiveAngularMarginKernelUtil final {
-  static void Forward(DeviceCtx* ctx, const Blob* in, const Blob* label, const int64_t lower_bound,
-                      const T cos_m, const T sin_m, Blob* sin_theta_data, Blob* out);
-  static void Backward(DeviceCtx* ctx, const Blob* out_diff, const int64_t lower_bound,
-                       const T cos_m, const T sin_m, const Blob* label, const Blob* sin_theta_data,
+  static void Forward(DeviceCtx* ctx, const int64_t lower_bound, const T cos_m, const T sin_m,
+                      const Blob* in, const Blob* label, Blob* sin_theta_data, Blob* out);
+  static void Backward(DeviceCtx* ctx, const int64_t lower_bound, const T cos_m, const T sin_m,
+                       const Blob* out_diff, const Blob* label, const Blob* sin_theta_data,
                        Blob* in_diff);
 };
 

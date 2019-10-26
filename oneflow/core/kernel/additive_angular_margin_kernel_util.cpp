@@ -6,21 +6,21 @@ namespace oneflow {
 namespace {
 
 template<DeviceType device_type, typename T, typename K>
-void AdditiveAngularMarginForward(DeviceCtx* ctx, const Blob* in, const Blob* label,
-                                  const int64_t lower_bound, const T cos_m, const T sin_m,
+void AdditiveAngularMarginForward(DeviceCtx* ctx, const int64_t lower_bound, const T cos_m,
+                                  const T sin_m, const Blob* in, const Blob* label,
                                   Blob* sin_theta_data, Blob* out) {
   AdditiveAngularMarginKernelUtilImpl<device_type, T, K>::Forward(
-      ctx, in->shape().At(0), in->shape().At(1), in->dptr<T>(), label->dptr<K>(), lower_bound,
-      cos_m, sin_m, sin_theta_data->mut_dptr<T>(), out->mut_dptr<T>());
+      ctx, in->shape().At(0), in->shape().At(1), lower_bound, cos_m, sin_m, in->dptr<T>(),
+      label->dptr<K>(), sin_theta_data->mut_dptr<T>(), out->mut_dptr<T>());
 }
 
 template<DeviceType device_type, typename T, typename K>
-void AdditiveAngularMarginBackward(DeviceCtx* ctx, const Blob* out_diff, const int64_t lower_bound,
-                                   const T cos_m, const T sin_m, const Blob* label,
+void AdditiveAngularMarginBackward(DeviceCtx* ctx, const int64_t lower_bound, const T cos_m,
+                                   const T sin_m, const Blob* out_diff, const Blob* label,
                                    const Blob* sin_theta_data, Blob* in_diff) {
   AdditiveAngularMarginKernelUtilImpl<device_type, T, K>::Backward(
-      ctx, out_diff->shape().At(0), out_diff->shape().At(1), out_diff->dptr<T>(), label->dptr<K>(),
-      lower_bound, cos_m, sin_m, sin_theta_data->dptr<T>(), in_diff->mut_dptr<T>());
+      ctx, out_diff->shape().At(0), out_diff->shape().At(1), lower_bound, cos_m, sin_m,
+      out_diff->dptr<T>(), label->dptr<K>(), sin_theta_data->dptr<T>(), in_diff->mut_dptr<T>());
 }
 
 template<DeviceType device_type, typename T>
@@ -38,47 +38,47 @@ struct AdditiveAngularMarginSwitchUtil final {
 }  // namespace
 
 template<DeviceType device_type, typename T>
-void AdditiveAngularMarginKernelUtil<device_type, T>::Forward(DeviceCtx* ctx, const Blob* in,
-                                                              const Blob* label,
+void AdditiveAngularMarginKernelUtil<device_type, T>::Forward(DeviceCtx* ctx,
                                                               const int64_t lower_bound,
                                                               const T cos_m, const T sin_m,
+                                                              const Blob* in, const Blob* label,
                                                               Blob* sin_theta_data, Blob* out) {
   AdditiveAngularMarginSwitchUtil<device_type, T>::SwitchAdditiveAngularMarginForward(
-      SwitchCase(label->data_type()), ctx, in, label, lower_bound, cos_m, sin_m, sin_theta_data,
+      SwitchCase(label->data_type()), ctx, lower_bound, cos_m, sin_m, in, label, sin_theta_data,
       out);
 }
 
 template<DeviceType device_type, typename T>
 void AdditiveAngularMarginKernelUtil<device_type, T>::Backward(
-    DeviceCtx* ctx, const Blob* out_diff, const int64_t lower_bound, const T cos_m, const T sin_m,
+    DeviceCtx* ctx, const int64_t lower_bound, const T cos_m, const T sin_m, const Blob* out_diff,
     const Blob* label, const Blob* sin_theta_data, Blob* in_diff) {
   AdditiveAngularMarginSwitchUtil<device_type, T>::SwitchAdditiveAngularMarginBackward(
-      SwitchCase(label->data_type()), ctx, out_diff, lower_bound, cos_m, sin_m, label,
+      SwitchCase(label->data_type()), ctx, lower_bound, cos_m, sin_m, out_diff, label,
       sin_theta_data, in_diff);
 }
 
 template<typename T, typename K>
 struct AdditiveAngularMarginKernelUtilImpl<DeviceType::kCPU, T, K> final {
   static void Forward(DeviceCtx* ctx, const int64_t batch_num, const int64_t labels_num,
-                      const T* in, const K* label, const int64_t lower_bound, const T cos_m,
-                      const T sin_m, T* sin_theta_data, T* out);
+                      const int64_t lower_bound, const T cos_m, const T sin_m, const T* in,
+                      const K* label, T* sin_theta_data, T* out);
   static void Backward(DeviceCtx* ctx, const int64_t batch_num, const int64_t labels_num,
-                       const T* out_diff, const K* label, const int64_t lower_bound, const T cos_m,
-                       const T sin_m, const T* sin_theta_data, T* in_diff);
+                       const int64_t lower_bound, const T cos_m, const T sin_m, const T* out_diff,
+                       const K* label, const T* sin_theta_data, T* in_diff);
 };
 
 template<typename T, typename K>
 void AdditiveAngularMarginKernelUtilImpl<DeviceType::kCPU, T, K>::Forward(
-    DeviceCtx* ctx, const int64_t batch_num, const int64_t labels_num, const T* in, const K* label,
-    const int64_t lower_bound, const T cos_m, const T sin_m, T* sin_theta_data, T* out) {
+    DeviceCtx* ctx, const int64_t batch_num, const int64_t labels_num, const int64_t lower_bound,
+    const T cos_m, const T sin_m, const T* in, const K* label, T* sin_theta_data, T* out) {
   UNIMPLEMENTED();
 }
 
 template<typename T, typename K>
 void AdditiveAngularMarginKernelUtilImpl<DeviceType::kCPU, T, K>::Backward(
-    DeviceCtx* ctx, const int64_t batch_num, const int64_t labels_num, const T* out_diff,
-    const K* label, const int64_t lower_bound, const T cos_m, const T sin_m,
-    const T* sin_theta_data, T* in_diff) {
+    DeviceCtx* ctx, const int64_t batch_num, const int64_t labels_num, const int64_t lower_bound,
+    const T cos_m, const T sin_m, const T* out_diff, const K* label, const T* sin_theta_data,
+    T* in_diff) {
   UNIMPLEMENTED();
 }
 
