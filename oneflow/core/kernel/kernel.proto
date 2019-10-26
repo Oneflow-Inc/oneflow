@@ -174,6 +174,26 @@ message NcclTupleBroadcastConf {
   required ParallelContext parallel_ctx = 1;
 }
 
+message AdditiveAngularMarginConf {
+  required int64 lower_bound = 1;
+}
+
+message AdditiveAngularMarginGradConf {
+  required int64 lower_bound = 1;
+}
+
+message SparseSoftmaxCrossEntropyGradConf {
+  required int64 lower_bound = 1;
+}
+
+message SparseCrossEntropyConf {
+  required int64 lower_bound = 1;
+}
+
+message SparseCrossEntropyGradConf {
+  required int64 lower_bound = 1;
+}
+
 message KernelConf {
   required OpAttribute op_attribute = 1;
   required bool is_forward = 2;
@@ -221,5 +241,10 @@ message KernelConf {
     GatherMs0GradKernelConf gather_ms0_grad_conf = 415;
     NcclTupleReduceConf nccl_tuple_reduce_conf = 416;
     NcclTupleBroadcastConf nccl_tuple_broadcast_conf = 417;
+    AdditiveAngularMarginConf additive_angular_margin_conf = 418;
+    AdditiveAngularMarginGradConf additive_angular_margin_grad_conf = 419;
+    SparseSoftmaxCrossEntropyGradConf sparse_softmax_cross_entropy_grad_conf = 420;
+    SparseCrossEntropyConf sparse_cross_entropy_conf = 421;
+    SparseCrossEntropyGradConf sparse_cross_entropy_grad_conf = 422;
   }
 }

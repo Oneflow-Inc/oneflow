@@ -350,6 +350,51 @@ message SparseCrossEntropyGradOpConf {
   required string prediction_diff = 4;
 }
 
+message SparseCrossEntropyMs1OpConf {
+  required string prediction = 1;
+  required string label = 2;
+  required string out = 3;
+  required int32 depth = 4;
+}
+
+message SparseCrossEntropyMs1GradOpConf {
+  required string prediction = 1;
+  required string label = 2;
+  required string dy = 3;
+  required string prediction_diff = 4;
+  required int32 depth = 5;
+}
+
+message SparseSoftmaxCrossEntropyOpConf {
+  required string prediction = 1;
+  required string label = 2;
+  required string out = 3;
+  required string prob = 4;
+}
+
+message SparseSoftmaxCrossEntropyGradOpConf {
+  required string prob = 1;
+  required string label = 2;
+  required string dy = 3;
+  required string dx = 4;
+}
+
+message SparseSoftmaxCrossEntropyMs1OpConf {
+  required string prediction = 1;
+  required string label = 2;
+  required string out = 3;
+  required string prob = 4;
+  required int32 depth = 5;
+}
+
+message SparseSoftmaxCrossEntropyMs1GradOpConf {
+  required string prob = 1;
+  required string label = 2;
+  required string dy = 3;
+  required string dx = 4;
+  required int32 depth = 5;
+}
+
 message SparseSoftmaxCrossEntropyLossOpConf {
   required string prediction = 1;
   required string label = 2;
@@ -724,6 +769,19 @@ message ReduceMeanGradOpConf {
   optional string temp_storage = 5 [default = "temp_storage"];
 }
 
+message ReduceMaxOpConf {
+  required string in = 1;
+  required string out = 2;
+  repeated int32 axis = 4;
+  optional bool keep_dims = 5 [default = false];
+}
+
+message DeviceReduceMaxOpConf {
+  required string in = 1;
+  required string out = 2;
+  repeated int32 axis = 3;
+}
+
 message ReshapeOpConf {
   required string in = 1;
   required string out = 2;
@@ -955,6 +1013,40 @@ message NormalizationGradOpConf {
   required float epsilon = 10;
 }
 
+message AdditiveAngularMarginOpConf {
+  required string in = 1;
+  required string label = 2;
+  required string out = 3;
+  required string sin_theta_data = 4;
+  required float margin = 5;
+}
+
+message AdditiveAngularMarginGradOpConf {
+  required string dy = 1;
+  required string sin_theta_data = 2;
+  required string label = 3;
+  required string dx = 4;
+  required float margin = 5;
+}
+
+message AdditiveAngularMarginMs1OpConf {
+  required string in = 1;
+  required string label = 2;
+  required string out = 3;
+  required string sin_theta_data = 4;
+  required float margin = 5;
+  optional int32 depth = 6;
+}
+
+message AdditiveAngularMarginMs1GradOpConf {
+  required string dy = 1;
+  required string sin_theta_data = 2;
+  required string label = 3;
+  required string dx = 4;
+  required float margin = 5;
+  optional int32 depth = 6;
+}
+
 message RandomMaskLikeOpConf {
   required string like = 1;
   required string out = 2;
@@ -1145,6 +1237,11 @@ message RsqrtOpConf {
   required string in = 1;
   required string out = 2;
   optional double epsilon = 3 [default = 1e-5];
+}
+
+message ExpOpConf {
+  required string in = 1;
+  required string out = 2;
 }
 
 message SquareOpConf {
@@ -1647,6 +1744,18 @@ message OperatorConf {
     SigmoidCrossEntropyLossGradOpConf sigmoid_cross_entropy_loss_grad_conf = 304; 
     GatherMs0OpConf gather_ms0_conf = 305;
     GatherMs0GradOpConf gather_ms0_grad_conf = 306;
+    ReduceMaxOpConf reduce_max_conf = 307;
+    DeviceReduceMaxOpConf device_reduce_max_conf = 308;
+    AdditiveAngularMarginOpConf additive_angular_margin_conf = 309;
+    AdditiveAngularMarginGradOpConf additive_angular_margin_grad_conf = 310;
+    AdditiveAngularMarginMs1OpConf additive_angular_margin_ms1_conf = 311;
+    AdditiveAngularMarginMs1GradOpConf additive_angular_margin_ms1_grad_conf = 312;
+    SparseCrossEntropyMs1OpConf sparse_cross_entropy_ms1_conf = 313;
+    SparseCrossEntropyMs1GradOpConf sparse_cross_entropy_ms1_grad_conf = 314;
+    SparseSoftmaxCrossEntropyOpConf sparse_softmax_cross_entropy_conf = 315;
+    SparseSoftmaxCrossEntropyGradOpConf sparse_softmax_cross_entropy_grad_conf = 316;
+    SparseSoftmaxCrossEntropyMs1OpConf sparse_softmax_cross_entropy_ms1_conf = 317;
+    SparseSoftmaxCrossEntropyMs1GradOpConf sparse_softmax_cross_entropy_ms1_grad_conf = 318;
 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;
@@ -1658,6 +1767,7 @@ message OperatorConf {
     RsqrtOpConf rsqrt_conf = 506;
     ScalarAddOpConf scalar_add_conf = 507;
     ScalarMulOpConf scalar_mul_conf = 508;
+    ExpOpConf exp_conf = 509;
 
     // mutable input op
     AxpyOpConf axpy_conf = 752;
