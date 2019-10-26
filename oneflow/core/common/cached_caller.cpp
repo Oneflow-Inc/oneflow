@@ -5,8 +5,8 @@
 namespace oneflow {
 
 bool IsThreadLocalCacheEnabled() {
-	if (Global<ResourceDesc>::Get() == nullptr) { return true; }
-	return Global<ResourceDesc>::Get()->enable_thread_local_cache();
+  if (Global<ResourceDesc>::Get() == nullptr) { return true; }
+  return Global<ResourceDesc>::Get()->enable_thread_local_cache();
 }
 
-}
+}  // namespace oneflow

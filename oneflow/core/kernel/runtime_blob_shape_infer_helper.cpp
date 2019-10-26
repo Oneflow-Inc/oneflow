@@ -16,8 +16,8 @@ Symbol<Shape> _CreateLeftExtendedShapeSym(const std::pair<Symbol<Shape>, int>& p
 
 Symbol<Shape> CreateLeftExtendedShapeSym(Symbol<Shape> shape_sym, int num_axes) {
   CHECK_LE(shape_sym->NumAxes(), num_axes);
-	return ThreadLocalCachedCall(kCallCacheSize, &_CreateLeftExtendedShapeSym,
-															 std::make_pair(shape_sym, num_axes));
+  return ThreadLocalCachedCall(kCallCacheSize, &_CreateLeftExtendedShapeSym,
+                               std::make_pair(shape_sym, num_axes));
 }
 
 Symbol<Shape> _CreateLeftOnesStrippedShapeSym(const std::pair<Symbol<Shape>, int>& pair) {
@@ -29,8 +29,8 @@ Symbol<Shape> _CreateLeftOnesStrippedShapeSym(const std::pair<Symbol<Shape>, int
 
 Symbol<Shape> CreateLeftOnesStrippedShapeSym(Symbol<Shape> shape_sym, int num_left_ones) {
   CHECK_GE(num_left_ones, 0);
-	return ThreadLocalCachedCall(kCallCacheSize, &_CreateLeftOnesStrippedShapeSym,
-															 std::make_pair(shape_sym, num_left_ones));
+  return ThreadLocalCachedCall(kCallCacheSize, &_CreateLeftOnesStrippedShapeSym,
+                               std::make_pair(shape_sym, num_left_ones));
 }
 
 }  // namespace
@@ -90,7 +90,7 @@ void RuntimeBlobShapeInferHelper::InferDenseShape(
     });
     CHECK_JUST(op_->InferOutBlobDescsIf(CachedBlobDesc4BnInOp, &parallel_ctx_, &sbp_signature_,
                                         [](OpContext*) {}));
-		auto* ret = new OpInferCacheValue();
+    auto* ret = new OpInferCacheValue();
     for (const auto& obn : op_->output_bns()) {
       const auto& blob_desc = bn_in_op2blob_desc_.at(obn);
       ret->obn2shape_sym[obn].reset(blob_desc->shape());
@@ -102,7 +102,7 @@ void RuntimeBlobShapeInferHelper::InferDenseShape(
     }
     return std::shared_ptr<const OpInferCacheValue>(ret);
   };
-	size_t cache_size = Global<ResourceDesc>::Get()->thread_local_cache_max_size(); 
+  size_t cache_size = Global<ResourceDesc>::Get()->thread_local_cache_max_size();
   const auto& shape_infer_ret = ThreadLocalCachedCall(cache_size, Infer, op_infer_cache_key_);
   const auto& obn2shape_sym = shape_infer_ret->obn2shape_sym;
   for (const auto& obn : op_->output_bns()) {

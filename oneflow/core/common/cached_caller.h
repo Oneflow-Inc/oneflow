@@ -8,13 +8,13 @@ namespace oneflow {
 
 template<typename T>
 void DeleteAndClear(T** ptr, size_t obj_cnt) {
-	static const size_t kThreshold = 4096;
-	if (obj_cnt <= kThreshold) {
-		delete ptr;
-	} else {
-		std::thread([](T* ptr){ delete ptr; }, *ptr);
-	}
-	*ptr = nullptr;
+  static const size_t kThreshold = 4096;
+  if (obj_cnt <= kThreshold) {
+    delete ptr;
+  } else {
+    std::thread([](T* ptr) { delete ptr; }, *ptr);
+  }
+  *ptr = nullptr;
 }
 
 bool IsThreadLocalCacheEnabled();
@@ -24,29 +24,29 @@ template<
     typename RawArg = typename std::tuple_element<0, typename function_traits<F>::args_type>::type,
     typename Arg = typename std::remove_const<typename std::remove_reference<RawArg>::type>::type>
 Ret ThreadLocalCachedCall(size_t max_size, F f, const Arg& arg) {
-	if (IsThreadLocalCacheEnabled() == false) { return f(arg); }	
-	using HashMap = std::unordered_map<HashEqTraitPtr<const Arg>, Ret>;
-	using KeyStorage = std::list<std::unique_ptr<Arg>>;
+  if (IsThreadLocalCacheEnabled() == false) { return f(arg); }
+  using HashMap = std::unordered_map<HashEqTraitPtr<const Arg>, Ret>;
+  using KeyStorage = std::list<std::unique_ptr<Arg>>;
   static thread_local HashMap* cache = nullptr;
   static thread_local KeyStorage* key_storage = nullptr;
-	if (cache != nullptr && cache->size() >= max_size) {
-		DeleteAndClear(&cache, cache->size());
-		DeleteAndClear(&key_storage, cache->size());
-	}
-	if (cache == nullptr) {
-		cache = new HashMap();
-		key_storage = new KeyStorage();
-	}
-	size_t hash_value = std::hash<Arg>()(arg);
-	{
-		HashEqTraitPtr<const Arg> ptr_wrapper(&arg, hash_value);
-		const auto& iter = cache->find(ptr_wrapper);
-		if (iter != cache->end()) { return iter->second; }
-	}
-	Arg* new_arg = new Arg(arg);
-	key_storage->emplace_back(new_arg);
-	HashEqTraitPtr<const Arg> ptr_wrapper(new_arg, hash_value);
-	return cache->emplace(ptr_wrapper, f(*new_arg)).first->second;
+  if (cache != nullptr && cache->size() >= max_size) {
+    DeleteAndClear(&cache, cache->size());
+    DeleteAndClear(&key_storage, cache->size());
+  }
+  if (cache == nullptr) {
+    cache = new HashMap();
+    key_storage = new KeyStorage();
+  }
+  size_t hash_value = std::hash<Arg>()(arg);
+  {
+    HashEqTraitPtr<const Arg> ptr_wrapper(&arg, hash_value);
+    const auto& iter = cache->find(ptr_wrapper);
+    if (iter != cache->end()) { return iter->second; }
+  }
+  Arg* new_arg = new Arg(arg);
+  key_storage->emplace_back(new_arg);
+  HashEqTraitPtr<const Arg> ptr_wrapper(new_arg, hash_value);
+  return cache->emplace(ptr_wrapper, f(*new_arg)).first->second;
 }
 
 template<

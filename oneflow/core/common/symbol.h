@@ -31,25 +31,25 @@ class Symbol final {
 
 template<typename T>
 const T* Symbol<T>::FindOrInsertPtr(const T& obj) {
-	using HashSet = std::unordered_set<HashEqTraitPtr<const T>>; 
+  using HashSet = std::unordered_set<HashEqTraitPtr<const T>>;
   static HashSet cached_objs;
-	static thread_local std::unordered_map<HashEqTraitPtr<const T>, const T*> obj2ptr;
+  static thread_local std::unordered_map<HashEqTraitPtr<const T>, const T*> obj2ptr;
 
   size_t hash_value = std::hash<T>()(obj);
-	HashEqTraitPtr<const T> obj_ptr_wraper(&obj, hash_value);
+  HashEqTraitPtr<const T> obj_ptr_wraper(&obj, hash_value);
   {
     auto iter = obj2ptr.find(obj_ptr_wraper);
     if (iter != obj2ptr.end()) { return iter->second; }
   }
-	const T* ptr;
+  const T* ptr;
   {
     static std::mutex mutex;
     HashEqTraitPtr<const T> new_obj_ptr_wraper(new T(obj), hash_value);
     std::lock_guard<std::mutex> lock(mutex);
     ptr = cached_objs.emplace(new_obj_ptr_wraper).first->ptr();
   }
-	obj2ptr[obj_ptr_wraper] = ptr;
-	return ptr;
+  obj2ptr[obj_ptr_wraper] = ptr;
+  return ptr;
 }
 
 template<typename T>
