@@ -232,9 +232,19 @@ def compare_test_case():
     compare(gt_segm.ndarray(), flat_polys(data["gt_segm"]), name="gt_segm")
 
     # compare gt_segm_mask
+    masks = []
+    for m in data["gt_segm_mask"]:
+        if len(m.shape) == 2:
+            m = np.expand_dims(m, axis=0)
+
+        assert len(m.shape) == 3
+        pad_h = image.shape[1] - m.shape[1]
+        pad_w = image.shape[2] - m.shape[2]
+        masks.append(np.pad(m, ((0, 0), (0, pad_h), (0, pad_w))))
+
     compare(
         gt_segm_mask.ndarray(),
-        np.concatenate([m.reshape(-1) for m in data["gt_segm_mask"]], axis=0),
+        np.concatenate(masks, axis=0),
         name="gt_segm_mask",
     )
 
