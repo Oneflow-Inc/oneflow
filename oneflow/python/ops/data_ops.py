@@ -53,6 +53,57 @@ class ImageResizePreprocessor(object):
         return proto
 
 
+@oneflow_export("data.ImageCropPreprocessor")
+class ImageCropPreprocessor(object):
+    def __init__(self, width, height, random_xy=True, x=None, y=None, crop_w=-1, crop_h=-1):
+        assert isinstance(width, int)
+        assert isinstance(height, int)
+        self.random_xy = random_xy
+        self.x = None
+        self.y = None
+        if x is not None:
+            self.x = x
+        if y is not None:
+            self.y = y
+        self.width = width
+        self.height = height
+        self.crop_h = crop_h
+        self.crop_w = crop_w
+
+    def to_proto(self, proto=None):
+        proto = proto or image_util.ImagePreprocess()
+        proto.crop.random_xy = self.random_xy
+        if self.x is not None:
+            proto.crop.x = self.x
+        if self.y is not None:
+            proto.crop.y = self.y
+        proto.crop.width = self.width
+        proto.crop.height = self.height
+        proto.crop.range.width = self.crop_w
+        proto.crop.range.height = self.crop_h
+        return proto
+
+
+@oneflow_export("data.ImageCutoutPreprocessor")
+class ImageCutoutPreprocessor(object):
+    def __init__(self, cutout_ratio = 0.0, cutout_size = 4, cutout_mode = "normal", cutout_filler = 0):
+        self.cutout_ratio = cutout_ratio
+        self.cutout_size = cutout_size
+        self.cutout_mode = cutout_mode
+        self.cutout_filler = cutout_filler
+
+    def to_proto(self, proto=None):
+        proto = proto or image_util.ImagePreprocess()
+        proto.cutout.cutout_ratio = self.cutout_ratio
+        proto.cutout.cutout_size = self.cutout_size
+        if self.cutout_mode == "normal":
+            proto.cutout.cutout_mode = image_util.ImageCutout.CutoutMode.Normal
+        else:
+            proto.cutout.cutout_mode = image_util.ImageCutout.CutoutMode.Uniform
+        proto.cutout.cutout_filler = self.cutout_filler
+        return proto
+
+
 @oneflow_export("data.ImageCodec")
 class ImageCodec(object):
     def __init__(self, image_preprocessors=None):
@@ -139,6 +190,8 @@ def decode_ofrecord(ofrecord_dir, blobs,
                     data_part_num=-1,
                     part_name_prefix="part-",
                     part_name_suffix_length=-1,
+                    shuffle=False,
+                    buffer_size=1024,
                     name=None):
     if name is None:
         name = id_util.UniqueStr("Decode_")
@@ -153,6 +206,8 @@ def decode_ofrecord(ofrecord_dir, blobs,
     op_conf.decode_ofrecord_conf.batch_size = batch_size
     op_conf.decode_ofrecord_conf.part_name_prefix = part_name_prefix
     op_conf.decode_ofrecord_conf.part_name_suffix_length = part_name_suffix_length
+    if shuffle == True:
+        op_conf.decode_ofrecord_conf.random_shuffle_conf.buffer_size = buffer_size
     for blob_conf in blobs:
         op_conf.decode_ofrecord_conf.blob.extend([blob_conf.to_proto()])
         lbi = logical_blob_id_util.LogicalBlobId()

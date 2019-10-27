@@ -31,7 +31,9 @@ def dense(
 
     assert model_distribute is distribute_util.auto() or \
         model_distribute is distribute_util.broadcast() or \
-        model_distribute is distribute_util.split(0)
+        model_distribute is distribute_util.split(0) or \
+        model_distribute is distribute_util.split(1)
+
 
     if model_distribute is distribute_util.split(0):
         assert in_num_axes is 2 # model distribute is hard for reshape split dim 1
@@ -142,6 +144,7 @@ def batch_normalization(
     moving_mean_initializer=None,
     moving_variance_initializer=None,
     trainable=False,
+    is_training=True,
     name=None,
 ):
     assert axis >= -len(inputs.shape) and axis < len(inputs.shape)
@@ -212,10 +215,48 @@ def batch_normalization(
     if trainable:
         setattr(op_conf.normalization_conf, "mean", "mean")
         setattr(op_conf.normalization_conf, "inv_variance", "inv_variance")
-        setattr(op_conf.normalization_conf, "is_training", True)
+        setattr(op_conf.normalization_conf, "is_training", is_training)
     else:
         setattr(op_conf.normalization_conf, "is_training", False)
 
+    compile_context.CurJobAddOp(op_conf)
+    out_lbi = logical_blob_id_util.LogicalBlobId()
+    setattr(out_lbi, "op_name", op_conf.name)
+    setattr(out_lbi, "blob_name", "out")
+    return remote_blob_util.RemoteBlob(out_lbi)
+
+@oneflow_export("layers.PRelu")
+def prelu(
+    inputs,
+    alpha_initializer,
+    data_format,
+    channel_shared,
+    name=None,
+    model_distribute=distribute_util.broadcast(),
+):
+  if channel_shared:
+    alpha_shape = [1]
+  else:
+    if data_format == "channels_first":
+      alpha_shape = [inputs.shape[1]]
+    elif data_format == "channels_last":
+      alpha_shape = [inputs.shape[-1]]
+    else:
+      raise ValueError("invalid data_format")
+    alpha = flow.get_variable(
+        name + "-alpha",
+        shape=alpha_shape,
+        dtype=inputs.dtype,
+        initializer=flow.constant_initializer(alpha_initializer),
+        distribute=model_distribute
+    )
+    op_conf = op_conf_util.OperatorConf()
+    setattr(op_conf, "name", name)
+    setattr(op_conf.prelu_conf, "in", inputs.logical_blob_name)
+    setattr(op_conf.prelu_conf, "out", "out")
+    setattr(op_conf.prelu_conf, "alpha", alpha.logical_blob_name)
+    setattr(op_conf.prelu_conf, "data_format", data_format)
+    setattr(op_conf.prelu_conf, "channel_shared", channel_shared)
     compile_context.CurJobAddOp(op_conf)
     out_lbi = logical_blob_id_util.LogicalBlobId()
     setattr(out_lbi, "op_name", op_conf.name)
