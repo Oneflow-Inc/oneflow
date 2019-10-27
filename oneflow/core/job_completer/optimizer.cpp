@@ -1,4 +1,7 @@
 #include "oneflow/core/job_completer/optimizer.h"
+#include "oneflow/core/graph/op_graph.h"
+#include "oneflow/core/job_completer/auto_learning_rate.h"
+#include "oneflow/core/job/job.pb.h"
 
 namespace oneflow {
 
@@ -13,7 +16,10 @@ void GenerateOptimizerOpConfIf(const VariableOp& var_op, const ParallelConf& par
                                JobBuilder* job_builder, const LogicalBlobId& diff_lbi_of_var_out,
                                const LogicalBlobId& total_loss_instance_num_lbi) {
   const auto& train_conf = GlobalJobDesc().job_conf().train_conf();
-  auto optimizer_case = train_conf.model_update_conf().normal_mdupdt_case();
+  auto optimizer_case =
+      var_op.op_conf().variable_conf().has_model_update_conf()
+          ? var_op.op_conf().variable_conf().model_update_conf().normal_mdupdt_case()
+          : train_conf.model_update_conf().normal_mdupdt_case();
   auto* obj = NewObj<GenerateOptimizerOpConfWrapperStruct>(optimizer_case);
   obj->Call(var_op, parallel_conf, job_builder, diff_lbi_of_var_out, total_loss_instance_num_lbi);
 }
@@ -58,22 +64,49 @@ void ConstructMdUpdtOpConf(const VariableOp& op, const LogicalBlobId& diff_lbi_o
                            const LogicalBlobId& total_loss_instance_num_lbi,
                            JobBuilder* job_builder, T* mdupdt_op_conf) {
   const auto& train_conf = job_builder->job().job_conf().train_conf();
-  *mdupdt_op_conf->mutable_user_conf() = train_conf.model_update_conf();
+  *mdupdt_op_conf->mutable_user_conf() = op.op_conf().variable_conf().has_model_update_conf()
+                                             ? op.op_conf().variable_conf().model_update_conf()
+                                             : train_conf.model_update_conf();
   mdupdt_op_conf->set_model_diff(GenLogicalBlobName(diff_lbi_of_var_out));
   mdupdt_op_conf->set_total_instance_num_diff(GenLogicalBlobName(total_loss_instance_num_lbi));
   mdupdt_op_conf->set_model(GenLogicalBlobName(op.BnInOp2Lbi("out")));
   mdupdt_op_conf->set_train_step(train_conf.train_step_lbn());
-  const std::string& primary_lr_lbn = train_conf.primary_lr_lbn();
-  const std::string& secondary_lr_lbn = train_conf.secondary_lr_lbn();
+
   if (op.op_conf().variable_conf().model_name() == "weight") {
+    const std::string& primary_lr_lbn =
+        op.op_conf().variable_conf().has_learning_rate()
+            ? AddScheduleOp(job_builder, mdupdt_op_conf->user_conf(), train_conf.train_step_lbn(),
+                            "Variable-Train-PrimaryLearningRate-Scheduler" + op.op_conf().name(),
+                            op.op_conf().variable_conf().learning_rate())
+            : train_conf.primary_lr_lbn();
+    const float l1 = op.op_conf().variable_conf().has_l1() ? op.op_conf().variable_conf().l1()
+                                                           : train_conf.weight_l1();
+    const float l2 = op.op_conf().variable_conf().has_l2() ? op.op_conf().variable_conf().l2()
+                                                           : train_conf.weight_l2();
     mdupdt_op_conf->set_learning_rate(primary_lr_lbn);
-    mdupdt_op_conf->set_l1(train_conf.weight_l1());
-    mdupdt_op_conf->set_l2(train_conf.weight_l2());
+    mdupdt_op_conf->set_l1(l1);
+    mdupdt_op_conf->set_l2(l2);
   } else if (op.op_conf().variable_conf().model_name() == "bias") {
+    const std::string& secondary_lr_lbn =
+        op.op_conf().variable_conf().has_learning_rate()
+            ? AddScheduleOp(job_builder, mdupdt_op_conf->user_conf(), train_conf.train_step_lbn(),
+                            "Variable-Train-SecondaryLearningRate-Scheduler" + op.op_conf().name(),
+                            op.op_conf().variable_conf().learning_rate())
+            : train_conf.secondary_lr_lbn();
+    const float l1 = op.op_conf().variable_conf().has_l1() ? op.op_conf().variable_conf().l1()
+                                                           : train_conf.bias_l1();
+    const float l2 = op.op_conf().variable_conf().has_l2() ? op.op_conf().variable_conf().l2()
+                                                           : train_conf.bias_l2();
     mdupdt_op_conf->set_learning_rate(secondary_lr_lbn);
-    mdupdt_op_conf->set_l1(train_conf.bias_l1());
-    mdupdt_op_conf->set_l2(train_conf.bias_l2());
+    mdupdt_op_conf->set_l1(l1);
+    mdupdt_op_conf->set_l2(l2);
   } else {
+    const std::string& primary_lr_lbn =
+        op.op_conf().variable_conf().has_learning_rate()
+            ? AddScheduleOp(job_builder, mdupdt_op_conf->user_conf(), train_conf.train_step_lbn(),
+                            "Variable-Train-PrimaryLearningRate-Scheduler" + op.op_conf().name(),
+                            op.op_conf().variable_conf().learning_rate())
+            : train_conf.primary_lr_lbn();
     mdupdt_op_conf->set_learning_rate(primary_lr_lbn);
     mdupdt_op_conf->set_l1(0);
     mdupdt_op_conf->set_l2(0);
