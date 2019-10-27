@@ -18,7 +18,7 @@ class RuntimeBlobShapeInferHelper final {
   void InferDenseShape(std::function<Blob*(const std::string&)> BnInOp2Blob);
 
  private:
-  void UpdateOpInferCacheKey(std::function<Blob*(const std::string&)> BnInOp2Blob);
+  void UpdateInputBlobDescs7OpInferCacheKey(std::function<Blob*(const std::string&)> BnInOp2Blob);
   BlobDesc* BlobDesc4BnInOp(const std::string& bn_in_op, const RtBlobDesc& rt_blob_desc);
 
   std::shared_ptr<Operator> op_;

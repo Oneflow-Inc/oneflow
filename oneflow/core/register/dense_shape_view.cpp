@@ -93,12 +93,12 @@ void DenseShapeMutView::Set(int64_t axis, int64_t val) {
 
 void DenseShapeMutView::set_shape(const Shape& shape) {
   CHECK_EQ(num_axes_, shape.NumAxes());
-  for (size_t i = 0; i < shape.NumAxes(); ++i) { ptr_[i] = shape.At(i); }
+  std::copy(shape.dim_vec().data(), shape.dim_vec().data() + shape.NumAxes(), ptr_);
 }
 
 void DenseShapeMutView::set_shape(const DenseShapeView& shape) {
   CHECK_EQ(num_axes_, shape.NumAxes());
-  for (size_t i = 0; i < shape.NumAxes(); ++i) { ptr_[i] = shape.At(i); }
+  std::copy(shape.ptr(), shape.ptr() + shape.NumAxes(), ptr_);
 }
 
 }  // namespace oneflow

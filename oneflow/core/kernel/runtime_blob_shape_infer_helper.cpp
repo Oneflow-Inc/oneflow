@@ -39,7 +39,6 @@ RuntimeBlobShapeInferHelper::RuntimeBlobShapeInferHelper(const OperatorConf& op_
                                                          const KernelConf& kernel_conf,
                                                          const JobDesc* job_desc) {
   op_ = ConstructOp(op_conf, job_desc);
-  for (const auto& ibn : op_->input_bns()) { ibns_.insert(ibn); }
   auto* map = sbp_signature_.mutable_bn_in_op2sbp_parallel();
   op_->ForEachBnInOp([&](const std::string& bn_in_op) {
     bn_in_op2blob_desc_[bn_in_op].reset();
@@ -55,15 +54,15 @@ RuntimeBlobShapeInferHelper::RuntimeBlobShapeInferHelper(const OperatorConf& op_
   op_infer_cache_key_.dtype_signature_sym = SymbolOf(kernel_conf.dtype_signature());
 }
 
-void RuntimeBlobShapeInferHelper::UpdateOpInferCacheKey(
+void RuntimeBlobShapeInferHelper::UpdateInputBlobDescs7OpInferCacheKey(
     std::function<Blob*(const std::string&)> BnInOp2Blob) {
   for (const auto& ibn : op_->input_bns()) {
     const Blob* blob = BnInOp2Blob(ibn);
     if (blob == nullptr) { continue; }
-    Shape shape;
-    blob->dense_shape_view().ToShape(&shape);
+    BlobDesc* blob_desc = BlobDesc4BnInOp(ibn, blob->blob_desc());
+    blob_desc->mut_shape().CheckNumAxesIdenticalAndAssign(blob->shape());
     op_infer_cache_key_.ibn2shape_sym[ibn] =
-        CreateLeftExtendedShapeSym(SymbolOf(shape), blob->static_shape().NumAxes());
+        CreateLeftExtendedShapeSym(SymbolOf(blob_desc->shape()), blob->static_shape().NumAxes());
   }
 }
 
@@ -79,16 +78,12 @@ BlobDesc* RuntimeBlobShapeInferHelper::BlobDesc4BnInOp(const std::string& bn_in_
 
 void RuntimeBlobShapeInferHelper::InferDenseShape(
     std::function<Blob*(const std::string&)> BnInOp2Blob) {
-  UpdateOpInferCacheKey(BnInOp2Blob);
+  UpdateInputBlobDescs7OpInferCacheKey(BnInOp2Blob);
   auto Infer = [&](const OpInferCacheKey& key) -> std::shared_ptr<const OpInferCacheValue> {
     auto CachedBlobDesc4BnInOp = WithResultCached([&](const std::string& bn_in_op) -> BlobDesc* {
       const Blob* blob = BnInOp2Blob(bn_in_op);
       if (blob == nullptr) { return nullptr; }
-      BlobDesc* blob_desc = BlobDesc4BnInOp(bn_in_op, blob->blob_desc());
-      if (ibns_.find(bn_in_op) != ibns_.end()) {
-        blob_desc->mut_shape() = *key.ibn2shape_sym.at(bn_in_op);
-      }
-      return blob_desc;
+      return BlobDesc4BnInOp(bn_in_op, blob->blob_desc());
     });
     CHECK_JUST(op_->InferOutBlobDescsIf(CachedBlobDesc4BnInOp, &parallel_ctx_, &sbp_signature_,
                                         [](OpContext*) {}));

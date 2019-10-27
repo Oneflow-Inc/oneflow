@@ -6,6 +6,8 @@
 
 namespace oneflow {
 
+class DenseShapeView;
+
 class Shape final {
  public:
   // OF_DISALLOW_COPY_AND_MOVE(Shape);
@@ -16,6 +18,7 @@ class Shape final {
   Shape(const std::initializer_list<int64_t>& dim_vec);
   ~Shape() = default;
   Shape& operator=(const Shape& shape);
+  Shape& CheckNumAxesIdenticalAndAssign(const DenseShapeView& shape_view);
 
   bool operator==(const Shape& rhs) const;
   bool operator!=(const Shape& rhs) const { return !(*this == rhs); }
@@ -52,7 +55,6 @@ class Shape final {
 
 int64_t ShiftNegativeAxis(int64_t axis, const int64_t num_axes);
 
-class DenseShapeView;
 Shape CreateReducedShape(const DenseShapeView& shape, const std::vector<int64_t>& axis_vec);
 Shape CreateLeftExtendedShape(const DenseShapeView& shape, int ndims_extend_to);
 Shape CreateReducedShapeOrOnesShape(const DenseShapeView& shape,

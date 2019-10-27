@@ -50,6 +50,13 @@ Shape& Shape::operator=(const Shape& shape) {
   return *this;
 }
 
+Shape& Shape::CheckNumAxesIdenticalAndAssign(const DenseShapeView& shape_view) {
+  CHECK_EQ(NumAxes(), shape_view.NumAxes());
+  std::copy(shape_view.ptr(), shape_view.ptr() + shape_view.NumAxes(), dim_vec_.data());
+  UpdateElemCnt();
+  return *this;
+}
+
 bool Shape::operator==(const Shape& rhs) const { return dim_vec_ == rhs.dim_vec_; }
 
 std::string Shape::ToString() const {
