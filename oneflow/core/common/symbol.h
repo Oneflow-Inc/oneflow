@@ -41,15 +41,19 @@ const T* Symbol<T>::FindOrInsertPtr(const T& obj) {
     auto iter = obj2ptr.find(obj_ptr_wraper);
     if (iter != obj2ptr.end()) { return iter->second; }
   }
-  const T* ptr;
+  static std::mutex mutex;
+  typename HashSet::iterator iter;
   {
-    static std::mutex mutex;
+    std::lock_guard<std::mutex> lock(mutex);
+    iter = cached_objs.find(obj_ptr_wraper);
+  }
+  if (iter == cached_objs.end()) {
     HashEqTraitPtr<const T> new_obj_ptr_wraper(new T(obj), hash_value);
     std::lock_guard<std::mutex> lock(mutex);
-    ptr = cached_objs.emplace(new_obj_ptr_wraper).first->ptr();
+    iter = cached_objs.emplace(new_obj_ptr_wraper).first;
   }
-  obj2ptr[obj_ptr_wraper] = ptr;
-  return ptr;
+  obj2ptr[*iter] = iter->ptr();
+  return iter->ptr();
 }
 
 template<typename T>
