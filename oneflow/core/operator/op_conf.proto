@@ -55,9 +55,16 @@ enum RandomDistribution {
   kTruncatedNormal = 2;
 }
 
+enum RndType {
+  kUniform = 0;
+  kNormal = 1;
+}
+
 message XavierInitializerConf {
   required VarianceNorm variance_norm = 1;
   required string data_format = 2;
+  optional RndType rnd_type = 3 [default = kUniform];
+  optional float magnitude = 4 [default = 3];
 }
 
 message MsraInitializerConf {
