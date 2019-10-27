@@ -21,9 +21,7 @@ class AdditiveAngularMarginMs1GradOp final : public Operator {
   Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                              const ParallelContext* parallel_ctx) const override {
     const BlobDesc* dy = GetBlobDesc4BnInOp("dy");
-    CHECK_GT_OR_RETURN(dy->shape().NumAxes(), 0);
     const BlobDesc* label = GetBlobDesc4BnInOp("label");
-    CHECK_GT_OR_RETURN(label->shape().NumAxes(), 0);
     CHECK_OR_RETURN(IsIntegralDataType(label->data_type()));
     CHECK_EQ_OR_RETURN(label->shape().At(0), dy->shape().At(0));
 
@@ -51,9 +49,9 @@ class AdditiveAngularMarginMs1GradOp final : public Operator {
   void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                             const ParallelContext* parallel_ctx,
                             KernelConf* kernel_conf) const override {
-    const int64_t dim = op_conf().additive_angular_margin_ms1_grad_conf().depth();
-    CHECK_GE(dim, parallel_ctx->parallel_num());
-    BalancedSplitter bs(dim, parallel_ctx->parallel_num());
+    const int64_t depth = op_conf().additive_angular_margin_ms1_grad_conf().depth();
+    CHECK_GE(depth, parallel_ctx->parallel_num());
+    BalancedSplitter bs(depth, parallel_ctx->parallel_num());
     kernel_conf->mutable_additive_angular_margin_grad_conf()->set_lower_bound(
         bs.At(parallel_ctx->parallel_id()).begin());
   }

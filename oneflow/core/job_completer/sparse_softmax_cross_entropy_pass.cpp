@@ -4,7 +4,7 @@ namespace oneflow {
 
 namespace {
 
-std::string GenReduceMaxMs1OpConf(OperatorConf op_conf, const ParallelConf& parallel_conf,
+std::string GenReduceMaxMs1OpConf(const OperatorConf& op_conf, const ParallelConf& parallel_conf,
                                   JobBuilder* job_builder) {
   OperatorConf reduce_max_stage0_op_conf;
   reduce_max_stage0_op_conf.set_name(op_conf.name() + "-softmax_reduce_max_stage0");
@@ -32,7 +32,7 @@ std::string GenReduceMaxMs1OpConf(OperatorConf op_conf, const ParallelConf& para
   return reduce_max_stage1_op_conf.name() + "/out";
 }
 
-std::string GenSoftmaxMs1OpConf(OperatorConf op_conf, std::string reduce_max_lbn,
+std::string GenSoftmaxMs1OpConf(const OperatorConf& op_conf, const std::string& reduce_max_lbn,
                                 const ParallelConf& parallel_conf, JobBuilder* job_builder) {
   const auto& sparse_softmax_cross_entropy_conf = op_conf.sparse_softmax_cross_entropy_ms1_conf();
 

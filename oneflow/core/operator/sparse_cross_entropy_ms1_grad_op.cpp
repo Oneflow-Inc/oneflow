@@ -13,7 +13,7 @@ class SparseCrossEntropyMs1GradOp final : public Operator {
   void InitFromOpConf() override {
     CHECK(op_conf().has_sparse_cross_entropy_ms1_grad_conf());
     EnrollInputBn("prediction", false);
-    EnrollInputBn("label");
+    EnrollInputBn("label", false);
     EnrollInputBn("dy");
     EnrollOutputBn("prediction_diff");
   }

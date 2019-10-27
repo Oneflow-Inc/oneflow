@@ -1035,7 +1035,7 @@ message AdditiveAngularMarginMs1OpConf {
   required string out = 3;
   required string sin_theta_data = 4;
   required float margin = 5;
-  optional int32 depth = 6;
+  required int32 depth = 6;
 }
 
 message AdditiveAngularMarginMs1GradOpConf {
@@ -1044,7 +1044,7 @@ message AdditiveAngularMarginMs1GradOpConf {
   required string label = 3;
   required string dx = 4;
   required float margin = 5;
-  optional int32 depth = 6;
+  required int32 depth = 6;
 }
 
 message RandomMaskLikeOpConf {

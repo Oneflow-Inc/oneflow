@@ -25,9 +25,7 @@ class AdditiveAngularMarginOp final : public Operator {
                              const ParallelContext* parallel_ctx,
                              const SbpSignature* sbp_signature) const override {
     const BlobDesc* in = GetBlobDesc4BnInOp("in");
-    CHECK_GT_OR_RETURN(in->shape().NumAxes(), 0);
     const BlobDesc* label = GetBlobDesc4BnInOp("label");
-    CHECK_GT_OR_RETURN(label->shape().NumAxes(), 0);
     CHECK_OR_RETURN(IsIntegralDataType(label->data_type()));
     CHECK_EQ_OR_RETURN(label->shape().At(0), in->shape().At(0));
 

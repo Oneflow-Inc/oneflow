@@ -37,8 +37,6 @@ __global__ void ComputeDiffGpu(int64_t num_instances, int64_t num_classes,
                                const int64_t lower_bound, const T* x, const K* labels, T* dx) {
   CUDA_1D_KERNEL_LOOP(i, num_instances) {
     K label = labels[i] - lower_bound;
-    // assert(label >= 0);
-    // assert(label < num_classes);
     if (label >= 0 && label < num_classes) {
       dx[i * num_classes + label] = -1 / MaxWithLogThreshold(x[i * num_classes + label]);
     }
@@ -52,8 +50,6 @@ __global__ void ComputeDiffGpuHalf(int64_t num_instances, int64_t num_classes,
 #if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
   CUDA_1D_KERNEL_LOOP(i, num_instances) {
     K label = labels[i] - lower_bound;
-    // assert(label >= 0);
-    // assert(label < num_classes);
     if (label >= 0 && label < num_classes) {
       dx[i * num_classes + label] =
           __hneg(__hdiv(__float2half(1.0), MaxWithLogThreshold<half>(x[i * num_classes + label])));
@@ -71,8 +67,6 @@ __global__ void ComputeDiffGpu(int64_t num_instances, int64_t num_classes,
                                T* dx) {
   CUDA_1D_KERNEL_LOOP(i, num_instances) {
     K label = labels[i] - lower_bound;
-    // assert(label >= 0);
-    // assert(label < num_classes);
     if (label >= 0 && label < num_classes) {
       dx[i * num_classes + label] = -dy[i] / MaxWithLogThreshold(x[i * num_classes + label]);
     }
@@ -86,8 +80,6 @@ __global__ void ComputeDiffGpuHalf(int64_t num_instances, int64_t num_classes,
 #if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
   CUDA_1D_KERNEL_LOOP(i, num_instances) {
     K label = labels[i] - lower_bound;
-    // assert(label >= 0);
-    // assert(label < num_classes);
     if (label >= 0 && label < num_classes) {
       dx[i * num_classes + label] = __hneg(
           __hdiv(__float2half(dy[i]), MaxWithLogThreshold<half>(x[i * num_classes + label])));

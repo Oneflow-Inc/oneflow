@@ -22,9 +22,7 @@ class AdditiveAngularMarginGradOp final : public Operator {
   Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                              const ParallelContext* parallel_ctx) const override {
     const BlobDesc* dy = GetBlobDesc4BnInOp("dy");
-    CHECK_GT_OR_RETURN(dy->shape().NumAxes(), 0);
     const BlobDesc* label = GetBlobDesc4BnInOp("label");
-    CHECK_GT_OR_RETURN(label->shape().NumAxes(), 0);
     CHECK_OR_RETURN(IsIntegralDataType(label->data_type()));
     CHECK_EQ_OR_RETURN(label->shape().At(0), dy->shape().At(0));
 

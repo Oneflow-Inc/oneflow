@@ -62,9 +62,9 @@ class SparseSoftmaxCrossEntropyMs1GradOp final : public Operator {
   void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                             const ParallelContext* parallel_ctx,
                             KernelConf* kernel_conf) const override {
-    const int64_t dim = op_conf().sparse_softmax_cross_entropy_ms1_grad_conf().depth();
-    CHECK_GE(dim, parallel_ctx->parallel_num());
-    BalancedSplitter bs(dim, parallel_ctx->parallel_num());
+    const int64_t depth = op_conf().sparse_softmax_cross_entropy_ms1_grad_conf().depth();
+    CHECK_GE(depth, parallel_ctx->parallel_num());
+    BalancedSplitter bs(depth, parallel_ctx->parallel_num());
     kernel_conf->mutable_sparse_softmax_cross_entropy_grad_conf()->set_lower_bound(
         bs.At(parallel_ctx->parallel_id()).begin());
   }

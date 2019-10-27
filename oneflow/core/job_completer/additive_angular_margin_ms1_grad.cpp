@@ -6,8 +6,7 @@ namespace {
 
 void GenerateBackwardOpConf(
     const Operator& op, std::vector<OperatorConf>* op_confs,
-    const std::function<LogicalBlobId*(const std::string&)>& DiffLbi4BnInOp,
-    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4BnInOp) {
+    const std::function<LogicalBlobId*(const std::string&)>& DiffLbi4BnInOp) {
   CHECK(op.op_conf().has_additive_angular_margin_ms1_conf());
   if (DiffLbi4BnInOp("in") != nullptr) {
     OperatorConf additive_angular_margin_ms1_grad_op;
