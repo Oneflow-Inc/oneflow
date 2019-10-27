@@ -3,6 +3,7 @@
 
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/operator/operator_util.h"
+#include "oneflow/core/register/dense_shape_view.h"
 #include "oneflow/core/device/cudnn_util.h"
 #include "oneflow/core/device/cudnn_conv_ctx_cache.h"
 
@@ -16,7 +17,7 @@ class CudnnDeconvDesc final {
   CudnnDeconvDesc() = delete;
   ~CudnnDeconvDesc();
 
-  CudnnDeconvDesc(const DataType&, const Shape&, const ConvConf&);
+  CudnnDeconvDesc(const DataType&, const DenseShapeView&, const ConvConf&);
 
   const cudnnConvolutionDescriptor_t& Get() const { return val_; }
 

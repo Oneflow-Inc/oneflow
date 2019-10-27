@@ -11,6 +11,7 @@ class Shape final {
   // OF_DISALLOW_COPY_AND_MOVE(Shape);
   Shape() : elem_cnt_(0) {}
   explicit Shape(const std::vector<int64_t>& dim_vec);
+  explicit Shape(std::vector<int64_t>&& dim_vec);
   explicit Shape(const ShapeProto& shape_proto);
   Shape(const std::initializer_list<int64_t>& dim_vec);
   ~Shape() = default;
@@ -35,10 +36,7 @@ class Shape final {
   int64_t Count(int64_t begin_axis, int64_t end_axis) const;
   int64_t Count(int64_t begin_axis) const;
 
-  Shape CreateLeftExtendedShape(int num_axes) const;
-  std::vector<int64_t> ShiftNegativeAxis(const std::vector<int64_t>& axis_vec) const;
-  Shape CreateReducedShape(const std::vector<int64_t>& axis_vec) const;
-  Shape CreateReducedShapeOrOnesShape(const std::vector<int64_t>& axis_vec) const;
+  std::vector<int64_t> ShiftNegativeAxisVec(const std::vector<int64_t>& axis_vec) const;
   Shape RemoveOnes(const std::vector<int64_t>& axis_vec) const;
   static Shape Ones(const int64_t num_axes);
   std::vector<int64_t> Axes4BroadcastTo(const Shape& broadcast_dim_vec) const;
@@ -52,19 +50,13 @@ class Shape final {
   int64_t elem_cnt_;
 };
 
-inline Shape CreateReducedShape(const Shape& shape, const std::vector<int64_t>& axis_vec) {
-  return shape.CreateReducedShape(axis_vec);
-}
+int64_t ShiftNegativeAxis(int64_t axis, const int64_t num_axes);
 
-inline Shape CreateReducedShapeOrOnesShape(const Shape& shape,
-                                           const std::vector<int64_t>& axis_vec) {
-  return shape.CreateReducedShapeOrOnesShape(axis_vec);
-}
-
-inline Shape CreateLeftExtendedShape(const Shape& shape, int ndims_extend_to) {
-  return shape.CreateLeftExtendedShape(ndims_extend_to);
-}
-
+class DenseShapeView;
+Shape CreateReducedShape(const DenseShapeView& shape, const std::vector<int64_t>& axis_vec);
+Shape CreateLeftExtendedShape(const DenseShapeView& shape, int ndims_extend_to);
+Shape CreateReducedShapeOrOnesShape(const DenseShapeView& shape,
+                                    const std::vector<int64_t>& axis_vec);
 template<typename StreamT>
 void Shape::SerializeWithTextFormat(StreamT& out_stream) const {
   for (int64_t dim : dim_vec_) { out_stream << std::to_string(dim) << ' '; }

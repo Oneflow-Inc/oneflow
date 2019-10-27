@@ -37,12 +37,9 @@ class Blob final {
     return static_cast<T*>(dptr_);
   }
   const Shape& static_shape() const { return blob_desc_->body_shape(); }
-  DenseShapeView dense_shape_view() const {
-    return DenseShapeView(header_ptr_->Field(FieldKey::kDenseShape));
-  }
-  const Symbol<Shape>& shape_sym() const;
-  const Shape& shape() const;
-  DenseShapeMutView dense_shape_mut_view();
+  const DenseShapeView& dense_shape_view() const { return *dense_shape_view_; }
+  const DenseShapeView& shape() const { return *dense_shape_view_; }
+  DenseShapeMutView* dense_shape_mut_view() { return dense_shape_mut_view_.get(); }
   LengthLoDView length_lod_view() const {
     return LengthLoDView(header_ptr_->Field(FieldKey::kLoD), blob_desc_->num_of_lod_levels());
   }
@@ -96,9 +93,9 @@ class Blob final {
 
   const RtBlobDesc* blob_desc_;
   void* dptr_;
+  std::unique_ptr<DenseShapeView> dense_shape_view_;
+  std::unique_ptr<DenseShapeMutView> dense_shape_mut_view_;
   std::unique_ptr<PodPtr> header_ptr_;
-  std::unique_ptr<Symbol<Shape>> dynamic_shape_;
-  std::unique_ptr<std::mutex> dynamic_shape_mutex_;
   // TODO(); remove this ugly code
   int32_t record_num_;
 };

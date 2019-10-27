@@ -5,9 +5,9 @@ namespace oneflow {
 
 void ConvKernel<DeviceType::kGPU, float16>::VirtualKernelInit() {
   CHECK(this->EnableCudnn());
-  Shape in_shape(this->GetConvKernelConf().in());
-  Shape out_shape(this->GetConvKernelConf().out());
-  Shape weight_shape(this->GetConvKernelConf().weight());
+  DenseShapeView in_shape(this->GetConvKernelConf().in());
+  DenseShapeView out_shape(this->GetConvKernelConf().out());
+  DenseShapeView weight_shape(this->GetConvKernelConf().weight());
 
   const std::string& data_format =
       this->template GetValFromCustomizedOpConf<std::string>("data_format");
@@ -19,7 +19,7 @@ void ConvKernel<DeviceType::kGPU, float16>::VirtualKernelInit() {
                                            in_shape, this->GetCustomizedOpConf()));
 
   if (this->template GetValFromCustomizedOpConf<bool>("use_bias")) {
-    int32_t filters = Shape(this->GetConvKernelConf().bias()).At(0);
+    int32_t filters = DenseShapeView(this->GetConvKernelConf().bias()).At(0);
     if ((this->OpKernelDim() == 1) || (this->OpKernelDim() == 2)) {
       if (data_format == "channels_first") {
         this->bias_desc_.reset(
@@ -122,9 +122,9 @@ void ConvKernel<DeviceType::kGPU, T>::BiasBackward(
 
 template<typename T>
 void ConvKernel<DeviceType::kGPU, T>::KernelInitWithCudnn() {
-  Shape in_shape(this->GetConvKernelConf().in());
-  Shape out_shape(this->GetConvKernelConf().out());
-  Shape weight_shape(this->GetConvKernelConf().weight());
+  DenseShapeView in_shape(this->GetConvKernelConf().in());
+  DenseShapeView out_shape(this->GetConvKernelConf().out());
+  DenseShapeView weight_shape(this->GetConvKernelConf().weight());
 
   const std::string& data_format =
       this->template GetValFromCustomizedOpConf<std::string>("data_format");
@@ -135,7 +135,7 @@ void ConvKernel<DeviceType::kGPU, T>::KernelInitWithCudnn() {
                                            this->GetCustomizedOpConf()));
 
   if (this->template GetValFromCustomizedOpConf<bool>("use_bias")) {
-    int32_t filters = Shape(this->GetConvKernelConf().bias()).At(0);
+    int32_t filters = DenseShapeView(this->GetConvKernelConf().bias()).At(0);
     if ((this->OpKernelDim() == 1) || (this->OpKernelDim() == 2)) {
       if (data_format == "channels_first") {
         this->bias_desc_.reset(
@@ -505,8 +505,8 @@ __global__ void Col2ImGpu(const int n, const T* col_buf_dptr, const int channel,
 
 template<typename T>
 void ConvKernelUtil<DeviceType::kGPU, T>::NCDHWIm2Col(
-    const int dim_num, DeviceCtx* device_ctx, const T* in_dptr, const Shape& in_shape,
-    const Shape& weight_shape, const Shape& out_shape, const int32_t* strides,
+    const int dim_num, DeviceCtx* device_ctx, const T* in_dptr, const DenseShapeView& in_shape,
+    const DenseShapeView& weight_shape, const DenseShapeView& out_shape, const int32_t* strides,
     const int32_t* dilation_rate, const int32_t* padding_before, T* col_buf_dptr) {
   int32_t kernels = weight_shape.At(1) * out_shape.Count(2);
   switch (dim_num) {
@@ -519,8 +519,8 @@ void ConvKernelUtil<DeviceType::kGPU, T>::NCDHWIm2Col(
 
 template<typename T>
 void ConvKernelUtil<DeviceType::kGPU, T>::NDHWCIm2Col(
-    const int dim_num, DeviceCtx* device_ctx, const T* in_dptr, const Shape& in_shape,
-    const Shape& weight_shape, const Shape& out_shape, const int32_t* strides,
+    const int dim_num, DeviceCtx* device_ctx, const T* in_dptr, const DenseShapeView& in_shape,
+    const DenseShapeView& weight_shape, const DenseShapeView& out_shape, const int32_t* strides,
     const int32_t* dilation_rate, const int32_t* padding_before, T* col_buf_dptr) {
   int32_t kernels = weight_shape.At(1) * out_shape.Count(2);
   switch (dim_num) {
@@ -533,8 +533,8 @@ void ConvKernelUtil<DeviceType::kGPU, T>::NDHWCIm2Col(
 
 template<typename T>
 void ConvKernelUtil<DeviceType::kGPU, T>::NCDHWCol2Im(
-    const int dim_num, DeviceCtx* device_ctx, const T* col_buf_dptr, const Shape& in_shape,
-    const Shape& weight_shape, const Shape& out_shape, const int32_t* strides,
+    const int dim_num, DeviceCtx* device_ctx, const T* col_buf_dptr, const DenseShapeView& in_shape,
+    const DenseShapeView& weight_shape, const DenseShapeView& out_shape, const int32_t* strides,
     const int32_t* dilation_rate, const int32_t* padding_before, T* in_diff_dptr) {
   int32_t im_size = in_shape.Count(1);
   switch (dim_num) {
@@ -547,8 +547,8 @@ void ConvKernelUtil<DeviceType::kGPU, T>::NCDHWCol2Im(
 
 template<typename T>
 void ConvKernelUtil<DeviceType::kGPU, T>::NDHWCCol2Im(
-    const int dim_num, DeviceCtx* device_ctx, const T* col_buf_dptr, const Shape& in_shape,
-    const Shape& weight_shape, const Shape& out_shape, const int32_t* strides,
+    const int dim_num, DeviceCtx* device_ctx, const T* col_buf_dptr, const DenseShapeView& in_shape,
+    const DenseShapeView& weight_shape, const DenseShapeView& out_shape, const int32_t* strides,
     const int32_t* dilation_rate, const int32_t* padding_before, T* in_diff_dptr) {
   int32_t im_size = in_shape.Count(1);
   switch (dim_num) {

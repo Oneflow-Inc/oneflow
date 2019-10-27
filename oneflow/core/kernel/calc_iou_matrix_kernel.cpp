@@ -14,7 +14,7 @@ class CalcIoUMatrixKernel final : public KernelIf<device_type> {
                          std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
     BnInOp2Blob("iou_matrix")
         ->dense_shape_mut_view()
-        .set_shape(
+        ->set_shape(
             Shape{BnInOp2Blob("boxes1")->shape().At(0), BnInOp2Blob("boxes2")->shape().At(0)});
   }
   void ForwardDataContent(const KernelCtx& ctx,

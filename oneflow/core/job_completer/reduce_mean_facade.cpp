@@ -1,4 +1,5 @@
 #include "oneflow/core/job_completer/job_completer.h"
+#include "oneflow/core/register/dense_shape_view.h"
 
 namespace oneflow {
 
@@ -62,8 +63,8 @@ void GenerateFacadeImplOpConf(const OpNode& op_node, JobBuilder* job_builder) {
       shape_elem_cnt = in_blob.shape().elem_cnt();
     } else {
       const auto& axes = reduce_mean_conf.axis();
-      for (const auto& axis : in_blob.shape().ShiftNegativeAxis({axes.begin(), axes.end()})) {
-        shape_elem_cnt *= in_blob.shape().At(axis);
+      for (const auto& axis : axes) {
+        shape_elem_cnt *= in_blob.shape().At(ShiftNegativeAxis(axis, in_blob.shape().NumAxes()));
       }
     }
     OperatorConf scalar_div_op_conf;

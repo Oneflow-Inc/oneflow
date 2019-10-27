@@ -4,7 +4,7 @@ namespace oneflow {
 
 namespace {
 
-Shape GetFlatShape(const Shape& shape, int64_t axis) {
+Shape GetFlatShape(const DenseShapeView& shape, int64_t axis) {
   CHECK_GT(shape.NumAxes(), 0);
   CHECK_GE(axis, 0);
   CHECK_LT(axis, shape.NumAxes());
@@ -14,7 +14,7 @@ Shape GetFlatShape(const Shape& shape, int64_t axis) {
 template<DeviceType device_type, typename T, typename K>
 void GatherForward(DeviceCtx* ctx, const Blob* indices, const Blob* in, int64_t axis, Blob* out,
                    const int64_t offset) {
-  const Shape flat_in_shape = GetFlatShape(in->shape(), axis);
+  const Shape& flat_in_shape = GetFlatShape(in->shape(), axis);
   GatherKernelUtilImpl<device_type, T, K>::Forward(ctx, indices->dptr<K>(),
                                                    indices->shape().elem_cnt(), in->dptr<T>(),
                                                    flat_in_shape, out->mut_dptr<T>(), offset);
@@ -23,7 +23,7 @@ void GatherForward(DeviceCtx* ctx, const Blob* indices, const Blob* in, int64_t 
 template<DeviceType device_type, typename T, typename K>
 void GatherBackward(DeviceCtx* ctx, const Blob* indices, const Blob* out_diff, int64_t axis,
                     Blob* in_diff, const int64_t offset) {
-  const Shape flat_in_shape = GetFlatShape(in_diff->shape(), axis);
+  const Shape& flat_in_shape = GetFlatShape(in_diff->shape(), axis);
   GatherKernelUtilImpl<device_type, T, K>::Backward(
       ctx, indices->dptr<K>(), indices->shape().elem_cnt(), out_diff->dptr<T>(), flat_in_shape,
       in_diff->mut_dptr<T>(), offset);

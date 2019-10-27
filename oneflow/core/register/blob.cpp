@@ -22,9 +22,12 @@ void Blob::Init(const MemoryCase& mem_case, const RtBlobDesc* blob_desc, char* h
   blob_desc_ = blob_desc;
   dptr_ = body_ptr;
   header_ptr_.reset(new PodPtr(blob_desc_->header_pod_desc(), header_ptr));
-  dynamic_shape_.reset(new Symbol<Shape>(static_shape()));
-  dynamic_shape_mutex_.reset(new std::mutex());
   if (!blob_desc_->header_is_opaque()) {
+    const PodPtr& dense_shape_pod_ptr = header_ptr_->Field(FieldKey::kDenseShape);
+    dense_shape_view_.reset(new DenseShapeView(dense_shape_pod_ptr));
+    if (blob_desc->is_dynamic()) {
+      dense_shape_mut_view_.reset(new DenseShapeMutView(dense_shape_pod_ptr));
+    }
     std::vector<int64_t> dim_vec = static_shape().dim_vec();
     if (blob_desc->num_of_lod_levels() > 0) {
       CHECK_GT(blob_desc->num_of_lod_levels(), 1);
@@ -32,31 +35,11 @@ void Blob::Init(const MemoryCase& mem_case, const RtBlobDesc* blob_desc, char* h
       FOR_RANGE(int64_t, i, 0, blob_desc->num_of_lod_levels()) { dim0 *= dim_vec.at(i); }
       dim_vec = {dim_vec.begin() + blob_desc->num_of_lod_levels() - 1, dim_vec.end()};
     }
-    dense_shape_mut_view().set_shape(Shape(dim_vec));
+    DenseShapeMutView(dense_shape_pod_ptr).set_shape(Shape(std::move(dim_vec)));
+  } else {
+    const std::vector<int64_t>& dim_vec = static_shape().dim_vec();
+    dense_shape_view_.reset(new DenseShapeView(dim_vec.data(), dim_vec.size()));
   }
-}
-
-const Symbol<Shape>& Blob::shape_sym() const {
-  // this line of code is not a typo
-  if (*dynamic_shape_) { return *dynamic_shape_; }
-  Shape shape(dense_shape_view());
-  std::lock_guard<std::mutex> lock(*dynamic_shape_mutex_);
-  if (*dynamic_shape_) { return *dynamic_shape_; }
-  dynamic_shape_->reset(shape);
-  return *dynamic_shape_;
-}
-
-const Shape& Blob::shape() const {
-  if (blob_desc().is_dynamic() == false) { return static_shape(); }
-  return *shape_sym();
-}
-
-DenseShapeMutView Blob::dense_shape_mut_view() {
-  {
-    std::lock_guard<std::mutex> lock(*dynamic_shape_mutex_);
-    dynamic_shape_->reset();
-  }
-  return DenseShapeMutView(header_ptr_->MutField(FieldKey::kDenseShape));
 }
 
 void Blob::CopyDataContentFrom(DeviceCtx* device_ctx, const Blob* rhs) {

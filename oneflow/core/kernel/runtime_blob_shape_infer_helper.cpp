@@ -60,8 +60,10 @@ void RuntimeBlobShapeInferHelper::UpdateOpInferCacheKey(
   for (const auto& ibn : op_->input_bns()) {
     const Blob* blob = BnInOp2Blob(ibn);
     if (blob == nullptr) { continue; }
+    Shape shape;
+    blob->dense_shape_view().ToShape(&shape);
     op_infer_cache_key_.ibn2shape_sym[ibn] =
-        CreateLeftExtendedShapeSym(blob->shape_sym(), blob->static_shape().NumAxes());
+        CreateLeftExtendedShapeSym(SymbolOf(shape), blob->static_shape().NumAxes());
   }
 }
 
@@ -112,7 +114,7 @@ void RuntimeBlobShapeInferHelper::InferDenseShape(
       int64_t num_of_lod_levels = blob->blob_desc().num_of_lod_levels();
       int num_left_ones = (num_of_lod_levels == 0 ? 0 : num_of_lod_levels - 1);
       const auto& shape = CreateLeftOnesStrippedShapeSym(obn2shape_sym.at(obn), num_left_ones);
-      blob->dense_shape_mut_view().set_shape(*shape);
+      blob->dense_shape_mut_view()->set_shape(*shape);
     } else {
       CHECK(*obn2shape_sym.at(obn) == blob->static_shape());
     }

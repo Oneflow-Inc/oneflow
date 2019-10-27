@@ -27,7 +27,7 @@ __global__ void HalfBiasAddNCXKernel(int32_t nthreads, const half* input, const 
 
 template<typename T>
 struct BiasAddUtil<DeviceType::kGPU, T> {
-  static void BiasAddNCX(DeviceCtx* ctx, const Shape& shape, const int32_t bias_axis,
+  static void BiasAddNCX(DeviceCtx* ctx, const DenseShapeView& shape, const int32_t bias_axis,
                          const T* input, const T* bias, T* output) {
     BiasAddNCXKernel<<<BlocksNum4ThreadsNum(shape.At(0)), kCudaThreadsNumPerBlock, 0,
                        ctx->cuda_stream()>>>(shape.At(0), input, bias, output, shape.At(bias_axis),
@@ -35,7 +35,7 @@ struct BiasAddUtil<DeviceType::kGPU, T> {
   }
 };
 
-void BiasAddUtil<DeviceType::kGPU, float16>::BiasAddNCX(DeviceCtx* ctx, const Shape& shape,
+void BiasAddUtil<DeviceType::kGPU, float16>::BiasAddNCX(DeviceCtx* ctx, const DenseShapeView& shape,
                                                         const int32_t bias_axis,
                                                         const float16* input, const float16* bias,
                                                         float16* output) {

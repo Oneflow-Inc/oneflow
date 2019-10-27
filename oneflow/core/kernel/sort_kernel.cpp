@@ -32,14 +32,13 @@ class SortKernel final : public KernelIf<device_type> {
  private:
   void ForwardDenseShape(const KernelCtx& ctx,
                          std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
-    BnInOp2Blob("out")->dense_shape_mut_view().set_shape(
-        static_cast<Shape>(BnInOp2Blob("in")->shape()));
+    BnInOp2Blob("out")->dense_shape_mut_view()->set_shape(BnInOp2Blob("in")->shape());
   }
   void ForwardDataContent(const KernelCtx& ctx,
                           std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
     const Blob* in_blob = BnInOp2Blob("in");
     Blob* out_blob = BnInOp2Blob("out");
-    int32_t instance_size = in_blob->shape().dim_vec().back();
+    int32_t instance_size = in_blob->shape().At(in_blob->shape().NumAxes() - 1);
     int32_t instance_num = in_blob->shape().elem_cnt() / instance_size;
     const T* in_ptr = in_blob->dptr<T>();
     T* out_ptr = out_blob->mut_dptr<T>();

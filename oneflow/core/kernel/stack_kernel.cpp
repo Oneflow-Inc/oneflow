@@ -38,7 +38,8 @@ class StackKernel final : public KernelIf<device_type> {
   void ForwardDenseShape(const KernelCtx& ctx,
                          std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
     const Blob* in_0 = BnInOp2Blob(this->op_attribute().input_bns().Get(0));
-    std::vector<int64_t> shape_vec = in_0->shape().dim_vec();
+    std::vector<int64_t> shape_vec;
+    in_0->shape().ToDimVec(&shape_vec);
     int64_t stack_axis = this->op_conf().stack_conf().axis();
 
     FOR_RANGE(size_t, i, 1, this->op_attribute().input_bns().size()) {
@@ -52,7 +53,7 @@ class StackKernel final : public KernelIf<device_type> {
         }
       }
     }
-    BnInOp2Blob("out")->dense_shape_mut_view().set_shape(Shape(shape_vec));
+    BnInOp2Blob("out")->dense_shape_mut_view()->set_shape(Shape(std::move(shape_vec)));
   }
 };
 

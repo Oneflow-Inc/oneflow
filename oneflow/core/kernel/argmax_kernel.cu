@@ -37,7 +37,7 @@ class ArgmaxGpuKernel : public KernelIf<DeviceType::kGPU> {
     Blob* temp_storage_blob = BnInOp2Blob("temp_storage");
     Blob* key_value_out_blob = BnInOp2Blob("key_value_out");
     Blob* out_blob = BnInOp2Blob("out");
-    const int32_t num_col = in_blob->shape().dim_vec().back();
+    const int32_t num_col = in_blob->shape().At(in_blob->shape().NumAxes() - 1);
     const int32_t num_row = in_blob->shape().elem_cnt() / num_col;
 
     cub::CountingInputIterator<int32_t> counting_iter(0);
