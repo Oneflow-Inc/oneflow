@@ -15,6 +15,11 @@ message ImageCrop {
   optional int32 y = 3;
   required int32 width = 4;
   required int32 height = 5;
+  message Range {
+    optional int32 width = 6 [default = -1];
+    optional int32 height = 7 [default = -1];
+  }
+  optional Range range = 8;
 }
 
 message ImageCenterCrop {
@@ -39,6 +44,17 @@ message ImageCropWithRandomSize {
 message ImageBgr2Rgb {
 }
 
+message ImageCutout {
+  optional float cutout_ratio = 1 [default = 0.0];
+  optional int32 cutout_size = 2 [default = 4];
+  enum CutoutMode {
+    Normal = 0;
+    Uniform = 1;
+  }
+  optional CutoutMode cutout_mode = 3 [default = Normal];
+  optional int32 cutout_filler = 4 [default = 0];
+}
+
 message ImagePreprocess {
   oneof preprocess {
     ImageResize resize = 1;
@@ -47,5 +63,6 @@ message ImagePreprocess {
     ImageCropWithRandomSize crop_with_random_size = 4;
     ImageMirror mirror = 5;
     ImageBgr2Rgb bgr2rgb = 6;
+    ImageCutout cutout = 7;
   }
 }
