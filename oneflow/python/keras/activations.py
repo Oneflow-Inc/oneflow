@@ -39,7 +39,7 @@ def gelu(x):
 
 @oneflow_export('keras.activations.gelu_v2')
 def gelu_v2(x):
-    return 0.5 * (1.0 + flow.keras.activations.tanh((np.sqrt(2 / np.pi) * (x + 0.044715 * x * x * x))))
+    return 0.5 * (1.0 + flow.keras.activations.tanh((np.sqrt(2 / np.pi) * (x + 0.044715 * flow.math.pow(x, 3)))))
 
 @oneflow_export('keras.activations.tanh')
 def tanh(x):

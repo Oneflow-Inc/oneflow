@@ -59,6 +59,20 @@ def divide(x, y, name=None):
     else:
         return broadcast_div(x, y, name)
 
+@oneflow_export("math.pow")
+def pow(x, y, name=None):
+    if isinstance(x, int):
+        if x > 1:
+            return scalar_pow(y, x, name)
+        else:
+            return y
+    elif isinstance(y, int):
+        if y > 1:
+            return scalar_pow(x, y, name)
+        else:
+            return x
+    else:
+        raise NotImplementedError
 
 def scalar_add(x, operand, name=None):
     op_conf = op_conf_util.OperatorConf()
@@ -157,6 +171,19 @@ def scalar_mul(x, operand, name=None):
     lbi.blob_name = "out"
     return remote_blob_util.RemoteBlob(lbi)
 
+def scalar_pow(x, operand, name=None):
+    op_conf = op_conf_util.OperatorConf()
+    setattr(
+        op_conf, "name", name if name is not None else id_util.UniqueStr("ScalarPow_")
+    )
+    setattr(op_conf.scalar_pow_conf, "in", x.logical_blob_name)
+    op_conf.scalar_pow_conf.int_operand = operand
+    op_conf.scalar_pow_conf.out = "out"
+    compile_context.CurJobAddOp(op_conf)
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = "out"
+    return remote_blob_util.RemoteBlob(lbi)
 
 def broadcast_div(x, y, name=None):
     op_conf = op_conf_util.OperatorConf()
