@@ -7,9 +7,10 @@ namespace oneflow {
 
 template<DeviceType device_type, typename T>
 struct BoxDecodeUtil {
-  static void Decode(DeviceCtx* ctx, const int32_t num_boxes, const T* ref_boxes_ptr,
-                     const T* boxes_delta_ptr, const float weight_x, const float weight_y,
-                     const float weight_w, const float weight_h, T* boxes_ptr);
+  static void Decode(DeviceCtx* ctx, const int32_t num_boxes_delta, const int32_t num_ref_boxes,
+                     const T* ref_boxes_ptr, const T* boxes_delta_ptr, const float weight_x,
+                     const float weight_y, const float weight_w, const float weight_h,
+                     T* boxes_ptr);
 };
 
 }  // namespace oneflow
