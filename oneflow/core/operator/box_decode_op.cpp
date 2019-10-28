@@ -21,14 +21,14 @@ class BoxDecodeOp final : public Operator {
     const BlobDesc* ref_boxes = GetBlobDesc4BnInOp("ref_boxes");
     CHECK_EQ_OR_RETURN(ref_boxes->shape().NumAxes(), 2);
     CHECK_EQ_OR_RETURN(ref_boxes->shape().At(1), 4);
-    // input: boxes_delta (N, 4)
+    // input: boxes_delta (N, M * 4)
     const BlobDesc* boxes_delta = GetBlobDesc4BnInOp("boxes_delta");
     CHECK_EQ_OR_RETURN(boxes_delta->shape().NumAxes(), 2);
-    CHECK_EQ_OR_RETURN(boxes_delta->shape().At(1), 4);
-    CHECK_EQ_OR_RETURN(ref_boxes->shape(), boxes_delta->shape());
-    // output: boxes (N, 4)
+    CHECK_EQ_OR_RETURN(ref_boxes->shape().At(0), boxes_delta->shape().At(0));
+    CHECK_OR_RETURN(boxes_delta->shape().At(1) % 4 == 0);
+    // output: boxes (N, M * 4)
     BlobDesc* boxes = GetBlobDesc4BnInOp("boxes");
-    boxes->mut_shape() = ref_boxes->shape();
+    boxes->mut_shape() = boxes_delta->shape();
     boxes->set_data_type(ref_boxes->data_type());
     CHECK_EQ(ref_boxes->is_dynamic(), boxes_delta->is_dynamic());
     boxes->set_is_dynamic(ref_boxes->is_dynamic());

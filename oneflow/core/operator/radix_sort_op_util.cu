@@ -33,7 +33,8 @@ size_t InferTempStorageForSortingPairsAscending(int32_t num_row, int32_t num_col
       /* end_bit */ sizeof(KeyType) * 8,
       /* stream */ cuda_stream);
   CudaCheck(err);
-
+  CudaCheck(cudaStreamSynchronize(cuda_stream));
+  if (temp_storage_bytes == 0) { temp_storage_bytes = 1; }
   CudaCheck(cudaStreamDestroy(cuda_stream));
 
   return temp_storage_bytes;
@@ -79,7 +80,8 @@ size_t InferTempStorageForSortingPairsDescending(int32_t num_row, int32_t num_co
       /* end_bit */ sizeof(KeyType) * 8,
       /* stream */ cuda_stream);
   CudaCheck(err);
-
+  CudaCheck(cudaStreamSynchronize(cuda_stream));
+  if (temp_storage_bytes == 0) { temp_storage_bytes = 1; }
   CudaCheck(cudaStreamDestroy(cuda_stream));
 
   return temp_storage_bytes;
@@ -122,7 +124,8 @@ size_t InferTempStorageForSortingKeysAscending(int32_t num_row, int32_t num_col)
       /* end_bit */ sizeof(KeyType) * 8,
       /* stream */ cuda_stream);
   CudaCheck(err);
-
+  CudaCheck(cudaStreamSynchronize(cuda_stream));
+  if (temp_storage_bytes == 0) { temp_storage_bytes = 1; }
   CudaCheck(cudaStreamDestroy(cuda_stream));
 
   return temp_storage_bytes;
@@ -165,7 +168,8 @@ size_t InferTempStorageForSortingKeysDescending(int32_t num_row, int32_t num_col
       /* end_bit */ sizeof(KeyType) * 8,
       /* stream */ cuda_stream);
   CudaCheck(err);
-
+  CudaCheck(cudaStreamSynchronize(cuda_stream));
+  if (temp_storage_bytes == 0) { temp_storage_bytes = 1; }
   CudaCheck(cudaStreamDestroy(cuda_stream));
 
   return temp_storage_bytes;
@@ -188,7 +192,7 @@ struct InferTempStorageForSortingKeysDescendingSwitchUtil final {
 // FIX ME: should also pass value_data_type param here, use int64_t for now
 size_t InferTempStorageForSortingPairsAscendingAtCompile(int32_t num_row, int32_t num_col,
                                                          DataType key_data_type) {
-  InferTempStorageForSortingPairsAscendingSwitchUtil::
+  return InferTempStorageForSortingPairsAscendingSwitchUtil::
       SwitchInferTempStorageForSortingPairsAscending(SwitchCase(key_data_type), num_row, num_col);
 }
 
@@ -196,21 +200,21 @@ size_t InferTempStorageForSortingPairsAscendingAtCompile(int32_t num_row, int32_
 // FIX ME: should also pass value_data_type param here, use int64_t for now
 size_t InferTempStorageForSortingPairsDescendingAtCompile(int32_t num_row, int32_t num_col,
                                                           DataType key_data_type) {
-  InferTempStorageForSortingPairsDescendingSwitchUtil::
+  return InferTempStorageForSortingPairsDescendingSwitchUtil::
       SwitchInferTempStorageForSortingPairsDescending(SwitchCase(key_data_type), num_row, num_col);
 }
 
 // Infer temp storage for sorting keys in ascending order at compile stage
 size_t InferTempStorageForSortingKeysAscendingAtCompile(int32_t num_row, int32_t num_col,
                                                         DataType key_data_type) {
-  InferTempStorageForSortingKeysAscendingSwitchUtil::SwitchInferTempStorageForSortingKeysAscending(
-      SwitchCase(key_data_type), num_row, num_col);
+  return InferTempStorageForSortingKeysAscendingSwitchUtil::
+      SwitchInferTempStorageForSortingKeysAscending(SwitchCase(key_data_type), num_row, num_col);
 }
 
 // Infer temp storage for sorting keys in descending order at compile stage
 size_t InferTempStorageForSortingKeysDescendingAtCompile(int32_t num_row, int32_t num_col,
                                                          DataType key_data_type) {
-  InferTempStorageForSortingKeysDescendingSwitchUtil::
+  return InferTempStorageForSortingKeysDescendingSwitchUtil::
       SwitchInferTempStorageForSortingKeysDescending(SwitchCase(key_data_type), num_row, num_col);
 }
 
