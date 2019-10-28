@@ -68,6 +68,7 @@ void GenerateBackwardOpConf4ScalarPow(
       BroadcastMulOpConf* conf = grad_broadcast_mul_op.mutable_broadcast_mul_conf();
       conf->set_a(tmp_lbn);
       conf->set_b(GenLogicalBlobName(*DiffLbi4BnInOp("out")));
+      conf->set_out("out");
       op_confs->push_back(grad_broadcast_mul_op);
       DiffLbi4BnInOp("in")->set_op_name(grad_broadcast_mul_op.name());
       DiffLbi4BnInOp("in")->set_blob_name("out");
