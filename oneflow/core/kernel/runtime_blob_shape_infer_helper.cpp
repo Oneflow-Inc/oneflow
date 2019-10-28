@@ -5,36 +5,6 @@
 
 namespace oneflow {
 
-namespace {
-
-const size_t kCallCacheSize = 128 * 1024 * 1024;
-
-Symbol<Shape> _CreateLeftExtendedShapeSym(const std::pair<Symbol<Shape>, int>& pair) {
-  if (pair.first->NumAxes() == pair.second) { return pair.first; }
-  return SymbolOf(CreateLeftExtendedShape(*pair.first, pair.second));
-}
-
-Symbol<Shape> CreateLeftExtendedShapeSym(Symbol<Shape> shape_sym, int num_axes) {
-  CHECK_LE(shape_sym->NumAxes(), num_axes);
-  return ThreadLocalCachedCall(kCallCacheSize, &_CreateLeftExtendedShapeSym,
-                               std::make_pair(shape_sym, num_axes));
-}
-
-Symbol<Shape> _CreateLeftOnesStrippedShapeSym(const std::pair<Symbol<Shape>, int>& pair) {
-  if (pair.second == 0) { return pair.first; }
-  const auto& shape = *pair.first;
-  FOR_RANGE(int, i, 0, pair.second) { CHECK_EQ(shape.At(i), 1); }
-  return SymbolOf(Shape({shape.dim_vec().begin() + pair.second, shape.dim_vec().end()}));
-}
-
-Symbol<Shape> CreateLeftOnesStrippedShapeSym(Symbol<Shape> shape_sym, int num_left_ones) {
-  CHECK_GE(num_left_ones, 0);
-  return ThreadLocalCachedCall(kCallCacheSize, &_CreateLeftOnesStrippedShapeSym,
-                               std::make_pair(shape_sym, num_left_ones));
-}
-
-}  // namespace
-
 RuntimeBlobShapeInferHelper::RuntimeBlobShapeInferHelper(const OperatorConf& op_conf,
                                                          const KernelConf& kernel_conf,
                                                          const JobDesc* job_desc) {
@@ -60,9 +30,8 @@ void RuntimeBlobShapeInferHelper::UpdateInputBlobDescs7OpInferCacheKey(
     const Blob* blob = BnInOp2Blob(ibn);
     if (blob == nullptr) { continue; }
     BlobDesc* blob_desc = BlobDesc4BnInOp(ibn, blob->blob_desc());
-    blob_desc->mut_shape().CheckNumAxesIdenticalAndAssign(blob->shape());
-    op_infer_cache_key_.ibn2shape_sym[ibn] =
-        CreateLeftExtendedShapeSym(SymbolOf(blob_desc->shape()), blob->static_shape().NumAxes());
+    blob_desc->mut_shape().LeftOnesExtendedAssign(blob->shape());
+    op_infer_cache_key_.ibn2shape_sym[ibn] = SymbolOf(blob_desc->shape());
   }
 }
 
@@ -106,10 +75,10 @@ void RuntimeBlobShapeInferHelper::InferDenseShape(
     auto* blob = BnInOp2Blob(obn);
     if (blob == nullptr) { continue; }
     if (blob->blob_desc().is_dynamic()) {
-      int64_t num_of_lod_levels = blob->blob_desc().num_of_lod_levels();
-      int num_left_ones = (num_of_lod_levels == 0 ? 0 : num_of_lod_levels - 1);
-      const auto& shape = CreateLeftOnesStrippedShapeSym(obn2shape_sym.at(obn), num_left_ones);
-      blob->dense_shape_mut_view()->set_shape(*shape);
+      const int64_t num_of_lod_levels = blob->blob_desc().num_of_lod_levels();
+      const int64_t num_left_ones = (num_of_lod_levels == 0 ? 0 : num_of_lod_levels - 1);
+      CHECK_EQ(num_left_ones, obn2shape_sym.at(obn)->NumAxes() - blob->shape().NumAxes());
+      blob->dense_shape_mut_view()->LeftOnesStrippedAssign(*obn2shape_sym.at(obn));
     } else {
       CHECK(*obn2shape_sym.at(obn) == blob->static_shape());
     }

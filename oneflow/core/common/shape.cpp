@@ -57,6 +57,16 @@ Shape& Shape::CheckNumAxesIdenticalAndAssign(const DenseShapeView& shape_view) {
   return *this;
 }
 
+Shape& Shape::LeftOnesExtendedAssign(const DenseShapeView& shape_view) {
+  CHECK_GE(NumAxes(), shape_view.NumAxes());
+  size_t left_ones_size = NumAxes() - shape_view.NumAxes();
+  FOR_RANGE(int, i, 0, left_ones_size) { dim_vec_.at(i) = 1LL; }
+  std::copy(shape_view.ptr(), shape_view.ptr() + shape_view.NumAxes(),
+            dim_vec_.data() + left_ones_size);
+  UpdateElemCnt();
+  return *this;
+}
+
 bool Shape::operator==(const Shape& rhs) const { return dim_vec_ == rhs.dim_vec_; }
 
 std::string Shape::ToString() const {

@@ -46,6 +46,7 @@ class DenseShapeMutView final {
 
   void set_shape(const Shape& val);
   void set_shape(const DenseShapeView& shape);
+  void LeftOnesStrippedAssign(const Shape& shape);
 
  private:
   int64_t* ptr_;

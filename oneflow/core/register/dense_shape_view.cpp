@@ -101,4 +101,12 @@ void DenseShapeMutView::set_shape(const DenseShapeView& shape) {
   std::copy(shape.ptr(), shape.ptr() + shape.NumAxes(), ptr_);
 }
 
+void DenseShapeMutView::LeftOnesStrippedAssign(const Shape& shape) {
+  CHECK_LE(num_axes_, shape.NumAxes());
+  size_t left_ones_len = shape.NumAxes() - num_axes_;
+  FOR_RANGE(int, i, 0, left_ones_len) { CHECK_EQ(shape.At(i), 1LL); }
+  const int64_t* const_ptr = shape.dim_vec().data() + left_ones_len;
+  std::copy(const_ptr, const_ptr + num_axes_, ptr_);
+}
+
 }  // namespace oneflow

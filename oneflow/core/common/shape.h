@@ -19,6 +19,7 @@ class Shape final {
   ~Shape() = default;
   Shape& operator=(const Shape& shape);
   Shape& CheckNumAxesIdenticalAndAssign(const DenseShapeView& shape_view);
+  Shape& LeftOnesExtendedAssign(const DenseShapeView& shape_view);
 
   bool operator==(const Shape& rhs) const;
   bool operator!=(const Shape& rhs) const { return !(*this == rhs); }
