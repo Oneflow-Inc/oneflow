@@ -30,7 +30,8 @@ const AMPList& AutoMixedPrecisionLists::GrayList() {
                               OperatorConf::kBroadcastDivConf,
                               OperatorConf::kLayerNormConf,
                               OperatorConf::kDropoutConf,
-                              OperatorConf::kSoftmaxConf};
+                              OperatorConf::kSoftmaxConf,
+                              OperatorConf::kScalarPowConf};
   return gray_list;
 }
 
