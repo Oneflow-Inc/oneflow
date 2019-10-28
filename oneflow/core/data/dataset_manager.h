@@ -11,9 +11,7 @@ class DatasetManager final {
   OF_DISALLOW_COPY_AND_MOVE(DatasetManager);
   DatasetManager() = default;
   ~DatasetManager() = default;
-  std::shared_ptr<Dataset> Get(const std::string& dataset_name) const {
-    return dataset_map_.at(dataset_name);
-  }
+  std::shared_ptr<Dataset> Get(const std::string& dataset_name);
   std::shared_ptr<Dataset> GetOrCreateDataset(const DatasetProto& proto);
 
  private:
