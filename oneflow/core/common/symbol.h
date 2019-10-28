@@ -9,7 +9,7 @@ template<typename T>
 class Symbol final {
  public:
   Symbol() : ptr_(nullptr) {}
-  Symbol(const T& obj) : ptr_(FindOrInsertPtr(obj)) {}
+  Symbol(const T& obj) : ptr_(GetOrCreatePtr(obj)) {}
   Symbol(const Symbol<T>& rhs) = default;
   ~Symbol() = default;
 
@@ -21,16 +21,16 @@ class Symbol final {
   size_t hash_value() const { return std::hash<const T*>()(ptr_); }
 
   void reset() { ptr_ = nullptr; }
-  void reset(const T& obj) { ptr_ = FindOrInsertPtr(obj); }
+  void reset(const T& obj) { ptr_ = GetOrCreatePtr(obj); }
 
  private:
-  static const T* FindOrInsertPtr(const T& obj);
+  static const T* GetOrCreatePtr(const T& obj);
 
   const T* ptr_;
 };
 
 template<typename T>
-const T* Symbol<T>::FindOrInsertPtr(const T& obj) {
+const T* Symbol<T>::GetOrCreatePtr(const T& obj) {
   using HashSet = std::unordered_set<HashEqTraitPtr<const T>>;
   static HashSet cached_objs;
   static thread_local std::unordered_map<HashEqTraitPtr<const T>, const T*> obj2ptr;
