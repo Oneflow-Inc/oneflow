@@ -17,7 +17,7 @@ class Symbol final {
   const T* operator->() const { return ptr_; }
   const T& operator*() const { return *ptr_; }
   bool operator==(const Symbol<T>& rhs) const { return ptr_ == rhs.ptr_; }
-  bool operator!=(const Symbol<T>& rhs) const { return ptr_ == rhs.ptr_; }
+  bool operator!=(const Symbol<T>& rhs) const { return !(*this == rhs); }
   size_t hash_value() const { return std::hash<const T*>()(ptr_); }
 
   void reset() { ptr_ = nullptr; }
