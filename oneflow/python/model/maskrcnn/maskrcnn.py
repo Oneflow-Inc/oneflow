@@ -76,6 +76,9 @@ parser.add_argument(
     "-v", "--verbose", default=False, action="store_true", required=False
 )
 parser.add_argument("-i", "--iter_num", type=int, default=10, required=False)
+parser.add_argument(
+    "-lr", "--primary_lr", type=float, default=0.00001, required=False
+)
 terminal_args = parser.parse_args()
 
 
@@ -271,7 +274,7 @@ if terminal_args.mock_dataset:
         gt_segms=debug_data.blob_def("segm_mask_targets"),
         gt_labels=debug_data.blob_def("gt_labels"),
     ):
-        flow.config.train.primary_lr(0.00001)
+        flow.config.train.primary_lr(terminal_args.primary_lr)
         flow.config.train.model_update_conf(dict(naive_conf={}))
         # TODO: distribute map only support remote blob for now, so identity is required here
         image_sizes = flow.identity(image_sizes)
