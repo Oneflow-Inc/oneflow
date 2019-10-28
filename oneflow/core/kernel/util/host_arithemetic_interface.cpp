@@ -123,6 +123,19 @@ ADD_BY_SCALAR(int64_t);
 
 #undef ADD_BY_SCALAR
 
+#define POW_BY_INT_SCALAR(T)                                                                \
+  void ArithemeticIf<DeviceType::kCPU>::PowByIntScalar(DeviceCtx* ctx, const int64_t n,     \
+                                                       const T* x, const int32_t y, T* z) { \
+    for (int64_t i = 0; i < n; ++i) { z[i] = std::pow(x[i], y); }                           \
+  }
+
+POW_BY_INT_SCALAR(float);
+POW_BY_INT_SCALAR(double);
+POW_BY_INT_SCALAR(int32_t);
+POW_BY_INT_SCALAR(int64_t);
+
+#undef POW_BY_INT_SCALAR
+
 #define MUL(T)                                                                           \
   void ArithemeticIf<DeviceType::kCPU>::Mul(DeviceCtx* ctx, const int64_t n, const T* x, \
                                             const T* y, T* z) {                          \

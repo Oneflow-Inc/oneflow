@@ -87,6 +87,33 @@ REGISTER_WITH_NAME_AND_DTYPE(Add, int64_t);
 REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kScalarAddConf, DeviceType::kGPU, float16,
                                       ScalarAddKernel<DeviceType::kGPU, float16>);
 
+template<DeviceType device_type, typename T>
+class ScalarPowKernel final : public KernelIf<device_type> {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(ScalarPowKernel);
+  ScalarPowKernel() = default;
+  ~ScalarPowKernel() = default;
+
+ private:
+  void ForwardDataContent(const KernelCtx& ctx,
+                          std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
+    const Blob* in_blob = BnInOp2Blob("in");
+    Blob* out_blob = BnInOp2Blob("out");
+    int32_t scalar_operand = this->op_conf().scalar_pow_conf().int_operand();
+    NewKernelUtil<device_type>::PowByIntScalar(ctx.device_ctx, out_blob->shape().elem_cnt(),
+                                               in_blob->dptr<T>(), scalar_operand,
+                                               out_blob->mut_dptr<T>());
+  }
+  const PbMessage& GetCustomizedOpConf() const override {
+    return this->op_conf().scalar_pow_conf();
+  }
+};
+
+REGISTER_WITH_NAME_AND_DTYPE(Pow, float);
+REGISTER_WITH_NAME_AND_DTYPE(Pow, double);
+REGISTER_WITH_NAME_AND_DTYPE(Pow, int32_t);
+REGISTER_WITH_NAME_AND_DTYPE(Pow, int64_t);
+
 #undef REGISTER_WITH_NAME_AND_DTYPE
 #undef REGISTER_SCALAR_ARITHMETIC_KERNEL
 

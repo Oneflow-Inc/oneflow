@@ -31,6 +31,14 @@ struct ArithemeticIf<DeviceType::kCPU> {
                           int32_t* z);
   static void AddByScalar(DeviceCtx* ctx, const int64_t n, const int64_t* x, const int64_t y,
                           int64_t* z);
+  static void PowByIntScalar(DeviceCtx* ctx, const int64_t n, const float* x, const int32_t y,
+                             float* z);
+  static void PowByIntScalar(DeviceCtx* ctx, const int64_t n, const double* x, const int32_t y,
+                             double* z);
+  static void PowByIntScalar(DeviceCtx* ctx, const int64_t n, const int32_t* x, const int32_t y,
+                             int32_t* z);
+  static void PowByIntScalar(DeviceCtx* ctx, const int64_t n, const int64_t* x, const int32_t y,
+                             int64_t* z);
   static void Mul(DeviceCtx* ctx, const int64_t n, const float* x, const float* y, float* z);
   static void Mul(DeviceCtx* ctx, const int64_t n, const double* x, const double* y, double* z);
 };

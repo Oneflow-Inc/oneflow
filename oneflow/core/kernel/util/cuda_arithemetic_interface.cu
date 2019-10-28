@@ -290,4 +290,53 @@ void ArithemeticIf<DeviceType::kGPU>::MulByGpuScalar(DeviceCtx* ctx, const int64
           reinterpret_cast<half*>(z));
 }
 
+namespace {
+
+template<typename T>
+__global__ void PowByIntScalarGpu(const int64_t n, const T* x, const int32_t y, T* z);
+
+template<>
+__global__ void PowByIntScalarGpu<float>(const int64_t n, const float* x, const int32_t y,
+                                         float* z) {
+  CUDA_1D_KERNEL_LOOP(i, n) { z[i] = powf(x[i], y); }
+}
+
+template<>
+__global__ void PowByIntScalarGpu<double>(const int64_t n, const double* x, const int32_t y,
+                                          double* z) {
+  CUDA_1D_KERNEL_LOOP(i, n) { z[i] = pow(x[i], y); }
+}
+
+template<>
+__global__ void PowByIntScalarGpu<int32_t>(const int64_t n, const int32_t* x, const int32_t y,
+                                           int32_t* z) {
+  CUDA_1D_KERNEL_LOOP(i, n) {
+    z[i] = static_cast<int32_t>(powf(static_cast<float>(x[i]), static_cast<float>(y)));
+  }
+}
+
+template<>
+__global__ void PowByIntScalarGpu<int64_t>(const int64_t n, const int64_t* x, const int32_t y,
+                                           int64_t* z) {
+  CUDA_1D_KERNEL_LOOP(i, n) {
+    z[i] = static_cast<int64_t>(pow(static_cast<double>(x[i]), static_cast<double>(y)));
+  }
+}
+
+}  // namespace
+
+#define POW_BY_INT_SCALAR(T)                                                                       \
+  void ArithemeticIf<DeviceType::kGPU>::PowByIntScalar(DeviceCtx* ctx, const int64_t n,            \
+                                                       const T* x, const int32_t y, T* z) {        \
+    PowByIntScalarGpu<T>                                                                           \
+        <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y, z); \
+  }
+
+POW_BY_INT_SCALAR(float)
+POW_BY_INT_SCALAR(double)
+POW_BY_INT_SCALAR(int32_t)
+POW_BY_INT_SCALAR(int64_t)
+
+#undef POW_BY_INT_SCALAR
+
 }  // namespace oneflow
