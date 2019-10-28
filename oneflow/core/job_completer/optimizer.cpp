@@ -72,13 +72,6 @@ void ConstructMdUpdtOpConf(const VariableOp& op, const LogicalBlobId& diff_lbi_o
   mdupdt_op_conf->set_model(GenLogicalBlobName(op.BnInOp2Lbi("out")));
   mdupdt_op_conf->set_train_step(train_conf.train_step_lbn());
 
-  if (op.op_conf().variable_conf().has_normalize_conf()) {
-    mdupdt_op_conf->mutable_normalize_conf()->set_epsilon(
-        op.op_conf().variable_conf().normalize_conf().epsilon());
-    mdupdt_op_conf->mutable_normalize_conf()->set_axis(
-        op.op_conf().variable_conf().normalize_conf().axis());
-  }
-
   if (op.op_conf().variable_conf().model_name() == "weight") {
     const std::string& primary_lr_lbn =
         op.op_conf().variable_conf().has_learning_rate()
