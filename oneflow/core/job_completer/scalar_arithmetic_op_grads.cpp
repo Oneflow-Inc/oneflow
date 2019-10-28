@@ -79,6 +79,6 @@ void GenerateBackwardOpConf4ScalarPow(
 
 REGISTER_OP_GRAD(OperatorConf::kScalarAddConf, &GenerateBackwardOpConf4ScalarAdd);
 REGISTER_OP_GRAD(OperatorConf::kScalarMulConf, &GenerateBackwardOpConf4ScalarMul);
-REGISTER_OP_GRAD(OperatorConf::kScalarMulConf, &GenerateBackwardOpConf4ScalarPow);
+REGISTER_OP_GRAD(OperatorConf::kScalarPowConf, &GenerateBackwardOpConf4ScalarPow);
 
 }  // namespace oneflow
