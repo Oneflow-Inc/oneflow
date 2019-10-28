@@ -137,6 +137,8 @@ class ScalarPowOp final : public Operator {
   }
   Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                              const ParallelContext* parallel_ctx) const override {
+    CHECK_GT_OR_RETURN(op_conf().scalar_pow_conf().int_operand(), 1);
+    CHECK_LE_OR_RETURN(op_conf().scalar_pow_conf().int_operand(), 8);
     *GetBlobDesc4BnInOp("out") = *GetBlobDesc4BnInOp("in");
     return Maybe<void>::Ok();
   }
