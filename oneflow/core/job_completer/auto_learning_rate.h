@@ -6,11 +6,6 @@ namespace oneflow {
 class OpGraph;
 class Job;
 
-std::string AddScheduleOp(JobBuilder* job_builder,
-                          const NormalModelUpdateOpUserConf& model_update_conf,
-                          const std::string& train_step_lbn, const std::string& op_name,
-                          const float learning_rate);
-
 void AutoLearningRate(const OpGraph& op_graph, Job* job);
 
 }  // namespace oneflow
