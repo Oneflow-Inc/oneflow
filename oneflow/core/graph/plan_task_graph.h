@@ -39,7 +39,7 @@ class PlanTaskGraph final : public Graph<const PlanTaskNode, PlanTaskEdge> {
 
   void ComputeLifetimeSameChainActorIds(const RegstDescProto* regst_desc,
                                         HashSet<int64_t>* lifetime_same_chain_actor_ids) const;
-  bool IsReachableInSameArea(int64_t src_task_id, int64_t dst_task_id) const;
+  bool IsReachable(int64_t src_task_id, int64_t dst_task_id) const;
 
   const TaskProto* TaskProto4TaskId(int64_t task_id) const;
   const Plan& plan() const { return *plan_; }
