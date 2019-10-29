@@ -233,11 +233,16 @@ class RoiAlignGradGPUKernel final : public KernelIf<DeviceType::kGPU> {
     const Blob* dy_blob = BnInOp2Blob("dy");
     const Blob* rois_blob = BnInOp2Blob("rois");
     const int64_t elem_cnt = dy_blob->shape().elem_cnt();
-    RoiAlignBackward<T><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
-                          ctx.device_ctx->cuda_stream()>>>(
-        elem_cnt, dy_blob->dptr<T>(), rois_blob->dptr<T>(), args.spatial_scale(),
-        args.sampling_ratio(), dx_blob->shape().At(1), dx_blob->shape().At(2),
-        dx_blob->shape().At(3), args.pooled_h(), args.pooled_w(), dx_blob->mut_dptr<T>());
+    if (elem_cnt > 0) {
+      RoiAlignBackward<T><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
+                            ctx.device_ctx->cuda_stream()>>>(
+          elem_cnt, dy_blob->dptr<T>(), rois_blob->dptr<T>(), args.spatial_scale(),
+          args.sampling_ratio(), dx_blob->shape().At(1), dx_blob->shape().At(2),
+          dx_blob->shape().At(3), args.pooled_h(), args.pooled_w(), dx_blob->mut_dptr<T>());
+    } else {
+      Memset<DeviceType::kGPU>(ctx.device_ctx, dx_blob->mut_dptr<T>(), 0,
+                               dx_blob->AlignedByteSizeOfBlobBody());
+    }
   }
 };
 

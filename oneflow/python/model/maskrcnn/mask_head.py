@@ -35,7 +35,7 @@ class MaskHead(object):
             gt_label_list = []
             for img_idx in range(self.cfg.TRAINING_CONF.IMG_PER_GPU):
                 # if it is mask target projected, not need to do piece_slice
-                if isinstance(gt_segms, list):
+                if isinstance(gt_segms, (list, tuple)):
                     gt_segm_list.append(
                         flow.local_gather(
                             gt_segms[img_idx], pos_gt_indices[img_idx]
@@ -46,10 +46,7 @@ class MaskHead(object):
                         gt_labels[img_idx], pos_gt_indices[img_idx]
                     )
                 )
-            if isinstance(gt_segms, list):
-                gt_segms = flow.concat(
-                    gt_segm_list, axis=0, name="concat_gt_segms"
-                )
+
             gt_labels = flow.concat(
                 gt_label_list, axis=0, name="concat_gt_labels"
             )
@@ -64,12 +61,26 @@ class MaskHead(object):
                 name="squeeze_mask_pred",
             )
 
+            if isinstance(gt_segms, (list, tuple)):
+                gt_segms = flow.concat(
+                    gt_segm_list, axis=0, name="concat_gt_segms"
+                )
+                gt_segms = flow.detection.masks_crop_and_resize(
+                    flow.expand_dims(gt_segms, 1),
+                    proposals,
+                    mask_pred.shape[1],
+                    mask_pred.shape[2],
+                )
+                gt_segms = flow.squeeze(gt_segms, axis=[1])
+
             mask_loss = flow.math.reduce_sum(
                 flow.nn.sigmoid_cross_entropy_with_logits(gt_segms, mask_pred)
             )
+
             elem_cnt = flow.elem_cnt(gt_labels, dtype=mask_loss.dtype) * (
                 gt_segms.shape[1] * gt_segms.shape[2]
             )
+
             mask_loss = mask_loss / elem_cnt
             return mask_loss
 
@@ -111,7 +122,7 @@ class MaskHead(object):
                 pooled_w=self.cfg.MASK_HEAD.POOLED_W,
                 spatial_scale=self.cfg.MASK_HEAD.SPATIAL_SCALE / pow(2, i),
                 sampling_ratio=self.cfg.MASK_HEAD.SAMPLING_RATIO,
-                name="roi_align_" + str(i),
+                name="mask_roi_align_" + str(i),
             )
             roi_features_list.append(roi_feature_i)
 
