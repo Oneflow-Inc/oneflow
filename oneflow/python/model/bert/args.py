@@ -41,7 +41,8 @@ parser.add_argument("--vocab_size", type=int, default=30522)
 parser.add_argument("--attention_probs_dropout_prob", type=float, default=0.1)
 parser.add_argument("--hidden_dropout_prob", type=float, default=0.1)
 parser.add_argument("--hidden_size_per_head", type=int, default=64)
-parser.add_argument("--enable_auto_mixed_precision", type=bool, default=False)
+parser.add_argument("--enable_auto_mixed_precision", dest='enable_auto_mixed_precision', action='store_true')
+parser.set_defaults(enable_auto_mixed_precision=False)
 
 args = parser.parse_args()
 
