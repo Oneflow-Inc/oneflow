@@ -32,10 +32,10 @@ __device__ __forceinline__ double Floor(double x) {
 
 template<typename T>
 __launch_bounds__(kCudaThreadsNumPerBlock) __global__
-    void MasksCropAndResizeForward(const int nthreads, const int8_t* masks, const T* rois,
+    void MasksCropAndResizeForward(const int elem_cnt, const int8_t* masks, const T* rois,
                                    const int channels, const int height, const int width,
                                    const int mask_height, const int mask_width, T* output) {
-  CUDA_1D_KERNEL_LOOP(index, nthreads) {
+  CUDA_1D_KERNEL_LOOP(index, elem_cnt) {
     const int n = index / (mask_height * mask_width * channels);
     const int c = (index / (mask_height * mask_width)) % channels;
     const int h = (index / mask_width) % mask_height;
@@ -47,18 +47,25 @@ __launch_bounds__(kCudaThreadsNumPerBlock) __global__
     const T roi_y_max = Round(rois[n * 4 + 3]);
     assert(roi_x_min >= 0);
     assert(roi_y_min >= 0);
-    assert(roi_x_max <= width - GetOneVal<T>());
-    assert(roi_y_max <= height - GetOneVal<T>());
-    assert(roi_x_min <= roi_x_max - GetOneVal<T>());
-    assert(roi_y_min <= roi_y_max - GetOneVal<T>());
+    assert(roi_x_max <= width - 1);
+    assert(roi_y_max <= height - 1);
+    assert(roi_x_min <= roi_x_max - 1);
+    assert(roi_y_min <= roi_y_max - 1);
     const T roi_height = roi_y_max - roi_y_min;
     const T roi_width = roi_x_max - roi_x_min;
     const T bin_height = roi_height / static_cast<T>(mask_height);
     const T bin_width = roi_width / static_cast<T>(mask_width);
 
     const int8_t* cur_mask = masks + (n * channels + c) * height * width;
-    const T x_center = roi_x_min + static_cast<T>((w + 0.5f) * bin_width - 0.5f);
-    const T y_center = roi_y_min + static_cast<T>((h + 0.5f) * bin_height - 0.5f);
+    const T x_center =
+        max(roi_x_min + static_cast<T>((w + 0.5f) * bin_width - 0.5f), GetZeroVal<T>());
+    const T y_center =
+        max(roi_y_min + static_cast<T>((h + 0.5f) * bin_height - 0.5f), GetZeroVal<T>());
+    assert(x_center >= 0);
+    assert(y_center >= 0);
+    assert(x_center < width);
+    assert(y_center < height);
+
     const int x_low = static_cast<int>(Floor(x_center));
     const int y_low = static_cast<int>(Floor(y_center));
     const int x_high = x_low < width - 1 ? x_low + 1 : x_low;

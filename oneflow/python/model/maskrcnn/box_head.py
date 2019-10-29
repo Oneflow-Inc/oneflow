@@ -222,6 +222,7 @@ class BoxHead(object):
                 pooled_w=self.cfg.BOX_HEAD.POOLED_W,
                 spatial_scale=self.cfg.BOX_HEAD.SPATIAL_SCALE / pow(2, i),
                 sampling_ratio=self.cfg.BOX_HEAD.SAMPLING_RATIO,
+                name="box_roi_align_" + str(i),
             )
             roi_features_list.append(roi_feature_i)
 
@@ -305,10 +306,6 @@ class BoxHead(object):
         for img_idx, (proposals, cls_probs, image_size) in enumerate(
             zip(proposals_list, cls_probs_list, image_size_list)
         ):
-            flow.watch(proposals, Save("xxx_proposals_{}".format(img_idx)))
-            flow.watch(cls_probs, Save("xxx_cls_probs_{}".format(img_idx)))
-            flow.watch(image_size, Save("xxx_image_size_{}".format(img_idx)))
             proposals = flow.detection.clip_to_image(proposals, image_size)
-            flow.watch(proposals, Save("proposals_{}".format(img_idx)))
 
         return None

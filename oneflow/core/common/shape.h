@@ -57,9 +57,10 @@ class Shape final {
 
 int64_t ShiftNegativeAxis(int64_t axis, const int64_t num_axes);
 
-Shape CreateReducedShape(const DenseShapeView& shape, const AxisVector& axis_vec);
+Shape CreateReducedShape(const DenseShapeView& shape, const std::vector<int64_t>& axis_vec);
 Shape CreateLeftExtendedShape(const DenseShapeView& shape, int ndims_extend_to);
-Shape CreateReducedShapeOrOnesShape(const DenseShapeView& shape, const AxisVector& axis_vec);
+Shape CreateReducedShapeOrOnesShape(const DenseShapeView& shape,
+                                    const std::vector<int64_t>& axis_vec);
 template<typename StreamT>
 void Shape::SerializeWithTextFormat(StreamT& out_stream) const {
   for (int64_t dim : dim_vec_) { out_stream << std::to_string(dim) << ' '; }
