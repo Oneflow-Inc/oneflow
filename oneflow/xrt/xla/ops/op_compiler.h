@@ -1,7 +1,7 @@
 #ifndef ONEFLOW_XRT_XLA_OPS_OP_COMPILER_H_
 #define ONEFLOW_XRT_XLA_OPS_OP_COMPILER_H_
 
-#include "oneflow/xrt/platform.h"
+#include "oneflow/xrt/types.h"
 #include "oneflow/xrt/utility/registry.h"
 #include "oneflow/xrt/xla/op_context.h"
 #include "oneflow/xrt/xla/xla_macro.h"

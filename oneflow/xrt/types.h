@@ -1,7 +1,7 @@
-#ifndef ONEFLOW_XRT_PLATFORM_H_
-#define ONEFLOW_XRT_PLATFORM_H_
+#ifndef ONEFLOW_XRT_TYPES_H_
+#define ONEFLOW_XRT_TYPES_H_
 
-#include "oneflow/xrt/platform.pb.h"
+#include "oneflow/xrt/types.pb.h"
 
 namespace oneflow {
 namespace xrt {
@@ -27,4 +27,4 @@ struct hash<oneflow::xrt::XrtEngine> {
 
 }  // namespace std
 
-#endif  // ONEFLOW_XRT_PLATFORM_H_
+#endif  // ONEFLOW_XRT_TYPES_H_

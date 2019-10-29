@@ -6,7 +6,7 @@
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/common/shape.h"
 #include "oneflow/xrt/argument.h"
-#include "oneflow/xrt/platform.h"
+#include "oneflow/xrt/types.h"
 #include "oneflow/xrt/xrt.pb.h"
 #include "tensorflow/compiler/xla/client/xla_builder.h"
 #include "tensorflow/compiler/xla/shape.h"

@@ -1,7 +1,7 @@
 #include "oneflow/xrt/graph/node.h"
 #include "absl/strings/str_split.h"
 #include "oneflow/xrt/graph/algorithm.h"
-#include "oneflow/xrt/platform.h"
+#include "oneflow/xrt/types.h"
 #include "oneflow/xrt/utility/registry.h"
 
 namespace oneflow {

@@ -4,7 +4,7 @@
 #include "oneflow/xrt/executable.h"
 #include "oneflow/xrt/graph/graph.h"
 #include "oneflow/xrt/parameter.h"
-#include "oneflow/xrt/platform.h"
+#include "oneflow/xrt/types.h"
 #include "oneflow/xrt/utility/registry.h"
 
 namespace oneflow {

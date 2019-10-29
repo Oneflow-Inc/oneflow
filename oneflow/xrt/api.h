@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_XRT_XRT_H_
-#define ONEFLOW_XRT_XRT_H_
+#ifndef ONEFLOW_XRT_API_H_
+#define ONEFLOW_XRT_API_H_
 
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/job/job_desc.h"
@@ -64,4 +64,4 @@ Parameter BuildParameter(const Blob &blob, const std::string &name = "");
 }  // namespace xrt
 }  // namespace oneflow
 
-#endif  // ONEFLOW_XRT_XRT_H_
+#endif  // ONEFLOW_XRT_API_H_
