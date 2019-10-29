@@ -5,7 +5,7 @@
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/common/shape.h"
-#include "oneflow/xrt/graph/argument.h"
+#include "oneflow/xrt/argument.h"
 #include "oneflow/xrt/platform.h"
 #include "oneflow/xrt/xrt.pb.h"
 #include "tensorflow/compiler/xla/client/xla_builder.h"
@@ -15,7 +15,7 @@ namespace oneflow {
 namespace xrt {
 namespace mola {
 
-using Argument = XrtArgument;
+using Argument = Argument;
 
 class Operand {
  public:

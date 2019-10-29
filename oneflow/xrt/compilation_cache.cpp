@@ -4,17 +4,16 @@ namespace oneflow {
 namespace xrt {
 
 bool operator==(const Signature &lhs, const Signature &rhs) {
-  return lhs.name == rhs.name && lhs.device_ordinal == rhs.device_ordinal &&
+  return lhs.builder_name == rhs.builder_name &&
+         lhs.device_ordinal == rhs.device_ordinal &&
          lhs.entry_shapes == rhs.entry_shapes;
 }
 
 size_t SignatureHash::operator()(const Signature &signature) const {
-  size_t hash_val = std::hash<std::string>()(signature.name) ^
+  size_t hash_val = std::hash<std::string>()(signature.builder_name) ^
                     std::hash<int>()(signature.device_ordinal);
   for (const auto &shape : signature.entry_shapes) {
-    hash_val ^= std::hash<XrtShape>()(shape);
-    // hash_val ^= std::hash<std::string>()(shape.shape().ToString());
-    // hash_val ^= std::hash<DataType>(shape.data_type());
+    hash_val ^= std::hash<std::string>()(shape.ToString());
   }
   return hash_val;
 }
@@ -22,13 +21,12 @@ size_t SignatureHash::operator()(const Signature &signature) const {
 Signature ComputeSignature(const std::string &name, const int device_ordinal,
                            const std::vector<Parameter> &entry_params) {
   Signature signature;
-  signature.name = name;
+  signature.builder_name = name;
   signature.device_ordinal = device_ordinal;
   signature.entry_shapes.resize(entry_params.size());
   for (int i = 0; i < entry_params.size(); ++i) {
     signature.entry_shapes[i] = entry_params[i].shape();
   }
-
   return std::move(signature);
 }
 

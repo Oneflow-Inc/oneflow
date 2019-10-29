@@ -2,9 +2,9 @@
 #include "absl/strings/str_split.h"
 
 #include "oneflow/core/job/sbp_signature_builder.h"
+#include "oneflow/xrt/api.h"
 #include "oneflow/xrt/launch_op.h"
 #include "oneflow/xrt/launch_util.h"
-#include "oneflow/xrt/xrt_api.h"
 
 namespace oneflow {
 

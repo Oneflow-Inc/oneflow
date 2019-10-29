@@ -7,11 +7,11 @@
 #include "oneflow/core/job/job.pb.h"
 #include "oneflow/core/job/job_builder.h"
 #include "oneflow/core/operator/op_conf.pb.h"
-#include "oneflow/xrt/graph/argument.h"
+#include "oneflow/xrt/api.h"
+#include "oneflow/xrt/argument.h"
 #include "oneflow/xrt/graph/graph.h"
 #include "oneflow/xrt/passes/pass.h"
 #include "oneflow/xrt/utility/stl.h"
-#include "oneflow/xrt/xrt_api.h"
 
 namespace oneflow {
 namespace xrt {
@@ -203,13 +203,13 @@ void FoldSubgraphBuilder::buildXrtLaunchAttribute(
       bool is_mutable = false;
       // Build inputs or outputs for the argument nodes
       for (const XrtEdge *edge : node->out_edges()) {
-        const XrtArgument &argument = edge->argument();
+        const Argument &argument = edge->argument();
         argument_proto->set_in(argument.name());
         argument_proto->set_out(argument.name());
         // is_mutable |= IsMutableArgument(edge->end(), argument);
       }
       for (const XrtEdge *edge : node->in_edges()) {
-        const XrtArgument &argument = edge->argument();
+        const Argument &argument = edge->argument();
         argument_proto->set_in(argument.name());
         argument_proto->set_out(argument.name());
       }
@@ -240,7 +240,7 @@ void AddInBlobNames(const util::List<XrtEdge *> &in_edges,
                     XrtLaunchOpConf *launch_conf) {
   for (const XrtEdge *edge : in_edges) {
     if (!edge->IsControlEdge()) {
-      const XrtArgument &arg = edge->argument();
+      const Argument &arg = edge->argument();
       DoNoDuplicationAdd(launch_conf->mutable_in(), arg.name());
     }
   }
@@ -250,7 +250,7 @@ void AddOutBlobNames(const util::List<XrtEdge *> &out_edges,
                      XrtLaunchOpConf *launch_conf) {
   for (const XrtEdge *edge : out_edges) {
     if (!edge->IsControlEdge()) {
-      const XrtArgument &arg = edge->argument();
+      const Argument &arg = edge->argument();
       DoNoDuplicationAdd(launch_conf->mutable_out(), arg.name());
     }
   }

@@ -2,8 +2,8 @@
 #define ONEFLOW_XRT_GRAPH_GRAPH_H_
 
 #include <vector>
+#include "oneflow/xrt/argument.h"
 #include "oneflow/xrt/graph/algorithm.h"
-#include "oneflow/xrt/graph/argument.h"
 #include "oneflow/xrt/graph/node.h"
 #include "oneflow/xrt/utility/attribute_map.h"
 
@@ -26,7 +26,7 @@ class XrtGraph : public util::AttributeMap {
 
   XrtEdge *Connect(const XrtNode *start, const XrtNode *end);
   XrtEdge *Connect(const XrtNode *start, const XrtNode *end,
-                   const XrtArgument &arg);
+                   const Argument &arg);
   void Disconnect(const XrtEdge *edge);
 
   // Create a subgraph for node that unique id is `node_id`
@@ -38,7 +38,7 @@ class XrtGraph : public util::AttributeMap {
   const std::vector<XrtEdge *> &Edges() const { return edges_; }
   std::vector<XrtEdge *> &Edges() { return edges_; }
 
-  std::vector<XrtArgument> Arguments() const;
+  std::vector<Argument> Arguments() const;
 
   std::string ToDot() const;
 

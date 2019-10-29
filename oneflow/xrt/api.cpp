@@ -1,4 +1,4 @@
-#include "oneflow/xrt/xrt_api.h"
+#include "oneflow/xrt/api.h"
 #include "glog/logging.h"
 #include "oneflow/core/operator/operator.h"  // GenLogicalBlobName, GenLogicalBlobId
 #include "oneflow/xrt/utility/env.h"
@@ -15,7 +15,7 @@ DEFINE_bool(strict_clustering, EnvToBool(FLAGS_strict_clustering, true),
 namespace oneflow {
 namespace xrt {
 
-extern std::string _XrtArgumentOpType;
+extern std::string _ArgumentOpType;
 
 #define OP_TYPE_CASE(op) OperatorConf::k##op##Conf
 
@@ -135,7 +135,7 @@ std::shared_ptr<XrtGraph> BuildXrtGraphEdges(
     for (const std::string &input : inputs) {
       const auto &it = producers.find(input);
       if (it != producers.end() && it->second != node) {
-        XrtArgument argument(input);
+        Argument argument(input);
         graph->Connect(it->second, node, argument);
       }
     }
@@ -172,7 +172,7 @@ void SetupXrtNode(XrtNode *node, const OperatorConf &node_conf) {
 
 void SetupXrtNode(XrtNode *node, const XrtLaunchOpConf::Argument &arg_conf) {
   node->set_name(arg_conf.name());
-  node->set_type(_XrtArgumentOpType);
+  node->set_type(_ArgumentOpType);
   node->set_backend(DeviceTypeToBackend(arg_conf.device_type()));
 }
 
@@ -245,8 +245,8 @@ XrtPassOptions CreateDefaultXrtPassOptions() {
 
 Parameter BuildParameter(const Blob &blob, const std::string &name) {
   const auto &desc = blob.blob_desc();
-  return Parameter(const_cast<void *>(blob.dptr<void>()),
-                   XrtShape(desc.shape(), desc.data_type()), name);
+  return Parameter(name, const_cast<void *>(blob.dptr<void>()), desc.shape(),
+                   desc.data_type());
 }
 
 bool LookupMutability(const XrtLaunchOpConf &launch_conf,
@@ -257,11 +257,6 @@ bool LookupMutability(const XrtLaunchOpConf &launch_conf,
     return false;
   }
   return it->second;
-}
-
-void ConvertXrtShapeToBlobDesc(const XrtShape &shape, BlobDesc *desc) {
-  desc->mut_shape() = shape.shape();
-  desc->set_data_type(shape.data_type());
 }
 
 }  // namespace xrt

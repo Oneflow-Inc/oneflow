@@ -3,8 +3,8 @@
 
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/xrt/any.h"
+#include "oneflow/xrt/argument.h"
 #include "oneflow/xrt/graph/algorithm.h"
-#include "oneflow/xrt/graph/argument.h"
 #include "oneflow/xrt/utility/attribute_map.h"
 #include "oneflow/xrt/utility/stl.h"
 #include "oneflow/xrt/xrt.pb.h"
@@ -19,14 +19,14 @@ class XrtEdge : public util::AttributeMap {
  public:
   XrtNode *start() const { return start_; }
   XrtNode *end() const { return end_; }
-  const XrtArgument &argument() const { return arg_; }
-  XrtArgument &argument() { return arg_; }
+  const Argument &argument() const { return arg_; }
+  Argument &argument() { return arg_; }
 
   void SetStartNode(const XrtNode *start) {
     start_ = const_cast<XrtNode *>(start);
   }
   void SetEndNode(const XrtNode *end) { end_ = const_cast<XrtNode *>(end); }
-  void SetArgument(const XrtArgument &arg) { arg_ = arg; }
+  void SetArgument(const Argument &arg) { arg_ = arg; }
 
   int64_t unique_id() const { return unique_id_; }
   bool IsControlEdge() const { return !arg_.initialized(); }
@@ -44,7 +44,7 @@ class XrtEdge : public util::AttributeMap {
   XrtNode *start_;
   XrtNode *end_;
   //
-  XrtArgument arg_;
+  Argument arg_;
 
   int64_t unique_id_ = -1;
 };
@@ -122,8 +122,8 @@ struct NodeTypeTrait<const XrtNode> {
 };
 }  // namespace algorithm
 
-bool IsNodeInput(const XrtNode *node, const XrtArgument &argument);
-bool IsNodeOutput(const XrtNode *node, const XrtArgument &argument);
+bool IsNodeInput(const XrtNode *node, const Argument &argument);
+bool IsNodeOutput(const XrtNode *node, const Argument &argument);
 
 }  // namespace xrt
 }  // namespace oneflow

@@ -1,8 +1,8 @@
 #include "oneflow/xrt/launch_kernel.h"
+#include "oneflow/xrt/api.h"
 #include "oneflow/xrt/compilation_cache.h"
 #include "oneflow/xrt/executable.h"
 #include "oneflow/xrt/graph_compiler.h"
-#include "oneflow/xrt/xrt_api.h"
 
 namespace oneflow {
 
@@ -34,7 +34,8 @@ xrt::Executable *XrtLaunchKernel<device_type>::BuildExecutable(
       std::unordered_map<std::string, BlobDesc> blob_descs;
       for (int i = 0; i < entry_params.size(); ++i) {
         BlobDesc blob_desc;
-        xrt::ConvertXrtShapeToBlobDesc(entry_params[i].shape(), &blob_desc);
+        blob_desc.mut_shape() = entry_params[i].shape();
+        blob_desc.set_data_type(entry_params[i].data_type());
         blob_descs.emplace(entry_params[i].name(), blob_desc);
       }
       SbpSignature sbp_signature;

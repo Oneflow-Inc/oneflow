@@ -6,9 +6,10 @@
 #include <string>
 #include <vector>
 
+//#include "oneflow/core/common/data_type.pb.h"
+#include "oneflow/core/common/shape.h"
 #include "oneflow/xrt/executable.h"
 #include "oneflow/xrt/parameter.h"
-#include "oneflow/xrt/shape.h"
 #include "oneflow/xrt/utility/stl.h"
 
 namespace oneflow {
@@ -16,11 +17,12 @@ namespace xrt {
 
 struct Signature {
   // Builder name
-  std::string name;
+  std::string builder_name;
   // Device ordinal
   int device_ordinal;
+  // std::vector<Shape> entry_data_types;
   // It will Lose efficacy if the entry shapes has been changed.
-  std::vector<XrtShape> entry_shapes;
+  std::vector<Shape> entry_shapes;
 };
 
 bool operator==(const Signature &lhs, const Signature &rhs);

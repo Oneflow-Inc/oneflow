@@ -37,5 +37,5 @@
 
 - 如何添加XLA op
 
-  当前所有已支持的op实现都放在[oneflow/xrt/of2xla/ops](../../of2xla/ops/)目录下，添加新的XLA op时可以参考一下。
+  当前所有已支持的op实现都放在[oneflow/xrt/xla/ops](../../xla/ops/)目录下，添加新的XLA op时可以参考一下。
 

@@ -17,7 +17,8 @@
 
 #ifdef WITH_XLA
 #include "absl/strings/str_cat.h"
-#include "oneflow/xrt/xrt_api.h"
+#include "oneflow/xrt/api.h"
+
 DECLARE_bool(use_xla_jit);
 #endif  // WITH_XLA
 

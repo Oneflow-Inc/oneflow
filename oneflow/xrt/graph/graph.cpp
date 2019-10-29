@@ -1,6 +1,6 @@
 #include "oneflow/xrt/graph/graph.h"
 #include "oneflow/core/graph/op_graph.h"
-#include "oneflow/xrt/graph/argument.h"
+#include "oneflow/xrt/argument.h"
 
 namespace oneflow {
 namespace xrt {
@@ -13,7 +13,7 @@ XrtEdge *XrtGraph::Connect(const XrtNode *start, const XrtNode *end) {
 }
 
 XrtEdge *XrtGraph::Connect(const XrtNode *start, const XrtNode *end,
-                           const XrtArgument &arg) {
+                           const Argument &arg) {
   XrtEdge *edge = Connect(start, end);
   edge->SetArgument(arg);
   return edge;
@@ -99,8 +99,8 @@ XrtGraph *XrtGraph::AddSubgraph(int64_t node_id) {
   return it->second;
 }
 
-std::vector<XrtArgument> XrtGraph::Arguments() const {
-  std::vector<XrtArgument> arguments;
+std::vector<Argument> XrtGraph::Arguments() const {
+  std::vector<Argument> arguments;
   for (const XrtEdge *edge : edges_) {
     if (edge && edge->argument().initialized()) {
       arguments.push_back(edge->argument());

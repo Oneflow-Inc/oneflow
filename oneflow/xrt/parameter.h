@@ -2,8 +2,8 @@
 #define ONEFLOW_XRT_PARAMETER_H_
 
 #include <string>
-
-#include "oneflow/xrt/shape.h"
+#include "oneflow/core/common/data_type.pb.h"
+#include "oneflow/core/common/shape.h"
 
 namespace oneflow {
 namespace xrt {
@@ -13,11 +13,15 @@ class Parameter {
   Parameter() = default;
   virtual ~Parameter() = default;
 
-  Parameter(void *data, const XrtShape &shape)
-      : storage_(data), shape_(shape) {}
+  Parameter(void *data, const Shape &shape, const DataType &data_type)
+      : storage_(data), shape_(shape), data_type_(data_type) {}
 
-  Parameter(void *data, const XrtShape &shape, const std::string &name)
-      : storage_(data), shape_(shape), parameter_name_(name) {}
+  Parameter(const std::string &name, void *data, const Shape &shape,
+            const DataType &data_type)
+      : storage_(data),
+        shape_(shape),
+        data_type_(data_type),
+        parameter_name_(name) {}
 
   void set_data(const void *data) { storage_ = const_cast<void *>(data); }
 
@@ -33,14 +37,18 @@ class Parameter {
     return reinterpret_cast<T *>(storage_);
   }
 
-  const XrtShape &shape() const { return shape_; }
-  void set_shape(const XrtShape &shape) { shape_ = shape; }
   const std::string &name() const { return parameter_name_; }
+  const Shape &shape() const { return shape_; }
+  const DataType &data_type() const { return data_type_; }
+
   void set_name(const std::string &name) { parameter_name_ = name; }
+  void set_shape(const Shape &shape) { shape_ = shape; }
+  void set_data_type(const DataType &data_type) { data_type_ = data_type; }
 
  private:
   void *storage_ = nullptr;
-  XrtShape shape_;
+  Shape shape_;
+  DataType data_type_;
   std::string parameter_name_{""};
 };
 

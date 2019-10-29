@@ -7,7 +7,7 @@
 namespace oneflow {
 namespace xrt {
 
-extern const std::string _XrtArgumentOpType;
+extern const std::string _ArgumentOpType;
 extern const std::string _XrtInArgumentPrefix;
 extern const std::string _XrtOutArgumentPrefix;
 
@@ -41,7 +41,7 @@ bool XrtNode::IsSourceNode() const { return in_edges_.size() == 0; }
 
 bool XrtNode::IsFinishNode() const { return out_edges_.size() == 0; }
 
-bool XrtNode::IsArgumentNode() const { return type_ == _XrtArgumentOpType; }
+bool XrtNode::IsArgumentNode() const { return type_ == _ArgumentOpType; }
 
 bool XrtNode::IsInArgumentNode() const {
   return IsArgumentNode() && absl::StartsWith(name_, _XrtInArgumentPrefix);
@@ -55,7 +55,7 @@ bool XrtNode::IsReachable(const XrtNode &dst_node) const {
   return algorithm::IsReachable(this, &dst_node);
 }
 
-bool IsNodeInput(const XrtNode *node, const XrtArgument &argument) {
+bool IsNodeInput(const XrtNode *node, const Argument &argument) {
   for (XrtEdge *edge : node->in_edges()) {
     if (edge->argument() == argument) {
       return true;
@@ -64,7 +64,7 @@ bool IsNodeInput(const XrtNode *node, const XrtArgument &argument) {
   return false;
 }
 
-bool IsNodeOutput(const XrtNode *node, const XrtArgument &argument) {
+bool IsNodeOutput(const XrtNode *node, const Argument &argument) {
   for (XrtEdge *edge : node->out_edges()) {
     if (edge->argument() == argument) {
       return true;

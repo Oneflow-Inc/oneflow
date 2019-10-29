@@ -1,5 +1,5 @@
 #include "oneflow/xrt/xla/op_context.h"
-#include "oneflow/xrt/graph/argument.h"
+#include "oneflow/xrt/argument.h"
 #include "oneflow/xrt/xla/xla_shape.h"
 #include "tensorflow/compiler/xla/client/xla_builder.h"
 #include "tensorflow/compiler/xla/shape.h"
@@ -69,24 +69,24 @@ void OpContext::SetOutput(const std::string &name, const xla::XlaOp &handle) {
 
 void OpContext::SetOutput(const std::string &name, const Operand &handle) {
   Argument arg = ArgumentFromString(name);
-  CHECK_EQ(arg.shape().shape(), XlaShapeToOfShape(handle.shape_));
+  CHECK_EQ(arg.shape(), XlaShapeToOfShape(handle.shape_));
   outputs_[arg] = handle;
 }
 
 DataType OpContext::InputType(const std::string &name) const {
-  return ArgumentFromString(name).shape().data_type();
+  return ArgumentFromString(name).data_type();
 }
 
 DataType OpContext::OutputType(const std::string &name) const {
-  return ArgumentFromString(name).shape().data_type();
+  return ArgumentFromString(name).data_type();
 }
 
 Shape OpContext::InputShape(const std::string &name) const {
-  return ArgumentFromString(name).shape().shape();
+  return ArgumentFromString(name).shape();
 }
 
 Shape OpContext::OutputShape(const std::string &name) const {
-  return ArgumentFromString(name).shape().shape();
+  return ArgumentFromString(name).shape();
 }
 
 Argument OpContext::ArgumentFromString(const std::string &name) const {

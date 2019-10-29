@@ -4,11 +4,11 @@
 
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/operator/op_conf.pb.h"
-#include "oneflow/xrt/graph/argument.h"
+#include "oneflow/xrt/api.h"
+#include "oneflow/xrt/argument.h"
 #include "oneflow/xrt/graph/graph.h"
 #include "oneflow/xrt/passes/pass.h"
 #include "oneflow/xrt/utility/stl.h"
-#include "oneflow/xrt/xrt_api.h"
 
 namespace oneflow {
 namespace xrt {
@@ -61,8 +61,7 @@ void InferShape(XrtGraph *graph, const XrtPassOptions &options,
       std::string name = edge->argument().name();
       auto it = blob_descs->find(name);
       CHECK(it != blob_descs->end());
-      XrtArgument argument(
-          name, XrtShape(it->second.shape(), it->second.data_type()));
+      Argument argument(name, it->second.shape(), it->second.data_type());
       edge->SetArgument(argument);
     }
   });

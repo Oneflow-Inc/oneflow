@@ -10,7 +10,7 @@ namespace oneflow {
 namespace xrt {
 
 extern const std::string _XrtLaunchOpType = "XrtLaunch";
-extern const std::string _XrtArgumentOpType = "XrtArgument";
+extern const std::string _ArgumentOpType = "Argument";
 extern const std::string _XrtLaunchPrefix = "_xrt_launch_";
 extern const std::string _XrtInArgumentPrefix = "_input_argument_";
 extern const std::string _XrtOutArgumentPrefix = "_output_argument_";
@@ -140,7 +140,7 @@ void BuildSubGraphPass::DivideArgumentNodes(XrtGraph *sub_graph) {
   // Find all argument nodes
   std::vector<XrtNode *> argument_nodes;
   for (XrtNode *node : sub_graph->Nodes()) {
-    if (node->type() == _XrtArgumentOpType) {
+    if (node->type() == _ArgumentOpType) {
       argument_nodes.push_back(node);
     }
   }
@@ -155,9 +155,9 @@ void BuildSubGraphPass::DivideArgumentNodes(XrtGraph *sub_graph) {
     node->ClearInEdges();
     node->ClearOutEdges();
 
-    util::Map<XrtArgument, XrtNode *> divided_args;
+    util::Map<Argument, XrtNode *> divided_args;
     for (XrtEdge *edge : in_edges) {
-      const XrtArgument &arg = edge->argument();
+      const Argument &arg = edge->argument();
       if (node->in_edges().size() == 0) {
         node->set_name(absl::StrCat(_XrtOutArgumentPrefix, argument_id++));
         divided_args.emplace(arg, node);
@@ -165,7 +165,7 @@ void BuildSubGraphPass::DivideArgumentNodes(XrtGraph *sub_graph) {
       const auto &it = divided_args.find(arg);
       if (it == divided_args.end()) {
         XrtNode *argument = sub_graph->AddNode();
-        argument->set_type(_XrtArgumentOpType);
+        argument->set_type(_ArgumentOpType);
         argument->set_name(absl::StrCat(_XrtOutArgumentPrefix, argument_id++));
         argument->set_backend(node->backend());
         argument->AddInEdge(edge);
@@ -179,7 +179,7 @@ void BuildSubGraphPass::DivideArgumentNodes(XrtGraph *sub_graph) {
     }
 
     for (XrtEdge *edge : out_edges) {
-      const XrtArgument &arg = edge->argument();
+      const Argument &arg = edge->argument();
       if (node->out_edges().size() == 0) {
         node->set_name(absl::StrCat(_XrtInArgumentPrefix, argument_id++));
         divided_args.emplace(arg, node);
@@ -187,7 +187,7 @@ void BuildSubGraphPass::DivideArgumentNodes(XrtGraph *sub_graph) {
       const auto &it = divided_args.find(arg);
       if (it == divided_args.end()) {
         XrtNode *argument = sub_graph->AddNode();
-        argument->set_type(_XrtArgumentOpType);
+        argument->set_type(_ArgumentOpType);
         argument->set_name(absl::StrCat(_XrtInArgumentPrefix, argument_id++));
         argument->set_backend(node->backend());
         argument->AddOutEdge(edge);
@@ -212,7 +212,7 @@ void BuildSubGraphPass::RebuildSubgraphInputs(
       XrtNode *argument = nullptr;
       if (sub_graph_nodes->count(start_id) == 0) {
         argument = sub_graph->AddNode();
-        argument->set_type(_XrtArgumentOpType);
+        argument->set_type(_ArgumentOpType);
         argument->set_backend(e->start()->backend());
         sub_graph_nodes->emplace(start_id, argument);
       } else {
@@ -239,7 +239,7 @@ void BuildSubGraphPass::RebuildSubgraphOutputs(
       XrtNode *argument = nullptr;
       if (sub_graph_nodes->count(start_id) == 0) {
         argument = sub_graph->AddNode();
-        argument->set_type(_XrtArgumentOpType);
+        argument->set_type(_ArgumentOpType);
         argument->set_backend(e->start()->backend());
         sub_graph_nodes->emplace(start_id, argument);
       } else {

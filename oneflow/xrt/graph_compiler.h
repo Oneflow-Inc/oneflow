@@ -14,13 +14,14 @@ class GraphCompiler {
  public:
   GraphCompiler(const XrtEngine &engine) : engine_(engine) {
     impl_.reset(GraphCompiler::Registry()->Lookup(engine_)());
-    CHECK(impl_) << "Internal compiler should be built correctly.";
+    CHECK(impl_) << "Internal compiler should be built correctly for engine "
+                 << engine_;
   }
 
   std::shared_ptr<Executable> Compile(
-      const XrtGraph *graph, const std::vector<xrt::Parameter> &entry_params,
-      const std::vector<xrt::Parameter> &return_params,
-      const std::vector<xrt::InputOutputAlias> &aliases) {
+      const XrtGraph *graph, const std::vector<Parameter> &entry_params,
+      const std::vector<Parameter> &return_params,
+      const std::vector<InputOutputAlias> &aliases) {
     return impl_->Compile(graph, entry_params, return_params, aliases);
   }
 
@@ -29,9 +30,9 @@ class GraphCompiler {
     Impl() = default;
     virtual ~Impl() = default;
     virtual std::shared_ptr<Executable> Compile(
-        const XrtGraph *graph, const std::vector<xrt::Parameter> &entry_params,
-        const std::vector<xrt::Parameter> &return_params,
-        const std::vector<xrt::InputOutputAlias> &aliases) = 0;
+        const XrtGraph *graph, const std::vector<Parameter> &entry_params,
+        const std::vector<Parameter> &return_params,
+        const std::vector<InputOutputAlias> &aliases) = 0;
   };
 
   static auto Registry()

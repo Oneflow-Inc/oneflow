@@ -9,7 +9,6 @@
 #include "oneflow/xrt/graph/graph.h"
 #include "oneflow/xrt/parameter.h"
 #include "oneflow/xrt/passes/pass.h"
-#include "oneflow/xrt/shape.h"
 #include "oneflow/xrt/utility/env.h"
 #include "oneflow/xrt/xrt.pb.h"
 
@@ -61,9 +60,6 @@ bool LookupMutability(const XrtLaunchOpConf &launch_conf,
                       const std::string &argument);
 
 Parameter BuildParameter(const Blob &blob, const std::string &name = "");
-
-//
-void ConvertXrtShapeToBlobDesc(const XrtShape &shape, BlobDesc *desc);
 
 }  // namespace xrt
 }  // namespace oneflow
