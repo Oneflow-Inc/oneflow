@@ -76,7 +76,7 @@ class TopKOp final : public Operator {
     // output
     BlobDesc* out = GetBlobDesc4BnInOp("out");
     *out = *in;
-    out->mut_shape().Set(in->shape().NumAxes() - 1, k);
+    out->mut_shape().Set(in->shape().NumAxes() - 1, std::min(k, instance_size));
     out->set_data_type(DataType::kInt32);
 
     return Maybe<void>::Ok();
