@@ -83,7 +83,9 @@ parser.add_argument(
     "-v", "--verbose", default=False, action="store_true", required=False
 )
 parser.add_argument("-i", "--iter_num", type=int, default=10, required=False)
-parser.add_argument("-lr", "--primary_lr", type=float, default=0.00001, required=False)
+parser.add_argument(
+    "-lr", "--primary_lr", type=float, default=0.00001, required=False
+)
 terminal_args = parser.parse_args()
 
 

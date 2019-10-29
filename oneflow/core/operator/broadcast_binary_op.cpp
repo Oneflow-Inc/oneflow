@@ -1,5 +1,6 @@
 #include "oneflow/core/operator/broadcast_binary_op.h"
 #include "oneflow/core/job/sbp_signature_builder.h"
+#include "oneflow/core/register/dense_shape_view.h"
 
 namespace oneflow {
 
@@ -30,8 +31,10 @@ Maybe<void> BroadcastBinaryOp::InferBlobDescs(
   } else if (IsScalarBlob(b_blob_desc)) {
     *out_blob_desc = *a_blob_desc;
   } else {
-    const auto& a_shape = a_blob_desc->shape().CreateLeftExtendedShape(output_num_axes);
-    const auto& b_shape = b_blob_desc->shape().CreateLeftExtendedShape(output_num_axes);
+    const auto& a_shape =
+        CreateLeftExtendedShape(DenseShapeView(a_blob_desc->shape()), output_num_axes);
+    const auto& b_shape =
+        CreateLeftExtendedShape(DenseShapeView(b_blob_desc->shape()), output_num_axes);
     *out_blob_desc = *a_blob_desc;
     Shape out_shape(a_shape);
     FOR_RANGE(int64_t, i, 0, a_shape.NumAxes()) {

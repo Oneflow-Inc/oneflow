@@ -32,7 +32,7 @@ void LocalResponseNormalizationKernel<DeviceType::kCPU, T>::NCHWForward(
   const LocalResponseNormalizationOpConf& lrn_conf =
       this->op_conf().local_response_normalization_conf();
   const Blob* in_blob = BnInOp2Blob("in");
-  const Shape& in_shape = in_blob->shape();
+  const auto& in_shape = in_blob->shape();
   Blob* out_blob = BnInOp2Blob("out");
   Blob* ps_blob = BnInOp2Blob("padded_square");
   Blob* nc_blob = BnInOp2Blob("normalize_coef");
@@ -79,7 +79,7 @@ void LocalResponseNormalizationKernel<DeviceType::kCPU, T>::NCHWBackward(
   const LocalResponseNormalizationOpConf& lrn_conf =
       this->op_conf().local_response_normalization_conf();
   const Blob* in_blob = BnInOp2Blob("in");
-  const Shape& in_shape = in_blob->shape();
+  const auto& in_shape = in_blob->shape();
   const Blob* out_blob = BnInOp2Blob("out");
   Blob* ps_blob = BnInOp2Blob("padded_square");
   Memset<DeviceType::kCPU>(ctx.device_ctx, ps_blob->mut_dptr(), 0, ps_blob->ByteSizeOfBlobBody());
@@ -133,7 +133,7 @@ template<typename T>
 void LocalResponseNormalizationKernel<DeviceType::kCPU, T>::NHWCForward(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* in_blob = BnInOp2Blob("in");
-  const Shape& in_shape = in_blob->shape();
+  const auto& in_shape = in_blob->shape();
   Blob* out_blob = BnInOp2Blob("out");
   Blob* padded_square_blob = BnInOp2Blob("padded_square");
   Blob* normalize_coef_blob = BnInOp2Blob("normalize_coef");

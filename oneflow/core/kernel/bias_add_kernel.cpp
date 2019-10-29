@@ -49,7 +49,7 @@ const PbMessage& BiasAddKernel<device_type, T>::GetCustomizedOpConf() const {
 
 template<typename T>
 struct BiasAddUtil<DeviceType::kCPU, T> {
-  static void BiasAddNCX(DeviceCtx* ctx, const Shape& shape, const int32_t bias_axis,
+  static void BiasAddNCX(DeviceCtx* ctx, const DenseShapeView& shape, const int32_t bias_axis,
                          const T* input, const T* bias, T* output) {
     Shape bias_shape = Shape::Ones(shape.NumAxes());
     bias_shape.Set(bias_axis, shape.At(bias_axis));

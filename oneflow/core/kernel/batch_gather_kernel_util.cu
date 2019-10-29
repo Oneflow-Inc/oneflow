@@ -6,7 +6,7 @@ namespace oneflow {
 
 namespace {
 
-Shape GetFlatShape(const Shape& shape, const int64_t axis) {
+Shape GetFlatShape(const DenseShapeView& shape, const int64_t axis) {
   CHECK_GT(shape.NumAxes(), 0);
   CHECK_GE(axis, 0);
   CHECK_LT(axis, shape.NumAxes());
@@ -110,7 +110,7 @@ class BatchGatherGPUKernel final : public KernelIf<DeviceType::kGPU> {
     const Blob* indices = BnInOp2Blob("indices");
     Blob* out = BnInOp2Blob("out");
     const int64_t axis = indices->shape().NumAxes() - 1;
-    const Shape flat_out_shape = GetFlatShape(out->shape(), axis);
+    const Shape& flat_out_shape = GetFlatShape(out->shape(), axis);
 
     const int64_t batch_num = flat_out_shape.At(0);
     const int64_t indices_num = flat_out_shape.At(1);
@@ -147,7 +147,7 @@ class UnsortedBatchSegmentSumGPUKernel final : public KernelIf<DeviceType::kGPU>
     const Blob* indices = BnInOp2Blob("segment_ids");
     Blob* in_diff = BnInOp2Blob("out");
     const int64_t axis = indices->shape().NumAxes() - 1;
-    const Shape flat_out_diff_shape = GetFlatShape(out_diff->shape(), axis);
+    const Shape& flat_out_diff_shape = GetFlatShape(out_diff->shape(), axis);
     const int64_t batch_num = flat_out_diff_shape.At(0);
     const int64_t indices_num = flat_out_diff_shape.At(1);
     const int64_t instance_size = flat_out_diff_shape.At(2);

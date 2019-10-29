@@ -25,8 +25,8 @@ class ClipByValueGpuKernel final : public KernelIf<DeviceType::kGPU> {
     const Blob* in_blob = BnInOp2Blob("in");
     Blob* out_blob = BnInOp2Blob("out");
 
-    const Shape shape = in_blob->shape();
-    CHECK_EQ(out_blob->shape(), shape);
+    const auto& shape = in_blob->shape();
+    CHECK(out_blob->shape() == shape);
     const ClipByValueOpConf& conf = this->op_conf().clip_by_value_conf();
     const T min_val = conf.has_min_val() ? static_cast<T>(conf.min_val()) : GetMinVal<T>();
     const T max_val = conf.has_max_val() ? static_cast<T>(conf.max_val()) : GetMaxVal<T>();

@@ -28,7 +28,7 @@ class WhereGpuKernel final : public KernelIf<DeviceType::kGPU> {
     const Blob* lhs_blob = BnInOp2Blob("lhs");
     const Blob* rhs_blob = BnInOp2Blob("rhs");
     Blob* out_blob = BnInOp2Blob("out");
-    const Shape shape = condition_blob->shape();
+    const auto& shape = condition_blob->shape();
     CHECK_EQ(lhs_blob->shape(), shape);
     CHECK_EQ(rhs_blob->shape(), shape);
     CHECK_EQ(out_blob->shape(), shape);

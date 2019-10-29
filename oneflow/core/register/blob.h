@@ -10,6 +10,7 @@
 #include "oneflow/core/common/range.h"
 #include "oneflow/core/persistence/persistent_in_stream.h"
 #include "oneflow/core/record/record.pb.h"
+#include "oneflow/core/common/symbol.h"
 
 namespace oneflow {
 
@@ -22,7 +23,6 @@ class Blob final {
 
   DataType data_type() const { return blob_desc_->data_type(); }
   const char* header_ptr() const { return header_ptr_->ptr(); }
-  char* mut_header_ptr() { return header_ptr_->ptr(); }
   const RtBlobDesc& blob_desc() const { return *blob_desc_; }
   const RtBlobDesc* blob_desc_ptr() const { return blob_desc_; }
 
@@ -37,19 +37,9 @@ class Blob final {
     return static_cast<T*>(dptr_);
   }
   const Shape& static_shape() const { return blob_desc_->body_shape(); }
-  DenseShapeView dense_shape_view() const {
-    return DenseShapeView(header_ptr_->Field(FieldKey::kDenseShape));
-  }
-  Shape shape() const {
-    if (blob_desc().header_is_opaque()) {
-      return static_shape();
-    } else {
-      return dense_shape_view();
-    }
-  }
-  DenseShapeMutView dense_shape_mut_view() {
-    return DenseShapeMutView(header_ptr_->MutField(FieldKey::kDenseShape));
-  }
+  const DenseShapeView& dense_shape_view() const { return *dense_shape_view_; }
+  const DenseShapeView& shape() const { return *dense_shape_view_; }
+  DenseShapeMutView* dense_shape_mut_view() { return dense_shape_mut_view_.get(); }
   LengthLoDView length_lod_view() const {
     return LengthLoDView(header_ptr_->Field(FieldKey::kLoD), blob_desc_->num_of_lod_levels());
   }
@@ -103,8 +93,9 @@ class Blob final {
 
   const RtBlobDesc* blob_desc_;
   void* dptr_;
+  std::unique_ptr<DenseShapeView> dense_shape_view_;
+  std::unique_ptr<DenseShapeMutView> dense_shape_mut_view_;
   std::unique_ptr<PodPtr> header_ptr_;
-
   // TODO(); remove this ugly code
   int32_t record_num_;
 };
