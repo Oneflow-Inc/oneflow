@@ -88,23 +88,23 @@ void GetWindowedOutputSize(int64_t input_size, int32_t filter_size, int32_t stri
                         nullptr);
 }
 
-void Get3DOutputSize(const std::vector<int64_t>& in, const std::vector<int32_t>& pool_size,
+void Get3DOutputSize(const DimVector& in, const std::vector<int32_t>& pool_size,
                      const std::vector<int32_t>& strides, const std::string& padding_type,
-                     std::vector<int64_t>* out, std::vector<int32_t>* padding) {
+                     DimVector* out, std::vector<int32_t>* padding) {
   Get3DOutputSize(in, pool_size, strides, padding_type, out, padding, nullptr, nullptr);
 }
 
-void Get3DOutputSize(const std::vector<int64_t>& in, const std::vector<int32_t>& pool_size,
+void Get3DOutputSize(const DimVector& in, const std::vector<int32_t>& pool_size,
                      const std::vector<int32_t>& strides, const std::string& padding_type,
-                     std::vector<int64_t>* out, std::vector<int32_t>* padding_before,
+                     DimVector* out, std::vector<int32_t>* padding_before,
                      std::vector<int32_t>* padding_after) {
   Get3DOutputSize(in, pool_size, strides, padding_type, out, padding_before, padding_after,
                   nullptr);
 }
 
-void Get3DOutputSize(const std::vector<int64_t>& in, const std::vector<int32_t>& pool_size,
+void Get3DOutputSize(const DimVector& in, const std::vector<int32_t>& pool_size,
                      const std::vector<int32_t>& strides, const std::string& padding_type,
-                     std::vector<int64_t>* out, std::vector<int32_t>* padding_before,
+                     DimVector* out, std::vector<int32_t>* padding_before,
                      std::vector<int32_t>* padding_after, std::vector<int32_t>* dilation_rate) {
   CHECK(out);
   out->clear();

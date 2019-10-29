@@ -3,6 +3,7 @@
 
 #include "oneflow/core/common/shape.pb.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/common/shape_vec.h"
 
 namespace oneflow {
 
@@ -12,8 +13,8 @@ class Shape final {
  public:
   // OF_DISALLOW_COPY_AND_MOVE(Shape);
   Shape() : elem_cnt_(0) {}
-  explicit Shape(const std::vector<int64_t>& dim_vec);
-  explicit Shape(std::vector<int64_t>&& dim_vec);
+  explicit Shape(const DimVector& dim_vec);
+  explicit Shape(DimVector&& dim_vec);
   explicit Shape(const ShapeProto& shape_proto);
   Shape(const std::initializer_list<int64_t>& dim_vec);
   ~Shape() = default;
@@ -32,7 +33,7 @@ class Shape final {
   void SerializeWithTextFormat(StreamT& out_stream) const;
 
   // Getters and Setters
-  const std::vector<int64_t>& dim_vec() const { return dim_vec_; }
+  const DimVector& dim_vec() const { return dim_vec_; }
   int64_t elem_cnt() const { return elem_cnt_; }
   int64_t At(int64_t index) const { return dim_vec_.at(index); }
   void Set(int64_t index, int64_t val);
@@ -40,17 +41,17 @@ class Shape final {
   int64_t Count(int64_t begin_axis, int64_t end_axis) const;
   int64_t Count(int64_t begin_axis) const;
 
-  std::vector<int64_t> ShiftNegativeAxisVec(const std::vector<int64_t>& axis_vec) const;
-  Shape RemoveOnes(const std::vector<int64_t>& axis_vec) const;
+  AxisVector ShiftNegativeAxisVec(const AxisVector& axis_vec) const;
+  Shape RemoveOnes(const AxisVector& axis_vec) const;
   static Shape Ones(const int64_t num_axes);
-  std::vector<int64_t> Axes4BroadcastTo(const Shape& broadcast_dim_vec) const;
+  AxisVector Axes4BroadcastTo(const Shape& broadcast_dim_vec) const;
 
   bool Containing(const Shape& small_shape) const;
 
  private:
   void UpdateElemCnt();
 
-  std::vector<int64_t> dim_vec_;
+  DimVector dim_vec_;
   int64_t elem_cnt_;
 };
 

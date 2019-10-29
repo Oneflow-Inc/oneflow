@@ -61,14 +61,14 @@ std::string DenseShapeView::ToString() const {
   return ss.str();
 }
 
-void DenseShapeView::ToDimVec(std::vector<int64_t>* dim_vec) const {
+void DenseShapeView::ToDimVector(DimVector* dim_vec) const {
   dim_vec->resize(num_axes_);
   dim_vec->assign(ptr_, ptr_ + num_axes_);
 }
 
 void DenseShapeView::ToShape(Shape* shape) const {
-  std::vector<int64_t> dim_vec;
-  ToDimVec(&dim_vec);
+  DimVector dim_vec;
+  ToDimVector(&dim_vec);
   *shape = Shape(std::move(dim_vec));
 }
 

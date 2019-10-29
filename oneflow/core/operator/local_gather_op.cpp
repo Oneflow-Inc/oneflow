@@ -40,7 +40,7 @@ class LocalGatherOp final : public Operator {
     const int64_t axis = CheckGatherAxis(op_conf().local_gather_conf(), in->shape().NumAxes());
     BlobDesc* out = GetBlobDesc4BnInOp("out");
     *out = *in;
-    std::vector<int64_t> dim_vec;
+    DimVector dim_vec;
     dim_vec.insert(dim_vec.end(), in->shape().dim_vec().cbegin(),
                    in->shape().dim_vec().cbegin() + axis);
     dim_vec.insert(dim_vec.end(), indices->shape().dim_vec().cbegin(),

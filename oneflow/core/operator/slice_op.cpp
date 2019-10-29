@@ -39,7 +39,7 @@ Maybe<void> SliceOp::InferOutBlobDescs(
   const SliceOpConf& conf = op_conf().slice_conf();
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
   CHECK_EQ_OR_RETURN(conf.dim_slice_conf_size(), in_blob_desc->shape().NumAxes());
-  std::vector<int64_t> shape_vec(in_blob_desc->shape().NumAxes());
+  DimVector shape_vec(in_blob_desc->shape().NumAxes());
   FOR_RANGE(size_t, i, 0, conf.dim_slice_conf_size()) {
     int32_t dim_len = in_blob_desc->shape().At(i);
     const DimSliceConf& dim_slice_conf = conf.dim_slice_conf(i);

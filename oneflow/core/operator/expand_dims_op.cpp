@@ -33,7 +33,7 @@ Maybe<void> ExpandDimsOp::InferBlobDescs(
   BlobDesc* in = GetBlobDesc4BnInOp("in");
   BlobDesc* out = GetBlobDesc4BnInOp("out");
   const int32_t axis = op_conf().expand_dims_conf().axis();
-  std::vector<int64_t> dim_vec = in->shape().dim_vec();
+  DimVector dim_vec = in->shape().dim_vec();
   // do not allow expand the first dim
   CHECK_GT_OR_RETURN(axis, 0);
   CHECK_LE_OR_RETURN(axis, dim_vec.size());

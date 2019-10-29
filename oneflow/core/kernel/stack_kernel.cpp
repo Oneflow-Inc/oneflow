@@ -39,8 +39,8 @@ class StackKernel final : public KernelIf<device_type> {
   void ForwardDenseShape(const KernelCtx& ctx,
                          std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
     const Blob* in_0 = BnInOp2Blob(this->op_attribute().input_bns().Get(0));
-    std::vector<int64_t> shape_vec;
-    in_0->shape().ToDimVec(&shape_vec);
+    DimVector shape_vec;
+    in_0->shape().ToDimVector(&shape_vec);
     int64_t stack_axis = this->op_conf().stack_conf().axis();
 
     FOR_RANGE(size_t, i, 1, this->op_attribute().input_bns().size()) {

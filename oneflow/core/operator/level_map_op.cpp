@@ -23,7 +23,7 @@ class LevelMapOp final : public Operator {
     BlobDesc* out = GetBlobDesc4BnInOp("out");
     *out = *in;
     out->mut_shape() =
-        Shape(std::vector<int64_t>(in->shape().dim_vec().begin(), in->shape().dim_vec().end() - 1));
+        Shape(DimVector(in->shape().dim_vec().begin(), in->shape().dim_vec().end() - 1));
     out->set_data_type(DataType::kInt32);
 
     return Maybe<void>::Ok();

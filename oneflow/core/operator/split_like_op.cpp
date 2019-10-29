@@ -19,7 +19,7 @@ Maybe<void> SplitLikeOp::InferBlobDescs(
     const ParallelContext* parallel_ctx) const {
   const SplitLikeOpConf& conf = op_conf().split_like_conf();
   const BlobDesc* like_0_blob_desc = GetBlobDesc4BnInOp(GenRepeatedBn("like", 0));
-  const std::vector<int64_t>& in_dim_vec = GetBlobDesc4BnInOp("in")->shape().dim_vec();
+  const DimVector& in_dim_vec = GetBlobDesc4BnInOp("in")->shape().dim_vec();
   int32_t split_axis = FixAxis(conf.axis(), in_dim_vec.size());
   int64_t dim_sum = 0;
   FOR_RANGE(int32_t, i, 0, op_conf().split_like_conf().like_size()) {

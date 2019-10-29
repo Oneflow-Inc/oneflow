@@ -36,7 +36,7 @@ Maybe<void> ConvFilterGradOp::InferOutBlobDescs(
   CHECK_EQ_OR_RETURN(dy->shape().NumAxes(), num_spatial_dims + 2);
   CHECK_EQ_OR_RETURN(x->shape().NumAxes(), num_spatial_dims + 2);
   CHECK_EQ_OR_RETURN(x->data_type(), dy->data_type());
-  std::vector<int64_t> filter_diff_dim_vec;
+  DimVector filter_diff_dim_vec;
   if (conv_conf.data_format() == "channels_first") {
     filter_diff_dim_vec.push_back(dy->shape().At(1));
     filter_diff_dim_vec.push_back(x->shape().At(1));
@@ -70,7 +70,7 @@ Maybe<void> ConvFilterGradOp::InferBlobDescs(
   CHECK_EQ_OR_RETURN(dy->shape().NumAxes(), num_spatial_dims + 2);
   CHECK_EQ_OR_RETURN(x->shape().NumAxes(), num_spatial_dims + 2);
   CHECK_EQ_OR_RETURN(x->data_type(), dy->data_type());
-  std::vector<int64_t> filter_diff_dim_vec;
+  DimVector filter_diff_dim_vec;
   if (conv_conf.data_format() == "channels_first") {
     filter_diff_dim_vec.push_back(dy->shape().At(1));
     filter_diff_dim_vec.push_back(x->shape().At(1));
