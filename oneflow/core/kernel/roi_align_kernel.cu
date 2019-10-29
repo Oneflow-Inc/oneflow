@@ -241,7 +241,7 @@ class RoiAlignGradGPUKernel final : public KernelIf<DeviceType::kGPU> {
           dx_blob->shape().At(3), args.pooled_h(), args.pooled_w(), dx_blob->mut_dptr<T>());
     } else {
       Memset<DeviceType::kGPU>(ctx.device_ctx, dx_blob->mut_dptr<T>(), 0,
-                              dx_blob->AlignedByteSizeOfBlobBody());
+                               dx_blob->AlignedByteSizeOfBlobBody());
     }
   }
 };

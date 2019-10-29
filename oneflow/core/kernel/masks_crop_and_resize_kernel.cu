@@ -65,7 +65,7 @@ __launch_bounds__(kCudaThreadsNumPerBlock) __global__
     assert(y_center >= 0);
     assert(x_center < width);
     assert(y_center < height);
-    
+
     const int x_low = static_cast<int>(Floor(x_center));
     const int y_low = static_cast<int>(Floor(y_center));
     const int x_high = x_low < width - 1 ? x_low + 1 : x_low;

@@ -79,9 +79,9 @@ class StackGradKernel final : public KernelIf<device_type> {
       const int64_t out_cols = out_blob->shape().Count(axis);
       CHECK_EQ(out_blob->shape().elem_cnt(), rows * out_cols);
       if (rows * out_cols > 0) {
-        KernelUtil<device_type, T>::CopyColsRegion(ctx.device_ctx, rows, out_cols, in_blob->dptr<T>(),
-                                                  in_col_offset, in_cols, out_blob->mut_dptr<T>(), 0,
-                                                  out_cols);
+        KernelUtil<device_type, T>::CopyColsRegion(ctx.device_ctx, rows, out_cols,
+                                                   in_blob->dptr<T>(), in_col_offset, in_cols,
+                                                   out_blob->mut_dptr<T>(), 0, out_cols);
       }
       in_col_offset += out_cols;
       CHECK_LE(in_col_offset, in_cols);
