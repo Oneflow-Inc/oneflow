@@ -4,6 +4,7 @@
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/operator/conv_op.h"
 #include "oneflow/core/device/cudnn_util.h"
+#include "oneflow/core/register/dense_shape_view.h"
 
 namespace oneflow {
 
@@ -50,15 +51,15 @@ class ConvKernelIf : public KernelIf<device_type> {
 
 template<typename T>
 using Im2ColFunc = void (*)(const int dim_num, DeviceCtx* device_ctx, const T* in_dptr,
-                            const Shape& in_shape, const Shape& weight_shape,
-                            const Shape& out_shape, const int32_t* strides,
+                            const DenseShapeView& in_shape, const DenseShapeView& weight_shape,
+                            const DenseShapeView& out_shape, const int32_t* strides,
                             const int32_t* dilation_rate, const int32_t* padding_before,
                             T* col_buf);
 
 template<typename T>
 using Col2ImFunc = void (*)(const int dim_num, DeviceCtx* device_ctx, const T* col_buf,
-                            const Shape& in_shape, const Shape& weight_shape,
-                            const Shape& out_shape, const int32_t* strides,
+                            const DenseShapeView& in_shape, const DenseShapeView& weight_shape,
+                            const DenseShapeView& out_shape, const int32_t* strides,
                             const int32_t* dilation_rate, const int32_t* padding_before,
                             T* in_diff_ptr);
 
@@ -94,9 +95,9 @@ class ConvKernelImplByIm2Col : public ConvKernelIf<device_type, T> {
   const int32_t* strides_;
   const int32_t* dilation_rate_;
   const int32_t* padding_before_;
-  Shape in_shape_;
-  Shape out_shape_;
-  Shape weight_shape_;
+  DenseShapeView in_shape_;
+  DenseShapeView out_shape_;
+  DenseShapeView weight_shape_;
 };
 
 template<DeviceType device_type, typename T>
@@ -244,7 +245,7 @@ using DHWValidFunc = void (ColBufWriter<T>::*)(int64_t c, int64_t kd, int64_t kh
 template<typename T>
 class ColBufUtil final {
  public:
-  ColBufUtil(const Shape& in_shape, const Shape& out_shape, int32_t dhw_offset,
+  ColBufUtil(const DenseShapeView& in_shape, const DenseShapeView& out_shape, int32_t dhw_offset,
              const int32_t* strides, const int32_t* dilation_rate, const int32_t* padding_before);
   void operator()(ColBufWriter<T>* col_buf_writer, int64_t c, int64_t kd, int64_t kh, int64_t kw);
 
@@ -268,30 +269,32 @@ template<typename T>
 struct ConvKernelUtil<DeviceType::kCPU, T> final {
  public:
   static void NCDHWIm2Col(const int dim_num, DeviceCtx* device_ctx, const T* in_dptr,
-                          const Shape& in_shape, const Shape& weight_shape, const Shape& out_shape,
-                          const int32_t* strides, const int32_t* dilation_rate,
-                          const int32_t* padding_before, T* col_buf);
+                          const DenseShapeView& in_shape, const DenseShapeView& weight_shape,
+                          const DenseShapeView& out_shape, const int32_t* strides,
+                          const int32_t* dilation_rate, const int32_t* padding_before, T* col_buf);
 
   static void NDHWCIm2Col(const int dim_num, DeviceCtx* device_ctx, const T* in_dptr,
-                          const Shape& in_shape, const Shape& weight_shape, const Shape& out_shape,
-                          const int32_t* strides, const int32_t* dilation_rate,
-                          const int32_t* padding_before, T* col_buf);
+                          const DenseShapeView& in_shape, const DenseShapeView& weight_shape,
+                          const DenseShapeView& out_shape, const int32_t* strides,
+                          const int32_t* dilation_rate, const int32_t* padding_before, T* col_buf);
 
   static void NCDHWCol2Im(const int dim_num, DeviceCtx* device_ctx, const T* col_buf,
-                          const Shape& in_shape, const Shape& weight_shape, const Shape& out_shape,
-                          const int32_t* strides, const int32_t* dilation_rate,
-                          const int32_t* padding_before, T* in_diff_ptr);
+                          const DenseShapeView& in_shape, const DenseShapeView& weight_shape,
+                          const DenseShapeView& out_shape, const int32_t* strides,
+                          const int32_t* dilation_rate, const int32_t* padding_before,
+                          T* in_diff_ptr);
 
   static void NDHWCCol2Im(const int dim_num, DeviceCtx* device_ctx, const T* col_buf,
-                          const Shape& in_shape, const Shape& weight_shape, const Shape& out_shape,
-                          const int32_t* strides, const int32_t* dilation_rate,
-                          const int32_t* padding_before, T* in_diff_ptr);
+                          const DenseShapeView& in_shape, const DenseShapeView& weight_shape,
+                          const DenseShapeView& out_shape, const int32_t* strides,
+                          const int32_t* dilation_rate, const int32_t* padding_before,
+                          T* in_diff_ptr);
 
  private:
-  static void DoNCDWHFunc(const Shape& weight_shape, ColBufUtil<T>& conv_util,
+  static void DoNCDWHFunc(const DenseShapeView& weight_shape, ColBufUtil<T>& conv_util,
                           ColBufWriter<T>* col_buf_writer);
 
-  static void DoNDWHCFunc(const Shape& weight_shape, ColBufUtil<T>& conv_util,
+  static void DoNDWHCFunc(const DenseShapeView& weight_shape, ColBufUtil<T>& conv_util,
                           ColBufWriter<T>* col_buf_writer);
 };
 
@@ -299,24 +302,26 @@ template<typename T>
 struct ConvKernelUtil<DeviceType::kGPU, T> final {
  public:
   static void NCDHWIm2Col(const int dim_num, DeviceCtx* device_ctx, const T* in_dptr,
-                          const Shape& in_shape, const Shape& weight_shape, const Shape& out_shape,
-                          const int32_t* strides, const int32_t* dilation_rate,
-                          const int32_t* padding_before, T* col_buf);
+                          const DenseShapeView& in_shape, const DenseShapeView& weight_shape,
+                          const DenseShapeView& out_shape, const int32_t* strides,
+                          const int32_t* dilation_rate, const int32_t* padding_before, T* col_buf);
 
   static void NDHWCIm2Col(const int dim_num, DeviceCtx* device_ctx, const T* in_dptr,
-                          const Shape& in_shape, const Shape& weight_shape, const Shape& out_shape,
-                          const int32_t* strides, const int32_t* dilation_rate,
-                          const int32_t* padding_before, T* col_buf);
+                          const DenseShapeView& in_shape, const DenseShapeView& weight_shape,
+                          const DenseShapeView& out_shape, const int32_t* strides,
+                          const int32_t* dilation_rate, const int32_t* padding_before, T* col_buf);
 
   static void NCDHWCol2Im(const int dim_num, DeviceCtx* device_ctx, const T* col_buf,
-                          const Shape& in_shape, const Shape& weight_shape, const Shape& out_shape,
-                          const int32_t* strides, const int32_t* dilation_rate,
-                          const int32_t* padding_before, T* in_diff_ptr);
+                          const DenseShapeView& in_shape, const DenseShapeView& weight_shape,
+                          const DenseShapeView& out_shape, const int32_t* strides,
+                          const int32_t* dilation_rate, const int32_t* padding_before,
+                          T* in_diff_ptr);
 
   static void NDHWCCol2Im(const int dim_num, DeviceCtx* device_ctx, const T* col_buf,
-                          const Shape& in_shape, const Shape& weight_shape, const Shape& out_shape,
-                          const int32_t* strides, const int32_t* dilation_rate,
-                          const int32_t* padding_before, T* in_diff_ptr);
+                          const DenseShapeView& in_shape, const DenseShapeView& weight_shape,
+                          const DenseShapeView& out_shape, const int32_t* strides,
+                          const int32_t* dilation_rate, const int32_t* padding_before,
+                          T* in_diff_ptr);
 
  private:
 };

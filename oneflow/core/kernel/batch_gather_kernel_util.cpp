@@ -4,7 +4,7 @@ namespace oneflow {
 
 namespace {
 
-Shape GetFlatShape(const Shape& shape, const int64_t axis) {
+Shape GetFlatShape(const DenseShapeView& shape, const int64_t axis) {
   CHECK_GT(shape.NumAxes(), 0);
   CHECK_GE(axis, 0);
   CHECK_LT(axis, shape.NumAxes());

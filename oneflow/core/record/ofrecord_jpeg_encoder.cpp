@@ -11,7 +11,7 @@ void OFRecordEncoderImpl<EncodeCase::kJpeg, T>::EncodeOneCol(DeviceCtx* ctx, con
   const T* in_dptr = in_blob->dptr<T>() + in_offset;
   DataType data_type = GetDataType<T>();
   // shape must be N * H * W * C
-  const Shape& shape = in_blob->shape();
+  const auto& shape = in_blob->shape();
   CHECK(shape.NumAxes() == 4);
   int type = -1;
   if (data_type == DataType::kInt8 && shape.At(3) == 1) {

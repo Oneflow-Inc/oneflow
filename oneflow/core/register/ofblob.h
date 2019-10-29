@@ -52,7 +52,7 @@ inline void OfBlob::CopyShapeFrom(const int64_t* ptr, int64_t num_axis) const {
   } else {
     CHECK_LE(shape.elem_cnt(), blob_->static_shape().elem_cnt());
   }
-  blob_->dense_shape_mut_view().set_shape(shape);
+  blob_->dense_shape_mut_view()->set_shape(shape);
 }
 
 inline void OfBlob::CopyShapeTo(int64_t* ptr, int64_t num_axis) const {

@@ -115,8 +115,8 @@ struct CpuKernelUtilIf {
                      void* temp_storage, const size_t temp_storage_bytes) {
     RowSum(ctx, row_num, col_num, x, y);
   }
-  static void Transpose(DeviceCtx* ctx, const int32_t num_axis, const Shape& x_shape,
-                        const Shape& y_shape, const PbRf<int32_t>& permutation,
+  static void Transpose(DeviceCtx* ctx, const int32_t num_axis, const DenseShapeView& x_shape,
+                        const DenseShapeView& y_shape, const PbRf<int32_t>& permutation,
                         const int64_t elem_cnt, const T* x, T* y);
   static void Set(DeviceCtx* ctx, const T value, T* addr);
   static void Replicate(DeviceCtx* ctx, const int64_t n, T* y, const T* x);
@@ -221,8 +221,8 @@ struct GpuKernelUtilIf {
                      void* temp_storage, const size_t temp_storage_bytes);
   static void RowSum(DeviceCtx* ctx, const int64_t row_num, const int64_t col_num, const T* x, T* y,
                      void* temp_storage, const size_t temp_storage_bytes);
-  static void Transpose(DeviceCtx* ctx, const int32_t num_axis, const Shape& x_shape,
-                        const Shape& y_shape, const PbRf<int32_t>& permutation,
+  static void Transpose(DeviceCtx* ctx, const int32_t num_axis, const DenseShapeView& x_shape,
+                        const DenseShapeView& y_shape, const PbRf<int32_t>& permutation,
                         const int64_t elem_cnt, const T* x, T* y);
   static void InitializeWithConf(DeviceCtx* ctx, const InitializerConf& initializer_conf,
                                  uint32_t random_seed, Blob* blob);

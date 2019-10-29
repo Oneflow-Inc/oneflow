@@ -3,6 +3,7 @@ package oneflow;
 
 import "oneflow/core/common/shape.proto";
 import "oneflow/core/common/data_type.proto";
+import "oneflow/core/common/dtype_signature.proto";
 import "oneflow/core/operator/op_attribute.proto";
 import "oneflow/core/operator/op_conf.proto";
 import "oneflow/core/job/placement.proto";
@@ -226,6 +227,7 @@ message KernelConf {
   optional bool need_do_opaque_header = 4 [default = false];
   optional bool need_do_lod = 5 [default = false];
   optional bool need_do_dense_shape = 6 [default = false];
+  required DTypeSignature dtype_signature = 7;
 
   oneof kernel_type {
     SparseSoftmaxCrossEntropyLossKernelConf sparse_softmax_cross_entropy_loss_conf = 101;

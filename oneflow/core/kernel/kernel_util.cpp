@@ -314,8 +314,8 @@ KU_IF_METHOD RowSum(DeviceCtx* ctx, const int64_t row_num, const int64_t col_num
                     T* y) {
   MatrixRowReduce<T, ReduceCoreAdd>(row_num, col_num, x, y);
 }
-KU_IF_METHOD Transpose(DeviceCtx* ctx, const int32_t num_axis, const Shape& x_shape,
-                       const Shape& y_shape, const PbRf<int32_t>& permutation,
+KU_IF_METHOD Transpose(DeviceCtx* ctx, const int32_t num_axis, const DenseShapeView& x_shape,
+                       const DenseShapeView& y_shape, const PbRf<int32_t>& permutation,
                        const int64_t elem_cnt, const T* x, T* y) {
   int64_t block_size = 1;
   int32_t shared_idxs_num = 0;
@@ -329,7 +329,7 @@ KU_IF_METHOD Transpose(DeviceCtx* ctx, const int32_t num_axis, const Shape& x_sh
   }
   int32_t trans_axis = num_axis - shared_idxs_num;
   std::vector<int64_t> x_to_y_offset;
-  ComputeOffset(trans_axis, y_shape.dim_vec().data(), permutation.data(), x_to_y_offset);
+  ComputeOffset(trans_axis, y_shape.ptr(), permutation.data(), x_to_y_offset);
   std::vector<int64_t> x_index_digits(trans_axis, 0);
   int64_t num_blocks = elem_cnt / block_size;
   FOR_RANGE(int64_t, x_idx, 0, num_blocks) {
@@ -340,7 +340,7 @@ KU_IF_METHOD Transpose(DeviceCtx* ctx, const int32_t num_axis, const Shape& x_sh
     } else {
       memcpy(y + block_size * y_idx, x + block_size * x_idx, block_size * sizeof(T));
     }
-    IncreaseIndex(x_shape.dim_vec().data(), x_index_digits);
+    IncreaseIndex(x_shape.ptr(), x_index_digits);
   }
 }
 KU_IF_METHOD Set(DeviceCtx* ctx, const T value, T* addr) { *addr = value; }

@@ -6,6 +6,7 @@
 #include "oneflow/core/common/preprocessor.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/common/auto_registration_factory.h"
+#include "oneflow/core/common/symbol.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/kernel/kernel.pb.h"
@@ -158,6 +159,8 @@ class Operator {
   const JobDesc& job_desc() const { return *job_desc_; }
 
   void ForEachBnInOp(std::function<void(const std::string&)>) const;
+
+  Symbol<OperatorConf> GetOpConfWithoutOpNameAndLbn() const;
 
  protected:
   virtual Maybe<void> GetSbpSignatures(
@@ -374,6 +377,21 @@ Maybe<void> InferOpSbpSignature(
     std::function<const OptInt64&(const LogicalBlobId&)> GetBatchAxis4Lbi,
     SbpSignature* sbp_sig_to_infer);
 
+bool operator==(const OperatorConf& lhs, const OperatorConf& rhs);
+
 }  // namespace oneflow
+
+namespace std {
+
+template<>
+struct hash<oneflow::OperatorConf> final {
+  size_t operator()(const oneflow::OperatorConf& op_conf) {
+    std::string serialized;
+    op_conf.SerializeToString(&serialized);
+    return std::hash<std::string>()(serialized);
+  }
+};
+
+}  // namespace std
 
 #endif  // ONEFLOW_CORE_OPERATOR_OPERATOR_H_

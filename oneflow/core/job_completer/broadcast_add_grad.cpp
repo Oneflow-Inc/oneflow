@@ -1,4 +1,5 @@
 #include "oneflow/core/job_completer/autograd.h"
+#include "oneflow/core/register/dense_shape_view.h"
 
 namespace oneflow {
 
@@ -10,8 +11,9 @@ void GenerateBackwardOpConf(
     const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4BnInOp) {
   CHECK(op.op_conf().has_broadcast_add_conf());
   if (DiffLbi4BnInOp("a") != nullptr) {
-    const Shape& left_extended_shape = LogicalBlobDesc4BnInOp("a").shape().CreateLeftExtendedShape(
-        LogicalBlobDesc4BnInOp("out").shape().NumAxes());
+    const Shape& left_extended_shape =
+        CreateLeftExtendedShape(DenseShapeView(LogicalBlobDesc4BnInOp("a").shape()),
+                                LogicalBlobDesc4BnInOp("out").shape().NumAxes());
     if (LogicalBlobDesc4BnInOp("out").shape() == LogicalBlobDesc4BnInOp("a").shape()) {
       *DiffLbi4BnInOp("a") = *DiffLbi4BnInOp("out");
     } else if (LogicalBlobDesc4BnInOp("out").shape() == left_extended_shape) {
@@ -42,8 +44,9 @@ void GenerateBackwardOpConf(
     }
   }
   if (DiffLbi4BnInOp("b") != nullptr) {
-    const Shape& left_extended_shape = LogicalBlobDesc4BnInOp("b").shape().CreateLeftExtendedShape(
-        LogicalBlobDesc4BnInOp("out").shape().NumAxes());
+    const Shape& left_extended_shape =
+        CreateLeftExtendedShape(DenseShapeView(LogicalBlobDesc4BnInOp("b").shape()),
+                                LogicalBlobDesc4BnInOp("out").shape().NumAxes());
     if (LogicalBlobDesc4BnInOp("out").shape() == LogicalBlobDesc4BnInOp("b").shape()) {
       *DiffLbi4BnInOp("b") = *DiffLbi4BnInOp("out");
     } else if (LogicalBlobDesc4BnInOp("out").shape() == left_extended_shape) {
