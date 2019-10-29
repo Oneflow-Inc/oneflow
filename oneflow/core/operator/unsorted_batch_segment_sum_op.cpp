@@ -30,7 +30,7 @@ Maybe<void> UnsortedBatchSegmentSumOp::InferBlobDescs(
     CHECK_EQ_OR_RETURN(segment_ids->shape().At(i), data->shape().At(i));
   }
 
-  std::vector<int64_t> out_dim_vec(data->shape().dim_vec());
+  DimVector out_dim_vec(data->shape().dim_vec());
   out_dim_vec.at(segment_ids->shape().NumAxes() - 1) = num_segments;
   BlobDesc* out = GetBlobDesc4BnInOp("out");
   *out = *data;

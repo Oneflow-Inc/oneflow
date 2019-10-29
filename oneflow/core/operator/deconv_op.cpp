@@ -29,9 +29,8 @@ void GetDewindowedOutputSize(int64_t input_size, int32_t filter_size, int32_t st
                           nullptr);
 }
 
-void GetOutAndPad(const DenseShapeView& in_blob_shape, const ConvConf& conv_conf,
-                  std::vector<int64_t>* out, std::vector<int32_t>* pad_small_side,
-                  std::vector<int32_t>* pad_large_side) {
+void GetOutAndPad(const DenseShapeView& in_blob_shape, const ConvConf& conv_conf, DimVector* out,
+                  std::vector<int32_t>* pad_small_side, std::vector<int32_t>* pad_large_side) {
   int32_t opkernel_dim = in_blob_shape.NumAxes() - 2;
   if (out) { out->assign(opkernel_dim, 0); }
   if (pad_small_side) { pad_small_side->assign(opkernel_dim, 0); }
@@ -48,7 +47,7 @@ void GetOutAndPad(const DenseShapeView& in_blob_shape, const ConvConf& conv_conf
   }
 }
 
-void GetOutAndPad(const Shape& in_blob_shape, const ConvConf& conv_conf, std::vector<int64_t>* out,
+void GetOutAndPad(const Shape& in_blob_shape, const ConvConf& conv_conf, DimVector* out,
                   std::vector<int32_t>* pad_small_side, std::vector<int32_t>* pad_large_side) {
   return GetOutAndPad(DenseShapeView(in_blob_shape), conv_conf, out, pad_small_side,
                       pad_large_side);
@@ -109,9 +108,9 @@ class DeconvOp : public Operator {
 
     int64_t data_num = x_blob_desc->shape().At(0);
     int32_t filters = conf.filters();
-    std::vector<int64_t> out;
+    DimVector out;
     GetOutAndPad(x_blob_desc->shape(), conv_conf, &out, nullptr, nullptr);
-    std::vector<int64_t> y_shape = {data_num, filters};
+    DimVector y_shape = {data_num, filters};
     size_t dhw_offset = DhwOffset(data_format);
     for (size_t i = 0; i < NDims(); ++i) {
       y_shape.insert(y_shape.begin() + dhw_offset + i, out[i]);
@@ -138,9 +137,9 @@ class DeconvOp : public Operator {
     int64_t data_num = x_blob_desc->shape().At(0);
     int64_t channels = x_blob_desc->shape().At(1);
     int32_t filters = conf.filters();
-    std::vector<int64_t> out;
+    DimVector out;
     GetOutAndPad(x_blob_desc->shape(), conv_conf, &out, nullptr, nullptr);
-    std::vector<int64_t> y_shape = {data_num, filters};
+    DimVector y_shape = {data_num, filters};
     size_t dhw_offset = DhwOffset(data_format);
     for (size_t i = 0; i < NDims(); ++i) {
       y_shape.insert(y_shape.begin() + dhw_offset + i, out[i]);
@@ -149,7 +148,7 @@ class DeconvOp : public Operator {
     *y_blob_desc = *x_blob_desc;
     y_blob_desc->mut_shape() = Shape(y_shape);
 
-    std::vector<int64_t> weight_shape(y_blob_desc->shape().dim_vec());
+    DimVector weight_shape(y_blob_desc->shape().dim_vec());
     weight_shape[0] = channels;
     if (data_format == "channels_first") {
       weight_shape[1] = filters;

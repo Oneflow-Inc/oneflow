@@ -17,7 +17,7 @@ Maybe<void> ConstantOp::InferBlobDescs(
   const ConstantOpConf& conf = op_conf().constant_conf();
   const DataType& data_type =
       conf.has_data_type() ? conf.data_type() : job_desc().DefaultDataType();
-  std::vector<int64_t> dim_vec;
+  DimVector dim_vec;
   if (conf.has_shape()) {
     dim_vec.insert(dim_vec.end(), conf.shape().dim().cbegin(), conf.shape().dim().cend());
   }

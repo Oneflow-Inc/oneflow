@@ -28,7 +28,7 @@ void Blob::Init(const MemoryCase& mem_case, const RtBlobDesc* blob_desc, char* h
     if (blob_desc->is_dynamic()) {
       dense_shape_mut_view_.reset(new DenseShapeMutView(dense_shape_pod_ptr));
     }
-    std::vector<int64_t> dim_vec = static_shape().dim_vec();
+    DimVector dim_vec = static_shape().dim_vec();
     if (blob_desc->num_of_lod_levels() > 0) {
       CHECK_GT(blob_desc->num_of_lod_levels(), 1);
       int64_t dim0 = 1;
@@ -37,7 +37,7 @@ void Blob::Init(const MemoryCase& mem_case, const RtBlobDesc* blob_desc, char* h
     }
     DenseShapeMutView(dense_shape_pod_ptr).set_shape(Shape(std::move(dim_vec)));
   } else {
-    const std::vector<int64_t>& dim_vec = static_shape().dim_vec();
+    const DimVector& dim_vec = static_shape().dim_vec();
     dense_shape_view_.reset(new DenseShapeView(dim_vec.data(), dim_vec.size()));
   }
 }

@@ -1,11 +1,15 @@
 #ifndef ONEFLOW_CORE_REGISTER_DENSE_SHAPE_VIEW_H_
 #define ONEFLOW_CORE_REGISTER_DENSE_SHAPE_VIEW_H_
 
+#include "oneflow/core/common/shape_vec.h"
+
 namespace oneflow {
 
 class ShapeProto;
 class Shape;
 class PodPtr;
+template<typename T, long long kMaxSize>
+class fixed_vector;
 
 class DenseShapeView final {
  public:
@@ -26,7 +30,7 @@ class DenseShapeView final {
 
   bool operator==(const DenseShapeView& rhs) const;
   std::string ToString() const;
-  void ToDimVec(std::vector<int64_t>* dim_vec) const;
+  void ToDimVec(fixed_vector<int64_t, SHAPE_MAX_AXIS_SIZE>* dim_vec) const;
   void ToShape(Shape* shape) const;
 
  private:

@@ -101,7 +101,7 @@ struct NdarrayMatrixRowReduce<DeviceType::kGPU, T, binary_func> final {
 
  private:
   static XpuShape SqueezeRight(const XpuShape& shape) {
-    std::vector<int64_t> dim_vec;
+    DimVector dim_vec;
     for (int i = 0; i < shape.NumAxes(); ++i) { dim_vec.push_back(shape.At(i)); }
     for (int i = shape.NumAxes() - 1; i >= 0; --i) {
       if (dim_vec.at(i) != 1) { break; }
@@ -140,7 +140,7 @@ struct NdarrayMatrixColReduce<DeviceType::kGPU, T, binary_func> final {
 
  private:
   static XpuShape SqueezeLeft(const XpuShape& shape) {
-    std::vector<int64_t> dim_vec;
+    DimVector dim_vec;
     bool all_squeezed = false;
     for (int i = 0; i < shape.NumAxes(); ++i) {
       if (all_squeezed == false) {

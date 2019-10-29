@@ -22,7 +22,7 @@ Maybe<void> ReshapeOp::InferBlobDescs(
   *out_blob_desc = *in_blob_desc;
   const ReshapeOpConf& conf = op_conf().reshape_conf();
   CHECK_GE_OR_RETURN(conf.shape().dim_size(), 1);
-  std::vector<int64_t> dim_vec = {conf.shape().dim().begin(), conf.shape().dim().end()};
+  DimVector dim_vec = {conf.shape().dim().begin(), conf.shape().dim().end()};
   for (int32_t i = 0; i < dim_vec.size(); ++i) { CHECK_GT_OR_RETURN(dim_vec[i], 0); }
   const auto& sbp_parallel_it = sbp_signature->bn_in_op2sbp_parallel().find("out");
   CHECK_OR_RETURN(sbp_parallel_it != sbp_signature->bn_in_op2sbp_parallel().end());

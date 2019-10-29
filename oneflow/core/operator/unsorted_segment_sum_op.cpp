@@ -23,7 +23,7 @@ Maybe<void> UnsortedSegmentSumOp::InferBlobDescs(
   const BlobDesc* segment_ids = GetBlobDesc4BnInOp("segment_ids");
   CHECK_OR_RETURN(IsIntegralDataType(segment_ids->data_type()));
   const BlobDesc* data = GetBlobDesc4BnInOp("data");
-  std::vector<int64_t> out_dim_vec;
+  DimVector out_dim_vec;
   out_dim_vec.insert(out_dim_vec.end(), data->shape().dim_vec().cbegin(),
                      data->shape().dim_vec().cbegin() + conf.axis());
   out_dim_vec.push_back(conf.num_segments());
