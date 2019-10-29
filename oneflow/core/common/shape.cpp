@@ -7,7 +7,7 @@ namespace oneflow {
 Shape CreateReducedShape(const DenseShapeView& shape, const AxisVector& axis_vec) {
   CHECK_EQ(axis_vec.empty(), false);
   DimVector dim_vec;
-  shape.ToDimVec(&dim_vec);
+  shape.ToDimVector(&dim_vec);
   for (int64_t axis : axis_vec) { dim_vec.at(ShiftNegativeAxis(axis, shape.NumAxes())) = 1; }
   return Shape(std::move(dim_vec));
 }

@@ -30,7 +30,7 @@ class DenseShapeView final {
 
   bool operator==(const DenseShapeView& rhs) const;
   std::string ToString() const;
-  void ToDimVec(fixed_vector<int64_t, SHAPE_MAX_AXIS_SIZE>* dim_vec) const;
+  void ToDimVector(DimVector* dim_vec) const;
   void ToShape(Shape* shape) const;
 
  private:
