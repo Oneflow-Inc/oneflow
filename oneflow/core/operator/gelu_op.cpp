@@ -1,4 +1,4 @@
-#include "oneflow/core/operator/gelu_op.h"
+#include "oneflow/core/operator/operator.h"
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/job/sbp_signature_builder.h"
 
