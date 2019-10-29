@@ -97,4 +97,54 @@ void ArithemeticIf<DeviceType::kCPU>::InitializeWithConstConf(
   }
 }
 
+#define MUL_BY_SCALAR(T)                                                                         \
+  void ArithemeticIf<DeviceType::kCPU>::MulByScalar(DeviceCtx* ctx, const int64_t n, const T* x, \
+                                                    const T y, T* z) {                           \
+    for (int64_t i = 0; i < n; ++i) { z[i] = x[i] * y; }                                         \
+  }
+
+MUL_BY_SCALAR(float);
+MUL_BY_SCALAR(double);
+MUL_BY_SCALAR(int32_t);
+MUL_BY_SCALAR(int64_t);
+
+#undef MUL_BY_SCALAR
+
+#define ADD_BY_SCALAR(T)                                                                         \
+  void ArithemeticIf<DeviceType::kCPU>::AddByScalar(DeviceCtx* ctx, const int64_t n, const T* x, \
+                                                    const T y, T* z) {                           \
+    for (int64_t i = 0; i < n; ++i) { z[i] = x[i] + y; }                                         \
+  }
+
+ADD_BY_SCALAR(float);
+ADD_BY_SCALAR(double);
+ADD_BY_SCALAR(int32_t);
+ADD_BY_SCALAR(int64_t);
+
+#undef ADD_BY_SCALAR
+
+#define POW_BY_INT_SCALAR(T)                                                                \
+  void ArithemeticIf<DeviceType::kCPU>::PowByIntScalar(DeviceCtx* ctx, const int64_t n,     \
+                                                       const T* x, const int32_t y, T* z) { \
+    for (int64_t i = 0; i < n; ++i) { z[i] = std::pow(x[i], y); }                           \
+  }
+
+POW_BY_INT_SCALAR(float);
+POW_BY_INT_SCALAR(double);
+POW_BY_INT_SCALAR(int32_t);
+POW_BY_INT_SCALAR(int64_t);
+
+#undef POW_BY_INT_SCALAR
+
+#define MUL(T)                                                                           \
+  void ArithemeticIf<DeviceType::kCPU>::Mul(DeviceCtx* ctx, const int64_t n, const T* x, \
+                                            const T* y, T* z) {                          \
+    for (int64_t i = 0; i < n; ++i) { z[i] = x[i] * y[i]; }                              \
+  }
+
+MUL(float);
+MUL(double);
+
+#undef MUL
+
 }  // namespace oneflow
