@@ -1304,12 +1304,6 @@ message ScalarMulOpConf {
   }
 }
 
-message ScalarPowOpConf {
-  required string in = 1;
-  required string out = 2;
-  required int32 int_operand = 3;
-}
-
 message ReduceIdentityOpConf {
   optional string in = 1;
   optional string out = 2;
@@ -1664,7 +1658,6 @@ message OperatorConf {
     RsqrtOpConf rsqrt_conf = 506;
     ScalarAddOpConf scalar_add_conf = 507;
     ScalarMulOpConf scalar_mul_conf = 508;
-    ScalarPowOpConf scalar_pow_conf = 509;
 
     // mutable input op
     AxpyOpConf axpy_conf = 752;

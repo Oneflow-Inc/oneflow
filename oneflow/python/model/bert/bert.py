@@ -319,10 +319,7 @@ def GetActivation(name):
   elif name == 'tanh':
     return flow.keras.activations.tanh
   elif name == 'gelu':
-    if args.enable_auto_mixed_precision:
-      return flow.keras.activations.gelu_v2
-    else:
-      return flow.keras.activations.gelu
+    return flow.keras.activations.gelu
   else:
     raise Exception("unsupported activation")
 

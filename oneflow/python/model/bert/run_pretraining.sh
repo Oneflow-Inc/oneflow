@@ -1,10 +1,12 @@
-python run_pretraining.py \
+rm -rf core.* log model_save of_loss snapshots __pycache__
+export CUDA_VISIBLE_DEVICES=2
+python3 run_pretraining.py \
   --gpu_num_per_node=1 \
   --node_num=1 \
   --node_list='192.168.1.15,192.168.1.16' \
   --learning_rate=1e-4 \
   --weight_l2=0.01 \
-  --batch_size_per_device=24 \
+  --batch_size_per_device=122 \
   --iter_num=10 \
   --log_every_n_iter=10 \
   --data_dir="/dataset/bert/of_wiki_seq_len_128" \
@@ -20,4 +22,5 @@ python run_pretraining.py \
   --vocab_size=30522 \
   --attention_probs_dropout_prob=0.1 \
   --hidden_dropout_prob=0.1 \
-  --hidden_size_per_head=64
+  --hidden_size_per_head=64 \
+  --enable_auto_mixed_precision
