@@ -14,19 +14,6 @@ namespace oneflow {
 namespace xrt {
 namespace util {
 
-#define STL_COMP_STRUCT(op, expr)                                          \
-  template <typename K>                                                    \
-  struct op {                                                              \
-    bool operator()(const K &k1, const K &k2) const { return k1 expr k2; } \
-  };
-
-STL_COMP_STRUCT(EQ, ==);
-STL_COMP_STRUCT(NE, !=);
-STL_COMP_STRUCT(GT, >);
-STL_COMP_STRUCT(LT, <);
-STL_COMP_STRUCT(GE, >=);
-STL_COMP_STRUCT(LE, <=);
-
 template <typename T>
 using Vector = std::vector<T>;
 
@@ -34,10 +21,11 @@ template <typename T>
 using List = std::list<T>;
 
 template <typename K, typename T, typename Hash = std::hash<K>,
-          typename Comp = EQ<K>>
+          typename Comp = std::equal_to<K>>
 using Map = std::unordered_map<K, T, Hash, Comp>;
 
-template <typename K, typename Hash = std::hash<K>, typename Comp = EQ<K>>
+template <typename K, typename Hash = std::hash<K>,
+          typename Comp = std::equal_to<K>>
 using Set = std::unordered_set<K, Hash, Comp>;
 
 template <typename T>

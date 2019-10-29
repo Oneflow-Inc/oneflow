@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_XRT_IR_ARGUMENT_H_
-#define ONEFLOW_XRT_IR_ARGUMENT_H_
+#ifndef ONEFLOW_XRT_GRAPH_ARGUMENT_H_
+#define ONEFLOW_XRT_GRAPH_ARGUMENT_H_
 
 #include "oneflow/xrt/shape.h"
 
@@ -8,17 +8,14 @@ namespace xrt {
 
 class XrtArgument {
  public:
-  XrtArgument() : has_shape_(false), initialized_(false) {}
+  XrtArgument() : initialized_(false) {}
 
-  XrtArgument(const std::string &name)
-      : name_(name), has_shape_(false), initialized_(true) {}
+  XrtArgument(const std::string &name) : name_(name), initialized_(true) {}
 
   XrtArgument(const std::string &name, const XrtShape &shape)
-      : name_(name), shape_(shape), has_shape_(true), initialized_(true) {}
+      : name_(name), shape_(shape), initialized_(true) {}
 
   const std::string &name() const { return name_; }
-
-  bool has_shape() const { return has_shape_; }
 
   const XrtShape &shape() const { return shape_; }
 
@@ -26,15 +23,12 @@ class XrtArgument {
     return name_ == rhs.name_ && shape_ == rhs.shape_;
   }
 
-  bool is_initialized() const { return initialized_; }
+  bool initialized() const { return initialized_; }
 
  private:
   std::string name_ = "";
 
   XrtShape shape_;
-
-  bool has_shape_ = false;
-
   bool initialized_ = false;
 };
 
@@ -50,4 +44,4 @@ struct hash<oneflow::xrt::XrtArgument> {
 };
 }  // namespace std
 
-#endif  // ONEFLOW_XRT_IR_ARGUMENT_H_
+#endif  // ONEFLOW_XRT_GRAPH_ARGUMENT_H_

@@ -23,9 +23,9 @@ class AttributeMap {
   }
 
   template <typename T>
-  T Attr(const std::string &name) {
+  T &Attr(const std::string &name) {
     CHECK_GT(attributes_.count(name), 0);
-    return any_cast<T>(attributes_.at(name));
+    return *any_cast<T *>(&attributes_[name]);
   }
 
   template <typename T>

@@ -13,15 +13,16 @@ class InputOutputAlias {
  public:
   InputOutputAlias(const std::vector<int> &output_index, int param_number,
                    const std::vector<int> &param_index)
-    : param_number_(param_number), param_index_(param_index),
-      output_index_(output_index) {}
+      : param_number_(param_number),
+        param_index_(param_index),
+        output_index_(output_index) {}
 
   int param_number() const { return param_number_; }
 
   const std::vector<int> &param_index() const { return param_index_; }
 
   const std::vector<int> &output_index() const { return output_index_; }
- 
+
  private:
   int param_number_;
   std::vector<int> param_index_;

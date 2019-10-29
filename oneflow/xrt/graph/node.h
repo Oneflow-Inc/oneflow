@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_XRT_XRT_NODE_H_
-#define ONEFLOW_XRT_XRT_NODE_H_
+#ifndef ONEFLOW_XRT_GRAPH_NODE_H_
+#define ONEFLOW_XRT_GRAPH_NODE_H_
 
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/xrt/any.h"
@@ -29,7 +29,7 @@ class XrtEdge : public util::AttributeMap {
   void SetArgument(const XrtArgument &arg) { arg_ = arg; }
 
   int64_t unique_id() const { return unique_id_; }
-  bool IsControlEdge() const { return arg_.is_initialized(); }
+  bool IsControlEdge() const { return !arg_.initialized(); }
 
  private:
   friend class XrtGraph;
@@ -128,4 +128,4 @@ bool IsNodeOutput(const XrtNode *node, const XrtArgument &argument);
 }  // namespace xrt
 }  // namespace oneflow
 
-#endif  // ONEFLOW_XRT_XRT_NODE_H_
+#endif  // ONEFLOW_XRT_GRAPH_NODE_H_

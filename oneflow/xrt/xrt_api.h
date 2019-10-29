@@ -9,8 +9,8 @@
 #include "oneflow/xrt/graph/graph.h"
 #include "oneflow/xrt/parameter.h"
 #include "oneflow/xrt/passes/pass.h"
-#include "oneflow/xrt/utility/env.h"
 #include "oneflow/xrt/shape.h"
+#include "oneflow/xrt/utility/env.h"
 #include "oneflow/xrt/xrt.pb.h"
 
 namespace oneflow {
@@ -28,6 +28,7 @@ LogicalBlobId BlobNameToId(const std::string &blob_name);
 
 // Build an xrt graph from launch conf.
 std::shared_ptr<XrtGraph> BuildXrtGraph(const XrtLaunchOpConf &launch_conf,
+                                        const DeviceType &device_type,
                                         const JobDesc &job_desc);
 
 // Build an xrt graph from op graph.
@@ -59,10 +60,10 @@ inline void RunXrtPass(const std::string &pass, XrtGraph *graph,
 bool LookupMutability(const XrtLaunchOpConf &launch_conf,
                       const std::string &argument);
 
-Parameter ConvertBlobToParameter(const Blob &blob,
-                                 const std::string &blob_name = "");
+Parameter BuildParameter(const Blob &blob, const std::string &name = "");
 
-BlobDesc ConvertXrtShapeToBlobDesc(const XrtShape &shape);
+//
+void ConvertXrtShapeToBlobDesc(const XrtShape &shape, BlobDesc *desc);
 
 }  // namespace xrt
 }  // namespace oneflow

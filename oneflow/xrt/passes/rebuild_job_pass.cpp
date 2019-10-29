@@ -374,7 +374,9 @@ void FoldSubgraphBuilder::FixupInOutBlobNames() {
       } else {
         // TODO(hjchen2) Current implementation is ugly
         auto *op_conf = builder_->MutableOpConf4OpName(end->name());
-        std::shared_ptr<Operator> op = ConstructOp(*op_conf, &GlobalJobDesc());
+        DeviceType device_type = xrt::BackendToDeviceType(end->backend());
+        std::shared_ptr<Operator> op =
+            ConstructOp(*op_conf, device_type, &GlobalJobDesc());
         for (const std::string &input : op->input_bns()) {
           const LogicalBlobId &lbi = op->BnInOp2Lbi(input);
           std::string blob_name = BlobIdToName(lbi);

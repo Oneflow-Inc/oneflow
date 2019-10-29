@@ -19,18 +19,14 @@ class Parameter {
   Parameter(void *data, const XrtShape &shape, const std::string &name)
       : storage_(data), shape_(shape), parameter_name_(name) {}
 
-  void set_data(const void *data) {
-    storage_ = const_cast<void *>(data);
-  }
+  void set_data(const void *data) { storage_ = const_cast<void *>(data); }
 
   template <typename T>
   void set_data(const T *data) {
     storage_ = const_cast<T *>(data);
   }
 
-  void *data() const {
-    return storage_;
-  }
+  void *data() const { return storage_; }
 
   template <typename T>
   T *data() const {

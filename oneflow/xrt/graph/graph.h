@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_XRT_XRT_GRAPH_H_
-#define ONEFLOW_XRT_XRT_GRAPH_H_
+#ifndef ONEFLOW_XRT_GRAPH_GRAPH_H_
+#define ONEFLOW_XRT_GRAPH_GRAPH_H_
 
 #include <vector>
 #include "oneflow/xrt/graph/algorithm.h"
@@ -80,4 +80,4 @@ struct GraphTypeTrait<const XrtGraph> {
 }  // namespace xrt
 }  // namespace oneflow
 
-#endif  // ONEFLOW_XRT_XRT_GRAPH_H_
+#endif  // ONEFLOW_XRT_GRAPH_GRAPH_H_

@@ -63,8 +63,8 @@ class OpRegistrar {
     return *this;
   }
 
-  auto Factory() -> util::Registry<decltype(factory_)> * {
-    return util::Registry<decltype(factory_)>::Global();
+  auto Factory() -> util::Registry<std::string, decltype(factory_)> * {
+    return util::Registry<std::string, decltype(factory_)>::Global();
   }
 
   typedef std::pair<XrtEngine, XrtDevice> FieldType;
@@ -73,16 +73,17 @@ class OpRegistrar {
   }
 };
 
-#define REGISTER_XLA_OP_COMPILER(OpName, CompilerType)         \
-  static OpRegistrar<CompilerType> _xla_compiler_##OpName##_ = \
-      OpRegistrar<CompilerType>(#OpName)                       \
-          .SetField(XrtEngine::XLA)                            \
-          .SetFactory([]() -> OpCompiler * { return new CompilerType; })
+#define REGISTER_XLA_OP_COMPILER(OpName, CompilerType)       \
+  static OpRegistrar<CompilerType> _xla_compiler_##OpName##_ \
+      __attribute__((unused)) =                              \
+          OpRegistrar<CompilerType>(#OpName)                 \
+              .SetField(XrtEngine::XLA)                      \
+              .SetFactory([]() -> OpCompiler * { return new CompilerType; })
 
 struct CompilerBuilder {
   OpCompiler *operator()(const std::string &op_name) {
-    return util::Registry<std::function<OpCompiler *()>>::Global()->Lookup(
-        op_name)();
+    return util::Registry<std::string, std::function<OpCompiler *()>>::Global()
+        ->Lookup(op_name)();
   }
 };
 

@@ -102,7 +102,7 @@ XrtGraph *XrtGraph::AddSubgraph(int64_t node_id) {
 std::vector<XrtArgument> XrtGraph::Arguments() const {
   std::vector<XrtArgument> arguments;
   for (const XrtEdge *edge : edges_) {
-    if (edge && edge->argument().is_initialized()) {
+    if (edge && edge->argument().initialized()) {
       arguments.push_back(edge->argument());
     }
   }

@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_XRT_XRT_NODE_ATTR_H_
-#define ONEFLOW_XRT_XRT_NODE_ATTR_H_
+#ifndef ONEFLOW_XRT_GRAPH_NODE_ATTR_H_
+#define ONEFLOW_XRT_GRAPH_NODE_ATTR_H_
 
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/common/shape.h"
@@ -28,4 +28,4 @@ std::string GetNodeAttrAsString(const XrtNode *node,
 }  // namespace xrt
 }  // namespace oneflow
 
-#endif  // ONEFLOW_XRT_XRT_NODE_ATTR_H_
+#endif  // ONEFLOW_XRT_GRAPH_NODE_ATTR_H_

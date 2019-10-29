@@ -177,6 +177,7 @@ void SetupXrtNode(XrtNode *node, const XrtLaunchOpConf::Argument &arg_conf) {
 }
 
 std::shared_ptr<XrtGraph> BuildXrtGraph(const XrtLaunchOpConf &launch_conf,
+                                        const DeviceType &device_type,
                                         const JobDesc &job_desc) {
   std::shared_ptr<XrtGraph> graph(new XrtGraph);
   util::Map<std::string, const XrtNode *> producers;
@@ -192,7 +193,7 @@ std::shared_ptr<XrtGraph> BuildXrtGraph(const XrtLaunchOpConf &launch_conf,
   for (const auto &node_conf : launch_conf.attr().node()) {
     XrtNode *node = graph->AddNode(node_conf);
     SetupXrtNode(node, node_conf);
-    std::shared_ptr<Operator> op = ConstructOp(node_conf, &job_desc);
+    auto op = ConstructOp(node_conf, device_type, &job_desc);
     for (const std::string &bn : op->output_bns()) {
       std::string output = BlobIdToName(op->BnInOp2Lbi(bn));
       producers[output] = node;
@@ -227,7 +228,7 @@ std::shared_ptr<XrtGraph> BuildXrtGraph(const OpGraph *op_graph) {
     op_nodes.emplace(node, op_node);
   });
 
-  BuildXrtGraphEdges(graph, node_inputs, producers);
+  graph = BuildXrtGraphEdges(graph, node_inputs, producers);
   return SetupXrtGraphEdges(graph, op_nodes);
 }
 
@@ -242,11 +243,10 @@ XrtPassOptions CreateDefaultXrtPassOptions() {
   return xrt_options;
 }
 
-Parameter ConvertBlobToParameter(const Blob &blob,
-                                 const std::string &blob_name) {
+Parameter BuildParameter(const Blob &blob, const std::string &name) {
   const auto &desc = blob.blob_desc();
-  return Parameter(const_cast<void *>(blob.dptr<void>()), desc.shape(),
-                   desc.data_type(), blob_name);
+  return Parameter(const_cast<void *>(blob.dptr<void>()),
+                   XrtShape(desc.shape(), desc.data_type()), name);
 }
 
 bool LookupMutability(const XrtLaunchOpConf &launch_conf,
@@ -259,8 +259,9 @@ bool LookupMutability(const XrtLaunchOpConf &launch_conf,
   return it->second;
 }
 
-BlobDesc ConvertXrtShapeToBlobDesc(const XrtShape &shape) {
-  // TODO(hjchen2)
+void ConvertXrtShapeToBlobDesc(const XrtShape &shape, BlobDesc *desc) {
+  desc->mut_shape() = shape.shape();
+  desc->set_data_type(shape.data_type());
 }
 
 }  // namespace xrt

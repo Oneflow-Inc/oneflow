@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_XRT_XRT_GRAPH_ALGORITHM_H_
-#define ONEFLOW_XRT_XRT_GRAPH_ALGORITHM_H_
+#ifndef ONEFLOW_XRT_GRAPH_ALGORITHM_H_
+#define ONEFLOW_XRT_GRAPH_ALGORITHM_H_
 
 #include "oneflow/xrt/utility/stl.h"
 
@@ -88,4 +88,4 @@ inline bool IsReachable(NodeType *start, NodeType *dest) {
 }  // namespace xrt
 }  // namespace oneflow
 
-#endif  // ONEFLOW_XRT_XRT_GRAPH_ALGORITHM_H_
+#endif  // ONEFLOW_XRT_GRAPH_ALGORITHM_H_

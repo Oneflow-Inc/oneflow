@@ -16,7 +16,7 @@ void XrtLaunchOp::InitFromOpConf() {
 
   for (int i = 0; i < inputs_num; ++i) {
     const std::string &input = launch_conf.in().at(i);
-    bool mutability = LookupMutability(launch_conf, input);
+    bool mutability = xrt::LookupMutability(launch_conf, input);
     EnrollInputBn(absl::StrCat("in_", i))->set_is_mutable(mutability);
   }
   if (outputs_num > 0) {
@@ -42,12 +42,12 @@ Maybe<void> XrtLaunchOp::InferBlobDescs(
   // Build graph from launch conf, and inference output shape
   {
     const auto &launch_conf = op_conf().xrt_launch_conf();
-    SbpSignature sbp_signature;
     // Run InferShape pass
     auto options = xrt::CreateDefaultXrtPassOptions();
-    auto graph = xrt::BuildXrtGraph(launch_conf, this->job_desc());
+    auto graph = xrt::BuildXrtGraph(launch_conf, op_conf().device_type(),
+                                    this->job_desc());
     xrt::RunXrtPass("InferShape", graph.get(), options, &this->job_desc(),
-                    parallel_ctx, &sbp_signature, &blob_descs);
+                    &blob_descs);
   }
 
   // Fetch output blob descs

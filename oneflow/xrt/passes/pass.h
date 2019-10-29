@@ -43,16 +43,17 @@ class XrtPass {
 
 // typedef XrtPass *(*XrtPassCreator)();
 
-#define REGISTER_XRT_PASS(PassName, PassType)                            \
-  std::function<XrtPass *()> _##PassName##_creator = []() -> XrtPass * { \
-    return new PassType;                                                 \
-  };                                                                     \
-  XRT_REGISTER_FACTORY(PassName, _##PassName##_creator)
+#define REGISTER_XRT_PASS(PassName, PassType)                          \
+  std::function<XrtPass *()> _##PassName##_pass_ = []() -> XrtPass * { \
+    return new PassType;                                               \
+  };                                                                   \
+  XRT_REGISTER_FACTORY(#PassName, _##PassName##_pass_)
 
 inline void RunPassImpl(const std::string &pass, XrtGraph *graph,
                         const XrtPassOptions &options) {
   auto optimize_pass =
-      util::Registry<std::function<XrtPass *()>>::Global()->Lookup(pass)();
+      util::Registry<std::string, std::function<XrtPass *()>>::Global()->Lookup(
+          pass)();
   optimize_pass->Run(graph, options);
 }
 
@@ -61,7 +62,8 @@ inline void RunPassImpl(const std::string &pass, XrtGraph *graph,
                         const XrtPassOptions &options, Args &&... args) {
   std::vector<Any> params{std::forward<Args>(args)...};
   auto optimize_pass =
-      util::Registry<std::function<XrtPass *()>>::Global()->Lookup(pass)();
+      util::Registry<std::string, std::function<XrtPass *()>>::Global()->Lookup(
+          pass)();
   optimize_pass->Run(graph, options, params);
 }
 

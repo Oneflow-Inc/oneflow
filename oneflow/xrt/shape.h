@@ -32,4 +32,14 @@ inline bool operator==(const XrtShape &lhs, const XrtShape &rhs) {
 }  // namespace xrt
 }  // namespace oneflow
 
+namespace std {
+template <>
+struct hash<oneflow::xrt::XrtShape> {
+  size_t operator()(const oneflow::xrt::XrtShape &shape) const {
+    return std::hash<std::string>()(shape.shape().ToString()) ^
+           std::hash<int64_t>()(shape.data_type());
+  }
+};
+}  // namespace std
+
 #endif  // ONEFLOW_XRT_XRT_SHAPE_H_
