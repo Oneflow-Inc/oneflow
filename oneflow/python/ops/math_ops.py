@@ -59,6 +59,7 @@ def divide(x, y, name=None):
     else:
         return broadcast_div(x, y, name)
 
+
 def scalar_add(x, operand, name=None):
     op_conf = op_conf_util.OperatorConf()
     setattr(
@@ -155,6 +156,7 @@ def scalar_mul(x, operand, name=None):
     lbi.op_name = op_conf.name
     lbi.blob_name = "out"
     return remote_blob_util.RemoteBlob(lbi)
+
 
 def broadcast_div(x, y, name=None):
     op_conf = op_conf_util.OperatorConf()
