@@ -16,7 +16,7 @@ Maybe<void> EveryNthOp::InferOutputBlobTimeShape(
     const ParallelContext* parallel_ctx, Shape* time_shape) const {
   const int64_t n = op_conf().every_nth_conf().n();
   const Shape* in_shape = GetTimeShape4BnInOp("in");
-  std::vector<int64_t> dim_vec;
+  DimVector dim_vec;
   CHECK_GE_OR_RETURN(in_shape->NumAxes(), 1);
   CHECK_GE_OR_RETURN(n, 1);
   if (in_shape->dim_vec().back() % n == 0) {

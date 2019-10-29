@@ -25,8 +25,7 @@ void RepeatForwardCompTaskNode::BuildExecGphAndRegst() {
 }
 
 void RepeatForwardCompTaskNode::InferProducedDataRegstTimeShape() {
-  std::vector<int64_t> time_shape_dim_vec =
-      GetSoleConsumedRegst("in")->data_regst_time_shape()->dim_vec();
+  DimVector time_shape_dim_vec = GetSoleConsumedRegst("in")->data_regst_time_shape()->dim_vec();
   const RepeatOp* repeat_op = dynamic_cast<RepeatOp*>(this->logical_node()->SoleOp().get());
   CHECK_NOTNULL(repeat_op);
   int32_t repeat_num = repeat_op->GetRepeatNum();

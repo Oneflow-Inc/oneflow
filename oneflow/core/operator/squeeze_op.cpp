@@ -33,7 +33,7 @@ Maybe<void> SqueezeOp::InferBlobDescs(
   BlobDesc* in = GetBlobDesc4BnInOp("in");
   BlobDesc* out = GetBlobDesc4BnInOp("out");
   *out = *in;
-  std::vector<int64_t> dim_vec = in->shape().dim_vec();
+  DimVector dim_vec = in->shape().dim_vec();
   for (const auto& idx : PbRf2StdVec(op_conf().squeeze_conf().axis())) {
     CHECK_LT_OR_RETURN(idx, dim_vec.size());
     CHECK_EQ_OR_RETURN(dim_vec[idx], 1);

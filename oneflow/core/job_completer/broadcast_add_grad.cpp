@@ -34,7 +34,7 @@ void GenerateBackwardOpConf(
       reduce_sum_like_a_op_conf->set_x(GenLogicalBlobName(*DiffLbi4BnInOp("out")));
       reduce_sum_like_a_op_conf->set_y("y");
       reduce_sum_like_a_op_conf->set_like(GenLogicalBlobName(op.BnInOp2Lbi("a")));
-      const std::vector<int64_t>& broadcast_axis_vec =
+      const AxisVector& broadcast_axis_vec =
           left_extended_shape.Axes4BroadcastTo(LogicalBlobDesc4BnInOp("out").shape());
       *reduce_sum_like_a_op_conf->mutable_axis() = {broadcast_axis_vec.begin(),
                                                     broadcast_axis_vec.end()};
@@ -67,7 +67,7 @@ void GenerateBackwardOpConf(
       reduce_sum_like_b_op_conf->set_x(GenLogicalBlobName(*DiffLbi4BnInOp("out")));
       reduce_sum_like_b_op_conf->set_y("y");
       reduce_sum_like_b_op_conf->set_like(GenLogicalBlobName(op.BnInOp2Lbi("b")));
-      const std::vector<int64_t>& broadcast_axis_vec =
+      const AxisVector& broadcast_axis_vec =
           left_extended_shape.Axes4BroadcastTo(LogicalBlobDesc4BnInOp("out").shape());
       *reduce_sum_like_b_op_conf->mutable_axis() = {broadcast_axis_vec.begin(),
                                                     broadcast_axis_vec.end()};

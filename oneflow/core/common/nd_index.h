@@ -2,13 +2,14 @@
 #define ONEFLOW_CORE_COMMON_ND_INDEX_H_
 
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/common/shape.h"
 
 namespace oneflow {
 
 class NdIndex final {
  public:
   NdIndex() = default;
-  explicit NdIndex(const std::vector<int64_t>& dim_vec);
+  explicit NdIndex(const DimVector& dim_vec);
   NdIndex(const std::initializer_list<int64_t>& dim_vec);
   ~NdIndex() = default;
   NdIndex& operator=(const NdIndex& other);
@@ -20,7 +21,7 @@ class NdIndex final {
   int64_t NumAxes() const { return dim_vec_.size(); }
 
  private:
-  std::vector<int64_t> dim_vec_;
+  DimVector dim_vec_;
 };
 
 }  // namespace oneflow

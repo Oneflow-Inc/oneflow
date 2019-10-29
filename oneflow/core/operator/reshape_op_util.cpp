@@ -6,7 +6,7 @@ Maybe<Shape> ReshapeOpUtil::GetLogicalOutBlobShape(const Shape& in_shape,
   size_t total_elem_dim_exclude_minus_1 = 1;
   bool has_minus_1 = false;
   bool minus_1_axis = -1;
-  std::vector<int64_t> dim_vec;
+  DimVector dim_vec;
   FOR_RANGE(int, axis, 0, reshape_proto.dim_size()) {
     int64_t dim = reshape_proto.dim(axis);
     dim_vec.push_back(dim);
@@ -36,7 +36,7 @@ Maybe<Shape> ReshapeOpUtil::GetLogicalOutBlobShape(const Shape& in_shape,
 Maybe<void> ReshapeOpUtil::Squeeze(const Shape& origin, Shape* shape,
                                    HashMap<int, int>* squeezed_axis2origin_axis) {
   OF_CHECK_GT(origin.NumAxes(), 0);
-  std::vector<int64_t> dim_vec;
+  DimVector dim_vec;
   FOR_RANGE(int, axis, 0, origin.NumAxes()) {
     int64_t dim = origin.At(axis);
     OF_CHECK_GT(dim, 0);

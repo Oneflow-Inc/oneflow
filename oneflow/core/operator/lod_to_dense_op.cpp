@@ -38,7 +38,7 @@ Maybe<void> LoDToDenseOp::InferBlobDescs(
   out_blob_desc->ClearLoD();
   {
     const auto& in_dim_vec = in_blob_desc.shape().dim_vec();
-    std::vector<int64_t> dim_vec{in_blob_desc.shape().Count(0, num_of_lod_levels)};
+    DimVector dim_vec{in_blob_desc.shape().Count(0, num_of_lod_levels)};
     dim_vec.insert(dim_vec.end(), in_dim_vec.begin() + num_of_lod_levels, in_dim_vec.end());
     out_blob_desc->mut_shape() = Shape(dim_vec);
   }
