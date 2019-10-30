@@ -58,7 +58,7 @@ class Executable {
 
   virtual bool Run(const std::vector<Parameter> &inputs,
                    const ExecutableRunOptions &run_options,
-                   bool block_until_done = true);
+                   bool block_until_done = true) = 0;
 
   bool RunAsync(const std::vector<Parameter> inputs,
                 const ExecutableRunOptions &run_options) {

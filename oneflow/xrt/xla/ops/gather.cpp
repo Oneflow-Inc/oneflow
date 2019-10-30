@@ -1,5 +1,5 @@
-#include "oneflow/xrt/xla/op_context.h"
-#include "oneflow/xrt/xla/ops/op_compiler.h"
+#include "oneflow/xrt/xla/ops/op_context.h"
+#include "oneflow/xrt/xla/ops/op_kernel.h"
 #include "tensorflow/compiler/xla/client/lib/matrix.h"
 #include "tensorflow/compiler/xla/client/lib/slicing.h"
 #include "tensorflow/compiler/xla/client/xla_builder.h"
@@ -45,9 +45,9 @@ xla::XlaOp GenericGatherGrad(
     const std::function<xla::XlaOp(xla::XlaOp, xla::XlaOp, xla::XlaBuilder *)>
         &combiner,
     xla::XlaBuilder *builder) {
-  XRT_CHECK_AND_ASSIGN(xla::Shape buffer_shape, builder->GetShape(buffer));
-  XRT_CHECK_AND_ASSIGN(xla::Shape updates_shape, builder->GetShape(updates));
-  XRT_CHECK_AND_ASSIGN(xla::Shape indices_shape, builder->GetShape(indices));
+  MOLA_CHECK_AND_ASSIGN(xla::Shape buffer_shape, builder->GetShape(buffer));
+  MOLA_CHECK_AND_ASSIGN(xla::Shape updates_shape, builder->GetShape(updates));
+  MOLA_CHECK_AND_ASSIGN(xla::Shape indices_shape, builder->GetShape(indices));
   absl::Span<const long long> indices_dims =
       xla::AsInt64Slice(indices_shape.dimensions());
 
@@ -89,7 +89,7 @@ xla::XlaOp GenericGatherGrad(
   int64_t expected_updates_rank = expected_updates_dims.size();
   if (updates_rank == 0 && expected_updates_rank != 0) {
     new_updates = xla::Broadcast(updates, expected_updates_dims);
-    XRT_CHECK_AND_ASSIGN(updates_shape, builder->GetShape(new_updates));
+    MOLA_CHECK_AND_ASSIGN(updates_shape, builder->GetShape(new_updates));
     updates_rank = updates_shape.rank();
   }
   if (updates_rank > 0) {
@@ -121,7 +121,7 @@ xla::XlaOp GenericGatherGrad(
                       dim_numbers);
 }
 
-class GatherOp : public OpCompiler {
+class GatherOp : public OpKernel {
  public:
   void Compile(OpContext *ctx) override {
     Shape input_shape = ctx->InputShape("in");
@@ -165,7 +165,7 @@ class BatchGatherOp : public GatherOp {
 REGISTER_XLA_OP_COMPILER(Gather, GatherOp).Finalize();
 REGISTER_XLA_OP_COMPILER(BatchGather, BatchGatherOp).Finalize();
 
-class GatherGradOp : public OpCompiler {
+class GatherGradOp : public OpKernel {
  public:
   void Compile(OpContext *ctx) override {
     xla::XlaBuilder *builder = ctx->builder();
@@ -204,7 +204,7 @@ class GatherGradOp : public OpCompiler {
 
 REGISTER_XLA_OP_COMPILER(GatherGrad, GatherGradOp).Finalize();
 
-class UnsortedSegmentSumOp : public OpCompiler {
+class UnsortedSegmentSumOp : public OpKernel {
  public:
   void Compile(OpContext *ctx) override {
     xla::XlaOp segment_ids = ctx->Input("segment_ids");

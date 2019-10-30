@@ -1,12 +1,12 @@
-#include "oneflow/xrt/xla/op_context.h"
-#include "oneflow/xrt/xla/ops/op_compiler.h"
+#include "oneflow/xrt/xla/ops/op_context.h"
+#include "oneflow/xrt/xla/ops/op_kernel.h"
 #include "tensorflow/compiler/xla/client/xla_builder.h"
 
 namespace oneflow {
 namespace xrt {
 namespace mola {
 
-class TransposeOp : public OpCompiler {
+class TransposeOp : public OpKernel {
  public:
   void Compile(OpContext *ctx) override {
     auto perm = ctx->GetAttr<std::vector<int32_t>>("perm");

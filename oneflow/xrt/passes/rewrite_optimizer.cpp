@@ -1,5 +1,5 @@
 #include "oneflow/xrt/passes/rewrite_optimizer.h"
-#include "oneflow/xrt/graph/node_attr.h"
+#include "oneflow/xrt/utility/message_attr.h"
 
 namespace oneflow {
 namespace xrt {
@@ -11,31 +11,28 @@ void OptimizerParamBuilder::BuilderImpl::ApplyBuild() {
 
 template <>
 void OptimizerParamBuilder::BuilderImpl::ApplyBuild<OptimizerMode::kAdam>() {
-  using xrt::GetNodeAttr;
   AdamOptimizerOpConf *conf = op_conf_->mutable_adam_optimizer_conf();
-  float l1_weight_decay = GetNodeAttr<float>(node_, "l1");
-  float l2_weight_decay = GetNodeAttr<float>(node_, "l2");
-  conf->set_l1(l1_weight_decay);
-  conf->set_l2(l2_weight_decay);
+  const AdamModelUpdateOpConf &update_conf =
+      dynamic_cast<const OperatorConf *>(&node_->param())
+          ->adam_model_update_conf();
+  conf->set_m(update_conf.m());
+  conf->set_v(update_conf.v());
+  conf->set_weight(update_conf.model());
+
+  conf->set_l1(update_conf.l1());
+  conf->set_l2(update_conf.l2());
 
   conf->set_gradient(gradient_);
   conf->set_instance_num_diff(total_instances_);
   conf->set_learning_rate(learning_rate_);
-  conf->set_weight(GetNodeAttr<std::string>(node_, "model"));
-  conf->set_m(GetNodeAttr<std::string>(node_, "m"));
-  conf->set_v(GetNodeAttr<std::string>(node_, "v"));
 
-  // conf->set_beta1(GetNodeAttr<std::string>(node_, "beta1_t"));
-  // conf->set_beta2(GetNodeAttr<std::string>(node_, "beta2_t"));
-  const auto *user_conf = dynamic_cast<NormalModelUpdateOpUserConf *>(
-      GetNodeAttr<PbMessage *>(node_, "user_conf"));
-  CHECK_NOTNULL(user_conf);
-  if (user_conf->has_adam_conf()) {
-    const float epsilon = user_conf->adam_conf().epsilon();
+  const NormalModelUpdateOpUserConf &user_conf = update_conf.user_conf();
+  if (user_conf.has_adam_conf()) {
+    const float epsilon = user_conf.adam_conf().epsilon();
     conf->set_epsilon(epsilon);
-    const float beta1 = user_conf->adam_conf().beta1();
+    const float beta1 = user_conf.adam_conf().beta1();
     conf->set_beta1(beta1);
-    const float beta2 = user_conf->adam_conf().beta2();
+    const float beta2 = user_conf.adam_conf().beta2();
     conf->set_beta2(beta2);
   }
 }

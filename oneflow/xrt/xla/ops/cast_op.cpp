@@ -1,5 +1,5 @@
-#include "oneflow/xrt/xla/op_context.h"
-#include "oneflow/xrt/xla/ops/op_compiler.h"
+#include "oneflow/xrt/xla/ops/op_context.h"
+#include "oneflow/xrt/xla/ops/op_kernel.h"
 #include "tensorflow/compiler/xla/client/xla_builder.h"
 
 #include "oneflow/xrt/xla/xla_data_type.h"
@@ -8,7 +8,7 @@ namespace oneflow {
 namespace xrt {
 namespace mola {
 
-class CastOp : public OpCompiler {
+class CastOp : public OpKernel {
  public:
   void Compile(OpContext *ctx) override {
     DataType dest_dtype = ctx->GetAttr<DataType>("data_type");

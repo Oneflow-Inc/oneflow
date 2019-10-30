@@ -1,5 +1,5 @@
-#include "oneflow/xrt/xla/op_context.h"
-#include "oneflow/xrt/xla/ops/op_compiler.h"
+#include "oneflow/xrt/xla/ops/op_context.h"
+#include "oneflow/xrt/xla/ops/op_kernel.h"
 #include "tensorflow/compiler/xla/client/xla_builder.h"
 
 #include "oneflow/xrt/xla/ops/binary_op.h"
@@ -10,7 +10,7 @@ namespace xrt {
 namespace mola {
 
 template <typename BinaryOp>
-class ScalarBinaryOp : public OpCompiler {
+class ScalarBinaryOp : public OpKernel {
  public:
   void Compile(OpContext *ctx) override {
     xla::XlaOp scalar = Scalar(ctx);
@@ -22,7 +22,7 @@ class ScalarBinaryOp : public OpCompiler {
   xla::XlaOp Scalar(OpContext *ctx) const {
     xla::XlaBuilder *builder = ctx->builder();
     DataType data_type = ctx->InputType("in");
-    std::string type = ctx->AttrTypeInOneof("scalar_operand");
+    std::string type = ctx->GetOneofType("scalar_operand");
     if (type == "int_operand") {
       int64_t value = ctx->GetAttr<int64_t>(type);
       return IntegerLiteral(builder, data_type, value);

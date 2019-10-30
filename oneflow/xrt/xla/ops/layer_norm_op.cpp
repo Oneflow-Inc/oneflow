@@ -1,5 +1,5 @@
-#include "oneflow/xrt/xla/op_context.h"
-#include "oneflow/xrt/xla/ops/op_compiler.h"
+#include "oneflow/xrt/xla/ops/op_context.h"
+#include "oneflow/xrt/xla/ops/op_kernel.h"
 #include "tensorflow/compiler/xla/client/lib/constants.h"
 #include "tensorflow/compiler/xla/client/lib/math.h"
 #include "tensorflow/compiler/xla/client/xla_builder.h"
@@ -10,7 +10,7 @@ namespace oneflow {
 namespace xrt {
 namespace mola {
 
-class LayerNormOp : public OpCompiler {
+class LayerNormOp : public OpKernel {
  public:
   void Compile(OpContext *ctx) override;
 
@@ -77,7 +77,7 @@ void LayerNormOp::Compile(OpContext *ctx) {
   ctx->SetOutput("out", Reshape(output, input_shape));
 }
 
-class LayerNormGradOp : public OpCompiler {
+class LayerNormGradOp : public OpKernel {
  public:
   void Compile(OpContext *ctx) override;
 
@@ -126,7 +126,7 @@ void LayerNormGradOp::Compile(OpContext *ctx) {
   ctx->SetOutput("dx", Reshape(activation_grad, activation_shape));
 }
 
-class LayerNormParamGradOp : public OpCompiler {
+class LayerNormParamGradOp : public OpKernel {
  public:
   void Compile(OpContext *ctx) override;
 };

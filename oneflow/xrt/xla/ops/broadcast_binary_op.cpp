@@ -1,5 +1,5 @@
-#include "oneflow/xrt/xla/op_context.h"
-#include "oneflow/xrt/xla/ops/op_compiler.h"
+#include "oneflow/xrt/xla/ops/op_context.h"
+#include "oneflow/xrt/xla/ops/op_kernel.h"
 #include "tensorflow/compiler/xla/client/xla_builder.h"
 
 #include "oneflow/xrt/xla/ops/binary_op.h"
@@ -10,7 +10,7 @@ namespace xrt {
 namespace mola {
 
 template <typename BinaryOp>
-class BcastBinaryOp : public OpCompiler {
+class BcastBinaryOp : public OpKernel {
  public:
   void Compile(OpContext *ctx) override {
     Shape shape_a = ctx->InputShape("a");

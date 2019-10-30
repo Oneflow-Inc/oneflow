@@ -1,5 +1,5 @@
-#include "oneflow/xrt/xla/op_context.h"
-#include "oneflow/xrt/xla/ops/op_compiler.h"
+#include "oneflow/xrt/xla/ops/op_context.h"
+#include "oneflow/xrt/xla/ops/op_kernel.h"
 #include "tensorflow/compiler/xla/client/lib/constants.h"
 #include "tensorflow/compiler/xla/client/lib/math.h"
 #include "tensorflow/compiler/xla/client/xla_builder.h"
@@ -11,7 +11,7 @@ namespace xrt {
 namespace mola {
 
 template <typename UnaryOp>
-class ApplyUnaryOp : public OpCompiler {
+class ApplyUnaryOp : public OpKernel {
  public:
   void Compile(OpContext *ctx) override {
     ctx->SetOutput("out", UnaryOp()(ctx->Input("in")));

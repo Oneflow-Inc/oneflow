@@ -1,12 +1,12 @@
-#include "oneflow/xrt/xla/op_context.h"
-#include "oneflow/xrt/xla/ops/op_compiler.h"
+#include "oneflow/xrt/xla/ops/op_context.h"
+#include "oneflow/xrt/xla/ops/op_kernel.h"
 #include "tensorflow/compiler/xla/client/xla_builder.h"
 
 namespace oneflow {
 namespace xrt {
 namespace mola {
 
-class MatMulOp : public OpCompiler {
+class MatMulOp : public OpKernel {
  public:
   void Compile(OpContext *ctx) override {
     Shape a_shape = ctx->InputShape("a");
@@ -15,9 +15,8 @@ class MatMulOp : public OpCompiler {
     CHECK_EQ(a_shape.NumAxes(), b_shape.NumAxes());
 
     if (a_shape.NumAxes() > 2) {
-      auto batch_matmul_compiler =
-          CreateOpCompiler(ctx->backend(), "BatchMatMul");
-      batch_matmul_compiler->Compile(ctx);
+      auto batch_matmul_kernel = BuildOpKernel(ctx->backend(), "BatchMatMul");
+      batch_matmul_kernel->Compile(ctx);
       return;
     }
 

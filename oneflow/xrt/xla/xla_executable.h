@@ -22,7 +22,10 @@ class XlaExecutable : public Executable {
 
   bool Run(const std::vector<Parameter> &inputs,
            const ExecutableRunOptions &run_options,
-           bool block_until_done = true) override {}
+           bool block_until_done = true) override {
+    // TODO(hjchen2)
+    return true;
+  }
 
  private:
   std::vector<xla::Shape> input_shapes_;

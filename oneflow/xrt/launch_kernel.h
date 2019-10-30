@@ -1,6 +1,8 @@
 #ifndef ONEFLOW_XRT_XRT_LAUNCH_KERNEL_H_
 #define ONEFLOW_XRT_XRT_LAUNCH_KERNEL_H_
 
+#include <unordered_map>
+
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/xrt/compilation_cache.h"
 #include "oneflow/xrt/executable.h"
@@ -8,6 +10,21 @@
 #include "oneflow/xrt/types.h"
 
 namespace oneflow {
+
+template <DeviceType device_type>
+class BlobDescGetter {
+ public:
+  BlobDescGetter() = default;
+  BlobDescGetter(const KernelIf<device_type> *kernel,
+                 std::function<Blob *(const std::string &)> get_blob_fn)
+      : kernel_(kernel), get_blob_fn_(get_blob_fn) {}
+
+  void DumpEntryTo(std::unordered_map<std::string, BlobDesc> *entry_blob_desc);
+
+ private:
+  const KernelIf<device_type> *kernel_;
+  std::function<Blob *(const std::string &)> get_blob_fn_;
+};
 
 template <DeviceType device_type>
 class XrtLaunchKernel : public KernelIf<device_type> {
@@ -30,6 +47,7 @@ class XrtLaunchKernel : public KernelIf<device_type> {
       const std::vector<xrt::InputOutputAlias> &aliases) const;
 
  private:
+  mutable BlobDescGetter<device_type> desc_getter_;
   mutable std::shared_ptr<xrt::CompilationCache> compilation_cache_;
 };
 

@@ -12,7 +12,20 @@ namespace xrt {
 
 class GraphCompiler {
  public:
-  GraphCompiler(const XrtEngine &engine) : engine_(engine) {
+  struct Impl {
+    virtual std::shared_ptr<Executable> Compile(
+        const XrtGraph *graph, const std::vector<Parameter> &entry_params,
+        const std::vector<Parameter> &return_params,
+        const std::vector<InputOutputAlias> &aliases) = 0;
+  };
+
+ public:
+  static auto Registry()
+      -> util::Registry<XrtEngine, std::function<Impl *()>> * {
+    return util::Registry<XrtEngine, std::function<Impl *()>>::Global();
+  }
+
+  explicit GraphCompiler(const XrtEngine &engine) : engine_(engine) {
     impl_.reset(GraphCompiler::Registry()->Lookup(engine_)());
     CHECK(impl_) << "Internal compiler should be built correctly for engine "
                  << engine_;
@@ -25,27 +38,14 @@ class GraphCompiler {
     return impl_->Compile(graph, entry_params, return_params, aliases);
   }
 
-  class Impl {
-   public:
-    Impl() = default;
-    virtual ~Impl() = default;
-    virtual std::shared_ptr<Executable> Compile(
-        const XrtGraph *graph, const std::vector<Parameter> &entry_params,
-        const std::vector<Parameter> &return_params,
-        const std::vector<InputOutputAlias> &aliases) = 0;
-  };
-
-  static auto Registry()
-      -> util::Registry<XrtEngine, std::function<Impl *()>> * {
-    return util::Registry<XrtEngine, std::function<Impl *()>>::Global();
-  }
-
  private:
+  GraphCompiler() = delete;
+
   XrtEngine engine_;
   std::shared_ptr<Impl> impl_;
 };
 
-#define REGISTER_GRAPH_COMPILER(Engine, Compiler)                          \
+#define REGISTER_XRT_GRAPH_COMPILER(Engine, Compiler)                      \
   namespace {                                                              \
   struct _XrtGraphCompiler {                                               \
     _XrtGraphCompiler() {                                                  \

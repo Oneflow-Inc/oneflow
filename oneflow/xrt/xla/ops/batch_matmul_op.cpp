@@ -1,5 +1,5 @@
-#include "oneflow/xrt/xla/op_context.h"
-#include "oneflow/xrt/xla/ops/op_compiler.h"
+#include "oneflow/xrt/xla/ops/op_context.h"
+#include "oneflow/xrt/xla/ops/op_kernel.h"
 #include "tensorflow/compiler/xla/client/lib/matrix.h"
 #include "tensorflow/compiler/xla/client/xla_builder.h"
 
@@ -7,7 +7,7 @@ namespace oneflow {
 namespace xrt {
 namespace mola {
 
-class BatchMatMulOp : public OpCompiler {
+class BatchMatMulOp : public OpKernel {
  public:
   void Compile(OpContext *ctx) override {
     Shape shape_a = ctx->InputShape("a");

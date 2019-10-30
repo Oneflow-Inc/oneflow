@@ -1,5 +1,5 @@
-#include "oneflow/xrt/xla/op_context.h"
-#include "oneflow/xrt/xla/ops/op_compiler.h"
+#include "oneflow/xrt/xla/ops/op_context.h"
+#include "oneflow/xrt/xla/ops/op_kernel.h"
 #include "tensorflow/compiler/xla/client/lib/matrix.h"
 #include "tensorflow/compiler/xla/client/lib/slicing.h"
 #include "tensorflow/compiler/xla/client/xla_builder.h"
@@ -10,7 +10,7 @@ namespace oneflow {
 namespace xrt {
 namespace mola {
 
-class ReduceOp : public OpCompiler {
+class ReduceOp : public OpKernel {
  public:
   void Compile(OpContext *ctx) override {
     bool keep_dims = ctx->GetAttr<bool>("keep_dims");

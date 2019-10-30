@@ -7,6 +7,20 @@
 namespace oneflow {
 
 template <DeviceType device_type>
+void BlobDescGetter<device_type>::DumpEntryTo(
+    std::unordered_map<std::string, BlobDesc> *entry_blob_desc) {
+  for (const auto &bn : kernel_->op_attribute().input_bns()) {
+    const RtBlobDesc &runtime_desc = get_blob_fn_(bn)->blob_desc();
+    BlobDesc blob_desc(runtime_desc.shape(), runtime_desc.data_type(),
+                       runtime_desc.has_data_id_field(),
+                       runtime_desc.has_col_num_field(),
+                       runtime_desc.max_col_num());
+    std::string blob_name = xrt::BlobIdToName(kernel_->BnInOp2Lbi(bn));
+    entry_blob_desc->emplace(blob_name, std::move(blob_desc));
+  }
+}
+
+template <DeviceType device_type>
 xrt::Executable *XrtLaunchKernel<device_type>::BuildExecutable(
     const std::vector<xrt::Parameter> &entry_params,
     const std::vector<xrt::Parameter> &return_params,
@@ -29,20 +43,16 @@ xrt::Executable *XrtLaunchKernel<device_type>::BuildExecutable(
   if (!executable) {
     auto graph = xrt::BuildXrtGraph(this->op_conf().xrt_launch_conf(),
                                     device_type, this->job_desc());
-    // Run InferShape pass
     {
-      std::unordered_map<std::string, BlobDesc> blob_descs;
-      for (int i = 0; i < entry_params.size(); ++i) {
-        BlobDesc blob_desc;
-        blob_desc.mut_shape() = entry_params[i].shape();
-        blob_desc.set_data_type(entry_params[i].data_type());
-        blob_descs.emplace(entry_params[i].name(), blob_desc);
-      }
-      SbpSignature sbp_signature;
-      ParallelContext parallel_ctx;
+      // Run InferShape pass
+      std::unordered_map<std::string, BlobDesc> entry_blob_descs;
+      desc_getter_.DumpEntryTo(&entry_blob_descs);
       auto options = xrt::CreateDefaultXrtPassOptions();
       xrt::RunXrtPass("InferShape", graph.get(), options, &this->job_desc(),
-                      &blob_descs);
+                      &entry_blob_descs);
+      // Update argument meta data
+      xrt::RunXrtPass("UpdateArgMetaData", graph.get(), options,
+                      &this->job_desc());
     }
     xrt::XrtEngine engine = xrt::XLA;
     xrt::GraphCompiler compiler(engine);
@@ -54,7 +64,7 @@ xrt::Executable *XrtLaunchKernel<device_type>::BuildExecutable(
     executable = compilation_cache_->GetRecord(signature);
   }
 
-  return executable;
+  return std::move(executable);
 }
 
 template <DeviceType device_type>
@@ -79,7 +89,7 @@ template <DeviceType device_type>
 void XrtLaunchKernel<device_type>::ForwardDataContent(
     const KernelCtx &ctx,
     std::function<Blob *(const std::string &)> BnInOp2Blob) const {
-  LOG(INFO) << "XrtLaunchKernel ForwardDataContent...";
+  desc_getter_ = BlobDescGetter<device_type>(this, BnInOp2Blob);
   // Prepare input and output parameters
   std::vector<xrt::Parameter> entry_params, return_params;
   for (const auto &bn : this->op_attribute().input_bns()) {
@@ -96,7 +106,7 @@ void XrtLaunchKernel<device_type>::ForwardDataContent(
   MakeInputOutputAlias(entry_params, &return_params, &aliases);
   auto executable = BuildExecutable(entry_params, return_params, aliases);
   if (!executable) {
-    LOG(FATAL) << "Executable built failed.";
+    LOG(FATAL) << "Executable is built failed.";
   }
 
   xrt::ExecutableRunOptions run_options;
@@ -107,12 +117,13 @@ void XrtLaunchKernel<device_type>::ForwardDataContent(
     run_options.stream = ctx.device_ctx->cuda_stream();
   }
   bool status = executable->Run(entry_params, run_options, block_until_done);
-  CHECK(status) << "Executable running failed.";
+  CHECK(status) << "Executable is running failed.";
 
   const std::vector<xrt::Parameter> &results = executable->Results();
   CHECK_EQ(results.size(), return_params.size());
-  for (int i = 0; i < results.size(); ++i)
+  for (int i = 0; i < results.size(); ++i) {
     CHECK_EQ(results[i].data(), return_params[i].data());
+  }
 }
 
 // ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kXrtLaunchConf, XrtLaunchKernel,

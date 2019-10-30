@@ -7,9 +7,9 @@
 #include "oneflow/core/job/job.pb.h"
 #include "oneflow/core/job/job_builder.h"
 #include "oneflow/xrt/graph/graph.h"
-#include "oneflow/xrt/graph/node_attr.h"
 #include "oneflow/xrt/passes/pass.h"
 #include "oneflow/xrt/passes/rewrite_optimizer.h"
+#include "oneflow/xrt/utility/message_attr.h"
 
 namespace oneflow {
 namespace xrt {
@@ -37,6 +37,7 @@ class OptimizerRewritor {
 
   std::vector<std::string> GetControlInOpNames(const xrt::XrtNode *node) const;
 
+ private:
   const xrt::XrtGraph &graph_;
   std::shared_ptr<JobBuilder> builder_;
 };
@@ -118,19 +119,21 @@ void OptimizerRewritor::Run() {
       // Skip the node if it is not a model update node
       continue;
     }
-    using xrt::GetNodeAttr;
-    using xrt::GetNodeAttrAsString;
-    std::string learning_rate = GetNodeAttrAsString(node, "learning_rate");
-    std::string model_diff = GetNodeAttrAsString(node, "model_diff");
-    std::string total_instances =
-        GetNodeAttrAsString(node, "total_instance_num_diff");
-    std::string train_step = GetNodeAttrAsString(node, "train_step");
+    PbMessage *conf = nullptr;
+    util::GetOneofMessage(node->param(), "op_type", &conf);
+    CHECK(conf) << "Cann't get op_type in operator conf.";
 
-    auto control_in_op_names = GetControlInOpNames(node);
+    std::string learning_rate, model_diff, total_instances, train_step;
+    learning_rate = util::GetAttrAsString(*conf, "learning_rate");
+    model_diff = util::GetAttrAsString(*conf, "model_diff");
+    total_instances = util::GetAttrAsString(*conf, "total_instance_num_diff");
+    train_step = util::GetAttrAsString(*conf, "train_step");
+
+    NormalModelUpdateOpUserConf *user_conf = nullptr;
+    util::GetMessage(*conf, "user_conf", &user_conf);
+    CHECK(user_conf) << "Cann't get user_conf in operator conf.";
+
     std::vector<OperatorConf *> operator_confs;
-    const auto *user_conf = dynamic_cast<NormalModelUpdateOpUserConf *>(
-        GetNodeAttr<PbMessage *>(node, "user_conf"));
-    CHECK_NOTNULL(user_conf);
     // Create clip gradient operator if `has_clip_conf`
     if (user_conf->has_clip_conf()) {
       OperatorConf *clip_conf = BuildClipGradientOp(
@@ -143,6 +146,7 @@ void OptimizerRewritor::Run() {
         BuildOptimizerOp(node, model_diff, total_instances, learning_rate);
     operator_confs.push_back(optimizer_conf);
 
+    auto control_in_op_names = GetControlInOpNames(node);
     if (control_in_op_names.size() > 0) {
       for (OperatorConf *op_conf : operator_confs) {
         // control_in_op_names.push_back(op_conf->name());

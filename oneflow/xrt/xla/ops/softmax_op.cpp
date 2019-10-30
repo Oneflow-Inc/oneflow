@@ -1,5 +1,5 @@
-#include "oneflow/xrt/xla/op_context.h"
-#include "oneflow/xrt/xla/ops/op_compiler.h"
+#include "oneflow/xrt/xla/ops/op_context.h"
+#include "oneflow/xrt/xla/ops/op_kernel.h"
 #include "tensorflow/compiler/xla/client/xla_builder.h"
 
 #include "oneflow/xrt/xla/xla_helpers.h"
@@ -8,7 +8,7 @@ namespace oneflow {
 namespace xrt {
 namespace mola {
 
-class SoftmaxOp : public OpCompiler {
+class SoftmaxOp : public OpKernel {
  public:
   void Compile(OpContext *ctx) override;
 };
@@ -37,7 +37,7 @@ void SoftmaxOp::Compile(OpContext *ctx) {
 
 REGISTER_XLA_OP_COMPILER(Softmax, SoftmaxOp).Finalize();
 
-class SoftmaxGradOp : public OpCompiler {
+class SoftmaxGradOp : public OpKernel {
  public:
   void Compile(OpContext *ctx) override;
 };

@@ -1,5 +1,5 @@
-#include "oneflow/xrt/xla/op_context.h"
-#include "oneflow/xrt/xla/ops/op_compiler.h"
+#include "oneflow/xrt/xla/ops/op_context.h"
+#include "oneflow/xrt/xla/ops/op_kernel.h"
 #include "tensorflow/compiler/xla/client/xla_builder.h"
 
 #include "oneflow/xrt/xla/xla_helpers.h"
@@ -8,7 +8,7 @@ namespace oneflow {
 namespace xrt {
 namespace mola {
 
-class ReshapeOp : public OpCompiler {
+class ReshapeOp : public OpKernel {
  public:
   void Compile(OpContext *ctx) override {
     Shape in_shape = ctx->InputShape("in");
@@ -21,7 +21,7 @@ class ReshapeOp : public OpCompiler {
 
 REGISTER_XLA_OP_COMPILER(Reshape, ReshapeOp).Finalize();
 
-class ReshapeLikeOp : public OpCompiler {
+class ReshapeLikeOp : public OpKernel {
  public:
   void Compile(OpContext *ctx) override {
     Shape x_shape = ctx->InputShape("x");
