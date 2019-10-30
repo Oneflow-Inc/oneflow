@@ -455,6 +455,8 @@ bool Improver::IsAnyZoneOutOfMemory(
       const auto& regst_descs = mz_regst_descs[machine_id][mem_zone_id];
       if (CalcMemoryConsumed(regst_descs, PathDurations4RegstDescId, PathIIScales4RegstDescId, ii)
           >= AvailableMemSize(machine_id, mem_zone_id)) {
+        LOG(INFO) << "OOM detected at compile time, machine_id: " << machine_id << ", "
+                  << "mem_zone_id: " << mem_zone_id;
         return true;
       }
     }
