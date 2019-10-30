@@ -16,63 +16,85 @@ class Kernel;
 namespace kernel_registration {
 
 using CreateFn = std::function<Kernel*()>;
+using IsMatchedPredicator = std::function<bool(const KernelConf&)>;
 
-namespace constraint {
-
-class KernelConstraint {
+class KernelConstraint final {
  public:
   KernelConstraint() = default;
-  virtual ~KernelConstraint() = default;
+  ~KernelConstraint() = default;
 
-  virtual bool IsMatched(const KernelConf&) = 0;
-  virtual size_t PriorityLevel() { return 0; }  // big number means high priority
-};
-
-class DeviceAndDTypeConstraint final : public KernelConstraint {
- public:
-  DeviceAndDTypeConstraint(DeviceType dev, DataType dtype) : dev_(dev), dtype_(dtype) {}
-  bool IsMatched(const KernelConf&) override;
+  bool IsMatched(const KernelConf& conf) const { return predicator_(conf); }
+  void SetIsMatchedPred(IsMatchedPredicator pred) { predicator_ = pred; }
 
  private:
-  DeviceType dev_;
-  DataType dtype_;
+  IsMatchedPredicator predicator_;
 };
 
-class DeviceConstraint final : public KernelConstraint {
+struct KernelRegistryVal final {
+  KernelRegistryVal() : func(), cons() {}
+
+  CreateFn func;
+  KernelConstraint cons;
+};
+
+class KernelRegistrarBuilder final {
  public:
-  DeviceConstraint(DeviceType dev) : dev_(dev) {}
-  bool IsMatched(const KernelConf&) override;
+  explicit KernelRegistrarBuilder(OperatorConf::OpTypeCase op_type)
+      : op_type_(op_type), registry_val_() {}
+  KernelRegistrarBuilder& SetCreateFn(CreateFn fn);
+  KernelRegistrarBuilder& SetIsMatchedPred(IsMatchedPredicator fn);
+
+  void Finalize(OperatorConf::OpTypeCase* op_type, KernelRegistryVal* val) const;
 
  private:
-  DeviceType dev_;
+  OperatorConf::OpTypeCase op_type_;
+  KernelRegistryVal registry_val_;
 };
-
-}  // namespace constraint
 
 struct KernelRegistrar final {
-  KernelRegistrar(const OperatorConf::OpTypeCase& op_type, constraint::KernelConstraint* cons,
-                  CreateFn f);
+  KernelRegistrar(const KernelRegistrarBuilder&);
 };
 
 Kernel* CreateKernel(const KernelConf& kernel_conf);
 
 }  // namespace kernel_registration
 
-#define REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(op_type, device, dtype, ...)                      \
-  namespace {                                                                                   \
-  static kernel_registration::KernelRegistrar OF_PP_CAT(g_registrar, __LINE__)(                 \
-      op_type,                                                                                  \
-      new kernel_registration::constraint::DeviceAndDTypeConstraint(device,                     \
-                                                                    GetDataType<dtype>::value), \
-      []() { return new __VA_ARGS__(); });                                                      \
-  }  // namespace
+#define NEW_REGISTER_KERNEL(op_type, ...)                                           \
+  static kernel_registration::KernelRegistrar OF_PP_CAT(g_registrar, __COUNTER__) = \
+      kernel_registration::KernelRegistrarBuilder(op_type).SetCreateFn(             \
+          []() { return new __VA_ARGS__(); })
 
-#define REGISTER_KERNEL_WITH_DEVICE(op_type, device, ...)                       \
-  namespace {                                                                   \
-  static kernel_registration::KernelRegistrar OF_PP_CAT(g_registrar, __LINE__)( \
-      op_type, new kernel_registration::constraint::DeviceConstraint(device),   \
-      []() { return new __VA_ARGS__(); });                                      \
-  }  // namespace
+#define REGISTER_KERNEL_WITH_NOTHING(op_type, ...)                                   \
+  NEW_REGISTER_KERNEL(op_type, __VA_ARGS__).SetIsMatchedPred([](const KernelConf&) { \
+    return true;                                                                     \
+  });
+
+#define REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(op_type, device, dtype, ...)                \
+  NEW_REGISTER_KERNEL(op_type, __VA_ARGS__).SetIsMatchedPred([](const KernelConf& conf) { \
+    return (device == conf.op_attribute().op_conf().device_type())                        \
+           && (GetDataType<dtype>::value == conf.data_type());                            \
+  });
+
+#define REGISTER_KERNEL_WITH_DEVICE(op_type, device, ...)                                 \
+  NEW_REGISTER_KERNEL(op_type, __VA_ARGS__).SetIsMatchedPred([](const KernelConf& conf) { \
+    return (device == conf.op_attribute().op_conf().device_type());                       \
+  });
+
+#define REGISTER_KERNEL_HELPER_CPU_FLOATING(op_type, kernel)               \
+  REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(op_type, DeviceType::kCPU, float,  \
+                                        kernel<DeviceType::kCPU, float>)   \
+  REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(op_type, DeviceType::kCPU, double, \
+                                        kernel<DeviceType::kCPU, double>)
+
+#define REGISTER_KERNEL_HELPER_GPU_FLOATING(op_type, kernel)               \
+  REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(op_type, DeviceType::kGPU, float,  \
+                                        kernel<DeviceType::kGPU, float>)   \
+  REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(op_type, DeviceType::kGPU, double, \
+                                        kernel<DeviceType::kGPU, double>)
+
+#define REGISTER_KERNEL_HELPER_GPU_HALF(op_type, kernel)                    \
+  REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(op_type, DeviceType::kGPU, float16, \
+                                        kernel<DeviceType::kGPU, float16>)
 
 }  // namespace oneflow
 

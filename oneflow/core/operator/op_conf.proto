@@ -955,20 +955,26 @@ message NormalizationGradOpConf {
   required float epsilon = 10;
 }
 
-message DropoutOpConf {
-  required string in = 1;
+message RandomMaskLikeOpConf {
+  required string like = 1;
   required string out = 2;
   required double rate = 3;
   optional ShapeProto noise_shape = 4;
   optional int64 seed = 5;
-  optional string random_mask = 6 [default = "random_mask"];
+}
+
+message DropoutOpConf {
+  required string mask = 1;
+  required string in = 2;
+  required string out = 3;
+  required float scale = 4;
 }
 
 message DropoutGradOpConf {
-  required string random_mask = 1;
+  required string mask = 1;
   required string dy = 2;
   required string dx = 3;
-  required double rate = 4;
+  required float scale = 4;
 }
 
 message TransposeOpConf {
@@ -1594,6 +1600,7 @@ message OperatorConf {
     MaxPooling2DOpConf max_pooling_2d_conf = 211;
     AveragePooling3DOpConf average_pooling_3d_conf = 212;
     MaxPooling3DOpConf max_pooling_3d_conf = 213;
+    RandomMaskLikeOpConf random_mask_like_conf = 214;
     LocalResponseNormalizationOpConf local_response_normalization_conf = 216;
     NormalizationOpConf normalization_conf = 217;
     DropoutOpConf dropout_conf = 218;

@@ -23,12 +23,6 @@ message ConvKernelConf {
   optional int32 cudnn_bwd_data_algo = 12 [default = -1];
 }
 
-message DropoutKernelConf {
-  required ShapeProto in = 1;
-  required ShapeProto random_mask = 2;
-  required ShapeProto out = 3;
-}
-
 message LossKernelConf {
   required DataType prediction_type = 1;
   required DataType label_type = 2;
@@ -210,7 +204,6 @@ message KernelConf {
     TransposeKernelConf transpose_conf = 117;
     ReduceSumKernelConf reduce_sum_conf = 120;
     ConvKernelConf conv_conf = 127;
-    DropoutKernelConf dropout_conf = 140;
     AveragePoolingKernelConf average_pooling_conf = 204;
     MaxPoolingKernelConf max_pooling_conf = 205;
     LocalResponseNormalizationKernelConf local_response_normalization_conf = 300;
