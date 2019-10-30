@@ -3,10 +3,14 @@
 
 #include <vector>
 #include <initializer_list>
+#include <glog/logging.h>
 
 namespace oneflow {
 
-template<typename T, long long kMaxSize>
+void CheckFixedVectorSize(size_t size, size_t max_size);
+void CheckFixedVectorPos(size_t pos, size_t size);
+
+template<typename T, long kMaxSize>
 class fixed_vector final {
  public:
   using value_type = T;
@@ -16,152 +20,250 @@ class fixed_vector final {
   using const_reference = const value_type&;
   using pointer = T*;
   using const_pointer = const T*;
-  using iterator = typename std::vector<T>::iterator;
-  using const_iterator = typename std::vector<T>::const_iterator;
-  using reverse_iterator = typename std::vector<T>::reverse_iterator;
-  using const_reverse_iterator = typename std::vector<T>::const_reverse_iterator;
+  using iterator = T*;
+  using const_iterator = const T*;
+  using reverse_iterator = std::reverse_iterator<T*>;
+  using const_reverse_iterator = std::reverse_iterator<const T*>;
 
-  fixed_vector() = default;
-  explicit fixed_vector(size_t size) : vec_(size) {}
-  explicit fixed_vector(size_t size, const T& val) : vec_(size, val) {}
+  fixed_vector() : size_(0) {}
+  explicit fixed_vector(size_t size) { assign(size, T()); }
+  explicit fixed_vector(size_t size, const T& val) { assign(size, val); }
   template<class InputIt>
-  fixed_vector(InputIt first, InputIt last) : vec_(first, last) {}
-  fixed_vector(const fixed_vector&) = default;
-  fixed_vector(fixed_vector&&) = default;
-  fixed_vector(std::initializer_list<T> vec) : vec_(vec) {}
+  fixed_vector(InputIt first, InputIt last) { assign(first, last); }
+  fixed_vector(const fixed_vector& rhs)  { *this = rhs;  }
+  fixed_vector(fixed_vector&& rhs) { *this = std::move(rhs); }
+  fixed_vector(std::initializer_list<T> rhs) { assign(rhs); }
   ~fixed_vector() = default;
 
-  fixed_vector& operator=(const fixed_vector& other) {
-    vec_ = other.vec_;
+  fixed_vector& operator=(const fixed_vector& rhs) {
+    size_ = rhs.size();
+    CheckSize();
+    std::copy(rhs.begin(), rhs.end(), begin());
     return *this;
   }
-  fixed_vector& operator=(fixed_vector&& other) noexcept {
-    vec_ = std::move(other.vec_);
+  fixed_vector& operator=(fixed_vector&& rhs) noexcept {
+    size_ = rhs.size();
+    CheckSize();
+    std::copy(rhs.begin(), rhs.end(), begin());
     return *this;
   }
   fixed_vector& operator=(std::initializer_list<T> ilist) {
-    vec_ = ilist;
+    assign(ilist);
     return *this;
   }
-
-  void assign(size_type count, const T& value) { return vec_.assign(count, value); }
+  void assign(size_type count, const T& value) {
+    size_ = count;
+    CheckSize();
+    std::fill(begin(), begin() + size, val);
+  }
   template<class InputIt>
   void assign(InputIt first, InputIt last) {
-    return vec_.assign(first, last);
+    size_t i = last - first; 
+    CheckSize();
+    std::copy(first, last, begin());
   }
-  void assign(std::initializer_list<T> ilist) { return vec_.assign(ilist); }
+  void assign(std::initializer_list<T> ilist) {
+    size_ = ilist.size();
+    CheckSize();
+    std::copy(ilist.begin(), ilist.end(), begin());
+  }
 
-  reference at(size_type pos) { return vec_.at(pos); }
-  const_reference at(size_type pos) const { return vec_.at(pos); }
+  reference at(size_type pos) {
+    CheckPos(pos);
+    return data_.at(pos);
+  }
+  const_reference at(size_type pos) const {
+    CheckPos(pos);
+    return data_.at(pos);
+  }
 
-  reference operator[](size_type pos) { return vec_[pos]; }
-  const_reference operator[](size_type pos) const { return vec_[pos]; }
+  reference operator[](size_type pos) {
+    CheckPos(pos);
+    return data_[pos];
+  }
+  const_reference operator[](size_type pos) const {
+    CheckPos(pos);
+    return data_[pos];
+  }
 
-  reference front() { return vec_.front(); }
-  const_reference front() const { return vec_.front(); }
+  reference front() {
+    CheckPos(0);
+    return data_.at(0);
+  }
+  const_reference front() const {
+    CheckPos(0);
+    return data_.at(0);
+  }
 
-  reference back() { return vec_.back(); }
-  const_reference back() const { return vec_.back(); }
+  reference back() {
+    CheckPos(0);
+    return data_.at(size_ - 1);
+  }
+  const_reference back() const {
+    CheckPos(0);
+    return data_.at(size_ - 1);
+  }
 
-  T* data() noexcept { return vec_.data(); }
-  const T* data() const noexcept { return vec_.data(); }
+  T* data() noexcept { return data_.data(); }
+  const T* data() const noexcept { return data_.data(); }
 
-  iterator begin() noexcept { return vec_.begin(); }
-  const_iterator begin() const noexcept { return vec_.cbegin(); }
-  const_iterator cbegin() const noexcept { return vec_.cbegin(); }
+  iterator begin() noexcept { return data_.data(); }
+  const_iterator begin() const noexcept { return data_.data(); }
+  const_iterator cbegin() const noexcept { return data_.data(); }
 
-  iterator end() noexcept { return vec_.end(); }
-  const_iterator end() const noexcept { return vec_.cend(); }
-  const_iterator cend() const noexcept { return vec_.cend(); }
+  iterator end() noexcept { return data_.data() + size_; }
+  const_iterator end() const noexcept { return data_.data() + size_; }
+  const_iterator cend() const noexcept { return data_.data() + size_; }
 
-  reverse_iterator rbegin() noexcept { return vec_.rbegin(); }
-  const_reverse_iterator rbegin() const noexcept { return vec_.crbegin(); }
-  const_reverse_iterator crbegin() const noexcept { return vec_.crbegin(); }
+  reverse_iterator rbegin() noexcept { return data_.data() + size_ - 1; }
+  const_reverse_iterator rbegin() const noexcept { return data_.data() + size_ - 1; }
+  const_reverse_iterator crbegin() const noexcept { return data_.data() + size_ - 1; }
 
-  reverse_iterator rend() noexcept { return vec_.rend(); }
-  const_reverse_iterator rend() const noexcept { return vec_.crend(); }
-  const_reverse_iterator crend() const noexcept { return vec_.crend(); }
+  reverse_iterator rend() noexcept { return data_.data() - 1; }
+  const_reverse_iterator rend() const noexcept { return data_.data() - 1; }
+  const_reverse_iterator crend() const noexcept { return data_.data() - 1; }
 
-  bool empty() const noexcept { return vec_.empty(); }
+  bool empty() const noexcept { return size_ == 0; }
 
-  size_type size() const noexcept { return vec_.size(); }
+  size_type size() const noexcept { return size_; }
 
-  size_type max_size() const noexcept { return vec_.max_size(); }
+  size_type max_size() const noexcept { return kMaxSize; }
 
-  size_type capacity() const noexcept { return vec_.capacity(); }
+  size_type capacity() const noexcept { return kMaxSize; }
 
-  void clear() noexcept { return vec_.clear(); }
+  void clear() noexcept { size_ = 0; }
 
-  iterator insert(iterator pos, const T& value) { return vec_.insert(pos, value); }
-  iterator insert(iterator pos, T&& value) { return vec_.insert(pos, std::move(value)); }
+  iterator insert(iterator pos, const T& value) {
+    MoveNToEnd(pos, 1);
+    *pos = value;
+    return pos;
+  }
+  iterator insert(iterator pos, T&& value) {
+    MoveNToEnd(pos, 1);
+    *pos = std::move(value);
+    return pos;
+  }
   iterator insert(iterator pos, size_type count, const T& value) {
-    return vec_.insert(pos, count, value);
+    MoveNToEnd(pos, count);
+    std::fill(pos, pos + count, value);
+    return pos;
   }
   template<class InputIt>
   void insert(iterator pos, InputIt first, InputIt last) {
-    return vec_.insert(pos, first, last);
+    MoveNToEnd(pos, last - first);
+    std::copy(first, last, pos);
   }
-  iterator insert(iterator pos, std::initializer_list<T> ilist) { return vec_.insert(pos, ilist); }
+  iterator insert(iterator pos, std::initializer_list<T> ilist) {
+    MoveNToEnd(pos, ilist.size());
+    std::copy(ilist.begin(), ilist.end(), pos);
+    return pos;
+  }
 
   template<class... Args>
   iterator emplace(iterator pos, Args&&... args) {
-    return vec_.emplace(pos, std::forward<Args>(args)...);
+    MoveNToEnd(pos, 1);
+    new (&*pos) T(std::forward<Args>(args)...);
+    return pos;
   }
 
-  iterator erase(iterator pos) { return vec_.erase(pos); }
-  iterator erase(iterator first, iterator last) { return vec_.erase(first, last); }
+  iterator erase(iterator pos) {
+    MoveNToBegin(pos + 1, 1);
+    return pos;
+  }
+  iterator erase(iterator first, iterator last) {
+    MoveNToBegin(last, last - first);
+    return first;
+  }
 
-  void push_back(const T& value) { return vec_.push_back(value); }
-  void push_back(T&& value) { return vec_.push_back(std::move(value)); }
+  void push_back(const T& value) { insert(end(), value); }
+  void push_back(T&& value) { insert(end(), std::move(value)); }
 
   template<class... Args>
-  void emplace_back(Args&&... args) {
-    return vec_.emplace_back(std::forward<Args>(args)...);
+    void emplace_back(Args&&... args) { insert(end(), std::forward<Args>(args)...); }
+
+  void pop_back() { erase(end() - 1); }
+
+  void resize(size_type count) { resize(count, T()); }
+  void resize(size_type count, const value_type& value) {
+    if (count == size_) { return; }
+    if (count < size_) { return erase(begin() + count); }
+    insert(end(), count - size_, value);
   }
 
-  void pop_back() { return vec_.pop_back(); }
+  void swap(fixed_vector& rhs) noexcept {
+    fixed_vetor tmp;
+    tmp = rhs;
+    rhs = *this;
+    *this = tmp;
+  }
 
-  void resize(size_type count) { return vec_.resize(count); }
-  void resize(size_type count, const value_type& value) { return vec_.resize(count, value); }
-
-  void swap(fixed_vector& other) noexcept { return vec_.swap(other.vec_); }
-
-  std::vector<T> vec_;
+ private:
+  void CheckSize() { CheckSize(size_, kMaxSize); }
+  void CheckSize(size_t size) { CHECK_LE(size, kMaxSize); }
+  void CheckPos(size_t pos) { CHECK_LT(pos, size_); }
+  void MoveNToEnd(iterator first, size_t N) {
+    CheckSize(size_ + N);
+    iterator old_end = end();
+    size_ += N;
+    iterator new_end = end();
+    std::copy_backward(first, old_end, new_end());
+  }
+  void MoveNToBegin(iterator last, size_t N) {
+    CheckPos(last - N - begin());
+    iterator old_end = end();
+    size_ -= N;
+    std::copy(last, old_end, last - N);
+  }
+  
+  size_t size_;
+  std::array<T, kMaxSize> data_;
 };
 
-template<class T, long long kMaxSize>
+template<class T, long kMaxSize>
 void swap(fixed_vector<T, kMaxSize>& lhs, fixed_vector<T, kMaxSize>& rhs) {
-  return std::swap(lhs.vec_, rhs.vec_);
+  return lhs.swap(rhs);
 }
 
-template<class T, long long kMaxSize>
+template<class T, long kMaxSize>
 bool operator==(const fixed_vector<T, kMaxSize>& lhs, const fixed_vector<T, kMaxSize>& rhs) {
-  return lhs.vec_ == rhs.vec_;
+  return std::lexicographical_compare(
+      lhs.begin(), lhs.end(), rhs.begin(), rhs.end(),
+      [](const T& lhs_elem, const T& rhs_elem) { return lhs_elem == rhs_elem; });
 }
 
-template<class T, long long kMaxSize>
+template<class T, long kMaxSize>
 bool operator!=(const fixed_vector<T, kMaxSize>& lhs, const fixed_vector<T, kMaxSize>& rhs) {
-  return lhs.vec_ != rhs.vec_;
+  return std::lexicographical_compare(
+      lhs.begin(), lhs.end(), rhs.begin(), rhs.end(),
+      [](const T& lhs_elem, const T& rhs_elem) { return lhs_elem != rhs_elem; });
 }
 
-template<class T, long long kMaxSize>
+template<class T, long kMaxSize>
 bool operator>=(const fixed_vector<T, kMaxSize>& lhs, const fixed_vector<T, kMaxSize>& rhs) {
-  return lhs.vec_ >= rhs.vec_;
+  return std::lexicographical_compare(
+      lhs.begin(), lhs.end(), rhs.begin(), rhs.end(),
+      [](const T& lhs_elem, const T& rhs_elem) { return lhs_elem >= rhs_elem; });
 }
 
-template<class T, long long kMaxSize>
+template<class T, long kMaxSize>
 bool operator>(const fixed_vector<T, kMaxSize>& lhs, const fixed_vector<T, kMaxSize>& rhs) {
-  return lhs.vec_ > rhs.vec_;
+  return std::lexicographical_compare(
+      lhs.begin(), lhs.end(), rhs.begin(), rhs.end(),
+      [](const T& lhs_elem, const T& rhs_elem) { return lhs_elem > rhs_elem; });
 }
 
-template<class T, long long kMaxSize>
+template<class T, long kMaxSize>
 bool operator<=(const fixed_vector<T, kMaxSize>& lhs, const fixed_vector<T, kMaxSize>& rhs) {
-  return lhs.vec_ <= rhs.vec_;
+  return std::lexicographical_compare(
+      lhs.begin(), lhs.end(), rhs.begin(), rhs.end(),
+      [](const T& lhs_elem, const T& rhs_elem) { return lhs_elem <= rhs_elem; });
 }
 
-template<class T, long long kMaxSize>
+template<class T, long kMaxSize>
 bool operator<(const fixed_vector<T, kMaxSize>& lhs, const fixed_vector<T, kMaxSize>& rhs) {
-  return lhs.vec_ < rhs.vec_;
+  return std::lexicographical_compare(
+      lhs.begin(), lhs.end(), rhs.begin(), rhs.end(),
+      [](const T& lhs_elem, const T& rhs_elem) { return lhs_elem < rhs_elem; });
 }
 
 #define SHAPE_MAX_AXIS_SIZE 20
