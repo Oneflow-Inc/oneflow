@@ -468,7 +468,7 @@ def assign(ref, value, begin_axis=None, end_axis=None, dtype=None, name=None):
     return remote_blob_util.RemoteBlob(out_lbi)
 
 @oneflow_export("random_perm")
-def random_perm(n_or_like, keep=None, name=None):
+def random_perm(n_or_like, name=None):
     op_conf = op_conf_util.OperatorConf()
     output_size = None
     if isinstance(n_or_like, int):
@@ -478,10 +478,6 @@ def random_perm(n_or_like, keep=None, name=None):
         output_size = n_or_like.shape[0]
         op_conf.random_perm_conf.like = n_or_like.logical_blob_name
     assert(output_size > 0)
-    if keep is not None:
-        assert(isinstance(keep, int))
-        assert(keep <= output_size)
-        op_conf.random_perm_conf.keep = keep
     setattr(
         op_conf,
         "name",

@@ -30,11 +30,6 @@ class RandomPermOp final : public Operator {
     } else if (random_perm_conf.has_upper_bound()) {
       out_size = random_perm_conf.upper_bound();
     }
-    if (random_perm_conf.has_keep()) {
-      const int64_t keep = random_perm_conf.keep();
-      CHECK_GE_OR_RETURN(out_size, keep);
-      out_size = keep;
-    }
     CHECK_GE_OR_RETURN(out_size, 0);
     out_blob_desc->mut_shape() = Shape({out_size});
     out_blob_desc->set_data_type(DataType::kInt32);

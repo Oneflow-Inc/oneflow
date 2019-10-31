@@ -1926,7 +1926,6 @@ message RandomPermOpConf {
     int64 upper_bound = 2;
   }
   required string out = 3;
-  optional int64 keep = 4;
 }
 
 message OperatorConf {

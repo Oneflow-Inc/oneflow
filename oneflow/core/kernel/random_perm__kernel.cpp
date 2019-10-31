@@ -33,8 +33,6 @@ class RandomPermKernel final : public KernelIf<device_type> {
 
 #define REGISTER_RANDOM_PERM_KERNEL(device_type)                                             \
   REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kRandomPermConf, device_type, int32_t, \
-                                        RandomPermKernel<device_type, int32_t>);             \
-  REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kRandomPermConf, device_type, int32_t, \
                                         RandomPermKernel<device_type, int32_t>);
 
 REGISTER_RANDOM_PERM_KERNEL(DeviceType::kCPU);
