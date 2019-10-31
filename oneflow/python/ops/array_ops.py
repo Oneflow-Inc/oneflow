@@ -466,26 +466,3 @@ def assign(ref, value, begin_axis=None, end_axis=None, dtype=None, name=None):
     setattr(out_lbi, "op_name", op_conf.name)
     setattr(out_lbi, "blob_name", "y")
     return remote_blob_util.RemoteBlob(out_lbi)
-
-@oneflow_export("random_perm")
-def random_perm(n_or_like, name=None):
-    op_conf = op_conf_util.OperatorConf()
-    output_size = None
-    if isinstance(n_or_like, int):
-        output_size = n_or_like
-        op_conf.random_perm_conf.upper_bound = n_or_like
-    else:
-        output_size = n_or_like.shape[0]
-        op_conf.random_perm_conf.like = n_or_like.logical_blob_name
-    assert(output_size > 0)
-    setattr(
-        op_conf,
-        "name",
-        name if name is not None else id_util.UniqueStr("RandomPerm_"),
-    )
-    op_conf.random_perm_conf.out = "out"
-    compile_context.CurJobAddOp(op_conf)
-    out_lbi = logical_blob_id_util.LogicalBlobId()
-    setattr(out_lbi, "op_name", op_conf.name)
-    setattr(out_lbi, "blob_name", "out")
-    return remote_blob_util.RemoteBlob(out_lbi)

@@ -1920,12 +1920,9 @@ message MasksCropAndResizeOpConf {
   required int32 mask_width = 5;
 }
 
-message RandomPermOpConf {
-  oneof n {
-    string like = 1;
-    int64 upper_bound = 2;
-  }
-  required string out = 3;
+message RandomPermLikeOpConf {
+  required string like = 1;
+  required string out = 2;
 }
 
 message OperatorConf {
@@ -2129,7 +2126,7 @@ message OperatorConf {
     ScalarMulOpConf scalar_mul_conf = 517;
     ReduceMaxOpConf reduce_max_conf = 518;
     ArgmaxOpConf argmax_conf = 519;
-    RandomPermOpConf random_perm_conf = 520;
+    RandomPermLikeOpConf random_perm_like_conf = 520;
 
     // detection op
     MaskrcnnPositiveNegativeSampleOpConf maskrcnn_positive_negative_sample_conf = 601;
