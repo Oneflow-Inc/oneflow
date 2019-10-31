@@ -469,6 +469,7 @@ def assign(ref, value, begin_axis=None, end_axis=None, dtype=None, name=None):
 
 @oneflow_export("random_perm")
 def random_perm(n_or_like, keep=None, name=None):
+    op_conf = op_conf_util.OperatorConf()
     output_size = None
     if isinstance(n_or_like, int):
         output_size = n_or_like
@@ -481,7 +482,6 @@ def random_perm(n_or_like, keep=None, name=None):
         assert(isinstance(keep, int))
         assert(keep <= output_size)
         op_conf.random_perm_conf.keep = keep
-    op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf,
         "name",
