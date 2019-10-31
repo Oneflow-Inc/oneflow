@@ -47,8 +47,9 @@ void DataLoadKernel::WriteDataToBlob(DeviceCtx* ctx,
       data_field->InferShape(blob_conf.shape(), blob_conf.variable_length_axes(), &shape, nullptr);
       CHECK(dense_shape == shape);
     });
-    dense_shape = dense_shape.CreateLeftExtendedShape(dense_shape.NumAxes() + 1);
-    dense_shape.Set(0, batch_data->size());
+    DimVector dense_shape_vec = dense_shape.dim_vec();
+    dense_shape_vec.insert(dense_shape_vec.begin(), batch_data->size());
+    dense_shape = Shape(dense_shape_vec);
   } else {
     LoDTree lod_tree;
     for (DataInstance& data_inst : *batch_data) {
@@ -71,7 +72,8 @@ void DataLoadKernel::WriteDataToBlob(DeviceCtx* ctx,
     }
     blob->tree_lod_mut_view().UpdateLoD(lod_tree);
   }
-  blob->dense_shape_mut_view().set_shape(dense_shape);
+  auto* dense_shape_mut_view = blob->dense_shape_mut_view();
+  if (dense_shape_mut_view) { dense_shape_mut_view->set_shape(dense_shape); }
 }
 
 REGISTER_KERNEL(OperatorConf::kDataLoadConf, DataLoadKernel);

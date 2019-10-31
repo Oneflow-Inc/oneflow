@@ -109,17 +109,18 @@ void NdarrayDataField<T>::InferShape(const ShapeProto& shape_proto, const PbRf<i
                                      Shape* shape, LoDTree* lod_tree) const {
   CHECK_NOTNULL(lod_tree);
   CHECK_EQ(var_axes.size(), lod_len_.size());
-  Shape static_shape(shape_proto);
-  CHECK_LE(lod_len_.size(), static_shape.NumAxes());
+  CHECK_LE(lod_len_.size(), shape_proto.dim_size());
 
-  std::vector<int64_t> var_axes_vec(var_axes.begin(), var_axes.end());
-  Shape shape_dense = static_shape.CreateReducedShape(var_axes_vec);
-  *shape =
-      shape_dense.RemoveOnes(std::vector<int64_t>(var_axes_vec.begin(), var_axes_vec.end() - 1));
   const auto& last_level_length_vec = lod_len_.at(lod_len_.size() - 1);
-  shape->Set(0, std::accumulate(last_level_length_vec.begin(), last_level_length_vec.end(), 0,
-                                std::plus<size_t>()));
-
+  size_t total_length = std::accumulate(last_level_length_vec.begin(), last_level_length_vec.end(),
+                                        0, std::plus<size_t>());
+  DimVector shape_vec;
+  shape_vec.push_back(total_length);
+  int last_var_axis = var_axes.Get(var_axes.size() - 1);
+  FOR_RANGE(int, i, last_var_axis + 1, shape_proto.dim_size()) {
+    shape_vec.push_back(shape_proto.dim(i));
+  }
+  *shape = Shape(shape_vec);
   BuildLodTreeFromNestedVector(lod_len_, lod_tree);
 }
 
@@ -132,7 +133,7 @@ void TensorArrayDataField<T>::InferShape(const ShapeProto& shape_proto, const Pb
   CHECK_EQ(var_axis, 0);
 
   Shape static_shape(shape_proto);
-  std::vector<int64_t> shape_vec = this->shape();
+  DimVector shape_vec = this->shape();
   int64_t length = this->ArrayLength();
   shape_vec.insert(shape_vec.begin(), length);
   *shape = Shape(shape_vec);

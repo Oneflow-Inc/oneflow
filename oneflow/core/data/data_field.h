@@ -132,8 +132,8 @@ class TensorArrayDataField : public DataField {
 
   T* data() { return data_.get(); }
   const T* data() const { return data_.get(); }
-  std::vector<int64_t>& shape() { return tensor_shape_; }
-  const std::vector<int64_t>& shape() const { return tensor_shape_; }
+  DimVector& shape() { return tensor_shape_; }
+  const DimVector& shape() const { return tensor_shape_; }
   size_t size() const { return size_; }
   size_t capacity() const { return capacity_; }
 
@@ -141,7 +141,7 @@ class TensorArrayDataField : public DataField {
   std::unique_ptr<T[]> data_;
   size_t capacity_;
   size_t size_;
-  std::vector<int64_t> tensor_shape_;
+  DimVector tensor_shape_;
 };
 
 template<DataSourceCase dsrc>
