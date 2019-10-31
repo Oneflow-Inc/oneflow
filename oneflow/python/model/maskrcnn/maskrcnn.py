@@ -7,10 +7,12 @@ from backbone import Backbone
 from rpn import RPNHead, RPNLoss, RPNProposal
 from box_head import BoxHead
 from mask_head import MaskHead
+from blob_watcher import save_blob_watched
 
+import os
+import numpy as np
 import argparse
 from datetime import datetime
-import os
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
@@ -56,6 +58,13 @@ parser.add_argument(
 parser.add_argument(
     "-mask_head_eval",
     "--mask_head_eval",
+    default=False,
+    action="store_true",
+    required=False,
+)
+parser.add_argument(
+    "-td",
+    "--train_with_real_dataset",
     default=False,
     action="store_true",
     required=False,
@@ -136,12 +145,13 @@ def maskrcnn_train(images, image_sizes, gt_boxes, gt_segms, gt_labels):
     gt_segms: (N, G, 28, 28), dynamic
     gt_labels: (N, G), dynamic
     """
-    assert images.is_dynamic == True
-    assert image_sizes.is_dynamic == False
+    assert images.is_dynamic is True
+    assert images.shape[3] == 3
+    assert image_sizes.is_dynamic is False
     assert gt_boxes.num_of_lod_levels == 2
     # if it is mask target projected, num_of_lod_levels is 0
-    if gt_segms.num_of_lod_levels is 0:
-        assert gt_segms.is_dynamic == True
+    if gt_segms.num_of_lod_levels == 0:
+        assert gt_segms.is_dynamic is True
     else:
         assert gt_segms.num_of_lod_levels == 2
     assert gt_labels.num_of_lod_levels == 2
@@ -152,6 +162,7 @@ def maskrcnn_train(images, image_sizes, gt_boxes, gt_segms, gt_labels):
     cfg.freeze()
     if terminal_args.verbose:
         print(cfg)
+
     backbone = Backbone(cfg)
     rpn_head = RPNHead(cfg)
     rpn_loss = RPNLoss(cfg)
@@ -169,7 +180,7 @@ def maskrcnn_train(images, image_sizes, gt_boxes, gt_segms, gt_labels):
     gt_boxes_list = flow.piece_slice(gt_boxes, cfg.TRAINING_CONF.IMG_PER_GPU)
     gt_labels_list = flow.piece_slice(gt_labels, cfg.TRAINING_CONF.IMG_PER_GPU)
     gt_segms_list = None
-    if gt_segms.num_of_lod_levels is 2:
+    if gt_segms.num_of_lod_levels == 2:
         gt_segms_list = flow.piece_slice(
             gt_segms, cfg.TRAINING_CONF.IMG_PER_GPU
         )
@@ -179,7 +190,7 @@ def maskrcnn_train(images, image_sizes, gt_boxes, gt_segms, gt_labels):
     for i in range(cfg.DECODER.FPN_LAYERS):
         anchors.append(
             flow.detection.anchor_generate(
-                images=flow.transpose(images, perm=[0, 2, 3, 1]),
+                images=images,
                 feature_map_stride=cfg.DECODER.FEATURE_MAP_STRIDE * pow(2, i),
                 aspect_ratios=cfg.DECODER.ASPECT_RATIOS,
                 anchor_scales=cfg.DECODER.ANCHOR_SCALES * pow(2, i),
@@ -188,7 +199,7 @@ def maskrcnn_train(images, image_sizes, gt_boxes, gt_segms, gt_labels):
 
     # Backbone
     # CHECK_POINT: fpn features
-    features = backbone.build(images)
+    features = backbone.build(flow.transpose(images, perm=[0, 3, 1, 2]))
 
     # RPN
     cls_logit_list, bbox_pred_list = rpn_head.build(features)
@@ -269,7 +280,6 @@ def maskrcnn_eval(images, image_sizes):
     return tuple(rpn_proposals) + (cls_logits,) + (box_regressions,)
 
 
-blob_watched, diff_blob_watched = {}, {}
 if terminal_args.mock_dataset:
 
     @flow.function
@@ -285,7 +295,11 @@ if terminal_args.mock_dataset:
         # TODO: distribute map only support remote blob for now, so identity is required here
         image_sizes = flow.identity(image_sizes)
         outputs = maskrcnn_train(
-            images, image_sizes, gt_boxes, gt_segms, gt_labels
+            flow.transpose(images, perm=[0, 2, 3, 1]),
+            image_sizes,
+            gt_boxes,
+            gt_segms,
+            gt_labels,
         )
         for loss in outputs:
             flow.losses.add_loss(loss)
@@ -452,8 +466,6 @@ if __name__ == "__main__":
         check_point.load(terminal_args.model_load_dir)
     if terminal_args.debug:
         if terminal_args.rcnn_eval:
-            import numpy as np
-
             rpn_proposals = np.load(
                 "/home/xfjiang/rcnn_eval_fake_data/iter_0/rpn/final_proposals_img_0.(1000, 4).npy"
             )
@@ -505,8 +517,6 @@ if __name__ == "__main__":
             print(results)
             np.save("mask_logits", results.ndarray())
         elif terminal_args.box_head_post_processor:
-            import numpy as np
-
             rpn_proposals_0 = np.load(
                 "/tmp/shared_with_jxf/box_head_post_processor/rpn_proposals_0.(1000, 4).npy"
             )
@@ -592,35 +602,8 @@ if __name__ == "__main__":
                 for loss in train_loss:
                     print_loss.append(loss.mean())
                 print(fmt_str.format(*print_loss))
-                saver_path = os.path.join("saver", "iter" + str(i), "fw")
-                diff_saver_path = os.path.join("saver", "iter" + str(i), "bw")
-                if not os.path.exists(saver_path):
-                    os.makedirs(saver_path)
-                if not os.path.exists(diff_saver_path):
-                    os.makedirs(diff_saver_path)
-                for lbn, blob_data in blob_watched.items():
-                    import numpy as np
 
-                    blob_def = blob_data["blob_def"]
-                    op_saver_path = os.path.join(saver_path, blob_def.op_name)
-                    if not os.path.exists(op_saver_path):
-                        os.makedirs(op_saver_path)
-                    np.save(
-                        os.path.join(op_saver_path, blob_def.blob_name),
-                        blob_data["blob"].ndarray(),
-                    )
-                for lbn, blob_data in diff_blob_watched.items():
-                    import numpy as np
+                save_blob_watched(i)
 
-                    blob_def = blob_data["blob_def"]
-                    op_saver_path = os.path.join(
-                        diff_saver_path, blob_def.op_name
-                    )
-                    if not os.path.exists(op_saver_path):
-                        os.makedirs(op_saver_path)
-                    np.save(
-                        os.path.join(op_saver_path, blob_def.blob_name),
-                        blob_data["blob"].ndarray(),
-                    )
                 if (i + 1) % 10 == 0:
                     save_model()
