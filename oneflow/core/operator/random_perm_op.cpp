@@ -25,6 +25,7 @@ class RandomPermOp final : public Operator {
     int64_t out_size = -1;
     if (random_perm_conf.has_like()) {
       const BlobDesc* like_blob_desc = GetBlobDesc4BnInOp("like");
+      out_blob_desc->set_is_dynamic(like_blob_desc->is_dynamic());
       out_size = like_blob_desc->shape().At(0);
     } else if (random_perm_conf.has_upper_bound()) {
       out_size = random_perm_conf.upper_bound();
