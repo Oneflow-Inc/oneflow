@@ -1,16 +1,19 @@
 #ifndef ONEFLOW_CORE_COMMON_FIXED_VECTOR_H_
 #define ONEFLOW_CORE_COMMON_FIXED_VECTOR_H_
 
-#include <vector>
+#include <array>
 #include <initializer_list>
+#include <vector>
 #include <glog/logging.h>
 
 namespace oneflow {
 
-void CheckFixedVectorSize(size_t size, size_t max_size);
-void CheckFixedVectorPos(size_t pos, size_t size);
+template<typename _InIter>
+using RequireInputIter = typename std::enable_if<
+    std::is_convertible<typename std::iterator_traits<_InIter>::iterator_category,
+                        std::input_iterator_tag>::value>::type;
 
-template<typename T, long kMaxSize>
+template<typename T, int kMaxSize>
 class fixed_vector final {
  public:
   using value_type = T;
@@ -22,15 +25,17 @@ class fixed_vector final {
   using const_pointer = const T*;
   using iterator = T*;
   using const_iterator = const T*;
-  using reverse_iterator = std::reverse_iterator<T*>;
-  using const_reverse_iterator = std::reverse_iterator<const T*>;
+  using reverse_iterator = std::reverse_iterator<iterator>;
+  using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
   fixed_vector() : size_(0) {}
   explicit fixed_vector(size_t size) { assign(size, T()); }
   explicit fixed_vector(size_t size, const T& val) { assign(size, val); }
-  template<class InputIt>
-  fixed_vector(InputIt first, InputIt last) { assign(first, last); }
-  fixed_vector(const fixed_vector& rhs)  { *this = rhs;  }
+  template<class InputIt, typename = RequireInputIter<InputIt>>
+  fixed_vector(InputIt first, InputIt last) {
+    assign(first, last);
+  }
+  fixed_vector(const fixed_vector& rhs) { *this = rhs; }
   fixed_vector(fixed_vector&& rhs) { *this = std::move(rhs); }
   fixed_vector(std::initializer_list<T> rhs) { assign(rhs); }
   ~fixed_vector() = default;
@@ -48,17 +53,18 @@ class fixed_vector final {
     return *this;
   }
   fixed_vector& operator=(std::initializer_list<T> ilist) {
+    size_ = ilist.size();
     assign(ilist);
     return *this;
   }
-  void assign(size_type count, const T& value) {
+  void assign(size_type count, const value_type& value) {
     size_ = count;
     CheckSize();
-    std::fill(begin(), begin() + size, val);
+    std::fill(begin(), begin() + size_, value);
   }
-  template<class InputIt>
+  template<class InputIt, typename = RequireInputIter<InputIt>>
   void assign(InputIt first, InputIt last) {
-    size_t i = last - first; 
+    size_ = last - first;
     CheckSize();
     std::copy(first, last, begin());
   }
@@ -115,13 +121,13 @@ class fixed_vector final {
   const_iterator end() const noexcept { return data_.data() + size_; }
   const_iterator cend() const noexcept { return data_.data() + size_; }
 
-  reverse_iterator rbegin() noexcept { return data_.data() + size_ - 1; }
-  const_reverse_iterator rbegin() const noexcept { return data_.data() + size_ - 1; }
-  const_reverse_iterator crbegin() const noexcept { return data_.data() + size_ - 1; }
+  reverse_iterator rbegin() noexcept { return reverse_iterator(end()); }
+  const_reverse_iterator rbegin() const noexcept { return const_reverse_iterator(end()); }
+  const_reverse_iterator crbegin() const noexcept { return const_reverse_iterator(cend()); }
 
-  reverse_iterator rend() noexcept { return data_.data() - 1; }
-  const_reverse_iterator rend() const noexcept { return data_.data() - 1; }
-  const_reverse_iterator crend() const noexcept { return data_.data() - 1; }
+  reverse_iterator rend() noexcept { return reverse_iterator(begin()); }
+  const_reverse_iterator rend() const noexcept { return const_reverse_iterator(begin()); }
+  const_reverse_iterator crend() const noexcept { return const_reverse_iterator(cbegin()); }
 
   bool empty() const noexcept { return size_ == 0; }
 
@@ -148,7 +154,7 @@ class fixed_vector final {
     std::fill(pos, pos + count, value);
     return pos;
   }
-  template<class InputIt>
+  template<class InputIt, typename = RequireInputIter<InputIt>>
   void insert(iterator pos, InputIt first, InputIt last) {
     MoveNToEnd(pos, last - first);
     std::copy(first, last, pos);
@@ -179,34 +185,58 @@ class fixed_vector final {
   void push_back(T&& value) { insert(end(), std::move(value)); }
 
   template<class... Args>
-    void emplace_back(Args&&... args) { insert(end(), std::forward<Args>(args)...); }
+  void emplace_back(Args&&... args) {
+    insert(end(), std::forward<Args>(args)...);
+  }
 
-  void pop_back() { erase(end() - 1); }
+  void pop_back() { --size_; }
 
   void resize(size_type count) { resize(count, T()); }
   void resize(size_type count, const value_type& value) {
     if (count == size_) { return; }
-    if (count < size_) { return erase(begin() + count); }
+    if (count < size_) {
+      erase(begin() + count, end());
+      return;
+    }
     insert(end(), count - size_, value);
   }
 
   void swap(fixed_vector& rhs) noexcept {
-    fixed_vetor tmp;
+    fixed_vector tmp;
     tmp = rhs;
     rhs = *this;
     *this = tmp;
   }
 
+  bool operator==(const fixed_vector& rhs) const {
+    if (size() != rhs.size()) { return false; }
+    return std::equal(begin(), end(), rhs.begin());
+  }
+
+  bool operator!=(const fixed_vector& rhs) const { return !(*this == rhs); }
+
+  bool operator>=(const fixed_vector& rhs) const { return !(*this < rhs); }
+
+  bool operator<=(const fixed_vector& rhs) const { return !(*this > rhs); }
+
+  bool operator>(const fixed_vector& rhs) const {
+    return std::lexicographical_compare(rhs.begin(), rhs.end(), begin(), end());
+  }
+
+  bool operator<(const fixed_vector& rhs) const {
+    return std::lexicographical_compare(begin(), end(), rhs.begin(), rhs.end());
+  }
+
  private:
-  void CheckSize() { CheckSize(size_, kMaxSize); }
-  void CheckSize(size_t size) { CHECK_LE(size, kMaxSize); }
-  void CheckPos(size_t pos) { CHECK_LT(pos, size_); }
+  void CheckSize() const { CheckSize(size_); }
+  void CheckSize(size_t size) const { CHECK_LE(size, kMaxSize); }
+  void CheckPos(size_t pos) const { CHECK_LT(pos, size_); }
   void MoveNToEnd(iterator first, size_t N) {
     CheckSize(size_ + N);
     iterator old_end = end();
     size_ += N;
     iterator new_end = end();
-    std::copy_backward(first, old_end, new_end());
+    std::copy_backward(first, old_end, new_end);
   }
   void MoveNToBegin(iterator last, size_t N) {
     CheckPos(last - N - begin());
@@ -214,7 +244,7 @@ class fixed_vector final {
     size_ -= N;
     std::copy(last, old_end, last - N);
   }
-  
+
   size_t size_;
   std::array<T, kMaxSize> data_;
 };
@@ -222,48 +252,6 @@ class fixed_vector final {
 template<class T, long kMaxSize>
 void swap(fixed_vector<T, kMaxSize>& lhs, fixed_vector<T, kMaxSize>& rhs) {
   return lhs.swap(rhs);
-}
-
-template<class T, long kMaxSize>
-bool operator==(const fixed_vector<T, kMaxSize>& lhs, const fixed_vector<T, kMaxSize>& rhs) {
-  return std::lexicographical_compare(
-      lhs.begin(), lhs.end(), rhs.begin(), rhs.end(),
-      [](const T& lhs_elem, const T& rhs_elem) { return lhs_elem == rhs_elem; });
-}
-
-template<class T, long kMaxSize>
-bool operator!=(const fixed_vector<T, kMaxSize>& lhs, const fixed_vector<T, kMaxSize>& rhs) {
-  return std::lexicographical_compare(
-      lhs.begin(), lhs.end(), rhs.begin(), rhs.end(),
-      [](const T& lhs_elem, const T& rhs_elem) { return lhs_elem != rhs_elem; });
-}
-
-template<class T, long kMaxSize>
-bool operator>=(const fixed_vector<T, kMaxSize>& lhs, const fixed_vector<T, kMaxSize>& rhs) {
-  return std::lexicographical_compare(
-      lhs.begin(), lhs.end(), rhs.begin(), rhs.end(),
-      [](const T& lhs_elem, const T& rhs_elem) { return lhs_elem >= rhs_elem; });
-}
-
-template<class T, long kMaxSize>
-bool operator>(const fixed_vector<T, kMaxSize>& lhs, const fixed_vector<T, kMaxSize>& rhs) {
-  return std::lexicographical_compare(
-      lhs.begin(), lhs.end(), rhs.begin(), rhs.end(),
-      [](const T& lhs_elem, const T& rhs_elem) { return lhs_elem > rhs_elem; });
-}
-
-template<class T, long kMaxSize>
-bool operator<=(const fixed_vector<T, kMaxSize>& lhs, const fixed_vector<T, kMaxSize>& rhs) {
-  return std::lexicographical_compare(
-      lhs.begin(), lhs.end(), rhs.begin(), rhs.end(),
-      [](const T& lhs_elem, const T& rhs_elem) { return lhs_elem <= rhs_elem; });
-}
-
-template<class T, long kMaxSize>
-bool operator<(const fixed_vector<T, kMaxSize>& lhs, const fixed_vector<T, kMaxSize>& rhs) {
-  return std::lexicographical_compare(
-      lhs.begin(), lhs.end(), rhs.begin(), rhs.end(),
-      [](const T& lhs_elem, const T& rhs_elem) { return lhs_elem < rhs_elem; });
 }
 
 #define SHAPE_MAX_AXIS_SIZE 20
