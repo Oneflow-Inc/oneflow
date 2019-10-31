@@ -14,7 +14,8 @@ class RandomPermLikeKernel final : public KernelIf<device_type> {
     Blob* out_blob = BnInOp2Blob("out");
     const Blob* like_blob = BnInOp2Blob("like");
     std::vector<int32_t> result(like_blob->shape().At(0));
-    std::mt19937 gen_;
+    std::random_device rd;
+    std::mt19937 gen_(rd());
     std::iota(result.begin(), result.end(), 0);
     std::shuffle(result.begin(), result.end(), gen_);
     MemoryCase host_mem_case;
