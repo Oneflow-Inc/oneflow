@@ -39,7 +39,8 @@ class StackKernel final : public KernelIf<device_type> {
   void ForwardDenseShape(const KernelCtx& ctx,
                          std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
     const Blob* in_0 = BnInOp2Blob(this->op_attribute().input_bns().Get(0));
-    std::vector<int64_t> shape_vec = in_0->shape().dim_vec();
+    DimVector shape_vec;
+    in_0->shape().ToDimVector(&shape_vec);
     int64_t stack_axis = this->op_conf().stack_conf().axis();
 
     FOR_RANGE(size_t, i, 1, this->op_attribute().input_bns().size()) {
@@ -53,7 +54,7 @@ class StackKernel final : public KernelIf<device_type> {
         }
       }
     }
-    BnInOp2Blob("out")->dense_shape_mut_view().set_shape(Shape(shape_vec));
+    BnInOp2Blob("out")->dense_shape_mut_view()->set_shape(Shape(std::move(shape_vec)));
   }
 };
 
@@ -79,9 +80,9 @@ class StackGradKernel final : public KernelIf<device_type> {
       const int64_t out_cols = out_blob->shape().Count(axis);
       CHECK_EQ(out_blob->shape().elem_cnt(), rows * out_cols);
       if (rows * out_cols > 0) {
-        KernelUtil<device_type, T>::CopyColsRegion(ctx.device_ctx, rows, out_cols, in_blob->dptr<T>(),
-                                                  in_col_offset, in_cols, out_blob->mut_dptr<T>(), 0,
-                                                  out_cols);
+        KernelUtil<device_type, T>::CopyColsRegion(ctx.device_ctx, rows, out_cols,
+                                                   in_blob->dptr<T>(), in_col_offset, in_cols,
+                                                   out_blob->mut_dptr<T>(), 0, out_cols);
       }
       in_col_offset += out_cols;
       CHECK_LE(in_col_offset, in_cols);

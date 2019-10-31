@@ -83,7 +83,7 @@ class LocalNonzeroOp final : public Operator {
 
       OF_CHECK_GT(out_tmp_bytes, 0) << "out_tmp_bytes should be greater than zero.";
       BlobDesc* out_tmp = GetBlobDesc4BnInOp("out_tmp");
-      out_tmp->mut_shape() = Shape(std::vector<int64_t>{static_cast<int64_t>(out_tmp_bytes)});
+      out_tmp->mut_shape() = Shape(DimVector{static_cast<int64_t>(out_tmp_bytes)});
       out_tmp->set_data_type(DataType::kChar);
     }
     return Maybe<void>::Ok();

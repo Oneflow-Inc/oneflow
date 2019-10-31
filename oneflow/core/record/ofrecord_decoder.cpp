@@ -16,7 +16,7 @@ void DoSubtractPreprocess(const SubtractPreprocessConf& conf, T* dptr, int64_t n
 
 template<typename T>
 void DoNormByChannelPreprocess(const NormByChannelPreprocessConf& conf, T* dptr,
-                               const Shape& shape) {
+                               const DenseShapeView& shape) {
   std::vector<float> std_value(conf.mean_value_size(), 1.0);
   if (conf.std_value_size() > 0) {
     CHECK_EQ(conf.mean_value_size(), conf.std_value_size());
@@ -59,7 +59,7 @@ void DoScalePreprocess(const ScalePreprocessConf& conf, T* dptr, int64_t n) {
 }  // namespace
 
 template<typename T>
-void DoPreprocess(const PreprocessConf& conf, T* dptr, const Shape& shape) {
+void DoPreprocess(const PreprocessConf& conf, T* dptr, const DenseShapeView& shape) {
   int64_t n = shape.Count(1);
   if (conf.has_subtract_conf()) {
     DoSubtractPreprocess<T>(conf.subtract_conf(), dptr, n);

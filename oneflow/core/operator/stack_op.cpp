@@ -20,7 +20,7 @@ class StackOp final : public Operator {
                              const ParallelContext* parallel_ctx) const override {
     // TODO: support dim > 0 stack (lod)
     const BlobDesc* in_0 = GetBlobDesc4BnInOp(input_bns().Get(0));
-    std::vector<int64_t> shape_vec = in_0->shape().dim_vec();
+    DimVector shape_vec = in_0->shape().dim_vec();
     int64_t stack_axis = op_conf().stack_conf().axis();
     OF_CHECK_GE(stack_axis, 0);
     OF_CHECK_LT(stack_axis, shape_vec.size());

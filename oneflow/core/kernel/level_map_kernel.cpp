@@ -32,10 +32,8 @@ class LevelMapKernel final : public KernelIf<device_type> {
     const Blob* in_blob = BnInOp2Blob("in");
     Blob* out_blob = BnInOp2Blob("out");
 
-    const auto in_dim_vec = static_cast<Shape>(in_blob->shape()).dim_vec();
-    CHECK_EQ(in_dim_vec.back(), 4);
-    int64_t num_boxes =
-        std::accumulate(in_dim_vec.begin(), in_dim_vec.end() - 1, 1, std::multiplies<int64_t>());
+    CHECK_EQ(in_blob->shape().At(in_blob->shape().NumAxes() - 1), 4);
+    int64_t num_boxes = in_blob->shape().Count(0, in_blob->shape().NumAxes() - 1);
     const auto conf = this->op_conf().level_map_conf();
     LevelMapUtil<device_type, T>::Forward(ctx.device_ctx, num_boxes, in_blob->dptr<T>(),
                                           conf.canonical_level(), conf.canonical_scale(),

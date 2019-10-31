@@ -20,7 +20,7 @@ class DynamicReshapeOp final : public Operator {
       out_shape = Shape({in->shape().Count(0)});
     } else {
       int32_t inferred_axis = -1;
-      std::vector<int64_t> tmp_dim_vec;
+      DimVector tmp_dim_vec;
       for (int32_t i = 0; i < out_shape.NumAxes(); ++i) {
         if (out_shape.At(i) == -1) {
           CHECK_EQ_OR_RETURN(-1, inferred_axis);

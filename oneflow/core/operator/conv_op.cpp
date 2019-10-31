@@ -8,7 +8,7 @@ namespace oneflow {
 
 namespace {
 
-void GetOutAndPad(const Shape& in_blob_shape, const PbMessage& conv_conf, std::vector<int64_t>* out,
+void GetOutAndPad(const DenseShapeView& in_blob_shape, const PbMessage& conv_conf, DimVector* out,
                   std::vector<int32_t>* pad_small_side, std::vector<int32_t>* pad_large_side) {
   int32_t opkernel_dim = in_blob_shape.NumAxes() - 2;
   if (out) { out->assign(opkernel_dim, 0); }
@@ -33,7 +33,7 @@ void GetOutAndPad(const Shape& in_blob_shape, const PbMessage& conv_conf, std::v
 #ifdef WITH_CUDA
 CudnnConvDesc::~CudnnConvDesc() { CudaCheck(cudnnDestroyConvolutionDescriptor(val_)); }
 
-CudnnConvDesc::CudnnConvDesc(const DataType& data_type, const Shape& in_blob_shape,
+CudnnConvDesc::CudnnConvDesc(const DataType& data_type, const DenseShapeView& in_blob_shape,
                              const PbMessage& conv_conf) {
   int32_t opkernel_dim = in_blob_shape.NumAxes() - 2;
   CudaCheck(cudnnCreateConvolutionDescriptor(&val_));
@@ -94,9 +94,9 @@ Maybe<void> ConvOp<NDims>::InferOutBlobDescs(
   CHECK_OR_RETURN(parallel_ctx->parallel_num() == 1
                   || sbp_signature->bn_in_op2sbp_parallel().at("weight").has_broadcast_parallel());
 
-  std::vector<int64_t> out;
+  DimVector out;
   GetOutAndPad(in_blob_desc->shape(), GetCustomizedConf(), &out, nullptr, nullptr);
-  std::vector<int64_t> out_shape = {data_num, filters};
+  DimVector out_shape = {data_num, filters};
   size_t dhw_offset = DhwOffset(data_format);
   for (size_t i = 0; i < NDims; ++i) {
     out_shape.insert(out_shape.begin() + dhw_offset + i, out[i]);
@@ -127,9 +127,9 @@ Maybe<void> ConvOp<NDims>::InferBlobDescs(
   CHECK_OR_RETURN(parallel_ctx->parallel_num() == 1
                   || sbp_signature->bn_in_op2sbp_parallel().at("weight").has_broadcast_parallel());
 
-  std::vector<int64_t> out;
+  DimVector out;
   GetOutAndPad(in_blob_desc->shape(), GetCustomizedConf(), &out, nullptr, nullptr);
-  std::vector<int64_t> out_shape = {data_num, filters};
+  DimVector out_shape = {data_num, filters};
   size_t dhw_offset = DhwOffset(data_format);
   for (size_t i = 0; i < NDims; ++i) {
     out_shape.insert(out_shape.begin() + dhw_offset + i, out[i]);
@@ -139,7 +139,7 @@ Maybe<void> ConvOp<NDims>::InferBlobDescs(
   out_blob_desc->mut_shape() = Shape(out_shape);
 
   // weight
-  std::vector<int64_t> weight_shape(in_blob_desc->shape().dim_vec());
+  DimVector weight_shape(in_blob_desc->shape().dim_vec());
   weight_shape[0] = filters;
   for (size_t i = 0; i < NDims; ++i) {
     weight_shape[dhw_offset + i] = GetPbRfFromCustomizedConf<int32_t>("kernel_size").Get(i);
@@ -150,7 +150,7 @@ Maybe<void> ConvOp<NDims>::InferBlobDescs(
     // bias and bias_multiplier
     CHECK_EQ_OR_RETURN(GetBlobDesc4BnInOp("bias")->shape(), Shape({filters}));
     if (DevIsGpuAndEnableCudnn() == false) {
-      std::vector<int64_t> bias_mul_shape(NDims + 1, 1);
+      DimVector bias_mul_shape(NDims + 1, 1);
       for (size_t i = 0; i != NDims; ++i) { bias_mul_shape[i + 1] = out_shape[dhw_offset + i]; }
       GetBlobDesc4BnInOp("bias_multiplier")->mut_shape() = Shape(bias_mul_shape);
     }
@@ -190,10 +190,10 @@ void ConvOp<NDims>::GenKernelConfWithoutCudnn(
   const Shape& in_shape = GetBlobDesc4BnInOp("in")->shape();
   const Shape& weight_shape = GetBlobDesc4BnInOp("weight")->shape();
   std::string data_format = GetValFromCustomizedConf<std::string>("data_format");
-  std::vector<int64_t> in = {GetInDim(in_shape, data_format, 0, NDims),
-                             GetInDim(in_shape, data_format, 1, NDims),
-                             GetInDim(in_shape, data_format, 2, NDims)};
-  std::vector<int64_t> out;
+  DimVector in = {GetInDim(in_shape, data_format, 0, NDims),
+                  GetInDim(in_shape, data_format, 1, NDims),
+                  GetInDim(in_shape, data_format, 2, NDims)};
+  DimVector out;
   std::vector<int32_t> weight =
       Get3DVecInOpConf(this->GetPbRfFromCustomizedConf<int32_t>("kernel_size"), NDims);
   std::vector<int32_t> strides =

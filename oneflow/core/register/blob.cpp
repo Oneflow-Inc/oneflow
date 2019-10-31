@@ -23,14 +23,22 @@ void Blob::Init(const MemoryCase& mem_case, const RtBlobDesc* blob_desc, char* h
   dptr_ = body_ptr;
   header_ptr_.reset(new PodPtr(blob_desc_->header_pod_desc(), header_ptr));
   if (!blob_desc_->header_is_opaque()) {
-    std::vector<int64_t> dim_vec = static_shape().dim_vec();
+    const PodPtr& dense_shape_pod_ptr = header_ptr_->Field(FieldKey::kDenseShape);
+    dense_shape_view_.reset(new DenseShapeView(dense_shape_pod_ptr));
+    if (blob_desc->is_dynamic()) {
+      dense_shape_mut_view_.reset(new DenseShapeMutView(dense_shape_pod_ptr));
+    }
+    DimVector dim_vec = static_shape().dim_vec();
     if (blob_desc->num_of_lod_levels() > 0) {
       CHECK_GT(blob_desc->num_of_lod_levels(), 1);
       int64_t dim0 = 1;
       FOR_RANGE(int64_t, i, 0, blob_desc->num_of_lod_levels()) { dim0 *= dim_vec.at(i); }
       dim_vec = {dim_vec.begin() + blob_desc->num_of_lod_levels() - 1, dim_vec.end()};
     }
-    dense_shape_mut_view().set_shape(Shape(dim_vec));
+    DenseShapeMutView(dense_shape_pod_ptr).set_shape(Shape(std::move(dim_vec)));
+  } else {
+    const DimVector& dim_vec = static_shape().dim_vec();
+    dense_shape_view_.reset(new DenseShapeView(dim_vec.data(), dim_vec.size()));
   }
 }
 
@@ -50,7 +58,7 @@ void Blob::CopyValidDataContentFrom(DeviceCtx* device_ctx, const Blob* rhs) {
 void Blob::CopyHeaderFrom(DeviceCtx* device_ctx, const Blob* rhs) {
   if (this == rhs || blob_desc().ByteSizeOfBlobHeader() == 0) { return; }
   CHECK_EQ(blob_desc().ByteSizeOfBlobHeader(), rhs->blob_desc().ByteSizeOfBlobHeader());
-  Memcpy<DeviceType::kCPU>(device_ctx, mut_header_ptr(), rhs->header_ptr(),
+  Memcpy<DeviceType::kCPU>(device_ctx, header_ptr_->ptr(), rhs->header_ptr(),
                            blob_desc().ByteSizeOfBlobHeader());
 }
 

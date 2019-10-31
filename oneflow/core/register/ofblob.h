@@ -39,7 +39,7 @@ class OfBlob final {
 
 inline void OfBlob::CopyShapeFrom(const int64_t* ptr, int64_t num_axis) const {
   CHECK_EQ(num_axis, NumAxes());
-  Shape shape(std::vector<int64_t>(ptr, ptr + num_axis));
+  Shape shape(DimVector(ptr, ptr + num_axis));
   if (blob_->blob_desc().is_dynamic() == false) {
     CHECK_EQ(shape, blob_->static_shape());
     return;
@@ -52,7 +52,7 @@ inline void OfBlob::CopyShapeFrom(const int64_t* ptr, int64_t num_axis) const {
   } else {
     CHECK_LE(shape.elem_cnt(), blob_->static_shape().elem_cnt());
   }
-  blob_->dense_shape_mut_view().set_shape(shape);
+  blob_->dense_shape_mut_view()->set_shape(shape);
 }
 
 inline void OfBlob::CopyShapeTo(int64_t* ptr, int64_t num_axis) const {

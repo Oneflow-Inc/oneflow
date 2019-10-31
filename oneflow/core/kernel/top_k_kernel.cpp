@@ -85,7 +85,7 @@ class TopKKernel final : public KernelIf<device_type> {
                           std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
     const Blob* in_blob = BnInOp2Blob("in");
     Blob* out_blob = BnInOp2Blob("out");
-    int32_t instance_size = in_blob->shape().dim_vec().back();
+    int32_t instance_size = in_blob->shape().At(in_blob->shape().NumAxes() - 1);
     int32_t instance_num = in_blob->shape().elem_cnt() / instance_size;
     // temp solution: we allow k > instance_size
     // CHECK_LE(k, instance_size)

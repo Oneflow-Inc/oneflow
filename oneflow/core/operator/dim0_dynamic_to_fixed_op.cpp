@@ -43,7 +43,7 @@ class Dim0DynamicToFixedOp final : public Operator {
     mask_blob_desc->set_is_dynamic(false);
     mask_blob_desc->set_data_type(DataType::kInt32);
     CHECK_GT_OR_RETURN(dim0_val, 0);
-    mask_blob_desc->mut_shape() = Shape(std::vector<int64_t>{dim0_val});
+    mask_blob_desc->mut_shape() = Shape(DimVector{dim0_val});
     return Maybe<void>::Ok();
   }
 

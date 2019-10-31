@@ -1,19 +1,26 @@
+#include "oneflow/core/common/shape.h"
+#include "oneflow/core/common/shape.pb.h"
+#include "oneflow/core/register/pod_ptr.h"
 #include "oneflow/core/register/dense_shape_view.h"
 
 namespace oneflow {
 
-DenseShapeViewBase::DenseShapeViewBase(PodPtr dense_shape_ptr) {
-  ptr_ = dense_shape_ptr.MutTensorPtr<int64_t>();
+DenseShapeView::DenseShapeView(const PodPtr& dense_shape_ptr) {
+  ptr_ = dense_shape_ptr.TensorPtr<int64_t>();
   CHECK_NOTNULL(ptr_);
   const TensorPodDesc& dense_shape_desc = dense_shape_ptr.pod_desc().Cast<TensorPodDesc>();
   CHECK_EQ(1, dense_shape_desc.shape().NumAxes());
   num_axes_ = dense_shape_desc.shape().At(0);
 }
 
-DenseShapeView::operator Shape() const {
-  std::vector<int64_t> dim_vec;
-  FOR_RANGE(int, i, 0, NumAxes()) { dim_vec.push_back(At(i)); }
-  return Shape(dim_vec);
+DenseShapeView::DenseShapeView(const ShapeProto& shape_proto) {
+  ptr_ = shape_proto.dim().data();
+  num_axes_ = shape_proto.dim_size();
+}
+
+DenseShapeView::DenseShapeView(const Shape& shape) {
+  ptr_ = shape.dim_vec().data();
+  num_axes_ = shape.dim_vec().size();
 }
 
 bool DenseShapeView::operator==(const DenseShapeView& rhs) const {
@@ -54,14 +61,52 @@ std::string DenseShapeView::ToString() const {
   return ss.str();
 }
 
+void DenseShapeView::ToDimVector(DimVector* dim_vec) const {
+  dim_vec->resize(num_axes_);
+  dim_vec->assign(ptr_, ptr_ + num_axes_);
+}
+
+void DenseShapeView::ToShape(Shape* shape) const {
+  DimVector dim_vec;
+  ToDimVector(&dim_vec);
+  *shape = Shape(std::move(dim_vec));
+}
+
 std::ostream& operator<<(std::ostream& out, const DenseShapeView& shape) {
   out << shape.ToString();
   return out;
 }
 
+DenseShapeMutView::DenseShapeMutView(const PodPtr& dense_shape_ptr) {
+  ptr_ = PodPtr(dense_shape_ptr).MutTensorPtr<int64_t>();
+  CHECK_NOTNULL(ptr_);
+  const TensorPodDesc& dense_shape_desc = dense_shape_ptr.pod_desc().Cast<TensorPodDesc>();
+  CHECK_EQ(1, dense_shape_desc.shape().NumAxes());
+  num_axes_ = dense_shape_desc.shape().At(0);
+}
+
+void DenseShapeMutView::Set(int64_t axis, int64_t val) {
+  CHECK_GE(axis, 0);
+  CHECK_LT(axis, num_axes_);
+  ptr_[axis] = val;
+}
+
 void DenseShapeMutView::set_shape(const Shape& shape) {
   CHECK_EQ(num_axes_, shape.NumAxes());
-  for (size_t i = 0; i < shape.NumAxes(); ++i) { ptr_[i] = shape.At(i); }
+  std::copy(shape.dim_vec().data(), shape.dim_vec().data() + shape.NumAxes(), ptr_);
+}
+
+void DenseShapeMutView::set_shape(const DenseShapeView& shape) {
+  CHECK_EQ(num_axes_, shape.NumAxes());
+  std::copy(shape.ptr(), shape.ptr() + shape.NumAxes(), ptr_);
+}
+
+void DenseShapeMutView::LeftOnesStrippedAssign(const Shape& shape) {
+  CHECK_LE(num_axes_, shape.NumAxes());
+  size_t left_ones_len = shape.NumAxes() - num_axes_;
+  FOR_RANGE(int, i, 0, left_ones_len) { CHECK_EQ(shape.At(i), 1LL); }
+  const int64_t* const_ptr = shape.dim_vec().data() + left_ones_len;
+  std::copy(const_ptr, const_ptr + num_axes_, ptr_);
 }
 
 }  // namespace oneflow

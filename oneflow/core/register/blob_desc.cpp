@@ -21,7 +21,7 @@ std::unique_ptr<BlobDesc> ComputePackedBlobDesc(
     *opaque_header_pod_desc.MutStructField(NewFieldId(pair.first)) = rt_blob_desc.header_pod_desc();
   }
   if (lbi2blob_desc.size() > 1) {
-    ret.reset(new BlobDesc(Shape(std::vector<int64_t>{body_byte_size}), DataType::kChar));
+    ret.reset(new BlobDesc(Shape(DimVector{body_byte_size}), DataType::kChar));
     ret->SetOpaqueHeader(opaque_header_pod_desc);
   }
   return ret;
@@ -86,13 +86,12 @@ void BlobDesc::ToProto(BlobDescProto* proto) const {
       max_reserved_size_for_lod += num_of_lod_levels_;
       header.AddField(
           FieldKey::kLoD,
-          TensorPodDesc(Shape(std::vector<int64_t>{max_reserved_size_for_lod + num_of_lod_levels_}),
+          TensorPodDesc(Shape(DimVector{max_reserved_size_for_lod + num_of_lod_levels_}),
                         DataType::kInt64));
       dense_shape_num_axes = shape().NumAxes() - num_of_lod_levels_ + 1;  // 1 for tiled lod dims
     }
-    header.AddField(
-        FieldKey::kDenseShape,
-        TensorPodDesc(Shape(std::vector<int64_t>{dense_shape_num_axes}), DataType::kInt64));
+    header.AddField(FieldKey::kDenseShape,
+                    TensorPodDesc(Shape(DimVector{dense_shape_num_axes}), DataType::kInt64));
     header.ToProto(proto->mutable_header());
     proto->set_header_is_opaque(false);
   }

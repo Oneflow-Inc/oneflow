@@ -19,7 +19,7 @@ int64_t GetGatherAxis(const GatherOpConf& conf, const BlobDesc* in_blob_desc) {
 }  // namespace
 
 Shape GatherGetOutShape(const Shape& in, const Shape& indices, const int64_t axis) {
-  std::vector<int64_t> dim_vec;
+  DimVector dim_vec;
   dim_vec.insert(dim_vec.end(), in.dim_vec().cbegin(), in.dim_vec().cbegin() + axis);
   dim_vec.insert(dim_vec.end(), indices.dim_vec().cbegin(), indices.dim_vec().cend());
   dim_vec.insert(dim_vec.end(), in.dim_vec().cbegin() + axis + 1, in.dim_vec().end());

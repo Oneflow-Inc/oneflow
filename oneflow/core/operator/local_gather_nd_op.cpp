@@ -36,7 +36,7 @@ class LocalGatherNdOp final : public Operator {
 
     int64_t segm_dims = indices->shape().At(indices->shape().NumAxes() - 1);
     OF_CHECK_LE(segm_dims, in->shape().NumAxes());
-    std::vector<int64_t> shape_vec = indices->shape().dim_vec();
+    DimVector shape_vec = indices->shape().dim_vec();
     shape_vec.pop_back();
     FOR_RANGE(int64_t, i, segm_dims, in->shape().NumAxes()) {
       shape_vec.push_back(in->shape().At(i));

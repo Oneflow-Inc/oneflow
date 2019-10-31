@@ -42,7 +42,7 @@ Maybe<void> LayerNormOp::InferBlobDescs(
   *GetBlobDesc4BnInOp("out") = *in;
   const LayerNormOpConf& conf = op_conf().layer_norm_conf();
   const int64_t begin_params_axis = ShiftNegativeAxisIfNeed(in->shape(), conf.begin_params_axis());
-  std::vector<int64_t> param_shape_dim_vec;
+  DimVector param_shape_dim_vec;
   param_shape_dim_vec.insert(param_shape_dim_vec.end(),
                              in->shape().dim_vec().cbegin() + begin_params_axis,
                              in->shape().dim_vec().cend());
@@ -64,7 +64,7 @@ Maybe<void> LayerNormOp::InferBlobDescs(
     *GetBlobDesc4BnInOp("normalized") = *in;
   }
   const int64_t begin_norm_axis = ShiftNegativeAxisIfNeed(in->shape(), conf.begin_norm_axis());
-  std::vector<int64_t> bn_param_shape_dim_vec;
+  DimVector bn_param_shape_dim_vec;
   bn_param_shape_dim_vec.insert(bn_param_shape_dim_vec.end(), in->shape().dim_vec().cbegin(),
                                 in->shape().dim_vec().cbegin() + begin_norm_axis);
   const Shape bn_param_shape(bn_param_shape_dim_vec);

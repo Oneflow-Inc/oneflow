@@ -33,8 +33,8 @@ class MaskrcnnPositiveNegativeSampleKernel final : public KernelIf<device_type> 
                num_pos * sizeof(T), sampled_pos_inds_blob->mem_case(), pos_inds_blob->mem_case());
     AutoMemcpy(ctx.device_ctx, sampled_neg_inds_blob->mut_dptr<T>(), neg_inds_blob->dptr<T>(),
                num_neg * sizeof(T), sampled_neg_inds_blob->mem_case(), neg_inds_blob->mem_case());
-    sampled_pos_inds_blob->dense_shape_mut_view().set_shape(Shape({num_pos}));
-    sampled_neg_inds_blob->dense_shape_mut_view().set_shape(Shape({num_neg}));
+    sampled_pos_inds_blob->dense_shape_mut_view()->set_shape(Shape({num_pos}));
+    sampled_neg_inds_blob->dense_shape_mut_view()->set_shape(Shape({num_neg}));
   }
 };
 

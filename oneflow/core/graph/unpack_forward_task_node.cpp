@@ -28,7 +28,7 @@ void UnpackForwardCompTaskNode::BuildExecGphAndRegst() {
 void UnpackForwardCompTaskNode::InferProducedDataRegstTimeShape() {
   std::shared_ptr<RegstDesc> in_regst = GetSoleConsumedRegst("in");
   std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out");
-  std::vector<int64_t> time_shape_dim_vec(in_regst->data_regst_time_shape()->dim_vec());
+  DimVector time_shape_dim_vec(in_regst->data_regst_time_shape()->dim_vec());
 
   const UnpackOp* op = dynamic_cast<UnpackOp*>(logical_node()->SoleOp().get());
   CHECK_NOTNULL(op);

@@ -17,9 +17,9 @@ class PieceSliceKernel final : public KernelIf<device_type> {
     const int32_t out_size = this->op_conf().piece_slice_conf().out_size();
     CHECK_EQ(in_blob->length_lod_view().GetLength(0, 0), out_size);
     FOR_RANGE(size_t, i, 0, out_size) {
-      Shape shape = static_cast<Shape>(in_blob->dense_shape_view());
-      shape.Set(0, in_blob->length_lod_view().GetLength(1, i));
-      BnInOp2Blob("out_" + std::to_string(i))->dense_shape_mut_view().set_shape(shape);
+      auto* dense_shape_mut_view = BnInOp2Blob("out_" + std::to_string(i))->dense_shape_mut_view();
+      dense_shape_mut_view->set_shape(in_blob->shape());
+      dense_shape_mut_view->Set(0, in_blob->length_lod_view().GetLength(1, i));
     }
   }
   void ForwardDataContent(const KernelCtx& ctx,
