@@ -7,7 +7,7 @@ class BlobDump(object):
         assert (
             str(type(blob))
             == "<class 'oneflow.python.framework.remote_blob.RemoteBlob'>"
-        )
+        ), "type of blob is {}".format(type(blob))
         self.blob_ = blob
 
     def __call__(self, dump_diff=False):
