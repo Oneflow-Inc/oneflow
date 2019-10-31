@@ -6,6 +6,7 @@
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/xrt/compilation_cache.h"
 #include "oneflow/xrt/executable.h"
+#include "oneflow/xrt/graph_compiler.h"
 #include "oneflow/xrt/parameter.h"
 #include "oneflow/xrt/types.h"
 

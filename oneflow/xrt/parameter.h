@@ -8,20 +8,45 @@
 namespace oneflow {
 namespace xrt {
 
+inline int SizeOf(const DataType &data_type) {
+  switch (data_type) {
+    case DataType::kChar:
+    case DataType::kInt8:
+    case DataType::kUInt8:
+      return 1;
+    case DataType::kFloat16:
+      return 2;
+    case DataType::kFloat:
+    case DataType::kInt32:
+      return 4;
+    case DataType::kDouble:
+    case DataType::kInt64:
+      return 8;
+    default: {
+      LOG(FATAL) << "Invalid data type " << data_type;
+      return 0;
+    }
+  }
+}
+
 class Parameter {
  public:
   Parameter() = default;
   virtual ~Parameter() = default;
 
   Parameter(void *data, const Shape &shape, const DataType &data_type)
-      : storage_(data), shape_(shape), data_type_(data_type) {}
+      : storage_(data), shape_(shape), data_type_(data_type) {
+    byte_size_ = shape.elem_cnt() * SizeOf(data_type);
+  }
 
   Parameter(const std::string &name, void *data, const Shape &shape,
             const DataType &data_type)
       : storage_(data),
         shape_(shape),
         data_type_(data_type),
-        parameter_name_(name) {}
+        parameter_name_(name) {
+    byte_size_ = shape.elem_cnt() * SizeOf(data_type);
+  }
 
   void set_data(const void *data) { storage_ = const_cast<void *>(data); }
 
@@ -40,13 +65,18 @@ class Parameter {
   const std::string &name() const { return parameter_name_; }
   const Shape &shape() const { return shape_; }
   const DataType &data_type() const { return data_type_; }
+  int64_t byte_size() const { return byte_size_; }
 
   void set_name(const std::string &name) { parameter_name_ = name; }
   void set_shape(const Shape &shape) { shape_ = shape; }
   void set_data_type(const DataType &data_type) { data_type_ = data_type; }
+  void set_byte_size(int64_t byte_size) { byte_size_ = byte_size; }
 
  private:
   void *storage_ = nullptr;
+
+  int64_t byte_size_ = 0;
+
   Shape shape_;
   DataType data_type_;
   std::string parameter_name_{""};

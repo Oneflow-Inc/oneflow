@@ -57,7 +57,6 @@ xrt::Executable *XrtLaunchKernel<device_type>::BuildExecutable(
 
     xrt::XrtEngine engine = xrt::XLA;
     xrt::XrtDevice device = xrt::DeviceTypeToXrtDevice(device_type);
-    int32_t device_ordinal = 0;
     xrt::GraphCompiler compiler(this->op_conf().name(), engine, device,
                                 device_ordinal);
     auto result =

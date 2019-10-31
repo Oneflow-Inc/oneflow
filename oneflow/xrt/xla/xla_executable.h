@@ -10,10 +10,12 @@ namespace mola {
 
 class XlaExecutable : public Executable {
  public:
-  XlaExecutable(const std::vector<xla::Shape> &input_shapes,
+  XlaExecutable(const XrtDevice &device,
+                const std::vector<xla::Shape> &input_shapes,
                 const xla::Shape &output_shape,
                 std::unique_ptr<xla::LocalExecutable> &executable)
       : Executable(XrtEngine::XLA),
+        device_(device),
         input_shapes_(input_shapes),
         output_shape_(output_shape),
         executable_(std::move(executable)) {}
@@ -22,15 +24,15 @@ class XlaExecutable : public Executable {
 
   bool Run(const std::vector<Parameter> &inputs,
            const ExecutableRunOptions &run_options,
-           bool block_until_done = true) override {
-    // TODO(hjchen2)
-    return true;
-  }
+           bool block_until_done = true) override;
 
  private:
+  XrtDevice device_;
+
   std::vector<xla::Shape> input_shapes_;
   // The output shape is always a tuple.
   xla::Shape output_shape_;
+
   std::unique_ptr<xla::LocalExecutable> executable_;
 };
 
@@ -38,4 +40,4 @@ class XlaExecutable : public Executable {
 }  // namespace xrt
 }  // namespace oneflow
 
-#endif  // ONEFLOW_XRT_EXECUTABLE_H_
+#endif  // ONEFLOW_XRT_XLA_XLA_EXECUTABLE_H_
