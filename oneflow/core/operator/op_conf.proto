@@ -1920,6 +1920,15 @@ message MasksCropAndResizeOpConf {
   required int32 mask_width = 5;
 }
 
+message RandomPermOpConf {
+  oneof n {
+    string like = 1;
+    int64 upper_bound = 2;
+  }
+  required string out = 3;
+  optional int64 keep = 4;
+}
+
 message OperatorConf {
   required string name = 1;
   optional bool trainable = 3 [default = true];
