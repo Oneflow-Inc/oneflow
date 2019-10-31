@@ -1383,16 +1383,10 @@ message WhereOpConf {
   required string out = 4;
 }
 
-message WhereXGradOpConf {
-  required string condition = 1;
-  required string out_diff = 2;
-  required string x_diff = 3;
-}
-
-message WhereYGradOpConf {
-  required string condition = 1;
-  required string out_diff = 2;
-  required string y_diff = 3;
+message ZerosLikeOpConf {
+  required string like = 1;
+  required string y = 2;
+  optional DataType data_type = 3;
 }
 
 message KeepHeaderOnlyOpConf {
@@ -1681,9 +1675,8 @@ message OperatorConf {
     GatherMs0OpConf gather_ms0_conf = 305;
     GatherMs0GradOpConf gather_ms0_grad_conf = 306;
     WhereOpConf where_conf = 307;
-    WhereXGradOpConf where_x_grad_conf = 308;
-    WhereYGradOpConf where_y_grad_conf = 309;
-    L2NormalizeGradOpConf l2_normalize_grad_conf = 310;
+    ZerosLikeOpConf zeros_like_conf = 308;
+    L2NormalizeGradOpConf l2_normalize_grad_conf = 309;
 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;

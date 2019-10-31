@@ -174,6 +174,11 @@ message NcclTupleBroadcastConf {
   required ParallelContext parallel_ctx = 1;
 }
 
+message WhereKernelConf {
+  required DataType cond_type = 1;
+  required DataType value_type = 2;
+}
+
 message KernelConf {
   required OpAttribute op_attribute = 1;
   required bool is_forward = 2;
@@ -221,5 +226,6 @@ message KernelConf {
     GatherMs0GradKernelConf gather_ms0_grad_conf = 415;
     NcclTupleReduceConf nccl_tuple_reduce_conf = 416;
     NcclTupleBroadcastConf nccl_tuple_broadcast_conf = 417;
+    WhereKernelConf where_conf = 418;
   }
 }
