@@ -8,8 +8,6 @@ namespace oneflow {
 class ShapeProto;
 class Shape;
 class PodPtr;
-template<typename T, long long kMaxSize>
-class fixed_vector;
 
 class DenseShapeView final {
  public:
