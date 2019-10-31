@@ -67,8 +67,8 @@ void ConvKernel<DeviceType::kGPU, float16>::DoForwardDataContent(
         this->template GetValFromCustomizedOpConf<std::string>("data_format");
     CudnnTensorDesc in_desc(GetDataType<float16>::value, in_blob->shape(), data_format);
     CudnnTensorDesc out_desc(GetDataType<float16>::value, out_blob->shape(), data_format);
-    CudnnConvDesc conv_desc(GetConvDescDataType(GetDataType<float16>::value),
-                            in_blob->shape(), this->GetCustomizedOpConf());
+    CudnnConvDesc conv_desc(GetConvDescDataType(GetDataType<float16>::value), in_blob->shape(),
+                            this->GetCustomizedOpConf());
     CudaCheck(cudnnConvolutionForward(
         device_ctx->cudnn_handle(), CudnnSPOnePtr<float16>(), in_desc.Get(),
         in_blob->dptr<float16>(), this->filter_desc_->Get(), weight_blob->dptr<float16>(),
@@ -202,8 +202,8 @@ void ConvKernel<DeviceType::kGPU, T>::DoForwardDataContentWithCudnn(
         this->template GetValFromCustomizedOpConf<std::string>("data_format");
     CudnnTensorDesc in_desc(GetDataType<T>::value, in_blob->shape(), data_format);
     CudnnTensorDesc out_desc(GetDataType<T>::value, out_blob->shape(), data_format);
-    CudnnConvDesc conv_desc(GetConvDescDataType(GetDataType<T>::value),
-                            in_blob->shape(), this->GetCustomizedOpConf());
+    CudnnConvDesc conv_desc(GetConvDescDataType(GetDataType<T>::value), in_blob->shape(),
+                            this->GetCustomizedOpConf());
     CudaCheck(cudnnConvolutionForward(
         device_ctx->cudnn_handle(), CudnnSPOnePtr<T>(), in_desc.Get(), in_blob->dptr<T>(),
         this->filter_desc_->Get(), weight_blob->dptr<T>(), conv_desc.Get(),
