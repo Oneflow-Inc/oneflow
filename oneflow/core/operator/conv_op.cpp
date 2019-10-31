@@ -262,6 +262,8 @@ void ConvOp<NDims>::GenKernelConfWithCudnn(
     SetValInCustomizedKernelConf(
         kernel_conf, "cudnn_bwd_data_algo",
         static_cast<int32_t>(conv_op_ctx->cudnn_conv_algo_ctx.bwd_data_algo));
+    SetValInCustomizedKernelConf(kernel_conf, "need_infer_cudnn_desc_each_forward",
+                                 GetBlobDesc4BnInOp("out")->is_dynamic());
   }
 #endif  // WITH_CUDA
 }

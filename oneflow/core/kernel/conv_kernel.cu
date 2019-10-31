@@ -5,18 +5,23 @@ namespace oneflow {
 
 void ConvKernel<DeviceType::kGPU, float16>::VirtualKernelInit() {
   CHECK(this->EnableCudnn());
-  DenseShapeView in_shape(this->GetConvKernelConf().in());
-  DenseShapeView out_shape(this->GetConvKernelConf().out());
-  DenseShapeView weight_shape(this->GetConvKernelConf().weight());
-
   const std::string& data_format =
       this->template GetValFromCustomizedOpConf<std::string>("data_format");
-  this->in_desc_.reset(new CudnnTensorDesc(GetDataType<float16>::value, in_shape, data_format));
-  this->out_desc_.reset(new CudnnTensorDesc(GetDataType<float16>::value, out_shape, data_format));
+
+  // if need to update in/out CudnnTensorDesc and CudnnConvDesc for each forward,
+  // there is no need to new CudnnTensorDesc here
+  if (!this->GetConvKernelConf().need_infer_cudnn_desc_each_forward()) {
+    DenseShapeView in_shape(this->GetConvKernelConf().in());
+    DenseShapeView out_shape(this->GetConvKernelConf().out());
+    this->in_desc_.reset(new CudnnTensorDesc(GetDataType<float16>::value, in_shape, data_format));
+    this->out_desc_.reset(new CudnnTensorDesc(GetDataType<float16>::value, out_shape, data_format));
+    this->conv_desc_.reset(new CudnnConvDesc(GetConvDescDataType(GetDataType<float16>::value),
+                                             in_shape, this->GetCustomizedOpConf()));
+  }
+
+  DenseShapeView weight_shape(this->GetConvKernelConf().weight());
   this->filter_desc_.reset(
       new CudnnFilterDesc(GetDataType<float16>::value, weight_shape, data_format));
-  this->conv_desc_.reset(new CudnnConvDesc(GetConvDescDataType(GetDataType<float16>::value),
-                                           in_shape, this->GetCustomizedOpConf()));
 
   if (this->template GetValFromCustomizedOpConf<bool>("use_bias")) {
     int32_t filters = DenseShapeView(this->GetConvKernelConf().bias()).At(0);
@@ -56,13 +61,30 @@ void ConvKernel<DeviceType::kGPU, float16>::DoForwardDataContent(
   Blob* fw_cudnn_buf = BnInOp2Blob("fw_cudnn_buf");
   void* fw_cudnn_buf_ptr = fw_cudnn_buf ? fw_cudnn_buf->mut_dptr() : nullptr;
   size_t fw_cudnn_buf_size = fw_cudnn_buf ? fw_cudnn_buf->ByteSizeOfBlobBody() : 0;
-  CudaCheck(cudnnConvolutionForward(
-      device_ctx->cudnn_handle(), CudnnSPOnePtr<float16>(), this->in_desc_->Get(),
-      in_blob->dptr<float16>(), this->filter_desc_->Get(), weight_blob->dptr<float16>(),
-      this->conv_desc_->Get(),
-      static_cast<cudnnConvolutionFwdAlgo_t>(this->GetConvKernelConf().cudnn_fwd_algo()),
-      fw_cudnn_buf_ptr, fw_cudnn_buf_size, CudnnSPZeroPtr<float16>(), this->out_desc_->Get(),
-      out_blob->mut_dptr<float16>()));
+
+  if (this->GetConvKernelConf().need_infer_cudnn_desc_each_forward()) {
+    const std::string& data_format =
+        this->template GetValFromCustomizedOpConf<std::string>("data_format");
+    CudnnTensorDesc in_desc(GetDataType<float16>::value, in_blob->shape(), data_format);
+    CudnnTensorDesc out_desc(GetDataType<float16>::value, out_blob->shape(), data_format);
+    CudnnConvDesc conv_desc(GetConvDescDataType(GetDataType<float16>::value), in_blob->shape(),
+                            this->GetCustomizedOpConf());
+    CudaCheck(cudnnConvolutionForward(
+        device_ctx->cudnn_handle(), CudnnSPOnePtr<float16>(), in_desc.Get(),
+        in_blob->dptr<float16>(), this->filter_desc_->Get(), weight_blob->dptr<float16>(),
+        conv_desc.Get(),
+        static_cast<cudnnConvolutionFwdAlgo_t>(this->GetConvKernelConf().cudnn_fwd_algo()),
+        fw_cudnn_buf_ptr, fw_cudnn_buf_size, CudnnSPZeroPtr<float16>(), out_desc.Get(),
+        out_blob->mut_dptr<float16>()));
+  } else {
+    CudaCheck(cudnnConvolutionForward(
+        device_ctx->cudnn_handle(), CudnnSPOnePtr<float16>(), this->in_desc_->Get(),
+        in_blob->dptr<float16>(), this->filter_desc_->Get(), weight_blob->dptr<float16>(),
+        this->conv_desc_->Get(),
+        static_cast<cudnnConvolutionFwdAlgo_t>(this->GetConvKernelConf().cudnn_fwd_algo()),
+        fw_cudnn_buf_ptr, fw_cudnn_buf_size, CudnnSPZeroPtr<float16>(), this->out_desc_->Get(),
+        out_blob->mut_dptr<float16>()));
+  }
 
   if (this->template GetValFromCustomizedOpConf<bool>("use_bias")) {
     const Blob* bias = BnInOp2Blob("bias");
@@ -122,17 +144,20 @@ void ConvKernel<DeviceType::kGPU, T>::BiasBackward(
 
 template<typename T>
 void ConvKernel<DeviceType::kGPU, T>::KernelInitWithCudnn() {
-  DenseShapeView in_shape(this->GetConvKernelConf().in());
-  DenseShapeView out_shape(this->GetConvKernelConf().out());
-  DenseShapeView weight_shape(this->GetConvKernelConf().weight());
-
   const std::string& data_format =
       this->template GetValFromCustomizedOpConf<std::string>("data_format");
-  this->in_desc_.reset(new CudnnTensorDesc(GetDataType<T>::value, in_shape, data_format));
-  this->out_desc_.reset(new CudnnTensorDesc(GetDataType<T>::value, out_shape, data_format));
+  // if need to update in/out CudnnTensorDesc and CudnnConvDesc for each forward,
+  // there is no need to new CudnnTensorDesc here
+  if (!this->GetConvKernelConf().need_infer_cudnn_desc_each_forward()) {
+    DenseShapeView in_shape(this->GetConvKernelConf().in());
+    DenseShapeView out_shape(this->GetConvKernelConf().out());
+    this->in_desc_.reset(new CudnnTensorDesc(GetDataType<T>::value, in_shape, data_format));
+    this->out_desc_.reset(new CudnnTensorDesc(GetDataType<T>::value, out_shape, data_format));
+    this->conv_desc_.reset(new CudnnConvDesc(GetConvDescDataType(GetDataType<T>::value), in_shape,
+                                             this->GetCustomizedOpConf()));
+  }
+  DenseShapeView weight_shape(this->GetConvKernelConf().weight());
   this->filter_desc_.reset(new CudnnFilterDesc(GetDataType<T>::value, weight_shape, data_format));
-  this->conv_desc_.reset(new CudnnConvDesc(GetConvDescDataType(GetDataType<T>::value), in_shape,
-                                           this->GetCustomizedOpConf()));
 
   if (this->template GetValFromCustomizedOpConf<bool>("use_bias")) {
     int32_t filters = DenseShapeView(this->GetConvKernelConf().bias()).At(0);
@@ -171,12 +196,28 @@ void ConvKernel<DeviceType::kGPU, T>::DoForwardDataContentWithCudnn(
   Blob* fw_cudnn_buf = BnInOp2Blob("fw_cudnn_buf");
   void* fw_cudnn_buf_ptr = fw_cudnn_buf ? fw_cudnn_buf->mut_dptr() : nullptr;
   size_t fw_cudnn_buf_size = fw_cudnn_buf ? fw_cudnn_buf->ByteSizeOfBlobBody() : 0;
-  CudaCheck(cudnnConvolutionForward(
-      device_ctx->cudnn_handle(), CudnnSPOnePtr<T>(), this->in_desc_->Get(), in_blob->dptr<T>(),
-      this->filter_desc_->Get(), weight_blob->dptr<T>(), this->conv_desc_->Get(),
-      static_cast<cudnnConvolutionFwdAlgo_t>(this->GetConvKernelConf().cudnn_fwd_algo()),
-      fw_cudnn_buf_ptr, fw_cudnn_buf_size, CudnnSPZeroPtr<T>(), this->out_desc_->Get(),
-      out_blob->mut_dptr<T>()));
+
+  if (this->GetConvKernelConf().need_infer_cudnn_desc_each_forward()) {
+    const std::string& data_format =
+        this->template GetValFromCustomizedOpConf<std::string>("data_format");
+    CudnnTensorDesc in_desc(GetDataType<T>::value, in_blob->shape(), data_format);
+    CudnnTensorDesc out_desc(GetDataType<T>::value, out_blob->shape(), data_format);
+    CudnnConvDesc conv_desc(GetConvDescDataType(GetDataType<T>::value), in_blob->shape(),
+                            this->GetCustomizedOpConf());
+    CudaCheck(cudnnConvolutionForward(
+        device_ctx->cudnn_handle(), CudnnSPOnePtr<T>(), in_desc.Get(), in_blob->dptr<T>(),
+        this->filter_desc_->Get(), weight_blob->dptr<T>(), conv_desc.Get(),
+        static_cast<cudnnConvolutionFwdAlgo_t>(this->GetConvKernelConf().cudnn_fwd_algo()),
+        fw_cudnn_buf_ptr, fw_cudnn_buf_size, CudnnSPZeroPtr<T>(), out_desc.Get(),
+        out_blob->mut_dptr<T>()));
+  } else {
+    CudaCheck(cudnnConvolutionForward(
+        device_ctx->cudnn_handle(), CudnnSPOnePtr<T>(), this->in_desc_->Get(), in_blob->dptr<T>(),
+        this->filter_desc_->Get(), weight_blob->dptr<T>(), this->conv_desc_->Get(),
+        static_cast<cudnnConvolutionFwdAlgo_t>(this->GetConvKernelConf().cudnn_fwd_algo()),
+        fw_cudnn_buf_ptr, fw_cudnn_buf_size, CudnnSPZeroPtr<T>(), this->out_desc_->Get(),
+        out_blob->mut_dptr<T>()));
+  }
 
   if (this->template GetValFromCustomizedOpConf<bool>("use_bias")) {
     const Blob* bias = BnInOp2Blob("bias");
