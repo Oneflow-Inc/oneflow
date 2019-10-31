@@ -1,5 +1,4 @@
 #include "oneflow/core/operator/operator.h"
-#include "oneflow/core/operator/radix_sort_op_util.h"
 
 namespace oneflow {
 
