@@ -21,6 +21,7 @@ message ConvKernelConf {
   optional int32 cudnn_fwd_algo = 10 [default = -1];
   optional int32 cudnn_bwd_filter_algo = 11 [default = -1];
   optional int32 cudnn_bwd_data_algo = 12 [default = -1];
+  optional bool need_infer_cudnn_desc_each_forward = 13 [default = false];
 }
 
 message DropoutKernelConf {
