@@ -11,11 +11,22 @@ class RandomPermKernel final : public KernelIf<device_type> {
 
   void ForwardDataContent(const KernelCtx& ctx,
                           std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
+    const RandomPermOpConf& random_perm_conf = this->op_conf().random_perm_conf();
     Blob* out_blob = BnInOp2Blob("out");
-    int32_t* result;
+    int64_t upper_bound = -1;
+    if (random_perm_conf.has_like()) {
+      const Blob* like_blob = BnInOp2Blob("like");
+      upper_bound = like_blob->shape().At(0);
+    } else if (random_perm_conf.has_upper_bound()) {
+      upper_bound = random_perm_conf.upper_bound();
+    }
+    CHECK_GT(upper_bound, 0);
+    std::vector<int32_t> result(upper_bound);
+    std::iota(result.begin(), result.end(), 0);
+    random_shuffle(result.begin(), result.end());
     MemoryCase host_mem_case;
     host_mem_case.mutable_host_mem();
-    AutoMemcpy(ctx.device_ctx, out_blob->mut_dptr(), result, out_blob->ByteSizeOfBlobBody(),
+    AutoMemcpy(ctx.device_ctx, out_blob->mut_dptr(), result.data(), out_blob->ByteSizeOfBlobBody(),
                out_blob->mem_case(), host_mem_case);
   }
 };
