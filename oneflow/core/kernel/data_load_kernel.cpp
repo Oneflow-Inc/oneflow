@@ -5,21 +5,6 @@
 
 namespace oneflow {
 
-namespace {
-
-void PreprocessBlob(const PreprocessConf& prep_conf, Blob* blob) {
-#define MAKE_ENTRY(T, TVal)                                                 \
-  {GetHashKey(TVal), [](const PreprocessConf& prep_conf, Blob* blob) {      \
-     DoPreprocess<T>(prep_conf, blob->mut_dptr<T>(), blob->static_shape()); \
-   }},
-  static const HashMap<std::string, std::function<void(const PreprocessConf&, Blob*)>>
-      preprocessers = {OF_PP_FOR_EACH_TUPLE(MAKE_ENTRY, ARITHMETIC_DATA_TYPE_SEQ)};
-#undef MAKE_ENTRY
-  preprocessers.at(GetHashKey(blob->data_type()))(prep_conf, blob);
-}
-
-}  // namespace
-
 void DataLoadKernel::VirtualKernelInit() {
   data_loader_.reset(
       new data::DataLoader(this->op_conf().data_load_conf(), this->kernel_conf().data_load_conf()));
@@ -87,11 +72,6 @@ void DataLoadKernel::WriteDataToBlob(DeviceCtx* ctx,
     blob->tree_lod_mut_view().UpdateLoD(lod_tree);
   }
   blob->dense_shape_mut_view().set_shape(dense_shape);
-  // TODO: implement all preprocessor with transforma or batch transform
-  // some of preprocessor could be implemented by op
-  for (const auto& preprocess_conf : blob_conf.preprocess()) {
-    PreprocessBlob(preprocess_conf, blob);
-  }
 }
 
 REGISTER_KERNEL(OperatorConf::kDataLoadConf, DataLoadKernel);
