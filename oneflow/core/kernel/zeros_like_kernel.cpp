@@ -1,5 +1,4 @@
 #include "oneflow/core/kernel/kernel.h"
-//#include "oneflow/core/kernel/kernel_context.h"
 
 namespace oneflow {
 
