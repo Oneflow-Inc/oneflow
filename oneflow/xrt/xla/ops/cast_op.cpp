@@ -23,7 +23,7 @@ class CastOp : public OpKernel {
   }
 };
 
-REGISTER_XLA_OP_COMPILER(Cast, CastOp).Finalize();
+REGISTER_XLA_OP_KERNEL(Cast, CastOp).Finalize();
 
 }  // namespace mola
 }  // namespace xrt

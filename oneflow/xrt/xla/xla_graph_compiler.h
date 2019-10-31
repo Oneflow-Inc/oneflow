@@ -45,8 +45,7 @@ class XlaGraphCompiler : public GraphCompiler::Impl {
  private:
   bool use_meta_data_ = true;
 
-  xla::LocalClient *client_;
-  xla::XlaBuilder *builder_;
+  std::shared_ptr<xla::XlaBuilder> builder_;
 
   util::Map<std::string, Argument> arguments_;
 

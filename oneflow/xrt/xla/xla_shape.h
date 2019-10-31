@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_CORE_COMPILER_OF2XLA_XLA_SHAPE_H_
-#define ONEFLOW_CORE_COMPILER_OF2XLA_XLA_SHAPE_H_
+#ifndef ONEFLOW_XRT_XLA_XLA_SHAPE_H_
+#define ONEFLOW_XRT_XLA_XLA_SHAPE_H_
 
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/common/shape.h"
@@ -23,4 +23,4 @@ Shape SliceShape(const Shape &shape, size_t start_dim, size_t end_dim);
 }  // namespace xrt
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_COMPILER_OF2XLA_XLA_SHAPE_H_
+#endif  // ONEFLOW_XRT_XLA_XLA_SHAPE_H_

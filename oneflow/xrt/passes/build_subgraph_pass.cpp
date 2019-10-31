@@ -89,7 +89,7 @@ void BuildSubGraphPass::Run(XrtGraph *graph, const XrtPassOptions &options) {
       XrtNode *node = sub_graph->AddNode(n->param());
       node->set_name(n->name());
       node->set_type(n->type());
-      node->set_backend(n->backend());
+      node->set_device(n->device());
       sub_graph_nodes[n->unique_id()] = node;
 
       // Rebuild inputs if the end node of input edges has been changed,
@@ -117,7 +117,7 @@ void BuildSubGraphPass::CreateLaunchNodes(
   for (XrtNode *node : graph->Nodes()) {
     int64_t cluster_id = ClusterId(node);
     if (cluster_id != -1) {
-      cluster_ids.emplace(cluster_id, node->backend());
+      cluster_ids.emplace(cluster_id, node->device());
     }
   }
 
@@ -125,7 +125,7 @@ void BuildSubGraphPass::CreateLaunchNodes(
     int64_t cluster_id = pair.first;
     XrtNode *launch_node = graph->AddNode();
     launch_node->SetAttr("cluster_id", cluster_id);
-    launch_node->set_backend(pair.second);
+    launch_node->set_device(pair.second);
     launch_node->set_type(_XrtLaunchOpType);
 
     // Assign the `name_` of the node, and it will be used to find the
@@ -167,7 +167,7 @@ void BuildSubGraphPass::DivideArgumentNodes(XrtGraph *sub_graph) {
         XrtNode *argument = sub_graph->AddNode();
         argument->set_type(_ArgumentOpType);
         argument->set_name(absl::StrCat(_XrtOutArgumentPrefix, argument_id++));
-        argument->set_backend(node->backend());
+        argument->set_device(node->device());
         argument->AddInEdge(edge);
         edge->SetEndNode(argument);
         divided_args.emplace(arg, argument);
@@ -189,7 +189,7 @@ void BuildSubGraphPass::DivideArgumentNodes(XrtGraph *sub_graph) {
         XrtNode *argument = sub_graph->AddNode();
         argument->set_type(_ArgumentOpType);
         argument->set_name(absl::StrCat(_XrtInArgumentPrefix, argument_id++));
-        argument->set_backend(node->backend());
+        argument->set_device(node->device());
         argument->AddOutEdge(edge);
         edge->SetStartNode(argument);
         divided_args.emplace(arg, argument);
@@ -213,7 +213,7 @@ void BuildSubGraphPass::RebuildSubgraphInputs(
       if (sub_graph_nodes->count(start_id) == 0) {
         argument = sub_graph->AddNode();
         argument->set_type(_ArgumentOpType);
-        argument->set_backend(e->start()->backend());
+        argument->set_device(e->start()->device());
         sub_graph_nodes->emplace(start_id, argument);
       } else {
         argument = (*sub_graph_nodes)[start_id];
@@ -240,7 +240,7 @@ void BuildSubGraphPass::RebuildSubgraphOutputs(
       if (sub_graph_nodes->count(start_id) == 0) {
         argument = sub_graph->AddNode();
         argument->set_type(_ArgumentOpType);
-        argument->set_backend(e->start()->backend());
+        argument->set_device(e->start()->device());
         sub_graph_nodes->emplace(start_id, argument);
       } else {
         argument = (*sub_graph_nodes)[start_id];

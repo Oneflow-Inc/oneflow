@@ -46,7 +46,7 @@ class OpContext {
     // XlaBuilder to compile the XlaComputation
     xla::XlaBuilder *builder;
 
-    XrtDevice backend;
+    XrtDevice device;
     // Config proto related to the operator
     const PbMessage *message;
     // Input oprands
@@ -60,7 +60,7 @@ class OpContext {
 
   virtual ~OpContext() = default;
 
-  const XrtDevice &backend() const { return param_.backend; }
+  const XrtDevice &device() const { return param_.device; }
   // Return XlaBuilder
   xla::XlaBuilder *builder() const;
 

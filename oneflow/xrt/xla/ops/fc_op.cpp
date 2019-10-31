@@ -20,7 +20,7 @@ class FullyConnectedOp : public OpKernel {
   }
 };
 
-REGISTER_XLA_OP_COMPILER(FullyConnected, FullyConnectedOp).Finalize();
+REGISTER_XLA_OP_KERNEL(FullyConnected, FullyConnectedOp).Finalize();
 
 }  // namespace mola
 }  // namespace xrt

@@ -59,7 +59,7 @@ class ReduceSumOp : public ReduceOp {
   }
 };
 
-REGISTER_XLA_OP_COMPILER(ReduceSum, ReduceSumOp).Finalize();
+REGISTER_XLA_OP_KERNEL(ReduceSum, ReduceSumOp).Finalize();
 
 }  // namespace mola
 }  // namespace xrt

@@ -196,7 +196,7 @@ void FoldSubgraphBuilder::buildXrtLaunchAttribute(
     } else {
       auto *argument_proto = launch_attr->add_argument();
       argument_proto->set_name(node->name());
-      DeviceType device_type = BackendToDeviceType(node->backend());
+      DeviceType device_type = XrtDeviceToDeviceType(node->device());
       argument_proto->set_device_type(device_type);
       // Usually one argument node has either inputs or outputs
       CHECK(node->in_edges().size() == 0 || node->out_edges().size() == 0);
@@ -262,7 +262,7 @@ void FoldSubgraphBuilder::BuildXrtLaunchOps() {
     // Add xrt launch operator
     OperatorConf op_conf;
     op_conf.set_name(node->name());
-    DeviceType device_type = BackendToDeviceType(node->backend());
+    DeviceType device_type = XrtDeviceToDeviceType(node->device());
     op_conf.set_device_type(device_type);
 
     XrtLaunchOpConf *launch_conf = op_conf.mutable_xrt_launch_conf();
@@ -374,7 +374,7 @@ void FoldSubgraphBuilder::FixupInOutBlobNames() {
       } else {
         // TODO(hjchen2) Current implementation is ugly
         auto *op_conf = builder_->MutableOpConf4OpName(end->name());
-        DeviceType device_type = xrt::BackendToDeviceType(end->backend());
+        DeviceType device_type = xrt::XrtDeviceToDeviceType(end->device());
         std::shared_ptr<Operator> op =
             ConstructOp(*op_conf, device_type, &GlobalJobDesc());
         for (const std::string &input : op->input_bns()) {

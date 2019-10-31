@@ -1,6 +1,7 @@
 #include "oneflow/xrt/xla/xla_graph_compiler.h"
 #include "oneflow/xrt/xla/ops/op_context.h"
 #include "oneflow/xrt/xla/ops/op_kernel.h"
+#include "oneflow/xrt/xla/xla_resource_manager.h"
 #include "oneflow/xrt/xla/xla_shape.h"
 #include "tensorflow/compiler/xla/shape_util.h"
 
@@ -54,12 +55,12 @@ void XlaGraphCompiler::SetupContextParam(
 
   size_t num_outputs = input_output_args.size() - input_ops.size();
   CHECK_GE(num_outputs, 0) << "Output num should not less than 0.";
-  context_param->backend = node->backend();
-  context_param->builder = builder_;
+  context_param->device = node->device();
+  context_param->builder = builder_.get();
   context_param->message = message;
+  context_param->arguments = std::move(input_output_args);
   context_param->inputs = std::move(input_ops);
   context_param->num_outputs = num_outputs;
-  context_param->arguments = std::move(input_output_args);
 }
 
 void XlaGraphCompiler::BuildComputation(
@@ -79,7 +80,7 @@ void XlaGraphCompiler::BuildComputation(
       builder_->SetOpMetadata(metadata);
     }
     // Do compile, lower the operator computation to HLO instructions.
-    auto op_kernel = BuildOpKernel(node->backend(), node->type());
+    auto op_kernel = BuildOpKernel(node->device(), node->type());
     OpContext op_context(param);
     op_kernel->Compile(&op_context);
 
@@ -99,9 +100,9 @@ void XlaGraphCompiler::BuildComputation(
   std::vector<xla::XlaOp> return_vals(return_args.size());
   for (int i = 0; i < return_vals.size(); ++i) {
     const Argument &arg = return_args[i];
-    return_vals[i] = all_outputs.at(arg).AsXlaOp(builder_);
+    return_vals[i] = all_outputs.at(arg).AsXlaOp(builder_.get());
   }
-  xla::Tuple(builder_, return_vals);
+  xla::Tuple(builder_.get(), return_vals);
 
   xla::StatusOr<xla::XlaComputation> computation_status = builder_->Build();
   CHECK(computation_status.ok());
@@ -128,12 +129,15 @@ std::shared_ptr<Executable> XlaGraphCompiler::BuildExecutable(
     argument_layouts[i] = &xla_input_shapes[i];
   }
 
+  xla::LocalClient *client =
+      resource_mgr::GetOrCreateLocalClient(this->device_);
+
   xla::ExecutableBuildOptions build_options;
-  build_options.set_device_ordinal(0);
+  build_options.set_device_ordinal(this->device_ordinal_);
   build_options.set_result_layout(xla_output_shape);
   MOLA_CHECK_AND_ASSIGN(
       auto executable,
-      client_->Compile(computation, argument_layouts, build_options));
+      client->Compile(computation, argument_layouts, build_options));
   return std::make_shared<XlaExecutable>(xla_input_shapes, xla_output_shape,
                                          executable);
 }
@@ -148,7 +152,7 @@ void XlaGraphCompiler::BuildEntryParameters(
     input_shapes->push_back(xla_shape);
     // Treat all inputs as xla parameters.
     xla::XlaOp handle =
-        xla::Parameter(builder_, i, xla_shape, absl::StrCat("arg", i));
+        xla::Parameter(builder_.get(), i, xla_shape, absl::StrCat("arg", i));
     Argument arg = ArgFromParameter(entry_params[i]);
     arguments_.emplace(entry_params[i].name(), arg);
     entry_operands_.emplace(arg, Operand::XlaOp(handle));
@@ -167,6 +171,8 @@ std::shared_ptr<Executable> XlaGraphCompiler::Compile(
     const XrtGraph *graph, const std::vector<Parameter> &entry_params,
     const std::vector<Parameter> &return_params,
     const std::vector<InputOutputAlias> &aliases) {
+  builder_ = std::make_shared<xla::XlaBuilder>(
+      absl::StrCat("XlaBuilder_", this->name_));
   for (const InputOutputAlias &alias : aliases) {
     builder_->SetUpAlias(MakeShapeIndex(alias.output_index()),
                          alias.param_number(),
@@ -186,7 +192,7 @@ std::shared_ptr<Executable> XlaGraphCompiler::Compile(
   return BuildExecutable(input_shapes, output_shape, computation);
 }
 
-REGISTER_XRT_GRAPH_COMPILER(XrtEngine::XLA, XlaGraphCompiler);
+REGISTER_GRAPH_COMPILER(XrtEngine::XLA, XlaGraphCompiler);
 
 }  // namespace mola
 }  // namespace xrt

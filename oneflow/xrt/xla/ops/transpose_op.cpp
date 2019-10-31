@@ -37,7 +37,7 @@ class TransposeOp : public OpKernel {
   }
 };
 
-REGISTER_XLA_OP_COMPILER(Transpose, TransposeOp).Finalize();
+REGISTER_XLA_OP_KERNEL(Transpose, TransposeOp).Finalize();
 
 }  // namespace mola
 }  // namespace xrt

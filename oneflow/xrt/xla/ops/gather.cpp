@@ -162,8 +162,8 @@ class BatchGatherOp : public GatherOp {
   }
 };
 
-REGISTER_XLA_OP_COMPILER(Gather, GatherOp).Finalize();
-REGISTER_XLA_OP_COMPILER(BatchGather, BatchGatherOp).Finalize();
+REGISTER_XLA_OP_KERNEL(Gather, GatherOp).Finalize();
+REGISTER_XLA_OP_KERNEL(BatchGather, BatchGatherOp).Finalize();
 
 class GatherGradOp : public OpKernel {
  public:
@@ -202,7 +202,7 @@ class GatherGradOp : public OpKernel {
   }
 };
 
-REGISTER_XLA_OP_COMPILER(GatherGrad, GatherGradOp).Finalize();
+REGISTER_XLA_OP_KERNEL(GatherGrad, GatherGradOp).Finalize();
 
 class UnsortedSegmentSumOp : public OpKernel {
  public:
@@ -264,8 +264,8 @@ class UnsortedBatchSegmentSumOp : public UnsortedSegmentSumOp {
   }
 };
 
-REGISTER_XLA_OP_COMPILER(UnsortedSegmentSum, UnsortedSegmentSumOp).Finalize();
-REGISTER_XLA_OP_COMPILER(UnsortedBatchSegmentSum, UnsortedBatchSegmentSumOp)
+REGISTER_XLA_OP_KERNEL(UnsortedSegmentSum, UnsortedSegmentSumOp).Finalize();
+REGISTER_XLA_OP_KERNEL(UnsortedBatchSegmentSum, UnsortedBatchSegmentSumOp)
     .Finalize();
 
 }  // namespace mola

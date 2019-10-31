@@ -12,7 +12,7 @@ extern const std::string _XrtInArgumentPrefix;
 extern const std::string _XrtOutArgumentPrefix;
 
 bool XrtNode::IsCompiled(const XrtEngine &engine) const {
-  auto field = std::make_pair(engine, backend_);
+  auto field = std::make_pair(engine, device_);
   auto *rm = util::RegistryManager<decltype(field)>::Global();
   return rm->Get(field)->IsRegistered(type_);
 }

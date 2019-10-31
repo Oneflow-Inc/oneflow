@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_CORE_COMPILER_OF2XLA_XLA_HELPERS_H_
-#define ONEFLOW_CORE_COMPILER_OF2XLA_XLA_HELPERS_H_
+#ifndef ONEFLOW_XRT_XLA_XLA_HELPERS_H_
+#define ONEFLOW_XRT_XLA_XLA_HELPERS_H_
 
 #include "oneflow/xrt/xla/xla_data_type.h"
 #include "oneflow/xrt/xla/xla_shape.h"
@@ -48,4 +48,4 @@ xla::XlaComputation CreateDivFunc(DataType data_type);
 }  // namespace xrt
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_COMPILER_OF2XLA_XLA_HELPERS_H_
+#endif  // ONEFLOW_XRT_XLA_XLA_HELPERS_H_

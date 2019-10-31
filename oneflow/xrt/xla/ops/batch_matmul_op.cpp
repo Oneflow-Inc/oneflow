@@ -43,7 +43,7 @@ class BatchMatMulOp : public OpKernel {
   }
 };
 
-REGISTER_XLA_OP_COMPILER(BatchMatMul, BatchMatMulOp).Finalize();
+REGISTER_XLA_OP_KERNEL(BatchMatMul, BatchMatMulOp).Finalize();
 
 }  // namespace mola
 }  // namespace xrt

@@ -62,7 +62,7 @@ void AdamOptimizerOp::Compile(OpContext *ctx) {
   // ctx->SetOutput("out", weight - learning_rate * gradient);
 }
 
-REGISTER_XLA_OP_COMPILER(AdamOptimizer, AdamOptimizerOp)
+REGISTER_XLA_OP_KERNEL(AdamOptimizer, AdamOptimizerOp)
     .SetMutableVariables({"weight", "m", "v"})
     .Finalize();
 

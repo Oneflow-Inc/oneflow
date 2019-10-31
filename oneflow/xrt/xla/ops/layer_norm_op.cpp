@@ -172,9 +172,9 @@ void LayerNormParamGradOp::Compile(OpContext *ctx) {
   }
 }
 
-REGISTER_XLA_OP_COMPILER(LayerNorm, LayerNormOp).Finalize();
-REGISTER_XLA_OP_COMPILER(LayerNormParamGrad, LayerNormParamGradOp).Finalize();
-REGISTER_XLA_OP_COMPILER(LayerNormGrad, LayerNormGradOp).Finalize();
+REGISTER_XLA_OP_KERNEL(LayerNorm, LayerNormOp).Finalize();
+REGISTER_XLA_OP_KERNEL(LayerNormParamGrad, LayerNormParamGradOp).Finalize();
+REGISTER_XLA_OP_KERNEL(LayerNormGrad, LayerNormGradOp).Finalize();
 
 }  // namespace mola
 }  // namespace xrt

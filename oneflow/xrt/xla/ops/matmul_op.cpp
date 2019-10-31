@@ -15,7 +15,7 @@ class MatMulOp : public OpKernel {
     CHECK_EQ(a_shape.NumAxes(), b_shape.NumAxes());
 
     if (a_shape.NumAxes() > 2) {
-      auto batch_matmul_kernel = BuildOpKernel(ctx->backend(), "BatchMatMul");
+      auto batch_matmul_kernel = BuildOpKernel(ctx->device(), "BatchMatMul");
       batch_matmul_kernel->Compile(ctx);
       return;
     }
@@ -32,7 +32,7 @@ class MatMulOp : public OpKernel {
   }
 };
 
-REGISTER_XLA_OP_COMPILER(MatMul, MatMulOp).Finalize();
+REGISTER_XLA_OP_KERNEL(MatMul, MatMulOp).Finalize();
 
 }  // namespace mola
 }  // namespace xrt

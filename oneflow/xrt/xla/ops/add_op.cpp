@@ -24,7 +24,7 @@ class AddOp : public OpKernel {
   }
 };
 
-REGISTER_XLA_OP_COMPILER(Add, AddOp).Finalize();
+REGISTER_XLA_OP_KERNEL(Add, AddOp).Finalize();
 
 }  // namespace mola
 }  // namespace xrt

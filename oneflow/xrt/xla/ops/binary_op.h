@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_CORE_COMPILER_OF2XLA_OPS_BINARY_OP_H_
-#define ONEFLOW_CORE_COMPILER_OF2XLA_OPS_BINARY_OP_H_
+#ifndef ONEFLOW_XRT_XLA_OPS_BINARY_OP_H_
+#define ONEFLOW_XRT_XLA_OPS_BINARY_OP_H_
 
 #include "tensorflow/compiler/xla/client/xla_builder.h"
 
@@ -26,4 +26,4 @@ OFXLA_DECLARE_BINARY_OP(Div);
 }  // namespace xrt
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_COMPILER_OF2XLA_OPS_BINARY_OP_H_
+#endif  // ONEFLOW_XRT_XLA_OPS_BINARY_OP_H_

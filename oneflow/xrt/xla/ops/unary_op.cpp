@@ -18,8 +18,8 @@ class ApplyUnaryOp : public OpKernel {
   }
 };
 
-REGISTER_XLA_OP_COMPILER(Sigmoid, ApplyUnaryOp<op::Logistic>).Finalize();
-REGISTER_XLA_OP_COMPILER(Tanh, ApplyUnaryOp<op::Tanh>).Finalize();
+REGISTER_XLA_OP_KERNEL(Sigmoid, ApplyUnaryOp<op::Logistic>).Finalize();
+REGISTER_XLA_OP_KERNEL(Tanh, ApplyUnaryOp<op::Tanh>).Finalize();
 
 struct Gelu {
   xla::XlaOp operator()(const xla::XlaOp &x) {
@@ -33,13 +33,13 @@ struct Gelu {
   }
 };
 
-REGISTER_XLA_OP_COMPILER(Gelu, ApplyUnaryOp<Gelu>).Finalize();
+REGISTER_XLA_OP_KERNEL(Gelu, ApplyUnaryOp<Gelu>).Finalize();
 
 struct Identity {
   xla::XlaOp operator()(const xla::XlaOp &x) { return x; }
 };
 
-// REGISTER_XLA_OP_COMPILER(Identity, ApplyUnaryOp<Identity>).Finalize();
+// REGISTER_XLA_OP_KERNEL(Identity, ApplyUnaryOp<Identity>).Finalize();
 
 }  // namespace mola
 }  // namespace xrt

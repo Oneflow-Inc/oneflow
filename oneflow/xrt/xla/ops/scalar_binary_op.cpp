@@ -33,9 +33,9 @@ class ScalarBinaryOp : public OpKernel {
   }
 };
 
-REGISTER_XLA_OP_COMPILER(ScalarAdd, ScalarBinaryOp<op::Add>).Finalize();
-REGISTER_XLA_OP_COMPILER(ScalarMul, ScalarBinaryOp<op::Mul>).Finalize();
-REGISTER_XLA_OP_COMPILER(ScalarDiv, ScalarBinaryOp<op::Div>).Finalize();
+REGISTER_XLA_OP_KERNEL(ScalarAdd, ScalarBinaryOp<op::Add>).Finalize();
+REGISTER_XLA_OP_KERNEL(ScalarMul, ScalarBinaryOp<op::Mul>).Finalize();
+REGISTER_XLA_OP_KERNEL(ScalarDiv, ScalarBinaryOp<op::Div>).Finalize();
 
 }  // namespace mola
 }  // namespace xrt

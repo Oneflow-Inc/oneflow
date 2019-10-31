@@ -66,7 +66,7 @@ std::string ExtractOpTypeAsString(const OperatorConf &conf) {
   }
 }
 
-XrtDevice DeviceTypeToBackend(const DeviceType &device_type) {
+XrtDevice DeviceTypeToXrtDevice(const DeviceType &device_type) {
   switch (device_type) {
     case DeviceType::kGPU:
       return XrtDevice::GPU_CUDA;
@@ -74,18 +74,19 @@ XrtDevice DeviceTypeToBackend(const DeviceType &device_type) {
       return XrtDevice::CPU_X86;
     default:
       DLOG(WARNING) << "Meet invalid device type (" << device_type
-                    << "). Use the default backend instead.";
+                    << "). Use the default xrt device instead.";
       return XrtDevice::CPU_X86;
   }
 }
 
-DeviceType BackendToDeviceType(const XrtDevice &backend) {
-  if (backend == XrtDevice::GPU_CUDA) {
+DeviceType XrtDeviceToDeviceType(const XrtDevice &device) {
+  if (device == XrtDevice::GPU_CUDA) {
     return DeviceType::kGPU;
-  } else if (backend == XrtDevice::CPU_X86) {
+  } else if (device == XrtDevice::CPU_X86) {
     return DeviceType::kCPU;
   } else {
-    LOG(FATAL) << "Can not convert backend (" << backend << ") to device type.";
+    LOG(FATAL) << "Can not convert xrt device (" << device
+               << ") to device type.";
     return DeviceType::kCPU;
   }
 }
@@ -167,13 +168,13 @@ std::shared_ptr<XrtGraph> SetupXrtGraphEdges(
 void SetupXrtNode(XrtNode *node, const OperatorConf &node_conf) {
   node->set_name(node_conf.name());
   node->set_type(ExtractOpTypeAsString(node_conf));
-  node->set_backend(DeviceTypeToBackend(node_conf.device_type()));
+  node->set_device(DeviceTypeToXrtDevice(node_conf.device_type()));
 }
 
 void SetupXrtNode(XrtNode *node, const XrtLaunchOpConf::Argument &arg_conf) {
   node->set_name(arg_conf.name());
   node->set_type(_ArgumentOpType);
-  node->set_backend(DeviceTypeToBackend(arg_conf.device_type()));
+  node->set_device(DeviceTypeToXrtDevice(arg_conf.device_type()));
 }
 
 std::shared_ptr<XrtGraph> BuildXrtGraph(const XrtLaunchOpConf &launch_conf,

@@ -35,7 +35,7 @@ void SoftmaxOp::Compile(OpContext *ctx) {
   ctx->SetOutput("out", xla::Div(y, sum, batch_dims));
 }
 
-REGISTER_XLA_OP_COMPILER(Softmax, SoftmaxOp).Finalize();
+REGISTER_XLA_OP_KERNEL(Softmax, SoftmaxOp).Finalize();
 
 class SoftmaxGradOp : public OpKernel {
  public:
@@ -60,7 +60,7 @@ void SoftmaxGradOp::Compile(OpContext *ctx) {
   ctx->SetOutput("dx", y * xla::Sub(dy, sum, batch_dims));
 }
 
-REGISTER_XLA_OP_COMPILER(SoftmaxGrad, SoftmaxGradOp).Finalize();
+REGISTER_XLA_OP_KERNEL(SoftmaxGrad, SoftmaxGradOp).Finalize();
 
 }  // namespace mola
 }  // namespace xrt

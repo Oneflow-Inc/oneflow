@@ -29,23 +29,23 @@ class XrtEdge : public util::AttributeMap {
   void SetArgument(const Argument &arg) { arg_ = arg; }
 
   int64_t unique_id() const { return unique_id_; }
+
   bool IsControlEdge() const { return !arg_.initialized(); }
 
- private:
   friend class XrtGraph;
 
+ protected:
   XrtEdge() = default;
   XrtEdge(const XrtNode *start, const XrtNode *end)
       : start_(const_cast<XrtNode *>(start)),
         end_(const_cast<XrtNode *>(end)) {}
 
-  virtual ~XrtEdge() {}
+  virtual ~XrtEdge() = default;
 
-  XrtNode *start_;
-  XrtNode *end_;
-  //
+ protected:
+  XrtNode *start_ = nullptr;
+  XrtNode *end_ = nullptr;
   Argument arg_;
-
   int64_t unique_id_ = -1;
 };
 
@@ -65,14 +65,14 @@ class XrtNode : public util::AttributeMap {
   void ClearOutEdges() { out_edges_.clear(); };
 
   int64_t unique_id() const { return unique_id_; }
-  const XrtDevice &backend() const { return backend_; }
+  const XrtDevice &device() const { return device_; }
   const std::string &type() const { return type_; }
   const std::string &name() const { return name_; }
   const PbMessage &param() const { return *param_; }
 
   XrtGraph *sub_graph() const { return sub_graph_; }
 
-  void set_backend(const XrtDevice &backend) { backend_ = backend; }
+  void set_device(const XrtDevice &device) { device_ = device; }
   void set_type(const std::string &type) { type_ = type; }
   void set_name(const std::string &name) { name_ = name; }
 
@@ -84,15 +84,16 @@ class XrtNode : public util::AttributeMap {
   bool IsOutArgumentNode() const;
   bool IsReachable(const XrtNode &dst_node) const;
 
- protected:
   friend class XrtGraph;
 
+ protected:
   XrtNode() = default;
   // XrtNode only can be created by XrtGraph
   explicit XrtNode(const PbMessage &param)
       : param_(&param), unique_id_(-1), sub_graph_(nullptr) {}
   virtual ~XrtNode() {}
 
+ protected:
   util::List<XrtEdge *> in_edges_;
   util::List<XrtEdge *> out_edges_;
 
@@ -100,7 +101,7 @@ class XrtNode : public util::AttributeMap {
   // Each node has a unique id related to it's index in the graph's nodes
   int64_t unique_id_ = -1;
   // Backend device such as X86, CUDA, ARM and so on
-  XrtDevice backend_;
+  XrtDevice device_;
   // String type, such as "Conv2d", "Matmul" or other else
   std::string type_;
   // String name

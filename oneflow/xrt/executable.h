@@ -34,6 +34,8 @@ struct ExecutableRunOptions {
   // It will use the default computation stream if `stream` is not set.
   void *stream = nullptr;
 
+  int32_t device_ordinal = -1;
+
   // Set host threads num.
   int32_t host_num_threads = -1;
 

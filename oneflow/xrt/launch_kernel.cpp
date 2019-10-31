@@ -54,8 +54,12 @@ xrt::Executable *XrtLaunchKernel<device_type>::BuildExecutable(
       xrt::RunXrtPass("UpdateArgMetaData", graph.get(), options,
                       &this->job_desc());
     }
+
     xrt::XrtEngine engine = xrt::XLA;
-    xrt::GraphCompiler compiler(engine);
+    xrt::XrtDevice device = xrt::DeviceTypeToXrtDevice(device_type);
+    int32_t device_ordinal = 0;
+    xrt::GraphCompiler compiler(this->op_conf().name(), engine, device,
+                                device_ordinal);
     auto result =
         compiler.Compile(graph.get(), entry_params, return_params, aliases);
     // Record new compilation result

@@ -27,7 +27,11 @@ class ArgMetaDataUpdater {
       if (node->IsArgumentNode()) {
         const auto &conf =
             *dynamic_cast<const XrtLaunchOpConf::Argument *>(&node->param());
-        keys = {{conf.in(), "in"}, {conf.out(), "out"}};
+        if (node->IsInArgumentNode()) {
+          keys = {{conf.out(), "out"}};
+        } else {
+          keys = {{conf.in(), "in"}};
+        }
       } else {
         std::shared_ptr<Operator> op = BuildOp(node);
         for (const std::string &bn : op->input_bns()) {
@@ -68,7 +72,7 @@ class ArgMetaDataUpdater {
   }
 
   std::shared_ptr<Operator> BuildOp(const XrtNode *node) {
-    DeviceType device_type = BackendToDeviceType(node->backend());
+    DeviceType device_type = XrtDeviceToDeviceType(node->device());
     const auto &conf = *dynamic_cast<const OperatorConf *>(&node->param());
     return ConstructOp(conf, device_type, job_desc_);
   }

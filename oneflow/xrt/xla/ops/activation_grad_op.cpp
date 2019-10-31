@@ -21,7 +21,7 @@ class TanhGradOp : public OpKernel {
     ctx->SetOutput("dx", dx);
   }
 };
-REGISTER_XLA_OP_COMPILER(TanhGrad, TanhGradOp).Finalize();
+REGISTER_XLA_OP_KERNEL(TanhGrad, TanhGradOp).Finalize();
 
 class GeluGradOp : public OpKernel {
  public:
@@ -40,7 +40,7 @@ class GeluGradOp : public OpKernel {
     ctx->SetOutput("dx", dot_5 * coef * dy);
   }
 };
-REGISTER_XLA_OP_COMPILER(GeluGrad, GeluGradOp).Finalize();
+REGISTER_XLA_OP_KERNEL(GeluGrad, GeluGradOp).Finalize();
 
 }  // namespace mola
 }  // namespace xrt

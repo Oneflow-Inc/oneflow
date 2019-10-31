@@ -38,17 +38,16 @@ class XrtGraph : public util::AttributeMap {
   const std::vector<XrtEdge *> &Edges() const { return edges_; }
   std::vector<XrtEdge *> &Edges() { return edges_; }
 
-  std::vector<Argument> Arguments() const;
-
   std::string ToDot() const;
 
- private:
-  void BuildEdges();
+  std::vector<Argument> Arguments() const;
 
+ private:
   void DeleteNodes();
   void DeleteEdges();
   void DeleteSubgraphs();
 
+ protected:
   // All allocated nodes in the graph. The node unique id is related to it's
   // index in the vector. The Xrt node in `nodes_` can be nullptr since we will
   // always keep it in `nodes_` even if it has been removed from the graph.

@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_CORE_COMPILER_OF2XLA_XLA_DATA_TYPE_H_
-#define ONEFLOW_CORE_COMPILER_OF2XLA_XLA_DATA_TYPE_H_
+#ifndef ONEFLOW_XRT_XLA_XLA_DATA_TYPE_H_
+#define ONEFLOW_XRT_XLA_XLA_DATA_TYPE_H_
 
 #include "oneflow/core/common/data_type.pb.h"
 #include "tensorflow/compiler/xla/xla_data.pb.h"

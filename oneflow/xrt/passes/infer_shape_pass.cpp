@@ -43,7 +43,7 @@ void InferShape(XrtGraph *graph, const XrtPassOptions &options,
           *dynamic_cast<const XrtLaunchOpConf::Argument *>(&node->param());
       blob_descs->emplace(conf.out(), blob_descs->at(conf.in()));
     } else {
-      DeviceType device_type = BackendToDeviceType(node->backend());
+      DeviceType device_type = XrtDeviceToDeviceType(node->device());
       const auto &conf = *dynamic_cast<const OperatorConf *>(&node->param());
       auto op = ConstructOp(conf, device_type, job_desc);
       auto get_blob_desc_fn = [&](const std::string &bn) -> BlobDesc * {

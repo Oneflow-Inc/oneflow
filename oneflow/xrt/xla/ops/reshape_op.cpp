@@ -19,7 +19,7 @@ class ReshapeOp : public OpKernel {
   }
 };
 
-REGISTER_XLA_OP_COMPILER(Reshape, ReshapeOp).Finalize();
+REGISTER_XLA_OP_KERNEL(Reshape, ReshapeOp).Finalize();
 
 class ReshapeLikeOp : public OpKernel {
  public:
@@ -32,7 +32,7 @@ class ReshapeLikeOp : public OpKernel {
   }
 };
 
-REGISTER_XLA_OP_COMPILER(ReshapeLike, ReshapeLikeOp).Finalize();
+REGISTER_XLA_OP_KERNEL(ReshapeLike, ReshapeLikeOp).Finalize();
 
 }  // namespace mola
 }  // namespace xrt

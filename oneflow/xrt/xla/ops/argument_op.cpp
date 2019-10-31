@@ -6,7 +6,7 @@ namespace oneflow {
 namespace xrt {
 namespace mola {
 
-class XlaArgumentOp : public OpKernel {
+class ArgumentOp : public OpKernel {
  public:
   void Compile(OpContext *ctx) override {
     xla::XlaOp in = ctx->Input("in");
@@ -14,7 +14,7 @@ class XlaArgumentOp : public OpKernel {
   }
 };
 
-REGISTER_XLA_OP_COMPILER(XlaArgument, XlaArgumentOp).Finalize();
+REGISTER_XLA_OP_KERNEL(Argument, ArgumentOp).Finalize();
 
 }  // namespace mola
 }  // namespace xrt

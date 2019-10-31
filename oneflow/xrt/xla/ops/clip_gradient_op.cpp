@@ -51,7 +51,7 @@ void ClipGradientOp::Compile(OpContext *ctx) {
   ctx->SetOutput("out", clip_norm * ctx->Input("gradient"));
 }
 
-REGISTER_XLA_OP_COMPILER(ClipGradient, ClipGradientOp).Finalize();
+REGISTER_XLA_OP_KERNEL(ClipGradient, ClipGradientOp).Finalize();
 
 }  // namespace mola
 }  // namespace xrt

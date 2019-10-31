@@ -23,7 +23,7 @@ class BiasAddOp : public OpKernel {
   }
 };
 
-REGISTER_XLA_OP_COMPILER(BiasAdd, BiasAddOp).Finalize();
+REGISTER_XLA_OP_KERNEL(BiasAdd, BiasAddOp).Finalize();
 
 }  // namespace mola
 }  // namespace xrt

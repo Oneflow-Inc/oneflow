@@ -17,9 +17,9 @@ namespace xrt {
 
 std::string ExtractOpTypeAsString(const OperatorConf &conf);
 
-XrtDevice DeviceTypeToBackend(const DeviceType &device_type);
+XrtDevice DeviceTypeToXrtDevice(const DeviceType &device_type);
 
-DeviceType BackendToDeviceType(const XrtDevice &backend);
+DeviceType XrtDeviceToDeviceType(const XrtDevice &device);
 
 std::string BlobIdToName(const LogicalBlobId &lbi);
 

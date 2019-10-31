@@ -74,7 +74,7 @@ class OpKernelRegistrar {
   }
 };
 
-#define REGISTER_XLA_OP_COMPILER(OpName, KernelType)              \
+#define REGISTER_XLA_OP_KERNEL(OpName, KernelType)                \
   static OpKernelRegistrar<KernelType> _xla_op_kernel_##OpName##_ \
       __attribute__((unused)) =                                   \
           OpKernelRegistrar<KernelType>(#OpName)                  \

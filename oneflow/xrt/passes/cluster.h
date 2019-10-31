@@ -99,7 +99,7 @@ class ClusterNode {
   void set_id(int64_t id) { id_ = id; }
   virtual std::string type() const { return xrt_node_->type(); }
   virtual std::string name() const { return xrt_node_->name(); }
-  virtual XrtDevice backend() const { return xrt_node_->backend(); }
+  virtual XrtDevice device() const { return xrt_node_->device(); }
 
   size_t size() const { return folded_nodes_.size(); }
   const util::Set<ClusterNode *> &folded_nodes() const { return folded_nodes_; }
@@ -126,16 +126,16 @@ class NoClusterNode : public ClusterNode {
     return count;
   }
 
-  void set_backend(const XrtDevice &backend) { backend_ = backend; }
+  void set_device(const XrtDevice &device) { device_ = device; }
 
   bool IsCompiled() const override { return true; }
   std::string type() const override { return "NoClusterNode"; }
   std::string name() const override { return name_; }
-  XrtDevice backend() const override { return backend_; }
+  XrtDevice device() const override { return device_; }
 
  private:
   std::string name_;
-  XrtDevice backend_;
+  XrtDevice device_;
 };
 
 typedef std::shared_ptr<ClusterNode> ClusterNodePtr;

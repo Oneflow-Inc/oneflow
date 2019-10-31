@@ -7,7 +7,7 @@ namespace oneflow {
 namespace xrt {
 
 bool IsSatisfyBackend(const ClusterEdge *edge) {
-  return edge->start()->backend() == edge->end()->backend();
+  return edge->start()->device() == edge->end()->device();
 }
 bool IsSatisfySbpPolicy(const ClusterEdge *edge) {
   return edge->is_control_edge() ||

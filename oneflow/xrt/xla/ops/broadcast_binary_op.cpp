@@ -49,9 +49,9 @@ class BcastBinaryOp : public OpKernel {
   }
 };
 
-REGISTER_XLA_OP_COMPILER(BcastAdd, BcastBinaryOp<op::Add>).Finalize();
-REGISTER_XLA_OP_COMPILER(BcastMul, BcastBinaryOp<op::Mul>).Finalize();
-REGISTER_XLA_OP_COMPILER(BcastDiv, BcastBinaryOp<op::Div>).Finalize();
+REGISTER_XLA_OP_KERNEL(BcastAdd, BcastBinaryOp<op::Add>).Finalize();
+REGISTER_XLA_OP_KERNEL(BcastMul, BcastBinaryOp<op::Mul>).Finalize();
+REGISTER_XLA_OP_KERNEL(BcastDiv, BcastBinaryOp<op::Div>).Finalize();
 
 }  // namespace mola
 }  // namespace xrt
