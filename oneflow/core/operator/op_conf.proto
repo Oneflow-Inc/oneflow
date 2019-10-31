@@ -2130,6 +2130,7 @@ message OperatorConf {
     ScalarMulOpConf scalar_mul_conf = 517;
     ReduceMaxOpConf reduce_max_conf = 518;
     ArgmaxOpConf argmax_conf = 519;
+    RandomPermOpConf random_perm_conf = 520;
 
     // detection op
     MaskrcnnPositiveNegativeSampleOpConf maskrcnn_positive_negative_sample_conf = 601;
