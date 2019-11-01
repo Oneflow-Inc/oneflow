@@ -21,14 +21,9 @@ class RandomMaskLikeGPUKernel final : public KernelIf<DeviceType::kGPU> {
 
   void VirtualKernelInit(DeviceCtx* device_ctx) {
     const auto& dropout_conf = this->op_conf().dropout_conf();
-    int64_t seed = -1;
+    int64_t seed = GetCurTime();
     const RandomMaskLikeOpConf& random_mask_like_conf = this->op_conf().random_mask_like_conf();
-    if (random_mask_like_conf.has_random_seed()) {
-      seed = random_mask_like_conf.random_seed();
-    } else {
-      seed = GetCurTime();
-    }
-    CHECK_NE(seed, -1);
+    if (random_mask_like_conf.has_random_seed()) { seed = random_mask_like_conf.random_seed(); }
     random_generator_.reset(new RandomGenerator<DeviceType::kGPU>(seed, device_ctx));
   }
 
