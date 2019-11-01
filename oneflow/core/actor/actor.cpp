@@ -223,9 +223,7 @@ void Actor::InitDeviceCtx(const ThreadCtx& thread_ctx) {
       device_ctx_.reset(new CudaDeviceCtx(cuda_handle));
       break;
     }
-    default: {
-      UNIMPLEMENTED();
-    }
+    default: { UNIMPLEMENTED(); }
   }
 }
 

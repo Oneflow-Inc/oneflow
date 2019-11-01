@@ -20,7 +20,7 @@ struct ArithemeticIf<DeviceType::kCPU> {
                         const int64_t elem_cnt, const double* x, double* y);
 
   static void InitializeWithConstConf(DeviceCtx* ctx,
-                                        const ConstantInitializerConf& initializer_conf, Blob* blob);
+                                      const ConstantInitializerConf& initializer_conf, Blob* blob);
 };
 
 }  // namespace oneflow
