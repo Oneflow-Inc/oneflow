@@ -1923,6 +1923,7 @@ message MasksCropAndResizeOpConf {
 message RandomPermLikeOpConf {
   required string like = 1;
   required string out = 2;
+  optional int64 random_seed = 3;
 }
 
 message OperatorConf {

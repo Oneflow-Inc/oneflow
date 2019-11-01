@@ -30,6 +30,5 @@ class RandomPermLikeKernel final : public KernelIf<device_type> {
                                         RandomPermLikeKernel<device_type, int32_t>);
 
 REGISTER_RANDOM_PERM_KERNEL(DeviceType::kCPU);
-REGISTER_RANDOM_PERM_KERNEL(DeviceType::kGPU);
 
 }  // namespace oneflow
