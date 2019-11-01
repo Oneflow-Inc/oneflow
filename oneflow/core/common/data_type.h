@@ -9,7 +9,7 @@
 #include "oneflow/core/common/data_type_seq.h"
 #include "oneflow/core/record/record.pb.h"
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/job/resource.pb.h"
+#include "oneflow/core/common/device_type.pb.h"
 
 namespace oneflow {
 
