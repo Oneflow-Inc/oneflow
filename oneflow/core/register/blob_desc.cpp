@@ -1,5 +1,6 @@
 #include "oneflow/core/register/blob_desc.h"
 #include "oneflow/core/register/runtime_blob_desc.h"
+#include "oneflow/core/job/job_desc.h"
 
 namespace oneflow {
 

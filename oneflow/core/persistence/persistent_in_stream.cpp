@@ -2,6 +2,7 @@
 #include "oneflow/core/persistence/binary_in_stream_with_local_copy.h"
 #include "oneflow/core/persistence/binary_in_stream_without_local_copy.h"
 #include "oneflow/core/job/resource_desc.h"
+#include "oneflow/core/job/job_set.pb.h"
 #include <cstring>
 
 namespace oneflow {

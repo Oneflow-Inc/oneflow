@@ -1,4 +1,5 @@
 #include "oneflow/core/kernel/util/host_blas_interface.h"
+#include "oneflow/core/register/blob.h"
 
 namespace oneflow {
 

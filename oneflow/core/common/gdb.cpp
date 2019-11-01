@@ -1,7 +1,8 @@
 #include "oneflow/core/register/blob.h"
-#include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/protobuf.h"
+#include "oneflow/core/operator/op_conf_util.h"
+#include "oneflow/core/operator/op_attribute.pb.h"
 #include <google/protobuf/text_format.h>
 
 namespace oneflow {
@@ -60,7 +61,10 @@ static Blob* Blob4BnInOp(const std::function<Blob*(const std::string&)>* BnInOp2
 static HashMap<std::string, std::vector<std::string>> GetAllBlobNames(
     const OpAttribute& op_attribute) {
   std::list<std::string> attrs{
-      "input_bns", "output_bns", "tmp_bns", "const_buf_bns",
+      "input_bns",
+      "output_bns",
+      "tmp_bns",
+      "const_buf_bns",
   };
   HashMap<std::string, std::vector<std::string>> ret;
   for (const auto& attr : attrs) {

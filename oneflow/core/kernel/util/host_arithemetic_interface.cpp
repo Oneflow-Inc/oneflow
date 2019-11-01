@@ -1,4 +1,6 @@
 #include "oneflow/core/kernel/util/host_arithemetic_interface.h"
+#include "oneflow/core/register/blob.h"
+#include "oneflow/core/operator/op_conf_util.h"
 
 namespace oneflow {
 

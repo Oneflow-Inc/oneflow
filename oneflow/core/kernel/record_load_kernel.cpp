@@ -1,6 +1,7 @@
 #include "oneflow/core/kernel/record_load_kernel.h"
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/record/record.pb.h"
+#include "oneflow/core/job/job_set.pb.h"
 
 namespace oneflow {
 
