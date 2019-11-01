@@ -65,7 +65,9 @@ class Parameter {
   const std::string &name() const { return parameter_name_; }
   const Shape &shape() const { return shape_; }
   const DataType &data_type() const { return data_type_; }
-  int64_t byte_size() const { return byte_size_; }
+  int64_t byte_size() const {
+    return byte_size_ < 0 ? shape_.elem_cnt() * SizeOf(data_type_) : byte_size_;
+  }
 
   void set_name(const std::string &name) { parameter_name_ = name; }
   void set_shape(const Shape &shape) { shape_ = shape; }
@@ -75,7 +77,7 @@ class Parameter {
  private:
   void *storage_ = nullptr;
 
-  int64_t byte_size_ = 0;
+  int64_t byte_size_ = -1;
 
   Shape shape_;
   DataType data_type_;

@@ -29,14 +29,14 @@ void XlaGraphCompiler::SetupContextParam(
       const Argument &arg = edge->argument();
       const Operand &operand = all_outputs.at(arg);
       input_ops.emplace(arg, operand);
-      const std::string &k = arg.meta_data().consume_key();
+      const std::string &k = arg.meta_data().consume_key;
       input_output_args.emplace(k, arg);
     }
   }
   for (const XrtEdge *edge : node->out_edges()) {
     if (!edge->IsControlEdge()) {
       const Argument &arg = edge->argument();
-      const std::string &k = arg.meta_data().produce_key();
+      const std::string &k = arg.meta_data().produce_key;
       input_output_args.emplace(k, arg);
     }
   }

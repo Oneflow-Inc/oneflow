@@ -60,6 +60,7 @@ const std::vector<xla::ShapedBuffer *> &XlaExecutableRunContext::PopulateInputs(
     shaped_buffers_[i]->set_buffer(memory_base, /*index=*/{});
     input_buffers_[i] = shaped_buffers_[i].get();
   }
+  return input_buffers_;
 }
 
 void XlaExecutableRunContext::PopulateResultBuffers(

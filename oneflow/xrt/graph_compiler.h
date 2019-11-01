@@ -34,8 +34,8 @@ class InputOutputAlias {
 
 class GraphCompiler {
  public:
-  // Internal compile interface class. It should be Inherited and implemented
-  // the `Compile` function for every engine.
+  // Internal compiler interface class. It should be inherited and the
+  // `Compile` function should be overrided for every engine compiler.
   class Impl {
    public:
     void set_name(const std::string &name) { name_ = name; }

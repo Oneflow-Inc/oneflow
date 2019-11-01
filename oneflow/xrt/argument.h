@@ -9,25 +9,27 @@
 namespace oneflow {
 namespace xrt {
 
-class ArgumentMetaData {
- public:
-  ArgumentMetaData() = default;
-  ArgumentMetaData(const std::string &key1, const std::string &key2)
-      : produce_key_(key1), consume_key_(key2) {}
-
-  virtual ~ArgumentMetaData() = default;
-
-  void set_produce_key(const std::string &key) { produce_key_ = key; }
-  void set_consume_key(const std::string &key) { consume_key_ = key; }
-
-  const std::string &produce_key() const { return produce_key_; }
-  const std::string &consume_key() const { return consume_key_; }
-
- private:
-  std::string produce_key_;
-  std::string consume_key_;
+// Each data flow will bind two keys, produce_key and consume_key.
+// Such as node A and B, there is a data flow named `a_output` on edge A->B.
+//  node A {
+//    in: "a_input"
+//    out: "a_output"
+//  }
+//  node B {
+//    in: "a_output"
+//    out: "b_output"
+//  }
+// In this case, the data flow named `a_output` has a `produce_key` named
+// \"out\" prodeced by node A and a `consume_key` named \"in\" consumed by
+// node B.
+struct ArgumentMetaData {
+  std::string produce_key;
+  std::string consume_key;
 };
 
+// Descriptor of data flow on graph edges include data name, shape and
+// data type. Also it may be attached by a metadata which giving the key
+// of producing and consuming.
 class Argument {
  public:
   Argument() : initialized_(false) {}

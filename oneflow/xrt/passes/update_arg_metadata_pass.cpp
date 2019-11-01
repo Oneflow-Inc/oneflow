@@ -67,8 +67,8 @@ class ArgMetaDataUpdater {
                     ArgumentMetaData *meta_data) {  // NOLINT
     const auto &prod_keys = input_output_keys_.at(start->name());
     const auto &cons_keys = input_output_keys_.at(end->name());
-    meta_data->set_produce_key(prod_keys.at(arg_name));
-    meta_data->set_consume_key(cons_keys.at(arg_name));
+    meta_data->produce_key = prod_keys.at(arg_name);
+    meta_data->consume_key = cons_keys.at(arg_name);
   }
 
   std::shared_ptr<Operator> BuildOp(const XrtNode *node) {

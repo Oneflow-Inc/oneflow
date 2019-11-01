@@ -31,8 +31,18 @@ class XlaExecutableRunContext {
   void PopulateResultBuffers(const std::vector<Parameter> &outputs,
                              xla::LocalExecutable *executable);
 
-  se::Stream *stream() const { return stream_.get(); }
+  // Returns run options.
+  const ExecutableRunOptions &run_options() const { return run_options_; }
 
+  // Returns device type.
+  const XrtDevice &device() const { return device_; }
+  // Returns device ordinal.
+  int device_ordinal() const { return device_ordinal_; }
+  // Returns xla local client.
+  xla::LocalClient *client() const { return client_; }
+  // Returns xla executing stream
+  se::Stream *stream() const { return stream_.get(); }
+  // Returns buffer allocator.
   XlaAllocator *allocator() const { return allocator_.get(); }
 
   Eigen::ThreadPoolDevice *host_device() const { return host_device_; }
@@ -41,6 +51,15 @@ class XlaExecutableRunContext {
     return (run_options_.random_seed) == -1 ? tensorflow::GetXLARandomSeed()
                                             : run_options_.random_seed;
   }
+
+  // Reserve allocator memory size. Do nothing if the allocator's buffer
+  // capacity >= size. Otherwise it should wait for all launched kernels
+  // to finish, then resize the memory buffer thread-safety.
+  void ReserveWorkspace(size_t size) { allocator_->ReserveWorkspace(size); }
+  // Increase kernel launched count on the allocator.
+  void LockWorkspace() { allocator_->LockWorkspace(); }
+  // Decrease kernel launched count on the allocator.
+  void UnlockWorkspace() { allocator_->UnlockWorkspace(); }
 
  private:
   ExecutableRunOptions run_options_;

@@ -1,5 +1,6 @@
 #include "oneflow/xrt/xla/xla_executable.h"
 #include "oneflow/xrt/xla/xla_executable_context.h"
+#include "oneflow/xrt/xla/xla_executable_scope.h"
 #include "oneflow/xrt/xla/xla_macro.h"
 #include "oneflow/xrt/xla/xla_resource_manager.h"
 
@@ -24,7 +25,8 @@ bool XlaExecutable::Run(const std::vector<Parameter> &inputs,
   run_context.PopulateResultBuffers(return_params, executable_.get());
 
   MOLA_CHECK_AND_ASSIGN(auto run_result, [&]() {
-    // XlaRunScope scope(executable, run_context);
+    XlaExecutableRunScope scope(executable_.get(), run_context);
+
     xla::ExecutableRunOptions options;
     options.set_stream(run_context.stream());
     options.set_allocator(run_context.allocator());
@@ -48,9 +50,9 @@ bool XlaExecutable::Run(const std::vector<Parameter> &inputs,
       CHECK_EQ(buffer.opaque(), return_params[i].data());
     }
   }
-  this->results_ = std::move(return_params);
 
-  return true;
+  this->results_ = std::move(return_params);
+  return true /*Success*/;
 }
 
 }  // namespace mola
