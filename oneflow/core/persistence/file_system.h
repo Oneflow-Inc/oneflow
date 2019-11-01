@@ -3,7 +3,7 @@
 
 #include "oneflow/core/common/platform.h"
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/job/job_set.pb.h"
+#include "oneflow/core/job/file_system_conf.pb.h"
 
 namespace oneflow {
 

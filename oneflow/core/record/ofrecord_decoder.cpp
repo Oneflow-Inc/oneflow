@@ -4,6 +4,7 @@
 #include "oneflow/core/record/ofrecord_bytes_list_decoder.h"
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/thread/thread_manager.h"
+#include "oneflow/core/common/blocking_counter.h"
 
 namespace oneflow {
 

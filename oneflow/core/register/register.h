@@ -1,7 +1,6 @@
 #ifndef ONEFLOW_CORE_REGISTER_REGISTER_H_
 #define ONEFLOW_CORE_REGISTER_REGISTER_H_
 
-#include "oneflow/core/operator/operator.h"
 #include "oneflow/core/register/blob.h"
 #include "oneflow/core/register/runtime_register_desc.h"
 

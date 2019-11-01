@@ -1,8 +1,7 @@
 #include "oneflow/core/graph/logical_graph.h"
-#include "oneflow/core/graph/task_graph.h"
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/operator/operator.h"
-#include "oneflow/core/operator/op_conf.pb.h"
+#include "oneflow/core/operator/op_conf_util.h"
 #include "oneflow/core/common/balanced_splitter.h"
 
 namespace oneflow {

@@ -1,4 +1,6 @@
 #include "oneflow/core/thread/thread.h"
+#include "oneflow/core/job/runtime_context.h"
+#include "oneflow/core/actor/actor.h"
 
 namespace oneflow {
 

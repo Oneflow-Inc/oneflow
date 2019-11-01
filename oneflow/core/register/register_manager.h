@@ -7,7 +7,6 @@
 #include "oneflow/core/memory/memory_allocator.h"
 #include "oneflow/core/register/register.h"
 #include "oneflow/core/record/record.pb.h"
-#include "oneflow/core/operator/op_conf.pb.h"
 
 namespace oneflow {
 

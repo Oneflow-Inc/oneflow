@@ -2,6 +2,7 @@
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/thread/cpu_thread.h"
 #include "oneflow/core/thread/gpu_thread.h"
+#include "oneflow/core/job/machine_context.h"
 
 namespace oneflow {
 

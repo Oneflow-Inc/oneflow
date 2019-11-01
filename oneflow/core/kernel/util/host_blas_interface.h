@@ -2,8 +2,12 @@
 #define ONEFLOW_CORE_KERNEL_UTIL_HOST_BLAS_INTERFACE_H_
 
 #include "oneflow/core/kernel/util/blas_interface.h"
+#include "oneflow/core/common/shape.h"
+#include "oneflow/core/common/protobuf.h"
 
 namespace oneflow {
+
+class Blob;
 
 template<>
 struct BlasIf<DeviceType::kCPU> {
