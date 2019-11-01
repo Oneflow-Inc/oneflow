@@ -37,7 +37,7 @@ class RandomPermLikeGPUKernel final : public KernelIf<DeviceType::kGPU> {
     Blob* out_blob = BnInOp2Blob("out");
     Blob* random_mask_blob = BnInOp2Blob("random_mask");
     const int64_t n = out_blob->shape().At(0);
-    random_generator_->Uniform(n, random_mask_blob);
+    random_generator_->Uniform(n, random_mask_blob->mut_dptr<float>());
   }
 
  private:
