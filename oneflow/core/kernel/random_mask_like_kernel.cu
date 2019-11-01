@@ -3,15 +3,6 @@
 
 namespace oneflow {
 
-namespace {
-
-template<typename T>
-__global__ void AtomicExchange(const int64_t n, T* in, const int64_t retry_limit) {
-  CUDA_1D_KERNEL_LOOP(i, n) {}
-}
-
-}  // namespace
-
 template<typename T>
 class RandomMaskLikeGPUKernel final : public KernelIf<DeviceType::kGPU> {
  public:
@@ -20,7 +11,6 @@ class RandomMaskLikeGPUKernel final : public KernelIf<DeviceType::kGPU> {
   ~RandomMaskLikeGPUKernel() = default;
 
   void VirtualKernelInit(DeviceCtx* device_ctx) {
-    const auto& dropout_conf = this->op_conf().dropout_conf();
     int64_t seed = GetCurTime();
     const RandomMaskLikeOpConf& random_mask_like_conf = this->op_conf().random_mask_like_conf();
     if (random_mask_like_conf.has_random_seed()) { seed = random_mask_like_conf.random_seed(); }
@@ -30,8 +20,7 @@ class RandomMaskLikeGPUKernel final : public KernelIf<DeviceType::kGPU> {
   void ForwardDataContent(const KernelCtx& ctx,
                           std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
     Blob* out_blob = BnInOp2Blob("out");
-    const int64_t n = out_blob->shape().At(0);
-    random_generator_->Uniform(n, out_blob->mut_dptr<float>());
+    random_generator_->Uniform(out_blob->shape().elem_cnt(), out_blob->mut_dptr<float>());
   }
 
  private:
