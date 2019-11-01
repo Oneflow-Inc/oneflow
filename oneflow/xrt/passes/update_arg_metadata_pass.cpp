@@ -43,7 +43,7 @@ class ArgMetaDataUpdater {
           keys.emplace(BlobIdToName(lbi), bn);
         }
       }
-      input_output_keys_.emplace(node->name(), std::move(keys));
+      input_output_keys_.emplace(node, std::move(keys));
     }
 
     for (XrtNode *node : graph_->Nodes()) {
@@ -65,8 +65,8 @@ class ArgMetaDataUpdater {
   void MakeMetaData(const XrtNode *start, const XrtNode *end,
                     const std::string &arg_name,    // NOLINT
                     ArgumentMetaData *meta_data) {  // NOLINT
-    const auto &prod_keys = input_output_keys_.at(start->name());
-    const auto &cons_keys = input_output_keys_.at(end->name());
+    const auto &prod_keys = input_output_keys_.at(start);
+    const auto &cons_keys = input_output_keys_.at(end);
     meta_data->produce_key = prod_keys.at(arg_name);
     meta_data->consume_key = cons_keys.at(arg_name);
   }
@@ -85,7 +85,7 @@ class ArgMetaDataUpdater {
 
   const JobDesc *job_desc_;
 
-  util::Map<std::string, util::Map<std::string, std::string>>
+  util::Map<const XrtNode *, util::Map<std::string, std::string>>
       input_output_keys_;
 };
 

@@ -187,6 +187,17 @@ void FoldSubgraphBuilder::FixSubgraphOutArgumentsBlobNames(
   }
 }
 
+// bool FoldSubgraphBuilder::IsMutableArgument(XrtNode *node,
+//                                            const Argument &argument) {
+//  const auto &mutable_vars = GetMutableVariables();
+//  for (const std::string &bn : mutable_vars) {
+//    if (argument.name() == BlobIdToName(op->BnInOp2Lbi(bn))) {
+//      return true;
+//    }
+//  }
+//  return false;
+//}
+
 void FoldSubgraphBuilder::buildXrtLaunchAttribute(
     const XrtGraph *sub_graph, XrtLaunchOpConf::Attribute *launch_attr) {
   for (const XrtNode *node : sub_graph->Nodes()) {
@@ -206,7 +217,7 @@ void FoldSubgraphBuilder::buildXrtLaunchAttribute(
         const Argument &argument = edge->argument();
         argument_proto->set_in(argument.name());
         argument_proto->set_out(argument.name());
-        // is_mutable |= IsMutableArgument(edge->end(), argument);
+        //        is_mutable |= IsMutableArgument(edge->end(), argument);
       }
       for (const XrtEdge *edge : node->in_edges()) {
         const Argument &argument = edge->argument();
@@ -215,7 +226,6 @@ void FoldSubgraphBuilder::buildXrtLaunchAttribute(
       }
       if (is_mutable) {
         (*launch_attr->mutable_mutability())[node->name()] = true;
-        // argument_proto->set_is_mutable(true);
       }
 
       // Store the batch axis that have batch dimension, so that it's no need to

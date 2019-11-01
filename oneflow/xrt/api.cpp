@@ -1,6 +1,7 @@
 #include "oneflow/xrt/api.h"
 #include "glog/logging.h"
 #include "oneflow/core/operator/operator.h"  // GenLogicalBlobName, GenLogicalBlobId
+#include "oneflow/xrt/build_graph.h"
 #include "oneflow/xrt/utility/env.h"
 
 DEFINE_int32(clustering_minimum_nodes,
@@ -14,8 +15,6 @@ DEFINE_bool(strict_clustering, EnvToBool(FLAGS_strict_clustering, true),
 
 namespace oneflow {
 namespace xrt {
-
-extern std::string _ArgumentOpType;
 
 #define OP_TYPE_CASE(op) OperatorConf::k##op##Conf
 
@@ -109,128 +108,14 @@ LogicalBlobId BlobNameToId(const std::string &blob_name) {
   }
 }
 
-const Shape &InputTimeShape(const OpNode *op_node) {
-  CHECK_NOTNULL(op_node);
-  return *(op_node->GetInputBlobFastestTimeShape());
-}
-
-const Shape &OutputTimeShape(const OpNode *op_node) {
-  CHECK_NOTNULL(op_node);
-  return *(op_node->out_blob_time_shape());
-}
-
-const SbpParallel &BlobSbpPolicy(const OpNode *op_node,
-                                 const std::string &name) {
-  CHECK_NOTNULL(op_node);
-  LogicalBlobId lbi = BlobNameToId(name);
-  return op_node->SbpParallel4Lbi(lbi);
-}
-
-std::shared_ptr<XrtGraph> BuildXrtGraphEdges(
-    std::shared_ptr<XrtGraph> &graph,
-    const util::Map<const XrtNode *, util::Set<std::string>> &node_inputs,
-    const util::Map<std::string, const XrtNode *> producers) {
-  for (const auto &p : node_inputs) {
-    const XrtNode *node = p.first;
-    const util::Set<std::string> &inputs = p.second;
-    for (const std::string &input : inputs) {
-      const auto &it = producers.find(input);
-      if (it != producers.end() && it->second != node) {
-        Argument argument(input);
-        graph->Connect(it->second, node, argument);
-      }
-    }
-  }
-  return graph;
-}
-
-std::shared_ptr<XrtGraph> SetupXrtGraphEdges(
-    std::shared_ptr<XrtGraph> &graph,
-    const util::Map<const XrtNode *, const OpNode *> &op_nodes) {
-  for (XrtEdge *edge : graph->Edges()) {
-    const OpNode *src = op_nodes.at(edge->start());
-    const OpNode *dst = op_nodes.at(edge->end());
-    const std::string &name = edge->argument().name();
-    // Set time shape
-    std::vector<Shape> time_shape;
-    time_shape.push_back(OutputTimeShape(src));
-    time_shape.push_back(InputTimeShape(dst));
-    edge->SetAttr<std::vector<Shape>>("time_shape", time_shape);
-    // Set sbp policy
-    std::vector<SbpParallel> sbp_policy;
-    sbp_policy.push_back(BlobSbpPolicy(src, name));
-    sbp_policy.push_back(BlobSbpPolicy(dst, name));
-    edge->SetAttr<std::vector<SbpParallel>>("sbp_policy", sbp_policy);
-  }
-  return graph;
-}
-
-void SetupXrtNode(XrtNode *node, const OperatorConf &node_conf) {
-  node->set_name(node_conf.name());
-  node->set_type(ExtractOpTypeAsString(node_conf));
-  node->set_device(DeviceTypeToXrtDevice(node_conf.device_type()));
-}
-
-void SetupXrtNode(XrtNode *node, const XrtLaunchOpConf::Argument &arg_conf) {
-  node->set_name(arg_conf.name());
-  node->set_type(_ArgumentOpType);
-  node->set_device(DeviceTypeToXrtDevice(arg_conf.device_type()));
+std::shared_ptr<XrtGraph> BuildXrtGraph(const OpGraph *op_graph) {
+  return graph_builder::BuildGraph(op_graph);
 }
 
 std::shared_ptr<XrtGraph> BuildXrtGraph(const XrtLaunchOpConf &launch_conf,
                                         const DeviceType &device_type,
                                         const JobDesc &job_desc) {
-  std::shared_ptr<XrtGraph> graph(new XrtGraph);
-  util::Map<std::string, const XrtNode *> producers;
-  util::Map<const XrtNode *, util::Set<std::string>> node_inputs;
-
-  for (const auto &arg_conf : launch_conf.attr().argument()) {
-    XrtNode *node = graph->AddNode(arg_conf);
-    SetupXrtNode(node, arg_conf);
-    producers[arg_conf.out()] = node;
-    node_inputs[node].insert(arg_conf.in());
-  }
-
-  for (const auto &node_conf : launch_conf.attr().node()) {
-    XrtNode *node = graph->AddNode(node_conf);
-    SetupXrtNode(node, node_conf);
-    auto op = ConstructOp(node_conf, device_type, &job_desc);
-    for (const std::string &bn : op->output_bns()) {
-      std::string output = BlobIdToName(op->BnInOp2Lbi(bn));
-      producers[output] = node;
-    }
-    for (const std::string &bn : op->input_bns()) {
-      std::string input = BlobIdToName(op->BnInOp2Lbi(bn));
-      node_inputs[node].insert(input);
-    }
-  }
-
-  return BuildXrtGraphEdges(graph, node_inputs, producers);
-}
-
-std::shared_ptr<XrtGraph> BuildXrtGraph(const OpGraph *op_graph) {
-  std::shared_ptr<XrtGraph> graph(new XrtGraph);
-  util::Map<std::string, const XrtNode *> producers;
-  util::Map<const XrtNode *, util::Set<std::string>> node_inputs;
-  util::Map<const XrtNode *, const OpNode *> op_nodes;
-
-  op_graph->TopoForEachNode([&](const OpNode *op_node) {
-    const Operator *op = &op_node->op();
-    XrtNode *node = graph->AddNode(op->op_conf());
-    SetupXrtNode(node, op->op_conf());
-    for (const std::string &bn : op->output_bns()) {
-      std::string output = BlobIdToName(op->BnInOp2Lbi(bn));
-      producers[output] = node;
-    }
-    for (const std::string &bn : op->input_bns()) {
-      std::string input = BlobIdToName(op->BnInOp2Lbi(bn));
-      node_inputs[node].insert(input);
-    }
-    op_nodes.emplace(node, op_node);
-  });
-
-  graph = BuildXrtGraphEdges(graph, node_inputs, producers);
-  return SetupXrtGraphEdges(graph, op_nodes);
+  return graph_builder::BuildGraph(launch_conf, device_type, job_desc);
 }
 
 XrtPassOptions CreateDefaultXrtPassOptions() {
