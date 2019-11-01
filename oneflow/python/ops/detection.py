@@ -498,6 +498,7 @@ def masks_crop_and_resize(masks, rois, mask_h, mask_w, name=None):
 
 @oneflow_export("detection.random_perm_like")
 def random_perm_like(like, seed=None, name=None):
+    assert len(like.shape) == 1
     op_conf = op_conf_util.OperatorConf()
     op_conf.random_mask_like_conf.like = like.logical_blob_name
     if seed is not None:
