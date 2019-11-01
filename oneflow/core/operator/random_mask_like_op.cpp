@@ -23,8 +23,7 @@ class RandomPermLikeOp final : public Operator {
                              std::function<void(OpContext*)> EnrollOpCtx) const override {
     BlobDesc* out_desc = GetBlobDesc4BnInOp("out");
     const BlobDesc* like_blob_desc = GetBlobDesc4BnInOp("like");
-    out_desc->set_is_dynamic(like_blob_desc->is_dynamic());
-    out_desc->mut_shape() = Shape({like_blob_desc->shape().At(0)});
+    out_desc->CopyMetaFrom(*like_blob_desc);
     out_desc->set_data_type(DataType::kFloat);
     return Maybe<void>::Ok();
   }
