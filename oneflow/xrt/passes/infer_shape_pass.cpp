@@ -49,12 +49,17 @@ void InferShape(XrtGraph *graph, const XrtPassOptions &options,
       auto get_blob_desc_fn = [&](const std::string &bn) -> BlobDesc * {
         const LogicalBlobId &lbi = op->BnInOp2Lbi(bn);
         std::string blob_name = BlobIdToName(lbi);
-        return &((*blob_descs)[blob_name]);
+        auto it = blob_descs->find(blob_name);
+        if (it == blob_descs->end()) {
+          DataType data_type = job_desc->DefaultDataType();
+          it = blob_descs->emplace(blob_name, BlobDesc(data_type)).first;
+        }
+        return &(it->second);
       };
       auto parallel_ctx = BuildLocalParallelContext();
       auto sbp_signature = BuildLocalSbpSignature(op);
-      op->InferBlobDescsIf(get_blob_desc_fn, &parallel_ctx, &sbp_signature,
-                           [](OpContext *) {});
+      CHECK_JUST(op->InferBlobDescsIf(get_blob_desc_fn, &parallel_ctx,
+                                      &sbp_signature, [](OpContext *) {}));
     }
     // Update blob desc on the output edges
     for (XrtEdge *edge : node->out_edges()) {

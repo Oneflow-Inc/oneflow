@@ -36,7 +36,8 @@ Maybe<void> XrtLaunchOp::InferBlobDescs(
   for (const std::string &bn : this->input_bns()) {
     const LogicalBlobId &lbi = this->BnInOp2Lbi(bn);
     std::string blob_name = xrt::BlobIdToName(lbi);
-    blob_descs[blob_name].CopyMetaFrom(*GetBlobDesc4BnInOp(bn));
+    auto it = blob_descs.emplace(blob_name, BlobDesc(DataType::kFloat)).first;
+    it->second.CopyMetaFrom(*GetBlobDesc4BnInOp(bn));
   }
 
   // Build graph from launch conf, and inference output shape
@@ -53,7 +54,7 @@ Maybe<void> XrtLaunchOp::InferBlobDescs(
   // Fetch output blob descs
   for (const std::string &bn : this->output_bns()) {
     CHECK_GT(blob_descs.count(bn), 0);
-    *GetBlobDesc4BnInOp(bn) = blob_descs[bn];
+    *GetBlobDesc4BnInOp(bn) = blob_descs.at(bn);
   }
   return Maybe<void>::Ok();
 }

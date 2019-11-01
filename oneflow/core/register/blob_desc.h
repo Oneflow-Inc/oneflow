@@ -14,7 +14,6 @@ namespace oneflow {
 class BlobDesc {
  public:
   // OF_DISALLOW_COPY_AND_MOVE(BlobDesc);
-  BlobDesc() : BlobDesc(DataType::kInvalidDataType) {}
   ~BlobDesc() = default;
 
   explicit BlobDesc(DataType data_type);

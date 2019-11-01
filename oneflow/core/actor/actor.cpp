@@ -4,8 +4,6 @@
 
 namespace oneflow {
 
-static const int32_t ACTOR_MESSAGE_SENT_INTERVAL = 20;
-
 namespace {
 
 void CheckInplaceRegstDescId(const TaskProto& task_proto) {
@@ -631,7 +629,6 @@ void Actor::EnqueueAsyncMsg(const ActorMsg& msg) {
     Global<ActorMsgBus>::Get()->SendMsg(msg);
   } else {
     async_msg_queue_.push_back(msg);
-    if (async_msg_queue_.size() >= ACTOR_MESSAGE_SENT_INTERVAL) { AsyncSendQueuedMsg(); }
   }
 }
 

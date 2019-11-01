@@ -1,6 +1,5 @@
 #include "oneflow/core/thread/gpu_thread.h"
 #include "oneflow/core/device/cuda_stream_handle.h"
-#include "oneflow/core/device/cuda_event_pool.h"
 
 namespace oneflow {
 
@@ -21,7 +20,7 @@ GpuThread::GpuThread(int64_t thrd_id, int64_t dev_id) {
     while (cb_event_chan_.Receive(&cb_event) == kChannelStatusSuccess) {
       CudaCheck(cudaEventSynchronize(cb_event.event));
       cb_event.callback();
-      Global<CudaEventPool>::Get()->Put(cb_event.event);
+      CudaCheck(cudaEventDestroy(cb_event.event));
     }
   });
 }
