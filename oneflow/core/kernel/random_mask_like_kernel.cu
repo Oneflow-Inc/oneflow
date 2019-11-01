@@ -13,18 +13,18 @@ __global__ void AtomicExchange(const int64_t n, T* in, const int64_t retry_limit
 }  // namespace
 
 template<typename T>
-class RandomPermLikeGPUKernel final : public KernelIf<DeviceType::kGPU> {
+class RandomMaskLikeGPUKernel final : public KernelIf<DeviceType::kGPU> {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(RandomPermLikeGPUKernel);
-  RandomPermLikeGPUKernel() = default;
-  ~RandomPermLikeGPUKernel() = default;
+  OF_DISALLOW_COPY_AND_MOVE(RandomMaskLikeGPUKernel);
+  RandomMaskLikeGPUKernel() = default;
+  ~RandomMaskLikeGPUKernel() = default;
 
   void VirtualKernelInit(DeviceCtx* device_ctx) {
     const auto& dropout_conf = this->op_conf().dropout_conf();
     int64_t seed = -1;
-    const RandomPermLikeOpConf& random_perm_like_conf = this->op_conf().random_perm_like_conf();
-    if (random_perm_like_conf.has_random_seed()) {
-      seed = random_perm_like_conf.random_seed();
+    const RandomMaskLikeOpConf& random_mask_like_conf = this->op_conf().random_mask_like_conf();
+    if (random_mask_like_conf.has_random_seed()) {
+      seed = random_mask_like_conf.random_seed();
     } else {
       seed = GetCurTime();
     }
@@ -35,19 +35,18 @@ class RandomPermLikeGPUKernel final : public KernelIf<DeviceType::kGPU> {
   void ForwardDataContent(const KernelCtx& ctx,
                           std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
     Blob* out_blob = BnInOp2Blob("out");
-    Blob* random_mask_blob = BnInOp2Blob("random_mask");
     const int64_t n = out_blob->shape().At(0);
-    random_generator_->Uniform(n, random_mask_blob->mut_dptr<float>());
+    random_generator_->Uniform(n, out_blob->mut_dptr<float>());
   }
 
  private:
   std::unique_ptr<RandomGenerator<DeviceType::kGPU>> random_generator_;
 };
 
-#define REGISTER_RANDOM_PERM_GPU_KERNEL(dtype)                                               \
-  REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kRandomPermLikeConf, DeviceType::kGPU, \
-                                        dtype, RandomPermLikeGPUKernel<dtype>);
+#define REGISTER_RANDOM_MASK_GPU_KERNEL(dtype)                                               \
+  REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kRandomMaskLikeConf, DeviceType::kGPU, \
+                                        dtype, RandomMaskLikeGPUKernel<dtype>);
 
-REGISTER_RANDOM_PERM_GPU_KERNEL(int32_t);
+REGISTER_RANDOM_MASK_GPU_KERNEL(float);
 
 }  // namespace oneflow
