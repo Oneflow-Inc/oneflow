@@ -497,18 +497,20 @@ def masks_crop_and_resize(masks, rois, mask_h, mask_w, name=None):
     return remote_blob_util.RemoteBlob(lbi)
 
 @oneflow_export("detection.random_perm_like")
-def random_perm_like(like, name=None):
+def random_perm_like(like, seed=None, name=None):
     op_conf = op_conf_util.OperatorConf()
-    op_conf.random_perm_like_conf.like = like.logical_blob_name
-    assert(like.shape[0] > 0)
+    op_conf.random_mask_like_conf.like = like.logical_blob_name
+    if seed is not None:
+        op_conf.random_mask_like_conf.random_seed = seed
     setattr(
         op_conf,
         "name",
         name if name is not None else id_util.UniqueStr("RandomPerm_"),
     )
-    op_conf.random_perm_like_conf.out = "out"
+    op_conf.random_mask_like_conf.out = "out"
     compile_context.CurJobAddOp(op_conf)
     out_lbi = logical_blob_id_util.LogicalBlobId()
     setattr(out_lbi, "op_name", op_conf.name)
     setattr(out_lbi, "blob_name", "out")
-    return remote_blob_util.RemoteBlob(out_lbi)
+    remote_blob = remote_blob_util.RemoteBlob(out_lbi)
+    return flow.argsort(remote_blob)

@@ -9,26 +9,23 @@ class RandomPermLikeOp final : public Operator {
   ~RandomPermLikeOp() = default;
 
   void InitFromOpConf() override {
-    CHECK(op_conf().has_random_perm_like_conf());
-    const RandomPermLikeOpConf& random_perm_like_conf = this->op_conf().random_perm_like_conf();
-    if (random_perm_like_conf.has_like()) {
-      EnrollInputBn("like", false)->set_use_header_only(true);
-    }
+    CHECK(op_conf().has_random_mask_like_conf());
+    EnrollInputBn("like", false)->set_use_header_only(true);
     EnrollOutputBn("out");
   }
 
   const PbMessage& GetCustomizedConf() const override {
-    return this->op_conf().random_perm_like_conf();
+    return this->op_conf().random_mask_like_conf();
   }
 
   Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                              const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature,
                              std::function<void(OpContext*)> EnrollOpCtx) const override {
-    BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
+    BlobDesc* out_desc = GetBlobDesc4BnInOp("out");
     const BlobDesc* like_blob_desc = GetBlobDesc4BnInOp("like");
-    out_blob_desc->set_is_dynamic(like_blob_desc->is_dynamic());
-    out_blob_desc->mut_shape() = Shape({like_blob_desc->shape().At(0)});
-    out_blob_desc->set_data_type(DataType::kInt32);
+    out_desc->set_is_dynamic(like_blob_desc->is_dynamic());
+    out_desc->mut_shape() = Shape({like_blob_desc->shape().At(0)});
+    out_desc->set_data_type(DataType::kFloat);
     return Maybe<void>::Ok();
   }
 
@@ -40,6 +37,6 @@ class RandomPermLikeOp final : public Operator {
   }
 };
 
-REGISTER_OP(OperatorConf::kRandomPermLikeConf, RandomPermLikeOp);
+REGISTER_OP(OperatorConf::kRandomMaskLikeConf, RandomPermLikeOp);
 
 }  // namespace oneflow
