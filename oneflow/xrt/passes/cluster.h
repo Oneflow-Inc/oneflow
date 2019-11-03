@@ -1,10 +1,9 @@
-#ifndef ONEFLOW_CORE_COMPILER_OF2XLA_PASS_CLUSTER_H_
-#define ONEFLOW_CORE_COMPILER_OF2XLA_PASS_CLUSTER_H_
+#ifndef ONEFLOW_XRT_PASSES_CLUSTER_H_
+#define ONEFLOW_XRT_PASSES_CLUSTER_H_
 
-#include <unordered_map>
-#include <unordered_set>
 #include "absl/strings/str_cat.h"
 #include "oneflow/xrt/graph/graph.h"
+#include "oneflow/xrt/utility/stl.h"
 
 namespace oneflow {
 namespace xrt {
@@ -156,4 +155,4 @@ bool IsNoClusterNode(const ClusterNode *node);
 }  // namespace xrt
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_COMPILER_OF2XLA_PASS_CLUSTER_H_
+#endif  // ONEFLOW_XRT_PASSES_CLUSTER_H_

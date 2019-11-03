@@ -12,6 +12,13 @@ namespace util {
 
 class AttributeMap {
  public:
+  AttributeMap() = default;
+
+  AttributeMap(const util::Map<std::string, Any> &attributes)
+      : attributes_(attributes) {}
+
+  virtual ~AttributeMap() = default;
+
   bool HasAttr(const std::string &name) const {
     return attributes_.count(name) > 0;
   }

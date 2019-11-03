@@ -3,6 +3,7 @@
 
 #include "oneflow/xrt/types.h"
 #include "oneflow/xrt/utility/registry.h"
+#include "oneflow/xrt/utility/stl.h"
 #include "oneflow/xrt/xla/ops/op_context.h"
 #include "oneflow/xrt/xla/xla_macro.h"
 
@@ -50,7 +51,7 @@ class OpKernelRegistrar {
   }
 
   OpKernelRegistrar<KernelType> &SetMutableVariables(
-      const std::vector<std::string> &variables) {
+      const util::Set<std::string> &variables) {
     attributes_["MutableVars"] = variables;
     return *this;
   }
@@ -58,7 +59,7 @@ class OpKernelRegistrar {
   OpKernelRegistrar<KernelType> &Finalize() {
     Factory()->Register(op_name_, factory_, attributes_);
     for (const auto &device : device_) {
-      auto field = std::make_pair(engine_field_, device);
+      XrtField field = MakeXrtField(device, engine_field_);
       FactoryManager()->Insert(field, Factory());
     }
     return *this;
@@ -68,9 +69,8 @@ class OpKernelRegistrar {
     return util::Registry<std::string, decltype(factory_)>::Global();
   }
 
-  typedef std::pair<XrtEngine, XrtDevice> FieldType;
-  auto FactoryManager() -> util::RegistryManager<FieldType> * {
-    return util::RegistryManager<FieldType>::Global();
+  auto FactoryManager() -> util::RegistryManager<XrtField> * {
+    return util::RegistryManager<XrtField>::Global();
   }
 };
 

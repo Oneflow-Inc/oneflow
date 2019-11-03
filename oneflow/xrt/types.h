@@ -3,12 +3,6 @@
 
 #include "oneflow/xrt/types.pb.h"
 
-namespace oneflow {
-namespace xrt {
-// NOLINT
-}  // namespace xrt
-}  // namespace oneflow
-
 namespace std {
 
 template <>
@@ -25,6 +19,32 @@ struct hash<oneflow::xrt::XrtEngine> {
   }
 };
 
+template <>
+struct hash<oneflow::xrt::XrtField> {
+  size_t operator()(const oneflow::xrt::XrtField &field) const {
+    return std::hash<oneflow::xrt::XrtDevice>()(field.device()) ^
+           std::hash<oneflow::xrt::XrtEngine>()(field.engine());
+  }
+};
+
 }  // namespace std
+
+namespace oneflow {
+namespace xrt {
+
+inline XrtField MakeXrtField(const XrtDevice &device, const XrtEngine &engine) {
+  XrtField field;
+  field.set_device(device);
+  field.set_engine(engine);
+  return std::move(field);
+}
+
+inline bool operator==(const XrtField &field1, const XrtField &field2) {
+  return field1.device() == field2.device() &&
+         field1.engine() == field2.engine();
+}
+
+}  // namespace xrt
+}  // namespace oneflow
 
 #endif  // ONEFLOW_XRT_TYPES_H_

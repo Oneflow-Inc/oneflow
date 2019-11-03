@@ -13,6 +13,9 @@ class RegistryBase {
  public:
   virtual bool IsRegistered(const Any &key) const = 0;
 
+  typedef util::Map<std::string, Any> Attribute;
+  virtual const Attribute &LookupAttr(const Any &key) const = 0;
+
   RegistryBase() = default;
   virtual ~RegistryBase() = default;
 };
@@ -26,7 +29,6 @@ class Registry : public RegistryBase {
     return g_registry;
   }
 
-  typedef util::Map<std::string, Any> Attribute;
   struct AttributeFactory {
     Factory factory;
     Attribute attribute;
@@ -36,10 +38,18 @@ class Registry : public RegistryBase {
     return factories_.count(any_cast<FactoryKey>(key)) > 0;
   }
 
+  const Factory &Lookup(const Any &key) const {
+    return Lookup(any_cast<FactoryKey>(key));
+  }
+
   const Factory &Lookup(const FactoryKey &key) const {
     CHECK_GT(factories_.count(key), 0)
         << "Factory (" << key << ") has not been registered.";
     return factories_.at(key).factory;
+  }
+
+  const Attribute &LookupAttr(const Any &key) const {
+    return LookupAttr(any_cast<FactoryKey>(key));
   }
 
   const Attribute &LookupAttr(const FactoryKey &key) const {

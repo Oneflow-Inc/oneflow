@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_XRT_XLA_COMPILATION_CACHE_H_
-#define ONEFLOW_XRT_XLA_COMPILATION_CACHE_H_
+#ifndef ONEFLOW_XRT_COMPILATION_CACHE_H_
+#define ONEFLOW_XRT_COMPILATION_CACHE_H_
 
 #include <memory>
 #include <mutex>
@@ -52,4 +52,4 @@ class CompilationCache {
 }  // namespace xrt
 }  // namespace oneflow
 
-#endif  // ONEFLOW_XRT_XLA_COMPILATION_CACHE_H_
+#endif  // ONEFLOW_XRT_COMPILATION_CACHE_H_

@@ -14,9 +14,10 @@ void XrtLaunchOp::InitFromOpConf() {
   int inputs_num = launch_conf.in().size();
   int outputs_num = launch_conf.out().size();
 
+  xrt::LaunchGraphHelper graph_helper(launch_conf.attr());
   for (int i = 0; i < inputs_num; ++i) {
     const std::string &input = launch_conf.in().at(i);
-    bool mutability = xrt::LookupMutability(launch_conf, input);
+    bool mutability = graph_helper.LookupMutability(input);
     EnrollInputBn(absl::StrCat("in_", i))->set_is_mutable(mutability);
   }
   if (outputs_num > 0) {
@@ -64,9 +65,9 @@ Maybe<void> XrtLaunchOp::InferBatchAxis(
   const auto &launch_conf = op_conf().xrt_launch_conf();
   const auto &batch_axis = launch_conf.attr().batch_axis();
 
-  xrt::LaunchGraphHelper graph(launch_conf.attr());
+  xrt::LaunchGraphHelper graph_helper(launch_conf.attr());
   for (const std::string &bn : this->output_bns()) {
-    std::string blob_name = graph.Output(bn);
+    std::string blob_name = graph_helper.Output(bn);
     CHECK_GT(batch_axis.count(blob_name), 0);
     *BatchAxis4BnInOp(bn) = batch_axis.at(blob_name);
   }

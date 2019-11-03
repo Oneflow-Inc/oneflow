@@ -3,6 +3,7 @@
 #include "oneflow/xrt/compilation_cache.h"
 #include "oneflow/xrt/executable.h"
 #include "oneflow/xrt/graph_compiler.h"
+#include "oneflow/xrt/launch_util.h"
 
 namespace oneflow {
 
@@ -76,14 +77,17 @@ void XrtLaunchKernel<device_type>::MakeInputOutputAlias(
     std::vector<xrt::Parameter> *return_params,
     std::vector<xrt::InputOutputAlias> *aliases) const {
   const auto &launch_conf = this->op_conf().xrt_launch_conf();
+  xrt::LaunchGraphHelper graph_helper(launch_conf.attr());
   for (int i = 0; i < entry_params.size(); ++i) {
     const std::string &entry_name = entry_params[i].name();
-    if (xrt::LookupMutability(launch_conf, entry_name)) {
+    if (graph_helper.LookupMutability(entry_name)) {
       aliases->push_back(
           {{static_cast<int>(return_params->size())} /*output_index*/,
            i /*param_number=*/,
            {} /*param_index=*/});
       return_params->push_back(entry_params[i]);
+      // TODO(hjchen2): Need to refine
+      return_params->back().set_name(graph_helper.Input(entry_name));
     }
   }
 }

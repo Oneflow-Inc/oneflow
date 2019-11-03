@@ -15,3 +15,8 @@ enum XrtEngine {
   TENSORRT = 2;
   TVM = 3;
 }
+
+message XrtField {
+  required XrtDevice device = 1;
+  required XrtEngine engine = 2;
+}

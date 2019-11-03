@@ -56,9 +56,6 @@ inline void RunXrtPass(const std::string &pass, XrtGraph *graph,
   return RunPassImpl(pass, graph, options, std::forward<Args>(args)...);
 }
 
-bool LookupMutability(const XrtLaunchOpConf &launch_conf,
-                      const std::string &argument);
-
 Parameter BuildParameter(const Blob &blob, const std::string &name = "");
 
 }  // namespace xrt

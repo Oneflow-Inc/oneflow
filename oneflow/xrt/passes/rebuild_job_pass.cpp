@@ -11,6 +11,7 @@
 #include "oneflow/xrt/argument.h"
 #include "oneflow/xrt/graph/graph.h"
 #include "oneflow/xrt/passes/pass.h"
+#include "oneflow/xrt/types.h"
 #include "oneflow/xrt/utility/stl.h"
 
 namespace oneflow {
@@ -121,6 +122,8 @@ class FoldSubgraphBuilder {
 
   void RemoveLaunchFoldedOps();
 
+  bool IsMutableArgument(const XrtNode *node, const Argument &argument);
+
   bool IsAfterAllReduce(const XrtNode *node);
 
  private:
@@ -187,16 +190,20 @@ void FoldSubgraphBuilder::FixSubgraphOutArgumentsBlobNames(
   }
 }
 
-// bool FoldSubgraphBuilder::IsMutableArgument(XrtNode *node,
-//                                            const Argument &argument) {
-//  const auto &mutable_vars = GetMutableVariables();
-//  for (const std::string &bn : mutable_vars) {
-//    if (argument.name() == BlobIdToName(op->BnInOp2Lbi(bn))) {
-//      return true;
-//    }
-//  }
-//  return false;
-//}
+bool FoldSubgraphBuilder::IsMutableArgument(const XrtNode *node,
+                                            const Argument &argument) {
+  XrtEngine engine = XrtEngine::XLA;
+  XrtField field = MakeXrtField(node->device(), engine);
+  auto *rm = util::RegistryManager<decltype(field)>::Global();
+  const auto &attrs = rm->Get(field)->LookupAttr(node->type());
+  const auto &it = attrs.find("MutableVars");
+  if (it != attrs.end()) {
+    const std::string &key = argument.meta_data().consume_key;
+    const auto &mutable_vars = any_cast<util::Set<std::string>>(it->second);
+    return mutable_vars.count(key) > 0;
+  }
+  return false;
+}
 
 void FoldSubgraphBuilder::buildXrtLaunchAttribute(
     const XrtGraph *sub_graph, XrtLaunchOpConf::Attribute *launch_attr) {
@@ -217,7 +224,7 @@ void FoldSubgraphBuilder::buildXrtLaunchAttribute(
         const Argument &argument = edge->argument();
         argument_proto->set_in(argument.name());
         argument_proto->set_out(argument.name());
-        //        is_mutable |= IsMutableArgument(edge->end(), argument);
+        is_mutable |= IsMutableArgument(edge->end(), argument);
       }
       for (const XrtEdge *edge : node->in_edges()) {
         const Argument &argument = edge->argument();

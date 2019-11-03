@@ -135,15 +135,5 @@ Parameter BuildParameter(const Blob &blob, const std::string &name) {
                    desc.data_type());
 }
 
-bool LookupMutability(const XrtLaunchOpConf &launch_conf,
-                      const std::string &argument) {
-  const auto &mutability_table = launch_conf.attr().mutability();
-  const auto &it = mutability_table.find(argument);
-  if (it == mutability_table.end()) {
-    return false;
-  }
-  return it->second;
-}
-
 }  // namespace xrt
 }  // namespace oneflow

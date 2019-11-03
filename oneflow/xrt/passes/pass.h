@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_CORE_COMPILER_OF2XLA_PASS_XLA_OPTIMIZE_PASS_H_
-#define ONEFLOW_CORE_COMPILER_OF2XLA_PASS_XLA_OPTIMIZE_PASS_H_
+#ifndef ONEFLOW_XRT_PASSES_PASS_H_
+#define ONEFLOW_XRT_PASSES_PASS_H_
 
 #include "oneflow/xrt/any.h"
 #include "oneflow/xrt/graph/graph.h"
@@ -39,21 +39,30 @@ class XrtPass {
                    const std::vector<Any> &params) {
     LOG(FATAL) << "Should not call this function.";
   }
+
+  static auto Registry()
+      -> util::Registry<std::string, std::function<XrtPass *()>> * {
+    return util::Registry<std::string, std::function<XrtPass *()>>::Global();
+  }
 };
 
 // typedef XrtPass *(*XrtPassCreator)();
 
-#define REGISTER_XRT_PASS(PassName, PassType)                          \
-  std::function<XrtPass *()> _##PassName##_pass_ = []() -> XrtPass * { \
-    return new PassType;                                               \
-  };                                                                   \
-  XRT_REGISTER_FACTORY(#PassName, _##PassName##_pass_)
+#define REGISTER_XRT_PASS(PassName, PassType)                     \
+  namespace {                                                     \
+  struct _XrtPassRegistrar {                                      \
+    _XrtPassRegistrar() {                                         \
+      XrtPass::Registry()->Register(                              \
+          #PassName, []() -> XrtPass * { return new PassType; }); \
+    }                                                             \
+  };                                                              \
+  _XrtPassRegistrar _xrt_pass_registrar_ __attribute__((unused)); \
+  }  // namespace
 
 inline void RunPassImpl(const std::string &pass, XrtGraph *graph,
                         const XrtPassOptions &options) {
   auto optimize_pass =
-      util::Registry<std::string, std::function<XrtPass *()>>::Global()->Lookup(
-          pass)();
+      std::shared_ptr<XrtPass>(XrtPass::Registry()->Lookup(pass)());
   optimize_pass->Run(graph, options);
 }
 
@@ -62,12 +71,11 @@ inline void RunPassImpl(const std::string &pass, XrtGraph *graph,
                         const XrtPassOptions &options, Args &&... args) {
   std::vector<Any> params{std::forward<Args>(args)...};
   auto optimize_pass =
-      util::Registry<std::string, std::function<XrtPass *()>>::Global()->Lookup(
-          pass)();
+      std::shared_ptr<XrtPass>(XrtPass::Registry()->Lookup(pass)());
   optimize_pass->Run(graph, options, params);
 }
 
 }  // namespace xrt
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_COMPILER_OF2XLA_PASS_XLA_OPTIMIZE_PASS_H_
+#endif  // ONEFLOW_XRT_PASSES_PASS_H_

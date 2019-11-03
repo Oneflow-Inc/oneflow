@@ -1,6 +1,7 @@
-#include "oneflow/xrt/graph/node.h"
 #include "absl/strings/str_split.h"
+
 #include "oneflow/xrt/graph/algorithm.h"
+#include "oneflow/xrt/graph/node.h"
 #include "oneflow/xrt/types.h"
 #include "oneflow/xrt/utility/registry.h"
 
@@ -12,7 +13,7 @@ extern const std::string _XrtInArgumentPrefix;
 extern const std::string _XrtOutArgumentPrefix;
 
 bool XrtNode::IsCompiled(const XrtEngine &engine) const {
-  auto field = std::make_pair(engine, device_);
+  auto field = MakeXrtField(device_, engine);
   auto *rm = util::RegistryManager<decltype(field)>::Global();
   return rm->Get(field)->IsRegistered(type_);
 }

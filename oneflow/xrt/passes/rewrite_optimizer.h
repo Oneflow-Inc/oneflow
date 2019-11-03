@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_XLA_OF2XLA_PASS_REWRITE_OPTIMIZER_H_
-#define ONEFLOW_XLA_OF2XLA_PASS_REWRITE_OPTIMIZER_H_
+#ifndef ONEFLOW_XRT_PASSES_REWRITE_OPTIMIZER_H_
+#define ONEFLOW_XRT_PASSES_REWRITE_OPTIMIZER_H_
 
 #include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/xrt/graph/node.h"
@@ -53,4 +53,4 @@ class OptimizerParamBuilder {
 }  // namespace xrt
 }  // namespace oneflow
 
-#endif  // ONEFLOW_XLA_OF2XLA_PASS_REWRITE_OPTIMIZER_H_
+#endif  // ONEFLOW_XRT_PASSES_REWRITE_OPTIMIZER_H_

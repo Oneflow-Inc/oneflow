@@ -5,9 +5,9 @@
 #include "oneflow/xrt/any.h"
 #include "oneflow/xrt/argument.h"
 #include "oneflow/xrt/graph/algorithm.h"
+#include "oneflow/xrt/types.h"
 #include "oneflow/xrt/utility/attribute_map.h"
 #include "oneflow/xrt/utility/stl.h"
-#include "oneflow/xrt/xrt.pb.h"
 
 namespace oneflow {
 namespace xrt {
@@ -76,13 +76,14 @@ class XrtNode : public util::AttributeMap {
   void set_type(const std::string &type) { type_ = type; }
   void set_name(const std::string &name) { name_ = name; }
 
-  bool IsCompiled(const XrtEngine &engine = XrtEngine::XLA) const;
   bool IsSourceNode() const;
   bool IsFinishNode() const;
   bool IsArgumentNode() const;
   bool IsInArgumentNode() const;
   bool IsOutArgumentNode() const;
   bool IsReachable(const XrtNode &dst_node) const;
+
+  bool IsCompiled(const XrtEngine &engine = XrtEngine::XLA) const;
 
   friend class XrtGraph;
 
