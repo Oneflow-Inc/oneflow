@@ -1385,7 +1385,7 @@ message WhereOpConf {
 
 message ZerosLikeOpConf {
   required string like = 1;
-  required string y = 2;
+  required string out = 2;
   optional DataType data_type = 3;
 }
 
