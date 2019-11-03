@@ -17,7 +17,7 @@ void GenerateBackwardOpConf(
     conf->set_in_1(GenLogicalBlobName(op.BnInOp2Lbi("out")));
     op_confs->push_back(op_conf);
     DiffLbi4BnInOp("in")->set_op_name(op_conf.name());
-    DiffLbi4BnInOp("in")->set_blob_name("out");
+    DiffLbi4BnInOp("in")->set_blob_name(conf->out());
   }
 }
 
