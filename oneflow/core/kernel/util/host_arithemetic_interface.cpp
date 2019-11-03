@@ -83,6 +83,16 @@ void ArithemeticIf<DeviceType::kCPU>::Transpose(DeviceCtx* ctx, const int32_t nu
   TransposeImpl<double>(ctx, num_axis, x_shape, y_shape, permutation, elem_cnt, x, y);
 }
 
+void ArithemeticIf<DeviceType::kCPU>::Exp(DeviceCtx* ctx, const int64_t n, const float* x,
+                                          float* y) {
+  for (int64_t i = 0; i < n; ++i) { y[i] = std::exp(x[i]); }
+}
+
+void ArithemeticIf<DeviceType::kCPU>::Exp(DeviceCtx* ctx, const int64_t n, const double* x,
+                                          double* y) {
+  for (int64_t i = 0; i < n; ++i) { y[i] = std::exp(x[i]); }
+}
+
 void ArithemeticIf<DeviceType::kCPU>::InitializeWithConstConf(
     DeviceCtx* ctx, const ConstantInitializerConf& initializer_conf, Blob* blob) {
   DataType dtype = blob->data_type();

@@ -12,6 +12,11 @@ struct Int32Array {
   int32_t val[NDIMS];
 };
 
+template<typename T>
+__global__ void ExpGpu(const int64_t n, const T* x, T* y) {
+  CUDA_1D_KERNEL_LOOP(i, n) { y[i] = std::exp(x[i]); }
+}
+
 template<int32_t NDIMS>
 __device__ int32_t GetXIndex(const int32_t* y_shape, const int32_t* x_strides, int32_t y_idx) {
   int32_t x_idx = 0;
@@ -107,6 +112,18 @@ void ArithemeticIf<DeviceType::kGPU>::Transpose(DeviceCtx* ctx, const int32_t nu
 }
 
 #undef TRANSPOSE_CHECK
+
+void ArithemeticIf<DeviceType::kGPU>::Exp(DeviceCtx* ctx, const int64_t n, const float* x,
+                                          float* y) {
+  ExpGpu<float>
+      <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y);
+}
+
+void ArithemeticIf<DeviceType::kGPU>::Exp(DeviceCtx* ctx, const int64_t n, const double* x,
+                                          double* y) {
+  ExpGpu<double>
+      <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y);
+}
 
 // create temporary host blob store initializer result
 #define BEFORE_CPU_INITIALIZE()                                     \

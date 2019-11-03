@@ -1,5 +1,5 @@
+#include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/kernel/kernel.h"
-#include "oneflow/core/kernel/kernel_context.h"
 
 namespace oneflow {
 
@@ -11,18 +11,19 @@ class ExpKernel final : public KernelIf<device_type> {
   ~ExpKernel() = default;
 
  private:
-  void ForwardDataContent(const KernelCtx&,
-                          std::function<Blob*(const std::string&)>) const override;
+  void ForwardDataContent(const KernelCtx& ctx,
+                          std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
+    Blob* in_blob = BnInOp2Blob("in");
+    NewKernelUtil<device_type>::Exp(ctx.device_ctx, in_blob->shape().elem_cnt(), in_blob->dptr<T>(),
+                                    BnInOp2Blob("out")->mut_dptr<T>());
+  }
 };
 
-template<DeviceType device_type, typename T>
-void ExpKernel<device_type, T>::ForwardDataContent(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  Blob* in_blob = BnInOp2Blob("in");
-  KernelUtil<device_type, T>::Exp(ctx.device_ctx, in_blob->shape().elem_cnt(), in_blob->dptr<T>(),
-                                  BnInOp2Blob("out")->mut_dptr<T>());
-}
-
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kExpConf, ExpKernel, FLOATING_DATA_TYPE_SEQ);
+#define REGISTER_EXP_KERNEL(dev, dtype) \
+  REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kExpConf, dev, dtype, ExpKernel<dev, dtype>)
+REGISTER_EXP_KERNEL(DeviceType::kGPU, float);
+REGISTER_EXP_KERNEL(DeviceType::kGPU, double);
+REGISTER_EXP_KERNEL(DeviceType::kCPU, float);
+REGISTER_EXP_KERNEL(DeviceType::kCPU, double);
 
 }  // namespace oneflow

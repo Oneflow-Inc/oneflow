@@ -16,6 +16,8 @@ struct ArithemeticIf<DeviceType::kGPU> {
   static void Transpose(DeviceCtx* ctx, const int32_t num_axis, const Shape& x_shape,
                         const Shape& y_shape, const PbRf<int32_t>& permutation,
                         const int64_t elem_cnt, const float16* x, float16* y);
+  static void Exp(DeviceCtx* ctx, const int64_t n, const float* x, float* y);
+  static void Exp(DeviceCtx* ctx, const int64_t n, const double* x, double* y);
 
   static void InitializeWithConstConf(DeviceCtx* ctx,
                                       const ConstantInitializerConf& initializer_conf, Blob* blob);
