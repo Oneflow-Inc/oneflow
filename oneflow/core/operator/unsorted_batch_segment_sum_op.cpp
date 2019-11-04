@@ -22,10 +22,6 @@ class UnsortedBatchSegmentSumOp final : public Operator {
   Maybe<void> GetSbpSignatures(
       const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
       SbpSignatureList* sbp_sig_list) const override;
-  void VirtualGenKernelConf(
-      std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-      const ParallelContext* parallel_ctx, KernelConf* kernel_conf, const OpContext* op_ctx,
-      std::function<const BlobDesc&(const std::string&)> LogicalBlobDesc4BnInOp) const override;
 };
 
 void UnsortedBatchSegmentSumOp::InitFromOpConf() {
@@ -81,14 +77,6 @@ Maybe<void> UnsortedBatchSegmentSumOp::GetSbpSignatures(
       .PartialSum("out")
       .Build(sbp_sig_list->mutable_sbp_signature()->Add());
   return Maybe<void>::Ok();
-}
-
-void UnsortedBatchSegmentSumOp::VirtualGenKernelConf(
-    std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx, KernelConf* kernel_conf, const OpContext* op_ctx,
-    std::function<const BlobDesc&(const std::string&)> LogicalBlobDesc4BnInOp) const {
-  UnsortedBatchSegmentSumKernelConf* conf = kernel_conf->mutable_unsorted_batch_segment_sum_conf();
-  conf->set_indices_data_type(GetBlobDesc4BnInOp("segment_ids")->data_type());
 }
 
 REGISTER_OP(OperatorConf::kUnsortedBatchSegmentSumConf, UnsortedBatchSegmentSumOp);
