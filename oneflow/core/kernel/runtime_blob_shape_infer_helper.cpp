@@ -18,20 +18,22 @@ RuntimeBlobShapeInferHelper::RuntimeBlobShapeInferHelper(const OperatorConf& op_
   parallel_ctx_.set_parallel_num(1);
   op_infer_cache_key_.job_desc = job_desc;
   op_infer_cache_key_.op_conf_sym = op_->GetOpConfWithoutOpNameAndLbn();
-  for (const auto& ibn : op_->input_bns()) {
-    op_infer_cache_key_.ibn2shape_sym[ibn] = Symbol<Shape>();
-  }
+  op_infer_cache_key_.ibn_idx2shape_sym.resize(op_->input_bns().size());
   op_infer_cache_key_.dtype_signature_sym = SymbolOf(kernel_conf.dtype_signature());
 }
 
 void RuntimeBlobShapeInferHelper::UpdateInputBlobDescs7OpInferCacheKey(
     std::function<Blob*(const std::string&)> BnInOp2Blob) {
-  for (const auto& ibn : op_->input_bns()) {
+  auto ResetBlobDescAndGetShapeSym = [&](const std::string& ibn) -> Symbol<Shape> {
     const Blob* blob = BnInOp2Blob(ibn);
-    if (blob == nullptr) { continue; }
+    if (blob == nullptr) { return Symbol<Shape>(); }
     BlobDesc* blob_desc = BlobDesc4BnInOp(ibn, blob->blob_desc());
     blob_desc->mut_shape().LeftOnesExtendedAssign(blob->shape());
-    op_infer_cache_key_.ibn2shape_sym[ibn] = SymbolOf(blob_desc->shape());
+    return SymbolOf(blob_desc->shape());
+  };
+  const auto& input_bns = op_->input_bns();
+  FOR_RANGE(int, i, 0, input_bns.size()) {
+    op_infer_cache_key_.ibn_idx2shape_sym.at(i) = ResetBlobDescAndGetShapeSym(input_bns.Get(i));
   }
 }
 
@@ -57,9 +59,11 @@ void RuntimeBlobShapeInferHelper::InferDenseShape(
     CHECK_JUST(op_->InferOutBlobDescsIf(CachedBlobDesc4BnInOp, &parallel_ctx_, &sbp_signature_,
                                         [](OpContext*) {}));
     auto* ret = new OpInferCacheValue();
-    for (const auto& obn : op_->output_bns()) {
+    ret->obn_idx2shape_sym.resize(op_->output_bns().size());
+    FOR_RANGE(int, i, 0, op_->output_bns().size()) {
+      const auto& obn = op_->output_bns().Get(i);
       const auto& blob_desc = bn_in_op2blob_desc_.at(obn);
-      ret->obn2shape_sym[obn].reset(blob_desc->shape());
+      ret->obn_idx2shape_sym.at(i).reset(blob_desc->shape());
       auto* blob = BnInOp2Blob(obn);
       if (blob == nullptr) { continue; }
       CHECK_EQ(blob->data_type(), blob_desc->data_type());
@@ -70,17 +74,18 @@ void RuntimeBlobShapeInferHelper::InferDenseShape(
   };
   size_t cache_size = Global<ResourceDesc>::Get()->thread_local_cache_max_size();
   const auto& shape_infer_ret = ThreadLocalCachedCall(cache_size, Infer, op_infer_cache_key_);
-  const auto& obn2shape_sym = shape_infer_ret->obn2shape_sym;
-  for (const auto& obn : op_->output_bns()) {
+  const auto& obn_idx2shape_sym = shape_infer_ret->obn_idx2shape_sym;
+  FOR_RANGE(int, i, 0, op_->output_bns().size()) {
+    const auto& obn = op_->output_bns().Get(i);
     auto* blob = BnInOp2Blob(obn);
     if (blob == nullptr) { continue; }
     if (blob->blob_desc().is_dynamic()) {
       const int64_t num_of_lod_levels = blob->blob_desc().num_of_lod_levels();
       const int64_t num_left_ones = (num_of_lod_levels == 0 ? 0 : num_of_lod_levels - 1);
-      CHECK_EQ(num_left_ones, obn2shape_sym.at(obn)->NumAxes() - blob->shape().NumAxes());
-      blob->dense_shape_mut_view()->LeftOnesStrippedAssign(*obn2shape_sym.at(obn));
+      CHECK_EQ(num_left_ones, obn_idx2shape_sym.at(i)->NumAxes() - blob->shape().NumAxes());
+      blob->dense_shape_mut_view()->LeftOnesStrippedAssign(*obn_idx2shape_sym.at(i));
     } else {
-      CHECK(*obn2shape_sym.at(obn) == blob->static_shape());
+      CHECK(*obn_idx2shape_sym.at(i) == blob->static_shape());
     }
   }
 }
