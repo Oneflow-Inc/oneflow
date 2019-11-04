@@ -35,6 +35,7 @@ class JobBuilder final {
                            const std::vector<OperatorConf> &op_confs);
 
   void RemoveOpByName(const std::string &op_name);
+  void RemoveOpByName(const std::unordered_set<std::string> &removing_names);
   void DelOps(const std::vector<std::string> &op_names);
   void DelOps(const std::vector<OperatorConf> &op_confs);
 

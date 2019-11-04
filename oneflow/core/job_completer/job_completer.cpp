@@ -19,7 +19,7 @@
 #include "absl/strings/str_cat.h"
 #include "oneflow/xrt/api.h"
 
-DECLARE_bool(use_xla_jit);
+DEFINE_bool(use_xla_jit, EnvToBool(FLAGS_use_xla_jit, false), "Option to use xla jit");
 #endif  // WITH_XLA
 
 namespace oneflow {
@@ -143,6 +143,23 @@ void RewriteOptimizerOp(const OpGraph& op_graph, Job* job) {
   xrt::RunXrtPass("RewriteOptimizer", graph.get(), options, job);
 
   TeePersistentLogStream::Create(absl::StrCat("job_rewrite_optimizer", GlobalJobDesc().job_id()))
+      ->Write(*job);
+}
+
+void RebuildXrtCompiledJob(const OpGraph& op_graph, Job* job) {
+  VLOG(2) << "Compile the job with XLA JIT support.";
+  TeePersistentLogStream::Create(absl::StrCat("job_without_xla", GlobalJobDesc().job_id()))
+      ->Write(*job);
+
+  auto graph = xrt::BuildXrtGraph(&op_graph);
+  auto options = xrt::CreateDefaultXrtPassOptions();
+  xrt::RunXrtPass("MarkClusterId", graph.get(), options);
+  xrt::RunXrtPass("BuildSubGraph", graph.get(), options);
+
+  // Rebuild Job
+  xrt::RunXrtPass("RebuildCompiledJob", graph.get(), options, job);
+
+  TeePersistentLogStream::Create(absl::StrCat("job_with_xla", GlobalJobDesc().job_id()))
       ->Write(*job);
 }
 #endif
@@ -396,6 +413,9 @@ void JobCompleter::Complete(Job* job) const {
   WithOpGraphAndMutJobBuilder(job, &AddGlobalOutputCriticalSections);
   WithOpGraphAndMutJobBuilder(job, &DumpLogicalBlobDescAndSbpSignature);
   WithOpGraphAndMutJobBuilder(job, &SetOpTimeShape7BatchAxisLbis);
+#ifdef WITH_XLA
+  if (FLAGS_use_xla_jit) { WithOpGraphAndMutJob(job, &RebuildXrtCompiledJob); }
+#endif
   CheckOpGraph(OpGraph(*job));
 }
 

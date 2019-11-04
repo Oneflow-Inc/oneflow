@@ -93,11 +93,15 @@ void JobBuilder::MutParallelConfOnlyOnce(const std::string &op_name,
 }
 
 void JobBuilder::RemoveOpByName(const std::string &op_name) {
+  RemoveOpByName(std::unordered_set<std::string>{op_name});
+}
+
+void JobBuilder::RemoveOpByName(const std::unordered_set<std::string> &removing_names) {
   // Update net
   DLNetConf net = job_->net();
   job_->mutable_net()->clear_op();
   for (const OperatorConf &op_conf : net.op()) {
-    if (op_conf.name() != op_name) { *(job_->mutable_net()->add_op()) = op_conf; }
+    if (removing_names.count(op_conf.name()) == 0) { *(job_->mutable_net()->add_op()) = op_conf; }
   }
   // Update placement
   auto placement_group = job_->placement().placement_group();
@@ -106,18 +110,21 @@ void JobBuilder::RemoveOpByName(const std::string &op_name) {
     PlacementGroup p;
     OpNameSet *op_set = p.mutable_op_set();
     for (const std::string &name : place.op_set().op_name()) {
-      if (name != op_name) { op_set->add_op_name(name); }
+      if (removing_names.count(name) == 0) { op_set->add_op_name(name); }
     }
 
     *(p.mutable_parallel_conf()) = place.parallel_conf();
     if (op_set->op_name().size() > 0) { *(job_->mutable_placement()->add_placement_group()) = p; }
   }
-  // Update Sbp
+
   auto *sbp_conf = job_->mutable_sbp_conf()->mutable_op_name2sbp_signature_conf();
-  if (sbp_conf->count(op_name) > 0) { sbp_conf->erase(op_name); }
-  // Update time shape
   auto *time_shape_conf = job_->mutable_helper()->mutable_op_name2op_time_shape();
-  if (time_shape_conf->count(op_name) > 0) { time_shape_conf->erase(op_name); }
+  for (const std::string &op_name : removing_names) {
+    // Update Sbp
+    if (sbp_conf->count(op_name) > 0) { sbp_conf->erase(op_name); }
+    // Update time shape
+    if (time_shape_conf->count(op_name) > 0) { time_shape_conf->erase(op_name); }
+  }
   // Update batch dim lbis
   // Update builder
   JobBuilder builder(job_);
@@ -128,11 +135,15 @@ void JobBuilder::RemoveOpByName(const std::string &op_name) {
 }
 
 void JobBuilder::DelOps(const std::vector<std::string> &op_names) {
-  for (const auto &op_name : op_names) { RemoveOpByName(op_name); }
+  std::unordered_set<std::string> removing_names;
+  for (const auto &op_name : op_names) { removing_names.insert(op_name); }
+  RemoveOpByName(removing_names);
 }
 
 void JobBuilder::DelOps(const std::vector<OperatorConf> &op_confs) {
-  for (const auto &op_conf : op_confs) { RemoveOpByName(op_conf.name()); }
+  std::unordered_set<std::string> removing_names;
+  for (const auto &op_conf : op_confs) { removing_names.insert(op_conf.name()); }
+  RemoveOpByName(removing_names);
 }
 
 void JobBuilder::MutOpsOnlyOnce(const std::vector<OperatorConf> &op_confs) {

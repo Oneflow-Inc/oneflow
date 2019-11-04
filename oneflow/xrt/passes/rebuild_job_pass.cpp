@@ -457,13 +457,15 @@ void FoldSubgraphBuilder::FixupSbpSignatures() {
 }
 
 void FoldSubgraphBuilder::RemoveLaunchFoldedOps() {
+  util::Set<std::string> removing_names;
   for (const XrtNode *node : launch_nodes_) {
     for (const XrtNode *sub_node : node->sub_graph()->Nodes()) {
       if (!sub_node->IsArgumentNode()) {
-        builder_->RemoveOpByName(sub_node->name());
+        removing_names.insert(sub_node->name());
       }
     }
   }
+  builder_->RemoveOpByName(removing_names);
 }
 
 void FoldSubgraphBuilder::InferIsAfterAllReduce() {

@@ -4,13 +4,6 @@
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/job_completer/job_completer.h"
 
-#ifdef WITH_XLA
-#include "absl/strings/str_cat.h"
-#include "oneflow/xrt/api.h"
-
-DEFINE_bool(use_xla_jit, EnvToBool(FLAGS_use_xla_jit, false), "Option to use xla jit");
-#endif  // WITH_XLA
-
 namespace oneflow {
 
 void Compiler::GenNetTopo(Plan* plan) const {
@@ -61,26 +54,6 @@ void Compiler::Compile(Job* job, Plan* plan, bool need_job_complete) const {
   TeePersistentLogStream::Create(StrCat("optimized_job", job_desc.job_id()))->Write(*job);
   Global<OpGraph>::New(*job);
   Global<OpGraph>::Get()->ToDotWithFilePath("optimized_dlnet_op_graph.dot");
-
-#ifdef WITH_XLA
-  if (FLAGS_use_xla_jit) {
-    VLOG(2) << "Compile the job with XLA JIT support.";
-    TeePersistentLogStream::Create(absl::StrCat("job_without_xla", job_desc.job_id()))->Write(*job);
-
-    auto graph = xrt::BuildXrtGraph(Global<OpGraph>::Get());
-    auto options = xrt::CreateDefaultXrtPassOptions();
-    xrt::RunXrtPass("MarkClusterId", graph.get(), options);
-    xrt::RunXrtPass("BuildSubGraph", graph.get(), options);
-
-    // Rebuild Job
-    xrt::RunXrtPass("RebuildCompiledJob", graph.get(), options, job);
-
-    TeePersistentLogStream::Create(absl::StrCat("job_with_xla", job_desc.job_id()))->Write(*job);
-    Global<OpGraph>::Delete();
-    Global<OpGraph>::New(*job);
-  }
-#endif  // WITH_XLA
-
   auto logical_gph = std::make_unique<LogicalGraph>(*job);
   auto task_gph = std::make_unique<TaskGraph>(std::move(logical_gph));
   using std::placeholders::_1;

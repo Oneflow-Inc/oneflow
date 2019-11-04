@@ -18,7 +18,9 @@ void DecodeOFRecordOp::InitFromOpConf() {
   CHECK(op_conf().has_decode_ofrecord_conf());
   if (op_conf().decode_ofrecord_conf().has_in()) { EnrollInputBn("in", false); }
   const DecodeOFRecordOpConf& conf = op_conf().decode_ofrecord_conf();
-  for (int32_t i = 0; i < conf.blob_size(); ++i) { EnrollOutputBn(conf.blob(i).name(), false); }
+  for (int32_t i = 0; i < conf.blob_size(); ++i) {
+    EnrollOutputBn("out_" + std::to_string(i), false);
+  }
   if (conf.part_name_suffix_length() != -1) {
     CHECK_GE(conf.part_name_suffix_length(), std::to_string(conf.data_part_num() - 1).length());
   }
@@ -64,9 +66,11 @@ Maybe<void> DecodeOFRecordOp::InferBlobDescs(
 }
 
 LogicalBlobId DecodeOFRecordOp::obn2lbi(const std::string& output_bn) const {
+  CHECK_STREQ(output_bn.substr(0, 4).c_str(), "out_");
   LogicalBlobId ret;
   ret.set_op_name(op_name());
-  ret.set_blob_name(output_bn);
+  ret.set_blob_name(
+      op_conf().decode_ofrecord_conf().blob(oneflow_cast<int32_t>(output_bn.substr(4))).name());
   return ret;
 }
 
