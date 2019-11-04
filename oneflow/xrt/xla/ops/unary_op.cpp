@@ -13,7 +13,7 @@ namespace mola {
 template <typename UnaryOp>
 class ApplyUnaryOp : public OpKernel {
  public:
-  void Compile(OpContext *ctx) override {
+  void Compile(OpKernelContext *ctx) override {
     ctx->SetOutput("out", UnaryOp()(ctx->Input("in")));
   }
 };

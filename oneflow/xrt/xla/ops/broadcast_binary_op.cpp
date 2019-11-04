@@ -12,7 +12,7 @@ namespace mola {
 template <typename BinaryOp>
 class BcastBinaryOp : public OpKernel {
  public:
-  void Compile(OpContext *ctx) override {
+  void Compile(OpKernelContext *ctx) override {
     Shape shape_a = ctx->InputShape("a");
     Shape shape_b = ctx->InputShape("b");
 

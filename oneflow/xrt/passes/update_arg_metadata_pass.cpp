@@ -27,11 +27,7 @@ class ArgMetaDataUpdater {
       if (node->IsArgumentNode()) {
         const auto &conf =
             *dynamic_cast<const XrtLaunchOpConf::Argument *>(&node->param());
-        if (node->IsInArgumentNode()) {
-          keys = {{conf.out(), "out"}};
-        } else {
-          keys = {{conf.in(), "in"}};
-        }
+        keys = {{conf.value(), "value"}};
       } else {
         std::shared_ptr<Operator> op = BuildOp(node);
         for (const std::string &bn : op->input_bns()) {

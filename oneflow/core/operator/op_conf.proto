@@ -1506,20 +1506,22 @@ message AdamOptimizerOpConf {
 message XrtLaunchOpConf {
   message Argument {
     required string name = 1;
-    required string in = 2;
-    required string out = 3;
-    required DeviceType device_type = 4;
+    required string value = 2;
+    required DeviceType device_type = 3;
   }
-  message Attribute {
+  message Function {
     repeated Argument argument = 1;
     repeated OperatorConf node = 2;
-    optional bool model_update = 3 [default = false];
-    map<string, bool> mutability = 4;
-    map<string, OptInt64> batch_axis = 5;
   }
   repeated string in = 1;
   repeated string out = 2;
-  required Attribute attr = 3;
+  required Function function = 3;
+  // Input mutability.
+  map<string, bool> mutability = 4;
+  // Mapping launch op's input and output names into function.
+  map<string, string> input_output_mapping = 5;
+  map<string, OptInt64> batch_axis = 6;
+  optional bool model_update = 7 [default = false];
 }
 
 message NcclBoxingReduceScatterOpConf {

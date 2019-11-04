@@ -8,7 +8,7 @@ namespace mola {
 
 class MatMulOp : public OpKernel {
  public:
-  void Compile(OpContext *ctx) override {
+  void Compile(OpKernelContext *ctx) override {
     Shape a_shape = ctx->InputShape("a");
     Shape b_shape = ctx->InputShape("b");
     CHECK_GE(a_shape.NumAxes(), 2);

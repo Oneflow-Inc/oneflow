@@ -10,7 +10,7 @@ namespace mola {
 
 class CastOp : public OpKernel {
  public:
-  void Compile(OpContext *ctx) override {
+  void Compile(OpKernelContext *ctx) override {
     DataType dest_dtype = ctx->GetAttr<DataType>("data_type");
     DataType src_dtype = ctx->InputType("in");
     xla::XlaOp in = ctx->Input("in");

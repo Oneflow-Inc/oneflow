@@ -10,10 +10,10 @@ namespace mola {
 
 class SoftmaxOp : public OpKernel {
  public:
-  void Compile(OpContext *ctx) override;
+  void Compile(OpKernelContext *ctx) override;
 };
 
-void SoftmaxOp::Compile(OpContext *ctx) {
+void SoftmaxOp::Compile(OpKernelContext *ctx) {
   xla::XlaBuilder *builder = ctx->builder();
   Shape input_shape = ctx->InputShape("in");
   std::vector<long long> batch_dims(input_shape.NumAxes() - 1);
@@ -39,12 +39,12 @@ REGISTER_XLA_OP_KERNEL(Softmax, SoftmaxOp).Finalize();
 
 class SoftmaxGradOp : public OpKernel {
  public:
-  void Compile(OpContext *ctx) override;
+  void Compile(OpKernelContext *ctx) override;
 };
 
 // softmax gradient formula:
 // dx = y * (dy - sum(dy * y))
-void SoftmaxGradOp::Compile(OpContext *ctx) {
+void SoftmaxGradOp::Compile(OpKernelContext *ctx) {
   Shape y_shape = ctx->InputShape("y");
   std::vector<long long> batch_dims(y_shape.NumAxes() - 1);
   std::iota(batch_dims.begin(), batch_dims.end(), 0);

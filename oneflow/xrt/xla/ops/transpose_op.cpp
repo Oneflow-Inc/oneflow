@@ -8,7 +8,7 @@ namespace mola {
 
 class TransposeOp : public OpKernel {
  public:
-  void Compile(OpContext *ctx) override {
+  void Compile(OpKernelContext *ctx) override {
     auto perm = ctx->GetAttr<std::vector<int32_t>>("perm");
     Shape x_shape = ctx->InputShape("in");
     CHECK_EQ(perm.size(), x_shape.NumAxes());

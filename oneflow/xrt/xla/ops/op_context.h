@@ -16,8 +16,6 @@ namespace oneflow {
 namespace xrt {
 namespace mola {
 
-using Argument = Argument;
-
 class Operand {
  public:
   Operand() : initialized_(false) {}
@@ -29,7 +27,7 @@ class Operand {
   // Return the XlaOp handle if the builder is matched with the handle.
   xla::XlaOp AsXlaOp(xla::XlaBuilder *builder) const;
 
-  friend class OpContext;
+  friend class OpKernelContext;
 
  private:
   bool initialized_;
@@ -40,7 +38,7 @@ class Operand {
   xla::Shape shape_;
 };
 
-class OpContext {
+class OpKernelContext {
  public:
   struct Param {
     // XlaBuilder to compile the XlaComputation
@@ -56,9 +54,9 @@ class OpContext {
     util::Map<std::string, Argument> arguments;
   };
 
-  explicit OpContext(const Param &param) : param_(param) {}
+  explicit OpKernelContext(const Param &param) : param_(param) {}
 
-  virtual ~OpContext() = default;
+  virtual ~OpKernelContext() = default;
 
   const XrtDevice &device() const { return param_.device; }
   // Return XlaBuilder
@@ -118,7 +116,7 @@ class OpContext {
   }
 
  private:
-  OpContext() = delete;
+  OpKernelContext() = delete;
   Argument ArgumentFromKey(const std::string &key) const;
 
   Param param_;

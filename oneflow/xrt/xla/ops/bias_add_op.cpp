@@ -8,7 +8,7 @@ namespace mola {
 
 class BiasAddOp : public OpKernel {
  public:
-  void Compile(OpContext *ctx) override {
+  void Compile(OpKernelContext *ctx) override {
     Shape in_shape = ctx->InputShape("a");
     Shape bias_shape = ctx->InputShape("b");
     CHECK_GE(in_shape.NumAxes(), 2);

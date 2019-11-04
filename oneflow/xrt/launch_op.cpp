@@ -4,7 +4,6 @@
 #include "oneflow/core/job/sbp_signature_builder.h"
 #include "oneflow/xrt/api.h"
 #include "oneflow/xrt/launch_op.h"
-#include "oneflow/xrt/launch_util.h"
 
 namespace oneflow {
 
@@ -14,10 +13,10 @@ void XrtLaunchOp::InitFromOpConf() {
   int inputs_num = launch_conf.in().size();
   int outputs_num = launch_conf.out().size();
 
-  xrt::LaunchGraphHelper graph_helper(launch_conf.attr());
+  const auto &mutability_table = launch_conf.mutability();
   for (int i = 0; i < inputs_num; ++i) {
     const std::string &input = launch_conf.in().at(i);
-    bool mutability = graph_helper.LookupMutability(input);
+    bool mutability = mutability_table.count(input) > 0;
     EnrollInputBn(absl::StrCat("in_", i))->set_is_mutable(mutability);
   }
   if (outputs_num > 0) {
@@ -32,30 +31,37 @@ const PbMessage &XrtLaunchOp::GetCustomizedConf() const {
 Maybe<void> XrtLaunchOp::InferBlobDescs(
     std::function<BlobDesc *(const std::string &)> GetBlobDesc4BnInOp,
     const ParallelContext *parallel_ctx) const {
+  const auto &launch_conf = op_conf().xrt_launch_conf();
+  const auto &io_mapping = launch_conf.input_output_mapping();
   // Prepare outer input blob descs
   std::unordered_map<std::string, BlobDesc> blob_descs;
   for (const std::string &bn : this->input_bns()) {
     const LogicalBlobId &lbi = this->BnInOp2Lbi(bn);
     std::string blob_name = xrt::BlobIdToName(lbi);
-    auto it = blob_descs.emplace(blob_name, BlobDesc(DataType::kFloat)).first;
-    it->second.CopyMetaFrom(*GetBlobDesc4BnInOp(bn));
-  }
+    BlobDesc blob_desc(this->job_desc().DefaultDataType());
+    blob_desc.CopyMetaFrom(*GetBlobDesc4BnInOp(bn));
 
-  // Build graph from launch conf, and inference output shape
+    const std::string &mapping_input = io_mapping.at(blob_name);
+    blob_descs.emplace(mapping_input, blob_desc);
+  }
+  // Build graph from launch conf, and inference output shape.
   {
-    const auto &launch_conf = op_conf().xrt_launch_conf();
     // Run InferShape pass
     auto options = xrt::CreateDefaultXrtPassOptions();
-    auto graph = xrt::BuildXrtGraph(launch_conf, op_conf().device_type(),
-                                    this->job_desc());
+    auto graph = xrt::BuildXrtGraph(launch_conf.function(),
+                                    op_conf().device_type(), this->job_desc());
     xrt::RunXrtPass("InferShape", graph.get(), options, &this->job_desc(),
                     &blob_descs);
   }
 
   // Fetch output blob descs
   for (const std::string &bn : this->output_bns()) {
-    CHECK_GT(blob_descs.count(bn), 0);
-    *GetBlobDesc4BnInOp(bn) = blob_descs.at(bn);
+    const LogicalBlobId &lbi = this->BnInOp2Lbi(bn);
+    std::string blob_name = xrt::BlobIdToName(lbi);
+
+    const std::string &mapping_output = io_mapping.at(blob_name);
+    CHECK_GT(blob_descs.count(mapping_output), 0);
+    *GetBlobDesc4BnInOp(bn) = blob_descs.at(mapping_output);
   }
   return Maybe<void>::Ok();
 }
@@ -63,11 +69,11 @@ Maybe<void> XrtLaunchOp::InferBlobDescs(
 Maybe<void> XrtLaunchOp::InferBatchAxis(
     std::function<OptInt64 *(const std::string &)> BatchAxis4BnInOp) const {
   const auto &launch_conf = op_conf().xrt_launch_conf();
-  const auto &batch_axis = launch_conf.attr().batch_axis();
+  const auto &batch_axis = launch_conf.batch_axis();
 
-  xrt::LaunchGraphHelper graph_helper(launch_conf.attr());
   for (const std::string &bn : this->output_bns()) {
-    std::string blob_name = graph_helper.Output(bn);
+    const LogicalBlobId &lbi = this->BnInOp2Lbi(bn);
+    std::string blob_name = xrt::BlobIdToName(lbi);
     CHECK_GT(batch_axis.count(blob_name), 0);
     *BatchAxis4BnInOp(bn) = batch_axis.at(blob_name);
   }

@@ -12,10 +12,10 @@ namespace mola {
 
 class AdamOptimizerOp : public OpKernel {
  public:
-  void Compile(OpContext *ctx) override;
+  void Compile(OpKernelContext *ctx) override;
 };
 
-void AdamOptimizerOp::Compile(OpContext *ctx) {
+void AdamOptimizerOp::Compile(OpKernelContext *ctx) {
   xla::XlaOp instance_num = ctx->Input("instance_num_diff");
   xla::XlaOp learning_rate = ctx->Input("learning_rate");
   xla::XlaOp weight = ctx->Input("weight");

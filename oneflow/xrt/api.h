@@ -26,9 +26,9 @@ std::string BlobIdToName(const LogicalBlobId &lbi);
 LogicalBlobId BlobNameToId(const std::string &blob_name);
 
 // Build an xrt graph from launch conf.
-std::shared_ptr<XrtGraph> BuildXrtGraph(const XrtLaunchOpConf &launch_conf,
-                                        const DeviceType &device_type,
-                                        const JobDesc &job_desc);
+std::shared_ptr<XrtGraph> BuildXrtGraph(
+    const XrtLaunchOpConf::Function &function, const DeviceType &device_type,
+    const JobDesc &job_desc);
 
 // Build an xrt graph from op graph.
 std::shared_ptr<XrtGraph> BuildXrtGraph(const OpGraph *op_graph);

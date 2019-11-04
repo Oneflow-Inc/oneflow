@@ -12,7 +12,7 @@ namespace mola {
 
 class LayerNormOp : public OpKernel {
  public:
-  void Compile(OpContext *ctx) override;
+  void Compile(OpKernelContext *ctx) override;
 
  private:
   xla::XlaOp BatchNormTraining(const xla::XlaOp &input, const xla::XlaOp &scale,
@@ -23,7 +23,7 @@ class LayerNormOp : public OpKernel {
   }
 };
 
-void LayerNormOp::Compile(OpContext *ctx) {
+void LayerNormOp::Compile(OpKernelContext *ctx) {
   DataType data_type = ctx->InputType("in");
   // input layout [N, C, H, W]
   Shape input_shape = ctx->InputShape("in");
@@ -79,7 +79,7 @@ void LayerNormOp::Compile(OpContext *ctx) {
 
 class LayerNormGradOp : public OpKernel {
  public:
-  void Compile(OpContext *ctx) override;
+  void Compile(OpKernelContext *ctx) override;
 
  private:
   xla::XlaOp BatchNormGrad(const xla::XlaOp &activations,
@@ -93,7 +93,7 @@ class LayerNormGradOp : public OpKernel {
   }
 };
 
-void LayerNormGradOp::Compile(OpContext *ctx) {
+void LayerNormGradOp::Compile(OpKernelContext *ctx) {
   xla::XlaOp output_grad = ctx->Input("dy");
   xla::XlaOp activation = ctx->Input("x");
   xla::XlaOp mean = ctx->Input("mean");
@@ -128,10 +128,10 @@ void LayerNormGradOp::Compile(OpContext *ctx) {
 
 class LayerNormParamGradOp : public OpKernel {
  public:
-  void Compile(OpContext *ctx) override;
+  void Compile(OpKernelContext *ctx) override;
 };
 
-void LayerNormParamGradOp::Compile(OpContext *ctx) {
+void LayerNormParamGradOp::Compile(OpKernelContext *ctx) {
   xla::XlaOp output_grad = ctx->Input("dy");
   Shape output_shape = ctx->InputShape("dy");
 

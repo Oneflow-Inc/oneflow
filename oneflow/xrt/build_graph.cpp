@@ -44,24 +44,23 @@ GraphBuilder::GraphBuilder(const OpGraph *op_graph)
   });
 }
 
-GraphBuilder::GraphBuilder(const XrtLaunchOpConf &launch_conf,
+GraphBuilder::GraphBuilder(const XrtLaunchOpConf::Function &function,
                            const DeviceType &device_type,
                            const JobDesc &job_desc)
     : graph_(std::make_shared<XrtGraph>()) {
-  for (const auto &arg_conf : launch_conf.attr().argument()) {
+  for (const auto &arg_conf : function.argument()) {
     XrtNode *node = graph_->AddNode(arg_conf);
     SetupXrtNode(node, arg_conf);
-    producers_[arg_conf.out()] = node;
-    node_info_[node].inputs.insert(arg_conf.in());
-    auto &input_output_keys = node_info_[node].input_output_keys;
     if (node->IsInArgumentNode()) {
-      input_output_keys = {{arg_conf.out(), "out"}};
+      producers_[arg_conf.value()] = node;
     } else {
-      input_output_keys = {{arg_conf.in(), "in"}};
+      node_info_[node].inputs.insert(arg_conf.value());
     }
+    auto &input_output_keys = node_info_[node].input_output_keys;
+    input_output_keys = {{arg_conf.value(), "value"}};
   }
 
-  for (const auto &node_conf : launch_conf.attr().node()) {
+  for (const auto &node_conf : function.node()) {
     XrtNode *node = graph_->AddNode(node_conf);
     SetupXrtNode(node, node_conf);
     auto &input_output_keys = node_info_[node].input_output_keys;
@@ -126,10 +125,10 @@ void GraphBuilder::SetupGraphEdges() {
   }
 }
 
-std::shared_ptr<XrtGraph> BuildGraph(const XrtLaunchOpConf &launch_conf,
+std::shared_ptr<XrtGraph> BuildGraph(const XrtLaunchOpConf::Function &function,
                                      const DeviceType &device_type,
                                      const JobDesc &job_desc) {
-  return GraphBuilder(launch_conf, device_type, job_desc).Build();
+  return GraphBuilder(function, device_type, job_desc).Build();
 }
 
 std::shared_ptr<XrtGraph> BuildGraph(const OpGraph *op_graph) {

@@ -20,7 +20,7 @@ class GraphBuilder {
 
   explicit GraphBuilder(const OpGraph *op_graph);
 
-  explicit GraphBuilder(const XrtLaunchOpConf &launch_conf,
+  explicit GraphBuilder(const XrtLaunchOpConf::Function &function,
                         const DeviceType &device_type, const JobDesc &job_desc);
 
   std::shared_ptr<XrtGraph> Build() {
@@ -61,7 +61,7 @@ class GraphBuilder {
   util::Map<const XrtNode *, NodeInfo> node_info_;
 };
 
-std::shared_ptr<XrtGraph> BuildGraph(const XrtLaunchOpConf &launch_conf,
+std::shared_ptr<XrtGraph> BuildGraph(const XrtLaunchOpConf::Function &function,
                                      const DeviceType &device_type,
                                      const JobDesc &job_desc);
 

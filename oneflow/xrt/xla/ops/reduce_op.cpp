@@ -12,7 +12,7 @@ namespace mola {
 
 class ReduceOp : public OpKernel {
  public:
-  void Compile(OpContext *ctx) override {
+  void Compile(OpKernelContext *ctx) override {
     bool keep_dims = ctx->GetAttr<bool>("keep_dims");
     CHECK(!keep_dims) << "Currently not support keep_dims option.";
 

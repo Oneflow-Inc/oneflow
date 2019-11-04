@@ -13,7 +13,7 @@ namespace mola {
 
 class OpKernel {
  public:
-  virtual void Compile(OpContext *ctx) = 0;
+  virtual void Compile(OpKernelContext *ctx) = 0;
 
   OpKernel() = default;
   virtual ~OpKernel() = default;

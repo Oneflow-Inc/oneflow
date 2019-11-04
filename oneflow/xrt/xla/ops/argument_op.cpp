@@ -8,9 +8,9 @@ namespace mola {
 
 class ArgumentOp : public OpKernel {
  public:
-  void Compile(OpContext *ctx) override {
-    xla::XlaOp in = ctx->Input("in");
-    ctx->SetOutput("out", in);
+  void Compile(OpKernelContext *ctx) override {
+    // xla::XlaOp value = ctx->Variable("value");
+    // ctx->SetOutput("value", value);
   }
 };
 

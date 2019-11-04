@@ -112,10 +112,10 @@ std::shared_ptr<XrtGraph> BuildXrtGraph(const OpGraph *op_graph) {
   return graph_builder::BuildGraph(op_graph);
 }
 
-std::shared_ptr<XrtGraph> BuildXrtGraph(const XrtLaunchOpConf &launch_conf,
-                                        const DeviceType &device_type,
-                                        const JobDesc &job_desc) {
-  return graph_builder::BuildGraph(launch_conf, device_type, job_desc);
+std::shared_ptr<XrtGraph> BuildXrtGraph(
+    const XrtLaunchOpConf::Function &function, const DeviceType &device_type,
+    const JobDesc &job_desc) {
+  return graph_builder::BuildGraph(function, device_type, job_desc);
 }
 
 XrtPassOptions CreateDefaultXrtPassOptions() {

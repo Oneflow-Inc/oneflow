@@ -25,7 +25,7 @@ class XlaGraphCompiler : public GraphCompiler::Impl {
  private:
   void SetupContextParam(const XrtNode *node,
                          const util::Map<Argument, Operand> &all_outputs,
-                         OpContext::Param *context_param);
+                         OpKernelContext::Param *context_param);
 
   void BuildComputation(const XrtGraph *graph,
                         const std::vector<Argument> &return_args,

@@ -12,10 +12,10 @@ namespace mola {
 
 class ClipGradientOp : public OpKernel {
  public:
-  void Compile(OpContext *ctx) override;
+  void Compile(OpKernelContext *ctx) override;
 };
 
-void ClipGradientOp::Compile(OpContext *ctx) {
+void ClipGradientOp::Compile(OpKernelContext *ctx) {
   xla::XlaOp instance_num = ctx->Input("instance_num_diff");
   xla::XlaOp gradient = ctx->Input("gradient");
   Shape gradient_shape = ctx->InputShape("gradient");

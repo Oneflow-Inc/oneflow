@@ -65,50 +65,28 @@ class FoldSubgraphBuilder {
     CHECK(builder_) << "Builder has not been initialized.";
     // Rebuilding folded job should takes the below steps in order
     InferIsAfterAllReduce();
-    // 1.Add XrtLaunch operator to the job
+    // 5.Fixup output blob names for launch nodes, and infect the
+    //   changes to the input of next nodes.
+    FixupInOutBlobNames();
+    // 1.Add XrtLaunch operator to the job.
     BuildXrtLaunchOps();
     // 2.Replace control_in_op_name by XrtLaunch name if the operator
-    //   has been folded by a XrtLaunch operator
+    //   has been folded by a XrtLaunch operator.
     FixupControlInOpNames();
-    // 3.Add time shape for XrtLaunch operators
+    // 3.Add time shape for XrtLaunch operators.
     FixupTimeShapes();
-    // 4.Add sbp parallel strategy for XrtLaunch operators
+    // 4.Add sbp parallel strategy for XrtLaunch operators.
     FixupSbpSignatures();
-    // 5.Fixup input blob names for all operators if it's input has
-    //   been folded, and fixup it's outputs
-    FixupInOutBlobNames();
-    // 6.Finally remove the folded operators
+    // 6.Finally remove the folded operators.
     RemoveLaunchFoldedOps();
   }
 
  private:
   void InferIsAfterAllReduce();
 
-  void buildXrtLaunchAttribute(const XrtGraph *sub_graph,
-                               XrtLaunchOpConf::Attribute *launch_attr);
-
-  XrtLaunchOpConf::Argument *MutableArgumentConf(
-      XrtLaunchOpConf *launch_conf, const std::string &argument_name) {
-    XrtLaunchOpConf::Argument *argument_conf = nullptr;
-    XrtLaunchOpConf::Attribute *attr = launch_conf->mutable_attr();
-    for (auto &argument_proto : *(attr->mutable_argument())) {
-      if (argument_proto.name() == argument_name) {
-        argument_conf = &argument_proto;
-        break;
-      }
-    }
-    return argument_conf;
-  }
-
-  void FixSubgraphInArgumentsBlobNames(
-      const XrtGraph *sub_graph, const std::string &launch_op_name,
-      XrtLaunchOpConf *launch_conf,
-      const util::Map<std::string, std::string> &fixed_blob_names);
-
-  void FixSubgraphOutArgumentsBlobNames(
-      const XrtGraph *sub_graph, const std::string &launch_op_name,
-      XrtLaunchOpConf *launch_conf,
-      const util::Map<std::string, std::string> &fixed_blob_names);
+  void buildFunction(const XrtGraph *sub_graph,
+                     util::Set<std::string> *mutability,
+                     XrtLaunchOpConf::Function *function);
 
   void BuildXrtLaunchOps();
 
@@ -122,19 +100,20 @@ class FoldSubgraphBuilder {
 
   void RemoveLaunchFoldedOps();
 
-  bool IsMutableArgument(const XrtNode *node, const Argument &argument);
-
   bool IsAfterAllReduce(const XrtNode *node);
 
  private:
   const XrtGraph &graph_;
   std::shared_ptr<JobBuilder> builder_;
+
   // Launch nodes
   std::vector<const XrtNode *> launch_nodes_;
   // Folded nodes except for argument nodes for each launch nodes
   std::vector<std::vector<const XrtNode *>> folded_nodes_;
+  // TODO(hjchen2): Remove this
+  util::Set<const XrtNode *> after_allreduce_nodes_;
 
-  std::unordered_set<const XrtNode *> after_allreduce_nodes_;
+  util::Map<std::string, std::string> fixedup_names_;
 };
 
 FoldSubgraphBuilder::FoldSubgraphBuilder(const XrtGraph &graph, Job *job)
@@ -158,40 +137,7 @@ FoldSubgraphBuilder::FoldSubgraphBuilder(const XrtGraph &graph, Job *job)
   builder_ = std::make_shared<JobBuilder>(job);
 }
 
-void FoldSubgraphBuilder::FixSubgraphInArgumentsBlobNames(
-    const XrtGraph *sub_graph, const std::string &launch_op_name,
-    XrtLaunchOpConf *launch_conf,
-    const util::Map<std::string, std::string> &fixed_blob_names) {
-  for (const auto *node : sub_graph->Nodes()) {
-    if (node->IsInArgumentNode()) {
-      auto *argument_conf = MutableArgumentConf(launch_conf, node->name());
-      const auto &it = fixed_blob_names.find(argument_conf->in());
-      if (it != fixed_blob_names.end()) {
-        argument_conf->set_in(absl::StrCat(launch_op_name, "/", it->second));
-      }
-    }
-  }
-}
-
-void FoldSubgraphBuilder::FixSubgraphOutArgumentsBlobNames(
-    const XrtGraph *sub_graph, const std::string &launch_op_name,
-    XrtLaunchOpConf *launch_conf,
-    const util::Map<std::string, std::string> &fixed_blob_names) {
-  for (const auto *node : sub_graph->Nodes()) {
-    if (node->IsOutArgumentNode()) {
-      auto *argument_conf = MutableArgumentConf(launch_conf, node->name());
-      const auto &it = fixed_blob_names.find(argument_conf->out());
-      if (it != fixed_blob_names.end()) {
-        // argument_conf->set_out(absl::StrCat(launch_op_name, "/",
-        // it->second));
-        argument_conf->set_out(it->second);
-      }
-    }
-  }
-}
-
-bool FoldSubgraphBuilder::IsMutableArgument(const XrtNode *node,
-                                            const Argument &argument) {
+bool IsMutableArgument(const XrtNode *node, const Argument &argument) {
   XrtEngine engine = XrtEngine::XLA;
   XrtField field = MakeXrtField(node->device(), engine);
   auto *rm = util::RegistryManager<decltype(field)>::Global();
@@ -205,14 +151,15 @@ bool FoldSubgraphBuilder::IsMutableArgument(const XrtNode *node,
   return false;
 }
 
-void FoldSubgraphBuilder::buildXrtLaunchAttribute(
-    const XrtGraph *sub_graph, XrtLaunchOpConf::Attribute *launch_attr) {
+void FoldSubgraphBuilder::buildFunction(const XrtGraph *sub_graph,
+                                        util::Set<std::string> *mutability,
+                                        XrtLaunchOpConf::Function *function) {
   for (const XrtNode *node : sub_graph->Nodes()) {
     if (!node->IsArgumentNode()) {
-      *(launch_attr->add_node()) =
+      *(function->add_node()) =
           *reinterpret_cast<const OperatorConf *>(&node->param());
     } else {
-      auto *argument_proto = launch_attr->add_argument();
+      auto *argument_proto = function->add_argument();
       argument_proto->set_name(node->name());
       DeviceType device_type = XrtDeviceToDeviceType(node->device());
       argument_proto->set_device_type(device_type);
@@ -222,53 +169,34 @@ void FoldSubgraphBuilder::buildXrtLaunchAttribute(
       // Build inputs or outputs for the argument nodes
       for (const XrtEdge *edge : node->out_edges()) {
         const Argument &argument = edge->argument();
-        argument_proto->set_in(argument.name());
-        argument_proto->set_out(argument.name());
+        argument_proto->set_value(argument.name());
         is_mutable |= IsMutableArgument(edge->end(), argument);
       }
       for (const XrtEdge *edge : node->in_edges()) {
         const Argument &argument = edge->argument();
-        argument_proto->set_in(argument.name());
-        argument_proto->set_out(argument.name());
+        argument_proto->set_value(argument.name());
       }
       if (is_mutable) {
-        (*launch_attr->mutable_mutability())[node->name()] = true;
-      }
-
-      // Store the batch axis that have batch dimension, so that it's no need to
-      // infer `HasBatchAxis4Lbn` for `XrtLaunch` operators. In practice it's
-      // hard to infer `HasBatchAxis4Lbn` since the operators to be infered have
-      // been folded. Normally we have to infer `HasBatchAxis4Lbn` before
-      // `SbpSignature` and `BlobDesc`, and `HasBatchAxis4Lbn` replies on the
-      // front operators `BlobDesc`. Therefor we probably could not infer
-      // `HasBatchAxis4Lbn` for the folded operators because their inputs
-      // `BlobDesc` were not infered since the front operators have been folded
-      // as well
-      const std::string &argument_out = argument_proto->out();
-      if (builder_->HasBatchAxis4Lbn(argument_out)) {
-        auto *batch_axis = launch_attr->mutable_batch_axis();
-        (*batch_axis)[argument_out] = builder_->BatchAxis4Lbn(argument_out);
+        mutability->insert(argument_proto->value());
       }
     }
   }
 }
 
-void AddInBlobNames(const util::List<XrtEdge *> &in_edges,
-                    XrtLaunchOpConf *launch_conf) {
-  for (const XrtEdge *edge : in_edges) {
+void AddInOutBlobNames(const XrtNode *node, XrtLaunchOpConf *launch_conf) {
+  for (const XrtEdge *edge : node->in_edges()) {
     if (!edge->IsControlEdge()) {
       const Argument &arg = edge->argument();
       DoNoDuplicationAdd(launch_conf->mutable_in(), arg.name());
     }
   }
-}
 
-void AddOutBlobNames(const util::List<XrtEdge *> &out_edges,
-                     XrtLaunchOpConf *launch_conf) {
-  for (const XrtEdge *edge : out_edges) {
+  for (const XrtEdge *edge : node->out_edges()) {
     if (!edge->IsControlEdge()) {
       const Argument &arg = edge->argument();
-      DoNoDuplicationAdd(launch_conf->mutable_out(), arg.name());
+      std::vector<std::string> splits = absl::StrSplit(arg.name(), "/");
+      CHECK_EQ(splits.size(), 2);
+      DoNoDuplicationAdd(launch_conf->mutable_out(), splits[1]);
     }
   }
 }
@@ -283,13 +211,37 @@ void FoldSubgraphBuilder::BuildXrtLaunchOps() {
     op_conf.set_device_type(device_type);
 
     XrtLaunchOpConf *launch_conf = op_conf.mutable_xrt_launch_conf();
-    AddInBlobNames(node->in_edges(), launch_conf);
-    AddOutBlobNames(node->out_edges(), launch_conf);
+    // Add inputs and outputs in launch_conf
+    AddInOutBlobNames(node, launch_conf);
+    // Build function and returns inputs mutability.
+    util::Set<std::string> mutability;
+    buildFunction(node->sub_graph(), &mutability,
+                  launch_conf->mutable_function());
 
-    buildXrtLaunchAttribute(node->sub_graph(), launch_conf->mutable_attr());
+    for (const auto &arg_proto : launch_conf->function().argument()) {
+      std::string arg_value = arg_proto.value();
+      const auto &it = fixedup_names_.find(arg_value);
+      if (it != fixedup_names_.end()) {
+        arg_value = it->second /* fixedup blob names */;
+      }
+      if (mutability.count(arg_proto.value()) > 0) {
+        (*launch_conf->mutable_mutability())[arg_value] = true;
+      }
+
+      // Set input and output mapping from launch op to function.
+      (*launch_conf->mutable_input_output_mapping())[arg_value] =
+          arg_proto.value();
+
+      // Store the batch axis that have batch dimension, so that it's no
+      // need to infer `HasBatchAxis4Lbn` for `XrtLaunch` operators.
+      if (builder_->HasBatchAxis4Lbn(arg_value)) {
+        auto *batch_axis = launch_conf->mutable_batch_axis();
+        (*batch_axis)[arg_value] = builder_->BatchAxis4Lbn(arg_value);
+      }
+    }
 
     if (IsAfterAllReduce(node) && node->out_edges().size() == 0) {
-      launch_conf->mutable_attr()->set_model_update(true);
+      launch_conf->set_model_update(true);
     }
 
     CHECK_GT(folded_nodes_[i].size(), 0);
@@ -348,68 +300,40 @@ void FoldSubgraphBuilder::FixupControlInOpNames() {
 void FoldSubgraphBuilder::FixupInOutBlobNames() {
   for (const XrtNode *node : launch_nodes_) {
     std::string launch_op_name = node->name();
-    auto *launch_conf = builder_->MutableOpConf4OpName(launch_op_name)
-                            ->mutable_xrt_launch_conf();
-    util::Map<std::string, std::string> fixed_blob_names;
     // Fix output blob names
-    for (int i = 0; i < launch_conf->out().size(); ++i) {
-      std::string blob_name = launch_conf->out()[i];
-      std::string fixed_blob_name = absl::StrCat("out_", i);
-      fixed_blob_names.emplace(blob_name, fixed_blob_name);
-
-      launch_conf->mutable_out()->Mutable(i)->assign(fixed_blob_name);
-      // Append to `batch_axis`
-      if (builder_->HasBatchAxis4Lbn(blob_name)) {
-        fixed_blob_name = absl::StrCat(launch_op_name, "/", fixed_blob_name);
-        builder_->AddBatchAxis4Lbn(fixed_blob_name,
-                                   builder_->BatchAxis4Lbn(blob_name));
-      }
-    }
-
-    // Infect changes to the next operators only once
-    std::unordered_set<const XrtNode *> changed_nodes;
-
-    for (const XrtEdge *edge : node->out_edges()) {
-      const XrtNode *end = edge->end();
-      if (edge->IsControlEdge() || !changed_nodes.insert(end).second) {
+    util::Set<std::string> argument_names;
+    for (XrtEdge *edge : node->out_edges()) {
+      if (edge->IsControlEdge()) {
         continue;
       }
-      if (end->type() == _XrtLaunchOpType) {
-        auto *launch_conf = builder_->MutableOpConf4OpName(end->name())
-                                ->mutable_xrt_launch_conf();
-        for (auto &blob_name : *launch_conf->mutable_in()) {
-          const auto &it = fixed_blob_names.find(blob_name);
-          if (it != fixed_blob_names.end()) {
-            std::string fixed_blob_name =
-                absl::StrCat(launch_op_name, "/", it->second);
-            blob_name = fixed_blob_name;
-          }
-        }
-        // Fix input argument blob name for subgraph first
-        FixSubgraphInArgumentsBlobNames(end->sub_graph(), launch_op_name,
-                                        launch_conf, fixed_blob_names);
-      } else {
-        // TODO(hjchen2) Current implementation is ugly
-        auto *op_conf = builder_->MutableOpConf4OpName(end->name());
-        DeviceType device_type = xrt::XrtDeviceToDeviceType(end->device());
-        std::shared_ptr<Operator> op =
-            ConstructOp(*op_conf, device_type, &GlobalJobDesc());
-        for (const std::string &input : op->input_bns()) {
-          const LogicalBlobId &lbi = op->BnInOp2Lbi(input);
-          std::string blob_name = BlobIdToName(lbi);
-          const auto &it = fixed_blob_names.find(blob_name);
-          if (it != fixed_blob_names.end()) {
-            std::string fixed_blob_name =
-                absl::StrCat(launch_op_name, "/", it->second);
-            // Fix input blob name for normal node
-            SetOpInputBlobName(op_conf, input, blob_name, fixed_blob_name);
-          }
-        }
+      const Argument &arg = edge->argument();
+      int index = argument_names.size();
+      if (argument_names.insert(arg.name()).second) {
+        CHECK_EQ(fixedup_names_.count(arg.name()), 0);
       }
+      auto it = fixedup_names_.find(arg.name());
+      if (it == fixedup_names_.end()) {
+        std::string fixed_blob_name =
+            absl::StrCat(launch_op_name, "/out_", index);
+        it = fixedup_names_.emplace(arg.name(), fixed_blob_name).first;
+      }
+      // Append to `batch_axis`
+      if (builder_->HasBatchAxis4Lbn(arg.name())) {
+        builder_->AddBatchAxis4Lbn(it->second /* fixed_blob_name */,
+                                   builder_->BatchAxis4Lbn(arg.name()));
+      }
+      // Fix end input blob name
+      const XrtNode *end = edge->end();
+      if (end->type() != _XrtLaunchOpType) {
+        auto *op_conf = builder_->MutableOpConf4OpName(end->name());
+        const std::string &consume_key = arg.meta_data().consume_key;
+        SetOpInputBlobName(op_conf, consume_key, arg.name(),
+                           it->second /* fixed_blob_name */);
+      }
+      Argument fixed_arg(it->second /* fixed_blob_name */, arg.shape(),
+                         arg.data_type(), arg.meta_data());
+      edge->SetArgument(fixed_arg);
     }
-    // Fix subgraph output argument blob name
-    FixSubgraphOutArgumentsBlobNames(node->sub_graph(), launch_op_name,
-                                     launch_conf, fixed_blob_names);
   }
 }
 
@@ -425,29 +349,17 @@ void FoldSubgraphBuilder::FixupTimeShapes() {
 
 void FoldSubgraphBuilder::FixupSbpSignatures() {
   for (const XrtNode *node : launch_nodes_) {
-    OperatorConf *op_conf = builder_->MutableOpConf4OpName(node->name());
-    std::shared_ptr<Operator> op = ConstructOp(*op_conf, &GlobalJobDesc());
-    util::Map<std::string, std::string> blob_names;
-    for (const std::string &bn : op->input_bns()) {
-      std::string blob_name = BlobIdToName(op->BnInOp2Lbi(bn));
-      blob_names.emplace(blob_name, bn);
-    }
-    for (const std::string &bn : op->output_bns()) {
-      std::string blob_name = op->BnInOp2Lbi(bn).blob_name();
-      blob_names.emplace(blob_name, bn);
-    }
-
     SbpSignature sbp_conf;
     auto *sbp_signatures = sbp_conf.mutable_bn_in_op2sbp_parallel();
     for (const XrtEdge *edge : node->in_edges()) {
       CHECK(edge->HasAttr("sbp_policy"));
-      std::string bn = blob_names.at(edge->argument().name());
+      const std::string &bn = edge->argument().meta_data().consume_key;
       (*sbp_signatures)[bn] =
           edge->Attr<std::vector<SbpParallel>>("sbp_policy")[1];
     }
     for (const XrtEdge *edge : node->out_edges()) {
       CHECK(edge->HasAttr("sbp_policy"));
-      std::string bn = blob_names.at(edge->argument().name());
+      const std::string &bn = edge->argument().meta_data().produce_key;
       (*sbp_signatures)[bn] =
           edge->Attr<std::vector<SbpParallel>>("sbp_policy")[0];
     }

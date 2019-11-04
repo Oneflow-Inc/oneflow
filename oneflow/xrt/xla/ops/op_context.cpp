@@ -42,54 +42,56 @@ xla::XlaOp Operand::AsXlaOp(xla::XlaBuilder *builder) const {
   return handle_;
 }
 
-xla::XlaBuilder *OpContext::builder() const { return param_.builder; }
+xla::XlaBuilder *OpKernelContext::builder() const { return param_.builder; }
 
-xla::XlaOp OpContext::Input(const std::string &name) {
+xla::XlaOp OpKernelContext::Input(const std::string &name) {
   return Input(ArgumentFromKey(name));
 }
 
-xla::XlaOp OpContext::Output(const std::string &name) {
+xla::XlaOp OpKernelContext::Output(const std::string &name) {
   return Output(ArgumentFromKey(name));
 }
 
-xla::XlaOp OpContext::Input(const Argument &arg) {
-  // DCHECK_GT(param_.inputs.count(arg), 0);
+xla::XlaOp OpKernelContext::Input(const Argument &arg) {
+  CHECK_GT(param_.inputs.count(arg), 0);
   return param_.inputs.at(arg).AsXlaOp(builder());
 }
 
-xla::XlaOp OpContext::Output(const Argument &arg) {
-  // DCHECK_GT(outputs_.count(arg), 0);
+xla::XlaOp OpKernelContext::Output(const Argument &arg) {
+  CHECK_GT(outputs_.count(arg), 0);
   return outputs_.at(arg).AsXlaOp(builder());
 }
 
-void OpContext::SetOutput(const std::string &name, const xla::XlaOp &handle) {
+void OpKernelContext::SetOutput(const std::string &name,
+                                const xla::XlaOp &handle) {
   SetOutput(name, Operand::XlaOp(handle));
 }
 
-void OpContext::SetOutput(const std::string &name, const Operand &handle) {
+void OpKernelContext::SetOutput(const std::string &name,
+                                const Operand &handle) {
   Argument arg = ArgumentFromKey(name);
   CHECK_EQ(arg.shape(), XlaShapeToOfShape(handle.shape_));
   outputs_[arg] = handle;
 }
 
-DataType OpContext::InputType(const std::string &name) const {
+DataType OpKernelContext::InputType(const std::string &name) const {
   return ArgumentFromKey(name).data_type();
 }
 
-DataType OpContext::OutputType(const std::string &name) const {
+DataType OpKernelContext::OutputType(const std::string &name) const {
   return ArgumentFromKey(name).data_type();
 }
 
-Shape OpContext::InputShape(const std::string &name) const {
+Shape OpKernelContext::InputShape(const std::string &name) const {
   return ArgumentFromKey(name).shape();
 }
 
-Shape OpContext::OutputShape(const std::string &name) const {
+Shape OpKernelContext::OutputShape(const std::string &name) const {
   return ArgumentFromKey(name).shape();
 }
 
-Argument OpContext::ArgumentFromKey(const std::string &key) const {
-  DCHECK_GT(param_.arguments.count(key), 0);
+Argument OpKernelContext::ArgumentFromKey(const std::string &key) const {
+  CHECK_GT(param_.arguments.count(key), 0);
   return param_.arguments.at(key);
 }
 

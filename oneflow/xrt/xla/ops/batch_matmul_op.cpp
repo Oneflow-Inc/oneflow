@@ -9,7 +9,7 @@ namespace mola {
 
 class BatchMatMulOp : public OpKernel {
  public:
-  void Compile(OpContext *ctx) override {
+  void Compile(OpKernelContext *ctx) override {
     Shape shape_a = ctx->InputShape("a");
     Shape shape_b = ctx->InputShape("b");
     CHECK_EQ(shape_a.NumAxes(), shape_b.NumAxes());

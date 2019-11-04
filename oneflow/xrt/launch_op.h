@@ -18,7 +18,7 @@ class XrtLaunchOp : public Operator {
 
   LogicalNode* NewProperLogicalNode() const override {
     const auto& launch_conf = op_conf().xrt_launch_conf();
-    if (launch_conf.attr().model_update()) {
+    if (launch_conf.model_update()) {
       return new OptimizerLogicalNode;
     }
     return new NormalForwardLogicalNode;

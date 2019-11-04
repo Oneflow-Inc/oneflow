@@ -12,7 +12,7 @@ namespace mola {
 
 class TanhGradOp : public OpKernel {
  public:
-  void Compile(OpContext *ctx) override {
+  void Compile(OpKernelContext *ctx) override {
     xla::XlaOp y = ctx->Input("y");
     xla::XlaOp dy = ctx->Input("dy");
     xla::XlaOp one = xla::ScalarLike(y, 1.f);
@@ -25,7 +25,7 @@ REGISTER_XLA_OP_KERNEL(TanhGrad, TanhGradOp).Finalize();
 
 class GeluGradOp : public OpKernel {
  public:
-  void Compile(OpContext *ctx) override {
+  void Compile(OpKernelContext *ctx) override {
     xla::XlaOp x = ctx->Input("x");
     xla::XlaOp dy = ctx->Input("dy");
     xla::XlaOp dot_5 = xla::ScalarLike(x, 0.5f);

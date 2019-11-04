@@ -8,7 +8,7 @@ namespace mola {
 
 class FullyConnectedOp : public OpKernel {
  public:
-  void Compile(OpContext *ctx) override {
+  void Compile(OpKernelContext *ctx) override {
     xla::XlaOp in = ctx->Input("in");
     xla::XlaOp weight = xla::Transpose(ctx->Input("weight"), {1, 0});
     xla::XlaOp result = xla::Dot(in, weight);

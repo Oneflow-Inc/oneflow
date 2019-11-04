@@ -10,7 +10,7 @@ namespace mola {
 
 class ReshapeOp : public OpKernel {
  public:
-  void Compile(OpContext *ctx) override {
+  void Compile(OpKernelContext *ctx) override {
     Shape in_shape = ctx->InputShape("in");
     Shape shape = ctx->OutputShape("out");
     CHECK_EQ(shape.Count(0), in_shape.Count(0));
@@ -23,7 +23,7 @@ REGISTER_XLA_OP_KERNEL(Reshape, ReshapeOp).Finalize();
 
 class ReshapeLikeOp : public OpKernel {
  public:
-  void Compile(OpContext *ctx) override {
+  void Compile(OpKernelContext *ctx) override {
     Shape x_shape = ctx->InputShape("x");
     Shape like_shape = ctx->InputShape("like");
     CHECK_EQ(x_shape.Count(0), like_shape.Count(0));

@@ -15,11 +15,12 @@ Argument XlaGraphCompiler::ArgFromParameter(const Parameter &param) {
 
 void XlaGraphCompiler::SetupContextParam(
     const XrtNode *node, const util::Map<Argument, Operand> &all_outputs,
-    OpContext::Param *context_param) {
+    OpKernelContext::Param *context_param) {
   const PbMessage *message = &node->param();
   if (!node->IsArgumentNode()) {
     util::GetOneofMessage(node->param(), "op_type", &message);
-    CHECK(message) << "Cann't get op_type message in node param.";
+    CHECK(message) << "Cann't get op_type message in node which name is "
+                   << node->name();
   }
 
   util::Map<Argument, Operand> input_ops;
@@ -27,6 +28,7 @@ void XlaGraphCompiler::SetupContextParam(
   for (const XrtEdge *edge : node->in_edges()) {
     if (!edge->IsControlEdge()) {
       const Argument &arg = edge->argument();
+      CHECK_GT(all_outputs.count(arg), 0);
       const Operand &operand = all_outputs.at(arg);
       input_ops.emplace(arg, operand);
       const std::string &k = arg.meta_data().consume_key;
@@ -39,18 +41,6 @@ void XlaGraphCompiler::SetupContextParam(
       const std::string &k = arg.meta_data().produce_key;
       input_output_args.emplace(k, arg);
     }
-  }
-
-  if (node->IsInArgumentNode()) {
-    std::string input = util::GetAttrAsString(*message, "in");
-    const Argument &arg = arguments_.at(input);
-    input_ops.emplace(arg, entry_operands_.at(arg));
-    input_output_args.emplace("in", arg);
-  }
-  if (node->IsOutArgumentNode()) {
-    std::string output = util::GetAttrAsString(*message, "out");
-    const Argument &arg = arguments_.at(output);
-    input_output_args.emplace("out", arg);
   }
 
   size_t num_outputs = input_output_args.size() - input_ops.size();
@@ -67,11 +57,11 @@ void XlaGraphCompiler::BuildComputation(
     const XrtGraph *graph, const std::vector<Argument> &return_args,
     xla::Shape *output_shape, xla::XlaComputation *computation) {
   // All operator's output operands.
-  util::Map<Argument, Operand> all_outputs;
+  util::Map<Argument, Operand> all_outputs(entry_operands_);
   // Compile each node as topology order.
   algorithm::TopologyVisit(*graph, [&](const XrtNode *node) {
-    // Setup param to build an OpContext.
-    OpContext::Param param;
+    // Setup param to build an OpKernelContext.
+    OpKernelContext::Param param;
     SetupContextParam(node, all_outputs, &param);
     if (use_meta_data_) {
       xla::OpMetadata metadata;
@@ -81,7 +71,7 @@ void XlaGraphCompiler::BuildComputation(
     }
     // Do compile, lower the operator computation to HLO instructions.
     auto op_kernel = BuildOpKernel(node->device(), node->type());
-    OpContext op_context(param);
+    OpKernelContext op_context(param);
     op_kernel->Compile(&op_context);
 
     if (use_meta_data_) {
@@ -96,10 +86,11 @@ void XlaGraphCompiler::BuildComputation(
 
   // Always insert a final tuple XlaOp to ensure the computation ends with
   // all the return values. This also make sure that it returns a tuple shape
-  // after runing the executable.
+  // after running the executable.
   std::vector<xla::XlaOp> return_vals(return_args.size());
   for (int i = 0; i < return_vals.size(); ++i) {
     const Argument &arg = return_args[i];
+    CHECK_GT(all_outputs.count(arg), 0);
     return_vals[i] = all_outputs.at(arg).AsXlaOp(builder_.get());
   }
   xla::Tuple(builder_.get(), return_vals);
