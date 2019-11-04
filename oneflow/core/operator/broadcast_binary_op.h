@@ -9,12 +9,19 @@ class BroadcastBinaryOp : public Operator {
  public:
   OF_DISALLOW_COPY_AND_MOVE(BroadcastBinaryOp);
   BroadcastBinaryOp() = default;
-  virtual ~BroadcastBinaryOp() = default;
+  ~BroadcastBinaryOp() override = default;
 
   void InitFromOpConf() override;
   bool IsAllOutputConst() const override { return GetValFromCustomizedConf<bool>("is_const"); }
   Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                              const ParallelContext* parallel_ctx) const override;
+
+ protected:
+  virtual Maybe<void> VirtualGetSbpSignatures(
+      const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
+      SbpSignatureList* sbp_sig_list) const {
+    return Maybe<void>::Ok();
+  }
 
  private:
   Maybe<void> InferBatchAxis(
