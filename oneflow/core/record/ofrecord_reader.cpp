@@ -1,4 +1,7 @@
 #include "oneflow/core/record/ofrecord_reader.h"
+#include "oneflow/core/common/blocking_counter.h"
+#include "oneflow/core/thread/thread_manager.h"
+#include "oneflow/core/common/balanced_splitter.h"
 
 namespace oneflow {
 
@@ -23,17 +26,33 @@ NaiveOFRecordReader::NaiveOFRecordReader(PersistentInStream* in, size_t num_max_
     : in_stream_(in), num_read_(0), num_max_read_(num_max_read) {}
 
 size_t NaiveOFRecordReader::Read(size_t n, OFRecord* allocated_records) {
-  OFRecordChunk chunk;
+  std::vector<OFRecordChunk> chunks(n);
   const size_t can_read = std::min(n, num_max_read_ - num_read_);
+  size_t cur_read = 0;
   FOR_RANGE(size_t, i, 0, can_read) {
-    if (ReadChunk(in_stream_, &chunk)) {
-      CHECK(allocated_records[i].ParseFromArray(chunk.data.get(), chunk.size));
-      ++num_read_;
+    if (ReadChunk(in_stream_, &chunks[i])) {
+      cur_read += 1;
     } else {
-      return i;
+      break;
     }
   }
-  return can_read;
+  if (cur_read == 0) { return 0; }
+  ThreadPool* thread_pool = Global<ThreadMgr>::Get()->compute_thread_pool();
+  const int64_t thread_num = std::min<int64_t>(thread_pool->thread_num(), cur_read);
+  BlockingCounter bc(thread_num);
+  const BalancedSplitter bs(cur_read, thread_num);
+  FOR_RANGE(int64_t, tid, 0, thread_num) {
+    const Range thrd_range = bs.At(tid);
+    thread_pool->AddWork([thrd_range, &bc, &chunks, &allocated_records]() {
+      FOR_RANGE(int64_t, i, thrd_range.begin(), thrd_range.end()) {
+        CHECK(allocated_records[i].ParseFromArray(chunks.at(i).data.get(), chunks.at(i).size));
+      }
+      bc.Decrease();
+    });
+  }
+  bc.WaitUntilCntEqualZero();
+  num_read_ += cur_read;
+  return cur_read;
 }
 
 RandomShuffleOFRecordReader::RandomShuffleOFRecordReader(PersistentInStream* in, size_t buffer_size,

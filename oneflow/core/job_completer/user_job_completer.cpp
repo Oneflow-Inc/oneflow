@@ -76,46 +76,55 @@ void AddRecordLoadOps(Job* job) {
   }
 
   for (const auto& pair : data_info2decode_ops) {
-    std::vector<const ParallelConf*> parallel_confs;
-    for (const OperatorConf* op_conf : pair.second) {
-      auto op_parallel_conf_it = name2parallel_conf.find(op_conf->name());
-      CHECK(op_parallel_conf_it != name2parallel_conf.end());
-      auto iter = std::find_if(
-          parallel_confs.begin(), parallel_confs.end(), [&](const ParallelConf* parallel_conf) {
-            PbMd message_diff;
-            return message_diff.Equivalent(*parallel_conf, *(op_parallel_conf_it->second));
-          });
-      if (iter == parallel_confs.end()) {
-        parallel_confs.emplace_back(op_parallel_conf_it->second);
-      }
+    HashMap<int64_t, std::vector<OperatorConf*>> batch_size2decode_ops;
+    for (const auto& decode_op : pair.second) {
+      batch_size2decode_ops[decode_op->decode_ofrecord_conf().batch_size()].push_back(decode_op);
     }
-    LOG_IF(WARNING, parallel_confs.size() > 1)
-        << "Operators sharing the same data information belong to different placement groups";
-    for (const ParallelConf* parallel_conf : parallel_confs) {
-      std::string record_load_op_name = "loader" + NewUniqueId();
-      std::string record_load_out_name = "out";
-      std::string record_load_lbi_name = record_load_op_name + "/" + record_load_out_name;
-      OperatorConf* op = job->mutable_net()->add_op();
-      RecordLoadOpConf* record_load_op = op->mutable_record_load_conf();
-      op->set_name(record_load_op_name);
-      record_load_op->set_out(record_load_out_name);
-      record_load_op->set_data_dir(pair.first.first);
-      record_load_op->set_data_part_num(data_info2part_num.at(pair.first));
-      record_load_op->set_part_name_prefix(pair.first.second);
-      record_load_op->set_part_name_suffix_length(data_info2suffix_length.at(pair.first));
-      if (data_info2shuffle_conf.at(pair.first) != nullptr) {
-        *record_load_op->mutable_random_shuffle_conf() = *data_info2shuffle_conf.at(pair.first);
-      }
-      PlacementGroup* p_group = job->mutable_placement()->add_placement_group();
-      *(p_group->mutable_op_set()->add_op_name()) = record_load_op_name;
-      *(p_group->mutable_parallel_conf()) = *parallel_conf;
-      for (OperatorConf* op : pair.second) {
-        std::string op_name = op->name();
-        auto op_parallel_conf_it = name2parallel_conf.find(op_name);
+    for (const auto& batch_size_n_decode_ops : batch_size2decode_ops) {
+      std::vector<const ParallelConf*> parallel_confs;
+      for (const OperatorConf* op_conf : batch_size_n_decode_ops.second) {
+        auto op_parallel_conf_it = name2parallel_conf.find(op_conf->name());
         CHECK(op_parallel_conf_it != name2parallel_conf.end());
-        PbMd message_diff;
-        if (!message_diff.Equivalent(*parallel_conf, *(op_parallel_conf_it->second))) { continue; }
-        op->mutable_decode_ofrecord_conf()->set_in(record_load_lbi_name);
+        auto iter = std::find_if(
+            parallel_confs.begin(), parallel_confs.end(), [&](const ParallelConf* parallel_conf) {
+              PbMd message_diff;
+              return message_diff.Equivalent(*parallel_conf, *(op_parallel_conf_it->second));
+            });
+        if (iter == parallel_confs.end()) {
+          parallel_confs.emplace_back(op_parallel_conf_it->second);
+        }
+      }
+      LOG_IF(WARNING, parallel_confs.size() > 1)
+          << "Operators sharing the same data information belong to different placement groups";
+      for (const ParallelConf* parallel_conf : parallel_confs) {
+        std::string record_load_op_name = "loader" + NewUniqueId();
+        std::string record_load_out_name = "out";
+        std::string record_load_lbi_name = record_load_op_name + "/" + record_load_out_name;
+        OperatorConf* op = job->mutable_net()->add_op();
+        RecordLoadOpConf* record_load_op = op->mutable_record_load_conf();
+        op->set_name(record_load_op_name);
+        record_load_op->set_out(record_load_out_name);
+        record_load_op->set_data_dir(pair.first.first);
+        record_load_op->set_data_part_num(data_info2part_num.at(pair.first));
+        record_load_op->set_part_name_prefix(pair.first.second);
+        record_load_op->set_part_name_suffix_length(data_info2suffix_length.at(pair.first));
+        record_load_op->set_batch_size(batch_size_n_decode_ops.first);
+        if (data_info2shuffle_conf.at(pair.first) != nullptr) {
+          *record_load_op->mutable_random_shuffle_conf() = *data_info2shuffle_conf.at(pair.first);
+        }
+        PlacementGroup* p_group = job->mutable_placement()->add_placement_group();
+        *(p_group->mutable_op_set()->add_op_name()) = record_load_op_name;
+        *(p_group->mutable_parallel_conf()) = *parallel_conf;
+        for (OperatorConf* op : batch_size_n_decode_ops.second) {
+          std::string op_name = op->name();
+          auto op_parallel_conf_it = name2parallel_conf.find(op_name);
+          CHECK(op_parallel_conf_it != name2parallel_conf.end());
+          PbMd message_diff;
+          if (!message_diff.Equivalent(*parallel_conf, *(op_parallel_conf_it->second))) {
+            continue;
+          }
+          op->mutable_decode_ofrecord_conf()->set_in(record_load_lbi_name);
+        }
       }
     }
   }

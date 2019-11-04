@@ -1,14 +1,10 @@
 import oneflow as of
 import numpy as np
 
-config = of.ConfigProtoBuilder()
-config.gpu_device_num(1)
-of.init(config)
+flow.config.gpu_device_num(1)
 
-
+@flow.function
 def variable_scope_test_job_1(a=of.input_blob_def((1, 3, 6, 6))):
-    job_conf = of.get_cur_job_conf_builder()
-    job_conf.batch_size(1).default_data_type(of.float)
     with of.deprecated.variable_scope("job1_scope1"):
         convw = of.get_variable(
             "conv_weight",
@@ -58,10 +54,8 @@ def variable_scope_test_job_1(a=of.input_blob_def((1, 3, 6, 6))):
 
     return fc2
 
-
+@flow.function
 def variable_scope_test_job_2(a=of.input_blob_def((2, 5))):
-    job_conf = of.get_cur_job_conf_builder()
-    job_conf.batch_size(1).default_data_type(of.float)
     with of.deprecated.variable_scope("job2_scope1"):
         indices = of.get_variable(
             "gather_inds",
@@ -76,21 +70,15 @@ def variable_scope_test_job_2(a=of.input_blob_def((2, 5))):
     print("gather op name: ", output.op_name)
     return output
 
+a1 = np.random.rand(1, 3, 6, 6).astype(np.float32)
+a2 = np.arange(10, dtype=np.float32).reshape(2, 5)
+ret1 = variable_scope_test_job_1.run(a1).get()
+ret2 = variable_scope_test_job_2(a2).get()
 
-of.add_job(variable_scope_test_job_1)
-of.add_job(variable_scope_test_job_2)
-
-
-with of.Session() as sess:
-    a1 = np.random.rand(1, 3, 6, 6).astype(np.float32)
-    a2 = np.arange(10, dtype=np.float32).reshape(2, 5)
-    ret1 = sess.run(variable_scope_test_job_1, a1).get()
-    ret2 = sess.run(variable_scope_test_job_2, a2).get()
-
-    print("Job1 result: ")
-    print(ret1)
-    print("shape: ", ret1.shape)
-    print("\n")
-    print("Job2 result: ")
-    print(ret2)
-    print("shape: ", ret2.shape)
+print("Job1 result: ")
+print(ret1)
+print("shape: ", ret1.shape)
+print("\n")
+print("Job2 result: ")
+print(ret2)
+print("shape: ", ret2.shape)

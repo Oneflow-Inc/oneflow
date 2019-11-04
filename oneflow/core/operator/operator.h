@@ -8,11 +8,11 @@
 #include "oneflow/core/common/auto_registration_factory.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/sbp_parallel.h"
-#include "oneflow/core/kernel/kernel.pb.h"
-#include "oneflow/core/operator/op_conf.pb.h"
+#include "oneflow/core/operator/op_conf_util.h"
 #include "oneflow/core/register/blob_desc.h"
 #include "oneflow/core/job/job_builder.h"
 #include "oneflow/core/job/sbp_signature_builder.h"
+#include "oneflow/core/kernel/kernel.pb.h"
 
 namespace oneflow {
 
@@ -35,8 +35,6 @@ class Operator {
   virtual LogicalNode* NewProperLogicalNode() const;
 
   virtual bool IsLossOp() const { return false; }
-  virtual bool IsRecurrentOp() const { return false; }
-  virtual bool IsEmbeddingLookupOp() const { return false; }
   virtual bool IsAllOutputConst() const { return false; }
 
   // bn_in_op <-> lbi
@@ -97,15 +95,10 @@ class Operator {
   // Write: shape of output_blobs
   Maybe<void> InferBlobDescsIf(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                const ParallelContext*, const SbpSignature* sbp_signature,
-                               int64_t record_piece_size,
                                std::function<void(OpContext*)> EnrollOpCtx) const;
   virtual Maybe<void> InferBlobDescs(
       std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*,
-      const SbpSignature* sbp_signature, int64_t record_piece_size,
-      std::function<void(OpContext*)> EnrollOpCtx) const;
-  virtual Maybe<void> InferBlobDescs(
-      std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*,
-      const SbpSignature* sbp_signature, int64_t record_piece_size) const;
+      const SbpSignature* sbp_signature, std::function<void(OpContext*)> EnrollOpCtx) const;
   virtual Maybe<void> InferBlobDescs(
       std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*,
       const SbpSignature* sbp_signature) const;
@@ -115,13 +108,11 @@ class Operator {
 
   Maybe<void> InferOutBlobDescsIf(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                   const ParallelContext*, const SbpSignature* sbp_signature,
-                                  int64_t record_piece_size,
                                   std::function<void(OpContext*)> EnrollOpCtx) const;
 
   virtual Maybe<void> InferOutBlobDescs(
       std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*,
-      const SbpSignature* sbp_signature, int64_t record_piece_size,
-      std::function<void(OpContext*)> EnrollOpCtx) const;
+      const SbpSignature* sbp_signature, std::function<void(OpContext*)> EnrollOpCtx) const;
 
   Maybe<void> InferBatchAxisIf(
       const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
@@ -283,8 +274,8 @@ struct OnlyCpuSupportPredicator {
   bool only_cpu_;
 };
 
-struct RuntimeMemBlockNum4OpSameOutputBlob final {
-  RuntimeMemBlockNum4OpSameOutputBlob(size_t num) : num_(num) {}
+struct RuntimeRegstNum4OpSameOutputBlob final {
+  RuntimeRegstNum4OpSameOutputBlob(size_t num) : num_(num) {}
   operator size_t() { return num_; }
 
  private:
@@ -308,9 +299,9 @@ struct IsInterfaceOpConf4OpTypeCase final {};
                          ([] { return new OnlyCpuSupportPredicator(false); })); \
   REGISTER_CLASS_CREATOR(op_type_case, Operator, creator, const OperatorConf&)
 
-#define REGISTER_OP_SAME_OUTPUT_BLOB_MEM_BLOCK_NUM(op_type_case, num)       \
-  REGISTER_CLASS_CREATOR(op_type_case, RuntimeMemBlockNum4OpSameOutputBlob, \
-                         ([] { return new RuntimeMemBlockNum4OpSameOutputBlob(num); }))
+#define REGISTER_OP_SAME_OUTPUT_BLOB_REGST_NUM(op_type_case, num)        \
+  REGISTER_CLASS_CREATOR(op_type_case, RuntimeRegstNum4OpSameOutputBlob, \
+                         ([] { return new RuntimeRegstNum4OpSameOutputBlob(num); }))
 
 #define REGISTER_INTERFACE_OP(op_type_case)                          \
   REGISTER_CLASS_CREATOR(op_type_case, IsInterfaceOpConf4OpTypeCase, \

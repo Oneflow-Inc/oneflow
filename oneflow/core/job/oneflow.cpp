@@ -58,9 +58,15 @@ std::string sub_plan_key(const std::string& plan_name, int64_t machine_id, int64
   return plan_name + "_" + std::to_string(machine_id) + "_" + std::to_string(thrd_id);
 }
 
+std::string block7chunk_key(const std::string& plan_name, int64_t machine_id) {
+  return plan_name + "_" + std::to_string(machine_id) + "_block7chunk";
+}
+
 void PushPlan(const std::string& plan_name, const Plan& plan) {
   HashMap<int64_t, std::set<int64_t>> machine_id2thrd_id_set;
   HashMap<std::pair<int64_t, int64_t>, std::vector<TaskProto>> mchn_thrd_id2task_protos;
+  HashMap<int64_t, MemBlockAndChunkList> machine_id2block7chunk;
+
   for (const auto& task : plan.task()) {
     machine_id2thrd_id_set[task.machine_id()].insert(task.thrd_id());
     mchn_thrd_id2task_protos[std::make_pair(task.machine_id(), task.thrd_id())].emplace_back(task);
@@ -82,6 +88,16 @@ void PushPlan(const std::string& plan_name, const Plan& plan) {
     *(sub_plan.mutable_task()) = StdVec2PbRpf(pair.second);
     Global<CtrlClient>::Get()->PushKV(sub_plan_key(plan_name, pair.first.first, pair.first.second),
                                       sub_plan);
+  }
+
+  for (const auto& mem_block : plan.block_chunk_list().mem_block()) {
+    *machine_id2block7chunk[mem_block.machine_id()].add_mem_block() = mem_block;
+  }
+  for (const auto& chunk : plan.block_chunk_list().chunk()) {
+    *machine_id2block7chunk[chunk.machine_id()].add_chunk() = chunk;
+  }
+  for (const auto& pair : machine_id2block7chunk) {
+    Global<CtrlClient>::Get()->PushKV(block7chunk_key(plan_name, pair.first), pair.second);
   }
 
   Global<CtrlClient>::Get()->PushKV(net_topo_key(plan_name), plan.net_topo());
@@ -109,31 +125,34 @@ void PullPlan(const std::string& plan_name, Plan* plan) {
   JobConfs job_confs;
   Global<CtrlClient>::Get()->PullKV(job_id2job_conf(plan_name), &job_confs);
   *(plan->mutable_job_confs()) = job_confs;
+  MemBlockAndChunkList block7chunk;
+  Global<CtrlClient>::Get()->PullKV(block7chunk_key(plan_name, machine_id), &block7chunk);
+  plan->mutable_block_chunk_list()->CopyFrom(block7chunk);
 }
 
 void CompileCurJobOnMaster(Job* job, Plan* improved_plan, bool need_job_complete) {
   const JobDesc& job_desc = GlobalJobDesc();
   Plan naive_plan;
-  Plan mem_shared_plan;
+  Plan complete_plan;
   double start = GetCurTime();
   if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
     Compiler().Compile(job, &naive_plan, need_job_complete);
     LOG(INFO) << "compile time: " << GetCurTime() - start;
-    mem_shared_plan =
-        Improver().ImproveMemSharedIdOnly(*Global<AvailableMemDesc>::Get(), naive_plan);
+    complete_plan =
+        Improver().GenAndInferMemBlockIdOnly(*Global<AvailableMemDesc>::Get(), naive_plan);
     TeePersistentLogStream::Create("naive_plan")->Write(naive_plan);
-    TeePersistentLogStream::Create("mem_shared_plan")->Write(mem_shared_plan);
+    TeePersistentLogStream::Create("complete_plan")->Write(complete_plan);
     LOG(INFO) << "push_pull_plan:" << GetCurTime() - start;
   }
   if (job_desc.enable_experiment_run()) {
     if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
-      PushPlan("mem_shared_plan", mem_shared_plan);
+      PushPlan("complete_plan", complete_plan);
     } else {
-      PullPlan("mem_shared_plan", &mem_shared_plan);
+      PullPlan("complete_plan", &complete_plan);
     }
     OF_BARRIER();
     // Experiment Runtime
-    { Runtime experiment_run(mem_shared_plan, job_desc.piece_num_of_experiment_phase(), true); }
+    { Runtime experiment_run(complete_plan, job_desc.piece_num_of_experiment_phase(), true); }
     // Improve
     if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
       TeePersistentLogStream::Create("available_mem_desc")->Write(*Global<AvailableMemDesc>::Get());
@@ -145,13 +164,14 @@ void CompileCurJobOnMaster(Job* job, Plan* improved_plan, bool need_job_complete
       TeePersistentLogStream::Create("improved_plan")->Write(*improved_plan);
     }
   } else {
-    *improved_plan = mem_shared_plan;
+    *improved_plan = complete_plan;
   }
   LOG(INFO) << "compile and improve time: " << GetCurTime() - start;
 }
 
 void MergePlanWithoutGenNetTopo(Plan* plan, const Plan& other) {
   plan->mutable_task()->MergeFrom(other.task());
+  plan->mutable_block_chunk_list()->MergeFrom(other.block_chunk_list());
   for (const auto& pair : other.job_confs().job_id2job_conf()) {
     CHECK(plan->mutable_job_confs()->mutable_job_id2job_conf()->insert(pair).second);
   }
@@ -476,14 +496,11 @@ void MakeMainJob(const std::vector<Job>& jobs, Job* main_job,
   critical_section_sink_lbi->set_blob_name("out");
 
   ParallelConf parallel_conf;
-  parallel_conf.set_policy(kDataParallel);
   parallel_conf.add_device_name("0:cpu:0");
   JobBuilder(main_job).AddOps(parallel_conf, op_confs);
   auto* job_conf = main_job->mutable_job_conf();
   job_conf->set_job_name("MainJob-unamed");
   job_conf->mutable_predict_conf();
-  job_conf->set_piece_size(1);
-  job_conf->set_total_batch_num(1);
   job_conf->set_default_data_type(DataType::kInt32);
 }
 
@@ -542,32 +559,34 @@ bool NeedAllocateMemory(const RegstDescTypeProto& regst_desc_type) {
          && regst_desc_type.data_regst_desc().packed_blob_desc().is_body_disabled() == false;
 }
 
-void FinishGlobalCriticalSectionDesc(const std::vector<Plan>& plans) {
-  std::vector<HashMap<std::string, HashSet<int64_t>>> job_id2sole_op_name2mem_block_ids;
-  std::vector<HashSet<int64_t>> job_id2mem_block_ids;
-  for (const auto& plan : plans) {
-    job_id2sole_op_name2mem_block_ids.push_back(HashMap<std::string, HashSet<int64_t>>());
-    auto* sole_op_name2mem_block_ids = &job_id2sole_op_name2mem_block_ids.back();
-    job_id2mem_block_ids.push_back(HashSet<int64_t>());
-    auto* job_id_mem_block_ids = &job_id2mem_block_ids.back();
-    for (const auto& task : plan.task()) {
-      if (task.exec_sequence().exec_node_size() == 1) {
-        const auto& kernel_conf = task.exec_sequence().exec_node(0).kernel_conf();
-        const auto& op_name = kernel_conf.op_attribute().op_conf().name();
-        auto* mem_block_ids = &(*sole_op_name2mem_block_ids)[op_name];
-        for (const auto& pair : task.produced_regst_desc()) {
-          if (NeedAllocateMemory(pair.second.regst_desc_type())) {
-            mem_block_ids->emplace(pair.second.mem_shared_id());
-          }
-        }
-      }
+void FinishGlobalCriticalSectionDesc(const Plan& plan, int64_t job_size) {
+  std::vector<HashMap<std::string, HashSet<int64_t>>> job_id2sole_op_name2mem_block_ids(job_size);
+  std::vector<HashSet<int64_t>> job_id2mem_block_ids(job_size);
+  std::vector<HashSet<int64_t>> job_id2chunk_ids(job_size);
+  for (const auto& task : plan.task()) {
+    if (task.exec_sequence().exec_node_size() == 1) {
+      const auto& kernel_conf = task.exec_sequence().exec_node(0).kernel_conf();
+      const std::string& op_name = kernel_conf.op_attribute().op_conf().name();
+      HashSet<int64_t>* mem_block_ids =
+          &(job_id2sole_op_name2mem_block_ids.at(task.job_id())[op_name]);
       for (const auto& pair : task.produced_regst_desc()) {
         if (NeedAllocateMemory(pair.second.regst_desc_type())) {
-          job_id_mem_block_ids->emplace(pair.second.mem_shared_id());
+          mem_block_ids->emplace(pair.second.mem_block_id());
         }
       }
     }
   }
+  for (const auto& mem_block : plan.block_chunk_list().mem_block()) {
+    if (mem_block.mem_size() == 0) { continue; }
+    for (int64_t job_id : mem_block.job_id()) {
+      job_id2mem_block_ids.at(job_id).insert(mem_block.mem_block_id());
+    }
+  }
+  for (const auto& chunk : plan.block_chunk_list().chunk()) {
+    if (chunk.mem_size() == 0) { continue; }
+    for (int64_t job_id : chunk.job_id()) { job_id2chunk_ids.at(job_id).insert(chunk.chunk_id()); }
+  }
+
   HashMap<int64_t, HashSet<int64_t>> job_id2input_output_mem_block_ids;
   auto* critical_section_desc = Global<CriticalSectionDesc>::Get();
   // set mem_block_id for InputOutputCriticalSection
@@ -609,6 +628,8 @@ void FinishGlobalCriticalSectionDesc(const std::vector<Plan>& plans) {
         }
       }
       *critical_section->mutable_mem_block_id() = {mem_block_ids->begin(), mem_block_ids->end()};
+      *critical_section->mutable_chunk_id() = {job_id2chunk_ids.at(job_id).begin(),
+                                               job_id2chunk_ids.at(job_id).end()};
     }
   }
   critical_section_desc->Done();
@@ -639,14 +660,12 @@ void MakePullJob(const std::string& job_name, const std::string& op_name,
     foreign_output_conf->set_in(input_op_conf.name() + "/out");
     foreign_output_conf->set_ofblob_buffer_name(GetForeignOutputBufferName(job_name));
     ParallelConf parallel_conf;
-    parallel_conf.set_policy(kDataParallel);
     parallel_conf.add_device_name("0:cpu:0");
     job_builder.AddOps(parallel_conf, {foreign_output_op_conf});
   }
   auto* job_conf = job->mutable_job_conf();
   job_conf->set_job_name(job_name);
   job_conf->mutable_predict_conf();
-  job_conf->set_piece_size(1);
   job_conf->set_total_batch_num(1);
   job_conf->set_default_data_type(data_type);
 }
@@ -669,7 +688,6 @@ void MakePushJob(const std::string& job_name, const std::string& op_name,
     InterfaceOpUtil::InitBlobConf(blob_conf, parallel_blob_conf);
     data_type = blob_conf->data_type();
     ParallelConf parallel_conf;
-    parallel_conf.set_policy(kDataParallel);
     parallel_conf.add_device_name("0:cpu:0");
     job_builder.AddOps(parallel_conf, {foreign_input_op_conf});
   }
@@ -685,7 +703,6 @@ void MakePushJob(const std::string& job_name, const std::string& op_name,
   auto* job_conf = job->mutable_job_conf();
   job_conf->set_job_name(job_name);
   job_conf->mutable_predict_conf();
-  job_conf->set_piece_size(1);
   job_conf->set_total_batch_num(1);
   job_conf->set_default_data_type(data_type);
 }
@@ -719,7 +736,6 @@ void MakeArgPassJob(const std::string& job_name, const ParallelBlobConf& paralle
     blob_conf->mutable_split_axis()->clear_value();
     blob_conf->mutable_batch_axis()->clear_value();
     ParallelConf parallel_conf;
-    parallel_conf.set_policy(kDataParallel);
     parallel_conf.add_device_name("0:cpu:0");
     job_builder.AddOps(parallel_conf, {foreign_input_op_conf});
   }
@@ -748,7 +764,6 @@ void MakeArgPassJob(const std::string& job_name, const ParallelBlobConf& paralle
   auto* job_conf = job->mutable_job_conf();
   job_conf->set_job_name(job_name);
   job_conf->mutable_predict_conf();
-  job_conf->set_piece_size(1);
   job_conf->set_total_batch_num(1);
 }
 
@@ -765,8 +780,7 @@ void CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan) {
     }
   }
   if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
-    // only has user job in jobs and sub_plans in this time
-    InterJobMemSharingUtil::MergeMemBlockBetweenSubPlans(jobs, &sub_plans);
+    size_t user_job_size = jobs.size();
     HashMap<std::string, ParallelBlobConf> push_op_name2parallel_blob_conf;
     FilterOpName2ParallelBlobConf({OperatorConf::kInputConf}, &jobs,
                                   &push_op_name2parallel_blob_conf);
@@ -789,7 +803,6 @@ void CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan) {
       }
       // + 3 for model init job, model load job and model save job
       helper_job_size += 3;
-      size_t user_job_size = jobs.size();
       jobs.resize(user_job_size + helper_job_size);
       sub_plans.resize(user_job_size + helper_job_size);
       job_id = user_job_size;
@@ -823,9 +836,10 @@ void CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan) {
       }
     }
     MakeModelIoJobs(jobs, var_op_name2parallel_blob_conf, [&](Job* job) { CompileHelperJob(job); });
-    InterJobMemSharingUtil::BindInterfaceMemBlockId(jobs, &sub_plans);
-    FinishGlobalCriticalSectionDesc(sub_plans);
     MergeSubPlanWithoutGenNetTopo(plan, sub_plans);
+    InterJobMemSharingUtil::MergeMemReusedChunkBetweenUserJobs(jobs, plan, user_job_size);
+    InterJobMemSharingUtil::MergeMemSharedInterfaceMemBlockBetweenJobs(jobs, plan);
+    FinishGlobalCriticalSectionDesc(*plan, jobs.size());
     Plan main_plan;
     std::vector<std::string> identity_tick_op_names;
     {
@@ -836,11 +850,13 @@ void CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan) {
       CompileMainJob(&main_job, critical_section_sink_lbi, sub_plans.size(), &main_plan);
     }
     LinkMainPlan(plan, main_plan, identity_tick_op_names);
+    PlanUtil::CleanUselessMemBlockAndCheckValid(plan);
     TeePersistentLogStream::Create("merged_plan")->Write(*plan);
     PlanUtil::ToDotFile(*plan, "/dot/merged_plan.dot");
     PushPlan("merged_plan", *plan);
   } else {
     PullPlan("merged_plan", plan);
+    TeePersistentLogStream::Create("merged_plan")->Write(*plan);
   }
   OF_BARRIER();
 }
@@ -848,13 +864,13 @@ void CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan) {
 }  // namespace
 
 GlobalObjectsScope4JobConf::GlobalObjectsScope4JobConf(const JobSet& job_set) {
-  Global<const JobMemSharingStrategy>::New(job_set.job_mem_sharing_strategy());
+  Global<const InterJobReuseMemStrategy>::New(job_set.inter_job_reuse_mem_strategy());
   Global<JobName2JobId>::New();
 }
 
 GlobalObjectsScope4JobConf::~GlobalObjectsScope4JobConf() {
   Global<JobName2JobId>::Delete();
-  Global<const JobMemSharingStrategy>::Delete();
+  Global<const InterJobReuseMemStrategy>::Delete();
 }
 
 Oneflow::Oneflow(const oneflow::JobSet& job_set) {

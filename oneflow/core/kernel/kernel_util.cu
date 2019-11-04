@@ -633,7 +633,7 @@ __device__ float gpu_atomic_add(float* address, float val) {
   return atomicAdd(address, val);
 }
 
-#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 700
+#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 700 && CUDA_VERSION >= 10000
 template<>
 __device__ half gpu_atomic_add(half* address, half val) {
   return atomicAdd(address, val);

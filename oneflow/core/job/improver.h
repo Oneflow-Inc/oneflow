@@ -12,22 +12,22 @@ namespace oneflow {
 class Improver final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Improver);
-  Improver() : start_mem_shared_id_(-1) {}
+  Improver() : start_mem_block_id_(-1) {}
   ~Improver() = default;
 
   Plan Improve(const AvailableMemDesc& amd, const Plan& naive_plan,
                const std::string& act_event_filepath);
-  Plan ImproveMemSharedIdOnly(const AvailableMemDesc& amd, const Plan& naive_plan);
+  Plan GenAndInferMemBlockIdOnly(const AvailableMemDesc& amd, const Plan& naive_plan);
 
  private:
-  Plan ImproveMemSharedId(const Plan& naive_plan) const;
+  Plan GenAndInferMemBlockId(const Plan& naive_plan) const;
   void Init(const AvailableMemDesc& amd, const Plan& naive_plan);
   void ForEachImprovedRegstNum(
       const Plan& plan, bool is_memory_limited, double ii,
       const std::function<const HashMap<int64_t, double>&(int64_t)>& PathDurations4RegstDescId,
       const std::function<const HashMap<int64_t, double>&(int64_t)>& PathIIScales4RegstDescId,
       const std::function<void(int64_t, uint64_t)>& Handler) const;
-  void ForEachInferredMemSharingCriticalSection(
+  void ForEachInferredMemBlockCriticalSection(
       const Plan& plan, const std::function<int64_t(int64_t)>& OrderInGraph4TaskId,
       const std::function<void(const std::vector<const RegstDescProto*>&)>& Handler) const;
   //  first dimension index of MemZoneRegstDescs is machine_id
@@ -50,7 +50,7 @@ class Improver final {
       const std::function<const HashMap<int64_t, double>&(int64_t)>& Duration4RegstDescId,
       const MemZoneRegstDescs& mz_regst_descs) const;
 
-  int32_t start_mem_shared_id_;
+  int32_t start_mem_block_id_;
   AvailableMemDesc amd_;
   std::vector<int32_t> record_load_task_num_;
 };

@@ -15,7 +15,7 @@ def add(x, y, name=None):
         return scalar_add(y, x, name)
     elif isinstance(y, (int, float)):
         return scalar_add(x, y, name)
-    elif x.static_shape == y.static_shape:
+    elif x.static_shape == y.static_shape and x.batch_axis == y.batch_axis:
         return element_wise_add(x, y, name)
     else:
         return broadcast_add(x, y, name)
@@ -40,9 +40,8 @@ def multiply(x, y, name=None):
         return scalar_mul(y, x, name)
     elif isinstance(y, (int, float)):
         return scalar_mul(x, y, name)
-    elif x.static_shape == y.static_shape:
-        # TODO: add element-wise op
-        return broadcast_mul(x, y, name)
+    elif x.static_shape == y.static_shape and x.batch_axis == y.batch_axis:
+        return element_wise_mul(x, y, name)
     else:
         return broadcast_mul(x, y, name)
 
@@ -118,6 +117,23 @@ def broadcast_sub(x, y, name=None):
     op_conf.broadcast_sub_conf.a = x.logical_blob_name
     op_conf.broadcast_sub_conf.b = y.logical_blob_name
     op_conf.broadcast_sub_conf.out = "out"
+    compile_context.CurJobAddOp(op_conf)
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = "out"
+    return remote_blob_util.RemoteBlob(lbi)
+
+
+def element_wise_mul(x, y, name=None):
+    op_conf = op_conf_util.OperatorConf()
+    setattr(
+        op_conf,
+        "name",
+        name if name is not None else id_util.UniqueStr("ElementWiseMul_"),
+    )
+    setattr(op_conf.multiply_conf, "in_0", x.logical_blob_name)
+    setattr(op_conf.multiply_conf, "in_1", y.logical_blob_name)
+    op_conf.multiply_conf.out = "out"
     compile_context.CurJobAddOp(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
     lbi.op_name = op_conf.name
@@ -223,6 +239,39 @@ def sigmoid(x, name=None):
     lbi.blob_name = "out"
     return remote_blob_util.RemoteBlob(lbi)
 
+@oneflow_export("math.unsorted_segment_sum", "unsorted_segment_sum")
+def unsorted_segment_sum(data, segment_ids, num_segments, name=None):
+    if name is None: name = id_util.UniqueStr("UnsortedSegmentSum_")
+    op_conf = op_conf_util.OperatorConf()
+    op_conf.name = name
+    op_conf.unsorted_segment_sum_conf.data = data.logical_blob_name
+    op_conf.unsorted_segment_sum_conf.segment_ids = segment_ids.logical_blob_name
+    op_conf.unsorted_segment_sum_conf.num_segments = num_segments
+    op_conf.unsorted_segment_sum_conf.axis = 0
+    op_conf.unsorted_segment_sum_conf.out = "out"
+
+    compile_context.CurJobAddOp(op_conf)
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = "out"
+    return remote_blob_util.RemoteBlob(lbi)
+
+@oneflow_export("math.unsorted_batch_segment_sum", "unsorted_batch_segment_sum")
+def unsorted_batch_segment_sum(data, segment_ids, num_segments, name=None):
+    if name is None: name = id_util.UniqueStr("UnsortedBatchSegmentSum_")
+
+    op_conf = op_conf_util.OperatorConf()
+    op_conf.name = name
+    op_conf.unsorted_batch_segment_sum_conf.data = data.logical_blob_name
+    op_conf.unsorted_batch_segment_sum_conf.segment_ids = segment_ids.logical_blob_name
+    op_conf.unsorted_batch_segment_sum_conf.num_segments = num_segments
+    op_conf.unsorted_batch_segment_sum_conf.out = "out"
+
+    compile_context.CurJobAddOp(op_conf)
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = "out"
+    return remote_blob_util.RemoteBlob(lbi)
 
 def sqrt(x, name=None):
     # TODO: not ready yet

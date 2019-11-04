@@ -20,6 +20,7 @@ class Error final {
   static Error CheckFailed();
   static Error Todo();
   static Error Unimplemented();
+  static Error BoxingNotSupported();
 
   std::shared_ptr<ErrorProto> error_proto() const { return error_proto_; }
   ErrorProto* operator->() const { return error_proto_.get(); }

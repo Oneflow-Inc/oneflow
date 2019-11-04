@@ -19,7 +19,7 @@ class InputWiseCompActor : public CompActor {
   int64_t InBnId4RegstDescId(int64_t id) const { return regst_desc_id2in_bn_id_.at(id); }
   int64_t ActNumForEachOutput(int64_t regst_desc_id) const override;
   bool EnableInplace() const {
-    return GetDeviceType() == DeviceType::kGPU && job_desc().enable_mem_sharing();
+    return GetDeviceType() == DeviceType::kGPU && job_desc().enable_inplace_in_reduce_struct();
   }
 
   bool ProducedCtrlRegstValid(int64_t regst_desc_id) const override;

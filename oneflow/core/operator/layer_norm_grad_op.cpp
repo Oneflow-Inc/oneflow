@@ -22,7 +22,6 @@ void LayerNormGradOp::InitFromOpConf() {
 Maybe<void> LayerNormGradOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
-  CHECK_OR_RETURN(parallel_ctx->policy() != kModelParallel);
   const LayerNormGradOpConf& conf = op_conf().layer_norm_grad_conf();
   const BlobDesc* dy = GetBlobDesc4BnInOp("dy");
   CHECK_GE_OR_RETURN(conf.begin_norm_axis(), 1);

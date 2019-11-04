@@ -44,7 +44,8 @@ parser.add_argument("-load", "--model_load_dir", type=str,
 parser.add_argument(
     "-save", "--model_save_dir", type=str, default=_MODEL_SAVE_DIR, required=False
 )
-
+parser.add_argument("-dn", "--data_part_num", type=int, default=32, required=False)
+parser.add_argument("-b", "--batch_size", type=int, default=8, required=False)
 args = parser.parse_args()
 
 
@@ -104,8 +105,11 @@ def _data_load_layer(data_dir):
         "class/label", shape=(), dtype=flow.int32, codec=flow.data.RawCodec()
     )
 
+    node_num = len(args.node_list.strip().split(',')) if args.multinode else 1
+    total_batch_size = args.batch_size * args.gpu_num_per_node * node_num
     return flow.data.decode_ofrecord(
-        data_dir, (label_blob_conf, image_blob_conf), data_part_num=32, name="decode"
+        data_dir, (label_blob_conf, image_blob_conf),
+        batch_size=total_batch_size, data_part_num=args.data_part_num, name="decode",
     )
 
 
@@ -198,7 +202,6 @@ def vgg(images, labels, trainable=True):
 
 @flow.function
 def vgg_train_job():
-    flow.config.train.batch_size(8)
     flow.config.train.primary_lr(0.00001)
     flow.config.train.model_update_conf(dict(naive_conf={}))
 
@@ -221,7 +224,6 @@ if __name__ == "__main__":
     flow.config.ctrl_port(3333)
 
     flow.config.log_dir("./log")
-    flow.config.piece_size(8)
     flow.config.default_data_type(flow.float)
     if args.multinode:
         flow.config.ctrl_port(12138)

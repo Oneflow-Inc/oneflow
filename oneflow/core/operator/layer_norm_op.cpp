@@ -37,8 +37,7 @@ void LayerNormOp::InitFromOpConf() {
 
 Maybe<void> LayerNormOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx) const {
-  CHECK_OR_RETURN(parallel_ctx->policy() != kModelParallel);
+    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
   const BlobDesc* in = GetBlobDesc4BnInOp("in");
   *GetBlobDesc4BnInOp("out") = *in;
   const LayerNormOpConf& conf = op_conf().layer_norm_conf();
@@ -50,11 +49,15 @@ Maybe<void> LayerNormOp::InferBlobDescs(
   if (param_shape_dim_vec.empty()) { param_shape_dim_vec.push_back(1); }
   const Shape param_shape(param_shape_dim_vec);
   if (conf.center()) {
+    CHECK_OR_RETURN(parallel_ctx->parallel_num() == 1
+                    || sbp_signature->bn_in_op2sbp_parallel().at("beta").has_broadcast_parallel());
     const BlobDesc* beta = GetBlobDesc4BnInOp("beta");
     CHECK_EQ_OR_RETURN(beta->shape(), param_shape);
     CHECK_EQ_OR_RETURN(beta->data_type(), in->data_type());
   }
   if (conf.scale()) {
+    CHECK_OR_RETURN(parallel_ctx->parallel_num() == 1
+                    || sbp_signature->bn_in_op2sbp_parallel().at("gamma").has_broadcast_parallel());
     const BlobDesc* gamma = GetBlobDesc4BnInOp("gamma");
     CHECK_EQ_OR_RETURN(gamma->shape(), param_shape);
     CHECK_EQ_OR_RETURN(gamma->data_type(), in->data_type());

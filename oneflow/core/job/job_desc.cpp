@@ -47,12 +47,7 @@ bool JobDesc::enable_experiment_run() const {
 }
 
 int64_t JobDesc::TotalBatchNum() const { return job_conf_.total_batch_num(); }
-int64_t JobDesc::BatchSize() const { return job_conf_.train_conf().batch_size(); }
-int64_t JobDesc::NumOfPiecesInBatch() const {
-  if (IsPredict()) { return 1; }
-  CHECK_EQ(BatchSize() % RecordPieceSize(), 0);
-  return BatchSize() / RecordPieceSize();
-}
+int64_t JobDesc::NumOfPiecesInBatch() const { return 1; }
 float JobDesc::weight_l1() const { return job_conf_.train_conf().weight_l1(); }
 float JobDesc::bias_l1() const { return job_conf_.train_conf().bias_l1(); }
 float JobDesc::weight_l2() const { return job_conf_.train_conf().weight_l2(); }

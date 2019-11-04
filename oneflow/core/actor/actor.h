@@ -90,7 +90,7 @@ class Actor {
   void AsyncLaunchKernel(const KernelCtx&);
 
   // Util For Derived Actor to Send Msg
-  void AsyncSendMsg(const ActorMsg&);
+  void EnqueueAsyncMsg(const ActorMsg&);
   void HandleProducedNaiveDataRegstToConsumer(std::function<bool(Regst*)> RegstPreProcess,
                                               std::function<bool(int64_t)> IsAllowedActor);
   void HandleProducedNaiveDataRegstToConsumer(std::function<bool(Regst*)> RegstPreProcess);
@@ -108,6 +108,7 @@ class Actor {
   void AsyncSendRegstMsgToProducer(Regst*);
   void AsyncSendRegstMsgToProducer(Regst*, int64_t producer);
   void AsyncSendEORDMsgForAllProducedRegstDesc();
+  void AsyncSendQueuedMsg();
 
   // Get Regst
   Regst* GetNaiveCurReadable(int64_t regst_desc_id) const;
@@ -227,6 +228,9 @@ class Actor {
   bool is_inplace_consumed_eord_;
   HashMap<int64_t, int64_t> inplace_regst_desc_id_in2out_;
   HashMap<int64_t, int64_t> inplace_regst_desc_id_out2in_;
+
+  std::deque<ActorMsg> async_msg_queue_;
+  bool is_kernel_launch_synchronized_;
 };
 
 std::unique_ptr<Actor> NewActor(const TaskProto&, const ThreadCtx&);

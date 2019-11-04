@@ -98,13 +98,13 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   size_t out_data_edges_size() const;
 
  protected:
-  std::shared_ptr<RegstDesc> ProduceRegst(const std::string& name, bool enable_mem_sharing);
-  std::shared_ptr<RegstDesc> ProduceRegst(const std::string& name, bool enable_mem_sharing,
+  std::shared_ptr<RegstDesc> ProduceRegst(const std::string& name, bool enable_reuse_mem);
+  std::shared_ptr<RegstDesc> ProduceRegst(const std::string& name, bool enable_reuse_mem,
                                           int32_t min_register_num, int32_t max_register_num);
-  std::shared_ptr<RegstDesc> ProduceRegst(const std::string& name, bool enable_mem_sharing,
+  std::shared_ptr<RegstDesc> ProduceRegst(const std::string& name, bool enable_reuse_mem,
                                           int32_t min_register_num, int32_t max_register_num,
                                           const RegstDescTypeProto&);
-  std::shared_ptr<RegstDesc> NewProducedRegst(bool enable_mem_sharing, int32_t min_register_num,
+  std::shared_ptr<RegstDesc> NewProducedRegst(bool enable_reuse_mem, int32_t min_register_num,
                                               int32_t max_register_num, const RegstDescTypeProto&);
   virtual void InitProducedRegstMemCase(RegstDesc* regst);
   virtual void InitProducedRegstMemCase(MemoryCase*);
@@ -160,9 +160,6 @@ class TaskEdge final : public Edge<TaskNode, TaskEdge> {
  private:
   HashMap<std::string, std::shared_ptr<RegstDesc>> name_in_producer2regst_;
 };
-
-extern std::map<TaskType, std::string> task_type2color;
-extern std::map<TaskType, std::string> task_type2type_str;
 
 struct IndependentThreadNum4TaskType final {
   IndependentThreadNum4TaskType(size_t num) : has_func_(false), num_(num) {}

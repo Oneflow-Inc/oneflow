@@ -33,7 +33,6 @@ parser.add_argument("-save", "--model_save_dir", type=str, default=MODEL_SAVE, r
 parser.add_argument("-dn", "--data_part_num", type=int, default=32, required=False)
 parser.add_argument("-b", "--batch_size", type=int, default=8, required=False)
 
-
 args = parser.parse_args()
 g_output = []
 g_output_key = []
@@ -55,11 +54,11 @@ def _data_load(data_dir):
         "class/label", shape=(), dtype=flow.int32, codec=flow.data.RawCodec()
     )
 
+    node_num = len(args.node_list.strip().split(',')) if args.multinode else 1
+    total_batch_size = args.batch_size * args.gpu_num_per_node * node_num
     return flow.data.decode_ofrecord(
-        data_dir,
-        (label_blob_conf, image_blob_conf),
-        data_part_num=args.data_part_num,
-        name="decode",
+        data_dir, (label_blob_conf, image_blob_conf),
+        batch_size=total_batch_size, data_part_num=args.data_part_num, name="decode",
     )
 
 
@@ -262,7 +261,6 @@ def _set_trainable(trainable):
 
 @flow.function
 def TrainNet():
-    flow.config.train.batch_size(args.batch_size)
     flow.config.train.primary_lr(0.0032)
     flow.config.train.model_update_conf(dict(naive_conf={}))
 
@@ -279,7 +277,6 @@ def evaluate():
 
 
 def main():
-    flow.config.piece_size(args.batch_size)
     flow.config.default_data_type(flow.float)
     flow.config.gpu_device_num(args.gpu_num_per_node)
     flow.config.grpc_use_no_signal()
@@ -330,7 +327,7 @@ def main():
         #     print(fmt_str.format(i, "eval loss:", eval))
 
         #     check_point.save(MODEL_SAVE + "_" + str(i))
-    
+
     # save loss to file
     loss_file = "{}n{}c.npy".format(str(num_nodes), str(args.gpu_num_per_node * num_nodes))
     loss_path = "./of_loss/resnet50"

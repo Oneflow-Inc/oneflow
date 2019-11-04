@@ -2,6 +2,7 @@ import os
 import unittest
 import numpy
 
+NODE_LIST = "192.168.1.12,192.168.1.14"
 
 class TestNet(unittest.TestCase):
   """
@@ -71,7 +72,7 @@ class TestAlexNet(TestNet):
     self.run_and_compare(4)
 
   def test_2n8c(self):
-    self.run_and_compare(4, 2, "192.168.1.12,192.168.1.14")
+    self.run_and_compare(4, 2, NODE_LIST)
 
   def test_report(self):
     self.print_report()
@@ -93,7 +94,7 @@ class TestResNet50(TestNet):
     self.run_and_compare(4)
 
   def test_2n8c(self):
-    self.run_and_compare(4, 2, "192.168.1.12,192.168.1.14")
+    self.run_and_compare(4, 2, NODE_LIST)
 
   def test_report(self):
     self.print_report()
@@ -115,7 +116,7 @@ class TestVgg16(TestNet):
     self.run_and_compare(4)
 
   def test_2n8c(self):
-    self.run_and_compare(4, 2, "192.168.1.12,192.168.1.14")
+    self.run_and_compare(4, 2, NODE_LIST)
 
   def test_report(self):
     self.print_report()
@@ -137,7 +138,7 @@ class TestInceptionV3(TestNet):
     self.run_and_compare(4)
 
   def test_2n8c(self):
-    self.run_and_compare(4, 2, "192.168.1.12,192.168.1.14")
+    self.run_and_compare(4, 2, NODE_LIST)
 
   def test_report(self):
     self.print_report()

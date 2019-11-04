@@ -59,7 +59,6 @@ void ExecNode::InferBlobDescs(const ParallelContext* parallel_ctx) {
     if (op_node != nullptr) { sbp_signature = &op_node->sbp_signature(); }
   }
   CHECK_JUST(op_->InferBlobDescsIf(GetBlobDesc4BnInOp, parallel_ctx, sbp_signature,
-                                   GlobalJobDesc().RecordPieceSize(),
                                    [this](OpContext* op_ctx) { op_ctx_.reset(op_ctx); }));
   Global<OpGraph>::Get()->CheckBlobDescs(op_->op_name(), GetBlobDesc4BnInOp, parallel_ctx);
 }

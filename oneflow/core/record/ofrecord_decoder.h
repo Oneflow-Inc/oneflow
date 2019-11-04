@@ -2,6 +2,7 @@
 #define ONEFLOW_CORE_RECORD_OFRECORD_DECODER_H_
 
 #include "oneflow/core/kernel/kernel_util.h"
+#include "oneflow/core/operator/op_conf_util.h"
 
 namespace oneflow {
 
