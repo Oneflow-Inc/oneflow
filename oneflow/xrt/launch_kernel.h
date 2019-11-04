@@ -45,7 +45,8 @@ class XrtLaunchKernel : public KernelIf<device_type> {
   xrt::Executable *BuildExecutable(
       const std::vector<xrt::Parameter> &entry_params,
       const std::vector<xrt::Parameter> &return_params,
-      const std::vector<xrt::InputOutputAlias> &aliases) const;
+      const std::vector<xrt::InputOutputAlias> &aliases,
+      const int device_ordinal) const;
 
  private:
   mutable BlobDescGetter<device_type> desc_getter_;

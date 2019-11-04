@@ -4,6 +4,7 @@
 #include "oneflow/xrt/executable.h"
 #include "oneflow/xrt/graph_compiler.h"
 #include "oneflow/xrt/launch_util.h"
+#include "oneflow/xrt/platform.h"
 
 namespace oneflow {
 
@@ -25,15 +26,13 @@ template <DeviceType device_type>
 xrt::Executable *XrtLaunchKernel<device_type>::BuildExecutable(
     const std::vector<xrt::Parameter> &entry_params,
     const std::vector<xrt::Parameter> &return_params,
-    const std::vector<xrt::InputOutputAlias> &aliases) const {
+    const std::vector<xrt::InputOutputAlias> &aliases,
+    const int device_ordinal) const {
   if (!compilation_cache_) {
     compilation_cache_.reset(new xrt::CompilationCache);
   }
 
   xrt::Executable *executable = nullptr;
-  // TODO(hjchen2)
-  // const int device_ordinal = launch_ctx->device_ordinal();
-  int device_ordinal = 0;
   xrt::Signature signature = xrt::ComputeSignature(
       this->op_conf().name(), device_ordinal, entry_params);
   bool force_compile = false;
@@ -99,24 +98,28 @@ void XrtLaunchKernel<device_type>::ForwardDataContent(
   desc_getter_ = BlobDescGetter<device_type>(this, BnInOp2Blob);
   // Prepare input and output parameters
   std::vector<xrt::Parameter> entry_params, return_params;
-  for (const auto &bn : this->op_attribute().input_bns()) {
+  for (const std::string &bn : this->op_attribute().input_bns()) {
     std::string blob_name = xrt::BlobIdToName(this->BnInOp2Lbi(bn));
     xrt::Parameter input = xrt::BuildParameter(*BnInOp2Blob(bn), blob_name);
     entry_params.push_back(input);
   }
-  for (const auto &bn : this->op_attribute().output_bns()) {
+  for (const std::string &bn : this->op_attribute().output_bns()) {
     xrt::Parameter output = xrt::BuildParameter(*BnInOp2Blob(bn), bn);
     return_params.push_back(output);
   }
 
+  xrt::XrtDevice device = xrt::DeviceTypeToXrtDevice(device_type);
+  int device_ordinal = xrt::platform::GetDeviceId(device);
   std::vector<xrt::InputOutputAlias> aliases;
   MakeInputOutputAlias(entry_params, &return_params, &aliases);
-  auto executable = BuildExecutable(entry_params, return_params, aliases);
+  auto executable =
+      BuildExecutable(entry_params, return_params, aliases, device_ordinal);
   if (!executable) {
     LOG(FATAL) << "Executable is built failed.";
   }
 
   xrt::ExecutableRunOptions run_options;
+  run_options.device_ordinal = device_ordinal;
   run_options.return_params = return_params;
   bool block_until_done = true;
   if (device_type == DeviceType::kGPU) {
