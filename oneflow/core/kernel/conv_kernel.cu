@@ -1,5 +1,6 @@
 #include "oneflow/core/kernel/conv_kernel.h"
 #include "oneflow/core/kernel/kernel_util.h"
+#include "oneflow/core/device/cudnn_conv_util.h"
 
 namespace oneflow {
 
@@ -10,18 +11,18 @@ void ConvKernel<DeviceType::kGPU, float16>::VirtualKernelInit() {
 
   // if need to update in/out CudnnTensorDesc and CudnnConvDesc for each forward,
   // there is no need to new CudnnTensorDesc here
-  if (!this->GetConvKernelConf().need_infer_cudnn_desc_each_forward()) {
+  if (!this->GetConvKernelConf().need_infer_cudnn_params_for_each()) {
     DenseShapeView in_shape(this->GetConvKernelConf().in());
+    DenseShapeView weight_shape(this->GetConvKernelConf().weight());
     DenseShapeView out_shape(this->GetConvKernelConf().out());
+
     this->in_desc_.reset(new CudnnTensorDesc(GetDataType<float16>::value, in_shape, data_format));
+    this->filter_desc_.reset(
+        new CudnnFilterDesc(GetDataType<float16>::value, weight_shape, data_format));
     this->out_desc_.reset(new CudnnTensorDesc(GetDataType<float16>::value, out_shape, data_format));
     this->conv_desc_.reset(new CudnnConvDesc(GetConvDescDataType(GetDataType<float16>::value),
                                              in_shape, this->GetCustomizedOpConf()));
   }
-
-  DenseShapeView weight_shape(this->GetConvKernelConf().weight());
-  this->filter_desc_.reset(
-      new CudnnFilterDesc(GetDataType<float16>::value, weight_shape, data_format));
 
   if (this->template GetValFromCustomizedOpConf<bool>("use_bias")) {
     int32_t filters = DenseShapeView(this->GetConvKernelConf().bias()).At(0);
@@ -62,21 +63,18 @@ void ConvKernel<DeviceType::kGPU, float16>::DoForwardDataContent(
   void* fw_cudnn_buf_ptr = fw_cudnn_buf ? fw_cudnn_buf->mut_dptr() : nullptr;
   size_t fw_cudnn_buf_size = fw_cudnn_buf ? fw_cudnn_buf->ByteSizeOfBlobBody() : 0;
 
-  if (this->GetConvKernelConf().need_infer_cudnn_desc_each_forward()) {
-    const std::string& data_format =
-        this->template GetValFromCustomizedOpConf<std::string>("data_format");
-    CudnnTensorDesc in_desc(GetDataType<float16>::value, in_blob->shape(), data_format);
-    CudnnTensorDesc out_desc(GetDataType<float16>::value, out_blob->shape(), data_format);
-    CudnnConvDesc conv_desc(GetConvDescDataType(GetDataType<float16>::value), in_blob->shape(),
-                            this->GetCustomizedOpConf());
-    CudaCheck(cudnnConvolutionForward(
-        device_ctx->cudnn_handle(), CudnnSPOnePtr<float16>(), in_desc.Get(),
-        in_blob->dptr<float16>(), this->filter_desc_->Get(), weight_blob->dptr<float16>(),
-        conv_desc.Get(),
-        static_cast<cudnnConvolutionFwdAlgo_t>(this->GetConvKernelConf().cudnn_fwd_algo()),
-        fw_cudnn_buf_ptr, fw_cudnn_buf_size, CudnnSPZeroPtr<float16>(), out_desc.Get(),
-        out_blob->mut_dptr<float16>()));
+  if (this->GetConvKernelConf().need_infer_cudnn_params_for_each()) {
+    CudnnConvArgs args(this->GetCustomizedOpConf(), device_ctx->cudnn_handle(), in_blob, out_blob,
+                       weight_blob, fw_cudnn_buf,
+                       this->job_desc().job_conf().cudnn_conv_use_deterministic_algo_only(),
+                       this->job_desc().job_conf().cudnn_conv_heuristic_search_algo());
+    auto algo_perf = FindCudnnConvAlgorithm<cudnnConvolutionFwdAlgoPerf_t>(args);
+    CudaCheck(cudnnConvolutionForward(args.handle, CudnnSPOnePtr<float16>(), args.xdesc.Get(),
+                                      args.x_dptr, args.wdesc.Get(), args.w_dptr, args.cdesc.Get(),
+                                      algo_perf->algo, args.work_space, algo_perf->memory,
+                                      CudnnSPZeroPtr<float16>(), args.ydesc.Get(), args.y_dptr));
   } else {
+    CHECK(this->GetConvKernelConf().has_cudnn_fwd_algo());
     CudaCheck(cudnnConvolutionForward(
         device_ctx->cudnn_handle(), CudnnSPOnePtr<float16>(), this->in_desc_->Get(),
         in_blob->dptr<float16>(), this->filter_desc_->Get(), weight_blob->dptr<float16>(),
@@ -148,7 +146,7 @@ void ConvKernel<DeviceType::kGPU, T>::KernelInitWithCudnn() {
       this->template GetValFromCustomizedOpConf<std::string>("data_format");
   // if need to update in/out CudnnTensorDesc and CudnnConvDesc for each forward,
   // there is no need to new CudnnTensorDesc here
-  if (!this->GetConvKernelConf().need_infer_cudnn_desc_each_forward()) {
+  if (!this->GetConvKernelConf().need_infer_cudnn_params_for_each()) {
     DenseShapeView in_shape(this->GetConvKernelConf().in());
     DenseShapeView out_shape(this->GetConvKernelConf().out());
     this->in_desc_.reset(new CudnnTensorDesc(GetDataType<T>::value, in_shape, data_format));
@@ -197,19 +195,17 @@ void ConvKernel<DeviceType::kGPU, T>::DoForwardDataContentWithCudnn(
   void* fw_cudnn_buf_ptr = fw_cudnn_buf ? fw_cudnn_buf->mut_dptr() : nullptr;
   size_t fw_cudnn_buf_size = fw_cudnn_buf ? fw_cudnn_buf->ByteSizeOfBlobBody() : 0;
 
-  if (this->GetConvKernelConf().need_infer_cudnn_desc_each_forward()) {
-    const std::string& data_format =
-        this->template GetValFromCustomizedOpConf<std::string>("data_format");
-    CudnnTensorDesc in_desc(GetDataType<T>::value, in_blob->shape(), data_format);
-    CudnnTensorDesc out_desc(GetDataType<T>::value, out_blob->shape(), data_format);
-    CudnnConvDesc conv_desc(GetConvDescDataType(GetDataType<T>::value), in_blob->shape(),
-                            this->GetCustomizedOpConf());
-    CudaCheck(cudnnConvolutionForward(
-        device_ctx->cudnn_handle(), CudnnSPOnePtr<T>(), in_desc.Get(), in_blob->dptr<T>(),
-        this->filter_desc_->Get(), weight_blob->dptr<T>(), conv_desc.Get(),
-        static_cast<cudnnConvolutionFwdAlgo_t>(this->GetConvKernelConf().cudnn_fwd_algo()),
-        fw_cudnn_buf_ptr, fw_cudnn_buf_size, CudnnSPZeroPtr<T>(), out_desc.Get(),
-        out_blob->mut_dptr<T>()));
+  if (this->GetConvKernelConf().need_infer_cudnn_params_for_each()) {
+    CudnnConvArgs args(this->GetCustomizedOpConf(), device_ctx->cudnn_handle(), in_blob, out_blob,
+                       weight_blob, fw_cudnn_buf,
+                       this->job_desc().job_conf().cudnn_conv_use_deterministic_algo_only(),
+                       this->job_desc().job_conf().cudnn_conv_heuristic_search_algo());
+    auto algo_perf = FindCudnnConvAlgorithm<cudnnConvolutionFwdAlgoPerf_t>(args);
+    CHECK_EQ(algo_perf->status, CUDNN_STATUS_SUCCESS);
+    CudaCheck(cudnnConvolutionForward(args.handle, CudnnSPOnePtr<T>(), args.xdesc.Get(),
+                                      args.x_dptr, args.wdesc.Get(), args.w_dptr, args.cdesc.Get(),
+                                      algo_perf->algo, args.work_space, algo_perf->memory,
+                                      CudnnSPZeroPtr<T>(), args.ydesc.Get(), args.y_dptr));
   } else {
     CudaCheck(cudnnConvolutionForward(
         device_ctx->cudnn_handle(), CudnnSPOnePtr<T>(), this->in_desc_->Get(), in_blob->dptr<T>(),
