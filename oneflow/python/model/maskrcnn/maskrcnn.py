@@ -219,7 +219,8 @@ def maskrcnn_train(images, image_sizes, gt_boxes, gt_segms, gt_labels):
     )
 
     # Mask Head
-    with flow.watch_scope(blob_watched, diff_blob_watched):
+    with flow.watch_scope(blob_watched, diff_blob_watched), \
+         flow.watch_scope(MakeWatcherCallback("forward"), MakeWatcherCallback("backward")):
         mask_loss = mask_head.build_train(
             pos_proposal_list,
             pos_gt_indices_list,
@@ -230,6 +231,11 @@ def maskrcnn_train(images, image_sizes, gt_boxes, gt_segms, gt_labels):
 
     return rpn_bbox_loss, rpn_objectness_loss, box_loss, cls_loss, mask_loss
 
+def MakeWatcherCallback(prompt):
+    def Callback(blob, blob_def):
+        print("%s, lbn: %s, min: %s, max: %s"
+              %(prompt, blob_def.logical_blob_name, blob.min(), blob.max()))
+    return Callback
 
 def maskrcnn_eval(images, image_sizes):
     cfg = get_default_cfgs()
