@@ -8,7 +8,9 @@ void ConvFilterGradKernel<device_type, T>::ForwardDataContent(
   ConvFilterGradKernelUtil<device_type, T>::Compute(
       ctx.device_ctx, this->kernel_conf().conv_filter_grad_conf(),
       this->op_conf().conv_filter_grad_conf().conv_conf(), BnInOp2Blob("x"), BnInOp2Blob("dy"),
-      BnInOp2Blob("filter_diff"), BnInOp2Blob("buf"));
+      BnInOp2Blob("filter_diff"), BnInOp2Blob("buf"),
+      this->job_desc().job_conf().cudnn_conv_use_deterministic_algo_only(),
+      this->job_desc().job_conf().cudnn_conv_heuristic_search_algo());
 }
 
 template<DeviceType device_type, typename T>
@@ -20,7 +22,7 @@ template<typename T>
 struct ConvFilterGradKernelUtil<DeviceType::kCPU, T> final {
   static void Compute(DeviceCtx* ctx, const ConvFilterGradKernelConf& kernel_conf,
                       const ConvConf& conf, const Blob* x, const Blob* dy, Blob* filter_diff,
-                      Blob* buf) {
+                      Blob* buf, bool deterministic, bool heuristic) {
     UNIMPLEMENTED();
   }
 };
