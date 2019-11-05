@@ -1499,6 +1499,62 @@ message NcclBoxingAllReduceOpConf {
   required LogicalBlobId lbi = 1;
 }
 
+message FlattenOpConf {
+  required string in = 1;
+  required string out = 2;
+  required int64 begin_axis = 3;
+  required int64 end_axis = 4;
+}
+
+message IndexedSlicesLazyAdamOptimizerOpConf {
+  required string m = 1;
+  required string v = 2;
+  required string model_diff_indices = 3;
+  required string model_diff_values = 4;
+  required string model = 6;
+  required string train_step = 7;
+  required string learning_rate = 8;
+  required float l1 = 9;
+  required float l2 = 10;
+  optional float beta1 = 11 [default = 0.9];
+  optional float beta2 = 12 [default = 0.999];
+  optional float epsilon = 13 [default = 1e-8];
+}
+
+message ParallelCastOpConf {
+  required string in = 1;
+  required string out = 2;
+  optional OptInt64 split_axis = 3;
+  optional OptInt64 gradient_split_axis = 4;
+}
+
+message ModelInitV2OpConf {
+  required string ref = 1;
+  required string variable_op_name = 2;
+  required VariableOpConf original_variable_conf = 3;
+  required string out = 4;
+  required string tick = 5;
+}
+
+message ModelLoadV2OpConf {
+  required string path = 1;
+  required string ref = 2;
+  required string variable_op_name = 3;
+  required VariableOpConf original_variable_conf = 4;
+  required string out = 5;
+  required string tick = 6;
+}
+
+
+message ModelSaveV2OpConf {
+  required string path = 1;
+  required string in = 2;
+  required string variable_op_name = 3;
+  required VariableOpConf original_variable_conf = 4;
+  required string out = 5;
+  required string tick = 6;
+}
+
 message OperatorConf {
   required string name = 1;
   optional bool trainable = 3 [default = true];
@@ -1647,6 +1703,12 @@ message OperatorConf {
     SigmoidCrossEntropyLossGradOpConf sigmoid_cross_entropy_loss_grad_conf = 304; 
     GatherMs0OpConf gather_ms0_conf = 305;
     GatherMs0GradOpConf gather_ms0_grad_conf = 306;
+    FlattenOpConf flatten_conf = 307;
+    IndexedSlicesLazyAdamOptimizerOpConf indexed_slices_lazy_adam_optimizer_conf = 308;
+    ParallelCastOpConf parallel_cast_conf = 309;
+    ModelInitV2OpConf model_init_v2_conf = 310;
+    ModelLoadV2OpConf model_load_v2_conf = 311;
+    ModelSaveV2OpConf model_save_v2_conf = 312;
 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;
