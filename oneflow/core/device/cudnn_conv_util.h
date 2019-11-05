@@ -22,7 +22,6 @@ struct CudnnConvParams {
   int dilation[max_dim];
   bool deterministic;
   bool heuristic;
-  // int64_t groups;
 };
 
 bool operator==(const CudnnConvParams& a, const CudnnConvParams& b);
