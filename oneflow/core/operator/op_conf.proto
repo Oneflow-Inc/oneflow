@@ -13,6 +13,7 @@ enum ActivationType {
   kTanH = 1;
   kSigmoid = 2;
   kRelu = 3;
+  kLeakyRelu = 4;
 }
 
 message ConstantInitializerConf {
@@ -85,6 +86,14 @@ message VarianceScalingInitializerConf {
   required string data_format = 4;
 }
 
+message KaimingInitializerConf {
+  optional RandomDistribution distribution = 1 [default = kRandomNormal];
+  optional VarianceNorm variance_norm = 2 [default = kFanIn];
+  optional ActivationType nonlinearity = 3 [default = kLeakyRelu];
+  optional float negative_slope = 4 [default = 0.0];
+  optional string data_format = 5 [default = ""];
+}
+
 message InitializerConf {
   oneof type {
     ConstantInitializerConf constant_conf = 1;
@@ -98,6 +107,7 @@ message InitializerConf {
     RangeInitializerConf range_conf = 9;
     IntRangeInitializerConf int_range_conf = 10;
     VarianceScalingInitializerConf variance_scaling_conf = 11;
+    KaimingInitializerConf kaiming_conf = 12;
   }
 }
 

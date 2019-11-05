@@ -33,7 +33,9 @@ def ones_initializer(dtype=data_type_conf_util.kFloat):
 
 
 @oneflow_export("random_uniform_initializer")
-def random_uniform_initializer(minval=0, maxval=1, dtype=data_type_conf_util.kFloat):
+def random_uniform_initializer(
+    minval=0, maxval=1, dtype=data_type_conf_util.kFloat
+):
     initializer = op_conf_util.InitializerConf()
     if dtype in [data_type_conf_util.kFloat, data_type_conf_util.kDouble]:
         setattr(initializer.random_uniform_conf, "min", float(minval))
@@ -83,10 +85,7 @@ def glorot_uniform_initializer(data_format=""):
 
 @oneflow_export("variance_scaling_initializer")
 def variance_scaling_initializer(
-    scale=1.0,
-    mode="fan_in",
-    distribution="truncated_normal",
-    data_format="",
+    scale=1.0, mode="fan_in", distribution="truncated_normal", data_format=""
 ):
     r"""Initializer that generates a truncated normal distribution 
     or a random normal distribution or a random uniform distribution 
@@ -150,3 +149,60 @@ def _get_data_format(data_format):
         return "channels_last"
     else:
         return ""
+
+
+def _get_activation_type(nonlinearity):
+    assert isinstance(nonlinearity, str)
+    if nonlinearity.lower() == "":
+        return op_conf_util.kNone
+    elif nonlinearity.lower() == "tanh":
+        return op_conf_util.kTanH
+    elif nonlinearity.lower() == "sigmoid":
+        return op_conf_util.kSigmoid
+    elif nonlinearity.lower() == "relu":
+        return op_conf_util.kRelu
+    elif nonlinearity.lower() == "leaky_relu":
+        return op_conf_util.kLeakyRelu
+    else:
+        raise ValueError("Does not support such activation type")
+
+
+@oneflow_export("kaiming_initializer")
+def kaiming_initializer(
+    distribution="random_normal",
+    mode="fan_in",
+    nonlinearity="leaky_relu",
+    negative_slope=0.0,
+    data_format="",
+):
+    r"""Initialize weight according to the method described in `Delving deep into
+    rectifiers: Surpassing human-level performance on ImageNet classification` 
+    - He, K. et al. (2015), using a normal or uniform distribution.
+
+    Args:
+        distribution: 'random_normal' or 'random_uniform'
+        mode: 'fan_in', 'fan_out', 'fan_avg'
+        nonlinearity: '' (no activation), 'tanh', 'sigmoid', 'relu', 'leaky_relu'
+        negative_slope: the negative slope of leaky_relu
+        data_format: 'channels_first', 'channels_last' or '' (default)
+    """
+    assert distribution in ["random_normal", "random_uniform"]
+    assert mode in ["fan_in", "fan_out", "fan_avg"]
+    assert nonlinearity in ["", "tanh", "sigmoid", "relu", "leaky_relu"]
+    assert data_format in ["channels_first", "channels_last"]
+    initializer = op_conf_util.InitializerConf()
+    setattr(
+        initializer.kaiming_conf,
+        "distribution",
+        _get_random_distribution(distribution),
+    )
+    setattr(initializer.kaiming_conf, "variance_norm", _get_variance_norm(mode))
+    setattr(
+        initializer.kaiming_conf,
+        "nonlinearity",
+        _get_activation_type(nonlinearity),
+    )
+    setattr(initializer.kaiming_conf, "negative_slope", float(negative_slope))
+    setattr(initializer.kaiming_conf, "data_format", data_format)
+    return initializer
+
