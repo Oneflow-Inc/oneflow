@@ -1,23 +1,28 @@
 #include "oneflow/core/kernel/conv_data_grad_kernel.h"
 #include "oneflow/core/operator/conv_op.h"
+#include "oneflow/core/device/cudnn_conv_util.h"
 
 namespace oneflow {
 
 template<typename T>
 struct ConvDataGradKernelUtil<DeviceType::kGPU, T> final {
   static void Compute(DeviceCtx* ctx, const ConvDataGradKernelConf& kernel_conf,
-                      const ConvConf& conf, const Blob* dy, const Blob* filter, Blob* dx,
-                      Blob* buf) {
-    CudnnTensorDesc dy_desc(dy->data_type(), dy->shape(), conf.data_format());
-    CudnnFilterDesc filter_desc(filter->data_type(), filter->shape(), conf.data_format());
-    CudnnTensorDesc dx_desc(dx->data_type(), dx->shape(), conf.data_format());
-    CudnnConvDesc conv_desc(GetConvDescDataType(dx->data_type()), dx->shape(), conf);
-    CudaCheck(cudnnConvolutionBackwardData(
-        ctx->cudnn_handle(), CudnnSPOnePtr<T>(), filter_desc.Get(), filter->dptr<T>(),
-        dy_desc.Get(), dy->dptr<T>(), conv_desc.Get(),
-        static_cast<cudnnConvolutionBwdDataAlgo_t>(kernel_conf.cudnn_bwd_data_algo()),
-        buf->mut_dptr(), buf->ByteSizeOfBlobBody(), CudnnSPZeroPtr<T>(), dx_desc.Get(),
-        dx->mut_dptr<T>()));
+                      const ConvConf& conf, const Blob* dy, const Blob* filter, Blob* dx, Blob* buf,
+                      bool deterministic, bool heuristic) {
+    CudnnConvArgs args(conf, ctx->cudnn_handle(), dx, dy, filter, buf, deterministic, heuristic);
+    if (kernel_conf.has_cudnn_bwd_data_algo()) {
+      CudaCheck(cudnnConvolutionBackwardData(
+          args.handle, CudnnSPOnePtr<T>(), args.wdesc.Get(), args.w_dptr, args.ydesc.Get(),
+          args.y_dptr, args.cdesc.Get(),
+          static_cast<cudnnConvolutionBwdDataAlgo_t>(kernel_conf.cudnn_bwd_data_algo()),
+          args.work_space, args.ws_size, CudnnSPZeroPtr<T>(), args.xdesc.Get(), args.x_dptr));
+    } else {
+      auto algo_perf = FindCudnnConvAlgorithm<cudnnConvolutionBwdDataAlgoPerf_t>(args);
+      CudaCheck(cudnnConvolutionBackwardData(
+          args.handle, CudnnSPOnePtr<T>(), args.wdesc.Get(), args.w_dptr, args.ydesc.Get(),
+          args.y_dptr, args.cdesc.Get(), algo_perf->algo, args.work_space, algo_perf->memory,
+          CudnnSPZeroPtr<T>(), args.xdesc.Get(), args.x_dptr));
+    }
   }
 };
 
