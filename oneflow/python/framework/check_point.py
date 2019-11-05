@@ -23,6 +23,7 @@ class CheckPoint(object):
     @session_util.try_init_default_session
     def save(self, path):
         r"""save a checkpoint to `path`.
+
         Args:
             Path: A `string` of path to save checkpoint. 
         """
@@ -32,6 +33,7 @@ class CheckPoint(object):
     @session_util.try_init_default_session
     def init(self):
         r"""Initialize models by default initializer of op or Job.
+
         Args:
             None.
         """
@@ -40,6 +42,7 @@ class CheckPoint(object):
     @session_util.try_init_default_session
     def load(self, path):
         r"""load a checkpoint from `path` and initialize models.
+        
         Args:
             Path: A `string` of path to load checkpoint.
         """
