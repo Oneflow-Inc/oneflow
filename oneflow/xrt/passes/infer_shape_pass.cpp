@@ -13,29 +13,11 @@
 namespace oneflow {
 namespace xrt {
 
-namespace {
-
-ParallelContext BuildLocalParallelContext() {
-  ParallelContext parallel_ctx;
-  parallel_ctx.set_parallel_id(0);
-  parallel_ctx.set_parallel_num(1);
-  return std::move(parallel_ctx);
-}
-
-SbpSignature BuildLocalSbpSignature(const std::shared_ptr<Operator> &op) {
-  SbpSignature sbp_signature;
-  auto &sbp_detail = *(sbp_signature.mutable_bn_in_op2sbp_parallel());
-  for (const auto &name : op->input_bns()) {
-    sbp_detail[name].mutable_split_parallel()->set_axis(0);
-  }
-  for (const auto &name : op->output_bns()) {
-    sbp_detail[name].mutable_split_parallel()->set_axis(0);
-  }
-  return std::move(sbp_signature);
-}
+namespace shape_inference {
 
 void InferShape(XrtGraph *graph, const XrtPassOptions &options,
-                const JobDesc *job_desc,
+                const JobDesc *job_desc, const ParallelContext *parallel_ctx,
+                const util::PbMap<std::string, SbpSignature> *sbp_signatures,
                 util::Map<std::string, BlobDesc> *blob_descs) {
   algorithm::TopologyVisit(*graph, [&](XrtNode *node) {
     if (node->IsArgumentNode()) {
@@ -56,9 +38,9 @@ void InferShape(XrtGraph *graph, const XrtPassOptions &options,
         }
         return &(it->second);
       };
-      auto parallel_ctx = BuildLocalParallelContext();
-      auto sbp_signature = BuildLocalSbpSignature(op);
-      CHECK_JUST(op->InferBlobDescsIf(get_blob_desc_fn, &parallel_ctx,
+
+      const SbpSignature &sbp_signature = sbp_signatures->at(node->name());
+      CHECK_JUST(op->InferBlobDescsIf(get_blob_desc_fn, parallel_ctx,
                                       &sbp_signature, [](OpContext *) {}));
     }
     // Update blob desc on the output edges
@@ -66,13 +48,15 @@ void InferShape(XrtGraph *graph, const XrtPassOptions &options,
       std::string name = edge->argument().name();
       auto it = blob_descs->find(name);
       CHECK(it != blob_descs->end());
-      Argument argument(name, it->second.shape(), it->second.data_type());
+      const auto &metadata = edge->argument().meta_data();
+      Argument argument(name, it->second.shape(), it->second.data_type(),
+                        metadata);
       edge->SetArgument(argument);
     }
   });
 }
 
-}  // namespace
+}  // namespace shape_inference
 
 class InferShapePass : public XrtPass {
  public:
@@ -80,10 +64,17 @@ class InferShapePass : public XrtPass {
 
   void Run(XrtGraph *graph, const XrtPassOptions &options,
            const std::vector<Any> &params) override {
-    CHECK_GE(params.size(), 2) << "JobDesc and BlobDesc are required.";
-    const JobDesc *job_desc = any_cast<const JobDesc *>(params[0]);
-    auto *blob_descs = any_cast<util::Map<std::string, BlobDesc> *>(params[1]);
-    InferShape(graph, options, job_desc, blob_descs);
+    CHECK_EQ(params.size(), 4)
+        << "JobDesc, BlobDesc, ParallelCtx and SbpSignatures are required in "
+           "InferShapePass.";
+    const auto *job_desc = any_cast<const JobDesc *>(params[0]);
+    const auto *parallel_ctx = any_cast<const ParallelContext *>(params[1]);
+    const auto *sbp_signatures =
+        any_cast<const util::PbMap<std::string, SbpSignature> *>(params[2]);
+    auto *blob_descs = any_cast<util::Map<std::string, BlobDesc> *>(params[3]);
+
+    shape_inference::InferShape(graph, options, job_desc, parallel_ctx,
+                                sbp_signatures, blob_descs);
   }
 };
 

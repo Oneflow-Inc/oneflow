@@ -24,6 +24,11 @@ class XrtLaunchOp : public Operator {
     return new NormalForwardLogicalNode;
   }
 
+  void VirtualGenKernelConf(
+      std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+      const ParallelContext* parallel_ctx,
+      KernelConf* kernel_conf) const override;
+
  private:
   Maybe<void> InferBatchAxis(std::function<OptInt64*(const std::string&)>
                                  BatchAxis4BnInOp) const override;

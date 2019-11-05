@@ -184,20 +184,33 @@ void FoldSubgraphBuilder::buildFunction(const XrtGraph *sub_graph,
 }
 
 void AddInOutBlobNames(const XrtNode *node, XrtLaunchOpConf *launch_conf) {
+  // Add inputs
+  util::Map<std::string, std::string> input_args;
   for (const XrtEdge *edge : node->in_edges()) {
     if (!edge->IsControlEdge()) {
       const Argument &arg = edge->argument();
-      DoNoDuplicationAdd(launch_conf->mutable_in(), arg.name());
+      input_args.emplace(arg.meta_data().consume_key, arg.name());
     }
   }
+  for (int i = 0; i < input_args.size(); ++i) {
+    std::string consume_key = absl::StrCat("in_", i);
+    CHECK_GT(input_args.count(consume_key), 0);
+    const std::string &val = input_args.at(consume_key);
+    launch_conf->mutable_in()->Add()->assign(val);
+  }
 
+  // Add outputs
+  util::Map<std::string, std::string> output_args;
   for (const XrtEdge *edge : node->out_edges()) {
     if (!edge->IsControlEdge()) {
       const Argument &arg = edge->argument();
-      std::vector<std::string> splits = absl::StrSplit(arg.name(), "/");
-      CHECK_EQ(splits.size(), 2);
-      DoNoDuplicationAdd(launch_conf->mutable_out(), splits[1]);
+      output_args.emplace(arg.meta_data().produce_key, arg.name());
     }
+  }
+  for (int i = 0; i < output_args.size(); ++i) {
+    std::string produce_key = absl::StrCat("out_", i);
+    CHECK_GT(output_args.count(produce_key), 0);
+    launch_conf->mutable_out()->Add()->assign(produce_key);
   }
 }
 
@@ -300,26 +313,48 @@ void FoldSubgraphBuilder::FixupControlInOpNames() {
 void FoldSubgraphBuilder::FixupInOutBlobNames() {
   for (const XrtNode *node : launch_nodes_) {
     std::string launch_op_name = node->name();
-    // Fix output blob names
-    util::Set<std::string> argument_names;
+    // Fix input arguments consume key.
+    util::Map<std::string, int> consume_argument_names;
+    for (XrtEdge *edge : node->in_edges()) {
+      if (edge->IsControlEdge()) {
+        continue;
+      }
+      const Argument &arg = edge->argument();
+      int index = consume_argument_names.size();
+      auto it = consume_argument_names.find(arg.name());
+      if (it == consume_argument_names.end()) {
+        it = consume_argument_names.emplace(arg.name(), index).first;
+      }
+      index = it->second;
+
+      ArgumentMetaData metadata;
+      metadata.consume_key = absl::StrCat("in_", index);
+      metadata.produce_key = arg.meta_data().produce_key;
+      Argument fixed_arg(arg.name(), arg.shape(), arg.data_type(), metadata);
+      edge->SetArgument(fixed_arg);
+    }
+
+    // Fix output blob names.
+    util::Map<std::string, int> produce_argument_names;
     for (XrtEdge *edge : node->out_edges()) {
       if (edge->IsControlEdge()) {
         continue;
       }
       const Argument &arg = edge->argument();
-      int index = argument_names.size();
-      if (argument_names.insert(arg.name()).second) {
+      int index = produce_argument_names.size();
+      auto it = produce_argument_names.find(arg.name());
+      if (it == produce_argument_names.end()) {
         CHECK_EQ(fixedup_names_.count(arg.name()), 0);
+        it = produce_argument_names.emplace(arg.name(), index).first;
       }
-      auto it = fixedup_names_.find(arg.name());
-      if (it == fixedup_names_.end()) {
-        std::string fixed_blob_name =
-            absl::StrCat(launch_op_name, "/out_", index);
-        it = fixedup_names_.emplace(arg.name(), fixed_blob_name).first;
-      }
+      index = it->second;
+
+      std::string fixed_blob_name =
+          absl::StrCat(launch_op_name, "/out_", index);
+      fixedup_names_.emplace(arg.name(), fixed_blob_name);
       // Append to `batch_axis`
       if (builder_->HasBatchAxis4Lbn(arg.name())) {
-        builder_->AddBatchAxis4Lbn(it->second /* fixed_blob_name */,
+        builder_->AddBatchAxis4Lbn(fixed_blob_name,
                                    builder_->BatchAxis4Lbn(arg.name()));
       }
       // Fix end input blob name
@@ -327,11 +362,13 @@ void FoldSubgraphBuilder::FixupInOutBlobNames() {
       if (end->type() != _XrtLaunchOpType) {
         auto *op_conf = builder_->MutableOpConf4OpName(end->name());
         const std::string &consume_key = arg.meta_data().consume_key;
-        SetOpInputBlobName(op_conf, consume_key, arg.name(),
-                           it->second /* fixed_blob_name */);
+        SetOpInputBlobName(op_conf, consume_key, arg.name(), fixed_blob_name);
       }
-      Argument fixed_arg(it->second /* fixed_blob_name */, arg.shape(),
-                         arg.data_type(), arg.meta_data());
+      ArgumentMetaData metadata;
+      metadata.consume_key = arg.meta_data().consume_key;
+      metadata.produce_key = absl::StrCat("out_", index);
+      Argument fixed_arg(fixed_blob_name, arg.shape(), arg.data_type(),
+                         metadata);
       edge->SetArgument(fixed_arg);
     }
   }
@@ -350,21 +387,30 @@ void FoldSubgraphBuilder::FixupTimeShapes() {
 void FoldSubgraphBuilder::FixupSbpSignatures() {
   for (const XrtNode *node : launch_nodes_) {
     SbpSignature sbp_conf;
-    auto *sbp_signatures = sbp_conf.mutable_bn_in_op2sbp_parallel();
+    auto *sbp_parallel = sbp_conf.mutable_bn_in_op2sbp_parallel();
     for (const XrtEdge *edge : node->in_edges()) {
       CHECK(edge->HasAttr("sbp_policy"));
       const std::string &bn = edge->argument().meta_data().consume_key;
-      (*sbp_signatures)[bn] =
+      (*sbp_parallel)[bn] =
           edge->Attr<std::vector<SbpParallel>>("sbp_policy")[1];
     }
     for (const XrtEdge *edge : node->out_edges()) {
       CHECK(edge->HasAttr("sbp_policy"));
       const std::string &bn = edge->argument().meta_data().produce_key;
-      (*sbp_signatures)[bn] =
+      (*sbp_parallel)[bn] =
           edge->Attr<std::vector<SbpParallel>>("sbp_policy")[0];
     }
     // Append sbp signatures to helper
     builder_->AddSbpSignature4OpName(node->name(), sbp_conf);
+
+    // Add function node sbp signatures.
+    auto *op_conf = builder_->MutableOpConf4OpName(node->name());
+    auto *launch_conf = op_conf->mutable_xrt_launch_conf();
+    auto *sbp_signatures = launch_conf->mutable_sbp_signatures();
+    for (const auto &node_conf : launch_conf->function().node()) {
+      const std::string &node_name = node_conf.name();
+      (*sbp_signatures)[node_name] = builder_->SbpSignature4OpName(node_name);
+    }
   }
 }
 

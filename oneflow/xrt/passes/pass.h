@@ -49,7 +49,7 @@ class XrtPass {
 // typedef XrtPass *(*XrtPassCreator)();
 
 #define REGISTER_XRT_PASS(PassName, PassType)                     \
-  namespace {                                                     \
+  namespace PassName {                                            \
   struct _XrtPassRegistrar {                                      \
     _XrtPassRegistrar() {                                         \
       XrtPass::Registry()->Register(                              \

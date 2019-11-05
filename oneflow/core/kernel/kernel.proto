@@ -180,6 +180,10 @@ message NcclTupleBroadcastConf {
   required ParallelContext parallel_ctx = 1;
 }
 
+message XrtLaunchKernelConf {
+  required ParallelContext parallel_ctx = 1;
+}
+
 message KernelConf {
   required OpAttribute op_attribute = 1;
   required bool is_forward = 2;
@@ -211,6 +215,7 @@ message KernelConf {
     ReduceGatherKernelConf reduce_gather_conf = 350;
     ReduceConcatKernelConf reduce_concat_conf = 351;
     ReduceSplitKernelConf reduce_split_conf = 352;
+    XrtLaunchKernelConf xrt_launch_conf = 353;
     AccuracyKernelConf accuracy_conf = 401;
     SliceKernelConf slice_conf = 402;
     ConstantKernelConf constant_conf = 403;

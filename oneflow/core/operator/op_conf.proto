@@ -7,6 +7,7 @@ import "oneflow/core/record/image.proto";
 import "oneflow/core/record/record.proto";
 import "oneflow/core/job/resource.proto";
 import "oneflow/core/register/logical_blob_id.proto";
+import "oneflow/core/job/sbp_parallel.proto";
 
 enum ActivationType {
   kNone = 0;
@@ -1521,7 +1522,9 @@ message XrtLaunchOpConf {
   // Mapping launch op's input and output names into function.
   map<string, string> input_output_mapping = 5;
   map<string, OptInt64> batch_axis = 6;
-  optional bool model_update = 7 [default = false];
+  // Sbp signatures of each function node.
+  map<string, SbpSignature> sbp_signatures = 7;
+  optional bool model_update = 8 [default = false];
 }
 
 message NcclBoxingReduceScatterOpConf {
