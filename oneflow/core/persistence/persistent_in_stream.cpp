@@ -66,7 +66,7 @@ int32_t PersistentInStream::ReadLine(std::string* l) {
   return 0;
 }
 
-int32_t PersistentInStream::Read(char* s, size_t n) {
+int32_t PersistentInStream::ReadFully(char* s, size_t n) {
   if (IsEof()) { return -1; }
   while (n) {
     if (cur_buf_begin_ == cur_buf_end_) { UpdateBuffer(); }

@@ -32,9 +32,9 @@ void ParseActEvents(const std::string& act_event_filepath,
                     std::list<std::unique_ptr<ActEvent>>* act_events) {
   PersistentInStream in_stream(LocalFS(), act_event_filepath);
   int64_t act_event_size;
-  while (!in_stream.Read(reinterpret_cast<char*>(&act_event_size), sizeof(act_event_size))) {
+  while (!in_stream.ReadFully(reinterpret_cast<char*>(&act_event_size), sizeof(act_event_size))) {
     std::vector<char> buffer(act_event_size);
-    CHECK(!in_stream.Read(buffer.data(), act_event_size));
+    CHECK(!in_stream.ReadFully(buffer.data(), act_event_size));
     auto act_event = std::make_unique<ActEvent>();
     act_event->ParseFromArray(buffer.data(), act_event_size);
     act_events->emplace_back(std::move(act_event));
