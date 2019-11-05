@@ -219,8 +219,9 @@ def maskrcnn_train(images, image_sizes, gt_boxes, gt_segms, gt_labels):
     )
 
     # Mask Head
-    with flow.watch_scope(blob_watched, diff_blob_watched), \
-         flow.watch_scope(MakeWatcherCallback("forward"), MakeWatcherCallback("backward")):
+    with flow.watch_scope(blob_watcher=blob_watched, diff_blob_watcher=diff_blob_watched), \
+         flow.watch_scope(blob_watcher=MakeWatcherCallback("forward"),
+                          diff_blob_watcher=MakeWatcherCallback("backward")):
         mask_loss = mask_head.build_train(
             pos_proposal_list,
             pos_gt_indices_list,

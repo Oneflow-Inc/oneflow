@@ -11,24 +11,26 @@ def TryWatchOnce(blob_def):
     for watch_scope in watch_scope_context.EachWatchScope(): watch_scope.WatchOnce(blob_def)
 
 class WatchScope(object):
-    def __init__(self, blob_watcher, diff_blob_watcher = None):
-        assert isinstance(blob_watcher, dict) or callable(blob_watcher)
+    def __init__(self, blob_watcher = None, diff_blob_watcher = None):
+        if blob_watcher is not None:
+            assert isinstance(blob_watcher, dict) or callable(blob_watcher)
         self.watched_blob_lbn = set()
         self.blob_watcher_ = blob_watcher
         if diff_blob_watcher is not None:
-            assert isinstance(diff_blob_watcher, dict) or callable(blob_watcher)
+            assert isinstance(diff_blob_watcher, dict) or callable(diff_blob_watcher)
         self.diff_blob_watcher_ = diff_blob_watcher
 
     def WatchOnce(self, blob_def):
         if blob_def.logical_blob_name in self.watched_blob_lbn: return
-        oneflow.watch(blob_def, _MakeBlobWatchCallback(self.blob_watcher_, blob_def))
+        if self.blob_watcher_ is not None:
+            oneflow.watch(blob_def, _MakeBlobWatchCallback(self.blob_watcher_, blob_def))
         if self.diff_blob_watcher_ is not None:
             oneflow.watch_diff(blob_def, _MakeBlobWatchCallback(self.diff_blob_watcher_, blob_def))
         self.watched_blob_lbn.add(blob_def.logical_blob_name)
 
 @oneflow_export("watch_scope")
 @contextmanager
-def watch_scope(blob_watcher, diff_blob_watcher = None):
+def watch_scope(blob_watcher = None, diff_blob_watcher = None):
     watch_scope_context.WatchScopeStackPush(WatchScope(blob_watcher, diff_blob_watcher))
     yield
     watch_scope_context.WatchScopeStackPop()
