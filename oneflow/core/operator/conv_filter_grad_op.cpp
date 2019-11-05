@@ -1,6 +1,7 @@
 #include "oneflow/core/operator/conv_filter_grad_op.h"
 #include "oneflow/core/operator/conv_op.h"
 #include "oneflow/core/device/cudnn_conv_ctx_cache.h"
+#include "oneflow/core/device/cudnn_conv_util.h"
 #include "oneflow/core/job/sbp_signature_builder.h"
 
 namespace oneflow {
@@ -91,10 +92,27 @@ Maybe<void> ConvFilterGradOp::InferBlobDescs(
 #ifdef WITH_CUDA
     ConvOpCtx* conv_op_ctx = new ConvOpCtx();
     EnrollOpCtx(conv_op_ctx);
-    CHECK_OR_RETURN(Global<CudnnConvCtxCache>::Get()->FindCudnnConvAlgoCtxWithConfig(
-        *x, *dy, *filter_diff, conv_conf, cudnn_buf_limit_byte(),
-        &conv_op_ctx->cudnn_conv_algo_ctx));
-    CHECK_OR_RETURN(conv_op_ctx->cudnn_conv_algo_ctx.bwd_filter_algo_found);
+    if (job_desc().job_conf().cudnn_conv_infer_algo_at_runtime()) {
+      conv_op_ctx->cudnn_conv_algo_ctx.bwd_filter_ws_size =
+          static_cast<size_t>(cudnn_buf_limit_byte());
+      conv_op_ctx->cudnn_conv_algo_ctx.bwd_filter_algo_found = false;
+    } else {
+      CudnnConvArgs args(conv_conf, x, dy, filter_diff, static_cast<size_t>(cudnn_buf_limit_byte()),
+                         job_desc().job_conf().cudnn_conv_use_deterministic_algo_only(),
+                         job_desc().job_conf().cudnn_conv_heuristic_search_algo());
+      if (job_desc().job_conf().has_cudnn_conv_force_bwd_filter_algo()) {
+        conv_op_ctx->cudnn_conv_algo_ctx.bwd_filter_algo =
+            static_cast<cudnnConvolutionBwdFilterAlgo_t>(
+                job_desc().job_conf().cudnn_conv_force_bwd_filter_algo());
+        CudaCheck(GetConvWorkspaceSize(args, conv_op_ctx->cudnn_conv_algo_ctx.bwd_filter_algo,
+                                       &conv_op_ctx->cudnn_conv_algo_ctx.bwd_filter_ws_size));
+      } else {
+        auto algo_perf = FindCudnnConvAlgorithm<cudnnConvolutionBwdFilterAlgoPerf_t>(args);
+        conv_op_ctx->cudnn_conv_algo_ctx.bwd_filter_algo = algo_perf->algo;
+        conv_op_ctx->cudnn_conv_algo_ctx.bwd_filter_ws_size = algo_perf->memory;
+      }
+      conv_op_ctx->cudnn_conv_algo_ctx.bwd_filter_algo_found = true;
+    }
     BlobDesc* cudnn_buf = GetBlobDesc4BnInOp("buf");
     cudnn_buf->set_data_type(DataType::kChar);
     size_t buf_size = std::max(size_t(1), conv_op_ctx->cudnn_conv_algo_ctx.bwd_filter_ws_size);
@@ -114,8 +132,10 @@ void ConvFilterGradOp::VirtualGenKernelConf(
   if (DevIsGpuAndEnableCudnn()) {
 #ifdef WITH_CUDA
     const ConvOpCtx* conv_op_ctx = dynamic_cast<const ConvOpCtx*>(op_ctx);
-    kernel_conf->mutable_conv_filter_grad_conf()->set_cudnn_bwd_filter_algo(
-        conv_op_ctx->cudnn_conv_algo_ctx.bwd_filter_algo);
+    if (conv_op_ctx->cudnn_conv_algo_ctx.bwd_filter_algo_found) {
+      kernel_conf->mutable_conv_filter_grad_conf()->set_cudnn_bwd_filter_algo(
+          conv_op_ctx->cudnn_conv_algo_ctx.bwd_filter_algo);
+    }
 #else
     UNIMPLEMENTED();
 #endif  // WITH_CUDA

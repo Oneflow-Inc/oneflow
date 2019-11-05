@@ -1,5 +1,6 @@
 #include "oneflow/core/kernel/conv_filter_grad_kernel.h"
 #include "oneflow/core/operator/conv_op.h"
+#include "oneflow/core/device/cudnn_conv_util.h"
 
 namespace oneflow {
 
@@ -7,18 +8,22 @@ template<typename T>
 struct ConvFilterGradKernelUtil<DeviceType::kGPU, T> final {
   static void Compute(DeviceCtx *ctx, const ConvFilterGradKernelConf &kernel_conf,
                       const ConvConf &conf, const Blob *x, const Blob *dy, Blob *filter_diff,
-                      Blob *buf) {
-    CudnnTensorDesc x_desc(x->data_type(), x->shape(), conf.data_format());
-    CudnnTensorDesc dy_desc(dy->data_type(), dy->shape(), conf.data_format());
-    CudnnFilterDesc filter_diff_desc(filter_diff->data_type(), filter_diff->shape(),
-                                     conf.data_format());
-    CudnnConvDesc conv_desc(GetConvDescDataType(x->data_type()), x->shape(), conf);
-    CudaCheck(cudnnConvolutionBackwardFilter(
-        ctx->cudnn_handle(), CudnnSPOnePtr<T>(), x_desc.Get(), x->dptr<T>(), dy_desc.Get(),
-        dy->dptr<T>(), conv_desc.Get(),
-        static_cast<cudnnConvolutionBwdFilterAlgo_t>(kernel_conf.cudnn_bwd_filter_algo()),
-        buf->mut_dptr(), buf->ByteSizeOfBlobBody(), CudnnSPZeroPtr<T>(), filter_diff_desc.Get(),
-        filter_diff->mut_dptr<T>()));
+                      Blob *buf, bool deterministic, bool heuristic) {
+    CudnnConvArgs args(conf, ctx->cudnn_handle(), x, dy, filter_diff, buf, deterministic,
+                       heuristic);
+    if (kernel_conf.has_cudnn_bwd_filter_algo()) {
+      CudaCheck(cudnnConvolutionBackwardFilter(
+          args.handle, CudnnSPOnePtr<T>(), args.xdesc.Get(), args.x_dptr, args.ydesc.Get(),
+          args.y_dptr, args.cdesc.Get(),
+          static_cast<cudnnConvolutionBwdFilterAlgo_t>(kernel_conf.cudnn_bwd_filter_algo()),
+          args.work_space, args.ws_size, CudnnSPZeroPtr<T>(), args.wdesc.Get(), args.w_dptr));
+    } else {
+      auto algo_perf = FindCudnnConvAlgorithm<cudnnConvolutionBwdFilterAlgoPerf_t>(args);
+      CudaCheck(cudnnConvolutionBackwardFilter(
+          args.handle, CudnnSPOnePtr<T>(), args.xdesc.Get(), args.x_dptr, args.ydesc.Get(),
+          args.y_dptr, args.cdesc.Get(), algo_perf->algo, args.work_space, algo_perf->memory,
+          CudnnSPZeroPtr<T>(), args.wdesc.Get(), args.w_dptr));
+    }
   }
 };
 
