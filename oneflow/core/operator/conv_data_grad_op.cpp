@@ -62,11 +62,7 @@ Maybe<void> ConvDataGradOp::InferBlobDescs(
 #ifdef WITH_CUDA
     ConvOpCtx* conv_op_ctx = new ConvOpCtx();
     EnrollOpCtx(conv_op_ctx);
-    if (job_desc().job_conf().cudnn_conv_infer_algo_at_runtime()) {
-      conv_op_ctx->cudnn_conv_algo_ctx.bwd_data_ws_size =
-          static_cast<size_t>(cudnn_buf_limit_byte());
-      conv_op_ctx->cudnn_conv_algo_ctx.bwd_data_algo_found = false;
-    } else {
+    if (job_desc().job_conf().cudnn_conv_infer_algo_at_compile()) {
       CudnnConvArgs args(conv_conf, dx, dy, filter, static_cast<size_t>(cudnn_buf_limit_byte()),
                          job_desc().job_conf().cudnn_conv_use_deterministic_algo_only(),
                          job_desc().job_conf().cudnn_conv_heuristic_search_algo());
@@ -81,6 +77,10 @@ Maybe<void> ConvDataGradOp::InferBlobDescs(
         conv_op_ctx->cudnn_conv_algo_ctx.bwd_data_ws_size = algo_perf->memory;
       }
       conv_op_ctx->cudnn_conv_algo_ctx.bwd_data_algo_found = true;
+    } else {
+      conv_op_ctx->cudnn_conv_algo_ctx.bwd_data_ws_size =
+          static_cast<size_t>(cudnn_buf_limit_byte());
+      conv_op_ctx->cudnn_conv_algo_ctx.bwd_data_algo_found = false;
     }
     BlobDesc* cudnn_buf = GetBlobDesc4BnInOp("buf");
     cudnn_buf->set_data_type(DataType::kChar);

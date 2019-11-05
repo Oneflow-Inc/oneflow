@@ -271,7 +271,7 @@ void ConvOp<NDims>::GenKernelConfWithCudnn(
     }
     SetValInCustomizedKernelConf(kernel_conf, "need_infer_cudnn_params_for_each",
                                  (GetBlobDesc4BnInOp("out")->is_dynamic()
-                                  || job_desc().job_conf().cudnn_conv_infer_algo_at_runtime()));
+                                  || !job_desc().job_conf().cudnn_conv_infer_algo_at_compile()));
   }
 #endif  // WITH_CUDA
 }
@@ -299,7 +299,7 @@ template<int32_t NDims>
 void ConvOp<NDims>::InferCudnnAlgo(
     std::function<const BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
     CudnnConvAlgoCtx* conv_ctx) const {
-  if (job_desc().job_conf().cudnn_conv_infer_algo_at_runtime()) {
+  if (job_desc().job_conf().cudnn_conv_infer_algo_at_compile()) {
     conv_ctx->fwd_ws_size = static_cast<size_t>(cudnn_buf_limit_byte());
     conv_ctx->fwd_algo_found = false;
   } else {
