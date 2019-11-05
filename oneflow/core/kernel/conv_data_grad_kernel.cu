@@ -20,10 +20,10 @@ struct ConvDataGradKernelUtil<DeviceType::kGPU, T> final {
       algo = algo_perf->algo;
       work_space_size = algo_perf->memory;
     }
-    CudaCheck(cudnnConvolutionBackwardData(
-      args.handle, CudnnSPOnePtr<T>(), args.wdesc.Get(), args.w_dptr, args.ydesc.Get(),
-      args.y_dptr, args.cdesc.Get(), algo, args.work_space, work_space_size,
-      CudnnSPZeroPtr<T>(), args.xdesc.Get(), args.x_dptr));
+    CudaCheck(cudnnConvolutionBackwardData(args.handle, CudnnSPOnePtr<T>(), args.wdesc.Get(),
+                                           args.w_dptr, args.ydesc.Get(), args.y_dptr,
+                                           args.cdesc.Get(), algo, args.work_space, work_space_size,
+                                           CudnnSPZeroPtr<T>(), args.xdesc.Get(), args.x_dptr));
   }
 };
 
