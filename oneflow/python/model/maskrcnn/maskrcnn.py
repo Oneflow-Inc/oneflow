@@ -7,7 +7,7 @@ from backbone import Backbone
 from rpn import RPNHead, RPNLoss, RPNProposal
 from box_head import BoxHead
 from mask_head import MaskHead
-from blob_watcher import save_blob_watched
+from blob_watcher import save_blob_watched, blob_watched, diff_blob_watched
 
 import os
 import numpy as np
@@ -219,14 +219,14 @@ def maskrcnn_train(images, image_sizes, gt_boxes, gt_segms, gt_labels):
     )
 
     # Mask Head
-    # with flow.watch_scope(blob_watched):
-    mask_loss = mask_head.build_train(
-        pos_proposal_list,
-        pos_gt_indices_list,
-        gt_segms_list,
-        gt_labels_list,
-        features,
-    )
+    with flow.watch_scope(blob_watched, diff_blob_watched):
+        mask_loss = mask_head.build_train(
+            pos_proposal_list,
+            pos_gt_indices_list,
+            gt_segms_list,
+            gt_labels_list,
+            features,
+        )
 
     return rpn_bbox_loss, rpn_objectness_loss, box_loss, cls_loss, mask_loss
 
@@ -291,6 +291,7 @@ if terminal_args.mock_dataset:
         gt_labels=debug_data.blob_def("gt_labels"),
     ):
         flow.config.train.primary_lr(terminal_args.primary_lr)
+        print("primary_lr:", terminal_args.primary_lr)
         flow.config.train.model_update_conf(dict(naive_conf={}))
         # TODO: distribute map only support remote blob for now, so identity is required here
         image_sizes = flow.identity(image_sizes)
@@ -602,7 +603,8 @@ if __name__ == "__main__":
                 for loss in train_loss:
                     print_loss.append(loss.mean())
                 print(fmt_str.format(*print_loss))
-
+                import time
+                time.sleep(10)
                 save_blob_watched(i)
 
                 if (i + 1) % 10 == 0:
