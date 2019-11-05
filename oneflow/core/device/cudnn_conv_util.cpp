@@ -283,10 +283,9 @@ struct CudnnConvAlgorithmSearch<cudnnConvolutionBwdFilterAlgoPerf_t> {
 
 template<typename perf_t>
 std::shared_ptr<perf_t> FindCudnnConvAlgorithm(const CudnnConvArgs& args) {
-  using search = CudnnConvAlgorithmSearch<perf_t>;
   auto Infer = [&args](const CudnnConvParams& params) {
     auto* perf = new perf_t();
-    search::FindAlgorithm(args, perf);
+    CudnnConvAlgorithmSearch<perf_t>::FindAlgorithm(args, perf);
     return std::shared_ptr<perf_t>(perf);
   };
   size_t cache_size = Global<ResourceDesc>::Get()->thread_local_cache_max_size();
