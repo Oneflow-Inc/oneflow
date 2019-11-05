@@ -25,7 +25,7 @@ class CheckPoint(object):
         r"""save a checkpoint to `path`.
 
         Args:
-            Path: A `string` of path to save checkpoint. 
+            path: A `string` of path to save checkpoint. 
         """
         assert type(path) is str
         c_api_util.LaunchJob(_MakeModelSaveJobFunc(path))
@@ -33,18 +33,15 @@ class CheckPoint(object):
     @session_util.try_init_default_session
     def init(self):
         r"""Initialize models by default initializer of op or Job.
-
-        Args:
-            None.
         """
         c_api_util.LaunchJob(_MakeModelInitJobFunc())
 
     @session_util.try_init_default_session
     def load(self, path):
         r"""load a checkpoint from `path` and initialize models.
-        
+
         Args:
-            Path: A `string` of path to load checkpoint.
+            path: A `string` of path to load checkpoint.
         """
         assert type(path) is str
         c_api_util.LaunchJob(_MakeModelLoadJobFunc(path))
