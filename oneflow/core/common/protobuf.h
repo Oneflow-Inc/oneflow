@@ -10,9 +10,9 @@
 #include <google/protobuf/util/message_differencer.h>
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/preprocessor.h"
-#include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/core/register/logical_blob_id.pb.h"
 #include "oneflow/core/register/op_blob_arg.pb.h"
+#include "oneflow/core/job/sbp_parallel.pb.h"
 #include "oneflow/core/persistence/persistent_out_stream.h"
 
 namespace oneflow {

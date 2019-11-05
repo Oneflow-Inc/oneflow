@@ -3,24 +3,7 @@ package oneflow;
 
 import "oneflow/core/job/job.proto";
 import "oneflow/core/job/resource.proto";
-
-message LocalFsConf {
-}
-
-message NetworkFsConf {
-}
-
-message HdfsConf {
-  required string namenode = 1;
-}
-
-message FileSystemConf {
-  oneof fs_type {
-    LocalFsConf localfs_conf = 1;
-    NetworkFsConf networkfs_conf = 2;
-    HdfsConf hdfs_conf = 3;
-  }
-}
+import "oneflow/core/job/file_system_conf.proto";
 
 message IOConf {
   required FileSystemConf data_fs_conf = 1;

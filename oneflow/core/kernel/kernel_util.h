@@ -5,16 +5,15 @@
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/device/cudnn_util.h"
-#include "oneflow/core/job/job_desc.h"
-#include "oneflow/core/job/resource.pb.h"
 #include "oneflow/core/kernel/kernel_context.h"
-#include "oneflow/core/operator/op_conf.pb.h"
-#include "oneflow/core/persistence/snapshot.h"
-#include "oneflow/core/register/blob.h"
 #include "oneflow/core/common/switch_func.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
+#include "oneflow/core/register/blob.h"
 
 namespace oneflow {
+
+class Blob;
+class InitializerConf;
 
 template<cudaMemcpyKind cpy_kind>
 void Memcpy(DeviceCtx*, void* dst, const void* src, size_t sz);

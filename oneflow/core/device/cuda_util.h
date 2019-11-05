@@ -13,6 +13,7 @@
 #include <curand.h>
 #include <nccl.h>
 #include <cuda_fp16.h>
+#include <device_launch_parameters.h>
 
 namespace oneflow {
 
@@ -22,6 +23,10 @@ void CudaCheck(T error);
 // CUDA: grid stride looping
 #define CUDA_1D_KERNEL_LOOP(i, n)                                                                 \
   for (int32_t i = blockIdx.x * blockDim.x + threadIdx.x, step = blockDim.x * gridDim.x; i < (n); \
+       i += step)
+
+#define CUDA_1D_KERNEL_LOOP_T(type, i, n)                                                      \
+  for (type i = blockIdx.x * blockDim.x + threadIdx.x, step = blockDim.x * gridDim.x; i < (n); \
        i += step)
 
 const int32_t kCudaThreadsNumPerBlock = 1024;

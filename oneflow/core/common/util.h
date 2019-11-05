@@ -25,26 +25,19 @@
 
 #include "oneflow/core/common/meta_util.hpp"
 #include "oneflow/core/common/data_type.h"
-#include "oneflow/core/operator/op_conf.pb.h"
 
 DECLARE_string(log_dir);
 
 #define CHECK_ISNULL(e) CHECK((e) == nullptr)
 
 namespace std {
+
 template<typename T0, typename T1>
 struct hash<std::pair<T0, T1>> {
   std::size_t operator()(const std::pair<T0, T1>& p) const {
     auto h0 = std::hash<T0>{}(p.first);
     auto h1 = std::hash<T1>{}(p.second);
     return h0 ^ h1;
-  }
-};
-
-template<>
-struct hash<::oneflow::OperatorConf::OpTypeCase> {
-  std::size_t operator()(const ::oneflow::OperatorConf::OpTypeCase& op_type) const {
-    return std::hash<int>()(static_cast<size_t>(op_type));
   }
 };
 
@@ -183,6 +176,8 @@ inline double GetCurTime() {
 const size_t kCudaAlignSize = 256;
 const size_t kCudaMemAllocAlignSize = 256;
 inline size_t RoundUp(size_t n, size_t val) { return (n + val - 1) / val * val; }
+
+inline size_t GetCudaAlignedSize(size_t size) { return RoundUp(size, kCudaAlignSize); }
 
 size_t GetAvailableCpuMemSize();
 
