@@ -300,9 +300,6 @@ void ConvOp<NDims>::InferCudnnAlgo(
     std::function<const BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
     CudnnConvAlgoCtx* conv_ctx) const {
   if (job_desc().job_conf().cudnn_conv_infer_algo_at_compile()) {
-    conv_ctx->fwd_ws_size = static_cast<size_t>(cudnn_buf_limit_byte());
-    conv_ctx->fwd_algo_found = false;
-  } else {
     CudnnConvArgs args(GetCustomizedConf(), GetBlobDesc4BnInOp("in"), GetBlobDesc4BnInOp("out"),
                        GetBlobDesc4BnInOp("weight"), static_cast<size_t>(cudnn_buf_limit_byte()),
                        job_desc().job_conf().cudnn_conv_use_deterministic_algo_only(),
@@ -317,6 +314,9 @@ void ConvOp<NDims>::InferCudnnAlgo(
       conv_ctx->fwd_ws_size = algo_perf->memory;
     }
     conv_ctx->fwd_algo_found = true;
+  } else {
+    conv_ctx->fwd_ws_size = static_cast<size_t>(cudnn_buf_limit_byte());
+    conv_ctx->fwd_algo_found = false;
   }
 }
 #endif  // WITH_CUDA
