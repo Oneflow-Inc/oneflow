@@ -10,19 +10,20 @@ struct ConvDataGradKernelUtil<DeviceType::kGPU, T> final {
                       const ConvConf& conf, const Blob* dy, const Blob* filter, Blob* dx, Blob* buf,
                       bool deterministic, bool heuristic) {
     CudnnConvArgs args(conf, ctx->cudnn_handle(), dx, dy, filter, buf, deterministic, heuristic);
+    cudnnConvolutionBwdDataAlgo_t algo;
+    size_t work_space_size = 0;
     if (kernel_conf.has_cudnn_bwd_data_algo()) {
-      CudaCheck(cudnnConvolutionBackwardData(
-          args.handle, CudnnSPOnePtr<T>(), args.wdesc.Get(), args.w_dptr, args.ydesc.Get(),
-          args.y_dptr, args.cdesc.Get(),
-          static_cast<cudnnConvolutionBwdDataAlgo_t>(kernel_conf.cudnn_bwd_data_algo()),
-          args.work_space, args.ws_size, CudnnSPZeroPtr<T>(), args.xdesc.Get(), args.x_dptr));
+      algo = static_cast<cudnnConvolutionBwdDataAlgo_t>(kernel_conf.cudnn_bwd_data_algo());
+      work_space_size = args.ws_size;
     } else {
       auto algo_perf = FindCudnnConvAlgorithm<cudnnConvolutionBwdDataAlgoPerf_t>(args);
-      CudaCheck(cudnnConvolutionBackwardData(
-          args.handle, CudnnSPOnePtr<T>(), args.wdesc.Get(), args.w_dptr, args.ydesc.Get(),
-          args.y_dptr, args.cdesc.Get(), algo_perf->algo, args.work_space, algo_perf->memory,
-          CudnnSPZeroPtr<T>(), args.xdesc.Get(), args.x_dptr));
+      algo = algo_perf->algo;
+      work_space_size = algo_perf->memory;
     }
+    CudaCheck(cudnnConvolutionBackwardData(
+      args.handle, CudnnSPOnePtr<T>(), args.wdesc.Get(), args.w_dptr, args.ydesc.Get(),
+      args.y_dptr, args.cdesc.Get(), algo, args.work_space, work_space_size,
+      CudnnSPZeroPtr<T>(), args.xdesc.Get(), args.x_dptr));
   }
 };
 

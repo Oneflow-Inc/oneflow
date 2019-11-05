@@ -11,19 +11,20 @@ struct ConvFilterGradKernelUtil<DeviceType::kGPU, T> final {
                       Blob *buf, bool deterministic, bool heuristic) {
     CudnnConvArgs args(conf, ctx->cudnn_handle(), x, dy, filter_diff, buf, deterministic,
                        heuristic);
+    cudnnConvolutionBwdFilterAlgo_t algo;
+    size_t work_space_size = 0;
     if (kernel_conf.has_cudnn_bwd_filter_algo()) {
-      CudaCheck(cudnnConvolutionBackwardFilter(
-          args.handle, CudnnSPOnePtr<T>(), args.xdesc.Get(), args.x_dptr, args.ydesc.Get(),
-          args.y_dptr, args.cdesc.Get(),
-          static_cast<cudnnConvolutionBwdFilterAlgo_t>(kernel_conf.cudnn_bwd_filter_algo()),
-          args.work_space, args.ws_size, CudnnSPZeroPtr<T>(), args.wdesc.Get(), args.w_dptr));
+      algo = static_cast<cudnnConvolutionBwdFilterAlgo_t>(kernel_conf.cudnn_bwd_filter_algo());
+      work_space_size = args.ws_size;
     } else {
       auto algo_perf = FindCudnnConvAlgorithm<cudnnConvolutionBwdFilterAlgoPerf_t>(args);
-      CudaCheck(cudnnConvolutionBackwardFilter(
-          args.handle, CudnnSPOnePtr<T>(), args.xdesc.Get(), args.x_dptr, args.ydesc.Get(),
-          args.y_dptr, args.cdesc.Get(), algo_perf->algo, args.work_space, algo_perf->memory,
-          CudnnSPZeroPtr<T>(), args.wdesc.Get(), args.w_dptr));
+      algo = algo_perf->algo;
+      work_space_size = algo_perf->memory;
     }
+    CudaCheck(cudnnConvolutionBackwardFilter(
+        args.handle, CudnnSPOnePtr<T>(), args.xdesc.Get(), args.x_dptr, args.ydesc.Get(),
+        args.y_dptr, args.cdesc.Get(), algo, args.work_space, work_space_size, CudnnSPZeroPtr<T>(),
+        args.wdesc.Get(), args.w_dptr));
   }
 };
 
