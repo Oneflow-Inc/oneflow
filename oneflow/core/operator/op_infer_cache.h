@@ -13,17 +13,17 @@ struct OpInferCacheKey final {
   const JobDesc* job_desc;
   Symbol<OperatorConf> op_conf_sym;
   Symbol<DTypeSignature> dtype_signature_sym;
-  HashMap<std::string, Symbol<Shape>> ibn2shape_sym;
+  std::vector<Symbol<Shape>> ibn_idx2shape_sym;
 };
 
 struct OpInferCacheValue final {
-  HashMap<std::string, Symbol<Shape>> obn2shape_sym;
+  std::vector<Symbol<Shape>> obn_idx2shape_sym;
 };
 
 inline bool operator==(const OpInferCacheKey& lhs, const OpInferCacheKey& rhs) {
   return lhs.job_desc == rhs.job_desc && lhs.op_conf_sym == rhs.op_conf_sym
          && lhs.dtype_signature_sym == rhs.dtype_signature_sym
-         && lhs.ibn2shape_sym == rhs.ibn2shape_sym;
+         && lhs.ibn_idx2shape_sym == rhs.ibn_idx2shape_sym;
 }
 
 inline bool operator!=(const OpInferCacheKey& lhs, const OpInferCacheKey& rhs) {
@@ -38,14 +38,13 @@ template<>
 struct hash<oneflow::OpInferCacheKey> final {
   size_t operator()(const oneflow::OpInferCacheKey& op_infer_cache_key) const {
     using namespace oneflow;
-    size_t ibn2shape_sym_hash_value = 0;
-    for (const auto& pair : op_infer_cache_key.ibn2shape_sym) {
-      ibn2shape_sym_hash_value ^= std::hash<std::string>()(pair.first);
-      ibn2shape_sym_hash_value ^= std::hash<Symbol<Shape>>()(pair.second);
+    size_t ibn_idx2shape_sym_hash_value = 0;
+    for (const auto& shape_sym : op_infer_cache_key.ibn_idx2shape_sym) {
+      ibn_idx2shape_sym_hash_value ^= std::hash<Symbol<Shape>>()(shape_sym);
     }
     return std::hash<const JobDesc*>()(op_infer_cache_key.job_desc)
            ^ std::hash<Symbol<OperatorConf>>()(op_infer_cache_key.op_conf_sym)
-           ^ ibn2shape_sym_hash_value
+           ^ ibn_idx2shape_sym_hash_value
            ^ std::hash<Symbol<DTypeSignature>>()(op_infer_cache_key.dtype_signature_sym);
   }
 };
