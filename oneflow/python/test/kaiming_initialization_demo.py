@@ -69,6 +69,5 @@ if __name__ == "__main__":
         [1.0],
         ["channels_first"],
     ]
-    arg_list = []
     for arg in itertools.product(*args):
         test_kaiming_initialization(*arg)
