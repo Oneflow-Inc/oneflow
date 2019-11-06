@@ -221,11 +221,11 @@ def _CalcFan(shape, mode, data_format):
             )
 
     if mode == "fan_avg":
-        return (fan_in + fan_out) / 2
+        return (float(fan_in) + float(fan_out)) / 2
     elif mode == "fan_in":
-        return fan_in
+        return float(fan_in)
     elif mode == "fan_out":
-        return fan_out
+        return float(fan_out)
     else:
         raise NotImplementedError(
             "Only support 'fan_in', 'fan_out' and 'fan_avg' mode"
