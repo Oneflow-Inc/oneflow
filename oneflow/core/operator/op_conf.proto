@@ -1526,6 +1526,13 @@ message ModelSaveV2OpConf {
   required string tick = 6;
 }
 
+message ParallelCastOpConf {
+  required string in = 1;
+  required string out = 2;
+  optional OptInt64 split_axis = 3;
+  optional OptInt64 gradient_split_axis = 4;
+}
+
 message OperatorConf {
   required string name = 1;
   optional bool trainable = 3 [default = true];
@@ -1674,9 +1681,10 @@ message OperatorConf {
     SigmoidCrossEntropyLossGradOpConf sigmoid_cross_entropy_loss_grad_conf = 304; 
     GatherMs0OpConf gather_ms0_conf = 305;
     GatherMs0GradOpConf gather_ms0_grad_conf = 306;
-    ModelInitV2OpConf model_init_v2_conf = 307;
-    ModelLoadV2OpConf model_load_v2_conf = 308;
-    ModelSaveV2OpConf model_save_v2_conf = 309;
+    ParallelCastOpConf parallel_cast_conf = 307;
+    ModelInitV2OpConf model_init_v2_conf = 308;
+    ModelLoadV2OpConf model_load_v2_conf = 309;
+    ModelSaveV2OpConf model_save_v2_conf = 310;
 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;

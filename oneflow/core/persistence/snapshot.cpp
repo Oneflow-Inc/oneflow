@@ -31,6 +31,7 @@ void SnapshotReader::Read(const std::string& key, const Shape& logical_blob_shap
   const int64_t logical_blob_size = logical_blob_shape.elem_cnt() * GetSizeOfDataType(data_type);
   CHECK_EQ(SnapshotFS()->GetFileSize(path), logical_blob_size)
       << "unexpected model snapshot size, path: " << path;
+<<<<<<< HEAD
   if (slice.shape().Count(1) == logical_blob_shape.Count(1)) {
     PersistentInStream in_stream(
         SnapshotFS(), path,
@@ -51,6 +52,10 @@ void SnapshotReader::Read(const std::string& key, const Shape& logical_blob_shap
                           const TensorSliceView& slice, Blob* blob) const {
   CHECK_EQ(slice.shape(), blob->shape());
   Read(key, logical_blob_shape, blob->data_type(), slice, blob->mut_dptr<char>());
+=======
+  PersistentInStream in_stream(SnapshotFS(), path);
+  in_stream.ReadFully(blob->mut_dptr<char>(), blob_size);
+>>>>>>> dev_python
 }
 
 void SnapshotReader::Close() {}

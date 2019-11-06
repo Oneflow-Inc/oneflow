@@ -26,6 +26,9 @@ class RemoteBlob(blob_desc.BlobDesc):
         ret.distribute_ = distribute
         return ret
 
+    def with_gradient_distribute(self, distribute):
+        return oneflow.parallel_cast(self, gradient_distribute=distribute)
+
     def pull(self):
         return inter_user_job_util.pull(self)
 
