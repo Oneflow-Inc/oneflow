@@ -21,7 +21,6 @@ message ConvKernelConf {
   optional int32 cudnn_fwd_algo = 10 [default = -1];
   optional int32 cudnn_bwd_filter_algo = 11 [default = -1];
   optional int32 cudnn_bwd_data_algo = 12 [default = -1];
-  optional bool need_infer_cudnn_params_for_each = 13 [default = false];
 }
 
 message DropoutKernelConf {
@@ -155,14 +154,6 @@ message PReluAlphaGradKernelConf {
   repeated int32 perm = 1;
 }
 
-message ConvFilterGradKernelConf {
-  optional int32 cudnn_bwd_filter_algo = 1 [default = -1];
-}
-
-message ConvDataGradKernelConf {
-  optional int32 cudnn_bwd_data_algo = 1 [default = -1];
-}
-
 message ShapeElemCntKernelConf {
   repeated int32 axis = 1;
 }
@@ -257,8 +248,6 @@ message KernelConf {
     VariableKernelConf variable_conf = 407;
     RecordLoadKernelConf record_load_conf = 408;
     PReluAlphaGradKernelConf prelu_alpha_grad_conf = 409;
-    ConvFilterGradKernelConf conv_filter_grad_conf = 410;
-    ConvDataGradKernelConf conv_data_grad_conf = 411;
     ShapeElemCntKernelConf shape_elem_cnt_conf = 412;
     GatherMs0KernelConf gather_ms0_conf = 413;
     GatherMs0GradKernelConf gather_ms0_grad_conf = 414;

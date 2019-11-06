@@ -64,10 +64,6 @@ class ConvOp : public Operator {
   void GenKernelConfWithCudnn(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                               KernelConf* kernel_conf, ConvKernelConf* conv_conf,
                               const OpContext*) const;
-#ifdef WITH_CUDA
-  void InferCudnnAlgo(std::function<const BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-                      CudnnConvAlgoCtx* conv_ctx) const;
-#endif  // WITH_CUDA
 };
 
 }  // namespace oneflow

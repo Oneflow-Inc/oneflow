@@ -90,33 +90,26 @@ Maybe<void> ConvFilterGradOp::InferBlobDescs(
 
   if (DevIsGpuAndEnableCudnn()) {
 #ifdef WITH_CUDA
-    ConvOpCtx* conv_op_ctx = new ConvOpCtx();
-    EnrollOpCtx(conv_op_ctx);
-    if (job_desc().job_conf().cudnn_conv_infer_algo_at_compile()) {
-      CudnnConvArgs args(conv_conf, x, dy, filter_diff, static_cast<size_t>(cudnn_buf_limit_byte()),
+    size_t bwd_filter_cudnn_buf_size = cudnn_buf_limit_byte();
+    if (!x->is_dynamic()) {
+      CudnnConvArgs args(conv_conf, x, dy, filter_diff, bwd_filter_cudnn_buf_size,
                          job_desc().job_conf().cudnn_conv_use_deterministic_algo_only(),
                          job_desc().job_conf().cudnn_conv_heuristic_search_algo());
       if (job_desc().job_conf().has_cudnn_conv_force_bwd_filter_algo()) {
-        conv_op_ctx->cudnn_conv_algo_ctx.bwd_filter_algo =
-            static_cast<cudnnConvolutionBwdFilterAlgo_t>(
-                job_desc().job_conf().cudnn_conv_force_bwd_filter_algo());
-        CudaCheck(GetConvWorkspaceSize(args, conv_op_ctx->cudnn_conv_algo_ctx.bwd_filter_algo,
-                                       &conv_op_ctx->cudnn_conv_algo_ctx.bwd_filter_ws_size));
+        CudaCheck(
+            GetConvWorkspaceSize(args,
+                                 static_cast<cudnnConvolutionBwdFilterAlgo_t>(
+                                     job_desc().job_conf().cudnn_conv_force_bwd_filter_algo()),
+                                 &bwd_filter_cudnn_buf_size));
       } else {
         auto algo_perf = FindCudnnConvAlgorithm<cudnnConvolutionBwdFilterAlgoPerf_t>(args);
-        conv_op_ctx->cudnn_conv_algo_ctx.bwd_filter_algo = algo_perf->algo;
-        conv_op_ctx->cudnn_conv_algo_ctx.bwd_filter_ws_size = algo_perf->memory;
+        bwd_filter_cudnn_buf_size = algo_perf->memory;
       }
-      conv_op_ctx->cudnn_conv_algo_ctx.bwd_filter_algo_found = true;
-    } else {
-      conv_op_ctx->cudnn_conv_algo_ctx.bwd_filter_ws_size =
-          static_cast<size_t>(cudnn_buf_limit_byte());
-      conv_op_ctx->cudnn_conv_algo_ctx.bwd_filter_algo_found = false;
     }
+    bwd_filter_cudnn_buf_size = std::max(size_t(1), bwd_filter_cudnn_buf_size);
     BlobDesc* cudnn_buf = GetBlobDesc4BnInOp("buf");
     cudnn_buf->set_data_type(DataType::kChar);
-    size_t buf_size = std::max(size_t(1), conv_op_ctx->cudnn_conv_algo_ctx.bwd_filter_ws_size);
-    cudnn_buf->mut_shape() = Shape({static_cast<int64_t>(buf_size)});
+    cudnn_buf->mut_shape() = Shape({static_cast<int64_t>(bwd_filter_cudnn_buf_size)});
 #else
     UNIMPLEMENTED_THEN_RETURN();
 #endif
@@ -124,24 +117,6 @@ Maybe<void> ConvFilterGradOp::InferBlobDescs(
     UNIMPLEMENTED_THEN_RETURN();
   }
   return Maybe<void>::Ok();
-}
-
-void ConvFilterGradOp::VirtualGenKernelConf(
-    std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx, KernelConf* kernel_conf, const OpContext* op_ctx) const {
-  if (DevIsGpuAndEnableCudnn()) {
-#ifdef WITH_CUDA
-    const ConvOpCtx* conv_op_ctx = dynamic_cast<const ConvOpCtx*>(op_ctx);
-    if (conv_op_ctx->cudnn_conv_algo_ctx.bwd_filter_algo_found) {
-      kernel_conf->mutable_conv_filter_grad_conf()->set_cudnn_bwd_filter_algo(
-          conv_op_ctx->cudnn_conv_algo_ctx.bwd_filter_algo);
-    }
-#else
-    UNIMPLEMENTED();
-#endif  // WITH_CUDA
-  } else {
-    UNIMPLEMENTED();
-  }
 }
 
 Maybe<void> ConvFilterGradOp::InferBatchAxis(
