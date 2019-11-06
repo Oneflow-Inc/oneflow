@@ -35,7 +35,6 @@ def test_kaiming_initialization(
     of_var = GetVariableJob().get()
 
     # PyTorch
-    pytorch_var = None
     if distribution == "random_normal":
         pytorch_var = torch.nn.init.kaiming_normal_(
             torch.empty(shape),
