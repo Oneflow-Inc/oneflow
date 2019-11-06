@@ -90,14 +90,14 @@ def glorot_uniform_initializer(data_format=""):
 def variance_scaling_initializer(
     scale=1.0, mode="fan_in", distribution="truncated_normal", data_format=""
 ):
-    r"""Initializer that generates a truncated normal distribution 
-    or a random normal distribution or a random uniform distribution 
+    r"""Initializer that generates a truncated normal distribution
+    or a random normal distribution or a random uniform distribution
     with a scale adapting to it.
 
     Args:
         scale: Scaling factor (positive float).
         mode: One of "fan_in", "fan_out", "fan_avg".
-        distribution: Random distribution to use. One of "truncated_normal", 
+        distribution: Random distribution to use. One of "truncated_normal",
             "random_normal", "random_uniform".
         data_format: A string be one of "N...C" or "NC..."
     """
@@ -131,7 +131,7 @@ def kaiming_initializer(
     data_format="channels_first",
 ):
     r"""Initialize weight according to the method described in `Delving deep into
-    rectifiers: Surpassing human-level performance on ImageNet classification` 
+    rectifiers: Surpassing human-level performance on ImageNet classification`
     - He, K. et al. (2015), using a normal or uniform distribution.
 
     Args:
@@ -243,5 +243,5 @@ def _CalcGain(nonlinearity, negative_slope):
         return math.sqrt(2.0 / (1 + negative_slope ** 2))
     else:
         raise NotImplementedError(
-            "Only support None, 'tanh', 'sigmoid', 'relu' or 'leaky_relu' nonlinearity"
+            "Only support None, 'tanh', 'sigmoid', 'relu' and 'leaky_relu' nonlinearity"
         )
