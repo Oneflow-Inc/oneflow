@@ -93,7 +93,7 @@ parser.add_argument(
 )
 parser.add_argument("-i", "--iter_num", type=int, default=10, required=False)
 parser.add_argument(
-    "-lr", "--primary_lr", type=float, default=0.00001, required=False
+    "-lr", "--primary_lr", type=float, default=0.02, required=False
 )
 terminal_args = parser.parse_args()
 
@@ -219,21 +219,23 @@ def maskrcnn_train(images, image_sizes, gt_boxes, gt_segms, gt_labels):
     )
 
     # Mask Head
-    with flow.watch_scope(blob_watcher=blob_watched, diff_blob_watcher=diff_blob_watched), \
-         flow.watch_scope(blob_watcher=MakeWatcherCallback("forward"),
-                          diff_blob_watcher=MakeWatcherCallback("backward")):
-        mask_loss = mask_head.build_train(
-            pos_proposal_list,
-            pos_gt_indices_list,
-            gt_segms_list,
-            gt_labels_list,
-            features,
-        )
+    # with flow.watch_scope(blob_watcher=blob_watched, diff_blob_watcher=diff_blob_watched), \
+    #      flow.watch_scope(blob_watcher=MakeWatcherCallback("forward"),
+    #                       diff_blob_watcher=MakeWatcherCallback("backward")):
+    mask_loss = mask_head.build_train(
+        pos_proposal_list,
+        pos_gt_indices_list,
+        gt_segms_list,
+        gt_labels_list,
+        features,
+    )
 
     return rpn_bbox_loss, rpn_objectness_loss, box_loss, cls_loss, mask_loss
 
 def MakeWatcherCallback(prompt):
     def Callback(blob, blob_def):
+        if prompt == "forward":
+            return
         print("%s, lbn: %s, min: %s, max: %s"
               %(prompt, blob_def.logical_blob_name, blob.min(), blob.max()))
     return Callback
@@ -610,8 +612,8 @@ if __name__ == "__main__":
                 for loss in train_loss:
                     print_loss.append(loss.mean())
                 print(fmt_str.format(*print_loss))
-                import time
-                time.sleep(10)
+                # import time
+                # time.sleep(10)
                 save_blob_watched(i)
 
                 if (i + 1) % 10 == 0:
