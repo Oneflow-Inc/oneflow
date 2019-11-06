@@ -201,12 +201,12 @@ void ConvKernel<DeviceType::kGPU, T>::DoForwardDataContentWithCudnn(
                        this->job_desc().job_conf().cudnn_conv_use_deterministic_algo_only(),
                        this->job_desc().job_conf().cudnn_conv_heuristic_search_algo());
     auto algo_perf = FindCudnnConvAlgorithm<cudnnConvolutionFwdAlgoPerf_t>(args);
-    CHECK_EQ(algo_perf->status, CUDNN_STATUS_SUCCESS);
     CudaCheck(cudnnConvolutionForward(args.handle, CudnnSPOnePtr<T>(), args.xdesc.Get(),
                                       args.x_dptr, args.wdesc.Get(), args.w_dptr, args.cdesc.Get(),
                                       algo_perf->algo, args.work_space, algo_perf->memory,
                                       CudnnSPZeroPtr<T>(), args.ydesc.Get(), args.y_dptr));
   } else {
+    CHECK(this->GetConvKernelConf().has_cudnn_fwd_algo());
     CudaCheck(cudnnConvolutionForward(
         device_ctx->cudnn_handle(), CudnnSPOnePtr<T>(), this->in_desc_->Get(), in_blob->dptr<T>(),
         this->filter_desc_->Get(), weight_blob->dptr<T>(), this->conv_desc_->Get(),
