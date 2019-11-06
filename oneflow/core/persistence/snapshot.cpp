@@ -31,16 +31,15 @@ void SnapshotReader::Read(const std::string& key, const Shape& logical_blob_shap
   const int64_t logical_blob_size = logical_blob_shape.elem_cnt() * GetSizeOfDataType(data_type);
   CHECK_EQ(SnapshotFS()->GetFileSize(path), logical_blob_size)
       << "unexpected model snapshot size, path: " << path;
-<<<<<<< HEAD
   if (slice.shape().Count(1) == logical_blob_shape.Count(1)) {
     PersistentInStream in_stream(
         SnapshotFS(), path,
         slice.At(0).begin() * slice.shape().Count(1) * GetSizeOfDataType(data_type));
-    in_stream.Read(dst, slice.shape().elem_cnt() * GetSizeOfDataType(data_type));
+    in_stream.ReadFully(dst, slice.shape().elem_cnt() * GetSizeOfDataType(data_type));
   } else {
     std::vector<char> buffer(logical_blob_size);
     PersistentInStream in_stream(SnapshotFS(), path);
-    in_stream.Read(buffer.data(), logical_blob_size);
+    in_stream.ReadFully(buffer.data(), logical_blob_size);
     TensorSliceCopier copier(slice, logical_blob_slice, data_type);
     CpuDeviceCtx device_ctx;
     std::unique_ptr<MemoryCopier> host_memory_copier(NewDefaultMemoryCopier(DeviceType::kCPU));
@@ -52,10 +51,6 @@ void SnapshotReader::Read(const std::string& key, const Shape& logical_blob_shap
                           const TensorSliceView& slice, Blob* blob) const {
   CHECK_EQ(slice.shape(), blob->shape());
   Read(key, logical_blob_shape, blob->data_type(), slice, blob->mut_dptr<char>());
-=======
-  PersistentInStream in_stream(SnapshotFS(), path);
-  in_stream.ReadFully(blob->mut_dptr<char>(), blob_size);
->>>>>>> dev_python
 }
 
 void SnapshotReader::Close() {}
