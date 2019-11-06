@@ -4,6 +4,9 @@ import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.common.data_type_pb2 as data_type_conf_util
 from oneflow.python.oneflow_export import oneflow_export
 
+import oneflow as flow
+import math
+
 
 @oneflow_export("constant_initializer")
 def constant_initializer(value=0, dtype=data_type_conf_util.kFloat):
@@ -118,6 +121,52 @@ def variance_scaling_initializer(
     return initializer
 
 
+@oneflow_export("kaiming_initializer")
+def kaiming_initializer(
+    shape,
+    distribution="random_normal",
+    mode="fan_in",
+    nonlinearity="leaky_relu",
+    negative_slope=0.0,
+    data_format=None,
+):
+    r"""Initialize weight according to the method described in `Delving deep into
+    rectifiers: Surpassing human-level performance on ImageNet classification` 
+    - He, K. et al. (2015), using a normal or uniform distribution.
+
+    Args:
+        distribution: 'random_normal' or 'random_uniform'
+        mode: 'fan_in', 'fan_out' or 'fan_avg'
+        nonlinearity: None, 'tanh', 'sigmoid', 'relu' or 'leaky_relu'
+        negative_slope: the negative slope of leaky_relu
+        data_format: None, 'channels_first', 'channels_last'
+    """
+    assert isinstance(shape, tuple)
+    # Kaiming Initialization only deals with FC, Conv and Deconv's weight
+    assert len(shape) >= 2
+    elem_cnt = 1
+    for dim in shape:
+        elem_cnt *= dim
+    assert elem_cnt > 0
+    assert distribution in ["random_normal", "random_uniform"]
+    assert mode in ["fan_in", "fan_out", "fan_avg"]
+    assert nonlinearity in [None, "tanh", "sigmoid", "relu", "leaky_relu"]
+    assert data_format in [None, "channels_first", "channels_last"]
+
+    fan = _CalcFan(shape, mode, data_format)
+    gain = _CalcGain(nonlinearity, negative_slope)
+    std = gain / math.sqrt(fan)
+    if distribution == "random_normal":
+        return flow.random_normal_initializer(0.0, std)
+    elif distribution == "random_uniform":
+        bound = math.sqrt(3.0) * std
+        return flow.random_uniform_initializer(-bound, bound)
+    else:
+        raise NotImplementedError(
+            "Only support normal and uniform distribution"
+        )
+
+
 def _get_variance_norm(mode):
     if mode.lower() == "fan_in":
         return op_conf_util.kFanIn
@@ -151,58 +200,49 @@ def _get_data_format(data_format):
         return ""
 
 
-def _get_activation_type(nonlinearity):
-    assert isinstance(nonlinearity, str)
-    if nonlinearity.lower() == "":
-        return op_conf_util.kNone
-    elif nonlinearity.lower() == "tanh":
-        return op_conf_util.kTanH
-    elif nonlinearity.lower() == "sigmoid":
-        return op_conf_util.kSigmoid
-    elif nonlinearity.lower() == "relu":
-        return op_conf_util.kRelu
-    elif nonlinearity.lower() == "leaky_relu":
-        return op_conf_util.kLeakyRelu
+def _CalcFan(shape, mode, data_format):
+    if len(shape) == 2:  # Linear
+        fan_in = shape[1]
+        fan_out = shape[0]
+    else:  # Conv and Deconv
+        fan_in = 1.0
+        for dim in shape[1:]:
+            fan_in *= dim
+        fan_out = shape[0]
+        if data_format == "channels_first" or data_format == None:
+            for dim in shape[2:]:
+                fan_out *= dim
+        elif data_format == "channels_last":
+            for dim in shape[1:-1]:
+                fan_out *= dim
+        else:
+            raise NotImplementedError(
+                "Only support None, 'channels_first' and 'channels_last' data format"
+            )
+
+    if mode == "fan_avg":
+        return (fan_in + fan_out) / 2
+    elif mode == "fan_in":
+        return fan_in
+    elif mode == "fan_out":
+        return fan_out
     else:
-        raise ValueError("Does not support such activation type")
+        raise NotImplementedError(
+            "Only support 'fan_in', 'fan_out' and 'fan_avg' mode"
+        )
 
 
-@oneflow_export("kaiming_initializer")
-def kaiming_initializer(
-    distribution="random_normal",
-    mode="fan_in",
-    nonlinearity="leaky_relu",
-    negative_slope=0.0,
-    data_format="",
-):
-    r"""Initialize weight according to the method described in `Delving deep into
-    rectifiers: Surpassing human-level performance on ImageNet classification` 
-    - He, K. et al. (2015), using a normal or uniform distribution.
-
-    Args:
-        distribution: 'random_normal' or 'random_uniform'
-        mode: 'fan_in', 'fan_out', 'fan_avg'
-        nonlinearity: '' (no activation), 'tanh', 'sigmoid', 'relu', 'leaky_relu'
-        negative_slope: the negative slope of leaky_relu
-        data_format: 'channels_first', 'channels_last' or '' (default)
-    """
-    assert distribution in ["random_normal", "random_uniform"]
-    assert mode in ["fan_in", "fan_out", "fan_avg"]
-    assert nonlinearity in ["", "tanh", "sigmoid", "relu", "leaky_relu"]
-    assert data_format in ["channels_first", "channels_last"]
-    initializer = op_conf_util.InitializerConf()
-    setattr(
-        initializer.kaiming_conf,
-        "distribution",
-        _get_random_distribution(distribution),
-    )
-    setattr(initializer.kaiming_conf, "variance_norm", _get_variance_norm(mode))
-    setattr(
-        initializer.kaiming_conf,
-        "nonlinearity",
-        _get_activation_type(nonlinearity),
-    )
-    setattr(initializer.kaiming_conf, "negative_slope", float(negative_slope))
-    setattr(initializer.kaiming_conf, "data_format", data_format)
-    return initializer
-
+def _CalcGain(nonlinearity, negative_slope=None):
+    if nonlinearity is None or nonlinearity == "sigmoid":
+        return 1.0
+    elif nonlinearity == "tanh":
+        return 5.0 / 3
+    elif nonlinearity == "relu":
+        return math.sqrt(2.0)
+    elif nonlinearity == "leaky_relu":
+        assert negative_slope is not None
+        return math.sqrt(2.0 / (1 + negative_slope ** 2))
+    else:
+        raise NotImplementedError(
+            "Only support None, 'tanh', 'sigmoid', 'relu' or 'leaky_relu' nonlinearity"
+        )

@@ -169,42 +169,6 @@ void VarianceScalingInitializer(const VarianceScalingInitializerConf& initialize
 }
 
 template<typename T>
-T CalcGain(const ActivationType& nonlinearity, const float negative_slope) {
-  if (nonlinearity == ActivationType::kNone || nonlinearity == ActivationType::kSigmoid) {
-    return 1.0;
-  } else if (nonlinearity == ActivationType::kTanH) {
-    return 5.0 / 3;
-  } else if (nonlinearity == ActivationType::kRelu) {
-    return std::sqrt(2.0);
-  } else if (nonlinearity == ActivationType::kLeakyRelu) {
-    return std::sqrt(2.0 / (1 + std::pow(static_cast<T>(negative_slope), 2)));
-  } else {
-    LOG(FATAL) << "Does not support such activation type in Kaiming Initialization";
-  }
-}
-
-template<typename T>
-void KaimingInitializer(const KaimingInitializerConf& initializer_conf, uint32_t random_seed,
-                        Blob* blob) {
-  CHECK_GT(blob->shape().elem_cnt(), 0);
-  // Kaiming Initialization only deals with FC, Conv and Deconv's weight
-  CHECK_GE(blob->shape().NumAxes(), 2);
-  const T gain = CalcGain<T>(initializer_conf.nonlinearity(), initializer_conf.negative_slope());
-  const T fan =
-      GenInitialFan<T>(initializer_conf.variance_norm(), blob, initializer_conf.data_format());
-  const T std = gain / std::sqrt(fan);
-  const RandomDistribution& distributioin = initializer_conf.distribution();
-  if (distributioin == RandomDistribution::kRandomNormal) {
-    RngNormal<T>(blob->shape().elem_cnt(), GetZeroVal<T>(), std, random_seed, blob->mut_dptr<T>());
-  } else if (distributioin == RandomDistribution::kRandomUniform) {
-    const T bound = std::sqrt(3.0) * std;
-    RngUniform<T>(blob->shape().elem_cnt(), -bound, bound, random_seed, blob->mut_dptr<T>());
-  } else {
-    UNIMPLEMENTED();
-  }
-}
-
-template<typename T>
 void RangeInitializer(int64_t outer_size, int64_t idx_dim_size, int64_t inner_size, T start,
                       T stride, T* out) {
   FOR_RANGE(int64_t, i, 0, outer_size) {
@@ -564,8 +528,6 @@ KU_FLOATING_METHOD InitializeWithConf(DeviceCtx* ctx, const InitializerConf& ini
     RangeInitializer<T>(initializer_conf.range_conf(), random_seed, blob);
   } else if (initializer_conf.has_variance_scaling_conf()) {
     VarianceScalingInitializer<T>(initializer_conf.variance_scaling_conf(), random_seed, blob);
-  } else if (initializer_conf.has_kaiming_conf()) {
-    KaimingInitializer<T>(initializer_conf.kaiming_conf(), random_seed, blob);
   } else {
     UNIMPLEMENTED();
   }
