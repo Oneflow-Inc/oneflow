@@ -73,11 +73,16 @@ class ImageCodec(object):
 
 @oneflow_export("data.RawCodec")
 class RawCodec(object):
+
+    def __init__(self, auto_zero_padding=False):
+        self.auto_zero_padding = auto_zero_padding
+
     def to_proto(self, proto=None):
         if proto is None:
             proto = op_conf_util.EncodeConf()
 
         proto.raw.dim1_varying_length = False
+        proto.raw.auto_zero_padding = self.auto_zero_padding
         return proto
 
 
