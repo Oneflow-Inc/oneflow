@@ -846,6 +846,7 @@ message EncodeBytesList {
 
 message EncodeRaw {
   optional bool dim1_varying_length = 1 [default = false];
+  optional bool auto_zero_padding = 2 [default = false];
 }
 
 message EncodeJpeg {
