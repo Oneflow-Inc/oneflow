@@ -17,28 +17,22 @@ def save_blob_watched(iter):
 
     global blob_watched
     for lbn, blob_data in blob_watched.items():
-        if "blob_def" in blob_data:
-            blob_def = blob_data["blob_def"]
-            op_saver_path = os.path.join(saver_path, blob_def.op_name)
-            if not os.path.exists(op_saver_path):
-                os.makedirs(op_saver_path)
-            np.save(
-                os.path.join(op_saver_path, blob_def.blob_name),
-                blob_data["blob"].ndarray(),
-            )
-        else:
-            print("no blob_def found for: {}".format(lbn))
+        blob_def = blob_data["blob_def"]
+        op_saver_path = os.path.join(saver_path, blob_def.op_name)
+        if not os.path.exists(op_saver_path):
+            os.makedirs(op_saver_path)
+        np.save(
+            os.path.join(op_saver_path, blob_def.blob_name),
+            blob_data["blob"].ndarray(),
+        )
 
     global diff_blob_watched
     for lbn, blob_data in diff_blob_watched.items():
-        if "blob_def" in blob_data:
-            blob_def = blob_data["blob_def"]
-            op_saver_path = os.path.join(diff_saver_path, blob_def.op_name)
-            if not os.path.exists(op_saver_path):
-                os.makedirs(op_saver_path)
-            np.save(
-                os.path.join(op_saver_path, blob_def.blob_name),
-                blob_data["blob"].ndarray(),
-            )
-        else:
-            print("no blob_def found for diff of: {}".format(lbn))
+        blob_def = blob_data["blob_def"]
+        op_saver_path = os.path.join(diff_saver_path, blob_def.op_name)
+        if not os.path.exists(op_saver_path):
+            os.makedirs(op_saver_path)
+        np.save(
+            os.path.join(op_saver_path, blob_def.blob_name),
+            blob_data["blob"].ndarray(),
+        )

@@ -11,38 +11,34 @@ def TryWatchOnce(blob_def):
     for watch_scope in watch_scope_context.EachWatchScope(): watch_scope.WatchOnce(blob_def)
 
 class WatchScope(object):
-    def __init__(self, blob_watcher = None, diff_blob_watcher = None):
-        if blob_watcher is not None:
-            assert isinstance(blob_watcher, dict) or callable(blob_watcher)
-        self.watched_blob_lbn = set()
-        self.blob_watcher_ = blob_watcher
-        if diff_blob_watcher is not None:
-            assert isinstance(diff_blob_watcher, dict) or callable(diff_blob_watcher)
-        self.diff_blob_watcher_ = diff_blob_watcher
+    def __init__(self, blob_watcher_dict, diff_blob_watcher_dict = None):
+        assert isinstance(blob_watcher_dict, dict)
+        if diff_blob_watcher_dict is not None: assert isinstance(diff_blob_watcher_dict, dict)
+        self.blob_watcher_dict_ = blob_watcher_dict
+        self.diff_blob_watcher_dict_ = diff_blob_watcher_dict
 
     def WatchOnce(self, blob_def):
-        if blob_def.logical_blob_name in self.watched_blob_lbn: return
-        if self.blob_watcher_ is not None:
-            oneflow.watch(blob_def, _MakeBlobWatchCallback(self.blob_watcher_, blob_def))
-        if self.diff_blob_watcher_ is not None:
-            oneflow.watch_diff(blob_def, _MakeBlobWatchCallback(self.diff_blob_watcher_, blob_def))
-        self.watched_blob_lbn.add(blob_def.logical_blob_name)
+        lbn = blob_def.logical_blob_name
+        if lbn in self.blob_watcher_dict_: return
+        self.blob_watcher_dict_[lbn] = {}
+        oneflow.watch(blob_def, _MakeStoreBlobCallback(self.blob_watcher_dict_, blob_def))
+        if self.diff_blob_watcher_dict_ is not None:
+            cb = _MakeStoreBlobCallback(self.diff_blob_watcher_dict_, blob_def)
+            oneflow.watch_diff(blob_def, cb)
 
 @oneflow_export("watch_scope")
 @contextmanager
-def watch_scope(blob_watcher = None, diff_blob_watcher = None):
-    watch_scope_context.WatchScopeStackPush(WatchScope(blob_watcher, diff_blob_watcher))
+def watch_scope(blob_watcher_dict, diff_blob_watcher_dict = None):
+    watch_scope_context.WatchScopeStackPush(WatchScope(blob_watcher_dict,
+                                                         diff_blob_watcher_dict))
     yield
     watch_scope_context.WatchScopeStackPop()
 
-def _MakeBlobWatchCallback(storage_or_func, blob_def):
-    if isinstance(storage_or_func, dict):
-        storage = storage_or_func
-        def StoreFunc(blob):
-            storage[blob_def.logical_blob_name] = dict(blob=blob, blob_def=blob_def)
-        return StoreFunc
-    elif callable(storage_or_func):
-        func = storage_or_func
-        return lambda blob: func(blob, blob_def)
-    else:
-        raise NotImplementedError
+def _MakeStoreBlobCallback(storage, blob_def):
+    lbn = blob_def.logical_blob_name
+    def StoreFunc(x):
+        if lbn not in storage:
+            storage[lbn] = {}
+        storage[lbn]["blob_def"] = blob_def
+        storage[lbn]["blob"] = x
+    return StoreFunc

@@ -8,7 +8,7 @@ from backbone import Backbone
 from rpn import RPNHead, RPNLoss, RPNProposal
 from box_head import BoxHead
 from mask_head import MaskHead
-from blob_watcher import save_blob_watched, blob_watched, diff_blob_watched
+from blob_watcher import save_blob_watched
 
 import os
 import numpy as np
@@ -94,7 +94,7 @@ parser.add_argument(
 )
 parser.add_argument("-i", "--iter_num", type=int, default=10, required=False)
 parser.add_argument(
-    "-lr", "--primary_lr", type=float, default=0.02, required=False
+    "-lr", "--primary_lr", type=float, default=0.00001, required=False
 )
 terminal_args = parser.parse_args()
 
@@ -220,9 +220,7 @@ def maskrcnn_train(images, image_sizes, gt_boxes, gt_segms, gt_labels):
     )
 
     # Mask Head
-    # with flow.watch_scope(blob_watcher=blob_watched, diff_blob_watcher=diff_blob_watched), \
-    #      flow.watch_scope(blob_watcher=MakeWatcherCallback("forward"),
-    #                       diff_blob_watcher=MakeWatcherCallback("backward")):
+    # with flow.watch_scope(blob_watched):
     mask_loss = mask_head.build_train(
         pos_proposal_list,
         pos_gt_indices_list,
@@ -233,13 +231,6 @@ def maskrcnn_train(images, image_sizes, gt_boxes, gt_segms, gt_labels):
 
     return rpn_bbox_loss, rpn_objectness_loss, box_loss, cls_loss, mask_loss
 
-def MakeWatcherCallback(prompt):
-    def Callback(blob, blob_def):
-        if prompt == "forward":
-            return
-        print("%s, lbn: %s, min: %s, max: %s"
-              %(prompt, blob_def.logical_blob_name, blob.min(), blob.max()))
-    return Callback
 
 def maskrcnn_eval(images, image_sizes):
     cfg = get_default_cfgs()
@@ -301,7 +292,6 @@ if terminal_args.mock_dataset:
         gt_labels=debug_data.blob_def("gt_labels"),
     ):
         flow.config.train.primary_lr(terminal_args.primary_lr)
-        print("primary_lr:", terminal_args.primary_lr)
         flow.config.train.model_update_conf(dict(naive_conf={}))
         # TODO: distribute map only support remote blob for now, so identity is required here
         image_sizes = flow.identity(image_sizes)
@@ -718,8 +708,7 @@ if __name__ == "__main__":
                 for loss in train_loss:
                     print_loss.append(loss.mean())
                 print(fmt_str.format(*print_loss))
-                # import time
-                # time.sleep(10)
+
                 save_blob_watched(i)
 
                 if (i + 1) % 10 == 0:
