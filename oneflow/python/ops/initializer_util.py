@@ -128,7 +128,7 @@ def kaiming_initializer(
     mode="fan_in",
     nonlinearity="leaky_relu",
     negative_slope=0.0,
-    data_format=None,
+    data_format="channels_first",
 ):
     r"""Initialize weight according to the method described in `Delving deep into
     rectifiers: Surpassing human-level performance on ImageNet classification` 
@@ -139,7 +139,7 @@ def kaiming_initializer(
         mode: 'fan_in', 'fan_out' or 'fan_avg'
         nonlinearity: None, 'tanh', 'sigmoid', 'relu' or 'leaky_relu'
         negative_slope: the negative slope of leaky_relu
-        data_format: None, 'channels_first', 'channels_last'
+        data_format: 'channels_first', 'channels_last'
     """
     assert isinstance(shape, tuple)
     # Kaiming Initialization only deals with FC, Conv and Deconv's weight
@@ -151,7 +151,7 @@ def kaiming_initializer(
     assert distribution in ["random_normal", "random_uniform"]
     assert mode in ["fan_in", "fan_out", "fan_avg"]
     assert nonlinearity in [None, "tanh", "sigmoid", "relu", "leaky_relu"]
-    assert data_format in [None, "channels_first", "channels_last"]
+    assert data_format in ["channels_first", "channels_last"]
 
     fan = _CalcFan(shape, mode, data_format)
     gain = _CalcGain(nonlinearity, negative_slope)
@@ -209,7 +209,7 @@ def _CalcFan(shape, mode, data_format):
         for dim in shape[1:]:
             fan_in *= dim
         fan_out = shape[0]
-        if data_format == "channels_first" or data_format == None:
+        if data_format == "channels_first":
             for dim in shape[2:]:
                 fan_out *= dim
         elif data_format == "channels_last":
@@ -217,7 +217,7 @@ def _CalcFan(shape, mode, data_format):
                 fan_out *= dim
         else:
             raise NotImplementedError(
-                "Only support None, 'channels_first' and 'channels_last' data format"
+                "Only support 'channels_first' and 'channels_last' data format"
             )
 
     if mode == "fan_avg":
@@ -232,7 +232,7 @@ def _CalcFan(shape, mode, data_format):
         )
 
 
-def _CalcGain(nonlinearity, negative_slope=None):
+def _CalcGain(nonlinearity, negative_slope):
     if nonlinearity is None or nonlinearity == "sigmoid":
         return 1.0
     elif nonlinearity == "tanh":
@@ -240,7 +240,6 @@ def _CalcGain(nonlinearity, negative_slope=None):
     elif nonlinearity == "relu":
         return math.sqrt(2.0)
     elif nonlinearity == "leaky_relu":
-        assert negative_slope is not None
         return math.sqrt(2.0 / (1 + negative_slope ** 2))
     else:
         raise NotImplementedError(

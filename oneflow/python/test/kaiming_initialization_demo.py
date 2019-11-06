@@ -67,7 +67,7 @@ if __name__ == "__main__":
         ["fan_in", "fan_out"],
         [None, "tanh", "sigmoid", "relu", "leaky_relu"],
         [1.0],
-        [None, "channels_first"],
+        ["channels_first"],
     ]
     arg_list = []
     for arg in itertools.product(*args):
