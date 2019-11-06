@@ -35,18 +35,21 @@ perf_t GetBestAlgorithm(const CudnnConvArgs& args, const std::vector<perf_t>& pe
     int stride_dim = args.x_ndims - 2;
     bool blacklist =
         std::any_of(std::begin(args.params.stride), std::begin(args.params.stride) + stride_dim,
-                    [=](int n) { return n != 1; });
+                    [](int n) { return n != 1; });
     if (blacklist
         && (static_cast<cudnnConvolutionBwdDataAlgo_t>(perf_vec[best_algo_idx].algo)
                 == CUDNN_CONVOLUTION_BWD_DATA_ALGO_FFT_TILING
             || static_cast<cudnnConvolutionBwdDataAlgo_t>(perf_vec[best_algo_idx].algo)
                    == CUDNN_CONVOLUTION_BWD_DATA_ALGO_FFT)) {
-      perf_vec[best_algo_idx].algo = CudnnConvAlgorithmSearch<perf_t>::DEFAULT_ALGO;
+      perf_t algo_perf;
+      algo_perf.algo = CudnnConvAlgorithmSearch<perf_t>::DEFAULT_ALGO;
       if (args.params.data_type == CUDNN_DATA_HALF) {
-        perf_vec[best_algo_idx].mathType = CUDNN_TENSOR_OP_MATH;
+        algo_perf.mathType = CUDNN_TENSOR_OP_MATH;
       } else {
-        perf_vec[best_algo_idx].mathType = CUDNN_DEFAULT_MATH;
+        algo_perf.mathType = CUDNN_DEFAULT_MATH;
       }
+      CudaCheck(GetConvWorkspaceSize(args, algo_perf.algo, &(algo_perf.memory)));
+      return algo_perf;
     }
   }
 #endif
