@@ -531,6 +531,7 @@ void CompileMainJob(Job* main_job, const LogicalBlobId& critical_section_sink_lb
 }
 
 void AddJobName2JobId(const std::string& job_name, int64_t job_id) {
+  if (!Global<MachineCtx>::Get()->IsThisMachineMaster()) { return; }
   CHECK(Global<JobName2JobId>::Get()->emplace(job_name, job_id).second);
 }
 
