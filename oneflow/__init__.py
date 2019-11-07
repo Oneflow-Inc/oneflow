@@ -22,7 +22,7 @@ del oneflow_export
 import atexit
 import oneflow.python.framework.c_api_util
 atexit.register(oneflow.python.framework.c_api_util.DestroyGlobalEnvironment)
-atexit.register(oneflow.python.framework.session_context.TryDestroyDefaultSession)
+atexit.register(oneflow.python.framework.session_context.TryCloseDefaultSession)
 del atexit
 
 del absolute_import

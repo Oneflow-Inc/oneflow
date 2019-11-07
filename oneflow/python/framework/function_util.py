@@ -6,14 +6,14 @@ from oneflow.python.oneflow_export import oneflow_export
 
 @oneflow_export("function")
 def function(job_func):
+    sess = session_ctx.GetDefaultSession()
     @functools.wraps(job_func)
     def Func(*args):
-        return _RunJob(job_func, *args)
+        return _RunJob(sess, job_func, *args)
     for x in dir(job_func):
         if x.startswith('__oneflow_'): setattr(Func, x, getattr(job_func, x))
-    session_ctx.GetDefaultSession().AddJob(job_func)
+    sess.AddJob(job_func)
     return Func
 
-@session_ctx.try_init_default_session
-def _RunJob(job_func, *args):
-    return session_ctx.GetDefaultSession().Run(job_func, *args)
+def _RunJob(session, job_func, *args):
+    return session.TryInit().Run(job_func, *args)
