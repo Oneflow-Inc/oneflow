@@ -10,48 +10,64 @@ namespace oneflow {
 namespace xrt {
 namespace tensorrt {
 
+// TensorRT ITensor or Weights.
 class TrtValue {
  public:
-  static TrtValue Build(TrtBuilder *builder, int64_t handle,
-                        const Parameter &param) {
-    TrtValue trt_value;
-    if (builder->AddParameter(handle, param)) {
-      trt_value.handle_ = handle;
-      trt_value.builder_ = builder;
-      trt_value.kind_ = TrtValueKind::kUndef;
-    }
-    return std::move(trt_value);
+  TrtValue() = default;
+
+  TrtValueKind ValueKind(TrtBuilder *builder) const {
+    CHECK_EQ(builder_, builder);
+    return builder_->ValueKind(handle_);
   }
 
-  TrtValue() : kind_(TrtValueKind::kUndef) {}
-
   nvinfer1::ITensor *AsTensor(TrtBuilder *builder) {
-    CHECK_EQ(builder_, builder) << "Must take the same trt builder.";
-    if (!IsUndef() && !IsTensor()) {
-      LOG(FATAL) << "`AsTensor` is not allowed since the value has been "
-                    "defined as Weight.";
-    }
-    kind_ = TrtValueKind::kTensor;
+    CHECK_EQ(builder_, builder);
     return builder_->GetTensor(handle_);
   }
 
-  nvinfer1::Weights *AsWeight(TrtBuilder *builder) {
-    CHECK_EQ(builder_, builder) << "Must take the same trt builder.";
-    if (!IsUndef() && !IsWeight()) {
-      LOG(FATAL) << "`AsWeight` is not allowed since the value has been "
-                    "defined as Tensor.";
-    }
-    kind_ = TrtValueKind::kWeight;
+  nvinfer1::Weights &AsWeight(TrtBuilder *builder) {
+    CHECK_EQ(builder_, builder);
     return builder_->GetWeight(handle_);
   }
 
- private:
-  TrtValueKind kind_;
+  inline static TrtValue BuildParameter(TrtBuilder *builder,
+                                        const Parameter &param);
 
+  inline static TrtValue BuildTensor(TrtBuilder *builder,
+                                     nvinfer1::ITensor *tensor);
+
+  inline static TrtValue BuildWeight(TrtBuilder *builder,
+                                     nvinfer1::Weights &weight);
+
+ private:
   // Unique id for the `TrtValue`.
   int64_t handle_ = -1;
   TrtBuilder *builder_ = nullptr;
 };
+
+TrtValue TrtValue::BuildParameter(TrtBuilder *builder,
+                                  const Parameter &param) {
+  TrtValue trt_value;
+  trt_value.handle_ = builder->AddParameter(param);
+  trt_value.builder_ = builder;
+  return std::move(trt_value);
+}
+
+TrtValue TrtValue::BuildTensor(TrtBuilder *builder,
+                               nvinfer1::ITensor *tensor) {
+  TrtValue trt_value;
+  trt_value.handle_ = builder->AddTensor(tensor);
+  trt_value.builder_ = builder;
+  return std::move(trt_value);
+}
+
+TrtValue TrtValue::BuildWeight(TrtBuilder *builder,
+                               nvinfer1::Weights &weight) {
+  TrtValue trt_value;
+  trt_value.handle_ = builder->AddWeight(weight);
+  trt_value.builder_ = builder;
+  return std::move(trt_value);
+}
 
 }  // namespace tensorrt
 }  // namespace xrt

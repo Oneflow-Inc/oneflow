@@ -4,7 +4,9 @@
 #include "NvInfer.h"
 
 #include "oneflow/xrt/graph_compiler.h"
+#include "oneflow/xrt/tensorrt/trt_builder.h"
 #include "oneflow/xrt/tensorrt/trt_executable.h"
+#include "oneflow/xrt/tensorrt/trt_value.h"
 
 namespace oneflow {
 namespace xrt {

@@ -32,6 +32,7 @@ class InputOutputAlias {
   std::vector<int> output_index_;
 };
 
+// Graph compiler.
 class GraphCompiler {
  public:
   // Internal compiler interface class. It should be inherited and the

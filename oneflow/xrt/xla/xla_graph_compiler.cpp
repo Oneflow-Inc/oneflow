@@ -1,3 +1,4 @@
+#include "oneflow/xrt/node_util.h"
 #include "oneflow/xrt/xla/xla_graph_compiler.h"
 #include "oneflow/xrt/xla/ops/op_context.h"
 #include "oneflow/xrt/xla/ops/op_kernel.h"
@@ -31,13 +32,6 @@ Argument XlaGraphCompiler::ArgFromParameter(const Parameter &param) {
 
 void XlaGraphCompiler::SetupKernelContextParam(
     const XrtNode *node, OpKernelContext::Param *context_param) {
-  const PbMessage *message = &node->param();
-  if (!node->IsArgumentNode()) {
-    util::GetOneofMessage(node->param(), "op_type", &message);
-    CHECK(message) << "Cann't get op_type message in node which name is "
-                   << node->name();
-  }
-
   util::Map<Argument, Operand> input_ops;
   util::Map<std::string /* produce/consume key */, Argument> input_output_args;
   for (const XrtEdge *edge : node->in_edges()) {
@@ -62,7 +56,7 @@ void XlaGraphCompiler::SetupKernelContextParam(
   CHECK_GE(num_outputs, 0) << "Output num should not less than 0.";
   context_param->device = node->device();
   context_param->builder = builder_.get();
-  context_param->message = message;
+  context_param->message = OpMessage(node);
   context_param->arguments = std::move(input_output_args);
   context_param->inputs = std::move(input_ops);
   context_param->num_outputs = num_outputs;

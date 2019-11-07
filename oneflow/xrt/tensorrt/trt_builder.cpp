@@ -8,22 +8,8 @@ namespace tensorrt {
 TrtBuilder::TrtBuilder(const std::string &name)
     : builder_name_(name), next_handle_(0) {
   nv::Logger logger(name);
-  builder_.reset(nvinfer1::createInferBuilder(Logger));
+  builder_.reset(nvinfer1::createInferBuilder(logger));
   network_.reset(builder_->createNetwork());
-}
-
-bool TrtBuilder::AddParameter(const Parameter &param) {
-  return AddParameter(next_handle_, param);
-}
-
-bool TrtBuilder::AddParameter(int64_t handle, const Parameter &param) {
-  if (!value_kinds_.emplace(handle, TrtValueKind::kUndef).second) {
-    LOG(FATAL) << "Handle " << handle
-               << " is already exist in the builder. Please check it.";
-  }
-  params_[handle] = param;
-  next_handle_ = std::max(handle + 1, next_handle_);
-  return true /* add parameter successfully */;
 }
 
 nvinfer1::ITensor *TrtBuilder::GetTensor(int64_t handle) {
@@ -64,17 +50,22 @@ nvinfer1::Weights &TrtBuilder::GetWeight(int64_t handle) {
   return weights_.at(handle);
 }
 
+bool TrtBuilder::AddParameter(const Parameter &param) {
+  int64_t handle = IncreaseHandle();
+  params_[handle] = param;
+  value_kinds_[handle] = TrtValueKind::kUndef;
+  return handle;
+}
+
 int64_t TrtBuilder::AddTensor(nvinfer1::ITensor *tensor) {
-  int handle = next_handle_;
-  IncreaseHandle();
+  int handle = IncreaseHandle();
   tensors_[handle] = tensor;
   value_kinds_[handle] = TrtValueKind::kTensor;
   return handle;
 }
 
 int64_t TrtBuilder::AddWeight(nvinfer1::Weights &weight) {
-  int handle = next_handle_;
-  IncreaseHandle();
+  int handle = IncreaseHandle();
   weights_[handle] = weight;
   value_kinds_[handle] = TrtValueKind::kWeight;
   return handle;

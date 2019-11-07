@@ -33,14 +33,9 @@ class TrtBuilder {
  public:
   explicit TrtBuilder(const std::string &name);
 
-  const std::string &name() const { return builder_name_; }
-
-  bool AddParameter(const Parameter &param);
-  bool AddParameter(int64_t handle, const Parameter &param);
-
   nvinfer1::ITensor *GetTensor(int64_t handle);
 
-  nvinfer1::Weights GetWeight(int64_t handle);
+  nvinfer1::Weights &GetWeight(int64_t handle);
 
   const TrtValueKind &ValueKind(int64_t handle) const {
     CHECK_GT(value_kinds_.count(handle), 0)
@@ -48,14 +43,12 @@ class TrtBuilder {
     return value_kinds_.at(handle);
   }
 
-  void CheckHasParameter(int64_t handle) const {
-    CHECK_GT(params_.count(handle), 0)
-        << "Parameter is not found for handle " << handle;
-  }
-
   nvinfer1::IBuilder *builder() const { return builder_.get(); }
 
   nvinfer1::INetworkDefinition *network() const { return network_.get(); }
+
+  // Returns handle for the added parameter.
+  int64_t AddParameter(const Parameter &param);
 
   // Returns handle for the added tensor.
   int64_t AddTensor(nvinfer1::ITensor *tensor);
@@ -64,7 +57,12 @@ class TrtBuilder {
   int64_t AddWeight(nvinfer1::Weights &weight);
 
  private:
-  int64_t IncreaseHandle() { return ++next_handle_; }
+  void CheckHasParameter(int64_t handle) const {
+    CHECK_GT(params_.count(handle), 0)
+        << "Parameter is not found for handle " << handle;
+  }
+
+  int64_t IncreaseHandle() { return next_handle_++; }
 
  private:
   std::string builder_name_;

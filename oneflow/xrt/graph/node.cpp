@@ -12,12 +12,6 @@ extern const std::string _ArgumentOpType;
 extern const std::string _XrtInArgumentPrefix;
 extern const std::string _XrtOutArgumentPrefix;
 
-bool XrtNode::IsCompiled(const XrtEngine &engine) const {
-  auto field = MakeXrtField(device_, engine);
-  auto *rm = util::RegistryManager<decltype(field)>::Global();
-  return rm->Get(field)->IsRegistered(type_);
-}
-
 void XrtNode::AddInEdge(const XrtEdge *edge) {
   in_edges_.push_back(const_cast<XrtEdge *>(edge));
 }
@@ -54,24 +48,6 @@ bool XrtNode::IsOutArgumentNode() const {
 
 bool XrtNode::IsReachable(const XrtNode &dst_node) const {
   return algorithm::IsReachable(this, &dst_node);
-}
-
-bool IsNodeInput(const XrtNode *node, const Argument &argument) {
-  for (XrtEdge *edge : node->in_edges()) {
-    if (edge->argument() == argument) {
-      return true;
-    }
-  }
-  return false;
-}
-
-bool IsNodeOutput(const XrtNode *node, const Argument &argument) {
-  for (XrtEdge *edge : node->out_edges()) {
-    if (edge->argument() == argument) {
-      return true;
-    }
-  }
-  return false;
 }
 
 }  // namespace xrt
