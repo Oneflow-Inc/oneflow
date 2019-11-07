@@ -1,10 +1,9 @@
 from __future__ import absolute_import
 
-import oneflow.python.framework.runtime_context as runtime_ctx
 from oneflow.python.oneflow_export import oneflow_export
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.job_instance as job_instance
-import oneflow.python.framework.session_util as session_util
+import oneflow.python.framework.session_context as session_ctx
 import numpy as np
 import os
 import datetime
@@ -15,19 +14,19 @@ class CheckPoint(object):
     def __init__(self):
         pass
 
-    @session_util.try_init_default_session
+    @session_ctx.try_init_default_session
     def save(self, path):
         assert type(path) is str
-        c_api_util.LaunchJob(_MakeModelSaveJobFunc(path))
+        session_ctx.GetDefaultSession().LaunchJob(_MakeModelSaveJobFunc(path))
 
-    @session_util.try_init_default_session
+    @session_ctx.try_init_default_session
     def init(self):
-        c_api_util.LaunchJob(_MakeModelInitJobFunc())
+        session_ctx.GetDefaultSession().LaunchJob(_MakeModelInitJobFunc())
 
-    @session_util.try_init_default_session
+    @session_ctx.try_init_default_session
     def load(self, path):
         assert type(path) is str
-        c_api_util.LaunchJob(_MakeModelLoadJobFunc(path))
+        session_ctx.GetDefaultSession().LaunchJob(_MakeModelLoadJobFunc(path))
 
 
 def _MakeModelInitJobFunc():
@@ -36,8 +35,8 @@ def _MakeModelInitJobFunc():
 
     def finish_cb():
         pass
-
-    return job_instance.MakeJobInstance(str(runtime_ctx.inter_user_job_info.global_model_init_job_name),
+    sess = session_ctx.GetDefaultSession()
+    return job_instance.MakeJobInstance(str(sess.inter_user_job_info.global_model_init_job_name),
                                         push_cb=push_cb,
                                         finish_cb=finish_cb)
 
@@ -48,11 +47,11 @@ def _MakeModelLoadJobFunc(path):
 
     def finish_cb():
         pass
-
-    return job_instance.MakeJobInstance(str(runtime_ctx.inter_user_job_info.global_model_load_job_name),
+    
+    sess = session_ctx.GetDefaultSession()
+    return job_instance.MakeJobInstance(str(sess.inter_user_job_info.global_model_load_job_name),
                                         push_cb=push_cb,
                                         finish_cb=finish_cb)
-
 
 def _MakeModelSaveJobFunc(path):
     def push_cb(blob):
@@ -60,11 +59,11 @@ def _MakeModelSaveJobFunc(path):
 
     def finish_cb():
         pass
-
-    return job_instance.MakeJobInstance(str(runtime_ctx.inter_user_job_info.global_model_save_job_name),
+    
+    sess = session_ctx.GetDefaultSession()
+    return job_instance.MakeJobInstance(str(sess.inter_user_job_info.global_model_save_job_name),
                                         push_cb=push_cb,
                                         finish_cb=finish_cb)
-
 
 @oneflow_export('train.SimpleCheckPointManager')
 class SimpleCheckPointManager(object):
