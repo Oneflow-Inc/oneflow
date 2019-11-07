@@ -548,8 +548,8 @@ if terminal_args.train_with_real_dataset:
             shape=(2, 1088, 800, 3), dtype=flow.float32, is_dynamic=True
         )
     ):
-        # make conv_filter_grad algo certain to bypass algo work space inferring bug
-        # flow.config.cudnn_conv_force_bwd_filter_algo(0)
+        flow.config.cudnn_conv_heuristic_search_algo(True)
+        flow.config.cudnn_conv_use_deterministic_algo_only(False)
         flow.config.train.primary_lr(terminal_args.primary_lr)
         flow.config.train.model_update_conf(dict(naive_conf={}))
         data_loader = make_data_loader(
