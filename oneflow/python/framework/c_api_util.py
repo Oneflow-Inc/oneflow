@@ -31,6 +31,16 @@ def InitEnvironment(config_proto):
 def IsEnvironmentInited():
     return oneflow_internal.IsEnvironmentInited()
 
+def InitGlobalSession():
+    error_str = oneflow_internal.InitGlobalSession()
+    error = text_format.Parse(error_str, error_util.ErrorProto())
+    if error.HasField("error_type"): raise JobBuildAndInferError(error)
+
+def DestroyGlobalSession():
+    error_str = oneflow_internal.DestroyGlobalSession()
+    error = text_format.Parse(error_str, error_util.ErrorProto())
+    if error.HasField("error_type"): raise JobBuildAndInferError(error)
+
 def InitGlobalOneflow():
     error_str = oneflow_internal.InitGlobalOneflow()
     error = text_format.Parse(error_str, error_util.ErrorProto())
