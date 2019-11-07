@@ -6,6 +6,7 @@ from oneflow.python.oneflow_export import oneflow_export
 
 import oneflow as flow
 import math
+import functools
 
 
 @oneflow_export("constant_initializer")
@@ -144,9 +145,7 @@ def kaiming_initializer(
     assert isinstance(shape, tuple)
     # Kaiming Initialization only deals with FC, Conv and Deconv's weight
     assert len(shape) >= 2
-    elem_cnt = 1
-    for dim in shape:
-        elem_cnt *= dim
+    elem_cnt = functools.reduce(lambda a, b: a * b, shape, 1)
     assert elem_cnt > 0
     assert distribution in ["random_normal", "random_uniform"]
     assert mode in ["fan_in", "fan_out", "fan_avg"]
