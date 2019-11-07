@@ -254,11 +254,6 @@ def set_cudnn_conv_force_bwd_filter_algo(value):
     _SetJobConfAttr(lambda x:x, 'cudnn_conv_force_bwd_filter_algo', value)
     return oneflow.config
 
-@oneflow_export('config.cudnn_conv_infer_algo_at_compile')
-def set_cudnn_conv_infer_algo_at_runtime(value):
-    _SetJobConfAttr(lambda x:x, 'cudnn_conv_infer_algo_at_compile', value)
-    return oneflow.config
-
 @oneflow_export('config.cudnn_conv_heuristic_search_algo')
 def set_cudnn_conv_heuristic_search_algo(value):
     _SetJobConfAttr(lambda x:x, 'cudnn_conv_heuristic_search_algo', value)
