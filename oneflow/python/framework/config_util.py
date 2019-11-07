@@ -2,7 +2,7 @@ from __future__ import absolute_import
 
 import oneflow
 import oneflow.core.job.resource_pb2 as resource_util
-import oneflow.core.job.job_set_pb2 as job_set_util
+import oneflow.core.job.job_set_pb2 as job_set_pb
 import oneflow.core.job.job_pb2 as job_util
 import oneflow.python.framework.compile_context as compile_context
 import oneflow.python.framework.c_api_util as c_api_util
@@ -68,12 +68,9 @@ def _TryCompleteDefaultJobConfigProto(job_conf):
         job_conf.predict_conf.SetInParent()
 
 def _DefaultConfigProto():
-    config_proto = job_set_util.ConfigProto()
+    config_proto = job_set_pb.ConfigProto()
     _TryCompleteDefaultConfigProto(config_proto)
     return config_proto
-
-default_config_proto = _DefaultConfigProto()
-config_proto_mutable = True
 
 @oneflow_export('config.gpu_device_num')
 def gpu_device_num(val):
@@ -88,9 +85,10 @@ def cpu_device_num(val):
     default_config_proto.resource.cpu_device_num = val
 
 @oneflow_export('config.machine')
-def machine(val):
+def machine(*val):
     assert config_proto_mutable == True
     del default_config_proto.resource.machine[:]
+    if len(val) == 1 and isinstance(val[0], list, tuple): val = val[0]
     default_config_proto.resource.machine.extend(_MakeMachine(val))
 
 @oneflow_export('config.ctrl_port')
@@ -402,4 +400,6 @@ def _GetJobConfAttr(GetConf, field):
         assert c_api_util.IsEnvironmentInited() == False
         return getattr(GetConf(default_job_conf), field)
 
+default_config_proto = _DefaultConfigProto()
+config_proto_mutable = True
 default_job_conf = job_util.JobConfigProto()

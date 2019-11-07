@@ -1,6 +1,5 @@
 from __future__ import absolute_import
 
-import oneflow.core.job.job_set_pb2 as job_set_util
 import oneflow.core.job.job_pb2 as job_util
 import oneflow.python.lib.core.func_inspect_util as func_inspect_util
 import oneflow.python.lib.core.pb_util as pb_util
@@ -18,7 +17,7 @@ from contextlib import contextmanager
 
 from oneflow.python.oneflow_export import oneflow_export
 
-def Compile(job_set, job_func):
+def Compile(job_func):
     job_conf = job_util.JobConfigProto()
     job_conf.job_name = job_func.__name__
     with compile_context.CurJobConf(job_conf), job_builder.JobBuildAndInferCtx(job_conf.job_name):

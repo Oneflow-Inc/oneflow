@@ -1,7 +1,6 @@
 from __future__ import absolute_import
 
 import oneflow.python.framework.blob_desc as blob_desc
-import oneflow.python.framework.inter_user_job_util as inter_user_job_util
 import oneflow.python.framework.job_builder as job_builder
 import oneflow.python.framework.watch_scope_util as watch_scope_util
 import oneflow.core.common.data_type_pb2 as data_type_util
@@ -37,8 +36,11 @@ class RemoteBlob(blob_desc.BlobDesc):
     def parallel_conf(self):
         return job_builder.GetParallelConfFromProducerView(self.job_name_, self.lbn_)
 
-    def pull(self):
-        return inter_user_job_util.pull(self)
+    def with_distribute(self, distribute):
+        oneflow.distribute.assert_is_valid_distribute(distribute)
+        ret = RemoteBlob(self.lbi_)
+        ret.distribute_ = distribute
+        return ret
 
     def __add__(self, rhs):
         return oneflow.math.add(self, rhs)
