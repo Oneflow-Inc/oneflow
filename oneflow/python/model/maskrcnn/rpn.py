@@ -229,10 +229,10 @@ class RPNLoss(object):
                 flow.math.reduce_sum(
                     flow.detection.smooth_l1(
                         flow.concat(
-                            sampled_bbox_pred_list, axis=0
+                            sampled_bbox_pred_list, axis=0, name="bbox_pred"
                         ),  # CHECK_POINT: bbox_pred
                         flow.concat(
-                            sampled_bbox_target_list, axis=0
+                            sampled_bbox_target_list, axis=0, name="bbox_target"
                         ),  # CHECK_POINT: bbox_target
                         beta=1.0 / 9.0,
                     )
@@ -244,10 +244,10 @@ class RPNLoss(object):
                 flow.math.reduce_sum(
                     flow.nn.sigmoid_cross_entropy_with_logits(
                         flow.concat(
-                            sampled_cls_label_list, axis=0
+                            sampled_cls_label_list, axis=0, name="cls_label"
                         ),  # CHECK_POINT: cls label
                         flow.concat(
-                            sampled_cls_logit_list, axis=0
+                            sampled_cls_logit_list, axis=0, name="cls_logit"
                         ),  # CHECK_POINT: cls logit
                     )
                 )
