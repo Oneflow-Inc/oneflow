@@ -38,11 +38,13 @@ class GraphCompiler {
   // `Compile` function should be overrided for every engine compiler.
   class Impl {
    public:
-    void set_name(const std::string &name) { name_ = name; }
+    explicit Impl(const std::string &name) : name_(name) {}
+    virtual ~Impl() = default;
 
-    void set_device(XrtDevice device) { device_ = device; }
+    void set_device(const XrtDevice &device) { device_ = device; }
 
     void set_device_ordinal(int32_t device_ordinal) {
+      CHECK_GE(device_ordinal, 0) << "Device ordinal should >= 0.";
       device_ordinal_ = device_ordinal;
     }
 
@@ -60,26 +62,18 @@ class GraphCompiler {
   };
 
  public:
-  static auto Registry()
-      -> util::Registry<XrtEngine, std::function<Impl *()>> * {
-    return util::Registry<XrtEngine, std::function<Impl *()>>::Global();
+  using Factory = std::function<Impl *(const std::string &)>;
+  static auto Registry() -> util::Registry<XrtEngine, Factory> * {
+    return util::Registry<XrtEngine, Factory>::Global();
   }
 
-  explicit GraphCompiler(const std::string &name, const XrtEngine &engine,
-                         const XrtDevice &device, int32_t device_ordinal)
+  GraphCompiler(const std::string &name, const XrtEngine &engine,
+                const XrtDevice &device, int32_t device_ordinal)
       : engine_(engine) {
-    impl_.reset(GraphCompiler::Registry()->Lookup(engine_)());
+    impl_.reset(GraphCompiler::Registry()->Lookup(engine_)(name));
     CHECK(impl_) << "Internal compiler should be built correctly for engine "
                  << engine_;
-    impl_->set_name(name);
     impl_->set_device(device);
-    impl_->set_device_ordinal(device_ordinal);
-  }
-
-  void set_devide(XrtDevice device) { impl_->set_device(device); }
-
-  void set_device_ordinal(int32_t device_ordinal) {
-    CHECK_GE(device_ordinal, 0) << "Device ordinal should >= 0.";
     impl_->set_device_ordinal(device_ordinal);
   }
 
@@ -97,15 +91,17 @@ class GraphCompiler {
   std::shared_ptr<Impl> impl_;
 };
 
-#define REGISTER_GRAPH_COMPILER(Engine, Compiler)                          \
-  namespace {                                                              \
-  struct _XrtGraphCompiler {                                               \
-    _XrtGraphCompiler() {                                                  \
-      GraphCompiler::Registry()->Register(                                 \
-          Engine, []() -> GraphCompiler::Impl * { return new Compiler; }); \
-    }                                                                      \
-  };                                                                       \
-  static _XrtGraphCompiler _xrt_graph_compiler_ __attribute__((unused));   \
+#define REGISTER_GRAPH_COMPILER(Engine, Compiler)                        \
+  namespace {                                                            \
+  struct _XrtGraphCompiler {                                             \
+    _XrtGraphCompiler() {                                                \
+      GraphCompiler::Registry()->Register(                               \
+          Engine, [](const std::string &name) -> GraphCompiler::Impl * { \
+            return new Compiler(name);                                   \
+          });                                                            \
+    }                                                                    \
+  };                                                                     \
+  static _XrtGraphCompiler _xrt_graph_compiler_ __attribute__((unused)); \
   }  // namespace
 
 }  // namespace xrt
