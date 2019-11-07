@@ -16,13 +16,13 @@ namespace oneflow {
 namespace xrt {
 namespace mola {
 
-class Operand {
+class XlaValue {
  public:
-  Operand() : initialized_(false) {}
+  XlaValue() : initialized_(false) {}
   // Construct from Constant shape.
-  static Operand Constant(const xla::Shape shape);
+  static XlaValue Constant(const xla::Shape shape);
   // Construct from XlaOp handle.
-  static Operand XlaOp(const xla::XlaOp handle);
+  static XlaValue XlaOp(const xla::XlaOp handle);
 
   // Return the XlaOp handle if the builder is matched with the handle.
   xla::XlaOp AsXlaOp(xla::XlaBuilder *builder) const;
@@ -31,10 +31,10 @@ class Operand {
 
  private:
   bool initialized_;
-  // XlaOp handle should be initialized if the operand is
+  // XlaOp handle should be initialized if the value is
   // constructed from another XlaOp.
   xla::XlaOp handle_;
-  // Shape of the operand.
+  // Shape of the xla value.
   xla::Shape shape_;
 };
 
@@ -47,8 +47,8 @@ class OpKernelContext {
     XrtDevice device;
     // Config proto related to the operator
     const PbMessage *message;
-    // Input oprands
-    util::Map<Argument, Operand> inputs;
+    // Input operands
+    util::Map<Argument, XlaValue> inputs;
     int num_outputs;
 
     util::Map<std::string, Argument> arguments;
@@ -71,15 +71,15 @@ class OpKernelContext {
 
   int num_inputs() const { return param_.inputs.size(); }
   int num_outputs() const { return param_.num_outputs; }
-  // Return inputs as Operands
-  const util::Map<Argument, Operand> &inputs() const { return param_.inputs; }
-  // Return output as Operands
-  const util::Map<Argument, Operand> &outputs() const { return outputs_; }
+  // Return inputs as XlaValues
+  const util::Map<Argument, XlaValue> &inputs() const { return param_.inputs; }
+  // Return output as XlaValues
+  const util::Map<Argument, XlaValue> &outputs() const { return outputs_; }
 
   // Setup the output `output_name` with XlaOp
   void SetOutput(const std::string &name, const xla::XlaOp &handle);
-  // Setup the output `output_name` with Operand
-  void SetOutput(const std::string &name, const Operand &handle);
+  // Setup the output `output_name` with XlaValue
+  void SetOutput(const std::string &name, const XlaValue &handle);
 
   // Return input `name` shape as Shape
   Shape InputShape(const std::string &name) const;
@@ -120,8 +120,8 @@ class OpKernelContext {
   Argument ArgumentFromKey(const std::string &key) const;
 
   Param param_;
-  // Output oprands
-  util::Map<Argument, Operand> outputs_;
+  // Output operands
+  util::Map<Argument, XlaValue> outputs_;
 };
 
 }  // namespace mola

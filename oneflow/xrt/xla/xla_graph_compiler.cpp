@@ -1,5 +1,5 @@
-#include "oneflow/xrt/node_util.h"
 #include "oneflow/xrt/xla/xla_graph_compiler.h"
+#include "oneflow/xrt/node_util.h"
 #include "oneflow/xrt/xla/ops/op_context.h"
 #include "oneflow/xrt/xla/ops/op_kernel.h"
 #include "oneflow/xrt/xla/xla_resource_manager.h"
@@ -32,13 +32,13 @@ Argument XlaGraphCompiler::ArgFromParameter(const Parameter &param) {
 
 void XlaGraphCompiler::SetupKernelContextParam(
     const XrtNode *node, OpKernelContext::Param *context_param) {
-  util::Map<Argument, Operand> input_ops;
+  util::Map<Argument, XlaValue> input_ops;
   util::Map<std::string /* produce/consume key */, Argument> input_output_args;
   for (const XrtEdge *edge : node->in_edges()) {
     if (!edge->IsControlEdge()) {
       const Argument &arg = edge->argument();
       CHECK_GT(operands_.count(arg), 0);
-      const Operand &operand = operands_.at(arg);
+      const XlaValue &operand = operands_.at(arg);
       input_ops.emplace(arg, operand);
       const std::string &k = arg.meta_data().consume_key;
       input_output_args.emplace(k, arg);
@@ -145,7 +145,7 @@ void XlaGraphCompiler::BuildEntryParameters(
     xla::XlaOp handle =
         xla::Parameter(builder_.get(), i, xla_shape, absl::StrCat("arg", i));
     Argument arg = ArgFromParameter(entry_params[i]);
-    operands_.emplace(arg, Operand::XlaOp(handle));
+    operands_.emplace(arg, XlaValue::XlaOp(handle));
     arguments_.emplace(entry_params[i].name(), arg);
   }
 }

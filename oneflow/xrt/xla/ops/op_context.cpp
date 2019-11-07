@@ -15,30 +15,30 @@ xla::Shape GetXlaOpShape(const xla::XlaOp &handle) {
   return shape.ValueOrDie();
 }
 
-Operand Operand::Constant(xla::Shape shape) {
-  Operand op;
+XlaValue XlaValue::Constant(xla::Shape shape) {
+  XlaValue op;
   op.shape_ = shape;
   op.initialized_ = true;
   return op;
 }
 
-Operand Operand::XlaOp(xla::XlaOp handle) {
-  Operand op;
+XlaValue XlaValue::XlaOp(xla::XlaOp handle) {
+  XlaValue op;
   op.handle_ = handle;
   op.shape_ = GetXlaOpShape(handle);
   op.initialized_ = true;
   return op;
 }
 
-xla::XlaOp Operand::AsXlaOp(xla::XlaBuilder *builder) const {
-  CHECK(initialized_) << "Operand has not been initialized.";
+xla::XlaOp XlaValue::AsXlaOp(xla::XlaBuilder *builder) const {
+  CHECK(initialized_) << "XlaValue has not been initialized.";
   if (handle_.IsUninitialized()) {
     // LiteralSlice literal;
     // HostTensorToBorrowingLiteral(constant_value_, &literal);
     // return xla::ConstantLiteral(builder, literal);
   }
   CHECK_EQ(builder, handle_.builder())
-      << "Mismatched builders in Operand::AsXlaOp";
+      << "Mismatched builders in XlaValue::AsXlaOp";
   return handle_;
 }
 
@@ -64,11 +64,11 @@ xla::XlaOp OpKernelContext::Output(const Argument &arg) {
 
 void OpKernelContext::SetOutput(const std::string &name,
                                 const xla::XlaOp &handle) {
-  SetOutput(name, Operand::XlaOp(handle));
+  SetOutput(name, XlaValue::XlaOp(handle));
 }
 
 void OpKernelContext::SetOutput(const std::string &name,
-                                const Operand &handle) {
+                                const XlaValue &handle) {
   Argument arg = ArgumentFromKey(name);
   CHECK_EQ(arg.shape(), XlaShapeToOfShape(handle.shape_));
   outputs_[arg] = handle;

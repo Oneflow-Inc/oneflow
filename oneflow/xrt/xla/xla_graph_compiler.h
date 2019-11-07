@@ -55,7 +55,7 @@ class XlaGraphCompiler : public GraphCompiler::Impl {
 
   std::unique_ptr<xla::XlaBuilder> builder_;
 
-  util::Map<Argument, Operand> operands_;
+  util::Map<Argument, XlaValue> operands_;
   util::Map<std::string /* argument name */, Argument> arguments_;
 };
 
