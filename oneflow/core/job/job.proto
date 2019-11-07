@@ -61,6 +61,8 @@ message JobConfigProto {
   optional int32 cudnn_conv_force_fwd_algo = 202;
   optional int32 cudnn_conv_force_bwd_data_algo = 203;
   optional int32 cudnn_conv_force_bwd_filter_algo = 204;
+  optional bool cudnn_conv_heuristic_search_algo = 205 [default = true];
+  optional bool cudnn_conv_use_deterministic_algo_only = 206 [default = false];
   
   optional bool enable_reuse_mem = 300 [default = true];
   optional bool enable_inplace = 301 [default = true];

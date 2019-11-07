@@ -56,6 +56,7 @@ class MaskHead(object):
                     params=mask_fcn_logits,
                     indices=flow.expand_dims(gt_labels, 1),
                     batch_dims=1,
+                    name="gather_mask_fcn_logits",
                 ),
                 axis=[1],
                 name="squeeze_mask_pred",
@@ -175,7 +176,7 @@ class MaskHead(object):
             strides=[2, 2],
             name="conv5",
         )
-        x = flow.nn.bias_add(x, bias, "NCHW")
+        x = flow.nn.bias_add(x, bias, "NCHW", name="conv5_bias_add")
         x = flow.keras.activations.relu(x, name="conv5_relu")
         x = flow.layers.conv2d(
             x,
