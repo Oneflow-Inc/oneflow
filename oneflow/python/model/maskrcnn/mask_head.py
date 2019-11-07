@@ -56,6 +56,7 @@ class MaskHead(object):
                     params=mask_fcn_logits,
                     indices=flow.expand_dims(gt_labels, 1),
                     batch_dims=1,
+                    name="gather_mask_fcn_logits",
                 ),
                 axis=[1],
                 name="squeeze_mask_pred",
