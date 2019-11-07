@@ -3,12 +3,11 @@ from __future__ import absolute_import
 import oneflow.core.common.error_pb2 as error_util
 import oneflow.core.common.data_type_pb2 as dtype_util
 from oneflow.core.job.inter_user_job_info_pb2 import InterUserJobInfo
-import oneflow.core.job.job_set_pb2 as job_set_util
+import oneflow.core.job.job_set_pb2 as job_set_pb
 import oneflow.core.job.placement_pb2 as placment_util
 import oneflow.core.record.record_pb2 as record_util
 from google.protobuf import text_format
 import oneflow.oneflow_internal as oneflow_internal
-import oneflow.python.framework.runtime_context as runtime_ctx
 from oneflow.python.framework.job_build_and_infer_error import JobBuildAndInferError
 
 def RegisterWatcherOnlyOnce(watcher):
@@ -23,7 +22,7 @@ def IsOpTypeCaseCpuSupportOnly(op_type_case):
     return ret
 
 def InitEnvironment(config_proto):
-    assert(type(config_proto) is job_set_util.ConfigProto)
+    assert(type(config_proto) is job_set_pb.ConfigProto)
     config_proto_str = text_format.MessageToString(config_proto)
     error_str = oneflow_internal.InitEnvironmentBySerializedConfigProto(config_proto_str)
     error = text_format.Parse(error_str, error_util.ErrorProto())
@@ -44,10 +43,6 @@ def GetInterUserJobInfo():
     return text_format.Parse(inter_user_job_info, InterUserJobInfo())
 
 def LaunchJob(job_instance):
-    for pre_launch_callback in runtime_ctx.job_instance_pre_launch_callbacks:
-        pre_launch_callback(job_instance)
-    for post_finish_callback in runtime_ctx.job_instance_post_finish_callbacks:
-        job_instance.AddPostFinishCallback(post_finish_callback)
     error_str = oneflow_internal.LaunchJob(job_instance)
     error = text_format.Parse(error_str, error_util.ErrorProto())
     if error.HasField("error_type"): raise JobBuildAndInferError(error)
