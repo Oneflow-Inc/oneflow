@@ -1,6 +1,7 @@
 #include "oneflow/core/operator/conv_op.h"
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/device/cuda_stream_handle.h"
+#include "oneflow/core/device/cudnn_conv_util.h"
 #include "oneflow/core/register/runtime_blob_desc.h"
 #include "oneflow/core/job/sbp_signature_builder.h"
 
@@ -173,10 +174,25 @@ Maybe<void> ConvOp<NDims>::InferBlobDescs(
 #ifdef WITH_CUDA
   if (DevIsGpuAndEnableCudnn()) {
     // cudnn_buf
-    InferCudnnAlgo(GetBlobDesc4BnInOp, &(conv_op_ctx->cudnn_conv_algo_ctx));
+    size_t fw_cudnn_buf_size = cudnn_buf_limit_byte();
+    if (!out_blob_desc->is_dynamic()) {
+      CudnnConvArgs args(GetCustomizedConf(), in_blob_desc, out_blob_desc,
+                         GetBlobDesc4BnInOp("weight"), fw_cudnn_buf_size,
+                         job_desc().job_conf().cudnn_conv_use_deterministic_algo_only(),
+                         job_desc().job_conf().cudnn_conv_heuristic_search_algo());
+      if (job_desc().job_conf().has_cudnn_conv_force_fwd_algo()) {
+        CudaCheck(GetConvWorkspaceSize(args,
+                                       static_cast<cudnnConvolutionFwdAlgo_t>(
+                                           job_desc().job_conf().cudnn_conv_force_fwd_algo()),
+                                       &fw_cudnn_buf_size));
+      } else {
+        auto algo_perf = FindCudnnConvAlgorithm<cudnnConvolutionFwdAlgoPerf_t>(args);
+        fw_cudnn_buf_size = algo_perf->memory;
+      }
+    }
+    fw_cudnn_buf_size = std::max(size_t(1), fw_cudnn_buf_size);
     BlobDesc* fw_cudnn_buf = GetBlobDesc4BnInOp("fw_cudnn_buf");
-    fw_cudnn_buf->mut_shape() =
-        Shape({static_cast<int64_t>(conv_op_ctx->cudnn_conv_algo_ctx.fwd_ws_size)});
+    fw_cudnn_buf->mut_shape() = Shape({static_cast<int64_t>(fw_cudnn_buf_size)});
     fw_cudnn_buf->set_data_type(DataType::kChar);
   }
 #endif  // WITH_CUDA
@@ -251,21 +267,6 @@ void ConvOp<NDims>::GenKernelConfWithCudnn(
     AddValToPbRfInCustomizedKernelConf(kernel_conf, "pad_small_side", pad_small_side[i]);
     AddValToPbRfInCustomizedKernelConf(kernel_conf, "pad_large_side", pad_large_side[i]);
   }
-#ifdef WITH_CUDA
-  if (device_type() == DeviceType::kGPU) {
-    const ConvOpCtx* conv_op_ctx = static_cast<const ConvOpCtx*>(op_ctx);
-    SetValInCustomizedKernelConf(kernel_conf, "cudnn_fwd_algo",
-                                 static_cast<int32_t>(conv_op_ctx->cudnn_conv_algo_ctx.fwd_algo));
-    SetValInCustomizedKernelConf(
-        kernel_conf, "cudnn_bwd_filter_algo",
-        static_cast<int32_t>(conv_op_ctx->cudnn_conv_algo_ctx.bwd_filter_algo));
-    SetValInCustomizedKernelConf(
-        kernel_conf, "cudnn_bwd_data_algo",
-        static_cast<int32_t>(conv_op_ctx->cudnn_conv_algo_ctx.bwd_data_algo));
-    SetValInCustomizedKernelConf(kernel_conf, "need_infer_cudnn_desc_each_forward",
-                                 GetBlobDesc4BnInOp("out")->is_dynamic());
-  }
-#endif  // WITH_CUDA
 }
 
 template<int32_t NDims>
@@ -285,18 +286,6 @@ template<int32_t NDims>
 PbMessage* ConvOp<NDims>::MutableCustomizedKernelConf(KernelConf* kernel_conf) const {
   return kernel_conf->mutable_conv_conf();
 }
-
-#ifdef WITH_CUDA
-template<int32_t NDims>
-void ConvOp<NDims>::InferCudnnAlgo(
-    std::function<const BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-    CudnnConvAlgoCtx* conv_ctx) const {
-  CHECK(Global<CudnnConvCtxCache>::Get()->FindCudnnConvAlgoCtxWithConfig(
-      *GetBlobDesc4BnInOp("in"), *GetBlobDesc4BnInOp("out"), *GetBlobDesc4BnInOp("weight"),
-      GetCustomizedConf(), static_cast<size_t>(cudnn_buf_limit_byte()), conv_ctx));
-  CHECK(conv_ctx->fwd_algo_found) << "algo: " << conv_ctx->fwd_algo;
-}
-#endif  // WITH_CUDA
 
 template<int32_t NDims>
 Maybe<void> ConvOp<NDims>::InferBatchAxis(
