@@ -10,13 +10,6 @@
 
 namespace oneflow {
 
-class GlobalObjectsScope4JobConf final {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(GlobalObjectsScope4JobConf);
-  GlobalObjectsScope4JobConf(const JobSet& job_set);
-  ~GlobalObjectsScope4JobConf();
-};
-
 class Oneflow final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Oneflow);
@@ -25,7 +18,6 @@ class Oneflow final {
 
  private:
   Plan plan_;
-  std::unique_ptr<GlobalObjectsScope4JobConf> global_objects_scope4job_conf_;
   std::unique_ptr<RuntimeBuffersScope> runtime_buffers_scope_;
   std::unique_ptr<Runtime> runtime_;
 };

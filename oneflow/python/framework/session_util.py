@@ -4,6 +4,7 @@ import threading
 from oneflow.core.job.job_set_pb2 import ConfigProto
 import oneflow.core.job.job_pb2 as job_util
 import oneflow.python.framework.session_context as session_ctx
+import oneflow.python.framework.compiler as compiler
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.config_util as config_util
 import oneflow.python.framework.job_instance as job_instance_util
@@ -26,14 +27,17 @@ class Session(object):
 
     def Init(self):
         assert self.is_running_ == False
-        TryInitEnvironment()
+        _TryInitEnvironment()
+        c_api_util.InitGlobalSession()
         for job_name, job_func in self.job_name2job_func_.items(): compiler.Compile(job_func)
         c_api_util.InitGlobalOneflow()
         self.inter_user_job_info_ = c_api_util.GetInterUserJobInfo()
         self.is_running_ = True
 
-    def Destory(self):
+    def Destroy(self):
+        if self.is_running_ == False: return
         c_api_util.DestroyGlobalOneflow()
+        c_api_util.DestroyGlobalSession()
 
     def AddJob(self, job_func):
         self.job_name2job_func_[job_func.__name__] = job_func
@@ -92,12 +96,17 @@ class Session(object):
         self.cond_var_.notify()
         self.cond_var_.release()
 
+@oneflow_export("clear_default_session")
+def clear_default_session():
+    session_ctx.TryDestroyDefaultSession()
+    session_ctx.InitDefaultSession(Session())
+
 def _MakePushCallback(ndarray):
     return lambda ofblob: ofblob.CopyFromNdarrayOrNestedNdarrayList(ndarray)
 
-def TryInitEnvironment():
+def _TryInitEnvironment():
     if c_api_util.IsEnvironmentInited() == False:
         c_api_util.InitEnvironment(config_util.default_config_proto)
         config_util.config_proto_mutable = False
 
-session_ctx.ResetDefaultSession(Session())
+session_ctx.InitDefaultSession(Session())
