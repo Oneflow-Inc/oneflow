@@ -254,6 +254,16 @@ def set_cudnn_conv_force_bwd_filter_algo(value):
     _SetJobConfAttr(lambda x:x, 'cudnn_conv_force_bwd_filter_algo', value)
     return oneflow.config
 
+@oneflow_export('config.cudnn_conv_heuristic_search_algo')
+def set_cudnn_conv_heuristic_search_algo(value):
+    _SetJobConfAttr(lambda x:x, 'cudnn_conv_heuristic_search_algo', value)
+    return oneflow.config
+
+@oneflow_export('config.cudnn_conv_use_deterministic_algo_only')
+def set_cudnn_conv_use_deterministic_algo_only(value):
+    _SetJobConfAttr(lambda x:x, 'cudnn_conv_use_deterministic_algo_only', value)
+    return oneflow.config
+
 @oneflow_export('config.enable_reused_mem')
 def set_enable_reused_mem(value = True):
     _SetJobConfAttr(lambda x:x, 'enable_reused_mem', value)
