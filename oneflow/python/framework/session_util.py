@@ -4,6 +4,7 @@ import threading
 from oneflow.core.job.job_set_pb2 import ConfigProto
 import oneflow.core.job.job_pb2 as job_util
 import oneflow.python.framework.session_context as session_ctx
+from oneflow.python.framework.session_context import SessionStatus
 import oneflow.python.framework.compiler as compiler
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.config_util as config_util
@@ -14,7 +15,7 @@ from oneflow.python.oneflow_export import oneflow_export
 class Session(object):
     def __init__(self):
         self.job_name2job_func_ = {}
-        self.is_running_ = False
+        self.status_ = SessionStatus.OPEN
         self.cond_var_ = threading.Condition()
         self.running_job_cnt_ = 0
         self.inter_user_job_info_ = None
@@ -23,27 +24,38 @@ class Session(object):
     def inter_user_job_info(self): return self.inter_user_job_info_
 
     @property
-    def is_running(self): return self.is_running_
+    def status(self): return self.status_
 
+    def TryInit(self):
+        if self.status_ is SessionStatus.OPEN: self.Init()
+        return self
+    
     def Init(self):
-        assert self.is_running_ == False
+        assert self.status_ is SessionStatus.OPEN
         _TryInitEnvironment()
         c_api_util.InitGlobalSession()
         for job_name, job_func in self.job_name2job_func_.items(): compiler.Compile(job_func)
         c_api_util.InitGlobalOneflow()
         self.inter_user_job_info_ = c_api_util.GetInterUserJobInfo()
-        self.is_running_ = True
+        self.status_ = SessionStatus.RUNNING
+        return self
 
-    def Destroy(self):
-        if self.is_running_ == False: return
+    def TryClose(self):
+        if self.status_ is SessionStatus.RUNNING: self.Close()
+
+    def Close(self):
+        assert self.status_ is SessionStatus.RUNNING
         c_api_util.DestroyGlobalOneflow()
         c_api_util.DestroyGlobalSession()
+        self.Sync()
+        self.status_ = SessionStatus.CLOSED
 
     def AddJob(self, job_func):
+        assert self.status_ is SessionStatus.OPEN
         self.job_name2job_func_[job_func.__name__] = job_func
 
     def Sync(self):
-        assert self.is_running_
+        assert self.status_ is SessionStatus.RUNNING
         self.cond_var_.acquire()
         while self.running_job_cnt_ > 0:
             self.cond_var_.wait()
@@ -51,13 +63,13 @@ class Session(object):
         self.cond_var_.release()
 
     def Run(self, job_func, *arg):
-        assert self.is_running_
+        assert self.status_ is SessionStatus.RUNNING
         remote_blobs = self.LaunchUserJob(job_func, *arg)
         if remote_blobs is None: return
         return OutRemoteBlobsStatus(self).SetResult(remote_blobs).Inited()
     
     def LaunchUserJob(self, job_func, *arg):
-        assert self.is_running_
+        assert self.status_ is SessionStatus.RUNNING
         job_name = job_func.__name__
         assert len(arg) == len(job_func.__oneflow_input_blob_defs__)
         for i in range(len(arg)):
@@ -68,29 +80,28 @@ class Session(object):
         return job_func.__oneflow_output_remote_blobs__
 
     def LaunchJob(self, job_instance):
-        assert self.is_running_
+        assert self.status_ is SessionStatus.RUNNING
         self._IncRunningJobCnt()
-        job_instance.AddPostFinishCallback(lambda _: self._DecRunningJobCnt)
+        job_instance.AddPostFinishCallback(lambda _: self._DecRunningJobCnt())
         c_api_util.LaunchJob(job_instance)
 
     def AsyncPush(self, op_name, push_data_cb):
-        assert self.is_running_
+        assert self.status_ is SessionStatus.RUNNING
         push_job_name = self.inter_user_job_info.input_or_var_op_name2push_job_name[op_name]
         self.LaunchJob(job_instance_util.MakePushJobInstance(push_job_name, op_name, push_data_cb))
 
     def AsyncPull(self, op_name, pull_data_cb):
-        assert self.is_running_
+        assert self.status_ is SessionStatus.RUNNING
         pull_job_name = self.inter_user_job_info.output_or_var_op_name2pull_job_name[op_name]
         self.LaunchJob(job_instance_util.MakePullJobInstance(pull_job_name, op_name, pull_data_cb))
     
     def _IncRunningJobCnt(self):
-        assert self.is_running_
+        assert self.status_ is SessionStatus.RUNNING
         self.cond_var_.acquire()
         self.running_job_cnt_ += 1
         self.cond_var_.release()
 
     def _DecRunningJobCnt(self):
-        assert self.is_running_
         self.cond_var_.acquire()
         self.running_job_cnt_ -= 1
         self.cond_var_.notify()
@@ -98,8 +109,8 @@ class Session(object):
 
 @oneflow_export("clear_default_session")
 def clear_default_session():
-    session_ctx.TryDestroyDefaultSession()
-    session_ctx.InitDefaultSession(Session())
+    session_ctx.TryCloseDefaultSession()
+    session_ctx.OpenDefaultSession(Session())
 
 def _MakePushCallback(ndarray):
     return lambda ofblob: ofblob.CopyFromNdarrayOrNestedNdarrayList(ndarray)
@@ -109,4 +120,4 @@ def _TryInitEnvironment():
         c_api_util.InitEnvironment(config_util.default_config_proto)
         config_util.config_proto_mutable = False
 
-session_ctx.InitDefaultSession(Session())
+session_ctx.OpenDefaultSession(Session())
