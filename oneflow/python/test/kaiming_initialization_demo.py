@@ -55,8 +55,8 @@ def test_kaiming_initialization(
         )
     pytorch_var = pytorch_var.detach().cpu().numpy()
 
-    assert np.allclose(np.var(of_var), np.var(pytorch_var), rtol=1e-3)
-    assert np.allclose(np.mean(of_var), np.mean(pytorch_var), atol=1e-5)
+    assert np.allclose(np.var(of_var), np.var(pytorch_var), rtol=1e-3, atol=1e-5)
+    assert np.allclose(np.mean(of_var), np.mean(pytorch_var), rtol=1e-3, atol=1e-5)
 
 
 if __name__ == "__main__":
