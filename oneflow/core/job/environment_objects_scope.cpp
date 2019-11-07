@@ -3,17 +3,12 @@
 #include "oneflow/core/control/ctrl_server.h"
 #include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/job/machine_context.h"
-#include "oneflow/core/job/critical_section_desc.h"
 #include "oneflow/core/job/available_memory_desc.pb.h"
 #include "oneflow/core/job/id_manager.h"
 #include "oneflow/core/job/profiler.h"
 #include "oneflow/core/persistence/file_system.h"
 #include "oneflow/core/common/buffer_manager.h"
 #include "oneflow/core/job/foreign_job_instance.h"
-#include "oneflow/core/job/inter_user_job_info.pb.h"
-#include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
-#include "oneflow/core/job/lbi_diff_watcher_info.pb.h"
-#include "oneflow/core/operator/op_infer_cache.h"
 
 namespace oneflow {
 
@@ -87,22 +82,12 @@ Maybe<void> EnvironmentObjectsScope::Init(const ConfigProto& config_proto) {
   if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
     Global<AvailableMemDesc>::New();
     *Global<AvailableMemDesc>::Get() = PullAvailableMemDesc();
-    Global<CriticalSectionDesc>::New();
-    Global<InterUserJobInfo>::New();
-    Global<JobBuildAndInferCtxMgr>::New();
-    Global<LbiDiffWatcherInfo>::New();
   }
   return Maybe<void>::Ok();
 }
 
 EnvironmentObjectsScope::~EnvironmentObjectsScope() {
-  if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
-    Global<LbiDiffWatcherInfo>::Delete();
-    Global<JobBuildAndInferCtxMgr>::Delete();
-    Global<InterUserJobInfo>::Delete();
-    Global<CriticalSectionDesc>::Delete();
-    Global<AvailableMemDesc>::Delete();
-  }
+  if (Global<MachineCtx>::Get()->IsThisMachineMaster()) { Global<AvailableMemDesc>::Delete(); }
   if (Global<Profiler>::Get() != nullptr) { Global<Profiler>::Delete(); }
   Global<IDMgr>::Delete();
   Global<MachineCtx>::Delete();

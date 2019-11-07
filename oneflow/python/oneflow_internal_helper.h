@@ -11,11 +11,10 @@
 #include "oneflow/core/job/runtime_job_descs.h"
 #include "oneflow/core/control/cluster_control.pb.h"
 #include "oneflow/core/control/ctrl_client.h"
-#include "oneflow/core/job/runtime_buffer_managers_scope.h"
 #include "oneflow/core/control/cluster_control.h"
-#include "oneflow/core/job/job_set_compile_ctx.h"
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 #include "oneflow/core/job/foreign_watcher.h"
+#include "oneflow/core/job/session.h"
 
 namespace oneflow {
 
@@ -63,15 +62,28 @@ Maybe<void> InitEnvironmentBySerializedConfigProto(const std::string& config_pro
   return Maybe<void>::Ok();
 }
 
+Maybe<void> InitGlobalSession() {
+  OF_CHECK_NOTNULL(Global<EnvironmentObjectsScope>::Get()) << "environment not inited";
+  OF_CHECK_ISNULL(Global<Session>::Get()) << "no multi sessions supported";
+  Global<Session>::New();
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> DestroyGlobalSession() {
+  OF_CHECK_NOTNULL(Global<Session>::Get()) << "session not found";
+  Global<Session>::Delete();
+  return Maybe<void>::Ok();
+}
+
 Maybe<void> InitGlobalOneflow() {
+  OF_CHECK_NOTNULL(Global<Session>::Get()) << "session not found";
   OF_CHECK(Global<MachineCtx>::Get()->IsThisMachineMaster());
   ClusterControl::MasterSendSessionStart();
   const JobSet& job_set = Global<JobBuildAndInferCtxMgr>::Get()->job_set();
   if (job_set.job().empty()) { return Error::JobSetEmpty() << "no function defined"; }
+  Global<const InterJobReuseMemStrategy>::New(job_set.inter_job_reuse_mem_strategy());
   OF_CHECK_ISNULL(Global<Oneflow>::Get());
   Global<CtrlClient>::Get()->PushKV("session_job_set", job_set);
-  Global<RuntimeBufferManagersScope>::New();
-  Global<JobSetCompileCtx>::New();
   Global<Oneflow>::New(job_set);
   return Maybe<void>::Ok();
 }
@@ -107,8 +119,7 @@ Maybe<void> DestroyGlobalOneflow() {
   OF_CHECK(Global<MachineCtx>::Get()->IsThisMachineMaster());
   OF_CHECK_NOTNULL(Global<Oneflow>::Get());
   Global<Oneflow>::Delete();
-  Global<JobSetCompileCtx>::Delete();
-  Global<RuntimeBufferManagersScope>::Delete();
+  Global<const InterJobReuseMemStrategy>::Delete();
   return Maybe<void>::Ok();
 }
 
