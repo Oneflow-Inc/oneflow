@@ -399,7 +399,8 @@ message SigmoidCrossEntropyGradOpConf {
   required string prediction = 1;
   required string label = 2;
   required string prediction_diff = 3;
-  required DataType label_type = 4;
+  required string loss_diff = 4;
+  required DataType label_type = 5;
 }
 
 message IdentityLossOpConf {

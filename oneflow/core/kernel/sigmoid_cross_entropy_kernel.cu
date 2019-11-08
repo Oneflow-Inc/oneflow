@@ -54,6 +54,7 @@ class SigmoidCrossEntropyGradGpuKernel final : public KernelIf<DeviceType::kGPU>
   void ForwardDataContent(const KernelCtx& ctx,
                           std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
     const Blob* prediction = BnInOp2Blob("prediction");
+    const Blob* loss_diff = BnInOp2Blob("loss_diff");
     const Blob* label = BnInOp2Blob("label");
     Blob* pred_diff = BnInOp2Blob("prediction_diff");
     const int64_t n = prediction->shape().elem_cnt();
@@ -61,6 +62,9 @@ class SigmoidCrossEntropyGradGpuKernel final : public KernelIf<DeviceType::kGPU>
         <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx.device_ctx->cuda_stream()>>>(
             n, prediction->dptr<PredType>(), label->dptr<LabelType>(),
             pred_diff->mut_dptr<PredType>());
+    KernelUtil<DeviceType::kGPU, PredType>::Mul(ctx.device_ctx, n, pred_diff->dptr<PredType>(),
+                                                loss_diff->dptr<PredType>(),
+                                                pred_diff->mut_dptr<PredType>());
   }
 };
 

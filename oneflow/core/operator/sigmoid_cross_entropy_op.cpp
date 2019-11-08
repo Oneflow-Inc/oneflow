@@ -60,6 +60,7 @@ class SigmoidCrossEntropyGradOp final : public Operator {
   void InitFromOpConf() override {
     CHECK(op_conf().has_sigmoid_cross_entropy_grad_conf());
     EnrollInputBn("prediction");
+    EnrollInputBn("loss_diff");
     EnrollInputBn("label", false);
     EnrollOutputBn("prediction_diff");
   }
@@ -74,6 +75,8 @@ class SigmoidCrossEntropyGradOp final : public Operator {
                        GetBlobDesc4BnInOp("label")->data_type());
     CHECK_EQ_OR_RETURN(GetBlobDesc4BnInOp("prediction")->shape(),
                        GetBlobDesc4BnInOp("label")->shape());
+    CHECK_EQ_OR_RETURN(GetBlobDesc4BnInOp("prediction")->shape(),
+                       GetBlobDesc4BnInOp("loss_diff")->shape());
     *GetBlobDesc4BnInOp("prediction_diff") = *GetBlobDesc4BnInOp("prediction");
     return Maybe<void>::Ok();
   }
