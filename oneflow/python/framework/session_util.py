@@ -76,7 +76,7 @@ class Session(object):
             arg_blob = job_func.__oneflow_input_blob_defs__[i]
             arg_blob.CheckInputNdarray(arg[i])
             self.AsyncPush(arg_blob.op_name, _MakePushCallback(arg[i]))
-            self.LaunchJob(job_instance_util.MakeUserJobInstance(job_name))
+        self.LaunchJob(job_instance_util.MakeUserJobInstance(job_name))
         return job_func.__oneflow_output_remote_blobs__
 
     def LaunchJob(self, job_instance):
