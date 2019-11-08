@@ -40,6 +40,7 @@ void GenerateBackwardOpConf(
     sigmoid_cross_entropy_grad_op_conf->set_label(GenLogicalBlobName(op.BnInOp2Lbi("label")));
     sigmoid_cross_entropy_grad_op_conf->set_prediction(
         GenLogicalBlobName(op.BnInOp2Lbi("prediction")));
+    sigmoid_cross_entropy_grad_op_conf->set_loss_diff(GenLogicalBlobName(*DiffLbi4BnInOp("loss")));
     sigmoid_cross_entropy_grad_op_conf->set_prediction_diff("prediction_diff");
     sigmoid_cross_entropy_grad_op_conf->set_label_type(
         op.op_conf().sigmoid_cross_entropy_conf().label_type());
