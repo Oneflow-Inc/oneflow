@@ -6,9 +6,9 @@ namespace oneflow {
 namespace xrt {
 namespace mola {
 
-class MatMulOp : public OpKernel {
+class MatMulOp : public XlaOpKernel {
  public:
-  void Compile(OpKernelContext *ctx) override {
+  void Compile(XlaOpContext *ctx) override {
     Shape a_shape = ctx->InputShape("a");
     Shape b_shape = ctx->InputShape("b");
     CHECK_GE(a_shape.NumAxes(), 2);

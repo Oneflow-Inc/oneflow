@@ -10,9 +10,9 @@ namespace oneflow {
 namespace xrt {
 namespace mola {
 
-class LayerNormOp : public OpKernel {
+class LayerNormOp : public XlaOpKernel {
  public:
-  void Compile(OpKernelContext *ctx) override;
+  void Compile(XlaOpContext *ctx) override;
 
  private:
   xla::XlaOp BatchNormTraining(const xla::XlaOp &input, const xla::XlaOp &scale,
@@ -23,7 +23,7 @@ class LayerNormOp : public OpKernel {
   }
 };
 
-void LayerNormOp::Compile(OpKernelContext *ctx) {
+void LayerNormOp::Compile(XlaOpContext *ctx) {
   DataType data_type = ctx->InputType("in");
   // input layout [N, C, H, W]
   Shape input_shape = ctx->InputShape("in");
@@ -77,9 +77,9 @@ void LayerNormOp::Compile(OpKernelContext *ctx) {
   ctx->SetOutput("out", Reshape(output, input_shape));
 }
 
-class LayerNormGradOp : public OpKernel {
+class LayerNormGradOp : public XlaOpKernel {
  public:
-  void Compile(OpKernelContext *ctx) override;
+  void Compile(XlaOpContext *ctx) override;
 
  private:
   xla::XlaOp BatchNormGrad(const xla::XlaOp &activations,
@@ -93,7 +93,7 @@ class LayerNormGradOp : public OpKernel {
   }
 };
 
-void LayerNormGradOp::Compile(OpKernelContext *ctx) {
+void LayerNormGradOp::Compile(XlaOpContext *ctx) {
   xla::XlaOp output_grad = ctx->Input("dy");
   xla::XlaOp activation = ctx->Input("x");
   xla::XlaOp mean = ctx->Input("mean");
@@ -126,12 +126,12 @@ void LayerNormGradOp::Compile(OpKernelContext *ctx) {
   ctx->SetOutput("dx", Reshape(activation_grad, activation_shape));
 }
 
-class LayerNormParamGradOp : public OpKernel {
+class LayerNormParamGradOp : public XlaOpKernel {
  public:
-  void Compile(OpKernelContext *ctx) override;
+  void Compile(XlaOpContext *ctx) override;
 };
 
-void LayerNormParamGradOp::Compile(OpKernelContext *ctx) {
+void LayerNormParamGradOp::Compile(XlaOpContext *ctx) {
   xla::XlaOp output_grad = ctx->Input("dy");
   Shape output_shape = ctx->InputShape("dy");
 

@@ -5,19 +5,19 @@ namespace oneflow {
 namespace xrt {
 namespace tensorrt {
 
-class FullyConnectedOp : public OpKernel {
+class FullyConnectedOp : public TrtOpKernel {
  public:
-  void Compile(OpKernelContext *ctx) override {
+  void Compile(TrtOpContext *ctx) override {
     nvinfer1::ITensor *in = ctx->Input("in");
     // Transpose weight
-    nvinfer1::Weights *weight = ctx->Weight("weight");
+    nvinfer1::Weights weight = ctx->Weight("weight");
 
-    nvinfer1::Weights *bias = nullptr;
+    nvinfer1::Weights bias;
     if (ctx->GetAttr<bool>("use_bias")) {
       bias = ctx->Weight("bias");
     }
 
-    auto *layer = ctx->addFullyConnected(in, 1, weight, bias);
+    auto *layer = ctx->addFullyConnected(*in, 1, weight, bias);
     ctx->SetOutput("out", layer->getOutput(0));
   }
 };

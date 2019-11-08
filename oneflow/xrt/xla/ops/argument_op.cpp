@@ -6,9 +6,9 @@ namespace oneflow {
 namespace xrt {
 namespace mola {
 
-class ArgumentOp : public OpKernel {
+class ArgumentOp : public XlaOpKernel {
  public:
-  void Compile(OpKernelContext *ctx) override {
+  void Compile(XlaOpContext *ctx) override {
     // xla::XlaOp value = ctx->Variable("value");
     // ctx->SetOutput("value", value);
   }

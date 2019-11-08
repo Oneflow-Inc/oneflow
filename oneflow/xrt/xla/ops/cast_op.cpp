@@ -8,9 +8,9 @@ namespace oneflow {
 namespace xrt {
 namespace mola {
 
-class CastOp : public OpKernel {
+class CastOp : public XlaOpKernel {
  public:
-  void Compile(OpKernelContext *ctx) override {
+  void Compile(XlaOpContext *ctx) override {
     DataType dest_dtype = ctx->GetAttr<DataType>("data_type");
     DataType src_dtype = ctx->InputType("in");
     xla::XlaOp in = ctx->Input("in");

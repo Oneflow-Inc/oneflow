@@ -1,6 +1,7 @@
 #ifndef ONEFLOW_XRT_XLA_OPS_OP_KERNEL_H_
 #define ONEFLOW_XRT_XLA_OPS_OP_KERNEL_H_
 
+#include "oneflow/xrt/kernel/op_kernel.h"
 #include "oneflow/xrt/types.h"
 #include "oneflow/xrt/utility/registry.h"
 #include "oneflow/xrt/utility/stl.h"
@@ -11,86 +12,28 @@ namespace oneflow {
 namespace xrt {
 namespace mola {
 
-class OpKernel {
+class XlaOpKernel : public OpKernel<XlaOpContext> {
  public:
-  virtual void Compile(OpKernelContext *ctx) = 0;
+  virtual void Compile(XlaOpContext *ctx) = 0;
 
-  OpKernel() = default;
-  virtual ~OpKernel() = default;
+  XlaOpKernel() = default;
+  virtual ~XlaOpKernel() = default;
 };
 
-template <typename KernelType>
-class OpKernelRegistrar {
- private:
-  std::function<OpKernel *()> factory_;
-  std::vector<XrtDevice> device_{CPU_X86, GPU_CUDA};
-  XrtEngine engine_field_;
+using XlaOpKernelPtr = std::shared_ptr<OpKernel<XlaOpContext> >;
 
-  std::string op_name_;
-  util::Map<std::string, Any> attributes_;
+#define REGISTER_XLA_OP_KERNEL(OpName, KernelType)                  \
+  static OpKernelRegistrar<XlaOpContext> _xla_op_kernel_##OpName##_ \
+      __attribute__((unused)) =                                     \
+          OpKernelRegistrar<XlaOpContext>(#OpName)                  \
+              .SetField(XrtEngine::XLA)                             \
+              .SetFactory(                                          \
+                  []() -> OpKernel<XlaOpContext> * { return new KernelType; })
 
- public:
-  explicit OpKernelRegistrar(const std::string &name) : op_name_(name) {}
-
-  virtual ~OpKernelRegistrar() = default;
-
-  OpKernelRegistrar<KernelType> &SetFactory(decltype(factory_) factory) {
-    factory_ = factory;
-    return *this;
-  }
-
-  OpKernelRegistrar<KernelType> &SetField(const XrtEngine &field) {
-    engine_field_ = field;
-    return *this;
-  }
-
-  OpKernelRegistrar<KernelType> &SetDevice(
-      const std::vector<XrtDevice> &device) {
-    device_ = device;
-    return *this;
-  }
-
-  OpKernelRegistrar<KernelType> &SetMutableVariables(
-      const util::Set<std::string> &variables) {
-    attributes_["MutableVars"] = variables;
-    return *this;
-  }
-
-  OpKernelRegistrar<KernelType> &Finalize() {
-    Factory()->Register(op_name_, factory_, attributes_);
-    for (const auto &device : device_) {
-      XrtField field = MakeXrtField(device, engine_field_);
-      FactoryManager()->Insert(field, Factory());
-    }
-    return *this;
-  }
-
-  auto Factory() -> util::Registry<std::string, decltype(factory_)> * {
-    return util::Registry<std::string, decltype(factory_)>::Global();
-  }
-
-  auto FactoryManager() -> util::RegistryManager<XrtField> * {
-    return util::RegistryManager<XrtField>::Global();
-  }
-};
-
-#define REGISTER_XLA_OP_KERNEL(OpName, KernelType)                \
-  static OpKernelRegistrar<KernelType> _xla_op_kernel_##OpName##_ \
-      __attribute__((unused)) =                                   \
-          OpKernelRegistrar<KernelType>(#OpName)                  \
-              .SetField(XrtEngine::XLA)                           \
-              .SetFactory([]() -> OpKernel * { return new KernelType; })
-
-struct OpKernelBuilder {
-  OpKernel *operator()(const std::string &op_name) {
-    return util::Registry<std::string, std::function<OpKernel *()>>::Global()
-        ->Lookup(op_name)();
-  }
-};
-
-inline std::shared_ptr<OpKernel> BuildOpKernel(const XrtDevice &device,
-                                               const std::string &op_name) {
-  return std::shared_ptr<OpKernel>(OpKernelBuilder()(op_name));
+inline XlaOpKernelPtr BuildOpKernel(const XrtDevice &device,
+                                    const std::string &op_name) {
+  XrtField field = MakeXrtField(device, XrtEngine::XLA);
+  return XlaOpKernelPtr(OpKernelBuilder<XlaOpContext>()(field, op_name));
 }
 
 }  // namespace mola

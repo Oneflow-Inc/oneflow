@@ -85,6 +85,8 @@ class GraphCompiler {
     return impl_->Compile(graph, entry_params, return_params, aliases);
   }
 
+  const XrtEngine &engine() const { return engine_; }
+
  private:
   GraphCompiler() = delete;
 

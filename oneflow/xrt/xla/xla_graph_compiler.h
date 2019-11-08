@@ -34,7 +34,7 @@ class XlaGraphCompiler : public GraphCompiler::Impl {
       const xla::XlaComputation &computation);
 
   void SetupKernelContextParam(const XrtNode *node,
-                               OpKernelContext::Param *context_param);
+                               XlaOpContext::Param *context_param);
 
   void BuildComputation(const XrtGraph *graph,
                         const std::vector<Argument> &return_args,

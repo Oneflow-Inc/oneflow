@@ -6,9 +6,9 @@ namespace oneflow {
 namespace xrt {
 namespace mola {
 
-class BiasAddOp : public OpKernel {
+class BiasAddOp : public XlaOpKernel {
  public:
-  void Compile(OpKernelContext *ctx) override {
+  void Compile(XlaOpContext *ctx) override {
     Shape in_shape = ctx->InputShape("a");
     Shape bias_shape = ctx->InputShape("b");
     CHECK_GE(in_shape.NumAxes(), 2);

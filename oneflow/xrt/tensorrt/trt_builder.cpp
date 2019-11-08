@@ -14,16 +14,16 @@ TrtBuilder::TrtBuilder(const std::string &name)
 
 nvinfer1::ITensor *TrtBuilder::GetTensor(int64_t handle) {
   const TrtValueKind &kind = ValueKind(handle);
-  CHECK(IsUndef(kind) || IsTensor(kind))
+  CHECK(IsUndefKind(kind) || IsTensorKind(kind))
       << "Value should be undefined or tensor for handle " << handle;
   nvinfer1::ITensor *tensor = nullptr;
-  if (IsUndef(kind)) {
+  if (IsUndefKind(kind)) {
     CheckHasParameter(handle);
     const Parameter &param = params_.at(handle);
     // Convert data type and shape.
     TrtShape shape(param.shape(), param.data_type());
-    tensor = network_->addInput(param.name(), shape().data_type(),
-                                shape.shape());
+    tensor =
+        network_->addInput(param.name(), shape().data_type(), shape.shape());
     tensors_[handle] = tensor;
     value_kinds_[handle] = TrtValueKind::kTensor;
   }
@@ -32,9 +32,9 @@ nvinfer1::ITensor *TrtBuilder::GetTensor(int64_t handle) {
 
 nvinfer1::Weights &TrtBuilder::GetWeight(int64_t handle) {
   const TrtValueKind &kind = ValueKind(handle);
-  CHECK(IsUndef(kind) || IsWeight(kind))
+  CHECK(IsUndefKind(kind) || IsWeightKind(kind))
       << "Value should be undefined or weight for handle " << handle;
-  if (IsUndef(kind)) {
+  if (IsUndefKind(kind)) {
     CheckHasParameter(handle);
     const Parameter &param = params_.at(handle);
     // Convert data type and shape.
@@ -69,6 +69,15 @@ int64_t TrtBuilder::AddWeight(nvinfer1::Weights &weight) {
   weights_[handle] = weight;
   value_kinds_[handle] = TrtValueKind::kWeight;
   return handle;
+}
+
+bool TrtBuilder::MarkOutput(int64_t handle) {
+  nvinfer1::ITensor *output = GetTensor(handle);
+  builder_->MarkOutput(*output);
+}
+
+nvinfer1::ICudaEngine *TrtBuilder::buildCudaEngine() {
+  return builder_->buildCudaEngine();
 }
 
 }  // namespace tensorrt

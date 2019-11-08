@@ -1,5 +1,6 @@
 #include "oneflow/xrt/node_util.h"
 #include "oneflow/xrt/types.h"
+#include "oneflow/xrt/utility/message_attr.h"
 #include "oneflow/xrt/utility/registry.h"
 
 namespace oneflow {
@@ -15,10 +16,9 @@ const PbMessage *OpMessage(const XrtNode *node) {
   return message;
 }
 
-bool IsNodeCompiled(const XrtNode *node,
-                    const XrtEngine &engine = XrtEngine::XLA) {
+bool IsNodeCompiled(const XrtNode *node, const XrtEngine &engine) {
   auto field = MakeXrtField(node->device(), engine);
-  auto *rm = util::RegistryManager<decltype(field)>::Global();
+  auto *rm = util::RegistryManager<XrtField>::Global();
   return rm->Get(field)->IsRegistered(node->type());
 }
 

@@ -10,9 +10,9 @@ namespace oneflow {
 namespace xrt {
 namespace mola {
 
-class TanhGradOp : public OpKernel {
+class TanhGradOp : public XlaOpKernel {
  public:
-  void Compile(OpKernelContext *ctx) override {
+  void Compile(XlaOpContext *ctx) override {
     xla::XlaOp y = ctx->Input("y");
     xla::XlaOp dy = ctx->Input("dy");
     xla::XlaOp one = xla::ScalarLike(y, 1.f);
@@ -23,9 +23,9 @@ class TanhGradOp : public OpKernel {
 };
 REGISTER_XLA_OP_KERNEL(TanhGrad, TanhGradOp).Finalize();
 
-class GeluGradOp : public OpKernel {
+class GeluGradOp : public XlaOpKernel {
  public:
-  void Compile(OpKernelContext *ctx) override {
+  void Compile(XlaOpContext *ctx) override {
     xla::XlaOp x = ctx->Input("x");
     xla::XlaOp dy = ctx->Input("dy");
     xla::XlaOp dot_5 = xla::ScalarLike(x, 0.5f);

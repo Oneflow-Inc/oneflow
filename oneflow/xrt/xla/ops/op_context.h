@@ -5,10 +5,11 @@
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/common/shape.h"
 #include "oneflow/xrt/argument.h"
+#include "oneflow/xrt/kernel/op_context.h"
 #include "oneflow/xrt/types.h"
-#include "oneflow/xrt/utility/message_attr.h"
 #include "oneflow/xrt/utility/stl.h"
 #include "oneflow/xrt/xrt.pb.h"
+
 #include "tensorflow/compiler/xla/client/xla_builder.h"
 #include "tensorflow/compiler/xla/shape.h"
 
@@ -27,7 +28,7 @@ class XlaValue {
   // Return the XlaOp handle if the builder is matched with the handle.
   xla::XlaOp AsXlaOp(xla::XlaBuilder *builder) const;
 
-  friend class OpKernelContext;
+  friend class XlaOpContext;
 
  private:
   bool initialized_;
@@ -38,7 +39,7 @@ class XlaValue {
   xla::Shape shape_;
 };
 
-class OpKernelContext {
+class XlaOpContext : public OpContext {
  public:
   struct Param {
     // XlaBuilder to compile the XlaComputation
@@ -54,9 +55,10 @@ class OpKernelContext {
     util::Map<std::string, Argument> arguments;
   };
 
-  explicit OpKernelContext(const Param &param) : param_(param) {}
+  explicit XlaOpContext(const Param &param)
+      : OpContext(*param.message), param_(param) {}
 
-  virtual ~OpKernelContext() = default;
+  virtual ~XlaOpContext() = default;
 
   const XrtDevice &device() const { return param_.device; }
   // Return XlaBuilder
@@ -93,30 +95,8 @@ class OpKernelContext {
 
   const Param &param() const { return param_; }
 
-  template <typename T>
-  T GetAttr(const std::string &attr_name) const {
-    T value;
-    util::GetAttr<T>(*param_.message, attr_name, &value);
-    return std::move(value);
-  }
-
-  template <typename T>
-  void SetAttr(const std::string &attr_name, const T &value) {
-    util::SetAttr<T>(const_cast<PbMessage *>(param_.message), attr_name, value);
-  }
-
-  bool HasAttr(const std::string &attr_name) const {
-    return util::HasAttr(*param_.message, attr_name);
-  }
-
-  std::string GetOneofType(const std::string &oneof_name) const {
-    std::string oneof_type;
-    util::GetOneofType(*param_.message, oneof_name, &oneof_type);
-    return std::move(oneof_type);
-  }
-
  private:
-  OpKernelContext() = delete;
+  XlaOpContext() = delete;
   Argument ArgumentFromKey(const std::string &key) const;
 
   Param param_;

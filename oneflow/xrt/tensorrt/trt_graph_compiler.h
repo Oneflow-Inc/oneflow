@@ -27,8 +27,11 @@ class TrtGraphCompiler : public GraphCompiler::Impl {
       const std::vector<InputOutputAlias> &aliases) override;
 
  private:
-  void SetupKernelContextParam(
-      const XrtNode *node, OpKernelContext::Param *context_param);
+  void SetupKernelContextParam(const XrtNode *node,
+                               TrtOpContext::Param *context_param);
+
+  void PopulateEntryParams(const std::vector<Parameter> &entry_params);
+  void PopulateReturnParams(const std::vector<Parameter> &return_params);
 
  private:
   std::shared_ptr<TrtBuilder> builder_;

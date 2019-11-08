@@ -22,8 +22,7 @@ inline nvinfer1::DataType DataTypeToTrtDataType(const DataType &data_type) {
     case oneflow::kFloat16:
       return nvinfer1::kHALF;
     default: {
-      LOG(FATAL) << "Unsupported data type " << data_type
-                 << " for TensorRT.";
+      LOG(FATAL) << "Unsupported data type " << data_type << " for TensorRT.";
       return nvinfer1::kFLOAT;
     }
   }

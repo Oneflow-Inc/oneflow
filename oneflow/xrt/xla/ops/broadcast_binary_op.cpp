@@ -10,9 +10,9 @@ namespace xrt {
 namespace mola {
 
 template <typename BinaryOp>
-class BcastBinaryOp : public OpKernel {
+class BcastBinaryOp : public XlaOpKernel {
  public:
-  void Compile(OpKernelContext *ctx) override {
+  void Compile(XlaOpContext *ctx) override {
     Shape shape_a = ctx->InputShape("a");
     Shape shape_b = ctx->InputShape("b");
 

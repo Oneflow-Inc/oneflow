@@ -31,7 +31,7 @@ Argument XlaGraphCompiler::ArgFromParameter(const Parameter &param) {
 }
 
 void XlaGraphCompiler::SetupKernelContextParam(
-    const XrtNode *node, OpKernelContext::Param *context_param) {
+    const XrtNode *node, XlaOpContext::Param *context_param) {
   util::Map<Argument, XlaValue> input_ops;
   util::Map<std::string /* produce/consume key */, Argument> input_output_args;
   for (const XrtEdge *edge : node->in_edges()) {
@@ -68,10 +68,10 @@ void XlaGraphCompiler::BuildComputation(
   // Compile each node as topology order.
   algorithm::TopologyVisit(*graph, [&](const XrtNode *node) {
     SetOpMetadata(node->type(), node->name());
-    // Setup param to build an OpKernelContext.
-    OpKernelContext::Param param;
+    // Setup param to build an XlaOpContext.
+    XlaOpContext::Param param;
     SetupKernelContextParam(node, &param);
-    OpKernelContext op_context(param);
+    XlaOpContext op_context(param);
     // Do compile, lower the operator computation to HLO instructions.
     auto op_kernel = BuildOpKernel(node->device(), node->type());
     op_kernel->Compile(&op_context);

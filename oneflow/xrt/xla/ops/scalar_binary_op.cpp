@@ -10,16 +10,16 @@ namespace xrt {
 namespace mola {
 
 template <typename BinaryOp>
-class ScalarBinaryOp : public OpKernel {
+class ScalarBinaryOp : public XlaOpKernel {
  public:
-  void Compile(OpKernelContext *ctx) override {
+  void Compile(XlaOpContext *ctx) override {
     xla::XlaOp scalar = Scalar(ctx);
     xla::XlaOp in = ctx->Input("in");
 
     ctx->SetOutput("out", BinaryOp()(in, scalar));
   }
 
-  xla::XlaOp Scalar(OpKernelContext *ctx) const {
+  xla::XlaOp Scalar(XlaOpContext *ctx) const {
     xla::XlaBuilder *builder = ctx->builder();
     DataType data_type = ctx->InputType("in");
     std::string type = ctx->GetOneofType("scalar_operand");

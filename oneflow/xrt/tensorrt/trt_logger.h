@@ -11,7 +11,7 @@ namespace nv {
 
 class Logger : public nvinfer1::ILogger {
  public:
-  Logger(const std::string &name) : name_(name) {}
+  Logger(const std::string& name) : name_(name) {}
 
   void log(nvinfer1::ILogger::Severity severity, const char* msg) override;
 

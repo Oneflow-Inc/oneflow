@@ -90,6 +90,38 @@ inline void GetOneofMessage(const PbMessage &message,
       const_cast<oneflow::PbMessage *>(&(r->GetMessage(message, fd))));
 }
 
+class MessageAttr {
+ public:
+  explicit MessageAttr(const PbMessage &message) : message_(message) {}
+
+  const PbMessage &message() const { return message_; }
+
+  template <typename T>
+  T GetAttr(const std::string &attr_name) const {
+    T value;
+    util::GetAttr<T>(message_, attr_name, &value);
+    return std::move(value);
+  }
+
+  template <typename T>
+  void SetAttr(const std::string &attr_name, const T &value) {
+    util::SetAttr<T>(const_cast<PbMessage *>(&message_), attr_name, value);
+  }
+
+  bool HasAttr(const std::string &attr_name) const {
+    return util::HasAttr(message_, attr_name);
+  }
+
+  std::string GetOneofType(const std::string &oneof_name) const {
+    std::string oneof_type;
+    util::GetOneofType(message_, oneof_name, &oneof_type);
+    return std::move(oneof_type);
+  }
+
+ private:
+  const PbMessage &message_;
+};
+
 }  // namespace util
 }  // namespace xrt
 }  // namespace oneflow

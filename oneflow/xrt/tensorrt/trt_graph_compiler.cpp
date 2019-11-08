@@ -1,12 +1,30 @@
-#include "oneflow/xrt/node_util.h"
 #include "oneflow/xrt/tensorrt/trt_graph_compiler.h"
+#include "oneflow/xrt/node_util.h"
 
 namespace oneflow {
 namespace xrt {
 namespace tensorrt {
 
+void TrtGraphCompiler::PopulateEntryParams(
+    const std::vector<Parameter> &entry_params) {
+  for (const Parameter &param : entry_params) {
+    Argument arg = ArgFromParameter(param);
+    TrtValue value = TrtValue::BuildParameter(builder_, param);
+    operands_[arg] = std::move(value);
+  }
+}
+
+void TrtGraphCompiler::PopulateReturnParams(
+    const std::vector<Parameter> &return_params) {
+  for (const Parameter &param : return_params) {
+    Argument arg = ArgFromParameter(param);
+    TrtValue value = TrtValue::BuildParameter(builder_, param);
+    operands_[arg] = std::move(value);
+  }
+}
+
 void TrtGraphCompiler::SetupKernelContextParam(
-    const XrtNode *node, OpKernelContext::Param *context_param) {
+    const XrtNode *node, TrtOpContext::Param *context_param) {
   util::Map<Argument, TrtValue> input_ops;
   util::Map<std::string /* produce/consume key */, Argument> input_output_args;
   for (const XrtEdge *edge : node->in_edges()) {
@@ -37,13 +55,17 @@ void TrtGraphCompiler::SetupKernelContextParam(
 }
 
 std::shared_ptr<Executable> TrtGraphCompiler::Compile(
-      const XrtGraph *graph, const std::vector<Parameter> &entry_params,
-      const std::vector<Parameter> &return_params,
-      const std::vector<InputOutputAlias> &aliases) {
+    const XrtGraph *graph, const std::vector<Parameter> &entry_params,
+    const std::vector<Parameter> &return_params,
+    const std::vector<InputOutputAlias> &aliases) {
+  // Build entry and return trt values.
+  PopulateEntryParams(entry_params);
+  PopulateReturnParams(return_params);
+
   algorithm::TopologyVisit(*graph, [&](const XrtNode *node) {
-    OpKernelContext::Param param;
+    TrtOpContext::Param param;
     SetupKernelContextParam(node, &param);
-    OpKernelContext context(param);
+    TrtOpContext context(param);
     // Do compile
     auto op_kernel = BuildOpKernel(node->type());
     op_kernel->Compile(&context);
@@ -53,6 +75,12 @@ std::shared_ptr<Executable> TrtGraphCompiler::Compile(
     for (auto it = outputs.begin(); it != outputs.end(); ++it) {
       operands_[it->first] = it->second;
     }
+  }
+
+  for (int i = 0; i < return_params.size(); ++i) {
+    Argument arg = ArgFromParameter(return_params[i]);
+    const TrtValue &value = operands_.at(arg);
+    builder_->MarkOutput(value.handle());
   }
 
   return std::make_shared<TrtExecutable>(builder_->buildCudaEngine());

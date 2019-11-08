@@ -17,15 +17,15 @@ class enum TrtValueKind : int {
   kWeight = 2,
 };
 
-inline bool IsUndef(const TrtValueKind &kind) {
+inline bool IsUndefKind(const TrtValueKind &kind) {
   return kind == TrtValueKind::kUndef;
 }
 
-inline bool IsTensor(const TrtValueKind &kind) {
+inline bool IsTensorKind(const TrtValueKind &kind) {
   return kind == TrtValueKind::kTensor;
 }
 
-inline bool IsWeight(const TrtValueKind &kind) {
+inline bool IsWeightKind(const TrtValueKind &kind) {
   return kind == TrtValueKind::kWeight;
 }
 
@@ -55,6 +55,10 @@ class TrtBuilder {
 
   // Returns handle for the added weight.
   int64_t AddWeight(nvinfer1::Weights &weight);
+
+  bool MarkOutput(int64_t handle);
+
+  nvinfer1::ICudaEngine *buildCudaEngine();
 
  private:
   void CheckHasParameter(int64_t handle) const {
