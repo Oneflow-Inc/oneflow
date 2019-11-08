@@ -121,9 +121,9 @@ xla::XlaOp GenericGatherGrad(
                       dim_numbers);
 }
 
-class GatherOp : public OpKernel {
+class GatherOp : public XlaOpKernel {
  public:
-  void Compile(OpKernelContext *ctx) override {
+  void Compile(XlaOpContext *ctx) override {
     Shape input_shape = ctx->InputShape("in");
     Shape indices_shape = ctx->InputShape("indices");
     CHECK_GT(input_shape.NumAxes(), 0);
@@ -144,19 +144,19 @@ class GatherOp : public OpKernel {
     ctx->SetOutput("out", output);
   }
 
-  virtual int GatherAxis(OpKernelContext *ctx) const {
+  virtual int GatherAxis(XlaOpContext *ctx) const {
     return ctx->GetAttr<int64_t>("axis");
   }
-  virtual int GatherBatchDims(OpKernelContext *ctx) const { return 0; }
+  virtual int GatherBatchDims(XlaOpContext *ctx) const { return 0; }
 };
 
 class BatchGatherOp : public GatherOp {
  public:
-  int GatherAxis(OpKernelContext *ctx) const override {
+  int GatherAxis(XlaOpContext *ctx) const override {
     Shape indices_shape = ctx->InputShape("indices");
     return indices_shape.NumAxes() - 1;
   }
-  int GatherBatchDims(OpKernelContext *ctx) const override {
+  int GatherBatchDims(XlaOpContext *ctx) const override {
     Shape indices_shape = ctx->InputShape("indices");
     return indices_shape.NumAxes() - 1;
   }
@@ -165,9 +165,9 @@ class BatchGatherOp : public GatherOp {
 REGISTER_XLA_OP_KERNEL(Gather, GatherOp).Finalize();
 REGISTER_XLA_OP_KERNEL(BatchGather, BatchGatherOp).Finalize();
 
-class GatherGradOp : public OpKernel {
+class GatherGradOp : public XlaOpKernel {
  public:
-  void Compile(OpKernelContext *ctx) override {
+  void Compile(XlaOpContext *ctx) override {
     xla::XlaBuilder *builder = ctx->builder();
     xla::XlaOp updates = ctx->Input("out_diff");
     xla::XlaOp indices = ctx->Input("indices");
@@ -204,9 +204,9 @@ class GatherGradOp : public OpKernel {
 
 REGISTER_XLA_OP_KERNEL(GatherGrad, GatherGradOp).Finalize();
 
-class UnsortedSegmentSumOp : public OpKernel {
+class UnsortedSegmentSumOp : public XlaOpKernel {
  public:
-  void Compile(OpKernelContext *ctx) override {
+  void Compile(XlaOpContext *ctx) override {
     xla::XlaOp segment_ids = ctx->Input("segment_ids");
     xla::XlaOp data = ctx->Input("segment_ids");
     Shape data_shape = ctx->InputShape("data");
@@ -241,11 +241,11 @@ class UnsortedSegmentSumOp : public OpKernel {
                                             combiner, builder));
   }
 
-  virtual int Axis(OpKernelContext *ctx) const {
+  virtual int Axis(XlaOpContext *ctx) const {
     return ctx->GetAttr<int64_t>("axis");
   }
 
-  virtual std::vector<int64_t> InitBufferDimVec(OpKernelContext *ctx) const {
+  virtual std::vector<int64_t> InitBufferDimVec(XlaOpContext *ctx) const {
     std::vector<int64_t> buffer_dim_vec;
     const std::vector<int64_t> data_dim_vec = ctx->InputShape("data").dim_vec();
     for (int i = 0; i < ctx->GetAttr<int64_t>("axis"); ++i) {
@@ -257,9 +257,9 @@ class UnsortedSegmentSumOp : public OpKernel {
 
 class UnsortedBatchSegmentSumOp : public UnsortedSegmentSumOp {
  public:
-  int Axis(OpKernelContext *ctx) const override { return 0; }
+  int Axis(XlaOpContext *ctx) const override { return 0; }
 
-  std::vector<int64_t> InitBufferDimVec(OpKernelContext *ctx) const override {
+  std::vector<int64_t> InitBufferDimVec(XlaOpContext *ctx) const override {
     return {ctx->InputShape("segment_ids").At(0)};
   }
 };

@@ -83,8 +83,6 @@ class XrtNode : public util::AttributeMap {
   bool IsOutArgumentNode() const;
   bool IsReachable(const XrtNode &dst_node) const;
 
-  bool IsCompiled(const XrtEngine &engine = XrtEngine::XLA) const;
-
   friend class XrtGraph;
 
  protected:
@@ -123,9 +121,6 @@ struct NodeTypeTrait<const XrtNode> {
   typedef const XrtEdge *pEdgeType;
 };
 }  // namespace algorithm
-
-bool IsNodeInput(const XrtNode *node, const Argument &argument);
-bool IsNodeOutput(const XrtNode *node, const Argument &argument);
 
 }  // namespace xrt
 }  // namespace oneflow

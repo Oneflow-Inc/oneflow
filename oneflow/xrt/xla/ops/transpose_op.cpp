@@ -6,9 +6,9 @@ namespace oneflow {
 namespace xrt {
 namespace mola {
 
-class TransposeOp : public OpKernel {
+class TransposeOp : public XlaOpKernel {
  public:
-  void Compile(OpKernelContext *ctx) override {
+  void Compile(XlaOpContext *ctx) override {
     auto perm = ctx->GetAttr<std::vector<int32_t>>("perm");
     Shape x_shape = ctx->InputShape("in");
     CHECK_EQ(perm.size(), x_shape.NumAxes());

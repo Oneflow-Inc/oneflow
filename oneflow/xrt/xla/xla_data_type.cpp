@@ -23,10 +23,13 @@ xla::PrimitiveType DataTypeToPrimitiveType(DataType data_type) {
     case oneflow::kChar:
     case oneflow::kUInt8:
       return xla::U8;
-    default:
+    case oneflow::kFloat16:
+      return xla::F16;
+    default: {
       LOG(FATAL) << "Unsupported data type (" << data_type
                  << ") in DataTypeToPrimitiveType";
       return xla::PRIMITIVE_TYPE_INVALID;
+    }
   }
 }
 

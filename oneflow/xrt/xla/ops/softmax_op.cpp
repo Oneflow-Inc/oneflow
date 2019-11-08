@@ -8,12 +8,12 @@ namespace oneflow {
 namespace xrt {
 namespace mola {
 
-class SoftmaxOp : public OpKernel {
+class SoftmaxOp : public XlaOpKernel {
  public:
-  void Compile(OpKernelContext *ctx) override;
+  void Compile(XlaOpContext *ctx) override;
 };
 
-void SoftmaxOp::Compile(OpKernelContext *ctx) {
+void SoftmaxOp::Compile(XlaOpContext *ctx) {
   xla::XlaBuilder *builder = ctx->builder();
   Shape input_shape = ctx->InputShape("in");
   std::vector<long long> batch_dims(input_shape.NumAxes() - 1);
@@ -37,14 +37,14 @@ void SoftmaxOp::Compile(OpKernelContext *ctx) {
 
 REGISTER_XLA_OP_KERNEL(Softmax, SoftmaxOp).Finalize();
 
-class SoftmaxGradOp : public OpKernel {
+class SoftmaxGradOp : public XlaOpKernel {
  public:
-  void Compile(OpKernelContext *ctx) override;
+  void Compile(XlaOpContext *ctx) override;
 };
 
 // softmax gradient formula:
 // dx = y * (dy - sum(dy * y))
-void SoftmaxGradOp::Compile(OpKernelContext *ctx) {
+void SoftmaxGradOp::Compile(XlaOpContext *ctx) {
   Shape y_shape = ctx->InputShape("y");
   std::vector<long long> batch_dims(y_shape.NumAxes() - 1);
   std::iota(batch_dims.begin(), batch_dims.end(), 0);

@@ -14,7 +14,12 @@ namespace mola {
 
 class XlaGraphCompiler : public GraphCompiler::Impl {
  public:
-  XlaGraphCompiler() = default;
+  explicit XlaGraphCompiler(const std::string &name)
+      : GraphCompiler::Impl(name) {
+    builder_ = std::make_unique<xla::XlaBuilder>(name);
+    CHECK(builder_) << "Creating xla builder failed.";
+  }
+
   virtual ~XlaGraphCompiler() = default;
 
   std::shared_ptr<Executable> Compile(
@@ -23,9 +28,13 @@ class XlaGraphCompiler : public GraphCompiler::Impl {
       const std::vector<InputOutputAlias> &aliases) override;
 
  private:
-  void SetupContextParam(const XrtNode *node,
-                         const util::Map<Argument, Operand> &all_outputs,
-                         OpKernelContext::Param *context_param);
+  std::shared_ptr<Executable> BuildExecutable(
+      const std::vector<xla::Shape> &xla_input_shapes,
+      const xla::Shape &xla_output_shape,
+      const xla::XlaComputation &computation);
+
+  void SetupKernelContextParam(const XrtNode *node,
+                               XlaOpContext::Param *context_param);
 
   void BuildComputation(const XrtGraph *graph,
                         const std::vector<Argument> &return_args,
@@ -35,21 +44,19 @@ class XlaGraphCompiler : public GraphCompiler::Impl {
   void BuildEntryParameters(const std::vector<Parameter> &entry_params,
                             std::vector<xla::Shape> *input_shapes);
 
-  std::shared_ptr<Executable> BuildExecutable(
-      const std::vector<xla::Shape> &xla_input_shapes,
-      const xla::Shape &xla_output_shape,
-      const xla::XlaComputation &computation);
+  void SetOpMetadata(const std::string &op_type, const std::string &op_name);
+
+  void ClearOpMetadata();
 
   Argument ArgFromParameter(const Parameter &param);
 
  private:
   bool use_meta_data_ = true;
 
-  std::shared_ptr<xla::XlaBuilder> builder_;
+  std::unique_ptr<xla::XlaBuilder> builder_;
 
-  util::Map<std::string, Argument> arguments_;
-
-  util::Map<Argument, Operand> entry_operands_;
+  util::Map<Argument, XlaValue> operands_;
+  util::Map<std::string /* argument name */, Argument> arguments_;
 };
 
 }  // namespace mola

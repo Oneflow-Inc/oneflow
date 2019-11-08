@@ -6,9 +6,9 @@ namespace oneflow {
 namespace xrt {
 namespace mola {
 
-class AddOp : public OpKernel {
+class AddOp : public XlaOpKernel {
  public:
-  void Compile(OpKernelContext *ctx) override {
+  void Compile(XlaOpContext *ctx) override {
     int num_inputs = ctx->num_inputs();
     CHECK_GT(num_inputs, 0);
     Shape shape = ctx->InputShape("in_0");

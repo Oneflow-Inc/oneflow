@@ -5,10 +5,11 @@
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/common/shape.h"
 #include "oneflow/xrt/argument.h"
+#include "oneflow/xrt/kernel/op_context.h"
 #include "oneflow/xrt/types.h"
-#include "oneflow/xrt/utility/message_attr.h"
 #include "oneflow/xrt/utility/stl.h"
 #include "oneflow/xrt/xrt.pb.h"
+
 #include "tensorflow/compiler/xla/client/xla_builder.h"
 #include "tensorflow/compiler/xla/shape.h"
 
@@ -16,29 +17,29 @@ namespace oneflow {
 namespace xrt {
 namespace mola {
 
-class Operand {
+class XlaValue {
  public:
-  Operand() : initialized_(false) {}
+  XlaValue() : initialized_(false) {}
   // Construct from Constant shape.
-  static Operand Constant(const xla::Shape shape);
+  static XlaValue Constant(const xla::Shape shape);
   // Construct from XlaOp handle.
-  static Operand XlaOp(const xla::XlaOp handle);
+  static XlaValue XlaOp(const xla::XlaOp handle);
 
   // Return the XlaOp handle if the builder is matched with the handle.
   xla::XlaOp AsXlaOp(xla::XlaBuilder *builder) const;
 
-  friend class OpKernelContext;
+  friend class XlaOpContext;
 
  private:
   bool initialized_;
-  // XlaOp handle should be initialized if the operand is
+  // XlaOp handle should be initialized if the value is
   // constructed from another XlaOp.
   xla::XlaOp handle_;
-  // Shape of the operand.
+  // Shape of the xla value.
   xla::Shape shape_;
 };
 
-class OpKernelContext {
+class XlaOpContext : public OpContext {
  public:
   struct Param {
     // XlaBuilder to compile the XlaComputation
@@ -47,16 +48,17 @@ class OpKernelContext {
     XrtDevice device;
     // Config proto related to the operator
     const PbMessage *message;
-    // Input oprands
-    util::Map<Argument, Operand> inputs;
+    // Input operands
+    util::Map<Argument, XlaValue> inputs;
     int num_outputs;
 
     util::Map<std::string, Argument> arguments;
   };
 
-  explicit OpKernelContext(const Param &param) : param_(param) {}
+  explicit XlaOpContext(const Param &param)
+      : OpContext(*param.message), param_(param) {}
 
-  virtual ~OpKernelContext() = default;
+  virtual ~XlaOpContext() = default;
 
   const XrtDevice &device() const { return param_.device; }
   // Return XlaBuilder
@@ -71,15 +73,15 @@ class OpKernelContext {
 
   int num_inputs() const { return param_.inputs.size(); }
   int num_outputs() const { return param_.num_outputs; }
-  // Return inputs as Operands
-  const util::Map<Argument, Operand> &inputs() const { return param_.inputs; }
-  // Return output as Operands
-  const util::Map<Argument, Operand> &outputs() const { return outputs_; }
+  // Return inputs as XlaValues
+  const util::Map<Argument, XlaValue> &inputs() const { return param_.inputs; }
+  // Return output as XlaValues
+  const util::Map<Argument, XlaValue> &outputs() const { return outputs_; }
 
   // Setup the output `output_name` with XlaOp
   void SetOutput(const std::string &name, const xla::XlaOp &handle);
-  // Setup the output `output_name` with Operand
-  void SetOutput(const std::string &name, const Operand &handle);
+  // Setup the output `output_name` with XlaValue
+  void SetOutput(const std::string &name, const XlaValue &handle);
 
   // Return input `name` shape as Shape
   Shape InputShape(const std::string &name) const;
@@ -93,35 +95,13 @@ class OpKernelContext {
 
   const Param &param() const { return param_; }
 
-  template <typename T>
-  T GetAttr(const std::string &attr_name) const {
-    T value;
-    util::GetAttr<T>(*param_.message, attr_name, &value);
-    return std::move(value);
-  }
-
-  template <typename T>
-  void SetAttr(const std::string &attr_name, const T &value) {
-    util::SetAttr<T>(const_cast<PbMessage *>(param_.message), attr_name, value);
-  }
-
-  bool HasAttr(const std::string &attr_name) const {
-    return util::HasAttr(*param_.message, attr_name);
-  }
-
-  std::string GetOneofType(const std::string &oneof_name) const {
-    std::string oneof_type;
-    util::GetOneofType(*param_.message, oneof_name, &oneof_type);
-    return std::move(oneof_type);
-  }
-
  private:
-  OpKernelContext() = delete;
+  XlaOpContext() = delete;
   Argument ArgumentFromKey(const std::string &key) const;
 
   Param param_;
-  // Output oprands
-  util::Map<Argument, Operand> outputs_;
+  // Output operands
+  util::Map<Argument, XlaValue> outputs_;
 };
 
 }  // namespace mola

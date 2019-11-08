@@ -10,12 +10,12 @@ namespace oneflow {
 namespace xrt {
 namespace mola {
 
-class ClipGradientOp : public OpKernel {
+class ClipGradientOp : public XlaOpKernel {
  public:
-  void Compile(OpKernelContext *ctx) override;
+  void Compile(XlaOpContext *ctx) override;
 };
 
-void ClipGradientOp::Compile(OpKernelContext *ctx) {
+void ClipGradientOp::Compile(XlaOpContext *ctx) {
   xla::XlaOp instance_num = ctx->Input("instance_num_diff");
   xla::XlaOp gradient = ctx->Input("gradient");
   Shape gradient_shape = ctx->InputShape("gradient");

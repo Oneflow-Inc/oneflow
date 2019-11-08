@@ -3,6 +3,7 @@
 
 #include "absl/strings/str_cat.h"
 #include "oneflow/xrt/graph/graph.h"
+#include "oneflow/xrt/node_util.h"
 #include "oneflow/xrt/utility/stl.h"
 
 namespace oneflow {
@@ -89,7 +90,7 @@ class ClusterNode {
   bool IsReachable(const ClusterNode &target);
   bool IsSatisfySbpPolicy() const;
   bool IsSourceNode() const { return in_edges_.empty(); }
-  virtual bool IsCompiled() const { return xrt_node_->IsCompiled(); }
+  virtual bool IsCompiled() const { return IsNodeCompiled(xrt_node_); }
 
   bool operator==(const ClusterNode &other) const { return id_ == other.id_; }
 

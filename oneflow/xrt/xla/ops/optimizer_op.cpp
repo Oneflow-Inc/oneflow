@@ -10,12 +10,12 @@ namespace oneflow {
 namespace xrt {
 namespace mola {
 
-class AdamOptimizerOp : public OpKernel {
+class AdamOptimizerOp : public XlaOpKernel {
  public:
-  void Compile(OpKernelContext *ctx) override;
+  void Compile(XlaOpContext *ctx) override;
 };
 
-void AdamOptimizerOp::Compile(OpKernelContext *ctx) {
+void AdamOptimizerOp::Compile(XlaOpContext *ctx) {
   xla::XlaOp instance_num = ctx->Input("instance_num_diff");
   xla::XlaOp learning_rate = ctx->Input("learning_rate");
   xla::XlaOp weight = ctx->Input("weight");

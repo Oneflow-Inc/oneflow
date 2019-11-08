@@ -9,6 +9,9 @@ namespace oneflow {
 namespace xrt {
 namespace util {
 
+template <typename Field, typename Key, typename Factory>
+class FieldRegistry;
+
 class RegistryBase {
  public:
   virtual bool IsRegistered(const Any &key) const = 0;
@@ -20,12 +23,12 @@ class RegistryBase {
   virtual ~RegistryBase() = default;
 };
 
-// Global map
-template <typename FactoryKey, typename Factory>
+// Global factory map
+template <typename Key, typename Factory>
 class Registry : public RegistryBase {
  public:
-  static Registry<FactoryKey, Factory> *Global() {
-    static auto *g_registry = new Registry<FactoryKey, Factory>;
+  static Registry<Key, Factory> *Global() {
+    static auto *g_registry = new Registry<Key, Factory>;
     return g_registry;
   }
 
@@ -35,35 +38,34 @@ class Registry : public RegistryBase {
   };
 
   bool IsRegistered(const Any &key) const override {
-    return factories_.count(any_cast<FactoryKey>(key)) > 0;
+    return factories_.count(any_cast<Key>(key)) > 0;
   }
 
   const Factory &Lookup(const Any &key) const {
-    return Lookup(any_cast<FactoryKey>(key));
+    return Lookup(any_cast<Key>(key));
   }
 
-  const Factory &Lookup(const FactoryKey &key) const {
+  const Factory &Lookup(const Key &key) const {
     CHECK_GT(factories_.count(key), 0)
         << "Factory (" << key << ") has not been registered.";
     return factories_.at(key).factory;
   }
 
   const Attribute &LookupAttr(const Any &key) const {
-    return LookupAttr(any_cast<FactoryKey>(key));
+    return LookupAttr(any_cast<Key>(key));
   }
 
-  const Attribute &LookupAttr(const FactoryKey &key) const {
+  const Attribute &LookupAttr(const Key &key) const {
     CHECK_GT(factories_.count(key), 0)
         << "Factory (" << key << ") has not been registered.";
     return factories_.at(key).attribute;
   }
 
-  void Register(const FactoryKey &key, Factory factory) {
+  void Register(const Key &key, Factory factory) {
     Register(key, factory, Attribute{});
   }
 
-  void Register(const FactoryKey &key, Factory factory,
-                const Attribute &attribute) {
+  void Register(const Key &key, Factory factory, const Attribute &attribute) {
     if (!factories_.emplace(key, MakeFactory(factory, attribute)).second) {
       LOG(INFO) << "Factory (" << key
                 << ") has been registered more than once.";
@@ -71,6 +73,9 @@ class Registry : public RegistryBase {
   }
 
   virtual ~Registry() = default;
+
+  template <typename FieldT, typename KeyT, typename FactoryT>
+  friend class FieldRegistry;
 
  protected:
   Registry() = default;
@@ -82,7 +87,7 @@ class Registry : public RegistryBase {
   }
 
  private:
-  util::Map<FactoryKey, AttributeFactory> factories_;
+  util::Map<Key, AttributeFactory> factories_;
 };
 
 #define XRT_REGISTER_FACTORY(FactoryName, Factory) \
@@ -91,16 +96,16 @@ class Registry : public RegistryBase {
 #define XRT_REGISTER_FACTORY_IMPL(Counter, FactoryName, Factory) \
   XRT_REGISTER_FACTORY_IMPL_0(Counter, FactoryName, Factory)
 
-#define XRT_REGISTER_FACTORY_IMPL_0(Counter, FactoryName, Factory)        \
-  namespace {                                                             \
-  struct _XrtRegistry_##Counter {                                         \
-    _XrtRegistry_##Counter() {                                            \
-      util::Registry<std::string, decltype(Factory)>::Global()->Register( \
-          FactoryName, Factory);                                          \
-    }                                                                     \
-  };                                                                      \
-  static _XrtRegistry_##Counter _xrt_registry_##Counter##_                \
-      __attribute__((unused));                                            \
+#define XRT_REGISTER_FACTORY_IMPL_0(Counter, FactoryName, Factory)       \
+  namespace {                                                            \
+  struct _XrtRegistry_##Counter {                                        \
+    _XrtRegistry_##Counter() {                                           \
+      util::Registry<decltype(FactoryName), decltype(Factory)>::Global() \
+          ->Register(FactoryName, Factory);                              \
+    }                                                                    \
+  };                                                                     \
+  static _XrtRegistry_##Counter _xrt_registry_##Counter##_               \
+      __attribute__((unused));                                           \
   }  // namespace
 
 template <typename Field>
@@ -126,23 +131,32 @@ class RegistryManager {
   util::Map<Field, RegistryBase *> registry_fields_;
 };
 
-#define XRT_REGISTER_REG_MANAGER(Field, Registry) \
-  XRT_REGISTER_REG_MANAGER_IMPL(__COUNTER__, Field, Registry)
+template <typename Field, typename Key, typename Factory>
+class FieldRegistry {
+ public:
+  static FieldRegistry<Field, Key, Factory> *Global() {
+    static auto *g_field_registry = new FieldRegistry<Field, Key, Factory>();
+    return g_field_registry;
+  }
 
-#define XRT_REGISTER_REG_MANAGER_IMPL(Counter, Field, Registry) \
-  XRT_REGISTER_REG_MANAGER_IMPL_0(Counter, Field, Registry)
+  Registry<Key, Factory> *Get(const Field &field) {
+    auto it = field_factories_.find(field);
+    if (it == field_factories_.end()) {
+      it = field_factories_.emplace(field, Registry<Key, Factory>()).first;
+      registry_manager_->Insert(field, &(it->second));
+    }
+    return &(it->second);
+  }
 
-#define XRT_REGISTER_REG_MANAGER_IMPL_0(Counter, Field, Registry)          \
-  namespace {                                                              \
-  struct _XrtRegistryManager_##Counter {                                   \
-    _XrtRegistryManager_##Counter() {                                      \
-      using FieldType = decltype(Field);                                   \
-      util::RegistryManager<FieldType>::Global()->Insert(Field, Registry); \
-    }                                                                      \
-  };                                                                       \
-  static _XrtRegistryManager_##Counter _xrt_registry_manager_##Counter##_  \
-      __attribute__((unused));                                             \
-  }  // namespace
+  virtual ~FieldRegistry() = default;
+
+ protected:
+  FieldRegistry() : registry_manager_(RegistryManager<Field>::Global()) {}
+
+ private:
+  util::Map<Field, Registry<Key, Factory>> field_factories_;
+  RegistryManager<Field> *registry_manager_;
+};
 
 }  // namespace util
 }  // namespace xrt

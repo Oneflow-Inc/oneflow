@@ -11,9 +11,9 @@ namespace xrt {
 namespace mola {
 
 template <typename UnaryOp>
-class ApplyUnaryOp : public OpKernel {
+class ApplyUnaryOp : public XlaOpKernel {
  public:
-  void Compile(OpKernelContext *ctx) override {
+  void Compile(XlaOpContext *ctx) override {
     ctx->SetOutput("out", UnaryOp()(ctx->Input("in")));
   }
 };

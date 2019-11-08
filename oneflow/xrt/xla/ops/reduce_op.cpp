@@ -10,9 +10,9 @@ namespace oneflow {
 namespace xrt {
 namespace mola {
 
-class ReduceOp : public OpKernel {
+class ReduceOp : public XlaOpKernel {
  public:
-  void Compile(OpKernelContext *ctx) override {
+  void Compile(XlaOpContext *ctx) override {
     bool keep_dims = ctx->GetAttr<bool>("keep_dims");
     CHECK(!keep_dims) << "Currently not support keep_dims option.";
 

@@ -6,9 +6,9 @@ namespace oneflow {
 namespace xrt {
 namespace mola {
 
-class FullyConnectedOp : public OpKernel {
+class FullyConnectedOp : public XlaOpKernel {
  public:
-  void Compile(OpKernelContext *ctx) override {
+  void Compile(XlaOpContext *ctx) override {
     xla::XlaOp in = ctx->Input("in");
     xla::XlaOp weight = xla::Transpose(ctx->Input("weight"), {1, 0});
     xla::XlaOp result = xla::Dot(in, weight);
