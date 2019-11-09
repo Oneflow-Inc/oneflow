@@ -200,5 +200,6 @@ class ResNet(object):
             conv3, activation=None, axis=1, trainable=False, name="bn3"
         )
         return flow.keras.activations.relu(
-            (downsample_blob if downsample else inputs) + affine3
+            (downsample_blob if downsample else inputs) + affine3,
+            name="output",
         )
