@@ -178,12 +178,12 @@ def maskrcnn_train(images, image_sizes, gt_boxes, gt_segms, gt_labels):
         )
         for i in range(image_sizes.shape[0])
     ]
-    gt_boxes_list = flow.piece_slice(gt_boxes, cfg.TRAINING_CONF.IMG_PER_GPU)
-    gt_labels_list = flow.piece_slice(gt_labels, cfg.TRAINING_CONF.IMG_PER_GPU)
+    gt_boxes_list = flow.piece_slice(gt_boxes, cfg.TRAINING_CONF.IMG_PER_GPU, name="piece_gt_boxes")
+    gt_labels_list = flow.piece_slice(gt_labels, cfg.TRAINING_CONF.IMG_PER_GPU, name="piece_slice_gt_labels")
     gt_segms_list = None
     if gt_segms.num_of_lod_levels == 2:
         gt_segms_list = flow.piece_slice(
-            gt_segms, cfg.TRAINING_CONF.IMG_PER_GPU
+            gt_segms, cfg.TRAINING_CONF.IMG_PER_GPU, name="piece_slice_gt_segms"
         )
     else:
         gt_segms_list = gt_segms
@@ -200,9 +200,11 @@ def maskrcnn_train(images, image_sizes, gt_boxes, gt_segms, gt_labels):
 
     # Backbone
     # CHECK_POINT: fpn features
+    # with flow.watch_scope(blob_watcher=blob_watched, diff_blob_watcher=diff_blob_watched):
     features = backbone.build(flow.transpose(images, perm=[0, 3, 1, 2]))
 
     # RPN
+    # with flow.watch_scope(blob_watcher=blob_watched, diff_blob_watcher=diff_blob_watched):
     cls_logit_list, bbox_pred_list = rpn_head.build(features)
     rpn_bbox_loss, rpn_objectness_loss = rpn_loss.build(
         anchors, image_size_list, gt_boxes_list, bbox_pred_list, cls_logit_list
@@ -214,15 +216,13 @@ def maskrcnn_train(images, image_sizes, gt_boxes, gt_segms, gt_labels):
         anchors, cls_logit_list, bbox_pred_list, image_size_list, gt_boxes_list
     )
 
+    # with flow.watch_scope(blob_watcher=blob_watched, diff_blob_watcher=diff_blob_watched), flow.watch_scope(blob_watcher=MakeWatcherCallback("forward"), diff_blob_watcher=MakeWatcherCallback("backward")):
     # Box Head
     box_loss, cls_loss, pos_proposal_list, pos_gt_indices_list = box_head.build_train(
         proposals, gt_boxes_list, gt_labels_list, features
     )
 
     # Mask Head
-    # with flow.watch_scope(blob_watcher=blob_watched, diff_blob_watcher=diff_blob_watched), \
-    #      flow.watch_scope(blob_watcher=MakeWatcherCallback("forward"),
-    #                       diff_blob_watcher=MakeWatcherCallback("backward")):
     mask_loss = mask_head.build_train(
         pos_proposal_list,
         pos_gt_indices_list,
@@ -718,8 +718,6 @@ if __name__ == "__main__":
                 for loss in train_loss:
                     print_loss.append(loss.mean())
                 print(fmt_str.format(*print_loss))
-                # import time
-                # time.sleep(10)
                 save_blob_watched(i)
 
                 if (i + 1) % 10 == 0:

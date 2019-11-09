@@ -4,6 +4,7 @@
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/device/cudnn_util.h"
+#include "oneflow/core/device/cudnn_conv_util.h"
 
 namespace oneflow {
 
@@ -63,25 +64,27 @@ class DeconvGPUKernel final : public KernelIf<DeviceType::kGPU> {
 
   void ForwardDataContent(const KernelCtx& ctx,
                           std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
-    const Blob* x_blob = BnInOp2Blob("x");
-    const Blob* filter_blob = BnInOp2Blob("filter");
-    const Blob* bias_blob = BnInOp2Blob("bias");
-    Blob* y_blob = BnInOp2Blob("y");
-    Blob* cudnn_buf = BnInOp2Blob("cudnn_buf");
-    void* buf_ptr = cudnn_buf ? cudnn_buf->mut_dptr() : nullptr;
-    size_t buf_size = cudnn_buf ? cudnn_buf->ByteSizeOfBlobBody() : 0;
-    CudaCheck(cudnnConvolutionBackwardData(
-        ctx.device_ctx->cudnn_handle(), CudnnSPOnePtr<T>(), this->filter_desc_->Get(),
-        filter_blob->dptr<T>(), this->x_desc_->Get(), x_blob->dptr<T>(), this->deconv_desc_->Get(),
-        static_cast<cudnnConvolutionBwdDataAlgo_t>(
-            this->kernel_conf().deconv_conf().cudnn_bwd_data_algo()),
-        buf_ptr, buf_size, CudnnSPZeroPtr<T>(), this->y_desc_->Get(), y_blob->mut_dptr<T>()));
-    if (bias_blob != nullptr) {
-      const Blob* bias = BnInOp2Blob("bias");
-      CudaCheck(cudnnAddTensor(ctx.device_ctx->cudnn_handle(), CudnnSPOnePtr<T>(),
-                               this->bias_desc_->Get(), bias_blob->dptr<T>(), CudnnSPOnePtr<T>(),
-                               this->y_desc_->Get(), y_blob->mut_dptr<T>()));
+    CudnnConvArgs args(this->op_conf().deconv_conf().conv_conf(), ctx.device_ctx->cudnn_handle(),
+                       BnInOp2Blob("y"), BnInOp2Blob("x"), BnInOp2Blob("filter"),
+                       BnInOp2Blob("cudnn_buf"),
+                       this->job_desc().job_conf().cudnn_conv_use_deterministic_algo_only(),
+                       this->job_desc().job_conf().cudnn_conv_heuristic_search_algo());
+    cudnnConvolutionBwdDataAlgo_t algo;
+    size_t work_space_size = 0;
+    if (this->job_desc().job_conf().has_cudnn_conv_force_bwd_data_algo()) {
+      algo = static_cast<cudnnConvolutionBwdDataAlgo_t>(
+          this->job_desc().job_conf().cudnn_conv_force_bwd_data_algo());
+      CudaCheck(GetConvWorkspaceSize(args, algo, &work_space_size));
+    } else {
+      auto algo_perf = FindCudnnConvAlgorithm<cudnnConvolutionBwdDataAlgoPerf_t>(args);
+      algo = algo_perf->algo;
+      work_space_size = algo_perf->memory;
     }
+    CHECK_LE(work_space_size, BnInOp2Blob("cudnn_buf")->ByteSizeOfBlobBody());
+    CudaCheck(cudnnConvolutionBackwardData(args.handle, CudnnSPOnePtr<T>(), args.wdesc.Get(),
+                                           args.w_dptr, args.ydesc.Get(), args.y_dptr,
+                                           args.cdesc.Get(), algo, args.work_space, work_space_size,
+                                           CudnnSPZeroPtr<T>(), args.xdesc.Get(), args.x_dptr));
   }
 
   mutable std::unique_ptr<CudnnTensorDesc> x_desc_;

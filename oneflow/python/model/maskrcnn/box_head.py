@@ -5,19 +5,6 @@ from matcher import Matcher
 import oneflow as flow
 
 
-def Save(name):
-    def _save(x):
-        import numpy as np
-        import os
-
-        path = "eval_dump/"
-        if not os.path.exists(path):
-            os.mkdir(path)
-        np.save(path + name, x.ndarray())
-
-    return _save
-
-
 class BoxHead(object):
     def __init__(self, cfg):
         self.cfg = cfg
@@ -189,18 +176,6 @@ class BoxHead(object):
             axis=1,
         )
         levels = flow.detection.level_map(proposals)
-
-        def Save(name):
-            def _save(x):
-                import numpy as np
-                import os
-
-                path = "eval_dump/"
-                if not os.path.exists(path):
-                    os.mkdir(path)
-                np.save(path + name, x.ndarray())
-
-            return _save
 
         level_idx_dict = {}
         for (i, level_idx) in zip(range(2, 6), range(0, 4)):

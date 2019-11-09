@@ -36,14 +36,23 @@ class RPNHead(object):
     def build(self, features):
         with flow.deprecated.variable_scope("rpn-head"):
 
-            def piece_slice_with_bw(inputs, output_size, name=None):
+            def piece_slice_with_bw(inputs, output_size, name):
                 assert inputs.shape[0] == output_size
                 ret = []
                 for i in range(output_size):
-                    indices = flow.constant(i, dtype=flow.int32)
-                    output = flow.local_gather(inputs, indices)
-                    output = flow.squeeze(output, [0])
-                    ret.append(output)
+                    with flow.deprecated.variable_scope(
+                        "piece_slice_with_bw_" + str(i)
+                    ):
+                        indices = flow.constant(
+                            i, dtype=flow.int32, name=name + "_constant"
+                        )
+                        output = flow.local_gather(
+                            inputs, indices, name=name + "_local_gather"
+                        )
+                        output = flow.squeeze(
+                            output, [0], name=name + "_squeeze"
+                        )
+                        ret.append(output)
                 return ret
 
             # list (wrt. fpn layers) of list (wrt. images) of [H_i * W_i * A, 4]
@@ -88,7 +97,9 @@ class RPNHead(object):
                     [
                         flow.dynamic_reshape(x, shape=[-1])
                         for x in piece_slice_with_bw(
-                            cls_logits, self.cfg.TRAINING_CONF.IMG_PER_GPU
+                            cls_logits,
+                            self.cfg.TRAINING_CONF.IMG_PER_GPU,
+                            name="cls_logits_layer_" + str(layer_i),
                         )
                     ]
                 )
@@ -96,7 +107,9 @@ class RPNHead(object):
                     [
                         flow.dynamic_reshape(x, shape=[-1, 4])
                         for x in piece_slice_with_bw(
-                            bbox_preds, self.cfg.TRAINING_CONF.IMG_PER_GPU
+                            bbox_preds,
+                            self.cfg.TRAINING_CONF.IMG_PER_GPU,
+                            name="bbox_preds_layer_" + str(layer_i),
                         )
                     ]
                 )
@@ -229,10 +242,10 @@ class RPNLoss(object):
                 flow.math.reduce_sum(
                     flow.detection.smooth_l1(
                         flow.concat(
-                            sampled_bbox_pred_list, axis=0
+                            sampled_bbox_pred_list, axis=0, name="bbox_pred"
                         ),  # CHECK_POINT: bbox_pred
                         flow.concat(
-                            sampled_bbox_target_list, axis=0
+                            sampled_bbox_target_list, axis=0, name="bbox_target"
                         ),  # CHECK_POINT: bbox_target
                         beta=1.0 / 9.0,
                     )
@@ -244,10 +257,10 @@ class RPNLoss(object):
                 flow.math.reduce_sum(
                     flow.nn.sigmoid_cross_entropy_with_logits(
                         flow.concat(
-                            sampled_cls_label_list, axis=0
+                            sampled_cls_label_list, axis=0, name="cls_label"
                         ),  # CHECK_POINT: cls label
                         flow.concat(
-                            sampled_cls_logit_list, axis=0
+                            sampled_cls_logit_list, axis=0, name="cls_logit"
                         ),  # CHECK_POINT: cls logit
                     )
                 )
@@ -274,7 +287,7 @@ class RPNProposal(object):
     # gt_boxes_list: list of [num_gt_boxes, 4] wrt. images
     # bbox_pred_list: list (wrt. fpn layers) of list (wrt. images) of [H_i * W_i * A, 4]
     # cls_logit_list: list (wrt. fpn layer) of list (wrt. images) of [H_i * W_i * A]
-    # 
+    #
     # outputs:
     # proposals: list of [R, 4] wrt. images
     def build(
@@ -291,16 +304,36 @@ class RPNProposal(object):
                 proposal_list = []
                 score_list = []
                 for layer_i in range(len(cls_logit_list)):
+                    # cls_probs = flow.keras.activations.sigmoid(
+                    #     cls_logit_list[layer_i][img_idx],
+                    #     name="img{}_layer{}_cls_probs".format(img_idx, layer_i),
+                    # )
+                    cls_probs = flow.identity(
+                        cls_logit_list[layer_i][img_idx],
+                        name="img{}_layer{}_cls_probs".format(img_idx, layer_i),
+                    )
                     pre_nms_top_k_inds = flow.math.top_k(
-                        cls_logit_list[layer_i][img_idx], k=self.top_n_per_fm
+                        cls_probs,
+                        k=self.top_n_per_fm,
+                        name="img{}_layer{}_topk_inds".format(img_idx, layer_i),
                     )
                     score_per_layer = flow.local_gather(
-                        cls_logit_list[layer_i][img_idx], pre_nms_top_k_inds
+                        cls_probs, pre_nms_top_k_inds
                     )
                     proposal_per_layer = flow.detection.box_decode(
-                        flow.local_gather(anchors[layer_i], pre_nms_top_k_inds),
                         flow.local_gather(
-                            bbox_pred_list[layer_i][img_idx], pre_nms_top_k_inds
+                            anchors[layer_i],
+                            pre_nms_top_k_inds,
+                            name="img{}_layer{}_anchors".format(
+                                img_idx, layer_i
+                            ),
+                        ),
+                        flow.local_gather(
+                            bbox_pred_list[layer_i][img_idx],
+                            pre_nms_top_k_inds,
+                            name="img{}_layer{}_box_delta".format(
+                                img_idx, layer_i
+                            ),
                         ),
                         regression_weights={
                             "weight_x": self.cfg.RPN.WEIGHT_X,
@@ -308,11 +341,18 @@ class RPNProposal(object):
                             "weight_h": self.cfg.RPN.WEIGHT_H,
                             "weight_w": self.cfg.RPN.WEIGHT_W,
                         },
+                        name="img{}_layer{}_box_decode".format(
+                            img_idx, layer_i
+                        ),
                     )
 
                     # clip to img
                     proposal_per_layer = flow.detection.clip_to_image(
-                        proposal_per_layer, image_size_list[img_idx]
+                        proposal_per_layer,
+                        image_size_list[img_idx],
+                        name="img{}_layer{}_box_clipped".format(
+                            img_idx, layer_i
+                        ),
                     )
 
                     # remove small boxes
@@ -328,7 +368,11 @@ class RPNProposal(object):
                         score_per_layer, indices
                     )
                     proposal_per_layer = flow.local_gather(
-                        proposal_per_layer, indices
+                        proposal_per_layer,
+                        indices,
+                        name="img{}_layer{}_box_pre_nms".format(
+                            img_idx, layer_i
+                        ),
                     )
 
                     # NMS
@@ -341,6 +385,7 @@ class RPNProposal(object):
                             )
                         ),
                         axis=[1],
+                        name="img{}_layer{}_nms".format(img_idx, layer_i),
                     )
                     score_per_layer = flow.local_gather(
                         score_per_layer, indices
@@ -364,6 +409,7 @@ class RPNProposal(object):
                     proposal_in_one_img = flow.concat(
                         [proposal_in_one_img, resized_gt_boxes_list[img_idx]],
                         axis=0,
+                        name="img{}_proposals".format(img_idx),
                     )
 
                 proposals.append(proposal_in_one_img)
