@@ -66,10 +66,10 @@ Maybe<void> NormalizationOp::InferBlobDescs(
     }
     return Maybe<void>::Ok();
   };
-  (conf.has_moving_mean() ? CheckParamBlobDesc : SetParamBlobDesc)("moving_mean");
-  (conf.has_moving_variance() ? CheckParamBlobDesc : SetParamBlobDesc)("moving_variance");
-  if (conf.center()) { CheckParamBlobDesc("beta"); }
-  if (conf.scale()) { CheckParamBlobDesc("gamma"); }
+  CheckParamBlobDesc("moving_mean");
+  CheckParamBlobDesc("moving_variance");
+  (conf.center() ? CheckParamBlobDesc : SetParamBlobDesc)("beta");
+  (conf.scale() ? CheckParamBlobDesc : SetParamBlobDesc)("gamma");
   if (conf.is_training()) {
     SetParamBlobDesc("mean");
     SetParamBlobDesc("inv_variance");
