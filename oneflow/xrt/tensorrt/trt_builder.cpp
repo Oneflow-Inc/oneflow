@@ -63,6 +63,13 @@ int64_t TrtBuilder::AddWeight(nvinfer1::Weights &weight) {
   return handle;
 }
 
+nv::unique_ptr<nvinfer1::ICudaEngine> TrtBuilder::BuildCudaEngine() {
+  auto build_config =
+      nv::unique_ptr<nvinfer1::IBuilderConfig>(builder_->createBuilderConfig());
+  return nv::unique_ptr<nvinfer1::ICudaEngine>(
+      builder_->buildEngineWithConfig(*network_, *build_config));
+}
+
 }  // namespace tensorrt
 }  // namespace xrt
 }  // namespace oneflow

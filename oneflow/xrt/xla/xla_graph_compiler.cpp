@@ -129,8 +129,8 @@ std::shared_ptr<Executable> XlaGraphCompiler::BuildExecutable(
   MOLA_CHECK_AND_ASSIGN(
       auto executable,
       client->Compile(computation, argument_layouts, build_options));
-  return std::make_shared<XlaExecutable>(this->device_, xla_input_shapes,
-                                         xla_output_shape, executable);
+  return std::make_shared<XlaExecutable>(
+      this->device_, xla_input_shapes, xla_output_shape, std::move(executable));
 }
 
 void XlaGraphCompiler::BuildEntryParameters(

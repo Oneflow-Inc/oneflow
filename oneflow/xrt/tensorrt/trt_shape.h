@@ -64,8 +64,8 @@ class TrtShape {
  private:
   mutable int64_t count_ = -1;
 
-  nvinfer1::DataType data_type_;
   nvinfer1::Dims dims_;
+  nvinfer1::DataType data_type_;
 };
 
 }  // namespace tensorrt

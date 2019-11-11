@@ -86,7 +86,10 @@ class TrtBuilder {
       : builder_name_(name), next_handle_(0) {
     nv::Logger logger(name);
     builder_.reset(nvinfer1::createInferBuilder(logger));
-    network_.reset(builder_->createNetwork());
+    nvinfer1::NetworkDefinitionCreationFlags flags =
+        (1U << int(nvinfer1::NetworkDefinitionCreationFlag::kEXPLICIT_BATCH));
+    // kEXPLICIT_PRECISION
+    network_.reset(builder_->createNetworkV2(flags));
   }
 
   nvinfer1::ITensor *GetTensor(int64_t handle);
@@ -112,20 +115,25 @@ class TrtBuilder {
   // Returns handle for the added weight.
   int64_t AddWeight(nvinfer1::Weights &weight);
 
+  nv::unique_ptr<nvinfer1::IBuilder> ReleaseBuilder() {
+    return std::move(builder_);
+  }
+
+  nv::unique_ptr<nvinfer1::INetworkDefinition> ReleaseNetwork() {
+    return std::move(network_);
+  }
+
   void MarkOutput(int64_t handle) {
     nvinfer1::ITensor *output = GetTensor(handle);
     network_->markOutput(*output);
   }
 
-  nv::unique_ptr<nvinfer1::ICudaEngine> BuildCudaEngine() {
-    return nv::unique_ptr<nvinfer1::ICudaEngine>(
-        builder_->buildCudaEngine(*network_));
-  }
+  nv::unique_ptr<nvinfer1::ICudaEngine> BuildCudaEngine();
 
 #define TRT_BUILDER_ADD_LAYER(Layer)                                          \
   template <typename... Args>                                                 \
   auto add##Layer(Args &&... args)->decltype(network_->add##Layer(args...)) { \
-    return network_->addFullyConnected(std::forward<Args>(args)...);          \
+    return network_->add##Layer(std::forward<Args>(args)...);                 \
   }
 
   FOREACH_TENSORRT_LAYER(TRT_BUILDER_ADD_LAYER);

@@ -79,7 +79,9 @@ std::shared_ptr<Executable> TrtGraphCompiler::Compile(
     builder_->MarkOutput(value.handle());
   }
 
-  return std::make_shared<TrtExecutable>(builder_->BuildCudaEngine());
+  // return std::make_shared<TrtExecutable>(builder_->BuildCudaEngine());
+  return std::make_shared<TrtExecutable>(builder_->ReleaseBuilder(),
+                                         builder_->ReleaseNetwork());
 }
 
 }  // namespace tensorrt

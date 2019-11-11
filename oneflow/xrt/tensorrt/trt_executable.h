@@ -18,6 +18,12 @@ class TrtExecutable : public Executable {
   explicit TrtExecutable(nv::unique_ptr<nvinfer1::ICudaEngine> &&engine)
       : Executable(XrtEngine::TENSORRT), engine_(std::move(engine)) {}
 
+  explicit TrtExecutable(nv::unique_ptr<nvinfer1::IBuilder> &&builder,
+                         nv::unique_ptr<nvinfer1::INetworkDefinition> &&network)
+      : Executable(XrtEngine::TENSORRT),
+        builder_(std::move(builder)),
+        network_(std::move(network)) {}
+
   virtual ~TrtExecutable() = default;
 
   bool Run(const std::vector<Parameter> &inputs,
@@ -25,7 +31,16 @@ class TrtExecutable : public Executable {
            bool block_until_done = true) override;
 
  private:
+  bool CreateExecutableEngine(const ExecutableRunOptions &run_options);
+
+  bool Execute(int batch_size, void **buffers, void *stream,
+               bool block_until_done);
+
+ private:
   nv::unique_ptr<nvinfer1::ICudaEngine> engine_;
+  nv::unique_ptr<nvinfer1::IBuilder> builder_;
+  nv::unique_ptr<nvinfer1::INetworkDefinition> network_;
+  nv::unique_ptr<nvinfer1::IExecutionContext> execution_context_;
 };
 
 }  // namespace tensorrt
