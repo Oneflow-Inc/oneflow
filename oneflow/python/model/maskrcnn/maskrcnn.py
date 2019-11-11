@@ -46,32 +46,11 @@ parser.add_argument(
     required=False,
 )
 parser.add_argument(
-    "-rcnn_eval",
-    "--rcnn_eval",
-    default=False,
-    action="store_true",
-    required=False,
-)
-parser.add_argument(
     "-eval", "--eval", default=False, action="store_true", required=False
-)
-parser.add_argument(
-    "-mask_head_eval",
-    "--mask_head_eval",
-    default=False,
-    action="store_true",
-    required=False,
 )
 parser.add_argument(
     "-td",
     "--train_with_real_dataset",
-    default=False,
-    action="store_true",
-    required=False,
-)
-parser.add_argument(
-    "-box_head_post_processor",
-    "--box_head_post_processor",
     default=False,
     action="store_true",
     required=False,
@@ -330,140 +309,6 @@ if terminal_args.eval:
         return maskrcnn_eval(images, image_sizes)
 
 
-if terminal_args.rcnn_eval:
-
-    @flow.function
-    def debug_rcnn_eval(
-        rpn_proposals=flow.input_blob_def(
-            placeholders["rpn_proposals"].shape,
-            dtype=flow.float32,
-            is_dynamic=True,
-        ),
-        fpn_fm1=flow.input_blob_def(
-            placeholders["fpn_feature_map1"].shape,
-            dtype=flow.float32,
-            is_dynamic=True,
-        ),
-        fpn_fm2=flow.input_blob_def(
-            placeholders["fpn_feature_map2"].shape,
-            dtype=flow.float32,
-            is_dynamic=True,
-        ),
-        fpn_fm3=flow.input_blob_def(
-            placeholders["fpn_feature_map3"].shape,
-            dtype=flow.float32,
-            is_dynamic=True,
-        ),
-        fpn_fm4=flow.input_blob_def(
-            placeholders["fpn_feature_map4"].shape,
-            dtype=flow.float32,
-            is_dynamic=True,
-        ),
-    ):
-        cfg = get_default_cfgs()
-        if terminal_args.config_file is not None:
-            cfg.merge_from_file(terminal_args.config_file)
-        cfg.freeze()
-        print(cfg)
-        box_head = BoxHead(cfg)
-        with flow.deprecated.variable_scope("roi"):
-            image_ids = flow.concat(
-                flow.detection.extract_piece_slice_id([rpn_proposals]), axis=0
-            )
-            x = box_head.box_feature_extractor(
-                rpn_proposals, image_ids, [fpn_fm1, fpn_fm2, fpn_fm3, fpn_fm4]
-            )
-            box_pred, cls_logits = box_head.box_predictor(x)
-
-        return cls_logits, box_pred
-
-
-if terminal_args.mask_head_eval:
-
-    @flow.function
-    def debug_mask_head_eval(
-        detections=flow.input_blob_def(
-            placeholders["detections"].shape,
-            dtype=flow.float32,
-            is_dynamic=True,
-        ),
-        fpn_fm1=flow.input_blob_def(
-            placeholders["fpn_feature_map1"].shape,
-            dtype=flow.float32,
-            is_dynamic=True,
-        ),
-        fpn_fm2=flow.input_blob_def(
-            placeholders["fpn_feature_map2"].shape,
-            dtype=flow.float32,
-            is_dynamic=True,
-        ),
-        fpn_fm3=flow.input_blob_def(
-            placeholders["fpn_feature_map3"].shape,
-            dtype=flow.float32,
-            is_dynamic=True,
-        ),
-        fpn_fm4=flow.input_blob_def(
-            placeholders["fpn_feature_map4"].shape,
-            dtype=flow.float32,
-            is_dynamic=True,
-        ),
-    ):
-        cfg = get_default_cfgs()
-        if terminal_args.config_file is not None:
-            cfg.merge_from_file(terminal_args.config_file)
-        cfg.freeze()
-        print(cfg)
-        mask_head = MaskHead(cfg)
-        with flow.deprecated.variable_scope("mask"):
-            image_ids = flow.concat(
-                flow.detection.extract_piece_slice_id([detections]), axis=0
-            )
-            x = mask_head.mask_feature_extractor(
-                detections, image_ids, [fpn_fm1, fpn_fm2, fpn_fm3, fpn_fm4]
-            )
-            mask_logits = mask_head.mask_predictor(x)
-        return mask_logits
-
-
-if terminal_args.box_head_post_processor:
-
-    @flow.function
-    def debug_box_head_post_processor_job(
-        rpn_proposals_0=flow.input_blob_def(
-            (1000, 4), dtype=flow.float32, is_dynamic=True
-        ),
-        rpn_proposals_1=flow.input_blob_def(
-            (1000, 4), dtype=flow.float32, is_dynamic=True
-        ),
-        cls_logits=flow.input_blob_def(
-            (2000, 81), dtype=flow.float32, is_dynamic=True
-        ),
-        box_regressions=flow.input_blob_def(
-            (2000, 324), dtype=flow.float32, is_dynamic=True
-        ),
-        image_size_0=flow.input_blob_def(
-            (2,), dtype=flow.int32, is_dynamic=False
-        ),
-        image_size_1=flow.input_blob_def(
-            (2,), dtype=flow.int32, is_dynamic=False
-        ),
-    ):
-        cfg = get_default_cfgs()
-        if terminal_args.config_file is not None:
-            cfg.merge_from_file(terminal_args.config_file)
-        cfg.freeze()
-        print(cfg)
-        box_head = BoxHead(cfg)
-        with flow.deprecated.variable_scope("roi"):
-            ret = box_head.build_post_processor(
-                cls_logits=cls_logits,
-                box_regressions=box_regressions,
-                rpn_proposals_list=[rpn_proposals_0, rpn_proposals_1],
-                image_size_list=[image_size_0, image_size_1],
-            )
-        return ret
-
-
 if __name__ == "__main__":
     flow.config.gpu_device_num(terminal_args.gpu_num_per_node)
     flow.config.ctrl_port(terminal_args.ctrl_port)
@@ -475,86 +320,7 @@ if __name__ == "__main__":
     else:
         check_point.load(terminal_args.model_load_dir)
     if terminal_args.debug:
-        if terminal_args.rcnn_eval:
-            rpn_proposals = np.load(
-                "/home/xfjiang/rcnn_eval_fake_data/iter_0/rpn/final_proposals_img_0.(1000, 4).npy"
-            )
-            fpn_feature_map1 = np.load(
-                "/home/xfjiang/rcnn_eval_fake_data/iter_0/backbone/CHECK_POINT_fpn_feature.layer1.(1, 256, 320, 200).npy"
-            )
-            fpn_feature_map2 = np.load(
-                "/home/xfjiang/rcnn_eval_fake_data/iter_0/backbone/CHECK_POINT_fpn_feature.layer2.(1, 256, 160, 100).npy"
-            )
-            fpn_feature_map3 = np.load(
-                "/home/xfjiang/rcnn_eval_fake_data/iter_0/backbone/CHECK_POINT_fpn_feature.layer3.(1, 256, 80, 50).npy"
-            )
-            fpn_feature_map4 = np.load(
-                "/home/xfjiang/rcnn_eval_fake_data/iter_0/backbone/CHECK_POINT_fpn_feature.layer4.(1, 256, 40, 25).npy"
-            )
-            results = debug_rcnn_eval(
-                rpn_proposals,
-                fpn_feature_map1,
-                fpn_feature_map2,
-                fpn_feature_map3,
-                fpn_feature_map4,
-            ).get()
-            print(results)
-        elif terminal_args.mask_head_eval:
-            import numpy as np
-
-            detections = np.load(
-                "/home/xfjiang/rcnn_eval_fake_data/iter_0/mask_head/detections_0.(34, 4).npy"
-            )
-            fpn_feature_map1 = np.load(
-                "/home/xfjiang/rcnn_eval_fake_data/iter_0/backbone/CHECK_POINT_fpn_feature.layer1.(1, 256, 320, 200).npy"
-            )
-            fpn_feature_map2 = np.load(
-                "/home/xfjiang/rcnn_eval_fake_data/iter_0/backbone/CHECK_POINT_fpn_feature.layer2.(1, 256, 160, 100).npy"
-            )
-            fpn_feature_map3 = np.load(
-                "/home/xfjiang/rcnn_eval_fake_data/iter_0/backbone/CHECK_POINT_fpn_feature.layer3.(1, 256, 80, 50).npy"
-            )
-            fpn_feature_map4 = np.load(
-                "/home/xfjiang/rcnn_eval_fake_data/iter_0/backbone/CHECK_POINT_fpn_feature.layer4.(1, 256, 40, 25).npy"
-            )
-            results = debug_mask_head_eval(
-                detections,
-                fpn_feature_map1,
-                fpn_feature_map2,
-                fpn_feature_map3,
-                fpn_feature_map4,
-            ).get()
-            print(results)
-            np.save("mask_logits", results.ndarray())
-        elif terminal_args.box_head_post_processor:
-            rpn_proposals_0 = np.load(
-                "/tmp/shared_with_jxf/box_head_post_processor/rpn_proposals_0.(1000, 4).npy"
-            )
-            rpn_proposals_1 = np.load(
-                "/tmp/shared_with_jxf/box_head_post_processor/rpn_proposals_1.(1000, 4).npy"
-            )
-            cls_logits = np.load(
-                "/tmp/shared_with_jxf/box_head_post_processor/cls_logits.(2000, 81).npy"
-            )
-            box_regressions = np.load(
-                "/tmp/shared_with_jxf/box_head_post_processor/box_regressions.(2000, 324).npy"
-            )
-            image_size_0 = np.load(
-                "/tmp/shared_with_jxf/box_head_post_processor/image_size_0.npy"
-            )
-            image_size_1 = np.load(
-                "/tmp/shared_with_jxf/box_head_post_processor/image_size_1.npy"
-            )
-
-            debug_box_head_post_processor_job(
-                rpn_proposals_0,
-                rpn_proposals_1,
-                cls_logits,
-                box_regressions,
-                image_size_0,
-                image_size_1,
-            )
-        elif terminal_args.eval:
+        if terminal_args.eval:
             import numpy as np
 
             images = np.load(
