@@ -77,6 +77,11 @@ config_proto_mutable = True
 
 @oneflow_export('config.gpu_device_num')
 def gpu_device_num(val):
+    r"""Set total number of GPUs on all machines to run oneflow on. By default, it is data parallel.
+
+    Args:
+        val: total number of GPUs on all machines
+    """
     assert config_proto_mutable == True
     assert type(val) is int
     default_config_proto.resource.gpu_device_num = val

@@ -6,6 +6,7 @@ OneFlow Documentation
     :caption: Oneflow Python API
 
     oneflow
+    config
     train
 
 Indices and tables
