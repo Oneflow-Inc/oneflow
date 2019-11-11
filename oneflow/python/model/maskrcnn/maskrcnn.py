@@ -156,8 +156,12 @@ def maskrcnn_train(images, image_sizes, gt_boxes, gt_segms, gt_labels):
         )
         for i in range(image_sizes.shape[0])
     ]
-    gt_boxes_list = flow.piece_slice(gt_boxes, cfg.TRAINING_CONF.IMG_PER_GPU, name="piece_gt_boxes")
-    gt_labels_list = flow.piece_slice(gt_labels, cfg.TRAINING_CONF.IMG_PER_GPU, name="piece_slice_gt_labels")
+    gt_boxes_list = flow.piece_slice(
+        gt_boxes, cfg.TRAINING_CONF.IMG_PER_GPU, name="piece_gt_boxes"
+    )
+    gt_labels_list = flow.piece_slice(
+        gt_labels, cfg.TRAINING_CONF.IMG_PER_GPU, name="piece_slice_gt_labels"
+    )
     gt_segms_list = None
     if gt_segms.num_of_lod_levels == 2:
         gt_segms_list = flow.piece_slice(
@@ -211,13 +215,18 @@ def maskrcnn_train(images, image_sizes, gt_boxes, gt_segms, gt_labels):
 
     return rpn_bbox_loss, rpn_objectness_loss, box_loss, cls_loss, mask_loss
 
+
 def MakeWatcherCallback(prompt):
     def Callback(blob, blob_def):
         if prompt == "forward":
             return
-        print("%s, lbn: %s, min: %s, max: %s"
-              %(prompt, blob_def.logical_blob_name, blob.min(), blob.max()))
+        print(
+            "%s, lbn: %s, min: %s, max: %s"
+            % (prompt, blob_def.logical_blob_name, blob.min(), blob.max())
+        )
+
     return Callback
+
 
 def maskrcnn_eval(images, image_sizes):
     cfg = get_default_cfgs()
@@ -231,13 +240,20 @@ def maskrcnn_eval(images, image_sizes):
     box_head = BoxHead(cfg)
     mask_head = MaskHead(cfg)
 
-    image_size_list = [
-        flow.squeeze(
-            flow.local_gather(image_sizes, flow.constant(i, dtype=flow.int32)),
-            [0],
-        )
-        for i in range(image_sizes.shape[0])
-    ]
+    image_size_list = []
+    gpu_num = 2
+    assert image_sizes.shape[0] % gpu_num == 0
+    dim_0_size_per_card = range(image_sizes.shape[0] / gpu_num)
+    for gpu_i in gpu_num:
+        for i in dim_0_size_per_card:
+            with flow.device_prior_placement("gpu", "0:" + str(gpu_i)):
+                image_size_of_one_img = flow.squeeze(
+                    flow.local_gather(
+                        image_sizes, flow.constant(i, dtype=flow.int32)
+                    ),
+                    [0],
+                )
+                image_size_list.append(image_size_of_one_img)
     anchors = []
     for i in range(cfg.DECODER.FPN_LAYERS):
         anchors.append(
