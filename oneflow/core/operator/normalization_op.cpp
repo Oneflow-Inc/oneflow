@@ -68,8 +68,16 @@ Maybe<void> NormalizationOp::InferBlobDescs(
   };
   CheckParamBlobDesc("moving_mean");
   CheckParamBlobDesc("moving_variance");
-  (conf.center() ? CheckParamBlobDesc : SetParamBlobDesc)("beta");
-  (conf.scale() ? CheckParamBlobDesc : SetParamBlobDesc)("gamma");
+  if (conf.center()) {
+    CheckParamBlobDesc("beta");
+  } else {
+    SetParamBlobDesc("beta");
+  }
+  if (conf.scale()) {
+    CheckParamBlobDesc("gamma");
+  } else {
+    SetParamBlobDesc("gamma");
+  }
   if (conf.is_training()) {
     SetParamBlobDesc("mean");
     SetParamBlobDesc("inv_variance");
