@@ -8,3 +8,4 @@ Operators
 ----------------------------------
 
 .. autofunction:: gather
+.. autofunction:: watch
