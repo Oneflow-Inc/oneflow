@@ -21,8 +21,8 @@ import oneflow
 # -- Project information -----------------------------------------------------
 
 project = u'OneFlow'
-copyright = u'2019, Oneflow Contributors'
-author = u'Oneflow Contributors'
+copyright = u'2019, OneFlow'
+author = u'OneFlow'
 
 # The short X.Y version
 version = u''
