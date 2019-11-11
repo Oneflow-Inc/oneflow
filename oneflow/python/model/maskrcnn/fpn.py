@@ -46,6 +46,14 @@ class FPN(object):
             data_format="NCHW",
             strides=[1, 1],
             dilation_rate=[1, 1],
+            kernel_initializer=flow.kaiming_initializer(
+                shape=(self.inner_channels, x.static_shape[1]) + (1, 1),
+                distribution="random_uniform",
+                mode="fan_in",
+                nonlinearity="leaky_relu",
+                negative_slope=1.0
+            ),
+            bias_initializer=flow.constant_initializer(0),
             name=name,
         )
 
@@ -63,6 +71,14 @@ class FPN(object):
             data_format="NCHW",
             strides=[1, 1],
             dilation_rate=[1, 1],
+            kernel_initializer=flow.kaiming_initializer(
+                shape=(self.layer_channels, x.static_shape[1]) + (3, 3),
+                distribution="random_uniform",
+                mode="fan_in",
+                nonlinearity="leaky_relu",
+                negative_slope=1.0
+            ),
+            bias_initializer=flow.constant_initializer(0),
             name=name,
         )
 
