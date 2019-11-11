@@ -1,4 +1,5 @@
 #include "oneflow/xrt/tensorrt/ops/op_context.h"
+#include "oneflow/xrt/tensorrt/trt_value.h"
 
 namespace oneflow {
 namespace xrt {
@@ -33,14 +34,14 @@ nvinfer1::Weights &TrtOpContext::Weight(const Argument &arg) {
 
 void TrtOpContext::SetOutput(const std::string &name,
                              nvinfer1::ITensor *tensor) {
-  SetOutput(name, TrtValue::BuildTensor(builder(), tensor));
+  SetOutput(name, TrtValue::Tensor(builder(), tensor));
 }
 
-void TrtOpContext::SetOutput(const std::string &name, const XrtValue &value) {
+void TrtOpContext::SetOutput(const std::string &name, const TrtValue &value) {
   Argument arg = ArgumentFromKey(name);
   outputs_[arg] = value;
   nvinfer1::ITensor *tensor = builder()->GetTensor(value.handle());
-  tensor->setName(arg.name());
+  tensor->setName(arg.name().c_str());
 }
 
 DataType TrtOpContext::InputType(const std::string &name) const {

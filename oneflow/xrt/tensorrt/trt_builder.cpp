@@ -1,16 +1,8 @@
 #include "oneflow/xrt/tensorrt/trt_builder.h"
-#include "oneflow/xrt/tensorrt/trt_logger.h"
 
 namespace oneflow {
 namespace xrt {
 namespace tensorrt {
-
-TrtBuilder::TrtBuilder(const std::string &name)
-    : builder_name_(name), next_handle_(0) {
-  nv::Logger logger(name);
-  builder_.reset(nvinfer1::createInferBuilder(logger));
-  network_.reset(builder_->createNetwork());
-}
 
 nvinfer1::ITensor *TrtBuilder::GetTensor(int64_t handle) {
   const TrtValueKind &kind = ValueKind(handle);
@@ -20,10 +12,10 @@ nvinfer1::ITensor *TrtBuilder::GetTensor(int64_t handle) {
   if (IsUndefKind(kind)) {
     CheckHasParameter(handle);
     const Parameter &param = params_.at(handle);
+    const char *name = param.name().c_str();
     // Convert data type and shape.
     TrtShape shape(param.shape(), param.data_type());
-    tensor =
-        network_->addInput(param.name(), shape().data_type(), shape.shape());
+    tensor = network_->addInput(name, shape.data_type(), shape.shape());
     tensors_[handle] = tensor;
     value_kinds_[handle] = TrtValueKind::kTensor;
   }
@@ -50,7 +42,7 @@ nvinfer1::Weights &TrtBuilder::GetWeight(int64_t handle) {
   return weights_.at(handle);
 }
 
-bool TrtBuilder::AddParameter(const Parameter &param) {
+int64_t TrtBuilder::AddParameter(const Parameter &param) {
   int64_t handle = IncreaseHandle();
   params_[handle] = param;
   value_kinds_[handle] = TrtValueKind::kUndef;
@@ -71,17 +63,6 @@ int64_t TrtBuilder::AddWeight(nvinfer1::Weights &weight) {
   return handle;
 }
 
-bool TrtBuilder::MarkOutput(int64_t handle) {
-  nvinfer1::ITensor *output = GetTensor(handle);
-  builder_->MarkOutput(*output);
-}
-
-nvinfer1::ICudaEngine *TrtBuilder::buildCudaEngine() {
-  return builder_->buildCudaEngine();
-}
-
 }  // namespace tensorrt
 }  // namespace xrt
 }  // namespace oneflow
-
-#endif  // ONEFLOW_XRT_TENSORRT_TRT_BUILDER_H_

@@ -17,7 +17,7 @@ class FullyConnectedOp : public TrtOpKernel {
       bias = ctx->Weight("bias");
     }
 
-    auto *layer = ctx->addFullyConnected(*in, 1, weight, bias);
+    auto *layer = ctx->builder()->addFullyConnected(*in, 1, weight, bias);
     ctx->SetOutput("out", layer->getOutput(0));
   }
 };

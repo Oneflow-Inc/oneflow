@@ -1,5 +1,6 @@
 #include "oneflow/xrt/tensorrt/trt_graph_compiler.h"
 #include "oneflow/xrt/node_util.h"
+#include "oneflow/xrt/tensorrt/ops/op_kernel.h"
 
 namespace oneflow {
 namespace xrt {
@@ -9,18 +10,13 @@ void TrtGraphCompiler::PopulateEntryParams(
     const std::vector<Parameter> &entry_params) {
   for (const Parameter &param : entry_params) {
     Argument arg = ArgFromParameter(param);
-    TrtValue value = TrtValue::BuildParameter(builder_, param);
+    TrtValue value = TrtValue::Parameter(builder_.get(), param);
     operands_[arg] = std::move(value);
   }
 }
 
-void TrtGraphCompiler::PopulateReturnParams(
-    const std::vector<Parameter> &return_params) {
-  for (const Parameter &param : return_params) {
-    Argument arg = ArgFromParameter(param);
-    TrtValue value = TrtValue::BuildParameter(builder_, param);
-    operands_[arg] = std::move(value);
-  }
+Argument TrtGraphCompiler::ArgFromParameter(const Parameter &param) {
+  return Argument(param.name(), param.shape(), param.data_type());
 }
 
 void TrtGraphCompiler::SetupKernelContextParam(
@@ -31,7 +27,7 @@ void TrtGraphCompiler::SetupKernelContextParam(
     if (!edge->IsControlEdge()) {
       const Argument &arg = edge->argument();
       CHECK_GT(operands_.count(arg), 0);
-      const Operand &operand = operands_.at(arg);
+      const TrtValue &operand = operands_.at(arg);
       input_ops.emplace(arg, operand);
       const std::string &k = arg.meta_data().consume_key;
       input_output_args.emplace(k, arg);
@@ -60,22 +56,22 @@ std::shared_ptr<Executable> TrtGraphCompiler::Compile(
     const std::vector<InputOutputAlias> &aliases) {
   // Build entry and return trt values.
   PopulateEntryParams(entry_params);
-  PopulateReturnParams(return_params);
+  // PopulateReturnParams(return_params);
 
   algorithm::TopologyVisit(*graph, [&](const XrtNode *node) {
     TrtOpContext::Param param;
     SetupKernelContextParam(node, &param);
-    TrtOpContext context(param);
+    TrtOpContext op_context(param);
     // Do compile
     auto op_kernel = BuildOpKernel(node->type());
-    op_kernel->Compile(&context);
+    op_kernel->Compile(&op_context);
 
     // Always insert the new output into `operands_`.
     const auto &outputs = op_context.outputs();
     for (auto it = outputs.begin(); it != outputs.end(); ++it) {
       operands_[it->first] = it->second;
     }
-  }
+  });
 
   for (int i = 0; i < return_params.size(); ++i) {
     Argument arg = ArgFromParameter(return_params[i]);
@@ -83,7 +79,7 @@ std::shared_ptr<Executable> TrtGraphCompiler::Compile(
     builder_->MarkOutput(value.handle());
   }
 
-  return std::make_shared<TrtExecutable>(builder_->buildCudaEngine());
+  return std::make_shared<TrtExecutable>(builder_->BuildCudaEngine());
 }
 
 }  // namespace tensorrt

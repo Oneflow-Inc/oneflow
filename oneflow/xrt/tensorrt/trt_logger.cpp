@@ -1,8 +1,11 @@
 #include "oneflow/xrt/tensorrt/trt_logger.h"
+#include "glog/logging.h"
 
 namespace oneflow {
 namespace xrt {
 namespace tensorrt {
+
+namespace nv {
 
 using ILogger = ::nvinfer1::ILogger;
 
@@ -32,6 +35,8 @@ void Logger::log(ILogger::Severity severity, const char* msg) {
     }
   }
 }
+
+}  // namespace nv
 
 }  // namespace tensorrt
 }  // namespace xrt

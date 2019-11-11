@@ -9,6 +9,7 @@ option(BUILD_CUDA "" ON)
 option(RELEASE_VERSION "" ON)
 option(PY3 "" OFF)
 option(WITH_XLA "" ON)
+option(WITH_TENSORRT "" ON)
 
 # Project
 if(THIRD_PARTY)
@@ -19,6 +20,9 @@ endif()
 
 if (WITH_XLA)
   add_definitions(-DWITH_XLA)
+endif()
+if (WITH_TENSORRT)
+  add_definitions(-DWITH_TENSORRT)
 endif()
 
 enable_testing()

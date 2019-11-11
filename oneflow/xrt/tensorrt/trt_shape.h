@@ -14,16 +14,16 @@ namespace tensorrt {
 inline nvinfer1::DataType DataTypeToTrtDataType(const DataType &data_type) {
   switch (data_type) {
     case oneflow::kFloat:
-      return nvinfer1::kFLOAT;
+      return nvinfer1::DataType::kFLOAT;
     case oneflow::kInt8:
-      return nvinfer1::kINT8;
+      return nvinfer1::DataType::kINT8;
     case oneflow::kInt32:
-      return nvinfer1::kINT32;
+      return nvinfer1::DataType::kINT32;
     case oneflow::kFloat16:
-      return nvinfer1::kHALF;
+      return nvinfer1::DataType::kHALF;
     default: {
       LOG(FATAL) << "Unsupported data type " << data_type << " for TensorRT.";
-      return nvinfer1::kFLOAT;
+      return nvinfer1::DataType::kFLOAT;
     }
   }
 }
@@ -62,7 +62,7 @@ class TrtShape {
   const nvinfer1::Dims &shape() const { return dims_; }
 
  private:
-  int64_t count_ = -1;
+  mutable int64_t count_ = -1;
 
   nvinfer1::DataType data_type_;
   nvinfer1::Dims dims_;

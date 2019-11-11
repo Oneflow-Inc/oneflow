@@ -14,6 +14,7 @@ include(eigen)
 include(cocoapi)
 include(half)
 include(tensorflow)
+include(tensorrt)
 
 if (BUILD_CUDA)
   set(CUDA_SEPARABLE_COMPILATION ON)
@@ -153,9 +154,14 @@ if(BUILD_RDMA)
   endif()
 endif()
 
-if(WITH_XLA)
+if (WITH_XLA)
   include_directories(${TENSORFLOW_XLA_INCLUDE_DIR})
   list(APPEND oneflow_third_party_libs ${TENSORFLOW_XLA_LIBRARIES})
+endif()
+
+if (WITH_TENSORRT)
+  include_directories(${TENSORRT_INCLUDE_DIR})
+  list(APPEND oneflow_third_party_libs ${TENSORRT_LIBRARIES})
 endif()
 
 message(STATUS "oneflow_third_party_libs: " ${oneflow_third_party_libs})

@@ -15,7 +15,7 @@ class TrtValue {
  public:
   TrtValue() = default;
 
-  const int &handle() const { return handle_; }
+  int handle() const { return handle_; }
 
   TrtValueKind ValueKind(TrtBuilder *builder) const {
     CHECK_EQ(builder_, builder);
@@ -32,14 +32,12 @@ class TrtValue {
     return builder_->GetWeight(handle_);
   }
 
-  inline static TrtValue BuildParameter(TrtBuilder *builder,
-                                        const Parameter &param);
+  inline static TrtValue Parameter(TrtBuilder *builder,
+                                   const xrt::Parameter &param);
 
-  inline static TrtValue BuildTensor(TrtBuilder *builder,
-                                     nvinfer1::ITensor *tensor);
+  inline static TrtValue Tensor(TrtBuilder *builder, nvinfer1::ITensor *tensor);
 
-  inline static TrtValue BuildWeight(TrtBuilder *builder,
-                                     nvinfer1::Weights &weight);
+  inline static TrtValue Weight(TrtBuilder *builder, nvinfer1::Weights &weight);
 
  private:
   // Unique id for the `TrtValue`.
@@ -47,21 +45,21 @@ class TrtValue {
   TrtBuilder *builder_ = nullptr;
 };
 
-TrtValue TrtValue::BuildParameter(TrtBuilder *builder, const Parameter &param) {
+TrtValue TrtValue::Parameter(TrtBuilder *builder, const xrt::Parameter &param) {
   TrtValue trt_value;
   trt_value.handle_ = builder->AddParameter(param);
   trt_value.builder_ = builder;
   return std::move(trt_value);
 }
 
-TrtValue TrtValue::BuildTensor(TrtBuilder *builder, nvinfer1::ITensor *tensor) {
+TrtValue TrtValue::Tensor(TrtBuilder *builder, nvinfer1::ITensor *tensor) {
   TrtValue trt_value;
   trt_value.handle_ = builder->AddTensor(tensor);
   trt_value.builder_ = builder;
   return std::move(trt_value);
 }
 
-TrtValue TrtValue::BuildWeight(TrtBuilder *builder, nvinfer1::Weights &weight) {
+TrtValue TrtValue::Weight(TrtBuilder *builder, nvinfer1::Weights &weight) {
   TrtValue trt_value;
   trt_value.handle_ = builder->AddWeight(weight);
   trt_value.builder_ = builder;

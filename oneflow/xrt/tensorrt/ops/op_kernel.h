@@ -17,7 +17,7 @@ class TrtOpKernel : public OpKernel<TrtOpContext> {
 
   TrtOpKernel() = default;
   virtual ~TrtOpKernel() = default;
-}
+};
 
 using TrtOpKernelPtr = std::shared_ptr<OpKernel<TrtOpContext> >;
 

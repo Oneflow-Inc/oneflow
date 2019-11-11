@@ -4,6 +4,7 @@
 #include "NvInfer.h"
 
 #include "oneflow/xrt/graph_compiler.h"
+#include "oneflow/xrt/tensorrt/ops/op_context.h"
 #include "oneflow/xrt/tensorrt/trt_builder.h"
 #include "oneflow/xrt/tensorrt/trt_executable.h"
 #include "oneflow/xrt/tensorrt/trt_value.h"
@@ -16,7 +17,7 @@ class TrtGraphCompiler : public GraphCompiler::Impl {
  public:
   explicit TrtGraphCompiler(const std::string &name)
       : GraphCompiler::Impl(name) {
-    builder_ = std::make_shared<XrtBuilder>(name);
+    builder_ = std::make_shared<TrtBuilder>(name);
   }
 
   virtual ~TrtGraphCompiler() = default;
@@ -31,7 +32,8 @@ class TrtGraphCompiler : public GraphCompiler::Impl {
                                TrtOpContext::Param *context_param);
 
   void PopulateEntryParams(const std::vector<Parameter> &entry_params);
-  void PopulateReturnParams(const std::vector<Parameter> &return_params);
+
+  Argument ArgFromParameter(const Parameter &param);
 
  private:
   std::shared_ptr<TrtBuilder> builder_;

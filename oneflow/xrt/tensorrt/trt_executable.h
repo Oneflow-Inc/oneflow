@@ -1,8 +1,11 @@
 #ifndef ONEFLOW_XRT_TENSORRT_TRT_EXECUTABLE_H_
 #define ONEFLOW_XRT_TENSORRT_TRT_EXECUTABLE_H_
 
+#include <vector>
 #include "NvInfer.h"
 
+#include "oneflow/xrt/executable.h"
+#include "oneflow/xrt/parameter.h"
 #include "oneflow/xrt/tensorrt/trt_unique_ptr.h"
 
 namespace oneflow {
@@ -12,7 +15,7 @@ namespace tensorrt {
 
 class TrtExecutable : public Executable {
  public:
-  TrtExecutable(nv::unique_ptr<nvinfer1::ICudaEngine> &engine)
+  explicit TrtExecutable(nv::unique_ptr<nvinfer1::ICudaEngine> &&engine)
       : Executable(XrtEngine::TENSORRT), engine_(std::move(engine)) {}
 
   virtual ~TrtExecutable() = default;

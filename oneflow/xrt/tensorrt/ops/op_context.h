@@ -9,6 +9,7 @@
 #include "oneflow/xrt/argument.h"
 #include "oneflow/xrt/kernel/op_context.h"
 #include "oneflow/xrt/tensorrt/trt_builder.h"
+#include "oneflow/xrt/tensorrt/trt_value.h"
 #include "oneflow/xrt/types.h"
 #include "oneflow/xrt/utility/stl.h"
 #include "oneflow/xrt/xrt.pb.h"

@@ -1,6 +1,7 @@
 #ifndef ONEFLOW_XRT_TENSORRT_TRT_LOGGER_H_
 #define ONEFLOW_XRT_TENSORRT_TRT_LOGGER_H_
 
+#include <string>
 #include "NvInfer.h"
 
 namespace oneflow {
