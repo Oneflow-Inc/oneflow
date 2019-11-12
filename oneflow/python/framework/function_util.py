@@ -12,7 +12,7 @@ _job_name2job_func = {}
 def function(job_func):
     r"""Creates a callable OneFlow graph from a Python function.
     Args:
-        job_func: job function to be compiled.
+        job_func: job function to be compiled. Usually the function is decorated by decorator `@oneflow.function`
     Returns:
         If func is not None, returns a callable that will execute the compiled 
         function (and return zero or more Blob objects). 
