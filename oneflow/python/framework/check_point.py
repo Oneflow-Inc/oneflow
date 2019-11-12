@@ -85,10 +85,14 @@ def _MakeModelSaveJobFunc(path):
 
 @oneflow_export('train.SimpleCheckPointManager')
 class SimpleCheckPointManager(object):
-    """Class for a simple checkpoint management.
+    r"""Class for a simple checkpoint management.
 
     This class defines a simple checkpoint management object which save and restore 
     checkpoint automaticly.
+
+    Args:
+        root_path: root path of snapshot
+        prefix: prefix of snapshot
     """
     def __init__(self, root_path, prefix='snapshot_'):
         if not os.path.exists(root_path):

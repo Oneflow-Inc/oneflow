@@ -8,3 +8,6 @@ oneflow.train
 .. autoclass:: oneflow.train.CheckPoint
     :members:
     :undoc-members:
+.. autoclass:: oneflow.train.SimpleCheckPointManager
+    :members:
+    :undoc-members:
