@@ -23,7 +23,7 @@ class MaskHead(object):
             img_ids = flow.concat(
                 flow.detection.extract_piece_slice_id(pos_proposals), axis=0
             )
-            proposals = flow.concat(pos_proposals, axis=0)
+            proposals = flow.concat(pos_proposals, axis=0, name="pos_proposals")
 
             # mask head feature extractor
             x = self.mask_feature_extractor(proposals, img_ids, features)
@@ -72,7 +72,10 @@ class MaskHead(object):
                     mask_pred.shape[1],
                     mask_pred.shape[2],
                 )
-                gt_segms = flow.squeeze(gt_segms, axis=[1])
+                gt_segms = flow.squeeze(gt_segms, axis=[1], name="targets")
+                gt_segms = flow.cast(
+                    gt_segms, dtype=flow.int32, name="int_targets"
+                )
 
             mask_loss = flow.math.reduce_sum(
                 flow.nn.sigmoid_cross_entropy_with_logits(gt_segms, mask_pred)
