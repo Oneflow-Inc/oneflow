@@ -18,9 +18,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument(
     "-c", "--config_file", default=None, type=str, help="yaml config file"
 )
-parser.add_argument(
-    "-bz", "--batch_size", type=int, default=1, required=False
-)
+parser.add_argument("-bz", "--batch_size", type=int, default=1, required=False)
 parser.add_argument(
     "-load", "--model_load_dir", type=str, default="", required=False
 )
@@ -175,8 +173,12 @@ def maskrcnn_train(images, image_sizes, gt_boxes, gt_segms, gt_labels):
         )
         for i in range(image_sizes.shape[0])
     ]
-    gt_boxes_list = flow.piece_slice(gt_boxes, cfg.TRAINING_CONF.IMG_PER_GPU, name="piece_gt_boxes")
-    gt_labels_list = flow.piece_slice(gt_labels, cfg.TRAINING_CONF.IMG_PER_GPU, name="piece_slice_gt_labels")
+    gt_boxes_list = flow.piece_slice(
+        gt_boxes, cfg.TRAINING_CONF.IMG_PER_GPU, name="piece_gt_boxes"
+    )
+    gt_labels_list = flow.piece_slice(
+        gt_labels, cfg.TRAINING_CONF.IMG_PER_GPU, name="piece_slice_gt_labels"
+    )
     gt_segms_list = None
     if gt_segms.num_of_lod_levels == 2:
         gt_segms_list = flow.piece_slice(
@@ -230,13 +232,18 @@ def maskrcnn_train(images, image_sizes, gt_boxes, gt_segms, gt_labels):
 
     return rpn_bbox_loss, rpn_objectness_loss, box_loss, cls_loss, mask_loss
 
+
 def MakeWatcherCallback(prompt):
     def Callback(blob, blob_def):
         if prompt == "forward":
             return
-        print("%s, lbn: %s, min: %s, max: %s"
-              %(prompt, blob_def.logical_blob_name, blob.min(), blob.max()))
+        print(
+            "%s, lbn: %s, min: %s, max: %s"
+            % (prompt, blob_def.logical_blob_name, blob.min(), blob.max())
+        )
+
     return Callback
+
 
 def maskrcnn_eval(images, image_sizes):
     cfg = get_default_cfgs()
@@ -326,6 +333,7 @@ if terminal_args.eval:
         ),
     ):
         return maskrcnn_eval(images, image_sizes)
+
 
 if terminal_args.train_with_real_dataset:
 
