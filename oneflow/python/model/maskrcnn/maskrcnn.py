@@ -112,16 +112,16 @@ def get_numpy_placeholders():
         "detections": np.random.randn(2000, 4).astype(np.float32),
         "detection0": np.random.randn(1000, 4).astype(np.float32),
         "detection1": np.random.randn(1000, 4).astype(np.float32),
-        "fpn_feature_map1": np.random.randn(1, 256, 512, 512).astype(
+        "fpn_feature_map1": np.random.randn(2, 256, 200, 304).astype(
             np.float32
         ),
-        "fpn_feature_map2": np.random.randn(1, 256, 256, 256).astype(
+        "fpn_feature_map2": np.random.randn(2, 256, 100, 152).astype(
             np.float32
         ),
-        "fpn_feature_map3": np.random.randn(1, 256, 128, 128).astype(
+        "fpn_feature_map3": np.random.randn(2, 256, 50, 76).astype(
             np.float32
         ),
-        "fpn_feature_map4": np.random.randn(1, 256, 64, 64).astype(np.float32),
+        "fpn_feature_map4": np.random.randn(2, 256, 25, 38).astype(np.float32),
     }
 
 
@@ -307,7 +307,7 @@ if terminal_args.eval:
 
     @flow.function
     def maskrcnn_box_head_eval_job(
-        images=flow.input_blob_def((2, 3, 1280, 800), dtype=flow.float, is_dynamic=True),
+        images=flow.input_blob_def((2, 3, 800, 1216), dtype=flow.float, is_dynamic=True),
         image_sizes=flow.input_blob_def((2, 2), dtype=flow.int32, is_dynamic=False),
     ):
         return maskrcnn_eval_box_head(images, image_sizes)
@@ -449,8 +449,8 @@ if __name__ == "__main__":
         elif terminal_args.eval:
             import numpy as np
 
-            images = debug_data.blob("images")
-            image_sizes = debug_data.blob("image_size")
+            images = np.load("/tmp/shared_with_jxf/maskrcnn_eval_input_data/images.npy")
+            image_sizes = np.load("/tmp/shared_with_jxf/maskrcnn_eval_input_data/image_size.npy")
             image_num = image_sizes.shape[0]
 
             results = maskrcnn_box_head_eval_job(images, image_sizes).get()
@@ -459,6 +459,9 @@ if __name__ == "__main__":
             fpn_feature_map = []
             for i in range(4):
                 fpn_feature_map.append(results[image_num + i].ndarray())
+
+            for item in fpn_feature_map:
+                print(item.shape)
 
             boxes = []
             for proposal, img in zip(results[:image_num], image_sizes):
@@ -482,9 +485,7 @@ if __name__ == "__main__":
             mask_postprocessor = MaskPostProcessor()
             predictions = mask_postprocessor.forward(mask_prob.ndarray(), results)
 
-            #coco = COCO('/dataset/coco_2_images/annotations/sample_2_instances_val2017.json')
-            #imgs = coco.loadImgs(coco.getImgIds())
-            ann_file = '/dataset/coco_2_images/annotations/sample_2_instances_val2017.json'
+            ann_file = '/dataset/mscoco_2017/annotations/sample_2_instances_val2017.json'
             dataset = COCODataset(ann_file)
             do_coco_evaluation(
                 dataset,

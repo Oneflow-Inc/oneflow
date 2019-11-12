@@ -1,7 +1,7 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
 import numpy as np
 
-from bounding_box import BoxList
+from .bounding_box import BoxList
 
 def _box_nms(dets, scores, thresh):
     '''https://github.com/rbgirshick/fast-rcnn/blob/master/lib/utils/nms.py

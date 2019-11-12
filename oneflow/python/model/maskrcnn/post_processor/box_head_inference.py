@@ -1,10 +1,10 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
 import numpy as np
 
-from bounding_box import BoxList
-from boxlist_ops import boxlist_nms
-from boxlist_ops import cat_boxlist
-from box_coder import BoxCoder
+from .bounding_box import BoxList
+from .boxlist_ops import boxlist_nms
+from .boxlist_ops import cat_boxlist
+from .box_coder import BoxCoder
 
 
 class PostProcessor():

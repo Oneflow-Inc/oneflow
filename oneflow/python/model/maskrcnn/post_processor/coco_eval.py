@@ -6,9 +6,9 @@ import numpy as np
 from collections import OrderedDict
 from tqdm import tqdm
 
-from mask_head_inference import Masker
-from bounding_box import BoxList
-from boxlist_ops import boxlist_iou
+from .mask_head_inference import Masker
+from .bounding_box import BoxList
+from .boxlist_ops import boxlist_iou
 
 
 def do_coco_evaluation(
@@ -63,8 +63,8 @@ def do_coco_evaluation(
             results.update(res)
     logger.info(results)
     check_expected_results(results, expected_results, expected_results_sigma_tol)
-    if output_folder:
-        pkl.dump(results, open(os.path.join(output_folder, "coco_results.pkl"), 'wb'))
+    # if output_folder:
+    #     pkl.dump(results, open(os.path.join(output_folder, "coco_results.pkl"), 'wb'))
     return results, coco_results
 
 
