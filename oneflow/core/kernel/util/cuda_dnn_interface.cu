@@ -13,7 +13,7 @@ __inline__ __device__ half hzero() { return __float2half(0.0); }
 
 template<typename T>
 __global__ void ReluForwardGpu(const int n, const T* x, T* y) {
-  CUDA_1D_KERNEL_LOOP(i, n) { y[i] = x[i] > 0 ? x[i] : 0; }
+  CUDA_1D_KERNEL_LOOP(i, n) { y[i] = (x[i] > 0) * x[i]; }
 }
 
 template<>
@@ -33,7 +33,7 @@ __global__ void ReluForwardGpu<half>(const int n, const half* x, half* y) {
 
 template<typename T>
 __global__ void ReluBackwardGpu(const int n, const T* y, const T* dy, T* dx) {
-  CUDA_1D_KERNEL_LOOP(i, n) { dx[i] = y[i] > 0 ? dy[i] : 0; }
+  CUDA_1D_KERNEL_LOOP(i, n) { dx[i] = (y[i] > 0) * dy[i]; }
 }
 
 template<>
@@ -115,10 +115,12 @@ __global__ void TanHBackwardGpu<half>(const int n, const half* y, const half* dy
 }  // namespace
 
 void DnnIf<DeviceType::kGPU>::Relu(DeviceCtx* ctx, const int64_t n, const float* x, float* y) {
+  CHECK_LE(n, GetMaxVal<int32_t>() / 2);
   ReluForwardGpu<float>
       <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y);
 }
 void DnnIf<DeviceType::kGPU>::Relu(DeviceCtx* ctx, const int64_t n, const double* x, double* y) {
+  CHECK_LE(n, GetMaxVal<int32_t>() / 2);
   ReluForwardGpu<double>
       <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y);
 }
@@ -129,18 +131,21 @@ void DnnIf<DeviceType::kGPU>::Relu(DeviceCtx* ctx, const int64_t n, const float1
 
 void DnnIf<DeviceType::kGPU>::ReluBackward(DeviceCtx* ctx, const int64_t n, const float* x,
                                            const float* y, const float* dy, float* dx) {
+  CHECK_LE(n, GetMaxVal<int32_t>() / 2);
   ReluBackwardGpu<float>
       <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, y, dy, dx);
 }
 
 void DnnIf<DeviceType::kGPU>::ReluBackward(DeviceCtx* ctx, const int64_t n, const double* x,
                                            const double* y, const double* dy, double* dx) {
+  CHECK_LE(n, GetMaxVal<int32_t>() / 2);
   ReluBackwardGpu<double>
       <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, y, dy, dx);
 }
 
 void DnnIf<DeviceType::kGPU>::ReluBackward(DeviceCtx* ctx, const int64_t n, const float16* x,
                                            const float16* y, const float16* dy, float16* dx) {
+  CHECK_LE(n, GetMaxVal<int32_t>() / 2);
   ReluBackwardGpu<half>
       <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
           n, reinterpret_cast<const half*>(y), reinterpret_cast<const half*>(dy),
@@ -148,16 +153,19 @@ void DnnIf<DeviceType::kGPU>::ReluBackward(DeviceCtx* ctx, const int64_t n, cons
 }
 
 void DnnIf<DeviceType::kGPU>::Sigmoid(DeviceCtx* ctx, int64_t n, const float* x, float* y) {
+  CHECK_LE(n, GetMaxVal<int32_t>() / 2);
   SigmoidForwardGpu<float>
       <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y);
 }
 
 void DnnIf<DeviceType::kGPU>::Sigmoid(DeviceCtx* ctx, int64_t n, const double* x, double* y) {
+  CHECK_LE(n, GetMaxVal<int32_t>() / 2);
   SigmoidForwardGpu<double>
       <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y);
 }
 
 void DnnIf<DeviceType::kGPU>::Sigmoid(DeviceCtx* ctx, int64_t n, const float16* x, float16* y) {
+  CHECK_LE(n, GetMaxVal<int32_t>() / 2);
   SigmoidForwardGpu<half>
       <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
           n, reinterpret_cast<const half*>(x), reinterpret_cast<half*>(y));
@@ -165,18 +173,21 @@ void DnnIf<DeviceType::kGPU>::Sigmoid(DeviceCtx* ctx, int64_t n, const float16* 
 
 void DnnIf<DeviceType::kGPU>::SigmoidBackward(DeviceCtx* ctx, const int64_t n, const float* x,
                                               const float* y, const float* dy, float* dx) {
+  CHECK_LE(n, GetMaxVal<int32_t>() / 2);
   SigmoidBackwardGpu<float>
       <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, y, dy, dx);
 }
 
 void DnnIf<DeviceType::kGPU>::SigmoidBackward(DeviceCtx* ctx, const int64_t n, const double* x,
                                               const double* y, const double* dy, double* dx) {
+  CHECK_LE(n, GetMaxVal<int32_t>() / 2);
   SigmoidBackwardGpu<double>
       <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, y, dy, dx);
 }
 
 void DnnIf<DeviceType::kGPU>::SigmoidBackward(DeviceCtx* ctx, const int64_t n, const float16* x,
                                               const float16* y, const float16* dy, float16* dx) {
+  CHECK_LE(n, GetMaxVal<int32_t>() / 2);
   SigmoidBackwardGpu<half>
       <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
           n, reinterpret_cast<const half*>(y), reinterpret_cast<const half*>(dy),
@@ -184,34 +195,40 @@ void DnnIf<DeviceType::kGPU>::SigmoidBackward(DeviceCtx* ctx, const int64_t n, c
 }
 
 void DnnIf<DeviceType::kGPU>::TanH(DeviceCtx* ctx, int64_t n, const float* x, float* y) {
+  CHECK_LE(n, GetMaxVal<int32_t>() / 2);
   TanHForwardGpu<float>
       <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y);
 }
 
 void DnnIf<DeviceType::kGPU>::TanH(DeviceCtx* ctx, int64_t n, const double* x, double* y) {
+  CHECK_LE(n, GetMaxVal<int32_t>() / 2);
   TanHForwardGpu<double>
       <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y);
 }
 
 void DnnIf<DeviceType::kGPU>::TanH(DeviceCtx* ctx, int64_t n, const float16* x, float16* y) {
+  CHECK_LE(n, GetMaxVal<int32_t>() / 2);
   TanHForwardGpu<half><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
       n, reinterpret_cast<const half*>(x), reinterpret_cast<half*>(y));
 }
 
 void DnnIf<DeviceType::kGPU>::TanHBackward(DeviceCtx* ctx, const int64_t n, const float* x,
                                            const float* y, const float* dy, float* dx) {
+  CHECK_LE(n, GetMaxVal<int32_t>() / 2);
   TanHBackwardGpu<float>
       <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, y, dy, dx);
 }
 
 void DnnIf<DeviceType::kGPU>::TanHBackward(DeviceCtx* ctx, const int64_t n, const double* x,
                                            const double* y, const double* dy, double* dx) {
+  CHECK_LE(n, GetMaxVal<int32_t>() / 2);
   TanHBackwardGpu<double>
       <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, y, dy, dx);
 }
 
 void DnnIf<DeviceType::kGPU>::TanHBackward(DeviceCtx* ctx, const int64_t n, const float16* x,
                                            const float16* y, const float16* dy, float16* dx) {
+  CHECK_LE(n, GetMaxVal<int32_t>() / 2);
   TanHBackwardGpu<half>
       <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
           n, reinterpret_cast<const half*>(y), reinterpret_cast<const half*>(dy),
