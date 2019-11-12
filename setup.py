@@ -25,7 +25,7 @@ setup(
     version='0.0.1',
     url='https://www.oneflow.org/',
     install_requires=REQUIRED_PACKAGES,
-    packages=find_packages("build/python_scripts"),
+    packages=find_packages("build/python_scripts", exclude=("oneflow",)),
     package_dir={'':'build/python_scripts'},
     package_data={
         'oneflow': [
