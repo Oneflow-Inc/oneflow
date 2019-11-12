@@ -7,6 +7,7 @@ import "oneflow/core/record/image.proto";
 import "oneflow/core/record/record.proto";
 import "oneflow/core/job/resource.proto";
 import "oneflow/core/register/logical_blob_id.proto";
+import "oneflow/core/data/data.proto";
 
 enum ActivationType {
   kNone = 0;
@@ -921,6 +922,18 @@ message BlobConf {
   optional int32 max_sequence_size = 4 [default = 1];
   required EncodeConf encode_case = 5;
   repeated PreprocessConf preprocess = 6;
+  repeated int32 variable_length_axes = 7;
+  optional DataSourceCase data_source = 8;
+  optional bool is_dynamic = 9 [default = false];
+}
+
+message DataLoadOpConf {
+  required int64 batch_size = 1;
+  optional string tick = 2;
+  required DatasetProto dataset = 3;
+  repeated BlobConf blobs = 4;
+  repeated DataTransformProto transforms = 5;
+  optional int32 batch_cache_size = 6 [default = 3];
 }
 
 message DecodeOFRecordOpConf {
@@ -1939,7 +1952,8 @@ message OperatorConf {
     DecodeOFRecordOpConf decode_ofrecord_conf = 101;
     DecodeRandomOpConf decode_random_conf = 102;
     RecordLoadOpConf record_load_conf = 103;
-    CopyHdOpConf copy_hd_conf = 104;
+    DataLoadOpConf data_load_conf = 104;
+    CopyHdOpConf copy_hd_conf = 105;
     CopyCommNetOpConf copy_comm_net_conf = 106;
     ConcatOpConf concat_conf = 107;
     BoxingOpConf boxing_conf = 108;
