@@ -100,12 +100,22 @@ def machine(val):
 
 @oneflow_export('config.ctrl_port')
 def ctrl_port(val):
+    r"""Set port number used to control the execution across multiple machines. Same on every machine.
+
+    Args:
+        val: a port number accessible to peer machines
+    """
     assert config_proto_mutable == True
     assert type(val) is int
     default_config_proto.resource.ctrl_port = val
 
 @oneflow_export('config.data_port')
 def data_port(val):
+    r"""Set port number used to data transfer among multiple machines. Same on every machine.
+
+    Args:
+        val: a port number accessible to peer machines
+    """
     assert config_proto_mutable == True
     assert type(val) is int
     default_config_proto.resource.data_port = val

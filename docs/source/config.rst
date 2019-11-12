@@ -6,3 +6,5 @@ oneflow.config
     :undoc-members:
 
 .. autofunction:: gpu_device_num
+.. autofunction:: ctrl_port
+.. autofunction:: data_port
