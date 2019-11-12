@@ -56,9 +56,10 @@ void DataLoadOp::VirtualGenKernelConf(
   this_kernel_conf->set_parallel_id(parallel_ctx->parallel_id());
 }
 
-Maybe<void> DataLoadOp::InferBlobDescs(
+Maybe<void> DataLoadOp::InferOutBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
+    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature,
+    std::function<void(OpContext*)> EnrollOpCtx) const {
   FOR_RANGE(size_t, i, 0, output_bns().size()) {
     BlobDesc* out_blob_desc = GetBlobDesc4BnInOp(output_bns().Get(i));
     const BlobConf& blob_conf = op_conf().data_load_conf().blobs(i);
