@@ -127,6 +127,17 @@ def get_numpy_placeholders():
 
 placeholders = get_numpy_placeholders()
 
+def Save(name):
+    def _save(x):
+        import numpy as np
+        import os
+
+        path = "eval_dump/"
+        if not os.path.exists(path):
+            os.mkdir(path)
+        np.save(path + name, x.ndarray())
+
+    return _save
 
 def maskrcnn_train(images, image_sizes, gt_boxes, gt_segms, gt_labels):
     r"""Mask-RCNN
@@ -229,7 +240,6 @@ def maskrcnn_eval_box_head(images, image_sizes):
     rpn_head = RPNHead(cfg)
     rpn_proposal = RPNProposal(cfg)
     box_head = BoxHead(cfg)
-    mask_head = MaskHead(cfg)
 
     image_size_list = [
         flow.squeeze(
@@ -252,8 +262,8 @@ def maskrcnn_eval_box_head(images, image_sizes):
     # Backbone
     features = backbone.build(images)
 
-    #for idx, feature in enumerate(features):
-    #    flow.watch(feature, Save("feature_{}".format(idx)))
+    for idx, feature in enumerate(features):
+       flow.watch(feature, Save("feature_{}".format(idx)))
 
     # RPN
     cls_logit_list, bbox_pred_list = rpn_head.build(features)
@@ -261,20 +271,16 @@ def maskrcnn_eval_box_head(images, image_sizes):
         anchors, cls_logit_list, bbox_pred_list, image_size_list, None
     )
 
+    # for idx, proposal in enumerate(proposals):
+    #    flow.watch(proposal, Save("proposal_{}".format(idx)))
+
     # Box Head
     cls_probs, box_regressions = box_head.build_eval(proposals, features)
-    #proposals = flow.concat(proposals, axis=0)
-    # Mask Head
-    # TODO: get proposals from box_head post-processors
-    # mask_logits = mask_head.build_eval(proposals, features)
 
-    #return (proposals, cls_probs, box_regressions)
+    # flow.watch(cls_probs, Save("cls_probs"))
+    # flow.watch(box_regressions, Save("box_regressions"))
+
     return tuple(proposals) + tuple(features) + (cls_probs,) + (box_regressions,)
-
-#def maskrcnn_eval_mask_head(proposals, features):
-#    cfg = get_default_cfgs()
-#    mask_head = MaskHead(cfg)
-#    return mask_head.build_eval(proposals, features)
 
 
 blob_watched, diff_blob_watched = {}, {}
@@ -324,7 +330,9 @@ if terminal_args.eval:
         cfg = get_default_cfgs()
         mask_head = MaskHead(cfg)
         mask_logits = mask_head.build_eval([detection0, detection1], [fpn_fm1, fpn_fm2, fpn_fm3, fpn_fm4])
-        return flow.math.sigmoid(mask_logits)
+        mask_prob = flow.math.sigmoid(mask_logits)
+        # flow.watch(mask_prob, Save("mask_prob"))
+        return mask_prob
 
 
 if terminal_args.rcnn_eval:
@@ -464,11 +472,18 @@ if __name__ == "__main__":
                 print(item.shape)
 
             boxes = []
-            for proposal, img in zip(results[:image_num], image_sizes):
-              bbox = BoxList(proposal.ndarray(), img, mode="xyxy")
+            for proposal, img_size in zip(results[:image_num], image_sizes):
+              bbox = BoxList(proposal.ndarray(), (img_size[1], img_size[0]), mode="xyxy")
+              print(img_size)
               boxes.append(bbox)
             postprocessor = PostProcessor()
+            for img_idx, box in enumerate(boxes):
+                np.save("eval_dump/proposals_{}".format(img_idx), box.bbox)
+            np.save("eval_dump/cls_probs", cls_probs.ndarray())
+            np.save("eval_dump/box_regressions", box_regressions.ndarray())
             results = postprocessor.forward((cls_probs.ndarray(), box_regressions.ndarray()), boxes)
+            for result in results:
+                print(len(result))
 
             detections = []
             for result in results:
