@@ -142,10 +142,10 @@ def slice(input_, begin, size, name=None):
     Args:
         input_: A `Blob`.
         begin: A list or a tuple, indicate each dimension slice begin, whose length must be equal 
-            to input_'s number of dimensions, the first element of beign must be set to None.
+            to `input_`'s number of dimensions, the first element of beign must be set to None.
             (because oneflow internal slice op do not support slice at dim0 at present)
         size: A list or a tuple, indicate each dimension slice size, whose length must be equal 
-            to input_'s number of dimensions, the first element of beign must be set to None.
+            to `input_`'s number of dimensions, the first element of beign must be set to None.
         name: A name for the operation (optional).
     """
     ndims = len(input_.static_shape)
