@@ -200,6 +200,7 @@ class PackForwardLogicalNode final : public ForwardLogicalNode {
   }
 
 DECLARE_NAIVE_LOGICAL_NODE(RecordLoadLogicalNode);
+DECLARE_NAIVE_LOGICAL_NODE(DataLoadLogicalNode);
 DECLARE_NAIVE_LOGICAL_NODE(DecodeLogicalNode);
 DECLARE_NAIVE_LOGICAL_NODE(DecodeRandomLogicalNode);
 DECLARE_NAIVE_LOGICAL_NODE(DistributeConcatLogicalNode);
