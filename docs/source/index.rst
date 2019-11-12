@@ -8,6 +8,7 @@ OneFlow Documentation
     oneflow
     config
     train
+    math
 
 Indices and tables
 ==================
