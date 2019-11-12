@@ -5,10 +5,10 @@ namespace oneflow {
 namespace {
 
 template<typename T, typename Index>
-__global__ void BiasAddGpu(const Index elem_cnt, const Index bias_size, const Index inner_size,
-                           const T* x, const T* bias, T* y) {
+__global__ void InplaceBiasAddGpu(const Index elem_cnt, const Index bias_size,
+                                  const Index inner_size, const T* bias, T* y) {
   const Index block_size = bias_size * inner_size;
-  CUDA_1D_KERNEL_LOOP(i, elem_cnt) { y[i] = x[i] + bias[(i % block_size) / inner_size]; }
+  CUDA_1D_KERNEL_LOOP(i, elem_cnt) { y[i] += bias[(i % block_size) / inner_size]; }
 }
 
 template<typename Index>
@@ -19,6 +19,17 @@ __global__ void BiasAddForwardGpuHalf(const Index elem_cnt, const Index bias_siz
   CUDA_1D_KERNEL_LOOP(i, elem_cnt) { y[i] = __hadd(x[i], bias[(i % block_size) / inner_size]); }
 }
 
+template<typename T, typename Index>
+struct BiasAddGpuHelper final {
+  static void BiasAdd(DeviceCtx* ctx, const Index elem_cnt, const Index bias_size,
+                      const Index inner_size, const T* x, const T* bias, T* y) {
+    Memcpy<DeviceType::kGPU>(ctx, y, x, elem_cnt, cudaMemcpyKind::cudaMemcpyDeviceToDevice);
+    InplaceBiasAddGpu<T, Index>
+        <<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+            elem_cnt, bias_size, inner_size, bias, y);
+  }
+};
+
 }  // namespace
 
 template<typename T>
@@ -27,13 +38,9 @@ struct BiasAddUtil<DeviceType::kGPU, T> {
                       const T* x, const T* bias, T* y) {
     const int64_t elem_cnt = outer_size * bias_size * inner_size;
     if (elem_cnt < (GetMaxVal<int32_t>() / 2)) {
-      BiasAddGpu<T, int32_t>
-          <<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-              elem_cnt, bias_size, inner_size, x, bias, y);
+      BiasAddGpuHelper<T, int32_t>::BiasAdd(ctx, elem_cnt, bias_size, inner_size, x, bias, y);
     } else {
-      BiasAddGpu<T, int64_t>
-          <<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-              elem_cnt, bias_size, inner_size, x, bias, y);
+      BiasAddGpuHelper<T, int64_t>::BiasAdd(ctx, elem_cnt, bias_size, inner_size, x, bias, y);
     }
   }
 };
