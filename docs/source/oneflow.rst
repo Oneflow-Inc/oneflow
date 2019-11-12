@@ -7,28 +7,8 @@ oneflow
 Operators
 ----------------------------------
 
-.. autofunction:: gather
-.. autofunction:: watch
-.. autoclass:: input_blob_def
-    :members:
-    :undoc-members:
-.. decorator:: function
-.. autofunction:: function
-.. autofunction:: get_default_job_set
-.. autofunction:: reset_default_job_set
-.. autofunction:: inter_job_reuse_mem_strategy
-.. autofunction:: fixed_placement
-.. autofunction:: device_prior_placement
-.. autodata:: double
-.. autodata:: float
-.. autodata:: float32
-.. autodata:: float64
-.. autodata:: int32
-.. autodata:: int64
-.. autodata:: int8
-.. autofunction:: gather
-.. autofunction:: get_default_job_set
 .. autofunction:: get_variable
+.. autofunction:: gather
 .. autofunction:: identity
 .. autofunction:: matmul
 .. autofunction:: parallel_cast
@@ -46,3 +26,30 @@ Operators
 .. autofunction:: variance_scaling_initializer
 .. autofunction:: xavier_uniform_initializer
 .. autofunction:: zeros_initializer
+
+System
+----------------------------------
+
+.. autofunction:: watch
+.. autoclass:: input_blob_def
+    :members:
+    :undoc-members:
+.. decorator:: function
+.. autofunction:: function
+.. autofunction:: get_default_job_set
+.. autofunction:: reset_default_job_set
+.. autofunction:: inter_job_reuse_mem_strategy
+.. autofunction:: fixed_placement
+.. autofunction:: device_prior_placement
+.. autofunction:: get_default_job_set
+
+Types
+----------------------------------
+
+.. autodata:: double
+.. autodata:: float
+.. autodata:: float32
+.. autodata:: float64
+.. autodata:: int32
+.. autodata:: int64
+.. autodata:: int8
