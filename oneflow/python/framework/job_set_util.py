@@ -20,8 +20,7 @@ def compile_all_job(job_set = None):
 @oneflow_export('get_default_job_set')
 def get_default_job_set():
     r"""Return the default job set object.
-    Args:
-        None. 
+
     Returns:
         the default job set.
     """
@@ -30,8 +29,6 @@ def get_default_job_set():
 @oneflow_export('reset_default_job_set')
 def reset_default_job_set():
     r"""Reset the default job set object.
-    Args:
-        None. 
     """
     global _default_job_set
     _default_job_set = JobSet()
@@ -40,6 +37,7 @@ def reset_default_job_set():
 @oneflow_export('inter_job_reuse_mem_strategy')
 def inter_job_reuse_mem_strategy(strategy_str, job_set = None, **kwargs):
     r"""Set memory sharing strategy for job set.
+
     Args:
         strategy_str: An optional `string` from: `mem_sharing_priority`, `parallelism_priority` 
         or `custom_parallelism`. 
