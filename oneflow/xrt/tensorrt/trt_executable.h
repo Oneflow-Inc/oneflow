@@ -33,8 +33,8 @@ class TrtExecutable : public Executable {
  private:
   bool CreateExecutableEngine(const ExecutableRunOptions &run_options);
 
-  bool Execute(int batch_size, void **buffers, void *stream,
-               bool block_until_done);
+  bool ExecuteEngine(int batch_size, void **buffers, void *stream,
+                     bool block_until_done);
 
  private:
   nv::unique_ptr<nvinfer1::ICudaEngine> engine_;

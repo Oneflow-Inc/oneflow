@@ -84,6 +84,8 @@ std::shared_ptr<Executable> TrtGraphCompiler::Compile(
                                          builder_->ReleaseNetwork());
 }
 
+REGISTER_GRAPH_COMPILER(XrtEngine::TENSORRT, TrtGraphCompiler);
+
 }  // namespace tensorrt
 }  // namespace xrt
 }  // namespace oneflow

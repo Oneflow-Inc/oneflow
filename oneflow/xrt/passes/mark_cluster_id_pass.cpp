@@ -6,18 +6,6 @@
 namespace oneflow {
 namespace xrt {
 
-bool IsSatisfyBackend(const ClusterEdge *edge) {
-  return edge->start()->device() == edge->end()->device();
-}
-bool IsSatisfySbpPolicy(const ClusterEdge *edge) {
-  return edge->is_control_edge() ||
-         (edge->start_sbp_policy() == edge->end_sbp_policy());
-}
-bool IsSatisfyTimeShape(const ClusterEdge *edge) {
-  return edge->is_control_edge() ||
-         (edge->start_time_shape() == edge->end_time_shape());
-}
-
 class MarkClusterIdPass : public XrtPass {
  public:
   MarkClusterIdPass() = default;
@@ -29,15 +17,15 @@ class MarkClusterIdPass : public XrtPass {
 
  private:
   void BuildClusterNodesAndEdges(XrtGraph *graph);
-  void ClusteringSubgraphs(const XrtPassOptions &options);
-  void RemoveInvalidClusterNodes(const XrtPassOptions &options);
+  void ClusteringSubgraphs(const ClusteringOptions &options);
+  void RemoveInvalidClusterNodes(const ClusteringOptions &options);
 
   // Rerank cluster id start by 0
   void RerankClusterIds();
-  void DumpClusterInfoToGraph(XrtGraph *graph);
+  void DumpClusterInfoToGraph(XrtGraph *graph, const XrtEngine &engine);
 
   bool TryToFuseWithParent(ClusterNode *children, ClusterNode *parent,
-                           const XrtPassOptions &options);
+                           const ClusteringOptions &options);
 
  private:
   // Root cluster nodes
@@ -57,28 +45,25 @@ struct GraphTypeTrait<MarkClusterIdPass> {
 }  // namespace algorithm
 
 void MarkClusterIdPass::BuildClusterNodesAndEdges(XrtGraph *graph) {
-  util::Map<int64_t, ClusterNode *> cluster_nodes;
-  CHECK(root_nodes_.empty());
-  CHECK(allocated_nodes_.empty());
-  CHECK(allocated_edges_.empty());
-  CHECK(graph) << "Graph is required by running MarkClusterIdPass.";
+  CHECK(graph) << "Graph is required by MarkClusterIdPass.";
 
+  util::Map<int64_t, ClusterNode *> cluster_nodes;
   algorithm::TopologyVisit(*graph, [&, this](XrtNode *xrt_node) {
     int64_t cluster_id = allocated_nodes_.size();
     auto cluster_node = BuildClusterNode(xrt_node, cluster_id);
     allocated_nodes_.push_back(cluster_node);
-    root_nodes_.emplace(cluster_node.get());
+    root_nodes_.insert(cluster_node.get());
 
-    cluster_nodes.emplace(xrt_node->unique_id(), cluster_node.get());
+    cluster_nodes[xrt_node->unique_id()] = cluster_node.get();
   });
 
   for (ClusterNode *start : root_nodes_) {
-    const XrtNode *xrt_node = start->xrt_node();
-    for (const XrtEdge *xrt_edge : xrt_node->out_edges()) {
-      int64_t unique_id = xrt_edge->end()->unique_id();
-      ClusterNode *end = cluster_nodes[unique_id];
+    for (const XrtEdge *edge : start->xrt_node()->out_edges()) {
+      int64_t unique_id = edge->end()->unique_id();
+      ClusterNode *end = cluster_nodes.at(unique_id);
+
       auto cluster_edge = BuildClusterEdge(start, end);
-      SetupClusterEdge(cluster_edge.get(), xrt_edge);
+      SetupClusterEdge(cluster_edge.get(), edge);
 
       start->AddOutEdge(cluster_edge.get());
       end->AddInEdge(cluster_edge.get());
@@ -87,15 +72,16 @@ void MarkClusterIdPass::BuildClusterNodesAndEdges(XrtGraph *graph) {
   }
 }
 
-void MarkClusterIdPass::ClusteringSubgraphs(const XrtPassOptions &options) {
-  int32_t max_nodes = options.clustering_options.maximum_nodes;
-  int32_t iter_count = 10;
+void MarkClusterIdPass::ClusteringSubgraphs(const ClusteringOptions &options) {
+  const XrtEngine engine = options.engine;
+  const int max_nodes = options.maximum_nodes;
+  const int max_iter = options.max_iteration;
 
-  for (int i = 0; i < iter_count; ++i) {
+  for (int i = 0; i < max_iter; ++i) {
     bool has_changed = false;
     std::vector<ClusterNode *> ordered_nodes;
     algorithm::TopologyVisit(*this, [&](ClusterNode *node) {
-      if (!node->IsCompiled()) {
+      if (!node->IsCompiled(engine)) {
         return;
       }
       ordered_nodes.push_back(node);
@@ -109,7 +95,7 @@ void MarkClusterIdPass::ClusteringSubgraphs(const XrtPassOptions &options) {
         candidate_parents.insert(edge->start());
       }
       for (ClusterNode *parent : candidate_parents) {
-        if (parent->IsCompiled() &&
+        if (parent->IsCompiled(engine) &&
             (parent->size() + node->size()) <= max_nodes &&
             TryToFuseWithParent(node, parent, options)) {
           has_changed = true;
@@ -126,8 +112,8 @@ void MarkClusterIdPass::ClusteringSubgraphs(const XrtPassOptions &options) {
 
 bool MarkClusterIdPass::TryToFuseWithParent(ClusterNode *children,
                                             ClusterNode *parent,
-                                            const XrtPassOptions &options) {
-  if (options.clustering_options.strict_clustering) {
+                                            const ClusteringOptions &options) {
+  if (options.strict_clustering) {
     for (const ClusterEdge *edge : parent->out_edges()) {
       if (edge->end() != children &&
           !IsNodeDirectChildren(children, edge->end())) {
@@ -153,28 +139,31 @@ bool MarkClusterIdPass::TryToFuseWithParent(ClusterNode *children,
 void MarkClusterIdPass::RerankClusterIds() {
   int64_t rank = 0;
   for (ClusterNode *node : root_nodes_) {
-    node->set_id(rank++);
+    node->set_cluster_id(rank++);
   }
 }
 
-void MarkClusterIdPass::DumpClusterInfoToGraph(XrtGraph *graph) {
+void MarkClusterIdPass::DumpClusterInfoToGraph(XrtGraph *graph,
+                                               const XrtEngine &engine) {
   for (const ClusterNode *node : root_nodes_) {
     for (const ClusterNode *folded_node : node->folded_nodes()) {
       int64_t unique_id = folded_node->xrt_node()->unique_id();
       XrtNode *xrt_node = graph->Node(unique_id);
-      xrt_node->SetAttr<int64_t>("cluster_id", node->id());
+      xrt_node->SetAttr<XrtEngine>("engine", engine);
+      xrt_node->SetAttr<int64_t>("cluster_id", node->cluster_id());
     }
   }
 }
 
 void MarkClusterIdPass::RemoveInvalidClusterNodes(
-    const XrtPassOptions &options) {
-  int32_t min_nodes = options.clustering_options.minimum_nodes;
-  int32_t max_nodes = options.clustering_options.maximum_nodes;
+    const ClusteringOptions &options) {
+  const int min_nodes = options.minimum_nodes;
+  const int max_nodes = options.maximum_nodes;
+  const XrtEngine engine = options.engine;
 
   std::vector<ClusterNode *> removing_clusters;
   for (ClusterNode *node : root_nodes_) {
-    if (!node->IsCompiled() || node->size() < min_nodes ||
+    if (!node->IsCompiled(engine) || node->size() < min_nodes ||
         node->size() > max_nodes) {
       removing_clusters.push_back(node);
     }
@@ -187,12 +176,13 @@ void MarkClusterIdPass::RemoveInvalidClusterNodes(
 void MarkClusterIdPass::Run(XrtGraph *graph, const XrtPassOptions &options) {
   BuildClusterNodesAndEdges(graph);
   // Clustering nodes iteratively
-  ClusteringSubgraphs(options);
+  const auto &clustering_options = options.clustering_options;
+  ClusteringSubgraphs(clustering_options);
 
-  RemoveInvalidClusterNodes(options);
+  RemoveInvalidClusterNodes(clustering_options);
   RerankClusterIds();
 
-  DumpClusterInfoToGraph(graph);
+  DumpClusterInfoToGraph(graph, clustering_options.engine);
 }
 
 REGISTER_XRT_PASS(MarkClusterId, MarkClusterIdPass);

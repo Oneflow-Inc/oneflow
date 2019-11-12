@@ -17,12 +17,6 @@
 namespace oneflow {
 namespace xrt {
 
-extern const std::string _XrtLaunchOpType;
-extern const std::string _XrtInArgumentPrefix;
-extern const std::string _XrtOutArgumentPrefix;
-
-static const std::string _ReduceSplitType = "ReduceSplit";
-
 template <typename T>
 void DoNoDuplicationAdd(util::PbVector<T> *repeat_field, const T &val) {
   if (std::find(repeat_field->begin(), repeat_field->end(), val) ==
@@ -84,7 +78,7 @@ class FoldSubgraphBuilder {
  private:
   void InferIsAfterAllReduce();
 
-  void buildFunction(const XrtGraph *sub_graph,
+  void buildFunction(const XrtGraph *sub_graph, const XrtEngine &engine,
                      util::Set<std::string> *mutability,
                      XrtLaunchOpConf::Function *function);
 
@@ -100,7 +94,9 @@ class FoldSubgraphBuilder {
 
   void RemoveLaunchFoldedOps();
 
-  bool IsAfterAllReduce(const XrtNode *node);
+  XrtEngine GraphEngine(const XrtGraph *graph) const;
+
+  bool IsAfterAllReduce(const XrtNode *node) const;
 
  private:
   const XrtGraph &graph_;
@@ -137,12 +133,11 @@ FoldSubgraphBuilder::FoldSubgraphBuilder(const XrtGraph &graph, Job *job)
   builder_ = std::make_shared<JobBuilder>(job);
 }
 
-bool IsMutableArgument(const XrtNode *node, const Argument &argument) {
-  XrtEngine engine = XrtEngine::XLA;
-  XrtField field = MakeXrtField(node->device(), engine);
-  auto *rm = util::RegistryManager<decltype(field)>::Global();
-  const auto &attrs = rm->Get(field)->LookupAttr(node->type());
-  const auto &it = attrs.find("MutableVars");
+bool IsMutableArgument(const Argument &argument, const std::string &op_type,
+                       const XrtField &field) {
+  auto *rm = util::RegistryManager<XrtField>::Global();
+  const auto &attrs = rm->Get(field)->LookupAttr(op_type);
+  const auto &it = attrs.find(MutableVariablesAttrName);
   if (it != attrs.end()) {
     const std::string &key = argument.meta_data().consume_key;
     const auto &mutable_vars = any_cast<util::Set<std::string>>(it->second);
@@ -152,6 +147,7 @@ bool IsMutableArgument(const XrtNode *node, const Argument &argument) {
 }
 
 void FoldSubgraphBuilder::buildFunction(const XrtGraph *sub_graph,
+                                        const XrtEngine &engine,
                                         util::Set<std::string> *mutability,
                                         XrtLaunchOpConf::Function *function) {
   for (const XrtNode *node : sub_graph->Nodes()) {
@@ -170,7 +166,11 @@ void FoldSubgraphBuilder::buildFunction(const XrtGraph *sub_graph,
       for (const XrtEdge *edge : node->out_edges()) {
         const Argument &argument = edge->argument();
         argument_proto->set_value(argument.name());
-        is_mutable |= IsMutableArgument(edge->end(), argument);
+
+        const std::string &op_type = edge->end()->type();
+        const XrtDevice &device = edge->end()->device();
+        is_mutable |=
+            IsMutableArgument(argument, op_type, MakeXrtField(device, engine));
       }
       for (const XrtEdge *edge : node->in_edges()) {
         const Argument &argument = edge->argument();
@@ -214,6 +214,11 @@ void AddInOutBlobNames(const XrtNode *node, XrtLaunchOpConf *launch_conf) {
   }
 }
 
+XrtEngine FoldSubgraphBuilder::GraphEngine(const XrtGraph *graph) const {
+  CHECK(graph->HasAttr("engine"));
+  return graph->Attr<XrtEngine>("engine");
+}
+
 void FoldSubgraphBuilder::BuildXrtLaunchOps() {
   for (int i = 0; i < launch_nodes_.size(); ++i) {
     const XrtNode *node = launch_nodes_[i];
@@ -226,9 +231,25 @@ void FoldSubgraphBuilder::BuildXrtLaunchOps() {
     XrtLaunchOpConf *launch_conf = op_conf.mutable_xrt_launch_conf();
     // Add inputs and outputs in launch_conf
     AddInOutBlobNames(node, launch_conf);
+
+    // Set launch engine.
+    XrtEngine engine = GraphEngine(node->sub_graph());
+    std::string str_engine = [&]() -> std::string {
+      switch (engine) {
+        case XrtEngine::XLA:
+          return "XLA";
+        case XrtEngine::TENSORRT:
+          return "TENSORRT";
+        default:
+          LOG(FATAL) << "Not supported engine " << engine;
+          return "";
+      }
+    }();
+    launch_conf->set_engine(str_engine);
+
     // Build function and returns inputs mutability.
     util::Set<std::string> mutability;
-    buildFunction(node->sub_graph(), &mutability,
+    buildFunction(node->sub_graph(), engine, &mutability,
                   launch_conf->mutable_function());
 
     for (const auto &arg_proto : launch_conf->function().argument()) {
@@ -437,7 +458,7 @@ void FoldSubgraphBuilder::InferIsAfterAllReduce() {
   });
 }
 
-bool FoldSubgraphBuilder::IsAfterAllReduce(const XrtNode *node) {
+bool FoldSubgraphBuilder::IsAfterAllReduce(const XrtNode *node) const {
   return after_allreduce_nodes_.count(node) > 0;
 }
 

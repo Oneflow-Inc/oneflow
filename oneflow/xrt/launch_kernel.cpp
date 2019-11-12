@@ -65,7 +65,9 @@ xrt::Executable *XrtLaunchKernel<device_type>::BuildExecutable(
       //                 &this->job_desc());
     }
 
-    xrt::XrtEngine engine = xrt::XLA;
+    xrt::XrtEngine engine = (launch_conf.engine() == "XLA")
+                                ? xrt::XrtEngine::XLA
+                                : xrt::XrtEngine::TENSORRT;
     xrt::XrtDevice device = xrt::DeviceTypeToXrtDevice(device_type);
     xrt::GraphCompiler compiler(this->op_conf().name(), engine, device,
                                 device_ordinal);

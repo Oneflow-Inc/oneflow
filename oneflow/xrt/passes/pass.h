@@ -15,8 +15,16 @@ struct ClusteringOptions {
   int32_t minimum_nodes = 0x1;
   int32_t maximum_nodes = 0x7fffffff;
 
+  // Clustering nodes if it's compiled by the engine.
+  XrtEngine engine = XrtEngine::XLA;
+
   // Option to clustering with strict dependencies analysis.
   bool strict_clustering = true;
+
+  // Maximum iteration count for iteratively clustering. You can set it -1 means
+  // that it will always iteratively merge nodes as much as possible until no
+  // nodes can be merged.
+  int32_t max_iteration = 20;
 
   bool ignore_sbp_policy = false;
   bool ignore_time_shape = false;

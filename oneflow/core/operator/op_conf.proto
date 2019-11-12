@@ -1511,20 +1511,23 @@ message XrtLaunchOpConf {
     required DeviceType device_type = 3;
   }
   message Function {
-    repeated Argument argument = 1;
-    repeated OperatorConf node = 2;
+    repeated Argument argument = 2;
+    repeated OperatorConf node = 3;
   }
   repeated string in = 1;
   repeated string out = 2;
   required Function function = 3;
+  // Function executing engine.
+  // Only "XLA" and "TensorRT" are supported currently.
+  required string engine = 4;
   // Input mutability.
-  map<string, bool> mutability = 4;
+  map<string, bool> mutability = 5;
   // Mapping launch op's input and output names into function.
-  map<string, string> input_output_mapping = 5;
-  map<string, OptInt64> batch_axis = 6;
+  map<string, string> input_output_mapping = 6;
+  map<string, OptInt64> batch_axis = 7;
   // Sbp signatures of each function node.
-  map<string, SbpSignature> sbp_signatures = 7;
-  optional bool model_update = 8 [default = false];
+  map<string, SbpSignature> sbp_signatures = 8;
+  optional bool model_update = 9 [default = false];
 }
 
 message NcclBoxingReduceScatterOpConf {

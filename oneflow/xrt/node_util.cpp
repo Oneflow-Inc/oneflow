@@ -19,7 +19,10 @@ const PbMessage *OpMessage(const XrtNode *node) {
 bool IsNodeCompiled(const XrtNode *node, const XrtEngine &engine) {
   auto field = MakeXrtField(node->device(), engine);
   auto *rm = util::RegistryManager<XrtField>::Global();
-  return rm->Get(field)->IsRegistered(node->type());
+  if (rm->HasField(field)) {
+    return rm->Get(field)->IsRegistered(node->type());
+  }
+  return false;
 }
 
 bool IsNodeInput(const XrtNode *node, const Argument &argument) {

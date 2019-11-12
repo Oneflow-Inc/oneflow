@@ -5,15 +5,10 @@
 #include "oneflow/xrt/graph/graph.h"
 #include "oneflow/xrt/graph/node.h"
 #include "oneflow/xrt/passes/pass.h"
+#include "oneflow/xrt/types.h"
 
 namespace oneflow {
 namespace xrt {
-
-extern const std::string _XrtLaunchOpType = "XrtLaunch";
-extern const std::string _ArgumentOpType = "Argument";
-extern const std::string _XrtLaunchPrefix = "_xrt_launch_";
-extern const std::string _XrtInArgumentPrefix = "_input_argument_";
-extern const std::string _XrtOutArgumentPrefix = "_output_argument_";
 
 class BuildSubGraphPass : public XrtPass {
  public:
@@ -31,12 +26,17 @@ class BuildSubGraphPass : public XrtPass {
   void CreateLaunchNodes(XrtGraph *graph,
                          util::Map<int64_t, XrtNode *> *launch_nodes);
 
-  int64_t ClusterId(const XrtNode *node) const {
+  int64_t NodeClusterId(const XrtNode *node) const {
     int64_t cluster_id = -1;
     if (node->HasAttr("cluster_id")) {
       cluster_id = node->Attr<int64_t>("cluster_id");
     }
     return cluster_id;
+  }
+
+  XrtEngine NodeEngine(const XrtNode *node) const {
+    CHECK(node->HasAttr("engine"));
+    return node->Attr<XrtEngine>("engine");
   }
 
   void DivideArgumentNodes(XrtGraph *sub_graph);
@@ -52,23 +52,23 @@ void BuildSubGraphPass::Run(XrtGraph *graph, const XrtPassOptions &options) {
   // Redirect all outer edges of the launch nodes
   util::Map<int64_t, util::Set<XrtNode *>> folded_nodes;
   for (XrtNode *node : graph->Nodes()) {
-    int64_t cluster_id = ClusterId(node);
+    int64_t cluster_id = NodeClusterId(node);
     if (cluster_id != -1 && node->type() != _XrtLaunchOpType) {
       XrtNode *launch_node = launch_nodes[cluster_id];
       // Redirect input edges
-      for (XrtEdge *e : node->in_edges()) {
-        XrtNode *start = e->start();
-        if (ClusterId(start) != cluster_id) {
-          e->SetEndNode(launch_node);
-          launch_node->AddInEdge(e);
+      for (XrtEdge *edge : node->in_edges()) {
+        XrtNode *start = edge->start();
+        if (NodeClusterId(start) != cluster_id) {
+          edge->SetEndNode(launch_node);
+          launch_node->AddInEdge(edge);
         }
       }
       // Redirect output edges
-      for (XrtEdge *e : node->out_edges()) {
-        XrtNode *end = e->end();
-        if (ClusterId(end) != cluster_id) {
-          e->SetStartNode(launch_node);
-          launch_node->AddOutEdge(e);
+      for (XrtEdge *edge : node->out_edges()) {
+        XrtNode *end = edge->end();
+        if (NodeClusterId(end) != cluster_id) {
+          edge->SetStartNode(launch_node);
+          launch_node->AddOutEdge(edge);
         }
       }
 
@@ -83,6 +83,8 @@ void BuildSubGraphPass::Run(XrtGraph *graph, const XrtPassOptions &options) {
     int64_t cluster_id = kv.first;
     XrtNode *launch_node = launch_nodes[cluster_id];
     XrtGraph *sub_graph = graph->AddSubgraph(launch_node->unique_id());
+    // Set subgraph execution engine.
+    sub_graph->SetAttr("engine", NodeEngine(*(kv.second.begin())));
 
     util::Map<int64_t, XrtNode *> sub_graph_nodes;
     for (XrtNode *n : kv.second) {
@@ -115,7 +117,7 @@ void BuildSubGraphPass::CreateLaunchNodes(
     XrtGraph *graph, util::Map<int64_t, XrtNode *> *launch_nodes) {
   util::Map<int64_t, XrtDevice> cluster_ids;
   for (XrtNode *node : graph->Nodes()) {
-    int64_t cluster_id = ClusterId(node);
+    int64_t cluster_id = NodeClusterId(node);
     if (cluster_id != -1) {
       cluster_ids.emplace(cluster_id, node->device());
     }
@@ -152,6 +154,7 @@ void BuildSubGraphPass::DivideArgumentNodes(XrtGraph *sub_graph) {
     // Argument node should has either inputs or outputs
     CHECK(in_edges.size() == 0 || out_edges.size() == 0);
 
+    // Clear node input and output edges, then rebuild them.
     node->ClearInEdges();
     node->ClearOutEdges();
 
@@ -172,9 +175,8 @@ void BuildSubGraphPass::DivideArgumentNodes(XrtGraph *sub_graph) {
         edge->SetEndNode(argument);
         divided_args.emplace(arg, argument);
       } else {
-        XrtNode *consumer = it->second;
-        edge->SetEndNode(consumer);
-        consumer->AddInEdge(edge);
+        it->second->AddInEdge(edge);
+        edge->SetEndNode(it->second /* consumer */);
       }
     }
 
@@ -194,9 +196,8 @@ void BuildSubGraphPass::DivideArgumentNodes(XrtGraph *sub_graph) {
         edge->SetStartNode(argument);
         divided_args.emplace(arg, argument);
       } else {
-        XrtNode *producer = it->second;
-        edge->SetStartNode(producer);
-        producer->AddOutEdge(edge);
+        it->second->AddOutEdge(edge);
+        edge->SetStartNode(it->second /* producer */);
       }
     }
   }
@@ -260,7 +261,7 @@ void BuildSubGraphPass::DumpSubgraphs(const XrtGraph *graph,
                                       const std::string &path) {
   for (const XrtNode *node : graph->Nodes()) {
     if (node->type() == _XrtLaunchOpType) {
-      std::string file = absl::StrCat(path, "/cluster_", ClusterId(node));
+      std::string file = absl::StrCat(path, "/cluster_", NodeClusterId(node));
       std::ofstream ost(file.c_str());
       if (ost.good()) ost << node->sub_graph()->ToDot();
     }

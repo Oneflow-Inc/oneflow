@@ -26,6 +26,9 @@ struct ExecutableRunOptions {
   // Random seed.
   int64_t random_seed = -1;
 
+  // Maximum batch size for TensorRT.
+  int32_t max_batch_size = 1;
+
   // Feed the return parameters to reuse it's storage while running
   // the executable.
   std::vector<Parameter> return_params;

@@ -125,6 +125,10 @@ class RegistryManager {
     return registry_fields_.emplace(field, registry).second;
   }
 
+  bool HasField(const Field &field) const {
+    return registry_fields_.count(field) > 0;
+  }
+
   virtual ~RegistryManager() = default;
 
  private:

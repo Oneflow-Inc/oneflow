@@ -33,6 +33,12 @@ class OpKernelRegistrar {
 
   virtual ~OpKernelRegistrar() = default;
 
+  auto FieldRegistry()
+      -> util::FieldRegistry<XrtField, std::string, decltype(factory_)> * {
+    return util::FieldRegistry<XrtField, std::string,
+                               decltype(factory_)>::Global();
+  }
+
   OpKernelRegistrar &SetFactory(decltype(factory_) factory) {
     factory_ = factory;
     return *this;
@@ -50,7 +56,7 @@ class OpKernelRegistrar {
 
   OpKernelRegistrar &SetMutableVariables(
       const util::Set<std::string> &variables) {
-    attributes_["MutableVars"] = variables;
+    attributes_[MutableVariablesAttrName] = variables;
     return *this;
   }
 
@@ -60,12 +66,6 @@ class OpKernelRegistrar {
       FieldRegistry()->Get(field)->Register(op_name_, factory_, attributes_);
     }
     return *this;
-  }
-
-  auto FieldRegistry()
-      -> util::FieldRegistry<XrtField, std::string, decltype(factory_)> * {
-    return util::FieldRegistry<XrtField, std::string,
-                               decltype(factory_)>::Global();
   }
 };
 

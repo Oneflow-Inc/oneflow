@@ -22,14 +22,14 @@ void ClusterNode::EraseOutEdge(const ClusterEdge *edge) {
 bool ClusterNode::IsSatisfySbpPolicy() const {
   util::Map<int64_t, util::Set<bool>> connection_kinds;
   for (ClusterEdge *edge : in_edges_) {
-    int64_t parent_id = edge->start()->id();
+    int64_t parent_id = edge->start()->cluster_id();
     connection_kinds[parent_id].insert(edge->IsIdentity());
     if (connection_kinds[parent_id].size() > 1) {
       return false;
     }
   }
   for (ClusterEdge *edge : out_edges_) {
-    int64_t children_id = edge->end()->id();
+    int64_t children_id = edge->end()->cluster_id();
     connection_kinds[children_id].insert(edge->IsIdentity());
     if (connection_kinds[children_id].size() > 1) {
       return false;
@@ -79,8 +79,8 @@ class ClusterMergeNode : public ClusterNode {
 
   void Fallback() {
     for (const EdgeSnapshot &snapshot : snapshot_edges_) {
-      snapshot.edge->UpdateStartNode(snapshot.from);
-      snapshot.edge->UpdateEndNode(snapshot.to);
+      snapshot.edge->SetStartNode(snapshot.from);
+      snapshot.edge->SetEndNode(snapshot.to);
     }
     snapshot_edges_.clear();
   }
@@ -95,14 +95,14 @@ class ClusterMergeNode : public ClusterNode {
     for (ClusterEdge *edge : lhs_->in_edges()) {
       if (edge->start() != rhs_) {
         SnapshotEdge(edge);
-        edge->UpdateEndNode(this);
+        edge->SetEndNode(this);
         AddInEdge(edge);
       }
     }
     for (ClusterEdge *edge : rhs_->in_edges()) {
       if (edge->start() != lhs_) {
         SnapshotEdge(edge);
-        edge->UpdateEndNode(this);
+        edge->SetEndNode(this);
         AddInEdge(edge);
       }
     }
@@ -112,14 +112,14 @@ class ClusterMergeNode : public ClusterNode {
     for (ClusterEdge *edge : lhs_->out_edges()) {
       if (edge->end() != rhs_) {
         SnapshotEdge(edge);
-        edge->UpdateStartNode(this);
+        edge->SetStartNode(this);
         AddOutEdge(edge);
       }
     }
     for (ClusterEdge *edge : rhs_->out_edges()) {
       if (edge->end() != lhs_) {
         SnapshotEdge(edge);
-        edge->UpdateStartNode(this);
+        edge->SetStartNode(this);
         AddOutEdge(edge);
       }
     }
@@ -141,7 +141,7 @@ class ClusterMergeNode : public ClusterNode {
 void ClusterNode::Merge(ClusterNode &other) {
   for (ClusterEdge *edge : other.in_edges()) {
     if (edge->start() != this) {
-      edge->UpdateEndNode(this);
+      edge->SetEndNode(this);
       AddInEdge(edge);
     } else {
       EraseOutEdge(edge);
@@ -149,7 +149,7 @@ void ClusterNode::Merge(ClusterNode &other) {
   }
   for (ClusterEdge *edge : other.out_edges()) {
     if (edge->end() != this) {
-      edge->UpdateStartNode(this);
+      edge->SetStartNode(this);
       AddOutEdge(edge);
     } else {
       EraseInEdge(edge);
@@ -204,8 +204,18 @@ bool IsNodeDirectChildren(const ClusterNode *parent,
   return false;
 }
 
-bool IsNoClusterNode(const ClusterNode *node) {
-  return node->type() == "NoClusterNode";
+bool IsSatisfyBackend(const ClusterEdge *edge) {
+  return edge->start()->device() == edge->end()->device();
+}
+
+bool IsSatisfySbpPolicy(const ClusterEdge *edge) {
+  return edge->is_control_edge() ||
+         (edge->start_sbp_policy() == edge->end_sbp_policy());
+}
+
+bool IsSatisfyTimeShape(const ClusterEdge *edge) {
+  return edge->is_control_edge() ||
+         (edge->start_time_shape() == edge->end_time_shape());
 }
 
 }  // namespace xrt

@@ -6,11 +6,10 @@
 #include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/xrt/api.h"
 #include "oneflow/xrt/graph/graph.h"
+#include "oneflow/xrt/types.h"
 
 namespace oneflow {
 namespace xrt {
-
-extern const std::string _ArgumentOpType;
 
 namespace graph_builder {
 
