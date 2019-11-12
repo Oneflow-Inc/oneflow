@@ -51,6 +51,7 @@ class BoxHead(object):
                     neg_inds,
                     total_subsample_num=self.cfg.BOX_HEAD.NUM_SAMPLED_ROI_PER_IMG,
                     pos_fraction=self.cfg.BOX_HEAD.FOREGROUND_FRACTION,
+                    name="img{}_pos_neg_sampler".format(img_idx),
                 )
                 sampled_pos_neg_inds = flow.concat(
                     [sampled_pos_inds, sampled_neg_inds], axis=0
@@ -76,7 +77,9 @@ class BoxHead(object):
                     clamped_matched_indices, sampled_pos_neg_inds
                 )
                 pos_gt_indices = flow.local_gather(
-                    clamped_matched_indices, sampled_pos_inds
+                    clamped_matched_indices,
+                    sampled_pos_inds,
+                    name="img{}_gt_inds".format(img_idx),
                 )
                 proposal_per_img = flow.local_gather(
                     proposals[img_idx], sampled_pos_neg_inds
