@@ -25,7 +25,7 @@ Maybe<void> SquareOp::GetSbpSignatures(
       .Split(input_bns(), 0)
       .Split(output_bns(), 0)
       .MakeSplitSignatureListBuilder(
-          JUST(LogicalBlobDesc4Ibn(output_bns().Get(0)))->shape().NumAxes())
+          JUST(LogicalBlobDesc4Ibn(input_bns().Get(0)))->shape().NumAxes())
       .Build(sbp_sig_list);
   return Maybe<void>::Ok();
 }
