@@ -1,23 +1,25 @@
 # must import get cfg before importing oneflow
 from config import get_default_cfgs
 
+import os
+import numpy as np
+import argparse
 import oneflow as flow
 import oneflow.core.data.data_pb2 as data_util
 
+from datetime import datetime
 from backbone import Backbone
 from rpn import RPNHead, RPNLoss, RPNProposal
 from box_head import BoxHead
 from mask_head import MaskHead
 from blob_watcher import save_blob_watched, blob_watched, diff_blob_watched
 
-import os
-import numpy as np
-import argparse
-from datetime import datetime
-
 parser = argparse.ArgumentParser()
 parser.add_argument(
     "-c", "--config_file", default=None, type=str, help="yaml config file"
+)
+parser.add_argument(
+    "-bz", "--batch_size", type=int, default=1, required=False
 )
 parser.add_argument(
     "-load", "--model_load_dir", type=str, default="", required=False
@@ -73,7 +75,23 @@ parser.add_argument(
 )
 parser.add_argument("-i", "--iter_num", type=int, default=10, required=False)
 parser.add_argument(
-    "-lr", "--primary_lr", type=float, default=0.02, required=False
+    "-lr", "--primary_lr", type=float, default=0.0002, required=False
+)
+parser.add_argument(
+    "-slr", "--secondary_lr", type=float, default=0.0004, required=False
+)
+parser.add_argument(
+    "-fake", "--fake_image_path", type=str, default="", required=False
+)
+parser.add_argument(
+    "-anno",
+    "--annotation_file",
+    type=str,
+    default="instances_val2017.json",
+    required=False,
+)
+parser.add_argument(
+    "-imgd", "--image_dir", type=str, default="val2017", required=False
 )
 terminal_args = parser.parse_args()
 
@@ -386,44 +404,88 @@ if terminal_args.train_with_real_dataset:
         data_loader.init()
         return data_loader
 
-    @flow.function
-    def train(
-        image_blob=flow.input_blob_def(
-            shape=(2, 1088, 800, 3), dtype=flow.float32, is_dynamic=True
-        )
-    ):
+    def init_conf():
         flow.config.cudnn_conv_heuristic_search_algo(True)
         flow.config.cudnn_conv_use_deterministic_algo_only(False)
         flow.config.train.primary_lr(terminal_args.primary_lr)
-        flow.config.train.model_update_conf(dict(naive_conf={}))
-        data_loader = make_data_loader(
-            batch_size=2,
-            batch_cache_size=1,
-            annotation_file="annotations/instances_val2017.json",
-            image_dir="val2017",
-        )
-        outputs = maskrcnn_train(
-            image_blob,
-            data_loader("image_size"),
-            data_loader("gt_bbox"),
-            data_loader("gt_segm"),
-            data_loader("gt_labels"),
-        )
-        for loss in outputs:
-            flow.losses.add_loss(loss)
-        return outputs
+        flow.config.train.secondary_lr(terminal_args.secondary_lr)
+        flow.config.train.weight_l2(0.0001)
+        flow.config.train.model_update_conf(dict(momentum_conf={"beta": 0.9}))
+        # flow.config.train.model_update_conf(dict(naive_conf={}))
+
+    def init_train_func(fake_image):
+        if fake_image:
+
+            @flow.function
+            def train(
+                image_blob=flow.input_blob_def(
+                    shape=(2, 800, 1344, 3), dtype=flow.float32, is_dynamic=True
+                )
+            ):
+                init_conf()
+                data_loader = make_data_loader(
+                    batch_size=terminal_args.batch_size,
+                    batch_cache_size=3,
+                    annotation_file=terminal_args.annotation_file,
+                    image_dir=terminal_args.image_dir,
+                )
+                outputs = maskrcnn_train(
+                    image_blob,
+                    data_loader("image_size"),
+                    data_loader("gt_bbox"),
+                    data_loader("gt_segm"),
+                    data_loader("gt_labels"),
+                )
+                for loss in outputs:
+                    flow.losses.add_loss(loss)
+                return outputs
+
+            return train
+        else:
+
+            @flow.function
+            def train():
+                init_conf()
+                data_loader = make_data_loader(
+                    batch_size=terminal_args.batch_size,
+                    batch_cache_size=3,
+                    annotation_file=terminal_args.annotation_file,
+                    image_dir=terminal_args.image_dir,
+                )
+                outputs = maskrcnn_train(
+                    data_loader("image"),
+                    data_loader("image_size"),
+                    data_loader("gt_bbox"),
+                    data_loader("gt_segm"),
+                    data_loader("gt_labels"),
+                )
+                for loss in outputs:
+                    flow.losses.add_loss(loss)
+                return outputs
+
+            return train
 
 
 if __name__ == "__main__":
     flow.config.gpu_device_num(terminal_args.gpu_num_per_node)
     flow.config.ctrl_port(terminal_args.ctrl_port)
-
     flow.config.default_data_type(flow.float)
+
+    if terminal_args.fake_image_path:
+        file_list = os.listdir(terminal_args.fake_image_path)
+        fake_image_list = [
+            np.load(os.path.join(terminal_args.fake_image_path, f))
+            for f in file_list
+        ]
+
+    train_func = init_train_func(len(fake_image_list) > 0)
+
     check_point = flow.train.CheckPoint()
     if not terminal_args.model_load_dir:
         check_point.init()
     else:
         check_point.load(terminal_args.model_load_dir)
+
     if terminal_args.debug:
         if terminal_args.eval:
             import numpy as np
@@ -500,8 +562,11 @@ if __name__ == "__main__":
                 )
             )
             for i in range(terminal_args.iter_num):
-                image = np.load("image_{}.npy".format(i + 90000))
-                train_loss = train(image).get()
+                if i < len(fake_image_list):
+                    train_loss = train_func(fake_image_list[i]).get()
+                else:
+                    train_loss = train_func().get()
+
                 fmt_str = "{:>8} " + "{:>16.10f} " * len(train_loss)
                 print_loss = [i]
                 for loss in train_loss:
