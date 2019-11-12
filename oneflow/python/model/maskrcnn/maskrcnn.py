@@ -93,7 +93,7 @@ debug_data = None
 #if terminal_args.mock_dataset:
 from mock_data import MockData
 
-debug_data = MockData(terminal_args.mock_dataset_path, 64)
+# debug_data = MockData(terminal_args.mock_dataset_path, 64)
 
 
 def get_numpy_placeholders():

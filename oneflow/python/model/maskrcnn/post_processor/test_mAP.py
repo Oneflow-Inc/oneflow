@@ -10,7 +10,7 @@ ann_file = '/dataset/mscoco_2017/annotations/sample_1_instances_val2017.json'
 
 coco = COCO(ann_file)
 imgs = coco.loadImgs(coco.getImgIds())
-mask_prob = np.load('data/mask_prob.npy')
+# mask_prob = np.load('data/mask_prob.npy')
 
 # # 2 img
 # torch_path = "/home/xfjiang/rcnn_eval_fake_data/iter_0/"
@@ -21,7 +21,7 @@ mask_prob = np.load('data/mask_prob.npy')
 # image_sizes = np.load("/tmp/shared_with_jxf/maskrcnn_eval_input_data/image_size.npy")
 
 # 1 img
-torch_path = "/home/xfjiang/rcnn_eval_fake_data/iter_0/"
+torch_path = "/home/xfjiang/repos/maskrcnn-benchmark/inference_dump/iter_0/"
 proposal_0 = np.load(torch_path + "rpn/proposals.image0.(500, 4).npy")
 class_prob = np.load(torch_path + "box_head/class_prob.(500, 81).npy")
 box_regression = np.load(torch_path + "roi_head/box_regression.(500, 324).npy")
