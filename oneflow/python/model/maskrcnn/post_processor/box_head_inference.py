@@ -1,10 +1,10 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
 import numpy as np
 
-from .bounding_box import BoxList
-from .boxlist_ops import boxlist_nms
-from .boxlist_ops import cat_boxlist
-from .box_coder import BoxCoder
+from bounding_box import BoxList
+from boxlist_ops import boxlist_nms
+from boxlist_ops import cat_boxlist
+from box_coder import BoxCoder
 
 
 class PostProcessor():
@@ -106,6 +106,9 @@ class PostProcessor():
         boxes = boxlist.bbox.reshape(-1, num_classes * 4)
         scores = boxlist.get_field("scores").reshape(-1, num_classes)
 
+        print(boxes)
+        print(scores)
+
         result = []
         # Apply threshold on detection probabilities and apply NMS
         # Skip j = 0, because it's the background class
@@ -120,6 +123,7 @@ class PostProcessor():
             boxlist_for_class.add_field("scores", scores_j)
             boxlist_for_class = boxlist_nms(boxlist_for_class, self.nms)
             num_labels = len(boxlist_for_class)
+            print(num_labels)
             boxlist_for_class.add_field("labels", np.full((num_labels,), j, dtype=np.int64))
             result.append(boxlist_for_class)
 

@@ -6,9 +6,9 @@ import numpy as np
 from collections import OrderedDict
 from tqdm import tqdm
 
-from .mask_head_inference import Masker
-from .bounding_box import BoxList
-from .boxlist_ops import boxlist_iou
+from mask_head_inference import Masker
+from bounding_box import BoxList
+from boxlist_ops import boxlist_iou
 
 
 def do_coco_evaluation(
