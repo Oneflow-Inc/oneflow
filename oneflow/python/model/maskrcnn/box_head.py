@@ -220,6 +220,14 @@ class BoxHead(object):
             units=1024,
             activation=flow.keras.activations.relu,
             use_bias=True,
+            kernel_initializer=flow.kaiming_initializer(
+                shape=(1024, roi_features_flat.static_shape[1]),
+                distribution="random_uniform",
+                mode="fan_in",
+                nonlinearity="leaky_relu",
+                negative_slope=1.0,
+            ),
+            bias_initializer=flow.constant_initializer(0),
             name="fc6",
         )
         x = flow.layers.dense(
@@ -227,6 +235,14 @@ class BoxHead(object):
             units=1024,
             activation=flow.keras.activations.relu,
             use_bias=True,
+            kernel_initializer=flow.kaiming_initializer(
+                shape=(1024, x.static_shape[1]),
+                distribution="random_uniform",
+                mode="fan_in",
+                nonlinearity="leaky_relu",
+                negative_slope=1.0,
+            ),
+            bias_initializer=flow.constant_initializer(0),
             name="fc7",
         )
 
@@ -238,6 +254,8 @@ class BoxHead(object):
             units=self.cfg.BOX_HEAD.NUM_CLASSES * 4,
             activation=None,
             use_bias=True,
+            kernel_initializer=flow.random_normal_initializer(stddev=0.001),
+            bias_initializer=flow.constant_initializer(0),
             name="bbox_pred",
         )
         cls_logits = flow.layers.dense(
@@ -245,6 +263,8 @@ class BoxHead(object):
             units=self.cfg.BOX_HEAD.NUM_CLASSES,
             activation=None,
             use_bias=True,
+            kernel_initializer=flow.random_normal_initializer(stddev=0.01),
+            bias_initializer=flow.constant_initializer(0),
             name="cls_score",
         )
 

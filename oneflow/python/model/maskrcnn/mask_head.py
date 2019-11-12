@@ -149,6 +149,13 @@ class MaskHead(object):
                 dilation_rate=[1, 1],
                 activation=flow.keras.activations.relu,
                 use_bias=True,
+                kernel_initializer=flow.kaiming_initializer(
+                    shape=(256, x.static_shape[1]) + (3, 3),
+                    distribution="random_normal",
+                    mode="fan_out",
+                    nonlinearity="relu",
+                ),
+                bias_initializer=flow.constant_initializer(0),
                 name="fcn{}".format(i),
             )
 
@@ -159,7 +166,12 @@ class MaskHead(object):
             "conv5-weight",
             shape=(x.static_shape[1], 256, 2, 2),
             dtype=x.dtype,
-            initializer=flow.constant_initializer(0),
+            initializer=flow.kaiming_initializer(
+                shape=(x.static_shape[1], 256, 2, 2),
+                distribution="random_normal",
+                mode="fan_out",
+                nonlinearity="relu",
+            ),
         )
         bias = flow.get_variable(
             name="conv5-bias",
@@ -186,6 +198,13 @@ class MaskHead(object):
             padding="SAME",
             strides=[1, 1],
             dilation_rate=[1, 1],
+            kernel_initializer=flow.kaiming_initializer(
+                shape=(81, x.static_shape[1]) + (1, 1),
+                distribution="random_normal",
+                mode="fan_out",
+                nonlinearity="relu",
+            ),
+            bias_initializer=flow.constant_initializer(0),
             name="fcn_logits",
         )
 
