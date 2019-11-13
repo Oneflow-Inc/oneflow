@@ -14,12 +14,6 @@ from box_head import BoxHead
 from mask_head import MaskHead
 from blob_watcher import save_blob_watched, blob_watched, diff_blob_watched
 
-from eval.bounding_box import BoxList
-from eval.box_head_inference import PostProcessor
-from eval.mask_head_inference import MaskPostProcessor
-from eval.coco import COCODataset
-from eval.coco_eval import do_coco_evaluation
-
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
@@ -128,12 +122,8 @@ def get_numpy_placeholders():
         "fpn_feature_map1": np.random.randn(2, 256, 104, 152).astype(
             np.float32
         ),
-        "fpn_feature_map2": np.random.randn(2, 256, 52, 76).astype(
-            np.float32
-        ),
-        "fpn_feature_map3": np.random.randn(2, 256, 26, 38).astype(
-            np.float32
-        ),
+        "fpn_feature_map2": np.random.randn(2, 256, 52, 76).astype(np.float32),
+        "fpn_feature_map3": np.random.randn(2, 256, 26, 38).astype(np.float32),
         "fpn_feature_map4": np.random.randn(2, 256, 13, 19).astype(np.float32),
     }
 
@@ -295,7 +285,9 @@ def maskrcnn_eval_box_head(images, image_sizes):
     # Box Head
     cls_probs, box_regressions = box_head.build_eval(proposals, features)
 
-    return tuple(proposals) + tuple(features) + (cls_probs,) + (box_regressions,)
+    return (
+        tuple(proposals) + tuple(features) + (cls_probs,) + (box_regressions,)
+    )
 
 
 if terminal_args.mock_dataset:
@@ -324,33 +316,47 @@ if terminal_args.mock_dataset:
             flow.losses.add_loss(loss)
         return outputs
 
+
 def input_blob_def(bn):
-    return flow.input_blob_def(placeholders[bn].shape, dtype=flow.float32, is_dynamic=True)
+    return flow.input_blob_def(
+        placeholders[bn].shape, dtype=flow.float32, is_dynamic=True
+    )
+
 
 if terminal_args.eval:
+    from eval.bounding_box import BoxList
+    from eval.box_head_inference import PostProcessor
+    from eval.mask_head_inference import MaskPostProcessor
+    from eval.coco import COCODataset
+    from eval.coco_eval import do_coco_evaluation
 
     @flow.function
     def maskrcnn_box_head_eval_job(
-        images=flow.input_blob_def((2, 3, 416, 608), dtype=flow.float, is_dynamic=True),
-        image_sizes=flow.input_blob_def((2, 2), dtype=flow.int32, is_dynamic=False),
+        images=flow.input_blob_def(
+            (2, 3, 416, 608), dtype=flow.float, is_dynamic=True
+        ),
+        image_sizes=flow.input_blob_def(
+            (2, 2), dtype=flow.int32, is_dynamic=False
+        ),
     ):
         return maskrcnn_eval_box_head(images, image_sizes)
 
     @flow.function
     def maskrcnn_mask_head_eval_job(
-        detection0=input_blob_def('detection0'),
-        detection1=input_blob_def('detection1'),
-        fpn_fm1=input_blob_def('fpn_feature_map1'),
-        fpn_fm2=input_blob_def('fpn_feature_map2'),
-        fpn_fm3=input_blob_def('fpn_feature_map3'),
-        fpn_fm4=input_blob_def('fpn_feature_map4'),
+        detection0=input_blob_def("detection0"),
+        detection1=input_blob_def("detection1"),
+        fpn_fm1=input_blob_def("fpn_feature_map1"),
+        fpn_fm2=input_blob_def("fpn_feature_map2"),
+        fpn_fm3=input_blob_def("fpn_feature_map3"),
+        fpn_fm4=input_blob_def("fpn_feature_map4"),
     ):
         cfg = get_default_cfgs()
         mask_head = MaskHead(cfg)
-        mask_logits = mask_head.build_eval([detection0, detection1], [fpn_fm1, fpn_fm2, fpn_fm3, fpn_fm4])
+        mask_logits = mask_head.build_eval(
+            [detection0, detection1], [fpn_fm1, fpn_fm2, fpn_fm3, fpn_fm4]
+        )
         mask_prob = flow.math.sigmoid(mask_logits)
         return mask_prob
-
 
 
 if terminal_args.train_with_real_dataset:
@@ -496,15 +502,15 @@ if __name__ == "__main__":
     flow.config.gpu_device_num(terminal_args.gpu_num_per_node)
     flow.config.ctrl_port(terminal_args.ctrl_port)
     flow.config.default_data_type(flow.float)
-
+    fake_image_list = []
     if terminal_args.fake_image_path:
         file_list = os.listdir(terminal_args.fake_image_path)
         fake_image_list = [
             np.load(os.path.join(terminal_args.fake_image_path, f))
             for f in file_list
         ]
-    if terminal_args.train_with_real_dataset:
-        train_func = init_train_func(len(fake_image_list) > 0)
+
+    train_func = init_train_func(len(fake_image_list) > 0)
 
     check_point = flow.train.CheckPoint()
     if not terminal_args.model_load_dir:
@@ -533,10 +539,14 @@ if __name__ == "__main__":
 
             boxes = []
             for proposal, img_size in zip(results[:image_num], image_sizes):
-              bbox = BoxList(proposal.ndarray(), (img_size[1], img_size[0]), mode="xyxy")
-              boxes.append(bbox)
+                bbox = BoxList(
+                    proposal.ndarray(), (img_size[1], img_size[0]), mode="xyxy"
+                )
+                boxes.append(bbox)
             postprocessor = PostProcessor()
-            results = postprocessor.forward((cls_probs.ndarray(), box_regressions.ndarray()), boxes)
+            results = postprocessor.forward(
+                (cls_probs.ndarray(), box_regressions.ndarray()), boxes
+            )
 
             detections = []
             for result in results:
@@ -551,16 +561,18 @@ if __name__ == "__main__":
             ).get()
 
             mask_postprocessor = MaskPostProcessor()
-            predictions = mask_postprocessor.forward(mask_prob.ndarray(), results)
+            predictions = mask_postprocessor.forward(
+                mask_prob.ndarray(), results
+            )
 
-            ann_file = '/dataset/mscoco_2017/annotations/sample_2_instances_val2017.json'
+            ann_file = "/dataset/mscoco_2017/annotations/sample_2_instances_val2017.json"
             dataset = COCODataset(ann_file)
             do_coco_evaluation(
                 dataset,
                 predictions,
                 box_only=False,
-                output_folder='./output',
-                iou_types=['bbox', 'segm'],
+                output_folder="./output",
+                iou_types=["bbox", "segm"],
                 expected_results=(),
                 expected_results_sigma_tol=4,
             )
