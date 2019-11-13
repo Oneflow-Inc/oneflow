@@ -39,6 +39,14 @@ class UpsampleNearestOp final : public Operator {
     *BatchAxis4BnInOp("out") = *BatchAxis4BnInOp("in");
     return Maybe<void>::Ok();
   }
+
+  Maybe<void> GetSbpSignatures(
+      const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
+      SbpSignatureList* sbp_sig_list) const override {
+    SbpSignatureBuilder().Split("in", 0).Split("out", 0).Build(
+        sbp_sig_list->mutable_sbp_signature()->Add());
+    return Maybe<void>::Ok();
+  }
 };
 
 REGISTER_OP(OperatorConf::kUpsampleNearestConf, UpsampleNearestOp);
@@ -76,6 +84,14 @@ class UpsampleNearestGradOp final : public Operator {
   Maybe<void> InferBatchAxis(
       std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override {
     *BatchAxis4BnInOp("dx") = *BatchAxis4BnInOp("dy");
+    return Maybe<void>::Ok();
+  }
+
+  Maybe<void> GetSbpSignatures(
+      const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
+      SbpSignatureList* sbp_sig_list) const override {
+    SbpSignatureBuilder().Split("dy", 0).Split("dx", 0).Build(
+        sbp_sig_list->mutable_sbp_signature()->Add());
     return Maybe<void>::Ok();
   }
 };

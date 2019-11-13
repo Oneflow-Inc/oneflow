@@ -60,6 +60,13 @@ class ArgmaxOp final : public Operator {
       KernelConf* kernel_conf, const OpContext* op_ctx) const override {
     kernel_conf->set_data_type(GetBlobDesc4BnInOp("in")->data_type());
   }
+  Maybe<void> GetSbpSignatures(
+      const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
+      SbpSignatureList* sbp_sig_list) const override {
+    SbpSignatureBuilder().Split("in", 0).Split("out", 0).Build(
+        sbp_sig_list->mutable_sbp_signature()->Add());
+    return Maybe<void>::Ok();
+  }
 };
 
 REGISTER_OP(OperatorConf::kArgmaxConf, ArgmaxOp);

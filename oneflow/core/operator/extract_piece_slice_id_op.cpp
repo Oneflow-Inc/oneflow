@@ -26,6 +26,7 @@ class ExtractPieceSliceIdOp final : public Operator {
     }
     return Maybe<void>::Ok();
   }
+  Maybe<void> GetSbpSignatures(SbpSignatureList* sbp_sig_list) const override;
 };
 
 void ExtractPieceSliceIdOp::InitFromOpConf() {
@@ -57,6 +58,14 @@ void ExtractPieceSliceIdOp::VirtualGenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*,
     KernelConf* kernel_conf, const OpContext* op_ctx) const {
   kernel_conf->set_data_type(GetBlobDesc4BnInOp(input_bns().Get(0))->data_type());
+}
+
+Maybe<void> ExtractPieceSliceIdOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
+  SbpSignatureBuilder()
+      .Split(input_bns(), 0)
+      .Split(output_bns(), 0)
+      .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+  return Maybe<void>::Ok();
 }
 
 REGISTER_OP(OperatorConf::kExtractPieceSliceIdConf, ExtractPieceSliceIdOp);

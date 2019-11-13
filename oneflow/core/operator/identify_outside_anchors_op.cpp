@@ -50,6 +50,15 @@ class IdentifyOutsideAnchorsOp final : public Operator {
     *BatchAxis4BnInOp("out") = *BatchAxis4BnInOp("anchors");
     return Maybe<void>::Ok();
   }
+
+  Maybe<void> GetSbpSignatures(SbpSignatureList* sbp_sig_list) const override {
+    SbpSignatureBuilder()
+        .Split("anchors", 0)
+        .Broadcast("image_size")
+        .Split("out", 0)
+        .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+    return Maybe<void>::Ok();
+  }
 };
 
 REGISTER_OP(OperatorConf::kIdentifyOutsideAnchorsConf, IdentifyOutsideAnchorsOp);

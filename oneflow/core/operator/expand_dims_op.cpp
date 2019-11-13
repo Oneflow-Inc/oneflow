@@ -19,6 +19,9 @@ class ExpandDimsOp final : public Operator {
       std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override {
     return NaiveInferBatchAxis(BatchAxis4BnInOp);
   }
+  Maybe<void> GetSbpSignatures(
+      const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
+      SbpSignatureList* sbp_sig_list) const override;
 };
 
 void ExpandDimsOp::InitFromOpConf() {
@@ -40,6 +43,14 @@ Maybe<void> ExpandDimsOp::InferBlobDescs(
   dim_vec.insert(dim_vec.begin() + axis, 1);
   *out = *in;
   out->mut_shape() = Shape(dim_vec);
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> ExpandDimsOp::GetSbpSignatures(
+    const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
+    SbpSignatureList* sbp_sig_list) const {
+  SbpSignatureBuilder().Split("in", 0).Split("out", 0).Build(
+      sbp_sig_list->mutable_sbp_signature()->Add());
   return Maybe<void>::Ok();
 }
 
