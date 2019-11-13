@@ -510,7 +510,8 @@ if __name__ == "__main__":
             for f in file_list
         ]
 
-    train_func = init_train_func(len(fake_image_list) > 0)
+    if terminal_args.train_with_real_dataset:
+        train_func = init_train_func(len(fake_image_list) > 0)
 
     check_point = flow.train.CheckPoint()
     if not terminal_args.model_load_dir:
