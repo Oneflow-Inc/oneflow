@@ -116,7 +116,7 @@ class BoxList(object):
         scaled_ymin = ymin * ratio_height
         scaled_ymax = ymax * ratio_height
         scaled_box = np.concatenate(
-            (scaled_xmin, scaled_ymin, scaled_xmax, scaled_ymax), dim=-1
+            (scaled_xmin, scaled_ymin, scaled_xmax, scaled_ymax), axis=-1
         )
         bbox = BoxList(scaled_box, size, mode="xyxy")
         # bbox._copy_extra_fields(self)
