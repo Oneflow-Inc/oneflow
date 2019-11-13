@@ -122,6 +122,14 @@ class MessageAttr {
   const PbMessage &message_;
 };
 
+template <>
+inline PbMessage *MessageAttr::GetAttr<PbMessage *>(
+    const std::string &attr_name) const {
+  PbMessage *value = nullptr;
+  GetMessage(message_, attr_name, &value);
+  return value;
+}
+
 }  // namespace util
 }  // namespace xrt
 }  // namespace oneflow

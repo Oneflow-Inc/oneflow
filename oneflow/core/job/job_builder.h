@@ -45,19 +45,15 @@ class JobBuilder final {
   void ForEachOperator(const std::function<void(const Operator &)> &Handler) const;
 
   const ParallelConf &ParallelConf4OpName(const std::string &op_name) const;
-  ParallelConf *MutableParallelConf4OpName(const std::string &op_name);
   void AddParallelConf4OpName(const std::string &op_name, const ParallelConf &parallel_conf);
 
   const SbpSignature &SbpSignature4OpName(const std::string &op_name) const;
-  SbpSignature *MutableSbpSignature4OpName(const std::string &op_name);
   void AddSbpSignature4OpName(const std::string &op_name, const SbpSignature &sbp_signature);
 
   const OpTimeShape &TimeShape4OpName(const std::string &op_name) const;
-  OpTimeShape *MutableTimeShape4OpName(const std::string &op_name);
   void AddTimeShape4OpName(const std::string &op_name, const OpTimeShape &time_shape);
 
   const OptInt64 &BatchAxis4Lbn(const std::string &lbn) const;
-  OptInt64 *MutableBatchAxis4Lbn(const std::string &lbn);
   void AddBatchAxis4Lbn(const std::string &lbn, const OptInt64 &axis);
   bool HasBatchAxis4Lbn(const std::string &lbn) const { return lbn2batch_axis_.count(lbn) > 0; }
 

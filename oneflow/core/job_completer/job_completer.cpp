@@ -137,20 +137,10 @@ void GenerateOpConf4Trainning(const OpGraph& op_graph, JobBuilder* job_builder) 
 }
 
 #ifdef WITH_XLA
-void RewriteOptimizerOp(const OpGraph& op_graph, Job* job) {
-  auto graph = xrt::BuildXrtGraph(&op_graph);
-  auto options = xrt::CreateDefaultXrtPassOptions();
-  xrt::RunXrtPass("RewriteOptimizer", graph.get(), options, job);
-
-  TeePersistentLogStream::Create(absl::StrCat("job_rewrite_optimizer", GlobalJobDesc().job_id()))
-      ->Write(*job);
-}
-
 void RebuildXrtCompiledJob(const OpGraph& op_graph, Job* job) {
-  VLOG(2) << "Compile the job with XLA JIT support.";
-  TeePersistentLogStream::Create(absl::StrCat("job_without_xla", GlobalJobDesc().job_id()))
+  TeePersistentLogStream::Create(absl::StrCat("job_without_xrt", GlobalJobDesc().job_id()))
       ->Write(*job);
-
+  // Create options to run xrt passes.
   auto graph = xrt::BuildXrtGraph(&op_graph);
   auto options = xrt::CreateDefaultXrtPassOptions();
   options.clustering_options.train_phase = GlobalJobDesc().IsTrain();
@@ -160,7 +150,7 @@ void RebuildXrtCompiledJob(const OpGraph& op_graph, Job* job) {
   // Rebuild Job
   xrt::RunXrtPass("RebuildCompiledJob", graph.get(), options, job);
 
-  TeePersistentLogStream::Create(absl::StrCat("job_with_xla", GlobalJobDesc().job_id()))
+  TeePersistentLogStream::Create(absl::StrCat("job_with_xrt", GlobalJobDesc().job_id()))
       ->Write(*job);
 }
 #endif
@@ -394,9 +384,6 @@ void JobCompleter::Complete(Job* job) const {
     WithOpGraphAndMutJob(job, &AutoLearningRate);
     // complete ops for trainning
     WithOpGraphAndMutJobBuilder(job, &GenerateOpConf4Trainning);
-#ifdef WITH_XLA
-// if (FLAGS_use_xla_jit) { WithOpGraphAndMutJob(job, &RewriteOptimizerOp); }
-#endif
     WithOpGraphAndMutJobBuilder(job, &MakeNcclTupleBroadcastReduceSequence);
     WithOpGraphAndMutJobBuilder(job, &RewriteBoxingWithAllReduce);
     WithOpGraphAndMutJobBuilder(job, &MakeAllReduceSequence);

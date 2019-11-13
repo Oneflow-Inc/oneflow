@@ -176,12 +176,6 @@ void JobBuilder::ForEachOperator(const std::function<void(const Operator &)> &Ha
   }
 }
 
-ParallelConf *JobBuilder::MutableParallelConf4OpName(const std::string &op_name) {
-  const auto &it = op_name2parallel_conf_.find(op_name);
-  CHECK(it != op_name2parallel_conf_.end());
-  return it->second;
-}
-
 const ParallelConf &JobBuilder::ParallelConf4OpName(const std::string &op_name) const {
   return *op_name2parallel_conf_.at(op_name);
 }
@@ -209,12 +203,6 @@ void JobBuilder::BindIdenticalSbpOpBlobArgPair(const OpBlobArg &first, const OpB
   *pair->mutable_second() = second;
 }
 
-SbpSignature *JobBuilder::MutableSbpSignature4OpName(const std::string &op_name) {
-  const auto &it = op_name2sbp_signature_conf_.find(op_name);
-  CHECK(it != op_name2sbp_signature_conf_.end());
-  return it->second;
-}
-
 const SbpSignature &JobBuilder::SbpSignature4OpName(const std::string &op_name) const {
   const auto &it = op_name2sbp_signature_conf_.find(op_name);
   CHECK(it != op_name2sbp_signature_conf_.end());
@@ -234,12 +222,6 @@ void JobBuilder::AddSbpSignature4OpName(const std::string &op_name,
   op_name2sbp_signature_conf_.emplace(op_name, &(*op_name2sbp_signature_conf)[op_name]);
 }
 
-OpTimeShape *JobBuilder::MutableTimeShape4OpName(const std::string &op_name) {
-  const auto &it = op_name2time_shapes_.find(op_name);
-  CHECK(it != op_name2time_shapes_.end());
-  return it->second;
-}
-
 const OpTimeShape &JobBuilder::TimeShape4OpName(const std::string &op_name) const {
   const auto &it = op_name2time_shapes_.find(op_name);
   CHECK(it != op_name2time_shapes_.end());
@@ -253,12 +235,6 @@ void JobBuilder::AddTimeShape4OpName(const std::string &op_name, const OpTimeSha
     (*time_shape_conf)[op_name] = time_shape;
     op_name2time_shapes_[op_name] = &((*time_shape_conf)[op_name]);
   }
-}
-
-OptInt64 *JobBuilder::MutableBatchAxis4Lbn(const std::string &lbn) {
-  const auto &it = lbn2batch_axis_.find(lbn);
-  CHECK(it != lbn2batch_axis_.end());
-  return it->second;
 }
 
 const OptInt64 &JobBuilder::BatchAxis4Lbn(const std::string &lbn) const {

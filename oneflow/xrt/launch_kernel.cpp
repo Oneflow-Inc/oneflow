@@ -169,8 +169,8 @@ void XrtLaunchKernel<device_type>::ForwardDataContent(
     block_until_done = false;
   }
   if (executable->engine() == xrt::XrtEngine::TENSORRT) {
-    run_options.max_batch_size = FLAGS_max_batch_size;
     CHECK_EQ(device_type, DeviceType::kGPU);
+    run_options.max_batch_size = FLAGS_max_batch_size;
   }
   bool status = executable->Run(entry_params, run_options, block_until_done);
   CHECK(status) << "Executable is running failed.";
