@@ -1,4 +1,5 @@
 TRAINING: True
+NUM_GPUS: 1
 DECODER:
   DATA_DIR_TRAIN: /dataset/mask_rcnn/sample_2_val
   DATA_DIR_TEST: /dataset/mask_rcnn/sample_2_val
