@@ -17,4 +17,7 @@
 #define EnvToInt(envname, dflt) \
   (!getenv(#envname) ? (dflt) : strtol(getenv(#envname), NULL, 10))
 
+#define EnvToInt64(envname, dflt) \
+  (!getenv(#envname) ? (dflt) : strtoll(getenv(#envname), NULL, 19))
+
 #endif  // ONEFLOW_XRT_UTILITY_ENV_H_

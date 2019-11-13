@@ -84,7 +84,7 @@ class TrtBuilder {
  public:
   explicit TrtBuilder(const std::string &name)
       : builder_name_(name), next_handle_(0) {
-    nv::Logger logger(name);
+    static nv::Logger logger;
     builder_.reset(nvinfer1::createInferBuilder(logger));
     nvinfer1::NetworkDefinitionCreationFlags flags =
         (1U << int(nvinfer1::NetworkDefinitionCreationFlag::kEXPLICIT_BATCH));

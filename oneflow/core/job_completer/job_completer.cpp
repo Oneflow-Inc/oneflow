@@ -394,7 +394,7 @@ void JobCompleter::Complete(Job* job) const {
     // complete ops for trainning
     WithOpGraphAndMutJobBuilder(job, &GenerateOpConf4Trainning);
 #ifdef WITH_XLA
-    if (FLAGS_use_xla_jit) { WithOpGraphAndMutJob(job, &RewriteOptimizerOp); }
+// if (FLAGS_use_xla_jit) { WithOpGraphAndMutJob(job, &RewriteOptimizerOp); }
 #endif
     WithOpGraphAndMutJobBuilder(job, &MakeNcclTupleBroadcastReduceSequence);
     WithOpGraphAndMutJobBuilder(job, &RewriteBoxingWithAllReduce);

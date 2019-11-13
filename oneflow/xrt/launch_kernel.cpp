@@ -5,6 +5,13 @@
 #include "oneflow/xrt/graph_compiler.h"
 #include "oneflow/xrt/platform.h"
 
+// General executable setup.
+DEFINE_int64(max_workspace_bytes, EnvToInt64(FLAGS_max_workspace_bytes, -1),
+             "Maximum temporary workspace bytes.");
+// TENSORRT executable setup.
+DEFINE_int32(max_batch_size, EnvToInt(FLAGS_max_batch_size, 1),
+             "Maximum batch size for builder of TENSORRT engine.");
+
 namespace oneflow {
 
 template <DeviceType device_type>
@@ -157,8 +164,13 @@ void XrtLaunchKernel<device_type>::ForwardDataContent(
   run_options.return_params = return_params;
   bool block_until_done = true;
   if (device_type == DeviceType::kGPU) {
-    block_until_done = false;
     run_options.stream = ctx.device_ctx->cuda_stream();
+    run_options.device_memory_limit = FLAGS_max_workspace_bytes;
+    block_until_done = false;
+  }
+  if (executable->engine() == xrt::XrtEngine::TENSORRT) {
+    run_options.max_batch_size = FLAGS_max_batch_size;
+    CHECK_EQ(device_type, DeviceType::kGPU);
   }
   bool status = executable->Run(entry_params, run_options, block_until_done);
   CHECK(status) << "Executable is running failed.";

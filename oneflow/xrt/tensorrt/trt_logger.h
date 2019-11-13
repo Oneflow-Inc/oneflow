@@ -12,12 +12,14 @@ namespace nv {
 
 class Logger : public nvinfer1::ILogger {
  public:
+  Logger() = default;
+
   Logger(const std::string& name) : name_(name) {}
 
   void log(nvinfer1::ILogger::Severity severity, const char* msg) override;
 
  private:
-  std::string name_ = "TensorRT Logger";
+  std::string name_ = "TensorRT Logging";
 };
 
 }  // namespace nv

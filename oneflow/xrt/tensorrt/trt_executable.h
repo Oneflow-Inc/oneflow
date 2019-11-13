@@ -31,9 +31,10 @@ class TrtExecutable : public Executable {
            bool block_until_done = true) override;
 
  private:
-  bool CreateExecutableEngine(const ExecutableRunOptions &run_options);
+  bool CreateExecutableEngine(const ExecutableRunOptions &run_options,
+                              const int batch_size = -1);
 
-  bool ExecuteEngine(int batch_size, void **buffers, void *stream,
+  bool ExecuteEngine(const int batch_size, void **buffers, void *stream,
                      bool block_until_done);
 
  private:
