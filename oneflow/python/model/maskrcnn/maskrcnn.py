@@ -48,9 +48,6 @@ parser.add_argument(
     required=False,
 )
 parser.add_argument(
-    "-eval", "--eval", default=False, action="store_true", required=False
-)
-parser.add_argument(
     "-td",
     "--train_with_real_dataset",
     default=False,
@@ -117,14 +114,6 @@ def get_numpy_placeholders():
         "gt_labels": np.random.randn(N, G).astype(np.int32),
         "rpn_proposals": np.random.randn(2000, 4).astype(np.float32),
         "detections": np.random.randn(2000, 4).astype(np.float32),
-        "detection0": np.random.randn(1000, 4).astype(np.float32),
-        "detection1": np.random.randn(1000, 4).astype(np.float32),
-        "fpn_feature_map1": np.random.randn(2, 256, 104, 152).astype(
-            np.float32
-        ),
-        "fpn_feature_map2": np.random.randn(2, 256, 52, 76).astype(np.float32),
-        "fpn_feature_map3": np.random.randn(2, 256, 26, 38).astype(np.float32),
-        "fpn_feature_map4": np.random.randn(2, 256, 13, 19).astype(np.float32),
     }
 
 
@@ -275,52 +264,6 @@ def MakeWatcherCallback(prompt):
     return Callback
 
 
-def maskrcnn_eval_box_head(images, image_sizes):
-    cfg = get_default_cfgs()
-    if terminal_args.config_file is not None:
-        cfg.merge_from_file(terminal_args.config_file)
-    cfg.freeze()
-    print(cfg)
-    backbone = Backbone(cfg)
-    rpn_head = RPNHead(cfg)
-    rpn_proposal = RPNProposal(cfg)
-    box_head = BoxHead(cfg)
-
-    image_size_list = [
-        flow.squeeze(
-            flow.local_gather(image_sizes, flow.constant(i, dtype=flow.int32)),
-            [0],
-        )
-        for i in range(image_sizes.shape[0])
-    ]
-    anchors = []
-    for i in range(cfg.DECODER.FPN_LAYERS):
-        anchors.append(
-            flow.detection.anchor_generate(
-                images=flow.transpose(images, perm=[0, 2, 3, 1]),
-                feature_map_stride=cfg.DECODER.FEATURE_MAP_STRIDE * pow(2, i),
-                aspect_ratios=cfg.DECODER.ASPECT_RATIOS,
-                anchor_scales=cfg.DECODER.ANCHOR_SCALES * pow(2, i),
-            )
-        )
-
-    # Backbone
-    features = backbone.build(images)
-
-    # RPN
-    cls_logit_list, bbox_pred_list = rpn_head.build(features)
-    proposals = rpn_proposal.build(
-        anchors, cls_logit_list, bbox_pred_list, image_size_list, None
-    )
-
-    # Box Head
-    cls_probs, box_regressions = box_head.build_eval(proposals, features)
-
-    return (
-        tuple(proposals) + tuple(features) + (cls_probs,) + (box_regressions,)
-    )
-
-
 if terminal_args.mock_dataset:
 
     @flow.function
@@ -346,48 +289,6 @@ if terminal_args.mock_dataset:
         for loss in outputs:
             flow.losses.add_loss(loss)
         return outputs
-
-
-def input_blob_def(bn):
-    return flow.input_blob_def(
-        placeholders[bn].shape, dtype=flow.float32, is_dynamic=True
-    )
-
-
-if terminal_args.eval:
-    from eval.bounding_box import BoxList
-    from eval.box_head_inference import PostProcessor
-    from eval.mask_head_inference import MaskPostProcessor
-    from eval.coco import COCODataset
-    from eval.coco_eval import do_coco_evaluation
-
-    @flow.function
-    def maskrcnn_box_head_eval_job(
-        images=flow.input_blob_def(
-            (2, 3, 416, 608), dtype=flow.float, is_dynamic=True
-        ),
-        image_sizes=flow.input_blob_def(
-            (2, 2), dtype=flow.int32, is_dynamic=False
-        ),
-    ):
-        return maskrcnn_eval_box_head(images, image_sizes)
-
-    @flow.function
-    def maskrcnn_mask_head_eval_job(
-        detection0=input_blob_def("detection0"),
-        detection1=input_blob_def("detection1"),
-        fpn_fm1=input_blob_def("fpn_feature_map1"),
-        fpn_fm2=input_blob_def("fpn_feature_map2"),
-        fpn_fm3=input_blob_def("fpn_feature_map3"),
-        fpn_fm4=input_blob_def("fpn_feature_map4"),
-    ):
-        cfg = get_default_cfgs()
-        mask_head = MaskHead(cfg)
-        mask_logits = mask_head.build_eval(
-            [detection0, detection1], [fpn_fm1, fpn_fm2, fpn_fm3, fpn_fm4]
-        )
-        mask_prob = flow.math.sigmoid(mask_logits)
-        return mask_prob
 
 
 if terminal_args.train_with_real_dataset:
@@ -553,64 +454,7 @@ if __name__ == "__main__":
         check_point.load(terminal_args.model_load_dir)
 
     if terminal_args.debug:
-        if terminal_args.eval:
-            import numpy as np
-
-            images = np.load(
-                "/tmp/shared_with_jxf/maskrcnn_eval_input_data_small/images.npy"
-            )
-            image_sizes = np.load(
-                "/tmp/shared_with_jxf/maskrcnn_eval_input_data_small/image_sizes.npy"
-            )
-            image_num = image_sizes.shape[0]
-
-            results = maskrcnn_box_head_eval_job(images, image_sizes).get()
-            cls_probs = results[-2]
-            box_regressions = results[-1]
-            fpn_feature_map = []
-            for i in range(4):
-                fpn_feature_map.append(results[image_num + i].ndarray())
-
-            boxes = []
-            for proposal, img_size in zip(results[:image_num], image_sizes):
-                bbox = BoxList(
-                    proposal.ndarray(), (img_size[1], img_size[0]), mode="xyxy"
-                )
-                boxes.append(bbox)
-            postprocessor = PostProcessor()
-            results = postprocessor.forward(
-                (cls_probs.ndarray(), box_regressions.ndarray()), boxes
-            )
-
-            detections = []
-            for result in results:
-                detections.append(result.bbox)
-            mask_prob = maskrcnn_mask_head_eval_job(
-                detections[0],
-                detections[1],
-                fpn_feature_map[0],
-                fpn_feature_map[1],
-                fpn_feature_map[2],
-                fpn_feature_map[3],
-            ).get()
-
-            mask_postprocessor = MaskPostProcessor()
-            predictions = mask_postprocessor.forward(
-                mask_prob.ndarray(), results
-            )
-
-            ann_file = "/dataset/mscoco_2017/annotations/sample_2_instances_val2017.json"
-            dataset = COCODataset(ann_file)
-            do_coco_evaluation(
-                dataset,
-                predictions,
-                box_only=False,
-                output_folder="./output",
-                iou_types=["bbox", "segm"],
-                expected_results=(),
-                expected_results_sigma_tol=4,
-            )
-        elif terminal_args.mock_dataset:
+        if terminal_args.mock_dataset:
             if terminal_args.rpn_only:
                 print(
                     "{:>8} {:>16} {:>16}".format(
