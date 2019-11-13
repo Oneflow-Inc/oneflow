@@ -226,6 +226,8 @@ void FoldSubgraphBuilder::BuildXrtLaunchOps() {
     XrtLaunchOpConf *launch_conf = op_conf.mutable_xrt_launch_conf();
     // Add inputs and outputs in launch_conf
     AddInOutBlobNames(node, launch_conf);
+
+    launch_conf->set_engine("XLA");
     // Build function and returns inputs mutability.
     util::Set<std::string> mutability;
     buildFunction(node->sub_graph(), &mutability,

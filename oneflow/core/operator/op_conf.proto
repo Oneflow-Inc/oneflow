@@ -1482,28 +1482,6 @@ message LearningRateScheduleOpConf {
   optional WarmupConf warmup_conf = 5;
 }
 
-message ClipGradientOpConf {
-  required string out = 1;
-  required string gradient = 2;
-  required string instance_num_diff = 3;
-  required float clip_norm = 4;
-  optional float global_norm = 5;
-}
-
-message AdamOptimizerOpConf {
-  required string gradient = 1;
-  required string weight = 2;
-  required string instance_num_diff = 3;
-  required string learning_rate = 4;
-  required string m = 5;
-  required string v = 6;
-  required float l1 = 7;
-  required float l2 = 8;
-  optional float beta1 = 9 [default = 0.9];
-  optional float beta2 = 10 [default = 0.999];
-  optional float epsilon = 11 [default = 1e-8];
-}
-
 message XrtLaunchOpConf {
   message Argument {
     required string name = 1;
@@ -1517,14 +1495,17 @@ message XrtLaunchOpConf {
   repeated string in = 1;
   repeated string out = 2;
   required Function function = 3;
+  // Function executing engine.
+  // Only "XLA" and "TensorRT" are supported currently.
+  required string engine = 4;
   // Input mutability.
-  map<string, bool> mutability = 4;
+  map<string, bool> mutability = 5;
   // Mapping launch op's input and output names into function.
-  map<string, string> input_output_mapping = 5;
-  map<string, OptInt64> batch_axis = 6;
+  map<string, string> input_output_mapping = 6;
+  map<string, OptInt64> batch_axis = 7;
   // Sbp signatures of each function node.
-  map<string, SbpSignature> sbp_signatures = 7;
-  optional bool model_update = 8 [default = false];
+  map<string, SbpSignature> sbp_signatures = 8;
+  optional bool model_update = 9 [default = false];
 }
 
 message NcclBoxingReduceScatterOpConf {
@@ -1687,8 +1668,6 @@ message OperatorConf {
     GatherMs0OpConf gather_ms0_conf = 305;
     GatherMs0GradOpConf gather_ms0_grad_conf = 306;
 
-    ClipGradientOpConf clip_gradient_conf = 401;
-    AdamOptimizerOpConf adam_optimizer_conf = 403;
     XrtLaunchOpConf xrt_launch_conf = 410;
 
     // math op
