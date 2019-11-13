@@ -1,4 +1,5 @@
 #include "oneflow/core/actor/actor.h"
+#include <string>
 #include "oneflow/core/thread/thread_manager.h"
 #include "oneflow/core/job/runtime_job_descs.h"
 #include "oneflow/core/job/machine_context.h"
@@ -39,6 +40,10 @@ void Actor::Init(const JobDesc* job_desc, const TaskProto& task_proto,
   InitDeviceCtx(thread_ctx);
   if (task_proto.has_parallel_ctx()) {
     parallel_ctx_.reset(new ParallelContext(task_proto.parallel_ctx()));
+  }
+  if (task_proto.exec_sequence().exec_node_size() == 1) {
+    const ExecNodeProto& node = task_proto.exec_sequence().exec_node(0);
+    this->op_name = node.kernel_conf().op_attribute().op_conf().name();
   }
   for (const ExecNodeProto& node : task_proto.exec_sequence().exec_node()) {
     ExecKernel ek;
@@ -569,12 +574,14 @@ void Actor::AsyncSendEORDMsgForAllProducedRegstDesc() {
   for (auto& pair : produced_regsts_) {
     CHECK(!pair.second.empty());
     const RtRegstDesc* regst_desc = pair.second.front()->regst_desc();
-    device_ctx_->AddCallBack([regst_desc]() {
-      for (int64_t consumer : regst_desc->consumers_actor_id()) {
-        Global<ActorMsgBus>::Get()->SendMsg(
-            ActorMsg::BuildEordMsg(consumer, regst_desc->regst_desc_id()));
-      }
-    });
+    device_ctx_->AddCallBack(
+        [regst_desc]() {
+          for (int64_t consumer : regst_desc->consumers_actor_id()) {
+            Global<ActorMsgBus>::Get()->SendMsg(
+                ActorMsg::BuildEordMsg(consumer, regst_desc->regst_desc_id()));
+          }
+        },
+        this->op_name);
   }
 }
 
@@ -672,9 +679,11 @@ void Actor::AsyncSendQueuedMsg() {
   if (!async_msg_queue_.empty()) {
     std::deque<ActorMsg> msgs;
     msgs.swap(async_msg_queue_);
-    device_ctx_->AddCallBack([msgs]() {
-      for (const ActorMsg& msg : msgs) { Global<ActorMsgBus>::Get()->SendMsg(msg); }
-    });
+    device_ctx_->AddCallBack(
+        [msgs]() {
+          for (const ActorMsg& msg : msgs) { Global<ActorMsgBus>::Get()->SendMsg(msg); }
+        },
+        this->op_name);
   }
 }
 

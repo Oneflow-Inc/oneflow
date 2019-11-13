@@ -130,6 +130,7 @@ class Actor {
   Regst* GetSoleProducedRegst4RegstDescId(int64_t regst_desc_id) const;
   void ForEachProducedRegst(const std::function<void(Regst*)>&) const;
   int64_t HandleRegstToConsumer(Regst* regst, std::function<bool(int64_t)> IsAllowedActor);
+  std::string op_name;
 
  private:
   int64_t GetGlobalWorkStreamId() const;

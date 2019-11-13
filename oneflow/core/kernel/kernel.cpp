@@ -1,5 +1,7 @@
 #include "oneflow/core/kernel/kernel.h"
+#include <string>
 #include "oneflow/core/common/gdb.h"
+#include "/home/caishenghang/nsight-systems-2019.4.2/target-linux-x64/nvtx/include/nvtx3/nvToolsExt.h"
 
 namespace oneflow {
 
@@ -40,6 +42,8 @@ void Kernel::InitModelAndConstBuf(const KernelCtx& ctx,
 
 void Kernel::Launch(const KernelCtx& ctx,
                     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  const std::string mark("Kernel::Launch " + this->kernel_conf().op_attribute().op_conf().name());
+  nvtxRangePush(mark.c_str());
   if (kernel_conf_.is_forward()) {
     gdb::ForwardEnterBreakPoint(op_attribute(), BnInOp2Blob);
     Forward(ctx, BnInOp2Blob);
@@ -47,6 +51,7 @@ void Kernel::Launch(const KernelCtx& ctx,
   } else {
     UNIMPLEMENTED();
   }
+  nvtxRangePop();
 }
 
 const LogicalBlobId& Kernel::BnInOp2Lbi(const std::string& bn_in_op) const {
