@@ -1,4 +1,5 @@
 #include "oneflow/xrt/node_util.h"
+#include "oneflow/xrt/kernel/op_kernel.h"
 #include "oneflow/xrt/types.h"
 #include "oneflow/xrt/utility/message_attr.h"
 #include "oneflow/xrt/utility/registry.h"
@@ -16,13 +17,11 @@ const PbMessage *OpMessage(const XrtNode *node) {
   return message;
 }
 
-bool IsNodeCompiled(const XrtNode *node, const XrtEngine &engine) {
+bool IsNodeCompiled(const XrtNode *node, const XrtEngine &engine,
+                    const bool train_phase) {
   auto field = MakeXrtField(node->device(), engine);
-  auto *rm = util::RegistryManager<XrtField>::Global();
-  if (rm->HasField(field)) {
-    return rm->Get(field)->IsRegistered(node->type());
-  }
-  return false;
+  return OpKernelRegistered(node->type(), field) &&
+         (!train_phase || TrainPhaseEnabled(node->type(), field));
 }
 
 bool IsNodeInput(const XrtNode *node, const Argument &argument) {

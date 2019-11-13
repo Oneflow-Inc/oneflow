@@ -10,6 +10,7 @@
 #include "oneflow/xrt/api.h"
 #include "oneflow/xrt/argument.h"
 #include "oneflow/xrt/graph/graph.h"
+#include "oneflow/xrt/kernel/op_kernel.h"
 #include "oneflow/xrt/passes/pass.h"
 #include "oneflow/xrt/types.h"
 #include "oneflow/xrt/utility/stl.h"
@@ -135,15 +136,9 @@ FoldSubgraphBuilder::FoldSubgraphBuilder(const XrtGraph &graph, Job *job)
 
 bool IsMutableArgument(const Argument &argument, const std::string &op_type,
                        const XrtField &field) {
-  auto *rm = util::RegistryManager<XrtField>::Global();
-  const auto &attrs = rm->Get(field)->LookupAttr(op_type);
-  const auto &it = attrs.find(MutableVariablesAttrName);
-  if (it != attrs.end()) {
-    const std::string &key = argument.meta_data().consume_key;
-    const auto &mutable_vars = any_cast<util::Set<std::string>>(it->second);
-    return mutable_vars.count(key) > 0;
-  }
-  return false;
+  const auto mutable_vars = MutableVariables(op_type, field);
+  const std::string &key = argument.meta_data().consume_key;
+  return mutable_vars.count(key) > 0;
 }
 
 void FoldSubgraphBuilder::buildFunction(const XrtGraph *sub_graph,

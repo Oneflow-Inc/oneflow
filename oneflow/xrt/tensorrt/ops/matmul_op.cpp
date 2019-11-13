@@ -29,13 +29,13 @@ class MatMulOp : public TrtOpKernel {
 
     auto op0 = GetMatrixOperation(a, transpose_a);
     auto op1 = GetMatrixOperation(b, transpose_b);
-    auto *layer = ctx->builder()->addMatrixMultiply(*a, op0, *b, op1);
 
+    auto *layer = ctx->builder()->addMatrixMultiply(*a, op0, *b, op1);
     ctx->SetOutput("out", layer->getOutput(0));
   }
 };
 
-REGISTER_TRT_OP_KERNEL(MatMul, MatMulOp).Finalize();
+REGISTER_TRT_OP_KERNEL(MatMul, MatMulOp).EnableTrainPhase().Finalize();
 
 }  // namespace tensorrt
 }  // namespace xrt

@@ -94,8 +94,9 @@ class ClusterNode {
   bool IsSatisfySbpPolicy() const;
   bool IsSourceNode() const { return in_edges_.empty(); }
 
-  virtual bool IsCompiled(const XrtEngine &engine) const {
-    return IsNodeCompiled(xrt_node_, engine);
+  virtual bool IsCompiled(const XrtEngine &engine,
+                          const bool train_phase) const {
+    return IsNodeCompiled(xrt_node_, engine, train_phase);
   }
 
   bool operator==(const ClusterNode &other) const {

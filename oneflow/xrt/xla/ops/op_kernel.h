@@ -27,6 +27,7 @@ using XlaOpKernelPtr = std::shared_ptr<OpKernel<XlaOpContext> >;
       __attribute__((unused)) =                                     \
           OpKernelRegistrar<XlaOpContext>(#OpName)                  \
               .SetField(XrtEngine::XLA)                             \
+              .EnableTrainPhase()                                   \
               .SetFactory(                                          \
                   []() -> OpKernel<XlaOpContext> * { return new KernelType; })
 

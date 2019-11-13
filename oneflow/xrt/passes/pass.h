@@ -26,6 +26,9 @@ struct ClusteringOptions {
   // nodes can be merged.
   int32_t max_iteration = 20;
 
+  // Clustering subgraph for train phase.
+  bool train_phase = true;
+
   bool ignore_sbp_policy = false;
   bool ignore_time_shape = false;
 };

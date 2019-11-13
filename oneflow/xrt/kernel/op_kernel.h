@@ -22,10 +22,13 @@ template <typename T>
 class OpKernelRegistrar {
  private:
   std::function<OpKernel<T> *()> factory_;
-  std::vector<XrtDevice> device_{CPU_X86, GPU_CUDA};
-  XrtEngine engine_field_;
 
   std::string op_name_;
+
+  XrtEngine engine_field_;
+  std::vector<XrtDevice> device_{CPU_X86, GPU_CUDA};
+
+  bool train_phase_enabled_ = false;
   util::Map<std::string, Any> attributes_;
 
  public:
@@ -60,7 +63,13 @@ class OpKernelRegistrar {
     return *this;
   }
 
+  OpKernelRegistrar &EnableTrainPhase() {
+    train_phase_enabled_ = true;
+    return *this;
+  }
+
   OpKernelRegistrar &Finalize() {
+    attributes_[TrainPhaseEnabledAttrName] = train_phase_enabled_;
     for (const auto &device : device_) {
       XrtField field = MakeXrtField(device, engine_field_);
       FieldRegistry()->Get(field)->Register(op_name_, factory_, attributes_);
@@ -78,6 +87,41 @@ struct OpKernelBuilder {
         ->Lookup(op_name)();
   }
 };
+
+inline bool OpKernelRegistered(const std::string &op_type,
+                               const XrtField &field) {
+  auto *rm = util::RegistryManager<XrtField>::Global();
+  if (rm->HasRegistry(field)) {
+    return rm->GetRegistry(field)->IsRegistered(op_type);
+  }
+  return false;
+}
+
+inline bool TrainPhaseEnabled(const std::string &op_type,
+                              const XrtField &field) {
+  auto *rm = util::RegistryManager<XrtField>::Global();
+  CHECK(rm->HasRegistry(field))
+      << "Field registry has not been found. Field is (engine: "
+      << field.engine() << ", device: " << field.device() << ").";
+  const auto &attrs = rm->GetRegistry(field)->LookupAttr(op_type);
+  CHECK_GT(attrs.count(TrainPhaseEnabledAttrName), 0)
+      << "TrainPhaseEnabled attrs is not set for type " << op_type;
+  return any_cast<bool>(attrs.at(TrainPhaseEnabledAttrName));
+}
+
+inline util::Set<std::string> MutableVariables(const std::string &op_type,
+                                               const XrtField &field) {
+  auto *rm = util::RegistryManager<XrtField>::Global();
+  CHECK(rm->HasRegistry(field))
+      << "Field registry has not been found. Field is (engine: "
+      << field.engine() << ", device: " << field.device() << ").";
+  const auto &attrs = rm->GetRegistry(field)->LookupAttr(op_type);
+  const auto &it = attrs.find(MutableVariablesAttrName);
+  if (it != attrs.end()) {
+    return any_cast<util::Set<std::string>>(it->second);
+  }
+  return util::Set<std::string>();
+}
 
 }  // namespace xrt
 }  // namespace oneflow

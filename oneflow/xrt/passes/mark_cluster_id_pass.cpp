@@ -73,15 +73,16 @@ void MarkClusterIdPass::BuildClusterNodesAndEdges(XrtGraph *graph) {
 }
 
 void MarkClusterIdPass::ClusteringSubgraphs(const ClusteringOptions &options) {
-  const XrtEngine engine = options.engine;
   const int max_nodes = options.maximum_nodes;
-  const int max_iter = options.max_iteration;
+  const XrtEngine engine = options.engine;
+  const bool train_phase = options.train_phase;
 
+  const int max_iter = options.max_iteration;
   for (int i = 0; i < max_iter; ++i) {
     bool has_changed = false;
     std::vector<ClusterNode *> ordered_nodes;
     algorithm::TopologyVisit(*this, [&](ClusterNode *node) {
-      if (!node->IsCompiled(engine)) {
+      if (!node->IsCompiled(engine, train_phase)) {
         return;
       }
       ordered_nodes.push_back(node);
@@ -95,7 +96,7 @@ void MarkClusterIdPass::ClusteringSubgraphs(const ClusteringOptions &options) {
         candidate_parents.insert(edge->start());
       }
       for (ClusterNode *parent : candidate_parents) {
-        if (parent->IsCompiled(engine) &&
+        if (parent->IsCompiled(engine, train_phase) &&
             (parent->size() + node->size()) <= max_nodes &&
             TryToFuseWithParent(node, parent, options)) {
           has_changed = true;
@@ -160,10 +161,11 @@ void MarkClusterIdPass::RemoveInvalidClusterNodes(
   const int min_nodes = options.minimum_nodes;
   const int max_nodes = options.maximum_nodes;
   const XrtEngine engine = options.engine;
+  const bool train_phase = options.train_phase;
 
   std::vector<ClusterNode *> removing_clusters;
   for (ClusterNode *node : root_nodes_) {
-    if (!node->IsCompiled(engine) || node->size() < min_nodes ||
+    if (!node->IsCompiled(engine, train_phase) || node->size() < min_nodes ||
         node->size() > max_nodes) {
       removing_clusters.push_back(node);
     }

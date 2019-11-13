@@ -116,7 +116,7 @@ class RegistryManager {
     return g_registry_manager;
   }
 
-  RegistryBase *Get(const Field &field) const {
+  RegistryBase *GetRegistry(const Field &field) const {
     CHECK_GT(registry_fields_.count(field), 0) << "No registry field.";
     return registry_fields_.at(field);
   }
@@ -125,7 +125,7 @@ class RegistryManager {
     return registry_fields_.emplace(field, registry).second;
   }
 
-  bool HasField(const Field &field) const {
+  bool HasRegistry(const Field &field) const {
     return registry_fields_.count(field) > 0;
   }
 
