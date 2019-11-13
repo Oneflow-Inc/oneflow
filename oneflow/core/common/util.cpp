@@ -48,7 +48,7 @@ double oneflow_cast(const std::string& s) {
 }
 
 #ifdef PLATFORM_POSIX
-COMMAND(feenableexcept(FE_ALL_EXCEPT & ~FE_INEXACT & ~FE_UNDERFLOW));
+// COMMAND(feenableexcept(FE_ALL_EXCEPT & ~FE_INEXACT & ~FE_UNDERFLOW));
 #endif
 
 size_t GetAvailableCpuMemSize() {
