@@ -94,6 +94,28 @@ class LocalScatterNdUpdateOp final : public Operator {
     *BatchAxis4BnInOp("out") = *BatchAxis4BnInOp("in");
     return Maybe<void>::Ok();
   }
+
+  Maybe<void> GetSbpSignatures(SbpSignatureList* sbp_sig_list) const override {
+    SbpSignatureBuilder()
+        .Split("in", 0)
+        .Split("indices", 0)
+        .Split("updates", 0)
+        .Split("out", 0)
+        .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+    return Maybe<void>::Ok();
+  }
+
+  Maybe<void> InferSbpSignature(
+      SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
+      const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
+      std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
+      const ParallelDesc& parallel_desc) const override {
+    SbpSignatureList sbp_sig_list;
+    JUST(GetSbpSignatures(&sbp_sig_list));
+    CHECK_EQ(sbp_sig_list.sbp_signature_size(), 1);
+    *sbp_signature = sbp_sig_list.sbp_signature(0);
+    return Maybe<void>::Ok();
+  }
 };
 
 REGISTER_OP(OperatorConf::kLocalScatterNdUpdateConf, LocalScatterNdUpdateOp);

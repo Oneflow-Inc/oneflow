@@ -41,6 +41,15 @@ class BoxEncodeOp final : public Operator {
     *BatchAxis4BnInOp("boxes_delta") = *BatchAxis4BnInOp("ref_boxes");
     return Maybe<void>::Ok();
   }
+
+  Maybe<void> GetSbpSignatures(SbpSignatureList* sbp_sig_list) const override {
+    SbpSignatureBuilder()
+        .Split("ref_boxes", 0)
+        .Split("boxes", 0)
+        .Split("boxes_delta", 0)
+        .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+    return Maybe<void>::Ok();
+  }
 };
 
 REGISTER_OP(OperatorConf::kBoxEncodeConf, BoxEncodeOp);

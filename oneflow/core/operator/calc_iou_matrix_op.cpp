@@ -43,6 +43,17 @@ class CalcIoUMatrixOp final : public Operator {
       std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override {
     return NaiveInferBatchAxis(BatchAxis4BnInOp);
   }
+
+  Maybe<void> GetSbpSignatures(
+      const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
+      SbpSignatureList* sbp_sig_list) const override {
+    SbpSignatureBuilder()
+        .Split("boxes1", 0)
+        .Split("boxes2", 0)
+        .Split("iou_matrix", 0)
+        .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+    return Maybe<void>::Ok();
+  }
 };
 
 REGISTER_OP(OperatorConf::kCalcIouMatrixConf, CalcIoUMatrixOp);

@@ -28,6 +28,24 @@ class ConstantLikeOp final : public Operator {
       std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override {
     return NaiveInferBatchAxis(BatchAxis4BnInOp);
   }
+  Maybe<void> InferSbpSignature(
+      SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
+      const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
+      std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
+      const ParallelDesc& parallel_desc) const override {
+    auto* bn2sbp = sbp_signature->mutable_bn_in_op2sbp_parallel();
+    const auto& bn2conf_sbp = sbp_sig_conf.bn_in_op2sbp_parallel();
+    const SbpParallel* sbp_parallel = nullptr;
+    const auto& conf_sbp_it = bn2conf_sbp.find("out");
+    if (conf_sbp_it == bn2conf_sbp.end()) {
+      sbp_parallel = &(JUST(SbpInferHint4Ibn("in"))->sbp_parallel());
+    } else {
+      sbp_parallel = &conf_sbp_it->second;
+    }
+    (*bn2sbp)["in"] = *sbp_parallel;
+    (*bn2sbp)["out"] = *sbp_parallel;
+    return Maybe<void>::Ok();
+  }
 };
 
 REGISTER_OP(OperatorConf::kConstantLikeConf, ConstantLikeOp);
