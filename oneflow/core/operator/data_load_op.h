@@ -21,6 +21,8 @@ class DataLoadOp final : public Operator {
                                 const ParallelContext* parallel_ctx,
                                 const SbpSignature* sbp_signature,
                                 std::function<void(OpContext*)> EnrollOpCtx) const override;
+  Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                             const ParallelContext* parallel_ctx) const override;
 
  private:
   Maybe<void> InferBatchAxis(
@@ -29,6 +31,8 @@ class DataLoadOp final : public Operator {
   void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                             const ParallelContext* parallel_ctx,
                             KernelConf* kernel_conf) const override;
+  Maybe<void> InferBlobDescsWithBatchSize(
+      std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, size_t batch_size) const;
 };
 
 }  // namespace oneflow
