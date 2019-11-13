@@ -13,6 +13,26 @@ __inline__ __device__ half hone() { return __float2half(1.0); }
 __inline__ __device__ half hzero() { return __float2half(0.0); }
 
 template<typename T>
+__global__ void ReluForwardGpu(const int n, const T* x, T* y) {
+  CUDA_1D_KERNEL_LOOP(i, n) { y[i] = x[i] > 0 ? x[i] : 0; }
+}
+
+template<>
+__global__ void ReluForwardGpu<half>(const int n, const half* x, half* y) {
+#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
+  CUDA_1D_KERNEL_LOOP(i, n) {
+    if (__hgt(x[i], hzero())) {
+      y[i] = x[i];
+    } else {
+      y[i] = hzero();
+    }
+  }
+#else
+  HALF_CHECK_FAILED;
+#endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__) */
+}
+
+template<typename T>
 __global__ void InplaceReluForwardGpu(const int n, T* y) {
   CUDA_1D_KERNEL_LOOP(i, n) {
     if (y[i] <= 0) { y[i] = 0; }
@@ -28,6 +48,27 @@ __global__ void InplaceReluForwardGpu<half>(const int n, half* y) {
 #else
   HALF_CHECK_FAILED;
 #endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__) */
+}
+
+template<typename T>
+__global__ void ReluBackwardGpu(const int n, const T* y, const T* dy, T* dx) {
+  CUDA_1D_KERNEL_LOOP(i, n) { dx[i] = y[i] > 0 ? dy[i] : 0; }
+}
+
+template<>
+__global__ void ReluBackwardGpu<half>(const int n, const half* y, const half* dy, half* dx) {
+#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
+  half zero = __float2half(0.0);
+  CUDA_1D_KERNEL_LOOP(i, n) {
+    if (__hgt(y[i], zero)) {
+      dx[i] = dy[i];
+    } else {
+      dx[i] = zero;
+    }
+  }
+#else
+  HALF_CHECK_FAILED;
+#endif  // __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
 }
 
 template<typename T>
@@ -113,16 +154,25 @@ template<typename T>
 struct ReluHelper final {
   static void ReluForward(DeviceCtx* ctx, const int64_t n, const T* x, T* y) {
     CHECK_LE(n, GetMaxVal<int32_t>() / 2);
-    Memcpy<DeviceType::kGPU>(ctx, y, x, n, cudaMemcpyKind::cudaMemcpyDeviceToDevice);
-    InplaceReluForwardGpu<T>
-        <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, y);
+    if (x == y) {
+      InplaceReluForwardGpu<T>
+          <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, y);
+    } else {
+      ReluForwardGpu<T>
+          <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y);
+    }
   }
 
   static void ReluBackward(DeviceCtx* ctx, const int64_t n, const T* y, const T* dy, T* dx) {
     CHECK_LE(n, GetMaxVal<int32_t>() / 2);
-    Memcpy<DeviceType::kGPU>(ctx, dx, dy, n, cudaMemcpyKind::cudaMemcpyDeviceToDevice);
-    InplaceReluBackwardGpu<T>
-        <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, y, dx);
+    if (dy == dx) {
+      InplaceReluBackwardGpu<T>
+          <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, y, dx);
+    } else {
+      ReluBackwardGpu<T>
+          <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, y, dy,
+                                                                                        dx);
+    }
   }
 };
 

@@ -5,10 +5,10 @@ namespace oneflow {
 namespace {
 
 template<typename T, typename Index>
-__global__ void InplaceBiasAddGpu(const Index elem_cnt, const Index bias_size,
-                                  const Index inner_size, const T* bias, T* y) {
+__global__ void BiasAddGpu(const Index elem_cnt, const Index bias_size, const Index inner_size,
+                           const T* x, const T* bias, T* y) {
   const Index block_size = bias_size * inner_size;
-  CUDA_1D_KERNEL_LOOP(i, elem_cnt) { y[i] += bias[(i % block_size) / inner_size]; }
+  CUDA_1D_KERNEL_LOOP(i, elem_cnt) { y[i] = x[i] + bias[(i % block_size) / inner_size]; }
 }
 
 template<typename Index>
@@ -20,13 +20,25 @@ __global__ void BiasAddForwardGpuHalf(const Index elem_cnt, const Index bias_siz
 }
 
 template<typename T, typename Index>
+__global__ void InplaceBiasAddGpu(const Index elem_cnt, const Index bias_size,
+                                  const Index inner_size, const T* bias, T* y) {
+  const Index block_size = bias_size * inner_size;
+  CUDA_1D_KERNEL_LOOP(i, elem_cnt) { y[i] += bias[(i % block_size) / inner_size]; }
+}
+
+template<typename T, typename Index>
 struct BiasAddGpuHelper final {
   static void BiasAdd(DeviceCtx* ctx, const Index elem_cnt, const Index bias_size,
                       const Index inner_size, const T* x, const T* bias, T* y) {
-    Memcpy<DeviceType::kGPU>(ctx, y, x, elem_cnt, cudaMemcpyKind::cudaMemcpyDeviceToDevice);
-    InplaceBiasAddGpu<T, Index>
-        <<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-            elem_cnt, bias_size, inner_size, bias, y);
+    if (x == y) {
+      InplaceBiasAddGpu<T, Index>
+          <<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+              elem_cnt, bias_size, inner_size, bias, y);
+    } else {
+      BiasAddGpu<T, Index>
+          <<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+              elem_cnt, bias_size, inner_size, x, bias, y);
+    }
   }
 };
 
