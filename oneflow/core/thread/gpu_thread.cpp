@@ -24,8 +24,8 @@ GpuThread::GpuThread(int64_t thrd_id, int64_t dev_id) {
       CudaCheck(cudaEventSynchronize(cb_event.event));
       cb_event.callback();
       CudaCheck(cudaEventDestroy(cb_event.event));
+      nvtxRangePop();
     }
-    nvtxRangePop();
   });
 }
 
