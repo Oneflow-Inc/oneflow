@@ -60,11 +60,24 @@ Maybe<void> DataLoadOp::InferOutBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature,
     std::function<void(OpContext*)> EnrollOpCtx) const {
+  return InferBlobDescsWithBatchSize(GetBlobDesc4BnInOp, op_conf().data_load_conf().batch_size());
+}
+
+Maybe<void> DataLoadOp::InferBlobDescs(
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx) const {
+  size_t batch_size = op_conf().data_load_conf().batch_size();
+  size_t device_batch_size = GetDeviceBatchSize(batch_size, parallel_ctx);
+  return InferBlobDescsWithBatchSize(GetBlobDesc4BnInOp, device_batch_size);
+}
+
+Maybe<void> DataLoadOp::InferBlobDescsWithBatchSize(
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, size_t batch_size) const {
   FOR_RANGE(size_t, i, 0, output_bns().size()) {
     BlobDesc* out_blob_desc = GetBlobDesc4BnInOp(output_bns().Get(i));
     const BlobConf& blob_conf = op_conf().data_load_conf().blobs(i);
     DimVector dim_vec(1 + blob_conf.shape().dim_size());
-    dim_vec[0] = op_conf().data_load_conf().batch_size();
+    dim_vec[0] = batch_size;
     FOR_RANGE(size_t, j, 1, dim_vec.size()) { dim_vec[j] = blob_conf.shape().dim(j - 1); }
     out_blob_desc->mut_shape() = Shape(dim_vec);
     out_blob_desc->set_data_type(blob_conf.data_type());
@@ -74,7 +87,6 @@ Maybe<void> DataLoadOp::InferOutBlobDescs(
       out_blob_desc->SetLoD(blob_conf.variable_length_axes_size() + 1);
     }
   }
-
   return Maybe<void>::Ok();
 }
 
