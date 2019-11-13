@@ -531,18 +531,12 @@ if __name__ == "__main__":
             for i in range(4):
                 fpn_feature_map.append(results[image_num + i].ndarray())
 
-            for item in fpn_feature_map:
-                print(item.shape)
-
             boxes = []
             for proposal, img_size in zip(results[:image_num], image_sizes):
               bbox = BoxList(proposal.ndarray(), (img_size[1], img_size[0]), mode="xyxy")
-              print(img_size)
               boxes.append(bbox)
             postprocessor = PostProcessor()
             results = postprocessor.forward((cls_probs.ndarray(), box_regressions.ndarray()), boxes)
-            for result in results:
-                print(len(result))
 
             detections = []
             for result in results:
