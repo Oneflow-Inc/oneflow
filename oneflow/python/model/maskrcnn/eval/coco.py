@@ -1,7 +1,7 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
 from pycocotools.coco import COCO
-from bounding_box import BoxList
-from segmentation_mask import SegmentationMask
+from .bounding_box import BoxList
+from .segmentation_mask import SegmentationMask
 #from maskrcnn_benchmark.structures.keypoint import PersonKeypoints
 
 
