@@ -62,6 +62,7 @@ def delete_worker():
         _SystemCall(ssh_prefix + "\"rm -r " + _temp_run_dir + "\"")
 
 def _SendBinaryAndConfig2Worker(machine, oneflow_worker_path, config_proto_path, run_dir, scp_binary):
+    _SystemCall("ssh-copy-id -f " + getpass.getuser() + "@" + machine.addr)
     ssh_prefix = "ssh " + getpass.getuser() + "@" + machine.addr + " "
     remote_file_prefix = " " + getpass.getuser() + "@" + machine.addr + ":"
     assert run_dir != ""
