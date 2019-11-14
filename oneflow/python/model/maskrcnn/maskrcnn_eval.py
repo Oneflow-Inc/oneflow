@@ -122,7 +122,7 @@ if terminal_args.fake_img:
             image_dir=terminal_args.image_dir,
         )
         image_sizes = data_loader("image_size")
-
+        
         return maskrcnn_box_head_eval(flow.transpose(images, perm=[0, 2, 3, 1]), image_sizes)
 
 
@@ -223,7 +223,28 @@ if __name__ == "__main__":
         # Mask Head Post-Processor
         mask_postprocessor = MaskPostProcessor()
         predictions = mask_postprocessor.forward(mask_prob.ndarray(), box_head_predictions)
+
         final_predictions += predictions
+
+    # Compare predictions with PyTorch
+    import torch
+    torch_predictions = torch.load("/home/xfjiang/repos/maskrcnn-benchmark/inference/coco_10_image_val/predictions.pth")
+    for idx, (of_box_list, torch_box_list) in enumerate(zip(final_predictions, torch_predictions)):
+        print("xxxxxxxxxxxxxx___{}___xxxxxxxxxxxxx".format(idx))
+        # of_bbox = of_box_list.bbox
+        # torch_bbox = torch_box_list.bbox.cpu().numpy()
+        # print(of_bbox)
+        # print(torch_bbox)
+        # print("compare bbox: max abs diff is {}", np.max(np.abs(of_bbox, torch_bbox)))
+        # of_scores = of_box_list.get_field("scores")
+        # torch_scores = torch_box_list.get_field("scores").cpu().numpy()
+        # print("compare scores: max abs diff is {}", np.max(np.abs(of_scores, torch_scores)))
+        # of_labels = of_box_list.get_field("labels")
+        # torch_labels = torch_box_list.get_field("labels").cpu().numpy()
+        # print("compare labels: max abs diff is {}", np.max(np.abs(of_labels, torch_labels)))
+        # of_mask = of_box_list.get_field("mask")
+        # torch_mask = torch_box_list.get_field("mask").cpu().numpy()
+        # print("compare mask: max abs diff is {}", np.max(np.abs(of_mask, torch_mask)))
 
     # Calculate mAP
     ann_file = os.path.join(terminal_args.dataset_dir, terminal_args.annotation_file)
@@ -237,32 +258,3 @@ if __name__ == "__main__":
         expected_results=(),
         expected_results_sigma_tol=4,
     )
-
-
-#  Object Detection
-#  Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.474
-#  Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets=100 ] = 0.665
-#  Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets=100 ] = 0.524
-#  Average Precision  (AP) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.000
-#  Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.460
-#  Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.788
-#  Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=  1 ] = 0.419
-#  Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets= 10 ] = 0.477
-#  Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.477
-#  Average Recall     (AR) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.000
-#  Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.464
-#  Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.787
-
-#  Segmentation
-#  Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.471
-#  Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets=100 ] = 0.600
-#  Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets=100 ] = 0.574
-#  Average Precision  (AP) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.004
-#  Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.490
-#  Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.650
-#  Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=  1 ] = 0.411
-#  Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets= 10 ] = 0.479
-#  Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.481
-#  Average Recall     (AR) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.008
-#  Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.500
-#  Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.650
