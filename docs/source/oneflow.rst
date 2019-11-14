@@ -18,6 +18,10 @@ Operators
 .. autofunction:: truncated_normal
 .. autofunction:: unsorted_batch_segment_sum
 .. autofunction:: unsorted_segment_sum
+.. autofunction:: cast
+
+Initializers
+----------------------------------
 .. autofunction:: ones_initializer
 .. autofunction:: glorot_uniform_initializer
 .. autofunction:: random_normal_initializer
