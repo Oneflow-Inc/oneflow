@@ -10,39 +10,39 @@ python 1node_run_cnns_test.py
 ```
 
 ## Test a specific net:
-# alexnet
+### alexnet
 ```
 python run_cnns_test.py TestAlexNet
 ```
 
-# resnet50
+### resnet50
 ```
 python run_cnns_test.py TestResNet50
 ```
 
-# inceptionv3
+### inceptionv3
 ```
 python run_cnns_test.py TestInceptionV3
 ```
 
-# vgg16
+### vgg16
 ```
 python run_cnns_test.py TestVgg16
 ```
 
 ## Test a specific case for a specific net: 
 
-# test alexnet on 1 gpu, 1 machine(node)
+### test alexnet on 1 gpu, 1 machine(node)
 ```
 python run_cnns_test.py TestAlexNet.test_1n1c
 ```
 
-# test alexnet on 4 gpu, 1 machine(node)
+### test alexnet on 4 gpu, 1 machine(node)
 ```
 python run_cnns_test.py TestAlexNet.test_1n4c
 ```
 
-# test alexnet on 4 gpu, 8 machine(node)
+### test alexnet on 4 gpu, 8 machine(node)
 ```
 python run_cnns_test.py TestAlexNet.test_2n8c
 
