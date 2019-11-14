@@ -43,7 +43,9 @@ bool XlaExecutable::Run(const std::vector<Parameter> &inputs,
   // Result shape should be tuple
   CHECK(run_result.on_host_shape().IsTuple());
 
-  // Translate result to output blobs
+  // Translate result to output parameters. Here we only check whether the
+  // address of the results are consistent other than copy them since all
+  // the result buffers are expected to be shared with the return parameters.
   for (int i = 0; i < return_params.size(); ++i) {
     se::DeviceMemoryBase buffer = run_result.buffer({i});
     if (buffer.opaque()) {
