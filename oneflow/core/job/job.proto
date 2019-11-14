@@ -39,6 +39,12 @@ message ExperimentalRunConf {
   optional bool enable_experiment_run = 2 [default = false];
 }
 
+message MemoryAllocationAlgorithmConf {
+  optional bool use_mem_size_first_algo = 1 [default = true];
+  optional bool use_mutual_exclusion_first_algo = 2 [default = true];
+  optional bool use_time_line_algo = 3 [default = false];
+}
+
 message JobConfigProto {
   required string job_name = 1;
 
@@ -55,6 +61,8 @@ message JobConfigProto {
   }
 
   optional ExperimentalRunConf exp_run_conf = 100;
+  optional bool use_memory_allocation_algorithm_v2 = 101 [default = true];
+  optional MemoryAllocationAlgorithmConf memory_allocation_algorithm_conf = 102;
 
   optional bool enable_cudnn = 200 [default = true];
   optional int64 cudnn_buf_limit_mbyte = 201 [default = 1024];  // 1GByte

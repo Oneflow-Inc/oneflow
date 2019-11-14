@@ -229,6 +229,44 @@ def set_exp_run_conf(value):
     pb_util.PythonDict2PbMessage(value, _GetJobConfAttr(lambda x:x, 'exp_run_conf'))
     return oneflow.config
 
+@oneflow_export('config.use_memory_allocation_algorithm_v2')
+def set_use_memory_allocation_algorithm_v2(value = True):
+    _SetJobConfAttr(lambda x:x, 'use_memory_allocation_algorithm_v2', value)
+    return oneflow.config
+
+@oneflow_export('config.static_mem_alloc_algo_white_list.show')
+def show_static_mem_alloc_algo_white_list():
+    return ["use_mem_size_first_algo", "use_mutual_exclusion_first_algo", "use_time_line_algo"]
+
+@oneflow_export('config.static_mem_alloc_policy_white_list.has')
+def static_mem_alloc_policy_white_list_has_policy(policy):
+    pb_msg = _GetJobConfAttr(lambda x:x, 'memory_allocation_algorithm_conf')
+    return getattr(pb_msg, policy)
+
+@oneflow_export('config.static_mem_alloc_policy_white_list.add')
+def static_mem_alloc_policy_white_list_add_policy(policy):
+    pb_msg = _GetJobConfAttr(lambda x:x, 'memory_allocation_algorithm_conf')
+    setattr(pb_msg, policy, True)
+    return oneflow.config
+
+@oneflow_export('config.static_mem_alloc_policy_white_list.remove')
+def static_mem_alloc_policy_white_list_remove_policy(policy):
+    pb_msg = _GetJobConfAttr(lambda x:x, 'memory_allocation_algorithm_conf')
+    setattr(pb_msg, policy, False)
+    return oneflow.config
+
+@oneflow_export('config.static_mem_alloc_policy_white_list.policy_mem_size_first')
+def policy_mem_size_first():
+    return "use_mem_size_first_algo"
+
+@oneflow_export('config.static_mem_alloc_policy_white_list.policy_mutual_exclusion_first')
+def policy_mutual_exclusion_first():
+    return "use_mutual_exclusion_first_algo"
+
+@oneflow_export('config.static_mem_alloc_policy_white_list.policy_time_line')
+def policy_time_line():
+    return "use_time_line_algo"
+
 @oneflow_export('config.enable_cudnn')
 def set_enable_cudnn(value = True):
     _SetJobConfAttr(lambda x:x, 'enable_cudnn', value)

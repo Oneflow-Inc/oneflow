@@ -505,6 +505,10 @@ Maybe<void> InferOpSbpSignature(
               && CHECK_JUST(SbpInferHint4Ibn(ibn))->sbp_parallel().has_split_parallel() == false
               && sbp_parallel.has_split_parallel() == false);
   };
+  auto OrderValue4SbpHint = [&](const std::string& ibn,
+                                const SbpParallel& sbp_parallel) -> int32_t {
+    return -3 * (CHECK_JUST(SbpInferHint4Ibn(ibn))->sbp_parallel() == sbp_parallel);
+  };
   if (sbp_sig_conf.bn_in_op2sbp_parallel().empty()) {
     CalcOrderValue4SbpSig = [&](const SbpSignature& sbp_signature) -> int32_t {
       int32_t order_value = 0;
@@ -513,6 +517,7 @@ Maybe<void> InferOpSbpSignature(
         CHECK(sbp_parallel_it != sbp_signature.bn_in_op2sbp_parallel().end());
         order_value += OrderValue4HasBatchAxis(ibn, sbp_parallel_it->second);
         order_value += OrderValue4HasNoBatchAxis(ibn, sbp_parallel_it->second);
+        order_value += OrderValue4SbpHint(ibn, sbp_parallel_it->second);
       }
       for (const auto& obn : op.output_bns()) {
         const auto& sbp_parallel_it = sbp_signature.bn_in_op2sbp_parallel().find(obn);

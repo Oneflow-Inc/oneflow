@@ -2,6 +2,7 @@
 #include "oneflow/core/job/nccl_comm_manager.h"
 #include "oneflow/core/job/machine_context.h"
 #include "oneflow/core/device/nccl_util.h"
+#include "oneflow/core/job/id_manager.h"
 
 #ifdef WITH_CUDA
 

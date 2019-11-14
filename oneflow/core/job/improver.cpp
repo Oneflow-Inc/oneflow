@@ -3,6 +3,7 @@
 #include "oneflow/core/graph/task_node.h"
 #include "oneflow/core/register/register_desc.pb.h"
 #include "oneflow/core/register/register_manager.h"
+#include "oneflow/core/job/intra_job_mem_sharing_util.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/profiler.h"
@@ -622,20 +623,20 @@ void Improver::ForEachImprovedRegstNum(
   }
 }
 
-void Improver::ForEachInferredMemSharingCriticalSection(
+void Improver::ForEachInferredMemBlockCriticalSection(
     const Plan& plan, const std::function<int64_t(int64_t)>& OrderInGraph4TaskId,
     const std::function<void(const std::vector<const RegstDescProto*>&)>& Handler) const {
-  HashMap<int32_t, std::vector<const RegstDescProto*>> mem_sharing_id2regst_descs;
+  HashMap<int32_t, std::vector<const RegstDescProto*>> mem_block_id2regst_descs;
   for (const auto& task : plan.task()) {
     for (const auto& pair : task.produced_regst_desc()) {
       int32_t mem_block_id = pair.second.mem_block_id();
       if (mem_block_id > start_mem_block_id_ && pair.second.consumer_task_id_size() > 0) {
         CHECK(pair.second.enable_reuse_mem());
-        mem_sharing_id2regst_descs[mem_block_id].push_back(&pair.second);
+        mem_block_id2regst_descs[mem_block_id].push_back(&pair.second);
       }
     }
   }
-  for (auto& pair : mem_sharing_id2regst_descs) {
+  for (auto& pair : mem_block_id2regst_descs) {
     std::sort(pair.second.begin(), pair.second.end(),
               [&](const RegstDescProto* lhs, const RegstDescProto* rhs) {
                 int64_t lhs_order_in_graph = OrderInGraph4TaskId(lhs->producer_task_id());
@@ -701,10 +702,14 @@ Plan Improver::GenAndInferMemBlockId(const Plan& naive_plan) const {
   PlanTaskGraph plan_task_graph(naive_plan);
   {
     auto regst_desc_id2regst_desc = MakeRegstDescId2RegstDesc(&plan);
-    ForEachInferredMemBlockId(plan_task_graph, [&](int64_t regst_desc_id, int64_t mem_block_id) {
-      regst_desc_id2regst_desc->at(regst_desc_id)->set_mem_block_id(mem_block_id);
-      regst_desc_id2regst_desc->at(regst_desc_id)->set_mem_block_offset(0);
-    });
+    if (GlobalJobDesc().use_memory_allocation_algorithm_v2()) {
+      IntraJobMemSharingUtil::InferMemBlockId4MemReusedRegst(&plan, plan_task_graph);
+    } else {
+      ForEachInferredMemBlockId(plan_task_graph, [&](int64_t regst_desc_id, int64_t mem_block_id) {
+        regst_desc_id2regst_desc->at(regst_desc_id)->set_mem_block_id(mem_block_id);
+        regst_desc_id2regst_desc->at(regst_desc_id)->set_mem_block_offset(0);
+      });
+    }
     SetInplaceConsumedRegstDescId(&plan, *regst_desc_id2regst_desc);
   }
   {
@@ -712,10 +717,10 @@ Plan Improver::GenAndInferMemBlockId(const Plan& naive_plan) const {
       return plan_task_graph.TaskProto4TaskId(task_id)->task_set_info().order_in_graph();
     };
     auto IsReachable = [&](int64_t src_task_id, int64_t dst_task_id) {
-      return plan_task_graph.IsReachableInSameArea(src_task_id, dst_task_id);
+      return plan_task_graph.IsReachable(src_task_id, dst_task_id);
     };
-    ForEachInferredMemSharingCriticalSection(plan, OrderInGraph4TaskId,
-                                             MakeSetterAddCtrlRegst(&plan, IsReachable));
+    ForEachInferredMemBlockCriticalSection(plan, OrderInGraph4TaskId,
+                                           MakeSetterAddCtrlRegst(&plan, IsReachable));
   }
   return plan;
 }
