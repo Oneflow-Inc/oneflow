@@ -50,10 +50,16 @@ System
 Types
 ----------------------------------
 
-.. autodata:: double
-.. autodata:: float
-.. autodata:: float32
-.. autodata:: float64
-.. autodata:: int32
-.. autodata:: int64
-.. autodata:: int8
+oneflow.double
+
+oneflow.float
+
+oneflow.float32
+
+oneflow.float64
+
+oneflow.int32
+
+oneflow.int64
+
+oneflow.int8
