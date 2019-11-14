@@ -14,6 +14,7 @@ import collections
 @oneflow_export("math.reduce_sum")
 def reduce_sum(input_tensor, axis=None, keepdims=False, name=None):
     r"""Computes the sum of elements across dimensions of a `Blob`.
+    
     Args:
         input_tensor: The `Blob` to reduce. Should have numeric type.
         axis: The dimensions to reduce. If None (the default), reduces all dimensions. 

@@ -9,3 +9,5 @@ oneflow.math
 .. autofunction:: sigmoid
 .. autofunction:: gelu
 .. autofunction:: multiply
+.. autofunction:: reduce_sum
+.. autofunction:: reduce_mean
