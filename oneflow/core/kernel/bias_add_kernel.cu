@@ -49,7 +49,7 @@ struct BiasAddUtil<DeviceType::kGPU, T> {
   static void BiasAdd(DeviceCtx* ctx, int64_t outer_size, int64_t bias_size, int64_t inner_size,
                       const T* x, const T* bias, T* y) {
     const int64_t elem_cnt = outer_size * bias_size * inner_size;
-    if (elem_cnt < (GetMaxVal<int32_t>() / 2)) {
+    if (IsKernelSafeInt32(elem_cnt)) {
       BiasAddGpuHelper<T, int32_t>::BiasAdd(ctx, elem_cnt, bias_size, inner_size, x, bias, y);
     } else {
       BiasAddGpuHelper<T, int64_t>::BiasAdd(ctx, elem_cnt, bias_size, inner_size, x, bias, y);
@@ -75,7 +75,7 @@ class BiasAddGpuHalfKernel final : public KernelIf<DeviceType::kGPU> {
     const int64_t bias_size = a_blob->shape().At(bias_add_axis);
     const int64_t inner_size = a_blob->shape().Count(bias_add_axis + 1);
     const int64_t elem_cnt = outer_size * bias_size * inner_size;
-    if (elem_cnt < (GetMaxVal<int32_t>() / 2)) {
+    if (IsKernelSafeInt32(elem_cnt)) {
       BiasAddForwardGpuHalf<int32_t><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
                                        ctx.device_ctx->cuda_stream()>>>(
           elem_cnt, bias_size, inner_size, reinterpret_cast<const half*>(a_blob->dptr<float16>()),
