@@ -16,7 +16,9 @@ __global__ void BiasAddForwardGpuHalf(const Index elem_cnt, const Index bias_siz
                                       const Index inner_size, const half* x, const half* bias,
                                       half* y) {
   const Index block_size = bias_size * inner_size;
-  CUDA_1D_KERNEL_LOOP_T(Index, i, elem_cnt) { y[i] = __hadd(x[i], bias[(i % block_size) / inner_size]); }
+  CUDA_1D_KERNEL_LOOP_T(Index, i, elem_cnt) {
+    y[i] = __hadd(x[i], bias[(i % block_size) / inner_size]);
+  }
 }
 
 template<typename T, typename Index>
