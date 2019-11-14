@@ -87,6 +87,7 @@ class InplaceLbiGraph final : public Graph<const InplaceLbiNode, const InplaceLb
     Init(obas, Op4OpName);
   }
   ~InplaceLbiGraph() = default;
+  const char* TypeName() const override { return "InplaceLbiGraph"; }
 
   void ComputeSafeInplaceObns(OpBlobArgList* obas,
                               const std::function<bool(const LogicalBlobId&, const std::string&)>&

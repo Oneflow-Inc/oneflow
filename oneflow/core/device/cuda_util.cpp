@@ -59,8 +59,9 @@ void InitGlobalCudaDeviceProp() {
 }
 
 int32_t GetSMCudaMaxBlocksNum() {
-  return global_device_prop.multiProcessorCount * global_device_prop.maxThreadsPerMultiProcessor
-         / kCudaThreadsNumPerBlock;
+  int32_t n =
+      global_device_prop.multiProcessorCount * global_device_prop.maxThreadsPerMultiProcessor;
+  return (n + kCudaThreadsNumPerBlock - 1) / kCudaThreadsNumPerBlock;
 }
 
 bool IsCuda9OnTuringDevice() {
