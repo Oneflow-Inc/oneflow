@@ -11,6 +11,16 @@ _job_name2job_func = {}
 @oneflow_export("function")
 def function(job_func):
     r"""Creates a callable OneFlow graph from a Python function.
+    For instance::
+    
+        @oneflow.function
+        def train(
+            image_blob=oneflow.input_blob_def(
+                shape=(2, 255, 255, 3), dtype=flow.float32, is_dynamic=True
+            )
+        ):
+            # your network
+
     Args:
         job_func: job function to be compiled. Usually the function is decorated by decorator `@oneflow.function`
     Returns:
