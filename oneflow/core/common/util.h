@@ -218,7 +218,7 @@ void Erase(T& container, const std::function<bool(const typename T::value_type&)
 #define ALWAYS_INLINE inline
 #endif
 
-#define CHECK_KERNEL_SAFE_INT32(n) CHECK_LE(n, GetMaxVal<int32_t>() / 2)
+bool IsKernelSafeInt32(int64_t n);
 
 }  // namespace oneflow
 
