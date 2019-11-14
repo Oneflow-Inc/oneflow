@@ -3,6 +3,7 @@ from config import get_default_cfgs
 
 import os
 import numpy as np
+import pickle
 import argparse
 import oneflow as flow
 import oneflow.core.data.data_pb2 as data_util
@@ -61,6 +62,9 @@ def make_data_loader(
     )
     data_loader.add_blob(
         "image_size", data_util.DataSourceCase.kImageSize, shape=(2,), dtype=flow.int32
+    )
+    data_loader.add_blob(
+        "image_id", data_util.DataSourceCase.kImageId, shape=(1,), dtype=flow.int64
     )
     data_loader.add_transform(flow.data.TargetResizeTransform(400, 600))
     data_loader.add_transform(flow.data.ImageNormalizeByChannel((102.9801, 115.9465, 122.7717)))
@@ -122,8 +126,10 @@ if terminal_args.fake_img:
             image_dir=terminal_args.image_dir,
         )
         image_sizes = data_loader("image_size")
-        
-        return maskrcnn_box_head_eval(flow.transpose(images, perm=[0, 2, 3, 1]), image_sizes)
+        image_ids = data_loader("image_id")
+
+        image_trans = flow.transpose(images, perm=[0, 2, 3, 1])
+        return maskrcnn_box_head_eval(image_trans, image_sizes) + (image_ids,)
 
 
 else:
@@ -139,14 +145,16 @@ else:
         )
         images = data_loader("image")
         image_sizes = data_loader("image_size")
+        image_ids = data_loader("image_id")
 
-        return maskrcnn_box_head_eval(images, image_sizes)
+        return maskrcnn_box_head_eval(images, image_sizes) + (image_ids,)
 
 
 def parse_results_from_box_head(results):
-    image_sizes = results[-3]
-    cls_probs = results[-2]
-    box_regressions = results[-1]
+    image_sizes = results[-4]
+    cls_probs = results[-3]
+    box_regressions = results[-2]
+    image_ids = results[-1]
     image_num = image_sizes.shape[0]
     feature_maps = []
     for i in range(4):
@@ -156,7 +164,15 @@ def parse_results_from_box_head(results):
         box_list = BoxList(proposal.ndarray(), (img_size[1], img_size[0]), mode="xyxy")
         box_lists.append(box_list)
 
-    return cls_probs, box_regressions, box_lists, feature_maps
+    return_dict = {
+        "cls_probs": cls_probs,
+        "box_regressions": box_regressions,
+        "box_lists": box_lists,
+        "feature_maps": feature_maps,
+        "image_ids": image_ids,
+    }
+
+    return return_dict
 
 
 @flow.function
@@ -188,20 +204,26 @@ if __name__ == "__main__":
     check_point = flow.train.CheckPoint()
     check_point.load(terminal_args.model_load_dir)
 
-    final_predictions = []
-    for i in range(5):
+    prediction_list = []
+    image_id_list = []
+    for i in range(terminal_args.iter_num):
         # Box Head
         if terminal_args.fake_img:
             if i == 0:
-                import pickle
                 f = open("/dataset/mask_rcnn/maskrcnn_eval_net_10/fake_image_list.pkl", "rb")
                 fake_image_list = pickle.load(f)
             results = maskrcnn_box_head_eval_job(fake_image_list[i]).get()
         else:
             results = maskrcnn_box_head_eval_job().get()
+        # We have to write such ugly parsing code because oneflow job can only return list or tuple of blob
+        return_dict = parse_results_from_box_head(results)
+        cls_probs = return_dict["cls_probs"]
+        box_regressions = return_dict["box_regressions"]
+        box_lists = return_dict["box_lists"]
+        feature_maps = return_dict["feature_maps"]
+        image_ids = return_dict["image_ids"]
 
         # Box Head Post-Processor
-        cls_probs, box_regressions, box_lists, feature_maps = parse_results_from_box_head(results)
         postprocessor = PostProcessor()
         box_head_predictions = postprocessor.forward(
             (cls_probs.ndarray(), box_regressions.ndarray()), box_lists
@@ -224,34 +246,24 @@ if __name__ == "__main__":
         mask_postprocessor = MaskPostProcessor()
         predictions = mask_postprocessor.forward(mask_prob.ndarray(), box_head_predictions)
 
-        final_predictions += predictions
+        image_id_list += list(np.squeeze(image_ids.ndarray()))
+        prediction_list += predictions
 
-    # Compare predictions with PyTorch
-    import torch
-    torch_predictions = torch.load("/home/xfjiang/repos/maskrcnn-benchmark/inference/coco_10_image_val/predictions.pth")
-    for idx, (of_box_list, torch_box_list) in enumerate(zip(final_predictions, torch_predictions)):
-        print("xxxxxxxxxxxxxx___{}___xxxxxxxxxxxxx".format(idx))
-        # of_bbox = of_box_list.bbox
-        # torch_bbox = torch_box_list.bbox.cpu().numpy()
-        # print(of_bbox)
-        # print(torch_bbox)
-        # print("compare bbox: max abs diff is {}", np.max(np.abs(of_bbox, torch_bbox)))
-        # of_scores = of_box_list.get_field("scores")
-        # torch_scores = torch_box_list.get_field("scores").cpu().numpy()
-        # print("compare scores: max abs diff is {}", np.max(np.abs(of_scores, torch_scores)))
-        # of_labels = of_box_list.get_field("labels")
-        # torch_labels = torch_box_list.get_field("labels").cpu().numpy()
-        # print("compare labels: max abs diff is {}", np.max(np.abs(of_labels, torch_labels)))
-        # of_mask = of_box_list.get_field("mask")
-        # torch_mask = torch_box_list.get_field("mask").cpu().numpy()
-        # print("compare mask: max abs diff is {}", np.max(np.abs(of_mask, torch_mask)))
+    # Sort predictions by image_id
+    num_imgs = len(prediction_list)
+    assert num_imgs == len(image_id_list)
+    prediction_dict = {}
+    for i in range(num_imgs):
+        prediction_dict.update({image_id_list[i]: prediction_list[i]})
+    sorted_image_ids = list(sorted(prediction_dict.keys()))
+    sorted_predictions = [prediction_dict[i] for i in sorted_image_ids]
 
     # Calculate mAP
     ann_file = os.path.join(terminal_args.dataset_dir, terminal_args.annotation_file)
     dataset = COCODataset(ann_file)
     do_coco_evaluation(
         dataset,
-        final_predictions,
+        sorted_predictions,
         box_only=False,
         output_folder="./output",
         iou_types=["bbox", "segm"],

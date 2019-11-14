@@ -6,4 +6,5 @@ python maskrcnn_eval.py -load="/model_zoo/detection/mask_rcnn_R_50_FPN_1x/snapsh
   -dataset_dir="/dataset/mscoco_2017"                                                 \
   -anno="annotations/sample_10_instances_val2017.json"                                \
   -imgd="val2017"                                                                     \
-  -fake
+  -fake                                                                               \
+  -i=5
