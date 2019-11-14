@@ -234,3 +234,22 @@ def concat(values,
     lbi.op_name = op_conf.name
     lbi.blob_name = "out"
     return remote_blob_util.RemoteBlob(lbi)
+
+
+@oneflow_export('identity')
+def identity(
+        input,
+        name=None):
+    op_conf = op_conf_util.OperatorConf()
+    setattr(
+        op_conf,
+        "name",
+        name if name is not None else id_util.UniqueStr("Identity_"),
+    )
+    op_conf.identity_conf.out = "out"
+    setattr(op_conf.identity_conf, "in", input.logical_blob_name)
+    compile_context.CurJobAddOp(op_conf)
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = "out"
+    return remote_blob_util.RemoteBlob(lbi)

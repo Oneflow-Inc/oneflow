@@ -1,5 +1,6 @@
 #include "oneflow/core/comm_network/ibverbs/ibverbs_comm_network.h"
 #include "oneflow/core/control/ctrl_client.h"
+#include "oneflow/core/job/resource_desc.h"
 
 #if defined(WITH_RDMA) && defined(PLATFORM_POSIX)
 

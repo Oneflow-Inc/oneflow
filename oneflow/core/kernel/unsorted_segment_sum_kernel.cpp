@@ -25,8 +25,7 @@ Kernel* CreateUnsortedSegmentSumKernel(const KernelConf& kernel_conf) {
   static const HashMap<std::string, std::function<Kernel*()>> creators = {
     OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_KERNEL_CREATOR_ENTRY, (UnsortedSegmentSumKernel),
                                      DEVICE_TYPE_SEQ, FLOATING_DATA_TYPE_SEQ)
-#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 700 && defined(__CUDA_API_VERSION) \
-    && __CUDA_API_VERSION >= 10000
+#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 700 && CUDA_VERSION >= 10000
         MAKE_KERNEL_CREATOR_ENTRY(UnsortedSegmentSumKernel, DeviceType::kGPU,
                                   (float16, DataType::kFloat16))
 #endif

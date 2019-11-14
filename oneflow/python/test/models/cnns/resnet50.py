@@ -292,6 +292,7 @@ def main():
             nodes.append(addr_dict)
 
         flow.config.machine(nodes)
+        flow.config.enable_inplace(False)
 
         if args.scp_binary_without_uuid:
             flow.deprecated.init_worker(scp_binary=True, use_uuid=False)
@@ -327,6 +328,13 @@ def main():
         #     print(fmt_str.format(i, "eval loss:", eval))
 
         #     check_point.save(MODEL_SAVE + "_" + str(i))
+        
+    if (
+            args.multinode
+          and args.skip_scp_binary is False
+        and args.scp_binary_without_uuid is False
+    ):
+      flow.deprecated.delete_worker()
 
     # save loss to file
     loss_file = "{}n{}c.npy".format(str(num_nodes), str(args.gpu_num_per_node * num_nodes))

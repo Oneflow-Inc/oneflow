@@ -19,6 +19,8 @@ namespace oneflow {
 DECLARE_NDARRAY_REDUCE_IMPL(NdarrayScalarReduce);
 DECLARE_NDARRAY_REDUCE_IMPL(NdarrayMatrixRowReduce);
 DECLARE_NDARRAY_REDUCE_IMPL(NdarrayMatrixColReduce);
+DECLARE_NDARRAY_REDUCE_IMPL(NdarrayXYZCubeYReduce);
+DECLARE_NDARRAY_REDUCE_IMPL(NdarrayXYZCubeXZReduce);
 #undef DECLARE_NDARRAY_REDUCE_IMPL
 
 template<DeviceType device_type, typename T, template<typename> class binary_func>

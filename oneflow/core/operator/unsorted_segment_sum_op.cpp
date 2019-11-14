@@ -1,5 +1,4 @@
 #include "oneflow/core/operator/unsorted_segment_sum_op.h"
-#include "oneflow/core/operator/gather_op.h"
 #include "oneflow/core/job/sbp_signature_builder.h"
 
 namespace oneflow {
@@ -20,7 +19,7 @@ Maybe<void> UnsortedSegmentSumOp::InferBlobDescs(
     const ParallelContext* parallel_ctx) const {
   const UnsortedSegmentSumOpConf& conf = op_conf().unsorted_segment_sum_conf();
   const BlobDesc* segment_ids = GetBlobDesc4BnInOp("segment_ids");
-  CHECK_OR_RETURN(IsIntegralDataType(segment_ids->data_type()));
+  CHECK_OR_RETURN(IsIndexDataType(segment_ids->data_type()));
   const BlobDesc* data = GetBlobDesc4BnInOp("data");
   std::vector<int64_t> out_dim_vec;
   out_dim_vec.insert(out_dim_vec.end(), data->shape().dim_vec().cbegin(),

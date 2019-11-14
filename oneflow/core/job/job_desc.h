@@ -28,6 +28,9 @@ class JobDesc final {
   bool IsTrain() const { return job_conf_.has_train_conf(); }
   bool IsPredict() const { return job_conf_.has_predict_conf(); }
   int64_t piece_num_of_experiment_phase() const;
+  bool use_memory_allocation_algorithm_v2() const {
+    return job_conf_.use_memory_allocation_algorithm_v2();
+  }
   bool enable_experiment_run() const;
   bool enable_reuse_mem() const { return job_conf_.enable_reuse_mem(); }
   bool enable_inplace() const { return job_conf_.enable_inplace(); }
