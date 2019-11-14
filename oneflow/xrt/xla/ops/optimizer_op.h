@@ -1,6 +1,8 @@
 #ifndef ONEFLOW_XRT_XLA_OPS_OPTIMIZER_OP_H_
 #define ONEFLOW_XRT_XLA_OPS_OPTIMIZER_OP_H_
 
+#include "oneflow/core/operator/op_conf.pb.h"
+
 #include "oneflow/xrt/xla/ops/op_context.h"
 #include "oneflow/xrt/xla/ops/op_kernel.h"
 #include "tensorflow/compiler/xla/client/lib/constants.h"

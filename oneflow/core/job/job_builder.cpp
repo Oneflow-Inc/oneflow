@@ -126,6 +126,17 @@ void JobBuilder::RemoveOpByName(const std::unordered_set<std::string>& removing_
     if (time_shape_conf->count(op_name) > 0) { time_shape_conf->erase(op_name); }
   }
   // Update batch dim lbis
+  // Update identical sbp oba pairs
+  if (job_->helper().has_identical_sbp_oba_pairs()) {
+    auto identical_sbp_oba_pairs = job_->helper().identical_sbp_oba_pairs().pair();
+    job_->mutable_helper()->mutable_identical_sbp_oba_pairs()->clear_pair();
+    for (const auto& pair : identical_sbp_oba_pairs) {
+      if (removing_names.count(pair.first().op_name()) == 0
+          && removing_names.count(pair.second().op_name()) == 0) {
+        *(job_->mutable_helper()->mutable_identical_sbp_oba_pairs()->mutable_pair()->Add()) = pair;
+      }
+    }
+  }
   // Update builder
   JobBuilder builder(job_);
   op_name2op_conf_.swap(builder.op_name2op_conf_);
