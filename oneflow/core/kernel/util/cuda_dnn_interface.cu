@@ -36,7 +36,7 @@ template<typename T>
 __global__ void InplaceReluForwardGpu(const int n, T* y) {
   CUDA_1D_KERNEL_LOOP(i, n) {
     // There is a subtle cuda bug in (y[i] <= 0)
-    if (y[i] < 0) { y[i] = 0; }
+    if (!(y[i] > 0)) { y[i] = 0; }
   }
 }
 
