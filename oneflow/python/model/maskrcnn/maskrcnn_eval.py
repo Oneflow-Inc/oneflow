@@ -188,43 +188,49 @@ if __name__ == "__main__":
     check_point = flow.train.CheckPoint()
     check_point.load(terminal_args.model_load_dir)
 
-    # Box Head
-    if terminal_args.fake_img:
-        images = np.load("/tmp/shared_with_jxf/maskrcnn_eval_input_data_small/images.npy")
-        results = maskrcnn_box_head_eval_job(images).get()
-    else:
-        results = maskrcnn_box_head_eval_job().get()
+    final_predictions = []
+    for i in range(5):
+        # Box Head
+        if terminal_args.fake_img:
+            if i == 0:
+                import pickle
+                f = open("/dataset/mask_rcnn/maskrcnn_eval_net_10/fake_image_list.pkl", "rb")
+                fake_image_list = pickle.load(f)
+            results = maskrcnn_box_head_eval_job(fake_image_list[i]).get()
+        else:
+            results = maskrcnn_box_head_eval_job().get()
 
-    # Box Head Post-Processor
-    cls_probs, box_regressions, box_lists, feature_maps = parse_results_from_box_head(results)
-    postprocessor = PostProcessor()
-    box_head_predictions = postprocessor.forward(
-        (cls_probs.ndarray(), box_regressions.ndarray()), box_lists
-    )
+        # Box Head Post-Processor
+        cls_probs, box_regressions, box_lists, feature_maps = parse_results_from_box_head(results)
+        postprocessor = PostProcessor()
+        box_head_predictions = postprocessor.forward(
+            (cls_probs.ndarray(), box_regressions.ndarray()), box_lists
+        )
 
-    # Mask Head and Post-Processor
-    detections = []
-    for prediction in box_head_predictions:
-        detections.append(prediction.bbox)
-    mask_prob = maskrcnn_mask_head_eval_job(
-        detections[0],
-        detections[1],
-        feature_maps[0],
-        feature_maps[1],
-        feature_maps[2],
-        feature_maps[3],
-    ).get()
+        # Mask Head and Post-Processor
+        detections = []
+        for prediction in box_head_predictions:
+            detections.append(prediction.bbox)
+        mask_prob = maskrcnn_mask_head_eval_job(
+            detections[0],
+            detections[1],
+            feature_maps[0],
+            feature_maps[1],
+            feature_maps[2],
+            feature_maps[3],
+        ).get()
 
-    # Mask Head Post-Processor
-    mask_postprocessor = MaskPostProcessor()
-    predictions = mask_postprocessor.forward(mask_prob.ndarray(), box_head_predictions)
+        # Mask Head Post-Processor
+        mask_postprocessor = MaskPostProcessor()
+        predictions = mask_postprocessor.forward(mask_prob.ndarray(), box_head_predictions)
+        final_predictions += predictions
 
     # Calculate mAP
     ann_file = os.path.join(terminal_args.dataset_dir, terminal_args.annotation_file)
     dataset = COCODataset(ann_file)
     do_coco_evaluation(
         dataset,
-        predictions,
+        final_predictions,
         box_only=False,
         output_folder="./output",
         iou_types=["bbox", "segm"],
