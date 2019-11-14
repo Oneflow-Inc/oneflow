@@ -435,6 +435,7 @@ if __name__ == "__main__":
     flow.config.ctrl_port(terminal_args.ctrl_port)
     flow.config.default_data_type(flow.float)
 
+    fake_image_list = []
     if terminal_args.fake_image_path:
         file_list = os.listdir(terminal_args.fake_image_path)
         fake_image_list = [
