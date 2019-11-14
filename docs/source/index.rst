@@ -9,6 +9,7 @@ OneFlow Documentation
     config
     train
     math
+    layers
 
 Indices and tables
 ==================
