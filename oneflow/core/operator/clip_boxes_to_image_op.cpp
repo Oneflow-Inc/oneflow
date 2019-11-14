@@ -39,6 +39,15 @@ class ClipBoxesToImageOp final : public Operator {
     *BatchAxis4BnInOp("out") = *BatchAxis4BnInOp("boxes");
     return Maybe<void>::Ok();
   }
+
+  Maybe<void> GetSbpSignatures(SbpSignatureList* sbp_sig_list) const override {
+    SbpSignatureBuilder()
+        .Split("boxes", 0)
+        .Broadcast("image_size")
+        .Split("out", 0)
+        .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+    return Maybe<void>::Ok();
+  }
 };
 
 REGISTER_OP(OperatorConf::kClipBoxesToImageConf, ClipBoxesToImageOp);

@@ -48,10 +48,8 @@ void AddOptimizerOpConf(
     const auto& parallel_desc = op_node->parallel_desc();
     GenerateDownScaleOpConf(var_op->op_name() + "-down_scale", parallel_desc.parallel_conf(),
                             job_builder, &diff_lbi_of_var_out);
-    if (op_node->op().op_conf().trainable()) {
-      GenerateOptimizerOpConfIf(*var_op, parallel_desc.parallel_conf(), job_builder,
-                                diff_lbi_of_var_out, LossInstanceNum4ParallelDesc(parallel_desc));
-    }
+    GenerateOptimizerOpConfIf(*var_op, parallel_desc.parallel_conf(), job_builder,
+                              diff_lbi_of_var_out, LossInstanceNum4ParallelDesc(parallel_desc));
   });
 }
 

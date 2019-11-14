@@ -102,6 +102,17 @@ class LocalNonzeroOp final : public Operator {
     for (const std::string& obn : output_bns()) { BatchAxis4BnInOp(obn)->set_value(0); }
     return Maybe<void>::Ok();
   }
+
+  Maybe<void> GetSbpSignatures(
+      const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
+      SbpSignatureList* sbp_sig_list) const override {
+    SbpSignatureBuilder()
+        .Split("in", 0)
+        .Split("out", 0)
+        .Broadcast("num_nonzero")
+        .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+    return Maybe<void>::Ok();
+  }
 };
 
 REGISTER_OP(OperatorConf::kLocalNonzeroConf, LocalNonzeroOp);

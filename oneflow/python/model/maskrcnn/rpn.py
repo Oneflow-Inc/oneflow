@@ -38,21 +38,26 @@ class RPNHead(object):
 
             def piece_slice_with_bw(inputs, output_size, name):
                 assert inputs.shape[0] == output_size
+                assert output_size % self.cfg.NUM_GPUS == 0
+                num_output_size_per_gpu = int(output_size / self.cfg.NUM_GPUS)
+
                 ret = []
-                for i in range(output_size):
-                    with flow.deprecated.variable_scope(
-                        "piece_slice_with_bw_" + str(i)
-                    ):
-                        indices = flow.constant(
-                            i, dtype=flow.int32, name=name + "_constant"
-                        )
-                        output = flow.local_gather(
-                            inputs, indices, name=name + "_local_gather"
-                        )
-                        output = flow.squeeze(
-                            output, [0], name=name + "_squeeze"
-                        )
-                        ret.append(output)
+                for gpu_i in range(self.cfg.NUM_GPUS):
+                    with flow.device_prior_placement("gpu", "0:" + str(gpu_i)):
+                        for i in range(num_output_size_per_gpu):
+                            ret.append(
+                                flow.squeeze(
+                                    flow.local_gather(
+                                        inputs,
+                                        flow.constant(i, dtype=flow.int32),
+                                    ),
+                                    [0],
+                                    name="{}_gpu{}_split{}".format(
+                                        name, gpu_i, i
+                                    ),
+                                )
+                            )
+
                 return ret
 
             # list (wrt. fpn layers) of list (wrt. images) of [H_i * W_i * A, 4]
@@ -308,10 +313,7 @@ class RPNProposal(object):
                     #     cls_logit_list[layer_i][img_idx],
                     #     name="img{}_layer{}_cls_probs".format(img_idx, layer_i),
                     # )
-                    cls_probs = flow.identity(
-                        cls_logit_list[layer_i][img_idx],
-                        name="img{}_layer{}_cls_probs".format(img_idx, layer_i),
-                    )
+                    cls_probs = cls_logit_list[layer_i][img_idx]
                     pre_nms_top_k_inds = flow.math.top_k(
                         cls_probs,
                         k=self.top_n_per_fm,

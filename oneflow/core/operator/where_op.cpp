@@ -50,6 +50,17 @@ class WhereOp final : public Operator {
     return NaiveInferBatchAxis(BatchAxis4BnInOp);
     return Maybe<void>::Ok();
   }
+  Maybe<void> GetSbpSignatures(
+      const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
+      SbpSignatureList* sbp_sig_list) const override {
+    SbpSignatureBuilder()
+        .Split("condition", 0)
+        .Split("lhs", 0)
+        .Split("rhs", 0)
+        .Split("out", 0)
+        .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+    return Maybe<void>::Ok();
+  }
 };
 
 REGISTER_OP(OperatorConf::kWhereConf, WhereOp);

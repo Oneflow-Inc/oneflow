@@ -19,6 +19,9 @@ class AnchorGenerateOp final : public Operator {
     BatchAxis4BnInOp("anchors")->set_value(0);
     return Maybe<void>::Ok();
   }
+  Maybe<void> GetSbpSignatures(
+      const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
+      SbpSignatureList* sbp_sig_list) const;
 };
 
 void AnchorGenerateOp::InitFromOpConf() {
@@ -52,6 +55,16 @@ Maybe<void> AnchorGenerateOp::InferBlobDescs(
   anchors->set_data_type(images->data_type());
   anchors->mut_shape() = Shape({num_anchors, 4});
   anchors->set_is_dynamic(images->is_dynamic());
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> AnchorGenerateOp::GetSbpSignatures(
+    const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
+    SbpSignatureList* sbp_sig_list) const {
+  SbpSignatureBuilder()
+      .Split(input_bns(), 0)
+      .Split(output_bns(), 0)
+      .Build(sbp_sig_list->mutable_sbp_signature()->Add());
   return Maybe<void>::Ok();
 }
 

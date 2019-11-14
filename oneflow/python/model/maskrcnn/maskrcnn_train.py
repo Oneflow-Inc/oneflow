@@ -48,9 +48,6 @@ parser.add_argument(
     required=False,
 )
 parser.add_argument(
-    "-eval", "--eval", default=False, action="store_true", required=False
-)
-parser.add_argument(
     "-td",
     "--train_with_real_dataset",
     default=False,
@@ -117,14 +114,6 @@ def get_numpy_placeholders():
         "gt_labels": np.random.randn(N, G).astype(np.int32),
         "rpn_proposals": np.random.randn(2000, 4).astype(np.float32),
         "detections": np.random.randn(2000, 4).astype(np.float32),
-        "detection0": np.random.randn(1000, 4).astype(np.float32),
-        "detection1": np.random.randn(1000, 4).astype(np.float32),
-        "fpn_feature_map1": np.random.randn(2, 256, 104, 152).astype(
-            np.float32
-        ),
-        "fpn_feature_map2": np.random.randn(2, 256, 52, 76).astype(np.float32),
-        "fpn_feature_map3": np.random.randn(2, 256, 26, 38).astype(np.float32),
-        "fpn_feature_map4": np.random.randn(2, 256, 13, 19).astype(np.float32),
     }
 
 
@@ -149,12 +138,20 @@ def maskrcnn_train(images, image_sizes, gt_boxes, gt_segms, gt_labels):
         assert gt_segms.is_dynamic is True
     else:
         assert gt_segms.num_of_lod_levels == 2
+
     assert gt_labels.num_of_lod_levels == 2
+
+    # process cfg
     cfg = get_default_cfgs()
     if terminal_args.config_file is not None:
         cfg.merge_from_file(terminal_args.config_file)
         print("merged config from {}".format(terminal_args.config_file))
+
+    if "gpu_num_per_node" in terminal_args:
+        cfg.NUM_GPUS = terminal_args.gpu_num_per_node
+
     cfg.freeze()
+
     if terminal_args.verbose:
         print(cfg)
 
@@ -165,19 +162,30 @@ def maskrcnn_train(images, image_sizes, gt_boxes, gt_segms, gt_labels):
     box_head = BoxHead(cfg)
     mask_head = MaskHead(cfg)
 
-    image_size_list = [
-        flow.squeeze(
-            flow.local_gather(image_sizes, flow.constant(i, dtype=flow.int32)),
-            [0],
-        )
-        for i in range(image_sizes.shape[0])
-    ]
+    image_size_list = []
+    num_gpus = cfg.NUM_GPUS
+    assert image_sizes.shape[0] % num_gpus == 0
+    num_image_size_per_gpu = int(image_sizes.shape[0] / num_gpus)
+    for gpu_i in range(num_gpus):
+        with flow.device_prior_placement("gpu", "0:" + str(gpu_i)):
+            for i in range(num_image_size_per_gpu):
+                image_size_list.append(
+                    flow.squeeze(
+                        flow.local_gather(
+                            image_sizes, flow.constant(i, dtype=flow.int32)
+                        ),
+                        [0],
+                    )
+                )
+
     gt_boxes_list = flow.piece_slice(
         gt_boxes, cfg.TRAINING_CONF.IMG_PER_GPU, name="piece_gt_boxes"
     )
+
     gt_labels_list = flow.piece_slice(
         gt_labels, cfg.TRAINING_CONF.IMG_PER_GPU, name="piece_slice_gt_labels"
     )
+
     gt_segms_list = None
     if gt_segms.num_of_lod_levels == 2:
         gt_segms_list = flow.piece_slice(
@@ -185,6 +193,7 @@ def maskrcnn_train(images, image_sizes, gt_boxes, gt_segms, gt_labels):
         )
     else:
         gt_segms_list = gt_segms
+
     anchors = []
     for i in range(cfg.DECODER.FPN_LAYERS):
         anchors.append(
@@ -198,23 +207,34 @@ def maskrcnn_train(images, image_sizes, gt_boxes, gt_segms, gt_labels):
 
     # Backbone
     # CHECK_POINT: fpn features
-    # with flow.watch_scope(blob_watcher=blob_watched, diff_blob_watcher=diff_blob_watched):
+    # with flow.watch_scope(
+    #     blob_watcher=blob_watched, diff_blob_watcher=diff_blob_watched
+    # ):
     features = backbone.build(flow.transpose(images, perm=[0, 3, 1, 2]))
 
     # RPN
-    # with flow.watch_scope(blob_watcher=blob_watched, diff_blob_watcher=diff_blob_watched):
+    # with flow.watch_scope(
+    #     blob_watcher=blob_watched, diff_blob_watcher=diff_blob_watched
+    # ):
     cls_logit_list, bbox_pred_list = rpn_head.build(features)
     rpn_bbox_loss, rpn_objectness_loss = rpn_loss.build(
         anchors, image_size_list, gt_boxes_list, bbox_pred_list, cls_logit_list
     )
+
     if terminal_args.rpn_only:
         return rpn_bbox_loss, rpn_objectness_loss
 
+    # with flow.watch_scope(blob_watched):
     proposals = rpn_proposal.build(
         anchors, cls_logit_list, bbox_pred_list, image_size_list, gt_boxes_list
     )
 
-    # with flow.watch_scope(blob_watcher=blob_watched, diff_blob_watcher=diff_blob_watched), flow.watch_scope(blob_watcher=MakeWatcherCallback("forward"), diff_blob_watcher=MakeWatcherCallback("backward")):
+    # with flow.watch_scope(
+    #     blob_watcher=blob_watched, diff_blob_watcher=diff_blob_watched
+    # ), flow.watch_scope(
+    #     blob_watcher=MakeWatcherCallback("forward"),
+    #     diff_blob_watcher=MakeWatcherCallback("backward"),
+    # ):
     # Box Head
     box_loss, cls_loss, pos_proposal_list, pos_gt_indices_list = box_head.build_train(
         proposals, gt_boxes_list, gt_labels_list, features
@@ -244,52 +264,6 @@ def MakeWatcherCallback(prompt):
     return Callback
 
 
-def maskrcnn_eval_box_head(images, image_sizes):
-    cfg = get_default_cfgs()
-    if terminal_args.config_file is not None:
-        cfg.merge_from_file(terminal_args.config_file)
-    cfg.freeze()
-    print(cfg)
-    backbone = Backbone(cfg)
-    rpn_head = RPNHead(cfg)
-    rpn_proposal = RPNProposal(cfg)
-    box_head = BoxHead(cfg)
-
-    image_size_list = [
-        flow.squeeze(
-            flow.local_gather(image_sizes, flow.constant(i, dtype=flow.int32)),
-            [0],
-        )
-        for i in range(image_sizes.shape[0])
-    ]
-    anchors = []
-    for i in range(cfg.DECODER.FPN_LAYERS):
-        anchors.append(
-            flow.detection.anchor_generate(
-                images=flow.transpose(images, perm=[0, 2, 3, 1]),
-                feature_map_stride=cfg.DECODER.FEATURE_MAP_STRIDE * pow(2, i),
-                aspect_ratios=cfg.DECODER.ASPECT_RATIOS,
-                anchor_scales=cfg.DECODER.ANCHOR_SCALES * pow(2, i),
-            )
-        )
-
-    # Backbone
-    features = backbone.build(images)
-
-    # RPN
-    cls_logit_list, bbox_pred_list = rpn_head.build(features)
-    proposals = rpn_proposal.build(
-        anchors, cls_logit_list, bbox_pred_list, image_size_list, None
-    )
-
-    # Box Head
-    cls_probs, box_regressions = box_head.build_eval(proposals, features)
-
-    return (
-        tuple(proposals) + tuple(features) + (cls_probs,) + (box_regressions,)
-    )
-
-
 if terminal_args.mock_dataset:
 
     @flow.function
@@ -315,48 +289,6 @@ if terminal_args.mock_dataset:
         for loss in outputs:
             flow.losses.add_loss(loss)
         return outputs
-
-
-def input_blob_def(bn):
-    return flow.input_blob_def(
-        placeholders[bn].shape, dtype=flow.float32, is_dynamic=True
-    )
-
-
-if terminal_args.eval:
-    from eval.bounding_box import BoxList
-    from eval.box_head_inference import PostProcessor
-    from eval.mask_head_inference import MaskPostProcessor
-    from eval.coco import COCODataset
-    from eval.coco_eval import do_coco_evaluation
-
-    @flow.function
-    def maskrcnn_box_head_eval_job(
-        images=flow.input_blob_def(
-            (2, 3, 416, 608), dtype=flow.float, is_dynamic=True
-        ),
-        image_sizes=flow.input_blob_def(
-            (2, 2), dtype=flow.int32, is_dynamic=False
-        ),
-    ):
-        return maskrcnn_eval_box_head(images, image_sizes)
-
-    @flow.function
-    def maskrcnn_mask_head_eval_job(
-        detection0=input_blob_def("detection0"),
-        detection1=input_blob_def("detection1"),
-        fpn_fm1=input_blob_def("fpn_feature_map1"),
-        fpn_fm2=input_blob_def("fpn_feature_map2"),
-        fpn_fm3=input_blob_def("fpn_feature_map3"),
-        fpn_fm4=input_blob_def("fpn_feature_map4"),
-    ):
-        cfg = get_default_cfgs()
-        mask_head = MaskHead(cfg)
-        mask_logits = mask_head.build_eval(
-            [detection0, detection1], [fpn_fm1, fpn_fm2, fpn_fm3, fpn_fm4]
-        )
-        mask_prob = flow.math.sigmoid(mask_logits)
-        return mask_prob
 
 
 if terminal_args.train_with_real_dataset:
@@ -502,7 +434,7 @@ if __name__ == "__main__":
     flow.config.gpu_device_num(terminal_args.gpu_num_per_node)
     flow.config.ctrl_port(terminal_args.ctrl_port)
     flow.config.default_data_type(flow.float)
-    fake_image_list = []
+
     if terminal_args.fake_image_path:
         file_list = os.listdir(terminal_args.fake_image_path)
         fake_image_list = [
@@ -511,7 +443,9 @@ if __name__ == "__main__":
         ]
 
     if terminal_args.train_with_real_dataset:
-        train_func = init_train_func(len(fake_image_list) > 0)
+        train_func = init_train_func(
+            len(fake_image_list) > 0 if fake_image_list else False
+        )
 
     check_point = flow.train.CheckPoint()
     if not terminal_args.model_load_dir:
@@ -520,64 +454,7 @@ if __name__ == "__main__":
         check_point.load(terminal_args.model_load_dir)
 
     if terminal_args.debug:
-        if terminal_args.eval:
-            import numpy as np
-
-            images = np.load(
-                "/tmp/shared_with_jxf/maskrcnn_eval_input_data_small/images.npy"
-            )
-            image_sizes = np.load(
-                "/tmp/shared_with_jxf/maskrcnn_eval_input_data_small/image_sizes.npy"
-            )
-            image_num = image_sizes.shape[0]
-
-            results = maskrcnn_box_head_eval_job(images, image_sizes).get()
-            cls_probs = results[-2]
-            box_regressions = results[-1]
-            fpn_feature_map = []
-            for i in range(4):
-                fpn_feature_map.append(results[image_num + i].ndarray())
-
-            boxes = []
-            for proposal, img_size in zip(results[:image_num], image_sizes):
-                bbox = BoxList(
-                    proposal.ndarray(), (img_size[1], img_size[0]), mode="xyxy"
-                )
-                boxes.append(bbox)
-            postprocessor = PostProcessor()
-            results = postprocessor.forward(
-                (cls_probs.ndarray(), box_regressions.ndarray()), boxes
-            )
-
-            detections = []
-            for result in results:
-                detections.append(result.bbox)
-            mask_prob = maskrcnn_mask_head_eval_job(
-                detections[0],
-                detections[1],
-                fpn_feature_map[0],
-                fpn_feature_map[1],
-                fpn_feature_map[2],
-                fpn_feature_map[3],
-            ).get()
-
-            mask_postprocessor = MaskPostProcessor()
-            predictions = mask_postprocessor.forward(
-                mask_prob.ndarray(), results
-            )
-
-            ann_file = "/dataset/mscoco_2017/annotations/sample_2_instances_val2017.json"
-            dataset = COCODataset(ann_file)
-            do_coco_evaluation(
-                dataset,
-                predictions,
-                box_only=False,
-                output_folder="./output",
-                iou_types=["bbox", "segm"],
-                expected_results=(),
-                expected_results_sigma_tol=4,
-            )
-        elif terminal_args.mock_dataset:
+        if terminal_args.mock_dataset:
             if terminal_args.rpn_only:
                 print(
                     "{:>8} {:>16} {:>16}".format(

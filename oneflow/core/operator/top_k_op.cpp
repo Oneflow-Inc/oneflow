@@ -97,6 +97,13 @@ class TopKOp final : public Operator {
       kernel_conf->mutable_top_k_conf()->set_temp_storage_bytes(top_k_op_ctx->temp_storage_bytes_);
     }
   }
+  Maybe<void> GetSbpSignatures(SbpSignatureList* sbp_sig_list) const override {
+    SbpSignatureBuilder()
+        .Split("in", 0)
+        .Split("out", 0)
+        .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+    return Maybe<void>::Ok();
+  }
 };
 
 REGISTER_OP(OperatorConf::kTopKConf, TopKOp);

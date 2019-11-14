@@ -48,6 +48,16 @@ class MaskrcnnPositiveNegativeSampleOp final : public Operator {
     BatchAxis4BnInOp("sampled_neg_inds")->set_value(0);
     return Maybe<void>::Ok();
   }
+
+  Maybe<void> GetSbpSignatures(SbpSignatureList* sbp_sig_list) const override {
+    SbpSignatureBuilder()
+        .Split("pos_inds", 0)
+        .Split("neg_inds", 0)
+        .Split("sampled_pos_inds", 0)
+        .Split("sampled_neg_inds", 0)
+        .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+    return Maybe<void>::Ok();
+  }
 };
 
 REGISTER_OP(OperatorConf::kMaskrcnnPositiveNegativeSampleConf, MaskrcnnPositiveNegativeSampleOp);
