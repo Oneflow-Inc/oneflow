@@ -19,12 +19,16 @@ namespace oneflow {
 SPECIALIZE_CPU_NDARRAY_REDUCE_IMPL(NdarrayScalarReduce);
 SPECIALIZE_CPU_NDARRAY_REDUCE_IMPL(NdarrayMatrixRowReduce);
 SPECIALIZE_CPU_NDARRAY_REDUCE_IMPL(NdarrayMatrixColReduce);
+SPECIALIZE_CPU_NDARRAY_REDUCE_IMPL(NdarrayXYZCubeYReduce);
+SPECIALIZE_CPU_NDARRAY_REDUCE_IMPL(NdarrayXYZCubeXZReduce);
 #undef SPECIALIZE_CPU_NDARRAY_REDUCE_IMPL
 
 #define INSTANTIATE_NDARRAY_REDUCE_IMPL(dtype, binary_func)                                       \
   template struct NdarrayScalarReduce<DeviceType::kCPU, OF_PP_PAIR_FIRST(dtype), binary_func>;    \
   template struct NdarrayMatrixRowReduce<DeviceType::kCPU, OF_PP_PAIR_FIRST(dtype), binary_func>; \
-  template struct NdarrayMatrixColReduce<DeviceType::kCPU, OF_PP_PAIR_FIRST(dtype), binary_func>;
+  template struct NdarrayMatrixColReduce<DeviceType::kCPU, OF_PP_PAIR_FIRST(dtype), binary_func>; \
+  template struct NdarrayXYZCubeYReduce<DeviceType::kCPU, OF_PP_PAIR_FIRST(dtype), binary_func>;  \
+  template struct NdarrayXYZCubeXZReduce<DeviceType::kCPU, OF_PP_PAIR_FIRST(dtype), binary_func>;
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_NDARRAY_REDUCE_IMPL,
                                  ARITHMETIC_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ,
                                  REDUCE_BINARY_FUNC_SEQ);
