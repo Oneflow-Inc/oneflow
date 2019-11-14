@@ -39,12 +39,6 @@ class TestNetMixin:
       of_loss = numpy.zeros(self.num_iter)
     return of_loss[0:self.num_iter]
 
-  def run_and_compare(self, num_gpu_per_node, num_node = 1, node_list = ""):
-    self.run_net(num_gpu_per_node, num_node, node_list)
-    tf_loss = self.load_tf_loss()
-    of_loss = self.load_of_loss('{}n{}c'.format(num_node, num_gpu_per_node * num_node))
-    self.assertTrue(numpy.allclose(tf_loss, of_loss, atol=1e-5), "Compare not pass!")
-
   def print_and_check_result(self, result_name):
     loss_dict = {}
     loss_dict['tensorflow'] = self.load_tf_loss()
