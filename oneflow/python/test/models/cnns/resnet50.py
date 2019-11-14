@@ -292,6 +292,7 @@ def main():
             nodes.append(addr_dict)
 
         flow.config.machine(nodes)
+        flow.config.enable_inplace(False)
 
         if args.scp_binary_without_uuid:
             flow.deprecated.init_worker(scp_binary=True, use_uuid=False)
