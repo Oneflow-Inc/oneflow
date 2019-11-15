@@ -20,7 +20,12 @@ def conv2d(
     data_format="NHWC",
     dilations=None,
     name=None,
-):
+):  
+    r"""2d convolution 
+
+    Analogous to `tf.nn.conv2d <https://www.tensorflow.org/api_docs/python/tf/nn/conv2d>`_
+
+    """
     assert len(input.static_shape) == 4
     assert len(filters.static_shape) == 4
 
