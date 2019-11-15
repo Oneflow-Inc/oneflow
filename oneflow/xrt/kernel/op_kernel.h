@@ -22,8 +22,11 @@ template <typename T>
 class OpKernelRegistrar {
  private:
   std::function<OpKernel<T> *()> factory_;
-  std::vector<XrtDevice> device_{CPU_X86, GPU_CUDA};
+
+  std::string op_name_;
+
   XrtEngine engine_field_;
+  std::vector<XrtDevice> device_{CPU_X86, GPU_CUDA};
 
   // Attributes releated to the op kernel.
   bool train_phase_enabled_ = false;
@@ -34,6 +37,12 @@ class OpKernelRegistrar {
   explicit OpKernelRegistrar(const std::string &name) : op_name_(name) {}
 
   virtual ~OpKernelRegistrar() = default;
+
+  auto FieldRegistry()
+      -> util::FieldRegistry<XrtField, std::string, decltype(factory_)> * {
+    return util::FieldRegistry<XrtField, std::string,
+                               decltype(factory_)>::Global();
+  }
 
   OpKernelRegistrar &SetFactory(decltype(factory_) factory) {
     factory_ = factory;
@@ -77,12 +86,6 @@ class OpKernelRegistrar {
       FieldRegistry()->Get(field)->Register(op_name_, factory_, attributes);
     }
     return *this;
-  }
-
-  auto FieldRegistry()
-      -> util::FieldRegistry<XrtField, std::string, decltype(factory_)> * {
-    return util::FieldRegistry<XrtField, std::string,
-                               decltype(factory_)>::Global();
   }
 };
 

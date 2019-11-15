@@ -8,10 +8,6 @@
 namespace oneflow {
 namespace xrt {
 
-extern const std::string _ArgumentOpType;
-extern const std::string _XrtInArgumentPrefix;
-extern const std::string _XrtOutArgumentPrefix;
-
 void XrtNode::AddInEdge(const XrtEdge *edge) {
   in_edges_.push_back(const_cast<XrtEdge *>(edge));
 }

@@ -13,6 +13,10 @@ DEFINE_int32(clustering_maximum_nodes,
 DEFINE_bool(strict_clustering, EnvToBool(FLAGS_strict_clustering, true),
             "Option to clustering with strict dependencies analysis.");
 
+DEFINE_string(engine, EnvToString(FLAGS_engine, "XLA"),
+              "Which third party engine to be used. XLA and TENSORRT are "
+              "valid, Default means using no engine.");
+
 namespace oneflow {
 namespace xrt {
 
@@ -121,6 +125,15 @@ XrtPassOptions CreateDefaultXrtPassOptions() {
   options.minimum_nodes = FLAGS_clustering_minimum_nodes;
   options.maximum_nodes = FLAGS_clustering_maximum_nodes;
   options.strict_clustering = FLAGS_strict_clustering;
+  // TODO(hjchen2)
+  if (FLAGS_engine == "XLA") {
+    options.engine = XrtEngine::XLA;
+  } else if (FLAGS_engine == "TENSORRT") {
+    options.engine = XrtEngine::TENSORRT;
+  } else {
+    // Default engine?
+    LOG(FATAL) << "Unknown engine: " << FLAGS_engine;
+  }
 
   XrtPassOptions xrt_options;
   xrt_options.clustering_options = options;

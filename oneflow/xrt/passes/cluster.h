@@ -10,6 +10,7 @@ namespace oneflow {
 namespace xrt {
 
 class ClusterNode;
+
 class ClusterEdge {
  public:
   ClusterEdge() = default;
@@ -17,8 +18,8 @@ class ClusterEdge {
       : start_(start), end_(end) {}
   virtual ~ClusterEdge() {}
 
-  void UpdateStartNode(ClusterNode *start) { start_ = start; }
-  void UpdateEndNode(ClusterNode *end) { end_ = end; }
+  void SetStartNode(ClusterNode *start) { start_ = start; }
+  void SetEndNode(ClusterNode *end) { end_ = end; }
 
   ClusterNode *start() const { return start_; }
   ClusterNode *end() const { return end_; }
@@ -53,7 +54,9 @@ class ClusterEdge {
  protected:
   ClusterNode *start_;
   ClusterNode *end_;
+  // A pair of sbp policy, produce sbp and consume sbp.
   SbpParallel sbp_policy_[2];
+  // A pair of time shape, produce time shape and consume time shape.
   Shape time_shape_[2];
   bool is_control_edge_ = false;
   bool is_fusion_disabled_ = false;
@@ -64,7 +67,7 @@ class ClusterNode {
   ClusterNode() : ClusterNode(nullptr, -1) {}
   explicit ClusterNode(int64_t id) : ClusterNode(nullptr, id) {}
   explicit ClusterNode(const XrtNode *node, int64_t id)
-      : xrt_node_(node), id_(id) {
+      : xrt_node_(node), cluster_id_(id) {
     folded_nodes_.insert(this);
   }
   virtual ~ClusterNode() {}
@@ -87,10 +90,9 @@ class ClusterNode {
 
   void Merge(ClusterNode &other);
   bool TryMerge(ClusterNode &other);
-  bool IsReachable(const ClusterNode &target);
+  bool IsReachable(const ClusterNode &target) const;
   bool IsSatisfySbpPolicy() const;
   bool IsSourceNode() const { return in_edges_.empty(); }
-  virtual bool IsCompiled() const { return IsNodeCompiled(xrt_node_); }
 
   virtual bool IsCompiled(const XrtEngine &engine,
                           const bool train_phase) const {
@@ -106,8 +108,8 @@ class ClusterNode {
   }
 
   const XrtNode *xrt_node() const { return xrt_node_; }
-  int64_t id() const { return id_; }
-  void set_id(int64_t id) { id_ = id; }
+  int64_t cluster_id() const { return cluster_id_; }
+  void set_cluster_id(int64_t id) { cluster_id_ = id; }
   virtual std::string type() const { return xrt_node_->type(); }
   virtual std::string name() const { return xrt_node_->name(); }
   virtual XrtDevice device() const { return xrt_node_->device(); }
@@ -116,38 +118,20 @@ class ClusterNode {
   const util::Set<ClusterNode *> &folded_nodes() const { return folded_nodes_; }
   util::Set<ClusterNode *> &folded_nodes() { return folded_nodes_; }
 
- protected:
+ private:
   const XrtNode *xrt_node_;
-  int64_t id_;
+  int64_t cluster_id_;
   util::Set<ClusterNode *> folded_nodes_;
   util::Set<ClusterEdge *> in_edges_;
   util::Set<ClusterEdge *> out_edges_;
 };
 
-class NoClusterNode : public ClusterNode {
- public:
-  NoClusterNode(int64_t id) : ClusterNode(id) {
-    name_ = absl::StrCat("#node_", InstanceCount());
-  }
-  virtual ~NoClusterNode() {}
-  // Not thread-safe
-  int64_t InstanceCount() {
-    static int64_t instance_count = 0;
-    int64_t count = instance_count++;
-    return count;
-  }
-
-  void set_device(const XrtDevice &device) { device_ = device; }
-
-  bool IsCompiled() const override { return true; }
-  std::string type() const override { return "NoClusterNode"; }
-  std::string name() const override { return name_; }
-  XrtDevice device() const override { return device_; }
-
- private:
-  std::string name_;
-  XrtDevice device_;
+namespace algorithm {
+template <>
+struct NodeTypeTrait<const ClusterNode> {
+  typedef const ClusterEdge *pEdgeType;
 };
+}  // namespace algorithm
 
 typedef std::shared_ptr<ClusterNode> ClusterNodePtr;
 typedef std::shared_ptr<ClusterEdge> ClusterEdgePtr;
@@ -162,7 +146,9 @@ void SetupClusterEdge(ClusterEdge *cluster_edge, const XrtEdge *xrt_edge);
 bool IsNodeDirectChildren(const ClusterNode *parent,
                           const ClusterNode *children);
 
-bool IsNoClusterNode(const ClusterNode *node);
+bool IsSatisfyBackend(const ClusterEdge *edge);
+bool IsSatisfySbpPolicy(const ClusterEdge *edge);
+bool IsSatisfyTimeShape(const ClusterEdge *edge);
 
 }  // namespace xrt
 }  // namespace oneflow

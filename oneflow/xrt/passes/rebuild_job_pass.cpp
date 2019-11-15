@@ -2,10 +2,10 @@
 
 #include <string>
 #include <vector>
-
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_split.h"
 #include "glog/logging.h"
+
 #include "oneflow/core/job/job_builder.h"
 #include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/xrt/api.h"
@@ -19,12 +19,6 @@
 namespace oneflow {
 namespace xrt {
 
-extern const std::string _XrtLaunchOpType;
-extern const std::string _XrtInArgumentPrefix;
-extern const std::string _XrtOutArgumentPrefix;
-
-static const std::string _ReduceSplitType = "ReduceSplit";
-
 template <typename T>
 void DoNoDuplicationAdd(util::PbVector<T> *repeat_field, const T &val) {
   if (std::find(repeat_field->begin(), repeat_field->end(), val) ==
@@ -34,11 +28,8 @@ void DoNoDuplicationAdd(util::PbVector<T> *repeat_field, const T &val) {
 }
 
 int GetRepeatedIndex(const std::string &input) {
-  std::vector<std::string> splits = absl::StrSplit(input, "_");
-  CHECK_GT(splits.size(), 0);
-  int index = 0;
-  absl::SimpleAtoi(splits.back(), &index);
-  return index;
+  auto name_and_index = GetFieldNameAndIndex4StrVal(input);
+  return name_and_index.second;
 };
 
 void SetOpInputBlobName(OperatorConf *op_conf, const std::string &input,
@@ -65,14 +56,14 @@ class FoldSubgraphBuilder {
 
   void Build() {
     CHECK(builder_) << "Builder has not been initialized.";
-    // Rebuilding folded job should takes the below steps in order
-    // 5.Fixup output blob names for launch nodes, and infect the
+    // Rebuilding folded job should takes the below steps in order.
+    // 0.Fixup output blob names for launch nodes, and infect the
     //   changes to the input of next nodes.
     FixupInOutBlobNames();
     // 1.Add XrtLaunch operator to the job.
     BuildXrtLaunchOps();
-    // 2.Replace control_in_op_name by XrtLaunch name if the operator
-    //   has been folded by a XrtLaunch operator.
+    // 2.Replace control_in_op_name by the XrtLaunch operator name if
+    //   the operator has been folded.
     FixupControlInOpNames();
     // 3.Add time shape for XrtLaunch operators.
     FixupTimeShapes();
@@ -165,7 +156,11 @@ void FoldSubgraphBuilder::buildFunction(
       for (const XrtEdge *edge : node->out_edges()) {
         const Argument &argument = edge->argument();
         argument_proto->set_value(argument.name());
-        is_mutable |= IsMutableArgument(edge->end(), argument);
+
+        const std::string &op_type = edge->end()->type();
+        const XrtDevice &device = edge->end()->device();
+        is_mutable |=
+            IsMutableArgument(argument, op_type, MakeXrtField(device, engine));
       }
       for (const XrtEdge *edge : node->in_edges()) {
         const Argument &argument = edge->argument();
@@ -207,6 +202,11 @@ void AddInOutBlobNames(const XrtNode *node, XrtLaunchOpConf *launch_conf) {
     CHECK_GT(output_args.count(produce_key), 0);
     launch_conf->mutable_out()->Add()->assign(produce_key);
   }
+}
+
+XrtEngine FoldSubgraphBuilder::GraphEngine(const XrtGraph *graph) const {
+  CHECK(graph->HasAttr("engine"));
+  return graph->Attr<XrtEngine>("engine");
 }
 
 void FoldSubgraphBuilder::BuildXrtLaunchOps() {

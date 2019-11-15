@@ -13,7 +13,7 @@ class XlaExecutable : public Executable {
   XlaExecutable(const XrtDevice &device,
                 const std::vector<xla::Shape> &input_shapes,
                 const xla::Shape &output_shape,
-                std::unique_ptr<xla::LocalExecutable> &executable)
+                std::unique_ptr<xla::LocalExecutable> &&executable)
       : Executable(XrtEngine::XLA),
         device_(device),
         input_shapes_(input_shapes),

@@ -116,13 +116,17 @@ class RegistryManager {
     return g_registry_manager;
   }
 
-  RegistryBase *Get(const Field &field) const {
+  RegistryBase *GetRegistry(const Field &field) const {
     CHECK_GT(registry_fields_.count(field), 0) << "No registry field.";
     return registry_fields_.at(field);
   }
 
   bool Insert(const Field &field, RegistryBase *registry) {
     return registry_fields_.emplace(field, registry).second;
+  }
+
+  bool HasRegistry(const Field &field) const {
+    return registry_fields_.count(field) > 0;
   }
 
   virtual ~RegistryManager() = default;

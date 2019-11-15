@@ -143,6 +143,8 @@ void RebuildXrtCompiledJob(const OpGraph& op_graph, Job* job) {
   // Create options to run xrt passes.
   auto graph = xrt::BuildXrtGraph(&op_graph);
   auto options = xrt::CreateDefaultXrtPassOptions();
+  options.clustering_options.train_phase = GlobalJobDesc().IsTrain();
+
   xrt::RunXrtPass("MarkClusterId", graph.get(), options);
   xrt::RunXrtPass("BuildSubGraph", graph.get(), options);
   // Rebuild Job

@@ -32,6 +32,8 @@ class XrtEdge : public util::AttributeMap {
 
   bool IsControlEdge() const { return !arg_.initialized(); }
 
+  virtual ~XrtEdge() = default;
+
   friend class XrtGraph;
 
  protected:
@@ -39,8 +41,6 @@ class XrtEdge : public util::AttributeMap {
   XrtEdge(const XrtNode *start, const XrtNode *end)
       : start_(const_cast<XrtNode *>(start)),
         end_(const_cast<XrtNode *>(end)) {}
-
-  virtual ~XrtEdge() = default;
 
  protected:
   XrtNode *start_ = nullptr;
@@ -83,6 +83,8 @@ class XrtNode : public util::AttributeMap {
   bool IsOutArgumentNode() const;
   bool IsReachable(const XrtNode &dst_node) const;
 
+  virtual ~XrtNode() {}
+
   friend class XrtGraph;
 
  protected:
@@ -90,7 +92,6 @@ class XrtNode : public util::AttributeMap {
   // XrtNode only can be created by XrtGraph
   explicit XrtNode(const PbMessage &param)
       : param_(&param), unique_id_(-1), sub_graph_(nullptr) {}
-  virtual ~XrtNode() {}
 
  protected:
   util::List<XrtEdge *> in_edges_;
