@@ -49,8 +49,14 @@ Maybe<void> ExpandDimsOp::InferBlobDescs(
 Maybe<void> ExpandDimsOp::GetSbpSignatures(
     const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
     SbpSignatureList* sbp_sig_list) const {
-  SbpSignatureBuilder().Split("in", 0).Split("out", 0).Build(
-      sbp_sig_list->mutable_sbp_signature()->Add());
+  const int expand_axis = op_conf().expand_dims_conf().axis();
+  if (expand_axis == 0) {
+    SbpSignatureBuilder().Split("in", 0).Split("out", 1).Build(
+        sbp_sig_list->mutable_sbp_signature()->Add());
+  } else {
+    SbpSignatureBuilder().Split("in", 0).Split("out", 0).Build(
+        sbp_sig_list->mutable_sbp_signature()->Add());
+  }
   return Maybe<void>::Ok();
 }
 
