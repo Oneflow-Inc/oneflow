@@ -50,8 +50,15 @@ Maybe<void> SqueezeOp::InferBlobDescs(
 Maybe<void> SqueezeOp::GetSbpSignatures(
     const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
     SbpSignatureList* sbp_sig_list) const {
-  SbpSignatureBuilder().Split("in", 0).Split("out", 0).Build(
-      sbp_sig_list->mutable_sbp_signature()->Add());
+  auto squeeze_axes_vec = PbRf2StdVec(op_conf().squeeze_conf().axis());
+  auto squeeze_dim0_iter = std::find(squeeze_axes_vec.begin(), squeeze_axes_vec.end(), 0);
+  if (squeeze_dim0_iter == squeeze_axes_vec.end()) {
+    SbpSignatureBuilder().Split("in", 0).Split("out", 0).Build(
+        sbp_sig_list->mutable_sbp_signature()->Add());
+  } else {
+    SbpSignatureBuilder().Split("in", 0).Broadcast("out").Build(
+        sbp_sig_list->mutable_sbp_signature()->Add());
+  }
   return Maybe<void>::Ok();
 }
 
