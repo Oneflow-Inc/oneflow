@@ -68,7 +68,7 @@ class XrtPass {
     }                                                             \
   };                                                              \
   _XrtPassRegistrar _xrt_pass_registrar_ __attribute__((unused)); \
-  }  // namespace
+  }  // namespace // PassName
 
 inline void RunPassImpl(const std::string &pass, XrtGraph *graph,
                         const XrtPassOptions &options) {

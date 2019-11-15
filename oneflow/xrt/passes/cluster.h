@@ -90,7 +90,7 @@ class ClusterNode {
 
   void Merge(ClusterNode &other);
   bool TryMerge(ClusterNode &other);
-  bool IsReachable(const ClusterNode &target);
+  bool IsReachable(const ClusterNode &target) const;
   bool IsSatisfySbpPolicy() const;
   bool IsSourceNode() const { return in_edges_.empty(); }
 
@@ -125,6 +125,13 @@ class ClusterNode {
   util::Set<ClusterEdge *> in_edges_;
   util::Set<ClusterEdge *> out_edges_;
 };
+
+namespace algorithm {
+template <>
+struct NodeTypeTrait<const ClusterNode> {
+  typedef const ClusterEdge *pEdgeType;
+};
+}  // namespace algorithm
 
 typedef std::shared_ptr<ClusterNode> ClusterNodePtr;
 typedef std::shared_ptr<ClusterEdge> ClusterEdgePtr;

@@ -28,11 +28,8 @@ void DoNoDuplicationAdd(util::PbVector<T> *repeat_field, const T &val) {
 }
 
 int GetRepeatedIndex(const std::string &input) {
-  std::vector<std::string> splits = absl::StrSplit(input, "_");
-  CHECK_GT(splits.size(), 0);
-  int index = 0;
-  absl::SimpleAtoi(splits.back(), &index);
-  return index;
+  auto name_and_index = GetFieldNameAndIndex4StrVal(input);
+  return name_and_index.second;
 };
 
 void SetOpInputBlobName(OperatorConf *op_conf, const std::string &input,
@@ -59,14 +56,14 @@ class FoldSubgraphBuilder {
 
   void Build() {
     CHECK(builder_) << "Builder has not been initialized.";
-    // Rebuilding folded job should takes the below steps in order
-    // 5.Fixup output blob names for launch nodes, and infect the
+    // Rebuilding folded job should takes the below steps in order.
+    // 0.Fixup output blob names for launch nodes, and infect the
     //   changes to the input of next nodes.
     FixupInOutBlobNames();
     // 1.Add XrtLaunch operator to the job.
     BuildXrtLaunchOps();
-    // 2.Replace control_in_op_name by XrtLaunch name if the operator
-    //   has been folded by a XrtLaunch operator.
+    // 2.Replace control_in_op_name by the XrtLaunch operator name if
+    //   the operator has been folded.
     FixupControlInOpNames();
     // 3.Add time shape for XrtLaunch operators.
     FixupTimeShapes();

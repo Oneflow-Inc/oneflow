@@ -2,13 +2,17 @@
 #define ONEFLOW_XRT_PARAMETER_H_
 
 #include <string>
+
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/common/shape.h"
+
+#include "oneflow/core/common/data_type.h"  // GetSizeOfDataType
 
 namespace oneflow {
 namespace xrt {
 
 inline int SizeOf(const DataType &data_type) {
+/*
   switch (data_type) {
     case DataType::kChar:
     case DataType::kInt8:
@@ -27,6 +31,8 @@ inline int SizeOf(const DataType &data_type) {
       return 0;
     }
   }
+*/
+  return GetSizeOfDataType(data_type);
 }
 
 class Parameter {

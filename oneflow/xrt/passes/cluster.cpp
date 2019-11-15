@@ -38,27 +38,8 @@ bool ClusterNode::IsSatisfySbpPolicy() const {
   return true;
 }
 
-bool ClusterNode::IsReachable(const ClusterNode &target) {
-  util::Set<const ClusterNode *> visited_nodes;
-  std::stack<const ClusterNode *> stack;
-  for (const ClusterEdge *edge : out_edges_) {
-    stack.push(edge->end());
-  }
-
-  while (!stack.empty()) {
-    const ClusterNode *node = stack.top();
-    stack.pop();
-    if (target == *node) {
-      return true;
-    }
-    for (const ClusterEdge *edge : node->out_edges()) {
-      const ClusterNode *end = edge->end();
-      if (visited_nodes.insert(end).second) {
-        stack.push(end);
-      }
-    }
-  }
-  return false;
+bool ClusterNode::IsReachable(const ClusterNode &target) const {
+  return algorithm::IsReachable(this, &target);
 }
 
 class ClusterMergeNode : public ClusterNode {
