@@ -39,14 +39,6 @@ class OutRemoteBlobsStatus(object):
         finally: self.cond_var_.release()
         self.data_delivered_ = True
 
-    def AddResult(self, out_remote_blobs):
-        assert self.inited_ == False
-        pullers = self._MakeRemoteBlobPullers(out_remote_blobs)
-        self.out_remote_blob_pullers_.append(pullers)
-        for puller in self._FlatRemoteBlobPullers(pullers):
-            puller.AsyncPull(self._FinishCallback)
-        return self
-
     def SetResult(self, out_remote_blobs):
         assert self.inited_ == False
         assert isinstance(self.out_remote_blob_pullers_, list) 
@@ -110,9 +102,7 @@ class OutRemoteBlobsStatus(object):
         if isinstance(out_remote_blobs, remote_blob_util.RemoteBlob):
             return _RemoteBlobPuller(out_remote_blobs, self.session_, self.cond_var_)
         if isinstance(out_remote_blobs, list) or isinstance(out_remote_blobs, tuple):
-            ret = [self._MakeRemoteBlobPullers(x) for x in out_remote_blobs]
-            if isinstance(out_remote_blobs, tuple): ret = tuple(ret)
-            return ret
+            return type(out_remote_blobs)(self._MakeRemoteBlobPullers(x) for x in out_remote_blobs)
         if isinstance(out_remote_blobs, dict):
             return {
                 k : self._MakeRemoteBlobPullers(v) for k, v in out_remote_blobs.items()

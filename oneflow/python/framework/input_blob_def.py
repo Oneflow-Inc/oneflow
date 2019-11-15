@@ -10,7 +10,6 @@ import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.distribute as distribute_util
 from oneflow.python.oneflow_export import oneflow_export
 import numpy as np
-import collections
 import oneflow
 
 @oneflow_export('input_blob_def')
