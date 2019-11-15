@@ -281,7 +281,7 @@ def concat(values,
 def identity(
         input,
         name=None):
-    r"""Return a `Blob` has identical content and data type to input `Blob`
+    r"""Return a `Blob` has identical content and data type to input `Blob`. Analogous to `tf.identity <https://www.tensorflow.org/api_docs/python/tf/identity>`_
 
     Args:
         input: a `Blob`
