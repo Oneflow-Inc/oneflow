@@ -345,6 +345,11 @@ def set_enable_reused_mem(value = True):
 
 @oneflow_export('config.enable_inplace')
 def set_enable_inplace(value = True):
+    r"""Set max limit of cuDNN buffer, in MB
+
+    Args:
+        val: a `int`
+    """
     _SetJobConfAttr(lambda x:x, 'enable_inplace', value)
     return oneflow.config
 
@@ -360,6 +365,11 @@ def set_enable_nccl(value = True):
 
 @oneflow_export('config.use_nccl_inter_node_communication')
 def set_use_nccl_inter_node_communication(value = True):
+    r"""Whether use NCCL when synchronizing variables
+
+    Args:
+        val: a `bool`, `True` by default
+    """
     _SetJobConfAttr(lambda x:x, 'use_nccl_inter_node_communication', value)
     return oneflow.config
 
