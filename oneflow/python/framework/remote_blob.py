@@ -1,7 +1,6 @@
 from __future__ import absolute_import
 
 import oneflow.python.framework.blob_desc as blob_desc
-import oneflow.python.framework.inter_user_job_util as inter_user_job_util
 import oneflow.python.framework.job_builder as job_builder
 import oneflow.core.common.data_type_pb2 as data_type_util
 import oneflow
@@ -28,9 +27,6 @@ class RemoteBlob(blob_desc.BlobDesc):
 
     def with_gradient_distribute(self, distribute):
         return oneflow.parallel_cast(self, gradient_distribute=distribute)
-
-    def pull(self):
-        return inter_user_job_util.pull(self)
 
     def __add__(self, rhs):
         return oneflow.math.add(self, rhs)
