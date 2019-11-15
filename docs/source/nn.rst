@@ -9,8 +9,6 @@ Operators for neural networks
 
 .. autofunction:: conv2d
 .. autofunction:: bias_add
-.. autofunction:: max_pool1d
-.. autofunction:: avg_pool1d
 .. autofunction:: max_pool2d
 .. autofunction:: avg_pool2d
 .. autofunction:: max_pool3d

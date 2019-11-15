@@ -87,6 +87,10 @@ def conv2d(
 
 @oneflow_export("nn.bias_add")
 def bias_add(value, bias, data_format=None, name=None):
+    r"""
+    Analogous to `tf.nn.bias_add <https://www.tensorflow.org/api_docs/python/tf/nn/bias_add>`_
+
+    """
     if name is None:
         name = id_util.UniqueStr("BiasAdd_")
 
@@ -130,6 +134,10 @@ def avg_pool1d(input, ksize, strides, padding, data_format="NWC", name=None):
 
 @oneflow_export("nn.max_pool2d")
 def max_pool2d(input, ksize, strides, padding, data_format="NHWC", name=None):
+    r"""
+    Analogous to `tf.nn.max_pool2d <https://www.tensorflow.org/api_docs/python/tf/nn/max_pool2d>`_
+
+    """
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf,
@@ -157,6 +165,10 @@ def max_pool2d(input, ksize, strides, padding, data_format="NHWC", name=None):
 
 @oneflow_export("nn.avg_pool2d")
 def avg_pool2d(input, ksize, strides, padding, data_format="NHWC", name=None):
+    r"""
+    Analogous to `tf.nn.avg_pool2d <https://www.tensorflow.org/api_docs/python/tf/nn/avg_pool2d>`_
+
+    """
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf,
@@ -188,6 +200,10 @@ def avg_pool2d(input, ksize, strides, padding, data_format="NHWC", name=None):
 
 @oneflow_export("nn.max_pool3d")
 def max_pool3d(input, ksize, strides, padding, data_format="NDHWC", name=None):
+    r"""
+    Analogous to `tf.nn.max_pool3d <https://www.tensorflow.org/api_docs/python/tf/nn/max_pool3d>`_
+
+    """
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf,
@@ -215,6 +231,10 @@ def max_pool3d(input, ksize, strides, padding, data_format="NDHWC", name=None):
 
 @oneflow_export("nn.avg_pool3d")
 def avg_pool3d(input, ksize, strides, padding, data_format="NDHWC", name=None):
+    r"""
+    Analogous to `tf.nn.avg_pool3d <https://www.tensorflow.org/api_docs/python/tf/nn/avg_pool3d>`_
+
+    """
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf,
@@ -246,6 +266,10 @@ def avg_pool3d(input, ksize, strides, padding, data_format="NDHWC", name=None):
 
 @oneflow_export("nn.softmax")
 def softmax(logits, axis=None, name=None):
+    r"""
+    Analogous to `tf.nn.softmax <https://www.tensorflow.org/api_docs/python/tf/nn/softmax>`_
+
+    """
     if axis is None:
         axis = -1
     assert type(axis) is int
@@ -269,6 +293,10 @@ def softmax(logits, axis=None, name=None):
 def sparse_softmax_cross_entropy_with_logits(
     labels=None, logits=None, name=None
 ):
+    r"""
+    Analogous to `tf.nn.sparse_softmax_cross_entropy_with_logits <https://www.tensorflow.org/api_docs/python/tf/nn/sparse_softmax_cross_entropy_with_logits>`_
+
+    """
     assert labels is not None
     assert logits is not None
     op_conf = op_conf_util.OperatorConf()
@@ -295,7 +323,11 @@ def sparse_softmax_cross_entropy_with_logits(
 @oneflow_export("nn.sigmoid_cross_entropy_with_logits")
 def sigmoid_cross_entropy_with_logits(
     labels=None, logits=None, name=None
-):
+):  
+    r"""
+    Analogous to `tf.nn.sigmoid_cross_entropy_with_logits <https://www.tensorflow.org/api_docs/python/tf/nn/sigmoid_cross_entropy_with_logits>`_
+
+    """
     assert labels is not None
     assert logits is not None
     op_conf = op_conf_util.OperatorConf()
@@ -342,6 +374,10 @@ def _GetSequence(value, n, name):
 
 @oneflow_export("nn.dropout")
 def dropout(x, noise_shape=None, seed=None, name=None, rate=None):
+    r"""
+    Analogous to `tf.nn.dropout <https://www.tensorflow.org/api_docs/python/tf/nn/dropout>`_
+
+    """
     # dropout op
     op_conf = op_conf_util.OperatorConf()
     if name is None:
