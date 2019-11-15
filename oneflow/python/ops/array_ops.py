@@ -281,6 +281,15 @@ def concat(values,
 def identity(
         input,
         name=None):
+    r"""Return a `Blob` has identical content and data type to input `Blob`
+
+    Args:
+        input: a `Blob`
+        name: name of this identity operator
+    
+    Returns:
+        A `Blob`
+    """
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf,
