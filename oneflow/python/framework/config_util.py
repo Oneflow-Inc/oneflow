@@ -182,6 +182,11 @@ def persistence_buf_byte(val):
 
 @oneflow_export('config.log_dir')
 def log_dir(val):
+    r"""Specify the directory path to save log info in
+
+    Args:
+        val: a path, could be relative or absolute
+    """
     assert config_proto_mutable == True
     assert type(val) is str
     default_config_proto.cpp_flags_conf.log_dir = val
