@@ -20,6 +20,14 @@ void InitEnvironmentBySerializedConfigProto(const std::string& config_proto_str,
       .GetDataAndSerializedErrorProto(error_str);
 }
 
+void InitGlobalSession(std::string* error_str) {
+  return oneflow::InitGlobalSession().GetDataAndSerializedErrorProto(error_str);
+}
+
+void DestroyGlobalSession(std::string* error_str) {
+  return oneflow::DestroyGlobalSession().GetDataAndSerializedErrorProto(error_str);
+}
+
 void InitGlobalOneflow(std::string* error_str) {
   return oneflow::InitGlobalOneflow().GetDataAndSerializedErrorProto(error_str);
 }
