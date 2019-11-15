@@ -1,17 +1,18 @@
+#include "oneflow/xrt/passes/pass.h"
+
 #include <string>
 #include <vector>
+
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_split.h"
 #include "glog/logging.h"
-
-#include "oneflow/core/job/job.pb.h"
 #include "oneflow/core/job/job_builder.h"
 #include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/xrt/api.h"
 #include "oneflow/xrt/argument.h"
 #include "oneflow/xrt/graph/graph.h"
 #include "oneflow/xrt/kernel/op_kernel.h"
-#include "oneflow/xrt/passes/pass.h"
+#include "oneflow/xrt/node_util.h"
 #include "oneflow/xrt/types.h"
 #include "oneflow/xrt/utility/stl.h"
 
@@ -59,7 +60,6 @@ class FoldSubgraphBuilder {
   void Build() {
     CHECK(builder_) << "Builder has not been initialized.";
     // Rebuilding folded job should takes the below steps in order
-    InferIsAfterAllReduce();
     // 5.Fixup output blob names for launch nodes, and infect the
     //   changes to the input of next nodes.
     FixupInOutBlobNames();
@@ -77,11 +77,10 @@ class FoldSubgraphBuilder {
   }
 
  private:
-  void InferIsAfterAllReduce();
-
   void buildFunction(const XrtGraph *sub_graph, const XrtEngine &engine,
-                     util::Set<std::string> *mutability,
-                     XrtLaunchOpConf::Function *function);
+                     util::Set<std::string> *input_mutability,
+                     bool *is_model_update,
+                     XrtLaunchOpConf::Function *function) const;
 
   void BuildXrtLaunchOps();
 
@@ -96,8 +95,6 @@ class FoldSubgraphBuilder {
   void RemoveLaunchFoldedOps();
 
   XrtEngine GraphEngine(const XrtGraph *graph) const;
-
-  bool IsAfterAllReduce(const XrtNode *node) const;
 
  private:
   const XrtGraph &graph_;
@@ -136,19 +133,20 @@ FoldSubgraphBuilder::FoldSubgraphBuilder(const XrtGraph &graph, Job *job)
 
 bool IsMutableArgument(const Argument &argument, const std::string &op_type,
                        const XrtField &field) {
-  const auto mutable_vars = MutableVariables(op_type, field);
+  const auto &mutable_vars = MutableVariables(op_type, field);
   const std::string &key = argument.meta_data().consume_key;
   return mutable_vars.count(key) > 0;
 }
 
-void FoldSubgraphBuilder::buildFunction(const XrtGraph *sub_graph,
-                                        const XrtEngine &engine,
-                                        util::Set<std::string> *mutability,
-                                        XrtLaunchOpConf::Function *function) {
+void FoldSubgraphBuilder::buildFunction(
+    const XrtGraph *sub_graph, const XrtEngine &engine,
+    util::Set<std::string> *input_mutability, bool *is_model_update,
+    XrtLaunchOpConf::Function *function) const {
   for (const XrtNode *node : sub_graph->Nodes()) {
     if (!node->IsArgumentNode()) {
       *(function->add_node()) =
           *reinterpret_cast<const OperatorConf *>(&node->param());
+      *is_model_update = IsOptimizerNode(node, engine);
     } else {
       auto *argument_proto = function->add_argument();
       argument_proto->set_name(node->name());
@@ -172,7 +170,7 @@ void FoldSubgraphBuilder::buildFunction(const XrtGraph *sub_graph,
         argument_proto->set_value(argument.name());
       }
       if (is_mutable) {
-        mutability->insert(argument_proto->value());
+        input_mutability->insert(argument_proto->value());
       }
     }
   }
@@ -229,7 +227,7 @@ void FoldSubgraphBuilder::BuildXrtLaunchOps() {
 
     // Set launch engine.
     XrtEngine engine = GraphEngine(node->sub_graph());
-    std::string str_engine = [&]() -> std::string {
+    launch_conf->set_engine([&]() -> std::string {
       switch (engine) {
         case XrtEngine::XLA:
           return "XLA";
@@ -239,13 +237,15 @@ void FoldSubgraphBuilder::BuildXrtLaunchOps() {
           LOG(FATAL) << "Not supported engine " << engine;
           return "";
       }
-    }();
-    launch_conf->set_engine(str_engine);
+    }());
 
-    // Build function and returns inputs mutability.
-    util::Set<std::string> mutability;
-    buildFunction(node->sub_graph(), engine, &mutability,
-                  launch_conf->mutable_function());
+    util::Set<std::string> input_mutability;
+    bool is_model_update = false;
+    // Build function, returns inputs mutabilities and is_model_update.
+    buildFunction(node->sub_graph(), engine, &input_mutability,
+                  &is_model_update, launch_conf->mutable_function());
+    // Mark the launch op whether it is model update op or not.
+    launch_conf->set_model_update(is_model_update);
 
     for (const auto &arg_proto : launch_conf->function().argument()) {
       std::string arg_value = arg_proto.value();
@@ -253,7 +253,7 @@ void FoldSubgraphBuilder::BuildXrtLaunchOps() {
       if (it != fixedup_names_.end()) {
         arg_value = it->second /* fixedup blob names */;
       }
-      if (mutability.count(arg_proto.value()) > 0) {
+      if (input_mutability.count(arg_proto.value()) > 0) {
         (*launch_conf->mutable_mutability())[arg_value] = true;
       }
 
@@ -267,10 +267,6 @@ void FoldSubgraphBuilder::BuildXrtLaunchOps() {
         auto *batch_axis = launch_conf->mutable_batch_axis();
         (*batch_axis)[arg_value] = builder_->BatchAxis4Lbn(arg_value);
       }
-    }
-
-    if (IsAfterAllReduce(node) && node->out_edges().size() == 0) {
-      launch_conf->set_model_update(true);
     }
 
     CHECK_GT(folded_nodes_[i].size(), 0);
@@ -440,21 +436,6 @@ void FoldSubgraphBuilder::RemoveLaunchFoldedOps() {
     }
   }
   builder_->RemoveOpByName(removing_names);
-}
-
-void FoldSubgraphBuilder::InferIsAfterAllReduce() {
-  algorithm::TopologyVisit(graph_, [this](const XrtNode *node) {
-    for (const XrtEdge *edge : node->in_edges()) {
-      const XrtNode *start = edge->start();
-      if (IsAfterAllReduce(start) || start->type() == _ReduceSplitType) {
-        after_allreduce_nodes_.insert(node);
-      }
-    }
-  });
-}
-
-bool FoldSubgraphBuilder::IsAfterAllReduce(const XrtNode *node) const {
-  return after_allreduce_nodes_.count(node) > 0;
 }
 
 // Rebuild job according to the nodes folded xrt graph. In order to rebuild

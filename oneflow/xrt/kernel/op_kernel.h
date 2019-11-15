@@ -28,8 +28,10 @@ class OpKernelRegistrar {
   XrtEngine engine_field_;
   std::vector<XrtDevice> device_{CPU_X86, GPU_CUDA};
 
+  // Attributes releated to the op kernel.
   bool train_phase_enabled_ = false;
-  util::Map<std::string, Any> attributes_;
+  bool is_optimizer_op_ = false;
+  util::Set<std::string> mutable_variables_ = {};
 
  public:
   explicit OpKernelRegistrar(const std::string &name) : op_name_(name) {}
@@ -59,7 +61,12 @@ class OpKernelRegistrar {
 
   OpKernelRegistrar &SetMutableVariables(
       const util::Set<std::string> &variables) {
-    attributes_[MutableVariablesAttrName] = variables;
+    mutable_variables_ = variables;
+    return *this;
+  }
+
+  OpKernelRegistrar &SetIsOptimizerOp(const bool &is_optimizer) {
+    is_optimizer_op_ = is_optimizer;
     return *this;
   }
 
@@ -69,10 +76,14 @@ class OpKernelRegistrar {
   }
 
   OpKernelRegistrar &Finalize() {
-    attributes_[TrainPhaseEnabledAttrName] = train_phase_enabled_;
+    util::Map<std::string, Any> attributes;
+    attributes[TrainPhaseEnabledAttrName] = train_phase_enabled_;
+    attributes[IsOptimizerOpAttrName] = is_optimizer_op_;
+    attributes[MutableVariablesAttrName] = mutable_variables_;
+
     for (const auto &device : device_) {
       XrtField field = MakeXrtField(device, engine_field_);
-      FieldRegistry()->Get(field)->Register(op_name_, factory_, attributes_);
+      FieldRegistry()->Get(field)->Register(op_name_, factory_, attributes);
     }
     return *this;
   }
@@ -97,30 +108,35 @@ inline bool OpKernelRegistered(const std::string &op_type,
   return false;
 }
 
-inline bool TrainPhaseEnabled(const std::string &op_type,
-                              const XrtField &field) {
+template <typename T>
+inline const T &LookupOpKernelAttribute(const std::string &op_type,
+                                        const XrtField &field,
+                                        const std::string &attr_name) {
   auto *rm = util::RegistryManager<XrtField>::Global();
   CHECK(rm->HasRegistry(field))
       << "Field registry has not been found. Field is (engine: "
       << field.engine() << ", device: " << field.device() << ").";
   const auto &attrs = rm->GetRegistry(field)->LookupAttr(op_type);
-  CHECK_GT(attrs.count(TrainPhaseEnabledAttrName), 0)
-      << "TrainPhaseEnabled attrs is not set for type " << op_type;
-  return any_cast<bool>(attrs.at(TrainPhaseEnabledAttrName));
+  CHECK_GT(attrs.count(attr_name), 0)
+      << "Attribute " << attr_name << " is not found for OpKernel " << op_type;
+  return any_cast<T>(attrs.at(attr_name));
 }
 
-inline util::Set<std::string> MutableVariables(const std::string &op_type,
-                                               const XrtField &field) {
-  auto *rm = util::RegistryManager<XrtField>::Global();
-  CHECK(rm->HasRegistry(field))
-      << "Field registry has not been found. Field is (engine: "
-      << field.engine() << ", device: " << field.device() << ").";
-  const auto &attrs = rm->GetRegistry(field)->LookupAttr(op_type);
-  const auto &it = attrs.find(MutableVariablesAttrName);
-  if (it != attrs.end()) {
-    return any_cast<util::Set<std::string>>(it->second);
-  }
-  return util::Set<std::string>();
+inline const util::Set<std::string> &MutableVariables(
+    const std::string &op_type, const XrtField &field) {
+  return LookupOpKernelAttribute<util::Set<std::string>>(
+      op_type, field, MutableVariablesAttrName);
+}
+
+inline const bool &TrainPhaseEnabled(const std::string &op_type,
+                                     const XrtField &field) {
+  return LookupOpKernelAttribute<bool>(op_type, field,
+                                       TrainPhaseEnabledAttrName);
+}
+
+inline const bool &IsOptimizerOp(const std::string &op_type,
+                                 const XrtField &field) {
+  return LookupOpKernelAttribute<bool>(op_type, field, IsOptimizerOpAttrName);
 }
 
 }  // namespace xrt

@@ -96,7 +96,11 @@ class ClusterNode {
 
   virtual bool IsCompiled(const XrtEngine &engine,
                           const bool train_phase) const {
-    return IsNodeCompiled(xrt_node_, engine, train_phase);
+    return IsCompiledNode(xrt_node_, engine, train_phase);
+  }
+
+  virtual bool IsOptimizer(const XrtEngine &engine) const {
+    return IsOptimizerNode(xrt_node_, engine);
   }
 
   bool operator==(const ClusterNode &other) const {
