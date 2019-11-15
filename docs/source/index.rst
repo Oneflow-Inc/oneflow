@@ -11,6 +11,7 @@ OneFlow Documentation
     math
     nn
     layers
+    data
 
 Indices and tables
 ==================

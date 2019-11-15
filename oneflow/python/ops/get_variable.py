@@ -15,11 +15,25 @@ def get_variable(
     shape=None,
     dtype=None,
     initializer=None,
-    trainable=None,
+    trainable=True,
     model_name=None,
     random_seed=None,
     distribute=distribute_util.broadcast(),
 ):
+    r"""Create a new variable or get a existing variable by name.
+
+    Args:
+        name: name of this variable. Variable could be shared across different function created by annotation `@oneflow.function` :func:`~oneflow.function`. `None` by defauilt
+        shape: shape of the variable. `None` by defauilt
+        dtype: data type of the variable. `None` by defauilt
+        initializer: a initializer_conf. For instance, a :func:`~oneflow.ones_initializer`. `None` by defauilt
+        trainable: a `bool` to indicate if this variable is trainable. `True` by defauilt
+        model_name: a `string`. `'weight'` or `'bias'`. `None` by defauilt
+        random_seed: random seed for initialization. `None` by defauilt
+    Returns:
+        A `Blob`
+
+    """
     assert isinstance(name, str)
     name = compile_context._get_variable_prefix() + name
 
