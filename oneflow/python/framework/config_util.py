@@ -345,11 +345,6 @@ def set_enable_reused_mem(value = True):
 
 @oneflow_export('config.enable_inplace')
 def set_enable_inplace(value = True):
-    r"""Set max limit of cuDNN buffer, in MB
-
-    Args:
-        val: a `int`
-    """
     _SetJobConfAttr(lambda x:x, 'enable_inplace', value)
     return oneflow.config
 
@@ -360,12 +355,17 @@ def set_enable_inplace_in_reduce_struct(value = True):
 
 @oneflow_export('config.enable_nccl')
 def set_enable_nccl(value = True):
+    r"""Whether to use NCCL when synchronizing gradients
+
+    Args:
+        val: a `bool`, `True` by default
+    """
     _SetJobConfAttr(lambda x:x, 'enable_nccl', value)
     return oneflow.config
 
 @oneflow_export('config.use_nccl_inter_node_communication')
 def set_use_nccl_inter_node_communication(value = True):
-    r"""Whether use NCCL when synchronizing variables
+    r"""Whether to use NCCL when synchronizing gradients among multiple machines
 
     Args:
         val: a `bool`, `True` by default
@@ -380,7 +380,7 @@ def use_boxing_v2(value=True):
 
 @oneflow_export('config.enable_all_reduce_group')
 def set_enable_all_reduce_group(value = True):
-    r"""Whether to group smaller variables when performing all reduce
+    r"""Whether to group smaller gradients when performing all reduce
 
     Args:
         val: a `bool`, `True` by default
@@ -390,7 +390,7 @@ def set_enable_all_reduce_group(value = True):
 
 @oneflow_export('config.all_reduce_group_num')
 def set_all_reduce_group_num(value):
-    r"""Number of variable groups when performing all reduce
+    r"""Number of gradient groups when performing all reduce
 
     Args:
         val: a `int`
@@ -405,7 +405,7 @@ def set_all_reduce_lazy_ratio(value):
 
 @oneflow_export('config.all_reduce_group_min_mbyte')
 def set_all_reduce_group_min_mbyte(value):
-    r"""Minimum variable group size when performing all reduce, in MB
+    r"""Minimum gradient group size when performing all reduce, in MB
 
     Args:
         val: a `int`
