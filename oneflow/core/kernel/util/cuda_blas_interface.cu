@@ -1,5 +1,6 @@
 #include "oneflow/core/kernel/util/cuda_blas_interface.h"
 #include "oneflow/core/device/cuda_util.h"
+#include "oneflow/core/register/blob.h"
 
 namespace oneflow {
 

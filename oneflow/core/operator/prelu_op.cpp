@@ -46,12 +46,8 @@ Maybe<void> PReluOp::InferBatchAxis(
 Maybe<void> PReluOp::GetSbpSignatures(
     const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
     SbpSignatureList* sbp_sig_list) const {
-  SbpSignatureBuilder()
-      .Split(input_bns(), 0)
-      .Split(output_bns(), 0)
-      .MakeSplitSignatureListBuilder(
-          JUST(LogicalBlobDesc4Ibn(output_bns().Get(0)))->shape().NumAxes())
-      .Build(sbp_sig_list);
+  SbpSignatureBuilder().Split("in", 0).Broadcast("alpha").Split("out", 0).Build(
+      sbp_sig_list->mutable_sbp_signature()->Add());
   return Maybe<void>::Ok();
 }
 

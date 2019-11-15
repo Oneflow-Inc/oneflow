@@ -4,6 +4,33 @@
 
 namespace oneflow {
 
+namespace {
+
+void UpdateSbpConf(const OpNode& op_node,
+                   const HashMap<OpBlobArg, std::vector<OpBlobArg>>& oba2sbp_identical_obas,
+                   SbpConf* sbp_conf) {
+  auto* op_name2sbp_signature = sbp_conf->mutable_op_name2sbp_signature_conf();
+  auto Update = [&](const std::string& bn) {
+    const auto& sbp_parallel = op_node.sbp_signature().bn_in_op2sbp_parallel().at(bn);
+    const OpBlobArg& oba = GenOpBlobArg(op_node.op().op_name(), bn);
+    auto iter = oba2sbp_identical_obas.find(oba);
+    if (iter == oba2sbp_identical_obas.end()) { return; }
+    for (const auto& identical_obas : iter->second) {
+      auto* sbp_signature = &(*op_name2sbp_signature)[identical_obas.op_name()];
+      auto iter = sbp_signature->mutable_bn_in_op2sbp_parallel()->find(identical_obas.bn_in_op());
+      if (iter == sbp_signature->mutable_bn_in_op2sbp_parallel()->end()) {
+        CHECK(iter->second == sbp_parallel);
+      } else {
+        iter->second = sbp_parallel;
+      }
+    }
+  };
+  for (const auto& ibn : op_node.op().input_bns()) { Update(ibn); }
+  for (const auto& obn : op_node.op().output_bns()) { Update(obn); }
+}
+
+}  // namespace
+
 std::string OpEdge::VisualStr() const {
   std::string str;
   int32_t idx = 0;
@@ -431,6 +458,12 @@ const OpNode* OpGraph::OpNode4OpName(const std::string& op_name) const {
 }
 
 void OpGraph::InferLogicalBlobDesc(const Job& job) const {
+  SbpConf sbp_conf(job.sbp_conf());
+  HashMap<OpBlobArg, std::vector<OpBlobArg>> oba2sbp_identical_obas;
+  for (const auto& pair : job.helper().identical_sbp_oba_pairs().pair()) {
+    oba2sbp_identical_obas[pair.first()].push_back(pair.second());
+    oba2sbp_identical_obas[pair.second()].push_back(pair.first());
+  }
   TopoForEachNode([&](OpNode* op_node) {
     // infer batch_axis
     auto BatchAxis4BnInOp = [&](const std::string& bn) -> OptInt64* {
@@ -445,11 +478,12 @@ void OpGraph::InferLogicalBlobDesc(const Job& job) const {
     // infer sbp_signature
     SbpSignature sbp_sig_conf;
     {
-      const auto& op_name2sbp_sig_conf = job.sbp_conf().op_name2sbp_signature_conf();
+      const auto& op_name2sbp_sig_conf = sbp_conf.op_name2sbp_signature_conf();
       const auto& it = op_name2sbp_sig_conf.find(op_node->op().op_name());
       if (it != op_name2sbp_sig_conf.end()) { sbp_sig_conf = it->second; }
     }
     InferOpNodeSbpSignature(op_node, sbp_sig_conf);
+    UpdateSbpConf(*op_node, oba2sbp_identical_obas, &sbp_conf);
     // infer logical_blob_desc
     InferOpNodeLogicalBlobDesc(op_node);
   });

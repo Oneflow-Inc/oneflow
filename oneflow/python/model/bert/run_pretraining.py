@@ -77,8 +77,8 @@ def BuildPreTrainNet(batch_size, data_part_num, seq_length=128, max_position_emb
 
   input_ids = decoders[0]
   next_sentence_labels = decoders[1]
-  token_type_ids = decoders[2]
-  input_mask = decoders[3]
+  input_mask = decoders[2]
+  token_type_ids = decoders[3]
   masked_lm_ids = decoders[4]
   masked_lm_positions = decoders[5]
   masked_lm_weights = decoders[6]

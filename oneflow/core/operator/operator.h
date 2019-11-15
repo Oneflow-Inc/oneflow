@@ -8,11 +8,11 @@
 #include "oneflow/core/common/auto_registration_factory.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/sbp_parallel.h"
-#include "oneflow/core/kernel/kernel.pb.h"
-#include "oneflow/core/operator/op_conf.pb.h"
+#include "oneflow/core/operator/op_conf_util.h"
 #include "oneflow/core/register/blob_desc.h"
 #include "oneflow/core/job/job_builder.h"
 #include "oneflow/core/job/sbp_signature_builder.h"
+#include "oneflow/core/kernel/kernel.pb.h"
 
 namespace oneflow {
 

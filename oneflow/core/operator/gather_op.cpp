@@ -1,4 +1,4 @@
-#include "oneflow/core/operator/gather_op.h"
+#include "oneflow/core/operator/operator.h"
 #include "oneflow/core/job/sbp_signature_builder.h"
 
 namespace oneflow {
@@ -16,8 +16,6 @@ int64_t GetGatherAxis(const GatherOpConf& conf, const BlobDesc* in_blob_desc) {
   return GetGatherAxis(conf, in_blob_desc->shape().NumAxes());
 }
 
-}  // namespace
-
 Shape GatherGetOutShape(const Shape& in, const Shape& indices, const int64_t axis) {
   std::vector<int64_t> dim_vec;
   dim_vec.insert(dim_vec.end(), in.dim_vec().cbegin(), in.dim_vec().cbegin() + axis);
@@ -25,6 +23,32 @@ Shape GatherGetOutShape(const Shape& in, const Shape& indices, const int64_t axi
   dim_vec.insert(dim_vec.end(), in.dim_vec().cbegin() + axis + 1, in.dim_vec().end());
   return Shape(dim_vec);
 }
+
+}  // namespace
+
+class GatherOp final : public Operator {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(GatherOp);
+  GatherOp() = default;
+  ~GatherOp() override = default;
+
+  void InitFromOpConf() override;
+  const PbMessage& GetCustomizedConf() const override;
+  Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                             const ParallelContext* parallel_ctx) const override;
+  void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                            const ParallelContext* parallel_ctx,
+                            KernelConf* kernel_conf) const override;
+
+ private:
+  Maybe<void> InferBatchAxis(
+      std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override {
+    return NaiveInferBatchAxis(BatchAxis4BnInOp);
+  }
+  Maybe<void> GetSbpSignatures(
+      const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
+      SbpSignatureList* sbp_sig_list) const override;
+};
 
 void GatherOp::InitFromOpConf() {
   CHECK(op_conf().has_gather_conf());
@@ -39,7 +63,7 @@ Maybe<void> GatherOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   const BlobDesc* indices = GetBlobDesc4BnInOp("indices");
-  CHECK(IsIntegralDataType(indices->data_type()));
+  CHECK(IsIndexDataType(indices->data_type()));
   CHECK_GT(indices->shape().NumAxes(), 0);
   const BlobDesc* in = GetBlobDesc4BnInOp("in");
   CHECK_GT(in->shape().NumAxes(), 0);

@@ -90,16 +90,16 @@ MakePredicatorIsLbiAllConsumersReachableInChain(
     const TaskNode* src_task_node = TaskNode4SoleOpName(lbi.op_name());
     const TaskNode* dst_task_node = TaskNode4SoleOpName(op_name);
     size_t out_edges_size = 0;
-    size_t rechable_out_edges_size = 0;
+    size_t reachable_out_edges_size = 0;
     for (TaskEdge* out_edge : src_task_node->out_edges()) {
       if (IsLbiOnTaskEdge(out_edge, lbi)) {
         out_edges_size += 1;
-        rechable_out_edges_size +=
+        reachable_out_edges_size +=
             (out_edge->dst_node()->chain_id() == dst_task_node->chain_id()
-             && out_edge->dst_node()->order_in_graph() < dst_task_node->order_in_graph());
+             && out_edge->dst_node()->order_in_graph() <= dst_task_node->order_in_graph());
       }
     }
-    return out_edges_size > 0 && out_edges_size == rechable_out_edges_size;
+    return out_edges_size > 0 && out_edges_size == reachable_out_edges_size;
   };
 }
 

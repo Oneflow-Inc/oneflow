@@ -10,6 +10,8 @@
 #include "oneflow/core/actor/act_event_logger.h"
 #include "oneflow/core/graph/task_node.h"
 #include "oneflow/core/device/cuda_util.h"
+#include "oneflow/core/memory/memory_allocator.h"
+#include "oneflow/core/register/register_manager.h"
 
 namespace oneflow {
 
