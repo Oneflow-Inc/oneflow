@@ -33,7 +33,7 @@ class MaskHead(object):
 
             gt_segm_list = []
             gt_label_list = []
-            for img_idx in range(self.cfg.TRAINING_CONF.IMG_PER_GPU):
+            for img_idx in range(len(gt_labels)):
                 # if it is mask target projected, not need to do piece_slice
                 if isinstance(gt_segms, (list, tuple)):
                     gt_segm_list.append(
