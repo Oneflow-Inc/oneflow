@@ -8,6 +8,7 @@ Operators
 ----------------------------------
 
 .. autofunction:: get_variable
+.. autofunction:: concat
 .. autofunction:: gather
 .. autofunction:: identity
 .. autofunction:: matmul

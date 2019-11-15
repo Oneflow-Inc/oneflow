@@ -258,6 +258,18 @@ def constant(
 def concat(values,
            axis,
            name=None):
+    r"""Concat two or more `Blob` s at specified axis. 
+
+    Analogous to `numpy.concatenate <https://docs.scipy.org/doc/numpy/reference/generated/numpy.concatenate.html>`_
+
+    Args:
+        values: a `list` of `Blob`
+        axis: a `int`
+        name: name of this operator. `None` by default
+    
+    Returns:
+        A `Blob`
+    """
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf,
@@ -285,7 +297,7 @@ def identity(
 
     Args:
         input: a `Blob`
-        name: name of this identity operator
+        name: name of this operator. `None` by default
     
     Returns:
         A `Blob`
