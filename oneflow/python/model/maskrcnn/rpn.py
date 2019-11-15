@@ -36,29 +36,17 @@ class RPNHead(object):
     def build(self, features):
         with flow.deprecated.variable_scope("rpn-head"):
 
-            def piece_slice_with_bw(inputs, output_size, name):
-                assert inputs.shape[0] == output_size
-                assert output_size % self.cfg.NUM_GPUS == 0
-                num_output_size_per_gpu = int(output_size / self.cfg.NUM_GPUS)
-
-                ret = []
-                for gpu_i in range(self.cfg.NUM_GPUS):
-                    with flow.device_prior_placement("gpu", "0:" + str(gpu_i)):
-                        for i in range(num_output_size_per_gpu):
-                            ret.append(
-                                flow.squeeze(
-                                    flow.local_gather(
-                                        inputs,
-                                        flow.constant(i, dtype=flow.int32),
-                                    ),
-                                    [0],
-                                    name="{}_gpu{}_split{}".format(
-                                        name, gpu_i, i
-                                    ),
-                                )
-                            )
-
-                return ret
+            def split_to_instances(inputs, name):
+                return [
+                    flow.squeeze(
+                        flow.local_gather(
+                            inputs, flow.constant(i, dtype=flow.int32)
+                        ),
+                        [0],
+                        name="{}_split{}".format(name, i),
+                    )
+                    for i in range(inputs.shape[0])
+                ]
 
             # list (wrt. fpn layers) of list (wrt. images) of [H_i * W_i * A, 4]
             bbox_pred_list = []
@@ -86,6 +74,7 @@ class RPNHead(object):
                     ),
                     perm=[0, 2, 3, 1],
                 )
+
                 bbox_preds = flow.transpose(
                     _Conv2d(
                         x,
@@ -98,26 +87,22 @@ class RPNHead(object):
                     perm=[0, 2, 3, 1],
                 )
 
-                cls_logit_list.append(
-                    [
-                        flow.dynamic_reshape(x, shape=[-1])
-                        for x in piece_slice_with_bw(
-                            cls_logits,
-                            self.cfg.TRAINING_CONF.IMG_PER_GPU,
-                            name="cls_logits_layer_" + str(layer_i),
-                        )
-                    ]
-                )
-                bbox_pred_list.append(
-                    [
-                        flow.dynamic_reshape(x, shape=[-1, 4])
-                        for x in piece_slice_with_bw(
-                            bbox_preds,
-                            self.cfg.TRAINING_CONF.IMG_PER_GPU,
-                            name="bbox_preds_layer_" + str(layer_i),
-                        )
-                    ]
-                )
+                cls_logit_per_image_list = [
+                    flow.dynamic_reshape(x, shape=[-1])
+                    for x in split_to_instances(
+                        cls_logits, name=f"cls_logits_layer_{layer_i}"
+                    )
+                ]
+                cls_logit_list.append(cls_logit_per_image_list)
+
+                bbox_pred_per_image_list = [
+                    flow.dynamic_reshape(x, shape=[-1, 4])
+                    for x in split_to_instances(
+                        bbox_preds, name=f"bbox_preds_layer_{layer_i}"
+                    )
+                ]
+                bbox_pred_list.append(bbox_pred_per_image_list)
+
         return cls_logit_list, bbox_pred_list
 
 
@@ -157,7 +142,8 @@ class RPNLoss(object):
             for _, tup in enumerate(zip(*cls_logit_list)):
                 cls_logit_wrt_img_list += [flow.concat(list(tup), axis=0)]
 
-            anchors = flow.concat(anchors_list, axis=0)  # # anchors: [M, 4]
+            anchors = flow.concat(anchors_list, axis=0, name="anchors_concated")
+
             for img_idx, gt_boxes in enumerate(gt_boxes_list):
                 with flow.deprecated.variable_scope("matcher"):
                     rpn_matcher = Matcher(
@@ -243,35 +229,38 @@ class RPNLoss(object):
             )
             total_sample_cnt = flow.cast(total_sample_cnt, flow.float)
 
-            bbox_loss = (
-                flow.math.reduce_sum(
-                    flow.detection.smooth_l1(
-                        flow.concat(
-                            sampled_bbox_pred_list, axis=0, name="bbox_pred"
-                        ),  # CHECK_POINT: bbox_pred
-                        flow.concat(
-                            sampled_bbox_target_list, axis=0, name="bbox_target"
-                        ),  # CHECK_POINT: bbox_target
-                        beta=1.0 / 9.0,
-                    )
-                )
-                / total_sample_cnt
+            bbox_loss = flow.math.reduce_sum(
+                flow.detection.smooth_l1(
+                    flow.concat(
+                        sampled_bbox_pred_list, axis=0, name="bbox_pred"
+                    ),  # CHECK_POINT: bbox_pred
+                    flow.concat(
+                        sampled_bbox_target_list, axis=0, name="bbox_target"
+                    ),  # CHECK_POINT: bbox_target
+                    beta=1.0 / 9.0,
+                ),
+                name="box_reg_loss",
+            )
+            bbox_loss_mean = flow.math.divide(
+                bbox_loss, total_sample_cnt, name="box_reg_loss_mean"
             )
 
-            cls_loss = (
-                flow.math.reduce_sum(
-                    flow.nn.sigmoid_cross_entropy_with_logits(
-                        flow.concat(
-                            sampled_cls_label_list, axis=0, name="cls_label"
-                        ),  # CHECK_POINT: cls label
-                        flow.concat(
-                            sampled_cls_logit_list, axis=0, name="cls_logit"
-                        ),  # CHECK_POINT: cls logit
-                    )
-                )
-                / total_sample_cnt
+            cls_loss = flow.math.reduce_sum(
+                flow.nn.sigmoid_cross_entropy_with_logits(
+                    flow.concat(
+                        sampled_cls_label_list, axis=0, name="cls_label"
+                    ),  # CHECK_POINT: cls label
+                    flow.concat(
+                        sampled_cls_logit_list, axis=0, name="cls_logit"
+                    ),  # CHECK_POINT: cls logit
+                ),
+                name="objectness_loss",
             )
-        return bbox_loss, cls_loss
+            cls_loss_mean = flow.math.divide(
+                cls_loss, total_sample_cnt, name="objectness_loss_mean"
+            )
+
+        return bbox_loss_mean, cls_loss_mean
 
 
 class RPNProposal(object):
