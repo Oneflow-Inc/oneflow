@@ -1,14 +1,11 @@
 import functools
 
 class SessionStatus:
-    def OPEN():
-        pass
+    OPEN = "OPEN"
     
-    def RUNNING():
-        pass
+    RUNNING = "RUNNING"
 
-    def CLOSED():
-        pass
+    CLOSED = "CLOSED"
 
 def GetDefaultSession():
     assert _default_session is not None
