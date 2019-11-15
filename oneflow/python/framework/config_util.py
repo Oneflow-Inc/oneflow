@@ -88,7 +88,7 @@ def cpu_device_num(val):
 def machine(*val):
     assert config_proto_mutable == True
     del default_config_proto.resource.machine[:]
-    if len(val) == 1 and isinstance(val[0], list, tuple): val = val[0]
+    if len(val) == 1 and isinstance(val[0], (list, tuple)): val = val[0]
     default_config_proto.resource.machine.extend(_MakeMachine(val))
 
 @oneflow_export('config.ctrl_port')
