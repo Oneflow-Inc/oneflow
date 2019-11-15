@@ -109,7 +109,15 @@ def maskrcnn_box_head_eval(images, image_sizes):
     # Box Head
     cls_probs, box_regressions = box_head.build_eval(proposals, features)
 
-    return tuple(proposals) + tuple(features) + (image_sizes,) + (cls_probs,) + (box_regressions,)
+    ret = {
+        "proposals": proposals,
+        "features": features,
+        "image_sizes": image_sizes,
+        "cls_probs": cls_probs,
+        "box_regressions": box_regressions,
+    }
+
+    return ret
 
 
 if terminal_args.fake_img:
@@ -128,8 +136,10 @@ if terminal_args.fake_img:
         image_sizes = data_loader("image_size")
         image_ids = data_loader("image_id")
 
-        image_trans = flow.transpose(images, perm=[0, 2, 3, 1])
-        return maskrcnn_box_head_eval(image_trans, image_sizes) + (image_ids,)
+        ret = maskrcnn_box_head_eval(flow.transpose(images, perm=[0, 2, 3, 1]), image_sizes)
+        ret.update({"image_ids": image_ids})
+
+        return ret
 
 
 else:
@@ -147,32 +157,10 @@ else:
         image_sizes = data_loader("image_size")
         image_ids = data_loader("image_id")
 
-        return maskrcnn_box_head_eval(images, image_sizes) + (image_ids,)
+        ret = maskrcnn_box_head_eval(images, image_sizes)
+        ret.update({"image_ids": image_ids})
 
-
-def parse_results_from_box_head(results):
-    image_sizes = results[-4]
-    cls_probs = results[-3]
-    box_regressions = results[-2]
-    image_ids = results[-1]
-    image_num = image_sizes.shape[0]
-    feature_maps = []
-    for i in range(4):
-        feature_maps.append(results[image_num + i].ndarray())
-    box_lists = []
-    for proposal, img_size in zip(results[:image_num], image_sizes):
-        box_list = BoxList(proposal.ndarray(), (img_size[1], img_size[0]), mode="xyxy")
-        box_lists.append(box_list)
-
-    return_dict = {
-        "cls_probs": cls_probs,
-        "box_regressions": box_regressions,
-        "box_lists": box_lists,
-        "feature_maps": feature_maps,
-        "image_ids": image_ids,
-    }
-
-    return return_dict
+        return ret
 
 
 @flow.function
@@ -215,13 +203,17 @@ if __name__ == "__main__":
             results = maskrcnn_box_head_eval_job(fake_image_list[i]).get()
         else:
             results = maskrcnn_box_head_eval_job().get()
-        # We have to write such ugly parsing code because oneflow job can only return list or tuple of blob
-        return_dict = parse_results_from_box_head(results)
-        cls_probs = return_dict["cls_probs"]
-        box_regressions = return_dict["box_regressions"]
-        box_lists = return_dict["box_lists"]
-        feature_maps = return_dict["feature_maps"]
-        image_ids = return_dict["image_ids"]
+
+        proposals = results["proposals"]
+        features = results["features"]
+        image_sizes = results["image_sizes"]
+        cls_probs = results["cls_probs"]
+        box_regressions = results["box_regressions"]
+        image_ids = results["image_ids"]
+        box_lists = []
+        for proposal, image_size in zip(proposals, image_sizes):
+            box_list = BoxList(proposal.ndarray(), (image_size[1], image_size[0]), mode="xyxy")
+            box_lists.append(box_list)
 
         # Box Head Post-Processor
         postprocessor = PostProcessor()
@@ -236,10 +228,10 @@ if __name__ == "__main__":
         mask_prob = maskrcnn_mask_head_eval_job(
             detections[0],
             detections[1],
-            feature_maps[0],
-            feature_maps[1],
-            feature_maps[2],
-            feature_maps[3],
+            features[0].ndarray(),
+            features[1].ndarray(),
+            features[2].ndarray(),
+            features[3].ndarray(),
         ).get()
 
         # Mask Head Post-Processor
