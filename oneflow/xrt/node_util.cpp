@@ -16,10 +16,16 @@ const PbMessage *OpMessage(const XrtNode *node) {
   return message;
 }
 
-bool IsNodeCompiled(const XrtNode *node, const XrtEngine &engine) {
+bool IsCompiledNode(const XrtNode *node, const XrtEngine &engine,
+                    const bool train_phase) {
   auto field = MakeXrtField(node->device(), engine);
   auto *rm = util::RegistryManager<XrtField>::Global();
   return rm->Get(field)->IsRegistered(node->type());
+}
+
+bool IsOptimizerNode(const XrtNode *node, const XrtEngine &engine) {
+  auto field = MakeXrtField(node->device(), engine);
+  return IsOptimizerOp(node->type(), field);
 }
 
 bool IsNodeInput(const XrtNode *node, const Argument &argument) {

@@ -32,6 +32,19 @@ struct hash<oneflow::xrt::XrtField> {
 namespace oneflow {
 namespace xrt {
 
+constexpr char _XrtLaunchOpType[] = "XrtLaunch";
+constexpr char _ArgumentOpType[] = "Argument";
+constexpr char _XrtLaunchPrefix[] = "_xrt_launch_";
+constexpr char _XrtInArgumentPrefix[] = "_input_argument_";
+constexpr char _XrtOutArgumentPrefix[] = "_output_argument_";
+
+constexpr char _ReduceSplitType[] = "ReduceSplit";
+constexpr char _ReduceConcatType[] = "ReduceConcat";
+
+constexpr char MutableVariablesAttrName[] = "MutableVariables";
+constexpr char IsOptimizerOpAttrName[] = "IsOptimizerOp";
+constexpr char TrainPhaseEnabledAttrName[] = "TrainPhaseEnabled";
+
 inline XrtField MakeXrtField(const XrtDevice &device, const XrtEngine &engine) {
   XrtField field;
   field.set_device(device);

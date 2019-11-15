@@ -92,7 +92,18 @@ class ClusterNode {
   bool IsSourceNode() const { return in_edges_.empty(); }
   virtual bool IsCompiled() const { return IsNodeCompiled(xrt_node_); }
 
-  bool operator==(const ClusterNode &other) const { return id_ == other.id_; }
+  virtual bool IsCompiled(const XrtEngine &engine,
+                          const bool train_phase) const {
+    return IsCompiledNode(xrt_node_, engine, train_phase);
+  }
+
+  virtual bool IsOptimizer(const XrtEngine &engine) const {
+    return IsOptimizerNode(xrt_node_, engine);
+  }
+
+  bool operator==(const ClusterNode &other) const {
+    return cluster_id_ == other.cluster_id_;
+  }
 
   const XrtNode *xrt_node() const { return xrt_node_; }
   int64_t id() const { return id_; }

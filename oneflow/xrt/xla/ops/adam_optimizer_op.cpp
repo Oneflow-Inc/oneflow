@@ -60,6 +60,7 @@ class AdamOptimizerOp : public OptimizerOp {
 };
 
 REGISTER_XLA_OP_KERNEL(AdamOptimizer, AdamOptimizerOp)
+    .SetIsOptimizerOp(true)
     .SetMutableVariables({"model", "m", "v"})
     .Finalize();
 
