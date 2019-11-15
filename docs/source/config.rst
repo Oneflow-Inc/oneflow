@@ -45,8 +45,8 @@ oneflow.config
 .. autofunction:: use_boxing_v2
 .. autofunction:: enable_all_reduce_group
 .. autofunction:: all_reduce_group_num
-.. autofunction:: all_reduce_lazy_ratio
 .. autofunction:: all_reduce_group_min_mbyte
+.. autofunction:: all_reduce_lazy_ratio
 .. autofunction:: all_reduce_group_size_warmup
 .. autofunction:: all_reduce_fp16
 .. autofunction:: enable_non_distributed_optimizer
