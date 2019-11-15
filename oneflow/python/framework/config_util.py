@@ -262,7 +262,9 @@ def set_exp_run_conf(value):
         enable_experiment_run : bool
 
     Args:
-        val: a dict
+        val: a dict. For instance::
+
+            {"piece_num_of_experiment_phase": 17, "enable_experiment_run": True}
     """
     assert type(value) is dict
     pb_util.PythonDict2PbMessage(value, _GetJobConfAttr(lambda x:x, 'exp_run_conf'))
