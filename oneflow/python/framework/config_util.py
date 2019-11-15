@@ -316,9 +316,9 @@ def set_enable_cudnn(value = True):
 @oneflow_export('config.cudnn_buf_limit_mbyte')
 def set_cudnn_buf_limit_mbyte(value):
     r"""Set max limit of cuDNN buffer, in MB
-    
+
     Args:
-        val: a int
+        val: a `int`
     """
     _SetJobConfAttr(lambda x:x, 'cudnn_buf_limit_mbyte', value)
     return oneflow.config
