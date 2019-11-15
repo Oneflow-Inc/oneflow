@@ -7,6 +7,7 @@ import "oneflow/core/record/image.proto";
 import "oneflow/core/record/record.proto";
 import "oneflow/core/job/resource.proto";
 import "oneflow/core/register/logical_blob_id.proto";
+import "oneflow/core/framework/user_op_attr.proto";
 
 enum ActivationType {
   kNone = 0;
@@ -1507,6 +1508,15 @@ message ParallelCastOpConf {
   optional OptInt64 gradient_split_axis = 4;
 }
 
+message UserOpConf {
+  message ListString {
+    repeated string s = 1;
+  }
+  required string op_type_name = 1;
+  map<string, ListString> input = 2;
+  map<string, UserOpAttrVal> attr = 3;
+}
+
 message OperatorConf {
   required string name = 1;
   optional bool trainable = 3 [default = true];
@@ -1567,6 +1577,7 @@ message OperatorConf {
     NcclBoxingReduceScatterOpConf nccl_boxing_reduce_scatter_conf = 152;
     NcclBoxingAllGatherOpConf nccl_boxing_all_gather_conf = 153;
     NcclBoxingAllReduceOpConf nccl_boxing_all_reduce_conf = 154;
+    UserOpConf user_op_conf = 155;
 
     // domain op
     TupleIdentityOpConf tuple_identity_conf = 200;
