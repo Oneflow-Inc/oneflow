@@ -29,26 +29,20 @@ def Compile(job_func):
 def _CompileJob(job_conf, func, config):
     device_type, machine_dev_ids = placement_util.GetDefaultMachineDeviceIds(config.resource)
     func.__oneflow_input_blob_defs__ = _GetArgDefault(func)
-    def IsValidBlob(blob):
-        return isinstance(blob, input_blob_def.input_blob_def) \
-            or isinstance(blob, remote_blob_util.RemoteBlob)
     with placement_util.DevicePriorPlacementScope(device_type, machine_dev_ids):
         with _SetJobConfBeforeInferOp(job_conf) as set_job_conf:
-            with _AddInputOpBeforeNonInputOp(func, set_job_conf): ret_remote_blobs = func()
-        if ret_remote_blobs is None:
-            func.__oneflow_output_remote_blobs__ = None 
-        elif IsValidBlob(ret_remote_blobs):
-            func.__oneflow_output_remote_blobs__ = ops.RetOpByRemoteBlob(ret_remote_blobs)
-        elif isinstance(ret_remote_blobs, tuple) or isinstance(ret_remote_blobs, list):
-            func.__oneflow_output_remote_blobs__ = []
-            for remote_blob in ret_remote_blobs:
-                assert IsValidBlob(remote_blob)
-                output_remote_blob = ops.RetOpByRemoteBlob(remote_blob)
-                func.__oneflow_output_remote_blobs__.append(output_remote_blob)
-            if isinstance(ret_remote_blobs, tuple):
-                func.__oneflow_output_remote_blobs__ = tuple(func.__oneflow_output_remote_blobs__)
-        else:
-            raise NotImplementedError
+            with _AddInputOpBeforeNonInputOp(func, set_job_conf):
+                func.__oneflow_output_remote_blobs__ = _RecursiveMakeRetRemoteBlobs(func())
+
+def _RecursiveMakeRetRemoteBlobs(out_remote_blobs):
+    if out_remote_blobs is None: return None
+    if isinstance(out_remote_blobs, (input_blob_def.input_blob_def, remote_blob_util.RemoteBlob)):
+        return ops.RetOpByRemoteBlob(out_remote_blobs)
+    if isinstance(out_remote_blobs, (tuple, list)):
+        return type(out_remote_blobs)(_RecursiveMakeRetRemoteBlobs(x) for x in out_remote_blobs)
+    if isinstance(out_remote_blobs, dict):
+        return {k : _RecursiveMakeRetRemoteBlobs(v) for k, v in out_remote_blobs.items()}
+    raise NotImplementedError
 
 @contextmanager
 def _SetJobConfBeforeInferOp(job_conf):
