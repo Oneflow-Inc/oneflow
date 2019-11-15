@@ -243,6 +243,11 @@ def set_max_data_id_length(value):
 
 @oneflow_export('config.default_initializer_conf')
 def set_default_initializer_conf(value):
+    r"""set default initializer conf
+
+    Args:
+        val: a initializer_conf. For instance, a :func:`~oneflow.ones_initializer`
+    """
     assert type(value) is dict
     pb_msg = _GetJobConfAttr(lambda x:x, 'default_initializer_conf')
     pb_util.PythonDict2PbMessage(value, pb_msg)
@@ -250,6 +255,15 @@ def set_default_initializer_conf(value):
 
 @oneflow_export('config.exp_run_conf')
 def set_exp_run_conf(value):
+    r"""Settings for experimental run.
+    Settings available now::
+
+        piece_num_of_experiment_phase : int
+        enable_experiment_run : bool
+
+    Args:
+        val: a dict
+    """
     assert type(value) is dict
     pb_util.PythonDict2PbMessage(value, _GetJobConfAttr(lambda x:x, 'exp_run_conf'))
     return oneflow.config
