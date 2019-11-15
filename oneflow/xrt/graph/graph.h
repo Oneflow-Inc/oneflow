@@ -43,15 +43,15 @@ class XrtGraph : public util::AttributeMap {
   std::vector<Argument> Arguments() const;
 
  protected:
+  std::vector<XrtNode *> nodes_;
   // All allocated nodes in the graph. The node unique id is related to it's
   // index in the vector. The Xrt node in `nodes_` can be nullptr since we will
   // always keep it in `nodes_` even if it has been removed from the graph.
-  std::vector<XrtNode *> nodes_;
   std::vector<std::unique_ptr<XrtNode> > allocated_nodes_;
 
+  std::vector<XrtEdge *> edges_;
   // All allocated edges in the graph. The edge unique id is related to it's
   // index in the vector. And the xrt edge in `edges_` can also be nullptr.
-  std::vector<XrtEdge *> edges_;
   std::vector<std::unique_ptr<XrtEdge> > allocated_edges_;
 
   // All allocated subgraphs. The key of the map means node unique id, and the
