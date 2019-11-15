@@ -211,6 +211,11 @@ def v(val):
 
 @oneflow_export('config.grpc_use_no_signal')
 def grpc_use_no_signal(val = True):
+    r"""Disable GRPC signal handling. Useful when debuggin with GDB.
+
+    Args:
+        val: a bool
+    """
     assert config_proto_mutable == True
     assert type(val) is bool
     default_config_proto.cpp_flags_conf.grpc_use_no_signal = val
