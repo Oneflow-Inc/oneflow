@@ -98,10 +98,8 @@ class TopKOp final : public Operator {
     }
   }
   Maybe<void> GetSbpSignatures(SbpSignatureList* sbp_sig_list) const override {
-    SbpSignatureBuilder()
-        .Split("in", 0)
-        .Split("out", 0)
-        .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+    SbpSignatureBuilder().Split("in", 0).Split("out", 0).Build(
+        sbp_sig_list->mutable_sbp_signature()->Add());
     return Maybe<void>::Ok();
   }
 };

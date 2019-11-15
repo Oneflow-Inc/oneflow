@@ -60,10 +60,8 @@ void NonMaximumSuppressionOp::VirtualGenKernelConf(
 }
 
 Maybe<void> NonMaximumSuppressionOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
-  SbpSignatureBuilder()
-      .Split("in", 0)
-      .Split("out", 0)
-      .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+  SbpSignatureBuilder().Split("in", 0).Split("out", 0).Build(
+      sbp_sig_list->mutable_sbp_signature()->Add());
   return Maybe<void>::Ok();
 }
 
