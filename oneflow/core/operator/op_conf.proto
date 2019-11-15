@@ -850,6 +850,7 @@ message EncodeBytesList {
 
 message EncodeRaw {
   optional bool dim1_varying_length = 1 [default = false];
+  optional bool auto_zero_padding = 2 [default = false];
 }
 
 message EncodeJpeg {
@@ -959,20 +960,26 @@ message NormalizationGradOpConf {
   required float epsilon = 10;
 }
 
-message DropoutOpConf {
-  required string in = 1;
+message RandomMaskLikeOpConf {
+  required string like = 1;
   required string out = 2;
   required double rate = 3;
   optional ShapeProto noise_shape = 4;
   optional int64 seed = 5;
-  optional string random_mask = 6 [default = "random_mask"];
+}
+
+message DropoutOpConf {
+  required string mask = 1;
+  required string in = 2;
+  required string out = 3;
+  required float scale = 4;
 }
 
 message DropoutGradOpConf {
-  required string random_mask = 1;
+  required string mask = 1;
   required string dy = 2;
   required string dx = 3;
-  required double rate = 4;
+  required float scale = 4;
 }
 
 message TransposeOpConf {
@@ -1550,6 +1557,13 @@ message NcclBoxingAllReduceOpConf {
   required LogicalBlobId lbi = 1;
 }
 
+message ParallelCastOpConf {
+  required string in = 1;
+  required string out = 2;
+  optional OptInt64 split_axis = 3;
+  optional OptInt64 gradient_split_axis = 4;
+}
+
 message OperatorConf {
   required string name = 1;
   optional bool trainable = 3 [default = true];
@@ -1625,6 +1639,7 @@ message OperatorConf {
     MaxPooling2DOpConf max_pooling_2d_conf = 211;
     AveragePooling3DOpConf average_pooling_3d_conf = 212;
     MaxPooling3DOpConf max_pooling_3d_conf = 213;
+    RandomMaskLikeOpConf random_mask_like_conf = 214;
     LocalResponseNormalizationOpConf local_response_normalization_conf = 216;
     NormalizationOpConf normalization_conf = 217;
     DropoutOpConf dropout_conf = 218;
@@ -1700,6 +1715,7 @@ message OperatorConf {
     GatherMs0GradOpConf gather_ms0_grad_conf = 306;
     SleepOpConf sleep_conf = 307;
     LoDToDenseOpConf lod_to_dense_conf = 308;
+    ParallelCastOpConf parallel_cast_conf = 309;
 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;

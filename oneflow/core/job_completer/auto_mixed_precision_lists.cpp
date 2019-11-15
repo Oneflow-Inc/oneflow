@@ -28,17 +28,20 @@ const AMPList& AutoMixedPrecisionLists::GrayList() {
                               OperatorConf::kBroadcastSubConf,
                               OperatorConf::kBroadcastMulConf,
                               OperatorConf::kBroadcastDivConf,
-                              OperatorConf::kLayerNormConf};
+                              OperatorConf::kLayerNormConf,
+                              OperatorConf::kDropoutConf};
   return gray_list;
 }
 
 const AMPList& AutoMixedPrecisionLists::ClearList() {
-  static AMPList gray_list = {OperatorConf::kGatherConf,        OperatorConf::kIdentityConf,
-                              OperatorConf::kTupleIdentityConf, OperatorConf::kMaxPooling1DConf,
-                              OperatorConf::kMaxPooling2DConf,  OperatorConf::kMaxPooling3DConf,
-                              OperatorConf::kReshapeConf,       OperatorConf::kReluConf,
-                              OperatorConf::kTransposeConf};
-  return gray_list;
+  static AMPList clear_list = {OperatorConf::kGatherConf,        OperatorConf::kIdentityConf,
+                               OperatorConf::kTupleIdentityConf, OperatorConf::kMaxPooling1DConf,
+                               OperatorConf::kMaxPooling2DConf,  OperatorConf::kMaxPooling3DConf,
+                               OperatorConf::kReshapeConf,       OperatorConf::kReluConf,
+                               OperatorConf::kTransposeConf,     OperatorConf::kRandomMaskLikeConf,
+                               OperatorConf::kKeepHeaderOnlyConf};
+
+  return clear_list;
 }
 
 }  // namespace oneflow

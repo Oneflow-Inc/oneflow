@@ -28,6 +28,9 @@ class JobDesc final {
   bool IsTrain() const { return job_conf_.has_train_conf(); }
   bool IsPredict() const { return job_conf_.has_predict_conf(); }
   int64_t piece_num_of_experiment_phase() const;
+  bool use_memory_allocation_algorithm_v2() const {
+    return job_conf_.use_memory_allocation_algorithm_v2();
+  }
   bool enable_experiment_run() const;
   bool enable_reuse_mem() const { return job_conf_.enable_reuse_mem(); }
   bool enable_inplace() const { return job_conf_.enable_inplace(); }
@@ -53,6 +56,7 @@ class JobDesc final {
   int64_t non_distributed_optimizer_group_size_mbyte() const {
     return job_conf_.non_distributed_optimizer_group_size_mbyte();
   }
+  bool disable_all_reduce_sequence() const { return job_conf_.disable_all_reduce_sequence(); }
   int64_t all_reduce_group_num() const;
   int64_t all_reduce_group_min_byte() const;
   float all_reduce_group_size_warmup() const;

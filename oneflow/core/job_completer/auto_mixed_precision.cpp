@@ -73,15 +73,6 @@ std::function<bool(OpNode*)> MakePredicatorIsAllowedToRunWithHalf(const OpGraph&
   return [allowed_set](OpNode* node) -> bool { return IsKeyFound(*allowed_set, node); };
 }
 
-bool IsOpFloat32(const OpNode* node) {
-  for (const std::string& obn : node->op().output_bns()) {
-    LogicalBlobId lbi = node->op().BnInOp2Lbi(obn);
-    const BlobDesc& blob_desc = node->LogicalBlobDesc4Lbi(lbi);
-    if (blob_desc.data_type() != DataType::kFloat) { return false; }
-  }
-  return true;
-}
-
 bool TryUpdtBnVal4SepcialOpConf(const OperatorConf::OpTypeCase& op_type, PbMessage* op_conf,
                                 const std::string& old_val, const std::string& new_val,
                                 const std::string& dst_ibn) {
@@ -246,7 +237,7 @@ void AutoMixedPrecision::FillWhiteSet(const OpGraph& op_graph,
   DfsTopoGraphTraversal(
       op_graph, true, IsWhiteAndAllowedToRunHalf,
       [&](OpNode* node) {
-        return !IsKeyFound(black_set, node) && IsAllowedToRunWithHalf(node) && IsOpFloat32(node)
+        return !IsKeyFound(black_set, node) && IsAllowedToRunWithHalf(node)
                && (IsNodeInList(gray_list_, node) || IsNodeInList(clear_list_, node));
       },
       [&](OpNode* node) { return IsKeyFound(upstream_or_part_of_white, node); },
@@ -273,7 +264,7 @@ void AutoMixedPrecision::PropagateWhiteThroughClearNodes(
     DfsTopoGraphTraversal(op_graph, !is_downward, [&](OpNode* node) { return false; },
                           [&](OpNode* node) {
                             return !IsKeyFound(*white_set, node) && !IsKeyFound(black_set, node)
-                                   && IsNodeInList(clear_list_, node) && IsOpFloat32(node)
+                                   && IsNodeInList(clear_list_, node)
                                    && IsAllowedToRunWithHalf(node);
                           },
                           [&](OpNode* node) { return IsKeyFound(*white_set, node); },

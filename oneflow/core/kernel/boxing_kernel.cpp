@@ -1,8 +1,9 @@
 #include "oneflow/core/kernel/boxing_kernel.h"
 #include "oneflow/core/kernel/kernel_util.h"
-#include "oneflow/core/operator/op_conf.pb.h"
+#include "oneflow/core/operator/op_conf_util.h"
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/thread/thread_manager.h"
+#include "oneflow/core/common/blocking_counter.h"
 
 namespace oneflow {
 
