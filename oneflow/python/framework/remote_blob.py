@@ -19,6 +19,15 @@ class RemoteBlob(blob_desc.BlobDesc):
     @property
     def batch_axis(self): return job_builder.GetBatchAxis(self.job_name_, self.lbn_)
 
+    @property
+    def disable_boxing(self):
+        if self.disable_boxing_ is not None: return self.disable_boxing_
+        return job_builder.DisableBoxing(self.job_name_, self.lbn_)
+    
+    @property
+    def parallel_conf(self):
+        return job_builder.GetParallelConfFromProducerView(self.job_name_, self.lbn_)
+
     def with_distribute(self, distribute):
         oneflow.distribute.assert_is_valid_distribute(distribute)
         ret = RemoteBlob(self.lbi_)
