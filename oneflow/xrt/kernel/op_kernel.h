@@ -9,19 +9,19 @@
 namespace oneflow {
 namespace xrt {
 
-template <typename T>
+template <typename TContext>
 class OpKernel {
  public:
-  virtual void Compile(T *ctx) = 0;
+  virtual void Compile(TContext *ctx) = 0;
 
   OpKernel() = default;
   virtual ~OpKernel() = default;
 };
 
-template <typename T>
+template <typename TContext>
 class OpKernelRegistrar {
  private:
-  std::function<OpKernel<T> *()> factory_;
+  std::function<OpKernel<TContext> *()> factory_;
 
   std::string op_name_;
 
@@ -78,11 +78,12 @@ class OpKernelRegistrar {
   }
 };
 
-template <typename T>
+template <typename TContext>
 struct OpKernelBuilder {
-  OpKernel<T> *operator()(const XrtField &field, const std::string &op_name) {
+  OpKernel<TContext> *operator()(const XrtField &field,
+                                 const std::string &op_name) {
     return util::FieldRegistry<XrtField, std::string,
-                               std::function<OpKernel<T> *()>>::Global()
+                               std::function<OpKernel<TContext> *()>>::Global()
         ->Get(field)
         ->Lookup(op_name)();
   }
