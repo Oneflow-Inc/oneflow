@@ -13,6 +13,7 @@
 #include <curand.h>
 #include <nccl.h>
 #include <cuda_fp16.h>
+#include <device_launch_parameters.h>
 
 namespace oneflow {
 
@@ -24,6 +25,10 @@ void CudaCheck(T error);
   for (int32_t i = blockIdx.x * blockDim.x + threadIdx.x, step = blockDim.x * gridDim.x; i < (n); \
        i += step)
 
+#define CUDA_1D_KERNEL_LOOP_T(type, i, n)                                                      \
+  for (type i = blockIdx.x * blockDim.x + threadIdx.x, step = blockDim.x * gridDim.x; i < (n); \
+       i += step)
+
 const int32_t kCudaThreadsNumPerBlock = 1024;
 const int32_t kCudaMaxBlocksNum = 4096;
 
@@ -32,6 +37,7 @@ const int32_t kCudaMaxSharedMemoryByteSize = 48 << 10;
 
 int32_t GetSMCudaMaxBlocksNum();
 void InitGlobalCudaDeviceProp();
+bool IsCuda9OnTuringDevice();
 
 inline int32_t BlocksNum4ThreadsNum(const int32_t n) {
   CHECK_GT(n, 0);

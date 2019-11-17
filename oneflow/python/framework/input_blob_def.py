@@ -11,7 +11,6 @@ import oneflow.python.framework.distribute as distribute_util
 from oneflow.python.oneflow_export import oneflow_export
 from functools import reduce
 import numpy as np
-import collections
 import oneflow
 
 @oneflow_export('input_blob_def')

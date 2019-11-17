@@ -484,3 +484,17 @@ def random_mask_like(like, seed=None, name=None):
     setattr(out_lbi, "op_name", op_conf.name)
     setattr(out_lbi, "blob_name", "out")
     return remote_blob_util.RemoteBlob(out_lbi)
+
+@oneflow_export('identity')
+def identity(
+        input,
+        name=None):
+        name if name is not None else id_util.UniqueStr("Identity_"),
+    )
+    op_conf.identity_conf.out = "out"
+    setattr(op_conf.identity_conf, "in", input.logical_blob_name)
+    compile_context.CurJobAddOp(op_conf)
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = "out"
+    return remote_blob_util.RemoteBlob(lbi)

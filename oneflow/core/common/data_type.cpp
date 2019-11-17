@@ -5,11 +5,12 @@ namespace oneflow {
 
 bool IsIntegralDataType(DataType data_type) {
   switch (data_type) {
-#define INTERGRAL_CASE(type_cpp, type_proto) \
+#define INTEGRAL_CASE(type_cpp, type_proto) \
   case type_proto: return true;
-    OF_PP_FOR_EACH_TUPLE(INTERGRAL_CASE, INT_DATA_TYPE_SEQ)
+    OF_PP_FOR_EACH_TUPLE(INTEGRAL_CASE, INT_DATA_TYPE_SEQ)
     default: return false;
   }
+#undef INTEGRAL_CASE
 }
 bool IsFloatingDataType(DataType data_type) {
   switch (data_type) {
@@ -18,6 +19,16 @@ bool IsFloatingDataType(DataType data_type) {
     OF_PP_FOR_EACH_TUPLE(FLOATING_CASE, FLOATING_DATA_TYPE_SEQ)
     default: return false;
   }
+#undef FLOATING_CASE
+}
+bool IsIndexDataType(DataType data_type) {
+  switch (data_type) {
+#define INDEX_CASE(type_cpp, type_proto) \
+  case type_proto: return true;
+    OF_PP_FOR_EACH_TUPLE(INDEX_CASE, INDEX_DATA_TYPE_SEQ)
+    default: return false;
+  }
+#undef INDEX_CASE
 }
 
 size_t GetSizeOfDataType(DataType data_type) {

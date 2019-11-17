@@ -23,6 +23,8 @@ parser.add_argument("-e", "--eval_dir", type=str, default=_DATA_DIR, required=Fa
 parser.add_argument("-t", "--train_dir", type=str, default=_DATA_DIR, required=False)
 parser.add_argument("-load", "--model_load_dir", type=str, default=_MODEL_LOAD, required=False)
 parser.add_argument("-save", "--model_save_dir", type=str, default=_MODEL_SAVE_DIR, required=False)
+parser.add_argument("-dn", "--data_part_num", type=int, default=32, required=False)
+parser.add_argument("-b", "--batch_size", type=int, default=8, required=False)
 
 args = parser.parse_args()
 
@@ -82,9 +84,11 @@ def _data_load_layer(data_dir):
     "class/label", shape=(), dtype=flow.int32, codec=flow.data.RawCodec()
   )
 
+  node_num = len(args.node_list.strip().split(',')) if args.multinode else 1
+  total_batch_size = args.batch_size * args.gpu_num_per_node * node_num
   return flow.data.decode_ofrecord(
-    data_dir, (label_blob_conf, image_blob_conf),
-    batch_size=8, data_part_num=8, name="decode"
+      data_dir, (label_blob_conf, image_blob_conf),
+      batch_size=total_batch_size, data_part_num=args.data_part_num, name="decode",
   )
 
 

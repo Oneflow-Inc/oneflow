@@ -42,6 +42,9 @@ class RemoteBlob(blob_desc.BlobDesc):
         ret.distribute_ = distribute
         return ret
 
+    def with_gradient_distribute(self, distribute):
+        return oneflow.parallel_cast(self, gradient_distribute=distribute)
+
     def __add__(self, rhs):
         return oneflow.math.add(self, rhs)
 

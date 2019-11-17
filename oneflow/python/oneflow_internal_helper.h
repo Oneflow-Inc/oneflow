@@ -81,9 +81,9 @@ Maybe<void> InitGlobalOneflow() {
   ClusterControl::MasterSendSessionStart();
   const JobSet& job_set = Global<JobBuildAndInferCtxMgr>::Get()->job_set();
   if (job_set.job().empty()) { return Error::JobSetEmpty() << "no function defined"; }
-  Global<const InterJobReuseMemStrategy>::New(job_set.inter_job_reuse_mem_strategy());
   OF_CHECK_ISNULL(Global<Oneflow>::Get());
   Global<CtrlClient>::Get()->PushKV("session_job_set", job_set);
+  Global<const InterJobReuseMemStrategy>::New(job_set.inter_job_reuse_mem_strategy());
   Global<Oneflow>::New(job_set);
   return Maybe<void>::Ok();
 }
