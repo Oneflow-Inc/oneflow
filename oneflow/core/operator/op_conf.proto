@@ -1496,8 +1496,8 @@ message XrtLaunchOpConf {
     required DeviceType device_type = 3;
   }
   message Function {
-    repeated Argument argument = 2;
-    repeated OperatorConf node = 3;
+    repeated Argument argument = 1;
+    repeated OperatorConf node = 2;
   }
   repeated string in = 1;
   repeated string out = 2;

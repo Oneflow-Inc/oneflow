@@ -82,7 +82,8 @@ void MarkClusterIdPass::ClusteringSubgraphs(const ClusteringOptions &options) {
     bool has_changed = false;
     std::vector<ClusterNode *> ordered_nodes;
     algorithm::TopologyVisit(*this, [&](ClusterNode *node) {
-      if (!node->IsCompiled(engine, train_phase)) {
+      if (!node->IsCompiled(engine, train_phase) ||
+          node->IsOptimizer(engine) /* skip model update op */) {
         return;
       }
       ordered_nodes.push_back(node);
@@ -102,6 +103,7 @@ void MarkClusterIdPass::ClusteringSubgraphs(const ClusteringOptions &options) {
           has_changed = true;
           root_nodes_.erase(node);
           break;
+          // node = parent;
         }
       }
     }
@@ -115,8 +117,14 @@ bool MarkClusterIdPass::TryToFuseWithParent(ClusterNode *children,
                                             ClusterNode *parent,
                                             const ClusteringOptions &options) {
   if (options.strict_clustering) {
+    // for (const ClusterEdge *edge : children->in_edges()) {
+    //   if (edge->start() != parent && !edge->start()->IsReachable(*parent)) {
+    //     return false;
+    //   }
+    // }
     for (const ClusterEdge *edge : parent->out_edges()) {
-      if (edge->end() != children &&
+      if (edge->end() !=
+              children && /* !children->IsReachable(*(edge->end())) */
           !IsNodeDirectChildren(children, edge->end())) {
         return false;
       }

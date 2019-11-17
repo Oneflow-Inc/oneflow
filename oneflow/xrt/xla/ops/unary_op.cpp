@@ -39,7 +39,7 @@ struct Identity {
   xla::XlaOp operator()(const xla::XlaOp &x) { return x; }
 };
 
-// REGISTER_XLA_OP_KERNEL(Identity, ApplyUnaryOp<Identity>).Finalize();
+REGISTER_XLA_OP_KERNEL(Identity, ApplyUnaryOp<Identity>).Finalize();
 
 }  // namespace mola
 }  // namespace xrt

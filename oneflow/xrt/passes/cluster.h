@@ -90,13 +90,17 @@ class ClusterNode {
 
   void Merge(ClusterNode &other);
   bool TryMerge(ClusterNode &other);
-  bool IsReachable(const ClusterNode &target);
+  bool IsReachable(const ClusterNode &target) const;
   bool IsSatisfySbpPolicy() const;
   bool IsSourceNode() const { return in_edges_.empty(); }
 
   virtual bool IsCompiled(const XrtEngine &engine,
                           const bool train_phase) const {
-    return IsNodeCompiled(xrt_node_, engine, train_phase);
+    return IsCompiledNode(xrt_node_, engine, train_phase);
+  }
+
+  virtual bool IsOptimizer(const XrtEngine &engine) const {
+    return IsOptimizerNode(xrt_node_, engine);
   }
 
   bool operator==(const ClusterNode &other) const {
@@ -121,6 +125,13 @@ class ClusterNode {
   util::Set<ClusterEdge *> in_edges_;
   util::Set<ClusterEdge *> out_edges_;
 };
+
+namespace algorithm {
+template <>
+struct NodeTypeTrait<const ClusterNode> {
+  typedef const ClusterEdge *pEdgeType;
+};
+}  // namespace algorithm
 
 typedef std::shared_ptr<ClusterNode> ClusterNodePtr;
 typedef std::shared_ptr<ClusterEdge> ClusterEdgePtr;

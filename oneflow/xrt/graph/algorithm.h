@@ -71,7 +71,7 @@ inline bool IsReachable(NodeType *start, NodeType *dest) {
   while (!stack.empty()) {
     pNodeType node = stack.top();
     stack.pop();
-    if (node->unique_id() == dest->unique_id()) {
+    if (node == dest) {
       return true;
     }
     for (pEdgeType edge : node->out_edges()) {

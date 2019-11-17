@@ -42,6 +42,7 @@ constexpr char _ReduceSplitType[] = "ReduceSplit";
 constexpr char _ReduceConcatType[] = "ReduceConcat";
 
 constexpr char MutableVariablesAttrName[] = "MutableVariables";
+constexpr char IsOptimizerOpAttrName[] = "IsOptimizerOp";
 constexpr char TrainPhaseEnabledAttrName[] = "TrainPhaseEnabled";
 
 inline XrtField MakeXrtField(const XrtDevice &device, const XrtEngine &engine) {

@@ -13,7 +13,7 @@ namespace xrt {
 class XrtGraph : public util::AttributeMap {
  public:
   XrtGraph() = default;
-  virtual ~XrtGraph();
+  virtual ~XrtGraph() = default;
 
   XrtNode *Node(int64_t node_id);
   const XrtNode *Node(int64_t node_id) const;
@@ -42,24 +42,21 @@ class XrtGraph : public util::AttributeMap {
 
   std::vector<Argument> Arguments() const;
 
- private:
-  void DeleteNodes();
-  void DeleteEdges();
-  void DeleteSubgraphs();
-
  protected:
+  std::vector<XrtNode *> nodes_;
   // All allocated nodes in the graph. The node unique id is related to it's
   // index in the vector. The Xrt node in `nodes_` can be nullptr since we will
   // always keep it in `nodes_` even if it has been removed from the graph.
-  std::vector<XrtNode *> nodes_;
+  std::vector<std::unique_ptr<XrtNode> > allocated_nodes_;
 
+  std::vector<XrtEdge *> edges_;
   // All allocated edges in the graph. The edge unique id is related to it's
   // index in the vector. And the xrt edge in `edges_` can also be nullptr.
-  std::vector<XrtEdge *> edges_;
+  std::vector<std::unique_ptr<XrtEdge> > allocated_edges_;
 
   // All allocated subgraphs. The key of the map means node unique id, and the
   // value is the subgraph which belongs to the node
-  util::Map<int64_t, XrtGraph *> subgraphs_;
+  util::Map<int64_t, std::unique_ptr<XrtGraph> > subgraphs_;
 };
 
 namespace algorithm {
