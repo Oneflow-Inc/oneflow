@@ -24,7 +24,6 @@ class LayerNormOp : public XlaOpKernel {
 };
 
 void LayerNormOp::Compile(XlaOpContext *ctx) {
-  DataType data_type = ctx->InputType("in");
   // input layout [N, C, H, W]
   Shape input_shape = ctx->InputShape("in");
 
@@ -36,6 +35,8 @@ void LayerNormOp::Compile(XlaOpContext *ctx) {
     begin_norm_axis += input_shape.NumAxes();
   }
 
+  DataType data_type = ctx->InputType("mean");
+
   int64_t batch_dims = input_shape.Count(0, begin_norm_axis);
   int64_t norm_dims = input_shape.Count(begin_norm_axis);
   Shape bn_shape = Shape({1, batch_dims, 1, norm_dims});
@@ -45,6 +46,11 @@ void LayerNormOp::Compile(XlaOpContext *ctx) {
   xla::XlaOp zeros = Zeros(ctx->builder(), scale_shape, data_type);
   // input layout [1, N, 1, CHW]
   xla::XlaOp input = Reshape(ctx->Input("in"), bn_shape);
+
+  // FP16 batch normalization (cudnn style) has not been supported by XLA.
+  if (ctx->InputType("in") != data_type) {
+    input = xla::ConvertElementType(input, DataTypeToPrimitiveType(data_type));
+  }
 
   double epsilon = ctx->GetAttr<double>("epsilon");
   // BatchNorm
@@ -60,6 +66,12 @@ void LayerNormOp::Compile(XlaOpContext *ctx) {
   ctx->SetOutput("mean", Reshape(mean, mean_shape));
   ctx->SetOutput("inv_variance", Reshape(inv_variance, mean_shape));
 
+  if (ctx->OutputType("out") != data_type) {
+    DataType output_type = ctx->OutputType("out");
+    output =
+        xla::ConvertElementType(output, DataTypeToPrimitiveType(output_type));
+  }
+
   if (ctx->GetAttr<bool>("scale")) {
     ctx->SetOutput("normalized", Reshape(output, input_shape));
   }
@@ -74,6 +86,7 @@ void LayerNormOp::Compile(XlaOpContext *ctx) {
     CHECK_EQ(gamma_shape, ctx->InputShape("beta"));
     output = xla::Add(output, ctx->Input("beta"), {3} /*broadcast dim*/);
   }
+
   ctx->SetOutput("out", Reshape(output, input_shape));
 }
 
@@ -120,9 +133,24 @@ void LayerNormGradOp::Compile(XlaOpContext *ctx) {
   mean = Reshape(mean, scale_shape);
   variance = Reshape(variance, scale_shape);
   output_grad = Reshape(output_grad, bn_shape);
+
+  if (ctx->InputType("mean") != ctx->InputType("x")) {
+    DataType data_type = ctx->InputType("mean");
+    activation =
+        xla::ConvertElementType(activation, DataTypeToPrimitiveType(data_type));
+    output_grad = xla::ConvertElementType(output_grad,
+                                          DataTypeToPrimitiveType(data_type));
+  }
+
   auto output = BatchNormGrad(activation, xla::Broadcast(ones, {batch_dims}),
                               mean, variance, output_grad, epsilon);
   xla::XlaOp activation_grad = xla::GetTupleElement(output, 0);
+
+  if (ctx->InputType("mean") != ctx->InputType("x")) {
+    DataType data_type = ctx->InputType("x");
+    activation_grad = xla::ConvertElementType(
+        activation_grad, DataTypeToPrimitiveType(data_type));
+  }
   ctx->SetOutput("dx", Reshape(activation_grad, activation_shape));
 }
 

@@ -22,12 +22,21 @@ void BlobDescGetter<device_type>::DumpEntryBlobDescTo(
 
   for (const auto &bn : kernel_->op_attribute().input_bns()) {
     const RtBlobDesc &runtime_desc = get_blob_fn_(bn)->blob_desc();
-    BlobDesc blob_desc(runtime_desc.shape(), runtime_desc.data_type(),
-                       runtime_desc.has_data_id_field(),
-                       runtime_desc.has_col_num_field(),
-                       runtime_desc.max_col_num());
-    std::string blob_name = xrt::BlobIdToName(kernel_->BnInOp2Lbi(bn));
+    // BlobDesc blob_desc(runtime_desc.shape(), runtime_desc.data_type(),
+    //                    runtime_desc.has_data_id_field(),
+    //                    runtime_desc.has_col_num_field(),
+    //                    runtime_desc.max_col_num());
+
+    // TODO(hjchen2)
+    BlobDesc blob_desc(kernel_->job_desc().DefaultDataType());
+    blob_desc.mut_shape() = runtime_desc.shape();
+    blob_desc.set_data_type(runtime_desc.data_type());
+    blob_desc.set_has_data_id_field(runtime_desc.has_data_id_field());
+    blob_desc.set_has_col_num_field(runtime_desc.has_col_num_field());
+    blob_desc.set_max_col_num(runtime_desc.max_col_num());
+
     // Map blob_name to function's input name.
+    std::string blob_name = xrt::BlobIdToName(kernel_->BnInOp2Lbi(bn));
     // CHECK_GT(io_mapping.count(blob_name), 0);
     const std::string &mapping_name = io_mapping.at(blob_name);
     entry_blob_desc->emplace(mapping_name, std::move(blob_desc));
@@ -53,6 +62,7 @@ xrt::Executable *XrtLaunchKernel<device_type>::BuildExecutable(
   }
 
   if (!executable) {
+    VLOG(2) << "Build executable for launch op " << this->op_conf().name();
     const auto &launch_conf = this->op_conf().xrt_launch_conf();
     auto graph = xrt::BuildXrtGraph(launch_conf.function(), device_type,
                                     this->job_desc());

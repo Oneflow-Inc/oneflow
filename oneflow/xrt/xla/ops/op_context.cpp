@@ -1,5 +1,7 @@
 #include "oneflow/xrt/xla/ops/op_context.h"
+
 #include "oneflow/xrt/argument.h"
+#include "oneflow/xrt/xla/xla_data_type.h"
 #include "oneflow/xrt/xla/xla_shape.h"
 #include "tensorflow/compiler/xla/client/xla_builder.h"
 #include "tensorflow/compiler/xla/shape.h"
@@ -70,6 +72,9 @@ void XlaOpContext::SetOutput(const std::string &name,
 void XlaOpContext::SetOutput(const std::string &name, const XlaValue &handle) {
   Argument arg = ArgumentFromKey(name);
   CHECK_EQ(arg.shape(), XlaShapeToOfShape(handle.shape_));
+  CHECK_EQ(DataTypeToPrimitiveType(arg.data_type()),
+           handle.shape_.element_type());
+  // CHECK_EQ(OfShapeToXlaShape(arg.shape(), arg.data_type()), handle.shape_);
   outputs_[arg] = handle;
 }
 

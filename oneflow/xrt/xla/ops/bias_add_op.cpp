@@ -14,6 +14,8 @@ class BiasAddOp : public XlaOpKernel {
     CHECK_GE(in_shape.NumAxes(), 2);
     CHECK_EQ(bias_shape.NumAxes(), 1);
 
+    CHECK_EQ(ctx->InputType("a"), ctx->InputType("b"));
+
     xla::XlaOp in = ctx->Input("a");
     xla::XlaOp bias = ctx->Input("b");
 
