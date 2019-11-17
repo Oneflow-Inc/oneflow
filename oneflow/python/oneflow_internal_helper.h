@@ -135,6 +135,13 @@ Maybe<long long> GetDeviceType4DeviceTag(const std::string& device_tag) {
   return *JUST(DeviceType4DeviceTag(device_tag));
 }
 
+Maybe<std::string> GetSerializedMachineId2DeviceIdListOFRecord(
+    const std::string& parallel_conf_str) {
+  ParallelConf parallel_conf;
+  OF_CHECK(TxtString2PbMessage(parallel_conf_str, &parallel_conf)) << "parallel conf parse failed";
+  return PbMessage2TxtString(*JUST(ParseMachineAndDeviceIdList(parallel_conf)));
+}
+
 namespace {
 
 struct GlobalChecker final {
