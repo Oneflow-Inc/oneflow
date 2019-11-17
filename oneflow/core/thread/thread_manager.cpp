@@ -4,6 +4,7 @@
 #include "oneflow/core/thread/gpu_thread.h"
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/common/blocking_counter.h"
+#include "oneflow/core/job/machine_context.h"
 
 namespace oneflow {
 

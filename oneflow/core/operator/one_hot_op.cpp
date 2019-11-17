@@ -29,6 +29,16 @@ Maybe<void> OneHotOp::InferBlobDescs(
   return Maybe<void>::Ok();
 }
 
+Maybe<void> OneHotOp::GetSbpSignatures(
+    const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
+    SbpSignatureList* sbp_sig_list) const {
+  SbpSignatureBuilder()
+      .Split("indices", 0)
+      .Split("out", 0)
+      .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+  return Maybe<void>::Ok();
+}
+
 REGISTER_OP(OperatorConf::kOneHotConf, OneHotOp);
 
 }  // namespace oneflow

@@ -54,9 +54,11 @@ def _data_load(data_dir):
         "class/label", shape=(), dtype=flow.int32, codec=flow.data.RawCodec()
     )
 
+    node_num = len(args.node_list.strip().split(',')) if args.multinode else 1
+    total_batch_size = args.batch_size * args.gpu_num_per_node * node_num
     return flow.data.decode_ofrecord(
         data_dir, (label_blob_conf, image_blob_conf),
-        batch_size=arg.batch_size, data_part_num=args.data_part_num, name="decode",
+        batch_size=total_batch_size, data_part_num=args.data_part_num, name="decode",
     )
 
 
@@ -290,6 +292,7 @@ def main():
             nodes.append(addr_dict)
 
         flow.config.machine(nodes)
+        flow.config.enable_inplace(False)
 
         if args.scp_binary_without_uuid:
             flow.deprecated.init_worker(scp_binary=True, use_uuid=False)
@@ -325,7 +328,14 @@ def main():
         #     print(fmt_str.format(i, "eval loss:", eval))
 
         #     check_point.save(MODEL_SAVE + "_" + str(i))
-    
+        
+    if (
+            args.multinode
+          and args.skip_scp_binary is False
+        and args.scp_binary_without_uuid is False
+    ):
+      flow.deprecated.delete_worker()
+
     # save loss to file
     loss_file = "{}n{}c.npy".format(str(num_nodes), str(args.gpu_num_per_node * num_nodes))
     loss_path = "./of_loss/resnet50"

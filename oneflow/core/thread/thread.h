@@ -1,11 +1,12 @@
 #ifndef ONEFLOW_CORE_THREAD_THREAD_H_
 #define ONEFLOW_CORE_THREAD_THREAD_H_
 
-#include "oneflow/core/actor/actor.h"
 #include "oneflow/core/actor/actor_message_bus.h"
 #include "oneflow/core/common/channel.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job/task.pb.h"
+#include "oneflow/core/thread/thread_context.h"
+#include "oneflow/core/actor/actor.h"
 
 namespace oneflow {
 

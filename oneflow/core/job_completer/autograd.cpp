@@ -290,6 +290,7 @@ void BindFwBwObaPairs(const OpGraph& op_graph, const OpBlobArgPairs& fw_bw_oba_p
 void CalcFwBwObaPairs(const OpGraph& op_graph,
                       const HashMap<OpBlobArg, LogicalBlobId>& in_oba2in_diff_lbi,
                       const HashMap<OpBlobArg, LogicalBlobId>& out_oba2out_diff_lbi,
+                      const HashMap<OpBlobArg, LogicalBlobId>& out_oba2clone_bw_add_out_lbi,
                       const JobBuilder& job_builder, OpBlobArgPairs* fw_bw_oba_pairs) {
   HashMap<LogicalBlobId, OpBlobArg> in_diff_lbi2in_oba;
   op_graph.ReverseTopoForEachNode([&](OpNode* op_node) {
@@ -313,21 +314,33 @@ void CalcFwBwObaPairs(const OpGraph& op_graph,
       }
     }
   });
+  HashMap<LogicalBlobId, OpBlobArg> clone_bw_add_out_lbi2out_oba;
+  for (const auto& pair : out_oba2clone_bw_add_out_lbi) {
+    CHECK(clone_bw_add_out_lbi2out_oba.emplace(pair.second, pair.first).second);
+  }
   job_builder.ForEachOperator([&](const Operator& op) {
     for (const auto& ibn : op.input_bns()) {
       const auto& out_oba_it = out_diff_lbi2out_oba.find(op.BnInOp2Lbi(ibn));
-      if (out_oba_it != out_diff_lbi2out_oba.end()) {
-        auto* pair = fw_bw_oba_pairs->mutable_pair()->Add();
-        *pair->mutable_first() = GenOpBlobArg(op.op_name(), ibn);
-        *pair->mutable_second() = out_oba_it->second;
-      }
+      if (out_oba_it == out_diff_lbi2out_oba.end()) { continue; }
+      auto* pair = fw_bw_oba_pairs->mutable_pair()->Add();
+      *pair->mutable_first() = GenOpBlobArg(op.op_name(), ibn);
+      *pair->mutable_second() = out_oba_it->second;
     }
     for (const auto& obn : op.output_bns()) {
-      const auto& in_oba_it = in_diff_lbi2in_oba.find(op.BnInOp2Lbi(obn));
-      if (in_oba_it != in_diff_lbi2in_oba.end()) {
+      const auto& lbi = op.BnInOp2Lbi(obn);
+      {
+        const auto& in_oba_it = in_diff_lbi2in_oba.find(lbi);
+        if (in_oba_it == in_diff_lbi2in_oba.end()) { continue; }
         auto* pair = fw_bw_oba_pairs->mutable_pair()->Add();
         *pair->mutable_first() = GenOpBlobArg(op.op_name(), obn);
         *pair->mutable_second() = in_oba_it->second;
+      }
+      {
+        const auto& clone_out_oba_it = clone_bw_add_out_lbi2out_oba.find(lbi);
+        if (clone_out_oba_it == clone_bw_add_out_lbi2out_oba.end()) { continue; }
+        auto* pair = fw_bw_oba_pairs->mutable_pair()->Add();
+        *pair->mutable_first() = GenOpBlobArg(op.op_name(), obn);
+        *pair->mutable_second() = clone_out_oba_it->second;
       }
     }
   });
@@ -434,6 +447,7 @@ void AutoGrad(const OpGraph& op_graph, JobBuilder* job_builder,
   };
   auto HasDiff4LbiOpName = MakePredicatorHasDiff4LbiOpName(op_graph, NeedBackwardOp);
   HashMap<OpBlobArg, LogicalBlobId> in_oba2in_diff_lbi;
+  HashMap<OpBlobArg, LogicalBlobId> out_oba2clone_bw_add_out_lbi;
   op_graph.TopoForEachNode(loss_nodes, ForEachOutNode, ForEachInNode, [&](OpNode* op_node) {
     const auto& op_name = op_node->op().op_name();
     auto DiffLbi4BnInOp = [&](const std::string& bn) -> LogicalBlobId* {
@@ -456,13 +470,14 @@ void AutoGrad(const OpGraph& op_graph, JobBuilder* job_builder,
       return op_graph.GetLogicalBlobDesc(op_node->op().BnInOp2Lbi(bn));
     };
     std::vector<OperatorConf> ops;
-    GenerateCloneGradOpIfNeed(*op_node, &ops, in_oba2in_diff_lbi, &out_oba2out_diff_lbi);
+    GenerateCloneGradOpIfNeed(*op_node, &ops, in_oba2in_diff_lbi, &out_oba2out_diff_lbi,
+                              &out_oba2clone_bw_add_out_lbi);
     GenerateBackwardOpConfIf(op_node->op(), &ops, DiffLbi4BnInOp, LogicalBlobDesc4BnInOp);
     job_builder->AddOps(op_node->parallel_desc().parallel_conf(), ops);
   });
   OpBlobArgPairs fw_bw_oba_pairs;
-  CalcFwBwObaPairs(op_graph, in_oba2in_diff_lbi, out_oba2out_diff_lbi, *job_builder,
-                   &fw_bw_oba_pairs);
+  CalcFwBwObaPairs(op_graph, in_oba2in_diff_lbi, out_oba2out_diff_lbi, out_oba2clone_bw_add_out_lbi,
+                   *job_builder, &fw_bw_oba_pairs);
   BindFwBwObaPairs(op_graph, fw_bw_oba_pairs, job_builder);
   CalcOutLbi2OutDiffLbi(op_graph, out_oba2out_diff_lbi, out_lbi2out_diff_lbi);
 }

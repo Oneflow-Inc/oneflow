@@ -71,12 +71,25 @@ void CriticalSectionDesc::UpdateCriticalSectionIds2IntersectingIds() {
   CHECK_EQ(inited_, false);
   critical_section_id2intersecting_ids_.resize(critical_sections_.size());
   HashMap<int64_t, HashSet<int64_t>> mem_block_id2critical_section_ids;
+  HashMap<int64_t, HashSet<int64_t>> chunk_id2critical_section_ids;
   FOR_RANGE(int64_t, i, 0, critical_sections_.size()) {
     for (int64_t mem_block_id : critical_sections_.at(i)->mem_block_id()) {
       mem_block_id2critical_section_ids[mem_block_id].insert(i);
     }
+    for (int64_t chunk_id : critical_sections_.at(i)->chunk_id()) {
+      chunk_id2critical_section_ids[chunk_id].insert(i);
+    }
   }
   for (const auto& pair : mem_block_id2critical_section_ids) {
+    for (int64_t first_id : pair.second) {
+      for (int64_t second_id : pair.second) {
+        if (first_id != second_id) {
+          critical_section_id2intersecting_ids_[first_id].insert(second_id);
+        }
+      }
+    }
+  }
+  for (const auto& pair : chunk_id2critical_section_ids) {
     for (int64_t first_id : pair.second) {
       for (int64_t second_id : pair.second) {
         if (first_id != second_id) {
