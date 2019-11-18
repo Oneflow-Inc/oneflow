@@ -243,6 +243,11 @@ def set_total_batch_num(value):
 
 @oneflow_export('config.default_data_type')
 def set_default_data_type(value):
+    r"""set default data type
+
+    Args:
+        val: a OneFlow data type. For instance, `oneflow.float`. If no data type is specified, it is `float32` by default.
+    """
     _SetJobConfAttr(lambda x:x, 'default_data_type', value)
     return oneflow.config
 
