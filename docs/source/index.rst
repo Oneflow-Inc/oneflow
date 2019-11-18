@@ -2,7 +2,7 @@ OneFlow Documentation
 ===================================
 .. toctree::
     :maxdepth: 1
-    :caption: Oneflow Tutorial
+    :caption: OneFlow Tutorial
 
     tutorials/quick_start
     tutorials/ofrecord
@@ -12,7 +12,7 @@ OneFlow Documentation
 
 .. toctree::
     :maxdepth: 1
-    :caption: Oneflow Python API
+    :caption: OneFlow Python API
 
     oneflow
     config
