@@ -22,6 +22,10 @@ def dense(
     name=None,
     model_distribute=distribute_util.broadcast(),
 ):
+    r"""
+    Analogous to `tf.keras.layers.Dense <https://www.tensorflow.org/api_docs/python/tf/keras/layers/Dense>`_
+
+    """
     in_shape = inputs.static_shape
     in_num_axes = len(in_shape)
     assert in_num_axes >= 2
@@ -84,6 +88,10 @@ def layer_norm(
     begin_params_axis=-1,
     name=None,
 ):
+    r"""
+    Analogous to `tf.keras.layers.LayerNormalization <https://www.tensorflow.org/api_docs/python/tf/keras/layers/LayerNormalization>`_
+
+    """
     op_conf = op_conf_util.OperatorConf()
     name = name if name is not None else id_util.UniqueStr(
         "LayerNorm_")
@@ -144,6 +152,10 @@ def batch_normalization(
     trainable=False,
     name=None,
 ):
+    r"""
+    Analogous to `tf.keras.layers.BatchNormalization <https://www.tensorflow.org/api_docs/python/tf/keras/layers/BatchNormalization>`_
+
+    """
     assert axis >= -len(inputs.shape) and axis < len(inputs.shape)
     params_shape = [inputs.shape[axis]]
 
