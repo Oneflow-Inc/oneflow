@@ -475,6 +475,13 @@ def set_concurrency_width(value):
 
 @oneflow_export('config.train.model_update_conf')
 def set_model_update_conf(value):
+    r"""Set model update (optimizer) configures.
+
+    Args:
+        val: a `dict`. For instance, a conventional SGD optimizer::
+
+            dict(naive_conf={})
+    """
     assert type(value) is dict
     pb_msg = _GetJobConfAttr(lambda job_conf: job_conf.train_conf, 'model_update_conf')
     pb_util.PythonDict2PbMessage(value, pb_msg)
