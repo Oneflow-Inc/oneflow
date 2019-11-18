@@ -36,9 +36,11 @@ def distribute_execute(num_devices_per_node, num_nodes):
                                     [v[dist_ctx.rank] for v in kwargs.values()],
                                 )
                             )
-                            ret.append(func(dist_ctx, config, *args_, **kwargs_))
+                            ret.append(
+                                func(dist_ctx, config, *args_, **kwargs_)
+                            )
 
-            return list(map(list, zip(*ret)))
+            return tuple(map(list, zip(*ret)))
         return wrapped_func
     return decorator_func
 
