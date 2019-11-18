@@ -20,6 +20,8 @@ def gather(
 ):
     r"""Gather slices from params axis axis according to indices.
 
+    Analogous to `tf.gather <https://www.tensorflow.org/api_docs/python/tf/gather>`_
+
     Args:
         params: A `Blob`. The blob from which to gather values. Must be at least rank `axis + 1`.
         indices: A `Blob`. Index blob. Must be in range [0, params.shape[axis]).
