@@ -23,9 +23,9 @@ def gather(
     Args:
         params: A `Blob`. The blob from which to gather values. Must be at least rank `axis + 1`.
         indices: A `Blob`. Index blob. Must be in range [0, params.shape[axis]).
-        axis: A Tensor. The axis in params to gather indices from. Defaults to the first dimension. 
+        axis: A `int`. The axis in params to gather indices from. Defaults to the first dimension. 
             Supports negative indexes.
-        batch_dims: An optional int. Defaults to 0.
+        batch_dims: An optional `int`. Defaults to 0.
         name: A name for the operation (optional).
     Returns:
         A blob. Has the same type as params.
