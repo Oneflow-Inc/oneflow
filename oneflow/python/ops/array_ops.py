@@ -109,7 +109,7 @@ def transpose(a, perm=None, conjugate=False, name=None):
     Args:
         a: A `Blob`.
         perm: A permutation of the dimensions of `a`.
-        conjugate: False. Not support in OneFlow.
+        conjugate: False. Not supported.
         name: A name for the operation (optional).
     Returns:
         A transposed blob.
