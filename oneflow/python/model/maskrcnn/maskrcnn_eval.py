@@ -73,7 +73,7 @@ def make_data_loader(
     return data_loader
 
 
-def maskrcnn_box_head_eval(images, image_sizes):
+def maskrcnn_eval(images, image_sizes):
     cfg = get_default_cfgs()
     if terminal_args.config_file is not None:
         cfg.merge_from_file(terminal_args.config_file)
@@ -83,6 +83,7 @@ def maskrcnn_box_head_eval(images, image_sizes):
     rpn_head = RPNHead(cfg)
     rpn_proposal = RPNProposal(cfg)
     box_head = BoxHead(cfg)
+    mask_head = MaskHead(cfg)
 
     image_size_list = [
         flow.squeeze(flow.local_gather(image_sizes, flow.constant(i, dtype=flow.int32)), [0])
@@ -107,23 +108,19 @@ def maskrcnn_box_head_eval(images, image_sizes):
     proposals = rpn_proposal.build(anchors, cls_logit_list, bbox_pred_list, image_size_list, None)
 
     # Box Head
-    cls_probs, box_regressions = box_head.build_eval(proposals, features)
+    box_head_results = box_head.build_eval(proposals, features, image_size_list)
 
-    ret = {
-        "proposals": proposals,
-        "features": features,
-        "image_sizes": image_sizes,
-        "cls_probs": cls_probs,
-        "box_regressions": box_regressions,
-    }
+    # Mask Head
+    detections = [result[0] for result in box_head_results]
+    mask_prob = mask_head.build_eval(detections, features)
 
-    return ret
+    return {"box_head_results": box_head_results, "mask_prob": mask_prob}
 
 
 if terminal_args.fake_img:
 
     @flow.function
-    def maskrcnn_box_head_eval_job(
+    def maskrcnn_eval_job(
         images=flow.input_blob_def(shape=(2, 3, 416, 608), dtype=flow.float32, is_dynamic=True)
     ):
         data_loader = make_data_loader(
@@ -136,7 +133,7 @@ if terminal_args.fake_img:
         image_sizes = data_loader("image_size")
         image_ids = data_loader("image_id")
 
-        ret = maskrcnn_box_head_eval(flow.transpose(images, perm=[0, 2, 3, 1]), image_sizes)
+        ret = maskrcnn_eval(flow.transpose(images, perm=[0, 2, 3, 1]), image_sizes)
         ret.update({"image_ids": image_ids})
 
         return ret
@@ -145,7 +142,7 @@ if terminal_args.fake_img:
 else:
 
     @flow.function
-    def maskrcnn_box_head_eval_job():
+    def maskrcnn_eval_job():
         data_loader = make_data_loader(
             batch_size=terminal_args.batch_size,
             batch_cache_size=3,
@@ -157,28 +154,10 @@ else:
         image_sizes = data_loader("image_size")
         image_ids = data_loader("image_id")
 
-        ret = maskrcnn_box_head_eval(images, image_sizes)
+        ret = maskrcnn_eval(images, image_sizes)
         ret.update({"image_ids": image_ids})
 
         return ret
-
-
-@flow.function
-def maskrcnn_mask_head_eval_job(
-    detection0=flow.input_blob_def((1000, 4), dtype=flow.float, is_dynamic=True),
-    detection1=flow.input_blob_def((1000, 4), dtype=flow.float, is_dynamic=True),
-    fpn_fm1=flow.input_blob_def((2, 256, 104, 152), dtype=flow.float, is_dynamic=True),
-    fpn_fm2=flow.input_blob_def((2, 256, 52, 76), dtype=flow.float, is_dynamic=True),
-    fpn_fm3=flow.input_blob_def((2, 256, 26, 38), dtype=flow.float, is_dynamic=True),
-    fpn_fm4=flow.input_blob_def((2, 256, 13, 19), dtype=flow.float, is_dynamic=True),
-):
-    cfg = get_default_cfgs()
-    mask_head = MaskHead(cfg)
-    mask_logits = mask_head.build_eval(
-        [detection0, detection1], [fpn_fm1, fpn_fm2, fpn_fm3, fpn_fm4]
-    )
-    mask_prob = flow.math.sigmoid(mask_logits)
-    return mask_prob
 
 
 if __name__ == "__main__":
@@ -195,48 +174,32 @@ if __name__ == "__main__":
     prediction_list = []
     image_id_list = []
     for i in range(terminal_args.iter_num):
-        # Box Head
         if terminal_args.fake_img:
             if i == 0:
                 f = open("/dataset/mask_rcnn/maskrcnn_eval_net_10/fake_image_list.pkl", "rb")
                 fake_image_list = pickle.load(f)
-            results = maskrcnn_box_head_eval_job(fake_image_list[i]).get()
+            results = maskrcnn_eval_job(fake_image_list[i]).get()
         else:
-            results = maskrcnn_box_head_eval_job().get()
+            results = maskrcnn_eval_job().get()
 
-        proposals = results["proposals"]
-        features = results["features"]
-        image_sizes = results["image_sizes"]
-        cls_probs = results["cls_probs"]
-        box_regressions = results["box_regressions"]
+        box_head_results = results["box_head_results"]
+        mask_prob = results["mask_prob"]
         image_ids = results["image_ids"]
-        box_lists = []
-        for proposal, image_size in zip(proposals, image_sizes):
-            box_list = BoxList(proposal.ndarray(), (image_size[1], image_size[0]), mode="xyxy")
-            box_lists.append(box_list)
 
-        # Box Head Post-Processor
-        postprocessor = PostProcessor()
-        box_head_predictions = postprocessor.forward(
-            (cls_probs.ndarray(), box_regressions.ndarray()), box_lists
-        )
-
-        # Mask Head and Post-Processor
-        detections = []
-        for prediction in box_head_predictions:
-            detections.append(prediction.bbox)
-        mask_prob = maskrcnn_mask_head_eval_job(
-            detections[0],
-            detections[1],
-            features[0].ndarray(),
-            features[1].ndarray(),
-            features[2].ndarray(),
-            features[3].ndarray(),
-        ).get()
+        boxes = []
+        for box_head_result in box_head_results:
+            # swap height and width in image_size
+            image_size_h_w = box_head_result[-1]
+            assert len(image_size_h_w) == 2
+            image_size_w_h = [image_size_h_w[1], image_size_h_w[0]]
+            boxlist = BoxList(box_head_result[0].ndarray(), image_size_w_h, mode="xyxy")
+            boxlist.add_field("scores", box_head_result[1].ndarray())
+            boxlist.add_field("labels", box_head_result[2].ndarray())
+            boxes.append(boxlist)
 
         # Mask Head Post-Processor
         mask_postprocessor = MaskPostProcessor()
-        predictions = mask_postprocessor.forward(mask_prob.ndarray(), box_head_predictions)
+        predictions = mask_postprocessor.forward(mask_prob.ndarray(), boxes)
 
         image_id_list += list(np.squeeze(image_ids.ndarray()))
         prediction_list += predictions
@@ -262,3 +225,31 @@ if __name__ == "__main__":
         expected_results=(),
         expected_results_sigma_tol=4,
     )
+
+# Box Head
+# Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.537
+# Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets=100 ] = 0.783
+# Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets=100 ] = 0.550
+# Average Precision  (AP) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = -1.000
+# Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.567
+# Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.592
+# Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=  1 ] = 0.490
+# Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets= 10 ] = 0.590
+# Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.590
+# Average Recall     (AR) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = -1.000
+# Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.567
+# Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.625
+
+# Mask Head
+# Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.535
+# Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets=100 ] = 0.750
+# Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets=100 ] = 0.650
+# Average Precision  (AP) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = -1.000
+# Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.667
+# Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.450
+# Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=  1 ] = 0.490
+# Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets= 10 ] = 0.580
+# Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.580
+# Average Recall     (AR) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = -1.000
+# Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.667
+# Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.450
