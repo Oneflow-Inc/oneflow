@@ -7,19 +7,6 @@ import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 
 from oneflow.python.oneflow_export import oneflow_export
 
-@oneflow_export("identity")
-def identity(x, name=None):
-    if name is None: name = id_util.UniqueStr("Identity_")
-    op_conf = op_conf_util.OperatorConf()
-    op_conf.name = name
-    setattr(op_conf.identity_conf, "in", x.logical_blob_name)
-    op_conf.identity_conf.out = "out"
-    compile_context.CurJobAddOp(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
-
 @oneflow_export("sleep_identity")
 def sleep_identity(x, seconds, name=None):
     if name is None: name = id_util.UniqueStr("Sleep_")
