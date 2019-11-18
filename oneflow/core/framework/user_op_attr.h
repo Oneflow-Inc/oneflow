@@ -25,12 +25,9 @@ namespace oneflow {
 template<typename T>
 struct GetAttrType;
 
-template<>
-struct GetAttrType<void> : std::integral_constant<AttrType, AttrType::kChar> {};
-
 #define SPECIALIZE_GET_ATTR_TYPE(type_cpp, type_proto) \
   template<>                                           \
-  struct GetAttrType<type_cpp> : std::integral_constant<AttrType, type_proto> {};
+  struct GetAttrType<type_cpp> : std::integral_constant<UserOpAttrType, type_proto> {};
 OF_PP_FOR_EACH_TUPLE(SPECIALIZE_GET_ATTR_TYPE, ATTR_TYPE_SEQ);
 #undef SPECIALIZE_GET_ATTR_TYPE
 

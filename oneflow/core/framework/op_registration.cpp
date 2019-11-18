@@ -34,6 +34,7 @@ OpRegistryWrapperBuilder& OpRegistryWrapperBuilder::ArgImpl(bool is_input, const
   } else {
     *(wrapper_.reg_val.op_def.mutable_out()->Add()) = arg_def;
   }
+  return *this;
 }
 
 #define FN_PREFIX_SEQ                             \
@@ -42,69 +43,29 @@ OpRegistryWrapperBuilder& OpRegistryWrapperBuilder::ArgImpl(bool is_input, const
   OF_PP_MAKE_TUPLE_SEQ(Output, false, false)      \
   OF_PP_MAKE_TUPLE_SEQ(OptionalOutput, false, true)
 
-#define OP_REG_ARG_MEMBER_FUNC(fn_prefix_tuple)                                                   \
-  OpRegistryWrapperBuilder& OpRegistryWrapperBuilder::##OF_PP_TUPLE_ELEM(                         \
-      0, fn_prefix_tuple)##(const std::string& name) {                                            \
-    return ArgImpl(OF_PP_TUPLE_ELEM(1, fn_prefix), name, OF_PP_TUPLE_ELEM(2, fn_prefix), 1,       \
-                   false);                                                                        \
-  }                                                                                               \
-  OpRegistryWrapperBuilder& OpRegistryWrapperBuilder::##OF_PP_TUPLE_ELEM(0, fn_prefix_tuple)##(   \
-      const std::string& name, int32_t num) {                                                     \
-    return ArgImpl(OF_PP_TUPLE_ELEM(1, fn_prefix), name, OF_PP_TUPLE_ELEM(2, fn_prefix), num,     \
-                   false);                                                                        \
-  }                                                                                               \
-  OpRegistryWrapperBuilderder& OpRegistryWrapperBuilder::##OF_PP_TUPLE_ELEM(                      \
-      0, fn_prefix_tuple)##WithMinimum(const std::string& name, int32_t min_num) {                \
-    return ArgImpl(OF_PP_TUPLE_ELEM(1, fn_prefix), name, OF_PP_TUPLE_ELEM(2, fn_prefix), min_num, \
-                   true);                                                                         \
+#define OP_REG_ARG_MEMBER_FUNC(name_prefix, is_input, is_optional)                           \
+  OpRegistryWrapperBuilder& OpRegistryWrapperBuilder::name_prefix(const std::string& name) { \
+    return ArgImpl(is_input, name, is_optional, 1, false);                                   \
+  }                                                                                          \
+  OpRegistryWrapperBuilder& OpRegistryWrapperBuilder::name_prefix(const std::string& name,   \
+                                                                  int32_t num) {             \
+    return ArgImpl(is_input, name, is_optional, num, false);                                 \
+  }                                                                                          \
+  OpRegistryWrapperBuilder& OpRegistryWrapperBuilder::name_prefix##WithMinimum(              \
+      const std::string& name, int32_t min_num) {                                            \
+    return ArgImpl(is_input, name, is_optional, min_num, true);                              \
   }
 
-/*
-OpRegistryWrapperBuilder& OpRegistryWrapperBuilder::Input(const std::string& name) {
-  return ArgImpl(true, name, false, 1, false);
-}
+OF_PP_FOR_EACH_TUPLE(OP_REG_ARG_MEMBER_FUNC, FN_PREFIX_SEQ)
 
-OpRegistryWrapperBuilder& OpRegistryWrapperBuilder::Input(const std::string& name, int32_t num) {
-  return ArgImpl(true, name, false, num, false);
-}
-OpRegistryWrapperBuilderder&  OpRegistryWrapperBuilder::InputWithMinimum(const std::string& name,
-int32_t min_num) { return ArgImpl(true, name, false, min_num, true);
-}
-OpRegistryWrapperBuilderder&  OpRegistryWrapperBuilder::OptionalInput(const std::string& name) {
-  return ArgImpl(true, name, true, 1, false);
-}
-OpRegistryWrapperBuilderder&  OpRegistryWrapperBuilder::OptionalInput(const std::string& name,
-int32_t num) { return ArgImpl(true, name, true, num, false);
-}
-OpRegistryWrapperBuilderder&  OpRegistryWrapperBuilder::OptionalInputWithMinimum(const std::string&
-name, int32_t min_num) { return ArgImpl(true, name, true, min_num, true);
-}
-
-OpRegistryWrapperBuilderder&  OpRegistryWrapperBuilder::Output(const std::string& name) {
-  return ArgImpl(false, name, false, 1, false);
-}
-OpRegistryWrapperBuilderder&  OpRegistryWrapperBuilder::Output(const std::string& name, int32_t num)
-{ return ArgImpl(false, name, false, num, false);
-}
-OpRegistryWrapperBuilderder&  OpRegistryWrapperBuilder::OutputWithMinimum(const std::string& name,
-int32_t min_num) { return ArgImpl(false, name, false, min_num, true);
-}
-OpRegistryWrapperBuilderder&  OpRegistryWrapperBuilder::OptionalOutput(const std::string& name) {
-  return ArgImpl(false, name, true, 1, false);
-}
-OpRegistryWrapperBuilderder&  OpRegistryWrapperBuilder::OptionalOutput(const std::string& name,
-int32_t num) { return ArgImpl(false, name, true, num, false);
-}
-OpRegistryWrapperBuilderder&  OpRegistryWrapperBuilder::OptionalOutputWithMinimum(const std::string&
-name, int32_t min_num) { return ArgImpl(false, name, true, min_num, true);
-}
-*/
+#undef OP_REG_ARG_MEMBER_FUNC
+#undef FN_PREFIX_SEQ
 
 OpRegistryWrapperBuilder& OpRegistryWrapperBuilder::Attr(const std::string& name,
                                                          UserOpAttrType type) {
   UserOpDef::AttrDef attr_def;
-  attr_def.name = name;
-  attr_def.type = type;
+  attr_def.set_name(name);
+  attr_def.set_type(type);
   *(wrapper_.reg_val.op_def.mutable_attr()->Add()) = attr_def;
   return *this;
 }
@@ -112,11 +73,18 @@ OpRegistryWrapperBuilder& OpRegistryWrapperBuilder::Attr(const std::string& name
 OpRegistryWrapperBuilder& OpRegistryWrapperBuilder::SetShapeInferFn(
     std::function<Maybe<void>(Shape4ArgNameAndIndex)> shape_infer_fn) {
   wrapper_.reg_val.shape_infer_fn = std::move(shape_infer_fn);
+  return *this;
 }
 
 OpRegistryWrapperBuilder& OpRegistryWrapperBuilder::SetDataTypeInferFn(
     std::function<Maybe<void>(Dtype4ArgNameAndIndex)> dtype_infer_fn) {
   wrapper_.reg_val.dtype_infer_fn = std::move(dtype_infer_fn);
+  return *this;
+}
+
+OpRegistryWrapperBuilder& OpRegistryWrapperBuilder::SetGetSbpFn(
+    std::function<Maybe<void>(/*TODO(niuchong): what is the para*/)>) {
+  return *this;
 }
 
 }  // namespace user_op

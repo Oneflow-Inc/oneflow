@@ -4,11 +4,15 @@
 #include "oneflow/core/framework/registrar.h"
 #include "oneflow/core/framework/user_op_def.pb.h"
 #include "oneflow/core/framework/user_op_attr.pb.h"
+#include "oneflow/core/framework/user_op_attr.h"
 #include "oneflow/core/operator/op_conf.pb.h"
+#include "oneflow/core/common/maybe.h"
 
 namespace oneflow {
 
 namespace user_op {
+
+class Shape;
 
 using Shape4ArgNameAndIndex = std::function<Shape*(const std::string&, int32_t)>;
 using Dtype4ArgNameAndIndex = std::function<DataType*(const std::string&, int32_t)>;
@@ -95,7 +99,7 @@ class OpRegistryWrapperBuilder final {
   OpRegistryWrapperBuilder& SetShapeInferFn(std::function<Maybe<void>(Shape4ArgNameAndIndex)>);
   OpRegistryWrapperBuilder& SetDataTypeInferFn(std::function<Maybe<void>(Dtype4ArgNameAndIndex)>);
   OpRegistryWrapperBuilder& SetGetSbpFn(
-      std::function<Maybe<void>(/*TODO(niuchong): what is the para*/)>) {}
+      std::function<Maybe<void>(/*TODO(niuchong): what is the para*/)>);
 
   OpRegistryWrapper Build() { return wrapper_; }
 
