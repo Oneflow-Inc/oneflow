@@ -63,10 +63,10 @@ Training
 .. automodule:: oneflow.config.train
     :members:
     :undoc-members:
-.. autofunction:: model_update_conf
-.. autofunction:: loss_scale_factor
 .. autofunction:: primary_lr
 .. autofunction:: secondary_lr
+.. autofunction:: model_update_conf
+.. autofunction:: loss_scale_factor
 .. autofunction:: weight_l1
 .. autofunction:: bias_l1
 .. autofunction:: weight_l2

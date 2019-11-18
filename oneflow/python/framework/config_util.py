@@ -487,11 +487,21 @@ def set_loss_scale_factor(value):
 
 @oneflow_export('config.train.primary_lr')
 def set_primary_lr(value):
+    r"""Set learning rate for all variables with model name "weight"
+
+    Args:
+        val: a `float`
+    """
     _SetJobConfAttr(lambda job_conf: job_conf.train_conf, 'primary_lr', value)
     return oneflow.config
 
 @oneflow_export('config.train.secondary_lr')
 def set_secondary_lr(value):
+    r"""Set learning rate for all variables with model name "bias". If no `secondary_lr` specified, `primary_lr` will be adopted.
+
+    Args:
+        val: a `float`
+    """
     _SetJobConfAttr(lambda job_conf: job_conf.train_conf, 'secondary_lr', value)
     return oneflow.config
 
