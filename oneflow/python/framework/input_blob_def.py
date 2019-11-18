@@ -49,7 +49,8 @@ class input_blob_def(blob_desc.BlobDesc):
     def is_dynamic(self): return self.is_dynamic_
 
     @property
-    def parallel_conf(self): return None
+    def parallel_conf(self):
+        TODO()
 
     def with_distribute(self, distribute):
         return input_blob_def(shape = self.shape_, dtype = self.dtype_,               \
