@@ -9,6 +9,10 @@ from oneflow.python.oneflow_export import oneflow_export
 
 @oneflow_export("matmul", "linalg.matmul")
 def matmul(a, b, transpose_a=False, transpose_b=False, name=None):
+    r"""
+    Analogous to `tf.linalg.matmul <https://www.tensorflow.org/api_docs/python/tf/linalg/matmul>`_
+
+    """
     op_conf = op_conf_util.OperatorConf()
     setattr(op_conf, "name", name if name is not None else id_util.UniqueStr("Matmul_"))
     setattr(op_conf.matmul_conf, "a", a.logical_blob_name)
