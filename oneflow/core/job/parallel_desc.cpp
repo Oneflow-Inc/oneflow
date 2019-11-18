@@ -41,12 +41,18 @@ Maybe<DeviceType> DeviceType4DeviceTag(const std::string& device_tag) {
   return Error::DeviceTagNotFound() << "device tag `" << device_tag << "' not found";
 }
 
-Maybe<long long> GetParallelNum4ParallelConf(const std::string& parallel_conf_str) {
-  ParallelConf parallel_conf;
-  OF_CHECK(TxtString2PbMessage(parallel_conf_str, &parallel_conf)) << "parallel conf parse failed";
+Maybe<OFRecord> ParseMachineAndDeviceIdList(const ParallelConf& parallel_conf) {
   ParallelDesc parallel_desc;
   JUST(parallel_desc.MaybeInit(parallel_conf));
-  return parallel_desc.parallel_num();
+  auto machine2device_list = std::make_shared<OFRecord>();
+  auto* features = machine2device_list->mutable_feature();
+  for (int64_t machine_id : parallel_desc.sorted_machine_ids()) {
+    Int32List* device_id_list = (*features)[std::to_string(machine_id)].mutable_int32_list();
+    for (int64_t device_id : parallel_desc.sorted_dev_phy_ids(machine_id)) {
+      device_id_list->add_value(device_id);
+    }
+  }
+  return machine2device_list;
 }
 
 ParallelDesc::ParallelDesc(const ParallelConf& user_conf) { CHECK_JUST(MaybeInit(user_conf)); }
@@ -144,6 +150,15 @@ Maybe<void> ParallelDesc::SanityCheck() {
     }
   }
   return Maybe<void>::Ok();
+}
+
+ParallelConf ParallelDesc::GetParallelIdOnlyParallelConf(int64_t parallel_id) const {
+  ParallelConf parallel_conf;
+  std::string device_tag = DeviceTag4DeviceType(device_type());
+  std::string machine_id = std::to_string(MachineIdForParallelId(parallel_id));
+  std::string device_id = std::to_string(DeviceIdForParallelId(parallel_id));
+  parallel_conf.add_device_name(machine_id + ":" + device_tag + ":" + device_id);
+  return parallel_conf;
 }
 
 int64_t ParallelDesc::MachineIdForParallelId(int64_t parallel_id) const {
