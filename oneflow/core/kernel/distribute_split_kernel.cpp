@@ -22,6 +22,8 @@ class DistributeSplitKernel final : public KernelIf<device_type> {
  private:
   void ForwardDataContent(const KernelCtx &,
                           std::function<Blob *(const std::string &)>) const override;
+  void ForwardDenseShape(const KernelCtx &ctx,
+                         std::function<Blob *(const std::string &)> BnInOp2Blob) const override;
   void ForwardLoD(const KernelCtx &ctx,
                   std::function<Blob *(const std::string &)> BnInOp2Blob) const override;
 
@@ -40,6 +42,13 @@ void DistributeSplitKernel<device_type>::ForwardLoD(
   const Blob *in_blob = BnInOp2Blob("in");
   Blob *out_blob = GetOutBlob(BnInOp2Blob);
   out_blob->tree_lod_mut_view().UpdateLoD(in_blob->tree_lod_view().lod_tree());
+}
+
+template<DeviceType device_type>
+void DistributeSplitKernel<device_type>::ForwardDenseShape(
+    const KernelCtx &ctx, std::function<Blob *(const std::string &)> BnInOp2Blob) const {
+  Blob* out_blob = GetOutBlob(BnInOp2Blob);
+  out_blob->dense_shape_mut_view()->set_shape(BnInOp2Blob("in")->shape());
 }
 
 template<DeviceType device_type>
