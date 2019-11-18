@@ -160,7 +160,7 @@ class Operator {
 
   void ForEachBnInOp(std::function<void(const std::string&)>) const;
 
-  Symbol<OperatorConf> GetOpConfWithoutOpNameAndLbn() const;
+  virtual Symbol<OperatorConf> GetOpConfWithoutOpNameAndLbn() const;
 
  protected:
   virtual Maybe<void> GetSbpSignatures(
