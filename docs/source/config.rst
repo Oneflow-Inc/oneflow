@@ -28,8 +28,8 @@ oneflow.config
 .. autofunction:: collect_act_event
 .. autofunction:: total_batch_num
 .. autofunction:: default_data_type
-.. autofunction:: max_data_id_length
 .. autofunction:: default_initializer_conf
+.. autofunction:: max_data_id_length
 .. autofunction:: exp_run_conf
 .. autofunction:: use_memory_allocation_algorithm_v2
 .. autofunction:: enable_cudnn
@@ -63,10 +63,10 @@ Training
 .. automodule:: oneflow.config.train
     :members:
     :undoc-members:
-.. autofunction:: model_update_conf
-.. autofunction:: loss_scale_factor
 .. autofunction:: primary_lr
 .. autofunction:: secondary_lr
+.. autofunction:: model_update_conf
+.. autofunction:: loss_scale_factor
 .. autofunction:: weight_l1
 .. autofunction:: bias_l1
 .. autofunction:: weight_l2

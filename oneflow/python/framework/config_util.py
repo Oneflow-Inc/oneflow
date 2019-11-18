@@ -74,10 +74,10 @@ def _DefaultConfigProto():
 
 @oneflow_export('config.gpu_device_num')
 def gpu_device_num(val):
-    r"""Set total number of GPUs on all machines to run oneflow on. By default, it is data parallel.
+    r"""Set number of GPUs on each machine to run oneflow on.
 
     Args:
-        val: total number of GPUs on all machines
+        val: number of GPUs. It is identical on every machine. In other words, you can't specify different number of GPUs you would like to use by machine.
     """
     assert config_proto_mutable == True
     assert type(val) is int
@@ -85,6 +85,11 @@ def gpu_device_num(val):
 
 @oneflow_export('config.cpu_device_num')
 def cpu_device_num(val):
+    r"""Set number of CPUs on each machine to run oneflow on. Usually you don't need to set this.
+
+    Args:
+        val: number of CPUs. It is identical on every machine.
+    """
     assert config_proto_mutable == True
     assert type(val) is int
     default_config_proto.resource.cpu_device_num = val
@@ -238,6 +243,11 @@ def set_total_batch_num(value):
 
 @oneflow_export('config.default_data_type')
 def set_default_data_type(value):
+    r"""set default data type
+
+    Args:
+        val: a OneFlow data type. For instance, `oneflow.float`. If no data type is specified, it is `float32` by default.
+    """
     _SetJobConfAttr(lambda x:x, 'default_data_type', value)
     return oneflow.config
 
@@ -465,6 +475,13 @@ def set_concurrency_width(value):
 
 @oneflow_export('config.train.model_update_conf')
 def set_model_update_conf(value):
+    r"""Set model update (optimizer) configures.
+
+    Args:
+        val: a `dict`. For instance, a conventional SGD optimizer::
+
+            dict(naive_conf={})
+    """
     assert type(value) is dict
     pb_msg = _GetJobConfAttr(lambda job_conf: job_conf.train_conf, 'model_update_conf')
     pb_util.PythonDict2PbMessage(value, pb_msg)
@@ -477,11 +494,21 @@ def set_loss_scale_factor(value):
 
 @oneflow_export('config.train.primary_lr')
 def set_primary_lr(value):
+    r"""Set learning rate for all variables with model name "weight"
+
+    Args:
+        val: a `float`
+    """
     _SetJobConfAttr(lambda job_conf: job_conf.train_conf, 'primary_lr', value)
     return oneflow.config
 
 @oneflow_export('config.train.secondary_lr')
 def set_secondary_lr(value):
+    r"""Set learning rate for all variables with model name "bias". If no `secondary_lr` specified, `primary_lr` will be adopted.
+
+    Args:
+        val: a `float`
+    """
     _SetJobConfAttr(lambda job_conf: job_conf.train_conf, 'secondary_lr', value)
     return oneflow.config
 

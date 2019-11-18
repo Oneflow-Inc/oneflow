@@ -106,10 +106,12 @@ def reshape(x, shape, name=None):
 def transpose(a, perm=None, conjugate=False, name=None):
     r"""Transposes `a`.
 
+    Analogous to `tf.transpose <https://www.tensorflow.org/api_docs/python/tf/transpose>`_
+
     Args:
         a: A `Blob`.
         perm: A permutation of the dimensions of `a`.
-        conjugate: False. Not support in OneFlow.
+        conjugate: False. Not supported.
         name: A name for the operation (optional).
     Returns:
         A transposed blob.

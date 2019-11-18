@@ -17,10 +17,12 @@ OneFlow Documentation
     oneflow
     config
     train
+    losses
     math
     nn
     layers
     data
+    keras.activations
 
 
 Indices and tables
