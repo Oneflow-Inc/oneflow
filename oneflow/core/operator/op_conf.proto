@@ -1577,7 +1577,7 @@ message OperatorConf {
     NcclBoxingReduceScatterOpConf nccl_boxing_reduce_scatter_conf = 152;
     NcclBoxingAllGatherOpConf nccl_boxing_all_gather_conf = 153;
     NcclBoxingAllReduceOpConf nccl_boxing_all_reduce_conf = 154;
-    UserOpConf user_op_conf = 155;
+    UserOpConf user_conf = 155;
 
     // domain op
     TupleIdentityOpConf tuple_identity_conf = 200;
