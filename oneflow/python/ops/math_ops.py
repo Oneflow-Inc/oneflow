@@ -214,8 +214,15 @@ def gelu(x, name=None):
     return remote_blob_util.RemoteBlob(lbi)
 
 
-@oneflow_export('math.relu')
+@oneflow_export('math.relu', 'keras.activations.relu')
 def relu(x, name=None):
+    r"""ReLU activation
+
+    Args:
+        x: Input `Blob`.
+    Returns:
+        A `Blob`
+    """
     op_conf = op_conf_util.OperatorConf()
     setattr(op_conf, "name", name if name is not None else id_util.UniqueStr('Relu_'))
     setattr(op_conf.relu_conf, "in", x.logical_blob_name)
