@@ -150,7 +150,7 @@ def alexnet_eval_job():
 
 （3）通过`flow.config.default_data_type()`指定数据类型，可以是`flow.float`类型(全精度)，或者`flow.half`类型(半精度)等。
 
-（4）对于多机运行的情况，还需要通过`flow.config.machine()`指定各个机器的ip地址。
+（4）对于多机运行的情况，还需要通过`flow.config.machine()`指定各个机器的ip地址，并在每个机器运行同样的 python 脚本。
 
 ```
 # 配置运行方式
