@@ -190,7 +190,7 @@ if __name__ == "__main__":
         for box_head_result in box_head_results:
             # swap height and width in image_size
             image_size_h_w = box_head_result[-1]
-            assert len(imaeg_size_h_w) == 2
+            assert len(image_size_h_w) == 2
             image_size_w_h = [image_size_h_w[1], image_size_h_w[0]]
             boxlist = BoxList(box_head_result[0].ndarray(), image_size_w_h, mode="xyxy")
             boxlist.add_field("scores", box_head_result[1].ndarray())
@@ -225,3 +225,31 @@ if __name__ == "__main__":
         expected_results=(),
         expected_results_sigma_tol=4,
     )
+
+# Box Head
+# Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.537
+# Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets=100 ] = 0.783
+# Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets=100 ] = 0.550
+# Average Precision  (AP) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = -1.000
+# Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.567
+# Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.592
+# Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=  1 ] = 0.490
+# Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets= 10 ] = 0.590
+# Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.590
+# Average Recall     (AR) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = -1.000
+# Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.567
+# Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.625
+
+# Mask Head
+# Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.535
+# Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets=100 ] = 0.750
+# Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets=100 ] = 0.650
+# Average Precision  (AP) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = -1.000
+# Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.667
+# Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.450
+# Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=  1 ] = 0.490
+# Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets= 10 ] = 0.580
+# Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.580
+# Average Recall     (AR) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = -1.000
+# Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.667
+# Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.450

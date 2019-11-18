@@ -274,13 +274,7 @@ class BoxHead(object):
                 inds = flow.squeeze(
                     flow.local_nonzero(
                         flow.squeeze(
-                            flow.slice_v2(
-                                inds_all,
-                                [
-                                    {"begin": None, "end": None, "stride": None},
-                                    {"begin": j, "end": j + 1, "stride": 1},
-                                ],
-                            ),
+                            flow.slice_v2(inds_all, [{}, {"begin": j, "end": j + 1, "stride": 1}]),
                             axis=[1],
                         )
                     ),
@@ -289,19 +283,13 @@ class BoxHead(object):
                 # [R, 4]
                 boxes_j = flow.slice_v2(
                     flow.local_gather(proposals, inds),
-                    [
-                        {"begin": None, "end": None, "stride": None},
-                        {"begin": j * 4, "end": (j + 1) * 4, "stride": 1},
-                    ],
+                    [{}, {"begin": j * 4, "end": (j + 1) * 4, "stride": 1}],
                 )
                 # [R,]
                 scores_j = flow.squeeze(
                     flow.slice_v2(
                         flow.local_gather(cls_probs, inds),
-                        [
-                            {"begin": None, "end": None, "stride": None},
-                            {"begin": j, "end": j + 1, "stride": 1},
-                        ],
+                        [{}, {"begin": j, "end": j + 1, "stride": 1}],
                     ),
                     axis=[1],
                 )
