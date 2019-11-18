@@ -21,6 +21,13 @@ void OpRegistryWrapper::InsertToGlobalRegistry() {
   registry->emplace(op_type_name, reg_val);
 }
 
+const OpRegistrationVal* LookUpInOpRegistry(const std::string& op_type_name) {
+  const auto registry = MutOpRegistry();
+  auto it = registry->find(op_type_name);
+  if (it != registry->end()) { return &(it->second); }
+  return nullptr;
+}
+
 OpRegistryWrapperBuilder& OpRegistryWrapperBuilder::ArgImpl(bool is_input, const std::string& name,
                                                             bool is_optional, int32_t num,
                                                             bool num_as_min) {

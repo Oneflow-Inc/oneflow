@@ -66,6 +66,8 @@ class OpRegistryWrapperBuilder final {
   OpRegistryWrapper wrapper_;
 };
 
+const OpRegistrationVal* LookUpInOpRegistry(const std::string& op_type_name);
+
 }  // namespace user_op
 
 #define REGISTER_USER_OP(name)                                                              \
