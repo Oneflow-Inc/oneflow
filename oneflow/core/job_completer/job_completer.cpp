@@ -361,7 +361,7 @@ void JobCompleter::Complete(Job* job) const {
     WithOpGraphAndMutJobBuilder(job, &GenerateOpConf4Trainning);
     WithOpGraphAndMutJobBuilder(job, &MakeNcclTupleBroadcastReduceSequence);
     WithOpGraphAndMutJobBuilder(job, &RewriteBoxingWithAllReduce);
-    AddLbiDiffWatherOpConfs(job);
+    AddLbiDiffWatcherOpConfs(job);
     WithOpGraphAndMutJobBuilder(job, &MakeAllReduceSequence);
   }
   WithOpGraphAndMutJobBuilder(job, &DumpLogicalBlobDescAndSbpSignature);

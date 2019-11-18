@@ -36,6 +36,7 @@ class OpNode final : public Node<OpNode, OpEdge> {
   const OpNode& ProducerOpNode4Lbi(const LogicalBlobId& lbi) const;
   const OpNode& SrcNode4InputBnInOp(const std::string& bn_in_op) const;
   const OpNode& ProducerOpNode4BnInOp(const std::string& bn_in_op) const;
+  const ParallelDesc& BlobParallelDesc4Obn(const std::string& obn) const;
 
   std::string VisualStr() const override;
 
@@ -49,7 +50,7 @@ class OpNode final : public Node<OpNode, OpEdge> {
   ParallelDesc* mut_parallel_desc() { return &parallel_desc_; }
   SbpSignature* mut_sbp_signature() { return &sbp_signature_; }
   Shape* mut_out_blob_time_shape();
-  HashMap<std::string, std::vector<std::unique_ptr<BlobDesc>>>* mut_bn2parallel_id2blob_desc() {
+  HashMap<std::string, std::vector<std::shared_ptr<BlobDesc>>>* mut_bn2parallel_id2blob_desc() {
     return &bn2parallel_id2blob_desc_;
   }
   OptInt64* MutBatchAxis4Lbi(const LogicalBlobId& lbi);
@@ -63,20 +64,23 @@ class OpNode final : public Node<OpNode, OpEdge> {
 
   int64_t GetAxisParallelNum(
       const std::function<void(bool*, int32_t*, int64_t*)>& GetAxisParallelInfo) const;
-  void ConcatBlobDesc(const std::vector<std::unique_ptr<BlobDesc>>& blob_descs,
+  void ConcatBlobDesc(const ParallelDesc& blob_parallel_desc,
+                      const std::vector<std::shared_ptr<BlobDesc>>& blob_descs,
                       const SbpParallel& sbp_parallel, BlobDesc* concatenated_blob_desc) const;
   void SplitLogicalInputBlobDesc();
   void ConcatLogicalOutputBlobDesc();
   void CheckBlobDescs(const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
                       const ParallelContext* parallel_ctx) const;
+  void InferBlobParallelDesc();
 
   ParallelDesc parallel_desc_;
+  HashMap<std::string, ParallelDesc> obn2blob_parallel_desc_;
   std::shared_ptr<Operator> op_;
   HashSet<std::string> ibns_;
   std::unique_ptr<Shape> out_blob_time_shape_;
   SbpSignature sbp_signature_;
   HashMap<LogicalBlobId, OptInt64> lbi2batch_axis_;
-  HashMap<std::string, std::vector<std::unique_ptr<BlobDesc>>> bn2parallel_id2blob_desc_;
+  HashMap<std::string, std::vector<std::shared_ptr<BlobDesc>>> bn2parallel_id2blob_desc_;
   HashMap<LogicalBlobId, std::unique_ptr<BlobDesc>> lbi2logical_blob_desc_;
 };
 

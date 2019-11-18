@@ -10,11 +10,6 @@ def PlacementScopeStackTop():
     assert len(placement_scope_stack) > 0, "no placement scope found"
     return placement_scope_stack[0]
     
-def CurPlacementGroupAddOpConf(op_conf):
-    global placement_scope_stack
-    assert len(placement_scope_stack) > 0
-    placement_scope_stack[0].AppendOpConf(op_conf)
-
 def CurPlacementGroupGetDeviceType(op_conf):
     global placement_scope_stack
     assert len(placement_scope_stack) > 0
