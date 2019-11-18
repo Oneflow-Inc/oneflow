@@ -564,6 +564,7 @@ if __name__ == "__main__":
     flow.config.ctrl_port(terminal_args.ctrl_port)
     flow.config.default_data_type(flow.float)
 
+    fake_image_list = []
     if terminal_args.fake_image_path:
         file_list = os.listdir(terminal_args.fake_image_path)
         fake_image_list = [
@@ -572,9 +573,7 @@ if __name__ == "__main__":
         ]
 
     if terminal_args.train_with_real_dataset:
-        train_func = init_train_func(
-            len(fake_image_list) > 0 if fake_image_list else False
-        )
+        train_func = init_train_func(len(fake_image_list) > 0)
 
     check_point = flow.train.CheckPoint()
     if not terminal_args.model_load_dir:
@@ -635,8 +634,9 @@ if __name__ == "__main__":
 
         elif terminal_args.train_with_real_dataset:
             print(
-                "{:>8} {:>16} {:>16} {:>16} {:>16} {:>16}".format(
+                "{:>8} {:>8} {:>16} {:>16} {:>16} {:>16} {:>16}".format(
                     "iter",
+                    "rank",
                     "loss_rpn_box_reg",
                     "loss_objectness",
                     "loss_box_reg",
@@ -646,14 +646,12 @@ if __name__ == "__main__":
             )
             for i in range(terminal_args.iter_num):
                 if i < len(fake_image_list):
-                    train_loss = train_func(fake_image_list[i]).get()
+                    losses = train_func(fake_image_list[i]).get()
                 else:
-                    train_loss = train_func().get()
+                    losses = train_func().get()
 
-                fmt_str = "{:>8} " + "{:>16.10f} " * len(train_loss)
-                print_loss = [i]
-                for loss in train_loss:
-                    print_loss.append(loss.mean())
-                print(fmt_str.format(*print_loss))
+                fmt_str = "{:>8} {:>8}" + "{:>16.10f} " * len(losses)
+                for j, loss in enumerate(zip(*losses)):
+                    print(fmt_str.format(i, j, *[t.mean() for t in loss]))
 
                 save_blob_watched(i)
