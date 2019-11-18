@@ -47,7 +47,7 @@ void DistributeSplitKernel<device_type>::ForwardLoD(
 template<DeviceType device_type>
 void DistributeSplitKernel<device_type>::ForwardDenseShape(
     const KernelCtx &ctx, std::function<Blob *(const std::string &)> BnInOp2Blob) const {
-  Blob* out_blob = GetOutBlob(BnInOp2Blob);
+  Blob *out_blob = GetOutBlob(BnInOp2Blob);
   out_blob->dense_shape_mut_view()->set_shape(BnInOp2Blob("in")->shape());
 }
 
