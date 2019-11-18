@@ -303,6 +303,14 @@ def rsqrt(x, name=None):
 
 @oneflow_export("cast")
 def cast(x, dtype, name=None):
+    r"""Return a `Blob` of given data type `dtype` and indentical shape to `x`
+
+    Args:
+        x: a `Blob`.
+        dtype: a OneFlow data type. For instance, `oneflow.float`.
+    Returns:
+        A `Blob`
+    """
     if x.dtype == dtype:
         return x
     op_conf = op_conf_util.OperatorConf()
