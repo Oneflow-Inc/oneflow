@@ -8,6 +8,7 @@ from oneflow.python.oneflow_export import oneflow_export
 @oneflow_export("constant_initializer")
 def constant_initializer(value=0, dtype=data_type_conf_util.kFloat):
     r"""Initializer that generates blob with constant values.
+    
     Args:
         value: A Python scalar. All elements of the initialized variable 
         will be set to the corresponding value.
@@ -43,6 +44,7 @@ def ones_initializer(dtype=data_type_conf_util.kFloat):
 @oneflow_export("random_uniform_initializer")
 def random_uniform_initializer(minval=0, maxval=1, dtype=data_type_conf_util.kFloat):
     r"""Initializer that generates blob with a uniform distribution.
+
     Args:
         minval: A python scalar. Lower bound of the range of random values to generate.
         maxval: A python scalar. Upper bound of the range of random values to generate. 
@@ -71,7 +73,8 @@ def random_uniform_initializer(minval=0, maxval=1, dtype=data_type_conf_util.kFl
 
 @oneflow_export("random_normal_initializer")
 def random_normal_initializer(mean=0.0, stddev=1.0, seed=None, dtype=None):
-    r"""Initializer that generates blob with a normal distribution..
+    r"""Initializer that generates blob with a normal distribution.
+
     Args:
         mean: a python scalar. Mean of the random values to generate.
         stddev: a python scalar. Standard deviation of the random values to generate.
