@@ -106,6 +106,8 @@ def reshape(x, shape, name=None):
 def transpose(a, perm=None, conjugate=False, name=None):
     r"""Transposes `a`.
 
+    Analogous to `tf.transpose <https://www.tensorflow.org/api_docs/python/tf/transpose>`_
+
     Args:
         a: A `Blob`.
         perm: A permutation of the dimensions of `a`.
