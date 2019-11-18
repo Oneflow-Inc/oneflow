@@ -1,5 +1,14 @@
 OneFlow Documentation
 ===================================
+.. toctree::
+    :maxdepth: 1
+    :caption: Oneflow Tutorial
+
+    tutorials/quick_start
+    tutorials/ofrecord
+    tutorials/alexnet
+    tutorials/models
+
 
 .. toctree::
     :maxdepth: 1
@@ -14,6 +23,7 @@ OneFlow Documentation
     layers
     data
     keras.activations
+
 
 Indices and tables
 ==================
