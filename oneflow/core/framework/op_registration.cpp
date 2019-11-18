@@ -37,12 +37,6 @@ OpRegistryWrapperBuilder& OpRegistryWrapperBuilder::ArgImpl(bool is_input, const
   return *this;
 }
 
-#define FN_PREFIX_SEQ                             \
-  OF_PP_MAKE_TUPLE_SEQ(Input, true, false)        \
-  OF_PP_MAKE_TUPLE_SEQ(OptionalInput, true, true) \
-  OF_PP_MAKE_TUPLE_SEQ(Output, false, false)      \
-  OF_PP_MAKE_TUPLE_SEQ(OptionalOutput, false, true)
-
 #define OP_REG_ARG_MEMBER_FUNC(name_prefix, is_input, is_optional)                           \
   OpRegistryWrapperBuilder& OpRegistryWrapperBuilder::name_prefix(const std::string& name) { \
     return ArgImpl(is_input, name, is_optional, 1, false);                                   \
@@ -56,10 +50,12 @@ OpRegistryWrapperBuilder& OpRegistryWrapperBuilder::ArgImpl(bool is_input, const
     return ArgImpl(is_input, name, is_optional, min_num, true);                              \
   }
 
-OF_PP_FOR_EACH_TUPLE(OP_REG_ARG_MEMBER_FUNC, FN_PREFIX_SEQ)
+OP_REG_ARG_MEMBER_FUNC(Input, true, false)
+OP_REG_ARG_MEMBER_FUNC(OptionalInput, true, true)
+OP_REG_ARG_MEMBER_FUNC(Output, false, false)
+OP_REG_ARG_MEMBER_FUNC(OptionalOutput, false, true)
 
 #undef OP_REG_ARG_MEMBER_FUNC
-#undef FN_PREFIX_SEQ
 
 OpRegistryWrapperBuilder& OpRegistryWrapperBuilder::Attr(const std::string& name,
                                                          UserOpAttrType type) {
