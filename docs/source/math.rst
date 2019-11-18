@@ -11,3 +11,5 @@ oneflow.math
 .. autofunction:: multiply
 .. autofunction:: reduce_sum
 .. autofunction:: reduce_mean
+.. autofunction:: unsorted_segment_sum
+.. autofunction:: unsorted_batch_segment_sum
