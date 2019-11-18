@@ -12,7 +12,6 @@ Operators
 .. autofunction:: gather
 .. autofunction:: identity
 .. autofunction:: matmul
-.. autofunction:: parallel_cast
 .. autofunction:: reshape
 .. autofunction:: slice
 .. autofunction:: transpose
@@ -20,6 +19,7 @@ Operators
 .. autofunction:: unsorted_batch_segment_sum
 .. autofunction:: unsorted_segment_sum
 .. autofunction:: cast
+.. autofunction:: parallel_cast
 
 Initializers
 ----------------------------------
