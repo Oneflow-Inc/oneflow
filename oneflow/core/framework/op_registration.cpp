@@ -1,5 +1,7 @@
 #include "oneflow/core/framework/op_registration.h"
+#include "oneflow/core/framework/user_op_attr.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/common/shape.h"
 
 namespace oneflow {
 
@@ -65,6 +67,68 @@ OpRegistryWrapperBuilder& OpRegistryWrapperBuilder::Attr(const std::string& name
   *(wrapper_.reg_val.op_def.mutable_attr()->Add()) = attr_def;
   return *this;
 }
+
+namespace {
+
+void AddAttrWithDefault(OpRegistryWrapper* wrapper, const std::string& name, UserOpAttrType type,
+                        std::function<void(UserOpDef::AttrDef*)> handler) {
+  UserOpDef::AttrDef attr_def;
+  attr_def.set_name(name);
+  attr_def.set_type(type);
+  handler(&attr_def);
+  *(wrapper->reg_val.op_def.mutable_attr()->Add()) = std::move(attr_def);
+}
+
+}  // namespace
+
+#define OP_REG_ATTR_MEMBER_FUNC(attr_type, cpp_type, postfix)                               \
+  template<>                                                                                \
+  OpRegistryWrapperBuilder& OpRegistryWrapperBuilder::Attr<cpp_type>(                       \
+      const std::string& name, UserOpAttrType type, cpp_type&& default_val) {               \
+    CHECK_EQ(type, UserOpAttrType::kAt##attr_type);                                         \
+    AddAttrWithDefault(&wrapper_, name, type, [default_val](UserOpDef::AttrDef* attr_def) { \
+      attr_def->mutable_default_val()->set_##postfix(default_val);                          \
+    });                                                                                     \
+    return *this;                                                                           \
+  }
+
+OP_REG_ATTR_MEMBER_FUNC(Int32, int32_t, at_int32)
+OP_REG_ATTR_MEMBER_FUNC(Int64, int64_t, at_int64)
+OP_REG_ATTR_MEMBER_FUNC(Bool, bool, at_bool)
+OP_REG_ATTR_MEMBER_FUNC(Float, float, at_float)
+OP_REG_ATTR_MEMBER_FUNC(Double, double, at_double)
+OP_REG_ATTR_MEMBER_FUNC(String, std::string, at_string)
+
+#undef OP_REG_ATTR_MEMBER_FUNC
+
+template<>
+OpRegistryWrapperBuilder& OpRegistryWrapperBuilder::Attr<Shape>(const std::string& name,
+                                                                UserOpAttrType type,
+                                                                Shape&& default_val) {
+  CHECK_EQ(type, UserOpAttrType::kAtShape);
+  AddAttrWithDefault(&wrapper_, name, type, [default_val](UserOpDef::AttrDef* attr_def) {
+    default_val.ToProto(attr_def->mutable_default_val()->mutable_at_shape());
+  });
+  return *this;
+}
+
+#define OP_REG_LIST_ATTR_MEMBER_FUNC(attr_type, cpp_type, postfix)                          \
+  template<>                                                                                \
+  OpRegistryWrapperBuilder& OpRegistryWrapperBuilder::Attr<cpp_type>(                       \
+      const std::string& name, UserOpAttrType type, cpp_type&& default_val) {               \
+    CHECK_EQ(type, UserOpAttrType::kAt##attr_type);                                         \
+    AddAttrWithDefault(&wrapper_, name, type, [default_val](UserOpDef::AttrDef* attr_def) { \
+      SerializeVector2ListAttr<cpp_type, UserOpAttrVal::attr_type>(                         \
+          default_val, attr_def->mutable_default_val()->mutable_##postfix());               \
+    });                                                                                     \
+    return *this;                                                                           \
+  }
+
+OP_REG_LIST_ATTR_MEMBER_FUNC(ListInt32, std::vector<int32_t>, at_list_int32)
+// OP_REG_LIST_ATTR_MEMBER_FUNC(ListInt64, std::vector<int64_t>, at_list_int64)
+// OP_REG_LIST_ATTR_MEMBER_FUNC(ListFloat, std::vector<float>, at_list_float)
+
+#undef OP_REG_LIST_ATTR_MEMBER_FUNC
 
 OpRegistryWrapperBuilder& OpRegistryWrapperBuilder::SetShapeInferFn(
     std::function<Maybe<void>(Shape4ArgNameAndIndex)> shape_infer_fn) {
