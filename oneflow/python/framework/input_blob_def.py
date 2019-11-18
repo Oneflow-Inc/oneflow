@@ -62,6 +62,10 @@ class input_blob_def(blob_desc.BlobDesc):
     @property
     def is_dynamic(self): return self.is_dynamic_
 
+    @property
+    def parallel_conf(self):
+        TODO()
+
     def with_distribute(self, distribute):
         return input_blob_def(shape = self.shape_, dtype = self.dtype_,               \
                         is_dynamic = self.is_dynamic_, batch_axis = self.batch_axis_, \
