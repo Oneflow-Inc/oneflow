@@ -91,6 +91,13 @@ def cpu_device_num(val):
 
 @oneflow_export('config.machine')
 def machine(*val):
+    r"""Set machines' hostnames. 
+
+    Args:
+        val:  `list`, `tuple` or multiple arguments of `dict`. First in the list is the master machine. For instance::
+
+            [{"addr": "192.168.1.1"}, {"addr": "192.168.1.2"}]
+    """
     assert config_proto_mutable == True
     del default_config_proto.resource.machine[:]
     if len(val) == 1 and isinstance(val[0], (list, tuple)): val = val[0]
