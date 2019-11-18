@@ -1,5 +1,4 @@
 #include "oneflow/xrt/graph/graph.h"
-#include "oneflow/core/graph/op_graph.h"
 #include "oneflow/xrt/argument.h"
 
 namespace oneflow {
@@ -42,7 +41,7 @@ XrtNode *XrtGraph::AddNode() {
   return nodes_.back();
 }
 
-XrtNode *XrtGraph::AddNode(const PbMessage &param) {
+XrtNode *XrtGraph::AddNode(const google::protobuf::Message &param) {
   std::unique_ptr<XrtNode> node(new XrtNode(param));
   node->unique_id_ = nodes_.size();
   nodes_.push_back(node.get());

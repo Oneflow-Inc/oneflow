@@ -1,8 +1,8 @@
 #ifndef ONEFLOW_XRT_GRAPH_NODE_H_
 #define ONEFLOW_XRT_GRAPH_NODE_H_
 
-#include "oneflow/core/graph/op_graph.h"
-#include "oneflow/xrt/any.h"
+#include <google/protobuf/message.h>
+
 #include "oneflow/xrt/argument.h"
 #include "oneflow/xrt/graph/algorithm.h"
 #include "oneflow/xrt/types.h"
@@ -68,7 +68,8 @@ class XrtNode : public util::AttributeMap {
   const XrtDevice &device() const { return device_; }
   const std::string &type() const { return type_; }
   const std::string &name() const { return name_; }
-  const PbMessage &param() const { return *param_; }
+
+  const google::protobuf::Message &param() const { return *param_; }
 
   XrtGraph *sub_graph() const { return sub_graph_; }
 
@@ -81,6 +82,7 @@ class XrtNode : public util::AttributeMap {
   bool IsArgumentNode() const;
   bool IsInArgumentNode() const;
   bool IsOutArgumentNode() const;
+
   bool IsReachable(const XrtNode &dst_node) const;
 
   virtual ~XrtNode() {}
@@ -90,14 +92,14 @@ class XrtNode : public util::AttributeMap {
  protected:
   XrtNode() = default;
   // XrtNode only can be created by XrtGraph
-  explicit XrtNode(const PbMessage &param)
+  explicit XrtNode(const google::protobuf::Message &param)
       : param_(&param), unique_id_(-1), sub_graph_(nullptr) {}
 
  protected:
   util::List<XrtEdge *> in_edges_;
   util::List<XrtEdge *> out_edges_;
 
-  const PbMessage *param_ = nullptr;
+  const google::protobuf::Message *param_ = nullptr;
   // Each node has a unique id related to it's index in the graph's nodes
   int64_t unique_id_ = -1;
   // Backend device such as X86, CUDA, ARM and so on

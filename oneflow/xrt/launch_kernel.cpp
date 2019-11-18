@@ -105,7 +105,7 @@ void XrtLaunchKernel<device_type>::MakeInputOutputAlias(
     std::vector<xrt::Parameter> *return_params,
     std::vector<xrt::InputOutputAlias> *aliases) const {
   const auto &launch_conf = this->op_conf().xrt_launch_conf();
-  const auto &mutability_table = launch_conf.mutability();
+  const auto &mutability_table = launch_conf.input_mutability();
 
   for (int i = 0; i < entry_params.size(); ++i) {
     const std::string &entry_name = entry_params[i].name();

@@ -1,6 +1,8 @@
 #ifndef ONEFLOW_XRT_PASSES_CLUSTER_H_
 #define ONEFLOW_XRT_PASSES_CLUSTER_H_
 
+#include "oneflow/core/job/sbp_parallel.h"
+
 #include "absl/strings/str_cat.h"
 #include "oneflow/xrt/graph/graph.h"
 #include "oneflow/xrt/node_util.h"
@@ -96,7 +98,8 @@ class ClusterNode {
 
   virtual bool IsCompiled(const XrtEngine &engine,
                           const bool train_phase) const {
-    return IsCompiledNode(xrt_node_, engine, train_phase);
+    return (engine_ == XrtEngine::DEFAULT || engine_ == engine) &&
+           IsCompiledNode(xrt_node_, engine, train_phase);
   }
 
   virtual bool IsOptimizer(const XrtEngine &engine) const {
@@ -110,6 +113,10 @@ class ClusterNode {
   const XrtNode *xrt_node() const { return xrt_node_; }
   int64_t cluster_id() const { return cluster_id_; }
   void set_cluster_id(int64_t id) { cluster_id_ = id; }
+
+  const XrtEngine &engine() const { return engine_; }
+  void set_engine(const XrtEngine &engine) { engine_ = engine; }
+
   virtual std::string type() const { return xrt_node_->type(); }
   virtual std::string name() const { return xrt_node_->name(); }
   virtual XrtDevice device() const { return xrt_node_->device(); }
@@ -120,7 +127,9 @@ class ClusterNode {
 
  private:
   const XrtNode *xrt_node_;
-  int64_t cluster_id_;
+  int64_t cluster_id_ = -1;
+  XrtEngine engine_ = XrtEngine::DEFAULT;
+
   util::Set<ClusterNode *> folded_nodes_;
   util::Set<ClusterEdge *> in_edges_;
   util::Set<ClusterEdge *> out_edges_;

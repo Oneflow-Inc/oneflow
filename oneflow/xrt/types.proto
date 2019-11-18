@@ -11,9 +11,10 @@ enum XrtDevice {
 }
 
 enum XrtEngine {
-  XLA = 1;
-  TENSORRT = 2;
-  TVM = 3;
+  DEFAULT = 1;
+  XLA = 2;
+  TENSORRT = 3;
+  TVM = 4;
 }
 
 message XrtField {

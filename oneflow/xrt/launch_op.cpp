@@ -13,7 +13,7 @@ void XrtLaunchOp::InitFromOpConf() {
   int inputs_num = launch_conf.in().size();
   int outputs_num = launch_conf.out().size();
 
-  const auto &mutability_table = launch_conf.mutability();
+  const auto &mutability_table = launch_conf.input_mutability();
   for (int i = 0; i < inputs_num; ++i) {
     const std::string &input = launch_conf.in().at(i);
     bool mutability = mutability_table.count(input) > 0;

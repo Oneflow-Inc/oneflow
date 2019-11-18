@@ -1506,7 +1506,7 @@ message XrtLaunchOpConf {
   // Only "XLA" and "TensorRT" are supported currently.
   required string engine = 4;
   // Input mutability.
-  map<string, bool> mutability = 5;
+  map<string, bool> input_mutability = 5;
   // Mapping launch op's input and output names into function.
   map<string, string> input_output_mapping = 6;
   map<string, OptInt64> batch_axis = 7;

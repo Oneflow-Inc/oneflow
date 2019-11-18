@@ -1,7 +1,9 @@
 #ifndef ONEFLOW_XRT_GRAPH_GRAPH_H_
 #define ONEFLOW_XRT_GRAPH_GRAPH_H_
 
+#include <google/protobuf/message.h>
 #include <vector>
+
 #include "oneflow/xrt/argument.h"
 #include "oneflow/xrt/graph/algorithm.h"
 #include "oneflow/xrt/graph/node.h"
@@ -19,7 +21,7 @@ class XrtGraph : public util::AttributeMap {
   const XrtNode *Node(int64_t node_id) const;
 
   XrtNode *AddNode();
-  XrtNode *AddNode(const PbMessage &param);
+  XrtNode *AddNode(const google::protobuf::Message &param);
 
   XrtEdge *AddEdge();
   XrtEdge *AddEdge(const XrtNode *start, const XrtNode *end);
