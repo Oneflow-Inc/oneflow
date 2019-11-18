@@ -11,6 +11,7 @@ from oneflow.python.oneflow_export import oneflow_export
 @oneflow_export('keras.activations.relu')
 def relu(x, alpha=0., max_value=None, threshold=0.):
     r"""Rectified Linear Unit.
+    
     Args:
         x: Input `Blob`.
         alpha: float. Slope of the negative part. Defaults to zero.
@@ -35,6 +36,7 @@ def relu(x, alpha=0., max_value=None, threshold=0.):
 @oneflow_export('keras.activations.gelu')
 def gelu(x):
     r"""Gaussian Error Linear Units.
+
     Args:
         x: Input `Blob`.
     Returns:
@@ -53,6 +55,7 @@ def gelu(x):
 @oneflow_export('keras.activations.tanh')
 def tanh(x):
     r"""Computes hyperbolic tangent of `x` element-wise.
+
     Args:
         x: Input `Blob`.
     Returns:
@@ -71,6 +74,7 @@ def tanh(x):
 @oneflow_export('keras.activations.sigmoid')
 def sigmoid(x):
     r"""Computes sigmoid of `x` element-wise.
+    
     Args:
         x: Input `Blob`.
     Returns:
@@ -85,4 +89,3 @@ def sigmoid(x):
     lbi.op_name = op_conf.name
     lbi.blob_name = "out"
     return remote_blob_util.RemoteBlob(lbi)
-

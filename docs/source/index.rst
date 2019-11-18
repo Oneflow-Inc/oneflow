@@ -13,6 +13,7 @@ OneFlow Documentation
     nn
     layers
     data
+    keras.activations
 
 Indices and tables
 ==================
