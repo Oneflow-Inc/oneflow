@@ -9,7 +9,6 @@ __global__ void SliceV2ForwardGpu(const int64_t n, const int64_t* offset, const 
   CUDA_1D_KERNEL_LOOP(i, n) { slice[i] = entire[offset[i]]; }
 }
 
-
 }  // namespace
 
 template<typename T>
