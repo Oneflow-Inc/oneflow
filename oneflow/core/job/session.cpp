@@ -4,6 +4,7 @@
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/critical_section_desc.h"
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
+#include "oneflow/core/job/lbi_diff_watcher_info.pb.h"
 #include "oneflow/core/job/job_set_compile_ctx.h"
 #include "oneflow/core/job/runtime_buffer_managers_scope.h"
 
@@ -14,6 +15,7 @@ Session::Session() {
   Global<CriticalSectionDesc>::New();
   Global<InterUserJobInfo>::New();
   Global<JobBuildAndInferCtxMgr>::New();
+  Global<LbiDiffWatcherInfo>::New();
   Global<JobSetCompileCtx>::New();
   Global<RuntimeBufferManagersScope>::New();
 }
@@ -21,6 +23,7 @@ Session::Session() {
 Session::~Session() {
   Global<RuntimeBufferManagersScope>::Delete();
   Global<JobSetCompileCtx>::Delete();
+  Global<LbiDiffWatcherInfo>::Delete();
   Global<JobBuildAndInferCtxMgr>::Delete();
   Global<InterUserJobInfo>::Delete();
   Global<CriticalSectionDesc>::Delete();

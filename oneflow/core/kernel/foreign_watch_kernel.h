@@ -5,7 +5,8 @@
 
 namespace oneflow {
 
-class ForeignWatchKernel final : public KernelIf<DeviceType::kCPU> {
+template<DeviceType device_type>
+class ForeignWatchKernel final : public KernelIf<device_type> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ForeignWatchKernel);
   ForeignWatchKernel() = default;
