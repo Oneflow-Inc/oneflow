@@ -270,7 +270,7 @@ def distribute_maskrcnn_train(
         flow.squeeze(
             flow.local_gather(image_size, flow.constant(i, dtype=flow.int32)),
             [0],
-            name="image_size",
+            name="image{}_size".format(i),
         )
         for i in range(image_size.shape[0])
     ]
@@ -357,6 +357,7 @@ def MakeWatcherCallback(prompt):
 
 
 def init_config():
+    flow.config.cudnn_buf_limit_mbyte(1280)
     flow.config.cudnn_conv_heuristic_search_algo(True)
     flow.config.cudnn_conv_use_deterministic_algo_only(False)
     flow.config.train.primary_lr(terminal_args.primary_lr)
