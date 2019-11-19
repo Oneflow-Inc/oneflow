@@ -87,7 +87,7 @@ def _DefaultEnvProto():
 # https://stackoverflow.com/questions/1365265/on-localhost-how-do-i-pick-a-free-port-number
 def _FindFreePort():
     with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as s:
-        s.bind(('', 0)) 
+        s.bind(('localhost', 0)) 
         s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         return s.getsockname()[1]
 
