@@ -259,24 +259,22 @@ def _set_trainable(trainable):
     g_trainable = trainable
 
 
-@flow.function
-def TrainNet():
-    flow.config.train.primary_lr(0.0032)
-    flow.config.train.model_update_conf(dict(naive_conf={}))
-
-    _set_trainable(True)
-    loss = resnet50(args.train_dir)
-    flow.losses.add_loss(loss)
-    return loss
-
-
-@flow.function
-def evaluate():
-    _set_trainable(False)
-    return resnet50(args.eval_dir)
-
-
 def main():
+    @flow.function
+    def TrainNet():
+        flow.config.train.primary_lr(0.0032)
+        flow.config.train.model_update_conf(dict(naive_conf={}))
+
+        _set_trainable(True)
+        loss = resnet50(args.train_dir)
+        flow.losses.add_loss(loss)
+        return loss
+
+    @flow.function
+    def evaluate():
+        _set_trainable(False)
+        return resnet50(args.eval_dir)
+
     flow.env.log_dir("./output/log")
     flow.env.ctrl_port(12138)
     flow.config.default_data_type(flow.float)
