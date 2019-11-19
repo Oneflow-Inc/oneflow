@@ -583,19 +583,19 @@ def TrainNet():
 
 if __name__ == "__main__":
   flow.config.gpu_device_num(args.gpu_num_per_node)
-  flow.ctrl_port(9788)
+  flow.cluster.ctrl_port(9788)
 
   flow.config.default_data_type(flow.float)
 
   if args.multinode:
-    flow.ctrl_port(12138)
+    flow.cluster.ctrl_port(12138)
     nodes = []
     for n in args.node_list.strip().split(","):
       addr_dict = {}
       addr_dict["addr"] = n
       nodes.append(addr_dict)
 
-    flow.machine(nodes)
+    flow.cluster.machine(nodes)
     if args.remote_by_hand is False:
       if args.scp_binary_without_uuid:
         flow.deprecated.init_worker(scp_binary=True, use_uuid=False)

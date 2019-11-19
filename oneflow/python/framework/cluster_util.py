@@ -3,7 +3,7 @@ from __future__ import absolute_import
 import oneflow.core.job.cluster_pb2 as cluster_pb
 from oneflow.python.oneflow_export import oneflow_export
 
-@oneflow_export('machine', 'cluster.machine')
+@oneflow_export('cluster.machine')
 def machine(*val):
     assert cluster_proto_mutable == True
     del default_cluster_proto.machine[:]
@@ -11,19 +11,19 @@ def machine(*val):
     default_cluster_proto.ClearField('machine')
     default_cluster_proto.machine.extend(_MakeMachine(val))
 
-@oneflow_export('ctrl_port', 'cluster.ctrl_port')
+@oneflow_export('cluster.ctrl_port')
 def ctrl_port(val):
     assert cluster_proto_mutable == True
     assert type(val) is int
     default_cluster_proto.ctrl_port = val
 
-@oneflow_export('data_port', 'cluster.data_port')
+@oneflow_export('cluster.data_port')
 def data_port(val):
     assert cluster_proto_mutable == True
     assert type(val) is int
     default_cluster_proto.data_port = val
 
-@oneflow_export('grpc_use_no_signal', 'cluster.grpc_use_no_signal')
+@oneflow_export('cluster.grpc_use_no_signal')
 def grpc_use_no_signal(val = True):
     assert cluster_proto_mutable == True
     assert type(val) is bool
