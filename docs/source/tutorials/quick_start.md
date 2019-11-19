@@ -16,7 +16,3 @@
 可以使用OneFlow Python API搭建各种模型和算法。
 
 见Oneflow Tutorial示例 及 Oneflow Python API 说明。
-
-
-## 线性回归模型例子
-待补充；
