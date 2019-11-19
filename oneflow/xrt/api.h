@@ -33,11 +33,16 @@ std::shared_ptr<XrtGraph> BuildXrtGraph(
 // Build an xrt graph from op graph.
 std::shared_ptr<XrtGraph> BuildXrtGraph(const OpGraph *op_graph);
 
+void EnableUseXlaJit(const ConfigOption &use_xla_jit);
+void EnableUseTensorRT(const ConfigOption &use_tensorrt);
+
+bool XrtCompilationEnabled();
+
 // Create a default options for xrt pass.
 // If environment variables FLAGS_clustering_minimum_nodes,
 // FLAGS_clustering_maximum_nodes, and FLAGS_strict_clustering have been set,
 // then it will be filled by these values.
-XrtPassOptions CreateDefaultXrtPassOptions();
+XrtPassOptions CreateDefaultXrtPassOptions(bool train_phase = false);
 
 // Run an xrt pass with fixed parameters.
 // args:
@@ -55,6 +60,9 @@ inline void RunXrtPass(const std::string &pass, XrtGraph *graph,
                        const XrtPassOptions &options, Args &&... args) {
   return RunPassImpl(pass, graph, options, std::forward<Args>(args)...);
 }
+
+void RunCompilationTimeXrtPasses(const OpGraph &op_graph, Job *job,
+                                 bool train_phase);
 
 Parameter BuildParameter(const Blob &blob, const std::string &name = "");
 

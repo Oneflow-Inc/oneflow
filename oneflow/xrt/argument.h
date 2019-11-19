@@ -20,7 +20,7 @@ namespace xrt {
 //    out: "b_output"
 //  }
 // In this case, the data flow named `a_output` has a `produce_key` named
-// \"out\" prodeced by node A and a `consume_key` named \"in\" consumed by
+// \"out\" produced by node A and a `consume_key` named \"in\" consumed by
 // node B.
 struct ArgumentMetaData {
   std::string produce_key;

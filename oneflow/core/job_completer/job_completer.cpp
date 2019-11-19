@@ -15,12 +15,7 @@
 #include "oneflow/core/job_completer/auto_train_step.h"
 #include "oneflow/core/job_completer/auto_learning_rate.h"
 
-#ifdef WITH_XLA
-#include "absl/strings/str_cat.h"
-#include "oneflow/xrt/api.h"
-
-DEFINE_bool(use_xla_jit, EnvToBool(FLAGS_use_xla_jit, false), "Option to use xla jit");
-#endif  // WITH_XLA
+#include "oneflow/core/job_completer/compile_with_xrt.h"
 
 namespace oneflow {
 
@@ -135,25 +130,6 @@ void GenerateOpConf4Trainning(const OpGraph& op_graph, JobBuilder* job_builder) 
   UpdateJobHelperConfProducedLbi2ConsumedDiffLbi(lbi2diff_lbi, job_builder);
   UpdateOpSbpSignatureHint(op_graph, job_builder);
 }
-
-#ifdef WITH_XLA
-void RebuildXrtCompiledJob(const OpGraph& op_graph, Job* job) {
-  TeePersistentLogStream::Create(absl::StrCat("job_without_xrt", GlobalJobDesc().job_id()))
-      ->Write(*job);
-  // Create options to run xrt passes.
-  auto graph = xrt::BuildXrtGraph(&op_graph);
-  auto options = xrt::CreateDefaultXrtPassOptions();
-  options.clustering_options.train_phase = GlobalJobDesc().IsTrain();
-
-  xrt::RunXrtPass("MarkClusterId", graph.get(), options);
-  xrt::RunXrtPass("BuildSubGraph", graph.get(), options);
-  // Rebuild Job
-  xrt::RunXrtPass("RebuildCompiledJob", graph.get(), options, job);
-
-  TeePersistentLogStream::Create(absl::StrCat("job_with_xrt", GlobalJobDesc().job_id()))
-      ->Write(*job);
-}
-#endif
 
 std::function<ParallelConf*(const std::string&)> MakeGetterMutParallelConf4OpName(
     Placement* placement) {
@@ -401,9 +377,15 @@ void JobCompleter::Complete(Job* job) const {
   WithOpGraphAndMutJobBuilder(job, &AddGlobalOutputCriticalSections);
   WithOpGraphAndMutJobBuilder(job, &DumpLogicalBlobDescAndSbpSignature);
   WithOpGraphAndMutJobBuilder(job, &SetOpTimeShape7BatchAxisLbis);
-#ifdef WITH_XLA
-  if (FLAGS_use_xla_jit) { WithOpGraphAndMutJob(job, &RebuildXrtCompiledJob); }
-#endif
+
+  if (XrtCompilationEnabled(GlobalJobDesc())) {
+#ifdef OF_WITH_XRT
+    WithOpGraphAndMutJob(job, &RebuildXrtCompiledJob);
+#else
+    LOG(WARNING) << "It will not use XLA or TensorRT since WITH_XLA or "
+                    "WITH_TENSORRT was not enabled when compiling the project.";
+#endif  // OF_WITH_XRT
+  }
   CheckOpGraph(OpGraph(*job));
 }
 

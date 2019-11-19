@@ -251,7 +251,7 @@ void FoldSubgraphBuilder::BuildXrtLaunchOps() {
         arg_value = it->second /* fixedup blob names */;
       }
       if (input_mutability.count(arg_proto.value()) > 0) {
-        (*launch_conf->mutable_mutability())[arg_value] = true;
+        (*launch_conf->mutable_input_mutability())[arg_value] = true;
       }
 
       // Set input and output mapping from launch op to function.

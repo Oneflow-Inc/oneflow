@@ -64,6 +64,9 @@ class JobDesc final {
   bool all_reduce_fp16() const;
   int64_t cudnn_buf_limit_mbyte() const { return job_conf_.cudnn_buf_limit_mbyte(); }
 
+  ConfigOption use_xla_jit() const { return job_conf_.use_xla_jit(); }
+  ConfigOption use_tensorrt() const { return job_conf_.use_tensorrt(); }
+
   // Train conf
   int64_t TotalBatchNum() const;
   int64_t NumOfPiecesInBatch() const;

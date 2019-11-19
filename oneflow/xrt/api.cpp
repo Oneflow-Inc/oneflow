@@ -13,9 +13,13 @@ DEFINE_int32(clustering_maximum_nodes,
 DEFINE_bool(strict_clustering, EnvToBool(FLAGS_strict_clustering, true),
             "Option to clustering with strict dependencies analysis.");
 
-DEFINE_string(engine, EnvToString(FLAGS_engine, "XLA"),
-              "Which third party engine to be used. XLA and TENSORRT are "
-              "valid, Default means using no engine.");
+// DEFINE_string(engine, EnvToString(FLAGS_engine, "XLA"),
+//               "Which third party engine to be used. XLA and TENSORRT are "
+//               "valid, Default means using no engine.");
+DEFINE_bool(use_xla_jit, EnvToBool(FLAGS_use_xla_jit, false),
+            "It's optional to use xla jit.");
+DEFINE_bool(use_tensorrt, EnvToBool(FLAGS_use_tensorrt, false),
+            "It's optional to use tensorrt.");
 
 namespace oneflow {
 namespace xrt {
@@ -52,8 +56,8 @@ static std::unordered_map<int32_t, std::string> op_type2string_map = {
     {OP_TYPE_CASE(LayerNormGrad), "LayerNormGrad"},
     {OP_TYPE_CASE(ReduceSum), "ReduceSum"},
     {OP_TYPE_CASE(AdamModelUpdate), "AdamOptimizer"},
-    {OP_TYPE_CASE(ReduceConcat), "ReduceConcat"},
-    {OP_TYPE_CASE(ReduceSplit), "ReduceSplit"},
+    // {OP_TYPE_CASE(ReduceConcat), "ReduceConcat"},
+    // {OP_TYPE_CASE(ReduceSplit), "ReduceSplit"},
     // TODO(hjchen2)
 };
 
@@ -120,24 +124,57 @@ std::shared_ptr<XrtGraph> BuildXrtGraph(
   return graph_builder::BuildGraph(function, device_type, job_desc);
 }
 
-XrtPassOptions CreateDefaultXrtPassOptions() {
+void EnableUseXlaJit(const ConfigOption &use_xla_jit) {
+  if (use_xla_jit == ConfigOption::OPT_ON) {
+    // TODO(hjchen2): Check xla jit has been compiled.
+    FLAGS_use_xla_jit = true;
+  } else if (use_xla_jit == ConfigOption::OPT_OFF) {
+    FLAGS_use_xla_jit = false;
+  }
+}
+
+void EnableUseTensorRT(const ConfigOption &use_tensorrt) {
+  if (use_tensorrt == ConfigOption::OPT_ON) {
+    // TODO(hjchen2): Check tensorrt has been compiled.
+    FLAGS_use_tensorrt = true;
+  } else if (use_tensorrt == ConfigOption::OPT_OFF) {
+    FLAGS_use_tensorrt = false;
+  }
+}
+
+bool XrtCompilationEnabled() { return FLAGS_use_xla_jit || FLAGS_use_tensorrt; }
+
+XrtPassOptions CreateDefaultXrtPassOptions(bool train_phase) {
   ClusteringOptions options;
   options.minimum_nodes = FLAGS_clustering_minimum_nodes;
   options.maximum_nodes = FLAGS_clustering_maximum_nodes;
   options.strict_clustering = FLAGS_strict_clustering;
+
+  options.train_phase = train_phase;
   // TODO(hjchen2)
-  if (FLAGS_engine == "XLA") {
-    options.engine = XrtEngine::XLA;
-  } else if (FLAGS_engine == "TENSORRT") {
-    options.engine = XrtEngine::TENSORRT;
-  } else {
-    // Default engine?
-    LOG(FATAL) << "Unknown engine: " << FLAGS_engine;
+  options.engine = (1U << XrtEngineOptionBit::kUseDefault);
+  if (FLAGS_use_xla_jit) {
+    options.engine |= (1U << XrtEngineOptionBit::kUseXlaJit);
+  }
+  if (FLAGS_use_tensorrt) {
+    options.engine |= (1U << XrtEngineOptionBit::kUseTensorRT);
   }
 
   XrtPassOptions xrt_options;
   xrt_options.clustering_options = options;
   return xrt_options;
+}
+
+void RunCompilationTimeXrtPasses(const OpGraph &op_graph, Job *job,
+                                 bool train_phase) {
+  auto graph = BuildXrtGraph(&op_graph);
+  // Create options to run xrt passes.
+  auto options = CreateDefaultXrtPassOptions(train_phase);
+
+  RunXrtPass("MarkClusterId", graph.get(), options);
+  RunXrtPass("BuildSubGraph", graph.get(), options);
+  // Rebuild Job
+  RunXrtPass("RebuildCompiledJob", graph.get(), options, job);
 }
 
 Parameter BuildParameter(const Blob &blob, const std::string &name) {

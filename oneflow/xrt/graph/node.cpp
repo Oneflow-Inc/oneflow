@@ -2,8 +2,6 @@
 
 #include "oneflow/xrt/graph/algorithm.h"
 #include "oneflow/xrt/graph/node.h"
-#include "oneflow/xrt/types.h"
-#include "oneflow/xrt/utility/registry.h"
 
 namespace oneflow {
 namespace xrt {

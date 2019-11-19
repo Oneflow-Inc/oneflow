@@ -8,15 +8,20 @@
 namespace oneflow {
 namespace xrt {
 
+typedef int64_t XrtEngineOptionBitFlags;
+
+enum XrtEngineOptionBit : int {
+  kUseDefault = 0,
+  kUseXlaJit = 1,
+  kUseTensorRT = 2,
+};
+
 struct ClusteringOptions {
   // Minimum node number in each cluster after clustering. If the number of
   // nodes contained by a cluster is less than `minimum_nodes` or grater than
   // `maximum_nodes`, then this cluster will be given up and not compiled.
   int32_t minimum_nodes = 0x1;
   int32_t maximum_nodes = 0x7fffffff;
-
-  // Clustering nodes if it's compiled by the engine.
-  XrtEngine engine = XrtEngine::XLA;
 
   // Option to clustering with strict dependencies analysis.
   bool strict_clustering = true;
@@ -26,12 +31,19 @@ struct ClusteringOptions {
   // nodes can be merged.
   int32_t max_iteration = 20;
 
+  // Clustering nodes if it's compiled by the engine.
+  // XrtEngine engine = XrtEngine::XLA;
+  XrtEngineOptionBitFlags engine = 0x0;
+
   // Clustering subgraph for train phase.
   bool train_phase = true;
 
   bool ignore_sbp_policy = false;
   bool ignore_time_shape = false;
 };
+
+bool CheckUseXrtEngine(const ClusteringOptions &options,
+                       const XrtEngine &engine);
 
 struct XrtPassOptions {
   ClusteringOptions clustering_options;
