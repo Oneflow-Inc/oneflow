@@ -15,7 +15,7 @@
 #include "oneflow/core/job_completer/auto_train_step.h"
 #include "oneflow/core/job_completer/auto_learning_rate.h"
 
-#include "oneflow/core/job_completer/compile_with_xrt.h"
+#include "oneflow/core/job_completer/xrt_compilation.h"
 
 namespace oneflow {
 
