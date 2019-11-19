@@ -57,7 +57,7 @@ class OpRegistryWrapperBuilder final {
   OpRegistryWrapperBuilder& SetGetSbpFn(
       std::function<Maybe<void>(/*TODO(niuchong): what is the para*/)>);
 
-  OpRegistryWrapper Build() { return wrapper_; }
+  OpRegistryWrapper Build() const { return wrapper_; }
 
  private:
   OpRegistryWrapperBuilder& ArgImpl(bool is_input, const std::string& name, bool is_optional,
@@ -72,9 +72,9 @@ std::vector<std::string> GetAllRegisteredUserOp();
 
 }  // namespace user_op
 
-#define REGISTER_USER_OP(name)                                                              \
-  static user_op::Registrar<OpRegistryWrapperBuilder> OF_PP_CAT(g_registrar, __COUNTER__) = \
-      user_op::OpRegistryWrapperBuilder(name)
+#define REGISTER_USER_OP(name)                                            \
+  static user_op::Registrar<user_op::OpRegistryWrapperBuilder> OF_PP_CAT( \
+      g_registrar, __COUNTER__) = user_op::OpRegistryWrapperBuilder(name)
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_FRAMEWORK_OP_REGISTRATION_H_
