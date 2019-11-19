@@ -29,7 +29,7 @@ const OpRegistrationVal* LookUpInOpRegistry(const std::string& op_type_name) {
   return nullptr;
 }
 
-std::vector<std::string> GetAllRegisteredUserOp() {
+std::vector<std::string> GetAllUserOpInOpRegistry() {
   std::vector<std::string> ret;
   const auto registry = MutOpRegistry();
   for (auto it = registry->begin(); it != registry->end(); ++it) { ret.push_back(it->first); }
@@ -144,26 +144,52 @@ OpRegistryWrapperBuilder& OpRegistryWrapperBuilder::Attr<Shape>(const std::strin
   }
 
 OP_REG_LIST_ATTR_MEMBER_FUNC(ListInt32, std::vector<int32_t>, at_list_int32)
-// OP_REG_LIST_ATTR_MEMBER_FUNC(ListInt64, std::vector<int64_t>, at_list_int64)
-// OP_REG_LIST_ATTR_MEMBER_FUNC(ListFloat, std::vector<float>, at_list_float)
+OP_REG_LIST_ATTR_MEMBER_FUNC(ListInt64, std::vector<int64_t>, at_list_int64)
+OP_REG_LIST_ATTR_MEMBER_FUNC(ListFloat, std::vector<float>, at_list_float)
 
 #undef OP_REG_LIST_ATTR_MEMBER_FUNC
 
-OpRegistryWrapperBuilder& OpRegistryWrapperBuilder::SetShapeInferFn(
-    std::function<Maybe<void>(Shape4ArgNameAndIndex)> shape_infer_fn) {
+OpRegistryWrapperBuilder& OpRegistryWrapperBuilder::SetShapeInferFn(ShapeInferFn shape_infer_fn) {
   wrapper_.reg_val.shape_infer_fn = std::move(shape_infer_fn);
   return *this;
 }
 
 OpRegistryWrapperBuilder& OpRegistryWrapperBuilder::SetDataTypeInferFn(
-    std::function<Maybe<void>(Dtype4ArgNameAndIndex)> dtype_infer_fn) {
+    DtypeInferFn dtype_infer_fn) {
   wrapper_.reg_val.dtype_infer_fn = std::move(dtype_infer_fn);
   return *this;
 }
 
-OpRegistryWrapperBuilder& OpRegistryWrapperBuilder::SetGetSbpFn(
-    std::function<Maybe<void>(/*TODO(niuchong): what is the para*/)>) {
+OpRegistryWrapperBuilder& OpRegistryWrapperBuilder::SetGetSbpFn(GetSbpFn get_sbp_fn) {
+  wrapper_.reg_val.get_sbp_fn = std::move(get_sbp_fn);
   return *this;
+}
+
+OpRegistryWrapper OpRegistryWrapperBuilder::Build() {
+  if (wrapper_.reg_val.check_fn == nullptr) {
+    wrapper_.reg_val.check_fn = [](const UserOpDef&, const UserOpConf&) {
+      return Maybe<void>::Ok();
+    };
+  }
+  if (wrapper_.reg_val.shape_infer_fn == nullptr) {
+    wrapper_.reg_val.shape_infer_fn = [](Shape4ArgNameAndIndex) {
+      // TODO(niuchong): default impl
+      return Maybe<void>::Ok();
+    };
+  }
+  if (wrapper_.reg_val.dtype_infer_fn == nullptr) {
+    wrapper_.reg_val.dtype_infer_fn = [](Dtype4ArgNameAndIndex) {
+      // TODO(niuchong): default impl
+      return Maybe<void>::Ok();
+    };
+  }
+  if (wrapper_.reg_val.get_sbp_fn == nullptr) {
+    wrapper_.reg_val.get_sbp_fn = [](/**/) {
+      // TODO(niuchong): default impl
+      return Maybe<void>::Ok();
+    };
+  }
+  return wrapper_;
 }
 
 }  // namespace user_op

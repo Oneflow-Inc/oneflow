@@ -16,12 +16,17 @@ namespace user_op {
 using Shape4ArgNameAndIndex = std::function<Shape*(const std::string&, int32_t)>;
 using Dtype4ArgNameAndIndex = std::function<DataType*(const std::string&, int32_t)>;
 
+using CheckAttrFn = std::function<Maybe<void>(const UserOpDef&, const UserOpConf&)>;
+using ShapeInferFn = std::function<Maybe<void>(Shape4ArgNameAndIndex)>;
+using DtypeInferFn = std::function<Maybe<void>(Dtype4ArgNameAndIndex)>;
+using GetSbpFn = std::function<Maybe<void>(/*TODO(niuchong): what is the para*/)>;
+
 struct OpRegistrationVal {
   UserOpDef op_def;
-  std::function<Maybe<void>(const UserOpDef&, const UserOpConf&)> check_fn;
-  std::function<Maybe<void>(Shape4ArgNameAndIndex)> shape_infer_fn;
-  std::function<Maybe<void>(Dtype4ArgNameAndIndex)> dtype_infer_fn;
-  std::function<Maybe<void>(/*TODO(niuchong): what is the para*/)> get_sbp_fn;
+  CheckAttrFn check_fn;
+  ShapeInferFn shape_infer_fn;
+  DtypeInferFn dtype_infer_fn;
+  GetSbpFn get_sbp_fn;
 };
 
 struct OpRegistryWrapper final {
@@ -52,12 +57,12 @@ class OpRegistryWrapperBuilder final {
   template<typename T>
   OpRegistryWrapperBuilder& Attr(const std::string& name, UserOpAttrType type, T&& default_val);
 
-  OpRegistryWrapperBuilder& SetShapeInferFn(std::function<Maybe<void>(Shape4ArgNameAndIndex)>);
-  OpRegistryWrapperBuilder& SetDataTypeInferFn(std::function<Maybe<void>(Dtype4ArgNameAndIndex)>);
-  OpRegistryWrapperBuilder& SetGetSbpFn(
-      std::function<Maybe<void>(/*TODO(niuchong): what is the para*/)>);
+  OpRegistryWrapperBuilder& SetShapeInferFn(ShapeInferFn fn);
+  OpRegistryWrapperBuilder& SetDataTypeInferFn(DtypeInferFn fn);
+  OpRegistryWrapperBuilder& SetGetSbpFn(GetSbpFn fn);
+  OpRegistryWrapperBuilder& SetCheckAttrFn(CheckAttrFn fn);
 
-  OpRegistryWrapper Build() const { return wrapper_; }
+  OpRegistryWrapper Build();
 
  private:
   OpRegistryWrapperBuilder& ArgImpl(bool is_input, const std::string& name, bool is_optional,
@@ -68,7 +73,7 @@ class OpRegistryWrapperBuilder final {
 
 const OpRegistrationVal* LookUpInOpRegistry(const std::string& op_type_name);
 
-std::vector<std::string> GetAllRegisteredUserOp();
+std::vector<std::string> GetAllUserOpInOpRegistry();
 
 }  // namespace user_op
 
