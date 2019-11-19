@@ -1,5 +1,8 @@
 from __future__ import absolute_import
 
+import socket
+from contextlib import closing
+
 import oneflow.core.job.env_pb2 as env_pb
 from oneflow.python.oneflow_export import oneflow_export
 
@@ -69,14 +72,25 @@ def _MakeMachine(machines):
         addrs_for_check.add(m.addr)
     return rp_machine
 
+def CompleteEnvProto(env_proto):
+    if len(env_proto.machine) == 1 and env_proto.HasField('ctrl_port') == False:
+        env_proto.ctrl_port = _FindFreePort()
+
 def _DefaultEnvProto():
     env_proto = env_pb.EnvProto()
     machine = env_proto.machine.add()
     machine.id = 0
     machine.addr = "127.0.0.1"
-    env_proto.ctrl_port = 2017
     env_proto.grpc_use_no_signal = True
     return env_proto
+
+# copied from
+# https://stackoverflow.com/questions/1365265/on-localhost-how-do-i-pick-a-free-port-number
+def _FindFreePort():
+    with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as s:
+        s.bind(('', 0)) 
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        return s.getsockname()[1]
 
 default_env_proto = _DefaultEnvProto()
 env_proto_mutable = True
