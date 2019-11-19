@@ -20,7 +20,6 @@ void OpRegistryWrapper::InsertToGlobalRegistry() {
   CHECK(!op_type_name.empty());
   auto registry = MutOpRegistry();
   CHECK(registry->emplace(op_type_name, reg_val).second);
-  LOG(INFO) << "UserOp Registry: Register " << op_type_name;
 }
 
 const OpRegistrationVal* LookUpInOpRegistry(const std::string& op_type_name) {
