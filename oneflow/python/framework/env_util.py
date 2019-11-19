@@ -2,7 +2,6 @@ from __future__ import absolute_import
 
 import socket
 from contextlib import closing
-
 import oneflow.core.job.env_pb2 as env_pb
 from oneflow.python.oneflow_export import oneflow_export
 
