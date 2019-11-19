@@ -126,6 +126,7 @@ def _GetConfigProto():
 def _TryInitEnv():
     if c_api_util.IsEnvInited(): return
     assert len(env_util.default_env_proto.machine) > 0
+    env_util.CompleteEnvProto(env_util.default_env_proto)
     c_api_util.InitEnv(env_util.default_env_proto)
     env_util.env_proto_mutable = False
 
