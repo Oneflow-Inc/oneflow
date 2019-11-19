@@ -77,7 +77,7 @@ def gpu_device_num(val):
     r"""Set number of GPUs on each machine to run oneflow on.
 
     Args:
-        val: number of GPUs. It is identical on every machine. In other words, you can't specify different number of GPUs you would like to use by machine.
+        val: number of GPUs. It is identical on every machine. In other words, you can't specify different number of GPUs you would like to use on each machine.
     """
     assert config_proto_mutable == True
     assert type(val) is int
