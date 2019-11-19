@@ -1,4 +1,4 @@
-#include "oneflow/core/job/environment_objects_scope.h"
+#include "oneflow/core/job/session_global_objects_scope.h"
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/env_desc.h"
 #include "oneflow/core/control/ctrl_server.h"
@@ -10,6 +10,13 @@
 #include "oneflow/core/persistence/file_system.h"
 #include "oneflow/core/common/buffer_manager.h"
 #include "oneflow/core/job/foreign_job_instance.h"
+#include "oneflow/core/job/inter_user_job_info.pb.h"
+#include "oneflow/core/job/job_desc.h"
+#include "oneflow/core/job/critical_section_desc.h"
+#include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
+#include "oneflow/core/job/lbi_diff_watcher_info.pb.h"
+#include "oneflow/core/job/job_set_compile_ctx.h"
+#include "oneflow/core/job/runtime_buffer_managers_scope.h"
 
 namespace oneflow {
 
@@ -42,9 +49,9 @@ AvailableMemDesc PullAvailableMemDesc() {
 
 }  // namespace
 
-EnvironmentObjectsScope::EnvironmentObjectsScope() {}
+SessionGlobalObjectsScope::SessionGlobalObjectsScope() {}
 
-Maybe<void> EnvironmentObjectsScope::Init(const ConfigProto& config_proto) {
+Maybe<void> SessionGlobalObjectsScope::Init(const ConfigProto& config_proto) {
   Global<ResourceDesc>::New(config_proto.resource());
   Global<const IOConf>::New(config_proto.io_conf());
   Global<const ProfilerConf>::New(config_proto.profiler_conf());
@@ -57,12 +64,28 @@ Maybe<void> EnvironmentObjectsScope::Init(const ConfigProto& config_proto) {
   if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
     Global<AvailableMemDesc>::New();
     *Global<AvailableMemDesc>::Get() = PullAvailableMemDesc();
+    Global<JobName2JobId>::New();
+    Global<CriticalSectionDesc>::New();
+    Global<InterUserJobInfo>::New();
+    Global<JobBuildAndInferCtxMgr>::New();
+    Global<LbiDiffWatcherInfo>::New();
+    Global<JobSetCompileCtx>::New();
+    Global<RuntimeBufferManagersScope>::New();
   }
   return Maybe<void>::Ok();
 }
 
-EnvironmentObjectsScope::~EnvironmentObjectsScope() {
-  if (Global<MachineCtx>::Get()->IsThisMachineMaster()) { Global<AvailableMemDesc>::Delete(); }
+SessionGlobalObjectsScope::~SessionGlobalObjectsScope() {
+  if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
+    Global<RuntimeBufferManagersScope>::Delete();
+    Global<JobSetCompileCtx>::Delete();
+    Global<LbiDiffWatcherInfo>::Delete();
+    Global<JobBuildAndInferCtxMgr>::Delete();
+    Global<InterUserJobInfo>::Delete();
+    Global<CriticalSectionDesc>::Delete();
+    Global<JobName2JobId>::Delete();
+    Global<AvailableMemDesc>::Delete();
+  }
   if (Global<Profiler>::Get() != nullptr) { Global<Profiler>::Delete(); }
   Global<IDMgr>::Delete();
   Global<const ProfilerConf>::Delete();

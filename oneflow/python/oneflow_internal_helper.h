@@ -7,7 +7,7 @@
 #include "oneflow/core/job/oneflow.h"
 #include "oneflow/core/job/foreign_job_instance.h"
 #include "oneflow/core/job/env_global_objects_scope.h"
-#include "oneflow/core/job/environment_objects_scope.h"
+#include "oneflow/core/job/session_global_objects_scope.h"
 #include "oneflow/core/job/machine_context.h"
 #include "oneflow/core/job/oneflow.h"
 #include "oneflow/core/job/runtime_job_descs.h"
@@ -16,7 +16,6 @@
 #include "oneflow/core/control/cluster_control.h"
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 #include "oneflow/core/job/foreign_watcher.h"
-#include "oneflow/core/job/session.h"
 
 namespace oneflow {
 
@@ -47,9 +46,9 @@ Maybe<void> InitEnv(const std::string& env_proto_str) {
   while (ClusterControl::WorkerReceiveHalt() == false) {
     ConfigProto config_proto;
     Global<CtrlClient>::Get()->PullKV("config_proto", &config_proto);
-    Global<EnvironmentObjectsScope>::SetAllocated(new EnvironmentObjectsScope());
-    JUST(Global<EnvironmentObjectsScope>::Get()->Init(config_proto));
-    LOG(INFO) << "NewGlobal " << typeid(EnvironmentObjectsScope).name();
+    Global<SessionGlobalObjectsScope>::SetAllocated(new SessionGlobalObjectsScope());
+    JUST(Global<SessionGlobalObjectsScope>::Get()->Init(config_proto));
+    LOG(INFO) << "NewGlobal " << typeid(SessionGlobalObjectsScope).name();
 
     JobSet job_set;
     Global<CtrlClient>::Get()->PullKV("session_job_set", &job_set);
@@ -74,7 +73,7 @@ void FixCpuDeviceNum(ConfigProto* config_proto) {
   config_proto->mutable_resource()->set_cpu_device_num(std::thread::hardware_concurrency());
 }
 
-Maybe<void> InitGlobalEnvironment(const std::string& config_proto_str) {
+Maybe<void> InitGlobalSession(const std::string& config_proto_str) {
   OF_CHECK_NOTNULL(Global<EnvDesc>::Get()) << "env not found";
   OF_CHECK(Global<MachineCtx>::Get()->IsThisMachineMaster());
 
@@ -86,35 +85,22 @@ Maybe<void> InitGlobalEnvironment(const std::string& config_proto_str) {
   FixCpuDeviceNum(&config_proto);
   Global<CtrlClient>::Get()->PushKV("config_proto", config_proto);
 
-  OF_CHECK_ISNULL(Global<EnvironmentObjectsScope>::Get());
-  Global<EnvironmentObjectsScope>::SetAllocated(new EnvironmentObjectsScope());
-  JUST(Global<EnvironmentObjectsScope>::Get()->Init(config_proto));
-  LOG(INFO) << "NewGlobal " << typeid(EnvironmentObjectsScope).name();
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> DestroyGlobalEnvironment() {
-  if (Global<EnvironmentObjectsScope>::Get() == nullptr) { return Maybe<void>::Ok(); }
-  OF_CHECK(Global<MachineCtx>::Get()->IsThisMachineMaster());
-  Global<EnvironmentObjectsScope>::Delete();
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> InitGlobalSession() {
-  OF_CHECK_NOTNULL(Global<EnvironmentObjectsScope>::Get()) << "environment not inited";
-  OF_CHECK_ISNULL(Global<Session>::Get()) << "no multi sessions supported";
-  Global<Session>::New();
+  OF_CHECK_ISNULL(Global<SessionGlobalObjectsScope>::Get());
+  Global<SessionGlobalObjectsScope>::SetAllocated(new SessionGlobalObjectsScope());
+  JUST(Global<SessionGlobalObjectsScope>::Get()->Init(config_proto));
+  LOG(INFO) << "NewGlobal " << typeid(SessionGlobalObjectsScope).name();
   return Maybe<void>::Ok();
 }
 
 Maybe<void> DestroyGlobalSession() {
-  OF_CHECK_NOTNULL(Global<Session>::Get()) << "session not found";
-  Global<Session>::Delete();
+  if (Global<SessionGlobalObjectsScope>::Get() == nullptr) { return Maybe<void>::Ok(); }
+  OF_CHECK(Global<MachineCtx>::Get()->IsThisMachineMaster());
+  Global<SessionGlobalObjectsScope>::Delete();
   return Maybe<void>::Ok();
 }
 
-Maybe<void> InitGlobalOneflow() {
-  OF_CHECK_NOTNULL(Global<Session>::Get()) << "session not found";
+Maybe<void> StartGlobalSession() {
+  OF_CHECK_NOTNULL(Global<SessionGlobalObjectsScope>::Get()) << "session not found";
   OF_CHECK(Global<MachineCtx>::Get()->IsThisMachineMaster());
   const JobSet& job_set = Global<JobBuildAndInferCtxMgr>::Get()->job_set();
   if (job_set.job().empty()) { return Error::JobSetEmpty() << "no function defined"; }
@@ -125,7 +111,7 @@ Maybe<void> InitGlobalOneflow() {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> DestroyGlobalOneflow() {
+Maybe<void> StopGlobalSession() {
   if (Global<Oneflow>::Get() == nullptr) { return Maybe<void>::Ok(); }
   OF_CHECK(Global<MachineCtx>::Get()->IsThisMachineMaster());
   OF_CHECK_NOTNULL(Global<Oneflow>::Get());
@@ -177,8 +163,8 @@ struct GlobalChecker final {
   GlobalChecker() = default;
   ~GlobalChecker() {
     if (Global<Oneflow>::Get() != nullptr) { LOG(FATAL) << "global oneflow is not destroyed yet"; }
-    if (Global<EnvironmentObjectsScope>::Get() != nullptr) {
-      LOG(FATAL) << "global environment is not destroyed yet";
+    if (Global<SessionGlobalObjectsScope>::Get() != nullptr) {
+      LOG(FATAL) << "Session is not destroyed yet";
     }
   }
 };

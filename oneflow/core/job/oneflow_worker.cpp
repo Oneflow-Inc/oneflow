@@ -2,7 +2,7 @@
 #include "oneflow/core/job/oneflow.h"
 #include "oneflow/core/job/machine_context.h"
 #include "oneflow/core/job/env_global_objects_scope.h"
-#include "oneflow/core/job/environment_objects_scope.h"
+#include "oneflow/core/job/session_global_objects_scope.h"
 #include "oneflow/core/job/env.pb.h"
 #include "oneflow/core/control/cluster_control.h"
 #include "oneflow/core/control/ctrl_client.h"
@@ -25,9 +25,9 @@ Maybe<void> Run(const std::string& env_proto_filepath) {
   while (ClusterControl::WorkerReceiveHalt() == false) {
     ConfigProto config_proto;
     Global<CtrlClient>::Get()->PullKV("config_proto", &config_proto);
-    Global<EnvironmentObjectsScope>::SetAllocated(new EnvironmentObjectsScope());
-    JUST(Global<EnvironmentObjectsScope>::Get()->Init(config_proto));
-    LOG(INFO) << "NewGlobal " << typeid(EnvironmentObjectsScope).name();
+    Global<SessionGlobalObjectsScope>::SetAllocated(new SessionGlobalObjectsScope());
+    JUST(Global<SessionGlobalObjectsScope>::Get()->Init(config_proto));
+    LOG(INFO) << "NewGlobal " << typeid(SessionGlobalObjectsScope).name();
 
     JobSet job_set;
     Global<CtrlClient>::Get()->PullKV("session_job_set", &job_set);

@@ -37,23 +37,13 @@ def DestroyEnv():
     error = text_format.Parse(error_str, error_util.ErrorProto())
     if error.HasField("error_type"): raise JobBuildAndInferError(error)
 
-def IsEnvironmentInited():
-    return oneflow_internal.IsEnvironmentInited()
+def IsSessionInited():
+    return oneflow_internal.IsSessionInited()
 
-def InitGlobalEnvironment(config_proto):
+def InitGlobalSession(config_proto):
     assert(type(config_proto) is job_set_pb.ConfigProto)
     config_proto_str = text_format.MessageToString(config_proto)
-    error_str = oneflow_internal.InitGlobalEnvironment(config_proto_str)
-    error = text_format.Parse(error_str, error_util.ErrorProto())
-    if error.HasField("error_type"): raise JobBuildAndInferError(error)
-
-def DestroyGlobalEnvironment():
-    error_str = oneflow_internal.DestroyGlobalEnvironment()
-    error = text_format.Parse(error_str, error_util.ErrorProto())
-    if error.HasField("error_type"): raise JobBuildAndInferError(error)
-
-def InitGlobalSession():
-    error_str = oneflow_internal.InitGlobalSession()
+    error_str = oneflow_internal.InitGlobalSession(config_proto_str)
     error = text_format.Parse(error_str, error_util.ErrorProto())
     if error.HasField("error_type"): raise JobBuildAndInferError(error)
 
@@ -62,13 +52,13 @@ def DestroyGlobalSession():
     error = text_format.Parse(error_str, error_util.ErrorProto())
     if error.HasField("error_type"): raise JobBuildAndInferError(error)
 
-def InitGlobalOneflow():
-    error_str = oneflow_internal.InitGlobalOneflow()
+def StartGlobalSession():
+    error_str = oneflow_internal.StartGlobalSession()
     error = text_format.Parse(error_str, error_util.ErrorProto())
     if error.HasField("error_type"): raise JobBuildAndInferError(error)
 
-def DestroyGlobalOneflow():
-    error_str = oneflow_internal.DestroyGlobalOneflow()
+def StopGlobalSession():
+    error_str = oneflow_internal.StopGlobalSession()
     error = text_format.Parse(error_str, error_util.ErrorProto())
     if error.HasField("error_type"): raise JobBuildAndInferError(error)
 

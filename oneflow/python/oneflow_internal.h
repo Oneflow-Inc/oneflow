@@ -22,34 +22,26 @@ void DestroyEnv(std::string* error_str) {
   return oneflow::DestroyEnv().GetDataAndSerializedErrorProto(error_str);
 }
 
-bool IsEnvironmentInited() {
+bool IsSessionInited() {
   using namespace oneflow;
-  return Global<EnvironmentObjectsScope>::Get() != nullptr;
+  return Global<SessionGlobalObjectsScope>::Get() != nullptr;
 }
 
-void InitGlobalEnvironment(const std::string& config_proto_str, std::string* error_str) {
+void InitGlobalSession(const std::string& config_proto_str, std::string* error_str) {
   using namespace oneflow;
-  return InitGlobalEnvironment(config_proto_str).GetDataAndSerializedErrorProto(error_str);
-}
-
-void InitGlobalSession(std::string* error_str) {
-  return oneflow::InitGlobalSession().GetDataAndSerializedErrorProto(error_str);
-}
-
-void DestroyGlobalEnvironment(std::string* error_str) {
-  return oneflow::DestroyGlobalEnvironment().GetDataAndSerializedErrorProto(error_str);
+  return InitGlobalSession(config_proto_str).GetDataAndSerializedErrorProto(error_str);
 }
 
 void DestroyGlobalSession(std::string* error_str) {
   return oneflow::DestroyGlobalSession().GetDataAndSerializedErrorProto(error_str);
 }
 
-void InitGlobalOneflow(std::string* error_str) {
-  return oneflow::InitGlobalOneflow().GetDataAndSerializedErrorProto(error_str);
+void StartGlobalSession(std::string* error_str) {
+  return oneflow::StartGlobalSession().GetDataAndSerializedErrorProto(error_str);
 }
 
-void DestroyGlobalOneflow(std::string* error_str) {
-  return oneflow::DestroyGlobalOneflow().GetDataAndSerializedErrorProto(error_str);
+void StopGlobalSession(std::string* error_str) {
+  return oneflow::StopGlobalSession().GetDataAndSerializedErrorProto(error_str);
 }
 
 std::string GetSerializedInterUserJobInfo(std::string* error_str) {

@@ -354,7 +354,7 @@ def _SetJobConfAttr(GetConf, field, value):
         assert c_api_util.CurJobBuildAndInferCtx_HasJobConf() == False
         setattr(GetConf(compile_context.cur_job_conf), field, value)
     else:
-        assert c_api_util.IsEnvironmentInited() == False
+        assert c_api_util.IsSessionInited() == False
         setattr(GetConf(default_job_conf), field, value)
 
 def _GetJobConfAttr(GetConf, field):
@@ -362,7 +362,7 @@ def _GetJobConfAttr(GetConf, field):
         assert c_api_util.CurJobBuildAndInferCtx_HasJobConf() == False
         return getattr(GetConf(compile_context.cur_job_conf), field)
     else:
-        assert c_api_util.IsEnvironmentInited() == False
+        assert c_api_util.IsSessionInited() == False
         return getattr(GetConf(default_job_conf), field)
 
 default_config_proto = _DefaultConfigProto()

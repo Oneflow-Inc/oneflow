@@ -7,11 +7,11 @@
 
 namespace oneflow {
 
-class EnvironmentObjectsScope final {
+class SessionGlobalObjectsScope final {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(EnvironmentObjectsScope);
-  EnvironmentObjectsScope();
-  ~EnvironmentObjectsScope();
+  OF_DISALLOW_COPY_AND_MOVE(SessionGlobalObjectsScope);
+  SessionGlobalObjectsScope();
+  ~SessionGlobalObjectsScope();
 
   Maybe<void> Init(const ConfigProto& config_proto);
 };

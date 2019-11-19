@@ -34,10 +34,9 @@ class Session(object):
     def Init(self):
         assert self.status_ is SessionStatus.OPEN
         _TryInitEnv()
-        c_api_util.InitGlobalEnvironment(_GetConfigProto())
-        c_api_util.InitGlobalSession()
+        c_api_util.InitGlobalSession(_GetConfigProto())
         for job_name, job_func in self.job_name2job_func_.items(): compiler.Compile(job_func)
-        c_api_util.InitGlobalOneflow()
+        c_api_util.StartGlobalSession()
         self.inter_user_job_info_ = c_api_util.GetInterUserJobInfo()
         self.status_ = SessionStatus.RUNNING
         return self
@@ -47,9 +46,8 @@ class Session(object):
 
     def Close(self):
         assert self.status_ is SessionStatus.RUNNING
-        c_api_util.DestroyGlobalOneflow()
+        c_api_util.StopGlobalSession()
         c_api_util.DestroyGlobalSession()
-        c_api_util.DestroyGlobalEnvironment()
         self.Sync()
         self.status_ = SessionStatus.CLOSED
 
