@@ -4,7 +4,7 @@ import oneflow.core.common.error_pb2 as error_util
 import oneflow.core.common.data_type_pb2 as dtype_util
 from oneflow.core.job.inter_user_job_info_pb2 import InterUserJobInfo
 import oneflow.core.job.job_set_pb2 as job_set_pb
-import oneflow.core.job.cluster_pb2 as cluster_pb2
+import oneflow.core.job.env_pb2 as env_pb2
 import oneflow.core.job.placement_pb2 as placment_util
 import oneflow.core.record.record_pb2 as record_util
 from google.protobuf import text_format
@@ -22,18 +22,18 @@ def IsOpTypeCaseCpuSupportOnly(op_type_case):
     if error.HasField("error_type"): raise JobBuildAndInferError(error)
     return ret
 
-def IsClusterInited():
-    return oneflow_internal.IsClusterInited()
+def IsEnvInited():
+    return oneflow_internal.IsEnvInited()
 
-def InitCluster(cluster_proto):
-    assert(type(cluster_proto) is cluster_pb2.ClusterProto)
-    cluster_proto_str = text_format.MessageToString(cluster_proto)
-    error_str = oneflow_internal.InitCluster(cluster_proto_str)
+def InitEnv(env_proto):
+    assert(type(env_proto) is env_pb2.EnvProto)
+    env_proto_str = text_format.MessageToString(env_proto)
+    error_str = oneflow_internal.InitEnv(env_proto_str)
     error = text_format.Parse(error_str, error_util.ErrorProto())
     if error.HasField("error_type"): raise JobBuildAndInferError(error)
 
-def DestroyCluster():
-    error_str = oneflow_internal.DestroyCluster()
+def DestroyEnv():
+    error_str = oneflow_internal.DestroyEnv()
     error = text_format.Parse(error_str, error_util.ErrorProto())
     if error.HasField("error_type"): raise JobBuildAndInferError(error)
 

@@ -1,4 +1,4 @@
-#include "oneflow/core/job/cluster_objects_scope.h"
+#include "oneflow/core/job/env_global_objects_scope.h"
 #include "oneflow/core/control/ctrl_server.h"
 #include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/job/machine_context.h"
@@ -27,27 +27,27 @@ void InitLogging(const CppLoggingConf& logging_conf) {
 
 }  // namespace
 
-Maybe<void> ClusterObjectsScope::Init(const ClusterProto& cluster_proto) {
-  InitLogging(cluster_proto.cpp_logging_conf());
-  Global<ClusterDesc>::New(cluster_proto);
+Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
+  InitLogging(env_proto.cpp_logging_conf());
+  Global<EnvDesc>::New(env_proto);
   Global<CtrlServer>::New();
   Global<CtrlClient>::New();
   OF_BARRIER();
   int64_t this_mchn_id =
-      Global<ClusterDesc>::Get()->GetMachineId(Global<CtrlServer>::Get()->this_machine_addr());
+      Global<EnvDesc>::Get()->GetMachineId(Global<CtrlServer>::Get()->this_machine_addr());
   Global<MachineCtx>::New(this_mchn_id);
   return Maybe<void>::Ok();
 }
 
-ClusterObjectsScope::~ClusterObjectsScope() {
+EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
   CHECK_NOTNULL(Global<MachineCtx>::Get());
   CHECK_NOTNULL(Global<CtrlClient>::Get());
   CHECK_NOTNULL(Global<CtrlServer>::Get());
-  CHECK_NOTNULL(Global<ClusterDesc>::Get());
+  CHECK_NOTNULL(Global<EnvDesc>::Get());
   Global<MachineCtx>::Delete();
   Global<CtrlClient>::Delete();
   Global<CtrlServer>::Delete();
-  Global<ClusterDesc>::Delete();
+  Global<EnvDesc>::Delete();
 }
 
 }  // namespace oneflow

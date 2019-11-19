@@ -5,13 +5,13 @@ namespace oneflow {
 
 size_t ResourceDesc::TotalMachineNum() const {
   CHECK_GT(resource_.machine_num(), 0);
-  CHECK_LE(resource_.machine_num(), Global<ClusterDesc>::Get()->TotalMachineNum());
+  CHECK_LE(resource_.machine_num(), Global<EnvDesc>::Get()->TotalMachineNum());
   return resource_.machine_num();
 }
 
 const Machine& ResourceDesc::machine(int32_t idx) const {
   CHECK_LT(idx, TotalMachineNum());
-  return Global<ClusterDesc>::Get()->machine(idx);
+  return Global<EnvDesc>::Get()->machine(idx);
 }
 
 int32_t ResourceDesc::ComputeThreadPoolSize() const {

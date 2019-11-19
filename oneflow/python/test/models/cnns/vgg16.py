@@ -219,11 +219,10 @@ def vgg_eval_job():
 
 
 if __name__ == "__main__":
-    flow.config.gpu_device_num(args.gpu_num_per_node)
     flow.env.grpc_use_no_signal()
     flow.env.ctrl_port(3333)
-
-    flow.config.log_dir("./log")
+    flow.env.log_dir("./log")
+    flow.config.gpu_device_num(args.gpu_num_per_node)
     flow.config.default_data_type(flow.float)
     if args.multinode:
         flow.env.ctrl_port(12138)

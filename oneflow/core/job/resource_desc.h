@@ -2,7 +2,7 @@
 #define ONEFLOW_CORE_JOB_RESOURCE_DESC_H_
 
 #include "oneflow/core/job/resource.pb.h"
-#include "oneflow/core/job/cluster_desc.h"
+#include "oneflow/core/job/env_desc.h"
 
 namespace oneflow {
 

@@ -9,17 +9,17 @@ bool IsOpTypeCaseCpuSupportOnly(int64_t op_type_case, std::string* error_str) {
       .GetDataAndSerializedErrorProto(error_str, false);
 }
 
-bool IsClusterInited() {
+bool IsEnvInited() {
   using namespace oneflow;
-  return Global<ClusterObjectsScope>::Get() != nullptr;
+  return Global<EnvGlobalObjectsScope>::Get() != nullptr;
 }
 
-void InitCluster(const std::string& cluster_proto_str, std::string* error_str) {
-  return oneflow::InitCluster(cluster_proto_str).GetDataAndSerializedErrorProto(error_str);
+void InitEnv(const std::string& env_proto_str, std::string* error_str) {
+  return oneflow::InitEnv(env_proto_str).GetDataAndSerializedErrorProto(error_str);
 }
 
-void DestroyCluster(std::string* error_str) {
-  return oneflow::DestroyCluster().GetDataAndSerializedErrorProto(error_str);
+void DestroyEnv(std::string* error_str) {
+  return oneflow::DestroyEnv().GetDataAndSerializedErrorProto(error_str);
 }
 
 bool IsEnvironmentInited() {

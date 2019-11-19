@@ -3,10 +3,10 @@
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/register/ofblob.h"
 #include "oneflow/core/job/job_set.pb.h"
-#include "oneflow/core/job/cluster.pb.h"
+#include "oneflow/core/job/env.pb.h"
 #include "oneflow/core/job/oneflow.h"
 #include "oneflow/core/job/foreign_job_instance.h"
-#include "oneflow/core/job/cluster_objects_scope.h"
+#include "oneflow/core/job/env_global_objects_scope.h"
 #include "oneflow/core/job/environment_objects_scope.h"
 #include "oneflow/core/job/machine_context.h"
 #include "oneflow/core/job/oneflow.h"
@@ -33,15 +33,15 @@ Maybe<bool> IsOpTypeCaseCpuSupportOnly(int64_t op_type_case) {
   return static_cast<bool>(*std::unique_ptr<OnlyCpuSupport>(NewObj<OnlyCpuSupport>(op_type_case)));
 }
 
-Maybe<void> InitCluster(const std::string& cluster_proto_str) {
-  ClusterProto cluster_proto;
-  OF_CHECK(TxtString2PbMessage(cluster_proto_str, &cluster_proto))
-      << "failed to parse cluster_proto" << cluster_proto_str;
-  OF_CHECK_ISNULL(Global<ClusterObjectsScope>::Get());
+Maybe<void> InitEnv(const std::string& env_proto_str) {
+  EnvProto env_proto;
+  OF_CHECK(TxtString2PbMessage(env_proto_str, &env_proto))
+      << "failed to parse env_proto" << env_proto_str;
+  OF_CHECK_ISNULL(Global<EnvGlobalObjectsScope>::Get());
   // Global<T>::New is not allowed to be called here
   // because glog is not constructed yet and LOG(INFO) has bad bahavior
-  Global<ClusterObjectsScope>::SetAllocated(new ClusterObjectsScope());
-  JUST(Global<ClusterObjectsScope>::Get()->Init(cluster_proto));
+  Global<EnvGlobalObjectsScope>::SetAllocated(new EnvGlobalObjectsScope());
+  JUST(Global<EnvGlobalObjectsScope>::Get()->Init(env_proto));
   if (Global<MachineCtx>::Get()->IsThisMachineMaster()) { return Maybe<void>::Ok(); }
   // workers go here as daemons
   while (ClusterControl::WorkerReceiveHalt() == false) {
@@ -56,14 +56,14 @@ Maybe<void> InitCluster(const std::string& cluster_proto_str) {
     { Oneflow oneflow(job_set); }
   }
   ClusterControl::WorkerSendHaltAck();
-  Global<ClusterObjectsScope>::Delete();
+  Global<EnvGlobalObjectsScope>::Delete();
   exit(0);
   // avoid compiler complain
   return Maybe<void>::Ok();
 }
 
-Maybe<void> DestroyCluster() {
-  if (Global<ClusterObjectsScope>::Get() == nullptr) { return Maybe<void>::Ok(); }
+Maybe<void> DestroyEnv() {
+  if (Global<EnvGlobalObjectsScope>::Get() == nullptr) { return Maybe<void>::Ok(); }
   OF_CHECK(Global<MachineCtx>::Get()->IsThisMachineMaster());
   ClusterControl::MasterSendHaltAndWaitAck();
   return Maybe<void>::Ok();
@@ -75,7 +75,7 @@ void FixCpuDeviceNum(ConfigProto* config_proto) {
 }
 
 Maybe<void> InitGlobalEnvironment(const std::string& config_proto_str) {
-  OF_CHECK_NOTNULL(Global<ClusterDesc>::Get()) << "cluster not found";
+  OF_CHECK_NOTNULL(Global<EnvDesc>::Get()) << "env not found";
   OF_CHECK(Global<MachineCtx>::Get()->IsThisMachineMaster());
 
   ClusterControl::MasterSendSessionStart();

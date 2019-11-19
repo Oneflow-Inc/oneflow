@@ -8,7 +8,7 @@ from oneflow.python.framework.session_context import SessionStatus
 import oneflow.python.framework.compiler as compiler
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.config_util as config_util
-import oneflow.python.framework.cluster_util as cluster_util
+import oneflow.python.framework.env_util as env_util
 import oneflow.python.framework.job_instance as job_instance_util
 from oneflow.python.framework.out_remote_blobs_status import OutRemoteBlobsStatus
 from oneflow.python.oneflow_export import oneflow_export
@@ -33,7 +33,7 @@ class Session(object):
     
     def Init(self):
         assert self.status_ is SessionStatus.OPEN
-        _TryInitCluster()
+        _TryInitEnv()
         c_api_util.InitGlobalEnvironment(_GetConfigProto())
         c_api_util.InitGlobalSession()
         for job_name, job_func in self.job_name2job_func_.items(): compiler.Compile(job_func)
@@ -122,13 +122,13 @@ def _GetConfigProto():
     config_proto = config_util.default_config_proto
     if config_proto.resource.machine_num <= 0:
       config_proto.resource.machine_num = \
-          len(cluster_util.default_cluster_proto.machine)
+          len(env_util.default_env_proto.machine)
     return config_proto
 
-def _TryInitCluster():
-    if c_api_util.IsClusterInited(): return
-    assert len(cluster_util.default_cluster_proto.machine) > 0
-    c_api_util.InitCluster(cluster_util.default_cluster_proto)
-    cluster_util.cluster_proto_mutable = False
+def _TryInitEnv():
+    if c_api_util.IsEnvInited(): return
+    assert len(env_util.default_env_proto.machine) > 0
+    c_api_util.InitEnv(env_util.default_env_proto)
+    env_util.env_proto_mutable = False
 
 session_ctx.OpenDefaultSession(Session())

@@ -1,6 +1,6 @@
 #include "oneflow/core/job/environment_objects_scope.h"
 #include "oneflow/core/job/resource_desc.h"
-#include "oneflow/core/job/cluster_desc.h"
+#include "oneflow/core/job/env_desc.h"
 #include "oneflow/core/control/ctrl_server.h"
 #include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/job/machine_context.h"

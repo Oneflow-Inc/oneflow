@@ -277,10 +277,10 @@ def evaluate():
 
 
 def main():
+    flow.env.log_dir("./output/log")
+    flow.env.ctrl_port(12138)
     flow.config.default_data_type(flow.float)
     flow.config.gpu_device_num(args.gpu_num_per_node)
-    flow.config.log_dir("./output/log")
-    flow.env.ctrl_port(12138)
 
     if args.multinode:
         flow.env.ctrl_port(12139)
