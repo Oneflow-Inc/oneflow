@@ -29,6 +29,13 @@ const OpRegistrationVal* LookUpInOpRegistry(const std::string& op_type_name) {
   return nullptr;
 }
 
+std::vector<std::string> GetAllRegisteredUserOp() {
+  std::vector<std::string> ret;
+  const auto registry = MutOpRegistry();
+  for (auto it = registry->begin(); it != registry->end(); ++it) { ret.push_back(it->first); }
+  return ret;
+}
+
 OpRegistryWrapperBuilder::OpRegistryWrapperBuilder(const std::string& op_type_name) {
   wrapper_.op_type_name = op_type_name;
 }
@@ -44,9 +51,9 @@ OpRegistryWrapperBuilder& OpRegistryWrapperBuilder::ArgImpl(bool is_input, const
     arg_def.set_num_as_min(num_as_min);
   }
   if (is_input) {
-    *(wrapper_.reg_val.op_def.mutable_in()->Add()) = arg_def;
+    *(wrapper_.reg_val.op_def.mutable_input()->Add()) = arg_def;
   } else {
-    *(wrapper_.reg_val.op_def.mutable_out()->Add()) = arg_def;
+    *(wrapper_.reg_val.op_def.mutable_output()->Add()) = arg_def;
   }
   return *this;
 }

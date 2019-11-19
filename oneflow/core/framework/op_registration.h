@@ -68,12 +68,13 @@ class OpRegistryWrapperBuilder final {
 
 const OpRegistrationVal* LookUpInOpRegistry(const std::string& op_type_name);
 
+std::vector<std::string> GetAllRegisteredUserOp();
+
 }  // namespace user_op
 
 #define REGISTER_USER_OP(name)                                                              \
   static user_op::Registrar<OpRegistryWrapperBuilder> OF_PP_CAT(g_registrar, __COUNTER__) = \
       user_op::OpRegistryWrapperBuilder(name)
-
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_FRAMEWORK_OP_REGISTRATION_H_
