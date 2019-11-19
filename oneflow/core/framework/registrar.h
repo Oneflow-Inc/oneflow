@@ -7,7 +7,7 @@ namespace user_op {
 
 template<typename BuilderT>
 struct Registrar final {
-  Registrar(const BuilderT& builder) { builder.Build().InsertToGlobalRegistry(); }
+  Registrar(BuilderT& builder) { builder.Build().InsertToGlobalRegistry(); }
 };
 
 }  // namespace user_op
