@@ -41,7 +41,8 @@ struct CudnnConvArgs final {
   void* w_dptr;
   void* work_space;
   size_t ws_size;
-  bool at_runtime;
+  bool need_destroy_handle;
+  bool need_free_memory;
 
   OF_DISALLOW_COPY_AND_MOVE(CudnnConvArgs);
   CudnnConvArgs(const PbMessage& conf, const BlobDesc* x, const BlobDesc* y, const BlobDesc* w,
