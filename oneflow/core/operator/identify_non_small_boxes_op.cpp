@@ -42,10 +42,8 @@ class IdentifyNonSmallBoxesOp final : public Operator {
     return NaiveInferBatchAxis(BatchAxis4BnInOp);
   }
   Maybe<void> GetSbpSignatures(SbpSignatureList* sbp_sig_list) const override {
-    SbpSignatureBuilder()
-        .Split("in", 0)
-        .Split("out", 0)
-        .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+    SbpSignatureBuilder().Split("in", 0).Split("out", 0).Build(
+        sbp_sig_list->mutable_sbp_signature()->Add());
     return Maybe<void>::Ok();
   }
 };

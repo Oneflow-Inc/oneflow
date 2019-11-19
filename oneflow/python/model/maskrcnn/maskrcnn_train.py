@@ -13,6 +13,7 @@ from rpn import RPNHead, RPNLoss, RPNProposal
 from box_head import BoxHead
 from mask_head import MaskHead
 from blob_watcher import save_blob_watched, blob_watched, diff_blob_watched
+from distribution import distribute_execute
 
 
 parser = argparse.ArgumentParser()
@@ -120,7 +121,7 @@ def get_numpy_placeholders():
 placeholders = get_numpy_placeholders()
 
 
-def maskrcnn_train(images, image_sizes, gt_boxes, gt_segms, gt_labels):
+def maskrcnn_train(cfg, images, image_sizes, gt_boxes, gt_segms, gt_labels):
     r"""Mask-RCNN
     Args:
     images: (N, H, W, C)
@@ -140,20 +141,6 @@ def maskrcnn_train(images, image_sizes, gt_boxes, gt_segms, gt_labels):
         assert gt_segms.num_of_lod_levels == 2
 
     assert gt_labels.num_of_lod_levels == 2
-
-    # process cfg
-    cfg = get_default_cfgs()
-    if terminal_args.config_file is not None:
-        cfg.merge_from_file(terminal_args.config_file)
-        print("merged config from {}".format(terminal_args.config_file))
-
-    if "gpu_num_per_node" in terminal_args:
-        cfg.NUM_GPUS = terminal_args.gpu_num_per_node
-
-    cfg.freeze()
-
-    if terminal_args.verbose:
-        print(cfg)
 
     backbone = Backbone(cfg)
     rpn_head = RPNHead(cfg)
@@ -252,6 +239,111 @@ def maskrcnn_train(images, image_sizes, gt_boxes, gt_segms, gt_labels):
     return rpn_bbox_loss, rpn_objectness_loss, box_loss, cls_loss, mask_loss
 
 
+@distribute_execute(terminal_args.gpu_num_per_node, 1)
+def distribute_maskrcnn_train(
+    dist_ctx, config, image, image_size, gt_bbox, gt_segm, gt_label
+):
+    """Mask-RCNN
+    Args:
+        image: (N, H, W, C)
+        image_size: (N, 2)
+        gt_bbox: (N, M, 4), num_lod_lvl == 2
+        gt_segm: (N, M, 28, 28), num_lod_lvl == 2
+        gt_label: (N, M), num_lod_lvl == 2
+    """
+    assert image.shape[3] == 3
+    assert gt_bbox.num_of_lod_levels == 2
+    assert gt_segm.num_of_lod_levels == 2
+    assert gt_label.num_of_lod_levels == 2
+
+    if terminal_args.verbose:
+        print(config)
+
+    backbone = Backbone(config)
+    rpn_head = RPNHead(config)
+    rpn_loss = RPNLoss(config)
+    rpn_proposal = RPNProposal(config)
+    box_head = BoxHead(config)
+    mask_head = MaskHead(config)
+
+    image_size_list = [
+        flow.squeeze(
+            flow.local_gather(image_size, flow.constant(i, dtype=flow.int32)),
+            [0],
+            name="image{}_size".format(i),
+        )
+        for i in range(image_size.shape[0])
+    ]
+
+    gt_bbox_list = flow.piece_slice(
+        gt_bbox, gt_bbox.shape[0], name="gt_bbox_per_img"
+    )
+
+    gt_label_list = flow.piece_slice(
+        gt_label, gt_label.shape[0], name="gt_label_per_img"
+    )
+
+    gt_segm_list = flow.piece_slice(
+        gt_segm, gt_segm.shape[0], name="gt_segm_per_img"
+    )
+
+    anchors = [
+        flow.detection.anchor_generate(
+            images=image,
+            feature_map_stride=config.DECODER.FEATURE_MAP_STRIDE * pow(2, i),
+            aspect_ratios=config.DECODER.ASPECT_RATIOS,
+            anchor_scales=config.DECODER.ANCHOR_SCALES * pow(2, i),
+        )
+        for i in range(config.DECODER.FPN_LAYERS)
+    ]
+
+    # Backbone
+    # CHECK_POINT: fpn features
+    # with flow.watch_scope(
+    #     blob_watcher=blob_watched, diff_blob_watcher=diff_blob_watched
+    # ):
+    features = backbone.build(flow.transpose(image, perm=[0, 3, 1, 2]))
+
+    # RPN
+    # with flow.watch_scope(
+    #     blob_watcher=blob_watched, diff_blob_watcher=diff_blob_watched
+    # ):
+    cls_logit_list, bbox_pred_list = rpn_head.build(features)
+    rpn_bbox_loss, rpn_objectness_loss = rpn_loss.build(
+        anchors, image_size_list, gt_bbox_list, bbox_pred_list, cls_logit_list
+    )
+
+    if terminal_args.rpn_only:
+        return rpn_bbox_loss, rpn_objectness_loss
+
+    # with flow.watch_scope(blob_watched):
+    proposals = rpn_proposal.build(
+        anchors, cls_logit_list, bbox_pred_list, image_size_list, gt_bbox_list
+    )
+
+    # with flow.watch_scope(
+    #     blob_watcher=blob_watched, diff_blob_watcher=diff_blob_watched
+    # ), flow.watch_scope(
+    #     blob_watcher=MakeWatcherCallback("forward"),
+    #     diff_blob_watcher=MakeWatcherCallback("backward"),
+    # ):
+    # Box Head
+    box_loss, cls_loss, pos_proposal_list, pos_gt_indices_list = box_head.build_train(
+        proposals, gt_bbox_list, gt_label_list, features
+    )
+
+    # Mask Head
+    mask_loss = mask_head.build_train(
+        pos_proposal_list,
+        pos_gt_indices_list,
+        gt_segm_list,
+        gt_label_list,
+        features,
+    )
+
+    return rpn_bbox_loss, rpn_objectness_loss, box_loss, cls_loss, mask_loss
+
+
 def MakeWatcherCallback(prompt):
     def Callback(blob, blob_def):
         if prompt == "forward":
@@ -264,6 +356,32 @@ def MakeWatcherCallback(prompt):
     return Callback
 
 
+def init_config():
+    flow.config.cudnn_buf_limit_mbyte(1280)
+    flow.config.cudnn_conv_heuristic_search_algo(True)
+    flow.config.cudnn_conv_use_deterministic_algo_only(False)
+    flow.config.train.primary_lr(terminal_args.primary_lr)
+    flow.config.train.secondary_lr(terminal_args.secondary_lr)
+    flow.config.train.weight_l2(0.0001)
+    flow.config.train.model_update_conf(dict(momentum_conf={"beta": 0.9}))
+    # flow.config.train.model_update_conf(dict(naive_conf={}))
+
+    config = get_default_cfgs()
+    if terminal_args.config_file is not None:
+        config.merge_from_file(terminal_args.config_file)
+        print("merged config from {}".format(terminal_args.config_file))
+
+    if "gpu_num_per_node" in terminal_args:
+        config.NUM_GPUS = terminal_args.gpu_num_per_node
+
+    config.freeze()
+
+    if terminal_args.verbose:
+        print(config)
+
+    return config
+
+
 if terminal_args.mock_dataset:
 
     @flow.function
@@ -274,12 +392,12 @@ if terminal_args.mock_dataset:
         gt_segms=debug_data.blob_def("segm_mask_targets"),
         gt_labels=debug_data.blob_def("gt_labels"),
     ):
-        flow.config.train.primary_lr(terminal_args.primary_lr)
-        print("primary_lr:", terminal_args.primary_lr)
-        flow.config.train.model_update_conf(dict(naive_conf={}))
-        # TODO: distribute map only support remote blob for now, so identity is required here
-        image_sizes = flow.identity(image_sizes)
+        # flow.config.train.primary_lr(terminal_args.primary_lr)
+        # print("primary_lr:", terminal_args.primary_lr)
+        # flow.config.train.model_update_conf(dict(naive_conf={}))
+
         outputs = maskrcnn_train(
+            init_config(),
             flow.transpose(images, perm=[0, 2, 3, 1]),
             image_sizes,
             gt_boxes,
@@ -368,14 +486,55 @@ if terminal_args.train_with_real_dataset:
         data_loader.init()
         return data_loader
 
-    def init_conf():
-        flow.config.cudnn_conv_heuristic_search_algo(True)
-        flow.config.cudnn_conv_use_deterministic_algo_only(False)
-        flow.config.train.primary_lr(terminal_args.primary_lr)
-        flow.config.train.secondary_lr(terminal_args.secondary_lr)
-        flow.config.train.weight_l2(0.0001)
-        flow.config.train.model_update_conf(dict(momentum_conf={"beta": 0.9}))
-        # flow.config.train.model_update_conf(dict(naive_conf={}))
+    def train_net(config, image=None):
+        data_loader = make_data_loader(
+            batch_size=terminal_args.batch_size,
+            batch_cache_size=3,
+            annotation_file=terminal_args.annotation_file,
+            image_dir=terminal_args.image_dir,
+        )
+
+        if config.NUM_GPUS > 1:
+            image_list = flow.advanced.distribute_split(
+                image or data_loader("image")
+            )
+            image_size_list = flow.advanced.distribute_split(
+                data_loader("image_size")
+            )
+            gt_bbox_list = flow.advanced.distribute_split(
+                data_loader("gt_bbox")
+            )
+            gt_segm_list = flow.advanced.distribute_split(
+                data_loader("gt_segm")
+            )
+            gt_label_list = flow.advanced.distribute_split(
+                data_loader("gt_labels")
+            )
+            outputs = distribute_maskrcnn_train(
+                config,
+                image_list,
+                image_size_list,
+                gt_bbox_list,
+                gt_segm_list,
+                gt_label_list,
+            )
+            for losses in outputs:
+                for loss in losses:
+                    flow.losses.add_loss(loss)
+
+        else:
+            outputs = maskrcnn_train(
+                config,
+                image or data_loader("image"),
+                data_loader("image_size"),
+                data_loader("gt_bbox"),
+                data_loader("gt_segm"),
+                data_loader("gt_labels"),
+            )
+            for loss in outputs:
+                flow.losses.add_loss(loss)
+
+        return outputs
 
     def init_train_func(fake_image):
         if fake_image:
@@ -386,46 +545,17 @@ if terminal_args.train_with_real_dataset:
                     shape=(2, 800, 1344, 3), dtype=flow.float32, is_dynamic=True
                 )
             ):
-                init_conf()
-                data_loader = make_data_loader(
-                    batch_size=terminal_args.batch_size,
-                    batch_cache_size=3,
-                    annotation_file=terminal_args.annotation_file,
-                    image_dir=terminal_args.image_dir,
-                )
-                outputs = maskrcnn_train(
-                    image_blob,
-                    data_loader("image_size"),
-                    data_loader("gt_bbox"),
-                    data_loader("gt_segm"),
-                    data_loader("gt_labels"),
-                )
-                for loss in outputs:
-                    flow.losses.add_loss(loss)
-                return outputs
+                config = init_config()
+                return train_net(config, image_blob)
 
             return train
+
         else:
 
             @flow.function
             def train():
-                init_conf()
-                data_loader = make_data_loader(
-                    batch_size=terminal_args.batch_size,
-                    batch_cache_size=3,
-                    annotation_file=terminal_args.annotation_file,
-                    image_dir=terminal_args.image_dir,
-                )
-                outputs = maskrcnn_train(
-                    data_loader("image"),
-                    data_loader("image_size"),
-                    data_loader("gt_bbox"),
-                    data_loader("gt_segm"),
-                    data_loader("gt_labels"),
-                )
-                for loss in outputs:
-                    flow.losses.add_loss(loss)
-                return outputs
+                config = init_config()
+                return train_net(config)
 
             return train
 
@@ -444,9 +574,7 @@ if __name__ == "__main__":
         ]
 
     if terminal_args.train_with_real_dataset:
-        train_func = init_train_func(
-            len(fake_image_list) > 0 if fake_image_list else False
-        )
+        train_func = init_train_func(len(fake_image_list) > 0)
 
     check_point = flow.train.CheckPoint()
     if not terminal_args.model_load_dir:
@@ -507,8 +635,9 @@ if __name__ == "__main__":
 
         elif terminal_args.train_with_real_dataset:
             print(
-                "{:>8} {:>16} {:>16} {:>16} {:>16} {:>16}".format(
+                "{:>8} {:>8} {:>16} {:>16} {:>16} {:>16} {:>16}".format(
                     "iter",
+                    "rank",
                     "loss_rpn_box_reg",
                     "loss_objectness",
                     "loss_box_reg",
@@ -518,14 +647,12 @@ if __name__ == "__main__":
             )
             for i in range(terminal_args.iter_num):
                 if i < len(fake_image_list):
-                    train_loss = train_func(fake_image_list[i]).get()
+                    losses = train_func(fake_image_list[i]).get()
                 else:
-                    train_loss = train_func().get()
+                    losses = train_func().get()
 
-                fmt_str = "{:>8} " + "{:>16.10f} " * len(train_loss)
-                print_loss = [i]
-                for loss in train_loss:
-                    print_loss.append(loss.mean())
-                print(fmt_str.format(*print_loss))
+                fmt_str = "{:>8} {:>8}" + "{:>16.10f} " * len(losses)
+                for j, loss in enumerate(zip(*losses)):
+                    print(fmt_str.format(i, j, *[t.mean() for t in loss]))
 
                 save_blob_watched(i)

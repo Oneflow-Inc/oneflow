@@ -124,7 +124,7 @@ Maybe<void> DistributeSplitOp::GetSbpSignatures(
   const int32_t axis = FixAxis(conf.axis(), num_axes);
   SbpSignatureBuilder()
       .Split(input_bns(), axis)
-      .Split(output_bns(), axis)
+      .Broadcast(output_bns())
       .Build(sbp_sig_list->mutable_sbp_signature()->Add());
   return Maybe<void>::Ok();
 }

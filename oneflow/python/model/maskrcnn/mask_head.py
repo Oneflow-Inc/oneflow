@@ -33,7 +33,7 @@ class MaskHead(object):
 
             gt_segm_list = []
             gt_label_list = []
-            for img_idx in range(self.cfg.TRAINING_CONF.IMG_PER_GPU):
+            for img_idx in range(len(gt_labels)):
                 # if it is mask target projected, not need to do piece_slice
                 if isinstance(gt_segms, (list, tuple)):
                     gt_segm_list.append(
@@ -97,7 +97,7 @@ class MaskHead(object):
             x = self.mask_feature_extractor(proposals, image_ids, features)
             mask_logits = self.mask_predictor(x)
 
-        return mask_logits
+        return flow.math.sigmoid(mask_logits)
 
     def mask_feature_extractor(self, proposals, img_ids, features):
         proposals_with_img_ids = flow.concat(

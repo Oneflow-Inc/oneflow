@@ -69,13 +69,18 @@ CudnnConvArgs::CudnnConvArgs(const PbMessage& conf, const BlobDesc* x, const Blo
       x_ndims(x->shape().NumAxes()),
       y_ndims(y->shape().NumAxes()),
       w_ndims(w->shape().NumAxes()),
-      ws_size(max_ws_size),
-      at_runtime(false) {
+      ws_size(max_ws_size) {
   CudaCheck(cudnnCreate(&handle));
-  CudaCheck(cudaMalloc(&x_dptr, RtBlobDesc(*x).AlignedByteSizeOfBlobBody()));
-  CudaCheck(cudaMalloc(&w_dptr, RtBlobDesc(*w).AlignedByteSizeOfBlobBody()));
-  CudaCheck(cudaMalloc(&y_dptr, RtBlobDesc(*y).AlignedByteSizeOfBlobBody()));
-  CudaCheck(cudaMalloc(&work_space, max_ws_size));
+  need_destroy_handle = true;
+  if (heuristic) { 
+    need_free_memory = false; 
+  } else {
+    CudaCheck(cudaMalloc(&x_dptr, RtBlobDesc(*x).AlignedByteSizeOfBlobBody()));
+    CudaCheck(cudaMalloc(&w_dptr, RtBlobDesc(*w).AlignedByteSizeOfBlobBody()));
+    CudaCheck(cudaMalloc(&y_dptr, RtBlobDesc(*y).AlignedByteSizeOfBlobBody()));
+    CudaCheck(cudaMalloc(&work_space, max_ws_size));
+    need_free_memory = true;
+  }
 
   std::memset(&params, 0, sizeof(CudnnConvParams));
 
@@ -116,7 +121,8 @@ CudnnConvArgs::CudnnConvArgs(const PbMessage& conf, cudnnHandle_t handle, const 
       w_dptr(const_cast<void*>(w->dptr())),
       work_space(buf ? buf->mut_dptr() : nullptr),
       ws_size(buf ? buf->ByteSizeOfBlobBody() : 0),
-      at_runtime(true) {
+      need_destroy_handle(false),
+      need_free_memory(false) {
   std::memset(&params, 0, sizeof(CudnnConvParams));
 
   cudnnDataType_t x_data_type;
@@ -141,11 +147,13 @@ CudnnConvArgs::CudnnConvArgs(const PbMessage& conf, cudnnHandle_t handle, const 
 }
 
 CudnnConvArgs::~CudnnConvArgs() {
-  if (!at_runtime) {
+  if (need_free_memory) {
     CudaCheck(cudaFree(x_dptr));
     CudaCheck(cudaFree(w_dptr));
     CudaCheck(cudaFree(y_dptr));
     CudaCheck(cudaFree(work_space));
+  }
+  if (need_destroy_handle) {
     CudaCheck(cudnnDestroy(handle));
   }
 }
