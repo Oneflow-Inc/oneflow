@@ -3,7 +3,6 @@
 
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job/job_set.pb.h"
-#include "oneflow/core/job/flags_and_log_scope.h"
 #include "oneflow/core/common/maybe.h"
 
 namespace oneflow {
@@ -15,9 +14,6 @@ class EnvironmentObjectsScope final {
   ~EnvironmentObjectsScope();
 
   Maybe<void> Init(const ConfigProto& config_proto);
-
- private:
-  std::unique_ptr<FlagsAndLogScope> flags_and_log_scope_;
 };
 
 }  // namespace oneflow

@@ -1,4 +1,3 @@
-#include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/job/session.h"
 #include "oneflow/core/job/inter_user_job_info.pb.h"
 #include "oneflow/core/job/job_desc.h"
@@ -28,7 +27,6 @@ Session::~Session() {
   Global<InterUserJobInfo>::Delete();
   Global<CriticalSectionDesc>::Delete();
   Global<JobName2JobId>::Delete();
-  Global<CtrlClient>::Get()->Clear();
 }
 
 }  // namespace oneflow

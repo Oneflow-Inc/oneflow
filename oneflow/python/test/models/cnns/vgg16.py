@@ -220,13 +220,13 @@ def vgg_eval_job():
 
 if __name__ == "__main__":
     flow.config.gpu_device_num(args.gpu_num_per_node)
-    flow.cluster.grpc_use_no_signal()
-    flow.cluster.ctrl_port(3333)
+    flow.env.grpc_use_no_signal()
+    flow.env.ctrl_port(3333)
 
     flow.config.log_dir("./log")
     flow.config.default_data_type(flow.float)
     if args.multinode:
-        flow.cluster.ctrl_port(12138)
+        flow.env.ctrl_port(12138)
 
         nodes = []
         for n in args.node_list.strip().split(","):
@@ -234,7 +234,7 @@ if __name__ == "__main__":
           addr_dict["addr"] = n
           nodes.append(addr_dict)
 
-        flow.cluster.machine(nodes)
+        flow.env.machine(nodes)
 
         if args.remote_by_hand is False:
             if args.scp_binary_without_uuid:

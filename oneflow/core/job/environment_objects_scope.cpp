@@ -45,7 +45,6 @@ AvailableMemDesc PullAvailableMemDesc() {
 EnvironmentObjectsScope::EnvironmentObjectsScope() {}
 
 Maybe<void> EnvironmentObjectsScope::Init(const ConfigProto& config_proto) {
-  flags_and_log_scope_.reset(new FlagsAndLogScope(config_proto, "oneflow"));
   Global<ResourceDesc>::New(config_proto.resource());
   Global<const IOConf>::New(config_proto.io_conf());
   Global<const ProfilerConf>::New(config_proto.profiler_conf());
@@ -69,7 +68,7 @@ EnvironmentObjectsScope::~EnvironmentObjectsScope() {
   Global<const ProfilerConf>::Delete();
   Global<const IOConf>::Delete();
   Global<ResourceDesc>::Delete();
-  flags_and_log_scope_.reset();
+  Global<CtrlClient>::Get()->Clear();
 }
 
 }  // namespace oneflow

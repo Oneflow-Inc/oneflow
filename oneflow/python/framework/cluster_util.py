@@ -3,7 +3,7 @@ from __future__ import absolute_import
 import oneflow.core.job.cluster_pb2 as cluster_pb
 from oneflow.python.oneflow_export import oneflow_export
 
-@oneflow_export('cluster.machine')
+@oneflow_export('env.machine')
 def machine(*val):
     assert cluster_proto_mutable == True
     del default_cluster_proto.machine[:]
@@ -11,23 +11,41 @@ def machine(*val):
     default_cluster_proto.ClearField('machine')
     default_cluster_proto.machine.extend(_MakeMachine(val))
 
-@oneflow_export('cluster.ctrl_port')
+@oneflow_export('env.ctrl_port')
 def ctrl_port(val):
     assert cluster_proto_mutable == True
     assert type(val) is int
     default_cluster_proto.ctrl_port = val
 
-@oneflow_export('cluster.data_port')
+@oneflow_export('env.data_port')
 def data_port(val):
     assert cluster_proto_mutable == True
     assert type(val) is int
     default_cluster_proto.data_port = val
 
-@oneflow_export('cluster.grpc_use_no_signal')
+@oneflow_export('env.grpc_use_no_signal')
 def grpc_use_no_signal(val = True):
     assert cluster_proto_mutable == True
     assert type(val) is bool
     default_cluster_proto.grpc_use_no_signal = val
+
+@oneflow_export('env.log_dir')
+def log_dir(val):
+    assert config_proto_mutable == True
+    assert type(val) is str
+    default_config_proto.cpp_logging_conf.log_dir = val
+
+@oneflow_export('env.logtostderr')
+def logtostderr(val):
+    assert config_proto_mutable == True
+    assert type(val) is int
+    default_config_proto.cpp_logging_conf.logtostderr = val
+
+@oneflow_export('env.logbuflevel')
+def logbuflevel(val):
+    assert config_proto_mutable == True
+    assert type(val) is int
+    default_config_proto.cpp_logging_conf.logbuflevel = val
 
 def _MakeMachine(machines):
     if isinstance(machines, str): machines = [machines]
@@ -52,13 +70,13 @@ def _MakeMachine(machines):
     return rp_machine
 
 def _DefaultClusterProto():
-  cluster_proto = cluster_pb.ClusterProto()
-  machine = cluster_proto.machine.add()
-  machine.id = 0
-  machine.addr = "127.0.0.1"
-  cluster_proto.ctrl_port = 2017
-  cluster_proto.grpc_use_no_signal = True
-  return cluster_proto
+    cluster_proto = cluster_pb.ClusterProto()
+    machine = cluster_proto.machine.add()
+    machine.id = 0
+    machine.addr = "127.0.0.1"
+    cluster_proto.ctrl_port = 2017
+    cluster_proto.grpc_use_no_signal = True
+    return cluster_proto
 
 default_cluster_proto = _DefaultClusterProto()
 cluster_proto_mutable = True

@@ -8,9 +8,16 @@ message Machine {
   optional int32 data_port_agent = 4 [default = -1];
 }
 
+message CppLoggingConf {
+  optional string log_dir = 1 [default = "./log"];
+  optional int32 logtostderr = 2 [default = 0];
+  optional int32 logbuflevel = 3 [default = -1];
+}
+
 message ClusterProto {
   repeated Machine machine = 1;
   required int32 ctrl_port = 2;
   optional int32 data_port = 3 [default = -1];
-  optional bool grpc_use_no_signal = 4 [default = false];
+  optional CppLoggingConf cpp_logging_conf = 4;
+  optional bool grpc_use_no_signal = 5 [default = true];
 }

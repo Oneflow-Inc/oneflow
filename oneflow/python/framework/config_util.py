@@ -15,7 +15,6 @@ def TryCompleteDefaultJobConfigProto(job_conf):
 def _TryCompleteDefaultConfigProto(config):
     _DefaultConfigResource(config)
     _DefaultConfigIO(config)
-    _DefaultConfigCppFlags(config)
 
 def _DefaultConfigResource(config):
     resource = config.resource
@@ -28,9 +27,6 @@ def _DefaultConfigIO(config):
         io_conf.data_fs_conf.localfs_conf.SetInParent()
     if io_conf.snapshot_fs_conf.WhichOneof("fs_type") == None:
         io_conf.snapshot_fs_conf.localfs_conf.SetInParent()
-
-def  _DefaultConfigCppFlags(config):
-    config.cpp_flags_conf.SetInParent()
 
 def _TryCompleteDefaultJobConfigProto(job_conf):
     if job_conf.WhichOneof("job_type") is None:
@@ -118,30 +114,6 @@ def persistence_buf_byte(val):
     assert config_proto_mutable == True
     assert type(val) is int
     default_config_proto.io_conf.persistence_buf_byte = val
-
-@oneflow_export('config.log_dir')
-def log_dir(val):
-    assert config_proto_mutable == True
-    assert type(val) is str
-    default_config_proto.cpp_flags_conf.log_dir = val
-
-@oneflow_export('config.logtostderr')
-def logtostderr(val):
-    assert config_proto_mutable == True
-    assert type(val) is int
-    default_config_proto.cpp_flags_conf.logtostderr = val
-
-@oneflow_export('config.logbuflevel')
-def logbuflevel(val):
-    assert config_proto_mutable == True
-    assert type(val) is int
-    default_config_proto.cpp_flags_conf.logbuflevel = val
-
-@oneflow_export('config.v')
-def v(val):
-    assert config_proto_mutable == True
-    assert type(val) is int
-    default_config_proto.cpp_flags_conf.v = val
 
 @oneflow_export('config.collect_act_event')
 def collect_act_event(val = True):

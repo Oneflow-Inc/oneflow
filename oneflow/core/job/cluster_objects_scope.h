@@ -9,7 +9,7 @@ namespace oneflow {
 class ClusterObjectsScope final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ClusterObjectsScope);
-  ClusterObjectsScope();
+  ClusterObjectsScope() = default;
   ~ClusterObjectsScope();
 
   Maybe<void> Init(const ClusterProto& cluster_proto);
