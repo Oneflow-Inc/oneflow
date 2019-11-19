@@ -13,16 +13,17 @@ import collections
 
 @oneflow_export("math.reduce_sum")
 def reduce_sum(input_tensor, axis=None, keepdims=False, name=None):
-    r"""Computes the sum of elements across dimensions of a `Blob`.
+    r"""Sum of elements across dimensions of a `Blob`.
     
+    Analogous to `tf.math.reduce_sum <https://www.tensorflow.org/api_docs/python/tf/math/reduce_sum>`_
+
     Args:
-        input_tensor: The `Blob` to reduce. Should have numeric type.
-        axis: The dimensions to reduce. If None (the default), reduces all dimensions. 
-        Must be in the range [-rank(input_tensor), rank(input_tensor)).
-        keepdims: If true, retains reduced dimensions with length 1.
-        name: A name for the operation (optional).
+        input_tensor: A `Blob`.
+        axis: Dimensions to reduce. By default, all dimensions will be reduced.
+        keepdims: If true, every reduced dimension with a length of 1 will be kept.
+        name: A name for the operator (optional).
     Returns:
-        the default job set.
+        A `Blob`.
     """
     op_conf = op_conf_util.OperatorConf()
     setattr(
