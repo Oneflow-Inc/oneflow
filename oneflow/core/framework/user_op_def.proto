@@ -12,8 +12,8 @@ message UserOpDef {
     required int32 num = 3;
     required bool num_as_min = 4;
   }
-  repeated ArgDef in = 2;
-  required ArgDef out = 3;
+  repeated ArgDef input = 2;
+  repeated ArgDef output = 3;
 
   message AttrDef {
     required string name = 1;
