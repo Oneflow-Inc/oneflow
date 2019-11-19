@@ -9,19 +9,35 @@ bool IsOpTypeCaseCpuSupportOnly(int64_t op_type_case, std::string* error_str) {
       .GetDataAndSerializedErrorProto(error_str, false);
 }
 
+bool IsClusterInited() {
+  using namespace oneflow;
+  return Global<ClusterObjectsScope>::Get() != nullptr;
+}
+
+void InitCluster(const std::string& cluster_proto_str, std::string* error_str) {
+  return oneflow::InitCluster(cluster_proto_str).GetDataAndSerializedErrorProto(error_str);
+}
+
+void DestroyCluster(std::string* error_str) {
+  return oneflow::DestroyCluster().GetDataAndSerializedErrorProto(error_str);
+}
+
 bool IsEnvironmentInited() {
   using namespace oneflow;
   return Global<EnvironmentObjectsScope>::Get() != nullptr;
 }
 
-void InitEnvironmentBySerializedConfigProto(const std::string& config_proto_str,
-                                            std::string* error_str) {
-  return oneflow::InitEnvironmentBySerializedConfigProto(config_proto_str)
-      .GetDataAndSerializedErrorProto(error_str);
+void InitGlobalEnvironment(const std::string& config_proto_str, std::string* error_str) {
+  using namespace oneflow;
+  return InitGlobalEnvironment(config_proto_str).GetDataAndSerializedErrorProto(error_str);
 }
 
 void InitGlobalSession(std::string* error_str) {
   return oneflow::InitGlobalSession().GetDataAndSerializedErrorProto(error_str);
+}
+
+void DestroyGlobalEnvironment(std::string* error_str) {
+  return oneflow::DestroyGlobalEnvironment().GetDataAndSerializedErrorProto(error_str);
 }
 
 void DestroyGlobalSession(std::string* error_str) {
@@ -32,20 +48,16 @@ void InitGlobalOneflow(std::string* error_str) {
   return oneflow::InitGlobalOneflow().GetDataAndSerializedErrorProto(error_str);
 }
 
+void DestroyGlobalOneflow(std::string* error_str) {
+  return oneflow::DestroyGlobalOneflow().GetDataAndSerializedErrorProto(error_str);
+}
+
 std::string GetSerializedInterUserJobInfo(std::string* error_str) {
   return oneflow::GetSerializedInterUserJobInfo().GetDataAndSerializedErrorProto(error_str, "");
 }
 
 void LaunchJob(const std::shared_ptr<oneflow::ForeignJobInstance>& cb, std::string* error_str) {
   return oneflow::LaunchJob(cb).GetDataAndSerializedErrorProto(error_str);
-}
-
-void DestroyGlobalOneflow(std::string* error_str) {
-  return oneflow::DestroyGlobalOneflow().GetDataAndSerializedErrorProto(error_str);
-}
-
-void DestroyGlobalEnvironment(std::string* error_str) {
-  return oneflow::DestroyGlobalEnvironment().GetDataAndSerializedErrorProto(error_str);
 }
 
 long long DeviceType4DeviceTag(const std::string& device_tag, std::string* error_str) {

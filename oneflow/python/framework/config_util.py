@@ -17,37 +17,8 @@ def _TryCompleteDefaultConfigProto(config):
     _DefaultConfigIO(config)
     _DefaultConfigCppFlags(config)
 
-def _MakeMachine(machines):
-    if isinstance(machines, str): machines = [machines]
-    resource = resource_util.Resource()
-    rp_machine = resource.machine
-    for m_data in machines:
-        m = rp_machine.add()
-        if isinstance(m_data, str):
-            m.addr = m_data
-        elif isinstance(m_data, dict):
-            if 'addr' in m_data: m.addr = m_data['addr']
-            if 'ctrl_port_agent' in m_data: m.ctrl_port_agent = m_data['ctrl_port_agent']
-            if 'data_port_agent' in m_data: m.data_port_agent = m_data['data_port_agent']
-        else:
-            raise NotImplementedError
-    id = 0
-    addrs_for_check = set()
-    for m in rp_machine:
-        m.id = id
-        id += 1
-        assert m.addr not in addrs_for_check
-        addrs_for_check.add(m.addr)
-    return rp_machine
-
 def _DefaultConfigResource(config):
     resource = config.resource
-    if len(resource.machine) == 0:
-        machine = resource.machine.add()
-        machine.id = 0
-        machine.addr = "127.0.0.1"
-    if resource.HasField("ctrl_port") == False:
-        resource.ctrl_port = 2017
     if resource.gpu_device_num == 0:
         resource.gpu_device_num = 1
 
@@ -60,8 +31,6 @@ def _DefaultConfigIO(config):
 
 def  _DefaultConfigCppFlags(config):
     config.cpp_flags_conf.SetInParent()
-    config.cpp_flags_conf.grpc_use_no_signal = True
-
 
 def _TryCompleteDefaultJobConfigProto(job_conf):
     if job_conf.WhichOneof("job_type") is None:
@@ -71,6 +40,12 @@ def _DefaultConfigProto():
     config_proto = job_set_pb.ConfigProto()
     _TryCompleteDefaultConfigProto(config_proto)
     return config_proto
+
+@oneflow_export('config.machine_num')
+def machine_num(val):
+    assert config_proto_mutable == True
+    assert type(val) is int
+    default_config_proto.resource.machine_num = val
 
 @oneflow_export('config.gpu_device_num')
 def gpu_device_num(val):
@@ -83,25 +58,6 @@ def cpu_device_num(val):
     assert config_proto_mutable == True
     assert type(val) is int
     default_config_proto.resource.cpu_device_num = val
-
-@oneflow_export('config.machine')
-def machine(*val):
-    assert config_proto_mutable == True
-    del default_config_proto.resource.machine[:]
-    if len(val) == 1 and isinstance(val[0], (list, tuple)): val = val[0]
-    default_config_proto.resource.machine.extend(_MakeMachine(val))
-
-@oneflow_export('config.ctrl_port')
-def ctrl_port(val):
-    assert config_proto_mutable == True
-    assert type(val) is int
-    default_config_proto.resource.ctrl_port = val
-
-@oneflow_export('config.data_port')
-def data_port(val):
-    assert config_proto_mutable == True
-    assert type(val) is int
-    default_config_proto.resource.data_port = val
 
 @oneflow_export('config.comm_net_worker_num')
 def comm_net_worker_num(val):
@@ -186,12 +142,6 @@ def v(val):
     assert config_proto_mutable == True
     assert type(val) is int
     default_config_proto.cpp_flags_conf.v = val
-
-@oneflow_export('config.grpc_use_no_signal')
-def grpc_use_no_signal(val = True):
-    assert config_proto_mutable == True
-    assert type(val) is bool
-    default_config_proto.cpp_flags_conf.grpc_use_no_signal = val
 
 @oneflow_export('config.collect_act_event')
 def collect_act_event(val = True):

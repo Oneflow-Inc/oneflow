@@ -22,8 +22,6 @@
 #include "oneflow/core/operator/interface_op_util.h"
 #include "oneflow/core/job/critical_section_desc.h"
 
-DECLARE_bool(grpc_use_no_signal);
-
 namespace std {
 
 template<>

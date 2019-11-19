@@ -279,19 +279,19 @@ def evaluate():
 def main():
     flow.config.default_data_type(flow.float)
     flow.config.gpu_device_num(args.gpu_num_per_node)
-    flow.config.grpc_use_no_signal()
+    flow.grpc_use_no_signal()
     flow.config.log_dir("./output/log")
-    flow.config.ctrl_port(12138)
+    flow.ctrl_port(12138)
 
     if args.multinode:
-        flow.config.ctrl_port(12139)
+        flow.ctrl_port(12139)
         nodes = []
         for n in args.node_list.strip().split(","):
             addr_dict = {}
             addr_dict["addr"] = n
             nodes.append(addr_dict)
 
-        flow.config.machine(nodes)
+        flow.machine(nodes)
         flow.config.enable_inplace(False)
 
         if args.scp_binary_without_uuid:

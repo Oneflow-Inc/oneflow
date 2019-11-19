@@ -1,5 +1,6 @@
 #include "oneflow/core/job/environment_objects_scope.h"
 #include "oneflow/core/job/resource_desc.h"
+#include "oneflow/core/job/cluster_desc.h"
 #include "oneflow/core/control/ctrl_server.h"
 #include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/job/machine_context.h"
@@ -39,24 +40,6 @@ AvailableMemDesc PullAvailableMemDesc() {
   return ret;
 }
 
-Maybe<void> FixCpuDeviceNum() {
-  int32_t cpu_device_num = Global<ResourceDesc>::Get()->CpuDeviceNum();
-  if (cpu_device_num > 0) { return Maybe<void>::Ok(); }
-  if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
-    cpu_device_num = std::thread::hardware_concurrency();
-    Global<CtrlClient>::Get()->PushKVT("cpu_device_num", cpu_device_num);
-  } else {
-    Global<CtrlClient>::Get()->PullKVT("cpu_device_num", &cpu_device_num);
-  }
-  OF_BARRIER();
-  if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
-    Global<CtrlClient>::Get()->ClearKV("cpu_device_num");
-  }
-  OF_CHECK_GT(cpu_device_num, 0);
-  Global<ResourceDesc>::Get()->SetCpuDeviceNum(cpu_device_num);
-  return Maybe<void>::Ok();
-}
-
 }  // namespace
 
 EnvironmentObjectsScope::EnvironmentObjectsScope() {}
@@ -66,13 +49,6 @@ Maybe<void> EnvironmentObjectsScope::Init(const ConfigProto& config_proto) {
   Global<ResourceDesc>::New(config_proto.resource());
   Global<const IOConf>::New(config_proto.io_conf());
   Global<const ProfilerConf>::New(config_proto.profiler_conf());
-  Global<CtrlServer>::New();
-  Global<CtrlClient>::New();
-  OF_BARRIER();
-  int64_t this_mchn_id =
-      Global<ResourceDesc>::Get()->GetMachineId(Global<CtrlServer>::Get()->this_machine_addr());
-  Global<MachineCtx>::New(this_mchn_id);
-  JUST(FixCpuDeviceNum());
   Global<IDMgr>::New();
   if (Global<MachineCtx>::Get()->IsThisMachineMaster()
       && Global<const ProfilerConf>::Get()->collect_act_event()) {
@@ -90,9 +66,6 @@ EnvironmentObjectsScope::~EnvironmentObjectsScope() {
   if (Global<MachineCtx>::Get()->IsThisMachineMaster()) { Global<AvailableMemDesc>::Delete(); }
   if (Global<Profiler>::Get() != nullptr) { Global<Profiler>::Delete(); }
   Global<IDMgr>::Delete();
-  Global<MachineCtx>::Delete();
-  Global<CtrlClient>::Delete();
-  Global<CtrlServer>::Delete();
   Global<const ProfilerConf>::Delete();
   Global<const IOConf>::Delete();
   Global<ResourceDesc>::Delete();

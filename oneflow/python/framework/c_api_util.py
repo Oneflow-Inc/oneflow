@@ -4,6 +4,7 @@ import oneflow.core.common.error_pb2 as error_util
 import oneflow.core.common.data_type_pb2 as dtype_util
 from oneflow.core.job.inter_user_job_info_pb2 import InterUserJobInfo
 import oneflow.core.job.job_set_pb2 as job_set_pb
+import oneflow.core.job.cluster_pb2 as cluster_pb2
 import oneflow.core.job.placement_pb2 as placment_util
 import oneflow.core.record.record_pb2 as record_util
 from google.protobuf import text_format
@@ -21,15 +22,35 @@ def IsOpTypeCaseCpuSupportOnly(op_type_case):
     if error.HasField("error_type"): raise JobBuildAndInferError(error)
     return ret
 
-def InitEnvironment(config_proto):
-    assert(type(config_proto) is job_set_pb.ConfigProto)
-    config_proto_str = text_format.MessageToString(config_proto)
-    error_str = oneflow_internal.InitEnvironmentBySerializedConfigProto(config_proto_str)
+def IsClusterInited():
+    return oneflow_internal.IsClusterInited()
+
+def InitCluster(cluster_proto):
+    assert(type(cluster_proto) is cluster_pb2.ClusterProto)
+    cluster_proto_str = text_format.MessageToString(cluster_proto)
+    error_str = oneflow_internal.InitCluster(cluster_proto_str)
+    error = text_format.Parse(error_str, error_util.ErrorProto())
+    if error.HasField("error_type"): raise JobBuildAndInferError(error)
+
+def DestroyCluster():
+    error_str = oneflow_internal.DestroyCluster()
     error = text_format.Parse(error_str, error_util.ErrorProto())
     if error.HasField("error_type"): raise JobBuildAndInferError(error)
 
 def IsEnvironmentInited():
     return oneflow_internal.IsEnvironmentInited()
+
+def InitGlobalEnvironment(config_proto):
+    assert(type(config_proto) is job_set_pb.ConfigProto)
+    config_proto_str = text_format.MessageToString(config_proto)
+    error_str = oneflow_internal.InitGlobalEnvironment(config_proto_str)
+    error = text_format.Parse(error_str, error_util.ErrorProto())
+    if error.HasField("error_type"): raise JobBuildAndInferError(error)
+
+def DestroyGlobalEnvironment():
+    error_str = oneflow_internal.DestroyGlobalEnvironment()
+    error = text_format.Parse(error_str, error_util.ErrorProto())
+    if error.HasField("error_type"): raise JobBuildAndInferError(error)
 
 def InitGlobalSession():
     error_str = oneflow_internal.InitGlobalSession()
@@ -46,6 +67,11 @@ def InitGlobalOneflow():
     error = text_format.Parse(error_str, error_util.ErrorProto())
     if error.HasField("error_type"): raise JobBuildAndInferError(error)
 
+def DestroyGlobalOneflow():
+    error_str = oneflow_internal.DestroyGlobalOneflow()
+    error = text_format.Parse(error_str, error_util.ErrorProto())
+    if error.HasField("error_type"): raise JobBuildAndInferError(error)
+
 def GetInterUserJobInfo():
     inter_user_job_info, error_str = oneflow_internal.GetSerializedInterUserJobInfo()
     error = text_format.Parse(error_str, error_util.ErrorProto())
@@ -54,16 +80,6 @@ def GetInterUserJobInfo():
 
 def LaunchJob(job_instance):
     error_str = oneflow_internal.LaunchJob(job_instance)
-    error = text_format.Parse(error_str, error_util.ErrorProto())
-    if error.HasField("error_type"): raise JobBuildAndInferError(error)
-
-def DestroyGlobalOneflow():
-    error_str = oneflow_internal.DestroyGlobalOneflow()
-    error = text_format.Parse(error_str, error_util.ErrorProto())
-    if error.HasField("error_type"): raise JobBuildAndInferError(error)
-
-def DestroyGlobalEnvironment():
-    error_str = oneflow_internal.DestroyGlobalEnvironment()
     error = text_format.Parse(error_str, error_util.ErrorProto())
     if error.HasField("error_type"): raise JobBuildAndInferError(error)
 

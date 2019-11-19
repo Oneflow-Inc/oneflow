@@ -3,7 +3,7 @@
 #include "oneflow/core/control/ctrl_server.h"
 #include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/job/machine_context.h"
-#include "oneflow/core/job/resource_desc.h"
+#include "oneflow/core/job/cluster_desc.h"
 
 namespace oneflow {
 
@@ -21,7 +21,7 @@ std::string GetHaltOrSessionStartCtrlKey() {
 }
 
 void MasterWaitHaltAck() {
-  FOR_RANGE(int64_t, i, 0, Global<ResourceDesc>::Get()->TotalMachineNum()) {
+  FOR_RANGE(int64_t, i, 0, Global<ClusterDesc>::Get()->TotalMachineNum()) {
     if (i == Global<MachineCtx>::Get()->this_machine_id()) { continue; }
     ClusterControlProto cluster_control_proto;
     Global<CtrlClient>::Get()->PullKV(GetHaltAckCtrlKey(i), &cluster_control_proto);

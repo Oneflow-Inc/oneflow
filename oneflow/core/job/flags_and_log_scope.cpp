@@ -2,8 +2,6 @@
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/persistence/file_system.h"
 
-DECLARE_bool(grpc_use_no_signal);
-
 namespace oneflow {
 
 namespace {
@@ -37,7 +35,6 @@ FlagsAndLogScope::FlagsAndLogScope(const ConfigProto& config, const char* binary
   FLAGS_log_dir = LogDir(config.cpp_flags_conf().log_dir());
   FLAGS_logtostderr = config.cpp_flags_conf().logtostderr();
   FLAGS_logbuflevel = config.cpp_flags_conf().logbuflevel();
-  FLAGS_grpc_use_no_signal = config.cpp_flags_conf().grpc_use_no_signal();
   google::InitGoogleLogging(binary_name);
   gflags::SetVersionString(BuildVersionString());
   LocalFS()->RecursivelyCreateDirIfNotExist(FLAGS_log_dir);
