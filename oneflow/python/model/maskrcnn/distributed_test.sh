@@ -8,4 +8,5 @@ python distributed_maskrcnn_eval.py                                             
   -anno="annotations/sample_10_instances_val2017.json"                                \
   -imgd="val2017"                                                                     \
   -i=5                                                                                \
-  -g=2
+  -g=2                                                                                \
+  -fake

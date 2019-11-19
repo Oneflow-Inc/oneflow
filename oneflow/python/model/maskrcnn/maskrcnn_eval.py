@@ -177,7 +177,7 @@ def GenPredictionsAndImageIds(results):
     # Mask Head Post-Processor
     mask_postprocessor = MaskPostProcessor()
     predictions = mask_postprocessor.forward(mask_prob.ndarray(), boxes)
-    image_ids = list(np.squeeze(image_ids.ndarray()))
+    image_ids = list(np.squeeze(image_ids.ndarray(), axis=1))
 
     return (predictions, image_ids)
 

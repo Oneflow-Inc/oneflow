@@ -73,7 +73,7 @@ def make_data_loader(
     return data_loader
 
 
-@distribute_execute(terminal_args.gpu_num_per_node, 1)
+@distribute_execute(terminal_args.gpu_num_per_node, 1, "eval")
 def maskrcnn_eval(dist_ctx, config, images, image_sizes, image_ids):
     cfg = get_default_cfgs()
     if terminal_args.config_file is not None:
@@ -186,7 +186,7 @@ def GenPredictionsAndImageIds(results):
     # Mask Head Post-Processor
     mask_postprocessor = MaskPostProcessor()
     predictions = mask_postprocessor.forward(mask_prob.ndarray(), boxes)
-    image_ids = list(np.squeeze(image_ids.ndarray()))
+    image_ids = list(np.squeeze(image_ids.ndarray(), axis=1))
 
     return (predictions, image_ids)
 
