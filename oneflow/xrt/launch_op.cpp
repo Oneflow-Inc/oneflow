@@ -15,7 +15,8 @@ void XrtLaunchOp::InitFromOpConf() {
 
   const auto &mutability_table = launch_conf.input_mutability();
   for (int i = 0; i < inputs_num; ++i) {
-    const std::string &input = launch_conf.in().at(i);
+    // const std::string &input = launch_conf.in().at(i);
+    const std::string &input = launch_conf.in()[i];
     bool mutability = mutability_table.count(input) > 0;
     EnrollInputBn(absl::StrCat("in_", i))->set_is_mutable(mutability);
   }

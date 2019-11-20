@@ -15,11 +15,14 @@ include(cocoapi)
 include(half)
 
 if (WITH_XLA)
-include(tensorflow)
+  include(tensorflow)
 endif()
 
 if (WITH_TENSORRT)
-include(tensorrt)
+  if (NOT WITH_XLA)
+    include(absl)
+  endif()
+  include(tensorrt)
 endif()
 
 if (BUILD_CUDA)
@@ -165,6 +168,9 @@ if(WITH_XLA)
 endif()
 
 if(WITH_TENSORRT)
+  if (NOT WITH_XLA)
+    list(APPEND oneflow_third_party_libs ${ABSL_LIBRARIES})
+  endif()
   list(APPEND oneflow_third_party_libs ${TENSORRT_LIBRARIES})
 endif()
 

@@ -3,7 +3,6 @@
 
 #include "oneflow/core/job/sbp_parallel.h"
 
-#include "absl/strings/str_cat.h"
 #include "oneflow/xrt/graph/graph.h"
 #include "oneflow/xrt/node_util.h"
 #include "oneflow/xrt/utility/stl.h"

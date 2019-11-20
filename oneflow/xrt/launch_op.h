@@ -1,6 +1,8 @@
 #ifndef ONEFLOW_XRT_LAUNCH_OP_H_
 #define ONEFLOW_XRT_LAUNCH_OP_H_
 
+#include <string>
+
 #include "oneflow/core/graph/logical_node.h"
 #include "oneflow/core/operator/operator.h"
 
