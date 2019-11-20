@@ -122,7 +122,7 @@ if terminal_args.fake_img:
 
     @flow.function
     def maskrcnn_eval_job(
-        images=flow.input_blob_def(shape=(2, 3, 416, 608), dtype=flow.float32, is_dynamic=True)
+        images=flow.input_blob_def(shape=(2, 416, 608, 3), dtype=flow.float32, is_dynamic=True)
     ):
         data_loader = make_data_loader(
             batch_size=terminal_args.batch_size,
@@ -131,7 +131,6 @@ if terminal_args.fake_img:
             annotation_file=terminal_args.annotation_file,
             image_dir=terminal_args.image_dir,
         )
-        images = flow.transpose(images, perm=[0, 2, 3, 1])
         image_sizes = data_loader("image_size")
         image_ids = data_loader("image_id")
 
@@ -200,6 +199,7 @@ if __name__ == "__main__":
             if i == 0:
                 f = open("/dataset/mask_rcnn/maskrcnn_eval_net_10/fake_image_list.pkl", "rb")
                 fake_image_list = pickle.load(f)
+            images = fake_image_list[i].transpose((0, 2, 3, 1)).copy()
             results = maskrcnn_eval_job(fake_image_list[i]).get()
         else:
             results = maskrcnn_eval_job().get()
