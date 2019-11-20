@@ -8,14 +8,14 @@ import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 from oneflow.python.oneflow_export import oneflow_export
 import oneflow
 
-@oneflow_export("advanced.distribute_broadcast", "debug.distribute_broadcast")
-def distribute_broadcast(x, name=None):
-    if name is None: name = id_util.UniqueStr("DistributeBroadcast_")
+@oneflow_export("advanced.distribute_clone", "debug.distribute_clone")
+def distribute_clone(x, name=None):
+    if name is None: name = id_util.UniqueStr("DistributeClone_")
     op_conf = op_conf_util.OperatorConf()
     op_conf.name = name
-    setattr(op_conf.distribute_broadcast_conf, "in", x.logical_blob_name)
+    setattr(op_conf.distribute_clone_conf, "in", x.logical_blob_name)
     parallel_size = oneflow.placement.current_scope().parallel_size
-    op_conf.distribute_broadcast_conf.out.extend(["out_%d" % i for i in range(parallel_size)])
+    op_conf.distribute_clone_conf.out.extend(["out_%d" % i for i in range(parallel_size)])
     compile_context.CurJobAddOp(op_conf)
     ret = []
     for i in range(parallel_size):
