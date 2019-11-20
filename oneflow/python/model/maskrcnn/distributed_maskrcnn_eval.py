@@ -5,15 +5,15 @@ import os
 import numpy as np
 import pickle
 import argparse
+from datetime import datetime
+
 import oneflow as flow
 import oneflow.core.data.data_pb2 as data_util
-
-from datetime import datetime
+from distribution import distribute_execute
 from backbone import Backbone
 from rpn import RPNHead, RPNLoss, RPNProposal
 from box_head import BoxHead
 from mask_head import MaskHead
-
 from eval.bounding_box import BoxList
 from eval.box_head_inference import PostProcessor
 from eval.mask_head_inference import MaskPostProcessor
@@ -73,7 +73,8 @@ def make_data_loader(
     return data_loader
 
 
-def maskrcnn_eval(images, image_sizes, image_ids):
+@distribute_execute(terminal_args.gpu_num_per_node, 1, "eval")
+def maskrcnn_eval(dist_ctx, config, images, image_sizes, image_ids):
     cfg = get_default_cfgs()
     if terminal_args.config_file is not None:
         cfg.merge_from_file(terminal_args.config_file)
@@ -134,7 +135,11 @@ if terminal_args.fake_img:
         image_sizes = data_loader("image_size")
         image_ids = data_loader("image_id")
 
-        return maskrcnn_eval(images, image_sizes, image_ids)
+        images_list = flow.advanced.distribute_split(images)
+        image_sizes_list = flow.advanced.distribute_split(image_sizes)
+        image_ids_list = flow.advanced.distribute_split(image_ids)
+
+        return maskrcnn_eval(None, images_list, image_sizes_list, image_ids_list)
 
 
 else:
@@ -152,7 +157,11 @@ else:
         image_sizes = data_loader("image_size")
         image_ids = data_loader("image_id")
 
-        return maskrcnn_eval(images, image_sizes, image_ids)
+        images_list = flow.advanced.distribute_split(images)
+        image_sizes_list = flow.advanced.distribute_split(image_sizes)
+        image_ids_list = flow.advanced.distribute_split(image_ids)
+
+        return maskrcnn_eval(None, images_list, image_sizes_list, image_ids_list)
 
 
 # return: (list of BoxList wrt. images, list of image_is wrt. image)
@@ -192,28 +201,29 @@ if __name__ == "__main__":
     check_point = flow.train.CheckPoint()
     check_point.load(terminal_args.model_load_dir)
 
-    prediction_list = []
-    image_id_list = []
-    for i in range(terminal_args.iter_num):
+    predictions_all = []
+    image_ids_all = []
+    for i in range(terminal_args.iter_num):  # wrt. iterations
         if terminal_args.fake_img:
             if i == 0:
                 f = open("/dataset/mask_rcnn/maskrcnn_eval_net_10/fake_image_list.pkl", "rb")
                 fake_image_list = pickle.load(f)
             images = fake_image_list[i].transpose((0, 2, 3, 1)).copy()
-            results = maskrcnn_eval_job(fake_image_list[i]).get()
+            results = maskrcnn_eval_job(images).get()
         else:
             results = maskrcnn_eval_job().get()
-        predictions, image_ids = GenPredictionsAndImageIds(results)
 
-        image_id_list += image_ids
-        prediction_list += predictions
+        for device_id in range(terminal_args.gpu_num_per_node):  # wrt. devices
+            predictions_per_gpu, image_ids_per_gpu = GenPredictionsAndImageIds(results[device_id])
+            predictions_all += predictions_per_gpu
+            image_ids_all += image_ids_per_gpu
 
     # Sort predictions by image_id
-    num_imgs = len(prediction_list)
-    assert num_imgs == len(image_id_list)
+    num_imgs = len(predictions_all)
+    assert num_imgs == len(image_ids_all)
     prediction_dict = {}
     for i in range(num_imgs):
-        prediction_dict.update({image_id_list[i]: prediction_list[i]})
+        prediction_dict.update({image_ids_all[i]: predictions_all[i]})
     sorted_image_ids = list(sorted(prediction_dict.keys()))
     sorted_predictions = [prediction_dict[i] for i in sorted_image_ids]
 
