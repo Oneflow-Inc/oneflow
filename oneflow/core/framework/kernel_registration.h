@@ -17,7 +17,7 @@ struct KernelRegCtx {
   DataType dtype;
 };
 
-using CreateFn = std::function<Kernel*()>;
+using CreateFn = std::function<Kernel*(/*TODO(niuchong)*/)>;
 using IsMatchedPredicator = std::function<bool(const KernelRegCtx&)>;
 using InferTmpSizeFn = std::function<size_t(/*TODO(niuchong)*/)>;
 
