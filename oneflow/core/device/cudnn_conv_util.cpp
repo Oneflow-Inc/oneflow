@@ -72,8 +72,8 @@ CudnnConvArgs::CudnnConvArgs(const PbMessage& conf, const BlobDesc* x, const Blo
       ws_size(max_ws_size) {
   CudaCheck(cudnnCreate(&handle));
   need_destroy_handle = true;
-  if (heuristic) { 
-    need_free_memory = false; 
+  if (heuristic) {
+    need_free_memory = false;
   } else {
     CudaCheck(cudaMalloc(&x_dptr, RtBlobDesc(*x).AlignedByteSizeOfBlobBody()));
     CudaCheck(cudaMalloc(&w_dptr, RtBlobDesc(*w).AlignedByteSizeOfBlobBody()));
@@ -153,9 +153,7 @@ CudnnConvArgs::~CudnnConvArgs() {
     CudaCheck(cudaFree(y_dptr));
     CudaCheck(cudaFree(work_space));
   }
-  if (need_destroy_handle) {
-    CudaCheck(cudnnDestroy(handle));
-  }
+  if (need_destroy_handle) { CudaCheck(cudnnDestroy(handle)); }
 }
 
 bool operator==(const CudnnConvParams& a, const CudnnConvParams& b) {
