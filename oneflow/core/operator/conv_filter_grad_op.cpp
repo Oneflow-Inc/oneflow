@@ -1,7 +1,6 @@
 #include "oneflow/core/operator/conv_filter_grad_op.h"
 #include "oneflow/core/operator/conv_op.h"
 #include "oneflow/core/device/cudnn_conv_ctx_cache.h"
-#include "oneflow/core/device/cudnn_conv_util.h"
 #include "oneflow/core/job/sbp_signature_builder.h"
 
 namespace oneflow {
@@ -92,19 +91,14 @@ Maybe<void> ConvFilterGradOp::InferBlobDescs(
 #ifdef WITH_CUDA
     size_t bwd_filter_cudnn_buf_size = cudnn_buf_limit_byte();
     if (!x->is_dynamic()) {
-      CudnnConvArgs args(conv_conf, x, dy, filter_diff, bwd_filter_cudnn_buf_size,
-                         job_desc().job_conf().cudnn_conv_use_deterministic_algo_only(),
-                         job_desc().job_conf().cudnn_conv_heuristic_search_algo());
-      if (job_desc().job_conf().has_cudnn_conv_force_bwd_filter_algo()) {
-        CudaCheck(
-            GetConvWorkspaceSize(args,
-                                 static_cast<cudnnConvolutionBwdFilterAlgo_t>(
-                                     job_desc().job_conf().cudnn_conv_force_bwd_filter_algo()),
-                                 &bwd_filter_cudnn_buf_size));
-      } else {
-        auto algo_perf = FindCudnnConvAlgorithm<cudnnConvolutionBwdFilterAlgoPerf_t>(args);
-        bwd_filter_cudnn_buf_size = algo_perf->memory;
-      }
+      CudnnConvAlgoCtx cudnn_conv_algo_ctx;
+      CHECK_OR_RETURN(Global<CudnnConvCtxCache>::Get()->FindCudnnConvAlgoCtxWithConfig(
+          *x, *dy, *filter_diff, conv_conf, cudnn_buf_limit_byte(), &cudnn_conv_algo_ctx));
+      CHECK_OR_RETURN(cudnn_conv_algo_ctx.bwd_filter_algo_found)
+          << "cudnn conv data grad algo: " << cudnn_conv_algo_ctx.bwd_filter_algo
+          << " alog_workspace_size: " << cudnn_conv_algo_ctx.bwd_filter_algo_found
+          << " max_workspace_size: " << bwd_filter_cudnn_buf_size;
+      bwd_filter_cudnn_buf_size = cudnn_conv_algo_ctx.bwd_filter_ws_size;
     }
     bwd_filter_cudnn_buf_size = std::max(size_t(1), bwd_filter_cudnn_buf_size);
     BlobDesc* cudnn_buf = GetBlobDesc4BnInOp("buf");

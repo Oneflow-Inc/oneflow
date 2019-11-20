@@ -430,6 +430,16 @@ message DistributeSplitOpConf {
   required int32 axis = 3;
 }
 
+message DistributeCloneOpConf {
+  required string in = 1;
+  repeated string out = 2;
+}
+
+message DistributeAddOpConf {
+  repeated string in = 1;
+  required string out = 2;
+}
+
 message SplitLikeOpConf {
   required string in = 1;
   repeated string like = 2;
@@ -1321,6 +1331,12 @@ message SliceOpConf {
   repeated DimSliceConf dim_slice_conf = 3;
 }
 
+message SliceV2OpConf {
+  required string in = 1;
+  required string out = 2;
+  repeated DimSliceConf dim_slice_conf = 3;
+}
+
 message SliceGradOpConf {
   required string dy = 1;
   required string dx = 2;
@@ -2011,6 +2027,8 @@ message OperatorConf {
     NcclBoxingAllReduceOpConf nccl_boxing_all_reduce_conf = 154;
     DistributeConcatOpConf distribute_concat_conf = 155;
     DistributeSplitOpConf distribute_split_conf = 156;
+    DistributeCloneOpConf distribute_clone_conf = 157;
+    DistributeAddOpConf distribute_add_conf = 158;
     
     // domain op
     TupleIdentityOpConf tuple_identity_conf = 200;
@@ -2130,6 +2148,7 @@ message OperatorConf {
     LoDToDenseOpConf lod_to_dense_conf = 334;
     Dim0DynamicToFixedOpConf dim0_dynamic_to_fixed_conf = 335;
     ParallelCastOpConf parallel_cast_conf = 336;
+    SliceV2OpConf slice_v2_conf = 337;
 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;
