@@ -8,14 +8,14 @@ import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 from oneflow.python.oneflow_export import oneflow_export
 import oneflow
     
-@oneflow_export("advanced.distribute_partial_sum", "debug.distribute_partial_sum")
-def distribute_partial_sum(xs, name=None):
+@oneflow_export("advanced.distribute_add", "debug.distribute_add")
+def distribute_add(xs, name=None):
     assert oneflow.placement.current_scope().parallel_size == len(xs)
-    if name is None: name = id_util.UniqueStr("DistributePartial_")
+    if name is None: name = id_util.UniqueStr("DistributeAdd_")
     op_conf = op_conf_util.OperatorConf()
     op_conf.name = name
-    getattr(op_conf.distribute_partial_conf, "in").extend([x.logical_blob_name for x in xs])
-    op_conf.distribute_partial_conf.out = "out"
+    getattr(op_conf.distribute_add_conf, "in").extend([x.logical_blob_name for x in xs])
+    op_conf.distribute_add_conf.out = "out"
     compile_context.CurJobAddOp(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
     lbi.op_name = op_conf.name
