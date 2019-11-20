@@ -45,8 +45,8 @@ class OpKernel {
  private:
 };
 
-}
+}  // namespace user_op
 
-}
+}  // namespace oneflow
 
 #endif
