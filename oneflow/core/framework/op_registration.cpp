@@ -9,6 +9,7 @@ namespace user_op {
 
 namespace {
 
+// only access with single thread
 HashMap<std::string, OpRegistrationVal>* MutOpRegistry() {
   static HashMap<std::string, OpRegistrationVal> registry;
   return &registry;
