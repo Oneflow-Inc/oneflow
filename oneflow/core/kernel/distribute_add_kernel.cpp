@@ -13,11 +13,11 @@ void CheckSizeAndCopyBlob(DeviceCtx *ctx, Blob *dst, const Blob *src) {
 }  // namespace
 
 template<DeviceType device_type>
-class DistributePartialKernel final : public KernelIf<device_type> {
+class DistributeAddKernel final : public KernelIf<device_type> {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(DistributePartialKernel);
-  DistributePartialKernel() = default;
-  ~DistributePartialKernel() = default;
+  OF_DISALLOW_COPY_AND_MOVE(DistributeAddKernel);
+  DistributeAddKernel() = default;
+  ~DistributeAddKernel() = default;
 
  private:
   void ForwardDataContent(const KernelCtx &,
@@ -29,13 +29,13 @@ class DistributePartialKernel final : public KernelIf<device_type> {
 };
 
 template<DeviceType device_type>
-void DistributePartialKernel<device_type>::ForwardDataContent(
+void DistributeAddKernel<device_type>::ForwardDataContent(
     const KernelCtx &ctx, std::function<Blob *(const std::string &)> BnInOp2Blob) const {
   CheckSizeAndCopyBlob(ctx.device_ctx, BnInOp2Blob("out"), GetInBlob(BnInOp2Blob));
 }
 
 template<DeviceType device_type>
-void DistributePartialKernel<device_type>::ForwardLoD(
+void DistributeAddKernel<device_type>::ForwardLoD(
     const KernelCtx &ctx, std::function<Blob *(const std::string &)> BnInOp2Blob) const {
   const Blob *in_blob = GetInBlob(BnInOp2Blob);
   Blob *out_blob = BnInOp2Blob("out");
@@ -43,7 +43,7 @@ void DistributePartialKernel<device_type>::ForwardLoD(
 }
 
 template<DeviceType device_type>
-const Blob *DistributePartialKernel<device_type>::GetInBlob(
+const Blob *DistributeAddKernel<device_type>::GetInBlob(
     std::function<Blob *(const std::string &)> BnInOp2Blob) const {
   const Blob *in_blob = nullptr;
   FOR_RANGE(int, i, 0, this->op_attribute().input_bns().size()) {
@@ -56,6 +56,6 @@ const Blob *DistributePartialKernel<device_type>::GetInBlob(
   return in_blob;
 }
 
-ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kDistributePartialConf, DistributePartialKernel);
+ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kDistributeAddConf, DistributeAddKernel);
 
 }  // namespace oneflow

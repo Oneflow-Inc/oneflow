@@ -4,11 +4,11 @@
 
 namespace oneflow {
 
-class DistributeBroadcastOp final : public Operator {
+class DistributeCloneOp final : public Operator {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(DistributeBroadcastOp);
-  DistributeBroadcastOp() = default;
-  ~DistributeBroadcastOp() = default;
+  OF_DISALLOW_COPY_AND_MOVE(DistributeCloneOp);
+  DistributeCloneOp() = default;
+  ~DistributeCloneOp() = default;
 
   void InitFromOpConf() override;
 
@@ -33,18 +33,18 @@ class DistributeBroadcastOp final : public Operator {
       const SbpSignature*) const override;
 };
 
-void DistributeBroadcastOp::InitFromOpConf() {
-  CHECK(op_conf().has_distribute_broadcast_conf());
+void DistributeCloneOp::InitFromOpConf() {
+  CHECK(op_conf().has_distribute_clone_conf());
 
   EnrollInputBn("in");
   EnrollRepeatedOutputBn("out");
 }
 
-const PbMessage& DistributeBroadcastOp::GetCustomizedConf() const {
-  return op_conf().distribute_broadcast_conf();
+const PbMessage& DistributeCloneOp::GetCustomizedConf() const {
+  return op_conf().distribute_clone_conf();
 }
 
-Maybe<void> DistributeBroadcastOp::InferBlobDescs(
+Maybe<void> DistributeCloneOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   const auto& in_blob_desc = *GetBlobDesc4BnInOp("in");
@@ -61,7 +61,7 @@ Maybe<void> DistributeBroadcastOp::InferBlobDescs(
   return Maybe<void>::Ok();
 }
 
-Maybe<void> DistributeBroadcastOp::InferOutParallelDesc(
+Maybe<void> DistributeCloneOp::InferOutParallelDesc(
     std::function<ParallelDesc*(const std::string&)> ParallelDesc4Obn,
     std::function<const BlobDesc*(const std::string&)> LogicalBlobDesc4Ibn,
     const ParallelDesc& op_parallel_desc, const SbpSignature*) const {
@@ -77,7 +77,7 @@ Maybe<void> DistributeBroadcastOp::InferOutParallelDesc(
   return Maybe<void>::Ok();
 }
 
-Maybe<void> DistributeBroadcastOp::InferBatchAxis(
+Maybe<void> DistributeCloneOp::InferBatchAxis(
     const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
     std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
   FOR_RANGE(int32_t, i, 0, output_bns().size()) {
@@ -86,7 +86,7 @@ Maybe<void> DistributeBroadcastOp::InferBatchAxis(
   return Maybe<void>::Ok();
 }
 
-Maybe<void> DistributeBroadcastOp::InferSbpSignature(
+Maybe<void> DistributeCloneOp::InferSbpSignature(
     SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
     const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
     std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
@@ -100,6 +100,6 @@ Maybe<void> DistributeBroadcastOp::InferSbpSignature(
   return Maybe<void>::Ok();
 }
 
-REGISTER_OP(OperatorConf::kDistributeBroadcastConf, DistributeBroadcastOp);
+REGISTER_OP(OperatorConf::kDistributeCloneConf, DistributeCloneOp);
 
 }  // namespace oneflow
