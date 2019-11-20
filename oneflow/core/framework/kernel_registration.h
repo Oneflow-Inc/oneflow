@@ -7,7 +7,6 @@
 
 namespace oneflow {
 
-class Shape;
 class OpKernel;
 
 namespace user_op {
