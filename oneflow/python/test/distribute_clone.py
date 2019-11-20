@@ -13,18 +13,16 @@ def Print(prefix):
     return _print
 
 @flow.function
-def DistributePartial(
-      a = flow.input_blob_def((2, 5), is_dynamic=True),
-      b = flow.input_blob_def((2, 5), is_dynamic=True)):
+def DistributeClone(x = flow.input_blob_def((2, 5), is_dynamic=True)):
   with flow.device_prior_placement("gpu", "0:0"):
-    a = flow.math.relu(a)
-    b = flow.math.relu(b)
-  ret = flow.advanced.distribute_partial_sum([a, b])
-  print(ret.shape)
-  return ret;
+    a = flow.identity(x)
+    b = flow.math.relu(x)
+  y = flow.advanced.distribute_add([a, b])
+  (s, t) = flow.advanced.distribute_clone(y)
+  print(x.shape, y.shape, s.shape, t.shape)
+  return s, t
 
-index = [-1, 0, 1, 2, 3]
+index = [-2, -1, 0, 1, 2]
 data = []
 for i in index: data.append(np.ones((1, 5), dtype=np.float32) * i)
-for x in data:
-  print(DistributePartial(x, x).get())
+for x in data: print(DistributeClone(x).get())

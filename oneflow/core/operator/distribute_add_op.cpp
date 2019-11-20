@@ -4,11 +4,11 @@
 
 namespace oneflow {
 
-class DistributePartialOp final : public Operator {
+class DistributeAddOp final : public Operator {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(DistributePartialOp);
-  DistributePartialOp() = default;
-  ~DistributePartialOp() = default;
+  OF_DISALLOW_COPY_AND_MOVE(DistributeAddOp);
+  DistributeAddOp() = default;
+  ~DistributeAddOp() = default;
 
   void InitFromOpConf() override;
 
@@ -29,18 +29,18 @@ class DistributePartialOp final : public Operator {
       const ParallelDesc& parallel_desc) const override;
 };
 
-void DistributePartialOp::InitFromOpConf() {
-  CHECK(op_conf().has_distribute_partial_conf());
+void DistributeAddOp::InitFromOpConf() {
+  CHECK(op_conf().has_distribute_add_conf());
 
   EnrollRepeatedInputBn("in");
   EnrollOutputBn("out");
 }
 
-const PbMessage& DistributePartialOp::GetCustomizedConf() const {
-  return op_conf().distribute_partial_conf();
+const PbMessage& DistributeAddOp::GetCustomizedConf() const {
+  return op_conf().distribute_add_conf();
 }
 
-Maybe<void> DistributePartialOp::InferBlobDescs(
+Maybe<void> DistributeAddOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   const BlobDesc* first_blob_desc = nullptr;
@@ -53,7 +53,7 @@ Maybe<void> DistributePartialOp::InferBlobDescs(
   return Maybe<void>::Ok();
 }
 
-Maybe<void> DistributePartialOp::InferBatchAxis(
+Maybe<void> DistributeAddOp::InferBatchAxis(
     const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
     std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
   FOR_RANGE(int32_t, i, 0, input_bns().size()) {
@@ -63,7 +63,7 @@ Maybe<void> DistributePartialOp::InferBatchAxis(
   return Maybe<void>::Ok();
 }
 
-Maybe<void> DistributePartialOp::InferSbpSignature(
+Maybe<void> DistributeAddOp::InferSbpSignature(
     SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
     const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
     std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
@@ -82,7 +82,7 @@ Maybe<void> DistributePartialOp::InferSbpSignature(
   return Maybe<void>::Ok();
 }
 
-REGISTER_OP(OperatorConf::kDistributePartialConf, DistributePartialOp);
-REGISTER_DISABLE_INPUT_BOXING_GROUP(OperatorConf::kDistributePartialConf);
+REGISTER_OP(OperatorConf::kDistributeAddConf, DistributeAddOp);
+REGISTER_DISABLE_INPUT_BOXING_GROUP(OperatorConf::kDistributeAddConf);
 
 }  // namespace oneflow
