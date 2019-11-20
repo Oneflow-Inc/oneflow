@@ -38,7 +38,6 @@ CtrlClient::~CtrlClient() {
     need_heartbeat_thread_stop_ = true;
   }
   heartbeat_thread_.join();
-  OF_BARRIER_ALL();
 }
 
 void CtrlClient::Barrier(const std::string& barrier_name) {
