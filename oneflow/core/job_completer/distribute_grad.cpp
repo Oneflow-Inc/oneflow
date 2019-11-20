@@ -4,7 +4,7 @@ namespace oneflow {
 
 namespace {
 
-void GenerateBackwardOpConf4DistributeConcat(
+void GenerateBackwardOpConf4Concat(
     const Operator& op, std::vector<OperatorConf>* op_confs,
     const std::function<LogicalBlobId*(const std::string&)>& DiffLbi4BnInOp,
     const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4BnInOp) {
@@ -27,7 +27,7 @@ void GenerateBackwardOpConf4DistributeConcat(
   op_confs->push_back(split_op);
 }
 
-void GenerateBackwardOpConf4DistributeSplit(
+void GenerateBackwardOpConf4Split(
     const Operator& op, std::vector<OperatorConf>* op_confs,
     const std::function<LogicalBlobId*(const std::string&)>& DiffLbi4BnInOp,
     const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4BnInOp) {
@@ -55,9 +55,60 @@ void GenerateBackwardOpConf4DistributeSplit(
   }
 }
 
+void GenerateBackwardOpConf4Broadcast(
+    const Operator& op, std::vector<OperatorConf>* op_confs,
+    const std::function<LogicalBlobId*(const std::string&)>& DiffLbi4BnInOp,
+    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4BnInOp) {
+  CHECK(op.op_conf().has_distribute_broadcast_conf());
+  const DistributeBroadcastOpConf& conf = op.op_conf().distribute_broadcast_conf();
+  OperatorConf partial_op;
+  partial_op.set_name(op.op_conf().name() + "_grad");
+  DistributePartialOpConf* partial_op_conf = partial_op.mutable_distribute_partial_conf();
+  const bool has_diff_0 = DiffLbi4BnInOp(op.output_bns().Get(0)) != nullptr;
+  FOR_RANGE(int32_t, i, 0, conf.out_size()) {
+    const std::string& obn_of_distribute_broadcast_op = op.output_bns().Get(i);
+    const bool has_diff_i = DiffLbi4BnInOp(obn_of_distribute_broadcast_op) != nullptr;
+    CHECK_EQ(has_diff_i, has_diff_0);
+    if (has_diff_i) {
+      partial_op_conf->add_in(GenLogicalBlobName(*DiffLbi4BnInOp(obn_of_distribute_broadcast_op)));
+    }
+  }
+  partial_op_conf->set_out("out");
+  if (DiffLbi4BnInOp("in") != nullptr) {
+    CHECK_EQ(partial_op_conf->in_size(), conf.out_size());
+    DiffLbi4BnInOp("in")->set_op_name(partial_op.name());
+    DiffLbi4BnInOp("in")->set_blob_name("out");
+    op_confs->push_back(partial_op);
+  }
+}
+
+void GenerateBackwardOpConf4Partial(
+    const Operator& op, std::vector<OperatorConf>* op_confs,
+    const std::function<LogicalBlobId*(const std::string&)>& DiffLbi4BnInOp,
+    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4BnInOp) {
+  CHECK(op.op_conf().has_distribute_partial_conf());
+  const auto& distribute_partial_conf = op.op_conf().distribute_partial_conf();
+  OperatorConf broadcast_op;
+  broadcast_op.set_name(op.op_conf().name() + "_grad");
+  DistributeBroadcastOpConf* broadcast_op_conf = broadcast_op.mutable_distribute_broadcast_conf();
+  broadcast_op_conf->set_in(GenLogicalBlobName(*DiffLbi4BnInOp("out")));
+  FOR_RANGE(int32_t, i, 0, distribute_partial_conf.in_size()) {
+    const std::string& ibn_of_distribute_partial_op = op.input_bns().Get(i);
+    const std::string& obn = "out_" + std::to_string(i);
+    broadcast_op_conf->add_out(obn);
+    if (DiffLbi4BnInOp(ibn_of_distribute_partial_op) != nullptr) {
+      DiffLbi4BnInOp(ibn_of_distribute_partial_op)->set_op_name(broadcast_op.name());
+      DiffLbi4BnInOp(ibn_of_distribute_partial_op)->set_blob_name(obn);
+    }
+  }
+  op_confs->push_back(broadcast_op);
+}
+
 }  // namespace
 
-REGISTER_OP_GRAD(OperatorConf::kDistributeConcatConf, &GenerateBackwardOpConf4DistributeConcat);
-REGISTER_OP_GRAD(OperatorConf::kDistributeSplitConf, &GenerateBackwardOpConf4DistributeSplit);
+REGISTER_OP_GRAD(OperatorConf::kDistributeConcatConf, &GenerateBackwardOpConf4Concat);
+REGISTER_OP_GRAD(OperatorConf::kDistributeSplitConf, &GenerateBackwardOpConf4Split);
+REGISTER_OP_GRAD(OperatorConf::kDistributeBroadcastConf, &GenerateBackwardOpConf4Broadcast);
+REGISTER_OP_GRAD(OperatorConf::kDistributePartialConf, &GenerateBackwardOpConf4Partial);
 
 }  // namespace oneflow
