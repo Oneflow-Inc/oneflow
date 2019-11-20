@@ -1,7 +1,7 @@
 #include "oneflow/core/operator/conv_op.h"
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/device/cuda_stream_handle.h"
-#include "oneflow/core/device/cudnn_conv_util.h"
+#include "oneflow/core/device/cudnn_conv_ctx_cache.h"
 #include "oneflow/core/register/runtime_blob_desc.h"
 #include "oneflow/core/job/sbp_signature_builder.h"
 
@@ -140,12 +140,13 @@ Maybe<void> ConvOp<NDims>::InferBlobDescs(
   out_blob_desc->mut_shape() = Shape(out_shape);
 
   // weight
+  const BlobDesc* weight_blob_desc = GetBlobDesc4BnInOp("weight");
   DimVector weight_shape(in_blob_desc->shape().dim_vec());
   weight_shape[0] = filters;
   for (size_t i = 0; i < NDims; ++i) {
     weight_shape[dhw_offset + i] = GetPbRfFromCustomizedConf<int32_t>("kernel_size").Get(i);
   }
-  CHECK_EQ_OR_RETURN(GetBlobDesc4BnInOp("weight")->shape(), Shape(weight_shape));
+  CHECK_EQ_OR_RETURN(weight_blob_desc->shape(), Shape(weight_shape));
 
   if (GetValFromCustomizedConf<bool>("use_bias")) {
     // bias and bias_multiplier
@@ -176,19 +177,14 @@ Maybe<void> ConvOp<NDims>::InferBlobDescs(
     // cudnn_buf
     size_t fw_cudnn_buf_size = cudnn_buf_limit_byte();
     if (!out_blob_desc->is_dynamic()) {
-      CudnnConvArgs args(GetCustomizedConf(), in_blob_desc, out_blob_desc,
-                         GetBlobDesc4BnInOp("weight"), fw_cudnn_buf_size,
-                         job_desc().job_conf().cudnn_conv_use_deterministic_algo_only(),
-                         job_desc().job_conf().cudnn_conv_heuristic_search_algo());
-      if (job_desc().job_conf().has_cudnn_conv_force_fwd_algo()) {
-        CudaCheck(GetConvWorkspaceSize(args,
-                                       static_cast<cudnnConvolutionFwdAlgo_t>(
-                                           job_desc().job_conf().cudnn_conv_force_fwd_algo()),
-                                       &fw_cudnn_buf_size));
-      } else {
-        auto algo_perf = FindCudnnConvAlgorithm<cudnnConvolutionFwdAlgoPerf_t>(args);
-        fw_cudnn_buf_size = algo_perf->memory;
-      }
+      CHECK(Global<CudnnConvCtxCache>::Get()->FindCudnnConvAlgoCtxWithConfig(
+          *in_blob_desc, *out_blob_desc, *weight_blob_desc, GetCustomizedConf(),
+          static_cast<size_t>(cudnn_buf_limit_byte()), &conv_op_ctx->cudnn_conv_algo_ctx));
+      CHECK(conv_op_ctx->cudnn_conv_algo_ctx.fwd_algo_found)
+          << "cudnn fwd algo: " << conv_op_ctx->cudnn_conv_algo_ctx.fwd_algo
+          << " algo_workspace_size: " << conv_op_ctx->cudnn_conv_algo_ctx.fwd_ws_size
+          << " max_workspace_size: " << fw_cudnn_buf_size;
+      fw_cudnn_buf_size = conv_op_ctx->cudnn_conv_algo_ctx.fwd_ws_size;
     }
     fw_cudnn_buf_size = std::max(size_t(1), fw_cudnn_buf_size);
     BlobDesc* fw_cudnn_buf = GetBlobDesc4BnInOp("fw_cudnn_buf");
