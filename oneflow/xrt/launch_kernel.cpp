@@ -4,6 +4,7 @@
 #include "oneflow/xrt/executable.h"
 #include "oneflow/xrt/graph_compiler.h"
 #include "oneflow/xrt/platform.h"
+#include "oneflow/xrt/utility/env.h"
 
 // General executable setup.
 DEFINE_int64(max_workspace_bytes, EnvToInt64(FLAGS_max_workspace_bytes, -1),

@@ -42,14 +42,6 @@ set(THIRD_PROTOBUF_DIR ${TENSORFLOW_EXTERNAL_DIR}/com_google_protobuf/src)
 set(THIRD_BORINGSSL_DIR ${TENSORFLOW_EXTERNAL_DIR}/boringssl/src)
 set(THIRD_SNAPPY_DIR ${TENSORFLOW_EXTERNAL_DIR}/snappy)
 
-
-list(APPEND TENSORFLOW_XLA_LIBRARIES libtensorflow_framework.so.1)
-list(APPEND TENSORFLOW_XLA_LIBRARIES libxla_core.so)
-link_directories(
-  ${TENSORFLOW_SRCS_DIR}/bazel-bin/tensorflow
-  ${TENSORFLOW_SRCS_DIR}/bazel-bin/tensorflow/compiler/jit/xla_lib
-)
-
 list(APPEND TENSORFLOW_XLA_INCLUDE_DIR
   ${TENSORFLOW_INC_DIR}
   ${TENSORFLOW_GEN_DIR}
@@ -57,6 +49,14 @@ list(APPEND TENSORFLOW_XLA_INCLUDE_DIR
   ${THIRD_PROTOBUF_DIR}
   ${THIRD_BORINGSSL_DIR}
   ${THIRD_SNAPPY_DIR}
+)
+include_directories(${TENSORFLOW_XLA_INCLUDE_DIR})
+
+list(APPEND TENSORFLOW_XLA_LIBRARIES libtensorflow_framework.so.1)
+list(APPEND TENSORFLOW_XLA_LIBRARIES libxla_core.so)
+link_directories(
+  ${TENSORFLOW_SRCS_DIR}/bazel-bin/tensorflow
+  ${TENSORFLOW_SRCS_DIR}/bazel-bin/tensorflow/compiler/jit/xla_lib
 )
 
 if (THIRD_PARTY)

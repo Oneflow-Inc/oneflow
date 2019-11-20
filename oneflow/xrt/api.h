@@ -9,8 +9,6 @@
 #include "oneflow/xrt/graph/graph.h"
 #include "oneflow/xrt/parameter.h"
 #include "oneflow/xrt/passes/pass.h"
-#include "oneflow/xrt/utility/env.h"
-#include "oneflow/xrt/xrt.pb.h"
 
 namespace oneflow {
 namespace xrt {
