@@ -49,6 +49,11 @@ def logbuflevel(val):
     assert type(val) is int
     default_env_proto.cpp_logging_conf.logbuflevel = val
 
+@oneflow_export('env.disable_setting')
+def disable_setting():
+    global env_proto_mutable
+    env_proto_mutable = False
+
 def _MakeMachine(machines):
     if isinstance(machines, str): machines = [machines]
     rp_machine = env_pb.EnvProto().machine

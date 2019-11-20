@@ -2,6 +2,7 @@ import os
 import numpy
 from absl import app
 from absl.testing import absltest
+import env_2node
 import cnns_tests
 from test_2node_mixin import Test2NodeMixin
 
@@ -17,5 +18,8 @@ class TestVgg16(Test2NodeMixin, cnns_tests.TestVgg16Mixin, absltest.TestCase):
 class TestInceptionV3(Test2NodeMixin, cnns_tests.TestInceptionV3Mixin, absltest.TestCase):
   pass
 
-if __name__ == '__main__':
-  app.run(lambda argv: absltest.main())
+def main(argv):
+  env_2node.Init()
+  absltest.main()
+
+if __name__ == '__main__': app.run(main)

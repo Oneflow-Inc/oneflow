@@ -4,6 +4,7 @@
 #include "oneflow/core/job/env_global_objects_scope.h"
 #include "oneflow/core/job/session_global_objects_scope.h"
 #include "oneflow/core/job/env.pb.h"
+#include "oneflow/core/job/cluster.h"
 #include "oneflow/core/control/cluster_control.h"
 #include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/control/ctrl_server.h"
@@ -21,21 +22,7 @@ Maybe<void> Run(const std::string& env_proto_filepath) {
   // because glog is not constructed yet and LOG(INFO) has bad bahavior
   Global<EnvGlobalObjectsScope>::SetAllocated(new EnvGlobalObjectsScope());
   JUST(Global<EnvGlobalObjectsScope>::Get()->Init(env_proto));
-  OF_CHECK(!Global<MachineCtx>::Get()->IsThisMachineMaster());
-  while (ClusterControl::WorkerReceiveHalt() == false) {
-    ConfigProto config_proto;
-    Global<CtrlClient>::Get()->PullKV("config_proto", &config_proto);
-    Global<SessionGlobalObjectsScope>::SetAllocated(new SessionGlobalObjectsScope());
-    JUST(Global<SessionGlobalObjectsScope>::Get()->Init(config_proto));
-    LOG(INFO) << "NewGlobal " << typeid(SessionGlobalObjectsScope).name();
-
-    JobSet job_set;
-    Global<CtrlClient>::Get()->PullKV("session_job_set", &job_set);
-    { Oneflow oneflow(job_set); }
-  }
-  ClusterControl::WorkerSendHaltAck();
-  Global<EnvGlobalObjectsScope>::Delete();
-  exit(0);
+  JUST(Cluster::WorkerLoop());
   return Maybe<void>::Ok();
 }
 

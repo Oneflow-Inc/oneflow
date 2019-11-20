@@ -2,6 +2,9 @@ import os
 import numpy
 from absl import app
 from absl import flags
+import sys
+import imp
+import oneflow
 
 FLAGS = flags.FLAGS
 
@@ -17,11 +20,18 @@ class TestNetMixin:
     self.of_loss_dir = ''
     self.num_iter = 10
     self.set_params()
+    oneflow.clear_default_session()
 
   def set_params(self):
     pass
 
   def run_net(self, num_gpu_per_node, num_node = 1, node_list = ""):
+    net_modudle = _Import(self.net)
+    spec = net_modudle.DLNetSpec()
+    spec.num_nodes = num_node
+    spec.gpu_num_per_node = num_gpu_per_node
+    net_modudle.main(spec)
+    return
     if num_node > 1:
       os.system("{} {}.py -g {} -m -n {}".format(FLAGS.python_bin, self.net, num_gpu_per_node, node_list))
     else:
@@ -89,3 +99,21 @@ class TestInceptionV3Mixin(TestNetMixin):
     self.net = 'inceptionv3'
     self.tf_loss_dir = os.path.join("/dataset/PNGS/cnns_model_for_test/tf_loss", self.net)
     self.of_loss_dir = os.path.join("./of_loss", self.net)
+
+def _Import(name, globals=None, locals=None, fromlist=None):
+  # Fast path: see if the module has already been imported.
+  try:
+    return sys.modules[name]
+  except KeyError:
+    pass
+
+  # If any of the following calls raises an exception,
+  # there's a problem we can't handle -- let the caller handle it.
+
+  fp, pathname, description = imp.find_module(name)
+
+  try:
+    return imp.load_module(name, fp, pathname, description)
+  finally:
+    # Since we may exit via an exception, close fp explicitly.
+    if fp: fp.close()
