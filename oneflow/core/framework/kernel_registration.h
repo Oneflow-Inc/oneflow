@@ -8,7 +8,7 @@
 namespace oneflow {
 
 class Shape;
-class Kernel;
+class OpKernel;
 
 namespace user_op {
 
@@ -17,7 +17,7 @@ struct KernelRegCtx {
   DataType dtype;
 };
 
-using CreateFn = std::function<Kernel*(/*TODO(niuchong)*/)>;
+using CreateFn = std::function<OpKernel*(/*TODO(niuchong)*/)>;
 using IsMatchedPredicator = std::function<bool(const KernelRegCtx&)>;
 using InferTmpSizeFn = std::function<size_t(/*TODO(niuchong)*/)>;
 
