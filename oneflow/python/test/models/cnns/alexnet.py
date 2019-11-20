@@ -251,9 +251,6 @@ if __name__ == "__main__":
         flow.deprecated.init_worker(scp_binary=True, use_uuid=True)
 
   main(args)
-  if (
-          args.multinode
-        and args.skip_scp_binary is False
-      and args.scp_binary_without_uuid is False
-  ):
+  if (args.multinode and args.skip_scp_binary is False
+      and args.scp_binary_without_uuid is False):
     flow.deprecated.delete_worker()

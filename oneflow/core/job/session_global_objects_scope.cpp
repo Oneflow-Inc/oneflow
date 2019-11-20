@@ -91,7 +91,6 @@ SessionGlobalObjectsScope::~SessionGlobalObjectsScope() {
   Global<const ProfilerConf>::Delete();
   Global<const IOConf>::Delete();
   Global<ResourceDesc>::Delete();
-  Global<CtrlClient>::Get()->Clear();
 }
 
 }  // namespace oneflow
