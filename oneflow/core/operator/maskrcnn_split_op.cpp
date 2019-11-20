@@ -38,6 +38,14 @@ class MaskrcnnSplitOp final : public Operator {
     for (const auto& obn : output_bns()) { *BatchAxis4BnInOp(obn) = *BatchAxis4BnInOp("in"); }
     return Maybe<void>::Ok();
   }
+  Maybe<void> GetSbpSignatures(SbpSignatureList* sbp_sig_list) const override {
+    SbpSignatureBuilder()
+        .Split("in", 0)
+        .Split("segm", 0)
+        .Split("out", 0)
+        .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+    return Maybe<void>::Ok();
+  }
 };
 
 REGISTER_OP(OperatorConf::kMaskrcnnSplitConf, MaskrcnnSplitOp);

@@ -42,7 +42,7 @@ def _RecursiveMakeRetRemoteBlobs(out_remote_blobs):
         return type(out_remote_blobs)(_RecursiveMakeRetRemoteBlobs(x) for x in out_remote_blobs)
     if isinstance(out_remote_blobs, dict):
         return {k : _RecursiveMakeRetRemoteBlobs(v) for k, v in out_remote_blobs.items()}
-    raise NotImplementedError
+    raise NotImplementedError("Do not support return {}".format(type(out_remote_blobs)))
 
 @contextmanager
 def _SetJobConfBeforeInferOp(job_conf):
