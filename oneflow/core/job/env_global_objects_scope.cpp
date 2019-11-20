@@ -32,7 +32,6 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
   Global<EnvDesc>::New(env_proto);
   Global<CtrlServer>::New();
   Global<CtrlClient>::New();
-  OF_BARRIER();
   int64_t this_mchn_id =
       Global<EnvDesc>::Get()->GetMachineId(Global<CtrlServer>::Get()->this_machine_addr());
   Global<MachineCtx>::New(this_mchn_id);

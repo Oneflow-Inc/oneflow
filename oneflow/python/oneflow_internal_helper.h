@@ -16,6 +16,7 @@
 #include "oneflow/core/control/cluster_control.h"
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 #include "oneflow/core/job/foreign_watcher.h"
+#include "oneflow/core/job/cluster.h"
 
 namespace oneflow {
 
@@ -41,30 +42,14 @@ Maybe<void> InitEnv(const std::string& env_proto_str) {
   // because glog is not constructed yet and LOG(INFO) has bad bahavior
   Global<EnvGlobalObjectsScope>::SetAllocated(new EnvGlobalObjectsScope());
   JUST(Global<EnvGlobalObjectsScope>::Get()->Init(env_proto));
-  if (Global<MachineCtx>::Get()->IsThisMachineMaster()) { return Maybe<void>::Ok(); }
-  // workers go here as daemons
-  while (ClusterControl::WorkerReceiveHalt() == false) {
-    ConfigProto config_proto;
-    Global<CtrlClient>::Get()->PullKV("config_proto", &config_proto);
-    Global<SessionGlobalObjectsScope>::SetAllocated(new SessionGlobalObjectsScope());
-    JUST(Global<SessionGlobalObjectsScope>::Get()->Init(config_proto));
-    LOG(INFO) << "NewGlobal " << typeid(SessionGlobalObjectsScope).name();
-
-    JobSet job_set;
-    Global<CtrlClient>::Get()->PullKV("session_job_set", &job_set);
-    { Oneflow oneflow(job_set); }
-  }
-  ClusterControl::WorkerSendHaltAck();
-  Global<EnvGlobalObjectsScope>::Delete();
-  exit(0);
-  // avoid compiler complain
+  if (!Global<MachineCtx>::Get()->IsThisMachineMaster()) { CHECK_JUST(Cluster::WorkerLoop()); }
   return Maybe<void>::Ok();
 }
 
 Maybe<void> DestroyEnv() {
   if (Global<EnvGlobalObjectsScope>::Get() == nullptr) { return Maybe<void>::Ok(); }
   OF_CHECK(Global<MachineCtx>::Get()->IsThisMachineMaster());
-  ClusterControl::MasterSendHaltAndWaitAck();
+  ClusterControl::MasterSendHalt();
   return Maybe<void>::Ok();
 }
 
