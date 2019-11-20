@@ -357,15 +357,6 @@ def MakeWatcherCallback(prompt):
 
 
 def init_config():
-    flow.config.cudnn_buf_limit_mbyte(1280)
-    flow.config.cudnn_conv_heuristic_search_algo(True)
-    flow.config.cudnn_conv_use_deterministic_algo_only(False)
-    flow.config.train.primary_lr(terminal_args.primary_lr)
-    flow.config.train.secondary_lr(terminal_args.secondary_lr)
-    flow.config.train.weight_l2(0.0001)
-    flow.config.train.model_update_conf(dict(momentum_conf={"beta": 0.9}))
-    # flow.config.train.model_update_conf(dict(naive_conf={}))
-
     config = get_default_cfgs()
     if terminal_args.config_file is not None:
         config.merge_from_file(terminal_args.config_file)
@@ -374,10 +365,24 @@ def init_config():
     if "gpu_num_per_node" in terminal_args:
         config.NUM_GPUS = terminal_args.gpu_num_per_node
 
+    assert terminal_args.batch_size % terminal_args.gpu_num_per_node == 0
+    config.TRAINING_CONF.IMG_PER_GPU = int(
+        terminal_args.batch_size / terminal_args.gpu_num_per_node
+    )
+
     config.freeze()
 
     if terminal_args.verbose:
         print(config)
+
+    flow.config.cudnn_buf_limit_mbyte(1280)
+    flow.config.cudnn_conv_heuristic_search_algo(True)
+    flow.config.cudnn_conv_use_deterministic_algo_only(False)
+    flow.config.train.primary_lr(terminal_args.primary_lr)
+    flow.config.train.secondary_lr(terminal_args.secondary_lr)
+    flow.config.train.weight_l2(0.0001)
+    flow.config.train.model_update_conf(dict(momentum_conf={"beta": 0.9}))
+    # flow.config.train.model_update_conf(dict(naive_conf={}))
 
     return config
 
