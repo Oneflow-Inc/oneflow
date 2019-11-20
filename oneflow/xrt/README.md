@@ -17,9 +17,9 @@ XRT是一个同时支持多个计算引擎的运行时加速库，目前已经�
 
   如果多个后端引擎被开启，则会按照优先级进行每个引擎的子图划分。目前各引擎的优先级如下：
 
-  训练时，优先进行XLA的子图划分，之后进行TensorRT子图划分。
+  - 训练时，优先进行XLA的子图划分，之后进行TensorRT子图划分。
 
-  预测时，优先进行TensorRT的子图划分，之后进行XLA子图划分。
+  - 预测时，优先进行TensorRT的子图划分，之后进行XLA子图划分。
 
   [子图划分](https://github.com/Oneflow-Inc/oneflow-issue/issues/44)是自动完成的，但可以通过设置以下环境变量来调整子图划分的结果。
 
@@ -85,11 +85,11 @@ OneFlow中XRT的使用默认是关闭的，可以通过前端的Python接口和�
 
   ```python
   import oneflow as flow
-  
+
   # 配置使用XLA
   # True开启XLA，False关闭XLA，默认为未定义状态
   flow.config.use_xla_jit(True)
-  
+
   # 配置使用TensorRT
   # True开启TensorRT，False关闭TensorRT，默认为未定义状态
   flow.config.use_tensorrt(True)
@@ -103,6 +103,8 @@ OneFlow中XRT的使用默认是关闭的，可以通过前端的Python接口和�
   ```
 
 ### BenchMark
+
+- Bert base
 
 | RTX  2080Ti 单卡                   | FP32        |             |            |                | FP16混合精度 |             |            |                |
 | ---------------------------------- | ----------- | ----------- | ---------- | -------------- | ------------ | ----------- | ---------- | -------------- |

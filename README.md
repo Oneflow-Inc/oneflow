@@ -72,13 +72,13 @@ or you can just clone source code and submodules step by step
   Run the following command to build third-parties.
 
   ```shell
-  cd build && cmake -DTHIRD_PARTY=ON ..
+  cd build && cmake -DWITH_XLA=ON -DTHIRD_PARTY=ON ..
   make -j$(nproc)
   ```
 
   If the downloading error occurred, you should go back to the previous step to reinstall the cmake, then clean the file CMakeCache.txt and build the third-parties once again.
 
-- Build Oneflow
+- Build OneFlow
 
   ```shell
   cmake .. \
@@ -94,3 +94,24 @@ or you can just clone source code and submodules step by step
 
   You can check this [doc](./oneflow/xrt/doc/xla/index.md) to obtain more details about how to use XLA.
 
+### Build with TensorRT
+
+- Build third-parties
+
+  Run the following command to build third-parties.
+
+  ```shell
+  cd build && cmake -DWITH_TENSORRT=ON -DTHIRD_PARTY=ON ..
+  make -j$(nproc)
+  ```
+- Build OneFlow
+
+  ```shell
+  cmake .. \
+  -DWITH_TENSORRT=ON \
+  -DPYTHON_LIBRARY=your_python_lib_path \
+  -DPYTHON_INCLUDE_DIR=your_python_include_dir \
+  -DPython_NumPy_INCLUDE_DIRS=your_numpy_include_dir
+
+  make -j$(nproc)
+  ```
