@@ -7,28 +7,33 @@
 
 namespace oneflow {
 
+class KernelCtx;
+
 namespace user_op {
 
-class KernelInitCtx final {
+class KernelInitContext final {
  public:
-  KernelInitCtx() = default;
-  ~KernelInitCtx() = default;
-  explicit KernelInitCtx(const KernelInitCtx&);
+  KernelInitContext() = default;
+  ~KernelInitContext() = default;
+  explicit KernelInitContext(const KernelInitContext&) {}
 
  private:
 };
 
-class KernelCtx final {
- public:
-  KernelCtx() = default;
-  ~KernelCtx() = default;
-  explicit KernelCtx(const KernelCtx&);
+using Blob4ArgNameAndIndexFn = std::function<Blob*(const std::string&, int32_t)>;
 
-  Blob* Blob4ArgNameAndIndex(const std::string&, int32_t);
-  DeviceCtx* device_ctx() const;
+class KernelContext final {
+ public:
+  KernelContext() = default;
+  ~KernelContext() = default;
+  explicit KernelContext(const KernelCtx&, Blob4ArgNameAndIndexFn fn);
+
+  Blob* Blob4ArgNameAndIndex(const std::string& arg_name, int32_t index);
+  DeviceCtx* device_ctx() const { return device_ctx_; }
 
  private:
   DeviceCtx* device_ctx_;
+  Blob4ArgNameAndIndexFn fn_;
 };
 
 class OpKernel {
@@ -36,8 +41,8 @@ class OpKernel {
   OF_DISALLOW_COPY_AND_MOVE(OpKernel);
   virtual ~OpKernel() = default;
 
-  void Init(const KernelInitCtx&);
-  virtual void Compute(const KernelCtx&) = 0;
+  void Init(const KernelInitContext&);
+  virtual void Compute(const KernelContext&) = 0;
 
  protected:
   OpKernel() = default;

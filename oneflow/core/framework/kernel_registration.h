@@ -5,21 +5,29 @@
 #include "oneflow/core/common/device_type.pb.h"
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/job/placement.pb.h"
+#include "oneflow/core/common/util.h"
 
 namespace oneflow {
 
-class OpKernel;
-class BlobInfo;
-
 namespace user_op {
 
-class KernelRegCtx final {
+class OpKernel;
+class KernelInitContext;
+class BlobInfo;
+
+using BlobInfo4ArgNameAndIndexFn = std::function<BlobInfo*(const std::string&, int32_t)>;
+
+class KernelRegContext final {
  public:
-  explicit KernelRegCtx();
+  OF_DISALLOW_COPY_AND_MOVE(KernelRegContext);
+  explicit KernelRegContext(DeviceType, DataType, const ParallelContext&,
+                            BlobInfo4ArgNameAndIndexFn);
+  ~KernelRegContext() = default;
+
   DeviceType device() const { return device_; }
   DataType data_type() const { return data_type_; }
-  const BlobInfo& BlobDesc4ArgNameAndIndex(const std::string& arg_name, int32_t index) const {
-    return blob_desc4arg_name_and_index_fn_(arg_name, index);
+  const BlobInfo* BlobDesc4ArgNameAndIndex(const std::string& arg_name, int32_t index) const {
+    return fn_(arg_name, index);
   }
   const ParallelContext& parallel_ctx() const { return parallel_ctx_; }
 
@@ -27,11 +35,11 @@ class KernelRegCtx final {
   DeviceType device_;
   DataType data_type_;
   ParallelContext parallel_ctx_;
-  std::function<const BlobInfo&(const std::string&, int32_t)> blob_desc4arg_name_and_index_fn_;
+  BlobInfo4ArgNameAndIndexFn fn_;
 };
 
-using CreateFn = std::function<OpKernel*(/*TODO(niuchong)*/)>;
-using IsMatchedPredicator = std::function<bool(const KernelRegCtx&)>;
+using CreateFn = std::function<OpKernel*(const KernelInitContext&)>;
+using IsMatchedPredicator = std::function<bool(const KernelRegContext&)>;
 using InferTmpSizeFn = std::function<size_t(/*TODO(niuchong)*/)>;
 
 struct KernelRegistrationVal {
@@ -61,7 +69,7 @@ class KernelRegistryWrapperBuilder final {
 };
 
 const KernelRegistrationVal* LookUpInKernelRegistry(const std::string& op_type_name,
-                                                    const KernelRegCtx&);
+                                                    const KernelRegContext&);
 
 std::vector<std::string> GetAllUserOpInKernelRegistry();
 

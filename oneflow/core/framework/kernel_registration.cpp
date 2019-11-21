@@ -22,7 +22,7 @@ void KernelRegistryWrapper::InsertToGlobalRegistry() {
 }
 
 const KernelRegistrationVal* LookUpInKernelRegistry(const std::string& op_type_name,
-                                                    const KernelRegCtx& ctx) {
+                                                    const KernelRegContext& ctx) {
   const auto registry = MutKernelRegistry();
   auto it = registry->find(op_type_name);
   if (it == registry->end()) { return nullptr; }
@@ -75,6 +75,11 @@ KernelRegistryWrapper KernelRegistryWrapperBuilder::Build() {
   }
   return wrapper_;
 }
+
+KernelRegContext::KernelRegContext(DeviceType dev, DataType dtype,
+                                   const ParallelContext& parallel_ctx,
+                                   BlobInfo4ArgNameAndIndexFn fn)
+    : device_(dev), data_type_(dtype), parallel_ctx_(parallel_ctx), fn_(fn) {}
 
 }  // namespace user_op
 
