@@ -51,7 +51,7 @@ size_t RtRegstDesc::MainByteSize4OneRegst() const {
     }
   } else {
     if (mem_case_.has_device_cuda_mem()) {
-      return packed_blob_desc_->ByteSizeOfBlobBody();
+      return packed_blob_desc_->AlignedByteSizeOfBlobBody();
     } else {
       return packed_blob_desc_->AlignedTotalByteSize();
     }
