@@ -76,34 +76,6 @@ Maybe<OperatorConf> JobBuildAndInferCtx::AddDefaultValueAndCheckValid4UserOp(
                                  user_conf->input(), op_def.input());
   CheckArgDefIsValidInUserOpConf(op_conf.name(), user_conf->op_type_name(), "output",
                                  user_conf->output(), op_def.output());
-  /*
-  HashSet<std::string> op_def_input_arg_names;
-  for(int32_t i = 0; i < op_def.input_size(); ++i) {
-    JUST(CheckArgDefIsValidInUserOpConf(op_conf.name(), user_conf->op_type_name(),
-          user_conf->input(), op_def.input(i)));
-    op_def_input_arg_names.insert(op_def.input(i).name());
-  }
-  for(const auto& pair : user_conf->input()) {
-    CHECK_OR_RETURN(op_def_input_arg_names.find(pair.first) != op_def_input_arg_names.end())
-        << " op_name: " << op_conf.name()
-        << " op_type_name: " << user_conf->op_type_name()
-        << " has not input arg name: " << pair.first << " in OpDef";
-  }
-
-  // check output valid
-  HashSet<std::string> op_def_output_arg_names;
-  for(int32_t i = 0; i < op_def.output_size(); ++i) {
-    JUST(CheckArgDefIsValidInUserOpConf(op_conf.name(), user_conf->op_type_name(),
-          user_conf->output(), op_def.output(i)));
-    op_def_output_arg_names.insert(op_def.output(i).name());
-  }
-  for(const auto& pair : user_conf->output()) {
-    CHECK_OR_RETURN(op_def_output_arg_names.find(pair.first) != op_def_output_arg_names.end())
-        << " op_name: " << op_conf.name()
-        << " op_type_name: " << user_conf->op_type_name()
-        << " has not output arg name: " << pair.first << " in OpDef";
-  }
-  */
 
   // check attr valid by user
   JUST(val->check_fn(op_def, *user_conf));
