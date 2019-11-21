@@ -1,10 +1,113 @@
 #include "oneflow/core/job/job_build_and_infer_ctx.h"
+#include "oneflow/core/framework/op_registration.h"
 
 namespace oneflow {
+
+namespace {
+
+Maybe<void> CheckArgDefIsValidInUserOpConf(
+    const std::string& op_name, const std::string& op_type_name,
+    const std::string& input_output_type,
+    const PbMap<std::string, UserOpConf_ListString>& arg_name2lbns,
+    const PbRpf<UserOpDef_ArgDef>& args) {
+  HashSet<std::string> op_def_arg_names;
+  for (const auto& arg : args) {
+    int32_t arg_blob_num = 0;
+    if (arg_name2lbns.find(arg.name()) != arg_name2lbns.end()) {
+      arg_blob_num = arg_name2lbns.at(arg.name()).s_size();
+    }
+    if (arg_blob_num != arg.num()) {
+      if (arg_blob_num == 0) {
+        CHECK_OR_RETURN(arg.is_optional())
+            << " op_name: " << op_name << " op_type_name: " << op_type_name << input_output_type
+            << " arg name: " << arg.name() << " in OpDef must have blob in op_conf";
+      } else {
+        CHECK_OR_RETURN(arg_blob_num > arg.num() && arg.num_as_min())
+            << " op_name: " << op_name << " op_type_name: " << op_type_name << input_output_type
+            << " arg name: " << arg.name() << " has blob num: " << arg_blob_num
+            << " in op_conf does not meet its constraints in OpDef";
+      }
+    }
+    op_def_arg_names.insert(arg.name());
+  }
+  for (const auto& pair : arg_name2lbns) {
+    CHECK_OR_RETURN(op_def_arg_names.find(pair.first) != op_def_arg_names.end())
+        << " op_name: " << op_name << " op_type_name: " << op_type_name << " has not "
+        << input_output_type << " arg name: " << pair.first << " in OpDef";
+  }
+  return Maybe<void>::Ok();
+}
+
+}  // namespace
 
 JobBuildAndInferCtx::JobBuildAndInferCtx(Job* job, int64_t job_id) : job_(job), job_id_(job_id) {
   is_job_conf_frozen_ = false;
   has_job_conf_ = false;
+}
+
+Maybe<OperatorConf> JobBuildAndInferCtx::AddDefaultValueAndCheckValid4UserOp(
+    const OperatorConf& op_conf) {
+  CHECK_OR_RETURN(op_conf.has_user_conf()) << " Add default value only for user op";
+  OperatorConf ret = op_conf;
+  UserOpConf* user_conf = ret.mutable_user_conf();
+  const user_op::OpRegistrationVal* val = user_op::LookUpInOpRegistry(user_conf->op_type_name());
+  CHECK_OR_RETURN(val) << " Cannot find op_type_name: " << user_conf->op_type_name();
+  const UserOpDef& op_def = val->op_def;
+  auto* attr_name2attr = user_conf->mutable_attr();
+  // add default value and check attr
+  HashSet<std::string> op_def_attr_names;
+  for (const auto& attr : op_def.attr()) {
+    if (attr_name2attr->find(attr.name()) == attr_name2attr->end()) {
+      CHECK_OR_RETURN(attr.has_default_val())
+          << " op_name: " << op_conf.name() << " op_type_name: " << user_conf->op_type_name()
+          << " must set attr val for attr_name: " << attr.name();
+      (*attr_name2attr)[attr.name()] = attr.default_val();
+    }
+    op_def_attr_names.insert(attr.name());
+  }
+  for (const auto& pair : user_conf->attr()) {
+    CHECK_OR_RETURN(op_def_attr_names.find(pair.first) != op_def_attr_names.end())
+        << " op_name: " << op_conf.name() << " op_type_name: " << user_conf->op_type_name()
+        << " has not attr_name: " << pair.first << " in OpDef";
+  }
+
+  // check input and output valid
+  CheckArgDefIsValidInUserOpConf(op_conf.name(), user_conf->op_type_name(), "input",
+                                 user_conf->input(), op_def.input());
+  CheckArgDefIsValidInUserOpConf(op_conf.name(), user_conf->op_type_name(), "output",
+                                 user_conf->output(), op_def.output());
+  /*
+  HashSet<std::string> op_def_input_arg_names;
+  for(int32_t i = 0; i < op_def.input_size(); ++i) {
+    JUST(CheckArgDefIsValidInUserOpConf(op_conf.name(), user_conf->op_type_name(),
+          user_conf->input(), op_def.input(i)));
+    op_def_input_arg_names.insert(op_def.input(i).name());
+  }
+  for(const auto& pair : user_conf->input()) {
+    CHECK_OR_RETURN(op_def_input_arg_names.find(pair.first) != op_def_input_arg_names.end())
+        << " op_name: " << op_conf.name()
+        << " op_type_name: " << user_conf->op_type_name()
+        << " has not input arg name: " << pair.first << " in OpDef";
+  }
+
+  // check output valid
+  HashSet<std::string> op_def_output_arg_names;
+  for(int32_t i = 0; i < op_def.output_size(); ++i) {
+    JUST(CheckArgDefIsValidInUserOpConf(op_conf.name(), user_conf->op_type_name(),
+          user_conf->output(), op_def.output(i)));
+    op_def_output_arg_names.insert(op_def.output(i).name());
+  }
+  for(const auto& pair : user_conf->output()) {
+    CHECK_OR_RETURN(op_def_output_arg_names.find(pair.first) != op_def_output_arg_names.end())
+        << " op_name: " << op_conf.name()
+        << " op_type_name: " << user_conf->op_type_name()
+        << " has not output arg name: " << pair.first << " in OpDef";
+  }
+  */
+
+  // check attr valid by user
+  JUST(val->check_fn(op_def, *user_conf));
+  return ret;
 }
 
 Maybe<void> JobBuildAndInferCtx::SetJobConf(const JobConfigProto& job_conf) {

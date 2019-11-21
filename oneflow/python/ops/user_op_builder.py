@@ -4,6 +4,7 @@ import oneflow.python.framework.compile_context as compile_context
 import oneflow.python.framework.blob_desc as blob_desc
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.id_util as id_util
+import oneflow.python.framework.job_builder as job_builder
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.framework.user_op_attr_pb2 as user_op_attr_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
@@ -22,13 +23,8 @@ class UserOpWrapper(object):
     @property
     def user_conf(self): return self.user_conf_
 
-    def SelfCheck(self):
-        # TODO()
-        return self
-
-    def AddDefaultValue(self):
-        # TODO()
-        return self
+    @property
+    def op_conf(self): return self.op_conf_
 
     def RemoteBlobList(self):
         remote_blob_list = []
@@ -47,6 +43,8 @@ class UserOpWrapperBuilder(object):
 
     def Build(self):
         assert self.user_op_.op_type_name is not ""
+        self.user_op_.op_conf = \
+            job_builder.CurCtxAddDefaultValueAndCheckValid4UserOp(self.user_op_.op_conf)
         return self.user_op_
 
     def Op(self, op_type_name):
