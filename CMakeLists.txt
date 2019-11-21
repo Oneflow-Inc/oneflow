@@ -8,7 +8,7 @@ option(BUILD_RDMA "" OFF)
 option(BUILD_CUDA "" ON)
 option(RELEASE_VERSION "" ON)
 option(PY3 "" OFF)
-option(WITH_XLA "" ON)
+option(WITH_XLA "" OFF)
 
 # Project
 if(THIRD_PARTY)
