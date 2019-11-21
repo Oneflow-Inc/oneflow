@@ -2,6 +2,16 @@
 
 namespace oneflow {
 
+namespace {
+
+void ResetOpConfIbn(OperatorConf* op_conf, const std::string& ibn, const std::string lbn) {
+  PbMessage* op_type_conf = MutableMessageInPbMessage(op_conf, op_conf->op_type_case());
+  std::string lbn_may_with_hint = GetStrValInPbFdOrPbRpf(*op_type_conf, ibn);
+  ReplaceStrValInPbFdOrPbRpf(op_type_conf, ibn, lbn_may_with_hint, lbn);
+}
+
+}  // namespace
+
 JobBuildAndInferCtx::JobBuildAndInferCtx(Job* job, int64_t job_id) : job_(job), job_id_(job_id) {
   is_job_conf_frozen_ = false;
   has_job_conf_ = false;
@@ -220,7 +230,95 @@ void JobBuildAndInferCtx::UpdateLbi2DisableBoxing(
   }
 }
 
+bool JobBuildAndInferCtx::HasAnyMirrorBlobInput(const Operator& op) const {
+  for (const auto& ibn : op.input_bns()) {
+    const std::string& lbn = GenLogicalBlobName(op.BnInOp2Lbi(ibn));
+    if (mirror_blob_name2lbis_.find(lbn) != mirror_blob_name2lbis_.end()) { return true; }
+  }
+  return false;
+}
+
+Maybe<const SbpParallel*> JobBuildAndInferCtx::SbpParallel4Lbi(const LogicalBlobId& lbi) const {
+  const auto& iter = lbi2sbp_parallel_from_producer_view_.find(lbi);
+  OF_CHECK(iter != lbi2sbp_parallel_from_producer_view_.end())
+      << "lbn: " << GenLogicalBlobName(lbi) << " undefined";
+  return &iter->second;
+}
+
+Maybe<const ParallelDesc*> JobBuildAndInferCtx::ParallelDesc4Lbi(const LogicalBlobId& lbi) const {
+  const auto& iter = lbi2parallel_desc_from_producer_view_.find(lbi);
+  OF_CHECK(iter != lbi2parallel_desc_from_producer_view_.end())
+      << "lbn: " << GenLogicalBlobName(lbi) << " undefined";
+  return &iter->second;
+}
+
+Maybe<void> JobBuildAndInferCtx::CheckAllInputsConvertableToMirrorBlob(const Operator& op) const {
+  for (const auto& ibn : op.input_bns()) {
+    const auto& lbi = op.BnInOp2Lbi(ibn);
+    const std::string& lbn = GenLogicalBlobName(lbi);
+    if (mirror_blob_name2lbis_.find(lbn) != mirror_blob_name2lbis_.end()) { continue; }
+    if (JUST(SbpParallel4Lbi(lbi))->has_broadcast_parallel()) { continue; }
+    return Error::CheckFailed() << "input lbn: " << lbn << " is not convertable to mirror blob";
+  }
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> JobBuildAndInferCtx::CheckAllInputsWithSameParallelNum(const Operator& op,
+                                                                   int32_t parallel_num) const {
+  for (const auto& ibn : op.input_bns()) {
+    const auto& lbi = op.BnInOp2Lbi(ibn);
+    const std::string& lbn = GenLogicalBlobName(lbi);
+    const auto& iter = mirror_blob_name2lbis_.find(lbn);
+    int32_t ibn_parallel_num = 0;
+    if (iter != mirror_blob_name2lbis_.end()) {
+      ibn_parallel_num = iter->second.size();
+    } else {
+      ibn_parallel_num = JUST(ParallelDesc4Lbi(lbi))->parallel_num();
+    }
+    OF_CHECK_EQ(ibn_parallel_num, parallel_num)
+        << "the parallel_num of input lbn: " << GenLogicalBlobName(lbi)
+        << "is not equals to op' parallel_num";
+  }
+  return Maybe<void>::Ok();
+}
+
+Maybe<const LogicalBlobId*> JobBuildAndInferCtx::GetMirrorBlobSubLbi(
+    const std::string& lbn_or_mirror_blob_name, int32_t index) {
+  if (mirror_blob_name2lbis_.find(lbn_or_mirror_blob_name) != mirror_blob_name2lbis_.end()) {
+    return GetLbiInMirrorBlob(lbn_or_mirror_blob_name, index);
+  }
+  const auto& lbi = GenLogicalBlobId(lbn_or_mirror_blob_name);
+  OF_CHECK(JUST(SbpParallel4Lbi(lbi))->has_broadcast_parallel());
+  TODO();
+}
+
 // TODO(): add handle error of same interface op blob between jobs
+Maybe<void> JobBuildAndInferCtx::AddAndInferOps(const OperatorConf& op_conf,
+                                                const ParallelConf& origin_parallel_conf) {
+  auto op = ConstructOp(op_conf, &GlobalJobDesc());
+  if (!HasAnyMirrorBlobInput(*op)) { return AddAndInferOp(op_conf, origin_parallel_conf); }
+  JUST(CheckAllInputsConvertableToMirrorBlob(*op));
+  ParallelDesc parallel_desc(origin_parallel_conf);
+  int32_t parallel_num = parallel_desc.parallel_num();
+  JUST(CheckAllInputsWithSameParallelNum(*op, parallel_num));
+  auto GetSubOpName = [&](int index) { return op_conf.name() + "_" + std::to_string(index); };
+  OperatorConf sub_op_conf(op_conf);
+  FOR_RANGE(int32_t, i, 0, parallel_num) {
+    sub_op_conf.set_name(GetSubOpName(i));
+    for (const auto& ibn : op->input_bns()) {
+      const auto& lbi = *JUST(GetMirrorBlobSubLbi(GenLogicalBlobName(op->BnInOp2Lbi(ibn)), i));
+      ResetOpConfIbn(&sub_op_conf, ibn, GenLogicalBlobName(lbi));
+    }
+    AddAndInferOp(sub_op_conf, parallel_desc.GetParallelIdOnlyParallelConf(i));
+  }
+  for (const auto& obn : op->output_bns()) {
+    auto* sub_lbis = &mirror_blob_name2lbis_[GenLogicalBlobName(op->BnInOp2Lbi(obn))];
+    sub_lbis->resize(parallel_num, op->BnInOp2Lbi(obn));
+    FOR_RANGE(int32_t, i, 0, parallel_num) { sub_lbis->at(i).set_op_name(GetSubOpName(i)); }
+  }
+  return Maybe<void>::Ok();
+}
+
 Maybe<void> JobBuildAndInferCtx::AddAndInferOp(const OperatorConf& op_conf,
                                                const ParallelConf& origin_parallel_conf) {
   CHECK_OR_RETURN(has_job_conf_) << JobBuildAndInferError::kJobConfNotSet;
@@ -291,6 +389,8 @@ Maybe<void> JobBuildAndInferCtx::AddAndInferOp(const OperatorConf& op_conf,
   return Maybe<void>::Ok();
 }
 
+bool JobBuildAndInferCtx::HasJobConf() const { return has_job_conf_; }
+
 Maybe<void> JobBuildAndInferCtx::AddLossLogicalBlobName(const std::string& lbn) {
   CHECK_OR_RETURN(job_->job_conf().has_train_conf())
       << JobBuildAndInferError::kUnknownJobBuildAndInferError
@@ -298,8 +398,6 @@ Maybe<void> JobBuildAndInferCtx::AddLossLogicalBlobName(const std::string& lbn) 
   job_->mutable_job_conf()->mutable_train_conf()->add_loss_lbn(lbn);
   return Maybe<void>::Ok();
 }
-
-bool JobBuildAndInferCtx::HasJobConf() const { return has_job_conf_; }
 
 Maybe<Shape> JobBuildAndInferCtx::GetStaticShape(const std::string& lbn) const {
   JUST(CheckLbnValidAndExist(lbn));
@@ -346,6 +444,86 @@ Maybe<const ParallelDesc*> JobBuildAndInferCtx::GetParallelDescFromProducerView(
     const std::string& lbn) const {
   JUST(CheckLbnValidAndExist(lbn));
   return &(lbi2parallel_desc_from_producer_view_.at(GenLogicalBlobId(lbn)));
+}
+
+Maybe<std::string> JobBuildAndInferCtx::MirrorBlobNameStripHint(
+    const std::string& mirror_blob_name_with_hint) const {
+  const LogicalBlobId& lbi = GenLogicalBlobId(mirror_blob_name_with_hint);
+  const std::string& ret = GenLogicalBlobName(lbi);
+  if (mirror_blob_name2lbis_.find(ret) != mirror_blob_name2lbis_.end()) { return ret; }
+  return Error::CheckFailed() << mirror_blob_name_with_hint << " is not a mirror blob name";
+}
+
+Maybe<int> JobBuildAndInferCtx::NumLbiInMirrorBlob(
+    const std::string& mirror_blob_name_with_hint) const {
+  const auto& mirror_blob_name = *JUST(MirrorBlobNameStripHint(mirror_blob_name_with_hint));
+  return mirror_blob_name2lbis_.at(mirror_blob_name).size();
+}
+
+Maybe<const LogicalBlobId*> JobBuildAndInferCtx::GetLbiInMirrorBlob(
+    const std::string& mirror_blob_name_with_hint, int index) const {
+  const auto& mirror_blob_name = *JUST(MirrorBlobNameStripHint(mirror_blob_name_with_hint));
+  const auto& vec = mirror_blob_name2lbis_.at(mirror_blob_name);
+  OF_CHECK_GE(index, 0);
+  OF_CHECK_LT(index, vec.size());
+  return &vec.at(index);
+}
+
+bool JobBuildAndInferCtx::IsMirrorBlob(const std::string& lbn_or_mirror_blob_name) const {
+  return MirrorBlobNameStripHint(lbn_or_mirror_blob_name).IsOk();
+}
+
+Maybe<Shape> JobBuildAndInferCtx::MirrorBlobGetStaticShape(
+    const std::string& mirror_blob_name_with_hint) const {
+  const auto& lbi = *JUST(GetLbiInMirrorBlob(mirror_blob_name_with_hint, 0));
+  return lbi2logical_blob_desc_.at(lbi)->shape();
+}
+
+Maybe<DataType> JobBuildAndInferCtx::MirrorBlobGetDataType(
+    const std::string& mirror_blob_name_with_hint) const {
+  const auto& lbi = *JUST(GetLbiInMirrorBlob(mirror_blob_name_with_hint, 0));
+  return lbi2logical_blob_desc_.at(lbi)->data_type();
+}
+
+Maybe<bool> JobBuildAndInferCtx::MirrorBlobIsDynamic(
+    const std::string& mirror_blob_name_with_hint) const {
+  const auto& lbi = *JUST(GetLbiInMirrorBlob(mirror_blob_name_with_hint, 0));
+  return lbi2logical_blob_desc_.at(lbi)->is_dynamic();
+}
+
+Maybe<long long> JobBuildAndInferCtx::MirrorBlobGetNumOfLoDLevels(
+    const std::string& mirror_blob_name_with_hint) const {
+  const auto& lbi = *JUST(GetLbiInMirrorBlob(mirror_blob_name_with_hint, 0));
+  return lbi2logical_blob_desc_.at(lbi)->num_of_lod_levels();
+}
+
+Maybe<bool> JobBuildAndInferCtx::MirrorBlobDisableBoxing(
+    const std::string& mirror_blob_name_with_hint) const {
+  OF_CHECK(IsMirrorBlob(mirror_blob_name_with_hint));
+  return true;
+}
+
+Maybe<OptInt64> JobBuildAndInferCtx::MirrorBlobGetBatchAxis(
+    const std::string& mirror_blob_name_with_hint) const {
+  OF_CHECK(IsMirrorBlob(mirror_blob_name_with_hint));
+  auto ret = std::make_shared<OptInt64>();
+  ret->set_value(0);
+  return ret;
+}
+
+Maybe<OptInt64> JobBuildAndInferCtx::MirrorBlobGetSplitAxisFromProducerView(
+    const std::string& mirror_blob_name_with_hint) const {
+  const auto& lbi = *JUST(GetLbiInMirrorBlob(mirror_blob_name_with_hint, 0));
+  OptInt64 ret;
+  const auto& sbp = lbi2sbp_parallel_from_producer_view_.at(lbi);
+  if (sbp.has_split_parallel()) { ret.set_value(sbp.split_parallel().axis()); }
+  return ret;
+}
+
+Maybe<const ParallelDesc*> JobBuildAndInferCtx::MirrorBlobGetParallelDescFromProducerView(
+    const std::string& mirror_blob_name_with_hint) const {
+  const auto& lbi = *JUST(GetLbiInMirrorBlob(mirror_blob_name_with_hint, 0));
+  return &(lbi2parallel_desc_from_producer_view_.at(lbi));
 }
 
 Maybe<void> JobBuildAndInferCtx::CheckJob() const {

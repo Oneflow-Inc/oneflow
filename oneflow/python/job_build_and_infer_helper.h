@@ -48,11 +48,7 @@ Maybe<void> CurJobBuildAndInferCtx_AddAndInferOp(const std::string& op_conf_str,
   OF_CHECK(TxtString2PbMessage(op_conf_str, &op_conf)) << "operator conf parse failed";
   ParallelConf parallel_conf;
   OF_CHECK(TxtString2PbMessage(parallel_conf_str, &parallel_conf)) << "parallel conf parse failed";
-  return JUST(GetCurInferCtx())->AddAndInferOp(op_conf, parallel_conf);
-}
-
-Maybe<void> CurJobBuildAndInferCtx_AddLossLogicalBlobName(const std::string& lbn) {
-  return JUST(GetCurInferCtx())->AddLossLogicalBlobName(lbn);
+  return JUST(GetCurInferCtx())->AddAndInferOps(op_conf, parallel_conf);
 }
 
 Maybe<void> CurJobBuildAndInferCtx_AddLbiAndDiffWatcherUuidPair(
@@ -105,6 +101,75 @@ Maybe<std::string> JobBuildAndInferCtx_GetSerializedParallelConfFromProducerView
     const std::string& job_name, const std::string& lbn) {
   auto* ctx = JUST(Global<JobBuildAndInferCtxMgr>::Get()->FindJobBuildAndInferCtx(job_name));
   return PbMessage2TxtString(JUST(ctx->GetParallelDescFromProducerView(lbn))->parallel_conf());
+}
+
+Maybe<void> CurJobBuildAndInferCtx_AddLossLogicalBlobName(const std::string& lbn) {
+  return JUST(GetCurInferCtx())->AddLossLogicalBlobName(lbn);
+}
+
+Maybe<bool> JobBuildAndInferCtx_IsMirrorBlob(const std::string& job_name,
+                                             const std::string& mirror_blob_name) {
+  auto* ctx = JUST(Global<JobBuildAndInferCtxMgr>::Get()->FindJobBuildAndInferCtx(job_name));
+  return ctx->IsMirrorBlob(mirror_blob_name);
+}
+
+Maybe<int> JobBuildAndInferCtx_NumLbiInMirrorBlob(const std::string& job_name,
+                                                  const std::string& mirror_blob_name) {
+  auto* ctx = JUST(Global<JobBuildAndInferCtxMgr>::Get()->FindJobBuildAndInferCtx(job_name));
+  return ctx->NumLbiInMirrorBlob(mirror_blob_name);
+}
+
+Maybe<std::string> JobBuildAndInferCtx_GetLbiInMirrorBlob(const std::string& job_name,
+                                                          const std::string& mirror_blob_name,
+                                                          int index) {
+  auto* ctx = JUST(Global<JobBuildAndInferCtxMgr>::Get()->FindJobBuildAndInferCtx(job_name));
+  return PbMessage2TxtString(*JUST(ctx->GetLbiInMirrorBlob(mirror_blob_name, index)));
+}
+
+Maybe<std::string> JobBuildAndInferCtx_MirrorBlobGetSerializedIdListAsStaticShape(
+    const std::string& job_name, const std::string& mirror_blob_name) {
+  auto* ctx = JUST(Global<JobBuildAndInferCtxMgr>::Get()->FindJobBuildAndInferCtx(job_name));
+  const auto& shape = JUST(ctx->MirrorBlobGetStaticShape(mirror_blob_name));
+  Int64List id_list;
+  *id_list.mutable_value() = {shape->dim_vec().begin(), shape->dim_vec().end()};
+  return PbMessage2TxtString(id_list);
+}
+
+Maybe<long long> JobBuildAndInferCtx_MirrorBlobGetDataType(const std::string& job_name,
+                                                           const std::string& mirror_blob_name) {
+  auto* ctx = JUST(Global<JobBuildAndInferCtxMgr>::Get()->FindJobBuildAndInferCtx(job_name));
+  return *JUST(ctx->MirrorBlobGetDataType(mirror_blob_name));
+}
+
+Maybe<bool> JobBuildAndInferCtx_MirrorBlobIsDynamic(const std::string& job_name,
+                                                    const std::string& mirror_blob_name) {
+  auto* ctx = JUST(Global<JobBuildAndInferCtxMgr>::Get()->FindJobBuildAndInferCtx(job_name));
+  return ctx->MirrorBlobIsDynamic(mirror_blob_name);
+}
+
+Maybe<long long> JobBuildAndInferCtx_MirrorBlobGetNumOfLoDLevels(
+    const std::string& job_name, const std::string& mirror_blob_name) {
+  auto* ctx = JUST(Global<JobBuildAndInferCtxMgr>::Get()->FindJobBuildAndInferCtx(job_name));
+  return ctx->MirrorBlobGetNumOfLoDLevels(mirror_blob_name);
+}
+
+Maybe<std::string> JobBuildAndInferCtx_MirrorBlobGetBatchAxis(const std::string& job_name,
+                                                              const std::string& mirror_blob_name) {
+  auto* ctx = JUST(Global<JobBuildAndInferCtxMgr>::Get()->FindJobBuildAndInferCtx(job_name));
+  return PbMessage2TxtString(*JUST(ctx->MirrorBlobGetBatchAxis(mirror_blob_name)));
+}
+
+Maybe<std::string> JobBuildAndInferCtx_MirrorBlobGetSplitAxisFromProducerView(
+    const std::string& job_name, const std::string& mirror_blob_name) {
+  auto* ctx = JUST(Global<JobBuildAndInferCtxMgr>::Get()->FindJobBuildAndInferCtx(job_name));
+  return PbMessage2TxtString(*JUST(ctx->MirrorBlobGetSplitAxisFromProducerView(mirror_blob_name)));
+}
+
+Maybe<std::string> JobBuildAndInferCtx_MirrorBlobGetSerializedParallelConfFromProducerView(
+    const std::string& job_name, const std::string& mirror_blob_name) {
+  auto* ctx = JUST(Global<JobBuildAndInferCtxMgr>::Get()->FindJobBuildAndInferCtx(job_name));
+  return PbMessage2TxtString(
+      JUST(ctx->MirrorBlobGetParallelDescFromProducerView(mirror_blob_name))->parallel_conf());
 }
 
 }  // namespace oneflow
