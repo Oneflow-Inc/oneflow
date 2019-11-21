@@ -8,8 +8,10 @@ from contextlib import contextmanager
 @contextmanager
 def CurJobConf(job_conf):
     _ResetCurJobConf(job_conf)
-    yield None
-    _ResetCurJobConf(None)
+    try:
+        yield None
+    finally:
+        _ResetCurJobConf(None)
 
 
 class BeforeNonInputOpBuildAndInferHook:
