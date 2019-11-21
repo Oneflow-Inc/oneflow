@@ -4,14 +4,13 @@ namespace oneflow {
 namespace xrt {
 
 bool operator==(const Signature &lhs, const Signature &rhs) {
-  return lhs.builder_name == rhs.builder_name &&
-         lhs.device_ordinal == rhs.device_ordinal &&
-         lhs.entry_shapes == rhs.entry_shapes;
+  return lhs.builder_name == rhs.builder_name && lhs.device_ordinal == rhs.device_ordinal
+         && lhs.entry_shapes == rhs.entry_shapes;
 }
 
 size_t SignatureHash::operator()(const Signature &signature) const {
-  size_t hash_val = std::hash<std::string>()(signature.builder_name) ^
-                    std::hash<int>()(signature.device_ordinal);
+  size_t hash_val =
+      std::hash<std::string>()(signature.builder_name) ^ std::hash<int>()(signature.device_ordinal);
   for (const auto &shape : signature.entry_shapes) {
     hash_val ^= std::hash<std::string>()(shape.ToString());
   }
@@ -35,9 +34,7 @@ Executable *CompilationCache::GetRecord(const Signature &signature) const {
   // std::shared_lock<std::shared_mutex> lock(mutex_);
   std::lock_guard<std::mutex> lock(mutex_);
   const auto &it = records_.find(signature);
-  if (it != records_.end()) {
-    record = it->second.get();
-  }
+  if (it != records_.end()) { record = it->second.get(); }
   return record;
 }
 
@@ -49,8 +46,7 @@ void CompilationCache::Record(const Signature &signature,
 }
 
 void CompilationCache::Release() {
-  util::Map<Signature, std::shared_ptr<Executable>, SignatureHash>
-      empty_records;
+  util::Map<Signature, std::shared_ptr<Executable>, SignatureHash> empty_records;
   records_.swap(empty_records);
 }
 

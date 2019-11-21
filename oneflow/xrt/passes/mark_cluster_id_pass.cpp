@@ -17,13 +17,11 @@ class MarkClusterIdPass : public XrtPass {
 
  private:
   void BuildClusterNodesAndEdges(XrtGraph *graph);
-  void ClusteringSubgraphs(const ClusteringOptions &options,
-                           const XrtEngine &engine);
+  void ClusteringSubgraphs(const ClusteringOptions &options, const XrtEngine &engine);
 
   void RemoveInvalidClusterNodes(const ClusteringOptions &options);
 
-  void FinalizeClusterEngine(const ClusteringOptions &options,
-                             const XrtEngine &engine);
+  void FinalizeClusterEngine(const ClusteringOptions &options, const XrtEngine &engine);
 
   // Rerank cluster id start by 0.
   void RerankClusterIds();
@@ -42,7 +40,7 @@ class MarkClusterIdPass : public XrtPass {
 };
 
 namespace algorithm {
-template <>
+template<>
 struct GraphTypeTrait<MarkClusterIdPass> {
   typedef ClusterNode *pNodeType;
   typedef ClusterEdge *pEdgeType;
@@ -77,15 +75,13 @@ void MarkClusterIdPass::BuildClusterNodesAndEdges(XrtGraph *graph) {
 
 void MarkClusterIdPass::ClusteringSubgraphs(const ClusteringOptions &options,
                                             const XrtEngine &engine) {
-  if (!CheckUseXrtEngine(options, engine)) {
-    return;
-  }
+  if (!CheckUseXrtEngine(options, engine)) { return; }
   for (int i = 0; i < options.max_iteration; ++i) {
     bool has_changed = false;
     std::vector<ClusterNode *> ordered_nodes;
     algorithm::TopologyVisit(*this, [&](ClusterNode *node) {
-      if (!node->IsCompiled(engine, options.train_phase) ||
-          node->IsOptimizer(engine) /* skip model update op */) {
+      if (!node->IsCompiled(engine, options.train_phase)
+          || node->IsOptimizer(engine) /* skip model update op */) {
         return;
       }
       ordered_nodes.push_back(node);
@@ -95,13 +91,11 @@ void MarkClusterIdPass::ClusteringSubgraphs(const ClusteringOptions &options,
     for (int i = ordered_nodes.size() - 1; i >= 0; --i) {
       ClusterNode *node = ordered_nodes[i];
       util::Set<ClusterNode *> candidate_parents;
-      for (ClusterEdge *edge : node->in_edges()) {
-        candidate_parents.insert(edge->start());
-      }
+      for (ClusterEdge *edge : node->in_edges()) { candidate_parents.insert(edge->start()); }
       for (ClusterNode *parent : candidate_parents) {
-        if (parent->IsCompiled(engine, options.train_phase) &&
-            (parent->size() + node->size()) <= options.maximum_nodes &&
-            TryToFuseWithParent(node, parent, options)) {
+        if (parent->IsCompiled(engine, options.train_phase)
+            && (parent->size() + node->size()) <= options.maximum_nodes
+            && TryToFuseWithParent(node, parent, options)) {
           has_changed = true;
           root_nodes_.erase(node);
           break;
@@ -109,16 +103,13 @@ void MarkClusterIdPass::ClusteringSubgraphs(const ClusteringOptions &options,
         }
       }
     }
-    if (!has_changed) {
-      break;
-    }
+    if (!has_changed) { break; }
   }
 
   FinalizeClusterEngine(options, engine);
 }
 
-bool MarkClusterIdPass::TryToFuseWithParent(ClusterNode *children,
-                                            ClusterNode *parent,
+bool MarkClusterIdPass::TryToFuseWithParent(ClusterNode *children, ClusterNode *parent,
                                             const ClusteringOptions &options) {
   if (options.strict_clustering) {
     // for (const ClusterEdge *edge : children->in_edges()) {
@@ -127,8 +118,7 @@ bool MarkClusterIdPass::TryToFuseWithParent(ClusterNode *children,
     //   }
     // }
     for (const ClusterEdge *edge : parent->out_edges()) {
-      if (edge->end() !=
-              children && /* !children->IsReachable(*(edge->end())) */
+      if (edge->end() != children && /* !children->IsReachable(*(edge->end())) */
           !IsNodeDirectChildren(children, edge->end())) {
         return false;
       }
@@ -138,22 +128,17 @@ bool MarkClusterIdPass::TryToFuseWithParent(ClusterNode *children,
   bool can_be_fusion = true;
   for (const ClusterEdge *edge : children->in_edges()) {
     if (edge->start() == parent) {
-      can_be_fusion = can_be_fusion && !edge->is_fusion_disabled() &&
-                      IsSatisfyBackend(edge) && IsSatisfySbpPolicy(edge) &&
-                      IsSatisfyTimeShape(edge);
+      can_be_fusion = can_be_fusion && !edge->is_fusion_disabled() && IsSatisfyBackend(edge)
+                      && IsSatisfySbpPolicy(edge) && IsSatisfyTimeShape(edge);
     }
   }
-  if (can_be_fusion) {
-    return parent->TryMerge(*children);
-  }
+  if (can_be_fusion) { return parent->TryMerge(*children); }
   return false;
 }
 
 void MarkClusterIdPass::RerankClusterIds() {
   int64_t rank = 0;
-  for (ClusterNode *node : root_nodes_) {
-    node->set_cluster_id(rank++);
-  }
+  for (ClusterNode *node : root_nodes_) { node->set_cluster_id(rank++); }
 }
 
 void MarkClusterIdPass::DumpClusterInfoToGraph(XrtGraph *graph) {
@@ -172,27 +157,24 @@ void MarkClusterIdPass::FinalizeClusterEngine(const ClusteringOptions &options,
   const int min_nodes = options.minimum_nodes;
   const int max_nodes = options.maximum_nodes;
   for (ClusterNode *node : root_nodes_) {
-    if (node->IsCompiled(engine, options.train_phase) &&
-        node->size() >= min_nodes && node->size() <= max_nodes) {
+    if (node->IsCompiled(engine, options.train_phase) && node->size() >= min_nodes
+        && node->size() <= max_nodes) {
       node->set_engine(engine);
     }
   }
 }
 
-void MarkClusterIdPass::RemoveInvalidClusterNodes(
-    const ClusteringOptions &options) {
+void MarkClusterIdPass::RemoveInvalidClusterNodes(const ClusteringOptions &options) {
   const int min_nodes = options.minimum_nodes;
   const int max_nodes = options.maximum_nodes;
   std::vector<ClusterNode *> removing_clusters;
   for (ClusterNode *node : root_nodes_) {
-    if (node->engine() == XrtEngine::DEFAULT || node->size() < min_nodes ||
-        node->size() > max_nodes) {
+    if (node->engine() == XrtEngine::DEFAULT || node->size() < min_nodes
+        || node->size() > max_nodes) {
       removing_clusters.push_back(node);
     }
   }
-  for (ClusterNode *node : removing_clusters) {
-    root_nodes_.erase(node);
-  }
+  for (ClusterNode *node : removing_clusters) { root_nodes_.erase(node); }
 }
 
 void MarkClusterIdPass::Run(XrtGraph *graph, const XrtPassOptions &options) {

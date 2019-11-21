@@ -27,8 +27,7 @@ Eigen::ThreadPoolDevice *GetOrCreateEigenHostDevice();
 typedef void *StreamId;
 
 DeviceBufferAllocator *GetOrCreateBufferAllocator(const XrtDevice &device,
-                                                  const StreamId &stream_id,
-                                                  se::Stream *stream,
+                                                  const StreamId &stream_id, se::Stream *stream,
                                                   int device_ordinal);
 
 xla::LocalClient *GetOrCreateLocalClient(const XrtDevice &device);

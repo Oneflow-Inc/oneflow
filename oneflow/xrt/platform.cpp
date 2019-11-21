@@ -13,8 +13,7 @@ namespace platform {
 
 int GetDeviceId(const XrtDevice &device) {
   switch (device) {
-    case XrtDevice::CPU_X86:
-      return 0;
+    case XrtDevice::CPU_X86: return 0;
     case XrtDevice::GPU_CUDA: {
 #ifdef WITH_CUDA
       int device_id = 0;

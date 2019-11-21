@@ -45,25 +45,21 @@ class Parameter {
     byte_size_ = shape.elem_cnt() * SizeOf(data_type);
   }
 
-  Parameter(const std::string &name, void *data, const Shape &shape,
-            const DataType &data_type)
-      : storage_(data),
-        shape_(shape),
-        data_type_(data_type),
-        parameter_name_(name) {
+  Parameter(const std::string &name, void *data, const Shape &shape, const DataType &data_type)
+      : storage_(data), shape_(shape), data_type_(data_type), parameter_name_(name) {
     byte_size_ = shape.elem_cnt() * SizeOf(data_type);
   }
 
   void set_data(const void *data) { storage_ = const_cast<void *>(data); }
 
-  template <typename T>
+  template<typename T>
   void set_data(const T *data) {
     storage_ = const_cast<T *>(data);
   }
 
   void *data() const { return storage_; }
 
-  template <typename T>
+  template<typename T>
   T *data() const {
     return reinterpret_cast<T *>(storage_);
   }

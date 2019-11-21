@@ -31,19 +31,15 @@ class DeviceMemoryPool {
 
   int device_ordinal() const { return device_ordinal_; }
 
-  static std::shared_ptr<DeviceMemoryPool> NewMemoryPool(
-      const se::Platform *platform, se::Stream *stream, int device_ordinal);
+  static std::shared_ptr<DeviceMemoryPool> NewMemoryPool(const se::Platform *platform,
+                                                         se::Stream *stream, int device_ordinal);
 
   static auto Registry()
-      -> util::Registry<se::Platform::Id,
-                        std::function<DeviceMemoryPool *(se::Stream *, int)>> *;
+      -> util::Registry<se::Platform::Id, std::function<DeviceMemoryPool *(se::Stream *, int)>> *;
 
  protected:
   explicit DeviceMemoryPool(se::Stream *stream, int device_ordinal)
-      : mem_buffer_(nullptr),
-        capacity_(0),
-        stream_(stream),
-        device_ordinal_(device_ordinal) {}
+      : mem_buffer_(nullptr), capacity_(0), stream_(stream), device_ordinal_(device_ordinal) {}
 
   virtual void ReserveImpl(size_t size) = 0;
   virtual void ReleaseImpl() = 0;
@@ -58,21 +54,19 @@ class DeviceMemoryPool {
   int64_t limited_memory_size_ = -1;
 };
 
-template <typename MemoryPool>
+template<typename MemoryPool>
 class DeviceMemoryPoolRegistarr {
  public:
   DeviceMemoryPoolRegistarr(const se::Platform::Id &platform_id) {
-    DeviceMemoryPool::Registry()->Register(
-        platform_id, [](se::Stream *stream, int device_ordinal) {
-          return new MemoryPool(stream, device_ordinal);
-        });
+    DeviceMemoryPool::Registry()->Register(platform_id, [](se::Stream *stream, int device_ordinal) {
+      return new MemoryPool(stream, device_ordinal);
+    });
   }
 };
 
-#define REGISTER_XLA_MEMORY_POOL(PlatformId, MemoryPool)            \
-  static DeviceMemoryPoolRegistarr<MemoryPool>                      \
-      _device_memory_pool_##MemoryPool##_ __attribute__((unused)) = \
-          DeviceMemoryPoolRegistarr<MemoryPool>(PlatformId)
+#define REGISTER_XLA_MEMORY_POOL(PlatformId, MemoryPool)                           \
+  static DeviceMemoryPoolRegistarr<MemoryPool> _device_memory_pool_##MemoryPool##_ \
+      __attribute__((unused)) = DeviceMemoryPoolRegistarr<MemoryPool>(PlatformId)
 
 }  // namespace mola
 }  // namespace xrt

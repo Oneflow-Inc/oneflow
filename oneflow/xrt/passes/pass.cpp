@@ -3,16 +3,12 @@
 namespace oneflow {
 namespace xrt {
 
-bool CheckUseXrtEngine(const ClusteringOptions &options,
-                       const XrtEngine &engine) {
+bool CheckUseXrtEngine(const ClusteringOptions &options, const XrtEngine &engine) {
   XrtEngineOptionBit bit = [&]() {
     switch (engine) {
-      case XrtEngine::XLA:
-        return XrtEngineOptionBit::kUseXlaJit;
-      case XrtEngine::TENSORRT:
-        return XrtEngineOptionBit::kUseTensorRT;
-      default:
-        return XrtEngineOptionBit::kUseDefault;
+      case XrtEngine::XLA: return XrtEngineOptionBit::kUseXlaJit;
+      case XrtEngine::TENSORRT: return XrtEngineOptionBit::kUseTensorRT;
+      default: return XrtEngineOptionBit::kUseDefault;
     }
   }();
 

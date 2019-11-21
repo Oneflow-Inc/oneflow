@@ -38,8 +38,7 @@ class CompilationCache {
  public:
   Executable *GetRecord(const Signature &signature) const;
 
-  void Record(const Signature &signature,
-              const std::shared_ptr<Executable> &result);
+  void Record(const Signature &signature, const std::shared_ptr<Executable> &result);
 
   void Release();
 

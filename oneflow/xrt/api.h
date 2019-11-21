@@ -26,9 +26,8 @@ std::string BlobIdToName(const LogicalBlobId &lbi);
 LogicalBlobId BlobNameToId(const std::string &blob_name);
 
 // Build an xrt graph from launch conf.
-std::shared_ptr<XrtGraph> BuildXrtGraph(
-    const XrtLaunchOpConf::Function &function, const DeviceType &device_type,
-    const JobDesc &job_desc);
+std::shared_ptr<XrtGraph> BuildXrtGraph(const XrtLaunchOpConf::Function &function,
+                                        const DeviceType &device_type, const JobDesc &job_desc);
 
 // Build an xrt graph from op graph.
 std::shared_ptr<XrtGraph> BuildXrtGraph(const OpGraph *op_graph);
@@ -49,20 +48,18 @@ XrtPassOptions CreateDefaultXrtPassOptions(bool train_phase = false);
 // pass    "Pass type, sunch as \"BuildSubGraph\"."
 // graph   "An XRT graph which be applied by pass."
 // options "Specify options to affect pass results."
-inline void RunXrtPass(const std::string &pass, XrtGraph *graph,
-                       const XrtPassOptions &options) {
+inline void RunXrtPass(const std::string &pass, XrtGraph *graph, const XrtPassOptions &options) {
   return RunPassImpl(pass, graph, options);
 }
 
 // Run an xrt pass with unfixed parameters.
-template <typename... Args>
-inline void RunXrtPass(const std::string &pass, XrtGraph *graph,
-                       const XrtPassOptions &options, Args &&... args) {
+template<typename... Args>
+inline void RunXrtPass(const std::string &pass, XrtGraph *graph, const XrtPassOptions &options,
+                       Args &&... args) {
   return RunPassImpl(pass, graph, options, std::forward<Args>(args)...);
 }
 
-void RunCompilationTimeXrtPasses(const OpGraph &op_graph, Job *job,
-                                 bool train_phase);
+void RunCompilationTimeXrtPasses(const OpGraph &op_graph, Job *job, bool train_phase);
 
 Parameter BuildParameter(const Blob &blob, const std::string &name = "");
 

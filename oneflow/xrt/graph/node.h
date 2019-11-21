@@ -22,9 +22,7 @@ class XrtEdge : public util::AttributeMap {
   const Argument &argument() const { return arg_; }
   Argument &argument() { return arg_; }
 
-  void SetStartNode(const XrtNode *start) {
-    start_ = const_cast<XrtNode *>(start);
-  }
+  void SetStartNode(const XrtNode *start) { start_ = const_cast<XrtNode *>(start); }
   void SetEndNode(const XrtNode *end) { end_ = const_cast<XrtNode *>(end); }
   void SetArgument(const Argument &arg) { arg_ = arg; }
 
@@ -39,8 +37,7 @@ class XrtEdge : public util::AttributeMap {
  protected:
   XrtEdge() = default;
   XrtEdge(const XrtNode *start, const XrtNode *end)
-      : start_(const_cast<XrtNode *>(start)),
-        end_(const_cast<XrtNode *>(end)) {}
+      : start_(const_cast<XrtNode *>(start)), end_(const_cast<XrtNode *>(end)) {}
 
  protected:
   XrtNode *start_ = nullptr;
@@ -114,12 +111,12 @@ class XrtNode : public util::AttributeMap {
 };
 
 namespace algorithm {
-template <>
+template<>
 struct NodeTypeTrait<XrtNode> {
   typedef XrtEdge *pEdgeType;
 };
 
-template <>
+template<>
 struct NodeTypeTrait<const XrtNode> {
   typedef const XrtEdge *pEdgeType;
 };

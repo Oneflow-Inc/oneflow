@@ -8,9 +8,7 @@ namespace xrt {
 namespace mola {
 
 void DeviceMemoryPool::Reserve(size_t size) {
-  if (limited_memory_size_ > -1) {
-    CHECK_LT(size, limited_memory_size_);
-  }
+  if (limited_memory_size_ > -1) { CHECK_LT(size, limited_memory_size_); }
 
   while (size > capacity_) {
     Release();
@@ -27,16 +25,16 @@ void DeviceMemoryPool::Release() {
 }
 
 auto DeviceMemoryPool::Registry()
-    -> util::Registry<se::Platform::Id,
-                      std::function<DeviceMemoryPool *(se::Stream *, int)>> * {
-  return util::Registry<se::Platform::Id, std::function<DeviceMemoryPool *(
-                                              se::Stream *, int)>>::Global();
+    -> util::Registry<se::Platform::Id, std::function<DeviceMemoryPool *(se::Stream *, int)>> * {
+  return util::Registry<se::Platform::Id,
+                        std::function<DeviceMemoryPool *(se::Stream *, int)>>::Global();
 }
 
-std::shared_ptr<DeviceMemoryPool> DeviceMemoryPool::NewMemoryPool(
-    const se::Platform *platform, se::Stream *stream, int device_ordinal) {
-  return std::shared_ptr<DeviceMemoryPool>(DeviceMemoryPool::Registry()->Lookup(
-      platform->id())(stream, device_ordinal));
+std::shared_ptr<DeviceMemoryPool> DeviceMemoryPool::NewMemoryPool(const se::Platform *platform,
+                                                                  se::Stream *stream,
+                                                                  int device_ordinal) {
+  return std::shared_ptr<DeviceMemoryPool>(
+      DeviceMemoryPool::Registry()->Lookup(platform->id())(stream, device_ordinal));
 }
 
 namespace memory {
@@ -55,9 +53,7 @@ class CpuMemoryPool : public DeviceMemoryPool {
   }
 
   void ReleaseImpl() override {
-    if (capacity_ > 0 && mem_buffer_) {
-      delete[] mem_buffer_;
-    }
+    if (capacity_ > 0 && mem_buffer_) { delete[] mem_buffer_; }
     capacity_ = 0;
     mem_buffer_ = nullptr;
   }
@@ -77,15 +73,11 @@ class GpuMemoryPool : public DeviceMemoryPool {
 #ifdef WITH_CUDA
     int device_ordinal;
     cudaGetDevice(&device_ordinal);
-    if (device_ordinal != device_ordinal_) {
-      cudaSetDevice(device_ordinal_);
-    }
+    if (device_ordinal != device_ordinal_) { cudaSetDevice(device_ordinal_); }
 
     CudaCheck(cudaMalloc(&mem_buffer_, size));
 
-    if (device_ordinal != device_ordinal_) {
-      cudaSetDevice(device_ordinal);
-    }
+    if (device_ordinal != device_ordinal_) { cudaSetDevice(device_ordinal); }
 #else
     LOG(FATAL) << "Please recompile with CUDA.";
 #endif
@@ -97,17 +89,11 @@ class GpuMemoryPool : public DeviceMemoryPool {
 #ifdef WITH_CUDA
     int device_ordinal;
     cudaGetDevice(&device_ordinal);
-    if (device_ordinal != device_ordinal_) {
-      cudaSetDevice(device_ordinal_);
-    }
+    if (device_ordinal != device_ordinal_) { cudaSetDevice(device_ordinal_); }
 
-    if (capacity_ > 0 && mem_buffer_) {
-      CudaCheck(cudaFree(mem_buffer_));
-    }
+    if (capacity_ > 0 && mem_buffer_) { CudaCheck(cudaFree(mem_buffer_)); }
 
-    if (device_ordinal != device_ordinal_) {
-      cudaSetDevice(device_ordinal);
-    }
+    if (device_ordinal != device_ordinal_) { cudaSetDevice(device_ordinal); }
 #else
     LOG(FATAL) << "Please recompile with CUDA.";
 #endif

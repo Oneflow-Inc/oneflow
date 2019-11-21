@@ -9,44 +9,38 @@ namespace oneflow {
 namespace xrt {
 namespace util {
 
-template <typename T>
-inline void GetAttr(const PbMessage &message, const std::string &attr_name,
-                    T *value) {
+template<typename T>
+inline void GetAttr(const PbMessage &message, const std::string &attr_name, T *value) {
   CHECK(HasFieldInPbMessage(message, attr_name));
   *value = GetValFromPbMessage<T>(message, attr_name);
 }
 
-template <typename T>
-inline void SetAttr(PbMessage *message, const std::string &attr_name,
-                    const T &value) {
+template<typename T>
+inline void SetAttr(PbMessage *message, const std::string &attr_name, const T &value) {
   SetValInPbMessage(message, attr_name, value);
 }
 
-template <>
-inline void GetAttr<Shape>(const PbMessage &message,
-                           const std::string &attr_name, Shape *value) {
+template<>
+inline void GetAttr<Shape>(const PbMessage &message, const std::string &attr_name, Shape *value) {
   CHECK(HasFieldInPbMessage(message, attr_name));
   *value = Shape(GetValFromPbMessage<ShapeProto>(message, attr_name));
 }
 
-template <>
-inline void SetAttr<Shape>(PbMessage *message, const std::string &attr_name,
-                           const Shape &value) {
+template<>
+inline void SetAttr<Shape>(PbMessage *message, const std::string &attr_name, const Shape &value) {
   ShapeProto shape;
   value.ToProto(&shape);
   SetValInPbMessage<ShapeProto>(message, attr_name, shape);
 }
 
-template <typename T>
-inline void GetMessage(const PbMessage &message, const std::string &attr_name,
-                       T **value) {
+template<typename T>
+inline void GetMessage(const PbMessage &message, const std::string &attr_name, T **value) {
   CHECK(HasFieldInPbMessage(message, attr_name));
-  *value = dynamic_cast<T *>(const_cast<oneflow::PbMessage *>(
-      &GetMessageInPbMessage(message, attr_name)));
+  *value = dynamic_cast<T *>(
+      const_cast<oneflow::PbMessage *>(&GetMessageInPbMessage(message, attr_name)));
 }
 
-inline std::string GetAttrAsString(const PbMessage &message,
-                                   const std::string &attr_name) {
+inline std::string GetAttrAsString(const PbMessage &message, const std::string &attr_name) {
   std::string value;
   GetAttr<std::string>(message, attr_name, &value);
   return std::move(value);
@@ -63,31 +57,26 @@ inline bool HasAttr(const PbMessage &message, const std::string &attr_name) {
   return fd != nullptr;
 }
 
-inline void GetOneofType(const PbMessage &message,
-                         const std::string &oneof_name,
+inline void GetOneofType(const PbMessage &message, const std::string &oneof_name,
                          std::string *oneof_type) {
   using namespace google::protobuf;
   const Descriptor *d = message.GetDescriptor();
   const OneofDescriptor *ofd = d->FindOneofByName(oneof_name);
   const Reflection *r = message.GetReflection();
   CHECK(ofd) << "Message has no oneof field named " << oneof_name;
-  const google::protobuf::FieldDescriptor *fd =
-      r->GetOneofFieldDescriptor(message, ofd);
+  const google::protobuf::FieldDescriptor *fd = r->GetOneofFieldDescriptor(message, ofd);
   *oneof_type = fd->name();
 }
 
-template <typename T>
-inline void GetOneofMessage(const PbMessage &message,
-                            const std::string &oneof_name, T **value) {
+template<typename T>
+inline void GetOneofMessage(const PbMessage &message, const std::string &oneof_name, T **value) {
   using namespace google::protobuf;
   const Descriptor *d = message.GetDescriptor();
   const OneofDescriptor *ofd = d->FindOneofByName(oneof_name);
   const Reflection *r = message.GetReflection();
   CHECK(ofd) << "Message has no oneof field named " << oneof_name;
-  const google::protobuf::FieldDescriptor *fd =
-      r->GetOneofFieldDescriptor(message, ofd);
-  *value = dynamic_cast<T *>(
-      const_cast<oneflow::PbMessage *>(&(r->GetMessage(message, fd))));
+  const google::protobuf::FieldDescriptor *fd = r->GetOneofFieldDescriptor(message, ofd);
+  *value = dynamic_cast<T *>(const_cast<oneflow::PbMessage *>(&(r->GetMessage(message, fd))));
 }
 
 class MessageAttr {
@@ -96,21 +85,19 @@ class MessageAttr {
 
   const PbMessage &message() const { return message_; }
 
-  template <typename T>
+  template<typename T>
   T GetAttr(const std::string &attr_name) const {
     T value;
     util::GetAttr<T>(message_, attr_name, &value);
     return std::move(value);
   }
 
-  template <typename T>
+  template<typename T>
   void SetAttr(const std::string &attr_name, const T &value) {
     util::SetAttr<T>(const_cast<PbMessage *>(&message_), attr_name, value);
   }
 
-  bool HasAttr(const std::string &attr_name) const {
-    return util::HasAttr(message_, attr_name);
-  }
+  bool HasAttr(const std::string &attr_name) const { return util::HasAttr(message_, attr_name); }
 
   std::string GetOneofType(const std::string &oneof_name) const {
     std::string oneof_type;
@@ -122,9 +109,8 @@ class MessageAttr {
   const PbMessage &message_;
 };
 
-template <>
-inline PbMessage *MessageAttr::GetAttr<PbMessage *>(
-    const std::string &attr_name) const {
+template<>
+inline PbMessage *MessageAttr::GetAttr<PbMessage *>(const std::string &attr_name) const {
   PbMessage *value = nullptr;
   GetMessage(message_, attr_name, &value);
   return value;

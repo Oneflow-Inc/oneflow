@@ -10,12 +10,10 @@ namespace oneflow {
 namespace xrt {
 namespace mola {
 
-template <typename UnaryOp>
+template<typename UnaryOp>
 class ApplyUnaryOp : public XlaOpKernel {
  public:
-  void Compile(XlaOpContext *ctx) override {
-    ctx->SetOutput("out", UnaryOp()(ctx->Input("in")));
-  }
+  void Compile(XlaOpContext *ctx) override { ctx->SetOutput("out", UnaryOp()(ctx->Input("in"))); }
 };
 
 REGISTER_XLA_OP_KERNEL(Sigmoid, ApplyUnaryOp<op::Logistic>).Finalize();

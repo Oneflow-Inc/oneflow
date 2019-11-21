@@ -24,16 +24,12 @@ bool ClusterNode::IsSatisfySbpPolicy() const {
   for (ClusterEdge *edge : in_edges_) {
     int64_t parent_id = edge->start()->cluster_id();
     connection_kinds[parent_id].insert(edge->IsIdentity());
-    if (connection_kinds[parent_id].size() > 1) {
-      return false;
-    }
+    if (connection_kinds[parent_id].size() > 1) { return false; }
   }
   for (ClusterEdge *edge : out_edges_) {
     int64_t children_id = edge->end()->cluster_id();
     connection_kinds[children_id].insert(edge->IsIdentity());
-    if (connection_kinds[children_id].size() > 1) {
-      return false;
-    }
+    if (connection_kinds[children_id].size() > 1) { return false; }
   }
   return true;
 }
@@ -50,8 +46,7 @@ class ClusterMergeNode : public ClusterNode {
     ClusterEdge *edge;
   };
 
-  ClusterMergeNode(ClusterNode *lhs, ClusterNode *rhs)
-      : ClusterNode(-100), lhs_(lhs), rhs_(rhs) {
+  ClusterMergeNode(ClusterNode *lhs, ClusterNode *rhs) : ClusterNode(-100), lhs_(lhs), rhs_(rhs) {
     BuildInputEdges();
     BuildOutputEdges();
   }
@@ -155,8 +150,7 @@ ClusterNodePtr BuildClusterNode(const XrtNode *node, int64_t id) {
   return std::make_shared<ClusterNode>(node, id);
 }
 
-ClusterEdgePtr BuildClusterEdge(const ClusterNode *start,
-                                const ClusterNode *end) {
+ClusterEdgePtr BuildClusterEdge(const ClusterNode *start, const ClusterNode *end) {
   return std::make_shared<ClusterEdge>(const_cast<ClusterNode *>(start),
                                        const_cast<ClusterNode *>(end));
 }
@@ -165,8 +159,7 @@ void SetupClusterEdge(ClusterEdge *cluster_edge, const XrtEdge *xrt_edge) {
   cluster_edge->set_is_control_edge(xrt_edge->IsControlEdge());
   CHECK(xrt_edge->HasAttr("time_shape"));
   CHECK(xrt_edge->HasAttr("sbp_policy"));
-  const auto &sbp_policy =
-      xrt_edge->Attr<std::vector<SbpParallel>>("sbp_policy");
+  const auto &sbp_policy = xrt_edge->Attr<std::vector<SbpParallel>>("sbp_policy");
   cluster_edge->set_start_sbp_policy(sbp_policy[0]);
   cluster_edge->set_end_sbp_policy(sbp_policy[1]);
 
@@ -175,12 +168,9 @@ void SetupClusterEdge(ClusterEdge *cluster_edge, const XrtEdge *xrt_edge) {
   cluster_edge->set_end_time_shape(time_shape[1]);
 }
 
-bool IsNodeDirectChildren(const ClusterNode *parent,
-                          const ClusterNode *children) {
+bool IsNodeDirectChildren(const ClusterNode *parent, const ClusterNode *children) {
   for (const ClusterEdge *edge : parent->out_edges()) {
-    if (edge->end() == children) {
-      return true;
-    }
+    if (edge->end() == children) { return true; }
   }
   return false;
 }
@@ -190,13 +180,11 @@ bool IsSatisfyBackend(const ClusterEdge *edge) {
 }
 
 bool IsSatisfySbpPolicy(const ClusterEdge *edge) {
-  return edge->is_control_edge() ||
-         (edge->start_sbp_policy() == edge->end_sbp_policy());
+  return edge->is_control_edge() || (edge->start_sbp_policy() == edge->end_sbp_policy());
 }
 
 bool IsSatisfyTimeShape(const ClusterEdge *edge) {
-  return edge->is_control_edge() ||
-         (edge->start_time_shape() == edge->end_time_shape());
+  return edge->is_control_edge() || (edge->start_time_shape() == edge->end_time_shape());
 }
 
 }  // namespace xrt

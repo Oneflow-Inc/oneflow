@@ -14,7 +14,7 @@ DEFINE_int32(max_batch_size, EnvToInt(FLAGS_max_batch_size, 1),
 
 namespace oneflow {
 
-template <DeviceType device_type>
+template<DeviceType device_type>
 void BlobDescGetter<device_type>::DumpEntryBlobDescTo(
     std::unordered_map<std::string, BlobDesc> *entry_blob_desc) const {
   const auto &launch_conf = kernel_->op_conf().xrt_launch_conf();
@@ -43,53 +43,43 @@ void BlobDescGetter<device_type>::DumpEntryBlobDescTo(
   }
 }
 
-template <DeviceType device_type>
+template<DeviceType device_type>
 xrt::Executable *XrtLaunchKernel<device_type>::BuildExecutable(
     const std::vector<xrt::Parameter> &entry_params,
     const std::vector<xrt::Parameter> &return_params,
-    const std::vector<xrt::InputOutputAlias> &aliases,
-    const int device_ordinal) const {
-  if (!compilation_cache_) {
-    compilation_cache_.reset(new xrt::CompilationCache);
-  }
+    const std::vector<xrt::InputOutputAlias> &aliases, const int device_ordinal) const {
+  if (!compilation_cache_) { compilation_cache_.reset(new xrt::CompilationCache); }
 
   xrt::Executable *executable = nullptr;
-  xrt::Signature signature = xrt::ComputeSignature(
-      this->op_conf().name(), device_ordinal, entry_params);
+  xrt::Signature signature =
+      xrt::ComputeSignature(this->op_conf().name(), device_ordinal, entry_params);
   bool force_compile = false;
-  if (!force_compile) {
-    executable = compilation_cache_->GetRecord(signature);
-  }
+  if (!force_compile) { executable = compilation_cache_->GetRecord(signature); }
 
   if (!executable) {
     VLOG(2) << "Build executable for launch op " << this->op_conf().name();
     const auto &launch_conf = this->op_conf().xrt_launch_conf();
-    auto graph = xrt::BuildXrtGraph(launch_conf.function(), device_type,
-                                    this->job_desc());
+    auto graph = xrt::BuildXrtGraph(launch_conf.function(), device_type, this->job_desc());
     {
       // Run InferShape pass
-      const auto &parallel_ctx =
-          this->kernel_conf().xrt_launch_conf().parallel_ctx();
+      const auto &parallel_ctx = this->kernel_conf().xrt_launch_conf().parallel_ctx();
       const auto &sbp_signatures = launch_conf.sbp_signatures();
 
       std::unordered_map<std::string, BlobDesc> entry_blob_descs;
       desc_getter_.DumpEntryBlobDescTo(&entry_blob_descs);
       auto options = xrt::CreateDefaultXrtPassOptions();
-      xrt::RunXrtPass("InferShape", graph.get(), options, &this->job_desc(),
-                      &parallel_ctx, &sbp_signatures, &entry_blob_descs);
+      xrt::RunXrtPass("InferShape", graph.get(), options, &this->job_desc(), &parallel_ctx,
+                      &sbp_signatures, &entry_blob_descs);
       // Update argument meta data
       // xrt::RunXrtPass("UpdateArgMetaData", graph.get(), options,
       //                 &this->job_desc());
     }
 
-    xrt::XrtEngine engine = (launch_conf.engine() == "XLA")
-                                ? xrt::XrtEngine::XLA
-                                : xrt::XrtEngine::TENSORRT;
+    xrt::XrtEngine engine =
+        (launch_conf.engine() == "XLA") ? xrt::XrtEngine::XLA : xrt::XrtEngine::TENSORRT;
     xrt::XrtDevice device = xrt::DeviceTypeToXrtDevice(device_type);
-    xrt::GraphCompiler compiler(this->op_conf().name(), engine, device,
-                                device_ordinal);
-    auto result =
-        compiler.Compile(graph.get(), entry_params, return_params, aliases);
+    xrt::GraphCompiler compiler(this->op_conf().name(), engine, device, device_ordinal);
+    auto result = compiler.Compile(graph.get(), entry_params, return_params, aliases);
     // Record new compilation result
     compilation_cache_->Record(signature, result);
     // Get compilation result from cache
@@ -99,10 +89,9 @@ xrt::Executable *XrtLaunchKernel<device_type>::BuildExecutable(
   return std::move(executable);
 }
 
-template <DeviceType device_type>
+template<DeviceType device_type>
 void XrtLaunchKernel<device_type>::MakeInputOutputAlias(
-    const std::vector<xrt::Parameter> &entry_params,
-    std::vector<xrt::Parameter> *return_params,
+    const std::vector<xrt::Parameter> &entry_params, std::vector<xrt::Parameter> *return_params,
     std::vector<xrt::InputOutputAlias> *aliases) const {
   const auto &launch_conf = this->op_conf().xrt_launch_conf();
   const auto &mutability_table = launch_conf.input_mutability();
@@ -110,19 +99,17 @@ void XrtLaunchKernel<device_type>::MakeInputOutputAlias(
   for (int i = 0; i < entry_params.size(); ++i) {
     const std::string &entry_name = entry_params[i].name();
     if (mutability_table.count(entry_name) > 0) {
-      aliases->push_back(
-          {{static_cast<int>(return_params->size())} /*output_index*/,
-           i /*param_number=*/,
-           {} /*param_index=*/});
+      aliases->push_back({{static_cast<int>(return_params->size())} /*output_index*/,
+                          i /*param_number=*/,
+                          {} /*param_index=*/});
       return_params->push_back(entry_params[i]);
     }
   }
 }
 
-template <DeviceType device_type>
+template<DeviceType device_type>
 void XrtLaunchKernel<device_type>::MappingParamsToFunctionNames(
-    std::vector<xrt::Parameter> *entry_params,
-    std::vector<xrt::Parameter> *return_params) const {
+    std::vector<xrt::Parameter> *entry_params, std::vector<xrt::Parameter> *return_params) const {
   const auto &launch_conf = this->op_conf().xrt_launch_conf();
   const auto &io_mapping = launch_conf.input_output_mapping();
 
@@ -136,10 +123,9 @@ void XrtLaunchKernel<device_type>::MappingParamsToFunctionNames(
   }
 }
 
-template <DeviceType device_type>
+template<DeviceType device_type>
 void XrtLaunchKernel<device_type>::ForwardDataContent(
-    const KernelCtx &ctx,
-    std::function<Blob *(const std::string &)> BnInOp2Blob) const {
+    const KernelCtx &ctx, std::function<Blob *(const std::string &)> BnInOp2Blob) const {
   desc_getter_ = BlobDescGetter<device_type>(this, BnInOp2Blob);
   // Prepare input and output parameters
   std::vector<xrt::Parameter> entry_params, return_params;
@@ -163,11 +149,8 @@ void XrtLaunchKernel<device_type>::ForwardDataContent(
   // Mapping parameter names to function input and output names.
   MappingParamsToFunctionNames(&entry_params, &return_params);
   // Build executable.
-  auto executable =
-      BuildExecutable(entry_params, return_params, aliases, device_ordinal);
-  if (!executable) {
-    LOG(FATAL) << "Executable is built failed.";
-  }
+  auto executable = BuildExecutable(entry_params, return_params, aliases, device_ordinal);
+  if (!executable) { LOG(FATAL) << "Executable is built failed."; }
   // Run executable.
   xrt::ExecutableRunOptions run_options;
   run_options.device_ordinal = device_ordinal;
@@ -187,9 +170,7 @@ void XrtLaunchKernel<device_type>::ForwardDataContent(
 
   const std::vector<xrt::Parameter> &results = executable->Results();
   CHECK_EQ(results.size(), return_params.size());
-  for (int i = 0; i < results.size(); ++i) {
-    CHECK_EQ(results[i].data(), return_params[i].data());
-  }
+  for (int i = 0; i < results.size(); ++i) { CHECK_EQ(results[i].data(), return_params[i].data()); }
 }
 
 // ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kXrtLaunchConf, XrtLaunchKernel,

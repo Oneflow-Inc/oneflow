@@ -11,8 +11,7 @@ namespace xrt {
 namespace mola {
 
 xla::XlaOp GenericGather(const xla::XlaOp &input, const xla::XlaOp &indices,
-                         const Shape &input_shape, const Shape &indices_shape,
-                         int64_t axis) {
+                         const Shape &input_shape, const Shape &indices_shape, int64_t axis) {
   int64_t index_vector_dim = indices_shape.NumAxes();
   xla::GatherDimensionNumbers dim_numbers;
   std::vector<long long> slice_sizes(input_shape.NumAxes());
@@ -40,16 +39,14 @@ xla::XlaOp GenericGather(const xla::XlaOp &input, const xla::XlaOp &indices,
   return xla::Gather(input, indices, dim_numbers, slice_sizes);
 }
 xla::XlaOp GenericGatherGrad(
-    const xla::XlaOp &buffer, const xla::XlaOp &updates,
-    const xla::XlaOp &indices, bool indices_are_vectors,
-    const std::function<xla::XlaOp(xla::XlaOp, xla::XlaOp, xla::XlaBuilder *)>
-        &combiner,
+    const xla::XlaOp &buffer, const xla::XlaOp &updates, const xla::XlaOp &indices,
+    bool indices_are_vectors,
+    const std::function<xla::XlaOp(xla::XlaOp, xla::XlaOp, xla::XlaBuilder *)> &combiner,
     xla::XlaBuilder *builder) {
   MOLA_CHECK_AND_ASSIGN(xla::Shape buffer_shape, builder->GetShape(buffer));
   MOLA_CHECK_AND_ASSIGN(xla::Shape updates_shape, builder->GetShape(updates));
   MOLA_CHECK_AND_ASSIGN(xla::Shape indices_shape, builder->GetShape(indices));
-  absl::Span<const long long> indices_dims =
-      xla::AsInt64Slice(indices_shape.dimensions());
+  absl::Span<const long long> indices_dims = xla::AsInt64Slice(indices_shape.dimensions());
 
   // If the indices are N-dimensional, the minor dimension of indices contains
   // the indices to update. Otherwise the indices are all scalars.
@@ -60,19 +57,14 @@ xla::XlaOp GenericGatherGrad(
   }
 
   int64_t num_indices = 1;
-  for (int64_t dim : indices_dims) {
-    num_indices *= dim;
-  }
+  for (int64_t dim : indices_dims) { num_indices *= dim; }
 
   // Degenerate case: nothing to update. Return the buffer unchanged.
-  if (num_indices == 0) {
-    return buffer;
-  }
+  if (num_indices == 0) { return buffer; }
 
   xla::ScatterDimensionNumbers dim_numbers;
-  dim_numbers.set_index_vector_dim(indices_are_vectors
-                                       ? indices_shape.dimensions_size() - 1
-                                       : indices_shape.dimensions_size());
+  dim_numbers.set_index_vector_dim(indices_are_vectors ? indices_shape.dimensions_size() - 1
+                                                       : indices_shape.dimensions_size());
 
   int64_t updates_rank = updates_shape.rank();
   int64_t buffer_rank = buffer_shape.rank();
@@ -81,8 +73,7 @@ xla::XlaOp GenericGatherGrad(
   // If the rank of `updates` is 0 and does not match the expected rank of
   // updates, broadcast `updates` to the expected shape of updates.
   auto new_updates = updates;
-  std::vector<long long> expected_updates_dims(indices_dims.begin(),
-                                               indices_dims.end());
+  std::vector<long long> expected_updates_dims(indices_dims.begin(), indices_dims.end());
   for (int64_t dim = num_index_dims; dim < buffer_rank; ++dim) {
     expected_updates_dims.push_back(buffer_shape.dimensions(dim));
   }
@@ -93,8 +84,7 @@ xla::XlaOp GenericGatherGrad(
     updates_rank = updates_shape.rank();
   }
   if (updates_rank > 0) {
-    for (int64_t i = (updates_rank - num_window_dims_in_updates);
-         i < updates_rank; ++i) {
+    for (int64_t i = (updates_rank - num_window_dims_in_updates); i < updates_rank; ++i) {
       dim_numbers.add_update_window_dims(i);
     }
   }
@@ -108,17 +98,13 @@ xla::XlaOp GenericGatherGrad(
   xla::XlaComputation combiner_computation;
   {
     xla::XlaBuilder cb("scatter-combiner");
-    auto xla_scalar_shape =
-        xla::ShapeUtil::MakeShape(buffer_shape.element_type(), {});
+    auto xla_scalar_shape = xla::ShapeUtil::MakeShape(buffer_shape.element_type(), {});
     auto p0 = xla::Parameter(&cb, 0, xla_scalar_shape, "p0");
     auto p1 = xla::Parameter(&cb, 1, xla_scalar_shape, "p1");
-    if (combiner) {
-      combiner(p0, p1, &cb);
-    }
+    if (combiner) { combiner(p0, p1, &cb); }
     combiner_computation = cb.Build().ConsumeValueOrDie();
   }
-  return xla::Scatter(buffer, indices, new_updates, combiner_computation,
-                      dim_numbers);
+  return xla::Scatter(buffer, indices, new_updates, combiner_computation, dim_numbers);
 }
 
 class GatherOp : public XlaOpKernel {
@@ -144,9 +130,7 @@ class GatherOp : public XlaOpKernel {
     ctx->SetOutput("out", output);
   }
 
-  virtual int GatherAxis(XlaOpContext *ctx) const {
-    return ctx->GetAttr<int64_t>("axis");
-  }
+  virtual int GatherAxis(XlaOpContext *ctx) const { return ctx->GetAttr<int64_t>("axis"); }
   virtual int GatherBatchDims(XlaOpContext *ctx) const { return 0; }
 };
 
@@ -183,22 +167,15 @@ class GatherGradOp : public XlaOpKernel {
     CHECK_LT(axis, updates_dim_vec.size());
     std::vector<int64_t> buffer_dim_vec;
 
-    for (int i = 0; i < axis; ++i) {
-      buffer_dim_vec.push_back(updates_dim_vec[i]);
-    }
+    for (int i = 0; i < axis; ++i) { buffer_dim_vec.push_back(updates_dim_vec[i]); }
     buffer_dim_vec.push_back(gather_dim_size);
-    for (int i = axis + indices_dim_vec.size(); i < updates_dim_vec.size();
-         ++i) {
+    for (int i = axis + indices_dim_vec.size(); i < updates_dim_vec.size(); ++i) {
       buffer_dim_vec.push_back(updates_dim_vec[i]);
     }
 
-    xla::XlaOp buffer =
-        Zeros(ctx->builder(), Shape(buffer_dim_vec), updates_data_type);
-    auto combiner = [](xla::XlaOp x, xla::XlaOp y, xla::XlaBuilder *) {
-      return xla::Add(x, y);
-    };
-    ctx->SetOutput("in_diff", GenericGatherGrad(buffer, updates, indices, true,
-                                                combiner, builder));
+    xla::XlaOp buffer = Zeros(ctx->builder(), Shape(buffer_dim_vec), updates_data_type);
+    auto combiner = [](xla::XlaOp x, xla::XlaOp y, xla::XlaBuilder *) { return xla::Add(x, y); };
+    ctx->SetOutput("in_diff", GenericGatherGrad(buffer, updates, indices, true, combiner, builder));
   }
 };
 
@@ -216,34 +193,24 @@ class UnsortedSegmentSumOp : public XlaOpKernel {
     std::vector<int64_t> buffer_dim_vec = InitBufferDimVec(ctx);
 
     buffer_dim_vec.push_back(num_segments);
-    for (int i = Axis(ctx) + segment_ids_shape.NumAxes();
-         i < data_shape.dim_vec().size(); ++i) {
+    for (int i = Axis(ctx) + segment_ids_shape.NumAxes(); i < data_shape.dim_vec().size(); ++i) {
       buffer_dim_vec.push_back(data_shape.dim_vec()[i]);
     }
 
-    const int64_t num_elems =
-        segment_ids_shape.NumAxes() > 0 ? segment_ids_shape.At(0) : 1;
+    const int64_t num_elems = segment_ids_shape.NumAxes() > 0 ? segment_ids_shape.At(0) : 1;
 
-    if (data_shape.NumAxes() == 0 && num_elems != 1) {
-      data = xla::Broadcast(data, {num_elems});
-    }
+    if (data_shape.NumAxes() == 0 && num_elems != 1) { data = xla::Broadcast(data, {num_elems}); }
 
-    xla::XlaOp default_value =
-        Zeros(ctx->builder(), Shape(buffer_dim_vec), data_type);
+    xla::XlaOp default_value = Zeros(ctx->builder(), Shape(buffer_dim_vec), data_type);
     xla::XlaBuilder *builder = ctx->builder();
     std::vector<long long> buffer_dim_vecs(buffer_dim_vec.size());
 
     xla::XlaOp buffer = xla::Broadcast(default_value, buffer_dim_vecs);
-    auto combiner = [](xla::XlaOp x, xla::XlaOp y, xla::XlaBuilder *) {
-      return xla::Add(x, y);
-    };
-    ctx->SetOutput("out", GenericGatherGrad(buffer, data, segment_ids, false,
-                                            combiner, builder));
+    auto combiner = [](xla::XlaOp x, xla::XlaOp y, xla::XlaBuilder *) { return xla::Add(x, y); };
+    ctx->SetOutput("out", GenericGatherGrad(buffer, data, segment_ids, false, combiner, builder));
   }
 
-  virtual int Axis(XlaOpContext *ctx) const {
-    return ctx->GetAttr<int64_t>("axis");
-  }
+  virtual int Axis(XlaOpContext *ctx) const { return ctx->GetAttr<int64_t>("axis"); }
 
   virtual std::vector<int64_t> InitBufferDimVec(XlaOpContext *ctx) const {
     std::vector<int64_t> buffer_dim_vec;
@@ -265,8 +232,7 @@ class UnsortedBatchSegmentSumOp : public UnsortedSegmentSumOp {
 };
 
 REGISTER_XLA_OP_KERNEL(UnsortedSegmentSum, UnsortedSegmentSumOp).Finalize();
-REGISTER_XLA_OP_KERNEL(UnsortedBatchSegmentSum, UnsortedBatchSegmentSumOp)
-    .Finalize();
+REGISTER_XLA_OP_KERNEL(UnsortedBatchSegmentSum, UnsortedBatchSegmentSumOp).Finalize();
 
 }  // namespace mola
 }  // namespace xrt

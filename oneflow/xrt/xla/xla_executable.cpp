@@ -9,8 +9,7 @@ namespace xrt {
 namespace mola {
 
 bool XlaExecutable::Run(const std::vector<Parameter> &inputs,
-                        const ExecutableRunOptions &run_options,
-                        bool block_until_done) {
+                        const ExecutableRunOptions &run_options, bool block_until_done) {
   CHECK_EQ(inputs.size(), input_shapes_.size())
       << "Size mismatch between input params and input shapes.";
   XlaExecutableRunContext run_context(run_options, device_);
@@ -34,9 +33,7 @@ bool XlaExecutable::Run(const std::vector<Parameter> &inputs,
     options.set_rng_seed(run_context.rng_seed());
 
     auto result = executable_->RunAsync(input_buffers, options);
-    if (block_until_done) {
-      run_context.stream()->BlockHostUntilDone();
-    }
+    if (block_until_done) { run_context.stream()->BlockHostUntilDone(); }
     return std::move(result);
   }());
 
@@ -48,9 +45,7 @@ bool XlaExecutable::Run(const std::vector<Parameter> &inputs,
   // the result buffers are expected to be shared with the return parameters.
   for (int i = 0; i < return_params.size(); ++i) {
     se::DeviceMemoryBase buffer = run_result.buffer({i});
-    if (buffer.opaque()) {
-      CHECK_EQ(buffer.opaque(), return_params[i].data());
-    }
+    if (buffer.opaque()) { CHECK_EQ(buffer.opaque(), return_params[i].data()); }
   }
 
   this->results_ = std::move(return_params);

@@ -19,10 +19,9 @@
 namespace oneflow {
 namespace xrt {
 
-template <typename T>
+template<typename T>
 void DoNoDuplicationAdd(util::PbVector<T> *repeat_field, const T &val) {
-  if (std::find(repeat_field->begin(), repeat_field->end(), val) ==
-      repeat_field->end()) {
+  if (std::find(repeat_field->begin(), repeat_field->end(), val) == repeat_field->end()) {
     repeat_field->Add()->assign(val);
   }
 }
@@ -33,18 +32,15 @@ int GetRepeatedIndex(const std::string &input) {
 };
 
 void SetOpInputBlobName(OperatorConf *op_conf, const std::string &input,
-                        const std::string &blob_name,
-                        const std::string &fixed_blob_name) {
+                        const std::string &blob_name, const std::string &fixed_blob_name) {
   auto *spec_conf = MutableMessageInPbMessage(op_conf, op_conf->op_type_case());
   switch (op_conf->op_type_case()) {
     case OperatorConf::kPrintConf: {
       int index = GetRepeatedIndex(input);
-      *(op_conf->mutable_print_conf()->mutable_in(index)->mutable_lbn()) =
-          fixed_blob_name;
+      *(op_conf->mutable_print_conf()->mutable_in(index)->mutable_lbn()) = fixed_blob_name;
       break;
     }
-    default:
-      ReplaceStrValInPbFdOrPbRpf(spec_conf, input, blob_name, fixed_blob_name);
+    default: ReplaceStrValInPbFdOrPbRpf(spec_conf, input, blob_name, fixed_blob_name);
   }
 }
 
@@ -75,8 +71,7 @@ class FoldSubgraphBuilder {
 
  private:
   void buildFunction(const XrtGraph *sub_graph, const XrtEngine &engine,
-                     util::Set<std::string> *input_mutability,
-                     bool *is_model_update,
+                     util::Set<std::string> *input_mutability, bool *is_model_update,
                      XrtLaunchOpConf::Function *function) const;
 
   void BuildXrtLaunchOps();
@@ -107,12 +102,9 @@ class FoldSubgraphBuilder {
   util::Map<std::string, std::string> fixedup_names_;
 };
 
-FoldSubgraphBuilder::FoldSubgraphBuilder(const XrtGraph &graph, Job *job)
-    : graph_(graph) {
+FoldSubgraphBuilder::FoldSubgraphBuilder(const XrtGraph &graph, Job *job) : graph_(graph) {
   for (const XrtNode *node : graph_.Nodes()) {
-    if (node->type() == _XrtLaunchOpType) {
-      launch_nodes_.push_back(node);
-    }
+    if (node->type() == _XrtLaunchOpType) { launch_nodes_.push_back(node); }
   }
 
   folded_nodes_.resize(launch_nodes_.size());
@@ -120,9 +112,7 @@ FoldSubgraphBuilder::FoldSubgraphBuilder(const XrtGraph &graph, Job *job)
     XrtGraph *sub_graph = launch_nodes_[i]->sub_graph();
     CHECK_NOTNULL(sub_graph);
     for (const XrtNode *sub_node : sub_graph->Nodes()) {
-      if (!sub_node->IsArgumentNode()) {
-        folded_nodes_[i].push_back(sub_node);
-      }
+      if (!sub_node->IsArgumentNode()) { folded_nodes_[i].push_back(sub_node); }
     }
   }
   builder_ = std::make_shared<JobBuilder>(job);
@@ -135,14 +125,13 @@ bool IsMutableArgument(const Argument &argument, const std::string &op_type,
   return mutable_vars.count(key) > 0;
 }
 
-void FoldSubgraphBuilder::buildFunction(
-    const XrtGraph *sub_graph, const XrtEngine &engine,
-    util::Set<std::string> *input_mutability, bool *is_model_update,
-    XrtLaunchOpConf::Function *function) const {
+void FoldSubgraphBuilder::buildFunction(const XrtGraph *sub_graph, const XrtEngine &engine,
+                                        util::Set<std::string> *input_mutability,
+                                        bool *is_model_update,
+                                        XrtLaunchOpConf::Function *function) const {
   for (const XrtNode *node : sub_graph->Nodes()) {
     if (!node->IsArgumentNode()) {
-      *(function->add_node()) =
-          *reinterpret_cast<const OperatorConf *>(&node->param());
+      *(function->add_node()) = *reinterpret_cast<const OperatorConf *>(&node->param());
       *is_model_update = IsOptimizerNode(node, engine);
     } else {
       auto *argument_proto = function->add_argument();
@@ -159,16 +148,13 @@ void FoldSubgraphBuilder::buildFunction(
 
         const std::string &op_type = edge->end()->type();
         const XrtDevice &device = edge->end()->device();
-        is_mutable |=
-            IsMutableArgument(argument, op_type, MakeXrtField(device, engine));
+        is_mutable |= IsMutableArgument(argument, op_type, MakeXrtField(device, engine));
       }
       for (const XrtEdge *edge : node->in_edges()) {
         const Argument &argument = edge->argument();
         argument_proto->set_value(argument.name());
       }
-      if (is_mutable) {
-        input_mutability->insert(argument_proto->value());
-      }
+      if (is_mutable) { input_mutability->insert(argument_proto->value()); }
     }
   }
 }
@@ -226,37 +212,30 @@ void FoldSubgraphBuilder::BuildXrtLaunchOps() {
     XrtEngine engine = GraphEngine(node->sub_graph());
     launch_conf->set_engine([&]() -> std::string {
       switch (engine) {
-        case XrtEngine::XLA:
-          return "XLA";
-        case XrtEngine::TENSORRT:
-          return "TENSORRT";
-        default:
-          LOG(FATAL) << "Not supported engine " << engine;
-          return "";
+        case XrtEngine::XLA: return "XLA";
+        case XrtEngine::TENSORRT: return "TENSORRT";
+        default: LOG(FATAL) << "Not supported engine " << engine; return "";
       }
     }());
 
     util::Set<std::string> input_mutability;
     bool is_model_update = false;
     // Build function, returns inputs mutabilities and is_model_update.
-    buildFunction(node->sub_graph(), engine, &input_mutability,
-                  &is_model_update, launch_conf->mutable_function());
+    buildFunction(node->sub_graph(), engine, &input_mutability, &is_model_update,
+                  launch_conf->mutable_function());
     // Mark the launch op whether it is model update op or not.
     launch_conf->set_model_update(is_model_update);
 
     for (const auto &arg_proto : launch_conf->function().argument()) {
       std::string arg_value = arg_proto.value();
       const auto &it = fixedup_names_.find(arg_value);
-      if (it != fixedup_names_.end()) {
-        arg_value = it->second /* fixedup blob names */;
-      }
+      if (it != fixedup_names_.end()) { arg_value = it->second /* fixedup blob names */; }
       if (input_mutability.count(arg_proto.value()) > 0) {
         (*launch_conf->mutable_input_mutability())[arg_value] = true;
       }
 
       // Set input and output mapping from launch op to function.
-      (*launch_conf->mutable_input_output_mapping())[arg_value] =
-          arg_proto.value();
+      (*launch_conf->mutable_input_output_mapping())[arg_value] = arg_proto.value();
 
       // Store the batch axis that have batch dimension, so that it's no
       // need to infer `HasBatchAxis4Lbn` for `XrtLaunch` operators.
@@ -267,8 +246,7 @@ void FoldSubgraphBuilder::BuildXrtLaunchOps() {
     }
 
     CHECK_GT(folded_nodes_[i].size(), 0);
-    const ParallelConf &parallel_conf =
-        builder_->ParallelConf4OpName(folded_nodes_[i][0]->name());
+    const ParallelConf &parallel_conf = builder_->ParallelConf4OpName(folded_nodes_[i][0]->name());
     // TODO(hjchen2) check parallel conf over all folded nodes
 
     builder_->AddOps(parallel_conf, {op_conf});
@@ -285,13 +263,10 @@ void FoldSubgraphBuilder::FixupControlInOpNames() {
     }
   }
 
-  auto AddControlInOpName = [&](OperatorConf *conf,
-                                const std::string &op_name) -> void {
+  auto AddControlInOpName = [&](OperatorConf *conf, const std::string &op_name) -> void {
     std::string ctrl_in_op_name = op_name;
     const auto &it = folded_op_names.find(op_name);
-    if (it != folded_op_names.end()) {
-      ctrl_in_op_name = it->second->name();
-    }
+    if (it != folded_op_names.end()) { ctrl_in_op_name = it->second->name(); }
     if (conf->name() != ctrl_in_op_name) {
       DoNoDuplicationAdd(conf->mutable_ctrl_in_op_name(), ctrl_in_op_name);
     }
@@ -302,14 +277,10 @@ void FoldSubgraphBuilder::FixupControlInOpNames() {
     if (node->sub_graph() == nullptr) {
       auto ctrl_in_op_names = op_conf->ctrl_in_op_name();
       op_conf->clear_ctrl_in_op_name();
-      for (const auto &op_name : ctrl_in_op_names) {
-        AddControlInOpName(op_conf, op_name);
-      }
+      for (const auto &op_name : ctrl_in_op_names) { AddControlInOpName(op_conf, op_name); }
     } else {
       for (const XrtNode *sub_node : node->sub_graph()->Nodes()) {
-        if (sub_node->IsArgumentNode()) {
-          continue;
-        }
+        if (sub_node->IsArgumentNode()) { continue; }
         const auto &folded_op_conf = builder_->OpConf4OpName(sub_node->name());
         for (const auto &op_name : folded_op_conf.ctrl_in_op_name()) {
           AddControlInOpName(op_conf, op_name);
@@ -325,9 +296,7 @@ void FoldSubgraphBuilder::FixupInOutBlobNames() {
     // Fix input arguments consume key.
     util::Map<std::string, int> consume_argument_names;
     for (XrtEdge *edge : node->in_edges()) {
-      if (edge->IsControlEdge()) {
-        continue;
-      }
+      if (edge->IsControlEdge()) { continue; }
       const Argument &arg = edge->argument();
       int index = consume_argument_names.size();
       auto it = consume_argument_names.find(arg.name());
@@ -346,9 +315,7 @@ void FoldSubgraphBuilder::FixupInOutBlobNames() {
     // Fix output blob names.
     util::Map<std::string, int> produce_argument_names;
     for (XrtEdge *edge : node->out_edges()) {
-      if (edge->IsControlEdge()) {
-        continue;
-      }
+      if (edge->IsControlEdge()) { continue; }
       const Argument &arg = edge->argument();
       int index = produce_argument_names.size();
       auto it = produce_argument_names.find(arg.name());
@@ -358,13 +325,11 @@ void FoldSubgraphBuilder::FixupInOutBlobNames() {
       }
       index = it->second;
 
-      std::string fixed_blob_name =
-          absl::StrCat(launch_op_name, "/out_", index);
+      std::string fixed_blob_name = absl::StrCat(launch_op_name, "/out_", index);
       fixedup_names_.emplace(arg.name(), fixed_blob_name);
       // Append to `batch_axis`
       if (builder_->HasBatchAxis4Lbn(arg.name())) {
-        builder_->AddBatchAxis4Lbn(fixed_blob_name,
-                                   builder_->BatchAxis4Lbn(arg.name()));
+        builder_->AddBatchAxis4Lbn(fixed_blob_name, builder_->BatchAxis4Lbn(arg.name()));
       }
       // Fix end input blob name
       const XrtNode *end = edge->end();
@@ -376,8 +341,7 @@ void FoldSubgraphBuilder::FixupInOutBlobNames() {
       ArgumentMetaData metadata;
       metadata.consume_key = arg.meta_data().consume_key;
       metadata.produce_key = absl::StrCat("out_", index);
-      Argument fixed_arg(fixed_blob_name, arg.shape(), arg.data_type(),
-                         metadata);
+      Argument fixed_arg(fixed_blob_name, arg.shape(), arg.data_type(), metadata);
       edge->SetArgument(fixed_arg);
     }
   }
@@ -386,8 +350,7 @@ void FoldSubgraphBuilder::FixupInOutBlobNames() {
 void FoldSubgraphBuilder::FixupTimeShapes() {
   for (int i = 0; i < launch_nodes_.size(); ++i) {
     CHECK_GT(folded_nodes_[i].size(), 0);
-    const OpTimeShape &time_shape =
-        builder_->TimeShape4OpName(folded_nodes_[i][0]->name());
+    const OpTimeShape &time_shape = builder_->TimeShape4OpName(folded_nodes_[i][0]->name());
     // TODO(hjchen2) check time shape for all folded nodes
     builder_->AddTimeShape4OpName(launch_nodes_[i]->name(), time_shape);
   }
@@ -400,14 +363,12 @@ void FoldSubgraphBuilder::FixupSbpSignatures() {
     for (const XrtEdge *edge : node->in_edges()) {
       CHECK(edge->HasAttr("sbp_policy"));
       const std::string &bn = edge->argument().meta_data().consume_key;
-      (*sbp_parallel)[bn] =
-          edge->Attr<std::vector<SbpParallel>>("sbp_policy")[1];
+      (*sbp_parallel)[bn] = edge->Attr<std::vector<SbpParallel>>("sbp_policy")[1];
     }
     for (const XrtEdge *edge : node->out_edges()) {
       CHECK(edge->HasAttr("sbp_policy"));
       const std::string &bn = edge->argument().meta_data().produce_key;
-      (*sbp_parallel)[bn] =
-          edge->Attr<std::vector<SbpParallel>>("sbp_policy")[0];
+      (*sbp_parallel)[bn] = edge->Attr<std::vector<SbpParallel>>("sbp_policy")[0];
     }
     // Append sbp signatures to helper
     builder_->AddSbpSignature4OpName(node->name(), sbp_conf);
@@ -427,9 +388,7 @@ void FoldSubgraphBuilder::RemoveLaunchFoldedOps() {
   util::Set<std::string> removing_names;
   for (const XrtNode *node : launch_nodes_) {
     for (const XrtNode *sub_node : node->sub_graph()->Nodes()) {
-      if (!sub_node->IsArgumentNode()) {
-        removing_names.insert(sub_node->name());
-      }
+      if (!sub_node->IsArgumentNode()) { removing_names.insert(sub_node->name()); }
     }
   }
   builder_->RemoveOpByName(removing_names);
@@ -447,8 +406,7 @@ class RebuildCompiledJobPass : public XrtPass {
   //   0 - job
   void Run(XrtGraph *graph, const XrtPassOptions &options,
            const std::vector<Any> &params) override {
-    CHECK_GE(params.size(), 1)
-        << "Job is required by `RebuildCompiledJobPass`.";
+    CHECK_GE(params.size(), 1) << "Job is required by `RebuildCompiledJobPass`.";
     auto *job = any_cast<Job *>(params[0]);
 
     CHECK(graph) << "Graph is required by `RebuildCompiledJobPass`.";
