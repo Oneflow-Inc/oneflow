@@ -96,3 +96,70 @@ std::string JobBuildAndInferCtx_GetSerializedParallelConfFromProducerView(
   return oneflow::JobBuildAndInferCtx_GetSerializedParallelConfFromProducerView(job_name, lbn)
       .GetDataAndSerializedErrorProto(error_str, "");
 }
+
+bool JobBuildAndInferCtx_IsMirrorBlob(const std::string& job_name, const std::string& lbn,
+                                      std::string* error_str) {
+  return oneflow::JobBuildAndInferCtx_IsMirrorBlob(job_name, lbn)
+      .GetDataAndSerializedErrorProto(error_str, false);
+}
+
+int JobBuildAndInferCtx_NumLbiInMirrorBlob(const std::string& job_name, const std::string& lbn,
+                                           std::string* error_str) {
+  return oneflow::JobBuildAndInferCtx_NumLbiInMirrorBlob(job_name, lbn)
+      .GetDataAndSerializedErrorProto(error_str, 0);
+}
+
+std::string JobBuildAndInferCtx_GetSerializedLbiInMirrorBlob(const std::string& job_name,
+                                                             const std::string& lbn, int index,
+                                                             std::string* error_str) {
+  return oneflow::JobBuildAndInferCtx_GetLbiInMirrorBlob(job_name, lbn, index)
+      .GetDataAndSerializedErrorProto(error_str, "");
+}
+
+std::string JobBuildAndInferCtx_MirrorBlobGetSerializedIdListAsStaticShape(
+    const std::string& job_name, const std::string& mirror_blob_name, std::string* error_str) {
+  return oneflow::JobBuildAndInferCtx_MirrorBlobGetSerializedIdListAsStaticShape(job_name,
+                                                                                 mirror_blob_name)
+      .GetDataAndSerializedErrorProto(error_str, "");
+}
+
+long long JobBuildAndInferCtx_MirrorBlobGetDataType(const std::string& job_name,
+                                                    const std::string& mirror_blob_name,
+                                                    std::string* error_str) {
+  return oneflow::JobBuildAndInferCtx_MirrorBlobGetDataType(job_name, mirror_blob_name)
+      .GetDataAndSerializedErrorProto(error_str, 0LL);
+}
+
+bool JobBuildAndInferCtx_MirrorBlobIsDynamic(const std::string& job_name,
+                                             const std::string& mirror_blob_name,
+                                             std::string* error_str) {
+  return oneflow::JobBuildAndInferCtx_MirrorBlobIsDynamic(job_name, mirror_blob_name)
+      .GetDataAndSerializedErrorProto(error_str, false);
+}
+
+long long JobBuildAndInferCtx_MirrorBlobGetNumOfLoDLevels(const std::string& job_name,
+                                                          const std::string& mirror_blob_name,
+                                                          std::string* error_str) {
+  return oneflow::JobBuildAndInferCtx_MirrorBlobGetNumOfLoDLevels(job_name, mirror_blob_name)
+      .GetDataAndSerializedErrorProto(error_str, 0LL);
+}
+
+std::string JobBuildAndInferCtx_MirrorBlobGetBatchAxis(const std::string& job_name,
+                                                       const std::string& mirror_blob_name,
+                                                       std::string* error_str) {
+  return oneflow::JobBuildAndInferCtx_MirrorBlobGetBatchAxis(job_name, mirror_blob_name)
+      .GetDataAndSerializedErrorProto(error_str, "");
+}
+
+std::string JobBuildAndInferCtx_MirrorBlobGetSplitAxisFromProducerView(
+    const std::string& job_name, const std::string& mirror_blob_name, std::string* error_str) {
+  return oneflow::JobBuildAndInferCtx_GetSplitAxisFromProducerView(job_name, mirror_blob_name)
+      .GetDataAndSerializedErrorProto(error_str, "");
+}
+
+std::string JobBuildAndInferCtx_MirrorBlobGetSerializedParallelConfFromProducerView(
+    const std::string& job_name, const std::string& mirror_blob_name, std::string* error_str) {
+  return oneflow::JobBuildAndInferCtx_GetSerializedParallelConfFromProducerView(job_name,
+                                                                                mirror_blob_name)
+      .GetDataAndSerializedErrorProto(error_str, "");
+}
