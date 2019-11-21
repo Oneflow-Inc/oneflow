@@ -8,12 +8,26 @@
 namespace oneflow {
 
 class OpKernel;
+class BlobInfo;
+class ParallelContext;
 
 namespace user_op {
 
-struct KernelRegCtx {
-  DeviceType device;
-  DataType dtype;
+class KernelRegCtx final {
+ public:
+  explicit KernelRegCtx();
+  DeviceType device() const { return device_; }
+  DataType data_type() const { return data_type_; }
+  const BlobInfo& BlobDesc4ArgNameAndIndex(const std::string& arg_name, int32_t index) const {
+    return blob_desc4arg_name_and_index_fn_(arg_name, index);
+  }
+  const ParallelContext& parallel_ctx() const { return parallel_; }
+
+ private:
+  DeviceType device_;
+  DataType data_type_;
+  ParallelContext parallel_ctx_;
+  std::function<const BlobDesc&(const std::string&, int32_t)> blob_desc4arg_name_and_index_fn_;
 };
 
 using CreateFn = std::function<OpKernel*(/*TODO(niuchong)*/)>;
