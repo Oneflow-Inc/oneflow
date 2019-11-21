@@ -6,6 +6,7 @@ import "oneflow/core/common/data_type.proto";
 import "oneflow/core/operator/op_attribute.proto";
 import "oneflow/core/operator/op_conf.proto";
 import "oneflow/core/job/placement.proto";
+import "oneflow/core/register/blob_desc.proto";
 
 message ConvKernelConf {
   required ShapeProto in = 1;
@@ -174,6 +175,11 @@ message NcclTupleBroadcastConf {
   required ParallelContext parallel_ctx = 1;
 }
 
+message UserKernelConf {
+  map<string, BlobDescProto> bn_in_op2blob_desc = 1;
+  required ParallelContext parallel_ctx = 2;
+}
+
 message KernelConf {
   required OpAttribute op_attribute = 1;
   required bool is_forward = 2;
@@ -189,6 +195,7 @@ message KernelConf {
   optional bool can_naive_do_record_id_in_device_piece = 14 [default = false];
 
   oneof kernel_type {
+    UserKernelConf user_conf = 100;
     SparseSoftmaxCrossEntropyLossKernelConf sparse_softmax_cross_entropy_loss_conf = 101;
     SparseCrossEntropyLossKernelConf sparse_cross_entropy_loss_conf = 102;
     DecodeRandomKernelConf decode_random_conf = 103;
