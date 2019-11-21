@@ -801,7 +801,7 @@ message ForeignOutputOpConf {
 }
 
 message ForeignWatchOpConf {
-  repeated string in = 1;
+  required string in = 1;
   required string handler_uuid = 2;
 }
 

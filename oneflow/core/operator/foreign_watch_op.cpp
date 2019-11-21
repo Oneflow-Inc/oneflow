@@ -5,7 +5,7 @@ namespace oneflow {
 
 void ForeignWatchOp::InitFromOpConf() {
   CHECK(op_conf().has_foreign_watch_conf());
-  EnrollRepeatedInputBn("in");
+  EnrollInputBn("in");
 }
 
 Maybe<void> ForeignWatchOp::InferBlobDescs(
@@ -24,9 +24,14 @@ Maybe<void> ForeignWatchOp::InferBatchAxis(
   return Maybe<void>::Ok();
 }
 
-Maybe<void> ForeignWatchOp::GetSbpSignatures(
-    const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
-    SbpSignatureList* sbp_sig_list) const {
+Maybe<void> ForeignWatchOp::InferSbpSignature(
+    SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
+    const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
+    std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
+    const ParallelDesc& parallel_desc) const {
+  OF_CHECK_EQ(JUST(SbpInferHint4Ibn("in"))->parallel_desc().parallel_num(), 1);
+  OF_CHECK(JUST(SbpInferHint4Ibn("in"))->parallel_desc() == parallel_desc);
+  (*sbp_signature->mutable_bn_in_op2sbp_parallel())["in"].mutable_split_parallel()->set_axis(0);
   return Maybe<void>::Ok();
 }
 

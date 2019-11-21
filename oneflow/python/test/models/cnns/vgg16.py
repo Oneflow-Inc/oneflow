@@ -13,6 +13,18 @@ _MODEL_SAVE_DIR = "./model_save-{}".format(
 )
 NODE_LIST = "192.168.1.12,192.168.1.14"
 
+class DLNetSpec(object):
+  def __init__(self):
+    self.batch_size = 8
+    self.data_part_num = 32
+    self.eval_dir = _DATA_DIR
+    self.train_dir = _DATA_DIR
+    self.model_save_dir = _MODEL_SAVE_DIR
+    self.model_load_dir = _MODEL_LOAD_DIR
+    self.num_nodes = 1
+    self.gpu_num_per_node = 1
+    self.iter_num = 10
+
 parser = argparse.ArgumentParser(
     description="flags for multi-node and resource")
 parser.add_argument("-g", "--gpu_num_per_node",
@@ -46,7 +58,6 @@ parser.add_argument(
 )
 parser.add_argument("-dn", "--data_part_num", type=int, default=32, required=False)
 parser.add_argument("-b", "--batch_size", type=int, default=8, required=False)
-args = parser.parse_args()
 
 
 def _conv2d_layer(
@@ -91,7 +102,7 @@ def _conv2d_layer(
     return output
 
 
-def _data_load_layer(data_dir):
+def _data_load_layer(args, data_dir):
     image_blob_conf = flow.data.BlobConf(
         "encoded",
         shape=(224, 224, 3),
@@ -105,7 +116,7 @@ def _data_load_layer(data_dir):
         "class/label", shape=(), dtype=flow.int32, codec=flow.data.RawCodec()
     )
 
-    node_num = len(args.node_list.strip().split(',')) if args.multinode else 1
+    node_num = args.num_nodes
     total_batch_size = args.batch_size * args.gpu_num_per_node * node_num
     return flow.data.decode_ofrecord(
         data_dir, (label_blob_conf, image_blob_conf),
@@ -200,61 +211,31 @@ def vgg(images, labels, trainable=True):
     return tuple(to_return)
 
 
-@flow.function
-def vgg_train_job():
-    flow.config.train.primary_lr(0.00001)
-    flow.config.train.model_update_conf(dict(naive_conf={}))
+def main(args):
+    @flow.function
+    def vgg_train_job():
+        flow.config.train.primary_lr(0.00001)
+        flow.config.train.model_update_conf(dict(naive_conf={}))
+        (labels, images) = _data_load_layer(args, args.train_dir)
+        to_return = vgg(images, labels)
+        loss = to_return[-1]
+        flow.losses.add_loss(loss)
+        return loss
 
-    (labels, images) = _data_load_layer(args.train_dir)
-    to_return = vgg(images, labels)
-    loss = to_return[-1]
-    flow.losses.add_loss(loss)
-    return loss
-
-
-@flow.function
-def vgg_eval_job():
-    (labels, images) = _data_load_layer(args.eval_dir)
-    return vgg(images, labels, False)
-
-
-if __name__ == "__main__":
+    @flow.function
+    def vgg_eval_job():
+        (labels, images) = _data_load_layer(args, args.eval_dir)
+        return vgg(images, labels, False)
+    flow.config.machine_num(args.num_nodes)
     flow.config.gpu_device_num(args.gpu_num_per_node)
-    flow.config.grpc_use_no_signal()
-    flow.config.ctrl_port(3333)
-
-    flow.config.log_dir("./log")
     flow.config.default_data_type(flow.float)
-    if args.multinode:
-        flow.config.ctrl_port(12138)
-
-        nodes = []
-        for n in args.node_list.strip().split(","):
-          addr_dict = {}
-          addr_dict["addr"] = n
-          nodes.append(addr_dict)
-
-        flow.config.machine(nodes)
-
-        if args.remote_by_hand is False:
-            if args.scp_binary_without_uuid:
-                flow.deprecated.init_worker(
-                    scp_binary=True, use_uuid=False)
-            elif args.skip_scp_binary:
-                flow.deprecated.init_worker(
-                    scp_binary=False, use_uuid=False)
-            else:
-                flow.deprecated.init_worker(
-                    scp_binary=True, use_uuid=True)
-
     check_point = flow.train.CheckPoint()
     if not args.model_load_dir:
         check_point.init()
     else:
         check_point.load(args.model_load_dir)
 
-
-    num_nodes = len(args.node_list.strip().split(",")) if args.multinode else 1
+    num_nodes = args.num_nodes
     print("Traning vgg16: num_gpu_per_node = {}, num_nodes = {}.".format(args.gpu_num_per_node, num_nodes))
 
     print("{:>12}  {:>12}  {:>12}".format("iter", "loss type", "loss value"))
@@ -275,15 +256,40 @@ if __name__ == "__main__":
         # )
       if (i + 1) % 100 == 0:
         check_point.save(_MODEL_SAVE_DIR + str(i))
-    if (
-            args.multinode
-          and args.skip_scp_binary is False
-        and args.scp_binary_without_uuid is False
-    ):
-      flow.deprecated.delete_worker()
 
     # save loss to file
     loss_file = "{}n{}c.npy".format(str(num_nodes), str(args.gpu_num_per_node * num_nodes))
     loss_path = "./of_loss/vgg16"
     if not os.path.exists(loss_path): os.makedirs(loss_path)
     numpy.save(os.path.join(loss_path, loss_file), loss)
+
+if __name__ == "__main__":
+    args = parser.parse_args()
+    flow.env.grpc_use_no_signal()
+    flow.env.log_dir("./log")
+    if args.multinode:
+        flow.env.ctrl_port(12138)
+
+        nodes = []
+        for n in args.node_list.strip().split(","):
+          addr_dict = {}
+          addr_dict["addr"] = n
+          nodes.append(addr_dict)
+
+        flow.env.machine(nodes)
+
+        if args.remote_by_hand is False:
+            if args.scp_binary_without_uuid:
+                flow.deprecated.init_worker(
+                    scp_binary=True, use_uuid=False)
+            elif args.skip_scp_binary:
+                flow.deprecated.init_worker(
+                    scp_binary=False, use_uuid=False)
+            else:
+                flow.deprecated.init_worker(
+                    scp_binary=True, use_uuid=True)
+
+    main(args)
+    if (args.multinode and args.skip_scp_binary is False and
+          args.scp_binary_without_uuid is False):
+        flow.deprecated.delete_worker()

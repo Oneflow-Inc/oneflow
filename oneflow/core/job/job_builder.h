@@ -44,6 +44,7 @@ class JobBuilder final {
 
   void ForEachOperator(const std::function<void(const Operator&)>& Handler) const;
 
+  const ParallelConf& ParallelConf4Lbi(const LogicalBlobId& lbi) const;
   const ParallelConf& ParallelConf4OpName(const std::string& op_name) const;
   void AddParallelConf4OpName(const std::string& op_name, const ParallelConf& parallel_conf);
 
@@ -63,6 +64,7 @@ class JobBuilder final {
   Job* job_;
   HashMap<std::string, OperatorConf*> op_name2op_conf_;
   HashMap<std::string, ParallelConf*> op_name2parallel_conf_;
+  HashMap<LogicalBlobId, ParallelConf*> lbi2blob_parallel_conf_;
   HashSet<std::string> modified_op_conf_op_names_;
   HashSet<std::string> modified_parallel_conf_op_names_;
 

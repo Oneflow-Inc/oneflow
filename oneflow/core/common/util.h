@@ -218,6 +218,8 @@ void Erase(T& container, const std::function<bool(const typename T::value_type&)
 #define ALWAYS_INLINE inline
 #endif
 
+bool IsKernelSafeInt32(int64_t n);
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_COMMON_UTIL_H_
