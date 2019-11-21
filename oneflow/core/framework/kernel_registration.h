@@ -4,12 +4,12 @@
 #include "oneflow/core/framework/registrar.h"
 #include "oneflow/core/common/device_type.pb.h"
 #include "oneflow/core/common/data_type.pb.h"
+#include "oneflow/core/job/placement.pb.h"
 
 namespace oneflow {
 
 class OpKernel;
 class BlobInfo;
-class ParallelContext;
 
 namespace user_op {
 
@@ -21,13 +21,13 @@ class KernelRegCtx final {
   const BlobInfo& BlobDesc4ArgNameAndIndex(const std::string& arg_name, int32_t index) const {
     return blob_desc4arg_name_and_index_fn_(arg_name, index);
   }
-  const ParallelContext& parallel_ctx() const { return parallel_; }
+  const ParallelContext& parallel_ctx() const { return parallel_ctx_; }
 
  private:
   DeviceType device_;
   DataType data_type_;
   ParallelContext parallel_ctx_;
-  std::function<const BlobDesc&(const std::string&, int32_t)> blob_desc4arg_name_and_index_fn_;
+  std::function<const BlobInfo&(const std::string&, int32_t)> blob_desc4arg_name_and_index_fn_;
 };
 
 using CreateFn = std::function<OpKernel*(/*TODO(niuchong)*/)>;
