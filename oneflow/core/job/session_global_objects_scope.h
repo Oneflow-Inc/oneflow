@@ -3,21 +3,17 @@
 
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job/job_set.pb.h"
-#include "oneflow/core/job/flags_and_log_scope.h"
 #include "oneflow/core/common/maybe.h"
 
 namespace oneflow {
 
-class EnvironmentObjectsScope final {
+class SessionGlobalObjectsScope final {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(EnvironmentObjectsScope);
-  EnvironmentObjectsScope();
-  ~EnvironmentObjectsScope();
+  OF_DISALLOW_COPY_AND_MOVE(SessionGlobalObjectsScope);
+  SessionGlobalObjectsScope();
+  ~SessionGlobalObjectsScope();
 
   Maybe<void> Init(const ConfigProto& config_proto);
-
- private:
-  std::unique_ptr<FlagsAndLogScope> flags_and_log_scope_;
 };
 
 }  // namespace oneflow

@@ -3,17 +3,8 @@ package oneflow;
 
 import public "oneflow/core/common/device_type.proto";
 
-message Machine {
-  required int64 id = 1;
-  required string addr = 2; // domain name or ip
-  optional int32 ctrl_port_agent = 3 [default = -1];
-  optional int32 data_port_agent = 4 [default = -1];
-}
-
 message Resource {
-  repeated Machine machine = 1;
-  required int32 ctrl_port = 2;
-  optional int32 data_port = 3 [default = -1];
+  optional int32 machine_num = 1 [default = 0];
   optional int32 gpu_device_num = 4 [default = 0];
   optional int32 cpu_device_num = 5 [default = 0];
   optional int32 comm_net_worker_num = 6 [default = 4];
@@ -26,8 +17,3 @@ message Resource {
   optional bool enable_numa_aware_cuda_malloc_host = 14 [default = false];
   optional int32 compute_thread_pool_size = 15;
 }
-
-// Usage:
-//   machine_name:gpu:gpu_dev_phy_id
-//   machine_name:gpu:gpu_dev_phy_id_first-gpu_dev_phy_id_last
-//   machine_name:cpu:parallel_num

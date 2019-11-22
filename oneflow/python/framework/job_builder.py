@@ -30,6 +30,9 @@ def CurCtxAddAndInferOp(op_conf_proto, parallel_conf_proto):
 def CurCtxAddLossLogicalBlobName(lbn):
     return c_api_util.CurJobBuildAndInferCtx_AddLossLogicalBlobName(lbn)
 
+def CurCtxAddLbiAndDiffWatcherUuidPair(lbi_and_uuid):
+    return c_api_util.CurJobBuildAndInferCtx_AddLbiAndDiffWatcherUuidPair(lbi_and_uuid)
+
 def CurCtxHasJobConf():
     return c_api_util.CurJobBuildAndInferCtx_HasJobConf()
 
