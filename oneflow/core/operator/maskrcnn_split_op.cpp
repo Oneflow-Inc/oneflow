@@ -39,11 +39,8 @@ class MaskrcnnSplitOp final : public Operator {
     return Maybe<void>::Ok();
   }
   Maybe<void> GetSbpSignatures(SbpSignatureList* sbp_sig_list) const override {
-    SbpSignatureBuilder()
-        .Split("in", 0)
-        .Split("segm", 0)
-        .Split("out", 0)
-        .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+    SbpSignatureBuilder().Split("in", 0).Split("segm", 0).Split("out", 0).Build(
+        sbp_sig_list->mutable_sbp_signature()->Add());
     return Maybe<void>::Ok();
   }
 };
