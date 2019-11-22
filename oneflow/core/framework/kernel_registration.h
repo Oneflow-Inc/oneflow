@@ -4,20 +4,44 @@
 #include "oneflow/core/framework/registrar.h"
 #include "oneflow/core/common/device_type.pb.h"
 #include "oneflow/core/common/data_type.pb.h"
+#include "oneflow/core/job/placement.pb.h"
+#include "oneflow/core/common/util.h"
 
 namespace oneflow {
 
-class OpKernel;
+class KernelConf;
 
 namespace user_op {
 
-struct KernelRegCtx {
-  DeviceType device;
-  DataType dtype;
+class OpKernel;
+class KernelInitContext;
+class BlobInfo;
+
+using BlobInfo4ArgNameAndIndexFn =
+    std::function<std::shared_ptr<BlobInfo>(const std::string&, int32_t)>;
+
+class KernelRegContext final {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(KernelRegContext);
+  explicit KernelRegContext(DeviceType, DataType, const ParallelContext&,
+                            BlobInfo4ArgNameAndIndexFn);
+  explicit KernelRegContext(const KernelConf&);
+  ~KernelRegContext() = default;
+
+  DeviceType device() const { return device_; }
+  DataType data_type() const { return data_type_; }
+  const ParallelContext& parallel_ctx() const { return parallel_ctx_; }
+  std::shared_ptr<const BlobInfo> BlobDesc4ArgNameAndIndex(const std::string&, int32_t) const;
+
+ private:
+  DeviceType device_;
+  DataType data_type_;
+  ParallelContext parallel_ctx_;
+  BlobInfo4ArgNameAndIndexFn fn_;
 };
 
-using CreateFn = std::function<OpKernel*(/*TODO(niuchong)*/)>;
-using IsMatchedPredicator = std::function<bool(const KernelRegCtx&)>;
+using CreateFn = std::function<OpKernel*(const KernelInitContext&)>;
+using IsMatchedPredicator = std::function<bool(const KernelRegContext&)>;
 using InferTmpSizeFn = std::function<size_t(/*TODO(niuchong)*/)>;
 
 struct KernelRegistrationVal {
@@ -47,7 +71,7 @@ class KernelRegistryWrapperBuilder final {
 };
 
 const KernelRegistrationVal* LookUpInKernelRegistry(const std::string& op_type_name,
-                                                    const KernelRegCtx&);
+                                                    const KernelRegContext&);
 
 std::vector<std::string> GetAllUserOpInKernelRegistry();
 
