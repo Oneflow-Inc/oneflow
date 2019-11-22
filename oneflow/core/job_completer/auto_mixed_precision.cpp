@@ -163,7 +163,7 @@ void InsertCastOpImpl(bool f2h, const OpGraph& op_graph, const HashSet<OpNode*>&
       std::string new_lbn = cast_op_conf.name() + "/out";
       if (!TryUpdtBnVal4SepcialOpConf(dst_op_conf.op_type_case(), dst_op_type_conf, lbn, new_lbn,
                                       dst_ibn)) {
-        ReplaceStrValInPbFdOrPbRpf(dst_op_type_conf, dst_ibn, lbn, new_lbn);
+        ReplaceInputLbnInOpCustomizedConf(dst_op_type_conf, dst_ibn, lbn, new_lbn);
       }
     }
   }

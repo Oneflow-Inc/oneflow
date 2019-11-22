@@ -71,6 +71,21 @@ Maybe<OperatorConf> JobBuildAndInferCtx::AddDefaultValueAndCheckValid4UserOp(
         << " has not attr_name: " << pair.first << " in OpDef";
   }
 
+  // add default output arg and lbn
+  for (const auto& output_arg : op_def.output()) {
+    LOG(INFO) << "cclog: output arg_name: " << output_arg.name()
+              << " is_optional: " << output_arg.is_optional()
+              << " num_as_min: " << output_arg.num_as_min();
+    if (user_conf->output().find(output_arg.name()) == user_conf->output().end()
+        && (!output_arg.is_optional()) && (!output_arg.num_as_min())) {
+      for (int32_t i = 0; i < output_arg.num(); ++i) {
+        std::string lbn = GenLogicalBlobName(op_conf.name(), GenRepeatedBn(output_arg.name(), i));
+        (*(user_conf->mutable_output()))[output_arg.name()].add_s(lbn);
+        CHECK_EQ(i + 1, user_conf->output().at(output_arg.name()).s_size());
+      }
+    }
+  }
+
   // check input and output valid
   CheckArgDefIsValidInUserOpConf(op_conf.name(), user_conf->op_type_name(), "input",
                                  user_conf->input(), op_def.input());
@@ -116,13 +131,13 @@ Maybe<void> JobBuildAndInferCtx::DecodeSplitHint7AddOp7AddSbpSigConf2Job(
   PbMessage* op_type_conf = MutableMessageInPbMessage(&op_conf_without_split_hint,
                                                       op_conf_without_split_hint.op_type_case());
   for (const std::string& ibn : op->input_bns()) {
-    std::string lbn_may_with_split_hint = GetStrValInPbFdOrPbRpf(op->GetCustomizedConf(), ibn);
+    std::string lbn_may_with_split_hint = GetStrValInOpCustomizedConf(op->GetCustomizedConf(), ibn);
     SbpParallel sbp_parallel;
     if (JUST(GetSbpParallelInLbnOrNothing(lbn_may_with_split_hint, &sbp_parallel))) {
       (*(sbp_sig_conf->mutable_bn_in_op2sbp_parallel()))[ibn] = sbp_parallel;
       const LogicalBlobId& lbi = op->BnInOp2Lbi(ibn);
       std::string lbn = GenLogicalBlobName(lbi);
-      ReplaceStrValInPbFdOrPbRpf(op_type_conf, ibn, lbn_may_with_split_hint, lbn);
+      ReplaceInputLbnInOpCustomizedConf(op_type_conf, ibn, lbn_may_with_split_hint, lbn);
     }
   }
   if (sbp_sig_conf->bn_in_op2sbp_parallel().size() > 0) {

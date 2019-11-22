@@ -534,4 +534,68 @@ Maybe<void> InferOpSbpSignature(
   return Maybe<void>::Ok();
 }
 
+std::string GetStrValInOpCustomizedConf(const PbMessage& msg,
+                                        const std::string& fd_name_may_have_idx) {
+  const PbMessage* msg_ptr = &msg;
+  const UserOpConf* user_conf = dynamic_cast<const UserOpConf*>(msg_ptr);
+  if (user_conf) {
+    if (user_conf->attr().find(fd_name_may_have_idx) != user_conf->attr().end()) {
+      return user_conf->attr().at(fd_name_may_have_idx).at_string();
+    }
+    std::pair<std::string, int32_t> pair = GetFieldNameAndIndex4StrVal(fd_name_may_have_idx);
+    if (user_conf->input().find(pair.first) != user_conf->input().end()) {
+      return user_conf->input().at(pair.first).s(pair.second);
+    } else if (user_conf->output().find(pair.first) != user_conf->output().end()) {
+      return user_conf->output().at(pair.first).s(pair.second);
+    } else {
+      LOG(WARNING) << "cannot find input/output arg val in user op conf. (arg_name = " << pair.first
+                   << ", id = " << std::to_string(pair.second) << ")";
+      return "";
+    }
+  } else {
+    return GetStrValInPbFdOrPbRpf(msg, fd_name_may_have_idx);
+  }
+}
+
+void ReplaceStrValInOpCustomizedConf(PbMessage* msg, const std::string& fd_name_may_have_idx,
+                                     const std::string& old_val, const std::string& new_val) {
+  UserOpConf* user_conf = dynamic_cast<UserOpConf*>(msg);
+  if (user_conf) {
+    if (user_conf->attr().find(fd_name_may_have_idx) != user_conf->attr().end()) {
+      CHECK_EQ(user_conf->attr().at(fd_name_may_have_idx).at_string(), old_val);
+      (*(user_conf->mutable_attr()))[fd_name_may_have_idx].set_at_string(new_val);
+      return;
+    }
+    std::pair<std::string, int32_t> pair = GetFieldNameAndIndex4StrVal(fd_name_may_have_idx);
+    if (user_conf->input().find(pair.first) != user_conf->input().end()) {
+      CHECK_EQ(user_conf->input().at(pair.first).s(pair.second), old_val);
+      (*(user_conf->mutable_input()))[pair.first].set_s(pair.second, new_val);
+    } else if (user_conf->output().find(pair.first) != user_conf->output().end()) {
+      CHECK_EQ(user_conf->output().at(pair.first).s(pair.second), old_val);
+      (*(user_conf->mutable_output()))[pair.first].set_s(pair.second, new_val);
+    } else {
+      LOG(FATAL) << "cannot find input/output arg val in user op conf. (arg_name = " << pair.first
+                 << ", id = " << std::to_string(pair.second) << ")";
+    }
+  } else {
+    ReplaceStrValInPbFdOrPbRpf(msg, fd_name_may_have_idx, old_val, new_val);
+  }
+}
+
+void ReplaceInputLbnInOpCustomizedConf(PbMessage* msg, const std::string& fd_name_may_have_idx,
+                                       const std::string& old_val, const std::string& new_val) {
+  UserOpConf* user_conf = dynamic_cast<UserOpConf*>(msg);
+  if (user_conf) {
+    std::pair<std::string, int32_t> pair = GetFieldNameAndIndex4StrVal(fd_name_may_have_idx);
+    CHECK(user_conf->input().find(pair.first) != user_conf->input().end())
+        << "cannot find input arg val in user op conf. (arg_name = " << pair.first
+        << ", id = " << std::to_string(pair.second) << ")\n"
+        << "old lbn = " << old_val << " new lbn = " << new_val;
+    CHECK_EQ(user_conf->input().at(pair.first).s(pair.second), old_val);
+    (*(user_conf->mutable_input()))[pair.first].set_s(pair.second, new_val);
+  } else {
+    ReplaceStrValInPbFdOrPbRpf(msg, fd_name_may_have_idx, old_val, new_val);
+  }
+}
+
 }  // namespace oneflow
