@@ -16,22 +16,10 @@ class UserKernel final : public Kernel {
   mutable std::unique_ptr<user_op::KernelContext> ctx_;
 
   void VirtualKernelInit() override {
-    const auto& op_conf = kernel_conf().op_attribute().op_conf();
-    const auto& user_kernel_conf = kernel_conf().user_conf();
-    user_op::BlobInfo blob_info;
-    auto BlobInfo4ArgNameAndIndex = [&](const std::string& arg_name,
-                                        int32_t id) -> user_op::BlobInfo* {
-      std::string bn_in_op = GenRepeatedBn(arg_name, id);
-      const auto& pb_map = user_kernel_conf.bn_in_op2blob_desc();
-      auto it = pb_map.find(bn_in_op);
-      if (it == pb_map.end()) { return nullptr; }
-      blob_info = it->second;
-      return &blob_info;
-    };
-    user_op::KernelRegContext ctx(op_conf.device_type(), kernel_conf().data_type(),
-                                  user_kernel_conf.parallel_ctx(), BlobInfo4ArgNameAndIndex);
+    user_op::KernelRegContext ctx(kernel_conf());
 
-    auto kernel_reg_val = user_op::LookUpInKernelRegistry(op_conf.user_conf().op_type_name(), ctx);
+    auto kernel_reg_val = user_op::LookUpInKernelRegistry(
+        kernel_conf().op_attribute().op_conf().user_conf().op_type_name(), ctx);
     CHECK_NOTNULL(kernel_reg_val);
 
     user_op::KernelInitContext init_ctx;

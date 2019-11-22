@@ -9,27 +9,29 @@
 
 namespace oneflow {
 
+class KernelConf;
+
 namespace user_op {
 
 class OpKernel;
 class KernelInitContext;
 class BlobInfo;
 
-using BlobInfo4ArgNameAndIndexFn = std::function<BlobInfo*(const std::string&, int32_t)>;
+using BlobInfo4ArgNameAndIndexFn =
+    std::function<std::shared_ptr<BlobInfo>(const std::string&, int32_t)>;
 
 class KernelRegContext final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(KernelRegContext);
   explicit KernelRegContext(DeviceType, DataType, const ParallelContext&,
                             BlobInfo4ArgNameAndIndexFn);
+  explicit KernelRegContext(const KernelConf&);
   ~KernelRegContext() = default;
 
   DeviceType device() const { return device_; }
   DataType data_type() const { return data_type_; }
-  const BlobInfo* BlobDesc4ArgNameAndIndex(const std::string& arg_name, int32_t index) const {
-    return fn_(arg_name, index);
-  }
   const ParallelContext& parallel_ctx() const { return parallel_ctx_; }
+  std::shared_ptr<const BlobInfo> BlobDesc4ArgNameAndIndex(const std::string&, int32_t) const;
 
  private:
   DeviceType device_;

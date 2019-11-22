@@ -48,8 +48,9 @@ class UserOp final : public Operator {
     // infer Dtype
     HashMap<std::string, DataType> bn_in_op2data_type;
     auto GetDtype4ArgNameAndIndex = [&](const std::string& bn, int32_t index) -> DataType* {
-      BlobDesc* blob = GetBlobDesc4BnInOp(GenRepeatedBn(bn, index));
-      if (blob) { return &bn_in_op2data_type[GenRepeatedBn(bn, index)]; }
+      std::string bn_in_op = GenRepeatedBn(bn, index);
+      BlobDesc* blob = GetBlobDesc4BnInOp(bn_in_op);
+      if (blob) { return &bn_in_op2data_type[bn_in_op]; }
       return nullptr;
     };
     JUST(val->dtype_infer_fn(GetDtype4ArgNameAndIndex));
