@@ -77,9 +77,10 @@ std::vector<std::string> GetAllUserOpInOpRegistry();
 
 }  // namespace user_op
 
-#define REGISTER_USER_OP(name)                                            \
-  static user_op::Registrar<user_op::OpRegistryWrapperBuilder> OF_PP_CAT( \
-      g_registrar, __COUNTER__) = user_op::OpRegistryWrapperBuilder(name)
 }  // namespace oneflow
+
+#define REGISTER_USER_OP(name)                                                                  \
+  static ::oneflow::user_op::Registrar<::oneflow::user_op::OpRegistryWrapperBuilder> OF_PP_CAT( \
+      g_registrar, __COUNTER__) = ::oneflow::user_op::OpRegistryWrapperBuilder(name)
 
 #endif  // ONEFLOW_CORE_FRAMEWORK_OP_REGISTRATION_H_
