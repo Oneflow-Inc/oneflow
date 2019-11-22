@@ -12,7 +12,7 @@ class DistributionContext(object):
         self.machine = node_i
 
 
-def distribute_execute(num_devices_per_node, num_nodes):
+def distribute_execute(num_devices_per_node, num_nodes, mode="train"):
     def decorator_func(func):
         @functools.wraps(func)
         def wrapped_func(config, *args, **kwargs):
@@ -39,8 +39,12 @@ def distribute_execute(num_devices_per_node, num_nodes):
                             ret.append(
                                 func(dist_ctx, config, *args_, **kwargs_)
                             )
-
-            return tuple(map(list, zip(*ret)))
+            if mode == "train":
+                return tuple(map(list, zip(*ret)))
+            elif mode == "eval":
+                return ret
+            else:
+                raise NotImplementedError
         return wrapped_func
     return decorator_func
 
