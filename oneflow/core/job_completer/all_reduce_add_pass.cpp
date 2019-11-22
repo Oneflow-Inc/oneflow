@@ -4,6 +4,15 @@ namespace oneflow {
 
 namespace {
 
+std::function<std::string(const std::string&)> MakeGetterArg4ThisFuncPrevCall() {
+  auto arg4this_func_prev_call = std::make_shared<std::string>("");
+  return [arg4this_func_prev_call](const std::string& arg) {
+    std::string ret = *arg4this_func_prev_call;
+    *arg4this_func_prev_call = arg;
+    return ret;
+  };
+}
+
 std::function<const OpNode*(const LogicalBlobId&)> MakeGetterProducerOpNode4Lbi(
     const OpGraph& op_graph) {
   auto lbi2producer_op_node = std::make_shared<HashMap<LogicalBlobId, const OpNode*>>();
@@ -192,14 +201,14 @@ void AddReduceSplitOpConf(
     JobBuilder* job_builder,
     const std::function<const OpNode*(const LogicalBlobId&)>& ProducerOpNode4Lbi,
     const std::vector<LogicalBlobId>& lbi_group, int32_t order_in_graph,
-    const LogicalBlobId& all_reduced_lbi) {
+    const LogicalBlobId& all_reduced_lbi,
+    std::function<std::string(const std::string&)> GetLastTouchedOpName) {
   auto SoleConsumerOpNode4Lbi = MakeGetterSoleConsumerOpNode4Lbi(ProducerOpNode4Lbi);
-  std::string prev_op_name = "";
   auto MutModelUpdateOpConf = [&](const LogicalBlobId& lbi, const LogicalBlobId& new_lbi) {
     const auto* op_node = SoleConsumerOpNode4Lbi(lbi);
     OperatorConf md_updt_op_conf(op_node->op().op_conf());
+    const std::string& prev_op_name = GetLastTouchedOpName(op_node->op().op_name());
     if (prev_op_name != "") { md_updt_op_conf.add_ctrl_in_op_name(prev_op_name); }
-    prev_op_name = op_node->op().op_name();
     std::string ibn = "";
     for (const auto& bn : op_node->op().input_bns()) {
       if (op_node->op().BnInOp2Lbi(bn) == lbi) {
@@ -236,19 +245,22 @@ void AddReduceSplitOpConf(
 void BuildAllReduceStruct(
     JobBuilder* job_builder,
     const std::function<const OpNode*(const LogicalBlobId&)>& ProducerOpNode4Lbi,
-    const std::vector<LogicalBlobId>& lbi_group, int32_t order_in_graph) {
+    const std::vector<LogicalBlobId>& lbi_group, int32_t order_in_graph,
+    std::function<std::string(const std::string&)> GetLastTouchedOpName) {
   const auto& parallel_conf = ProducerOpNode4Lbi(lbi_group.at(0))->parallel_desc().parallel_conf();
   LogicalBlobId grouped_lbi;
   AddReduceConcatAndReduceIdentityOpConf(job_builder, parallel_conf, lbi_group, order_in_graph,
                                          &grouped_lbi);
   LogicalBlobId all_reduced_lbi;
   AddAllReduceOpConf(job_builder, parallel_conf, grouped_lbi, &all_reduced_lbi);
-  AddReduceSplitOpConf(job_builder, ProducerOpNode4Lbi, lbi_group, order_in_graph, all_reduced_lbi);
+  AddReduceSplitOpConf(job_builder, ProducerOpNode4Lbi, lbi_group, order_in_graph, all_reduced_lbi,
+                       GetLastTouchedOpName);
 }
 
 }  // namespace
 
 void AllReduceAddPass::Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
+  auto GetLastTouchedOpName = MakeGetterArg4ThisFuncPrevCall();
   auto ProducerOpNode4Lbi = MakeGetterProducerOpNode4Lbi(op_graph);
   std::vector<LogicalBlobId> lbis;
   FindAllReducedLbis(job_builder->job(), op_graph, ProducerOpNode4Lbi, &lbis);
@@ -261,7 +273,7 @@ void AllReduceAddPass::Apply(const OpGraph& op_graph, JobBuilder* job_builder) c
   FOR_RANGE(int32_t, i, 0, lbi_groups.size()) {
     const auto& lbi_group = lbi_groups.at(i);
     BuildAllReduceStruct(job_builder, ProducerOpNode4Lbi, lbi_group,
-                         lbi2order_in_graph.at(lbi_group.at(0)));
+                         lbi2order_in_graph.at(lbi_group.at(0)), GetLastTouchedOpName);
   }
 }
 
