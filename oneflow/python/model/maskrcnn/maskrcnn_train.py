@@ -239,9 +239,9 @@ def maskrcnn_train(cfg, images, image_sizes, gt_boxes, gt_segms, gt_labels):
     return rpn_bbox_loss, rpn_objectness_loss, box_loss, cls_loss, mask_loss
 
 
-@distribute_execute(terminal_args.gpu_num_per_node, 1)
+@flow.experimental.mirror_execute(terminal_args.gpu_num_per_node, 1)
 def distribute_maskrcnn_train(
-    dist_ctx, config, image, image_size, gt_bbox, gt_segm, gt_label
+    config, image, image_size, gt_bbox, gt_segm, gt_label
 ):
     """Mask-RCNN
     Args:
@@ -500,28 +500,13 @@ if terminal_args.train_with_real_dataset:
         )
 
         if config.NUM_GPUS > 1:
-            image_list = flow.advanced.distribute_split(
-                image or data_loader("image")
-            )
-            image_size_list = flow.advanced.distribute_split(
-                data_loader("image_size")
-            )
-            gt_bbox_list = flow.advanced.distribute_split(
-                data_loader("gt_bbox")
-            )
-            gt_segm_list = flow.advanced.distribute_split(
-                data_loader("gt_segm")
-            )
-            gt_label_list = flow.advanced.distribute_split(
-                data_loader("gt_labels")
-            )
             outputs = distribute_maskrcnn_train(
                 config,
-                image_list,
-                image_size_list,
-                gt_bbox_list,
-                gt_segm_list,
-                gt_label_list,
+                flow.identity(image) if image else data_loader("image"),
+                data_loader("image_size"),
+                data_loader("gt_bbox"),
+                data_loader("gt_segm"),
+                data_loader("gt_labels"),
             )
             for losses in outputs:
                 for loss in losses:
