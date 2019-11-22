@@ -35,9 +35,9 @@ bool CurJobBuildAndInferCtx_HasJobConf(std::string* error_str) {
                                                                                      false);
 }
 
-std::string CurJobBuildAndInferCtx_AddDefaultValueAndCheckValid4UserOp(
-    const std::string& serialized_op_conf, std::string* error_str) {
-  return oneflow::CurJobBuildAndInferCtx_AddDefaultValueAndCheckValid4UserOp(serialized_op_conf)
+std::string CurJobBuildAndInferCtx_CheckAndCompleteUserOpConf(const std::string& serialized_op_conf,
+                                                              std::string* error_str) {
+  return oneflow::CurJobBuildAndInferCtx_CheckAndCompleteUserOpConf(serialized_op_conf)
       .GetDataAndSerializedErrorProto(error_str, "");
 }
 

@@ -84,9 +84,9 @@ def CurJobBuildAndInferCtx_SetJobConf(job_config_proto):
     error = text_format.Parse(error_str, error_util.ErrorProto())
     if error.HasField("error_type"): raise JobBuildAndInferError(error)
 
-def CurJobBuildAndInferCtx_AddDefaultValueAndCheckValid4UserOp(op_conf_proto):
+def CurJobBuildAndInferCtx_CheckAndCompleteUserOpConf(op_conf_proto):
     serialized_op_conf = str(text_format.MessageToString(op_conf_proto))
-    AddDefaultVal = oneflow_internal.CurJobBuildAndInferCtx_AddDefaultValueAndCheckValid4UserOp
+    AddDefaultVal = oneflow_internal.CurJobBuildAndInferCtx_CheckAndCompleteUserOpConf
     new_op_conf, error_str = AddDefaultVal(serialized_op_conf)
     error = text_format.Parse(error_str, error_util.ErrorProto())
     if error.HasField("error_type"): raise JobBuildAndInferError(error)

@@ -11,7 +11,7 @@ import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 import oneflow
 from oneflow.python.oneflow_export import oneflow_export
 
-class UserOpWrapper(object):
+class UserOpConfWrapper(object):
     def __init__(self, op_name):
         self.op_conf_ = op_conf_util.OperatorConf()
         self.op_conf_.name = op_name
@@ -48,14 +48,14 @@ class UserOpWrapper(object):
         return tuple(remote_blob_list)
 
 @oneflow_export('user_op_builder')
-class UserOpWrapperBuilder(object):
+class UserOpConfWrapperBuilder(object):
     def __init__(self, op_name):
-        self.user_op_ = UserOpWrapper(op_name)
+        self.user_op_ = UserOpConfWrapper(op_name)
 
     def Build(self):
         assert self.user_op_.op_conf_.user_conf.op_type_name is not ""
         self.user_op_.op_conf_ = \
-            job_builder.CurCtxAddDefaultValueAndCheckValid4UserOp(self.user_op_.op_conf_)
+            job_builder.CurCtxCheckAndCompleteUserOpConf(self.user_op_.op_conf_)
         print("cclog: op conf: ", self.user_op_.op_conf_)
         return self.user_op_
 
@@ -103,6 +103,7 @@ class UserOpWrapperBuilder(object):
             attribute.at_string = attr_value
         elif attr_type == user_op_attr_util.UserOpAttrType.kAtShape:
             assert isinstance(attr_value, (tuple, list))
+            assert all(isinstance(x, int) for x in attr_value)
             attribute.at_shape.dim[:] = list(attr_value)
         elif attr_type == user_op_attr_util.UserOpAttrType.kAtListInt32:
             assert isinstance(attr_value, (tuple, list))
