@@ -2,6 +2,7 @@
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/thread/cpu_thread.h"
 #include "oneflow/core/thread/gpu_thread.h"
+#include "oneflow/core/job/machine_context.h"
 
 namespace oneflow {
 
@@ -31,7 +32,7 @@ ThreadMgr::ThreadMgr(const Plan& plan) {
   }
   threads_.push_back(new CpuThread(thrd_id++));  // comm_net
   CreatePersistenceThrd(plan, thrd_id);
-  compute_thread_pool_.reset(new ThreadPool(Global<ResourceDesc>::Get()->CpuDeviceNum()));
+  compute_thread_pool_.reset(new ThreadPool(Global<ResourceDesc>::Get()->ComputeThreadPoolSize()));
 }
 
 void ThreadMgr::CreatePersistenceThrd(const Plan& plan, int64_t thrd_id) {

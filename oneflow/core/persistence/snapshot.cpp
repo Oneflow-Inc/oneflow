@@ -22,7 +22,7 @@ void SnapshotReader::Read(const std::string& key, Blob* blob) const {
   CHECK_EQ(SnapshotFS()->GetFileSize(path), blob_size)
       << "unexpected model snapshot size, path: " << path;
   PersistentInStream in_stream(SnapshotFS(), path);
-  in_stream.Read(blob->mut_dptr<char>(), blob_size);
+  in_stream.ReadFully(blob->mut_dptr<char>(), blob_size);
 }
 
 void SnapshotReader::Close() {}

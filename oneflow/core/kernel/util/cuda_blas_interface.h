@@ -5,6 +5,8 @@
 
 namespace oneflow {
 
+class Blob;
+
 template<>
 struct BlasIf<DeviceType::kGPU> {
   static void BlobGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,

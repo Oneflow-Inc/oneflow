@@ -6,7 +6,6 @@
 #include "oneflow/core/register/field_desc.h"
 #include "oneflow/core/register/blob_desc.pb.h"
 #include "oneflow/core/register/pod_desc.h"
-#include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/register/register_desc.pb.h"
 
 namespace oneflow {

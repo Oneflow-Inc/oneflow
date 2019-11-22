@@ -25,4 +25,25 @@ bool MemoryCaseUtil::GetCommonMemoryCase(const MemoryCase& a, const MemoryCase& 
   }
 }
 
+MemoryCase MemoryCaseUtil::GetHostPinnedMemoryCaseForRegstSeparatedHeader(
+    const MemoryCase& mem_case) {
+  CHECK(mem_case.has_device_cuda_mem());
+  MemoryCase ret;
+  ret.mutable_host_mem()->mutable_cuda_pinned_mem()->set_device_id(
+      mem_case.device_cuda_mem().device_id());
+  return ret;
+}
+
+int64_t MemoryCaseUtil::GenMemZoneUniqueId(int64_t machine_id, const MemoryCase& mem_case) {
+  int64_t mem_zone_id = 1024;
+  if (mem_case.has_host_mem()) {
+    if (mem_case.host_mem().has_cuda_pinned_mem()) {
+      mem_zone_id = 1025 + mem_case.host_mem().cuda_pinned_mem().device_id();
+    }
+  } else {
+    mem_zone_id = mem_case.device_cuda_mem().device_id();
+  }
+  return (machine_id << 32) | mem_zone_id;
+}
+
 }  // namespace oneflow
