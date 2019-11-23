@@ -107,69 +107,71 @@ Maybe<void> CurJobBuildAndInferCtx_AddLossLogicalBlobName(const std::string& lbn
   return JUST(GetCurInferCtx())->AddLossLogicalBlobName(lbn);
 }
 
-Maybe<bool> JobBuildAndInferCtx_IsMirrorBlob(const std::string& job_name,
-                                             const std::string& mirror_blob_name) {
+Maybe<bool> JobBuildAndInferCtx_IsSymmetricBlob(const std::string& job_name,
+                                                const std::string& symmetric_blob_name) {
   auto* ctx = JUST(Global<JobBuildAndInferCtxMgr>::Get()->FindJobBuildAndInferCtx(job_name));
-  return ctx->IsMirrorBlob(mirror_blob_name);
+  return ctx->IsSymmetricBlob(symmetric_blob_name);
 }
 
-Maybe<int> JobBuildAndInferCtx_NumLbiInMirrorBlob(const std::string& job_name,
-                                                  const std::string& mirror_blob_name) {
+Maybe<int> JobBuildAndInferCtx_NumLbiInSymmetricBlob(const std::string& job_name,
+                                                     const std::string& symmetric_blob_name) {
   auto* ctx = JUST(Global<JobBuildAndInferCtxMgr>::Get()->FindJobBuildAndInferCtx(job_name));
-  return ctx->NumLbiInMirrorBlob(mirror_blob_name);
+  return ctx->NumLbiInSymmetricBlob(symmetric_blob_name);
 }
 
-Maybe<std::string> JobBuildAndInferCtx_GetLbiInMirrorBlob(const std::string& job_name,
-                                                          const std::string& mirror_blob_name,
-                                                          int index) {
+Maybe<std::string> JobBuildAndInferCtx_GetLbiInSymmetricBlob(const std::string& job_name,
+                                                             const std::string& symmetric_blob_name,
+                                                             int index) {
   auto* ctx = JUST(Global<JobBuildAndInferCtxMgr>::Get()->FindJobBuildAndInferCtx(job_name));
-  return PbMessage2TxtString(*JUST(ctx->GetLbiInMirrorBlob(mirror_blob_name, index)));
+  return PbMessage2TxtString(*JUST(ctx->GetLbiInSymmetricBlob(symmetric_blob_name, index)));
 }
 
-Maybe<std::string> JobBuildAndInferCtx_MirrorBlobGetSerializedIdListAsStaticShape(
-    const std::string& job_name, const std::string& mirror_blob_name) {
+Maybe<std::string> JobBuildAndInferCtx_SymmetricBlobGetSerializedIdListAsStaticShape(
+    const std::string& job_name, const std::string& symmetric_blob_name) {
   auto* ctx = JUST(Global<JobBuildAndInferCtxMgr>::Get()->FindJobBuildAndInferCtx(job_name));
-  const auto& shape = JUST(ctx->MirrorBlobGetStaticShape(mirror_blob_name));
+  const auto& shape = JUST(ctx->SymmetricBlobGetStaticShape(symmetric_blob_name));
   Int64List id_list;
   *id_list.mutable_value() = {shape->dim_vec().begin(), shape->dim_vec().end()};
   return PbMessage2TxtString(id_list);
 }
 
-Maybe<long long> JobBuildAndInferCtx_MirrorBlobGetDataType(const std::string& job_name,
-                                                           const std::string& mirror_blob_name) {
+Maybe<long long> JobBuildAndInferCtx_SymmetricBlobGetDataType(
+    const std::string& job_name, const std::string& symmetric_blob_name) {
   auto* ctx = JUST(Global<JobBuildAndInferCtxMgr>::Get()->FindJobBuildAndInferCtx(job_name));
-  return *JUST(ctx->MirrorBlobGetDataType(mirror_blob_name));
+  return *JUST(ctx->SymmetricBlobGetDataType(symmetric_blob_name));
 }
 
-Maybe<bool> JobBuildAndInferCtx_MirrorBlobIsDynamic(const std::string& job_name,
-                                                    const std::string& mirror_blob_name) {
+Maybe<bool> JobBuildAndInferCtx_SymmetricBlobIsDynamic(const std::string& job_name,
+                                                       const std::string& symmetric_blob_name) {
   auto* ctx = JUST(Global<JobBuildAndInferCtxMgr>::Get()->FindJobBuildAndInferCtx(job_name));
-  return ctx->MirrorBlobIsDynamic(mirror_blob_name);
+  return ctx->SymmetricBlobIsDynamic(symmetric_blob_name);
 }
 
-Maybe<long long> JobBuildAndInferCtx_MirrorBlobGetNumOfLoDLevels(
-    const std::string& job_name, const std::string& mirror_blob_name) {
+Maybe<long long> JobBuildAndInferCtx_SymmetricBlobGetNumOfLoDLevels(
+    const std::string& job_name, const std::string& symmetric_blob_name) {
   auto* ctx = JUST(Global<JobBuildAndInferCtxMgr>::Get()->FindJobBuildAndInferCtx(job_name));
-  return ctx->MirrorBlobGetNumOfLoDLevels(mirror_blob_name);
+  return ctx->SymmetricBlobGetNumOfLoDLevels(symmetric_blob_name);
 }
 
-Maybe<std::string> JobBuildAndInferCtx_MirrorBlobGetBatchAxis(const std::string& job_name,
-                                                              const std::string& mirror_blob_name) {
+Maybe<std::string> JobBuildAndInferCtx_SymmetricBlobGetBatchAxis(
+    const std::string& job_name, const std::string& symmetric_blob_name) {
   auto* ctx = JUST(Global<JobBuildAndInferCtxMgr>::Get()->FindJobBuildAndInferCtx(job_name));
-  return PbMessage2TxtString(*JUST(ctx->MirrorBlobGetBatchAxis(mirror_blob_name)));
+  return PbMessage2TxtString(*JUST(ctx->SymmetricBlobGetBatchAxis(symmetric_blob_name)));
 }
 
-Maybe<std::string> JobBuildAndInferCtx_MirrorBlobGetSplitAxisFromProducerView(
-    const std::string& job_name, const std::string& mirror_blob_name) {
-  auto* ctx = JUST(Global<JobBuildAndInferCtxMgr>::Get()->FindJobBuildAndInferCtx(job_name));
-  return PbMessage2TxtString(*JUST(ctx->MirrorBlobGetSplitAxisFromProducerView(mirror_blob_name)));
-}
-
-Maybe<std::string> JobBuildAndInferCtx_MirrorBlobGetSerializedParallelConfFromProducerView(
-    const std::string& job_name, const std::string& mirror_blob_name) {
+Maybe<std::string> JobBuildAndInferCtx_SymmetricBlobGetSplitAxisFromProducerView(
+    const std::string& job_name, const std::string& symmetric_blob_name) {
   auto* ctx = JUST(Global<JobBuildAndInferCtxMgr>::Get()->FindJobBuildAndInferCtx(job_name));
   return PbMessage2TxtString(
-      JUST(ctx->MirrorBlobGetParallelDescFromProducerView(mirror_blob_name))->parallel_conf());
+      *JUST(ctx->SymmetricBlobGetSplitAxisFromProducerView(symmetric_blob_name)));
+}
+
+Maybe<std::string> JobBuildAndInferCtx_SymmetricBlobGetSerializedParallelConfFromProducerView(
+    const std::string& job_name, const std::string& symmetric_blob_name) {
+  auto* ctx = JUST(Global<JobBuildAndInferCtxMgr>::Get()->FindJobBuildAndInferCtx(job_name));
+  return PbMessage2TxtString(
+      JUST(ctx->SymmetricBlobGetParallelDescFromProducerView(symmetric_blob_name))
+          ->parallel_conf());
 }
 
 }  // namespace oneflow
