@@ -77,7 +77,7 @@ Maybe<void> DistributeAddOp::InferSbpSignature(
                 in_sbp_infer_hint.logical_blob_desc().shape());
   }
   auto* bn2sbp = sbp_signature->mutable_bn_in_op2sbp_parallel();
-  for (const auto& ibn : input_bns()) { (*bn2sbp)[ibn] = first_in_hint.sbp_parallel(); }
+  for (const auto& ibn : input_bns()) { (*bn2sbp)[ibn].mutable_partial_sum_parallel(); }
   (*bn2sbp)["out"].mutable_partial_sum_parallel();
   return Maybe<void>::Ok();
 }

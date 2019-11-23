@@ -469,9 +469,9 @@ void AutoGrad(const OpGraph& op_graph, JobBuilder* job_builder,
     auto LogicalBlobDesc4BnInOp = [&](const std::string& bn) -> const BlobDesc& {
       return op_graph.GetLogicalBlobDesc(op_node->op().BnInOp2Lbi(bn));
     };
-    std::vector<OperatorConf> ops;
-    GenerateCloneGradOpIfNeed(*op_node, &ops, in_oba2in_diff_lbi, &out_oba2out_diff_lbi,
+    GenerateCloneGradOpIfNeed(*op_node, job_builder, in_oba2in_diff_lbi, &out_oba2out_diff_lbi,
                               &out_oba2clone_bw_add_out_lbi);
+    std::vector<OperatorConf> ops;
     GenerateBackwardOpConfIf(op_node->op(), &ops, DiffLbi4BnInOp, LogicalBlobDesc4BnInOp);
     job_builder->AddOps(op_node->parallel_desc().parallel_conf(), ops);
   });
