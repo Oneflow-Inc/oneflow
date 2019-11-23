@@ -239,9 +239,9 @@ def maskrcnn_train(cfg, images, image_sizes, gt_boxes, gt_segms, gt_labels):
     return rpn_bbox_loss, rpn_objectness_loss, box_loss, cls_loss, mask_loss
 
 
-@distribute_execute(terminal_args.gpu_num_per_node, 1)
+@flow.experimental.mirror_execute(terminal_args.gpu_num_per_node, 1)
 def distribute_maskrcnn_train(
-    dist_ctx, config, image, image_size, gt_bbox, gt_segm, gt_label
+    config, image, image_size, gt_bbox, gt_segm, gt_label
 ):
     """Mask-RCNN
     Args:
@@ -357,15 +357,6 @@ def MakeWatcherCallback(prompt):
 
 
 def init_config():
-    flow.config.cudnn_buf_limit_mbyte(1280)
-    flow.config.cudnn_conv_heuristic_search_algo(True)
-    flow.config.cudnn_conv_use_deterministic_algo_only(False)
-    flow.config.train.primary_lr(terminal_args.primary_lr)
-    flow.config.train.secondary_lr(terminal_args.secondary_lr)
-    flow.config.train.weight_l2(0.0001)
-    flow.config.train.model_update_conf(dict(momentum_conf={"beta": 0.9}))
-    # flow.config.train.model_update_conf(dict(naive_conf={}))
-
     config = get_default_cfgs()
     if terminal_args.config_file is not None:
         config.merge_from_file(terminal_args.config_file)
@@ -374,10 +365,24 @@ def init_config():
     if "gpu_num_per_node" in terminal_args:
         config.NUM_GPUS = terminal_args.gpu_num_per_node
 
+    assert terminal_args.batch_size % terminal_args.gpu_num_per_node == 0
+    config.TRAINING_CONF.IMG_PER_GPU = int(
+        terminal_args.batch_size / terminal_args.gpu_num_per_node
+    )
+
     config.freeze()
 
     if terminal_args.verbose:
         print(config)
+
+    flow.config.cudnn_buf_limit_mbyte(1280)
+    flow.config.cudnn_conv_heuristic_search_algo(True)
+    flow.config.cudnn_conv_use_deterministic_algo_only(False)
+    flow.config.train.primary_lr(terminal_args.primary_lr)
+    flow.config.train.secondary_lr(terminal_args.secondary_lr)
+    flow.config.train.weight_l2(0.0001)
+    flow.config.train.model_update_conf(dict(momentum_conf={"beta": 0.9}))
+    # flow.config.train.model_update_conf(dict(naive_conf={}))
 
     return config
 
@@ -495,28 +500,13 @@ if terminal_args.train_with_real_dataset:
         )
 
         if config.NUM_GPUS > 1:
-            image_list = flow.advanced.distribute_split(
-                image or data_loader("image")
-            )
-            image_size_list = flow.advanced.distribute_split(
-                data_loader("image_size")
-            )
-            gt_bbox_list = flow.advanced.distribute_split(
-                data_loader("gt_bbox")
-            )
-            gt_segm_list = flow.advanced.distribute_split(
-                data_loader("gt_segm")
-            )
-            gt_label_list = flow.advanced.distribute_split(
-                data_loader("gt_labels")
-            )
             outputs = distribute_maskrcnn_train(
                 config,
-                image_list,
-                image_size_list,
-                gt_bbox_list,
-                gt_segm_list,
-                gt_label_list,
+                flow.identity(image) if image else data_loader("image"),
+                data_loader("image_size"),
+                data_loader("gt_bbox"),
+                data_loader("gt_segm"),
+                data_loader("gt_labels"),
             )
             for losses in outputs:
                 for loss in losses:
