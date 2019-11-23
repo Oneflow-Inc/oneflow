@@ -33,21 +33,22 @@ class JobBuildAndInferCtx {
   Maybe<OptInt64> GetSplitAxisFromProducerView(const std::string& lbn) const;
   Maybe<const ParallelDesc*> GetParallelDescFromProducerView(const std::string& lbn) const;
 
-  bool IsMirrorBlob(const std::string& lbn_or_mirror_blob_name) const;
-  Maybe<int> NumLbiInMirrorBlob(const std::string& lbn_or_mirror_blob_name) const;
-  Maybe<const LogicalBlobId*> GetLbiInMirrorBlob(const std::string& lbn_or_mirror_blob_name,
-                                                 int index) const;
+  bool IsSymmetricBlob(const std::string& lbn_or_symmetric_blob_name) const;
+  Maybe<int> NumLbiInSymmetricBlob(const std::string& lbn_or_symmetric_blob_name) const;
+  Maybe<const LogicalBlobId*> GetLbiInSymmetricBlob(const std::string& lbn_or_symmetric_blob_name,
+                                                    int index) const;
 
-  Maybe<Shape> MirrorBlobGetStaticShape(const std::string& mirror_blob_name_with_hint) const;
-  Maybe<DataType> MirrorBlobGetDataType(const std::string& mirror_blob_name_with_hint) const;
-  Maybe<bool> MirrorBlobIsDynamic(const std::string& mirror_blob_name_with_hint) const;
-  Maybe<long long> MirrorBlobGetNumOfLoDLevels(const std::string& mirror_blob_name_with_hint) const;
-  Maybe<bool> MirrorBlobDisableBoxing(const std::string& mirror_blob_name_with_hint) const;
-  Maybe<OptInt64> MirrorBlobGetBatchAxis(const std::string& mirror_blob_name_with_hint) const;
-  Maybe<OptInt64> MirrorBlobGetSplitAxisFromProducerView(
-      const std::string& mirror_blob_name_with_hint) const;
-  Maybe<const ParallelDesc*> MirrorBlobGetParallelDescFromProducerView(
-      const std::string& mirror_blob_name_with_hint) const;
+  Maybe<Shape> SymmetricBlobGetStaticShape(const std::string& symmetric_blob_name_with_hint) const;
+  Maybe<DataType> SymmetricBlobGetDataType(const std::string& symmetric_blob_name_with_hint) const;
+  Maybe<bool> SymmetricBlobIsDynamic(const std::string& symmetric_blob_name_with_hint) const;
+  Maybe<long long> SymmetricBlobGetNumOfLoDLevels(
+      const std::string& symmetric_blob_name_with_hint) const;
+  Maybe<bool> SymmetricBlobDisableBoxing(const std::string& symmetric_blob_name_with_hint) const;
+  Maybe<OptInt64> SymmetricBlobGetBatchAxis(const std::string& symmetric_blob_name_with_hint) const;
+  Maybe<OptInt64> SymmetricBlobGetSplitAxisFromProducerView(
+      const std::string& symmetric_blob_name_with_hint) const;
+  Maybe<const ParallelDesc*> SymmetricBlobGetParallelDescFromProducerView(
+      const std::string& symmetric_blob_name_with_hint) const;
 
   const Job& job() const;
   Maybe<void> CheckJob() const;
@@ -75,15 +76,16 @@ class JobBuildAndInferCtx {
   Maybe<void> CheckPlacement() const;
   Maybe<void> CheckJobConf() const;
   Maybe<void> CheckLbnValidAndExist(const std::string& lbn) const;
-  Maybe<std::string> MirrorBlobNameStripHint(const std::string& mirror_blob_name_with_hint) const;
+  Maybe<std::string> SymmetricBlobNameStripHint(
+      const std::string& symmetric_blob_name_with_hint) const;
   Maybe<void> AddAndInferOp(const OperatorConf& op_conf, const ParallelConf& parallel_conf);
-  bool HasAnyMirrorBlobInput(const Operator& op) const;
-  Maybe<void> CheckAllInputsConvertableToMirrorBlob(const Operator& op) const;
+  bool HasAnySymmetricBlobInput(const Operator& op) const;
+  Maybe<void> CheckAllInputsConvertableToSymmetricBlob(const Operator& op) const;
   Maybe<void> CheckAllInputsWithSameParallelNum(const Operator& op, int32_t parallel_num) const;
   Maybe<const SbpParallel*> SbpParallel4Lbi(const LogicalBlobId& lbi) const;
   Maybe<const ParallelDesc*> ParallelDesc4Lbi(const LogicalBlobId& lbi) const;
-  Maybe<const LogicalBlobId*> GetMirrorBlobSubLbi(const std::string& lbn_or_mirror_blob_name,
-                                                  int32_t index);
+  Maybe<const LogicalBlobId*> GetSymmetricBlobSubLbi(const std::string& lbn_or_symmetric_blob_name,
+                                                     int32_t index);
 
   Job* job_;
   int64_t job_id_;
@@ -92,7 +94,7 @@ class JobBuildAndInferCtx {
   HashMap<LogicalBlobId, SbpParallel> lbi2sbp_parallel_from_producer_view_;
   HashMap<LogicalBlobId, ParallelDesc> lbi2parallel_desc_from_producer_view_;
   HashMap<LogicalBlobId, bool> lbi2disable_boxing_;
-  HashMap<std::string, std::vector<LogicalBlobId>> mirror_blob_name2lbis_;
+  HashMap<std::string, std::vector<LogicalBlobId>> symmetric_blob_name2lbis_;
   HashMap<std::string, std::shared_ptr<Operator>> op_name2op_;
   HashMap<ParallelDesc, PlacementGroup*> parallel_desc2placement_group_;
   HashMap<ParallelDesc, BlobPlacementGroup*> parallel_desc2blob_placement_group_;
