@@ -34,7 +34,7 @@ void ReduceSplitOp::VirtualGenKernelConf(
   int64_t offset = 0;
   for (int32_t i = 0; i < op_conf().reduce_split_conf().out_num(); ++i) {
     reduce_split_conf->mutable_data_offset()->Add(offset);
-    offset += RtBlobDesc(*(GetBlobDesc4BnInOp(output_bns().Get(i)))).AlignedByteSizeOfBlobBody();
+    offset += RtBlobDesc(*(GetBlobDesc4BnInOp(output_bns().Get(i)))).ByteSizeOfBlobBody();
   }
   const int64_t data_type_byte_size =
       static_cast<int64_t>(GetSizeOfDataType(GetBlobDesc4BnInOp(SoleIbn())->data_type()));
