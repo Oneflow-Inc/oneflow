@@ -86,6 +86,7 @@ class JobBuildAndInferCtx {
   Maybe<const ParallelDesc*> ParallelDesc4Lbi(const LogicalBlobId& lbi) const;
   Maybe<const LogicalBlobId*> GetSymmetricBlobSubLbi(const std::string& lbn_or_symmetric_blob_name,
                                                      int32_t index);
+  Maybe<std::string> FindOrCreateSymmetricBlobFromCompatibleConsistentBlob(const std::string& lbn);
 
   Job* job_;
   int64_t job_id_;
@@ -94,10 +95,11 @@ class JobBuildAndInferCtx {
   HashMap<LogicalBlobId, SbpParallel> lbi2sbp_parallel_from_producer_view_;
   HashMap<LogicalBlobId, ParallelDesc> lbi2parallel_desc_from_producer_view_;
   HashMap<LogicalBlobId, bool> lbi2disable_boxing_;
-  HashMap<std::string, std::vector<LogicalBlobId>> symmetric_blob_name2lbis_;
   HashMap<std::string, std::shared_ptr<Operator>> op_name2op_;
   HashMap<ParallelDesc, PlacementGroup*> parallel_desc2placement_group_;
   HashMap<ParallelDesc, BlobPlacementGroup*> parallel_desc2blob_placement_group_;
+  HashMap<std::string, std::vector<LogicalBlobId>> symmetric_blob_name2lbis_;
+  HashMap<LogicalBlobId, std::string> consistent_lbi2symmetric_blob_name_;
   bool is_job_conf_frozen_;
   bool has_job_conf_;
 };

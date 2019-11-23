@@ -2,6 +2,9 @@
 
 namespace oneflow {
 
+static const std::string kAutoSymmetricBlobNamePrefix =
+    "System-Symmetric-Blob-Auto-Converted-From-Consistent-Blob";
+
 namespace {
 
 void ResetOpConfIbn(OperatorConf* op_conf, const std::string& ibn, const std::string lbn) {
@@ -258,7 +261,9 @@ Maybe<void> JobBuildAndInferCtx::CheckAllInputsConvertableToSymmetricBlob(
     const auto& lbi = op.BnInOp2Lbi(ibn);
     const std::string& lbn = GenLogicalBlobName(lbi);
     if (symmetric_blob_name2lbis_.find(lbn) != symmetric_blob_name2lbis_.end()) { continue; }
-    if (JUST(SbpParallel4Lbi(lbi))->has_broadcast_parallel()) { continue; }
+    const auto& sbp = *JUST(SbpParallel4Lbi(lbi));
+    if (sbp.has_broadcast_parallel()) { continue; }
+    if (sbp.has_split_parallel() && sbp.split_parallel().axis() == 0) { continue; }
     return Error::CheckFailed() << "input lbn: " << lbn << " is not convertable to mirror blob";
   }
   return Maybe<void>::Ok();
@@ -283,15 +288,69 @@ Maybe<void> JobBuildAndInferCtx::CheckAllInputsWithSameParallelNum(const Operato
   return Maybe<void>::Ok();
 }
 
+Maybe<std::string> JobBuildAndInferCtx::FindOrCreateSymmetricBlobFromCompatibleConsistentBlob(
+    const std::string& lbn) {
+  const LogicalBlobId& lbi = GenLogicalBlobId(lbn);
+  const auto& sbn_it = consistent_lbi2symmetric_blob_name_.find(lbi);
+  if (sbn_it != consistent_lbi2symmetric_blob_name_.end()) { return sbn_it->second; }
+  const SbpParallel& sbp = *CHECK_JUST(SbpParallel4Lbi(lbi));
+  const ParallelDesc& parallel_desc = *CHECK_JUST(ParallelDesc4Lbi(lbi));
+  std::string symmetric_blob_name;
+  {
+    LogicalBlobId symmetric_blob_as_fake_lbi;
+    symmetric_blob_as_fake_lbi.set_op_name(kAutoSymmetricBlobNamePrefix + NewUniqueId());
+    symmetric_blob_as_fake_lbi.set_blob_name("out");
+    symmetric_blob_name = GenLogicalBlobName(symmetric_blob_as_fake_lbi);
+  }
+  consistent_lbi2symmetric_blob_name_[lbi] = symmetric_blob_name;
+  auto* lbi_vec = &symmetric_blob_name2lbis_[symmetric_blob_name];
+  lbi_vec->reserve(parallel_desc.parallel_num());
+  auto PushBackSubLbi = [&](const std::string& op_name, const std::string& blob_name) {
+    LogicalBlobId sub_lbi;
+    sub_lbi.set_op_name(op_name);
+    sub_lbi.set_blob_name(blob_name);
+    lbi_vec->push_back(sub_lbi);
+  };
+  OperatorConf op_conf;
+  if (sbp.has_broadcast_parallel()) {
+    op_conf.set_name(kAutoSymmetricBlobNamePrefix + "-DistributeClone-" + NewUniqueId());
+    auto* distribute_clone = op_conf.mutable_distribute_clone_conf();
+    distribute_clone->set_in(lbn);
+    FOR_RANGE(int32_t, i, 0, parallel_desc.parallel_num()) {
+      const std::string& blob_name = "out_" + std::to_string(i);
+      distribute_clone->add_out(blob_name);
+      PushBackSubLbi(op_conf.name(), blob_name);
+    }
+  } else if (sbp.has_split_parallel()) {
+    OF_CHECK_EQ(sbp.split_parallel().axis(), 0)
+        << "only `S(0)' consistent blob is compatible to symmetric blob";
+    OperatorConf op_conf;
+    op_conf.set_name(kAutoSymmetricBlobNamePrefix + "-DistributeSplit-" + NewUniqueId());
+    auto* distribute_split = op_conf.mutable_distribute_split_conf();
+    distribute_split->set_in(lbn);
+    distribute_split->set_axis(0);
+    FOR_RANGE(int32_t, i, 0, parallel_desc.parallel_num()) {
+      const std::string& blob_name = "out_" + std::to_string(i);
+      distribute_split->add_out(blob_name);
+      PushBackSubLbi(op_conf.name(), blob_name);
+    }
+  } else {
+    OF_UNIMPLEMENTED() << "`P' consistant blob is not compatible to symmetric blob";
+  }
+  CHECK_JUST(AddAndInferOp(op_conf, parallel_desc.parallel_conf()));
+  return symmetric_blob_name;
+}
+
 Maybe<const LogicalBlobId*> JobBuildAndInferCtx::GetSymmetricBlobSubLbi(
     const std::string& lbn_or_symmetric_blob_name, int32_t index) {
-  if (symmetric_blob_name2lbis_.find(lbn_or_symmetric_blob_name)
-      != symmetric_blob_name2lbis_.end()) {
-    return GetLbiInSymmetricBlob(lbn_or_symmetric_blob_name, index);
+  auto lbi_vec_iter = symmetric_blob_name2lbis_.find(lbn_or_symmetric_blob_name);
+  if (lbi_vec_iter == symmetric_blob_name2lbis_.end()) {
+    const auto& new_synmmetric_blob_name =
+        *JUST(FindOrCreateSymmetricBlobFromCompatibleConsistentBlob(lbn_or_symmetric_blob_name));
+    lbi_vec_iter = symmetric_blob_name2lbis_.find(new_synmmetric_blob_name);
+    CHECK(lbi_vec_iter != symmetric_blob_name2lbis_.end());
   }
-  const auto& lbi = GenLogicalBlobId(lbn_or_symmetric_blob_name);
-  OF_CHECK(JUST(SbpParallel4Lbi(lbi))->has_broadcast_parallel());
-  TODO();
+  return &lbi_vec_iter->second.at(index);
 }
 
 // TODO(): add handle error of same interface op blob between jobs
