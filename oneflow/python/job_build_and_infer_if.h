@@ -102,3 +102,70 @@ std::string JobBuildAndInferCtx_GetSerializedParallelConfFromProducerView(
   return oneflow::JobBuildAndInferCtx_GetSerializedParallelConfFromProducerView(job_name, lbn)
       .GetDataAndSerializedErrorProto(error_str, "");
 }
+
+bool JobBuildAndInferCtx_IsSymmetricBlob(const std::string& job_name, const std::string& lbn,
+                                         std::string* error_str) {
+  return oneflow::JobBuildAndInferCtx_IsSymmetricBlob(job_name, lbn)
+      .GetDataAndSerializedErrorProto(error_str, false);
+}
+
+int JobBuildAndInferCtx_NumLbiInSymmetricBlob(const std::string& job_name, const std::string& lbn,
+                                              std::string* error_str) {
+  return oneflow::JobBuildAndInferCtx_NumLbiInSymmetricBlob(job_name, lbn)
+      .GetDataAndSerializedErrorProto(error_str, 0);
+}
+
+std::string JobBuildAndInferCtx_GetSerializedLbiInSymmetricBlob(const std::string& job_name,
+                                                                const std::string& lbn, int index,
+                                                                std::string* error_str) {
+  return oneflow::JobBuildAndInferCtx_GetLbiInSymmetricBlob(job_name, lbn, index)
+      .GetDataAndSerializedErrorProto(error_str, "");
+}
+
+std::string JobBuildAndInferCtx_SymmetricBlobGetSerializedIdListAsStaticShape(
+    const std::string& job_name, const std::string& symmetric_blob_name, std::string* error_str) {
+  return oneflow::JobBuildAndInferCtx_SymmetricBlobGetSerializedIdListAsStaticShape(
+             job_name, symmetric_blob_name)
+      .GetDataAndSerializedErrorProto(error_str, "");
+}
+
+long long JobBuildAndInferCtx_SymmetricBlobGetDataType(const std::string& job_name,
+                                                       const std::string& symmetric_blob_name,
+                                                       std::string* error_str) {
+  return oneflow::JobBuildAndInferCtx_SymmetricBlobGetDataType(job_name, symmetric_blob_name)
+      .GetDataAndSerializedErrorProto(error_str, 0LL);
+}
+
+bool JobBuildAndInferCtx_SymmetricBlobIsDynamic(const std::string& job_name,
+                                                const std::string& symmetric_blob_name,
+                                                std::string* error_str) {
+  return oneflow::JobBuildAndInferCtx_SymmetricBlobIsDynamic(job_name, symmetric_blob_name)
+      .GetDataAndSerializedErrorProto(error_str, false);
+}
+
+long long JobBuildAndInferCtx_SymmetricBlobGetNumOfLoDLevels(const std::string& job_name,
+                                                             const std::string& symmetric_blob_name,
+                                                             std::string* error_str) {
+  return oneflow::JobBuildAndInferCtx_SymmetricBlobGetNumOfLoDLevels(job_name, symmetric_blob_name)
+      .GetDataAndSerializedErrorProto(error_str, 0LL);
+}
+
+std::string JobBuildAndInferCtx_SymmetricBlobGetBatchAxis(const std::string& job_name,
+                                                          const std::string& symmetric_blob_name,
+                                                          std::string* error_str) {
+  return oneflow::JobBuildAndInferCtx_SymmetricBlobGetBatchAxis(job_name, symmetric_blob_name)
+      .GetDataAndSerializedErrorProto(error_str, "");
+}
+
+std::string JobBuildAndInferCtx_SymmetricBlobGetSplitAxisFromProducerView(
+    const std::string& job_name, const std::string& symmetric_blob_name, std::string* error_str) {
+  return oneflow::JobBuildAndInferCtx_GetSplitAxisFromProducerView(job_name, symmetric_blob_name)
+      .GetDataAndSerializedErrorProto(error_str, "");
+}
+
+std::string JobBuildAndInferCtx_SymmetricBlobGetSerializedParallelConfFromProducerView(
+    const std::string& job_name, const std::string& symmetric_blob_name, std::string* error_str) {
+  return oneflow::JobBuildAndInferCtx_GetSerializedParallelConfFromProducerView(job_name,
+                                                                                symmetric_blob_name)
+      .GetDataAndSerializedErrorProto(error_str, "");
+}
