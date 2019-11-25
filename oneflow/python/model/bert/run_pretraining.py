@@ -45,6 +45,9 @@ parser.add_argument("--attention_probs_dropout_prob", type=float, default=0.1)
 parser.add_argument("--hidden_dropout_prob", type=float, default=0.1)
 parser.add_argument("--hidden_size_per_head", type=int, default=64)
 
+# inplace
+parser.add_argument("--inplace", action="store_true", required=False)
+
 args = parser.parse_args()
 
 def _blob_conf(name, shape, dtype=flow.int32):
@@ -160,13 +163,13 @@ if __name__ == '__main__':
 
   start_time = time.time()
   flow.config.gpu_device_num(args.gpu_num_per_node)
-  flow.config.ctrl_port(9788)
-  flow.config.data_port(9789)
+  flow.env.ctrl_port(9788)
+  flow.env.data_port(9789)
   flow.config.default_data_type(flow.float)
-  flow.config.enable_inplace(False)
+  flow.config.enable_inplace(args.inplace)
 
   if args.node_num > 1:
-    flow.config.ctrl_port(12138)
+    flow.env.ctrl_port(12138)
     nodes = []
     for n in args.node_list.strip().split(","):
       addr_dict = {}
