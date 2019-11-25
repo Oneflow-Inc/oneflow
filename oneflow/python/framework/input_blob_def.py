@@ -13,8 +13,7 @@ from functools import reduce
 import numpy as np
 import oneflow
 
-@oneflow_export('input_blob_def')
-class input_blob_def(blob_desc.BlobDesc):
+class InputBlobDef(blob_desc.BlobDesc):
     def __init__(self, shape,
                  dtype = data_type_util.kFloat,
                  is_dynamic = False,
@@ -59,16 +58,15 @@ class input_blob_def(blob_desc.BlobDesc):
     def parallel_conf(self):
         TODO()
 
-    def with_distribute(self, distribute):
-        return input_blob_def(shape = self.shape_, dtype = self.dtype_,               \
-                        is_dynamic = self.is_dynamic_, batch_axis = self.batch_axis_, \
-                        distribute = distribute, name = self.lbi.op_name)
-
+    def CheckAndAsyncPush(self, session, arg_ndarray):
+        self.CheckInputNdarray(arg_ndarray)
+        self.AsyncPush(session, arg_ndarray)
+        
     def CheckInputNdarray(self, ndarray):
-        if self.num_of_lod_levels == 0:
-            self._CheckDenseNdarray(ndarray)
-        else:
-            self._CheckLodNdarray(ndarray)
+        raise NotImplementedError
+
+    def AsyncPush(self, session, arg_ndarray):
+        raise NotImplementedError
 
     def ToInterfaceBlobConf(self):
         interface_blob_conf = op_conf_util.InterfaceBlobConf()
@@ -164,3 +162,61 @@ class input_blob_def(blob_desc.BlobDesc):
                 for x in ndarray_nested_list:
                     RecursiveCheckNdarray(axis + 1, x)
         RecursiveCheckNdarray(0, ndarray_nested_list)
+
+@oneflow_export('input_blob_def')
+class input_blob_def(InputBlobDef):
+    def __init__(self, *args, **kwargs):
+        InputBlobDef.__init__(self, *args, **kwargs)
+
+    def with_distribute(self, distribute):
+        return input_blob_def(shape = self.shape_, dtype = self.dtype_,               \
+                        is_dynamic = self.is_dynamic_, batch_axis = self.batch_axis_, \
+                        distribute = distribute, name = self.lbi.op_name)
+    
+    def AsyncPush(self, session, arg_ndarray):
+        session.AsyncPush(self.op_name, _MakePushCallback(arg_ndarray))
+        
+    def CheckInputNdarray(self, ndarray):
+        if self.num_of_lod_levels == 0:
+            self._CheckDenseNdarray(ndarray)
+        else:
+            self._CheckLodNdarray(ndarray)
+
+@oneflow_export('mirror_blob_def')
+class mirror_blob_def(InputBlobDef):
+    def __init__(self, *args, **kwargs):
+        InputBlobDef.__init__(self, *args, **kwargs)
+        self.sub_consistent_blob_list_ = None
+
+    def with_distribute(self, distribute):
+        return mirror_blob_def(shape = self.shape_, dtype = self.dtype_,               \
+                        is_dynamic = self.is_dynamic_, batch_axis = self.batch_axis_, \
+                        distribute = distribute, name = self.lbi.op_name)
+
+    def set_sub_consistent_blob_list(self, val):
+        assert self.sub_consistent_blob_list_ is None
+        self.sub_consistent_blob_list_ = val
+        
+    @property
+    def sub_consistent_blob_list(self):
+        assert self.sub_consistent_blob_list_ is not None
+        return self.sub_consistent_blob_list_
+        
+    def AsyncPush(self, session, arg_ndarray):
+        for i in range(len(arg_ndarray)):
+            sub_blob = self.sub_consistent_blob_list[i]
+            session.AsyncPush(sub_blob.op_name, _MakePushCallback(arg_ndarray[i]))
+            
+    def CheckInputNdarray(self, arg_ndarray):
+        assert isinstance(arg_ndarray, (list, tuple))
+        assert len(self.sub_consistent_blob_list) == len(arg_ndarray)
+        for x in arg_ndarray:
+            assert type(x) is np.ndarray
+            if self.num_of_lod_levels == 0:
+                self._CheckDenseNdarray(x)
+            else:
+                self._CheckLodNdarray(x)
+
+def _MakePushCallback(ndarray):
+    copied = np.copy(ndarray)
+    return lambda ofblob: ofblob.CopyFromNdarrayOrNestedNdarrayList(copied)

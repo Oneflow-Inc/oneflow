@@ -3,7 +3,7 @@ from __future__ import absolute_import
 import threading
 import oneflow.python.framework.remote_blob as remote_blob_util
 
-class OutRemoteBlobsStatus(object):
+class FutureRemoteBlobs(object):
     def __init__(self, session):
         self.session_ = session
         self.cond_var_ = threading.Condition()
@@ -45,7 +45,7 @@ class OutRemoteBlobsStatus(object):
         assert len(self.out_remote_blob_pullers_) == 0 
         pullers = self._MakeRemoteBlobPullers(out_remote_blobs)
         self.out_remote_blob_pullers_ = pullers
-        for puller in self._FlatRemoteBlobPullers(pullers):
+        for puller in self._FlatConsistentBlobPullers(pullers):
             puller.AsyncPull(self._FinishCallback)
         return self
     
@@ -69,7 +69,7 @@ class OutRemoteBlobsStatus(object):
 
     def _GetResultNdarray(self, pullers):
         assert self.inited_
-        if isinstance(pullers, _RemoteBlobPuller):
+        if isinstance(pullers, _ConsistentBlobPuller):
             return pullers.result_ndarray
         if isinstance(pullers, list) or isinstance(pullers, tuple):
             ret = [self._GetResultNdarray(x) for x in pullers]
@@ -83,24 +83,27 @@ class OutRemoteBlobsStatus(object):
     
     def _GetPullersCnt(self):
        cnt = 0
-       for _ in self._FlatRemoteBlobPullers(self.out_remote_blob_pullers_): cnt += 1
+       for _ in self._FlatConsistentBlobPullers(self.out_remote_blob_pullers_): cnt += 1
        return cnt
 
-    def _FlatRemoteBlobPullers(self, pullers):
-        if isinstance(pullers, _RemoteBlobPuller):
+    def _FlatConsistentBlobPullers(self, pullers):
+        if isinstance(pullers, _ConsistentBlobPuller):
             yield pullers
         elif isinstance(pullers, list) or isinstance(pullers, tuple):
             for elem in pullers:
-                for x in self._FlatRemoteBlobPullers(elem): yield x
+                for x in self._FlatConsistentBlobPullers(elem): yield x
         elif isinstance(pullers, dict):
             for _, v in pullers.items():
-                for x in self._FlatRemoteBlobPullers(v): yield x
+                for x in self._FlatConsistentBlobPullers(v): yield x
         else:
             raise NotImplementedError
 
     def _MakeRemoteBlobPullers(self, out_remote_blobs):
-        if isinstance(out_remote_blobs, remote_blob_util.RemoteBlob):
-            return _RemoteBlobPuller(out_remote_blobs, self.session_, self.cond_var_)
+        if isinstance(out_remote_blobs, remote_blob_util.ConsistentBlob):
+            return _ConsistentBlobPuller(out_remote_blobs, self.session_, self.cond_var_)
+        if isinstance(out_remote_blobs, remote_blob_util.MirrorBlob):
+            return tuple(_ConsistentBlobPuller(x, self.session_, self.cond_var_)
+                         for x in out_remote_blobs.sub_consistent_blob_list)
         if isinstance(out_remote_blobs, list) or isinstance(out_remote_blobs, tuple):
             return type(out_remote_blobs)(self._MakeRemoteBlobPullers(x) for x in out_remote_blobs)
         if isinstance(out_remote_blobs, dict):
@@ -109,7 +112,7 @@ class OutRemoteBlobsStatus(object):
             }
         raise NotImplementedError
 
-class _RemoteBlobPuller(object):
+class _ConsistentBlobPuller(object):
     def __init__(self, remote_blob, session, cond_var):
         self.op_name_ = remote_blob.op_name
         self.result_ndarray_ = None

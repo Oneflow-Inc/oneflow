@@ -9,8 +9,9 @@ import oneflow.python.framework.compiler as compiler
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.config_util as config_util
 import oneflow.python.framework.env_util as env_util
+import oneflow.python.framework.push_util as push_util
 import oneflow.python.framework.job_instance as job_instance_util
-from oneflow.python.framework.out_remote_blobs_status import OutRemoteBlobsStatus
+from oneflow.python.framework.pull_util import FutureRemoteBlobs
 from oneflow.python.oneflow_export import oneflow_export
 
 class Session(object):
@@ -67,16 +68,12 @@ class Session(object):
         assert self.status_ is SessionStatus.RUNNING
         remote_blobs = self.LaunchUserJob(job_func, *arg)
         if remote_blobs is None: return
-        return OutRemoteBlobsStatus(self).SetResult(remote_blobs).Inited()
+        return FutureRemoteBlobs(self).SetResult(remote_blobs).Inited()
     
     def LaunchUserJob(self, job_func, *arg):
         assert self.status_ is SessionStatus.RUNNING
         job_name = job_func.__name__
-        assert len(arg) == len(job_func.__oneflow_input_blob_defs__)
-        for i in range(len(arg)):
-            arg_blob = job_func.__oneflow_input_blob_defs__[i]
-            arg_blob.CheckInputNdarray(arg[i])
-            self.AsyncPush(arg_blob.op_name, _MakePushCallback(arg[i]))
+        push_util.AsyncPush(self, job_func, *arg)
         self.LaunchJob(job_instance_util.MakeUserJobInstance(job_name))
         return job_func.__oneflow_output_remote_blobs__
 
@@ -112,9 +109,6 @@ class Session(object):
 def clear_default_session():
     session_ctx.TryCloseDefaultSession()
     session_ctx.OpenDefaultSession(Session())
-
-def _MakePushCallback(ndarray):
-    return lambda ofblob: ofblob.CopyFromNdarrayOrNestedNdarrayList(ndarray)
 
 def _GetConfigProto():
     config_proto = config_util.default_config_proto

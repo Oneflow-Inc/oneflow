@@ -42,6 +42,22 @@ void CurJobBuildAndInferCtx_AddAndInferOp(const std::string& serialized_op_conf,
       .GetDataAndSerializedErrorProto(error_str);
 }
 
+void CurJobBuildAndInferCtx_AddAndInferMirrorOp(const std::string& serialized_op_conf,
+                                                const std::string& serialized_parallel_conf,
+                                                std::string* error_str) {
+  return oneflow::CurJobBuildAndInferCtx_AddAndInferMirrorOp(serialized_op_conf,
+                                                             serialized_parallel_conf)
+      .GetDataAndSerializedErrorProto(error_str);
+}
+
+void CurJobBuildAndInferCtx_AddAndInferConsistentOp(const std::string& serialized_op_conf,
+                                                    const std::string& serialized_parallel_conf,
+                                                    std::string* error_str) {
+  return oneflow::CurJobBuildAndInferCtx_AddAndInferConsistentOp(serialized_op_conf,
+                                                                 serialized_parallel_conf)
+      .GetDataAndSerializedErrorProto(error_str);
+}
+
 void CurJobBuildAndInferCtx_AddLossLogicalBlobName(const std::string& lbn, std::string* error_str) {
   return oneflow::CurJobBuildAndInferCtx_AddLossLogicalBlobName(lbn).GetDataAndSerializedErrorProto(
       error_str);
@@ -103,69 +119,68 @@ std::string JobBuildAndInferCtx_GetSerializedParallelConfFromProducerView(
       .GetDataAndSerializedErrorProto(error_str, "");
 }
 
-bool JobBuildAndInferCtx_IsSymmetricBlob(const std::string& job_name, const std::string& lbn,
-                                         std::string* error_str) {
-  return oneflow::JobBuildAndInferCtx_IsSymmetricBlob(job_name, lbn)
+bool JobBuildAndInferCtx_IsMirrorBlob(const std::string& job_name, const std::string& lbn,
+                                      std::string* error_str) {
+  return oneflow::JobBuildAndInferCtx_IsMirrorBlob(job_name, lbn)
       .GetDataAndSerializedErrorProto(error_str, false);
 }
 
-int JobBuildAndInferCtx_NumLbiInSymmetricBlob(const std::string& job_name, const std::string& lbn,
-                                              std::string* error_str) {
-  return oneflow::JobBuildAndInferCtx_NumLbiInSymmetricBlob(job_name, lbn)
+int JobBuildAndInferCtx_MirrorBlobGetNumSubLbi(const std::string& job_name, const std::string& lbn,
+                                               std::string* error_str) {
+  return oneflow::JobBuildAndInferCtx_MirrorBlobGetNumSubLbi(job_name, lbn)
       .GetDataAndSerializedErrorProto(error_str, 0);
 }
 
-std::string JobBuildAndInferCtx_GetSerializedLbiInSymmetricBlob(const std::string& job_name,
-                                                                const std::string& lbn, int index,
-                                                                std::string* error_str) {
-  return oneflow::JobBuildAndInferCtx_GetLbiInSymmetricBlob(job_name, lbn, index)
+std::string JobBuildAndInferCtx_MirrorBlobGetSerializedSubLbi(const std::string& job_name,
+                                                              const std::string& lbn, int index,
+                                                              std::string* error_str) {
+  return oneflow::JobBuildAndInferCtx_MirrorBlobGetSubLbi(job_name, lbn, index)
       .GetDataAndSerializedErrorProto(error_str, "");
 }
 
-std::string JobBuildAndInferCtx_SymmetricBlobGetSerializedIdListAsStaticShape(
-    const std::string& job_name, const std::string& symmetric_blob_name, std::string* error_str) {
-  return oneflow::JobBuildAndInferCtx_SymmetricBlobGetSerializedIdListAsStaticShape(
-             job_name, symmetric_blob_name)
+std::string JobBuildAndInferCtx_MirrorBlobGetSerializedIdListAsStaticShape(
+    const std::string& job_name, const std::string& lbn, std::string* error_str) {
+  return oneflow::JobBuildAndInferCtx_MirrorBlobGetSerializedIdListAsStaticShape(job_name, lbn)
       .GetDataAndSerializedErrorProto(error_str, "");
 }
 
-long long JobBuildAndInferCtx_SymmetricBlobGetDataType(const std::string& job_name,
-                                                       const std::string& symmetric_blob_name,
-                                                       std::string* error_str) {
-  return oneflow::JobBuildAndInferCtx_SymmetricBlobGetDataType(job_name, symmetric_blob_name)
+long long JobBuildAndInferCtx_MirrorBlobGetDataType(const std::string& job_name,
+                                                    const std::string& lbn,
+                                                    std::string* error_str) {
+  return oneflow::JobBuildAndInferCtx_MirrorBlobGetDataType(job_name, lbn)
       .GetDataAndSerializedErrorProto(error_str, 0LL);
 }
 
-bool JobBuildAndInferCtx_SymmetricBlobIsDynamic(const std::string& job_name,
-                                                const std::string& symmetric_blob_name,
-                                                std::string* error_str) {
-  return oneflow::JobBuildAndInferCtx_SymmetricBlobIsDynamic(job_name, symmetric_blob_name)
+bool JobBuildAndInferCtx_MirrorBlobIsDynamic(const std::string& job_name, const std::string& lbn,
+                                             std::string* error_str) {
+  return oneflow::JobBuildAndInferCtx_MirrorBlobIsDynamic(job_name, lbn)
       .GetDataAndSerializedErrorProto(error_str, false);
 }
 
-long long JobBuildAndInferCtx_SymmetricBlobGetNumOfLoDLevels(const std::string& job_name,
-                                                             const std::string& symmetric_blob_name,
-                                                             std::string* error_str) {
-  return oneflow::JobBuildAndInferCtx_SymmetricBlobGetNumOfLoDLevels(job_name, symmetric_blob_name)
+long long JobBuildAndInferCtx_MirrorBlobGetNumOfLoDLevels(const std::string& job_name,
+                                                          const std::string& lbn,
+                                                          std::string* error_str) {
+  return oneflow::JobBuildAndInferCtx_MirrorBlobGetNumOfLoDLevels(job_name, lbn)
       .GetDataAndSerializedErrorProto(error_str, 0LL);
 }
 
-std::string JobBuildAndInferCtx_SymmetricBlobGetBatchAxis(const std::string& job_name,
-                                                          const std::string& symmetric_blob_name,
-                                                          std::string* error_str) {
-  return oneflow::JobBuildAndInferCtx_SymmetricBlobGetBatchAxis(job_name, symmetric_blob_name)
+std::string JobBuildAndInferCtx_MirrorBlobGetBatchAxis(const std::string& job_name,
+                                                       const std::string& lbn,
+                                                       std::string* error_str) {
+  return oneflow::JobBuildAndInferCtx_MirrorBlobGetBatchAxis(job_name, lbn)
       .GetDataAndSerializedErrorProto(error_str, "");
 }
 
-std::string JobBuildAndInferCtx_SymmetricBlobGetSplitAxisFromProducerView(
-    const std::string& job_name, const std::string& symmetric_blob_name, std::string* error_str) {
-  return oneflow::JobBuildAndInferCtx_GetSplitAxisFromProducerView(job_name, symmetric_blob_name)
+std::string JobBuildAndInferCtx_MirrorBlobGetSplitAxisFromProducerView(const std::string& job_name,
+                                                                       const std::string& lbn,
+                                                                       std::string* error_str) {
+  return oneflow::JobBuildAndInferCtx_MirrorBlobGetSplitAxisFromProducerView(job_name, lbn)
       .GetDataAndSerializedErrorProto(error_str, "");
 }
 
-std::string JobBuildAndInferCtx_SymmetricBlobGetSerializedParallelConfFromProducerView(
-    const std::string& job_name, const std::string& symmetric_blob_name, std::string* error_str) {
-  return oneflow::JobBuildAndInferCtx_GetSerializedParallelConfFromProducerView(job_name,
-                                                                                symmetric_blob_name)
+std::string JobBuildAndInferCtx_MirrorBlobGetSerializedParallelConfFromProducerView(
+    const std::string& job_name, const std::string& lbn, std::string* error_str) {
+  return oneflow::JobBuildAndInferCtx_MirrorBlobGetSerializedParallelConfFromProducerView(job_name,
+                                                                                          lbn)
       .GetDataAndSerializedErrorProto(error_str, "");
 }
