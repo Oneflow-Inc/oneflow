@@ -2,6 +2,7 @@ from __future__ import absolute_import
 
 import oneflow.python.framework.placement_context as placement_context
 import oneflow.python.framework.job_builder as job_builder
+import oneflow.python.framework.c_api_util as c_api_util
 
 from contextlib import contextmanager
 from oneflow.python.oneflow_export import oneflow_export
@@ -39,26 +40,33 @@ class BeforeNonInputOpBuildAndInferHook:
 
 
 def CurJobAddOp(op_conf, parallel_conf=None):
-    return _CurJobAddNonInputOp(op_conf, parallel_conf)
+    return _CurJobAddNonInputOp(op_conf, parallel_conf,
+                                c_api_util.CurJobBuildAndInferCtx_AddAndInferOp)
 
+def CurJobAddConsistentOp(op_conf, parallel_conf=None):
+    return _CurJobAddNonInputOp(op_conf, parallel_conf,
+                                c_api_util.CurJobBuildAndInferCtx_AddAndInferConsistentOp)
 
-def CurJobAddInputOp(op_conf):
-    op_conf.device_type = placement_context.CurPlacementGroupGetDeviceType(
-        op_conf
-    )
+def CurJobAddMirrorOp(op_conf, parallel_conf=None):
+    return _CurJobAddNonInputOp(op_conf, parallel_conf,
+        c_api_util.CurJobBuildAndInferCtx_AddAndInferMirrorOp)
 
-    job_builder.CurCtxAddAndInferOp(
-        op_conf, placement_context.ParallelConf4OpConf(op_conf)
-    )
+def CurJobAddConsistentInputOp(op_conf):
+    return _CurJobAddInputOp(op_conf, job_builder.CurCtxAddAndInferOp)
 
+def CurJobAddMirrorInputOp(op_conf):
+    return _CurJobAddInputOp(op_conf, c_api_util.CurJobBuildAndInferCtx_AddAndInferMirrorOp)
 
-def _CurJobAddNonInputOp(op_conf, parallel_conf=None):
+def _CurJobAddInputOp(op_conf, add_and_infer_op):
+    op_conf.device_type = placement_context.CurPlacementGroupGetDeviceType(op_conf)
+    add_and_infer_op(op_conf, placement_context.ParallelConf4OpConf(op_conf))
+
+def _CurJobAddNonInputOp(op_conf, parallel_conf, add_and_infer_op):
     _prefixing_op_name_if_need(op_conf)
     op_conf.device_type = placement_context.CurPlacementGroupGetDeviceType(op_conf)
     for callback in before_non_input_op_build_and_infer_hooks: callback()
     if parallel_conf is None: parallel_conf = placement_context.ParallelConf4OpConf(op_conf)
-    job_builder.CurCtxAddAndInferOp(op_conf, parallel_conf)
-
+    add_and_infer_op(op_conf, parallel_conf)
 
 def _ResetCurJobConf(job_conf):
     global cur_job_conf

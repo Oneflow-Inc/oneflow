@@ -10,17 +10,17 @@ def distribute_map(xs, f, axis = 0):
     if isinstance(xs, (list, tuple)) == False: xs = [xs]
     splitted_xs = [oneflow.advanced.distribute_split(x, axis=axis) for x in xs]
     results = [_UnderSingleDevicePlacementScope(f, *x) for x in zip(*splitted_xs)]
-    output_is_not_container = all([isinstance(x, remote_blob_util.RemoteBlob) for x in results])
+    output_is_not_container = all([isinstance(x, remote_blob_util.ConsistentBlob) for x in results])
     results = [_TryWrapTuple(x) for x in results]
     result = [oneflow.advanced.distribute_concat(x, axis=axis) for x in zip(*results)]
     if output_is_not_container: return result[0]
     return tuple(result)
 
 def _AssertInputOrOutput(xs):
-    assert isinstance(xs, (list, tuple, remote_blob_util.RemoteBlob))
+    assert isinstance(xs, (list, tuple, remote_blob_util.ConsistentBlob))
     if isinstance(xs, (list, tuple)):
         assert len(xs) > 0
-        assert all([isinstance(x, remote_blob_util.RemoteBlob) for x in xs])
+        assert all([isinstance(x, remote_blob_util.ConsistentBlob) for x in xs])
 
 def _TryWrapTuple(ys):
     _AssertInputOrOutput(ys)

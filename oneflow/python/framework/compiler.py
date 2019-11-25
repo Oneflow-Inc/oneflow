@@ -8,7 +8,7 @@ import oneflow.python.framework.compile_context as compile_context
 import oneflow.python.framework.placement_util as placement_util
 import oneflow.python.framework.config_util as config_util
 import oneflow.python.framework.remote_blob as remote_blob_util
-import oneflow.python.framework.input_blob_def as input_blob_def
+import oneflow.python.framework.input_blob_def as input_blob_util
 import oneflow.python.framework.job_builder as job_builder
 import oneflow.python.ops as ops
 from oneflow.python.lib.core.box import Box
@@ -36,7 +36,7 @@ def _CompileJob(job_conf, func, config):
 
 def _RecursiveMakeRetRemoteBlobs(out_remote_blobs):
     if out_remote_blobs is None: return None
-    if isinstance(out_remote_blobs, (input_blob_def.input_blob_def, remote_blob_util.RemoteBlob)):
+    if isinstance(out_remote_blobs, (input_blob_util.InputBlobDef, remote_blob_util.BlobDef)):
         return ops.RetOpByRemoteBlob(out_remote_blobs)
     if isinstance(out_remote_blobs, (tuple, list)):
         return type(out_remote_blobs)(_RecursiveMakeRetRemoteBlobs(x) for x in out_remote_blobs)
@@ -65,8 +65,8 @@ def _AddInputOpBeforeNonInputOp(func, do_before_infer_input_op):
         input_op_add_and_infered.set_value(True)
         do_before_infer_input_op()
         for blob_desc in func.__oneflow_input_blob_defs__:
-            assert isinstance(blob_desc, input_blob_def.input_blob_def)
-            ops.InputOpByBlobDesc(blob_desc)
+            assert isinstance(blob_desc, input_blob_util.InputBlobDef)
+            ops.InputOpByInputBlobDef(blob_desc)
     with compile_context.BeforeNonInputOpBuildAndInferHook(AddAndInferInputOp):
         yield None
     if input_op_add_and_infered.value == False: AddAndInferInputOp()

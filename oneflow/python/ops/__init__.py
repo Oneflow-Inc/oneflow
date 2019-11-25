@@ -2,18 +2,39 @@ from __future__ import absolute_import
 
 import oneflow.python.framework.compile_context as compile_context
 import oneflow.python.framework.remote_blob as remote_blob_util
+import oneflow.python.framework.input_blob_def as input_blob_util
 import oneflow.python.framework.id_util as id_util
+import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 
-def InputOpByBlobDesc(blob_desc):
+def InputOpByInputBlobDef(blob_def):
+    add_and_infer_op = None
+    if isinstance(blob_def, input_blob_util.input_blob_def):
+        add_and_infer_op = compile_context.CurJobAddConsistentInputOp
+    elif isinstance(blob_def, input_blob_util.mirror_blob_def):
+        def add_and_infer_op(op_conf):
+            compile_context.CurJobAddMirrorInputOp(op_conf)
+            sub_consistent_blob_list = []
+            job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
+            lbn = blob_def.logical_blob_name
+            num_sub_lbi = c_api_util.JobBuildAndInferCtx_MirrorBlobGetNumSubLbi(job_name, lbn)
+            for i in range(num_sub_lbi):
+                sub_lbi = c_api_util.JobBuildAndInferCtx_MirrorBlobGetSubLbi(job_name, lbn, i)
+                sub_consistent_blob_list.append(remote_blob_util.ConsistentBlob(sub_lbi))
+            blob_def.set_sub_consistent_blob_list(sub_consistent_blob_list)
+    else:
+        raise NotImplementedError
+    return _InputOpByInputBlobDef(blob_def, add_and_infer_op)
+
+def _InputOpByInputBlobDef(blob_def, add_and_infer_op):
     op_conf = op_conf_util.OperatorConf()
-    op_conf.name = blob_desc.op_name
-    op_conf.input_conf.out = blob_desc.blob_name
-    op_conf.input_conf.blob_conf.CopyFrom(blob_desc.ToInterfaceBlobConf())
+    op_conf.name = blob_def.op_name
+    op_conf.input_conf.out = blob_def.blob_name
+    op_conf.input_conf.blob_conf.CopyFrom(blob_def.ToInterfaceBlobConf())
     op_conf.input_conf.blob_conf.batch_axis.value = 0
-    compile_context.CurJobAddInputOp(op_conf)
-    return remote_blob_util.RemoteBlob(blob_desc.lbi)
+    add_and_infer_op(op_conf)
+    return remote_blob_util.RemoteBlob(blob_def.lbi)
 
 def RetOpByRemoteBlob(remote_blob):
     op_conf = op_conf_util.OperatorConf()

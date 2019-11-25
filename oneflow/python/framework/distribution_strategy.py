@@ -4,7 +4,7 @@ import functools
 import oneflow.python.framework.compile_context as compile_context
 import oneflow.python.framework.placement_util as placement_util
 
-from oneflow.python.framework.remote_blob import RemoteBlob
+from oneflow.python.framework.remote_blob import ConsistentBlob
 from oneflow.python.advanced.distribute_split import distribute_split
 from oneflow.python.advanced.distribute_clone import distribute_clone
 from oneflow.python.deprecated.variable_scope import distribution_name_scope
@@ -64,14 +64,14 @@ class MirrorDistributionStrategy(DistributionStrategy):
     def register(self, fn):
         @functools.wraps(fn)
         def wrapped_fn(*args, **kwargs):
-            args_ = [distribute_split(arg) if isinstance(arg, RemoteBlob) else arg for arg in args]
-            args_is_blob = [True if isinstance(arg, RemoteBlob) else False for arg in args]
+            args_ = [distribute_split(arg) if isinstance(arg, ConsistentBlob) else arg for arg in args]
+            args_is_blob = [True if isinstance(arg, ConsistentBlob) else False for arg in args]
 
             kwargs_ = dict(
                 zip(
                     kwargs.keys(),
                     [
-                        distribute_split(v) if isinstance(v, RemoteBlob) else v
+                        distribute_split(v) if isinstance(v, ConsistentBlob) else v
                         for v in kwargs.values()
                     ],
                 )
@@ -79,7 +79,7 @@ class MirrorDistributionStrategy(DistributionStrategy):
             kwargs_is_blob = dict(
                 zip(
                     kwargs.keys(),
-                    [True if isinstance(v, RemoteBlob) else False for v in kwargs.values()],
+                    [True if isinstance(v, ConsistentBlob) else False for v in kwargs.values()],
                 )
             )
 
