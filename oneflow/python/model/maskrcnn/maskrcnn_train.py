@@ -552,7 +552,7 @@ if terminal_args.train_with_real_dataset:
 
 if __name__ == "__main__":
     flow.config.gpu_device_num(terminal_args.gpu_num_per_node)
-    flow.config.ctrl_port(terminal_args.ctrl_port)
+    flow.env.ctrl_port(terminal_args.ctrl_port)
     flow.config.default_data_type(flow.float)
 
     fake_image_list = []
@@ -594,7 +594,6 @@ if __name__ == "__main__":
             for i in range(terminal_args.iter_num):
 
                 def save_model():
-                    return
                     if not os.path.exists(terminal_args.model_save_dir):
                         os.makedirs(terminal_args.model_save_dir)
                     model_dst = os.path.join(
@@ -624,6 +623,7 @@ if __name__ == "__main__":
                     save_model()
 
         elif terminal_args.train_with_real_dataset:
+            
             print(
                 "{:>8} {:>8} {:>16} {:>16} {:>16} {:>16} {:>16}".format(
                     "iter",
@@ -635,7 +635,17 @@ if __name__ == "__main__":
                     "loss_mask",
                 )
             )
+            def save_model(i):
+                if not os.path.exists(terminal_args.model_save_dir):
+                    os.makedirs(terminal_args.model_save_dir)
+                model_dst = os.path.join(
+                    terminal_args.model_save_dir, "iter-" + str(i)
+                )
+                print("saving models to {}".format(model_dst))
+                check_point.save(model_dst)
             for i in range(terminal_args.iter_num):
+                if i == 0:
+                    save_model(0)
                 if i < len(fake_image_list):
                     losses = train_func(fake_image_list[i]).get()
                 else:
@@ -646,3 +656,5 @@ if __name__ == "__main__":
                     print(fmt_str.format(i, j, *[t.mean() for t in loss]))
 
                 save_blob_watched(i)
+                if (i + 1) % 10 == 0:
+                    save_model(i)
