@@ -61,7 +61,7 @@ void UserOp::InitFromOpConf() {
 }
 
 Maybe<void> UserOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                   const ParallelContext* parallel_ctx) const override {
+                                   const ParallelContext* parallel_ctx) const {
   const user_op::OpRegistrationVal* val =
       user_op::LookUpInOpRegistry(op_conf().user_conf().op_type_name());
   CHECK_OR_RETURN(val != nullptr) << "cannot find op_type: " << op_conf().user_conf().op_type_name()
@@ -74,6 +74,12 @@ Maybe<void> UserOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> 
     for (const std::string& obn : output_bns()) { *GetBlobDesc4BnInOp(obn) = *first_in_blob_desc; }
   }
 
+  // cclog:
+  LOG(INFO) << "cclog: befor infer shape, in shape "
+            << GetBlobDesc4BnInOp(SoleIbn())->shape().ToString() << " sole_ibn = " << SoleIbn();
+  LOG(INFO) << "cclog: befor infer shape, out shape "
+            << GetBlobDesc4BnInOp(SoleObn())->shape().ToString() << " sole_obn = " << SoleObn();
+
   // infer Shape
   auto GetShape4ArgNameAndIndex = [&](const std::string& bn, int32_t index) -> Shape* {
     BlobDesc* blob = GetBlobDesc4BnInOp(GenRepeatedBn(bn, index));
@@ -81,6 +87,12 @@ Maybe<void> UserOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> 
     return nullptr;
   };
   JUST(val->shape_infer_fn(GetShape4ArgNameAndIndex));
+
+  // cclog:
+  LOG(INFO) << "cclog: after infer shape, in shape "
+            << GetBlobDesc4BnInOp(SoleIbn())->shape().ToString() << " sole_ibn = " << SoleIbn();
+  LOG(INFO) << "cclog: after infer shape, out shape "
+            << GetBlobDesc4BnInOp(SoleObn())->shape().ToString() << " sole_obn = " << SoleObn();
 
   // infer Dtype
   HashMap<std::string, DataType> bn_in_op2data_type;
@@ -113,11 +125,14 @@ LogicalBlobId UserOp::obn2lbi(const std::string& output_bn) const {
 Maybe<void> UserOp::InferTmpBufferBlobDesc(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
-  BlobInfo4ArgNameAndIndexFn GetBlobInfo = [&](const std::string& arg_name,
-                                               int32_t id) -> std::shared_ptr<BlobInfo> {
+  user_op::BlobInfo4ArgNameAndIndexFn GetBlobInfo =
+      [&](const std::string& arg_name, int32_t id) -> std::shared_ptr<user_op::BlobInfo> {
     BlobDesc* blob = GetBlobDesc4BnInOp(GenRepeatedBn(arg_name, id));
-    if (blob) { return std::shared_ptr<BlobInfo>(new BlobInfo(blob->shape(), blob->data_type())); }
-    return std::shared_ptr<BlobInfo>();
+    if (blob) {
+      return std::shared_ptr<user_op::BlobInfo>(
+          new user_op::BlobInfo(blob->shape(), blob->data_type()));
+    }
+    return std::shared_ptr<user_op::BlobInfo>();
   };
 
   DataType data_type = DataType::kInvalidDataType;
@@ -127,19 +142,19 @@ Maybe<void> UserOp::InferTmpBufferBlobDesc(
   }
   if (first_blob_desc) { data_type = first_blob_desc->data_type(); }
 
-  user_op::KernelRegContext kernel_reg_ctx(op_conf().device_type(), data_type, parallel_ctx,
+  user_op::KernelRegContext kernel_reg_ctx(op_conf().device_type(), data_type, *parallel_ctx,
                                            GetBlobInfo);
   const user_op::KernelRegistrationVal* kernel_reg_val =
-      user_op::LookUpInKernelRegistry(op_conf().user_conf().op_type_name(), ctx);
-  CHECK_OR_RETURN(val != nullptr) << "cannot find op_type: " << op_conf().user_conf().op_type_name()
-                                  << " in kernel registry!";
+      user_op::LookUpInKernelRegistry(op_conf().user_conf().op_type_name(), kernel_reg_ctx);
+  CHECK_OR_RETURN(kernel_reg_val != nullptr)
+      << "cannot find op_type: " << op_conf().user_conf().op_type_name() << " in kernel registry!";
 
-  size_t tmp_size = val->infer_tmp_size_fn(/*TODO(niuchong)*/);
+  size_t tmp_size = kernel_reg_val->infer_tmp_size_fn(/*TODO(niuchong)*/);
   if (tmp_size > 0) {
     BlobDesc* tmp_buffer_blob = GetBlobDesc4BnInOp("tmp_buffer");
     CHECK(tmp_buffer_blob != nullptr);
     tmp_buffer_blob->set_data_type(DataType::kChar);
-    tmp_buffer_blob->mut_shape() = Shape({tmp_size});
+    tmp_buffer_blob->mut_shape() = Shape({static_cast<int64_t>(tmp_size)});
   }
   return Maybe<void>::Ok();
 }

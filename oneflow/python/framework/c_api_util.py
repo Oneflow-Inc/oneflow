@@ -6,6 +6,7 @@ from oneflow.core.job.inter_user_job_info_pb2 import InterUserJobInfo
 import oneflow.core.job.job_set_pb2 as job_set_util
 import oneflow.core.job.placement_pb2 as placment_util
 import oneflow.core.record.record_pb2 as record_util
+import oneflow.core.operator.op_conf_pb2 as op_conf_util
 from google.protobuf import text_format
 import oneflow.oneflow_internal as oneflow_internal
 import oneflow.python.framework.runtime_context as runtime_ctx
@@ -82,6 +83,14 @@ def CurJobBuildAndInferCtx_SetJobConf(job_config_proto):
     error_str = oneflow_internal.CurJobBuildAndInferCtx_SetJobConf(serialized_job_conf)
     error = text_format.Parse(error_str, error_util.ErrorProto())
     if error.HasField("error_type"): raise JobBuildAndInferError(error)
+
+def CurJobBuildAndInferCtx_CheckAndCompleteUserOpConf(op_conf_proto):
+    serialized_op_conf = str(text_format.MessageToString(op_conf_proto))
+    AddDefaultVal = oneflow_internal.CurJobBuildAndInferCtx_CheckAndCompleteUserOpConf
+    new_op_conf, error_str = AddDefaultVal(serialized_op_conf)
+    error = text_format.Parse(error_str, error_util.ErrorProto())
+    if error.HasField("error_type"): raise JobBuildAndInferError(error)
+    return text_format.Parse(new_op_conf, op_conf_util.OperatorConf())
 
 def CurJobBuildAndInferCtx_AddAndInferOp(op_conf_proto, parallel_conf_proto):
     serialized_op_conf = str(text_format.MessageToString(op_conf_proto))

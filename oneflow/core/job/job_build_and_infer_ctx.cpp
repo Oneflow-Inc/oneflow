@@ -1,10 +1,114 @@
 #include "oneflow/core/job/job_build_and_infer_ctx.h"
+#include "oneflow/core/framework/op_registration.h"
 
 namespace oneflow {
+
+namespace {
+
+Maybe<void> CheckArgDefIsValidInUserOpConf(
+    const OperatorConf& op_conf, const PbMap<std::string, UserOpConf_ListString>& arg_name2lbns,
+    const PbRpf<UserOpDef_ArgDef>& args) {
+  const std::string& op_name = op_conf.name();
+  const std::string& op_type_name = op_conf.user_conf().op_type_name();
+  HashSet<std::string> op_def_arg_names;
+  for (const auto& arg : args) {
+    int32_t arg_blob_num = 0;
+    if (arg_name2lbns.find(arg.name()) != arg_name2lbns.end()) {
+      arg_blob_num = arg_name2lbns.at(arg.name()).s_size();
+    }
+    if (arg_blob_num != arg.num()) {
+      if (arg_blob_num == 0) {
+        CHECK_OR_RETURN(arg.is_optional())
+            << " op_name: " << op_name << " op_type_name: " << op_type_name
+            << " arg name: " << arg.name() << " in OpDef must have blob in op_conf";
+      } else {
+        CHECK_OR_RETURN(arg_blob_num > arg.num() && arg.num_as_min())
+            << " op_name: " << op_name << " op_type_name: " << op_type_name
+            << " arg name: " << arg.name() << " has blob num: " << arg_blob_num
+            << " in op_conf does not meet its constraints in OpDef";
+      }
+    }
+    op_def_arg_names.insert(arg.name());
+  }
+  for (const auto& pair : arg_name2lbns) {
+    CHECK_OR_RETURN(op_def_arg_names.find(pair.first) != op_def_arg_names.end())
+        << " op_name: " << op_name << " op_type_name: " << op_type_name
+        << " has not arg name: " << pair.first << " in OpDef";
+  }
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> AddAttrDefaultValueAndCheckValid(const UserOpDef& op_def, OperatorConf* op_conf) {
+  UserOpConf* user_conf = op_conf->mutable_user_conf();
+  auto* attr_name2attr = user_conf->mutable_attr();
+  HashSet<std::string> op_def_attr_names;
+  for (const auto& attr : op_def.attr()) {
+    if (attr_name2attr->find(attr.name()) == attr_name2attr->end()) {
+      CHECK_OR_RETURN(attr.has_default_val())
+          << " op_name: " << op_conf->name() << " op_type_name: " << user_conf->op_type_name()
+          << " must set attr val for attr_name: " << attr.name();
+      (*attr_name2attr)[attr.name()] = attr.default_val();
+    }
+    op_def_attr_names.insert(attr.name());
+  }
+  for (const auto& pair : user_conf->attr()) {
+    CHECK_OR_RETURN(op_def_attr_names.find(pair.first) != op_def_attr_names.end())
+        << " op_name: " << op_conf->name() << " op_type_name: " << user_conf->op_type_name()
+        << " has not attr_name: " << pair.first << " in OpDef";
+  }
+  for (const auto& attr : op_def.attr()) {
+    CHECK_OR_RETURN(static_cast<int32_t>(attr.type())
+                    == static_cast<int32_t>(attr_name2attr->at(attr.name()).value_case()))
+        << " op_name: " << op_conf->name() << " op_type_name: " << user_conf->op_type_name()
+        << " attr_name: " << attr.name()
+        << " has different attr type in OpDef and OpConf, it should be with type: "
+        << UserOpAttrType_Name(attr.type());
+  }
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> AddUserOpConfOutputDefaultArg(const UserOpDef& op_def, OperatorConf* op_conf) {
+  UserOpConf* user_conf = op_conf->mutable_user_conf();
+  // add default output arg and lbn
+  for (const auto& output_arg : op_def.output()) {
+    LOG(INFO) << "cclog: output arg_name: " << output_arg.name()
+              << " is_optional: " << output_arg.is_optional()
+              << " num_as_min: " << output_arg.num_as_min();
+    if (user_conf->output().find(output_arg.name()) == user_conf->output().end()
+        && (!output_arg.is_optional()) && (!output_arg.num_as_min())) {
+      for (int32_t i = 0; i < output_arg.num(); ++i) {
+        std::string lbn = GenLogicalBlobName(op_conf->name(), GenRepeatedBn(output_arg.name(), i));
+        (*(user_conf->mutable_output()))[output_arg.name()].add_s(lbn);
+        CHECK_EQ(i + 1, user_conf->output().at(output_arg.name()).s_size());
+      }
+    }
+  }
+  return Maybe<void>::Ok();
+}
+
+}  // namespace
 
 JobBuildAndInferCtx::JobBuildAndInferCtx(Job* job, int64_t job_id) : job_(job), job_id_(job_id) {
   is_job_conf_frozen_ = false;
   has_job_conf_ = false;
+}
+
+Maybe<OperatorConf> JobBuildAndInferCtx::CheckAndCompleteUserOpConf(const OperatorConf& op_conf) {
+  CHECK_OR_RETURN(op_conf.has_user_conf()) << " Add default value only for user op";
+  OperatorConf ret = op_conf;
+  UserOpConf* user_conf = ret.mutable_user_conf();
+  const user_op::OpRegistrationVal* val = user_op::LookUpInOpRegistry(user_conf->op_type_name());
+  CHECK_OR_RETURN(val) << " Cannot find op_type_name: " << user_conf->op_type_name();
+  const UserOpDef& op_def = val->op_def;
+
+  JUST(AddAttrDefaultValueAndCheckValid(op_def, &ret));
+  JUST(AddUserOpConfOutputDefaultArg(op_def, &ret));
+  // check input and output valid
+  JUST(CheckArgDefIsValidInUserOpConf(op_conf, user_conf->input(), op_def.input()));
+  JUST(CheckArgDefIsValidInUserOpConf(op_conf, user_conf->output(), op_def.output()));
+  // check attr valid by user
+  JUST(val->check_fn(op_def, *user_conf));
+  return ret;
 }
 
 Maybe<void> JobBuildAndInferCtx::SetJobConf(const JobConfigProto& job_conf) {
@@ -41,13 +145,14 @@ Maybe<void> JobBuildAndInferCtx::DecodeSplitHint7AddOp7AddSbpSigConf2Job(
   PbMessage* op_type_conf = MutableMessageInPbMessage(&op_conf_without_split_hint,
                                                       op_conf_without_split_hint.op_type_case());
   for (const std::string& ibn : op->input_bns()) {
-    std::string lbn_may_with_split_hint = GetStrValInPbFdOrPbRpf(op->GetCustomizedConf(), ibn);
+    std::string lbn_may_with_split_hint =
+        GetInputLbnInOpCustomizedConf(op->GetCustomizedConf(), ibn);
     SbpParallel sbp_parallel;
     if (JUST(GetSbpParallelInLbnOrNothing(lbn_may_with_split_hint, &sbp_parallel))) {
       (*(sbp_sig_conf->mutable_bn_in_op2sbp_parallel()))[ibn] = sbp_parallel;
       const LogicalBlobId& lbi = op->BnInOp2Lbi(ibn);
       std::string lbn = GenLogicalBlobName(lbi);
-      ReplaceStrValInPbFdOrPbRpf(op_type_conf, ibn, lbn_may_with_split_hint, lbn);
+      ReplaceInputLbnInOpCustomizedConf(op_type_conf, ibn, lbn_may_with_split_hint, lbn);
     }
   }
   if (sbp_sig_conf->bn_in_op2sbp_parallel().size() > 0) {
