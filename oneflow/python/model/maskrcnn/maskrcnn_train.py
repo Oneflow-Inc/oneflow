@@ -624,10 +624,9 @@ if __name__ == "__main__":
                 save_blob_watched(i)
 
                 if (i + 1) % 10 == 0:
-                    save_model()
+                    save_model(i + 1)
 
         elif terminal_args.train_with_real_dataset:
-            
             print(
                 "{:>8} {:>8} {:>16} {:>16} {:>16} {:>16} {:>16}".format(
                     "iter",
@@ -639,14 +638,7 @@ if __name__ == "__main__":
                     "loss_mask",
                 )
             )
-            def save_model(i):
-                if not os.path.exists(terminal_args.model_save_dir):
-                    os.makedirs(terminal_args.model_save_dir)
-                model_dst = os.path.join(
-                    terminal_args.model_save_dir, "iter-" + str(i)
-                )
-                print("saving models to {}".format(model_dst))
-                check_point.save(model_dst)
+
             for i in range(terminal_args.iter_num):
                 if i == 0:
                     save_model(0)
