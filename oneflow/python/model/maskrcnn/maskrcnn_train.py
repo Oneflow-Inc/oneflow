@@ -93,6 +93,9 @@ parser.add_argument(
 parser.add_argument(
     "-imgd", "--image_dir", type=str, default="val2017", required=False
 )
+parser.add_argument(
+    "-j", "--jupyter", default=False, action="store_true", required=False
+)
 terminal_args = parser.parse_args()
 
 
@@ -639,6 +642,17 @@ if __name__ == "__main__":
                 )
             )
 
+            def save_model(i):
+                return
+                if not os.path.exists(terminal_args.model_save_dir):
+                    os.makedirs(terminal_args.model_save_dir)
+                model_dst = os.path.join(
+                    terminal_args.model_save_dir, "iter-" + str(i)
+                )
+                print("saving models to {}".format(model_dst))
+                check_point.save(model_dst)
+
+            losses_hisogram = []
             for i in range(terminal_args.iter_num):
                 if i == 0:
                     save_model(0)
@@ -657,8 +671,40 @@ if __name__ == "__main__":
 
                 fmt_str = "{:>8} {:>8}" + "{:>16.10f} " * len(losses)
                 for j, loss in enumerate(zip(*losses)):
-                    print(fmt_str.format(i, j, *[t.mean() for t in loss]))
-
-                save_blob_watched(i)
+                    frame = [t.mean() for t in loss]
+                    print(fmt_str.format(i, j, *frame))
+                    frame.append(i)
+                    losses_hisogram.append(frame)
+                    save_blob_watched(i)
                 if (i + 1) % 10 == 0:
                     save_model(i)
+            if terminal_args.jupyter:
+                import altair as alt
+                from vega_datasets import data
+
+                import pandas as pd
+
+                loss_data_frame = pd.DataFrame(np.array(losses_hisogram), columns=["loss_rpn_box_reg", "loss_objectness", "loss_box_reg", "loss_classifier", "loss_mask", "iter"])
+    
+                base = (
+                    alt.Chart(loss_data_frame).mark_line()
+                    .encode(x="petalLength", y="petalWidth")
+                )
+                chart = base.mark_line().encode(
+                    x='iter',
+                    y='loss_rpn_box_reg',
+                ) + base.mark_line().encode(
+                    x='iter',
+                    y='loss_objectness',
+                ) + base.mark_line().encode(
+                    x='iter',
+                    y='loss_box_reg',
+                ) + base.mark_line().encode(
+                    x='iter',
+                    y='loss_classifier',
+                ) + base.mark_line().encode(
+                    x='iter',
+                    y='loss_mask',
+                )
+
+                chart.display()
