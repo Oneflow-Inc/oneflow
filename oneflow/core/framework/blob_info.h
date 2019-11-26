@@ -32,4 +32,4 @@ class BlobInfo final {
 
 }  // namespace oneflow
 
-#endif
+#endif  // ONEFLOW_CORE_FRAMEWORK_BLOB_INFO_H_

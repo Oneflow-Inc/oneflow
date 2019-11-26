@@ -42,7 +42,7 @@ class OpKernel {
   virtual ~OpKernel() = default;
 
   void Init(const KernelInitContext&);
-  virtual void Compute(const KernelContext&) = 0;
+  virtual void Compute(const KernelContext&) const = 0;
 
  protected:
   OpKernel() = default;
