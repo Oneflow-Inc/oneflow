@@ -84,7 +84,10 @@ Maybe<void> UserOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> 
   auto GetDtype4ArgNameAndIndex = [&](const std::string& bn, int32_t index) -> DataType* {
     std::string bn_in_op = GenRepeatedBn(bn, index);
     BlobDesc* blob = GetBlobDesc4BnInOp(bn_in_op);
-    if (blob) { return &bn_in_op2data_type[bn_in_op]; }
+    if (blob) {
+      bn_in_op2data_type[bn_in_op] = blob->data_type();
+      return &bn_in_op2data_type[bn_in_op];
+    }
     return nullptr;
   };
   user_op::ArgVec inputs_vec;
@@ -109,6 +112,7 @@ Maybe<void> UserOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> 
   JUST(val->shape_infer_fn(infer_ctx));
   JUST(val->dtype_infer_fn(infer_ctx));
   for (const auto& pair : bn_in_op2data_type) {
+    // data_type of input blobs is also set, but not changed
     GetBlobDesc4BnInOp(pair.first)->set_data_type(pair.second);
   }
 
