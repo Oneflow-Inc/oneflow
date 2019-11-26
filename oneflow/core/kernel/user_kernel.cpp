@@ -38,6 +38,8 @@ class UserKernel final : public Kernel {
   }
 };
 
-NEW_REGISTER_KERNEL(OperatorConf::kUserConf, UserKernel);
+NEW_REGISTER_KERNEL(OperatorConf::kUserConf, UserKernel).SetIsMatchedPred([](const KernelConf&) {
+  return true;
+});
 
 }  // namespace oneflow
