@@ -116,8 +116,6 @@ Maybe<void> UserOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> 
     GetBlobDesc4BnInOp(pair.first)->set_data_type(pair.second);
   }
 
-  return Maybe<void>::Ok();
-
   // infer tmp buffer size must after infer out shape/dtype
   JUST(InferTmpBufferBlobDesc(GetBlobDesc4BnInOp, parallel_ctx));
   return Maybe<void>::Ok();
