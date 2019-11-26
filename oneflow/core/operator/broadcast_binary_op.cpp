@@ -102,6 +102,7 @@ Maybe<void> BroadcastBinaryOp::GetSbpSignatures(
       }
     }
   }
+  JUST(VirtualGetSbpSignatures(LogicalBlobDesc4Ibn, sbp_sig_list));
   return Maybe<void>::Ok();
 }
 

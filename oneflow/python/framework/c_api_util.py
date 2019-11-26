@@ -4,6 +4,7 @@ import oneflow.core.common.error_pb2 as error_util
 import oneflow.core.common.data_type_pb2 as dtype_util
 from oneflow.core.job.inter_user_job_info_pb2 import InterUserJobInfo
 import oneflow.core.job.job_set_pb2 as job_set_pb
+import oneflow.core.job.env_pb2 as env_pb2
 import oneflow.core.job.placement_pb2 as placment_util
 import oneflow.core.record.record_pb2 as record_util
 from google.protobuf import text_format
@@ -21,18 +22,28 @@ def IsOpTypeCaseCpuSupportOnly(op_type_case):
     if error.HasField("error_type"): raise JobBuildAndInferError(error)
     return ret
 
-def InitEnvironment(config_proto):
-    assert(type(config_proto) is job_set_pb.ConfigProto)
-    config_proto_str = text_format.MessageToString(config_proto)
-    error_str = oneflow_internal.InitEnvironmentBySerializedConfigProto(config_proto_str)
+def IsEnvInited():
+    return oneflow_internal.IsEnvInited()
+
+def InitEnv(env_proto):
+    assert(type(env_proto) is env_pb2.EnvProto)
+    env_proto_str = text_format.MessageToString(env_proto)
+    error_str = oneflow_internal.InitEnv(env_proto_str)
     error = text_format.Parse(error_str, error_util.ErrorProto())
     if error.HasField("error_type"): raise JobBuildAndInferError(error)
 
-def IsEnvironmentInited():
-    return oneflow_internal.IsEnvironmentInited()
+def DestroyEnv():
+    error_str = oneflow_internal.DestroyEnv()
+    error = text_format.Parse(error_str, error_util.ErrorProto())
+    if error.HasField("error_type"): raise JobBuildAndInferError(error)
 
-def InitGlobalSession():
-    error_str = oneflow_internal.InitGlobalSession()
+def IsSessionInited():
+    return oneflow_internal.IsSessionInited()
+
+def InitGlobalSession(config_proto):
+    assert(type(config_proto) is job_set_pb.ConfigProto)
+    config_proto_str = text_format.MessageToString(config_proto)
+    error_str = oneflow_internal.InitGlobalSession(config_proto_str)
     error = text_format.Parse(error_str, error_util.ErrorProto())
     if error.HasField("error_type"): raise JobBuildAndInferError(error)
 
@@ -41,8 +52,13 @@ def DestroyGlobalSession():
     error = text_format.Parse(error_str, error_util.ErrorProto())
     if error.HasField("error_type"): raise JobBuildAndInferError(error)
 
-def InitGlobalOneflow():
-    error_str = oneflow_internal.InitGlobalOneflow()
+def StartGlobalSession():
+    error_str = oneflow_internal.StartGlobalSession()
+    error = text_format.Parse(error_str, error_util.ErrorProto())
+    if error.HasField("error_type"): raise JobBuildAndInferError(error)
+
+def StopGlobalSession():
+    error_str = oneflow_internal.StopGlobalSession()
     error = text_format.Parse(error_str, error_util.ErrorProto())
     if error.HasField("error_type"): raise JobBuildAndInferError(error)
 
@@ -54,16 +70,6 @@ def GetInterUserJobInfo():
 
 def LaunchJob(job_instance):
     error_str = oneflow_internal.LaunchJob(job_instance)
-    error = text_format.Parse(error_str, error_util.ErrorProto())
-    if error.HasField("error_type"): raise JobBuildAndInferError(error)
-
-def DestroyGlobalOneflow():
-    error_str = oneflow_internal.DestroyGlobalOneflow()
-    error = text_format.Parse(error_str, error_util.ErrorProto())
-    if error.HasField("error_type"): raise JobBuildAndInferError(error)
-
-def DestroyGlobalEnvironment():
-    error_str = oneflow_internal.DestroyGlobalEnvironment()
     error = text_format.Parse(error_str, error_util.ErrorProto())
     if error.HasField("error_type"): raise JobBuildAndInferError(error)
 
@@ -157,6 +163,14 @@ def JobBuildAndInferCtx_GetNumOfLoDLevels(job_name, lbn):
     job_name = str(job_name)
     lbn = str(lbn)
     ret, error_str = oneflow_internal.JobBuildAndInferCtx_GetNumOfLoDLevels(job_name, lbn)
+    error = text_format.Parse(error_str, error_util.ErrorProto())
+    if error.HasField("error_type"): raise JobBuildAndInferError(error)
+    return ret
+
+def JobBuildAndInferCtx_DisableBoxing(job_name, lbn):
+    job_name = str(job_name)
+    lbn = str(lbn)
+    ret, error_str = oneflow_internal.JobBuildAndInferCtx_DisableBoxing(job_name, lbn)
     error = text_format.Parse(error_str, error_util.ErrorProto())
     if error.HasField("error_type"): raise JobBuildAndInferError(error)
     return ret

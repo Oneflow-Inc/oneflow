@@ -7,10 +7,10 @@
 namespace oneflow {
 
 struct InterJobMemSharingUtil {
-  static void BindInterfaceMemBlockId(const std::vector<Job>& jobs, std::vector<Plan>* sub_plans);
+  static void MergeMemSharedInterfaceMemBlockBetweenJobs(const std::vector<Job>& jobs, Plan* plan);
 
-  static void MergeMemBlockBetweenSubPlans(const std::vector<Job>& jobs,
-                                           std::vector<Plan>* sub_plans);
+  static void MergeMemReusedChunkBetweenUserJobs(const std::vector<Job>& jobs, Plan* plan,
+                                                 int64_t user_job_size);
 };
 
 }  // namespace oneflow

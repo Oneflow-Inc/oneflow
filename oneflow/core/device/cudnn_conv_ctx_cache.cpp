@@ -46,7 +46,6 @@ bool CudnnConvCtxCache::InferCudnnConvAlgoCtxWithConfig(
   CudnnConvArgs args(conf, &in_blob_desc, &out_blob_desc, &filter_blob_desc, max_buf_size,
                      GlobalJobDesc().job_conf().cudnn_conv_use_deterministic_algo_only(),
                      GlobalJobDesc().job_conf().cudnn_conv_heuristic_search_algo());
-
   if (GlobalJobDesc().job_conf().has_cudnn_conv_force_fwd_algo()) {
     size_t work_space_size;
     const auto algo = static_cast<cudnnConvolutionFwdAlgo_t>(

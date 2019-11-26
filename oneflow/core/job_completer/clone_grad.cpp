@@ -4,7 +4,8 @@ namespace oneflow {
 
 void GenerateCloneGradOpIfNeed(const OpNode& op_node, JobBuilder* job_builder,
                                const HashMap<OpBlobArg, LogicalBlobId>& in_oba2in_diff_lbi,
-                               HashMap<OpBlobArg, LogicalBlobId>* out_oba2out_diff_lbi) {
+                               HashMap<OpBlobArg, LogicalBlobId>* out_oba2out_diff_lbi,
+                               HashMap<OpBlobArg, LogicalBlobId>* out_oba2clone_bw_add_out_lbi) {
   HashMap<LogicalBlobId, OpBlobArg> out_lbi2out_oba;
   for (const auto& obn : op_node.op().output_bns()) {
     out_lbi2out_oba[op_node.op().BnInOp2Lbi(obn)] = GenOpBlobArg(op_node.op().op_name(), obn);
@@ -39,6 +40,7 @@ void GenerateCloneGradOpIfNeed(const OpNode& op_node, JobBuilder* job_builder,
       job_builder->AddOps(job_builder->ParallelConf4Lbi(lbi), {add_op});
       diff_lbi.set_op_name(add_op.name());
       diff_lbi.set_blob_name("out");
+      CHECK(out_oba2clone_bw_add_out_lbi->emplace(oba, diff_lbi).second);
     } else {
       UNIMPLEMENTED();
     }

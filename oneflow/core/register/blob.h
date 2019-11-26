@@ -8,7 +8,6 @@
 #include "oneflow/core/register/dense_shape_view.h"
 #include "oneflow/core/register/lod_view.h"
 #include "oneflow/core/common/range.h"
-#include "oneflow/core/persistence/persistent_in_stream.h"
 #include "oneflow/core/record/record.pb.h"
 #include "oneflow/core/common/symbol.h"
 

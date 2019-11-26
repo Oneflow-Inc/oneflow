@@ -42,7 +42,7 @@ Maybe<void> ReduceConcatOp::InferBlobDescs(
   int64_t in_blob_body_size_sum = 0;
   for (int32_t i = 0; i < op_conf().reduce_concat_conf().in_num(); ++i) {
     in_blob_body_size_sum +=
-        RtBlobDesc(*(GetBlobDesc4BnInOp(input_bns().Get(i)))).AlignedByteSizeOfBlobBody();
+        RtBlobDesc(*(GetBlobDesc4BnInOp(input_bns().Get(i)))).ByteSizeOfBlobBody();
   }
   const int64_t data_type_byte_size =
       static_cast<int64_t>(GetSizeOfDataType(first_in_blob->data_type()));
@@ -64,7 +64,7 @@ void ReduceConcatOp::VirtualGenKernelConf(
   int64_t offset = 0;
   for (int32_t i = 0; i < op_conf().reduce_concat_conf().in_num(); ++i) {
     reduce_concat_conf->mutable_data_offset()->Add(offset);
-    offset += RtBlobDesc(*(GetBlobDesc4BnInOp(input_bns().Get(i)))).AlignedByteSizeOfBlobBody();
+    offset += RtBlobDesc(*(GetBlobDesc4BnInOp(input_bns().Get(i)))).ByteSizeOfBlobBody();
   }
   const int64_t data_type_byte_size =
       static_cast<int64_t>(GetSizeOfDataType(GetBlobDesc4BnInOp(input_bns().Get(0))->data_type()));

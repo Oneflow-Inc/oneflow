@@ -54,6 +54,7 @@ template<typename T>
 void OFRecordDecoderImpl<EncodeCase::kRaw, T>::ReadOneCol(
     DeviceCtx* ctx, const Feature& feature, const BlobConf& blob_conf, int32_t col_id, T* out_dptr,
     int64_t one_col_elem_num, std::function<int32_t(void)> NextRandomInt) const {
+  // TODO: fix or remove col_id
   if (feature.has_bytes_list()) {
     CHECK_EQ(feature.bytes_list().value_size(), 1);
     const auto& value0 = feature.bytes_list().value(0);
@@ -61,17 +62,24 @@ void OFRecordDecoderImpl<EncodeCase::kRaw, T>::ReadOneCol(
     one_col_elem_num = std::min<int64_t>(one_col_elem_num, value0.size());
     FixInDptrThenCopyElem<int8_t, T>(ctx, in_dptr, col_id, one_col_elem_num, out_dptr);
   }
-#define DEFINE_ONE_ELIF(PbT, CppT)                                                    \
-  else if (feature.has_##PbT##_list()) {                                              \
-    const auto& list = feature.PbT##_list();                                          \
-    const CppT* in_dptr = list.value().data();                                        \
-    if (blob_conf.encode_case().raw().dim1_varying_length()) {                        \
-      CHECK_LE(list.value_size(), one_col_elem_num);                                  \
-      one_col_elem_num = list.value_size();                                           \
-    } else {                                                                          \
-      CHECK_EQ(one_col_elem_num, list.value_size());                                  \
-    }                                                                                 \
-    FixInDptrThenCopyElem<CppT, T>(ctx, in_dptr, col_id, one_col_elem_num, out_dptr); \
+#define DEFINE_ONE_ELIF(PbT, CppT)                                                     \
+  else if (feature.has_##PbT##_list()) {                                               \
+    const auto& list = feature.PbT##_list();                                           \
+    const CppT* in_dptr = list.value().data();                                         \
+    const int64_t padding_elem_num = blob_conf.encode_case().raw().auto_zero_padding() \
+                                         ? one_col_elem_num - list.value_size()        \
+                                         : 0;                                          \
+    if (blob_conf.encode_case().raw().dim1_varying_length()                            \
+        || blob_conf.encode_case().raw().auto_zero_padding()) {                        \
+      CHECK_LE(list.value_size(), one_col_elem_num);                                   \
+      one_col_elem_num = list.value_size();                                            \
+    } else {                                                                           \
+      CHECK_EQ(one_col_elem_num, list.value_size());                                   \
+    }                                                                                  \
+    FixInDptrThenCopyElem<CppT, T>(ctx, in_dptr, col_id, one_col_elem_num, out_dptr);  \
+    if (padding_elem_num > 0) {                                                        \
+      std::memset(out_dptr + one_col_elem_num, 0, padding_elem_num * sizeof(T));       \
+    }                                                                                  \
   }
   DEFINE_ONE_ELIF(float, float)
   DEFINE_ONE_ELIF(double, double)
