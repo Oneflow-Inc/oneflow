@@ -68,6 +68,9 @@ parser.add_argument(
     required=False,
 )
 parser.add_argument(
+    "-save_rate", "--model_save_rate", type=int, default=0, required=False
+)
+parser.add_argument(
     "-v", "--verbose", default=False, action="store_true", required=False
 )
 parser.add_argument("-i", "--iter_num", type=int, default=10, required=False)
@@ -387,6 +390,14 @@ def init_config():
     return config
 
 
+def save_model(i):
+    if not os.path.exists(terminal_args.model_save_dir):
+        os.makedirs(terminal_args.model_save_dir)
+    model_dst = os.path.join(terminal_args.model_save_dir, "iter-" + str(i))
+    print("saving models to {}".format(model_dst))
+    check_point.save(model_dst)
+
+
 if terminal_args.mock_dataset:
 
     @flow.function
@@ -551,8 +562,9 @@ if terminal_args.train_with_real_dataset:
 
 
 if __name__ == "__main__":
+    flow.env.ctrl_port(terminal_args.ctrl_port)
+    flow.config.enable_inplace(False)
     flow.config.gpu_device_num(terminal_args.gpu_num_per_node)
-    flow.config.ctrl_port(terminal_args.ctrl_port)
     flow.config.default_data_type(flow.float)
 
     fake_image_list = []
@@ -569,6 +581,8 @@ if __name__ == "__main__":
     check_point = flow.train.CheckPoint()
     if not terminal_args.model_load_dir:
         check_point.init()
+        if terminal_args.model_save_rate > 0:
+            save_model(0)
     else:
         check_point.load(terminal_args.model_load_dir)
 
@@ -592,19 +606,8 @@ if __name__ == "__main__":
                     )
                 )
             for i in range(terminal_args.iter_num):
-
-                def save_model():
-                    return
-                    if not os.path.exists(terminal_args.model_save_dir):
-                        os.makedirs(terminal_args.model_save_dir)
-                    model_dst = os.path.join(
-                        terminal_args.model_save_dir, "iter-" + str(i)
-                    )
-                    print("saving models to {}".format(model_dst))
-                    check_point.save(model_dst)
-
                 if i == 0:
-                    save_model()
+                    save_model(i)
 
                 train_loss = mock_train(
                     debug_data.blob("images"),
@@ -621,7 +624,7 @@ if __name__ == "__main__":
                 save_blob_watched(i)
 
                 if (i + 1) % 10 == 0:
-                    save_model()
+                    save_model(i + 1)
 
         elif terminal_args.train_with_real_dataset:
             print(
@@ -635,14 +638,27 @@ if __name__ == "__main__":
                     "loss_mask",
                 )
             )
+
             for i in range(terminal_args.iter_num):
+                if i == 0:
+                    save_model(0)
                 if i < len(fake_image_list):
                     losses = train_func(fake_image_list[i]).get()
                 else:
                     losses = train_func().get()
+
+                if terminal_args.model_save_rate > 0:
+                    if (
+                        i + 1
+                    ) % terminal_args.model_save_rate == 0 or i + 1 == len(
+                        terminal_args.iter_num
+                    ):
+                        save_model(i + 1)
 
                 fmt_str = "{:>8} {:>8}" + "{:>16.10f} " * len(losses)
                 for j, loss in enumerate(zip(*losses)):
                     print(fmt_str.format(i, j, *[t.mean() for t in loss]))
 
                 save_blob_watched(i)
+                if (i + 1) % 10 == 0:
+                    save_model(i)

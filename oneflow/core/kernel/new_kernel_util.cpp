@@ -1,5 +1,6 @@
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/memory/memory_case.pb.h"
+#include "oneflow/core/register/blob.h"
 
 namespace oneflow {
 

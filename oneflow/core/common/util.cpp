@@ -1,4 +1,5 @@
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/common/data_type.h"
 #include <cfenv>
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/common/platform.h"
@@ -75,5 +76,7 @@ size_t GetAvailableCpuMemSize() {
 #endif
   return 0;
 }
+
+bool IsKernelSafeInt32(int64_t n) { return n <= GetMaxVal<int32_t>() / 2; }
 
 }  // namespace oneflow
