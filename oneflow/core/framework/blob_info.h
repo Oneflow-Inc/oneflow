@@ -15,6 +15,7 @@ class BlobInfo final {
   ~BlobInfo() = default;
   BlobInfo(const BlobInfo&);
   BlobInfo(const BlobDescProto&);
+  BlobInfo(const Shape& shape, DataType dtype) : shape_(shape), data_type_(dtype) {}
 
   BlobInfo& operator=(const BlobInfo&);
   BlobInfo& operator=(const BlobDescProto&);

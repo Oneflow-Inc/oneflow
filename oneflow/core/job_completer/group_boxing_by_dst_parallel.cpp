@@ -51,8 +51,8 @@ void GroupBoxingByDstParallel(const OpGraph& op_graph, JobBuilder* job_builder) 
         OperatorConf& consumer_op_conf = op_node2op_conf[consumer];
         PbMessage* consumer_op_type_conf =
             MutableMessageInPbMessage(&consumer_op_conf, consumer_op_conf.op_type_case());
-        ReplaceStrValInPbFdOrPbRpf(consumer_op_type_conf, ibn, GenLogicalBlobName(lbi),
-                                   GenLogicalBlobName(grouped_lbi));
+        ReplaceInputLbnInOpCustomizedConf(consumer_op_type_conf, ibn, GenLogicalBlobName(lbi),
+                                          GenLogicalBlobName(grouped_lbi));
       }
     }
   }
