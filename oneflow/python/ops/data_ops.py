@@ -11,7 +11,6 @@ import oneflow.core.data.data_pb2 as data_util
 
 from oneflow.python.oneflow_export import oneflow_export
 
-
 @oneflow_export("data.ImagePreprocessor")
 class ImagePreprocessor(object):
     def __init__(self, preprocessor):
@@ -171,7 +170,7 @@ def decode_ofrecord(
         lbi.blob_name = blob_conf.name
         lbis.append(lbi)
 
-    compile_context.CurJobAddOp(op_conf)
+    compile_context.CurJobAddConsistentOp(op_conf)
     return tuple(map(lambda x: remote_blob_util.RemoteBlob(x), lbis))
 
 
@@ -209,7 +208,7 @@ def decode_random(
     lbi.op_name = op_conf.name
     lbi.blob_name = "out"
 
-    compile_context.CurJobAddOp(op_conf)
+    compile_context.CurJobAddConsistentOp(op_conf)
     return remote_blob_util.RemoteBlob(lbi)
 
 

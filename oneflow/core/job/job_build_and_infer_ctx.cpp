@@ -319,6 +319,7 @@ Maybe<LogicalBlobId> JobBuildAndInferCtx::FindOrCreateMirrorLbiFromCompatibleCon
     lbi_vec->push_back(sub_lbi);
   };
   OperatorConf op_conf;
+  op_conf.set_device_type(parallel_desc.device_type());
   if (sbp.has_broadcast_parallel()) {
     op_conf.set_name(kAutoMirrorBlobNamePrefix + "-DistributeClone-" + NewUniqueId());
     auto* distribute_clone = op_conf.mutable_distribute_clone_conf();
@@ -331,7 +332,6 @@ Maybe<LogicalBlobId> JobBuildAndInferCtx::FindOrCreateMirrorLbiFromCompatibleCon
   } else if (sbp.has_split_parallel()) {
     OF_CHECK_EQ(sbp.split_parallel().axis(), 0)
         << "only `S(0)' consistent blob is compatible to mirror blob";
-    OperatorConf op_conf;
     op_conf.set_name(kAutoMirrorBlobNamePrefix + "-DistributeSplit-" + NewUniqueId());
     auto* distribute_split = op_conf.mutable_distribute_split_conf();
     distribute_split->set_in(lbn);
@@ -536,10 +536,26 @@ Maybe<const ParallelDesc*> JobBuildAndInferCtx::GetParallelDescFromProducerView(
 
 Maybe<void> JobBuildAndInferCtx::AddLossMirrorBlobName(const std::string& lbn) {
   const auto& mirror_lbi = JUST(GetMirrorLbi(lbn));
+  const ParallelDesc& parallel_desc = mirror_lbi2parallel_desc_.at(*mirror_lbi);
+  LogicalBlobId loss_mirror_lbi;
+  if (parallel_desc.parallel_num() > 1) {
+    loss_mirror_lbi.set_op_name("System-Auto-Losss-Scale-" + NewUniqueId());
+    loss_mirror_lbi.set_blob_name("out");
+    OperatorConf op_conf;
+    op_conf.set_name(loss_mirror_lbi.op_name());
+    op_conf.set_device_type(parallel_desc.device_type());
+    auto* scalar_mul_conf = op_conf.mutable_scalar_mul_conf();
+    scalar_mul_conf->set_in(GenLogicalBlobName(*mirror_lbi));
+    scalar_mul_conf->set_out(loss_mirror_lbi.blob_name());
+    scalar_mul_conf->set_float_operand(static_cast<double>(1) / parallel_desc.parallel_num());
+    CHECK_JUST(AddAndInferMirrorOp(op_conf, parallel_desc.parallel_conf()));
+  } else {
+    loss_mirror_lbi = *mirror_lbi;
+  }
   CHECK_OR_RETURN(job_->job_conf().has_train_conf())
       << JobBuildAndInferError::kUnknownJobBuildAndInferError
       << "job has not TrainConf when add loss logical blob name";
-  for (const auto& lbi : mirror_lbi2sub_lbis_.at(*mirror_lbi)) {
+  for (const auto& lbi : mirror_lbi2sub_lbis_.at(loss_mirror_lbi)) {
     job_->mutable_job_conf()->mutable_train_conf()->add_loss_lbn(GenLogicalBlobName(lbi));
   }
   return Maybe<void>::Ok();
