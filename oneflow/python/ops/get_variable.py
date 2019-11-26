@@ -52,7 +52,7 @@ def get_variable(
 
         op_conf.variable_conf.out = "out"
 
-        compile_context.CurJobAddOp(op_conf)
+        compile_context.CurJobAddConsistentOp(op_conf)
         lbi = logical_blob_id_util.LogicalBlobId()
         lbi.op_name = op_conf.name
         lbi.blob_name = op_conf.variable_conf.out
