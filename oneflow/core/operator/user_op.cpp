@@ -37,6 +37,12 @@ class UserOp final : public Operator {
       }
     }
 
+    // cclog:
+    LOG(INFO) << "cclog: befor infer shape, in shape "
+              << GetBlobDesc4BnInOp(SoleIbn())->shape().ToString() << " sole_ibn = " << SoleIbn();
+    LOG(INFO) << "cclog: befor infer shape, out shape "
+              << GetBlobDesc4BnInOp(SoleObn())->shape().ToString() << " sole_obn = " << SoleObn();
+
     // infer Shape
     auto GetShape4ArgNameAndIndex = [&](const std::string& bn, int32_t index) -> Shape* {
       BlobDesc* blob = GetBlobDesc4BnInOp(GenRepeatedBn(bn, index));
@@ -57,6 +63,12 @@ class UserOp final : public Operator {
     for (const auto& pair : bn_in_op2data_type) {
       GetBlobDesc4BnInOp(pair.first)->set_data_type(pair.second);
     }
+
+    // cclog:
+    LOG(INFO) << "cclog: after infer shape, in shape "
+              << GetBlobDesc4BnInOp(SoleIbn())->shape().ToString() << " sole_ibn = " << SoleIbn();
+    LOG(INFO) << "cclog: after infer shape, out shape "
+              << GetBlobDesc4BnInOp(SoleObn())->shape().ToString() << " sole_obn = " << SoleObn();
 
     return Maybe<void>::Ok();
   }
