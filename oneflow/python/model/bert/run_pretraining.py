@@ -5,6 +5,7 @@ import argparse
 import shutil
 import numpy as np
 from datetime import datetime
+import pickle as pkl
 
 import oneflow as flow
 from pretrain import PreTrain#, Eval
@@ -47,6 +48,8 @@ parser.add_argument("--hidden_size_per_head", type=int, default=64)
 
 # inplace
 parser.add_argument("--inplace", action="store_true", required=False)
+# watch all blobs
+parser.add_argument("--watch", action="store_true", required=False)
 
 args = parser.parse_args()
 
@@ -129,6 +132,8 @@ _BERT_MODEL_UPDATE_CONF = dict(
   ),
 )
 
+blob_watched = {}
+
 @flow.function
 def PretrainJob():
   total_device_num = args.node_num * args.gpu_num_per_node
@@ -138,17 +143,31 @@ def PretrainJob():
   flow.config.train.model_update_conf(_BERT_MODEL_UPDATE_CONF)
   flow.config.train.weight_l2(args.weight_l2)
 
-  loss = BuildPreTrainNet(batch_size, args.data_part_num,
-                          seq_length=args.seq_length,
-                          max_position_embeddings=args.max_position_embeddings,
-                          num_hidden_layers=args.num_hidden_layers,
-                          num_attention_heads=args.num_attention_heads,
-                          hidden_dropout_prob=args.hidden_dropout_prob,
-                          attention_probs_dropout_prob=args.attention_probs_dropout_prob,
-                          vocab_size=args.vocab_size,
-                          type_vocab_size=args.type_vocab_size,
-                          max_predictions_per_seq=args.max_predictions_per_seq)
+  if args.watch:
+    with flow.watch_scope(blob_watched):
+      loss = BuildPreTrainNet(batch_size, args.data_part_num,
+                              seq_length=args.seq_length,
+                              max_position_embeddings=args.max_position_embeddings,
+                              num_hidden_layers=args.num_hidden_layers,
+                              num_attention_heads=args.num_attention_heads,
+                              hidden_dropout_prob=args.hidden_dropout_prob,
+                              attention_probs_dropout_prob=args.attention_probs_dropout_prob,
+                              vocab_size=args.vocab_size,
+                              type_vocab_size=args.type_vocab_size,
+                              max_predictions_per_seq=args.max_predictions_per_seq)
+  else:
+    loss = BuildPreTrainNet(batch_size, args.data_part_num,
+                            seq_length=args.seq_length,
+                            max_position_embeddings=args.max_position_embeddings,
+                            num_hidden_layers=args.num_hidden_layers,
+                            num_attention_heads=args.num_attention_heads,
+                            hidden_dropout_prob=args.hidden_dropout_prob,
+                            attention_probs_dropout_prob=args.attention_probs_dropout_prob,
+                            vocab_size=args.vocab_size,
+                            type_vocab_size=args.type_vocab_size,
+                            max_predictions_per_seq=args.max_predictions_per_seq)
   flow.losses.add_loss(loss)
+  
   return loss
 
 cur_step = 0
@@ -201,6 +220,21 @@ if __name__ == '__main__':
         check_point.save(snapshot_save_path)
 
     loss_mean = PretrainJob().get().mean()
+
+    # for lbn, blob_data in blob_watched.items():
+    #   print(lbn)
+    #   print(blob_data['blob_def'].location)
+    #   print(blob_data['blob'])
+    # pkl.dump(
+    #     blob_watched,
+    #     open(
+    #         "/home/xfjiang/15/tmp/bert_blob_watched_{}_inplace.pkl".format(
+    #             "with" if args.inplace else "without"
+    #         ),
+    #         "wb",
+    #     ),
+    # )
+
     step_time.append(time.time())
     train_step_time = step_time[step] - step_time[step-1]
     print(fmt_str.format(step, loss_mean, train_step_time))
@@ -211,7 +245,10 @@ if __name__ == '__main__':
   total_time = step_time[-1] - start_time
   train_time = step_time[-1] - train_start_time
   init_time = train_start_time - start_time
-  mean_batch_time = (step_time[-1] - step_time[0]) / (args.iter_num - 1)
+  if args.iter_num == 1:
+    mean_batch_time = step_time[0]
+  else:
+    mean_batch_time = (step_time[-1] - step_time[0]) / (args.iter_num - 1)
   total_batch_size = args.node_num * args.gpu_num_per_node * args.batch_size_per_device
   throughput = total_batch_size / mean_batch_time
 

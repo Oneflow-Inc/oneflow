@@ -16,6 +16,7 @@
 #include "oneflow/core/graph/boxing/chain_sub_task_graph_builder.h"
 #include "oneflow/core/graph/boxing/nccl_boxing_sub_task_graph_builder.h"
 #include "oneflow/core/graph/boxing/sub_task_graph_builder_util.h"
+#include <iostream>
 
 namespace oneflow {
 
@@ -454,7 +455,14 @@ void TaskGraph::GetSafeInplaceOpBlobArgList(
                                                || IsLbiAllConsumersReachableInChain(lbi, op_name);
                                       });
   InplaceLbiGraph inplaced_graph(*safe_obas, Op4OpName);
-  inplaced_graph.ToDotWithAutoFilePath();
+
+  std::cout << "Print all safe inplace blobs" << std::endl;
+  for (const auto& oba : safe_obas->oba()) {
+    std::cout << oba.op_name() << std::endl;
+    std::cout << oba.bn_in_op() << std::endl;
+  }
+
+  inplaced_graph.ToDotWithFilePath(JoinPath("dot", "safe_inplaced_graph.dot"));
 }
 
 void TaskGraph::SetTaskRegstInplaceInfo(const OpBlobArgList& obas,
