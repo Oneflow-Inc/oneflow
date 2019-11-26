@@ -7,6 +7,9 @@ import oneflow.core.common.data_type_pb2 as data_type_util
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.register.logical_blob_id_pb2 as lbi_util
 import oneflow.python.framework.id_util as id_util
+import oneflow.python.framework.c_api_util as c_api_util
+import oneflow.python.framework.compile_context as compile_context
+import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.distribute as distribute_util
 from oneflow.python.oneflow_export import oneflow_export
 from functools import reduce
@@ -57,6 +60,19 @@ class InputBlobDef(blob_desc.BlobDesc):
 
     def parallel_conf(self):
         TODO()
+        
+    def with_distribute(self, distribute):
+        return type(self)(shape = self.shape_, dtype = self.dtype_,               \
+                          is_dynamic = self.is_dynamic_, batch_axis = self.batch_axis_, \
+                          distribute = distribute, name = self.lbi.op_name)
+    
+    def Clone(self, op_name = None):
+        return type(self)(shape = self.shape_, dtype = self.dtype_,               \
+                          is_dynamic = self.is_dynamic_, batch_axis = self.batch_axis_, \
+                          distribute = self.distribute_, name = op_name)
+
+    def AddAndInferOp(self, op_conf):
+        raise NotImplementedError
 
     def CheckAndAsyncPush(self, session, arg_ndarray):
         self.CheckInputNdarray(arg_ndarray)
@@ -163,16 +179,14 @@ class InputBlobDef(blob_desc.BlobDesc):
                     RecursiveCheckNdarray(axis + 1, x)
         RecursiveCheckNdarray(0, ndarray_nested_list)
 
-@oneflow_export('input_blob_def')
-class input_blob_def(InputBlobDef):
+@oneflow_export('consistent_input_def')
+class ConsistentInpuDef(InputBlobDef):
     def __init__(self, *args, **kwargs):
         InputBlobDef.__init__(self, *args, **kwargs)
 
-    def with_distribute(self, distribute):
-        return input_blob_def(shape = self.shape_, dtype = self.dtype_,               \
-                        is_dynamic = self.is_dynamic_, batch_axis = self.batch_axis_, \
-                        distribute = distribute, name = self.lbi.op_name)
-    
+    def AddAndInferOp(self, op_conf):
+        return compile_context.CurJobAddConsistentInputOp(op_conf)
+
     def AsyncPush(self, session, arg_ndarray):
         session.AsyncPush(self.op_name, _MakePushCallback(arg_ndarray))
         
@@ -181,25 +195,30 @@ class input_blob_def(InputBlobDef):
             self._CheckDenseNdarray(ndarray)
         else:
             self._CheckLodNdarray(ndarray)
+            
+@oneflow_export('input_blob_def')
+class input_blob_def(ConsistentInpuDef):
+    def __init__(self, *args, **kwargs):
+        ConsistentInpuDef.__init__(self, *args, **kwargs)
 
-@oneflow_export('mirror_blob_def')
-class mirror_blob_def(InputBlobDef):
+@oneflow_export('mirror_input_def')
+class MirrorInputDef(InputBlobDef):
     def __init__(self, *args, **kwargs):
         InputBlobDef.__init__(self, *args, **kwargs)
-        self.sub_consistent_blob_list_ = None
+        self.sub_consistent_blob_list_ = []
 
-    def with_distribute(self, distribute):
-        return mirror_blob_def(shape = self.shape_, dtype = self.dtype_,               \
-                        is_dynamic = self.is_dynamic_, batch_axis = self.batch_axis_, \
-                        distribute = distribute, name = self.lbi.op_name)
+    def AddAndInferOp(self, op_conf):
+        compile_context.CurJobAddMirrorInputOp(op_conf)
+        job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
+        lbn = self.logical_blob_name
+        num_sub_lbi = c_api_util.JobBuildAndInferCtx_MirrorBlobGetNumSubLbi(job_name, lbn)
+        for i in range(num_sub_lbi):
+            sub_lbi = c_api_util.JobBuildAndInferCtx_MirrorBlobGetSubLbi(job_name, lbn, i)
+            self.sub_consistent_blob_list_.append(remote_blob_util.ConsistentBlob(sub_lbi))
 
-    def set_sub_consistent_blob_list(self, val):
-        assert self.sub_consistent_blob_list_ is None
-        self.sub_consistent_blob_list_ = val
-        
     @property
     def sub_consistent_blob_list(self):
-        assert self.sub_consistent_blob_list_ is not None
+        assert len(self.sub_consistent_blob_list_) != 0
         return self.sub_consistent_blob_list_
         
     def AsyncPush(self, session, arg_ndarray):

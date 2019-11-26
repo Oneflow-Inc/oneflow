@@ -32,7 +32,8 @@ def _CompileJob(job_conf, func, config):
     with placement_util.DevicePriorPlacementScope(device_type, machine_dev_ids):
         with _SetJobConfBeforeInferOp(job_conf) as set_job_conf:
             with _AddInputOpBeforeNonInputOp(func, set_job_conf):
-                func.__oneflow_output_remote_blobs__ = _RecursiveMakeRetRemoteBlobs(func())
+                func.__oneflow_output_remote_blobs__ = \
+                    _RecursiveMakeRetRemoteBlobs(func(*func.__oneflow_input_blob_defs__))
 
 def _RecursiveMakeRetRemoteBlobs(out_remote_blobs):
     if out_remote_blobs is None: return None
@@ -64,7 +65,7 @@ def _AddInputOpBeforeNonInputOp(func, do_before_infer_input_op):
         if input_op_add_and_infered.value: return
         input_op_add_and_infered.set_value(True)
         do_before_infer_input_op()
-        for blob_desc in func.__oneflow_input_blob_defs__:
+        for blob_desc in _FlatInputBlobDef(func.__oneflow_input_blob_defs__):
             assert isinstance(blob_desc, input_blob_util.InputBlobDef)
             ops.InputOpByInputBlobDef(blob_desc)
     with compile_context.BeforeNonInputOpBuildAndInferHook(AddAndInferInputOp):
@@ -73,4 +74,22 @@ def _AddInputOpBeforeNonInputOp(func, do_before_infer_input_op):
 
 def _GetArgDefault(func):
     if hasattr(func, '__oneflow_arg_default__'): return func.__oneflow_arg_default__
-    return func_inspect_util.GetArgDefaults(func)
+    return _CloneInputBlobDef(func_inspect_util.GetArgDefaults(func))
+
+def _FlatInputBlobDef(args):
+    if isinstance(args, input_blob_util.InputBlobDef):
+        yield args
+    elif isinstance(args, (tuple, list)):
+        for arg in args:
+            for x in _FlatInputBlobDef(arg): yield x
+    elif isinstance(args, dict):
+        for k, v in args:
+            for x in _FlatInputBlobDef(v): yield x
+    else:
+        raise NotImplementedError("oneflow.function only accepts nested input blob defs")
+
+def _CloneInputBlobDef(args):
+    if isinstance(args, input_blob_util.InputBlobDef): return args.Clone()
+    if isinstance(args, (tuple, list)): return type(args)(_CloneInputBlobDef(x) for x in args)
+    if isinstance(args, dict): return {k: _CloneInputBlobDef(v) for k, v in args}
+    raise NotImplementedError("oneflow.function only accepts nested input blob defs")
