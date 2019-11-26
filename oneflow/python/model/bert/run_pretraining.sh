@@ -1,6 +1,7 @@
 export CUDA_VISIBLE_DEVICES=1
 rm -rf ./snapshots
 rm stdout.txt
+rm -rf log
 python run_pretraining.py                                                                     \
   --gpu_num_per_node=1                                                                        \
   --node_num=1                                                                                \
@@ -23,7 +24,4 @@ python run_pretraining.py                                                       
   --vocab_size=30522                                                                          \
   --attention_probs_dropout_prob=0                                                            \
   --hidden_dropout_prob=0                                                                     \
-  --hidden_size_per_head=64                                                                   \
-  --inplace                                                                                   \
-  --watch                                                                                     \
-  > stdout.txt
+  --hidden_size_per_head=64 --inplace > stdout.txt

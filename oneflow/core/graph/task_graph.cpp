@@ -448,7 +448,11 @@ void TaskGraph::GetSafeInplaceOpBlobArgList(
   auto IsLbiAllConsumersReachableInChain =
       MakePredicatorIsLbiAllConsumersReachableInChain(TaskNode4SoleOpName);
   InplaceLbiGraph origin_graph(inplace_obas, Op4OpName);
-  origin_graph.ToDotWithAutoFilePath();
+
+  origin_graph.ToDotWithFilePath(
+      JoinPath("dot", "InplaceLbiGraph",
+               logical_gph_->GetJob().job_conf().job_name() + "_origin_inplaced_graph.dot"));
+
   origin_graph.ComputeSafeInplaceObns(safe_obas,
                                       [&](const LogicalBlobId& lbi, const std::string& op_name) {
                                         return IsLbiAllConsumersReachableToOpName(lbi, op_name)
@@ -456,13 +460,16 @@ void TaskGraph::GetSafeInplaceOpBlobArgList(
                                       });
   InplaceLbiGraph inplaced_graph(*safe_obas, Op4OpName);
 
-  std::cout << "Print all safe inplace blobs" << std::endl;
+  std::cout << "Print all safe inplace blobs for job: "
+            << logical_gph_->GetJob().job_conf().job_name() << std::endl;
   for (const auto& oba : safe_obas->oba()) {
     std::cout << oba.op_name() << std::endl;
     std::cout << oba.bn_in_op() << std::endl;
   }
 
-  inplaced_graph.ToDotWithFilePath(JoinPath("dot", "safe_inplaced_graph.dot"));
+  inplaced_graph.ToDotWithFilePath(
+      JoinPath("dot", "InplaceLbiGraph",
+               logical_gph_->GetJob().job_conf().job_name() + "_safe_inplaced_graph.dot"));
 }
 
 void TaskGraph::SetTaskRegstInplaceInfo(const OpBlobArgList& obas,
