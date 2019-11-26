@@ -5,20 +5,15 @@
 #include "oneflow/core/framework/user_op_def.pb.h"
 #include "oneflow/core/framework/user_op_attr.pb.h"
 #include "oneflow/core/operator/op_conf.pb.h"
-#include "oneflow/core/common/maybe.h"
+#include "oneflow/core/framework/op_infer_util.h"
 
 namespace oneflow {
 
-class Shape;
-
 namespace user_op {
 
-using Shape4ArgNameAndIndex = std::function<Shape*(const std::string&, int32_t)>;
-using Dtype4ArgNameAndIndex = std::function<DataType*(const std::string&, int32_t)>;
-
 using CheckAttrFn = std::function<Maybe<void>(const UserOpDef&, const UserOpConf&)>;
-using ShapeInferFn = std::function<Maybe<void>(Shape4ArgNameAndIndex)>;
-using DtypeInferFn = std::function<Maybe<void>(Dtype4ArgNameAndIndex)>;
+using ShapeInferFn = std::function<Maybe<void>(const InferContext&)>;
+using DtypeInferFn = std::function<Maybe<void>(const InferContext&)>;
 using GetSbpFn = std::function<Maybe<void>(/*TODO(niuchong): what is the para*/)>;
 
 struct OpRegistrationVal {

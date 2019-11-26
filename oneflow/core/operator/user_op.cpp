@@ -37,15 +37,12 @@ class UserOp final : public Operator {
       }
     }
 
-    // infer Shape
+    // construct InferContext
     auto GetShape4ArgNameAndIndex = [&](const std::string& bn, int32_t index) -> Shape* {
       BlobDesc* blob = GetBlobDesc4BnInOp(GenRepeatedBn(bn, index));
       if (blob) { return &(blob->mut_shape()); }
       return nullptr;
     };
-    JUST(val->shape_infer_fn(GetShape4ArgNameAndIndex));
-
-    // infer Dtype
     HashMap<std::string, DataType> bn_in_op2data_type;
     auto GetDtype4ArgNameAndIndex = [&](const std::string& bn, int32_t index) -> DataType* {
       std::string bn_in_op = GenRepeatedBn(bn, index);
@@ -53,7 +50,27 @@ class UserOp final : public Operator {
       if (blob) { return &bn_in_op2data_type[bn_in_op]; }
       return nullptr;
     };
-    JUST(val->dtype_infer_fn(GetDtype4ArgNameAndIndex));
+    user_op::ArgVec inputs_vec;
+    auto Inputs = [&]() -> user_op::ArgVec const& {
+      inputs_vec.clear();
+      const auto& inputs = this->input_bns();
+      inputs_vec.reserve(inputs.size());
+      for (auto& input : inputs) { inputs_vec.emplace_back(GenUnRepeatedBn(input)); }
+      return inputs_vec;
+    };
+    user_op::ArgVec outputs_vec;
+    auto Outputs = [&]() -> user_op::ArgVec const& {
+      outputs_vec.clear();
+      const auto& outputs = this->output_bns();
+      outputs_vec.reserve(outputs.size());
+      for (auto& output : outputs) { outputs_vec.emplace_back(GenUnRepeatedBn(output)); }
+      return outputs_vec;
+    };
+    user_op::InferContext infer_ctx(GetShape4ArgNameAndIndex, GetDtype4ArgNameAndIndex, Inputs,
+                                    Outputs);
+
+    JUST(val->shape_infer_fn(infer_ctx));
+    JUST(val->dtype_infer_fn(infer_ctx));
     for (const auto& pair : bn_in_op2data_type) {
       GetBlobDesc4BnInOp(pair.first)->set_data_type(pair.second);
     }

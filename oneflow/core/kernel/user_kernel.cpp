@@ -16,10 +16,9 @@ class UserKernel final : public Kernel {
   mutable std::unique_ptr<user_op::KernelContext> ctx_;
 
   void VirtualKernelInit() override {
-    user_op::KernelRegContext ctx(kernel_conf());
-
     auto kernel_reg_val = user_op::LookUpInKernelRegistry(
-        kernel_conf().op_attribute().op_conf().user_conf().op_type_name(), ctx);
+        kernel_conf().op_attribute().op_conf().user_conf().op_type_name(),
+        user_op::KernelRegContext(kernel_conf()));
     CHECK_NOTNULL(kernel_reg_val);
 
     user_op::KernelInitContext init_ctx;

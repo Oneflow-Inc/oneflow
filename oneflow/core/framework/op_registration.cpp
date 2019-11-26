@@ -167,22 +167,13 @@ OpRegistryWrapperBuilder& OpRegistryWrapperBuilder::SetGetSbpFn(GetSbpFn get_sbp
 }
 
 OpRegistryWrapper OpRegistryWrapperBuilder::Build() {
+  CHECK(wrapper_.reg_val.shape_infer_fn != nullptr)
+      << "No ShapeInfer function for " << wrapper_.op_type_name;
   if (wrapper_.reg_val.check_fn == nullptr) {
-    wrapper_.reg_val.check_fn = [](const UserOpDef&, const UserOpConf&) {
-      return Maybe<void>::Ok();
-    };
-  }
-  if (wrapper_.reg_val.shape_infer_fn == nullptr) {
-    wrapper_.reg_val.shape_infer_fn = [](Shape4ArgNameAndIndex) {
-      // TODO(niuchong): default impl
-      return Maybe<void>::Ok();
-    };
+    wrapper_.reg_val.check_fn = CheckAttrFnUtil::NoCheck;
   }
   if (wrapper_.reg_val.dtype_infer_fn == nullptr) {
-    wrapper_.reg_val.dtype_infer_fn = [](Dtype4ArgNameAndIndex) {
-      // TODO(niuchong): default impl
-      return Maybe<void>::Ok();
-    };
+    wrapper_.reg_val.dtype_infer_fn = DtypeInferFnUtil::Unchanged;
   }
   if (wrapper_.reg_val.get_sbp_fn == nullptr) {
     wrapper_.reg_val.get_sbp_fn = [](/**/) {
