@@ -4,7 +4,7 @@ import oneflow.core.common.data_type_pb2 as dtype_util
 from oneflow.python.framework.dtype import convert_of_dtype_to_numpy_dtype
 from oneflow.core.register.lod_tree_pb2 import LoDTree
 import oneflow.oneflow_internal as oneflow_internal
-import oneflow.python.framework.blob as blob_util
+import oneflow.python.framework.local_blob as local_blob_util
 from google.protobuf import text_format
 from oneflow.python.lib.core.box import Box
 import numpy as np
@@ -44,7 +44,7 @@ class OfBlob(object):
         return text_format.Parse(lod_tree_str, LoDTree())
 
     def CopyToBlob(self):
-        blob = blob_util.Blob();
+        blob = local_blob_util.LocalConsistentBlob();
         dense_ndarray = self.CopyToNdarray()
         blob.set_ndarray(dense_ndarray)
         if self.num_of_lod_levels > 0:

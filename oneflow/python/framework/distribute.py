@@ -1,6 +1,30 @@
 from __future__ import absolute_import
 
 from oneflow.python.oneflow_export import oneflow_export
+from contextlib import contextmanager
+import oneflow.python.framework.distribute_context as distribute_ctx
+
+@oneflow_export("distribute.mirror_strategy")
+@contextmanager
+def DistributeMirrorStrategy():
+    distribute_ctx.PushMirrorStrategyEnabled(True)
+    yield
+    distribute_ctx.PophMirrorStrategyEnabled()
+    
+@oneflow_export("distribute.mirror_strategy_enabled")
+def MirrorStrategyEnabled():
+    return distribute_ctx.AnyStrategyEnabled() and distribute_ctx.IsMirrorStrategyEnabled()
+
+@oneflow_export("distribute.consistent_strategy")
+@contextmanager
+def DistributeConsistentStrategy():
+    distribute_ctx.PushMirrorStrategyEnabled(False)
+    yield
+    distribute_ctx.PophMirrorStrategyEnabled()
+
+@oneflow_export("distribute.consistent_strategy_enabled")
+def ConsistentStrategyEnabled():
+    return distribute_ctx.AnyStrategyEnabled() and not distribute_ctx.IsMirrorStrategyEnabled()
 
 @oneflow_export("distribute.split")
 def split(axis):

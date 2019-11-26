@@ -2,6 +2,7 @@ from __future__ import absolute_import
 
 import oneflow.python.framework.placement_context as placement_context
 import oneflow.python.framework.job_builder as job_builder
+import oneflow.python.framework.distribute_context as distribute_ctx
 import oneflow.python.framework.c_api_util as c_api_util
 
 from contextlib import contextmanager
@@ -9,7 +10,6 @@ from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.framework.variable_getter_composite import (
     VariableGetterComposite,
 )
-
 
 @oneflow_export("experimental.variable_getter")
 def variable_getter(fn):
@@ -40,8 +40,8 @@ class BeforeNonInputOpBuildAndInferHook:
 
 
 def CurJobAddOp(op_conf, parallel_conf=None):
-    return _CurJobAddNonInputOp(op_conf, parallel_conf,
-                                c_api_util.CurJobBuildAndInferCtx_AddAndInferOp)
+    if distribute_ctx.IsMirrorStrategyEnabled(): return CurJobAddMirrorOp(op_conf, parallel_conf)
+    return CurJobAddConsistentOp(op_conf, parallel_conf)
 
 def CurJobAddConsistentOp(op_conf, parallel_conf=None):
     return _CurJobAddNonInputOp(op_conf, parallel_conf,

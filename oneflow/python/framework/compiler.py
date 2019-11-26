@@ -8,6 +8,7 @@ import oneflow.python.framework.compile_context as compile_context
 import oneflow.python.framework.placement_util as placement_util
 import oneflow.python.framework.config_util as config_util
 import oneflow.python.framework.remote_blob as remote_blob_util
+import oneflow.python.framework.distribute as distribute_util
 import oneflow.python.framework.input_blob_def as input_blob_util
 import oneflow.python.framework.job_builder as job_builder
 import oneflow.python.ops as ops
@@ -27,14 +28,19 @@ def Compile(job_func):
         job_builder.CurCtxCheckJob()
 
 def _CompileJob(job_conf, func, config):
-    device_type, machine_dev_ids = placement_util.GetDefaultMachineDeviceIds(config.resource)
     func.__oneflow_input_blob_defs__ = _GetArgDefault(func)
-    with placement_util.DevicePriorPlacementScope(device_type, machine_dev_ids):
+    with _DefaultParallel(config.resource):
         with _SetJobConfBeforeInferOp(job_conf) as set_job_conf:
             with _AddInputOpBeforeNonInputOp(func, set_job_conf):
                 func.__oneflow_output_remote_blobs__ = \
                     _RecursiveMakeRetRemoteBlobs(func(*func.__oneflow_input_blob_defs__))
-
+                
+@contextmanager
+def _DefaultParallel(resource):
+    device_type, machine_dev_ids = placement_util.GetDefaultMachineDeviceIds(resource)
+    with placement_util.DevicePriorPlacementScope(device_type, machine_dev_ids):
+        with distribute_util.DistributeMirrorStrategy(): yield
+        
 def _RecursiveMakeRetRemoteBlobs(out_remote_blobs):
     if out_remote_blobs is None: return None
     if isinstance(out_remote_blobs, (input_blob_util.InputBlobDef, remote_blob_util.BlobDef)):
