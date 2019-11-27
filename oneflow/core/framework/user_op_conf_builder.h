@@ -17,6 +17,7 @@ namespace user_op {
 class UserOpConfWrapper final {
  public:
   UserOpConfWrapper(const OperatorConf&);
+  const OperatorConf& op_conf() const;
   std::string op_name() const;
   std::string op_type_name() const;
   std::string input(const std::string& arg_name, int32_t index) const;
@@ -34,11 +35,16 @@ class UserOpConfWrapper final {
 
 class UserOpWrapper final {
  public:
-  UserOpWrapper(const OperatorConf& op,
-                const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4BnInOp);
+  UserOpWrapper(const OperatorConf& op, const std::function<const BlobDesc&(const std::string&)>&,
+                const std::function<LogicalBlobId*(const std::string&)>&);
 
   const BlobInfo& LogicalBlobInfo4ArgNameAndIndex(const std::string& arg_name, int32_t index) const;
+  void BindGradBlobWithOpInput(const std::string logical_grad_blob_name,
+                               const std::string& input_arg_name, int32_t index) const;
+  bool NeedGenGradBlob4OpInput(const std::string& input_arg_name, int32_t index) const;
+
   const UserOpConfWrapper& user_op_conf_wrapper();
+  const OperatorConf& op_conf() const { return conf_.op_conf(); }
   std::string op_name() const { return conf_.op_name(); }
   std::string op_type_name() const { return conf_.op_type_name(); }
   std::string input(const std::string& arg_name, int32_t index) const {
@@ -54,6 +60,7 @@ class UserOpWrapper final {
 
  private:
   UserOpConfWrapper conf_;
+  std::function<LogicalBlobId*(const std::string&)> diff_fn_;
   HashMap<std::string, BlobInfo> bn2blob_info_;
 };
 

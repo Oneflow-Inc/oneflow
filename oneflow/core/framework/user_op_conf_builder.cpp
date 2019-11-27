@@ -13,6 +13,8 @@ UserOpConfWrapper::UserOpConfWrapper(const OperatorConf& op_conf) {
   op_conf_ = *CHECK_JUST(CheckAndCompleteUserOpConf(op_conf));
 }
 
+const OperatorConf& UserOpConfWrapper::op_conf() const { return op_conf_; }
+
 std::string UserOpConfWrapper::op_name() const { return op_conf_.name(); }
 
 std::string UserOpConfWrapper::op_type_name() const { return op_conf_.user_conf().op_type_name(); }
@@ -100,8 +102,9 @@ OP_WRAPPER_LIST_ATTR_MEMBER_FUNC(float, at_list_float)
 
 UserOpWrapper::UserOpWrapper(
     const OperatorConf& op,
-    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4BnInOp)
-    : conf_(op) {
+    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4BnInOp,
+    const std::function<LogicalBlobId*(const std::string&)>& DiffLbi4BnInOp)
+    : conf_(op), diff_fn_(DiffLbi4BnInOp) {
   auto InitBlobInfoFromOpArgs = [&](const PbMap<std::string, UserOpConf_ListString>& args) {
     for (const auto& pair : args) {
       for (int32_t i = 0; i < pair.second.s_size(); ++i) {
@@ -115,6 +118,19 @@ UserOpWrapper::UserOpWrapper(
   };
   InitBlobInfoFromOpArgs(op.user_conf().input());
   InitBlobInfoFromOpArgs(op.user_conf().output());
+}
+
+bool UserOpWrapper::NeedGenGradBlob4OpInput(const std::string& input_arg_name,
+                                            int32_t index) const {
+  input(input_arg_name, index);
+  return diff_fn_(GenRepeatedBn(input_arg_name, index)) != nullptr;
+}
+
+void UserOpWrapper::BindGradBlobWithOpInput(const std::string logical_grad_blob_name,
+                                            const std::string& input_arg_name,
+                                            int32_t index) const {
+  CHECK(NeedGenGradBlob4OpInput(input_arg_name, index));
+  *diff_fn_(GenRepeatedBn(input_arg_name, index)) = GenLogicalBlobId(logical_grad_blob_name);
 }
 
 const BlobInfo& UserOpWrapper::LogicalBlobInfo4ArgNameAndIndex(const std::string& arg_name,
