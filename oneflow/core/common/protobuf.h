@@ -10,9 +10,9 @@
 #include <google/protobuf/util/message_differencer.h>
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/preprocessor.h"
-#include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/core/register/logical_blob_id.pb.h"
 #include "oneflow/core/register/op_blob_arg.pb.h"
+#include "oneflow/core/job/sbp_parallel.pb.h"
 #include "oneflow/core/persistence/persistent_out_stream.h"
 
 namespace oneflow {
@@ -198,10 +198,8 @@ inline bool operator==(const OpBlobArg& lhs, const OpBlobArg& rhs) {
 
 inline bool operator!=(const OpBlobArg& lhs, const OpBlobArg& rhs) { return !(lhs == rhs); }
 
-inline bool operator==(const BlobDescProto& lhs, const BlobDescProto& rhs) {
-  return PbMd().Equivalent(lhs, rhs);
-}
-
+class BlobDescProto;
+bool operator==(const BlobDescProto& lhs, const BlobDescProto& rhs);
 inline bool operator!=(const BlobDescProto& lhs, const BlobDescProto& rhs) { return !(lhs == rhs); }
 
 // Persistent
@@ -215,32 +213,35 @@ namespace std {
 template<>
 struct hash<oneflow::LogicalBlobId> {
   size_t operator()(const oneflow::LogicalBlobId& lbi) const {
-    return std::hash<std::string>()(lbi.op_name() + lbi.blob_name()
-                                    + std::to_string(lbi.is_packed_id()));
+    const auto& str_hash = std::hash<std::string>();
+    return str_hash(lbi.op_name()) ^ str_hash(lbi.blob_name());
   }
 };
 
 template<>
 struct hash<oneflow::OpBlobArg> {
   size_t operator()(const oneflow::OpBlobArg& oba) const {
-    return std::hash<std::string>()(oba.op_name() + oba.bn_in_op());
+    const auto& str_hash = std::hash<std::string>();
+    return str_hash(oba.op_name()) ^ str_hash(oba.bn_in_op());
   }
 };
 
 template<>
 struct hash<oneflow::SbpParallel> {
   size_t operator()(const oneflow::SbpParallel& sbp_parallel) const {
-    std::string desc;
+    const auto& str_hash = std::hash<std::string>();
+    size_t ret = 0;
     if (sbp_parallel.has_broadcast_parallel()) {
-      desc = "B";
+      ret ^= str_hash("B");
     } else if (sbp_parallel.has_partial_sum_parallel()) {
-      desc = "P";
+      ret ^= str_hash("P");
     } else if (sbp_parallel.has_split_parallel()) {
-      desc = "S(" + std::to_string(sbp_parallel.split_parallel().axis()) + ")";
+      ret ^= str_hash("S");
+      ret ^= std::hash<int64_t>()(sbp_parallel.split_parallel().axis());
     } else {
       UNIMPLEMENTED();
     }
-    return std::hash<std::string>()(desc);
+    return ret;
   }
 };
 

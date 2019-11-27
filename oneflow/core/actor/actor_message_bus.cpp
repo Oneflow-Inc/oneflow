@@ -2,6 +2,7 @@
 #include "oneflow/core/job/id_manager.h"
 #include "oneflow/core/job/machine_context.h"
 #include "oneflow/core/thread/thread_manager.h"
+#include "oneflow/core/comm_network/comm_network.h"
 
 namespace oneflow {
 

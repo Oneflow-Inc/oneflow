@@ -1,7 +1,37 @@
-#include "oneflow/core/operator/gather_ms0_op.h"
+#include "oneflow/core/operator/operator.h"
 #include "oneflow/core/common/balanced_splitter.h"
 
 namespace oneflow {
+
+class GatherMs0Op final : public Operator {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(GatherMs0Op);
+  GatherMs0Op() = default;
+  ~GatherMs0Op() override = default;
+
+  void InitFromOpConf() override;
+  const PbMessage& GetCustomizedConf() const override;
+  Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                             const ParallelContext* parallel_ctx) const override;
+
+ private:
+  Maybe<void> InferSbpSignature(
+      SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
+      const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
+      std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
+      const ParallelDesc& parallel_desc) const override;
+
+  void VirtualGenKernelConf(
+      std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+      const ParallelContext* parallel_ctx, KernelConf* kernel_conf, const OpContext* op_ctx,
+      std::function<const BlobDesc&(const std::string&)> LogicalBlobDesc4BnInOp) const override;
+
+  Maybe<void> InferBatchAxis(
+      std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override {
+    return NaiveInferBatchAxis(BatchAxis4BnInOp);
+  }
+  Maybe<void> GetSbpSignatures(SbpSignatureList* sbp_sig_list) const override;
+};
 
 void GatherMs0Op::InitFromOpConf() {
   CHECK(op_conf().has_gather_ms0_conf());
@@ -16,7 +46,7 @@ Maybe<void> GatherMs0Op::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   const BlobDesc* indices = GetBlobDesc4BnInOp("indices");
-  CHECK(IsIntegralDataType(indices->data_type()));
+  CHECK(IsIndexDataType(indices->data_type()));
   CHECK_GT(indices->shape().NumAxes(), 0);
   const BlobDesc* in = GetBlobDesc4BnInOp("in");
   CHECK_GT(in->shape().NumAxes(), 0);
