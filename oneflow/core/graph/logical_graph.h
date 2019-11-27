@@ -25,8 +25,6 @@ class LogicalGraph final : public Graph<LogicalNode, LogicalEdge> {
       const std::function<void(const LogicalNode* src, const LogicalNode* dst,
                                int64_t ctrl_regst_num)>& Handler) const;
 
-  const Job& GetJob() const { return job_; }
-
  private:
   template<typename LogicalNodeType>
   void ForEachLogicalNode(std::function<void(LogicalNodeType*)> Handler);

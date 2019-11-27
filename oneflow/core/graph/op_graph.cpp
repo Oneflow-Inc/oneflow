@@ -693,7 +693,8 @@ OpGraph::MakePredicatorIsOpNameDataOrCtrlReachable() const {
     if (src_node_it == op_name2op_node_.end()) { return false; }
     const auto& dst_node_it = op_name2op_node_.find(rhs);
     if (dst_node_it == op_name2op_node_.end()) { return false; }
-    return IsDataOrCtrlReachable(src_node_it->second, dst_node_it->second);
+    return (src_node_it->second == dst_node_it->second)
+           || IsDataOrCtrlReachable(src_node_it->second, dst_node_it->second);
   };
 }
 
