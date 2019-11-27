@@ -16,7 +16,6 @@
 #include "oneflow/core/graph/boxing/chain_sub_task_graph_builder.h"
 #include "oneflow/core/graph/boxing/nccl_boxing_sub_task_graph_builder.h"
 #include "oneflow/core/graph/boxing/sub_task_graph_builder_util.h"
-#include <iostream>
 
 namespace oneflow {
 
@@ -115,8 +114,7 @@ MakePredicatorIsLbiAllConsumersReachable(
         reachable_out_edges_size += IsDataOrCtrlReachable(out_edge->dst_node(), dst_task_node);
       }
     }
-
-    return (out_edges_size > 0 && out_edges_size == reachable_out_edges_size);
+    return out_edges_size > 0 && out_edges_size == reachable_out_edges_size;
   };
 }
 
