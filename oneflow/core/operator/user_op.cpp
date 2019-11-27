@@ -90,24 +90,8 @@ Maybe<void> UserOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> 
     }
     return nullptr;
   };
-  user_op::ArgVec inputs_vec;
-  auto Inputs = [&]() -> user_op::ArgVec const& {
-    inputs_vec.clear();
-    const auto& inputs = this->input_bns();
-    inputs_vec.reserve(inputs.size());
-    for (auto& input : inputs) { inputs_vec.emplace_back(GenUnRepeatedBn(input)); }
-    return inputs_vec;
-  };
-  user_op::ArgVec outputs_vec;
-  auto Outputs = [&]() -> user_op::ArgVec const& {
-    outputs_vec.clear();
-    const auto& outputs = this->output_bns();
-    outputs_vec.reserve(outputs.size());
-    for (auto& output : outputs) { outputs_vec.emplace_back(GenUnRepeatedBn(output)); }
-    return outputs_vec;
-  };
-  user_op::InferContext infer_ctx(GetShape4ArgNameAndIndex, GetDtype4ArgNameAndIndex, Inputs,
-                                  Outputs);
+  user_op::InferContext infer_ctx(GetShape4ArgNameAndIndex, GetDtype4ArgNameAndIndex,
+                                  &op_conf().user_conf());
 
   JUST(val->shape_infer_fn(&infer_ctx));
   JUST(val->dtype_infer_fn(&infer_ctx));

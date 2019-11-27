@@ -19,22 +19,25 @@ using ArgVec = std::vector<std::pair<std::string, int32_t>>;
 class InferContext final {
  public:
   InferContext() = default;
-  InferContext(Shape4ArgNameAndIndexFn, Dtype4ArgNameAndIndexFn, std::function<const ArgVec&()>,
-               std::function<const ArgVec&()>);
+  InferContext(Shape4ArgNameAndIndexFn, Dtype4ArgNameAndIndexFn, const UserOpConf*);
   ~InferContext() = default;
   InferContext(const InferContext&) = delete;
   InferContext(InferContext&&) = delete;
 
   Shape* Shape4ArgNameAndIndex(const std::string&, int32_t) const;
   DataType* Dtype4ArgNameAndIndex(const std::string&, int32_t) const;
-  const ArgVec& inputs() const { return inputs_(); }
-  const ArgVec& outputs() const { return outputs_(); }
+  const ArgVec& inputs() const;
+  const ArgVec& outputs() const;
+
+  template<typename T>
+  T GetAttr(const std::string&) const;
 
  private:
+  const UserOpConf* conf_;
+  ArgVec inputs_;
+  ArgVec outputs_;
   Shape4ArgNameAndIndexFn shape_infer_fn_;
   Dtype4ArgNameAndIndexFn dtype_infer_fn_;
-  std::function<const ArgVec&()> inputs_;
-  std::function<const ArgVec&()> outputs_;
 };
 
 struct ShapeInferFnUtil {
