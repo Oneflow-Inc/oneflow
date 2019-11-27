@@ -3,7 +3,7 @@ import numpy as np
 
 def IdentityLoss(name):
     w = flow.get_variable(name, (10,), initializer=flow.constant_initializer(100))
-    y = w
+    y = flow.math.reduce_sum(w)
     flow.losses.add_loss(y)
     return y
 
