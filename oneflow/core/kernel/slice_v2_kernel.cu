@@ -5,7 +5,8 @@ namespace oneflow {
 namespace {
 
 template<typename T>
-__global__ void SliceV2ForwardGpu(const int64_t n, const int64_t* offset, const T* entire, T* slice) {
+__global__ void SliceV2ForwardGpu(const int64_t n, const int64_t* offset, const T* entire,
+                                  T* slice) {
   CUDA_1D_KERNEL_LOOP(i, n) { slice[i] = entire[offset[i]]; }
 }
 
@@ -50,14 +51,14 @@ class SliceV2GpuKernel final : public KernelIf<DeviceType::kGPU> {
     });
     const int64_t num_output = out_blob->shape().elem_cnt();
     SliceV2ForwardGpu<T><<<BlocksNum4ThreadsNum(num_output), kCudaThreadsNumPerBlock, 0,
-                         ctx.device_ctx->cuda_stream()>>>(
+                           ctx.device_ctx->cuda_stream()>>>(
         num_output, offset_blob->dptr<int64_t>(), in_blob->dptr<T>(), out_blob->mut_dptr<T>());
   }
 };
 
-#define REGISTER_SLICE_V2_GPU_KERNEL(dtype)                                                       \
-  REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kSliceV2Conf, DeviceType::kGPU, dtype,     \
-                                        SliceV2GpuKernel<dtype>)                                 \
+#define REGISTER_SLICE_V2_GPU_KERNEL(dtype)                                                  \
+  REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kSliceV2Conf, DeviceType::kGPU, dtype, \
+                                        SliceV2GpuKernel<dtype>)
 
 REGISTER_SLICE_V2_GPU_KERNEL(float);
 REGISTER_SLICE_V2_GPU_KERNEL(double);

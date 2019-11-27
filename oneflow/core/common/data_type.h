@@ -9,7 +9,7 @@
 #include "oneflow/core/common/data_type_seq.h"
 #include "oneflow/core/record/record.pb.h"
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/job/resource.pb.h"
+#include "oneflow/core/common/device_type.pb.h"
 
 namespace oneflow {
 
@@ -226,6 +226,7 @@ struct DevDType<DeviceType::kGPU, float16> {
 
 bool IsIntegralDataType(DataType data_type);
 bool IsFloatingDataType(DataType data_type);
+bool IsIndexDataType(DataType data_type);
 size_t GetSizeOfDataType(DataType data_type);
 
 inline bool operator==(const OptInt64& lhs, const OptInt64& rhs) {

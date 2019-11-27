@@ -1,6 +1,8 @@
 #include "oneflow/core/job/plan_util.h"
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/graph/task_node.h"
+#include "oneflow/core/memory/memory_case_util.h"
+#include "oneflow/core/register/runtime_register_desc.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
 
 namespace oneflow {
@@ -59,6 +61,97 @@ std::function<const TaskProto&(int64_t)> PlanUtil::MakeGetterTaskProto4TaskId(co
     task_id2task_proto->emplace(task_proto.task_id(), &task_proto);
   }
   return [task_id2task_proto](int64_t task_id) { return *task_id2task_proto->at(task_id); };
+}
+
+void PlanUtil::CleanUselessMemBlockAndCheckValid(Plan* plan) {
+  HashMap<int64_t, ChunkProto> chunk_id2chunk;
+  HashMap<int64_t, MemBlockProto> mem_block_id2mem_block;
+  for (const auto& chunk : plan->block_chunk_list().chunk()) {
+    CHECK(chunk_id2chunk.emplace(chunk.chunk_id(), chunk).second);
+  }
+  for (const auto& mem_block : plan->block_chunk_list().mem_block()) {
+    CHECK(mem_block_id2mem_block.emplace(mem_block.mem_block_id(), mem_block).second);
+  }
+  plan->mutable_block_chunk_list()->clear_mem_block();
+
+  HashMap<int64_t, HashSet<int64_t>> chunk_id2job_ids;
+  HashMap<int64_t, HashSet<int64_t>> mem_block_id2job_ids;
+  for (const auto& pair : chunk_id2chunk) {
+    for (int64_t job_id : pair.second.job_id()) {
+      CHECK(chunk_id2job_ids[pair.first].insert(job_id).second);
+    }
+  }
+  for (const auto& pair : mem_block_id2mem_block) {
+    for (int64_t job_id : pair.second.job_id()) {
+      CHECK(mem_block_id2job_ids[pair.first].insert(job_id).second);
+    }
+  }
+
+  HashSet<int64_t> valid_mem_block_ids;
+  for (const TaskProto& task : plan->task()) {
+    for (const auto& pair : task.produced_regst_desc()) {
+      const RegstDescProto& regst = pair.second;
+      RtRegstDesc rt_regst(regst);
+      int64_t regst_size = rt_regst.TotalMainByteSize4AllRegst();
+      CHECK(mem_block_id2mem_block.find(regst.mem_block_id()) != mem_block_id2mem_block.end());
+      const MemBlockProto& mem_block = mem_block_id2mem_block.at(regst.mem_block_id());
+      CHECK_GE(mem_block.mem_size(), regst.mem_block_offset() + regst_size);
+      CHECK_EQ(task.machine_id(), mem_block.machine_id());
+      CHECK_EQ(mem_block.enable_reuse_mem(), regst.enable_reuse_mem());
+      CHECK(mem_block.mem_case() == regst.mem_case());
+      const auto& job_ids = mem_block_id2job_ids[regst.mem_block_id()];
+      CHECK(job_ids.find(task.job_id()) != job_ids.end());
+      valid_mem_block_ids.insert(regst.mem_block_id());
+
+      // separated_header
+      int64_t separated_header_mem_size = rt_regst.TotalSeparatedHeaderByteSize4AllRegst();
+      if (separated_header_mem_size > 0) {
+        int64_t header_block_id = regst.separated_header_mem_block_id();
+        CHECK_NE(header_block_id, -1);
+        CHECK(mem_block_id2mem_block.find(header_block_id) != mem_block_id2mem_block.end());
+        const MemBlockProto& header_mem_block = mem_block_id2mem_block.at(header_block_id);
+        CHECK_EQ(header_mem_block.mem_size(), separated_header_mem_size);
+        CHECK_EQ(task.machine_id(), header_mem_block.machine_id());
+        CHECK(header_mem_block.mem_case()
+              == MemoryCaseUtil::GetHostPinnedMemoryCaseForRegstSeparatedHeader(regst.mem_case()));
+        CHECK(header_mem_block.enable_reuse_mem() == false);
+        const auto& header_block_job_ids = mem_block_id2job_ids[header_block_id];
+        CHECK(header_block_job_ids.find(task.job_id()) != header_block_job_ids.end());
+        valid_mem_block_ids.insert(regst.separated_header_mem_block_id());
+      }
+    }
+  }
+
+  HashSet<int64_t> useless_mem_block_ids;
+  HashSet<int64_t> valid_chunk_ids;
+  for (const auto& pair : mem_block_id2mem_block) {
+    if (valid_mem_block_ids.find(pair.first) == valid_mem_block_ids.end()) {
+      CHECK(useless_mem_block_ids.insert(pair.first).second);
+      continue;
+    }
+    const MemBlockProto& mem_block = pair.second;
+    if (mem_block.has_chunk_id()) {
+      CHECK(mem_block.has_chunk_offset());
+      CHECK(mem_block.enable_reuse_mem());
+      CHECK(chunk_id2chunk.find(mem_block.chunk_id()) != chunk_id2chunk.end());
+      const ChunkProto& chunk = chunk_id2chunk.at(mem_block.chunk_id());
+      CHECK_GE(chunk.mem_size(), mem_block.chunk_offset() + mem_block.mem_size());
+      CHECK_EQ(mem_block.job_id_size(), 1);
+      CHECK_GE(chunk.job_id_size(), 1);
+      const HashSet<int64_t>& chunk_job_ids = chunk_id2job_ids.at(chunk.chunk_id());
+      CHECK(chunk_job_ids.find(mem_block.job_id(0)) != chunk_job_ids.end());
+      valid_chunk_ids.insert(mem_block.chunk_id());
+    }
+  }
+  CHECK_EQ(valid_chunk_ids.size(), chunk_id2chunk.size());
+
+  for (int64_t useless_block_id : useless_mem_block_ids) {
+    mem_block_id2mem_block.erase(useless_block_id);
+  }
+
+  for (const auto& pair : mem_block_id2mem_block) {
+    *(plan->mutable_block_chunk_list()->add_mem_block()) = pair.second;
+  }
 }
 
 void PlanUtil::ToDotFile(const Plan& plan, const std::string& filepath) {

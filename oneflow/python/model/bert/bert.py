@@ -44,11 +44,11 @@ class BertBackbone(object):
             max_position_embeddings=max_position_embeddings,
             dropout_prob=hidden_dropout_prob)
       with flow.deprecated.variable_scope("encoder"):
-        attention_mask_blob = _CreateAttentionMaskFromInputMask(
+        addr_blob = _CreateAttentionMaskFromInputMask(
           input_mask_blob, from_seq_length=seq_length, to_seq_length=seq_length)
         self.all_encoder_layers_ = _TransformerModel(
             input_blob=self.embedding_output_,
-            attention_mask_blob=attention_mask_blob,
+            addr_blob=addr_blob,
             seq_length=seq_length,
             hidden_size=hidden_size,
             num_hidden_layers=num_hidden_layers,
@@ -73,7 +73,7 @@ def _Gelu(in_blob):
   return flow.keras.activations.gelu(in_blob)
 
 def _TransformerModel(input_blob,
-                      attention_mask_blob,
+                      addr_blob,
                       seq_length,
                       hidden_size=768,
                       num_hidden_layers=12,
@@ -98,7 +98,7 @@ def _TransformerModel(input_blob,
           attention_output_blob = _AttentionLayer(
               from_blob=layer_input_blob,
               to_blob=layer_input_blob,
-              attention_mask_blob=attention_mask_blob,
+              addr_blob=addr_blob,
               num_attention_heads=num_attention_heads,
               size_per_head=attention_head_size,
               attention_probs_dropout_prob=attention_probs_dropout_prob,
@@ -156,7 +156,7 @@ def _TransformerModel(input_blob,
 
 def _AttentionLayer(from_blob,
                     to_blob,
-                    attention_mask_blob,
+                    addr_blob,
                     num_attention_heads=1,
                     size_per_head=512,
                     query_act=op_conf_util.kNone,
@@ -207,10 +207,6 @@ def _AttentionLayer(from_blob,
   attention_scores_blob = flow.matmul(query_blob, key_blob, transpose_b=True)
   attention_scores_blob = attention_scores_blob * (1.0 / math.sqrt(float(size_per_head)))
 
-  attention_mask_blob = flow.reshape(attention_mask_blob, [-1, 1, from_seq_length, to_seq_length])
-  attention_mask_blob = flow.cast(attention_mask_blob, dtype=flow.float)
-  addr_blob = (attention_mask_blob - 1.0) * 10000.0
-
   attention_scores_blob = attention_scores_blob + addr_blob
   attention_probs_blob = flow.nn.softmax(attention_scores_blob)
   attention_probs_blob = _Dropout(attention_probs_blob, attention_probs_dropout_prob)
@@ -256,8 +252,12 @@ def _CreateAttentionMaskFromInputMask(to_mask_blob, from_seq_length, to_seq_leng
   output = flow.cast(to_mask_blob, dtype=flow.float)
   output = flow.reshape(output, [-1, 1, to_seq_length])
   zeros = flow.constant(0.0, dtype=flow.float, shape=[from_seq_length, to_seq_length])
-  output = zeros + output
-  return output
+  attention_mask_blob = zeros + output
+  attention_mask_blob = flow.reshape(attention_mask_blob, [-1, 1, from_seq_length, to_seq_length])
+  attention_mask_blob = flow.cast(attention_mask_blob, dtype=flow.float)
+  addr_blob = (attention_mask_blob - 1.0) * 10000.0
+
+  return addr_blob
 
 
 def _EmbeddingPostprocessor(input_blob,

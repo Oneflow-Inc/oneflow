@@ -2,6 +2,7 @@
 #include <string>
 #include "oneflow/core/thread/thread_manager.h"
 #include "oneflow/core/job/runtime_job_descs.h"
+#include "oneflow/core/job/machine_context.h"
 
 namespace oneflow {
 

@@ -34,7 +34,7 @@ struct GatherSwitchUtil final {
 #define MAKE_GATHER_SWITCH_ENTRY(func_name, K) func_name<device_type, T, K>
 #define DEFINE_GATHER_STATIC_SWITCH_FUNC(func_name)                    \
   DEFINE_STATIC_SWITCH_FUNC(void, func_name, MAKE_GATHER_SWITCH_ENTRY, \
-                            MAKE_DATA_TYPE_CTRV_SEQ(INT_DATA_TYPE_SEQ));
+                            MAKE_DATA_TYPE_CTRV_SEQ(INDEX_DATA_TYPE_SEQ));
   DEFINE_GATHER_STATIC_SWITCH_FUNC(GatherForward);
   DEFINE_GATHER_STATIC_SWITCH_FUNC(GatherBackward);
 #undef DEFINE_GATHER_STATIC_SWITCH_FUNC
@@ -128,7 +128,7 @@ void GatherKernelUtilImpl<DeviceType::kCPU, T, K>::Backward(DeviceCtx* ctx, cons
   template struct GatherKernelUtilImpl<DeviceType::kCPU, OF_PP_PAIR_FIRST(in_type_pair), \
                                        OF_PP_PAIR_FIRST(index_type_pair)>;
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INITIATE_GATHER_KERNEL_UTIL_CPU_IMPL, FLOATING_DATA_TYPE_SEQ,
-                                 INT_DATA_TYPE_SEQ);
+                                 INDEX_DATA_TYPE_SEQ);
 #undef INITIATE_GATHER_KERNEL_UTIL_CPU_IMPL
 
 #define INITIATE_GATHER_KERNEL_UTIL(device_type, in_type_pair) \
@@ -137,7 +137,7 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INITIATE_GATHER_KERNEL_UTIL, DEVICE_TYPE_SEQ,
                                  FLOATING_DATA_TYPE_SEQ);
 template struct GatherKernelUtil<DeviceType::kGPU, int32_t>;
 #undef INITIATE_GATHER_KERNEL_UTIL
-#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 700
+#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 700 && CUDA_VERSION >= 10000
 template struct GatherKernelUtil<DeviceType::kGPU, float16>;
 #endif
 
