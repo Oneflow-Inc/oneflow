@@ -8,7 +8,13 @@ class ReluKernel final : public oneflow::user_op::OpKernel {
   ~ReluKernel() = default;
 
  private:
-  void Compute(oneflow::user_op::KernelContext* ctx) override { LOG(WARNING) << "Run Relu Kernel"; }
+  void Compute(oneflow::user_op::KernelContext* ctx) override {
+    const oneflow::user_op::Blob* in_blob = ctx->Blob4ArgNameAndIndex("in", 0);
+    oneflow::user_op::Blob* out_blob = ctx->Blob4ArgNameAndIndex("out", 0);
+    oneflow::NewKernelUtil<oneflow::DeviceType::kGPU>::Relu(
+        ctx->device_ctx(), in_blob->shape().elem_cnt(), in_blob->dptr<float>(),
+        out_blob->mut_dptr<float>());
+  }
 };
 
 REGISTER_USER_KERNEL("ccrelu")
