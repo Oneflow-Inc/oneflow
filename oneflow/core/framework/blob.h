@@ -19,6 +19,9 @@ class Blob final {
   Blob(const Blob&) = delete;
   Blob(Blob&&) = delete;
 
+  const Shape& shape() const { return def_.shape(); }
+  DataType data_type() const { return def_.data_type(); }
+
   template<typename T = void>
   const T* dptr() const {
     CheckDataType<T>();
