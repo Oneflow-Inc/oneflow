@@ -1,7 +1,7 @@
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/framework/op_registration.h"
 #include "oneflow/core/framework/kernel_registration.h"
-#include "oneflow/core/framework/blob_info.h"
+#include "oneflow/core/framework/blob_def.h"
 
 namespace oneflow {
 
@@ -134,14 +134,14 @@ LogicalBlobId UserOp::obn2lbi(const std::string& output_bn) const {
 Maybe<void> UserOp::InferTmpBufferBlobDesc(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
-  user_op::BlobInfo4ArgNameAndIndexFn GetBlobInfo =
-      [&](const std::string& arg_name, int32_t id) -> std::shared_ptr<user_op::BlobInfo> {
+  user_op::BlobDef4ArgNameAndIndexFn GetBlobDef =
+      [&](const std::string& arg_name, int32_t id) -> std::shared_ptr<user_op::BlobDef> {
     BlobDesc* blob = GetBlobDesc4BnInOp(GenRepeatedBn(arg_name, id));
     if (blob) {
-      return std::shared_ptr<user_op::BlobInfo>(
-          new user_op::BlobInfo(blob->shape(), blob->data_type()));
+      return std::shared_ptr<user_op::BlobDef>(
+          new user_op::BlobDef(blob->shape(), blob->data_type()));
     }
-    return std::shared_ptr<user_op::BlobInfo>();
+    return std::shared_ptr<user_op::BlobDef>();
   };
 
   DataType data_type = DataType::kInvalidDataType;
@@ -152,7 +152,7 @@ Maybe<void> UserOp::InferTmpBufferBlobDesc(
   if (first_blob_desc) { data_type = first_blob_desc->data_type(); }
 
   user_op::KernelRegContext kernel_reg_ctx(op_conf().device_type(), data_type, *parallel_ctx,
-                                           GetBlobInfo);
+                                           GetBlobDef);
   const user_op::KernelRegistrationVal* kernel_reg_val =
       user_op::LookUpInKernelRegistry(op_conf().user_conf().op_type_name(), kernel_reg_ctx);
   CHECK_OR_RETURN(kernel_reg_val != nullptr)

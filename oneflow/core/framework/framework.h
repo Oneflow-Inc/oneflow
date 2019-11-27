@@ -5,7 +5,7 @@
 #include "oneflow/core/framework/kernel_registration.h"
 #include "oneflow/core/framework/grad_registration.h"
 
-#include "oneflow/core/framework/blob_info.h"
+#include "oneflow/core/framework/blob_def.h"
 #include "oneflow/core/framework/op_kernel.h"
 
 #endif  // ONEFLOW_CORE_FRAMEWORK_FRAMEWORK_H_
