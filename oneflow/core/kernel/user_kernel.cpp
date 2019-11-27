@@ -34,7 +34,7 @@ class UserKernel final : public Kernel {
       };
       ctx_.reset(new user_op::KernelContext(ctx, Blob4ArgNameAndIndex));
     }
-    kernel_->Compute(*ctx_.get());
+    kernel_->Compute(ctx_.get());
   }
 };
 

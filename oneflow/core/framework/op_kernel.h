@@ -41,11 +41,10 @@ class OpKernel {
   OF_DISALLOW_COPY_AND_MOVE(OpKernel);
   virtual ~OpKernel() = default;
 
-  void Init(const KernelInitContext&);
-  virtual void Compute(const KernelContext&) const = 0;
+  virtual void Compute(KernelContext*) = 0;
 
  protected:
-  OpKernel() = default;
+  OpKernel(const KernelInitContext&) {}
 
  private:
 };
