@@ -5,7 +5,7 @@ def IdentityLoss(name):
     w = flow.get_variable(name, (10,), initializer=flow.constant_initializer(100))
     y = w
     flow.losses.add_loss(y)
-    return flow.reshape(y, (2, 5))
+    return y
 
 def test_loss_inplace(test_case):
     Compare(test_case, IdentityLoss)
