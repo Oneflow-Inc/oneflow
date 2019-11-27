@@ -4,7 +4,7 @@ from absl import app
 from absl.testing import absltest
 import oneflow as flow
 
-flow.unittest.register_testcases(
+flow.unittest.register_test_cases(
     scope=globals(),
     directory=os.path.dirname(os.path.realpath(__file__)),
     filter_by_num_nodes=lambda x: x == 1,

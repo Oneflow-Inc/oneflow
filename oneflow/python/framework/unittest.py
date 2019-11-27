@@ -5,8 +5,8 @@ import oneflow
 import os
 import imp
 
-@oneflow_export('unittest.register_testcases')
-def register_testcases(scope, directory, filter_by_num_nodes, base_class=unittest.TestCase):
+@oneflow_export('unittest.register_test_cases')
+def register_test_cases(scope, directory, filter_by_num_nodes, base_class=unittest.TestCase):
     def FilterTestPyFile(f):
         return os.path.isfile(os.path.join(directory, f)) \
             and f.endswith('.py') and f.startswith('test')
