@@ -11,7 +11,6 @@ import oneflow.python.framework.distribute as distribute_util
 from oneflow.python.oneflow_export import oneflow_export
 from functools import reduce
 import numpy as np
-import collections
 import oneflow
 
 @oneflow_export('input_blob_def')
@@ -56,9 +55,14 @@ class input_blob_def(blob_desc.BlobDesc):
 
     @property
     def num_of_lod_levels(self): return self.num_of_lod_levels_
-    
-    @property
-    def parallel_conf(self): return None
+
+    def parallel_conf(self):
+        TODO()
+
+    def with_distribute(self, distribute):
+        return input_blob_def(shape = self.shape_, dtype = self.dtype_,               \
+                        is_dynamic = self.is_dynamic_, batch_axis = self.batch_axis_, \
+                        distribute = distribute, name = self.lbi.op_name)
 
     def CheckInputNdarray(self, ndarray):
         if self.num_of_lod_levels == 0:

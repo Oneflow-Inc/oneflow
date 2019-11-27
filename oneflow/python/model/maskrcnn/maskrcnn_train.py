@@ -68,6 +68,9 @@ parser.add_argument(
     required=False,
 )
 parser.add_argument(
+    "-save_rate", "--model_save_rate", type=int, default=0, required=False
+)
+parser.add_argument(
     "-v", "--verbose", default=False, action="store_true", required=False
 )
 parser.add_argument("-i", "--iter_num", type=int, default=10, required=False)
@@ -89,6 +92,9 @@ parser.add_argument(
 )
 parser.add_argument(
     "-imgd", "--image_dir", type=str, default="val2017", required=False
+)
+parser.add_argument(
+    "-j", "--jupyter", default=False, action="store_true", required=False
 )
 terminal_args = parser.parse_args()
 
@@ -239,9 +245,9 @@ def maskrcnn_train(cfg, images, image_sizes, gt_boxes, gt_segms, gt_labels):
     return rpn_bbox_loss, rpn_objectness_loss, box_loss, cls_loss, mask_loss
 
 
-@distribute_execute(terminal_args.gpu_num_per_node, 1)
+@flow.experimental.mirror_execute(terminal_args.gpu_num_per_node, 1)
 def distribute_maskrcnn_train(
-    dist_ctx, config, image, image_size, gt_bbox, gt_segm, gt_label
+    config, image, image_size, gt_bbox, gt_segm, gt_label
 ):
     """Mask-RCNN
     Args:
@@ -357,6 +363,24 @@ def MakeWatcherCallback(prompt):
 
 
 def init_config():
+    config = get_default_cfgs()
+    if terminal_args.config_file is not None:
+        config.merge_from_file(terminal_args.config_file)
+        print("merged config from {}".format(terminal_args.config_file))
+
+    if "gpu_num_per_node" in terminal_args:
+        config.NUM_GPUS = terminal_args.gpu_num_per_node
+
+    assert terminal_args.batch_size % terminal_args.gpu_num_per_node == 0
+    config.TRAINING_CONF.IMG_PER_GPU = int(
+        terminal_args.batch_size / terminal_args.gpu_num_per_node
+    )
+
+    config.freeze()
+
+    if terminal_args.verbose:
+        print(config)
+
     flow.config.cudnn_buf_limit_mbyte(1280)
     flow.config.cudnn_conv_heuristic_search_algo(True)
     flow.config.cudnn_conv_use_deterministic_algo_only(False)
@@ -366,20 +390,15 @@ def init_config():
     flow.config.train.model_update_conf(dict(momentum_conf={"beta": 0.9}))
     # flow.config.train.model_update_conf(dict(naive_conf={}))
 
-    config = get_default_cfgs()
-    if terminal_args.config_file is not None:
-        config.merge_from_file(terminal_args.config_file)
-        print("merged config from {}".format(terminal_args.config_file))
-
-    if "gpu_num_per_node" in terminal_args:
-        config.NUM_GPUS = terminal_args.gpu_num_per_node
-
-    config.freeze()
-
-    if terminal_args.verbose:
-        print(config)
-
     return config
+
+
+def save_model(i):
+    if not os.path.exists(terminal_args.model_save_dir):
+        os.makedirs(terminal_args.model_save_dir)
+    model_dst = os.path.join(terminal_args.model_save_dir, "iter-" + str(i))
+    print("saving models to {}".format(model_dst))
+    check_point.save(model_dst)
 
 
 if terminal_args.mock_dataset:
@@ -495,28 +514,13 @@ if terminal_args.train_with_real_dataset:
         )
 
         if config.NUM_GPUS > 1:
-            image_list = flow.advanced.distribute_split(
-                image or data_loader("image")
-            )
-            image_size_list = flow.advanced.distribute_split(
-                data_loader("image_size")
-            )
-            gt_bbox_list = flow.advanced.distribute_split(
-                data_loader("gt_bbox")
-            )
-            gt_segm_list = flow.advanced.distribute_split(
-                data_loader("gt_segm")
-            )
-            gt_label_list = flow.advanced.distribute_split(
-                data_loader("gt_labels")
-            )
             outputs = distribute_maskrcnn_train(
                 config,
-                image_list,
-                image_size_list,
-                gt_bbox_list,
-                gt_segm_list,
-                gt_label_list,
+                flow.identity(image) if image else data_loader("image"),
+                data_loader("image_size"),
+                data_loader("gt_bbox"),
+                data_loader("gt_segm"),
+                data_loader("gt_labels"),
             )
             for losses in outputs:
                 for loss in losses:
@@ -561,8 +565,9 @@ if terminal_args.train_with_real_dataset:
 
 
 if __name__ == "__main__":
+    flow.env.ctrl_port(terminal_args.ctrl_port)
+    flow.config.enable_inplace(False)
     flow.config.gpu_device_num(terminal_args.gpu_num_per_node)
-    flow.config.ctrl_port(terminal_args.ctrl_port)
     flow.config.default_data_type(flow.float)
 
     fake_image_list = []
@@ -579,6 +584,8 @@ if __name__ == "__main__":
     check_point = flow.train.CheckPoint()
     if not terminal_args.model_load_dir:
         check_point.init()
+        if terminal_args.model_save_rate > 0:
+            save_model(0)
     else:
         check_point.load(terminal_args.model_load_dir)
 
@@ -602,19 +609,8 @@ if __name__ == "__main__":
                     )
                 )
             for i in range(terminal_args.iter_num):
-
-                def save_model():
-                    return
-                    if not os.path.exists(terminal_args.model_save_dir):
-                        os.makedirs(terminal_args.model_save_dir)
-                    model_dst = os.path.join(
-                        terminal_args.model_save_dir, "iter-" + str(i)
-                    )
-                    print("saving models to {}".format(model_dst))
-                    check_point.save(model_dst)
-
                 if i == 0:
-                    save_model()
+                    save_model(i)
 
                 train_loss = mock_train(
                     debug_data.blob("images"),
@@ -631,7 +627,7 @@ if __name__ == "__main__":
                 save_blob_watched(i)
 
                 if (i + 1) % 10 == 0:
-                    save_model()
+                    save_model(i + 1)
 
         elif terminal_args.train_with_real_dataset:
             print(
@@ -645,14 +641,70 @@ if __name__ == "__main__":
                     "loss_mask",
                 )
             )
+
+            def save_model(i):
+                return
+                if not os.path.exists(terminal_args.model_save_dir):
+                    os.makedirs(terminal_args.model_save_dir)
+                model_dst = os.path.join(
+                    terminal_args.model_save_dir, "iter-" + str(i)
+                )
+                print("saving models to {}".format(model_dst))
+                check_point.save(model_dst)
+
+            losses_hisogram = []
             for i in range(terminal_args.iter_num):
+                if i == 0:
+                    save_model(0)
                 if i < len(fake_image_list):
                     losses = train_func(fake_image_list[i]).get()
                 else:
                     losses = train_func().get()
 
+                if terminal_args.model_save_rate > 0:
+                    if (
+                        i + 1
+                    ) % terminal_args.model_save_rate == 0 or i + 1 == len(
+                        terminal_args.iter_num
+                    ):
+                        save_model(i + 1)
+
                 fmt_str = "{:>8} {:>8}" + "{:>16.10f} " * len(losses)
                 for j, loss in enumerate(zip(*losses)):
-                    print(fmt_str.format(i, j, *[t.mean() for t in loss]))
+                    frame = [t.mean() for t in loss]
+                    print(fmt_str.format(i, j, *frame))
+                    frame.append(i)
+                    losses_hisogram.append(frame)
+                    save_blob_watched(i)
+                if (i + 1) % 10 == 0:
+                    save_model(i)
+            if terminal_args.jupyter:
+                import altair as alt
+                from vega_datasets import data
 
-                save_blob_watched(i)
+                import pandas as pd
+
+                loss_data_frame = pd.DataFrame(np.array(losses_hisogram), columns=["loss_rpn_box_reg", "loss_objectness", "loss_box_reg", "loss_classifier", "loss_mask", "iter"])
+    
+                base = (
+                    alt.Chart(loss_data_frame).mark_line()
+                    .encode(x="petalLength", y="petalWidth")
+                )
+                chart = base.mark_line().encode(
+                    x='iter',
+                    y='loss_rpn_box_reg',
+                ) + base.mark_line().encode(
+                    x='iter',
+                    y='loss_objectness',
+                ) + base.mark_line().encode(
+                    x='iter',
+                    y='loss_box_reg',
+                ) + base.mark_line().encode(
+                    x='iter',
+                    y='loss_classifier',
+                ) + base.mark_line().encode(
+                    x='iter',
+                    y='loss_mask',
+                )
+
+                chart.display()

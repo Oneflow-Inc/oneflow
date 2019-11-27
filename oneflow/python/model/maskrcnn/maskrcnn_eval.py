@@ -73,7 +73,7 @@ def make_data_loader(
     return data_loader
 
 
-def maskrcnn_eval(images, image_sizes):
+def maskrcnn_eval(images, image_sizes, image_ids):
     cfg = get_default_cfgs()
     if terminal_args.config_file is not None:
         cfg.merge_from_file(terminal_args.config_file)
@@ -85,6 +85,7 @@ def maskrcnn_eval(images, image_sizes):
     box_head = BoxHead(cfg)
     mask_head = MaskHead(cfg)
 
+    assert images.shape[3] == 3
     image_size_list = [
         flow.squeeze(flow.local_gather(image_sizes, flow.constant(i, dtype=flow.int32)), [0])
         for i in range(image_sizes.shape[0])
@@ -114,14 +115,14 @@ def maskrcnn_eval(images, image_sizes):
     detections = [result[0] for result in box_head_results]
     mask_prob = mask_head.build_eval(detections, features)
 
-    return {"box_head_results": box_head_results, "mask_prob": mask_prob}
+    return {"box_head_results": box_head_results, "mask_prob": mask_prob, "image_ids": image_ids}
 
 
 if terminal_args.fake_img:
 
     @flow.function
     def maskrcnn_eval_job(
-        images=flow.input_blob_def(shape=(2, 3, 416, 608), dtype=flow.float32, is_dynamic=True)
+        images=flow.input_blob_def(shape=(2, 416, 608, 3), dtype=flow.float32, is_dynamic=True)
     ):
         data_loader = make_data_loader(
             batch_size=terminal_args.batch_size,
@@ -133,10 +134,7 @@ if terminal_args.fake_img:
         image_sizes = data_loader("image_size")
         image_ids = data_loader("image_id")
 
-        ret = maskrcnn_eval(flow.transpose(images, perm=[0, 2, 3, 1]), image_sizes)
-        ret.update({"image_ids": image_ids})
-
-        return ret
+        return maskrcnn_eval(images, image_sizes, image_ids)
 
 
 else:
@@ -154,10 +152,33 @@ else:
         image_sizes = data_loader("image_size")
         image_ids = data_loader("image_id")
 
-        ret = maskrcnn_eval(images, image_sizes)
-        ret.update({"image_ids": image_ids})
+        return maskrcnn_eval(images, image_sizes, image_ids)
 
-        return ret
+
+# return: (list of BoxList wrt. images, list of image_is wrt. image)
+def GenPredictionsAndImageIds(results):
+    assert isinstance(results, dict)
+    box_head_results = results["box_head_results"]
+    mask_prob = results["mask_prob"]
+    image_ids = results["image_ids"]
+
+    boxes = []
+    for box_head_result in box_head_results:
+        # swap height and width in image_size
+        image_size_h_w = box_head_result[-1]
+        assert len(image_size_h_w) == 2
+        image_size_w_h = [image_size_h_w[1], image_size_h_w[0]]
+        boxlist = BoxList(box_head_result[0].ndarray(), image_size_w_h, mode="xyxy")
+        boxlist.add_field("scores", box_head_result[1].ndarray())
+        boxlist.add_field("labels", box_head_result[2].ndarray())
+        boxes.append(boxlist)
+
+    # Mask Head Post-Processor
+    mask_postprocessor = MaskPostProcessor()
+    predictions = mask_postprocessor.forward(mask_prob.ndarray(), boxes)
+    image_ids = list(np.squeeze(image_ids.ndarray(), axis=1))
+
+    return (predictions, image_ids)
 
 
 if __name__ == "__main__":
@@ -178,30 +199,13 @@ if __name__ == "__main__":
             if i == 0:
                 f = open("/dataset/mask_rcnn/maskrcnn_eval_net_10/fake_image_list.pkl", "rb")
                 fake_image_list = pickle.load(f)
+            images = fake_image_list[i].transpose((0, 2, 3, 1)).copy()
             results = maskrcnn_eval_job(fake_image_list[i]).get()
         else:
             results = maskrcnn_eval_job().get()
+        predictions, image_ids = GenPredictionsAndImageIds(results)
 
-        box_head_results = results["box_head_results"]
-        mask_prob = results["mask_prob"]
-        image_ids = results["image_ids"]
-
-        boxes = []
-        for box_head_result in box_head_results:
-            # swap height and width in image_size
-            image_size_h_w = box_head_result[-1]
-            assert len(image_size_h_w) == 2
-            image_size_w_h = [image_size_h_w[1], image_size_h_w[0]]
-            boxlist = BoxList(box_head_result[0].ndarray(), image_size_w_h, mode="xyxy")
-            boxlist.add_field("scores", box_head_result[1].ndarray())
-            boxlist.add_field("labels", box_head_result[2].ndarray())
-            boxes.append(boxlist)
-
-        # Mask Head Post-Processor
-        mask_postprocessor = MaskPostProcessor()
-        predictions = mask_postprocessor.forward(mask_prob.ndarray(), boxes)
-
-        image_id_list += list(np.squeeze(image_ids.ndarray()))
+        image_id_list += image_ids
         prediction_list += predictions
 
     # Sort predictions by image_id
