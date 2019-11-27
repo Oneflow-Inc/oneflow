@@ -73,7 +73,7 @@ void Compiler::Compile(Job* job, Plan* plan, bool need_job_complete) const {
   }
 
   if (job_desc.enable_inplace()) {
-    auto IsReachable = Global<OpGraph>::Get()->MakePredicatorIsLbiAllConsumersReachableToOpName();
+    auto IsReachable = Global<OpGraph>::Get()->MakePredicatorIsOpNameDataOrCtrlReachable();
     task_gph->EnableInplaceMemSharing(IsReachable);
   }
   // TODO: update method for fw bw split

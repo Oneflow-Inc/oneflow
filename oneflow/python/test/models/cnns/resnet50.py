@@ -288,7 +288,6 @@ def main(args):
     flow.config.default_data_type(flow.float)
     flow.config.machine_num(args.num_nodes)
     flow.config.gpu_device_num(args.gpu_num_per_node)
-    flow.config.enable_inplace(False)
 
     check_point = flow.train.CheckPoint()
     check_point.load(MODEL_LOAD)
