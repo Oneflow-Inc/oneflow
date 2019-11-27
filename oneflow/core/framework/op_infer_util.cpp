@@ -24,58 +24,58 @@ DataType* InferContext::Dtype4ArgNameAndIndex(const std::string& arg_name, int32
   return dtype_infer_fn_(arg_name, index);
 }
 
-Maybe<void> ShapeInferFnUtil::Unchanged(const InferContext& ctx) {
+Maybe<void> ShapeInferFnUtil::Unchanged(InferContext* ctx) {
   const Shape* shape = nullptr;
-  for (size_t i = 0; i < ctx.inputs().size(); ++i) {
-    const std::pair<std::string, int32_t>& input_arg = ctx.inputs().at(i);
+  for (size_t i = 0; i < ctx->inputs().size(); ++i) {
+    const std::pair<std::string, int32_t>& input_arg = ctx->inputs().at(i);
     if (shape) {
-      CHECK_EQ_OR_RETURN(*shape, *ctx.Shape4ArgNameAndIndex(input_arg.first, input_arg.second));
+      CHECK_EQ_OR_RETURN(*shape, *ctx->Shape4ArgNameAndIndex(input_arg.first, input_arg.second));
     } else {
-      shape = ctx.Shape4ArgNameAndIndex(input_arg.first, input_arg.second);
+      shape = ctx->Shape4ArgNameAndIndex(input_arg.first, input_arg.second);
     }
   }
-  for (size_t i = 0; i < ctx.outputs().size(); ++i) {
-    const std::pair<std::string, int32_t>& output_arg = ctx.outputs().at(i);
-    *ctx.Shape4ArgNameAndIndex(output_arg.first, output_arg.second) = *shape;
+  for (size_t i = 0; i < ctx->outputs().size(); ++i) {
+    const std::pair<std::string, int32_t>& output_arg = ctx->outputs().at(i);
+    *ctx->Shape4ArgNameAndIndex(output_arg.first, output_arg.second) = *shape;
   }
   return Maybe<void>::Ok();
 }
 
-Maybe<void> ShapeInferFnUtil::InOutCorrespond(const InferContext& ctx) {
-  CHECK_EQ_OR_RETURN(ctx.inputs().size(), ctx.outputs().size());
-  for (size_t i = 0; i < ctx.inputs().size(); ++i) {
-    const auto& input_arg = ctx.inputs().at(i);
-    const auto& output_arg = ctx.outputs().at(i);
-    *ctx.Shape4ArgNameAndIndex(output_arg.first, output_arg.second) =
-        *ctx.Shape4ArgNameAndIndex(input_arg.first, input_arg.second);
+Maybe<void> ShapeInferFnUtil::InOutCorrespond(InferContext* ctx) {
+  CHECK_EQ_OR_RETURN(ctx->inputs().size(), ctx->outputs().size());
+  for (size_t i = 0; i < ctx->inputs().size(); ++i) {
+    const auto& input_arg = ctx->inputs().at(i);
+    const auto& output_arg = ctx->outputs().at(i);
+    *ctx->Shape4ArgNameAndIndex(output_arg.first, output_arg.second) =
+        *ctx->Shape4ArgNameAndIndex(input_arg.first, input_arg.second);
   }
   return Maybe<void>::Ok();
 }
 
-Maybe<void> DtypeInferFnUtil::Unchanged(const InferContext& ctx) {
+Maybe<void> DtypeInferFnUtil::Unchanged(InferContext* ctx) {
   const DataType* dtype = nullptr;
-  for (size_t i = 0; i < ctx.inputs().size(); ++i) {
-    const std::pair<std::string, int32_t>& input_arg = ctx.inputs().at(i);
+  for (size_t i = 0; i < ctx->inputs().size(); ++i) {
+    const std::pair<std::string, int32_t>& input_arg = ctx->inputs().at(i);
     if (dtype) {
-      CHECK_EQ_OR_RETURN(*dtype, *ctx.Dtype4ArgNameAndIndex(input_arg.first, input_arg.second));
+      CHECK_EQ_OR_RETURN(*dtype, *ctx->Dtype4ArgNameAndIndex(input_arg.first, input_arg.second));
     } else {
-      dtype = ctx.Dtype4ArgNameAndIndex(input_arg.first, input_arg.second);
+      dtype = ctx->Dtype4ArgNameAndIndex(input_arg.first, input_arg.second);
     }
   }
-  for (size_t i = 0; i < ctx.outputs().size(); ++i) {
-    const std::pair<std::string, int32_t>& output_arg = ctx.outputs().at(i);
-    *ctx.Dtype4ArgNameAndIndex(output_arg.first, output_arg.second) = *dtype;
+  for (size_t i = 0; i < ctx->outputs().size(); ++i) {
+    const std::pair<std::string, int32_t>& output_arg = ctx->outputs().at(i);
+    *ctx->Dtype4ArgNameAndIndex(output_arg.first, output_arg.second) = *dtype;
   }
   return Maybe<void>::Ok();
 }
 
-Maybe<void> DtypeInferFnUtil::InOutCorrespond(const InferContext& ctx) {
-  CHECK_EQ_OR_RETURN(ctx.inputs().size(), ctx.outputs().size());
-  for (size_t i = 0; i < ctx.inputs().size(); ++i) {
-    const auto& input_arg = ctx.inputs().at(i);
-    const auto& output_arg = ctx.outputs().at(i);
-    *ctx.Dtype4ArgNameAndIndex(output_arg.first, output_arg.second) =
-        *ctx.Dtype4ArgNameAndIndex(input_arg.first, input_arg.second);
+Maybe<void> DtypeInferFnUtil::InOutCorrespond(InferContext* ctx) {
+  CHECK_EQ_OR_RETURN(ctx->inputs().size(), ctx->outputs().size());
+  for (size_t i = 0; i < ctx->inputs().size(); ++i) {
+    const auto& input_arg = ctx->inputs().at(i);
+    const auto& output_arg = ctx->outputs().at(i);
+    *ctx->Dtype4ArgNameAndIndex(output_arg.first, output_arg.second) =
+        *ctx->Dtype4ArgNameAndIndex(input_arg.first, input_arg.second);
   }
   return Maybe<void>::Ok();
 }

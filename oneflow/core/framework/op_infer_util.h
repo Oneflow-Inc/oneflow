@@ -38,13 +38,13 @@ class InferContext final {
 };
 
 struct ShapeInferFnUtil {
-  static Maybe<void> Unchanged(const InferContext&);
-  static Maybe<void> InOutCorrespond(const InferContext&);
+  static Maybe<void> Unchanged(InferContext*);
+  static Maybe<void> InOutCorrespond(InferContext*);
 };
 
 struct DtypeInferFnUtil {
-  static Maybe<void> Unchanged(const InferContext&);
-  static Maybe<void> InOutCorrespond(const InferContext&);
+  static Maybe<void> Unchanged(InferContext*);
+  static Maybe<void> InOutCorrespond(InferContext*);
 };
 
 struct CheckAttrFnUtil {

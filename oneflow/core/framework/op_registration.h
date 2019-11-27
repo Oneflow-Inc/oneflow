@@ -12,8 +12,8 @@ namespace oneflow {
 namespace user_op {
 
 using CheckAttrFn = std::function<Maybe<void>(const UserOpDef&, const UserOpConf&)>;
-using ShapeInferFn = std::function<Maybe<void>(const InferContext&)>;
-using DtypeInferFn = std::function<Maybe<void>(const InferContext&)>;
+using ShapeInferFn = std::function<Maybe<void>(InferContext*)>;
+using DtypeInferFn = std::function<Maybe<void>(InferContext*)>;
 using GetSbpFn = std::function<Maybe<void>(/*TODO(niuchong): what is the para*/)>;
 
 struct OpRegistrationVal {

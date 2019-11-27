@@ -109,8 +109,8 @@ Maybe<void> UserOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> 
   user_op::InferContext infer_ctx(GetShape4ArgNameAndIndex, GetDtype4ArgNameAndIndex, Inputs,
                                   Outputs);
 
-  JUST(val->shape_infer_fn(infer_ctx));
-  JUST(val->dtype_infer_fn(infer_ctx));
+  JUST(val->shape_infer_fn(&infer_ctx));
+  JUST(val->dtype_infer_fn(&infer_ctx));
   for (const auto& pair : bn_in_op2data_type) {
     // data_type of input blobs is also set, but not changed
     GetBlobDesc4BnInOp(pair.first)->set_data_type(pair.second);
