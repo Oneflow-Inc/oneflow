@@ -8,6 +8,7 @@ from oneflow.python.framework.session_context import SessionStatus
 import oneflow.python.framework.compiler as compiler
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.config_util as config_util
+import oneflow.python.framework.env_util as env_util
 import oneflow.python.framework.job_instance as job_instance_util
 from oneflow.python.framework.out_remote_blobs_status import OutRemoteBlobsStatus
 from oneflow.python.oneflow_export import oneflow_export
@@ -32,10 +33,10 @@ class Session(object):
     
     def Init(self):
         assert self.status_ is SessionStatus.OPEN
-        _TryInitEnvironment()
-        c_api_util.InitGlobalSession()
+        _TryInitEnv()
+        c_api_util.InitGlobalSession(_GetConfigProto())
         for job_name, job_func in self.job_name2job_func_.items(): compiler.Compile(job_func)
-        c_api_util.InitGlobalOneflow()
+        c_api_util.StartGlobalSession()
         self.inter_user_job_info_ = c_api_util.GetInterUserJobInfo()
         self.status_ = SessionStatus.RUNNING
         return self
@@ -45,7 +46,7 @@ class Session(object):
 
     def Close(self):
         assert self.status_ is SessionStatus.RUNNING
-        c_api_util.DestroyGlobalOneflow()
+        c_api_util.StopGlobalSession()
         c_api_util.DestroyGlobalSession()
         self.Sync()
         self.status_ = SessionStatus.CLOSED
@@ -115,9 +116,18 @@ def clear_default_session():
 def _MakePushCallback(ndarray):
     return lambda ofblob: ofblob.CopyFromNdarrayOrNestedNdarrayList(ndarray)
 
-def _TryInitEnvironment():
-    if c_api_util.IsEnvironmentInited() == False:
-        c_api_util.InitEnvironment(config_util.default_config_proto)
-        config_util.config_proto_mutable = False
+def _GetConfigProto():
+    config_proto = config_util.default_config_proto
+    if config_proto.resource.machine_num <= 0:
+      config_proto.resource.machine_num = \
+          len(env_util.default_env_proto.machine)
+    return config_proto
+
+def _TryInitEnv():
+    if c_api_util.IsEnvInited(): return
+    assert len(env_util.default_env_proto.machine) > 0
+    env_util.CompleteEnvProto(env_util.default_env_proto)
+    c_api_util.InitEnv(env_util.default_env_proto)
+    env_util.env_proto_mutable = False
 
 session_ctx.OpenDefaultSession(Session())

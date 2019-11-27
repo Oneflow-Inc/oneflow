@@ -33,6 +33,11 @@ class RemoteBlob(blob_desc.BlobDesc):
     def num_of_lod_levels(self): return job_builder.GetNumOfLoDLevels(self.job_name_, self.lbn_)
 
     @property
+    def disable_boxing(self):
+        if self.disable_boxing_ is not None: return self.disable_boxing_
+        return job_builder.DisableBoxing(self.job_name_, self.lbn_)
+    
+    @property
     def parallel_conf(self):
         return job_builder.GetParallelConfFromProducerView(self.job_name_, self.lbn_)
 
@@ -41,6 +46,9 @@ class RemoteBlob(blob_desc.BlobDesc):
         ret = RemoteBlob(self.lbi_)
         ret.distribute_ = distribute
         return ret
+
+    def with_gradient_distribute(self, distribute):
+        return oneflow.parallel_cast(self, gradient_distribute=distribute)
 
     def __add__(self, rhs):
         return oneflow.math.add(self, rhs)

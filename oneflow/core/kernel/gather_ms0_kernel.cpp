@@ -1,7 +1,20 @@
-#include "oneflow/core/kernel/gather_ms0_kernel.h"
+#include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/kernel/gather_kernel_util.h"
 
 namespace oneflow {
+
+template<DeviceType device_type, typename T>
+class GatherMs0Kernel final : public KernelIf<device_type> {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(GatherMs0Kernel);
+  GatherMs0Kernel() = default;
+  ~GatherMs0Kernel() override = default;
+
+ private:
+  const PbMessage& GetCustomizedOpConf() const override;
+  void ForwardDataContent(const KernelCtx& ctx,
+                          std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+};
 
 template<DeviceType device_type, typename T>
 const PbMessage& GatherMs0Kernel<device_type, T>::GetCustomizedOpConf() const {

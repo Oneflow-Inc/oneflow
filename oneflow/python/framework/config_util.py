@@ -15,39 +15,9 @@ def TryCompleteDefaultJobConfigProto(job_conf):
 def _TryCompleteDefaultConfigProto(config):
     _DefaultConfigResource(config)
     _DefaultConfigIO(config)
-    _DefaultConfigCppFlags(config)
-
-def _MakeMachine(machines):
-    if isinstance(machines, str): machines = [machines]
-    resource = resource_util.Resource()
-    rp_machine = resource.machine
-    for m_data in machines:
-        m = rp_machine.add()
-        if isinstance(m_data, str):
-            m.addr = m_data
-        elif isinstance(m_data, dict):
-            if 'addr' in m_data: m.addr = m_data['addr']
-            if 'ctrl_port_agent' in m_data: m.ctrl_port_agent = m_data['ctrl_port_agent']
-            if 'data_port_agent' in m_data: m.data_port_agent = m_data['data_port_agent']
-        else:
-            raise NotImplementedError
-    id = 0
-    addrs_for_check = set()
-    for m in rp_machine:
-        m.id = id
-        id += 1
-        assert m.addr not in addrs_for_check
-        addrs_for_check.add(m.addr)
-    return rp_machine
 
 def _DefaultConfigResource(config):
     resource = config.resource
-    if len(resource.machine) == 0:
-        machine = resource.machine.add()
-        machine.id = 0
-        machine.addr = "127.0.0.1"
-    if resource.HasField("ctrl_port") == False:
-        resource.ctrl_port = 2017
     if resource.gpu_device_num == 0:
         resource.gpu_device_num = 1
 
@@ -58,11 +28,6 @@ def _DefaultConfigIO(config):
     if io_conf.snapshot_fs_conf.WhichOneof("fs_type") == None:
         io_conf.snapshot_fs_conf.localfs_conf.SetInParent()
 
-def  _DefaultConfigCppFlags(config):
-    config.cpp_flags_conf.SetInParent()
-    config.cpp_flags_conf.grpc_use_no_signal = True
-
-
 def _TryCompleteDefaultJobConfigProto(job_conf):
     if job_conf.WhichOneof("job_type") is None:
         job_conf.predict_conf.SetInParent()
@@ -71,6 +36,12 @@ def _DefaultConfigProto():
     config_proto = job_set_pb.ConfigProto()
     _TryCompleteDefaultConfigProto(config_proto)
     return config_proto
+
+@oneflow_export('config.machine_num')
+def machine_num(val):
+    assert config_proto_mutable == True
+    assert type(val) is int
+    default_config_proto.resource.machine_num = val
 
 @oneflow_export('config.gpu_device_num')
 def gpu_device_num(val):
@@ -83,25 +54,6 @@ def cpu_device_num(val):
     assert config_proto_mutable == True
     assert type(val) is int
     default_config_proto.resource.cpu_device_num = val
-
-@oneflow_export('config.machine')
-def machine(*val):
-    assert config_proto_mutable == True
-    del default_config_proto.resource.machine[:]
-    if len(val) == 1 and isinstance(val[0], list, tuple): val = val[0]
-    default_config_proto.resource.machine.extend(_MakeMachine(val))
-
-@oneflow_export('config.ctrl_port')
-def ctrl_port(val):
-    assert config_proto_mutable == True
-    assert type(val) is int
-    default_config_proto.resource.ctrl_port = val
-
-@oneflow_export('config.data_port')
-def data_port(val):
-    assert config_proto_mutable == True
-    assert type(val) is int
-    default_config_proto.resource.data_port = val
 
 @oneflow_export('config.comm_net_worker_num')
 def comm_net_worker_num(val):
@@ -163,36 +115,6 @@ def persistence_buf_byte(val):
     assert type(val) is int
     default_config_proto.io_conf.persistence_buf_byte = val
 
-@oneflow_export('config.log_dir')
-def log_dir(val):
-    assert config_proto_mutable == True
-    assert type(val) is str
-    default_config_proto.cpp_flags_conf.log_dir = val
-
-@oneflow_export('config.logtostderr')
-def logtostderr(val):
-    assert config_proto_mutable == True
-    assert type(val) is int
-    default_config_proto.cpp_flags_conf.logtostderr = val
-
-@oneflow_export('config.logbuflevel')
-def logbuflevel(val):
-    assert config_proto_mutable == True
-    assert type(val) is int
-    default_config_proto.cpp_flags_conf.logbuflevel = val
-
-@oneflow_export('config.v')
-def v(val):
-    assert config_proto_mutable == True
-    assert type(val) is int
-    default_config_proto.cpp_flags_conf.v = val
-
-@oneflow_export('config.grpc_use_no_signal')
-def grpc_use_no_signal(val = True):
-    assert config_proto_mutable == True
-    assert type(val) is bool
-    default_config_proto.cpp_flags_conf.grpc_use_no_signal = val
-
 @oneflow_export('config.collect_act_event')
 def collect_act_event(val = True):
     assert config_proto_mutable == True
@@ -226,6 +148,44 @@ def set_exp_run_conf(value):
     assert type(value) is dict
     pb_util.PythonDict2PbMessage(value, _GetJobConfAttr(lambda x:x, 'exp_run_conf'))
     return oneflow.config
+
+@oneflow_export('config.use_memory_allocation_algorithm_v2')
+def set_use_memory_allocation_algorithm_v2(value = True):
+    _SetJobConfAttr(lambda x:x, 'use_memory_allocation_algorithm_v2', value)
+    return oneflow.config
+
+@oneflow_export('config.static_mem_alloc_algo_white_list.show')
+def show_static_mem_alloc_algo_white_list():
+    return ["use_mem_size_first_algo", "use_mutual_exclusion_first_algo", "use_time_line_algo"]
+
+@oneflow_export('config.static_mem_alloc_policy_white_list.has')
+def static_mem_alloc_policy_white_list_has_policy(policy):
+    pb_msg = _GetJobConfAttr(lambda x:x, 'memory_allocation_algorithm_conf')
+    return getattr(pb_msg, policy)
+
+@oneflow_export('config.static_mem_alloc_policy_white_list.add')
+def static_mem_alloc_policy_white_list_add_policy(policy):
+    pb_msg = _GetJobConfAttr(lambda x:x, 'memory_allocation_algorithm_conf')
+    setattr(pb_msg, policy, True)
+    return oneflow.config
+
+@oneflow_export('config.static_mem_alloc_policy_white_list.remove')
+def static_mem_alloc_policy_white_list_remove_policy(policy):
+    pb_msg = _GetJobConfAttr(lambda x:x, 'memory_allocation_algorithm_conf')
+    setattr(pb_msg, policy, False)
+    return oneflow.config
+
+@oneflow_export('config.static_mem_alloc_policy_white_list.policy_mem_size_first')
+def policy_mem_size_first():
+    return "use_mem_size_first_algo"
+
+@oneflow_export('config.static_mem_alloc_policy_white_list.policy_mutual_exclusion_first')
+def policy_mutual_exclusion_first():
+    return "use_mutual_exclusion_first_algo"
+
+@oneflow_export('config.static_mem_alloc_policy_white_list.policy_time_line')
+def policy_time_line():
+    return "use_time_line_algo"
 
 @oneflow_export('config.enable_cudnn')
 def set_enable_cudnn(value = True):
@@ -327,6 +287,11 @@ def set_enable_non_distributed_optimizer(value = True):
     _SetJobConfAttr(lambda x:x, 'enable_non_distributed_optimizer', value)
     return oneflow.config
 
+@oneflow_export('config.disable_all_reduce_sequence')
+def disable_all_reduce_sequence(value=True):
+    _SetJobConfAttr(lambda x: x, 'disable_all_reduce_sequence', value)
+    return oneflow.config
+
 @oneflow_export('config.non_distributed_optimizer_group_size_mbyte')
 def set_non_distributed_optimizer_group_size_mbyte(value):
     _SetJobConfAttr(lambda x:x, 'non_distributed_optimizer_group_size_mbyte', value)
@@ -399,7 +364,7 @@ def _SetJobConfAttr(GetConf, field, value):
         assert c_api_util.CurJobBuildAndInferCtx_HasJobConf() == False
         setattr(GetConf(compile_context.cur_job_conf), field, value)
     else:
-        assert c_api_util.IsEnvironmentInited() == False
+        assert c_api_util.IsSessionInited() == False
         setattr(GetConf(default_job_conf), field, value)
 
 def _GetJobConfAttr(GetConf, field):
@@ -407,7 +372,7 @@ def _GetJobConfAttr(GetConf, field):
         assert c_api_util.CurJobBuildAndInferCtx_HasJobConf() == False
         return getattr(GetConf(compile_context.cur_job_conf), field)
     else:
-        assert c_api_util.IsEnvironmentInited() == False
+        assert c_api_util.IsSessionInited() == False
         return getattr(GetConf(default_job_conf), field)
 
 default_config_proto = _DefaultConfigProto()

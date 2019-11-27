@@ -54,16 +54,9 @@ def CurJobAddInputOp(op_conf):
 
 def _CurJobAddNonInputOp(op_conf, parallel_conf=None):
     _prefixing_op_name_if_need(op_conf)
-    op_conf.device_type = placement_context.CurPlacementGroupGetDeviceType(
-        op_conf
-    )
-
-    for callback in before_non_input_op_build_and_infer_hooks:
-        callback()
-
-    if parallel_conf is None:
-        parallel_conf = placement_context.ParallelConf4OpConf(op_conf)
-
+    op_conf.device_type = placement_context.CurPlacementGroupGetDeviceType(op_conf)
+    for callback in before_non_input_op_build_and_infer_hooks: callback()
+    if parallel_conf is None: parallel_conf = placement_context.ParallelConf4OpConf(op_conf)
     job_builder.CurCtxAddAndInferOp(op_conf, parallel_conf)
 
 
@@ -96,7 +89,6 @@ def _ResetCurJobConf(job_conf):
     global cur_job_distribution_strategy
     cur_job_distribution_strategy = None
 
-
 def _init_variable_getter():
     @variable_getter
     def get_shared_variable(gen_op_fn, name, *arg, **kwargs):
@@ -106,7 +98,6 @@ def _init_variable_getter():
         else:
             cur_job_var_op_name2var_blob[name] = gen_op_fn()
             return cur_job_var_op_name2var_blob[name]
-
 
 def _prefixing_op_name_if_need(op_conf):
     if op_conf.HasField("variable_conf"):
@@ -123,7 +114,6 @@ def _prefixing_op_name_if_need(op_conf):
         + _get_variable_prefix()
         + op_conf.name
     )
-
 
 def _get_variable_prefix():
     global cur_job_variable_scope_stack
