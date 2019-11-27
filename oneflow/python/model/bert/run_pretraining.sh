@@ -1,7 +1,7 @@
 python run_pretraining.py                                                                     \
   --gpu_num_per_node=1                                                                        \
   --node_num=1                                                                                \
-  --node_list='192.168.1.15'                                                                  \
+  --node_list='192.168.1.15,192.168.1.16'                                                     \
   --learning_rate=1e-4                                                                        \
   --weight_l2=0.01                                                                            \
   --batch_size_per_device=24                                                                  \
@@ -18,6 +18,6 @@ python run_pretraining.py                                                       
   --max_position_embeddings=512                                                               \
   --type_vocab_size=2                                                                         \
   --vocab_size=30522                                                                          \
-  --attention_probs_dropout_prob=0                                                            \
-  --hidden_dropout_prob=0                                                                     \
+  --attention_probs_dropout_prob=0.1                                                          \
+  --hidden_dropout_prob=0.1                                                                   \
   --hidden_size_per_head=64
