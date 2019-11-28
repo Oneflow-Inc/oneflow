@@ -15,29 +15,29 @@ namespace user_op {
 
 class OpKernel;
 class KernelInitContext;
-class BlobInfo;
+class BlobDef;
 
-using BlobInfo4ArgNameAndIndexFn =
-    std::function<std::shared_ptr<BlobInfo>(const std::string&, int32_t)>;
+using BlobDef4ArgNameAndIndexFn =
+    std::function<std::shared_ptr<BlobDef>(const std::string&, int32_t)>;
 
 class KernelRegContext final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(KernelRegContext);
   explicit KernelRegContext(DeviceType, DataType, const ParallelContext&,
-                            BlobInfo4ArgNameAndIndexFn);
+                            BlobDef4ArgNameAndIndexFn);
   explicit KernelRegContext(const KernelConf&);
   ~KernelRegContext() = default;
 
   DeviceType device() const { return device_; }
   DataType data_type() const { return data_type_; }
   const ParallelContext& parallel_ctx() const { return parallel_ctx_; }
-  std::shared_ptr<const BlobInfo> BlobDesc4ArgNameAndIndex(const std::string&, int32_t) const;
+  std::shared_ptr<const BlobDef> BlobDesc4ArgNameAndIndex(const std::string&, int32_t) const;
 
  private:
   DeviceType device_;
   DataType data_type_;
   ParallelContext parallel_ctx_;
-  BlobInfo4ArgNameAndIndexFn fn_;
+  BlobDef4ArgNameAndIndexFn fn_;
 };
 
 using CreateFn = std::function<OpKernel*(const KernelInitContext&)>;
