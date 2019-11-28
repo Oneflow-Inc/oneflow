@@ -2,6 +2,7 @@
 #include "oneflow/core/framework/user_op_attr.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/shape.h"
+#include "oneflow/core/common/protobuf.h"
 
 namespace oneflow {
 
@@ -114,24 +115,19 @@ void AddAttrWithDefault(OpRegistryWrapper* wrapper, const std::string& name, Use
 
 }  // namespace
 
-#define OP_REG_ATTR_MEMBER_FUNC(attr_type, cpp_type, postfix)                               \
+#define OP_REG_ATTR_MEMBER_FUNC(field, cpp_type, attr_type)                                 \
   template<>                                                                                \
   OpRegistryWrapperBuilder& OpRegistryWrapperBuilder::Attr<cpp_type>(                       \
       const std::string& name, UserOpAttrType type, cpp_type&& default_val) {               \
     CHECK(InsertIfNotExists(name, &unique_names_));                                         \
-    CHECK_EQ(type, UserOpAttrType::kAt##attr_type);                                         \
+    CHECK_EQ(type, attr_type);                                                              \
     AddAttrWithDefault(&wrapper_, name, type, [default_val](UserOpDef::AttrDef* attr_def) { \
-      attr_def->mutable_default_val()->set_##postfix(default_val);                          \
+      attr_def->mutable_default_val()->set_##field(default_val);                            \
     });                                                                                     \
     return *this;                                                                           \
   }
 
-OP_REG_ATTR_MEMBER_FUNC(Int32, int32_t, at_int32)
-OP_REG_ATTR_MEMBER_FUNC(Int64, int64_t, at_int64)
-OP_REG_ATTR_MEMBER_FUNC(Bool, bool, at_bool)
-OP_REG_ATTR_MEMBER_FUNC(Float, float, at_float)
-OP_REG_ATTR_MEMBER_FUNC(Double, double, at_double)
-OP_REG_ATTR_MEMBER_FUNC(String, std::string, at_string)
+OF_PP_FOR_EACH_TUPLE(OP_REG_ATTR_MEMBER_FUNC, BASIC_ATTR_SEQ)
 
 #undef OP_REG_ATTR_MEMBER_FUNC
 
@@ -147,22 +143,20 @@ OpRegistryWrapperBuilder& OpRegistryWrapperBuilder::Attr<Shape>(const std::strin
   return *this;
 }
 
-#define OP_REG_LIST_ATTR_MEMBER_FUNC(attr_type, cpp_type, postfix)                          \
+#define OP_REG_LIST_ATTR_MEMBER_FUNC(field, cpp_type, attr_type)                            \
   template<>                                                                                \
   OpRegistryWrapperBuilder& OpRegistryWrapperBuilder::Attr<cpp_type>(                       \
       const std::string& name, UserOpAttrType type, cpp_type&& default_val) {               \
     CHECK(InsertIfNotExists(name, &unique_names_));                                         \
-    CHECK_EQ(type, UserOpAttrType::kAt##attr_type);                                         \
+    CHECK_EQ(type, attr_type);                                                              \
     AddAttrWithDefault(&wrapper_, name, type, [default_val](UserOpDef::AttrDef* attr_def) { \
-      SerializeVector2ListAttr<cpp_type, UserOpAttrVal::attr_type>(                         \
-          default_val, attr_def->mutable_default_val()->mutable_##postfix());               \
+      *(attr_def->mutable_default_val()->mutable_##field()->mutable_val()) =                \
+          StdVec2PbRf<cpp_type::value_type>(default_val);                                   \
     });                                                                                     \
     return *this;                                                                           \
   }
 
-OP_REG_LIST_ATTR_MEMBER_FUNC(ListInt32, std::vector<int32_t>, at_list_int32)
-OP_REG_LIST_ATTR_MEMBER_FUNC(ListInt64, std::vector<int64_t>, at_list_int64)
-OP_REG_LIST_ATTR_MEMBER_FUNC(ListFloat, std::vector<float>, at_list_float)
+OF_PP_FOR_EACH_TUPLE(OP_REG_LIST_ATTR_MEMBER_FUNC, LIST_ATTR_SEQ)
 
 #undef OP_REG_LIST_ATTR_MEMBER_FUNC
 

@@ -1,6 +1,7 @@
 #include "oneflow/core/framework/op_infer_util.h"
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/common/shape.h"
+#include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/framework/user_op_def.pb.h"
 #include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/core/framework/user_op_attr.h"
@@ -38,36 +39,34 @@ const ArgVec& InferContext::inputs() const { return inputs_; }
 
 const ArgVec& InferContext::outputs() const { return outputs_; }
 
-#define BASIC_AND_MESSAGE_ATTR_TYPE_SPECIALIZATION(type, field_name)             \
+#define BASIC_ATTR_TYPE_SPECIALIZATION(field, cpp_type, attr_type)               \
   template<>                                                                     \
-  type InferContext::GetAttr<type>(const std::string& attr_name) const {         \
+  cpp_type InferContext::GetAttr<cpp_type>(const std::string& attr_name) const { \
     const UserOpAttrVal& attr_val = conf_->attr().at(attr_name);                 \
-    CHECK_EQ(static_cast<int>(GetAttrType<type>::value), attr_val.value_case()); \
-    return attr_val.field_name();                                                \
+    CHECK_EQ(static_cast<int>(attr_type), attr_val.value_case());                \
+    return attr_val.field();                                                     \
   }
 
-BASIC_AND_MESSAGE_ATTR_TYPE_SPECIALIZATION(int32_t, at_int32)
-BASIC_AND_MESSAGE_ATTR_TYPE_SPECIALIZATION(int64_t, at_int64)
-BASIC_AND_MESSAGE_ATTR_TYPE_SPECIALIZATION(bool, at_bool)
-BASIC_AND_MESSAGE_ATTR_TYPE_SPECIALIZATION(float, at_float)
-BASIC_AND_MESSAGE_ATTR_TYPE_SPECIALIZATION(double, at_double)
-BASIC_AND_MESSAGE_ATTR_TYPE_SPECIALIZATION(std::string, at_string)
+OF_PP_FOR_EACH_TUPLE(BASIC_ATTR_TYPE_SPECIALIZATION, BASIC_ATTR_SEQ)
 
-#undef BASIC_AND_MESSAGE_ATTR_TYPE_SPECIALIZATION
+template<>
+Shape InferContext::GetAttr<Shape>(const std::string& attr_name) const {
+  const UserOpAttrVal& attr_val = conf_->attr().at(attr_name);
+  CHECK_EQ(static_cast<int>(UserOpAttrType::kAtShape), attr_val.value_case());
+  return Shape(attr_val.at_shape());
+}
 
-#define LIST_ATTR_TYPE_SPECIALIZATION(type, field_name)                          \
+#undef BASIC_ATTR_TYPE_SPECIALIZATION
+
+#define LIST_ATTR_TYPE_SPECIALIZATION(field, cpp_type, attr_type)                \
   template<>                                                                     \
-  type InferContext::GetAttr<type>(const std::string& attr_name) const {         \
+  cpp_type InferContext::GetAttr<cpp_type>(const std::string& attr_name) const { \
     const UserOpAttrVal& attr_val = conf_->attr().at(attr_name);                 \
-    CHECK_EQ(static_cast<int>(GetAttrType<type>::value), attr_val.value_case()); \
-    type ret;                                                                    \
-    SerializeListAttr2Vector(attr_val.field_name(), &ret);                       \
-    return ret;                                                                  \
+    CHECK_EQ(static_cast<int>(attr_type), attr_val.value_case());                \
+    return PbRf2StdVec<cpp_type::value_type>(attr_val.field().val());            \
   }
 
-LIST_ATTR_TYPE_SPECIALIZATION(std::vector<int32_t>, at_list_int32)
-LIST_ATTR_TYPE_SPECIALIZATION(std::vector<int64_t>, at_list_int64)
-LIST_ATTR_TYPE_SPECIALIZATION(std::vector<float>, at_list_float)
+OF_PP_FOR_EACH_TUPLE(LIST_ATTR_TYPE_SPECIALIZATION, LIST_ATTR_SEQ)
 
 #undef LIST_ATTR_TYPE_SPECIALIZATION
 
