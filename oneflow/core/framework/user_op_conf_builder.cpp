@@ -126,7 +126,9 @@ UserOpWrapper::UserOpWrapper(
 
 bool UserOpWrapper::NeedGenGradBlob4OpInput(const std::string& input_arg_name,
                                             int32_t index) const {
-  input(input_arg_name, index);
+  auto it = op_conf().user_conf().input().find(input_arg_name);
+  CHECK(it != op_conf().user_conf().input().end());
+  CHECK(index >= 0 && index < it->second.s_size());
   return diff_fn_(GenRepeatedBn(input_arg_name, index)) != nullptr;
 }
 
