@@ -40,22 +40,6 @@ struct GetAttrType;
 OF_PP_FOR_EACH_TUPLE(SPECIALIZE_GET_ATTR_TYPE, ATTR_SEQ);
 #undef SPECIALIZE_GET_ATTR_TYPE
 
-// Others
-template<typename VecT, typename ListAttrT>
-void SerializeVector2ListAttr(const VecT& vec, ListAttrT* attr) {
-  // TODO(niuchong): some check for VecT and ListAttrT
-  attr->clear_val();
-  for (auto it = vec.begin(); it != vec.end(); ++it) { attr->add_val(*it); }
-}
-
-template<typename VecT, typename ListAttrT>
-void SerializeListAttr2Vector(const ListAttrT& attr, VecT* vec) {
-  // TODO(niuchong): some check for VecT and ListAttrT
-  vec->clear();
-  vec->resize(attr.val_size());
-  for (int i = 0; i < attr.val_size(); ++i) { vec->at(i) = attr.val(i); }
-}
-
 }  // namespace user_op
 
 }  // namespace oneflow
