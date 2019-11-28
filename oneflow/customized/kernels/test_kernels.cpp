@@ -21,3 +21,25 @@ REGISTER_USER_KERNEL("ccrelu")
     .SetCreateFn([](const oneflow::user_op::KernelInitContext& ctx) { return new ReluKernel(ctx); })
     .SetIsMatchedPred([](const oneflow::user_op::KernelRegContext& ctx) { return true; })
     .SetInferTmpSizeFn([]() { return 10; });
+
+class TestReshapeKernel final : public oneflow::user_op::OpKernel {
+ public:
+  TestReshapeKernel(const oneflow::user_op::KernelInitContext& ctx)
+      : oneflow::user_op::OpKernel(ctx) {}
+  TestReshapeKernel() = default;
+  ~TestReshapeKernel() = default;
+
+ private:
+  void Compute(oneflow::user_op::KernelContext* ctx) override {
+    const oneflow::user_op::Blob* in_blob = ctx->Blob4ArgNameAndIndex("in", 0);
+    oneflow::user_op::Blob* out_blob = ctx->Blob4ArgNameAndIndex("out", 0);
+    LOG(WARNING) << "Run TestReshape Kernel";
+  }
+};
+
+REGISTER_USER_KERNEL("TestReshape")
+    .SetCreateFn([](const oneflow::user_op::KernelInitContext& ctx) {
+      return new TestReshapeKernel(ctx);
+    })
+    .SetIsMatchedPred([](const oneflow::user_op::KernelRegContext& ctx) { return true; })
+    .SetInferTmpSizeFn([]() { return 10; });

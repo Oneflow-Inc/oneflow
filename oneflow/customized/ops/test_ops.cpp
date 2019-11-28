@@ -17,12 +17,12 @@ REGISTER_USER_OP("TestReshape")
     .Output("out")
     .Attr("shape", UserOpAttrType::kAtShape)
     .SetShapeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);
+      const Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);
       Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
       Shape conf_shape = ctx->GetAttr<Shape>("shape");
+      CHECK_EQ(in_shape->NumAxes(), conf_shape.NumAxes());
       *out_shape = conf_shape;
       return Maybe<void>::Ok();
     });
-// .SetCheckAttrFn([](user_op::));
 
 }  // namespace oneflow
