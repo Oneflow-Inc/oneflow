@@ -15,20 +15,24 @@ UserOpConfWrapper::UserOpConfWrapper(const OperatorConf& op_conf) {
 
 const OperatorConf& UserOpConfWrapper::op_conf() const { return op_conf_; }
 
-std::string UserOpConfWrapper::op_name() const { return op_conf_.name(); }
+const std::string& UserOpConfWrapper::op_name() const { return op_conf_.name(); }
 
-std::string UserOpConfWrapper::op_type_name() const { return op_conf_.user_conf().op_type_name(); }
-
-std::string UserOpConfWrapper::input(const std::string& arg_name, int32_t index) const {
-  CHECK(op_conf_.user_conf().input().find(arg_name) != op_conf_.user_conf().input().end());
-  CHECK(index >= 0 && index < op_conf_.user_conf().input().at(arg_name).s_size());
-  return op_conf_.user_conf().input().at(arg_name).s(index);
+const std::string& UserOpConfWrapper::op_type_name() const {
+  return op_conf_.user_conf().op_type_name();
 }
 
-std::string UserOpConfWrapper::output(const std::string& arg_name, int32_t index) const {
-  CHECK(op_conf_.user_conf().output().find(arg_name) != op_conf_.user_conf().output().end());
-  CHECK(index >= 0 && index < op_conf_.user_conf().output().at(arg_name).s_size());
-  return op_conf_.user_conf().output().at(arg_name).s(index);
+const std::string& UserOpConfWrapper::input(const std::string& arg_name, int32_t index) const {
+  auto it = op_conf_.user_conf().input().find(arg_name);
+  CHECK(it != op_conf_.user_conf().input().end());
+  CHECK(index >= 0 && index < it->second.s_size());
+  return it->second.s(index);
+}
+
+const std::string& UserOpConfWrapper::output(const std::string& arg_name, int32_t index) const {
+  auto it = op_conf_.user_conf().output().find(arg_name);
+  CHECK(it != op_conf_.user_conf().output().end());
+  CHECK(index >= 0 && index < it->second.s_size());
+  return it->second.s(index);
 }
 
 #define OP_WRAPPER_ATTR_MEMBER_FUNC(cpp_type, postfix)                                             \
@@ -152,7 +156,7 @@ UserOpConfWrapperBuilder& UserOpConfWrapperBuilder::Output(const std::string& ar
   output_[arg_name].resize(num);
   for (int32_t i = 0; i < num; ++i) {
     std::string bn = GenRepeatedBn(arg_name, i);
-    output_[arg_name][i] = GenLogicalBlobName(op_name_, bn);
+    output_[arg_name].at(i) = GenLogicalBlobName(op_name_, bn);
   }
   return *this;
 }

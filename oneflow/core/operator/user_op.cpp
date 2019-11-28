@@ -64,8 +64,8 @@ Maybe<void> UserOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> 
                                    const ParallelContext* parallel_ctx) const {
   const user_op::OpRegistrationVal* val =
       user_op::LookUpInOpRegistry(op_conf().user_conf().op_type_name());
-  CHECK_OR_RETURN(val != nullptr) << " cannot find op_type: "
-                                  << op_conf().user_conf().op_type_name() << " in op registry!";
+  CHECK_OR_RETURN(val != nullptr) << "cannot find op_type: " << op_conf().user_conf().op_type_name()
+                                  << " in op registry!";
   // default method set other attribute instead of Shape and Dtype (such as data_id, is_dynamic)
   // set out blob desc other attr as first input blob desc (if has)
   // TODO(ChengCheng): infer other attribute in blob desc
@@ -147,7 +147,7 @@ Maybe<void> UserOp::InferTmpBufferBlobDesc(
   const user_op::KernelRegistrationVal* kernel_reg_val =
       user_op::LookUpInKernelRegistry(op_conf().user_conf().op_type_name(), kernel_reg_ctx);
   CHECK_OR_RETURN(kernel_reg_val != nullptr)
-      << " cannot find op_type: " << op_conf().user_conf().op_type_name() << " in kernel registry!";
+      << "cannot find op_type: " << op_conf().user_conf().op_type_name() << " in kernel registry!";
 
   size_t tmp_size = kernel_reg_val->infer_tmp_size_fn(/*TODO(niuchong)*/);
   if (tmp_size > 0) {

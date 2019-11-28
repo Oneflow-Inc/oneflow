@@ -18,10 +18,10 @@ class UserOpConfWrapper final {
  public:
   UserOpConfWrapper(const OperatorConf&);
   const OperatorConf& op_conf() const;
-  std::string op_name() const;
-  std::string op_type_name() const;
-  std::string input(const std::string& arg_name, int32_t index) const;
-  std::string output(const std::string& arg_name, int32_t index) const;
+  const std::string& op_name() const;
+  const std::string& op_type_name() const;
+  const std::string& input(const std::string& arg_name, int32_t index) const;
+  const std::string& output(const std::string& arg_name, int32_t index) const;
 
   template<typename T>
   T attr(const std::string& attr_name) const;
@@ -45,12 +45,12 @@ class UserOpWrapper final {
 
   const UserOpConfWrapper& user_op_conf_wrapper();
   const OperatorConf& op_conf() const { return conf_.op_conf(); }
-  std::string op_name() const { return conf_.op_name(); }
-  std::string op_type_name() const { return conf_.op_type_name(); }
-  std::string input(const std::string& arg_name, int32_t index) const {
+  const std::string& op_name() const { return conf_.op_name(); }
+  const std::string& op_type_name() const { return conf_.op_type_name(); }
+  const std::string& input(const std::string& arg_name, int32_t index) const {
     return conf_.input(arg_name, index);
   }
-  std::string output(const std::string& arg_name, int32_t index) const {
+  const std::string& output(const std::string& arg_name, int32_t index) const {
     return conf_.output(arg_name, index);
   }
   template<typename T>
