@@ -1,9 +1,9 @@
-#ifndef ONEFLOW_CORE_FRAMEWORK_USER_OP_CONF_BUILDER_H_
-#define ONEFLOW_CORE_FRAMEWORK_USER_OP_CONF_BUILDER_H_
+#ifndef ONEFLOW_CORE_FRAMEWORK_USER_OP_CONF_H_
+#define ONEFLOW_CORE_FRAMEWORK_USER_OP_CONF_H_
 
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/maybe.h"
-#include "oneflow/core/framework/blob_info.h"
+#include "oneflow/core/framework/blob_def.h"
 #include "oneflow/core/framework/user_op_def.pb.h"
 #include "oneflow/core/framework/user_op_attr.pb.h"
 #include "oneflow/core/operator/op_conf.pb.h"
@@ -38,7 +38,7 @@ class UserOpWrapper final {
   UserOpWrapper(const OperatorConf& op, const std::function<const BlobDesc&(const std::string&)>&,
                 const std::function<LogicalBlobId*(const std::string&)>&);
 
-  const BlobInfo& LogicalBlobInfo4ArgNameAndIndex(const std::string& arg_name, int32_t index) const;
+  const BlobDef& BlobDef4ArgNameAndIndex(const std::string& arg_name, int32_t index) const;
   void BindGradBlobWithOpInput(const std::string logical_grad_blob_name,
                                const std::string& input_arg_name, int32_t index) const;
   bool NeedGenGradBlob4OpInput(const std::string& input_arg_name, int32_t index) const;
@@ -61,7 +61,7 @@ class UserOpWrapper final {
  private:
   UserOpConfWrapper conf_;
   std::function<LogicalBlobId*(const std::string&)> diff_fn_;
-  HashMap<std::string, BlobInfo> bn2blob_info_;
+  HashMap<std::string, BlobDef> bn2blob_def_;
 };
 
 class UserOpConfWrapperBuilder final {
@@ -90,8 +90,8 @@ class UserOpConfWrapperBuilder final {
 
 }  // namespace user_op
 
-Maybe<OperatorConf> CheckAndCompleteUserOpConf(const OperatorConf& op_conf);
+Maybe<OperatorConf> CheckAndCompleteUserOpConfImpl(const OperatorConf& op_conf);
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_FRAMEWORK_USER_OP_CONF_BUILDER_H_
+#endif  // ONEFLOW_CORE_FRAMEWORK_USER_OP_CONF_H_

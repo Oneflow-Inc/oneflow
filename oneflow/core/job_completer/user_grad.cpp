@@ -1,6 +1,6 @@
 #include "oneflow/core/job_completer/autograd.h"
 #include "oneflow/core/framework/grad_registration.h"
-#include "oneflow/core/framework/user_op_conf_builder.h"
+#include "oneflow/core/framework/user_op_conf.h"
 
 namespace oneflow {
 

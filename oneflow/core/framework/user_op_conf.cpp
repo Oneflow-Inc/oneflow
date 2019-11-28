@@ -1,4 +1,4 @@
-#include "oneflow/core/framework/user_op_conf_builder.h"
+#include "oneflow/core/framework/user_op_conf.h"
 #include "oneflow/core/framework/op_registration.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/operator/operator.h"
@@ -10,7 +10,7 @@ namespace user_op {
 
 UserOpConfWrapper::UserOpConfWrapper(const OperatorConf& op_conf) {
   CHECK(op_conf.has_user_conf());
-  op_conf_ = *CHECK_JUST(CheckAndCompleteUserOpConf(op_conf));
+  op_conf_ = *CHECK_JUST(CheckAndCompleteUserOpConfImpl(op_conf));
 }
 
 const OperatorConf& UserOpConfWrapper::op_conf() const { return op_conf_; }
@@ -109,19 +109,19 @@ UserOpWrapper::UserOpWrapper(
     const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4BnInOp,
     const std::function<LogicalBlobId*(const std::string&)>& DiffLbi4BnInOp)
     : conf_(op), diff_fn_(DiffLbi4BnInOp) {
-  auto InitBlobInfoFromOpArgs = [&](const PbMap<std::string, UserOpConf_ListString>& args) {
+  auto InitBlobDefFromOpArgs = [&](const PbMap<std::string, UserOpConf_ListString>& args) {
     for (const auto& pair : args) {
       for (int32_t i = 0; i < pair.second.s_size(); ++i) {
         std::string bn = GenRepeatedBn(pair.first, i);
         const BlobDesc& blob_desc = LogicalBlobDesc4BnInOp(bn);
         CHECK((&blob_desc) != nullptr);
-        BlobInfo blob_info(blob_desc.shape(), blob_desc.data_type());
-        CHECK(bn2blob_info_.emplace(bn, blob_info).second);
+        BlobDef blob_def(blob_desc.shape(), blob_desc.data_type());
+        CHECK(bn2blob_def_.emplace(bn, blob_def).second);
       }
     }
   };
-  InitBlobInfoFromOpArgs(op.user_conf().input());
-  InitBlobInfoFromOpArgs(op.user_conf().output());
+  InitBlobDefFromOpArgs(op.user_conf().input());
+  InitBlobDefFromOpArgs(op.user_conf().output());
 }
 
 bool UserOpWrapper::NeedGenGradBlob4OpInput(const std::string& input_arg_name,
@@ -139,11 +139,11 @@ void UserOpWrapper::BindGradBlobWithOpInput(const std::string logical_grad_blob_
   *diff_fn_(GenRepeatedBn(input_arg_name, index)) = GenLogicalBlobId(logical_grad_blob_name);
 }
 
-const BlobInfo& UserOpWrapper::LogicalBlobInfo4ArgNameAndIndex(const std::string& arg_name,
-                                                               int32_t index) const {
+const BlobDef& UserOpWrapper::BlobDef4ArgNameAndIndex(const std::string& arg_name,
+                                                      int32_t index) const {
   std::string bn = GenRepeatedBn(arg_name, index);
-  CHECK(bn2blob_info_.find(bn) != bn2blob_info_.end());
-  return bn2blob_info_.at(bn);
+  CHECK(bn2blob_def_.find(bn) != bn2blob_def_.end());
+  return bn2blob_def_.at(bn);
 }
 
 UserOpConfWrapperBuilder& UserOpConfWrapperBuilder::Input(const std::string& arg_name,
@@ -268,7 +268,7 @@ Maybe<void> AddUserOpConfOutputDefaultArg(const UserOpDef& op_def, OperatorConf*
 
 }  // namespace
 
-Maybe<OperatorConf> CheckAndCompleteUserOpConf(const OperatorConf& op_conf) {
+Maybe<OperatorConf> CheckAndCompleteUserOpConfImpl(const OperatorConf& op_conf) {
   CHECK_OR_RETURN(op_conf.has_user_conf()) << " Add default value only for user op";
   OperatorConf ret = op_conf;
   UserOpConf* user_conf = ret.mutable_user_conf();

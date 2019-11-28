@@ -1,5 +1,5 @@
 #include "oneflow/core/job/job_build_and_infer_ctx.h"
-#include "oneflow/core/framework/user_op_conf_builder.h"
+#include "oneflow/core/framework/user_op_conf.h"
 
 namespace oneflow {
 
@@ -9,7 +9,7 @@ JobBuildAndInferCtx::JobBuildAndInferCtx(Job* job, int64_t job_id) : job_(job), 
 }
 
 Maybe<OperatorConf> JobBuildAndInferCtx::CheckAndCompleteUserOpConf(const OperatorConf& op_conf) {
-  return CheckAndCompleteUserOpConf(op_conf);
+  return CheckAndCompleteUserOpConfImpl(op_conf);
 }
 
 Maybe<void> JobBuildAndInferCtx::SetJobConf(const JobConfigProto& job_conf) {

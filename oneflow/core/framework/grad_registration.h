@@ -2,7 +2,7 @@
 #define ONEFLOW_CORE_FRAMEWORK_GRAD_REGISTRATION_H_
 
 #include "oneflow/core/framework/registrar.h"
-#include "oneflow/core/framework/user_op_conf_builder.h"
+#include "oneflow/core/framework/user_op_conf.h"
 #include "oneflow/core/common/util.h"
 
 namespace oneflow {
