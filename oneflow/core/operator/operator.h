@@ -320,6 +320,12 @@ struct IsInterfaceOpConf4OpTypeCase final {};
   REGISTER_CLASS_CREATOR(op_type_case, IsInterfaceOpConf4OpTypeCase, \
                          ([] { return new IsInterfaceOpConf4OpTypeCase(); }))
 
+struct DisableInputBoxingGroup final {};
+
+#define REGISTER_DISABLE_INPUT_BOXING_GROUP(op_type_case)       \
+  REGISTER_CLASS_CREATOR(op_type_case, DisableInputBoxingGroup, \
+                         ([] { return new DisableInputBoxingGroup(); }))
+
 struct IsTickTockOpTypeCase final {};
 
 #define REGISTER_TICK_TOCK_OP(op_type_case)                  \
