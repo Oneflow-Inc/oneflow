@@ -37,13 +37,25 @@ std::vector<std::string> GetAllUserOpInOpRegistry() {
   return ret;
 }
 
+namespace {
+
+bool InsertIfNotExists(const std::string& name, HashSet<std::string>* unique_names) {
+  if (unique_names->find(name) != unique_names->end()) { return false; }
+  unique_names->emplace(name);
+  return true;
+}
+
+}  // namespace
+
 OpRegistryWrapperBuilder::OpRegistryWrapperBuilder(const std::string& op_type_name) {
+  CHECK(InsertIfNotExists(op_type_name, &unique_names_));
   wrapper_.op_type_name = op_type_name;
 }
 
 OpRegistryWrapperBuilder& OpRegistryWrapperBuilder::ArgImpl(bool is_input, const std::string& name,
                                                             bool is_optional, int32_t num,
                                                             bool num_as_min) {
+  CHECK(InsertIfNotExists(name, &unique_names_));
   UserOpDef::ArgDef arg_def;
   {
     arg_def.set_name(name);
@@ -81,6 +93,7 @@ OP_REG_ARG_MEMBER_FUNC(OptionalOutput, false, true)
 
 OpRegistryWrapperBuilder& OpRegistryWrapperBuilder::Attr(const std::string& name,
                                                          UserOpAttrType type) {
+  CHECK(InsertIfNotExists(name, &unique_names_));
   UserOpDef::AttrDef attr_def;
   attr_def.set_name(name);
   attr_def.set_type(type);
@@ -105,6 +118,7 @@ void AddAttrWithDefault(OpRegistryWrapper* wrapper, const std::string& name, Use
   template<>                                                                                \
   OpRegistryWrapperBuilder& OpRegistryWrapperBuilder::Attr<cpp_type>(                       \
       const std::string& name, UserOpAttrType type, cpp_type&& default_val) {               \
+    CHECK(InsertIfNotExists(name, &unique_names_));                                         \
     CHECK_EQ(type, UserOpAttrType::kAt##attr_type);                                         \
     AddAttrWithDefault(&wrapper_, name, type, [default_val](UserOpDef::AttrDef* attr_def) { \
       attr_def->mutable_default_val()->set_##postfix(default_val);                          \
@@ -125,6 +139,7 @@ template<>
 OpRegistryWrapperBuilder& OpRegistryWrapperBuilder::Attr<Shape>(const std::string& name,
                                                                 UserOpAttrType type,
                                                                 Shape&& default_val) {
+  CHECK(InsertIfNotExists(name, &unique_names_));
   CHECK_EQ(type, UserOpAttrType::kAtShape);
   AddAttrWithDefault(&wrapper_, name, type, [default_val](UserOpDef::AttrDef* attr_def) {
     default_val.ToProto(attr_def->mutable_default_val()->mutable_at_shape());
@@ -136,6 +151,7 @@ OpRegistryWrapperBuilder& OpRegistryWrapperBuilder::Attr<Shape>(const std::strin
   template<>                                                                                \
   OpRegistryWrapperBuilder& OpRegistryWrapperBuilder::Attr<cpp_type>(                       \
       const std::string& name, UserOpAttrType type, cpp_type&& default_val) {               \
+    CHECK(InsertIfNotExists(name, &unique_names_));                                         \
     CHECK_EQ(type, UserOpAttrType::kAt##attr_type);                                         \
     AddAttrWithDefault(&wrapper_, name, type, [default_val](UserOpDef::AttrDef* attr_def) { \
       SerializeVector2ListAttr<cpp_type, UserOpAttrVal::attr_type>(                         \

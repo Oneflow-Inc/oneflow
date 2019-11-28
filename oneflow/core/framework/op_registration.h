@@ -64,6 +64,7 @@ class OpRegistryWrapperBuilder final {
                                     int32_t num, bool num_as_min);
 
   OpRegistryWrapper wrapper_;
+  HashSet<std::string> unique_names_;
 };
 
 const OpRegistrationVal* LookUpInOpRegistry(const std::string& op_type_name);
