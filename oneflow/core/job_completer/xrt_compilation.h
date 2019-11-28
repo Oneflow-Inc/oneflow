@@ -17,15 +17,8 @@ inline void RebuildXrtCompiledJob(const OpGraph& op_graph, Job* job) {
   TeePersistentLogStream::Create("job_without_xrt_" + std::to_string(job_desc.job_id()))
       ->Write(*job);
 
-  // // Create options to run xrt passes.
-  // auto graph = xrt::BuildXrtGraph(&op_graph);
-  // auto options = xrt::CreateDefaultXrtPassOptions();
-  // options.clustering_options.train_phase = GlobalJobDesc().IsTrain();
-
-  // xrt::RunXrtPass("MarkClusterId", graph.get(), options);
-  // xrt::RunXrtPass("BuildSubGraph", graph.get(), options);
-  // // Rebuild Job
-  // xrt::RunXrtPass("RebuildCompiledJob", graph.get(), options, job);
+  // Run compilation time passes currently include `MarkClusterId`, `BuildSubGraph`
+  // and `RebuildCompiledJob`.
   xrt::RunCompilationTimeXrtPasses(op_graph, job, job_desc.IsTrain());
 
   TeePersistentLogStream::Create("job_with_xrt_" + std::to_string(job_desc.job_id()))->Write(*job);

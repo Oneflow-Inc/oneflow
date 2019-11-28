@@ -22,11 +22,6 @@ void BlobDescGetter<device_type>::DumpEntryBlobDescTo(
 
   for (const auto &bn : kernel_->op_attribute().input_bns()) {
     const RtBlobDesc &runtime_desc = get_blob_fn_(bn)->blob_desc();
-    // BlobDesc blob_desc(runtime_desc.shape(), runtime_desc.data_type(),
-    //                    runtime_desc.has_data_id_field(),
-    //                    runtime_desc.has_col_num_field(),
-    //                    runtime_desc.max_col_num());
-
     // TODO(hjchen2)
     BlobDesc blob_desc(kernel_->job_desc().DefaultDataType());
     blob_desc.mut_shape() = runtime_desc.shape();

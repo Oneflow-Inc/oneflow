@@ -21,7 +21,7 @@ struct Signature {
   // Device ordinal
   int device_ordinal;
   // std::vector<Shape> entry_data_types;
-  // It will Lose efficacy if the entry shapes has been changed.
+  // It will lose efficacy if the entry shapes has been changed.
   std::vector<Shape> entry_shapes;
 };
 
