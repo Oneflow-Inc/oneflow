@@ -685,21 +685,16 @@ void OpGraph::ForEachDataAndCtrlOutNode(OpNode* node,
   }
 }
 
-std::function<bool(const LogicalBlobId&, const std::string&)>
-OpGraph::MakePredicatorIsLbiAllConsumersReachableToOpName() const {
+std::function<bool(const std::string&, const std::string&)>
+OpGraph::MakePredicatorIsOpNameDataOrCtrlReachable() const {
   auto IsDataOrCtrlReachable = MakePredicatorIsDataOrCtrlReachable();
-  return [IsDataOrCtrlReachable, this](const LogicalBlobId& lbi, const std::string& op_name) {
-    const OpNode* src_node = op_name2op_node_.at(lbi.op_name());
-    const OpNode* dst_node = op_name2op_node_.at(op_name);
-    size_t out_node_cnt = 0;
-    size_t reachable_out_node_cnt = 0;
-    for (OpEdge* edge : src_node->out_edges()) {
-      if (std::find(edge->lbis().begin(), edge->lbis().end(), lbi) != edge->lbis().end()) {
-        out_node_cnt += 1;
-        reachable_out_node_cnt += IsDataOrCtrlReachable(edge->dst_node(), dst_node);
-      }
-    }
-    return out_node_cnt > 0 && out_node_cnt == reachable_out_node_cnt;
+  return [IsDataOrCtrlReachable, this](const std::string& lhs, const std::string& rhs) {
+    const auto& src_node_it = op_name2op_node_.find(lhs);
+    if (src_node_it == op_name2op_node_.end()) { return false; }
+    const auto& dst_node_it = op_name2op_node_.find(rhs);
+    if (dst_node_it == op_name2op_node_.end()) { return false; }
+    return (src_node_it->second == dst_node_it->second)
+           || IsDataOrCtrlReachable(src_node_it->second, dst_node_it->second);
   };
 }
 
