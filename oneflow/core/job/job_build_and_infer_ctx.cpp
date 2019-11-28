@@ -1,5 +1,6 @@
 #include "oneflow/core/job/job_build_and_infer_ctx.h"
 #include "oneflow/core/framework/op_registration.h"
+#include "oneflow/core/framework/user_op_def.h"
 
 namespace oneflow {
 
@@ -107,7 +108,7 @@ Maybe<OperatorConf> JobBuildAndInferCtx::CheckAndCompleteUserOpConf(const Operat
   JUST(CheckArgDefIsValidInUserOpConf(op_conf, user_conf->input(), op_def.input()));
   JUST(CheckArgDefIsValidInUserOpConf(op_conf, user_conf->output(), op_def.output()));
   // check attr valid by user
-  JUST(val->check_fn(op_def, *user_conf));
+  JUST(val->check_fn(user_op::UserOpDefWrapper(op_def), *user_conf));
   return ret;
 }
 

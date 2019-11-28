@@ -11,7 +11,10 @@ namespace oneflow {
 
 namespace user_op {
 
-using CheckAttrFn = std::function<Maybe<void>(const UserOpDef&, const UserOpConf&)>;
+class UserOpDefWrapper;
+class UserOpConfWrapper;
+
+using CheckAttrFn = std::function<Maybe<void>(const UserOpDefWrapper&, const UserOpConf&)>;
 using ShapeInferFn = std::function<Maybe<void>(InferContext*)>;
 using DtypeInferFn = std::function<Maybe<void>(InferContext*)>;
 using GetSbpFn = std::function<Maybe<void>(/*TODO(niuchong): what is the para*/)>;

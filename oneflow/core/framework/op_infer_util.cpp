@@ -5,6 +5,7 @@
 #include "oneflow/core/framework/user_op_def.pb.h"
 #include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/core/framework/user_op_attr.h"
+#include "oneflow/core/framework/user_op_def.h"
 
 namespace oneflow {
 
@@ -126,7 +127,7 @@ Maybe<void> DtypeInferFnUtil::InOutCorrespond(InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> CheckAttrFnUtil::NoCheck(const UserOpDef&, const UserOpConf&) {
+Maybe<void> CheckAttrFnUtil::NoCheck(const UserOpDefWrapper&, const UserOpConf&) {
   return Maybe<void>::Ok();
 }
 
