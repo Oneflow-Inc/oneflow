@@ -3,7 +3,18 @@
 
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/device/device_context.h"
-#include "oneflow/core/register/blob.h"
+#include "oneflow/core/framework/blob.h"
+
+namespace std {
+
+template<>
+struct hash<std::pair<std::string, int32_t>> {
+  std::size_t operator()(const std::pair<std::string, int32_t>& p) const {
+    return std::hash<std::string>{}(p.first) ^ std::hash<int32_t>{}(p.second);
+  }
+};
+
+}  // namespace std
 
 namespace oneflow {
 
@@ -20,20 +31,21 @@ class KernelInitContext final {
  private:
 };
 
-using Blob4ArgNameAndIndexFn = std::function<Blob*(const std::string&, int32_t)>;
+using ArgNameAndIndex2Blob =
+    HashMap<std::pair<std::string, int32_t>, std::unique_ptr<user_op::Blob>>;
 
 class KernelContext final {
  public:
   KernelContext() = default;
   ~KernelContext() = default;
-  explicit KernelContext(const KernelCtx&, Blob4ArgNameAndIndexFn fn);
+  explicit KernelContext(DeviceCtx*, ArgNameAndIndex2Blob&&);
 
-  Blob* Blob4ArgNameAndIndex(const std::string& arg_name, int32_t index);
+  user_op::Blob* Blob4ArgNameAndIndex(const std::string&, int32_t);
   DeviceCtx* device_ctx() const { return device_ctx_; }
 
  private:
   DeviceCtx* device_ctx_;
-  Blob4ArgNameAndIndexFn fn_;
+  ArgNameAndIndex2Blob blobs_;
 };
 
 class OpKernel {
@@ -41,11 +53,10 @@ class OpKernel {
   OF_DISALLOW_COPY_AND_MOVE(OpKernel);
   virtual ~OpKernel() = default;
 
-  void Init(const KernelInitContext&);
-  virtual void Compute(const KernelContext&) = 0;
+  virtual void Compute(KernelContext*) = 0;
 
  protected:
-  OpKernel() = default;
+  OpKernel(const KernelInitContext&) {}
 
  private:
 };

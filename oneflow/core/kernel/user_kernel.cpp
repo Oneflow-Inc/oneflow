@@ -1,7 +1,7 @@
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/framework/op_kernel.h"
 #include "oneflow/core/framework/kernel_registration.h"
-#include "oneflow/core/framework/blob_info.h"
+#include "oneflow/core/framework/blob.h"
 
 namespace oneflow {
 
@@ -16,10 +16,9 @@ class UserKernel final : public Kernel {
   mutable std::unique_ptr<user_op::KernelContext> ctx_;
 
   void VirtualKernelInit() override {
-    user_op::KernelRegContext ctx(kernel_conf());
-
     auto kernel_reg_val = user_op::LookUpInKernelRegistry(
-        kernel_conf().op_attribute().op_conf().user_conf().op_type_name(), ctx);
+        kernel_conf().op_attribute().op_conf().user_conf().op_type_name(),
+        user_op::KernelRegContext(kernel_conf()));
     CHECK_NOTNULL(kernel_reg_val);
 
     user_op::KernelInitContext init_ctx;
@@ -29,16 +28,35 @@ class UserKernel final : public Kernel {
   void ForwardDataContent(const KernelCtx& ctx,
                           std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
     if (ctx_ == nullptr) {
-      auto Blob4ArgNameAndIndex = [&](const std::string& arg_name, int32_t id) {
-        std::string bn_in_op = GenRepeatedBn(arg_name, id);
-        return BnInOp2Blob(bn_in_op);
-      };
-      ctx_.reset(new user_op::KernelContext(ctx, Blob4ArgNameAndIndex));
+      const auto& user_op_conf = kernel_conf().op_attribute().op_conf().user_conf();
+      user_op::ArgNameAndIndex2Blob blobs;
+      for (auto it = user_op_conf.input().begin(); it != user_op_conf.input().end(); ++it) {
+        const std::string& arg_name = it->first;
+        for (int32_t i = 0; i < it->second.s_size(); ++i) {
+          Blob* blob = BnInOp2Blob(GenRepeatedBn(arg_name, i));
+          blobs.emplace(std::make_pair(arg_name, i),
+                        std::make_unique<user_op::Blob>(blob->shape(), blob->data_type(),
+                                                        blob->mut_dptr<char>()));
+        }
+      }
+      for (auto it = user_op_conf.output().begin(); it != user_op_conf.output().end(); ++it) {
+        const std::string& arg_name = it->first;
+        for (int32_t i = 0; i < it->second.s_size(); ++i) {
+          Blob* blob = BnInOp2Blob(GenRepeatedBn(arg_name, i));
+          blobs.emplace(std::make_pair(arg_name, i),
+                        std::make_unique<user_op::Blob>(blob->shape(), blob->data_type(),
+                                                        blob->mut_dptr<char>()));
+        }
+      }
+
+      ctx_.reset(new user_op::KernelContext(ctx.device_ctx, std::move(blobs)));
     }
-    kernel_->Compute(*ctx_.get());
+    kernel_->Compute(ctx_.get());
   }
 };
 
-NEW_REGISTER_KERNEL(OperatorConf::kUserConf, UserKernel);
+NEW_REGISTER_KERNEL(OperatorConf::kUserConf, UserKernel).SetIsMatchedPred([](const KernelConf&) {
+  return true;
+});
 
 }  // namespace oneflow
