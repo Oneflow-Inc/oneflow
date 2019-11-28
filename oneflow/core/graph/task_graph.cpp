@@ -794,6 +794,36 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByConnectNodeOnSameGpuDevice) {
   }
 }
 
+DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByPartialInLbiConnect) {
+  HashSet<LogicalBlobId> lbis;
+  for (const auto& obn : src_logical->SoleOp()->output_bns()) {
+    lbis.insert(src_logical->SoleOp()->BnInOp2Lbi(obn));
+  }
+  CHECK_EQ(sorted_src_comp_tasks.size(), 1);
+  CHECK_EQ(dst_logical->SoleOp()->input_bns().size(), sorted_dst_comp_tasks.size());
+  FOR_RANGE(int, i, 0, sorted_dst_comp_tasks.size()) {
+    const auto& lbi = dst_logical->SoleOp()->BnInOp2Lbi(dst_logical->SoleOp()->input_bns().Get(i));
+    if (lbis.find(lbi) != lbis.end()) {
+      BuildTaskPath(sorted_src_comp_tasks.at(0), sorted_dst_comp_tasks.at(i), MutBufTask, true);
+    }
+  }
+}
+
+DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByPartialOutLbiConnect) {
+  HashSet<LogicalBlobId> lbis;
+  for (const auto& ibn : dst_logical->SoleOp()->input_bns()) {
+    lbis.insert(dst_logical->SoleOp()->BnInOp2Lbi(ibn));
+  }
+  CHECK_EQ(sorted_dst_comp_tasks.size(), 1);
+  CHECK_EQ(src_logical->SoleOp()->output_bns().size(), sorted_src_comp_tasks.size());
+  FOR_RANGE(int, i, 0, sorted_src_comp_tasks.size()) {
+    const auto& lbi = src_logical->SoleOp()->BnInOp2Lbi(src_logical->SoleOp()->output_bns().Get(i));
+    if (lbis.find(lbi) != lbis.end()) {
+      BuildTaskPath(sorted_src_comp_tasks.at(i), sorted_dst_comp_tasks.at(0), MutBufTask, true);
+    }
+  }
+}
+
 void TaskGraph::BuildTaskPath(
     CompTaskNode* src, CompTaskNode* dst,
     std::function<TaskNode**(CompTaskNode* src, int64_t machine_id, int32_t mem_zone_id)>
