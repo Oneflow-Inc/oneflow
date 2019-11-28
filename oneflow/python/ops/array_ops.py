@@ -249,7 +249,6 @@ def concat(values, axis, name=None):
     lbi.blob_name = "out"
     return remote_blob_util.RemoteBlob(lbi)
 
-
 @oneflow_export("local_scatter_nd_update")
 def local_scatter_nd_update(inputs, indices, updates, name=None):
     op_conf = op_conf_util.OperatorConf()

@@ -2,7 +2,7 @@ import oneflow as flow
 import numpy as np
 
 flow.config.gpu_device_num(1)
-flow.config.grpc_use_no_signal()
+flow.env.grpc_use_no_signal()
 
 flow.config.default_data_type(flow.float)
 

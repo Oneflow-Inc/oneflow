@@ -19,11 +19,15 @@ def variable_getter(fn):
     cur_job_variable_getter_composite.register(fn)
 
 
+
 @contextmanager
 def CurJobConf(job_conf):
     _ResetCurJobConf(job_conf)
-    yield None
-    _ResetCurJobConf(None)
+    try:
+        yield None
+    finally:
+        _ResetCurJobConf(None)
+
 
 
 class BeforeNonInputOpBuildAndInferHook:
