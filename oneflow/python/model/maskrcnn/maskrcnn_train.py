@@ -669,7 +669,7 @@ if __name__ == "__main__":
                     elapsed_time_str = (
                         "{:.6f}".format(elapsed_time) if rank == 0 else ""
                     )
-          Î          print(fmt.format(i, rank, elapsed_time_str, *frame))
+                    print(fmt.format(i, rank, elapsed_time_str, *frame))
                     frame.append(i)
                     losses_hisogram.append(frame)
 
