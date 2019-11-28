@@ -82,7 +82,7 @@ class UserOpConfWrapperBuilder(object):
     def SetAttr(self, attr_name, attr_value, attr_type):
         attribute = user_op_attr_util.UserOpAttrVal()
         assert type(attr_name) is str
-        assert type(attr_type) is user_op_attr_util.UserOpAttrType
+        assert type(attr_type) is int
         if attr_type == user_op_attr_util.UserOpAttrType.kAtInt32:
             assert type(attr_value) is int
             attribute.at_int32 = attr_value
@@ -119,6 +119,6 @@ class UserOpConfWrapperBuilder(object):
             attribute.at_list_float.val[:] = list(attr_value)
         else:
             assert False, "Unknow op attribute type: {}".format(attr_type)
-        self.user_op_.op_conf_.user_conf.attr[attr_name] = attribute
+        self.user_op_.op_conf_.user_conf.attr[attr_name].CopyFrom(attribute)
         return self
 
