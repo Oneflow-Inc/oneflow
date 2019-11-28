@@ -132,6 +132,14 @@ bool UserOpWrapper::NeedGenGradBlob4OpInput(const std::string& input_arg_name,
   return diff_fn_(GenRepeatedBn(input_arg_name, index)) != nullptr;
 }
 
+std::string UserOpWrapper::GetGradBlobWithOpOutput(const std::string& output_arg_name,
+                                                   int32_t index) const {
+  auto it = op_conf().user_conf().output().find(output_arg_name);
+  CHECK(it != op_conf().user_conf().output().end());
+  CHECK(index >= 0 && index < it->second.s_size());
+  return GenLogicalBlobName(*diff_fn_(GenRepeatedBn(output_arg_name, index)));
+}
+
 void UserOpWrapper::BindGradBlobWithOpInput(const std::string logical_grad_blob_name,
                                             const std::string& input_arg_name,
                                             int32_t index) const {
@@ -150,6 +158,10 @@ UserOpConfWrapperBuilder& UserOpConfWrapperBuilder::Input(const std::string& arg
                                                           const std::string& logical_blob_name) {
   input_[arg_name].push_back(logical_blob_name);
   return *this;
+}
+
+UserOpConfWrapperBuilder& UserOpConfWrapperBuilder::Output(const std::string& arg_name) {
+  return Output(arg_name, 1);
 }
 
 UserOpConfWrapperBuilder& UserOpConfWrapperBuilder::Output(const std::string& arg_name,
