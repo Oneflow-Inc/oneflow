@@ -1,6 +1,4 @@
-#include "oneflow/core/framework/op_registration.h"
-#include "oneflow/core/framework/grad_registration.h"
-#include "oneflow/core/common/shape.h"
+#include "oneflow/core/framework/framework.h"
 
 namespace oneflow {
 
@@ -9,8 +7,8 @@ REGISTER_USER_OP("ccrelu").Input("in").Output("out").SetShapeInferFn(
       Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);
       Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
       *out_shape = *in_shape;
-      // int32_t last_axis = in_shape->NumAxes() - 1;
-      // out_shape->Set(last_axis, in_shape->At(last_axis) * 2);
+      int32_t last_axis = in_shape->NumAxes() - 1;
+      out_shape->Set(last_axis, in_shape->At(last_axis) * 2);
       return Maybe<void>::Ok();
     });
 
@@ -29,19 +27,17 @@ REGISTER_USER_OP("ccrelu_grad")
       return Maybe<void>::Ok();
     });
 
-REGISTER_USER_OP_GRAD("ccrelu").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                                                          user_op::AddOpFn AddOp) {
-  if (op.NeedGenGradBlob4OpInput("in", 0)) {
-    user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-    user_op::UserOpConfWrapper ccrelu_grad_op =
-        builder.Op("ccrelu_grad")
-            .Input("y", op.output("out", 0))
-            .Input("dy", op.GetGradBlobWithOpOutput("out", 0))
-            .Output("dx")
-            .Build();
-    op.BindGradBlobWithOpInput(ccrelu_grad_op.output("dx", 0), "in", 0);
-    AddOp(ccrelu_grad_op);
-  }
-});
+REGISTER_USER_OP("TestReshape")
+    .Input("in")
+    .Output("out")
+    .Attr("shape", UserOpAttrType::kAtShape)
+    .SetShapeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      const Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);
+      Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
+      Shape conf_shape = ctx->GetAttr<Shape>("shape");
+      CHECK_EQ(in_shape->NumAxes(), conf_shape.NumAxes());
+      *out_shape = conf_shape;
+      return Maybe<void>::Ok();
+    });
 
 }  // namespace oneflow

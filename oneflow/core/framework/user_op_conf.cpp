@@ -3,6 +3,7 @@
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/register/blob_desc.h"
+#include "oneflow/core/framework/user_op_def.h"
 
 namespace oneflow {
 
@@ -294,7 +295,7 @@ Maybe<OperatorConf> CheckAndCompleteUserOpConfImpl(const OperatorConf& op_conf) 
   JUST(CheckArgDefIsValidInUserOpConf(op_conf, user_conf->input(), op_def.input()));
   JUST(CheckArgDefIsValidInUserOpConf(op_conf, user_conf->output(), op_def.output()));
   // check attr valid by user
-  JUST(val->check_fn(op_def, *user_conf));
+  JUST(val->check_fn(user_op::UserOpDefWrapper(op_def), *user_conf));
   return ret;
 }
 

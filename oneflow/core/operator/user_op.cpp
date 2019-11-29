@@ -176,7 +176,9 @@ void UserOp::VirtualGenKernelConf(
 #define BLOB_DESCS_TO_PROTO(prefix)                         \
   for (const auto& bn : prefix##_bns()) {                   \
     BlobDescProto proto;                                    \
-    GetBlobDesc4BnInOp(bn)->ToProto(&proto);                \
+    const BlobDesc* blob_desc = GetBlobDesc4BnInOp(bn);     \
+    if (!blob_desc) { continue; }                           \
+    blob_desc->ToProto(&proto);                             \
     (*user_conf->mutable_bn_in_op2blob_desc())[bn] = proto; \
   }
 

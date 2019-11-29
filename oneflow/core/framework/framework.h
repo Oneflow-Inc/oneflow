@@ -7,5 +7,6 @@
 
 #include "oneflow/core/framework/blob_def.h"
 #include "oneflow/core/framework/op_kernel.h"
+#include "oneflow/core/framework/user_op_def.h"
 
 #endif  // ONEFLOW_CORE_FRAMEWORK_FRAMEWORK_H_

@@ -7,10 +7,12 @@ namespace oneflow {
 
 class Shape;
 enum DataType;
-class UserOpDef;
 class UserOpConf;
 
 namespace user_op {
+
+class UserOpDefWrapper;
+class UserOpConfWrapper;
 
 using Shape4ArgNameAndIndexFn = std::function<Shape*(const std::string&, int32_t)>;
 using Dtype4ArgNameAndIndexFn = std::function<DataType*(const std::string&, int32_t)>;
@@ -51,7 +53,7 @@ struct DtypeInferFnUtil {
 };
 
 struct CheckAttrFnUtil {
-  static Maybe<void> NoCheck(const UserOpDef&, const UserOpConf&);
+  static Maybe<void> NoCheck(const UserOpDefWrapper&, const UserOpConf&);
 };
 
 }  // namespace user_op

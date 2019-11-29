@@ -5,6 +5,7 @@
 #include "oneflow/core/framework/user_op_def.pb.h"
 #include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/core/framework/user_op_attr.h"
+#include "oneflow/core/framework/user_op_def.h"
 
 namespace oneflow {
 
@@ -49,14 +50,14 @@ const ArgVec& InferContext::outputs() const { return outputs_; }
 
 OF_PP_FOR_EACH_TUPLE(BASIC_ATTR_TYPE_SPECIALIZATION, BASIC_ATTR_SEQ)
 
+#undef BASIC_ATTR_TYPE_SPECIALIZATION
+
 template<>
 Shape InferContext::GetAttr<Shape>(const std::string& attr_name) const {
   const UserOpAttrVal& attr_val = conf_->attr().at(attr_name);
   CHECK_EQ(static_cast<int>(UserOpAttrType::kAtShape), attr_val.value_case());
   return Shape(attr_val.at_shape());
 }
-
-#undef BASIC_ATTR_TYPE_SPECIALIZATION
 
 #define LIST_ATTR_TYPE_SPECIALIZATION(field, cpp_type, attr_type)                \
   template<>                                                                     \
@@ -126,7 +127,7 @@ Maybe<void> DtypeInferFnUtil::InOutCorrespond(InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> CheckAttrFnUtil::NoCheck(const UserOpDef&, const UserOpConf&) {
+Maybe<void> CheckAttrFnUtil::NoCheck(const UserOpDefWrapper&, const UserOpConf&) {
   return Maybe<void>::Ok();
 }
 
