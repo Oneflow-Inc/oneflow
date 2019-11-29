@@ -236,7 +236,9 @@ static bool HaveSameDim0InnerShape(
   std::unique_ptr<Shape> dim0_inner_shape;
   ForEachBn([&](const std::string& bn) {
     if (ret == false) { return; }
-    const auto& inner_shape = GetBlobDesc4BnInOp(bn)->dim0_inner_shape();
+    const BlobDesc* blob_desc = GetBlobDesc4BnInOp(bn);
+    if (blob_desc == false) { return; }
+    const auto& inner_shape = blob_desc->dim0_inner_shape();
     if (dim0_inner_shape) {
       if (*dim0_inner_shape != inner_shape) { ret = false; }
     } else {
