@@ -6,6 +6,7 @@
 #include "oneflow/core/framework/blob_def.h"
 #include "oneflow/core/framework/user_op_def.pb.h"
 #include "oneflow/core/framework/user_op_attr.pb.h"
+#include "oneflow/core/framework/user_op_conf.pb.h"
 #include "oneflow/core/operator/op_conf.pb.h"
 
 namespace oneflow {

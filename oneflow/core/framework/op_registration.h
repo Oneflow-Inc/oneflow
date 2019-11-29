@@ -4,7 +4,7 @@
 #include "oneflow/core/framework/registrar.h"
 #include "oneflow/core/framework/user_op_def.pb.h"
 #include "oneflow/core/framework/user_op_attr.pb.h"
-#include "oneflow/core/operator/op_conf.pb.h"
+#include "oneflow/core/framework/user_op_conf.pb.h"
 #include "oneflow/core/framework/op_infer_util.h"
 
 namespace oneflow {

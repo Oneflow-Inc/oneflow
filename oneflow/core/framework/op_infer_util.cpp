@@ -6,6 +6,7 @@
 #include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/core/framework/user_op_attr.h"
 #include "oneflow/core/framework/user_op_def.h"
+#include "oneflow/core/framework/user_op_conf.h"
 
 namespace oneflow {
 
