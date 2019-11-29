@@ -4,6 +4,8 @@ from config import get_default_cfgs
 import os
 import numpy as np
 import argparse
+import time
+import statistics
 import oneflow as flow
 import oneflow.core.data.data_pb2 as data_util
 
@@ -14,7 +16,6 @@ from box_head import BoxHead
 from mask_head import MaskHead
 from blob_watcher import save_blob_watched, blob_watched, diff_blob_watched
 from distribution import distribute_execute
-
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
@@ -68,6 +69,9 @@ parser.add_argument(
     required=False,
 )
 parser.add_argument(
+    "-save_rate", "--model_save_rate", type=int, default=0, required=False
+)
+parser.add_argument(
     "-v", "--verbose", default=False, action="store_true", required=False
 )
 parser.add_argument("-i", "--iter_num", type=int, default=10, required=False)
@@ -89,6 +93,9 @@ parser.add_argument(
 )
 parser.add_argument(
     "-imgd", "--image_dir", type=str, default="val2017", required=False
+)
+parser.add_argument(
+    "-j", "--jupyter", default=False, action="store_true", required=False
 )
 terminal_args = parser.parse_args()
 
@@ -387,6 +394,14 @@ def init_config():
     return config
 
 
+def save_model(i):
+    if not os.path.exists(terminal_args.model_save_dir):
+        os.makedirs(terminal_args.model_save_dir)
+    model_dst = os.path.join(terminal_args.model_save_dir, "iter-" + str(i))
+    print("saving models to {}".format(model_dst))
+    check_point.save(model_dst)
+
+
 if terminal_args.mock_dataset:
 
     @flow.function
@@ -551,8 +566,9 @@ if terminal_args.train_with_real_dataset:
 
 
 if __name__ == "__main__":
+    flow.env.ctrl_port(terminal_args.ctrl_port)
+    flow.config.enable_inplace(False)
     flow.config.gpu_device_num(terminal_args.gpu_num_per_node)
-    flow.config.ctrl_port(terminal_args.ctrl_port)
     flow.config.default_data_type(flow.float)
 
     fake_image_list = []
@@ -569,6 +585,8 @@ if __name__ == "__main__":
     check_point = flow.train.CheckPoint()
     if not terminal_args.model_load_dir:
         check_point.init()
+        if terminal_args.model_save_rate > 0:
+            save_model(0)
     else:
         check_point.load(terminal_args.model_load_dir)
 
@@ -592,20 +610,6 @@ if __name__ == "__main__":
                     )
                 )
             for i in range(terminal_args.iter_num):
-
-                def save_model():
-                    return
-                    if not os.path.exists(terminal_args.model_save_dir):
-                        os.makedirs(terminal_args.model_save_dir)
-                    model_dst = os.path.join(
-                        terminal_args.model_save_dir, "iter-" + str(i)
-                    )
-                    print("saving models to {}".format(model_dst))
-                    check_point.save(model_dst)
-
-                if i == 0:
-                    save_model()
-
                 train_loss = mock_train(
                     debug_data.blob("images"),
                     debug_data.blob("image_size"),
@@ -621,13 +625,14 @@ if __name__ == "__main__":
                 save_blob_watched(i)
 
                 if (i + 1) % 10 == 0:
-                    save_model()
+                    save_model(i + 1)
 
         elif terminal_args.train_with_real_dataset:
             print(
-                "{:>8} {:>8} {:>16} {:>16} {:>16} {:>16} {:>16}".format(
+                "{:<8} {:<8} {:<16} {:<16} {:<16} {:<16} {:<16} {:<16}".format(
                     "iter",
                     "rank",
+                    "elapsed_time",
                     "loss_rpn_box_reg",
                     "loss_objectness",
                     "loss_box_reg",
@@ -635,14 +640,75 @@ if __name__ == "__main__":
                     "loss_mask",
                 )
             )
+
+            losses_hisogram = []
+            start_time = time.time()
+            elapsed_times = []
             for i in range(terminal_args.iter_num):
                 if i < len(fake_image_list):
                     losses = train_func(fake_image_list[i]).get()
                 else:
                     losses = train_func().get()
 
-                fmt_str = "{:>8} {:>8}" + "{:>16.10f} " * len(losses)
-                for j, loss in enumerate(zip(*losses)):
-                    print(fmt_str.format(i, j, *[t.mean() for t in loss]))
+                now_time = time.time()
+                elapsed_time = now_time - start_time
+                elapsed_times.append(elapsed_time)
+                start_time = now_time
+
+                if terminal_args.model_save_rate > 0:
+                    if (
+                        i + 1
+                    ) % terminal_args.model_save_rate == 0 or i + 1 == len(
+                        terminal_args.iter_num
+                    ):
+                        save_model(i + 1)
+
+                fmt = "{:<8} {:<8} {:<16} " + "{:<16.10f} " * len(losses)
+                for rank, loss_tup in enumerate(zip(*losses)):
+                    frame = [loss.mean() for loss in loss_tup]
+                    elapsed_time_str = (
+                        "{:.6f}".format(elapsed_time) if rank == 0 else ""
+                    )
+                    print(fmt.format(i, rank, elapsed_time_str, *frame))
+                    frame.append(i)
+                    losses_hisogram.append(frame)
 
                 save_blob_watched(i)
+
+            print(
+                "median of elapsed time per batch:",
+                statistics.median(elapsed_times),
+            )
+
+            if terminal_args.jupyter:
+                import altair as alt
+                from vega_datasets import data
+
+                import pandas as pd
+
+                loss_data_frame = pd.DataFrame(
+                    np.array(losses_hisogram),
+                    columns=[
+                        "loss_rpn_box_reg",
+                        "loss_objectness",
+                        "loss_box_reg",
+                        "loss_classifier",
+                        "loss_mask",
+                        "iter",
+                    ],
+                )
+
+                base = (
+                    alt.Chart(loss_data_frame)
+                    .mark_line()
+                    .encode(x="petalLength", y="petalWidth")
+                )
+                chart = (
+                    base.mark_line().encode(x="iter", y="loss_rpn_box_reg")
+                    + base.mark_line().encode(x="iter", y="loss_objectness")
+                    + base.mark_line().encode(x="iter", y="loss_box_reg")
+                    + base.mark_line().encode(x="iter", y="loss_classifier")
+                    + base.mark_line().encode(x="iter", y="loss_mask")
+                )
+
+                chart.display()
