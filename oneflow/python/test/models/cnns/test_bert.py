@@ -8,7 +8,7 @@ sys.path.append("/home/xfjiang/oneflow/oneflow/python/model/bert")
 from pretrain import PreTrain
 
 FLAGS = flags.FLAGS
-flags.DEFINE_string("data_dir", "/dataset/bert/of_wiki_seq_len_128", "")
+flags.DEFINE_string("data_dir", "/dataset/bert/bert_seq_len_128_repeat1024", "")
 flags.DEFINE_string(
     "model_load_dir", "/dataset/model_zoo/bert_new_snapshot/of_L-12_H-768_A-12_random_init", ""
 )
@@ -142,6 +142,15 @@ def test_1n1c(test_case):
 
 
 def test_1n4c(test_case):
+    flow.config.gpu_device_num(4)
+    pretrain_job = flow.function(PretrainJob)
+    check_point = flow.train.CheckPoint()
+    check_point.load(FLAGS.model_load_dir)
+    of_loss = [pretrain_job().get().mean() for _ in range(10)]
+    print(of_loss)
+
+@flow.unittest.num_nodes_required(2)
+def test_2n8c(test_case):
     flow.config.gpu_device_num(4)
     pretrain_job = flow.function(PretrainJob)
     check_point = flow.train.CheckPoint()
