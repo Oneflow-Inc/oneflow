@@ -2,13 +2,15 @@
 #define ONEFLOW_CORE_FRAMEWORK_GRAD_REGISTRATION_H_
 
 #include "oneflow/core/framework/registrar.h"
+#include "oneflow/core/framework/user_op_conf.h"
 #include "oneflow/core/common/util.h"
 
 namespace oneflow {
 
 namespace user_op {
 
-using GenBackwardOpConfFn = std::function<void(/*TODO(niuchong)*/)>;
+using AddOpFn = std::function<void(const UserOpConfWrapper&)>;
+using GenBackwardOpConfFn = std::function<void(const UserOpWrapper&, AddOpFn)>;
 
 struct GradRegistrationVal {
   GenBackwardOpConfFn gen_bw_fn;
