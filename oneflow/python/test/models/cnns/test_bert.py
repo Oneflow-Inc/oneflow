@@ -2,9 +2,6 @@ import oneflow as flow
 import numpy as np
 from absl import flags
 import sys
-
-# TODO: use relative import
-sys.path.append("/home/xfjiang/oneflow/oneflow/python/model/bert")
 from pretrain import PreTrain
 
 FLAGS = flags.FLAGS
