@@ -66,7 +66,7 @@ void Kernel::CheckSameDim0ValidNum(
     const PbRpf<std::string>& bns,
     const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
   const Blob* first_blob = nullptr;
-  FOR_RANGE(int, i, 1, bns.size()) {
+  FOR_RANGE(int, i, 0, bns.size()) {
     const Blob* cur_blob = BnInOp2Blob(bns.Get(i));
     if (cur_blob == nullptr) { continue; }
     first_blob = cur_blob;
