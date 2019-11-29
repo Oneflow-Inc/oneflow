@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 import unittest
 import inspect
 from oneflow.python.oneflow_export import oneflow_export
