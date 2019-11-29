@@ -62,14 +62,6 @@ class InputBlobDef(blob_desc.BlobDesc):
         TODO()
 
     def with_distribute(self, distribute):
-        return input_blob_def(shape = self.shape_, dtype = self.dtype_,               \
-                        is_dynamic = self.is_dynamic_, batch_axis = self.batch_axis_, \
-                        distribute = distribute, name = self.lbi.op_name)
-
-    def parallel_conf(self):
-        TODO()
-        
-    def with_distribute(self, distribute):
         return type(self)(shape = self.shape_, dtype = self.dtype_,               \
                           is_dynamic = self.is_dynamic_, batch_axis = self.batch_axis_, \
                           distribute = distribute, name = self.lbi.op_name)
