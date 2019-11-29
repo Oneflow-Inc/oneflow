@@ -365,7 +365,7 @@ bool InplaceLbiGraph::IsConstRefConflictMutRefNode(
   auto ForEachNext = [&](const InplaceLbiNode* node,
                          const std::function<void(const InplaceLbiNode*)>& Handler) {
     node->ForEachNodeOnValidOutEdge(IsValidEdge, [&](const InplaceLbiNode* out_node) {
-      if (out_node->IsConstRef(IsValidEdge)) { Handler(out_node); }
+      if (out_node != mut_ref_node) { Handler(out_node); }
     });
   };
   bool conflict = false;
