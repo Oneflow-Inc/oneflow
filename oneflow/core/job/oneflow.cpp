@@ -572,6 +572,10 @@ void FinishGlobalCriticalSectionDesc(const Plan& plan, int64_t job_size) {
         if (NeedAllocateMemory(pair.second.regst_desc_type())) {
           mem_block_ids->emplace(pair.second.mem_block_id());
         }
+        if (pair.second.has_separated_header_mem_block_id()
+            && pair.second.separated_header_mem_block_id() != -1) {
+          mem_block_ids->emplace(pair.second.separated_header_mem_block_id());
+        }
       }
     }
   }
