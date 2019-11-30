@@ -137,7 +137,6 @@ class TrtBuilder {
   }
 
   FOREACH_TENSORRT_LAYER(TRT_BUILDER_ADD_LAYER);
-
  private:
   void CheckHasParameter(int64_t handle) const {
     CHECK_GT(params_.count(handle), 0)

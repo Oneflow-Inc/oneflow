@@ -37,6 +37,7 @@ static std::unordered_map<int32_t, std::string> op_type2string_map = {
     {OP_TYPE_CASE(Identity), "Identity"},
     {OP_TYPE_CASE(ReshapeLike), "ReshapeLike"},
     {OP_TYPE_CASE(Cast), "Cast"},
+    {OP_TYPE_CASE(Cast), "Concat"},
     {OP_TYPE_CASE(ScalarAdd), "ScalarAdd"},
     {OP_TYPE_CASE(ScalarMul), "ScalarMul"},
     {OP_TYPE_CASE(Transpose), "Transpose"},
@@ -58,6 +59,8 @@ static std::unordered_map<int32_t, std::string> op_type2string_map = {
     {OP_TYPE_CASE(LayerNormGrad), "LayerNormGrad"},
     {OP_TYPE_CASE(ReduceSum), "ReduceSum"},
     {OP_TYPE_CASE(AdamModelUpdate), "AdamOptimizer"},
+    {OP_TYPE_CASE(MaxPooling2D), "MaxPooling2D"},
+    {OP_TYPE_CASE(AveragePooling2D), "AveragePooling2D"},
     // {OP_TYPE_CASE(ReduceConcat), "ReduceConcat"},
     // {OP_TYPE_CASE(ReduceSplit), "ReduceSplit"},
     // TODO(hjchen2)
