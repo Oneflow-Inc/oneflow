@@ -22,9 +22,14 @@ def make_handler(prompt):
 
 
 @oneflow_export("watch")
-def watch(blob_watched, handler=None):
-    if not callable(handler):
-        handler = make_handler(handler)
+def watch(blob_watched, param=None):
+    if isinstance(param, (tuple, list)):
+        handlers = [p if callable(p) else make_handler(p) for p in param]
+    elif callable(param):
+        handlers = [param]
+    else:
+        handlers = [make_handler(param)]
+    assert len(handlers) > 0
 
     blobs = []
     if isinstance(blob_watched, MirrorBlob):
@@ -34,13 +39,14 @@ def watch(blob_watched, handler=None):
     else:
         raise NotImplementedError
 
-    for blob in blobs:
+    for i, blob in enumerate(blobs):
         handler_uuid = str(uuid.uuid1())
         op_conf = op_conf_util.OperatorConf()
         op_conf.name = id_util.UniqueStr("ForeignWatch_")
         setattr(op_conf.foreign_watch_conf, "in", blob.logical_blob_name)
         op_conf.foreign_watch_conf.handler_uuid = handler_uuid
         compile_context.CurJobAddOp(op_conf, blob.parallel_conf)
+        handler = handlers[i] if i < len(handlers) else handlers[0]
         watcher_util.BindUuidAndHandler(handler_uuid, handler)
 
 
