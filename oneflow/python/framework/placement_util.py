@@ -102,14 +102,14 @@ def GetDefaultMachineDeviceIds(resource):
         raise NotImplementedError
 
 def GetGpuDefaultMachineDeviceIds(resource):
-    assert len(resource.machine) > 0
+    assert resource.machine_num > 0
     assert resource.HasField('gpu_device_num')
-    return ["%s:0-%s" % (m.id, resource.gpu_device_num - 1) for m in resource.machine]
+    return ["%s:0-%s" % (m_id, resource.gpu_device_num - 1) for m_id in range(resource.machine_num)]
 
 def GetCpuDefaultMachineDeviceIds(resource):
-    assert len(resource.machine) > 0
+    assert resource.machine_num > 0
     assert resource.HasField('cpu_device_num')
-    return ["%s:0-%s" % (m.id, resource.cpu_device_num - 1) for m in resource.machine]
+    return ["%s:0-%s" % (m_id, resource.gpu_device_num - 1) for m_id in range(resource.machine_num)]
 
 def _MakeMachineId2DeviceIdList(parallel_conf):
     parallel_conf_str = str(parallel_conf)

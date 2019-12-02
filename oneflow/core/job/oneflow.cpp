@@ -22,8 +22,6 @@
 #include "oneflow/core/operator/interface_op_util.h"
 #include "oneflow/core/job/critical_section_desc.h"
 
-DECLARE_bool(grpc_use_no_signal);
-
 namespace std {
 
 template<>
@@ -573,6 +571,10 @@ void FinishGlobalCriticalSectionDesc(const Plan& plan, int64_t job_size) {
       for (const auto& pair : task.produced_regst_desc()) {
         if (NeedAllocateMemory(pair.second.regst_desc_type())) {
           mem_block_ids->emplace(pair.second.mem_block_id());
+        }
+        if (pair.second.has_separated_header_mem_block_id()
+            && pair.second.separated_header_mem_block_id() != -1) {
+          mem_block_ids->emplace(pair.second.separated_header_mem_block_id());
         }
       }
     }

@@ -15,39 +15,9 @@ def TryCompleteDefaultJobConfigProto(job_conf):
 def _TryCompleteDefaultConfigProto(config):
     _DefaultConfigResource(config)
     _DefaultConfigIO(config)
-    _DefaultConfigCppFlags(config)
-
-def _MakeMachine(machines):
-    if isinstance(machines, str): machines = [machines]
-    resource = resource_util.Resource()
-    rp_machine = resource.machine
-    for m_data in machines:
-        m = rp_machine.add()
-        if isinstance(m_data, str):
-            m.addr = m_data
-        elif isinstance(m_data, dict):
-            if 'addr' in m_data: m.addr = m_data['addr']
-            if 'ctrl_port_agent' in m_data: m.ctrl_port_agent = m_data['ctrl_port_agent']
-            if 'data_port_agent' in m_data: m.data_port_agent = m_data['data_port_agent']
-        else:
-            raise NotImplementedError
-    id = 0
-    addrs_for_check = set()
-    for m in rp_machine:
-        m.id = id
-        id += 1
-        assert m.addr not in addrs_for_check
-        addrs_for_check.add(m.addr)
-    return rp_machine
 
 def _DefaultConfigResource(config):
     resource = config.resource
-    if len(resource.machine) == 0:
-        machine = resource.machine.add()
-        machine.id = 0
-        machine.addr = "127.0.0.1"
-    if resource.HasField("ctrl_port") == False:
-        resource.ctrl_port = 2017
     if resource.gpu_device_num == 0:
         resource.gpu_device_num = 1
 
@@ -58,11 +28,6 @@ def _DefaultConfigIO(config):
     if io_conf.snapshot_fs_conf.WhichOneof("fs_type") == None:
         io_conf.snapshot_fs_conf.localfs_conf.SetInParent()
 
-def  _DefaultConfigCppFlags(config):
-    config.cpp_flags_conf.SetInParent()
-    config.cpp_flags_conf.grpc_use_no_signal = True
-
-
 def _TryCompleteDefaultJobConfigProto(job_conf):
     if job_conf.WhichOneof("job_type") is None:
         job_conf.predict_conf.SetInParent()
@@ -71,6 +36,12 @@ def _DefaultConfigProto():
     config_proto = job_set_pb.ConfigProto()
     _TryCompleteDefaultConfigProto(config_proto)
     return config_proto
+
+@oneflow_export('config.machine_num')
+def machine_num(val):
+    assert config_proto_mutable == True
+    assert type(val) is int
+    default_config_proto.resource.machine_num = val
 
 @oneflow_export('config.gpu_device_num')
 def gpu_device_num(val):
@@ -93,42 +64,6 @@ def cpu_device_num(val):
     assert config_proto_mutable == True
     assert type(val) is int
     default_config_proto.resource.cpu_device_num = val
-
-@oneflow_export('config.machine')
-def machine(*val):
-    r"""Set machines' hostnames. 
-
-    Args:
-        val:  `list`, `tuple` or multiple arguments of `dict`. First in the list is the master machine. For instance::
-
-            [{"addr": "192.168.1.1"}, {"addr": "192.168.1.2"}]
-    """
-    assert config_proto_mutable == True
-    del default_config_proto.resource.machine[:]
-    if len(val) == 1 and isinstance(val[0], (list, tuple)): val = val[0]
-    default_config_proto.resource.machine.extend(_MakeMachine(val))
-
-@oneflow_export('config.ctrl_port')
-def ctrl_port(val):
-    r"""Set port number used to control the execution across multiple machines. Same on every machine.
-
-    Args:
-        val: a port number accessible to peer machines
-    """
-    assert config_proto_mutable == True
-    assert type(val) is int
-    default_config_proto.resource.ctrl_port = val
-
-@oneflow_export('config.data_port')
-def data_port(val):
-    r"""Set port number used to data transfer among multiple machines. Same on every machine.
-
-    Args:
-        val: a port number accessible to peer machines
-    """
-    assert config_proto_mutable == True
-    assert type(val) is int
-    default_config_proto.resource.data_port = val
 
 @oneflow_export('config.comm_net_worker_num')
 def comm_net_worker_num(val):
@@ -190,6 +125,7 @@ def persistence_buf_byte(val):
     assert type(val) is int
     default_config_proto.io_conf.persistence_buf_byte = val
 
+<<<<<<< HEAD
 @oneflow_export('config.log_dir')
 def log_dir(val):
     r"""Specify the directory path to save log info in
@@ -230,6 +166,8 @@ def grpc_use_no_signal(val = True):
     assert type(val) is bool
     default_config_proto.cpp_flags_conf.grpc_use_no_signal = val
 
+=======
+>>>>>>> dcdabc702ac9c7ae6b47cbfc71ee4c4db9b95188
 @oneflow_export('config.collect_act_event')
 def collect_act_event(val = True):
     assert config_proto_mutable == True
@@ -537,7 +475,7 @@ def _SetJobConfAttr(GetConf, field, value):
         assert c_api_util.CurJobBuildAndInferCtx_HasJobConf() == False
         setattr(GetConf(compile_context.cur_job_conf), field, value)
     else:
-        assert c_api_util.IsEnvironmentInited() == False
+        assert c_api_util.IsSessionInited() == False
         setattr(GetConf(default_job_conf), field, value)
 
 def _GetJobConfAttr(GetConf, field):
@@ -545,7 +483,7 @@ def _GetJobConfAttr(GetConf, field):
         assert c_api_util.CurJobBuildAndInferCtx_HasJobConf() == False
         return getattr(GetConf(compile_context.cur_job_conf), field)
     else:
-        assert c_api_util.IsEnvironmentInited() == False
+        assert c_api_util.IsSessionInited() == False
         return getattr(GetConf(default_job_conf), field)
 
 default_config_proto = _DefaultConfigProto()
