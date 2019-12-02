@@ -21,9 +21,13 @@ class Session(object):
         self.cond_var_ = threading.Condition()
         self.running_job_cnt_ = 0
         self.inter_user_job_info_ = None
+        self.uuid2watch_handler_ = {}
 
     @property
     def inter_user_job_info(self): return self.inter_user_job_info_
+
+    @property
+    def uuid2watch_handler(self): return self.uuid2watch_handler_
 
     @property
     def status(self): return self.status_
@@ -92,6 +96,9 @@ class Session(object):
         assert self.status_ is SessionStatus.RUNNING
         pull_job_name = self.inter_user_job_info.output_or_var_op_name2pull_job_name[op_name]
         self.LaunchJob(job_instance_util.MakePullJobInstance(pull_job_name, op_name, pull_data_cb))
+
+    def HasAnyCallbackAfterFunctionReturn(self):
+        return len(self.uuid2watch_handler) > 0
     
     def _IncRunningJobCnt(self):
         assert self.status_ is SessionStatus.RUNNING
@@ -109,6 +116,10 @@ class Session(object):
 def clear_default_session():
     session_ctx.TryCloseDefaultSession()
     session_ctx.OpenDefaultSession(Session())
+
+@oneflow_export("sync_default_session")
+def sync_default_session():
+    session_ctx.GetDefaultSession().Sync()
 
 def _GetConfigProto():
     config_proto = config_util.default_config_proto
