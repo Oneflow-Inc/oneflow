@@ -417,4 +417,4 @@ class DataLoader(object):
             lbi.blob_name = blob_conf.name
             self._outputs[blob_conf.name] = remote_blob_util.RemoteBlob(lbi)
 
-        compile_context.CurJobAddOp(op_conf)
+        compile_context.CurJobAddConsistentOp(op_conf)
