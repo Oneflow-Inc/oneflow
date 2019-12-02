@@ -1,1 +1,2 @@
 recursive-exclude oneflow *
+include build/python_scripts/oneflow/_oneflow_internal.so
