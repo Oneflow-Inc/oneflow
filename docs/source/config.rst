@@ -7,9 +7,6 @@ oneflow.config
 
 .. autofunction:: gpu_device_num
 .. autofunction:: cpu_device_num
-.. autofunction:: machine
-.. autofunction:: ctrl_port
-.. autofunction:: data_port
 .. autofunction:: comm_net_worker_num
 .. autofunction:: max_mdsave_worker_num
 .. autofunction:: compute_thread_pool_size
@@ -20,11 +17,6 @@ oneflow.config
 .. autofunction:: use_rdma
 .. autofunction:: save_downloaded_file_to_local_fs
 .. autofunction:: persistence_buf_byte
-.. autofunction:: log_dir
-.. autofunction:: logtostderr
-.. autofunction:: logbuflevel
-.. autofunction:: v
-.. autofunction:: grpc_use_no_signal
 .. autofunction:: collect_act_event
 .. autofunction:: total_batch_num
 .. autofunction:: default_data_type

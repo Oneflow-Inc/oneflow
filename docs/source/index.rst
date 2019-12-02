@@ -15,6 +15,7 @@ OneFlow Documentation
     :caption: OneFlow Python API
 
     oneflow
+    env
     config
     train
     losses
