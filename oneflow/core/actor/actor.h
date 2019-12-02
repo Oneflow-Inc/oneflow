@@ -199,6 +199,7 @@ class Actor {
     return std::make_pair(RegstNameType::kCustomized, HashSet<std::string>{});
   }
   virtual void AsyncSendCustomizedConsumedRegstMsgToProducer() {}
+  void AsyncRetInplaceConsumedRegstIfNoConsumer();
 
   const JobDesc* job_desc_;
   int64_t actor_id_;
@@ -226,6 +227,7 @@ class Actor {
   RegstSlot inplace_consumed_rs_;
   RegstSlot inplace_produced_rs_;
   bool is_inplace_consumed_eord_;
+  HashSet<int64_t> inplace_in_ids_with_no_out_consumed_;
   HashMap<int64_t, int64_t> inplace_regst_desc_id_in2out_;
   HashMap<int64_t, int64_t> inplace_regst_desc_id_out2in_;
 

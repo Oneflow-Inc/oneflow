@@ -38,22 +38,10 @@ message InterJobReuseMemStrategy {
   }
 }
 
-message CppFlagsConf {
-  // glog
-  optional string log_dir = 1 [default = "./log"];
-  optional int32 logtostderr = 2 [default = 0];
-  optional int32 logbuflevel = 3 [default = -1];
-  optional int32 v = 4 [default = 0];
-
-  // grpc
-  optional bool grpc_use_no_signal = 5 [default = false];
-}
-
 message ConfigProto {
   required Resource resource = 1;
   required IOConf io_conf = 2;
-  required CppFlagsConf cpp_flags_conf = 3;
-  optional ProfilerConf profiler_conf = 4;
+  optional ProfilerConf profiler_conf = 3;
 }
 
 message JobSet {

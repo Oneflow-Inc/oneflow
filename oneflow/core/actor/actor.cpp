@@ -110,6 +110,11 @@ void Actor::TakeOverInplaceConsumedAndProduced(
     if (inplace_produced_rs_.HasRegstDescId(pair.first)) {
       for (const auto& regst : pair.second) {
         CHECK_EQ(0, inplace_produced_rs_.TryPushBackRegst(regst.get()));
+        if (regst->consumers_actor_id().size() == 0) {
+          CHECK(inplace_in_ids_with_no_out_consumed_
+                    .emplace(inplace_regst_desc_id_out2in_.at(pair.first))
+                    .second);
+        }
       }
     }
   }
@@ -374,6 +379,7 @@ void Actor::ActUntilFail() {
 
     AsyncSendCustomizedConsumedRegstMsgToProducer();
     AsyncSendNaiveConsumedRegstMsgToProducer();
+    AsyncRetInplaceConsumedRegstIfNoConsumer();
 
     AsyncSendQueuedMsg();
   }
@@ -390,6 +396,24 @@ void Actor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
 
 void Actor::AsyncSendInplaceProducedRegstMsgToConsumer() {
   VirtualAsyncSendInplaceProducedRegstMsgToConsumer();
+}
+
+void Actor::AsyncRetInplaceConsumedRegstIfNoConsumer() {
+  std::vector<int64_t> consumed_ids_to_be_ret;
+  inplace_consumed_rs_.ForChosenRegstDeq(
+      [&](int64_t regst_desc_id) {
+        return inplace_in_ids_with_no_out_consumed_.find(regst_desc_id)
+               != inplace_in_ids_with_no_out_consumed_.end();
+      },
+      [&](const std::deque<Regst*>& deq) {
+        if (!deq.empty()) {
+          Regst* in_regst = deq.front();
+          CHECK(in_regst);
+          AsyncSendRegstMsgToProducer(in_regst);
+          consumed_ids_to_be_ret.push_back(in_regst->regst_desc_id());
+        }
+      });
+  inplace_consumed_rs_.PopFrontRegsts(consumed_ids_to_be_ret);
 }
 
 void Actor::VirtualAsyncSendInplaceProducedRegstMsgToConsumer() {

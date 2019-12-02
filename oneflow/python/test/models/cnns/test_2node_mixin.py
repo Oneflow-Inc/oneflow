@@ -1,7 +1,6 @@
 from absl import flags
 
 FLAGS = flags.FLAGS
-flags.DEFINE_string('nodes_list', '192.168.1.15,192.168.1.14', 'nodes list seperated by comma')
 
 class Test2NodeMixin:
   def test_2n8c(self):
