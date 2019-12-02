@@ -1,8 +1,7 @@
 #include "oneflow/core/framework/op_registration.h"
 #include "oneflow/core/framework/user_op_attr.h"
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/common/shape.h"
-#include "oneflow/core/common/protobuf.h"
+#include "oneflow/core/framework/attr_value_accessor.h"
 
 namespace oneflow {
 
@@ -115,50 +114,21 @@ void AddAttrWithDefault(OpRegistryWrapper* wrapper, const std::string& name, Use
 
 }  // namespace
 
-#define OP_REG_ATTR_MEMBER_FUNC(field, cpp_type, attr_type)                                 \
+#define ATTR_MEMBER_FUNC(field, cpp_type, attr_type)                                        \
   template<>                                                                                \
   OpRegistryWrapperBuilder& OpRegistryWrapperBuilder::Attr<cpp_type>(                       \
       const std::string& name, UserOpAttrType type, cpp_type&& default_val) {               \
     CHECK(InsertIfNotExists(name, &unique_names_));                                         \
     CHECK_EQ(type, attr_type);                                                              \
     AddAttrWithDefault(&wrapper_, name, type, [default_val](UserOpDef::AttrDef* attr_def) { \
-      attr_def->mutable_default_val()->set_##field(default_val);                            \
+      AttrValAccessor<cpp_type>::SetAttr(default_val, attr_def->mutable_default_val());     \
     });                                                                                     \
     return *this;                                                                           \
   }
 
-OF_PP_FOR_EACH_TUPLE(OP_REG_ATTR_MEMBER_FUNC, BASIC_ATTR_SEQ)
+OF_PP_FOR_EACH_TUPLE(ATTR_MEMBER_FUNC, ATTR_SEQ)
 
-#undef OP_REG_ATTR_MEMBER_FUNC
-
-template<>
-OpRegistryWrapperBuilder& OpRegistryWrapperBuilder::Attr<Shape>(const std::string& name,
-                                                                UserOpAttrType type,
-                                                                Shape&& default_val) {
-  CHECK(InsertIfNotExists(name, &unique_names_));
-  CHECK_EQ(type, UserOpAttrType::kAtShape);
-  AddAttrWithDefault(&wrapper_, name, type, [default_val](UserOpDef::AttrDef* attr_def) {
-    default_val.ToProto(attr_def->mutable_default_val()->mutable_at_shape());
-  });
-  return *this;
-}
-
-#define OP_REG_LIST_ATTR_MEMBER_FUNC(field, cpp_type, attr_type)                            \
-  template<>                                                                                \
-  OpRegistryWrapperBuilder& OpRegistryWrapperBuilder::Attr<cpp_type>(                       \
-      const std::string& name, UserOpAttrType type, cpp_type&& default_val) {               \
-    CHECK(InsertIfNotExists(name, &unique_names_));                                         \
-    CHECK_EQ(type, attr_type);                                                              \
-    AddAttrWithDefault(&wrapper_, name, type, [default_val](UserOpDef::AttrDef* attr_def) { \
-      *(attr_def->mutable_default_val()->mutable_##field()->mutable_val()) =                \
-          StdVec2PbRf<cpp_type::value_type>(default_val);                                   \
-    });                                                                                     \
-    return *this;                                                                           \
-  }
-
-OF_PP_FOR_EACH_TUPLE(OP_REG_LIST_ATTR_MEMBER_FUNC, LIST_ATTR_SEQ)
-
-#undef OP_REG_LIST_ATTR_MEMBER_FUNC
+#undef ATTR_MEMBER_FUNC
 
 OpRegistryWrapperBuilder& OpRegistryWrapperBuilder::SetShapeInferFn(ShapeInferFn shape_infer_fn) {
   wrapper_.reg_val.shape_infer_fn = std::move(shape_infer_fn);

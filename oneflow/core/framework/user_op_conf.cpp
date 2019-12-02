@@ -1,10 +1,9 @@
 #include "oneflow/core/framework/user_op_conf.h"
 #include "oneflow/core/framework/op_registration.h"
-#include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/register/blob_desc.h"
 #include "oneflow/core/framework/user_op_def.h"
-#include "oneflow/core/framework/user_op_attr.h"
+#include "oneflow/core/framework/attr_value_accessor.h"
 
 namespace oneflow {
 
@@ -43,60 +42,21 @@ const std::string& UserOpConfWrapper::output(const std::string& arg_name, int32_
     CHECK(op_conf_.user_conf().attr().find(attr_name) != op_conf_.user_conf().attr().end());       \
     UserOpAttrVal val = op_conf_.user_conf().attr().at(attr_name);                                 \
     CHECK(val.has_##field());                                                                      \
-    return val.field();                                                                            \
+    return AttrValAccessor<cpp_type>::GetAttr(val);                                                \
   }                                                                                                \
                                                                                                    \
   template<>                                                                                       \
   UserOpConfWrapperBuilder& UserOpConfWrapperBuilder::Attr<cpp_type>(const std::string& attr_name, \
                                                                      const cpp_type& val) {        \
     UserOpAttrVal attr_val;                                                                        \
-    attr_val.set_##field(val);                                                                     \
+    AttrValAccessor<cpp_type>::SetAttr(val, &attr_val);                                            \
     attr_.emplace(attr_name, attr_val);                                                            \
     return *this;                                                                                  \
   }
 
-OF_PP_FOR_EACH_TUPLE(OP_WRAPPER_ATTR_MEMBER_FUNC, BASIC_ATTR_SEQ)
+OF_PP_FOR_EACH_TUPLE(OP_WRAPPER_ATTR_MEMBER_FUNC, ATTR_SEQ)
 
 #undef OP_WRAPPER_ATTR_MEMBER_FUNC
-
-template<>
-Shape UserOpConfWrapper::attr<Shape>(const std::string& attr_name) const {
-  CHECK(op_conf_.user_conf().attr().find(attr_name) != op_conf_.user_conf().attr().end());
-  UserOpAttrVal val = op_conf_.user_conf().attr().at(attr_name);
-  CHECK(val.has_at_shape());
-  return Shape(val.at_shape());
-}
-
-template<>
-UserOpConfWrapperBuilder& UserOpConfWrapperBuilder::Attr<Shape>(const std::string& attr_name,
-                                                                const Shape& val) {
-  UserOpAttrVal attr_val;
-  val.ToProto(attr_val.mutable_at_shape());
-  attr_.emplace(attr_name, attr_val);
-  return *this;
-}
-
-#define OP_WRAPPER_LIST_ATTR_MEMBER_FUNC(field, cpp_type, attr_type)                               \
-  template<>                                                                                       \
-  cpp_type UserOpConfWrapper::attr<cpp_type>(const std::string& attr_name) const {                 \
-    CHECK(op_conf_.user_conf().attr().find(attr_name) != op_conf_.user_conf().attr().end());       \
-    UserOpAttrVal val = op_conf_.user_conf().attr().at(attr_name);                                 \
-    CHECK(val.has_##field());                                                                      \
-    return PbRf2StdVec<cpp_type::value_type>(val.field().val());                                   \
-  }                                                                                                \
-                                                                                                   \
-  template<>                                                                                       \
-  UserOpConfWrapperBuilder& UserOpConfWrapperBuilder::Attr<cpp_type>(const std::string& attr_name, \
-                                                                     const cpp_type& val) {        \
-    UserOpAttrVal attr_val;                                                                        \
-    *(attr_val.mutable_##field()->mutable_val()) = StdVec2PbRf<cpp_type::value_type>(val);         \
-    attr_.emplace(attr_name, attr_val);                                                            \
-    return *this;                                                                                  \
-  }
-
-OF_PP_FOR_EACH_TUPLE(OP_WRAPPER_LIST_ATTR_MEMBER_FUNC, LIST_ATTR_SEQ)
-
-#undef OP_WRAPPER_LIST_ATTR_MEMBER_FUNC
 
 UserOpWrapper::UserOpWrapper(
     const OperatorConf& op,

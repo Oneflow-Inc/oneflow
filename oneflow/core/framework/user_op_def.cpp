@@ -1,7 +1,5 @@
 #include "oneflow/core/framework/user_op_def.h"
-#include "oneflow/core/common/shape.h"
-#include "oneflow/core/common/protobuf.h"
-#include "oneflow/core/framework/user_op_attr.h"
+#include "oneflow/core/framework/attr_value_accessor.h"
 
 namespace oneflow {
 
@@ -60,39 +58,18 @@ bool UserOpDefWrapper::AttrHasDefaultVal(const std::string& name) const {
   return attrs_.at(name)->has_default_val();
 }
 
-#define BASIC_ATTR_TYPE_SPECIALIZATION(field, cpp_type, attr_type)                        \
+#define ATTR_TYPE_SPECIALIZATION(field, cpp_type, attr_type)                              \
   template<>                                                                              \
   cpp_type UserOpDefWrapper::GetAttrDefaultVal<cpp_type>(const std::string& name) const { \
     CHECK(AttrHasDefaultVal(name));                                                       \
     const UserOpAttrVal& default_val = attrs_.at(name)->default_val();                    \
     CHECK_EQ(static_cast<int>(attr_type), default_val.value_case());                      \
-    return default_val.field();                                                           \
+    return AttrValAccessor<cpp_type>::GetAttr(default_val);                               \
   }
 
-OF_PP_FOR_EACH_TUPLE(BASIC_ATTR_TYPE_SPECIALIZATION, BASIC_ATTR_SEQ)
+OF_PP_FOR_EACH_TUPLE(ATTR_TYPE_SPECIALIZATION, ATTR_SEQ)
 
-#undef BASIC_ATTR_TYPE_SPECIALIZATION
-
-template<>
-Shape UserOpDefWrapper::GetAttrDefaultVal<Shape>(const std::string& name) const {
-  CHECK(AttrHasDefaultVal(name));
-  const UserOpAttrVal& default_val = attrs_.at(name)->default_val();
-  CHECK_EQ(static_cast<int>(UserOpAttrType::kAtShape), default_val.value_case());
-  return Shape(default_val.at_shape());
-}
-
-#define LIST_ATTR_TYPE_SPECIALIZATION(field, cpp_type, attr_type)                         \
-  template<>                                                                              \
-  cpp_type UserOpDefWrapper::GetAttrDefaultVal<cpp_type>(const std::string& name) const { \
-    CHECK(AttrHasDefaultVal(name));                                                       \
-    const UserOpAttrVal& default_val = attrs_.at(name)->default_val();                    \
-    CHECK_EQ(static_cast<int>(attr_type), default_val.value_case());                      \
-    return PbRf2StdVec<cpp_type::value_type>(default_val.field().val());                  \
-  }
-
-OF_PP_FOR_EACH_TUPLE(LIST_ATTR_TYPE_SPECIALIZATION, LIST_ATTR_SEQ)
-
-#undef LIST_ATTR_TYPE_SPECIALIZATION
+#undef ATTR_TYPE_SPECIALIZATION
 }  // namespace user_op
 
 }  // namespace oneflow
