@@ -4,6 +4,7 @@
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/register/blob_desc.h"
 #include "oneflow/core/framework/user_op_def.h"
+#include "oneflow/core/framework/user_op_attr.h"
 
 namespace oneflow {
 
@@ -36,30 +37,25 @@ const std::string& UserOpConfWrapper::output(const std::string& arg_name, int32_
   return it->second.s(index);
 }
 
-#define OP_WRAPPER_ATTR_MEMBER_FUNC(cpp_type, postfix)                                             \
+#define OP_WRAPPER_ATTR_MEMBER_FUNC(field, cpp_type, attr_type)                                    \
   template<>                                                                                       \
   cpp_type UserOpConfWrapper::attr<cpp_type>(const std::string& attr_name) const {                 \
     CHECK(op_conf_.user_conf().attr().find(attr_name) != op_conf_.user_conf().attr().end());       \
     UserOpAttrVal val = op_conf_.user_conf().attr().at(attr_name);                                 \
-    CHECK(val.has_##postfix());                                                                    \
-    return val.postfix();                                                                          \
+    CHECK(val.has_##field());                                                                      \
+    return val.field();                                                                            \
   }                                                                                                \
                                                                                                    \
   template<>                                                                                       \
   UserOpConfWrapperBuilder& UserOpConfWrapperBuilder::Attr<cpp_type>(const std::string& attr_name, \
                                                                      const cpp_type& val) {        \
     UserOpAttrVal attr_val;                                                                        \
-    attr_val.set_##postfix(val);                                                                   \
+    attr_val.set_##field(val);                                                                     \
     attr_.emplace(attr_name, attr_val);                                                            \
     return *this;                                                                                  \
   }
 
-OP_WRAPPER_ATTR_MEMBER_FUNC(int32_t, at_int32)
-OP_WRAPPER_ATTR_MEMBER_FUNC(int64_t, at_int64)
-OP_WRAPPER_ATTR_MEMBER_FUNC(bool, at_bool)
-OP_WRAPPER_ATTR_MEMBER_FUNC(float, at_float)
-OP_WRAPPER_ATTR_MEMBER_FUNC(double, at_double)
-OP_WRAPPER_ATTR_MEMBER_FUNC(std::string, at_string)
+OF_PP_FOR_EACH_TUPLE(OP_WRAPPER_ATTR_MEMBER_FUNC, BASIC_ATTR_SEQ)
 
 #undef OP_WRAPPER_ATTR_MEMBER_FUNC
 
@@ -80,28 +76,25 @@ UserOpConfWrapperBuilder& UserOpConfWrapperBuilder::Attr<Shape>(const std::strin
   return *this;
 }
 
-#define OP_WRAPPER_LIST_ATTR_MEMBER_FUNC(cpp_type, postfix)                                  \
-  template<>                                                                                 \
-  std::vector<cpp_type> UserOpConfWrapper::attr<std::vector<cpp_type>>(                      \
-      const std::string& attr_name) const {                                                  \
-    CHECK(op_conf_.user_conf().attr().find(attr_name) != op_conf_.user_conf().attr().end()); \
-    UserOpAttrVal val = op_conf_.user_conf().attr().at(attr_name);                           \
-    CHECK(val.has_##postfix());                                                              \
-    return PbRf2StdVec<cpp_type>(val.postfix().val());                                       \
-  }                                                                                          \
-                                                                                             \
-  template<>                                                                                 \
-  UserOpConfWrapperBuilder& UserOpConfWrapperBuilder::Attr<std::vector<cpp_type>>(           \
-      const std::string& attr_name, const std::vector<cpp_type>& val) {                      \
-    UserOpAttrVal attr_val;                                                                  \
-    *(attr_val.mutable_##postfix()->mutable_val()) = StdVec2PbRf<cpp_type>(val);             \
-    attr_.emplace(attr_name, attr_val);                                                      \
-    return *this;                                                                            \
+#define OP_WRAPPER_LIST_ATTR_MEMBER_FUNC(field, cpp_type, attr_type)                               \
+  template<>                                                                                       \
+  cpp_type UserOpConfWrapper::attr<cpp_type>(const std::string& attr_name) const {                 \
+    CHECK(op_conf_.user_conf().attr().find(attr_name) != op_conf_.user_conf().attr().end());       \
+    UserOpAttrVal val = op_conf_.user_conf().attr().at(attr_name);                                 \
+    CHECK(val.has_##field());                                                                      \
+    return PbRf2StdVec<cpp_type::value_type>(val.field().val());                                   \
+  }                                                                                                \
+                                                                                                   \
+  template<>                                                                                       \
+  UserOpConfWrapperBuilder& UserOpConfWrapperBuilder::Attr<cpp_type>(const std::string& attr_name, \
+                                                                     const cpp_type& val) {        \
+    UserOpAttrVal attr_val;                                                                        \
+    *(attr_val.mutable_##field()->mutable_val()) = StdVec2PbRf<cpp_type::value_type>(val);         \
+    attr_.emplace(attr_name, attr_val);                                                            \
+    return *this;                                                                                  \
   }
 
-OP_WRAPPER_LIST_ATTR_MEMBER_FUNC(int32_t, at_list_int32)
-OP_WRAPPER_LIST_ATTR_MEMBER_FUNC(int64_t, at_list_int64)
-OP_WRAPPER_LIST_ATTR_MEMBER_FUNC(float, at_list_float)
+OF_PP_FOR_EACH_TUPLE(OP_WRAPPER_LIST_ATTR_MEMBER_FUNC, LIST_ATTR_SEQ)
 
 #undef OP_WRAPPER_LIST_ATTR_MEMBER_FUNC
 
