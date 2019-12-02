@@ -397,6 +397,28 @@ message IdentityLossOpConf {
   optional string weight = 5;
 }
 
+message DistributeConcatOpConf {
+  repeated string in = 1;
+  required string out = 2;
+  required int32 axis = 3;
+}
+
+message DistributeSplitOpConf {
+  required string in = 1;
+  repeated string out = 2;
+  required int32 axis = 3;
+}
+
+message DistributeCloneOpConf {
+  required string in = 1;
+  repeated string out = 2;
+}
+
+message DistributeAddOpConf {
+  repeated string in = 1;
+  required string out = 2;
+}
+
 message ConcatOpConf {
   repeated string in = 1;
   required string out = 2;
@@ -801,7 +823,7 @@ message ForeignOutputOpConf {
 }
 
 message ForeignWatchOpConf {
-  repeated string in = 1;
+  required string in = 1;
   required string handler_uuid = 2;
 }
 
@@ -1568,7 +1590,11 @@ message OperatorConf {
     NcclBoxingReduceScatterOpConf nccl_boxing_reduce_scatter_conf = 152;
     NcclBoxingAllGatherOpConf nccl_boxing_all_gather_conf = 153;
     NcclBoxingAllReduceOpConf nccl_boxing_all_reduce_conf = 154;
-    UserOpConf user_conf = 155;
+    DistributeConcatOpConf distribute_concat_conf = 155;
+    DistributeSplitOpConf distribute_split_conf = 156;
+    DistributeCloneOpConf distribute_clone_conf = 157;
+    DistributeAddOpConf distribute_add_conf = 158;
+    UserOpConf user_conf = 199;
 
     // domain op
     TupleIdentityOpConf tuple_identity_conf = 200;

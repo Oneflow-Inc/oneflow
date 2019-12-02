@@ -160,13 +160,12 @@ if __name__ == '__main__':
 
   start_time = time.time()
   flow.config.gpu_device_num(args.gpu_num_per_node)
-  flow.config.ctrl_port(9788)
-  flow.config.data_port(9789)
+  flow.env.ctrl_port(9788)
+  flow.env.data_port(9789)
   flow.config.default_data_type(flow.float)
-  flow.config.enable_inplace(False)
 
   if args.node_num > 1:
-    flow.config.ctrl_port(12138)
+    flow.env.ctrl_port(12138)
     nodes = []
     for n in args.node_list.strip().split(","):
       addr_dict = {}
