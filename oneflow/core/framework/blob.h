@@ -16,8 +16,7 @@ class Blob final {
   Blob(const Shape&, DataType, char*);
   ~Blob() = default;
 
-  Blob(const Blob&) = delete;
-  Blob(Blob&&) = delete;
+  Blob(const Blob&);
 
   const Shape& shape() const { return def_.shape(); }
   DataType data_type() const { return def_.data_type(); }

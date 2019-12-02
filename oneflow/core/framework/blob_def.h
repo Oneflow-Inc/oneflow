@@ -21,7 +21,9 @@ class BlobDef final {
   BlobDef& operator=(const BlobDescProto&);
 
   const Shape& shape() const { return shape_; }
+  Shape* mut_shape() { return &shape_; }
   DataType data_type() const { return data_type_; }
+  DataType* mut_data_type() { return &data_type_; }
 
  private:
   Shape shape_;

@@ -2,6 +2,7 @@
 #define ONEFLOW_CORE_FRAMEWORK_INFER_UTIL_H_
 
 #include "oneflow/core/common/maybe.h"
+#include "oneflow/core/framework/blob_def.h"
 
 namespace oneflow {
 
@@ -17,17 +18,17 @@ class UserOpConfWrapper;
 using Shape4ArgNameAndIndexFn = std::function<Shape*(const std::string&, int32_t)>;
 using Dtype4ArgNameAndIndexFn = std::function<DataType*(const std::string&, int32_t)>;
 using ArgVec = std::vector<std::pair<std::string, int32_t>>;
+using Arg2BlobDef = HashMap<std::pair<std::string, int32_t>, BlobDef>;
 
 class InferContext final {
  public:
-  InferContext() = default;
-  InferContext(Shape4ArgNameAndIndexFn, Dtype4ArgNameAndIndexFn, const UserOpConf*);
+  InferContext(const UserOpConf*, Arg2BlobDef&&);
   ~InferContext() = default;
   InferContext(const InferContext&) = delete;
   InferContext(InferContext&&) = delete;
 
-  Shape* Shape4ArgNameAndIndex(const std::string&, int32_t) const;
-  DataType* Dtype4ArgNameAndIndex(const std::string&, int32_t) const;
+  Shape* Shape4ArgNameAndIndex(const std::string&, int32_t);
+  DataType* Dtype4ArgNameAndIndex(const std::string&, int32_t);
   const ArgVec& inputs() const;
   const ArgVec& outputs() const;
 
@@ -38,8 +39,7 @@ class InferContext final {
   const UserOpConf* conf_;
   ArgVec inputs_;
   ArgVec outputs_;
-  Shape4ArgNameAndIndexFn shape_infer_fn_;
-  Dtype4ArgNameAndIndexFn dtype_infer_fn_;
+  Arg2BlobDef arg2blob_def_;
 };
 
 struct ShapeInferFnUtil {

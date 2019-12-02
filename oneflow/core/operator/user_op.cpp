@@ -2,6 +2,7 @@
 #include "oneflow/core/framework/op_registration.h"
 #include "oneflow/core/framework/kernel_registration.h"
 #include "oneflow/core/framework/blob_def.h"
+#include "oneflow/core/framework/infer_util.h"
 
 namespace oneflow {
 
@@ -75,29 +76,33 @@ Maybe<void> UserOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> 
   }
 
   // construct InferContext
-  auto GetShape4ArgNameAndIndex = [&](const std::string& bn, int32_t index) -> Shape* {
-    BlobDesc* blob = GetBlobDesc4BnInOp(GenRepeatedBn(bn, index));
-    if (blob) { return &(blob->mut_shape()); }
-    return nullptr;
-  };
-  HashMap<std::string, DataType> bn_in_op2data_type;
-  auto GetDtype4ArgNameAndIndex = [&](const std::string& bn, int32_t index) -> DataType* {
-    std::string bn_in_op = GenRepeatedBn(bn, index);
-    BlobDesc* blob = GetBlobDesc4BnInOp(bn_in_op);
-    if (blob) {
-      bn_in_op2data_type[bn_in_op] = blob->data_type();
-      return &bn_in_op2data_type[bn_in_op];
+  const auto& user_op_conf = op_conf().user_conf();
+  user_op::Arg2BlobDef arg2blob_def;
+  for (auto it = user_op_conf.input().begin(); it != user_op_conf.input().end(); ++it) {
+    const std::string& arg_name = it->first;
+    for (int32_t i = 0; i < it->second.s_size(); ++i) {
+      BlobDesc* blob = GetBlobDesc4BnInOp(GenRepeatedBn(arg_name, i));
+      arg2blob_def.emplace(std::make_pair(arg_name, i),
+                           user_op::BlobDef(blob->shape(), blob->data_type()));
     }
-    return nullptr;
-  };
-  user_op::InferContext infer_ctx(GetShape4ArgNameAndIndex, GetDtype4ArgNameAndIndex,
-                                  &op_conf().user_conf());
+  }
+  for (auto it = user_op_conf.output().begin(); it != user_op_conf.output().end(); ++it) {
+    const std::string& arg_name = it->first;
+    for (int32_t i = 0; i < it->second.s_size(); ++i) {
+      BlobDesc* blob = GetBlobDesc4BnInOp(GenRepeatedBn(arg_name, i));
+      arg2blob_def.emplace(std::make_pair(arg_name, i),
+                           user_op::BlobDef(blob->shape(), blob->data_type()));
+    }
+  }
+
+  user_op::InferContext infer_ctx(&op_conf().user_conf(), std::move(arg2blob_def));
 
   JUST(val->shape_infer_fn(&infer_ctx));
   JUST(val->dtype_infer_fn(&infer_ctx));
-  for (const auto& pair : bn_in_op2data_type) {
-    // data_type of input blobs is also set, but not changed
-    GetBlobDesc4BnInOp(pair.first)->set_data_type(pair.second);
+  for (const auto& pair : infer_ctx.outputs()) {
+    BlobDesc* out_blob_desc = GetBlobDesc4BnInOp(GenRepeatedBn(pair.first, pair.second));
+    out_blob_desc->set_data_type(*(infer_ctx.Dtype4ArgNameAndIndex(pair.first, pair.second)));
+    out_blob_desc->mut_shape() = *(infer_ctx.Shape4ArgNameAndIndex(pair.first, pair.second));
   }
 
   // infer tmp buffer size must after infer out shape/dtype

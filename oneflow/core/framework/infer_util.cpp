@@ -12,9 +12,8 @@ namespace oneflow {
 
 namespace user_op {
 
-InferContext::InferContext(Shape4ArgNameAndIndexFn shape_fn, Dtype4ArgNameAndIndexFn dtype_fn,
-                           const UserOpConf* conf)
-    : conf_(conf), inputs_(), outputs_(), shape_infer_fn_(shape_fn), dtype_infer_fn_(dtype_fn) {
+InferContext::InferContext(const UserOpConf* conf, Arg2BlobDef&& arg2blob_def)
+    : conf_(conf), inputs_(), outputs_(), arg2blob_def_(std::move(arg2blob_def)) {
   for (auto it = conf_->input().begin(); it != conf_->input().end(); ++it) {
     const std::string& arg_name = it->first;
     for (int i = 0; i < it->second.s_size(); ++i) {
@@ -29,12 +28,12 @@ InferContext::InferContext(Shape4ArgNameAndIndexFn shape_fn, Dtype4ArgNameAndInd
   }
 }
 
-Shape* InferContext::Shape4ArgNameAndIndex(const std::string& arg_name, int32_t index) const {
-  return shape_infer_fn_(arg_name, index);
+Shape* InferContext::Shape4ArgNameAndIndex(const std::string& arg_name, int32_t index) {
+  return arg2blob_def_.at(std::make_pair(arg_name, index)).mut_shape();
 }
 
-DataType* InferContext::Dtype4ArgNameAndIndex(const std::string& arg_name, int32_t index) const {
-  return dtype_infer_fn_(arg_name, index);
+DataType* InferContext::Dtype4ArgNameAndIndex(const std::string& arg_name, int32_t index) {
+  return arg2blob_def_.at(std::make_pair(arg_name, index)).mut_data_type();
 }
 
 const ArgVec& InferContext::inputs() const { return inputs_; }

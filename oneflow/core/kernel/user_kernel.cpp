@@ -30,14 +30,13 @@ class UserKernel final : public Kernel {
                           std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
     if (ctx_ == nullptr) {
       const auto& user_op_conf = kernel_conf().op_attribute().op_conf().user_conf();
-      user_op::ArgNameAndIndex2Blob blobs;
+      user_op::Arg2Blob blobs;
       for (auto it = user_op_conf.input().begin(); it != user_op_conf.input().end(); ++it) {
         const std::string& arg_name = it->first;
         for (int32_t i = 0; i < it->second.s_size(); ++i) {
           Blob* blob = BnInOp2Blob(GenRepeatedBn(arg_name, i));
           blobs.emplace(std::make_pair(arg_name, i),
-                        std::make_unique<user_op::Blob>(blob->shape(), blob->data_type(),
-                                                        blob->mut_dptr<char>()));
+                        user_op::Blob(blob->shape(), blob->data_type(), blob->mut_dptr<char>()));
         }
       }
       for (auto it = user_op_conf.output().begin(); it != user_op_conf.output().end(); ++it) {
@@ -45,8 +44,7 @@ class UserKernel final : public Kernel {
         for (int32_t i = 0; i < it->second.s_size(); ++i) {
           Blob* blob = BnInOp2Blob(GenRepeatedBn(arg_name, i));
           blobs.emplace(std::make_pair(arg_name, i),
-                        std::make_unique<user_op::Blob>(blob->shape(), blob->data_type(),
-                                                        blob->mut_dptr<char>()));
+                        user_op::Blob(blob->shape(), blob->data_type(), blob->mut_dptr<char>()));
         }
       }
 
