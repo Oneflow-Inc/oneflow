@@ -9,6 +9,5 @@ flags.DEFINE_integer('ctrl_port', '9524', 'control port')
 def Init():
   flow.env.machine(FLAGS.nodes_list.split(','))
   flow.env.ctrl_port(FLAGS.ctrl_port)
-  flow.env.disable_setting()
   flow.deprecated.init_worker(scp_binary=True, use_uuid=True)
   atexit.register(flow.deprecated.delete_worker)
