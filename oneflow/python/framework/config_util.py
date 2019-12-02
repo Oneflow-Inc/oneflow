@@ -125,49 +125,6 @@ def persistence_buf_byte(val):
     assert type(val) is int
     default_config_proto.io_conf.persistence_buf_byte = val
 
-<<<<<<< HEAD
-@oneflow_export('config.log_dir')
-def log_dir(val):
-    r"""Specify the directory path to save log info in
-
-    Args:
-        val: a path, could be relative or absolute
-    """
-    assert config_proto_mutable == True
-    assert type(val) is str
-    default_config_proto.cpp_flags_conf.log_dir = val
-
-@oneflow_export('config.logtostderr')
-def logtostderr(val):
-    assert config_proto_mutable == True
-    assert type(val) is int
-    default_config_proto.cpp_flags_conf.logtostderr = val
-
-@oneflow_export('config.logbuflevel')
-def logbuflevel(val):
-    assert config_proto_mutable == True
-    assert type(val) is int
-    default_config_proto.cpp_flags_conf.logbuflevel = val
-
-@oneflow_export('config.v')
-def v(val):
-    assert config_proto_mutable == True
-    assert type(val) is int
-    default_config_proto.cpp_flags_conf.v = val
-
-@oneflow_export('config.grpc_use_no_signal')
-def grpc_use_no_signal(val = True):
-    r"""Disable GRPC signal handling. Useful when debuggin with GDB.
-
-    Args:
-        val: a bool
-    """
-    assert config_proto_mutable == True
-    assert type(val) is bool
-    default_config_proto.cpp_flags_conf.grpc_use_no_signal = val
-
-=======
->>>>>>> dcdabc702ac9c7ae6b47cbfc71ee4c4db9b95188
 @oneflow_export('config.collect_act_event')
 def collect_act_event(val = True):
     assert config_proto_mutable == True
