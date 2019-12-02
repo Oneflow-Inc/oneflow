@@ -5,12 +5,20 @@ namespace oneflow {
 template<DeviceType device_type, typename T>
 void ConstantKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  if (is_init_) { return; }
+  if (is_init_) {
+    if (this->op_conf().name() == "System-Train-PrimaryLearningRate-Scheduler") {
+      LOG(INFO) << "learning rate: " << *BnInOp2Blob("out")->dptr<T>();
+    }
+    return;
+  }
   CHECK(this->kernel_conf().has_constant_conf());
   const ConstantKernelConf& conf = this->kernel_conf().constant_conf();
   KernelUtil<device_type, T>::InitializeWithConf(ctx.device_ctx, conf.initializer(),
                                                  conf.random_seed(), BnInOp2Blob("out"));
   is_init_ = true;
+  if (this->op_conf().name() == "System-Train-PrimaryLearningRate-Scheduler") {
+    LOG(INFO) << "learning rate: " << *BnInOp2Blob("out")->dptr<T>();
+  }
 }
 
 template<DeviceType device_type, typename T>

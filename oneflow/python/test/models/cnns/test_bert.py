@@ -7,10 +7,10 @@ from pretrain import PreTrain
 FLAGS = flags.FLAGS
 flags.DEFINE_string("data_dir", "/dataset/bert/bert_seq_len_128_repeat1024", "")
 flags.DEFINE_string(
-    "model_load_dir", "/dataset/model_zoo/bert_new_snapshot/of_L-12_H-768_A-12_random_init", ""
+    "model_load_dir", "/dataset/bert_regression_test/of_random_init_L-12_H-768_A-12", ""
 )
 flags.DEFINE_string("model_save_dir", "snapshots", "")
-flags.DEFINE_float("lr", 1e-4, "learning rate")
+flags.DEFINE_float("lr", 1e-6, "learning rate")
 flags.DEFINE_float("weight_l2", 0.01, "")
 flags.DEFINE_integer("batch_size", 24, "")
 flags.DEFINE_integer("data_part_num", 8, "")
@@ -100,8 +100,8 @@ def BuildPreTrainNet(
 
 
 _BERT_MODEL_UPDATE_CONF = dict(
-    learning_rate_decay=dict(polynomial_conf=dict(decay_batches=100000, end_learning_rate=0.0)),
-    warmup_conf=dict(linear_conf=dict(warmup_batches=1000, start_multiplier=0)),
+    # learning_rate_decay=dict(polynomial_conf=dict(decay_batches=100000, end_learning_rate=0.0)),
+    # warmup_conf=dict(linear_conf=dict(warmup_batches=1000, start_multiplier=0)),
     clip_conf=dict(clip_by_global_norm=dict(clip_norm=1.0)),
     adam_conf=dict(epsilon=1e-6),
 )
@@ -111,6 +111,7 @@ def PretrainJob():
     flow.config.train.primary_lr(FLAGS.lr)
     flow.config.train.model_update_conf(_BERT_MODEL_UPDATE_CONF)
     flow.config.train.weight_l2(FLAGS.weight_l2)
+    flow.config.enable_inplace(False)
 
     loss = BuildPreTrainNet(
         batch_size=FLAGS.batch_size,
@@ -127,7 +128,6 @@ def PretrainJob():
     )
     flow.losses.add_loss(loss)
     return loss
-
 
 def test_1n1c(test_case):
     flow.config.gpu_device_num(1)
