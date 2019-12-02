@@ -47,7 +47,7 @@ double oneflow_cast(const std::string& s) {
   return ret;
 }
 
-#ifdef PLATFORM_POSIX
+#if defined(PLATFORM_POSIX) && !defined(WITH_TENSORRT)
 COMMAND(feenableexcept(FE_ALL_EXCEPT & ~FE_INEXACT & ~FE_UNDERFLOW));
 #endif
 
