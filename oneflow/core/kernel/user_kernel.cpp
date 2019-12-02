@@ -2,6 +2,7 @@
 #include "oneflow/core/framework/op_kernel.h"
 #include "oneflow/core/framework/kernel_registration.h"
 #include "oneflow/core/framework/blob.h"
+#include "oneflow/core/framework/user_op_conf.h"
 
 namespace oneflow {
 
@@ -49,7 +50,8 @@ class UserKernel final : public Kernel {
         }
       }
 
-      ctx_.reset(new user_op::KernelContext(ctx.device_ctx, std::move(blobs)));
+      ctx_.reset(new user_op::KernelContext(ctx.device_ctx, std::move(blobs),
+                                            user_op::UserOpConfWrapper(op_conf())));
     }
     kernel_->Compute(ctx_.get());
   }

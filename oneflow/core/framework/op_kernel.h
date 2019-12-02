@@ -4,6 +4,7 @@
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/device/device_context.h"
 #include "oneflow/core/framework/blob.h"
+#include "oneflow/core/framework/user_op_conf.h"
 
 namespace std {
 
@@ -38,14 +39,19 @@ class KernelContext final {
  public:
   KernelContext() = default;
   ~KernelContext() = default;
-  explicit KernelContext(DeviceCtx*, ArgNameAndIndex2Blob&&);
+  explicit KernelContext(DeviceCtx*, ArgNameAndIndex2Blob&&, UserOpConfWrapper&&);
 
   user_op::Blob* Blob4ArgNameAndIndex(const std::string&, int32_t);
   DeviceCtx* device_ctx() const { return device_ctx_; }
+  template<typename T>
+  T GetAttr(const std::string& attr_name) const {
+    return user_op_conf_.attr<T>(attr_name);
+  }
 
  private:
   DeviceCtx* device_ctx_;
   ArgNameAndIndex2Blob blobs_;
+  UserOpConfWrapper user_op_conf_;
 };
 
 class OpKernel {
