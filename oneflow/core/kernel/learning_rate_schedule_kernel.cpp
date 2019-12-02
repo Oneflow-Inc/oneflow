@@ -1,5 +1,4 @@
 #include "oneflow/core/kernel/kernel.h"
-#include <iostream>
 
 namespace oneflow {
 
@@ -172,8 +171,6 @@ void LearningRateScheduleKernel::ForwardDataContent(
   } else if (conf.has_learning_rate_decay()) {
     learning_rate = GetDecayedLearningRate(conf.learning_rate_decay(), learning_rate, train_step);
   }
-  std::cout << "learning rate: " << learning_rate << std::endl;
-  LOG(INFO) << "learning rate" << learning_rate;
   *BnInOp2Blob("out")->mut_dptr<float>() = learning_rate;
 }
 

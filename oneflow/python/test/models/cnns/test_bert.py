@@ -10,7 +10,7 @@ flags.DEFINE_string(
     "model_load_dir", "/dataset/bert_regression_test/of_random_init_L-12_H-768_A-12", ""
 )
 flags.DEFINE_string("model_save_dir", "snapshots", "")
-flags.DEFINE_float("lr", 1e-6, "learning rate")
+flags.DEFINE_float("lr", 1e-4, "learning rate")
 flags.DEFINE_float("weight_l2", 0.01, "")
 flags.DEFINE_integer("batch_size", 24, "")
 flags.DEFINE_integer("data_part_num", 8, "")
@@ -100,8 +100,8 @@ def BuildPreTrainNet(
 
 
 _BERT_MODEL_UPDATE_CONF = dict(
-    # learning_rate_decay=dict(polynomial_conf=dict(decay_batches=100000, end_learning_rate=0.0)),
-    # warmup_conf=dict(linear_conf=dict(warmup_batches=1000, start_multiplier=0)),
+    learning_rate_decay=dict(polynomial_conf=dict(decay_batches=100000, end_learning_rate=0.0)),
+    warmup_conf=dict(linear_conf=dict(warmup_batches=1000, start_multiplier=0)),
     clip_conf=dict(clip_by_global_norm=dict(clip_norm=1.0)),
     adam_conf=dict(epsilon=1e-6),
 )

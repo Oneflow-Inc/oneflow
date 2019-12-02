@@ -12,4 +12,3 @@ def Init():
   flow.env.disable_setting()
   flow.deprecated.init_worker(scp_binary=True, use_uuid=True)
   atexit.register(flow.deprecated.delete_worker)
-  
