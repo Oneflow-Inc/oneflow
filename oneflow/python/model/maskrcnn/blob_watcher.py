@@ -41,8 +41,7 @@ def save_blob_watched(iter):
 
 
 class BlobWatcher(object):
-    def __init__(self, start_iter=0, base_dir="dump_blobs"):
-        self.cur_iter = start_iter
+    def __init__(self, base_dir="dump_blobs"):
         self.base_dir = base_dir
         self.blobs_watched = {}
 
