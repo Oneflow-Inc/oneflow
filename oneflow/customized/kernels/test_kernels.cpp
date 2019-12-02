@@ -38,14 +38,14 @@ class ReluGradKernel final : public oneflow::user_op::OpKernel {
 REGISTER_USER_KERNEL("ccrelu")
     .SetCreateFn([](const oneflow::user_op::KernelInitContext& ctx) { return new ReluKernel(ctx); })
     .SetIsMatchedPred([](const oneflow::user_op::KernelRegContext& ctx) { return true; })
-    .SetInferTmpSizeFn([]() { return 10; });
+    .SetInferTmpSizeFn([](const oneflow::user_op::InferContext&) { return 10; });
 
 REGISTER_USER_KERNEL("ccrelu_grad")
     .SetCreateFn([](const oneflow::user_op::KernelInitContext& ctx) {
       return new ReluGradKernel(ctx);
     })
     .SetIsMatchedPred([](const oneflow::user_op::KernelRegContext& ctx) { return true; })
-    .SetInferTmpSizeFn([]() { return 10; });
+    .SetInferTmpSizeFn([](const oneflow::user_op::InferContext&) { return 10; });
 
 class TestReshapeKernel final : public oneflow::user_op::OpKernel {
  public:
@@ -56,8 +56,8 @@ class TestReshapeKernel final : public oneflow::user_op::OpKernel {
 
  private:
   void Compute(oneflow::user_op::KernelContext* ctx) override {
-    const oneflow::user_op::Blob* in_blob = ctx->Blob4ArgNameAndIndex("in", 0);
-    oneflow::user_op::Blob* out_blob = ctx->Blob4ArgNameAndIndex("out", 0);
+    // const oneflow::user_op::Blob* in_blob = ctx->Blob4ArgNameAndIndex("in", 0);
+    // oneflow::user_op::Blob* out_blob = ctx->Blob4ArgNameAndIndex("out", 0);
     LOG(WARNING) << "Run TestReshape Kernel";
   }
 };
