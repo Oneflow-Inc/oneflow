@@ -144,5 +144,3 @@ class ConsistentBlob(BlobDef):
     @property
     def parallel_conf(self):
         return job_builder.GetParallelConfFromProducerView(self.job_name_, self.lbn_)
-
-
