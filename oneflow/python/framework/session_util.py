@@ -120,6 +120,10 @@ def clear_default_session():
     session_ctx.TryCloseDefaultSession()
     session_ctx.OpenDefaultSession(Session())
 
+@oneflow_export("sync_default_session")
+def sync_default_session():
+    session_ctx.GetDefaultSession().Sync()
+
 def _MakePushCallback(ndarray):
     return lambda ofblob: ofblob.CopyFromNdarrayOrNestedNdarrayList(ndarray)
 
