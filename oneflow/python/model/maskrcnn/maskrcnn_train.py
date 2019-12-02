@@ -542,7 +542,7 @@ if __name__ == "__main__":
                     losses_hisogram.append(frame)
 
                 save_blob_watched(i)
-                blob_watcher.step()
+                blob_watcher.save(i)
 
             print(
                 "median of elapsed time per batch:",

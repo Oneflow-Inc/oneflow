@@ -44,84 +44,72 @@ class BlobWatcher(object):
     def __init__(self, start_iter=0, base_dir="dump_blobs"):
         self.cur_iter = start_iter
         self.base_dir = base_dir
+        self.blobs_watched = {}
 
-        save_dir = os.path.join(self.base_dir, "iter{}".format(self.cur_iter))
+    def save(self, iter):
+        save_dir = os.path.join(self.base_dir, "iter{}".format(iter))
         if not os.path.exists(save_dir):
             os.makedirs(save_dir)
 
-    def step(self):
-        self.cur_iter += 1
+        for blob_key, blob_ndarray in self.blobs_watched.items():
+            if isinstance(blob_ndarray, np.ndarray):
+                save_path = os.path.join(save_dir, blob_key)
+                np.save(save_path, blob_ndarray)
+            else:
+                raise ValueError
 
-        save_dir = os.path.join(self.base_dir, "iter{}".format(self.cur_iter))
-        if not os.path.exists(save_dir):
-            os.makedirs(save_dir)
+        self.blobs_watched = {}
+
+    def dump(self, blob_key, blob_ndarray):
+        self.blobs_watched[blob_key] = blob_ndarray
 
     def watch(self, blob, watch_diff=False):
-        saver = None
+        watcher = None
         if hasattr(blob, "sub_consistent_blob_list"):
-            save_path_list = [
-                self.get_blob_grad_save_path(sub_blob) for sub_blob in blob.sub_consistent_blob_list
+
+            def make_watch_fn(key):
+                def watch_fn(x):
+                    self.dump(key, x.ndarray())
+
+                return watch_fn
+
+            watcher = [
+                make_watch_fn("{}-{}".format(sub_blob.op_name, sub_blob.blob_name))
+                for sub_blob in blob.sub_consistent_blob_list
             ]
-
-            def make_save_fn(save_path):
-                def save_fn(x):
-                    self.save(save_path, x.ndarray())
-
-                return save_fn
-
-            saver = [make_save_fn(save_path) for save_path in save_path_list]
         else:
-            save_path = self.get_blob_save_path(blob)
 
-            def save_fn(x):
-                self.save(save_path, x.ndarray())
+            def watch_fn(x):
+                self.dump("{}-{}".format(blob.op_name, blob.blob_name), x.ndarray())
 
-            saver = save_fn
+            watcher = watch_fn
 
-        of.watch(blob, saver)
+        of.watch(blob, watcher)
         if watch_diff:
             self.watch_diff(blob)
 
     def watch_diff(self, blob):
-        saver = None
+        watcher = None
         if hasattr(blob, "sub_consistent_blob_list"):
-            save_path_list = [
-                self.get_blob_grad_save_path(sub_blob) for sub_blob in blob.sub_consistent_blob_list
+
+            def make_watch_fn(key):
+                def watch_fn(x):
+                    self.dump(key, x.ndarray())
+
+                return watch_fn
+
+            watcher = [
+                make_watch_fn("{}-{}_grad".format(sub_blob.op_name, sub_blob.blob_name))
+                for sub_blob in blob.sub_consistent_blob_list
             ]
-
-            def make_save_fn(save_path):
-                def save_fn(x):
-                    self.save(save_path, x.ndarray())
-
-                return save_fn
-
-            saver = [make_save_fn(save_path) for save_path in save_path_list]
         else:
-            save_path = self.get_blob_grad_save_path(blob)
 
-            def save_fn(x):
-                self.save(save_path, x.ndarray())
+            def watch_fn(x):
+                self.dump("{}-{}_grad".format(blob.op_name, blob.blob_name), x.ndarray())
 
-            saver = save_fn
+            watcher = watch_fn
 
-        of.watch_diff(blob, saver)
-
-    def get_blob_save_path(self, blob):
-        return os.path.join(
-            self.base_dir,
-            "iter{}".format(self.cur_iter),
-            "{}-{}".format(blob.op_name, blob.blob_name),
-        )
-
-    def get_blob_grad_save_path(self, blob):
-        return os.path.join(
-            self.base_dir,
-            "iter{}".format(self.cur_iter),
-            "{}-{}_grad".format(blob.op_name, blob.blob_name),
-        )
-
-    def save(self, path, ndarray):
-        np.save(path, ndarray)
+        of.watch_diff(blob, watcher)
 
 
 def get_blob_watcher():
