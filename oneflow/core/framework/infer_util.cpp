@@ -1,4 +1,4 @@
-#include "oneflow/core/framework/op_infer_util.h"
+#include "oneflow/core/framework/infer_util.h"
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/framework/user_op_def.pb.h"
@@ -112,6 +112,8 @@ Maybe<void> DtypeInferFnUtil::InOutCorrespond(InferContext* ctx) {
 Maybe<void> CheckAttrFnUtil::NoCheck(const UserOpDefWrapper&, const UserOpConf&) {
   return Maybe<void>::Ok();
 }
+
+size_t TmpSizeInferFnUtil::ZeroTmpSize(const InferContext&) { return 0; }
 
 }  // namespace user_op
 

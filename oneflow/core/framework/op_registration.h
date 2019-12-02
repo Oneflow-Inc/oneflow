@@ -5,7 +5,7 @@
 #include "oneflow/core/framework/user_op_def.pb.h"
 #include "oneflow/core/framework/user_op_attr.pb.h"
 #include "oneflow/core/framework/user_op_conf.pb.h"
-#include "oneflow/core/framework/op_infer_util.h"
+#include "oneflow/core/framework/infer_util.h"
 
 namespace oneflow {
 

@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_CORE_FRAMEWORK_OP_INFER_UTIL_H_
-#define ONEFLOW_CORE_FRAMEWORK_OP_INFER_UTIL_H_
+#ifndef ONEFLOW_CORE_FRAMEWORK_INFER_UTIL_H_
+#define ONEFLOW_CORE_FRAMEWORK_INFER_UTIL_H_
 
 #include "oneflow/core/common/maybe.h"
 
@@ -56,8 +56,12 @@ struct CheckAttrFnUtil {
   static Maybe<void> NoCheck(const UserOpDefWrapper&, const UserOpConf&);
 };
 
+struct TmpSizeInferFnUtil {
+  static size_t ZeroTmpSize(const InferContext&);
+};
+
 }  // namespace user_op
 
 }  // namespace oneflow
 
-#endif
+#endif  // ONEFLOW_CORE_FRAMEWORK_INFER_UTIL_H_

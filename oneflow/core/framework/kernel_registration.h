@@ -16,6 +16,7 @@ namespace user_op {
 class OpKernel;
 class KernelInitContext;
 class BlobDef;
+class InferContext;
 
 using BlobDef4ArgNameAndIndexFn =
     std::function<std::shared_ptr<BlobDef>(const std::string&, int32_t)>;
@@ -42,7 +43,7 @@ class KernelRegContext final {
 
 using CreateFn = std::function<OpKernel*(const KernelInitContext&)>;
 using IsMatchedPredicator = std::function<bool(const KernelRegContext&)>;
-using InferTmpSizeFn = std::function<size_t(/*TODO(niuchong)*/)>;
+using InferTmpSizeFn = std::function<size_t(const InferContext&)>;
 
 struct KernelRegistrationVal {
   CreateFn create_fn;

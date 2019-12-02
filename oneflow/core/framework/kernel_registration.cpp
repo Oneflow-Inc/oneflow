@@ -3,6 +3,7 @@
 #include "oneflow/core/kernel/kernel.pb.h"
 #include "oneflow/core/framework/blob_def.h"
 #include "oneflow/core/operator/operator.h"
+#include "oneflow/core/framework/infer_util.h"
 
 namespace oneflow {
 
@@ -75,7 +76,7 @@ KernelRegistryWrapper KernelRegistryWrapperBuilder::Build() {
   CHECK(wrapper_.reg_val.is_matched_fn != nullptr)
       << "No IsMatched function for " << wrapper_.op_type_name;
   if (wrapper_.reg_val.infer_tmp_size_fn == nullptr) {
-    wrapper_.reg_val.infer_tmp_size_fn = []() { return 0; };
+    wrapper_.reg_val.infer_tmp_size_fn = TmpSizeInferFnUtil::ZeroTmpSize;
   }
   return wrapper_;
 }

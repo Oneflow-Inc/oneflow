@@ -32,7 +32,7 @@ class UserOp final : public Operator {
                             KernelConf* kernel_conf) const override;
   Maybe<void> InferTmpBufferBlobDesc(
       std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-      const ParallelContext* parallel_ctx) const;
+      const ParallelContext* parallel_ctx, const user_op::InferContext& infer_ctx) const;
 };
 
 namespace {
@@ -101,7 +101,7 @@ Maybe<void> UserOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> 
   }
 
   // infer tmp buffer size must after infer out shape/dtype
-  JUST(InferTmpBufferBlobDesc(GetBlobDesc4BnInOp, parallel_ctx));
+  JUST(InferTmpBufferBlobDesc(GetBlobDesc4BnInOp, parallel_ctx, infer_ctx));
   return Maybe<void>::Ok();
 }
 
@@ -117,7 +117,7 @@ LogicalBlobId UserOp::obn2lbi(const std::string& output_bn) const {
 
 Maybe<void> UserOp::InferTmpBufferBlobDesc(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx) const {
+    const ParallelContext* parallel_ctx, const user_op::InferContext& infer_ctx) const {
   user_op::BlobDef4ArgNameAndIndexFn GetBlobDef =
       [&](const std::string& arg_name, int32_t id) -> std::shared_ptr<user_op::BlobDef> {
     BlobDesc* blob = GetBlobDesc4BnInOp(GenRepeatedBn(arg_name, id));
@@ -142,7 +142,7 @@ Maybe<void> UserOp::InferTmpBufferBlobDesc(
   CHECK_OR_RETURN(kernel_reg_val != nullptr)
       << "cannot find op_type: " << op_conf().user_conf().op_type_name() << " in kernel registry!";
 
-  size_t tmp_size = kernel_reg_val->infer_tmp_size_fn(/*TODO(niuchong)*/);
+  size_t tmp_size = kernel_reg_val->infer_tmp_size_fn(infer_ctx);
   if (tmp_size > 0) {
     BlobDesc* tmp_buffer_blob = GetBlobDesc4BnInOp("tmp_buffer");
     CHECK(tmp_buffer_blob != nullptr);
