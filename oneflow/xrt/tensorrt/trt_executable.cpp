@@ -58,22 +58,23 @@ bool TrtExecutable::Run(const std::vector<Parameter> &inputs,
   // All return params are results of the executable.
   this->results_ = run_options.return_params;
 
-  const int num_bindings = engine_->getNbBindings();
-  std::vector<const Parameter *> binding_params(num_bindings);
+  util::Map<std::string, const Parameter *> all_params;
   for (const Parameter &input : inputs) {
-    // Binding index is -1 if the name is not found.
-    int binding_index = engine_->getBindingIndex(input.name().c_str());
-    if (binding_index >= 0 && binding_index < num_bindings) {
-      binding_params[binding_index] = &input;
-    }
+    all_params.emplace(input.name(), &input);
   }
   for (const Parameter &output : this->results_) {
-    int binding_index = engine_->getBindingIndex(output.name().c_str());
-    if (binding_index >= 0 && binding_index < num_bindings) {
-      binding_params[binding_index] = &output;
-    }
+    all_params.emplace(output.name(), &output);
   }
 
+  const int num_bindings = engine_->getNbBindings();
+  std::vector<const Parameter *> binding_params(num_bindings);
+  std::vector<void *> buffers(num_bindings);
+  for (int i = 0; i < num_bindings; ++i) {
+    const char *binding_name = engine_->getBindingName(i);
+    CHECK_GT(all_params.count(binding_name), 0);
+    binding_params[i] = all_params.at(binding_name);
+    buffers[i] = binding_params[i]->data();
+  }
   // TODO(hjchen2): Check batch size is same for all binding parameters.
   const int batch_size = binding_params[0]->shape().At(0);
   if (batch_size > engine_->getMaxBatchSize()) {
@@ -83,11 +84,6 @@ bool TrtExecutable::Run(const std::vector<Parameter> &inputs,
     CHECK(CreateExecutableEngine(run_options, batch_size))
         << "Failed to create engine with batch size " << batch_size;
     execution_context_.reset(engine_->createExecutionContext());
-  }
-
-  std::vector<void *> buffers(num_bindings);
-  for (int i = 0; i < num_bindings; ++i) {
-    buffers[i] = binding_params[i]->data();
   }
   return ExecuteEngine(batch_size, buffers.data(), run_options.stream,
                        block_until_done);

@@ -16,16 +16,17 @@ class SoftMaxOp : public TrtOpKernel {
       axis += in_shape.NumAxes();
     }
     CHECK_GE(axis, 1);
-    CHECK_LT(axis, in_shape.NumAxes() - 1);
-  
+    CHECK_LT(axis, in_shape.NumAxes());
+
     nvinfer1::ITensor *in = ctx->Input("in");
     auto *layer = ctx->builder()->addSoftMax(*in);
     layer->setAxes(axis);
+    layer->setName(ctx->op_name().c_str());
     ctx->SetOutput("out", layer->getOutput(0));
   }
 };
 
-REGISTER_TRT_OP_KERNEL(SoftMax, SoftMaxOp).EnableTrainPhase().Finalize();
+// REGISTER_TRT_OP_KERNEL(Softmax, SoftMaxOp).EnableTrainPhase().Finalize();
 
 }  // namespace tensorrt
 }  // namespace xrt

@@ -1,3 +1,6 @@
+#ifdef WITH_CUDA
+#include "cuda_runtime.h"
+#endif
 #include "oneflow/xrt/tensorrt/trt_builder.h"
 
 namespace oneflow {
@@ -31,10 +34,22 @@ nvinfer1::Weights &TrtBuilder::GetWeight(int64_t handle) {
     const Parameter &param = params_.at(handle);
     // Convert data type and shape.
     TrtShape shape(param.shape(), param.data_type());
+    // Weights passed to TensorRT layers are in host memory.
+    size_t num_bytes = shape.count() * SizeOf(param.data_type());
+    auto *host_data = new std::vector<uint8_t>(num_bytes);
+#ifdef WITH_CUDA
+    CHECK_EQ(cudaSuccess, cudaMemcpy(host_data->data(), param.data(), num_bytes,
+                                     cudaMemcpyDefault));
+#else
+    LOG(FATAL) << "Recompile the project with CUDA please.";
+#endif
+    CHECK_EQ(host_weights_.count(param.name()), 0);
+    host_weights_[param.name()] =
+        std::shared_ptr<std::vector<uint8_t> >(host_data);
 
     nvinfer1::Weights weight;
-    weight.values = param.data();
     weight.type = shape.data_type();
+    weight.values = host_data->data();
     weight.count = shape.count();
     weights_[handle] = weight;
     value_kinds_[handle] = TrtValueKind::kWeight;

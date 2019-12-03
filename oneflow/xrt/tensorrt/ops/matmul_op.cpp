@@ -31,6 +31,7 @@ class MatMulOp : public TrtOpKernel {
     auto op1 = GetMatrixOperation(b, transpose_b);
 
     auto *layer = ctx->builder()->addMatrixMultiply(*a, op0, *b, op1);
+    layer->setName(ctx->op_name().c_str());
     ctx->SetOutput("out", layer->getOutput(0));
   }
 };
