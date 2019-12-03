@@ -92,7 +92,7 @@ parser.add_argument(
     required=False,
 )
 parser.add_argument(
-    "-imgd", "--image_dir", type=str, default="val2017", required=False
+    "-img", "--image_dir", type=str, default="val2017", required=False
 )
 parser.add_argument(
     "-j", "--jupyter", default=False, action="store_true", required=False
@@ -496,6 +496,7 @@ if terminal_args.train_with_real_dataset:
             is_dynamic=True,
         )
         data_loader.add_transform(flow.data.TargetResizeTransform(800, 1333))
+        data_loader.add_transform(flow.data.ImageRandomFlip())
         data_loader.add_transform(
             flow.data.ImageNormalizeByChannel((102.9801, 115.9465, 122.7717))
         )
