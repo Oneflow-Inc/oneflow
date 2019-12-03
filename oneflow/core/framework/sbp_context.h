@@ -5,6 +5,8 @@ namespace oneflow {
 
 namespace user_op {
 
+using BlobDesc4IbnFn = std::function<Maybe<const BlobDesc*>(const std::string&)>;
+
 class SbpContext final {
  public:
   SbpContext();
@@ -12,9 +14,11 @@ class SbpContext final {
   SbpContext(const SbpContext&) = delete;
   SbpContext(SbpContext&&) = delete;
 
-  const BlobDef* BlobDef4ArgNameAndIndex(const std::string&, int32_t) const;
+  Maybe<const BlobDesc*> LogicalBlobDesc4Ibn(const std::string&) const;
   const ArgVec& inputs() const;
   const ArgVec& outputs() const;
+
+ private:
 };
 
 }  // namespace user_op

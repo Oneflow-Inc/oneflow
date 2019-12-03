@@ -25,7 +25,11 @@ class UserOp final : public Operator {
   Maybe<void> GetSbpSignatures(
       const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
       SbpSignatureList* sbp_sig_list) const override {
-    // TODO
+    const user_op::OpRegistrationVal* val =
+        user_op::LookUpInOpRegistry(op_conf().user_conf().op_type_name());
+    CHECK_OR_RETURN(val != nullptr)
+        << "cannot find op_type: " << op_conf().user_conf().op_type_name() << " in op registry!";
+    JUST(val->get_sbp_fn(LogicalBlobDesc4Ibn, sbp_sig_list));
     return Maybe<void>::Ok();
   }
   void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
