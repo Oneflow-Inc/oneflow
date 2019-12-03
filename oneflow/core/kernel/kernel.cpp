@@ -65,10 +65,19 @@ bool Kernel::HasEmptyShapeBlob(const PbRpf<std::string>& bns,
 void Kernel::CheckSameDim0ValidNum(
     const PbRpf<std::string>& bns,
     const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
-  const void* mem_ptr = BnInOp2Blob(bns.Get(0))->dim0_valid_num_ptr();
-  size_t len = BnInOp2Blob(bns.Get(0))->ByteSizeOfDim0ValidNumField();
+  const Blob* first_blob = nullptr;
+  FOR_RANGE(int, i, 0, bns.size()) {
+    const Blob* cur_blob = BnInOp2Blob(bns.Get(i));
+    if (cur_blob == nullptr) { continue; }
+    first_blob = cur_blob;
+    break;
+  }
+  const void* mem_ptr = first_blob->dim0_valid_num_ptr();
+  size_t len = first_blob->ByteSizeOfDim0ValidNumField();
   FOR_RANGE(int, i, 1, bns.size()) {
-    CHECK_EQ(std::memcmp(BnInOp2Blob(bns.Get(i))->dim0_valid_num_ptr(), mem_ptr, len), 0);
+    const Blob* cur_blob = BnInOp2Blob(bns.Get(i));
+    if (cur_blob == nullptr) { continue; }
+    CHECK_EQ(std::memcmp(cur_blob->dim0_valid_num_ptr(), mem_ptr, len), 0);
   }
 }
 

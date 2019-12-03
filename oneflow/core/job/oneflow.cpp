@@ -12,7 +12,6 @@
 #include "oneflow/core/job/profiler.h"
 #include "oneflow/core/job/sub_plan.pb.h"
 #include "oneflow/core/job/plan.pb.h"
-#include "oneflow/core/job/critical_section_desc.h"
 #include "oneflow/core/job/available_memory_desc.pb.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
 #include "oneflow/core/actor/act_event_logger.h"
@@ -21,8 +20,7 @@
 #include "oneflow/core/job/inter_job_mem_sharing_util.h"
 #include "oneflow/core/job/plan_util.h"
 #include "oneflow/core/operator/interface_op_util.h"
-
-DECLARE_bool(grpc_use_no_signal);
+#include "oneflow/core/job/critical_section_desc.h"
 
 namespace std {
 
@@ -551,6 +549,7 @@ void CompileMainJob(Job* main_job, const LogicalBlobId& critical_section_sink_lb
 }
 
 void AddJobName2JobId(const std::string& job_name, int64_t job_id) {
+  if (!Global<MachineCtx>::Get()->IsThisMachineMaster()) { return; }
   CHECK(Global<JobName2JobId>::Get()->emplace(job_name, job_id).second);
 }
 
@@ -572,6 +571,10 @@ void FinishGlobalCriticalSectionDesc(const Plan& plan, int64_t job_size) {
       for (const auto& pair : task.produced_regst_desc()) {
         if (NeedAllocateMemory(pair.second.regst_desc_type())) {
           mem_block_ids->emplace(pair.second.mem_block_id());
+        }
+        if (pair.second.has_separated_header_mem_block_id()
+            && pair.second.separated_header_mem_block_id() != -1) {
+          mem_block_ids->emplace(pair.second.separated_header_mem_block_id());
         }
       }
     }
@@ -863,18 +866,7 @@ void CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan) {
 
 }  // namespace
 
-GlobalObjectsScope4JobConf::GlobalObjectsScope4JobConf(const JobSet& job_set) {
-  Global<const InterJobReuseMemStrategy>::New(job_set.inter_job_reuse_mem_strategy());
-  Global<JobName2JobId>::New();
-}
-
-GlobalObjectsScope4JobConf::~GlobalObjectsScope4JobConf() {
-  Global<JobName2JobId>::Delete();
-  Global<const InterJobReuseMemStrategy>::Delete();
-}
-
 Oneflow::Oneflow(const oneflow::JobSet& job_set) {
-  global_objects_scope4job_conf_.reset(new GlobalObjectsScope4JobConf(job_set));
   // Runtime
   CompileAndMergePlanOnMaster(job_set.job(), &plan_);
   if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
@@ -890,7 +882,6 @@ Oneflow::~Oneflow() {
     Global<Profiler>::Get()->Profile(
         plan_, JoinPath(FLAGS_log_dir, ActEventLogger::act_event_bin_filename()));
   }
-  global_objects_scope4job_conf_.reset();
 }
 
 }  // namespace oneflow

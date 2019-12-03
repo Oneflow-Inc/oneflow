@@ -40,28 +40,53 @@ Maybe<void> JobBuildAndInferCtx::AddOpNameParallelConf2Placement(
   return Maybe<void>::Ok();
 }
 
-Maybe<void> JobBuildAndInferCtx::DecodeSplitHint7AddOp7AddSbpSigConf2Job(
-    Operator* op, SbpSignature* sbp_sig_conf) {
-  OperatorConf op_conf_without_split_hint = op->op_conf();
-  PbMessage* op_type_conf = MutableMessageInPbMessage(&op_conf_without_split_hint,
-                                                      op_conf_without_split_hint.op_type_case());
-  for (const std::string& ibn : op->input_bns()) {
-    std::string lbn_may_with_split_hint =
-        GetInputLbnInOpCustomizedConf(op->GetCustomizedConf(), ibn);
+Maybe<void> JobBuildAndInferCtx::AddLbiParallelConf2BlobPlacement(
+    const Operator* op, std::function<ParallelDesc*(const std::string&)> ParallelDesc4Obn) {
+  for (const auto& obn : op->output_bns()) {
+    const auto& parallel_desc = *ParallelDesc4Obn(obn);
+    auto iter = parallel_desc2blob_placement_group_.find(parallel_desc);
+    if (iter == parallel_desc2blob_placement_group_.end()) {
+      auto* blob_pg = job_->mutable_placement()->add_blob_placement_group();
+      *blob_pg->mutable_parallel_conf() = parallel_desc.parallel_conf();
+      iter = parallel_desc2blob_placement_group_.emplace(parallel_desc, blob_pg).first;
+    }
+    const auto& lbi = op->BnInOp2Lbi(obn);
+    OF_CHECK(std::find(iter->second->lbi().begin(), iter->second->lbi().end(), lbi)
+             == iter->second->lbi().end());
+    *iter->second->add_lbi() = lbi;
+  }
+  return Maybe<void>::Ok();
+}
+
+Maybe<OperatorConf> JobBuildAndInferCtx::DecodeLbiHintAndReturnNewOpConf(
+    const Operator& op, SbpSignature* sbp_sig_conf,
+    HashMap<std::string, bool>* ibn2disable_boxing) const {
+  auto op_conf_without_split_hint = std::make_shared<OperatorConf>(op.op_conf());
+  PbMessage* op_type_conf = MutableMessageInPbMessage(op_conf_without_split_hint.get(),
+                                                      op_conf_without_split_hint->op_type_case());
+  for (const std::string& ibn : op.input_bns()) {
+    std::string lbn_may_with_hint = GetInputLbnInOpCustomizedConf(op.GetCustomizedConf(), ibn);
     SbpParallel sbp_parallel;
-    if (JUST(GetSbpParallelInLbnOrNothing(lbn_may_with_split_hint, &sbp_parallel))) {
+    bool has_sbp_hint = JUST(GetSbpParallelInLbnOrNothing(lbn_may_with_hint, &sbp_parallel));
+    bool has_disable_boxing_hint =
+        JUST(ParseDisableBoxingFlag(lbn_may_with_hint, &(*ibn2disable_boxing)[ibn]));
+    if (has_sbp_hint || has_disable_boxing_hint) {
       (*(sbp_sig_conf->mutable_bn_in_op2sbp_parallel()))[ibn] = sbp_parallel;
-      const LogicalBlobId& lbi = op->BnInOp2Lbi(ibn);
+      const LogicalBlobId& lbi = op.BnInOp2Lbi(ibn);
       std::string lbn = GenLogicalBlobName(lbi);
-      ReplaceInputLbnInOpCustomizedConf(op_type_conf, ibn, lbn_may_with_split_hint, lbn);
+      ReplaceInputLbnInOpCustomizedConf(op_type_conf, ibn, lbn_may_with_hint, lbn);
     }
   }
-  if (sbp_sig_conf->bn_in_op2sbp_parallel().size() > 0) {
-    (*(job_->mutable_sbp_conf()->mutable_op_name2sbp_signature_conf()))[op->op_name()] =
-        *sbp_sig_conf;
+  return op_conf_without_split_hint;
+}
+
+void JobBuildAndInferCtx::AddOp7AddSbpSigConf2Job(const OperatorConf& operator_conf,
+                                                  const SbpSignature& sbp_signature) const {
+  auto* op_name2sbp_sig = job_->mutable_sbp_conf()->mutable_op_name2sbp_signature_conf();
+  if (sbp_signature.bn_in_op2sbp_parallel().size() > 0) {
+    (*op_name2sbp_sig)[operator_conf.name()] = sbp_signature;
   }
-  job_->mutable_net()->add_op()->CopyFrom(op_conf_without_split_hint);
-  return Maybe<void>::Ok();
+  job_->mutable_net()->add_op()->CopyFrom(operator_conf);
 }
 
 Maybe<void> JobBuildAndInferCtx::InferOpOutSbpParallel(Operator* op,
@@ -75,14 +100,16 @@ Maybe<void> JobBuildAndInferCtx::InferOpOutSbpParallel(Operator* op,
         << JobBuildAndInferError::kLogicalBlobNameNotExist << "when infer op_name: \""
         << op->op_name() << "\", consumed op_name: \"" << lbi.op_name() << "\", blob_name: \""
         << lbi.blob_name() << "\" not infer blob desc";
+    const ParallelDesc* pd = &lbi2parallel_desc_from_producer_view_.at(lbi);
     const BlobDesc* logical_blob_desc = lbi2logical_blob_desc_.at(lbi).get();
     CHECK_OR_RETURN(lbi2sbp_parallel_from_producer_view_.find(lbi)
                     != lbi2sbp_parallel_from_producer_view_.end())
         << JobBuildAndInferError::kLogicalBlobNameNotExist
         << "when infer op_name: " << op->op_name() << " consumed op_name: " << lbi.op_name()
         << " blob_name: " << lbi.blob_name() << " not infer split axis";
-    const SbpParallel& sbp_parallel = lbi2sbp_parallel_from_producer_view_.at(lbi);
-    ibn2sbp_infer_hint.emplace(ibn, SbpInferHint(&parallel_desc, logical_blob_desc, sbp_parallel));
+    const SbpParallel* sbp_parallel = &lbi2sbp_parallel_from_producer_view_.at(lbi);
+    const OptInt64* batch_axis = &lbi2batch_axis_.at(lbi);
+    ibn2sbp_infer_hint.emplace(ibn, SbpInferHint(pd, logical_blob_desc, sbp_parallel, batch_axis));
   }
 
   auto GetBatchAxis4Lbi = [&](const LogicalBlobId& lbi) -> const OptInt64& {
@@ -136,26 +163,71 @@ Maybe<void> JobBuildAndInferCtx::GenOpProducedEmptyLogicalBlobDesc(Operator* op)
 
 Maybe<void> JobBuildAndInferCtx::CheckOpBlobSplitability(Operator* op, const SbpSignature& sbp_sig,
                                                          int64_t parallel_num) {
+  HashSet<std::string> obns(op->output_bns().begin(), op->output_bns().end());
+  auto GetParallelNum = [&](const std::string& bn_in_op) {
+    if (obns.find(bn_in_op) == obns.end()) { return parallel_num; }
+    return lbi2parallel_desc_from_producer_view_.at(op->BnInOp2Lbi(bn_in_op)).parallel_num();
+  };
   for (const auto& pair : sbp_sig.bn_in_op2sbp_parallel()) {
     if (pair.second.has_split_parallel()) {
       int64_t axis = pair.second.split_parallel().axis();
       const LogicalBlobId& lbi = op->BnInOp2Lbi(pair.first);
+      int64_t blob_parallel_num = GetParallelNum(pair.first);
       const BlobDesc& logical_blob_desc = *(lbi2logical_blob_desc_.at(lbi).get());
       int64_t num_axes = logical_blob_desc.shape().NumAxes();
       if (axis < 0) { axis += num_axes; }
       CHECK_OR_RETURN(axis >= 0 && axis < num_axes
-                      && logical_blob_desc.shape().At(axis) >= parallel_num)
+                      && logical_blob_desc.shape().At(axis) >= blob_parallel_num)
           << JobBuildAndInferError::kUnknownJobBuildAndInferError << "op_name: " << lbi.op_name()
           << " blob_name: " << lbi.blob_name()
-          << " cannot split blob by parallel_num: " << std::to_string(parallel_num);
+          << " cannot split blob by parallel_num: " << std::to_string(blob_parallel_num);
     }
   }
   return Maybe<void>::Ok();
 }
 
+Maybe<ParallelConf> JobBuildAndInferCtx::InferOpParallelConf(
+    const Operator& op, const ParallelConf& origin_parallel_conf,
+    const HashMap<std::string, bool>& ibn2disable_boxing) const {
+  const ParallelDesc* parallel_desc = nullptr;
+  for (const auto& ibn : op.input_bns()) {
+    if (ibn2disable_boxing.at(ibn) == false) { continue; }
+    const auto& lbi = op.BnInOp2Lbi(ibn);
+    const auto& ibn_parallel_desc = lbi2parallel_desc_from_producer_view_.at(lbi);
+    if (parallel_desc == nullptr) {
+      parallel_desc = &ibn_parallel_desc;
+    } else {
+      OF_CHECK_EQ(parallel_desc->parallel_num(), ibn_parallel_desc.parallel_num());
+    }
+  }
+  if (parallel_desc == nullptr) { return std::make_shared<ParallelConf>(origin_parallel_conf); }
+  return std::make_shared<ParallelConf>(parallel_desc->parallel_conf());
+}
+
+void JobBuildAndInferCtx::InitIbn2DisableBoxing(const Operator& op,
+                                                HashMap<std::string, bool>* ibn2disable_boxing) {
+  for (const auto& ibn : op.input_bns()) {
+    (*ibn2disable_boxing)[ibn] = lbi2disable_boxing_[op.BnInOp2Lbi(ibn)];
+  }
+}
+
+void JobBuildAndInferCtx::UpdateLbi2DisableBoxing(
+    const Operator& op, const HashMap<std::string, bool>& ibn2disable_boxing) {
+  bool disable_boxing = false;
+  for (const auto& ibn : op.input_bns()) {
+    if (ibn2disable_boxing.at(ibn)) {
+      disable_boxing = true;
+      break;
+    }
+  }
+  for (const auto& obn : op.output_bns()) {
+    lbi2disable_boxing_[op.BnInOp2Lbi(obn)] = disable_boxing;
+  }
+}
+
 // TODO(): add handle error of same interface op blob between jobs
 Maybe<void> JobBuildAndInferCtx::AddAndInferOp(const OperatorConf& op_conf,
-                                               const ParallelConf& parallel_conf) {
+                                               const ParallelConf& origin_parallel_conf) {
   CHECK_OR_RETURN(has_job_conf_) << JobBuildAndInferError::kJobConfNotSet;
   if (!is_job_conf_frozen_) { is_job_conf_frozen_ = true; }
   const std::string& op_name = op_conf.name();
@@ -166,14 +238,17 @@ Maybe<void> JobBuildAndInferCtx::AddAndInferOp(const OperatorConf& op_conf,
       << JobBuildAndInferError::kOpConfDeviceTypeNoSet << "op_name: " << op_name
       << " not set device type";
 
-  JUST(AddOpNameParallelConf2Placement(op_name, parallel_conf));
-
   op_name2op_.emplace(op_name, ConstructOp(op_conf, &GlobalJobDesc()));
   Operator* op = op_name2op_.at(op_name).get();
 
   SbpSignature sbp_sig_conf;
-  JUST(DecodeSplitHint7AddOp7AddSbpSigConf2Job(op, &sbp_sig_conf));
-
+  HashMap<std::string, bool> ibn2disable_boxing;
+  InitIbn2DisableBoxing(*op, &ibn2disable_boxing);
+  auto new_op_conf = JUST(DecodeLbiHintAndReturnNewOpConf(*op, &sbp_sig_conf, &ibn2disable_boxing));
+  AddOp7AddSbpSigConf2Job(*new_op_conf, sbp_sig_conf);
+  auto parallel_conf = JUST(InferOpParallelConf(*op, origin_parallel_conf, ibn2disable_boxing));
+  JUST(AddOpNameParallelConf2Placement(op_name, *parallel_conf));
+  UpdateLbi2DisableBoxing(*op, ibn2disable_boxing);
   // infer batch_axis
   auto BatchAxis4BnInOp = [&](const std::string& bn) -> OptInt64* {
     const LogicalBlobId& lbi = op->BnInOp2Lbi(bn);
@@ -186,7 +261,7 @@ Maybe<void> JobBuildAndInferCtx::AddAndInferOp(const OperatorConf& op_conf,
   JUST(op->InferBatchAxisIf(GetConstBlobDescBnInOp, BatchAxis4BnInOp));
 
   // infer sbp
-  ParallelDesc parallel_desc(parallel_conf);
+  ParallelDesc parallel_desc(*parallel_conf);
   SbpSignature sbp_sig_to_infer;
   JUST(InferOpOutSbpParallel(op, sbp_sig_conf, parallel_desc, &sbp_sig_to_infer));
 
@@ -204,7 +279,17 @@ Maybe<void> JobBuildAndInferCtx::AddAndInferOp(const OperatorConf& op_conf,
   parallel_ctx.set_parallel_num(1);
   JUST(op->InferOutBlobDescsIf(GetBlobDesc4BnInOp, &parallel_ctx, &sbp_sig_to_infer,
                                [](OpContext*) {}));
-
+  auto ParallelDesc4Obn = [&](const std::string& obn) -> ParallelDesc* {
+    const auto& lbi = op->BnInOp2Lbi(obn);
+    auto iter = lbi2parallel_desc_from_producer_view_.find(lbi);
+    if (iter == lbi2parallel_desc_from_producer_view_.end()) {
+      iter = lbi2parallel_desc_from_producer_view_.emplace(lbi, parallel_desc).first;
+    }
+    return &iter->second;
+  };
+  JUST(op->InferOutParallelDescIf(ParallelDesc4Obn, GetBlobDesc4BnInOp, parallel_desc,
+                                  &sbp_sig_to_infer));
+  JUST(AddLbiParallelConf2BlobPlacement(op, ParallelDesc4Obn));
   // check splitability
   JUST(CheckOpBlobSplitability(op, sbp_sig_to_infer, parallel_desc.parallel_num()));
 
@@ -229,6 +314,14 @@ Maybe<Shape> JobBuildAndInferCtx::GetStaticShape(const std::string& lbn) const {
 Maybe<DataType> JobBuildAndInferCtx::GetDataType(const std::string& lbn) const {
   JUST(CheckLbnValidAndExist(lbn));
   return lbi2logical_blob_desc_.at(GenLogicalBlobId(lbn))->data_type();
+}
+
+Maybe<bool> JobBuildAndInferCtx::DisableBoxing(const std::string& lbn) const {
+  JUST(CheckLbnValidAndExist(lbn));
+  LogicalBlobId lbi(GenLogicalBlobId(lbn));
+  const auto& iter = lbi2disable_boxing_.find(lbi);
+  OF_CHECK(iter != lbi2disable_boxing_.end());
+  return iter->second;
 }
 
 Maybe<OptInt64> JobBuildAndInferCtx::GetBatchAxis(const std::string& lbn) const {
