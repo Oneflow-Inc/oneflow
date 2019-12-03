@@ -95,7 +95,7 @@ Maybe<void> UserOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> 
     }
   }
 
-  user_op::InferContext infer_ctx(&op_conf().user_conf(), std::move(arg2blob_def));
+  user_op::InferContext infer_ctx(user_op::UserOpConfWrapper(op_conf()), std::move(arg2blob_def));
 
   JUST(val->shape_infer_fn(&infer_ctx));
   JUST(val->dtype_infer_fn(&infer_ctx));

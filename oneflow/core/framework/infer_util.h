@@ -3,17 +3,16 @@
 
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/framework/blob_def.h"
+#include "oneflow/core/framework/user_op_conf.h"
 
 namespace oneflow {
 
 class Shape;
 enum DataType;
-class UserOpConf;
 
 namespace user_op {
 
 class UserOpDefWrapper;
-class UserOpConfWrapper;
 
 using Shape4ArgNameAndIndexFn = std::function<Shape*(const std::string&, int32_t)>;
 using Dtype4ArgNameAndIndexFn = std::function<DataType*(const std::string&, int32_t)>;
@@ -22,7 +21,7 @@ using Arg2BlobDef = HashMap<std::pair<std::string, int32_t>, BlobDef>;
 
 class InferContext final {
  public:
-  InferContext(const UserOpConf*, Arg2BlobDef&&);
+  InferContext(UserOpConfWrapper&&, Arg2BlobDef&&);
   ~InferContext() = default;
   InferContext(const InferContext&) = delete;
   InferContext(InferContext&&) = delete;
@@ -33,10 +32,12 @@ class InferContext final {
   const ArgVec& outputs() const;
 
   template<typename T>
-  T GetAttr(const std::string&) const;
+  T GetAttr(const std::string& attr_name) const {
+    return conf_.attr<T>(attr_name);
+  }
 
  private:
-  const UserOpConf* conf_;
+  UserOpConfWrapper conf_;
   ArgVec inputs_;
   ArgVec outputs_;
   Arg2BlobDef arg2blob_def_;
@@ -53,7 +54,7 @@ struct DtypeInferFnUtil {
 };
 
 struct CheckAttrFnUtil {
-  static Maybe<void> NoCheck(const UserOpDefWrapper&, const UserOpConf&);
+  static Maybe<void> NoCheck(const UserOpDefWrapper&, const UserOpConfWrapper&);
 };
 
 struct TmpSizeInferFnUtil {

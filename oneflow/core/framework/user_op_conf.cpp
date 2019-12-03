@@ -9,12 +9,13 @@ namespace oneflow {
 
 namespace user_op {
 
-UserOpConfWrapper::UserOpConfWrapper(const OperatorConf& op_conf) {
-  CHECK(op_conf.has_user_conf());
-  op_conf_ = *CHECK_JUST(CheckAndCompleteUserOpConfImpl(op_conf));
+UserOpConfWrapper::UserOpConfWrapper(const OperatorConf& op_conf) : op_conf_(op_conf) {
+  CHECK(op_conf_.has_user_conf());
 }
 
 const OperatorConf& UserOpConfWrapper::op_conf() const { return op_conf_; }
+
+const UserOpConf& UserOpConfWrapper::user_op_conf() const { return op_conf_.user_conf(); }
 
 const std::string& UserOpConfWrapper::op_name() const { return op_conf_.name(); }
 
@@ -143,7 +144,7 @@ UserOpConfWrapper UserOpConfWrapperBuilder::Build() {
   GenArgs(input_, user_conf->mutable_input());
   GenArgs(output_, user_conf->mutable_output());
   for (const auto& pair : attr_) { (*user_conf->mutable_attr())[pair.first] = pair.second; }
-  wrapper_ = UserOpConfWrapper(op_conf);
+  wrapper_ = UserOpConfWrapper(*CHECK_JUST(CheckAndCompleteUserOpConfImpl(op_conf)));
   return wrapper_;
 }
 
@@ -248,7 +249,7 @@ Maybe<OperatorConf> CheckAndCompleteUserOpConfImpl(const OperatorConf& op_conf) 
   JUST(CheckArgDefIsValidInUserOpConf(op_conf, user_conf->input(), op_def.input()));
   JUST(CheckArgDefIsValidInUserOpConf(op_conf, user_conf->output(), op_def.output()));
   // check attr valid by user
-  JUST(val->check_fn(user_op::UserOpDefWrapper(op_def), *user_conf));
+  JUST(val->check_fn(user_op::UserOpDefWrapper(op_def), user_op::UserOpConfWrapper(ret)));
   return ret;
 }
 

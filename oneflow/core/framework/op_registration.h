@@ -14,7 +14,7 @@ namespace user_op {
 class UserOpDefWrapper;
 class UserOpConfWrapper;
 
-using CheckAttrFn = std::function<Maybe<void>(const UserOpDefWrapper&, const UserOpConf&)>;
+using CheckAttrFn = std::function<Maybe<void>(const UserOpDefWrapper&, const UserOpConfWrapper&)>;
 using ShapeInferFn = std::function<Maybe<void>(InferContext*)>;
 using DtypeInferFn = std::function<Maybe<void>(InferContext*)>;
 using GetSbpFn = std::function<Maybe<void>(/*TODO(niuchong): what is the para*/)>;

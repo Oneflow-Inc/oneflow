@@ -19,6 +19,7 @@ class UserOpConfWrapper final {
  public:
   UserOpConfWrapper(const OperatorConf&);
   const OperatorConf& op_conf() const;
+  const UserOpConf& user_op_conf() const;
   const std::string& op_name() const;
   const std::string& op_type_name() const;
   const std::string& input(const std::string& arg_name, int32_t index) const;
