@@ -16,13 +16,21 @@ class ActivationOp : public TrtOpKernel {
 
     nvinfer1::ITensor *in = ctx->Input("in");
     auto *layer = ctx->builder()->addActivation(*in, activation_type);
+    layer->setName(ctx->op_name().c_str());
     ctx->SetOutput("out", layer->getOutput(0));
   }
 };
 
-REGISTER_TRT_OP_KERNEL(Tanh, ActivationOp<nvinfer1::ActivationType::kTANH>).EnableTrainPhase().Finalize();
-REGISTER_TRT_OP_KERNEL(Relu, ActivationOp<nvinfer1::ActivationType::kRELU>).EnableTrainPhase().Finalize();
-REGISTER_TRT_OP_KERNEL(Sigmoid, ActivationOp<nvinfer1::ActivationType::kSIGMOID>).EnableTrainPhase().Finalize();
+REGISTER_TRT_OP_KERNEL(Tanh, ActivationOp<nvinfer1::ActivationType::kTANH>)
+    .EnableTrainPhase()
+    .Finalize();
+REGISTER_TRT_OP_KERNEL(Relu, ActivationOp<nvinfer1::ActivationType::kRELU>)
+    .EnableTrainPhase()
+    .Finalize();
+REGISTER_TRT_OP_KERNEL(Sigmoid,
+                       ActivationOp<nvinfer1::ActivationType::kSIGMOID>)
+    .EnableTrainPhase()
+    .Finalize();
 
 }  // namespace tensorrt
 }  // namespace xrt

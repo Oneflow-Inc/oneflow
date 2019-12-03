@@ -81,6 +81,8 @@ class TrtBuilder {
   util::Map<int64_t, nvinfer1::ITensor *> tensors_;
   util::Map<int64_t, nvinfer1::Weights> weights_;
 
+  util::Map<std::string, std::shared_ptr<std::vector<uint8_t> > > host_weights_;
+
  public:
   explicit TrtBuilder(const std::string &name)
       : builder_name_(name), next_handle_(0) {
@@ -121,6 +123,11 @@ class TrtBuilder {
 
   nv::unique_ptr<nvinfer1::INetworkDefinition> ReleaseNetwork() {
     return std::move(network_);
+  }
+
+  const util::Map<std::string, std::shared_ptr<std::vector<uint8_t> > >
+      &host_weights() const {
+    return host_weights_;
   }
 
   void MarkOutput(int64_t handle) {

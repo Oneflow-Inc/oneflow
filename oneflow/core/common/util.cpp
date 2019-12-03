@@ -47,9 +47,13 @@ double oneflow_cast(const std::string& s) {
   return ret;
 }
 
-#if defined(PLATFORM_POSIX) && !defined(WITH_TENSORRT)
+#ifdef PLATFORM_POSIX
+#ifdef WITH_TENSORRT
+COMMAND(feenableexcept(FE_ALL_EXCEPT & ~FE_INEXACT & ~FE_UNDERFLOW & ~FE_OVERFLOW));
+#else
 COMMAND(feenableexcept(FE_ALL_EXCEPT & ~FE_INEXACT & ~FE_UNDERFLOW));
-#endif
+#endif  // WITH_TENSORRT
+#endif  // PLATFORM_POSIX
 
 size_t GetAvailableCpuMemSize() {
 #ifdef PLATFORM_POSIX

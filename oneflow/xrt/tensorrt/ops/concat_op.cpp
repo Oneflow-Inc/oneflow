@@ -25,6 +25,7 @@ class ConcatOp : public TrtOpKernel {
     }
     auto *layer = ctx->builder()->addConcatenation(in.data(), num_inputs);
     layer->setAxis(axis);
+    layer->setName(ctx->op_name());
     ctx->SetOutput("out", layer->getOutput(0));
   }
 };
