@@ -338,6 +338,74 @@ struct DataTransformer<DataSourceCase::kImage, TransformCase::kImageNormalizeByC
 };
 
 template<>
+struct DataTransformer<DataSourceCase::kImage, TransformCase::kImageRandomFlip> {
+  using ImageFieldT = typename DataFieldTrait<DataSourceCase::kImage>::type;
+  using BboxFieldT = typename DataFieldTrait<DataSourceCase::kObjectBoundingBox>::type;
+  using SegmPolyFieldT = typename DataFieldTrait<DataSourceCase::kObjectSegmentation>::type;
+  using BBoxT = typename BboxFieldT::data_type;
+  using PolyT = typename SegmPolyFieldT::data_type;
+
+  static void Apply(DataInstance* data_inst, const DataTransformProto& proto) {
+    std::random_device r;
+    std::mt19937 gen(r());
+    std::uniform_int_distribution<int> dist(0, 99);
+    float p = dist(gen) / 100.0f;
+    if (p >= proto.image_random_flip().probability()) { return; }
+
+    auto* image_field = dynamic_cast<ImageFieldT*>(data_inst->GetField<DataSourceCase::kImage>());
+    if (!image_field) { return; }
+    auto& image_mat = image_field->data();
+    int flip_code = proto.image_random_flip().flip_code();
+    cv::flip(image_mat, image_mat, flip_code);
+    int image_height = image_mat.rows;
+    int image_width = image_mat.cols;
+
+    auto* bbox_field =
+        dynamic_cast<BboxFieldT*>(data_inst->GetField<DataSourceCase::kObjectBoundingBox>());
+    if (bbox_field) { 
+      auto& bbox_vec = bbox_field->data();
+      CHECK_EQ(bbox_vec.size() % 4, 0);
+      size_t num_bbox = bbox_vec.size() / 4;
+      BBoxT* bbox_ptr = bbox_vec.data();
+      FOR_RANGE(size_t, i, 0, num_bbox) {
+        if (flip_code <= 0) {
+          BBoxT ymin = bbox_ptr[1];
+          BBoxT ymax = bbox_ptr[3];
+          bbox_ptr[1] = image_height - ymax;
+          bbox_ptr[3] = image_height - ymin;
+        }
+        if (flip_code != 0) {
+          // why x axis coordinate removes 1 but y axis does not? (follow fb maskrcnn)
+          const BBoxT TO_REMOVE = 1;
+          BBoxT xmin = bbox_ptr[0];
+          BBoxT xmax = bbox_ptr[2];
+          bbox_ptr[0] = image_width - xmax - TO_REMOVE;
+          bbox_ptr[2] = image_width - xmin - TO_REMOVE;
+        }
+        bbox_ptr += 4;
+      }
+    }
+
+    auto* poly_field =
+        dynamic_cast<SegmPolyFieldT*>(data_inst->GetField<DataSourceCase::kObjectSegmentation>());
+    if (poly_field) {
+      PolyT* poly_ptr = poly_field->data();
+      FOR_RANGE(size_t, i, 0, poly_field->total_length()) {
+        if (i % 2 == 0) {
+          if (flip_code != 0) {
+            poly_ptr[i] = image_width - poly_ptr[i];
+          }
+        } else {
+          if (flip_code <= 0) {
+            poly_ptr[i] = image_height - poly_ptr[i];
+          }
+        }
+      }
+    }
+  }
+};
+
+template<>
 void DoDataTransform<TransformCase::kResize>(DataInstance* data_inst,
                                              const DataTransformProto& proto) {
   CHECK(proto.has_resize());
@@ -383,6 +451,13 @@ void DoDataTransform<TransformCase::kImageNormalizeByChannel>(DataInstance* data
                                                                                           proto);
 }
 
+template<>
+void DoDataTransform<TransformCase::kImageRandomFlip>(DataInstance* data_inst,
+                                                      const DataTransformProto& proto) {
+  CHECK(proto.has_image_random_flip());
+  DataTransformer<DataSourceCase::kImage, TransformCase::kImageRandomFlip>::Apply(data_inst, proto);
+}
+
 #define DEFINE_MULTI_THREAD_BATCH_TRANSFORM(trans)                                             \
   template<>                                                                                   \
   void DoBatchTransform<trans>(std::shared_ptr<std::vector<DataInstance>> batch_data_inst_ptr, \
@@ -398,6 +473,7 @@ DEFINE_MULTI_THREAD_BATCH_TRANSFORM(TransformCase::kTargetResize)
 DEFINE_MULTI_THREAD_BATCH_TRANSFORM(TransformCase::kSegmentationPolyToMask)
 DEFINE_MULTI_THREAD_BATCH_TRANSFORM(TransformCase::kSegmentationPolyToAlignedMask)
 DEFINE_MULTI_THREAD_BATCH_TRANSFORM(TransformCase::kImageNormalizeByChannel)
+DEFINE_MULTI_THREAD_BATCH_TRANSFORM(TransformCase::kImageRandomFlip)
 
 template<>
 void DoBatchTransform<TransformCase::kImageAlign>(
@@ -457,6 +533,7 @@ void DataTransform(DataInstance* data_inst, const DataTransformProto& trans_prot
     MAKE_CASE(DataTransformProto::kTargetResize)
     MAKE_CASE(DataTransformProto::kSegmentationPolyToMask)
     MAKE_CASE(DataTransformProto::kImageNormalizeByChannel)
+    MAKE_CASE(DataTransformProto::kImageRandomFlip)
     default: { UNIMPLEMENTED(); }
   }
 #undef MAKE_CASE
@@ -477,6 +554,7 @@ void BatchTransform(std::shared_ptr<std::vector<DataInstance>> batch_data_inst_p
     MAKE_CASE(DataTransformProto::kSegmentationPolyToAlignedMask)
     MAKE_CASE(DataTransformProto::kImageNormalizeByChannel)
     MAKE_CASE(DataTransformProto::kImageAlign)
+    MAKE_CASE(DataTransformProto::kImageRandomFlip)
     default: { UNIMPLEMENTED(); }
   }
 #undef MAKE_CASE
