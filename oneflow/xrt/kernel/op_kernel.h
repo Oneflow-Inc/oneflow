@@ -110,7 +110,7 @@ inline bool OpKernelRegistered(const std::string &op_type,
 }
 
 template <typename T>
-inline const T &LookupOpKernelAttribute(const std::string &op_type,
+inline const T &LookupOpKernelAttr(const std::string &op_type,
                                         const XrtField &field,
                                         const std::string &attr_name) {
   auto *rm = util::RegistryManager<XrtField>::Global();
@@ -125,19 +125,19 @@ inline const T &LookupOpKernelAttribute(const std::string &op_type,
 
 inline const util::Set<std::string> &MutableVariables(
     const std::string &op_type, const XrtField &field) {
-  return LookupOpKernelAttribute<util::Set<std::string>>(
+  return LookupOpKernelAttr<util::Set<std::string>>(
       op_type, field, MutableVariablesAttrName);
 }
 
 inline const bool &TrainPhaseEnabled(const std::string &op_type,
                                      const XrtField &field) {
-  return LookupOpKernelAttribute<bool>(op_type, field,
+  return LookupOpKernelAttr<bool>(op_type, field,
                                        TrainPhaseEnabledAttrName);
 }
 
 inline const bool &IsOptimizerOp(const std::string &op_type,
                                  const XrtField &field) {
-  return LookupOpKernelAttribute<bool>(op_type, field, IsOptimizerOpAttrName);
+  return LookupOpKernelAttr<bool>(op_type, field, IsOptimizerOpAttrName);
 }
 
 }  // namespace xrt
