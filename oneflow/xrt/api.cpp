@@ -54,7 +54,7 @@ static std::unordered_map<int32_t, std::string> op_type2string_map = {
     {OP_TYPE_CASE(Gather), "Gather"},
     {OP_TYPE_CASE(UnsortedSegmentSum), "UnsortedSegmentSum"},
     {OP_TYPE_CASE(BatchGather), "BatchGather"},
-  //  {OP_TYPE_CASE(Softmax), "Softmax"},
+    {OP_TYPE_CASE(Softmax), "Softmax"},
     {OP_TYPE_CASE(SoftmaxGrad), "SoftmaxGrad"},
     {OP_TYPE_CASE(LayerNorm), "LayerNorm"},
     {OP_TYPE_CASE(LayerNormParamGrad), "LayerNormParamGrad"},
