@@ -1964,6 +1964,12 @@ message ParallelCastOpConf {
   optional OptInt64 gradient_split_axis = 4;
 }
 
+message RandomLikeOpConf {
+  required string like = 1;
+  required string out = 2;
+  optional int64 random_seed = 3;
+}
+
 message OperatorConf {
   required string name = 1;
   optional bool trainable = 3 [default = true];
@@ -2171,6 +2177,7 @@ message OperatorConf {
     ScalarMulOpConf scalar_mul_conf = 517;
     ReduceMaxOpConf reduce_max_conf = 518;
     ArgmaxOpConf argmax_conf = 519;
+    RandomLikeOpConf random_like_conf = 520;
 
     // detection op
     MaskrcnnPositiveNegativeSampleOpConf maskrcnn_positive_negative_sample_conf = 601;
