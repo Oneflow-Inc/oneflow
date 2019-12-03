@@ -92,7 +92,8 @@ set(oneflow_third_party_dependencies
   half_copy_headers_to_destination
 )
 
-include_directories(
+
+list(APPEND ONEFLOW_INCLUDE_SRC_DIRS
     ${ZLIB_INCLUDE_DIR}
     ${GFLAGS_INCLUDE_DIR}
     ${GLOG_INCLUDE_DIR}
@@ -119,11 +120,11 @@ if (BUILD_CUDA)
   list(APPEND oneflow_third_party_dependencies nccl_copy_headers_to_destination)
   list(APPEND oneflow_third_party_dependencies nccl_copy_libs_to_destination)
 
-  include_directories(
+  list(APPEND ONEFLOW_INCLUDE_SRC_DIRS
     ${CUDNN_INCLUDE_DIRS}
     ${CUB_INCLUDE_DIR}
     ${NCCL_INCLUDE_DIR}
-)
+  )
 endif()
 
 if(BUILD_RDMA)
@@ -146,6 +147,8 @@ if(BUILD_RDMA)
     message(FATAL_ERROR "UNIMPLEMENTED")
   endif()
 endif()
+
+include_directories(${ONEFLOW_INCLUDE_SRC_DIRS})
 
 message(STATUS "oneflow_third_party_libs: " ${oneflow_third_party_libs})
 

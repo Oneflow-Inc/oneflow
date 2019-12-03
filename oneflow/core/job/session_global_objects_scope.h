@@ -14,6 +14,9 @@ class SessionGlobalObjectsScope final {
   ~SessionGlobalObjectsScope();
 
   Maybe<void> Init(const ConfigProto& config_proto);
+
+ private:
+  HashSet<void*> lib_handles_;
 };
 
 }  // namespace oneflow

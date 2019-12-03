@@ -37,6 +37,12 @@ def _DefaultConfigProto():
     _TryCompleteDefaultConfigProto(config_proto)
     return config_proto
 
+@oneflow_export('config.load_library')
+def loadlibray(val):
+    assert config_proto_mutable == True
+    assert type(val) is str
+    default_config_proto.load_lib_path.append(val)
+
 @oneflow_export('config.machine_num')
 def machine_num(val):
     assert config_proto_mutable == True
