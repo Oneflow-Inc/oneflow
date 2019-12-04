@@ -6,8 +6,7 @@
 
 namespace oneflow {
 
-Maybe<void> LoadLibrary(const std::string& lib_path, void** handle);
-Maybe<void> UnloadLibrary(void* handle);
+Maybe<void> LoadLibrary(const std::string& lib_path);
 
 }  // namespace oneflow
 

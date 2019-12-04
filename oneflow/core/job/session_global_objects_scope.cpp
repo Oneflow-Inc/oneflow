@@ -74,15 +74,12 @@ Maybe<void> SessionGlobalObjectsScope::Init(const ConfigProto& config_proto) {
     Global<RuntimeBufferManagersScope>::New();
   }
   for (const std::string lib_path : config_proto.load_lib_path()) {
-    void* handle = nullptr;
-    JUST(LoadLibrary(lib_path, &handle));
-    lib_handles_.insert(handle);
+    JUST(LoadLibrary(lib_path));
   }
   return Maybe<void>::Ok();
 }
 
 SessionGlobalObjectsScope::~SessionGlobalObjectsScope() {
-  // for (void* handle : lib_handles_) { UnloadLibrary(handle); }
   if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
     Global<RuntimeBufferManagersScope>::Delete();
     Global<JobSetCompileCtx>::Delete();
