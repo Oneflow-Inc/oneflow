@@ -683,8 +683,6 @@ if __name__ == "__main__":
 
             if terminal_args.jupyter:
                 import altair as alt
-                from vega_datasets import data
-
                 import pandas as pd
 
                 loss_data_frame = pd.DataFrame(
