@@ -218,9 +218,6 @@ Maybe<void> AddUserOpConfOutputDefaultArg(const UserOpDef& op_def, OperatorConf*
   UserOpConf* user_conf = op_conf->mutable_user_conf();
   // add default output arg and lbn
   for (const auto& output_arg : op_def.output()) {
-    LOG(INFO) << "cclog: output arg_name: " << output_arg.name()
-              << " is_optional: " << output_arg.is_optional()
-              << " num_as_min: " << output_arg.num_as_min();
     if (user_conf->output().find(output_arg.name()) == user_conf->output().end()
         && (!output_arg.is_optional()) && (!output_arg.num_as_min())) {
       for (int32_t i = 0; i < output_arg.num(); ++i) {

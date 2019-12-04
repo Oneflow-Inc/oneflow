@@ -25,26 +25,6 @@ class UserOpConfWrapper(object):
                 lbi.op_name = self.op_conf_.name
                 lbi.blob_name = k + '_' + str(i)
                 remote_blob_list.append(remote_blob_util.RemoteBlob(lbi))
-        # cclog:
-        print("cclog: op_name: ", self.op_conf_.name, "\n")
-        print("cclog: op_type_name: ", self.op_conf_.user_conf.op_type_name, "\n")
-        print("cclog: input: \n")
-        for k in self.op_conf_.user_conf.input:
-            for i in range(len(self.op_conf_.user_conf.input[k].s)):
-                print("cclog: input_name: ", k, " lbn: ", self.op_conf_.user_conf.input[k].s[i])
-        print("cclog: output: \n")
-        for k in self.op_conf_.user_conf.output:
-            for i in range(len(self.op_conf_.user_conf.output[k].s)):
-                print("cclog: output_name: ", k, " lbn: ", self.op_conf_.user_conf.output[k].s[i])
-        print("cclog: attr: \n")
-        for k in self.op_conf_.user_conf.attr:
-            print("cclog: attr_name: ", k)
-            # TODO(); print attr val
-        print("cclog: remote blob: \n")
-        for blob in remote_blob_list:
-            print("cclog: blob_name: ", blob.logical_blob_name, " shape: ", blob.shape)
-        print("cclog Done: \n")
-        # cclog Done;
         return tuple(remote_blob_list)
 
 @oneflow_export('user_op_builder')
@@ -56,7 +36,6 @@ class UserOpConfWrapperBuilder(object):
         assert self.user_op_.op_conf_.user_conf.op_type_name is not ""
         self.user_op_.op_conf_ = \
             job_builder.CurCtxCheckAndCompleteUserOpConf(self.user_op_.op_conf_)
-        print("cclog: op conf: ", self.user_op_.op_conf_)
         return self.user_op_
 
     def Op(self, op_type_name):
