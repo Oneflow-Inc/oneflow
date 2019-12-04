@@ -13,14 +13,7 @@ class KernelCtx;
 
 namespace user_op {
 
-class KernelInitContext final {
- public:
-  KernelInitContext() = default;
-  ~KernelInitContext() = default;
-  explicit KernelInitContext(const KernelInitContext&) {}
-
- private:
-};
+class KernelInitContext final {};
 
 class OpKernel {
  public:

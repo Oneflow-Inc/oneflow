@@ -107,6 +107,50 @@ class UserOpKernelRegContext final : public user_op::KernelRegContext {
   HashMap<std::pair<std::string, int32_t>, user_op::BlobDef> arg2tensor_desc_;
 };
 
+class UserOpInferContext : public user_op::InferContext {
+ public:
+  using ArgVec = std::vector<std::pair<std::string, int32_t>>;
+
+  UserOpInferContext(const OperatorConf& op_conf,
+                     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp)
+      : user_op::InferContext(user_op::UserOpConfWrapper(op_conf)) {
+    const auto& user_op_conf = op_conf.user_conf();
+    for (auto it = user_op_conf.input().begin(); it != user_op_conf.input().end(); ++it) {
+      const std::string& arg_name = it->first;
+      for (int32_t i = 0; i < it->second.s_size(); ++i) {
+        BlobDesc* blob = GetBlobDesc4BnInOp(GenRepeatedBn(arg_name, i));
+        arg2blob_def_.emplace(std::make_pair(arg_name, i),
+                              user_op::BlobDef(blob->shape(), blob->data_type()));
+        inputs_.emplace_back(std::make_pair(arg_name, i));
+      }
+    }
+    for (auto it = user_op_conf.output().begin(); it != user_op_conf.output().end(); ++it) {
+      const std::string& arg_name = it->first;
+      for (int32_t i = 0; i < it->second.s_size(); ++i) {
+        BlobDesc* blob = GetBlobDesc4BnInOp(GenRepeatedBn(arg_name, i));
+        arg2blob_def_.emplace(std::make_pair(arg_name, i),
+                              user_op::BlobDef(blob->shape(), blob->data_type()));
+        outputs_.emplace_back(std::make_pair(arg_name, i));
+      }
+    }
+  }
+  ~UserOpInferContext() = default;
+
+  Shape* Shape4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
+    return arg2blob_def_.at(std::make_pair(arg_name, index)).mut_shape();
+  }
+  DataType* Dtype4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
+    return arg2blob_def_.at(std::make_pair(arg_name, index)).mut_data_type();
+  }
+  const ArgVec& inputs() const { return inputs_; }
+  const ArgVec& outputs() const { return outputs_; }
+
+ private:
+  ArgVec inputs_;
+  ArgVec outputs_;
+  HashMap<std::pair<std::string, int32_t>, user_op::BlobDef> arg2blob_def_;
+};
+
 void UserOp::InitFromOpConf() {
   CHECK(op_conf().has_user_conf());
   for (const auto& pair : op_conf().user_conf().input()) {
@@ -132,27 +176,7 @@ Maybe<void> UserOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> 
     for (const std::string& obn : output_bns()) { *GetBlobDesc4BnInOp(obn) = *first_in_blob_desc; }
   }
 
-  // construct InferContext
-  const auto& user_op_conf = op_conf().user_conf();
-  user_op::Arg2BlobDef arg2blob_def;
-  for (auto it = user_op_conf.input().begin(); it != user_op_conf.input().end(); ++it) {
-    const std::string& arg_name = it->first;
-    for (int32_t i = 0; i < it->second.s_size(); ++i) {
-      BlobDesc* blob = GetBlobDesc4BnInOp(GenRepeatedBn(arg_name, i));
-      arg2blob_def.emplace(std::make_pair(arg_name, i),
-                           user_op::BlobDef(blob->shape(), blob->data_type()));
-    }
-  }
-  for (auto it = user_op_conf.output().begin(); it != user_op_conf.output().end(); ++it) {
-    const std::string& arg_name = it->first;
-    for (int32_t i = 0; i < it->second.s_size(); ++i) {
-      BlobDesc* blob = GetBlobDesc4BnInOp(GenRepeatedBn(arg_name, i));
-      arg2blob_def.emplace(std::make_pair(arg_name, i),
-                           user_op::BlobDef(blob->shape(), blob->data_type()));
-    }
-  }
-
-  user_op::InferContext infer_ctx(user_op::UserOpConfWrapper(op_conf()), std::move(arg2blob_def));
+  UserOpInferContext infer_ctx(op_conf(), GetBlobDesc4BnInOp);
 
   JUST(val->shape_infer_fn(&infer_ctx));
   JUST(val->dtype_infer_fn(&infer_ctx));
@@ -162,7 +186,7 @@ Maybe<void> UserOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> 
     out_blob_desc->mut_shape() = *(infer_ctx.Shape4ArgNameAndIndex(pair.first, pair.second));
   }
 
-  // infer tmp buffer size must after infer out shape/dtype
+  // tmp buffer size must be inferred after out shape/dtype
   const user_op::KernelRegistrationVal* kernel_reg_val = user_op::LookUpInKernelRegistry(
       op_conf().user_conf().op_type_name(),
       UserOpKernelRegContext(this, GetBlobDesc4BnInOp, parallel_ctx));
