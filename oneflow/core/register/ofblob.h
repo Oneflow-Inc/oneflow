@@ -31,10 +31,29 @@ class OfBlob final {
   template<typename T>
   void AutoMemCopyFrom(const T* ptr, int64_t len) const;
 
+  int64_t NumOfTensorListSlices() const;
+  int64_t TensorIndex4SliceId(int32_t slice_id) const;
+  void AddTensorListSlice() const;
+
+  void ResetTensorIterator();
+  void ResetMutTensorIterator();
+  void IncTensorIterator();
+  void IncMutTensorIterator();
+  bool CurTensorIteratorEqEnd() const { return static_cast<bool>(cur_tensor_); }
+  bool CurMutTensorIteratorEqEnd() const { return static_cast<bool>(cur_mut_tensor_); }
+  void CurTensorCopyShapeTo(int64_t* ptr, int64_t num_axis) const;
+  void CurMutTensorCopyShapeFrom(const int64_t* ptr, int64_t num_axis) const;
+  template<typename T>
+  void CurTensorAutoMemCopyTo(T* ptr, int64_t len) const;
+  template<typename T>
+  void CurMutTensorAutoMemCopyFrom(const T* ptr, int64_t len) const;
+
  private:
   DeviceCtx* device_ctx_;
   Blob* blob_;
   MemoryCase mem_case_;
+  std::unique_ptr<TensorView> cur_tensor_;
+  std::unique_ptr<FullyMutTensorView> cur_mut_tensor_;
 };
 
 inline void OfBlob::CopyShapeFrom(const int64_t* ptr, int64_t num_axis) const {
@@ -88,6 +107,54 @@ inline void OfBlob::SetLoDTree(const LoDTree& lod_tree) const {
   CHECK_EQ(lod_tree.offset(), 0);
   CHECK_EQ(lod_tree.length(), blob_->shape().At(0));
   blob_->tree_lod_mut_view().UpdateLoD(lod_tree);
+}
+
+inline int64_t OfBlob::NumOfTensorListSlices() const { return blob_->num_of_tensor_list_slices(); }
+
+inline int64_t OfBlob::TensorIndex4SliceId(int32_t slice_id) const {
+  return blob_->tensor_index4slice_id(slice_id);
+}
+
+inline void OfBlob::AddTensorListSlice() const { return blob_->add_tensor_list_slice(); }
+
+inline void OfBlob::ResetTensorIterator() { cur_tensor_ = blob_->first_tensor(); }
+
+inline void OfBlob::ResetMutTensorIterator() {
+  blob_->clear_tensor_lists();
+  cur_mut_tensor_.reset();
+  cur_mut_tensor_ = blob_->add_tensor(cur_mut_tensor_.get());
+}
+
+inline void OfBlob::IncTensorIterator() { cur_tensor_ = blob_->next_tensor(*cur_tensor_); }
+
+inline void OfBlob::IncMutTensorIterator() {
+  cur_mut_tensor_ = blob_->add_tensor(cur_mut_tensor_.get());
+}
+
+inline void OfBlob::CurTensorCopyShapeTo(int64_t* ptr, int64_t num_axis) const {
+  CHECK_EQ(num_axis, NumAxes());
+  DenseShapeMutView(ptr, num_axis).set_shape(cur_tensor_->shape());
+}
+
+inline void OfBlob::CurMutTensorCopyShapeFrom(const int64_t* ptr, int64_t num_axis) const {
+  CHECK_EQ(num_axis, NumAxes());
+  cur_mut_tensor_->set_shape(DenseShapeView(ptr, num_axis));
+}
+
+template<typename T>
+void OfBlob::CurTensorAutoMemCopyTo(T* ptr, int64_t len) const {
+  CHECK_EQ(cur_tensor_->shape().elem_cnt(), len);
+  CHECK(cur_tensor_->data_type() == GetDataType<T>::value);
+  SyncAutoMemcpy(device_ctx_, ptr, cur_tensor_->dptr(), len * sizeof(T), mem_case_,
+                 blob_->mem_case());
+}
+
+template<typename T>
+void OfBlob::CurMutTensorAutoMemCopyFrom(const T* ptr, int64_t len) const {
+  CHECK_EQ(cur_mut_tensor_->shape().elem_cnt(), len);
+  CHECK(cur_mut_tensor_->data_type() == GetDataType<T>::value);
+  SyncAutoMemcpy(device_ctx_, cur_mut_tensor_->mut_dptr(), ptr, len * sizeof(T), blob_->mem_case(),
+                 mem_case_);
 }
 
 }  // namespace oneflow

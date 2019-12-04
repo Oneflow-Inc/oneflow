@@ -109,19 +109,32 @@ std::unique_ptr<DataOnlyMutTensorView> Blob::next_mut_tensor(const DataOnlyMutTe
                                                  reinterpret_cast<void*>(mem_ptr));
 }
 
-std::unique_ptr<FullyMutTensorView> Blob::add_tensor() {
-  Range range;
-  int32_t slice_id = num_of_tensor_list_slices();
-  *mut_header_field(FieldKey::kShapeListSlicesLength) += 1;
-  int64_t shape_offset = 0;
-  int64_t data_offset = 0;
-  GetTensorListInfoBySliceId(slice_id, &range, &shape_offset, &data_offset);
-  char* mem_ptr = reinterpret_cast<char*>(mut_dptr()) + data_offset;
-  auto* ret = new FullyMutTensorView(mut_header_field(FieldKey::kDenseShape) + shape_offset,
-                                     static_shape().NumAxes(), data_type(),
-                                     reinterpret_cast<void*>(mem_ptr + data_offset),
-                                     blob_desc().ByteSizeOfBlobBody() - data_offset);
-  return std::unique_ptr<FullyMutTensorView>(ret);
+std::unique_ptr<FullyMutTensorView> Blob::add_tensor(const FullyMutTensorView* last) {
+  if (last == nullptr) {
+    CHECK_EQ(total_num_of_tensors(), 0);
+  } else {
+    int32_t shape_offset = (total_num_of_tensors() - 1) * static_shape().NumAxes();
+    CHECK_EQ(last->shape().ptr(), header_field(FieldKey::kDenseShape) + shape_offset);
+  }
+  *mut_header_field(FieldKey::kDenseShapeListLength) += 1;
+  if (last == nullptr) {
+    return std::make_unique<FullyMutTensorView>(mut_header_field(FieldKey::kDenseShape),
+                                                static_shape().NumAxes(), data_type(), mut_dptr(),
+                                                blob_desc().ByteSizeOfBlobBody());
+  }
+  int64_t* shape_ptr = last->mut_shape_ptr() + static_shape().NumAxes();
+  size_t shape_list_size =
+      blob_desc().header_pod_desc().Field(FieldKey::kDenseShape).ByteSize() / sizeof(int64_t);
+  const int64_t* end_shape_ptr = header_field(FieldKey::kDenseShape) + shape_list_size;
+  CHECK_LE(shape_ptr, end_shape_ptr);
+  if (shape_ptr == end_shape_ptr) { return std::unique_ptr<FullyMutTensorView>(); }
+  char* mem_ptr = reinterpret_cast<char*>(last->mut_dptr());
+  mem_ptr += last->shape().elem_cnt() * GetSizeOfDataType(data_type());
+  char* end_ptr = reinterpret_cast<char*>(mut_dptr()) + blob_desc().ByteSizeOfBlobBody();
+  CHECK_LE(mem_ptr, end_ptr);
+  if (mem_ptr == end_ptr) { return std::unique_ptr<FullyMutTensorView>(); }
+  return std::make_unique<FullyMutTensorView>(shape_ptr, static_shape().NumAxes(), data_type(),
+                                              reinterpret_cast<void*>(mem_ptr), end_ptr - mem_ptr);
 }
 
 size_t Blob::num_of_tensor_list_slices() const {
