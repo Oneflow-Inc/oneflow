@@ -7,6 +7,7 @@ import "oneflow/core/record/image.proto";
 import "oneflow/core/record/record.proto";
 import "oneflow/core/job/resource.proto";
 import "oneflow/core/register/logical_blob_id.proto";
+import "oneflow/core/framework/user_op_conf.proto";
 
 enum ActivationType {
   kNone = 0;
@@ -1593,6 +1594,7 @@ message OperatorConf {
     DistributeSplitOpConf distribute_split_conf = 156;
     DistributeCloneOpConf distribute_clone_conf = 157;
     DistributeAddOpConf distribute_add_conf = 158;
+    UserOpConf user_conf = 199;
 
     // domain op
     TupleIdentityOpConf tuple_identity_conf = 200;
