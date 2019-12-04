@@ -73,8 +73,8 @@ def make_data_loader(
     return data_loader
 
 
-@distribute_execute(terminal_args.gpu_num_per_node, 1, "eval")
-def maskrcnn_eval(dist_ctx, config, images, image_sizes, image_ids):
+@flow.experimental.mirror_execute(terminal_args.gpu_num_per_node, 1)
+def maskrcnn_eval(images, image_sizes, image_ids):
     cfg = get_default_cfgs()
     if terminal_args.config_file is not None:
         cfg.merge_from_file(terminal_args.config_file)
@@ -135,11 +135,7 @@ if terminal_args.fake_img:
         image_sizes = data_loader("image_size")
         image_ids = data_loader("image_id")
 
-        images_list = flow.advanced.distribute_split(images)
-        image_sizes_list = flow.advanced.distribute_split(image_sizes)
-        image_ids_list = flow.advanced.distribute_split(image_ids)
-
-        return maskrcnn_eval(None, images_list, image_sizes_list, image_ids_list)
+        return maskrcnn_eval(images, image_sizes, image_ids)
 
 
 else:
@@ -157,11 +153,7 @@ else:
         image_sizes = data_loader("image_size")
         image_ids = data_loader("image_id")
 
-        images_list = flow.advanced.distribute_split(images)
-        image_sizes_list = flow.advanced.distribute_split(image_sizes)
-        image_ids_list = flow.advanced.distribute_split(image_ids)
-
-        return maskrcnn_eval(None, images_list, image_sizes_list, image_ids_list)
+        return maskrcnn_eval(images, image_sizes, image_ids)
 
 
 # return: (list of BoxList wrt. images, list of image_is wrt. image)
@@ -192,7 +184,7 @@ def GenPredictionsAndImageIds(results):
 
 if __name__ == "__main__":
     flow.config.gpu_device_num(terminal_args.gpu_num_per_node)
-    flow.config.ctrl_port(terminal_args.ctrl_port)
+    flow.env.ctrl_port(terminal_args.ctrl_port)
     flow.config.default_data_type(flow.float)
     flow.config.cudnn_conv_heuristic_search_algo(True)
     flow.config.cudnn_conv_use_deterministic_algo_only(False)
