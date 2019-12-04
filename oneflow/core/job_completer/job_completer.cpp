@@ -14,6 +14,7 @@
 #include "oneflow/core/job_completer/nccl_tuple_broadcast_reduce_sequence_pass.h"
 #include "oneflow/core/job_completer/auto_train_step.h"
 #include "oneflow/core/job_completer/auto_learning_rate.h"
+#include "oneflow/core/job_completer/add_lbi_diff_watcher.h"
 
 #include "oneflow/core/job_completer/xrt_compilation.h"
 
@@ -362,6 +363,7 @@ void JobCompleter::Complete(Job* job) const {
     WithOpGraphAndMutJobBuilder(job, &GenerateOpConf4Trainning);
     WithOpGraphAndMutJobBuilder(job, &MakeNcclTupleBroadcastReduceSequence);
     WithOpGraphAndMutJobBuilder(job, &RewriteBoxingWithAllReduce);
+    AddLbiDiffWatcherOpConfs(job);
     WithOpGraphAndMutJobBuilder(job, &MakeAllReduceSequence);
   }
   WithOpGraphAndMutJobBuilder(job, &DumpLogicalBlobDescAndSbpSignature);

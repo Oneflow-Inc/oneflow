@@ -1,11 +1,11 @@
 from __future__ import absolute_import
 
 import threading
-import oneflow.python.framework.inter_user_job_util as inter_user_job_util
 import oneflow.python.framework.remote_blob as remote_blob_util
 
 class OutRemoteBlobsStatus(object):
-    def __init__(self):
+    def __init__(self, session):
+        self.session_ = session
         self.cond_var_ = threading.Condition()
         self.out_remote_blob_pullers_ = []
         self.inited_ = False
@@ -38,14 +38,6 @@ class OutRemoteBlobsStatus(object):
                 self.async_get_callback_ = Callback
         finally: self.cond_var_.release()
         self.data_delivered_ = True
-
-    def AddResult(self, out_remote_blobs):
-        assert self.inited_ == False
-        pullers = self._MakeRemoteBlobPullers(out_remote_blobs)
-        self.out_remote_blob_pullers_.append(pullers)
-        for puller in self._FlatRemoteBlobPullers(pullers):
-            puller.AsyncPull(self._FinishCallback)
-        return self
 
     def SetResult(self, out_remote_blobs):
         assert self.inited_ == False
@@ -108,11 +100,9 @@ class OutRemoteBlobsStatus(object):
 
     def _MakeRemoteBlobPullers(self, out_remote_blobs):
         if isinstance(out_remote_blobs, remote_blob_util.RemoteBlob):
-            return _RemoteBlobPuller(out_remote_blobs, self.cond_var_)
+            return _RemoteBlobPuller(out_remote_blobs, self.session_, self.cond_var_)
         if isinstance(out_remote_blobs, list) or isinstance(out_remote_blobs, tuple):
-            ret = [self._MakeRemoteBlobPullers(x) for x in out_remote_blobs]
-            if isinstance(out_remote_blobs, tuple): ret = tuple(ret)
-            return ret
+            return type(out_remote_blobs)(self._MakeRemoteBlobPullers(x) for x in out_remote_blobs)
         if isinstance(out_remote_blobs, dict):
             return {
                 k : self._MakeRemoteBlobPullers(v) for k, v in out_remote_blobs.items()
@@ -120,9 +110,10 @@ class OutRemoteBlobsStatus(object):
         raise NotImplementedError
 
 class _RemoteBlobPuller(object):
-    def __init__(self, remote_blob, cond_var):
+    def __init__(self, remote_blob, session, cond_var):
         self.op_name_ = remote_blob.op_name
         self.result_ndarray_ = None
+        self.session_ = session
 
     @property
     def result_ndarray(self):
@@ -137,4 +128,4 @@ class _RemoteBlobPuller(object):
         def PullCallback(of_blob):
             self.result_ndarray_ = of_blob.CopyToNdarray()
             pull_cb()
-        inter_user_job_util.AsyncPull(self.op_name_, PullCallback)
+        self.session_.AsyncPull(self.op_name_, PullCallback)

@@ -3,51 +3,67 @@ import numpy as np
 
 import oneflow as flow
 
-@flow.function
-def identity_job(x=flow.input_blob_def((3, 3)), y=flow.input_blob_def((3, 3))):
-    flow.config.use_xla_jit(False)
-    flow.config.use_tensorrt(False)
-    flow.config.default_data_type(flow.float)
-    
-    return flow.math.identity(x, y)
+def make_job(input_shape, dtype=flow.float32):
+    @flow.function
+    def identity_job(x = flow.input_blob_def(input_shape, dtype=dtype)):
+        flow.config.use_xla_jit(False)
+        flow.config.use_tensorrt(False)
+        return flow.identity(x)
+    return identity_job
 
-@flow.function
-def trt_identity_job(x=flow.input_blob_def((3, 3)), y=flow.input_blob_def((3, 3))):
-    flow.config.use_xla_jit(False)
-    flow.config.use_tensorrt(True)
-    flow.config.default_data_type(flow.float)
+def make_xla_job(input_shape, dtype=flow.float32):
+    @flow.function
+    def xla_identity_job(x = flow.input_blob_def(input_shape, dtype=dtype)):
+        flow.config.use_xla_jit(True)
+        flow.config.use_tensorrt(False)
+        return flow.identity(x)
+    return xla_identity_job
 
-    return flow.math.identity(x, y)
+def make_trt_job(input_shape, dtype=flow.float32):
+    @flow.function
+    def trt_identity_job(x = flow.input_blob_def(input_shape, dtype=dtype)):
+        flow.config.use_xla_jit(False)
+        flow.config.use_tensorrt(True)
+        return flow.identity(x)
+    return trt_identity_job
 
-# @flow.function
-# def trt_identity_job(x = flow.input_blob_def((10,))):
-#     flow.config.use_xla_jit(False)
-#     flow.config.use_tensorrt(True)
-#     return flow.keras.activations.identity(x)
-
-
-class Testidentity(unittest.TestCase):
-    def _test_body(self, x, y):
-        a = identity_job(x, y).get()
-        b = trt_identity_job(x, y).get()
-        print("without tensorrt: ", a)
-        print("with tensorrt", b)
+class TestIdentity(unittest.TestCase):
+    def _test_body(self, x, dtype=np.float32):
+        f1 = make_job(x.shape, dtype=flow.float32)
+        f2 = make_xla_job(x.shape, dtype=flow.float32)
+        f3 = make_trt_job(x.shape, dtype=flow.float32)         
+        a = f1(x).get()
+        b = f2(x).get()
+        c = f3(x).get()
+        print("without xla: ", a)
+        print("with xla", b)
+        print("with tensorrt", c)
         self.assertTrue(np.allclose(a, b , rtol=1e-03, atol=1e-05))
+        self.assertTrue(np.allclose(a, c , rtol=1e-03, atol=1e-05))
         # b = trt_identity_job(x).get()
         # print("with tensorrt", b)
         # self.assertTrue(np.allclose(a, b , rtol=1e-03, atol=1e-05))
+        flow.clear_default_session()
+
+    def _test_ones_body(self, shape, dtype=np.float32):
+        x = np.ones(shape, dtype=dtype)
+        self._test_body(x, dtype=dtype)
+
+    def _test_random_body(self, shape, dtype=np.float32):
+        x = np.random.random(shape).astype(dtype)
+        self._test_body(x, dtype=dtype)
 
     def test_ones_input(self):
-        x = np.ones((3, 3), dtype=np.float32)
-        y = np.ones((3, 3), dtype=np.float32)
-        self._test_body(x, y)
+        self._test_ones_body((1))
+        self._test_ones_body((1, 10))
+        self._test_ones_body((2, 10, 2))
+        self._test_ones_body((2, 5, 2, 2))
 
     def test_random_input(self):
-        x = np.random.rand(3, 3).astype(np.float32)
-        y = np.random.rand(3, 3).astype(np.float32)
-        self._test_body(x, y)
-
-
+        self._test_random_body((1))
+        self._test_random_body((1, 10))
+        self._test_random_body((2, 10, 2))
+        self._test_random_body((2, 5, 2, 2))
 
 if __name__ == '__main__':
   unittest.main()
