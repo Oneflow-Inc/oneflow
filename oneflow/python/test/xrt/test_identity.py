@@ -27,7 +27,7 @@ def make_trt_job(input_shape, dtype=flow.float32):
         return flow.identity(x)
     return trt_identity_job
 
-class TestRelu(unittest.TestCase):
+class TestIdentity(unittest.TestCase):
     def _test_body(self, x, dtype=np.float32):
         f1 = make_job(x.shape, dtype=flow.float32)
         f2 = make_xla_job(x.shape, dtype=flow.float32)

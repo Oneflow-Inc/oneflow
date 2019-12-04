@@ -58,19 +58,19 @@ class TestScalarMulOp(TestScalarOp):
     run_test = True
     def make_job(self, x_shape, scalar, dtype=flow.float32):
         @flow.function
-        def scalar_add_job(x = flow.input_blob_def(x_shape, dtype=dtype)):
+        def scalar_mul_job(x = flow.input_blob_def(x_shape, dtype=dtype)):
             flow.config.use_xla_jit(False)
             flow.config.use_tensorrt(False)
             return flow.math.multiply(x, scalar)
-        return scalar_add_job
+        return scalar_mul_job
 
     def make_xla_job(self, x_shape, scalar, dtype=flow.float32):
         @flow.function
-        def xla_scalar_add_job(x = flow.input_blob_def(x_shape, dtype=dtype)):
+        def xla_scalar_mul_job(x = flow.input_blob_def(x_shape, dtype=dtype)):
             flow.config.use_xla_jit(True)
             flow.config.use_tensorrt(False)
             return flow.math.multiply(x, scalar)
-        return xla_scalar_add_job
+        return xla_scalar_mul_job
 
 if __name__ == '__main__':
   unittest.main()
