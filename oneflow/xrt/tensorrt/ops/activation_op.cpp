@@ -12,8 +12,6 @@ template <nvinfer1::ActivationType activation_type>
 class ActivationOp : public TrtOpKernel {
  public:
   void Compile(TrtOpContext *ctx) override {
-    Shape in_shape = ctx->InputShape("in");
-
     nvinfer1::ITensor *in = ctx->Input("in");
     auto *layer = ctx->builder()->addActivation(*in, activation_type);
     layer->setName(ctx->op_name().c_str());

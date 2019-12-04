@@ -9,15 +9,16 @@ class TopKOp : public TrtOpKernel {
  public:
   void Compile(TrtOpContext *ctx) override {
     Shape in_shape = ctx->InputShape("in");
-//    CHECK_GE(in_shape.NumAxes(), 2);
+    //    CHECK_GE(in_shape.NumAxes(), 2);
 
     int32_t k = ctx->GetAttr<int32_t>("k");
-    //CHECK_GE(axis, 1);
-    //CHECK_LT(axis, in_shape.NumAxes());
-    uint32_t reduceAxes = in_shape.dim_vec().back(); 
+    // CHECK_GE(axis, 1);
+    // CHECK_LT(axis, in_shape.NumAxes());
+    uint32_t reduceAxes = (1U << in_shape.dim_vec().back());
     nvinfer1::ITensor *in = ctx->Input("in");
     auto *layer = ctx->builder()->addTopK(*in, nvinfer1::TopKOperation::kMAX, k,
-       reduceAxes);
+                                          reduceAxes);
+    layer->setName(ctx->op_name().c_str());
     ctx->SetOutput("out", layer->getOutput(0));
   }
 };

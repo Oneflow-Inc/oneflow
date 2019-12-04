@@ -5,7 +5,7 @@ namespace oneflow {
 namespace xrt {
 namespace tensorrt {
 
-class SoftMaxOp : public TrtOpKernel {
+class SoftmaxOp : public TrtOpKernel {
  public:
   void Compile(TrtOpContext *ctx) override {
     Shape in_shape = ctx->InputShape("in");
@@ -15,7 +15,6 @@ class SoftMaxOp : public TrtOpKernel {
     if (axis < 0) {
       axis += in_shape.NumAxes();
     }
-    // CHECK_GE(axis, 1); 
     CHECK_LT(axis, in_shape.NumAxes());
 
     nvinfer1::ITensor *in = ctx->Input("in");
@@ -26,7 +25,7 @@ class SoftMaxOp : public TrtOpKernel {
   }
 };
 
-REGISTER_TRT_OP_KERNEL(Softmax, SoftMaxOp).EnableTrainPhase().Finalize();
+REGISTER_TRT_OP_KERNEL(Softmax, SoftmaxOp).EnableTrainPhase().Finalize();
 
 }  // namespace tensorrt
 }  // namespace xrt

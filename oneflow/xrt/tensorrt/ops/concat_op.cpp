@@ -1,6 +1,6 @@
+#include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/xrt/tensorrt/ops/op_context.h"
 #include "oneflow/xrt/tensorrt/ops/op_kernel.h"
-#include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/xrt/tensorrt/trt_logger.h"
 
 #include "NvInfer.h"
@@ -14,12 +14,18 @@ namespace tensorrt {
 class ConcatOp : public TrtOpKernel {
  public:
   void Compile(TrtOpContext *ctx) override {
-    Shape in_shape = ctx->InputShape("in_0"); 
-    std::vector<nvinfer1::ITensor*> in;
+    Shape in_shape = ctx->InputShape("in_0");
+    std::vector<nvinfer1::ITensor *> in;
+
+    int32_t axis = ctx->GetAttr<int32_t>("axis");
+    if (axis < 0) {
+      axis += in_shape.NumAxes();
+    }
+    CHECK_GE(axis, 0);
+    CHECK_LT(axis, in_shape.NumAxes());
 
     int num_inputs = ctx->num_inputs();
-        int32_t axis = ctx->GetAttr<int32_t>("axis");
-        for(int i = 0; i < num_inputs; ++i) {
+    for (int i = 0; i < num_inputs; ++i) {
       std::string name = absl::StrCat("in_", i);
       in.push_back(ctx->Input(name));
     }
