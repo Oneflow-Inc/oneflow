@@ -24,6 +24,9 @@ def CurCtxSetJobConfIfNotSet(job_config_proto):
         c_api_util.CurJobBuildAndInferCtx_SetJobConf(job_config_proto)
         job_conf_inited = True
 
+def CurCtxCheckAndCompleteUserOpConf(op_conf_proto):
+    return c_api_util.CurJobBuildAndInferCtx_CheckAndCompleteUserOpConf(op_conf_proto)
+
 def CurCtxAddAndInferOp(op_conf_proto, parallel_conf_proto):
     return c_api_util.CurJobBuildAndInferCtx_AddAndInferOp(op_conf_proto, parallel_conf_proto)
 
