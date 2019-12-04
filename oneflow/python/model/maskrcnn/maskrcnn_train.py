@@ -522,6 +522,8 @@ if terminal_args.train_with_real_dataset:
         return data_loader
 
     def train_net(config, image=None):
+        flow.config.default_initialize_with_snapshot_path(terminal_args.model_load_dir)
+
         data_loader = make_data_loader(
             batch_size=terminal_args.batch_size,
             batch_cache_size=3,
@@ -606,9 +608,10 @@ if __name__ == "__main__":
         if terminal_args.model_save_every_n_batch > 0:
             save_model(0)
     else:
-        check_point = flow.train.SimpleCheckPointManager(terminal_args.model_load_dir)
-        check_point.initialize_or_restore()
-
+        check_point = flow.train.CheckPoint()
+        # check_point.load(terminal_args.model_load_dir)
+        check_point.init()
+        
     if terminal_args.debug:
         if terminal_args.mock_dataset:
             if terminal_args.rpn_only:
