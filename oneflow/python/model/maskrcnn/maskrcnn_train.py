@@ -528,8 +528,8 @@ if terminal_args.train_with_real_dataset:
                 data_loader("gt_segm"),
                 data_loader("gt_labels"),
             )
-            for losses in outputs:
-                for loss in losses:
+            for losses_per_device in outputs:
+                for loss in losses_per_device:
                     flow.losses.add_loss(loss)
 
         else:
@@ -687,8 +687,6 @@ if __name__ == "__main__":
 
             if terminal_args.jupyter:
                 import altair as alt
-                from vega_datasets import data
-
                 import pandas as pd
 
                 loss_data_frame = pd.DataFrame(
