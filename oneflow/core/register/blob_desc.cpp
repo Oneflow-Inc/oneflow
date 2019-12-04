@@ -1,6 +1,7 @@
 #include "oneflow/core/register/blob_desc.h"
 #include "oneflow/core/register/runtime_blob_desc.h"
 #include "oneflow/core/job/job_desc.h"
+#include "oneflow/core/common/range.h"
 
 namespace oneflow {
 
@@ -91,8 +92,17 @@ void BlobDesc::ToProto(BlobDescProto* proto) const {
                         DataType::kInt64));
       dense_shape_num_axes = shape().NumAxes() - num_of_lod_levels_ + 1;  // 1 for tiled lod dims
     }
-    header.AddField(FieldKey::kDenseShape,
-                    TensorPodDesc(Shape(DimVector{dense_shape_num_axes}), DataType::kInt64));
+    int32_t batch_axis = 0;  // TODO: batch_axis isn't always 0
+    int64_t batch_dim = shape().At(batch_axis);
+    header.AddField(FieldKey::kDenseShapeListLength,
+                    TensorPodDesc(Shape(DimVector{1LL}), DataType::kInt64));
+    header.AddField(FieldKey::kShapeListSlicesLength,
+                    TensorPodDesc(Shape(DimVector{1LL}), DataType::kInt64));
+    header.AddField(
+        FieldKey::kDenseShape,
+        TensorPodDesc(Shape(DimVector{batch_dim, dense_shape_num_axes}), DataType::kInt64));
+    header.AddField(FieldKey::kShapeListSlices,
+                    TensorPodDesc(Shape(DimVector{batch_dim}), DataType::kInt64));
     header.ToProto(proto->mutable_header());
     proto->set_header_is_opaque(false);
   }

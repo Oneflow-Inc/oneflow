@@ -40,10 +40,12 @@ std::ostream& operator<<(std::ostream& out, const DenseShapeView& shape);
 
 class DenseShapeMutView final {
  public:
+  DenseShapeMutView(int64_t* ptr, int64_t num_axes) : ptr_(ptr), num_axes_(num_axes) {}
   DenseShapeMutView(const PodPtr& dense_shape_ptr);
   DenseShapeMutView(const DenseShapeMutView& rhs) = default;
   ~DenseShapeMutView() = default;
 
+  int64_t* mut_ptr() const { return ptr_; }
   void Set(int64_t axis, int64_t val);
 
   void set_shape(const Shape& val);

@@ -18,6 +18,9 @@ enum FieldKey {
   kInvalidFieldKey = 0;
   kDenseShape = 1;
   kLoD = 2;
+  kDenseShapeListLength = 3;
+  kShapeListSlices = 4;
+  kShapeListSlicesLength = 5;
 }
 
 message FieldId {
