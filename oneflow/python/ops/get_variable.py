@@ -7,7 +7,7 @@ import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 
 from oneflow.python.oneflow_export import oneflow_export
-
+import os
 
 @oneflow_export("get_variable")
 def get_variable(
@@ -32,9 +32,17 @@ def get_variable(
 
         if dtype is not None:
             op_conf.variable_conf.data_type = dtype
-
-        if initializer is not None:
-            op_conf.variable_conf.initializer.CopyFrom(initializer)
+        root_path = compile_context.cur_job_conf.default_initialize_with_snapshot_path
+        dir_path = os.path.join(root_path, name)
+        file_path = os.path.join(dir_path, "out")
+        if root_path is not None and os.path.isfile(file_path):
+            op_conf.variable_conf.initialize_with_snapshot.path = dir_path
+            op_conf.variable_conf.initialize_with_snapshot.key = "out"
+        else:
+            if root_path is not None:
+                print("{} not found, will be initialized".format(file_path))
+            if initializer is not None:
+                op_conf.variable_conf.initializer.CopyFrom(initializer)
 
         if trainable is not None:
             op_conf.trainable = trainable
