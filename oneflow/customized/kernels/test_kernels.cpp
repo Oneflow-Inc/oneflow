@@ -9,8 +9,8 @@ class ReluKernel final : public oneflow::user_op::OpKernel {
 
  private:
   void Compute(oneflow::user_op::KernelContext* ctx) override {
-    const oneflow::user_op::Blob* in_blob = ctx->Tensor4ArgNameAndIndex("in", 0);
-    oneflow::user_op::Blob* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
+    const oneflow::user_op::Tensor* in_blob = ctx->Tensor4ArgNameAndIndex("in", 0);
+    oneflow::user_op::Tensor* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
     oneflow::NewKernelUtil<oneflow::DeviceType::kGPU>::Relu(
         ctx->device_ctx(), in_blob->shape().elem_cnt(), in_blob->dptr<float>(),
         out_blob->mut_dptr<float>());
@@ -26,9 +26,9 @@ class ReluGradKernel final : public oneflow::user_op::OpKernel {
 
  private:
   void Compute(oneflow::user_op::KernelContext* ctx) override {
-    const oneflow::user_op::Blob* y_blob = ctx->Tensor4ArgNameAndIndex("y", 0);
-    const oneflow::user_op::Blob* dy_blob = ctx->Tensor4ArgNameAndIndex("dy", 0);
-    oneflow::user_op::Blob* dx_blob = ctx->Tensor4ArgNameAndIndex("dx", 0);
+    const oneflow::user_op::Tensor* y_blob = ctx->Tensor4ArgNameAndIndex("y", 0);
+    const oneflow::user_op::Tensor* dy_blob = ctx->Tensor4ArgNameAndIndex("dy", 0);
+    oneflow::user_op::Tensor* dx_blob = ctx->Tensor4ArgNameAndIndex("dx", 0);
     oneflow::NewKernelUtil<oneflow::DeviceType::kGPU>::ReluBackward(
         ctx->device_ctx(), dx_blob->shape().elem_cnt(), y_blob->dptr<float>(),
         y_blob->dptr<float>(), dy_blob->dptr<float>(), dx_blob->mut_dptr<float>());
@@ -56,8 +56,8 @@ class TestReshapeKernel final : public oneflow::user_op::OpKernel {
 
  private:
   void Compute(oneflow::user_op::KernelContext* ctx) override {
-    // const oneflow::user_op::Blob* in_blob = ctx->Tensor4ArgNameAndIndex("in", 0);
-    // oneflow::user_op::Blob* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
+    // const oneflow::user_op::Tensor* in_blob = ctx->Tensor4ArgNameAndIndex("in", 0);
+    // oneflow::user_op::Tensor* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
     LOG(WARNING) << "Run TestReshape Kernel";
   }
 };

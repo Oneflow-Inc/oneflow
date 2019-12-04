@@ -42,15 +42,15 @@ REGISTER_USER_OP("TestReshape")
 
 REGISTER_USER_OP_GRAD("ccrelu").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
                                                           user_op::AddOpFn AddOp) {
-  if (op.NeedGenGradBlob4OpInput("in", 0)) {
+  if (op.NeedGenGradTensor4OpInput("in", 0)) {
     user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
     user_op::UserOpConfWrapper ccrelu_grad_op =
         builder.Op("ccrelu_grad")
             .Input("y", op.output("out", 0))
-            .Input("dy", op.GetGradBlobWithOpOutput("out", 0))
+            .Input("dy", op.GetGradTensorWithOpOutput("out", 0))
             .Output("dx")
             .Build();
-    op.BindGradBlobWithOpInput(ccrelu_grad_op.output("dx", 0), "in", 0);
+    op.BindGradTensorWithOpInput(ccrelu_grad_op.output("dx", 0), "in", 0);
     AddOp(ccrelu_grad_op);
   }
 });

@@ -9,13 +9,13 @@ class DeviceCtx;
 
 namespace user_op {
 
-class Blob;
+class Tensor;
 
 class KernelContext {
  public:
   virtual ~KernelContext() = default;
 
-  virtual Blob* Tensor4ArgNameAndIndex(const std::string& arg_name, int32_t index) = 0;
+  virtual Tensor* Tensor4ArgNameAndIndex(const std::string& arg_name, int32_t index) = 0;
   virtual DeviceCtx* device_ctx() = 0;
 
   template<typename T>

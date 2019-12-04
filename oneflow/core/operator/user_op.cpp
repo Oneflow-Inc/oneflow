@@ -1,7 +1,7 @@
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/framework/op_registration.h"
 #include "oneflow/core/framework/kernel_registration.h"
-#include "oneflow/core/framework/blob_def.h"
+#include "oneflow/core/framework/tensor_desc.h"
 #include "oneflow/core/framework/infer_util.h"
 
 namespace oneflow {
@@ -73,12 +73,12 @@ class UserOpKernelRegContext final : public user_op::KernelRegContext {
     }
 
     {
-#define INSERT_TO_ARG2TENSOR_DESC(prefix)                                                   \
-  for (const auto& bn : user_op->prefix##_bns()) {                                          \
-    const BlobDesc* blob_desc = GetBlobDesc4BnInOp(bn);                                     \
-    if (!blob_desc) { continue; }                                                           \
-    arg2tensor_desc_.emplace(GenUnRepeatedBn(bn),                                           \
-                             user_op::BlobDef(blob_desc->shape(), blob_desc->data_type())); \
+#define INSERT_TO_ARG2TENSOR_DESC(prefix)                                                      \
+  for (const auto& bn : user_op->prefix##_bns()) {                                             \
+    const BlobDesc* blob_desc = GetBlobDesc4BnInOp(bn);                                        \
+    if (!blob_desc) { continue; }                                                              \
+    arg2tensor_desc_.emplace(GenUnRepeatedBn(bn),                                              \
+                             user_op::TensorDesc(blob_desc->shape(), blob_desc->data_type())); \
   }
 
       INSERT_TO_ARG2TENSOR_DESC(input)
@@ -93,8 +93,8 @@ class UserOpKernelRegContext final : public user_op::KernelRegContext {
   DeviceType device() const override { return device_; }
   DataType data_type() const override { return data_type_; }
   const ParallelContext& parallel_ctx() const override { return *parallel_ctx_; }
-  const user_op::BlobDef* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
-                                                     int32_t index) const override {
+  const user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
+                                                        int32_t index) const override {
     auto it = arg2tensor_desc_.find(std::make_pair(arg_name, index));
     if (it == arg2tensor_desc_.end()) { return nullptr; }
     return &(it->second);
@@ -104,7 +104,7 @@ class UserOpKernelRegContext final : public user_op::KernelRegContext {
   DeviceType device_;
   DataType data_type_;
   const ParallelContext* parallel_ctx_;
-  HashMap<std::pair<std::string, int32_t>, user_op::BlobDef> arg2tensor_desc_;
+  HashMap<std::pair<std::string, int32_t>, user_op::TensorDesc> arg2tensor_desc_;
 };
 
 class UserOpInferContext : public user_op::InferContext {
@@ -119,8 +119,8 @@ class UserOpInferContext : public user_op::InferContext {
       const std::string& arg_name = it->first;
       for (int32_t i = 0; i < it->second.s_size(); ++i) {
         BlobDesc* blob = GetBlobDesc4BnInOp(GenRepeatedBn(arg_name, i));
-        arg2blob_def_.emplace(std::make_pair(arg_name, i),
-                              user_op::BlobDef(blob->shape(), blob->data_type()));
+        arg2tensor_desc_.emplace(std::make_pair(arg_name, i),
+                                 user_op::TensorDesc(blob->shape(), blob->data_type()));
         inputs_.emplace_back(std::make_pair(arg_name, i));
       }
     }
@@ -128,8 +128,8 @@ class UserOpInferContext : public user_op::InferContext {
       const std::string& arg_name = it->first;
       for (int32_t i = 0; i < it->second.s_size(); ++i) {
         BlobDesc* blob = GetBlobDesc4BnInOp(GenRepeatedBn(arg_name, i));
-        arg2blob_def_.emplace(std::make_pair(arg_name, i),
-                              user_op::BlobDef(blob->shape(), blob->data_type()));
+        arg2tensor_desc_.emplace(std::make_pair(arg_name, i),
+                                 user_op::TensorDesc(blob->shape(), blob->data_type()));
         outputs_.emplace_back(std::make_pair(arg_name, i));
       }
     }
@@ -137,10 +137,10 @@ class UserOpInferContext : public user_op::InferContext {
   ~UserOpInferContext() = default;
 
   Shape* Shape4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
-    return arg2blob_def_.at(std::make_pair(arg_name, index)).mut_shape();
+    return arg2tensor_desc_.at(std::make_pair(arg_name, index)).mut_shape();
   }
   DataType* Dtype4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
-    return arg2blob_def_.at(std::make_pair(arg_name, index)).mut_data_type();
+    return arg2tensor_desc_.at(std::make_pair(arg_name, index)).mut_data_type();
   }
   const ArgVec& inputs() const { return inputs_; }
   const ArgVec& outputs() const { return outputs_; }
@@ -148,7 +148,7 @@ class UserOpInferContext : public user_op::InferContext {
  private:
   ArgVec inputs_;
   ArgVec outputs_;
-  HashMap<std::pair<std::string, int32_t>, user_op::BlobDef> arg2blob_def_;
+  HashMap<std::pair<std::string, int32_t>, user_op::TensorDesc> arg2tensor_desc_;
 };
 
 void UserOp::InitFromOpConf() {

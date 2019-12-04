@@ -2,7 +2,7 @@
 #define ONEFLOW_CORE_FRAMEWORK_INFER_UTIL_H_
 
 #include "oneflow/core/common/maybe.h"
-#include "oneflow/core/framework/blob_def.h"
+#include "oneflow/core/framework/tensor_desc.h"
 #include "oneflow/core/framework/user_op_conf.h"
 
 namespace oneflow {

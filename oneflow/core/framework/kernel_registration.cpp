@@ -1,7 +1,7 @@
 #include "oneflow/core/framework/kernel_registration.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/kernel/kernel.pb.h"
-#include "oneflow/core/framework/blob_def.h"
+#include "oneflow/core/framework/tensor_desc.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/framework/infer_util.h"
 

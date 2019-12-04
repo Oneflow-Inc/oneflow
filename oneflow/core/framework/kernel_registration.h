@@ -16,7 +16,7 @@ namespace user_op {
 
 class OpKernel;
 class KernelInitContext;
-class BlobDef;
+class TensorDesc;
 class InferContext;
 
 class KernelRegContext {
@@ -26,7 +26,7 @@ class KernelRegContext {
   virtual DeviceType device() const = 0;
   virtual DataType data_type() const = 0;
   virtual const ParallelContext& parallel_ctx() const = 0;
-  virtual const BlobDef* TensorDesc4ArgNameAndIndex(const std::string&, int32_t) const = 0;
+  virtual const TensorDesc* TensorDesc4ArgNameAndIndex(const std::string&, int32_t) const = 0;
 
   template<typename T>
   T GetAttr(const std::string& attr_name) const {
