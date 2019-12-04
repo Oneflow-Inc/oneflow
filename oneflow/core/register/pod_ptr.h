@@ -15,10 +15,18 @@ class PodPtr final {
   template<typename T>
   const T* TensorPtr() const;
   template<typename T>
+  const T* TensorPtr(FieldKey field_key) const {
+    return TensorPtr<T>(field_key, nullptr);
+  }
+  template<typename T>
   const T* TensorPtr(FieldKey field_key, const T* default_ptr) const;
 
   template<typename T>
   T* MutTensorPtr();
+  template<typename T>
+  T* MutTensorPtr(FieldKey field_key) {
+    return MutTensorPtr<T>(field_key, nullptr);
+  }
   template<typename T>
   T* MutTensorPtr(FieldKey field_key, T* default_ptr);
 
