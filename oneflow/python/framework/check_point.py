@@ -100,11 +100,8 @@ class SimpleCheckPointManager(object):
             self._checkpoint.init()
             self.save()
 
-    def save(self, path=None):
-        if path is None:
-            self._checkpoint.save(self._GetSnapshotPath(self._NextSnapshotName()))
-        else:
-            self._checkpoint.save(path)
+    def save(self):
+        self._checkpoint.save(self._GetSnapshotPath(self._NextSnapshotName()))
 
     def _NextSnapshotName(self):
         return self._prefix + datetime.datetime.now().strftime('%Y%m%d_%H%M%S_%f')
