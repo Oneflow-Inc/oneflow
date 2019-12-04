@@ -524,8 +524,8 @@ if terminal_args.train_with_real_dataset:
                 data_loader("gt_segm"),
                 data_loader("gt_labels"),
             )
-            for losses in outputs:
-                for loss in losses:
+            for losses_per_device in outputs:
+                for loss in losses_per_device:
                     flow.losses.add_loss(loss)
 
         else:
