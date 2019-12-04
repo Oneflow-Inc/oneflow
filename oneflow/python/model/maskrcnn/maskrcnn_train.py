@@ -69,7 +69,11 @@ parser.add_argument(
     required=False,
 )
 parser.add_argument(
-    "-save_every_n_batch", "--model_save_every_n_batch", type=int, default=0, required=False
+    "-save_every_n_batch",
+    "--model_save_every_n_batch",
+    type=int,
+    default=0,
+    required=False,
 )
 parser.add_argument(
     "-v", "--verbose", default=False, action="store_true", required=False
@@ -98,13 +102,25 @@ parser.add_argument(
     "-j", "--jupyter", default=False, action="store_true", required=False
 )
 parser.add_argument(
-    "-ds", "--dataset_shuffle", default=False, action="store_true", required=False
+    "-ds",
+    "--dataset_shuffle",
+    default=False,
+    action="store_true",
+    required=False,
 )
 parser.add_argument(
-    "-ss", "--sample_shuffle", default=False, action="store_true", required=False
+    "-ss",
+    "--sample_shuffle",
+    default=False,
+    action="store_true",
+    required=False,
 )
 parser.add_argument(
-    "-flip", "--random_flip_image", default=False, action="store_true", required=False
+    "-flip",
+    "--random_flip_image",
+    default=False,
+    action="store_true",
+    required=False,
 )
 
 terminal_args = parser.parse_args()
@@ -397,11 +413,48 @@ def init_config():
     flow.config.cudnn_buf_limit_mbyte(1280)
     flow.config.cudnn_conv_heuristic_search_algo(True)
     flow.config.cudnn_conv_use_deterministic_algo_only(False)
-    flow.config.train.primary_lr(terminal_args.primary_lr)
-    flow.config.train.secondary_lr(terminal_args.secondary_lr)
-    flow.config.train.weight_l2(0.0001)
-    flow.config.train.model_update_conf(dict(momentum_conf={"beta": 0.9}))
-    # flow.config.train.model_update_conf(dict(naive_conf={}))
+    flow.config.train.primary_lr(config.TRAINING_CONF.PRIMARY_LR)
+    flow.config.train.secondary_lr(config.TRAINING_CONF.SECONDARY_LR)
+    flow.config.train.weight_l2(config.TRAINING_CONF.WEIGHT_L2)
+    flow.config.train.bias_l2(config.TRAINING_CONF.BIAS_L2)
+
+    if config.TRAINING_CONF.USE_MOMENTUM_SGD:
+        optimizer = dict(
+            momentum_conf={"beta": config.TRAINING_CONF.MOMENTUM_BETA}
+        )
+    else:
+        optimizer = dict(naive_conf={})
+
+    if not config.TRAINING_CONF.DISABLE_LR_DECAY:
+        optimizer.update(
+            dict(
+                learning_rate_decay=dict(
+                    piecewise_constant_conf={
+                        "boundaries": config.TRAINING_CONF.LR_DECAY_BOUNDARIES,
+                        "values": config.TRAINING_CONF.LR_DECAY_VALUES,
+                    }
+                )
+            )
+        )
+
+    if not config.TRAINING_CONF.DISABLE_WARMUP:
+        if config.TRAINING_CONF.WARMUP_METHOD == "linear":
+            optimizer.update(
+                {
+                    "warmup_conf": {
+                        "linear_conf": {
+                            "warmup_batches": config.TRAINING_CONF.WARMUP_BATCHES,
+                            "start_multiplier": config.TRAINING_CONF.WARMUP_FACTOR,
+                        }
+                    }
+                }
+            )
+        elif config.TRAINING_CONF.WARMUP_METHOD == "constant":
+            raise NotImplementedError
+        else:
+            raise ValueError
+
+    flow.config.train.model_update_conf(optimizer)
 
     return config
 
@@ -522,7 +575,9 @@ if terminal_args.train_with_real_dataset:
         return data_loader
 
     def train_net(config, image=None):
-        flow.config.default_initialize_with_snapshot_path(terminal_args.model_load_dir)
+        flow.config.default_initialize_with_snapshot_path(
+            terminal_args.model_load_dir
+        )
 
         data_loader = make_data_loader(
             batch_size=terminal_args.batch_size,
@@ -611,7 +666,7 @@ if __name__ == "__main__":
         check_point = flow.train.CheckPoint()
         # check_point.load(terminal_args.model_load_dir)
         check_point.init()
-        
+
     if terminal_args.debug:
         if terminal_args.mock_dataset:
             if terminal_args.rpn_only:
@@ -679,8 +734,9 @@ if __name__ == "__main__":
 
                 if terminal_args.model_save_every_n_batch > 0:
                     if (
-                        i + 1
-                    ) % terminal_args.model_save_every_n_batch == 0 or i + 1 == terminal_args.iter_num:
+                        (i + 1) % terminal_args.model_save_every_n_batch == 0
+                        or i + 1 == terminal_args.iter_num
+                    ):
                         save_model(i + 1)
 
                 fmt = "{:<8} {:<8} {:<16} " + "{:<16.10f} " * len(losses)
