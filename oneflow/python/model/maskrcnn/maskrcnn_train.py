@@ -98,8 +98,15 @@ parser.add_argument(
     "-j", "--jupyter", default=False, action="store_true", required=False
 )
 parser.add_argument(
-    "-s", "--dataset_shuffle", default=False, action="store_true", required=False
+    "-ds", "--dataset_shuffle", default=False, action="store_true", required=False
 )
+parser.add_argument(
+    "-ss", "--sample_shuffle", default=False, action="store_true", required=False
+)
+parser.add_argument(
+    "-flip", "--random_flip_image", default=False, action="store_true", required=False
+)
+
 terminal_args = parser.parse_args()
 
 
@@ -380,6 +387,8 @@ def init_config():
         terminal_args.batch_size / terminal_args.gpu_num_per_node
     )
 
+    config.INFERENCE.PROPOSAL_RANDOM_SAMPLE = terminal_args.sample_shuffle
+
     config.freeze()
 
     if terminal_args.verbose:
@@ -443,6 +452,7 @@ if terminal_args.train_with_real_dataset:
         random_seed=123456,
         shuffle=False,
         group_by_aspect_ratio=True,
+        random_flip_image=False,
     ):
         coco = flow.data.COCODataset(
             dataset_dir,
@@ -499,7 +509,8 @@ if terminal_args.train_with_real_dataset:
             is_dynamic=True,
         )
         data_loader.add_transform(flow.data.TargetResizeTransform(800, 1333))
-        data_loader.add_transform(flow.data.ImageRandomFlip())
+        if random_flip_image:
+            data_loader.add_transform(flow.data.ImageRandomFlip())
         data_loader.add_transform(
             flow.data.ImageNormalizeByChannel((102.9801, 115.9465, 122.7717))
         )
@@ -517,6 +528,7 @@ if terminal_args.train_with_real_dataset:
             annotation_file=terminal_args.annotation_file,
             image_dir=terminal_args.image_dir,
             shuffle=terminal_args.dataset_shuffle,
+            random_flip_image=terminal_args.random_flip_image,
         )
 
         if config.NUM_GPUS > 1:
@@ -588,13 +600,14 @@ if __name__ == "__main__":
     if terminal_args.train_with_real_dataset:
         train_func = init_train_func(len(fake_image_list) > 0)
 
-    check_point = flow.train.CheckPoint()
     if not terminal_args.model_load_dir:
+        check_point = flow.train.CheckPoint()
         check_point.init()
         if terminal_args.model_save_rate > 0:
             save_model(0)
     else:
-        check_point.load(terminal_args.model_load_dir)
+        check_point = flow.train.SimpleCheckPointManager(terminal_args.model_load_dir)
+        check_point.initialize_or_restore()
 
     if terminal_args.debug:
         if terminal_args.mock_dataset:
