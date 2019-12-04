@@ -8,8 +8,9 @@ import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.register.logical_blob_id_pb2 as lbi_util
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.distribute as distribute_util
-
 from oneflow.python.oneflow_export import oneflow_export
+from functools import reduce
+import numpy as np
 import oneflow
 
 @oneflow_export('input_blob_def')
@@ -48,11 +49,18 @@ class input_blob_def(blob_desc.BlobDesc):
     @property
     def is_dynamic(self): return self.is_dynamic_
 
+    @property
+    def parallel_conf(self):
+        TODO()
+
     def with_distribute(self, distribute):
         return input_blob_def(shape = self.shape_, dtype = self.dtype_,               \
                         is_dynamic = self.is_dynamic_, batch_axis = self.batch_axis_, \
                         distribute = distribute, name = self.lbi.op_name)
-
+    
+    def CheckInputNdarray(self, ndarray):
+        self._CheckDenseNdarray(ndarray)
+            
     def ToInterfaceBlobConf(self):
         interface_blob_conf = op_conf_util.InterfaceBlobConf()
         interface_blob_conf.shape.dim.extend(self.shape_)
@@ -104,3 +112,12 @@ class input_blob_def(blob_desc.BlobDesc):
 
     def __div__(self, rhs):
         return oneflow.math.divide(self, rhs)
+    
+    def _CheckDenseNdarray(self, ndarray):
+        assert isinstance(ndarray, np.ndarray)
+        def GetElemCnt(shape): return reduce(lambda x, y: x * y, shape, 1)
+        assert len(ndarray.shape) == len(self.shape)
+        if self.is_dynamic:
+            assert GetElemCnt(ndarray.shape) <= GetElemCnt(self.shape)
+        else:
+            assert ndarray.shape == self.shape

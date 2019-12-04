@@ -269,8 +269,7 @@ void InplaceLbiGraph::ForEachSafeInplaceEdgeInSourceOpSubTree(
         if (in_edge != nullptr) { CHECK(cur_disabled_edges.emplace(in_edge).second); }
         if (dynamic_cast<const NormalInplaceLbiNode*>(node) != nullptr) {
           CHECK_NOTNULL(in_edge);
-          CHECK(node->IsConstRef(IsValidEdge));
-          Handler(in_edge);
+          if (node->IsConstRef(IsValidEdge)) { Handler(in_edge); }
         }
       });
       disabled_edges->insert(cur_disabled_edges.begin(), cur_disabled_edges.end());
@@ -365,7 +364,7 @@ bool InplaceLbiGraph::IsConstRefConflictMutRefNode(
   auto ForEachNext = [&](const InplaceLbiNode* node,
                          const std::function<void(const InplaceLbiNode*)>& Handler) {
     node->ForEachNodeOnValidOutEdge(IsValidEdge, [&](const InplaceLbiNode* out_node) {
-      if (out_node->IsConstRef(IsValidEdge)) { Handler(out_node); }
+      if (out_node != mut_ref_node) { Handler(out_node); }
     });
   };
   bool conflict = false;

@@ -17,6 +17,17 @@ BLOCK_COUNTS = [3, 4, 6, 3]
 BLOCK_FILTERS = [256, 512, 1024, 2048]
 BLOCK_FILTERS_INNER = [64, 128, 256, 512]
 
+class DLNetSpec(object):
+  def __init__(self):
+    self.batch_size = 8
+    self.data_part_num = 32
+    self.eval_dir = DATA_DIR
+    self.train_dir = DATA_DIR
+    self.model_save_dir = MODEL_SAVE
+    self.model_load_dir = MODEL_LOAD
+    self.num_nodes = 1
+    self.gpu_num_per_node = 1
+    self.iter_num = 10
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-g", "--gpu_num_per_node", type=int, default=1, required=False)
@@ -33,13 +44,12 @@ parser.add_argument("-save", "--model_save_dir", type=str, default=MODEL_SAVE, r
 parser.add_argument("-dn", "--data_part_num", type=int, default=32, required=False)
 parser.add_argument("-b", "--batch_size", type=int, default=8, required=False)
 
-args = parser.parse_args()
 g_output = []
 g_output_key = []
 g_trainable = True
 
 
-def _data_load(data_dir):
+def _data_load(args, data_dir):
     image_blob_conf = flow.data.BlobConf(
         "encoded",
         shape=(IMAGE_SIZE, IMAGE_SIZE, 3),
@@ -54,7 +64,7 @@ def _data_load(data_dir):
         "class/label", shape=(), dtype=flow.int32, codec=flow.data.RawCodec()
     )
 
-    node_num = len(args.node_list.strip().split(',')) if args.multinode else 1
+    node_num = args.num_nodes
     total_batch_size = args.batch_size * args.gpu_num_per_node * node_num
     return flow.data.decode_ofrecord(
         data_dir, (label_blob_conf, image_blob_conf),
@@ -213,8 +223,8 @@ def resnet_stem(input):
     return pool1
 
 
-def resnet50(data_dir):
-    (labels, images) = _data_load(data_dir)
+def resnet50(args, data_dir):
+    (labels, images) = _data_load(args, data_dir)
     images = flow.transpose(images, name="transpose", perm=[0, 3, 1, 2])
     g_output_key.append("input_img")
     g_output.append(images)
@@ -259,47 +269,25 @@ def _set_trainable(trainable):
     g_trainable = trainable
 
 
-@flow.function
-def TrainNet():
-    flow.config.train.primary_lr(0.0032)
-    flow.config.train.model_update_conf(dict(naive_conf={}))
+def main(args):
+    @flow.function
+    def TrainNet():
+        flow.config.train.primary_lr(0.0032)
+        flow.config.train.model_update_conf(dict(naive_conf={}))
 
-    _set_trainable(True)
-    loss = resnet50(args.train_dir)
-    flow.losses.add_loss(loss)
-    return loss
+        _set_trainable(True)
+        loss = resnet50(args, args.train_dir)
+        flow.losses.add_loss(loss)
+        return loss
 
+    @flow.function
+    def evaluate():
+        _set_trainable(False)
+        return resnet50(args, args.eval_dir)
 
-@flow.function
-def evaluate():
-    _set_trainable(False)
-    return resnet50(args.eval_dir)
-
-
-def main():
     flow.config.default_data_type(flow.float)
+    flow.config.machine_num(args.num_nodes)
     flow.config.gpu_device_num(args.gpu_num_per_node)
-    flow.config.grpc_use_no_signal()
-    flow.config.log_dir("./output/log")
-    flow.config.ctrl_port(12138)
-
-    if args.multinode:
-        flow.config.ctrl_port(12139)
-        nodes = []
-        for n in args.node_list.strip().split(","):
-            addr_dict = {}
-            addr_dict["addr"] = n
-            nodes.append(addr_dict)
-
-        flow.config.machine(nodes)
-        flow.config.enable_inplace(False)
-
-        if args.scp_binary_without_uuid:
-            flow.deprecated.init_worker(scp_binary=True, use_uuid=False)
-        elif args.skip_scp_binary:
-            flow.deprecated.init_worker(scp_binary=False, use_uuid=False)
-        else:
-            flow.deprecated.init_worker(scp_binary=True, use_uuid=True)
 
     check_point = flow.train.CheckPoint()
     check_point.load(MODEL_LOAD)
@@ -308,8 +296,6 @@ def main():
     # else:
     #     check_point.load(args.model_load_dir)
 
-    num_nodes = len(args.node_list.strip().split(",")) if args.multinode else 1
-    print("Traning resnet50: num_gpu_per_node = {}, num_nodes = {}.".format(args.gpu_num_per_node, num_nodes))
     loss = []
 
     fmt_str = "{:>12}  {:>12}  {:.6f}"
@@ -329,19 +315,36 @@ def main():
 
         #     check_point.save(MODEL_SAVE + "_" + str(i))
         
-    if (
-            args.multinode
-          and args.skip_scp_binary is False
-        and args.scp_binary_without_uuid is False
-    ):
-      flow.deprecated.delete_worker()
-
     # save loss to file
-    loss_file = "{}n{}c.npy".format(str(num_nodes), str(args.gpu_num_per_node * num_nodes))
+    loss_file = "{}n{}c.npy".format(str(args.num_nodes), str(args.gpu_num_per_node * args.num_nodes))
     loss_path = "./of_loss/resnet50"
     if not os.path.exists(loss_path): os.makedirs(loss_path)
     numpy.save(os.path.join(loss_path, loss_file), loss)
 
 
 if __name__ == "__main__":
-    main()
+    flow.env.log_dir("./output/log")
+    flow.env.ctrl_port(12138)
+    args = parser.parse_args()
+    if args.multinode:
+        flow.env.ctrl_port(12139)
+        nodes = []
+        for n in args.node_list.strip().split(","):
+            addr_dict = {}
+            addr_dict["addr"] = n
+            nodes.append(addr_dict)
+
+        flow.env.machine(nodes)
+
+        if args.scp_binary_without_uuid:
+            flow.deprecated.init_worker(scp_binary=True, use_uuid=False)
+        elif args.skip_scp_binary:
+            flow.deprecated.init_worker(scp_binary=False, use_uuid=False)
+        else:
+            flow.deprecated.init_worker(scp_binary=True, use_uuid=True)
+    num_nodes = len(args.node_list.strip().split(",")) if args.multinode else 1
+    print("Traning resnet50: num_gpu_per_node = {}, num_nodes = {}.".format(args.gpu_num_per_node, num_nodes))
+    main(args)
+    if (args.multinode and args.skip_scp_binary is False
+        and args.scp_binary_without_uuid is False):
+      flow.deprecated.delete_worker()

@@ -11,7 +11,20 @@ _MODEL_SAVE_DIR = "./model_save-{}".format(str(datetime.now().strftime("%Y-%m-%d
 _MODEL_LOAD = "/dataset/PNGS/cnns_model_for_test/alexnet/models/of_model_bk"
 NODE_LIST = "192.168.1.12,192.168.1.14"
 
+class DLNetSpec(object):
+  def __init__(self):
+    self.batch_size = 8
+    self.data_part_num = 32
+    self.eval_dir = _DATA_DIR
+    self.train_dir = _DATA_DIR
+    self.model_save_dir = _MODEL_SAVE_DIR
+    self.model_load_dir = _MODEL_LOAD
+    self.num_nodes = 1
+    self.gpu_num_per_node = 1
+    self.iter_num = 10
+
 parser = argparse.ArgumentParser(description="flags for multi-node and resource")
+parser.add_argument("-nn", "--num_nodes", type=str, default=1, required=False)
 parser.add_argument("-g", "--gpu_num_per_node", type=int, default=1, required=False)
 parser.add_argument("-i", "--iter_num", type=int, default=10, required=False)
 parser.add_argument("-m", "--multinode", default=False, action="store_true", required=False)
@@ -26,10 +39,8 @@ parser.add_argument("-save", "--model_save_dir", type=str, default=_MODEL_SAVE_D
 parser.add_argument("-dn", "--data_part_num", type=int, default=32, required=False)
 parser.add_argument("-b", "--batch_size", type=int, default=8, required=False)
 
-args = parser.parse_args()
-
-
 def _conv2d_layer(
+    args,
     name,
     input,
     filters,
@@ -71,7 +82,7 @@ def _conv2d_layer(
   return output
 
 
-def _data_load_layer(data_dir):
+def _data_load_layer(args, data_dir):
   image_blob_conf = flow.data.BlobConf(
     "encoded",
     shape=(227, 227, 3),
@@ -84,7 +95,7 @@ def _data_load_layer(data_dir):
     "class/label", shape=(), dtype=flow.int32, codec=flow.data.RawCodec()
   )
 
-  node_num = len(args.node_list.strip().split(',')) if args.multinode else 1
+  node_num = args.num_nodes
   total_batch_size = args.batch_size * args.gpu_num_per_node * node_num
   return flow.data.decode_ofrecord(
       data_dir, (label_blob_conf, image_blob_conf),
@@ -92,21 +103,21 @@ def _data_load_layer(data_dir):
   )
 
 
-def alexnet(images, labels, trainable=True):
+def alexnet(args, images, labels, trainable=True):
   transposed = flow.transpose(images, name="transpose", perm=[0, 3, 1, 2])
-  conv1 = _conv2d_layer("conv1", transposed, filters=64, kernel_size=11, strides=4, padding="VALID")
+  conv1 = _conv2d_layer(args, "conv1", transposed, filters=64, kernel_size=11, strides=4, padding="VALID")
 
   pool1 = flow.nn.avg_pool2d(conv1, 3, 2, "VALID", "NCHW", name="pool1")
 
-  conv2 = _conv2d_layer("conv2", pool1, filters=192, kernel_size=5)
+  conv2 = _conv2d_layer(args, "conv2", pool1, filters=192, kernel_size=5)
 
   pool2 = flow.nn.avg_pool2d(conv2, 3, 2, "VALID", "NCHW", name="pool2")
 
-  conv3 = _conv2d_layer("conv3", pool2, filters=384)
+  conv3 = _conv2d_layer(args, "conv3", pool2, filters=384)
 
-  conv4 = _conv2d_layer("conv4", conv3, filters=384)
+  conv4 = _conv2d_layer(args, "conv4", conv3, filters=384)
 
-  conv5 = _conv2d_layer("conv5", conv4, filters=256)
+  conv5 = _conv2d_layer(args, "conv5", conv4, filters=256)
 
   pool5 = flow.nn.avg_pool2d(conv5, 3, 2, "VALID", "NCHW", name="pool5")
 
@@ -159,50 +170,30 @@ def alexnet(images, labels, trainable=True):
 
   return loss
 
+def main(args):
+  @flow.function
+  def alexnet_train_job():
+    flow.config.train.primary_lr(0.00001)
+    flow.config.train.model_update_conf(dict(naive_conf={}))
 
-@flow.function
-def alexnet_train_job():
-  flow.config.train.primary_lr(0.00001)
-  flow.config.train.model_update_conf(dict(naive_conf={}))
+    flow.config.cudnn_conv_force_fwd_algo(0)
+    flow.config.cudnn_conv_force_bwd_data_algo(1)
+    flow.config.cudnn_conv_force_bwd_filter_algo(1)
 
-  flow.config.cudnn_conv_force_fwd_algo(0)
-  flow.config.cudnn_conv_force_bwd_data_algo(1)
-  flow.config.cudnn_conv_force_bwd_filter_algo(1)
+    (labels, images) = _data_load_layer(args, args.train_dir)
+    loss = alexnet(args, images, labels)
+    flow.losses.add_loss(loss)
+    return loss
 
-  (labels, images) = _data_load_layer(args.train_dir)
-  loss = alexnet(images, labels)
-  flow.losses.add_loss(loss)
-  return loss
+  @flow.function
+  def alexnet_eval_job():
+    (labels, images) = _data_load_layer(args, args.eval_dir)
+    return alexnet(args, images, labels, False)
 
-
-@flow.function
-def alexnet_eval_job():
-  (labels, images) = _data_load_layer(args.eval_dir)
-  return alexnet(images, labels, False)
-
-
-if __name__ == "__main__":
+  flow.config.machine_num(args.num_nodes)
   flow.config.gpu_device_num(args.gpu_num_per_node)
-  flow.config.ctrl_port(9788)
 
   flow.config.default_data_type(flow.float)
-
-  if args.multinode:
-    flow.config.ctrl_port(12138)
-    nodes = []
-    for n in args.node_list.strip().split(","):
-      addr_dict = {}
-      addr_dict["addr"] = n
-      nodes.append(addr_dict)
-
-    flow.config.machine(nodes)
-    if args.remote_by_hand is False:
-      if args.scp_binary_without_uuid:
-        flow.deprecated.init_worker(scp_binary=True, use_uuid=False)
-      elif args.skip_scp_binary:
-        flow.deprecated.init_worker(scp_binary=False, use_uuid=False)
-      else:
-        flow.deprecated.init_worker(scp_binary=True, use_uuid=True)
 
   check_point = flow.train.CheckPoint()
   if not args.model_load_dir:
@@ -210,7 +201,7 @@ if __name__ == "__main__":
   else:
     check_point.load(args.model_load_dir)
 
-  num_nodes = len(args.node_list.strip().split(",")) if args.multinode else 1
+  num_nodes = args.num_nodes
   print("Traning alexnet: num_gpu_per_node = {}, num_nodes = {}.".format(args.gpu_num_per_node, num_nodes))
 
   print("{:>12}  {:>12}  {:>12}".format("iter", "loss type", "loss value"))
@@ -231,15 +222,35 @@ if __name__ == "__main__":
       # )
     if (i + 1) % 100 == 0:
       check_point.save(_MODEL_SAVE_DIR + str(i))
-  if (
-          args.multinode
-        and args.skip_scp_binary is False
-      and args.scp_binary_without_uuid is False
-  ):
-    flow.deprecated.delete_worker()
 
   # save loss to file
   loss_file = "{}n{}c.npy".format(str(num_nodes), str(args.gpu_num_per_node * num_nodes))
   loss_path = "./of_loss/alexnet"
   if not os.path.exists(loss_path): os.makedirs(loss_path)
   numpy.save(os.path.join(loss_path, loss_file), loss)
+
+if __name__ == "__main__":
+  args = parser.parse_args()
+  args.num_nodes = len(args.node_list.strip().split(',')) if args.multinode else 1
+  flow.env.ctrl_port(9788)
+  if args.multinode:
+    flow.env.ctrl_port(12138)
+    nodes = []
+    for n in args.node_list.strip().split(","):
+      addr_dict = {}
+      addr_dict["addr"] = n
+      nodes.append(addr_dict)
+
+    flow.env.machine(nodes)
+    if args.remote_by_hand is False:
+      if args.scp_binary_without_uuid:
+        flow.deprecated.init_worker(scp_binary=True, use_uuid=False)
+      elif args.skip_scp_binary:
+        flow.deprecated.init_worker(scp_binary=False, use_uuid=False)
+      else:
+        flow.deprecated.init_worker(scp_binary=True, use_uuid=True)
+
+  main(args)
+  if (args.multinode and args.skip_scp_binary is False
+      and args.scp_binary_without_uuid is False):
+    flow.deprecated.delete_worker()

@@ -3,53 +3,53 @@ import numpy as np
 
 import oneflow as flow
 
-@flow.function
-def gelu_job(x = flow.input_blob_def((10,))):
-    flow.config.use_xla_jit(False)
-    return flow.keras.activations.gelu(x)
+def make_job(input_shape, dtype=flow.float32):
+    @flow.function
+    def gelu_job(x = flow.input_blob_def(input_shape, dtype=dtype)):
+        flow.config.use_xla_jit(False)
+        flow.config.use_tensorrt(False)
+        return flow.keras.activations.gelu(x)
+    return gelu_job
 
-@flow.function
-def xla_gelu_job(x = flow.input_blob_def((10,))):
-    flow.config.use_xla_jit(True)
-    return flow.keras.activations.gelu(x)
+def make_xla_job(input_shape, dtype=flow.float32):
+    @flow.function
+    def xla_gelu_job(x = flow.input_blob_def(input_shape, dtype=dtype)):
+        flow.config.use_xla_jit(True)
+        return flow.keras.activations.gelu(x)
+    return xla_gelu_job
 
-#@flow.function
-#def gelu_job_float16(x = flow.input_blob_def((10,), dtype=flow.float16)):
-#    flow.config.use_xla_jit(False)
-#    #cast = flow.cast(x, dtype= kFloat16)
-#    return flow.keras.activations.gelu(x)
-#
-#@flow.function
-#def xla_gelu_job_float16(x = flow.input_blob_def((10,), dtype=flow.float16)):
-#    flow.config.use_xla_jit(True)
-#    return flow.keras.activations.gelu(x)
 
 class TestGelu(unittest.TestCase):
-    def _test_body(self, x):
-        a = gelu_job(x).get()
-        b = xla_gelu_job(x).get()
+    def _test_body(self, x, dtype=np.float32):
+        f1 = make_job(x.shape, dtype=flow.float32)
+        f2 = make_xla_job(x.shape, dtype=flow.float32)
+        a = f1(x).get()
+        b = f2(x).get()
         print("without xla: ", a)
         print("with xla", b)
         self.assertTrue(np.allclose(a, b , rtol=1e-03, atol=1e-05))
 
-    #def _test_body_float16(self, x):
-    #    a = gelu_job_float16(x).get()
-    #    b = xla_gelu_job_float16(x).get()
-    #    print("without xla: ", a)
-    #    print("with xla", b)
-    #    self.assertTrue(np.allclose(a, b , rtol=1e-03, atol=1e-05))
-     
-    def test_float_ones_input(self):
-        x = np.ones((10,), dtype=np.float32)
-        self._test_body(x)
+        flow.clear_default_session()
 
-    def test_float_random_input(self):
-        x = np.random.rand(10,).astype(np.float32)
-        self._test_body(x)
+    def _test_ones_body(self, shape, dtype=np.float32):
+        x = np.ones(shape, dtype=dtype)
+        self._test_body(x, dtype=dtype)
 
-    #def test_float16_ones_input(self):
-    #  x = np.ones((10,), dtype=np.float16)
-    #  self._test_body_float16(x)
+    def _test_random_body(self, shape, dtype=np.float32):
+        x = np.random.random(shape).astype(dtype)
+        self._test_body(x, dtype=dtype)
+
+    def test_ones_input(self):
+        self._test_ones_body((1))
+        self._test_ones_body((1, 10))
+        self._test_ones_body((2, 10, 2))
+        self._test_ones_body((2, 5, 2, 2))
+
+    def test_random_input(self):
+        self._test_random_body((1))
+        self._test_random_body((1, 10))
+        self._test_random_body((2, 10, 2))
+        self._test_random_body((2, 5, 2, 2))
 
 if __name__ == '__main__':
   unittest.main()

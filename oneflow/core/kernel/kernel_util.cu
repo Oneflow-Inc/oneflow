@@ -111,6 +111,18 @@ __global__ void ReluBackwardGpu(const int n, const T* y, const T* dy, T* dx) {
 }
 
 template<typename T>
+__global__ void gpu_assign_add(const int64_t n, T* out, const T* in_1) {
+  CUDA_1D_KERNEL_LOOP(i, n) {
+    if (in_1[i]) { out[i] += in_1[i]; }
+  }
+}
+
+template<typename T>
+__global__ void gpu_assign_add(const int64_t n, T* out, const T* in_1, const T* in_2) {
+  CUDA_1D_KERNEL_LOOP(i, n) { out[i] += in_1[i] + in_2[i]; }
+}
+
+template<typename T>
 __global__ void gpu_add(const int64_t n, T* out, const T* in_0) {
   CUDA_1D_KERNEL_LOOP(i, n) { out[i] = in_0[i]; }
 }
@@ -564,14 +576,24 @@ KU_FLOATING_METHOD Addition(DeviceCtx* ctx, const int64_t n, T* out, const T* in
       <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, out, in_0);
 }
 KU_FLOATING_METHOD Addition(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0, const T* in_1) {
-  gpu_add<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-      n, out, in_0, in_1);
+  if (out == in_0) {
+    gpu_assign_add<T>
+        <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, out, in_1);
+  } else {
+    gpu_add<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+        n, out, in_0, in_1);
+  }
 }
 
 KU_FLOATING_METHOD Addition(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0, const T* in_1,
                             const T* in_2) {
-  gpu_add<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-      n, out, in_0, in_1, in_2);
+  if (out == in_0) {
+    gpu_assign_add<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+        n, out, in_1, in_2);
+  } else {
+    gpu_add<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+        n, out, in_0, in_1, in_2);
+  }
 }
 
 KU_FLOATING_METHOD Addition(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0, const T* in_1,

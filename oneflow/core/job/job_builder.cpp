@@ -41,6 +41,12 @@ JobBuilder::JobBuilder(Job* job) : job_(job) {
   for (auto& pair : *(helper_conf->mutable_op_name2op_time_shape())) {
     op_name2time_shapes_.emplace(pair.first, &pair.second);
   }
+  FOR_RANGE(int32_t, i, 0, job->placement().blob_placement_group_size()) {
+    auto* blob_pg = job->mutable_placement()->mutable_blob_placement_group(i);
+    for (const auto& lbi : blob_pg->lbi()) {
+      CHECK(lbi2blob_parallel_conf_.emplace(lbi, blob_pg->mutable_parallel_conf()).second);
+    }
+  }
 }
 
 OperatorConf* JobBuilder::MutableOpConf4OpName(const std::string& op_name) {
@@ -51,6 +57,10 @@ OperatorConf* JobBuilder::MutableOpConf4OpName(const std::string& op_name) {
 
 const OperatorConf& JobBuilder::OpConf4OpName(const std::string& op_name) const {
   return *op_name2op_conf_.at(op_name);
+}
+
+const ParallelConf& JobBuilder::ParallelConf4Lbi(const LogicalBlobId& lbi) const {
+  return *lbi2blob_parallel_conf_.at(lbi);
 }
 
 void JobBuilder::AddOps(const ParallelConf& parallel_conf,

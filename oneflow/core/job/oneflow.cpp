@@ -12,7 +12,6 @@
 #include "oneflow/core/job/profiler.h"
 #include "oneflow/core/job/sub_plan.pb.h"
 #include "oneflow/core/job/plan.pb.h"
-#include "oneflow/core/job/critical_section_desc.h"
 #include "oneflow/core/job/available_memory_desc.pb.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
 #include "oneflow/core/actor/act_event_logger.h"
@@ -21,8 +20,7 @@
 #include "oneflow/core/job/inter_job_mem_sharing_util.h"
 #include "oneflow/core/job/plan_util.h"
 #include "oneflow/core/operator/interface_op_util.h"
-
-DECLARE_bool(grpc_use_no_signal);
+#include "oneflow/core/job/critical_section_desc.h"
 
 namespace std {
 
@@ -367,7 +365,7 @@ void FilterOpName2ParallelBlobConf(
 void FilterArgPassJobGroupInfo(
     std::vector<Job>* jobs,
     HashMap<ParallelBlobConf, HashMap<std::string, std::vector<std::string>>>*
-        parallel_blob_conf2input_op_name2output_op_name) {
+        parallel_blob_conf2input_op_name2output_op_names) {
   HashMap<ParallelBlobConf, HashSet<std::string>> parallel_blob_conf2input_op_names;
   HashMap<ParallelBlobConf, HashSet<std::string>> parallel_blob_conf2output_op_names;
   FOR_RANGE(int64_t, job_id, 0, jobs->size()) {
@@ -391,7 +389,7 @@ void FilterArgPassJobGroupInfo(
       if (output_op_names.empty()) { continue; }
       for (const auto& output_op_name : output_op_names) {
         if (input_op_name == output_op_name) { continue; }
-        auto* in2outs = &(*parallel_blob_conf2input_op_name2output_op_name)[parallel_blob_conf];
+        auto* in2outs = &(*parallel_blob_conf2input_op_name2output_op_names)[parallel_blob_conf];
         (*in2outs)[input_op_name].push_back(output_op_name);
       }
     }
@@ -551,6 +549,7 @@ void CompileMainJob(Job* main_job, const LogicalBlobId& critical_section_sink_lb
 }
 
 void AddJobName2JobId(const std::string& job_name, int64_t job_id) {
+  if (!Global<MachineCtx>::Get()->IsThisMachineMaster()) { return; }
   CHECK(Global<JobName2JobId>::Get()->emplace(job_name, job_id).second);
 }
 
@@ -572,6 +571,10 @@ void FinishGlobalCriticalSectionDesc(const Plan& plan, int64_t job_size) {
       for (const auto& pair : task.produced_regst_desc()) {
         if (NeedAllocateMemory(pair.second.regst_desc_type())) {
           mem_block_ids->emplace(pair.second.mem_block_id());
+        }
+        if (pair.second.has_separated_header_mem_block_id()
+            && pair.second.separated_header_mem_block_id() != -1) {
+          mem_block_ids->emplace(pair.second.separated_header_mem_block_id());
         }
       }
     }
@@ -791,14 +794,14 @@ void CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan) {
     FilterOpName2ParallelBlobConf({OperatorConf::kVariableConf}, &jobs,
                                   &var_op_name2parallel_blob_conf);
     HashMap<ParallelBlobConf, HashMap<std::string, std::vector<std::string>>>
-        parallel_blob_conf2input_op_name2output_op_name;
-    FilterArgPassJobGroupInfo(&jobs, &parallel_blob_conf2input_op_name2output_op_name);
+        parallel_blob_conf2input_op_name2output_op_names;
+    FilterArgPassJobGroupInfo(&jobs, &parallel_blob_conf2input_op_name2output_op_names);
     int64_t job_id = -1;
     {
       size_t helper_job_size =
           push_op_name2parallel_blob_conf.size() + pull_op_name2parallel_blob_conf.size();
 
-      for (const auto& pair : parallel_blob_conf2input_op_name2output_op_name) {
+      for (const auto& pair : parallel_blob_conf2input_op_name2output_op_names) {
         helper_job_size += pair.second.size();
       }
       // + 3 for model init job, model load job and model save job
@@ -826,7 +829,7 @@ void CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan) {
       MakePullJob(std::string("System-Pull-") + pair.first, pair.first, pair.second, &pull_job);
       CompileHelperJob(&pull_job);
     }
-    for (const auto& outer_pair : parallel_blob_conf2input_op_name2output_op_name) {
+    for (const auto& outer_pair : parallel_blob_conf2input_op_name2output_op_names) {
       const auto parallel_blob_conf = outer_pair.first;
       for (const auto& pair : outer_pair.second) {
         Job arg_pass_job;
@@ -863,18 +866,7 @@ void CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan) {
 
 }  // namespace
 
-GlobalObjectsScope4JobConf::GlobalObjectsScope4JobConf(const JobSet& job_set) {
-  Global<const InterJobReuseMemStrategy>::New(job_set.inter_job_reuse_mem_strategy());
-  Global<JobName2JobId>::New();
-}
-
-GlobalObjectsScope4JobConf::~GlobalObjectsScope4JobConf() {
-  Global<JobName2JobId>::Delete();
-  Global<const InterJobReuseMemStrategy>::Delete();
-}
-
 Oneflow::Oneflow(const oneflow::JobSet& job_set) {
-  global_objects_scope4job_conf_.reset(new GlobalObjectsScope4JobConf(job_set));
   // Runtime
   CompileAndMergePlanOnMaster(job_set.job(), &plan_);
   if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
@@ -890,7 +882,6 @@ Oneflow::~Oneflow() {
     Global<Profiler>::Get()->Profile(
         plan_, JoinPath(FLAGS_log_dir, ActEventLogger::act_event_bin_filename()));
   }
-  global_objects_scope4job_conf_.reset();
 }
 
 }  // namespace oneflow

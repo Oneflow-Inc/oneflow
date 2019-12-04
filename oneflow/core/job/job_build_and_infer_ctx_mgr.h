@@ -6,6 +6,7 @@
 #include "oneflow/core/job/job.pb.h"
 #include "oneflow/core/job/job_set.pb.h"
 #include "oneflow/core/job/job_build_and_infer_ctx.h"
+#include "oneflow/core/job/lbi_diff_watcher_info.pb.h"
 
 namespace oneflow {
 
@@ -16,8 +17,10 @@ class JobBuildAndInferCtxMgr {
 
   Maybe<void> OpenJobBuildAndInferCtx(const std::string& job_name);
   Maybe<JobBuildAndInferCtx*> FindJobBuildAndInferCtx(const std::string& job_name);
-  Maybe<std::string> GetCurrentJobName();
+  Maybe<std::string> GetCurrentJobName() const;
   void CloseCurrentJobBuildAndInferCtx();
+  Maybe<void> AddLbiAndDiffWatcherUuidPair(const LbiAndDiffWatcherUuidPair& lbi_uuid_pair) const;
+
   const JobSet& job_set() const { return job_set_; }
 
  private:
