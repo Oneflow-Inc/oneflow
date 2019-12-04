@@ -249,7 +249,6 @@ add_custom_target(of_include_copy ALL
 file(REMOVE_RECURSE "${ONEFLOW_INCLUDE_DIR}")
 foreach(of_include_src_dir ${ONEFLOW_INCLUDE_SRC_DIRS})
   set(oneflow_all_include_file)
-  message(STATUS "cclog: include_dir : " ${of_include_src_dir})
   #file(GLOB_RECURSE h_files "${of_include_src_dir}/*.h")
   #list(APPEND oneflow_all_include_file ${h_files})
   #file(GLOB_RECURSE hpp_files "${of_include_src_dir}/*.hpp")
@@ -261,7 +260,6 @@ foreach(of_include_src_dir ${ONEFLOW_INCLUDE_SRC_DIRS})
       COMMAND "${CMAKE_COMMAND}" -E copy
       "${of_hdr_file}"
       "${ONEFLOW_INCLUDE_DIR}/${of_include_rel_file_path}")
-    message(STATUS "cclog: copy_file: FROM:  ${of_hdr_file} TO: ${ONEFLOW_INCLUDE_DIR}/${of_include_rel_file_path}")
   endforeach()
 endforeach()
 
@@ -271,7 +269,6 @@ foreach(of_proto_hdr_file ${PROTO_HDRS})
     COMMAND "${CMAKE_COMMAND}" -E copy
     "${of_proto_hdr_file}"
     "${ONEFLOW_INCLUDE_DIR}/${of_include_rel_file_path}")
-  message(STATUS "cclog: copy_file: FROM:  ${of_proto_hdr_file} TO: ${ONEFLOW_INCLUDE_DIR}/${of_include_rel_file_path}")
 endforeach()
 
 set(OF_CORE_HDRS)
@@ -284,26 +281,10 @@ foreach(of_core_dir_name ${of_core_dir_name_list})
 endforeach()
 list(APPEND OF_CORE_HDRS "${PROJECT_SOURCE_DIR}/oneflow/core/kernel/new_kernel_util.h")
 list(APPEND OF_CORE_HDRS "${PROJECT_SOURCE_DIR}/oneflow/core/kernel/kernel_context.h")
-#file(GLOB_RECURSE of_common_hdrs "${PROJECT_SOURCE_DIR}/oneflow/core/common/*.h")
-#file(GLOB_RECURSE of_device_hdrs "${PROJECT_SOURCE_DIR}/oneflow/core/device/*.h")
-#file(GLOB_RECURSE of_framework_hdrs "${PROJECT_SOURCE_DIR}/oneflow/core/framework/*.h")
-#list(APPEND OF_CORE_HDRS ${of_common_hdrs})
-#list(APPEND OF_CORE_HDRS ${of_device_hdrs})
-#list(APPEND OF_CORE_HDRS ${of_framework_hdrs})
-#list(APPEND OF_CORE_HDRS "${PROJECT_SOURCE_DIR}/oneflow/core/framework/*.h")
-#list(APPEND OF_CORE_HDRS "${PROJECT_SOURCE_DIR}/oneflow/core/common/*.h")
-#list(APPEND OF_CORE_HDRS "${PROJECT_SOURCE_DIR}/oneflow/core/device/*.h")
 foreach(of_core_hdr_file ${OF_CORE_HDRS})
   file(RELATIVE_PATH of_include_rel_file_path ${PROJECT_SOURCE_DIR} ${of_core_hdr_file})
   add_custom_command(TARGET of_include_copy POST_BUILD
     COMMAND "${CMAKE_COMMAND}" -E copy
     "${of_core_hdr_file}"
     "${ONEFLOW_INCLUDE_DIR}/${of_include_rel_file_path}")
-  message(STATUS "cclog: copy_file: FROM:  ${of_core_hdr_file} TO: ${ONEFLOW_INCLUDE_DIR}/${of_include_rel_file_path}")
 endforeach()
-
-foreach(oneflow_third_party_lib ${oneflow_third_party_libs})
-  # file(RELATIVE_PATH of_rel_path ${PROJECT_SOURCE_DIR} ${oneflow_include_dir})
-  message(STATUS "cclog: include_lib : " ${oneflow_third_party_lib})
-endforeach()
-
