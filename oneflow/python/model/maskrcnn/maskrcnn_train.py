@@ -532,6 +532,7 @@ if terminal_args.train_with_real_dataset:
                 for loss in losses_per_device:
                     flow.losses.add_loss(loss)
 
+            return tuple(map(list, zip(*outputs)))
         else:
             outputs = maskrcnn_train(
                 config,
@@ -544,7 +545,7 @@ if terminal_args.train_with_real_dataset:
             for loss in outputs:
                 flow.losses.add_loss(loss)
 
-        return outputs
+            return outputs
 
     def init_train_func(fake_image):
         if fake_image:
