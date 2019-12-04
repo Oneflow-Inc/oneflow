@@ -69,7 +69,7 @@ parser.add_argument(
     required=False,
 )
 parser.add_argument(
-    "-save_rate", "--model_save_rate", type=int, default=0, required=False
+    "-save_every_n_batch", "--model_save_every_n_batch", type=int, default=0, required=False
 )
 parser.add_argument(
     "-v", "--verbose", default=False, action="store_true", required=False
@@ -603,7 +603,7 @@ if __name__ == "__main__":
     if not terminal_args.model_load_dir:
         check_point = flow.train.CheckPoint()
         check_point.init()
-        if terminal_args.model_save_rate > 0:
+        if terminal_args.model_save_every_n_batch > 0:
             save_model(0)
     else:
         check_point = flow.train.SimpleCheckPointManager(terminal_args.model_load_dir)
@@ -674,12 +674,10 @@ if __name__ == "__main__":
                 elapsed_times.append(elapsed_time)
                 start_time = now_time
 
-                if terminal_args.model_save_rate > 0:
+                if terminal_args.model_save_every_n_batch > 0:
                     if (
                         i + 1
-                    ) % terminal_args.model_save_rate == 0 or i + 1 == len(
-                        terminal_args.iter_num
-                    ):
+                    ) % terminal_args.model_save_every_n_batch == 0 or i + 1 == terminal_args.iter_num:
                         save_model(i + 1)
 
                 fmt = "{:<8} {:<8} {:<16} " + "{:<16.10f} " * len(losses)
