@@ -600,14 +600,14 @@ if __name__ == "__main__":
     if terminal_args.train_with_real_dataset:
         train_func = init_train_func(len(fake_image_list) > 0)
 
-    if not terminal_args.model_load_dir:
+    if terminal_args.model_load_dir:
+        check_point = flow.train.SimpleCheckPointManager(terminal_args.model_load_dir)
+        check_point.initialize_or_restore()
+    else:
         check_point = flow.train.CheckPoint()
         check_point.init()
         if terminal_args.model_save_every_n_batch > 0:
             save_model(0)
-    else:
-        check_point = flow.train.SimpleCheckPointManager(terminal_args.model_load_dir)
-        check_point.initialize_or_restore()
 
     if terminal_args.debug:
         if terminal_args.mock_dataset:
