@@ -6,6 +6,7 @@
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/job/placement.pb.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/framework/user_op_conf.h"
 
 namespace oneflow {
 
@@ -18,27 +19,26 @@ class KernelInitContext;
 class BlobDef;
 class InferContext;
 
-using BlobDef4ArgNameAndIndexFn =
-    std::function<std::shared_ptr<BlobDef>(const std::string&, int32_t)>;
-
-class KernelRegContext final {
+class KernelRegContext {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(KernelRegContext);
-  explicit KernelRegContext(DeviceType, DataType, const ParallelContext&,
-                            BlobDef4ArgNameAndIndexFn);
-  explicit KernelRegContext(const KernelConf&);
-  ~KernelRegContext() = default;
+  virtual ~KernelRegContext() = default;
 
-  DeviceType device() const { return device_; }
-  DataType data_type() const { return data_type_; }
-  const ParallelContext& parallel_ctx() const { return parallel_ctx_; }
-  std::shared_ptr<const BlobDef> BlobDesc4ArgNameAndIndex(const std::string&, int32_t) const;
+  virtual DeviceType device() const = 0;
+  virtual DataType data_type() const = 0;
+  virtual const ParallelContext& parallel_ctx() const = 0;
+  virtual const BlobDef* TensorDesc4ArgNameAndIndex(const std::string&, int32_t) const = 0;
+
+  template<typename T>
+  T GetAttr(const std::string& attr_name) const {
+    return user_op_conf_.attr<T>(attr_name);
+  }
+
+ protected:
+  KernelRegContext(UserOpConfWrapper&& conf) : user_op_conf_(std::move(conf)) {}
+  KernelRegContext(const KernelRegContext&) = delete;
 
  private:
-  DeviceType device_;
-  DataType data_type_;
-  ParallelContext parallel_ctx_;
-  BlobDef4ArgNameAndIndexFn fn_;
+  UserOpConfWrapper user_op_conf_;
 };
 
 using CreateFn = std::function<OpKernel*(const KernelInitContext&)>;

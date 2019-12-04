@@ -6,6 +6,20 @@
 
 namespace oneflow {
 
+namespace {
+
+BlobDesc* FindValidBlobDescOfBnsInOp(
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const PbRpf<std::string>& bn_in_ops) {
+  for (const std::string& bn_in_op : bn_in_ops) {
+    BlobDesc* blob_desc = GetBlobDesc4BnInOp(bn_in_op);
+    if (blob_desc) { return blob_desc; }
+  }
+  return nullptr;
+}
+
+}  // namespace
+
 class UserOp final : public Operator {
  public:
   OF_DISALLOW_COPY_AND_MOVE(UserOp);
@@ -35,24 +49,63 @@ class UserOp final : public Operator {
   void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                             const ParallelContext* parallel_ctx,
                             KernelConf* kernel_conf) const override;
-  Maybe<void> InferTmpBufferBlobDesc(
-      std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-      const ParallelContext* parallel_ctx, const user_op::InferContext& infer_ctx) const;
 };
 
-namespace {
+class UserOpKernelRegContext final : public user_op::KernelRegContext {
+ public:
+  explicit UserOpKernelRegContext(const UserOp* user_op,
+                                  std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                                  const ParallelContext* parallel_ctx)
+      : user_op::KernelRegContext(user_op::UserOpConfWrapper(user_op->op_conf())) {
+    const auto& op_conf = user_op->op_conf();
+    CHECK(op_conf.has_user_conf());
 
-BlobDesc* FindValidBlobDescOfBnsInOp(
-    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const PbRpf<std::string>& bn_in_ops) {
-  for (const std::string& bn_in_op : bn_in_ops) {
-    BlobDesc* blob_desc = GetBlobDesc4BnInOp(bn_in_op);
-    if (blob_desc) { return blob_desc; }
+    device_ = op_conf.device_type();
+    parallel_ctx_ = parallel_ctx;
+
+    {
+      BlobDesc* first_blob_desc =
+          FindValidBlobDescOfBnsInOp(GetBlobDesc4BnInOp, user_op->input_bns());
+      if (!first_blob_desc) {
+        first_blob_desc = FindValidBlobDescOfBnsInOp(GetBlobDesc4BnInOp, user_op->output_bns());
+      }
+      if (first_blob_desc) { data_type_ = first_blob_desc->data_type(); }
+    }
+
+    {
+#define INSERT_TO_ARG2TENSOR_DESC(prefix)                                                   \
+  for (const auto& bn : user_op->prefix##_bns()) {                                          \
+    const BlobDesc* blob_desc = GetBlobDesc4BnInOp(bn);                                     \
+    if (!blob_desc) { continue; }                                                           \
+    arg2tensor_desc_.emplace(GenUnRepeatedBn(bn),                                           \
+                             user_op::BlobDef(blob_desc->shape(), blob_desc->data_type())); \
   }
-  return nullptr;
-}
 
-}  // namespace
+      INSERT_TO_ARG2TENSOR_DESC(input)
+      INSERT_TO_ARG2TENSOR_DESC(output)
+      INSERT_TO_ARG2TENSOR_DESC(tmp)
+
+#undef INSERT_TO_ARG2TENSOR_DESC
+    }
+  }
+  ~UserOpKernelRegContext() = default;
+
+  DeviceType device() const override { return device_; }
+  DataType data_type() const override { return data_type_; }
+  const ParallelContext& parallel_ctx() const override { return *parallel_ctx_; }
+  const user_op::BlobDef* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
+                                                     int32_t index) const override {
+    auto it = arg2tensor_desc_.find(std::make_pair(arg_name, index));
+    if (it == arg2tensor_desc_.end()) { return nullptr; }
+    return &(it->second);
+  }
+
+ private:
+  DeviceType device_;
+  DataType data_type_;
+  const ParallelContext* parallel_ctx_;
+  HashMap<std::pair<std::string, int32_t>, user_op::BlobDef> arg2tensor_desc_;
+};
 
 void UserOp::InitFromOpConf() {
   CHECK(op_conf().has_user_conf());
@@ -62,7 +115,7 @@ void UserOp::InitFromOpConf() {
   for (const auto& pair : op_conf().user_conf().output()) {
     EnrollRepeatedOutputBn(pair.first, pair.second.s_size());
   }
-  EnrollTmpBn("tmp_buffer");
+  EnrollTmpBn(GenRepeatedBn("tmp_buffer", 0));
 }
 
 Maybe<void> UserOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
@@ -110,7 +163,19 @@ Maybe<void> UserOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> 
   }
 
   // infer tmp buffer size must after infer out shape/dtype
-  JUST(InferTmpBufferBlobDesc(GetBlobDesc4BnInOp, parallel_ctx, infer_ctx));
+  const user_op::KernelRegistrationVal* kernel_reg_val = user_op::LookUpInKernelRegistry(
+      op_conf().user_conf().op_type_name(),
+      UserOpKernelRegContext(this, GetBlobDesc4BnInOp, parallel_ctx));
+  CHECK_OR_RETURN(kernel_reg_val != nullptr)
+      << "cannot find op_type: " << op_conf().user_conf().op_type_name() << " in kernel registry !";
+
+  size_t tmp_size = kernel_reg_val->infer_tmp_size_fn(infer_ctx);
+  if (tmp_size > 0) {
+    BlobDesc* tmp_buffer_blob = GetBlobDesc4BnInOp(GenRepeatedBn("tmp_buffer", 0));
+    CHECK(tmp_buffer_blob != nullptr);
+    tmp_buffer_blob->set_data_type(DataType::kChar);
+    tmp_buffer_blob->mut_shape() = Shape({static_cast<int64_t>(tmp_size)});
+  }
   return Maybe<void>::Ok();
 }
 
@@ -122,43 +187,6 @@ LogicalBlobId UserOp::ibn2lbi(const std::string& input_bn) const {
 LogicalBlobId UserOp::obn2lbi(const std::string& output_bn) const {
   auto pair = GenUnRepeatedBn(output_bn);
   return GenLogicalBlobId(op_conf().user_conf().output().at(pair.first).s(pair.second));
-}
-
-Maybe<void> UserOp::InferTmpBufferBlobDesc(
-    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx, const user_op::InferContext& infer_ctx) const {
-  user_op::BlobDef4ArgNameAndIndexFn GetBlobDef =
-      [&](const std::string& arg_name, int32_t id) -> std::shared_ptr<user_op::BlobDef> {
-    BlobDesc* blob = GetBlobDesc4BnInOp(GenRepeatedBn(arg_name, id));
-    if (blob) {
-      return std::shared_ptr<user_op::BlobDef>(
-          new user_op::BlobDef(blob->shape(), blob->data_type()));
-    }
-    return std::shared_ptr<user_op::BlobDef>();
-  };
-
-  DataType data_type = DataType::kInvalidDataType;
-  BlobDesc* first_blob_desc = FindValidBlobDescOfBnsInOp(GetBlobDesc4BnInOp, input_bns());
-  if (!first_blob_desc) {
-    first_blob_desc = FindValidBlobDescOfBnsInOp(GetBlobDesc4BnInOp, output_bns());
-  }
-  if (first_blob_desc) { data_type = first_blob_desc->data_type(); }
-
-  user_op::KernelRegContext kernel_reg_ctx(op_conf().device_type(), data_type, *parallel_ctx,
-                                           GetBlobDef);
-  const user_op::KernelRegistrationVal* kernel_reg_val =
-      user_op::LookUpInKernelRegistry(op_conf().user_conf().op_type_name(), kernel_reg_ctx);
-  CHECK_OR_RETURN(kernel_reg_val != nullptr)
-      << "cannot find op_type: " << op_conf().user_conf().op_type_name() << " in kernel registry!";
-
-  size_t tmp_size = kernel_reg_val->infer_tmp_size_fn(infer_ctx);
-  if (tmp_size > 0) {
-    BlobDesc* tmp_buffer_blob = GetBlobDesc4BnInOp("tmp_buffer");
-    CHECK(tmp_buffer_blob != nullptr);
-    tmp_buffer_blob->set_data_type(DataType::kChar);
-    tmp_buffer_blob->mut_shape() = Shape({static_cast<int64_t>(tmp_size)});
-  }
-  return Maybe<void>::Ok();
 }
 
 Maybe<void> UserOp::InferBatchAxis(

@@ -30,6 +30,40 @@ class UserKernelContext final : public user_op::KernelContext {
   Arg2Blob blobs_;
 };
 
+class UserKernelRegContext final : public user_op::KernelRegContext {
+ public:
+  explicit UserKernelRegContext(const KernelConf& kernel_conf,
+                                user_op::UserOpConfWrapper&& user_op_conf)
+      : user_op::KernelRegContext(std::move(user_op_conf)) {
+    CHECK(kernel_conf.has_user_conf());
+
+    device_ = kernel_conf.op_attribute().op_conf().device_type();
+    data_type_ = kernel_conf.data_type();
+    parallel_ctx_ = kernel_conf.user_conf().parallel_ctx();
+
+    for (const auto& pair : kernel_conf.user_conf().bn_in_op2blob_desc()) {
+      arg2tensor_desc_.emplace(GenUnRepeatedBn(pair.first), user_op::BlobDef(pair.second));
+    }
+  }
+  ~UserKernelRegContext() = default;
+
+  DeviceType device() const override { return device_; }
+  DataType data_type() const override { return data_type_; }
+  const ParallelContext& parallel_ctx() const override { return parallel_ctx_; }
+  const user_op::BlobDef* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
+                                                     int32_t index) const override {
+    auto it = arg2tensor_desc_.find(std::make_pair(arg_name, index));
+    if (it == arg2tensor_desc_.end()) { return nullptr; }
+    return &(it->second);
+  }
+
+ private:
+  DeviceType device_;
+  DataType data_type_;
+  ParallelContext parallel_ctx_;
+  HashMap<std::pair<std::string, int32_t>, user_op::BlobDef> arg2tensor_desc_;
+};
+
 class UserKernel final : public Kernel {
  public:
   OF_DISALLOW_COPY_AND_MOVE(UserKernel);
@@ -43,7 +77,8 @@ class UserKernel final : public Kernel {
   void VirtualKernelInit() override {
     auto kernel_reg_val = user_op::LookUpInKernelRegistry(
         kernel_conf().op_attribute().op_conf().user_conf().op_type_name(),
-        user_op::KernelRegContext(kernel_conf()));
+        UserKernelRegContext(kernel_conf(),
+                             user_op::UserOpConfWrapper(kernel_conf().op_attribute().op_conf())));
     CHECK_NOTNULL(kernel_reg_val);
 
     user_op::KernelInitContext init_ctx;
