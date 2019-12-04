@@ -11,11 +11,29 @@ using Arg2Blob = HashMap<std::pair<std::string, int32_t>, user_op::Blob>;
 
 class UserKernelContext final : public user_op::KernelContext {
  public:
-  explicit UserKernelContext(DeviceCtx* device_ctx, Arg2Blob&& arg2blob,
-                             user_op::UserOpConfWrapper&& conf)
-      : user_op::KernelContext(std::move(conf)),
+  explicit UserKernelContext(DeviceCtx* device_ctx, const OperatorConf& op_conf,
+                             std::function<Blob*(const std::string&)> BnInOp2Blob)
+      : user_op::KernelContext(user_op::UserOpConfWrapper(op_conf)),
         device_ctx_(device_ctx),
-        blobs_(std::move(arg2blob)) {}
+        blobs_() {
+    const auto& user_op_conf = op_conf.user_conf();
+    for (auto it = user_op_conf.input().begin(); it != user_op_conf.input().end(); ++it) {
+      const std::string& arg_name = it->first;
+      for (int32_t i = 0; i < it->second.s_size(); ++i) {
+        Blob* blob = BnInOp2Blob(GenRepeatedBn(arg_name, i));
+        blobs_.emplace(std::make_pair(arg_name, i),
+                       user_op::Blob(blob->shape(), blob->data_type(), blob->mut_dptr<char>()));
+      }
+    }
+    for (auto it = user_op_conf.output().begin(); it != user_op_conf.output().end(); ++it) {
+      const std::string& arg_name = it->first;
+      for (int32_t i = 0; i < it->second.s_size(); ++i) {
+        Blob* blob = BnInOp2Blob(GenRepeatedBn(arg_name, i));
+        blobs_.emplace(std::make_pair(arg_name, i),
+                       user_op::Blob(blob->shape(), blob->data_type(), blob->mut_dptr<char>()));
+      }
+    }
+  }
   ~UserKernelContext() = default;
 
   user_op::Blob* Tensor4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
@@ -88,27 +106,8 @@ class UserKernel final : public Kernel {
   void ForwardDataContent(const KernelCtx& ctx,
                           std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
     if (ctx_ == nullptr) {
-      const auto& user_op_conf = kernel_conf().op_attribute().op_conf().user_conf();
-      Arg2Blob blobs;
-      for (auto it = user_op_conf.input().begin(); it != user_op_conf.input().end(); ++it) {
-        const std::string& arg_name = it->first;
-        for (int32_t i = 0; i < it->second.s_size(); ++i) {
-          Blob* blob = BnInOp2Blob(GenRepeatedBn(arg_name, i));
-          blobs.emplace(std::make_pair(arg_name, i),
-                        user_op::Blob(blob->shape(), blob->data_type(), blob->mut_dptr<char>()));
-        }
-      }
-      for (auto it = user_op_conf.output().begin(); it != user_op_conf.output().end(); ++it) {
-        const std::string& arg_name = it->first;
-        for (int32_t i = 0; i < it->second.s_size(); ++i) {
-          Blob* blob = BnInOp2Blob(GenRepeatedBn(arg_name, i));
-          blobs.emplace(std::make_pair(arg_name, i),
-                        user_op::Blob(blob->shape(), blob->data_type(), blob->mut_dptr<char>()));
-        }
-      }
-
-      ctx_.reset(new UserKernelContext(ctx.device_ctx, std::move(blobs),
-                                       user_op::UserOpConfWrapper(op_conf())));
+      ctx_.reset(new UserKernelContext(ctx.device_ctx, kernel_conf().op_attribute().op_conf(),
+                                       BnInOp2Blob));
     }
     kernel_->Compute(ctx_.get());
   }
