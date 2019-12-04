@@ -38,7 +38,7 @@ def _DefaultConfigProto():
     return config_proto
 
 @oneflow_export('config.load_library')
-def loadlibray(val):
+def load_libray(val):
     assert config_proto_mutable == True
     assert type(val) is str
     default_config_proto.load_lib_path.append(val)
