@@ -365,7 +365,7 @@ void FilterOpName2ParallelBlobConf(
 void FilterArgPassJobGroupInfo(
     std::vector<Job>* jobs,
     HashMap<ParallelBlobConf, HashMap<std::string, std::vector<std::string>>>*
-        parallel_blob_conf2input_op_name2output_op_name) {
+        parallel_blob_conf2input_op_name2output_op_names) {
   HashMap<ParallelBlobConf, HashSet<std::string>> parallel_blob_conf2input_op_names;
   HashMap<ParallelBlobConf, HashSet<std::string>> parallel_blob_conf2output_op_names;
   FOR_RANGE(int64_t, job_id, 0, jobs->size()) {
@@ -389,7 +389,7 @@ void FilterArgPassJobGroupInfo(
       if (output_op_names.empty()) { continue; }
       for (const auto& output_op_name : output_op_names) {
         if (input_op_name == output_op_name) { continue; }
-        auto* in2outs = &(*parallel_blob_conf2input_op_name2output_op_name)[parallel_blob_conf];
+        auto* in2outs = &(*parallel_blob_conf2input_op_name2output_op_names)[parallel_blob_conf];
         (*in2outs)[input_op_name].push_back(output_op_name);
       }
     }
@@ -794,14 +794,14 @@ void CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan) {
     FilterOpName2ParallelBlobConf({OperatorConf::kVariableConf}, &jobs,
                                   &var_op_name2parallel_blob_conf);
     HashMap<ParallelBlobConf, HashMap<std::string, std::vector<std::string>>>
-        parallel_blob_conf2input_op_name2output_op_name;
-    FilterArgPassJobGroupInfo(&jobs, &parallel_blob_conf2input_op_name2output_op_name);
+        parallel_blob_conf2input_op_name2output_op_names;
+    FilterArgPassJobGroupInfo(&jobs, &parallel_blob_conf2input_op_name2output_op_names);
     int64_t job_id = -1;
     {
       size_t helper_job_size =
           push_op_name2parallel_blob_conf.size() + pull_op_name2parallel_blob_conf.size();
 
-      for (const auto& pair : parallel_blob_conf2input_op_name2output_op_name) {
+      for (const auto& pair : parallel_blob_conf2input_op_name2output_op_names) {
         helper_job_size += pair.second.size();
       }
       // + 3 for model init job, model load job and model save job
@@ -829,7 +829,7 @@ void CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan) {
       MakePullJob(std::string("System-Pull-") + pair.first, pair.first, pair.second, &pull_job);
       CompileHelperJob(&pull_job);
     }
-    for (const auto& outer_pair : parallel_blob_conf2input_op_name2output_op_name) {
+    for (const auto& outer_pair : parallel_blob_conf2input_op_name2output_op_names) {
       const auto parallel_blob_conf = outer_pair.first;
       for (const auto& pair : outer_pair.second) {
         Job arg_pass_job;
