@@ -97,6 +97,9 @@ parser.add_argument(
 parser.add_argument(
     "-j", "--jupyter", default=False, action="store_true", required=False
 )
+parser.add_argument(
+    "-s", "--dataset_shuffle", default=False, action="store_true", required=False
+)
 terminal_args = parser.parse_args()
 
 
@@ -513,6 +516,7 @@ if terminal_args.train_with_real_dataset:
             batch_cache_size=3,
             annotation_file=terminal_args.annotation_file,
             image_dir=terminal_args.image_dir,
+            shuffle=terminal_args.dataset_shuffle,
         )
 
         if config.NUM_GPUS > 1:
