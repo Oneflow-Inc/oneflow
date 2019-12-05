@@ -60,8 +60,8 @@ class OfBlob(object):
 
     def CopyToNdarray(self):
         ndarray_lists = self._CopyToNdarrayLists()
-        assert len(ndarray_lists) == 0
-        assert len(ndarray_lists[0]) == 0
+        assert len(ndarray_lists) == 1
+        assert len(ndarray_lists[0]) == 1
         return ndarray_lists[0][0];
         dst_ndarray = np.ndarray(self._Size(), dtype=convert_of_dtype_to_numpy_dtype(self.dtype))
         method_name = oneflow_api.Dtype_GetOfBlobCopyToBufferFuncName(self.dtype)
@@ -110,6 +110,7 @@ class OfBlob(object):
             copy_method(self.of_blob_ptr_, tensor)
             tensor_list.append(tensor)
             oneflow_api.OfBlob_IncTensorIterator(self.of_blob_ptr_)
+        assert len(tensor_list) == oneflow_api.OfBlob_TotalNumOfTensors(self.of_blob_ptr_)
         # generate is_new_slice_start_mask
         is_new_slice_start_mask = [False] * len(tensor_list)
         num_slices = oneflow_api.OfBlob_NumOfTensorListSlices(self.of_blob_ptr_)

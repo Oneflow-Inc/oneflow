@@ -16,6 +16,10 @@ Blob::Blob(const MemoryCase& mem_case, const RtBlobDesc* blob_desc, char* header
   Init(mem_case, blob_desc, header_ptr, body_ptr);
 }
 
+const Shape& Blob::header_field_shape(FieldKey field_key) const {
+  return blob_desc().header_pod_desc().Field(field_key).Cast<TensorPodDesc>().shape();
+}
+
 const int64_t* Blob::header_field(FieldKey field_key) const {
   return header_ptr_->TensorPtr<int64_t>(field_key);
 }
@@ -34,10 +38,10 @@ void Blob::Init(const MemoryCase& mem_case, const RtBlobDesc* blob_desc, char* h
   *mut_header_field(FieldKey::kShapeListSlices) = 0;
   *mut_header_field(FieldKey::kShapeListSlicesLength) = 1;
   if (!blob_desc_->header_is_opaque()) {
-    const PodPtr& dense_shape_pod_ptr = header_ptr_->Field(FieldKey::kDenseShape);
-    dense_shape_view_.reset(new DenseShapeView(dense_shape_pod_ptr));
+    int64_t* shape_ptr = mut_header_field(FieldKey::kDenseShape);
+    dense_shape_view_.reset(new DenseShapeView(shape_ptr, static_shape().NumAxes()));
     if (blob_desc->is_dynamic()) {
-      dense_shape_mut_view_.reset(new DenseShapeMutView(dense_shape_pod_ptr));
+      dense_shape_mut_view_.reset(new DenseShapeMutView(shape_ptr, static_shape().NumAxes()));
     }
     DimVector dim_vec = static_shape().dim_vec();
     if (blob_desc->num_of_lod_levels() > 0) {
@@ -46,7 +50,7 @@ void Blob::Init(const MemoryCase& mem_case, const RtBlobDesc* blob_desc, char* h
       FOR_RANGE(int64_t, i, 0, blob_desc->num_of_lod_levels()) { dim0 *= dim_vec.at(i); }
       dim_vec = {dim_vec.begin() + blob_desc->num_of_lod_levels() - 1, dim_vec.end()};
     }
-    DenseShapeMutView(dense_shape_pod_ptr).set_shape(Shape(std::move(dim_vec)));
+    DenseShapeMutView(shape_ptr, static_shape().NumAxes()).set_shape(Shape(std::move(dim_vec)));
   } else {
     const DimVector& dim_vec = static_shape().dim_vec();
     dense_shape_view_.reset(new DenseShapeView(dim_vec.data(), dim_vec.size()));
@@ -57,7 +61,12 @@ void Blob::Init(const MemoryCase& mem_case, const RtBlobDesc* blob_desc, char* h
       mut_header_field(FieldKey::kDenseShape), static_shape().NumAxes(), data_type(), mut_dptr()));
 }
 
-size_t Blob::total_num_of_tensors() const { return *header_field(FieldKey::kDenseShapeListLength); }
+size_t Blob::total_num_of_tensors() const {
+  size_t num_tensor = *header_field(FieldKey::kDenseShapeListLength);
+  CHECK_LE(num_tensor * static_shape().NumAxes(),
+	   header_field_shape(FieldKey::kDenseShape).elem_cnt());
+  return num_tensor;
+}
 
 const TensorView& Blob::sole_tensor() const {
   CHECK_EQ(*header_field(FieldKey::kShapeListSlicesLength), 1);
@@ -79,9 +88,9 @@ std::unique_ptr<TensorView> Blob::first_tensor() const {
 
 std::unique_ptr<TensorView> Blob::next_tensor(const TensorView& last) const {
   const int64_t* shape_ptr = last.shape_ptr() + static_shape().NumAxes();
-  size_t shape_list_byte_size =
-      blob_desc().header_pod_desc().Field(FieldKey::kDenseShape).ByteSize();
-  if (shape_ptr >= header_field(FieldKey::kDenseShape) + shape_list_byte_size) {
+  size_t shape_list_capacity =
+      *header_field(FieldKey::kDenseShapeListLength) * static_shape().NumAxes();
+  if (shape_ptr >= header_field(FieldKey::kDenseShape) + shape_list_capacity) {
     return std::unique_ptr<TensorView>();
   }
   const char* mem_ptr = reinterpret_cast<const char*>(last.dptr());
@@ -98,9 +107,9 @@ std::unique_ptr<DataOnlyMutTensorView> Blob::first_mut_tensor() {
 
 std::unique_ptr<DataOnlyMutTensorView> Blob::next_mut_tensor(const DataOnlyMutTensorView& last) {
   const int64_t* shape_ptr = last.shape_ptr() + static_shape().NumAxes();
-  size_t shape_list_byte_size =
-      blob_desc().header_pod_desc().Field(FieldKey::kDenseShape).ByteSize();
-  if (shape_ptr >= header_field(FieldKey::kDenseShape) + shape_list_byte_size) {
+  size_t shape_list_capacity =
+      *header_field(FieldKey::kDenseShapeListLength) * static_shape().NumAxes();
+  if (shape_ptr >= header_field(FieldKey::kDenseShape) + shape_list_capacity) {
     return std::unique_ptr<DataOnlyMutTensorView>();
   }
   char* mem_ptr = reinterpret_cast<char*>(last.mut_dptr());
@@ -123,9 +132,8 @@ std::unique_ptr<FullyMutTensorView> Blob::add_tensor(const FullyMutTensorView* l
                                                 blob_desc().ByteSizeOfBlobBody());
   }
   int64_t* shape_ptr = last->mut_shape_ptr() + static_shape().NumAxes();
-  size_t shape_list_size =
-      blob_desc().header_pod_desc().Field(FieldKey::kDenseShape).ByteSize() / sizeof(int64_t);
-  const int64_t* end_shape_ptr = header_field(FieldKey::kDenseShape) + shape_list_size;
+  size_t shape_list_capacity = header_field_shape(FieldKey::kDenseShape).elem_cnt();
+  const int64_t* end_shape_ptr = header_field(FieldKey::kDenseShape) + shape_list_capacity;
   CHECK_LE(shape_ptr, end_shape_ptr);
   if (shape_ptr == end_shape_ptr) { return std::unique_ptr<FullyMutTensorView>(); }
   char* mem_ptr = reinterpret_cast<char*>(last->mut_dptr());
@@ -138,7 +146,9 @@ std::unique_ptr<FullyMutTensorView> Blob::add_tensor(const FullyMutTensorView* l
 }
 
 size_t Blob::num_of_tensor_list_slices() const {
-  return *header_field(FieldKey::kShapeListSlicesLength);
+  size_t num_slices = *header_field(FieldKey::kShapeListSlicesLength);
+  CHECK_LE(num_slices, header_field_shape(FieldKey::kShapeListSlices).elem_cnt());
+  return num_slices;
 }
 
 int64_t Blob::tensor_index4slice_id(int32_t slice_id) const {

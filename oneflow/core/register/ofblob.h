@@ -31,6 +31,7 @@ class OfBlob final {
   template<typename T>
   void AutoMemCopyFrom(const T* ptr, int64_t len) const;
 
+  int64_t TotalNumOfTensors() const;
   int64_t NumOfTensorListSlices() const;
   int64_t TensorIndex4SliceId(int32_t slice_id) const;
   void AddTensorListSlice() const;
@@ -40,8 +41,8 @@ class OfBlob final {
   void ResetMutTensorIterator();
   void IncTensorIterator();
   void IncMutTensorIterator();
-  bool CurTensorIteratorEqEnd() const { return static_cast<bool>(cur_tensor_); }
-  bool CurMutTensorIteratorEqEnd() const { return static_cast<bool>(cur_mut_tensor_); }
+  bool CurTensorIteratorEqEnd() const { return !cur_tensor_; }
+  bool CurMutTensorIteratorEqEnd() const { return !cur_mut_tensor_; }
   void CurTensorCopyShapeTo(int64_t* ptr, int64_t num_axis) const;
   void CurMutTensorCopyShapeFrom(const int64_t* ptr, int64_t num_axis) const;
   template<typename T>
@@ -111,6 +112,8 @@ inline void OfBlob::SetLoDTree(const LoDTree& lod_tree) const {
   CHECK_EQ(lod_tree.length(), blob_->shape().At(0));
   blob_->tree_lod_mut_view().UpdateLoD(lod_tree);
 }
+
+inline int64_t OfBlob::TotalNumOfTensors() const { return blob_->total_num_of_tensors(); }
 
 inline int64_t OfBlob::NumOfTensorListSlices() const { return blob_->num_of_tensor_list_slices(); }
 
