@@ -36,6 +36,10 @@ class SbpContext {
   SbpSignatureList* sbp_sig_list_;
 };
 
+struct GetSbpFnUtil {
+  static Maybe<void> MirrorSplitAtDim0(SbpContext*);
+};
+
 }  // namespace user_op
 
 }  // namespace oneflow

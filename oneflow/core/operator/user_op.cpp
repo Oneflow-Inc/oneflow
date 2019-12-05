@@ -269,15 +269,8 @@ Maybe<void> UserOp::GetSbpSignatures(
       user_op::LookUpInOpRegistry(op_conf().user_conf().op_type_name());
   CHECK_OR_RETURN(val != nullptr) << "cannot find op_type: " << op_conf().user_conf().op_type_name()
                                   << " in op registry!";
-  if (val->get_sbp_fn == nullptr) {
-    SbpSignatureBuilder()
-        .Split(input_bns(), 0)
-        .Split(output_bns(), 0)
-        .Build(sbp_sig_list->mutable_sbp_signature()->Add());
-  } else {
-    UserOpSbpContext sbp_ctx(op_conf(), sbp_sig_list, LogicalBlobDesc4Ibn);
-    JUST(val->get_sbp_fn(&sbp_ctx));
-  }
+  UserOpSbpContext sbp_ctx(op_conf(), sbp_sig_list, LogicalBlobDesc4Ibn);
+  JUST(val->get_sbp_fn(&sbp_ctx));
   return Maybe<void>::Ok();
 }
 

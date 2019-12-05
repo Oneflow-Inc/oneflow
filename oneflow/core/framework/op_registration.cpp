@@ -2,6 +2,7 @@
 #include "oneflow/core/framework/infer_util.h"
 #include "oneflow/core/framework/user_op_attr.h"
 #include "oneflow/core/framework/attr_value_accessor.h"
+#include "oneflow/core/framework/sbp_context.h"
 
 namespace oneflow {
 
@@ -156,7 +157,7 @@ OpRegistryWrapper OpRegistryWrapperBuilder::Build() {
     wrapper_.reg_val.dtype_infer_fn = DtypeInferFnUtil::Unchanged;
   }
   if (wrapper_.reg_val.get_sbp_fn == nullptr) {
-    // do nothing
+    wrapper_.reg_val.get_sbp_fn = GetSbpFnUtil::MirrorSplitAtDim0;
   }
   return wrapper_;
 }
