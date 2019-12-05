@@ -84,6 +84,15 @@ message ImageAlign {
   required int32 alignment = 1; 
 }
 
+message ImageRandomFlip {
+  // flip code: 
+  //   0 means flipping vertically as also as flipping around the horizontal axis
+  //   >= 1 means flipping horizontally as also as flipping around the vertical axis
+  //   <= -1 means flipping around both axes
+  required int32 flip_code = 1;
+  required float probability = 2;
+}
+
 message DataTransformProto {
   oneof transform {
     ResizeTransform resize = 1;
@@ -92,5 +101,6 @@ message DataTransformProto {
     ImageNormalizeByChannel image_normalize_by_channel = 4;
     SegmentationPolygonListToAlignedMask segmentation_poly_to_aligned_mask = 5;
     ImageAlign image_align = 6;
+    ImageRandomFlip image_random_flip = 7;
   }
 }

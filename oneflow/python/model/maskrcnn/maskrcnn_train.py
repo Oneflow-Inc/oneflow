@@ -69,7 +69,11 @@ parser.add_argument(
     required=False,
 )
 parser.add_argument(
-    "-save_rate", "--model_save_rate", type=int, default=0, required=False
+    "-save_every_n_batch",
+    "--model_save_every_n_batch",
+    type=int,
+    default=0,
+    required=False,
 )
 parser.add_argument(
     "-v", "--verbose", default=False, action="store_true", required=False
@@ -92,11 +96,33 @@ parser.add_argument(
     required=False,
 )
 parser.add_argument(
-    "-imgd", "--image_dir", type=str, default="val2017", required=False
+    "-img", "--image_dir", type=str, default="val2017", required=False
 )
 parser.add_argument(
     "-j", "--jupyter", default=False, action="store_true", required=False
 )
+parser.add_argument(
+    "-ds",
+    "--dataset_shuffle",
+    default=False,
+    action="store_true",
+    required=False,
+)
+parser.add_argument(
+    "-ss",
+    "--sample_shuffle",
+    default=False,
+    action="store_true",
+    required=False,
+)
+parser.add_argument(
+    "-flip",
+    "--random_flip_image",
+    default=False,
+    action="store_true",
+    required=False,
+)
+
 terminal_args = parser.parse_args()
 
 
@@ -377,6 +403,8 @@ def init_config():
         terminal_args.batch_size / terminal_args.gpu_num_per_node
     )
 
+    config.INFERENCE.PROPOSAL_RANDOM_SAMPLE = terminal_args.sample_shuffle
+
     config.freeze()
 
     if terminal_args.verbose:
@@ -385,11 +413,48 @@ def init_config():
     flow.config.cudnn_buf_limit_mbyte(1280)
     flow.config.cudnn_conv_heuristic_search_algo(True)
     flow.config.cudnn_conv_use_deterministic_algo_only(False)
-    flow.config.train.primary_lr(terminal_args.primary_lr)
-    flow.config.train.secondary_lr(terminal_args.secondary_lr)
-    flow.config.train.weight_l2(0.0001)
-    flow.config.train.model_update_conf(dict(momentum_conf={"beta": 0.9}))
-    # flow.config.train.model_update_conf(dict(naive_conf={}))
+    flow.config.train.primary_lr(config.TRAINING_CONF.PRIMARY_LR)
+    flow.config.train.secondary_lr(config.TRAINING_CONF.SECONDARY_LR)
+    flow.config.train.weight_l2(config.TRAINING_CONF.WEIGHT_L2)
+    flow.config.train.bias_l2(config.TRAINING_CONF.BIAS_L2)
+
+    if config.TRAINING_CONF.USE_MOMENTUM_SGD:
+        optimizer = dict(
+            momentum_conf={"beta": config.TRAINING_CONF.MOMENTUM_BETA}
+        )
+    else:
+        optimizer = dict(naive_conf={})
+
+    if not config.TRAINING_CONF.DISABLE_LR_DECAY:
+        optimizer.update(
+            dict(
+                learning_rate_decay=dict(
+                    piecewise_constant_conf={
+                        "boundaries": config.TRAINING_CONF.LR_DECAY_BOUNDARIES,
+                        "values": config.TRAINING_CONF.LR_DECAY_VALUES,
+                    }
+                )
+            )
+        )
+
+    if not config.TRAINING_CONF.DISABLE_WARMUP:
+        if config.TRAINING_CONF.WARMUP_METHOD == "linear":
+            optimizer.update(
+                {
+                    "warmup_conf": {
+                        "linear_conf": {
+                            "warmup_batches": config.TRAINING_CONF.WARMUP_BATCHES,
+                            "start_multiplier": config.TRAINING_CONF.WARMUP_FACTOR,
+                        }
+                    }
+                }
+            )
+        elif config.TRAINING_CONF.WARMUP_METHOD == "constant":
+            raise NotImplementedError
+        else:
+            raise ValueError
+
+    flow.config.train.model_update_conf(optimizer)
 
     return config
 
@@ -440,6 +505,7 @@ if terminal_args.train_with_real_dataset:
         random_seed=123456,
         shuffle=False,
         group_by_aspect_ratio=True,
+        random_flip_image=False,
     ):
         coco = flow.data.COCODataset(
             dataset_dir,
@@ -496,6 +562,8 @@ if terminal_args.train_with_real_dataset:
             is_dynamic=True,
         )
         data_loader.add_transform(flow.data.TargetResizeTransform(800, 1333))
+        if random_flip_image:
+            data_loader.add_transform(flow.data.ImageRandomFlip())
         data_loader.add_transform(
             flow.data.ImageNormalizeByChannel((102.9801, 115.9465, 122.7717))
         )
@@ -507,11 +575,17 @@ if terminal_args.train_with_real_dataset:
         return data_loader
 
     def train_net(config, image=None):
+        flow.config.default_initialize_with_snapshot_path(
+            terminal_args.model_load_dir
+        )
+
         data_loader = make_data_loader(
             batch_size=terminal_args.batch_size,
             batch_cache_size=3,
             annotation_file=terminal_args.annotation_file,
             image_dir=terminal_args.image_dir,
+            shuffle=terminal_args.dataset_shuffle,
+            random_flip_image=terminal_args.random_flip_image,
         )
 
         if config.NUM_GPUS > 1:
@@ -523,10 +597,11 @@ if terminal_args.train_with_real_dataset:
                 data_loader("gt_segm"),
                 data_loader("gt_labels"),
             )
-            for losses in outputs:
-                for loss in losses:
+            for losses_per_device in outputs:
+                for loss in losses_per_device:
                     flow.losses.add_loss(loss)
 
+            return tuple(map(list, zip(*outputs)))
         else:
             outputs = maskrcnn_train(
                 config,
@@ -539,7 +614,7 @@ if terminal_args.train_with_real_dataset:
             for loss in outputs:
                 flow.losses.add_loss(loss)
 
-        return outputs
+            return outputs
 
     def init_train_func(fake_image):
         if fake_image:
@@ -582,13 +657,15 @@ if __name__ == "__main__":
     if terminal_args.train_with_real_dataset:
         train_func = init_train_func(len(fake_image_list) > 0)
 
-    check_point = flow.train.CheckPoint()
     if not terminal_args.model_load_dir:
+        check_point = flow.train.CheckPoint()
         check_point.init()
-        if terminal_args.model_save_rate > 0:
+        if terminal_args.model_save_every_n_batch > 0:
             save_model(0)
     else:
-        check_point.load(terminal_args.model_load_dir)
+        check_point = flow.train.CheckPoint()
+        # check_point.load(terminal_args.model_load_dir)
+        check_point.init()
 
     if terminal_args.debug:
         if terminal_args.mock_dataset:
@@ -655,11 +732,10 @@ if __name__ == "__main__":
                 elapsed_times.append(elapsed_time)
                 start_time = now_time
 
-                if terminal_args.model_save_rate > 0:
+                if terminal_args.model_save_every_n_batch > 0:
                     if (
-                        i + 1
-                    ) % terminal_args.model_save_rate == 0 or i + 1 == len(
-                        terminal_args.iter_num
+                        (i + 1) % terminal_args.model_save_every_n_batch == 0
+                        or i + 1 == terminal_args.iter_num
                     ):
                         save_model(i + 1)
 
@@ -679,36 +755,35 @@ if __name__ == "__main__":
                 "median of elapsed time per batch:",
                 statistics.median(elapsed_times),
             )
-
+            npy_file_name = "loss-{}".format(i)
+            np.save(npy_file_name, np.array(losses_hisogram))
+            print("saved: {}.npy".format(npy_file_name))
             if terminal_args.jupyter:
                 import altair as alt
-                from vega_datasets import data
-
                 import pandas as pd
+                columns=[
+                    "loss_rpn_box_reg",
+                    "loss_objectness",
+                    "loss_box_reg",
+                    "loss_classifier",
+                    "loss_mask",
+                ]
+                for column_index, column_name in enumerate(columns):
+                    loss_data_frame = pd.DataFrame(
+                        np.array(losses_hisogram)[:, [column_index, -1]],
+                        columns=[
+                            column_name,
+                            "iter",
+                        ],
+                    )
 
-                loss_data_frame = pd.DataFrame(
-                    np.array(losses_hisogram),
-                    columns=[
-                        "loss_rpn_box_reg",
-                        "loss_objectness",
-                        "loss_box_reg",
-                        "loss_classifier",
-                        "loss_mask",
-                        "iter",
-                    ],
-                )
+                    base = (
+                        alt.Chart(loss_data_frame)
+                        .mark_line()
+                        .encode(x="petalLength", y="petalWidth")
+                    )
+                    chart = (
+                        base.mark_line().encode(x="iter", y=column_name)
+                    )
 
-                base = (
-                    alt.Chart(loss_data_frame)
-                    .mark_line()
-                    .encode(x="petalLength", y="petalWidth")
-                )
-                chart = (
-                    base.mark_line().encode(x="iter", y="loss_rpn_box_reg")
-                    + base.mark_line().encode(x="iter", y="loss_objectness")
-                    + base.mark_line().encode(x="iter", y="loss_box_reg")
-                    + base.mark_line().encode(x="iter", y="loss_classifier")
-                    + base.mark_line().encode(x="iter", y="loss_mask")
-                )
-
-                chart.display()
+                    chart.display()
