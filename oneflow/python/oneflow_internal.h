@@ -121,6 +121,12 @@ void OfBlob_ClearTensorLists(uint64_t of_blob_ptr) {
   return of_blob->ClearTensorLists();
 }
 
+long OfBlob_TotalNumOfTensors(uint64_t of_blob_ptr) {
+  using namespace oneflow;
+  auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
+  return of_blob->TotalNumOfTensors();
+}
+
 long OfBlob_NumOfTensorListSlices(uint64_t of_blob_ptr) {
   using namespace oneflow;
   auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
@@ -175,14 +181,14 @@ bool OfBlob_CurMutTensorIteratorEqEnd(uint64_t of_blob_ptr) {
   return of_blob->CurMutTensorIteratorEqEnd();
 }
 
-void OfBlob_CurTensorCopyShapeTo(uint64_t of_blob_ptr, long* ptr, int num_axis) {
+void OfBlob_CurTensorCopyShapeTo(uint64_t of_blob_ptr, long* array, int size) {
   using namespace oneflow;
   auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
-  return of_blob->CurTensorCopyShapeTo(ptr, num_axis);
+  return of_blob->CurTensorCopyShapeTo(array, size);
 }
 
-void OfBlob_CurMutTensorCopyShapeFrom(uint64_t of_blob_ptr, const long* ptr, int num_axis) {
+void OfBlob_CurMutTensorCopyShapeFrom(uint64_t of_blob_ptr, long* array, int size) {
   using namespace oneflow;
   auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
-  return of_blob->CurMutTensorCopyShapeFrom(ptr, num_axis);
+  return of_blob->CurMutTensorCopyShapeFrom(array, size);
 }

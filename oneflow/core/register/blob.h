@@ -102,6 +102,7 @@ class Blob final {
  private:
   void Init(const MemoryCase& mem_case, const RtBlobDesc* blob_desc, char* header_ptr,
             char* body_ptr);
+  const Shape& header_field_shape(FieldKey field_key) const;
   const int64_t* header_field(FieldKey field_key) const;
   int64_t* mut_header_field(FieldKey field_key);
   void GetTensorListSliceRange(int32_t slice_id, Range* range) const;

@@ -12,6 +12,6 @@ x = np.random.rand(5, 2).astype(np.float32)
 y = np.random.rand(5, 2).astype(np.float32)
 z = None
 
-z = AddJob(x, y).get()
+z = AddJob(x, y).get().ndarray()
 
-print (np.array_equal(z, x + y + y))
+print(np.array_equal(z, x + y + y))
