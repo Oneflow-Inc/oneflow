@@ -4,15 +4,20 @@ import numpy as np
 from test_util import GenCartesianProduct
 
 
-def compare_with_tensorflow(a_shape, b_shape, transpose_a=False, transpose_b=False):
+def compare_with_tensorflow(
+    a_shape, b_shape, transpose_a=False, transpose_b=False, device_type="gpu"
+):
     flow.clear_default_session()
+    tf.keras.backend.clear_session()
 
     flow.config.gpu_device_num(1)
     flow.config.default_data_type(flow.float)
 
     @flow.function
     def MatmulTestJob(a=flow.input_blob_def(a_shape), b=flow.input_blob_def(b_shape)):
-        return flow.matmul(a, b, transpose_a, transpose_b)
+        assert device_type in ["gpu", "cpu"]
+        with flow.device_prior_placement(device_type, "0:0"):
+            return flow.matmul(a, b, transpose_a, transpose_b)
 
     a = np.random.random_sample(a_shape).astype(np.float32)
     b = np.random.random_sample(b_shape).astype(np.float32)
@@ -41,12 +46,14 @@ def filter_args(arg_list):
             ret.append(tuple(arg))
     return ret
 
+
 def gen_arg_list():
     matmul_args = [
         [(512, 256), (256, 512)],
         [(256, 1024), (1024, 256)],
         [True, False],
         [True, False],
+        ["gpu"],
     ]
     matmul_args = filter_args(GenCartesianProduct(matmul_args))
 
@@ -55,6 +62,7 @@ def gen_arg_list():
         [(10, 10, 32, 128), (10, 10, 128, 32)],
         [True, False],
         [True, False],
+        ["gpu"],
     ]
     batch_matmul_args = filter_args(GenCartesianProduct(batch_matmul_args))
 
