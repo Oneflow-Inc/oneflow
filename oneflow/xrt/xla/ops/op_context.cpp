@@ -46,6 +46,15 @@ xla::XlaOp XlaValue::AsXlaOp(xla::XlaBuilder *builder) const {
 
 xla::XlaBuilder *XlaOpContext::builder() const { return param_.builder; }
 
+bool XlaOpContext::HasInput(const std::string &name) const {
+  return param_.arguments.count(name) > 0 &&
+         param_.inputs.count(ArgumentFromKey(name)) > 0;
+}
+
+bool XlaOpContext::HasOutput(const std::string &name) const {
+  return param_.arguments.count(name) > 0;
+}
+
 xla::XlaOp XlaOpContext::Input(const std::string &name) {
   return Input(ArgumentFromKey(name));
 }
