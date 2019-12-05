@@ -3,6 +3,7 @@
 #include "oneflow/core/framework/kernel_registration.h"
 #include "oneflow/core/framework/tensor_desc.h"
 #include "oneflow/core/framework/infer_util.h"
+#include "oneflow/core/framework/sbp_context.h"
 
 namespace oneflow {
 
@@ -38,14 +39,7 @@ class UserOp final : public Operator {
       std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override;
   Maybe<void> GetSbpSignatures(
       const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
-      SbpSignatureList* sbp_sig_list) const override {
-    const user_op::OpRegistrationVal* val =
-        user_op::LookUpInOpRegistry(op_conf().user_conf().op_type_name());
-    CHECK_OR_RETURN(val != nullptr)
-        << "cannot find op_type: " << op_conf().user_conf().op_type_name() << " in op registry!";
-    JUST(val->get_sbp_fn(LogicalBlobDesc4Ibn, sbp_sig_list));
-    return Maybe<void>::Ok();
-  }
+      SbpSignatureList* sbp_sig_list) const override;
   void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                             const ParallelContext* parallel_ctx,
                             KernelConf* kernel_conf) const override;
@@ -151,6 +145,45 @@ class UserOpInferContext : public user_op::InferContext {
   HashMap<std::pair<std::string, int32_t>, user_op::TensorDesc> arg2tensor_desc_;
 };
 
+class UserOpSbpContext : public user_op::SbpContext {
+ public:
+  using ArgVec = std::vector<std::pair<std::string, int32_t>>;
+
+  UserOpSbpContext(const OperatorConf& op_conf, SbpSignatureList* sbp_sig_list,
+                   std::function<Maybe<const BlobDesc*>(const std::string&)> LogicalBlobDesc4Ibn)
+      : user_op::SbpContext(user_op::UserOpConfWrapper(op_conf), sbp_sig_list) {
+    const auto& user_op_conf = op_conf.user_conf();
+    for (auto it = user_op_conf.input().begin(); it != user_op_conf.input().end(); ++it) {
+      const std::string& arg_name = it->first;
+      for (int32_t i = 0; i < it->second.s_size(); ++i) {
+        const BlobDesc* blob = CHECK_JUST(LogicalBlobDesc4Ibn(GenRepeatedBn(arg_name, i)));
+        arg2tensor_desc_.emplace(std::make_pair(arg_name, i),
+                                 user_op::TensorDesc(blob->shape(), blob->data_type()));
+        inputs_.emplace_back(std::make_pair(arg_name, i));
+      }
+    }
+    for (auto it = user_op_conf.output().begin(); it != user_op_conf.output().end(); ++it) {
+      const std::string& arg_name = it->first;
+      for (int32_t i = 0; i < it->second.s_size(); ++i) {
+        outputs_.emplace_back(std::make_pair(arg_name, i));
+      }
+    }
+  }
+  ~UserOpSbpContext() = default;
+
+  const user_op::TensorDesc& LogicalTensorDesc4InputArgNameAndIndex(
+      const std::string& input_arg_name, int32_t index) override {
+    return arg2tensor_desc_.at(std::make_pair(input_arg_name, index));
+  }
+  const ArgVec& inputs() const { return inputs_; }
+  const ArgVec& outputs() const { return outputs_; }
+
+ private:
+  ArgVec inputs_;
+  ArgVec outputs_;
+  HashMap<std::pair<std::string, int32_t>, user_op::TensorDesc> arg2tensor_desc_;
+};
+
 void UserOp::InitFromOpConf() {
   CHECK(op_conf().has_user_conf());
   for (const auto& pair : op_conf().user_conf().input()) {
@@ -226,6 +259,18 @@ Maybe<void> UserOp::InferBatchAxis(
   if (batch_axis) {
     for (const std::string& obn : output_bns()) { *BatchAxis4BnInOp(obn) = *batch_axis; }
   }
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> UserOp::GetSbpSignatures(
+    const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
+    SbpSignatureList* sbp_sig_list) const {
+  const user_op::OpRegistrationVal* val =
+      user_op::LookUpInOpRegistry(op_conf().user_conf().op_type_name());
+  CHECK_OR_RETURN(val != nullptr) << "cannot find op_type: " << op_conf().user_conf().op_type_name()
+                                  << " in op registry!";
+  UserOpSbpContext sbp_ctx(op_conf(), sbp_sig_list, LogicalBlobDesc4Ibn);
+  JUST(val->get_sbp_fn(&sbp_ctx));
   return Maybe<void>::Ok();
 }
 
