@@ -281,6 +281,7 @@ foreach(of_core_dir_name ${of_core_dir_name_list})
 endforeach()
 list(APPEND OF_CORE_HDRS "${PROJECT_SOURCE_DIR}/oneflow/core/kernel/new_kernel_util.h")
 list(APPEND OF_CORE_HDRS "${PROJECT_SOURCE_DIR}/oneflow/core/kernel/kernel_context.h")
+list(APPEND OF_CORE_HDRS "${PROJECT_SOURCE_DIR}/oneflow/core/job/sbp_signature_builder.h")
 foreach(of_core_hdr_file ${OF_CORE_HDRS})
   file(RELATIVE_PATH of_include_rel_file_path ${PROJECT_SOURCE_DIR} ${of_core_hdr_file})
   add_custom_command(TARGET of_include_copy POST_BUILD
