@@ -136,10 +136,7 @@ OperatorConf AppendTick(const std::string tick_name, const std::vector<std::stri
 OperatorConf AppendTick(const std::string tick_name, const std::list<const OpNode*>& op_nodes,
                         JobBuilder* job_builder) {
   std::vector<std::string> op_names;
-  for (const auto* op_node : op_nodes) {
-    CHECK(op_node->op().op_conf().has_keep_header_only_conf() == false);
-    op_names.push_back(op_node->op().op_name());
-  }
+  for (const auto* op_node : op_nodes) { op_names.push_back(op_node->op().op_name()); }
   ParallelDesc pd(op_nodes.front()->parallel_desc());
   pd.set_device_type(DeviceType::kCPU);
   return AppendTick(tick_name, op_names, pd.parallel_conf(), job_builder);
