@@ -78,6 +78,8 @@ class XlaOpContext : public OpContext {
   // Return output as XlaValues
   const util::Map<Argument, XlaValue> &outputs() const { return outputs_; }
 
+  bool HasInput(const std::string &name) const;
+  bool HasOutput(const std::string &name) const;
   // Setup the output `output_name` with XlaOp
   void SetOutput(const std::string &name, const xla::XlaOp &handle);
   // Setup the output `output_name` with XlaValue
