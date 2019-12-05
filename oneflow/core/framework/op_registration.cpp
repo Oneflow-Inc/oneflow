@@ -1,4 +1,5 @@
 #include "oneflow/core/framework/op_registration.h"
+#include "oneflow/core/framework/infer_util.h"
 #include "oneflow/core/framework/user_op_attr.h"
 #include "oneflow/core/framework/attr_value_accessor.h"
 

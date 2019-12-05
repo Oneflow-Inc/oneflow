@@ -13,12 +13,11 @@ REGISTER_USER_OP("ccrelu")
       // out_shape->Set(last_axis, in_shape->At(last_axis) * 2);
       return Maybe<void>::Ok();
     })
-    .SetGetSbpFn([](user_op::LogicalTensorDesc4ArgNameAndIndex get_tensor,
-                    SbpSignatureList* sbp_sig_list) -> Maybe<void> {
+    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       SbpSignatureBuilder()
           .Split("in", 0, 0)
           .Split("out", 0, 0)
-          .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+          .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
       return Maybe<void>::Ok();
     });
 
@@ -36,13 +35,12 @@ REGISTER_USER_OP("ccrelu_grad")
       // dx_shape->Set(last_axis, y_shape->At(last_axis) / 2);
       return Maybe<void>::Ok();
     })
-    .SetGetSbpFn([](user_op::LogicalTensorDesc4ArgNameAndIndex get_tensor,
-                    SbpSignatureList* sbp_sig_list) -> Maybe<void> {
+    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       SbpSignatureBuilder()
           .Split("y", 0, 0)
           .Split("dy", 0, 0)
           .Split("dx", 0, 0)
-          .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+          .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
       return Maybe<void>::Ok();
     });
 
