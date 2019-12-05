@@ -794,7 +794,7 @@ if __name__ == "__main__":
                 "median of elapsed time per batch:",
                 statistics.median(elapsed_times),
             )
-            npy_file_name = "loss-{}".format(i)
+            npy_file_name = "loss-{}-batch_size-{}-gpu-{}-{}".format(i, terminal_args.batch_size, terminal_args.gpu_num_per_node, str(datetime.now().strftime("%Y-%m-%d--%H-%M-%S")))
             np.save(npy_file_name, np.array(losses_hisogram))
             print("saved: {}.npy".format(npy_file_name))
             if terminal_args.jupyter:
