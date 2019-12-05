@@ -1,6 +1,8 @@
 import tensorflow as tf
 import oneflow as flow
 import numpy as np
+from test_util import GenCartesianProduct
+
 
 def compare_with_tensorflow(a_shape, b_shape, transpose_a=False, transpose_b=False):
     flow.clear_default_session()
@@ -21,16 +23,44 @@ def compare_with_tensorflow(a_shape, b_shape, transpose_a=False, transpose_b=Fal
     assert np.allclose(of_out, tf_out)
 
 
+def filter_args(arg_list):
+    def trans_shape(shape):
+        tmp_shape = shape[:-2]
+        tmp_shape += (shape[-1], shape[-2])
+        return tmp_shape
+
+    ret = []
+    for arg in arg_list:
+        a_shape = arg[0]
+        b_shape = arg[1]
+        if arg[2]:  # transpose_a
+            a_shape = trans_shape(a_shape)
+        if arg[3]:  # transpose_b
+            b_shape = trans_shape(b_shape)
+        if a_shape[-1] == b_shape[-2]:
+            ret.append(tuple(arg))
+    return ret
+
+def gen_arg_list():
+    matmul_args = [
+        [(512, 256), (256, 512)],
+        [(256, 1024), (1024, 256)],
+        [True, False],
+        [True, False],
+    ]
+    matmul_args = filter_args(GenCartesianProduct(matmul_args))
+
+    batch_matmul_args = [
+        [(10, 10, 64, 32), (10, 10, 32, 64)],
+        [(10, 10, 32, 128), (10, 10, 128, 32)],
+        [True, False],
+        [True, False],
+    ]
+    batch_matmul_args = filter_args(GenCartesianProduct(batch_matmul_args))
+
+    return matmul_args + batch_matmul_args
+
+
 def test_matmul(test_case):
-    compare_with_tensorflow(a_shape=(512, 256), b_shape=(256, 1024))
-    compare_with_tensorflow(a_shape=(256, 512), b_shape=(256, 1024), transpose_a=True)
-    compare_with_tensorflow(a_shape=(512, 256), b_shape=(1024, 256), transpose_b=True)
-    compare_with_tensorflow(
-        a_shape=(256, 512), b_shape=(1024, 256), transpose_a=True, transpose_b=True
-    )
-    compare_with_tensorflow(a_shape=(10, 10, 64, 32), b_shape=(10, 10, 32, 128))
-    compare_with_tensorflow(a_shape=(10, 10, 32, 64), b_shape=(10, 10, 32, 128), transpose_a=True)
-    compare_with_tensorflow(a_shape=(10, 10, 64, 32), b_shape=(10, 10, 128, 32), transpose_b=True)
-    compare_with_tensorflow(
-        a_shape=(10, 10, 32, 64), b_shape=(10, 10, 128, 32), transpose_a=True, transpose_b=True
-    )
+    for arg in gen_arg_list():
+        compare_with_tensorflow(*arg)
