@@ -755,34 +755,35 @@ if __name__ == "__main__":
                 "median of elapsed time per batch:",
                 statistics.median(elapsed_times),
             )
-
+            npy_file_name = "loss-{}".format(i)
+            np.save(npy_file_name, np.array(losses_hisogram))
+            print("saved: {}.npy".format(npy_file_name))
             if terminal_args.jupyter:
                 import altair as alt
                 import pandas as pd
+                columns=[
+                    "loss_rpn_box_reg",
+                    "loss_objectness",
+                    "loss_box_reg",
+                    "loss_classifier",
+                    "loss_mask",
+                ]
+                for column_index, column_name in enumerate(columns):
+                    loss_data_frame = pd.DataFrame(
+                        np.array(losses_hisogram)[:, [column_index, -1]],
+                        columns=[
+                            column_name,
+                            "iter",
+                        ],
+                    )
 
-                loss_data_frame = pd.DataFrame(
-                    np.array(losses_hisogram),
-                    columns=[
-                        "loss_rpn_box_reg",
-                        "loss_objectness",
-                        "loss_box_reg",
-                        "loss_classifier",
-                        "loss_mask",
-                        "iter",
-                    ],
-                )
+                    base = (
+                        alt.Chart(loss_data_frame)
+                        .mark_line()
+                        .encode(x="petalLength", y="petalWidth")
+                    )
+                    chart = (
+                        base.mark_line().encode(x="iter", y=column_name)
+                    )
 
-                base = (
-                    alt.Chart(loss_data_frame)
-                    .mark_line()
-                    .encode(x="petalLength", y="petalWidth")
-                )
-                chart = (
-                    base.mark_line().encode(x="iter", y="loss_rpn_box_reg")
-                    + base.mark_line().encode(x="iter", y="loss_objectness")
-                    + base.mark_line().encode(x="iter", y="loss_box_reg")
-                    + base.mark_line().encode(x="iter", y="loss_classifier")
-                    + base.mark_line().encode(x="iter", y="loss_mask")
-                )
-
-                chart.display()
+                    chart.display()
