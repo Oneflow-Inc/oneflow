@@ -37,7 +37,7 @@ COCODataset::COCODataset(const DatasetProto& proto) : Dataset(proto) {
     if (anno["iscrowd"].get<int>() == 1) { continue; }
     // check if empty bbox, bbox format is (left, top, width, height)
     const auto bbox = anno["bbox"];
-    if (!(bbox[2].get<float>() > 0.0f && bbox[3].get<float>() > 0.0f)) {
+    if (!(bbox[2].get<float>() > 1.0f && bbox[3].get<float>() > 1.0f)) {
       LOG(INFO) << "coco dataset ignore too small bbox, image_id: " << image_id
                 << ", anno_id: " << id << ", bbox: (" << bbox[0].get<float>() << ","
                 << bbox[1].get<float>() << "," << bbox[2].get<float>() << ","

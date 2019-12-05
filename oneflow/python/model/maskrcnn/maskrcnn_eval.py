@@ -183,7 +183,7 @@ def GenPredictionsAndImageIds(results):
 
 if __name__ == "__main__":
     flow.config.gpu_device_num(terminal_args.gpu_num_per_node)
-    flow.config.ctrl_port(terminal_args.ctrl_port)
+    flow.env.ctrl_port(terminal_args.ctrl_port)
     flow.config.default_data_type(flow.float)
     flow.config.cudnn_conv_heuristic_search_algo(True)
     flow.config.cudnn_conv_use_deterministic_algo_only(False)

@@ -143,6 +143,12 @@ def set_default_initializer_conf(value):
     pb_util.PythonDict2PbMessage(value, pb_msg)
     return oneflow.config
 
+@oneflow_export('config.default_initialize_with_snapshot_path')
+def set_default_initialize_with_snapshot_path(value):
+    assert type(value) is str
+    _SetJobConfAttr(lambda x:x, 'default_initialize_with_snapshot_path', value)
+    return oneflow.config
+
 @oneflow_export('config.exp_run_conf')
 def set_exp_run_conf(value):
     assert type(value) is dict
