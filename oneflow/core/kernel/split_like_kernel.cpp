@@ -18,8 +18,8 @@ void SplitLikeKernel<device_type, T>::ForwardDataContent(
     CHECK_EQ(out_blob->data_type(), in_blob->data_type());
     if (row_num * out_col_num > 0) {
       KernelUtil<device_type, T>::CopyColsRegion(ctx.device_ctx, row_num, out_col_num,
-                                                in_blob->dptr<T>(), in_col_offset, in_col_num,
-                                                out_blob->mut_dptr<T>(), 0, out_col_num);
+                                                 in_blob->dptr<T>(), in_col_offset, in_col_num,
+                                                 out_blob->mut_dptr<T>(), 0, out_col_num);
     }
     in_col_offset += out_col_num;
   }

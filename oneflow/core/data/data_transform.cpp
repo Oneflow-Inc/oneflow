@@ -362,7 +362,7 @@ struct DataTransformer<DataSourceCase::kImage, TransformCase::kImageRandomFlip> 
 
     auto* bbox_field =
         dynamic_cast<BboxFieldT*>(data_inst->GetField<DataSourceCase::kObjectBoundingBox>());
-    if (bbox_field) { 
+    if (bbox_field) {
       auto& bbox_vec = bbox_field->data();
       CHECK_EQ(bbox_vec.size() % 4, 0);
       size_t num_bbox = bbox_vec.size() / 4;
@@ -392,13 +392,9 @@ struct DataTransformer<DataSourceCase::kImage, TransformCase::kImageRandomFlip> 
       PolyT* poly_ptr = poly_field->data();
       FOR_RANGE(size_t, i, 0, poly_field->total_length()) {
         if (i % 2 == 0) {
-          if (flip_code != 0) {
-            poly_ptr[i] = image_width - poly_ptr[i];
-          }
+          if (flip_code != 0) { poly_ptr[i] = image_width - poly_ptr[i]; }
         } else {
-          if (flip_code <= 0) {
-            poly_ptr[i] = image_height - poly_ptr[i];
-          }
+          if (flip_code <= 0) { poly_ptr[i] = image_height - poly_ptr[i]; }
         }
       }
     }

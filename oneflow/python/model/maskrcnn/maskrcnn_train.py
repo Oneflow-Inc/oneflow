@@ -15,7 +15,6 @@ from rpn import RPNHead, RPNLoss, RPNProposal
 from box_head import BoxHead
 from mask_head import MaskHead
 from blob_watcher import save_blob_watched, blob_watched, diff_blob_watched
-from distribution import distribute_execute
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
@@ -118,6 +117,13 @@ parser.add_argument(
 parser.add_argument(
     "-flip",
     "--random_flip_image",
+    default=False,
+    action="store_true",
+    required=False,
+)
+parser.add_argument(
+    "-pr",
+    "--print_loss_each_rank",
     default=False,
     action="store_true",
     required=False,
@@ -705,18 +711,31 @@ if __name__ == "__main__":
                     save_model(i + 1)
 
         elif terminal_args.train_with_real_dataset:
-            print(
-                "{:<8} {:<8} {:<16} {:<16} {:<16} {:<16} {:<16} {:<16}".format(
-                    "iter",
-                    "rank",
-                    "elapsed_time",
-                    "loss_rpn_box_reg",
-                    "loss_objectness",
-                    "loss_box_reg",
-                    "loss_classifier",
-                    "loss_mask",
+            if terminal_args.print_loss_each_rank:
+                print(
+                    "{:<8} {:<8} {:<16} {:<16} {:<16} {:<16} {:<16} {:<16}".format(
+                        "iter",
+                        "rank",
+                        "elapsed_time",
+                        "loss_rpn_box_reg",
+                        "loss_objectness",
+                        "loss_box_reg",
+                        "loss_classifier",
+                        "loss_mask",
+                    )
                 )
-            )
+            else:
+                print(
+                    "{:<8} {:<16} {:<16} {:<16} {:<16} {:<16} {:<16}".format(
+                        "iter",
+                        "elapsed_time",
+                        "loss_rpn_box_reg",
+                        "loss_objectness",
+                        "loss_box_reg",
+                        "loss_classifier",
+                        "loss_mask",
+                    )
+                )
 
             losses_hisogram = []
             start_time = time.time()
@@ -739,15 +758,35 @@ if __name__ == "__main__":
                     ):
                         save_model(i + 1)
 
-                fmt = "{:<8} {:<8} {:<16} " + "{:<16.10f} " * len(losses)
-                for rank, loss_tup in enumerate(zip(*losses)):
-                    frame = [loss.mean() for loss in loss_tup]
-                    elapsed_time_str = (
-                        "{:.6f}".format(elapsed_time) if rank == 0 else ""
-                    )
-                    print(fmt.format(i, rank, elapsed_time_str, *frame))
-                    frame.append(i)
-                    losses_hisogram.append(frame)
+                elapsed_time_str = "{:.6f}".format(elapsed_time)
+                if terminal_args.print_loss_each_rank:
+                    for rank, loss_tup in enumerate(zip(*losses)):
+                        fmt = "{:<8} {:<8} {:<16} " + "{:<16.10f} " * len(
+                            loss_tup
+                        )
+                        loss_per_rank = [loss.mean() for loss in loss_tup]
+                        print(
+                            fmt.format(
+                                i,
+                                rank,
+                                elapsed_time_str if rank == 0 else "",
+                                *loss_per_rank
+                            )
+                        )
+                else:
+                    loss_per_batch = []
+                    for loss_list in losses:
+                        rank_loss_list = [
+                            loss_per_rank.mean() for loss_per_rank in loss_list
+                        ]
+                        loss_per_batch.append(
+                            sum(rank_loss_list) / len(rank_loss_list)
+                        )
+
+                    fmt = "{:<8} {:<16} " + "{:<16.10f} " * len(loss_per_batch)
+                    print(fmt.format(i, elapsed_time_str, *loss_per_batch))
+                    loss_per_batch.append(i)
+                    losses_hisogram.append(loss_per_batch)
 
                 save_blob_watched(i)
 
@@ -777,13 +816,24 @@ if __name__ == "__main__":
                         ],
                     )
 
+                columns = [
+                    "loss_rpn_box_reg",
+                    "loss_objectness",
+                    "loss_box_reg",
+                    "loss_classifier",
+                    "loss_mask",
+                ]
+                for column_index, column_name in enumerate(columns):
+                    loss_data_frame = pd.DataFrame(
+                        np.array(losses_hisogram)[:, [column_index, -1]],
+                        columns=[column_name, "iter"],
+                    )
+
                     base = (
                         alt.Chart(loss_data_frame)
                         .mark_line()
                         .encode(x="petalLength", y="petalWidth")
                     )
-                    chart = (
-                        base.mark_line().encode(x="iter", y=column_name)
-                    )
+                    chart = base.mark_line().encode(x="iter", y=column_name)
 
                     chart.display()
