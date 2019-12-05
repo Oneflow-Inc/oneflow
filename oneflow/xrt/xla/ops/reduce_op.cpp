@@ -13,9 +13,6 @@ namespace mola {
 class ReduceOp : public XlaOpKernel {
  public:
   void Compile(XlaOpContext *ctx) override {
-    bool keep_dims = ctx->GetAttr<bool>("keep_dims");
-    CHECK(!keep_dims) << "Currently not support keep_dims option.";
-
     std::vector<int> axis = ctx->GetAttr<std::vector<int>>("axis");
     Shape in_shape = ctx->InputShape("in");
     for (int i = 0; i < axis.size(); ++i) {
@@ -36,10 +33,24 @@ class ReduceOp : public XlaOpKernel {
 
     xla::XlaBuilder *builder = ctx->builder();
     DataType data_type = ctx->InputType("in");
-    ctx->SetOutput(
-        "out",
+    xla::XlaOp output =
         xla::Reduce(input, InitValue(builder, data_type), Reduction(data_type),
-                    std::vector<long long>{axis.begin(), axis.end()}));
+                    std::vector<long long>{axis.begin(), axis.end()});
+
+    bool keep_dims = ctx->GetAttr<bool>("keep_dims");
+    if (keep_dims) {
+      for (int i = 0; i < axis.size(); ++i) {
+        in_shape.Set(axis[i], 1);
+      }
+      output = Reshape(output, in_shape);
+    } else {
+      // Reshape to 1-d array if output is scalar in order to
+      // keep consistent with oneflow.
+      if (axis.size() == in_shape.NumAxes()) {
+        output = Reshape(output, Shape({1}));
+      }
+    }
+    ctx->SetOutput("out", output);
   }
 
   virtual xla::XlaOp InitValue(xla::XlaBuilder *builder,
