@@ -14,10 +14,16 @@ REGISTER_USER_OP("ccrelu")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
+      const user_op::TensorDesc& tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
       SbpSignatureBuilder()
-          .Split("in", 0, 0)
-          .Split("out", 0, 0)
-          .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
+          .Split(ctx->inputs(), 0)
+          .Split(ctx->outputs(), 0)
+          .MakeSplitSignatureListBuilder(tensor.shape().NumAxes())
+          .Build(ctx->sbp_sig_list());
+      // SbpSignatureBuilder()
+      //     .Split("in", 0, 0)
+      //     .Split("out", 0, 0)
+      //     .Build(ctx->sbp_sig_list()->mutable_sbp_signature()->Add());
       return Maybe<void>::Ok();
     });
 
