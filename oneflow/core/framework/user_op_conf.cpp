@@ -9,12 +9,13 @@ namespace oneflow {
 
 namespace user_op {
 
-UserOpConfWrapper::UserOpConfWrapper(const OperatorConf& op_conf) {
-  CHECK(op_conf.has_user_conf());
-  op_conf_ = *CHECK_JUST(CheckAndCompleteUserOpConfImpl(op_conf));
+UserOpConfWrapper::UserOpConfWrapper(const OperatorConf& op_conf) : op_conf_(op_conf) {
+  CHECK(op_conf_.has_user_conf());
 }
 
 const OperatorConf& UserOpConfWrapper::op_conf() const { return op_conf_; }
+
+const UserOpConf& UserOpConfWrapper::user_op_conf() const { return op_conf_.user_conf(); }
 
 const std::string& UserOpConfWrapper::op_name() const { return op_conf_.name(); }
 
@@ -63,49 +64,49 @@ UserOpWrapper::UserOpWrapper(
     const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4BnInOp,
     const std::function<LogicalBlobId*(const std::string&)>& DiffLbi4BnInOp)
     : conf_(op), diff_fn_(DiffLbi4BnInOp) {
-  auto InitBlobDefFromOpArgs = [&](const PbMap<std::string, UserOpConf_ListString>& args) {
+  auto InitTensorDescFromOpArgs = [&](const PbMap<std::string, UserOpConf_ListString>& args) {
     for (const auto& pair : args) {
       for (int32_t i = 0; i < pair.second.s_size(); ++i) {
         std::string bn = GenRepeatedBn(pair.first, i);
         const BlobDesc& blob_desc = LogicalBlobDesc4BnInOp(bn);
         CHECK((&blob_desc) != nullptr);
-        BlobDef blob_def(blob_desc.shape(), blob_desc.data_type());
-        CHECK(bn2blob_def_.emplace(bn, blob_def).second);
+        TensorDesc tensor_desc(blob_desc.shape(), blob_desc.data_type());
+        CHECK(bn2tensor_desc_.emplace(bn, tensor_desc).second);
       }
     }
   };
-  InitBlobDefFromOpArgs(op.user_conf().input());
-  InitBlobDefFromOpArgs(op.user_conf().output());
+  InitTensorDescFromOpArgs(op.user_conf().input());
+  InitTensorDescFromOpArgs(op.user_conf().output());
 }
 
-bool UserOpWrapper::NeedGenGradBlob4OpInput(const std::string& input_arg_name,
-                                            int32_t index) const {
+bool UserOpWrapper::NeedGenGradTensor4OpInput(const std::string& input_arg_name,
+                                              int32_t index) const {
   auto it = op_conf().user_conf().input().find(input_arg_name);
   CHECK(it != op_conf().user_conf().input().end());
   CHECK(index >= 0 && index < it->second.s_size());
   return diff_fn_(GenRepeatedBn(input_arg_name, index)) != nullptr;
 }
 
-std::string UserOpWrapper::GetGradBlobWithOpOutput(const std::string& output_arg_name,
-                                                   int32_t index) const {
+std::string UserOpWrapper::GetGradTensorWithOpOutput(const std::string& output_arg_name,
+                                                     int32_t index) const {
   auto it = op_conf().user_conf().output().find(output_arg_name);
   CHECK(it != op_conf().user_conf().output().end());
   CHECK(index >= 0 && index < it->second.s_size());
   return GenLogicalBlobName(*diff_fn_(GenRepeatedBn(output_arg_name, index)));
 }
 
-void UserOpWrapper::BindGradBlobWithOpInput(const std::string logical_grad_blob_name,
-                                            const std::string& input_arg_name,
-                                            int32_t index) const {
-  CHECK(NeedGenGradBlob4OpInput(input_arg_name, index));
+void UserOpWrapper::BindGradTensorWithOpInput(const std::string logical_grad_blob_name,
+                                              const std::string& input_arg_name,
+                                              int32_t index) const {
+  CHECK(NeedGenGradTensor4OpInput(input_arg_name, index));
   *diff_fn_(GenRepeatedBn(input_arg_name, index)) = GenLogicalBlobId(logical_grad_blob_name);
 }
 
-const BlobDef& UserOpWrapper::BlobDef4ArgNameAndIndex(const std::string& arg_name,
-                                                      int32_t index) const {
+const TensorDesc& UserOpWrapper::TensorDesc4ArgNameAndIndex(const std::string& arg_name,
+                                                            int32_t index) const {
   std::string bn = GenRepeatedBn(arg_name, index);
-  CHECK(bn2blob_def_.find(bn) != bn2blob_def_.end());
-  return bn2blob_def_.at(bn);
+  CHECK(bn2tensor_desc_.find(bn) != bn2tensor_desc_.end());
+  return bn2tensor_desc_.at(bn);
 }
 
 UserOpConfWrapperBuilder& UserOpConfWrapperBuilder::Input(const std::string& arg_name,
@@ -143,7 +144,7 @@ UserOpConfWrapper UserOpConfWrapperBuilder::Build() {
   GenArgs(input_, user_conf->mutable_input());
   GenArgs(output_, user_conf->mutable_output());
   for (const auto& pair : attr_) { (*user_conf->mutable_attr())[pair.first] = pair.second; }
-  wrapper_ = UserOpConfWrapper(op_conf);
+  wrapper_ = UserOpConfWrapper(*CHECK_JUST(CheckAndCompleteUserOpConfImpl(op_conf)));
   return wrapper_;
 }
 
@@ -217,9 +218,6 @@ Maybe<void> AddUserOpConfOutputDefaultArg(const UserOpDef& op_def, OperatorConf*
   UserOpConf* user_conf = op_conf->mutable_user_conf();
   // add default output arg and lbn
   for (const auto& output_arg : op_def.output()) {
-    LOG(INFO) << "cclog: output arg_name: " << output_arg.name()
-              << " is_optional: " << output_arg.is_optional()
-              << " num_as_min: " << output_arg.num_as_min();
     if (user_conf->output().find(output_arg.name()) == user_conf->output().end()
         && (!output_arg.is_optional()) && (!output_arg.num_as_min())) {
       for (int32_t i = 0; i < output_arg.num(); ++i) {
@@ -248,7 +246,7 @@ Maybe<OperatorConf> CheckAndCompleteUserOpConfImpl(const OperatorConf& op_conf) 
   JUST(CheckArgDefIsValidInUserOpConf(op_conf, user_conf->input(), op_def.input()));
   JUST(CheckArgDefIsValidInUserOpConf(op_conf, user_conf->output(), op_def.output()));
   // check attr valid by user
-  JUST(val->check_fn(user_op::UserOpDefWrapper(op_def), *user_conf));
+  JUST(val->check_fn(user_op::UserOpDefWrapper(op_def), user_op::UserOpConfWrapper(ret)));
   return ret;
 }
 

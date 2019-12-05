@@ -12,46 +12,6 @@ namespace oneflow {
 
 namespace user_op {
 
-InferContext::InferContext(const UserOpConf* conf, Arg2BlobDef&& arg2blob_def)
-    : conf_(conf), inputs_(), outputs_(), arg2blob_def_(std::move(arg2blob_def)) {
-  for (auto it = conf_->input().begin(); it != conf_->input().end(); ++it) {
-    const std::string& arg_name = it->first;
-    for (int i = 0; i < it->second.s_size(); ++i) {
-      inputs_.emplace_back(std::make_pair(arg_name, i));
-    }
-  }
-  for (auto it = conf_->output().begin(); it != conf_->output().end(); ++it) {
-    const std::string& arg_name = it->first;
-    for (int i = 0; i < it->second.s_size(); ++i) {
-      outputs_.emplace_back(std::make_pair(arg_name, i));
-    }
-  }
-}
-
-Shape* InferContext::Shape4ArgNameAndIndex(const std::string& arg_name, int32_t index) {
-  return arg2blob_def_.at(std::make_pair(arg_name, index)).mut_shape();
-}
-
-DataType* InferContext::Dtype4ArgNameAndIndex(const std::string& arg_name, int32_t index) {
-  return arg2blob_def_.at(std::make_pair(arg_name, index)).mut_data_type();
-}
-
-const ArgVec& InferContext::inputs() const { return inputs_; }
-
-const ArgVec& InferContext::outputs() const { return outputs_; }
-
-#define ATTR_TYPE_SPECIALIZATION(field, cpp_type, attr_type)                     \
-  template<>                                                                     \
-  cpp_type InferContext::GetAttr<cpp_type>(const std::string& attr_name) const { \
-    const UserOpAttrVal& attr_val = conf_->attr().at(attr_name);                 \
-    CHECK_EQ(static_cast<int>(attr_type), attr_val.value_case());                \
-    return AttrValAccessor<cpp_type>::GetAttr(attr_val);                         \
-  }
-
-OF_PP_FOR_EACH_TUPLE(ATTR_TYPE_SPECIALIZATION, ATTR_SEQ)
-
-#undef ATTR_TYPE_SPECIALIZATION
-
 Maybe<void> ShapeInferFnUtil::Unchanged(InferContext* ctx) {
   const Shape* shape = nullptr;
   for (size_t i = 0; i < ctx->inputs().size(); ++i) {
@@ -108,7 +68,7 @@ Maybe<void> DtypeInferFnUtil::InOutCorrespond(InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> CheckAttrFnUtil::NoCheck(const UserOpDefWrapper&, const UserOpConf&) {
+Maybe<void> CheckAttrFnUtil::NoCheck(const UserOpDefWrapper&, const UserOpConfWrapper&) {
   return Maybe<void>::Ok();
 }
 

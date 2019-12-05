@@ -3,7 +3,7 @@
 
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/maybe.h"
-#include "oneflow/core/framework/blob_def.h"
+#include "oneflow/core/framework/tensor_desc.h"
 #include "oneflow/core/framework/user_op_def.pb.h"
 #include "oneflow/core/framework/user_op_attr.pb.h"
 #include "oneflow/core/framework/user_op_conf.pb.h"
@@ -19,6 +19,7 @@ class UserOpConfWrapper final {
  public:
   UserOpConfWrapper(const OperatorConf&);
   const OperatorConf& op_conf() const;
+  const UserOpConf& user_op_conf() const;
   const std::string& op_name() const;
   const std::string& op_type_name() const;
   const std::string& input(const std::string& arg_name, int32_t index) const;
@@ -39,11 +40,11 @@ class UserOpWrapper final {
   UserOpWrapper(const OperatorConf& op, const std::function<const BlobDesc&(const std::string&)>&,
                 const std::function<LogicalBlobId*(const std::string&)>&);
 
-  const BlobDef& BlobDef4ArgNameAndIndex(const std::string& arg_name, int32_t index) const;
-  void BindGradBlobWithOpInput(const std::string logical_grad_blob_name,
-                               const std::string& input_arg_name, int32_t index) const;
-  std::string GetGradBlobWithOpOutput(const std::string& output_arg_name, int32_t index) const;
-  bool NeedGenGradBlob4OpInput(const std::string& input_arg_name, int32_t index) const;
+  const TensorDesc& TensorDesc4ArgNameAndIndex(const std::string& arg_name, int32_t index) const;
+  void BindGradTensorWithOpInput(const std::string logical_grad_blob_name,
+                                 const std::string& input_arg_name, int32_t index) const;
+  std::string GetGradTensorWithOpOutput(const std::string& output_arg_name, int32_t index) const;
+  bool NeedGenGradTensor4OpInput(const std::string& input_arg_name, int32_t index) const;
 
   const UserOpConfWrapper& user_op_conf_wrapper();
   const OperatorConf& op_conf() const { return conf_.op_conf(); }
@@ -63,7 +64,7 @@ class UserOpWrapper final {
  private:
   UserOpConfWrapper conf_;
   std::function<LogicalBlobId*(const std::string&)> diff_fn_;
-  HashMap<std::string, BlobDef> bn2blob_def_;
+  HashMap<std::string, TensorDesc> bn2tensor_desc_;
 };
 
 class UserOpConfWrapperBuilder final {

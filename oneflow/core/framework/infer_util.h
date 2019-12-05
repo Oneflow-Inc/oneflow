@@ -2,44 +2,39 @@
 #define ONEFLOW_CORE_FRAMEWORK_INFER_UTIL_H_
 
 #include "oneflow/core/common/maybe.h"
-#include "oneflow/core/framework/blob_def.h"
+#include "oneflow/core/framework/tensor_desc.h"
+#include "oneflow/core/framework/user_op_conf.h"
 
 namespace oneflow {
 
 class Shape;
 enum DataType;
-class UserOpConf;
 
 namespace user_op {
 
 class UserOpDefWrapper;
-class UserOpConfWrapper;
 
-using Shape4ArgNameAndIndexFn = std::function<Shape*(const std::string&, int32_t)>;
-using Dtype4ArgNameAndIndexFn = std::function<DataType*(const std::string&, int32_t)>;
-using ArgVec = std::vector<std::pair<std::string, int32_t>>;
-using Arg2BlobDef = HashMap<std::pair<std::string, int32_t>, BlobDef>;
-
-class InferContext final {
+class InferContext {
  public:
-  InferContext(const UserOpConf*, Arg2BlobDef&&);
-  ~InferContext() = default;
+  virtual ~InferContext() = default;
+
+  virtual Shape* Shape4ArgNameAndIndex(const std::string&, int32_t) = 0;
+  virtual DataType* Dtype4ArgNameAndIndex(const std::string&, int32_t) = 0;
+  virtual const std::vector<std::pair<std::string, int32_t>>& inputs() const = 0;
+  virtual const std::vector<std::pair<std::string, int32_t>>& outputs() const = 0;
+
+  template<typename T>
+  T GetAttr(const std::string& attr_name) const {
+    return conf_.attr<T>(attr_name);
+  }
+
+ protected:
+  InferContext(UserOpConfWrapper&& conf) : conf_(std::move(conf)) {}
   InferContext(const InferContext&) = delete;
   InferContext(InferContext&&) = delete;
 
-  Shape* Shape4ArgNameAndIndex(const std::string&, int32_t);
-  DataType* Dtype4ArgNameAndIndex(const std::string&, int32_t);
-  const ArgVec& inputs() const;
-  const ArgVec& outputs() const;
-
-  template<typename T>
-  T GetAttr(const std::string&) const;
-
  private:
-  const UserOpConf* conf_;
-  ArgVec inputs_;
-  ArgVec outputs_;
-  Arg2BlobDef arg2blob_def_;
+  UserOpConfWrapper conf_;
 };
 
 struct ShapeInferFnUtil {
@@ -53,7 +48,7 @@ struct DtypeInferFnUtil {
 };
 
 struct CheckAttrFnUtil {
-  static Maybe<void> NoCheck(const UserOpDefWrapper&, const UserOpConf&);
+  static Maybe<void> NoCheck(const UserOpDefWrapper&, const UserOpConfWrapper&);
 };
 
 struct TmpSizeInferFnUtil {

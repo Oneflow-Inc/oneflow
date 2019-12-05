@@ -1,7 +1,7 @@
 #include "oneflow/core/framework/kernel_registration.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/kernel/kernel.pb.h"
-#include "oneflow/core/framework/blob_def.h"
+#include "oneflow/core/framework/tensor_desc.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/framework/infer_util.h"
 
@@ -79,32 +79,6 @@ KernelRegistryWrapper KernelRegistryWrapperBuilder::Build() {
     wrapper_.reg_val.infer_tmp_size_fn = TmpSizeInferFnUtil::ZeroTmpSize;
   }
   return wrapper_;
-}
-
-KernelRegContext::KernelRegContext(DeviceType dev, DataType dtype,
-                                   const ParallelContext& parallel_ctx,
-                                   BlobDef4ArgNameAndIndexFn fn)
-    : device_(dev), data_type_(dtype), parallel_ctx_(parallel_ctx), fn_(fn) {}
-
-KernelRegContext::KernelRegContext(const KernelConf& conf) {
-  CHECK(conf.has_user_conf());
-
-  device_ = conf.op_attribute().op_conf().device_type();
-  data_type_ = conf.data_type();
-  parallel_ctx_ = conf.user_conf().parallel_ctx();
-
-  fn_ = [&](const std::string& arg_name, int32_t id) -> std::shared_ptr<BlobDef> {
-    std::string bn_in_op = GenRepeatedBn(arg_name, id);
-    const auto& pb_map = conf.user_conf().bn_in_op2blob_desc();
-    auto it = pb_map.find(bn_in_op);
-    if (it == pb_map.end()) { return std::shared_ptr<BlobDef>(); }
-    return std::shared_ptr<BlobDef>(new BlobDef(it->second));
-  };
-}
-
-std::shared_ptr<const BlobDef> KernelRegContext::BlobDesc4ArgNameAndIndex(
-    const std::string& arg_name, int32_t index) const {
-  return fn_(arg_name, index);
 }
 
 }  // namespace user_op

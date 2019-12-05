@@ -1,23 +1,29 @@
 #ifndef ONEFLOW_CORE_FRAMEWORK_OP_REGISTRATION_H_
 #define ONEFLOW_CORE_FRAMEWORK_OP_REGISTRATION_H_
 
+#include "oneflow/core/common/util.h"
+#include "oneflow/core/common/maybe.h"
 #include "oneflow/core/framework/registrar.h"
 #include "oneflow/core/framework/user_op_def.pb.h"
 #include "oneflow/core/framework/user_op_attr.pb.h"
 #include "oneflow/core/framework/user_op_conf.pb.h"
-#include "oneflow/core/framework/infer_util.h"
 
 namespace oneflow {
+
+class TensorDesc;
+class SbpSignatureList;
 
 namespace user_op {
 
 class UserOpDefWrapper;
 class UserOpConfWrapper;
+class InferContext;
+class SbpContext;
 
-using CheckAttrFn = std::function<Maybe<void>(const UserOpDefWrapper&, const UserOpConf&)>;
+using CheckAttrFn = std::function<Maybe<void>(const UserOpDefWrapper&, const UserOpConfWrapper&)>;
 using ShapeInferFn = std::function<Maybe<void>(InferContext*)>;
 using DtypeInferFn = std::function<Maybe<void>(InferContext*)>;
-using GetSbpFn = std::function<Maybe<void>(/*TODO(niuchong): what is the para*/)>;
+using GetSbpFn = std::function<Maybe<void>(SbpContext*)>;
 
 struct OpRegistrationVal {
   UserOpDef op_def;
