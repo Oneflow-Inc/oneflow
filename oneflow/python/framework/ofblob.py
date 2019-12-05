@@ -3,12 +3,13 @@ from __future__ import absolute_import
 import oneflow.core.common.data_type_pb2 as dtype_util
 from oneflow.python.framework.dtype import convert_of_dtype_to_numpy_dtype
 from oneflow.core.register.lod_tree_pb2 import LoDTree
-import oneflow.oneflow_internal as oneflow_internal
+import oneflow.oneflow_internal as oneflow_api
 import oneflow.python.framework.blob as blob_util
 from google.protobuf import text_format
 from oneflow.python.lib.core.box import Box
 import numpy as np
 import collections
+from functools import reduce
 
 class OfBlob(object):
     def __init__(self, of_blob_ptr):
@@ -16,22 +17,25 @@ class OfBlob(object):
 
     @property
     def dtype(self):
-        return oneflow_internal.Ofblob_GetDataType(self.of_blob_ptr_)
+        return oneflow_api.Ofblob_GetDataType(self.of_blob_ptr_)
 
     @property
     def shape(self):
-        num_axes = oneflow_internal.OfBlob_NumAxes(self.of_blob_ptr_)
+        num_axes = oneflow_api.OfBlob_NumAxes(self.of_blob_ptr_)
         dst_ndarray = np.ndarray(num_axes, dtype=np.int64)
-        oneflow_internal.OfBlob_CopyShapeToNumpy(self.of_blob_ptr_, dst_ndarray)
+        oneflow_api.OfBlob_CopyShapeToNumpy(self.of_blob_ptr_, dst_ndarray)
         return tuple(dst_ndarray.tolist())
     
     @property
+    def num_axes(self): return oneflow_api.OfBlob_NumAxes(self.of_blob_ptr_)
+
+    @property
     def is_dynamic(self):
-        return oneflow_internal.OfBlob_IsDynamic(self.of_blob_ptr_)
+        return oneflow_api.OfBlob_IsDynamic(self.of_blob_ptr_)
     
     @property
     def num_of_lod_levels(self):
-        num_of_lod_levels = oneflow_internal.OfBlob_GetNumOfLoDLevels(self.of_blob_ptr_)
+        num_of_lod_levels = oneflow_api.OfBlob_GetNumOfLoDLevels(self.of_blob_ptr_)
         if num_of_lod_levels > 0:
             assert num_of_lod_levels > 1
         else:
@@ -40,7 +44,7 @@ class OfBlob(object):
 
     @property
     def lod_tree(self):
-        lod_tree_str = oneflow_internal.OfBlob_GetSerializedLoDTree(self.of_blob_ptr_)
+        lod_tree_str = oneflow_api.OfBlob_GetSerializedLoDTree(self.of_blob_ptr_)
         return text_format.Parse(lod_tree_str, LoDTree())
 
     def CopyToBlob(self):
@@ -55,9 +59,13 @@ class OfBlob(object):
         return blob
 
     def CopyToNdarray(self):
+        ndarray_lists = self._CopyToNdarrayLists()
+        assert len(ndarray_lists) == 0
+        assert len(ndarray_lists[0]) == 0
+        return ndarray_lists[0][0];
         dst_ndarray = np.ndarray(self._Size(), dtype=convert_of_dtype_to_numpy_dtype(self.dtype))
-        method_name = oneflow_internal.Dtype_GetOfBlobCopyToBufferFuncName(self.dtype)
-        copy_method = getattr(oneflow_internal, method_name)
+        method_name = oneflow_api.Dtype_GetOfBlobCopyToBufferFuncName(self.dtype)
+        copy_method = getattr(oneflow_api, method_name)
         copy_method(self.of_blob_ptr_, dst_ndarray)
         return dst_ndarray.reshape(self.shape)
 
@@ -71,6 +79,72 @@ class OfBlob(object):
             self._SetShape(np.array(src_ndarray.shape, dtype=np.int64))
         assert isinstance(src_ndarray, np.ndarray)
         self._CopyFromNdarray(src_ndarray)
+
+    def CopyToNdarrayLists(self):
+        assert self.is_dynamic
+        return self._CopyToNdarrayLists()
+
+    def CopyFromNdarrayLists(self, ndarray_lists):
+        assert self.is_dynamic
+        return self._CopyFromNdarrayLists(ndarray_lists)
+    
+    def _CopyToNdarrayLists(self):
+        tensor_list, is_new_slice_start_mask = self._CopyToNdarrayListAndIsNewSliceStartMask()
+        tensor_lists = []
+        for tensor, is_new_slice_start in zip(tensor_list, is_new_slice_start_mask):
+            if is_new_slice_start: tensor_lists.append([])
+            tensor_lists[-1].append(tensor)
+        return tensor_lists
+
+    def _CopyToNdarrayListAndIsNewSliceStartMask(self):
+        # get tensor list
+        method_name = oneflow_api.Dtype_GetOfBlobCurTensorCopyToBufferFuncName(self.dtype)
+        copy_method = getattr(oneflow_api, method_name)
+        tensor_list = []
+        oneflow_api.OfBlob_ResetTensorIterator(self.of_blob_ptr_)
+        while oneflow_api.OfBlob_CurTensorIteratorEqEnd(self.of_blob_ptr_) == False:
+            shape_tensor = np.ndarray(self.num_axes, dtype=np.int64)
+            oneflow_api.OfBlob_CurTensorCopyShapeTo(self.of_blob_ptr_, shape_tensor)
+            shape = tuple(shape_tensor.tolist())
+            tensor = np.ndarray(shape, dtype=convert_of_dtype_to_numpy_dtype(self.dtype))
+            copy_method(self.of_blob_ptr_, tensor)
+            tensor_list.append(tensor)
+            oneflow_api.OfBlob_IncTensorIterator(self.of_blob_ptr_)
+        # generate is_new_slice_start_mask
+        is_new_slice_start_mask = [False] * len(tensor_list)
+        num_slices = oneflow_api.OfBlob_NumOfTensorListSlices(self.of_blob_ptr_)
+        for x in range(num_slices):
+            tensor_list_start = oneflow_api.OfBlob_TensorIndex4SliceId(self.of_blob_ptr_, x)
+            assert tensor_list_start >= 0
+            assert tensor_list_start < len(is_new_slice_start_mask)
+            is_new_slice_start_mask[tensor_list_start] = True
+        return tensor_list, is_new_slice_start_mask
+    
+    def _CopyFromNdarrayLists(self, ndarray_lists):
+        assert isinstance(ndarray_lists, (list, tuple))
+        flat_ndarray_list = []
+        is_new_slice_start_mask = []
+        for ndarray_list in ndarray_lists:
+            assert isinstance(ndarray_list, (list, tuple))
+            for i, ndarray in enumerate(ndarray_list):
+                assert isinstance(ndarray, np.ndarray)
+                flat_ndarray_list.append(ndarray)
+                is_new_slice_start_mask.append(i == 0)
+        self._CopyFromNdarrayListAndIsNewSliceStartMask(flat_ndarray_list, is_new_slice_start_mask) 
+
+    def _CopyFromNdarrayListAndIsNewSliceStartMask(self, tensor_list, is_new_slice_start_mask):
+        assert len(tensor_list, is_new_slice_start_mask)
+        method_name = oneflow_api.Dtype_GetOfBlobCurMutTensorCopyFromBufferFuncName(self.dtype)
+        copy_method = getattr(oneflow_api, method_name)
+        oneflow_api.OfBlob_ResetMutTensorIterator(self.of_blob_ptr_)
+        for i, tensor in enumerate(tensor_list):
+            assert oneflow_api.OfBlob_CurMutTensorIteratorEqEnd(self.of_blob_ptr_) == False
+            shape_tensor = np.array(tensor.shape, dtype=np.int64)
+            oneflow_api.OfBlob_CurMutTensorCopyShapeFrom(self.of_blob_ptr_, shape_tensor)
+            copy_method(self.of_blob_ptr_, tensor)
+            if is_new_slice_start_mask[i]: oneflow_api.OfBlob_AddTensorListSlice(self.of_blob_ptr_)
+            oneflow_api.OfBlob_IncMutTensorIterator(self.of_blob_ptr_)
+        if len(tensor_list) == 0: oneflow_api.OfBlob_ClearTensorLists(self.of_blob_ptr_)
 
     def _MakeLodTreeAndDenseNdarray(self, lod_ndarray_nested_list):
         lod_tree = LoDTree()
@@ -119,8 +193,8 @@ class OfBlob(object):
         of_dtype = convert_of_dtype_to_numpy_dtype(self.dtype)
         assert(of_dtype == src_ndarray.dtype), \
             "of_dtype: %s, numpy.dtype: %s" % (of_dtype, src_ndarray.dtype)
-        method_name = oneflow_internal.Dtype_GetOfBlobCopyFromBufferFuncName(self.dtype)
-        copy_method = getattr(oneflow_internal, method_name)
+        method_name = oneflow_api.Dtype_GetOfBlobCopyFromBufferFuncName(self.dtype)
+        copy_method = getattr(oneflow_api, method_name)
         copy_method(self.of_blob_ptr_, src_ndarray)
         return
 
@@ -132,9 +206,9 @@ class OfBlob(object):
     
     def _SetShape(self, shape_tensor):
         assert shape_tensor.dtype == np.int64
-        assert len(shape_tensor) == oneflow_internal.OfBlob_NumAxes(self.of_blob_ptr_)
-        oneflow_internal.OfBlob_CopyShapeFromNumpy(self.of_blob_ptr_, shape_tensor)
+        assert len(shape_tensor) == oneflow_api.OfBlob_NumAxes(self.of_blob_ptr_)
+        oneflow_api.OfBlob_CopyShapeFromNumpy(self.of_blob_ptr_, shape_tensor)
         
     def _SetLoDTree(self, lod_tree):
         lod_tree_str = str(text_format.MessageToString(lod_tree))
-        oneflow_internal.OfBlob_SetSerializedLoDTree(self.of_blob_ptr_, lod_tree_str)
+        oneflow_api.OfBlob_SetSerializedLoDTree(self.of_blob_ptr_, lod_tree_str)
