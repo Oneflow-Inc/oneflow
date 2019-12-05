@@ -2,30 +2,69 @@ import tensorflow as tf
 import oneflow as flow
 import numpy as np
 from test_util import GenCartesianProduct
+from test_util import GetSavePath
+from test_util import Save
+import os
 
 
 def compare_with_tensorflow(
     a_shape, b_shape, transpose_a=False, transpose_b=False, device_type="gpu"
 ):
     flow.clear_default_session()
-    tf.keras.backend.clear_session()
 
     flow.config.gpu_device_num(1)
     flow.config.default_data_type(flow.float)
 
     @flow.function
-    def MatmulTestJob(a=flow.input_blob_def(a_shape), b=flow.input_blob_def(b_shape)):
+    def MatmulTestJob():
         assert device_type in ["gpu", "cpu"]
-        with flow.device_prior_placement(device_type, "0:0"):
-            return flow.matmul(a, b, transpose_a, transpose_b)
 
-    a = np.random.random_sample(a_shape).astype(np.float32)
-    b = np.random.random_sample(b_shape).astype(np.float32)
+        flow.config.train.primary_lr(1e-4)
+        flow.config.train.model_update_conf(dict(naive_conf={}))
+
+        with flow.device_prior_placement(device_type, "0:0"):
+            a = flow.get_variable(
+                "a",
+                shape=a_shape,
+                dtype=flow.float,
+                initializer=flow.random_uniform_initializer(minval=0, maxval=10),
+                trainable=True,
+            )
+            b = flow.get_variable(
+                "b",
+                shape=b_shape,
+                dtype=flow.float,
+                initializer=flow.random_uniform_initializer(minval=0, maxval=10),
+                trainable=True,
+            )
+            loss = flow.matmul(a, b, transpose_a, transpose_b)
+            flow.losses.add_loss(loss)
+
+            flow.watch(a, Save("a"))
+            flow.watch_diff(a, Save("a_diff"))
+            flow.watch(b, Save("b"))
+            flow.watch_diff(b, Save("b_diff"))
+            flow.watch(loss, Save("loss"))
+            flow.watch_diff(loss, Save("loss_diff"))
+
+            return loss
+
     # OneFlow
-    of_out = MatmulTestJob(a, b).get()
+    check_point = flow.train.CheckPoint()
+    check_point.init()
+    of_out = MatmulTestJob().get()
     # TensorFlow
-    tf_out = tf.matmul(tf.Variable(a), tf.Variable(b), transpose_a, transpose_b).numpy()
-    assert np.allclose(of_out, tf_out)
+    with tf.GradientTape(persistent=True) as tape:
+        a = tf.Variable(np.load(os.path.join(GetSavePath(), "a.npy")))
+        b = tf.Variable(np.load(os.path.join(GetSavePath(), "b.npy")))
+        tf_out = tf.matmul(a, b, transpose_a, transpose_b)
+    loss_diff = np.load(os.path.join(GetSavePath(), "loss_diff.npy"))
+    tf_a_diff = tape.gradient(tf_out, a, loss_diff)
+    tf_b_diff = tape.gradient(tf_out, b, loss_diff)
+
+    assert np.allclose(of_out, tf_out.numpy())
+    assert np.allclose(np.load(os.path.join(GetSavePath(), "a_diff.npy")), tf_a_diff.numpy())
+    assert np.allclose(np.load(os.path.join(GetSavePath(), "b_diff.npy")), tf_b_diff.numpy())
 
 
 def filter_args(arg_list):
