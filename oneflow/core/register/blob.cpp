@@ -34,10 +34,15 @@ void Blob::Init(const MemoryCase& mem_case, const RtBlobDesc* blob_desc, char* h
   blob_desc_ = blob_desc;
   dptr_ = body_ptr;
   header_ptr_.reset(new PodPtr(blob_desc_->header_pod_desc(), header_ptr));
-  *mut_header_field(FieldKey::kDenseShapeListLength) = 1;
-  *mut_header_field(FieldKey::kShapeListSlices) = 0;
-  *mut_header_field(FieldKey::kShapeListSlicesLength) = 1;
   if (!blob_desc_->header_is_opaque()) {
+    *mut_header_field(FieldKey::kDenseShapeListLength) = 1;
+    *mut_header_field(FieldKey::kShapeListSlices) = 0;
+    *mut_header_field(FieldKey::kShapeListSlicesLength) = 1;
+    sole_tensor_.reset(new TensorView(header_field(FieldKey::kDenseShape), static_shape().NumAxes(),
+                                      data_type(), dptr()));
+    sole_mut_tensor_.reset(new DataOnlyMutTensorView(mut_header_field(FieldKey::kDenseShape),
+                                                     static_shape().NumAxes(), data_type(),
+                                                     mut_dptr()));
     int64_t* shape_ptr = mut_header_field(FieldKey::kDenseShape);
     dense_shape_view_.reset(new DenseShapeView(shape_ptr, static_shape().NumAxes()));
     if (blob_desc->is_dynamic()) {
@@ -55,20 +60,17 @@ void Blob::Init(const MemoryCase& mem_case, const RtBlobDesc* blob_desc, char* h
     const DimVector& dim_vec = static_shape().dim_vec();
     dense_shape_view_.reset(new DenseShapeView(dim_vec.data(), dim_vec.size()));
   }
-  sole_tensor_.reset(new TensorView(header_field(FieldKey::kDenseShape), static_shape().NumAxes(),
-                                    data_type(), dptr()));
-  sole_mut_tensor_.reset(new DataOnlyMutTensorView(
-      mut_header_field(FieldKey::kDenseShape), static_shape().NumAxes(), data_type(), mut_dptr()));
 }
 
 size_t Blob::total_num_of_tensors() const {
   size_t num_tensor = *header_field(FieldKey::kDenseShapeListLength);
   CHECK_LE(num_tensor * static_shape().NumAxes(),
-	   header_field_shape(FieldKey::kDenseShape).elem_cnt());
+           header_field_shape(FieldKey::kDenseShape).elem_cnt());
   return num_tensor;
 }
 
 const TensorView& Blob::sole_tensor() const {
+  CHECK(static_cast<bool>(sole_tensor_));
   CHECK_EQ(*header_field(FieldKey::kShapeListSlicesLength), 1);
   CHECK_EQ(*header_field(FieldKey::kDenseShapeListLength), 1);
   return *sole_tensor_;
@@ -221,6 +223,7 @@ void Blob::GetTensorListInfoBySliceId(int32_t slice_id, Range* range, int64_t* s
 }
 
 size_t Blob::ByteSizeOfBlobBody() const {
+  if (blob_desc().header_is_opaque()) { return blob_desc().ByteSizeOfBlobBody(); }
   size_t elem_cnt = 0;
   const size_t num_axes = static_shape().NumAxes();
   const int64_t* dense_shape_list = header_field(FieldKey::kDenseShape);
@@ -228,7 +231,7 @@ size_t Blob::ByteSizeOfBlobBody() const {
     elem_cnt += DenseShapeView(dense_shape_list + i * num_axes, num_axes).elem_cnt();
   }
   size_t byte_size = elem_cnt * GetSizeOfDataType(data_type());
-  CHECK_LE(byte_size, blob_desc_->ByteSizeOfBlobBody());
+  CHECK_LE(byte_size, blob_desc().ByteSizeOfBlobBody());
   return byte_size;
 }
 
@@ -248,6 +251,11 @@ void Blob::CopyValidDataContentFrom(DeviceCtx* device_ctx, const Blob* rhs) {
 void Blob::CopyHeaderFrom(DeviceCtx* device_ctx, const Blob* rhs) {
   if (this == rhs || blob_desc().ByteSizeOfBlobHeader() == 0) { return; }
   CHECK_EQ(blob_desc().ByteSizeOfBlobHeader(), rhs->blob_desc().ByteSizeOfBlobHeader());
+  if (blob_desc().header_is_opaque()) {
+    Memcpy<DeviceType::kCPU>(device_ctx, header_ptr_->ptr(), rhs->header_ptr(),
+                             blob_desc().ByteSizeOfBlobHeader());
+    return;
+  }
   {
     const int64_t shape_list_len = *rhs->header_field(FieldKey::kDenseShapeListLength);
     *mut_header_field(FieldKey::kDenseShapeListLength) = shape_list_len;
@@ -266,7 +274,9 @@ void Blob::CopyHeaderFrom(DeviceCtx* device_ctx, const Blob* rhs) {
 }
 
 bool Blob::IsBodyEmpty() const {
-  const int64_t shape_list_len = *header_field(FieldKey::kDenseShapeListLength);
+  const int64_t* shape_list_size = header_field(FieldKey::kDenseShapeListLength);
+  if (shape_list_size == nullptr) { return false; }
+  const int64_t shape_list_len = *shape_list_size;
   return shape_list_len == 0 || shape().elem_cnt() == 0;
 }
 

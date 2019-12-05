@@ -27,8 +27,6 @@ class OfBlob final {
   void CopyShapeFrom(const int64_t* ptr, int64_t num_axis) const;
 
   template<typename T>
-  void AutoMemCopyTo(T* ptr, int64_t len) const;
-  template<typename T>
   void AutoMemCopyFrom(const T* ptr, int64_t len) const;
 
   int64_t TotalNumOfTensors() const;
@@ -81,13 +79,6 @@ inline void OfBlob::CopyShapeFrom(const int64_t* ptr, int64_t num_axis) const {
 inline void OfBlob::CopyShapeTo(int64_t* ptr, int64_t num_axis) const {
   CHECK_EQ(num_axis, NumAxes());
   FOR_RANGE(int32_t, i, 0, num_axis) { ptr[i] = blob_->shape().At(i); }
-}
-
-template<typename T>
-void OfBlob::AutoMemCopyTo(T* ptr, int64_t len) const {
-  CHECK_EQ(blob_->shape().elem_cnt(), len);
-  CHECK(blob_->data_type() == GetDataType<T>::value);
-  SyncAutoMemcpy(device_ctx_, ptr, blob_->dptr(), len * sizeof(T), mem_case_, blob_->mem_case());
 }
 
 template<typename T>

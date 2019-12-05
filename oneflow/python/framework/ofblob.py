@@ -62,12 +62,7 @@ class OfBlob(object):
         ndarray_lists = self._CopyToNdarrayLists()
         assert len(ndarray_lists) == 1
         assert len(ndarray_lists[0]) == 1
-        return ndarray_lists[0][0];
-        dst_ndarray = np.ndarray(self._Size(), dtype=convert_of_dtype_to_numpy_dtype(self.dtype))
-        method_name = oneflow_api.Dtype_GetOfBlobCopyToBufferFuncName(self.dtype)
-        copy_method = getattr(oneflow_api, method_name)
-        copy_method(self.of_blob_ptr_, dst_ndarray)
-        return dst_ndarray.reshape(self.shape)
+        return ndarray_lists[0][0]
 
     def CopyFromNdarrayOrNestedNdarrayList(self, src_ndarray):
         if self.num_of_lod_levels > 0:
@@ -198,13 +193,7 @@ class OfBlob(object):
         copy_method = getattr(oneflow_api, method_name)
         copy_method(self.of_blob_ptr_, src_ndarray)
         return
-
-    def _Size(self):
-        elem_cnt = 1
-        for d in self.shape:
-            elem_cnt *= d
-        return elem_cnt
-    
+   
     def _SetShape(self, shape_tensor):
         assert shape_tensor.dtype == np.int64
         assert len(shape_tensor) == oneflow_api.OfBlob_NumAxes(self.of_blob_ptr_)
