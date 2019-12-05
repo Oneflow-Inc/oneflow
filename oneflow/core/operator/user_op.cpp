@@ -38,14 +38,7 @@ class UserOp final : public Operator {
       std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override;
   Maybe<void> GetSbpSignatures(
       const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
-      SbpSignatureList* sbp_sig_list) const override {
-    const user_op::OpRegistrationVal* val =
-        user_op::LookUpInOpRegistry(op_conf().user_conf().op_type_name());
-    CHECK_OR_RETURN(val != nullptr)
-        << "cannot find op_type: " << op_conf().user_conf().op_type_name() << " in op registry!";
-    JUST(val->get_sbp_fn(LogicalBlobDesc4Ibn, sbp_sig_list));
-    return Maybe<void>::Ok();
-  }
+      SbpSignatureList* sbp_sig_list) const override;
   void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                             const ParallelContext* parallel_ctx,
                             KernelConf* kernel_conf) const override;
@@ -225,6 +218,30 @@ Maybe<void> UserOp::InferBatchAxis(
   }
   if (batch_axis) {
     for (const std::string& obn : output_bns()) { *BatchAxis4BnInOp(obn) = *batch_axis; }
+  }
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> UserOp::GetSbpSignatures(
+    const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
+    SbpSignatureList* sbp_sig_list) const {
+  const user_op::OpRegistrationVal* val =
+      user_op::LookUpInOpRegistry(op_conf().user_conf().op_type_name());
+  CHECK_OR_RETURN(val != nullptr) << "cannot find op_type: " << op_conf().user_conf().op_type_name()
+                                  << " in op registry!";
+  if (val->get_sbp_fn == nullptr) {
+    SbpSignatureBuilder()
+        .Split(input_bns(), 0)
+        .Split(output_bns(), 0)
+        .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+  } else {
+    user_op::LogicalTensorDesc4ArgNameAndIndex get_tensor =
+        [&](const std::string& input_arg_name, int32_t index) -> Maybe<user_op::TensorDesc> {
+      const BlobDesc* logical_blob =
+          JUST(LogicalBlobDesc4Ibn(GenRepeatedBn(input_arg_name, index)));
+      return user_op::TensorDesc(logical_blob->shape(), logical_blob->data_type());
+    };
+    JUST(val->get_sbp_fn(get_tensor, sbp_sig_list));
   }
   return Maybe<void>::Ok();
 }

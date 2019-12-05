@@ -1,4 +1,5 @@
 #include "oneflow/core/job/sbp_signature_builder.h"
+#include "oneflow/core/operator/operator.h"
 #include "oneflow/core/job/sbp_parallel.h"
 
 namespace oneflow {
@@ -41,6 +42,22 @@ SbpSignatureBuilder&& SbpSignatureBuilder::Broadcast(const std::string& bn_in_op
 
 SbpSignatureBuilder&& SbpSignatureBuilder::PartialSum(const std::string& bn_in_op) {
   (*sbp_signature_.mutable_bn_in_op2sbp_parallel())[bn_in_op].mutable_partial_sum_parallel();
+  return std::move(*this);
+}
+
+SbpSignatureBuilder&& SbpSignatureBuilder::Split(const std::string& arg_name, int32_t index,
+                                                 int64_t axis) {
+  Split(GenRepeatedBn(arg_name, index), axis);
+  return std::move(*this);
+}
+
+SbpSignatureBuilder&& SbpSignatureBuilder::Broadcast(const std::string& arg_name, int32_t index) {
+  Broadcast(GenRepeatedBn(arg_name, index));
+  return std::move(*this);
+}
+
+SbpSignatureBuilder&& SbpSignatureBuilder::PartialSum(const std::string& arg_name, int32_t index) {
+  PartialSum(GenRepeatedBn(arg_name, index));
   return std::move(*this);
 }
 

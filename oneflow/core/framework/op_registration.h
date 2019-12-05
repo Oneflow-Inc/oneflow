@@ -1,6 +1,7 @@
 #ifndef ONEFLOW_CORE_FRAMEWORK_OP_REGISTRATION_H_
 #define ONEFLOW_CORE_FRAMEWORK_OP_REGISTRATION_H_
 
+#include "oneflow/core/common/util.h"
 #include "oneflow/core/framework/registrar.h"
 #include "oneflow/core/framework/user_op_def.pb.h"
 #include "oneflow/core/framework/user_op_attr.pb.h"
@@ -9,7 +10,7 @@
 
 namespace oneflow {
 
-class BlobDesc;
+class TensorDesc;
 class SbpSignatureList;
 
 namespace user_op {
@@ -17,11 +18,12 @@ namespace user_op {
 class UserOpDefWrapper;
 class UserOpConfWrapper;
 
+using LogicalTensorDesc4ArgNameAndIndex =
+    std::function<Maybe<TensorDesc>(const std::string&, int32_t)>;
 using CheckAttrFn = std::function<Maybe<void>(const UserOpDefWrapper&, const UserOpConfWrapper&)>;
 using ShapeInferFn = std::function<Maybe<void>(InferContext*)>;
 using DtypeInferFn = std::function<Maybe<void>(InferContext*)>;
-using GetSbpFn = std::function<Maybe<void>(
-    std::function<Maybe<const BlobDesc*>(const std::string&)>, SbpSignatureList*)>;
+using GetSbpFn = std::function<Maybe<void>(LogicalTensorDesc4ArgNameAndIndex, SbpSignatureList*)>;
 
 struct OpRegistrationVal {
   UserOpDef op_def;
