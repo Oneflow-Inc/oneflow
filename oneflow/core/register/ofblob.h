@@ -26,9 +26,6 @@ class OfBlob final {
   void CopyShapeTo(int64_t* ptr, int64_t num_axis) const;
   void CopyShapeFrom(const int64_t* ptr, int64_t num_axis) const;
 
-  template<typename T>
-  void AutoMemCopyFrom(const T* ptr, int64_t len) const;
-
   int64_t TotalNumOfTensors() const;
   int64_t NumOfTensorListSlices() const;
   int64_t TensorIndex4SliceId(int32_t slice_id) const;
@@ -79,14 +76,6 @@ inline void OfBlob::CopyShapeFrom(const int64_t* ptr, int64_t num_axis) const {
 inline void OfBlob::CopyShapeTo(int64_t* ptr, int64_t num_axis) const {
   CHECK_EQ(num_axis, NumAxes());
   FOR_RANGE(int32_t, i, 0, num_axis) { ptr[i] = blob_->shape().At(i); }
-}
-
-template<typename T>
-void OfBlob::AutoMemCopyFrom(const T* ptr, int64_t len) const {
-  CHECK_EQ(blob_->shape().elem_cnt(), len);
-  CHECK(blob_->data_type() == GetDataType<T>::value);
-  SyncAutoMemcpy(device_ctx_, blob_->mut_dptr(), ptr, len * sizeof(T), blob_->mem_case(),
-                 mem_case_);
 }
 
 inline LoDTree OfBlob::GetLoDTree() const {
