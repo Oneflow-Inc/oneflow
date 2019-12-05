@@ -35,6 +35,7 @@ class OfBlob final {
   int64_t TensorIndex4SliceId(int32_t slice_id) const;
   void AddTensorListSlice() const;
 
+  void ClearTensorLists();
   void ResetTensorIterator();
   void ResetMutTensorIterator();
   void IncTensorIterator();
@@ -49,6 +50,8 @@ class OfBlob final {
   void CurMutTensorAutoMemCopyFrom(const T* ptr, int64_t len) const;
 
  private:
+  void ClearShape(FullyMutTensorView* tensor) const;
+
   DeviceCtx* device_ctx_;
   Blob* blob_;
   MemoryCase mem_case_;
@@ -119,10 +122,13 @@ inline void OfBlob::AddTensorListSlice() const { return blob_->add_tensor_list_s
 
 inline void OfBlob::ResetTensorIterator() { cur_tensor_ = blob_->first_tensor(); }
 
+inline void OfBlob::ClearTensorLists() { blob_->clear_tensor_lists(); }
+
 inline void OfBlob::ResetMutTensorIterator() {
   blob_->clear_tensor_lists();
   cur_mut_tensor_.reset();
   cur_mut_tensor_ = blob_->add_tensor(cur_mut_tensor_.get());
+  ClearShape(cur_mut_tensor_.get());
 }
 
 inline void OfBlob::IncTensorIterator() { cur_tensor_ = blob_->next_tensor(*cur_tensor_); }
@@ -134,6 +140,13 @@ inline void OfBlob::IncMutTensorIterator() {
 inline void OfBlob::CurTensorCopyShapeTo(int64_t* ptr, int64_t num_axis) const {
   CHECK_EQ(num_axis, NumAxes());
   DenseShapeMutView(ptr, num_axis).set_shape(cur_tensor_->shape());
+  ClearShape(cur_mut_tensor_.get());
+}
+
+inline void OfBlob::ClearShape(FullyMutTensorView* tensor) const {
+  if (tensor == nullptr) { return; }
+  std::vector<int64_t> zeros(NumAxes(), 0LL);
+  tensor->set_shape(DenseShapeView(zeros.data(), NumAxes()));
 }
 
 inline void OfBlob::CurMutTensorCopyShapeFrom(const int64_t* ptr, int64_t num_axis) const {

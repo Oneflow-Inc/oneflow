@@ -115,6 +115,12 @@ void OfBlob_SetSerializedLoDTree(uint64_t of_blob_ptr, const std::string& lod_tr
   of_blob->SetLoDTree(lod_tree);
 }
 
+void OfBlob_ClearTensorLists(uint64_t of_blob_ptr) {
+  using namespace oneflow;
+  auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
+  return of_blob->ClearTensorLists();
+}
+
 long OfBlob_NumOfTensorListSlices(uint64_t of_blob_ptr) {
   using namespace oneflow;
   auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
