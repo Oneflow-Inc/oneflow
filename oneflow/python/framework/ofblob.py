@@ -64,6 +64,9 @@ class OfBlob(object):
         assert len(ndarray_lists[0]) == 1
         return ndarray_lists[0][0]
 
+    def CopyFromNdarray(self, src_ndarray):
+        return self._CopyFromNdarrayLists([[src_ndarray]])
+   
     def CopyFromNdarrayOrNestedNdarrayList(self, src_ndarray):
         if self.num_of_lod_levels > 0:
             assert isinstance(src_ndarray, (list, tuple))
@@ -73,7 +76,7 @@ class OfBlob(object):
         else:
             self._SetShape(np.array(src_ndarray.shape, dtype=np.int64))
         assert isinstance(src_ndarray, np.ndarray)
-        self._CopyFromNdarray(src_ndarray)
+        self.CopyFromNdarray(src_ndarray)
 
     def CopyToNdarrayLists(self):
         assert self.is_dynamic
@@ -129,18 +132,20 @@ class OfBlob(object):
         self._CopyFromNdarrayListAndIsNewSliceStartMask(flat_ndarray_list, is_new_slice_start_mask) 
 
     def _CopyFromNdarrayListAndIsNewSliceStartMask(self, tensor_list, is_new_slice_start_mask):
-        assert len(tensor_list, is_new_slice_start_mask)
+        assert len(tensor_list) == len(is_new_slice_start_mask)
         method_name = oneflow_api.Dtype_GetOfBlobCurMutTensorCopyFromBufferFuncName(self.dtype)
         copy_method = getattr(oneflow_api, method_name)
-        oneflow_api.OfBlob_ResetMutTensorIterator(self.of_blob_ptr_)
+        oneflow_api.OfBlob_ClearTensorLists(self.of_blob_ptr_)
         for i, tensor in enumerate(tensor_list):
-            assert oneflow_api.OfBlob_CurMutTensorIteratorEqEnd(self.of_blob_ptr_) == False
+            if is_new_slice_start_mask[i]: oneflow_api.OfBlob_AddTensorListSlice(self.of_blob_ptr_)
+            oneflow_api.OfBlob_AddTensor(self.of_blob_ptr_)
+            assert oneflow_api.OfBlob_CurMutTensorIsNull(self.of_blob_ptr_) == False
             shape_tensor = np.array(tensor.shape, dtype=np.int64)
             oneflow_api.OfBlob_CurMutTensorCopyShapeFrom(self.of_blob_ptr_, shape_tensor)
             copy_method(self.of_blob_ptr_, tensor)
-            if is_new_slice_start_mask[i]: oneflow_api.OfBlob_AddTensorListSlice(self.of_blob_ptr_)
-            oneflow_api.OfBlob_IncMutTensorIterator(self.of_blob_ptr_)
-        if len(tensor_list) == 0: oneflow_api.OfBlob_ClearTensorLists(self.of_blob_ptr_)
+        assert len(tensor_list) == oneflow_api.OfBlob_TotalNumOfTensors(self.of_blob_ptr_)
+        num_slices = reduce(lambda a, b: a + b, is_new_slice_start_mask, 0)
+        assert num_slices == oneflow_api.OfBlob_NumOfTensorListSlices(self.of_blob_ptr_)
 
     def _MakeLodTreeAndDenseNdarray(self, lod_ndarray_nested_list):
         lod_tree = LoDTree()
@@ -185,15 +190,6 @@ class OfBlob(object):
             return ndarray_list
         return RecursiveMakeLoDNdarrayNestedList(lod_tree)
 
-    def _CopyFromNdarray(self, src_ndarray):
-        of_dtype = convert_of_dtype_to_numpy_dtype(self.dtype)
-        assert(of_dtype == src_ndarray.dtype), \
-            "of_dtype: %s, numpy.dtype: %s" % (of_dtype, src_ndarray.dtype)
-        method_name = oneflow_api.Dtype_GetOfBlobCopyFromBufferFuncName(self.dtype)
-        copy_method = getattr(oneflow_api, method_name)
-        copy_method(self.of_blob_ptr_, src_ndarray)
-        return
-   
     def _SetShape(self, shape_tensor):
         assert shape_tensor.dtype == np.int64
         assert len(shape_tensor) == oneflow_api.OfBlob_NumAxes(self.of_blob_ptr_)
