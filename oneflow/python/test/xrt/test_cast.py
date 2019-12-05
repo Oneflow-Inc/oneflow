@@ -52,5 +52,4 @@ class TestCast(unittest.TestCase):
         self._test_random_body((1, 10), flow.int32, flow.float32)
 
 if __name__ == '__main__':
-  unittest.main()
-
+    unittest.main()

@@ -55,5 +55,4 @@ class TestTranspose(unittest.TestCase):
         self._test_random_body((2, 2, 2), (1, 2, 0))
 
 if __name__ == '__main__':
-  unittest.main()
-
+    unittest.main()

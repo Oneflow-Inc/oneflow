@@ -99,4 +99,4 @@ class TestBroadcastDivOp(TestBroadcastOp):
         return xla_broadcast_div_job
 
 if __name__ == '__main__':
-  unittest.main()
+    unittest.main()
