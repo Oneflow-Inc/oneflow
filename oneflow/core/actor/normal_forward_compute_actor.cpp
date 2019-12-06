@@ -190,9 +190,7 @@ void NormalForwardCompActor::TrySendMsgToForwardModelSaveActor(int64_t piece_id)
   if (forward_model_regst_desc_id_ == -1) { return; }
   bool is_last_piece_in_batch = (piece_id + 1) % actual_num_of_piece_in_batch_ == 0;
   int64_t batch_id = piece_id / actual_num_of_piece_in_batch_;
-  if (is_last_piece_in_batch && NeedModelSave(job_desc(), batch_id)) {
-    SendMsgToForwardModelSaveActor(batch_id);
-  }
+  if (is_last_piece_in_batch) { SendMsgToForwardModelSaveActor(batch_id); }
 }
 
 void NormalForwardCompActor::SendMsgToForwardModelSaveActor(int64_t batch_id) {
