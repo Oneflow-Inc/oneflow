@@ -59,7 +59,7 @@ class BlobDesc(object):
         return self.disable_boxing_
 
     @property
-    def num_of_lod_levels(self):
+    def enable_tensor_list(self):
         raise NotImplementedError
     
     @property

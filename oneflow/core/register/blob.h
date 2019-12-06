@@ -6,13 +6,14 @@
 #include "oneflow/core/memory/memory_case.pb.h"
 #include "oneflow/core/register/runtime_blob_desc.h"
 #include "oneflow/core/register/dense_shape_view.h"
-#include "oneflow/core/register/lod_view.h"
 #include "oneflow/core/register/tensor_view.h"
-#include "oneflow/core/common/range.h"
+#include "oneflow/core/register/pod_ptr.h"
 #include "oneflow/core/record/record.pb.h"
 #include "oneflow/core/common/symbol.h"
 
 namespace oneflow {
+
+class Range;
 
 class Blob final {
  public:
@@ -62,28 +63,6 @@ class Blob final {
   const DenseShapeView& dense_shape_view() const { return *dense_shape_view_; }
   const DenseShapeView& shape() const { return *dense_shape_view_; }
   DenseShapeMutView* dense_shape_mut_view() { return dense_shape_mut_view_.get(); }
-  LengthLoDView length_lod_view() const {
-    return LengthLoDView(header_ptr_->Field(FieldKey::kLoD), blob_desc_->num_of_lod_levels());
-  }
-  LengthLoDMutView length_lod_mut_view() {
-    return LengthLoDMutView(header_ptr_->MutField(FieldKey::kLoD), blob_desc_->num_of_lod_levels());
-  }
-  OffsetLoDView offset_lod_view() const {
-    return OffsetLoDView(header_ptr_->Field(FieldKey::kLoD), blob_desc_->num_of_lod_levels());
-  }
-  OffsetLoDMutView offset_lod_mut_view() {
-    return OffsetLoDMutView(header_ptr_->MutField(FieldKey::kLoD), blob_desc_->num_of_lod_levels());
-  }
-  TreeLoDView tree_lod_view() const {
-    return TreeLoDView(header_ptr_->Field(FieldKey::kLoD), blob_desc_->num_of_lod_levels());
-  }
-  TreeLoDMutView tree_lod_mut_view() const {
-    return TreeLoDMutView(header_ptr_->MutField(FieldKey::kLoD), blob_desc_->num_of_lod_levels());
-  }
-  CoordinateLoDMutView coord_lod_mut_view() const {
-    return CoordinateLoDMutView(header_ptr_->MutField(FieldKey::kLoD),
-                                blob_desc_->num_of_lod_levels());
-  }
 
   void CopyDataContentFrom(DeviceCtx* device_ctx, const Blob* rhs);
   void CopyValidDataContentFrom(DeviceCtx* device_ctx, const Blob* rhs);

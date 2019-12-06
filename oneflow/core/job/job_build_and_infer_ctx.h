@@ -27,7 +27,7 @@ class JobBuildAndInferCtx {
   Maybe<DataType> GetDataType(const std::string& lbn) const;
   Maybe<bool> IsDynamic(const std::string& lbn) const;
   Maybe<bool> DisableBoxing(const std::string& lbn) const;
-  Maybe<long long> GetNumOfLoDLevels(const std::string& lbn) const;
+  Maybe<bool> EnableTensorList(const std::string& lbn) const;
   Maybe<OptInt64> GetBatchAxis(const std::string& lbn) const;
   Maybe<OptInt64> GetSplitAxisFromProducerView(const std::string& lbn) const;
   Maybe<const ParallelDesc*> GetParallelDescFromProducerView(const std::string& lbn) const;

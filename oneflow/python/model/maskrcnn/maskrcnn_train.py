@@ -166,14 +166,13 @@ def maskrcnn_train(cfg, images, image_sizes, gt_boxes, gt_segms, gt_labels):
     assert images.is_dynamic is True
     assert images.shape[3] == 3
     assert image_sizes.is_dynamic is False
-    assert gt_boxes.num_of_lod_levels == 2
-    # if it is mask target projected, num_of_lod_levels is 0
-    if gt_segms.num_of_lod_levels == 0:
+    assert gt_boxes.enable_tensor_list
+    if gt_segms.enable_tensor_list == False:
         assert gt_segms.is_dynamic is True
     else:
-        assert gt_segms.num_of_lod_levels == 2
+        assert gt_segms.enable_tensor_list
 
-    assert gt_labels.num_of_lod_levels == 2
+    assert gt_labels.enable_tensor_list
 
     backbone = Backbone(cfg)
     rpn_head = RPNHead(cfg)
@@ -207,7 +206,7 @@ def maskrcnn_train(cfg, images, image_sizes, gt_boxes, gt_segms, gt_labels):
     )
 
     gt_segms_list = None
-    if gt_segms.num_of_lod_levels == 2:
+    if gt_segms.enable_tensor_list:
         gt_segms_list = flow.piece_slice(
             gt_segms, cfg.TRAINING_CONF.IMG_PER_GPU, name="piece_slice_gt_segms"
         )
@@ -280,14 +279,14 @@ def distribute_maskrcnn_train(
     Args:
         image: (N, H, W, C)
         image_size: (N, 2)
-        gt_bbox: (N, M, 4), num_lod_lvl == 2
-        gt_segm: (N, M, 28, 28), num_lod_lvl == 2
-        gt_label: (N, M), num_lod_lvl == 2
+        gt_bbox: (N, M, 4), enable_tensor_list
+        gt_segm: (N, M, 28, 28), enable_tensor_list
+        gt_label: (N, M), enable_tensor_list
     """
     assert image.shape[3] == 3
-    assert gt_bbox.num_of_lod_levels == 2
-    assert gt_segm.num_of_lod_levels == 2
-    assert gt_label.num_of_lod_levels == 2
+    assert gt_bbox.enable_tensor_list
+    assert gt_segm.enable_tensor_list
+    assert gt_label.enable_tensor_list
 
     if terminal_args.verbose:
         print(config)
@@ -534,7 +533,7 @@ if terminal_args.train_with_real_dataset:
             data_util.DataSourceCase.kObjectBoundingBox,
             shape=(64, 4),
             dtype=flow.float,
-            variable_length_axes=(0,),
+            tensor_list_variable_axis=0,
             is_dynamic=True,
         )
         data_loader.add_blob(
@@ -542,15 +541,7 @@ if terminal_args.train_with_real_dataset:
             data_util.DataSourceCase.kObjectLabel,
             shape=(64,),
             dtype=flow.int32,
-            variable_length_axes=(0,),
-            is_dynamic=True,
-        )
-        data_loader.add_blob(
-            "gt_segm_poly",
-            data_util.DataSourceCase.kObjectSegmentation,
-            shape=(64, 2, 256, 2),
-            dtype=flow.double,
-            variable_length_axes=(0, 1, 2),
+            tensor_list_variable_axis=0,
             is_dynamic=True,
         )
         data_loader.add_blob(
@@ -558,7 +549,7 @@ if terminal_args.train_with_real_dataset:
             data_util.DataSourceCase.kObjectSegmentationAlignedMask,
             shape=(64, 1344, 800),
             dtype=flow.int8,
-            variable_length_axes=(0,),
+            tensor_list_variable_axis=0,
             is_dynamic=True,
         )
         data_loader.add_transform(flow.data.TargetResizeTransform(800, 1333))

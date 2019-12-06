@@ -2,6 +2,7 @@
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/register/register.h"
+#include "oneflow/core/common/range.h"
 
 namespace oneflow {
 
@@ -48,14 +49,7 @@ void Blob::Init(const MemoryCase& mem_case, const RtBlobDesc* blob_desc, char* h
     if (blob_desc->is_dynamic()) {
       dense_shape_mut_view_.reset(new DenseShapeMutView(shape_ptr, static_shape().NumAxes()));
     }
-    DimVector dim_vec = static_shape().dim_vec();
-    if (blob_desc->num_of_lod_levels() > 0) {
-      CHECK_GT(blob_desc->num_of_lod_levels(), 1);
-      int64_t dim0 = 1;
-      FOR_RANGE(int64_t, i, 0, blob_desc->num_of_lod_levels()) { dim0 *= dim_vec.at(i); }
-      dim_vec = {dim_vec.begin() + blob_desc->num_of_lod_levels() - 1, dim_vec.end()};
-    }
-    DenseShapeMutView(shape_ptr, static_shape().NumAxes()).set_shape(Shape(std::move(dim_vec)));
+    DenseShapeMutView(shape_ptr, static_shape().NumAxes()).set_shape(static_shape());
   } else {
     const DimVector& dim_vec = static_shape().dim_vec();
     dense_shape_view_.reset(new DenseShapeView(dim_vec.data(), dim_vec.size()));

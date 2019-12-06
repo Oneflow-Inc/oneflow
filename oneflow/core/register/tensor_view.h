@@ -22,6 +22,7 @@ class TensorView final {
     CheckDataType<T>(data_type_);
     return static_cast<const T*>(dptr_);
   }
+  size_t ByteSize() const { return shape().elem_cnt() * GetSizeOfDataType(data_type()); }
 
  private:
   const DenseShapeView shape_;
@@ -45,6 +46,7 @@ class MutTensorView {
     CheckDataType<T>(data_type_);
     return static_cast<T*>(dptr_);
   }
+  size_t ByteSize() const { return shape().elem_cnt() * GetSizeOfDataType(data_type()); }
 
  protected:
   OF_DISALLOW_COPY(MutTensorView);

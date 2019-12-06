@@ -89,30 +89,16 @@ void OfBlob_CopyShapeToNumpy(uint64_t of_blob_ptr, long* array, int size) {
   return of_blob->CopyShapeTo(array, size);
 }
 
-size_t OfBlob_GetNumOfLoDLevels(uint64_t of_blob_ptr) {
-  using namespace oneflow;
-  auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
-  return of_blob->num_of_lod_levels();
-}
-
 bool OfBlob_IsDynamic(uint64_t of_blob_ptr) {
   using namespace oneflow;
   auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
   return of_blob->is_dynamic();
 }
 
-std::string OfBlob_GetSerializedLoDTree(uint64_t of_blob_ptr) {
+bool OfBlob_EnableTensorList(uint64_t of_blob_ptr) {
   using namespace oneflow;
   auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
-  return PbMessage2TxtString(of_blob->GetLoDTree());
-}
-
-void OfBlob_SetSerializedLoDTree(uint64_t of_blob_ptr, const std::string& lod_tree_str) {
-  using namespace oneflow;
-  LoDTree lod_tree;
-  CHECK(TxtString2PbMessage(lod_tree_str, &lod_tree));
-  auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
-  of_blob->SetLoDTree(lod_tree);
+  return of_blob->enable_tensor_list();
 }
 
 long OfBlob_TotalNumOfTensors(uint64_t of_blob_ptr) {

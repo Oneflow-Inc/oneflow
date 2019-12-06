@@ -18,7 +18,7 @@ class input_blob_def(blob_desc.BlobDesc):
     def __init__(self, shape,
                  dtype = data_type_util.kFloat,
                  is_dynamic = False,
-                 num_of_lod_levels = 0,
+                 enable_tensor_list = False,
                  batch_axis = 0,
                  name = None,
                  **kw):
@@ -32,10 +32,7 @@ class input_blob_def(blob_desc.BlobDesc):
         self.shape_ = shape
         self.dtype_ = dtype
         self.is_dynamic_ = is_dynamic
-        if num_of_lod_levels > 0:
-            assert num_of_lod_levels > 1
-            assert num_of_lod_levels <= len(shape)
-        self.num_of_lod_levels_ = num_of_lod_levels
+        self.enable_tensor_list_ = enable_tensor_list
         self.batch_axis_ = batch_axis
 
     @property
@@ -54,7 +51,7 @@ class input_blob_def(blob_desc.BlobDesc):
     def is_dynamic(self): return self.is_dynamic_
 
     @property
-    def num_of_lod_levels(self): return self.num_of_lod_levels_
+    def enable_tensor_list(self): return self.enable_tensor_list_
 
     def parallel_conf(self):
         TODO()
@@ -65,17 +62,17 @@ class input_blob_def(blob_desc.BlobDesc):
                         distribute = distribute, name = self.lbi.op_name)
 
     def CheckInputNdarray(self, ndarray):
-        if self.num_of_lod_levels == 0:
-            self._CheckDenseNdarray(ndarray)
+        if self.enable_tensor_list:
+            self._CheckNdarrayList(ndarray)
         else:
-            self._CheckLodNdarray(ndarray)
+            self._CheckDenseNdarray(ndarray)
 
     def ToInterfaceBlobConf(self):
         interface_blob_conf = op_conf_util.InterfaceBlobConf()
         interface_blob_conf.shape.dim.extend(self.shape_)
         interface_blob_conf.data_type = self.dtype_
         interface_blob_conf.is_dynamic = self.is_dynamic_
-        interface_blob_conf.num_of_lod_levels = self.num_of_lod_levels_
+        interface_blob_conf.enable_tensor_list = self.enable_tensor_list
         if type(self.batch_axis_) is int:
             assert self.batch_axis_ >= 0
             interface_blob_conf.batch_axis.value = self.batch_axis_
@@ -148,19 +145,5 @@ class input_blob_def(blob_desc.BlobDesc):
         else:
             assert ndarray.shape == self.shape
 
-    def _CheckLodNdarray(self, ndarray_nested_list):
-        def RecursiveCheckNdarray(axis, ndarray_nested_list):
-            if axis == self.num_of_lod_levels - 1:
-                assert isinstance(ndarray_nested_list, np.ndarray)
-                assert ndarray_nested_list.shape[0] <= self.static_shape[axis]
-                assert ndarray_nested_list.shape[1:] == self.static_shape[axis + 1:],\
-                    "ndarray.shape[1:] should be %s" % str(self.static_shape[axis + 1:])
-            else:
-                assert isinstance(ndarray_nested_list, (list, tuple))
-                if axis == 0:
-                    assert len(ndarray_nested_list) == self.static_shape[axis]
-                else:
-                    assert len(ndarray_nested_list) <= self.static_shape[axis]
-                for x in ndarray_nested_list:
-                    RecursiveCheckNdarray(axis + 1, x)
-        RecursiveCheckNdarray(0, ndarray_nested_list)
+    def _CheckNdarrayList(self, ndarray_nested_list):
+        raise NotImplementedError

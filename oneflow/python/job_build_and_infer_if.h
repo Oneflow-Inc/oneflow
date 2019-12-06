@@ -78,9 +78,9 @@ bool JobBuildAndInferCtx_DisableBoxing(const std::string& job_name, const std::s
       .GetDataAndSerializedErrorProto(error_str, false);
 }
 
-long long JobBuildAndInferCtx_GetNumOfLoDLevels(const std::string& job_name, const std::string& lbn,
-                                                std::string* error_str) {
-  return oneflow::JobBuildAndInferCtx_GetNumOfLoDLevels(job_name, lbn)
+long long JobBuildAndInferCtx_EnableTensorList(const std::string& job_name, const std::string& lbn,
+                                               std::string* error_str) {
+  return oneflow::JobBuildAndInferCtx_EnableTensorList(job_name, lbn)
       .GetDataAndSerializedErrorProto(error_str, 0LL);
 }
 
