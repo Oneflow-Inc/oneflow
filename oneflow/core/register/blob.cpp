@@ -184,6 +184,11 @@ std::unique_ptr<MutTensorListView> Blob::mut_tensor_list(int32_t slice_id) {
       data_type(), reinterpret_cast<void*>(mem_ptr + data_offset));
 }
 
+void Blob::reserve_one_empty_tensor_list() {
+  clear_tensor_lists();
+  add_tensor_list_slice();
+}
+
 void Blob::clear_tensor_lists() {
   *mut_header_field(FieldKey::kDenseShapeListLength) = 0;
   *mut_header_field(FieldKey::kShapeListSlicesLength) = 0;

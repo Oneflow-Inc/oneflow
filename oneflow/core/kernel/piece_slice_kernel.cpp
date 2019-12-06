@@ -24,8 +24,7 @@ class PieceSliceKernel final : public KernelIf<device_type> {
     std::unique_ptr<FullyMutTensorView> out_tensor;
     FOR_RANGE(size_t, i, 0, out_size) {
       Blob* out_blob = BnInOp2Blob("out_" + std::to_string(i));
-      out_blob->clear_tensor_lists();
-      out_blob->add_tensor_list_slice();
+      out_blob->reserve_one_empty_tensor_list();
       out_tensor = out_blob->add_tensor(out_tensor.get());
       out_tensor->set_shape(in_tensor->shape());
       Memcpy<device_type>(ctx.device_ctx, out_tensor->mut_dptr(), in_tensor->dptr(),
