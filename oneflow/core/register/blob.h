@@ -33,6 +33,7 @@ class Blob final {
   std::unique_ptr<DataOnlyMutTensorView> first_mut_tensor();
   std::unique_ptr<DataOnlyMutTensorView> next_mut_tensor(const DataOnlyMutTensorView& last);
   std::unique_ptr<FullyMutTensorView> add_tensor(const FullyMutTensorView* last);
+  void reserve_one_empty_tensor_list();
 
   // tensor list slice
   size_t num_of_tensor_list_slices() const;

@@ -61,7 +61,7 @@ void DataLoadKernel::WriteDataToBlob(DeviceCtx* ctx,
     auto* dense_shape_mut_view = blob->dense_shape_mut_view();
     if (dense_shape_mut_view) { dense_shape_mut_view->set_shape(Shape(dense_shape_vec)); }
   } else {
-    blob->clear_tensor_lists();
+    blob->reserve_one_empty_tensor_list();
     std::unique_ptr<FullyMutTensorView> tensor;
     for (DataInstance& data_inst : *batch_data) {
       tensor = blob->add_tensor(tensor.get());
