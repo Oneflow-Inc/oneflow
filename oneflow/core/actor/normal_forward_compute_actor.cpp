@@ -95,11 +95,8 @@ void NormalForwardCompActor::Act() {
 }
 
 void NormalForwardCompActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
-  int64_t model_version_id = -1;
-  if (model_regst_) { model_version_id = model_regst_->model_version_id(); }
   HandleProducedNaiveDataRegstToConsumer([&](Regst* regst) {
     regst->set_piece_id(cur_piece_id_);
-    regst->set_model_version_id(model_version_id);
     return regst->regst_desc_id() != forward_model_regst_desc_id_;
   });
 }
@@ -201,7 +198,6 @@ void NormalForwardCompActor::TrySendMsgToForwardModelSaveActor(int64_t piece_id)
 void NormalForwardCompActor::SendMsgToForwardModelSaveActor(int64_t batch_id) {
   Regst* fw_model_regst = GetNaiveCurWriteable(forward_model_regst_desc_id_);
   CHECK(fw_model_regst);
-  fw_model_regst->set_model_version_id(batch_id);
   AsyncSendRegstMsgToConsumer(fw_model_regst, [](int64_t) { return true; });
 }
 
