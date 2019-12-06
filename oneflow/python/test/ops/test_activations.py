@@ -4,6 +4,7 @@ import os
 import oneflow as flow
 import tensorflow as tf
 import tensorflow_addons as tfa
+from collections import OrderedDict 
 
 from test_util import GenArgList
 from test_util import GetSavePath
@@ -71,5 +72,9 @@ def compare_with_tensorflow(device_type, activation_type, shape):
 
 
 def test_activations(test_case):
-    for arg in GenArgList([["gpu"], ["relu", "sigmoid", "tanh", "gelu"], [(1024, 1024)]]):
+    arg_dict = OrderedDict()
+    arg_dict["device_type"] = ["gpu"]
+    arg_dict["activation_type"] = ["relu", "sigmoid", "tanh", "gelu"]
+    arg_dict["shape"] = [(1024, 1024)]
+    for arg in GenArgList(arg_dict):
         compare_with_tensorflow(*arg)

@@ -2,6 +2,7 @@ import os
 import numpy as np
 import tensorflow as tf
 import oneflow as flow
+from collections import OrderedDict 
 
 from test_util import GenArgList
 from test_util import GetSavePath
@@ -56,5 +57,10 @@ def compare_with_tensorflow(device_type, input_shape, axis, keepdims):
 
 
 def test_reduce_mean(test_case):
-    for arg in GenArgList([["gpu"], [(64, 64, 64)], [None, [1], [0, 2]], [True, False]]):
+    arg_dict = OrderedDict()
+    arg_dict["device_type"] = ["gpu"]
+    arg_dict["input_shape"] = [(64, 64, 64)]
+    arg_dict["axis"] = [None, [1], [0, 2]]
+    arg_dict["keepdims"] = [True, False]
+    for arg in GenArgList(arg_dict):
         compare_with_tensorflow(*arg)

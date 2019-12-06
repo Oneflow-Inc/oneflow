@@ -2,6 +2,7 @@ import os
 import numpy as np
 import tensorflow as tf
 import oneflow as flow
+from collections import OrderedDict 
 
 from test_util import GenArgList
 from test_util import GetSavePath
@@ -68,5 +69,10 @@ def compare_with_tensorflow(device_type, x_shape, y_shape, axis):
 
 
 def test_concat(test_case):
-    for arg in GenArgList([["gpu"], [(10, 20, 30)], [(10, 20, 30)], [0, 1, 2]]):
+    arg_dict = OrderedDict()
+    arg_dict["device_type"] = ["gpu"]
+    arg_dict["x_shape"] = [(10, 20, 30)]
+    arg_dict["y_shape"] = [(10, 20, 30)]
+    arg_dict["axis"] = [0, 1, 2]
+    for arg in GenArgList(arg_dict):
         compare_with_tensorflow(*arg)

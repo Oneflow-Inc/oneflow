@@ -1,4 +1,5 @@
 import itertools
+from collections import OrderedDict 
 from collections.abc import Iterable
 import os
 import numpy as np
@@ -11,8 +12,10 @@ def GenCartesianProduct(sets):
     return itertools.product(*sets)
 
 
-def GenArgList(args):
-    return GenCartesianProduct(args)
+def GenArgList(arg_dict):
+    assert isinstance(arg_dict, OrderedDict)
+    sets = [arg_set for _, arg_set in arg_dict.items()]
+    return GenCartesianProduct(sets)
 
 
 def GetSavePath():
