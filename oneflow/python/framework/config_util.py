@@ -349,6 +349,11 @@ def set_bias_l2(value):
     _SetJobConfAttr(lambda job_conf: job_conf.train_conf, 'bias_l2', value)
     return oneflow.config
 
+@oneflow_export('config.thread_enable_local_message_queue')
+def thread_enable_local_message_queue(value=True):
+    _SetJobConfAttr(lambda x:x, 'thread_enable_local_message_queue', value)
+    return oneflow.config
+
 def _SetJobConfAttr(GetConf, field, value):
     if compile_context.cur_job_conf is not None:
         assert c_api_util.CurJobBuildAndInferCtx_HasJobConf() == False

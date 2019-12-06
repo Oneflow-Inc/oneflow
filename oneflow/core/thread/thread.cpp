@@ -16,7 +16,8 @@ void Thread::AddTask(const TaskProto& task) {
 }
 
 void Thread::EnqueueActorMsg(const ActorMsg& msg) {
-  if (std::this_thread::get_id() == actor_thread_.get_id()) {
+  if (GlobalJobDesc().thread_enable_local_message_queue()
+      && std::this_thread::get_id() == actor_thread_.get_id()) {
     local_msg_queue_.push(msg);
   } else {
     msg_channel_.Send(msg);
