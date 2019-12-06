@@ -63,6 +63,9 @@ class JobDesc final {
   float all_reduce_lazy_ratio() const;
   bool all_reduce_fp16() const;
   int64_t cudnn_buf_limit_mbyte() const { return job_conf_.cudnn_buf_limit_mbyte(); }
+  bool thread_enable_local_message_queue() const {
+    return job_conf_.thread_enable_local_message_queue();
+  }
 
   // Train conf
   int64_t TotalBatchNum() const;
