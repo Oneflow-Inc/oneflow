@@ -4,14 +4,14 @@ import os
 import oneflow as flow
 import tensorflow as tf
 import tensorflow_addons as tfa
-import torch
 
 from test_util import GenArgList
 from test_util import GetSavePath
 from test_util import Save
 
 
-def compare_with_tensorflow(activation_type, shape, device_type):
+def compare_with_tensorflow(device_type, activation_type, shape):
+    assert device_type in ["gpu", "cpu"]
     flow.clear_default_session()
     flow.config.gpu_device_num(1)
     flow.config.default_data_type(flow.float)
@@ -68,3 +68,8 @@ def compare_with_tensorflow(activation_type, shape, device_type):
     assert np.allclose(
         np.load(os.path.join(GetSavePath(), "x_diff.npy")), tf_x_diff.numpy(), rtol, atol
     )
+
+
+def test_activations(test_case):
+    for arg in GenArgList([["gpu"], ["relu", "sigmoid", "tanh", "gelu"], [(1024, 1024)]]):
+        compare_with_tensorflow(*arg)

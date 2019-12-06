@@ -8,16 +8,14 @@ from test_util import GetSavePath
 from test_util import Save
 
 
-def compare_with_tensorflow(
-    a_shape, b_shape, transpose_a=False, transpose_b=False, device_type="gpu"
-):
+def compare_with_tensorflow(device_type, a_shape, b_shape, transpose_a, transpose_b):
     assert device_type in ["gpu", "cpu"]
     flow.clear_default_session()
     flow.config.gpu_device_num(1)
     flow.config.default_data_type(flow.float)
 
     @flow.function
-    def MatmulTestJob():
+    def MatmulJob():
         flow.config.train.primary_lr(1e-4)
         flow.config.train.model_update_conf(dict(naive_conf={}))
         with flow.device_prior_placement(device_type, "0:0"):
@@ -50,7 +48,7 @@ def compare_with_tensorflow(
     # OneFlow
     check_point = flow.train.CheckPoint()
     check_point.init()
-    of_out = MatmulTestJob().get()
+    of_out = MatmulJob().get()
     # TensorFlow
     with tf.GradientTape(persistent=True) as tape:
         a = tf.Variable(np.load(os.path.join(GetSavePath(), "a.npy")))
@@ -86,20 +84,20 @@ def filter_args(arg_list):
 
 def gen_arg_list():
     matmul_args = [
+        ["gpu"],
         [(512, 256), (256, 512)],
         [(256, 1024), (1024, 256)],
         [True, False],
         [True, False],
-        ["gpu"],
     ]
     matmul_args = filter_args(GenArgList(matmul_args))
 
     batch_matmul_args = [
+        ["gpu"],
         [(10, 10, 64, 32), (10, 10, 32, 64)],
         [(10, 10, 32, 128), (10, 10, 128, 32)],
         [True, False],
         [True, False],
-        ["gpu"],
     ]
     batch_matmul_args = filter_args(GenArgList(batch_matmul_args))
 

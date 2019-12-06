@@ -8,13 +8,14 @@ from test_util import GetSavePath
 from test_util import Save
 
 
-def compare_with_tensorflow(device_type, input_shape, axis=None, keepdims=False):
+def compare_with_tensorflow(device_type, input_shape, axis, keepdims):
+    assert device_type in ["gpu", "cpu"]
     flow.clear_default_session()
     flow.config.gpu_device_num(1)
     flow.config.default_data_type(flow.float)
 
     @flow.function
-    def ReduceSumTestJob():
+    def ReduceSumJob():
         flow.config.train.primary_lr(1e-4)
         flow.config.train.model_update_conf(dict(naive_conf={}))
         with flow.device_prior_placement(device_type, "0:0"):
@@ -38,7 +39,7 @@ def compare_with_tensorflow(device_type, input_shape, axis=None, keepdims=False)
     # OneFlow
     check_point = flow.train.CheckPoint()
     check_point.init()
-    of_out = ReduceSumTestJob().get()
+    of_out = ReduceSumJob().get()
     # TensorFlow
     with tf.GradientTape(persistent=True) as tape:
         x = tf.Variable(np.load(os.path.join(GetSavePath(), "x.npy")))
@@ -52,6 +53,6 @@ def compare_with_tensorflow(device_type, input_shape, axis=None, keepdims=False)
     )
 
 
-def test_reduce_sum(test_cast):
+def test_reduce_sum(test_case):
     for arg in GenArgList([["gpu"], [(64, 64, 64)], [None, [1], [0, 2]], [True, False]]):
         compare_with_tensorflow(*arg)

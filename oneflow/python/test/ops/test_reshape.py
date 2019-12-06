@@ -9,6 +9,7 @@ from test_util import Save
 
 
 def compare_with_tensorflow(device_type, input_shape, output_shape):
+    assert device_type in ["gpu", "cpu"]
     flow.clear_default_session()
     flow.config.gpu_device_num(1)
     flow.config.default_data_type(flow.float)
