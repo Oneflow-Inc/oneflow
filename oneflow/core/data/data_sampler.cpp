@@ -72,40 +72,48 @@ GroupedDataSampler::GroupedDataSampler(Dataset* dataset)
 std::vector<int64_t> GroupedDataSampler::FetchBatchIndexSequence(DataSamplerContext* ctx,
                                                                  size_t batch_size) {
   std::vector<int64_t> seq(batch_size);
-  size_t fetch_count = 0;
   bool skip_happened = false;
-  int64_t group_id = -1;
+  int64_t first_group_id = -1;
   size_t iter = ctx->iter_;
   size_t epoch = ctx->epoch_;
-  // fetch indices
-  while (fetch_count < batch_size) {
+
+  auto foward_iter_and_get_index = [this, ctx, &iter, &epoch]() {
+    iter += ctx->num_replicas_;
     if (iter >= dataset()->Size()) {
       epoch += 1;
       iter %= dataset()->Size();
     }
-    // stop updating ctx that once skip happened
+    return AcquireGetOrGenEpochIndexSequence(epoch).at(iter);
+  };
+
+  auto fill_index = [this, &seq, ctx](size_t i, int64_t index, bool skip_happened) {
+    seq.at(i) = index;
     if (!skip_happened) {
-      if (ctx->epoch_ == epoch) {
-        ctx->count_ += 1;
-      } else {
+      ctx->iter_ += ctx->num_replicas_;
+      ctx->count_ += 1;
+      if (ctx->iter_ >= dataset()->Size()) {
         CheckIndexSequenceRanOut(ctx);
-        ctx->epoch_ = epoch;
+        ctx->epoch_ += 1;
+        ctx->iter_ %= dataset()->Size();
         ctx->count_ = 0;
       }
-      ctx->iter_ = iter;
     }
-    int64_t index = AcquireGetOrGenEpochIndexSequence(epoch).at(iter);
-    if (group_id == -1) { group_id = group_ids_.at(index); }
-    if (group_id == group_ids_.at(index)) {
-      // fetch index with the same group_id
-      seq.at(fetch_count) = index;
-      fetch_count += 1;
+  };
+
+  FOR_RANGE(size_t, i, 0, batch_size) {
+    int64_t index = foward_iter_and_get_index();
+    if (i == 0) {
+      fill_index(i, index, skip_happened);
+      first_group_id = group_ids_.at(index);
     } else {
-      // record skip happened
-      skip_happened = true;
+      while (first_group_id != group_ids_.at(index)) {
+        index = foward_iter_and_get_index();
+        skip_happened = true;
+      }
+      fill_index(i, index, skip_happened);
     }
-    iter += ctx->num_replicas_;
   }
+
   return seq;
 }
 
