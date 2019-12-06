@@ -11,8 +11,7 @@ using Arg2Tensor = HashMap<std::pair<std::string, int32_t>, user_op::Tensor>;
 
 class UserKernelContext final : public user_op::KernelContext {
  public:
-  explicit UserKernelContext(DeviceCtx* device_ctx, const OperatorConf& op_conf,
-                             std::function<Blob*(const std::string&)> BnInOp2Blob)
+  explicit UserKernelContext(DeviceCtx* device_ctx, const OperatorConf& op_conf)
       : user_op::KernelContext(user_op::UserOpConfWrapper(op_conf)),
         device_ctx_(device_ctx),
         arg2tensor_() {
@@ -20,19 +19,13 @@ class UserKernelContext final : public user_op::KernelContext {
     for (auto it = user_op_conf.input().begin(); it != user_op_conf.input().end(); ++it) {
       const std::string& arg_name = it->first;
       for (int32_t i = 0; i < it->second.s_size(); ++i) {
-        Blob* blob = BnInOp2Blob(GenRepeatedBn(arg_name, i));
-        arg2tensor_.emplace(
-            std::make_pair(arg_name, i),
-            user_op::Tensor(blob->shape(), blob->data_type(), blob->mut_dptr<char>()));
+        arg2tensor_.emplace(std::make_pair(arg_name, i), user_op::Tensor());
       }
     }
     for (auto it = user_op_conf.output().begin(); it != user_op_conf.output().end(); ++it) {
       const std::string& arg_name = it->first;
       for (int32_t i = 0; i < it->second.s_size(); ++i) {
-        Blob* blob = BnInOp2Blob(GenRepeatedBn(arg_name, i));
-        arg2tensor_.emplace(
-            std::make_pair(arg_name, i),
-            user_op::Tensor(blob->shape(), blob->data_type(), blob->mut_dptr<char>()));
+        arg2tensor_.emplace(std::make_pair(arg_name, i), user_op::Tensor());
       }
     }
   }
@@ -44,6 +37,14 @@ class UserKernelContext final : public user_op::KernelContext {
     return &(it->second);
   }
   DeviceCtx* device_ctx() override { return device_ctx_; }
+
+  void UpdateTensorWithCorrBlob(std::function<Blob*(const std::string&)> BnInOp2Blob) {
+    for (auto& pair : arg2tensor_) {
+      std::string bn_in_op = GenRepeatedBn(pair.first.first, pair.first.second);
+      Blob* blob = BnInOp2Blob(bn_in_op);
+      pair.second = user_op::Tensor(blob->shape(), blob->data_type(), blob->mut_dptr<char>());
+    }
+  }
 
  private:
   DeviceCtx* device_ctx_;
@@ -92,9 +93,9 @@ class UserKernel final : public Kernel {
 
  private:
   std::unique_ptr<user_op::OpKernel> kernel_;
-  mutable std::unique_ptr<user_op::KernelContext> ctx_;
+  std::unique_ptr<UserKernelContext> ctx_;
 
-  void VirtualKernelInit() override {
+  void VirtualKernelInit(DeviceCtx* device_ctx) override {
     auto kernel_reg_val = user_op::LookUpInKernelRegistry(
         kernel_conf().op_attribute().op_conf().user_conf().op_type_name(),
         UserKernelRegContext(kernel_conf(),
@@ -103,14 +104,12 @@ class UserKernel final : public Kernel {
 
     user_op::KernelInitContext init_ctx;
     kernel_.reset(kernel_reg_val->create_fn(init_ctx));
+    ctx_.reset(new UserKernelContext(device_ctx, op_conf()));
   }
 
   void ForwardDataContent(const KernelCtx& ctx,
                           std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
-    if (ctx_ == nullptr) {
-      ctx_.reset(new UserKernelContext(ctx.device_ctx, kernel_conf().op_attribute().op_conf(),
-                                       BnInOp2Blob));
-    }
+    ctx_->UpdateTensorWithCorrBlob(BnInOp2Blob);
     kernel_->Compute(ctx_.get());
   }
 };

@@ -12,6 +12,7 @@ namespace user_op {
 
 class Tensor final {
  public:
+  Tensor() = default;
   Tensor(const TensorDesc&, char*);
   Tensor(const Shape&, DataType, char*);
   ~Tensor() = default;
