@@ -95,11 +95,8 @@ void NormalForwardCompActor::Act() {
 }
 
 void NormalForwardCompActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
-  int64_t model_version_id = -1;
-  if (model_regst_) { model_version_id = model_regst_->model_version_id(); }
   HandleProducedNaiveDataRegstToConsumer([&](Regst* regst) {
     regst->set_piece_id(cur_piece_id_);
-    regst->set_model_version_id(model_version_id);
     return regst->regst_desc_id() != forward_model_regst_desc_id_;
   });
 }
@@ -193,15 +190,11 @@ void NormalForwardCompActor::TrySendMsgToForwardModelSaveActor(int64_t piece_id)
   if (forward_model_regst_desc_id_ == -1) { return; }
   bool is_last_piece_in_batch = (piece_id + 1) % actual_num_of_piece_in_batch_ == 0;
   int64_t batch_id = piece_id / actual_num_of_piece_in_batch_;
-  if (is_last_piece_in_batch && NeedModelSave(job_desc(), batch_id)) {
-    SendMsgToForwardModelSaveActor(batch_id);
-  }
 }
 
 void NormalForwardCompActor::SendMsgToForwardModelSaveActor(int64_t batch_id) {
   Regst* fw_model_regst = GetNaiveCurWriteable(forward_model_regst_desc_id_);
   CHECK(fw_model_regst);
-  fw_model_regst->set_model_version_id(batch_id);
   AsyncSendRegstMsgToConsumer(fw_model_regst, [](int64_t) { return true; });
 }
 
