@@ -62,5 +62,4 @@ class TestSoftmax(unittest.TestCase):
         self._test_random_body((1, 5, 2), axis=2)
 
 if __name__ == '__main__':
-  unittest.main()
-
+    unittest.main()

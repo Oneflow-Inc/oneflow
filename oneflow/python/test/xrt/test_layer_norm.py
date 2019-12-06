@@ -57,4 +57,4 @@ class TestLayerNorm(unittest.TestCase):
         self._test_random_body((2, 5, 2, 2))
 
 if __name__ == '__main__':
-  unittest.main()
+    unittest.main()

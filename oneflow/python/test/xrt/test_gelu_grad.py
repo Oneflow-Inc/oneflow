@@ -3,51 +3,45 @@ import numpy as np
 
 import oneflow as flow
 
-def make_job(input_shape, dtype=flow.float32):
+def make_job(shape, dtype=flow.float32):
     @flow.function
-    def sigmoid_job(x = flow.input_blob_def(input_shape, dtype=dtype)):
+    def gelu_grad_job(x = flow.input_blob_def(shape, dtype=dtype),
+                      dy = flow.input_blob_def(shape, dtype=dtype)):
         flow.config.use_xla_jit(False)
         flow.config.use_tensorrt(False)
-        return flow.keras.activations.sigmoid(x)
-    return sigmoid_job
+        return flow.keras.activations.gelu_grad(x, dy)
+    return gelu_grad_job
 
-def make_xla_job(input_shape, dtype=flow.float32):
+def make_xla_job(shape, dtype=flow.float32):
     @flow.function
-    def xla_sigmoid_job(x = flow.input_blob_def(input_shape, dtype=dtype)):
+    def xla_gelu_grad_job(x = flow.input_blob_def(shape, dtype=dtype),
+                          dy = flow.input_blob_def(shape, dtype=dtype)):
         flow.config.use_xla_jit(True)
-        flow.config.use_tensorrt(False)
-        return flow.keras.activations.sigmoid(x)
-    return xla_sigmoid_job
+        return flow.keras.activations.gelu_grad(x, dy)
+    return xla_gelu_grad_job
 
-def make_trt_job(input_shape, dtype=flow.float32):
-    @flow.function
-    def trt_sigmoid_job(x = flow.input_blob_def(input_shape, dtype=dtype)):
-        flow.config.use_xla_jit(False)
-        flow.config.use_tensorrt(True)
-        return flow.keras.activations.sigmoid(x)
-    return trt_sigmoid_job
 
-class TestSigmoid(unittest.TestCase):
-    def _test_body(self, x, dtype=np.float32):
+class TestGeluGrad(unittest.TestCase):
+    def _test_body(self, x, dy, dtype=np.float32):
         f1 = make_job(x.shape, dtype=flow.float32)
         f2 = make_xla_job(x.shape, dtype=flow.float32)
-        a = f1(x).get()
-        b = f2(x).get()
+        a = f1(x, dy).get()
+        b = f2(x, dy).get()
         print("without xla: ", a)
         print("with xla", b)
         self.assertTrue(np.allclose(a, b , rtol=1e-03, atol=1e-05))
-        # b = trt_sigmoid_job(x).get()
-        # print("with tensorrt", b)
-        # self.assertTrue(np.allclose(a, b , rtol=1e-03, atol=1e-05))
+
         flow.clear_default_session()
 
     def _test_ones_body(self, shape, dtype=np.float32):
         x = np.ones(shape, dtype=dtype)
-        self._test_body(x, dtype=dtype)
+        dy = np.ones(shape, dtype=dtype)
+        self._test_body(x, dy, dtype=dtype)
 
     def _test_random_body(self, shape, dtype=np.float32):
         x = np.random.random(shape).astype(dtype)
-        self._test_body(x, dtype=dtype)
+        dy = np.random.random(shape).astype(dtype)
+        self._test_body(x, dy, dtype=dtype)
 
     def test_ones_input(self):
         self._test_ones_body((1))

@@ -95,4 +95,4 @@ class TestMatmul(unittest.TestCase):
         self._test_random_body(10, 10, 2, True, True)
 
 if __name__ == '__main__':
-  unittest.main()
+    unittest.main()

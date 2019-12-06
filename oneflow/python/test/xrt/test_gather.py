@@ -15,11 +15,8 @@ class TestGather(unittest.TestCase):
         print("without xla: ", a)
         print("with xla", b)
         print("with tensorrt", c)
-        self.assertTrue(a.shape ==  b.shape)
-        flow.clear_default_session()
-        self.assertTrue(a.shape ==  c.shape)
-        flow.clear_default_session()
-        self.assertTrue(np.allclose(a, b , rtol=1e-03, atol=1e-05))
+        self.assertTrue(np.allclose(a, b, rtol=1e-03, atol=1e-05))
+        self.assertTrue(np.allclose(a, c, rtol=1e-03, atol=1e-05))
         flow.clear_default_session()
         self.assertTrue(np.allclose(a, c , rtol=1e-03, atol=1e-05))
         flow.clear_default_session()
@@ -32,7 +29,7 @@ class TestGather(unittest.TestCase):
             flow.config.use_tensorrt(False)
             return flow.gather(x, indices, axis=axis)
         return gather_job
-    
+
     def make_xla_job(self, input_shape, indices_shape, axis, dtype=flow.float32):
         @flow.function
         def xla_gather_job(x = flow.input_blob_def(input_shape, dtype=dtype),
@@ -52,6 +49,15 @@ class TestGather(unittest.TestCase):
         return trt_gather_job
 
 
+    def make_trt_job(self, input_shape, indices_shape, axis, dtype=flow.float32):
+        @flow.function
+        def trt_gather_job(x = flow.input_blob_def(input_shape, dtype=dtype),
+                           indices = flow.input_blob_def(indices_shape, dtype=flow.int32)):
+            flow.config.use_xla_jit(False)
+            flow.config.use_tensorrt(True)
+            return flow.gather(x, indices, axis=axis)
+        return trt_gather_job
+
     def _test_ones_body(self, shape, indices, axis, dtype=flow.float32):
         np_dtype = flow.convert_of_dtype_to_numpy_dtype(dtype)
         x = np.ones(shape, dtype=np_dtype)
@@ -63,16 +69,16 @@ class TestGather(unittest.TestCase):
         self._test_body(x, indices, axis, dtype=dtype)
 
     def test_ones_input(self):
-        self._test_ones_body((1), [0], 0)
-        self._test_ones_body((1), [0, 0], 0)
+        self._test_ones_body((1, 1), [0], 0)
+        self._test_ones_body((2, 2), [0, 0], 0)
         self._test_ones_body((1, 10), [[0], [0]], 0)
         self._test_ones_body((1, 10), [[0, 1, 2], [2, 3, 4]], 1)
         self._test_ones_body((2, 10, 2), [[0, 1], [2, 3], [4, 5]], 1)
         self._test_ones_body((2, 5, 2, 2), [[0, 0], [1, 1]], 3)
-
+ 
     def test_random_input(self):
-        self._test_random_body((1), [0], 0)
-        self._test_random_body((1), [0, 0], 0)
+        self._test_random_body((1, 1), [0], 0)
+        self._test_random_body((2, 2), [0, 0], 0)
         self._test_random_body((1, 10), [[0], [0]], 0)
         self._test_random_body((1, 10), [[0, 1, 2], [2, 3, 4]], 1)
         self._test_random_body((2, 10, 2), [[0, 1], [2, 3], [4, 5]], 1)
@@ -88,7 +94,7 @@ class TestBatchGather(TestGather):
             flow.config.use_tensorrt(False)
             return flow.gather(x, indices, batch_dims=axis)
         return batch_gather_job
-    
+
     def make_xla_job(self, input_shape, indices_shape, axis, dtype=flow.float32):
         @flow.function
         def xla_batch_gather_job(x = flow.input_blob_def(input_shape, dtype=dtype),
@@ -97,6 +103,15 @@ class TestBatchGather(TestGather):
             flow.config.use_tensorrt(False)
             return flow.gather(x, indices, batch_dims=axis)
         return xla_batch_gather_job
+    def make_trt_job(self, input_shape, indices_shape, axis, dtype=flow.float32):
+        @flow.function
+        def trt_batch_gather_job(x = flow.input_blob_def(input_shape, dtype=dtype),
+                                 indices = flow.input_blob_def(indices_shape, dtype=flow.int32)):
+            flow.config.use_xla_jit(False)
+            flow.config.use_tensorrt(True)
+            return flow.gather(x, indices, batch_dims=axis)
+        return trt_batch_gather_job
+
     def make_trt_job(self, input_shape, indices_shape, axis, dtype=flow.float32):
         @flow.function
         def trt_batch_gather_job(x = flow.input_blob_def(input_shape, dtype=dtype),
@@ -119,5 +134,4 @@ class TestBatchGather(TestGather):
         self._test_random_body((2, 3, 2, 2), [[[0], [0], [0]], [[1], [1], [1]]], 2)
 
 if __name__ == '__main__':
-  unittest.main()
-
+    unittest.main()

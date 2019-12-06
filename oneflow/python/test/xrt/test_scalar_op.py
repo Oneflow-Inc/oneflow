@@ -73,4 +73,4 @@ class TestScalarMulOp(TestScalarOp):
         return xla_scalar_mul_job
 
 if __name__ == '__main__':
-  unittest.main()
+    unittest.main()
