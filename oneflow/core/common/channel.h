@@ -51,7 +51,7 @@ ChannelStatus Channel<T>::ReceiveMany(std::queue<T>* items) {
   cond_.wait(lock, [this]() { return (!queue_.empty()) || is_closed_; });
   if (queue_.empty()) { return kChannelStatusErrorClosed; }
   while (!queue_.empty()) {
-    items->emplace_back(std::move(queue_.front()));
+    items->push(std::move(queue_.front()));
     queue_.pop();
   }
   return kChannelStatusSuccess;
