@@ -7,7 +7,7 @@
 
 namespace oneflow {
 
-using Arg2Tensor = HashMap<std::pair<std::string, int32_t>, user_op::Tensor>;
+using Arg2Tensor = HashMap<std::pair<std::string, int32_t>, std::unique_ptr<user_op::Tensor>>;
 
 class UserKernelContext final : public user_op::KernelContext {
  public:
@@ -19,22 +19,23 @@ class UserKernelContext final : public user_op::KernelContext {
     for (auto it = user_op_conf.input().begin(); it != user_op_conf.input().end(); ++it) {
       const std::string& arg_name = it->first;
       for (int32_t i = 0; i < it->second.s_size(); ++i) {
-        arg2tensor_.emplace(std::make_pair(arg_name, i), user_op::Tensor());
+        arg2tensor_.emplace(std::make_pair(arg_name, i), std::unique_ptr<user_op::Tensor>());
       }
     }
     for (auto it = user_op_conf.output().begin(); it != user_op_conf.output().end(); ++it) {
       const std::string& arg_name = it->first;
       for (int32_t i = 0; i < it->second.s_size(); ++i) {
-        arg2tensor_.emplace(std::make_pair(arg_name, i), user_op::Tensor());
+        arg2tensor_.emplace(std::make_pair(arg_name, i), std::unique_ptr<user_op::Tensor>());
       }
     }
+    arg2tensor_.emplace(std::make_pair("tmp_buffer", 0), std::unique_ptr<user_op::Tensor>());
   }
   ~UserKernelContext() = default;
 
   user_op::Tensor* Tensor4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
     auto it = arg2tensor_.find(std::make_pair(arg_name, index));
     if (it == arg2tensor_.end()) { return nullptr; }
-    return &(it->second);
+    return it->second.get();
   }
   DeviceCtx* device_ctx() override { return device_ctx_; }
 
@@ -42,7 +43,18 @@ class UserKernelContext final : public user_op::KernelContext {
     for (auto& pair : arg2tensor_) {
       std::string bn_in_op = GenRepeatedBn(pair.first.first, pair.first.second);
       Blob* blob = BnInOp2Blob(bn_in_op);
-      pair.second = user_op::Tensor(blob->shape(), blob->data_type(), blob->mut_dptr<char>());
+      if (blob == nullptr) {
+        pair.second.reset();
+        continue;
+      }
+      pair.second.reset(new user_op::Tensor(blob->shape(), blob->data_type(),
+                                            static_cast<char*>(blob->mut_dptr())));
+    }
+    Blob* tmp_blob = BnInOp2Blob(GenRepeatedBn("tmp_buffer", 0));
+    if (tmp_blob != nullptr) {
+      arg2tensor_.at(std::make_pair("tmp_buffer", 0))
+          .reset(new user_op::Tensor(tmp_blob->shape(), tmp_blob->data_type(),
+                                     static_cast<char*>(tmp_blob->mut_dptr())));
     }
   }
 
