@@ -19,7 +19,6 @@ enum class ColIdOrder { kUnCertain = 0, kAscending, kDescending };
 
 bool IsFirstRegstInPieceWithOrder(const Regst*, ColIdOrder);
 bool IsLastRegstInPieceWithOrder(const Regst*, ColIdOrder);
-inline bool NeedModelSave(const JobDesc& job_desc, int64_t model_version_id) { return false; }
 
 class Actor {
  public:
