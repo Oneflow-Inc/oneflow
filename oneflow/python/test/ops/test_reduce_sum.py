@@ -46,9 +46,6 @@ def compare_with_tensorflow(device_type, input_shape, axis=None, keepdims=False)
     loss_diff = np.load(os.path.join(GetSavePath(), "loss_diff.npy"))
     tf_x_diff = tape.gradient(tf_out, x, loss_diff)
 
-    print(of_out.shape)
-    print(tf_out.numpy().shape)
-    print(np.max(np.abs(of_out - tf_out.numpy())))
     assert np.allclose(of_out, tf_out.numpy(), rtol=1e-5, atol=1e-5)
     assert np.allclose(
         np.load(os.path.join(GetSavePath(), "x_diff.npy")), tf_x_diff.numpy(), rtol=1e-5, atol=1e-5
@@ -56,7 +53,5 @@ def compare_with_tensorflow(device_type, input_shape, axis=None, keepdims=False)
 
 
 def test_reduce_sum(test_cast):
-    for arg in GenArgList(
-        [["gpu"], [(128, 128, 128)], [None, [1], [0, 2]], [True, False]]
-    ):
+    for arg in GenArgList([["gpu"], [(64, 64, 64)], [None, [1], [0, 2]], [True, False]]):
         compare_with_tensorflow(*arg)
