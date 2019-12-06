@@ -10,31 +10,28 @@ import os
 def compare_with_tensorflow(
     a_shape, b_shape, transpose_a=False, transpose_b=False, device_type="gpu"
 ):
+    assert device_type in ["gpu", "cpu"]
     flow.clear_default_session()
-
     flow.config.gpu_device_num(1)
     flow.config.default_data_type(flow.float)
 
     @flow.function
     def MatmulTestJob():
-        assert device_type in ["gpu", "cpu"]
-
         flow.config.train.primary_lr(1e-4)
         flow.config.train.model_update_conf(dict(naive_conf={}))
-
         with flow.device_prior_placement(device_type, "0:0"):
             a = flow.get_variable(
                 "a",
                 shape=a_shape,
                 dtype=flow.float,
-                initializer=flow.random_uniform_initializer(minval=0, maxval=10),
+                initializer=flow.random_uniform_initializer(minval=-10, maxval=10),
                 trainable=True,
             )
             b = flow.get_variable(
                 "b",
                 shape=b_shape,
                 dtype=flow.float,
-                initializer=flow.random_uniform_initializer(minval=0, maxval=10),
+                initializer=flow.random_uniform_initializer(minval=-10, maxval=10),
                 trainable=True,
             )
             loss = flow.matmul(a, b, transpose_a, transpose_b)
