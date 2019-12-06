@@ -103,6 +103,12 @@ def use_rdma(val = True):
     assert type(val) is bool
     default_config_proto.resource.use_rdma = val
 
+@oneflow_export('config.thread_enable_local_message_queue')
+def thread_enable_local_message_queue(val):
+    assert config_proto_mutable == True
+    assert type(val) is bool
+    default_config_proto.resource.thread_enable_local_message_queue = val
+
 @oneflow_export('config.save_downloaded_file_to_local_fs')
 def save_downloaded_file_to_local_fs(val = True):
     assert config_proto_mutable == True
@@ -347,11 +353,6 @@ def set_weight_l2(value):
 @oneflow_export('config.train.bias_l2')
 def set_bias_l2(value):
     _SetJobConfAttr(lambda job_conf: job_conf.train_conf, 'bias_l2', value)
-    return oneflow.config
-
-@oneflow_export('config.thread_enable_local_message_queue')
-def thread_enable_local_message_queue(value=True):
-    _SetJobConfAttr(lambda x:x, 'thread_enable_local_message_queue', value)
     return oneflow.config
 
 def _SetJobConfAttr(GetConf, field, value):
