@@ -45,16 +45,10 @@ class UserKernelContext final : public user_op::KernelContext {
       Blob* blob = BnInOp2Blob(bn_in_op);
       if (blob == nullptr) {
         pair.second.reset();
-        continue;
+      } else {
+        pair.second.reset(new user_op::Tensor(blob->shape(), blob->data_type(),
+                                              static_cast<char*>(blob->mut_dptr())));
       }
-      pair.second.reset(new user_op::Tensor(blob->shape(), blob->data_type(),
-                                            static_cast<char*>(blob->mut_dptr())));
-    }
-    Blob* tmp_blob = BnInOp2Blob(GenRepeatedBn("tmp_buffer", 0));
-    if (tmp_blob != nullptr) {
-      arg2tensor_.at(std::make_pair("tmp_buffer", 0))
-          .reset(new user_op::Tensor(tmp_blob->shape(), tmp_blob->data_type(),
-                                     static_cast<char*>(tmp_blob->mut_dptr())));
     }
   }
 
