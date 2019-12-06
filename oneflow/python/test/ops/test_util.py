@@ -11,8 +11,13 @@ def GenCartesianProduct(sets):
     return itertools.product(*sets)
 
 
+def GenArgList(args):
+    return GenCartesianProduct(args)
+
+
 def GetSavePath():
-  return "/tmp/op_unit_test/"
+    return "/tmp/op_unit_test/"
+
 
 # Save func for flow.watch
 def Save(name):

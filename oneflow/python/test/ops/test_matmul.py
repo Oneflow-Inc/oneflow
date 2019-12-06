@@ -1,10 +1,11 @@
+import os
+import numpy as np
 import tensorflow as tf
 import oneflow as flow
-import numpy as np
-from test_util import GenCartesianProduct
+
+from test_util import GenArgList
 from test_util import GetSavePath
 from test_util import Save
-import os
 
 
 def compare_with_tensorflow(
@@ -91,7 +92,7 @@ def gen_arg_list():
         [True, False],
         ["gpu"],
     ]
-    matmul_args = filter_args(GenCartesianProduct(matmul_args))
+    matmul_args = filter_args(GenArgList(matmul_args))
 
     batch_matmul_args = [
         [(10, 10, 64, 32), (10, 10, 32, 64)],
@@ -100,7 +101,7 @@ def gen_arg_list():
         [True, False],
         ["gpu"],
     ]
-    batch_matmul_args = filter_args(GenCartesianProduct(batch_matmul_args))
+    batch_matmul_args = filter_args(GenArgList(batch_matmul_args))
 
     return matmul_args + batch_matmul_args
 
