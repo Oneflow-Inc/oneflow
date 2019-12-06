@@ -3,6 +3,7 @@ import math
 import os
 import oneflow as flow
 import tensorflow as tf
+import tensorflow_addons as tfa
 import torch
 
 from test_util import GenArgList
@@ -19,8 +20,14 @@ def compare_with_tensorflow(activation_type, shape, device_type):
         "relu": flow.keras.activations.relu,
         "sigmoid": flow.keras.activations.sigmoid,
         "tanh": flow.keras.activations.tanh,
+        "gelu": flow.keras.activations.gelu,
     }
-    tf_activation_map = {"relu": tf.nn.relu, "sigmoid": tf.math.sigmoid, "tanh": tf.math.tanh}
+    tf_activation_map = {
+        "relu": tf.nn.relu,
+        "sigmoid": tf.math.sigmoid,
+        "tanh": tf.math.tanh,
+        "gelu": tfa.activations.gelu,
+    }
 
     @flow.function
     def ActivationJob():
@@ -55,43 +62,9 @@ def compare_with_tensorflow(activation_type, shape, device_type):
     loss_diff = np.load(os.path.join(GetSavePath(), "loss_diff.npy"))
     tf_x_diff = tape.gradient(tf_out, x, loss_diff)
 
-    assert np.allclose(of_out, tf_out.numpy(), rtol=1e-5, atol=1e-5)
+    rtol = 1e-3 if activation_type is "gelu" else 1e-5
+    atol = 1e-3 if activation_type is "gelu" else 1e-5
+    assert np.allclose(of_out, tf_out.numpy(), rtol, atol)
     assert np.allclose(
-        np.load(os.path.join(GetSavePath(), "x_diff.npy")),
-        tf_x_diff.numpy(),
-        rtol=1e-05,
-        atol=1e-05,
+        np.load(os.path.join(GetSavePath(), "x_diff.npy")), tf_x_diff.numpy(), rtol, atol
     )
-
-
-def test_activations(test_case):
-    for arg in GenArgList([["relu", "sigmoid", "tanh"], [(1024, 1024)], ["gpu"]]):
-        compare_with_tensorflow(*arg)
-
-
-# TODO: move gelu test to test_activations
-def _test_gelu(device_type):
-    flow.clear_default_session()
-    flow.config.gpu_device_num(1)
-    flow.config.default_data_type(flow.float)
-
-    @flow.function
-    def GeluJob(x=flow.input_blob_def((10,))):
-        with flow.device_prior_placement(device_type, "0:0"):
-            return flow.keras.activations.gelu(x)
-
-    def gelu(x):
-        return 0.5 * x * (1 + torch.tanh(math.sqrt(2 / math.pi) * (x + 0.044715 * torch.pow(x, 3))))
-
-    ratios = [-2, -1, 0, 1, 2]
-    ones = np.ones((10,), dtype=np.float32)
-    for r in ratios:
-        x = ones * r
-        of_out = GeluJob(x).get()
-        torch_out = gelu(torch.tensor(x)).numpy()
-        assert np.allclose(of_out, torch_out, rtol=1e-3, atol=1e-4)
-
-
-def test_gelu(test_case):
-    _test_gelu("gpu")
-    _test_gelu("cpu")
