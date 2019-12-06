@@ -14,8 +14,7 @@ inline size_t Align(int alignment, size_t size) {
   return (size + alignment - 1) / alignment * alignment;
 }
 
-XlaAllocator::XlaAllocator(const se::Platform *platform,
-                           DeviceBufferAllocator *allocator)
+XlaAllocator::XlaAllocator(const se::Platform *platform, DeviceBufferAllocator *allocator)
     : se::DeviceMemoryAllocator(platform),
       allocator_(allocator),
       allocate_offset_(0),
@@ -23,11 +22,11 @@ XlaAllocator::XlaAllocator(const se::Platform *platform,
 
 XlaAllocator::~XlaAllocator() {}
 
-xla::StatusOr<se::OwningDeviceMemory> XlaAllocator::Allocate(
-    int device_ordinal, uint64 size, bool retry_on_failure) {
+xla::StatusOr<se::OwningDeviceMemory> XlaAllocator::Allocate(int device_ordinal, uint64 size,
+                                                             bool retry_on_failure) {
   se::DeviceMemoryBase memory_base;
-  if (allocate_index_ < populated_buffers_.size() &&
-      populated_buffers_[allocate_index_].populated) {
+  if (allocate_index_ < populated_buffers_.size()
+      && populated_buffers_[allocate_index_].populated) {
     memory_base = populated_buffers_[allocate_index_].memory;
   } else {
     void *data = nullptr;
@@ -42,8 +41,7 @@ xla::StatusOr<se::OwningDeviceMemory> XlaAllocator::Allocate(
   return se::OwningDeviceMemory(memory_base, device_ordinal, this);
 }
 
-tensorflow::Status XlaAllocator::Deallocate(int device_ordinal,
-                                            se::DeviceMemoryBase mem) {
+tensorflow::Status XlaAllocator::Deallocate(int device_ordinal, se::DeviceMemoryBase mem) {
   return tensorflow::Status::OK();
 }
 
@@ -60,9 +58,8 @@ void XlaAllocator::ReserveWorkspace(size_t workspace_bytes) {
   allocator_->Reserve(workspace_bytes);
 }
 
-void XlaAllocator::PopulateDeviceMemory(
-    const std::vector<se::DeviceMemoryBase> &device_buffers,
-    const std::vector<int64_t> &allocation_indices) {
+void XlaAllocator::PopulateDeviceMemory(const std::vector<se::DeviceMemoryBase> &device_buffers,
+                                        const std::vector<int64_t> &allocation_indices) {
   int64_t max_populated_index = 0;
   for (int i = 0; i < allocation_indices.size(); ++i) {
     int64_t index = allocation_indices[i];

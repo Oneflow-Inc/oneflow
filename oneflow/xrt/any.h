@@ -18,7 +18,7 @@ class Any {
 
   inline Any(const Any &other);
 
-  template <typename T>
+  template<typename T>
   inline Any(T &&value);
 
   inline virtual ~Any();
@@ -27,20 +27,20 @@ class Any {
 
   inline Any &operator=(const Any &other);
 
-  template <typename T>
+  template<typename T>
   inline Any &operator=(T &&value);
 
   inline void Swap(Any &other);
 
-  template <typename T>
+  template<typename T>
   inline const T &Cast() const;
 
-  template <typename T>
+  template<typename T>
   inline T &Cast();
 
-  template <typename T>
+  template<typename T>
   inline friend const T &any_cast(const Any &any);
-  template <typename T>
+  template<typename T>
   inline friend T &any_cast(Any &any);
 
  private:
@@ -54,17 +54,17 @@ class Any {
     std::function<AnyData *()> clone;
   };
 
-  template <typename T>
+  template<typename T>
   struct AnyDataImpl : public AnyData {
     T data_content;
     explicit AnyDataImpl(const T &value);
     const void *Ptr() override { return &data_content; }
   };
 
-  template <typename T>
+  template<typename T>
   inline AnyType TypeInfo() const;
 
-  template <typename T>
+  template<typename T>
   inline bool CheckType() const;
 
  private:
@@ -72,7 +72,7 @@ class Any {
   AnyData *data_ = nullptr;
 };
 
-template <typename T>
+template<typename T>
 Any::AnyDataImpl<T>::AnyDataImpl(const T &value) : data_content(value) {
   this->clone = [this]() -> Any::AnyDataImpl<T> * {
     return new AnyDataImpl<T>(this->data_content);
@@ -88,9 +88,7 @@ Any::Any(Any &&other) { this->Swap(other); }
 
 Any::Any(const Any &other) {
   type_ = other.type_;
-  if (other.data_) {
-    data_ = other.data_->clone();
-  }
+  if (other.data_) { data_ = other.data_->clone(); }
 }
 
 Any::~Any() {
@@ -98,14 +96,14 @@ Any::~Any() {
   data_ = nullptr;
 }
 
-template <typename T>
+template<typename T>
 Any::AnyType Any::TypeInfo() const {
   Any::AnyType type;
   type.ptype_info = &typeid(T);
   return std::move(type);
 }
 
-template <typename T>
+template<typename T>
 Any::Any(T &&value) {
   typedef typename std::decay<T>::type DT;
   if (std::is_same<DT, Any>::value) {
@@ -126,40 +124,40 @@ Any &Any::operator=(const Any &other) {
   return *this;
 }
 
-template <typename T>
+template<typename T>
 Any &Any::operator=(T &&value) {
   Any(std::move(value)).Swap(*this);
   return *this;
 }
 
-template <typename T>
+template<typename T>
 bool Any::CheckType() const {
   if (typeid(T).hash_code() != type_.ptype_info->hash_code()) {
-    LOG(FATAL) << "Could not cast type " << type_.ptype_info->name()
-               << " to type " << typeid(T).name();
+    LOG(FATAL) << "Could not cast type " << type_.ptype_info->name() << " to type "
+               << typeid(T).name();
     return false;
   }
   return true;
 }
 
-template <typename T>
+template<typename T>
 const T &Any::Cast() const {
   CheckType<T>();
   return *reinterpret_cast<const T *>(data_->Ptr());
 }
 
-template <typename T>
+template<typename T>
 T &Any::Cast() {
   CheckType<T>();
   return *const_cast<T *>(reinterpret_cast<const T *>(data_->Ptr()));
 }
 
-template <typename T>
+template<typename T>
 const T &any_cast(const Any &any) {
   return any.Cast<T>();
 }
 
-template <typename T>
+template<typename T>
 T &any_cast(Any &any) {
   return any.Cast<T>();
 }

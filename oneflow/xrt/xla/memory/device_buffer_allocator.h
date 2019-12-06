@@ -12,16 +12,13 @@ namespace mola {
 
 class DeviceBufferAllocator {
  public:
-  explicit DeviceBufferAllocator(std::shared_ptr<DeviceMemoryPool> mem_pool)
-      : mem_pool_(mem_pool) {
+  explicit DeviceBufferAllocator(std::shared_ptr<DeviceMemoryPool> mem_pool) : mem_pool_(mem_pool) {
     // mem_pool_->Reserve(256 * 1024 * 1024/*256MiB*/);
   }
 
   virtual ~DeviceBufferAllocator() {}
 
-  void *AllocateRaw(size_t offset, size_t size) {
-    return mem_pool_->AllocateRaw(offset, size);
-  }
+  void *AllocateRaw(size_t offset, size_t size) { return mem_pool_->AllocateRaw(offset, size); }
 
   void Reserve(size_t size) {
     while (size > mem_pool_->capacity()) {

@@ -16,15 +16,13 @@ const Shape &OutputTimeShape(const OpNode *op_node) {
   return *(op_node->out_blob_time_shape());
 }
 
-const SbpParallel &BlobSbpPolicy(const OpNode *op_node,
-                                 const std::string &name) {
+const SbpParallel &BlobSbpPolicy(const OpNode *op_node, const std::string &name) {
   CHECK_NOTNULL(op_node);
   LogicalBlobId lbi = BlobNameToId(name);
   return op_node->SbpParallel4Lbi(lbi);
 }
 
-GraphBuilder::GraphBuilder(const OpGraph *op_graph)
-    : graph_(std::make_shared<XrtGraph>()) {
+GraphBuilder::GraphBuilder(const OpGraph *op_graph) : graph_(std::make_shared<XrtGraph>()) {
   op_graph->TopoForEachNode([&](const OpNode *op_node) {
     const Operator *op = &op_node->op();
     XrtNode *node = graph_->AddNode(op->op_conf());
@@ -44,8 +42,7 @@ GraphBuilder::GraphBuilder(const OpGraph *op_graph)
   });
 }
 
-GraphBuilder::GraphBuilder(const XrtLaunchOpConf::Function &function,
-                           const DeviceType &device_type,
+GraphBuilder::GraphBuilder(const XrtLaunchOpConf::Function &function, const DeviceType &device_type,
                            const JobDesc &job_desc)
     : graph_(std::make_shared<XrtGraph>()) {
   for (const auto &arg_conf : function.argument()) {
@@ -79,8 +76,7 @@ GraphBuilder::GraphBuilder(const XrtLaunchOpConf::Function &function,
 }
 
 void GraphBuilder::MakeMetaData(const XrtNode *start, const XrtNode *end,
-                                const std::string &arg_name,
-                                ArgumentMetaData *meta_data) {
+                                const std::string &arg_name, ArgumentMetaData *meta_data) {
   const auto &prod_keys = node_info_.at(start).input_output_keys;
   const auto &cons_keys = node_info_.at(end).input_output_keys;
   meta_data->produce_key = prod_keys.at(arg_name);
@@ -109,9 +105,7 @@ void GraphBuilder::SetupGraphEdges() {
     const OpNode *dst = node_info_.at(edge->end()).op_node;
     const std::string &name = edge->argument().name();
 
-    if (nullptr == src || nullptr == dst) {
-      continue;
-    }
+    if (nullptr == src || nullptr == dst) { continue; }
     // Set time shape
     std::vector<Shape> time_shape;
     time_shape.push_back(OutputTimeShape(src));
@@ -126,8 +120,7 @@ void GraphBuilder::SetupGraphEdges() {
 }
 
 std::shared_ptr<XrtGraph> BuildGraph(const XrtLaunchOpConf::Function &function,
-                                     const DeviceType &device_type,
-                                     const JobDesc &job_desc) {
+                                     const DeviceType &device_type, const JobDesc &job_desc) {
   return GraphBuilder(function, device_type, job_desc).Build();
 }
 

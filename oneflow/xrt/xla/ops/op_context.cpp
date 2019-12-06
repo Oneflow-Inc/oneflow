@@ -39,29 +39,23 @@ xla::XlaOp XlaValue::AsXlaOp(xla::XlaBuilder *builder) const {
     // HostTensorToBorrowingLiteral(constant_value_, &literal);
     // return xla::ConstantLiteral(builder, literal);
   }
-  CHECK_EQ(builder, handle_.builder())
-      << "Mismatched builders in XlaValue::AsXlaOp";
+  CHECK_EQ(builder, handle_.builder()) << "Mismatched builders in XlaValue::AsXlaOp";
   return handle_;
 }
 
 xla::XlaBuilder *XlaOpContext::builder() const { return param_.builder; }
 
 bool XlaOpContext::HasInput(const std::string &name) const {
-  return param_.arguments.count(name) > 0 &&
-         param_.inputs.count(ArgumentFromKey(name)) > 0;
+  return param_.arguments.count(name) > 0 && param_.inputs.count(ArgumentFromKey(name)) > 0;
 }
 
 bool XlaOpContext::HasOutput(const std::string &name) const {
   return param_.arguments.count(name) > 0;
 }
 
-xla::XlaOp XlaOpContext::Input(const std::string &name) {
-  return Input(ArgumentFromKey(name));
-}
+xla::XlaOp XlaOpContext::Input(const std::string &name) { return Input(ArgumentFromKey(name)); }
 
-xla::XlaOp XlaOpContext::Output(const std::string &name) {
-  return Output(ArgumentFromKey(name));
-}
+xla::XlaOp XlaOpContext::Output(const std::string &name) { return Output(ArgumentFromKey(name)); }
 
 xla::XlaOp XlaOpContext::Input(const Argument &arg) {
   CHECK_GT(param_.inputs.count(arg), 0);
@@ -73,16 +67,14 @@ xla::XlaOp XlaOpContext::Output(const Argument &arg) {
   return outputs_.at(arg).AsXlaOp(builder());
 }
 
-void XlaOpContext::SetOutput(const std::string &name,
-                             const xla::XlaOp &handle) {
+void XlaOpContext::SetOutput(const std::string &name, const xla::XlaOp &handle) {
   SetOutput(name, XlaValue::XlaOp(handle));
 }
 
 void XlaOpContext::SetOutput(const std::string &name, const XlaValue &handle) {
   Argument arg = ArgumentFromKey(name);
   CHECK_EQ(arg.shape(), XlaShapeToOfShape(handle.shape_));
-  CHECK_EQ(DataTypeToPrimitiveType(arg.data_type()),
-           handle.shape_.element_type());
+  CHECK_EQ(DataTypeToPrimitiveType(arg.data_type()), handle.shape_.element_type());
   // CHECK_EQ(OfShapeToXlaShape(arg.shape(), arg.data_type()), handle.shape_);
   outputs_[arg] = handle;
 }

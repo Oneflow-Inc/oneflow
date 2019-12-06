@@ -42,8 +42,7 @@ struct ClusteringOptions {
   bool ignore_time_shape = false;
 };
 
-bool CheckUseXrtEngine(const ClusteringOptions &options,
-                       const XrtEngine &engine);
+bool CheckUseXrtEngine(const ClusteringOptions &options, const XrtEngine &engine);
 
 struct XrtPassOptions {
   ClusteringOptions clustering_options;
@@ -58,43 +57,37 @@ class XrtPass {
     LOG(FATAL) << "Should not call this function.";
   }
 
-  virtual void Run(XrtGraph *graph, const XrtPassOptions &options,
-                   const std::vector<Any> &params) {
+  virtual void Run(XrtGraph *graph, const XrtPassOptions &options, const std::vector<Any> &params) {
     LOG(FATAL) << "Should not call this function.";
   }
 
-  static auto Registry()
-      -> util::Registry<std::string, std::function<XrtPass *()>> * {
+  static auto Registry() -> util::Registry<std::string, std::function<XrtPass *()>> * {
     return util::Registry<std::string, std::function<XrtPass *()>>::Global();
   }
 };
 
 // typedef XrtPass *(*XrtPassCreator)();
 
-#define REGISTER_XRT_PASS(PassName, PassType)                     \
-  namespace PassName {                                            \
-  struct _XrtPassRegistrar {                                      \
-    _XrtPassRegistrar() {                                         \
-      XrtPass::Registry()->Register(                              \
-          #PassName, []() -> XrtPass * { return new PassType; }); \
-    }                                                             \
-  };                                                              \
-  _XrtPassRegistrar _xrt_pass_registrar_ __attribute__((unused)); \
+#define REGISTER_XRT_PASS(PassName, PassType)                                               \
+  namespace PassName {                                                                      \
+  struct _XrtPassRegistrar {                                                                \
+    _XrtPassRegistrar() {                                                                   \
+      XrtPass::Registry()->Register(#PassName, []() -> XrtPass * { return new PassType; }); \
+    }                                                                                       \
+  };                                                                                        \
+  _XrtPassRegistrar _xrt_pass_registrar_ __attribute__((unused));                           \
   }  // namespace // PassName
 
-inline void RunPassImpl(const std::string &pass, XrtGraph *graph,
-                        const XrtPassOptions &options) {
-  auto optimize_pass =
-      std::shared_ptr<XrtPass>(XrtPass::Registry()->Lookup(pass)());
+inline void RunPassImpl(const std::string &pass, XrtGraph *graph, const XrtPassOptions &options) {
+  auto optimize_pass = std::shared_ptr<XrtPass>(XrtPass::Registry()->Lookup(pass)());
   optimize_pass->Run(graph, options);
 }
 
-template <typename... Args>
-inline void RunPassImpl(const std::string &pass, XrtGraph *graph,
-                        const XrtPassOptions &options, Args &&... args) {
+template<typename... Args>
+inline void RunPassImpl(const std::string &pass, XrtGraph *graph, const XrtPassOptions &options,
+                        Args &&... args) {
   std::vector<Any> params{std::forward<Args>(args)...};
-  auto optimize_pass =
-      std::shared_ptr<XrtPass>(XrtPass::Registry()->Lookup(pass)());
+  auto optimize_pass = std::shared_ptr<XrtPass>(XrtPass::Registry()->Lookup(pass)());
   optimize_pass->Run(graph, options, params);
 }
 

@@ -23,14 +23,11 @@ class BuildSubGraphPass : public XrtPass {
   void RebuildSubgraphOutputs(XrtNode *node, XrtNode *n, XrtGraph *sub_graph,
                               util::Map<int64_t, XrtNode *> *sub_graph_nodes);
 
-  void CreateLaunchNodes(XrtGraph *graph,
-                         util::Map<int64_t, XrtNode *> *launch_nodes);
+  void CreateLaunchNodes(XrtGraph *graph, util::Map<int64_t, XrtNode *> *launch_nodes);
 
   int64_t NodeClusterId(const XrtNode *node) const {
     int64_t cluster_id = -1;
-    if (node->HasAttr("cluster_id")) {
-      cluster_id = node->Attr<int64_t>("cluster_id");
-    }
+    if (node->HasAttr("cluster_id")) { cluster_id = node->Attr<int64_t>("cluster_id"); }
     return cluster_id;
   }
 
@@ -106,21 +103,17 @@ void BuildSubGraphPass::Run(XrtGraph *graph, const XrtPassOptions &options) {
     DivideArgumentNodes(sub_graph);
   }
 
-  for (const XrtNode *node : graph->Nodes()) {
-    CHECK(!node->IsReachable(*node));
-  }
+  for (const XrtNode *node : graph->Nodes()) { CHECK(!node->IsReachable(*node)); }
 
   DumpSubgraphs(graph, "./dump_subgraph");
 }
 
-void BuildSubGraphPass::CreateLaunchNodes(
-    XrtGraph *graph, util::Map<int64_t, XrtNode *> *launch_nodes) {
+void BuildSubGraphPass::CreateLaunchNodes(XrtGraph *graph,
+                                          util::Map<int64_t, XrtNode *> *launch_nodes) {
   util::Map<int64_t, XrtDevice> cluster_ids;
   for (XrtNode *node : graph->Nodes()) {
     int64_t cluster_id = NodeClusterId(node);
-    if (cluster_id != -1) {
-      cluster_ids.emplace(cluster_id, node->device());
-    }
+    if (cluster_id != -1) { cluster_ids.emplace(cluster_id, node->device()); }
   }
 
   for (const auto &pair : cluster_ids) {
@@ -142,9 +135,7 @@ void BuildSubGraphPass::DivideArgumentNodes(XrtGraph *sub_graph) {
   // Find all argument nodes
   std::vector<XrtNode *> argument_nodes;
   for (XrtNode *node : sub_graph->Nodes()) {
-    if (node->type() == _ArgumentOpType) {
-      argument_nodes.push_back(node);
-    }
+    if (node->type() == _ArgumentOpType) { argument_nodes.push_back(node); }
   }
   // Start to divide nodes
   int argument_id = 0;
@@ -203,9 +194,8 @@ void BuildSubGraphPass::DivideArgumentNodes(XrtGraph *sub_graph) {
   }
 }
 
-void BuildSubGraphPass::RebuildSubgraphInputs(
-    XrtNode *node, XrtNode *n, XrtGraph *sub_graph,
-    util::Map<int64_t, XrtNode *> *sub_graph_nodes) {
+void BuildSubGraphPass::RebuildSubgraphInputs(XrtNode *node, XrtNode *n, XrtGraph *sub_graph,
+                                              util::Map<int64_t, XrtNode *> *sub_graph_nodes) {
   for (XrtEdge *e : n->in_edges()) {
     int64_t start_id = e->start()->unique_id();
     // Check if the edge had been redirected
@@ -229,9 +219,8 @@ void BuildSubGraphPass::RebuildSubgraphInputs(
   }
 }
 
-void BuildSubGraphPass::RebuildSubgraphOutputs(
-    XrtNode *node, XrtNode *n, XrtGraph *sub_graph,
-    util::Map<int64_t, XrtNode *> *sub_graph_nodes) {
+void BuildSubGraphPass::RebuildSubgraphOutputs(XrtNode *node, XrtNode *n, XrtGraph *sub_graph,
+                                               util::Map<int64_t, XrtNode *> *sub_graph_nodes) {
   for (XrtEdge *e : n->out_edges()) {
     // Check if the edge had been redirected
     if (e->start()->unique_id() != n->unique_id()) {
@@ -257,8 +246,7 @@ void BuildSubGraphPass::RebuildSubgraphOutputs(
   }
 }
 
-void BuildSubGraphPass::DumpSubgraphs(const XrtGraph *graph,
-                                      const std::string &path) {
+void BuildSubGraphPass::DumpSubgraphs(const XrtGraph *graph, const std::string &path) {
   for (const XrtNode *node : graph->Nodes()) {
     if (node->type() == _XrtLaunchOpType) {
       std::string file = absl::StrCat(path, "/cluster_", NodeClusterId(node));

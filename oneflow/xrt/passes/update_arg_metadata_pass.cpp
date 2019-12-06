@@ -16,8 +16,7 @@ namespace {
 
 class ArgMetaDataUpdater {
  public:
-  ArgMetaDataUpdater(XrtGraph *graph, const XrtPassOptions &options,
-                     const JobDesc *job_desc)
+  ArgMetaDataUpdater(XrtGraph *graph, const XrtPassOptions &options, const JobDesc *job_desc)
       : graph_(graph), options_(options), job_desc_(job_desc) {}
 
   void Run() {
@@ -25,8 +24,7 @@ class ArgMetaDataUpdater {
     for (const XrtNode *node : graph_->Nodes()) {
       util::Map<std::string, std::string> keys;
       if (node->IsArgumentNode()) {
-        const auto &conf =
-            *dynamic_cast<const XrtLaunchOpConf::Argument *>(&node->param());
+        const auto &conf = *dynamic_cast<const XrtLaunchOpConf::Argument *>(&node->param());
         keys = {{conf.value(), "value"}};
       } else {
         std::shared_ptr<Operator> op = BuildOp(node);
@@ -81,8 +79,7 @@ class ArgMetaDataUpdater {
 
   const JobDesc *job_desc_;
 
-  util::Map<const XrtNode *, util::Map<std::string, std::string>>
-      input_output_keys_;
+  util::Map<const XrtNode *, util::Map<std::string, std::string>> input_output_keys_;
 };
 
 }  // namespace

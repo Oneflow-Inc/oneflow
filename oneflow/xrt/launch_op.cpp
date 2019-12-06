@@ -20,14 +20,10 @@ void XrtLaunchOp::InitFromOpConf() {
     bool mutability = mutability_table.count(input) > 0;
     EnrollInputBn(absl::StrCat("in_", i))->set_is_mutable(mutability);
   }
-  if (outputs_num > 0) {
-    EnrollRepeatedOutputBn("out");
-  }
+  if (outputs_num > 0) { EnrollRepeatedOutputBn("out"); }
 }
 
-const PbMessage &XrtLaunchOp::GetCustomizedConf() const {
-  return op_conf().xrt_launch_conf();
-}
+const PbMessage &XrtLaunchOp::GetCustomizedConf() const { return op_conf().xrt_launch_conf(); }
 
 Maybe<void> XrtLaunchOp::InferBlobDescs(
     std::function<BlobDesc *(const std::string &)> GetBlobDesc4BnInOp,
@@ -50,10 +46,10 @@ Maybe<void> XrtLaunchOp::InferBlobDescs(
     // Run InferShape pass
     const auto &sbp_signatures = launch_conf.sbp_signatures();
     auto options = xrt::CreateDefaultXrtPassOptions();
-    auto graph = xrt::BuildXrtGraph(launch_conf.function(),
-                                    op_conf().device_type(), this->job_desc());
-    xrt::RunXrtPass("InferShape", graph.get(), options, &this->job_desc(),
-                    parallel_ctx, &sbp_signatures, &blob_descs);
+    auto graph =
+        xrt::BuildXrtGraph(launch_conf.function(), op_conf().device_type(), this->job_desc());
+    xrt::RunXrtPass("InferShape", graph.get(), options, &this->job_desc(), parallel_ctx,
+                    &sbp_signatures, &blob_descs);
   }
 
   // Fetch output blob descs
@@ -85,20 +81,17 @@ Maybe<void> XrtLaunchOp::InferBatchAxis(
 Maybe<void> XrtLaunchOp::InferSbpSignature(
     SbpSignature *sbp_signature, const SbpSignature &sbp_sig_conf,
     const std::function<int32_t(const SbpSignature &)> &CalcOrderValue4SbpSig,
-    XrtLaunchOp::SbpInferHint4IbnFunc SbpInferHint4Ibn,
-    const ParallelDesc &parallel_desc) const {
+    XrtLaunchOp::SbpInferHint4IbnFunc SbpInferHint4Ibn, const ParallelDesc &parallel_desc) const {
   *sbp_signature = sbp_sig_conf;
   // Check existence of inputs and outputs sbp parallel.
   const auto &bn2sbp_parallel = sbp_sig_conf.bn_in_op2sbp_parallel();
   for (const std::string &bn : this->input_bns()) {
     CHECK_GT(bn2sbp_parallel.count(bn), 0)
-        << "Input sbp parallel is not found for operator "
-        << this->op_conf().name();
+        << "Input sbp parallel is not found for operator " << this->op_conf().name();
   }
   for (const std::string &bn : this->output_bns()) {
     CHECK_GT(bn2sbp_parallel.count(bn), 0)
-        << "Output sbp parallel is not found for operator "
-        << this->op_conf().name();
+        << "Output sbp parallel is not found for operator " << this->op_conf().name();
   }
   return Maybe<void>::Ok();
 }
@@ -106,8 +99,7 @@ Maybe<void> XrtLaunchOp::InferSbpSignature(
 void XrtLaunchOp::VirtualGenKernelConf(
     std::function<const BlobDesc *(const std::string &)> GetBlobDesc4BnInOp,
     const ParallelContext *parallel_ctx, KernelConf *kernel_conf) const {
-  *(kernel_conf->mutable_xrt_launch_conf()->mutable_parallel_ctx()) =
-      *parallel_ctx;
+  *(kernel_conf->mutable_xrt_launch_conf()->mutable_parallel_ctx()) = *parallel_ctx;
 }
 
 REGISTER_OP(OperatorConf::kXrtLaunchConf, XrtLaunchOp);

@@ -9,7 +9,7 @@ namespace oneflow {
 namespace xrt {
 namespace mola {
 
-template <typename BinaryOp>
+template<typename BinaryOp>
 class BcastBinaryOp : public XlaOpKernel {
  public:
   void Compile(XlaOpContext *ctx) override {
@@ -42,9 +42,7 @@ class BcastBinaryOp : public XlaOpKernel {
 
   bool NeedBroadcast(const std::vector<long long> &bcast_dimensions) const {
     bool need_broadcast = false;
-    for (auto dim : bcast_dimensions) {
-      need_broadcast = need_broadcast || (dim > 1);
-    }
+    for (auto dim : bcast_dimensions) { need_broadcast = need_broadcast || (dim > 1); }
     return need_broadcast;
   }
 };

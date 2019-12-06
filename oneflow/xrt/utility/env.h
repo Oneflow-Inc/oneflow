@@ -7,17 +7,13 @@
 
 // Refer to glog `src/base/commandlineflags.h`
 
-#define EnvToString(envname, dflt) \
-  (!getenv(#envname) ? (dflt) : getenv(#envname))
+#define EnvToString(envname, dflt) (!getenv(#envname) ? (dflt) : getenv(#envname))
 
 #define EnvToBool(envname, dflt) \
-  (!getenv(#envname) ? (dflt)    \
-                     : memchr("tTyY1\0", getenv(#envname)[0], 6) != NULL)
+  (!getenv(#envname) ? (dflt) : memchr("tTyY1\0", getenv(#envname)[0], 6) != NULL)
 
-#define EnvToInt(envname, dflt) \
-  (!getenv(#envname) ? (dflt) : strtol(getenv(#envname), NULL, 10))
+#define EnvToInt(envname, dflt) (!getenv(#envname) ? (dflt) : strtol(getenv(#envname), NULL, 10))
 
-#define EnvToInt64(envname, dflt) \
-  (!getenv(#envname) ? (dflt) : strtoll(getenv(#envname), NULL, 10))
+#define EnvToInt64(envname, dflt) (!getenv(#envname) ? (dflt) : strtoll(getenv(#envname), NULL, 10))
 
 #endif  // ONEFLOW_XRT_UTILITY_ENV_H_

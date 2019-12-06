@@ -34,8 +34,7 @@ class GeluGradOp : public XlaOpKernel {
 
     xla::XlaOp coef = xla::ScalarLike(x, std::sqrt(2.f / std::acos(-1.f)));
     // coef = 1 + erf(sqrt(0.5) * x) + x * coef * exp(-0.5 * x * x)
-    coef = one + xla::Erf(inv_sqrt2 * x) +
-           (x * coef * xla::Exp(xla::Neg(dot_5) * x * x));
+    coef = one + xla::Erf(inv_sqrt2 * x) + (x * coef * xla::Exp(xla::Neg(dot_5) * x * x));
 
     ctx->SetOutput("dx", dot_5 * coef * dy);
   }

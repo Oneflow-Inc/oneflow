@@ -15,8 +15,8 @@ namespace xrt {
 
 namespace shape_inference {
 
-void InferShape(XrtGraph *graph, const XrtPassOptions &options,
-                const JobDesc *job_desc, const ParallelContext *parallel_ctx,
+void InferShape(XrtGraph *graph, const XrtPassOptions &options, const JobDesc *job_desc,
+                const ParallelContext *parallel_ctx,
                 const util::PbMap<std::string, SbpSignature> *sbp_signatures,
                 util::Map<std::string, BlobDesc> *blob_descs) {
   algorithm::TopologyVisit(*graph, [&](XrtNode *node) {
@@ -36,8 +36,8 @@ void InferShape(XrtGraph *graph, const XrtPassOptions &options,
       };
 
       const SbpSignature &sbp_signature = sbp_signatures->at(node->name());
-      CHECK_JUST(op->InferBlobDescsIf(get_blob_desc_fn, parallel_ctx,
-                                      &sbp_signature, [](OpContext *) {}));
+      CHECK_JUST(
+          op->InferBlobDescsIf(get_blob_desc_fn, parallel_ctx, &sbp_signature, [](OpContext *) {}));
     }
     // Update blob desc on the output edges.
     for (XrtEdge *edge : node->out_edges()) {
@@ -45,8 +45,7 @@ void InferShape(XrtGraph *graph, const XrtPassOptions &options,
       auto it = blob_descs->find(name);
       CHECK(it != blob_descs->end());
       const auto &metadata = edge->argument().meta_data();
-      Argument argument(name, it->second.shape(), it->second.data_type(),
-                        metadata);
+      Argument argument(name, it->second.shape(), it->second.data_type(), metadata);
       edge->SetArgument(argument);
     }
   });
@@ -69,8 +68,7 @@ class InferShapePass : public XrtPass {
         any_cast<const util::PbMap<std::string, SbpSignature> *>(params[2]);
     auto *blob_descs = any_cast<util::Map<std::string, BlobDesc> *>(params[3]);
 
-    shape_inference::InferShape(graph, options, job_desc, parallel_ctx,
-                                sbp_signatures, blob_descs);
+    shape_inference::InferShape(graph, options, job_desc, parallel_ctx, sbp_signatures, blob_descs);
   }
 };
 

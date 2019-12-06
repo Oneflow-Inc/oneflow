@@ -6,8 +6,8 @@ namespace mola {
 
 class AdamOptimizerOp : public OptimizerOp {
  private:
-  void ApplyUpdate(XlaOpContext *ctx, xla::XlaOp gradient,
-                   xla::XlaOp instance_num, xla::XlaOp learning_rate) override {
+  void ApplyUpdate(XlaOpContext *ctx, xla::XlaOp gradient, xla::XlaOp instance_num,
+                   xla::XlaOp learning_rate) override {
     xla::XlaOp weight = ctx->Input("model");
     xla::XlaOp m = ctx->Input("m");
     xla::XlaOp v = ctx->Input("v");
@@ -23,8 +23,7 @@ class AdamOptimizerOp : public OptimizerOp {
     gradient = gradient / instance_num;
 
     NormalModelUpdateOpUserConf *user_conf =
-        dynamic_cast<NormalModelUpdateOpUserConf *>(
-            ctx->GetAttr<PbMessage *>("user_conf"));
+        dynamic_cast<NormalModelUpdateOpUserConf *>(ctx->GetAttr<PbMessage *>("user_conf"));
     CHECK(user_conf) << "Can not get message `user_conf`.";
     if (user_conf->has_adam_conf()) {
       xla::XlaOp one = One(ctx->builder(), ctx->InputType("m"));

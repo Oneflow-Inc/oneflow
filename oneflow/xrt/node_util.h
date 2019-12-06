@@ -10,8 +10,7 @@ namespace xrt {
 
 const PbMessage *OpMessage(const XrtNode *node);
 
-bool IsCompiledNode(const XrtNode *node, const XrtEngine &engine,
-                    const bool train_phase);
+bool IsCompiledNode(const XrtNode *node, const XrtEngine &engine, const bool train_phase);
 bool IsOptimizerNode(const XrtNode *node, const XrtEngine &engine);
 
 bool IsNodeInput(const XrtNode *node, const Argument &argument);

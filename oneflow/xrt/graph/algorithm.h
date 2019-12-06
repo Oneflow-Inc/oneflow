@@ -7,18 +7,18 @@ namespace oneflow {
 namespace xrt {
 namespace algorithm {
 
-template <typename GraphType>
+template<typename GraphType>
 struct GraphTypeTrait {
   typedef typename GraphType::NodeType *pNodeType;
   typedef typename GraphType::EdgeType *pEdgeType;
 };
 
-template <typename NodeType>
+template<typename NodeType>
 struct NodeTypeTrait {
   typedef typename NodeType::EdgeType *pEdgeType;
 };
 
-template <typename GraphType, typename UserFunc>
+template<typename GraphType, typename UserFunc>
 inline void TopologyVisit(GraphType &graph, UserFunc func) {
   typedef typename GraphTypeTrait<GraphType>::pNodeType pNodeType;
   typedef typename GraphTypeTrait<GraphType>::pEdgeType pEdgeType;
@@ -35,9 +35,7 @@ inline void TopologyVisit(GraphType &graph, UserFunc func) {
   auto IsAllInputsVisited = [&](pNodeType node) -> bool {
     for (pEdgeType edge : node->in_edges()) {
       pNodeType start = edge->start();
-      if (visited.count(start) == 0) {
-        return false;
-      }
+      if (visited.count(start) == 0) { return false; }
     }
     return true;
   };
@@ -50,35 +48,27 @@ inline void TopologyVisit(GraphType &graph, UserFunc func) {
     }
     for (pEdgeType edge : node->out_edges()) {
       pNodeType end = edge->end();
-      if (IsAllInputsVisited(end) && visited.insert(end).second) {
-        visit_queue.push(end);
-      }
+      if (IsAllInputsVisited(end) && visited.insert(end).second) { visit_queue.push(end); }
     }
   }
 };
 
-template <typename NodeType>
+template<typename NodeType>
 inline bool IsReachable(NodeType *start, NodeType *dest) {
   typedef NodeType *pNodeType;
   typedef typename NodeTypeTrait<NodeType>::pEdgeType pEdgeType;
 
   util::Set<pNodeType> visited_nodes;
   util::Stack<pNodeType> stack;
-  for (pEdgeType edge : start->out_edges()) {
-    stack.push(edge->end());
-  }
+  for (pEdgeType edge : start->out_edges()) { stack.push(edge->end()); }
 
   while (!stack.empty()) {
     pNodeType node = stack.top();
     stack.pop();
-    if (node == dest) {
-      return true;
-    }
+    if (node == dest) { return true; }
     for (pEdgeType edge : node->out_edges()) {
       pNodeType end = edge->end();
-      if (visited_nodes.insert(end).second) {
-        stack.push(end);
-      }
+      if (visited_nodes.insert(end).second) { stack.push(end); }
     }
   }
   return false;

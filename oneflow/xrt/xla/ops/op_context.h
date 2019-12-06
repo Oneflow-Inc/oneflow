@@ -55,8 +55,7 @@ class XlaOpContext : public OpContext {
     util::Map<std::string, Argument> arguments;
   };
 
-  explicit XlaOpContext(const Param &param)
-      : OpContext(*param.message), param_(param) {}
+  explicit XlaOpContext(const Param &param) : OpContext(*param.message), param_(param) {}
 
   virtual ~XlaOpContext() = default;
 

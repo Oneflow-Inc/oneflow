@@ -20,32 +20,28 @@ se::Platform::Id GetPlatformId(const XrtDevice &device) {
   } else {
     LOG(FATAL) << "Only CPU_X86 or GPU_CUDA is supported by XLA.";
   }
-  CHECK(platform_id) << "Platform Id should not be nullptr. Current device is "
-                     << device << ", please check it.";
+  CHECK(platform_id) << "Platform Id should not be nullptr. Current device is " << device
+                     << ", please check it.";
   return std::move(platform_id);
 }
 
 const se::Platform *GetPlatform(const XrtDevice &device) {
   se::Platform::Id platform_id = GetPlatformId(device);
-  MOLA_CHECK_AND_ASSIGN(auto platform,
-                        se::MultiPlatformManager::PlatformWithId(platform_id));
+  MOLA_CHECK_AND_ASSIGN(auto platform, se::MultiPlatformManager::PlatformWithId(platform_id));
   return std::move(platform);
 }
 
 Eigen::ThreadPoolDevice *GetOrCreateEigenHostDevice() {
   static int default_num_threads = 10;
   static Eigen::ThreadPool threadpool(default_num_threads);
-  static Eigen::ThreadPoolDevice host_device(&threadpool,
-                                             threadpool.NumThreads());
+  static Eigen::ThreadPoolDevice host_device(&threadpool, threadpool.NumThreads());
   return &host_device;
 }
 
 DeviceBufferAllocator *GetOrCreateBufferAllocator(const XrtDevice &device,
-                                                  const StreamId &stream_id,
-                                                  se::Stream *stream,
+                                                  const StreamId &stream_id, se::Stream *stream,
                                                   int device_ordinal) {
-  static std::unordered_map<StreamId, DeviceBufferAllocator *>
-      buffer_allocators;
+  static std::unordered_map<StreamId, DeviceBufferAllocator *> buffer_allocators;
   static std::mutex mutex;
   const se::Platform *platform = GetPlatform(device);
   if (buffer_allocators.count(stream_id) == 0) {
@@ -67,8 +63,7 @@ xla::LocalClient *GetOrCreateLocalClient(const XrtDevice &device) {
 
   // Get a local client if the client of this `client_options` has been created,
   // otherwise create a new local client by `ClientLibrary` and return it.
-  MOLA_CHECK_AND_ASSIGN(
-      auto client, xla::ClientLibrary::GetOrCreateLocalClient(client_options));
+  MOLA_CHECK_AND_ASSIGN(auto client, xla::ClientLibrary::GetOrCreateLocalClient(client_options));
   return std::move(client);
 }
 

@@ -11,8 +11,7 @@ XrtEdge *XrtGraph::Connect(const XrtNode *start, const XrtNode *end) {
   return edge;
 }
 
-XrtEdge *XrtGraph::Connect(const XrtNode *start, const XrtNode *end,
-                           const Argument &arg) {
+XrtEdge *XrtGraph::Connect(const XrtNode *start, const XrtNode *end, const Argument &arg) {
   XrtEdge *edge = Connect(start, end);
   edge->SetArgument(arg);
   return edge;
@@ -75,9 +74,7 @@ XrtGraph *XrtGraph::AddSubgraph(int64_t node_id) {
 std::vector<Argument> XrtGraph::Arguments() const {
   std::vector<Argument> arguments;
   for (const XrtEdge *edge : edges_) {
-    if (edge && edge->argument().initialized()) {
-      arguments.push_back(edge->argument());
-    }
+    if (edge && edge->argument().initialized()) { arguments.push_back(edge->argument()); }
   }
   return std::move(arguments);
 }
@@ -86,8 +83,7 @@ std::string XrtGraph::ToDot() const {
   std::stringstream ost;
   ost << "digraph {\n";
   for (const XrtNode *node : this->Nodes()) {
-    ost << "\"" << node->unique_id() << "\" [label=\"" << node->name()
-        << "\"]\n";
+    ost << "\"" << node->unique_id() << "\" [label=\"" << node->name() << "\"]\n";
   }
   for (const XrtEdge *edge : edges_) {
     ost << "\"" << edge->start()->unique_id() << "\" -> "

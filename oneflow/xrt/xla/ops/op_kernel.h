@@ -20,19 +20,16 @@ class XlaOpKernel : public OpKernel<XlaOpContext> {
   virtual ~XlaOpKernel() = default;
 };
 
-using XlaOpKernelPtr = std::shared_ptr<OpKernel<XlaOpContext> >;
+using XlaOpKernelPtr = std::shared_ptr<OpKernel<XlaOpContext>>;
 
-#define REGISTER_XLA_OP_KERNEL(OpName, KernelType)                  \
-  static OpKernelRegistrar<XlaOpContext> _xla_op_kernel_##OpName##_ \
-      __attribute__((unused)) =                                     \
-          OpKernelRegistrar<XlaOpContext>(#OpName)                  \
-              .SetField(XrtEngine::XLA)                             \
-              .EnableTrainPhase()                                   \
-              .SetFactory(                                          \
-                  []() -> OpKernel<XlaOpContext> * { return new KernelType; })
+#define REGISTER_XLA_OP_KERNEL(OpName, KernelType)                                            \
+  static OpKernelRegistrar<XlaOpContext> _xla_op_kernel_##OpName##_ __attribute__((unused)) = \
+      OpKernelRegistrar<XlaOpContext>(#OpName)                                                \
+          .SetField(XrtEngine::XLA)                                                           \
+          .EnableTrainPhase()                                                                 \
+          .SetFactory([]() -> OpKernel<XlaOpContext> * { return new KernelType; })
 
-inline XlaOpKernelPtr BuildOpKernel(const XrtDevice &device,
-                                    const std::string &op_name) {
+inline XlaOpKernelPtr BuildOpKernel(const XrtDevice &device, const std::string &op_name) {
   XrtField field = MakeXrtField(device, XrtEngine::XLA);
   return XlaOpKernelPtr(OpKernelBuilder<XlaOpContext>()(field, op_name));
 }

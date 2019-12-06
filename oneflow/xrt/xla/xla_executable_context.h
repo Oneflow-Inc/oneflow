@@ -16,14 +16,12 @@ namespace mola {
 
 class XlaExecutableRunContext {
  public:
-  XlaExecutableRunContext(const ExecutableRunOptions &run_options,
-                          const XrtDevice &device);
+  XlaExecutableRunContext(const ExecutableRunOptions &run_options, const XrtDevice &device);
 
   virtual ~XlaExecutableRunContext() = default;
 
   const std::vector<xla::ShapedBuffer *> &PopulateInputs(
-      const std::vector<Parameter> &inputs,
-      const std::vector<xla::Shape> &input_shapes);
+      const std::vector<Parameter> &inputs, const std::vector<xla::Shape> &input_shapes);
 
   // Populate output params to reuse the buffers in allocator. This helps
   // to reduce memory occupancy and avoid extra copy between temporary

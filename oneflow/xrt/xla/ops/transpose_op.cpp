@@ -18,9 +18,7 @@ class TransposeOp : public XlaOpKernel {
       ctx->SetOutput("out", x);
     } else {
       std::vector<long long> transposed_order(x_shape.NumAxes());
-      for (int i = 0; i < x_shape.NumAxes(); ++i) {
-        transposed_order[i] = perm[i];
-      }
+      for (int i = 0; i < x_shape.NumAxes(); ++i) { transposed_order[i] = perm[i]; }
       ctx->SetOutput("out", xla::Transpose(x, transposed_order));
     }
   }

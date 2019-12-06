@@ -23,25 +23,21 @@ class OptimizerOp : public XlaOpKernel {
     xla::XlaOp learning_rate = ctx->Input("learning_rate");
 
     NormalModelUpdateOpUserConf *user_conf =
-        dynamic_cast<NormalModelUpdateOpUserConf *>(
-            ctx->GetAttr<PbMessage *>("user_conf"));
+        dynamic_cast<NormalModelUpdateOpUserConf *>(ctx->GetAttr<PbMessage *>("user_conf"));
     CHECK(user_conf) << "Can not get message `user_conf`.";
     if (user_conf->has_clip_conf()) {
-      gradient =
-          ClipGradient(ctx, gradient, instance_num, user_conf->clip_conf());
+      gradient = ClipGradient(ctx, gradient, instance_num, user_conf->clip_conf());
     }
 
     ApplyUpdate(ctx, gradient, instance_num, learning_rate);
   }
 
  private:
-  virtual void ApplyUpdate(XlaOpContext *ctx, xla::XlaOp gradient,
-                           xla::XlaOp instance_num,
+  virtual void ApplyUpdate(XlaOpContext *ctx, xla::XlaOp gradient, xla::XlaOp instance_num,
                            xla::XlaOp learning_rate) = 0;
 
   xla::XlaOp ClipGradient(XlaOpContext *ctx, const xla::XlaOp &gradient,
-                          const xla::XlaOp &instance_num,
-                          const ClipConf &clip_conf) {
+                          const xla::XlaOp &instance_num, const ClipConf &clip_conf) {
     DataType data_type = ctx->InputType("model_diff");
     Shape gradient_shape = ctx->InputShape("model_diff");
     xla::XlaOp norm;
@@ -56,8 +52,8 @@ class OptimizerOp : public XlaOpKernel {
       std::vector<long long> reduce_dims(gradient_shape.NumAxes());
       std::iota(reduce_dims.begin(), reduce_dims.end(), 0);
       xla::XlaComputation add_func = CreateAddFunc(data_type);
-      xla::XlaOp sum = xla::Reduce(
-          gradient * gradient, Zero(builder, data_type), add_func, reduce_dims);
+      xla::XlaOp sum =
+          xla::Reduce(gradient * gradient, Zero(builder, data_type), add_func, reduce_dims);
       norm = xla::Sqrt(sum) / instance_num;
     }
 

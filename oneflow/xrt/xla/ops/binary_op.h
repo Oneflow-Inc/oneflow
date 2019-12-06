@@ -8,11 +8,9 @@ namespace xrt {
 namespace mola {
 namespace op {
 
-#define OFXLA_DECLARE_BINARY_OP(op)                     \
-  struct op {                                           \
-    xla::XlaOp operator()(xla::XlaOp a, xla::XlaOp b) { \
-      return xla::op(a, b);                             \
-    }                                                   \
+#define OFXLA_DECLARE_BINARY_OP(op)                                             \
+  struct op {                                                                   \
+    xla::XlaOp operator()(xla::XlaOp a, xla::XlaOp b) { return xla::op(a, b); } \
   };
 
 OFXLA_DECLARE_BINARY_OP(Add);

@@ -19,8 +19,8 @@ class GraphBuilder {
 
   explicit GraphBuilder(const OpGraph *op_graph);
 
-  explicit GraphBuilder(const XrtLaunchOpConf::Function &function,
-                        const DeviceType &device_type, const JobDesc &job_desc);
+  explicit GraphBuilder(const XrtLaunchOpConf::Function &function, const DeviceType &device_type,
+                        const JobDesc &job_desc);
 
   std::shared_ptr<XrtGraph> Build() {
     BuildGraphEdges();
@@ -41,15 +41,14 @@ class GraphBuilder {
     node->set_device(DeviceTypeToXrtDevice(node_conf.device_type()));
   }
 
-  void SetupXrtNode(XrtNode *node,
-                    const XrtLaunchOpConf::Argument &arg_conf) const {
+  void SetupXrtNode(XrtNode *node, const XrtLaunchOpConf::Argument &arg_conf) const {
     node->set_name(arg_conf.name());
     node->set_type(_ArgumentOpType);
     node->set_device(DeviceTypeToXrtDevice(arg_conf.device_type()));
   }
 
-  void MakeMetaData(const XrtNode *start, const XrtNode *end,
-                    const std::string &arg_name, ArgumentMetaData *meta_data);
+  void MakeMetaData(const XrtNode *start, const XrtNode *end, const std::string &arg_name,
+                    ArgumentMetaData *meta_data);
 
   void BuildGraphEdges();
   void SetupGraphEdges();
@@ -61,8 +60,7 @@ class GraphBuilder {
 };
 
 std::shared_ptr<XrtGraph> BuildGraph(const XrtLaunchOpConf::Function &function,
-                                     const DeviceType &device_type,
-                                     const JobDesc &job_desc);
+                                     const DeviceType &device_type, const JobDesc &job_desc);
 
 std::shared_ptr<XrtGraph> BuildGraph(const OpGraph *op_graph);
 

@@ -9,7 +9,7 @@ namespace oneflow {
 namespace xrt {
 namespace mola {
 
-template <typename BinaryOp>
+template<typename BinaryOp>
 class ScalarBinaryOp : public XlaOpKernel {
  public:
   void Compile(XlaOpContext *ctx) override {
