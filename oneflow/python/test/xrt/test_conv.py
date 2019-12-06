@@ -126,7 +126,7 @@ class Testconv2d(unittest.TestCase):
             dilation_rate=dilation_rate, use_bias=use_bias,
             weight_initializer=weight_initializer,
             bias_initializer=bias_initializer, dtype=dtype)
- 
+
     def test_ones1x1_input(self):
         print("run test_ones1x1x1_input: ")
         self._test_ones_body(1, 1, 1, 1, filters=1, kernel_size=1, strides=1,
@@ -203,10 +203,10 @@ class Testconv2d(unittest.TestCase):
    #             use_bias=True, weight_initializer=flow.random_uniform_initializer(),
    #             bias_initializer=_get_bias_initializer())
    #     self._test_random_body(1, 3, 3, 3, filters=1, kernel_size=1, strides=1,
-    #            padding="VALID", data_format="NHWC", dilation_rate=1,
-    #            use_bias=False,
-    #            weight_initializer=flow.random_uniform_initializer(),
-    #            bias_initializer=None)
+   #             padding="VALID", data_format="NHWC", dilation_rate=1,
+   #             use_bias=False,
+   #             weight_initializer=flow.random_uniform_initializer(),
+   #             bias_initializer=None)
 
     def test_ones227x227_input(self):
         print("test_ones227x227_input: ")
@@ -225,11 +225,11 @@ class Testconv2d(unittest.TestCase):
      #           padding="SAME", data_format="NHWC", dilation_rate=1,
      #           use_bias=True, weight_initializer=flow.random_uniform_initializer(),
      #           bias_initializer=_get_bias_initializer())
-      #  self._test_ones_body(1, 227, 227, 3, filters=64, kernel_size=11,
-      #          strides=4,
-      #          padding="SAME", data_format="NHWC", dilation_rate=1,
-      #          use_bias=False, weight_initializer=flow.random_uniform_initializer(),
-      #          bias_initializer=None)
+     #   self._test_ones_body(1, 227, 227, 3, filters=64, kernel_size=11,
+     #           strides=4,
+     #           padding="SAME", data_format="NHWC", dilation_rate=1,
+     #           use_bias=False, weight_initializer=flow.random_uniform_initializer(),
+     #           bias_initializer=None)
 
     def test_random227x227_input(self):
         print("run test_random227x227_input: ")
