@@ -2,7 +2,7 @@
 
 namespace oneflow {
 
-void GenerateCloneGradOpIfNeed(const OpNode& op_node, std::vector<OperatorConf>* op_confs,
+void GenerateCloneGradOpIfNeed(const OpNode& op_node, JobBuilder* job_builder,
                                const HashMap<OpBlobArg, LogicalBlobId>& in_oba2in_diff_lbi,
                                HashMap<OpBlobArg, LogicalBlobId>* out_oba2out_diff_lbi,
                                HashMap<OpBlobArg, LogicalBlobId>* out_oba2clone_bw_add_out_lbi) {
@@ -23,6 +23,7 @@ void GenerateCloneGradOpIfNeed(const OpNode& op_node, std::vector<OperatorConf>*
   });
   for (const auto& obn : op_node.op().output_bns()) {
     const OpBlobArg& oba = GenOpBlobArg(op_node.op().op_name(), obn);
+    const LogicalBlobId& lbi = op_node.op().BnInOp2Lbi(obn);
     LogicalBlobId diff_lbi;
     const auto& in_diff_lbis = out_oba2in_diff_lbis[oba];
     if (in_diff_lbis.empty()) { continue; }
@@ -36,7 +37,7 @@ void GenerateCloneGradOpIfNeed(const OpNode& op_node, std::vector<OperatorConf>*
       for (const auto& in_diff_lbi : in_diff_lbis) {
         add_op_conf->add_in(GenLogicalBlobName(in_diff_lbi));
       }
-      op_confs->push_back(add_op);
+      job_builder->AddOps(job_builder->ParallelConf4Lbi(lbi), {add_op});
       diff_lbi.set_op_name(add_op.name());
       diff_lbi.set_blob_name("out");
       CHECK(out_oba2clone_bw_add_out_lbi->emplace(oba, diff_lbi).second);

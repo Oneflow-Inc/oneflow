@@ -9,6 +9,7 @@ import oneflow.core.register.logical_blob_id_pb2 as lbi_util
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.distribute as distribute_util
 from oneflow.python.oneflow_export import oneflow_export
+from functools import reduce
 import numpy as np
 import oneflow
 

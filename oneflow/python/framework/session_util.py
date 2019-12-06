@@ -46,9 +46,9 @@ class Session(object):
 
     def Close(self):
         assert self.status_ is SessionStatus.RUNNING
+        self.Sync()
         c_api_util.StopGlobalSession()
         c_api_util.DestroyGlobalSession()
-        self.Sync()
         self.status_ = SessionStatus.CLOSED
 
     def AddJob(self, job_func):
