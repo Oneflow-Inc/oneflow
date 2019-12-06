@@ -26,12 +26,16 @@ class ElementWiseOp : public TrtOpKernel {
                                              element_wise_operation);
       tmp_result = layer->getOutput(0);
     }
-    ctx->SetOutput("out", layer->getOutput(0));
     ctx->SetOutput("out", tmp_result);
   }
 };
 
 REGISTER_TRT_OP_KERNEL(Add, ElementWiseOp<nvinfer1::ElementWiseOperation::kSUM>)
+    .EnableTrainPhase()
+    .Finalize();
+
+REGISTER_TRT_OP_KERNEL(Multiply,
+                       ElementWiseOp<nvinfer1::ElementWiseOperation::kPROD>)
     .EnableTrainPhase()
     .Finalize();
 

@@ -5,19 +5,19 @@ namespace oneflow {
 namespace xrt {
 namespace tensorrt {
 
-template <nvinfer1::ReduceOperation reduce_operation>
+template <nvinfer1::ReduceOperation reduce_op>
 class ReduceOp : public TrtOpKernel {
  public:
   void Compile(TrtOpContext *ctx) override {
     std::vector<int32_t> axis = ctx->GetAttr<std::vector<int32_t>>("axis");
-    int32_t reduceAxes = 0;
+    int32_t reduce_axis = 0;
     for (int i = 0; i < axis.size(); ++i) {
-      reduceAxes = reduceAxes | (1U << axis[i]);
+      reduce_axis = reduce_axis | (1U << axis[i]);
     }
     bool keepDimensions = ctx->GetAttr<bool>("keep_dims");
     nvinfer1::ITensor *in = ctx->Input("in");
-    auto *layer = ctx->builder()->addReduce(*in, reduce_operation, reduceAxes,
-                                            keepDimensions);
+    auto *layer =
+        ctx->builder()->addReduce(*in, reduce_op, reduce_axis, keepDimensions);
     layer->setName(ctx->op_name().c_str());
     ctx->SetOutput("out", layer->getOutput(0));
   }

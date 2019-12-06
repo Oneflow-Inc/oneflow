@@ -32,6 +32,7 @@ static std::unordered_map<int32_t, std::string> op_type2string_map = {
     {OP_TYPE_CASE(Matmul), "MatMul"},
     {OP_TYPE_CASE(Relu), "Relu"},
     {OP_TYPE_CASE(Conv2D), "Conv2D"},
+    {OP_TYPE_CASE(Multiply), "Multiply"},
     // {OP_TYPE_CASE(FullyConnected), "FullyConnected"},
     {OP_TYPE_CASE(BiasAdd), "BiasAdd"},
     {OP_TYPE_CASE(Reshape), "Reshape"},
