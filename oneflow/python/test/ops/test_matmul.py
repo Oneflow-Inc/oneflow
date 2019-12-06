@@ -71,11 +71,11 @@ def filter_args(arg_list):
 
     ret = []
     for arg in arg_list:
-        a_shape = arg[0]
-        b_shape = arg[1]
-        if arg[2]:  # transpose_a
+        a_shape = arg[1]
+        b_shape = arg[2]
+        if arg[3]:  # transpose_a
             a_shape = trans_shape(a_shape)
-        if arg[3]:  # transpose_b
+        if arg[4]:  # transpose_b
             b_shape = trans_shape(b_shape)
         if a_shape[-1] == b_shape[-2]:
             ret.append(tuple(arg))
