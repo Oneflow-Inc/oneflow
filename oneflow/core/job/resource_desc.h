@@ -28,6 +28,9 @@ class ResourceDesc final {
   bool enable_numa_aware_cuda_malloc_host() const {
     return resource_.enable_numa_aware_cuda_malloc_host();
   }
+  bool thread_enable_local_message_queue() const {
+    return resource_.thread_enable_local_message_queue();
+  }
   int32_t ComputeThreadPoolSize() const;
 
   void SetMachineNum(int32_t val) { resource_.set_machine_num(val); }

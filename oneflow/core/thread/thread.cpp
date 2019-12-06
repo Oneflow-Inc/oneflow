@@ -15,10 +15,22 @@ void Thread::AddTask(const TaskProto& task) {
   CHECK(id2task_.emplace(task.task_id(), task).second);
 }
 
+void Thread::EnqueueActorMsg(const ActorMsg& msg) {
+  if (Global<ResourceDesc>::Get()->thread_enable_local_message_queue()
+      && std::this_thread::get_id() == actor_thread_.get_id()) {
+    local_msg_queue_.push(msg);
+  } else {
+    msg_channel_.Send(msg);
+  }
+}
+
 void Thread::PollMsgChannel(const ThreadCtx& thread_ctx) {
-  ActorMsg msg;
   while (true) {
-    CHECK_EQ(msg_channel_.Receive(&msg), kChannelStatusSuccess);
+    if (local_msg_queue_.empty()) {
+      CHECK_EQ(msg_channel_.ReceiveMany(&local_msg_queue_), kChannelStatusSuccess);
+    }
+    ActorMsg msg = std::move(local_msg_queue_.front());
+    local_msg_queue_.pop();
     if (msg.msg_type() == ActorMsgType::kCmdMsg) {
       if (msg.actor_cmd() == ActorCmd::kStopThread) {
         CHECK(id2actor_ptr_.empty());

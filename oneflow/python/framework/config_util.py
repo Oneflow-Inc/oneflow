@@ -103,6 +103,12 @@ def use_rdma(val = True):
     assert type(val) is bool
     default_config_proto.resource.use_rdma = val
 
+@oneflow_export('config.thread_enable_local_message_queue')
+def thread_enable_local_message_queue(val):
+    assert config_proto_mutable == True
+    assert type(val) is bool
+    default_config_proto.resource.thread_enable_local_message_queue = val
+
 @oneflow_export('config.save_downloaded_file_to_local_fs')
 def save_downloaded_file_to_local_fs(val = True):
     assert config_proto_mutable == True
