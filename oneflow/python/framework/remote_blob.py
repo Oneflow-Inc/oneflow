@@ -30,7 +30,7 @@ class RemoteBlob(blob_desc.BlobDesc):
         return job_builder.DisableBoxing(self.job_name_, self.lbn_)
     
     @property
-    def num_of_lod_levels(self): return job_builder.GetNumOfLoDLevels(self.job_name_, self.lbn_)
+    def enable_tensor_list(self): return job_builder.EnableTensorList(self.job_name_, self.lbn_)
 
     @property
     def disable_boxing(self):

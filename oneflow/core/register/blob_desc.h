@@ -18,10 +18,10 @@ class BlobDesc final {
   explicit BlobDesc(DataType dtype) : BlobDesc(Shape(), dtype) {}
   explicit BlobDesc(const BlobDescProto& proto);
   explicit BlobDesc(const BlobDesc&);
-  BlobDesc(const TensorPodDesc& body, int64_t num_of_lod_levels, bool is_body_disabled,
+  BlobDesc(const TensorPodDesc& body, bool enable_tensor_list, bool is_body_disabled,
            bool is_dynamic)
       : body_(body),
-        num_of_lod_levels_(num_of_lod_levels),
+        enable_tensor_list_(enable_tensor_list),
         is_body_disabled_(is_body_disabled),
         is_dynamic_(is_dynamic) {}
 
@@ -29,8 +29,7 @@ class BlobDesc final {
 
   BlobDesc& operator=(const BlobDesc&);
 
-  void ClearLoD() { num_of_lod_levels_ = 0; }
-  Maybe<void> SetLoD(int64_t num_of_lod_levels);
+  void set_enable_tensor_list(bool val) { enable_tensor_list_ = val; }
   void SetOpaqueHeader(const StructPodDesc& header_pod_desc);
 
   const Shape& shape() const { return body_.shape(); }
@@ -39,7 +38,7 @@ class BlobDesc final {
   DataType data_type() const { return body_.data_type(); }
   void set_data_type(DataType val) { body_.set_data_type(val); }
 
-  int64_t num_of_lod_levels() const { return num_of_lod_levels_; }
+  int64_t enable_tensor_list() const { return enable_tensor_list_; }
   bool is_body_disabled() const { return is_body_disabled_; }
   void set_is_body_disabled(bool val) { is_body_disabled_ = val; }
   bool header_is_opaque() const { return opaque_header_ != nullptr; }
@@ -58,7 +57,7 @@ class BlobDesc final {
   void InitFromProto(const BlobDescProto& proto);
 
   TensorPodDesc body_;
-  int64_t num_of_lod_levels_;  // lod: level of details
+  bool enable_tensor_list_;
   bool is_body_disabled_;
   bool is_dynamic_;
 

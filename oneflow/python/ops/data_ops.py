@@ -370,18 +370,18 @@ class DataLoader(object):
         data_source,
         shape,
         dtype,
-        variable_length_axes=None,
+        tensor_list_variable_axis=None,
         is_dynamic=False,
     ):
-        variable_length_axes = variable_length_axes or []
-        assert isinstance(variable_length_axes, (tuple, list))
+        if tensor_list_variable_axis is not None:
+            assert isinstance(tensor_list_variable_axis, int)
         self._blobs.append(
             dict(
                 name=name,
                 data_source=data_source,
                 shape=shape,
                 dtype=dtype,
-                variable_length_axes=variable_length_axes or [],
+                tensor_list_variable_axis=tensor_list_variable_axis,
                 is_dynamic=is_dynamic,
             )
         )
@@ -432,7 +432,8 @@ class DataLoader(object):
                 blob_conf.encode_case.jpeg.SetInParent()
             else:
                 blob_conf.encode_case.raw.SetInParent()
-            blob_conf.variable_length_axes.extend(blob["variable_length_axes"])
+            if blob["tensor_list_variable_axis"] is not None:
+                blob_conf.tensor_list_variable_axis = blob["tensor_list_variable_axis"]
             blob_conf.is_dynamic = blob["is_dynamic"]
             op_conf.data_load_conf.blobs.extend([blob_conf])
 

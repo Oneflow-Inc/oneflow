@@ -66,13 +66,7 @@ void Kernel::ForwardHeader(const KernelCtx& ctx,
     ForwardPackedHeader(ctx, BnInOp2Blob);
   } else {
     if (kernel_conf_.need_do_dense_shape()) { ForwardDenseShape(ctx, BnInOp2Blob); }
-    if (kernel_conf_.need_do_lod()) { ForwardLoD(ctx, BnInOp2Blob); }
   }
-}
-
-void Kernel::ForwardLoD(const KernelCtx& ctx,
-                        std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  UNIMPLEMENTED();
 }
 
 void Kernel::ForwardDenseShape(const KernelCtx& ctx,

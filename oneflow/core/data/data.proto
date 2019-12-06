@@ -42,7 +42,6 @@ enum DataSourceCase {
   kObjectLabel = 5;
   kImageScale = 6;
   kImageSize = 7;
-  kObjectSegmentationMask = 8;
   kImageId = 9;
   kObjectSegmentationAlignedMask = 10;
 }
@@ -67,9 +66,6 @@ message ResizeTransform {
 message TargetResizeTransform {
   required int32 target_size = 1;
   required int32 max_size = 2;
-}
-
-message SegmentationPolygonListToMask {
 }
 
 message SegmentationPolygonListToAlignedMask {
@@ -97,7 +93,6 @@ message DataTransformProto {
   oneof transform {
     ResizeTransform resize = 1;
     TargetResizeTransform target_resize = 2;
-    SegmentationPolygonListToMask segmentation_poly_to_mask = 3;
     ImageNormalizeByChannel image_normalize_by_channel = 4;
     SegmentationPolygonListToAlignedMask segmentation_poly_to_aligned_mask = 5;
     ImageAlign image_align = 6;

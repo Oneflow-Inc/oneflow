@@ -52,8 +52,6 @@ class Kernel {
                        std::function<Blob*(const std::string&)> BnInOp2Blob) const;
   virtual void ForwardHeader(const KernelCtx& ctx,
                              std::function<Blob*(const std::string&)> BnInOp2Blob) const;
-  virtual void ForwardLoD(const KernelCtx& ctx,
-                          std::function<Blob*(const std::string&)> BnInOp2Blob) const;
   virtual void ForwardDenseShape(const KernelCtx& ctx,
                                  std::function<Blob*(const std::string&)> BnInOp2Blob) const;
   void NaiveForwardDenseShape(std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
