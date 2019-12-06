@@ -45,7 +45,6 @@ class JobBuilder final {
   void ForEachOperator(const std::function<void(const Operator&)>& Handler) const;
 
   const ParallelConf& ParallelConf4Lbi(const LogicalBlobId& lbi) const;
-
   const ParallelConf& ParallelConf4OpName(const std::string& op_name) const;
   void AddParallelConf4OpName(const std::string& op_name, const ParallelConf& parallel_conf);
 
