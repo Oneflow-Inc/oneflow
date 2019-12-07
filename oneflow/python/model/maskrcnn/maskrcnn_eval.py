@@ -15,7 +15,6 @@ from box_head import BoxHead
 from mask_head import MaskHead
 
 from eval.bounding_box import BoxList
-from eval.box_head_inference import PostProcessor
 from eval.mask_head_inference import MaskPostProcessor
 from eval.coco import COCODataset
 from eval.coco_eval import do_coco_evaluation
