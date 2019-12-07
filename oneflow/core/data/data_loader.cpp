@@ -17,7 +17,7 @@ DataLoader::DataLoader(const DataLoadOpConf& op_conf, const DataLoadKernelConf& 
   sampler_ctx_.num_replicas_ = kernel_conf.parallel_num();
   sampler_ctx_.rank_ = kernel_conf.parallel_id();
   sampler_ctx_.epoch_ = 0;
-  sampler_ctx_.iter_ = kernel_conf.parallel_id();
+  sampler_ctx_.offset_ = kernel_conf.parallel_id();
   sampler_ctx_.count_ = 0;
   dataset_->SubmitSamplerContext(&sampler_ctx_);
   load_thrd_ = std::thread([this] {
