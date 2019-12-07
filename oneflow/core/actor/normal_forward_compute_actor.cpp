@@ -8,8 +8,8 @@ void NormalForwardCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
   const_buf_regst_ = nullptr;
   if (const_buf_regst_desc_id_ != -1) {
     const_buf_regst_ = GetSoleProducedRegst4RegstDescId(const_buf_regst_desc_id_);
+    AsyncInitModelAndConstBuf();
   }
-  if (const_buf_regst_desc_id_ != -1) { AsyncInitModelAndConstBuf(); }
   OF_SET_MSG_HANDLER(&NormalForwardCompActor::HandlerNormal);
 }
 
