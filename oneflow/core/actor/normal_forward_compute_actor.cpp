@@ -9,23 +9,9 @@ void NormalForwardCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
   if (const_buf_regst_desc_id_ != -1) {
     const_buf_regst_ = GetSoleProducedRegst4RegstDescId(const_buf_regst_desc_id_);
   }
-  send_const_buf_regst_ = false;
   if (const_buf_regst_desc_id_ != -1) { AsyncInitModelAndConstBuf(); }
   OF_SET_MSG_HANDLER(&NormalForwardCompActor::HandlerNormal);
 }
-
-bool NormalForwardCompActor::IsCustomizedWriteReady() const {
-  if (const_buf_regst_desc_id_ != -1) { CHECK(send_const_buf_regst_); }
-  return true;
-}
-
-void NormalForwardCompActor::UpdtStateAsCustomizedProducedRegst(Regst* regst) {
-  CHECK_EQ(const_buf_regst_, regst);
-  const_buf_regst_ = nullptr;
-  send_const_buf_regst_ = false;
-}
-
-bool NormalForwardCompActor::CheckOutputActId(int64_t regst_desc_id) const { return true; }
 
 void NormalForwardCompActor::Act() {
   KernelCtx kernel_ctx = GenDefaultKernelCtx();

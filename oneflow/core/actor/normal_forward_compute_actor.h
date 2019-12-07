@@ -18,14 +18,8 @@ class NormalForwardCompActor final : public CompActor {
       override {
     return std::make_pair(RegstNameType::kCustomized, HashSet<std::string>{"const_buf"});
   }
-  void AsyncSendCustomizedProducedRegstMsgToConsumer() override {}
   void VirtualAsyncSendNaiveProducedRegstMsgToConsumer() override;
   void VirtualAsyncSendInplaceProducedRegstMsgToConsumer() override;
-
-  bool IsCustomizedWriteReady() const override;
-  void UpdtStateAsCustomizedProducedRegst(Regst* regst) override;
-  bool CheckOutputActId(int64_t regst_desc_id) const override;
-
   void AsyncInitModelAndConstBuf();
 
   int64_t cur_piece_id_;
