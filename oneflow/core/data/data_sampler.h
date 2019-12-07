@@ -8,7 +8,7 @@ struct DataSamplerContext final {
   size_t num_replicas_;
   size_t rank_;
   size_t epoch_;
-  size_t iter_;
+  size_t offset_;
   size_t count_;
 };
 

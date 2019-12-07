@@ -50,14 +50,14 @@ std::vector<int64_t> DataSampler::FetchBatchIndexSequence(DataSamplerContext* ct
   std::vector<int64_t> batch_index_seq(batch_size);
   size_t i = 0;
   while (i < batch_size) {
-    if (ctx->iter_ >= dataset()->Size()) {
+    if (ctx->offset_ >= dataset()->Size()) {
       CheckIndexSequenceRanOut(ctx);
       ctx->epoch_ += 1;
-      ctx->iter_ %= dataset()->Size();
+      ctx->offset_ %= dataset()->Size();
       ctx->count_ = 0;
     }
-    batch_index_seq[i] = AcquireGetOrGenEpochIndexSequence(ctx->epoch_).at(ctx->iter_);
-    ctx->iter_ += ctx->num_replicas_;
+    batch_index_seq[i] = AcquireGetOrGenEpochIndexSequence(ctx->epoch_).at(ctx->offset_);
+    ctx->offset_ += ctx->num_replicas_;
     ctx->count_ += 1;
     i += 1;
   }
@@ -74,44 +74,45 @@ std::vector<int64_t> GroupedDataSampler::FetchBatchIndexSequence(DataSamplerCont
   std::vector<int64_t> seq(batch_size);
   bool skip_happened = false;
   int64_t first_group_id = -1;
-  size_t iter = ctx->iter_;
+  size_t offset = ctx->offset_;
   size_t epoch = ctx->epoch_;
 
-  auto foward_iter_and_get_index = [this, ctx, &iter, &epoch]() {
-    iter += ctx->num_replicas_;
-    if (iter >= dataset()->Size()) {
+  auto MoveOffsetAndRetIndex = [this, ctx, &offset, &epoch]() {
+    offset += ctx->num_replicas_;
+    if (offset >= dataset()->Size()) {
       epoch += 1;
-      iter %= dataset()->Size();
+      offset %= dataset()->Size();
     }
-    return AcquireGetOrGenEpochIndexSequence(epoch).at(iter);
+    return AcquireGetOrGenEpochIndexSequence(epoch).at(offset);
   };
 
-  auto fill_index = [this, &seq, ctx](size_t i, int64_t index, bool skip_happened) {
+  auto FetchIndex = [this, &seq, ctx](size_t i, int64_t index, bool skip_happened) {
     seq.at(i) = index;
     if (!skip_happened) {
-      ctx->iter_ += ctx->num_replicas_;
+      ctx->offset_ += ctx->num_replicas_;
       ctx->count_ += 1;
-      if (ctx->iter_ >= dataset()->Size()) {
+      if (ctx->offset_ >= dataset()->Size()) {
         CheckIndexSequenceRanOut(ctx);
         ctx->epoch_ += 1;
-        ctx->iter_ %= dataset()->Size();
+        ctx->offset_ %= dataset()->Size();
         ctx->count_ = 0;
       }
     }
   };
 
+  int64_t index = AcquireGetOrGenEpochIndexSequence(epoch).at(offset);
   FOR_RANGE(size_t, i, 0, batch_size) {
-    int64_t index = foward_iter_and_get_index();
     if (i == 0) {
-      fill_index(i, index, skip_happened);
+      FetchIndex(i, index, skip_happened);
       first_group_id = group_ids_.at(index);
     } else {
       while (first_group_id != group_ids_.at(index)) {
-        index = foward_iter_and_get_index();
+        index = MoveOffsetAndRetIndex();
         skip_happened = true;
       }
-      fill_index(i, index, skip_happened);
+      FetchIndex(i, index, skip_happened);
     }
+    index = MoveOffsetAndRetIndex();
   }
 
   return seq;
