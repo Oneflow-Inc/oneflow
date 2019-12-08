@@ -33,8 +33,8 @@ void LayerNormOp::Compile(XlaOpContext *ctx) {
   CHECK_LT(begin_params_axis, input_shape.NumAxes());
   while (begin_norm_axis < 0) { begin_norm_axis += input_shape.NumAxes(); }
 
-  DataType data_type = ctx->InputType("mean");
-
+  DataType data_type = ctx->InputType("in");
+  if (ctx->HasOutput("mean")) { data_type = ctx->OutputType("mean"); }
   int64_t batch_dims = input_shape.Count(0, begin_norm_axis);
   int64_t norm_dims = input_shape.Count(begin_norm_axis);
   Shape bn_shape = Shape({1, batch_dims, 1, norm_dims});
@@ -60,15 +60,19 @@ void LayerNormOp::Compile(XlaOpContext *ctx) {
   xla::XlaOp inv_variance = xla::Rsqrt(xla::Add(variance, xla::ScalarLike(variance, epsilon)));
 
   Shape mean_shape = SliceShape(input_shape, 0, begin_norm_axis);
-  ctx->SetOutput("mean", Reshape(mean, mean_shape));
-  ctx->SetOutput("inv_variance", Reshape(inv_variance, mean_shape));
+  if (ctx->HasOutput("mean")) { ctx->SetOutput("mean", Reshape(mean, mean_shape)); }
+  if (ctx->HasOutput("inv_variance")) {
+    ctx->SetOutput("inv_variance", Reshape(inv_variance, mean_shape));
+  }
 
   if (ctx->OutputType("out") != data_type) {
     DataType output_type = ctx->OutputType("out");
     output = xla::ConvertElementType(output, DataTypeToPrimitiveType(output_type));
   }
 
-  if (ctx->GetAttr<bool>("scale")) { ctx->SetOutput("normalized", Reshape(output, input_shape)); }
+  if (ctx->GetAttr<bool>("scale") && ctx->HasOutput("normalized")) {
+    ctx->SetOutput("normalized", Reshape(output, input_shape));
+  }
 
   Shape gamma_shape = Shape({norm_dims});
   // output = Reshape(output, Shape({batch_dims, norm_dims}));

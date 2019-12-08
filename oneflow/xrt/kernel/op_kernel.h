@@ -103,8 +103,8 @@ inline bool OpKernelRegistered(const std::string &op_type, const XrtField &field
 }
 
 template<typename T>
-inline const T &LookupOpKernelAttribute(const std::string &op_type, const XrtField &field,
-                                        const std::string &attr_name) {
+inline const T &LookupOpKernelAttr(const std::string &op_type, const XrtField &field,
+                                   const std::string &attr_name) {
   auto *rm = util::RegistryManager<XrtField>::Global();
   CHECK(rm->HasRegistry(field)) << "Field registry has not been found. Field is (engine: "
                                 << field.engine() << ", device: " << field.device() << ").";
@@ -116,15 +116,15 @@ inline const T &LookupOpKernelAttribute(const std::string &op_type, const XrtFie
 
 inline const util::Set<std::string> &MutableVariables(const std::string &op_type,
                                                       const XrtField &field) {
-  return LookupOpKernelAttribute<util::Set<std::string>>(op_type, field, MutableVariablesAttrName);
+  return LookupOpKernelAttr<util::Set<std::string>>(op_type, field, MutableVariablesAttrName);
 }
 
 inline const bool &TrainPhaseEnabled(const std::string &op_type, const XrtField &field) {
-  return LookupOpKernelAttribute<bool>(op_type, field, TrainPhaseEnabledAttrName);
+  return LookupOpKernelAttr<bool>(op_type, field, TrainPhaseEnabledAttrName);
 }
 
 inline const bool &IsOptimizerOp(const std::string &op_type, const XrtField &field) {
-  return LookupOpKernelAttribute<bool>(op_type, field, IsOptimizerOpAttrName);
+  return LookupOpKernelAttr<bool>(op_type, field, IsOptimizerOpAttrName);
 }
 
 }  // namespace xrt

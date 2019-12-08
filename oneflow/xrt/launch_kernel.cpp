@@ -4,6 +4,7 @@
 #include "oneflow/xrt/executable.h"
 #include "oneflow/xrt/graph_compiler.h"
 #include "oneflow/xrt/platform.h"
+#include "oneflow/xrt/utility/env.h"
 
 // General executable setup.
 DEFINE_int64(max_workspace_bytes, EnvToInt64(FLAGS_max_workspace_bytes, -1),
@@ -22,14 +23,12 @@ void BlobDescGetter<device_type>::DumpEntryBlobDescTo(
 
   for (const auto &bn : kernel_->op_attribute().input_bns()) {
     const RtBlobDesc &runtime_desc = get_blob_fn_(bn)->blob_desc();
-    // TODO(hjchen2)
     BlobDesc blob_desc(kernel_->job_desc().DefaultDataType());
     blob_desc.mut_shape() = runtime_desc.shape();
     blob_desc.set_data_type(runtime_desc.data_type());
     blob_desc.set_has_data_id_field(runtime_desc.has_data_id_field());
     blob_desc.set_has_col_num_field(runtime_desc.has_col_num_field());
     blob_desc.set_max_col_num(runtime_desc.max_col_num());
-
     // Map blob_name to function's input name.
     std::string blob_name = xrt::BlobIdToName(kernel_->BnInOp2Lbi(bn));
     // CHECK_GT(io_mapping.count(blob_name), 0);
