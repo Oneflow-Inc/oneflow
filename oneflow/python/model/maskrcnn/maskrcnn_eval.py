@@ -196,10 +196,10 @@ if __name__ == "__main__":
     for i in range(terminal_args.iter_num):
         if terminal_args.fake_img:
             if i == 0:
-                f = open("/dataset/mask_rcnn/maskrcnn_eval_net_10/fake_image_list.pkl", "rb")
+                f = open("/dataset/mask_rcnn/maskrcnn_eval_net_50/fake_image_list.pkl", "rb")
                 fake_image_list = pickle.load(f)
             images = fake_image_list[i].transpose((0, 2, 3, 1)).copy()
-            results = maskrcnn_eval_job(fake_image_list[i]).get()
+            results = maskrcnn_eval_job(images).get()
         else:
             results = maskrcnn_eval_job().get()
         predictions, image_ids = GenPredictionsAndImageIds(results)
