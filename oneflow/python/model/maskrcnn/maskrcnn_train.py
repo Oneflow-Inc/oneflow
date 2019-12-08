@@ -465,7 +465,7 @@ def init_config():
     return config
 
 
-def save_model(i):
+def save_model(check_point, i):
     if not os.path.exists(terminal_args.model_save_dir):
         os.makedirs(terminal_args.model_save_dir)
     model_dst = os.path.join(terminal_args.model_save_dir, "iter-" + str(i))
@@ -538,7 +538,7 @@ if terminal_args.train_with_real_dataset:
         data_loader.add_blob(
             "gt_bbox",
             data_util.DataSourceCase.kObjectBoundingBox,
-            shape=(64, 4),
+            shape=(128, 4),
             dtype=flow.float,
             variable_length_axes=(0,),
             is_dynamic=True,
@@ -546,7 +546,7 @@ if terminal_args.train_with_real_dataset:
         data_loader.add_blob(
             "gt_labels",
             data_util.DataSourceCase.kObjectLabel,
-            shape=(64,),
+            shape=(128,),
             dtype=flow.int32,
             variable_length_axes=(0,),
             is_dynamic=True,
@@ -554,7 +554,7 @@ if terminal_args.train_with_real_dataset:
         data_loader.add_blob(
             "gt_segm_poly",
             data_util.DataSourceCase.kObjectSegmentation,
-            shape=(64, 2, 256, 2),
+            shape=(128, 2, 256, 2),
             dtype=flow.double,
             variable_length_axes=(0, 1, 2),
             is_dynamic=True,
@@ -562,7 +562,7 @@ if terminal_args.train_with_real_dataset:
         data_loader.add_blob(
             "gt_segm",
             data_util.DataSourceCase.kObjectSegmentationAlignedMask,
-            shape=(64, 1344, 800),
+            shape=(128, 1344, 800),
             dtype=flow.int8,
             variable_length_axes=(0,),
             is_dynamic=True,
@@ -667,7 +667,7 @@ if __name__ == "__main__":
         check_point = flow.train.CheckPoint()
         check_point.init()
         if terminal_args.model_save_every_n_batch > 0:
-            save_model(0)
+            save_model(check_point, 0)
     else:
         check_point = flow.train.CheckPoint()
         # check_point.load(terminal_args.model_load_dir)
@@ -708,7 +708,7 @@ if __name__ == "__main__":
                 save_blob_watched(i)
 
                 if (i + 1) % 10 == 0:
-                    save_model(i + 1)
+                    save_model(check_point, i + 1)
 
         elif terminal_args.train_with_real_dataset:
             if terminal_args.print_loss_each_rank:
@@ -756,7 +756,7 @@ if __name__ == "__main__":
                         (i + 1) % terminal_args.model_save_every_n_batch == 0
                         or i + 1 == terminal_args.iter_num
                     ):
-                        save_model(i + 1)
+                        save_model(check_point, i + 1)
 
                 elapsed_time_str = "{:.6f}".format(elapsed_time)
                 if terminal_args.print_loss_each_rank:
@@ -794,7 +794,7 @@ if __name__ == "__main__":
                 "median of elapsed time per batch:",
                 statistics.median(elapsed_times),
             )
-            npy_file_name = "loss-{}-batch_size-{}-gpu-{}-{}".format(i, terminal_args.batch_size, terminal_args.gpu_num_per_node, str(datetime.now().strftime("%Y-%m-%d--%H-%M-%S")))
+            npy_file_name = "loss-{}-batch_size-{}-gpu-{}-image_dir-{}-{}".format(i, terminal_args.batch_size, terminal_args.gpu_num_per_node, terminal_args.image_dir ,str(datetime.now().strftime("%Y-%m-%d--%H-%M-%S")))
             np.save(npy_file_name, np.array(losses_hisogram))
             print("saved: {}.npy".format(npy_file_name))
             if terminal_args.jupyter:
