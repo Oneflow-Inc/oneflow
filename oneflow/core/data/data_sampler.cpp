@@ -2,6 +2,33 @@
 
 namespace oneflow {
 namespace data {
+namespace {
+
+// eop: epoch offset pair
+using eop_cache_func_t = std::function<void(size_t, size_t)>;
+using eop_iscached_func_t = std::function<bool(size_t, size_t)>;
+
+std::pair<eop_cache_func_t, eop_iscached_func_t> MakeEpochOffsetPairCacheFunctions() {
+  using eop_t = std::pair<size_t, size_t>;
+  static thread_local HashSet<eop_t> epoch_offset_pair_set;
+
+  auto Cache = [&](size_t epoch, size_t offset) {
+    CHECK(epoch_offset_pair_set.insert({epoch, offset}).second);
+  };
+
+  auto IsCachedAndTryClear = [&](size_t epoch, size_t offset) {
+    auto it = epoch_offset_pair_set.find({epoch, offset});
+    if (it != epoch_offset_pair_set.end()) {
+      epoch_offset_pair_set.erase(it);
+      return true;
+    }
+    return false;
+  };
+
+  return {Cache, IsCachedAndTryClear};
+}
+
+}  // namespace
 
 DataSampler::DataSampler(Dataset* dataset)
     : dataset_(dataset), max_count_(0), gen_(dataset->dataset_proto().random_seed()) {}
@@ -71,48 +98,49 @@ GroupedDataSampler::GroupedDataSampler(Dataset* dataset)
 
 std::vector<int64_t> GroupedDataSampler::FetchBatchIndexSequence(DataSamplerContext* ctx,
                                                                  size_t batch_size) {
+  std::function<void(size_t, size_t)> CacheFetched;
+  std::function<bool(size_t, size_t)> IsFetched;
+  std::tie(CacheFetched, IsFetched) = MakeEpochOffsetPairCacheFunctions();
+
   std::vector<int64_t> seq(batch_size);
-  bool skip_happened = false;
-  int64_t first_group_id = -1;
+  size_t fetch_count = 0;
   size_t offset = ctx->offset_;
   size_t epoch = ctx->epoch_;
+  int64_t first_group_id = -1;
+  bool skip_happened = false;
 
-  auto MoveOffsetAndRetIndex = [this, ctx, &offset, &epoch]() {
+  while (fetch_count < batch_size) {
+    bool is_feteched = IsFetched(epoch, offset);
+    if (!is_feteched) {
+      int64_t index = AcquireGetOrGenEpochIndexSequence(epoch).at(offset);
+      int64_t group_id = group_ids_.at(index);
+      if (first_group_id == -1) { first_group_id = group_id; }
+      if (first_group_id == group_id) {
+        seq.at(fetch_count) = index;
+        fetch_count += 1;
+        is_feteched = true;
+        if (skip_happened) { CacheFetched(epoch, offset); }
+      } else {
+        skip_happened = true;
+      }
+    }
+
+    if (is_feteched && !skip_happened) {
+      ctx->count_ += 1;
+      ctx->offset_ += ctx->num_replicas_;
+      if (ctx->offset_ >= dataset()->Size()) {
+        CheckIndexSequenceRanOut(ctx);
+        ctx->count_ = 0;
+        ctx->offset_ %= dataset()->Size();
+        ctx->epoch_ += 1;
+      }
+    }
+
     offset += ctx->num_replicas_;
     if (offset >= dataset()->Size()) {
       epoch += 1;
       offset %= dataset()->Size();
     }
-    return AcquireGetOrGenEpochIndexSequence(epoch).at(offset);
-  };
-
-  auto FetchIndex = [this, &seq, ctx](size_t i, int64_t index, bool skip_happened) {
-    seq.at(i) = index;
-    if (!skip_happened) {
-      ctx->offset_ += ctx->num_replicas_;
-      ctx->count_ += 1;
-      if (ctx->offset_ >= dataset()->Size()) {
-        CheckIndexSequenceRanOut(ctx);
-        ctx->epoch_ += 1;
-        ctx->offset_ %= dataset()->Size();
-        ctx->count_ = 0;
-      }
-    }
-  };
-
-  int64_t index = AcquireGetOrGenEpochIndexSequence(epoch).at(offset);
-  FOR_RANGE(size_t, i, 0, batch_size) {
-    if (i == 0) {
-      FetchIndex(i, index, skip_happened);
-      first_group_id = group_ids_.at(index);
-    } else {
-      while (first_group_id != group_ids_.at(index)) {
-        index = MoveOffsetAndRetIndex();
-        skip_happened = true;
-      }
-      FetchIndex(i, index, skip_happened);
-    }
-    index = MoveOffsetAndRetIndex();
   }
 
   return seq;
