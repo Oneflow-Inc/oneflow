@@ -161,10 +161,10 @@ void OfBlob_AddTensor(uint64_t of_blob_ptr) {
   return of_blob->AddTensor();
 }
 
-bool OfBlob_CurMutTensorIsNull(uint64_t of_blob_ptr) {
+bool OfBlob_CurMutTensorAvailable(uint64_t of_blob_ptr) {
   using namespace oneflow;
   auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
-  return of_blob->CurMutTensorIsNull();
+  return of_blob->CurMutTensorAvailable();
 }
 
 void OfBlob_CurMutTensorCopyShapeFrom(uint64_t of_blob_ptr, long* array, int size) {

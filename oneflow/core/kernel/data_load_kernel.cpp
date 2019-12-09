@@ -61,10 +61,11 @@ void DataLoadKernel::WriteDataToBlob(DeviceCtx* ctx,
     auto* dense_shape_mut_view = blob->dense_shape_mut_view();
     if (dense_shape_mut_view) { dense_shape_mut_view->set_shape(Shape(dense_shape_vec)); }
   } else {
-    auto tensor = blob->ReserveOneEmptyTensorList();
+    auto tensor_inserter = blob->tensor_back_inserter();
+    tensor_inserter.ReserveOneEmptyTensorList();
     for (DataInstance& data_inst : *batch_data) {
-      blob->AddTensor(&tensor);
-      CHECK_EQ(tensor.dptr(), dptr);
+      auto* tensor = tensor_inserter.add_tensor();
+      CHECK_EQ(tensor->dptr(), dptr);
       const DataField* data_field = data_inst.GetField(blob_conf.data_source());
       size_t written_size = data_field->ToBuffer(dptr, blob_conf.data_type());
       dptr += written_size;
@@ -73,8 +74,8 @@ void DataLoadKernel::WriteDataToBlob(DeviceCtx* ctx,
       data_field->InferShape(blob_conf.shape(), var_axis, &inst_shape);
       DimVector dim_vec(inst_shape.dim_vec());
       dim_vec.insert(dim_vec.begin(), 1);
-      tensor.set_shape(DenseShapeView(dim_vec.data(), dim_vec.size()));
-      CHECK_EQ(tensor.ByteSize(), written_size);
+      tensor->set_shape(DenseShapeView(dim_vec.data(), dim_vec.size()));
+      CHECK_EQ(tensor->ByteSize(), written_size);
     }
     CHECK_EQ(blob->total_num_of_tensors(), blob->static_shape().At(0));
   }

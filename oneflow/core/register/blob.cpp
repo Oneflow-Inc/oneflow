@@ -6,6 +6,32 @@
 
 namespace oneflow {
 
+TensorBackInserter::TensorBackInserter(Blob* blob)
+    : blob_(blob), cur_mut_tensor_(blob->EndFullyMutTensor()) {}
+
+void TensorBackInserter::ReserveOneEmptyTensorList() {
+  blob_->ReserveOneEmptyTensorList();
+  if (IsCurMutTensorAvailable()) { cur_mut_tensor_ = blob_->EndFullyMutTensor(); }
+}
+
+void TensorBackInserter::ClearTensorLists() {
+  blob_->clear_tensor_lists();
+  if (IsCurMutTensorAvailable()) { cur_mut_tensor_ = blob_->EndFullyMutTensor(); }
+}
+
+bool TensorBackInserter::IsCurMutTensorAvailable() const {
+  return !blob_->IsEndFullyMutTensor(cur_mut_tensor_);
+}
+
+FullyMutTensorView* TensorBackInserter::add_tensor() {
+  blob_->AddTensor(&cur_mut_tensor_);
+  return &cur_mut_tensor_;
+}
+
+FullyMutTensorView* TensorBackInserter::cur_mut_tensor() { return &cur_mut_tensor_; }
+
+void TensorBackInserter::add_tensor_list_slice() { return blob_->add_tensor_list_slice(); }
+
 const MemoryCase& Blob::mem_case() const { return mem_case_; }
 
 Blob::Blob(const MemoryCase& mem_case, const RtBlobDesc* blob_desc, char* header_ptr) {
@@ -42,6 +68,7 @@ void Blob::Init(const MemoryCase& mem_case, const RtBlobDesc* blob_desc, char* h
         new TensorView(this, header_field<FieldKey::kTensorShapeList>(), dptr<char>()));
     begin_mut_tensor_.reset(new DataOnlyMutTensorView(
         this, mut_header_field<FieldKey::kTensorShapeList>(), mut_dptr<char>()));
+    tensor_back_inserter_.reset(new TensorBackInserter(this));
     int64_t* shape_ptr = mut_header_field<FieldKey::kTensorShapeList>();
     dense_shape_view_.reset(new DenseShapeView(shape_ptr, static_shape().NumAxes()));
     if (blob_desc->is_dynamic()) {
@@ -89,7 +116,7 @@ bool Blob::IsEndTensor(const DataOnlyMutTensorView& tensor) const {
   return end_shape_ptr == tensor.shape().ptr();
 }
 
-bool Blob::OutOfMemory(const FullyMutTensorView& tensor) const {
+bool Blob::IsEndFullyMutTensor(const FullyMutTensorView& tensor) const {
   size_t shape_list_capacity = header_field_capacity<FieldKey::kTensorShapeList>();
   const int64_t* end_shape_ptr = header_field<FieldKey::kTensorShapeList>() + shape_list_capacity;
   const char* end_tensor_dptr = dptr<char>() + blob_desc().ByteSizeOfBlobBody();
@@ -147,20 +174,22 @@ void Blob::add_tensor_list_slice() {
       *header_field<FieldKey::kTensorListLength>();
 }
 
-FullyMutTensorView Blob::ReserveOneEmptyTensorList() {
-  const auto& ret = clear_tensor_lists();
+void Blob::ReserveOneEmptyTensorList() {
+  clear_tensor_lists();
   add_tensor_list_slice();
-  return ret;
 }
 
-FullyMutTensorView Blob::clear_tensor_lists() {
-  *mut_header_field<FieldKey::kTensorListLength>() = 0;
-  *mut_header_field<FieldKey::kTensorListSlicesLength>() = 0;
-  *mut_header_field<FieldKey::kLastTensorDataOffset>() = 0;
+FullyMutTensorView Blob::EndFullyMutTensor() {
   size_t shape_list_capacity = header_field_capacity<FieldKey::kTensorShapeList>();
   int64_t* end_shape_ptr = mut_header_field<FieldKey::kTensorShapeList>() + shape_list_capacity;
   char* end_tensor_dptr = mut_dptr<char>() + blob_desc().ByteSizeOfBlobBody();
   return FullyMutTensorView(this, end_shape_ptr, end_tensor_dptr);
+}
+
+void Blob::clear_tensor_lists() {
+  *mut_header_field<FieldKey::kTensorListLength>() = 0;
+  *mut_header_field<FieldKey::kTensorListSlicesLength>() = 0;
+  *mut_header_field<FieldKey::kLastTensorDataOffset>() = 0;
 }
 
 size_t Blob::GetEndTensorDataOffset() const {
