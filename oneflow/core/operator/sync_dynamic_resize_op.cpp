@@ -22,7 +22,7 @@ class SyncDynamicResizeOp : public Operator {
     const SyncDynamicResizeOpConf& conf = op_conf().sync_dynamic_resize_conf();
     CHECK_EQ_OR_RETURN(conf.axis(), 0);
     const BlobDesc* in = GetBlobDesc4BnInOp("in");
-    CHECK_EQ_OR_RETURN(in->enable_tensor_list(), false);
+    CHECK_EQ_OR_RETURN(in->is_tensor_list(), false);
     const BlobDesc* size = GetBlobDesc4BnInOp("size");
     CHECK_EQ_OR_RETURN(size->shape().elem_cnt(), 1);
     CHECK_EQ_OR_RETURN(size->data_type(), DataType::kInt32);

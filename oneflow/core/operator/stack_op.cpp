@@ -25,7 +25,7 @@ class StackOp final : public Operator {
     OF_CHECK_GE(stack_axis, 0);
     OF_CHECK_LT(stack_axis, shape_vec.size());
     OF_CHECK(in_0->is_dynamic());
-    OF_CHECK_EQ(in_0->enable_tensor_list(), false);
+    OF_CHECK_EQ(in_0->is_tensor_list(), false);
 
     FOR_RANGE(size_t, i, 1, input_bns().size()) {
       const BlobDesc* in_i = GetBlobDesc4BnInOp(input_bns().Get(i));
@@ -91,7 +91,7 @@ class StackGradOp final : public Operator {
                              const ParallelContext* parallel_ctx) const override {
     const auto& conf = op_conf().stack_grad_conf();
     const BlobDesc* in = GetBlobDesc4BnInOp("in");
-    OF_CHECK_EQ(in->enable_tensor_list(), false);
+    OF_CHECK_EQ(in->is_tensor_list(), false);
     OF_CHECK_EQ(conf.like_size(), output_bns().size());
 
     FOR_RANGE(size_t, i, 0, output_bns().size()) {

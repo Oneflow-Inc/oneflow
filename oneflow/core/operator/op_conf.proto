@@ -796,7 +796,7 @@ message InterfaceBlobConf {
   optional OptInt64 split_axis = 3;
   required OptInt64 batch_axis = 4;
   optional bool is_dynamic = 5;
-  optional bool enable_tensor_list = 6 [default = false];
+  optional bool is_tensor_list = 6 [default = false];
 }
 
 message InputOpConf {

@@ -179,13 +179,13 @@ def maskrcnn_train(cfg, images, image_sizes, gt_boxes, gt_segms, gt_labels):
     assert images.is_dynamic is True
     assert images.shape[3] == 3
     assert image_sizes.is_dynamic is False
-    assert gt_boxes.enable_tensor_list
-    if gt_segms.enable_tensor_list == False:
+    assert gt_boxes.is_tensor_list
+    if gt_segms.is_tensor_list == False:
         assert gt_segms.is_dynamic is True
     else:
-        assert gt_segms.enable_tensor_list
+        assert gt_segms.is_tensor_list
 
-    assert gt_labels.enable_tensor_list
+    assert gt_labels.is_tensor_list
 
     backbone = Backbone(cfg)
     rpn_head = RPNHead(cfg)
@@ -219,7 +219,7 @@ def maskrcnn_train(cfg, images, image_sizes, gt_boxes, gt_segms, gt_labels):
     )
 
     gt_segms_list = None
-    if gt_segms.enable_tensor_list:
+    if gt_segms.is_tensor_list:
         gt_segms_list = flow.piece_slice(
             gt_segms, cfg.TRAINING_CONF.IMG_PER_GPU, name="piece_slice_gt_segms"
         )
@@ -292,14 +292,14 @@ def distribute_maskrcnn_train(
     Args:
         image: (N, H, W, C)
         image_size: (N, 2)
-        gt_bbox: (N, M, 4), enable_tensor_list
-        gt_segm: (N, M, 28, 28), enable_tensor_list
-        gt_label: (N, M), enable_tensor_list
+        gt_bbox: (N, M, 4), is_tensor_list
+        gt_segm: (N, M, 28, 28), is_tensor_list
+        gt_label: (N, M), is_tensor_list
     """
     assert image.shape[3] == 3
-    assert gt_bbox.enable_tensor_list
-    assert gt_segm.enable_tensor_list
-    assert gt_label.enable_tensor_list
+    assert gt_bbox.is_tensor_list
+    assert gt_segm.is_tensor_list
+    assert gt_label.is_tensor_list
 
     if terminal_args.verbose:
         print(config)

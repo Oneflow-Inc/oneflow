@@ -19,7 +19,7 @@ class PieceSliceOp final : public Operator {
   Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                              const ParallelContext* parallel_ctx) const override {
     const BlobDesc* in = GetBlobDesc4BnInOp(SoleIbn());
-    CHECK_EQ_OR_RETURN(in->enable_tensor_list(), true);
+    CHECK_EQ_OR_RETURN(in->is_tensor_list(), true);
     auto dim_vec = in->shape().dim_vec();
     dim_vec.erase(dim_vec.begin());
     FOR_RANGE(int32_t, i, 0, op_conf().piece_slice_conf().out_size()) {

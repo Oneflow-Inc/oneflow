@@ -36,9 +36,9 @@ class LocalScatterNdUpdateOp final : public Operator {
     const BlobDesc* in = GetBlobDesc4BnInOp("in");
     const BlobDesc* indices = GetBlobDesc4BnInOp("indices");
     const BlobDesc* updates = GetBlobDesc4BnInOp("updates");
-    CHECK_EQ_OR_RETURN(in->enable_tensor_list(), false);
-    CHECK_EQ_OR_RETURN(indices->enable_tensor_list(), false);
-    CHECK_EQ_OR_RETURN(updates->enable_tensor_list(), false);
+    CHECK_EQ_OR_RETURN(in->is_tensor_list(), false);
+    CHECK_EQ_OR_RETURN(indices->is_tensor_list(), false);
+    CHECK_EQ_OR_RETURN(updates->is_tensor_list(), false);
     OF_CHECK_EQ(in->data_type(), updates->data_type());
     OF_CHECK(IsIntegralDataType(indices->data_type()));
 
@@ -62,9 +62,9 @@ class LocalScatterNdUpdateOp final : public Operator {
     const BlobDesc* in = GetBlobDesc4BnInOp("in");
     const BlobDesc* indices = GetBlobDesc4BnInOp("indices");
     const BlobDesc* updates = GetBlobDesc4BnInOp("updates");
-    CHECK_EQ_OR_RETURN(in->enable_tensor_list(), false);
-    CHECK_EQ_OR_RETURN(indices->enable_tensor_list(), false);
-    CHECK_EQ_OR_RETURN(updates->enable_tensor_list(), false);
+    CHECK_EQ_OR_RETURN(in->is_tensor_list(), false);
+    CHECK_EQ_OR_RETURN(indices->is_tensor_list(), false);
+    CHECK_EQ_OR_RETURN(updates->is_tensor_list(), false);
     OF_CHECK_EQ(in->data_type(), updates->data_type());
     OF_CHECK(IsIntegralDataType(indices->data_type()));
 

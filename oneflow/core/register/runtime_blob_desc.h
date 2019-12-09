@@ -18,7 +18,7 @@ class RtBlobDesc final {
 
   const StructPodDesc& header_pod_desc() const { return header_; }
   bool is_body_disabled() const { return is_body_disabled_; }
-  int64_t enable_tensor_list() const { return enable_tensor_list_; }
+  int64_t is_tensor_list() const { return is_tensor_list_; }
   bool is_dynamic() const { return is_dynamic_; }
   bool header_is_opaque() const { return header_is_opaque_; }
 
@@ -40,7 +40,7 @@ class RtBlobDesc final {
 
   TensorPodDesc body_;
   StructPodDesc header_;
-  bool enable_tensor_list_;
+  bool is_tensor_list_;
   bool is_body_disabled_;
   bool is_dynamic_;
   bool header_is_opaque_;

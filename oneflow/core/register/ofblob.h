@@ -19,7 +19,7 @@ class OfBlob final {
 
   int data_type() const { return blob_->data_type(); }
   size_t NumAxes() const { return blob_->shape().NumAxes(); }
-  size_t enable_tensor_list() const { return blob_->blob_desc().enable_tensor_list(); }
+  size_t is_tensor_list() const { return blob_->blob_desc().is_tensor_list(); }
   bool is_dynamic() const { return blob_->blob_desc().is_dynamic(); }
   void CopyShapeTo(int64_t* ptr, int64_t num_axis) const;
   void CopyShapeFrom(const int64_t* ptr, int64_t num_axis) const;

@@ -240,7 +240,7 @@ void Operator::GenKernelConf(
       kernel_conf->set_need_do_dense_shape(true);
     }
     if (HasBlobDescWithField(GetBlobDesc4BnInOp, output_bns(), [](const BlobDesc* blob_desc) {
-          return blob_desc->enable_tensor_list();
+          return blob_desc->is_tensor_list();
         })) {
       kernel_conf->set_need_do_tensor_list(true);
     }

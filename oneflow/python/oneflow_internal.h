@@ -95,10 +95,10 @@ bool OfBlob_IsDynamic(uint64_t of_blob_ptr) {
   return of_blob->is_dynamic();
 }
 
-bool OfBlob_EnableTensorList(uint64_t of_blob_ptr) {
+bool OfBlob_IsTensorList(uint64_t of_blob_ptr) {
   using namespace oneflow;
   auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
-  return of_blob->enable_tensor_list();
+  return of_blob->is_tensor_list();
 }
 
 long OfBlob_TotalNumOfTensors(uint64_t of_blob_ptr) {

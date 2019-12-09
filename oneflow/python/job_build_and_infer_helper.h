@@ -88,10 +88,9 @@ Maybe<bool> JobBuildAndInferCtx_DisableBoxing(const std::string& job_name, const
   return ctx->DisableBoxing(lbn);
 }
 
-Maybe<bool> JobBuildAndInferCtx_EnableTensorList(const std::string& job_name,
-                                                 const std::string& lbn) {
+Maybe<bool> JobBuildAndInferCtx_IsTensorList(const std::string& job_name, const std::string& lbn) {
   auto* ctx = JUST(Global<JobBuildAndInferCtxMgr>::Get()->FindJobBuildAndInferCtx(job_name));
-  return ctx->EnableTensorList(lbn);
+  return ctx->IsTensorList(lbn);
 }
 
 Maybe<std::string> JobBuildAndInferCtx_GetBatchAxis(const std::string& job_name,
