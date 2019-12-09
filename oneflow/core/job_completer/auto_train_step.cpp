@@ -15,6 +15,22 @@ void AutoTrainStep(const OpGraph& op_graph, Job* job) {
   variable_conf->mutable_split_axis()->clear_value();
   variable_conf->mutable_initializer()->mutable_constant_int_conf()->set_value(0);
 
+  const bool has_snapshot_path =
+      job->job_conf().has_default_initialize_with_snapshot_path();
+  std::string file_path = "";
+  if (has_snapshot_path) {
+    file_path = JoinPath(job->job_conf().default_initialize_with_snapshot_path(),
+                         train_step_name, "out");
+  }
+  if (has_snapshot_path && SnapshotFS()->FileExists(file_path)) {
+    variable_conf->mutable_initialize_with_snapshot()->set_path(
+        JoinPath(job->job_conf().default_initialize_with_snapshot_path(), train_step_name));
+    variable_conf->mutable_initialize_with_snapshot()->set_key("out");
+  } else {
+    if (has_snapshot_path) { LOG(INFO) << file_path << " not found, will be initialized"; }
+    variable_conf->mutable_initializer()->mutable_constant_int_conf()->set_value(0);
+  }
+
   OperatorConf identity_op_conf{};
   identity_op_conf.set_name(train_step_name + "-Identity");
   IdentityOpConf* identity_conf = identity_op_conf.mutable_identity_conf();
