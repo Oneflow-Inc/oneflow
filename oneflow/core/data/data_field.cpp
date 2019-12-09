@@ -132,9 +132,15 @@ std::unique_ptr<DataField> CreateDataFieldFromProto(const DataFieldProto& proto)
       data_field_ptr.reset(new ImageDataField());
       break;
     }
+    case DataSourceCase::kImageId: {
+      data_field_ptr.reset(new TensorDataField<int64_t>());
+      break;
+    }
     case DataSourceCase::kLabel:
-    case DataSourceCase::kImageId:
-    case DataSourceCase::kImageSize:
+    case DataSourceCase::kImageSize: {
+      data_field_ptr.reset(new TensorDataField<int32_t>());
+      break;
+    }
     case DataSourceCase::kImageScale: {
       data_field_ptr.reset(new TensorDataField<float>());
       break;
@@ -144,8 +150,16 @@ std::unique_ptr<DataField> CreateDataFieldFromProto(const DataFieldProto& proto)
       data_field_ptr.reset(new LoDDataField<double>(max_elem_cnt));
       break;
     }
-    case DataSourceCase::kObjectLabel:
-    case DataSourceCase::kObjectBoundingBox:
+    case DataSourceCase::kObjectLabel: {
+      int64_t max_elem_cnt = Shape(proto.shape()).elem_cnt();
+      data_field_ptr.reset(new TensorListDataField<int32_t>(max_elem_cnt));
+      break;
+    }
+    case DataSourceCase::kObjectBoundingBox: {
+      int64_t max_elem_cnt = Shape(proto.shape()).elem_cnt();
+      data_field_ptr.reset(new TensorListDataField<float>(max_elem_cnt));
+      break;
+    }
     case DataSourceCase::kObjectSegmentationAlignedMask: {
       int64_t max_elem_cnt = Shape(proto.shape()).elem_cnt();
       data_field_ptr.reset(new TensorListDataField<int8_t>(max_elem_cnt));

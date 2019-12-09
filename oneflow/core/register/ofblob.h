@@ -31,14 +31,14 @@ class OfBlob final {
 
   void ResetTensorIterator();
   void IncTensorIterator();
-  bool CurTensorIteratorEqEnd() const { return !cur_tensor_; }
+  bool CurTensorIteratorEqEnd() const { return blob_->IsEndTensor(*cur_tensor_); }
   void CurTensorCopyShapeTo(int64_t* ptr, int64_t num_axis) const;
   template<typename T>
   void CurTensorAutoMemCopyTo(T* ptr, int64_t len) const;
 
   void ClearTensorLists();
   void AddTensor();
-  bool CurMutTensorIsNull() const { return !cur_mut_tensor_; }
+  bool CurMutTensorIsNull() const { return blob_->OutOfMemory(*cur_mut_tensor_); }
   void CurMutTensorCopyShapeFrom(const int64_t* ptr, int64_t num_axis) const;
   template<typename T>
   void CurMutTensorAutoMemCopyFrom(const T* ptr, int64_t len) const;
@@ -79,16 +79,17 @@ inline int64_t OfBlob::TensorIndex4SliceId(int32_t slice_id) const {
 
 inline void OfBlob::AddTensorListSlice() const { return blob_->add_tensor_list_slice(); }
 
-inline void OfBlob::ResetTensorIterator() { cur_tensor_ = blob_->first_tensor(); }
-
-inline void OfBlob::ClearTensorLists() {
-  blob_->clear_tensor_lists();
-  cur_mut_tensor_.reset();
+inline void OfBlob::ResetTensorIterator() {
+  cur_tensor_.reset(new TensorView(blob_->BeginTensor()));
 }
 
-inline void OfBlob::AddTensor() { cur_mut_tensor_ = blob_->add_tensor(cur_mut_tensor_.get()); }
+inline void OfBlob::ClearTensorLists() {
+  cur_mut_tensor_.reset(new FullyMutTensorView(blob_->clear_tensor_lists()));
+}
 
-inline void OfBlob::IncTensorIterator() { cur_tensor_ = blob_->next_tensor(*cur_tensor_); }
+inline void OfBlob::AddTensor() { blob_->AddTensor(cur_mut_tensor_.get()); }
+
+inline void OfBlob::IncTensorIterator() { blob_->MoveToNextTensor(cur_tensor_.get()); }
 
 inline void OfBlob::CurTensorCopyShapeTo(int64_t* ptr, int64_t num_axis) const {
   CHECK_EQ(num_axis, NumAxes());

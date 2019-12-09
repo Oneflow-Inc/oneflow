@@ -77,19 +77,21 @@ void BlobDesc::ToProto(BlobDescProto* proto) const {
   } else {
     StructPodDesc header;
     int64_t dense_shape_num_axes = shape().NumAxes();
-    header.AddField(FieldKey::kDenseShapeListLength,
+    header.AddField(FieldKey::kTensorListLength,
                     TensorPodDesc(Shape(DimVector{1LL}), DataType::kInt64));
-    header.AddField(FieldKey::kShapeListSlicesLength,
+    header.AddField(FieldKey::kTensorListSlicesLength,
+                    TensorPodDesc(Shape(DimVector{1LL}), DataType::kInt64));
+    header.AddField(FieldKey::kLastTensorDataOffset,
                     TensorPodDesc(Shape(DimVector{1LL}), DataType::kInt64));
     int64_t shape_list_size = 1;
-    if (shape().NumAxes() > 0) {
+    if (enable_tensor_list_ && shape().NumAxes() > 0) {
       int32_t batch_axis = 0;  // TODO: batch_axis isn't always 0
       shape_list_size = shape().At(batch_axis);
     }
     header.AddField(
-        FieldKey::kDenseShape,
+        FieldKey::kTensorShapeList,
         TensorPodDesc(Shape(DimVector{shape_list_size * dense_shape_num_axes}), DataType::kInt64));
-    header.AddField(FieldKey::kShapeListSlices,
+    header.AddField(FieldKey::kTensorListSlices,
                     TensorPodDesc(Shape(DimVector{shape_list_size}), DataType::kInt64));
     header.ToProto(proto->mutable_header());
     proto->set_header_is_opaque(false);

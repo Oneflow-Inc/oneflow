@@ -24,16 +24,19 @@ class Blob final {
 
   // tensor view for blob
   const TensorView& sole_tensor() const;
-  DataOnlyMutTensorView* sole_mut_tensor();
+  const DataOnlyMutTensorView& sole_mut_tensor();
 
   // [tensor] view for blob
   size_t total_num_of_tensors() const;
-  std::unique_ptr<TensorView> first_tensor() const;
-  std::unique_ptr<TensorView> next_tensor(const TensorView& last) const;
-  std::unique_ptr<DataOnlyMutTensorView> first_mut_tensor();
-  std::unique_ptr<DataOnlyMutTensorView> next_mut_tensor(const DataOnlyMutTensorView& last);
-  std::unique_ptr<FullyMutTensorView> add_tensor(const FullyMutTensorView* last);
-  void reserve_one_empty_tensor_list();
+  const TensorView& BeginTensor() const { return *begin_tensor_; }
+  const DataOnlyMutTensorView& BeginMutTensor() { return *begin_mut_tensor_; }
+  void MoveToNextTensor(TensorView* last) const;
+  void MoveToNextMutTensor(DataOnlyMutTensorView* last);
+  bool IsEndTensor(const TensorView& tensor) const;
+  bool IsEndTensor(const DataOnlyMutTensorView& tensor) const;
+  FullyMutTensorView ReserveOneEmptyTensorList();  // return value usually for AddTensor
+  void AddTensor(FullyMutTensorView* tensor);
+  bool OutOfMemory(const FullyMutTensorView& tensor) const;
 
   // tensor list slice
   size_t num_of_tensor_list_slices() const;
@@ -41,9 +44,7 @@ class Blob final {
   void add_tensor_list_slice();
 
   // [[tensor]] view for blob
-  std::unique_ptr<TensorListView> tensor_list(int32_t slice_id) const;
-  std::unique_ptr<MutTensorListView> mut_tensor_list(int32_t slice_id);
-  void clear_tensor_lists();
+  FullyMutTensorView clear_tensor_lists();  // return value usually for AddTensor
 
   DataType data_type() const { return blob_desc_->data_type(); }
   const char* header_ptr() const { return header_ptr_->ptr(); }
@@ -82,21 +83,30 @@ class Blob final {
  private:
   void Init(const MemoryCase& mem_case, const RtBlobDesc* blob_desc, char* header_ptr,
             char* body_ptr);
-  const Shape& header_field_shape(FieldKey field_key) const;
-  const int64_t* header_field(FieldKey field_key) const;
-  int64_t* mut_header_field(FieldKey field_key);
-  void GetTensorListSliceRange(int32_t slice_id, Range* range) const;
-  void GetTensorListInfoBySliceId(int32_t slice_id, Range* range, int64_t* shape_offset,
-                                  int64_t* data_offset) const;
+  template<FieldKey key>
+  const int64_t* header_field() const {
+    return header_fields_[key];
+  }
+  template<FieldKey key>
+  int64_t* mut_header_field() {
+    return header_fields_[key];
+  }
+  template<FieldKey key>
+  size_t header_field_capacity() const {
+    return header_field_capacities_[key];
+  }
+  size_t GetEndTensorDataOffset() const;
 
   MemoryCase mem_case_;
   const RtBlobDesc* blob_desc_;
   void* dptr_;
+  int64_t* header_fields_[FieldKey::kFieldKeySize];
+  size_t header_field_capacities_[FieldKey::kFieldKeySize];
   std::unique_ptr<DenseShapeView> dense_shape_view_;
   std::unique_ptr<DenseShapeMutView> dense_shape_mut_view_;
   std::unique_ptr<PodPtr> header_ptr_;
-  std::unique_ptr<TensorView> sole_tensor_;
-  std::unique_ptr<DataOnlyMutTensorView> sole_mut_tensor_;
+  std::unique_ptr<TensorView> begin_tensor_;
+  std::unique_ptr<DataOnlyMutTensorView> begin_mut_tensor_;
   // TODO(); remove this ugly code
   int32_t record_num_;
 };

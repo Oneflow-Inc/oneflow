@@ -20,16 +20,15 @@ class PieceSliceKernel final : public KernelIf<device_type> {
     CHECK_EQ(in_blob->blob_desc().enable_tensor_list(), true);
     const int32_t out_size = this->op_conf().piece_slice_conf().out_size();
     CHECK_EQ(in_blob->total_num_of_tensors(), out_size);
-    auto in_tensor = in_blob->first_tensor();
-    std::unique_ptr<FullyMutTensorView> out_tensor;
+    auto in_tensor = in_blob->BeginTensor();
     FOR_RANGE(size_t, i, 0, out_size) {
       Blob* out_blob = BnInOp2Blob("out_" + std::to_string(i));
-      out_blob->reserve_one_empty_tensor_list();
-      out_tensor = out_blob->add_tensor(out_tensor.get());
-      out_tensor->set_shape(in_tensor->shape());
-      Memcpy<device_type>(ctx.device_ctx, out_tensor->mut_dptr(), in_tensor->dptr(),
-                          in_tensor->ByteSize());
-      in_tensor = in_blob->next_tensor(*in_tensor);
+      auto out_tensor = out_blob->ReserveOneEmptyTensorList();
+      out_blob->AddTensor(&out_tensor);
+      out_tensor.set_shape(in_tensor.shape());
+      Memcpy<device_type>(ctx.device_ctx, out_tensor.mut_dptr(), in_tensor.dptr(),
+                          in_tensor.ByteSize());
+      in_blob->MoveToNextTensor(&in_tensor);
     }
   }
 };
