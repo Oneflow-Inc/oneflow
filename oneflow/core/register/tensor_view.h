@@ -32,7 +32,7 @@ class TensorViewBase {
  protected:
   TensorViewBase(const TensorViewBase&) = default;
   TensorViewBase(const Blob* blob, typename ShapeViewType::DimType* shape_ptr, ByteType* dptr)
-      : shape_(shape_ptr, NumAxes4Blob(blob)), dptr_(dptr) {}
+      : blob_(blob), shape_(shape_ptr, NumAxes4Blob(blob)), dptr_(dptr) {}
   ~TensorViewBase() = default;
 
   const Blob* blob() const { return blob_; }
