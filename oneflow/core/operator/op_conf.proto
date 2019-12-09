@@ -440,6 +440,7 @@ message CopyHdOpConf {
     D2H = 1;
   }
   required Type type = 1;
+  optional LogicalBlobId lbi = 2;
 }
 
 message BoxConcatConf {
