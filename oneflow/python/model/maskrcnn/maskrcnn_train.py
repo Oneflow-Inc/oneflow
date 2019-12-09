@@ -794,10 +794,11 @@ if __name__ == "__main__":
                     print(fmt.format(i, elapsed_time_str, *loss_per_batch))
                     loss_per_batch.append(i)
                     losses_hisogram.append(loss_per_batch)
-                if (terminal_args.save_loss_npy_every_n_batch  > 0 and (i + 1) % terminal_args.save_loss_npy_every_n_batch == 0) or i + 1 == terminal_args.iter_num:
-                    npy_file_name = "loss-{}-batch_size-{}-gpu-{}-image_dir-{}-{}".format(i, terminal_args.batch_size, terminal_args.gpu_num_per_node, terminal_args.image_dir ,str(datetime.now().strftime("%Y-%m-%d--%H-%M-%S")))
-                    np.save(npy_file_name, np.array(losses_hisogram))
-                    print("saved: {}.npy".format(npy_file_name))
+                if terminal_args.save_loss_npy_every_n_batch  > 0 :
+                    if (i + 1) % terminal_args.save_loss_npy_every_n_batch == 0 or i + 1 == terminal_args.iter_num:
+                        npy_file_name = "loss-{}-batch_size-{}-gpu-{}-image_dir-{}-{}".format(i, terminal_args.batch_size, terminal_args.gpu_num_per_node, terminal_args.image_dir ,str(datetime.now().strftime("%Y-%m-%d--%H-%M-%S")))
+                        np.save(npy_file_name, np.array(losses_hisogram))
+                        print("saved: {}.npy".format(npy_file_name))
                 save_blob_watched(i)
 
             print(
