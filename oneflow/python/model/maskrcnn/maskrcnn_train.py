@@ -513,6 +513,7 @@ if terminal_args.train_with_real_dataset:
             random_seed,
             shuffle,
             group_by_aspect_ratio,
+            max_segm_poly_points=1024 * 1024,
         )
         data_loader = flow.data.DataLoader(coco, batch_size, batch_cache_size)
         data_loader.add_blob(
@@ -544,6 +545,14 @@ if terminal_args.train_with_real_dataset:
             tensor_list_variable_axis=0,
             is_dynamic=True,
         )
+#        data_loader.add_blob(
+#            "gt_segm_poly",
+#            data_util.DataSourceCase.kObjectSegmentation,
+#            shape=(64, 2, 256, 2),
+#            dtype=flow.double,
+#            tensor_list_variable_axis=0,
+#            is_dynamic=True,
+#        )
         data_loader.add_blob(
             "gt_segm",
             data_util.DataSourceCase.kObjectSegmentationAlignedMask,

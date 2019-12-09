@@ -25,7 +25,10 @@ class PieceSliceKernel final : public KernelIf<device_type> {
       Blob* out_blob = BnInOp2Blob("out_" + std::to_string(i));
       auto out_tensor = out_blob->ReserveOneEmptyTensorList();
       out_blob->AddTensor(&out_tensor);
-      out_tensor.set_shape(in_tensor.shape());
+      DimVector dim_vec;
+      in_tensor.shape().ToDimVector(&dim_vec);
+      dim_vec.erase(dim_vec.begin());
+      out_tensor.set_shape(Shape(dim_vec));
       Memcpy<device_type>(ctx.device_ctx, out_tensor.mut_dptr(), in_tensor.dptr(),
                           in_tensor.ByteSize());
       in_blob->MoveToNextTensor(&in_tensor);
