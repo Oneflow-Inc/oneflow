@@ -14,8 +14,8 @@ class RtBlobDesc {
   RtBlobDesc() = delete;
   ~RtBlobDesc() = default;
 
-  RtBlobDesc(const BlobDesc& blob_desc);
-  RtBlobDesc(const BlobDescProto& blob_desc_proto);
+  explicit RtBlobDesc(const BlobDesc& blob_desc);
+  explicit RtBlobDesc(const BlobDescProto& blob_desc_proto);
 
   const BlobDescProto& blob_desc_proto() const { return blob_desc_proto_; }
   const Shape& shape() const;  // body shape
@@ -55,6 +55,9 @@ class RtBlobDesc {
   FieldDesc body_desc_;
   StructPodDesc header_pod_desc_;
   std::unique_ptr<Shape> dim0_inner_shape_;
+  bool has_dim0_valid_num_field_ = false;
+  size_t byte_size_of_dim0_valid_num_field_ = 0;
+  size_t byte_size_of_data_content_field_ = 0;
 };
 
 }  // namespace oneflow
