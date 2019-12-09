@@ -140,12 +140,11 @@ void COCODataset::GetData(int64_t idx, DataInstance* data_inst) const {
   auto* image_size_field = data_inst->GetField<DataSourceCase::kImageSize>();
   auto* bbox_field = data_inst->GetField<DataSourceCase::kObjectBoundingBox>();
   auto* label_field = data_inst->GetField<DataSourceCase::kObjectLabel>();
-  DataField* segm_field = nullptr;
-  if (data_inst->HasField<DataSourceCase::kObjectSegmentationAlignedMask>()) {
+  DataField* segm_field = data_inst->GetField<DataSourceCase::kObjectSegmentation>();
+  if (segm_field == nullptr
+      && data_inst->HasField<DataSourceCase::kObjectSegmentationAlignedMask>()) {
     segm_field = data_inst->GetOrCreateField<DataSourceCase::kObjectSegmentation>(
         dataset_proto().coco().max_segm_poly_points());
-  } else {
-    segm_field = data_inst->GetField<DataSourceCase::kObjectSegmentation>();
   }
   auto* bbox_list = dynamic_cast<TensorListDataField<float>*>(bbox_field);
   if (bbox_list != nullptr) { bbox_list->SetShape(4); }
