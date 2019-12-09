@@ -3,6 +3,7 @@ from config import get_default_cfgs
 
 import os
 import numpy as np
+import pandas as pd
 import argparse
 import time
 import statistics
@@ -374,7 +375,7 @@ def distribute_maskrcnn_train(
     #     diff_blob_watcher=MakeWatcherCallback("backward"),
     # ):
     # Box Head
-    box_loss, cls_loss, pos_proposal_list, pos_gt_indices_list = box_head.build_train(
+    box_loss, cls_loss, pos_proposal_list, pos_gt_indices_list, total_pos_inds_elem_cnt = box_head.build_train(
         proposals, gt_bbox_list, gt_label_list, features
     )
 
@@ -387,7 +388,7 @@ def distribute_maskrcnn_train(
         features,
     )
 
-    return rpn_bbox_loss, rpn_objectness_loss, box_loss, cls_loss, mask_loss
+    return rpn_bbox_loss, rpn_objectness_loss, box_loss, cls_loss, mask_loss, total_pos_inds_elem_cnt
 
 
 def MakeWatcherCallback(prompt):
@@ -611,7 +612,7 @@ if terminal_args.train_with_real_dataset:
                 data_loader("gt_labels"),
             )
             for losses_per_device in outputs:
-                for loss in losses_per_device:
+                for loss in losses_per_device[:5]:
                     flow.losses.add_loss(loss)
 
             return tuple(map(list, zip(*outputs)))
@@ -744,7 +745,7 @@ if __name__ == "__main__":
                     )
                 )
 
-            losses_hisogram = []
+            metrics = pd.DataFrame()
             start_time = time.time()
             elapsed_times = []
             for i in range(terminal_args.iter_num):
@@ -792,42 +793,32 @@ if __name__ == "__main__":
 
                     fmt = "{:<8} {:<16} " + "{:<16.10f} " * len(loss_per_batch)
                     print(fmt.format(i, elapsed_time_str, *loss_per_batch))
+                    
+                    df = pd.DataFrame(
+                        [
+                            {"iter": i, "legend": "elapsed_time", "value": elapsed_time},
+                            {"iter": i, "legend": "loss_rpn_box_reg", "value": loss_per_batch[0]},
+                            {"iter": i, "legend": "loss_objectness", "value": loss_per_batch[1]},
+                            {"iter": i, "legend": "loss_box_reg", "value": loss_per_batch[2]},
+                            {"iter": i, "legend": "loss_classifier", "value": loss_per_batch[3]},
+                            {"iter": i, "legend": "loss_mask", "value": loss_per_batch[4]},
+                            {
+                                "iter": i,
+                                "legend": "total_pos_inds_elem_cnt",
+                                "value": loss_per_batch[5],
+                            },
+                        ]
+                    )
+                    metrics = pd.concat([metrics, df], axis=0)
                     loss_per_batch.append(i)
-                    losses_hisogram.append(loss_per_batch)
                 if terminal_args.save_loss_npy_every_n_batch  > 0 :
                     if (i + 1) % terminal_args.save_loss_npy_every_n_batch == 0 or i + 1 == terminal_args.iter_num:
-                        npy_file_name = "loss-{}-batch_size-{}-gpu-{}-image_dir-{}-{}".format(i, terminal_args.batch_size, terminal_args.gpu_num_per_node, terminal_args.image_dir ,str(datetime.now().strftime("%Y-%m-%d--%H-%M-%S")))
-                        np.save(npy_file_name, np.array(losses_hisogram))
-                        print("saved: {}.npy".format(npy_file_name))
+                        npy_file_name = "loss-{}-batch_size-{}-gpu-{}-image_dir-{}-{}.csv".format(i, terminal_args.batch_size, terminal_args.gpu_num_per_node, terminal_args.image_dir ,str(datetime.now().strftime("%Y-%m-%d--%H-%M-%S")))
+                        metrics.to_csv(npy_file_name, index=False)
+                        print("saved: {}".format(npy_file_name))
                 save_blob_watched(i)
 
             print(
                 "median of elapsed time per batch:",
                 statistics.median(elapsed_times),
             )
-            
-            if terminal_args.jupyter:
-                import altair as alt
-                import pandas as pd
-
-                columns = [
-                    "loss_rpn_box_reg",
-                    "loss_objectness",
-                    "loss_box_reg",
-                    "loss_classifier",
-                    "loss_mask",
-                ]
-                for column_index, column_name in enumerate(columns):
-                    loss_data_frame = pd.DataFrame(
-                        np.array(losses_hisogram)[:, [column_index, -1]],
-                        columns=[column_name, "iter"],
-                    )
-
-                    base = (
-                        alt.Chart(loss_data_frame)
-                        .mark_line()
-                        .encode(x="petalLength", y="petalWidth")
-                    )
-                    chart = base.mark_line().encode(x="iter", y=column_name)
-
-                    chart.display()
