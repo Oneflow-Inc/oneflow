@@ -1,8 +1,7 @@
-#include "NvInferRuntimeCommon.h"
-#include "oneflow/core/operator/op_conf.pb.h"
+#include "NvInferRuntimeCommon.h"  // nvinfer1::ActivationType
+
 #include "oneflow/xrt/tensorrt/ops/op_context.h"
 #include "oneflow/xrt/tensorrt/ops/op_kernel.h"
-#include "oneflow/xrt/tensorrt/trt_logger.h"
 
 namespace oneflow {
 namespace xrt {

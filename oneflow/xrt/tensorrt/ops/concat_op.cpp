@@ -1,7 +1,6 @@
+#include "absl/strings/str_cat.h"
 #include "oneflow/xrt/tensorrt/ops/op_context.h"
 #include "oneflow/xrt/tensorrt/ops/op_kernel.h"
-
-#include "absl/strings/str_cat.h"
 
 namespace oneflow {
 namespace xrt {
@@ -10,9 +9,9 @@ namespace tensorrt {
 class ConcatOp : public TrtOpKernel {
  public:
   void Compile(TrtOpContext *ctx) override {
+    int num_inputs = ctx->num_inputs();
+    CHECK_GE(num_inputs, 2) << "Concat needs 2 inputs at least.";
     Shape in_shape = ctx->InputShape("in_0");
-    std::vector<nvinfer1::ITensor *> in;
-
     int32_t axis = ctx->GetAttr<int32_t>("axis");
     if (axis < 0) {
       axis += in_shape.NumAxes();
@@ -20,10 +19,9 @@ class ConcatOp : public TrtOpKernel {
     CHECK_GE(axis, 0);
     CHECK_LT(axis, in_shape.NumAxes());
 
-    int num_inputs = ctx->num_inputs();
+    std::vector<nvinfer1::ITensor *> in(num_inputs);
     for (int i = 0; i < num_inputs; ++i) {
-      std::string name = absl::StrCat("in_", i);
-      in.push_back(ctx->Input(name));
+      in[i] = ctx->Input(absl::StrCat("in_", i));
     }
     auto *layer = ctx->builder()->addConcatenation(in.data(), num_inputs);
     layer->setAxis(axis);

@@ -36,13 +36,10 @@ class TestIdentity(unittest.TestCase):
         b = f2(x).get()
         c = f3(x).get()
         print("without xla: ", a)
-        print("with xla", b)
-        print("with tensorrt", c)
+        print("with xla: ", b)
+        print("with tensorrt: ", c)
         self.assertTrue(np.allclose(a, b , rtol=1e-03, atol=1e-05))
         self.assertTrue(np.allclose(a, c , rtol=1e-03, atol=1e-05))
-        # b = trt_identity_job(x).get()
-        # print("with tensorrt", b)
-        # self.assertTrue(np.allclose(a, b , rtol=1e-03, atol=1e-05))
         flow.clear_default_session()
 
     def _test_ones_body(self, shape, dtype=np.float32):
