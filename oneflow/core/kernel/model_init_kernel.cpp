@@ -52,10 +52,12 @@ class ModelInitKernel final : public KernelIf<DeviceType::kCPU> {
       const std::string& var_lbn =
           GenLogicalBlobName(conf.variable_op_name(i), original_variable_conf.out());
       if (original_variable_conf.has_initializer()) {
+        LOG(INFO) << "init " << conf.variable_op_name(i);
         InitializeWithConfUtil::SwitchInitializeWithConf(SwitchCase(out_i->data_type()),
                                                          original_variable_conf.initializer(),
                                                          random_seed_gen(), out_i);
       } else if (original_variable_conf.has_initialize_with_snapshot()) {
+        LOG(INFO) << "load " << conf.variable_op_name(i);
         const std::string key = original_variable_conf.initialize_with_snapshot().has_key()
                                     ? original_variable_conf.initialize_with_snapshot().key()
                                     : var_lbn;
