@@ -2,6 +2,33 @@
 
 namespace oneflow {
 namespace data {
+namespace {
+
+// eop: epoch offset pair
+using eop_cache_func_t = std::function<void(size_t, size_t)>;
+using eop_iscached_func_t = std::function<bool(size_t, size_t)>;
+
+std::pair<eop_cache_func_t, eop_iscached_func_t> MakeEpochOffsetPairCacheFunctions() {
+  using eop_t = std::pair<size_t, size_t>;
+  static thread_local HashSet<eop_t> epoch_offset_pair_set;
+
+  auto Cache = [&](size_t epoch, size_t offset) {
+    CHECK(epoch_offset_pair_set.insert({epoch, offset}).second);
+  };
+
+  auto IsCachedAndTryClear = [&](size_t epoch, size_t offset) {
+    auto it = epoch_offset_pair_set.find({epoch, offset});
+    if (it != epoch_offset_pair_set.end()) {
+      epoch_offset_pair_set.erase(it);
+      return true;
+    }
+    return false;
+  };
+
+  return {Cache, IsCachedAndTryClear};
+}
+
+}  // namespace
 
 DataSampler::DataSampler(Dataset* dataset)
     : dataset_(dataset), max_count_(0), gen_(dataset->dataset_proto().random_seed()) {}
@@ -50,14 +77,14 @@ std::vector<int64_t> DataSampler::FetchBatchIndexSequence(DataSamplerContext* ct
   std::vector<int64_t> batch_index_seq(batch_size);
   size_t i = 0;
   while (i < batch_size) {
-    if (ctx->iter_ >= dataset()->Size()) {
+    if (ctx->offset_ >= dataset()->Size()) {
       CheckIndexSequenceRanOut(ctx);
       ctx->epoch_ += 1;
-      ctx->iter_ %= dataset()->Size();
+      ctx->offset_ %= dataset()->Size();
       ctx->count_ = 0;
     }
-    batch_index_seq[i] = AcquireGetOrGenEpochIndexSequence(ctx->epoch_).at(ctx->iter_);
-    ctx->iter_ += ctx->num_replicas_;
+    batch_index_seq[i] = AcquireGetOrGenEpochIndexSequence(ctx->epoch_).at(ctx->offset_);
+    ctx->offset_ += ctx->num_replicas_;
     ctx->count_ += 1;
     i += 1;
   }
@@ -71,41 +98,51 @@ GroupedDataSampler::GroupedDataSampler(Dataset* dataset)
 
 std::vector<int64_t> GroupedDataSampler::FetchBatchIndexSequence(DataSamplerContext* ctx,
                                                                  size_t batch_size) {
+  std::function<void(size_t, size_t)> CacheFetched;
+  std::function<bool(size_t, size_t)> IsFetched;
+  std::tie(CacheFetched, IsFetched) = MakeEpochOffsetPairCacheFunctions();
+
   std::vector<int64_t> seq(batch_size);
   size_t fetch_count = 0;
-  bool skip_happened = false;
-  int64_t group_id = -1;
-  size_t iter = ctx->iter_;
+  size_t offset = ctx->offset_;
   size_t epoch = ctx->epoch_;
-  // fetch indices
+  int64_t first_group_id = -1;
+  bool skip_happened = false;
+
   while (fetch_count < batch_size) {
-    if (iter >= dataset()->Size()) {
-      epoch += 1;
-      iter %= dataset()->Size();
-    }
-    // stop updating ctx that once skip happened
-    if (!skip_happened) {
-      if (ctx->epoch_ == epoch) {
-        ctx->count_ += 1;
+    bool is_feteched = IsFetched(epoch, offset);
+    if (!is_feteched) {
+      int64_t index = AcquireGetOrGenEpochIndexSequence(epoch).at(offset);
+      int64_t group_id = group_ids_.at(index);
+      if (first_group_id == -1) { first_group_id = group_id; }
+      if (first_group_id == group_id) {
+        seq.at(fetch_count) = index;
+        fetch_count += 1;
+        is_feteched = true;
+        if (skip_happened) { CacheFetched(epoch, offset); }
       } else {
-        CheckIndexSequenceRanOut(ctx);
-        ctx->epoch_ = epoch;
-        ctx->count_ = 0;
+        skip_happened = true;
       }
-      ctx->iter_ = iter;
     }
-    int64_t index = AcquireGetOrGenEpochIndexSequence(epoch).at(iter);
-    if (group_id == -1) { group_id = group_ids_.at(index); }
-    if (group_id == group_ids_.at(index)) {
-      // fetch index with the same group_id
-      seq.at(fetch_count) = index;
-      fetch_count += 1;
-    } else {
-      // record skip happened
-      skip_happened = true;
+
+    if (is_feteched && !skip_happened) {
+      ctx->count_ += 1;
+      ctx->offset_ += ctx->num_replicas_;
+      if (ctx->offset_ >= dataset()->Size()) {
+        CheckIndexSequenceRanOut(ctx);
+        ctx->count_ = 0;
+        ctx->offset_ %= dataset()->Size();
+        ctx->epoch_ += 1;
+      }
     }
-    iter += ctx->num_replicas_;
+
+    offset += ctx->num_replicas_;
+    if (offset >= dataset()->Size()) {
+      epoch += 1;
+      offset %= dataset()->Size();
+    }
   }
+
   return seq;
 }
 

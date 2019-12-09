@@ -35,11 +35,11 @@ def get_variable(
         root_path = compile_context.cur_job_conf.default_initialize_with_snapshot_path
         dir_path = os.path.join(root_path, name)
         file_path = os.path.join(dir_path, "out")
-        if root_path is not None and os.path.isfile(file_path):
+        if root_path and os.path.isfile(file_path):
             op_conf.variable_conf.initialize_with_snapshot.path = dir_path
             op_conf.variable_conf.initialize_with_snapshot.key = "out"
         else:
-            if root_path is not None:
+            if root_path:
                 print("{} not found, will be initialized".format(file_path))
             if initializer is not None:
                 op_conf.variable_conf.initializer.CopyFrom(initializer)
