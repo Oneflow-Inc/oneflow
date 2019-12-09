@@ -17,7 +17,7 @@ class PieceSliceKernel final : public KernelIf<device_type> {
   void ForwardDataContent(const KernelCtx& ctx,
                           std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
     const Blob* in_blob = BnInOp2Blob("in");
-    CHECK_EQ(in_blob->blob_desc().enable_tensor_list(), true);
+    CHECK_EQ(in_blob->blob_desc().is_tensor_list(), true);
     const int32_t out_size = this->op_conf().piece_slice_conf().out_size();
     CHECK_EQ(in_blob->total_num_of_tensors(), out_size);
     auto in_tensor = in_blob->BeginTensor();

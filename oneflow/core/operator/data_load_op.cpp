@@ -83,7 +83,7 @@ Maybe<void> DataLoadOp::InferBlobDescsWithBatchSize(
     out_blob_desc->set_data_type(blob_conf.data_type());
     out_blob_desc->set_is_dynamic(blob_conf.is_dynamic()
                                   || blob_conf.has_tensor_list_variable_axis());
-    out_blob_desc->set_enable_tensor_list(blob_conf.has_tensor_list_variable_axis());
+    out_blob_desc->set_is_tensor_list(blob_conf.has_tensor_list_variable_axis());
   }
   return Maybe<void>::Ok();
 }

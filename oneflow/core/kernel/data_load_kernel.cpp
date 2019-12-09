@@ -32,7 +32,7 @@ void DataLoadKernel::WriteDataToBlob(DeviceCtx* ctx,
                                      std::shared_ptr<std::vector<data::DataInstance>> batch_data,
                                      const BlobConf& blob_conf, Blob* blob) const {
   using namespace data;
-  CHECK(blob_conf.has_tensor_list_variable_axis() == blob->blob_desc().enable_tensor_list());
+  CHECK(blob_conf.has_tensor_list_variable_axis() == blob->blob_desc().is_tensor_list());
   OptInt64 var_axis;
   InitOptVariableAxis(blob_conf, &var_axis);
   char* dptr = static_cast<char*>(blob->mut_dptr());

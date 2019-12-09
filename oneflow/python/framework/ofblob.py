@@ -33,8 +33,8 @@ class OfBlob(object):
         return oneflow_api.OfBlob_IsDynamic(self.of_blob_ptr_)
     
     @property
-    def enable_tensor_list(self):
-        return oneflow_api.OfBlob_EnableTensorList(self.of_blob_ptr_)
+    def is_tensor_list(self):
+        return oneflow_api.OfBlob_IsTensorList(self.of_blob_ptr_)
     
     def CopyToBlob(self):
         blob = blob_util.Blob();

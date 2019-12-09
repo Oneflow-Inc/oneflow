@@ -26,13 +26,13 @@ class MasksCropAndResizeOp final : public Operator {
     // input: masks (N, C, H, W)
     const BlobDesc* masks = GetBlobDesc4BnInOp("masks");
     CHECK_EQ(masks->shape().NumAxes(), 4);
-    CHECK_EQ(masks->enable_tensor_list(), false);
+    CHECK_EQ(masks->is_tensor_list(), false);
     CHECK_EQ(masks->data_type(), DataType::kInt8);
     // input: rois (N, 4)
     const BlobDesc* rois = GetBlobDesc4BnInOp("rois");
     CHECK_EQ(rois->shape().NumAxes(), 2);
     CHECK_EQ(rois->shape().At(1), 4);
-    CHECK_EQ(rois->enable_tensor_list(), false);
+    CHECK_EQ(rois->is_tensor_list(), false);
     CHECK_EQ(masks->shape().At(0), rois->shape().At(0));
     CHECK_EQ(masks->is_dynamic(), rois->is_dynamic());
     // output: (N, C, mask_h, mask_w)

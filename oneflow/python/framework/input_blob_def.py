@@ -18,7 +18,7 @@ class input_blob_def(blob_desc.BlobDesc):
     def __init__(self, shape,
                  dtype = data_type_util.kFloat,
                  is_dynamic = False,
-                 enable_tensor_list = False,
+                 is_tensor_list = False,
                  batch_axis = 0,
                  name = None,
                  **kw):
@@ -32,7 +32,7 @@ class input_blob_def(blob_desc.BlobDesc):
         self.shape_ = shape
         self.dtype_ = dtype
         self.is_dynamic_ = is_dynamic
-        self.enable_tensor_list_ = enable_tensor_list
+        self.is_tensor_list_ = is_tensor_list
         self.batch_axis_ = batch_axis
 
     @property
@@ -51,7 +51,7 @@ class input_blob_def(blob_desc.BlobDesc):
     def is_dynamic(self): return self.is_dynamic_
 
     @property
-    def enable_tensor_list(self): return self.enable_tensor_list_
+    def is_tensor_list(self): return self.is_tensor_list_
 
     def parallel_conf(self):
         TODO()
@@ -62,7 +62,7 @@ class input_blob_def(blob_desc.BlobDesc):
                         distribute = distribute, name = self.lbi.op_name)
 
     def CheckInputNdarray(self, ndarray):
-        if self.enable_tensor_list:
+        if self.is_tensor_list:
             self._CheckNdarrayList(ndarray)
         else:
             self._CheckDenseNdarray(ndarray)
@@ -72,7 +72,7 @@ class input_blob_def(blob_desc.BlobDesc):
         interface_blob_conf.shape.dim.extend(self.shape_)
         interface_blob_conf.data_type = self.dtype_
         interface_blob_conf.is_dynamic = self.is_dynamic_
-        interface_blob_conf.enable_tensor_list = self.enable_tensor_list
+        interface_blob_conf.is_tensor_list = self.is_tensor_list
         if type(self.batch_axis_) is int:
             assert self.batch_axis_ >= 0
             interface_blob_conf.batch_axis.value = self.batch_axis_
