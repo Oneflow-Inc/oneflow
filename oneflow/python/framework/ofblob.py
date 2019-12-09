@@ -116,7 +116,7 @@ class OfBlob(object):
         for i, tensor in enumerate(tensor_list):
             if is_new_slice_start_mask[i]: oneflow_api.OfBlob_AddTensorListSlice(self.of_blob_ptr_)
             oneflow_api.OfBlob_AddTensor(self.of_blob_ptr_)
-            assert oneflow_api.OfBlob_CurMutTensorIsNull(self.of_blob_ptr_) == False
+            assert oneflow_api.OfBlob_CurMutTensorAvailable(self.of_blob_ptr_)
             shape_tensor = np.array(tensor.shape, dtype=np.int64)
             oneflow_api.OfBlob_CurMutTensorCopyShapeFrom(self.of_blob_ptr_, shape_tensor)
             copy_method(self.of_blob_ptr_, tensor)

@@ -38,7 +38,7 @@ class OfBlob final {
 
   void ClearTensorLists();
   void AddTensor();
-  bool CurMutTensorIsNull() const { return blob_->OutOfMemory(*cur_mut_tensor_); }
+  bool CurMutTensorAvailable() const { return tensor_back_inserter_->IsCurMutTensorAvailable(); }
   void CurMutTensorCopyShapeFrom(const int64_t* ptr, int64_t num_axis) const;
   template<typename T>
   void CurMutTensorAutoMemCopyFrom(const T* ptr, int64_t len) const;
@@ -50,7 +50,7 @@ class OfBlob final {
   Blob* blob_;
   MemoryCase mem_case_;
   std::unique_ptr<TensorView> cur_tensor_;
-  std::unique_ptr<FullyMutTensorView> cur_mut_tensor_;
+  std::unique_ptr<TensorBackInserter> tensor_back_inserter_;
 };
 
 inline void OfBlob::CopyShapeFrom(const int64_t* ptr, int64_t num_axis) const {
@@ -77,24 +77,22 @@ inline int64_t OfBlob::TensorIndex4SliceId(int32_t slice_id) const {
   return blob_->tensor_index4slice_id(slice_id);
 }
 
-inline void OfBlob::AddTensorListSlice() const { return blob_->add_tensor_list_slice(); }
+inline void OfBlob::AddTensorListSlice() const { tensor_back_inserter_->add_tensor_list_slice(); }
 
 inline void OfBlob::ResetTensorIterator() {
   cur_tensor_.reset(new TensorView(blob_->BeginTensor()));
 }
 
-inline void OfBlob::ClearTensorLists() {
-  cur_mut_tensor_.reset(new FullyMutTensorView(blob_->clear_tensor_lists()));
-}
+inline void OfBlob::ClearTensorLists() { tensor_back_inserter_->ClearTensorLists(); }
 
-inline void OfBlob::AddTensor() { blob_->AddTensor(cur_mut_tensor_.get()); }
+inline void OfBlob::AddTensor() { tensor_back_inserter_->add_tensor(); }
 
 inline void OfBlob::IncTensorIterator() { blob_->MoveToNextTensor(cur_tensor_.get()); }
 
 inline void OfBlob::CurTensorCopyShapeTo(int64_t* ptr, int64_t num_axis) const {
   CHECK_EQ(num_axis, NumAxes());
   DenseShapeMutView(ptr, num_axis).set_shape(cur_tensor_->shape());
-  ClearShape(cur_mut_tensor_.get());
+  ClearShape(tensor_back_inserter_->cur_mut_tensor());
 }
 
 inline void OfBlob::ClearShape(FullyMutTensorView* tensor) const {
@@ -105,7 +103,7 @@ inline void OfBlob::ClearShape(FullyMutTensorView* tensor) const {
 
 inline void OfBlob::CurMutTensorCopyShapeFrom(const int64_t* ptr, int64_t num_axis) const {
   CHECK_EQ(num_axis, NumAxes());
-  cur_mut_tensor_->set_shape(DenseShapeView(ptr, num_axis));
+  tensor_back_inserter_->cur_mut_tensor()->set_shape(DenseShapeView(ptr, num_axis));
 }
 
 template<typename T>
@@ -118,10 +116,10 @@ void OfBlob::CurTensorAutoMemCopyTo(T* ptr, int64_t len) const {
 
 template<typename T>
 void OfBlob::CurMutTensorAutoMemCopyFrom(const T* ptr, int64_t len) const {
-  CHECK_EQ(cur_mut_tensor_->shape().elem_cnt(), len);
-  CHECK(cur_mut_tensor_->data_type() == GetDataType<T>::value);
-  SyncAutoMemcpy(device_ctx_, cur_mut_tensor_->mut_dptr(), ptr, len * sizeof(T), blob_->mem_case(),
-                 mem_case_);
+  CHECK_EQ(tensor_back_inserter_->cur_mut_tensor()->shape().elem_cnt(), len);
+  CHECK(tensor_back_inserter_->cur_mut_tensor()->data_type() == GetDataType<T>::value);
+  SyncAutoMemcpy(device_ctx_, tensor_back_inserter_->cur_mut_tensor()->mut_dptr(), ptr,
+                 len * sizeof(T), blob_->mem_case(), mem_case_);
 }
 
 }  // namespace oneflow

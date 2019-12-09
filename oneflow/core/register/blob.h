@@ -13,7 +13,25 @@
 
 namespace oneflow {
 
-class Range;
+class Blob;
+
+class TensorBackInserter final {
+ public:
+  explicit TensorBackInserter(Blob* blob);
+  TensorBackInserter(const TensorBackInserter&) = default;
+  ~TensorBackInserter() = default;
+
+  void ReserveOneEmptyTensorList();
+  void ClearTensorLists();
+  bool IsCurMutTensorAvailable() const;
+  FullyMutTensorView* add_tensor();
+  FullyMutTensorView* cur_mut_tensor();
+  void add_tensor_list_slice();
+
+ private:
+  Blob* blob_;
+  FullyMutTensorView cur_mut_tensor_;
+};
 
 class Blob final {
  public:
@@ -34,17 +52,13 @@ class Blob final {
   void MoveToNextMutTensor(DataOnlyMutTensorView* last);
   bool IsEndTensor(const TensorView& tensor) const;
   bool IsEndTensor(const DataOnlyMutTensorView& tensor) const;
-  FullyMutTensorView ReserveOneEmptyTensorList();  // return value usually for AddTensor
-  void AddTensor(FullyMutTensorView* tensor);
-  bool OutOfMemory(const FullyMutTensorView& tensor) const;
+
+  friend class TensorBackInserter;
+  const TensorBackInserter& tensor_back_inserter() { return *tensor_back_inserter_; }
 
   // tensor list slice
   size_t num_of_tensor_list_slices() const;
   int64_t tensor_index4slice_id(int32_t slice_id) const;
-  void add_tensor_list_slice();
-
-  // [[tensor]] view for blob
-  FullyMutTensorView clear_tensor_lists();  // return value usually for AddTensor
 
   DataType data_type() const { return blob_desc_->data_type(); }
   const char* header_ptr() const { return header_ptr_->ptr(); }
@@ -97,6 +111,13 @@ class Blob final {
   }
   size_t GetEndTensorDataOffset() const;
 
+  FullyMutTensorView EndFullyMutTensor();
+  void ReserveOneEmptyTensorList();
+  void AddTensor(FullyMutTensorView* tensor);
+  bool IsEndFullyMutTensor(const FullyMutTensorView& tensor) const;
+  void clear_tensor_lists();
+  void add_tensor_list_slice();
+
   MemoryCase mem_case_;
   const RtBlobDesc* blob_desc_;
   void* dptr_;
@@ -107,6 +128,7 @@ class Blob final {
   std::unique_ptr<PodPtr> header_ptr_;
   std::unique_ptr<TensorView> begin_tensor_;
   std::unique_ptr<DataOnlyMutTensorView> begin_mut_tensor_;
+  std::unique_ptr<TensorBackInserter> tensor_back_inserter_;
   // TODO(); remove this ugly code
   int32_t record_num_;
 };
