@@ -22,6 +22,8 @@ def _Conv2d(
         dilation_rate=[1, 1],
         activation=activation,
         use_bias=True,
+        kernel_initializer=flow.random_normal_initializer(mean=0.0, stddev=0.01),
+        bias_initializer=flow.constant_initializer(0),
         name=name,
         weight_name=weight_name,
         bias_name=bias_name,
