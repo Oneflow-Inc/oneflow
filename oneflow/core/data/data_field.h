@@ -115,6 +115,10 @@ class TensorListDataField : public DataField {
     size_ += size;
     CHECK_LT(size_, capacity_);
   }
+  void PushBack(T val) {
+    data()[size()] = val;
+    IncreaseSize(1);
+  }
   template<typename... I>
   auto SetShape(I... dims)
       -> std::enable_if_t<std::conjunction<std::is_convertible<int, I>...>::value> {

@@ -3,123 +3,93 @@
 
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/register/dense_shape_view.h"
+#include "oneflow/core/memory/memory_case.pb.h"
 
 namespace oneflow {
 
-class TensorView final {
- public:
-  OF_DISALLOW_COPY(TensorView);
-  TensorView(TensorView&&) = default;
-  TensorView(const int64_t* shape_ptr, int64_t num_axes, DataType data_type, const void* dptr)
-      : shape_(shape_ptr, num_axes), data_type_(data_type), dptr_(dptr) {}
-  ~TensorView() = default;
+class Blob;
+int64_t NumAxes4Blob(const Blob* blob);
+const MemoryCase& MemCase4Blob(const Blob* blob);
+DataType DataType4Blob(const Blob* blob);
 
-  const DenseShapeView& shape() const { return shape_; }
-  const int64_t* shape_ptr() const { return shape_.ptr(); }
-  DataType data_type() const { return data_type_; }
+template<typename ShapeViewType, typename ByteType>
+class TensorViewBase {
+ public:
+  const ShapeViewType& shape() const { return shape_; }
+  const MemoryCase& mem_case() const { return MemCase4Blob(blob_); }
+  DataType data_type() const { return DataType4Blob(blob_); }
   template<typename T = void>
   const T* dptr() const {
-    CheckDataType<T>(data_type_);
+    CheckDataType<T>(data_type());
     return static_cast<const T*>(dptr_);
   }
   size_t ByteSize() const { return shape().elem_cnt() * GetSizeOfDataType(data_type()); }
-
- private:
-  const DenseShapeView shape_;
-  const DataType data_type_;
-  const void* dptr_;
-};
-
-class MutTensorView {
- public:
-  const DenseShapeView& shape() const { return shape_; }
-  DataType data_type() const { return data_type_; }
-
-  template<typename T = void>
-  const T* dptr() const {
-    CheckDataType<T>(data_type_);
-    return static_cast<const T*>(dptr_);
+  void reset(typename ShapeViewType::DimType* shape_ptr, ByteType* dptr) {
+    shape_.set_ptr(shape_ptr);
+    dptr_ = dptr;
   }
-
-  template<typename T = void>
-  T* mut_dptr() const {
-    CheckDataType<T>(data_type_);
-    return static_cast<T*>(dptr_);
-  }
-  size_t ByteSize() const { return shape().elem_cnt() * GetSizeOfDataType(data_type()); }
 
  protected:
-  OF_DISALLOW_COPY(MutTensorView);
-  MutTensorView(MutTensorView&&) = default;
-  MutTensorView(const int64_t* shape_ptr, int64_t num_axes, DataType data_type, void* dptr)
-      : shape_(shape_ptr, num_axes), data_type_(data_type), dptr_(dptr) {}
-  ~MutTensorView() = default;
+  TensorViewBase(const TensorViewBase&) = default;
+  TensorViewBase(const Blob* blob, typename ShapeViewType::DimType* shape_ptr, ByteType* dptr)
+      : shape_(shape_ptr, NumAxes4Blob(blob)), dptr_(dptr) {}
+  ~TensorViewBase() = default;
+
+  const Blob* blob() const { return blob_; }
+  ByteType* mem_dptr() const { return dptr_; }
+  ShapeViewType* shape_view_ptr() { return &shape_; }
 
  private:
-  DenseShapeView shape_;
-  const DataType data_type_;
-  void* dptr_;
+  const Blob* blob_;
+  ShapeViewType shape_;
+  ByteType* dptr_;
 };
 
-class DataOnlyMutTensorView final : public MutTensorView {
+class TensorView final : public TensorViewBase<DenseShapeView, const char> {
  public:
-  OF_DISALLOW_COPY(DataOnlyMutTensorView);
-  DataOnlyMutTensorView(DataOnlyMutTensorView&&) = default;
-  DataOnlyMutTensorView(const int64_t* shape_ptr, int64_t num_axes, DataType data_type, void* dptr)
-      : MutTensorView(shape_ptr, num_axes, data_type, dptr) {}
-  ~DataOnlyMutTensorView() = default;
+  TensorView(const TensorView&) = default;
+  TensorView(const Blob* blob, const int64_t* shape_ptr, const char* dptr)
+      : TensorViewBase<DenseShapeView, const char>(blob, shape_ptr, dptr) {}
+  ~TensorView() = default;
+};
 
-  const int64_t* shape_ptr() const { return shape().ptr(); }
+template<typename ShapeViewType>
+class MutTensorView : public TensorViewBase<ShapeViewType, char> {
+ public:
+  template<typename T = void>
+  T* mut_dptr() const {
+    CheckDataType<T>(this->data_type());
+    return static_cast<T*>(this->mem_dptr());
+  }
+
+ protected:
+  MutTensorView(const MutTensorView&) = default;
+  MutTensorView(const Blob* blob, typename ShapeViewType::DimType* shape_ptr, char* dptr)
+      : TensorViewBase<ShapeViewType, char>(blob, shape_ptr, dptr) {}
+  ~MutTensorView() = default;
+};
+
+class DataOnlyMutTensorView final : public MutTensorView<DenseShapeView> {
+ public:
+  DataOnlyMutTensorView(const DataOnlyMutTensorView&) = default;
+  DataOnlyMutTensorView(const Blob* blob, const int64_t* shape_ptr, char* dptr)
+      : MutTensorView<DenseShapeView>(blob, shape_ptr, dptr) {}
+  ~DataOnlyMutTensorView() = default;
 };
 
 class Shape;
 
-class FullyMutTensorView final : public MutTensorView {
+class FullyMutTensorView final : public MutTensorView<DenseShapeMutView> {
  public:
-  OF_DISALLOW_COPY(FullyMutTensorView);
-  FullyMutTensorView(FullyMutTensorView&&) = default;
-  FullyMutTensorView(int64_t* shape_ptr, int64_t num_axes, DataType data_type, void* dptr,
-                     size_t data_capacity);
+  FullyMutTensorView(const FullyMutTensorView&) = default;
+  FullyMutTensorView(const Blob* blob, int64_t* shape_ptr, char* dptr);
   ~FullyMutTensorView() = default;
-
-  int64_t* mut_shape_ptr() const { return mut_shape_.mut_ptr(); }
 
   void set_shape(const Shape& shape);
   void set_shape(const DenseShapeView& shape);
 
  private:
-  DenseShapeMutView mut_shape_;
-  size_t max_elem_cnt_;
-};
-
-class TensorListView final {
- public:
-  TensorListView(int64_t size, const int64_t* shape_ptr, int64_t num_axes, DataType data_type,
-                 const void* dptr);
-  ~TensorListView() = default;
-
-  size_t size() const { return tensors_->size(); }
-  DataType data_type() const { return data_type_; }
-  const TensorView& tensor(int32_t i) const { return tensors_->at(i); }
-
- private:
-  const DataType data_type_;
-  std::shared_ptr<std::vector<TensorView>> tensors_;
-};
-
-class MutTensorListView final {
- public:
-  MutTensorListView(int64_t size, const int64_t* shape_ptr, int64_t num_axes, DataType data_type,
-                    void* dptr);
-  ~MutTensorListView() = default;
-
-  size_t size() const { return tensors_->size(); }
-  DataType data_type() const { return data_type_; }
-  DataOnlyMutTensorView* mutable_tensor(int32_t i) const { return &tensors_->at(i); }
-
- private:
-  const DataType data_type_;
-  std::shared_ptr<std::vector<DataOnlyMutTensorView>> tensors_;
+  void CheckCapacity(size_t shape_elem_cnt) const;
 };
 
 }  // namespace oneflow
