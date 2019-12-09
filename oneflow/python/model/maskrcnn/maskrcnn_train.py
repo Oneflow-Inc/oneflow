@@ -15,7 +15,6 @@ from rpn import RPNHead, RPNLoss, RPNProposal
 from box_head import BoxHead
 from mask_head import MaskHead
 from blob_watcher import save_blob_watched, blob_watched, diff_blob_watched
-from distribution import distribute_execute
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
@@ -76,6 +75,13 @@ parser.add_argument(
     required=False,
 )
 parser.add_argument(
+    "-save_loss_npy_every_n_batch",
+    "--save_loss_npy_every_n_batch",
+    type=int,
+    default=0,
+    required=False,
+)
+parser.add_argument(
     "-v", "--verbose", default=False, action="store_true", required=False
 )
 parser.add_argument("-i", "--iter_num", type=int, default=10, required=False)
@@ -118,6 +124,13 @@ parser.add_argument(
 parser.add_argument(
     "-flip",
     "--random_flip_image",
+    default=False,
+    action="store_true",
+    required=False,
+)
+parser.add_argument(
+    "-pr",
+    "--print_loss_each_rank",
     default=False,
     action="store_true",
     required=False,
@@ -458,7 +471,7 @@ def init_config():
     return config
 
 
-def save_model(i):
+def save_model(check_point, i):
     if not os.path.exists(terminal_args.model_save_dir):
         os.makedirs(terminal_args.model_save_dir)
     model_dst = os.path.join(terminal_args.model_save_dir, "iter-" + str(i))
@@ -532,7 +545,7 @@ if terminal_args.train_with_real_dataset:
         data_loader.add_blob(
             "gt_bbox",
             data_util.DataSourceCase.kObjectBoundingBox,
-            shape=(64, 4),
+            shape=(128, 4),
             dtype=flow.float,
             tensor_list_variable_axis=0,
             is_dynamic=True,
@@ -540,7 +553,7 @@ if terminal_args.train_with_real_dataset:
         data_loader.add_blob(
             "gt_labels",
             data_util.DataSourceCase.kObjectLabel,
-            shape=(64,),
+            shape=(128,),
             dtype=flow.int32,
             tensor_list_variable_axis=0,
             is_dynamic=True,
@@ -556,7 +569,7 @@ if terminal_args.train_with_real_dataset:
         data_loader.add_blob(
             "gt_segm",
             data_util.DataSourceCase.kObjectSegmentationAlignedMask,
-            shape=(64, 1344, 800),
+            shape=(128, 1344, 800),
             dtype=flow.int8,
             tensor_list_variable_axis=0,
             is_dynamic=True,
@@ -661,7 +674,7 @@ if __name__ == "__main__":
         check_point = flow.train.CheckPoint()
         check_point.init()
         if terminal_args.model_save_every_n_batch > 0:
-            save_model(0)
+            save_model(check_point, 0)
     else:
         check_point = flow.train.CheckPoint()
         # check_point.load(terminal_args.model_load_dir)
@@ -702,21 +715,34 @@ if __name__ == "__main__":
                 save_blob_watched(i)
 
                 if (i + 1) % 10 == 0:
-                    save_model(i + 1)
+                    save_model(check_point, i + 1)
 
         elif terminal_args.train_with_real_dataset:
-            print(
-                "{:<8} {:<8} {:<16} {:<16} {:<16} {:<16} {:<16} {:<16}".format(
-                    "iter",
-                    "rank",
-                    "elapsed_time",
-                    "loss_rpn_box_reg",
-                    "loss_objectness",
-                    "loss_box_reg",
-                    "loss_classifier",
-                    "loss_mask",
+            if terminal_args.print_loss_each_rank:
+                print(
+                    "{:<8} {:<8} {:<16} {:<16} {:<16} {:<16} {:<16} {:<16}".format(
+                        "iter",
+                        "rank",
+                        "elapsed_time",
+                        "loss_rpn_box_reg",
+                        "loss_objectness",
+                        "loss_box_reg",
+                        "loss_classifier",
+                        "loss_mask",
+                    )
                 )
-            )
+            else:
+                print(
+                    "{:<8} {:<16} {:<16} {:<16} {:<16} {:<16} {:<16}".format(
+                        "iter",
+                        "elapsed_time",
+                        "loss_rpn_box_reg",
+                        "loss_objectness",
+                        "loss_box_reg",
+                        "loss_classifier",
+                        "loss_mask",
+                    )
+                )
 
             losses_hisogram = []
             start_time = time.time()
@@ -737,31 +763,53 @@ if __name__ == "__main__":
                         (i + 1) % terminal_args.model_save_every_n_batch == 0
                         or i + 1 == terminal_args.iter_num
                     ):
-                        save_model(i + 1)
+                        save_model(check_point, i + 1)
+                        
+                elapsed_time_str = "{:.6f}".format(elapsed_time)
+                if terminal_args.print_loss_each_rank:
+                    for rank, loss_tup in enumerate(zip(*losses)):
+                        fmt = "{:<8} {:<8} {:<16} " + "{:<16.10f} " * len(
+                            loss_tup
+                        )
+                        loss_per_rank = [loss.mean() for loss in loss_tup]
+                        print(
+                            fmt.format(
+                                i,
+                                rank,
+                                elapsed_time_str if rank == 0 else "",
+                                *loss_per_rank
+                            )
+                        )
+                else:
+                    loss_per_batch = []
+                    for loss_list in losses:
+                        rank_loss_list = [
+                            loss_per_rank.mean() for loss_per_rank in loss_list
+                        ]
+                        loss_per_batch.append(
+                            sum(rank_loss_list) / len(rank_loss_list)
+                        )
 
-                fmt = "{:<8} {:<8} {:<16} " + "{:<16.10f} " * len(losses)
-                for rank, loss_tup in enumerate(zip(*losses)):
-                    frame = [loss.mean() for loss in loss_tup]
-                    elapsed_time_str = (
-                        "{:.6f}".format(elapsed_time) if rank == 0 else ""
-                    )
-                    print(fmt.format(i, rank, elapsed_time_str, *frame))
-                    frame.append(i)
-                    losses_hisogram.append(frame)
-
+                    fmt = "{:<8} {:<16} " + "{:<16.10f} " * len(loss_per_batch)
+                    print(fmt.format(i, elapsed_time_str, *loss_per_batch))
+                    loss_per_batch.append(i)
+                    losses_hisogram.append(loss_per_batch)
+                if (terminal_args.save_loss_npy_every_n_batch  > 0 and (i + 1) % terminal_args.save_loss_npy_every_n_batch == 0) or i + 1 == terminal_args.iter_num:
+                    npy_file_name = "loss-{}-batch_size-{}-gpu-{}-image_dir-{}-{}".format(i, terminal_args.batch_size, terminal_args.gpu_num_per_node, terminal_args.image_dir ,str(datetime.now().strftime("%Y-%m-%d--%H-%M-%S")))
+                    np.save(npy_file_name, np.array(losses_hisogram))
+                    print("saved: {}.npy".format(npy_file_name))
                 save_blob_watched(i)
 
             print(
                 "median of elapsed time per batch:",
                 statistics.median(elapsed_times),
             )
-            npy_file_name = "loss-{}".format(i)
-            np.save(npy_file_name, np.array(losses_hisogram))
-            print("saved: {}.npy".format(npy_file_name))
+            
             if terminal_args.jupyter:
                 import altair as alt
                 import pandas as pd
-                columns=[
+
+                columns = [
                     "loss_rpn_box_reg",
                     "loss_objectness",
                     "loss_box_reg",
@@ -771,10 +819,7 @@ if __name__ == "__main__":
                 for column_index, column_name in enumerate(columns):
                     loss_data_frame = pd.DataFrame(
                         np.array(losses_hisogram)[:, [column_index, -1]],
-                        columns=[
-                            column_name,
-                            "iter",
-                        ],
+                        columns=[column_name, "iter"],
                     )
 
                     base = (
@@ -782,8 +827,6 @@ if __name__ == "__main__":
                         .mark_line()
                         .encode(x="petalLength", y="petalWidth")
                     )
-                    chart = (
-                        base.mark_line().encode(x="iter", y=column_name)
-                    )
+                    chart = base.mark_line().encode(x="iter", y=column_name)
 
                     chart.display()

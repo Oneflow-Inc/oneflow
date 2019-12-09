@@ -126,6 +126,7 @@ def conv2d(
         if kernel_initializer is not None
         else flow.constant_initializer(0),
         trainable=trainable,
+        model_name="weight",
     )
     output = flow.nn.conv2d(
         inputs, weight, strides, padding, data_format, dilation_rate, name
@@ -139,6 +140,7 @@ def conv2d(
             if bias_initializer is not None
             else flow.constant_initializer(0),
             trainable=trainable,
+            model_name="bias",
         )
         output = flow.nn.bias_add(
             output, bias, data_format, name=name_prefix + "-bias_add"
