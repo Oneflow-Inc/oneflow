@@ -65,7 +65,10 @@ parser.add_argument("--enable_warmup", type=str2bool, nargs="?", const=True)
 parser.add_argument("--enable_lr_decay", type=str2bool, nargs="?", const=True)
 parser.add_argument("--shuffle_dataset", type=str2bool, nargs="?", const=True)
 parser.add_argument(
-    "--shuffle_proposal_sample", type=str2bool, nargs="?", const=True
+    "--rpn_random_sample", type=str2bool, nargs="?", const=True
+)
+parser.add_argument(
+    "--roi_head_random_sample", type=str2bool, nargs="?", const=True
 )
 parser.add_argument(
     "-flip", "--random_flip_image", type=str2bool, nargs="?", const=True
