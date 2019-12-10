@@ -39,24 +39,8 @@ class COCODataset():
         self.coco = COCO(ann_file)
         self.ids = list(sorted(self.coco.imgs.keys()))
 
-        to_remove = set([])
-        for cat_id, _ in self.coco.cats.items():
-            if cat_id > 80:
-                to_remove |= set(self.coco.catToImgs[cat_id])
-        self.ids = list(set(self.ids) - to_remove)
-
         # sort indices for reproducible results
         self.ids = sorted(self.ids)
-
-        # filter images without detection annotations
-        if remove_images_without_annotations:
-            ids = []
-            for img_id in self.ids:
-                ann_ids = self.coco.getAnnIds(imgIds=img_id, iscrowd=None)
-                anno = self.coco.loadAnns(ann_ids)
-                if has_valid_annotation(anno):
-                    ids.append(img_id)
-            self.ids = ids
 
         self.categories = {cat['id']: cat['name'] for cat in self.coco.cats.values()}
 

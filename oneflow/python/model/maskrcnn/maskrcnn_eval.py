@@ -55,7 +55,7 @@ def make_data_loader(
     data_loader.add_blob(
         "image",
         data_util.DataSourceCase.kImage,
-        shape=(416, 608, 3),
+        shape=(800, 1344, 3),
         dtype=flow.float,
         is_dynamic=True,
     )
@@ -65,7 +65,7 @@ def make_data_loader(
     data_loader.add_blob(
         "image_id", data_util.DataSourceCase.kImageId, shape=(1,), dtype=flow.int64
     )
-    data_loader.add_transform(flow.data.TargetResizeTransform(400, 600))
+    data_loader.add_transform(flow.data.TargetResizeTransform(800, 1333))
     data_loader.add_transform(flow.data.ImageNormalizeByChannel((102.9801, 115.9465, 122.7717)))
     data_loader.add_transform(flow.data.ImageAlign(32))
     data_loader.init()
@@ -121,8 +121,10 @@ if terminal_args.fake_img:
 
     @flow.function
     def maskrcnn_eval_job(
-        images=flow.input_blob_def(shape=(2, 416, 608, 3), dtype=flow.float32, is_dynamic=True)
+        images=flow.input_blob_def(shape=(1, 800, 1344, 3), dtype=flow.float32, is_dynamic=True)
     ):
+        # TODO: support batching strategy the same with PyTorch
+        assert terminal_args.batch_size == 1
         data_loader = make_data_loader(
             batch_size=terminal_args.batch_size,
             batch_cache_size=3,
@@ -140,6 +142,8 @@ else:
 
     @flow.function
     def maskrcnn_eval_job():
+        # TODO: support batching strategy the same with PyTorch
+        assert terminal_args.batch_size == 1
         data_loader = make_data_loader(
             batch_size=terminal_args.batch_size,
             batch_cache_size=3,
@@ -194,9 +198,13 @@ if __name__ == "__main__":
     prediction_list = []
     image_id_list = []
     for i in range(terminal_args.iter_num):
+        print("iteration: {}".format(i))
         if terminal_args.fake_img:
             if i == 0:
-                f = open("/dataset/mask_rcnn/maskrcnn_eval_net_50/fake_image_list.pkl", "rb")
+                f = open(
+                    "/dataset/mask_rcnn/maskrcnn_eval_net_fake_image_list/100_fake_images_bz_1.pkl",
+                    "rb",
+                )
                 fake_image_list = pickle.load(f)
             images = fake_image_list[i].transpose((0, 2, 3, 1)).copy()
             results = maskrcnn_eval_job(images).get()
@@ -230,29 +238,29 @@ if __name__ == "__main__":
     )
 
 # Box Head
-# Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.537
-# Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets=100 ] = 0.783
-# Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets=100 ] = 0.550
-# Average Precision  (AP) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = -1.000
-# Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.567
-# Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.592
-# Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=  1 ] = 0.490
-# Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets= 10 ] = 0.590
-# Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.590
-# Average Recall     (AR) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = -1.000
-# Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.567
-# Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.625
+#  Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.257
+#  Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets=100 ] = 0.432
+#  Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets=100 ] = 0.269
+#  Average Precision  (AP) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.167
+#  Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.311
+#  Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.394
+#  Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=  1 ] = 0.294
+#  Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets= 10 ] = 0.395
+#  Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.400
+#  Average Recall     (AR) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.291
+#  Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.413
+#  Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.539
 
 # Mask Head
-# Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.535
-# Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets=100 ] = 0.750
-# Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets=100 ] = 0.650
-# Average Precision  (AP) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = -1.000
-# Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.667
-# Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.450
-# Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=  1 ] = 0.490
-# Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets= 10 ] = 0.580
-# Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.580
-# Average Recall     (AR) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = -1.000
-# Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.667
-# Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.450
+#  Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.232
+#  Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets=100 ] = 0.408
+#  Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets=100 ] = 0.241
+#  Average Precision  (AP) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.122
+#  Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.290
+#  Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.427
+#  Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=  1 ] = 0.262
+#  Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets= 10 ] = 0.350
+#  Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.353
+#  Average Recall     (AR) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.227
+#  Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.389
+#  Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.539
