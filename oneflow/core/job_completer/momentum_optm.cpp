@@ -18,7 +18,6 @@ void GenerateOptimizerOpConf(const VariableOp& op, const ParallelConf& parallel_
                          op_name, "out");
   }
   if (has_snapshot_path && SnapshotFS()->FileExists(file_path)) {
-    LOG(INFO) << "file_path: " << file_path;
     momentum_var.mutable_variable_conf()->mutable_initialize_with_snapshot()->set_path(
         JoinPath(job_builder->job().job_conf().default_initialize_with_snapshot_path(), op_name));
     momentum_var.mutable_variable_conf()->mutable_initialize_with_snapshot()->set_key("out");

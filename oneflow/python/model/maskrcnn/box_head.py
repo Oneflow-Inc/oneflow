@@ -121,13 +121,14 @@ class BoxHead(object):
             bbox_pred = flow.squeeze(
                 flow.gather(params=pos_bbox_reg, indices=indices, batch_dims=1), axis=[1]
             )
+            total_pos_inds_elem_cnt = flow.elem_cnt(total_pos_inds, dtype=flow.int32)
             bbox_target = flow.local_gather(bbox_targets, total_pos_inds)
             box_head_box_loss = (
                 flow.math.reduce_sum(flow.detection.smooth_l1(bbox_pred, bbox_target))
                 / total_elem_cnt
             )
 
-            return (box_head_box_loss, box_head_cls_loss, pos_proposal_list, pos_gt_indices_list)
+            return (box_head_box_loss, box_head_cls_loss, pos_proposal_list, pos_gt_indices_list, total_pos_inds_elem_cnt)
 
     # Input:
     # rpn_proposals: list of [R, 4] wrt. images
