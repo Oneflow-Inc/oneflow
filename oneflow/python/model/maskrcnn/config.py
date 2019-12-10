@@ -1,30 +1,22 @@
 from yacs.config import CfgNode as CN
 _C = CN()
 
+
 _C.TRAINING = True
-_C.NUM_GPUS = 1
+# ---------------------------------------------------------------------------- #
+#  Env
+# ---------------------------------------------------------------------------- #
+_C.ENV = CN()
+_C.ENV.NUM_GPUS = 1
+_C.ENV.ENABLE_INPLACE = False
+_C.ENV.CUDNN_BUFFER_SIZE_LIMIT = 1280
+_C.ENV.CUDNN_CONV_HEURISTIC_SEARCH_ALGO = True
+_C.ENV.CUDNN_CONV_USE_DETERMINISTIC_ALGO_ONLY = False
+
 # ---------------------------------------------------------------------------- #
 #  Decoder
 # ---------------------------------------------------------------------------- #
 _C.DECODER = CN()
-# Dataset for train and test
-_C.DECODER.DATA_DIR_TRAIN = "/dataset/mask_rcnn/sample_1_train"
-_C.DECODER.DATA_DIR_TEST = "/dataset/mask_rcnn/sample_1_train"
-# Static shape to store images, should walk through the dataset to find it
-_C.DECODER.IMAGE_STATIC_SIZE_TRAIN = [1344, 800]
-_C.DECODER.IMAGE_STATIC_SIZE_TEST = [1344, 800]
-# Preprocess params: target resize
-_C.DECODER.RESIZE_TARGET_SIZE_TRAIN = 800
-_C.DECODER.RESIZE_MAX_SIZE_TRAIN = 1333
-_C.DECODER.RESIZE_TARGET_SIZE_TEST = 800
-_C.DECODER.RESIZE_MAX_SIZE_TEST = 1333
-# Preprocess params: norm by channel
-_C.DECODER.PREPROCESS_NORMAL_MEAN = [102.9801, 115.9465, 122.7717]
-_C.DECODER.PREPROCESS_NORMAL_STD = [1.0, 1.0, 1.0]
-# Max number of ground truth boxes one image should have
-_C.DECODER.MAX_NUM_OF_GT_BBOXES_PER_IMAGE = 256
-# Max bytesize to store segmentations for each image
-_C.DECODER.MAX_SEGM_BYTES_SIZE_PER_IMAGE = 1048576
 # Anchor generator params
 _C.DECODER.FPN_LAYERS = 5
 _C.DECODER.FEATURE_MAP_STRIDE = 4
@@ -95,39 +87,69 @@ _C.MASK_HEAD.SAMPLING_RATIO = 2
 _C.MASK_HEAD.SPATIAL_SCALE = 0.25
 
 # ---------------------------------------------------------------------------- #
-#  Training Configs
+#  Train & Eval
 # ---------------------------------------------------------------------------- #
-_C.TRAINING_CONF = CN()
-_C.TRAINING_CONF.IMG_PER_GPU = 2
-_C.TRAINING_CONF.BATCH_SIZE = 2
-_C.TRAINING_CONF.TOTAL_BATCH_NUM = 1440000
-_C.TRAINING_CONF.PRIMARY_LR = 0.00125
-_C.TRAINING_CONF.SECONDARY_LR = 0.0025
-_C.TRAINING_CONF.USE_MOMENTUM_SGD = True
-_C.TRAINING_CONF.MOMENTUM_BETA = 0.9
-_C.TRAINING_CONF.WEIGHT_L2 = 0.0001
-_C.TRAINING_CONF.BIAS_L2 = 0.0
-_C.TRAINING_CONF.DISABLE_LR_DECAY = False
-_C.TRAINING_CONF.LR_DECAY_BOUNDARIES = [960000, 1280000]
-_C.TRAINING_CONF.LR_DECAY_VALUES = [0.01, 0.001, 0.0001]
-_C.TRAINING_CONF.DISABLE_WARMUP = False
-_C.TRAINING_CONF.WARMUP_METHOD = "linear"  # "linear" or "constant"
-_C.TRAINING_CONF.WARMUP_BATCHES = 500
-_C.TRAINING_CONF.WARMUP_FACTOR = 1.0 / 3
+_C.TRAIN = CN()
+_C.TRAIN.BATCH_SIZE = 2
+_C.TRAIN.IMAGE_PER_GPU = 2
+_C.TRAIN.MODEL_INIT_PATH = "/model_zoo/detection/R-50"
+
+_C.TRAIN.DATASET = CN()
+_C.TRAIN.DATASET.DATASET_DIR = "/dataset/mscoco_2017"
+_C.TRAIN.DATASET.ANNOTATION = "annotations/instances_train2017.json"
+_C.TRAIN.DATASET.IMAGE_DIR = "train2017"
+_C.TRAIN.DATASET.SHUFFLE = True
+_C.TRAIN.DATASET.RANDOM_SEED = 123456
+_C.TRAIN.DATASET.MAX_SEGM_POLY_POINTS_PER_IMAGE = 65536
+
+_C.TRAIN.INPUT = CN()
+_C.TRAIN.INPUT.TARGET_SIZE = 800
+_C.TRAIN.INPUT.MAX_SIZE = 1333
+_C.TRAIN.INPUT.IMAGE_ALIGN_SIZE = 32
+_C.TRAIN.INPUT.PIXEL_MEAN = [102.9801, 115.9465, 122.7717]
+_C.TRAIN.INPUT.PIXEL_STD = [1., 1., 1.]
+_C.TRAIN.INPUT.MIRROR_PROB = 0.5
+_C.TRAIN.INPUT.MAX_BOXES_PER_IMAGE = 64
+_C.TRAIN.INPUT.MAX_POLYGONS_PER_OBJECT = 2
+_C.TRAIN.INPUT.MAX_POINTS_PER_POLYGON = 256
+
+_C.EVAL = CN()
+_C.EVAL.BATCH_SIZE = 1
+_C.EVAL.IMAGE_PER_GPU = 1
+_C.EVAL.MODEL_LOAD_PATH = "/model_zoo/detection/mask_rcnn_R_50_FPN_1x_with_momentum"
+
+_C.EVAL.DATASET = CN()
+_C.EVAL.DATASET.DATASET_DIR = "/dataset/mscoco_2017"
+_C.EVAL.DATASET.ANNOTATION = "annotations/instances_val2017.json"
+_C.EVAL.DATASET.IMAGE_DIR = "val2017"
+
+_C.EVAL.INPUT = CN()
+_C.EVAL.INPUT.TARGET_SIZE = 400
+_C.EVAL.INPUT.MAX_SIZE = 600
+_C.EVAL.INPUT.IMAGE_ALIGN_SIZE = 32
+_C.EVAL.INPUT.PIXEL_MEAN = [102.9801, 115.9465, 122.7717]
+_C.EVAL.INPUT.PIXEL_STD = [1., 1., 1.]
+
+_C.SOLVER = CN()
+_C.SOLVER.PRIMARY_LR = 0.00125
+_C.SOLVER.SECONDARY_LR = 0.0025
+_C.SOLVER.OPTIMIZER = "momentum"  # "momentum" or "sgd"
+_C.SOLVER.MOMENTUM_BETA = 0.9
+_C.SOLVER.WEIGHT_L2 = 0.0001
+_C.SOLVER.BIAS_L2 = 0.0
+_C.SOLVER.ENABLE_LR_DECAY = True
+_C.SOLVER.LR_DECAY_BOUNDARIES = [960000, 1280000]
+_C.SOLVER.LR_DECAY_VALUES = [0.01, 0.001, 0.0001]
+_C.SOLVER.ENABLE_WARMUP = False
+_C.SOLVER.WARMUP_METHOD = "linear"  # "linear" or "constant"
+_C.SOLVER.WARMUP_BATCHES = 500
+_C.SOLVER.WARMUP_FACTOR = 1.0 / 3
 
 # ---------------------------------------------------------------------------- #
-#  Inference
+#  Debug
 # ---------------------------------------------------------------------------- #
-_C.INFERENCE = CN()
-_C.INFERENCE.PROPOSAL_RANDOM_SAMPLE = True
-
-# ---------------------------------------------------------------------------- #
-#  Model Load and Save
-# ---------------------------------------------------------------------------- #
-_C.MODEL = CN()
-_C.MODEL.MODEL_LOAD_PATH = ""
-_C.MODEL.MODEL_LOAD_SNAPSHOT_PATH = ""
-_C.MODEL.MODEL_SAVE_SNAPSHOT_PATH = ""
+_C.DEBUG = CN()
+_C.DEBUG.PROPOSAL_RANDOM_SAMPLE = True
 
 
 def get_default_cfgs():
