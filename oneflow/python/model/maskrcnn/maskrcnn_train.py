@@ -480,7 +480,7 @@ def update_metrics(metrics, iter, elapsed_time, outputs):
         )
         loss_mask = reduce_loss([output["loss_mask"] for output in outputs])
         total_pos_inds_elem_cnt = sum(
-            [output["total_pos_inds_elem_cnt"] for output in outputs]
+            [output["total_pos_inds_elem_cnt"][0] for output in outputs]
         )
 
         print(
