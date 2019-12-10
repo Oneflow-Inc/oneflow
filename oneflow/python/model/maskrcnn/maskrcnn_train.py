@@ -8,13 +8,13 @@ import argparse
 import time
 import statistics
 import oneflow as flow
-import oneflow.core.data.data_pb2 as data_util
 
 from datetime import datetime
 from backbone import Backbone
 from rpn import RPNHead, RPNLoss, RPNProposal
 from box_head import BoxHead
 from mask_head import MaskHead
+from data_load import make_data_loader
 from blob_watcher import save_blob_watched, blob_watched, diff_blob_watched
 
 parser = argparse.ArgumentParser()
@@ -40,20 +40,10 @@ parser.add_argument(
     "-rpn", "--rpn_only", default=False, action="store_true", required=False
 )
 parser.add_argument(
-    "-md", "--mock_dataset", default=False, action="store_true", required=False
-)
-parser.add_argument(
     "-mp",
     "--mock_dataset_path",
     type=str,
     default="/tmp/shared_with_zwx/mock_data_600x1000_b2.pkl",
-    required=False,
-)
-parser.add_argument(
-    "-td",
-    "--train_with_real_dataset",
-    default=False,
-    action="store_true",
     required=False,
 )
 parser.add_argument(
@@ -140,156 +130,19 @@ parser.add_argument(
 terminal_args = parser.parse_args()
 
 
-debug_data = None
-
-if terminal_args.mock_dataset:
-    from mock_data import MockData
-
-    debug_data = MockData(terminal_args.mock_dataset_path, 64)
-
-
-def get_numpy_placeholders():
-    import numpy as np
-
-    (N, H, W, C) = (2, 64, 64, 3)
-    R = 50
-    G = 12
-    return {
-        "images": np.random.randn(N, H, W, C).astype(np.float32),
-        "image_sizes": np.random.randn(N, 2).astype(np.int32),
-        "gt_boxes": np.random.randn(N, R, 4).astype(np.float32),
-        "gt_segms": np.random.randn(N, G, 28, 28).astype(np.int8),
-        "gt_labels": np.random.randn(N, G).astype(np.int32),
-        "rpn_proposals": np.random.randn(2000, 4).astype(np.float32),
-        "detections": np.random.randn(2000, 4).astype(np.float32),
-    }
-
-
-placeholders = get_numpy_placeholders()
-
-
-def maskrcnn_train(cfg, images, image_sizes, gt_boxes, gt_segms, gt_labels):
-    r"""Mask-RCNN
-    Args:
-    images: (N, H, W, C)
-    image_sizes: (N, 2)
-    gt_boxes: (N, R, 4), dynamic
-    gt_segms: (N, G, 28, 28), dynamic
-    gt_labels: (N, G), dynamic
-    """
-    assert images.is_dynamic is True
-    assert images.shape[3] == 3
-    assert image_sizes.is_dynamic is False
-    assert gt_boxes.num_of_lod_levels == 2
-    # if it is mask target projected, num_of_lod_levels is 0
-    if gt_segms.num_of_lod_levels == 0:
-        assert gt_segms.is_dynamic is True
-    else:
-        assert gt_segms.num_of_lod_levels == 2
-
-    assert gt_labels.num_of_lod_levels == 2
-
-    backbone = Backbone(cfg)
-    rpn_head = RPNHead(cfg)
-    rpn_loss = RPNLoss(cfg)
-    rpn_proposal = RPNProposal(cfg)
-    box_head = BoxHead(cfg)
-    mask_head = MaskHead(cfg)
-
-    image_size_list = []
-    num_gpus = cfg.NUM_GPUS
-    assert image_sizes.shape[0] % num_gpus == 0
-    num_image_size_per_gpu = int(image_sizes.shape[0] / num_gpus)
-    for gpu_i in range(num_gpus):
-        with flow.device_prior_placement("gpu", "0:" + str(gpu_i)):
-            for i in range(num_image_size_per_gpu):
-                image_size_list.append(
-                    flow.squeeze(
-                        flow.local_gather(
-                            image_sizes, flow.constant(i, dtype=flow.int32)
-                        ),
-                        [0],
-                    )
-                )
-
-    gt_boxes_list = flow.piece_slice(
-        gt_boxes, cfg.TRAINING_CONF.IMG_PER_GPU, name="piece_gt_boxes"
-    )
-
-    gt_labels_list = flow.piece_slice(
-        gt_labels, cfg.TRAINING_CONF.IMG_PER_GPU, name="piece_slice_gt_labels"
-    )
-
-    gt_segms_list = None
-    if gt_segms.num_of_lod_levels == 2:
-        gt_segms_list = flow.piece_slice(
-            gt_segms, cfg.TRAINING_CONF.IMG_PER_GPU, name="piece_slice_gt_segms"
-        )
-    else:
-        gt_segms_list = gt_segms
-
-    anchors = []
-    for i in range(cfg.DECODER.FPN_LAYERS):
-        anchors.append(
-            flow.detection.anchor_generate(
-                images=images,
-                feature_map_stride=cfg.DECODER.FEATURE_MAP_STRIDE * pow(2, i),
-                aspect_ratios=cfg.DECODER.ASPECT_RATIOS,
-                anchor_scales=cfg.DECODER.ANCHOR_SCALES * pow(2, i),
-            )
+def MakeWatcherCallback(prompt):
+    def Callback(blob, blob_def):
+        if prompt == "forward":
+            return
+        print(
+            "%s, lbn: %s, min: %s, max: %s"
+            % (prompt, blob_def.logical_blob_name, blob.min(), blob.max())
         )
 
-    # Backbone
-    # CHECK_POINT: fpn features
-    # with flow.watch_scope(
-    #     blob_watcher=blob_watched, diff_blob_watcher=diff_blob_watched
-    # ):
-    features = backbone.build(flow.transpose(images, perm=[0, 3, 1, 2]))
-
-    # RPN
-    # with flow.watch_scope(
-    #     blob_watcher=blob_watched, diff_blob_watcher=diff_blob_watched
-    # ):
-    cls_logit_list, bbox_pred_list = rpn_head.build(features)
-    rpn_bbox_loss, rpn_objectness_loss = rpn_loss.build(
-        anchors, image_size_list, gt_boxes_list, bbox_pred_list, cls_logit_list
-    )
-
-    if terminal_args.rpn_only:
-        return rpn_bbox_loss, rpn_objectness_loss
-
-    # with flow.watch_scope(blob_watched):
-    proposals = rpn_proposal.build(
-        anchors, cls_logit_list, bbox_pred_list, image_size_list, gt_boxes_list
-    )
-
-    # with flow.watch_scope(
-    #     blob_watcher=blob_watched, diff_blob_watcher=diff_blob_watched
-    # ), flow.watch_scope(
-    #     blob_watcher=MakeWatcherCallback("forward"),
-    #     diff_blob_watcher=MakeWatcherCallback("backward"),
-    # ):
-    # Box Head
-    box_loss, cls_loss, pos_proposal_list, pos_gt_indices_list = box_head.build_train(
-        proposals, gt_boxes_list, gt_labels_list, features
-    )
-
-    # Mask Head
-    mask_loss = mask_head.build_train(
-        pos_proposal_list,
-        pos_gt_indices_list,
-        gt_segms_list,
-        gt_labels_list,
-        features,
-    )
-
-    return rpn_bbox_loss, rpn_objectness_loss, box_loss, cls_loss, mask_loss
+    return Callback
 
 
-@flow.experimental.mirror_execute(terminal_args.gpu_num_per_node, 1)
-def distribute_maskrcnn_train(
-    config, image, image_size, gt_bbox, gt_segm, gt_label
-):
+def maskrcnn_train(cfg, image, image_size, gt_bbox, gt_segm, gt_label):
     """Mask-RCNN
     Args:
         image: (N, H, W, C)
@@ -304,14 +157,14 @@ def distribute_maskrcnn_train(
     assert gt_label.num_of_lod_levels == 2
 
     if terminal_args.verbose:
-        print(config)
+        print(cfg)
 
-    backbone = Backbone(config)
-    rpn_head = RPNHead(config)
-    rpn_loss = RPNLoss(config)
-    rpn_proposal = RPNProposal(config)
-    box_head = BoxHead(config)
-    mask_head = MaskHead(config)
+    backbone = Backbone(cfg)
+    rpn_head = RPNHead(cfg)
+    rpn_loss = RPNLoss(cfg)
+    rpn_proposal = RPNProposal(cfg)
+    box_head = BoxHead(cfg)
+    mask_head = MaskHead(cfg)
 
     image_size_list = [
         flow.squeeze(
@@ -337,11 +190,11 @@ def distribute_maskrcnn_train(
     anchors = [
         flow.detection.anchor_generate(
             images=image,
-            feature_map_stride=config.DECODER.FEATURE_MAP_STRIDE * pow(2, i),
-            aspect_ratios=config.DECODER.ASPECT_RATIOS,
-            anchor_scales=config.DECODER.ANCHOR_SCALES * pow(2, i),
+            feature_map_stride=cfg.DECODER.FEATURE_MAP_STRIDE * pow(2, i),
+            aspect_ratios=cfg.DECODER.ASPECT_RATIOS,
+            anchor_scales=cfg.DECODER.ANCHOR_SCALES * pow(2, i),
         )
-        for i in range(config.DECODER.FPN_LAYERS)
+        for i in range(cfg.DECODER.FPN_LAYERS)
     ]
 
     # Backbone
@@ -388,19 +241,14 @@ def distribute_maskrcnn_train(
         features,
     )
 
-    return rpn_bbox_loss, rpn_objectness_loss, box_loss, cls_loss, mask_loss, total_pos_inds_elem_cnt
-
-
-def MakeWatcherCallback(prompt):
-    def Callback(blob, blob_def):
-        if prompt == "forward":
-            return
-        print(
-            "%s, lbn: %s, min: %s, max: %s"
-            % (prompt, blob_def.logical_blob_name, blob.min(), blob.max())
-        )
-
-    return Callback
+    return {
+        "loss_rpn_box_reg": rpn_bbox_loss,
+        "loss_objectness": rpn_objectness_loss,
+        "loss_box_reg": box_loss,
+        "loss_classifier": cls_loss,
+        "loss_mask": mask_loss,
+        "total_pos_inds_elem_cnt": total_pos_inds_elem_cnt,
+    }
 
 
 def init_config():
@@ -481,180 +329,221 @@ def save_model(check_point, i):
     check_point.save(model_dst)
 
 
-if terminal_args.mock_dataset:
+def train_net(config, image=None):
+    flow.config.default_initialize_with_snapshot_path(
+        terminal_args.model_load_dir
+    )
 
-    @flow.function
-    def mock_train(
-        images=debug_data.blob_def("images"),
-        image_sizes=debug_data.blob_def("image_size"),
-        gt_boxes=debug_data.blob_def("gt_bbox"),
-        gt_segms=debug_data.blob_def("segm_mask_targets"),
-        gt_labels=debug_data.blob_def("gt_labels"),
-    ):
-        # flow.config.train.primary_lr(terminal_args.primary_lr)
-        # print("primary_lr:", terminal_args.primary_lr)
-        # flow.config.train.model_update_conf(dict(naive_conf={}))
-
-        outputs = maskrcnn_train(
-            init_config(),
-            flow.transpose(images, perm=[0, 2, 3, 1]),
-            image_sizes,
-            gt_boxes,
-            gt_segms,
-            gt_labels,
-        )
-        for loss in outputs:
-            flow.losses.add_loss(loss)
-        return outputs
-
-
-if terminal_args.train_with_real_dataset:
-
-    def make_data_loader(
-        batch_size,
+    data_loader = make_data_loader(
+        batch_size=terminal_args.batch_size,
         batch_cache_size=3,
-        dataset_dir="/dataset/mscoco_2017",
-        annotation_file="annotations/instances_train2017.json",
-        image_dir="train2017",
-        random_seed=123456,
-        shuffle=False,
-        group_by_aspect_ratio=True,
-        random_flip_image=False,
-    ):
-        coco = flow.data.COCODataset(
-            dataset_dir,
-            annotation_file,
-            image_dir,
-            random_seed,
-            shuffle,
-            group_by_aspect_ratio,
-        )
-        data_loader = flow.data.DataLoader(coco, batch_size, batch_cache_size)
-        data_loader.add_blob(
-            "image",
-            data_util.DataSourceCase.kImage,
-            shape=(1344, 800, 3),
-            dtype=flow.float,
-            is_dynamic=True,
-        )
-        data_loader.add_blob(
-            "image_size",
-            data_util.DataSourceCase.kImageSize,
-            shape=(2,),
-            dtype=flow.int32,
-        )
-        data_loader.add_blob(
-            "gt_bbox",
-            data_util.DataSourceCase.kObjectBoundingBox,
-            shape=(128, 4),
-            dtype=flow.float,
-            variable_length_axes=(0,),
-            is_dynamic=True,
-        )
-        data_loader.add_blob(
-            "gt_labels",
-            data_util.DataSourceCase.kObjectLabel,
-            shape=(128,),
-            dtype=flow.int32,
-            variable_length_axes=(0,),
-            is_dynamic=True,
-        )
-        data_loader.add_blob(
-            "gt_segm_poly",
-            data_util.DataSourceCase.kObjectSegmentation,
-            shape=(128, 2, 256, 2),
-            dtype=flow.double,
-            variable_length_axes=(0, 1, 2),
-            is_dynamic=True,
-        )
-        data_loader.add_blob(
-            "gt_segm",
-            data_util.DataSourceCase.kObjectSegmentationAlignedMask,
-            shape=(128, 1344, 800),
-            dtype=flow.int8,
-            variable_length_axes=(0,),
-            is_dynamic=True,
-        )
-        data_loader.add_transform(flow.data.TargetResizeTransform(800, 1333))
-        if random_flip_image:
-            data_loader.add_transform(flow.data.ImageRandomFlip())
-        data_loader.add_transform(
-            flow.data.ImageNormalizeByChannel((102.9801, 115.9465, 122.7717))
-        )
-        data_loader.add_transform(flow.data.ImageAlign(32))
-        data_loader.add_transform(
-            flow.data.SegmentationPolygonListToAlignedMask()
-        )
-        data_loader.init()
-        return data_loader
+        annotation_file=terminal_args.annotation_file,
+        image_dir=terminal_args.image_dir,
+        shuffle=terminal_args.dataset_shuffle,
+        random_flip_image=terminal_args.random_flip_image,
+    )
 
-    def train_net(config, image=None):
-        flow.config.default_initialize_with_snapshot_path(
-            terminal_args.model_load_dir
-        )
+    loss_name_tup = (
+        "loss_rpn_box_reg",
+        "loss_objectness",
+        "loss_box_reg",
+        "loss_classifier",
+        "loss_mask",
+    )
 
-        data_loader = make_data_loader(
-            batch_size=terminal_args.batch_size,
-            batch_cache_size=3,
-            annotation_file=terminal_args.annotation_file,
-            image_dir=terminal_args.image_dir,
-            shuffle=terminal_args.dataset_shuffle,
-            random_flip_image=terminal_args.random_flip_image,
+    if config.NUM_GPUS > 1:
+        distribute_train_func = flow.experimental.mirror_execute(
+            config.NUM_GPUS, 1
+        )(maskrcnn_train)
+        outputs = distribute_train_func(
+            config,
+            flow.identity(image) if image else data_loader("image"),
+            data_loader("image_size"),
+            data_loader("gt_bbox"),
+            data_loader("gt_segm"),
+            data_loader("gt_labels"),
         )
+        for outputs_per_rank in outputs:
+            for k, v in outputs_per_rank.items():
+                if k in loss_name_tup:
+                    flow.losses.add_loss(v)
 
-        if config.NUM_GPUS > 1:
-            outputs = distribute_maskrcnn_train(
-                config,
-                flow.identity(image) if image else data_loader("image"),
-                data_loader("image_size"),
-                data_loader("gt_bbox"),
-                data_loader("gt_segm"),
-                data_loader("gt_labels"),
+    else:
+        outputs = maskrcnn_train(
+            config,
+            image or data_loader("image"),
+            data_loader("image_size"),
+            data_loader("gt_bbox"),
+            data_loader("gt_segm"),
+            data_loader("gt_labels"),
+        )
+        for k, v in outputs.items():
+            if k in loss_name_tup:
+                flow.losses.add_loss(v)
+
+    return outputs
+
+
+def init_train_func(fake_image):
+    if fake_image:
+
+        @flow.function
+        def train(
+            image_blob=flow.input_blob_def(
+                shape=(2, 800, 1344, 3), dtype=flow.float32, is_dynamic=True
             )
-            for losses_per_device in outputs:
-                for loss in losses_per_device[:5]:
-                    flow.losses.add_loss(loss)
+        ):
+            config = init_config()
+            return train_net(config, image_blob)
 
-            return tuple(map(list, zip(*outputs)))
-        else:
-            outputs = maskrcnn_train(
-                config,
-                image or data_loader("image"),
-                data_loader("image_size"),
-                data_loader("gt_bbox"),
-                data_loader("gt_segm"),
-                data_loader("gt_labels"),
+        return train
+
+    else:
+
+        @flow.function
+        def train():
+            config = init_config()
+            return train_net(config)
+
+        return train
+
+
+def print_metric_title():
+    if terminal_args.print_loss_each_rank:
+        print(
+            "{:<8} {:<8} {:<16} {:<16} {:<16} {:<16} {:<16} {:<16}".format(
+                "iter",
+                "rank",
+                "elapsed_time",
+                "loss_rpn_box_reg",
+                "loss_objectness",
+                "loss_box_reg",
+                "loss_classifier",
+                "loss_mask",
             )
-            for loss in outputs:
-                flow.losses.add_loss(loss)
+        )
+    else:
+        print(
+            "{:<8} {:<16} {:<16} {:<16} {:<16} {:<16} {:<16}".format(
+                "iter",
+                "elapsed_time",
+                "loss_rpn_box_reg",
+                "loss_objectness",
+                "loss_box_reg",
+                "loss_classifier",
+                "loss_mask",
+            )
+        )
 
-            return outputs
 
-    def init_train_func(fake_image):
-        if fake_image:
-
-            @flow.function
-            def train(
-                image_blob=flow.input_blob_def(
-                    shape=(2, 800, 1344, 3), dtype=flow.float32, is_dynamic=True
+def update_metrics(metrics, iter, elapsed_time, outputs):
+    elapsed_time_str = "{:.6f}".format(elapsed_time)
+    if terminal_args.print_loss_each_rank:
+        for rank, output_per_rank in enumerate(outputs):
+            fmt = "{:<8} {:<8} {:<16} {:<16.8f} {:<16.8f} {:<16.8f} {:<16.8f} {:<16.8f} {:<8}"
+            loss_rpn_box_reg = output_per_rank["loss_rpn_box_reg"]
+            loss_objectness = output_per_rank["loss_objectness"]
+            loss_box_reg = output_per_rank["loss_box_reg"]
+            loss_classifier = output_per_rank["loss_classifier"]
+            loss_mask = output_per_rank["loss_mask"]
+            total_pos_inds_elem_cnt = output_per_rank["total_pos_inds_elem_cnt"]
+            print(
+                fmt.format(
+                    iter,
+                    rank,
+                    elapsed_time_str if rank == 0 else "",
+                    loss_rpn_box_reg.mean(),
+                    loss_objectness.mean(),
+                    loss_box_reg.mean(),
+                    loss_classifier.mean(),
+                    loss_mask.mean(),
+                    int(total_pos_inds_elem_cnt.item()),
                 )
-            ):
-                config = init_config()
-                return train_net(config, image_blob)
+            )
+    else:
 
-            return train
+        def reduce_loss(losses):
+            loss_list_of_ranks = [loss.mean() for loss in losses]
+            return sum(loss_list_of_ranks) / len(loss_list_of_ranks)
 
-        else:
+        loss_rpn_box_reg = reduce_loss(
+            [output["loss_rpn_box_reg"] for output in outputs]
+        )
+        loss_objectness = reduce_loss(
+            [output["loss_objectness"] for output in outputs]
+        )
+        loss_box_reg = reduce_loss(
+            [output["loss_box_reg"] for output in outputs]
+        )
+        loss_classifier = reduce_loss(
+            [output["loss_classifier"] for output in outputs]
+        )
+        loss_mask = reduce_loss([output["loss_mask"] for output in outputs])
+        total_pos_inds_elem_cnt = sum(
+            [output["total_pos_inds_elem_cnt"] for output in outputs]
+        )
 
-            @flow.function
-            def train():
-                config = init_config()
-                return train_net(config)
+        print(
+            "{:<8} {:<16} {:<16.8f} {:<16.8f} {:<16.8f} {:<16.8f} {:<16.8f} {:<8}".format(
+                iter,
+                elapsed_time_str,
+                loss_rpn_box_reg,
+                loss_objectness,
+                loss_box_reg,
+                loss_classifier,
+                loss_mask,
+                int(total_pos_inds_elem_cnt),
+            )
+        )
 
-            return train
+        df = pd.DataFrame(
+            [
+                {"iter": iter, "legend": "elapsed_time", "value": elapsed_time},
+                {
+                    "iter": iter,
+                    "legend": "loss_rpn_box_reg",
+                    "value": loss_rpn_box_reg,
+                },
+                {
+                    "iter": iter,
+                    "legend": "loss_objectness",
+                    "value": loss_objectness,
+                },
+                {"iter": iter, "legend": "loss_box_reg", "value": loss_box_reg},
+                {
+                    "iter": iter,
+                    "legend": "loss_classifier",
+                    "value": loss_classifier,
+                },
+                {"iter": iter, "legend": "loss_mask", "value": loss_mask},
+                {
+                    "iter": iter,
+                    "legend": "total_pos_inds_elem_cnt",
+                    "value": total_pos_inds_elem_cnt,
+                },
+            ]
+        )
+        metrics = pd.concat([metrics, df], axis=0)
+
+    if terminal_args.save_loss_npy_every_n_batch > 0:
+        if (
+            (iter + 1) % terminal_args.save_loss_npy_every_n_batch == 0
+            or iter + 1 == terminal_args.iter_num
+        ):
+            npy_file_name = "loss-{}-batch_size-{}-gpu-{}-image_dir-{}-{}.csv".format(
+                iter,
+                terminal_args.batch_size,
+                terminal_args.gpu_num_per_node,
+                terminal_args.image_dir,
+                str(datetime.now().strftime("%Y-%m-%d--%H-%M-%S")),
+            )
+            metrics.to_csv(npy_file_name, index=False)
+            print("saved: {}".format(npy_file_name))
+
+    return metrics
 
 
-if __name__ == "__main__":
+def run():
     flow.env.ctrl_port(terminal_args.ctrl_port)
     flow.config.enable_inplace(False)
     flow.config.gpu_device_num(terminal_args.gpu_num_per_node)
@@ -668,9 +557,10 @@ if __name__ == "__main__":
             for f in file_list
         ]
 
-    if terminal_args.train_with_real_dataset:
-        train_func = init_train_func(len(fake_image_list) > 0)
+    # Get mrcn train function
+    train_func = init_train_func(len(fake_image_list) > 0)
 
+    # model init
     if not terminal_args.model_load_dir:
         check_point = flow.train.CheckPoint()
         check_point.init()
@@ -681,144 +571,34 @@ if __name__ == "__main__":
         # check_point.load(terminal_args.model_load_dir)
         check_point.init()
 
-    if terminal_args.debug:
-        if terminal_args.mock_dataset:
-            if terminal_args.rpn_only:
-                print(
-                    "{:>8} {:>16} {:>16}".format(
-                        "iter", "rpn_bbox_loss", "rpn_obj_loss"
-                    )
-                )
-            else:
-                print(
-                    "{:>8} {:>16} {:>16} {:>16} {:>16} {:>16}".format(
-                        "iter",
-                        "loss_rpn_box_reg",
-                        "loss_objectness",
-                        "loss_box_reg",
-                        "loss_classifier",
-                        "loss_mask",
-                    )
-                )
-            for i in range(terminal_args.iter_num):
-                train_loss = mock_train(
-                    debug_data.blob("images"),
-                    debug_data.blob("image_size"),
-                    debug_data.blob("gt_bbox"),
-                    debug_data.blob("segm_mask_targets"),
-                    debug_data.blob("gt_labels"),
-                ).get()
-                fmt_str = "{:>8} " + "{:>16.10f} " * len(train_loss)
-                print_loss = [i]
-                for loss in train_loss:
-                    print_loss.append(loss.mean())
-                print(fmt_str.format(*print_loss))
-                save_blob_watched(i)
+    start_time = time.time()
+    elapsed_times = []
+    metrics = pd.DataFrame()
+    print_metric_title()
+    for i in range(terminal_args.iter_num):
+        if i < len(fake_image_list):
+            outputs = train_func(fake_image_list[i]).get()
+        else:
+            outputs = train_func().get()
 
-                if (i + 1) % 10 == 0:
-                    save_model(check_point, i + 1)
+        now_time = time.time()
+        elapsed_time = now_time - start_time
+        elapsed_times.append(elapsed_time)
+        start_time = now_time
 
-        elif terminal_args.train_with_real_dataset:
-            if terminal_args.print_loss_each_rank:
-                print(
-                    "{:<8} {:<8} {:<16} {:<16} {:<16} {:<16} {:<16} {:<16}".format(
-                        "iter",
-                        "rank",
-                        "elapsed_time",
-                        "loss_rpn_box_reg",
-                        "loss_objectness",
-                        "loss_box_reg",
-                        "loss_classifier",
-                        "loss_mask",
-                    )
-                )
-            else:
-                print(
-                    "{:<8} {:<16} {:<16} {:<16} {:<16} {:<16} {:<16}".format(
-                        "iter",
-                        "elapsed_time",
-                        "loss_rpn_box_reg",
-                        "loss_objectness",
-                        "loss_box_reg",
-                        "loss_classifier",
-                        "loss_mask",
-                    )
-                )
+        save_blob_watched(i)
 
-            metrics = pd.DataFrame()
-            start_time = time.time()
-            elapsed_times = []
-            for i in range(terminal_args.iter_num):
-                if i < len(fake_image_list):
-                    losses = train_func(fake_image_list[i]).get()
-                else:
-                    losses = train_func().get()
+        if terminal_args.model_save_every_n_batch > 0:
+            if (
+                (i + 1) % terminal_args.model_save_every_n_batch == 0
+                or i + 1 == terminal_args.iter_num
+            ):
+                save_model(check_point, i + 1)
 
-                now_time = time.time()
-                elapsed_time = now_time - start_time
-                elapsed_times.append(elapsed_time)
-                start_time = now_time
+        metrics = update_metrics(metrics, i, elapsed_time, outputs)
 
-                if terminal_args.model_save_every_n_batch > 0:
-                    if (
-                        (i + 1) % terminal_args.model_save_every_n_batch == 0
-                        or i + 1 == terminal_args.iter_num
-                    ):
-                        save_model(check_point, i + 1)
-                        
-                elapsed_time_str = "{:.6f}".format(elapsed_time)
-                if terminal_args.print_loss_each_rank:
-                    for rank, loss_tup in enumerate(zip(*losses)):
-                        fmt = "{:<8} {:<8} {:<16} " + "{:<16.10f} " * len(
-                            loss_tup
-                        )
-                        loss_per_rank = [loss.mean() for loss in loss_tup]
-                        print(
-                            fmt.format(
-                                i,
-                                rank,
-                                elapsed_time_str if rank == 0 else "",
-                                *loss_per_rank
-                            )
-                        )
-                else:
-                    loss_per_batch = []
-                    for loss_list in losses:
-                        rank_loss_list = [
-                            loss_per_rank.mean() for loss_per_rank in loss_list
-                        ]
-                        loss_per_batch.append(
-                            sum(rank_loss_list) / len(rank_loss_list)
-                        )
+    print("median of elapsed time per batch:", statistics.median(elapsed_times))
 
-                    fmt = "{:<8} {:<16} " + "{:<16.10f} " * len(loss_per_batch)
-                    print(fmt.format(i, elapsed_time_str, *loss_per_batch))
-                    
-                    df = pd.DataFrame(
-                        [
-                            {"iter": i, "legend": "elapsed_time", "value": elapsed_time},
-                            {"iter": i, "legend": "loss_rpn_box_reg", "value": loss_per_batch[0]},
-                            {"iter": i, "legend": "loss_objectness", "value": loss_per_batch[1]},
-                            {"iter": i, "legend": "loss_box_reg", "value": loss_per_batch[2]},
-                            {"iter": i, "legend": "loss_classifier", "value": loss_per_batch[3]},
-                            {"iter": i, "legend": "loss_mask", "value": loss_per_batch[4]},
-                            {
-                                "iter": i,
-                                "legend": "total_pos_inds_elem_cnt",
-                                "value": loss_per_batch[5],
-                            },
-                        ]
-                    )
-                    metrics = pd.concat([metrics, df], axis=0)
-                    loss_per_batch.append(i)
-                if terminal_args.save_loss_npy_every_n_batch  > 0 :
-                    if (i + 1) % terminal_args.save_loss_npy_every_n_batch == 0 or i + 1 == terminal_args.iter_num:
-                        npy_file_name = "loss-{}-batch_size-{}-gpu-{}-image_dir-{}-{}.csv".format(i, terminal_args.batch_size, terminal_args.gpu_num_per_node, terminal_args.image_dir ,str(datetime.now().strftime("%Y-%m-%d--%H-%M-%S")))
-                        metrics.to_csv(npy_file_name, index=False)
-                        print("saved: {}".format(npy_file_name))
-                save_blob_watched(i)
 
-            print(
-                "median of elapsed time per batch:",
-                statistics.median(elapsed_times),
-            )
+if __name__ == "__main__":
+    run()
