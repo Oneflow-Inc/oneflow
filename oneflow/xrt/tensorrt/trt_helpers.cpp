@@ -36,6 +36,35 @@ nvinfer1::ITensor *Reshape(TrtOpContext *ctx, nvinfer1::Weights in,  // NOLINT
   return layer->getOutput(0);
 }
 
+nvinfer1::ITensor *Transpose(TrtOpContext *ctx, nvinfer1::ITensor *in,
+                             const std::vector<int> &permute) {
+  CHECK_LE(permute.size(), nvinfer1::Dims::MAX_DIMS)  // NOLINT
+      << "Exceed the allowed maximum dimension.";
+  nvinfer1::Permutation permutation;
+  for (int i = 0; i < permute.size(); ++i) {
+    permutation.order[i] = permute[i];
+  }
+  auto *layer = ctx->builder()->addShuffle(*in);
+  layer->setFirstTranspose(permutation);
+  return layer->getOutput(0);
+}
+
+nvinfer1::ITensor *Transpose(TrtOpContext *ctx, nvinfer1::Weights in,
+                             const Shape &shape,
+                             const std::vector<int> &permute) {
+  CHECK_LE(permute.size(), nvinfer1::Dims::MAX_DIMS)  // NOLINT
+      << "Exceed the allowed maximum dimension.";
+  nvinfer1::Permutation permutation;
+  for (int i = 0; i < permute.size(); ++i) {
+    permutation.order[i] = permute[i];
+  }
+
+  nvinfer1::ITensor *in_tensor = Reshape(ctx, in, shape);
+  auto *layer = ctx->builder()->addShuffle(*in_tensor);
+  layer->setFirstTranspose(permutation);
+  return layer->getOutput(0);
+}
+
 }  // namespace helpers
 
 }  // namespace tensorrt

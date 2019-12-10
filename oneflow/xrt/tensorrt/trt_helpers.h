@@ -17,6 +17,14 @@ nvinfer1::ITensor *Reshape(TrtOpContext *ctx, nvinfer1::ITensor *in,  // NOLINT
 
 nvinfer1::ITensor *Reshape(TrtOpContext *ctx, nvinfer1::Weights in,  // NOLINT
                            const Shape &shape);
+
+nvinfer1::ITensor *Transpose(TrtOpContext *ctx, nvinfer1::ITensor *in,
+                             const std::vector<int> &permute);
+
+nvinfer1::ITensor *Transpose(TrtOpContext *ctx, nvinfer1::Weights in,
+                             const Shape &shape,
+                             const std::vector<int> &permute);
+
 }  // namespace helpers
 
 }  // namespace tensorrt
