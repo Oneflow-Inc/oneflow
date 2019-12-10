@@ -515,22 +515,6 @@ def update_metrics(metrics, iter, elapsed_time, outputs):
         )
         metrics = pd.concat([metrics, df], axis=0)
 
-    if terminal_args.save_loss_npy_every_n_batch > 0:
-        if (
-            (iter + 1) % terminal_args.save_loss_npy_every_n_batch == 0
-            or iter + 1 == terminal_args.iter_num
-        ):
-            npy_file_name = "loss-{}-batch_size-{}-gpu-{}-image_dir-{}-{}.csv".format(
-                iter,
-                terminal_args.batch_size,
-                terminal_args.gpu_num_per_node,
-                terminal_args.image_dir,
-                str(datetime.now().strftime("%Y-%m-%d--%H-%M-%S")),
-            )
-            metrics.to_csv(npy_file_name, index=False)
-            if terminal_args.verbose:
-                print("saved: {}".format(npy_file_name))
-
     return metrics
 
 
@@ -577,7 +561,20 @@ def run():
                 or i + 1 == terminal_args.iter_num
             ):
                 save_model(check_point, i + 1)
-
+        if terminal_args.save_loss_npy_every_n_batch > 0:
+            if (
+                (i + 1) % terminal_args.save_loss_npy_every_n_batch == 0
+                or i + 1 == terminal_args.iter_num
+            ):
+                npy_file_name = "loss-{}-batch_size-{}-gpu-{}-image_dir-{}-{}.csv".format(
+                    i,
+                    terminal_args.batch_size,
+                    terminal_args.gpu_num_per_node,
+                    terminal_args.image_dir,
+                    str(datetime.now().strftime("%Y-%m-%d--%H-%M-%S")),
+                )
+                metrics.to_csv(npy_file_name, index=False)
+                print("saved: {}".format(npy_file_name))
         metrics = update_metrics(metrics, i, elapsed_time, outputs)
 
     print("median of elapsed time per batch:", statistics.median(elapsed_times))
