@@ -462,26 +462,24 @@ def update_metrics(metrics, iter, elapsed_time, outputs):
             )
     else:
 
-        def reduce_loss(losses):
+        def reduce_across_ranks(losses):
             loss_list_of_ranks = [loss.mean() for loss in losses]
             return sum(loss_list_of_ranks) / len(loss_list_of_ranks)
 
-        loss_rpn_box_reg = reduce_loss(
+        loss_rpn_box_reg = reduce_across_ranks(
             [output["loss_rpn_box_reg"] for output in outputs]
         )
-        loss_objectness = reduce_loss(
+        loss_objectness = reduce_across_ranks(
             [output["loss_objectness"] for output in outputs]
         )
-        loss_box_reg = reduce_loss(
+        loss_box_reg = reduce_across_ranks(
             [output["loss_box_reg"] for output in outputs]
         )
-        loss_classifier = reduce_loss(
+        loss_classifier = reduce_across_ranks(
             [output["loss_classifier"] for output in outputs]
         )
-        loss_mask = reduce_loss([output["loss_mask"] for output in outputs])
-        total_pos_inds_elem_cnt = sum(
-            [output["total_pos_inds_elem_cnt"][0] for output in outputs]
-        )
+        loss_mask = reduce_across_ranks([output["loss_mask"] for output in outputs])
+        total_pos_inds_elem_cnt = reduce_across_ranks([output["total_pos_inds_elem_cnt"] for output in outputs])
 
         print(
             "{:<8} {:<16} {:<16.8f} {:<16.8f} {:<16.8f} {:<16.8f} {:<16.8f} {:<8}".format(
