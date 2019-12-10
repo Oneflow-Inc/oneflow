@@ -179,7 +179,7 @@ class RPNLoss(object):
                     axis=[1],
                 )
 
-                if self.cfg.INFERENCE.PROPOSAL_RANDOM_SAMPLE:
+                if self.cfg.DEBUG.PROPOSAL_RANDOM_SAMPLE:
                     rand_pos_inds = flow.detection.random_perm_like(pos_inds)
                     rand_neg_inds = flow.detection.random_perm_like(neg_inds)
                     pos_inds = flow.local_gather(pos_inds, rand_pos_inds)
