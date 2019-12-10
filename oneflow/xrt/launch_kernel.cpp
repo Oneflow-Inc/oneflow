@@ -12,6 +12,10 @@ DEFINE_int64(max_workspace_bytes, EnvToInt64(FLAGS_max_workspace_bytes, -1),
 // TENSORRT executable setup.
 DEFINE_int32(max_batch_size, EnvToInt(FLAGS_max_batch_size, 1),
              "Maximum batch size for builder of TENSORRT engine.");
+DEFINE_bool(enable_fp16, EnvToBool(FLAGS_enable_fp16, false),
+            "Enable fp16 precision for TENSORRT engine.");
+DEFINE_bool(enable_int8, EnvToBool(FLAGS_enable_int8, false),
+            "Enable int8 precision for TENSORRT engine.");
 
 namespace oneflow {
 
@@ -182,6 +186,7 @@ void XrtLaunchKernel<device_type>::ForwardDataContent(
   if (executable->engine() == xrt::XrtEngine::TENSORRT) {
     CHECK_EQ(device_type, DeviceType::kGPU);
     run_options.max_batch_size = FLAGS_max_batch_size;
+    run_options.enable_fp16 = FLAGS_enable_fp16;
   }
   bool status = executable->Run(entry_params, run_options, block_until_done);
   CHECK(status) << "Executable is running failed.";
