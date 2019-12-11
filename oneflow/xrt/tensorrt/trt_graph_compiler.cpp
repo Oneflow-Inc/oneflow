@@ -43,6 +43,7 @@ void TrtGraphCompiler::SetupKernelContextParam(
 
   size_t num_outputs = input_output_args.size() - input_ops.size();
   CHECK_GE(num_outputs, 0) << "Outputs number should >= 0.";
+  context_param->op_name = node->name();
   context_param->builder = builder_.get();
   context_param->message = OpMessage(node);
   context_param->arguments = std::move(input_output_args);
@@ -81,7 +82,8 @@ std::shared_ptr<Executable> TrtGraphCompiler::Compile(
 
   // return std::make_shared<TrtExecutable>(builder_->BuildCudaEngine());
   return std::make_shared<TrtExecutable>(builder_->ReleaseBuilder(),
-                                         builder_->ReleaseNetwork());
+                                         builder_->ReleaseNetwork(),
+                                         builder_->host_weights());
 }
 
 REGISTER_GRAPH_COMPILER(XrtEngine::TENSORRT, TrtGraphCompiler);

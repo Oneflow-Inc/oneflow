@@ -21,6 +21,8 @@ namespace tensorrt {
 class TrtOpContext : public OpContext {
  public:
   struct Param {
+    std::string op_name;
+
     TrtBuilder *builder;
     // Config proto related to the operator
     const PbMessage *message;
@@ -39,6 +41,8 @@ class TrtOpContext : public OpContext {
   const Param &param() const { return param_; }
 
   TrtBuilder *builder() const { return param_.builder; }
+
+  const std::string &op_name() const { return param_.op_name; }
 
   // Return input named `name` as tensor
   nvinfer1::ITensor *Input(const std::string &name);

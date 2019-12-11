@@ -5,24 +5,17 @@ namespace oneflow {
 namespace xrt {
 namespace tensorrt {
 
-class FullyConnectedOp : public TrtOpKernel {
+class IdentityOp : public TrtOpKernel {
  public:
   void Compile(TrtOpContext *ctx) override {
     nvinfer1::ITensor *in = ctx->Input("in");
-    // Transpose weight
-    nvinfer1::Weights weight = ctx->Weight("weight");
-
-    nvinfer1::Weights bias;
-    if (ctx->GetAttr<bool>("use_bias")) {
-      bias = ctx->Weight("bias");
-    }
-
-    auto *layer = ctx->builder()->addFullyConnected(*in, 1, weight, bias);
+    auto *layer = ctx->builder()->addIdentity(*in);
+    layer->setName(ctx->op_name().c_str());
     ctx->SetOutput("out", layer->getOutput(0));
   }
 };
 
-REGISTER_TRT_OP_KERNEL(FullyConnected, FullyConnectedOp);
+REGISTER_TRT_OP_KERNEL(Identity, IdentityOp).EnableTrainPhase().Finalize();
 
 }  // namespace tensorrt
 }  // namespace xrt

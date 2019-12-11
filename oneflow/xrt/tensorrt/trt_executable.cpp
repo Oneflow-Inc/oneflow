@@ -19,13 +19,24 @@ bool TrtExecutable::CreateExecutableEngine(
     max_workspace_size = run_options.device_memory_limit;
   }
   build_config->setMaxWorkspaceSize(max_workspace_size);
-  // build_config->setInt8Calibrator();
-  // nvinfer1::BuilderFlags flags = 0U;
-  // flags |= (1U << int(nvinfer1::BuilderFlag::kFP16));
+
+  nvinfer1::BuilderFlags flags = 0U;
+  if (run_options.enable_fp16) {
+    if (builder_->platformHasFastFp16()) {
+      flags |= (1U << int(nvinfer1::BuilderFlag::kFP16));
+      // It does not guarantee using half kernel if only set kFP16 flag,
+      // but you can set kSTRICT_TYPES to force using half precision.
+      // flags |= (1U << int(nvinfer1::BuilderFlag::kSTRICT_TYPES));
+    } else {
+      LOG(INFO) << "TensorRT couldn't use fp16 precision since the GPU "
+                   "hardware does not support.";
+    }
+  }
   // flags |= (1U << int(nvinfer1::BuilderFlag::kINT8));
   // flags |= (1U << int(nvinfer1::BuilderFlag::kREFIT));
-  // build_config->setFlags(flags);
-  // builder_->setMaxBatchSize(run_options.max_batch_size);
+  build_config->setFlags(flags);
+  // build_config->setInt8Calibrator();
+
   int32_t max_batch_size = std::max(run_options.max_batch_size, batch_size);
   builder_->setMaxBatchSize(max_batch_size);
   // builder_->setGpuAllocator();
@@ -40,7 +51,8 @@ bool TrtExecutable::ExecuteEngine(int batch_size, void **buffers, void *stream,
   }
   cudaStream_t cu_stream = reinterpret_cast<cudaStream_t>(stream);
   bool status =
-      execution_context_->enqueue(batch_size, buffers, cu_stream, nullptr);
+      // execution_context_->enqueue(batch_size, buffers, cu_stream, nullptr);
+      execution_context_->enqueueV2(buffers, cu_stream, nullptr);
   if (block_until_done) {
     CHECK_EQ(cudaSuccess, cudaStreamSynchronize(cu_stream));
   }
@@ -58,22 +70,23 @@ bool TrtExecutable::Run(const std::vector<Parameter> &inputs,
   // All return params are results of the executable.
   this->results_ = run_options.return_params;
 
-  const int num_bindings = engine_->getNbBindings();
-  std::vector<const Parameter *> binding_params(num_bindings);
+  util::Map<std::string, const Parameter *> all_params;
   for (const Parameter &input : inputs) {
-    // Binding index is -1 if the name is not found.
-    int binding_index = engine_->getBindingIndex(input.name().c_str());
-    if (binding_index >= 0 && binding_index < num_bindings) {
-      binding_params[binding_index] = &input;
-    }
+    all_params.emplace(input.name(), &input);
   }
   for (const Parameter &output : this->results_) {
-    int binding_index = engine_->getBindingIndex(output.name().c_str());
-    if (binding_index >= 0 && binding_index < num_bindings) {
-      binding_params[binding_index] = &output;
-    }
+    all_params.emplace(output.name(), &output);
   }
 
+  const int num_bindings = engine_->getNbBindings();
+  std::vector<const Parameter *> binding_params(num_bindings);
+  std::vector<void *> buffers(num_bindings);
+  for (int i = 0; i < num_bindings; ++i) {
+    const char *binding_name = engine_->getBindingName(i);
+    CHECK_GT(all_params.count(binding_name), 0);
+    binding_params[i] = all_params.at(binding_name);
+    buffers[i] = binding_params[i]->data();
+  }
   // TODO(hjchen2): Check batch size is same for all binding parameters.
   const int batch_size = binding_params[0]->shape().At(0);
   if (batch_size > engine_->getMaxBatchSize()) {
@@ -83,11 +96,6 @@ bool TrtExecutable::Run(const std::vector<Parameter> &inputs,
     CHECK(CreateExecutableEngine(run_options, batch_size))
         << "Failed to create engine with batch size " << batch_size;
     execution_context_.reset(engine_->createExecutionContext());
-  }
-
-  std::vector<void *> buffers(num_bindings);
-  for (int i = 0; i < num_bindings; ++i) {
-    buffers[i] = binding_params[i]->data();
   }
   return ExecuteEngine(batch_size, buffers.data(), run_options.stream,
                        block_until_done);
