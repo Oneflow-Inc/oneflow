@@ -251,8 +251,11 @@ def merge_args_to_train_config(args):
     if hasattr(args, "shuffle_dataset"):
         config.TRAIN.DATASET.SHUFFLE = args.shuffle_dataset
 
-    if hasattr(args, "shuffle_proposal_sample"):
-        config.DEBUG.PROPOSAL_RANDOM_SAMPLE = args.shuffle_proposal_sample
+    if hasattr(args, "rpn_random_sample"):
+        config.DEBUG.RPN_RANDOM_SAMPLE = args.rpn_random_sample
+
+    if hasattr(args, "roi_head_random_sample"):
+        config.DEBUG.ROI_HEAD_RANDOM_SAMPLE = args.roi_head_random_sample
 
     if hasattr(args, "random_flip_image"):
         if args.random_flip_image is False:
