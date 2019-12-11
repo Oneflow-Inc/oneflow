@@ -32,7 +32,6 @@ COCODataset::COCODataset(const DatasetProto& proto) : Dataset(proto) {
   for (const auto& anno : annotation_json_["annotations"]) {
     int64_t id = anno["id"].get<int64_t>();
     int64_t image_id = anno["image_id"].get<int64_t>();
-    int64_t category_id = anno["category_id"].get<int64_t>();
     // ignore crowd object for now
     if (anno["iscrowd"].get<int>() == 1) { continue; }
     // check if empty bbox, bbox format is (left, top, width, height)

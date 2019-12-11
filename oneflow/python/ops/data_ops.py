@@ -224,11 +224,18 @@ class COCODataset(object):
         shuffle=True,
         group_by_aspect_ratio=True,
         remove_images_without_annotations=True,
+        max_segm_poly_points_per_image=65536,
         name=None,
     ):
-        name = name or id_util.UniqueStr("COCODataset_")
-        self.__dict__.update(locals())
-        del self.self
+        self.name = name or id_util.UniqueStr("COCODataset_")
+        self.dataset_dir = dataset_dir
+        self.annotation_file = annotation_file
+        self.image_dir = image_dir
+        self.random_seed = random_seed
+        self.shuffle = shuffle
+        self.group_by_aspect_ratio = group_by_aspect_ratio
+        self.remove_images_without_annotations = remove_images_without_annotations
+        self.max_segm_poly_points_per_image = max_segm_poly_points_per_image
 
     def to_proto(self, proto=None):
         if proto is None:
@@ -242,6 +249,7 @@ class COCODataset(object):
         proto.coco.image_dir = self.image_dir
         proto.coco.group_by_aspect_ratio = self.group_by_aspect_ratio
         proto.coco.remove_images_without_annotations = self.remove_images_without_annotations
+        proto.coco.max_segm_poly_points = self.max_segm_poly_points_per_image
         return proto
 
 
@@ -430,7 +438,7 @@ class DataLoader(object):
             blob_conf.data_source = blob["data_source"]
             blob_conf.shape.dim.extend(blob["shape"])
             blob_conf.data_type = blob["dtype"]
-            if blob_conf.data_source == data_util.DataSourceCase.kImage:
+            if blob_conf.data_source == data_util.kImage:
                 blob_conf.encode_case.jpeg.SetInParent()
             else:
                 blob_conf.encode_case.raw.SetInParent()
