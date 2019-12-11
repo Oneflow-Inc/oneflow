@@ -9,9 +9,9 @@ class TestPooling(unittest.TestCase):
         if not self.run_test:
             return
         f1 = self.make_job(x.shape, ksize, strides, padding, data_format,
-                dtype=flow.float32)
+                           dtype=flow.float32)
         f2 = self.make_trt_job(x.shape, ksize, strides, padding, data_format,
-        dtype=flow.float32)
+                           dtype=flow.float32)
         a = f1(x).get()
         b = f2(x).get()
         print("without trt: ", a)
@@ -21,16 +21,16 @@ class TestPooling(unittest.TestCase):
         flow.clear_default_session()
 
     def _test_ones_body(self, shape, ksize, strides, padding, data_format,
-            dtype=np.float32):
+                        dtype=np.float32):
         x = np.ones(shape, dtype=dtype)
         self._test_body(x, ksize=ksize, strides=strides,
-                padding=padding, data_format=data_format, dtype=dtype)
+                        padding=padding, data_format=data_format, dtype=dtype)
 
     def _test_random_body(self, shape, ksize, strides, padding, data_format,
-            dtype=np.float32):
+                          dtype=np.float32):
         x = np.random.random(shape).astype(dtype)
         self._test_body(x, ksize=ksize, strides=strides, padding=padding,
-                data_format=data_format, dtype=dtype)
+                        data_format=data_format, dtype=dtype)
 
     def test_ones_input(self):
         print("test ones input: ")
@@ -72,16 +72,16 @@ class TestMaxPooling(TestPooling):
             flow.config.use_xla_jit(False)
             flow.config.use_tensorrt(False)
             return flow.nn.max_pool2d(x, ksize=ksize, strides=strides,
-                    padding=padding, data_format=data_format)
+                                      padding=padding, data_format=data_format)
         return max_pooling_job
 
     def make_trt_job(self, x_shape, ksize, strides, padding, data_format, dtype=flow.float32):
         @flow.function
         def trt_max_pooling_job(x = flow.input_blob_def(x_shape, dtype=dtype)):
-            flow.config.use_xla_jit(True)
-            flow.config.use_tensorrt(False)
+            flow.config.use_xla_jit(False)
+            flow.config.use_tensorrt(True)
             return flow.nn.max_pool2d(x, ksize=ksize, strides=strides,
-                    padding=padding, data_format=data_format)
+                                      padding=padding, data_format=data_format)
         return trt_max_pooling_job
 
 
@@ -93,7 +93,7 @@ class TestAveragePooling(TestPooling):
             flow.config.use_xla_jit(False)
             flow.config.use_tensorrt(False)
             return flow.nn.avg_pool2d(x, ksize=ksize, strides=strides,
-                    padding=padding, data_format=data_format)
+                                      padding=padding, data_format=data_format)
         return avg_pooling_job
 
     def make_trt_job(self, x_shape, ksize, strides, padding, data_format, dtype=flow.float32):
@@ -102,10 +102,9 @@ class TestAveragePooling(TestPooling):
             flow.config.use_xla_jit(False)
             flow.config.use_tensorrt(True)
             return flow.nn.avg_pool2d(x, ksize=ksize, strides=strides,
-                    padding=padding, data_format=data_format)
+                                      padding=padding, data_format=data_format)
         return trt_avg_pooling_job
 
 
 if __name__ == '__main__':
-  unittest.main()
-
+    unittest.main()
