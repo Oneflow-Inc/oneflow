@@ -19,13 +19,24 @@ bool TrtExecutable::CreateExecutableEngine(
     max_workspace_size = run_options.device_memory_limit;
   }
   build_config->setMaxWorkspaceSize(max_workspace_size);
-  // build_config->setInt8Calibrator();
-  // nvinfer1::BuilderFlags flags = 0U;
-  // flags |= (1U << int(nvinfer1::BuilderFlag::kFP16));
+
+  nvinfer1::BuilderFlags flags = 0U;
+  if (run_options.enable_fp16) {
+    if (builder_->platformHasFastFp16()) {
+      flags |= (1U << int(nvinfer1::BuilderFlag::kFP16));
+      // It does not guarantee using half kernel if only set kFP16 flag,
+      // but you can set kSTRICT_TYPES to force using half precision.
+      // flags |= (1U << int(nvinfer1::BuilderFlag::kSTRICT_TYPES));
+    } else {
+      LOG(INFO) << "TensorRT couldn't use fp16 precision since the GPU "
+                   "hardware does not support.";
+    }
+  }
   // flags |= (1U << int(nvinfer1::BuilderFlag::kINT8));
   // flags |= (1U << int(nvinfer1::BuilderFlag::kREFIT));
-  // build_config->setFlags(flags);
-  // builder_->setMaxBatchSize(run_options.max_batch_size);
+  build_config->setFlags(flags);
+  // build_config->setInt8Calibrator();
+
   int32_t max_batch_size = std::max(run_options.max_batch_size, batch_size);
   builder_->setMaxBatchSize(max_batch_size);
   // builder_->setGpuAllocator();
@@ -40,7 +51,8 @@ bool TrtExecutable::ExecuteEngine(int batch_size, void **buffers, void *stream,
   }
   cudaStream_t cu_stream = reinterpret_cast<cudaStream_t>(stream);
   bool status =
-      execution_context_->enqueue(batch_size, buffers, cu_stream, nullptr);
+      // execution_context_->enqueue(batch_size, buffers, cu_stream, nullptr);
+      execution_context_->enqueueV2(buffers, cu_stream, nullptr);
   if (block_until_done) {
     CHECK_EQ(cudaSuccess, cudaStreamSynchronize(cu_stream));
   }
