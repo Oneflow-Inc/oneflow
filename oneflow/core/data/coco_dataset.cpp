@@ -21,18 +21,17 @@ COCODataset::COCODataset(const DatasetProto& proto) : Dataset(proto) {
   std::istringstream in_str_stream(json_str);
   in_str_stream >> annotation_json_;
 
-  // build image id array and map
+  // initialize image_ids_, image_id2image_ and image_id2anno_id_ 
   for (const auto& image : annotation_json_["images"]) {
     int64_t id = image["id"].get<int64_t>();
     image_ids_.push_back(id);
     CHECK(image_id2image_.emplace(id, image).second);
+    CHECK(image_id2anno_id_.emplace(id, std::vector<int64_t>()).second);
   }
   // build anno map
-  HashSet<int64_t> to_remove_image_ids;
   for (const auto& anno : annotation_json_["annotations"]) {
     int64_t id = anno["id"].get<int64_t>();
     int64_t image_id = anno["image_id"].get<int64_t>();
-    int64_t category_id = anno["category_id"].get<int64_t>();
     // ignore crowd object for now
     if (anno["iscrowd"].get<int>() == 1) { continue; }
     // check if empty bbox, bbox format is (left, top, width, height)
@@ -53,52 +52,42 @@ COCODataset::COCODataset(const DatasetProto& proto) : Dataset(proto) {
         CHECK_GT(poly.size(), 6);
       }
     }
-    // remove image with category_id > 80
-    if (category_id > 80) {
-      to_remove_image_ids.insert(image_id);
-    } else {
-      CHECK(anno_id2anno_.emplace(id, anno).second);
-      image_id2anno_id_[image_id].push_back(id);
-    }
+    CHECK(anno_id2anno_.emplace(id, anno).second);
+    image_id2anno_id_.at(image_id).push_back(id);
   }
-  // TODO: add config
-  for (int64_t image_id : image_ids_) {
-    if (!ImageHasValidAnnotations(image_id)) {
-      // LOG(INFO) << "coco dataset image has no valid annotations, image_id: " << image_id;
-      to_remove_image_ids.insert(image_id);
+  // remove images without annotations if necessary
+  if (coco_dataset.remove_images_without_annotations()) {
+    HashSet<int64_t> to_remove_image_ids;
+    for (int64_t image_id : image_ids_) {
+      if (!ImageHasValidAnnotations(image_id)) {
+        to_remove_image_ids.insert(image_id);
+      }
     }
+    image_ids_.erase(std::remove_if(image_ids_.begin(), image_ids_.end(),
+                                    [&to_remove_image_ids](int64_t image_id) {
+                                      return to_remove_image_ids.find(image_id)
+                                             != to_remove_image_ids.end();
+                                    }),
+                     image_ids_.end());
   }
-  // remove images whose anno is invalid
-  image_ids_.erase(std::remove_if(image_ids_.begin(), image_ids_.end(),
-                                  [&to_remove_image_ids](int64_t image_id) {
-                                    return to_remove_image_ids.find(image_id)
-                                           != to_remove_image_ids.end();
-                                  }),
-                   image_ids_.end());
   // sort image ids for reproducible results
   std::sort(image_ids_.begin(), image_ids_.end());
   // build categories map
   std::vector<int32_t> category_ids;
-  for (const auto& cate : annotation_json_["categories"]) {
-    int32_t id = cate["id"].get<int32_t>();
-    // TODO: make 80 configurable
-    if (id <= 80) { category_ids.push_back(id); }
+  for (const auto& cat : annotation_json_["categories"]) {
+    category_ids.emplace_back(cat["id"].get<int32_t>());
   }
   std::sort(category_ids.begin(), category_ids.end());
-  int32_t contiguous_id = 0;
+  int32_t contiguous_id = 1;
   for (int32_t category_id : category_ids) {
-    ++contiguous_id;
-    CHECK(category_id2contiguous_id_.emplace(category_id, contiguous_id).second);
+    CHECK(category_id2contiguous_id_.emplace(category_id, contiguous_id++).second);
   }
   if (coco_dataset.group_by_aspect_ratio()) { sampler().reset(new GroupedDataSampler(this)); }
 }
 
 bool COCODataset::ImageHasValidAnnotations(int64_t image_id) const {
-  // image has no annotations
-  if (image_id2anno_id_.find(image_id) == image_id2anno_id_.end()) { return false; }
   const std::vector<int64_t>& anno_id_vec = image_id2anno_id_.at(image_id);
-  // if it's empty, there is no annotation
-  if (anno_id_vec.size() == 0) { return false; }
+  if (anno_id_vec.empty()) { return false; }
 
   bool bbox_area_all_close_to_zero = true;
   size_t visible_keypoints_count = 0;
@@ -226,8 +215,7 @@ void COCODataset::GetLabel(const nlohmann::json& label_json, DataField* data_fie
   CHECK(label_json.is_number_integer());
   auto* label_field = dynamic_cast<ArrayDataField<int32_t>*>(data_field);
   if (!label_field) { return; }
-  // TODO: add config to get contiguous_category_id
-  label_field->data().push_back(label_json.get<int32_t>());
+  label_field->data().push_back(category_id2contiguous_id_.at(label_json.get<int32_t>()));
 }
 
 void COCODataset::GetSegmentation(const nlohmann::json& segmentation, DataField* data_field) const {
