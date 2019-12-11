@@ -65,7 +65,10 @@ parser.add_argument("--enable_warmup", type=str2bool, nargs="?", const=True)
 parser.add_argument("--enable_lr_decay", type=str2bool, nargs="?", const=True)
 parser.add_argument("--shuffle_dataset", type=str2bool, nargs="?", const=True)
 parser.add_argument(
-    "--shuffle_proposal_sample", type=str2bool, nargs="?", const=True
+    "--rpn_random_sample", type=str2bool, nargs="?", const=True
+)
+parser.add_argument(
+    "--roi_head_random_sample", type=str2bool, nargs="?", const=True
 )
 parser.add_argument(
     "-flip", "--random_flip_image", type=str2bool, nargs="?", const=True
@@ -248,8 +251,11 @@ def merge_args_to_train_config(args):
     if hasattr(args, "shuffle_dataset"):
         config.TRAIN.DATASET.SHUFFLE = args.shuffle_dataset
 
-    if hasattr(args, "shuffle_proposal_sample"):
-        config.DEBUG.PROPOSAL_RANDOM_SAMPLE = args.shuffle_proposal_sample
+    if hasattr(args, "rpn_random_sample"):
+        config.DEBUG.RPN_RANDOM_SAMPLE = args.rpn_random_sample
+
+    if hasattr(args, "roi_head_random_sample"):
+        config.DEBUG.ROI_HEAD_RANDOM_SAMPLE = args.roi_head_random_sample
 
     if hasattr(args, "random_flip_image"):
         if args.random_flip_image is False:

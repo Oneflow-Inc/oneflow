@@ -149,7 +149,8 @@ _C.SOLVER.WARMUP_FACTOR = 1.0 / 3
 #  Debug
 # ---------------------------------------------------------------------------- #
 _C.DEBUG = CN()
-_C.DEBUG.PROPOSAL_RANDOM_SAMPLE = True
+_C.DEBUG.RPN_RANDOM_SAMPLE = True
+_C.DEBUG.ROI_HEAD_RANDOM_SAMPLE = True
 
 
 def get_default_cfgs():
