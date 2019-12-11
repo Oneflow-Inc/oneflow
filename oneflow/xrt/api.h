@@ -19,6 +19,8 @@ XrtDevice DeviceTypeToXrtDevice(const DeviceType &device_type);
 
 DeviceType XrtDeviceToDeviceType(const XrtDevice &device);
 
+XrtEngine StringToXrtEngine(const std::string &engine);
+
 std::string BlobIdToName(const LogicalBlobId &lbi);
 
 LogicalBlobId BlobNameToId(const std::string &blob_name);

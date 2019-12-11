@@ -81,10 +81,7 @@ xrt::Executable *XrtLaunchKernel<device_type>::BuildExecutable(
       // xrt::RunXrtPass("UpdateArgMetaData", graph.get(), options,
       //                 &this->job_desc());
     }
-
-    xrt::XrtEngine engine = (launch_conf.engine() == "XLA")
-                                ? xrt::XrtEngine::XLA
-                                : xrt::XrtEngine::TENSORRT;
+    xrt::XrtEngine engine = xrt::StringToXrtEngine(launch_conf.engine());
     xrt::XrtDevice device = xrt::DeviceTypeToXrtDevice(device_type);
     xrt::GraphCompiler compiler(this->op_conf().name(), engine, device,
                                 device_ordinal);

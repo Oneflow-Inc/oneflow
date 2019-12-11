@@ -104,6 +104,16 @@ DeviceType XrtDeviceToDeviceType(const XrtDevice &device) {
   }
 }
 
+XrtEngine StringToXrtEngine(const std::string &engine) {
+  if (engine == "XLA") {
+    return xrt::XrtEngine::XLA;
+  } else if (engine == "TENSORRT") {
+    return xrt::XrtEngine::TENSORRT;
+  } else {
+    LOG(FATAL) << "Unknown engine: " << engine;
+  }
+}
+
 std::string BlobIdToName(const LogicalBlobId &lbi) {
   CHECK_EQ(lbi.has_op_name(), true);
   CHECK_EQ(lbi.has_blob_name(), true);
