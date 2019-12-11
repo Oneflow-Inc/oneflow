@@ -48,11 +48,11 @@ class Testconcat(unittest.TestCase):
         self._test_ones_body((5, 1, 2), (5, 1, 2), axis=1)
         self._test_ones_body((5, 1, 2), (5, 1, 2), axis=2)
 
-   # def test_random_input(self):
-   #     self._test_random_body((5, 2), (5, 3), axis=1)
-   #     self._test_random_body((5, 2), (5, 3), axis=-1)
-   #     self._test_random_body((5, 1, 2), (5, 1, 2), axis=1)
-   #     self._test_random_body((5, 3, 2), (5, 3, 2), axis=2)
+    def test_random_input(self):
+        self._test_random_body((5, 2), (5, 3), axis=1)
+        self._test_random_body((5, 2), (5, 3), axis=-1)
+        self._test_random_body((5, 1, 2), (5, 1, 2), axis=1)
+        self._test_random_body((5, 3, 2), (5, 3, 2), axis=2)
 
 if __name__ == '__main__':
     unittest.main()
