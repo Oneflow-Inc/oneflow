@@ -3,45 +3,56 @@ import numpy as np
 
 import oneflow as flow
 
-@flow.function
-def concat_job(x=flow.input_blob_def((5, 2)), y=flow.input_blob_def((5, 3))):
-    flow.config.use_xla_jit(False)
-    flow.config.use_tensorrt(False)
-    flow.config.default_data_type(flow.float)
-    
-    return flow.concat([x, y], axis=1)
+def make_job(a_shape, b_shape, axis, dtype=flow.float32):
+    @flow.function
+    def concat_job(x=flow.input_blob_def(a_shape, dtype=dtype),
+            y=flow.input_blob_def(b_shape, dtype=dtype)):
+        flow.config.use_xla_jit(False)
+        flow.config.use_tensorrt(False)
+        return flow.concat([x, y], axis=axis)
+    return concat_job
 
-@flow.function
-def trt_concat_job(x=flow.input_blob_def((5, 2)), y=flow.input_blob_def((5, 3))):
-    flow.config.use_xla_jit(False)
-    flow.config.use_tensorrt(True)
-    flow.config.default_data_type(flow.float)
-
-    return flow.concat([x, y], axis=1)
+def make_trt_job(a_shape, b_shape, axis, dtype=flow.float32):
+    @flow.function
+    def trt_concat_job(x=flow.input_blob_def(a_shape, dtype=dtype),
+            y=flow.input_blob_def(b_shape, dtype=dtype)):
+        flow.config.use_xla_jit(False)
+        flow.config.use_tensorrt(True)
+        return flow.concat([x, y], axis=axis)
+    return trt_concat_job
 
 class Testconcat(unittest.TestCase):
-    def _test_body(self, x, y):
-        a = concat_job(x, y).get()
-        b = trt_concat_job(x, y).get()
-        print("without tensorrt: ", a)
-        print("with tensorrt", b)
+    def _test_body(self, x, y, axis, dtype=np.float32):
+        f1 = make_job(x.shape, y.shape, axis, dtype=flow.float32)
+        f2 = make_trt_job(x.shape, y.shape, axis, dtype=flow.float32)
+        a = f1(x, y).get()
+        b = f2(x, y).get()
+        print("without xla: ", a)
+        print("with tensorrt: ", b)
         self.assertTrue(np.allclose(a, b , rtol=1e-03, atol=1e-05))
-        # b = trt_concat_job(x).get()
-        # print("with tensorrt", b)
-        # self.assertTrue(np.allclose(a, b , rtol=1e-03, atol=1e-05))
+        flow.clear_default_session()
+
+    def _test_ones_body(self, a_shape, b_shape, axis, dtype=np.float32):
+        x = np.ones(a_shape, dtype=dtype)
+        y = np.ones(b_shape, dtype=dtype)
+        self._test_body(x, y, axis, dtype=dtype)
+
+    def _test_random_body(self, a_shape, b_shape, axis, dtype=np.float32):
+        x = np.random.random(a_shape).astype(dtype)
+        y = np.random.random(b_shape).astype(dtype)
+        self._test_body(x, y, axis, dtype=dtype)
 
     def test_ones_input(self):
-        x = np.ones((5, 2), dtype=np.float32)
-        y = np.ones((5, 3), dtype=np.float32)
-        self._test_body(x, y)
+        self._test_ones_body((5, 2), (5, 3), axis=1)
+        self._test_ones_body((5, 2), (5, 3), axis=-1)
+        self._test_ones_body((5, 1, 2), (5, 1, 2), axis=1)
+        self._test_ones_body((5, 1, 2), (5, 1, 2), axis=2)
 
-    def test_random_input(self):
-        x = np.random.rand(5, 2).astype(np.float32)
-        y = np.random.rand(5, 3).astype(np.float32)
-        self._test_body(x, y)
-
-
+   # def test_random_input(self):
+   #     self._test_random_body((5, 2), (5, 3), axis=1)
+   #     self._test_random_body((5, 2), (5, 3), axis=-1)
+   #     self._test_random_body((5, 1, 2), (5, 1, 2), axis=1)
+   #     self._test_random_body((5, 3, 2), (5, 3, 2), axis=2)
 
 if __name__ == '__main__':
-  unittest.main()
-
+    unittest.main()
