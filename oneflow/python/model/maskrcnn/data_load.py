@@ -31,20 +31,20 @@ def make_data_loader(config, training, load_cache_size=3):
 
         data_loader.add_blob(
             "image",
-            data_util.DataSourceCase.kImage,
+            data_util.kImage,
             shape=(aligned_max_size, aligned_target_size, 3),
             dtype=flow.float,
             is_dynamic=True,
         )
         data_loader.add_blob(
             "image_size",
-            data_util.DataSourceCase.kImageSize,
+            data_util.kImageSize,
             shape=(2,),
             dtype=flow.int32,
         )
         data_loader.add_blob(
             "gt_bbox",
-            data_util.DataSourceCase.kObjectBoundingBox,
+            data_util.kObjectBoundingBox,
             shape=(train_cfg.INPUT.MAX_BOXES_PER_IMAGE, 4),
             dtype=flow.float,
             variable_length_axes=(0,),
@@ -52,7 +52,7 @@ def make_data_loader(config, training, load_cache_size=3):
         )
         data_loader.add_blob(
             "gt_labels",
-            data_util.DataSourceCase.kObjectLabel,
+            data_util.kObjectLabel,
             shape=(train_cfg.INPUT.MAX_BOXES_PER_IMAGE,),
             dtype=flow.int32,
             variable_length_axes=(0,),
@@ -60,7 +60,7 @@ def make_data_loader(config, training, load_cache_size=3):
         )
         data_loader.add_blob(
             "gt_segm_poly",
-            data_util.DataSourceCase.kObjectSegmentation,
+            data_util.kObjectSegmentation,
             shape=(
                 train_cfg.INPUT.MAX_BOXES_PER_IMAGE,
                 train_cfg.INPUT.MAX_POLYGONS_PER_OBJECT,
@@ -73,7 +73,7 @@ def make_data_loader(config, training, load_cache_size=3):
         )
         data_loader.add_blob(
             "gt_segm",
-            data_util.DataSourceCase.kObjectSegmentationAlignedMask,
+            data_util.kObjectSegmentationAlignedMask,
             shape=(
                 train_cfg.INPUT.MAX_BOXES_PER_IMAGE,
                 aligned_max_size,
@@ -126,20 +126,20 @@ def make_data_loader(config, training, load_cache_size=3):
 
         data_loader.add_blob(
             "image",
-            data_util.DataSourceCase.kImage,
+            data_util.kImage,
             shape=(aligned_target_size, aligned_max_size, 3),
             dtype=flow.float,
             is_dynamic=True,
         )
         data_loader.add_blob(
             "image_size",
-            data_util.DataSourceCase.kImageSize,
+            data_util.kImageSize,
             shape=(2,),
             dtype=flow.int32,
         )
         data_loader.add_blob(
             "image_id",
-            data_util.DataSourceCase.kImageId,
+            data_util.kImageId,
             shape=(1,),
             dtype=flow.int64,
         )
