@@ -142,6 +142,11 @@ OpRegistryWrapperBuilder& OpRegistryWrapperBuilder::SetDataTypeInferFn(
   return *this;
 }
 
+OpRegistryWrapperBuilder& OpRegistryWrapperBuilder::SetCheckAttrFn(CheckAttrFn fn) {
+  wrapper_.reg_val.check_fn = std::move(fn);
+  return *this;
+}
+
 OpRegistryWrapperBuilder& OpRegistryWrapperBuilder::SetGetSbpFn(GetSbpFn get_sbp_fn) {
   wrapper_.reg_val.get_sbp_fn = std::move(get_sbp_fn);
   return *this;
