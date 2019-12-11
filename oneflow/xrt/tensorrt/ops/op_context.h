@@ -33,8 +33,7 @@ class TrtOpContext : public OpContext {
     util::Map<std::string, Argument> arguments;
   };
 
-  explicit TrtOpContext(const Param &param)
-      : OpContext(*param.message), param_(param) {}
+  explicit TrtOpContext(const Param &param) : OpContext(*param.message), param_(param) {}
 
   virtual ~TrtOpContext() = default;
 

@@ -5,13 +5,9 @@ namespace oneflow {
 namespace xrt {
 namespace tensorrt {
 
-nvinfer1::MatrixOperation GetMatrixOperation(nvinfer1::ITensor *x,
-                                             bool transpose) {
-  if (x->getDimensions().nbDims < 2) {
-    return nvinfer1::MatrixOperation::kVECTOR;
-  }
-  return transpose ? nvinfer1::MatrixOperation::kTRANSPOSE
-                   : nvinfer1::MatrixOperation::kNONE;
+nvinfer1::MatrixOperation GetMatrixOperation(nvinfer1::ITensor *x, bool transpose) {
+  if (x->getDimensions().nbDims < 2) { return nvinfer1::MatrixOperation::kVECTOR; }
+  return transpose ? nvinfer1::MatrixOperation::kTRANSPOSE : nvinfer1::MatrixOperation::kNONE;
 }
 
 class MatMulOp : public TrtOpKernel {

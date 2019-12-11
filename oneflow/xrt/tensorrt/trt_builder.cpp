@@ -38,14 +38,13 @@ nvinfer1::Weights &TrtBuilder::GetWeight(int64_t handle) {
     size_t num_bytes = shape.count() * SizeOf(param.data_type());
     auto *host_data = new std::vector<uint8_t>(num_bytes);
 #ifdef WITH_CUDA
-    CHECK_EQ(cudaSuccess, cudaMemcpy(host_data->data(), param.data(), num_bytes,
-                                     cudaMemcpyDefault));
+    CHECK_EQ(cudaSuccess,
+             cudaMemcpy(host_data->data(), param.data(), num_bytes, cudaMemcpyDefault));
 #else
     LOG(FATAL) << "Recompile the project with CUDA please.";
 #endif
     CHECK_EQ(host_weights_.count(param.name()), 0);
-    host_weights_[param.name()] =
-        std::shared_ptr<std::vector<uint8_t> >(host_data);
+    host_weights_[param.name()] = std::shared_ptr<std::vector<uint8_t>>(host_data);
 
     nvinfer1::Weights weight;
     weight.type = shape.data_type();
@@ -79,8 +78,7 @@ int64_t TrtBuilder::AddWeight(nvinfer1::Weights &weight) {
 }
 
 nv::unique_ptr<nvinfer1::ICudaEngine> TrtBuilder::BuildCudaEngine() {
-  auto build_config =
-      nv::unique_ptr<nvinfer1::IBuilderConfig>(builder_->createBuilderConfig());
+  auto build_config = nv::unique_ptr<nvinfer1::IBuilderConfig>(builder_->createBuilderConfig());
   return nv::unique_ptr<nvinfer1::ICudaEngine>(
       builder_->buildEngineWithConfig(*network_, *build_config));
 }

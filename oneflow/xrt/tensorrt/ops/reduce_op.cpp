@@ -5,16 +5,14 @@ namespace oneflow {
 namespace xrt {
 namespace tensorrt {
 
-template <nvinfer1::ReduceOperation reduce_op>
+template<nvinfer1::ReduceOperation reduce_op>
 class ReduceOp : public TrtOpKernel {
  public:
   void Compile(TrtOpContext *ctx) override {
     std::vector<int32_t> axis = ctx->GetAttr<std::vector<int32_t>>("axis");
 
     int32_t reduce_axis = 0;
-    for (int i = 0; i < axis.size(); ++i) {
-      reduce_axis = reduce_axis | (1U << axis[i]);
-    }
+    for (int i = 0; i < axis.size(); ++i) { reduce_axis = reduce_axis | (1U << axis[i]); }
     bool keepDimensions = ctx->GetAttr<bool>("keep_dims");
     // TensorRT does not support full reduce without keepDimensions.
     Shape in_shape = ctx->InputShape("in");
@@ -24,8 +22,7 @@ class ReduceOp : public TrtOpKernel {
     }
 
     nvinfer1::ITensor *in = ctx->Input("in");
-    auto *layer =
-        ctx->builder()->addReduce(*in, reduce_op, reduce_axis, keepDimensions);
+    auto *layer = ctx->builder()->addReduce(*in, reduce_op, reduce_axis, keepDimensions);
     layer->setName(ctx->op_name().c_str());
     ctx->SetOutput("out", layer->getOutput(0));
   }

@@ -7,7 +7,7 @@ namespace oneflow {
 namespace xrt {
 namespace tensorrt {
 
-template <nvinfer1::ElementWiseOperation element_wise_op>
+template<nvinfer1::ElementWiseOperation element_wise_op>
 class ElementWiseOp : public TrtOpKernel {
  public:
   void Compile(TrtOpContext *ctx) override {
@@ -19,8 +19,7 @@ class ElementWiseOp : public TrtOpKernel {
     for (int i = 1; i < num_inputs; ++i) {
       std::string name = absl::StrCat("in_", i);
       CHECK_EQ(in_shape, ctx->InputShape(name));
-      auto *layer = ctx->builder()->addElementWise(*ctx->Input(name), *result,
-                                                   element_wise_op);
+      auto *layer = ctx->builder()->addElementWise(*ctx->Input(name), *result, element_wise_op);
       result = layer->getOutput(0);
     }
     ctx->SetOutput("out", result);
@@ -31,8 +30,7 @@ REGISTER_TRT_OP_KERNEL(Add, ElementWiseOp<nvinfer1::ElementWiseOperation::kSUM>)
     .EnableTrainPhase()
     .Finalize();
 
-REGISTER_TRT_OP_KERNEL(Multiply,
-                       ElementWiseOp<nvinfer1::ElementWiseOperation::kPROD>)
+REGISTER_TRT_OP_KERNEL(Multiply, ElementWiseOp<nvinfer1::ElementWiseOperation::kPROD>)
     .EnableTrainPhase()
     .Finalize();
 

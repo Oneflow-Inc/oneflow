@@ -6,8 +6,7 @@ namespace oneflow {
 namespace xrt {
 namespace tensorrt {
 
-void TrtGraphCompiler::PopulateEntryParams(
-    const std::vector<Parameter> &entry_params) {
+void TrtGraphCompiler::PopulateEntryParams(const std::vector<Parameter> &entry_params) {
   for (const Parameter &param : entry_params) {
     Argument arg = ArgFromParameter(param);
     TrtValue value = TrtValue::Parameter(builder_.get(), param);
@@ -19,8 +18,8 @@ Argument TrtGraphCompiler::ArgFromParameter(const Parameter &param) {
   return Argument(param.name(), param.shape(), param.data_type());
 }
 
-void TrtGraphCompiler::SetupKernelContextParam(
-    const XrtNode *node, TrtOpContext::Param *context_param) {
+void TrtGraphCompiler::SetupKernelContextParam(const XrtNode *node,
+                                               TrtOpContext::Param *context_param) {
   util::Map<Argument, TrtValue> input_ops;
   util::Map<std::string /* produce/consume key */, Argument> input_output_args;
   for (const XrtEdge *edge : node->in_edges()) {
@@ -53,8 +52,7 @@ void TrtGraphCompiler::SetupKernelContextParam(
 
 std::shared_ptr<Executable> TrtGraphCompiler::Compile(
     const XrtGraph *graph, const std::vector<Parameter> &entry_params,
-    const std::vector<Parameter> &return_params,
-    const std::vector<InputOutputAlias> &aliases) {
+    const std::vector<Parameter> &return_params, const std::vector<InputOutputAlias> &aliases) {
   // Build entry and return trt values.
   PopulateEntryParams(entry_params);
   // PopulateReturnParams(return_params);
@@ -81,8 +79,7 @@ std::shared_ptr<Executable> TrtGraphCompiler::Compile(
   }
 
   // return std::make_shared<TrtExecutable>(builder_->BuildCudaEngine());
-  return std::make_shared<TrtExecutable>(builder_->ReleaseBuilder(),
-                                         builder_->ReleaseNetwork(),
+  return std::make_shared<TrtExecutable>(builder_->ReleaseBuilder(), builder_->ReleaseNetwork(),
                                          builder_->host_weights());
 }
 

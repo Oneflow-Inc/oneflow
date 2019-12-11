@@ -16,22 +16,18 @@ class ConvolutionOp : public TrtOpKernel {
     if (ctx->GetAttr<bool>("use_bias")) {
       bias = ctx->Weight("bias");
     } else {
-      bias = nvinfer1::Weights{nvinfer1::DataType::kFLOAT /* type */,
-                               nullptr /* values */, 0 /* count */};
+      bias = nvinfer1::Weights{nvinfer1::DataType::kFLOAT /* type */, nullptr /* values */,
+                               0 /* count */};
     }
 
     CHECK_EQ(ctx->GetAttr<std::string>("data_format"), "channels_first");
-    std::vector<int32_t> kernel_size =
-        ctx->GetAttr<std::vector<int32_t>>("kernel_size");
-    std::vector<int32_t> strides =
-        ctx->GetAttr<std::vector<int32_t>>("strides");
-    std::vector<int32_t> dilation =
-        ctx->GetAttr<std::vector<int32_t>>("dilation_rate");
+    std::vector<int32_t> kernel_size = ctx->GetAttr<std::vector<int32_t>>("kernel_size");
+    std::vector<int32_t> strides = ctx->GetAttr<std::vector<int32_t>>("strides");
+    std::vector<int32_t> dilation = ctx->GetAttr<std::vector<int32_t>>("dilation_rate");
 
     int filters = ctx->GetAttr<int32_t>("filters");
     auto *layer = ctx->builder()->addConvolution(
-        *in, filters, nvinfer1::DimsHW(kernel_size[0], kernel_size[1]), weight,
-        bias);
+        *in, filters, nvinfer1::DimsHW(kernel_size[0], kernel_size[1]), weight, bias);
     layer->setName(ctx->op_name().c_str());
 
     layer->setStride(nvinfer1::DimsHW(strides[0], strides[1]));

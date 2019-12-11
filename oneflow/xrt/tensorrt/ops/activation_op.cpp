@@ -7,7 +7,7 @@ namespace oneflow {
 namespace xrt {
 namespace tensorrt {
 
-template <nvinfer1::ActivationType activation_type>
+template<nvinfer1::ActivationType activation_type>
 class ActivationOp : public TrtOpKernel {
  public:
   void Compile(TrtOpContext *ctx) override {
@@ -24,8 +24,7 @@ REGISTER_TRT_OP_KERNEL(Tanh, ActivationOp<nvinfer1::ActivationType::kTANH>)
 REGISTER_TRT_OP_KERNEL(Relu, ActivationOp<nvinfer1::ActivationType::kRELU>)
     .EnableTrainPhase()
     .Finalize();
-REGISTER_TRT_OP_KERNEL(Sigmoid,
-                       ActivationOp<nvinfer1::ActivationType::kSIGMOID>)
+REGISTER_TRT_OP_KERNEL(Sigmoid, ActivationOp<nvinfer1::ActivationType::kSIGMOID>)
     .EnableTrainPhase()
     .Finalize();
 

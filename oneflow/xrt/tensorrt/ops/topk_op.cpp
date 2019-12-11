@@ -17,8 +17,7 @@ class TopKOp : public TrtOpKernel {
     // CHECK_LT(axis, in_shape.NumAxes());
     uint32_t reduce_axis = (1U << (in_shape.NumAxes() - 1));
     nvinfer1::ITensor *in = ctx->Input("in");
-    auto *layer = ctx->builder()->addTopK(*in, nvinfer1::TopKOperation::kMAX, k,
-                                          reduce_axis);
+    auto *layer = ctx->builder()->addTopK(*in, nvinfer1::TopKOperation::kMAX, k, reduce_axis);
     layer->setName(ctx->op_name().c_str());
     ctx->SetOutput("out", layer->getOutput(0));
   }
