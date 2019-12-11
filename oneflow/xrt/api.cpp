@@ -27,12 +27,15 @@ namespace xrt {
 static std::unordered_map<int32_t, std::string> op_type2string_map = {
     {OP_TYPE_CASE(Matmul), "MatMul"},
     {OP_TYPE_CASE(Relu), "Relu"},
+    {OP_TYPE_CASE(Conv2D), "Conv2D"},
+    {OP_TYPE_CASE(Multiply), "Multiply"},
     // {OP_TYPE_CASE(FullyConnected), "FullyConnected"},
     {OP_TYPE_CASE(BiasAdd), "BiasAdd"},
     {OP_TYPE_CASE(Reshape), "Reshape"},
     {OP_TYPE_CASE(Identity), "Identity"},
     {OP_TYPE_CASE(ReshapeLike), "ReshapeLike"},
     {OP_TYPE_CASE(Cast), "Cast"},
+    {OP_TYPE_CASE(Concat), "Concat"},
     {OP_TYPE_CASE(ScalarAdd), "ScalarAdd"},
     {OP_TYPE_CASE(ScalarMul), "ScalarMul"},
     {OP_TYPE_CASE(Transpose), "Transpose"},
@@ -53,7 +56,10 @@ static std::unordered_map<int32_t, std::string> op_type2string_map = {
     {OP_TYPE_CASE(LayerNormParamGrad), "LayerNormParamGrad"},
     {OP_TYPE_CASE(LayerNormGrad), "LayerNormGrad"},
     {OP_TYPE_CASE(ReduceSum), "ReduceSum"},
+    {OP_TYPE_CASE(ReduceMean), "ReduceMean"},
     {OP_TYPE_CASE(AdamModelUpdate), "AdamOptimizer"},
+    {OP_TYPE_CASE(MaxPooling2D), "MaxPooling2D"},
+    {OP_TYPE_CASE(AveragePooling2D), "AveragePooling2D"},
     // {OP_TYPE_CASE(ReduceConcat), "ReduceConcat"},
     // {OP_TYPE_CASE(ReduceSplit), "ReduceSplit"},
     // TODO(hjchen2)
@@ -88,6 +94,16 @@ DeviceType XrtDeviceToDeviceType(const XrtDevice &device) {
   } else {
     LOG(FATAL) << "Can not convert xrt device (" << device << ") to device type.";
     return DeviceType::kCPU;
+  }
+}
+
+XrtEngine StringToXrtEngine(const std::string &engine) {
+  if (engine == "XLA") {
+    return xrt::XrtEngine::XLA;
+  } else if (engine == "TENSORRT") {
+    return xrt::XrtEngine::TENSORRT;
+  } else {
+    LOG(FATAL) << "Unknown engine: " << engine;
   }
 }
 
