@@ -33,7 +33,7 @@ def distribution_name_scope(machine, device, exclude_variables=True):
     assert isinstance(machine, int)
     assert isinstance(device, int)
     assert compile_context.cur_job_distribution_name_scope == ""
-    compile_context.cur_job_distribution_name_scope = f"m{machine}d{device}-"
+    compile_context.cur_job_distribution_name_scope = "m{}d{}-".format(machine, device)
     origin_exclude_variables_flag = (
         compile_context.cur_job_distribution_name_scope_exclude_variable
     )

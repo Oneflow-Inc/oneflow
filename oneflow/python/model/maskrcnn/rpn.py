@@ -92,7 +92,7 @@ class RPNHead(object):
                 cls_logit_per_image_list = [
                     flow.dynamic_reshape(x, shape=[-1])
                     for x in split_to_instances(
-                        cls_logits, name=f"cls_logits_layer_{layer_i}"
+                        cls_logits, name="cls_logits_layer_{}".format(layer_i)
                     )
                 ]
                 cls_logit_list.append(cls_logit_per_image_list)
@@ -100,7 +100,7 @@ class RPNHead(object):
                 bbox_pred_per_image_list = [
                     flow.dynamic_reshape(x, shape=[-1, 4])
                     for x in split_to_instances(
-                        bbox_preds, name=f"bbox_preds_layer_{layer_i}"
+                        bbox_preds, name="bbox_preds_layer_{layer_i}".format(layer_i)
                     )
                 ]
                 bbox_pred_list.append(bbox_pred_per_image_list)
