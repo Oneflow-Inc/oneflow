@@ -30,7 +30,6 @@ def make_trt_job(x_shape, like_shape, dtype=flow.float32):
         return flow.reshape_like(x, like)
     return trt_reshape_like_job
 
-
 class TestReshapeLike(unittest.TestCase):
     def _test_body(self, x, like, dtype=np.float32):
         f1 = make_job(x.shape, like.shape, dtype=flow.float32)

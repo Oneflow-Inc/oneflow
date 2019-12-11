@@ -30,7 +30,6 @@ def make_trt_job(x_shape, b_shape, dtype=flow.float32):
         return flow.nn.bias_add(x, bias)
     return trt_bias_add_job
 
-
 class TestBiasAdd(unittest.TestCase):
     def _test_body(self, x, bias, dtype=np.float32):
         f1 = make_job(x.shape, bias.shape, dtype=flow.float32)

@@ -79,25 +79,7 @@ class TestReduceSum(TestReduce):
            return flow.math.reduce_sum(x, axis=axis, keepdims=keepdims)
         return trt_reduce_sum_job
 
-# XLA has not support ReduceMean.
-class TestReduceMean(TestReduce):
-    run_test = True
-    def make_job(self, x_shape, axis, keepdims, dtype=flow.float32):
-        @flow.function
-        def reduce_mean_job(x = flow.input_blob_def(x_shape, dtype=dtype)):
-            flow.config.use_xla_jit(False)
-            flow.config.use_tensorrt(False)
-            return flow.math.reduce_mean(x, axis=axis, keepdims=keepdims)
-        return reduce_mean_job
-    
-    def make_xla_job(self, x_shape, axis, keepdims, dtype=flow.float32):
-        @flow.function
-        def xla_reduce_mean_job(x = flow.input_blob_def(x_shape, dtype=dtype)):
-            flow.config.use_xla_jit(True)
-            flow.config.use_tensorrt(False)
-            return flow.math.reduce_mean(x, axis=axis, keepdims=keepdims)
-        return xla_reduce_mean_job
-
+    # XLA has not support ReduceMean.
     def make_trt_job(self, x_shape, axis, keepdims, dtype=flow.float32):
         @flow.function
         def trt_reduce_mean_job(x = flow.input_blob_def(x_shape, dtype=dtype)):

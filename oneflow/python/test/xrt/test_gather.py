@@ -64,7 +64,7 @@ class TestBatchGather(TestGather):
         @flow.function
         def batch_gather_job(x = flow.input_blob_def(input_shape, dtype=dtype),
                              indices = flow.input_blob_def(indices_shape,
-                                 dtype=flow.int32)):
+                             dtype=flow.int32)):
             flow.config.use_xla_jit(False)
             flow.config.use_tensorrt(False)
             return flow.gather(x, indices, batch_dims=axis)
