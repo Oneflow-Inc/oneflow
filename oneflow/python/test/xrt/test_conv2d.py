@@ -52,9 +52,10 @@ class TestConv2d(unittest.TestCase):
         x = np.ones(shape, dtype=dtype)
         w_shape = self.make_filter_shape(shape, filters, kernel_size, data_format)
         weight = np.random.random(w_shape).astype(dtype)
+
         self._test_body(x, weight, kernel_size=kernel_size,
-                strides=strides, padding=padding, data_format=data_format,
-                dilation_rate=dilation_rate)
+                        strides=strides, padding=padding, data_format=data_format,
+                        dilation_rate=dilation_rate)
 
     def _test_random_body(self, shape, filters, kernel_size, strides,
                           padding, data_format, dilation_rate, dtype=np.float32):
@@ -62,9 +63,10 @@ class TestConv2d(unittest.TestCase):
         x = np.random.random(shape).astype(dtype)
         w_shape = self.make_filter_shape(shape, filters, kernel_size, data_format)
         weight = np.random.random(w_shape).astype(dtype)
+
         self._test_body(x, weight, kernel_size=kernel_size,
-                strides=strides, padding=padding, data_format=data_format,
-                dilation_rate=dilation_rate)
+                        strides=strides, padding=padding, data_format=data_format,
+                        dilation_rate=dilation_rate)
 
     def test_ones_kernel_1x1(self):
         self._test_ones_body(shape=[1, 1, 1, 1], filters=1, kernel_size=1, strides=1,
@@ -111,16 +113,24 @@ class TestConv2d(unittest.TestCase):
                                padding="SAME", data_format="NCHW", dilation_rate=1)
 
     def test_ones_kernel_11x11(self):
-        self._test_ones_body(shape=[1, 3, 227, 227], filters=64, kernel_size=11,
-                strides=4, padding="VALID", data_format="NCHW", dilation_rate=1)
-        self._test_ones_body(shape=[1, 3, 227, 227], filters=64, kernel_size=11,
-                strides=4, padding="SAME", data_format="NCHW", dilation_rate=1)
+        self._test_ones_body(shape=[1, 3, 24, 24], filters=3, kernel_size=11,
+                             strides=4, padding="VALID", data_format="NCHW", dilation_rate=1)
+        self._test_ones_body(shape=[1, 3, 24, 24], filters=3, kernel_size=11,
+                             strides=4, padding="SAME", data_format="NCHW", dilation_rate=1)
+        self._test_ones_body(shape=[1, 3, 27, 27], filters=3, kernel_size=11,
+                             strides=4, padding="VALID", data_format="NCHW", dilation_rate=1)
+        self._test_ones_body(shape=[1, 3, 27, 27], filters=3, kernel_size=11,
+                             strides=4, padding="SAME", data_format="NCHW", dilation_rate=1)
 
     def test_random_kernel_11x11(self):
-        self._test_random_body(shape=[1, 3, 227, 227], filters=64, kernel_size=11,
-                strides=4, padding="VALID", data_format="NCHW", dilation_rate=1)
-        self._test_random_body(shape=[1, 3, 227, 227], filters=64, kernel_size=11,
-                strides=4, padding="SAME", data_format="NCHW", dilation_rate=1)
+        self._test_random_body(shape=[1, 3, 24, 24], filters=3, kernel_size=11,
+                               strides=4, padding="VALID", data_format="NCHW", dilation_rate=1)
+        self._test_random_body(shape=[1, 3, 24, 24], filters=3, kernel_size=11,
+                               strides=4, padding="SAME", data_format="NCHW", dilation_rate=1)
+        self._test_random_body(shape=[1, 3, 27, 27], filters=3, kernel_size=11,
+                               strides=4, padding="VALID", data_format="NCHW", dilation_rate=1)
+        self._test_random_body(shape=[1, 3, 27, 27], filters=3, kernel_size=11,
+                               strides=4, padding="SAME", data_format="NCHW", dilation_rate=1)
 
 if __name__ == '__main__':
     unittest.main()

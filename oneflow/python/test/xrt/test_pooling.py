@@ -34,23 +34,33 @@ class TestPooling(unittest.TestCase):
 
     def test_ones_input(self):
         print("test ones input: ")
-        self._test_ones_body((1, 1, 224, 224), 1, 1, "VALID", "NCHW")
-        self._test_ones_body((1, 3, 224, 224), 3, 2, "SAME", "NCHW")
+        self._test_ones_body((1, 1, 6, 6), 1, 1, "VALID", "NCHW")
+        self._test_ones_body((1, 3, 6, 6), 3, 2, "SAME", "NCHW")
         self._test_ones_body((1, 1, 3, 3), 1, 1, "VALID", "NCHW")
         self._test_ones_body((1, 5, 9, 9), 3, 1, "SAME", "NCHW")
-        self._test_ones_body((1, 7, 299, 299), 1, 1, "SAME", "NCHW")
+        self._test_ones_body((1, 7, 9, 9), 1, 1, "SAME", "NCHW")
         self._test_ones_body((1, 5, 3, 3), 1, 1, "VALID", "NCHW")
+        self._test_ones_body((1, 1, 6, 6), 2, 2, "SAME", "NCHW")
+        self._test_ones_body((1, 1, 6, 6), 2, 2, "VALID", "NCHW")
+        self._test_ones_body((1, 1, 9, 9), 2, 2, "SAME", "NCHW")
+        self._test_ones_body((1, 1, 9, 9), 2, 2, "VALID", "NCHW")
+
      #   self._test_ones_body((1, 224, 224, 3), 3, 2, "VALID", "NHWC")
      #   self._test_ones_body((1, 224, 224, 1), 2, 1, "SAME", "NHWC")
 
     def test_random_input(self):
         print("test random input: ")
-        self._test_random_body((1, 1, 224, 224), 1, 1, "VALID", "NCHW")
-        self._test_random_body((1, 3, 224, 224), 3, 2, "SAME", "NCHW")
-        self._test_random_body((1, 5, 224, 224), 3, 2, "VALID", "NCHW")
-        self._test_random_body((1, 7, 224, 224), 3, 2, "SAME", "NCHW")
+        self._test_random_body((1, 1, 6, 6), 1, 1, "VALID", "NCHW")
+        self._test_random_body((1, 3, 6, 6), 3, 2, "SAME", "NCHW")
+        self._test_random_body((1, 5, 6, 6), 3, 2, "VALID", "NCHW")
+        self._test_random_body((1, 7, 6, 6), 3, 2, "SAME", "NCHW")
         self._test_random_body((1, 3, 3, 3), 1, 1, "VALID", "NCHW")
-        self._test_random_body((1, 3, 224, 224), 3, 2, "SAME", "NCHW")
+        self._test_random_body((1, 3, 6, 6), 3, 2, "SAME", "NCHW")
+        self._test_random_body((1, 1, 6, 6), 2, 2, "SAME", "NCHW")
+        self._test_random_body((1, 1, 6, 6), 2, 2, "VALID", "NCHW")
+        self._test_random_body((1, 1, 9, 9), 2, 2, "SAME", "NCHW")
+        self._test_random_body((1, 1, 9, 9), 2, 2, "VALID", "NCHW")
+
        # self._test_random_body((1, 224, 224, 3), 3, 2, "VALID", "NHWC")
        # self._test_random_body((1, 224, 224, 1), 2, 1, "SAME", "NHWC")
 

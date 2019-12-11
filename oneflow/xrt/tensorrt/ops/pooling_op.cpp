@@ -30,7 +30,7 @@ class PoolingOp : public TrtOpKernel {
 
     layer->setStride(nvinfer1::DimsHW(strides[0], strides[1]));
     if (padding == "same") {
-      layer->setPaddingMode(nvinfer1::PaddingMode::kSAME_UPPER);
+      layer->setPaddingMode(nvinfer1::PaddingMode::kSAME_LOWER);
     }
     ctx->SetOutput("out", layer->getOutput(0));
   }
