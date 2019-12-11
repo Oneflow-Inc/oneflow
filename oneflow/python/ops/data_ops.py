@@ -223,6 +223,7 @@ class COCODataset(object):
         random_seed,
         shuffle=True,
         group_by_aspect_ratio=True,
+        remove_images_without_annotations=True,
         max_segm_poly_points_per_image=65536,
         name=None,
     ):
@@ -233,6 +234,7 @@ class COCODataset(object):
         self.random_seed = random_seed
         self.shuffle = shuffle
         self.group_by_aspect_ratio = group_by_aspect_ratio
+        self.remove_images_without_annotations = remove_images_without_annotations
         self.max_segm_poly_points_per_image = max_segm_poly_points_per_image
 
     def to_proto(self, proto=None):
@@ -246,6 +248,7 @@ class COCODataset(object):
         proto.coco.annotation_file = self.annotation_file
         proto.coco.image_dir = self.image_dir
         proto.coco.group_by_aspect_ratio = self.group_by_aspect_ratio
+        proto.coco.remove_images_without_annotations = self.remove_images_without_annotations
         proto.coco.max_segm_poly_points = self.max_segm_poly_points_per_image
         return proto
 

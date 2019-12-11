@@ -12,7 +12,8 @@ message COCODatasetCatalog {
   required string annotation_file = 1;
   required string image_dir = 2;
   optional bool group_by_aspect_ratio = 3 [default = true];
-  optional int64 max_segm_poly_points = 4 [default = 1024];
+  optional bool remove_images_without_annotations = 4 [default = true];
+  optional int64 max_segm_poly_points = 5 [default = 1024];
 }
 
 message WideDeepDatasetCatalog {
