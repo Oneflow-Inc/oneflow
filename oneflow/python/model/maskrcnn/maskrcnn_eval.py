@@ -4,6 +4,7 @@ from config import get_default_cfgs
 import os
 import numpy as np
 import pickle
+import json
 import argparse
 import oneflow as flow
 import oneflow.core.data.data_pb2 as data_util
@@ -26,7 +27,6 @@ parser.add_argument("-bz", "--batch_size", type=int, default=1, required=False)
 parser.add_argument("-load", "--model_load_dir", type=str, default="", required=False)
 parser.add_argument("-g", "--gpu_num_per_node", type=int, default=1, required=False)
 parser.add_argument("-cp", "--ctrl_port", type=int, default=19765, required=False)
-parser.add_argument("-i", "--iter_num", type=int, default=10, required=False)
 parser.add_argument(
     "-dataset_dir", "--dataset_dir", type=str, default="/dataset/mscoco_2017", required=False
 )
@@ -47,9 +47,16 @@ def make_data_loader(
     random_seed=873898,
     shuffle=False,
     group_by_aspect_ratio=True,
+    remove_images_without_annotations=False,
 ):
     coco = flow.data.COCODataset(
-        dataset_dir, annotation_file, image_dir, random_seed, shuffle, group_by_aspect_ratio
+        dataset_dir,
+        annotation_file,
+        image_dir,
+        random_seed,
+        shuffle,
+        group_by_aspect_ratio,
+        remove_images_without_annotations,
     )
     data_loader = flow.data.DataLoader(coco, batch_size, batch_cache_size)
     data_loader.add_blob(
@@ -197,7 +204,8 @@ if __name__ == "__main__":
 
     prediction_list = []
     image_id_list = []
-    for i in range(terminal_args.iter_num):
+    ann_file_path = os.path.join(terminal_args.dataset_dir, terminal_args.annotation_file)
+    for i in range(len(json.load(open(ann_file_path))["images"])):
         print("iteration: {}".format(i))
         if terminal_args.fake_img:
             if i == 0:

@@ -223,6 +223,7 @@ class COCODataset(object):
         random_seed,
         shuffle=True,
         group_by_aspect_ratio=True,
+        remove_images_without_annotations=True,
         name=None,
     ):
         name = name or id_util.UniqueStr("COCODataset_")
@@ -240,6 +241,7 @@ class COCODataset(object):
         proto.coco.annotation_file = self.annotation_file
         proto.coco.image_dir = self.image_dir
         proto.coco.group_by_aspect_ratio = self.group_by_aspect_ratio
+        proto.coco.remove_images_without_annotations = self.remove_images_without_annotations
         return proto
 
 
