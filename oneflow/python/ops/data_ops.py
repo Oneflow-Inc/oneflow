@@ -435,7 +435,7 @@ class DataLoader(object):
             blob_conf.data_source = blob["data_source"]
             blob_conf.shape.dim.extend(blob["shape"])
             blob_conf.data_type = blob["dtype"]
-            if blob_conf.data_source == data_util.DataSourceCase.kImage:
+            if blob_conf.data_source == data_util.kImage:
                 blob_conf.encode_case.jpeg.SetInParent()
             else:
                 blob_conf.encode_case.raw.SetInParent()
