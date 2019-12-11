@@ -567,6 +567,8 @@ def run():
                 or i + 1 == terminal_args.iter_num
             ):
                 save_model(check_point, i + 1)
+
+        metrics = update_metrics(metrics, i, elapsed_time, outputs)
         if terminal_args.save_loss_npy_every_n_batch > 0:
             if (
                 (i + 1) % terminal_args.save_loss_npy_every_n_batch == 0
@@ -581,7 +583,6 @@ def run():
                 )
                 metrics.to_csv(npy_file_name, index=False)
                 print("saved: {}".format(npy_file_name))
-        metrics = update_metrics(metrics, i, elapsed_time, outputs)
 
     print("median of elapsed time per batch:", statistics.median(elapsed_times))
 
