@@ -3,6 +3,7 @@ import altair as alt
 import pandas as pd
 import numpy as np
 import os
+import glob
 
 
 def plot_value(df):
@@ -15,13 +16,13 @@ def plot_value(df):
             np.polyfit(
                 df[df["legend"] == legend]["iter"],
                 df[df["legend"] == legend]["value"],
-                5,
+                3,
             )
         )(poly_data["iter"])
 
     base = alt.Chart(df).interactive()
 
-    chart = base.mark_line().encode(x="iter", y="value", color="legend:N")
+    chart = base.mark_circle().encode(x="iter", y="value", color="legend:N")
 
     polynomial_fit = (
         alt.Chart(poly_data)
@@ -43,21 +44,25 @@ def plot_by_legend(df):
 
 
 def plot_many_by_legend(df_dict):
-    legend_set = []
-    for _, df in df_dict.items():
-        for legend in list(df["legend"].unique()):
-            if legend not in legend_set:
-                legend_set.append(legend)
-    legend_set = [
+    legend_set_unsored = []
+    legend_set_sorted = [
         "loss_rpn_box_reg",
         "loss_objectness",
+        "lr",
         "loss_box_reg",
         "total_pos_inds_elem_cnt",
         "loss_classifier",
         "loss_mask",
         "elapsed_time",
     ]
-    for legend in legend_set:
+    for _, df in df_dict.items():
+        for legend in list(df["legend"].unique()):
+            if (
+                legend not in legend_set_sorted
+                and df[df["legend"] == legend]["note"].size is 0
+            ):
+                legend_set_unsored.append(legend)
+    for legend in legend_set_sorted + legend_set_unsored:
         df_by_legend = pd.concat(
             [
                 update_legend(df[df["legend"] == legend].copy(), k)
@@ -109,29 +114,57 @@ def make_loss_frame5(losses_hisogram, source):
 
 touch_loss_np = np.load(os.path.join(DL, "pytorch_maskrcnn_losses.npy"))
 
-pytorch_maskrcnn_losses = make_loss_frame5(
-    touch_loss_np, "pytorch_maskrcnn_losses"
-)
+torch_old_70k = make_loss_frame5(touch_loss_np, "pytorch_maskrcnn_losses")
 
 flow = pd.read_csv(
     os.path.join(
         DL,
-        "init-loss-1999-batch_size-2-gpu-1-image_dir-train2017-2019-12-10--21-05-17.csv",
+        "loss-19999-batch_size-8-gpu-4-image_dir-train2017-2019-12-12--02-51-33.csv",
     )
 )
-torch = pd.read_csv(
+torch_before_fix_1x1 = pd.read_csv(
     os.path.join(
         DL,
-        "torch-1999-batch_size-2-image_dir-coco_2017_train-2019-12-10--13-07-48.csv",
+        "torch-13299-batch_size-8-image_dir-coco_2017_train-2019-12-12--02-01-47.csv",
     )
 )
 
+
+def latest_wildcard(path):
+    result = glob.glob(path)
+    result.sort(key=os.path.getmtime)
+    return result[-1]
+
+
+flow_latest_csv = latest_wildcard(os.path.join(DL, "loss*.csv"))
+torch_latest_csv = latest_wildcard(os.path.join(DL, "torch*.csv"))
+
+flow_latest = pd.read_csv(flow_latest_csv)
+torch_latest = pd.read_csv(torch_latest_csv)
+
+LIMIT = min(torch_latest["iter"].max(), flow["iter"].max())
+TAKE_EVERY_N = 1
+if LIMIT > 2500:
+    TAKE_EVERY_N = LIMIT // 2500 + 1
+
+
+def isinstance2(x, t):
+    print(type(x))
+    return isinstance(x, t)
+
+
+def subset_and_mod(df, limit, take_every_n):
+    df_limited = df[df["iter"] < limit]
+    return df_limited[df_limited["iter"] % take_every_n == 0]
+
+
 plot_many_by_legend(
     {
-        # "torch_lr_0": torch_lr_0[torch_lr_0["iter"] < 100][
-        #     torch_lr_0["iter"] % 1 == 0
-        # ],
-        "flow": flow[flow["iter"] < 2000][flow["iter"] % 2 == 0],
-        "torch": torch[torch["iter"] < 2000][torch["iter"] % 2 == 0],
+        "flow": subset_and_mod(flow_latest, LIMIT, TAKE_EVERY_N),
+        "torch": subset_and_mod(torch_latest, LIMIT, TAKE_EVERY_N),
+        # "torch_before_fix_1x1": subset_and_mod(
+        #     torch_before_fix_1x1, LIMIT, TAKE_EVERY_N
+        # ),
+        # "torch_old_70k": subset_and_mod(torch_old_70k, LIMIT, TAKE_EVERY_N),
     }
 )
