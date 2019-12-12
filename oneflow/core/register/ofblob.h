@@ -12,7 +12,8 @@ class Blob;
 class OfBlob final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(OfBlob);
-  OfBlob(DeviceCtx* device_ctx, Blob* blob) : device_ctx_(device_ctx), blob_(blob) {
+  OfBlob(DeviceCtx* device_ctx, Blob* blob)
+      : device_ctx_(device_ctx), blob_(blob), tensor_back_inserter_(new TensorBackInserter(blob)) {
     mem_case_.mutable_host_mem();
   }
   ~OfBlob() = default;
@@ -49,8 +50,8 @@ class OfBlob final {
   DeviceCtx* device_ctx_;
   Blob* blob_;
   MemoryCase mem_case_;
-  std::unique_ptr<TensorView> cur_tensor_;
   std::unique_ptr<TensorBackInserter> tensor_back_inserter_;
+  std::unique_ptr<TensorView> cur_tensor_;
 };
 
 inline void OfBlob::CopyShapeFrom(const int64_t* ptr, int64_t num_axis) const {
@@ -85,14 +86,16 @@ inline void OfBlob::ResetTensorIterator() {
 
 inline void OfBlob::ClearTensorLists() { tensor_back_inserter_->ClearTensorLists(); }
 
-inline void OfBlob::AddTensor() { tensor_back_inserter_->add_tensor(); }
+inline void OfBlob::AddTensor() {
+  tensor_back_inserter_->add_tensor();
+  ClearShape(tensor_back_inserter_->cur_mut_tensor());
+}
 
 inline void OfBlob::IncTensorIterator() { blob_->MoveToNextTensor(cur_tensor_.get()); }
 
 inline void OfBlob::CurTensorCopyShapeTo(int64_t* ptr, int64_t num_axis) const {
   CHECK_EQ(num_axis, NumAxes());
   DenseShapeMutView(ptr, num_axis).set_shape(cur_tensor_->shape());
-  ClearShape(tensor_back_inserter_->cur_mut_tensor());
 }
 
 inline void OfBlob::ClearShape(FullyMutTensorView* tensor) const {
