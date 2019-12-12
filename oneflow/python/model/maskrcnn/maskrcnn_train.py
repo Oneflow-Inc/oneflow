@@ -263,7 +263,11 @@ def merge_args_to_train_config(args):
 
     config.freeze()
     print("difference between default (upper) and given config (lower)")
-    compare_config(get_default_cfgs(), config)
+    d1_diff, d2_diff = compare_config(get_default_cfgs(), config)
+    print("")
+    print("default:\n{}\n".format(str(d1_diff)))
+    print("given:\n{}\n".format(str(d2_diff)))
+    assert False
     if args.verbose:
         print(config)
 

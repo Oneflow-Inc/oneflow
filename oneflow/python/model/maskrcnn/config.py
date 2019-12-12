@@ -160,21 +160,44 @@ def get_default_cfgs():
     return _C.clone()
 
 
-def compare_config(d1, d2, path=""):
+def update_by_path(node, path, value):
+    last_idx = len(path) - 1
+    for i, key in enumerate(path):
+        if i == last_idx:
+            # print("updating", id(node), key)
+            node[key] = value
+        else:
+            if key not in node:
+                node[key] = CN()
+            node = node[key]
+
+
+def compare_config(d1, d2, path=None, d1_diff=None, d2_diff=None):
+    if d1_diff is None:
+        assert(path is None)
+        d1_diff = CN()
+    if d2_diff is None:
+        assert(path is None)
+        d2_diff = CN()
+    if path is None:
+        path = []
     for k in d1.keys():
         if k not in d2:
             raise ValueError
 
         if type(d1[k]) is CN:
             sub_path = None
-            if path == "":
-                sub_path = k
+            if path == []:
+                sub_path = [k]
             else:
-                sub_path = path + "." + k
-            assert sub_path is not ""
-            compare_config(d1[k], d2[k], sub_path)
+                sub_path = path + [k]
+            assert sub_path is not None
+            compare_config(d1[k], d2[k], sub_path, d1_diff, d2_diff)
         else:
             if d1[k] != d2[k]:
-                print(path, ":")
+                print("{}:".format(".".join(path)))
                 print("- {} : {}".format(k, d1[k]))
                 print("+ {} : {}".format(k, d2[k]))
+                update_by_path(d1_diff, path + [k], d1[k])
+                update_by_path(d2_diff, path + [k], d2[k])
+    return (d1_diff, d2_diff)
