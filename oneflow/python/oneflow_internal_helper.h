@@ -147,9 +147,9 @@ namespace {
 struct GlobalChecker final {
   GlobalChecker() = default;
   ~GlobalChecker() {
-    if (Global<Oneflow>::Get() != nullptr) { LOG(FATAL) << "global oneflow is not destroyed yet"; }
+    if (Global<Oneflow>::Get() != nullptr) { LOG(ERROR) << "global session is not closed yet"; }
     if (Global<SessionGlobalObjectsScope>::Get() != nullptr) {
-      LOG(FATAL) << "Session is not destroyed yet";
+      LOG(ERROR) << "global session is not destroyed yet";
     }
   }
 };
