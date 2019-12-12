@@ -38,13 +38,11 @@ void DistributeConcatCompTaskNode::BuildExecGphStructAndBindInRegst() {
   }
   auto in_regst = GetSoleConsumedRegst("in");
   mut_exec_gph().ForEachNode([&](ExecNode* cur_node) {
-    for (const std::string& ibn : cur_node->op()->input_bns()) {
-      if (in_regst->HasLbi(cur_node->op()->BnInOp2Lbi(ibn))) {
-        cur_node->BindBnWithRegst(ibn, in_regst);
-      }
-    }
+    const auto& ibn = cur_node->op()->input_bns().Get(parallel_ctx()->parallel_id());
+    cur_node->BindBnWithRegst(ibn, in_regst);
+    CHECK(in_regst->HasLbi(cur_node->op()->BnInOp2Lbi(ibn)));
   });
-}
+}  // namespace oneflow
 
 void DistributeConcatCompTaskNode::BuildOutRegst() {
   std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out");
@@ -56,6 +54,7 @@ void DistributeConcatCompTaskNode::BuildOutRegst() {
       cur_node->BindBnWithRegst(obn, out_regst);
     }
   });
+  out_regst->set_hint_inplace_consumed_regst_desc_id(GetSoleConsumedRegst("in")->regst_desc_id());
 }
 
 void DistributeConcatCompTaskNode::InferProducedDataRegstTimeShape() {

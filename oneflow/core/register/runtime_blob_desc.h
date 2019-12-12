@@ -14,8 +14,8 @@ class RtBlobDesc final {
   RtBlobDesc() = delete;
   ~RtBlobDesc() = default;
 
-  RtBlobDesc(const BlobDesc&);
-  RtBlobDesc(const BlobDescProto&);
+  explicit RtBlobDesc(const BlobDesc& blob_desc);
+  explicit RtBlobDesc(const BlobDescProto& blob_desc_proto);
 
   const StructPodDesc& header_pod_desc() const { return header_; }
   bool is_body_disabled() const { return is_body_disabled_; }

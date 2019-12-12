@@ -26,6 +26,7 @@ void GenerateFacadeImplOpConf(const OpNode& op_node, JobBuilder* job_builder) {
   auto* reduce_sum_conf = reduce_sum_op_conf.mutable_reduce_sum_conf();
   reduce_sum_conf->set_in(reduce_mean_conf.in());
   *reduce_sum_conf->mutable_axis() = reduce_mean_conf.axis();
+  reduce_sum_conf->set_keep_dims(reduce_mean_conf.keep_dims());
   reduce_sum_conf->set_out("out");
   job_builder->MutOpsOnlyOnce({reduce_sum_op_conf});
 

@@ -6,9 +6,11 @@ import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 
 from oneflow.python.oneflow_export import oneflow_export
+import oneflow
 
-@oneflow_export("debug.distribute_concat")
+@oneflow_export("advanced.distribute_concat", "debug.distribute_concat")
 def distribute_concat(xs, axis=0, name=None):
+    assert oneflow.placement.current_scope().parallel_size == len(xs)
     if name is None: name = id_util.UniqueStr("DistributeConcat_")
     op_conf = op_conf_util.OperatorConf()
     op_conf.name = name
