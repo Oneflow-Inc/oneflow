@@ -568,7 +568,7 @@ def run():
     start_time = time.time()
     elapsed_times = []
     metrics = pd.DataFrame(
-        {"iter": 0, "legend": "cfg", "value": str(cfg)}, index=[0]
+        {"iter": 0, "legend": "cfg", "value": str(config)}, index=[0]
     )
     print_metric_title()
     for i in range(terminal_args.iter_num):
