@@ -15,7 +15,7 @@ class ShapeElemCntKernel final : public KernelIf<device_type> {
  private:
   void ForwardDataContent(const KernelCtx&,
                           std::function<Blob*(const std::string&)>) const override;
-  int32_t GetShapePartialElemCnt(const Shape& shape) const;
+  int32_t GetShapePartialElemCnt(const DenseShapeView& shape) const;
 };
 
 }  // namespace oneflow

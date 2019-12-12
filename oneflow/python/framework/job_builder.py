@@ -45,8 +45,11 @@ def GetDataType(job_name, lbn):
 def IsDynamic(job_name, lbn):
     return c_api_util.JobBuildAndInferCtx_IsDynamic(job_name, lbn)
 
-def GetNumOfLoDLevels(job_name, lbn):
-    return c_api_util.JobBuildAndInferCtx_GetNumOfLoDLevels(job_name, lbn)
+def DisableBoxing(job_name, lbn):
+    return c_api_util.JobBuildAndInferCtx_DisableBoxing(job_name, lbn)
+
+def IsTensorList(job_name, lbn):
+    return c_api_util.JobBuildAndInferCtx_IsTensorList(job_name, lbn)
 
 def GetBatchAxis(job_name, lbn):
     return c_api_util.JobBuildAndInferCtx_GetBatchAxis(job_name, lbn)

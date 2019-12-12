@@ -5,11 +5,11 @@ import oneflow.core.record.record_pb2 as record_util
 import oneflow.python.framework.ofblob as ofblob
 import oneflow.oneflow_internal as oneflow_internal
 import oneflow.python.framework.c_api_util as c_api_util
+import oneflow.python.framework.session_context as session_ctx
 import traceback
 
 def BindUuidAndHandler(uuid, handler):
-     assert uuid not in _uuid2handler
-     _uuid2handler[uuid] = handler
+     session_ctx.GetDefaultSession().uuid2watch_handler[uuid] = handler
 
 class _Watcher(oneflow_internal.ForeignWatcher):
     def __init__(self):
@@ -23,10 +23,10 @@ class _Watcher(oneflow_internal.ForeignWatcher):
             raise e
 
 def _WatcherHandler(handler_uuid, of_blob_ptr):
-    assert handler_uuid in _uuid2handler
-    _uuid2handler[handler_uuid](ofblob.OfBlob(of_blob_ptr).CopyToBlob())
+    uuid2handler = session_ctx.GetDefaultSession().uuid2watch_handler
+    assert handler_uuid in uuid2handler
+    assert callable(uuid2handler[handler_uuid])
+    uuid2handler[handler_uuid](ofblob.OfBlob(of_blob_ptr).CopyToBlob())
 
 _global_watcher = _Watcher()
 c_api_util.RegisterWatcherOnlyOnce(_global_watcher)
-
-_uuid2handler = dict()

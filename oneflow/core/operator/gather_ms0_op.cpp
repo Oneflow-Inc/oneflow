@@ -52,7 +52,7 @@ Maybe<void> GatherMs0Op::InferBlobDescs(
   CHECK_GT(in->shape().NumAxes(), 0);
   BlobDesc* out = GetBlobDesc4BnInOp("out");
   *out = *indices;
-  std::vector<int64_t> dim_vec = indices->shape().dim_vec();
+  DimVector dim_vec = indices->shape().dim_vec();
   FOR_RANGE(int, i, 1, in->shape().NumAxes()) { dim_vec.push_back(in->shape().At(i)); }
   out->mut_shape() = Shape(dim_vec);
   out->set_data_type(in->data_type());

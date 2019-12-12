@@ -316,9 +316,9 @@ Maybe<bool> JobBuildAndInferCtx::IsDynamic(const std::string& lbn) const {
   return lbi2logical_blob_desc_.at(GenLogicalBlobId(lbn))->is_dynamic();
 }
 
-Maybe<long long> JobBuildAndInferCtx::GetNumOfLoDLevels(const std::string& lbn) const {
+Maybe<bool> JobBuildAndInferCtx::IsTensorList(const std::string& lbn) const {
   JUST(CheckLbnValidAndExist(lbn));
-  return lbi2logical_blob_desc_.at(GenLogicalBlobId(lbn))->num_of_lod_levels();
+  return lbi2logical_blob_desc_.at(GenLogicalBlobId(lbn))->is_tensor_list();
 }
 
 Maybe<bool> JobBuildAndInferCtx::DisableBoxing(const std::string& lbn) const {

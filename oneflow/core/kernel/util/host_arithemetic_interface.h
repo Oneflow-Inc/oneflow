@@ -12,11 +12,11 @@ class ConstantInitializerConf;
 
 template<>
 struct ArithemeticIf<DeviceType::kCPU> {
-  static void Transpose(DeviceCtx* ctx, const int32_t num_axis, const Shape& x_shape,
-                        const Shape& y_shape, const PbRf<int32_t>& permutation,
+  static void Transpose(DeviceCtx* ctx, const int32_t num_axis, const DenseShapeView& x_shape,
+                        const DenseShapeView& y_shape, const PbRf<int32_t>& permutation,
                         const int64_t elem_cnt, const float* x, float* y);
-  static void Transpose(DeviceCtx* ctx, const int32_t num_axis, const Shape& x_shape,
-                        const Shape& y_shape, const PbRf<int32_t>& permutation,
+  static void Transpose(DeviceCtx* ctx, const int32_t num_axis, const DenseShapeView& x_shape,
+                        const DenseShapeView& y_shape, const PbRf<int32_t>& permutation,
                         const int64_t elem_cnt, const double* x, double* y);
 
   static void InitializeWithConstConf(DeviceCtx* ctx,

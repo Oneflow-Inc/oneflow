@@ -2,6 +2,7 @@
 #define ONEFLOW_CORE_NDARRAY_XPU_SHAPE_H_
 
 #include "oneflow/core/common/shape.h"
+#include "oneflow/core/register/dense_shape_view.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/ndarray/xpu_util.h"
@@ -14,6 +15,8 @@ struct XpuShapeUtil;
 class XpuShape final {
  public:
   explicit XpuShape(const Shape& shape);
+  explicit XpuShape(const DenseShapeView& shape);
+  explicit XpuShape(const DenseShapeView& shape, int ndims_left_extend_to);
   OF_DEVICE_FUNC XpuShape(const int64_t dim[], int num_axes);
   OF_DEVICE_FUNC XpuShape(const XpuShape&) = default;
 

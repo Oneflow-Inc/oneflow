@@ -248,7 +248,7 @@ __global__ void TransposeGpu(const Int32Array<NDIMS> y_shape, const Int32Array<N
 }
 
 template<int32_t NDIMS, typename T>
-void Transpose(DeviceCtx* ctx, const Shape& x_shape, const Shape& y_shape,
+void Transpose(DeviceCtx* ctx, const DenseShapeView& x_shape, const DenseShapeView& y_shape,
                const PbRf<int32_t>& permutation, const int64_t elem_cnt, const T* x, T* y) {
   CHECK_LE(y_shape.elem_cnt(), GetMaxVal<int32_t>());
   Int32Array<NDIMS> y_shape_struct;
@@ -388,8 +388,8 @@ KU_IF_METHOD RowSum(DeviceCtx* ctx, const int64_t row_num, const int64_t col_num
   MatrixRowReduce<T, ReduceCoreAdd>(ctx, row_num, col_num, x, y, temp_storage, temp_storage_bytes);
 }
 
-KU_IF_METHOD Transpose(DeviceCtx* ctx, const int32_t num_axis, const Shape& x_shape,
-                       const Shape& y_shape, const PbRf<int32_t>& permutation,
+KU_IF_METHOD Transpose(DeviceCtx* ctx, const int32_t num_axis, const DenseShapeView& x_shape,
+                       const DenseShapeView& y_shape, const PbRf<int32_t>& permutation,
                        const int64_t elem_cnt, const T* x, T* y) {
   CHECK_LE(y_shape.elem_cnt(), GetMaxVal<int32_t>());
   CHECK_EQ(num_axis, y_shape.NumAxes());
@@ -649,6 +649,11 @@ KU_INTEGRAL_METHOD Axpy(DeviceCtx* ctx, const int n, const T alpha, const T* x, 
   template struct GpuKernelUtilIf<type_cpp, KernelUtil<DeviceType::kGPU, type_cpp>>; \
   template struct KernelUtil<DeviceType::kGPU, type_cpp>;
 OF_PP_FOR_EACH_TUPLE(INSTANTIATE_KERNEL_UTIL, ARITHMETIC_DATA_TYPE_SEQ);
+
+template<>
+__device__ int32_t gpu_atomic_add(int32_t* address, const int32_t val) {
+  return atomicAdd(address, val);
+}
 
 template<>
 __device__ float gpu_atomic_add(float* address, float val) {

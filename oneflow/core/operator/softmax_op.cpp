@@ -21,6 +21,28 @@ void SoftmaxOp::InitFromOpConf() {
 
 const PbMessage& SoftmaxOp::GetCustomizedConf() const { return op_conf().softmax_conf(); }
 
+Maybe<void> SoftmaxOp::InferOutBlobDescs(
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature,
+    std::function<void(OpContext*)> EnrollOpCtx) const {
+  // in
+  const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
+  // out
+  *GetBlobDesc4BnInOp("out") = *in_blob_desc;
+  SoftmaxOpCtx* op_ctx = NewSoftmaxOpCtx(in_blob_desc->shape());
+  EnrollOpCtx(op_ctx);
+  if (op_ctx->need_transpose && (job_desc().IsTrain() && op_conf().softmax_conf().axis() != -1)) {
+    // transpose blob
+    BlobDesc* transpose_blob_desc = GetBlobDesc4BnInOp("transpose_in");
+    transpose_blob_desc->mut_shape() = in_blob_desc->shape();
+    transpose_blob_desc->mut_shape().Set(op_ctx->axis, in_blob_desc->shape().At(op_ctx->dims - 1));
+    transpose_blob_desc->mut_shape().Set(op_ctx->dims - 1, op_ctx->transpose_cols);
+    transpose_blob_desc->set_data_type(in_blob_desc->data_type());
+    *GetBlobDesc4BnInOp("transpose_out") = *transpose_blob_desc;
+  }
+  return Maybe<void>::Ok();
+}
+
 Maybe<void> SoftmaxOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature,

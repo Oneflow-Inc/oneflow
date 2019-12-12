@@ -205,4 +205,10 @@ void InitCtrlRegstDesc(int64_t producer_task_id, RegstDescProto* ctrl_regst_prot
   ctrl_regst_proto->set_mem_block_offset(-1);
 }
 
+MemoryCase MakeHostMemCase() {
+  MemoryCase mem_case;
+  mem_case.mutable_host_mem();
+  return mem_case;
+}
+
 }  // namespace oneflow

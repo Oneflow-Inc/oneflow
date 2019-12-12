@@ -7,7 +7,7 @@ import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 
 from oneflow.python.oneflow_export import oneflow_export
-
+import os
 
 @oneflow_export("get_variable")
 def get_variable(
@@ -23,23 +23,33 @@ def get_variable(
     assert isinstance(name, str)
     name = compile_context._get_variable_prefix() + name
 
-    if name not in compile_context.cur_job_var_op_name2var_blob:
+    assert shape is not None, "Argument shape should not be None when the variable exists!"
+
+    def gen_var_op():
         op_conf = op_conf_util.OperatorConf()
         op_conf.name = name
-
-        assert (
-            shape is not None
-        ), "Argument shape should not be None when the variable exists!"
         op_conf.variable_conf.shape.dim.extend(shape)
 
         if dtype is not None:
             op_conf.variable_conf.data_type = dtype
-        if initializer is not None:
-            op_conf.variable_conf.initializer.CopyFrom(initializer)
+        root_path = compile_context.cur_job_conf.default_initialize_with_snapshot_path
+        dir_path = os.path.join(root_path, name)
+        file_path = os.path.join(dir_path, "out")
+        if root_path and os.path.isfile(file_path):
+            op_conf.variable_conf.initialize_with_snapshot.path = dir_path
+            op_conf.variable_conf.initialize_with_snapshot.key = "out"
+        else:
+            if root_path:
+                print("{} not found, will be initialized".format(file_path))
+            if initializer is not None:
+                op_conf.variable_conf.initializer.CopyFrom(initializer)
+
         if trainable is not None:
             op_conf.trainable = trainable
+
         if model_name is not None:
             op_conf.variable_conf.model_name = model_name
+
         if type(distribute) is distribute_util.SplitDistribute:
             op_conf.variable_conf.split_axis.value = distribute.axis
         else:
@@ -54,7 +64,19 @@ def get_variable(
         lbi = logical_blob_id_util.LogicalBlobId()
         lbi.op_name = op_conf.name
         lbi.blob_name = op_conf.variable_conf.out
-        var_blob = remote_blob_util.RemoteBlob(lbi)
-        compile_context.cur_job_var_op_name2var_blob[name] = var_blob
+        return remote_blob_util.RemoteBlob(lbi)
 
-    return compile_context.cur_job_var_op_name2var_blob[name]
+    if callable(compile_context.cur_job_variable_getter_composite):
+        return compile_context.cur_job_variable_getter_composite(
+            gen_var_op,
+            name,
+            shape,
+            dtype,
+            initializer,
+            trainable,
+            model_name,
+            random_seed,
+            distribute,
+        )
+    else:
+        return gen_var_op()

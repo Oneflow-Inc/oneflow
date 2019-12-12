@@ -6,7 +6,8 @@ namespace {
 
 class LayerNormCudnnBnCtx final {
  public:
-  LayerNormCudnnBnCtx(const Shape& data_shape, const Shape& param_shape, DataType data_type) {
+  LayerNormCudnnBnCtx(const DenseShapeView& data_shape, const DenseShapeView& param_shape,
+                      DataType data_type) {
     const int64_t cudnn_c = param_shape.elem_cnt();
     CHECK_EQ(data_shape.elem_cnt() % cudnn_c, 0);
     const int64_t cudnn_w = data_shape.elem_cnt() / cudnn_c;
@@ -55,7 +56,7 @@ void LayerNormKernelUtil<DeviceType::kGPU, T>::NormalizeForward(const DeviceCtx*
                                                                 Blob* out, Blob* mean,
                                                                 Blob* inv_variance) {
   CHECK_GE(epsilon, CUDNN_BN_MIN_EPSILON);
-  LayerNormCudnnBnCtx bn_ctx(in->static_shape(), mean->shape(), in->data_type());
+  LayerNormCudnnBnCtx bn_ctx(in->shape(), mean->shape(), in->data_type());
   CudaCheck(cudnnBatchNormalizationForwardTraining(
       ctx->cudnn_handle(), bn_ctx.mode(), CudnnSPOnePtr<T>(), CudnnSPZeroPtr<T>(),
       bn_ctx.data_tensor_desc(), in->dptr<T>(), bn_ctx.data_tensor_desc(), out->mut_dptr<T>(),
@@ -69,7 +70,7 @@ void LayerNormKernelUtil<DeviceType::kGPU, T>::NormalizeBackward(
     const Blob* inv_variance, const Blob* out_diff, double epsilon, Blob* in_diff, Blob* scale_diff,
     Blob* bias_diff) {
   CHECK_GE(epsilon, CUDNN_BN_MIN_EPSILON);
-  LayerNormCudnnBnCtx bn_ctx(in->static_shape(), scale_diff->shape(), in->data_type());
+  LayerNormCudnnBnCtx bn_ctx(in->shape(), scale_diff->shape(), in->data_type());
   CudaCheck(cudnnBatchNormalizationBackward(
       ctx->cudnn_handle(), bn_ctx.mode(), CudnnSPOnePtr<T>(), CudnnSPZeroPtr<T>(),
       CudnnSPOnePtr<T>(), CudnnSPZeroPtr<T>(), bn_ctx.data_tensor_desc(), in->dptr<T>(),
