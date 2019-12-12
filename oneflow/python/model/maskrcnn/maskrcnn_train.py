@@ -540,7 +540,7 @@ def update_metrics(metrics, iter, elapsed_time, outputs):
                 },
             ]
         )
-        metrics = pd.concat([metrics, df], axis=0)
+        metrics = pd.concat([metrics, df], axis=0, sort=False)
 
     return metrics
 
@@ -568,7 +568,7 @@ def run():
     start_time = time.time()
     elapsed_times = []
     metrics = pd.DataFrame(
-        {"iter": 0, "legend": "cfg", "value": str(config)}, index=[0]
+        {"iter": 0, "legend": "cfg", "note": str(config)}, index=[0]
     )
     print_metric_title()
     for i in range(terminal_args.iter_num):
