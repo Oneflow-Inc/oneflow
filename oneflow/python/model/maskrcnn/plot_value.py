@@ -142,7 +142,9 @@ torch_latest_csv = latest_wildcard(os.path.join(DL, "torch*.csv"))
 flow_latest = pd.read_csv(flow_latest_csv)
 torch_latest = pd.read_csv(torch_latest_csv)
 
-LIMIT = min(torch_latest["iter"].max(), flow["iter"].max())
+flow = flow_latest
+torch = torch_latest
+LIMIT = min(torch["iter"].max(), flow["iter"].max())
 TAKE_EVERY_N = 1
 if LIMIT > 2500:
     TAKE_EVERY_N = LIMIT // 2500 + 1
@@ -160,11 +162,7 @@ def subset_and_mod(df, limit, take_every_n):
 
 plot_many_by_legend(
     {
-        "flow": subset_and_mod(flow_latest, LIMIT, TAKE_EVERY_N),
-        "torch": subset_and_mod(torch_latest, LIMIT, TAKE_EVERY_N),
-        # "torch_before_fix_1x1": subset_and_mod(
-        #     torch_before_fix_1x1, LIMIT, TAKE_EVERY_N
-        # ),
-        # "torch_old_70k": subset_and_mod(torch_old_70k, LIMIT, TAKE_EVERY_N),
+        "flow": subset_and_mod(flow, LIMIT, TAKE_EVERY_N),
+        "torch": subset_and_mod(torch, LIMIT, TAKE_EVERY_N),
     }
 )
