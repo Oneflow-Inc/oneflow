@@ -6,12 +6,13 @@ namespace oneflow {
 template<typename T>
 struct ConvDataGradKernelUtil<DeviceType::kGPU, T> final {
   static void Compute(DeviceCtx* ctx, const ConvDataGradKernelConf& kernel_conf,
-                      const ConvConf& conf, const Blob* dy, const Blob* filter, Blob* dx,
-                      Blob* buf) {
+                      const ConvConf& conf, const Blob* dy, const Blob* filter, Blob* dx, Blob* buf,
+                      const bool enable_true_half) {
     CudnnTensorDesc dy_desc(dy->data_type(), dy->shape(), conf.data_format());
     CudnnFilterDesc filter_desc(filter->data_type(), filter->shape(), conf.data_format());
     CudnnTensorDesc dx_desc(dx->data_type(), dx->shape(), conf.data_format());
-    CudnnConvDesc conv_desc(GetConvDescDataType(dx->data_type()), dx->shape(), conf);
+    CudnnConvDesc conv_desc(GetConvDescDataType(dx->data_type(), enable_true_half), dx->shape(),
+                            conf);
     CudaCheck(cudnnConvolutionBackwardData(
         ctx->cudnn_handle(), CudnnSPOnePtr<T>(), filter_desc.Get(), filter->dptr<T>(),
         dy_desc.Get(), dy->dptr<T>(), conv_desc.Get(),

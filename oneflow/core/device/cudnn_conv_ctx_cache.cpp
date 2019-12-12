@@ -41,13 +41,15 @@ std::string CudnnConvCtxCache::GetKey(const BlobDesc& in_blob_desc, const BlobDe
 
 bool CudnnConvCtxCache::InferCudnnConvAlgoCtxWithConfig(
     const BlobDesc& in_blob_desc, const BlobDesc& out_blob_desc, const BlobDesc& filter_blob_desc,
-    const PbMessage& conf, const size_t max_buf_size, CudnnConvAlgoCtx* conv_algo_ctx) const {
+    const PbMessage& conf, const size_t max_buf_size, const bool enable_true_half,
+    CudnnConvAlgoCtx* conv_algo_ctx) const {
   const std::string format = GetValFromPbMessage<std::string>(conf, "data_format");
   const DataType data_type = in_blob_desc.data_type();
   CudnnTensorDesc in_desc(data_type, in_blob_desc.shape(), format);
   CudnnTensorDesc out_desc(data_type, out_blob_desc.shape(), format);
   CudnnFilterDesc filter_desc(data_type, filter_blob_desc.shape(), format);
-  CudnnConvDesc conv_desc(GetConvDescDataType(data_type), in_blob_desc.shape(), conf);
+  CudnnConvDesc conv_desc(GetConvDescDataType(data_type, enable_true_half), in_blob_desc.shape(),
+                          conf);
   cudnnHandle_t cudnn_handle;
   if (IsCuda9OnTuringDevice()) {
     CudaCheck(cudaDeviceSynchronize());
@@ -171,15 +173,17 @@ bool CudnnConvCtxCache::InferCudnnConvAlgoCtxWithConfig(
 
 bool CudnnConvCtxCache::FindCudnnConvAlgoCtxWithConfig(
     const BlobDesc& in_blob_desc, const BlobDesc& out_blob_desc, const BlobDesc& filter_blob_desc,
-    const PbMessage& conf, const size_t max_buf_size, CudnnConvAlgoCtx* conv_algo_ctx) {
+    const PbMessage& conf, const size_t max_buf_size, const bool enable_true_half,
+    CudnnConvAlgoCtx* conv_algo_ctx) {
   std::string key = GetKey(in_blob_desc, out_blob_desc, filter_blob_desc, conf, max_buf_size);
   auto algo_ctx_it = conv_config2algo_ctx_.find(key);
   if (algo_ctx_it != conv_config2algo_ctx_.end()) {
     *conv_algo_ctx = algo_ctx_it->second;
     return true;
   } else {
-    bool found = InferCudnnConvAlgoCtxWithConfig(in_blob_desc, out_blob_desc, filter_blob_desc,
-                                                 conf, max_buf_size, conv_algo_ctx);
+    bool found =
+        InferCudnnConvAlgoCtxWithConfig(in_blob_desc, out_blob_desc, filter_blob_desc, conf,
+                                        max_buf_size, enable_true_half, conv_algo_ctx);
     if (found) {
       AddCudnnConvAlgoCtxWithConfig(in_blob_desc, out_blob_desc, filter_blob_desc, conf,
                                     max_buf_size, *conv_algo_ctx);
@@ -195,12 +199,9 @@ void CudnnConvCtxCache::AddCudnnConvAlgoCtxWithConfig(
   CHECK(conv_config2algo_ctx_.emplace(key, conv_algo_ctx).second);
 }
 
-DataType GetConvDescDataType(DataType blob_data_type) {
-  DataType conv_desc_data_type =
-      blob_data_type == DataType::kFloat16 && !GlobalJobDesc().enable_true_half_config_when_conv()
-          ? DataType::kFloat
-          : blob_data_type;
-  return conv_desc_data_type;
+DataType GetConvDescDataType(DataType blob_data_type, const bool enable_true_half) {
+  return (blob_data_type == DataType::kFloat16 && !enable_true_half) ? DataType::kFloat
+                                                                     : blob_data_type;
 }
 
 }  // namespace oneflow
