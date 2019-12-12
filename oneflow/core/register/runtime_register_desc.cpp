@@ -85,7 +85,7 @@ void RtRegstDesc::ForEachBlobDescOffsetInOnRegst(
   for (const LbiBlobDescPair& lbi : lbis) {
     Handler(lbi, cur_body_offset, cur_header_offset);
     const RtBlobDesc* blob_desc = GetRtBlobDescFromLbi(lbi.lbi());
-    cur_body_offset += blob_desc->ByteSizeOfBlobBody();
+    cur_body_offset += blob_desc->AlignedByteSizeOfBlobBody();
     cur_header_offset += blob_desc->ByteSizeOfBlobHeader();
   }
 }

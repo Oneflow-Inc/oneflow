@@ -52,8 +52,6 @@ class Kernel {
                        std::function<Blob*(const std::string&)> BnInOp2Blob) const;
   virtual void ForwardHeader(const KernelCtx& ctx,
                              std::function<Blob*(const std::string&)> BnInOp2Blob) const;
-  virtual void ForwardLoD(const KernelCtx& ctx,
-                          std::function<Blob*(const std::string&)> BnInOp2Blob) const;
   virtual void ForwardDenseShape(const KernelCtx& ctx,
                                  std::function<Blob*(const std::string&)> BnInOp2Blob) const;
   void NaiveForwardDenseShape(std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
@@ -64,11 +62,9 @@ class Kernel {
                                    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
     UNIMPLEMENTED();
   }
-  virtual bool NeedForwardIfBlobEmpty() const { return false; }
+  virtual bool IsStateless() const { return true; }
   virtual const PbMessage& GetCustomizedOpConf() const { UNIMPLEMENTED(); }
   virtual const PbMessage& GetCustomizedKernelConf() const { UNIMPLEMENTED(); }
-  bool HasEmptyShapeBlob(const PbRpf<std::string>& bns,
-                         const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
   void CheckSameDim0ValidNum(const PbRpf<std::string>& bns,
                              const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
 

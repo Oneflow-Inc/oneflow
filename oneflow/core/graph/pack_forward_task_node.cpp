@@ -51,7 +51,7 @@ void PackForwardCompTaskNode::BuildExecGphAndRegst() {
 void PackForwardCompTaskNode::InferProducedDataRegstTimeShape() {
   std::shared_ptr<RegstDesc> in_regst = GetSoleConsumedRegst("in");
   std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out");
-  std::vector<int64_t> time_shape_dim_vec(in_regst->data_regst_time_shape()->dim_vec());
+  DimVector time_shape_dim_vec(in_regst->data_regst_time_shape()->dim_vec());
 
   const PackOp* pack_op = dynamic_cast<const PackOp*>(logical_node()->SoleOp().get());
   CHECK_NOTNULL(pack_op);

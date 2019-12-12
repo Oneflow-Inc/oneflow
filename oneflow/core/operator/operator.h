@@ -6,6 +6,7 @@
 #include "oneflow/core/common/preprocessor.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/common/auto_registration_factory.h"
+#include "oneflow/core/common/symbol.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/operator/op_conf_util.h"
@@ -161,6 +162,8 @@ class Operator {
   const JobDesc& job_desc() const { return *job_desc_; }
 
   void ForEachBnInOp(std::function<void(const std::string&)>) const;
+
+  virtual Symbol<OperatorConf> GetOpConfWithoutOpNameAndLbn() const;
 
  protected:
   virtual Maybe<void> GetSbpSignatures(

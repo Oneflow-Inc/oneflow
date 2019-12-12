@@ -37,6 +37,16 @@ LogicalBlobId BoxingOp::obn2lbi(const std::string& output_bn) const {
   return GetMsgFromCustomizedConf<LogicalBlobId>("lbi");
 }
 
+Symbol<OperatorConf> BoxingOp::GetOpConfWithoutOpNameAndLbn() const {
+  OperatorConf op_conf(this->op_conf());
+  op_conf.set_name("");
+  CHECK(op_conf.has_boxing_conf());
+  auto* boxing_conf = op_conf.mutable_boxing_conf();
+  LogicalBlobId empty_logical_blob_id;
+  *boxing_conf->mutable_lbi() = empty_logical_blob_id;
+  return SymbolOf(op_conf);
+}
+
 Maybe<void> BoxingOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
@@ -49,8 +59,7 @@ Maybe<void> BoxingOp::InferBlobDescs(
     }
   }
 
-  std::vector<int64_t> data_tmp_blob_shape_vec =
-      GetBlobDesc4BnInOp(input_bns().Get(0))->shape().dim_vec();
+  DimVector data_tmp_blob_shape_vec = GetBlobDesc4BnInOp(input_bns().Get(0))->shape().dim_vec();
   InferTmpBlobDesc(GetBlobDesc4BnInOp, &data_tmp_blob_shape_vec);
 
   if (conf.out_box_case() == BoxingOpConf::kSplitBox) {
@@ -78,14 +87,14 @@ Maybe<void> BoxingOp::InferBlobDescs(
 
 Maybe<void> BoxingOp::InferTmpBlobDesc(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    std::vector<int64_t>* data_tmp_vec_ptr) const {
+    DimVector* data_tmp_vec_ptr) const {
   const BoxingOpConf& conf = op_conf().boxing_conf();
   if (conf.in_box_case() == BoxingOpConf::kConcatBox) {
     int32_t concat_axis = conf.concat_box().axis();
     CHECK_GE_OR_RETURN(concat_axis, 0);
     FOR_RANGE(size_t, ib_idx, 1, input_bns().size()) {
       const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp(input_bns().Get(ib_idx));
-      const std::vector<int64_t>& in_blob_shape_vec = in_blob_desc->shape().dim_vec();
+      const DimVector& in_blob_shape_vec = in_blob_desc->shape().dim_vec();
       CHECK_LT_OR_RETURN(concat_axis, in_blob_shape_vec.size());
       FOR_RANGE(size_t, i, 0, in_blob_shape_vec.size()) {
         if (i == concat_axis) {

@@ -1,4 +1,5 @@
 #include "oneflow/core/job_completer/job_completer.h"
+#include "oneflow/core/register/dense_shape_view.h"
 
 namespace oneflow {
 
@@ -31,7 +32,7 @@ void GenerateFacadeImplOpConf(const OpNode& op_node, JobBuilder* job_builder) {
   job_builder->MutOpsOnlyOnce({reduce_sum_op_conf});
 
   const auto& in_blob = op_node.LogicalBlobDesc4Lbi(GenLogicalBlobId(reduce_mean_conf.in()));
-  CHECK_EQ(in_blob.num_of_lod_levels(), 0);
+  CHECK_EQ(in_blob.is_tensor_list(), false);
   std::string out_lbi;
   if (in_blob.is_dynamic()) {  // TODO: && in_blob.has_instance_shape()
     OperatorConf partial_elem_cnt_op_conf;
@@ -63,8 +64,8 @@ void GenerateFacadeImplOpConf(const OpNode& op_node, JobBuilder* job_builder) {
       shape_elem_cnt = in_blob.shape().elem_cnt();
     } else {
       const auto& axes = reduce_mean_conf.axis();
-      for (const auto& axis : in_blob.shape().ShiftNegativeAxis({axes.begin(), axes.end()})) {
-        shape_elem_cnt *= in_blob.shape().At(axis);
+      for (const auto& axis : axes) {
+        shape_elem_cnt *= in_blob.shape().At(ShiftNegativeAxis(axis, in_blob.shape().NumAxes()));
       }
     }
     OperatorConf scalar_div_op_conf;

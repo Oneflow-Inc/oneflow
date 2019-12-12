@@ -83,10 +83,14 @@ Maybe<bool> JobBuildAndInferCtx_IsDynamic(const std::string& job_name, const std
   return ctx->IsDynamic(lbn);
 }
 
-Maybe<long long> JobBuildAndInferCtx_GetNumOfLoDLevels(const std::string& job_name,
-                                                       const std::string& lbn) {
+Maybe<bool> JobBuildAndInferCtx_DisableBoxing(const std::string& job_name, const std::string& lbn) {
   auto* ctx = JUST(Global<JobBuildAndInferCtxMgr>::Get()->FindJobBuildAndInferCtx(job_name));
-  return ctx->GetNumOfLoDLevels(lbn);
+  return ctx->DisableBoxing(lbn);
+}
+
+Maybe<bool> JobBuildAndInferCtx_IsTensorList(const std::string& job_name, const std::string& lbn) {
+  auto* ctx = JUST(Global<JobBuildAndInferCtxMgr>::Get()->FindJobBuildAndInferCtx(job_name));
+  return ctx->IsTensorList(lbn);
 }
 
 Maybe<std::string> JobBuildAndInferCtx_GetBatchAxis(const std::string& job_name,

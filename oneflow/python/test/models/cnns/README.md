@@ -67,7 +67,12 @@ iter     tensorflow   oneflow-1n1c
 ```
 
 ## Test Bert on current node (1n1c, 1n4c):
+
+```
 python 1node_run_cnns_test.py test_bert
+```
 
 ## Test Bert with specified distributed strategy
+```
 python 2node_run_cnns_test.py test_bert.test_2n8c
+```

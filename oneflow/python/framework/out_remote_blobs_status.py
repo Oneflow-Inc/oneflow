@@ -19,7 +19,7 @@ class OutRemoteBlobsStatus(object):
         assert self.data_delivered_ == False
         self._Wait()
         self.data_delivered_ = True
-        return self._GetResultNdarray(self.out_remote_blob_pullers_)
+        return self._TrySyncAndGetResultNdarray(self.out_remote_blob_pullers_)
 
     # user api
     def async_get(self, callback):
@@ -29,7 +29,7 @@ class OutRemoteBlobsStatus(object):
         def Callback():
             assert self.finished_cnt_ <= pullers_cnt
             if self.finished_cnt_ == pullers_cnt:
-                callback(self._GetResultNdarray(self.out_remote_blob_pullers_))
+                callback(self._TrySyncAndGetResultNdarray(self.out_remote_blob_pullers_))
         try: 
             self.cond_var_.acquire()
             if self.finished_cnt_ == pullers_cnt:
@@ -64,8 +64,12 @@ class OutRemoteBlobsStatus(object):
     def _Wait(self):
         pullers_cnt = self._GetPullersCnt()
         self.cond_var_.acquire()
-        while self.finished_cnt_ != pullers_cnt: self.cond_var_.wait() 
+        while self.finished_cnt_ != pullers_cnt: self.cond_var_.wait()
         self.cond_var_.release()
+
+    def _TrySyncAndGetResultNdarray(self, pullers):
+        if self.session_.HasAnyCallbackAfterFunctionReturn(): self.session_.Sync()
+        return self._GetResultNdarray(pullers)
 
     def _GetResultNdarray(self, pullers):
         assert self.inited_

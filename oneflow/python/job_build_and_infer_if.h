@@ -72,9 +72,15 @@ bool JobBuildAndInferCtx_IsDynamic(const std::string& job_name, const std::strin
       .GetDataAndSerializedErrorProto(error_str, false);
 }
 
-long long JobBuildAndInferCtx_GetNumOfLoDLevels(const std::string& job_name, const std::string& lbn,
-                                                std::string* error_str) {
-  return oneflow::JobBuildAndInferCtx_GetNumOfLoDLevels(job_name, lbn)
+bool JobBuildAndInferCtx_DisableBoxing(const std::string& job_name, const std::string& lbn,
+                                       std::string* error_str) {
+  return oneflow::JobBuildAndInferCtx_DisableBoxing(job_name, lbn)
+      .GetDataAndSerializedErrorProto(error_str, false);
+}
+
+long long JobBuildAndInferCtx_IsTensorList(const std::string& job_name, const std::string& lbn,
+                                           std::string* error_str) {
+  return oneflow::JobBuildAndInferCtx_IsTensorList(job_name, lbn)
       .GetDataAndSerializedErrorProto(error_str, 0LL);
 }
 

@@ -21,7 +21,6 @@ class DistributeConcatKernel final : public KernelIf<device_type> {
  private:
   void ForwardDataContent(const KernelCtx &,
                           std::function<Blob *(const std::string &)>) const override;
-
   const Blob *GetInBlob(std::function<Blob *(const std::string &)> BnInOp2Blob) const;
 };
 

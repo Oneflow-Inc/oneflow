@@ -1,8 +1,22 @@
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/common/gdb.h"
+#include "oneflow/core/common/cached_caller.h"
 #include "oneflow/core/kernel/runtime_blob_shape_infer_helper.h"
 
 namespace oneflow {
+
+namespace {
+
+bool IsAllBlobEmpty(const PbRpf<std::string>& bns,
+                    const std::function<Blob*(const std::string&)>& BnInOp2Blob) {
+  for (const auto& bn : bns) {
+    Blob* blob = BnInOp2Blob(bn);
+    if (blob && !blob->IsBodyEmpty()) { return false; }
+  }
+  return true;
+}
+
+}  // namespace
 
 Kernel::~Kernel() {
   if (shape_infer_helper_ != nullptr) { delete shape_infer_helper_; }
@@ -11,7 +25,8 @@ Kernel::~Kernel() {
 void Kernel::Init(const JobDesc* job_desc, const KernelConf& kernel_conf, DeviceCtx* device_ctx) {
   job_desc_ = job_desc;
   kernel_conf_ = kernel_conf;
-  shape_infer_helper_ = new RuntimeBlobShapeInferHelper(this->op_conf(), &this->job_desc());
+  shape_infer_helper_ =
+      new RuntimeBlobShapeInferHelper(this->op_conf(), this->kernel_conf(), &this->job_desc());
   VirtualKernelInit(device_ctx);
 }
 
@@ -22,14 +37,7 @@ void Kernel::InitModelAndConstBuf(const KernelCtx& ctx,
 
 void Kernel::Launch(const KernelCtx& ctx,
                     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  HashMap<std::string, Blob*> bn_in_op2blob;
-  auto CachedBnInOp2Blob = [&](const std::string& bn_in_op) -> Blob* {
-    auto iter = bn_in_op2blob.find(bn_in_op);
-    if (iter == bn_in_op2blob.end()) {
-      iter = bn_in_op2blob.emplace(bn_in_op, BnInOp2Blob(bn_in_op)).first;
-    }
-    return iter->second;
-  };
+  auto CachedBnInOp2Blob = WithResultCached(BnInOp2Blob);
   gdb::ForwardEnterBreakPoint(op_attribute(), CachedBnInOp2Blob);
   Forward(ctx, CachedBnInOp2Blob);
   gdb::ForwardLeaveBreakPoint(op_attribute(), CachedBnInOp2Blob);
@@ -37,15 +45,6 @@ void Kernel::Launch(const KernelCtx& ctx,
 
 const LogicalBlobId& Kernel::BnInOp2Lbi(const std::string& bn_in_op) const {
   return op_attribute().bn_in_op2lbi().at(bn_in_op);
-}
-
-bool Kernel::HasEmptyShapeBlob(const PbRpf<std::string>& bns,
-                               const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
-  for (const auto& bn : bns) {
-    Blob* blob = BnInOp2Blob(bn);
-    if (blob && blob->IsShapeEmpty()) { return true; }
-  }
-  return false;
 }
 
 void Kernel::CheckSameDim0ValidNum(
@@ -57,6 +56,7 @@ void Kernel::CheckSameDim0ValidNum(
 void Kernel::Forward(const KernelCtx& ctx,
                      std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   ForwardHeader(ctx, BnInOp2Blob);
+  if (IsAllBlobEmpty(op_attribute().output_bns(), BnInOp2Blob) && IsStateless()) { return; }
   ForwardDataContent(ctx, BnInOp2Blob);
 }
 
@@ -66,13 +66,7 @@ void Kernel::ForwardHeader(const KernelCtx& ctx,
     ForwardPackedHeader(ctx, BnInOp2Blob);
   } else {
     if (kernel_conf_.need_do_dense_shape()) { ForwardDenseShape(ctx, BnInOp2Blob); }
-    if (kernel_conf_.need_do_lod()) { ForwardLoD(ctx, BnInOp2Blob); }
   }
-}
-
-void Kernel::ForwardLoD(const KernelCtx& ctx,
-                        std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  UNIMPLEMENTED();
 }
 
 void Kernel::ForwardDenseShape(const KernelCtx& ctx,

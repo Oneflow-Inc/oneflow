@@ -25,7 +25,12 @@ class RemoteBlob(blob_desc.BlobDesc):
     def is_dynamic(self): return job_builder.IsDynamic(self.job_name_, self.lbn_)
     
     @property
-    def num_of_lod_levels(self): return job_builder.GetNumOfLoDLevels(self.job_name_, self.lbn_)
+    def disable_boxing(self):
+        if self.disable_boxing_ is not None: return self.disable_boxing_
+        return job_builder.DisableBoxing(self.job_name_, self.lbn_)
+    
+    @property
+    def is_tensor_list(self): return job_builder.IsTensorList(self.job_name_, self.lbn_)
 
     @property
     def disable_boxing(self):
