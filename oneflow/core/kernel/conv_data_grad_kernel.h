@@ -21,8 +21,8 @@ class ConvDataGradKernel final : public KernelIf<device_type> {
 template<DeviceType device_type, typename T>
 struct ConvDataGradKernelUtil final {
   static void Compute(DeviceCtx* ctx, const ConvDataGradKernelConf& kernel_conf,
-                      const ConvConf& conf, const Blob* dy, const Blob* filter, Blob* dx,
-                      Blob* buf);
+                      const ConvConf& conf, const Blob* dy, const Blob* filter, Blob* dx, Blob* buf,
+                      const bool enable_true_half);
 };
 
 }  // namespace oneflow
