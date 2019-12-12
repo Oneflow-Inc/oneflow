@@ -267,7 +267,6 @@ def merge_args_to_train_config(args):
     print("")
     print("default:\n{}\n".format(str(d1_diff)))
     print("given:\n{}\n".format(str(d2_diff)))
-    assert False
     if args.verbose:
         print(config)
 
