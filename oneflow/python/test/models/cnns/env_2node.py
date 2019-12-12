@@ -3,7 +3,7 @@ import oneflow as flow
 import atexit
 
 FLAGS = flags.FLAGS
-flags.DEFINE_string('nodes_list', '192.168.1.15,192.168.1.14', 'nodes list seperated by comma')
+flags.DEFINE_string('nodes_list', '192.168.1.15,192.168.1.16', 'nodes list seperated by comma')
 flags.DEFINE_integer('ctrl_port', '9524', 'control port')
 
 def Init():
