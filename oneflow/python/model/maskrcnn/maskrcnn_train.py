@@ -1,5 +1,5 @@
 # must import get cfg before importing oneflow
-from config import get_default_cfgs
+from config import get_default_cfgs, compare_config
 
 import os
 import numpy as np
@@ -205,26 +205,6 @@ def maskrcnn_train(cfg, image, image_size, gt_bbox, gt_segm, gt_label):
         "total_pos_inds_elem_cnt": total_pos_inds_elem_cnt,
     }
 
-
-def compare_config(d1, d2, path=""):
-    from yacs.config import CfgNode as CN
-    for k in d1.keys():
-        if not d2.has_key(k):
-            raise ValueError
-        else:
-            if type(d1[k]) is CN:
-                sub_path = None
-                if path == "":
-                    sub_path = k
-                else:
-                    sub_path = path + "." + k
-                assert sub_path is not ""
-                compare_config(d1[k],d2[k], sub_path)
-            else:
-                if d1[k] != d2[k]:
-                    print path, ":"
-                    print " - ", k," : ", d1[k]
-                    print " + ", k," : ", d2[k] 
 
 def merge_args_to_train_config(args):
     config = get_default_cfgs()

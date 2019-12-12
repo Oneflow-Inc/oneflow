@@ -158,3 +158,23 @@ def get_default_cfgs():
     Get a yacs CfgNode object with default values for maskrcnn object
     """
     return _C.clone()
+
+
+def compare_config(d1, d2, path=""):
+    for k in d1.keys():
+        if k not in d2:
+            raise ValueError
+
+        if type(d1[k]) is CN:
+            sub_path = None
+            if path == "":
+                sub_path = k
+            else:
+                sub_path = path + "." + k
+            assert sub_path is not ""
+            compare_config(d1[k], d2[k], sub_path)
+        else:
+            if d1[k] != d2[k]:
+                print(path, ":")
+                print("- {} : {}".format(k, d1[k]))
+                print("+ {} : {}".format(k, d2[k]))
