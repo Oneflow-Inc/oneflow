@@ -172,7 +172,7 @@ def update_by_path(node, path, value):
             node = node[key]
 
 
-def compare_config(d1, d2, path=None, d1_diff=None, d2_diff=None):
+def compare_config(d1, d2, path=None, d1_diff=None, d2_diff=None, identitcal_structure=True):
     if d1_diff is None:
         assert(path is None)
         d1_diff = CN()
@@ -182,22 +182,36 @@ def compare_config(d1, d2, path=None, d1_diff=None, d2_diff=None):
     if path is None:
         path = []
     for k in d1.keys():
-        if k not in d2:
-            raise ValueError
-
-        if type(d1[k]) is CN:
-            sub_path = None
-            if path == []:
-                sub_path = [k]
+        if identitcal_structure:
+            assert k in d2, "key {} not found in d2".format(k)
+            if type(d1[k]) is CN:
+                sub_path = None
+                if path == []:
+                    sub_path = [k]
+                else:
+                    sub_path = path + [k]
+                assert sub_path is not None
+                compare_config(d1[k], d2[k], sub_path, d1_diff, d2_diff, True)
             else:
-                sub_path = path + [k]
-            assert sub_path is not None
-            compare_config(d1[k], d2[k], sub_path, d1_diff, d2_diff)
-        else:
-            if d1[k] != d2[k]:
-                print("{}:".format(".".join(path)))
-                print("- {} : {}".format(k, d1[k]))
-                print("+ {} : {}".format(k, d2[k]))
-                update_by_path(d1_diff, path + [k], d1[k])
-                update_by_path(d2_diff, path + [k], d2[k])
+                if d1[k] != d2[k]:
+                    print("{}:".format(".".join(path)))
+                    print("- {} : {}".format(k, d1[k]))
+                    print("+ {} : {}".format(k, d2[k]))
+                    update_by_path(d1_diff, path + [k], d1[k])
+                    update_by_path(d2_diff, path + [k], d2[k])
     return (d1_diff, d2_diff)
+
+def check_compatibility(d1, d2):
+    return compare_config(d1, d2, identitcal_structure=False)
+
+if __name__ == "__main__":
+    import torch_config
+    (d1_diff, d2_diff) = check_compatibility(_C, torch_config._C)
+    print(str(d1_diff))
+    print(str(d2_diff))
+
+    print("")
+
+    (d1_diff, d2_diff) = check_compatibility(torch_config._C, _C)
+    print(str(d1_diff))
+    print(str(d2_diff))
