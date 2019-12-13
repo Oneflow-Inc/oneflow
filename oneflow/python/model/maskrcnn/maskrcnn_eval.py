@@ -6,6 +6,8 @@ import numpy as np
 import pickle
 import json
 import argparse
+import time
+import statistics
 import oneflow as flow
 import oneflow.core.data.data_pb2 as data_util
 
@@ -204,9 +206,10 @@ if __name__ == "__main__":
 
     prediction_list = []
     image_id_list = []
+    elapsed_times = []
     ann_file_path = os.path.join(terminal_args.dataset_dir, terminal_args.annotation_file)
     for i in range(len(json.load(open(ann_file_path))["images"])):
-        print("iteration: {}".format(i))
+        start_time = time.time()
         if terminal_args.fake_img:
             if i == 0:
                 f = open(
@@ -219,10 +222,17 @@ if __name__ == "__main__":
         else:
             results = maskrcnn_eval_job().get()
         predictions, image_ids = GenPredictionsAndImageIds(results)
-
         image_id_list += image_ids
         prediction_list += predictions
+        end_time = time.time()
 
+        elapsed_time = end_time - start_time
+        elapsed_times.append(end_time - start_time)
+        print("iteration: {}, time: {}".format(i, elapsed_time))
+    
+    print("median of elapsed times: {}".format(statistics.median(elapsed_times)))
+
+    print("Calculating mAP...")
     # Sort predictions by image_id
     num_imgs = len(prediction_list)
     assert num_imgs == len(image_id_list)
