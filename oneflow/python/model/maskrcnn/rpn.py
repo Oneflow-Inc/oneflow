@@ -428,14 +428,15 @@ def gen_anchors(image, anchor_strides, anchor_sizes, aspect_ratios):
     if not isinstance(anchor_strides, (tuple, list)):
         anchor_strides = [anchor_strides]
 
+    assert len(anchor_strides) == len(anchor_sizes)
     anchors = [
         flow.detection.anchor_generate(
             images=image,
             feature_map_stride=stride,
             aspect_ratios=aspect_ratios,
-            anchor_scales=anchor_sizes,
+            anchor_scales=sizes_per_stride,
         )
-        for stride in anchor_strides
+        for stride, sizes_per_stride in zip(anchor_strides, anchor_sizes)
     ]
 
     return anchors
