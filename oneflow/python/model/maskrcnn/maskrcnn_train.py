@@ -191,6 +191,7 @@ def merge_args_to_train_config(args):
             config.SOLVER.BATCH_SIZE / config.ENV.NUM_GPUS
         )
 
+    assert config.SOLVER.IMS_PER_BATCH * config.ENV.NUM_GPUS == config.SOLVER.BATCH_SIZE
     config.freeze()
     print("difference between default (upper) and given config (lower)")
     d1_diff, d2_diff = compare_config(get_default_cfgs(), config)

@@ -18,7 +18,7 @@ def make_data_loader(cfg, is_train):
             group_by_aspect_ratio=cfg.DATALOADER.ASPECT_RATIO_GROUPING,
         )
         data_loader = flow.data.DataLoader(
-            coco, cfg.SOLVER.IMS_PER_BATCH, cfg.DATALOADER.CACHE_SIZE
+            coco, cfg.SOLVER.BATCH_SIZE, cfg.DATALOADER.CACHE_SIZE
         )
 
         aligned_min_size = roundup(cfg.INPUT.MIN_SIZE_TRAIN, cfg.DATALOADER.SIZE_DIVISIBILITY)
@@ -89,7 +89,7 @@ def make_data_loader(cfg, is_train):
             group_by_aspect_ratio=True,
         )
         data_loader = flow.data.DataLoader(
-            coco, cfg.SOLVER.IMS_PER_BATCH, cfg.DATALOADER.CACHE_SIZE
+            coco, cfg.SOLVER.BATCH_SIZE, cfg.DATALOADER.CACHE_SIZE
         )
 
         aligned_min_size = roundup(cfg.INPUT.MIN_SIZE_TEST, cfg.DATALOADER.SIZE_DIVISIBILITY)
