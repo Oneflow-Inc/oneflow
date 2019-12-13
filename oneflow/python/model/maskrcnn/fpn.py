@@ -2,9 +2,9 @@ import oneflow as flow
 
 
 class FPN(object):
-    def __init__(self):
-        self.inner_channels = 256
-        self.layer_channels = 256
+    def __init__(self, cfg):
+        self.inner_channels = cfg.MODEL.RESNETS.BACKBONE_OUT_CHANNELS
+        self.layer_channels = cfg.MODEL.RESNETS.BACKBONE_OUT_CHANNELS
 
     def build(self, features):
         layers = range(len(features))

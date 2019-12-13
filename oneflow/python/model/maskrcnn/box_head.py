@@ -26,8 +26,8 @@ class BoxHead(object):
             for img_idx in range(len(proposals)):
                 with flow.deprecated.variable_scope("matcher"):
                     box_head_matcher = Matcher(
-                        self.cfg.BOX_HEAD.FOREGROUND_THRESHOLD,
-                        self.cfg.BOX_HEAD.BACKGROUND_THRESHOLD_HIGH,
+                        self.cfg.MODEL.ROI_HEADS.FG_IOU_THRESHOLD,
+                        self.cfg.MODEL.ROI_HEADS.BG_IOU_THRESHOLD,
                     )
                     matched_indices = box_head_matcher.build(
                         proposals[img_idx], gt_boxes_list[img_idx], allow_low_quality_matches=False
@@ -41,7 +41,7 @@ class BoxHead(object):
                     axis=[1],
                 )
 
-                if self.cfg.DEBUG.ROI_HEAD_RANDOM_SAMPLE:
+                if self.cfg.MODEL.ROI_HEADS.RANDOM_SAMPLE:
                     rand_pos_inds = flow.detection.random_perm_like(pos_inds)
                     rand_neg_inds = flow.detection.random_perm_like(neg_inds)
                     pos_inds = flow.local_gather(pos_inds, rand_pos_inds)
@@ -50,8 +50,8 @@ class BoxHead(object):
                 sampled_pos_inds, sampled_neg_inds = flow.detection.pos_neg_sampler(
                     pos_inds,
                     neg_inds,
-                    total_subsample_num=self.cfg.BOX_HEAD.NUM_SAMPLED_ROI_PER_IMG,
-                    pos_fraction=self.cfg.BOX_HEAD.FOREGROUND_FRACTION,
+                    total_subsample_num=self.cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE,
+                    pos_fraction=self.cfg.MODEL.ROI_HEADS.POSITIVE_FRACTION,
                     name="img{}_pos_neg_sampler".format(img_idx),
                 )
                 sampled_pos_neg_inds = flow.concat([sampled_pos_inds, sampled_neg_inds], axis=0)
@@ -75,15 +75,16 @@ class BoxHead(object):
                 proposal_per_img = flow.local_gather(proposals[img_idx], sampled_pos_neg_inds)
                 pos_proposal_per_img = flow.local_gather(proposals[img_idx], sampled_pos_inds)
                 gt_boxes_per_img = flow.local_gather(gt_boxes_list[img_idx], gt_indices)
+                (weight_x, weight_y, weight_h, weight_w) = self.cfg.MODEL.ROI_HEADS.BBOX_REG_WEIGHTS
                 bbox_target_list.append(
                     flow.detection.box_encode(
                         gt_boxes_per_img,
                         proposal_per_img,
                         regression_weights={
-                            "weight_x": self.cfg.BOX_HEAD.WEIGHT_X,
-                            "weight_y": self.cfg.BOX_HEAD.WEIGHT_Y,
-                            "weight_h": self.cfg.BOX_HEAD.WEIGHT_H,
-                            "weight_w": self.cfg.BOX_HEAD.WEIGHT_W,
+                            "weight_x": weight_x,
+                            "weight_y": weight_y,
+                            "weight_h": weight_h,
+                            "weight_w": weight_w,
                         },
                     )
                 )
@@ -129,7 +130,13 @@ class BoxHead(object):
                 / total_elem_cnt
             )
 
-            return (box_head_box_loss, box_head_cls_loss, pos_proposal_list, pos_gt_indices_list, total_pos_inds_elem_cnt)
+            return (
+                box_head_box_loss,
+                box_head_cls_loss,
+                pos_proposal_list,
+                pos_gt_indices_list,
+                total_pos_inds_elem_cnt,
+            )
 
     # Input:
     # rpn_proposals: list of [R, 4] wrt. images
@@ -150,35 +157,39 @@ class BoxHead(object):
         return results
 
     def box_feature_extractor(self, proposals, img_ids, features):
+        pooler_scales = self.cfg.MODEL.ROI_BOX_HEAD.POOLER_SCALES
+        pooler_res = self.cfg.MODEL.ROI_BOX_HEAD.POOLER_RESOLUTION
+        sampling_ratio = self.cfg.MODEL.ROI_BOX_HEAD.POOLER_SAMPLING_RATIO
+
         proposals_with_img_ids = flow.concat(
             [flow.expand_dims(flow.cast(img_ids, flow.float), 1), proposals], axis=1
         )
         levels = flow.detection.level_map(proposals)
 
-        level_idx_dict = {}
-        for (i, level_idx) in zip(range(2, 6), range(0, 4)):
-            level_idx_dict[i] = flow.squeeze(
-                flow.local_nonzero(levels == flow.constant_scalar(int(level_idx), flow.int32)),
-                axis=[1],
+        level_idx_list = [
+            flow.squeeze(
+                flow.local_nonzero(levels == flow.constant_scalar(i, flow.int32)), axis=[1]
             )
+            for i in range(len(pooler_scales))
+        ]
 
-        roi_features_list = []
-        for (level, i) in zip(range(2, 6), range(0, 4)):
-            roi_feature_i = flow.detection.roi_align(
-                features[i],
-                rois=flow.local_gather(proposals_with_img_ids, level_idx_dict[level]),
-                pooled_h=self.cfg.BOX_HEAD.POOLED_H,
-                pooled_w=self.cfg.BOX_HEAD.POOLED_W,
-                spatial_scale=self.cfg.BOX_HEAD.SPATIAL_SCALE / pow(2, i),
-                sampling_ratio=self.cfg.BOX_HEAD.SAMPLING_RATIO,
+        roi_features_list = [
+            flow.detection.roi_align(
+                feature,
+                rois=flow.local_gather(proposals_with_img_ids, level_idx),
+                pooled_h=pooler_res,
+                pooled_w=pooler_res,
+                spatial_scale=scale,
+                sampling_ratio=sampling_ratio,
                 name="box_roi_align_" + str(i),
             )
-            roi_features_list.append(roi_feature_i)
+            for i, (feature, level_idx, scale) in enumerate(
+                zip(features, level_idx_list, pooler_scales), 1
+            )
+        ]
 
         roi_features = flow.stack(roi_features_list, axis=0)
-
-        origin_indices = flow.stack(list(level_idx_dict.values()), axis=0)
-
+        origin_indices = flow.stack(level_idx_list, axis=0)
         roi_features_reorder = flow.local_scatter_nd_update(
             flow.constant_like(roi_features, float(0)),
             flow.expand_dims(origin_indices, axis=1),
@@ -188,13 +199,15 @@ class BoxHead(object):
         roi_features_flat = flow.dynamic_reshape(
             roi_features_reorder, [-1, reduce(operator.mul, roi_features_reorder.shape[1:], 1)]
         )
+
+        representation_size = self.cfg.MODEL.ROI_BOX_HEAD.MLP_HEAD_DIM
         x = flow.layers.dense(
             inputs=roi_features_flat,
-            units=1024,
+            units=representation_size,
             activation=flow.keras.activations.relu,
             use_bias=True,
             kernel_initializer=flow.kaiming_initializer(
-                shape=(1024, roi_features_flat.static_shape[1]),
+                shape=(representation_size, roi_features_flat.static_shape[1]),
                 distribution="random_uniform",
                 mode="fan_in",
                 nonlinearity="leaky_relu",
@@ -203,13 +216,14 @@ class BoxHead(object):
             bias_initializer=flow.constant_initializer(0),
             name="fc6",
         )
+
         x = flow.layers.dense(
             inputs=x,
-            units=1024,
+            units=representation_size,
             activation=flow.keras.activations.relu,
             use_bias=True,
             kernel_initializer=flow.kaiming_initializer(
-                shape=(1024, x.static_shape[1]),
+                shape=(representation_size, x.static_shape[1]),
                 distribution="random_uniform",
                 mode="fan_in",
                 nonlinearity="leaky_relu",
@@ -224,7 +238,7 @@ class BoxHead(object):
     def box_predictor(self, x):
         bbox_regression = flow.layers.dense(
             inputs=x,
-            units=self.cfg.BOX_HEAD.NUM_CLASSES * 4,
+            units=self.cfg.MODEL.ROI_BOX_HEAD.NUM_CLASSES * 4,
             activation=None,
             use_bias=True,
             kernel_initializer=flow.random_normal_initializer(stddev=0.001),
@@ -233,7 +247,7 @@ class BoxHead(object):
         )
         cls_logits = flow.layers.dense(
             inputs=x,
-            units=self.cfg.BOX_HEAD.NUM_CLASSES,
+            units=self.cfg.MODEL.ROI_BOX_HEAD.NUM_CLASSES,
             activation=None,
             use_bias=True,
             kernel_initializer=flow.random_normal_initializer(stddev=0.01),
