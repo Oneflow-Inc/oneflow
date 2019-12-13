@@ -16,7 +16,7 @@ bool TrtExecutable::CreateExecutableEngine(const ExecutableRunOptions &run_optio
   build_config->setMaxWorkspaceSize(max_workspace_size);
 
   nvinfer1::BuilderFlags flags = 0U;
-  if (run_options.enable_fp16) {
+  if (run_options.tensorrt_fp16) {
     if (builder_->platformHasFastFp16()) {
       flags |= (1U << int(nvinfer1::BuilderFlag::kFP16));
       // It does not guarantee using half precision if only set kFP16 flag,

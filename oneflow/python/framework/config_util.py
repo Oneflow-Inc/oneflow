@@ -309,11 +309,25 @@ def set_concurrency_width(value):
 
 @oneflow_export('config.use_xla_jit')
 def set_use_xla_jit(value = True):
-  _SetJobConfAttr(lambda x:x, 'use_xla_jit', job_util.OPT_ON if value else job_util.OPT_OFF)
+    _SetJobConfAttr(lambda job_conf : job_conf.xrt_config, 'use_xla_jit',
+                    job_util.XrtConfig.OPT_ON if value else job_util.XrtConfig.OPT_OFF)
 
 @oneflow_export('config.use_tensorrt')
 def set_use_tensorrt(value = True):
-  _SetJobConfAttr(lambda x:x, 'use_tensorrt', job_util.OPT_ON if value else job_util.OPT_OFF)
+    _SetJobConfAttr(lambda job_conf : job_conf.xrt_config, 'use_tensorrt',
+                    job_util.XrtConfig.OPT_ON if value else job_util.XrtConfig.OPT_OFF)
+
+@oneflow_export('config.tensorrt.use_fp16')
+def set_tensorrt_use_fp16(value = True):
+    set_use_tensorrt(True)
+    _SetJobConfAttr(lambda job_conf : job_conf.xrt_config.tensorrt_config, 'use_fp16',
+                    job_util.XrtConfig.OPT_ON if value else job_util.XrtConfig.OPT_OFF)
+
+@oneflow_export('config.tensorrt.use_int8')
+def set_tensorrt_use_int8(value = True):
+    set_use_tensorrt(True)
+    _SetJobConfAttr(lambda job_conf : job_conf.xrt_config.tensorrt_config, 'use_int8',
+                    job_util.XrtConfig.OPT_ON if value else job_util.XrtConfig.OPT_OFF)
 
 @oneflow_export('config.train.model_update_conf')
 def set_model_update_conf(value):

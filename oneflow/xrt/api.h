@@ -32,8 +32,9 @@ std::shared_ptr<XrtGraph> BuildXrtGraph(const XrtLaunchOpConf::Function &functio
 // Build an xrt graph from op graph.
 std::shared_ptr<XrtGraph> BuildXrtGraph(const OpGraph *op_graph);
 
-void EnableUseXlaJit(const ConfigOption &use_xla_jit);
-void EnableUseTensorRT(const ConfigOption &use_tensorrt);
+void SetXrtEnvOption(const XrtConfig::Option &option, bool *env);
+
+void InitXrtConfigurations(const XrtConfig &config);
 
 bool XrtCompilationEnabled();
 
@@ -60,8 +61,6 @@ inline void RunXrtPass(const std::string &pass, XrtGraph *graph, const XrtPassOp
 }
 
 void RunCompilationTimeXrtPasses(const OpGraph &op_graph, Job *job, bool train_phase);
-
-Parameter BuildParameter(const Blob &blob, const std::string &name = "");
 
 }  // namespace xrt
 }  // namespace oneflow

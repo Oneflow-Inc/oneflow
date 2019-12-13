@@ -19,6 +19,11 @@ DEFINE_bool(strict_clustering, EnvToBool(FLAGS_strict_clustering, true),
 DEFINE_bool(use_xla_jit, EnvToBool(FLAGS_use_xla_jit, false), "It's optional to use xla jit.");
 DEFINE_bool(use_tensorrt, EnvToBool(FLAGS_use_tensorrt, false), "It's optional to use tensorrt.");
 
+DEFINE_bool(tensorrt_fp16, EnvToBool(FLAGS_tensorrt_fp16, false),
+            "Enable fp16 precision for TENSORRT engine.");
+DEFINE_bool(tensorrt_int8, EnvToBool(FLAGS_tensorrt_int8, false),
+            "Enable int8 precision for TENSORRT engine.");
+
 namespace oneflow {
 namespace xrt {
 
@@ -132,21 +137,22 @@ std::shared_ptr<XrtGraph> BuildXrtGraph(const XrtLaunchOpConf::Function &functio
   return graph_builder::BuildGraph(function, device_type, job_desc);
 }
 
-void EnableUseXlaJit(const ConfigOption &use_xla_jit) {
-  if (use_xla_jit == ConfigOption::OPT_ON) {
-    // TODO(hjchen2): Check xla jit has been compiled.
-    FLAGS_use_xla_jit = true;
-  } else if (use_xla_jit == ConfigOption::OPT_OFF) {
-    FLAGS_use_xla_jit = false;
+void SetXrtEnvOption(const XrtConfig::Option &option, bool *env) {
+  if (option == XrtConfig::OPT_ON) {
+    *env = true;
+  } else if (option == XrtConfig::OPT_OFF) {
+    *env = false;
   }
 }
 
-void EnableUseTensorRT(const ConfigOption &use_tensorrt) {
-  if (use_tensorrt == ConfigOption::OPT_ON) {
-    // TODO(hjchen2): Check tensorrt has been compiled.
-    FLAGS_use_tensorrt = true;
-  } else if (use_tensorrt == ConfigOption::OPT_OFF) {
-    FLAGS_use_tensorrt = false;
+void InitXrtConfigurations(const XrtConfig &config) {
+  SetXrtEnvOption(config.use_xla_jit(), &FLAGS_use_xla_jit);
+  SetXrtEnvOption(config.use_tensorrt(), &FLAGS_use_tensorrt);
+  // Set xla configurations.
+  if (config.has_tensorrt_config()) {
+    const XrtConfig::TensorRTConfig &trt_config = config.tensorrt_config();
+    SetXrtEnvOption(trt_config.use_fp16(), &FLAGS_tensorrt_fp16);
+    SetXrtEnvOption(trt_config.use_int8(), &FLAGS_tensorrt_int8);
   }
 }
 
@@ -178,11 +184,6 @@ void RunCompilationTimeXrtPasses(const OpGraph &op_graph, Job *job, bool train_p
   RunXrtPass("BuildSubGraph", graph.get(), options);
   // Rebuild Job
   RunXrtPass("RebuildCompiledJob", graph.get(), options, job);
-}
-
-Parameter BuildParameter(const Blob &blob, const std::string &name) {
-  const auto &desc = blob.blob_desc();
-  return Parameter(name, const_cast<void *>(blob.dptr<void>()), desc.shape(), desc.data_type());
 }
 
 }  // namespace xrt

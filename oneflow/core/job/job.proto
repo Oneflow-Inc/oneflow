@@ -45,10 +45,23 @@ message MemoryAllocationAlgorithmConf {
   optional bool use_time_line_algo = 3 [default = false];
 }
 
-enum ConfigOption {
-  OPT_UNDEF = 1;
-  OPT_ON = 2;
-  OPT_OFF = 3;
+message XrtConfig {
+  enum Option {
+    OPT_UNDEF = 1;
+    OPT_ON = 2;
+    OPT_OFF = 3;
+  }
+  message XlaConfig {
+    // TODO
+  }
+  message TensorRTConfig {
+    optional Option use_fp16 = 1 [default = OPT_UNDEF];
+    optional Option use_int8 = 2 [default = OPT_UNDEF];
+  }
+  optional Option use_xla_jit = 1 [default = OPT_UNDEF];
+  optional Option use_tensorrt = 2 [default = OPT_UNDEF];
+  optional XlaConfig xla_config = 3;
+  optional TensorRTConfig tensorrt_config = 4;
 }
 
 message JobConfigProto {
@@ -69,6 +82,8 @@ message JobConfigProto {
   optional ExperimentalRunConf exp_run_conf = 100;
   optional bool use_memory_allocation_algorithm_v2 = 101 [default = true];
   optional MemoryAllocationAlgorithmConf memory_allocation_algorithm_conf = 102;
+
+  optional XrtConfig xrt_config = 103;
 
   optional bool enable_cudnn = 200 [default = true];
   optional int64 cudnn_buf_limit_mbyte = 201 [default = 1024];  // 1GByte
@@ -107,8 +122,6 @@ message JobConfigProto {
   optional bool enable_true_half_config_when_conv = 600 [default = false];
   optional bool enable_float_compute_for_half_gemm = 601 [default = true];
   optional bool enable_auto_mixed_precision = 602 [default = false];
-  optional ConfigOption use_xla_jit = 603 [default = OPT_UNDEF];
-  optional ConfigOption use_tensorrt = 604 [default = OPT_UNDEF];
 
   optional int64 concurrency_width = 1000 [default = 128];
 }

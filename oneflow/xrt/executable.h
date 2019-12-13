@@ -31,9 +31,9 @@ struct ExecutableRunOptions {
 
   // Enable TensorRT Mixed-Precision.
   // Enable TensorRT fp16
-  bool enable_fp16 = false;
+  bool tensorrt_fp16 = false;
   // Enable TensorRT int8
-  bool enable_int8 = false;
+  bool tensorrt_int8 = false;
 
   // Feed the return parameters to reuse it's storage while running
   // the executable.

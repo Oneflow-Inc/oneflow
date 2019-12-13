@@ -26,17 +26,14 @@ inline void RebuildXrtCompiledJob(const OpGraph& op_graph, Job* job) {
 }
 
 inline bool XrtCompilationEnabled(const JobDesc& job_desc) {
+  if (!job_desc.has_xrt_config()) { return false; }
+  const XrtConfig& config = job_desc.xrt_config();
 #ifdef OF_WITH_XRT
-  if (job_desc.use_xla_jit() != ConfigOption::OPT_UNDEF) {
-    xrt::EnableUseXlaJit(job_desc.use_xla_jit());
-  }
-  if (job_desc.use_tensorrt() != ConfigOption::OPT_UNDEF) {
-    xrt::EnableUseTensorRT(job_desc.use_tensorrt());
-  }
+  xrt::InitXrtConfigurations(config);
   return xrt::XrtCompilationEnabled();
 #else
-  return job_desc.use_xla_jit() == ConfigOption::OPT_ON
-         || job_desc.use_tensorrt() == ConfigOption::OPT_ON;
+  return config.use_xla_jit() == XrtConfig::Option::OPT_ON
+         || config.use_tensorrt() == XrtConfig::Option::OPT_ON;
 #endif  // OF_WITH_XRT
 }
 
