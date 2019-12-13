@@ -57,7 +57,7 @@ Maybe<void> ConvFilterGradOp::InferBlobDescs(
 #ifdef WITH_CUDA
     ConvOpCtx* conv_op_ctx = new ConvOpCtx();
     EnrollOpCtx(conv_op_ctx);
-    const bool enable_true_half = this->job_desc().enable_true_half_config_when_conv();
+    const bool enable_true_half = this->job_desc().cudnn_conv_enable_true_half();
     CHECK_OR_RETURN(Global<CudnnConvCtxCache>::Get()->FindCudnnConvAlgoCtxWithConfig(
         *x, *dy, *filter_diff, conv_conf, cudnn_buf_limit_byte(), enable_true_half,
         &conv_op_ctx->cudnn_conv_algo_ctx));

@@ -289,7 +289,7 @@ template<int32_t NDims>
 void ConvOp<NDims>::InferCudnnAlgo(
     std::function<const BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
     CudnnConvAlgoCtx* conv_ctx) const {
-  const bool enable_true_half = this->job_desc().enable_true_half_config_when_conv();
+  const bool enable_true_half = this->job_desc().cudnn_conv_enable_true_half();
   CHECK(Global<CudnnConvCtxCache>::Get()->FindCudnnConvAlgoCtxWithConfig(
       *GetBlobDesc4BnInOp("in"), *GetBlobDesc4BnInOp("out"), *GetBlobDesc4BnInOp("weight"),
       GetCustomizedConf(), static_cast<size_t>(cudnn_buf_limit_byte()), enable_true_half,

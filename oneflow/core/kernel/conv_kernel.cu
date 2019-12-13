@@ -16,7 +16,7 @@ void ConvKernel<DeviceType::kGPU, float16>::VirtualKernelInit() {
   this->filter_desc_.reset(
       new CudnnFilterDesc(GetDataType<float16>::value, weight_shape, data_format));
 
-  const bool enable_true_half = this->job_desc().enable_true_half_config_when_conv();
+  const bool enable_true_half = this->job_desc().cudnn_conv_enable_true_half();
   this->conv_desc_.reset(
       new CudnnConvDesc(GetConvDescDataType(GetDataType<float16>::value, enable_true_half),
                         in_shape, this->GetCustomizedOpConf()));
@@ -135,7 +135,7 @@ void ConvKernel<DeviceType::kGPU, T>::KernelInitWithCudnn() {
   this->out_desc_.reset(new CudnnTensorDesc(GetDataType<T>::value, out_shape, data_format));
   this->filter_desc_.reset(new CudnnFilterDesc(GetDataType<T>::value, weight_shape, data_format));
 
-  const bool enable_true_half = this->job_desc().enable_true_half_config_when_conv();
+  const bool enable_true_half = this->job_desc().cudnn_conv_enable_true_half();
   this->conv_desc_.reset(
       new CudnnConvDesc(GetConvDescDataType(GetDataType<T>::value, enable_true_half), in_shape,
                         this->GetCustomizedOpConf()));
