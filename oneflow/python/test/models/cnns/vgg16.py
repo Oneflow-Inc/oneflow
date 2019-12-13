@@ -216,16 +216,18 @@ def main(args):
     def vgg_train_job():
         flow.config.train.primary_lr(0.00001)
         flow.config.train.model_update_conf(dict(naive_conf={}))
-        (labels, images) = _data_load_layer(args, args.train_dir)
-        to_return = vgg(images, labels)
-        loss = to_return[-1]
-        flow.losses.add_loss(loss)
-        return loss
+        with flow.distribute.consistent_strategy():
+            (labels, images) = _data_load_layer(args, args.train_dir)
+            to_return = vgg(images, labels)
+            loss = to_return[-1]
+            flow.losses.add_loss(loss)
+            return loss
 
     @flow.function
     def vgg_eval_job():
-        (labels, images) = _data_load_layer(args, args.eval_dir)
-        return vgg(images, labels, False)
+        with flow.distribute.consistent_strategy():
+            (labels, images) = _data_load_layer(args, args.eval_dir)
+            return vgg(images, labels, False)
     flow.config.machine_num(args.num_nodes)
     flow.config.gpu_device_num(args.gpu_num_per_node)
     flow.config.default_data_type(flow.float)

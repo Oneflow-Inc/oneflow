@@ -179,16 +179,17 @@ def main(args):
     flow.config.cudnn_conv_force_fwd_algo(0)
     flow.config.cudnn_conv_force_bwd_data_algo(1)
     flow.config.cudnn_conv_force_bwd_filter_algo(1)
-
-    (labels, images) = _data_load_layer(args, args.train_dir)
-    loss = alexnet(args, images, labels)
-    flow.losses.add_loss(loss)
-    return loss
+    with flow.distribute.consistent_strategy():
+      (labels, images) = _data_load_layer(args, args.train_dir)
+      loss = alexnet(args, images, labels)
+      flow.losses.add_loss(loss)
+      return loss
 
   @flow.function
   def alexnet_eval_job():
-    (labels, images) = _data_load_layer(args, args.eval_dir)
-    return alexnet(args, images, labels, False)
+    with flow.distribute.consistent_strategy():
+      (labels, images) = _data_load_layer(args, args.eval_dir)
+      return alexnet(args, images, labels, False)
 
   flow.config.machine_num(args.num_nodes)
   flow.config.gpu_device_num(args.gpu_num_per_node)

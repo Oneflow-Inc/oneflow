@@ -590,11 +590,11 @@ def main(args):
   def TrainNet():
       flow.config.train.primary_lr(0.0001)
       flow.config.train.model_update_conf(dict(naive_conf={}))
-
-      (images, labels) = _data_load_layer(args, args.train_dir)
-      loss = InceptionV3(images, labels)
-      flow.losses.add_loss(loss)
-      return loss
+      with flow.distribute.consistent_strategy():
+          (images, labels) = _data_load_layer(args, args.train_dir)
+          loss = InceptionV3(images, labels)
+          flow.losses.add_loss(loss)
+          return loss
   check_point = flow.train.CheckPoint()
   if not args.model_load_dir:
     check_point.init()
