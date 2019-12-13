@@ -22,7 +22,9 @@ def _Conv2d(
         dilation_rate=[1, 1],
         activation=activation,
         use_bias=True,
-        kernel_initializer=flow.random_normal_initializer(mean=0.0, stddev=0.01),
+        kernel_initializer=flow.random_normal_initializer(
+            mean=0.0, stddev=0.01
+        ),
         bias_initializer=flow.constant_initializer(0),
         name=name,
         weight_name=weight_name,
@@ -149,8 +151,8 @@ class RPNLoss(object):
             for img_idx, gt_boxes in enumerate(gt_boxes_list):
                 with flow.deprecated.variable_scope("matcher"):
                     rpn_matcher = Matcher(
-                        self.cfg.RPN.POSITIVE_OVERLAP_THRESHOLD,
-                        self.cfg.RPN.NEGATIVE_OVERLAP_THRESHOLD,
+                        self.cfg.MODEL.RPN.FG_IOU_THRESHOLD,
+                        self.cfg.MODEL.RPN.BG_IOU_THRESHOLD,
                     )
                     matched_indices = rpn_matcher.build(anchors, gt_boxes, True)
 
@@ -158,7 +160,9 @@ class RPNLoss(object):
                 # CHECK_POINT: matched_indices
                 matched_indices = flow.where(
                     flow.detection.identify_outside_anchors(
-                        anchors, image_size_list[img_idx], tolerance=0.0
+                        anchors,
+                        image_size_list[img_idx],
+                        tolerance=self.cfg.MODEL.RPN.STRADDLE_THRESH,
                     ),
                     flow.constant_like(matched_indices, int(-2)),
                     matched_indices,
@@ -179,7 +183,7 @@ class RPNLoss(object):
                     axis=[1],
                 )
 
-                if self.cfg.DEBUG.RPN_RANDOM_SAMPLE:
+                if self.cfg.MODEL.RPN.RANDOM_SAMPLE:
                     rand_pos_inds = flow.detection.random_perm_like(pos_inds)
                     rand_neg_inds = flow.detection.random_perm_like(neg_inds)
                     pos_inds = flow.local_gather(pos_inds, rand_pos_inds)
@@ -189,8 +193,8 @@ class RPNLoss(object):
                 sampled_pos_inds, sampled_neg_inds = flow.detection.pos_neg_sampler(
                     pos_inds,
                     neg_inds,
-                    total_subsample_num=self.cfg.RPN.SUBSAMPLE_NUM_PER_IMG,
-                    pos_fraction=self.cfg.RPN.FOREGROUND_FRACTION,
+                    total_subsample_num=self.cfg.MODEL.RPN.BATCH_SIZE_PER_IMAGE,
+                    pos_fraction=self.cfg.MODEL.RPN.POSITIVE_FRACTION,
                 )
 
                 sampled_bbox_target_list.append(
@@ -203,10 +207,10 @@ class RPNLoss(object):
                         ),
                         flow.local_gather(anchors, sampled_pos_inds),
                         regression_weights={
-                            "weight_x": self.cfg.RPN.WEIGHT_X,
-                            "weight_y": self.cfg.RPN.WEIGHT_Y,
-                            "weight_h": self.cfg.RPN.WEIGHT_H,
-                            "weight_w": self.cfg.RPN.WEIGHT_W,
+                            "weight_x": 1.0,
+                            "weight_y": 1.0,
+                            "weight_h": 1.0,
+                            "weight_w": 1.0,
                         },
                     )
                 )
@@ -272,16 +276,18 @@ class RPNLoss(object):
 
 
 class RPNProposal(object):
-    def __init__(self, cfg):
+    def __init__(self, cfg, is_train):
         self.cfg = cfg
-        if cfg.TRAINING:
-            self.top_n_per_fm = cfg.RPN.TOP_N_PER_FM_TRAIN
-            self.nms_top_n = cfg.RPN.NMS_TOP_N_TRAIN
-            self.top_n_per_img = cfg.RPN.TOP_N_PER_IMG_TRAIN
+        self.is_train = is_train
+
+        if is_train:
+            self.top_n_per_fm = cfg.MODEL.RPN.PRE_NMS_TOP_N_TRAIN
+            self.nms_top_n = cfg.MODEL.RPN.POST_NMS_TOP_N_TRAIN
+            self.top_n_per_img = cfg.MODEL.RPN.FPN_POST_NMS_TOP_N_TRAIN
         else:
-            self.top_n_per_fm = cfg.RPN.TOP_N_PER_FM_TEST
-            self.nms_top_n = cfg.RPN.NMS_TOP_N_TEST
-            self.top_n_per_img = cfg.RPN.TOP_N_PER_IMG_TEST
+            self.top_n_per_fm = cfg.MODEL.RPN.PRE_NMS_TOP_N_TEST
+            self.nms_top_n = cfg.MODEL.RPN.POST_NMS_TOP_N_TEST
+            self.top_n_per_img = cfg.MODEL.RPN.FPN_POST_NMS_TOP_N_TEST
 
     # args:
     # anchors: list of [num_anchors_i, 4] wrt. fpn layers
@@ -335,10 +341,10 @@ class RPNProposal(object):
                             ),
                         ),
                         regression_weights={
-                            "weight_x": self.cfg.RPN.WEIGHT_X,
-                            "weight_y": self.cfg.RPN.WEIGHT_Y,
-                            "weight_h": self.cfg.RPN.WEIGHT_H,
-                            "weight_w": self.cfg.RPN.WEIGHT_W,
+                            "weight_x": 1.0,
+                            "weight_y": 1.0,
+                            "weight_h": 1.0,
+                            "weight_w": 1.0,
                         },
                         name="img{}_layer{}_box_decode".format(
                             img_idx, layer_i
@@ -358,7 +364,8 @@ class RPNProposal(object):
                     indices = flow.squeeze(
                         flow.local_nonzero(
                             flow.detection.identify_non_small_boxes(
-                                proposal_per_layer, min_size=0.0
+                                proposal_per_layer,
+                                min_size=self.cfg.MODEL.RPN.MIN_SIZE,
                             )
                         ),
                         axis=[1],
@@ -379,7 +386,7 @@ class RPNProposal(object):
                         flow.local_nonzero(
                             flow.detection.nms(
                                 proposal_per_layer,
-                                nms_iou_threshold=self.cfg.RPN.NMS_THRESH,
+                                nms_iou_threshold=self.cfg.MODEL.RPN.NMS_THRESH,
                                 post_nms_top_n=self.nms_top_n,
                             )
                         ),
@@ -403,7 +410,8 @@ class RPNProposal(object):
                     proposal_in_one_img,
                     flow.math.top_k(score_in_one_img, k=self.top_n_per_img),
                 )
-                if self.cfg.TRAINING is True:
+
+                if self.is_train is True:
                     assert resized_gt_boxes_list is not None
                     proposal_in_one_img = flow.concat(
                         [proposal_in_one_img, resized_gt_boxes_list[img_idx]],
@@ -414,3 +422,20 @@ class RPNProposal(object):
                 proposals.append(proposal_in_one_img)
 
             return proposals
+
+
+def gen_anchors(image, anchor_strides, anchor_sizes, aspect_ratios):
+    if not isinstance(anchor_strides, (tuple, list)):
+        anchor_strides = [anchor_strides]
+
+    anchors = [
+        flow.detection.anchor_generate(
+            images=image,
+            feature_map_stride=stride,
+            aspect_ratios=aspect_ratios,
+            anchor_scales=anchor_sizes,
+        )
+        for stride in anchor_strides
+    ]
+
+    return anchors

@@ -11,7 +11,7 @@ import oneflow as flow
 
 from datetime import datetime
 from backbone import Backbone
-from rpn import RPNHead, RPNLoss, RPNProposal
+from rpn import RPNHead, RPNLoss, RPNProposal, gen_anchors
 from box_head import BoxHead
 from mask_head import MaskHead
 from data_load import make_data_loader
@@ -40,39 +40,10 @@ parser.add_argument(
     "-g", "--gpu_num_per_node", type=int, default=1, required=False
 )
 parser.add_argument("-bz", "--batch_size", type=int, default=2, required=False)
-parser.add_argument("-m", "--model_dir", type=str, required=False)
-parser.add_argument(
-    "--model_save_dir",
-    type=str,
-    default="./model_save-{}".format(
-        str(datetime.now().strftime("%Y-%m-%d--%H-%M-%S"))
-    ),
-    required=False,
-)
-parser.add_argument(
-    "--save_model_every_n_batch", type=int, default=0, required=False
-)
 parser.add_argument(
     "--save_loss_npy_every_n_batch", type=int, default=0, required=False
 )
-parser.add_argument("-data", "--dataset_dir", type=str, required=False)
-parser.add_argument("-anno", "--annotation_file", type=str, required=False)
-parser.add_argument("-img", "--image_dir", type=str, required=False)
 parser.add_argument("-fake", "--fake_image_path", type=str, required=False)
-parser.add_argument("-lr", "--primary_lr", type=float, required=False)
-parser.add_argument("-slr", "--secondary_lr", type=float, required=False)
-parser.add_argument("--enable_warmup", type=str2bool, nargs="?", const=True)
-parser.add_argument("--enable_lr_decay", type=str2bool, nargs="?", const=True)
-parser.add_argument("--shuffle_dataset", type=str2bool, nargs="?", const=True)
-parser.add_argument(
-    "--rpn_random_sample", type=str2bool, nargs="?", const=True
-)
-parser.add_argument(
-    "--roi_head_random_sample", type=str2bool, nargs="?", const=True
-)
-parser.add_argument(
-    "-flip", "--random_flip_image", type=str2bool, nargs="?", const=True
-)
 parser.add_argument(
     "-pr",
     "--print_loss_each_rank",
@@ -120,7 +91,7 @@ def maskrcnn_train(cfg, image, image_size, gt_bbox, gt_segm, gt_label):
     backbone = Backbone(cfg)
     rpn_head = RPNHead(cfg)
     rpn_loss = RPNLoss(cfg)
-    rpn_proposal = RPNProposal(cfg)
+    rpn_proposal = RPNProposal(cfg, True)
     box_head = BoxHead(cfg)
     mask_head = MaskHead(cfg)
 
@@ -145,15 +116,12 @@ def maskrcnn_train(cfg, image, image_size, gt_bbox, gt_segm, gt_label):
         gt_segm, gt_segm.shape[0], name="gt_segm_per_img"
     )
 
-    anchors = [
-        flow.detection.anchor_generate(
-            images=image,
-            feature_map_stride=cfg.DECODER.FEATURE_MAP_STRIDE * pow(2, i),
-            aspect_ratios=cfg.DECODER.ASPECT_RATIOS,
-            anchor_scales=cfg.DECODER.ANCHOR_SCALES * pow(2, i),
-        )
-        for i in range(cfg.DECODER.FPN_LAYERS)
-    ]
+    anchors = gen_anchors(
+        image,
+        cfg.MODEL.RPN.ANCHOR_STRIDE,
+        cfg.MODEL.RPN.ANCHOR_SIZES,
+        cfg.MODEL.RPN.ASPECT_RATIOS,
+    )
 
     # Backbone
     # CHECK_POINT: fpn features
@@ -213,53 +181,15 @@ def merge_args_to_train_config(args):
         config.merge_from_file(args.config_file)
         print("merged config from {}".format(args.config_file))
 
+    if hasattr(args, "batch_size"):
+        config.SOLVER.BATCH_SIZE = args.batch_size
+
     if hasattr(args, "gpu_num_per_node"):
         config.ENV.NUM_GPUS = args.gpu_num_per_node
-
-    if hasattr(args, "batch_size"):
-        config.TRAIN.BATCH_SIZE = args.batch_size
-
-    assert config.TRAIN.BATCH_SIZE % config.ENV.NUM_GPUS == 0
-    config.TRAIN.IMAGE_PER_GPU = int(
-        config.TRAIN.BATCH_SIZE / config.ENV.NUM_GPUS
-    )
-
-    if hasattr(args, "model_dir"):
-        config.TRAIN.MODEL_INIT_PATH = args.model_dir
-
-    if hasattr(args, "dataset_dir"):
-        config.TRAIN.DATASET.DATASET_DIR = args.dataset_dir
-
-    if hasattr(args, "annotation_file"):
-        config.TRAIN.DATASET.ANNOTATION = args.annotation_file
-
-    if hasattr(args, "image_dir"):
-        config.TRAIN.DATASET.IMAGE_DIR = args.image_dir
-
-    if hasattr(args, "primary_lr"):
-        config.SOLVER.PRIMARY_LR = args.primary_lr
-
-    if hasattr(args, "secondary_lr"):
-        config.SOLVER.SECONDARY_LR = args.secondary_lr
-
-    if hasattr(args, "enable_warmup"):
-        config.SOLVER.ENABLE_WARMUP = args.enable_warmup
-
-    if hasattr(args, "enable_lr_decay"):
-        config.SOLVER.ENABLE_LR_DECAY = args.enable_lr_decay
-
-    if hasattr(args, "shuffle_dataset"):
-        config.TRAIN.DATASET.SHUFFLE = args.shuffle_dataset
-
-    if hasattr(args, "rpn_random_sample"):
-        config.DEBUG.RPN_RANDOM_SAMPLE = args.rpn_random_sample
-
-    if hasattr(args, "roi_head_random_sample"):
-        config.DEBUG.ROI_HEAD_RANDOM_SAMPLE = args.roi_head_random_sample
-
-    if hasattr(args, "random_flip_image"):
-        if args.random_flip_image is False:
-            config.TRAIN.INPUT.MIRROR_PROB = 0.0
+        assert config.SOLVER.BATCH_SIZE % config.ENV.NUM_GPUS == 0
+        config.SOLVER.IMS_PER_BATCH = int(
+            config.SOLVER.BATCH_SIZE / config.ENV.NUM_GPUS
+        )
 
     config.freeze()
     print("difference between default (upper) and given config (lower)")
@@ -281,14 +211,16 @@ def set_config(cfg):
     flow.config.cudnn_conv_use_deterministic_algo_only(
         cfg.ENV.CUDNN_CONV_USE_DETERMINISTIC_ALGO_ONLY
     )
-    flow.config.default_initialize_with_snapshot_path(cfg.TRAIN.MODEL_INIT_PATH)
-    flow.config.train.primary_lr(cfg.SOLVER.PRIMARY_LR)
-    flow.config.train.secondary_lr(cfg.SOLVER.SECONDARY_LR)
-    flow.config.train.weight_l2(cfg.SOLVER.WEIGHT_L2)
-    flow.config.train.bias_l2(cfg.SOLVER.BIAS_L2)
+    flow.config.default_initialize_with_snapshot_path(cfg.MODEL.WEIGHT)
+    flow.config.train.primary_lr(cfg.SOLVER.BASE_LR)
+    flow.config.train.secondary_lr(
+        cfg.SOLVER.BASE_LR * cfg.SOLVER.BIAS_LR_FACTOR
+    )
+    flow.config.train.weight_l2(cfg.SOLVER.WEIGHT_DECAY)
+    flow.config.train.bias_l2(cfg.SOLVER.WEIGHT_DECAY_BIAS)
 
     if cfg.SOLVER.OPTIMIZER == "momentum":
-        optimizer = dict(momentum_conf={"beta": cfg.SOLVER.MOMENTUM_BETA})
+        optimizer = dict(momentum_conf={"beta": cfg.SOLVER.MOMENTUM})
     elif cfg.SOLVER.OPTIMIZER == "sgd":
         optimizer = dict(naive_conf={})
     else:
@@ -299,7 +231,7 @@ def set_config(cfg):
             dict(
                 learning_rate_decay=dict(
                     piecewise_constant_conf={
-                        "boundaries": cfg.SOLVER.LR_DECAY_BOUNDARIES,
+                        "boundaries": cfg.SOLVER.STEPS,
                         "values": cfg.SOLVER.LR_DECAY_VALUES,
                     }
                 )
@@ -312,7 +244,7 @@ def set_config(cfg):
                 {
                     "warmup_conf": {
                         "linear_conf": {
-                            "warmup_batches": cfg.SOLVER.WARMUP_BATCHES,
+                            "warmup_batches": cfg.SOLVER.WARMUP_ITERS,
                             "start_multiplier": cfg.SOLVER.WARMUP_FACTOR,
                         }
                     }
@@ -480,8 +412,12 @@ def update_metrics(metrics, iter, elapsed_time, outputs):
         loss_classifier = reduce_across_ranks(
             [output["loss_classifier"] for output in outputs]
         )
-        loss_mask = reduce_across_ranks([output["loss_mask"] for output in outputs])
-        total_pos_inds_elem_cnt = reduce_across_ranks([output["total_pos_inds_elem_cnt"] for output in outputs])
+        loss_mask = reduce_across_ranks(
+            [output["loss_mask"] for output in outputs]
+        )
+        total_pos_inds_elem_cnt = reduce_across_ranks(
+            [output["total_pos_inds_elem_cnt"] for output in outputs]
+        )
 
         print(
             "{:<8} {:<16} {:<16.8f} {:<16.8f} {:<16.8f} {:<16.8f} {:<16.8f} {:<8}".format(
@@ -545,7 +481,7 @@ def run():
     check_point = flow.train.CheckPoint()
     check_point.init()
     # check_point.load(terminal_args.model_load_dir)
-    if terminal_args.save_model_every_n_batch > 0:
+    if config.SOLVER.CHECKPOINT_PERIOD > 0:
         save_model(check_point, 0)
 
     start_time = time.time()
@@ -567,7 +503,7 @@ def run():
 
         save_blob_watched(i)
 
-        if terminal_args.save_model_every_n_batch > 0:
+        if config.SOLVER.CHECKPOINT_PERIOD > 0:
             if (
                 (i + 1) % terminal_args.save_model_every_n_batch == 0
                 or i + 1 == terminal_args.iter_num

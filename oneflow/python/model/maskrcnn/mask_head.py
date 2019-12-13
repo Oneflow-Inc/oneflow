@@ -100,56 +100,64 @@ class MaskHead(object):
         return flow.math.sigmoid(mask_logits)
 
     def mask_feature_extractor(self, proposals, img_ids, features):
+        pooler_scales = self.cfg.MODEL.ROI_MASK_HEAD.POOLER_SCALES
+        pooler_res = self.cfg.MODEL.ROI_MASK_HEAD.POOLER_RESOLUTION
+        sampling_ratio = self.cfg.MODEL.ROI_MASK_HEAD.POOLER_SAMPLING_RATIO
+
         proposals_with_img_ids = flow.concat(
             [flow.expand_dims(flow.cast(img_ids, flow.float), 1), proposals],
             axis=1,
         )
         levels = flow.detection.level_map(proposals)
-        level_idx_dict = {}
-        for (level, scalar) in zip(range(2, 6), range(0, 4)):
-            level_idx_dict[level] = flow.squeeze(
+
+        level_idx_list = [
+            flow.squeeze(
                 flow.local_nonzero(
-                    levels == flow.constant_scalar(int(scalar), flow.int32)
+                    levels == flow.constant_scalar(i, flow.int32)
                 ),
                 axis=[1],
-                name="squeeze_level_idx_" + str(scalar),
+                name="squeeze_level_idx_" + str(i),
             )
+            for i in range(len(pooler_scales))
+        ]
 
-        roi_features_list = []
-        for (level, i) in zip(range(2, 6), range(0, 4)):
-            roi_feature_i = flow.detection.roi_align(
-                features[i],
-                rois=flow.local_gather(
-                    proposals_with_img_ids, level_idx_dict[level]
-                ),
-                pooled_h=self.cfg.MASK_HEAD.POOLED_H,
-                pooled_w=self.cfg.MASK_HEAD.POOLED_W,
-                spatial_scale=self.cfg.MASK_HEAD.SPATIAL_SCALE / pow(2, i),
-                sampling_ratio=self.cfg.MASK_HEAD.SAMPLING_RATIO,
+        roi_features_list = [
+            flow.detection.roi_align(
+                feature,
+                rois=flow.local_gather(proposals_with_img_ids, level_idx),
+                pooled_h=pooler_res,
+                pooled_w=pooler_res,
+                spatial_scale=scale,
+                sampling_ratio=sampling_ratio,
                 name="mask_roi_align_" + str(i),
             )
-            roi_features_list.append(roi_feature_i)
+            for i, (feature, level_idx, scale) in enumerate(
+                zip(features, level_idx_list, pooler_scales), 1
+            )
+        ]
 
         roi_features = flow.stack(
             roi_features_list, axis=0, name="stack_roi_features"
         )
         origin_indices = flow.stack(
-            list(level_idx_dict.values()), axis=0, name="stack_origin_indices"
+            level_idx_list, axis=0, name="stack_origin_indices"
         )
         x = flow.local_scatter_nd_update(
             flow.constant_like(roi_features, float(0)),
             flow.expand_dims(origin_indices, axis=1),
             roi_features,
         )
-        for i in range(1, 5):
+
+        dilation = self.cfg.MODEL.ROI_MASK_HEAD.DILATION
+        for i, filters in enumerate(self.cfg.MODEL.ROI_MASK_HEAD.CONV_LAYERS, 1):
             x = flow.layers.conv2d(
                 inputs=x,
-                filters=256,
+                filters=filters,
                 kernel_size=[3, 3],
                 strides=[1, 1],
                 padding="SAME",
                 data_format="NCHW",
-                dilation_rate=[1, 1],
+                dilation_rate=dilation,
                 activation=flow.keras.activations.relu,
                 use_bias=True,
                 kernel_initializer=flow.kaiming_initializer(
@@ -165,12 +173,13 @@ class MaskHead(object):
         return x
 
     def mask_predictor(self, x):
+        channels = self.cfg.MODEL.ROI_MASK_HEAD.CONV_LAYERS[-1]
         filter = flow.get_variable(
             "conv5-weight",
-            shape=(x.static_shape[1], 256, 2, 2),
+            shape=(x.static_shape[1], channels, 2, 2),
             dtype=x.dtype,
             initializer=flow.kaiming_initializer(
-                shape=(x.static_shape[1], 256, 2, 2),
+                shape=(x.static_shape[1], channels, 2, 2),
                 distribution="random_normal",
                 mode="fan_out",
                 nonlinearity="relu",
@@ -178,7 +187,7 @@ class MaskHead(object):
         )
         bias = flow.get_variable(
             name="conv5-bias",
-            shape=(256,),
+            shape=(channels,),
             dtype=x.dtype,
             initializer=flow.constant_initializer(0),
             model_name="bias",
@@ -193,16 +202,18 @@ class MaskHead(object):
         )
         x = flow.nn.bias_add(x, bias, "NCHW", name="conv5_bias_add")
         x = flow.keras.activations.relu(x, name="conv5_relu")
+
+        num_classes = self.cfg.MODEL.ROI_BOX_HEAD.NUM_CLASSES
         x = flow.layers.conv2d(
             x,
-            filters=81,
+            filters=num_classes,
             kernel_size=[1, 1],
             data_format="NCHW",
             padding="SAME",
             strides=[1, 1],
             dilation_rate=[1, 1],
             kernel_initializer=flow.kaiming_initializer(
-                shape=(81, x.static_shape[1]) + (1, 1),
+                shape=(num_classes, x.static_shape[1]) + (1, 1),
                 distribution="random_normal",
                 mode="fan_out",
                 nonlinearity="relu",

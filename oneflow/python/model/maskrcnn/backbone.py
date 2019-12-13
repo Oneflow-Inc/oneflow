@@ -6,7 +6,7 @@ from fpn import FPN
 class Backbone(object):
     def __init__(self, cfg):
         self.resnet = ResNet(cfg)
-        self.fpn = FPN()
+        self.fpn = FPN(cfg)
 
     def build(self, in_blob):
         with flow.deprecated.variable_scope("backbone"):

@@ -89,7 +89,7 @@ def maskrcnn_eval(images, image_sizes, image_ids):
     print(cfg)
     backbone = Backbone(cfg)
     rpn_head = RPNHead(cfg)
-    rpn_proposal = RPNProposal(cfg)
+    rpn_proposal = RPNProposal(cfg, False)
     box_head = BoxHead(cfg)
     mask_head = MaskHead(cfg)
 
