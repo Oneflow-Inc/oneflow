@@ -11,6 +11,8 @@ class ReluKernel final : public oneflow::user_op::OpKernel {
   void Compute(oneflow::user_op::KernelContext* ctx) override {
     const oneflow::user_op::Tensor* in_blob = ctx->Tensor4ArgNameAndIndex("in", 0);
     oneflow::user_op::Tensor* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
+    oneflow::user_op::Tensor* tmp = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
+    CHECK_NOTNULL(tmp);
     oneflow::NewKernelUtil<oneflow::DeviceType::kGPU>::Relu(
         ctx->device_ctx(), in_blob->shape().elem_cnt(), in_blob->dptr<float>(),
         out_blob->mut_dptr<float>());
