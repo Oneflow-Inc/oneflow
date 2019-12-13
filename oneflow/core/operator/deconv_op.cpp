@@ -171,7 +171,7 @@ class DeconvOp : public Operator {
       EnrollOpCtx(deconv_op_ctx);
       CHECK_OR_RETURN(Global<CudnnConvCtxCache>::Get()->FindCudnnConvAlgoCtxWithConfig(
           *y_blob_desc, *x_blob_desc, *filter_blob_desc, conv_conf, cudnn_buf_limit_byte(),
-          &deconv_op_ctx->cudnn_deconv_algo_ctx));
+          this->job_desc().cudnn_conv_enable_true_half(), &deconv_op_ctx->cudnn_deconv_algo_ctx));
       CHECK_OR_RETURN(deconv_op_ctx->cudnn_deconv_algo_ctx.bwd_data_algo_found);
       BlobDesc* cudnn_buf = GetBlobDesc4BnInOp("cudnn_buf");
       cudnn_buf->set_data_type(DataType::kChar);

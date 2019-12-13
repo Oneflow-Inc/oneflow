@@ -46,9 +46,11 @@ struct CudnnConvArgs final {
 
   OF_DISALLOW_COPY_AND_MOVE(CudnnConvArgs);
   CudnnConvArgs(const PbMessage& conf, const BlobDesc* x, const BlobDesc* y, const BlobDesc* w,
-                size_t max_ws_size, bool deterministic, bool heuristic);
+                size_t max_ws_size, bool deterministic, bool heuristic,
+                const bool enable_true_half);
   CudnnConvArgs(const PbMessage& conf, cudnnHandle_t handle, const Blob* x, const Blob* y,
-                const Blob* w, Blob* buf, bool deterministic, bool heuristic);
+                const Blob* w, Blob* buf, bool deterministic, bool heuristic,
+                const bool enable_true_half);
   ~CudnnConvArgs();
 };
 

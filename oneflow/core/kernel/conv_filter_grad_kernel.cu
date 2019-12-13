@@ -21,7 +21,8 @@ class ConvFilterGradGpuKernel final : public KernelIf<DeviceType::kGPU> {
                        ctx.device_ctx->cudnn_handle(), BnInOp2Blob("x"), BnInOp2Blob("dy"),
                        BnInOp2Blob("filter_diff"), BnInOp2Blob("buf"),
                        this->job_desc().job_conf().cudnn_conv_use_deterministic_algo_only(),
-                       this->job_desc().job_conf().cudnn_conv_heuristic_search_algo());
+                       this->job_desc().job_conf().cudnn_conv_heuristic_search_algo(),
+                       this->job_desc().cudnn_conv_enable_true_half());
     cudnnConvolutionBwdFilterAlgo_t algo;
     size_t work_space_size = 0;
     if (this->job_desc().job_conf().has_cudnn_conv_force_bwd_filter_algo()) {

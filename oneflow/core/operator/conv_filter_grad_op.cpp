@@ -93,7 +93,8 @@ Maybe<void> ConvFilterGradOp::InferBlobDescs(
     if (!x->is_dynamic()) {
       CudnnConvAlgoCtx cudnn_conv_algo_ctx;
       CHECK_OR_RETURN(Global<CudnnConvCtxCache>::Get()->FindCudnnConvAlgoCtxWithConfig(
-          *x, *dy, *filter_diff, conv_conf, cudnn_buf_limit_byte(), &cudnn_conv_algo_ctx));
+          *x, *dy, *filter_diff, conv_conf, cudnn_buf_limit_byte(),
+          this->job_desc().cudnn_conv_enable_true_half(), &cudnn_conv_algo_ctx));
       CHECK_OR_RETURN(cudnn_conv_algo_ctx.bwd_filter_algo_found)
           << "cudnn conv data grad algo: " << cudnn_conv_algo_ctx.bwd_filter_algo
           << " alog_workspace_size: " << cudnn_conv_algo_ctx.bwd_filter_algo_found
