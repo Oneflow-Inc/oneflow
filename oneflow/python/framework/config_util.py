@@ -293,9 +293,9 @@ def set_non_distributed_optimizer_group_size_mbyte(value):
     _SetJobConfAttr(lambda x:x, 'non_distributed_optimizer_group_size_mbyte', value)
     return oneflow.config
 
-@oneflow_export('config.enable_true_half_config_when_conv')
-def set_enable_true_half_config_when_conv(value = True):
-    _SetJobConfAttr(lambda x:x, 'enable_true_half_config_when_conv', value)
+@oneflow_export('config.enable_true_half_config_when_conv', 'config.cudnn_conv_enable_true_half')
+def set_cudnn_conv_enable_true_half(value = True):
+    _SetJobConfAttr(lambda x:x, 'cudnn_conv_enable_true_half', value)
     return oneflow.config
 
 @oneflow_export('config.enable_float_compute_for_half_gemm')

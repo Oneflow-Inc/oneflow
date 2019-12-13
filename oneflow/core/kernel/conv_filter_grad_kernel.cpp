@@ -5,7 +5,7 @@ namespace oneflow {
 template<DeviceType device_type, typename T>
 void ConvFilterGradKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const bool enable_true_half = this->job_desc().enable_true_half_config_when_conv();
+  const bool enable_true_half = this->job_desc().cudnn_conv_enable_true_half();
   ConvFilterGradKernelUtil<device_type, T>::Compute(
       ctx.device_ctx, this->kernel_conf().conv_filter_grad_conf(),
       this->op_conf().conv_filter_grad_conf().conv_conf(), BnInOp2Blob("x"), BnInOp2Blob("dy"),
