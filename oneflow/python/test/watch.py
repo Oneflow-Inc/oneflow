@@ -2,7 +2,6 @@ import oneflow as flow
 import numpy as np
 
 flow.config.gpu_device_num(1)
-flow.config.default_data_type(flow.float)
 
 @flow.function
 def ReluJob(x = flow.input_blob_def((10,))):

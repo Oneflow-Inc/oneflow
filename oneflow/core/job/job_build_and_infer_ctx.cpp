@@ -502,9 +502,9 @@ Maybe<bool> JobBuildAndInferCtx::IsDynamic(const std::string& lbn) const {
   return lbi2logical_blob_desc_.at(GenLogicalBlobId(lbn))->is_dynamic();
 }
 
-Maybe<long long> JobBuildAndInferCtx::GetNumOfLoDLevels(const std::string& lbn) const {
+Maybe<bool> JobBuildAndInferCtx::IsTensorList(const std::string& lbn) const {
   JUST(CheckLbnValidAndExist(lbn));
-  return lbi2logical_blob_desc_.at(GenLogicalBlobId(lbn))->num_of_lod_levels();
+  return lbi2logical_blob_desc_.at(GenLogicalBlobId(lbn))->is_tensor_list();
 }
 
 Maybe<bool> JobBuildAndInferCtx::DisableBoxing(const std::string& lbn) const {
@@ -600,10 +600,9 @@ Maybe<bool> JobBuildAndInferCtx::MirrorBlobIsDynamic(const std::string& lbn_with
   return lbi2logical_blob_desc_.at(lbi)->is_dynamic();
 }
 
-Maybe<long long> JobBuildAndInferCtx::MirrorBlobGetNumOfLoDLevels(
-    const std::string& lbn_with_hint) const {
+Maybe<bool> JobBuildAndInferCtx::MirrorBlobIsTensorList(const std::string& lbn_with_hint) const {
   const auto& lbi = *JUST(MirrorBlobGetSubLbi(lbn_with_hint, 0));
-  return lbi2logical_blob_desc_.at(lbi)->num_of_lod_levels();
+  return lbi2logical_blob_desc_.at(lbi)->is_tensor_list();
 }
 
 Maybe<bool> JobBuildAndInferCtx::MirrorBlobDisableBoxing(const std::string& lbn_with_hint) const {

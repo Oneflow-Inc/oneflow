@@ -76,6 +76,11 @@ OperatorConf CopyHdTaskNode::NewCopyOpConf() {
   conf.set_name("copy_hd_" + NewUniqueId());
   conf.set_device_type(device_type());
   conf.mutable_copy_hd_conf()->set_type(copy_type_);
+  auto in_regst = GetSoleConsumedRegst("copy_in");
+  if (in_regst->NumOfLbi() == 1) {
+    in_regst->ForEachLbi(
+        [&](const LogicalBlobId& lbi) { *conf.mutable_copy_hd_conf()->mutable_lbi() = lbi; });
+  }
   return conf;
 }
 

@@ -28,7 +28,7 @@ class Dim0DynamicToFixedOp final : public Operator {
     FOR_RANGE(int32_t, i, 0, bn_size) {
       const BlobDesc* cur_in = GetBlobDesc4BnInOp(GenRepeatedBn("in", i));
       CHECK_OR_RETURN(cur_in->is_dynamic());
-      CHECK_EQ_OR_RETURN(0, cur_in->num_of_lod_levels());
+      CHECK_EQ_OR_RETURN(false, cur_in->is_tensor_list());
       if (dim0_val == -1) {
         dim0_val = cur_in->shape().At(0);
       } else {

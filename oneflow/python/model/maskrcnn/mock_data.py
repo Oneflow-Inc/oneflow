@@ -24,13 +24,13 @@ class MockData(object):
             return flow.input_blob_def(
                 shape=(len(self._data["gt_bbox"]), self._max_objs_per_img, 4),
                 dtype=flow.float32,
-                num_of_lod_levels=2,
+                is_tensor_list=True,
             )
         elif blob_name == "gt_labels":
             return flow.input_blob_def(
                 shape=(len(self._data["gt_labels"]), self._max_objs_per_img),
                 dtype=flow.int32,
-                num_of_lod_levels=2,
+                is_tensor_list=True,
             )
         elif blob_name == "gt_segm":
             segm_mask_shape = [
@@ -40,7 +40,7 @@ class MockData(object):
             return flow.input_blob_def(
                 shape=tuple(segm_mask_shape),
                 dtype=flow.int8,
-                num_of_lod_levels=2,
+                is_tensor_list=True,
             )
         elif blob_name == "segm_mask_targets":
             segm_mask_shape = (128,) + self._data["segm_mask_targets"].shape[1:]

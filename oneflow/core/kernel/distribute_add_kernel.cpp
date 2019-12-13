@@ -6,8 +6,7 @@ namespace oneflow {
 namespace {
 
 void CheckSizeAndCopyBlob(DeviceCtx *ctx, Blob *dst, const Blob *src) {
-  CHECK_EQ(src->ByteSizeOfBlobBody(), dst->ByteSizeOfBlobBody());
-  dst->CopyDataContentFrom(ctx, src);
+  dst->CopyValidDataContentFrom(ctx, src);
 }
 
 }  // namespace
@@ -22,9 +21,6 @@ class DistributeAddKernel final : public KernelIf<device_type> {
  private:
   void ForwardDataContent(const KernelCtx &,
                           std::function<Blob *(const std::string &)>) const override;
-  void ForwardLoD(const KernelCtx &ctx,
-                  std::function<Blob *(const std::string &)> BnInOp2Blob) const override;
-
   const Blob *GetInBlob(std::function<Blob *(const std::string &)> BnInOp2Blob) const;
 };
 
@@ -32,14 +28,6 @@ template<DeviceType device_type>
 void DistributeAddKernel<device_type>::ForwardDataContent(
     const KernelCtx &ctx, std::function<Blob *(const std::string &)> BnInOp2Blob) const {
   CheckSizeAndCopyBlob(ctx.device_ctx, BnInOp2Blob("out"), GetInBlob(BnInOp2Blob));
-}
-
-template<DeviceType device_type>
-void DistributeAddKernel<device_type>::ForwardLoD(
-    const KernelCtx &ctx, std::function<Blob *(const std::string &)> BnInOp2Blob) const {
-  const Blob *in_blob = GetInBlob(BnInOp2Blob);
-  Blob *out_blob = BnInOp2Blob("out");
-  out_blob->tree_lod_mut_view().UpdateLoD(in_blob->tree_lod_view().lod_tree());
 }
 
 template<DeviceType device_type>

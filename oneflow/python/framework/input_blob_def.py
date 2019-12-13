@@ -20,7 +20,7 @@ class InputBlobDef(blob_desc.BlobDesc):
     def __init__(self, shape,
                  dtype = data_type_util.kFloat,
                  is_dynamic = False,
-                 num_of_lod_levels = 0,
+                 is_tensor_list = False,
                  batch_axis = 0,
                  name = None,
                  **kw):
@@ -34,10 +34,7 @@ class InputBlobDef(blob_desc.BlobDesc):
         self.shape_ = shape
         self.dtype_ = dtype
         self.is_dynamic_ = is_dynamic
-        if num_of_lod_levels > 0:
-            assert num_of_lod_levels > 1
-            assert num_of_lod_levels <= len(shape)
-        self.num_of_lod_levels_ = num_of_lod_levels
+        self.is_tensor_list_ = is_tensor_list
         self.batch_axis_ = batch_axis
 
     @property
@@ -56,7 +53,7 @@ class InputBlobDef(blob_desc.BlobDesc):
     def is_dynamic(self): return self.is_dynamic_
 
     @property
-    def num_of_lod_levels(self): return self.num_of_lod_levels_
+    def is_tensor_list(self): return self.is_tensor_list_
 
     def parallel_conf(self):
         TODO()
@@ -79,7 +76,10 @@ class InputBlobDef(blob_desc.BlobDesc):
         self.AsyncPush(session, arg_ndarray)
         
     def CheckInputNdarray(self, ndarray):
-        raise NotImplementedError
+        if self.is_tensor_list:
+            self._CheckNdarrayList(ndarray)
+        else:
+            self._CheckDenseNdarray(ndarray)
 
     def AsyncPush(self, session, arg_ndarray):
         raise NotImplementedError
@@ -89,7 +89,7 @@ class InputBlobDef(blob_desc.BlobDesc):
         interface_blob_conf.shape.dim.extend(self.shape_)
         interface_blob_conf.data_type = self.dtype_
         interface_blob_conf.is_dynamic = self.is_dynamic_
-        interface_blob_conf.num_of_lod_levels = self.num_of_lod_levels_
+        interface_blob_conf.is_tensor_list = self.is_tensor_list
         if type(self.batch_axis_) is int:
             assert self.batch_axis_ >= 0
             interface_blob_conf.batch_axis.value = self.batch_axis_
@@ -161,23 +161,9 @@ class InputBlobDef(blob_desc.BlobDesc):
             assert GetElemCnt(ndarray.shape) <= GetElemCnt(self.shape)
         else:
             assert ndarray.shape == self.shape
-
-    def _CheckLodNdarray(self, ndarray_nested_list):
-        def RecursiveCheckNdarray(axis, ndarray_nested_list):
-            if axis == self.num_of_lod_levels - 1:
-                assert isinstance(ndarray_nested_list, np.ndarray)
-                assert ndarray_nested_list.shape[0] <= self.static_shape[axis]
-                assert ndarray_nested_list.shape[1:] == self.static_shape[axis + 1:],\
-                    "ndarray.shape[1:] should be %s" % str(self.static_shape[axis + 1:])
-            else:
-                assert isinstance(ndarray_nested_list, (list, tuple))
-                if axis == 0:
-                    assert len(ndarray_nested_list) == self.static_shape[axis]
-                else:
-                    assert len(ndarray_nested_list) <= self.static_shape[axis]
-                for x in ndarray_nested_list:
-                    RecursiveCheckNdarray(axis + 1, x)
-        RecursiveCheckNdarray(0, ndarray_nested_list)
+            
+    def _CheckNdarrayList(self, ndarray_nested_list):
+        raise NotImplementedError
 
 @oneflow_export('consistent_input_def')
 class ConsistentInpuDef(InputBlobDef):
@@ -190,12 +176,6 @@ class ConsistentInpuDef(InputBlobDef):
     def AsyncPush(self, session, arg_ndarray):
         session.AsyncPush(self.op_name, _MakePushCallback(arg_ndarray))
         
-    def CheckInputNdarray(self, ndarray):
-        if self.num_of_lod_levels == 0:
-            self._CheckDenseNdarray(ndarray)
-        else:
-            self._CheckLodNdarray(ndarray)
-            
 @oneflow_export('input_blob_def')
 class input_blob_def(ConsistentInpuDef):
     def __init__(self, *args, **kwargs):
@@ -226,15 +206,13 @@ class MirrorInputDef(InputBlobDef):
             sub_blob = self.sub_consistent_blob_list[i]
             session.AsyncPush(sub_blob.op_name, _MakePushCallback(arg_ndarray[i]))
             
-    def CheckInputNdarray(self, arg_ndarray):
+    def _CheckDenseNdarray(self, arg_ndarray):
         assert isinstance(arg_ndarray, (list, tuple))
         assert len(self.sub_consistent_blob_list) == len(arg_ndarray)
-        for x in arg_ndarray:
-            assert type(x) is np.ndarray
-            if self.num_of_lod_levels == 0:
-                self._CheckDenseNdarray(x)
-            else:
-                self._CheckLodNdarray(x)
+        assert self.is_tensor_list == False
+        for consistent_blob, ndarray in zip(self.sub_consistent_blob_list, arg_ndarray):
+            assert type(ndarray) is np.ndarray
+            InputBlobDef._CheckDenseNdarray(self, ndarray)
 
 def _MakePushCallback(ndarray):
     copied = np.copy(ndarray)

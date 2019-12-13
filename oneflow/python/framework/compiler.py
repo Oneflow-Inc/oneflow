@@ -23,8 +23,6 @@ def Compile(job_func):
     job_conf.job_name = job_func.__name__
     with compile_context.CurJobConf(job_conf), job_builder.JobBuildAndInferCtx(job_conf.job_name):
         _CompileJob(job_conf, job_func, config_util.default_config_proto)
-        job_builder.CurCtxSetJobConfIfNotSet(job_conf)
-        assert job_builder.CurCtxHasJobConf()
         job_builder.CurCtxCheckJob()
 
 def _CompileJob(job_conf, func, config):
@@ -49,7 +47,7 @@ def _RecursiveMakeRetRemoteBlobs(out_remote_blobs):
         return type(out_remote_blobs)(_RecursiveMakeRetRemoteBlobs(x) for x in out_remote_blobs)
     if isinstance(out_remote_blobs, dict):
         return {k : _RecursiveMakeRetRemoteBlobs(v) for k, v in out_remote_blobs.items()}
-    raise NotImplementedError("Do not support return {}".format(type(out_remote_blobs)))
+    raise NotImplementedError
 
 @contextmanager
 def _SetJobConfBeforeInferOp(job_conf):
@@ -59,7 +57,7 @@ def _SetJobConfBeforeInferOp(job_conf):
         job_conf_has_set.set_value(True)
         config_util.TryCompleteDefaultJobConfigProto(job_conf)
         pb_util.MergePbMessage(job_conf, config_util.default_job_conf)
-        job_builder.CurCtxSetJobConfIfNotSet(job_conf)
+        c_api_util.CurJobBuildAndInferCtx_SetJobConf(job_conf)
     with compile_context.BeforeNonInputOpBuildAndInferHook(SetJobconf):
         yield SetJobconf
     if job_conf_has_set.value == False: SetJobconf()

@@ -6,7 +6,6 @@
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/common/shape.h"
-#include "oneflow/core/register/lod_tree.pb.h"
 #include <opencv2/opencv.hpp>
 
 namespace oneflow {
@@ -22,22 +21,22 @@ class DataField {
   size_t ToBuffer(void* buffer, DataType data_type) const;
   void SetSource(DataSourceCase dsrc) { data_source_ = dsrc; }
   DataSourceCase Source() const { return data_source_; }
-  virtual void InferShape(const ShapeProto& shape_proto, const PbRf<int>& var_axes, Shape* shape,
-                          LoDTree* lod_tree) const = 0;
+  virtual void InferShape(const ShapeProto& shape_proto, const OptInt64& var_axis,
+                          Shape* shape) const = 0;
 
  private:
   DataSourceCase data_source_;
 };
 
 template<typename T>
-class ArrayDataField : public DataField {
+class TensorDataField : public DataField {
  public:
   typedef T data_type;
 
   const std::vector<T>& data() const { return data_; }
   std::vector<T>& data() { return data_; }
-  void InferShape(const ShapeProto& shape_proto, const PbRf<int>& var_axes, Shape* shape,
-                  LoDTree* lod_tree) const override;
+  void InferShape(const ShapeProto& shape_proto, const OptInt64& var_axis,
+                  Shape* shape) const override;
 
  private:
   std::vector<T> data_;
@@ -47,19 +46,19 @@ class ImageDataField : public DataField {
  public:
   const cv::Mat& data() const { return data_; }
   cv::Mat& data() { return data_; }
-  void InferShape(const ShapeProto& shape_proto, const PbRf<int>& var_axes, Shape* shape,
-                  LoDTree* lod_tree) const override;
+  void InferShape(const ShapeProto& shape_proto, const OptInt64& var_axis,
+                  Shape* shape) const override;
 
  private:
   cv::Mat data_;
 };
 
 template<typename T>
-class NdarrayDataField : public DataField {
+class LoDDataField : public DataField {
  public:
   typedef T data_type;
 
-  NdarrayDataField(size_t max_length)
+  LoDDataField(size_t max_length)
       : data_(new T[max_length]), capacity_(max_length), total_length_(0) {
     std::memset(data_.get(), 0, capacity_ * sizeof(T));
   }
@@ -89,8 +88,8 @@ class NdarrayDataField : public DataField {
   int Levels() const { return lod_len_.size(); }
   std::vector<size_t>& GetLod(int lvl) { return lod_len_.at(lvl); }
   const std::vector<size_t>& GetLod(int lvl) const { return lod_len_.at(lvl); }
-  void InferShape(const ShapeProto& shape_proto, const PbRf<int>& var_axes, Shape* shape,
-                  LoDTree* lod_tree) const override;
+  void InferShape(const ShapeProto& shape_proto, const OptInt64& var_axis,
+                  Shape* shape) const override;
 
   T* data() { return data_.get(); }
   const T* data() const { return data_.get(); }
@@ -104,17 +103,21 @@ class NdarrayDataField : public DataField {
 };
 
 template<typename T>
-class TensorArrayDataField : public DataField {
+class TensorListDataField : public DataField {
  public:
   typedef T data_type;
 
-  TensorArrayDataField(size_t max_size) : data_(new T[max_size]), capacity_(max_size), size_(0) {
+  TensorListDataField(size_t max_size) : data_(new T[max_size]), capacity_(max_size), size_(0) {
     std::memset(data_.get(), 0, capacity_ * sizeof(T));
   }
 
   void IncreaseSize(size_t size) {
     size_ += size;
     CHECK_LT(size_, capacity_);
+  }
+  void PushBack(T val) {
+    data()[size()] = val;
+    IncreaseSize(1);
   }
   template<typename... I>
   auto SetShape(I... dims)
@@ -127,8 +130,8 @@ class TensorArrayDataField : public DataField {
     CHECK_EQ(size_ % tensor_elem_cnt, 0);
     return size_ / static_cast<size_t>(tensor_elem_cnt);
   }
-  void InferShape(const ShapeProto& shape_proto, const PbRf<int>& var_axes, Shape* shape,
-                  LoDTree* lod_tree) const override;
+  void InferShape(const ShapeProto& shape_proto, const OptInt64& var_axis,
+                  Shape* shape) const override;
 
   T* data() { return data_.get(); }
   const T* data() const { return data_.get(); }
@@ -154,47 +157,42 @@ struct DataFieldTrait<DataSourceCase::kImage> {
 
 template<>
 struct DataFieldTrait<DataSourceCase::kLabel> {
-  typedef ArrayDataField<int32_t> type;
-};
-
-template<>
-struct DataFieldTrait<DataSourceCase::kObjectBoundingBox> {
-  typedef ArrayDataField<float> type;
-};
-
-template<>
-struct DataFieldTrait<DataSourceCase::kObjectSegmentation> {
-  typedef NdarrayDataField<double> type;
-};
-
-template<>
-struct DataFieldTrait<DataSourceCase::kObjectSegmentationMask> {
-  typedef NdarrayDataField<int8_t> type;
-};
-
-template<>
-struct DataFieldTrait<DataSourceCase::kObjectSegmentationAlignedMask> {
-  typedef TensorArrayDataField<int8_t> type;
-};
-
-template<>
-struct DataFieldTrait<DataSourceCase::kObjectLabel> {
-  typedef ArrayDataField<int32_t> type;
-};
-
-template<>
-struct DataFieldTrait<DataSourceCase::kImageScale> {
-  typedef ArrayDataField<float> type;
-};
-
-template<>
-struct DataFieldTrait<DataSourceCase::kImageSize> {
-  typedef ArrayDataField<int32_t> type;
+  typedef TensorDataField<int32_t> type;
 };
 
 template<>
 struct DataFieldTrait<DataSourceCase::kImageId> {
-  typedef ArrayDataField<int64_t> type;
+  typedef TensorDataField<int64_t> type;
+};
+
+template<>
+struct DataFieldTrait<DataSourceCase::kImageSize> {
+  typedef TensorDataField<int32_t> type;
+};
+
+template<>
+struct DataFieldTrait<DataSourceCase::kImageScale> {
+  typedef TensorDataField<float> type;
+};
+
+template<>
+struct DataFieldTrait<DataSourceCase::kObjectSegmentation> {
+  typedef LoDDataField<double> type;
+};
+
+template<>
+struct DataFieldTrait<DataSourceCase::kObjectLabel> {
+  typedef TensorListDataField<int32_t> type;
+};
+
+template<>
+struct DataFieldTrait<DataSourceCase::kObjectBoundingBox> {
+  typedef TensorListDataField<float> type;
+};
+
+template<>
+struct DataFieldTrait<DataSourceCase::kObjectSegmentationAlignedMask> {
+  typedef TensorListDataField<int8_t> type;
 };
 
 template<typename DataFieldT, typename T>
@@ -218,7 +216,6 @@ std::unique_ptr<DataField> MakeDataField(Args&&... args) {
   OF_PP_MAKE_TUPLE_SEQ(DataSourceCase::kLabel)                         \
   OF_PP_MAKE_TUPLE_SEQ(DataSourceCase::kObjectBoundingBox)             \
   OF_PP_MAKE_TUPLE_SEQ(DataSourceCase::kObjectSegmentation)            \
-  OF_PP_MAKE_TUPLE_SEQ(DataSourceCase::kObjectSegmentationMask)        \
   OF_PP_MAKE_TUPLE_SEQ(DataSourceCase::kObjectSegmentationAlignedMask) \
   OF_PP_MAKE_TUPLE_SEQ(DataSourceCase::kObjectLabel)                   \
   OF_PP_MAKE_TUPLE_SEQ(DataSourceCase::kImageScale)                    \

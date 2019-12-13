@@ -8,7 +8,7 @@ struct DataSamplerContext final {
   size_t num_replicas_;
   size_t rank_;
   size_t epoch_;
-  size_t iter_;
+  size_t offset_;
   size_t count_;
 };
 
@@ -52,7 +52,6 @@ class GroupedDataSampler : public DataSampler {
 
  private:
   std::vector<int64_t> group_ids_;
-  HashMap<size_t, HashSet<int64_t>> epoch2fetched_indices_;
 };
 
 }  // namespace data

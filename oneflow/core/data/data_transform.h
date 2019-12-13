@@ -26,10 +26,9 @@ struct DataTransformer;
 }  // namespace data
 }  // namespace oneflow
 
-#define DATA_TRANSFORM_SEQ                                \
-  OF_PP_MAKE_TUPLE_SEQ(DataTransformProto::kResize)       \
-  OF_PP_MAKE_TUPLE_SEQ(DataTransformProto::kTargetResize) \
-  OF_PP_MAKE_TUPLE_SEQ(DataTransformProto::kSegmentationPolyToMask)
+#define DATA_TRANSFORM_SEQ                          \
+  OF_PP_MAKE_TUPLE_SEQ(DataTransformProto::kResize) \
+  OF_PP_MAKE_TUPLE_SEQ(DataTransformProto::kTargetResize)
 
 #define DATA_FIELD_TRANSFORM_TUPLE_SEQ                                    \
   OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(OF_PP_MAKE_TUPLE_SEQ, DATA_SOURCE_SEQ, \

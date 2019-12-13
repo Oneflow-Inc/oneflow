@@ -15,6 +15,7 @@
 %define %apply_numpy_typemaps(TYPE)
 
 %apply (TYPE* INPLACE_ARRAY_FLAT, int DIM_FLAT) {(TYPE* array, int size)};
+%apply (TYPE* INPLACE_ARRAY_FLAT, int DIM_FLAT) {(TYPE* array1, int size1), (TYPE* array2, int size2)};
 
 %enddef    /* %apply_numpy_typemaps() macro */
 

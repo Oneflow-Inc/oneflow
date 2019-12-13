@@ -6,16 +6,16 @@ class CopyHdOp final : public Operator {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CopyHdOp);
   CopyHdOp() = default;
-  ~CopyHdOp() = default;
+  ~CopyHdOp() override = default;
 
   void InitFromOpConf() override;
   const PbMessage& GetCustomizedConf() const override;
   Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                             const ParallelContext* parallel_ctx) const override;
+                             const ParallelContext* parallel_ctx) const;
 
  private:
-  LogicalBlobId ibn2lbi(const std::string& input_bn) const override { return GenPackedLbi(); }
-  LogicalBlobId obn2lbi(const std::string& output_bn) const override { return GenPackedLbi(); }
+  LogicalBlobId ibn2lbi(const std::string& input_bn) const override;
+  LogicalBlobId obn2lbi(const std::string& output_bn) const override;
 };
 
 void CopyHdOp::InitFromOpConf() {
@@ -31,6 +31,22 @@ Maybe<void> CopyHdOp::InferBlobDescs(
 }
 
 const PbMessage& CopyHdOp::GetCustomizedConf() const { return op_conf().copy_hd_conf(); }
+
+LogicalBlobId CopyHdOp::ibn2lbi(const std::string& input_bn) const {
+  if (this->op_conf().copy_hd_conf().has_lbi()) {
+    return this->op_conf().copy_hd_conf().lbi();
+  } else {
+    return GenPackedLbi();
+  }
+}
+
+LogicalBlobId CopyHdOp::obn2lbi(const std::string& output_bn) const {
+  if (this->op_conf().copy_hd_conf().has_lbi()) {
+    return this->op_conf().copy_hd_conf().lbi();
+  } else {
+    return GenPackedLbi();
+  }
+}
 
 REGISTER_OP(OperatorConf::kCopyHdConf, CopyHdOp);
 

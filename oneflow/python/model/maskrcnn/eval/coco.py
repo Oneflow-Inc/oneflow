@@ -37,8 +37,15 @@ def has_valid_annotation(anno):
 class COCODataset():
     def __init__(self, ann_file, remove_images_without_annotations=False, transforms=None):
         self.coco = COCO(ann_file)
-        # sort indices for reproducible results
         self.ids = list(sorted(self.coco.imgs.keys()))
+
+        to_remove = set([])
+        for cat_id, _ in self.coco.cats.items():
+            if cat_id > 80:
+                to_remove |= set(self.coco.catToImgs[cat_id])
+        self.ids = list(set(self.ids) - to_remove)
+
+        # sort indices for reproducible results
         self.ids = sorted(self.ids)
 
         # filter images without detection annotations

@@ -5,7 +5,7 @@ flow.config.gpu_device_num(2)
 flow.config.default_data_type(flow.float)
 
 @flow.function
-def ReluJob(x = flow.mirror_blob_def((10,))):
+def ReluJob(x = flow.mirror_input_def((10,))):
     return flow.keras.activations.relu(flow.keras.activations.sigmoid(x))
 
 x = np.ones((10,), dtype=np.float32)

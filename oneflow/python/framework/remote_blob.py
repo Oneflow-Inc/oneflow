@@ -18,6 +18,37 @@ def RemoteBlob(lbi, **kw):
 class BlobDef(blob_desc.BlobDesc):
     def __init__(self, lbi, **kw):
         blob_desc.BlobDesc.__init__(self, lbi, **kw)
+        self.job_name_ = job_builder.GetCurCtxJobName()
+        watch_scope_util.TryWatchOnce(self)
+
+    @property
+    def static_shape(self): return job_builder.GetStaticShape(self.job_name_, self.lbn_)
+
+    @property
+    def dtype(self): return job_builder.GetDataType(self.job_name_, self.lbn_)
+
+    @property
+    def batch_axis(self): return job_builder.GetBatchAxis(self.job_name_, self.lbn_)
+
+    @property
+    def is_dynamic(self): return job_builder.IsDynamic(self.job_name_, self.lbn_)
+    
+    @property
+    def disable_boxing(self):
+        if self.disable_boxing_ is not None: return self.disable_boxing_
+        return job_builder.DisableBoxing(self.job_name_, self.lbn_)
+    
+    @property
+    def is_tensor_list(self): return job_builder.IsTensorList(self.job_name_, self.lbn_)
+
+    @property
+    def disable_boxing(self):
+        if self.disable_boxing_ is not None: return self.disable_boxing_
+        return job_builder.DisableBoxing(self.job_name_, self.lbn_)
+    
+    @property
+    def parallel_conf(self):
+        return job_builder.GetParallelConfFromProducerView(self.job_name_, self.lbn_)
 
     def with_distribute(self, distribute):
         oneflow.distribute.assert_is_valid_distribute(distribute)
@@ -109,7 +140,7 @@ class MirrorBlob(BlobDef):
         return job_builder.MirrorBlobDisableBoxing(self.job_name_, self.lbn_)
     
     @property
-    def num_of_lod_levels(self): return job_builder.MirrorBlobGetNumOfLoDLevels(self.job_name_, self.lbn_)
+    def is_tensor_list(self): return job_builder.MirrorBlobIsTensorList(self.job_name_, self.lbn_)
     
     @property
     def parallel_conf(self):
@@ -139,7 +170,7 @@ class ConsistentBlob(BlobDef):
         return job_builder.DisableBoxing(self.job_name_, self.lbn_)
     
     @property
-    def num_of_lod_levels(self): return job_builder.GetNumOfLoDLevels(self.job_name_, self.lbn_)
+    def is_tensor_list(self): return job_builder.IsTensorList(self.job_name_, self.lbn_)
 
     @property
     def parallel_conf(self):

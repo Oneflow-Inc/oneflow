@@ -106,6 +106,6 @@ class MirrorDistributionStrategy(DistributionStrategy):
                             )
                             result.append(fn(*args__, **kwargs__))
 
-            return tuple(map(list, zip(*result)))
+            return result
 
         return wrapped_fn

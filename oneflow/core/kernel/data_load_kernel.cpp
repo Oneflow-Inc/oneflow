@@ -1,9 +1,17 @@
 #include "oneflow/core/kernel/data_load_kernel.h"
 #include "oneflow/core/record/ofrecord_decoder.h"
 #include "oneflow/core/thread/thread_manager.h"
-#include "oneflow/core/register/lod_view.h"
 
 namespace oneflow {
+
+namespace {
+
+void InitOptVariableAxis(const BlobConf& blob_conf, OptInt64* var_axis) {
+  if (blob_conf.has_tensor_list_variable_axis() == false) { return; }
+  var_axis->set_value(blob_conf.tensor_list_variable_axis());
+}
+
+}  // namespace
 
 void DataLoadKernel::VirtualKernelInit() {
   data_loader_.reset(
@@ -24,56 +32,53 @@ void DataLoadKernel::WriteDataToBlob(DeviceCtx* ctx,
                                      std::shared_ptr<std::vector<data::DataInstance>> batch_data,
                                      const BlobConf& blob_conf, Blob* blob) const {
   using namespace data;
-  bool is_contiguous = (blob->blob_desc().num_of_lod_levels() == 0);
+  CHECK(blob_conf.has_tensor_list_variable_axis() == blob->blob_desc().is_tensor_list());
+  OptInt64 var_axis;
+  InitOptVariableAxis(blob_conf, &var_axis);
   char* dptr = static_cast<char*>(blob->mut_dptr());
   Memset<DeviceType::kCPU>(ctx, dptr, 0, blob->AlignedByteSizeOfBlobBody());
-  Shape dense_shape;
-  if (is_contiguous) {
+  if (var_axis.has_value() == false) {
+    Shape instance_shape;
     const DataField* first = batch_data->at(0).GetField(blob_conf.data_source());
-    first->InferShape(blob_conf.shape(), blob_conf.variable_length_axes(), &dense_shape, nullptr);
-    const int64_t elem_cnt = dense_shape.elem_cnt();
+    first->InferShape(blob_conf.shape(), var_axis, &instance_shape);
+    const int64_t elem_cnt = instance_shape.elem_cnt();
     if (!blob->blob_desc().is_dynamic()) {
       const int64_t exp_elem_cnt =
           std::accumulate(blob_conf.shape().dim().begin(), blob_conf.shape().dim().end(), 1,
                           std::multiplies<int64_t>());
       CHECK_EQ(elem_cnt, exp_elem_cnt);
     }
-    MultiThreadLoop(batch_data->size(), [&blob_conf, &dense_shape, batch_data, elem_cnt,
-                                         dptr](int64_t n) {
+    MultiThreadLoop(batch_data->size(), [&](int64_t n) {
       const DataField* data_field = batch_data->at(n).GetField(blob_conf.data_source());
       size_t elem_bytes_size = GetSizeOfDataType(blob_conf.data_type());
       data_field->ToBuffer(dptr + n * elem_cnt * elem_bytes_size, blob_conf.data_type());
       Shape shape;
-      data_field->InferShape(blob_conf.shape(), blob_conf.variable_length_axes(), &shape, nullptr);
-      CHECK(dense_shape == shape);
+      data_field->InferShape(blob_conf.shape(), var_axis, &shape);
+      CHECK(instance_shape == shape);
     });
-    DimVector dense_shape_vec = dense_shape.dim_vec();
+    DimVector dense_shape_vec(instance_shape.dim_vec());
     dense_shape_vec.insert(dense_shape_vec.begin(), batch_data->size());
-    dense_shape = Shape(dense_shape_vec);
+    auto* dense_shape_mut_view = blob->dense_shape_mut_view();
+    if (dense_shape_mut_view) { dense_shape_mut_view->set_shape(Shape(dense_shape_vec)); }
   } else {
-    LoDTree lod_tree;
+    auto tensor_inserter = blob->tensor_back_inserter();
+    tensor_inserter.ReserveOneEmptyTensorList();
     for (DataInstance& data_inst : *batch_data) {
+      auto* tensor = tensor_inserter.add_tensor();
+      CHECK_EQ(tensor->dptr(), dptr);
       const DataField* data_field = data_inst.GetField(blob_conf.data_source());
       size_t written_size = data_field->ToBuffer(dptr, blob_conf.data_type());
       dptr += written_size;
 
       Shape inst_shape;
-      LoDTree* inst_lod_tree = lod_tree.mutable_children()->Add();
-      data_field->InferShape(blob_conf.shape(), blob_conf.variable_length_axes(), &inst_shape,
-                             inst_lod_tree);
-      if (dense_shape.elem_cnt() == 0) {
-        dense_shape = inst_shape;
-      } else {
-        FOR_RANGE(int64_t, i, 1, dense_shape.NumAxes()) {
-          CHECK_EQ(dense_shape.At(i), inst_shape.At(i));
-        }
-        dense_shape.Set(0, dense_shape.At(0) + inst_shape.At(0));
-      }
+      data_field->InferShape(blob_conf.shape(), var_axis, &inst_shape);
+      DimVector dim_vec(inst_shape.dim_vec());
+      dim_vec.insert(dim_vec.begin(), 1);
+      tensor->set_shape(DenseShapeView(dim_vec.data(), dim_vec.size()));
+      CHECK_EQ(tensor->ByteSize(), written_size);
     }
-    blob->tree_lod_mut_view().UpdateLoD(lod_tree);
+    CHECK_EQ(blob->total_num_of_tensors(), blob->static_shape().At(0));
   }
-  auto* dense_shape_mut_view = blob->dense_shape_mut_view();
-  if (dense_shape_mut_view) { dense_shape_mut_view->set_shape(dense_shape); }
 }
 
 REGISTER_KERNEL(OperatorConf::kDataLoadConf, DataLoadKernel);

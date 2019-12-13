@@ -222,11 +222,18 @@ class COCODataset(object):
         random_seed,
         shuffle=True,
         group_by_aspect_ratio=True,
+        max_segm_poly_points=1024,
         name=None,
     ):
         name = name or id_util.UniqueStr("COCODataset_")
-        self.__dict__.update(locals())
-        del self.self
+        self.dataset_dir = dataset_dir
+        self.annotation_file = annotation_file
+        self.image_dir = image_dir
+        self.random_seed = random_seed
+        self.shuffle = shuffle
+        self.group_by_aspect_ratio = group_by_aspect_ratio
+        self.max_segm_poly_points = max_segm_poly_points
+        self.name = name
 
     def to_proto(self, proto=None):
         if proto is None:
@@ -239,6 +246,7 @@ class COCODataset(object):
         proto.coco.annotation_file = self.annotation_file
         proto.coco.image_dir = self.image_dir
         proto.coco.group_by_aspect_ratio = self.group_by_aspect_ratio
+        proto.coco.max_segm_poly_points = self.max_segm_poly_points
         return proto
 
 
@@ -304,6 +312,29 @@ class ImageNormalizeByChannel(object):
         return proto
 
 
+@oneflow_export("data.ImageRandomFlip")
+class ImageRandomFlip(object):
+    r"""Random flip image.
+    params:
+        @flip_code:
+            0 means flipping vertically as also as flipping around the horizontal axis
+            >= 1 means flipping horizontally as also as flipping around the vertical axis
+            <= -1 means flipping around both axes
+        @probability: probability of random flip image
+    """
+    def __init__(self, flip_code=1, probability=0.5):
+        self.flip_code = flip_code
+        self.probability = probability
+
+    def to_proto(self, proto=None):
+        if proto is None:
+            proto = data_util.DataTransformProto()
+
+        proto.image_random_flip.flip_code = self.flip_code
+        proto.image_random_flip.probability = self.probability
+        return proto
+
+
 @oneflow_export("data.ImageAlign")
 class ImageAlign(object):
     def __init__(self, alignment):
@@ -346,18 +377,18 @@ class DataLoader(object):
         data_source,
         shape,
         dtype,
-        variable_length_axes=None,
+        tensor_list_variable_axis=None,
         is_dynamic=False,
     ):
-        variable_length_axes = variable_length_axes or []
-        assert isinstance(variable_length_axes, (tuple, list))
+        if tensor_list_variable_axis is not None:
+            assert isinstance(tensor_list_variable_axis, int)
         self._blobs.append(
             dict(
                 name=name,
                 data_source=data_source,
                 shape=shape,
                 dtype=dtype,
-                variable_length_axes=variable_length_axes or [],
+                tensor_list_variable_axis=tensor_list_variable_axis,
                 is_dynamic=is_dynamic,
             )
         )
@@ -408,7 +439,8 @@ class DataLoader(object):
                 blob_conf.encode_case.jpeg.SetInParent()
             else:
                 blob_conf.encode_case.raw.SetInParent()
-            blob_conf.variable_length_axes.extend(blob["variable_length_axes"])
+            if blob["tensor_list_variable_axis"] is not None:
+                blob_conf.tensor_list_variable_axis = blob["tensor_list_variable_axis"]
             blob_conf.is_dynamic = blob["is_dynamic"]
             op_conf.data_load_conf.blobs.extend([blob_conf])
 

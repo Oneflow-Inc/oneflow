@@ -249,7 +249,6 @@ def concat(values, axis, name=None):
     lbi.blob_name = "out"
     return remote_blob_util.RemoteBlob(lbi)
 
-
 @oneflow_export("local_scatter_nd_update")
 def local_scatter_nd_update(inputs, indices, updates, name=None):
     op_conf = op_conf_util.OperatorConf()
@@ -336,7 +335,7 @@ def expand_dims(inputs, axis, name=None):
 
 @oneflow_export("piece_slice")
 def piece_slice(inputs, output_size, name=None):
-    assert inputs.num_of_lod_levels == 2
+    assert inputs.shape[0] == output_size
     op_conf = op_conf_util.OperatorConf()
     setattr(op_conf, "name", name if name is not None else id_util.UniqueStr("PieceSlice_"))
     setattr(op_conf.piece_slice_conf, "in", inputs.logical_blob_name)
@@ -418,14 +417,14 @@ def assign(ref, value, begin_axis=None, end_axis=None, dtype=None, name=None):
     return remote_blob_util.RemoteBlob(out_lbi)
 
 
-@oneflow_export("random_mask_like")
-def random_mask_like(like, seed=None, name=None):
+@oneflow_export("random_like")
+def random_like(like, seed=None, name=None):
     op_conf = op_conf_util.OperatorConf()
-    op_conf.random_mask_like_conf.like = like.logical_blob_name
+    op_conf.random_like_conf.like = like.logical_blob_name
     if seed is not None:
-        op_conf.random_mask_like_conf.random_seed = seed
-    setattr(op_conf, "name", name if name is not None else id_util.UniqueStr("RandomMask_"))
-    op_conf.random_mask_like_conf.out = "out"
+        op_conf.random_like_conf.random_seed = seed
+    setattr(op_conf, "name", name if name is not None else id_util.UniqueStr("RandomLike_"))
+    op_conf.random_like_conf.out = "out"
     compile_context.CurJobAddOp(op_conf)
     out_lbi = logical_blob_id_util.LogicalBlobId()
     setattr(out_lbi, "op_name", op_conf.name)
