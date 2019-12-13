@@ -303,33 +303,70 @@ def update_by_path(node, path, value):
                 node[key] = CN()
             node = node[key]
 
+def get_sub_path(path, k):
+    sub_path = None
+    if path == []:
+        sub_path = [k]
+    else:
+        sub_path = path + [k]
+    return sub_path
 
-def compare_config(d1, d2, path=None, d1_diff=None, d2_diff=None):
+def compare_config(d1, d2, path=None, d1_diff=None, d2_diff=None, d1_only=None, d2_only=None, identitcal_structure=True):
     if d1_diff is None:
         assert(path is None)
         d1_diff = CN()
     if d2_diff is None:
         assert(path is None)
         d2_diff = CN()
+    if identitcal_structure is False:
+        if d1_only is None:
+            assert(path is None)
+            d1_only = set()
+        if d2_only is None:
+            assert(path is None)
+            d2_only = set()
     if path is None:
         path = []
     for k in d1.keys():
-        if k not in d2:
-            raise ValueError
-
-        if type(d1[k]) is CN:
-            sub_path = None
-            if path == []:
-                sub_path = [k]
+        sub_path = get_sub_path(path, k)
+        assert sub_path is not None
+        if k in d2:
+            if type(d1[k]) is CN:
+                compare_config(d1[k], d2[k], sub_path, d1_diff, d2_diff, d1_only, d2_only, identitcal_structure=identitcal_structure)
             else:
-                sub_path = path + [k]
-            assert sub_path is not None
-            compare_config(d1[k], d2[k], sub_path, d1_diff, d2_diff)
+                if d1[k] != d2[k]:
+                    print("{}:".format(".".join(path)))
+                    print("- {} : {}".format(k, d1[k]))
+                    print("+ {} : {}".format(k, d2[k]))
+                    update_by_path(d1_diff, sub_path, d1[k])
+                    update_by_path(d2_diff, sub_path, d2[k])
         else:
-            if d1[k] != d2[k]:
-                print("{}:".format(".".join(path)))
-                print("- {} : {}".format(k, d1[k]))
-                print("+ {} : {}".format(k, d2[k]))
-                update_by_path(d1_diff, path + [k], d1[k])
-                update_by_path(d2_diff, path + [k], d2[k])
-    return (d1_diff, d2_diff)
+            if identitcal_structure:
+                raise ValueError("key {} not found in d2".format(k))
+            else:
+                update_by_path(d1_diff, sub_path, d1[k])
+                d1_only.add(".".join(sub_path))
+    for k_in_d2 in d2.keys():
+        sub_path = get_sub_path(path, k_in_d2)
+        if k_in_d2 not in d1:
+            update_by_path(d2_diff, sub_path, d2[k_in_d2])
+            d2_only.add(".".join(sub_path))
+
+    if identitcal_structure:
+        return (d1_diff, d2_diff)
+    else:
+        return (d1_diff, d2_diff, d1_only, d2_only)
+
+def check_compatibility(d1, d2):
+    return compare_config(d1, d2, identitcal_structure=False)
+
+if __name__ == "__main__":
+    import torch_config
+    (d1_diff, d2_diff, d1_only, d2_only) = check_compatibility(_C, torch_config._C)
+    print("d1_diff:\n{}\n".format(d1_diff))
+    
+    print("d2_diff:\n{}\n".format(d2_diff))
+
+    print("d1_only:\n{}\n".format("\n".join(d1_only)))
+
+    print("d2_only:\n{}\n".format("\n".join(d2_only)))
