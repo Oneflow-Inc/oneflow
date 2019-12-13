@@ -15,8 +15,11 @@ void ConvKernel<DeviceType::kGPU, float16>::VirtualKernelInit() {
   this->out_desc_.reset(new CudnnTensorDesc(GetDataType<float16>::value, out_shape, data_format));
   this->filter_desc_.reset(
       new CudnnFilterDesc(GetDataType<float16>::value, weight_shape, data_format));
-  this->conv_desc_.reset(new CudnnConvDesc(GetConvDescDataType(GetDataType<float16>::value),
-                                           in_shape, this->GetCustomizedOpConf()));
+
+  const bool enable_true_half = this->job_desc().cudnn_conv_enable_true_half();
+  this->conv_desc_.reset(
+      new CudnnConvDesc(GetConvDescDataType(GetDataType<float16>::value, enable_true_half),
+                        in_shape, this->GetCustomizedOpConf()));
 
   if (this->template GetValFromCustomizedOpConf<bool>("use_bias")) {
     int32_t filters = DenseShapeView(this->GetConvKernelConf().bias()).At(0);
@@ -57,7 +60,8 @@ void ConvKernel<DeviceType::kGPU, float16>::DoForwardDataContent(
   CudnnConvArgs args(this->GetCustomizedOpConf(), device_ctx->cudnn_handle(), in_blob, out_blob,
                      weight_blob, fw_cudnn_buf,
                      this->job_desc().job_conf().cudnn_conv_use_deterministic_algo_only(),
-                     this->job_desc().job_conf().cudnn_conv_heuristic_search_algo());
+                     this->job_desc().job_conf().cudnn_conv_heuristic_search_algo(),
+                     this->job_desc().cudnn_conv_enable_true_half());
   cudnnConvolutionFwdAlgo_t algo;
   size_t work_space_size = 0;
   if (job_desc().job_conf().has_cudnn_conv_force_fwd_algo()) {
@@ -142,8 +146,11 @@ void ConvKernel<DeviceType::kGPU, T>::KernelInitWithCudnn() {
   this->in_desc_.reset(new CudnnTensorDesc(GetDataType<T>::value, in_shape, data_format));
   this->out_desc_.reset(new CudnnTensorDesc(GetDataType<T>::value, out_shape, data_format));
   this->filter_desc_.reset(new CudnnFilterDesc(GetDataType<T>::value, weight_shape, data_format));
-  this->conv_desc_.reset(new CudnnConvDesc(GetConvDescDataType(GetDataType<T>::value), in_shape,
-                                           this->GetCustomizedOpConf()));
+
+  const bool enable_true_half = this->job_desc().cudnn_conv_enable_true_half();
+  this->conv_desc_.reset(
+      new CudnnConvDesc(GetConvDescDataType(GetDataType<T>::value, enable_true_half), in_shape,
+                        this->GetCustomizedOpConf()));
 
   if (this->template GetValFromCustomizedOpConf<bool>("use_bias")) {
     int32_t filters = DenseShapeView(this->GetConvKernelConf().bias()).At(0);
@@ -183,7 +190,8 @@ void ConvKernel<DeviceType::kGPU, T>::DoForwardDataContentWithCudnn(
   CudnnConvArgs args(this->GetCustomizedOpConf(), device_ctx->cudnn_handle(), in_blob, out_blob,
                      weight_blob, fw_cudnn_buf,
                      this->job_desc().job_conf().cudnn_conv_use_deterministic_algo_only(),
-                     this->job_desc().job_conf().cudnn_conv_heuristic_search_algo());
+                     this->job_desc().job_conf().cudnn_conv_heuristic_search_algo(),
+                     this->job_desc().cudnn_conv_enable_true_half());
   cudnnConvolutionFwdAlgo_t algo;
   size_t work_space_size = 0;
   if (this->job_desc().job_conf().has_cudnn_conv_force_fwd_algo()) {

@@ -179,7 +179,8 @@ Maybe<void> ConvOp<NDims>::InferBlobDescs(
     if (!out_blob_desc->is_dynamic()) {
       CHECK(Global<CudnnConvCtxCache>::Get()->FindCudnnConvAlgoCtxWithConfig(
           *in_blob_desc, *out_blob_desc, *weight_blob_desc, GetCustomizedConf(),
-          static_cast<size_t>(cudnn_buf_limit_byte()), &conv_op_ctx->cudnn_conv_algo_ctx));
+          static_cast<size_t>(cudnn_buf_limit_byte()),
+          this->job_desc().cudnn_conv_enable_true_half(), &conv_op_ctx->cudnn_conv_algo_ctx));
       CHECK(conv_op_ctx->cudnn_conv_algo_ctx.fwd_algo_found)
           << "cudnn fwd algo: " << conv_op_ctx->cudnn_conv_algo_ctx.fwd_algo
           << " algo_workspace_size: " << conv_op_ctx->cudnn_conv_algo_ctx.fwd_ws_size

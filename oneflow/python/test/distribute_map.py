@@ -2,7 +2,6 @@ import oneflow as flow
 import numpy as np
 
 flow.config.gpu_device_num(2)
-flow.config.grpc_use_no_signal()
 
 flow.config.default_data_type(flow.float)
 
@@ -13,16 +12,14 @@ def Print(prefix):
     return _print
 
 @flow.function
-def DistributeConcat(a = flow.input_blob_def((2, 5), is_dynamic=True)):
-  with flow.device_prior_placement("gpu", "0:0"):
-    b = flow.identity(a)
-    print(b.parallel_conf)
-  ret = flow.advanced.distribute_concat([b, b])
-  ret = flow.advanced.distribute_map(ret, flow.math.relu)
-  print ret.shape
+def DistributeMap(a = flow.input_blob_def((2, 5), is_dynamic=False)):
+  a = flow.math.relu(a)
+  ret = flow.advanced.distribute_map(a, flow.math.relu)
+  print(ret.shape)
+  return ret
 
 index = [-1, 0, 1, 2, 3]
 data = []
-for i in index: data.append(np.ones((1, 5), dtype=np.float32) * i)
+for i in index: data.append(np.ones((2, 5), dtype=np.float32) * i)
 for x in data:
-  DistributeConcat(x)
+  DistributeMap(x)

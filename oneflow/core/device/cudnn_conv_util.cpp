@@ -61,11 +61,11 @@ perf_t GetBestAlgorithm(const CudnnConvArgs& args, const std::vector<perf_t>& pe
 
 CudnnConvArgs::CudnnConvArgs(const PbMessage& conf, const BlobDesc* x, const BlobDesc* y,
                              const BlobDesc* w, size_t max_ws_size, bool deterministic,
-                             bool heuristic)
+                             bool heuristic, const bool enable_true_half)
     : xdesc(x->data_type(), x->shape(), GetValFromPbMessage<std::string>(conf, "data_format")),
       ydesc(y->data_type(), y->shape(), GetValFromPbMessage<std::string>(conf, "data_format")),
       wdesc(w->data_type(), w->shape(), GetValFromPbMessage<std::string>(conf, "data_format")),
-      cdesc(GetConvDescDataType(x->data_type()), x->shape(), conf),
+      cdesc(GetConvDescDataType(x->data_type(), enable_true_half), x->shape(), conf),
       x_ndims(x->shape().NumAxes()),
       y_ndims(y->shape().NumAxes()),
       w_ndims(w->shape().NumAxes()),
@@ -107,12 +107,12 @@ CudnnConvArgs::CudnnConvArgs(const PbMessage& conf, const BlobDesc* x, const Blo
 
 CudnnConvArgs::CudnnConvArgs(const PbMessage& conf, cudnnHandle_t handle, const Blob* x,
                              const Blob* y, const Blob* w, Blob* buf, bool deterministic,
-                             bool heuristic)
+                             bool heuristic, const bool enable_true_half)
     : handle(handle),
       xdesc(x->data_type(), x->shape(), GetValFromPbMessage<std::string>(conf, "data_format")),
       ydesc(y->data_type(), y->shape(), GetValFromPbMessage<std::string>(conf, "data_format")),
       wdesc(w->data_type(), w->shape(), GetValFromPbMessage<std::string>(conf, "data_format")),
-      cdesc(GetConvDescDataType(x->data_type()), x->shape(), conf),
+      cdesc(GetConvDescDataType(x->data_type(), enable_true_half), x->shape(), conf),
       x_ndims(x->shape().NumAxes()),
       y_ndims(y->shape().NumAxes()),
       w_ndims(w->shape().NumAxes()),
