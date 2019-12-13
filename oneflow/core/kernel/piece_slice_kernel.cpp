@@ -12,26 +12,27 @@ class PieceSliceKernel final : public KernelIf<device_type> {
  private:
   void ForwardDenseShape(const KernelCtx& ctx,
                          std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
-    const Blob* in_blob = BnInOp2Blob("in");
-    CHECK_EQ(in_blob->blob_desc().num_of_lod_levels(), 2);
-    const int32_t out_size = this->op_conf().piece_slice_conf().out_size();
-    CHECK_EQ(in_blob->length_lod_view().GetLength(0, 0), out_size);
-    FOR_RANGE(size_t, i, 0, out_size) {
-      auto* dense_shape_mut_view = BnInOp2Blob("out_" + std::to_string(i))->dense_shape_mut_view();
-      dense_shape_mut_view->set_shape(in_blob->shape());
-      dense_shape_mut_view->Set(0, in_blob->length_lod_view().GetLength(1, i));
-    }
+    // do nothing
   }
   void ForwardDataContent(const KernelCtx& ctx,
                           std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
     const Blob* in_blob = BnInOp2Blob("in");
-    const int32_t instance_byte_size = in_blob->shape().Count(1) * sizeof(T);
-    FOR_RANGE(size_t, i, 0, in_blob->length_lod_view().GetLength(0, 0)) {
-      const char* src =
-          in_blob->dptr<char>() + in_blob->offset_lod_view().GetOffset(1, i) * instance_byte_size;
-      char* dst = BnInOp2Blob("out_" + std::to_string(i))->mut_dptr<char>();
-      Memcpy<device_type>(ctx.device_ctx, dst, src,
-                          in_blob->length_lod_view().GetLength(1, i) * instance_byte_size);
+    CHECK_EQ(in_blob->blob_desc().is_tensor_list(), true);
+    const int32_t out_size = this->op_conf().piece_slice_conf().out_size();
+    CHECK_EQ(in_blob->total_num_of_tensors(), out_size);
+    auto in_tensor = in_blob->BeginTensor();
+    FOR_RANGE(size_t, i, 0, out_size) {
+      Blob* out_blob = BnInOp2Blob("out_" + std::to_string(i));
+      auto tensor_inserter = out_blob->tensor_back_inserter();
+      tensor_inserter.ReserveOneEmptyTensorList();
+      auto* out_tensor = tensor_inserter.add_tensor();
+      DimVector dim_vec;
+      in_tensor.shape().ToDimVector(&dim_vec);
+      dim_vec.erase(dim_vec.begin());
+      out_tensor->set_shape(Shape(dim_vec));
+      Memcpy<device_type>(ctx.device_ctx, out_tensor->mut_dptr(), in_tensor.dptr(),
+                          in_tensor.ByteSize());
+      in_blob->MoveToNextTensor(&in_tensor);
     }
   }
 };

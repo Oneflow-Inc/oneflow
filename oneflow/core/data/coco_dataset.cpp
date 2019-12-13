@@ -37,7 +37,7 @@ COCODataset::COCODataset(const DatasetProto& proto) : Dataset(proto) {
     if (anno["iscrowd"].get<int>() == 1) { continue; }
     // check if empty bbox, bbox format is (left, top, width, height)
     const auto bbox = anno["bbox"];
-    if (!(bbox[2].get<float>() > 0.0f && bbox[3].get<float>() > 0.0f)) {
+    if (!(bbox[2].get<float>() > 1.0f && bbox[3].get<float>() > 1.0f)) {
       LOG(INFO) << "coco dataset ignore too small bbox, image_id: " << image_id
                 << ", anno_id: " << id << ", bbox: (" << bbox[0].get<float>() << ","
                 << bbox[1].get<float>() << "," << bbox[2].get<float>() << ","
@@ -140,17 +140,20 @@ void COCODataset::GetData(int64_t idx, DataInstance* data_inst) const {
   auto* image_size_field = data_inst->GetField<DataSourceCase::kImageSize>();
   auto* bbox_field = data_inst->GetField<DataSourceCase::kObjectBoundingBox>();
   auto* label_field = data_inst->GetField<DataSourceCase::kObjectLabel>();
-  DataField* segm_field = nullptr;
-  if (data_inst->HasField<DataSourceCase::kObjectSegmentationMask>()) {
+  DataField* segm_field = data_inst->GetField<DataSourceCase::kObjectSegmentation>();
+  if (segm_field == nullptr
+      && data_inst->HasField<DataSourceCase::kObjectSegmentationAlignedMask>()) {
     segm_field = data_inst->GetOrCreateField<DataSourceCase::kObjectSegmentation>(
         dataset_proto().coco().max_segm_poly_points());
-  } else {
-    segm_field = data_inst->GetField<DataSourceCase::kObjectSegmentation>();
   }
+  auto* bbox_list = dynamic_cast<TensorListDataField<float>*>(bbox_field);
+  if (bbox_list != nullptr) { bbox_list->SetShape(4); }
+  auto* label_list = dynamic_cast<TensorListDataField<int32_t>*>(label_field);
+  if (label_list != nullptr) { label_list->SetShape(); }
 
   int64_t image_id = image_ids_.at(idx);
   auto* image_id_field =
-      dynamic_cast<ArrayDataField<int64_t>*>(data_inst->GetField<DataSourceCase::kImageId>());
+      dynamic_cast<TensorDataField<int64_t>*>(data_inst->GetField<DataSourceCase::kImageId>());
   if (image_id_field) { image_id_field->data().push_back(image_id); }
   // Get image data
   const auto& image = image_id2image_.at(image_id);
@@ -169,7 +172,7 @@ void COCODataset::GetData(int64_t idx, DataInstance* data_inst) const {
 void COCODataset::GetImage(const nlohmann::json& image_json, DataField* image_field,
                            DataField* image_size_field) const {
   auto* image = dynamic_cast<ImageDataField*>(image_field);
-  auto* image_size = dynamic_cast<ArrayDataField<int32_t>*>(image_size_field);
+  auto* image_size = dynamic_cast<TensorDataField<int32_t>*>(image_size_field);
   if (image) {
     auto image_file_path =
         JoinPath(dataset_proto().dataset_dir(), dataset_proto().coco().image_dir(),
@@ -193,11 +196,10 @@ void COCODataset::GetImage(const nlohmann::json& image_json, DataField* image_fi
 void COCODataset::GetBbox(const nlohmann::json& bbox_json, const nlohmann::json& image_json,
                           DataField* data_field) const {
   CHECK(bbox_json.is_array());
-  auto* bbox_field = dynamic_cast<ArrayDataField<float>*>(data_field);
+  auto* bbox_field = dynamic_cast<TensorListDataField<float>*>(data_field);
   if (!bbox_field) { return; }
   // COCO bounding box format is [left, top, width, height]
   // we need format xyxy
-  auto& bbox_vec = bbox_field->data();
   const auto to_remove = GetOneVal<float>();
   const auto min_size = GetZeroVal<float>();
   float left = bbox_json[0].get<float>();
@@ -216,18 +218,18 @@ void COCODataset::GetBbox(const nlohmann::json& bbox_json, const nlohmann::json&
   bottom = std::min(bottom, image_height - to_remove);
   CHECK_GT(bottom, top);
   // push to data_field
-  bbox_vec.push_back(left);
-  bbox_vec.push_back(top);
-  bbox_vec.push_back(right);
-  bbox_vec.push_back(bottom);
+  bbox_field->PushBack(left);
+  bbox_field->PushBack(top);
+  bbox_field->PushBack(right);
+  bbox_field->PushBack(bottom);
 }
 
 void COCODataset::GetLabel(const nlohmann::json& label_json, DataField* data_field) const {
   CHECK(label_json.is_number_integer());
-  auto* label_field = dynamic_cast<ArrayDataField<int32_t>*>(data_field);
+  auto* label_field = dynamic_cast<TensorListDataField<int32_t>*>(data_field);
   if (!label_field) { return; }
   // TODO: add config to get contiguous_category_id
-  label_field->data().push_back(label_json.get<int32_t>());
+  label_field->PushBack(label_json.get<int32_t>());
 }
 
 void COCODataset::GetSegmentation(const nlohmann::json& segmentation, DataField* data_field) const {

@@ -6,8 +6,7 @@ namespace oneflow {
 namespace {
 
 void CheckSizeAndCopyBlob(DeviceCtx *ctx, Blob *dst, const Blob *src) {
-  CHECK_EQ(src->ByteSizeOfBlobBody(), dst->ByteSizeOfBlobBody());
-  dst->CopyDataContentFrom(ctx, src);
+  dst->CopyValidDataContentFrom(ctx, src);
 }
 
 }  // namespace
@@ -24,9 +23,6 @@ class DistributeSplitKernel final : public KernelIf<device_type> {
                           std::function<Blob *(const std::string &)>) const override;
   void ForwardDenseShape(const KernelCtx &ctx,
                          std::function<Blob *(const std::string &)> BnInOp2Blob) const override;
-  void ForwardLoD(const KernelCtx &ctx,
-                  std::function<Blob *(const std::string &)> BnInOp2Blob) const override;
-
   Blob *GetOutBlob(std::function<Blob *(const std::string &)> BnInOp2Blob) const;
 };
 
@@ -34,14 +30,6 @@ template<DeviceType device_type>
 void DistributeSplitKernel<device_type>::ForwardDataContent(
     const KernelCtx &ctx, std::function<Blob *(const std::string &)> BnInOp2Blob) const {
   CheckSizeAndCopyBlob(ctx.device_ctx, GetOutBlob(BnInOp2Blob), BnInOp2Blob("in"));
-}
-
-template<DeviceType device_type>
-void DistributeSplitKernel<device_type>::ForwardLoD(
-    const KernelCtx &ctx, std::function<Blob *(const std::string &)> BnInOp2Blob) const {
-  const Blob *in_blob = BnInOp2Blob("in");
-  Blob *out_blob = GetOutBlob(BnInOp2Blob);
-  out_blob->tree_lod_mut_view().UpdateLoD(in_blob->tree_lod_view().lod_tree());
 }
 
 template<DeviceType device_type>

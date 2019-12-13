@@ -14,6 +14,7 @@ namespace oneflow {
 
 class Blob;
 class InitializerConf;
+class MemoryCase;
 
 template<cudaMemcpyKind cpy_kind>
 void Memcpy(DeviceCtx*, void* dst, const void* src, size_t sz);

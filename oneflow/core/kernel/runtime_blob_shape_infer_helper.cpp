@@ -41,7 +41,7 @@ BlobDesc* RuntimeBlobShapeInferHelper::BlobDesc4BnInOp(const std::string& bn_in_
                                                        const RtBlobDesc& rt_blob_desc) {
   BlobDesc* blob_desc = bn_in_op2blob_desc_.at(bn_in_op).get();
   if (blob_desc != nullptr) { return blob_desc; }
-  blob_desc = new BlobDesc(rt_blob_desc.body(), rt_blob_desc.num_of_lod_levels(),
+  blob_desc = new BlobDesc(rt_blob_desc.body(), rt_blob_desc.is_tensor_list(),
                            rt_blob_desc.is_body_disabled(), rt_blob_desc.is_dynamic());
   bn_in_op2blob_desc_.at(bn_in_op).reset(blob_desc);
   return blob_desc;
@@ -80,10 +80,7 @@ void RuntimeBlobShapeInferHelper::InferDenseShape(
     auto* blob = BnInOp2Blob(obn);
     if (blob == nullptr) { continue; }
     if (blob->blob_desc().is_dynamic()) {
-      const int64_t num_of_lod_levels = blob->blob_desc().num_of_lod_levels();
-      const int64_t num_left_ones = (num_of_lod_levels == 0 ? 0 : num_of_lod_levels - 1);
-      CHECK_EQ(num_left_ones, obn_idx2shape_sym.at(i)->NumAxes() - blob->shape().NumAxes());
-      blob->dense_shape_mut_view()->LeftOnesStrippedAssign(*obn_idx2shape_sym.at(i));
+      blob->dense_shape_mut_view()->set_shape(*obn_idx2shape_sym.at(i));
     } else {
       CHECK(*obn_idx2shape_sym.at(i) == blob->static_shape());
     }

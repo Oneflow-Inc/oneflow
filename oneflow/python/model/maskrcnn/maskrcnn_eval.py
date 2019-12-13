@@ -15,7 +15,6 @@ from box_head import BoxHead
 from mask_head import MaskHead
 
 from eval.bounding_box import BoxList
-from eval.box_head_inference import PostProcessor
 from eval.mask_head_inference import MaskPostProcessor
 from eval.coco import COCODataset
 from eval.coco_eval import do_coco_evaluation
@@ -183,7 +182,7 @@ def GenPredictionsAndImageIds(results):
 
 if __name__ == "__main__":
     flow.config.gpu_device_num(terminal_args.gpu_num_per_node)
-    flow.config.ctrl_port(terminal_args.ctrl_port)
+    flow.env.ctrl_port(terminal_args.ctrl_port)
     flow.config.default_data_type(flow.float)
     flow.config.cudnn_conv_heuristic_search_algo(True)
     flow.config.cudnn_conv_use_deterministic_algo_only(False)
@@ -197,10 +196,10 @@ if __name__ == "__main__":
     for i in range(terminal_args.iter_num):
         if terminal_args.fake_img:
             if i == 0:
-                f = open("/dataset/mask_rcnn/maskrcnn_eval_net_10/fake_image_list.pkl", "rb")
+                f = open("/dataset/mask_rcnn/maskrcnn_eval_net_50/fake_image_list.pkl", "rb")
                 fake_image_list = pickle.load(f)
             images = fake_image_list[i].transpose((0, 2, 3, 1)).copy()
-            results = maskrcnn_eval_job(fake_image_list[i]).get()
+            results = maskrcnn_eval_job(images).get()
         else:
             results = maskrcnn_eval_job().get()
         predictions, image_ids = GenPredictionsAndImageIds(results)

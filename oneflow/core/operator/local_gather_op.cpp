@@ -34,7 +34,7 @@ class LocalGatherOp final : public Operator {
     const BlobDesc* indices = GetBlobDesc4BnInOp("indices");
     CHECK_OR_RETURN(IsIntegralDataType(indices->data_type()));
     CHECK_GT_OR_RETURN(indices->shape().NumAxes(), 0);
-    CHECK_EQ_OR_RETURN(indices->num_of_lod_levels(), 0);
+    CHECK_EQ_OR_RETURN(indices->is_tensor_list(), false);
     const BlobDesc* in = GetBlobDesc4BnInOp("in");
     CHECK_GT_OR_RETURN(in->shape().NumAxes(), 0);
     const int64_t axis = CheckGatherAxis(op_conf().local_gather_conf(), in->shape().NumAxes());

@@ -48,7 +48,10 @@ class Operator {
   bool EnableCudnn() const { return op_conf().enable_cudnn(); }
   bool DevIsGpuAndEnableCudnn() const { return device_type() == DeviceType::kGPU && EnableCudnn(); }
   const OperatorConf& op_conf() const { return op_attribute_.op_conf(); }
-  virtual const PbMessage& GetCustomizedConf() const { UNIMPLEMENTED(); }
+  virtual const PbMessage& GetCustomizedConf() const {
+    UNIMPLEMENTED();
+    return *static_cast<const PbMessage*>(nullptr);
+  }
 
   bool HasFieldInCustomizedConf(const std::string& field_name) const {
     return HasFieldInPbMessage(GetCustomizedConf(), field_name);
@@ -180,6 +183,7 @@ class Operator {
       const ParallelDesc& parallel_desc) const;
   virtual Maybe<void> GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
     UNIMPLEMENTED() << " GetSbpSignatures unimplemented, op name: " << op_name();
+    return Maybe<void>::Ok();
   }
 
   int64_t cudnn_buf_limit_byte() const;

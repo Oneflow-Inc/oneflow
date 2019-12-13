@@ -115,7 +115,7 @@ def coco_data_load_job():
         data_util.DataSourceCase.kObjectBoundingBox,
         shape=(64, 4),
         dtype=flow.float,
-        variable_length_axes=(0,),
+        tensor_list_variable_axis=0,
         is_dynamic=True,
     )
     data_loader.add_blob(
@@ -123,15 +123,7 @@ def coco_data_load_job():
         data_util.DataSourceCase.kObjectLabel,
         shape=(64,),
         dtype=flow.int32,
-        variable_length_axes=(0,),
-        is_dynamic=True,
-    )
-    data_loader.add_blob(
-        "gt_segm",
-        data_util.DataSourceCase.kObjectSegmentation,
-        shape=(64, 2, 256, 2),
-        dtype=flow.double,
-        variable_length_axes=(0, 1, 2),
+        tensor_list_variable_axis=0,
         is_dynamic=True,
     )
     data_loader.add_blob(
@@ -139,7 +131,7 @@ def coco_data_load_job():
         data_util.DataSourceCase.kObjectSegmentationAlignedMask,
         shape=(64, 1344, 800),
         dtype=flow.int8,
-        variable_length_axes=(0,),
+        tensor_list_variable_axis=0,
         is_dynamic=True,
     )
     data_loader.add_transform(flow.data.TargetResizeTransform(800, 1333))

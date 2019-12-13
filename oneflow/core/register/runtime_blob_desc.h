@@ -13,12 +13,12 @@ class RtBlobDesc final {
   RtBlobDesc() = delete;
   ~RtBlobDesc() = default;
 
-  RtBlobDesc(const BlobDesc&);
-  RtBlobDesc(const BlobDescProto&);
+  explicit RtBlobDesc(const BlobDesc& blob_desc);
+  explicit RtBlobDesc(const BlobDescProto& blob_desc_proto);
 
   const StructPodDesc& header_pod_desc() const { return header_; }
   bool is_body_disabled() const { return is_body_disabled_; }
-  int64_t num_of_lod_levels() const { return num_of_lod_levels_; }
+  int64_t is_tensor_list() const { return is_tensor_list_; }
   bool is_dynamic() const { return is_dynamic_; }
   bool header_is_opaque() const { return header_is_opaque_; }
 
@@ -40,7 +40,7 @@ class RtBlobDesc final {
 
   TensorPodDesc body_;
   StructPodDesc header_;
-  int64_t num_of_lod_levels_;
+  bool is_tensor_list_;
   bool is_body_disabled_;
   bool is_dynamic_;
   bool header_is_opaque_;

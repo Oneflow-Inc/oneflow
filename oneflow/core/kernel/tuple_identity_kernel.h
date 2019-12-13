@@ -14,9 +14,10 @@ class TupleIdentityKernel final : public KernelIf<device_type> {
   ~TupleIdentityKernel() = default;
 
  private:
+  void ForwardHeader(const KernelCtx& ctx,
+                     std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   void ForwardDataContent(const KernelCtx&,
                           std::function<Blob*(const std::string&)>) const override;
-  void ForwardLoD(const KernelCtx&, std::function<Blob*(const std::string&)>) const override;
 };
 
 }  // namespace oneflow

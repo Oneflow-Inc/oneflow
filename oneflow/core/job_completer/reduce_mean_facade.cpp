@@ -27,11 +27,12 @@ void GenerateFacadeImplOpConf(const OpNode& op_node, JobBuilder* job_builder) {
   auto* reduce_sum_conf = reduce_sum_op_conf.mutable_reduce_sum_conf();
   reduce_sum_conf->set_in(reduce_mean_conf.in());
   *reduce_sum_conf->mutable_axis() = reduce_mean_conf.axis();
+  reduce_sum_conf->set_keep_dims(reduce_mean_conf.keep_dims());
   reduce_sum_conf->set_out("out");
   job_builder->MutOpsOnlyOnce({reduce_sum_op_conf});
 
   const auto& in_blob = op_node.LogicalBlobDesc4Lbi(GenLogicalBlobId(reduce_mean_conf.in()));
-  CHECK_EQ(in_blob.num_of_lod_levels(), 0);
+  CHECK_EQ(in_blob.is_tensor_list(), false);
   std::string out_lbi;
   if (in_blob.is_dynamic()) {  // TODO: && in_blob.has_instance_shape()
     OperatorConf partial_elem_cnt_op_conf;

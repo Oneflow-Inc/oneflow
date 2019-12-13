@@ -2,6 +2,7 @@
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/register/register_manager.h"
 #include "oneflow/core/kernel/kernel.h"
+#include "oneflow/core/memory/memory_case.pb.h"
 
 namespace oneflow {
 

@@ -102,10 +102,9 @@ Maybe<bool> JobBuildAndInferCtx_DisableBoxing(const std::string& job_name, const
   return ctx->DisableBoxing(lbn);
 }
 
-Maybe<long long> JobBuildAndInferCtx_GetNumOfLoDLevels(const std::string& job_name,
-                                                       const std::string& lbn) {
+Maybe<bool> JobBuildAndInferCtx_IsTensorList(const std::string& job_name, const std::string& lbn) {
   auto* ctx = JUST(Global<JobBuildAndInferCtxMgr>::Get()->FindJobBuildAndInferCtx(job_name));
-  return ctx->GetNumOfLoDLevels(lbn);
+  return ctx->IsTensorList(lbn);
 }
 
 Maybe<std::string> JobBuildAndInferCtx_GetBatchAxis(const std::string& job_name,
@@ -168,10 +167,10 @@ Maybe<bool> JobBuildAndInferCtx_MirrorBlobIsDynamic(const std::string& job_name,
   return ctx->MirrorBlobIsDynamic(lbn);
 }
 
-Maybe<long long> JobBuildAndInferCtx_MirrorBlobGetNumOfLoDLevels(const std::string& job_name,
-                                                                 const std::string& lbn) {
+Maybe<bool> JobBuildAndInferCtx_MirrorBlobIsTensorList(const std::string& job_name,
+                                                       const std::string& lbn) {
   auto* ctx = JUST(Global<JobBuildAndInferCtxMgr>::Get()->FindJobBuildAndInferCtx(job_name));
-  return ctx->MirrorBlobGetNumOfLoDLevels(lbn);
+  return ctx->MirrorBlobIsTensorList(lbn);
 }
 
 Maybe<std::string> JobBuildAndInferCtx_MirrorBlobGetBatchAxis(const std::string& job_name,

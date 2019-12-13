@@ -14,10 +14,6 @@ class StackKernel final : public KernelIf<device_type> {
                           std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
     Blob* out_blob = BnInOp2Blob("out");
     int64_t axis = this->op_conf().stack_conf().axis();
-    // const int64_t lod_levels = out_blob->blob_desc().num_of_lod_levels();
-    // if (lod_levels > 1) {
-    //   axis -= lod_levels - 1;
-    // }
     const int64_t out_cols = out_blob->shape().Count(axis);
     const int64_t rows = out_blob->shape().elem_cnt() / out_cols;
     CHECK_GT(rows, 0);

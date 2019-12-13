@@ -23,8 +23,11 @@ def variable_getter(fn):
 @contextmanager
 def CurJobConf(job_conf):
     _ResetCurJobConf(job_conf)
-    yield None
-    _ResetCurJobConf(None)
+    try:
+        yield None
+    finally:
+        _ResetCurJobConf(None)
+
 
 
 class BeforeNonInputOpBuildAndInferHook:
@@ -129,7 +132,6 @@ def _get_variable_prefix():
         return ""
 
     return "-".join(cur_job_variable_scope_stack) + "-"
-
 
 def _get_distribution_prefix(op_conf):
     global cur_job_distribution_name_scope
