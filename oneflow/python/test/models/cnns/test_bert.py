@@ -112,22 +112,22 @@ def PretrainJob():
     flow.config.train.model_update_conf(_BERT_MODEL_UPDATE_CONF)
     flow.config.train.weight_l2(FLAGS.weight_l2)
     flow.config.enable_inplace(False)
-
-    loss = BuildPreTrainNet(
-        batch_size=FLAGS.batch_size,
-        data_part_num=FLAGS.data_part_num,
-        seq_length=FLAGS.seq_length,
-        max_position_embeddings=FLAGS.max_position_embeddings,
-        num_hidden_layers=FLAGS.num_hidden_layers,
-        num_attention_heads=FLAGS.num_attention_heads,
-        hidden_dropout_prob=FLAGS.hidden_dropout_prob,
-        attention_probs_dropout_prob=FLAGS.attention_probs_dropout_prob,
-        vocab_size=FLAGS.vocab_size,
-        type_vocab_size=FLAGS.type_vocab_size,
-        max_predictions_per_seq=FLAGS.max_predictions_per_seq,
-    )
-    flow.losses.add_loss(loss)
-    return loss
+    with flow.distribute.consistent_strategy():
+        loss = BuildPreTrainNet(
+            batch_size=FLAGS.batch_size,
+            data_part_num=FLAGS.data_part_num,
+            seq_length=FLAGS.seq_length,
+            max_position_embeddings=FLAGS.max_position_embeddings,
+            num_hidden_layers=FLAGS.num_hidden_layers,
+            num_attention_heads=FLAGS.num_attention_heads,
+            hidden_dropout_prob=FLAGS.hidden_dropout_prob,
+            attention_probs_dropout_prob=FLAGS.attention_probs_dropout_prob,
+            vocab_size=FLAGS.vocab_size,
+            type_vocab_size=FLAGS.type_vocab_size,
+            max_predictions_per_seq=FLAGS.max_predictions_per_seq,
+        )
+        flow.losses.add_loss(loss)
+        return loss
 
 def test_1n1c(test_case):
     flow.config.gpu_device_num(1)

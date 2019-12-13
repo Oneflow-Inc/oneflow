@@ -274,16 +274,17 @@ def main(args):
     def TrainNet():
         flow.config.train.primary_lr(0.0032)
         flow.config.train.model_update_conf(dict(naive_conf={}))
-
-        _set_trainable(True)
-        loss = resnet50(args, args.train_dir)
-        flow.losses.add_loss(loss)
-        return loss
+        with flow.distribute.consistent_strategy():
+            _set_trainable(True)
+            loss = resnet50(args, args.train_dir)
+            flow.losses.add_loss(loss)
+            return loss
 
     @flow.function
     def evaluate():
-        _set_trainable(False)
-        return resnet50(args, args.eval_dir)
+        with flow.distribute.consistent_strategy():
+            _set_trainable(False)
+            return resnet50(args, args.eval_dir)
 
     flow.config.default_data_type(flow.float)
     flow.config.machine_num(args.num_nodes)
