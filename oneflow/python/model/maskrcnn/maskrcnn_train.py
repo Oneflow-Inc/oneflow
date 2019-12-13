@@ -521,7 +521,7 @@ def run():
                     i,
                     terminal_args.batch_size,
                     terminal_args.gpu_num_per_node,
-                    terminal_args.image_dir,
+                    config.DATASETS.IMAGE_DIR_TRAIN,
                     str(datetime.now().strftime("%Y-%m-%d--%H-%M-%S")),
                 )
                 metrics.to_csv(npy_file_name, index=False)

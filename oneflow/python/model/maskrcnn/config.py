@@ -233,56 +233,56 @@ _C.DECODER.FEATURE_MAP_STRIDE = 4
 _C.DECODER.ASPECT_RATIOS = [0.5, 1.0, 2.0]
 _C.DECODER.ANCHOR_SCALES = 32
 
-_C.BACKBONE = CN()
-_C.BACKBONE.CONV_BODY = "R-50-FPN"
-_C.BACKBONE.FREEZE_CONV_BODY_AT = 2
-_C.BACKBONE.RESNET_STEM_OUT_CHANNELS = 64
+# _C.BACKBONE = CN()
+# _C.BACKBONE.CONV_BODY = "R-50-FPN"
+# _C.BACKBONE.FREEZE_CONV_BODY_AT = 2
+# _C.BACKBONE.RESNET_STEM_OUT_CHANNELS = 64
 
-_C.RPN = CN()
-_C.RPN.RPN_HEAD = "SingleConvRPNHead"
+# _C.RPN = CN()
+# _C.RPN.RPN_HEAD = "SingleConvRPNHead"
 
-# Anchor targets params
-_C.RPN.POSITIVE_OVERLAP_THRESHOLD = 0.7
-_C.RPN.NEGATIVE_OVERLAP_THRESHOLD = 0.3
-_C.RPN.SUBSAMPLE_NUM_PER_IMG = 256
-_C.RPN.FOREGROUND_FRACTION = 0.5
-_C.RPN.WEIGHT_X = 1.0
-_C.RPN.WEIGHT_Y = 1.0
-_C.RPN.WEIGHT_W = 1.0
-_C.RPN.WEIGHT_H = 1.0
-_C.RPN.RANDOM_SUBSAMPLE = False
+# # Anchor targets params
+# _C.RPN.POSITIVE_OVERLAP_THRESHOLD = 0.7
+# _C.RPN.NEGATIVE_OVERLAP_THRESHOLD = 0.3
+# _C.RPN.SUBSAMPLE_NUM_PER_IMG = 256
+# _C.RPN.FOREGROUND_FRACTION = 0.5
+# _C.RPN.WEIGHT_X = 1.0
+# _C.RPN.WEIGHT_Y = 1.0
+# _C.RPN.WEIGHT_W = 1.0
+# _C.RPN.WEIGHT_H = 1.0
+# _C.RPN.RANDOM_SUBSAMPLE = False
 
-# RPN post processor
-_C.RPN.TOP_N_PER_FM_TRAIN = 2000
-_C.RPN.NMS_TOP_N_TRAIN = 2000
-_C.RPN.TOP_N_PER_IMG_TRAIN = 1000
-_C.RPN.TOP_N_PER_FM_TEST = 2000
-_C.RPN.NMS_TOP_N_TEST = 2000
-_C.RPN.TOP_N_PER_IMG_TEST = 2000
-_C.RPN.NMS_THRESH = 0.7
+# # RPN post processor
+# _C.RPN.TOP_N_PER_FM_TRAIN = 2000
+# _C.RPN.NMS_TOP_N_TRAIN = 2000
+# _C.RPN.TOP_N_PER_IMG_TRAIN = 1000
+# _C.RPN.TOP_N_PER_FM_TEST = 2000
+# _C.RPN.NMS_TOP_N_TEST = 2000
+# _C.RPN.TOP_N_PER_IMG_TEST = 2000
+# _C.RPN.NMS_THRESH = 0.7
 
-_C.BOX_HEAD = CN()
-_C.BOX_HEAD.FOREGROUND_THRESHOLD = 0.5
-_C.BOX_HEAD.BACKGROUND_THRESHOLD_LOW = 0.0
-_C.BOX_HEAD.BACKGROUND_THRESHOLD_HIGH = 0.5
-_C.BOX_HEAD.FOREGROUND_FRACTION = 0.25
-_C.BOX_HEAD.WEIGHT_X = 10.0
-_C.BOX_HEAD.WEIGHT_Y = 10.0
-_C.BOX_HEAD.WEIGHT_W = 5.0
-_C.BOX_HEAD.WEIGHT_H = 5.0
-_C.BOX_HEAD.NUM_CLASSES = 81
-_C.BOX_HEAD.NUM_SAMPLED_ROI_PER_IMG = 512
-_C.BOX_HEAD.POOLED_H = 7
-_C.BOX_HEAD.POOLED_W = 7
-_C.BOX_HEAD.SPATIAL_SCALE = 0.25
-_C.BOX_HEAD.SAMPLING_RATIO = 2
-_C.BOX_HEAD.RANDOM_SUBSAMPLE = False
+# _C.BOX_HEAD = CN()
+# _C.BOX_HEAD.FOREGROUND_THRESHOLD = 0.5
+# _C.BOX_HEAD.BACKGROUND_THRESHOLD_LOW = 0.0
+# _C.BOX_HEAD.BACKGROUND_THRESHOLD_HIGH = 0.5
+# _C.BOX_HEAD.FOREGROUND_FRACTION = 0.25
+# _C.BOX_HEAD.WEIGHT_X = 10.0
+# _C.BOX_HEAD.WEIGHT_Y = 10.0
+# _C.BOX_HEAD.WEIGHT_W = 5.0
+# _C.BOX_HEAD.WEIGHT_H = 5.0
+# _C.BOX_HEAD.NUM_CLASSES = 81
+# _C.BOX_HEAD.NUM_SAMPLED_ROI_PER_IMG = 512
+# _C.BOX_HEAD.POOLED_H = 7
+# _C.BOX_HEAD.POOLED_W = 7
+# _C.BOX_HEAD.SPATIAL_SCALE = 0.25
+# _C.BOX_HEAD.SAMPLING_RATIO = 2
+# _C.BOX_HEAD.RANDOM_SUBSAMPLE = False
 
-_C.MASK_HEAD = CN()
-_C.MASK_HEAD.POOLED_H = 14
-_C.MASK_HEAD.POOLED_W = 14
-_C.MASK_HEAD.SAMPLING_RATIO = 2
-_C.MASK_HEAD.SPATIAL_SCALE = 0.25
+# _C.MASK_HEAD = CN()
+# _C.MASK_HEAD.POOLED_H = 14
+# _C.MASK_HEAD.POOLED_W = 14
+# _C.MASK_HEAD.SAMPLING_RATIO = 2
+# _C.MASK_HEAD.SPATIAL_SCALE = 0.25
 
 
 def get_default_cfgs():
@@ -362,11 +362,13 @@ def check_compatibility(d1, d2):
 
 if __name__ == "__main__":
     import torch_config
-    (d1_diff, d2_diff, d1_only, d2_only) = check_compatibility(_C, torch_config._C)
-    print("d1_diff:\n{}\n".format(d1_diff))
+    torch_cfg = torch_config._C.clone()
+    # torch_cfg.merge_from_file("/home/zhangwenxiao/repos/maskrcnn-benchmark/golden_standard/1-card.yaml")
+    (d1_diff, d2_diff, d1_only, d2_only) = check_compatibility(_C, torch_cfg)
+    print("oneflow diff:\n{}\n".format(d1_diff))
     
-    print("d2_diff:\n{}\n".format(d2_diff))
+    print("pytorch diff:\n{}\n".format(d2_diff))
 
-    print("d1_only:\n{}\n".format("\n".join(d1_only)))
+    print("oneflow only:\n{}\n".format("\n".join(d1_only)))
 
-    print("d2_only:\n{}\n".format("\n".join(d2_only)))
+    print("pytorch only:\n{}\n".format("\n".join(d2_only)))
