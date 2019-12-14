@@ -221,6 +221,7 @@ def set_train_config(cfg):
     flow.config.cudnn_conv_use_deterministic_algo_only(
         cfg.ENV.CUDNN_CONV_USE_DETERMINISTIC_ALGO_ONLY
     )
+    assert cfg.MODEL.WEIGHT
     flow.config.default_initialize_with_snapshot_path(cfg.MODEL.WEIGHT)
     flow.config.train.primary_lr(cfg.SOLVER.BASE_LR)
     flow.config.train.secondary_lr(
