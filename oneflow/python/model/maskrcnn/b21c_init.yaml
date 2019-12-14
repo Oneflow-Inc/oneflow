@@ -1,0 +1,21 @@
+ENV:
+  NUM_GPUS: 1
+DATASETS:
+  ANNOTATION_TRAIN: "annotations/instances_val2017.json"
+  IMAGE_DIR_TRAIN: "val2017"
+  SHUFFLE: False
+INPUT:
+  MIRROR_PROB: 0.0
+MODEL:
+  WEIGHT: "/model_zoo/detection/mask_rcnn_R_50_FPN_1x_init"
+  RPN:
+    RANDOM_SAMPLE: False
+  ROI_HEADS:
+    RANDOM_SAMPLE: False
+SOLVER:
+  IMS_PER_BATCH: 2
+  MAX_ITER: 10
+  BASE_LR: 0.0025
+  ENABLE_LR_DECAY: False
+  ENABLE_WARMUP: False
+  METRICS_PERIOD: 10
