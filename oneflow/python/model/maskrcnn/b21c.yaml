@@ -5,7 +5,7 @@ DATASETS:
   IMAGE_DIR_TRAIN: "val2017"
   SHUFFLE: False
 INPUT:
-  MIRROR_PROB: 0.5
+  MIRROR_PROB: 0.0
 MODEL:
   WEIGHT: "/model_zoo/detection/mask_rcnn_R_50_FPN_1x_with_momentum"
   RPN:

@@ -171,7 +171,7 @@ _C.MODEL.ROI_MASK_HEAD.POOLER_RESOLUTION = 14
 _C.MODEL.ROI_MASK_HEAD.POOLER_SAMPLING_RATIO = 2
 _C.MODEL.ROI_MASK_HEAD.POOLER_SCALES = (0.25, 0.125, 0.0625, 0.03125)
 _C.MODEL.ROI_MASK_HEAD.CONV_LAYERS = (256, 256, 256, 256)
-#_C.MODEL.ROI_MASK_HEAD.RESOLUTION = 28
+# _C.MODEL.ROI_MASK_HEAD.RESOLUTION = 28
 
 # Dilation
 _C.MODEL.ROI_MASK_HEAD.DILATION = 1
@@ -216,12 +216,19 @@ _C.SOLVER.WARMUP_METHOD = "linear"
 _C.SOLVER.ENABLE_WARMUP = True
 
 _C.SOLVER.CHECKPOINT_PERIOD = 0
+_C.SOLVER.METRICS_PERIOD = 0
 
 # Number of images per batch
 # This is global, so if we have 8 GPUs and IMS_PER_BATCH = 16, each GPU will
 # see 2 images per batch
 _C.SOLVER.IMS_PER_BATCH = 2
 _C.SOLVER.BATCH_SIZE = 8
+
+# ---------------------------------------------------------------------------- #
+# Precision options
+# ---------------------------------------------------------------------------- #
+# Precision of input, allowable: (float32, float16)
+_C.DTYPE = "float32"
 
 # ---------------------------------------------------------------------------- #
 #  deprecated config
@@ -303,6 +310,7 @@ def update_by_path(node, path, value):
                 node[key] = CN()
             node = node[key]
 
+
 def get_sub_path(path, k):
     sub_path = None
     if path == []:
@@ -311,19 +319,29 @@ def get_sub_path(path, k):
         sub_path = path + [k]
     return sub_path
 
-def compare_config(d1, d2, path=None, d1_diff=None, d2_diff=None, d1_only=None, d2_only=None, identitcal_structure=True):
+
+def compare_config(
+    d1,
+    d2,
+    path=None,
+    d1_diff=None,
+    d2_diff=None,
+    d1_only=None,
+    d2_only=None,
+    identitcal_structure=True,
+):
     if d1_diff is None:
-        assert(path is None)
+        assert path is None
         d1_diff = CN()
     if d2_diff is None:
-        assert(path is None)
+        assert path is None
         d2_diff = CN()
     if identitcal_structure is False:
         if d1_only is None:
-            assert(path is None)
+            assert path is None
             d1_only = set()
         if d2_only is None:
-            assert(path is None)
+            assert path is None
             d2_only = set()
     if path is None:
         path = []
@@ -332,7 +350,16 @@ def compare_config(d1, d2, path=None, d1_diff=None, d2_diff=None, d1_only=None, 
         assert sub_path is not None
         if k in d2:
             if type(d1[k]) is CN:
-                compare_config(d1[k], d2[k], sub_path, d1_diff, d2_diff, d1_only, d2_only, identitcal_structure=identitcal_structure)
+                compare_config(
+                    d1[k],
+                    d2[k],
+                    sub_path,
+                    d1_diff,
+                    d2_diff,
+                    d1_only,
+                    d2_only,
+                    identitcal_structure=identitcal_structure,
+                )
             else:
                 if d1[k] != d2[k]:
                     print("{}:".format(".".join(path)))
@@ -357,18 +384,18 @@ def compare_config(d1, d2, path=None, d1_diff=None, d2_diff=None, d1_only=None, 
     else:
         return (d1_diff, d2_diff, d1_only, d2_only)
 
+
 def check_compatibility(d1, d2):
     return compare_config(d1, d2, identitcal_structure=False)
 
+
 if __name__ == "__main__":
     import torch_config
+
     torch_cfg = torch_config._C.clone()
     # torch_cfg.merge_from_file("/home/zhangwenxiao/repos/maskrcnn-benchmark/golden_standard/1-card.yaml")
     (d1_diff, d2_diff, d1_only, d2_only) = check_compatibility(_C, torch_cfg)
     print("oneflow diff:\n{}\n".format(d1_diff))
-    
     print("pytorch diff:\n{}\n".format(d2_diff))
-
     print("oneflow only:\n{}\n".format("\n".join(d1_only)))
-
     print("pytorch only:\n{}\n".format("\n".join(d2_only)))
