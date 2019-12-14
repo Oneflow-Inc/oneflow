@@ -538,7 +538,9 @@ Graph<NodeType, EdgeType>::MakePredicatorIsReachable(
     });
   });
   return [node2ancestor](const NodeType* src, const NodeType* dst) -> bool {
-    return node2ancestor->at(dst).find(src) != node2ancestor->at(dst).end();
+    const auto it = node2ancestor->find(dst);
+    if (it == node2ancestor->end()) { return false; }
+    return it->second.find(src) != it->second.end();
   };
 }
 
