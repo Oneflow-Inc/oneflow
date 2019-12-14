@@ -180,7 +180,7 @@ def maskrcnn_train(cfg, image, image_size, gt_bbox, gt_segm, gt_label):
     }
 
 
-def merge_args_to_train_config(args):
+def merge_and_compare_config(args):
     config = get_default_cfgs()
 
     if hasattr(args, "config_file"):
@@ -213,7 +213,7 @@ def merge_args_to_train_config(args):
     return config
 
 
-def set_config(cfg):
+def set_train_config(cfg):
     flow.config.cudnn_buf_limit_mbyte(cfg.ENV.CUDNN_BUFFER_SIZE_LIMIT)
     flow.config.cudnn_conv_heuristic_search_algo(
         cfg.ENV.CUDNN_CONV_HEURISTIC_SEARCH_ALGO
@@ -341,7 +341,7 @@ def init_train_func(config, input_fake_image):
                 shape=(2, 800, 1344, 3), dtype=flow.float32, is_dynamic=True
             )
         ):
-            set_config(config)
+            set_train_config(config)
             return train_net(config, image_blob)
 
         return train
@@ -350,7 +350,7 @@ def init_train_func(config, input_fake_image):
 
         @flow.function
         def train():
-            set_config(config)
+            set_train_config(config)
             return train_net(config)
 
         return train
@@ -506,7 +506,7 @@ def run():
         ]
 
     # Get mrcn train function
-    config = merge_args_to_train_config(terminal_args)
+    config = merge_and_compare_config(terminal_args)
     train_func = init_train_func(config, len(fake_image_list) > 0)
 
     # model init
