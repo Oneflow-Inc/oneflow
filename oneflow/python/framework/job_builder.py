@@ -18,12 +18,6 @@ def GetCurCtxJobName():
 def CurCtxCheckJob():
     c_api_util.CurJobBuildAndInferCtx_CheckJob()
 
-def CurCtxSetJobConfIfNotSet(job_config_proto):
-    global job_conf_inited
-    if job_conf_inited == False:
-        c_api_util.CurJobBuildAndInferCtx_SetJobConf(job_config_proto)
-        job_conf_inited = True
-
 def CurCtxAddAndInferOp(op_conf_proto, parallel_conf_proto):
     return c_api_util.CurJobBuildAndInferCtx_AddAndInferOp(op_conf_proto, parallel_conf_proto)
 
@@ -55,8 +49,4 @@ def _Open(job_name):
     return c_api_util.JobBuildAndInferCtx_Open(job_name)
 
 def _Close(job_name):
-    global job_conf_inited
-    job_conf_inited = False
     return c_api_util.JobBuildAndInferCtx_Close()
-
-job_conf_inited = False

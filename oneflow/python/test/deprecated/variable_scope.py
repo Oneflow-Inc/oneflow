@@ -1,8 +1,6 @@
 import oneflow as of
 import numpy as np
 
-flow.config.gpu_device_num(1)
-
 @flow.function
 def variable_scope_test_job_1(a=of.input_blob_def((1, 3, 6, 6))):
     with of.deprecated.variable_scope("job1_scope1"):

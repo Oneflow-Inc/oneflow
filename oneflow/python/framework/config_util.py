@@ -8,9 +8,6 @@ import oneflow.python.framework.c_api_util as c_api_util
 from oneflow.python.oneflow_export import oneflow_export
 import oneflow.python.lib.core.pb_util as pb_util
 
-def TryCompleteDefaultJobConfigProto(job_conf):
-    _TryCompleteDefaultJobConfigProto(job_conf)
-
 def _TryCompleteDefaultConfigProto(config):
     _DefaultConfigResource(config)
     _DefaultConfigIO(config)
@@ -26,10 +23,6 @@ def _DefaultConfigIO(config):
         io_conf.data_fs_conf.localfs_conf.SetInParent()
     if io_conf.snapshot_fs_conf.WhichOneof("fs_type") == None:
         io_conf.snapshot_fs_conf.localfs_conf.SetInParent()
-
-def _TryCompleteDefaultJobConfigProto(job_conf):
-    if job_conf.WhichOneof("job_type") is None:
-        job_conf.predict_conf.SetInParent()
 
 def _DefaultConfigProto():
     config_proto = job_set_pb.ConfigProto()
