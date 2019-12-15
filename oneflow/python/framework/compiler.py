@@ -19,15 +19,19 @@ from oneflow.python.oneflow_export import oneflow_export
 def Compile(function_desc, config_proto):
     job_conf = function_desc.job_config_proto
     job_conf.job_name = function_desc.job_func.__name__
+    placement_scope = function_desc.function_attribute.default_placement_scope
+    if placement_scope is None:
+        dev_ids = placement_util.GetDefaultMachineDeviceIds(config_proto.resource)
+        placement_scope = placement_util.DevicePriorPlacementScope(*dev_ids)
+
     compile_context.ResetCurJobContext()
     with job_builder.JobBuildAndInferCtx(job_conf.job_name):
         c_api_util.CurJobBuildAndInferCtx_SetJobConf(job_conf)
-        _CompileJob(function_desc.job_func, config_proto)
+        _CompileJob(function_desc.job_func, placement_scope)
 
-def _CompileJob(func, config):
-    device_type, machine_dev_ids = placement_util.GetDefaultMachineDeviceIds(config.resource)
+def _CompileJob(func, placement_scope):
     func.__oneflow_input_blob_defs__ = _GetArgDefault(func)
-    with placement_util.DevicePriorPlacementScope(device_type, machine_dev_ids):
+    with placement_scope:
         inputs = _AddAndInferInputOps(func)
         func.__oneflow_output_remote_blobs__ = _RecursiveMakeRetRemoteBlobs(func(*inputs))
 

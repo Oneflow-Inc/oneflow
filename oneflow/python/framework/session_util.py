@@ -23,9 +23,13 @@ class Session(object):
         self.running_job_cnt_ = 0
         self.inter_user_job_info_ = None
         self.config_proto_ = _GetDefaultConfigProto()
+        self.placement_scope_stack_ = []
 
     @property
     def config_proto(self): return self.config_proto_
+
+    @property
+    def placement_scope_stack(self): return self.placement_scope_stack_
 
     @property
     def is_running(self): return self.status_ is SessionStatus.RUNNING

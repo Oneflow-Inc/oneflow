@@ -3,7 +3,8 @@ from __future__ import absolute_import
 import oneflow.core.job.job_pb2 as job_util
 
 class FunctionAttribute(object):
-  pass
+  def __init__(self):
+      self.default_placement_scope = None
 
 class FunctionDesc(object):
     def __init__(self, job_func=None, job_config_proto=None, function_attribute=None):

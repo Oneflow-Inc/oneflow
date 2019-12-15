@@ -7,6 +7,7 @@ import oneflow.core.job.job_pb2 as job_util
 import oneflow.python.framework.session_context as session_ctx
 from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.framework.function_desc import FunctionDesc
+import oneflow.python.framework.placement_context as placement_ctx
 import oneflow.python.lib.core.pb_util as pb_util
 
 @oneflow_export('function_config')
@@ -246,3 +247,9 @@ def set_weight_l2(func_desc, value):
 @oneflow_function_config('train.bias_l2')
 def set_bias_l2(func_desc, value):
     func_desc.job_config_proto.train_conf.bias_l2 = value
+
+@oneflow_function_config('default_placement_scope')
+def set_default_placement(func_desc, value):
+    assert isinstance(value, placement_ctx.PlacementScope)
+    func_desc.function_attribute.default_placement_scope = value
+
