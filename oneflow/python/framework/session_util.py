@@ -3,6 +3,7 @@ from __future__ import absolute_import
 import threading
 from oneflow.core.job.job_set_pb2 import ConfigProto
 import oneflow.core.job.job_pb2 as job_util
+import oneflow.core.job.job_set_pb2 as job_set_util
 import oneflow.python.framework.session_context as session_ctx
 from oneflow.python.framework.session_context import SessionStatus
 import oneflow.python.framework.compiler as compiler
@@ -21,6 +22,13 @@ class Session(object):
         self.cond_var_ = threading.Condition()
         self.running_job_cnt_ = 0
         self.inter_user_job_info_ = None
+        self.config_proto_ = _GetDefaultConfigProto()
+
+    @property
+    def config_proto(self): return self.config_proto_
+
+    @property
+    def is_running(self): return self.status_ is SessionStatus.RUNNING
 
     @property
     def inter_user_job_info(self): return self.inter_user_job_info_
@@ -35,9 +43,9 @@ class Session(object):
     def Init(self):
         assert self.status_ is SessionStatus.OPEN
         _TryInitEnv()
-        c_api_util.InitGlobalSession(_GetConfigProto())
+        c_api_util.InitGlobalSession(self.config_proto_)
         for job_name, func_desc in self.job_name2function_desc_.items():
-            compiler.Compile(func_desc)
+            compiler.Compile(func_desc, self.config_proto_)
         c_api_util.StartGlobalSession()
         self.inter_user_job_info_ = c_api_util.GetInterUserJobInfo()
         self.status_ = SessionStatus.RUNNING
@@ -119,11 +127,12 @@ def clear_default_session():
 def _MakePushCallback(ndarray):
     return lambda ofblob: ofblob.CopyFromNdarray(ndarray)
 
-def _GetConfigProto():
-    config_proto = config_util.default_config_proto
-    if config_proto.resource.machine_num <= 0:
-      config_proto.resource.machine_num = \
-          len(env_util.default_env_proto.machine)
+def _GetDefaultConfigProto():
+    config_proto = job_set_util.ConfigProto()
+    config_proto.resource.machine_num = len(env_util.default_env_proto.machine)
+    config_proto.resource.gpu_device_num = 1
+    config_proto.io_conf.data_fs_conf.localfs_conf.SetInParent()
+    config_proto.io_conf.snapshot_fs_conf.localfs_conf.SetInParent()
     return config_proto
 
 def _TryInitEnv():

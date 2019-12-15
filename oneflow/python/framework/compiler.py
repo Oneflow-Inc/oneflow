@@ -6,7 +6,6 @@ import oneflow.python.lib.core.pb_util as pb_util
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.compile_context as compile_context
 import oneflow.python.framework.placement_util as placement_util
-import oneflow.python.framework.config_util as config_util
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.input_blob_def as input_blob_def
 import oneflow.python.framework.job_builder as job_builder
@@ -17,13 +16,13 @@ from contextlib import contextmanager
 
 from oneflow.python.oneflow_export import oneflow_export
 
-def Compile(function_desc):
+def Compile(function_desc, config_proto):
     job_conf = function_desc.job_config_proto
     job_conf.job_name = function_desc.job_func.__name__
     compile_context.ResetCurJobContext()
     with job_builder.JobBuildAndInferCtx(job_conf.job_name):
         c_api_util.CurJobBuildAndInferCtx_SetJobConf(job_conf)
-        _CompileJob(function_desc.job_func, config_util.default_config_proto)
+        _CompileJob(function_desc.job_func, config_proto)
 
 def _CompileJob(func, config):
     device_type, machine_dev_ids = placement_util.GetDefaultMachineDeviceIds(config.resource)
