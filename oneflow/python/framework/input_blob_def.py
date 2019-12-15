@@ -105,54 +105,6 @@ class InputBlobDef(blob_desc.BlobDesc):
             pass
         return interface_blob_conf
 
-    def __add__(self, rhs):
-        return oneflow.math.add(self, rhs)
-
-    def __radd__(self, lhs):
-        return oneflow.math.add(lhs, self)
-
-    def __sub__(self, rhs):
-        return oneflow.math.subtract(self, rhs)
-
-    def __rsub__(self, lhs):
-        return oneflow.math.subtract(lhs, self)
-
-    def __mul__(self, rhs):
-        return oneflow.math.multiply(self, rhs)
-
-    def __rmul__(self, lhs):
-        return oneflow.math.multiply(lhs, self)
-
-    def __mul__(self, rhs):
-        return oneflow.math.multiply(self, rhs)
-
-    def __rmul__(self, lhs):
-        return oneflow.math.multiply(lhs, self)
-
-    def __truediv__(self, rhs):
-        return oneflow.math.divide(self, rhs)
-
-    def __div__(self, rhs):
-        return oneflow.math.divide(self, rhs)
-
-    def __eq__(self, rhs):
-        return oneflow.math.equal(self, rhs)
-
-    def __ne__(self, rhs):
-        return oneflow.math.not_equal(self, rhs)
-
-    def __lt__(self, rhs):
-        return oneflow.math.less(self, rhs)
-
-    def __le__(self, rhs):
-        return oneflow.math.less_equal(self, rhs)
-
-    def __gt__(self, rhs):
-        return oneflow.math.greater(self, rhs)
-
-    def __ge__(self, rhs):
-        return oneflow.math.greater_equal(self, rhs)
-
     def _CheckDenseNdarray(self, ndarray):
         assert isinstance(ndarray, np.ndarray)
         def GetElemCnt(shape): return reduce(lambda x, y: x * y, shape, 1)
@@ -171,7 +123,7 @@ class ConsistentInpuDef(InputBlobDef):
         InputBlobDef.__init__(self, *args, **kwargs)
 
     def AddAndInferOp(self, op_conf):
-        return compile_context.CurJobAddConsistentInputOp(op_conf)
+        return compile_context.CurJobAddConsistentOp(op_conf)
 
     def AsyncPush(self, session, arg_ndarray):
         session.AsyncPush(self.op_name, _MakePushCallback(arg_ndarray))
@@ -188,7 +140,7 @@ class MirrorInputDef(InputBlobDef):
         self.sub_consistent_blob_list_ = []
 
     def AddAndInferOp(self, op_conf):
-        compile_context.CurJobAddMirrorInputOp(op_conf)
+        compile_context.CurJobAddMirrorOp(op_conf)
         job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
         lbn = self.logical_blob_name
         num_sub_lbi = c_api_util.JobBuildAndInferCtx_MirrorBlobGetNumSubLbi(job_name, lbn)

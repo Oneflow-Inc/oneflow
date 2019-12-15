@@ -12,13 +12,13 @@ from test_util import Save
 def compare_with_tensorflow(device_type, a_shape, b_shape, transpose_a, transpose_b):
     assert device_type in ["gpu", "cpu"]
     flow.clear_default_session()
-    flow.config.gpu_device_num(1)
-    flow.config.default_data_type(flow.float)
+    func_config = flow.function_config(1)
+    func_config.default_data_type(flow.float)
+    func_config.train.primary_lr(1e-4)
+    func_config.train.model_update_conf(dict(naive_conf={}))
 
-    @flow.function
+    @flow.function(func_config)
     def MatmulJob():
-        flow.config.train.primary_lr(1e-4)
-        flow.config.train.model_update_conf(dict(naive_conf={}))
         with flow.device_prior_placement(device_type, "0:0"):
             a = flow.get_variable(
                 "a",

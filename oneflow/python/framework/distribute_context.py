@@ -1,5 +1,8 @@
 from __future__ import absolute_import
 
+class DistributeStrategy(object):
+    pass
+
 def PushMirrorStrategyEnabled(val):
     global _is_mirror_strategy_enabled_stack
     _is_mirror_strategy_enabled_stack.append(val)
