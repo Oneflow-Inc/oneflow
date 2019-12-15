@@ -6,9 +6,9 @@ import oneflow
 import oneflow.python.framework.compile_context as compile_context
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.watcher as watcher_util
-import oneflow.python.framework.job_builder as job_builder
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 from oneflow.core.job.lbi_diff_watcher_info_pb2 import LbiAndDiffWatcherUuidPair
+import oneflow.python.framework.c_api_util as c_api_util
 
 from oneflow.python.oneflow_export import oneflow_export
 
@@ -40,5 +40,5 @@ def watch_diff(watched, handler = None):
     lbi_and_uuid = LbiAndDiffWatcherUuidPair()
     lbi_and_uuid.lbi.CopyFrom(watched.lbi)
     lbi_and_uuid.watcher_uuid = handler_uuid
-    job_builder.CurCtxAddLbiAndDiffWatcherUuidPair(lbi_and_uuid)
+    c_api_util.CurJobBuildAndInferCtx_AddLbiAndDiffWatcherUuidPair(lbi_and_uuid)
     watcher_util.BindUuidAndHandler(handler_uuid, handler)
