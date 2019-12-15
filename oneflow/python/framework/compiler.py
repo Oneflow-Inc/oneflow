@@ -17,11 +17,11 @@ from contextlib import contextmanager
 
 from oneflow.python.oneflow_export import oneflow_export
 
-def Compile(job_func):
-    job_conf = job_util.JobConfigProto()
-    job_conf.job_name = job_func.__name__
+def Compile(function_desc):
+    job_conf = function_desc.job_config_proto
+    job_conf.job_name = function_desc.job_func.__name__
     with compile_context.CurJobConf(job_conf), job_builder.JobBuildAndInferCtx(job_conf.job_name):
-        _CompileJob(job_conf, job_func, config_util.default_config_proto)
+        _CompileJob(job_conf, function_desc.job_func, config_util.default_config_proto)
         job_builder.CurCtxCheckJob()
 
 def _CompileJob(job_conf, func, config):

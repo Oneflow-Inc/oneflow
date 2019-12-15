@@ -12,10 +12,11 @@ import oneflow.python.framework.env_util as env_util
 import oneflow.python.framework.job_instance as job_instance_util
 from oneflow.python.framework.out_remote_blobs_status import OutRemoteBlobsStatus
 from oneflow.python.oneflow_export import oneflow_export
+from oneflow.python.framework.function_desc import FunctionDesc
 
 class Session(object):
     def __init__(self):
-        self.job_name2job_func_ = {}
+        self.job_name2function_desc_ = {}
         self.status_ = SessionStatus.OPEN
         self.cond_var_ = threading.Condition()
         self.running_job_cnt_ = 0
@@ -35,7 +36,8 @@ class Session(object):
         assert self.status_ is SessionStatus.OPEN
         _TryInitEnv()
         c_api_util.InitGlobalSession(_GetConfigProto())
-        for job_name, job_func in self.job_name2job_func_.items(): compiler.Compile(job_func)
+        for job_name, func_desc in self.job_name2function_desc_.items():
+            compiler.Compile(func_desc)
         c_api_util.StartGlobalSession()
         self.inter_user_job_info_ = c_api_util.GetInterUserJobInfo()
         self.status_ = SessionStatus.RUNNING
@@ -51,9 +53,10 @@ class Session(object):
         c_api_util.DestroyGlobalSession()
         self.status_ = SessionStatus.CLOSED
 
-    def AddJob(self, job_func):
+    def AddJob(self, function_desc):
         assert self.status_ is SessionStatus.OPEN
-        self.job_name2job_func_[job_func.__name__] = job_func
+        assert isinstance(function_desc, FunctionDesc)
+        self.job_name2function_desc_[function_desc.job_func.__name__] = function_desc
 
     def Sync(self):
         assert self.status_ is SessionStatus.RUNNING
