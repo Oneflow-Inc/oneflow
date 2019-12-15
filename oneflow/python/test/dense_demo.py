@@ -17,9 +17,10 @@ def test_dense(in_shape, units, activation=None, use_bias=True):
     input = np.random.random_sample(in_shape).astype(np.float32) / 10000
 
     # OneFlow
-    @flow.function
+    func_config = flow.function_config()
+    func_config.default_data_type(flow.float)
+    @flow.function(func_config)
     def DenseTestJob(inputs=flow.input_blob_def(in_shape)):
-        flow.config.default_data_type(flow.float)
         return flow.layers.dense(
             inputs=inputs,
             units=units,

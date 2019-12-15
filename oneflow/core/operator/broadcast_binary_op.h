@@ -12,7 +12,6 @@ class BroadcastBinaryOp : public Operator {
   ~BroadcastBinaryOp() override = default;
 
   void InitFromOpConf() override;
-  bool IsAllOutputConst() const override { return GetValFromCustomizedConf<bool>("is_const"); }
   Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                              const ParallelContext* parallel_ctx) const override;
   virtual Maybe<void> VirtualInferBlobDescs(

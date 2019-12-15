@@ -106,32 +106,33 @@ _BERT_MODEL_UPDATE_CONF = dict(
     adam_conf=dict(epsilon=1e-6),
 )
 
-
 def PretrainJob():
-    flow.config.train.primary_lr(FLAGS.lr)
-    flow.config.train.model_update_conf(_BERT_MODEL_UPDATE_CONF)
-    flow.config.train.weight_l2(FLAGS.weight_l2)
-    flow.config.enable_inplace(False)
-    with flow.distribute.consistent_strategy():
-        loss = BuildPreTrainNet(
-            batch_size=FLAGS.batch_size,
-            data_part_num=FLAGS.data_part_num,
-            seq_length=FLAGS.seq_length,
-            max_position_embeddings=FLAGS.max_position_embeddings,
-            num_hidden_layers=FLAGS.num_hidden_layers,
-            num_attention_heads=FLAGS.num_attention_heads,
-            hidden_dropout_prob=FLAGS.hidden_dropout_prob,
-            attention_probs_dropout_prob=FLAGS.attention_probs_dropout_prob,
-            vocab_size=FLAGS.vocab_size,
-            type_vocab_size=FLAGS.type_vocab_size,
-            max_predictions_per_seq=FLAGS.max_predictions_per_seq,
-        )
-        flow.losses.add_loss(loss)
-        return loss
+    loss = BuildPreTrainNet(
+        batch_size=FLAGS.batch_size,
+        data_part_num=FLAGS.data_part_num,
+        seq_length=FLAGS.seq_length,
+        max_position_embeddings=FLAGS.max_position_embeddings,
+        num_hidden_layers=FLAGS.num_hidden_layers,
+        num_attention_heads=FLAGS.num_attention_heads,
+        hidden_dropout_prob=FLAGS.hidden_dropout_prob,
+        attention_probs_dropout_prob=FLAGS.attention_probs_dropout_prob,
+        vocab_size=FLAGS.vocab_size,
+        type_vocab_size=FLAGS.type_vocab_size,
+        max_predictions_per_seq=FLAGS.max_predictions_per_seq,
+    )
+    flow.losses.add_loss(loss)
+    return loss
+
+func_config = flow.function_config()
+func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
+func_config.train.primary_lr(FLAGS.lr)
+func_config.train.model_update_conf(_BERT_MODEL_UPDATE_CONF)
+func_config.train.weight_l2(FLAGS.weight_l2)
+func_config.enable_inplace(False)
 
 def test_1n1c(test_case):
     flow.config.gpu_device_num(1)
-    pretrain_job = flow.function(PretrainJob)
+    pretrain_job = flow.function(func_config)(PretrainJob)
     check_point = flow.train.CheckPoint()
     check_point.load(FLAGS.model_load_dir)
     of_loss = [pretrain_job().get().mean() for _ in range(10)]
@@ -140,7 +141,7 @@ def test_1n1c(test_case):
 
 def test_1n4c(test_case):
     flow.config.gpu_device_num(4)
-    pretrain_job = flow.function(PretrainJob)
+    pretrain_job = flow.function(func_config)(PretrainJob)
     check_point = flow.train.CheckPoint()
     check_point.load(FLAGS.model_load_dir)
     of_loss = [pretrain_job().get().mean() for _ in range(10)]
@@ -149,7 +150,7 @@ def test_1n4c(test_case):
 @flow.unittest.num_nodes_required(2)
 def test_2n8c(test_case):
     flow.config.gpu_device_num(4)
-    pretrain_job = flow.function(PretrainJob)
+    pretrain_job = flow.function(func_config)(PretrainJob)
     check_point = flow.train.CheckPoint()
     check_point.load(FLAGS.model_load_dir)
     of_loss = [pretrain_job().get().mean() for _ in range(10)]

@@ -5,22 +5,24 @@ from contextlib import contextmanager
 import oneflow.python.framework.distribute_context as distribute_ctx
 
 @oneflow_export("distribute.mirror_strategy")
-@contextmanager
-def DistributeMirrorStrategy():
-    distribute_ctx.PushMirrorStrategyEnabled(True)
-    yield
-    distribute_ctx.PophMirrorStrategyEnabled()
+class DistributeMirrorStrategy(distribute_ctx.DistributeStrategy):
+    def __enter__(self, *argc, **kwarg):
+        distribute_ctx.PushMirrorStrategyEnabled(True)
+
+    def __exit__(self, *argc, **kwarg):
+        distribute_ctx.PophMirrorStrategyEnabled()
     
 @oneflow_export("distribute.mirror_strategy_enabled")
 def MirrorStrategyEnabled():
     return distribute_ctx.AnyStrategyEnabled() and distribute_ctx.IsMirrorStrategyEnabled()
 
 @oneflow_export("distribute.consistent_strategy")
-@contextmanager
-def DistributeConsistentStrategy():
-    distribute_ctx.PushMirrorStrategyEnabled(False)
-    yield
-    distribute_ctx.PophMirrorStrategyEnabled()
+class DistributeConsistentStrategy(distribute_ctx.DistributeStrategy):
+    def __enter__(self, *argc, **kwarg):
+        distribute_ctx.PushMirrorStrategyEnabled(False)
+
+    def __exit__(self, *argc, **kwarg):
+        distribute_ctx.PophMirrorStrategyEnabled()
 
 @oneflow_export("distribute.consistent_strategy_enabled")
 def ConsistentStrategyEnabled():

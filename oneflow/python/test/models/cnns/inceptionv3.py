@@ -585,16 +585,17 @@ def InceptionV3(images, labels, trainable=True):
 def main(args):
   flow.config.machine_num(args.num_nodes)
   flow.config.gpu_device_num(args.gpu_num_per_node)
-  flow.config.default_data_type(flow.float)
-  @flow.function
+  func_config = flow.function_config()
+  func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
+  func_config.default_data_type(flow.float)
+  func_config.train.primary_lr(0.0001)
+  func_config.train.model_update_conf(dict(naive_conf={}))
+  @flow.function(func_config)
   def TrainNet():
-      flow.config.train.primary_lr(0.0001)
-      flow.config.train.model_update_conf(dict(naive_conf={}))
-      with flow.distribute.consistent_strategy():
-          (images, labels) = _data_load_layer(args, args.train_dir)
-          loss = InceptionV3(images, labels)
-          flow.losses.add_loss(loss)
-          return loss
+      (images, labels) = _data_load_layer(args, args.train_dir)
+      loss = InceptionV3(images, labels)
+      flow.losses.add_loss(loss)
+      return loss
   check_point = flow.train.CheckPoint()
   if not args.model_load_dir:
     check_point.init()

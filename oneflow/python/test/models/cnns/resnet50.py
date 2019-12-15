@@ -270,25 +270,28 @@ def _set_trainable(trainable):
 
 
 def main(args):
-    @flow.function
-    def TrainNet():
-        flow.config.train.primary_lr(0.0032)
-        flow.config.train.model_update_conf(dict(naive_conf={}))
-        with flow.distribute.consistent_strategy():
-            _set_trainable(True)
-            loss = resnet50(args, args.train_dir)
-            flow.losses.add_loss(loss)
-            return loss
+    flow.config.machine_num(args.num_nodes)
+    flow.config.gpu_device_num(args.gpu_num_per_node)
 
-    @flow.function
+    train_config = flow.function_config()
+    train_config.default_distribute_strategy(flow.distribute.consistent_strategy())
+    train_config.default_data_type(flow.float)
+    train_config.train.primary_lr(0.0032)
+    train_config.train.model_update_conf(dict(naive_conf={}))
+    @flow.function(train_config)
+    def TrainNet():
+        _set_trainable(True)
+        loss = resnet50(args, args.train_dir)
+        flow.losses.add_loss(loss)
+        return loss
+
+    eval_config = flow.function_config()
+    eval_config.default_data_type(flow.float)
+    @flow.function(eval_config)
     def evaluate():
         with flow.distribute.consistent_strategy():
             _set_trainable(False)
             return resnet50(args, args.eval_dir)
-
-    flow.config.default_data_type(flow.float)
-    flow.config.machine_num(args.num_nodes)
-    flow.config.gpu_device_num(args.gpu_num_per_node)
 
     check_point = flow.train.CheckPoint()
     check_point.load(MODEL_LOAD)
