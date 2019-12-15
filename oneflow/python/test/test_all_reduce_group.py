@@ -9,7 +9,5 @@ def test_variable_reduced_as_loss_on_two_device(test_case):
     @flow.function(func_config)
     def Foo():
         w = flow.get_variable("w", (10,), initializer=flow.constant_initializer(100))
-        y = flow.math.reduce_sum(w)
-        flow.losses.add_loss(y)
-        return y
-    Foo().get()
+        flow.losses.add_loss(w)
+    Foo()
