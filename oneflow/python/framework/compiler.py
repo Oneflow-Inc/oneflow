@@ -8,13 +8,13 @@ import oneflow.python.framework.compile_context as compile_context
 import oneflow.python.framework.placement_util as placement_util
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.input_blob_def as input_blob_def
-import oneflow.python.framework.job_builder as job_builder
 import oneflow.python.ops as ops
 from oneflow.python.lib.core.box import Box
 
 from contextlib import contextmanager
 
 from oneflow.python.oneflow_export import oneflow_export
+import oneflow.python.framework.c_api_util as c_api_util
 
 def Compile(function_desc, config_proto):
     job_conf = function_desc.job_config_proto
@@ -25,15 +25,14 @@ def Compile(function_desc, config_proto):
         placement_scope = placement_util.DevicePriorPlacementScope(*dev_ids)
 
     compile_context.ResetCurJobContext()
-    with job_builder.JobBuildAndInferCtx(job_conf.job_name):
+    with _JobBuildAndInferCtx(job_conf.job_name), placement_scope:
         c_api_util.CurJobBuildAndInferCtx_SetJobConf(job_conf)
-        _CompileJob(function_desc.job_func, placement_scope)
+        _CompileJob(function_desc.job_func)
 
-def _CompileJob(func, placement_scope):
+def _CompileJob(func):
     func.__oneflow_input_blob_defs__ = _GetArgDefault(func)
-    with placement_scope:
-        inputs = _AddAndInferInputOps(func)
-        func.__oneflow_output_remote_blobs__ = _RecursiveMakeRetRemoteBlobs(func(*inputs))
+    inputs = _AddAndInferInputOps(func)
+    func.__oneflow_output_remote_blobs__ = _RecursiveMakeRetRemoteBlobs(func(*inputs))
 
 def _RecursiveMakeRetRemoteBlobs(out_remote_blobs):
     if out_remote_blobs is None: return None
@@ -51,3 +50,10 @@ def _AddAndInferInputOps(func):
 def _GetArgDefault(func):
     if hasattr(func, '__oneflow_arg_default__'): return func.__oneflow_arg_default__
     return func_inspect_util.GetArgDefaults(func)
+
+@contextmanager
+def _JobBuildAndInferCtx(job_name):
+    c_api_util.JobBuildAndInferCtx_Open(job_name)
+    yield
+    c_api_util.JobBuildAndInferCtx_Close()
+

@@ -1,14 +1,14 @@
 from __future__ import absolute_import
 
-import oneflow.python.framework.placement_context as placement_context
-import oneflow.python.framework.job_builder as job_builder
 from contextlib import contextmanager
+import oneflow.python.framework.placement_context as placement_context
+import oneflow.python.framework.c_api_util as c_api_util
 
 def CurJobAddOp(op_conf, parallel_conf=None):
     _PrependOpNamePrefixIfNeed(op_conf)
     op_conf.device_type = placement_context.CurPlacementGroupGetDeviceType(op_conf)
     if parallel_conf is None: parallel_conf = placement_context.ParallelConf4OpConf(op_conf)
-    job_builder.CurCtxAddAndInferOp(op_conf, parallel_conf)
+    c_api_util.CurJobBuildAndInferCtx_AddAndInferOp(op_conf, parallel_conf)
 
 def ResetCurJobContext():
     global cur_job_var_op_name2var_blob
