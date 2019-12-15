@@ -12,7 +12,7 @@ def InputOpByBlobDesc(blob_desc):
     op_conf.input_conf.out = blob_desc.blob_name
     op_conf.input_conf.blob_conf.CopyFrom(blob_desc.ToInterfaceBlobConf())
     op_conf.input_conf.blob_conf.batch_axis.value = 0
-    compile_context.CurJobAddInputOp(op_conf)
+    compile_context.CurJobAddOp(op_conf)
     return remote_blob_util.RemoteBlob(blob_desc.lbi)
 
 def RetOpByRemoteBlob(remote_blob):

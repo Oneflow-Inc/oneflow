@@ -1,12 +1,13 @@
 from __future__ import absolute_import
 
 import functools
-import oneflow.python.framework.session_context as session_ctx
-from oneflow.python.oneflow_export import oneflow_export
-import oneflow.core.job.job_pb2 as job_util
 import copy
 import re
+import oneflow.core.job.job_pb2 as job_util
+import oneflow.python.framework.session_context as session_ctx
+from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.framework.function_desc import FunctionDesc
+import oneflow.python.lib.core.pb_util as pb_util
 
 @oneflow_export('function_config')
 class FunctionConfig(object):
@@ -23,12 +24,20 @@ def oneflow_function(function_config = FunctionConfig()):
             return _RunJob(sess, job_func, *args)
         for x in dir(job_func):
             if x.startswith('__oneflow_'): setattr(Func, x, getattr(job_func, x))
-        func_spec = FunctionDesc(job_func=job_func)
-        func_spec.job_config_proto.CopyFrom(function_config.job_config_proto)
-        func_spec.function_attribute = copy.deepcopy(function_config.function_attribute)
-        sess.AddJob(func_spec)
+        sess.AddJob(_CloneFunctionDesc(function_config.function_desc, job_func))
         return Func
     return Decorator
+
+def _CloneFunctionDesc(func_desc, job_func):
+    new_func_desc = FunctionDesc(job_func=job_func)
+    new_func_desc.job_config_proto.CopyFrom(func_desc.job_config_proto)
+    _TryCompleteDefaultJobConfigProto(new_func_desc.job_config_proto)
+    new_func_desc.function_attribute = copy.deepcopy(func_desc.function_attribute)
+    return new_func_desc
+
+def _TryCompleteDefaultJobConfigProto(job_conf):
+    if job_conf.WhichOneof("job_type") is None:
+        job_conf.predict_conf.SetInParent()
 
 def oneflow_function_config(*field_paths):
     def Decorator(func):
