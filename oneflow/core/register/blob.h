@@ -10,6 +10,7 @@
 #include "oneflow/core/register/pod_ptr.h"
 #include "oneflow/core/record/record.pb.h"
 #include "oneflow/core/common/symbol.h"
+#include "oneflow/core/common/shape_view.h"
 
 namespace oneflow {
 
@@ -67,12 +68,12 @@ class Blob final {
 
   template<typename T = void>
   const T* dptr() const {
-    CheckDataType<T>(blob_desc_->data_type());
+    CheckDataType<T>(data_type());
     return static_cast<const T*>(dptr_);
   }
   template<typename T = void>
   T* mut_dptr() {
-    CheckDataType<T>(blob_desc_->data_type());
+    CheckDataType<T>(data_type());
     return static_cast<T*>(dptr_);
   }
   const Shape& static_shape() const { return blob_desc_->body_shape(); }

@@ -2,7 +2,7 @@
 #define ONEFLOW_CORE_KERNEL_UTIL_CPU_ARITHEMETIC_INTERFACE_H_
 
 #include "oneflow/core/kernel/util/arithemetic_interface.h"
-#include "oneflow/core/common/shape.h"
+#include "oneflow/core/common/shape_view.h"
 #include "oneflow/core/common/protobuf.h"
 
 namespace oneflow {
