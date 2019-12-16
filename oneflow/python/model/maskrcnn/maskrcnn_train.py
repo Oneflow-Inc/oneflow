@@ -538,7 +538,7 @@ def run():
     if loaded_iter is None:
         print("{} not found, iter starts at 1".format(iter_file))
     else:
-        print("{} found, iter starts at {}".format(iter_file, loaded_iter))
+        print("{} found, last iter: {}".format(iter_file, loaded_iter))
         start_iter = loaded_iter + 1
 
     for i in range(terminal_args.iter_num):
