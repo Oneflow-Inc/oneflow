@@ -58,13 +58,13 @@ class Blob final {
 
   template<typename T = void>
   const T* dptr() const {
-    CheckDataType<T>();
+    CheckDataType<T>(data_type());
     return static_cast<const T*>(dptr_);
   }
 
   template<typename T = void>
   T* mut_dptr() {
-    CheckDataType<T>();
+    CheckDataType<T>(data_type());
     return static_cast<T*>(dptr_);
   }
 
@@ -143,14 +143,6 @@ class Blob final {
     CHECK_GE(cur_dim, 0);
     CHECK_LT(cur_dim, static_shape().At(index));
     return cur_dim * static_shape().Count(index + 1) + GetDptrOffset(index + 1, remainder...);
-  }
-
-  template<typename T>
-  void CheckDataType() const {
-    LOG_IF(FATAL, (std::is_same<T, void>::value == false && std::is_same<T, char>::value == false
-                   && blob_desc_->data_type() != DataType::kChar
-                   && blob_desc_->data_type() != GetDataType<T>::value))
-        << blob_desc_->data_type() << " " << GetDataType<T>::value;
   }
   void Init(Regst* regst, const RtBlobDesc* blob_desc, char* header_ptr, char* body_ptr);
 
