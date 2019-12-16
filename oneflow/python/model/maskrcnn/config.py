@@ -13,6 +13,7 @@ _C = CN()
 # ---------------------------------------------------------------------------- #
 _C.ENV = CN()
 _C.ENV.NUM_GPUS = 4
+_C.ENV.IMS_PER_GPU = 2
 _C.ENV.ENABLE_INPLACE = False
 _C.ENV.CUDNN_BUFFER_SIZE_LIMIT = 1280
 _C.ENV.CUDNN_CONV_HEURISTIC_SEARCH_ALGO = True
@@ -221,8 +222,7 @@ _C.SOLVER.METRICS_PERIOD = 0
 # Number of images per batch
 # This is global, so if we have 8 GPUs and IMS_PER_BATCH = 16, each GPU will
 # see 2 images per batch
-_C.SOLVER.IMS_PER_BATCH = 2
-_C.SOLVER.BATCH_SIZE = 8
+_C.SOLVER.IMS_PER_BATCH = 8
 
 # ---------------------------------------------------------------------------- #
 # Precision options

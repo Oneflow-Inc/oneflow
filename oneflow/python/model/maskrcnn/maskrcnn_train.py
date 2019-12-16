@@ -36,10 +36,6 @@ parser.add_argument(
 parser.add_argument(
     "-cp", "--ctrl_port", type=int, default=19765, required=False
 )
-parser.add_argument(
-    "-g", "--gpu_num_per_node", type=int, default=1, required=False
-)
-parser.add_argument("-bz", "--batch_size", type=int, default=2, required=False)
 parser.add_argument("-fake", "--fake_image_path", type=str, required=False)
 parser.add_argument(
     "-save",
@@ -57,7 +53,6 @@ parser.add_argument(
     action="store_true",
     required=False,
 )
-parser.add_argument("-i", "--max_iter", type=int, required=False)
 parser.add_argument(
     "-v", "--verbose", default=False, action="store_true", required=False
 )
@@ -184,23 +179,8 @@ def merge_and_compare_config(args):
         config.merge_from_file(args.config_file)
         print("merged config from {}".format(args.config_file))
 
-    if hasattr(args, "batch_size"):
-        config.SOLVER.BATCH_SIZE = args.batch_size
-
-    if hasattr(args, "gpu_num_per_node"):
-        config.ENV.NUM_GPUS = args.gpu_num_per_node
-        assert config.SOLVER.BATCH_SIZE % config.ENV.NUM_GPUS == 0
-        config.SOLVER.IMS_PER_BATCH = int(
-            config.SOLVER.BATCH_SIZE / config.ENV.NUM_GPUS
-        )
-
-    if hasattr(args, "max_iter"):
-        config.SOLVER.MAX_ITER = args.max_iter
-
-    assert (
-        config.SOLVER.IMS_PER_BATCH * config.ENV.NUM_GPUS
-        == config.SOLVER.BATCH_SIZE
-    )
+    assert config.SOLVER.IMS_PER_BATCH % config.ENV.NUM_GPUS == 0
+    config.ENV.IMS_PER_GPU = config.SOLVER.IMS_PER_BATCH / config.ENV.NUM_GPUS
     config.freeze()
     print("difference between default (upper) and given config (lower)")
     d1_diff, d2_diff = compare_config(get_default_cfgs(), config)
@@ -440,8 +420,6 @@ class LossPrinter(object):
         def legend_value(legend):
             if "loss" in legend:
                 return reduce_across_ranks([d[legend] for d in data])
-            elif "elem_cnt" in legend:
-                return int(sum([d[legend].item() for d in data]))
             else:
                 raise ValueError
 
@@ -546,7 +524,9 @@ def run():
     else:
         print("{} found, last iter: {}".format(iter_file, loaded_iter))
         start_iter = loaded_iter + 1
-    assert start_iter <= config.SOLVER.MAX_ITER, "{} vs {}".format(start_iter, config.SOLVER.MAX_ITER)
+    assert start_iter <= config.SOLVER.MAX_ITER, "{} vs {}".format(
+        start_iter, config.SOLVER.MAX_ITER
+    )
 
     metrics = pd.DataFrame(
         {"iter": start_iter, "legend": "cfg", "note": str(config)}, index=[0]
@@ -577,9 +557,7 @@ def run():
             ):
                 save_model(check_point, i)
 
-        metrics = update_metrics(
-            metrics, i, elapsed_time, metrics_values
-        )
+        metrics = update_metrics(metrics, i, elapsed_time, metrics_values)
 
         if config.SOLVER.METRICS_PERIOD > 0:
             if (
@@ -588,7 +566,7 @@ def run():
             ):
                 npy_file_name = "loss-{}-batch_size-{}-gpu-{}-image_dir-{}-{}.csv".format(
                     i,
-                    config.SOLVER.BATCH_SIZE,
+                    config.SOLVER.IMS_PER_BATCH,
                     config.ENV.NUM_GPUS,
                     config.DATASETS.IMAGE_DIR_TRAIN,
                     str(datetime.now().strftime("%Y-%m-%d--%H-%M-%S")),
