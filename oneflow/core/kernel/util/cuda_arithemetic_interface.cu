@@ -45,7 +45,7 @@ __global__ void TransposeGpu(const Int32Array<NDIMS> y_shape, const Int32Array<N
 }
 
 template<int32_t NDIMS, typename T>
-void TransposeImpl(DeviceCtx* ctx, const DenseShapeView& x_shape, const DenseShapeView& y_shape,
+void TransposeImpl(DeviceCtx* ctx, const ShapeView& x_shape, const ShapeView& y_shape,
                    const PbRf<int32_t>& permutation, const int64_t elem_cnt, const T* x, T* y) {
   CHECK_LE(y_shape.elem_cnt(), GetMaxVal<int32_t>());
   Int32Array<NDIMS> y_shape_struct;
@@ -78,8 +78,7 @@ struct TransposeUtil final {
   CHECK_EQ(num_axis, x_shape.NumAxes())
 
 void ArithemeticIf<DeviceType::kGPU>::Transpose(DeviceCtx* ctx, const int32_t num_axis,
-                                                const DenseShapeView& x_shape,
-                                                const DenseShapeView& y_shape,
+                                                const ShapeView& x_shape, const ShapeView& y_shape,
                                                 const PbRf<int32_t>& permutation,
                                                 const int64_t elem_cnt, const float* x, float* y) {
   TRANSPOSE_CHECK;
@@ -88,8 +87,7 @@ void ArithemeticIf<DeviceType::kGPU>::Transpose(DeviceCtx* ctx, const int32_t nu
 }
 
 void ArithemeticIf<DeviceType::kGPU>::Transpose(DeviceCtx* ctx, const int32_t num_axis,
-                                                const DenseShapeView& x_shape,
-                                                const DenseShapeView& y_shape,
+                                                const ShapeView& x_shape, const ShapeView& y_shape,
                                                 const PbRf<int32_t>& permutation,
                                                 const int64_t elem_cnt, const double* x,
                                                 double* y) {
@@ -99,8 +97,7 @@ void ArithemeticIf<DeviceType::kGPU>::Transpose(DeviceCtx* ctx, const int32_t nu
 }
 
 void ArithemeticIf<DeviceType::kGPU>::Transpose(DeviceCtx* ctx, const int32_t num_axis,
-                                                const DenseShapeView& x_shape,
-                                                const DenseShapeView& y_shape,
+                                                const ShapeView& x_shape, const ShapeView& y_shape,
                                                 const PbRf<int32_t>& permutation,
                                                 const int64_t elem_cnt, const float16* x,
                                                 float16* y) {

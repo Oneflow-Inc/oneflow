@@ -69,14 +69,14 @@ void Blob::Init(const MemoryCase& mem_case, const RtBlobDesc* blob_desc, char* h
         this, mut_header_field<FieldKey::kTensorShapeList>(), mut_dptr<char>()));
     tensor_back_inserter_.reset(new TensorBackInserter(this));
     int64_t* shape_ptr = mut_header_field<FieldKey::kTensorShapeList>();
-    dense_shape_view_.reset(new DenseShapeView(shape_ptr, static_shape().NumAxes()));
+    shape_view_.reset(new ShapeView(shape_ptr, static_shape().NumAxes()));
     if (blob_desc->is_dynamic()) {
-      dense_shape_mut_view_.reset(new DenseShapeMutView(shape_ptr, static_shape().NumAxes()));
+      mut_shape_view_.reset(new MutShapeView(shape_ptr, static_shape().NumAxes()));
     }
-    DenseShapeMutView(shape_ptr, static_shape().NumAxes()).set_shape(static_shape());
+    MutShapeView(shape_ptr, static_shape().NumAxes()).set_shape(static_shape());
   } else {
     const DimVector& dim_vec = static_shape().dim_vec();
-    dense_shape_view_.reset(new DenseShapeView(dim_vec.data(), dim_vec.size()));
+    shape_view_.reset(new ShapeView(dim_vec.data(), dim_vec.size()));
   }
 }
 

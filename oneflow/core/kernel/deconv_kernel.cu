@@ -22,9 +22,9 @@ class DeconvGPUKernel final : public KernelIf<DeviceType::kGPU> {
     const DeconvOpConf& op_conf = this->op_conf().deconv_conf();
     const ConvConf& conv_conf = this->op_conf().deconv_conf().conv_conf();
     const int32_t num_spatial_dims = this->op_conf().deconv_conf().conv_conf().num_spatial_dims();
-    DenseShapeView x_shape(this->kernel_conf().deconv_conf().in());
-    DenseShapeView y_shape(this->kernel_conf().deconv_conf().out());
-    DenseShapeView weight_shape(this->kernel_conf().deconv_conf().weight());
+    ShapeView x_shape(this->kernel_conf().deconv_conf().in());
+    ShapeView y_shape(this->kernel_conf().deconv_conf().out());
+    ShapeView weight_shape(this->kernel_conf().deconv_conf().weight());
 
     const std::string& data_format = conv_conf.data_format();
     this->x_desc_.reset(new CudnnTensorDesc(GetDataType<T>::value, x_shape, data_format));

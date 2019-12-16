@@ -9,7 +9,7 @@ namespace oneflow {
 
 namespace {
 
-void GetOutAndPad(const DenseShapeView& in_blob_shape, const PbMessage& conv_conf, DimVector* out,
+void GetOutAndPad(const ShapeView& in_blob_shape, const PbMessage& conv_conf, DimVector* out,
                   std::vector<int32_t>* pad_small_side, std::vector<int32_t>* pad_large_side) {
   int32_t opkernel_dim = in_blob_shape.NumAxes() - 2;
   if (out) { out->assign(opkernel_dim, 0); }
@@ -34,7 +34,7 @@ void GetOutAndPad(const DenseShapeView& in_blob_shape, const PbMessage& conv_con
 #ifdef WITH_CUDA
 CudnnConvDesc::~CudnnConvDesc() { CudaCheck(cudnnDestroyConvolutionDescriptor(val_)); }
 
-CudnnConvDesc::CudnnConvDesc(const DataType& data_type, const DenseShapeView& in_blob_shape,
+CudnnConvDesc::CudnnConvDesc(const DataType& data_type, const ShapeView& in_blob_shape,
                              const PbMessage& conv_conf) {
   int32_t opkernel_dim = in_blob_shape.NumAxes() - 2;
   CudaCheck(cudnnCreateConvolutionDescriptor(&val_));

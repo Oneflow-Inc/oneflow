@@ -24,7 +24,7 @@ CudnnTensorDesc::CudnnTensorDesc(DataType data_type, int dims, const int* dim, c
   CudaCheck(cudnnCreateTensorDescriptor(&val_));
   CudaCheck(cudnnSetTensorNdDescriptor(val_, GetCudnnDataType(data_type), dims, dim, stride));
 }
-CudnnTensorDesc::CudnnTensorDesc(DataType data_type, const DenseShapeView& shape,
+CudnnTensorDesc::CudnnTensorDesc(DataType data_type, const ShapeView& shape,
                                  const std::string& data_format) {
   CudaCheck(cudnnCreateTensorDescriptor(&val_));
   cudnnTensorFormat_t cudnn_data_format;
@@ -69,7 +69,7 @@ CudnnTensorDesc::CudnnTensorDesc(DataType data_type, const DenseShapeView& shape
 
 CudnnFilterDesc::~CudnnFilterDesc() { CudaCheck(cudnnDestroyFilterDescriptor(val_)); }
 
-CudnnFilterDesc::CudnnFilterDesc(DataType data_type, const DenseShapeView& shape,
+CudnnFilterDesc::CudnnFilterDesc(DataType data_type, const ShapeView& shape,
                                  const std::string& data_format) {
   CudaCheck(cudnnCreateFilterDescriptor(&val_));
   cudnnTensorFormat_t cudnn_data_format;

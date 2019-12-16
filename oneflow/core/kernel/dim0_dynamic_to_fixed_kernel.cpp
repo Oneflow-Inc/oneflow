@@ -11,23 +11,23 @@ class Dim0DynamicToFixedCpuKernel : public KernelIf<DeviceType::kCPU> {
   ~Dim0DynamicToFixedCpuKernel() = default;
 
  private:
-  void ForwardDenseShape(const KernelCtx& ctx,
-                         std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
-    // do nothing cuz we want remove dynamic dense_shape
+  void ForwardShape(const KernelCtx& ctx,
+                    std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
+    // do nothing cuz we want remove dynamic shape
   }
   void ForwardDataContent(const KernelCtx& ctx,
                           std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
     const auto& input_bns = this->op_attribute().input_bns();
     const auto& output_bns = this->op_attribute().output_bns();
     CHECK_EQ(input_bns.size() + 1, output_bns.size());
-    int64_t dense_shape_dim0_val = -1;
+    int64_t shape_dim0_val = -1;
     FOR_RANGE(int, i, 0, input_bns.size()) {
       const Blob* in_blob = BnInOp2Blob(input_bns.Get(i));
       CHECK(in_blob->mem_case().has_host_mem());
-      if (dense_shape_dim0_val == -1) {
-        dense_shape_dim0_val = in_blob->shape().At(0);
+      if (shape_dim0_val == -1) {
+        shape_dim0_val = in_blob->shape().At(0);
       } else {
-        CHECK_EQ(dense_shape_dim0_val, in_blob->shape().At(0));
+        CHECK_EQ(shape_dim0_val, in_blob->shape().At(0));
       }
 
       Blob* out_blob = BnInOp2Blob(output_bns.Get(i));
@@ -45,8 +45,8 @@ class Dim0DynamicToFixedCpuKernel : public KernelIf<DeviceType::kCPU> {
 
     std::vector<int32_t> mask_vec(mask_blob->shape().Count(0));
     std::fill(mask_vec.begin(), mask_vec.end(), 0);
-    CHECK_GT(dense_shape_dim0_val, 0);
-    std::fill(mask_vec.begin(), mask_vec.begin() + dense_shape_dim0_val, 1);
+    CHECK_GT(shape_dim0_val, 0);
+    std::fill(mask_vec.begin(), mask_vec.begin() + shape_dim0_val, 1);
     AutoMemcpy(ctx.device_ctx, mask_blob->mut_dptr(), static_cast<const void*>(mask_vec.data()),
                sizeof(int32_t) * mask_vec.size(), MakeHostMemCase(), mask_blob->mem_case());
   }

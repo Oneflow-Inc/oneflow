@@ -6,10 +6,8 @@ namespace {
 
 template<typename T, typename I>
 __global__ void GatherNdGpu(int64_t num_segms, int64_t segms_size, int64_t segm_dims,
-                            const I* indices, const int64_t* dense_shape, const T* dense,
-                            T* sparse) {
-  GatherNdFunctor<T, I>::Invoke(num_segms, segms_size, segm_dims, indices, dense_shape, dense,
-                                sparse);
+                            const I* indices, const int64_t* shape, const T* dense, T* sparse) {
+  GatherNdFunctor<T, I>::Invoke(num_segms, segms_size, segm_dims, indices, shape, dense, sparse);
 }
 
 }  // namespace
@@ -17,10 +15,10 @@ __global__ void GatherNdGpu(int64_t num_segms, int64_t segms_size, int64_t segm_
 template<typename T, typename I>
 struct GatherNdOnDevice<DeviceType::kGPU, T, I> {
   static void Run(DeviceCtx* ctx, int64_t num_segms, int64_t segms_size, int64_t segm_dims,
-                  const I* indices, const int64_t* dense_shape, const T* dense, T* sparse) {
+                  const I* indices, const int64_t* shape, const T* dense, T* sparse) {
     int64_t elem_cnt = num_segms * segms_size;
     RUN_CUDA_KERNEL((GatherNdGpu<T, I>), ctx, elem_cnt, elem_cnt, segms_size, segm_dims, indices,
-                    dense_shape, dense, sparse);
+                    shape, dense, sparse);
   }
 };
 

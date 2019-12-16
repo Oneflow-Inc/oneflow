@@ -29,7 +29,7 @@ void GetDewindowedOutputSize(int64_t input_size, int32_t filter_size, int32_t st
                           nullptr);
 }
 
-void GetOutAndPad(const DenseShapeView& in_blob_shape, const ConvConf& conv_conf, DimVector* out,
+void GetOutAndPad(const ShapeView& in_blob_shape, const ConvConf& conv_conf, DimVector* out,
                   std::vector<int32_t>* pad_small_side, std::vector<int32_t>* pad_large_side) {
   int32_t opkernel_dim = in_blob_shape.NumAxes() - 2;
   if (out) { out->assign(opkernel_dim, 0); }
@@ -49,8 +49,7 @@ void GetOutAndPad(const DenseShapeView& in_blob_shape, const ConvConf& conv_conf
 
 void GetOutAndPad(const Shape& in_blob_shape, const ConvConf& conv_conf, DimVector* out,
                   std::vector<int32_t>* pad_small_side, std::vector<int32_t>* pad_large_side) {
-  return GetOutAndPad(DenseShapeView(in_blob_shape), conv_conf, out, pad_small_side,
-                      pad_large_side);
+  return GetOutAndPad(ShapeView(in_blob_shape), conv_conf, out, pad_small_side, pad_large_side);
 }
 
 }  // namespace
@@ -58,7 +57,7 @@ void GetOutAndPad(const Shape& in_blob_shape, const ConvConf& conv_conf, DimVect
 #ifdef WITH_CUDA
 CudnnDeconvDesc::~CudnnDeconvDesc() { CudaCheck(cudnnDestroyConvolutionDescriptor(val_)); }
 
-CudnnDeconvDesc::CudnnDeconvDesc(const DataType& data_type, const DenseShapeView& in_blob_shape,
+CudnnDeconvDesc::CudnnDeconvDesc(const DataType& data_type, const ShapeView& in_blob_shape,
                                  const ConvConf& conv_conf) {
   int32_t opkernel_dim = in_blob_shape.NumAxes() - 2;
   CudaCheck(cudnnCreateConvolutionDescriptor(&val_));

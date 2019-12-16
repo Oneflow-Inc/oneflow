@@ -6,7 +6,7 @@ namespace {
 
 class LayerNormCudnnBnCtx final {
  public:
-  LayerNormCudnnBnCtx(const DenseShapeView& data_shape, const DenseShapeView& param_shape,
+  LayerNormCudnnBnCtx(const ShapeView& data_shape, const ShapeView& param_shape,
                       DataType data_type) {
     const int64_t cudnn_c = param_shape.elem_cnt();
     CHECK_EQ(data_shape.elem_cnt() % cudnn_c, 0);

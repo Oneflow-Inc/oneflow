@@ -19,7 +19,7 @@ class CpuNdarrayBuilder final {
     return CpuVarNdarray<T, NDIMS>(shape, ptr);
   }
   template<typename T = default_data_type, int NDIMS = default_ndims>
-  CpuVarNdarray<T, NDIMS> Var(const DenseShapeView& shape_view, T* ptr) const {
+  CpuVarNdarray<T, NDIMS> Var(const ShapeView& shape_view, T* ptr) const {
     return CpuVarNdarray<T, NDIMS>(shape_view, ptr);
   }
   template<int CONCAT_AXES = 0, typename T = default_data_type, int NDIMS = default_ndims>

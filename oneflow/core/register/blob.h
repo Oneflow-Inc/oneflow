@@ -5,7 +5,7 @@
 #include "oneflow/core/job/resource.pb.h"
 #include "oneflow/core/memory/memory_case.pb.h"
 #include "oneflow/core/register/runtime_blob_desc.h"
-#include "oneflow/core/register/dense_shape_view.h"
+#include "oneflow/core/common/shape_view.h"
 #include "oneflow/core/register/tensor_view.h"
 #include "oneflow/core/register/pod_ptr.h"
 #include "oneflow/core/record/record.pb.h"
@@ -76,9 +76,9 @@ class Blob final {
     return static_cast<T*>(dptr_);
   }
   const Shape& static_shape() const { return blob_desc_->body_shape(); }
-  const DenseShapeView& dense_shape_view() const { return *dense_shape_view_; }
-  const DenseShapeView& shape() const { return *dense_shape_view_; }
-  DenseShapeMutView* dense_shape_mut_view() { return dense_shape_mut_view_.get(); }
+  const ShapeView& shape_view() const { return *shape_view_; }
+  const ShapeView& shape() const { return *shape_view_; }
+  MutShapeView* mut_shape_view() { return mut_shape_view_.get(); }
 
   void CopyDataContentFrom(DeviceCtx* device_ctx, const Blob* rhs);
   void CopyValidDataContentFrom(DeviceCtx* device_ctx, const Blob* rhs);
@@ -123,8 +123,8 @@ class Blob final {
   void* dptr_;
   int64_t* header_fields_[FieldKey::kFieldKeySize];
   size_t header_field_capacities_[FieldKey::kFieldKeySize];
-  std::unique_ptr<DenseShapeView> dense_shape_view_;
-  std::unique_ptr<DenseShapeMutView> dense_shape_mut_view_;
+  std::unique_ptr<ShapeView> shape_view_;
+  std::unique_ptr<MutShapeView> mut_shape_view_;
   std::unique_ptr<PodPtr> header_ptr_;
   std::unique_ptr<TensorView> begin_tensor_;
   std::unique_ptr<DataOnlyMutTensorView> begin_mut_tensor_;

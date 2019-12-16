@@ -1,5 +1,5 @@
 #include "oneflow/core/job_completer/autograd.h"
-#include "oneflow/core/register/dense_shape_view.h"
+#include "oneflow/core/common/shape_view.h"
 
 namespace oneflow {
 
@@ -19,7 +19,7 @@ void GenerateBackwardOpConf(
     broadcast_mul_a_op_conf->set_out("out");
     op_confs->push_back(broadcast_mul_a);
     const Shape& left_extended_shape =
-        CreateLeftExtendedShape(DenseShapeView(LogicalBlobDesc4BnInOp("a").shape()),
+        CreateLeftExtendedShape(ShapeView(LogicalBlobDesc4BnInOp("a").shape()),
                                 LogicalBlobDesc4BnInOp("out").shape().NumAxes());
     if (LogicalBlobDesc4BnInOp("out").shape() == LogicalBlobDesc4BnInOp("a").shape()) {
       DiffLbi4BnInOp("a")->set_op_name(broadcast_mul_a.name());
@@ -60,7 +60,7 @@ void GenerateBackwardOpConf(
     broadcast_mul_b_op_conf->set_out("out");
     op_confs->push_back(broadcast_mul_b);
     const Shape& left_extended_shape =
-        CreateLeftExtendedShape(DenseShapeView(LogicalBlobDesc4BnInOp("b").shape()),
+        CreateLeftExtendedShape(ShapeView(LogicalBlobDesc4BnInOp("b").shape()),
                                 LogicalBlobDesc4BnInOp("out").shape().NumAxes());
     if (LogicalBlobDesc4BnInOp("out").shape() == LogicalBlobDesc4BnInOp("b").shape()) {
       DiffLbi4BnInOp("b")->set_op_name(broadcast_mul_b.name());

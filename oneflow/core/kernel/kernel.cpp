@@ -65,13 +65,13 @@ void Kernel::ForwardHeader(const KernelCtx& ctx,
   if (kernel_conf_.need_do_opaque_header()) {
     ForwardPackedHeader(ctx, BnInOp2Blob);
   } else {
-    if (kernel_conf_.need_do_dense_shape()) { ForwardDenseShape(ctx, BnInOp2Blob); }
+    if (kernel_conf_.need_do_shape()) { ForwardShape(ctx, BnInOp2Blob); }
   }
 }
 
-void Kernel::ForwardDenseShape(const KernelCtx& ctx,
-                               std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  return shape_infer_helper_->InferDenseShape(BnInOp2Blob);
+void Kernel::ForwardShape(const KernelCtx& ctx,
+                          std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  return shape_infer_helper_->InferShape(BnInOp2Blob);
 }
 
 template<DeviceType device_type>

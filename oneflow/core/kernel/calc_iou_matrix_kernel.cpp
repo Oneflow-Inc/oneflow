@@ -10,10 +10,10 @@ class CalcIoUMatrixKernel final : public KernelIf<device_type> {
   ~CalcIoUMatrixKernel() = default;
 
  private:
-  void ForwardDenseShape(const KernelCtx& ctx,
-                         std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
+  void ForwardShape(const KernelCtx& ctx,
+                    std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
     BnInOp2Blob("iou_matrix")
-        ->dense_shape_mut_view()
+        ->mut_shape_view()
         ->set_shape(
             Shape{BnInOp2Blob("boxes1")->shape().At(0), BnInOp2Blob("boxes2")->shape().At(0)});
   }

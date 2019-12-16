@@ -315,8 +315,8 @@ KU_IF_METHOD RowSum(DeviceCtx* ctx, const int64_t row_num, const int64_t col_num
                     T* y) {
   MatrixRowReduce<T, ReduceCoreAdd>(row_num, col_num, x, y);
 }
-KU_IF_METHOD Transpose(DeviceCtx* ctx, const int32_t num_axis, const DenseShapeView& x_shape,
-                       const DenseShapeView& y_shape, const PbRf<int32_t>& permutation,
+KU_IF_METHOD Transpose(DeviceCtx* ctx, const int32_t num_axis, const ShapeView& x_shape,
+                       const ShapeView& y_shape, const PbRf<int32_t>& permutation,
                        const int64_t elem_cnt, const T* x, T* y) {
   int64_t block_size = 1;
   int32_t shared_idxs_num = 0;
