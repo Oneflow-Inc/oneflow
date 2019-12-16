@@ -277,7 +277,7 @@ void AddGlobalInputOutputCriticalSection(const HashSet<const OpNode*>& op_nodes,
                                          const std::vector<std::string>& lbi_producer_op_names,
                                          JobBuilder* job_builder) {
   auto time_shape = std::make_unique<Shape>(
-      std::vector<int64_t>{GlobalJobDesc().TotalBatchNum(), GlobalJobDesc().NumOfPiecesInBatch()});
+      DimVector{GlobalJobDesc().TotalBatchNum(), GlobalJobDesc().NumOfPiecesInBatch()});
   HashMap<ParallelDesc, HashSet<const OpNode*>> parallel_desc2op_nodes;
   HashMap<std::string, const ParallelConf*> op_name2parallel_conf;
   for (const OpNode* op_node : op_nodes) {

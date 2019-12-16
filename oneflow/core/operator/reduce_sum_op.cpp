@@ -32,8 +32,8 @@ Maybe<void> ReduceSumOp::InferBlobDescs(
       out_blob->mut_shape() = Shape({1});
     }
   } else {
-    const std::vector<int64_t> axis_vec = {conf.axis().begin(), conf.axis().end()};
-    const Shape& reduced_shape = in_blob->shape().CreateReducedShape(axis_vec);
+    const AxisVector axis_vec = {conf.axis().begin(), conf.axis().end()};
+    const Shape& reduced_shape = CreateReducedShape(in_blob->shape(), axis_vec);
     if (conf.keep_dims()) {
       out_blob->mut_shape() = reduced_shape;
     } else {

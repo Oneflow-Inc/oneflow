@@ -8,6 +8,7 @@
 #include "oneflow/core/common/range.h"
 #include "oneflow/core/record/record.pb.h"
 #include "oneflow/core/register/pod_ptr.h"
+#include "oneflow/core/common/shape_view.h"
 
 namespace oneflow {
 
@@ -83,7 +84,7 @@ class Blob final {
   const RtBlobDesc& blob_desc() const { return *blob_desc_; }
   const RtBlobDesc* blob_desc_ptr() const { return blob_desc_; }
   const Shape& static_shape() const { return blob_desc_->shape(); }
-  const Shape& shape() const;
+  const ShapeView& shape() const;
   bool IsShapeEmpty() const;
   bool has_dim0_inner_shape() const { return blob_desc_->has_dim0_inner_shape(); }
   const Shape& dim0_inner_shape() const { return blob_desc_->dim0_inner_shape(); }
@@ -160,6 +161,7 @@ class Blob final {
   Regst* regst_;
   PodPtr header_pod_ptr_;
   mutable Shape dynamic_shape_;
+  std::unique_ptr<ShapeView> shape_view_;
 };
 
 template<typename RecordType>
