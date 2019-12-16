@@ -18,7 +18,6 @@ class AssignKernel final : public KernelIf<device_type> {
 template<DeviceType device_type>
 void AssignKernel<device_type>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  LOG(INFO) << this->kernel_conf().op_attribute().op_conf().name();
   BnInOp2Blob("ref")->CopyValidDataContentFrom(ctx.device_ctx, BnInOp2Blob("value"));
 }
 
