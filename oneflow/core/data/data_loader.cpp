@@ -3,6 +3,7 @@
 #include "oneflow/core/data/data_transform.h"
 #include "oneflow/core/common/blocking_counter.h"
 #include "oneflow/core/thread/thread_manager.h"
+#include "oneflow/core/nvtx3/nvToolsExt.h"
 
 namespace oneflow {
 namespace data {
@@ -48,6 +49,8 @@ std::shared_ptr<DataLoader::BatchDataInstance> DataLoader::FetchBatch() {
 }
 
 void DataLoader::LoadBatch() {
+  const std::string mark("DataLoader::LoadBatch");
+  nvtxRangePush(mark.c_str());
   std::vector<int64_t> batch_idx_seq =
       dataset_->FetchBatchIndexSequence(&sampler_ctx_, kernel_conf_.device_batch_size());
 
@@ -66,6 +69,7 @@ void DataLoader::LoadBatch() {
     BatchTransform(batch_data_inst_ptr, trans_proto);
   }
   batch_buffer_.Send(batch_data_inst_ptr);
+  nvtxRangePop();
 }
 
 }  // namespace data

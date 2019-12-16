@@ -33,6 +33,10 @@ class CudaDeviceCtx : public DeviceCtx {
     cuda_handler_->AddCallBack(callback);
   }
 
+  void AddCallBack(std::function<void()> callback, const std::string& op_name) const override {
+    cuda_handler_->AddCallBack(callback, op_name);
+  }
+
  protected:
   CudaStreamHandle* cuda_handler_;
 };

@@ -70,6 +70,16 @@ void CudaStreamHandle::AddCallBack(std::function<void()> callback) {
   cb_event_chan_->Send(cb_event);
 }
 
+void CudaStreamHandle::AddCallBack(std::function<void()> callback, const std::string& op_name) {
+  CudaCBEvent cb_event;
+  cb_event.op_name = op_name;
+  cb_event.callback = callback;
+  CudaCheck(
+      cudaEventCreateWithFlags(&(cb_event.event), cudaEventBlockingSync | cudaEventDisableTiming));
+  CudaCheck(cudaEventRecord(cb_event.event, *cuda_stream()));
+  cb_event_chan_->Send(cb_event);
+}
+
 CudaStreamHandle::~CudaStreamHandle() {
   if (cudnn_handle_) { CudaCheck(cudnnDestroy(*cudnn_handle_)); }
   if (cublas_pmh_handle_) { CudaCheck(cublasDestroy(*cublas_pmh_handle_)); }
