@@ -2,6 +2,7 @@
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/register/register_manager.h"
 #include "oneflow/core/kernel/kernel.h"
+#include "oneflow/core/memory/memory_case.pb.h"
 
 namespace oneflow {
 
@@ -207,9 +208,9 @@ void IntSequenceInitializer(const IntRangeInitializerConf& initializer_conf, uin
 }
 
 void ComputeOffset(const int32_t num_axes, const int64_t* shape, const int32_t* permutation,
-                   std::vector<int64_t>& offset) {
+                   DimVector& offset) {
   offset.resize(num_axes);
-  std::vector<int64_t> buff(num_axes);
+  DimVector buff(num_axes);
   int64_t cur_offset = 1;
   for (int32_t i = num_axes - 1; i >= 0; --i) {
     buff[i] = cur_offset;
@@ -218,7 +219,7 @@ void ComputeOffset(const int32_t num_axes, const int64_t* shape, const int32_t* 
   for (int32_t i = 0; i < num_axes; ++i) { offset[permutation[i]] = buff[i]; }
 }
 
-void IncreaseIndex(const int64_t* shape, std::vector<int64_t>& index) {
+void IncreaseIndex(const int64_t* shape, DimVector& index) {
   for (int32_t i = index.size() - 1; i >= 0; --i) {
     ++index[i];
     if (index[i] >= shape[i]) {
@@ -259,6 +260,14 @@ void AutoMemcpy(DeviceCtx* ctx, void* dst, const void* src, size_t sz,
     }
   }
   func(ctx, dst, src, sz, kind);
+}
+
+void SyncAutoMemcpy(DeviceCtx* ctx, void* dst, const void* src, size_t sz,
+                    const MemoryCase& dst_mem_case, const MemoryCase& src_mem_case) {
+  AutoMemcpy(ctx, dst, src, sz, dst_mem_case, src_mem_case);
+  if (src_mem_case.has_device_cuda_mem() || dst_mem_case.has_device_cuda_mem()) {
+    CudaCheck(cudaStreamSynchronize(ctx->cuda_stream()));
+  }
 }
 
 template<>
