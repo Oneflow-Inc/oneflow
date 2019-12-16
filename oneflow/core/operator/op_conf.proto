@@ -561,6 +561,11 @@ message LinearCosineDecayConf {
   optional double beta = 4 [default = 0.001];
 }
 
+message PiecewiseScalingConf {
+  repeated int64 boundaries = 1;
+  repeated double scales = 2; 
+}
+
 message LearningRateDecayConf {
   oneof type {
     ExponentialDecayConf exponential_conf = 2000;
@@ -570,6 +575,7 @@ message LearningRateDecayConf {
     PolynomialDecayConf polynomial_conf = 2004;
     CosineDecayConf cosine_conf = 2005;
     LinearCosineDecayConf linear_cosine_conf = 2006;
+    PiecewiseScalingConf piecewise_scaling_conf = 2007;
   }
 }
 

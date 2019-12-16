@@ -241,9 +241,9 @@ def set_train_config(cfg):
         optimizer.update(
             dict(
                 learning_rate_decay=dict(
-                    piecewise_constant_conf={
+                    piecewise_scaling_conf={
                         "boundaries": cfg.SOLVER.STEPS,
-                        "values": cfg.SOLVER.LR_DECAY_VALUES,
+                        "scales": cfg.SOLVER.LR_DECAY_VALUES,
                     }
                 )
             )
