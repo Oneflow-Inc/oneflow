@@ -1,4 +1,5 @@
 #include "oneflow/core/job_completer/all_reduce_add_pass.h"
+#include "oneflow/core/register/runtime_blob_desc.h"
 
 namespace oneflow {
 
@@ -163,18 +164,27 @@ void GroupAllReducedLbisByStrategy(
       });
 }
 
-void AddReduceConcatAndReduceIdentityOpConf(JobBuilder* job_builder,
-                                            const ParallelConf& parallel_conf,
-                                            const std::vector<LogicalBlobId>& lbi_group,
-                                            int32_t order_in_graph, LogicalBlobId* grouped_lbi) {
+void AddReduceConcatAndReduceIdentityOpConf(
+    JobBuilder* job_builder, std::vector<int64_t>* offsets,
+    const std::function<const OpNode*(const LogicalBlobId&)>& ProducerOpNode4Lbi,
+    const ParallelConf& parallel_conf, const std::vector<LogicalBlobId>& lbi_group,
+    int32_t order_in_graph, LogicalBlobId* grouped_lbi) {
   OperatorConf reduce_concat_op_conf;
   reduce_concat_op_conf.set_name("System-Boxing-AllReduce-ReduceConcat_" + NewUniqueId());
   auto* reduce_concat_conf = reduce_concat_op_conf.mutable_reduce_concat_conf();
-  reduce_concat_conf->set_in_num(lbi_group.size());
   for (const LogicalBlobId& lbi : lbi_group) {
     reduce_concat_conf->add_in(GenLogicalBlobName(lbi));
   }
   reduce_concat_conf->set_out("out");
+  // compute data offset
+  int64_t offset = 0;
+  for (int32_t i = 0; i < lbi_group.size(); ++i) {
+    offsets->at(i) = offset;
+    offset += RtBlobDesc(ProducerOpNode4Lbi(lbi_group.at(i))->LogicalBlobDesc4Lbi(lbi_group.at(i)))
+                  .ByteSizeOfBlobBody();
+  }
+  *reduce_concat_conf->mutable_data_offset() = StdVec2PbRf<int64_t>(*offsets);
+  reduce_concat_conf->set_out_size(offset);
 
   OperatorConf reduce_identity_op_conf;
   reduce_identity_op_conf.set_name("System-Boxing-AllReduce-ReduceIdentity_" + NewUniqueId());
@@ -200,7 +210,7 @@ void AddAllReduceOpConf(JobBuilder* job_builder, const ParallelConf& parallel_co
 }
 
 void AddReduceSplitOpConf(
-    JobBuilder* job_builder,
+    JobBuilder* job_builder, const std::vector<int64_t>& offsets,
     const std::function<const OpNode*(const LogicalBlobId&)>& ProducerOpNode4Lbi,
     const std::vector<LogicalBlobId>& lbi_group, int32_t order_in_graph,
     const LogicalBlobId& all_reduced_lbi,
@@ -230,7 +240,7 @@ void AddReduceSplitOpConf(
   reduce_split_op_conf.set_name("System-Boxing-AllReduce-ReduceSplit_" + NewUniqueId());
   auto* reduce_split_conf = reduce_split_op_conf.mutable_reduce_split_conf();
   reduce_split_conf->set_in(GenLogicalBlobName(all_reduced_lbi));
-  reduce_split_conf->set_out_num(lbi_group.size());
+  *reduce_split_conf->mutable_data_offset() = StdVec2PbRf<int64_t>(offsets);
   reduce_split_conf->set_order_in_graph(order_in_graph);
   FOR_RANGE(int32_t, i, 0, lbi_group.size()) {
     const LogicalBlobId& lbi = lbi_group.at(i);
@@ -249,14 +259,15 @@ void BuildAllReduceStruct(
     const std::function<const OpNode*(const LogicalBlobId&)>& ProducerOpNode4Lbi,
     const std::vector<LogicalBlobId>& lbi_group, int32_t order_in_graph,
     std::function<std::string(const std::string&)> GetLastTouchedOpName) {
+  std::vector<int64_t> offsets(lbi_group.size(), -1);
   const auto& parallel_conf = ProducerOpNode4Lbi(lbi_group.at(0))->parallel_desc().parallel_conf();
   LogicalBlobId grouped_lbi;
-  AddReduceConcatAndReduceIdentityOpConf(job_builder, parallel_conf, lbi_group, order_in_graph,
-                                         &grouped_lbi);
+  AddReduceConcatAndReduceIdentityOpConf(job_builder, &offsets, ProducerOpNode4Lbi, parallel_conf,
+                                         lbi_group, order_in_graph, &grouped_lbi);
   LogicalBlobId all_reduced_lbi;
   AddAllReduceOpConf(job_builder, parallel_conf, grouped_lbi, &all_reduced_lbi);
-  AddReduceSplitOpConf(job_builder, ProducerOpNode4Lbi, lbi_group, order_in_graph, all_reduced_lbi,
-                       GetLastTouchedOpName);
+  AddReduceSplitOpConf(job_builder, offsets, ProducerOpNode4Lbi, lbi_group, order_in_graph,
+                       all_reduced_lbi, GetLastTouchedOpName);
 }
 
 }  // namespace

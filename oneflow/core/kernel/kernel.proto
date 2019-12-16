@@ -101,14 +101,6 @@ message ReduceGatherKernelConf {
   repeated int64 data_offset = 1;
 }
 
-message ReduceConcatKernelConf {
-  repeated int64 data_offset = 1;
-}
-
-message ReduceSplitKernelConf {
-  repeated int64 data_offset = 1;
-}
-
 message AccuracyKernelConf {
   required DataType prediction_type = 1;
   required DataType label_type = 2;
@@ -202,8 +194,6 @@ message KernelConf {
     MaxPoolingKernelConf max_pooling_conf = 205;
     LocalResponseNormalizationKernelConf local_response_normalization_conf = 300;
     ReduceGatherKernelConf reduce_gather_conf = 350;
-    ReduceConcatKernelConf reduce_concat_conf = 351;
-    ReduceSplitKernelConf reduce_split_conf = 352;
     AccuracyKernelConf accuracy_conf = 401;
     SliceKernelConf slice_conf = 402;
     ConstantKernelConf constant_conf = 403;
