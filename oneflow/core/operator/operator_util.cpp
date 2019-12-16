@@ -25,10 +25,6 @@ std::vector<int32_t> Get3DVecInOpConf(const PbRf<int32_t>& field_vals, int32_t N
   return vec;
 }
 
-int64_t GetInDim(const Shape& shape, const std::string& data_format, int32_t dim, int32_t NDims) {
-  return GetInDim(ShapeView(shape), data_format, dim, NDims);
-}
-
 int64_t GetInDim(const ShapeView& shape, const std::string& data_format, int32_t dim,
                  int32_t NDims) {
   int64_t offset = 0;
