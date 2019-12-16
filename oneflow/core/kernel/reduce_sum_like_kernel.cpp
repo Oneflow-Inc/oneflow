@@ -17,7 +17,7 @@ void ReduceSumLikeKernel<device_type, T>::ForwardDataContent(
     NdarrayUtil<device_type, T>::ReduceSum(
         ctx.device_ctx,
         XpuVarNdarray<T>(
-            x_blob->shape().CreateReducedShape({conf.axis().begin(), conf.axis().end()}),
+            CreateReducedShape(x_blob->shape(), {conf.axis().begin(), conf.axis().end()}),
             y_blob->mut_dptr<T>()),
         XpuVarNdarray<const T>(x_blob, x_blob->shape().NumAxes()),
         XpuVarNdarray<T>(temp_storage_blob, x_blob->shape().NumAxes()));

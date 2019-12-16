@@ -29,6 +29,9 @@ void Blob::Init(Regst* regst, const RtBlobDesc* blob_desc, char* header_ptr, cha
       header_pod_ptr_.MutTensorPtr<int64_t>(FieldKey::kRecordIdInDevicePiece, nullptr);
   dptr_ = body_ptr;
   dynamic_shape_ = blob_desc->shape();
+  const Shape* shape_ptr = &blob_desc->shape();
+  if (dim0_valid_num_ptr_ != nullptr) { shape_ptr = &dynamic_shape_; }
+  shape_view_.reset(new ShapeView(*shape_ptr));
   record_num_ = -1;
 }
 
@@ -139,9 +142,15 @@ void Blob::set_dim2_valid_num(int64_t dim0_idx, int64_t dim1_idx, int64_t val) {
   *(dim2_valid_num_ptr_ + dim0_idx * blob_desc_->shape().At(1) + dim1_idx) = val;
 }
 
-const Shape& Blob::shape() const {
-  if (dim0_valid_num_ptr_ == nullptr) { return static_shape(); }
-  return dynamic_shape();
+const ShapeView& Blob::shape() const {
+  if (dim0_valid_num_ptr_ != nullptr) {
+    size_t contiguous_instance_num = ContiguousDim0ValidNum();
+    CHECK_LE(contiguous_instance_num, static_shape().At(0));
+    if (dynamic_shape_.At(0) != contiguous_instance_num) {
+      dynamic_shape_.Set(0, contiguous_instance_num);
+    }
+  }
+  return *shape_view_;
 }
 
 size_t Blob::ContiguousDim0ValidNum() const {

@@ -98,7 +98,7 @@ void MatmulKernel<device_type, T>::CalcBatchMatMul(DeviceCtx* ctx, const Blob* a
                                                    Blob* buf) const {
   CBLAS_TRANSPOSE blas_trans_a = trans_a ? CblasTrans : CblasNoTrans;
   CBLAS_TRANSPOSE blas_trans_b = trans_b ? CblasTrans : CblasNoTrans;
-  int32_t dim_num = a->shape().dim_vec().size();
+  int32_t dim_num = a->shape().NumAxes();
   int32_t batch_size = a->shape().Count(0, dim_num - 2);
   int m = trans_a ? a->shape().At(dim_num - 1) : a->shape().At(dim_num - 2);
   int k = trans_a ? a->shape().At(dim_num - 2) : a->shape().At(dim_num - 1);
