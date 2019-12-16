@@ -23,9 +23,8 @@ class SyncDynamicResizeKernel final : public KernelIf<DeviceType::kGPU> {
                out->mem_case(), in->mem_case());
     AutoMemcpy(ctx.device_ctx, size_on_cpu.get(), size->dptr(), sizeof(int32_t), MakeHostMemCase(),
                size->mem_case());
-    ctx.device_ctx->AddCallBack([out, size_on_cpu, conf]() {
-      out->dense_shape_mut_view()->Set(conf.axis(), *size_on_cpu);
-    });
+    ctx.device_ctx->AddCallBack(
+        [out, size_on_cpu, conf]() { out->mut_shape_view()->Set(conf.axis(), *size_on_cpu); });
   }
 };
 

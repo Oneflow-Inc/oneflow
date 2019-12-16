@@ -62,7 +62,7 @@ inline void OfBlob::CopyShapeFrom(const int64_t* ptr, int64_t num_axis) const {
     return;
   }
   CHECK_LE(shape.elem_cnt(), blob_->static_shape().elem_cnt());
-  blob_->dense_shape_mut_view()->set_shape(shape);
+  blob_->mut_shape_view()->set_shape(shape);
 }
 
 inline void OfBlob::CopyShapeTo(int64_t* ptr, int64_t num_axis) const {
@@ -95,18 +95,18 @@ inline void OfBlob::IncTensorIterator() { blob_->MoveToNextTensor(cur_tensor_.ge
 
 inline void OfBlob::CurTensorCopyShapeTo(int64_t* ptr, int64_t num_axis) const {
   CHECK_EQ(num_axis, NumAxes());
-  DenseShapeMutView(ptr, num_axis).set_shape(cur_tensor_->shape());
+  MutShapeView(ptr, num_axis).set_shape(cur_tensor_->shape());
 }
 
 inline void OfBlob::ClearShape(FullyMutTensorView* tensor) const {
   if (tensor == nullptr) { return; }
   std::vector<int64_t> zeros(NumAxes(), 0LL);
-  tensor->set_shape(DenseShapeView(zeros.data(), NumAxes()));
+  tensor->set_shape(ShapeView(zeros.data(), NumAxes()));
 }
 
 inline void OfBlob::CurMutTensorCopyShapeFrom(const int64_t* ptr, int64_t num_axis) const {
   CHECK_EQ(num_axis, NumAxes());
-  tensor_back_inserter_->cur_mut_tensor()->set_shape(DenseShapeView(ptr, num_axis));
+  tensor_back_inserter_->cur_mut_tensor()->set_shape(ShapeView(ptr, num_axis));
 }
 
 template<typename T>

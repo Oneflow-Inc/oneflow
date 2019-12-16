@@ -30,8 +30,8 @@ void IncreaseIndex(const int64_t* shape, DimVector& index) {
 }
 
 template<typename T>
-void TransposeImpl(DeviceCtx* ctx, const int32_t num_axis, const DenseShapeView& x_shape,
-                   const DenseShapeView& y_shape, const PbRf<int32_t>& permutation,
+void TransposeImpl(DeviceCtx* ctx, const int32_t num_axis, const ShapeView& x_shape,
+                   const ShapeView& y_shape, const PbRf<int32_t>& permutation,
                    const int64_t elem_cnt, const T* x, T* y) {
   int64_t block_size = 1;
   int32_t shared_idxs_num = 0;
@@ -71,16 +71,14 @@ void ConstantInitializer(const T& value, Blob* blob) {
 }  // namespace
 
 void ArithemeticIf<DeviceType::kCPU>::Transpose(DeviceCtx* ctx, const int32_t num_axis,
-                                                const DenseShapeView& x_shape,
-                                                const DenseShapeView& y_shape,
+                                                const ShapeView& x_shape, const ShapeView& y_shape,
                                                 const PbRf<int32_t>& permutation,
                                                 const int64_t elem_cnt, const float* x, float* y) {
   TransposeImpl<float>(ctx, num_axis, x_shape, y_shape, permutation, elem_cnt, x, y);
 }
 
 void ArithemeticIf<DeviceType::kCPU>::Transpose(DeviceCtx* ctx, const int32_t num_axis,
-                                                const DenseShapeView& x_shape,
-                                                const DenseShapeView& y_shape,
+                                                const ShapeView& x_shape, const ShapeView& y_shape,
                                                 const PbRf<int32_t>& permutation,
                                                 const int64_t elem_cnt, const double* x,
                                                 double* y) {

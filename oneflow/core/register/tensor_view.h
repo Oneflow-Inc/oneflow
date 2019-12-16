@@ -2,7 +2,7 @@
 #define ONEFLOW_CORE_COMMON_REGISTER_TENSOR_VIEW_H_
 
 #include "oneflow/core/common/data_type.h"
-#include "oneflow/core/register/dense_shape_view.h"
+#include "oneflow/core/common/shape_view.h"
 #include "oneflow/core/memory/memory_case.pb.h"
 
 namespace oneflow {
@@ -45,11 +45,11 @@ class TensorViewBase {
   ByteType* dptr_;
 };
 
-class TensorView final : public TensorViewBase<DenseShapeView, const char> {
+class TensorView final : public TensorViewBase<ShapeView, const char> {
  public:
   TensorView(const TensorView&) = default;
   TensorView(const Blob* blob, const int64_t* shape_ptr, const char* dptr)
-      : TensorViewBase<DenseShapeView, const char>(blob, shape_ptr, dptr) {}
+      : TensorViewBase<ShapeView, const char>(blob, shape_ptr, dptr) {}
   ~TensorView() = default;
 };
 
@@ -69,24 +69,24 @@ class MutTensorView : public TensorViewBase<ShapeViewType, char> {
   ~MutTensorView() = default;
 };
 
-class DataOnlyMutTensorView final : public MutTensorView<DenseShapeView> {
+class DataOnlyMutTensorView final : public MutTensorView<ShapeView> {
  public:
   DataOnlyMutTensorView(const DataOnlyMutTensorView&) = default;
   DataOnlyMutTensorView(const Blob* blob, const int64_t* shape_ptr, char* dptr)
-      : MutTensorView<DenseShapeView>(blob, shape_ptr, dptr) {}
+      : MutTensorView<ShapeView>(blob, shape_ptr, dptr) {}
   ~DataOnlyMutTensorView() = default;
 };
 
 class Shape;
 
-class FullyMutTensorView final : public MutTensorView<DenseShapeMutView> {
+class FullyMutTensorView final : public MutTensorView<MutShapeView> {
  public:
   FullyMutTensorView(const FullyMutTensorView&) = default;
   FullyMutTensorView(const Blob* blob, int64_t* shape_ptr, char* dptr);
   ~FullyMutTensorView() = default;
 
   void set_shape(const Shape& shape);
-  void set_shape(const DenseShapeView& shape);
+  void set_shape(const ShapeView& shape);
 
  private:
   void CheckCapacity(size_t shape_elem_cnt) const;

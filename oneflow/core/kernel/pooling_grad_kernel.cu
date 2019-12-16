@@ -44,7 +44,7 @@ struct PoolingGradKernelUtil<DeviceType::kGPU, T> final {
     std::vector<int> pool_size(num_spatial_dims);
     std::vector<int> padding(num_spatial_dims);
     std::vector<int> strides(num_spatial_dims);
-    const DenseShapeView& x_shape = x_blob->shape();
+    const ShapeView& x_shape = x_blob->shape();
     const DimVector x_shape_vec = {GetInDim(x_shape, data_format, 0, num_spatial_dims),
                                    GetInDim(x_shape, data_format, 1, num_spatial_dims),
                                    GetInDim(x_shape, data_format, 2, num_spatial_dims)};

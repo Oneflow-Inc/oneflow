@@ -7,7 +7,7 @@
 
 namespace oneflow {
 
-class DenseShapeView;
+class ShapeView;
 
 class Shape final {
  public:
@@ -19,8 +19,8 @@ class Shape final {
   Shape(const std::initializer_list<int64_t>& dim_vec);
   ~Shape() = default;
   Shape& operator=(const Shape& shape);
-  Shape& CheckNumAxesIdenticalAndAssign(const DenseShapeView& shape_view);
-  Shape& LeftOnesExtendedAssign(const DenseShapeView& shape_view);
+  Shape& CheckNumAxesIdenticalAndAssign(const ShapeView& shape_view);
+  Shape& LeftOnesExtendedAssign(const ShapeView& shape_view);
 
   bool operator==(const Shape& rhs) const;
   bool operator!=(const Shape& rhs) const { return !(*this == rhs); }
@@ -57,9 +57,9 @@ class Shape final {
 
 int64_t ShiftNegativeAxis(int64_t axis, const int64_t num_axes);
 
-Shape CreateReducedShape(const DenseShapeView& shape, const AxisVector& axis_vec);
-Shape CreateLeftExtendedShape(const DenseShapeView& shape, int ndims_extend_to);
-Shape CreateReducedShapeOrOnesShape(const DenseShapeView& shape, const AxisVector& axis_vec);
+Shape CreateReducedShape(const ShapeView& shape, const AxisVector& axis_vec);
+Shape CreateLeftExtendedShape(const ShapeView& shape, int ndims_extend_to);
+Shape CreateReducedShapeOrOnesShape(const ShapeView& shape, const AxisVector& axis_vec);
 template<typename StreamT>
 void Shape::SerializeWithTextFormat(StreamT& out_stream) const {
   for (int64_t dim : dim_vec_) { out_stream << std::to_string(dim) << ' '; }

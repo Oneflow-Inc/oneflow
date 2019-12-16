@@ -10,8 +10,8 @@ class PieceSliceKernel final : public KernelIf<device_type> {
   ~PieceSliceKernel() = default;
 
  private:
-  void ForwardDenseShape(const KernelCtx& ctx,
-                         std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
+  void ForwardShape(const KernelCtx& ctx,
+                    std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
     // do nothing
   }
   void ForwardDataContent(const KernelCtx& ctx,

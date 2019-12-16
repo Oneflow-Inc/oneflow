@@ -1,10 +1,10 @@
 #include "oneflow/core/common/shape.h"
-#include "oneflow/core/register/dense_shape_view.h"
+#include "oneflow/core/common/shape_view.h"
 #include "oneflow/core/common/protobuf.h"
 
 namespace oneflow {
 
-Shape CreateReducedShape(const DenseShapeView& shape, const AxisVector& axis_vec) {
+Shape CreateReducedShape(const ShapeView& shape, const AxisVector& axis_vec) {
   CHECK_EQ(axis_vec.empty(), false);
   DimVector dim_vec;
   shape.ToDimVector(&dim_vec);
@@ -12,7 +12,7 @@ Shape CreateReducedShape(const DenseShapeView& shape, const AxisVector& axis_vec
   return Shape(std::move(dim_vec));
 }
 
-Shape CreateLeftExtendedShape(const DenseShapeView& shape, int ndims_left_extend_to) {
+Shape CreateLeftExtendedShape(const ShapeView& shape, int ndims_left_extend_to) {
   CHECK_GE(ndims_left_extend_to, shape.NumAxes());
   DimVector dim_vec(ndims_left_extend_to);
   const size_t left_ones_num = ndims_left_extend_to - shape.NumAxes();
@@ -22,7 +22,7 @@ Shape CreateLeftExtendedShape(const DenseShapeView& shape, int ndims_left_extend
   return Shape(std::move(dim_vec));
 }
 
-Shape CreateReducedShapeOrOnesShape(const DenseShapeView& shape, const AxisVector& axis_vec) {
+Shape CreateReducedShapeOrOnesShape(const ShapeView& shape, const AxisVector& axis_vec) {
   if (axis_vec.empty()) { return Shape::Ones(shape.NumAxes()); }
   return CreateReducedShape(shape, axis_vec);
 }
@@ -49,14 +49,14 @@ Shape& Shape::operator=(const Shape& shape) {
   return *this;
 }
 
-Shape& Shape::CheckNumAxesIdenticalAndAssign(const DenseShapeView& shape_view) {
+Shape& Shape::CheckNumAxesIdenticalAndAssign(const ShapeView& shape_view) {
   CHECK_EQ(NumAxes(), shape_view.NumAxes());
   std::copy(shape_view.ptr(), shape_view.ptr() + shape_view.NumAxes(), dim_vec_.data());
   UpdateElemCnt();
   return *this;
 }
 
-Shape& Shape::LeftOnesExtendedAssign(const DenseShapeView& shape_view) {
+Shape& Shape::LeftOnesExtendedAssign(const ShapeView& shape_view) {
   CHECK_GE(NumAxes(), shape_view.NumAxes());
   size_t left_ones_size = NumAxes() - shape_view.NumAxes();
   FOR_RANGE(int, i, 0, left_ones_size) { dim_vec_.at(i) = 1LL; }

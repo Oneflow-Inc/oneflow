@@ -47,8 +47,7 @@ BlobDesc* RuntimeBlobShapeInferHelper::BlobDesc4BnInOp(const std::string& bn_in_
   return blob_desc;
 }
 
-void RuntimeBlobShapeInferHelper::InferDenseShape(
-    std::function<Blob*(const std::string&)> BnInOp2Blob) {
+void RuntimeBlobShapeInferHelper::InferShape(std::function<Blob*(const std::string&)> BnInOp2Blob) {
   UpdateInputBlobDescs7OpInferCacheKey(BnInOp2Blob);
   auto Infer = [&](const OpInferCacheKey& key) -> std::shared_ptr<const OpInferCacheValue> {
     auto CachedBlobDesc4BnInOp = WithResultCached([&](const std::string& bn_in_op) -> BlobDesc* {
@@ -80,7 +79,7 @@ void RuntimeBlobShapeInferHelper::InferDenseShape(
     auto* blob = BnInOp2Blob(obn);
     if (blob == nullptr) { continue; }
     if (blob->blob_desc().is_dynamic()) {
-      blob->dense_shape_mut_view()->set_shape(*obn_idx2shape_sym.at(i));
+      blob->mut_shape_view()->set_shape(*obn_idx2shape_sym.at(i));
     } else {
       CHECK(*obn_idx2shape_sym.at(i) == blob->static_shape());
     }

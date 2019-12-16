@@ -237,7 +237,7 @@ void Operator::GenKernelConf(
   } else {
     if (HasBlobDescWithField(GetBlobDesc4BnInOp, output_bns(),
                              [](const BlobDesc* blob_desc) { return blob_desc->is_dynamic(); })) {
-      kernel_conf->set_need_do_dense_shape(true);
+      kernel_conf->set_need_do_shape(true);
     }
     if (HasBlobDescWithField(GetBlobDesc4BnInOp, output_bns(), [](const BlobDesc* blob_desc) {
           return blob_desc->is_tensor_list();

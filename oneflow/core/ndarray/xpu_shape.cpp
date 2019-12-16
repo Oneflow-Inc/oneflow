@@ -24,7 +24,7 @@ XpuShape::XpuShape(const Shape& shape) {
   }
 }
 
-XpuShape::XpuShape(const DenseShapeView& shape) {
+XpuShape::XpuShape(const ShapeView& shape) {
   num_axes_ = shape.NumAxes();
   int i = 0;
   for (; i < num_axes_; ++i) { dim_[i] = shape.At(i); }
@@ -35,7 +35,7 @@ XpuShape::XpuShape(const DenseShapeView& shape) {
   }
 }
 
-XpuShape::XpuShape(const DenseShapeView& shape, int ndims_left_extend_to) {
+XpuShape::XpuShape(const ShapeView& shape, int ndims_left_extend_to) {
   CHECK_LE(shape.NumAxes(), ndims_left_extend_to);
   num_axes_ = ndims_left_extend_to;
   size_t left_ones_num = num_axes_ - shape.NumAxes();

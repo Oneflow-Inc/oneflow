@@ -1,5 +1,5 @@
 #include "oneflow/core/job_completer/job_completer.h"
-#include "oneflow/core/register/dense_shape_view.h"
+#include "oneflow/core/common/shape_view.h"
 
 namespace oneflow {
 

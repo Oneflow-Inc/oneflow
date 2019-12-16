@@ -5,7 +5,7 @@
 #include "oneflow/core/operator/operator_util.h"
 #include "oneflow/core/device/cudnn_util.h"
 #include "oneflow/core/device/cudnn_conv_ctx_cache.h"
-#include "oneflow/core/register/dense_shape_view.h"
+#include "oneflow/core/common/shape_view.h"
 
 namespace oneflow {
 
@@ -16,7 +16,7 @@ class CudnnConvDesc final {
   CudnnConvDesc() = delete;
   ~CudnnConvDesc();
 
-  CudnnConvDesc(const DataType& data_type, const DenseShapeView& in_blob_shape,
+  CudnnConvDesc(const DataType& data_type, const ShapeView& in_blob_shape,
                 const PbMessage& conv_conf);
 
   const cudnnConvolutionDescriptor_t& Get() const { return val_; }

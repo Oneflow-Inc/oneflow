@@ -10,14 +10,14 @@ const MemoryCase& MemCase4Blob(const Blob* blob) { return blob->mem_case(); }
 DataType DataType4Blob(const Blob* blob) { return blob->data_type(); }
 
 FullyMutTensorView::FullyMutTensorView(const Blob* blob, int64_t* shape_ptr, char* dptr)
-    : MutTensorView<DenseShapeMutView>(blob, shape_ptr, dptr) {}
+    : MutTensorView<MutShapeView>(blob, shape_ptr, dptr) {}
 
 void FullyMutTensorView::set_shape(const Shape& shape) {
   CheckCapacity(shape.elem_cnt());
   shape_view_ptr()->set_shape(shape);
 }
 
-void FullyMutTensorView::set_shape(const DenseShapeView& shape) {
+void FullyMutTensorView::set_shape(const ShapeView& shape) {
   CheckCapacity(shape.elem_cnt());
   shape_view_ptr()->set_shape(shape);
 }

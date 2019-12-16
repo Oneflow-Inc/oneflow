@@ -32,8 +32,8 @@ class StackKernel final : public KernelIf<device_type> {
     CHECK_LE(out_col_offset, out_cols);
   }
 
-  void ForwardDenseShape(const KernelCtx& ctx,
-                         std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
+  void ForwardShape(const KernelCtx& ctx,
+                    std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
     const Blob* in_0 = BnInOp2Blob(this->op_attribute().input_bns().Get(0));
     DimVector shape_vec;
     in_0->shape().ToDimVector(&shape_vec);
@@ -50,7 +50,7 @@ class StackKernel final : public KernelIf<device_type> {
         }
       }
     }
-    BnInOp2Blob("out")->dense_shape_mut_view()->set_shape(Shape(std::move(shape_vec)));
+    BnInOp2Blob("out")->mut_shape_view()->set_shape(Shape(std::move(shape_vec)));
   }
 };
 
