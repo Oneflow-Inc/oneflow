@@ -132,7 +132,7 @@ def maskrcnn_train(cfg, image, image_size, gt_bbox, gt_segm, gt_label):
     # Backbone
     # CHECK_POINT: fpn features
     # with flow.watch_scope(
-    #     blob_watcher=blob_watched, diff_blob_watcher=diff_blob_watched
+    #     blob_watcher=blob_watched
     # ):
     features = backbone.build(flow.transpose(image, perm=[0, 3, 1, 2]))
 
@@ -276,6 +276,14 @@ def save_model(check_point, i):
     print("saving models to {}".format(model_dst))
     check_point.save(model_dst)
 
+def load_iter_num_from_file(path):
+    if os.path.isfile(path):
+        with open(path, "rb") as f:
+            import struct
+            (iter_num,) = struct.unpack("q", f.read())
+            return iter_num
+    else:
+        return None
 
 def train_net(config, image=None):
     data_loader = make_data_loader(config, True)
@@ -524,6 +532,15 @@ def run():
     )
 
     printer = LossPrinter(terminal_args.print_loss_each_rank)
+    iter_file = os.path.join(config.MODEL.WEIGHT, "System-Train-TrainStep-{}".format(train_func.__name__), "out")
+    loaded_iter = load_iter_num_from_file(iter_file)
+    start_iter = 1
+    if loaded_iter is None:
+        print("{} not found, iter starts at 1".format(iter_file))
+    else:
+        print("{} found, iter starts at {}".format(iter_file, loaded_iter))
+        start_iter = loaded_iter + 1
+
     for i in range(terminal_args.iter_num):
         if i < len(fake_image_list):
             outputs = train_func(fake_image_list[i]).get()
