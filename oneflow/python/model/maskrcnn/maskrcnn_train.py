@@ -40,9 +40,6 @@ parser.add_argument(
     "-g", "--gpu_num_per_node", type=int, default=1, required=False
 )
 parser.add_argument("-bz", "--batch_size", type=int, default=2, required=False)
-parser.add_argument(
-    "--save_loss_npy_every_n_batch", type=int, default=0, required=False
-)
 parser.add_argument("-fake", "--fake_image_path", type=str, required=False)
 parser.add_argument(
     "-save",
@@ -60,7 +57,7 @@ parser.add_argument(
     action="store_true",
     required=False,
 )
-parser.add_argument("-i", "--iter_num", type=int, default=10, required=False)
+parser.add_argument("-i", "--max_iter", type=int, required=False)
 parser.add_argument(
     "-v", "--verbose", default=False, action="store_true", required=False
 )
@@ -197,6 +194,9 @@ def merge_and_compare_config(args):
             config.SOLVER.BATCH_SIZE / config.ENV.NUM_GPUS
         )
 
+    if hasattr(args, "max_iter"):
+        config.SOLVER.MAX_ITER = args.max_iter
+
     assert (
         config.SOLVER.IMS_PER_BATCH * config.ENV.NUM_GPUS
         == config.SOLVER.BATCH_SIZE
@@ -276,14 +276,17 @@ def save_model(check_point, i):
     print("saving models to {}".format(model_dst))
     check_point.save(model_dst)
 
+
 def load_iter_num_from_file(path):
     if os.path.isfile(path):
         with open(path, "rb") as f:
             import struct
+
             (iter_num,) = struct.unpack("q", f.read())
             return iter_num
     else:
         return None
+
 
 def train_net(config, image=None):
     data_loader = make_data_loader(config, True)
@@ -506,8 +509,9 @@ def update_metrics(metrics, iter, elapsed_time, values):
 
 
 def run():
-    fake_image_list = []
+    use_fake_images = False
     if hasattr(terminal_args, "fake_image_path"):
+        use_fake_images = True
         file_list = os.listdir(terminal_args.fake_image_path)
         fake_image_list = [
             np.load(os.path.join(terminal_args.fake_image_path, f))
@@ -516,7 +520,7 @@ def run():
 
     # Get mrcn train function
     config = merge_and_compare_config(terminal_args)
-    train_func = init_train_func(config, len(fake_image_list) > 0)
+    train_func = init_train_func(config, use_fake_images)
 
     # model init
     check_point = flow.train.CheckPoint()
@@ -527,23 +531,33 @@ def run():
 
     start_time = time.time()
     elapsed_times = []
-    metrics = pd.DataFrame(
-        {"iter": 0, "legend": "cfg", "note": str(config)}, index=[0]
-    )
 
     printer = LossPrinter(terminal_args.print_loss_each_rank)
-    iter_file = os.path.join(config.MODEL.WEIGHT, "System-Train-TrainStep-{}".format(train_func.__name__), "out")
+    iter_file = os.path.join(
+        config.MODEL.WEIGHT,
+        "System-Train-TrainStep-{}".format(train_func.__name__),
+        "out",
+    )
     loaded_iter = load_iter_num_from_file(iter_file)
+
     start_iter = 1
     if loaded_iter is None:
         print("{} not found, iter starts at 1".format(iter_file))
     else:
         print("{} found, last iter: {}".format(iter_file, loaded_iter))
         start_iter = loaded_iter + 1
+    assert start_iter <= config.SOLVER.MAX_ITER, "{} vs {}".format(start_iter, config.SOLVER.MAX_ITER)
 
-    for i in range(terminal_args.iter_num):
-        if i < len(fake_image_list):
-            outputs = train_func(fake_image_list[i]).get()
+    metrics = pd.DataFrame(
+        {"iter": start_iter, "legend": "cfg", "note": str(config)}, index=[0]
+    )
+
+    if use_fake_images:
+        assert len(fake_image_list) >= config.SOLVER.MAX_ITER - start_iter + 1
+
+    for i in range(start_iter, config.SOLVER.MAX_ITER + 1):
+        if use_fake_images:
+            outputs = train_func(fake_image_list[i - start_iter]).get()
         else:
             outputs = train_func().get()
 
@@ -558,16 +572,19 @@ def run():
 
         if config.SOLVER.CHECKPOINT_PERIOD > 0:
             if (
-                (i + 1) % config.SOLVER.CHECKPOINT_PERIOD == 0
-                or i + 1 == terminal_args.iter_num
+                i % config.SOLVER.CHECKPOINT_PERIOD == 0
+                or i == config.SOLVER.MAX_ITER
             ):
-                save_model(check_point, i + 1)
+                save_model(check_point, i)
 
-        metrics = update_metrics(metrics, i, elapsed_time, metrics_values)
+        metrics = update_metrics(
+            metrics, i, elapsed_time, metrics_values
+        )
+
         if config.SOLVER.METRICS_PERIOD > 0:
             if (
-                (i + 1) % config.SOLVER.METRICS_PERIOD == 0
-                or i + 1 == terminal_args.iter_num
+                i % config.SOLVER.METRICS_PERIOD == 0
+                or i == config.SOLVER.MAX_ITER
             ):
                 npy_file_name = "loss-{}-batch_size-{}-gpu-{}-image_dir-{}-{}.csv".format(
                     i,
