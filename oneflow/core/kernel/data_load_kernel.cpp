@@ -2,7 +2,7 @@
 #include "oneflow/core/record/ofrecord_decoder.h"
 #include "oneflow/core/thread/thread_manager.h"
 #include "oneflow/core/register/lod_view.h"
-#include "/home/caishenghang/nsight-systems-2019.6.1/target-linux-x64/nvtx/include/nvtx3/nvToolsExt.h"
+#include "oneflow/core/nvtx3/nvToolsExt.h"
 
 namespace oneflow {
 

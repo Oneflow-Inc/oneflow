@@ -1,6 +1,6 @@
 #include "oneflow/core/thread/gpu_thread.h"
 #include "oneflow/core/device/cuda_stream_handle.h"
-#include "/home/caishenghang/nsight-systems-2019.6.1/target-linux-x64/nvtx/include/nvtx3/nvToolsExt.h"
+#include "oneflow/core/nvtx3/nvToolsExt.h"
 
 namespace oneflow {
 

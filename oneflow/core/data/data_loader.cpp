@@ -3,7 +3,7 @@
 #include "oneflow/core/data/data_transform.h"
 #include "oneflow/core/common/blocking_counter.h"
 #include "oneflow/core/thread/thread_manager.h"
-#include "/home/caishenghang/nsight-systems-2019.6.1/target-linux-x64/nvtx/include/nvtx3/nvToolsExt.h"
+#include "oneflow/core/nvtx3/nvToolsExt.h"
 
 namespace oneflow {
 namespace data {
