@@ -247,6 +247,7 @@ def set_train_config(cfg):
             raise ValueError("warmup method must be 'linear' or 'constant'")
 
     flow.config.train.model_update_conf(optimizer)
+    return flow.config.train.get_model_update_conf()
 
 
 def save_model(check_point, i):
@@ -318,7 +319,38 @@ def get_flow_dtype(dtype_str):
     else:
         raise NotImplementedError
 
-
+def make_lr(train_step_name, model_update_conf, primary_lr, secondary_lr=None):
+    # usually, train_step_name is "System-Train-TrainStep-" + train job name
+    assert model_update_conf.HasField("learning_rate_decay") or model_update_conf.HasField("warmup_conf"), "only support model update conf with warmup or lr decay for now"
+    flow.config.train.train_step_lbn(train_step_name + "/out")
+    secondary_lr_lbn = "System-Train-SecondaryLearningRate-Scheduler/out"
+    if secondary_lr is None:
+        secondary_lr_lbn = "System-Train-PrimaryLearningRate-Scheduler/out"
+    flow.config.train.lr_lbn("System-Train-PrimaryLearningRate-Scheduler/out", "System-Train-SecondaryLearningRate-Scheduler/out")
+    # these two lines above must be called before creating any op
+    with flow.device_prior_placement("cpu", "0:0"):
+        train_step = flow.get_variable(
+            name=train_step_name,
+            shape=(1,),
+            dtype=flow.int64,
+            initializer=flow.constant_initializer(0),
+            trainable=False
+        )
+        train_step_id = flow.identity(train_step, name=train_step_name + "-Identity")
+        flow.assign(train_step, train_step_id + 1, name=train_step_name + "-Assign")
+        primary_lr_blob = flow.schedule(train_step, model_update_conf, primary_lr, name="System-Train-PrimaryLearningRate-Scheduler")
+        secondary_lr_blob = None
+        if secondary_lr is None:
+            secondary_lr_blob = primary_lr_blob
+        else:
+            secondary_lr_blob = flow.schedule(train_step, model_update_conf, secondary_lr, name="System-Train-SecondaryLearningRate-Scheduler")
+        assert secondary_lr_blob is not None
+        return {
+            "train_step": train_step,
+            "primary_lr": primary_lr_blob,
+            "secondary_lr": secondary_lr_blob
+        }
+        
 def init_train_func(config, input_fake_image):
     flow.env.ctrl_port(terminal_args.ctrl_port)
     flow.config.enable_inplace(config.ENV.ENABLE_INPLACE)
@@ -342,7 +374,8 @@ def init_train_func(config, input_fake_image):
 
         @flow.function
         def train():
-            set_train_config(config)
+            model_update_conf = set_train_config(config)
+            make_lr("System-Train-TrainStep-train", model_update_conf, flow.config.train.get_primary_lr(), flow.config.train.get_secondary_lr())
             return train_net(config)
 
         return train

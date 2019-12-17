@@ -330,6 +330,10 @@ def set_model_update_conf(value):
     pb_util.PythonDict2PbMessage(value, pb_msg)
     return oneflow.config
 
+@oneflow_export('config.train.get_model_update_conf')
+def get_model_update_conf():
+    return _GetJobConfAttr(lambda job_conf: job_conf.train_conf, 'model_update_conf')
+
 @oneflow_export('config.train.loss_scale_factor')
 def set_loss_scale_factor(value):
     _SetJobConfAttr(lambda job_conf: job_conf.train_conf, 'loss_scale_factor', value)
@@ -340,10 +344,18 @@ def set_primary_lr(value):
     _SetJobConfAttr(lambda job_conf: job_conf.train_conf, 'primary_lr', value)
     return oneflow.config
 
+@oneflow_export('config.train.get_primary_lr')
+def get_primary_lr():
+    return _GetJobConfAttr(lambda job_conf: job_conf.train_conf, 'primary_lr')
+
 @oneflow_export('config.train.secondary_lr')
 def set_secondary_lr(value):
     _SetJobConfAttr(lambda job_conf: job_conf.train_conf, 'secondary_lr', value)
     return oneflow.config
+
+@oneflow_export('config.train.get_secondary_lr')
+def get_secondary_lr():
+    return _GetJobConfAttr(lambda job_conf: job_conf.train_conf, 'secondary_lr')
 
 @oneflow_export('config.train.weight_l1')
 def set_weight_l1(value):
@@ -363,6 +375,35 @@ def set_weight_l2(value):
 @oneflow_export('config.train.bias_l2')
 def set_bias_l2(value):
     _SetJobConfAttr(lambda job_conf: job_conf.train_conf, 'bias_l2', value)
+    return oneflow.config
+
+@oneflow_export('config.train.train_step_lbn')
+def set_train_step_lbn(train_step_lbn):
+    def _SetJobConfAttr2(GetConf, field, value):
+        if compile_context.cur_job_conf is not None:
+            assert c_api_util.CurJobBuildAndInferCtx_HasJobConf() == False
+            setattr(GetConf(compile_context.cur_job_conf), field, value)
+        else:
+            assert c_api_util.IsSessionInited() == False
+            setattr(GetConf(default_job_conf), field, value)
+
+    _SetJobConfAttr2(lambda job_conf: job_conf.train_conf, 'train_step_lbn', train_step_lbn)
+    return oneflow.config
+
+@oneflow_export('config.train.lr_lbn')
+def set_lr_bn(primary_lr_lbn, secondary_lr_lbn=None):
+    def _SetJobConfAttr2(GetConf, field, value):
+        if compile_context.cur_job_conf is not None:
+            assert c_api_util.CurJobBuildAndInferCtx_HasJobConf() == False
+            setattr(GetConf(compile_context.cur_job_conf), field, value)
+        else:
+            assert c_api_util.IsSessionInited() == False
+            setattr(GetConf(default_job_conf), field, value)
+
+    _SetJobConfAttr2(lambda job_conf: job_conf.train_conf, 'primary_lr_lbn', primary_lr_lbn)
+    if secondary_lr_lbn is None:
+        secondary_lr_lbn = primary_lr_lbn
+    _SetJobConfAttr2(lambda job_conf: job_conf.train_conf, 'secondary_lr_lbn', secondary_lr_lbn)
     return oneflow.config
 
 def _SetJobConfAttr(GetConf, field, value):

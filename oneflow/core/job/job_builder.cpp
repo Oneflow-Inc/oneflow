@@ -55,7 +55,8 @@ void JobBuilder::AddOps(const ParallelConf& parallel_conf,
   auto* placemnt_group = job_->mutable_placement()->add_placement_group();
   *placemnt_group->mutable_parallel_conf() = parallel_conf;
   for (const auto& op_conf : op_confs) {
-    CHECK(op_name2op_conf_.find(op_conf.name()) == op_name2op_conf_.end());
+    CHECK(op_name2op_conf_.find(op_conf.name()) == op_name2op_conf_.end())
+        << "duplicated found, op name: " << op_conf.name();
     OperatorConf* mut_op_conf = job_->mutable_net()->add_op();
     *mut_op_conf = op_conf;
     CHECK(op_name2op_conf_.emplace(op_conf.name(), mut_op_conf).second);
