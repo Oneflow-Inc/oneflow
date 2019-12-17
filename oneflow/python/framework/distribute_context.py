@@ -1,21 +1,20 @@
 from __future__ import absolute_import
 
+import oneflow.python.framework.session_context as session_ctx
+
 class DistributeStrategy(object):
     pass
 
-def PushMirrorStrategyEnabled(val):
-    global _is_mirror_strategy_enabled_stack
-    _is_mirror_strategy_enabled_stack.append(val)
+def PushMirroredStrategyEnabled(val):
+    session_ctx.GetDefaultSession().is_mirrored_strategy_enabled_stack.append(val)
 
-def IsMirrorStrategyEnabled():
-    assert len(_is_mirror_strategy_enabled_stack) > 0
-    return _is_mirror_strategy_enabled_stack[-1]
+def IsMirroredStrategyEnabled():
+    stack = session_ctx.GetDefaultSession().is_mirrored_strategy_enabled_stack
+    return len(stack) > 0 and stack[-1]
 
-def AnyStrategyEnabled():
-    return len(_is_mirror_strategy_enabled_stack) > 0
+def IsConsistentStrategyEnabled():
+    stack = session_ctx.GetDefaultSession().is_mirrored_strategy_enabled_stack
+    return len(stack) > 0 and not stack[-1]
 
-def PophMirrorStrategyEnabled():
-    global _is_mirror_strategy_enabled_stack
-    _is_mirror_strategy_enabled_stack.pop()
-
-_is_mirror_strategy_enabled_stack = []
+def PopMirroredStrategyEnabled():
+    session_ctx.GetDefaultSession().is_mirrored_strategy_enabled_stack.pop()

@@ -123,7 +123,7 @@ def PretrainJob():
     flow.losses.add_loss(loss)
     return loss
 
-func_config = flow.function_config()
+func_config = flow.FunctionConfig()
 func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
 func_config.train.primary_lr(FLAGS.lr)
 func_config.train.model_update_conf(_BERT_MODEL_UPDATE_CONF)

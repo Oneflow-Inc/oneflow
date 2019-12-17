@@ -4,29 +4,29 @@ from oneflow.python.oneflow_export import oneflow_export
 from contextlib import contextmanager
 import oneflow.python.framework.distribute_context as distribute_ctx
 
-@oneflow_export("distribute.mirror_strategy")
-class DistributeMirrorStrategy(distribute_ctx.DistributeStrategy):
+@oneflow_export("distribute.mirrored_strategy")
+class DistributeMirroredStrategy(distribute_ctx.DistributeStrategy):
     def __enter__(self, *argc, **kwarg):
-        distribute_ctx.PushMirrorStrategyEnabled(True)
+        distribute_ctx.PushMirroredStrategyEnabled(True)
 
     def __exit__(self, *argc, **kwarg):
-        distribute_ctx.PophMirrorStrategyEnabled()
+        distribute_ctx.PopMirroredStrategyEnabled()
     
-@oneflow_export("distribute.mirror_strategy_enabled")
-def MirrorStrategyEnabled():
-    return distribute_ctx.AnyStrategyEnabled() and distribute_ctx.IsMirrorStrategyEnabled()
+@oneflow_export("distribute.mirrored_strategy_enabled")
+def MirroredStrategyEnabled():
+    return distribute_ctx.IsMirroredStrategyEnabled()
 
 @oneflow_export("distribute.consistent_strategy")
 class DistributeConsistentStrategy(distribute_ctx.DistributeStrategy):
     def __enter__(self, *argc, **kwarg):
-        distribute_ctx.PushMirrorStrategyEnabled(False)
+        distribute_ctx.PushMirroredStrategyEnabled(False)
 
     def __exit__(self, *argc, **kwarg):
-        distribute_ctx.PophMirrorStrategyEnabled()
+        distribute_ctx.PopMirroredStrategyEnabled()
 
 @oneflow_export("distribute.consistent_strategy_enabled")
 def ConsistentStrategyEnabled():
-    return distribute_ctx.AnyStrategyEnabled() and not distribute_ctx.IsMirrorStrategyEnabled()
+    return distribute_ctx.IsConsistentStrategyEnabled()
 
 @oneflow_export("distribute.split")
 def split(axis):

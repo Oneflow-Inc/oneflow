@@ -26,24 +26,28 @@ class Session(object):
         self.uuid2watch_handler_ = {}
         self.config_proto_ = _GetDefaultConfigProto()
         self.placement_scope_stack_ = []
+        self.is_mirrored_strategy_enabled_stack_ = []
 
     @property
-    def config_proto(self): return self.config_proto_
-
-    @property
-    def placement_scope_stack(self): return self.placement_scope_stack_
+    def status(self): return self.status_
 
     @property
     def is_running(self): return self.status_ is SessionStatus.RUNNING
 
     @property
-    def inter_user_job_info(self): return self.inter_user_job_info_
+    def config_proto(self): return self.config_proto_
 
     @property
     def uuid2watch_handler(self): return self.uuid2watch_handler_
 
     @property
-    def status(self): return self.status_
+    def placement_scope_stack(self): return self.placement_scope_stack_
+
+    @property
+    def is_mirrored_strategy_enabled_stack(self): return self.is_mirrored_strategy_enabled_stack_
+
+    @property
+    def inter_user_job_info(self): return self.inter_user_job_info_
 
     def GetJobConfigProto(self, job_name):
       return self.job_name2function_desc_[job_name].job_config_proto

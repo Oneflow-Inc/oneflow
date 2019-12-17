@@ -1,7 +1,7 @@
 import oneflow as flow
 
 def test_default_placement_scope(test_case):
-    func_config = flow.function_config()
+    func_config = flow.FunctionConfig()
     func_config.default_placement_scope(flow.fixed_placement("cpu", "0:0"))
     @flow.function(func_config)
     def Foo():

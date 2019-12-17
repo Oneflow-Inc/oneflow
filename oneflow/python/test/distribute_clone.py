@@ -13,7 +13,7 @@ def Print(prefix):
     return _print
 
 @flow.function
-def DistributeClone(x = flow.input_blob_def((2, 5), is_dynamic=False)):
+def DistributeClone(x = flow.fixed_tensor_def((2, 5))):
   with flow.device_prior_placement("gpu", "0:0"):
     a = flow.identity(x)
     b = flow.math.relu(x)

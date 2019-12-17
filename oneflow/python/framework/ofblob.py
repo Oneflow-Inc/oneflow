@@ -47,18 +47,17 @@ class OfBlob(object):
         assert len(ndarray_lists) == 1
         assert len(ndarray_lists[0]) == 1
         return ndarray_lists[0][0]
-
-    def CopyFromNdarray(self, src_ndarray):
-        return self._CopyFromNdarrayLists([[src_ndarray]])
-   
-    def CopyFromNdarrayOrNestedNdarrayList(self, src_ndarray):
-        assert isinstance(src_ndarray, np.ndarray)
-        self.CopyFromNdarray(src_ndarray)
-
+    
     def CopyToNdarrayLists(self):
         assert self.is_dynamic
         return self._CopyToNdarrayLists()
 
+    def CopyFromNdarray(self, src_ndarray):
+        return self._CopyFromNdarrayLists([[src_ndarray]])
+
+    def CopyFromNdarrayList(self, src_ndarray_list):
+        return self._CopyFromNdarrayLists([src_ndarray_list])
+   
     def CopyFromNdarrayLists(self, ndarray_lists):
         assert self.is_dynamic
         return self._CopyFromNdarrayLists(ndarray_lists)

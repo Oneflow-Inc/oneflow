@@ -11,7 +11,7 @@ import oneflow.python.framework.placement_context as placement_ctx
 import oneflow.python.framework.distribute_context as distribute_ctx
 import oneflow.python.lib.core.pb_util as pb_util
 
-@oneflow_export('function_config')
+@oneflow_export("FunctionConfig", 'function_config')
 class FunctionConfig(object):
     def __init__(self):
         self.function_desc = FunctionDesc()

@@ -6,7 +6,7 @@ def test_simple(test_case):
   data = np.ones((10,), dtype=np.float32)
   def EqOnes(x): test_case.assertTrue(np.allclose(data, x))
   @flow.function()
-  def ReluJob(x = flow.input_blob_def((10,))):
+  def ReluJob(x = flow.FixedTensorDef((10,))):
       y = flow.keras.activations.relu(x)
       flow.watch(x, EqOnes)
       flow.watch(y, EqOnes)
