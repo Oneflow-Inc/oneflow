@@ -1,4 +1,4 @@
-#  pip3 install -U altair vega_datasets jupyterlab --user
+# pip3 install -U altair vega_datasets jupyterlab --user
 import altair as alt
 import pandas as pd
 import numpy as np
@@ -81,9 +81,6 @@ def update_legend(df, prefix):
     return df
 
 
-DL = "/Users/jackal/Downloads/"
-
-
 COLUMNS = [
     "loss_rpn_box_reg",
     "loss_objectness",
@@ -112,47 +109,24 @@ def make_loss_frame5(losses_hisogram, source):
     )
 
 
-touch_loss_np = np.load(os.path.join(DL, "pytorch_maskrcnn_losses.npy"))
-
-torch_old_70k = make_loss_frame5(touch_loss_np, "pytorch_maskrcnn_losses")
-
-flow = pd.read_csv(
-    os.path.join(
-        DL,
-        "loss-19999-batch_size-8-gpu-4-image_dir-train2017-2019-12-12--02-51-33.csv",
-    )
-)
-torch_before_fix_1x1 = pd.read_csv(
-    os.path.join(
-        DL,
-        "torch-13299-batch_size-8-image_dir-coco_2017_train-2019-12-12--02-01-47.csv",
-    )
-)
-
-
 def latest_wildcard(path):
     result = glob.glob(path)
+    assert len(result) > 0, "there is no files in {}".format(path)
     result.sort(key=os.path.getmtime)
     return result[-1]
 
 
-flow_latest_csv = latest_wildcard(os.path.join(DL, "loss*.csv"))
-torch_latest_csv = latest_wildcard(os.path.join(DL, "torch*.csv"))
+def get_df(path, wildcard):
+    if os.path.isdir(path):
+        path = latest_wildcard(os.path.join(path, wildcard))
 
-flow_latest = pd.read_csv(flow_latest_csv)
-torch_latest = pd.read_csv(torch_latest_csv)
-
-flow = flow_latest
-torch = torch_latest
-LIMIT = min(torch["iter"].max(), flow["iter"].max())
-TAKE_EVERY_N = 1
-if LIMIT > 2500:
-    TAKE_EVERY_N = LIMIT // 2500 + 1
+    return pd.read_csv(path)
 
 
-def isinstance2(x, t):
-    print(type(x))
-    return isinstance(x, t)
+def get_metrics_sr(df1, df2):
+    limit = min(df1["iter"].max(), df2["iter"].max())
+    rate = 1 if limit <= 2500 else limit // 2500 + 1
+    return limit, rate
 
 
 def subset_and_mod(df, limit, take_every_n):
@@ -160,9 +134,35 @@ def subset_and_mod(df, limit, take_every_n):
     return df_limited[df_limited["iter"] % take_every_n == 0]
 
 
-plot_many_by_legend(
-    {
-        "flow": subset_and_mod(flow, LIMIT, TAKE_EVERY_N),
-        "torch": subset_and_mod(torch, LIMIT, TAKE_EVERY_N),
-    }
-)
+if __name__ == "__main__":
+    import argparse
+    
+    parser = argparse.ArgumentParser(argument_default=argparse.SUPPRESS)
+    parser.add_argument("-d", "--metrics_dir", type=str)
+    parser.add_argument("-o", "--oneflow_metrics_path", type=str)
+    parser.add_argument("-p", "--pytorch_metrics_path", type=str)
+    args = parser.parse_args()
+
+    if hasattr(args, "metrics_dir"):
+        flow_metrics_path = args.metrics_dir
+        torch_metrics_path = args.metrics_dir
+
+    if hasattr(args, "oneflow_metrics_path"):
+        flow_metrics_path = args.oneflow_metrics_path
+
+    if hasattr(args, "pytorch_metrics_path"):
+        torch_metrics_path = args.pytorch_metrics_path
+
+    assert os.path.exists(flow_metrics_path), "{} not found".format(flow_metrics_path)
+    assert os.path.exists(torch_metrics_path), "{} not found".format(torch_metrics_path)
+
+    flow_df = get_df(flow_metrics_path, "loss*.csv")
+    torch_df = get_df(torch_metrics_path, "torch*.csv")
+    limit, rate = get_metrics_sr(flow_df, torch_df)
+
+    plot_many_by_legend(
+        {
+            "flow": subset_and_mod(flow_df, limit, rate),
+            "torch": subset_and_mod(torch_df, limit, rate),
+        }
+    )
