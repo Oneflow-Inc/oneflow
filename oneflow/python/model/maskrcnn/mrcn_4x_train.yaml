@@ -7,8 +7,7 @@ DATASETS:
 INPUT:
   MIRROR_PROB: 0.5
 MODEL:
-  WEIGHT: "/model_zoo/detection/R-50"
-  # WEIGHT: "/model_zoo/detection/mask_rcnn_R_50_FPN_4x_init"
+  WEIGHT: "/model_zoo/detection/mask_rcnn_R_50_FPN_4x_init"
 SOLVER:
   IMS_PER_BATCH: 8
   MAX_ITER: 20000

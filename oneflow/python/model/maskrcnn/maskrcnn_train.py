@@ -418,7 +418,7 @@ class LossPrinter(object):
             return sum(loss_for_each_rank_list) / len(loss_for_each_rank_list)
 
         def legend_value(legend):
-            if "loss" in legend:
+            if "loss" in legend or "elem_cnt" in legend:
                 return reduce_across_ranks([d[legend] for d in data])
             else:
                 raise ValueError
