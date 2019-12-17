@@ -3,27 +3,29 @@ import numpy as np
 
 import oneflow as flow
 
+config = flow.function_config()
+
 def make_job(input_shape, dtype=flow.float32):
-    @flow.function
+    @flow.function(config)
     def tanh_job(x = flow.input_blob_def(input_shape, dtype=dtype)):
-        flow.config.use_xla_jit(False)
-        flow.config.use_tensorrt(False)
+        config.use_xla_jit(False)
+        config.use_tensorrt(False)
         return flow.keras.activations.tanh(x)
     return tanh_job
 
 def make_xla_job(input_shape, dtype=flow.float32):
-    @flow.function
+    @flow.function(config)
     def xla_tanh_job(x = flow.input_blob_def(input_shape, dtype=dtype)):
-        flow.config.use_xla_jit(True)
-        flow.config.use_tensorrt(False)
+        config.use_xla_jit(True)
+        config.use_tensorrt(False)
         return flow.keras.activations.tanh(x)
     return xla_tanh_job
 
 def make_trt_job(input_shape, dtype=flow.float32):
-    @flow.function
+    @flow.function(config)
     def trt_tanh_job(x = flow.input_blob_def(input_shape, dtype=dtype)):
-        flow.config.use_xla_jit(False)
-        flow.config.use_tensorrt(True)
+        config.use_xla_jit(False)
+        config.use_tensorrt(True)
         return flow.keras.activations.tanh(x)
     return trt_tanh_job
 

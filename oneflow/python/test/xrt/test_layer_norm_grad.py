@@ -3,26 +3,28 @@ import numpy as np
 
 import oneflow as flow
 
+config = flow.function_config()
+
 def make_job(shape, mean_shape, norm_axis, dtype=flow.float32):
-    @flow.function
+    @flow.function(config)
     def layer_norm_grad_job(dy = flow.input_blob_def(shape, dtype=dtype),
                             x = flow.input_blob_def(shape, dtype=dtype),
                             mean = flow.input_blob_def(mean_shape, dtype=dtype),
                             inv_variance = flow.input_blob_def(mean_shape, dtype=dtype)):
-        flow.config.use_xla_jit(False)
-        flow.config.use_tensorrt(False)
+        config.use_xla_jit(False)
+        config.use_tensorrt(False)
         return flow.layers.layer_norm_grad(dy, x, mean, inv_variance,
                                            begin_norm_axis=norm_axis)
     return layer_norm_grad_job
 
 def make_xla_job(shape, mean_shape, norm_axis, dtype=flow.float32):
-    @flow.function
+    @flow.function(config)
     def xla_layer_norm_grad_job(dy = flow.input_blob_def(shape, dtype=dtype),
                                 x = flow.input_blob_def(shape, dtype=dtype),
                                 mean = flow.input_blob_def(mean_shape, dtype=dtype),
                                 inv_variance = flow.input_blob_def(mean_shape, dtype=dtype)):
-        flow.config.use_xla_jit(True)
-        flow.config.use_tensorrt(False)
+        config.use_xla_jit(True)
+        config.use_tensorrt(False)
         return flow.layers.layer_norm_grad(dy, x, mean, inv_variance,
                                            begin_norm_axis=norm_axis)
     return xla_layer_norm_grad_job

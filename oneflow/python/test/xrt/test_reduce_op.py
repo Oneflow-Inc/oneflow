@@ -3,6 +3,8 @@ import numpy as np
 
 import oneflow as flow
 
+config = flow.function_config()
+
 class TestReduce(unittest.TestCase):
     run_test = False
     def _test_body(self, x, axis, keepdims, dtype=np.float32):
@@ -56,26 +58,26 @@ class TestReduce(unittest.TestCase):
 class TestReduceSum(TestReduce):
     run_test = True
     def make_job(self, x_shape, axis, keepdims, dtype=flow.float32):
-        @flow.function
+        @flow.function(config)
         def reduce_sum_job(x = flow.input_blob_def(x_shape, dtype=dtype)):
-            flow.config.use_xla_jit(False)
-            flow.config.use_tensorrt(False)
+            config.use_xla_jit(False)
+            config.use_tensorrt(False)
             return flow.math.reduce_sum(x, axis=axis, keepdims=keepdims)
         return reduce_sum_job
     
     def make_xla_job(self, x_shape, axis, keepdims, dtype=flow.float32):
-        @flow.function
+        @flow.function(config)
         def xla_reduce_sum_job(x = flow.input_blob_def(x_shape, dtype=dtype)):
-            flow.config.use_xla_jit(True)
-            flow.config.use_tensorrt(False)
+            config.use_xla_jit(True)
+            config.use_tensorrt(False)
             return flow.math.reduce_sum(x, axis=axis, keepdims=keepdims)
         return xla_reduce_sum_job
 
     def make_trt_job(self, x_shape, axis, keepdims, dtype=flow.float32):
-        @flow.function
+        @flow.function(config)
         def trt_reduce_sum_job(x = flow.input_blob_def(x_shape, dtype=dtype)):
-           flow.config.use_xla_jit(False)
-           flow.config.use_tensorrt(True)
+           config.use_xla_jit(False)
+           config.use_tensorrt(True)
            return flow.math.reduce_sum(x, axis=axis, keepdims=keepdims)
         return trt_reduce_sum_job
 
@@ -83,26 +85,26 @@ class TestReduceSum(TestReduce):
 class TestReduceMean(TestReduce):
     run_test = True
     def make_job(self, x_shape, axis, keepdims, dtype=flow.float32):
-        @flow.function
+        @flow.function(config)
         def reduce_mean_job(x = flow.input_blob_def(x_shape, dtype=dtype)):
-            flow.config.use_xla_jit(False)
-            flow.config.use_tensorrt(False)
+            config.use_xla_jit(False)
+            config.use_tensorrt(False)
             return flow.math.reduce_mean(x, axis=axis, keepdims=keepdims)
         return reduce_mean_job
 
     def make_xla_job(self, x_shape, axis, keepdims, dtype=flow.float32):
-        @flow.function
+        @flow.function(config)
         def xla_reduce_mean_job(x = flow.input_blob_def(x_shape, dtype=dtype)):
-            flow.config.use_xla_jit(True)
-            flow.config.use_tensorrt(False)
+            config.use_xla_jit(True)
+            config.use_tensorrt(False)
             return flow.math.reduce_mean(x, axis=axis, keepdims=keepdims)
         return xla_reduce_mean_job
 
     def make_trt_job(self, x_shape, axis, keepdims, dtype=flow.float32):
-        @flow.function
+        @flow.function(config)
         def trt_reduce_mean_job(x = flow.input_blob_def(x_shape, dtype=dtype)):
-           flow.config.use_xla_jit(False)
-           flow.config.use_tensorrt(True)
+           config.use_xla_jit(False)
+           config.use_tensorrt(True)
            return flow.math.reduce_mean(x, axis=axis, keepdims=keepdims)
         return trt_reduce_mean_job
 

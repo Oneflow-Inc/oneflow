@@ -3,6 +3,8 @@ import numpy as np
 
 import oneflow as flow
 
+config = flow.function_config()
+
 class TestGather(unittest.TestCase):
     def _test_body(self, x, indices, axis, dtype=flow.float32):
         indices = np.array(indices).astype(np.int32)
@@ -16,20 +18,20 @@ class TestGather(unittest.TestCase):
         flow.clear_default_session()
 
     def make_job(self, input_shape, indices_shape, axis, dtype=flow.float32):
-        @flow.function
+        @flow.function(config)
         def gather_job(x = flow.input_blob_def(input_shape, dtype=dtype),
                        indices = flow.input_blob_def(indices_shape, dtype=flow.int32)):
-            flow.config.use_xla_jit(False)
-            flow.config.use_tensorrt(False)
+            config.use_xla_jit(False)
+            config.use_tensorrt(False)
             return flow.gather(x, indices, axis=axis)
         return gather_job
 
     def make_xla_job(self, input_shape, indices_shape, axis, dtype=flow.float32):
-        @flow.function
+        @flow.function(config)
         def xla_gather_job(x = flow.input_blob_def(input_shape, dtype=dtype),
                            indices = flow.input_blob_def(indices_shape, dtype=flow.int32)):
-            flow.config.use_xla_jit(True)
-            flow.config.use_tensorrt(False)
+            config.use_xla_jit(True)
+            config.use_tensorrt(False)
             return flow.gather(x, indices, axis=axis)
         return xla_gather_job
 
@@ -61,21 +63,21 @@ class TestGather(unittest.TestCase):
 
 class TestBatchGather(TestGather):
     def make_job(self, input_shape, indices_shape, axis, dtype=flow.float32):
-        @flow.function
+        @flow.function(config)
         def batch_gather_job(x = flow.input_blob_def(input_shape, dtype=dtype),
                              indices = flow.input_blob_def(indices_shape,
                              dtype=flow.int32)):
-            flow.config.use_xla_jit(False)
-            flow.config.use_tensorrt(False)
+            config.use_xla_jit(False)
+            config.use_tensorrt(False)
             return flow.gather(x, indices, batch_dims=axis)
         return batch_gather_job
 
     def make_xla_job(self, input_shape, indices_shape, axis, dtype=flow.float32):
-        @flow.function
+        @flow.function(config)
         def xla_batch_gather_job(x = flow.input_blob_def(input_shape, dtype=dtype),
                                  indices = flow.input_blob_def(indices_shape, dtype=flow.int32)):
-            flow.config.use_xla_jit(True)
-            flow.config.use_tensorrt(False)
+            config.use_xla_jit(True)
+            config.use_tensorrt(False)
             return flow.gather(x, indices, batch_dims=axis)
         return xla_batch_gather_job
 

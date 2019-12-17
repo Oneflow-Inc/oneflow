@@ -3,6 +3,8 @@ import numpy as np
 
 import oneflow as flow
 
+config = flow.function_config()
+
 class TestBroadcastOp(unittest.TestCase):
     run_test = False
     def _test_body(self, x, y, dtype=np.float32):
@@ -41,60 +43,60 @@ class TestBroadcastOp(unittest.TestCase):
 class TestBroadcastAddOp(TestBroadcastOp):
     run_test = True
     def make_job(self, x_shape, y_shape, dtype=flow.float32):
-        @flow.function
+        @flow.function(config)
         def broadcast_add_job(x = flow.input_blob_def(x_shape, dtype=dtype),
                               y = flow.input_blob_def(y_shape, dtype=dtype)):
-            flow.config.use_xla_jit(False)
-            flow.config.use_tensorrt(False)
+            config.use_xla_jit(False)
+            config.use_tensorrt(False)
             return flow.math.add(x, y)
         return broadcast_add_job
 
     def make_xla_job(self, x_shape, y_shape, dtype=flow.float32):
-        @flow.function
+        @flow.function(config)
         def xla_broadcast_add_job(x = flow.input_blob_def(x_shape, dtype=dtype),
                                   y = flow.input_blob_def(y_shape, dtype=dtype)):
-            flow.config.use_xla_jit(True)
-            flow.config.use_tensorrt(False)
+            config.use_xla_jit(True)
+            config.use_tensorrt(False)
             return flow.math.add(x, y)
         return xla_broadcast_add_job
 
 class TestBroadcastMulOp(TestBroadcastOp):
     run_test = True
     def make_job(self, x_shape, y_shape, dtype=flow.float32):
-        @flow.function
+        @flow.function(config)
         def broadcast_mul_job(x = flow.input_blob_def(x_shape, dtype=dtype),
                               y = flow.input_blob_def(y_shape, dtype=dtype)):
-            flow.config.use_xla_jit(False)
-            flow.config.use_tensorrt(False)
+            config.use_xla_jit(False)
+            config.use_tensorrt(False)
             return flow.math.multiply(x, y)
         return broadcast_mul_job
 
     def make_xla_job(self, x_shape, y_shape, dtype=flow.float32):
-        @flow.function
+        @flow.function(config)
         def xla_broadcast_mul_job(x = flow.input_blob_def(x_shape, dtype=dtype),
                                   y = flow.input_blob_def(y_shape, dtype=dtype)):
-            flow.config.use_xla_jit(True)
-            flow.config.use_tensorrt(False)
+            config.use_xla_jit(True)
+            config.use_tensorrt(False)
             return flow.math.multiply(x, y)
         return xla_broadcast_mul_job
 
 class TestBroadcastDivOp(TestBroadcastOp):
     run_test = True
     def make_job(self, x_shape, y_shape, dtype=flow.float32):
-        @flow.function
+        @flow.function(config)
         def broadcast_div_job(x = flow.input_blob_def(x_shape, dtype=dtype),
                               y = flow.input_blob_def(y_shape, dtype=dtype)):
-            flow.config.use_xla_jit(False)
-            flow.config.use_tensorrt(False)
+            config.use_xla_jit(False)
+            config.use_tensorrt(False)
             return flow.math.divide(x, y)
         return broadcast_div_job
 
     def make_xla_job(self, x_shape, y_shape, dtype=flow.float32):
-        @flow.function
+        @flow.function(config)
         def xla_broadcast_div_job(x = flow.input_blob_def(x_shape, dtype=dtype),
                                   y = flow.input_blob_def(y_shape, dtype=dtype)):
-            flow.config.use_xla_jit(True)
-            flow.config.use_tensorrt(False)
+            config.use_xla_jit(True)
+            config.use_tensorrt(False)
             return flow.math.divide(x, y)
         return xla_broadcast_div_job
 

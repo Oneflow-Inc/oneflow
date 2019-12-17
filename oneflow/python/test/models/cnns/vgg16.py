@@ -212,23 +212,26 @@ def vgg(images, labels, trainable=True):
 
 
 def main(args):
-    @flow.function
+    flow.config.machine_num(args.num_nodes)
+    flow.config.gpu_device_num(args.gpu_num_per_node)
+    train_config = flow.function_config()
+    train_config.default_data_type(flow.float)
+    train_config.train.primary_lr(0.00001)
+    train_config.train.model_update_conf(dict(naive_conf={}))
+    @flow.function(train_config)
     def vgg_train_job():
-        flow.config.train.primary_lr(0.00001)
-        flow.config.train.model_update_conf(dict(naive_conf={}))
         (labels, images) = _data_load_layer(args, args.train_dir)
         to_return = vgg(images, labels)
         loss = to_return[-1]
         flow.losses.add_loss(loss)
         return loss
 
-    @flow.function
+    eval_config = flow.function_config()
+    eval_config.default_data_type(flow.float)
+    @flow.function(eval_config)
     def vgg_eval_job():
         (labels, images) = _data_load_layer(args, args.eval_dir)
         return vgg(images, labels, False)
-    flow.config.machine_num(args.num_nodes)
-    flow.config.gpu_device_num(args.gpu_num_per_node)
-    flow.config.default_data_type(flow.float)
     check_point = flow.train.CheckPoint()
     if not args.model_load_dir:
         check_point.init()

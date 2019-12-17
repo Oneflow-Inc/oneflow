@@ -3,30 +3,32 @@ import numpy as np
 
 import oneflow as flow
 
+config = flow.function_config()
+
 def make_job(x_shape, y_shape, dtype=flow.float32):
-    @flow.function
+    @flow.function(config)
     def add_job(x = flow.input_blob_def(x_shape, dtype=dtype),
                 y = flow.input_blob_def(y_shape, dtype=dtype)):
-        flow.config.use_xla_jit(False)
-        flow.config.use_tensorrt(False)
+        config.use_xla_jit(False)
+        config.use_tensorrt(False)
         return x + y + x
     return add_job
 
 def make_xla_job(x_shape, y_shape, dtype=flow.float32):
-    @flow.function
+    @flow.function(config)
     def xla_add_job(x = flow.input_blob_def(x_shape, dtype=dtype),
                     y = flow.input_blob_def(y_shape, dtype=dtype)):
-        flow.config.use_xla_jit(True)
-        flow.config.use_tensorrt(False)
+        config.use_xla_jit(True)
+        config.use_tensorrt(False)
         return x + y + x
     return xla_add_job
 
 def make_trt_job(x_shape, y_shape, dtype=flow.float32):
-    @flow.function
+    @flow.function(config)
     def trt_add_job(x = flow.input_blob_def(x_shape, dtype=dtype),
                     y = flow.input_blob_def(y_shape, dtype=dtype)):
-        flow.config.use_xla_jit(False)
-        flow.config.use_tensorrt(True)
+        config.use_xla_jit(False)
+        config.use_tensorrt(True)
         return x + y + x
     return trt_add_job
 

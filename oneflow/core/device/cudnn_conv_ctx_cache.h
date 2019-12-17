@@ -28,10 +28,12 @@ class CudnnConvCtxCache final {
 
   bool FindCudnnConvAlgoCtxWithConfig(const BlobDesc& in_blob_desc, const BlobDesc& out_blob_desc,
                                       const BlobDesc& filter_blob_desc, const PbMessage& conf,
-                                      size_t max_buf_size, CudnnConvAlgoCtx* conv_algo_ctx);
+                                      size_t max_buf_size, const bool enable_true_half,
+                                      CudnnConvAlgoCtx* conv_algo_ctx);
   bool InferCudnnConvAlgoCtxWithConfig(const BlobDesc& in_blob_desc, const BlobDesc& out_blob_desc,
                                        const BlobDesc& filter_blob_desc, const PbMessage& conf,
-                                       size_t max_buf_size, CudnnConvAlgoCtx* conv_algo_ctx) const;
+                                       size_t max_buf_size, const bool enable_true_half,
+                                       CudnnConvAlgoCtx* conv_algo_ctx) const;
   void AddCudnnConvAlgoCtxWithConfig(const BlobDesc& in_blob_desc, const BlobDesc& out_blob_desc,
                                      const BlobDesc& filter_blob_desc, const PbMessage& conf,
                                      size_t max_buf_size, const CudnnConvAlgoCtx& conv_algo_ctx);
@@ -45,7 +47,7 @@ class CudnnConvCtxCache final {
   HashMap<std::string, CudnnConvAlgoCtx> conv_config2algo_ctx_;
 };
 
-DataType GetConvDescDataType(DataType blob_data_type);
+DataType GetConvDescDataType(DataType blob_data_type, const bool enable_true_half);
 
 }  // namespace oneflow
 

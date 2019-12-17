@@ -7,12 +7,13 @@ template<typename T>
 struct ConvFilterGradKernelUtil<DeviceType::kGPU, T> final {
   static void Compute(DeviceCtx *ctx, const ConvFilterGradKernelConf &kernel_conf,
                       const ConvConf &conf, const Blob *x, const Blob *dy, Blob *filter_diff,
-                      Blob *buf) {
+                      Blob *buf, const bool enable_true_half) {
     CudnnTensorDesc x_desc(x->data_type(), x->shape(), conf.data_format());
     CudnnTensorDesc dy_desc(dy->data_type(), dy->shape(), conf.data_format());
     CudnnFilterDesc filter_diff_desc(filter_diff->data_type(), filter_diff->shape(),
                                      conf.data_format());
-    CudnnConvDesc conv_desc(GetConvDescDataType(x->data_type()), x->shape(), conf);
+    CudnnConvDesc conv_desc(GetConvDescDataType(x->data_type(), enable_true_half), x->shape(),
+                            conf);
     CudaCheck(cudnnConvolutionBackwardFilter(
         ctx->cudnn_handle(), CudnnSPOnePtr<T>(), x_desc.Get(), x->dptr<T>(), dy_desc.Get(),
         dy->dptr<T>(), conv_desc.Get(),

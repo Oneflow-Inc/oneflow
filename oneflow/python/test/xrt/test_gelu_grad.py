@@ -3,20 +3,22 @@ import numpy as np
 
 import oneflow as flow
 
+config = flow.function_config()
+
 def make_job(shape, dtype=flow.float32):
-    @flow.function
+    @flow.function(config)
     def gelu_grad_job(x = flow.input_blob_def(shape, dtype=dtype),
                       dy = flow.input_blob_def(shape, dtype=dtype)):
-        flow.config.use_xla_jit(False)
-        flow.config.use_tensorrt(False)
+        config.use_xla_jit(False)
+        config.use_tensorrt(False)
         return flow.keras.activations.gelu_grad(x, dy)
     return gelu_grad_job
 
 def make_xla_job(shape, dtype=flow.float32):
-    @flow.function
+    @flow.function(config)
     def xla_gelu_grad_job(x = flow.input_blob_def(shape, dtype=dtype),
                           dy = flow.input_blob_def(shape, dtype=dtype)):
-        flow.config.use_xla_jit(True)
+        config.use_xla_jit(True)
         return flow.keras.activations.gelu_grad(x, dy)
     return xla_gelu_grad_job
 
