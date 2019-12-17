@@ -26,7 +26,7 @@ def Compile(function_desc, config_proto):
         placement_scope = placement_util.DevicePriorPlacementScope(*dev_ids)
     distribute_strategy = function_desc.function_attribute.default_distribute_strategy
     if distribute_strategy is None:
-        distribute_strategy = distribute_util.DistributeMirrorStrategy()
+        distribute_strategy = distribute_util.DistributeMirroredStrategy()
 
     compile_context.ResetCurJobContext()
     with _JobBuildAndInferCtx(job_conf.job_name), placement_scope, distribute_strategy:
@@ -46,23 +46,23 @@ def _JobBuildAndInferCtx(job_name):
 
 def _GetArgDefault(func):
     if hasattr(func, '__oneflow_arg_default__'): return func.__oneflow_arg_default__
-    return _CloneInputBlobDef(func_inspect_util.GetArgDefaults(func))
+    return _CloneArgBlobDef(func_inspect_util.GetArgDefaults(func))
 
-def _CloneInputBlobDef(args):
-    if isinstance(args, input_blob_util.InputBlobDef): return args.Clone()
-    if isinstance(args, (tuple, list)): return type(args)(_CloneInputBlobDef(x) for x in args)
-    if isinstance(args, dict): return {k: _CloneInputBlobDef(v) for k, v in args}
+def _CloneArgBlobDef(args):
+    if isinstance(args, input_blob_util.ArgBlobDef): return args.Clone()
+    if isinstance(args, (tuple, list)): return type(args)(_CloneArgBlobDef(x) for x in args)
+    if isinstance(args, dict): return {k: _CloneArgBlobDef(v) for k, v in args}
     raise NotImplementedError("oneflow.function only accepts nested input blob defs")
 
 def _RecursiveMakeInputBlobs(input_blob_def):
-    if isinstance(input_blob_def, input_blob_util.InputBlobDef):
-        return ops.InputOpByInputBlobDef(input_blob_def)
+    if isinstance(input_blob_def, input_blob_util.ArgBlobDef):
+        return ops.InputOpByArgBlobDef(input_blob_def)
     if isinstance(input_blob_def, (tuple, list)):
         return type(input_blob_def)(_RecursiveMakeInputBlobs(x) for x in input_blob_def)
     if isinstance(input_blob_def, dict):
         return {k : _RecursiveMakeInputBlobs(v) for k, v in input_blob_def.items()}
     raise NotImplementedError("oneflow.function accepts "
-            + "InputBlobDefs or list/tuple/dict nested InputBlobDefs as argument")
+            + "ArgBlobDefs or list/tuple/dict nested ArgBlobDefs as argument")
 
 def _RecursiveMakeRetRemoteBlobs(out_remote_blobs):
     if out_remote_blobs is None: return None

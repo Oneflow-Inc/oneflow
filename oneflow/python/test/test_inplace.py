@@ -2,7 +2,7 @@ import oneflow as flow
 import numpy as np
 
 def MakeFuncConfig(enable_inplace):
-    func_config = flow.function_config()
+    func_config = flow.FunctionConfig()
     func_config.enable_inplace(enable_inplace)
     return func_config
 
@@ -25,14 +25,14 @@ def test_inplace_variable(test_case):
 
 def test_deadlock(test_case):
     @flow.function(MakeFuncConfig(True))
-    def Foo(x = flow.input_blob_def((10, ))):
+    def Foo(x = flow.FixedTensorDef((10, ))):
         y = flow.math.relu(x)
         y = flow.math.relu(y)
     Foo(np.ones((10,), dtype=np.float32))
 
 def test_nodeadlock_with_return(test_case):
     @flow.function(MakeFuncConfig(True))
-    def Foo(x = flow.input_blob_def((10, ))):
+    def Foo(x = flow.FixedTensorDef((10, ))):
         y = flow.math.relu(x)
         y = flow.math.relu(y)
         return y
@@ -40,7 +40,7 @@ def test_nodeadlock_with_return(test_case):
 
 def test_reentrant_lock_check_failed(test_case):
     @flow.function(MakeFuncConfig(True))
-    def Foo(x = flow.input_blob_def((10, ))):
+    def Foo(x = flow.FixedTensorDef((10, ))):
         y = flow.math.relu(x)
         y = flow.math.relu(y)
     Foo(np.ones((10,), dtype=np.float32))

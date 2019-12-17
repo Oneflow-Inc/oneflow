@@ -11,30 +11,25 @@ import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.compile_context as compile_context
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.distribute as distribute_util
+import oneflow.python.framework.placement_context as placement_ctx
 from oneflow.python.oneflow_export import oneflow_export
 from functools import reduce
 import numpy as np
 import oneflow
 
-class InputBlobDef(blob_desc.BlobDesc):
-    def __init__(self, shape,
-                 dtype = data_type_util.kFloat,
-                 is_dynamic = False,
-                 is_tensor_list = False,
-                 batch_axis = 0,
-                 name = None,
-                 **kw):
+class ArgBlobDef(blob_desc.BlobDesc):
+    def __init__(self, shape, dtype = data_type_util.kFloat, batch_axis = 0, name = None):
         lbi = lbi_util.LogicalBlobId()
         if name is None: name = id_util.UniqueStr("Input_")
         lbi.op_name = name
         lbi.blob_name = "out"
-        blob_desc.BlobDesc.__init__(self, lbi, **kw)
+        blob_desc.BlobDesc.__init__(self, lbi)
         assert type(shape) is tuple
-        for dim in shape: assert type(dim) is int
+        for dim in shape:
+            assert type(dim) is int
+            assert dim > 0
         self.shape_ = shape
         self.dtype_ = dtype
-        self.is_dynamic_ = is_dynamic
-        self.is_tensor_list_ = is_tensor_list
         self.batch_axis_ = batch_axis
 
     @property
@@ -50,122 +45,149 @@ class InputBlobDef(blob_desc.BlobDesc):
     def batch_axis(self): return self.batch_axis_
 
     @property
-    def is_dynamic(self): return self.is_dynamic_
+    def is_dynamic(self):
+        raise NotImplementedError
 
     @property
-    def is_tensor_list(self): return self.is_tensor_list_
-
-    def parallel_conf(self):
-        TODO()
+    def is_tensor_list(self):
+        raise NotImplementedError
 
     def with_distribute(self, distribute):
-        return type(self)(shape = self.shape_, dtype = self.dtype_,               \
-                          is_dynamic = self.is_dynamic_, batch_axis = self.batch_axis_, \
-                          distribute = distribute, name = self.lbi.op_name)
+        return type(self)(shape = self.shape_,
+                          dtype = self.dtype_,
+                          batch_axis = self.batch_axis_,
+                          name = self.lbi.op_name)
     
     def Clone(self, op_name = None):
-        return type(self)(shape = self.shape_, dtype = self.dtype_,               \
-                          is_dynamic = self.is_dynamic_, batch_axis = self.batch_axis_, \
-                          distribute = self.distribute_, name = op_name)
+        return type(self)(shape = self.shape_,
+                          dtype = self.dtype_,
+                          batch_axis = self.batch_axis_,
+                          name = op_name)
 
     def AddAndInferOp(self, op_conf):
         raise NotImplementedError
 
     def CheckAndAsyncPush(self, session, arg_ndarray):
-        self.CheckInputNdarray(arg_ndarray)
-        self.AsyncPush(session, arg_ndarray)
+        self._CheckNdarray(arg_ndarray)
+        self._AsyncPush(session, arg_ndarray)
         
-    def CheckInputNdarray(self, ndarray):
-        if self.is_tensor_list:
-            self._CheckNdarrayList(ndarray)
-        else:
-            self._CheckDenseNdarray(ndarray)
+    def _CheckNdarray(self, ndarray):
+        raise NotImplementedError
 
-    def AsyncPush(self, session, arg_ndarray):
+    def _AsyncPush(self, session, arg_ndarray):
         raise NotImplementedError
 
     def ToInterfaceBlobConf(self):
         interface_blob_conf = op_conf_util.InterfaceBlobConf()
         interface_blob_conf.shape.dim.extend(self.shape_)
         interface_blob_conf.data_type = self.dtype_
-        interface_blob_conf.is_dynamic = self.is_dynamic_
+        interface_blob_conf.is_dynamic = self.is_dynamic
         interface_blob_conf.is_tensor_list = self.is_tensor_list
         if type(self.batch_axis_) is int:
             assert self.batch_axis_ >= 0
             interface_blob_conf.batch_axis.value = self.batch_axis_
+            interface_blob_conf.split_axis.value = self.batch_axis_
         else:
             assert self.batch_axis_ is None or self.batch_axis_ is False
             interface_blob_conf.batch_axis.ClearField("value")
-        if type(self.distribute_) is distribute_util.SplitDistribute:
-            interface_blob_conf.split_axis.value = self.distribute_.axis
-        elif type(self.distribute_) is distribute_util.BroadcastDistribute:
             interface_blob_conf.split_axis.ClearField("value")
-        else:
-            # do nothing
-            pass
         return interface_blob_conf
 
-    def _CheckDenseNdarray(self, ndarray):
-        assert isinstance(ndarray, np.ndarray)
-        def GetElemCnt(shape): return reduce(lambda x, y: x * y, shape, 1)
-        assert len(ndarray.shape) == len(self.shape)
-        if self.is_dynamic:
-            assert GetElemCnt(ndarray.shape) <= GetElemCnt(self.shape)
-        else:
-            assert ndarray.shape == self.shape
-            
-    def _CheckNdarrayList(self, ndarray_nested_list):
-        raise NotImplementedError
-
-@oneflow_export('consistent_input_def')
-class ConsistentInpuDef(InputBlobDef):
+@oneflow_export('FixedTensorDef')
+class FixedTensorDef(ArgBlobDef):
     def __init__(self, *args, **kwargs):
-        InputBlobDef.__init__(self, *args, **kwargs)
+        ArgBlobDef.__init__(self, *args, **kwargs)
+        
+    @property
+    def is_dynamic(self): return False
+
+    @property
+    def is_tensor_list(self): return False
 
     def AddAndInferOp(self, op_conf):
         return compile_context.CurJobAddConsistentOp(op_conf)
 
-    def AsyncPush(self, session, arg_ndarray):
-        session.AsyncPush(self.op_name, _MakePushCallback(arg_ndarray))
+    def _CheckNdarray(self, ndarray):
+        assert isinstance(ndarray, np.ndarray)
+        assert ndarray.shape == self.shape
+
+    def _AsyncPush(self, session, arg_ndarray):
+        session.AsyncPush(self.op_name, _MakePushNdarrayCallback(arg_ndarray))
         
-@oneflow_export('input_blob_def')
-class input_blob_def(ConsistentInpuDef):
+@oneflow_export('MirroredTensorDef')
+class MirroredTensorDef(ArgBlobDef):
     def __init__(self, *args, **kwargs):
-        ConsistentInpuDef.__init__(self, *args, **kwargs)
-
-@oneflow_export('mirror_input_def')
-class MirrorInputDef(InputBlobDef):
-    def __init__(self, *args, **kwargs):
-        InputBlobDef.__init__(self, *args, **kwargs)
+        ArgBlobDef.__init__(self, *args, **kwargs)
         self.sub_consistent_blob_list_ = []
-
-    def AddAndInferOp(self, op_conf):
-        compile_context.CurJobAddMirrorOp(op_conf)
-        job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
-        lbn = self.logical_blob_name
-        num_sub_lbi = c_api_util.JobBuildAndInferCtx_MirrorBlobGetNumSubLbi(job_name, lbn)
-        for i in range(num_sub_lbi):
-            sub_lbi = c_api_util.JobBuildAndInferCtx_MirrorBlobGetSubLbi(job_name, lbn, i)
-            self.sub_consistent_blob_list_.append(remote_blob_util.ConsistentBlob(sub_lbi))
+        
+    @property
+    def is_dynamic(self): return True
 
     @property
-    def sub_consistent_blob_list(self):
-        assert len(self.sub_consistent_blob_list_) != 0
-        return self.sub_consistent_blob_list_
-        
-    def AsyncPush(self, session, arg_ndarray):
-        for i in range(len(arg_ndarray)):
-            sub_blob = self.sub_consistent_blob_list[i]
-            session.AsyncPush(sub_blob.op_name, _MakePushCallback(arg_ndarray[i]))
-            
-    def _CheckDenseNdarray(self, arg_ndarray):
-        assert isinstance(arg_ndarray, (list, tuple))
-        assert len(self.sub_consistent_blob_list) == len(arg_ndarray)
-        assert self.is_tensor_list == False
-        for consistent_blob, ndarray in zip(self.sub_consistent_blob_list, arg_ndarray):
-            assert type(ndarray) is np.ndarray
-            InputBlobDef._CheckDenseNdarray(self, ndarray)
+    def is_tensor_list(self): return False
 
-def _MakePushCallback(ndarray):
+    def AddAndInferOp(self, op_conf):
+        _AddAndInferMirroredOp(self.logical_blob_name, op_conf, self.sub_consistent_blob_list_)
+        
+    def _CheckNdarray(self, ndarray_list):
+        assert isinstance(ndarray_list, (list, tuple))
+        assert len(self.sub_consistent_blob_list_) == len(ndarray_list)
+        def GetElemCnt(shape): return reduce(lambda x, y: x * y, shape, 1)
+        for consistent_blob, ndarray in zip(self.sub_consistent_blob_list_, ndarray_list):
+            assert type(ndarray) is np.ndarray
+            assert len(ndarray.shape) == len(self.shape)
+            assert GetElemCnt(ndarray.shape) <= GetElemCnt(self.shape)
+
+    def _AsyncPush(self, session, ndarray_list):
+        for i in range(len(ndarray_list)):
+            sub_blob = self.sub_consistent_blob_list_[i]
+            session.AsyncPush(sub_blob.op_name, _MakePushNdarrayCallback(ndarray_list[i]))
+            
+@oneflow_export('MirroredTensorListDef')
+class MirroredTensorListDef(ArgBlobDef):
+    def __init__(self, *args, **kwargs):
+        ArgBlobDef.__init__(self, *args, **kwargs)
+        self.sub_consistent_blob_list_ = []
+        
+    @property
+    def is_dynamic(self): return True
+
+    @property
+    def is_tensor_list(self): return True
+
+    def AddAndInferOp(self, op_conf):
+        _AddAndInferMirroredOp(self.logical_blob_name, op_conf, self.sub_consistent_blob_list_)
+        
+    def _CheckNdarray(self, ndarray_lists):
+        assert isinstance(ndarray_lists, (list, tuple))
+        assert len(self.sub_consistent_blob_list_) == len(ndarray_lists)
+        def GetElemCnt(shape): return reduce(lambda x, y: x * y, shape, 1)
+        for consistent_blob, ndarray_list in zip(self.sub_consistent_blob_list_, ndarray_lists):
+            assert type(ndarray_list) is list
+            elem_cnt = 0
+            for ndarray in ndarray_list:
+                assert type(ndarray) is np.ndarray
+                assert len(ndarray.shape) == len(self.shape)
+                elem_cnt += GetElemCnt(ndarray.shape)
+            assert elem_cnt <= GetElemCnt(self.shape)
+
+    def _AsyncPush(self, session, ndarray_lists):
+        for i in range(len(ndarray_lists)):
+            sub_blob = self.sub_consistent_blob_list_[i]
+            session.AsyncPush(sub_blob.op_name, _MakePushNdarrayListCallback(ndarray_lists[i]))
+
+def _AddAndInferMirroredOp(mirror_lbn, op_conf, sub_consistent_blob_list):
+    compile_context.CurJobAddMirrorOp(op_conf)
+    job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
+    num_sub_lbi = c_api_util.JobBuildAndInferCtx_MirrorBlobGetNumSubLbi(job_name, mirror_lbn)
+    for i in range(num_sub_lbi):
+        sub_lbi = c_api_util.JobBuildAndInferCtx_MirrorBlobGetSubLbi(job_name, mirror_lbn, i)
+        sub_consistent_blob_list.append(remote_blob_util.ConsistentBlob(sub_lbi))
+
+def _MakePushNdarrayCallback(ndarray):
     copied = np.copy(ndarray)
-    return lambda ofblob: ofblob.CopyFromNdarrayOrNestedNdarrayList(copied)
+    return lambda ofblob: ofblob.CopyFromNdarray(copied)
+
+def _MakePushNdarrayListCallback(ndarray_list):
+    copied = [np.copy(ndarray) for ndarray in ndarray_list]
+    return lambda ofblob: ofblob.CopyFromNdarrayList(copied)

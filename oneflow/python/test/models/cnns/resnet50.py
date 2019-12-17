@@ -273,7 +273,7 @@ def main(args):
     flow.config.machine_num(args.num_nodes)
     flow.config.gpu_device_num(args.gpu_num_per_node)
 
-    train_config = flow.function_config()
+    train_config = flow.FunctionConfig()
     train_config.default_distribute_strategy(flow.distribute.consistent_strategy())
     train_config.default_data_type(flow.float)
     train_config.train.primary_lr(0.0032)
@@ -285,7 +285,7 @@ def main(args):
         flow.losses.add_loss(loss)
         return loss
 
-    eval_config = flow.function_config()
+    eval_config = flow.FunctionConfig()
     eval_config.default_data_type(flow.float)
     @flow.function(eval_config)
     def evaluate():

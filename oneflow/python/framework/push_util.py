@@ -19,5 +19,5 @@ def _AsyncPushArg(session, arg_blob_def, arg_ndarray):
         for k, blob_def in arg_blob_def.items():
             _AsyncPushArg(session, blob_def, arg_ndarray[k])
     else:
-        assert isinstance(arg_blob_def, input_blob_util.InputBlobDef)
+        assert isinstance(arg_blob_def, input_blob_util.ArgBlobDef)
         arg_blob_def.CheckAndAsyncPush(session, arg_ndarray)

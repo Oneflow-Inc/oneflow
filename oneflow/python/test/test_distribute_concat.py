@@ -4,7 +4,7 @@ import numpy as np
 
 def test_deadlock(test_case):
   flow.config.gpu_device_num(2)
-  func_config = flow.function_config()
+  func_config = flow.FunctionConfig()
   func_config.enable_inplace(False)
   @flow.function(func_config)
   def DistributeConcat():

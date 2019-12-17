@@ -11,7 +11,7 @@ def GetCurJobConfigProto():
     return session_ctx.GetDefaultSession().GetJobConfigProto(job_name)
 
 def CurJobAddOp(op_conf, parallel_conf=None):
-    if distribute_ctx.IsMirrorStrategyEnabled(): return CurJobAddMirrorOp(op_conf, parallel_conf)
+    if distribute_ctx.IsMirroredStrategyEnabled(): return CurJobAddMirrorOp(op_conf, parallel_conf)
     return CurJobAddConsistentOp(op_conf, parallel_conf)
 
 def CurJobAddConsistentOp(op_conf, parallel_conf=None):

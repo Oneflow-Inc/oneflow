@@ -8,8 +8,8 @@ import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 
-def InputOpByInputBlobDef(blob_def):
-    assert isinstance(blob_def, input_blob_util.InputBlobDef)
+def InputOpByArgBlobDef(blob_def):
+    assert isinstance(blob_def, input_blob_util.ArgBlobDef)
     op_conf = op_conf_util.OperatorConf()
     op_conf.name = blob_def.op_name
     op_conf.input_conf.out = blob_def.blob_name
