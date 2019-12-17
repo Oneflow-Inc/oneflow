@@ -391,10 +391,23 @@ def check_compatibility(d1, d2):
 
 if __name__ == "__main__":
     import torch_config
+    import argparse
+
+    parser = argparse.ArgumentParser(argument_default=argparse.SUPPRESS)
+    parser.add_argument("-of", "--oneflow_config_yaml", type=str, required=True)
+    parser.add_argument("-py", "--pytorch_config_yaml", type=str, required=True)
+    args = parser.parse_args()
 
     torch_cfg = torch_config._C.clone()
-    # torch_cfg.merge_from_file("/home/zhangwenxiao/repos/maskrcnn-benchmark/golden_standard/1-card.yaml")
-    (d1_diff, d2_diff, d1_only, d2_only) = check_compatibility(_C, torch_cfg)
+    flow_cfg = _C.clone()
+    if hasattr(args, "oneflow_config_yaml"):
+        flow_cfg.merge_from_file(args.oneflow_config_yaml)
+    if hasattr(args, "pytorch_config_yaml"):
+        torch_cfg.merge_from_file(args.pytorch_config_yaml)
+
+    (d1_diff, d2_diff, d1_only, d2_only) = check_compatibility(
+        flow_cfg, torch_cfg
+    )
     print("oneflow diff:\n{}\n".format(d1_diff))
     print("pytorch diff:\n{}\n".format(d2_diff))
     print("oneflow only:\n{}\n".format("\n".join(d1_only)))
