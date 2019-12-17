@@ -479,45 +479,29 @@ class LossPrinter(object):
 
         return values_cross_ranks
 
-
-def update_metrics(metrics, iter, elapsed_time, values):
-    (
-        loss_rpn_box_reg,
-        loss_objectness,
-        loss_box_reg,
-        loss_classifier,
-        loss_mask,
-        total_pos_inds_elem_cnt,
-    ) = values
-    df = pd.DataFrame(
-        [
-            {"iter": iter, "legend": "elapsed_time", "value": elapsed_time},
-            {
-                "iter": iter,
-                "legend": "loss_rpn_box_reg",
-                "value": loss_rpn_box_reg,
-            },
-            {
-                "iter": iter,
-                "legend": "loss_objectness",
-                "value": loss_objectness,
-            },
-            {"iter": iter, "legend": "loss_box_reg", "value": loss_box_reg},
-            {
-                "iter": iter,
-                "legend": "loss_classifier",
-                "value": loss_classifier,
-            },
-            {"iter": iter, "legend": "loss_mask", "value": loss_mask},
-            {
-                "iter": iter,
-                "legend": "total_pos_inds_elem_cnt",
-                "value": total_pos_inds_elem_cnt,
-            },
-        ]
-    )
-    return pd.concat([metrics, df], axis=0, sort=False)
-
+def add_metrics(metrics_df, iter=None, **kwargs):
+    assert iter is not None
+    for k, v in kwargs.items():
+        if k is "outputs":
+            if isinstance(v, list):
+                dfs = []
+                for rank, v in enumerate(v, 0):
+                    for legend, value in v:
+                        dfs.append(pd.DataFrame({"iter": iter, "rank": rank, "legend": legend, "value": value.item()}))
+            elif isinstance(v, dict):
+                dfs = [pd.DataFrame(
+                    {"iter": iter, "legend": legend, "value": value.item()}, index=[0]
+                ) for legend, value in v.items()]
+            else:
+                raise ValueError("not supported")
+            metrics_df = pd.concat([metrics_df] + dfs, axis=0, sort=False)
+        elif k is not "outputs":
+            metrics_df = pd.concat([metrics_df, pd.DataFrame(
+                    {"iter": iter, "legend": k, "value": v}, index=[0]
+                )], axis=0, sort=False)
+        else:
+            raise ValueError("not supported")
+    return metrics_df
 
 def run():
     use_fake_images = False
@@ -590,8 +574,10 @@ def run():
             ):
                 save_model(check_point, i)
 
-        metrics = update_metrics(metrics, i, elapsed_time, metrics_values)
-
+        metrics_df = pd.DataFrame()
+        metrics_df = add_metrics(metrics_df, iter=i, elapsed_time=elapsed_time)
+        metrics_df = add_metrics(metrics_df, iter=i, outputs=outputs)
+        metrics = pd.concat([metrics, metrics_df], axis=0, sort=False)
         if config.SOLVER.METRICS_PERIOD > 0:
             if (
                 i % config.SOLVER.METRICS_PERIOD == 0
