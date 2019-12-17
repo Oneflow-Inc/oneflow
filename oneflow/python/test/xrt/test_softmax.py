@@ -6,26 +6,29 @@ import oneflow as flow
 config = flow.function_config()
 
 def make_job(input_shape, axis, dtype=flow.float32):
+    config.use_xla_jit(False)
+    config.use_tensorrt(False)
+
     @flow.function(config)
     def softmax_job(x = flow.input_blob_def(input_shape, dtype=dtype)):
-        config.use_xla_jit(False)
-        config.use_tensorrt(False)
         return flow.nn.softmax(x, axis=axis)
     return softmax_job
 
 def make_xla_job(input_shape, axis, dtype=flow.float32):
+    config.use_xla_jit(True)
+    config.use_tensorrt(False)
+
     @flow.function(config)
     def xla_softmax_job(x = flow.input_blob_def(input_shape, dtype=dtype)):
-        config.use_xla_jit(True)
-        config.use_tensorrt(False)
         return flow.nn.softmax(x, axis=axis)
     return xla_softmax_job
 
 def make_trt_job(input_shape, axis, dtype=flow.float32):
+    config.use_xla_jit(False)
+    config.use_tensorrt(True)
+
     @flow.function(config)
     def trt_softmax_job(x = flow.input_blob_def(input_shape, dtype=dtype)):
-        config.use_xla_jit(False)
-        config.use_tensorrt(True)
         return flow.nn.softmax(x, axis=axis)
     return trt_softmax_job
 

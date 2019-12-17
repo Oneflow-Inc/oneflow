@@ -41,36 +41,40 @@ class TestScalarOp(unittest.TestCase):
 class TestScalarAddOp(TestScalarOp):
     run_test = True
     def make_job(self, x_shape, scalar, dtype=flow.float32):
+        config.use_xla_jit(False)
+        config.use_tensorrt(False)
+
         @flow.function(config)
         def scalar_add_job(x = flow.input_blob_def(x_shape, dtype=dtype)):
-            config.use_xla_jit(False)
-            config.use_tensorrt(False)
             return flow.math.add(x, scalar)
         return scalar_add_job
 
     def make_xla_job(self, x_shape, scalar, dtype=flow.float32):
+        config.use_xla_jit(True)
+        config.use_tensorrt(False)
+
         @flow.function(config)
         def xla_scalar_add_job(x = flow.input_blob_def(x_shape, dtype=dtype)):
-            config.use_xla_jit(True)
-            config.use_tensorrt(False)
             return flow.math.add(x, scalar)
         return xla_scalar_add_job
 
 class TestScalarMulOp(TestScalarOp):
     run_test = True
     def make_job(self, x_shape, scalar, dtype=flow.float32):
+        config.use_xla_jit(False)
+        config.use_tensorrt(False)
+
         @flow.function(config)
         def scalar_mul_job(x = flow.input_blob_def(x_shape, dtype=dtype)):
-            config.use_xla_jit(False)
-            config.use_tensorrt(False)
             return flow.math.multiply(x, scalar)
         return scalar_mul_job
 
     def make_xla_job(self, x_shape, scalar, dtype=flow.float32):
+        config.use_xla_jit(True)
+        config.use_tensorrt(False)
+
         @flow.function(config)
         def xla_scalar_mul_job(x = flow.input_blob_def(x_shape, dtype=dtype)):
-            config.use_xla_jit(True)
-            config.use_tensorrt(False)
             return flow.math.multiply(x, scalar)
         return xla_scalar_mul_job
 

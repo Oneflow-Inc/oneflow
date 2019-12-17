@@ -6,20 +6,22 @@ import oneflow as flow
 config = flow.function_config()
 
 def make_job(a_shape, b_shape, trans_a=False, trans_b=False, dtype=flow.float32):
+    config.use_xla_jit(False)
+    config.use_tensorrt(False)
+
     @flow.function(config)
     def matmul_job(a=flow.input_blob_def(a_shape, dtype=dtype),
                    b=flow.input_blob_def(b_shape, dtype=dtype)):
-        config.use_xla_jit(False)
-        config.use_tensorrt(False)
         return flow.matmul(a, b, transpose_a=trans_a, transpose_b=trans_b)
     return matmul_job
 
 def make_xla_job(a_shape, b_shape, trans_a=False, trans_b=False, dtype=flow.float32):
+    config.use_xla_jit(True)
+    config.use_tensorrt(False)
+
     @flow.function(config)
     def xla_matmul_job(a=flow.input_blob_def(a_shape, dtype=dtype),
                        b=flow.input_blob_def(b_shape, dtype=dtype)):
-        config.use_xla_jit(True)
-        config.use_tensorrt(False)
         return flow.matmul(a, b, transpose_a=trans_a, transpose_b=trans_b)
     return xla_matmul_job
 

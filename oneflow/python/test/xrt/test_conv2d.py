@@ -7,21 +7,23 @@ config = flow.function_config()
 
 def make_job(x_shape, w_shape, kernel_size=None, strides=None,
         padding="valid", data_format="NCHW", dilation_rate=None, dtype=flow.float32):
+    config.use_xla_jit(False)
+    config.use_tensorrt(False)
+
     @flow.function(config)
     def conv2d_job(x=flow.input_blob_def(x_shape, dtype=dtype),
                    weight=flow.input_blob_def(w_shape, dtype=dtype)):
-        config.use_xla_jit(False)
-        config.use_tensorrt(False)
         return flow.nn.conv2d(x, weight, strides, padding, data_format, dilation_rate)
     return conv2d_job
 
 def make_trt_job(x_shape, w_shape, kernel_size=None, strides=None,
         padding="valid", data_format="NCHW", dilation_rate=None, dtype=flow.float32):
+    config.use_xla_jit(False)
+    config.use_tensorrt(True)
+
     @flow.function(config)
     def trt_conv2d_job(x=flow.input_blob_def(x_shape, dtype=dtype),
                        weight=flow.input_blob_def(w_shape, dtype=dtype)):
-        config.use_xla_jit(False)
-        config.use_tensorrt(True)
         return flow.nn.conv2d(x, weight, strides, padding, data_format, dilation_rate)
     return trt_conv2d_job
 

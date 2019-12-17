@@ -6,26 +6,29 @@ import oneflow as flow
 config = flow.function_config()
 
 def make_job(input_shape, permute, dtype=flow.float32):
+    config.use_xla_jit(False)
+    config.use_tensorrt(False)
+
     @flow.function(config)
     def transpose_job(x = flow.input_blob_def(input_shape, dtype=dtype)):
-        config.use_xla_jit(False)
-        config.use_tensorrt(False)
         return flow.transpose(x, perm=permute)
     return transpose_job
 
 def make_xla_job(input_shape, permute, dtype=flow.float32):
+    config.use_xla_jit(True)
+    config.use_tensorrt(False)
+
     @flow.function(config)
     def xla_transpose_job(x = flow.input_blob_def(input_shape, dtype=dtype)):
-        config.use_xla_jit(True)
-        config.use_tensorrt(False)
         return flow.transpose(x, perm=permute)
     return xla_transpose_job
 
 def make_trt_job(input_shape, permute, dtype=flow.float32):
+    config.use_xla_jit(False)
+    config.use_tensorrt(True)
+
     @flow.function(config)
     def trt_transpose_job(x = flow.input_blob_def(input_shape, dtype=dtype)):
-        config.use_xla_jit(False)
-        config.use_tensorrt(True)
         return flow.transpose(x, perm=permute)
     return trt_transpose_job
 

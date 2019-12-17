@@ -6,20 +6,22 @@ import oneflow as flow
 config = flow.function_config()
 
 def make_job(x_shape, y_shape, dtype=flow.float32):
+    config.use_xla_jit(False)
+    config.use_tensorrt(False)
+
     @flow.function(config)
     def multiply_job(x = flow.input_blob_def(x_shape, dtype=dtype),
                 y = flow.input_blob_def(y_shape, dtype=dtype)):
-        config.use_xla_jit(False)
-        config.use_tensorrt(False)
         return flow.math.multiply(x, y)
     return multiply_job
 
 def make_trt_job(x_shape, y_shape, dtype=flow.float32):
+    config.use_xla_jit(False)
+    config.use_tensorrt(True)
+
     @flow.function(config)
     def trt_multiply_job(x = flow.input_blob_def(x_shape, dtype=dtype),
                     y = flow.input_blob_def(y_shape, dtype=dtype)):
-        config.use_xla_jit(True)
-        config.use_tensorrt(False)
         return flow.math.multiply(x, y)
     return trt_multiply_job
 

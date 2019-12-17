@@ -6,20 +6,22 @@ import oneflow as flow
 config = flow.function_config()
 
 def make_job(a_shape, b_shape, axis, dtype=flow.float32):
+    config.use_xla_jit(False)
+    config.use_tensorrt(False)
+
     @flow.function(config)
     def concat_job(x=flow.input_blob_def(a_shape, dtype=dtype),
             y=flow.input_blob_def(b_shape, dtype=dtype)):
-        config.use_xla_jit(False)
-        config.use_tensorrt(False)
         return flow.concat([x, y], axis=axis)
     return concat_job
 
 def make_trt_job(a_shape, b_shape, axis, dtype=flow.float32):
+    config.use_xla_jit(False)
+    config.use_tensorrt(True)
+
     @flow.function(config)
     def trt_concat_job(x=flow.input_blob_def(a_shape, dtype=dtype),
             y=flow.input_blob_def(b_shape, dtype=dtype)):
-        config.use_xla_jit(False)
-        config.use_tensorrt(True)
         return flow.concat([x, y], axis=axis)
     return trt_concat_job
 

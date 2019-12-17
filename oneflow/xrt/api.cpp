@@ -137,22 +137,14 @@ std::shared_ptr<XrtGraph> BuildXrtGraph(const XrtLaunchOpConf::Function &functio
   return graph_builder::BuildGraph(function, device_type, job_desc);
 }
 
-void SetXrtEnvOption(const XrtConfig::Option &option, bool *env) {
-  if (option == XrtConfig::OPT_ON) {
-    *env = true;
-  } else if (option == XrtConfig::OPT_OFF) {
-    *env = false;
-  }
-}
-
 void InitXrtConfigurations(const XrtConfig &config) {
-  SetXrtEnvOption(config.use_xla_jit(), &FLAGS_use_xla_jit);
-  SetXrtEnvOption(config.use_tensorrt(), &FLAGS_use_tensorrt);
+  if (config.has_use_xla_jit()) { FLAGS_use_xla_jit = config.use_xla_jit(); }
+  if (config.has_use_tensorrt()) { FLAGS_use_tensorrt = config.use_tensorrt(); }
   // Set xla configurations.
   if (config.has_tensorrt_config()) {
     const XrtConfig::TensorRTConfig &trt_config = config.tensorrt_config();
-    SetXrtEnvOption(trt_config.use_fp16(), &FLAGS_tensorrt_fp16);
-    SetXrtEnvOption(trt_config.use_int8(), &FLAGS_tensorrt_int8);
+    if (trt_config.has_use_fp16()) { FLAGS_tensorrt_fp16 = trt_config.use_fp16(); }
+    if (trt_config.has_use_int8()) { FLAGS_tensorrt_int8 = trt_config.use_int8(); }
   }
 }
 

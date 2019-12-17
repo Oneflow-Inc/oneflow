@@ -46,20 +46,15 @@ message MemoryAllocationAlgorithmConf {
 }
 
 message XrtConfig {
-  enum Option {
-    OPT_UNDEF = 1;
-    OPT_ON = 2;
-    OPT_OFF = 3;
-  }
   message XlaConfig {
     // TODO
   }
   message TensorRTConfig {
-    optional Option use_fp16 = 1 [default = OPT_UNDEF];
-    optional Option use_int8 = 2 [default = OPT_UNDEF];
+    optional bool use_fp16 = 1 [default = false];
+    optional bool use_int8 = 2 [default = false];
   }
-  optional Option use_xla_jit = 1 [default = OPT_UNDEF];
-  optional Option use_tensorrt = 2 [default = OPT_UNDEF];
+  optional bool use_xla_jit = 1 [default = false];
+  optional bool use_tensorrt = 2 [default = false];
   optional XlaConfig xla_config = 3;
   optional TensorRTConfig tensorrt_config = 4;
 }

@@ -255,22 +255,18 @@ def set_default_placement(func_desc, value):
 
 @oneflow_function_config('use_xla_jit')
 def set_use_xla_jit(func_desc, value = True):
-    func_desc.job_config_proto.xrt_config.use_xla_jit = \
-        job_util.XrtConfig.OPT_ON if value else job_util.XrtConfig.OPT_OFF
+    func_desc.job_config_proto.xrt_config.use_xla_jit = value
 
 @oneflow_function_config('use_tensorrt')
 def set_use_tensorrt(func_desc, value = True):
-    func_desc.job_config_proto.xrt_config.use_tensorrt = \
-        job_util.XrtConfig.OPT_ON if value else job_util.XrtConfig.OPT_OFF
+    func_desc.job_config_proto.xrt_config.use_tensorrt = value
 
 @oneflow_function_config('tensorrt.use_fp16')
 def set_tensorrt_use_fp16(func_desc, value = True):
     set_use_tensorrt(True)
-    func_desc.job_config_proto.xrt_config.tensorrt_config.use_fp16 = \
-        job_util.XrtConfig.OPT_ON if value else job_util.XrtConfig.OPT_OFF
+    func_desc.job_config_proto.xrt_config.tensorrt_config.use_fp16 = value
 
 @oneflow_function_config('tensorrt.use_int8')
 def set_tensorrt_use_int8(func_desc, value = True):
     set_use_tensorrt(True)
-    func_desc.job_config_proto.xrt_config.tensorrt_config.use_int8 = \
-        job_util.XrtConfig.OPT_ON if value else job_util.XrtConfig.OPT_OFF
+    func_desc.job_config_proto.xrt_config.tensorrt_config.use_int8 = value

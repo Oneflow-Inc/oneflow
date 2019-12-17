@@ -32,8 +32,8 @@ inline bool XrtCompilationEnabled(const JobDesc& job_desc) {
   xrt::InitXrtConfigurations(config);
   return xrt::XrtCompilationEnabled();
 #else
-  return config.use_xla_jit() == XrtConfig::Option::OPT_ON
-         || config.use_tensorrt() == XrtConfig::Option::OPT_ON;
+  return (config.has_use_xla_jit() && config.use_xla_jit())
+         || (config.has_use_tensorrt() && config.use_tensorrt());
 #endif  // OF_WITH_XRT
 }
 

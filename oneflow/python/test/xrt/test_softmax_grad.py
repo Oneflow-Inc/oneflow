@@ -6,20 +6,22 @@ import oneflow as flow
 config = flow.function_config()
 
 def make_job(shape, axis, dtype=flow.float32):
+    config.use_xla_jit(False)
+    config.use_tensorrt(False)
+
     @flow.function(config)
     def softmax_grad_job(y=flow.input_blob_def(shape, dtype=dtype),
                          dy=flow.input_blob_def(shape, dtype=dtype)):
-        config.use_xla_jit(False)
-        config.use_tensorrt(False)
         return flow.nn.softmax_grad(y, dy, axis=axis)
     return softmax_grad_job
 
 def make_xla_job(shape, axis, dtype=flow.float32):
+    config.use_xla_jit(True)
+    config.use_tensorrt(False)
+
     @flow.function(config)
     def xla_softmax_grad_job(y=flow.input_blob_def(shape, dtype=dtype),
                              dy=flow.input_blob_def(shape, dtype=dtype)):
-        config.use_xla_jit(True)
-        config.use_tensorrt(False)
         return flow.nn.softmax_grad(y, dy, axis=axis)
     return xla_softmax_grad_job
 

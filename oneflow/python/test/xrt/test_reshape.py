@@ -6,26 +6,29 @@ import oneflow as flow
 config = flow.function_config()
 
 def make_job(x_shape, shape, dtype=flow.float32):
+    config.use_xla_jit(False)
+    config.use_tensorrt(False)
+
     @flow.function(config)
     def reshape_job(x = flow.input_blob_def(x_shape, dtype=dtype)):
-        config.use_xla_jit(False)
-        config.use_tensorrt(False)
         return flow.reshape(x, shape)
     return reshape_job
 
 def make_xla_job(x_shape, shape, dtype=flow.float32):
+    config.use_xla_jit(True)
+    config.use_tensorrt(False)
+
     @flow.function(config)
     def xla_reshape_job(x = flow.input_blob_def(x_shape, dtype=dtype)):
-        config.use_xla_jit(True)
-        config.use_tensorrt(False)
         return flow.reshape(x, shape)
     return xla_reshape_job
 
 def make_trt_job(x_shape, shape, dtype=flow.float32):
+    config.use_xla_jit(False)
+    config.use_tensorrt(True)
+
     @flow.function(config)
     def trt_reshape_job(x = flow.input_blob_def(x_shape, dtype=dtype)):
-        config.use_xla_jit(False)
-        config.use_tensorrt(True)
         return flow.reshape(x, shape)
     return trt_reshape_job
 

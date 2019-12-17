@@ -69,19 +69,21 @@ class TestPooling(unittest.TestCase):
 class TestMaxPooling(TestPooling):
     run_test = True
     def make_job(self, x_shape, ksize, strides, padding, data_format, dtype=flow.float32):
+        config.use_xla_jit(False)
+        config.use_tensorrt(False)
+
         @flow.function(config)
         def max_pooling_job(x = flow.input_blob_def(x_shape, dtype=dtype)):
-            config.use_xla_jit(False)
-            config.use_tensorrt(False)
             return flow.nn.max_pool2d(x, ksize=ksize, strides=strides,
                                       padding=padding, data_format=data_format)
         return max_pooling_job
 
     def make_trt_job(self, x_shape, ksize, strides, padding, data_format, dtype=flow.float32):
+        config.use_xla_jit(False)
+        config.use_tensorrt(True)
+
         @flow.function(config)
         def trt_max_pooling_job(x = flow.input_blob_def(x_shape, dtype=dtype)):
-            config.use_xla_jit(False)
-            config.use_tensorrt(True)
             return flow.nn.max_pool2d(x, ksize=ksize, strides=strides,
                                       padding=padding, data_format=data_format)
         return trt_max_pooling_job
@@ -90,19 +92,21 @@ class TestMaxPooling(TestPooling):
 class TestAveragePooling(TestPooling):
     run_test = True
     def make_job(self, x_shape, ksize, strides, padding, data_format, dtype=flow.float32):
+        config.use_xla_jit(False)
+        config.use_tensorrt(False)
+
         @flow.function(config)
         def avg_pooling_job(x = flow.input_blob_def(x_shape, dtype=dtype)):
-            config.use_xla_jit(False)
-            config.use_tensorrt(False)
             return flow.nn.avg_pool2d(x, ksize=ksize, strides=strides,
                                       padding=padding, data_format=data_format)
         return avg_pooling_job
 
     def make_trt_job(self, x_shape, ksize, strides, padding, data_format, dtype=flow.float32):
+        config.use_xla_jit(False)
+        config.use_tensorrt(True)
+
         @flow.function(config)
         def trt_avg_pooling_job(x = flow.input_blob_def(x_shape, dtype=dtype)):
-            config.use_xla_jit(False)
-            config.use_tensorrt(True)
             return flow.nn.avg_pool2d(x, ksize=ksize, strides=strides,
                                       padding=padding, data_format=data_format)
         return trt_avg_pooling_job

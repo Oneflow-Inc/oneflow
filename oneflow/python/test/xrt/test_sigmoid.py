@@ -6,26 +6,29 @@ import oneflow as flow
 config = flow.function_config()
 
 def make_job(input_shape, dtype=flow.float32):
+    config.use_xla_jit(False)
+    config.use_tensorrt(False)
+
     @flow.function(config)
     def sigmoid_job(x = flow.input_blob_def(input_shape, dtype=dtype)):
-        config.use_xla_jit(False)
-        config.use_tensorrt(False)
         return flow.keras.activations.sigmoid(x)
     return sigmoid_job
 
 def make_xla_job(input_shape, dtype=flow.float32):
+    config.use_xla_jit(True)
+    config.use_tensorrt(False)
+
     @flow.function(config)
     def xla_sigmoid_job(x = flow.input_blob_def(input_shape, dtype=dtype)):
-        config.use_xla_jit(True)
-        config.use_tensorrt(False)
         return flow.keras.activations.sigmoid(x)
     return xla_sigmoid_job
 
 def make_trt_job(input_shape, dtype=flow.float32):
+    config.use_xla_jit(False)
+    config.use_tensorrt(True)
+
     @flow.function(config)
     def trt_sigmoid_job(x = flow.input_blob_def(input_shape, dtype=dtype)):
-        config.use_xla_jit(False)
-        config.use_tensorrt(True)
         return flow.keras.activations.sigmoid(x)
     return trt_sigmoid_job
 

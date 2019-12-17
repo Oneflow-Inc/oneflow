@@ -6,29 +6,32 @@ import oneflow as flow
 config = flow.function_config()
 
 def make_job(x_shape, like_shape, dtype=flow.float32):
+    config.use_xla_jit(False)
+    config.use_tensorrt(False)
+
     @flow.function(config)
     def reshape_like_job(x = flow.input_blob_def(x_shape, dtype=dtype),
                          like = flow.input_blob_def(like_shape, dtype=dtype)):
-        config.use_xla_jit(False)
-        config.use_tensorrt(False)
         return flow.reshape_like(x, like)
     return reshape_like_job
 
 def make_xla_job(x_shape, like_shape, dtype=flow.float32):
+    config.use_xla_jit(True)
+    config.use_tensorrt(False) 
+
     @flow.function(config)
     def xla_reshape_like_job(x = flow.input_blob_def(x_shape, dtype=dtype),
                              like = flow.input_blob_def(like_shape, dtype=dtype)):
-        config.use_xla_jit(True)
-        config.use_tensorrt(False) 
         return flow.reshape_like(x, like)
     return xla_reshape_like_job
 
-def make_trt_job(x_shape, like_shape, dtype=flow.float32):   
+def make_trt_job(x_shape, like_shape, dtype=flow.float32):
+    config.use_xla_jit(False)
+    config.use_tensorrt(True) 
+
     @flow.function(config)
     def trt_reshape_like_job(x = flow.input_blob_def(x_shape, dtype=dtype),
                              like = flow.input_blob_def(like_shape, dtype=dtype)):
-        config.use_xla_jit(False)
-        config.use_tensorrt(True) 
         return flow.reshape_like(x, like)
     return trt_reshape_like_job
 
