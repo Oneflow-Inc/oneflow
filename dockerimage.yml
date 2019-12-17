@@ -1,7 +1,9 @@
 name: Docker Image CI
 
-on: [push]
-
+on:
+    pull_request:
+      branches:
+        - dev_python
 jobs:
 
   build:
