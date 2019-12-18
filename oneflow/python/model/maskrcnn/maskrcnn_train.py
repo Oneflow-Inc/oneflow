@@ -511,9 +511,9 @@ def run():
         metrics_df = add_metrics(metrics_df, iter=i, outputs=outputs)
         rank_size = metrics_df["rank"].dropna().unique().size if "rank" in metrics_df else 0
         if terminal_args.print_loss_each_rank and rank_size > 1:
-            for i in range(rank_size):
-                tansposed = transpose_metrics(metrics_df[metrics_df["rank"] == i])
-                tansposed["rank"] = i
+            for rank_i in range(rank_size):
+                tansposed = transpose_metrics(metrics_df[metrics_df["rank"] == rank_i])
+                tansposed["rank"] = rank_i
                 print_metrics(tansposed)
         else:
             tansposed = transpose_metrics(metrics_df)
