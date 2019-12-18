@@ -59,6 +59,7 @@ def plot_many_by_legend(df_dict):
         for legend in list(df["legend"].unique()):
             if (
                 legend not in legend_set_sorted
+                and "note" in df
                 and df[df["legend"] == legend]["note"].size is 0
             ):
                 legend_set_unsored.append(legend)
@@ -69,6 +70,7 @@ def plot_many_by_legend(df_dict):
                 for k, df in df_dict.items()
             ],
             axis=0,
+            sort=False,
         )
         plot_value(df_by_legend)
 
@@ -136,7 +138,7 @@ def subset_and_mod(df, limit, take_every_n):
 
 if __name__ == "__main__":
     import argparse
-    
+
     parser = argparse.ArgumentParser(argument_default=argparse.SUPPRESS)
     parser.add_argument("-d", "--metrics_dir", type=str)
     parser.add_argument("-o", "--oneflow_metrics_path", type=str)
@@ -153,16 +155,27 @@ if __name__ == "__main__":
     if hasattr(args, "pytorch_metrics_path"):
         torch_metrics_path = args.pytorch_metrics_path
 
-    assert os.path.exists(flow_metrics_path), "{} not found".format(flow_metrics_path)
-    assert os.path.exists(torch_metrics_path), "{} not found".format(torch_metrics_path)
+    assert os.path.exists(flow_metrics_path), "{} not found".format(
+        flow_metrics_path
+    )
+    assert os.path.exists(torch_metrics_path), "{} not found".format(
+        torch_metrics_path
+    )
 
     flow_df = get_df(flow_metrics_path, "loss*.csv")
+    flow_df.drop(["rank", "note"], axis=1)
+    if "primary_lr" in flow_df["legend"].unique():
+        flow_df["legend"].replace("primary_lr", "lr", inplace=True)
+    flow_df = flow_df.groupby(["iter", "legend"], as_index=False).mean()
     torch_df = get_df(torch_metrics_path, "torch*.csv")
+    if torch_df["iter"].min() == 0:
+        torch_df["iter"] += 1
     limit, rate = get_metrics_sr(flow_df, torch_df)
-
     plot_many_by_legend(
         {
             "flow": subset_and_mod(flow_df, limit, rate),
             "torch": subset_and_mod(torch_df, limit, rate),
         }
     )
+
+    # plot_by_legend(flow_df)
