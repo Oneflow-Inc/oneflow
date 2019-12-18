@@ -375,9 +375,14 @@ def init_train_func(config, input_fake_image):
         @flow.function
         def train():
             model_update_conf = set_train_config(config)
-            ret = make_lr("System-Train-TrainStep-train", model_update_conf, flow.config.train.get_primary_lr(), flow.config.train.get_secondary_lr())
-            ret.update(train_net(config))
-            return ret
+            # step_lr = make_lr("System-Train-TrainStep-train", model_update_conf, flow.config.train.get_primary_lr(), flow.config.train.get_secondary_lr())
+            outputs = train_net(config)
+            # if isinstance(outputs, (list, tuple)):
+            #     for o in outputs:
+            #         o.update(step_lr)
+            # else:
+            #     outputs.update(step_lr)
+            return outputs
 
         return train
 
@@ -414,8 +419,8 @@ def add_metrics(metrics_df, iter=None, **kwargs):
             if isinstance(v, list):
                 dfs = []
                 for rank, v in enumerate(v, 0):
-                    for legend, value in v:
-                        dfs.append(pd.DataFrame({"iter": iter, "rank": rank, "legend": legend, "value": value.item()}))
+                    for legend, value in v.items():
+                        dfs.append(pd.DataFrame({"iter": iter, "rank": rank, "legend": legend, "value": value.item()}, index=[0]))
             elif isinstance(v, dict):
                 dfs = [pd.DataFrame(
                     {"iter": iter, "legend": legend, "value": value.item()}, index=[0]
@@ -503,7 +508,7 @@ def run():
         metrics_df = pd.DataFrame()
         metrics_df = add_metrics(metrics_df, iter=i, elapsed_time=elapsed_time)
         metrics_df = add_metrics(metrics_df, iter=i, outputs=outputs)
-        rank_size = metrics_df["rank"].size if "rank" in metrics_df else 0
+        rank_size = metrics_df["rank"].dropna().unique().size if "rank" in metrics_df else 0
         if terminal_args.print_loss_each_rank and rank_size > 1:
             for i in range(rank_size):
                 tansposed = transpose_metrics(metrics_df[metrics_df["rank"] == i])
