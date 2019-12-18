@@ -18,7 +18,8 @@ import numpy as np
 import oneflow
 
 class ArgBlobDef(blob_desc.BlobDesc):
-    def __init__(self, shape, dtype = data_type_util.kFloat, batch_axis = 0, name = None):
+    def __init__(self, shape, dtype, batch_axis, split_axis='same_with_batch_axis', name=None):
+        if split_axis == 'same_with_batch_axis': split_axis = batch_axis
         lbi = lbi_util.LogicalBlobId()
         if name is None: name = id_util.UniqueStr("Input_")
         lbi.op_name = name
@@ -31,6 +32,7 @@ class ArgBlobDef(blob_desc.BlobDesc):
         self.shape_ = shape
         self.dtype_ = dtype
         self.batch_axis_ = batch_axis
+        self.split_axis_ = split_axis
 
     @property
     def static_shape(self): return self.shape_
@@ -86,17 +88,27 @@ class ArgBlobDef(blob_desc.BlobDesc):
         if type(self.batch_axis_) is int:
             assert self.batch_axis_ >= 0
             interface_blob_conf.batch_axis.value = self.batch_axis_
-            interface_blob_conf.split_axis.value = self.batch_axis_
         else:
             assert self.batch_axis_ is None or self.batch_axis_ is False
             interface_blob_conf.batch_axis.ClearField("value")
+        if type(self.split_axis_) is int:
+            assert self.split_axis_ >= 0
+            interface_blob_conf.split_axis.value = self.split_axis_
+        else:
+            assert self.split_axis_ is None or self.split_axis_ is False
             interface_blob_conf.split_axis.ClearField("value")
         return interface_blob_conf
 
 @oneflow_export('FixedTensorDef')
 class FixedTensorDef(ArgBlobDef):
-    def __init__(self, *args, **kwargs):
-        ArgBlobDef.__init__(self, *args, **kwargs)
+    def __init__(self, shape, dtype=data_type_util.kFloat, batch_axis=0,
+                 split_axis='same_with_batch_axis', name=None):
+        if type(batch_axis) is int:
+            if batch_axis < 0: batch_axis += len(shape)
+            assert batch_axis >= 0
+            assert batch_axis < len(shape)
+        ArgBlobDef.__init__(self, shape, dtype=dtype, batch_axis=batch_axis,
+                            split_axis=split_axis, name=name)
         
     @property
     def is_dynamic(self): return False
@@ -116,8 +128,13 @@ class FixedTensorDef(ArgBlobDef):
         
 @oneflow_export('MirroredTensorDef')
 class MirroredTensorDef(ArgBlobDef):
-    def __init__(self, *args, **kwargs):
-        ArgBlobDef.__init__(self, *args, **kwargs)
+    def __init__(self, shape, dtype=data_type_util.kFloat, batch_axis=0, name=None):
+        assert type(shape) is tuple
+        assert type(batch_axis) is int
+        if batch_axis < 0: batch_axis += len(shape)
+        assert batch_axis >= 0
+        assert batch_axis < len(shape)
+        ArgBlobDef.__init__(self, shape, dtype=dtype, batch_axis=batch_axis, name=name)
         self.sub_consistent_blob_list_ = []
         
     @property
@@ -145,8 +162,13 @@ class MirroredTensorDef(ArgBlobDef):
             
 @oneflow_export('MirroredTensorListDef')
 class MirroredTensorListDef(ArgBlobDef):
-    def __init__(self, *args, **kwargs):
-        ArgBlobDef.__init__(self, *args, **kwargs)
+    def __init__(self, shape, dtype=data_type_util.kFloat, batch_axis=0, name=None):
+        assert type(shape) is tuple
+        assert type(batch_axis) is int
+        if batch_axis < 0: batch_axis += len(shape)
+        assert batch_axis >= 0
+        assert batch_axis < len(shape)
+        ArgBlobDef.__init__(self, shape, dtype=dtype, batch_axis=batch_axis, name=name)
         self.sub_consistent_blob_list_ = []
         
     @property
