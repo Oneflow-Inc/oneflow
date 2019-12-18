@@ -36,6 +36,10 @@ class BlobDef(blob_desc.BlobDesc):
         raise NotImplementedError
 
     @property
+    def split_axis(self):
+        raise NotImplementedError
+
+    @property
     def is_dynamic(self):
         raise NotImplementedError
     
@@ -134,6 +138,11 @@ class ConsistentBlob(BlobDef):
         return c_api_util.JobBuildAndInferCtx_GetBatchAxis(self.job_name_, self.lbn_)
 
     @property
+    def split_axis(self):
+        return c_api_util.JobBuildAndInferCtx_GetSplitAxisFromProducerView(
+                            self.job_name_, self.lbn_)
+
+    @property
     def is_dynamic(self):
         return c_api_util.JobBuildAndInferCtx_IsDynamic(self.job_name_, self.lbn_)
     
@@ -181,6 +190,11 @@ class MirroredBlob(BlobDef):
     @property
     def batch_axis(self):
         return c_api_util.JobBuildAndInferCtx_MirroredBlobGetBatchAxis(self.job_name_, self.lbn_)
+
+    @property
+    def split_axis(self):
+        return c_api_util.JobBuildAndInferCtx_MirroredBlobGetSplitAxisFromProducerView(
+                            self.job_name_, self.lbn_)
 
     @property
     def is_dynamic(self):
