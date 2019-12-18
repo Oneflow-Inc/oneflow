@@ -48,7 +48,7 @@ def compare_with_tensorflow(device_type, input_shape, output_shape):
     loss_diff = np.load(os.path.join(GetSavePath(), "loss_diff.npy"))
     tf_x_diff = tape.gradient(tf_out, x, loss_diff)
 
-    assert np.allclose(of_out, tf_out.numpy(), rtol=1e-5, atol=1e-5)
+    assert np.allclose(of_out.ndarray(), tf_out.numpy(), rtol=1e-5, atol=1e-5)
     assert np.allclose(
         np.load(os.path.join(GetSavePath(), "x_diff.npy")), tf_x_diff.numpy(), rtol=1e-5, atol=1e-5
     )

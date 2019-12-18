@@ -29,6 +29,6 @@ def Save(name):
         os.makedirs(path)
 
     def _save(x):
-        np.save(os.path.join(path, name), x)
+        np.save(os.path.join(path, name), x.ndarray())
 
     return _save

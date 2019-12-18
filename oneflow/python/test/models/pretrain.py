@@ -90,6 +90,7 @@ def _AddMaskedLanguageModelLoss(input_blob,
     sum_label_weight_blob = flow.math.reduce_sum(label_weight_blob, axis=[-1])
     ones = sum_label_weight_blob * 0.0 + 1.0
     sum_label_weight_blob = flow.math.reduce_sum(sum_label_weight_blob)
+    print('shape and batch_axis', (sum_label_weight_blob.shape, sum_label_weight_blob.batch_axis))
     batch_size = flow.math.reduce_sum(ones)
     sum_label_weight_blob = sum_label_weight_blob / batch_size
   with flow.deprecated.variable_scope("cls-predictions"):

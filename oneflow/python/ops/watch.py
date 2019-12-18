@@ -39,7 +39,7 @@ def WatchDiff(blob_watched, handler_or_prompt=None):
         lbi_and_uuid = LbiAndDiffWatcherUuidPair()
         lbi_and_uuid.lbi.CopyFrom(blob_watched.lbi)
         lbi_and_uuid.watcher_uuid = handler_uuid
-        job_builder.CurCtxAddLbiAndDiffWatcherUuidPair(lbi_and_uuid)
+        c_api_util.CurJobBuildAndInferCtx_AddLbiAndDiffWatcherUuidPair(lbi_and_uuid)
         watcher_util.BindUuidAndHandler(handler_uuid, blob_watched, handler)
     elif type(blob_watched) is MirroredBlob:
         handlers = _MakeSubConsistentBlobHandlers(blob_watched, handler)
