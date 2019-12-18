@@ -1345,6 +1345,19 @@ message SliceGradOpConf {
   repeated DimSliceConf dim_slice_conf = 4;
 }
 
+message SliceV3OpConf {
+  required string in = 1;
+  required string out = 2;
+  repeated DimSliceConf dim_slice_conf = 3;
+}
+
+message SliceGradV3OpConf {
+  required string dy = 1;
+  required string dx = 2;
+  required string like = 3;
+  repeated DimSliceConf dim_slice_conf = 4;
+}
+
 message LayerNormOpConf {
   // in
   required string in = 1;
@@ -2150,6 +2163,8 @@ message OperatorConf {
     Dim0DynamicToFixedOpConf dim0_dynamic_to_fixed_conf = 335;
     ParallelCastOpConf parallel_cast_conf = 336;
     SliceV2OpConf slice_v2_conf = 337;
+    SliceV3OpConf slice_v3_conf = 338;
+    SliceGradV3OpConf slice_grad_v3_conf = 339;
 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;
