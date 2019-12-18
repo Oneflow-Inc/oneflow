@@ -381,12 +381,12 @@ def init_train_func(config, input_fake_image):
 
         return train
 
-def transpose_matrics(metrics):
+def transpose_metrics(metrics):
     legends = metrics["legend"].unique()
     transposed = metrics.pivot_table(
         values="value", columns=["legend"], aggfunc="mean"
     )
-    assert metrics["iter"].unique().size == 1
+    assert metrics["iter"].unique().size == 1, "can only transpose metrics in one iter"
     transposed["iter"] = metrics["iter"].unique()
     return transposed
 
@@ -506,11 +506,11 @@ def run():
         rank_size = metrics_df["rank"].size if "rank" in metrics_df else 0
         if terminal_args.print_loss_each_rank and rank_size > 1:
             for i in range(rank_size):
-                tansposed = transpose_matrics(metrics_df[metrics_df["rank"] == i])
+                tansposed = transpose_metrics(metrics_df[metrics_df["rank"] == i])
                 tansposed["rank"] = i
                 print_metrics(tansposed)
         else:
-            tansposed = transpose_matrics(metrics_df)
+            tansposed = transpose_metrics(metrics_df)
             print_metrics(tansposed)
         metrics = pd.concat([metrics, metrics_df], axis=0, sort=False)
         if config.SOLVER.METRICS_PERIOD > 0:
