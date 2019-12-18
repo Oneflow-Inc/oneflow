@@ -322,7 +322,7 @@ def get_flow_dtype(dtype_str):
 def make_lr(train_step_name, model_update_conf, primary_lr, secondary_lr=None):
     # usually, train_step_name is "System-Train-TrainStep-" + train job name
     assert model_update_conf.HasField("learning_rate_decay") or model_update_conf.HasField("warmup_conf"), "only support model update conf with warmup or lr decay for now"
-    flow.config.train.train_step_lbn(train_step_name + "/out")
+    flow.config.train.train_step_lbn(train_step_name + "-Identity" + "/out")
     secondary_lr_lbn = "System-Train-SecondaryLearningRate-Scheduler/out"
     if secondary_lr is None:
         secondary_lr_lbn = "System-Train-PrimaryLearningRate-Scheduler/out"
@@ -338,15 +338,17 @@ def make_lr(train_step_name, model_update_conf, primary_lr, secondary_lr=None):
         )
         train_step_id = flow.identity(train_step, name=train_step_name + "-Identity")
         flow.assign(train_step, train_step_id + 1, name=train_step_name + "-Assign")
-        primary_lr_blob = flow.schedule(train_step, model_update_conf, primary_lr, name="System-Train-PrimaryLearningRate-Scheduler")
+        
+        primary_lr_blob = flow.schedule(train_step_id, model_update_conf, primary_lr, name="System-Train-PrimaryLearningRate-Scheduler")
         secondary_lr_blob = None
         if secondary_lr is None:
             secondary_lr_blob = primary_lr_blob
         else:
-            secondary_lr_blob = flow.schedule(train_step, model_update_conf, secondary_lr, name="System-Train-SecondaryLearningRate-Scheduler")
+            secondary_lr_blob = flow.schedule(train_step_id, model_update_conf, secondary_lr, name="System-Train-SecondaryLearningRate-Scheduler")
         assert secondary_lr_blob is not None
+        
         return {
-            "train_step": train_step,
+            "train_step": train_step_id,
             "primary_lr": primary_lr_blob,
             "secondary_lr": secondary_lr_blob
         }
@@ -375,13 +377,12 @@ def init_train_func(config, input_fake_image):
         @flow.function
         def train():
             model_update_conf = set_train_config(config)
-            # step_lr = make_lr("System-Train-TrainStep-train", model_update_conf, flow.config.train.get_primary_lr(), flow.config.train.get_secondary_lr())
+            step_lr = make_lr("System-Train-TrainStep-train", model_update_conf, flow.config.train.get_primary_lr(), flow.config.train.get_secondary_lr())
             outputs = train_net(config)
-            # if isinstance(outputs, (list, tuple)):
-            #     for o in outputs:
-            #         o.update(step_lr)
-            # else:
-            #     outputs.update(step_lr)
+            if isinstance(outputs, (list, tuple)):
+                outputs[0].update(step_lr)
+            else:
+                outputs.update(step_lr)
             return outputs
 
         return train
