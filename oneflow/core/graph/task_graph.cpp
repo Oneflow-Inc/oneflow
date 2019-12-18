@@ -419,7 +419,7 @@ void TaskGraph::EnableInplaceMemSharingInReduceStruct() {
 }
 
 void TaskGraph::GetInplaceOpBlobArgList(
-    OpBlobArgList* inplace_obas, const HashSet<TaskNode*>& dev_nodes,
+    InplaceObasInfo* obas_info, const HashSet<TaskNode*>& dev_nodes,
     const std::function<const TaskNode*(const std::string&)>& TaskNode4OpName) const {
   for (TaskNode* task_node : dev_nodes) {
     if (task_node->exec_gph().node_num() != 1) { continue; }
@@ -427,10 +427,27 @@ void TaskGraph::GetInplaceOpBlobArgList(
     for (const std::string& ibn : op.input_bns()) {
       if (op.InputBlobModifier4Ibn(ibn).is_mutable()) {
         CHECK(IsInplaceAllowed(task_node, {ibn}, TaskNode4OpName));
-        *inplace_obas->mutable_oba()->Add() = GenOpBlobArg(op.op_name(), ibn);
+        *obas_info->mut_in_obas.mutable_oba()->Add() = GenOpBlobArg(op.op_name(), ibn);
       }
     }
     for (const std::string& obn : op.output_bns()) {
+      const auto& obn_modifier = op.OutputBlobModifier4Obn(obn);
+      if (obn_modifier.has_mutable_inplace_ibn()) {
+        std::string ibn = obn_modifier.mutable_inplace_ibn();
+        if (IsInplaceAllowed(task_node, {ibn, obn}, TaskNode4OpName)) {
+          auto* pair = obas_info->mut_inplace_oba_pairs.mutable_pair()->Add();
+          *pair->mutable_first() = GenOpBlobArg(op.op_name(), ibn);
+          *pair->mutable_second() = GenOpBlobArg(op.op_name(), obn);
+        }
+      } else if (obn_modifier.has_const_inplace_ibn()) {
+        std::string ibn = obn_modifier.const_inplace_ibn();
+        if (IsInplaceAllowed(task_node, {ibn, obn}, TaskNode4OpName)) {
+          auto* pair = obas_info->con_inplace_oba_pairs.mutable_pair()->Add();
+          *pair->mutable_first() = GenOpBlobArg(op.op_name(), ibn);
+          *pair->mutable_second() = GenOpBlobArg(op.op_name(), obn);
+        }
+      }
+      /*
       std::string ibn = "";
       {
         const auto& obn_modifier = op.OutputBlobModifier4Obn(obn);
@@ -445,37 +462,38 @@ void TaskGraph::GetInplaceOpBlobArgList(
       if (ibn != "" && IsInplaceAllowed(task_node, {ibn, obn}, TaskNode4OpName)) {
         *inplace_obas->mutable_oba()->Add() = GenOpBlobArg(op.op_name(), obn);
       }
+      */
     }
   }
 }
 
 void TaskGraph::GetSafeInplaceOpBlobArgList(
-    OpBlobArgList* safe_obas, const HashSet<TaskNode*>& dev_nodes,
+    InplaceObasInfo* safe_obas_info, const HashSet<TaskNode*>& dev_nodes,
     std::function<bool(const std::string&, const std::string&)> IsOpNameDataOrCtrlReachable) const {
   auto TaskNode4SoleOpName = MakeGetterTaskNode4SoleOpName(dev_nodes);
-  OpBlobArgList inplace_obas;
-  GetInplaceOpBlobArgList(&inplace_obas, dev_nodes, TaskNode4SoleOpName);
+  InplaceObasInfo obas_info;
+  GetInplaceOpBlobArgList(&obas_info, dev_nodes, TaskNode4SoleOpName);
   auto Op4OpName = [&](const std::string& op_name) -> const Operator* {
     return TaskNode4SoleOpName(op_name)->exec_gph().SoleNode()->op().get();
   };
   auto IsLbiAllConsumersReachable =
       MakePredicatorIsLbiAllConsumersReachable(TaskNode4SoleOpName, IsOpNameDataOrCtrlReachable);
-  InplaceLbiGraph origin_graph(inplace_obas, Op4OpName);
+  InplaceLbiGraph origin_graph(obas_info, Op4OpName);
   origin_graph.ToDotWithFilePath(
       JoinPath("dot", "InplaceLbiGraph", GlobalJobDesc().job_name() + "_origin.dot"));
-  origin_graph.ComputeSafeInplaceObns(safe_obas, IsLbiAllConsumersReachable);
-  InplaceLbiGraph(*safe_obas, Op4OpName)
+  origin_graph.ComputeSafeInplaceObns(safe_obas_info, IsLbiAllConsumersReachable);
+  InplaceLbiGraph(*safe_obas_info, Op4OpName)
       .ToDotWithFilePath(
           JoinPath("dot", "InplaceLbiGraph", GlobalJobDesc().job_name() + "_safe.dot"));
 }
 
-void TaskGraph::SetTaskRegstInplaceInfo(const OpBlobArgList& obas,
+void TaskGraph::SetTaskRegstInplaceInfo(const InplaceObasInfo& obas_info,
                                         const HashSet<TaskNode*>& dev_nodes) const {
   auto TaskNode4SoleOpName = MakeGetterTaskNode4SoleOpName(dev_nodes);
   auto Op4OpName = [&](const std::string& op_name) -> const Operator* {
     return TaskNode4SoleOpName(op_name)->exec_gph().SoleNode()->op().get();
   };
-  InplaceLbiGraph inplace_gph(obas, Op4OpName);
+  InplaceLbiGraph inplace_gph(obas_info, Op4OpName);
   inplace_gph.ForEachConnectedComponent([&](const HashSet<const InplaceLbiNode*> inplace_nodes) {
     for (const auto* inplace_node : inplace_nodes) {
       if (inplace_node->in_edges().empty()) { continue; }
@@ -503,9 +521,9 @@ void TaskGraph::EnableInplaceMemSharing(
     const std::function<bool(const std::string&, const std::string&)>&
         IsOpNameDataOrCtrlReachable) {
   ForEachGpuDeviceNodes([&](const HashSet<TaskNode*>& dev_nodes) {
-    OpBlobArgList safe_inplace_obas;
-    GetSafeInplaceOpBlobArgList(&safe_inplace_obas, dev_nodes, IsOpNameDataOrCtrlReachable);
-    SetTaskRegstInplaceInfo(safe_inplace_obas, dev_nodes);
+    InplaceObasInfo safe_inplace_obas_info;
+    GetSafeInplaceOpBlobArgList(&safe_inplace_obas_info, dev_nodes, IsOpNameDataOrCtrlReachable);
+    SetTaskRegstInplaceInfo(safe_inplace_obas_info, dev_nodes);
   });
 }
 

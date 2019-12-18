@@ -7,6 +7,12 @@
 
 namespace oneflow {
 
+struct InplaceObasInfo {
+  OpBlobArgList mut_in_obas;
+  OpBlobArgPairs mut_inplace_oba_pairs;
+  OpBlobArgPairs con_inplace_oba_pairs;
+};
+
 class InplaceLbiEdge;
 
 class InplaceLbiNode : public Node<InplaceLbiNode, InplaceLbiEdge> {
@@ -59,8 +65,9 @@ class UpdateInplaceLbiNode final : public InplaceLbiNode {
 class InplaceLbiEdge final : public Edge<InplaceLbiNode, InplaceLbiEdge> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(InplaceLbiEdge);
-  InplaceLbiEdge(const Operator* op, const std::string& ibn, const std::string& obn)
-      : op_(op), ibn_(ibn), obn_(obn) {}
+  InplaceLbiEdge(const Operator* op, const std::string& ibn, const std::string& obn,
+                 bool is_mut_ref)
+      : op_(op), ibn_(ibn), obn_(obn), is_mut_ref_(is_mut_ref) {}
   ~InplaceLbiEdge() = default;
 
   const Operator& op() const { return *op_; }
@@ -77,24 +84,25 @@ class InplaceLbiEdge final : public Edge<InplaceLbiNode, InplaceLbiEdge> {
   const Operator* op_;
   const std::string ibn_;
   const std::string obn_;
+  const bool is_mut_ref_;
 };
 
 class InplaceLbiGraph final : public Graph<const InplaceLbiNode, const InplaceLbiEdge> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(InplaceLbiGraph);
-  InplaceLbiGraph(const OpBlobArgList& obas,
+  InplaceLbiGraph(const InplaceObasInfo& obas_info,
                   const std::function<const Operator*(const std::string&)>& Op4OpName) {
-    Init(obas, Op4OpName);
+    Init(obas_info, Op4OpName);
   }
   ~InplaceLbiGraph() = default;
   const char* TypeName() const override { return "InplaceLbiGraph"; }
 
-  void ComputeSafeInplaceObns(OpBlobArgList* obas,
+  void ComputeSafeInplaceObns(InplaceObasInfo* obas_info,
                               const std::function<bool(const LogicalBlobId&, const std::string&)>&
                                   IsLbiAllConsumerReachableToOpName) const;
 
  private:
-  void Init(const OpBlobArgList& obas,
+  void Init(const InplaceObasInfo& obas_info,
             const std::function<const Operator*(const std::string&)>& Op4OpName);
   std::function<InplaceLbiNode*(const LogicalBlobId&)> MakeMutFindOrCreateNode(
       std::function<const Operator*(const std::string&)> Op4OpName);
