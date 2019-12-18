@@ -390,7 +390,7 @@ def init_train_func(config, input_fake_image):
 def transpose_metrics(metrics):
     legends = metrics["legend"].unique()
     transposed = metrics.pivot_table(
-        values="value", columns=["legend"], aggfunc="mean"
+        values="value", columns=["legend"], aggfunc="mean", dropna=False
     )
     assert metrics["iter"].unique().size == 1, "can only transpose metrics in one iter"
     transposed["iter"] = metrics["iter"].unique()
