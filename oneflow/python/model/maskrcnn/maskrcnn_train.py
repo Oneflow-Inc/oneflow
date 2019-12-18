@@ -349,8 +349,8 @@ def make_lr(train_step_name, model_update_conf, primary_lr, secondary_lr=None):
         
         return {
             "train_step": train_step_id,
-            "primary_lr": primary_lr_blob,
-            "secondary_lr": secondary_lr_blob
+            "lr": primary_lr_blob,
+            "lr2": secondary_lr_blob
         }
         
 def init_train_func(config, input_fake_image):
@@ -407,8 +407,8 @@ def print_metrics(m):
         "loss_mask",
         "total_pos_inds_elem_cnt",
         "train_step",
-        "primary_lr",
-        "secondary_lr",
+        "lr",
+        "lr2",
     ]
     to_print_with_order = [l for l in to_print_with_order if l in m]
     print(m[to_print_with_order].to_string(index=False))
