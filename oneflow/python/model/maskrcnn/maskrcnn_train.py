@@ -375,149 +375,66 @@ def init_train_func(config, input_fake_image):
         @flow.function
         def train():
             model_update_conf = set_train_config(config)
-            make_lr("System-Train-TrainStep-train", model_update_conf, flow.config.train.get_primary_lr(), flow.config.train.get_secondary_lr())
-            return train_net(config)
+            # step_lr = make_lr("System-Train-TrainStep-train", model_update_conf, flow.config.train.get_primary_lr(), flow.config.train.get_secondary_lr())
+            outputs = train_net(config)
+            # if isinstance(outputs, (list, tuple)):
+            #     for o in outputs:
+            #         o.update(step_lr)
+            # else:
+            #     outputs.update(step_lr)
+            return outputs
 
         return train
 
-
-class LossPrinter(object):
-    TRIVIAL_LEGENDS = ("iter", "rank", "elapsed_time")
-
-    def __init__(self, print_for_each_rank):
-        self.print_for_each_rank = print_for_each_rank
-        if print_for_each_rank:
-            self.legend_fmt = (
-                "{:<8} {:<8} {:<16} {:<16} {:<16} {:<16} {:<16} {:<16} {:<20}"
-            )
-            self.fmt = "{:<8} {:<8} {:<16} {:<16.8f} {:<16.8f} {:<16.8f} {:<16.8f} {:<16.8f} {:<8}"
-            self.legends = (
-                "iter",
-                "rank",
-                "elapsed_time",
-                "loss_rpn_box_reg",
-                "loss_objectness",
-                "loss_box_reg",
-                "loss_classifier",
-                "loss_mask",
-                "total_pos_inds_elem_cnt",
-            )
-        else:
-            self.legend_fmt = (
-                "{:<8} {:<16} {:<16} {:<16} {:<16} {:<16} {:<16} {:<20}"
-            )
-            self.fmt = "{:<8} {:<16} {:<16.8f} {:<16.8f} {:<16.8f} {:<16.8f} {:<16.8f} {:<8}"
-            self.legends = (
-                "iter",
-                "elapsed_time",
-                "loss_rpn_box_reg",
-                "loss_objectness",
-                "loss_box_reg",
-                "loss_classifier",
-                "loss_mask",
-                "total_pos_inds_elem_cnt",
-            )
-        self.title_printed = False
-
-    def get_non_trivial_legends(self):
-        f = filter(lambda x: x not in self.TRIVIAL_LEGENDS, self.legends)
-        return list(f)
-
-    def collect(self, data):
-        non_trivial_legends = self.get_non_trivial_legends()
-        assert isinstance(data, dict)
-        assert len(data) == len(non_trivial_legends)
-
-        def legend_value(legend):
-            if "loss" in legend:
-                return data[legend].mean()
-            elif "elem_cnt" in legend:
-                return int(data[legend].item())
-            else:
-                raise ValueError
-
-        return [legend_value(legend) for legend in non_trivial_legends]
-
-    def collect_cross_ranks(self, data):
-        non_trivial_legends = self.get_non_trivial_legends()
-        assert isinstance(data, (list, tuple))
-        assert isinstance(data[0], dict)
-        assert len(data[0]) == len(non_trivial_legends), "{} vs {}".format(
-            len(data), len(non_trivial_legends)
-        )
-
-        def reduce_across_ranks(losses):
-            loss_for_each_rank_list = [loss.mean() for loss in losses]
-            return sum(loss_for_each_rank_list) / len(loss_for_each_rank_list)
-
-        def legend_value(legend):
-            if "loss" in legend or "elem_cnt" in legend:
-                return reduce_across_ranks([d[legend] for d in data])
-            else:
-                raise ValueError
-
-        return [legend_value(legend) for legend in non_trivial_legends]
-
-    def __call__(self, iter, elapsed_time, data):
-        if not self.title_printed:
-            print(self.legend_fmt.format(*self.legends))
-            self.title_printed = True
-
-        if not isinstance(data, (tuple, list)):
-            data = [data]
-
-        values_cross_ranks = self.collect_cross_ranks(data)
-        if self.print_for_each_rank:
-            for rank, data_per_rank in enumerate(data):
-                values_per_rank = self.collect(data_per_rank)
-                elapsed_time = elapsed_time if rank == 0 else ""
-                print(
-                    self.fmt.format(iter, rank, elapsed_time, *values_per_rank)
-                )
-        else:
-            print(self.fmt.format(iter, elapsed_time, *values_cross_ranks))
-
-        return values_cross_ranks
-
-
-def update_metrics(metrics, iter, elapsed_time, values):
-    (
-        loss_rpn_box_reg,
-        loss_objectness,
-        loss_box_reg,
-        loss_classifier,
-        loss_mask,
-        total_pos_inds_elem_cnt,
-    ) = values
-    df = pd.DataFrame(
-        [
-            {"iter": iter, "legend": "elapsed_time", "value": elapsed_time},
-            {
-                "iter": iter,
-                "legend": "loss_rpn_box_reg",
-                "value": loss_rpn_box_reg,
-            },
-            {
-                "iter": iter,
-                "legend": "loss_objectness",
-                "value": loss_objectness,
-            },
-            {"iter": iter, "legend": "loss_box_reg", "value": loss_box_reg},
-            {
-                "iter": iter,
-                "legend": "loss_classifier",
-                "value": loss_classifier,
-            },
-            {"iter": iter, "legend": "loss_mask", "value": loss_mask},
-            {
-                "iter": iter,
-                "legend": "total_pos_inds_elem_cnt",
-                "value": total_pos_inds_elem_cnt,
-            },
-        ]
+def transpose_metrics(metrics):
+    legends = metrics["legend"].unique()
+    transposed = metrics.pivot_table(
+        values="value", columns=["legend"], aggfunc="mean"
     )
-    return pd.concat([metrics, df], axis=0, sort=False)
+    assert metrics["iter"].unique().size == 1, "can only transpose metrics in one iter"
+    transposed["iter"] = metrics["iter"].unique()
+    return transposed
 
+def print_metrics(m):
+    to_print_with_order = [
+        "iter",
+        "rank",
+        "loss_rpn_box_reg",
+        "loss_objectness",
+        "loss_box_reg",
+        "loss_classifier",
+        "loss_mask",
+        "total_pos_inds_elem_cnt",
+        "train_step",
+        "primary_lr",
+        "secondary_lr",
+    ]
+    to_print_with_order = [l for l in to_print_with_order if l in m]
+    print(m[to_print_with_order].to_string(index=False))
+
+def add_metrics(metrics_df, iter=None, **kwargs):
+    assert iter is not None
+    for k, v in kwargs.items():
+        if k is "outputs":
+            if isinstance(v, list):
+                dfs = []
+                for rank, v in enumerate(v, 0):
+                    for legend, value in v.items():
+                        dfs.append(pd.DataFrame({"iter": iter, "rank": rank, "legend": legend, "value": value.item()}, index=[0]))
+            elif isinstance(v, dict):
+                dfs = [pd.DataFrame(
+                    {"iter": iter, "legend": legend, "value": value.item()}, index=[0]
+                ) for legend, value in v.items()]
+            else:
+                raise ValueError("not supported")
+            metrics_df = pd.concat([metrics_df] + dfs, axis=0, sort=False)
+        elif k is not "outputs":
+            metrics_df = pd.concat([metrics_df, pd.DataFrame(
+                    {"iter": iter, "legend": k, "value": v}, index=[0]
+                )], axis=0, sort=False)
+        else:
+            raise ValueError("not supported")
+    return metrics_df
 
 def run():
     use_fake_images = False
@@ -543,7 +460,6 @@ def run():
     start_time = time.time()
     elapsed_times = []
 
-    printer = LossPrinter(terminal_args.print_loss_each_rank)
     iter_file = os.path.join(
         config.MODEL.WEIGHT,
         "System-Train-TrainStep-{}".format(train_func.__name__),
@@ -580,7 +496,6 @@ def run():
         elapsed_times.append(elapsed_time)
         start_time = now_time
 
-        metrics_values = printer(i, elapsed_time_str, outputs)
         save_blob_watched(i)
 
         if config.SOLVER.CHECKPOINT_PERIOD > 0:
@@ -590,8 +505,19 @@ def run():
             ):
                 save_model(check_point, i)
 
-        metrics = update_metrics(metrics, i, elapsed_time, metrics_values)
-
+        metrics_df = pd.DataFrame()
+        metrics_df = add_metrics(metrics_df, iter=i, elapsed_time=elapsed_time)
+        metrics_df = add_metrics(metrics_df, iter=i, outputs=outputs)
+        rank_size = metrics_df["rank"].dropna().unique().size if "rank" in metrics_df else 0
+        if terminal_args.print_loss_each_rank and rank_size > 1:
+            for i in range(rank_size):
+                tansposed = transpose_metrics(metrics_df[metrics_df["rank"] == i])
+                tansposed["rank"] = i
+                print_metrics(tansposed)
+        else:
+            tansposed = transpose_metrics(metrics_df)
+            print_metrics(tansposed)
+        metrics = pd.concat([metrics, metrics_df], axis=0, sort=False)
         if config.SOLVER.METRICS_PERIOD > 0:
             if (
                 i % config.SOLVER.METRICS_PERIOD == 0
