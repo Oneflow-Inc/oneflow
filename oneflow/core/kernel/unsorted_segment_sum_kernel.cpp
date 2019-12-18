@@ -36,7 +36,6 @@ Kernel* CreateUnsortedSegmentSumKernel(const KernelConf& kernel_conf) {
 }
 
 REGISTER_KERNEL_CREATOR(OperatorConf::kUnsortedSegmentSumConf, CreateUnsortedSegmentSumKernel);
-REGISTER_KERNEL_CREATOR(OperatorConf::kLocalGatherGradConf, CreateUnsortedSegmentSumKernel);
 }  // namespace
 
 }  // namespace oneflow

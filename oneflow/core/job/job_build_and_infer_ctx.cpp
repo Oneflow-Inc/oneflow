@@ -184,10 +184,10 @@ Maybe<void> JobBuildAndInferCtx::CheckOpBlobSplitability(Operator* op, const Sbp
       const BlobDesc& logical_blob_desc = *(lbi2logical_blob_desc_.at(lbi).get());
       int64_t num_axes = logical_blob_desc.shape().NumAxes();
       if (axis < 0) { axis += num_axes; }
-      CHECK_OR_RETURN(axis >= 0 && axis < num_axes
-                      && logical_blob_desc.shape().At(axis) >= blob_parallel_num)
-          << JobBuildAndInferError::kUnknownJobBuildAndInferError << "op_name: " << lbi.op_name()
-          << " blob_name: " << lbi.blob_name()
+      OF_CHECK_GE(axis, 0);
+      OF_CHECK_LT(axis, num_axes);
+      OF_CHECK_GE(logical_blob_desc.shape().At(axis), blob_parallel_num)
+          << "op_name: " << lbi.op_name() << " blob_name: " << lbi.blob_name()
           << " cannot split blob by parallel_num: " << std::to_string(blob_parallel_num);
     }
   }

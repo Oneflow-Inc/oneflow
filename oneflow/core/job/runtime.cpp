@@ -10,7 +10,6 @@
 #include "oneflow/core/actor/act_event_logger.h"
 #include "oneflow/core/graph/task_node.h"
 #include "oneflow/core/device/cuda_util.h"
-#include "oneflow/core/data/dataset_manager.h"
 #include "oneflow/core/memory/memory_allocator.h"
 #include "oneflow/core/register/register_manager.h"
 
@@ -116,11 +115,9 @@ void Runtime::NewAllGlobal(const Plan& plan, size_t total_piece_num, bool is_exp
   Global<NcclCommMgr>::New(plan);
 #endif  // WITH_CUDA
   Global<RuntimeJobDescs>::New(plan.job_confs().job_id2job_conf());
-  Global<data::DatasetManager>::New();
 }
 
 void Runtime::DeleteAllGlobal() {
-  Global<data::DatasetManager>::Delete();
   Global<RuntimeJobDescs>::Delete();
 #ifdef WITH_CUDA
   Global<NcclCommMgr>::Delete();

@@ -170,27 +170,27 @@ def slice(input_, begin, size, name=None):
     slice_conf_list = []
     for b, s, d in list(zip(begin, size, input_.static_shape)):
         slice_conf = op_conf_util.DimSliceConf()
-        if b < -d or b > d - 1:
-            raise ValueError(
-                "'i'th element of begin must be greater than or equal to negative input_'s 'i'th dimension "
-                "and less than input_'s 'i'th dimension."
-            )
-        b = b + d if b < 0 else b
-        slice_conf.start = b
-
-        if s > 0:
-            if b + s > d:
+        if b is not None:
+            if b < -d or b > d - 1:
                 raise ValueError(
-                    "the sum of 'i'th element of begin and 'i'th element of size must be "
-                    "less than or equal to input_'s 'i'th dimension."
+                    "'i'th element of begin must be greater than or equal to negative input_'s 'i'th dimension "
+                    "and less than input_'s 'i'th dimension."
                 )
-            slice_conf.end = b + s
-        elif s == -1:
-            slice_conf.end = d
-        else:
-            raise ValueError("elements of size must be an int that greater then 0 or equal to -1")
-
-        slice_conf.stride = 1
+            b = b + d if b < 0 else b
+            slice_conf.start = b
+        if s is not None:
+            if s > 0:
+                if b + s > d:
+                    raise ValueError(
+                        "the sum of 'i'th element of begin and 'i'th element of size must be "
+                        "less than or equal to input_'s 'i'th dimension."
+                    )
+                slice_conf.end = b + s
+            elif s == -1:
+                slice_conf.end = d
+            else:
+                raise ValueError("elements of size must be an int that greater then 0 or equal to -1")
+            slice_conf.stride = 1
         slice_conf_list.append(slice_conf)
 
     op_conf = op_conf_util.OperatorConf()
