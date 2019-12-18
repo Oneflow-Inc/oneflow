@@ -349,8 +349,8 @@ def make_lr(train_step_name, model_update_conf, primary_lr, secondary_lr=None):
         
         return {
             "train_step": train_step_id,
-            "primary_lr": primary_lr_blob,
-            "secondary_lr": secondary_lr_blob
+            "lr": primary_lr_blob,
+            "lr2": secondary_lr_blob
         }
         
 def init_train_func(config, input_fake_image):
@@ -407,8 +407,8 @@ def print_metrics(m):
         "loss_mask",
         "total_pos_inds_elem_cnt",
         "train_step",
-        "primary_lr",
-        "secondary_lr",
+        "lr",
+        "lr2",
     ]
     to_print_with_order = [l for l in to_print_with_order if l in m]
     print(m[to_print_with_order].to_string(index=False))
@@ -511,9 +511,9 @@ def run():
         metrics_df = add_metrics(metrics_df, iter=i, outputs=outputs)
         rank_size = metrics_df["rank"].dropna().unique().size if "rank" in metrics_df else 0
         if terminal_args.print_loss_each_rank and rank_size > 1:
-            for i in range(rank_size):
-                tansposed = transpose_metrics(metrics_df[metrics_df["rank"] == i])
-                tansposed["rank"] = i
+            for rank_i in range(rank_size):
+                tansposed = transpose_metrics(metrics_df[metrics_df["rank"] == rank_i])
+                tansposed["rank"] = rank_i
                 print_metrics(tansposed)
         else:
             tansposed = transpose_metrics(metrics_df)
