@@ -375,8 +375,9 @@ def init_train_func(config, input_fake_image):
         @flow.function
         def train():
             model_update_conf = set_train_config(config)
-            make_lr("System-Train-TrainStep-train", model_update_conf, flow.config.train.get_primary_lr(), flow.config.train.get_secondary_lr())
-            return train_net(config)
+            ret = make_lr("System-Train-TrainStep-train", model_update_conf, flow.config.train.get_primary_lr(), flow.config.train.get_secondary_lr())
+            ret.update(train_net(config))
+            return ret
 
         return train
 
@@ -387,16 +388,24 @@ def transpose_matrics(metrics):
     )
     assert metrics["iter"].unique().size == 1
     transposed["iter"] = metrics["iter"].unique()
-    ordered = [
+    return transposed
+
+def print_metrics(m):
+    to_print_with_order = [
         "iter",
+        "rank",
         "loss_rpn_box_reg",
         "loss_objectness",
         "loss_box_reg",
         "loss_classifier",
         "loss_mask",
         "total_pos_inds_elem_cnt",
+        "train_step",
+        "primary_lr",
+        "secondary_lr",
     ]
-    return transposed[ordered]
+    to_print_with_order = [l for l in to_print_with_order if l in m]
+    print(m[to_print_with_order].to_string(index=False))
 
 def add_metrics(metrics_df, iter=None, **kwargs):
     assert iter is not None
@@ -494,15 +503,15 @@ def run():
         metrics_df = pd.DataFrame()
         metrics_df = add_metrics(metrics_df, iter=i, elapsed_time=elapsed_time)
         metrics_df = add_metrics(metrics_df, iter=i, outputs=outputs)
-        
         rank_size = metrics_df["rank"].size if "rank" in metrics_df else 0
         if terminal_args.print_loss_each_rank and rank_size > 1:
             for i in range(rank_size):
                 tansposed = transpose_matrics(metrics_df[metrics_df["rank"] == i])
-                print(tansposed.to_string(index=False))
+                tansposed["rank"] = i
+                print_metrics(tansposed)
         else:
             tansposed = transpose_matrics(metrics_df)
-            print(tansposed.to_string(index=False))
+            print_metrics(tansposed)
         metrics = pd.concat([metrics, metrics_df], axis=0, sort=False)
         if config.SOLVER.METRICS_PERIOD > 0:
             if (
