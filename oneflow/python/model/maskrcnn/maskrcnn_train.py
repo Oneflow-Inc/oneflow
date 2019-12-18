@@ -283,7 +283,7 @@ def maskrcnn_train(cfg, images, image_sizes, gt_boxes, gt_segms, gt_labels):
     return rpn_bbox_loss, rpn_objectness_loss, box_loss, cls_loss, mask_loss
 
 
-@flow.experimental.mirror_execute(terminal_args.gpu_num_per_node, 1)
+@flow.experimental.mirrored_execute(terminal_args.gpu_num_per_node, 1)
 def distribute_maskrcnn_train(
     config, image, image_size, gt_bbox, gt_segm, gt_label
 ):

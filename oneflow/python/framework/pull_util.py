@@ -3,6 +3,7 @@ from __future__ import absolute_import
 import threading
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.local_blob as local_blob_util
+import numpy as np
 
 class FutureRemoteBlobs(object):
     def __init__(self, session):
@@ -70,17 +71,17 @@ class FutureRemoteBlobs(object):
 
     def _TrySyncAndGetResultNdarray(self, pullers):
         if self.session_.HasAnyCallbackAfterFunctionReturn(): self.session_.Sync()
-        return self._GetResultNdarray(pullers)
+        return self._GetResultLocalBlob(pullers)
 
-    def _GetResultNdarray(self, pullers):
+    def _GetResultLocalBlob(self, pullers):
         assert self.inited_
         if isinstance(pullers, _BlobPuller):
             return pullers.result
         if isinstance(pullers, (list, tuple)):
-            return type(pullers)(self._GetResultNdarray(x) for x in pullers)
+            return type(pullers)(self._GetResultLocalBlob(x) for x in pullers)
         if isinstance(pullers, dict):
             return {
-                k : self._GetResultNdarray(v) for k, v in pullers.items()
+                k : self._GetResultLocalBlob(v) for k, v in pullers.items()
             }
         raise NotImplementedError
     
@@ -104,8 +105,8 @@ class FutureRemoteBlobs(object):
     def _MakeRemoteBlobPullers(self, out_remote_blobs):
         if isinstance(out_remote_blobs, remote_blob_util.ConsistentBlob):
             return _ConsistentBlobPuller(out_remote_blobs, self.session_)
-        if isinstance(out_remote_blobs, remote_blob_util.MirrorBlob):
-            return _MirrorBlobPuller(out_remote_blobs, self.session_)
+        if isinstance(out_remote_blobs, remote_blob_util.MirroredBlob):
+            return _MirroredBlobPuller(out_remote_blobs, self.session_)
         if isinstance(out_remote_blobs, list) or isinstance(out_remote_blobs, tuple):
             return type(out_remote_blobs)(self._MakeRemoteBlobPullers(x) for x in out_remote_blobs)
         if isinstance(out_remote_blobs, dict):
@@ -126,10 +127,10 @@ class _BlobPuller(object):
         raise NotImplementedError
         
 class _ConsistentBlobPuller(_BlobPuller):
-    def __init__(self, remote_blob, session):
+    def __init__(self, consistent_blob, session):
         _BlobPuller.__init__(self, session)
         self.result_ = None
-        self.op_name_ = remote_blob.op_name
+        self.consistent_blob_ = consistent_blob
         
     @property
     def result(self):
@@ -140,23 +141,26 @@ class _ConsistentBlobPuller(_BlobPuller):
 
     def AsyncPull(self, pull_cb):
         def PullCallback(of_blob):
-            self.result_ = of_blob.CopyToBlob()
+            self.result_ = local_blob_util.MakeLocalBlob(of_blob.CopyToNdarrayLists(),
+                                                         self.consistent_blob_)
             pull_cb()
-        self.session_.AsyncPull(self.op_name_, PullCallback)
+        self.session_.AsyncPull(self.consistent_blob_.op_name, PullCallback)
 
-class _MirrorBlobPuller(_BlobPuller):
-    def __init__(self, mirror_blob_def, session):
+class _MirroredBlobPuller(_BlobPuller):
+    def __init__(self, mirrored_blob, session):
         _BlobPuller.__init__(self, session)
+        self.mirrored_blob_ = mirrored_blob
         self.sub_pullers_ = tuple(_ConsistentBlobPuller(x, self.session_)
-                                 for x in mirror_blob_def.sub_consistent_blob_list)
-        self.local_mirror_blob_ = None
+                                 for x in mirrored_blob.sub_consistent_blob_list)
+        self.local_mirrored_blob_ = None
         
     @property
     def result(self):
-        if self.local_mirror_blob_ is not None: return self.local_mirror_blob_
-        ndarray_list = [x.result.ndarray() for x in self.sub_pullers_]
-        self.local_mirror_blob_ = local_blob_util.LocalMirrorBlob(ndarray_list)
-        return self.local_mirror_blob_
+        if self.local_mirrored_blob_ is not None: return self.local_mirrored_blob_
+        local_blob_list = [x.result for x in self.sub_pullers_]
+        self.local_mirrored_blob_ = local_blob_util.MergeLocalBlobs(local_blob_list,
+                                                                    self.mirrored_blob_)
+        return self.local_mirrored_blob_
 
     def FlatConsistentBlobPullers(self):
         for x in self.sub_pullers_: yield x

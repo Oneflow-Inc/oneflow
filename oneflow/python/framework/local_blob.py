@@ -1,50 +1,58 @@
 from __future__ import absolute_import
 
+import oneflow.python.framework.remote_blob as remote_blob_util
 import numpy as np
 
-class LocalBlob(object):
+class LocalTensor(object):
     def __init__(self, ndarray = None):
         self.ndarray_ = ndarray
         
     def ndarray(self): return self.ndarray_
 
+    def __str__(self): return str(self.ndarray_)
+    
     def __getattr__(self, attr):
         return getattr(self.ndarray_, attr)
 
-class LocalConsistentBlob(LocalBlob):
-    def __init__(self, ndarray = None):
-        LocalBlob.__init__(self, ndarray)
-        self.lod_tree_ = None
-        self.lod_ndarray_nested_list_ = None
-    
-    def lod_tree(self): return self.lod_tree_
-
-    def lod_ndarray_nested_list(self): return self.lod_ndarray_nested_list_
-
-    def set_ndarray(self, ndarray): self.ndarray_ = ndarray
-
-    def set_lod_tree(self, lod_tree): self.lod_tree_ = lod_tree
-
-    def set_lod_ndarray_nested_list(self, lod_ndarray_nested_list):
-        self.lod_ndarray_nested_list_ = lod_ndarray_nested_list
-
-class LocalMirrorBlob(LocalBlob):
-    def __init__(self, ndarray_list):
-        LocalBlob.__init__(self)
-        self.ndarray_list_ = []
-        self.set_ndarray_list(ndarray_list)
-    
-    def ndarray_list(self):
-        assert len(self.ndarray_list_) > 0
-        return self.ndarray_list_
-
-    def __str__(self): return str(self.ndarray_list_)
-    
-    def set_ndarray_list(self, ndarray_list):
-        assert len(ndarray_list) > 0
-        assert len(self.ndarray_list_) == 0
+class LocalTensorList(object):
+    def __init__(self, ndarray_list = None):
         self.ndarray_list_ = ndarray_list
-        self.ndarray_ = np.concatenate(self.ndarray_list_)
+        
+    def ndarray_list(self): return self.ndarray_list_
+    
+class LocalTensorLists(object):
+    def __init__(self, ndarray_lists = None):
+        self.ndarray_lists_ = ndarray_lists
+        
+    def ndarray_lists(self): return self.ndarray_lists_
+
+def MakeLocalBlob(ndarray_lists, consistent_blob):
+    assert type(consistent_blob) is remote_blob_util.ConsistentBlob
+    if consistent_blob.is_tensor_list:
+        return LocalTensorLists(ndarray_lists)
+    assert len(ndarray_lists) == 1
+    if consistent_blob.is_dynamic:
+        return LocalTensorList(ndarray_lists[0])
+    assert len(ndarray_lists[0]) == 1
+    return LocalTensor(ndarray_lists[0][0])
+
+    
+def MergeLocalBlobs(local_blob_list, mirrored_blob):
+    assert type(mirrored_blob) is remote_blob_util.MirroredBlob
+    if mirrored_blob.is_tensor_list:
+        for local_blob in local_blob_list:
+            assert type(local_blob) is LocalTensorLists
+        return LocalTensorLists([x.ndarray_lists()[0] for x in local_blob_list])
+    if mirrored_blob.is_dynamic:
+        for local_blob in local_blob_list:
+            assert type(local_blob) is LocalTensorList
+        return LocalTensorList([x.ndarray_list()[0] for x in local_blob_list])
+    for local_blob in local_blob_list:
+        assert type(local_blob) is LocalTensor
+        batch_axis = mirrored_blob.batch_axis
+        assert type(batch_axis) is int
+        ndarray = np.concatenate([x.ndarray() for x in local_blob_list], axis=batch_axis)
+        return LocalTensor(ndarray)
 
 non_override_field = set([
     '__class__',
@@ -65,13 +73,11 @@ non_override_field = set([
 
 def MakeBlobMethod(field_name):
     def ConvertOtherArgs(args):
-        return [x.ndarray() if isinstance(x, LocalBlob) else x for x in args]
+        return [x.ndarray() if isinstance(x, LocalTensor) else x for x in args]
     return lambda self, *args: getattr(self.ndarray(), field_name)(*ConvertOtherArgs(args))
 
 for field_name in dir(np.ndarray):
     if field_name.startswith('__') == False: continue
     if field_name in non_override_field: continue
-    if hasattr(LocalConsistentBlob, field_name):
-        setattr(LocalConsistentBlob, field_name, MakeBlobMethod(field_name))
-    if hasattr(LocalMirrorBlob, field_name) == False:
-        setattr(LocalMirrorBlob, field_name, MakeBlobMethod(field_name))
+    if hasattr(LocalTensor, field_name) == False:
+        setattr(LocalTensor, field_name, MakeBlobMethod(field_name))

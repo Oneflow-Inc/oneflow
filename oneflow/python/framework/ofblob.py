@@ -4,6 +4,7 @@ import oneflow.core.common.data_type_pb2 as dtype_util
 from oneflow.python.framework.dtype import convert_of_dtype_to_numpy_dtype
 import oneflow.oneflow_internal as oneflow_api
 import oneflow.python.framework.local_blob as local_blob_util
+import oneflow.python.framework.remote_blob as remote_blob_util
 from google.protobuf import text_format
 from oneflow.python.lib.core.box import Box
 import numpy as np
@@ -36,21 +37,13 @@ class OfBlob(object):
     def is_tensor_list(self):
         return oneflow_api.OfBlob_IsTensorList(self.of_blob_ptr_)
     
-    def CopyToBlob(self):
-        blob = local_blob_util.LocalConsistentBlob();
-        dense_ndarray = self.CopyToNdarray()
-        blob.set_ndarray(dense_ndarray)
-        return blob
-
     def CopyToNdarray(self):
         ndarray_lists = self._CopyToNdarrayLists()
         assert len(ndarray_lists) == 1
         assert len(ndarray_lists[0]) == 1
         return ndarray_lists[0][0]
     
-    def CopyToNdarrayLists(self):
-        assert self.is_dynamic
-        return self._CopyToNdarrayLists()
+    def CopyToNdarrayLists(self): return self._CopyToNdarrayLists()
 
     def CopyFromNdarray(self, src_ndarray):
         return self._CopyFromNdarrayLists([[src_ndarray]])

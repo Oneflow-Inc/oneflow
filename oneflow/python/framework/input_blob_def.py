@@ -198,12 +198,12 @@ class MirroredTensorListDef(ArgBlobDef):
             sub_blob = self.sub_consistent_blob_list_[i]
             session.AsyncPush(sub_blob.op_name, _MakePushNdarrayListCallback(ndarray_lists[i]))
 
-def _AddAndInferMirroredOp(mirror_lbn, op_conf, sub_consistent_blob_list):
-    compile_context.CurJobAddMirrorOp(op_conf)
+def _AddAndInferMirroredOp(mirrored_lbn, op_conf, sub_consistent_blob_list):
+    compile_context.CurJobAddMirroredOp(op_conf)
     job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
-    num_sub_lbi = c_api_util.JobBuildAndInferCtx_MirrorBlobGetNumSubLbi(job_name, mirror_lbn)
+    num_sub_lbi = c_api_util.JobBuildAndInferCtx_MirroredBlobGetNumSubLbi(job_name, mirrored_lbn)
     for i in range(num_sub_lbi):
-        sub_lbi = c_api_util.JobBuildAndInferCtx_MirrorBlobGetSubLbi(job_name, mirror_lbn, i)
+        sub_lbi = c_api_util.JobBuildAndInferCtx_MirroredBlobGetSubLbi(job_name, mirrored_lbn, i)
         sub_consistent_blob_list.append(remote_blob_util.ConsistentBlob(sub_lbi))
 
 def _MakePushNdarrayCallback(ndarray):

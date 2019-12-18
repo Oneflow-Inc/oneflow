@@ -72,7 +72,7 @@ def make_data_loader(
     return data_loader
 
 
-@flow.experimental.mirror_execute(terminal_args.gpu_num_per_node, 1)
+@flow.experimental.mirrored_execute(terminal_args.gpu_num_per_node, 1)
 def maskrcnn_eval(images, image_sizes, image_ids):
     cfg = get_default_cfgs()
     if terminal_args.config_file is not None:

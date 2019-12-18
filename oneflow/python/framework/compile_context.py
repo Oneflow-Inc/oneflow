@@ -11,16 +11,16 @@ def GetCurJobConfigProto():
     return session_ctx.GetDefaultSession().GetJobConfigProto(job_name)
 
 def CurJobAddOp(op_conf, parallel_conf=None):
-    if distribute_ctx.IsMirroredStrategyEnabled(): return CurJobAddMirrorOp(op_conf, parallel_conf)
+    if distribute_ctx.IsMirroredStrategyEnabled(): return CurJobAddMirroredOp(op_conf, parallel_conf)
     return CurJobAddConsistentOp(op_conf, parallel_conf)
 
 def CurJobAddConsistentOp(op_conf, parallel_conf=None):
     op_conf, parallel_conf = _GetOpConfAndParallelConf(op_conf, parallel_conf)
     return c_api_util.CurJobBuildAndInferCtx_AddAndInferConsistentOp(op_conf, parallel_conf)
 
-def CurJobAddMirrorOp(op_conf, parallel_conf=None):
+def CurJobAddMirroredOp(op_conf, parallel_conf=None):
     op_conf, parallel_conf = _GetOpConfAndParallelConf(op_conf, parallel_conf)
-    return c_api_util.CurJobBuildAndInferCtx_AddAndInferMirrorOp(op_conf, parallel_conf)
+    return c_api_util.CurJobBuildAndInferCtx_AddAndInferMirroredOp(op_conf, parallel_conf)
 
 def ResetCurJobContext():
     global cur_job_var_op_name2var_blob

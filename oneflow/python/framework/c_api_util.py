@@ -111,10 +111,10 @@ def CurJobBuildAndInferCtx_AddAndInferConsistentOp(op_conf_proto, parallel_conf_
     error = text_format.Parse(error_str, error_util.ErrorProto())
     if error.HasField("error_type"): raise JobBuildAndInferError(error)
 
-def CurJobBuildAndInferCtx_AddAndInferMirrorOp(op_conf_proto, parallel_conf_proto):
+def CurJobBuildAndInferCtx_AddAndInferMirroredOp(op_conf_proto, parallel_conf_proto):
     serialized_op_conf = str(text_format.MessageToString(op_conf_proto))
     serialized_parallel_conf = str(text_format.MessageToString(parallel_conf_proto))
-    add_and_infer = oneflow_internal.CurJobBuildAndInferCtx_AddAndInferMirrorOp
+    add_and_infer = oneflow_internal.CurJobBuildAndInferCtx_AddAndInferMirroredOp
     error_str = add_and_infer(serialized_op_conf, serialized_parallel_conf)
     error = text_format.Parse(error_str, error_util.ErrorProto())
     if error.HasField("error_type"): raise JobBuildAndInferError(error)
@@ -142,98 +142,98 @@ def CurJobBuildAndInferCtx_HasJobConf():
     if error.HasField("error_type"): raise JobBuildAndInferError(error)
     return has_job_conf
 
-def JobBuildAndInferCtx_IsMirrorBlob(job_name, lbn):
+def JobBuildAndInferCtx_IsMirroredBlob(job_name, lbn):
     job_name = str(job_name)
     lbn = str(lbn)
-    ret, error_str = oneflow_internal.JobBuildAndInferCtx_IsMirrorBlob(job_name, lbn)
+    ret, error_str = oneflow_internal.JobBuildAndInferCtx_IsMirroredBlob(job_name, lbn)
     error = text_format.Parse(error_str, error_util.ErrorProto())
     if error.HasField("error_type"): raise JobBuildAndInferError(error)
     return ret
 
-def JobBuildAndInferCtx_MirrorBlobGetNumSubLbi(job_name, lbn):
+def JobBuildAndInferCtx_MirroredBlobGetNumSubLbi(job_name, lbn):
     job_name = str(job_name)
     lbn = str(lbn)
-    ret, error_str = oneflow_internal.JobBuildAndInferCtx_MirrorBlobGetNumSubLbi(job_name, lbn)
+    ret, error_str = oneflow_internal.JobBuildAndInferCtx_MirroredBlobGetNumSubLbi(job_name, lbn)
     error = text_format.Parse(error_str, error_util.ErrorProto())
     if error.HasField("error_type"): raise JobBuildAndInferError(error)
     return ret
 
-def JobBuildAndInferCtx_MirrorBlobGetSubLbi(job_name, lbn, index):
+def JobBuildAndInferCtx_MirroredBlobGetSubLbi(job_name, lbn, index):
     job_name = str(job_name)
     lbn = str(lbn)
     ret, error_str = \
-        oneflow_internal.JobBuildAndInferCtx_MirrorBlobGetSerializedSubLbi(job_name, lbn, index)
+        oneflow_internal.JobBuildAndInferCtx_MirroredBlobGetSerializedSubLbi(job_name, lbn, index)
     error = text_format.Parse(error_str, error_util.ErrorProto())
     if error.HasField("error_type"): raise JobBuildAndInferError(error)
     return text_format.Parse(ret, logical_blob_id_util.LogicalBlobId())
 
-def JobBuildAndInferCtx_MirrorBlobGetStaticShape(job_name, lbn):
+def JobBuildAndInferCtx_MirroredBlobGetStaticShape(job_name, lbn):
     job_name = str(job_name)
     lbn = str(lbn)
     axis_str, error_str = \
-        oneflow_internal.JobBuildAndInferCtx_MirrorBlobGetSerializedIdListAsStaticShape(job_name, lbn)
+        oneflow_internal.JobBuildAndInferCtx_MirroredBlobGetSerializedIdListAsStaticShape(job_name, lbn)
     error = text_format.Parse(error_str, error_util.ErrorProto())
     if error.HasField("error_type"): raise JobBuildAndInferError(error)
     int_list = text_format.Parse(axis_str, record_util.Int64List())
     return tuple(map(int, int_list.value))
 
-def JobBuildAndInferCtx_MirrorBlobGetDataType(job_name, lbn):
+def JobBuildAndInferCtx_MirroredBlobGetDataType(job_name, lbn):
     job_name = str(job_name)
     lbn = str(lbn)
-    dtype, erro_str = oneflow_internal.JobBuildAndInferCtx_MirrorBlobGetDataType(job_name, lbn)
+    dtype, erro_str = oneflow_internal.JobBuildAndInferCtx_MirroredBlobGetDataType(job_name, lbn)
     error = text_format.Parse(erro_str, error_util.ErrorProto())
     if error.HasField("error_type"): raise JobBuildAndInferError(error)
     return int(dtype)
 
-def JobBuildAndInferCtx_MirrorBlobIsDynamic(job_name, lbn):
+def JobBuildAndInferCtx_MirroredBlobIsDynamic(job_name, lbn):
     job_name = str(job_name)
     lbn = str(lbn)
-    ret, error_str = oneflow_internal.JobBuildAndInferCtx_MirrorBlobIsDynamic(job_name, lbn)
+    ret, error_str = oneflow_internal.JobBuildAndInferCtx_MirroredBlobIsDynamic(job_name, lbn)
     error = text_format.Parse(error_str, error_util.ErrorProto())
     if error.HasField("error_type"): raise JobBuildAndInferError(error)
     return ret
 
-def JobBuildAndInferCtx_MirrorBlobDisableBoxing(job_name, lbn):
+def JobBuildAndInferCtx_MirroredBlobDisableBoxing(job_name, lbn):
     job_name = str(job_name)
     lbn = str(lbn)
-    ret, error_str = oneflow_internal.JobBuildAndInferCtx_MirrorBlobDisableBoxing(job_name, lbn)
+    ret, error_str = oneflow_internal.JobBuildAndInferCtx_MirroredBlobDisableBoxing(job_name, lbn)
     error = text_format.Parse(error_str, error_util.ErrorProto())
     if error.HasField("error_type"): raise JobBuildAndInferError(error)
     return ret
 
-def JobBuildAndInferCtx_MirrorBlobIsTensorList(job_name, lbn):
+def JobBuildAndInferCtx_MirroredBlobIsTensorList(job_name, lbn):
     job_name = str(job_name)
     lbn = str(lbn)
-    ret, error_str = oneflow_internal.JobBuildAndInferCtx_MirrorBlobIsTensorList(job_name, lbn)
+    ret, error_str = oneflow_internal.JobBuildAndInferCtx_MirroredBlobIsTensorList(job_name, lbn)
     error = text_format.Parse(error_str, error_util.ErrorProto())
     if error.HasField("error_type"): raise JobBuildAndInferError(error)
     return ret
 
-def JobBuildAndInferCtx_MirrorBlobGetBatchAxis(job_name, lbn):
+def JobBuildAndInferCtx_MirroredBlobGetBatchAxis(job_name, lbn):
     job_name = str(job_name)
     lbn = str(lbn)
-    batch_axis_str, error_str = oneflow_internal.JobBuildAndInferCtx_MirrorBlobGetBatchAxis(job_name, lbn)
+    batch_axis_str, error_str = oneflow_internal.JobBuildAndInferCtx_MirroredBlobGetBatchAxis(job_name, lbn)
     batch_axis = text_format.Parse(batch_axis_str, dtype_util.OptInt64())
     error = text_format.Parse(error_str, error_util.ErrorProto())
     if error.HasField("error_type"): raise JobBuildAndInferError(error)
     if batch_axis.HasField("value"): return batch_axis.value
     return None
 
-def JobBuildAndInferCtx_MirrorBlobGetSplitAxisFromProducerView(job_name, lbn):
+def JobBuildAndInferCtx_MirroredBlobGetSplitAxisFromProducerView(job_name, lbn):
     job_name = str(job_name)
     lbn = str(lbn)
     split_axis_str, error_str = \
-        oneflow_internal.JobBuildAndInferCtx_MirrorBlobGetSplitAxisFromProducerView(job_name, lbn)
+        oneflow_internal.JobBuildAndInferCtx_MirroredBlobGetSplitAxisFromProducerView(job_name, lbn)
     split_axis = text_format.Parse(split_axis_str, dtype_util.OptInt64())
     error = text_format.Parse(error_str, error_util.ErrorProto())
     if error.HasField("error_type"): raise JobBuildAndInferError(error)
     if split_axis.HasField("value"): return split_axis.value
     return None
 
-def JobBuildAndInferCtx_MirrorBlobGetParallelConfFromProducerView(job_name, lbn):
+def JobBuildAndInferCtx_MirroredBlobGetParallelConfFromProducerView(job_name, lbn):
     job_name = str(job_name)
     lbn = str(lbn)
-    GetParallelConf = oneflow_internal.JobBuildAndInferCtx_MirrorBlobGetSerializedParallelConfFromProducerView
+    GetParallelConf = oneflow_internal.JobBuildAndInferCtx_MirroredBlobGetSerializedParallelConfFromProducerView
     parallel_conf, error_str = GetParallelConf(job_name, lbn)
     error = text_format.Parse(error_str, error_util.ErrorProto())
     if error.HasField("error_type"): raise JobBuildAndInferError(error)
