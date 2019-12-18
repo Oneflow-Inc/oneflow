@@ -12,8 +12,8 @@ def RemoteBlob(lbi, **kw):
     job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
     lbn = lbi.op_name + "/" + lbi.blob_name
     blob_type = ConsistentBlob
-    if (c_api_util.JobBuildAndInferCtx_IsMirrorBlob(job_name, lbn)):
-        blob_type = MirrorBlob
+    if (c_api_util.JobBuildAndInferCtx_IsMirroredBlob(job_name, lbn)):
+        blob_type = MirroredBlob
     return blob_type(lbi, **kw)
 
 class BlobDef(blob_desc.BlobDesc):
@@ -22,7 +22,6 @@ class BlobDef(blob_desc.BlobDesc):
         self.job_name_ = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
         self.parallel_size_ = placement_ctx.GetParallelSize(
             placement_ctx.MakeMachineId2DeviceIdList(self.parallel_conf))
-        watch_scope_util.TryWatchOnce(self)
 
     @property
     def static_shape(self):
@@ -117,10 +116,10 @@ class BlobDef(blob_desc.BlobDesc):
         return oneflow.math.greater_equal(self, rhs)
 
 class ConsistentBlob(BlobDef):
-    def __init__(self, lbi, **kw):
+    def __init__(self, lbi, auto_watched_within_scope = True, **kw):
         BlobDef.__init__(self, lbi, **kw)
         self.job_name_ = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
-        watch_scope_util.TryWatchOnce(self)
+        if auto_watched_within_scope: watch_scope_util.TryWatchOnce(self)
 
     @property
     def static_shape(self):
@@ -155,50 +154,51 @@ class ConsistentBlob(BlobDef):
         return c_api_util.JobBuildAndInferCtx_GetParallelConfFromProducerView(self.job_name_,
                                                                               self.lbn_)
 
-class MirrorBlob(BlobDef):
+class MirroredBlob(BlobDef):
     def __init__(self, lbi, **kw):
         BlobDef.__init__(self, lbi, **kw)
         self.job_name_ = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
-        watch_scope_util.TryWatchOnce(self)
         self.sub_consistent_blob_list_ = []
         lbn = self.logical_blob_name
-        num_sub_lbi = c_api_util.JobBuildAndInferCtx_MirrorBlobGetNumSubLbi(self.job_name_, lbn)
+        num_sub_lbi = c_api_util.JobBuildAndInferCtx_MirroredBlobGetNumSubLbi(self.job_name_, lbn)
         for i in range(num_sub_lbi):
-            sub_lbi = c_api_util.JobBuildAndInferCtx_MirrorBlobGetSubLbi(self.job_name_, lbn, i)
-            self.sub_consistent_blob_list_.append(ConsistentBlob(sub_lbi))
+            sub_lbi = c_api_util.JobBuildAndInferCtx_MirroredBlobGetSubLbi(self.job_name_, lbn, i)
+            consistent_blob = ConsistentBlob(sub_lbi, auto_watched_within_scope=False)
+            self.sub_consistent_blob_list_.append(consistent_blob)
+        watch_scope_util.TryWatchOnce(self)
             
     @property       
     def sub_consistent_blob_list(self): return self.sub_consistent_blob_list_
         
     @property
     def static_shape(self):
-        return c_api_util.JobBuildAndInferCtx_MirrorBlobGetStaticShape(self.job_name_, self.lbn_)
+        return c_api_util.JobBuildAndInferCtx_MirroredBlobGetStaticShape(self.job_name_, self.lbn_)
 
     @property
     def dtype(self):
-        return c_api_util.JobBuildAndInferCtx_MirrorBlobGetDataType(self.job_name_, self.lbn_)
+        return c_api_util.JobBuildAndInferCtx_MirroredBlobGetDataType(self.job_name_, self.lbn_)
 
     @property
     def batch_axis(self):
-        return c_api_util.JobBuildAndInferCtx_MirrorBlobGetBatchAxis(self.job_name_, self.lbn_)
+        return c_api_util.JobBuildAndInferCtx_MirroredBlobGetBatchAxis(self.job_name_, self.lbn_)
 
     @property
     def is_dynamic(self):
-        return c_api_util.JobBuildAndInferCtx_MirrorBlobIsDynamic(self.job_name_, self.lbn_)
+        return c_api_util.JobBuildAndInferCtx_MirroredBlobIsDynamic(self.job_name_, self.lbn_)
     
     @property
     def disable_boxing(self):
-        return c_api_util.JobBuildAndInferCtx_MirrorBlobDisableBoxing(self.job_name_, self.lbn_)
+        return c_api_util.JobBuildAndInferCtx_MirroredBlobDisableBoxing(self.job_name_, self.lbn_)
     
     @property
     def is_tensor_list(self):
-        return c_api_util.JobBuildAndInferCtx_MirrorBlobIsTensorList(self.job_name_, self.lbn_)
+        return c_api_util.JobBuildAndInferCtx_MirroredBlobIsTensorList(self.job_name_, self.lbn_)
 
     @property
     def disable_boxing(self):
-        return c_api_util.JobBuildAndInferCtx_MirrorBlobDisableBoxing(self.job_name_, self.lbn_)
+        return c_api_util.JobBuildAndInferCtx_MirroredBlobDisableBoxing(self.job_name_, self.lbn_)
     
     @property
     def parallel_conf(self):
-        return c_api_util.JobBuildAndInferCtx_MirrorBlobGetParallelConfFromProducerView(
+        return c_api_util.JobBuildAndInferCtx_MirroredBlobGetParallelConfFromProducerView(
                 self.job_name_, self.lbn_)

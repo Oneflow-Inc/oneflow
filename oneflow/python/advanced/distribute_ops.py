@@ -89,7 +89,7 @@ def distribute_map(xs, f, axis = 0):
 def _SoleConsistentLbn(blob):
     assert blob.parallel_size == 1
     if isinstance(blob, remote_blob_util.ConsistentBlob): return blob.logical_blob_name
-    if isinstance(blob, remote_blob_util.MirrorBlob):
+    if isinstance(blob, remote_blob_util.MirroredBlob):
       return blob.sub_consistent_blob_list[0].logical_blob_name
     raise NotImplementedError
 
