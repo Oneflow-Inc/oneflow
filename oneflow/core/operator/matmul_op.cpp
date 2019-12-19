@@ -23,16 +23,7 @@ Maybe<void> MatmulOp::InferBlobDescs(
   CHECK_EQ_OR_RETURN(a_blob_desc->shape().NumAxes(), b_blob_desc->shape().NumAxes());
   CHECK_GE_OR_RETURN(a_blob_desc->shape().NumAxes(), 2);
   size_t num_axes = a_blob_desc->shape().NumAxes();
-  if (conf.transpose_a()) {
-    CHECK_OR_RETURN(!a_blob_desc->has_dim0_valid_num_field());
-    CHECK_OR_RETURN(!a_blob_desc->has_dim1_valid_num_field());
-    CHECK_OR_RETURN(!a_blob_desc->has_dim2_valid_num_field());
-  }
-  if (conf.transpose_b()) {
-    CHECK_OR_RETURN(!b_blob_desc->has_dim0_valid_num_field());
-    CHECK_OR_RETURN(!b_blob_desc->has_dim1_valid_num_field());
-    CHECK_OR_RETURN(!b_blob_desc->has_dim2_valid_num_field());
-  }
+
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   *out_blob_desc = *a_blob_desc;
   FOR_RANGE(int32_t, i, 0, num_axes - 2) {
@@ -53,7 +44,6 @@ Maybe<void> MatmulOp::InferBlobDescs(
     *fw_buf_blob_desc = *out_blob_desc;
     fw_buf_blob_desc->mut_shape() = {3 * batch_num};
     fw_buf_blob_desc->set_data_type(DataType::kInt64);
-    fw_buf_blob_desc->set_has_data_id_field(false);
   }
   return Maybe<void>::Ok();
 }

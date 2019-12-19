@@ -3,6 +3,7 @@
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/kernel/kernel_util.h"
+#include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/kernel/kernel_util.cuh"
 
 namespace oneflow {
@@ -399,11 +400,10 @@ KU_IF_METHOD Transpose(DeviceCtx* ctx, const int32_t num_axis, const ShapeView& 
 
 KU_IF_METHOD InitializeWithConf(DeviceCtx* ctx, const InitializerConf& initializer_conf,
                                 uint32_t random_seed, Blob* blob) {
-  BEFORE_CPU_INITIALIZE();
-  // synchronous initialize the host blob
-  KernelUtil<DeviceType::kCPU, T>::InitializeWithConf(nullptr, initializer_conf, random_seed,
-                                                      host_blob.get());
-  AFTER_CPU_INITIALIZE();
+  WithHostBlobAndStreamSynchronizeEnv(ctx, blob, [&](Blob* host_blob) {
+    KernelUtil<DeviceType::kCPU, T>::InitializeWithConf(nullptr, initializer_conf, random_seed,
+                                                        host_blob);
+  });
 }
 KU_IF_METHOD Set(DeviceCtx* ctx, const T value, T* addr) {
   gpu_set<T><<<1, 1, 0, ctx->cuda_stream()>>>(value, addr);
@@ -649,6 +649,11 @@ KU_INTEGRAL_METHOD Axpy(DeviceCtx* ctx, const int n, const T alpha, const T* x, 
   template struct GpuKernelUtilIf<type_cpp, KernelUtil<DeviceType::kGPU, type_cpp>>; \
   template struct KernelUtil<DeviceType::kGPU, type_cpp>;
 OF_PP_FOR_EACH_TUPLE(INSTANTIATE_KERNEL_UTIL, ARITHMETIC_DATA_TYPE_SEQ);
+
+template<>
+__device__ int32_t gpu_atomic_add(int32_t* address, const int32_t val) {
+  return atomicAdd(address, val);
+}
 
 template<>
 __device__ float gpu_atomic_add(float* address, float val) {

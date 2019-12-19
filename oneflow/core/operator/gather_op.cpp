@@ -17,7 +17,7 @@ int64_t GetGatherAxis(const GatherOpConf& conf, const BlobDesc* in_blob_desc) {
 }
 
 Shape GatherGetOutShape(const Shape& in, const Shape& indices, const int64_t axis) {
-  std::vector<int64_t> dim_vec;
+  DimVector dim_vec;
   dim_vec.insert(dim_vec.end(), in.dim_vec().cbegin(), in.dim_vec().cbegin() + axis);
   dim_vec.insert(dim_vec.end(), indices.dim_vec().cbegin(), indices.dim_vec().cend());
   dim_vec.insert(dim_vec.end(), in.dim_vec().cbegin() + axis + 1, in.dim_vec().end());
@@ -70,7 +70,7 @@ Maybe<void> GatherOp::InferBlobDescs(
   const int64_t axis = GetGatherAxis(op_conf().gather_conf(), in);
   BlobDesc* out = GetBlobDesc4BnInOp("out");
   *out = *in;
-  out->set_has_dim0_valid_num_field(indices->has_dim0_valid_num_field());
+  out->set_is_dynamic(indices->is_dynamic());
   out->mut_shape() = Shape(GatherGetOutShape(in->shape(), indices->shape(), axis));
   return Maybe<void>::Ok();
 }

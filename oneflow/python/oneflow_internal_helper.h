@@ -1,3 +1,4 @@
+#include <iostream>
 #include <google/protobuf/text_format.h>
 #include "oneflow/core/common/buffer_manager.h"
 #include "oneflow/core/common/protobuf.h"
@@ -147,9 +148,11 @@ namespace {
 struct GlobalChecker final {
   GlobalChecker() = default;
   ~GlobalChecker() {
-    if (Global<Oneflow>::Get() != nullptr) { LOG(FATAL) << "global oneflow is not destroyed yet"; }
+    if (Global<Oneflow>::Get() != nullptr) {
+      std::cerr << "global session is not closed yet" << std::endl;
+    }
     if (Global<SessionGlobalObjectsScope>::Get() != nullptr) {
-      LOG(FATAL) << "Session is not destroyed yet";
+      std::cerr << "global session is not destroyed yet" << std::endl;
     }
   }
 };

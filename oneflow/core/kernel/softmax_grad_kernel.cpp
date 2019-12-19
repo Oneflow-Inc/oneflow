@@ -47,15 +47,14 @@ void SoftmaxGradKernel<device_type, T>::ForwardDataContent(
     Blob* transpose_y_blob = BnInOp2Blob("transpose_y");
     Blob* transpose_dy_blob = BnInOp2Blob("transpose_dy");
     Transpose<device_type, T>(ctx.device_ctx, dy_blob, transpose_dy_blob, conf.perm());
-    SoftmaxComputeDiff<device_type, T>(ctx.device_ctx, n, w, transpose_dy_blob->dptr<T>(),
-                                       transpose_y_blob->dptr<T>(), tmp,
-                                       transpose_dx_blob->mut_dptr<T>(), buf_blob->mut_dptr(),
-                                       buf_blob->ByteSizeOfDataContentField());
+    SoftmaxComputeDiff<device_type, T>(
+        ctx.device_ctx, n, w, transpose_dy_blob->dptr<T>(), transpose_y_blob->dptr<T>(), tmp,
+        transpose_dx_blob->mut_dptr<T>(), buf_blob->mut_dptr(), buf_blob->ByteSizeOfBlobBody());
     Transpose<device_type, T>(ctx.device_ctx, transpose_dx_blob, dx_blob, conf.perm());
   } else {
     SoftmaxComputeDiff<device_type, T>(ctx.device_ctx, n, w, dy_blob->dptr<T>(), y_blob->dptr<T>(),
                                        tmp, dx_blob->mut_dptr<T>(), buf_blob->mut_dptr(),
-                                       buf_blob->ByteSizeOfDataContentField());
+                                       buf_blob->ByteSizeOfBlobBody());
   }
 }
 

@@ -778,12 +778,10 @@ message CastOpConf {
 message InterfaceBlobConf {
   required ShapeProto shape = 1;
   required DataType data_type = 2;
-  optional ShapeProto dim0_inner_shape = 3;
-  optional bool has_dim0_valid_num = 4;
-  optional bool has_dim1_valid_num = 5;
-  optional bool has_dim2_valid_num = 6;
-  optional OptInt64 split_axis = 7;
-  required OptInt64 batch_axis = 8;
+  optional OptInt64 split_axis = 3;
+  required OptInt64 batch_axis = 4;
+  optional bool is_dynamic = 5;
+  optional bool is_tensor_list = 6 [default = false];
 }
 
 message InputOpConf {
@@ -920,6 +918,8 @@ message BlobConf {
   optional int32 max_sequence_size = 4 [default = 1];
   required EncodeConf encode_case = 5;
   repeated PreprocessConf preprocess = 6;
+  optional int32 tensor_list_variable_axis = 7 [default = -1];
+  optional bool is_dynamic = 9 [default = false];
 }
 
 message DecodeOFRecordOpConf {
@@ -1043,7 +1043,7 @@ message NcclTupleReduceOpConf {
 
 message ReduceSplitOpConf {
   required int32 out_num = 1;
-  optional string in = 2;
+  required string in = 2;
   repeated string out = 3;
   repeated ShapeProto out_shape = 4;
   optional int32 order_in_graph = 5;
@@ -1542,7 +1542,7 @@ message OperatorConf {
     DecodeOFRecordOpConf decode_ofrecord_conf = 101;
     DecodeRandomOpConf decode_random_conf = 102;
     RecordLoadOpConf record_load_conf = 103;
-    CopyHdOpConf copy_hd_conf = 104;
+    CopyHdOpConf copy_hd_conf = 105;
     CopyCommNetOpConf copy_comm_net_conf = 106;
     ConcatOpConf concat_conf = 107;
     BoxingOpConf boxing_conf = 108;
@@ -1594,7 +1594,7 @@ message OperatorConf {
     DistributeSplitOpConf distribute_split_conf = 156;
     DistributeCloneOpConf distribute_clone_conf = 157;
     DistributeAddOpConf distribute_add_conf = 158;
-
+    
     // domain op
     TupleIdentityOpConf tuple_identity_conf = 200;
     TransposeOpConf transpose_conf = 201;
@@ -1642,7 +1642,6 @@ message OperatorConf {
     IdentityLossOpConf identity_loss_conf = 259;
     SparseCrossEntropyOpConf sparse_cross_entropy_conf= 260;
     ReduceMeanOpConf reduce_mean_conf = 261;
-    TopKOpConf top_k_conf = 262;
     L2NormalizeOpConf l2_normalize_conf = 264;
     PReluOpConf prelu_conf = 265;
     ReluGradOpConf relu_grad_conf = 266;
@@ -1679,21 +1678,21 @@ message OperatorConf {
     PReluDataGradOpConf prelu_data_grad_conf = 299;
     PReluAlphaGradOpConf prelu_alpha_grad_conf = 300;
     ModelLoadOpConf model_load_conf = 301;
-    SigmoidCrossEntropyLossGradOpConf sigmoid_cross_entropy_loss_grad_conf = 304; 
-    GatherMs0OpConf gather_ms0_conf = 305;
-    GatherMs0GradOpConf gather_ms0_grad_conf = 306;
-    ParallelCastOpConf parallel_cast_conf = 307;
+    GatherMs0OpConf gather_ms0_conf = 302;
+    GatherMs0GradOpConf gather_ms0_grad_conf = 303;
+    SigmoidCrossEntropyLossGradOpConf sigmoid_cross_entropy_loss_grad_conf = 317;
+    ParallelCastOpConf parallel_cast_conf = 336;
 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;
     BroadcastSubOpConf broadcast_sub_conf = 501;
     BroadcastMulOpConf broadcast_mul_conf = 502;
     BroadcastDivOpConf broadcast_div_conf = 503;
-    SquareOpConf square_conf = 504;
-    SqrtOpConf sqrt_conf = 505;
-    RsqrtOpConf rsqrt_conf = 506;
-    ScalarAddOpConf scalar_add_conf = 507;
-    ScalarMulOpConf scalar_mul_conf = 508;
+    SquareOpConf square_conf = 513;
+    SqrtOpConf sqrt_conf = 514;
+    RsqrtOpConf rsqrt_conf = 515;
+    ScalarAddOpConf scalar_add_conf = 516;
+    ScalarMulOpConf scalar_mul_conf = 517;
 
     // mutable input op
     AxpyOpConf axpy_conf = 752;
