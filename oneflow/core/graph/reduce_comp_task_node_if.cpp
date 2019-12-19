@@ -7,9 +7,7 @@
 namespace oneflow {
 
 int64_t InferRegstSize(const RegstDesc& regst) {
-  RtBlobDesc blob(*(regst.GetBlobDesc(GenPackedLbi())));
-  // CHECK_EQ(blob.AlignedByteSizeOfBlobBody(), blob.AlignedTotalByteSize());
-  return blob.AlignedByteSizeOfBlobBody();
+  return RtBlobDesc(*(regst.GetBlobDesc(GenPackedLbi()))).AlignedByteSizeOfBlobBody();
 }
 
 TaskNode* ReduceCompTaskNodeIf::FindPredReduceTaskNodeIf(std::function<bool(TaskNode*)> predicate) {
