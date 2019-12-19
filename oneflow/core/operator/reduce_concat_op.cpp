@@ -7,7 +7,7 @@ namespace oneflow {
 
 void ReduceConcatOp::InitFromOpConf() {
   CHECK(op_conf().has_reduce_concat_conf());
-  EnrollRepeatedInputBn("in", op_conf().reduce_concat_conf().in_size(), false);
+  EnrollRepeatedInputBn("in", false);
   EnrollOutputBn("out", false);
 }
 

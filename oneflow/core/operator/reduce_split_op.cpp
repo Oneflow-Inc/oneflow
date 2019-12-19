@@ -7,7 +7,7 @@ namespace oneflow {
 void ReduceSplitOp::InitFromOpConf() {
   CHECK(op_conf().has_reduce_split_conf());
   EnrollInputBn("in", false);
-  EnrollRepeatedOutputBn("out", op_conf().reduce_split_conf().out_size(), false);
+  EnrollRepeatedOutputBn("out", false);
 }
 
 const PbMessage& ReduceSplitOp::GetCustomizedConf() const { return op_conf().reduce_split_conf(); }
