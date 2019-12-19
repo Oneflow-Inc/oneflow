@@ -11,7 +11,7 @@ void ReduceConcatKernel<device_type>::ForwardDataContent(
   for (int32_t in_bn_id = 0; in_bn_id < op_conf.in_size(); ++in_bn_id) {
     char* dst_cur_dptr = out_blob->mut_dptr<char>() + op_conf.data_offset(in_bn_id);
     Blob* in_blob = BnInOp2Blob(this->op_attribute().input_bns().Get(in_bn_id));
-    size_t in_byte_size = in_blob->ByteSizeOfDataContentField();
+    size_t in_byte_size = in_blob->ByteSizeOfBlobBody();
     Memcpy<device_type>(ctx.device_ctx, dst_cur_dptr, in_blob->dptr<char>(), in_byte_size);
   }
 }

@@ -21,6 +21,9 @@ class Graph {
   void ReverseTopoForEachNode(std::function<void(NodeType*)> NodeHandler) const;
   void ForEachEdge(std::function<void(EdgeType*)> EdgeHandler) const;
 
+  void SortedTopoForEachNode(std::function<bool(const EdgeType* lhs, const EdgeType* rhs)> LessThan,
+                             std::function<void(NodeType*)> NodeHandler) const;
+
   void BfsForEachNode(
       const std::list<NodeType*>& starts,
       const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachNext,
@@ -175,6 +178,15 @@ template<typename NodeType, typename EdgeType>
 void Graph<NodeType, EdgeType>::TopoForEachNode(std::function<void(NodeType*)> NodeHandler) const {
   TopoForEachNode(source_nodes(), &NodeType::ForEachNodeOnInEdge, &NodeType::ForEachNodeOnOutEdge,
                   NodeHandler);
+}
+
+template<typename NodeType, typename EdgeType>
+void Graph<NodeType, EdgeType>::SortedTopoForEachNode(
+    std::function<bool(const EdgeType* lhs, const EdgeType* rhs)> LessThan,
+    std::function<void(NodeType*)> NodeHandler) const {
+  ForEachNode([&](NodeType* node) { node->SortInOutEdges(LessThan); });
+  TopoForEachNode(source_nodes(), &NodeType::ForEachNodeOnSortedInEdge,
+                  &NodeType::ForEachNodeOnSortedOutEdge, NodeHandler);
 }
 
 template<typename NodeType, typename EdgeType>

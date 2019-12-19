@@ -12,7 +12,7 @@ from test_util import Save
 def compare_with_tensorflow(device_type, a_shape, b_shape, transpose_a, transpose_b):
     assert device_type in ["gpu", "cpu"]
     flow.clear_default_session()
-    func_config = flow.function_config(1)
+    func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
     func_config.train.primary_lr(1e-4)
     func_config.train.model_update_conf(dict(naive_conf={}))
@@ -59,7 +59,7 @@ def compare_with_tensorflow(device_type, a_shape, b_shape, transpose_a, transpos
     tf_a_diff = tape.gradient(tf_out, a, loss_diff)
     tf_b_diff = tape.gradient(tf_out, b, loss_diff)
 
-    assert np.allclose(of_out, tf_out.numpy())
+    assert np.allclose(of_out.ndarray(), tf_out.numpy())
     assert np.allclose(np.load(os.path.join(GetSavePath(), "a_diff.npy")), tf_a_diff.numpy())
     assert np.allclose(np.load(os.path.join(GetSavePath(), "b_diff.npy")), tf_b_diff.numpy())
 

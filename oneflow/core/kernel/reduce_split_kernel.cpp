@@ -11,7 +11,7 @@ void ReduceSplitKernel<device_type>::ForwardDataContent(
   for (int32_t out_bn_id = 0; out_bn_id < op_conf.out_size(); ++out_bn_id) {
     const char* src_cur_dptr = in_blob->dptr<char>() + op_conf.data_offset(out_bn_id);
     Blob* out_blob = BnInOp2Blob(this->op_attribute().output_bns().Get(out_bn_id));
-    size_t out_byte_size = out_blob->ByteSizeOfDataContentField();
+    size_t out_byte_size = out_blob->ByteSizeOfBlobBody();
     Memcpy<device_type>(ctx.device_ctx, out_blob->mut_dptr<char>(), src_cur_dptr, out_byte_size);
   }
 }

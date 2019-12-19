@@ -1,9 +1,28 @@
 #include "oneflow/core/common/protobuf.h"
+#include "oneflow/core/common/str_util.h"
+#include "oneflow/core/register/blob_desc.pb.h"
 #include <google/protobuf/io/coded_stream.h>
 #include <google/protobuf/io/zero_copy_stream_impl.h>
 #include <google/protobuf/text_format.h>
 
 namespace oneflow {
+
+namespace {
+
+bool TryGetFieldNameAndIndex4StrVal(const std::string& fd_name_with_idx, std::string* field_name,
+                                    int32_t* index) {
+  const size_t underline_pos = fd_name_with_idx.rfind('_');
+  if (underline_pos == std::string::npos) { return false; }
+  if (underline_pos == 0) { return false; }
+  if (underline_pos == fd_name_with_idx.size() - 1) { return false; }
+  *field_name = fd_name_with_idx.substr(0, underline_pos);
+  std::string index_str = fd_name_with_idx.substr(underline_pos + 1);
+  if (IsStrInt(index_str) == false) { return false; }
+  *index = oneflow_cast<int32_t>(index_str);
+  return *index >= 0;
+}
+
+}  // namespace
 
 // txt file
 bool TryParseProtoFromTextFile(const std::string& file_path, PbMessage* proto) {
@@ -127,6 +146,14 @@ std::string GetStrValInPbFdOrPbRpf(const PbMessage& msg, const std::string& fd_n
   }
 }
 
+bool HasStrFieldInPbFdOrPbRpf(const PbMessage& msg, const std::string& fd_name_may_have_idx) {
+  const PbFd* fd = msg.GetDescriptor()->FindFieldByName(fd_name_may_have_idx);
+  if (fd != nullptr) { return true; }
+  std::string field_name;
+  int32_t index = 0;
+  return TryGetFieldNameAndIndex4StrVal(fd_name_may_have_idx, &field_name, &index);
+}
+
 void ReplaceStrValInPbFdOrPbRpf(PbMessage* msg, const std::string& fd_name_may_have_idx,
                                 const std::string& old_val, const std::string& new_val) {
   const PbFd* fd = msg->GetDescriptor()->FindFieldByName(fd_name_may_have_idx);
@@ -150,6 +177,10 @@ PersistentOutStream& operator<<(PersistentOutStream& out_stream, const PbMessage
   CHECK_GT(msg_size, 0);
   out_stream << msg_size << msg_bin;
   return out_stream;
+}
+
+bool operator==(const BlobDescProto& lhs, const BlobDescProto& rhs) {
+  return PbMd().Equivalent(lhs, rhs);
 }
 
 }  // namespace oneflow
