@@ -10,6 +10,7 @@
 #include "oneflow/core/graph/reduce_identity_task_node.h"
 #include "oneflow/core/operator/variable_op.h"
 #include "oneflow/core/operator/constant_op.h"
+#include "oneflow/core/operator/user_op_util.h"
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/graph/boxing/sub_task_graph_builder_context.h"
 #include "oneflow/core/graph/boxing/sub_task_graph_builder.h"
