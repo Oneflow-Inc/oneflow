@@ -1250,6 +1250,19 @@ message SliceGradOpConf {
   repeated DimSliceConf dim_slice_conf = 4;
 }
 
+message SliceV3OpConf {
+  required string in = 1;
+  required string out = 2;
+  repeated DimSliceConf dim_slice_conf = 3;
+}
+
+message SliceGradV3OpConf {
+  required string dy = 1;
+  required string dx = 2;
+  required string like = 3;
+  repeated DimSliceConf dim_slice_conf = 4;
+}
+
 message LayerNormOpConf {
   // in
   required string in = 1;
@@ -1688,6 +1701,8 @@ message OperatorConf {
     GatherMs0GradOpConf gather_ms0_grad_conf = 303;
     SigmoidCrossEntropyLossGradOpConf sigmoid_cross_entropy_loss_grad_conf = 317;
     ParallelCastOpConf parallel_cast_conf = 336;
+    SliceV3OpConf slice_v3_conf = 338;
+    SliceGradV3OpConf slice_grad_v3_conf = 339;
 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;

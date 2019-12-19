@@ -153,57 +153,45 @@ def slice(input_, begin, size, name=None):
             to input_'s number of dimensions, the first element of beign must be set to None.
         name: A name for the operation (optional).
     """
-    ndims = len(input_.static_shape)
+    ndims = len(input_.shape)
     assert (
         isinstance(begin, (list, tuple)) and len(begin) == ndims
     ), "begin must be a list or tuple whose length is the same with input_'s number of dimensions."
     assert (
         isinstance(size, (list, tuple)) and len(size) == ndims
     ), "size must be a list or tuple whose length is the same with input_'s number of dimensions."
-    # assert (
-    #     begin[0] is None
-    # ), "begin not support dim0 slice at present, the first element of begin must be set to None"
-    # assert (
-    #     size[0] is None
-    # ), "size not support dim0 slice at present, the first element of size must be set to None"
+    assert (
+        begin[0] is None
+    ), "begin not support dim0 slice at present, the first element of begin must be set to None"
+    assert (
+        size[0] is None
+    ), "size not support dim0 slice at present, the first element of size must be set to None"
 
-    slice_conf_list = []
-    for b, s, d in list(zip(begin, size, input_.static_shape)):
-        slice_conf = op_conf_util.DimSliceConf()
-        if b is not None:
-            if b < -d or b > d - 1:
+    slice_tup_list = []
+    for begin_, size_, dims in list(zip(begin, size, input_.shape)):
+        if begin_ is not None:
+            if begin_ < -dims or begin_ > dims - 1:
                 raise ValueError(
                     "'i'th element of begin must be greater than or equal to negative input_'s 'i'th dimension "
                     "and less than input_'s 'i'th dimension."
                 )
-            b = b + d if b < 0 else b
-            slice_conf.start = b
-        if s is not None:
-            if s > 0:
-                if b + s > d:
-                    raise ValueError(
-                        "the sum of 'i'th element of begin and 'i'th element of size must be "
-                        "less than or equal to input_'s 'i'th dimension."
-                    )
-                slice_conf.end = b + s
-            elif s == -1:
-                slice_conf.end = d
+            begin_ = begin_ if begin_ >= 0 else begin_ + dims
+
+        end_ = None
+        if size_ is not None:
+            if size_ > 0 and begin_ + size_ > dims:
+                raise ValueError(
+                    "the sum of 'i'th element of begin and 'i'th element of size must be "
+                    "less than or equal to input_'s 'i'th dimension."
+                )
+            if size_ <= 0:
+                end_ = ndims
             else:
-                raise ValueError("elements of size must be an int that greater then 0 or equal to -1")
-            slice_conf.stride = 1
-        slice_conf_list.append(slice_conf)
+                end_ = begin_ + size_
 
-    op_conf = op_conf_util.OperatorConf()
-    setattr(op_conf, "name", name if name is not None else id_util.UniqueStr("Slice_"))
-    setattr(op_conf.slice_conf, "in", input_.logical_blob_name)
-    setattr(op_conf.slice_conf, "out", "out")
-    op_conf.slice_conf.dim_slice_conf.extend(slice_conf_list)
+        slice_tup_list.append((begin_, end_, 1))
 
-    compile_context.CurJobAddOp(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
+    return slice_v3(input_, slice_tup_list, name)
 
 
 @oneflow_export("slice_v2")
@@ -234,6 +222,72 @@ def slice_v2(input, slice_confs, name=None):
     return remote_blob_util.RemoteBlob(lbi)
 
 
+@oneflow_export("slice_v3")
+def slice_v3(input, slice_tup_list, name=None):
+    r"""Extracts a slice from a tensor.
+
+    Args:
+        input: A `Blob`.
+        slice_tup_list: A list of tuple, indicate each dimension slice (begin, end, stride). 
+            (The function don't support slice at dim0 now , first element of slice_tup_list must be 
+            (None, None, None). )
+        name: A name for the operation (optional).
+    """
+    ndims = len(input.shape)
+    if not isinstance(slice_tup_list, (list, tuple)) or len(slice_tup_list) > ndims:
+        raise ValueError
+
+    if len(slice_tup_list) < ndims:
+        slice_tup_list += [(None, None, None)] * (ndims - len(slice_tup_list))
+
+    slice_conf_list = []
+    for slice_tup, dims in list(zip(slice_tup_list, input.shape))[1:]:
+        if not isinstance(slice_tup, (tuple, list)) or len(slice_tup) != 3:
+            raise ValueError("slice_tup must be a (begin, end, stride) composed tuple or list")
+
+        (begin, end, stride) = slice_tup
+        slice_conf = op_conf_util.DimSliceConf()
+        if begin is None:
+            begin = 0
+        if begin < -dims or begin > dims - 1:
+            raise ValueError(
+                "begin must be greater than or equal to negative dimensions "
+                "and less than dimensions."
+            )
+        begin = begin if begin >= 0 else begin + dims
+
+        if end is None:
+            end = dims
+        if end < -dims or end > dims:
+            raise ValueError(
+                "the sum of 'i'th element of begin and 'i'th element of size must be "
+                "less than or equal to input_'s 'i'th dimension."
+            )
+        end = end if end >= 0 else end + dims
+
+        if stride is None:
+            stride = 1
+        if stride == 0:
+            raise ValueError("stride cannot be 0")
+
+        slice_conf.start = begin
+        slice_conf.end = end
+        slice_conf.stride = stride
+        slice_conf_list.append(slice_conf)
+
+    op_conf = op_conf_util.OperatorConf()
+    setattr(op_conf, "name", name if name is not None else id_util.UniqueStr("Slice_"))
+    setattr(op_conf.slice_v3_conf, "in", input.logical_blob_name)
+    setattr(op_conf.slice_v3_conf, "out", "out")
+    op_conf.slice_v3_conf.dim_slice_conf.extend(slice_conf_list)
+
+    compile_context.CurJobAddOp(op_conf)
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = "out"
+    return remote_blob_util.RemoteBlob(lbi)
+
+
 @oneflow_export("concat")
 def concat(values, axis, name=None):
     op_conf = op_conf_util.OperatorConf()
@@ -248,6 +302,7 @@ def concat(values, axis, name=None):
     lbi.op_name = op_conf.name
     lbi.blob_name = "out"
     return remote_blob_util.RemoteBlob(lbi)
+
 
 @oneflow_export("local_scatter_nd_update")
 def local_scatter_nd_update(inputs, indices, updates, name=None):
@@ -411,10 +466,6 @@ def assign(ref, value, begin_axis=None, end_axis=None, dtype=None, name=None):
     op_conf.assign_conf.ref = ref.logical_blob_name
     op_conf.assign_conf.value = value.logical_blob_name
     compile_context.CurJobAddOp(op_conf)
-    out_lbi = logical_blob_id_util.LogicalBlobId()
-    setattr(out_lbi, "op_name", op_conf.name)
-    setattr(out_lbi, "blob_name", "y")
-    return remote_blob_util.RemoteBlob(out_lbi)
 
 
 @oneflow_export("random_like")
@@ -431,9 +482,11 @@ def random_like(like, seed=None, name=None):
     setattr(out_lbi, "blob_name", "out")
     return remote_blob_util.RemoteBlob(out_lbi)
 
+
 @oneflow_export("identity")
 def identity(x, name=None):
-    if name is None: name = id_util.UniqueStr("Identity_")
+    if name is None:
+        name = id_util.UniqueStr("Identity_")
     op_conf = op_conf_util.OperatorConf()
     op_conf.name = name
     setattr(op_conf.identity_conf, "in", x.logical_blob_name)
