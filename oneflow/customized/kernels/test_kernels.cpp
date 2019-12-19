@@ -58,9 +58,11 @@ class TestReshapeKernel final : public oneflow::user_op::OpKernel {
 
  private:
   void Compute(oneflow::user_op::KernelContext* ctx) override {
-    // const oneflow::user_op::Tensor* in_blob = ctx->Tensor4ArgNameAndIndex("in", 0);
-    // oneflow::user_op::Tensor* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
-    LOG(WARNING) << "Run TestReshape Kernel";
+    const oneflow::user_op::Tensor* in_blob = ctx->Tensor4ArgNameAndIndex("in", 0);
+    oneflow::user_op::Tensor* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
+    oneflow::Memcpy<oneflow::DeviceType::kGPU>(ctx->device_ctx(), out_blob->mut_dptr<char>(),
+                                               in_blob->dptr<char>(),
+                                               in_blob->shape().elem_cnt() * sizeof(float));
   }
 };
 

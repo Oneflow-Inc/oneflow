@@ -61,38 +61,38 @@ class UserOpConfWrapperBuilder(object):
     def SetAttr(self, attr_name, attr_value, attr_type):
         attribute = user_op_attr_util.UserOpAttrVal()
         assert type(attr_name) is str
-        assert type(attr_type) is int
-        if attr_type == user_op_attr_util.UserOpAttrType.kAtInt32:
+        assert type(attr_type) is str
+        if attr_type == "AttrTypeInt32":
             assert type(attr_value) is int
             attribute.at_int32 = attr_value
-        elif attr_type == user_op_attr_util.UserOpAttrType.kAtInt64:
+        elif attr_type == "AttrTypeInt64":
             assert type(attr_value) is int
             attribute.at_int64 = attr_value
-        elif attr_type == user_op_attr_util.UserOpAttrType.kAtBool:
+        elif attr_type == "AttrTypeBool":
             assert type(attr_value) is bool
             attribute.at_bool = attr_value
-        elif attr_type == user_op_attr_util.UserOpAttrType.kAtFloat:
+        elif attr_type == "AttrTypeFloat":
             assert type(attr_value) is float
             attribute.at_float = attr_value
-        elif attr_type == user_op_attr_util.UserOpAttrType.kAtDouble:
+        elif attr_type == "AttrTypeDouble":
             assert type(attr_value) is float
             attribute.at_double = attr_value
-        elif attr_type == user_op_attr_util.UserOpAttrType.kAtString:
+        elif attr_type == "AttrTypeString":
             assert type(attr_value) is str
             attribute.at_string = attr_value
-        elif attr_type == user_op_attr_util.UserOpAttrType.kAtShape:
+        elif attr_type == "AttrTypeShape":
             assert isinstance(attr_value, (tuple, list))
             assert all(isinstance(x, int) for x in attr_value)
             attribute.at_shape.dim[:] = list(attr_value)
-        elif attr_type == user_op_attr_util.UserOpAttrType.kAtListInt32:
+        elif attr_type == "AttrTypeListInt32":
             assert isinstance(attr_value, (tuple, list))
             assert all(isinstance(x, int) for x in attr_value)
             attribute.at_list_int32.val[:] = list(attr_value)
-        elif attr_type == user_op_attr_util.UserOpAttrType.kAtListInt64:
+        elif attr_type == "AttrTypeListInt64":
             assert isinstance(attr_value, (tuple, list))
             assert all(isinstance(x, int) for x in attr_value)
             attribute.at_list_int64.val[:] = list(attr_value)
-        elif attr_type == user_op_attr_util.UserOpAttrType.kAtListFloat:
+        elif attr_type == "AttrTypeListFloat":
             assert isinstance(attr_value, (tuple, list))
             assert all(isinstance(x, float) for x in attr_value)
             attribute.at_list_float.val[:] = list(attr_value)
