@@ -53,8 +53,15 @@ class SliceV3Op final : public Operator {
         int64_t begin = FixSliceBegin(conf.dim_slice_conf(i - 1).start(), dims);
         int64_t end = FixSliceEnd(conf.dim_slice_conf(i - 1).end(), dims);
         int64_t stride = conf.dim_slice_conf(i - 1).stride();
-        CHECK_LT(begin, end);
-        dim_vec[i] = (end - begin - 1) / stride + 1;
+        CHECK_NE(begin, end);
+        CHECK_NE(stride, 0);
+        if (stride > 0) {
+          CHECK_LT(begin, end);
+        } else {
+          CHECK_GT(begin, end);
+        }
+        int64_t align = (begin > end) ? 1 : -1;
+        dim_vec[i] = (end - begin + align) / stride + 1;
       }
     }
 
