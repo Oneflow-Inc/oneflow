@@ -3,6 +3,7 @@
 #include "oneflow/core/kernel/util/host_arithemetic_interface.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/register/blob.h"
+#include "oneflow/core/kernel/util/cuda_half_util.h"
 
 namespace oneflow {
 
@@ -114,6 +115,44 @@ void ArithemeticIf<DeviceType::kGPU>::InitializeWithConstConf(
   WithHostBlobAndStreamSynchronizeEnv(ctx, blob, [&](Blob* host_blob) {
     ArithemeticIf<DeviceType::kCPU>::InitializeWithConstConf(nullptr, initializer_conf, host_blob);
   });
+}
+
+namespace {
+
+template<typename T>
+__global__ void MulByScalarGpu(const int64_t n, const T* x, const T y, T* z) {
+  CUDA_1D_KERNEL_LOOP(i, n) { z[i] = x[i] * y; }
+}
+
+template<>
+__global__ void MulByScalarGpu<half>(const int64_t n, const half* x, const half y, half* z) {
+#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
+  CUDA_1D_KERNEL_LOOP(i, n) { z[i] = __hmul(x[i], y); }
+#else
+  HALF_CHECK_FAILED;
+#endif  // __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
+}
+
+}  // namespace
+
+#define MUL_BY_SCALAR(T)                                                                           \
+  void ArithemeticIf<DeviceType::kGPU>::MulByScalar(DeviceCtx* ctx, const int64_t n, const T* x,   \
+                                                    const T y, T* z) {                             \
+    MulByScalarGpu<T>                                                                              \
+        <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y, z); \
+  }
+
+MUL_BY_SCALAR(float)
+MUL_BY_SCALAR(double)
+MUL_BY_SCALAR(int32_t)
+MUL_BY_SCALAR(int64_t)
+
+#undef MUL_BY_SCALAR
+
+void ArithemeticIf<DeviceType::kGPU>::MulByScalar(DeviceCtx* ctx, const int64_t n, const float16* x,
+                                                  const float16 y, float16* z) {
+  MulByScalarGpu<half><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+      n, reinterpret_cast<const half*>(x), float16_2half(y), reinterpret_cast<half*>(z));
 }
 
 }  // namespace oneflow
