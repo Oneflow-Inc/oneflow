@@ -16,10 +16,12 @@ void ConcatKernel<device_type, T>::ForwardDataContent(
     const int64_t in_col_num = in_blob->shape().Count(axis);
     CHECK_EQ(in_blob->shape().elem_cnt(), row_num * in_col_num);
     CHECK_EQ(in_blob->data_type(), out_blob->data_type());
-    KernelUtil<device_type, T>::CopyColsRegion(
-        ctx.device_ctx, row_num, in_col_num, in_blob->dptr<T>(), 0, in_col_num,
-        out_blob->mut_dptr<T>(), out_col_offset, out_col_num);
-    out_col_offset += in_col_num;
+    if (row_num * in_col_num > 0) {
+      KernelUtil<device_type, T>::CopyColsRegion(
+          ctx.device_ctx, row_num, in_col_num, in_blob->dptr<T>(), 0, in_col_num,
+          out_blob->mut_dptr<T>(), out_col_offset, out_col_num);
+      out_col_offset += in_col_num;
+    }
   }
   CHECK_EQ(out_col_offset, out_col_num);
 }

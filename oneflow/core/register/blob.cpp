@@ -5,283 +5,253 @@
 
 namespace oneflow {
 
-Blob::Blob(Regst* regst, const RtBlobDesc* blob_desc, char* header_ptr)
-    : header_pod_ptr_(blob_desc->header_pod_desc(), header_ptr) {
-  Init(regst, blob_desc, header_ptr, header_ptr + blob_desc->ByteSizeOfBlobHeader());
+TensorBackInserter::TensorBackInserter(Blob* blob)
+    : blob_(blob), cur_mut_tensor_(blob->EndFullyMutTensor()) {}
+
+void TensorBackInserter::ReserveOneEmptyTensorList() {
+  blob_->ReserveOneEmptyTensorList();
+  if (IsCurMutTensorAvailable()) { cur_mut_tensor_ = blob_->EndFullyMutTensor(); }
 }
 
-Blob::Blob(Regst* regst, const RtBlobDesc* blob_desc, char* header_ptr, char* body_ptr)
-    : header_pod_ptr_(blob_desc->header_pod_desc(), header_ptr) {
-  Init(regst, blob_desc, header_ptr, body_ptr);
+void TensorBackInserter::ClearTensorLists() {
+  blob_->clear_tensor_lists();
+  if (IsCurMutTensorAvailable()) { cur_mut_tensor_ = blob_->EndFullyMutTensor(); }
 }
 
-void Blob::Init(Regst* regst, const RtBlobDesc* blob_desc, char* header_ptr, char* body_ptr) {
-  is_contiguous_ = (body_ptr == header_ptr + blob_desc->ByteSizeOfBlobHeader());
-  regst_ = regst;
+bool TensorBackInserter::IsCurMutTensorAvailable() const {
+  return !blob_->IsEndFullyMutTensor(cur_mut_tensor_);
+}
+
+FullyMutTensorView* TensorBackInserter::add_tensor() {
+  blob_->AddTensor(&cur_mut_tensor_);
+  return &cur_mut_tensor_;
+}
+
+FullyMutTensorView* TensorBackInserter::cur_mut_tensor() { return &cur_mut_tensor_; }
+
+void TensorBackInserter::add_tensor_list_slice() { return blob_->add_tensor_list_slice(); }
+
+const MemoryCase& Blob::mem_case() const { return mem_case_; }
+
+Blob::Blob(const MemoryCase& mem_case, const RtBlobDesc* blob_desc, char* header_ptr) {
+  Init(mem_case, blob_desc, header_ptr, header_ptr + blob_desc->ByteSizeOfBlobHeader());
+}
+
+Blob::Blob(const MemoryCase& mem_case, const RtBlobDesc* blob_desc, char* header_ptr,
+           char* body_ptr) {
+  Init(mem_case, blob_desc, header_ptr, body_ptr);
+}
+
+void Blob::Init(const MemoryCase& mem_case, const RtBlobDesc* blob_desc, char* header_ptr,
+                char* body_ptr) {
+  mem_case_ = mem_case;
   blob_desc_ = blob_desc;
-  header_ptr_ = header_ptr;
-  data_id_ptr_ = header_pod_ptr_.MutTensorPtr<char>(FieldKey::kDataId, nullptr);
-  col_num_ptr_ = header_pod_ptr_.MutTensorPtr<int32_t>(FieldKey::kColNum, nullptr);
-  dim0_valid_num_ptr_ = header_pod_ptr_.MutTensorPtr<int64_t>(FieldKey::kDim0ValidNum, nullptr);
-  dim1_valid_num_ptr_ = header_pod_ptr_.MutTensorPtr<int64_t>(FieldKey::kDim1ValidNum, nullptr);
-  dim2_valid_num_ptr_ = header_pod_ptr_.MutTensorPtr<int64_t>(FieldKey::kDim2ValidNum, nullptr);
-  record_id_in_device_piece_ptr_ =
-      header_pod_ptr_.MutTensorPtr<int64_t>(FieldKey::kRecordIdInDevicePiece, nullptr);
   dptr_ = body_ptr;
-  dynamic_shape_ = blob_desc->shape();
-  const Shape* shape_ptr = &blob_desc->shape();
-  if (dim0_valid_num_ptr_ != nullptr) { shape_ptr = &dynamic_shape_; }
-  shape_view_.reset(new ShapeView(*shape_ptr));
-  record_num_ = -1;
-}
-
-const char* Blob::data_id(int32_t no) const { UNIMPLEMENTED(); }
-
-int32_t Blob::col_num(int32_t no) const {
-  if (col_num_ptr_ == nullptr) {
-    return 1;
-  } else {
-    return *(col_num_ptr_ + no);
-  }
-}
-
-void Blob::set_col_num(int32_t no, int32_t val) {
-  CHECK_NOTNULL(col_num_ptr_);
-  *(col_num_ptr_ + no) = val;
-}
-
-int64_t Blob::dim0_valid_num(int64_t no) const {
-  CHECK_GE(no, 0);
-  CHECK_LT(no, dim0_inner_shape().At(0));
-  int64_t val;
-  if (dim0_valid_num_ptr_) {
-    val = dim0_valid_num_ptr_[no];
-    CHECK_GE(val, 0);
-    CHECK_LE(val, dim0_inner_shape().Count(1));
-  } else {
-    val = dim0_inner_shape().Count(1);
-  }
-  return val;
-}
-void Blob::set_dim0_valid_num(int64_t no, int64_t val) {
-  CHECK_NOTNULL(dim0_valid_num_ptr_);
-  CHECK_GE(no, 0);
-  CHECK_LT(no, dim0_inner_shape().At(0));
-  CHECK_GE(val, 0);
-  CHECK_LE(val, dim0_inner_shape().Count(1));
-  dim0_valid_num_ptr_[no] = val;
-}
-
-int64_t Blob::dim1_valid_num(int64_t no) const {
-  CHECK_GE(no, 0);
-  CHECK_LT(no, blob_desc_->shape().At(0));
-  int64_t val;
-  if (dim1_valid_num_ptr_) {
-    val = dim1_valid_num_ptr_[no];
-    CHECK_GE(val, 0);
-    CHECK_LE(val, blob_desc_->shape().At(1));
-  } else {
-    val = blob_desc_->shape().At(1);
-  }
-  return val;
-}
-void Blob::set_dim1_valid_num(int64_t no, int64_t val) {
-  CHECK_NOTNULL(dim1_valid_num_ptr_);
-  CHECK_GE(no, 0);
-  CHECK_LT(no, blob_desc_->shape().At(0));
-  CHECK_GE(val, 0);
-  CHECK_LE(val, blob_desc_->shape().At(1));
-  dim1_valid_num_ptr_[no] = val;
-}
-
-int64_t Blob::dim2_valid_num(int64_t dim0_idx, int64_t dim1_idx) const {
-  CHECK_GE(dim0_idx, 0);
-  CHECK_LT(dim0_idx, blob_desc_->shape().At(0));
-  CHECK_GE(dim1_idx, 0);
-  CHECK_LT(dim1_idx, blob_desc_->shape().At(1));
-  int64_t val;
-  if (dim2_valid_num_ptr_) {
-    val = *(dim2_valid_num_ptr_ + dim0_idx * blob_desc_->shape().At(1) + dim1_idx);
-    CHECK_GE(val, 0);
-    CHECK_LE(val, blob_desc_->shape().At(2));
-  } else {
-    val = blob_desc_->shape().At(2);
-  }
-  return val;
-}
-
-int64_t Blob::record_id_in_device_piece(int64_t no) const {
-  CHECK_GE(no, 0);
-  CHECK_LT(no, shape().At(0));
-  int64_t val;
-  if (record_id_in_device_piece_ptr_) {
-    val = record_id_in_device_piece_ptr_[no];
-    CHECK_GE(val, 0);
-  } else {
-    val = no;
-  }
-  return val;
-}
-
-void Blob::set_record_id_in_device_piece(int64_t no, int64_t val) {
-  CHECK_NOTNULL(record_id_in_device_piece_ptr_);
-  CHECK_GE(no, 0);
-  CHECK_LT(no, static_shape().At(0));
-  CHECK_GE(val, 0);
-  record_id_in_device_piece_ptr_[no] = val;
-}
-
-void Blob::set_dim2_valid_num(int64_t dim0_idx, int64_t dim1_idx, int64_t val) {
-  CHECK_NOTNULL(dim2_valid_num_ptr_);
-  CHECK_GE(dim0_idx, 0);
-  CHECK_LT(dim0_idx, blob_desc_->shape().At(0));
-  CHECK_GE(dim1_idx, 0);
-  CHECK_LT(dim1_idx, blob_desc_->shape().At(1));
-  CHECK_GE(val, 0);
-  CHECK_LE(val, blob_desc_->shape().At(2));
-  *(dim2_valid_num_ptr_ + dim0_idx * blob_desc_->shape().At(1) + dim1_idx) = val;
-}
-
-const ShapeView& Blob::shape() const {
-  if (dim0_valid_num_ptr_ != nullptr) {
-    size_t contiguous_instance_num = ContiguousDim0ValidNum();
-    CHECK_LE(contiguous_instance_num, static_shape().At(0));
-    if (dynamic_shape_.At(0) != contiguous_instance_num) {
-      dynamic_shape_.Set(0, contiguous_instance_num);
+  header_ptr_.reset(new PodPtr(blob_desc_->header_pod_desc(), header_ptr));
+  FOR_RANGE(int32_t, i, 0, FieldKey::kFieldKeySize) {
+    FieldKey key = static_cast<FieldKey>(i);
+    header_fields_[i] = header_ptr_->MutTensorPtr<int64_t>(key);
+    if (header_fields_[i] == nullptr) {
+      header_field_capacities_[i] = 0;
+    } else {
+      header_field_capacities_[i] =
+          blob_desc->header_pod_desc().Field(key).Cast<TensorPodDesc>().shape().elem_cnt();
     }
   }
-  return *shape_view_;
-}
-
-size_t Blob::ContiguousDim0ValidNum() const {
-  size_t contiguous_invalid_instance_num = 0;
-  for (int i = dim0_inner_shape().At(0) - 1; i >= 0; --i) {
-    size_t valid_num = dim0_valid_num(i);
-    contiguous_invalid_instance_num += dim0_inner_shape().Count(1) - valid_num;
-    if (valid_num > 0) { break; }
+  if (!blob_desc_->header_is_opaque()) {
+    *mut_header_field<FieldKey::kTensorListLength>() = 1;
+    *mut_header_field<FieldKey::kTensorListSlices>() = 0;
+    *mut_header_field<FieldKey::kTensorListSlicesLength>() = 1;
+    *mut_header_field<FieldKey::kLastTensorDataOffset>() = 0;
+    begin_tensor_.reset(
+        new TensorView(this, header_field<FieldKey::kTensorShapeList>(), dptr<char>()));
+    begin_mut_tensor_.reset(new DataOnlyMutTensorView(
+        this, mut_header_field<FieldKey::kTensorShapeList>(), mut_dptr<char>()));
+    tensor_back_inserter_.reset(new TensorBackInserter(this));
+    int64_t* shape_ptr = mut_header_field<FieldKey::kTensorShapeList>();
+    shape_view_.reset(new ShapeView(shape_ptr, static_shape().NumAxes()));
+    if (blob_desc->is_dynamic()) {
+      mut_shape_view_.reset(new MutShapeView(shape_ptr, static_shape().NumAxes()));
+    }
+    MutShapeView(shape_ptr, static_shape().NumAxes()).set_shape(static_shape());
+  } else {
+    const DimVector& dim_vec = static_shape().dim_vec();
+    shape_view_.reset(new ShapeView(dim_vec.data(), dim_vec.size()));
   }
-  return blob_desc_->shape().At(0) - contiguous_invalid_instance_num;
 }
 
-bool Blob::IsShapeEmpty() const {
-  if (dim0_valid_num_ptr_ == nullptr) { return false; }
-  return ContiguousDim0ValidNum() == 0;
+size_t Blob::total_num_of_tensors() const {
+  size_t num_tensor = *header_field<FieldKey::kTensorListLength>();
+  CHECK_LE(num_tensor * static_shape().NumAxes(),
+           header_field_capacity<FieldKey::kTensorShapeList>());
+  return num_tensor;
 }
 
-const Shape& Blob::dynamic_shape() const {
-  size_t contiguous_instance_num = ContiguousDim0ValidNum();
-  CHECK_LE(contiguous_instance_num, static_shape().At(0));
-  if (dynamic_shape_.At(0) != contiguous_instance_num) {
-    dynamic_shape_.Set(0, contiguous_instance_num);
+void Blob::MoveToNextTensor(TensorView* last) const {
+  CHECK(!IsEndTensor(*last));
+  const int64_t* shape_ptr = last->shape().ptr() + static_shape().NumAxes();
+  const char* dptr = last->dptr<char>() + last->ByteSize();
+  last->reset(shape_ptr, dptr);
+}
+
+void Blob::MoveToNextMutTensor(DataOnlyMutTensorView* last) {
+  CHECK(!IsEndTensor(*last));
+  const int64_t* shape_ptr = last->shape().ptr() + static_shape().NumAxes();
+  char* dptr = last->mut_dptr<char>() + last->ByteSize();
+  last->reset(shape_ptr, dptr);
+}
+
+bool Blob::IsEndTensor(const TensorView& tensor) const {
+  const int64_t* end_shape_ptr =
+      header_field<FieldKey::kTensorShapeList>()
+      + *header_field<FieldKey::kTensorListLength>() * static_shape().NumAxes();
+  return end_shape_ptr == tensor.shape().ptr();
+}
+
+bool Blob::IsEndTensor(const DataOnlyMutTensorView& tensor) const {
+  const int64_t* end_shape_ptr =
+      header_field<FieldKey::kTensorShapeList>()
+      + *header_field<FieldKey::kTensorListLength>() * static_shape().NumAxes();
+  return end_shape_ptr == tensor.shape().ptr();
+}
+
+bool Blob::IsEndFullyMutTensor(const FullyMutTensorView& tensor) const {
+  size_t shape_list_capacity = header_field_capacity<FieldKey::kTensorShapeList>();
+  const int64_t* end_shape_ptr = header_field<FieldKey::kTensorShapeList>() + shape_list_capacity;
+  const char* end_tensor_dptr = dptr<char>() + blob_desc().ByteSizeOfBlobBody();
+  return tensor.shape().ptr() == end_shape_ptr || tensor.dptr<char>() == end_tensor_dptr;
+}
+
+const TensorView& Blob::sole_tensor() const {
+  CHECK(static_cast<bool>(begin_tensor_));
+  CHECK_EQ(*header_field<FieldKey::kTensorListSlicesLength>(), 1);
+  CHECK_EQ(*header_field<FieldKey::kTensorListLength>(), 1);
+  CHECK_EQ(*header_field<FieldKey::kLastTensorDataOffset>(), 0);
+  return *begin_tensor_;
+}
+
+const DataOnlyMutTensorView& Blob::sole_mut_tensor() {
+  CHECK(static_cast<bool>(begin_mut_tensor_));
+  CHECK_EQ(*header_field<FieldKey::kTensorListSlicesLength>(), 1);
+  CHECK_EQ(*header_field<FieldKey::kTensorListLength>(), 1);
+  CHECK_EQ(*header_field<FieldKey::kLastTensorDataOffset>(), 0);
+  return *begin_mut_tensor_;
+}
+
+void Blob::AddTensor(FullyMutTensorView* tensor) {
+  size_t end_tensor_data_offset = GetEndTensorDataOffset();
+  int64_t* shape_ptr = mut_header_field<FieldKey::kTensorShapeList>();
+  shape_ptr += total_num_of_tensors() * static_shape().NumAxes();
+  tensor->reset(shape_ptr, mut_dptr<char>() + end_tensor_data_offset);
+  *mut_header_field<FieldKey::kTensorListLength>() += 1;
+  if (end_tensor_data_offset == 0) {
+    CHECK_EQ(total_num_of_tensors(), 1);
+    CHECK_EQ(*header_field<FieldKey::kLastTensorDataOffset>(), 0);
+  } else {
+    *mut_header_field<FieldKey::kLastTensorDataOffset>() = end_tensor_data_offset;
   }
-  return dynamic_shape_;
 }
 
-const int32_t& Blob::record_num() const { return record_num_; }
-void Blob::set_record_num(int32_t val) { record_num_ = val; }
-int32_t Blob::col_id() const { return regst_->col_id(); }
-void Blob::set_col_id(int32_t val) { regst_->set_col_id(val); }
-int32_t Blob::max_col_id() const { return regst_->max_col_id(); }
-void Blob::set_max_col_id(int32_t val) { regst_->set_max_col_id(val); }
-const MemoryCase& Blob::mem_case() const { return regst_->regst_desc()->mem_case(); }
+size_t Blob::num_of_tensor_list_slices() const {
+  size_t num_slices = *header_field<FieldKey::kTensorListSlicesLength>();
+  CHECK_LE(num_slices, header_field_capacity<FieldKey::kTensorListSlices>());
+  return num_slices;
+}
+
+int64_t Blob::tensor_index4slice_id(int32_t slice_id) const {
+  CHECK_LT(slice_id, num_of_tensor_list_slices());
+  return header_field<FieldKey::kTensorListSlices>()[slice_id];
+}
+
+void Blob::add_tensor_list_slice() {
+  size_t slice_buff_byte_size =
+      blob_desc().header_pod_desc().Field(FieldKey::kTensorListSlices).ByteSize();
+  CHECK_LT(num_of_tensor_list_slices() * sizeof(int64_t), slice_buff_byte_size);
+  int32_t slice_id = num_of_tensor_list_slices();
+  *mut_header_field<FieldKey::kTensorListSlicesLength>() += 1;
+  mut_header_field<FieldKey::kTensorListSlices>()[slice_id] =
+      *header_field<FieldKey::kTensorListLength>();
+}
+
+void Blob::ReserveOneEmptyTensorList() {
+  clear_tensor_lists();
+  add_tensor_list_slice();
+}
+
+FullyMutTensorView Blob::EndFullyMutTensor() {
+  size_t shape_list_capacity = header_field_capacity<FieldKey::kTensorShapeList>();
+  int64_t* end_shape_ptr = mut_header_field<FieldKey::kTensorShapeList>() + shape_list_capacity;
+  char* end_tensor_dptr = mut_dptr<char>() + blob_desc().ByteSizeOfBlobBody();
+  return FullyMutTensorView(this, end_shape_ptr, end_tensor_dptr);
+}
+
+void Blob::clear_tensor_lists() {
+  *mut_header_field<FieldKey::kTensorListLength>() = 0;
+  *mut_header_field<FieldKey::kTensorListSlicesLength>() = 0;
+  *mut_header_field<FieldKey::kLastTensorDataOffset>() = 0;
+}
+
+size_t Blob::GetEndTensorDataOffset() const {
+  size_t num_tensor = total_num_of_tensors();
+  if (num_tensor == 0) { return 0; }
+  const int64_t* shape_ptr = header_field<FieldKey::kTensorShapeList>();
+  shape_ptr += (num_tensor - 1) * static_shape().NumAxes();
+  size_t elem_cnt = 1;
+  FOR_RANGE(int32_t, i, 0, static_shape().NumAxes()) { elem_cnt *= shape_ptr[i]; }
+  size_t last_tensor_byte_size = elem_cnt * GetSizeOfDataType(data_type());
+  return *header_field<FieldKey::kLastTensorDataOffset>() + last_tensor_byte_size;
+}
+
+size_t Blob::ByteSizeOfBlobBody() const {
+  if (blob_desc().header_is_opaque()) { return blob_desc().ByteSizeOfBlobBody(); }
+  return GetEndTensorDataOffset();
+}
 
 void Blob::CopyDataContentFrom(DeviceCtx* device_ctx, const Blob* rhs) {
   if (this == rhs) { return; }
-  AutoMemcpy(device_ctx, mut_dptr(), rhs->dptr(), ByteSizeOfDataContentField(), mem_case(),
+  AutoMemcpy(device_ctx, mut_dptr(), rhs->dptr(), ByteSizeOfBlobBody(), mem_case(),
              rhs->mem_case());
 }
 
 void Blob::CopyValidDataContentFrom(DeviceCtx* device_ctx, const Blob* rhs) {
   if (this == rhs) { return; }
-  const size_t copy_size = this->ByteSizeOfValidDataContent();
-  CHECK_EQ(rhs->ByteSizeOfValidDataContent(), copy_size);
-  AutoMemcpy(device_ctx, mut_dptr(), rhs->dptr(), copy_size, mem_case(), rhs->mem_case());
+  const size_t body_byte_size = ByteSizeOfBlobBody();
+  CHECK_EQ(rhs->ByteSizeOfBlobBody(), body_byte_size);
+  AutoMemcpy(device_ctx, mut_dptr(), rhs->dptr(), body_byte_size, mem_case(), rhs->mem_case());
 }
 
 void Blob::CopyHeaderFrom(DeviceCtx* device_ctx, const Blob* rhs) {
-  if (this == rhs || ByteSizeOfBlobHeader() == 0) { return; }
-  CHECK_EQ(ByteSizeOfBlobHeader(), rhs->ByteSizeOfBlobHeader());
-  Memcpy<DeviceType::kCPU>(device_ctx, mut_header_ptr(), rhs->header_ptr(), ByteSizeOfBlobHeader());
-}
-
-void Blob::CopyDataIdFrom(DeviceCtx* device_ctx, const Blob* rhs) {
-  if (this == rhs || ByteSizeOfDataIdField() == 0) { return; }
-  CHECK_EQ(ByteSizeOfDataIdField(), rhs->ByteSizeOfDataIdField());
-  Memcpy<DeviceType::kCPU>(device_ctx, mut_data_id(), rhs->data_id(), ByteSizeOfDataIdField());
-}
-
-void Blob::CopyColNumFrom(DeviceCtx* device_ctx, const Blob* rhs) {
-  if (this == rhs || ByteSizeOfColNumField() == 0) { return; }
-  CHECK_EQ(ByteSizeOfColNumField(), rhs->ByteSizeOfColNumField());
-  Memcpy<DeviceType::kCPU>(device_ctx, mut_col_num(), rhs->col_num(), ByteSizeOfColNumField());
-}
-
-size_t Blob::ByteSizeOfDim0ValidNumField() const {
-  return blob_desc_->ByteSizeOfDim0ValidNumField();
-}
-
-size_t Blob::ByteSizeOfDim1ValidNumField() const {
-  return blob_desc_->ByteSizeOfDim1ValidNumField();
-}
-
-size_t Blob::ByteSizeOfDim2ValidNumField() const {
-  return blob_desc_->ByteSizeOfDim2ValidNumField();
-}
-
-size_t Blob::ByteSizeOfRecordIdInDevicePieceField() const {
-  return blob_desc_->ByteSizeOfRecordIdInDevicePieceField();
-}
-
-size_t Blob::ByteSizeOfValidDataContent() const {
-  return shape().elem_cnt() * GetSizeOfDataType(data_type());
-}
-
-void Blob::CopyDim0ValidNumFrom(DeviceCtx* device_ctx, const Blob* rhs) {
-  if (this == rhs || ByteSizeOfDim0ValidNumField() == 0) { return; }
-  CHECK_EQ(ByteSizeOfDim0ValidNumField(), rhs->ByteSizeOfDim0ValidNumField());
-  Memcpy<DeviceType::kCPU>(device_ctx, mut_dim0_valid_num_ptr(), rhs->dim0_valid_num_ptr(),
-                           ByteSizeOfDim0ValidNumField());
-}
-
-void Blob::CopyDim1ValidNumFrom(DeviceCtx* device_ctx, const Blob* rhs) {
-  if (this == rhs || ByteSizeOfDim1ValidNumField() == 0) { return; }
-  CHECK_EQ(ByteSizeOfDim1ValidNumField(), rhs->ByteSizeOfDim1ValidNumField());
-  Memcpy<DeviceType::kCPU>(device_ctx, mut_dim1_valid_num_ptr(), rhs->dim1_valid_num_ptr(),
-                           ByteSizeOfDim1ValidNumField());
-}
-
-void Blob::CopyDim2ValidNumFrom(DeviceCtx* device_ctx, const Blob* rhs) {
-  if (this == rhs || ByteSizeOfDim2ValidNumField() == 0) { return; }
-  CHECK_EQ(ByteSizeOfDim2ValidNumField(), rhs->ByteSizeOfDim2ValidNumField());
-  Memcpy<DeviceType::kCPU>(device_ctx, mut_dim2_valid_num_ptr(), rhs->dim2_valid_num_ptr(),
-                           ByteSizeOfDim2ValidNumField());
-}
-
-void Blob::CopyRecordIdInDevicePieceFrom(DeviceCtx* device_ctx, const Blob* rhs) {
-  if (this == rhs || ByteSizeOfRecordIdInDevicePieceField() == 0) { return; }
-  CHECK_EQ(ByteSizeOfRecordIdInDevicePieceField(), rhs->ByteSizeOfRecordIdInDevicePieceField());
-  Memcpy<DeviceType::kCPU>(device_ctx, mut_record_id_in_device_piece_ptr(),
-                           rhs->record_id_in_device_piece_ptr(),
-                           ByteSizeOfRecordIdInDevicePieceField());
-}
-
-void Blob::CopyFrom(DeviceCtx* device_ctx, const Blob* rhs) {
-  if (this == rhs) { return; }
-  if (is_contiguous_) {
-    CHECK_EQ(TotalByteSize(), rhs->TotalByteSize());
-    AutoMemcpy(device_ctx, mut_header_ptr(), rhs->header_ptr(), TotalByteSize(), mem_case(),
-               rhs->mem_case());
-  } else {
-    CopyHeaderFrom(device_ctx, rhs);
-    CopyDataContentFrom(device_ctx, rhs);
+  if (this == rhs || blob_desc().ByteSizeOfBlobHeader() == 0) { return; }
+  CHECK_EQ(blob_desc().ByteSizeOfBlobHeader(), rhs->blob_desc().ByteSizeOfBlobHeader());
+  if (blob_desc().header_is_opaque()) {
+    Memcpy<DeviceType::kCPU>(device_ctx, header_ptr_->ptr(), rhs->header_ptr(),
+                             blob_desc().ByteSizeOfBlobHeader());
+    return;
+  }
+  {
+    const int64_t shape_list_len = *rhs->header_field<FieldKey::kTensorListLength>();
+    *mut_header_field<FieldKey::kTensorListLength>() = shape_list_len;
+    *mut_header_field<FieldKey::kLastTensorDataOffset>() =
+        *rhs->header_field<FieldKey::kLastTensorDataOffset>();
+    const size_t num_axes = static_shape().NumAxes();
+    Memcpy<DeviceType::kCPU>(device_ctx, mut_header_field<FieldKey::kTensorShapeList>(),
+                             rhs->header_field<FieldKey::kTensorShapeList>(),
+                             shape_list_len * num_axes * sizeof(int64_t));
+  }
+  {
+    const int64_t seg_length = *rhs->header_field<FieldKey::kTensorListSlicesLength>();
+    *mut_header_field<FieldKey::kTensorListSlicesLength>() = seg_length;
+    Memcpy<DeviceType::kCPU>(device_ctx, mut_header_field<FieldKey::kTensorListSlices>(),
+                             rhs->header_field<FieldKey::kTensorListSlices>(),
+                             seg_length * sizeof(int64_t));
   }
 }
 
-size_t Blob::CalcDim0ValidNumSum() const {
-  if (dim0_valid_num_ptr() == nullptr) { return static_shape().At(0); }
-  size_t sum = 0;
-  FOR_RANGE(int64_t, i, 0, dim0_inner_shape().At(0)) { sum += dim0_valid_num(i); }
-  return sum;
+bool Blob::IsBodyEmpty() const {
+  const int64_t* shape_list_size = header_field<FieldKey::kTensorListLength>();
+  if (shape_list_size == nullptr) { return false; }
+  const int64_t shape_list_len = *shape_list_size;
+  return shape_list_len == 0 || shape().elem_cnt() == 0;
 }
 
 }  // namespace oneflow

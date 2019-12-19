@@ -21,9 +21,12 @@ Maybe<void> SwitchOutputOp::InferBlobDescs(
   FOR_RANGE(int64_t, i, 0, op_conf().switch_output_conf().in_size()) {
     CHECK_OR_RETURN(*GetBlobDesc4BnInOp(GenRepeatedBn("in", i)) == first_in_blob_desc);
   }
-  InterfaceOpUtil::InferOutBlobDesc(op_conf().switch_output_conf().blob_conf(),
-                                    GetBlobDesc4BnInOp("out"), parallel_ctx);
-  CHECK_OR_RETURN(*GetBlobDesc4BnInOp("out") == first_in_blob_desc);
+  *GetBlobDesc4BnInOp("out") = first_in_blob_desc;
+  if (first_in_blob_desc.is_dynamic() == false) {
+    InterfaceOpUtil::InferOutBlobDesc(op_conf().switch_output_conf().blob_conf(),
+                                      GetBlobDesc4BnInOp("out"), parallel_ctx);
+    CHECK_OR_RETURN(*GetBlobDesc4BnInOp("out") == first_in_blob_desc);
+  }
   return Maybe<void>::Ok();
 }
 

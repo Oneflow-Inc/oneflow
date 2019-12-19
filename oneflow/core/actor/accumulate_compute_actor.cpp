@@ -37,7 +37,7 @@ void AccumulateCompActor::Act() {
     Blob* in_blob = in_regst->packed_blob();
     Blob* out_blob = out_regst->packed_blob();
     cpy_func_(kernel_ctx.device_ctx, out_blob->mut_dptr(), in_blob->dptr(),
-              in_blob->ByteSizeOfDataContentField());
+              in_blob->ByteSizeOfBlobBody());
   } else {
     AsyncLaunchKernel(kernel_ctx);
   }

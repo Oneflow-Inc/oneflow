@@ -12,8 +12,8 @@
 #include "oneflow/core/common/util.h"
 namespace oneflow {
 
-#define ARITHMETIC_BINARY_FUNC_NAME_SEQ (Add)(Sub)(Mul)(Div)
-#define LOGICAL_BINARY_FUNC_NAME_SEQ (EQ)(NE)(GT)(GE)(LT)(LE)
+#define ARITHMETIC_BINARY_FUNC_NAME_SEQ (Add)(Sub)(Mul)(Div)(Min)(Max)
+#define LOGICAL_BINARY_FUNC_NAME_SEQ (EQ)(NE)(GT)(GE)(LT)(LE)(AND)
 
 #define PREPEND_PREFIX_BINARY_FUNC(name) OF_PP_CAT(BinaryFunc, name)
 #define ARITHMETIC_BINARY_FUNC_SEQ \
@@ -120,6 +120,12 @@ struct BinaryFuncLE final {
   static OF_DEVICE_FUNC const int8_t Invoke(const T x, const T y) { return x <= y; }
 };
 SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncLE);
+
+template<typename T>
+struct BinaryFuncAND final {
+  static OF_DEVICE_FUNC const int8_t Invoke(const T x, const T y) { return x && y; }
+};
+SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncAND);
 
 #define NO_HALF_UTIL_FOUND         \
   printf("cuda arch must >= 530"); \

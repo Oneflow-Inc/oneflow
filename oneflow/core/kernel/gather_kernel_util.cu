@@ -1,10 +1,18 @@
 #include "oneflow/core/kernel/gather_kernel_util.h"
 #include "oneflow/core/kernel/kernel_util.cuh"
+#include "oneflow/core/kernel/kernel.h"
 #include <assert.h>
 
 namespace oneflow {
 
 namespace {
+
+Shape GetFlatShape(const ShapeView& shape, int64_t axis) {
+  CHECK_GT(shape.NumAxes(), 0);
+  CHECK_GE(axis, 0);
+  CHECK_LT(axis, shape.NumAxes());
+  return Shape({shape.Count(0, axis), shape.At(axis), shape.Count(axis + 1)});
+}
 
 template<typename K, typename IDX>
 __device__ IDX GetInOffset(const IDX out_offset, const K* indices, const IDX num_indices,
@@ -116,7 +124,8 @@ struct GatherKernelUtilImpl<DeviceType::kGPU, float16, K> final {
   template struct GatherKernelUtilImpl<DeviceType::kGPU, OF_PP_PAIR_FIRST(in_type_pair), \
                                        OF_PP_PAIR_FIRST(index_type_pair)>;
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INITIATE_GATHER_KERNEL_UTIL_GPU_IMPL,
-                                 FLOATING_DATA_TYPE_SEQ
+                                 FLOATING_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(int32_t,
+                                                                             DataType::kInt32)
 #if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 700 && CUDA_VERSION >= 10000
                                      FLOAT16_DATA_TYPE_SEQ
 #endif

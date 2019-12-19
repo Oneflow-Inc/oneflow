@@ -8,9 +8,10 @@ import oneflow.python.framework.session_context as session_ctx
 from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.framework.function_desc import FunctionDesc
 import oneflow.python.framework.placement_context as placement_ctx
+import oneflow.python.framework.distribute_context as distribute_ctx
 import oneflow.python.lib.core.pb_util as pb_util
 
-@oneflow_export('function_config')
+@oneflow_export("FunctionConfig", 'function_config')
 class FunctionConfig(object):
     def __init__(self):
         self.function_desc = FunctionDesc()
@@ -253,3 +254,7 @@ def set_default_placement(func_desc, value):
     assert isinstance(value, placement_ctx.PlacementScope)
     func_desc.function_attribute.default_placement_scope = value
 
+@oneflow_function_config('default_distribute_strategy')
+def set_default_distribute_strategy(func_desc, value):
+    assert isinstance(value, distribute_ctx.DistributeStrategy)
+    func_desc.function_attribute.default_distribute_strategy = value
