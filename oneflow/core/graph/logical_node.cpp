@@ -9,6 +9,7 @@
 #include "oneflow/core/graph/distribute_concat_compute_task_node.h"
 #include "oneflow/core/graph/distribute_split_compute_task_node.h"
 #include "oneflow/core/graph/record_load_compute_task_node.h"
+#include "oneflow/core/graph/data_load_compute_task_node.h"
 #include "oneflow/core/graph/reduce_scatter_compute_task_node.h"
 #include "oneflow/core/graph/reduce_add_compute_task_node.h"
 #include "oneflow/core/graph/reduce_gather_compute_task_node.h"
@@ -391,6 +392,7 @@ REGISTER_BLD_BOXING_OP_CONF_MTHD("Tick"
   OF_PP_MAKE_TUPLE_SEQ(DistributeConcat, kDataForwardArea) \
   OF_PP_MAKE_TUPLE_SEQ(DistributeSplit, kDataForwardArea)  \
   OF_PP_MAKE_TUPLE_SEQ(RecordLoad, kDataPreprocessArea)    \
+  OF_PP_MAKE_TUPLE_SEQ(DataLoad, kDataPreprocessArea)      \
   OF_PP_MAKE_TUPLE_SEQ(Decode, kDataPreprocessArea)        \
   OF_PP_MAKE_TUPLE_SEQ(DecodeRandom, kDataPreprocessArea)  \
   OF_PP_MAKE_TUPLE_SEQ(Loss, kDataForwardArea)             \

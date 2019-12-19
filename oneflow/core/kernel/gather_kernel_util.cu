@@ -133,4 +133,70 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INITIATE_GATHER_KERNEL_UTIL_GPU_IMPL,
                                  INDEX_DATA_TYPE_SEQ);
 #undef INITIATE_GATHER_KERNEL_UTIL_GPU_IMPL
 
+class LocalGatherInt8GPUKernel final : public KernelIf<DeviceType::kGPU> {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(LocalGatherInt8GPUKernel);
+  LocalGatherInt8GPUKernel() = default;
+  ~LocalGatherInt8GPUKernel() override = default;
+
+ private:
+  const PbMessage& GetCustomizedOpConf() const override {
+    return this->op_conf().local_gather_conf();
+  }
+  void ForwardDataContent(const KernelCtx& ctx,
+                          std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
+    const Blob* indices = BnInOp2Blob("indices");
+    CHECK_EQ(indices->data_type(), DataType::kInt32);
+    const Blob* in = BnInOp2Blob("in");
+    CHECK_EQ(in->data_type(), DataType::kInt8);
+    Blob* out = BnInOp2Blob("out");
+    const int64_t num_indices = indices->shape().elem_cnt();
+    const Shape flat_in_shape =
+        GetFlatShape(in->shape(), this->op_conf().local_gather_conf().axis());
+    const int64_t elem_cnt = flat_in_shape.At(0) * num_indices * flat_in_shape.At(2);
+    GatherForwardGpu<int8_t, int32_t, int64_t>
+        <<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
+           ctx.device_ctx->cuda_stream()>>>(elem_cnt, indices->dptr<int32_t>(), num_indices,
+                                            in->dptr<int8_t>(), flat_in_shape.At(1),
+                                            flat_in_shape.At(2), out->mut_dptr<int8_t>(), 0);
+  }
+};
+
+template<typename T>
+class LocalGatherGPUKernel final : public KernelIf<DeviceType::kGPU> {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(LocalGatherGPUKernel);
+  LocalGatherGPUKernel() = default;
+  ~LocalGatherGPUKernel() override = default;
+
+ private:
+  const PbMessage& GetCustomizedOpConf() const override {
+    return this->op_conf().local_gather_conf();
+  }
+  void ForwardDataContent(const KernelCtx& ctx,
+                          std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
+    const Blob* indices = BnInOp2Blob("indices");
+    CHECK_EQ(indices->data_type(), DataType::kInt32);
+    const Blob* in = BnInOp2Blob("in");
+    Blob* out = BnInOp2Blob("out");
+    const int64_t num_indices = indices->shape().elem_cnt();
+    const Shape flat_in_shape =
+        GetFlatShape(in->shape(), this->op_conf().local_gather_conf().axis());
+    const int64_t elem_cnt = flat_in_shape.At(0) * num_indices * flat_in_shape.At(2);
+    GatherForwardGpu<T, int32_t, int64_t><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock,
+                                            0, ctx.device_ctx->cuda_stream()>>>(
+        elem_cnt, indices->dptr<int32_t>(), num_indices, in->dptr<T>(), flat_in_shape.At(1),
+        flat_in_shape.At(2), out->mut_dptr<T>(), 0);
+  }
+};
+
+REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kLocalGatherConf, DeviceType::kGPU, int8_t,
+                                      LocalGatherInt8GPUKernel)
+REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kLocalGatherConf, DeviceType::kGPU, int32_t,
+                                      LocalGatherGPUKernel<int32_t>)
+REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kLocalGatherConf, DeviceType::kGPU, float,
+                                      LocalGatherGPUKernel<float>)
+REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kLocalGatherConf, DeviceType::kGPU, double,
+                                      LocalGatherGPUKernel<double>)
+
 }  // namespace oneflow

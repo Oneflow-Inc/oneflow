@@ -7,6 +7,7 @@ import "oneflow/core/record/image.proto";
 import "oneflow/core/record/record.proto";
 import "oneflow/core/job/resource.proto";
 import "oneflow/core/register/logical_blob_id.proto";
+import "oneflow/core/data/data.proto";
 
 enum ActivationType {
   kNone = 0;
@@ -386,6 +387,21 @@ message SigmoidCrossEntropyLossGradOpConf {
   required string prediction_diff = 4;
   optional float weight_scalar = 5 [default = 1.0];
   optional ScalarReductionType reduction = 6 [default = kSumOverN];
+}
+
+message SigmoidCrossEntropyOpConf {
+  required string prediction = 1;
+  required string label = 2;
+  required string loss = 3;
+  required DataType label_type = 4;
+}
+
+message SigmoidCrossEntropyGradOpConf {
+  required string prediction = 1;
+  required string label = 2;
+  required string prediction_diff = 3;
+  required string loss_diff = 4;
+  required DataType label_type = 5;
 }
 
 message IdentityLossOpConf {
@@ -919,7 +935,17 @@ message BlobConf {
   required EncodeConf encode_case = 5;
   repeated PreprocessConf preprocess = 6;
   optional int32 tensor_list_variable_axis = 7 [default = -1];
+  optional DataSourceCase data_source = 8;
   optional bool is_dynamic = 9 [default = false];
+}
+
+message DataLoadOpConf {
+  required int64 batch_size = 1;
+  optional string tick = 2;
+  required DatasetProto dataset = 3;
+  repeated BlobConf blobs = 4;
+  repeated DataTransformProto transforms = 5;
+  optional int32 batch_cache_size = 6 [default = 3];
 }
 
 message DecodeOFRecordOpConf {
@@ -1221,6 +1247,69 @@ message BroadcastDivGradOpConf {
   optional string temp_storage = 5 [default = "temp_storage"];
 }
 
+message BroadcastEqualOpConf {
+  required string a = 1;
+  required string b = 2;
+  required string out = 3;
+  optional bool is_const = 4 [default = false];
+}
+
+message BroadcastNotEqualOpConf {
+  required string a = 1;
+  required string b = 2;
+  required string out = 3;
+  optional bool is_const = 4 [default = false];
+}
+
+message BroadcastLessThanOpConf {
+  required string a = 1;
+  required string b = 2;
+  required string out = 3;
+  optional bool is_const = 4 [default = false];
+}
+
+message BroadcastLessEqualOpConf {
+  required string a = 1;
+  required string b = 2;
+  required string out = 3;
+  optional bool is_const = 4 [default = false];
+}
+
+message BroadcastGreaterThanOpConf {
+  required string a = 1;
+  required string b = 2;
+  required string out = 3;
+  optional bool is_const = 4 [default = false];
+}
+
+message BroadcastGreaterEqualOpConf {
+  required string a = 1;
+  required string b = 2;
+  required string out = 3;
+  optional bool is_const = 4 [default = false];
+}
+
+message BroadcastLogicalAndOpConf {
+  required string a = 1;
+  required string b = 2;
+  required string out = 3;
+  optional bool is_const = 4 [default = false];
+}
+
+message BroadcastMinOpConf {
+  required string a = 1;
+  required string b = 2;
+  required string out = 3;
+  optional bool is_const = 4 [default = false];
+}
+
+message BroadcastMaxOpConf {
+  required string a = 1;
+  required string b = 2;
+  required string out = 3;
+  optional bool is_const = 4 [default = false];
+}
+
 message BiasAddOpConf {
   // inputs
   required string a = 1;
@@ -1238,6 +1327,12 @@ message DimSliceConf {
 }
 
 message SliceOpConf {
+  required string in = 1;
+  required string out = 2;
+  repeated DimSliceConf dim_slice_conf = 3;
+}
+
+message SliceV2OpConf {
   required string in = 1;
   required string out = 2;
   repeated DimSliceConf dim_slice_conf = 3;
@@ -1476,6 +1571,12 @@ message IdentityOpConf {
   required string out = 2;
 }
 
+message SleepOpConf {
+  required string in = 1;
+  required string out = 2;
+  required int64 seconds = 3;
+}
+
 message CaseOpConf {
   required string in = 1;
   repeated string out = 2;
@@ -1511,6 +1612,260 @@ message LearningRateScheduleOpConf {
   optional WarmupConf warmup_conf = 5;
 }
 
+message DeconvOpConf {
+    required string x = 1;
+    required string y = 2;
+    required string filter = 3;
+    required int32 filters = 4;
+    required ConvConf conv_conf = 5;
+    optional bool use_bias = 6 [default = true];
+    optional InitializerConf weight_initializer = 7;
+    optional InitializerConf bias_initializer = 8;
+}
+
+message RoiAlignArgs {
+  required int32 pooled_h = 4;
+  required int32 pooled_w = 5;
+  optional float spatial_scale = 6 [default = 0.0625]; // 1/16
+  optional int32 sampling_ratio = 7 [default = 2]; // adaptive if negative
+  optional string data_format = 8 [default = "channels_first"];
+}
+
+message RoiAlignOpConf {
+  required string x = 1;
+  required string rois = 2;
+  required string y = 3;
+  required RoiAlignArgs roi_align_args = 4;
+}
+
+message RoiAlignGradOpConf {
+  required string dy = 1;
+  required string x_like = 2;
+  required string rois = 3;
+  required string dx = 4;
+  required RoiAlignArgs roi_align_args = 5;
+}
+
+message WhereOpConf {
+  // in
+  required string condition = 1;
+  required string lhs = 2;
+  required string rhs = 3;
+  // out
+  required string out = 4;
+}
+
+message ClipByValueOpConf {
+  // in
+  required string in = 1;
+  // conf
+  optional float min_val = 2;
+  optional float max_val = 3;
+  // out
+  required string out = 4;
+}
+
+message ConstantLikeOpConf {
+  required string in = 1;
+  required float scalar = 2;
+  required string out = 3;
+}
+
+message LocalNonzeroOpConf {
+  required string in = 1;
+  required string out = 2;
+  required string num_nonzero = 3;
+}
+
+message SqueezeOpConf {
+  required string in = 1;
+  required string out = 2;
+  repeated int32 axis = 3;
+}
+
+message ExpandDimsOpConf {
+  required string in = 1;
+  required string out = 2;
+  required int32 axis = 3;
+}
+
+message LocalGatherOpConf {
+  required string in = 1;
+  required string indices = 2;
+  required string out = 3;
+  optional int64 axis = 4 [default = 0];
+}
+
+message LocalScatterNdUpdateOpConf {
+  // in
+  required string in = 1;
+  required string indices = 2;
+  required string updates = 3;
+  // out
+  required string out = 4;
+}
+
+message MaskrcnnPositiveNegativeSampleOpConf {
+  // in
+  required string pos_inds = 1;
+  required string neg_inds = 2;
+  // config
+  required int32 total_subsample_num = 3;
+  required float pos_fraction = 4;
+  // out
+  required string sampled_pos_inds = 5;
+  required string sampled_neg_inds = 6;
+}
+
+message CalcIoUMatrixOpConf {
+  // in
+  required string boxes1= 1;
+  required string boxes2= 2;
+  // out
+  required string iou_matrix = 3;
+}
+
+message BBoxRegressionWeights {
+  required float weight_x = 1 [default = 1.0];
+  required float weight_y = 2 [default = 1.0];
+  required float weight_w = 3 [default = 1.0];
+  required float weight_h = 4 [default = 1.0];
+}
+
+message BoxEncodeOpConf {
+  // in
+  required string ref_boxes = 1;
+  required string boxes = 2;
+  // out
+  required string boxes_delta = 3;
+  // conf
+  required BBoxRegressionWeights regression_weights = 4;
+}
+
+message BoxDecodeOpConf {
+  // in
+  required string ref_boxes = 1;
+  required string boxes_delta = 2;
+  // out
+  required string boxes = 3;
+  // conf
+  required BBoxRegressionWeights regression_weights = 4;
+}
+
+message LevelMapOpConf {
+  // in
+  required string in = 1;
+  // out
+  required string out = 2;
+  // conf
+  required int32 min_level = 3 [default = 2];
+  required int32 max_level = 4 [default = 5];
+  required int32 canonical_level = 5 [default = 4];
+  required float canonical_scale = 6 [default = 224];
+  optional float epsilon = 7 [default = 1e-6];
+}
+
+message AnchorGenerateOpConf {
+  // in
+  required string images = 1;
+  // conf
+  required int32 feature_map_stride = 2;
+  repeated float aspect_ratios = 3;
+  repeated float anchor_scales = 4;
+  // out
+  required string anchors = 5;
+}
+
+message IdentifyNonSmallBoxesOpConf {
+  required string in = 1;
+  required string out = 2;
+  optional float min_size = 3 [default = 0.0];
+}
+
+message IdentifyOutsideAnchorsOpConf {
+  // in
+  required string anchors = 1;
+  required string image_size = 2;
+  // out
+  required string out = 3;
+  // conf
+  optional float tolerance = 4 [default = 0.0];
+}
+
+message ClipBoxesToImageOpConf {
+  required string boxes = 1;
+  required string image_size = 2;
+  required string out = 3;
+}
+
+message ExtractPieceSliceIdOpConf {
+  repeated string in = 1;
+  repeated string out = 2;
+}
+
+message NonMaximumSuppressionOpConf {
+  // in
+  required string in = 1;
+  // out
+  required string out = 2;
+  // conf
+  optional float nms_iou_threshold = 3 [default = 0.7];
+  optional int32 post_nms_top_n = 4 [default = -1];
+}
+
+message DynamicReshapeOpConf {
+  required string in = 1;
+  required string out = 2;
+  required ShapeProto shape = 3;
+}
+
+message DynamicReshapeLikeOpConf {
+  required string x = 1;
+  required string y = 2;
+  required string like = 3;
+}
+
+message SmoothL1OpConf {
+  required string prediction = 1;
+  required string label = 2;
+  optional float beta = 3 [default = 1.0];
+  optional float scale = 4 [default = 1.0];
+  required string out = 5;
+}
+
+message SmoothL1GradOpConf {
+  required string x = 1;
+  required string label = 2;
+  optional float beta = 3 [default = 1.0];
+  optional float scale = 4 [default = 1.0];
+  required string dy = 5;
+  required string dx = 6;
+}
+
+message UpsampleNearestOpConf {
+  required string in = 1;
+  required string out = 2;
+  required int32 scale = 3;
+  required string data_format = 4;
+}
+
+message UpsampleNearestGradOpConf {
+  required string dy = 1;
+  required string dx = 2;
+  required int32 scale = 3;
+}
+
+message PieceSliceOpConf {
+  required string in = 1;
+  repeated string out = 2;
+}
+
+message LocalGatherNdOpConf {
+  required string in = 1;
+  required string indices = 2;
+  required string out = 3;
+}
+
 message NcclBoxingReduceScatterOpConf {
   required LogicalBlobId lbi = 1;
 }
@@ -1523,11 +1878,92 @@ message NcclBoxingAllReduceOpConf {
   required LogicalBlobId lbi = 1;
 }
 
+message SyncDynamicResizeOpConf {
+  required string in = 1;
+  required string size = 2;
+  required string out = 3;
+  required int64 axis = 4;
+}
+
+message LocalGatherGradOpConf {
+  required string data = 1;
+  required string segment_ids = 2;
+  required string out = 3;
+  required int64 axis = 4;
+  required string like = 5;
+}
+
+message StackOpConf {
+  repeated string in = 1;
+  required string out = 2;
+  required int32 axis = 3;
+}
+
+message StackGradOpConf {
+  repeated string like = 1;
+  required string in = 2;
+  repeated string out = 3;
+  required int32 axis = 4;
+}
+
+message SortOpConf {
+  required string in = 1;
+  required string out = 2;
+  optional string dir = 3 [default = "ASCENDING"]; // ASCENDING or DESCENDING
+}
+
+message ArgSortOpConf {
+  required string in = 1;
+  required string out = 2;
+  optional string dir = 3 [default = "ASCENDING"]; // ASCENDING or DESCENDING
+}
+
+message Dim0DynamicToFixedOpConf {
+  repeated string in = 1;
+  repeated string out = 2;
+  required string mask = 3;
+}
+
+message ReduceMaxOpConf {
+  required string in = 1;
+  required string out = 2;
+  repeated int32 axis = 3;
+  optional bool keep_dims = 4 [default = false];
+}
+
+message ArgmaxOpConf {
+  required string in = 1;
+  required string out = 2;
+}
+
+message MaskrcnnSplitOpConf {
+  required string in = 1;
+  repeated string segm = 2;
+  repeated string out = 3;
+}
+
+message MasksCropAndResizeOpConf {
+  // input
+  required string masks = 1;
+  required string rois = 2;
+  // output
+  required string out = 3;
+  // conf
+  required int32 mask_height = 4;
+  required int32 mask_width = 5;
+}
+
 message ParallelCastOpConf {
   required string in = 1;
   required string out = 2;
   optional OptInt64 split_axis = 3;
   optional OptInt64 gradient_split_axis = 4;
+}
+
+message RandomLikeOpConf {
+  required string like = 1;
+  required string out = 2;
+  optional int64 random_seed = 3;
 }
 
 message OperatorConf {
@@ -1542,6 +1978,7 @@ message OperatorConf {
     DecodeOFRecordOpConf decode_ofrecord_conf = 101;
     DecodeRandomOpConf decode_random_conf = 102;
     RecordLoadOpConf record_load_conf = 103;
+    DataLoadOpConf data_load_conf = 104;
     CopyHdOpConf copy_hd_conf = 105;
     CopyCommNetOpConf copy_comm_net_conf = 106;
     ConcatOpConf concat_conf = 107;
@@ -1642,6 +2079,7 @@ message OperatorConf {
     IdentityLossOpConf identity_loss_conf = 259;
     SparseCrossEntropyOpConf sparse_cross_entropy_conf= 260;
     ReduceMeanOpConf reduce_mean_conf = 261;
+    TopKOpConf top_k_conf = 262;
     L2NormalizeOpConf l2_normalize_conf = 264;
     PReluOpConf prelu_conf = 265;
     ReluGradOpConf relu_grad_conf = 266;
@@ -1680,19 +2118,78 @@ message OperatorConf {
     ModelLoadOpConf model_load_conf = 301;
     GatherMs0OpConf gather_ms0_conf = 302;
     GatherMs0GradOpConf gather_ms0_grad_conf = 303;
+    PieceSliceOpConf piece_slice_conf = 304;
+    // LogicalAndOpConf logical_and_conf = 305;
+    WhereOpConf where_conf = 306;
+    ClipByValueOpConf clip_by_value_conf = 307;
+    ConstantLikeOpConf constant_like_conf = 309;
+    LocalNonzeroOpConf local_nonzero_conf = 310;
+    SqueezeOpConf squeeze_conf = 311;
+    ExpandDimsOpConf expand_dims_conf = 312;
+    DeconvOpConf deconv_conf = 313;
+    LocalGatherOpConf local_gather_conf = 314;
+    LocalScatterNdUpdateOpConf local_scatter_nd_update_conf = 315;
+    DynamicReshapeOpConf dynamic_reshape_conf = 316;
     SigmoidCrossEntropyLossGradOpConf sigmoid_cross_entropy_loss_grad_conf = 317;
+    SmoothL1OpConf smooth_l1_conf = 318;
+    UpsampleNearestOpConf upsample_nearest_conf = 319;
+    // ElementCountOpConf element_count_conf = 320;
+    SyncDynamicResizeOpConf sync_dynamic_resize_conf = 321;
+    UpsampleNearestGradOpConf upsample_nearest_grad_conf = 322;
+    SmoothL1GradOpConf smooth_l1_grad_conf = 323;
+    LocalGatherNdOpConf local_gather_nd_conf = 324;
+    DynamicReshapeLikeOpConf dynamic_reshape_like_conf = 325;
+    LocalGatherGradOpConf local_gather_grad_conf = 326;
+    StackOpConf stack_conf = 327;
+    StackGradOpConf stack_grad_conf = 328;
+    SortOpConf sort_conf = 329;
+    ArgSortOpConf arg_sort_conf = 330;
+    SigmoidCrossEntropyOpConf sigmoid_cross_entropy_conf = 331;
+    SigmoidCrossEntropyGradOpConf sigmoid_cross_entropy_grad_conf = 332;
+    SleepOpConf sleep_conf = 333;
+    Dim0DynamicToFixedOpConf dim0_dynamic_to_fixed_conf = 335;
     ParallelCastOpConf parallel_cast_conf = 336;
+    SliceV2OpConf slice_v2_conf = 337;
 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;
     BroadcastSubOpConf broadcast_sub_conf = 501;
     BroadcastMulOpConf broadcast_mul_conf = 502;
     BroadcastDivOpConf broadcast_div_conf = 503;
+    BroadcastEqualOpConf broadcast_equal_conf = 504;
+    BroadcastNotEqualOpConf broadcast_not_equal_conf = 505;
+    BroadcastLessThanOpConf broadcast_less_than_conf = 506;
+    BroadcastLessEqualOpConf broadcast_less_equal_conf = 507;
+    BroadcastGreaterThanOpConf broadcast_greater_than_conf = 508;
+    BroadcastGreaterEqualOpConf broadcast_greater_equal_conf = 509;
+    BroadcastLogicalAndOpConf broadcast_logical_and_conf = 510;
+    BroadcastMinOpConf broadcast_min_conf = 511;
+    BroadcastMaxOpConf broadcast_max_conf = 512;
     SquareOpConf square_conf = 513;
     SqrtOpConf sqrt_conf = 514;
     RsqrtOpConf rsqrt_conf = 515;
     ScalarAddOpConf scalar_add_conf = 516;
     ScalarMulOpConf scalar_mul_conf = 517;
+    ReduceMaxOpConf reduce_max_conf = 518;
+    ArgmaxOpConf argmax_conf = 519;
+    RandomLikeOpConf random_like_conf = 520;
+
+    // detection op
+    MaskrcnnPositiveNegativeSampleOpConf maskrcnn_positive_negative_sample_conf = 601;
+    CalcIoUMatrixOpConf calc_iou_matrix_conf = 602;
+    BoxEncodeOpConf box_encode_conf = 603;
+    BoxDecodeOpConf box_decode_conf = 604;
+    LevelMapOpConf level_map_conf = 605;
+    AnchorGenerateOpConf anchor_generate_conf = 606;
+    IdentifyNonSmallBoxesOpConf identify_non_small_boxes_conf= 607;
+    IdentifyOutsideAnchorsOpConf identify_outside_anchors_conf = 608;
+    ClipBoxesToImageOpConf clip_boxes_to_image_conf = 609;
+    ExtractPieceSliceIdOpConf extract_piece_slice_id_conf = 610;
+    NonMaximumSuppressionOpConf non_maximum_suppression_conf = 611;
+    RoiAlignOpConf roi_align_conf = 612;
+    RoiAlignGradOpConf roi_align_grad_conf = 613;
+    MaskrcnnSplitOpConf maskrcnn_split_conf = 614;
+    MasksCropAndResizeOpConf masks_crop_and_resize_conf = 615;
 
     // mutable input op
     AxpyOpConf axpy_conf = 752;

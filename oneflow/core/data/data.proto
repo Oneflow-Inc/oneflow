@@ -1,0 +1,101 @@
+syntax = "proto2";
+package oneflow;
+
+import "oneflow/core/common/data_type.proto";
+import "oneflow/core/common/shape.proto";
+
+message ImageNetDatasetCatalog {
+  required string image_dir = 1;
+}
+
+message COCODatasetCatalog {
+  required string annotation_file = 1;
+  required string image_dir = 2;
+  optional bool group_by_aspect_ratio = 3 [default = true];
+  optional int64 max_segm_poly_points = 4 [default = 1024];
+}
+
+message WideDeepDatasetCatalog {
+  required string feature_fields_file = 1;
+  required string feature_index_list_file = 2;
+  required string data_path = 3;
+  optional bool shuffle_before_repeat = 4 [default = true];
+}
+
+message DatasetProto {
+  required string name = 1;
+  required string dataset_dir = 2;
+  optional bool shuffle = 3 [default = true];
+  optional int64 random_seed = 4 [default = 123456];
+  oneof dataset_catalog {
+    ImageNetDatasetCatalog image_net = 100;
+    COCODatasetCatalog coco = 101;
+    WideDeepDatasetCatalog wide_deep = 102;
+  }
+}
+
+enum DataSourceCase {
+  kImage = 1;
+  kLabel = 2;
+  kObjectBoundingBox = 3;
+  kObjectSegmentation = 4;
+  kObjectLabel = 5;
+  kImageScale = 6;
+  kImageSize = 7;
+  kImageId = 9;
+  kObjectSegmentationAlignedMask = 10;
+}
+
+message DataFieldProto {
+  required DataSourceCase data_source = 1;
+  required ShapeProto shape = 2;
+  required DataType dtype = 3;
+}
+
+message DataInstanceProto {
+  repeated DataFieldProto data_fields = 1;
+}
+
+message ResizeTransform {
+  required int32 height = 1;
+  required int32 width = 2;
+  optional bool keep_aspect_ratio = 3 [default = false];
+  optional string padding_method = 4;
+}
+
+message TargetResizeTransform {
+  required int32 target_size = 1;
+  required int32 max_size = 2;
+}
+
+message SegmentationPolygonListToAlignedMask {
+}
+
+message ImageNormalizeByChannel {
+  repeated float mean = 1;
+  repeated float std = 2;
+}
+
+message ImageAlign {
+  required int32 alignment = 1; 
+}
+
+message ImageRandomFlip {
+  // flip code: 
+  //   0 means flipping vertically as also as flipping around the horizontal axis
+  //   >= 1 means flipping horizontally as also as flipping around the vertical axis
+  //   <= -1 means flipping around both axes
+  required int32 flip_code = 1;
+  required float probability = 2;
+}
+
+message DataTransformProto {
+  oneof transform {
+    ResizeTransform resize = 1;
+    TargetResizeTransform target_resize = 2;
+    ImageNormalizeByChannel image_normalize_by_channel = 4;
+    SegmentationPolygonListToAlignedMask segmentation_poly_to_aligned_mask = 5;
+    ImageAlign image_align = 6;
+    ImageRandomFlip image_random_flip = 7;
+  }
+}

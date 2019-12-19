@@ -7,6 +7,7 @@ import "oneflow/core/common/dtype_signature.proto";
 import "oneflow/core/operator/op_attribute.proto";
 import "oneflow/core/operator/op_conf.proto";
 import "oneflow/core/job/placement.proto";
+import "oneflow/core/data/data.proto";
 
 message ConvKernelConf {
   required ShapeProto in = 1;
@@ -160,12 +161,59 @@ message GatherMs0GradKernelConf {
   required int64 offset = 1;
 }
 
+message DeconvKernelConf {
+  required ShapeProto in = 1;
+  required ShapeProto out = 2;
+  required ShapeProto weight = 3;
+  required int32 dim = 4;
+  repeated int32 pad_small_side = 5;
+  repeated int32 pad_large_side = 6;
+  repeated int32 strides = 7;
+  optional int32 cudnn_bwd_data_algo = 8 [default = -1];
+}
+
+message TopKConf {
+  required int32 temp_storage_bytes = 1;
+}
+
+message SortConf {
+  required int32 temp_storage_bytes = 1;
+}
+
+message ArgSortConf {
+  required int32 temp_storage_bytes = 1;
+}
+
 message NcclTupleReduceConf {
   required ParallelContext parallel_ctx = 1;
 }
 
 message NcclTupleBroadcastConf {
   required ParallelContext parallel_ctx = 1;
+}
+
+message DataLoadKernelConf {
+  required DataInstanceProto data_instance = 1;
+  required int32 device_batch_size = 3;
+  required int32 parallel_num = 4;
+  required int32 parallel_id = 5;
+}
+
+message WhereKernelConf {
+  required DataType cond_type = 1;
+  required DataType value_type = 2;
+}
+
+message ScatterNdUpdateKernelConf {
+  required DataType idx_type = 1;
+}
+
+message GatherNdUpdateKernelConf {
+  required DataType idx_type = 1;
+}
+
+message NonzeroGpuKernelConf {
+  required int32 num_axes = 1;
 }
 
 message KernelConf {
@@ -202,10 +250,19 @@ message KernelConf {
     RecordLoadKernelConf record_load_conf = 408;
     PReluAlphaGradKernelConf prelu_alpha_grad_conf = 409;
     ShapeElemCntKernelConf shape_elem_cnt_conf = 412;
-    SigmoidCrossEntropyLossGradKernelConf sigmoid_cross_entropy_loss_grad_conf = 413;
-    GatherMs0KernelConf gather_ms0_conf = 414;
-    GatherMs0GradKernelConf gather_ms0_grad_conf = 415;
-    NcclTupleReduceConf nccl_tuple_reduce_conf = 426;
-    NcclTupleBroadcastConf nccl_tuple_broadcast_conf = 427;
+    GatherMs0KernelConf gather_ms0_conf = 413;
+    GatherMs0GradKernelConf gather_ms0_grad_conf = 414;
+    DeconvKernelConf deconv_conf = 415;
+    TopKConf top_k_conf = 416;
+    SortConf sort_conf = 417;
+    ArgSortConf arg_sort_conf = 418;
+    SigmoidCrossEntropyLossGradKernelConf sigmoid_cross_entropy_loss_grad_conf = 419;
+    NcclTupleReduceConf nccl_tuple_reduce_conf = 420;
+    NcclTupleBroadcastConf nccl_tuple_broadcast_conf = 421;
+    WhereKernelConf where_conf = 422;
+    ScatterNdUpdateKernelConf scatter_nd_update_conf = 423;
+    GatherNdUpdateKernelConf gather_nd_update_conf = 424;
+    NonzeroGpuKernelConf nonzero_gpu_kernel_conf = 425;
+    DataLoadKernelConf data_load_conf = 426;
   }
 }
