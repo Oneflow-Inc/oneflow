@@ -3,24 +3,37 @@ import numpy as np
 
 import oneflow as flow
 
+config = flow.function_config()
+
 def make_job(x_shape, b_shape, dtype=flow.float32):
-    @flow.function
+    config.use_xla_jit(False)
+    config.use_tensorrt(False)
+
+    @flow.function(config)
     def bias_add_job(x = flow.input_blob_def(x_shape, dtype=dtype),
                      bias = flow.input_blob_def(b_shape, dtype=dtype)):
-        flow.config.use_xla_jit(False)
-        flow.config.use_tensorrt(False)
         return flow.nn.bias_add(x, bias)
     return bias_add_job
 
 def make_xla_job(x_shape, b_shape, dtype=flow.float32):
-    @flow.function
+    config.use_xla_jit(True)
+    config.use_tensorrt(False)
+
+    @flow.function(config)
     def xla_bias_add_job(x = flow.input_blob_def(x_shape, dtype=dtype),
-                     bias = flow.input_blob_def(b_shape, dtype=dtype)):
-        flow.config.use_xla_jit(True)
-        flow.config.use_tensorrt(False)
+                         bias = flow.input_blob_def(b_shape, dtype=dtype)):
         return flow.nn.bias_add(x, bias)
     return xla_bias_add_job
 
+def make_trt_job(x_shape, b_shape, dtype=flow.float32):
+    config.use_xla_jit(False)
+    config.use_tensorrt(True)
+
+    @flow.function(config)
+    def trt_bias_add_job(x = flow.input_blob_def(x_shape, dtype=dtype),
+                         bias = flow.input_blob_def(b_shape, dtype=dtype)):
+        return flow.nn.bias_add(x, bias)
+    return trt_bias_add_job
 
 class TestBiasAdd(unittest.TestCase):
     def _test_body(self, x, bias, dtype=np.float32):
@@ -29,9 +42,14 @@ class TestBiasAdd(unittest.TestCase):
         a = f1(x, bias).get()
         b = f2(x, bias).get()
         print("without xla: ", a)
-        print("with xla", b)
-        self.assertTrue(np.allclose(a, b , rtol=1e-03, atol=1e-05))
+        print("with xla: ", b)
+        self.assertTrue(np.allclose(a, b, rtol=1e-03, atol=1e-05))
+        flow.clear_default_session()
 
+        f3 = make_trt_job(x.shape, bias.shape, dtype=flow.float32)
+        c = f3(x, bias).get()
+        print("with tensorrt: ", c)
+        self.assertTrue(np.allclose(a, c, rtol=1e-03, atol=1e-05))
         flow.clear_default_session()
 
     def _test_ones_body(self, x_shape, bias_shape, dtype=np.float32):

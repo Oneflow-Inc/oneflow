@@ -29,6 +29,12 @@ struct ExecutableRunOptions {
   // Maximum batch size for TensorRT.
   int32_t max_batch_size = 1;
 
+  // Enable TensorRT Mixed-Precision.
+  // Enable TensorRT fp16
+  bool tensorrt_fp16 = false;
+  // Enable TensorRT int8
+  bool tensorrt_int8 = false;
+
   // Feed the return parameters to reuse it's storage while running
   // the executable.
   std::vector<Parameter> return_params;

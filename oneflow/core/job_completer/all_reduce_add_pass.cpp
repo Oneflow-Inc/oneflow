@@ -88,8 +88,10 @@ void FindAllReducedLbis(
     CHECK(key_check.emplace(pair.first()).second);
     const auto* producer = ProducerOpNode4Lbi(pair.first());
     if (producer->parallel_desc().parallel_num() == 1) { continue; }
-    if (producer->op().op_conf().has_variable_conf() == false) { continue; }
-    if (producer->SbpParallel4Lbi(pair.first()).has_broadcast_parallel() == false) { continue; }
+    if (!producer->op().op_conf().has_variable_conf()) { continue; }
+    if (!producer->SbpParallel4Lbi(pair.first()).has_broadcast_parallel()) { continue; }
+    const auto* diff_producer = ProducerOpNode4Lbi(pair.second());
+    if (!diff_producer->SbpParallel4Lbi(pair.second()).has_partial_sum_parallel()) { continue; }
     const auto& diff_lbi =
         FindP2BLbiWithSoleConsumer(pair.second(), ProducerOpNode4Lbi, SoleConsumerOpNode4Lbi);
     diff_lbis.insert(diff_lbi);

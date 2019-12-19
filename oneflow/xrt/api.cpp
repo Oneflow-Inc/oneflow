@@ -19,6 +19,11 @@ DEFINE_bool(strict_clustering, EnvToBool(FLAGS_strict_clustering, true),
 DEFINE_bool(use_xla_jit, EnvToBool(FLAGS_use_xla_jit, false), "It's optional to use xla jit.");
 DEFINE_bool(use_tensorrt, EnvToBool(FLAGS_use_tensorrt, false), "It's optional to use tensorrt.");
 
+DEFINE_bool(tensorrt_fp16, EnvToBool(FLAGS_tensorrt_fp16, false),
+            "Enable fp16 precision for TENSORRT engine.");
+DEFINE_bool(tensorrt_int8, EnvToBool(FLAGS_tensorrt_int8, false),
+            "Enable int8 precision for TENSORRT engine.");
+
 namespace oneflow {
 namespace xrt {
 
@@ -27,12 +32,15 @@ namespace xrt {
 static std::unordered_map<int32_t, std::string> op_type2string_map = {
     {OP_TYPE_CASE(Matmul), "MatMul"},
     {OP_TYPE_CASE(Relu), "Relu"},
+    {OP_TYPE_CASE(Conv2D), "Conv2D"},
+    {OP_TYPE_CASE(Multiply), "Multiply"},
     // {OP_TYPE_CASE(FullyConnected), "FullyConnected"},
     {OP_TYPE_CASE(BiasAdd), "BiasAdd"},
     {OP_TYPE_CASE(Reshape), "Reshape"},
     {OP_TYPE_CASE(Identity), "Identity"},
     {OP_TYPE_CASE(ReshapeLike), "ReshapeLike"},
     {OP_TYPE_CASE(Cast), "Cast"},
+    {OP_TYPE_CASE(Concat), "Concat"},
     {OP_TYPE_CASE(ScalarAdd), "ScalarAdd"},
     {OP_TYPE_CASE(ScalarMul), "ScalarMul"},
     {OP_TYPE_CASE(Transpose), "Transpose"},
@@ -53,7 +61,10 @@ static std::unordered_map<int32_t, std::string> op_type2string_map = {
     {OP_TYPE_CASE(LayerNormParamGrad), "LayerNormParamGrad"},
     {OP_TYPE_CASE(LayerNormGrad), "LayerNormGrad"},
     {OP_TYPE_CASE(ReduceSum), "ReduceSum"},
+    {OP_TYPE_CASE(ReduceMean), "ReduceMean"},
     {OP_TYPE_CASE(AdamModelUpdate), "AdamOptimizer"},
+    {OP_TYPE_CASE(MaxPooling2D), "MaxPooling2D"},
+    {OP_TYPE_CASE(AveragePooling2D), "AveragePooling2D"},
     // {OP_TYPE_CASE(ReduceConcat), "ReduceConcat"},
     // {OP_TYPE_CASE(ReduceSplit), "ReduceSplit"},
     // TODO(hjchen2)
@@ -91,6 +102,16 @@ DeviceType XrtDeviceToDeviceType(const XrtDevice &device) {
   }
 }
 
+XrtEngine StringToXrtEngine(const std::string &engine) {
+  if (engine == "XLA") {
+    return xrt::XrtEngine::XLA;
+  } else if (engine == "TENSORRT") {
+    return xrt::XrtEngine::TENSORRT;
+  } else {
+    LOG(FATAL) << "Unknown engine: " << engine;
+  }
+}
+
 std::string BlobIdToName(const LogicalBlobId &lbi) {
   CHECK_EQ(lbi.has_op_name(), true);
   CHECK_EQ(lbi.has_blob_name(), true);
@@ -116,21 +137,14 @@ std::shared_ptr<XrtGraph> BuildXrtGraph(const XrtLaunchOpConf::Function &functio
   return graph_builder::BuildGraph(function, device_type, job_desc);
 }
 
-void EnableUseXlaJit(const ConfigOption &use_xla_jit) {
-  if (use_xla_jit == ConfigOption::OPT_ON) {
-    // TODO(hjchen2): Check xla jit has been compiled.
-    FLAGS_use_xla_jit = true;
-  } else if (use_xla_jit == ConfigOption::OPT_OFF) {
-    FLAGS_use_xla_jit = false;
-  }
-}
-
-void EnableUseTensorRT(const ConfigOption &use_tensorrt) {
-  if (use_tensorrt == ConfigOption::OPT_ON) {
-    // TODO(hjchen2): Check tensorrt has been compiled.
-    FLAGS_use_tensorrt = true;
-  } else if (use_tensorrt == ConfigOption::OPT_OFF) {
-    FLAGS_use_tensorrt = false;
+void InitXrtConfigurations(const XrtConfig &config) {
+  if (config.has_use_xla_jit()) { FLAGS_use_xla_jit = config.use_xla_jit(); }
+  if (config.has_use_tensorrt()) { FLAGS_use_tensorrt = config.use_tensorrt(); }
+  // Set xla configurations.
+  if (config.has_tensorrt_config()) {
+    const XrtConfig::TensorRTConfig &trt_config = config.tensorrt_config();
+    if (trt_config.has_use_fp16()) { FLAGS_tensorrt_fp16 = trt_config.use_fp16(); }
+    if (trt_config.has_use_int8()) { FLAGS_tensorrt_int8 = trt_config.use_int8(); }
   }
 }
 
@@ -162,11 +176,6 @@ void RunCompilationTimeXrtPasses(const OpGraph &op_graph, Job *job, bool train_p
   RunXrtPass("BuildSubGraph", graph.get(), options);
   // Rebuild Job
   RunXrtPass("RebuildCompiledJob", graph.get(), options, job);
-}
-
-Parameter BuildParameter(const Blob &blob, const std::string &name) {
-  const auto &desc = blob.blob_desc();
-  return Parameter(name, const_cast<void *>(blob.dptr<void>()), desc.shape(), desc.data_type());
 }
 
 }  // namespace xrt

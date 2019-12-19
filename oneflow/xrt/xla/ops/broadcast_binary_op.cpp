@@ -22,28 +22,7 @@ class BcastBinaryOp : public XlaOpKernel {
 
     xla::XlaOp a = Reshape(ctx->Input("a"), shape_a);
     xla::XlaOp b = Reshape(ctx->Input("b"), shape_b);
-
-    //    std::vector<long long> bcast_dimensions_a(axes);
-    //    std::vector<long long> bcast_dimensions_b(axes);
-    //    for (int i = 0; i < axes; ++i) {
-    //      int64_t dim = std::max(shape_a.At(i), shape_b.At(i));
-    //      bcast_dimensions_a[i] = dim / shape_a.At(i);
-    //      bcast_dimensions_b[i] = dim / shape_b.At(i);
-    //    }
-    //
-    //    if (NeedBroadcast(bcast_dimensions_a)) {
-    //      a = xla::Broadcast(a, bcast_dimensions_a);
-    //    }
-    //    if (NeedBroadcast(bcast_dimensions_b)) {
-    //      b = xla::Broadcast(b, bcast_dimensions_b);
-    //    }
     ctx->SetOutput("out", BinaryOp()(a, b));
-  }
-
-  bool NeedBroadcast(const std::vector<long long> &bcast_dimensions) const {
-    bool need_broadcast = false;
-    for (auto dim : bcast_dimensions) { need_broadcast = need_broadcast || (dim > 1); }
-    return need_broadcast;
   }
 };
 

@@ -3,23 +3,37 @@ import numpy as np
 
 import oneflow as flow
 
+config = flow.function_config()
+
 def make_job(x_shape, like_shape, dtype=flow.float32):
-    @flow.function
+    config.use_xla_jit(False)
+    config.use_tensorrt(False)
+
+    @flow.function(config)
     def reshape_like_job(x = flow.input_blob_def(x_shape, dtype=dtype),
                          like = flow.input_blob_def(like_shape, dtype=dtype)):
-        flow.config.use_xla_jit(False)
-        flow.config.use_tensorrt(False)
         return flow.reshape_like(x, like)
     return reshape_like_job
 
 def make_xla_job(x_shape, like_shape, dtype=flow.float32):
-    @flow.function
+    config.use_xla_jit(True)
+    config.use_tensorrt(False) 
+
+    @flow.function(config)
     def xla_reshape_like_job(x = flow.input_blob_def(x_shape, dtype=dtype),
                              like = flow.input_blob_def(like_shape, dtype=dtype)):
-        flow.config.use_xla_jit(True)
-        flow.config.use_tensorrt(False)
         return flow.reshape_like(x, like)
     return xla_reshape_like_job
+
+def make_trt_job(x_shape, like_shape, dtype=flow.float32):
+    config.use_xla_jit(False)
+    config.use_tensorrt(True) 
+
+    @flow.function(config)
+    def trt_reshape_like_job(x = flow.input_blob_def(x_shape, dtype=dtype),
+                             like = flow.input_blob_def(like_shape, dtype=dtype)):
+        return flow.reshape_like(x, like)
+    return trt_reshape_like_job
 
 class TestReshapeLike(unittest.TestCase):
     def _test_body(self, x, like, dtype=np.float32):
@@ -28,10 +42,16 @@ class TestReshapeLike(unittest.TestCase):
         a = f1(x, like).get()
         b = f2(x, like).get()
         print("without xla: ", a)
-        print("with xla", b)
+        print("with xla: ", b)
         self.assertTrue(a.shape == b.shape)
-        self.assertTrue(np.allclose(a, b , rtol=1e-03, atol=1e-05))
+        self.assertTrue(np.allclose(a, b, rtol=1e-03, atol=1e-05))
+        flow.clear_default_session()
 
+        f3 = make_trt_job(x.shape, like.shape, dtype=flow.float32)
+        c = f3(x, like).get()
+        print("with tensorrt: ", c)
+        self.assertTrue(a.shape == c.shape)
+        self.assertTrue(np.allclose(a, c, rtol=1e-03, atol=1e-05))
         flow.clear_default_session()
 
     def _test_ones_body(self, x_shape, like_shape, dtype=np.float32):

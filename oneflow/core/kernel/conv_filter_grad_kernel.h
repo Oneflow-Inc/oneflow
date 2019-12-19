@@ -22,7 +22,7 @@ template<DeviceType device_type, typename T>
 struct ConvFilterGradKernelUtil final {
   static void Compute(DeviceCtx* ctx, const ConvFilterGradKernelConf& kernel_conf,
                       const ConvConf& conf, const Blob* x, const Blob* dy, Blob* filter_diff,
-                      Blob* buf);
+                      Blob* buf, const bool enable_true_half);
 };
 
 }  // namespace oneflow

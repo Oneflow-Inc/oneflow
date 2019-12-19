@@ -3,27 +3,32 @@ import numpy as np
 
 import oneflow as flow
 
+config = flow.function_config()
+
 def make_job(input_shape, dtype=flow.float32):
-    @flow.function
+    config.use_xla_jit(False)
+    config.use_tensorrt(False)
+
+    @flow.function(config)
     def identity_job(x = flow.input_blob_def(input_shape, dtype=dtype)):
-        flow.config.use_xla_jit(False)
-        flow.config.use_tensorrt(False)
         return flow.identity(x)
     return identity_job
 
 def make_xla_job(input_shape, dtype=flow.float32):
-    @flow.function
+    config.use_xla_jit(True)
+    config.use_tensorrt(False)
+
+    @flow.function(config)
     def xla_identity_job(x = flow.input_blob_def(input_shape, dtype=dtype)):
-        flow.config.use_xla_jit(True)
-        flow.config.use_tensorrt(False)
         return flow.identity(x)
     return xla_identity_job
 
 def make_trt_job(input_shape, dtype=flow.float32):
-    @flow.function
+    config.use_xla_jit(False)
+    config.use_tensorrt(True)
+
+    @flow.function(config)
     def trt_identity_job(x = flow.input_blob_def(input_shape, dtype=dtype)):
-        flow.config.use_xla_jit(False)
-        flow.config.use_tensorrt(True)
         return flow.identity(x)
     return trt_identity_job
 
@@ -31,14 +36,15 @@ class TestIdentity(unittest.TestCase):
     def _test_body(self, x, dtype=np.float32):
         f1 = make_job(x.shape, dtype=flow.float32)
         f2 = make_xla_job(x.shape, dtype=flow.float32)
+        f3 = make_trt_job(x.shape, dtype=flow.float32)         
         a = f1(x).get()
         b = f2(x).get()
+        c = f3(x).get()
         print("without xla: ", a)
-        print("with xla", b)
+        print("with xla: ", b)
+        print("with tensorrt: ", c)
         self.assertTrue(np.allclose(a, b , rtol=1e-03, atol=1e-05))
-        # b = trt_identity_job(x).get()
-        # print("with tensorrt", b)
-        # self.assertTrue(np.allclose(a, b , rtol=1e-03, atol=1e-05))
+        self.assertTrue(np.allclose(a, c , rtol=1e-03, atol=1e-05))
         flow.clear_default_session()
 
     def _test_ones_body(self, shape, dtype=np.float32):

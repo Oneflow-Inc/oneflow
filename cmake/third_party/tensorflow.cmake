@@ -64,7 +64,7 @@ if (THIRD_PARTY)
     PREFIX ${TENSORFLOW_SOURCES_DIR}
     GIT_REPOSITORY ${TENSORFLOW_GIT_URL}
     GIT_TAG ${TENSORFLOW_GIT_TAG}
-    PATCH_COMMAND patch -p1 < ${PATCHES_DIR}/xla.patch
+    PATCH_COMMAND patch -Np1 < ${PATCHES_DIR}/xla.patch
     CONFIGURE_COMMAND ""
     BUILD_COMMAND cd ${TENSORFLOW_SRCS_DIR} &&
                   bazel build ${TENSORFLOW_BUILD_CMD} -j 20 //tensorflow/compiler/jit/xla_lib:libxla_core.so

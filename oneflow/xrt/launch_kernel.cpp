@@ -13,7 +13,16 @@ DEFINE_int64(max_workspace_bytes, EnvToInt64(FLAGS_max_workspace_bytes, -1),
 DEFINE_int32(max_batch_size, EnvToInt(FLAGS_max_batch_size, 1),
              "Maximum batch size for builder of TENSORRT engine.");
 
+DECLARE_bool(tensorrt_fp16);
+DECLARE_bool(tensorrt_int8);
+
 namespace oneflow {
+namespace xrt {
+static Parameter BuildParameter(const Blob &blob, const std::string &name) {
+  const auto &desc = blob.blob_desc();
+  return Parameter(name, const_cast<void *>(blob.dptr<void>()), desc.shape(), desc.data_type());
+}
+}  // namespace xrt
 
 template<DeviceType device_type>
 void BlobDescGetter<device_type>::DumpEntryBlobDescTo(
@@ -68,9 +77,7 @@ xrt::Executable *XrtLaunchKernel<device_type>::BuildExecutable(
       // xrt::RunXrtPass("UpdateArgMetaData", graph.get(), options,
       //                 &this->job_desc());
     }
-
-    xrt::XrtEngine engine =
-        (launch_conf.engine() == "XLA") ? xrt::XrtEngine::XLA : xrt::XrtEngine::TENSORRT;
+    xrt::XrtEngine engine = xrt::StringToXrtEngine(launch_conf.engine());
     xrt::XrtDevice device = xrt::DeviceTypeToXrtDevice(device_type);
     xrt::GraphCompiler compiler(this->op_conf().name(), engine, device, device_ordinal);
     auto result = compiler.Compile(graph.get(), entry_params, return_params, aliases);
@@ -158,6 +165,7 @@ void XrtLaunchKernel<device_type>::ForwardDataContent(
   if (executable->engine() == xrt::XrtEngine::TENSORRT) {
     CHECK_EQ(device_type, DeviceType::kGPU);
     run_options.max_batch_size = FLAGS_max_batch_size;
+    run_options.tensorrt_fp16 = FLAGS_tensorrt_fp16;
   }
   bool status = executable->Run(entry_params, run_options, block_until_done);
   CHECK(status) << "Executable is running failed.";

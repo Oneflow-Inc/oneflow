@@ -37,9 +37,7 @@ class JobDesc final {
   bool enable_inplace_in_reduce_struct() const {
     return job_conf_.enable_inplace_in_reduce_struct();
   }
-  bool enable_true_half_config_when_conv() const {
-    return job_conf_.enable_true_half_config_when_conv();
-  }
+  bool cudnn_conv_enable_true_half() const { return job_conf_.cudnn_conv_enable_true_half(); }
   bool enable_float_compute_for_half_gemm() const {
     return job_conf_.enable_float_compute_for_half_gemm();
   }
@@ -64,8 +62,8 @@ class JobDesc final {
   bool all_reduce_fp16() const;
   int64_t cudnn_buf_limit_mbyte() const { return job_conf_.cudnn_buf_limit_mbyte(); }
 
-  ConfigOption use_xla_jit() const { return job_conf_.use_xla_jit(); }
-  ConfigOption use_tensorrt() const { return job_conf_.use_tensorrt(); }
+  bool has_xrt_config() const { return job_conf_.has_xrt_config(); }
+  const XrtConfig& xrt_config() const { return job_conf_.xrt_config(); }
 
   // Train conf
   int64_t TotalBatchNum() const;

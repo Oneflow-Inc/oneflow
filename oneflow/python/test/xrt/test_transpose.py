@@ -3,21 +3,34 @@ import numpy as np
 
 import oneflow as flow
 
+config = flow.function_config()
+
 def make_job(input_shape, permute, dtype=flow.float32):
-    @flow.function
+    config.use_xla_jit(False)
+    config.use_tensorrt(False)
+
+    @flow.function(config)
     def transpose_job(x = flow.input_blob_def(input_shape, dtype=dtype)):
-        flow.config.use_xla_jit(False)
-        flow.config.use_tensorrt(False)
         return flow.transpose(x, perm=permute)
     return transpose_job
 
 def make_xla_job(input_shape, permute, dtype=flow.float32):
-    @flow.function
+    config.use_xla_jit(True)
+    config.use_tensorrt(False)
+
+    @flow.function(config)
     def xla_transpose_job(x = flow.input_blob_def(input_shape, dtype=dtype)):
-        flow.config.use_xla_jit(True)
-        flow.config.use_tensorrt(False)
         return flow.transpose(x, perm=permute)
     return xla_transpose_job
+
+def make_trt_job(input_shape, permute, dtype=flow.float32):
+    config.use_xla_jit(False)
+    config.use_tensorrt(True)
+
+    @flow.function(config)
+    def trt_transpose_job(x = flow.input_blob_def(input_shape, dtype=dtype)):
+        return flow.transpose(x, perm=permute)
+    return trt_transpose_job
 
 class TestTranspose(unittest.TestCase):
     def _test_body(self, x, permute, dtype=flow.float32):
@@ -26,10 +39,16 @@ class TestTranspose(unittest.TestCase):
         a = f1(x).get()
         b = f2(x).get()
         print("without xla: ", a)
-        print("with xla", b)
+        print("with xla: ", b)
         self.assertTrue(a.shape == b.shape)
         self.assertTrue(np.allclose(a, b, rtol=1e-03, atol=1e-05))
+        flow.clear_default_session()
 
+        f3 = make_trt_job(x.shape, permute, dtype=dtype)
+        c = f3(x).get()
+        print("with tensorrt: ", c)
+        self.assertTrue(a.shape == c.shape)
+        self.assertTrue(np.allclose(a, c, rtol=1e-03, atol=1e-05))
         flow.clear_default_session()
 
     def _test_ones_body(self, shape, permute, dtype=flow.float32):

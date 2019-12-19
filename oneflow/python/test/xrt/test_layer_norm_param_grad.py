@@ -3,24 +3,28 @@ import numpy as np
 
 import oneflow as flow
 
+config = flow.function_config()
+
 def make_job(shape, gamma_shape, params_axis, dtype=flow.float32):
-    @flow.function
+    config.use_xla_jit(False)
+    config.use_tensorrt(False)
+
+    @flow.function(config)
     def layer_norm_param_grad_job(dy = flow.input_blob_def(shape, dtype=dtype),
                                   norm = flow.input_blob_def(shape, dtype=dtype),
                                   gamma = flow.input_blob_def(gamma_shape, dtype=dtype)):
-        flow.config.use_xla_jit(False)
-        flow.config.use_tensorrt(False)
         return flow.layers.layer_norm_param_grad(
             dy, norm, gamma, begin_params_axis=params_axis)
     return layer_norm_param_grad_job
 
 def make_xla_job(shape, gamma_shape, params_axis, dtype=flow.float32):
-    @flow.function
+    config.use_xla_jit(True)
+    config.use_tensorrt(False)
+
+    @flow.function(config)
     def xla_layer_norm_param_grad_job(dy = flow.input_blob_def(shape, dtype=dtype),
                                       norm = flow.input_blob_def(shape, dtype=dtype),
                                       gamma = flow.input_blob_def(gamma_shape, dtype=dtype)):
-        flow.config.use_xla_jit(True)
-        flow.config.use_tensorrt(False)
         return flow.layers.layer_norm_param_grad(
             dy, norm, gamma, begin_params_axis=params_axis)
     return xla_layer_norm_param_grad_job
