@@ -267,6 +267,8 @@ def slice_v3(input, slice_tup_list, name=None):
 
         if stride is None:
             stride = 1
+        if stride == 0:
+            raise ValueError("stride cannot be 0")
 
         slice_conf.start = begin
         slice_conf.end = end
