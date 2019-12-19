@@ -7,7 +7,7 @@ import oneflow.python.framework.id_util as id_util
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.record.image_pb2 as image_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
-import oneflow.core.data.data_pb2 as data_util
+#import oneflow.core.data.data_pb2 as data_util
 
 from oneflow.python.oneflow_export import oneflow_export
 
