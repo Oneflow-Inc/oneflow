@@ -409,6 +409,7 @@ def print_metrics(m):
         "train_step",
         "lr",
         "lr2",
+        "elapsed_time"
     ]
     to_print_with_order = [l for l in to_print_with_order if l in m]
     print(m[to_print_with_order].to_string(index=False))
@@ -429,6 +430,10 @@ def add_metrics(metrics_df, iter=None, **kwargs):
             else:
                 raise ValueError("not supported")
             metrics_df = pd.concat([metrics_df] + dfs, axis=0, sort=False)
+        elif k is "elapsed_time":
+            metrics_df = pd.concat([metrics_df, pd.DataFrame(
+                    {"iter": iter, "legend": k, "value": v, "rank": 0}, index=[0]
+                )], axis=0, sort=False)
         elif k is not "outputs":
             metrics_df = pd.concat([metrics_df, pd.DataFrame(
                     {"iter": iter, "legend": k, "value": v}, index=[0]
@@ -493,7 +498,6 @@ def run():
 
         now_time = time.time()
         elapsed_time = now_time - start_time
-        elapsed_time_str = "{:.6f}".format(elapsed_time)
         elapsed_times.append(elapsed_time)
         start_time = now_time
 
