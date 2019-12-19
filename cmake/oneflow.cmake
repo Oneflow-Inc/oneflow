@@ -98,7 +98,7 @@ foreach(oneflow_single_file ${oneflow_all_src})
   if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/core/.*\\.cpp$")
     if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/core/.*_test\\.cpp$")
       # test file
-      list(APPEND of_all_test_cc ${oneflow_single_file})
+      # list(APPEND of_all_test_cc ${oneflow_single_file})
     else()
       # not test file
       list(FIND of_main_cc ${oneflow_single_file} main_found)
@@ -126,7 +126,11 @@ endforeach()
 
 # proto obj lib
 add_custom_target(make_pyproto_dir ALL
-  COMMAND ${CMAKE_COMMAND} -E make_directory ${PROJECT_BINARY_DIR}/python_scripts/oneflow/core)
+  COMMAND ${CMAKE_COMMAND} -E make_directory ${PROJECT_BINARY_DIR}/python_scripts/oneflow/core
+  COMMAND ${CMAKE_COMMAND} -E make_directory ${PROJECT_BINARY_DIR}/python_scripts/oneflow_pyproto
+  COMMAND ${CMAKE_COMMAND} -E make_directory ${PROJECT_BINARY_DIR}/python_scripts/oneflow_pyproto/oneflow
+  COMMAND ${CMAKE_COMMAND} -E make_directory ${PROJECT_BINARY_DIR}/python_scripts/oneflow_pyproto/oneflow/core
+	)
 foreach(proto_name ${of_all_proto})
   file(RELATIVE_PATH proto_rel_name ${PROJECT_SOURCE_DIR} ${proto_name})
   list(APPEND of_all_rel_protos ${proto_rel_name})
@@ -174,6 +178,7 @@ if(${CMAKE_VERSION} VERSION_LESS "3.14")
     message(FATAL_ERROR "python include files and libraries not found")
   endif()
   message("-- Python Version: " ${PYTHONLIBS_VERSION_STRING})
+  message("You can set PYTHON_INCLUDE_DIR and PYTHON_LIBRARY to specify Python version, run \"sysconfig.get_paths()\" in python")
   if(NOT IS_DIRECTORY ${Python_NumPy_INCLUDE_DIRS})
     message(FATAL_ERROR "Python_NumPy_INCLUDE_DIRS not set. You could get it by running \"numpy.get_include()\" in python")
   endif()
@@ -198,6 +203,9 @@ add_custom_target(of_pyscript_copy ALL
     COMMAND "${CMAKE_COMMAND}" -E copy
         "${PROJECT_SOURCE_DIR}/oneflow/__init__.py" "${of_pyscript_dir}/oneflow/__init__.py"
     COMMAND ${CMAKE_COMMAND} -E touch "${of_pyscript_dir}/oneflow/core/__init__.py"
+    COMMAND ${CMAKE_COMMAND} -E touch "${of_pyscript_dir}/oneflow_pyproto/__init__.py"
+    COMMAND ${CMAKE_COMMAND} -E touch "${of_pyscript_dir}/oneflow_pyproto/oneflow/__init__.py"
+    COMMAND ${CMAKE_COMMAND} -E touch "${of_pyscript_dir}/oneflow_pyproto/oneflow/core/__init__.py"
     COMMAND ${CMAKE_COMMAND} -E make_directory "${of_pyscript_dir}/oneflow/python"
     COMMAND python "${PROJECT_SOURCE_DIR}/tools/generate_oneflow_symbols_export_file.py"
         "${PROJECT_SOURCE_DIR}" "${of_pyscript_dir}/oneflow/python/__export_symbols__.py")
@@ -229,13 +237,16 @@ if(BUILD_TESTING)
   if(NOT BUILD_CUDA)
     message(FATAL_ERROR "BUILD_TESTING without BUILD_CUDA")
   endif()
-  oneflow_add_executable(oneflow_testexe ${of_all_test_cc})
-  target_link_libraries(oneflow_testexe ${of_libs} ${oneflow_third_party_libs})
-  add_test(NAME oneflow_test COMMAND oneflow_testexe)
-  foreach(cc ${of_all_test_cc})
-    get_filename_component(test_name ${cc} NAME_WE)
-    string(CONCAT test_exe_name ${test_name} exe)
-    oneflow_add_executable(${test_exe_name} ${cc})
-    target_link_libraries(${test_exe_name} ${of_libs} ${oneflow_third_party_libs})
-  endforeach()
+  if (of_all_test_cc)
+    oneflow_add_executable(oneflow_testexe ${of_all_test_cc})
+    target_link_libraries(oneflow_testexe ${of_libs} ${oneflow_third_party_libs})
+    set_target_properties(oneflow_testexe PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin")
+    add_test(NAME oneflow_test COMMAND oneflow_testexe)
+    #  foreach(cc ${of_all_test_cc})
+    #    get_filename_component(test_name ${cc} NAME_WE)
+    #    string(CONCAT test_exe_name ${test_name} exe)
+    #    oneflow_add_executable(${test_exe_name} ${cc})
+    #    target_link_libraries(${test_exe_name} ${of_libs} ${oneflow_third_party_libs})
+    #  endforeach()
+  endif()
 endif()

@@ -16,12 +16,12 @@ message StructPodProto {
 
 enum FieldKey {
   kInvalidFieldKey = 0;
-  kDataId = 1;
-  kColNum = 2;
-  kDim0ValidNum = 3;
-  kDim1ValidNum = 4;
-  kDim2ValidNum = 5;
-  kRecordIdInDevicePiece = 6;
+  kTensorShapeList = 1;
+  kTensorListLength = 2;
+  kLastTensorDataOffset = 3;
+  kTensorListSlices = 4;
+  kTensorListSlicesLength = 5;
+  kFieldKeySize = 6;
 }
 
 message FieldId {

@@ -56,7 +56,7 @@ class ExecNode final : public Node<ExecNode, ExecEdge> {
   ExecNode* fw_node() { return fw_node_; }
 
   std::string VisualStr() const override { return op_->op_name(); }
-  void ToProto(bool is_forward, const ParallelContext*, ExecNodeProto*) const;
+  void ToProto(const ParallelContext*, ExecNodeProto*) const;
 
   void InferBlobDescs(const ParallelContext* parallel_ctx);
 
@@ -78,7 +78,7 @@ class ExecGraph final : public Graph<ExecNode, ExecEdge> {
   ExecGraph() = default;
   ~ExecGraph() = default;
 
-  void ToExecSequence(bool is_forward, const ParallelContext*, ExecSequence*) const;
+  void ToExecSequence(const ParallelContext*, ExecSequence*) const;
   const char* TypeName() const override { return "ExecGraph"; }
 
  private:

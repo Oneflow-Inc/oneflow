@@ -2,6 +2,7 @@
 #include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/job/machine_context.h"
 #include "oneflow/core/job/resource_desc.h"
+#include "oneflow/core/job/env_desc.h"
 
 #ifdef PLATFORM_POSIX
 
@@ -108,7 +109,7 @@ void EpollCommNet::InitSockets() {
 
   // listen
   int listen_sockfd = socket(AF_INET, SOCK_STREAM, 0);
-  int32_t this_listen_port = Global<ResourceDesc>::Get()->data_port();
+  int32_t this_listen_port = Global<EnvDesc>::Get()->data_port();
   if (this_listen_port != -1) {
     CHECK_EQ(SockListen(listen_sockfd, this_listen_port, total_machine_num), 0);
     PushPort(this_machine_id,

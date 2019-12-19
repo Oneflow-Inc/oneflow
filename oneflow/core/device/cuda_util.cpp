@@ -50,11 +50,23 @@ cudaDeviceProp global_device_prop;
 
 }  // namespace
 
-void InitGlobalCudaDeviceProp() { cudaGetDeviceProperties(&global_device_prop, 0); }
+void InitGlobalCudaDeviceProp() {
+  cudaGetDeviceProperties(&global_device_prop, 0);
+  if (IsCuda9OnTuringDevice()) {
+    LOG(WARNING)
+        << "CUDA 9 running on Turing device has known issues, consider upgrading to CUDA 10";
+  }
+}
 
 int32_t GetSMCudaMaxBlocksNum() {
-  return global_device_prop.multiProcessorCount * global_device_prop.maxThreadsPerMultiProcessor
-         / kCudaThreadsNumPerBlock;
+  int32_t n =
+      global_device_prop.multiProcessorCount * global_device_prop.maxThreadsPerMultiProcessor;
+  return (n + kCudaThreadsNumPerBlock - 1) / kCudaThreadsNumPerBlock;
+}
+
+bool IsCuda9OnTuringDevice() {
+  return CUDA_VERSION >= 9000 && CUDA_VERSION < 9020 && global_device_prop.major == 7
+         && global_device_prop.minor == 5;
 }
 
 template<>

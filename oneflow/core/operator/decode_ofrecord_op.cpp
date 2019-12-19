@@ -49,18 +49,11 @@ Maybe<void> DecodeOFRecordOp::InferBlobDescs(
   FOR_RANGE(size_t, i, 0, output_bns().size()) {
     BlobDesc* out_blob_desc = GetBlobDesc4BnInOp(output_bns().Get(i));
     const BlobConf& blob_conf = op_conf().decode_ofrecord_conf().blob(i);
-    std::vector<int64_t> dim_vec(1 + blob_conf.shape().dim_size());
+    DimVector dim_vec(1 + blob_conf.shape().dim_size());
     dim_vec[0] = dim0;
     FOR_RANGE(size_t, j, 1, dim_vec.size()) { dim_vec[j] = blob_conf.shape().dim(j - 1); }
     out_blob_desc->mut_shape() = Shape(dim_vec);
     out_blob_desc->set_data_type(blob_conf.data_type());
-    out_blob_desc->set_has_data_id_field(job_desc().SizeOfOneDataId() > 0);
-    out_blob_desc->set_has_col_num_field(blob_conf.max_sequence_size() > 1);
-    out_blob_desc->set_max_col_num(blob_conf.max_sequence_size());
-    const auto& encode = blob_conf.encode_case();
-    const auto* decoder_if = GetOFRecordDecoder(encode.encode_case(), blob_conf.data_type());
-    out_blob_desc->set_has_dim1_valid_num_field(decoder_if->HasDim1ValidNumField(encode));
-    out_blob_desc->set_has_dim2_valid_num_field(decoder_if->HasDim2ValidNumField(encode));
   }
   return Maybe<void>::Ok();
 }

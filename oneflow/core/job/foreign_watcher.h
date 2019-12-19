@@ -10,10 +10,7 @@ class ForeignWatcher {
   ForeignWatcher() = default;
   virtual ~ForeignWatcher() = default;
 
-  virtual void Call(const std::string& handler_uuid,
-                    const std::string& int64_list_serialized_of_blob_ids) const {
-    UNIMPLEMENTED();
-  }
+  virtual void Call(const std::string& handler_uuid, int64_t ofblob_ptr) const { UNIMPLEMENTED(); }
 };
 
 }  // namespace oneflow

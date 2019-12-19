@@ -53,7 +53,8 @@ void Compiler::Compile(Job* job, Plan* plan, bool need_job_complete) const {
   if (need_job_complete) { JobCompleter().Complete(job); }
   TeePersistentLogStream::Create(StrCat("optimized_job", job_desc.job_id()))->Write(*job);
   Global<OpGraph>::New(*job);
-  Global<OpGraph>::Get()->ToDotWithFilePath("optimized_dlnet_op_graph.dot");
+  Global<OpGraph>::Get()->ToDotWithFilePath("optimized_dlnet_" + std::to_string(job_desc.job_id())
+                                            + "_op_graph.dot");
   auto logical_gph = std::make_unique<LogicalGraph>(*job);
   auto task_gph = std::make_unique<TaskGraph>(std::move(logical_gph));
   using std::placeholders::_1;
@@ -61,19 +62,18 @@ void Compiler::Compile(Job* job, Plan* plan, bool need_job_complete) const {
   task_gph->ForEachNode(std::bind(&TaskNode::ConsumeAllRegsts, _1));
   task_gph->ForEachNode(std::bind(&TaskNode::PinConsumedRegst, _1));
   task_gph->MdUpdtDelayedTopoForEachNode(&TaskNode::Build);
-  if (job_desc.IsTrain()) {
-    // TODO: update method for fw bw split
-    // task_gph->AddMdUpdtCtrlEdgesWithinReduceSplitNode();
-  }
   task_gph->RemoveEmptyRegsts();
   task_gph->AddOrderingCtrlEdgeInSameChain();
-  task_gph->EnableMemSharingInReduceStruct();
   // TODO: update method for fw bw split
   // if (job_desc.IsTrain() && job_desc.enable_mem_sharing()) {
   //   task_gph->EnableMemSharingAfterAllManualSetForMdUpdt();  // must last mem shared manual set
   // }
+  if (job_desc.enable_inplace_in_reduce_struct()) {
+    task_gph->EnableInplaceMemSharingInReduceStruct();
+  }
+
   if (job_desc.enable_inplace()) {
-    auto IsReachable = Global<OpGraph>::Get()->MakePredicatorIsLbiAllConsumersReachableToOpName();
+    auto IsReachable = Global<OpGraph>::Get()->MakePredicatorIsOpNameDataOrCtrlReachable();
     task_gph->EnableInplaceMemSharing(IsReachable);
   }
   // TODO: update method for fw bw split

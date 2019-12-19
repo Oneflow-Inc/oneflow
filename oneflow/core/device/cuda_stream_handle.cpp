@@ -46,8 +46,16 @@ const cublasHandle_t* CudaStreamHandle::cublas_tensor_op_math_handle() {
 
 const cudnnHandle_t* CudaStreamHandle::cudnn_handle() {
   if (!cudnn_handle_) {
+    if (IsCuda9OnTuringDevice()) {
+      CudaCheck(cudaDeviceSynchronize());
+      CudaCheck(cudaGetLastError());
+    }
     cudnn_handle_.reset(new cudnnHandle_t);
     CudaCheck(cudnnCreate(cudnn_handle_.get()));
+    if (IsCuda9OnTuringDevice()) {
+      CudaCheck(cudaDeviceSynchronize());
+      cudaGetLastError();
+    }
     CudaCheck(cudnnSetStream(*cudnn_handle_, *cuda_stream()));
   }
   return cudnn_handle_.get();

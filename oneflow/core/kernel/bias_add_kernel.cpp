@@ -11,35 +11,14 @@ void BiasAddKernel<device_type, T>::ForwardDataContent(
   const Blob* a_blob = BnInOp2Blob("a");
   const Blob* b_blob = BnInOp2Blob("b");
   Blob* out_blob = BnInOp2Blob("out");
-
-  const BiasAddOpConf& op_conf = this->op_conf().bias_add_conf();
-  if (op_conf.axis() == a_blob->shape().NumAxes() - 1) {
-    // out = bias_multiplier * b + a
-    const Blob* bias_mul_blob = BnInOp2Blob("bias_multiplier");
-    Memcpy<device_type>(ctx.device_ctx, out_blob->mut_dptr<T>(), a_blob->dptr<T>(),
-                        a_blob->ByteSizeOfDataContentField());
-    NewKernelUtil<device_type>::OFGemm(
-        ctx.device_ctx, CblasNoTrans, CblasNoTrans, bias_mul_blob->shape().elem_cnt(),
-        b_blob->shape().elem_cnt(), 1, GetOneVal<T>(), bias_mul_blob->dptr<T>(), b_blob->dptr<T>(),
-        GetOneVal<T>(), out_blob->mut_dptr<T>());
-  } else {
-    const int32_t bias_add_axis = this->op_conf().bias_add_conf().axis();
-    BiasAddUtil<device_type, T>::BiasAddNCX(ctx.device_ctx, a_blob->shape(), bias_add_axis,
-                                            a_blob->dptr<T>(), b_blob->dptr<T>(),
-                                            out_blob->mut_dptr<T>());
-  }
-}
-
-template<DeviceType device_type, typename T>
-void BiasAddKernel<device_type, T>::InitConstBufBlobs(
-    DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  Blob* bias_mul_blob = BnInOp2Blob("bias_multiplier");
-  if (bias_mul_blob) {
-    InitializerConf bias_multiplier_initializer_conf;
-    bias_multiplier_initializer_conf.mutable_constant_conf()->set_value(1.0f);
-    NewKernelUtil<device_type>::InitializeWithConstConf(
-        ctx, bias_multiplier_initializer_conf.constant_conf(), bias_mul_blob);
-  }
+  const BiasAddOpConf& conf = this->op_conf().bias_add_conf();
+  const int32_t bias_add_axis = conf.axis();
+  const int64_t outer_size = a_blob->shape().Count(0, bias_add_axis);
+  const int64_t bias_size = a_blob->shape().At(bias_add_axis);
+  const int64_t inner_size = a_blob->shape().Count(bias_add_axis + 1);
+  BiasAddUtil<device_type, T>::BiasAdd(ctx.device_ctx, outer_size, bias_size, inner_size,
+                                       a_blob->dptr<T>(), b_blob->dptr<T>(),
+                                       out_blob->mut_dptr<T>());
 }
 
 template<DeviceType device_type, typename T>
@@ -49,17 +28,34 @@ const PbMessage& BiasAddKernel<device_type, T>::GetCustomizedOpConf() const {
 
 template<typename T>
 struct BiasAddUtil<DeviceType::kCPU, T> {
-  static void BiasAddNCX(DeviceCtx* ctx, const Shape& shape, const int32_t bias_axis,
-                         const T* input, const T* bias, T* output) {
-    Shape bias_shape = Shape::Ones(shape.NumAxes());
-    bias_shape.Set(bias_axis, shape.At(bias_axis));
-    NdarrayUtil<DeviceType::kCPU, T>::BroadcastAdd(ctx, XpuVarNdarray<T>(shape, output),
-                                                   XpuVarNdarray<const T>(shape, input),
+  static void BiasAdd(DeviceCtx* ctx, int64_t outer_size, int64_t bias_size, int64_t inner_size,
+                      const T* x, const T* bias, T* y) {
+    const Shape in_out_shape({outer_size, bias_size, inner_size});
+    const Shape bias_shape({1, bias_size, 1});
+    NdarrayUtil<DeviceType::kCPU, T>::BroadcastAdd(ctx, XpuVarNdarray<T>(in_out_shape, y),
+                                                   XpuVarNdarray<const T>(in_out_shape, x),
                                                    XpuVarNdarray<const T>(bias_shape, bias));
   }
 };
 
-ADD_DEFAULT_KERNEL_CREATOR_WITH_GPU_HALF(OperatorConf::kBiasAddConf, BiasAddKernel,
-                                         FLOATING_DATA_TYPE_SEQ);
+#define INSTANTIATE_BIAS_ADD_KERNEL_UTIL(type_cpp, type_proto) \
+  template struct BiasAddUtil<DeviceType::kCPU, type_cpp>;
+OF_PP_FOR_EACH_TUPLE(INSTANTIATE_BIAS_ADD_KERNEL_UTIL, ARITHMETIC_DATA_TYPE_SEQ)
+
+#define REGISTER_BIAS_ADD_KERNEL(dev, dtype)                                    \
+  REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kBiasAddConf, dev, dtype, \
+                                        BiasAddKernel<dev, dtype>)
+
+REGISTER_BIAS_ADD_KERNEL(DeviceType::kGPU, float);
+REGISTER_BIAS_ADD_KERNEL(DeviceType::kGPU, double);
+REGISTER_BIAS_ADD_KERNEL(DeviceType::kGPU, int8_t);
+REGISTER_BIAS_ADD_KERNEL(DeviceType::kGPU, int32_t);
+REGISTER_BIAS_ADD_KERNEL(DeviceType::kGPU, int64_t);
+
+REGISTER_BIAS_ADD_KERNEL(DeviceType::kCPU, float);
+REGISTER_BIAS_ADD_KERNEL(DeviceType::kCPU, double);
+REGISTER_BIAS_ADD_KERNEL(DeviceType::kCPU, int8_t);
+REGISTER_BIAS_ADD_KERNEL(DeviceType::kCPU, int32_t);
+REGISTER_BIAS_ADD_KERNEL(DeviceType::kCPU, int64_t);
 
 }  // namespace oneflow

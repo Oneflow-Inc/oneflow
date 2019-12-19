@@ -13,6 +13,7 @@ include(opencv)
 include(eigen)
 include(cocoapi)
 include(half)
+include(json)
 
 if (BUILD_CUDA)
   set(CUDA_SEPARABLE_COMPILATION ON)
@@ -90,6 +91,7 @@ set(oneflow_third_party_dependencies
   cocoapi_copy_headers_to_destination
   cocoapi_copy_libs_to_destination
   half_copy_headers_to_destination
+  json_copy_headers_to_destination
 )
 
 include_directories(
@@ -105,6 +107,7 @@ include_directories(
     ${EIGEN_INCLUDE_DIR}
     ${COCOAPI_INCLUDE_DIR}
     ${HALF_INCLUDE_DIR}
+    ${JSON_INCLUDE_DIR}
 )
 
 if (BUILD_CUDA)

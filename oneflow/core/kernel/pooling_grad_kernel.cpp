@@ -9,8 +9,7 @@ void PoolingGradKernel<device_type, T>::ForwardDataContent(
   if (dx_blob == nullptr) { return; }
   const PoolingConf& pooling_conf = this->op_conf().pooling_grad_conf().pooling_conf();
   if (pooling_conf.pool_mode() == "max") {
-    Memset<device_type>(ctx.device_ctx, dx_blob->mut_dptr(), 0,
-                        dx_blob->ByteSizeOfDataContentField());
+    Memset<device_type>(ctx.device_ctx, dx_blob->mut_dptr(), 0, dx_blob->ByteSizeOfBlobBody());
   }
   CHECK_EQ(device_type, DeviceType::kGPU);
   PoolingGradKernelUtil<DeviceType::kGPU, T>::Compute(

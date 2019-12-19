@@ -13,7 +13,7 @@ class NcclAllGatherCompTaskNode final : public PipeCompTaskNode, public ReduceCo
   ~NcclAllGatherCompTaskNode() override = default;
 
   TaskType GetTaskType() const override { return TaskType::kNcclAllGather; }
-  CudaWorkType GetCudaWorkType() const override { return CudaWorkType::kNcclGather; }
+  CudaWorkType GetCudaWorkType() const override { return CudaWorkType::kNccl; }
 
   void EnableMemSharingInReduce(const ReduceMemSharingCtx& ctx) override;
 };

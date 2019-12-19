@@ -24,7 +24,7 @@ CudnnTensorDesc::CudnnTensorDesc(DataType data_type, int dims, const int* dim, c
   CudaCheck(cudnnCreateTensorDescriptor(&val_));
   CudaCheck(cudnnSetTensorNdDescriptor(val_, GetCudnnDataType(data_type), dims, dim, stride));
 }
-CudnnTensorDesc::CudnnTensorDesc(DataType data_type, const Shape& shape,
+CudnnTensorDesc::CudnnTensorDesc(DataType data_type, const ShapeView& shape,
                                  const std::string& data_format) {
   CudaCheck(cudnnCreateTensorDescriptor(&val_));
   cudnnTensorFormat_t cudnn_data_format;
@@ -56,7 +56,7 @@ CudnnTensorDesc::CudnnTensorDesc(DataType data_type, const Shape& shape,
     CudaCheck(cudnnSetTensor4dDescriptor(val_, cudnn_data_format, GetCudnnDataType(data_type),
                                          data_num, channels, kernel_h, kernel_w));
   } else {
-    std::vector<int> tensor_dim(shape.dim_vec().begin(), shape.dim_vec().end());
+    std::vector<int> tensor_dim({shape.ptr(), shape.ptr() + shape.NumAxes()});
     std::vector<int> stride_of_tensor(shape.NumAxes(), 1);
     for (int32_t i = shape.NumAxes() - 2; i >= 0; --i) {
       stride_of_tensor[i] = stride_of_tensor[i + 1] * shape.At(i + 1);
@@ -69,7 +69,7 @@ CudnnTensorDesc::CudnnTensorDesc(DataType data_type, const Shape& shape,
 
 CudnnFilterDesc::~CudnnFilterDesc() { CudaCheck(cudnnDestroyFilterDescriptor(val_)); }
 
-CudnnFilterDesc::CudnnFilterDesc(DataType data_type, const Shape& shape,
+CudnnFilterDesc::CudnnFilterDesc(DataType data_type, const ShapeView& shape,
                                  const std::string& data_format) {
   CudaCheck(cudnnCreateFilterDescriptor(&val_));
   cudnnTensorFormat_t cudnn_data_format;
@@ -101,7 +101,7 @@ CudnnFilterDesc::CudnnFilterDesc(DataType data_type, const Shape& shape,
     CudaCheck(cudnnSetFilter4dDescriptor(val_, GetCudnnDataType(data_type), cudnn_data_format,
                                          filters, c, kernel_h, kernel_w));
   } else {
-    std::vector<int> dims(shape.dim_vec().begin(), shape.dim_vec().end());
+    std::vector<int> dims({shape.ptr(), shape.ptr() + shape.NumAxes()});
     CudaCheck(cudnnSetFilterNdDescriptor(val_, GetCudnnDataType(data_type), cudnn_data_format,
                                          dims.size(), dims.data()));
   }

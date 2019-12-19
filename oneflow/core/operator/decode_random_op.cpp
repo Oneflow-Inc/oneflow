@@ -23,7 +23,7 @@ Maybe<void> DecodeRandomOp::InferBlobDescs(
     const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   const DecodeRandomOpConf& conf = op_conf().decode_random_conf();
-  std::vector<int64_t> dim_vec(1 + conf.shape().dim_size());
+  DimVector dim_vec(1 + conf.shape().dim_size());
   int64_t batch_size = conf.batch_size();
   OF_CHECK_GE(batch_size, parallel_ctx->parallel_num());
   CHECK_EQ_OR_RETURN(batch_size % parallel_ctx->parallel_num(), 0);
@@ -31,7 +31,6 @@ Maybe<void> DecodeRandomOp::InferBlobDescs(
   FOR_RANGE(size_t, j, 1, dim_vec.size()) { dim_vec[j] = conf.shape().dim(j - 1); }
   out_blob_desc->mut_shape() = Shape(dim_vec);
   out_blob_desc->set_data_type(conf.data_type());
-  out_blob_desc->set_has_data_id_field(job_desc().SizeOfOneDataId() > 0);
   return Maybe<void>::Ok();
 }
 

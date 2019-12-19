@@ -79,25 +79,25 @@ void ReduceAddCompTaskNode::BuildCtrlRegstBetweenReduceCopyNodes(const CompTaskN
     TaskNode* copy_d2h;
     ReduceCopyNodePair() : copy_h2d(nullptr), copy_d2h(nullptr) {}
   };
-  HashMap<int64_t, ReduceCopyNodePair> mem_shared_offset2copy_nodes;
+  HashMap<int64_t, ReduceCopyNodePair> mem_block_offset2copy_nodes;
 
   src_reduce->ForEachOutDataEdge([&](TaskEdge* out_edge) {
     if (out_edge->dst_node()->GetTaskType() == TaskType::kCopyHd) {
-      int64_t offset = out_edge->GetSoleRegst()->mem_shared_offset();
-      mem_shared_offset2copy_nodes[offset].copy_d2h = out_edge->dst_node();
+      int64_t offset = out_edge->GetSoleRegst()->mem_block_offset();
+      mem_block_offset2copy_nodes[offset].copy_d2h = out_edge->dst_node();
     }
   });
-  CHECK_EQ(copy_node_num, mem_shared_offset2copy_nodes.size());
+  CHECK_EQ(copy_node_num, mem_block_offset2copy_nodes.size());
 
   dst_reduce->ForEachInDataEdge([&](TaskEdge* in_edge) {
     if (in_edge->src_node()->GetTaskType() == TaskType::kCopyHd) {
-      int64_t offset = in_edge->GetSoleRegst()->mem_shared_offset();
-      CHECK(mem_shared_offset2copy_nodes.find(offset) != mem_shared_offset2copy_nodes.end());
-      mem_shared_offset2copy_nodes.at(offset).copy_h2d = in_edge->src_node();
+      int64_t offset = in_edge->GetSoleRegst()->mem_block_offset();
+      CHECK(mem_block_offset2copy_nodes.find(offset) != mem_block_offset2copy_nodes.end());
+      mem_block_offset2copy_nodes.at(offset).copy_h2d = in_edge->src_node();
     }
   });
 
-  for (const auto& kv : mem_shared_offset2copy_nodes) {
+  for (const auto& kv : mem_block_offset2copy_nodes) {
     kv.second.copy_d2h->BuildCtrlRegstDesc(kv.second.copy_h2d);
   }
 }

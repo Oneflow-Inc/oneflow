@@ -11,8 +11,9 @@ message CriticalSection {
   required string source_tick_op_name = 2;
   required string sink_tick_op_name = 3;
   repeated int64 mem_block_id = 4;
+  repeated int64 chunk_id = 5;
   oneof type {
-    TotalJobCriticalSection total_job_critical_section = 5;
-    InputOutputCriticalSection input_output_critical_section = 6;
+    TotalJobCriticalSection total_job_critical_section = 6;
+    InputOutputCriticalSection input_output_critical_section = 7;
   }
 }

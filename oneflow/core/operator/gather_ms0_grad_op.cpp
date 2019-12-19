@@ -1,8 +1,35 @@
-#include "oneflow/core/operator/gather_ms0_grad_op.h"
+#include "oneflow/core/operator/operator.h"
 #include "oneflow/core/job/sbp_signature_builder.h"
 #include "oneflow/core/common/balanced_splitter.h"
 
 namespace oneflow {
+
+class GatherMs0GradOp final : public Operator {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(GatherMs0GradOp);
+  GatherMs0GradOp() = default;
+  ~GatherMs0GradOp() override = default;
+
+  void InitFromOpConf() override;
+  const PbMessage& GetCustomizedConf() const override;
+  Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                             const ParallelContext* parallel_ctx) const override;
+
+ private:
+  Maybe<void> InferSbpSignature(
+      SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
+      const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
+      std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
+      const ParallelDesc& parallel_desc) const override;
+
+  void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                            const ParallelContext* parallel_ctx,
+                            KernelConf* kernel_conf) const override;
+
+  Maybe<void> InferBatchAxis(
+      std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override;
+  Maybe<void> GetSbpSignatures(SbpSignatureList* sbp_sig_list) const override;
+};
 
 void GatherMs0GradOp::InitFromOpConf() {
   CHECK(op_conf().has_gather_ms0_grad_conf());
@@ -20,9 +47,9 @@ Maybe<void> GatherMs0GradOp::InferBlobDescs(
     const ParallelContext* parallel_ctx) const {
   const GatherMs0GradOpConf& conf = op_conf().gather_ms0_grad_conf();
   const BlobDesc* indices = GetBlobDesc4BnInOp("indices");
-  CHECK_OR_RETURN(IsIntegralDataType(indices->data_type()));
+  CHECK_OR_RETURN(IsIndexDataType(indices->data_type()));
   const BlobDesc* out_diff = GetBlobDesc4BnInOp("out_diff");
-  std::vector<int64_t> in_diff_dim_vec;
+  DimVector in_diff_dim_vec;
   BalancedSplitter bs(conf.gather_dim_size(), parallel_ctx->parallel_num());
   in_diff_dim_vec.push_back(bs.At(parallel_ctx->parallel_id()).size());
   in_diff_dim_vec.insert(in_diff_dim_vec.end(),

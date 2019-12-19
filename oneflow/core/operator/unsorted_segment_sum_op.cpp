@@ -1,5 +1,4 @@
 #include "oneflow/core/operator/unsorted_segment_sum_op.h"
-#include "oneflow/core/operator/gather_op.h"
 #include "oneflow/core/job/sbp_signature_builder.h"
 
 namespace oneflow {
@@ -18,11 +17,12 @@ const PbMessage& UnsortedSegmentSumOp::GetCustomizedConf() const {
 Maybe<void> UnsortedSegmentSumOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
+  // TODO: fix when input in fw is dynamic at gather axis dim
   const UnsortedSegmentSumOpConf& conf = op_conf().unsorted_segment_sum_conf();
   const BlobDesc* segment_ids = GetBlobDesc4BnInOp("segment_ids");
-  CHECK_OR_RETURN(IsIntegralDataType(segment_ids->data_type()));
+  CHECK_OR_RETURN(IsIndexDataType(segment_ids->data_type()));
   const BlobDesc* data = GetBlobDesc4BnInOp("data");
-  std::vector<int64_t> out_dim_vec;
+  DimVector out_dim_vec;
   out_dim_vec.insert(out_dim_vec.end(), data->shape().dim_vec().cbegin(),
                      data->shape().dim_vec().cbegin() + conf.axis());
   out_dim_vec.push_back(conf.num_segments());

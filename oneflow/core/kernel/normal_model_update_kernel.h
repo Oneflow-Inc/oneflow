@@ -21,8 +21,13 @@ class NormalMdUpdateKernel : public KernelIf<device_type> {
                            std::function<Blob*(const std::string&)> BnInOp2Blob) const = 0;
 
  private:
+  void VirtualKernelInit() override;
   void ClipGradient(DeviceCtx* ctx, const ClipConf& conf, const T* batch_instance_num_ptr,
                     std::function<Blob*(const std::string&)> BnInOp2Blob) const;
+
+  NormalModelUpdateOpUserConf user_conf_;
+  T l1_;
+  T l2_;
 };
 
 template<DeviceType device_type, typename T>

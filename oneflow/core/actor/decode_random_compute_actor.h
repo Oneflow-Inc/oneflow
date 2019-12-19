@@ -12,6 +12,7 @@ class DecodeRandomActor final : public CompActor {
   ~DecodeRandomActor() = default;
 
  private:
+  void VirtualCompActorInit(const TaskProto&) override;
   void Act() override;
   void VirtualAsyncSendNaiveProducedRegstMsgToConsumer() override;
 };

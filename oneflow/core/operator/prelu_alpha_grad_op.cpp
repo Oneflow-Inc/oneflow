@@ -45,7 +45,7 @@ Maybe<void> PReluAlphaGradOp::InferBlobDescs(
       *bw_buf_desc = *x_blob_desc;
     } else {
       bw_buf_desc->set_data_type(x_blob_desc->data_type());
-      std::vector<int64_t> bw_buf_shape_vec = x_blob_desc->shape().dim_vec();
+      DimVector bw_buf_shape_vec = x_blob_desc->shape().dim_vec();
       if (conf.data_format() == "channels_first") {
         bw_buf_shape_vec[0] = x_blob_desc->shape().At(1);
         bw_buf_shape_vec[1] = x_blob_desc->shape().At(0);
