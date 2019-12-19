@@ -4,7 +4,14 @@ namespace oneflow {
 
 namespace {
 
-void GenerateBackwardOpConf(
+void GenerateBackwardOpConf4ScalarAdd(
+    const Operator& op, std::vector<OperatorConf>* op_confs,
+    const std::function<LogicalBlobId*(const std::string&)>& DiffLbi4BnInOp) {
+  CHECK(op.op_conf().has_scalar_add_conf());
+  if (DiffLbi4BnInOp("in") != nullptr) { *DiffLbi4BnInOp("in") = *DiffLbi4BnInOp("out"); }
+}
+
+void GenerateBackwardOpConf4ScalarMul(
     const Operator& op, std::vector<OperatorConf>* op_confs,
     const std::function<LogicalBlobId*(const std::string&)>& DiffLbi4BnInOp) {
   CHECK(op.op_conf().has_scalar_mul_conf());
@@ -30,6 +37,7 @@ void GenerateBackwardOpConf(
 
 }  // namespace
 
-REGISTER_OP_GRAD(OperatorConf::kScalarMulConf, &GenerateBackwardOpConf);
+REGISTER_OP_GRAD(OperatorConf::kScalarAddConf, &GenerateBackwardOpConf4ScalarAdd);
+REGISTER_OP_GRAD(OperatorConf::kScalarMulConf, &GenerateBackwardOpConf4ScalarMul);
 
 }  // namespace oneflow

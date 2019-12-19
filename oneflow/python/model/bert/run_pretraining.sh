@@ -1,4 +1,4 @@
-python run_pretraining.py \
+python3 run_pretraining.py \
   --gpu_num_per_node=1 \
   --node_num=1 \
   --node_list='192.168.1.15,192.168.1.16' \
