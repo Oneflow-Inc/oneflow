@@ -1,4 +1,5 @@
 #include "oneflow/core/job_completer/autograd.h"
+#include "oneflow/core/common/shape_view.h"
 
 namespace oneflow {
 
@@ -10,8 +11,9 @@ void GenerateBackwardOpConf(
     const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4BnInOp) {
   CHECK(op.op_conf().has_broadcast_add_conf());
   if (DiffLbi4BnInOp("a") != nullptr) {
-    const Shape& left_extended_shape = LogicalBlobDesc4BnInOp("a").shape().CreateLeftExtendedShape(
-        LogicalBlobDesc4BnInOp("out").shape().NumAxes());
+    const Shape& left_extended_shape =
+        CreateLeftExtendedShape(ShapeView(LogicalBlobDesc4BnInOp("a").shape()),
+                                LogicalBlobDesc4BnInOp("out").shape().NumAxes());
     if (LogicalBlobDesc4BnInOp("out").shape() == LogicalBlobDesc4BnInOp("a").shape()) {
       *DiffLbi4BnInOp("a") = *DiffLbi4BnInOp("out");
     } else if (LogicalBlobDesc4BnInOp("out").shape() == left_extended_shape) {
@@ -32,7 +34,7 @@ void GenerateBackwardOpConf(
       reduce_sum_like_a_op_conf->set_x(GenLogicalBlobName(*DiffLbi4BnInOp("out")));
       reduce_sum_like_a_op_conf->set_y("y");
       reduce_sum_like_a_op_conf->set_like(GenLogicalBlobName(op.BnInOp2Lbi("a")));
-      const std::vector<int64_t>& broadcast_axis_vec =
+      const AxisVector& broadcast_axis_vec =
           left_extended_shape.Axes4BroadcastTo(LogicalBlobDesc4BnInOp("out").shape());
       *reduce_sum_like_a_op_conf->mutable_axis() = {broadcast_axis_vec.begin(),
                                                     broadcast_axis_vec.end()};
@@ -42,11 +44,13 @@ void GenerateBackwardOpConf(
     }
   }
   if (DiffLbi4BnInOp("b") != nullptr) {
-    const Shape& left_extended_shape = LogicalBlobDesc4BnInOp("b").shape().CreateLeftExtendedShape(
-        LogicalBlobDesc4BnInOp("out").shape().NumAxes());
-    if (LogicalBlobDesc4BnInOp("out").shape() == LogicalBlobDesc4BnInOp("b").shape()) {
+    const Shape& b_shape = LogicalBlobDesc4BnInOp("b").shape();
+    const Shape& out_shape = LogicalBlobDesc4BnInOp("out").shape();
+    const Shape& left_extended_shape =
+        CreateLeftExtendedShape(ShapeView(b_shape), out_shape.NumAxes());
+    if (out_shape == b_shape) {
       *DiffLbi4BnInOp("b") = *DiffLbi4BnInOp("out");
-    } else if (LogicalBlobDesc4BnInOp("out").shape() == left_extended_shape) {
+    } else if (out_shape == left_extended_shape) {
       OperatorConf reshape_like_b_op;
       reshape_like_b_op.set_name(op.op_name() + "_grad_b_reshape_like");
       ReshapeLikeOpConf* reshape_like_b_op_conf = reshape_like_b_op.mutable_reshape_like_conf();
@@ -64,8 +68,7 @@ void GenerateBackwardOpConf(
       reduce_sum_like_b_op_conf->set_x(GenLogicalBlobName(*DiffLbi4BnInOp("out")));
       reduce_sum_like_b_op_conf->set_y("y");
       reduce_sum_like_b_op_conf->set_like(GenLogicalBlobName(op.BnInOp2Lbi("b")));
-      const std::vector<int64_t>& broadcast_axis_vec =
-          left_extended_shape.Axes4BroadcastTo(LogicalBlobDesc4BnInOp("out").shape());
+      const AxisVector& broadcast_axis_vec = left_extended_shape.Axes4BroadcastTo(out_shape);
       *reduce_sum_like_b_op_conf->mutable_axis() = {broadcast_axis_vec.begin(),
                                                     broadcast_axis_vec.end()};
       op_confs->push_back(reduce_sum_like_b_op);

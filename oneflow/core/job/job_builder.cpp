@@ -30,6 +30,12 @@ JobBuilder::JobBuilder(Job* job) : job_(job) {
           op_name2parallel_conf_.emplace(op_name, placemnt_group->mutable_parallel_conf()).second);
     }
   }
+  FOR_RANGE(int32_t, i, 0, job->placement().blob_placement_group_size()) {
+    auto* blob_pg = job->mutable_placement()->mutable_blob_placement_group(i);
+    for (const auto& lbi : blob_pg->lbi()) {
+      CHECK(lbi2blob_parallel_conf_.emplace(lbi, blob_pg->mutable_parallel_conf()).second);
+    }
+  }
 }
 
 const OperatorConf& JobBuilder::OpConf4OpName(const std::string& op_name) const {
@@ -38,6 +44,10 @@ const OperatorConf& JobBuilder::OpConf4OpName(const std::string& op_name) const 
 
 const ParallelConf& JobBuilder::ParallelConf4OpName(const std::string& op_name) const {
   return *op_name2parallel_conf_.at(op_name);
+}
+
+const ParallelConf& JobBuilder::ParallelConf4Lbi(const LogicalBlobId& lbi) const {
+  return *lbi2blob_parallel_conf_.at(lbi);
 }
 
 void JobBuilder::AddOps(const ParallelConf& parallel_conf,
@@ -77,6 +87,17 @@ void JobBuilder::MutParallelConfOnlyOnce(const std::string& op_name,
   }
   placement_group->mutable_op_set()->add_op_name(op_name);
   *placement_group->mutable_parallel_conf() = parallel_conf;
+}
+
+void JobBuilder::DelOps(const std::vector<OperatorConf>& op_confs) {
+  for (const auto& op_conf : op_confs) {
+    const std::string& op_name = op_conf.name();
+    op_name2op_conf_.erase(op_name);
+    auto* op_list = job_->mutable_net()->mutable_op();
+    auto it = std::remove_if(op_list->begin(), op_list->end(),
+                             [&](const OperatorConf& conf) { return conf.name() == op_name; });
+    if (it != op_list->end()) { op_list->erase(it); }
+  }
 }
 
 void JobBuilder::MutOpsOnlyOnce(const std::vector<OperatorConf>& op_confs) {

@@ -13,7 +13,7 @@ class NcclReduceScatterCompTaskNode final : public PipeCompTaskNode, public Redu
   ~NcclReduceScatterCompTaskNode() override = default;
 
   TaskType GetTaskType() const override { return TaskType::kNcclReduceScatter; }
-  CudaWorkType GetCudaWorkType() const override { return CudaWorkType::kNcclScatter; }
+  CudaWorkType GetCudaWorkType() const override { return CudaWorkType::kNccl; }
 
   void EnableMemSharingInReduce(const ReduceMemSharingCtx& ctx) override;
 };

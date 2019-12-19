@@ -13,15 +13,15 @@ RegstDesc::RegstDesc() {
   min_register_num_ = 1;
   max_register_num_ = kMaxRegisterNum;
   is_locked_ = false;
-  enable_mem_sharing_ = false;
-  mem_shared_id_ = -1;
-  mem_shared_offset_ = -1;
+  enable_reuse_mem_ = false;
+  mem_block_id_ = -1;
+  mem_block_offset_ = -1;
   hint_inplace_consumed_regst_desc_id_ = -1;
 }
 
-int64_t RegstDesc::mem_shared_offset() const {
-  CHECK_GE(mem_shared_offset_, 0);
-  return mem_shared_offset_;
+int64_t RegstDesc::mem_block_offset() const {
+  CHECK_GE(mem_block_offset_, 0);
+  return mem_block_offset_;
 }
 
 void RegstDesc::AddConsumer(const TaskNode* new_consumer) {
@@ -57,10 +57,10 @@ void RegstDesc::CopyBlobDescFrom(const RegstDesc* rhs) {
   CopyBlobDescWithoutAddLbi(rhs);
 }
 
-void RegstDesc::CopyMemSharedInfoFrom(const RegstDesc* rhs) {
-  enable_mem_sharing_ = rhs->enable_mem_sharing_;
-  mem_shared_id_ = rhs->mem_shared_id_;
-  mem_shared_offset_ = rhs->mem_shared_offset_;
+void RegstDesc::CopyMemBlockInfoFrom(const RegstDesc* rhs) {
+  enable_reuse_mem_ = rhs->enable_reuse_mem_;
+  mem_block_id_ = rhs->mem_block_id_;
+  mem_block_offset_ = rhs->mem_block_offset_;
 }
 
 void RegstDesc::CopyBlobDescWithoutAddLbi(const RegstDesc* rhs) {
@@ -111,7 +111,7 @@ void RegstDesc::ForEachLbi(std::function<void(const LogicalBlobId&)> func) const
 void RegstDesc::EraseZeroSizeBlob() {
   EraseIf<LogicalBlobId, std::unique_ptr<BlobDesc>>(
       &lbi2blob_desc_, [](HashMap<LogicalBlobId, std::unique_ptr<BlobDesc>>::iterator it) {
-        return RtBlobDesc(*(it->second)).ByteSizeOfDataContentField() == 0;
+        return RtBlobDesc(*(it->second)).ByteSizeOfBlobBody() == 0;
       });
 }
 
@@ -140,17 +140,17 @@ void RegstDesc::ToProto(RegstDescProto* ret) const {
   ret->set_max_register_num(max_register_num_);
   ret->set_register_num(min_register_num_);
   *(ret->mutable_mem_case()) = mem_case_;
-  ret->set_enable_mem_sharing(enable_mem_sharing_);
-  ret->set_mem_shared_id(mem_shared_id_);
-  ret->set_mem_shared_offset(mem_shared_offset_);
+  ret->set_enable_reuse_mem(enable_reuse_mem_);
+  ret->set_mem_block_id(mem_block_id_);
+  ret->set_mem_block_offset(mem_block_offset_);
   if (hint_inplace_consumed_regst_desc_id_ != -1) {
     ret->set_hint_inplace_consumed_regst_desc_id(hint_inplace_consumed_regst_desc_id_);
   }
 }
 
 bool RegstDesc::HasSameMemSize(const RegstDesc* rhs) {
-  return RtBlobDesc(*(packed_blob_desc_.get())).TotalByteSize()
-         == RtBlobDesc(*(rhs->packed_blob_desc_.get())).TotalByteSize();
+  return RtBlobDesc(*(packed_blob_desc_.get())).AlignedTotalByteSize()
+         == RtBlobDesc(*(rhs->packed_blob_desc_.get())).AlignedTotalByteSize();
 }
 
 bool RegstDesc::HasSameBlobDescs(const RegstDesc* rhs) {
@@ -200,9 +200,9 @@ void InitCtrlRegstDesc(int64_t producer_task_id, RegstDescProto* ctrl_regst_prot
   ctrl_regst_proto->set_register_num(1);
   ctrl_regst_proto->mutable_regst_desc_type()->mutable_ctrl_regst_desc();
   ctrl_regst_proto->mutable_mem_case()->mutable_host_mem();
-  ctrl_regst_proto->set_enable_mem_sharing(false);
-  ctrl_regst_proto->set_mem_shared_id(-1);
-  ctrl_regst_proto->set_mem_shared_offset(-1);
+  ctrl_regst_proto->set_enable_reuse_mem(false);
+  ctrl_regst_proto->set_mem_block_id(-1);
+  ctrl_regst_proto->set_mem_block_offset(-1);
 }
 
 MemoryCase MakeHostMemCase() {

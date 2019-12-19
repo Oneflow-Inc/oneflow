@@ -27,11 +27,13 @@ class JobBuilder final {
 
   const OperatorConf& OpConf4OpName(const std::string& op_name) const;
   const ParallelConf& ParallelConf4OpName(const std::string& op_name) const;
+  const ParallelConf& ParallelConf4Lbi(const LogicalBlobId& lbi) const;
   void AddOps(const ParallelConf& parallel_conf, const std::vector<OperatorConf>& op_confs);
   void MutOpsOnlyOnce(const std::vector<OperatorConf>& op_confs);
   void MutParallelConfOnlyOnce(const std::string& op_name, const ParallelConf& parallel_conf);
   void AddOrMutOpsOnlyOnce(const ParallelConf& parallel_conf,
                            const std::vector<OperatorConf>& op_confs);
+  void DelOps(const std::vector<OperatorConf>& op_confs);
   SbpParallel* MutSbpParallel4Oba(const OpBlobArg& oba) const;
   void BindIdenticalSbpOpBlobArgPair(const OpBlobArg& first, const OpBlobArg& second);
 
@@ -43,6 +45,7 @@ class JobBuilder final {
   Job* job_;
   HashMap<std::string, OperatorConf*> op_name2op_conf_;
   HashMap<std::string, ParallelConf*> op_name2parallel_conf_;
+  HashMap<LogicalBlobId, ParallelConf*> lbi2blob_parallel_conf_;
   HashSet<std::string> modified_op_conf_op_names_;
   HashSet<std::string> modified_parallel_conf_op_names_;
 };

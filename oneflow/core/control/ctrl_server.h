@@ -4,6 +4,7 @@
 #include <grpc++/alarm.h>
 #include <grpc++/server_builder.h>
 #include "oneflow/core/control/ctrl_call.h"
+#include "oneflow/core/common/function_traits.h"
 
 namespace oneflow {
 
@@ -44,9 +45,9 @@ class CtrlServer final {
 
   template<typename F>
   void Add(F f) {
-    using tuple_type = typename function_traits<F>::tuple_type;
+    using args_type = typename function_traits<F>::args_type;
     using arg_type =
-        typename std::remove_pointer<typename std::tuple_element<0, tuple_type>::type>::type;
+        typename std::remove_pointer<typename std::tuple_element<0, args_type>::type>::type;
 
     std::get<arg_type::value>(handlers_) = std::move(f);
   }

@@ -9,15 +9,24 @@ namespace oneflow {
 class PodPtr final {
  public:
   PodPtr(const PodDesc& pod_desc, char* ptr) : pod_desc_(&pod_desc), ptr_(ptr) {}
+  PodPtr(const PodPtr&) = default;
   ~PodPtr() = default;
 
   template<typename T>
   const T* TensorPtr() const;
   template<typename T>
+  const T* TensorPtr(FieldKey field_key) const {
+    return TensorPtr<T>(field_key, nullptr);
+  }
+  template<typename T>
   const T* TensorPtr(FieldKey field_key, const T* default_ptr) const;
 
   template<typename T>
   T* MutTensorPtr();
+  template<typename T>
+  T* MutTensorPtr(FieldKey field_key) {
+    return MutTensorPtr<T>(field_key, nullptr);
+  }
   template<typename T>
   T* MutTensorPtr(FieldKey field_key, T* default_ptr);
 
@@ -33,7 +42,7 @@ class PodPtr final {
 
  private:
   template<typename T>
-  void CheckDataType() {
+  void CheckDataType() const {
     const auto* tensor_pod = dynamic_cast<const TensorPodDesc*>(pod_desc_);
     CHECK_NOTNULL(tensor_pod);
     CHECK_EQ(tensor_pod->data_type(), GetDataType<T>::value);

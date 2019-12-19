@@ -13,9 +13,12 @@ void OutputOp::InitFromOpConf() {
 Maybe<void> OutputOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
-  InterfaceOpUtil::InferOutBlobDesc(op_conf().output_conf().blob_conf(), GetBlobDesc4BnInOp("out"),
-                                    parallel_ctx);
-  CHECK_OR_RETURN(*GetBlobDesc4BnInOp("out") == *GetBlobDesc4BnInOp("in"));
+  *GetBlobDesc4BnInOp("out") = *GetBlobDesc4BnInOp("in");
+  if (GetBlobDesc4BnInOp("out")->is_dynamic() == false) {
+    InterfaceOpUtil::InferOutBlobDesc(op_conf().output_conf().blob_conf(),
+                                      GetBlobDesc4BnInOp("out"), parallel_ctx);
+    CHECK_OR_RETURN(*GetBlobDesc4BnInOp("out") == *GetBlobDesc4BnInOp("in"));
+  }
   return Maybe<void>::Ok();
 }
 
@@ -39,7 +42,7 @@ Maybe<void> OutputOp::InferSbpSignature(
 }
 
 REGISTER_OP(OperatorConf::kOutputConf, OutputOp);
-REGISTER_OP_SAME_OUTPUT_BLOB_MEM_BLOCK_NUM(OperatorConf::kOutputConf, 1);
+REGISTER_OP_SAME_OUTPUT_BLOB_REGST_NUM(OperatorConf::kOutputConf, 1);
 REGISTER_INTERFACE_OP(OperatorConf::kOutputConf);
 
 }  // namespace oneflow

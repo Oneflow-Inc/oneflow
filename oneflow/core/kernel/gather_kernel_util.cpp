@@ -4,7 +4,7 @@ namespace oneflow {
 
 namespace {
 
-Shape GetFlatShape(const Shape& shape, int64_t axis) {
+Shape GetFlatShape(const ShapeView& shape, int64_t axis) {
   CHECK_GT(shape.NumAxes(), 0);
   CHECK_GE(axis, 0);
   CHECK_LT(axis, shape.NumAxes());
@@ -14,7 +14,7 @@ Shape GetFlatShape(const Shape& shape, int64_t axis) {
 template<DeviceType device_type, typename T, typename K>
 void GatherForward(DeviceCtx* ctx, const Blob* indices, const Blob* in, int64_t axis, Blob* out,
                    const int64_t offset) {
-  const Shape flat_in_shape = GetFlatShape(in->shape(), axis);
+  const Shape& flat_in_shape = GetFlatShape(in->shape(), axis);
   GatherKernelUtilImpl<device_type, T, K>::Forward(ctx, indices->dptr<K>(),
                                                    indices->shape().elem_cnt(), in->dptr<T>(),
                                                    flat_in_shape, out->mut_dptr<T>(), offset);
@@ -23,7 +23,7 @@ void GatherForward(DeviceCtx* ctx, const Blob* indices, const Blob* in, int64_t 
 template<DeviceType device_type, typename T, typename K>
 void GatherBackward(DeviceCtx* ctx, const Blob* indices, const Blob* out_diff, int64_t axis,
                     Blob* in_diff, const int64_t offset) {
-  const Shape flat_in_shape = GetFlatShape(in_diff->shape(), axis);
+  const Shape& flat_in_shape = GetFlatShape(in_diff->shape(), axis);
   GatherKernelUtilImpl<device_type, T, K>::Backward(
       ctx, indices->dptr<K>(), indices->shape().elem_cnt(), out_diff->dptr<T>(), flat_in_shape,
       in_diff->mut_dptr<T>(), offset);
@@ -34,7 +34,7 @@ struct GatherSwitchUtil final {
 #define MAKE_GATHER_SWITCH_ENTRY(func_name, K) func_name<device_type, T, K>
 #define DEFINE_GATHER_STATIC_SWITCH_FUNC(func_name)                    \
   DEFINE_STATIC_SWITCH_FUNC(void, func_name, MAKE_GATHER_SWITCH_ENTRY, \
-                            MAKE_DATA_TYPE_CTRV_SEQ(INT_DATA_TYPE_SEQ));
+                            MAKE_DATA_TYPE_CTRV_SEQ(INDEX_DATA_TYPE_SEQ));
   DEFINE_GATHER_STATIC_SWITCH_FUNC(GatherForward);
   DEFINE_GATHER_STATIC_SWITCH_FUNC(GatherBackward);
 #undef DEFINE_GATHER_STATIC_SWITCH_FUNC
@@ -128,15 +128,16 @@ void GatherKernelUtilImpl<DeviceType::kCPU, T, K>::Backward(DeviceCtx* ctx, cons
   template struct GatherKernelUtilImpl<DeviceType::kCPU, OF_PP_PAIR_FIRST(in_type_pair), \
                                        OF_PP_PAIR_FIRST(index_type_pair)>;
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INITIATE_GATHER_KERNEL_UTIL_CPU_IMPL, FLOATING_DATA_TYPE_SEQ,
-                                 INT_DATA_TYPE_SEQ);
+                                 INDEX_DATA_TYPE_SEQ);
 #undef INITIATE_GATHER_KERNEL_UTIL_CPU_IMPL
 
 #define INITIATE_GATHER_KERNEL_UTIL(device_type, in_type_pair) \
   template struct GatherKernelUtil<device_type, OF_PP_PAIR_FIRST(in_type_pair)>;
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INITIATE_GATHER_KERNEL_UTIL, DEVICE_TYPE_SEQ,
                                  FLOATING_DATA_TYPE_SEQ);
+template struct GatherKernelUtil<DeviceType::kGPU, int32_t>;
 #undef INITIATE_GATHER_KERNEL_UTIL
-#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 700
+#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 700 && CUDA_VERSION >= 10000
 template struct GatherKernelUtil<DeviceType::kGPU, float16>;
 #endif
 

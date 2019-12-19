@@ -1,13 +1,14 @@
 #ifndef ONEFLOW_CORE_THREAD_THREAD_MANAGER_H_
 #define ONEFLOW_CORE_THREAD_THREAD_MANAGER_H_
 
-#include "oneflow/core/actor/actor_message_bus.h"
 #include "oneflow/core/common/channel.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/thread/thread.h"
 #include "oneflow/core/thread/thread_pool.h"
 
 namespace oneflow {
+
+class Plan;
 
 class ThreadMgr final {
  public:
@@ -28,6 +29,9 @@ class ThreadMgr final {
   std::vector<Thread*> threads_;
   std::unique_ptr<ThreadPool> compute_thread_pool_;
 };
+
+void SingleThreadLoop(size_t num, std::function<void(size_t i)> Callback);
+void MultiThreadLoop(size_t num, std::function<void(size_t i)> Callback);
 
 }  // namespace oneflow
 

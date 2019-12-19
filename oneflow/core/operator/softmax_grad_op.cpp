@@ -25,6 +25,20 @@ void SoftmaxGradOp::InitFromOpConf() {
 
 const PbMessage& SoftmaxGradOp::GetCustomizedConf() const { return op_conf().softmax_grad_conf(); }
 
+Maybe<void> SoftmaxGradOp::InferOutBlobDescs(
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature,
+    std::function<void(OpContext*)> EnrollOpCtx) const {
+  // dy
+  const BlobDesc* dy_blob_desc = GetBlobDesc4BnInOp("dy");
+  // dx
+  BlobDesc* dx_blob_desc = GetBlobDesc4BnInOp("dx");
+  *dx_blob_desc = *dy_blob_desc;
+  SoftmaxGradOpCtx* op_ctx = NewSoftmaxGradOpCtx(dx_blob_desc->shape());
+  EnrollOpCtx(op_ctx);
+  return Maybe<void>::Ok();
+}
+
 Maybe<void> SoftmaxGradOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature,
@@ -45,7 +59,7 @@ Maybe<void> SoftmaxGradOp::InferBlobDescs(
   // temp storage for RowMax etc.
   BlobDesc* bw_buf_blob_desc = GetBlobDesc4BnInOp("bw_buf");
   bw_buf_blob_desc->mut_shape() =
-      Shape({static_cast<int64_t>(RtBlobDesc(*dx_blob_desc).ByteSizeOfDataContentField())});
+      Shape({static_cast<int64_t>(RtBlobDesc(*dx_blob_desc).ByteSizeOfBlobBody())});
   bw_buf_blob_desc->set_data_type(DataType::kChar);
   EnrollOpCtx(op_ctx);
   return Maybe<void>::Ok();
