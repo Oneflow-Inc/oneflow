@@ -23,8 +23,28 @@ void GenerateBackwardOpConf(
   }
 }
 
+void GenerateSliceV3BackwardOpConf(
+    const Operator& op, std::vector<OperatorConf>* op_confs,
+    const std::function<LogicalBlobId*(const std::string&)>& DiffLbi4BnInOp) {
+  CHECK(op.op_conf().has_slice_v3_conf());
+  if (DiffLbi4BnInOp("in") != nullptr) {
+    OperatorConf slice_grad_op;
+    slice_grad_op.set_name(op.op_name() + "_grad");
+    SliceGradV3OpConf* slice_grad_op_conf = slice_grad_op.mutable_slice_grad_v3_conf();
+    slice_grad_op_conf->set_like(GenLogicalBlobName(op.BnInOp2Lbi("in")));
+    slice_grad_op_conf->set_dy(GenLogicalBlobName(*DiffLbi4BnInOp("out")));
+    slice_grad_op_conf->set_dx("dx");
+    slice_grad_op_conf->mutable_dim_slice_conf()->CopyFrom(
+        op.op_conf().slice_v3_conf().dim_slice_conf());
+    op_confs->push_back(slice_grad_op);
+    DiffLbi4BnInOp("in")->set_op_name(slice_grad_op.name());
+    DiffLbi4BnInOp("in")->set_blob_name("dx");
+  }
+}
+
 }  // namespace
 
 REGISTER_OP_GRAD(OperatorConf::kSliceConf, &GenerateBackwardOpConf);
+REGISTER_OP_GRAD(OperatorConf::kSliceV3Conf, &GenerateSliceV3BackwardOpConf);
 
 }  // namespace oneflow
