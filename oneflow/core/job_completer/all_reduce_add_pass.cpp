@@ -181,7 +181,7 @@ void AddReduceConcatAndReduceIdentityOpConf(
   for (int32_t i = 0; i < lbi_group.size(); ++i) {
     offsets->at(i) = offset;
     offset += RtBlobDesc(ProducerOpNode4Lbi(lbi_group.at(i))->LogicalBlobDesc4Lbi(lbi_group.at(i)))
-                  .ByteSizeOfBlobBody();
+                  .AlignedByteSizeOfBlobBody();
   }
   *reduce_concat_conf->mutable_data_offset() = StdVec2PbRf<int64_t>(*offsets);
   reduce_concat_conf->set_out_size(offset);

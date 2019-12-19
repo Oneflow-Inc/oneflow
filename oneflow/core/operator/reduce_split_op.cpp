@@ -29,7 +29,7 @@ Maybe<void> ReduceSplitOp::InferBlobDescs(
     int64_t offset = 0;
     for (int32_t i = 0; i < conf.out_size(); ++i) {
       CHECK_EQ(offset, conf.data_offset(i));
-      offset += RtBlobDesc(*(GetBlobDesc4BnInOp(output_bns().Get(i)))).ByteSizeOfBlobBody();
+      offset += RtBlobDesc(*(GetBlobDesc4BnInOp(output_bns().Get(i)))).AlignedByteSizeOfBlobBody();
     }
     const int64_t data_type_byte_size =
         static_cast<int64_t>(GetSizeOfDataType(GetBlobDesc4BnInOp(SoleIbn())->data_type()));

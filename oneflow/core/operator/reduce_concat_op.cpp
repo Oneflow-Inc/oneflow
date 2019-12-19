@@ -44,7 +44,7 @@ Maybe<void> ReduceConcatOp::InferBlobDescs(
     int64_t in_blob_body_size_sum = 0;
     for (int32_t i = 0; i < conf.in_size(); ++i) {
       in_blob_body_size_sum +=
-          RtBlobDesc(*(GetBlobDesc4BnInOp(input_bns().Get(i)))).ByteSizeOfBlobBody();
+          RtBlobDesc(*(GetBlobDesc4BnInOp(input_bns().Get(i)))).AlignedByteSizeOfBlobBody();
     }
     CHECK_EQ(in_blob_body_size_sum, conf.out_size());
   }
