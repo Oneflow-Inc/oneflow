@@ -98,6 +98,7 @@ class SliceV3GpuKernel final : public KernelIf<DeviceType::kGPU> {
     const ShapeView& out_shape = out_blob->shape();
     const auto& conf = this->op_conf().slice_v3_conf();
 
+    CHECK_LE(in_shape.NumAxes(), kSliceMaxDims);
     // DimSliceConf size is 1 less than shape's num of axes,
     // because Slice now don't support dim0 slice,
     CHECK_EQ(in_shape.NumAxes(), conf.dim_slice_conf_size() + 1);
@@ -145,6 +146,7 @@ class SliceGradV3GpuKernel final : public KernelIf<DeviceType::kGPU> {
     Memset<DeviceType::kGPU>(ctx.device_ctx, dx_blob->mut_dptr<T>(), 0,
                              dx_blob->ByteSizeOfBlobBody());
 
+    CHECK_LE(dy_shape.NumAxes(), kSliceMaxDims);
     // DimSliceConf size is 1 less than shape's num of axes,
     // because Slice now don't support dim0 slice,
     CHECK_EQ(dy_shape.NumAxes(), conf.dim_slice_conf_size() + 1);
