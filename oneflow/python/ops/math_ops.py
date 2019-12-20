@@ -315,3 +315,17 @@ def cast(x, dtype, name=None):
     lbi.op_name = op_conf.name
     lbi.blob_name = "out"
     return remote_blob_util.RemoteBlob(lbi)
+
+@oneflow_export('math.leaky_relu')
+def leaky_relu(x, alpha=None, name=None):
+    op_conf = op_conf_util.OperatorConf()
+    setattr(op_conf, "name", name if name is not None else id_util.UniqueStr('LeakyRelu_'))
+    setattr(op_conf.leaky_relu_conf, "in", x.logical_blob_name)
+    setattr(op_conf.leaky_relu_conf, "out", "out")
+    if alpha is not None:
+        setattr(op_conf.leaky_relu_conf, "alpha", "alpha")
+    compile_context.CurJobAddOp(op_conf)
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = "out"
+    return remote_blob_util.RemoteBlob(lbi)

@@ -1530,6 +1530,19 @@ message ParallelCastOpConf {
   optional OptInt64 gradient_split_axis = 4;
 }
 
+message LeakyReluOpConf {
+  required string in = 1;
+  required string out = 2;
+  optional float alpha = 3 [default = 0.1];
+}
+
+message LeakyReluGradOpConf {
+  required string x = 1;
+  required string dy = 2;
+  required string dx = 3;
+  required float alpha = 4;
+}
+
 message OperatorConf {
   required string name = 1;
   optional bool trainable = 3 [default = true];
@@ -1684,6 +1697,8 @@ message OperatorConf {
     GatherMs0OpConf gather_ms0_conf = 305;
     GatherMs0GradOpConf gather_ms0_grad_conf = 306;
     ParallelCastOpConf parallel_cast_conf = 307;
+    LeakyReluOpConf leaky_relu_conf = 308;
+    LeakyReluGradOpConf leaky_relu_grad_conf = 309;
 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;
