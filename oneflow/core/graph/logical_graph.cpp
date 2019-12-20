@@ -88,28 +88,6 @@ void LogicalGraph::NaiveBuildFwStruct(
       Connect(pred_node, edge, cur_node);
     }
   });
-  // set batch_dim_lbis_cnt
-  HashSet<LogicalBlobId> batch_dim_lbis;
-  for (const auto& pair : job_.helper().lbn2batch_axis()) {
-    if (pair.second.has_value() == false) { continue; }
-    CHECK(batch_dim_lbis.emplace(GenLogicalBlobId(pair.first)).second);
-  }
-  ForEachNode([&](LogicalNode* cur_node) {
-    size_t consumed_batch_dim_lbis_cnt = 0;
-    size_t produced_batch_dim_lbis_cnt = 0;
-    for (const auto& op : cur_node->op_vec()) {
-      for (const std::string& ibn : op->input_bns()) {
-        consumed_batch_dim_lbis_cnt +=
-            batch_dim_lbis.find(op->BnInOp2Lbi(ibn)) != batch_dim_lbis.end();
-      }
-      for (const std::string& obn : op->output_bns()) {
-        produced_batch_dim_lbis_cnt +=
-            batch_dim_lbis.find(op->BnInOp2Lbi(obn)) != batch_dim_lbis.end();
-      }
-    }
-    cur_node->set_consumed_batch_dim_lbis_cnt(consumed_batch_dim_lbis_cnt);
-    cur_node->set_produced_batch_dim_lbis_cnt(produced_batch_dim_lbis_cnt);
-  });
 }
 
 void LogicalGraph::LinkUnpackFw2PackFw(

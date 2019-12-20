@@ -8,26 +8,17 @@
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/job/job_builder.h"
 #include "oneflow/core/job/job_desc.h"
-#include "oneflow/core/framework/config_def.h"
 
 namespace oneflow {
 
 namespace {
 
-void CheckAndCompleteFunctionConfigDefault(JobConfigProto* job_conf) {
-  HashMap<std::string, const ConfigFlagDef*> name2config_flag;
-  for (const ConfigFlagDef& config_flag : GlobalFunctionConfigDef().flag()) {
-    name2config_flag[config_flag.name()] = &config_flag;
-  }
-  for (const auto& pair : job_conf->flag_name2flag_value()) {
-    const auto& iter = name2config_flag.find(pair.first);
-    CHECK(iter != name2config_flag.end());
-    CHECK_EQ(static_cast<int>(iter->second->type()), static_cast<int>(pair.second.value_case()));
-  }
-  for (const ConfigFlagDef& config_flag : GlobalFunctionConfigDef().flag()) {
-    const auto& iter = job_conf->flag_name2flag_value().find(config_flag.name());
-    if (iter != job_conf->flag_name2flag_value().end()) { continue; }
-    (*job_conf->mutable_flag_name2flag_value())[config_flag.name()] = config_flag.default_val();
+void CheckFunctionConfig(const JobConfigProto& job_conf) {
+  const auto& flag_name2default_val = GlobalFunctionConfigDef().flag_name2default_val();
+  for (const auto& pair : job_conf.flag_name2flag_value()) {
+    const auto& iter = flag_name2default_val.find(pair.first);
+    CHECK(iter != flag_name2default_val.end());
+    CHECK_EQ(iter->second.value_case(), pair.second.value_case());
   }
 }
 
@@ -105,7 +96,16 @@ void JobDesc::Init() {
 #ifndef WITH_CUDA
   CHECK_EQ(Global<ResourceDesc>::Get()->GpuDeviceNum(), 0);
 #endif
-  CheckAndCompleteFunctionConfigDefault(&job_conf_);
+  CheckFunctionConfig(job_conf_);
+}
+
+const UserOpAttrVal& JobDesc::GetFunctionFlagVal(const std::string& field_name) const {
+  const auto& iter = job_conf_.flag_name2flag_value().find(field_name);
+  if (iter != job_conf_.flag_name2flag_value().end()) { return iter->second; }
+  const auto& flag_name2default_val = GlobalFunctionConfigDef().flag_name2default_val();
+  const auto& def_iter = flag_name2default_val.find(field_name);
+  CHECK(def_iter != flag_name2default_val.end());
+  return def_iter->second;
 }
 
 bool IsInterfaceOpConf(const OperatorConf& op_conf) {
