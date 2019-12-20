@@ -34,7 +34,7 @@ void UpdateSbpConf(const OpNode& op_node,
 std::string OpEdge::VisualStr() const {
   std::string str;
   int32_t idx = 0;
-  for (const LogicalBlobId& lbi : lbis_) {
+  for (const LogicalBlobId& lbi : *lbis_) {
     if (idx++ > 0) { str += "\\n"; }
     str += lbi.blob_name() + ":";
     str += src_node()->LogicalBlobDesc4Lbi(lbi).shape().ToString();
