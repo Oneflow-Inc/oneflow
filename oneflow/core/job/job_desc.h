@@ -8,6 +8,7 @@
 #include "oneflow/core/job/placement.pb.h"
 #include "oneflow/core/job/inter_user_job_info.pb.h"
 #include "oneflow/core/register/logical_blob_id.pb.h"
+#include "oneflow/core/framework/config_def.h"
 
 namespace oneflow {
 
@@ -63,11 +64,11 @@ class JobDesc final {
   bool all_reduce_fp16() const;
   int64_t cudnn_buf_limit_mbyte() const { return job_conf_.cudnn_buf_limit_mbyte(); }
 
-#define DEFINE_FUNCTION_CONFIG_GETTER(T, func_name, field_name)                      \
-  T func_name(const std::string& field_name) const {                                 \
-    const UserOpAttrVal& attr_val = job_conf_.flag_name2flag_value().at(field_name); \
-    CHECK(attr_val.has_##field_name());                                              \
-    return attr_val.field_name();                                                    \
+#define DEFINE_FUNCTION_CONFIG_GETTER(T, func_name, field_name)     \
+  T func_name(const std::string& field_name) const {                \
+    const UserOpAttrVal& attr_val = GetFunctionFlagVal(field_name); \
+    CHECK(attr_val.has_##field_name());                             \
+    return attr_val.field_name();                                   \
   }
   DEFINE_FUNCTION_CONFIG_GETTER(bool, Bool, at_bool);
   DEFINE_FUNCTION_CONFIG_GETTER(int64_t, Int64, at_int64);
@@ -85,6 +86,7 @@ class JobDesc final {
 
  private:
   void Init();
+  const UserOpAttrVal& GetFunctionFlagVal(const std::string& field_name) const;
 
   JobConfigProto job_conf_;
   int64_t job_id_;

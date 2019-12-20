@@ -18,6 +18,7 @@
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 #include "oneflow/core/job/foreign_watcher.h"
 #include "oneflow/core/job/cluster.h"
+#include "oneflow/core/framework/config_def.h"
 
 namespace oneflow {
 
@@ -112,6 +113,12 @@ Maybe<std::string> GetSerializedInterUserJobInfo() {
   OF_CHECK_NOTNULL(Global<InterUserJobInfo>::Get());
   std::string ret;
   google::protobuf::TextFormat::PrintToString(*Global<InterUserJobInfo>::Get(), &ret);
+  return ret;
+}
+
+Maybe<std::string> GetFunctionConfigDef() {
+  std::string ret;
+  google::protobuf::TextFormat::PrintToString(GlobalFunctionConfigDef(), &ret);
   return ret;
 }
 

@@ -15,6 +15,29 @@ import oneflow.python.lib.core.pb_util as pb_util
 class FunctionConfig(object):
     def __init__(self):
         self.function_desc = FunctionDesc()
+        
+    def __getattr__(self, attr_name):
+        name2default = session_ctx.GetDefaultSession().function_flag_name2default_val
+        assert attr_name in name2default
+        flag_name2flag_value = self.function_desc.job_config_proto.flag_name2flag_value
+        default_val = name2default[attr_name]
+        def FunctionConfigSetter(attr_value):
+            if default_val.HasField('at_bool'):
+                assert type(attr_value) is bool
+                flag_name2flag_value[attr_name].at_bool = attr_value
+            elif default_val.HasField('at_int64'):
+                assert type(attr_value) is int
+                flag_name2flag_value[attr_name].at_int64 = attr_value
+            elif default_val.HasField('at_double'):
+                assert type(attr_value) is float
+                flag_name2flag_value[attr_name].at_double = attr_value
+            elif default_val.HasField('at_string'):
+                assert type(attr_value) is str
+                flag_name2flag_value[attr_name].at_string = attr_value
+            else:
+                raise NotImplementedError("config_flag `%s' with type %s is not supported"
+                                          % (attr_name, type(attr_value)))
+        return FunctionConfigSetter
 
 @oneflow_export('function')
 def oneflow_function(function_config = FunctionConfig()):
@@ -248,11 +271,6 @@ def set_weight_l2(func_desc, value):
 @oneflow_function_config('train.bias_l2')
 def set_bias_l2(func_desc, value):
     func_desc.job_config_proto.train_conf.bias_l2 = value
-
-@oneflow_function_config('enable_pseudo_chain_merge')
-def set_bias_l2(func_desc, value):
-    assert type(value) is bool
-    func_desc.job_config_proto.flag_name2flag_value['enable_pseudo_chain_merge'] = value
 
 @oneflow_function_config('default_placement_scope')
 def set_default_placement(func_desc, value):

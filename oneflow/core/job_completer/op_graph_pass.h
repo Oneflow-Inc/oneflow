@@ -18,11 +18,9 @@ class OpGraphPass {
     JobBuilder job_builder(job);
     Apply(op_graph, &job_builder);
   }
-  virtual void Apply(const OpGraph& op_graph, JobBuilder* job_builder) {
-    UNIMPLEMENTED();
-  }
+  virtual void Apply(const OpGraph& op_graph, JobBuilder* job_builder) { UNIMPLEMENTED(); }
 };
 
-}
+}  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_JOB_COMPLETER_OP_GRAPH_PASS_H_

@@ -9,12 +9,6 @@ enum ConfigDefType {
   kFunctionConfigType = 3;
 }
 
-message ConfigFlagDef {
-  required string name = 1;
-  required UserOpAttrType type = 2;
-  optional UserOpAttrVal default_val = 3;
-}
-
 message ConfigDef {
-  repeated ConfigFlagDef flag = 1;
+  map<string, UserOpAttrVal> flag_name2default_val = 1;
 }
