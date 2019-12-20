@@ -189,7 +189,7 @@ ChainGraph::ChainGraph(const TaskGraph& task_gph) : task_gph_(task_gph) {
   InitChainEdge(chains);
   CheckNoCycle();
   SetChainId4ChainNode();
-  ToDotWithAutoFilePath();
+  if (Global<ResourceDesc>::Get()->enable_debug_mode()) { ToDotWithAutoFilePath(); }
 }
 
 void ChainGraph::CheckNoCycle() const {
@@ -199,7 +199,8 @@ void ChainGraph::CheckNoCycle() const {
     auto* ptr = scc.get();
     auto OnCycle = [ptr](ChainNode* chain_node) { return ptr->find(chain_node) != ptr->end(); };
     const auto& filename = "job" + job_id + "_cycle_chain_graph.dot";
-    ToDotWithFilePath(OnCycle, [](ChainEdge*) { return true; }, filename);
+    ToDotWithFilePath(
+        OnCycle, [](ChainEdge*) { return true; }, filename);
     HashSet<const TaskNode*> tasks;
     for (const auto* chain_node : *scc) {
       for (const TaskNode* task_node : chain_node->TaskNodes()) {
@@ -208,7 +209,8 @@ void ChainGraph::CheckNoCycle() const {
     }
     auto TaskOnCycle = [&](TaskNode* task) { return tasks.find(task) != tasks.end(); };
     const auto& task_gph_filename = "job" + job_id + "_cycle_task_graph.dot";
-    task_gph_.ToDotWithFilePath(TaskOnCycle, [](TaskEdge*) { return true; }, task_gph_filename);
+    task_gph_.ToDotWithFilePath(
+        TaskOnCycle, [](TaskEdge*) { return true; }, task_gph_filename);
     LOG(FATAL) << "cycle in graph detected";
   }
 }
