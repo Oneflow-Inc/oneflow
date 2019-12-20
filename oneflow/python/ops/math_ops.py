@@ -323,7 +323,7 @@ def leaky_relu(x, alpha=None, name=None):
     setattr(op_conf.leaky_relu_conf, "in", x.logical_blob_name)
     setattr(op_conf.leaky_relu_conf, "out", "out")
     if alpha is not None:
-        setattr(op_conf.leaky_relu_conf, "alpha", "alpha")
+        setattr(op_conf.leaky_relu_conf, "alpha", alpha)
     compile_context.CurJobAddOp(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
     lbi.op_name = op_conf.name

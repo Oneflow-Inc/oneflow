@@ -1556,6 +1556,28 @@ message UpsampleNearestGradOpConf {
   required int32 scale = 3;
 }
 
+message YoloDetectOpConf {
+  required string bbox = 1;
+  required string probs = 2;
+  required string out_bbox = 3;
+  required string out_probs = 4;
+  required string valid_num = 14;
+  required int32 image_height = 5;
+  required int32 image_width = 6;
+  required int32 image_origin_height = 7;
+  required int32 image_origin_width = 8;
+  required int32 layer_height = 9;
+  required int32 layer_width = 10;
+  optional float prob_thresh = 11 [default = 0.5];
+  optional int32 num_classes = 12 [default = 80];
+  repeated AnchorBoxesSize anchor_boxes_size = 13;
+}
+
+message AnchorBoxesSize {
+  required int32 width = 1;
+  required int32 height = 2;
+}
+
 message OperatorConf {
   required string name = 1;
   optional bool trainable = 3 [default = true];
@@ -1714,6 +1736,7 @@ message OperatorConf {
     LeakyReluGradOpConf leaky_relu_grad_conf = 309;
     UpsampleNearestOpConf upsample_nearest_conf = 310;
     UpsampleNearestGradOpConf upsample_nearest_grad_conf = 311;
+    YoloDetectOpConf yolo_detect_conf = 312;
 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;
