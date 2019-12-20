@@ -1543,6 +1543,19 @@ message LeakyReluGradOpConf {
   required float alpha = 4;
 }
 
+message UpsampleNearestOpConf {
+  required string in = 1;
+  required string out = 2;
+  required int32 scale = 3;
+  required string data_format = 4;
+}
+
+message UpsampleNearestGradOpConf {
+  required string dy = 1;
+  required string dx = 2;
+  required int32 scale = 3;
+}
+
 message OperatorConf {
   required string name = 1;
   optional bool trainable = 3 [default = true];
@@ -1699,6 +1712,8 @@ message OperatorConf {
     ParallelCastOpConf parallel_cast_conf = 307;
     LeakyReluOpConf leaky_relu_conf = 308;
     LeakyReluGradOpConf leaky_relu_grad_conf = 309;
+    UpsampleNearestOpConf upsample_nearest_conf = 310;
+    UpsampleNearestGradOpConf upsample_nearest_grad_conf = 311;
 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;
