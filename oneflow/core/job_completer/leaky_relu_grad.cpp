@@ -11,7 +11,8 @@ void GenerateBackwardOpConf(
   if (DiffLbi4BnInOp("in") != nullptr) {
     OperatorConf leaky_relu_grad_op;
     leaky_relu_grad_op.set_name(op.op_name() + "_grad");
-    LeakyReluGradOpConf* leaky_relu_grad_op_conf = leaky_relu_grad_op.mutable_leaky_relu_grad_conf();
+    LeakyReluGradOpConf* leaky_relu_grad_op_conf =
+        leaky_relu_grad_op.mutable_leaky_relu_grad_conf();
     leaky_relu_grad_op_conf->set_x(GenLogicalBlobName(op.BnInOp2Lbi("in")));
     leaky_relu_grad_op_conf->set_dy(GenLogicalBlobName(*DiffLbi4BnInOp("out")));
     leaky_relu_grad_op_conf->set_alpha(op.op_conf().leaky_relu_conf().alpha());

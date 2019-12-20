@@ -9,16 +9,16 @@ class LeakyReluOp final : public Operator {
   ~LeakyReluOp() = default;
 
   void InitFromOpConf() override {
-  CHECK(op_conf().has_leaky_relu_conf());
-  EnrollInputBn("in");
-  EnrollOutputBn("out");
-}
+    CHECK(op_conf().has_leaky_relu_conf());
+    EnrollInputBn("in");
+    EnrollOutputBn("out");
+  }
   const PbMessage& GetCustomizedConf() const override { return op_conf().leaky_relu_conf(); }
-  Maybe<void>  InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                      const ParallelContext* parallel_ctx) const override {
-  *GetBlobDesc4BnInOp("out") = *GetBlobDesc4BnInOp("in");
-  return Maybe<void>::Ok();
-}
+  Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                             const ParallelContext* parallel_ctx) const override {
+    *GetBlobDesc4BnInOp("out") = *GetBlobDesc4BnInOp("in");
+    return Maybe<void>::Ok();
+  }
 
  private:
   Maybe<void> InferBatchAxis(
@@ -38,7 +38,6 @@ class LeakyReluOp final : public Operator {
   }
 };
 
-
 class LeakyReluGradOp final : public Operator {
  public:
   OF_DISALLOW_COPY_AND_MOVE(LeakyReluGradOp);
@@ -46,20 +45,20 @@ class LeakyReluGradOp final : public Operator {
   ~LeakyReluGradOp() = default;
 
   void InitFromOpConf() override {
-  CHECK(op_conf().has_leaky_relu_grad_conf());
-  EnrollInputBn("x");
-  EnrollInputBn("dy");
-  EnrollOutputBn("dx");
-}
+    CHECK(op_conf().has_leaky_relu_grad_conf());
+    EnrollInputBn("x");
+    EnrollInputBn("dy");
+    EnrollOutputBn("dx");
+  }
   const PbMessage& GetCustomizedConf() const override { return op_conf().leaky_relu_grad_conf(); }
-  Maybe<void>  InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                      const ParallelContext* parallel_ctx) const override {
-  const BlobDesc* x_blob_desc = GetBlobDesc4BnInOp("x");
-  const BlobDesc* dy_blob_desc = GetBlobDesc4BnInOp("dy");
-  CHECK_EQ_OR_RETURN(x_blob_desc->shape(), dy_blob_desc->shape());
-  *GetBlobDesc4BnInOp("dx") = *dy_blob_desc;
-  return Maybe<void>::Ok();
-}
+  Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                             const ParallelContext* parallel_ctx) const override {
+    const BlobDesc* x_blob_desc = GetBlobDesc4BnInOp("x");
+    const BlobDesc* dy_blob_desc = GetBlobDesc4BnInOp("dy");
+    CHECK_EQ_OR_RETURN(x_blob_desc->shape(), dy_blob_desc->shape());
+    *GetBlobDesc4BnInOp("dx") = *dy_blob_desc;
+    return Maybe<void>::Ok();
+  }
 
  private:
   Maybe<void> InferBatchAxis(
