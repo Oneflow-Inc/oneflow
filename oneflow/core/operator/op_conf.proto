@@ -1008,9 +1008,10 @@ message TransposeOpConf {
 }
 
 message ReduceConcatOpConf {
-  required int32 in_num = 1;
-  repeated string in = 2;
-  optional string out = 3;
+  repeated string in = 1;
+  required string out = 2;
+  repeated int64 data_offset = 3;
+  required int64 out_size = 4;
 }
 
 message NcclAllReduceOpConf {
@@ -1042,10 +1043,10 @@ message NcclTupleReduceOpConf {
 }
 
 message ReduceSplitOpConf {
-  required int32 out_num = 1;
-  required string in = 2;
-  repeated string out = 3;
-  repeated ShapeProto out_shape = 4;
+  required string in = 1;
+  repeated string out = 2;
+  repeated ShapeProto out_shape = 3;
+  repeated int64 data_offset = 4;
   optional int32 order_in_graph = 5;
 }
 

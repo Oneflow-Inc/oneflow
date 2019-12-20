@@ -34,7 +34,7 @@ void UpdateSbpConf(const OpNode& op_node,
 std::string OpEdge::VisualStr() const {
   std::string str;
   int32_t idx = 0;
-  for (const LogicalBlobId& lbi : lbis_) {
+  for (const LogicalBlobId& lbi : *lbis_) {
     if (idx++ > 0) { str += "\\n"; }
     str += lbi.blob_name() + ":";
     str += src_node()->LogicalBlobDesc4Lbi(lbi).shape().ToString();
@@ -186,12 +186,12 @@ const OpNode& OpNode::ProducerOpNode4Lbi(const LogicalBlobId& lbi) const {
 }
 
 OpNode* OpNode::MutSrcNode4InputLbi(const LogicalBlobId& lbi) const {
-  for (OpEdge* edge : in_edges()) {
-    for (const LogicalBlobId& edge_lbi : edge->lbis()) {
-      if (lbi == edge_lbi) { return edge->src_node(); }
-    }
+  auto it = lbi2source_node_.find(lbi);
+  if (it == lbi2source_node_.end()) {
+    return nullptr;
+  } else {
+    return it->second;
   }
-  return nullptr;
 }
 
 bool OpNode::IsTimeShapeIdentity() const {
@@ -350,6 +350,14 @@ void OpNode::InferBlobParallelDesc() {
                                          &sbp_signature()));
 }
 
+void OpNode::InitLbi2SourceNode() {
+  for (OpEdge* edge : in_edges()) {
+    for (const LogicalBlobId& lbi : edge->lbis()) {
+      CHECK(lbi2source_node_.emplace(lbi, edge->src_node()).second);
+    }
+  }
+}
+
 void OpGraph::Init(const Job& job) {
   InitNodes(job);
   ForEachNode(
@@ -357,6 +365,7 @@ void OpGraph::Init(const Job& job) {
   InitEdges();
   InitProducerOpName2CtrlConsumerOpNames(job);
   CheckIsDAG();
+  ForEachNode([](OpNode* node) { node->InitLbi2SourceNode(); });
   InferTimeShape();
   InferLogicalBlobDesc(job);
   ForEachEdge([](OpEdge* edge) { edge->InitDistributeHierarchyInfo(); });
@@ -383,26 +392,31 @@ void OpGraph::InitNodes(const Job& job) {
 
 void OpGraph::InitEdges() {
   HashMap<LogicalBlobId, OpNode*> lbi2producer;
-  HashMap<std::string, HashMap<LogicalBlobId, std::string>> producer_op_name2lbi2obn;
+  HashMap<std::string, std::shared_ptr<HashMap<LogicalBlobId, std::string>>>
+      producer_op_name2lbi2obn;
   ForEachNode([&](OpNode* op_node) {
     for (const auto& obn : op_node->op().output_bns()) {
       const auto& lbi = op_node->op().BnInOp2Lbi(obn);
       CHECK(lbi2producer.emplace(lbi, op_node).second);
-      CHECK(producer_op_name2lbi2obn[op_node->op().op_name()].emplace(lbi, obn).second);
+      auto& lbi2obn = producer_op_name2lbi2obn[op_node->op().op_name()];
+      if (!lbi2obn) { lbi2obn.reset(new HashMap<LogicalBlobId, std::string>()); }
+      CHECK(lbi2obn->emplace(lbi, obn).second);
     }
   });
   ForEachNode([&](OpNode* op_node) {
     HashMap<std::string, HashSet<LogicalBlobId>> producer_op_name2lbis;
-    HashMap<LogicalBlobId, std::vector<std::string>> consumer_lbi2ibns;
+    std::shared_ptr<HashMap<LogicalBlobId, std::vector<std::string>>> consumer_lbi2ibns(
+        new HashMap<LogicalBlobId, std::vector<std::string>>);
     for (const auto& ibn : op_node->op().input_bns()) {
       const LogicalBlobId& lbi = op_node->op().BnInOp2Lbi(ibn);
       producer_op_name2lbis[lbi.op_name()].insert(lbi);
-      consumer_lbi2ibns[lbi].push_back(ibn);
+      (*consumer_lbi2ibns)[lbi].push_back(ibn);
     }
     for (const auto& pair : producer_op_name2lbis) {
-      std::vector<LogicalBlobId> lbis{pair.second.begin(), pair.second.end()};
+      std::shared_ptr<std::vector<LogicalBlobId>> lbis(
+          new std::vector<LogicalBlobId>({pair.second.begin(), pair.second.end()}));
       const auto& lbi2obn = producer_op_name2lbi2obn.at(pair.first);
-      OpNode* producer = lbi2producer.at(lbis.at(0));
+      OpNode* producer = lbi2producer.at(lbis->at(0));
       Connect(producer, NewEdge(lbis, lbi2obn, consumer_lbi2ibns), op_node);
     }
   });
