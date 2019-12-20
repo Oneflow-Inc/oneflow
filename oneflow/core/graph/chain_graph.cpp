@@ -176,7 +176,9 @@ ChainGraph::ChainGraph(const TaskGraph& task_gph) : task_gph_(task_gph) {
   InitChainEdge(chains);
   CheckNoCycle();
   SetChainId4ChainNode();
-  ToDotWithFilePath(JoinPath("dot", TypeName(), GlobalJobDesc().job_name() + ".dot"));
+  if (Global<ResourceDesc>::Get()->enable_debug_mode()) {
+    ToDotWithFilePath(JoinPath("dot", TypeName(), GlobalJobDesc().job_name() + ".dot"));
+  }
 }
 
 void ChainGraph::CheckNoCycle() const {

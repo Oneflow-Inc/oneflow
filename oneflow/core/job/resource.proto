@@ -19,4 +19,5 @@ message Resource {
   optional bool thread_enable_local_message_queue = 103 [default = false];
   optional bool enable_thread_local_cache = 16 [default = true];
   optional int64 thread_local_cache_max_size = 17 [default = 67108864]; // 64M
+  optional bool enable_debug_mode = 18 [default = false];
 }
