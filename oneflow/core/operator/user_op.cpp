@@ -249,6 +249,8 @@ LogicalBlobId UserOp::obn2lbi(const std::string& output_bn) const {
 Maybe<void> UserOp::InferBatchAxis(
     std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
   // TODO(ChengCheng): default func for infer batch axis, need to DELETE
+  for (const auto& obn : output_bns()) { BatchAxis4BnInOp(obn)->set_value(0); }
+  /*
   OptInt64* batch_axis = nullptr;
   for (const std::string& ibn : input_bns()) {
     if (BatchAxis4BnInOp(ibn)->has_value()) {
@@ -259,6 +261,7 @@ Maybe<void> UserOp::InferBatchAxis(
   if (batch_axis) {
     for (const std::string& obn : output_bns()) { *BatchAxis4BnInOp(obn) = *batch_axis; }
   }
+  */
   return Maybe<void>::Ok();
 }
 
