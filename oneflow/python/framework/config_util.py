@@ -119,6 +119,16 @@ def thread_enable_local_message_queue(val):
     assert type(val) is bool
     sess.config_proto.resource.thread_enable_local_message_queue = val
 
+
+@oneflow_export('config.enable_debug_mode')
+def enable_debug_mode(val):
+    sess = session_ctx.GetDefaultSession()
+    if sess.is_running:
+        print("flow.config.* are disabled when session running", file=sys.stderr)
+        return
+    assert type(val) is bool
+    sess.config_proto.resource.enable_debug_mode = val
+
 @oneflow_export('config.save_downloaded_file_to_local_fs')
 def save_downloaded_file_to_local_fs(val = True):
     sess = session_ctx.GetDefaultSession()
