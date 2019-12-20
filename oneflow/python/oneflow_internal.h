@@ -49,6 +49,10 @@ std::string GetSerializedInterUserJobInfo(std::string* error_str) {
   return oneflow::GetSerializedInterUserJobInfo().GetDataAndSerializedErrorProto(error_str, "");
 }
 
+std::string GetFunctionConfigDef(std::string* error_str) {
+  return oneflow::GetFunctionConfigDef().GetDataAndSerializedErrorProto(error_str, "");
+}
+
 void LaunchJob(const std::shared_ptr<oneflow::ForeignJobInstance>& cb, std::string* error_str) {
   return oneflow::LaunchJob(cb).GetDataAndSerializedErrorProto(error_str);
 }
