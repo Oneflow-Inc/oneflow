@@ -51,10 +51,12 @@ void Compiler::Compile(Job* job, Plan* plan, bool need_job_complete) const {
   auto cudnn_conv_ctx_cache_scope = std::make_unique<CudnnConvCtxCacheScope>();
   const JobDesc& job_desc = GlobalJobDesc();
   if (need_job_complete) { JobCompleter().Complete(job); }
-  TeePersistentLogStream::Create(StrCat("optimized_job", job_desc.job_id()))->Write(*job);
   Global<OpGraph>::New(*job);
-  Global<OpGraph>::Get()->ToDotWithFilePath("optimized_dlnet_" + std::to_string(job_desc.job_id())
-                                            + "_op_graph.dot");
+  if (Global<ResourceDesc>::Get()->enable_debug_mode()) {
+    TeePersistentLogStream::Create(StrCat("optimized_job", job_desc.job_id()))->Write(*job);
+    Global<OpGraph>::Get()->ToDotWithFilePath("optimized_dlnet_" + std::to_string(job_desc.job_id())
+                                              + "_op_graph.dot");
+  }
   auto logical_gph = std::make_unique<LogicalGraph>(*job);
   auto task_gph = std::make_unique<TaskGraph>(std::move(logical_gph));
   using std::placeholders::_1;
