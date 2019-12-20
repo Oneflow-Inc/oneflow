@@ -58,8 +58,8 @@ class Session(object):
       return self.job_name2function_desc_[job_name].job_config_proto
 
     def UpdateFunctionFlagName2DefaultVal(self):
-        flag_name2default_val = c_api_util.GetFunctionConfigDef().flag_name2default_val
-        self.function_flag_name2default_val_ = flag_name2default_val
+        items = c_api_util.GetFunctionConfigDef().flag_name2flag_def.items()
+        self.function_flag_name2default_val_ = {k : v.default_val for k, v in items}
 
     def TryInit(self):
         if self.status_ is SessionStatus.OPEN: self.Init()

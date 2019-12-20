@@ -9,10 +9,14 @@ namespace oneflow {
 
 template<ConfigDefType config_def_type>
 struct ConfigDefBuidler final {
-  const ConfigDefBuidler& Bool(const std::string& name, bool default_val) const;
-  const ConfigDefBuidler& Int64(const std::string& name, int64_t default_val) const;
-  const ConfigDefBuidler& Double(const std::string& name, double default_val) const;
-  const ConfigDefBuidler& String(const std::string& name, const std::string& default_val) const;
+  const ConfigDefBuidler& Bool(const std::string& name, bool default_val,
+                               const std::string& description) const;
+  const ConfigDefBuidler& Int64(const std::string& name, int64_t default_val,
+                                const std::string& description) const;
+  const ConfigDefBuidler& Double(const std::string& name, double default_val,
+                                 const std::string& description) const;
+  const ConfigDefBuidler& String(const std::string& name, const std::string& default_val,
+                                 const std::string& description) const;
 };
 
 #define REGISTER_ENV_CONFIG_DEF() REGISTER_CONFIG_DEF(kEnvConfigType)
