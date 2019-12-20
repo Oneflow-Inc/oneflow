@@ -56,7 +56,12 @@ parser.add_argument(
 parser.add_argument(
     "-v", "--verbose", default=False, action="store_true", required=False
 )
-
+parser.add_argument(
+    "opts",
+    help="yaml config given in terminal command",
+    default=None,
+    nargs=argparse.REMAINDER,
+)
 terminal_args = parser.parse_args()
 
 
@@ -181,6 +186,7 @@ def merge_and_compare_config(args):
 
     assert config.SOLVER.IMS_PER_BATCH % config.ENV.NUM_GPUS == 0
     config.ENV.IMS_PER_GPU = config.SOLVER.IMS_PER_BATCH / config.ENV.NUM_GPUS
+    config.merge_from_list(args.opts)
     config.freeze()
     print("difference between default (upper) and given config (lower)")
     d1_diff, d2_diff = compare_config(get_default_cfgs(), config)
