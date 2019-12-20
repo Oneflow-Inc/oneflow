@@ -138,7 +138,7 @@ void CompileCurJobOnMaster(Job* job, Plan* improved_plan, bool need_job_complete
     LOG(INFO) << "compile time: " << GetCurTime() - start;
     complete_plan =
         Improver().GenAndInferMemBlockIdOnly(*Global<AvailableMemDesc>::Get(), naive_plan);
-    if (Global<Resource>::Get()->enable_debug_mode()) {
+    if (Global<ResourceDesc>::Get()->enable_debug_mode()) {
       TeePersistentLogStream::Create("naive_plan")->Write(naive_plan);
       TeePersistentLogStream::Create("complete_plan")->Write(complete_plan);
     }
@@ -803,14 +803,14 @@ void CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan) {
     }
     LinkMainPlan(plan, main_plan, identity_tick_op_names);
     PlanUtil::CleanUselessMemBlockAndCheckValid(plan);
-    if (Global<Resource>::Get()->enable_debug_mode()) {
+    if (Global<ResourceDesc>::Get()->enable_debug_mode()) {
       TeePersistentLogStream::Create("merged_plan")->Write(*plan);
       PlanUtil::ToDotFile(*plan, "/dot/merged_plan.dot");
     }
     PushPlan("merged_plan", *plan);
   } else {
     PullPlan("merged_plan", plan);
-    if (Global<Resource>::Get()->enable_debug_mode()) {
+    if (Global<ResourceDesc>::Get()->enable_debug_mode()) {
       TeePersistentLogStream::Create("merged_plan")->Write(*plan);
     }
   }
