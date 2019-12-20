@@ -261,7 +261,7 @@ void BuildAllReduceStruct(
 
 }  // namespace
 
-void AllReduceAddPass::Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
+void AllReduceAddPass::Apply(const OpGraph& op_graph, JobBuilder* job_builder) {
   auto GetLastTouchedOpName = MakeGetterArg4ThisFuncPrevCall();
   auto ProducerOpNode4Lbi = MakeGetterProducerOpNode4Lbi(op_graph);
   std::vector<LogicalBlobId> lbis;
