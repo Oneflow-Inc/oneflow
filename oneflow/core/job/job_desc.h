@@ -4,6 +4,7 @@
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/job/dlnet_conf.pb.h"
 #include "oneflow/core/job/job.pb.h"
+#include "oneflow/core/framework/user_op_attr.pb.h"
 #include "oneflow/core/job/placement.pb.h"
 #include "oneflow/core/job/inter_user_job_info.pb.h"
 #include "oneflow/core/register/logical_blob_id.pb.h"
@@ -61,6 +62,17 @@ class JobDesc final {
   float all_reduce_lazy_ratio() const;
   bool all_reduce_fp16() const;
   int64_t cudnn_buf_limit_mbyte() const { return job_conf_.cudnn_buf_limit_mbyte(); }
+
+#define DEFINE_FUNCTION_CONFIG_GETTER(T, func_name, field_name)                      \
+  T func_name(const std::string& field_name) const {                                 \
+    const UserOpAttrVal& attr_val = job_conf_.flag_name2flag_value().at(field_name); \
+    CHECK(attr_val.has_##field_name());                                              \
+    return attr_val.field_name();                                                    \
+  }
+  DEFINE_FUNCTION_CONFIG_GETTER(bool, Bool, at_bool);
+  DEFINE_FUNCTION_CONFIG_GETTER(int64_t, Int64, at_int64);
+  DEFINE_FUNCTION_CONFIG_GETTER(double, Double, at_double);
+  DEFINE_FUNCTION_CONFIG_GETTER(const std::string&, String, at_string);
 
   // Train conf
   int64_t TotalBatchNum() const;

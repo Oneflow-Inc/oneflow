@@ -10,6 +10,7 @@ import "oneflow/core/register/blob_desc.proto";
 import "oneflow/core/operator/op_conf.proto";
 import "oneflow/core/common/shape.proto";
 import "oneflow/core/job/sbp_parallel.proto";
+import "oneflow/core/framework/user_op_attr.proto";
 
 message TrainConf {
   required NormalModelUpdateOpUserConf model_update_conf = 3;
@@ -105,6 +106,8 @@ message JobConfigProto {
   optional bool enable_auto_mixed_precision = 602 [default = false];
 
   optional int64 concurrency_width = 1000 [default = 128];
+
+  map<string, UserOpAttrVal> flag_name2flag_value = 2000;
 }
 
 message OpTimeShape {

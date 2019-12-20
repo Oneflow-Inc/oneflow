@@ -249,6 +249,11 @@ def set_weight_l2(func_desc, value):
 def set_bias_l2(func_desc, value):
     func_desc.job_config_proto.train_conf.bias_l2 = value
 
+@oneflow_function_config('enable_pseudo_chain_merge')
+def set_bias_l2(func_desc, value):
+    assert type(value) is bool
+    func_desc.job_config_proto.flag_name2flag_value['enable_pseudo_chain_merge'] = value
+
 @oneflow_function_config('default_placement_scope')
 def set_default_placement(func_desc, value):
     assert isinstance(value, placement_ctx.PlacementScope)
