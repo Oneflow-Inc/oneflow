@@ -5,9 +5,11 @@ namespace oneflow {
 
 namespace {
 
-std::function<std::string(const std::string&)> MakeGetterArg4ThisFuncPrevCall() {
+std::function<std::string(const std::string&)> MakeGetterArg4ThisFuncPrevCall(int64_t limits) {
+  auto count = std::make_shared<int64_t>(limits);
   auto arg4this_func_prev_call = std::make_shared<std::string>("");
-  return [arg4this_func_prev_call](const std::string& arg) {
+  return [count, arg4this_func_prev_call](const std::string& arg) -> std::string {
+    if (--(*count) < 0) { return ""; }
     std::string ret = *arg4this_func_prev_call;
     *arg4this_func_prev_call = arg;
     return ret;
@@ -132,38 +134,6 @@ void ForEachLbisGroupByDataTypeAndParallelDesc(
   }
 }
 
-void GroupAllReducedLbisByStrategy(
-    const std::function<const OpNode*(const LogicalBlobId&)>& ProducerOpNode4Lbi,
-    const std::vector<LogicalBlobId>& sorted_lbis,
-    std::vector<std::vector<LogicalBlobId>>* lbi_groups) {
-  auto MemSize4Lbi = [&](const LogicalBlobId& lbi) -> size_t {
-    const OpNode* producer = ProducerOpNode4Lbi(lbi);
-    const BlobDesc& logical_blob_desc = producer->LogicalBlobDesc4Lbi(lbi);
-    int64_t elem_cnt = logical_blob_desc.shape().elem_cnt();
-    size_t model_size = elem_cnt * GetSizeOfDataType(logical_blob_desc.data_type());
-    return RoundUp(model_size, kCudaAlignSize);
-  };
-  ForEachLbisGroupByDataTypeAndParallelDesc(
-      ProducerOpNode4Lbi, sorted_lbis, [&](const std::vector<LogicalBlobId>& lbis) {
-        size_t model_total_size = 0;
-        for (const auto& lbi : lbis) { model_total_size += MemSize4Lbi(lbi); }
-        size_t avg_size = model_total_size / GlobalJobDesc().all_reduce_group_num();
-        const size_t group_min_size = GlobalJobDesc().all_reduce_group_min_byte();
-        const float group_size_warmup = GlobalJobDesc().all_reduce_group_size_warmup();
-        size_t cur_group_capacity = group_min_size / group_size_warmup;
-        size_t cur_group_model_size = GetMaxVal<size_t>();
-        for (const LogicalBlobId& lbi : lbis) {
-          if (cur_group_model_size >= cur_group_capacity) {
-            lbi_groups->emplace_back(std::vector<LogicalBlobId>{});
-            cur_group_model_size = 0;
-            if (cur_group_capacity < avg_size) { cur_group_capacity *= group_size_warmup; }
-          }
-          lbi_groups->back().emplace_back(lbi);
-          cur_group_model_size += MemSize4Lbi(lbi);
-        }
-      });
-}
-
 void AddReduceConcatAndReduceIdentityOpConf(
     JobBuilder* job_builder, std::vector<int64_t>* offsets,
     const std::function<const OpNode*(const LogicalBlobId&)>& ProducerOpNode4Lbi,
@@ -273,21 +243,47 @@ void BuildAllReduceStruct(
 }  // namespace
 
 void AllReduceAddPass::Apply(const OpGraph& op_graph, JobBuilder* job_builder) {
-  auto GetLastTouchedOpName = MakeGetterArg4ThisFuncPrevCall();
   auto ProducerOpNode4Lbi = MakeGetterProducerOpNode4Lbi(op_graph);
   std::vector<LogicalBlobId> lbis;
   FindAllReducedLbis(job_builder->job(), op_graph, ProducerOpNode4Lbi, &lbis);
   SortAllReducedLbis(op_graph, ProducerOpNode4Lbi, &lbis);
   HashMap<LogicalBlobId, int32_t> lbi2order_in_graph;
   FOR_RANGE(int32_t, i, 0, lbis.size()) { CHECK(lbi2order_in_graph.emplace(lbis.at(i), i).second); }
-
-  std::vector<std::vector<LogicalBlobId>> lbi_groups;
-  GroupAllReducedLbisByStrategy(ProducerOpNode4Lbi, lbis, &lbi_groups);
-  FOR_RANGE(int32_t, i, 0, lbi_groups.size()) {
-    const auto& lbi_group = lbi_groups.at(i);
-    BuildAllReduceStruct(job_builder, ProducerOpNode4Lbi, lbi_group,
-                         lbi2order_in_graph.at(lbi_group.at(0)), GetLastTouchedOpName);
-  }
+  auto MemSize4Lbi = [&](const LogicalBlobId& lbi) -> size_t {
+    const OpNode* producer = ProducerOpNode4Lbi(lbi);
+    const BlobDesc& logical_blob_desc = producer->LogicalBlobDesc4Lbi(lbi);
+    int64_t elem_cnt = logical_blob_desc.shape().elem_cnt();
+    size_t model_size = elem_cnt * GetSizeOfDataType(logical_blob_desc.data_type());
+    return RoundUp(model_size, kCudaAlignSize);
+  };
+  ForEachLbisGroupByDataTypeAndParallelDesc(
+      ProducerOpNode4Lbi, lbis, [&](const std::vector<LogicalBlobId>& lbis) {
+        size_t model_total_size = 0;
+        for (const auto& lbi : lbis) { model_total_size += MemSize4Lbi(lbi); }
+        size_t avg_size = model_total_size / GlobalJobDesc().all_reduce_group_num();
+        const size_t group_min_size = GlobalJobDesc().all_reduce_group_min_byte();
+        const float group_size_warmup = GlobalJobDesc().all_reduce_group_size_warmup();
+        size_t cur_group_capacity = group_min_size / group_size_warmup;
+        size_t cur_group_model_size = GetMaxVal<size_t>();
+        std::vector<std::vector<LogicalBlobId>> lbi_groups;
+        for (const LogicalBlobId& lbi : lbis) {
+          if (cur_group_model_size >= cur_group_capacity) {
+            lbi_groups.emplace_back(std::vector<LogicalBlobId>{});
+            cur_group_model_size = 0;
+            if (cur_group_capacity < avg_size) { cur_group_capacity *= group_size_warmup; }
+          }
+          lbi_groups.back().emplace_back(lbi);
+          cur_group_model_size += MemSize4Lbi(lbi);
+        }
+        float sequantial_ratio = GlobalJobDesc().Double("ratio_sequantial_optimizers");
+        int64_t num_sequantial_optimizer = sequantial_ratio * lbis.size();
+        auto GetLastTouchedOpName = MakeGetterArg4ThisFuncPrevCall(num_sequantial_optimizer);
+        FOR_RANGE(int32_t, i, 0, lbi_groups.size()) {
+          const auto& lbi_group = lbi_groups.at(i);
+          BuildAllReduceStruct(job_builder, ProducerOpNode4Lbi, lbi_group,
+                               lbi2order_in_graph.at(lbi_group.at(0)), GetLastTouchedOpName);
+        }
+      });
 }
 
 }  // namespace oneflow
