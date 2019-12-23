@@ -9,7 +9,7 @@ from test_util import GetSavePath
 from test_util import Save
 
 
-def compare_with_tensorflow(device_type, input_shape, axis, keepdims):
+def compare_with_tensorflow(device_type, input_shape, axis, keepdims, rtol=1e-5, atol=1e-5):
     assert device_type in ["gpu", "cpu"]
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
@@ -47,18 +47,29 @@ def compare_with_tensorflow(device_type, input_shape, axis, keepdims):
         tf_out = tf.math.reduce_sum(x, axis=axis, keepdims=keepdims)
     loss_diff = np.load(os.path.join(GetSavePath(), "loss_diff.npy"))
     tf_x_diff = tape.gradient(tf_out, x, loss_diff)
-
-    assert np.allclose(of_out.ndarray(), tf_out.numpy(), rtol=1e-5, atol=1e-5)
+#    print("tf: ")
+#    print(tf_out.numpy())
+#    print("of: ")
+#    print(of_out.ndarray())
+    assert np.allclose(of_out.ndarray(), tf_out.numpy(), rtol=rtol, atol=atol)
     assert np.allclose(
-        np.load(os.path.join(GetSavePath(), "x_diff.npy")), tf_x_diff.numpy(), rtol=1e-5, atol=1e-5
+        np.load(os.path.join(GetSavePath(), "x_diff.npy")), tf_x_diff.numpy(), rtol=rtol, atol=atol
     )
-
 
 def test_reduce_sum(test_case):
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["gpu"]
     arg_dict["input_shape"] = [(64, 64, 64)]
     arg_dict["axis"] = [None, [1], [0, 2]]
+    arg_dict["keepdims"] = [True, False]
+    for arg in GenArgList(arg_dict):
+        compare_with_tensorflow(*arg)
+
+def test_matrix_col_reduce_sum(test_case):
+    arg_dict = OrderedDict()
+    arg_dict["device_type"] = ["gpu"]
+    arg_dict["input_shape"] = [(64, 64)]
+    arg_dict["axis"] = [[0]]
     arg_dict["keepdims"] = [True, False]
     for arg in GenArgList(arg_dict):
         compare_with_tensorflow(*arg)
