@@ -1570,12 +1570,54 @@ message YoloDetectOpConf {
   required int32 layer_width = 10;
   optional float prob_thresh = 11 [default = 0.5];
   optional int32 num_classes = 12 [default = 80];
-  repeated AnchorBoxesSize anchor_boxes_size = 13;
+  repeated int32 anchor_boxes = 13;
+  //repeated AnchorBoxesSize anchor_boxes_size = 13;
+}
+
+message YoloBoxDiffOpConf {
+  required string bbox = 1;
+  required string gt_boxes = 2;
+  required string gt_labels = 3;
+  required string bbox_loc_diff = 4;
+  required string pos_inds = 5;
+  required string pos_cls_label = 6;
+  required string neg_inds = 7;
+  required int32 image_height = 8;
+  required int32 image_width = 9;
+  required int32 layer_height = 10;
+  required int32 layer_width = 11;
+  optional float ignore_thresh = 12 [default = 0.7];
+  optional float truth_thresh = 13 [default = 1];
+  repeated AnchorBoxesSize anchor_boxes_size = 14;
+  repeated int32 box_mask = 15;
+  required string valid_num = 16;
+}
+
+message YoloProbLossOpConf {
+  required string bbox_objness = 1;
+  required string bbox_clsprob = 2;
+  required string pos_inds = 3;
+  required string pos_cls_label = 4;
+  required string neg_inds = 5;
+  required string bbox_objness_out = 6;
+  required string bbox_clsprob_out = 7;
+  optional int32 num_classes = 8 [default = 80];
+  required string valid_num = 9;
 }
 
 message AnchorBoxesSize {
   required int32 width = 1;
   required int32 height = 2;
+}
+
+message NonMaximumSuppressionOpConf {
+  // in
+  required string in = 1;
+  // out
+  required string out = 2;
+  // conf
+  optional float nms_iou_threshold = 3 [default = 0.7];
+  optional int32 post_nms_top_n = 4 [default = -1];
 }
 
 message OperatorConf {
@@ -1737,6 +1779,9 @@ message OperatorConf {
     UpsampleNearestOpConf upsample_nearest_conf = 310;
     UpsampleNearestGradOpConf upsample_nearest_grad_conf = 311;
     YoloDetectOpConf yolo_detect_conf = 312;
+    YoloBoxDiffOpConf yolo_box_diff_conf = 313;
+    YoloProbLossOpConf yolo_prob_loss_conf = 314;
+    NonMaximumSuppressionOpConf non_maximum_suppression_conf = 315;
 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;
