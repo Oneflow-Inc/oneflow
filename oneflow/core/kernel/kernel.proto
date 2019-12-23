@@ -180,6 +180,10 @@ message UserKernelConf {
   required ParallelContext parallel_ctx = 2;
 }
 
+message TopKConf {
+  required int32 temp_storage_bytes = 1;
+}
+
 message KernelConf {
   required OpAttribute op_attribute = 1;
   required bool is_forward = 2;
@@ -228,5 +232,6 @@ message KernelConf {
     GatherMs0GradKernelConf gather_ms0_grad_conf = 415;
     NcclTupleReduceConf nccl_tuple_reduce_conf = 416;
     NcclTupleBroadcastConf nccl_tuple_broadcast_conf = 417;
+    TopKConf top_k_conf = 418;
   }
 }
