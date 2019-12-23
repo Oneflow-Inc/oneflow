@@ -1570,8 +1570,7 @@ message YoloDetectOpConf {
   required int32 layer_width = 10;
   optional float prob_thresh = 11 [default = 0.5];
   optional int32 num_classes = 12 [default = 80];
-  repeated int32 anchor_boxes = 13;
-  //repeated AnchorBoxesSize anchor_boxes_size = 13;
+  repeated AnchorBoxesSize anchor_boxes_size = 13;
 }
 
 message YoloBoxDiffOpConf {
@@ -1599,10 +1598,10 @@ message YoloProbLossOpConf {
   required string pos_inds = 3;
   required string pos_cls_label = 4;
   required string neg_inds = 5;
-  required string bbox_objness_out = 6;
-  required string bbox_clsprob_out = 7;
-  optional int32 num_classes = 8 [default = 80];
-  required string valid_num = 9;
+  required string valid_num = 6;
+  required string bbox_objness_out = 7;
+  required string bbox_clsprob_out = 8;
+  optional int32 num_classes = 9 [default = 80];
 }
 
 message AnchorBoxesSize {

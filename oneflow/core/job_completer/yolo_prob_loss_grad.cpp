@@ -28,8 +28,8 @@ void GenerateBackwardOpConf(
     MultiplyOpConf* conf = op_conf.mutable_multiply_conf();
     conf->set_out("out");
 
-    conf->set_in_0(GenLogicalBlobName(*DiffLbi4BnInOp("bbox_clsprob")));
-    conf->set_in_1(GenLogicalBlobName(op.BnInOp2Lbi("bbox_clsprob")));
+    conf->set_in_0(GenLogicalBlobName(*DiffLbi4BnInOp("bbox_clsprob_out")));
+    conf->set_in_1(GenLogicalBlobName(op.BnInOp2Lbi("bbox_clsprob_out")));
 
     op_confs->push_back(op_conf);
 

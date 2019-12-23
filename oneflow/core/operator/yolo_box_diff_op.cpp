@@ -45,8 +45,8 @@ class YoloBoxDiffOp final : public Operator {
     const int64_t max_num_gt_boxes = gt_boxes_blob_desc->shape().At(1);
     CHECK_EQ(max_num_gt_boxes, gt_labels_blob_desc->shape().At(1));
     CHECK_EQ(bbox_blob_desc->data_type(), gt_boxes_blob_desc->data_type());
-    CHECK(gt_boxes_blob_desc->has_dim1_valid_num_field());
-    CHECK(gt_labels_blob_desc->has_dim1_valid_num_field());
+    // CHECK(gt_boxes_blob_desc->has_dim1_valid_num_field());
+    // CHECK(gt_labels_blob_desc->has_dim1_valid_num_field());
 
     // output: bbox_loc_diff (n, r, 4)
     BlobDesc* bbox_loc_diff_blob_desc = GetBlobDesc4BnInOp("bbox_loc_diff");

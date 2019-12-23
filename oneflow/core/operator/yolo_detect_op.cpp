@@ -69,8 +69,9 @@ class YoloDetectOp final : public Operator {
 
   Maybe<void> InferBatchAxis(
       std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override {
-    *BatchAxis4BnInOp("sin_theta_data") = *BatchAxis4BnInOp("in");
-    *BatchAxis4BnInOp("out") = *BatchAxis4BnInOp("in");
+    *BatchAxis4BnInOp("valid_num") = *BatchAxis4BnInOp("bbox");
+    *BatchAxis4BnInOp("out_bbox") = *BatchAxis4BnInOp("bbox");
+    *BatchAxis4BnInOp("out_probs") = *BatchAxis4BnInOp("bbox");
     return Maybe<void>::Ok();
   }
 };
