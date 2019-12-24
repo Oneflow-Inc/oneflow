@@ -6,7 +6,7 @@
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/graph/copy_task_node.h"
-#include "oneflow/core/graph/inplace_lbi_graph.h"
+#include "oneflow/core/register/op_blob_arg_info.h"
 
 namespace oneflow {
 

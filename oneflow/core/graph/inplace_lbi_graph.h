@@ -4,14 +4,9 @@
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/graph/graph.h"
+#include "oneflow/core/register/op_blob_arg_info.h"
 
 namespace oneflow {
-
-struct InplaceObasInfo {
-  OpBlobArgList mut_in_obas;
-  OpBlobArgPairs mut_inplace_oba_pairs;
-  OpBlobArgPairs con_inplace_oba_pairs;
-};
 
 class InplaceLbiEdge;
 

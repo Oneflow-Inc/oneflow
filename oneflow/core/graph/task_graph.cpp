@@ -422,6 +422,23 @@ void TaskGraph::EnableInplaceMemSharingInReduceStruct() {
 void TaskGraph::GetInplaceOpBlobArgList(
     InplaceObasInfo* obas_info, const HashSet<TaskNode*>& dev_nodes,
     const std::function<const TaskNode*(const std::string&)>& TaskNode4OpName) const {
+  auto AddMutableInplaceArgPair = [&](TaskNode* node, const std::string& ibn,
+                                      const std::string& obn, const std::string& op_name) {
+    if (IsInplaceAllowed(node, {ibn, obn}, TaskNode4OpName)) {
+      auto* pair = obas_info->mut_inplace_oba_pairs.mutable_pair()->Add();
+      *pair->mutable_first() = GenOpBlobArg(op_name, ibn);
+      *pair->mutable_second() = GenOpBlobArg(op_name, obn);
+    }
+  };
+  auto AddConstInplaceArgPair = [&](TaskNode* node, const std::string& ibn, const std::string& obn,
+                                    const std::string& op_name) {
+    if (IsInplaceAllowed(node, {ibn, obn}, TaskNode4OpName)) {
+      auto* pair = obas_info->con_inplace_oba_pairs.mutable_pair()->Add();
+      *pair->mutable_first() = GenOpBlobArg(op_name, ibn);
+      *pair->mutable_second() = GenOpBlobArg(op_name, obn);
+    }
+  };
+
   for (TaskNode* task_node : dev_nodes) {
     if (task_node->exec_gph().node_num() != 1) { continue; }
     const auto& op = *task_node->exec_gph().SoleNode()->op();
@@ -434,36 +451,21 @@ void TaskGraph::GetInplaceOpBlobArgList(
     for (const std::string& obn : op.output_bns()) {
       const auto& obn_modifier = op.OutputBlobModifier4Obn(obn);
       if (obn_modifier.has_mutable_inplace_ibn()) {
-        std::string ibn = obn_modifier.mutable_inplace_ibn();
-        if (IsInplaceAllowed(task_node, {ibn, obn}, TaskNode4OpName)) {
-          auto* pair = obas_info->mut_inplace_oba_pairs.mutable_pair()->Add();
-          *pair->mutable_first() = GenOpBlobArg(op.op_name(), ibn);
-          *pair->mutable_second() = GenOpBlobArg(op.op_name(), obn);
-        }
+        AddMutableInplaceArgPair(task_node, obn_modifier.mutable_inplace_ibn(), obn, op.op_name());
       } else if (obn_modifier.has_const_inplace_ibn()) {
-        std::string ibn = obn_modifier.const_inplace_ibn();
-        if (IsInplaceAllowed(task_node, {ibn, obn}, TaskNode4OpName)) {
-          auto* pair = obas_info->con_inplace_oba_pairs.mutable_pair()->Add();
-          *pair->mutable_first() = GenOpBlobArg(op.op_name(), ibn);
-          *pair->mutable_second() = GenOpBlobArg(op.op_name(), obn);
-        }
+        AddConstInplaceArgPair(task_node, obn_modifier.const_inplace_ibn(), obn, op.op_name());
       }
-      /*
-      std::string ibn = "";
-      {
-        const auto& obn_modifier = op.OutputBlobModifier4Obn(obn);
-        if (obn_modifier.has_const_inplace_ibn()) {
-          ibn = obn_modifier.const_inplace_ibn();
-        } else if (obn_modifier.has_mutable_inplace_ibn()) {
-          ibn = obn_modifier.mutable_inplace_ibn();
-        } else {
-          // do nothing
-        }
+    }
+
+    if (op.op_conf().has_user_conf()) {
+      const OpContext* op_ctx = task_node->exec_gph().SoleNode()->op_context();
+      const UserOpCtx* user_op_ctx = static_cast<const UserOpCtx*>(op_ctx);
+      for (const auto& pair : user_op_ctx->mut_inplace_obn2ibn) {
+        AddMutableInplaceArgPair(task_node, pair.second, pair.first, op.op_name());
       }
-      if (ibn != "" && IsInplaceAllowed(task_node, {ibn, obn}, TaskNode4OpName)) {
-        *inplace_obas->mutable_oba()->Add() = GenOpBlobArg(op.op_name(), obn);
+      for (const auto& pair : user_op_ctx->con_inplace_obn2ibn) {
+        AddConstInplaceArgPair(task_node, pair.second, pair.first, op.op_name());
       }
-      */
     }
   }
 }
