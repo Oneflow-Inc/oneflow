@@ -35,5 +35,6 @@ Maybe<void> AccTickOp::InferBatchAxis(
 }
 
 REGISTER_OP(OperatorConf::kAccTickConf, AccTickOp);
+REGISTER_TICK_TOCK_OP(OperatorConf::kAccTickConf);
 
 }  // namespace oneflow

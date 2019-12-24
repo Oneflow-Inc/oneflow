@@ -2,6 +2,7 @@
 #define ONEFLOW_CORE_NDARRAY_NDARRAY_APPLY_BROADCAST_BINARY_H_
 
 #include "oneflow/core/ndarray/ndarray_apply_broadcast_binary_core.h"
+#include "oneflow/core/ndarray/ndarray_apply_binary.h"
 #include "oneflow/core/common/util.h"
 
 namespace oneflow {
@@ -23,6 +24,9 @@ struct NdarrayApplyBroadcastBinary<
   static void Apply(DeviceCtx* ctx,
                     const XpuVarNdarray<typename BinaryFuncTrait<binary_func, T>::return_type>& y,
                     const XpuVarNdarray<const T>& a, const XpuVarNdarray<const T>& b) {
+    if (a.shape() == b.shape()) {
+      return NdarrayApplyBinary<device_type, T, binary_func>::Apply(ctx, y, a, b);
+    }
     using BroadcastBinary =
         NdarrayApplyBroadcastBinaryCoreWrapper<device_type, T, NDIMS, binary_func>;
     CheckBroadcastable(y, a, b);
@@ -38,6 +42,9 @@ struct NdarrayApplyBroadcastBinary<
 
   static void InplaceApply(DeviceCtx* ctx, const XpuVarNdarray<T>& y,
                            const XpuVarNdarray<const T>& x) {
+    if (y.shape() == x.shape()) {
+      return NdarrayApplyBinary<device_type, T, binary_func>::InplaceApply(ctx, y, x);
+    }
     using BroadcastBinary =
         NdarrayApplyBroadcastBinaryCoreWrapper<device_type, T, NDIMS, binary_func>;
     CheckBroadcastable(y, reinterpret_cast<const XpuVarNdarray<const T>&>(y), x);

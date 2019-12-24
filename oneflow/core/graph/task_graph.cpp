@@ -900,6 +900,7 @@ TaskNode* TaskGraph::BuildTaskStep(
 
 TaskNode* TaskGraph::TryAddCopyH2DTaskTo(TaskNode* task) {
   if (IsInterfaceTask(task)) { return nullptr; }
+  if (IsClassRegistered<TickTockTaskType>(task->GetTaskType())) { return nullptr; }
   CHECK_EQ(task->device_type(), DeviceType::kGPU);
   CopyHdTaskNode* copy_task = NewNode<CopyHdTaskNode>();
   copy_task->Init(CopyHdOpConf::H2D, task->machine_id(), task->GpuPhyId());
