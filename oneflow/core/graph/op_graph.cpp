@@ -52,7 +52,7 @@ bool OpEdge::CalcIsStrict121Connected() const {
   if (!src->parallel_desc().Equals(dst->parallel_desc())) { return false; }
   if (src->IsTimeShapeIdentity() == false) { return false; }
   if (dst->IsTimeShapeIdentity() == false) { return false; }
-  if (*src->GetInputOutputFastestTimeShape() != *src->GetInputOutputFastestTimeShape()) {
+  if (*src->GetInputOutputFastestTimeShape() != *dst->GetInputOutputFastestTimeShape()) {
     return false;
   }
   for (const LogicalBlobId& lbi : lbis()) {
@@ -203,15 +203,7 @@ bool OpNode::IsTimeShapeIdentity() const {
 }
 
 const Shape* OpNode::GetInputBlobFastestTimeShape() const {
-  const Shape* ret = nullptr;
-  for (OpEdge* edge : in_edges()) {
-    const Shape* shape = edge->src_node()->out_blob_time_shape();
-    if (ret == nullptr || shape->elem_cnt() > ret->elem_cnt()) { ret = shape; }
-  }
-  for (OpEdge* edge : in_edges()) {
-    CHECK_EQ(ret->elem_cnt() % edge->src_node()->out_blob_time_shape()->elem_cnt(), 0);
-  }
-  return ret;
+  return input_blob_fastest_time_shape_.get();
 }
 
 const Shape* OpNode::GetInputOutputFastestTimeShape() const {
@@ -358,6 +350,18 @@ void OpNode::InitLbi2SourceNode() {
   }
 }
 
+void OpNode::InitInputBlobFastestTimeShape() {
+  const Shape* fastest = nullptr;
+  for (OpEdge* edge : in_edges()) {
+    const Shape* shape = edge->src_node()->out_blob_time_shape();
+    if (fastest == nullptr || shape->elem_cnt() > fastest->elem_cnt()) { fastest = shape; }
+  }
+  for (OpEdge* edge : in_edges()) {
+    CHECK_EQ(fastest->elem_cnt() % edge->src_node()->out_blob_time_shape()->elem_cnt(), 0);
+  }
+  if (fastest != nullptr) { input_blob_fastest_time_shape_.reset(new Shape(fastest->dim_vec())); }
+}
+
 void OpGraph::Init(const Job& job) {
   InitNodes(job);
   ForEachNode(
@@ -439,6 +443,7 @@ void OpGraph::InferTimeShape() const {
     auto GetInputBlobTimeShape = [&](const std::string& bn_in_op) {
       return op_node->GetInputBlobTimeShape(bn_in_op);
     };
+    op_node->InitInputBlobFastestTimeShape();
     op_node->op().InferOutputBlobTimeShapeIf(GetInputBlobTimeShape, &parallel_ctx,
                                              op_node->mut_out_blob_time_shape());
   });
