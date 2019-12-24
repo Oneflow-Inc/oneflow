@@ -25,18 +25,16 @@ void GroupTickByParallelDesc(const OpGraph& op_graph, JobBuilder* job_builder) {
     parallel_desc2op_node[op_node->parallel_desc()].push_back(op_node);
   });
   for (const auto& pair : parallel_desc2op_node) {
-    if (pair.second.size() == 1) { continue; }
-    OperatorConf tick_op;
-    tick_op.set_name("System-AutoTick-Tick_" + NewUniqueId());
-    tick_op.mutable_tick_conf()->set_out("out");
-    ParallelDesc pd(pair.first);
-    pd.set_device_type(DeviceType::kCPU);
-    job_builder->AddOps(pd.parallel_conf(), {tick_op});
+    OperatorConf device_tick_op;
+    device_tick_op.set_name("System-AutoTick-Prepend-DeviceTick_" + NewUniqueId());
+    auto* device_tick_op_conf = device_tick_op.mutable_device_tick_conf();
+    device_tick_op_conf->set_out("out");
+    job_builder->AddOps(pair.first.parallel_conf(), {device_tick_op});
 
     for (const auto* op_node : pair.second) {
       auto mut_tick_input_helper = NewMutOpConTickInputHelper(op_node->op().op_conf());
       job_builder->MutOpsOnlyOnce(
-          {mut_tick_input_helper->NewTickInputBoundOpConf(tick_op.name() + "/out")});
+          {mut_tick_input_helper->NewTickInputBoundOpConf(device_tick_op.name() + "/out")});
     }
   }
 }

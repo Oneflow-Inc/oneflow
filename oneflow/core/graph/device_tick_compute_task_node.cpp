@@ -39,4 +39,6 @@ void DeviceTickCompTaskNode::InferProducedDataRegstTimeShape() {
   });
 }
 
+REGISTER_TICK_TOCK_TASK_TYPE(TaskType::kDeviceTick);
+
 }  // namespace oneflow

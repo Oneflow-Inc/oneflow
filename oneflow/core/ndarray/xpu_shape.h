@@ -52,6 +52,8 @@ class XpuShape final {
     }
   }
 
+  std::string ToString() const { return ShapeView(dim_, num_axes_).ToString(); }
+
  private:
   size_t num_axes_;
   size_t elem_num_;

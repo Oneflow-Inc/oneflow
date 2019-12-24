@@ -37,10 +37,9 @@ void Kernel::InitModelAndConstBuf(const KernelCtx& ctx,
 
 void Kernel::Launch(const KernelCtx& ctx,
                     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  auto CachedBnInOp2Blob = WithResultCached(BnInOp2Blob);
-  gdb::ForwardEnterBreakPoint(op_attribute(), CachedBnInOp2Blob);
-  Forward(ctx, CachedBnInOp2Blob);
-  gdb::ForwardLeaveBreakPoint(op_attribute(), CachedBnInOp2Blob);
+  gdb::ForwardEnterBreakPoint(op_attribute(), BnInOp2Blob);
+  Forward(ctx, BnInOp2Blob);
+  gdb::ForwardLeaveBreakPoint(op_attribute(), BnInOp2Blob);
 }
 
 const LogicalBlobId& Kernel::BnInOp2Lbi(const std::string& bn_in_op) const {
