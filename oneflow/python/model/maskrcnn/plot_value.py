@@ -168,7 +168,7 @@ if __name__ == "__main__":
         flow_df["legend"].replace("primary_lr", "lr", inplace=True)
     flow_df = flow_df.groupby(["iter", "legend"], as_index=False).mean()
     torch_df = get_df(torch_metrics_path, "torch*.csv")
-    if torch_df["iter"].min() == 0:
+    if torch_df[torch_df["value"].notnull()]["iter"].min() == 0:
         torch_df["iter"] += 1
     limit, rate = get_metrics_sr(flow_df, torch_df)
     plot_many_by_legend(
