@@ -531,10 +531,11 @@ Graph<NodeType, EdgeType>::MakePredicatorIsReachable(
     const {
   auto node2ancestor = std::make_shared<HashMap<const NodeType*, HashSet<const NodeType*>>>();
   TopoForEachNode(starts, ForEachInNode, ForEachOutNode, [&](NodeType* node) {
+    node2ancestor->emplace(node, HashSet<const NodeType*>());
     ForEachInNode(node, [&](NodeType* in_node) {
-      (*node2ancestor)[node].insert(in_node);
-      (*node2ancestor)[node].insert((*node2ancestor)[in_node].begin(),
-                                    (*node2ancestor)[in_node].end());
+      node2ancestor->at(node).insert(in_node);
+      node2ancestor->at(node).insert(node2ancestor->at(in_node).begin(),
+                                     node2ancestor->at(in_node).end());
     });
   });
   return [node2ancestor](const NodeType* src, const NodeType* dst) -> bool {
