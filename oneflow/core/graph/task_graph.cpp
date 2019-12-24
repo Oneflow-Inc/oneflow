@@ -129,6 +129,15 @@ bool IsInplaceAllowed(
     const RegstDesc& regst_desc = *exec_node.RegstDesc4BnInOp(bn);
     if (regst_desc.NumOfLbi() != 1) { return false; }
   }
+  const Shape* first_shape = nullptr;
+  for (const auto& bn : bns) {
+    const BlobDesc& blob_desc = *exec_node.RegstDesc4BnInOp(bn)->SoleBlobDesc();
+    if (first_shape == nullptr) {
+      first_shape = &blob_desc.shape();
+    } else {
+      if (*first_shape != blob_desc.shape()) { return false; }
+    }
+  }
   return true;
 }
 

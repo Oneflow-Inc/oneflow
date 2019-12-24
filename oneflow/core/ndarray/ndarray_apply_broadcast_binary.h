@@ -6,6 +6,11 @@
 
 namespace oneflow {
 
+void SimplifyBroadcastBinaryShapes(const XpuShape& y, const XpuShape& b, DimVector* simplified_y,
+                                   DimVector* simplified_b);
+void SimplifyBroadcastBinaryShapes(const XpuShape& y, const XpuShape& a, const XpuShape& b,
+                                   DimVector* simplified_y, DimVector* simplified_a,
+                                   DimVector* simplified_b);
 template<DeviceType device_type, typename T, int NDIMS, template<typename> class binary_func,
          typename Enable = void>
 struct NdarrayApplyBroadcastBinary;
@@ -21,7 +26,14 @@ struct NdarrayApplyBroadcastBinary<
     using BroadcastBinary =
         NdarrayApplyBroadcastBinaryCoreWrapper<device_type, T, NDIMS, binary_func>;
     CheckBroadcastable(y, a, b);
-    return BroadcastBinary::Apply(ctx, y, a, b);
+    DimVector simplified_y_dim;
+    DimVector simplified_a_dim;
+    DimVector simplified_b_dim;
+    SimplifyBroadcastBinaryShapes(y.shape(), a.shape(), b.shape(), &simplified_y_dim,
+                                  &simplified_a_dim, &simplified_b_dim);
+    return BroadcastBinary::Apply(ctx, XpuVarNdarray<T>(Shape(simplified_y_dim), y.ptr()),
+                                  XpuVarNdarray<const T>(Shape(simplified_a_dim), a.ptr()),
+                                  XpuVarNdarray<const T>(Shape(simplified_b_dim), b.ptr()));
   }
 
   static void InplaceApply(DeviceCtx* ctx, const XpuVarNdarray<T>& y,
@@ -29,7 +41,11 @@ struct NdarrayApplyBroadcastBinary<
     using BroadcastBinary =
         NdarrayApplyBroadcastBinaryCoreWrapper<device_type, T, NDIMS, binary_func>;
     CheckBroadcastable(y, reinterpret_cast<const XpuVarNdarray<const T>&>(y), x);
-    return BroadcastBinary::InplaceApply(ctx, y, x);
+    DimVector simplified_y_dim;
+    DimVector simplified_x_dim;
+    SimplifyBroadcastBinaryShapes(y.shape(), x.shape(), &simplified_y_dim, &simplified_x_dim);
+    return BroadcastBinary::InplaceApply(ctx, XpuVarNdarray<T>(Shape(simplified_y_dim), y.ptr()),
+                                         XpuVarNdarray<const T>(Shape(simplified_x_dim), x.ptr()));
   }
 
  private:

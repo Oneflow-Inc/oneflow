@@ -158,7 +158,12 @@ struct NdarrayUtil final {
   static void ApplyBinary(
       DeviceCtx* ctx, const XpuVarNdarray<typename BinaryFuncTrait<binary_func, T>::return_type>& y,
       const XpuVarNdarray<const T>& a, const XpuVarNdarray<const T>& b) {
-    return NdarrayApplyBinary<device_type, T, binary_func>::Apply(ctx, y, a, b);
+    if (a.host_ptr() == y.host_ptr()) {
+      CHECK(a.host_shape() == y.host_shape());
+      return NdarrayApplyBinary<device_type, T, binary_func>::InplaceApply(ctx, y, b);
+    } else {
+      return NdarrayApplyBinary<device_type, T, binary_func>::Apply(ctx, y, a, b);
+    }
   }
 
   template<template<typename> class unary_func>
