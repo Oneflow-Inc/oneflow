@@ -22,6 +22,7 @@ struct NdarrayApplyBroadcastBinary<
     if (a.shape() == b.shape()) {
       return NdarrayApplyBinary<device_type, T, binary_func>::Apply(ctx, y, a, b);
     }
+    if (y.shape() == a.shape() && y.ptr() == a.ptr()) { return InplaceApply(ctx, y, b); }
     CheckBroadcastable(y, a, b);
     DimVector simplified_y_dim;
     DimVector simplified_a_dim;
