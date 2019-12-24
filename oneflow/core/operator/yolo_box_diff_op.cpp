@@ -14,6 +14,7 @@ class YoloBoxDiffOp final : public Operator {
     EnrollInputBn("bbox", true);
     EnrollInputBn("gt_boxes", false);
     EnrollInputBn("gt_labels", false);
+    EnrollInputBn("gt_valid_num", false);
     // Enroll output
     EnrollOutputBn("bbox_loc_diff", true);
     EnrollOutputBn("pos_inds", false);
@@ -60,12 +61,12 @@ class YoloBoxDiffOp final : public Operator {
     BlobDesc* pos_inds_blob_desc = GetBlobDesc4BnInOp("pos_inds");
     pos_inds_blob_desc->mut_shape() = Shape({num_images, num_boxes});
     pos_inds_blob_desc->set_data_type(DataType::kInt32);
-    pos_inds_blob_desc->set_has_dim1_valid_num_field(true);
+    // pos_inds_blob_desc->set_has_dim1_valid_num_field(true);
     // output: neg_inds (n, r) dynamic
     BlobDesc* neg_inds_blob_desc = GetBlobDesc4BnInOp("neg_inds");
     neg_inds_blob_desc->mut_shape() = Shape({num_images, num_boxes});
     neg_inds_blob_desc->set_data_type(DataType::kInt32);
-    neg_inds_blob_desc->set_has_dim1_valid_num_field(true);
+    // neg_inds_blob_desc->set_has_dim1_valid_num_field(true);
     // output: valid_num
     BlobDesc* valid_num_blob_desc = GetBlobDesc4BnInOp("valid_num");
     valid_num_blob_desc->mut_shape() = Shape({num_images, 2});

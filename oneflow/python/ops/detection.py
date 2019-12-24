@@ -105,7 +105,7 @@ def yolo_detect(bbox, probs, image_height, image_width, image_origin_height, ima
 
 
 @oneflow_export("detection.yolo_box_diff")
-def yolo_box_diff(bbox, gt_boxes, gt_labels, image_height, image_width, layer_height, layer_width, ignore_thresh, truth_thresh, box_mask, anchor_boxes_size, name=None):
+def yolo_box_diff(bbox, gt_boxes, gt_labels, gt_valid_num, image_height, image_width, layer_height, layer_width, ignore_thresh, truth_thresh, box_mask, anchor_boxes_size, name=None):
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf,
@@ -115,6 +115,7 @@ def yolo_box_diff(bbox, gt_boxes, gt_labels, image_height, image_width, layer_he
     setattr(op_conf.yolo_box_diff_conf, "bbox", bbox.logical_blob_name)
     setattr(op_conf.yolo_box_diff_conf, "gt_boxes", gt_boxes.logical_blob_name)
     setattr(op_conf.yolo_box_diff_conf, "gt_labels", gt_labels.logical_blob_name)
+    setattr(op_conf.yolo_box_diff_conf, "gt_valid_num", gt_valid_num.logical_blob_name)
     op_conf.yolo_box_diff_conf.image_height = image_height
     op_conf.yolo_box_diff_conf.image_width = image_width
     op_conf.yolo_box_diff_conf.layer_height = layer_height

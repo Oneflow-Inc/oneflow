@@ -28,10 +28,11 @@ __global__ void CoordinateTransformGpu(const int32_t box_num, const T* bbox,
 
 template<typename T>
 __global__ void CalcIouGpu(const int32_t box_num, const T* pred_bbox, const T* gt_boxes_ptr,
-                           float* overlaps, const int32_t gt_max_num, const int32_t gt_valid_num) {
-  CUDA_1D_KERNEL_LOOP(i, box_num * gt_valid_num) {
-    const int32_t box_index = i / gt_valid_num;
-    const int32_t gt_index = i % gt_valid_num;
+                           float* overlaps, const int32_t gt_max_num,
+                           const int32_t* gt_valid_num_ptr) {
+  CUDA_1D_KERNEL_LOOP(i, box_num * gt_valid_num_ptr[0]) {
+    const int32_t box_index = i / gt_valid_num_ptr[0];
+    const int32_t gt_index = i % gt_valid_num_ptr[0];
     const float gt_left = gt_boxes_ptr[gt_index * 4] - 0.5f * gt_boxes_ptr[gt_index * 4 + 2];
     const float gt_right = gt_boxes_ptr[gt_index * 4] + 0.5f * gt_boxes_ptr[gt_index * 4 + 2];
     const float gt_top = gt_boxes_ptr[gt_index * 4 + 1] - 0.5f * gt_boxes_ptr[gt_index * 4 + 3];
@@ -54,14 +55,14 @@ __global__ void CalcIouGpu(const int32_t box_num, const T* pred_bbox, const T* g
   }
 }
 
-__global__ void SetMaxOverlapsAndGtIndex(const int32_t box_num, const int32_t gt_valid_num,
+__global__ void SetMaxOverlapsAndGtIndex(const int32_t box_num, const int32_t* gt_valid_num_ptr,
                                          const int32_t gt_max_num, const float* overlaps,
                                          float* max_overlaps, int32_t* max_overlaps_gt_indices,
                                          const float ignore_thresh, const float truth_thresh) {
   CUDA_1D_KERNEL_LOOP(i, box_num) {
     max_overlaps[i] = 0.0f;
     max_overlaps_gt_indices[i] = -1;
-    for (int j = 0; j < gt_valid_num; j++) {
+    for (int j = 0; j < gt_valid_num_ptr[0]; j++) {
       if (overlaps[i * gt_max_num + j] > max_overlaps[i]) {
         max_overlaps[i] = overlaps[i * gt_max_num + j];
         if (overlaps[i * gt_max_num + j] <= ignore_thresh) {
@@ -79,7 +80,7 @@ __global__ void SetMaxOverlapsAndGtIndex(const int32_t box_num, const int32_t gt
 }
 
 template<typename T>
-__global__ void CalcGtNearestAnchorSize(const int32_t gt_valid_num, const T* gt_boxes_ptr,
+__global__ void CalcGtNearestAnchorSize(const int32_t* gt_valid_num_ptr, const T* gt_boxes_ptr,
                                         const int32_t* anchor_boxes_size_ptr,
                                         const int32_t* box_mask_ptr,
                                         int32_t* max_overlaps_gt_indices,
@@ -87,7 +88,7 @@ __global__ void CalcGtNearestAnchorSize(const int32_t gt_valid_num, const T* gt_
                                         const int32_t box_mask_num, const int32_t layer_height,
                                         const int32_t layer_width, const int32_t layer_nbox,
                                         const int32_t image_height, const int32_t image_width) {
-  CUDA_1D_KERNEL_LOOP(i, gt_valid_num) {
+  CUDA_1D_KERNEL_LOOP(i, gt_valid_num_ptr[0]) {
     const float gt_left = 0 - 0.5f * gt_boxes_ptr[i * 4 + 2];
     const float gt_right = 0 + 0.5f * gt_boxes_ptr[i * 4 + 2];
     const float gt_bottom = 0 + 0.5f * gt_boxes_ptr[i * 4 + 3];
@@ -200,6 +201,7 @@ class YoloBoxDiffKernel final : public KernelIf<DeviceType::kGPU> {
 
     const Blob* bbox_blob = BnInOp2Blob("bbox");
     const Blob* gt_boxes_blob = BnInOp2Blob("gt_boxes");
+    const Blob* gt_valid_num_blob = BnInOp2Blob("gt_valid_num");
     int32_t* anchor_boxes_size_ptr = BnInOp2Blob("anchor_boxes_size_tmp")->mut_dptr<int32_t>();
     int32_t* box_mask_ptr = BnInOp2Blob("box_mask_tmp")->mut_dptr<int32_t>();
 
@@ -221,26 +223,27 @@ class YoloBoxDiffKernel final : public KernelIf<DeviceType::kGPU> {
                                                  anchor_boxes_size_ptr + 2 * i + 1);
     }
     FOR_RANGE(int32_t, im_index, 0, bbox_blob->shape().At(0)) {
-      const size_t gt_valid_num = gt_boxes_blob->dim1_valid_num(im_index);
+      // const size_t gt_valid_num = gt_boxes_blob->dim1_valid_num(im_index);
+      const int32_t* gt_valid_num_ptr = gt_valid_num_blob->dptr<int32_t>(im_index);
       const T* gt_boxes_ptr = gt_boxes_blob->dptr<T>(im_index);
       CoordinateTransformGpu<<<BlocksNum4ThreadsNum(box_num), kCudaThreadsNumPerBlock, 0,
                                ctx.device_ctx->cuda_stream()>>>(
           box_num, bbox_blob->dptr<T>(im_index), anchor_boxes_size_ptr, box_mask_ptr,
           BnInOp2Blob("pred_bbox")->mut_dptr<T>(), conf.layer_height(), conf.layer_width(),
           conf.image_height(), conf.image_width(), layer_nbox);
-      CalcIouGpu<<<BlocksNum4ThreadsNum(box_num * gt_valid_num), kCudaThreadsNumPerBlock, 0,
+      CalcIouGpu<<<BlocksNum4ThreadsNum(box_num * gt_max_num), kCudaThreadsNumPerBlock, 0,
                    ctx.device_ctx->cuda_stream()>>>(
           box_num, BnInOp2Blob("pred_bbox")->dptr<T>(), gt_boxes_ptr,
-          BnInOp2Blob("overlaps")->mut_dptr<float>(), gt_max_num, gt_valid_num);
+          BnInOp2Blob("overlaps")->mut_dptr<float>(), gt_max_num, gt_valid_num_ptr);
       SetMaxOverlapsAndGtIndex<<<BlocksNum4ThreadsNum(box_num), kCudaThreadsNumPerBlock, 0,
                                  ctx.device_ctx->cuda_stream()>>>(
-          box_num, gt_valid_num, gt_max_num, BnInOp2Blob("overlaps")->dptr<float>(),
+          box_num, gt_valid_num_ptr, gt_max_num, BnInOp2Blob("overlaps")->dptr<float>(),
           BnInOp2Blob("max_overlaps")->mut_dptr<float>(),
           BnInOp2Blob("max_overlaps_gt_indices")->mut_dptr<int32_t>(), conf.ignore_thresh(),
           conf.truth_thresh());
-      CalcGtNearestAnchorSize<<<BlocksNum4ThreadsNum(gt_valid_num), kCudaThreadsNumPerBlock, 0,
+      CalcGtNearestAnchorSize<<<BlocksNum4ThreadsNum(gt_max_num), kCudaThreadsNumPerBlock, 0,
                                 ctx.device_ctx->cuda_stream()>>>(
-          gt_valid_num, gt_boxes_ptr, anchor_boxes_size_ptr, box_mask_ptr,
+          gt_valid_num_ptr, gt_boxes_ptr, anchor_boxes_size_ptr, box_mask_ptr,
           BnInOp2Blob("max_overlaps_gt_indices")->mut_dptr<int32_t>(), anchor_boxes_size_num,
           layer_nbox, conf.layer_height(), conf.layer_width(), layer_nbox, conf.image_height(),
           conf.image_width());
@@ -249,7 +252,7 @@ class YoloBoxDiffKernel final : public KernelIf<DeviceType::kGPU> {
           BnInOp2Blob("max_overlaps_gt_indices")->dptr<int32_t>(), pos_inds_ptr,
           BnInOp2Blob("neg_inds")->mut_dptr<int32_t>(im_index),
           BnInOp2Blob("valid_num")->mut_dptr<int32_t>(im_index), box_num);
-      CalcBboxLoss<<<BlocksNum4ThreadsNum(gt_valid_num), kCudaThreadsNumPerBlock, 0,
+      CalcBboxLoss<<<BlocksNum4ThreadsNum(gt_max_num), kCudaThreadsNumPerBlock, 0,
                      ctx.device_ctx->cuda_stream()>>>(
           box_num, bbox_blob->dptr<T>(im_index), gt_boxes_ptr,
           BnInOp2Blob("gt_labels")->dptr<int32_t>(im_index), pos_inds_ptr,

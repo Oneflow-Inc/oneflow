@@ -1577,6 +1577,7 @@ message YoloBoxDiffOpConf {
   required string bbox = 1;
   required string gt_boxes = 2;
   required string gt_labels = 3;
+  required string gt_valid_num = 17;
   required string bbox_loc_diff = 4;
   required string pos_inds = 5;
   required string pos_cls_label = 6;

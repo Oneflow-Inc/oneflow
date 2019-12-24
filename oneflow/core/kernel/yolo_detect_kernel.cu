@@ -29,12 +29,12 @@ __global__ void SetOutProbs(const int32_t probs_num, const T* probs_ptr,
     if (probs_index == 0) {
       out_probs_ptr[select_index * probs_num + probs_index] =
           probs_ptr[box_index * probs_num + probs_index];
+      printf("%d out_probs_ptr: %f\n", i, out_probs_ptr[select_index * probs_num + probs_index]);
     } else {
       T cls_prob =
           probs_ptr[box_index * probs_num + probs_index] * probs_ptr[box_index * probs_num + 0];
       out_probs_ptr[select_index * probs_num + probs_index] = cls_prob > prob_thresh ? cls_prob : 0;
     }
-    printf("%d out_probs_ptr: %f\n", i, out_probs_ptr[select_index * probs_num + probs_index]);
   }
 }
 
