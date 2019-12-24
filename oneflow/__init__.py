@@ -3,6 +3,12 @@ from __future__ import absolute_import
 from oneflow.core.job.job_set_pb2 import ConfigProto
 from oneflow.core.job.job_pb2 import JobConfigProto
 
+import signal
+import os
+def signal_handler(sig, frame):
+    os.abort()
+signal.signal(signal.SIGINT, signal_handler)
+
 import oneflow.python.framework.session_util as session_util
 del session_util
 
