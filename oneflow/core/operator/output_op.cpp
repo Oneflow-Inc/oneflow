@@ -15,7 +15,7 @@ Maybe<void> OutputOp::InferBlobDescs(
     const ParallelContext* parallel_ctx) const {
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
-  if (GetBlobDesc4BnInOp("out")->is_dynamic()) {
+  if (in_blob_desc->is_dynamic()) {
     *out_blob_desc = *in_blob_desc;
   } else {
     InterfaceOpUtil::InferOutBlobDesc(op_conf().output_conf().blob_conf(), out_blob_desc,
