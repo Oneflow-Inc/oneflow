@@ -74,6 +74,7 @@ class OpNode final : public Node<OpNode, OpEdge> {
   void InferBlobParallelDesc();
   void InitLbi2SourceNode();
   void InitInputBlobFastestTimeShape();
+  void InitLbi2SbpParallel();
 
   ParallelDesc parallel_desc_;
   HashMap<std::string, ParallelDesc> obn2blob_parallel_desc_;
@@ -86,6 +87,7 @@ class OpNode final : public Node<OpNode, OpEdge> {
   HashMap<LogicalBlobId, std::unique_ptr<BlobDesc>> lbi2logical_blob_desc_;
   HashMap<LogicalBlobId, OpNode*> lbi2source_node_;
   std::unique_ptr<Shape> input_blob_fastest_time_shape_;
+  HashMap<LogicalBlobId, SbpParallel> lbi2sbp_parallel_;
 };
 
 class OpEdge final : public Edge<OpNode, OpEdge> {

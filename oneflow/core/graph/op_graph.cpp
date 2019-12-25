@@ -78,19 +78,9 @@ const SbpParallel& OpNode::SbpParallel4BnInOp(const std::string& bn_in_op) const
 }
 
 const SbpParallel& OpNode::SbpParallel4Lbi(const LogicalBlobId& lbi) const {
-  const SbpParallel* ret = nullptr;
-  for (const auto& ibn : op().input_bns()) {
-    if (op().BnInOp2Lbi(ibn) == lbi) {
-      const auto* sbp_parallel = &SbpParallel4BnInOp(ibn);
-      if (ret != nullptr) { CHECK(*ret == *sbp_parallel); }
-      ret = sbp_parallel;
-    }
-  }
-  if (ret != nullptr) { return *ret; }
-  for (const auto& obn : op().output_bns()) {
-    if (op().BnInOp2Lbi(obn) == lbi) { return SbpParallel4BnInOp(obn); }
-  }
-  UNIMPLEMENTED();
+  auto it = lbi2sbp_parallel_.find(lbi);
+  CHECK(it != lbi2sbp_parallel_.end());
+  return it->second;
 }
 
 std::string OpNode::VisualStr() const {
@@ -362,6 +352,23 @@ void OpNode::InitInputBlobFastestTimeShape() {
   if (fastest != nullptr) { input_blob_fastest_time_shape_.reset(new Shape(fastest->dim_vec())); }
 }
 
+void OpNode::InitLbi2SbpParallel() {
+  const auto Update = [&](const PbRpf<std::string>& bns) {
+    for (const auto& bn : bns) {
+      const LogicalBlobId& lbi = op().BnInOp2Lbi(bn);
+      const SbpParallel& sbp_parallel = SbpParallel4BnInOp(bn);
+      auto it = lbi2sbp_parallel_.find(lbi);
+      if (it == lbi2sbp_parallel_.end()) {
+        lbi2sbp_parallel_[lbi] = sbp_parallel;
+      } else {
+        CHECK(it->second == sbp_parallel);
+      }
+    }
+  };
+  Update(op().input_bns());
+  Update(op().output_bns());
+}
+
 void OpGraph::Init(const Job& job) {
   InitNodes(job);
   ForEachNode(
@@ -467,6 +474,7 @@ void OpGraph::InferOpNodeSbpSignature(OpNode* op_node, const SbpSignature& sbp_s
   CHECK_JUST(InferOpSbpSignature(op_node->op(), sbp_sig_conf, op_node->parallel_desc(),
                                  ibn2sbp_infer_hint, GetBatchAxis4Lbi,
                                  op_node->mut_sbp_signature()));
+  op_node->InitLbi2SbpParallel();
 }
 
 void OpGraph::InferOpNodeLogicalBlobDesc(OpNode* op_node) const {
