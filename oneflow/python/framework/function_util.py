@@ -263,10 +263,10 @@ def set_use_tensorrt(func_desc, value = True):
 
 @oneflow_function_config('tensorrt.use_fp16')
 def set_tensorrt_use_fp16(func_desc, value = True):
-    set_use_tensorrt(True)
+    set_use_tensorrt(func_desc, True)
     func_desc.job_config_proto.xrt_config.tensorrt_config.use_fp16 = value
 
 @oneflow_function_config('tensorrt.use_int8')
 def set_tensorrt_use_int8(func_desc, value = True):
-    set_use_tensorrt(True)
+    set_use_tensorrt(func_desc, True)
     func_desc.job_config_proto.xrt_config.tensorrt_config.use_int8 = value
