@@ -13,10 +13,15 @@ void OutputOp::InitFromOpConf() {
 Maybe<void> OutputOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
+  const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
-  InterfaceOpUtil::InferOutBlobDesc(op_conf().output_conf().blob_conf(), out_blob_desc,
-                                    parallel_ctx);
-  CHECK_OR_RETURN(*out_blob_desc == *GetBlobDesc4BnInOp("in"));
+  if (GetBlobDesc4BnInOp("out")->is_dynamic()) {
+    *out_blob_desc = *in_blob_desc;
+  } else {
+    InterfaceOpUtil::InferOutBlobDesc(op_conf().output_conf().blob_conf(), out_blob_desc,
+                                      parallel_ctx);
+    CHECK_OR_RETURN(*out_blob_desc == *in_blob_desc);
+  }
   return Maybe<void>::Ok();
 }
 
