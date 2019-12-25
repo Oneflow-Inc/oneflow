@@ -327,7 +327,6 @@ def get_flow_dtype(dtype_str):
 
 def make_lr(train_step_name, model_update_conf, primary_lr, secondary_lr=None):
     # usually, train_step_name is "System-Train-TrainStep-" + train job name
-    assert model_update_conf.HasField("learning_rate_decay") or model_update_conf.HasField("warmup_conf"), "only support model update conf with warmup or lr decay for now"
     flow.config.train.train_step_lbn(train_step_name + "-Identity" + "/out")
     secondary_lr_lbn = "System-Train-SecondaryLearningRate-Scheduler/out"
     if secondary_lr is None:
