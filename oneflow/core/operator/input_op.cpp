@@ -31,9 +31,8 @@ Maybe<void> InputOp::InferSbpSignature(
     const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
     std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
     const ParallelDesc& parallel_desc) const {
-  SbpSignatureList sbp_sig_list;
-  JUST(GetSbpSignatures(&sbp_sig_list));
-  *sbp_signature = sbp_sig_list.sbp_signature(0);
+  InterfaceOpUtil::GetInputLikeOpSbpSignature(op_conf().input_conf().blob_conf(), input_bns(),
+                                              output_bns(), sbp_signature);
   return Maybe<void>::Ok();
 }
 
