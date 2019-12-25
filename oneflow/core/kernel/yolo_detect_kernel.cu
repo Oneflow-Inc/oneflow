@@ -80,6 +80,10 @@ class YoloDetectGpuKernel final : public KernelIf<DeviceType::kGPU> {
  private:
   void ForwardDataContent(const KernelCtx& ctx,
                           std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
+    Memset<DeviceType::kGPU>(ctx.device_ctx, BnInOp2Blob("out_probs")->mut_dptr<T>(), 0,
+                             BnInOp2Blob("out_probs")->shape().elem_cnt() * sizeof(T));
+    Memset<DeviceType::kGPU>(ctx.device_ctx, BnInOp2Blob("out_bbox")->mut_dptr<T>(), 0,
+                             BnInOp2Blob("out_bbox")->shape().elem_cnt() * sizeof(T));
     int32_t* anchor_boxes_size_ptr = BnInOp2Blob("anchor_boxes_size_tmp")->mut_dptr<int32_t>();
     const YoloDetectOpConf& conf = op_conf().yolo_detect_conf();
     const int32_t layer_nbox = conf.anchor_boxes_size_size();
