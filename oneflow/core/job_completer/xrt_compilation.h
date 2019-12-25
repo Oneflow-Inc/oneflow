@@ -26,7 +26,7 @@ inline void RebuildXrtCompiledJob(const OpGraph& op_graph, Job* job) {
 }
 
 inline bool XrtCompilationEnabled(const JobDesc& job_desc) {
-  if (!job_desc.has_xrt_config()) { return false; }
+  if (!job_desc.has_xrt_config()) { return xrt::XrtCompilationEnabled(); }
   const XrtConfig& config = job_desc.xrt_config();
 #ifdef OF_WITH_XRT
   xrt::InitXrtConfigurations(config);
