@@ -15,7 +15,7 @@ bool IsScalarBlob(const BlobDesc* blob) {
 void BroadcastBinaryOp::InitFromOpConf() {
   EnrollInputBn("a");
   EnrollInputBn("b");
-  EnrollOutputBn("out");
+  EnrollOutputBn("out")->set_mutable_inplace_ibn("a");
 }
 
 Maybe<void> BroadcastBinaryOp::InferBlobDescs(

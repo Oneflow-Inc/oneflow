@@ -119,9 +119,13 @@ Maybe<void> Operator::InferOutParallelDesc(
 Maybe<void> Operator::InferOutputBlobTimeShapeIf(
     std::function<const Shape*(const std::string&)> GetTimeShape4BnInOp,
     const ParallelContext* parallel_ctx, Shape* time_shape) const {
-  for (const std::string& ibn : input_bns()) {
-    CHECK_EQ_OR_RETURN(GetTimeShape4BnInOp(ibn)->elem_cnt(),
-                       GetTimeShape4BnInOp(input_bns().Get(0))->elem_cnt());
+  if (!input_bns().empty()) {
+    const int64_t first_input_time_shape_elem_cnt =
+        GetTimeShape4BnInOp(input_bns().Get(0))->elem_cnt();
+    FOR_RANGE(int64_t, i, 1, input_bns().size()) {
+      CHECK_EQ_OR_RETURN(GetTimeShape4BnInOp(input_bns().Get(i))->elem_cnt(),
+                         first_input_time_shape_elem_cnt);
+    }
   }
   return InferOutputBlobTimeShape(GetTimeShape4BnInOp, parallel_ctx, time_shape);
 }

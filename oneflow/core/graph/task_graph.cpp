@@ -129,6 +129,18 @@ bool IsInplaceAllowed(
     const RegstDesc& regst_desc = *exec_node.RegstDesc4BnInOp(bn);
     if (regst_desc.NumOfLbi() != 1) { return false; }
   }
+  const BlobDesc* first_blob = nullptr;
+  for (const auto& bn : bns) {
+    const BlobDesc* blob_desc = exec_node.RegstDesc4BnInOp(bn)->SoleBlobDesc();
+    if (first_blob == nullptr) {
+      first_blob = blob_desc;
+    } else {
+      if (!(first_blob->shape() == blob_desc->shape()
+            && first_blob->data_type() == blob_desc->data_type())) {
+        return false;
+      }
+    }
+  }
   return true;
 }
 
@@ -197,7 +209,7 @@ TaskGraph::TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph) {
       });
 
   MergeChainAndSetOrderInGraphForEachNode();
-  ToDotWithAutoFilePath();
+  if (Global<ResourceDesc>::Get()->enable_debug_mode()) { ToDotWithAutoFilePath(); }
 }
 
 void TaskGraph::ConnectCtrlEdges(const std::vector<CompTaskNode*>& src_task_nodes,
@@ -461,12 +473,14 @@ void TaskGraph::GetSafeInplaceOpBlobArgList(
   auto IsLbiAllConsumersReachable =
       MakePredicatorIsLbiAllConsumersReachable(TaskNode4SoleOpName, IsOpNameDataOrCtrlReachable);
   InplaceLbiGraph origin_graph(inplace_obas, Op4OpName);
-  origin_graph.ToDotWithFilePath(
-      JoinPath("dot", "InplaceLbiGraph", GlobalJobDesc().job_name() + "_origin.dot"));
   origin_graph.ComputeSafeInplaceObns(safe_obas, IsLbiAllConsumersReachable);
-  InplaceLbiGraph(*safe_obas, Op4OpName)
-      .ToDotWithFilePath(
-          JoinPath("dot", "InplaceLbiGraph", GlobalJobDesc().job_name() + "_safe.dot"));
+  InplaceLbiGraph safe_graph(*safe_obas, Op4OpName);
+  if (Global<ResourceDesc>::Get()->enable_debug_mode()) {
+    origin_graph.ToDotWithFilePath(
+        JoinPath("dot", "InplaceLbiGraph", GlobalJobDesc().job_name() + "_origin.dot"));
+    safe_graph.ToDotWithFilePath(
+        JoinPath("dot", "InplaceLbiGraph", GlobalJobDesc().job_name() + "_safe.dot"));
+  }
 }
 
 void TaskGraph::SetTaskRegstInplaceInfo(const OpBlobArgList& obas,
@@ -889,6 +903,7 @@ TaskNode* TaskGraph::BuildTaskStep(
 
 TaskNode* TaskGraph::TryAddCopyH2DTaskTo(TaskNode* task) {
   if (IsInterfaceTask(task)) { return nullptr; }
+  if (IsClassRegistered<TickTockTaskType>(task->GetTaskType())) { return nullptr; }
   CHECK_EQ(task->device_type(), DeviceType::kGPU);
   CopyHdTaskNode* copy_task = NewNode<CopyHdTaskNode>();
   copy_task->Init(CopyHdOpConf::H2D, task->machine_id(), task->GpuPhyId());

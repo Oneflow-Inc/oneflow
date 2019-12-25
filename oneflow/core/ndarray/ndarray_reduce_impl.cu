@@ -18,22 +18,6 @@ struct CubFunctor4BianryFunc;
 OF_PP_FOR_EACH_ATOMIC(SPECIALIZE_CUB_FUNCTOR_4_BINARY_FUNC, REDUCE_BINARY_FUNC_NAME_SEQ);
 #undef SPECIALIZE_CUB_FUNCTOR_4_BINARY_FUNC
 
-namespace {
-
-template<typename T, template<typename> class binary_func>
-void __global__ NdarrayMatrixColReduceNaiveCudaKernel(T* y_ptr, const T* x_ptr, int32_t num_rows,
-                                                      int32_t num_cols) {
-  CUDA_1D_KERNEL_LOOP(j, num_cols) {
-    T reduced = x_ptr[j];
-    FOR_RANGE(int32_t, i, 1, num_rows) {
-      reduced = binary_func<T>::Invoke(reduced, x_ptr[i * num_cols + j]);
-    }
-    y_ptr[j] = reduced;
-  }
-}
-
-}  // namespace
-
 struct RowOffsetFunctor final {
   OF_DEVICE_FUNC explicit RowOffsetFunctor(int32_t num_cols) : num_cols_(num_cols) {}
   OF_DEVICE_FUNC int32_t operator()(const int32_t& x) const { return x * num_cols_; }
@@ -105,13 +89,46 @@ struct NdarrayMatrixColReduce<DeviceType::kGPU, T, binary_func> final {
     return y.shape().At(0) == 1 && x.shape().At(1) == y.shape().At(1);
   }
 
+  struct XY2YXFunctor final {
+    __host__ __device__ XY2YXFunctor(int32_t dim_x, int32_t dim_y) : dim_x_(dim_x), dim_y_(dim_y) {}
+
+    __host__ __device__ int32_t operator()(const int32_t& idx) const {
+      const int32_t y = idx / dim_x_;
+      const int32_t x = idx % dim_x_;
+      return x * dim_y_ + y;
+    }
+
+    int32_t dim_x_;
+    int32_t dim_y_;
+  };
+
   static void Reduce(DeviceCtx* ctx, const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x,
                      const XpuVarNdarray<T>& tmp_storage) {
     CHECK(Matched(y, x));
-    int32_t num_rows = x.shape().ElemNum() / y.shape().ElemNum();
-    int32_t num_cols = y.shape().ElemNum();
-    RUN_CUDA_KERNEL((NdarrayMatrixColReduceNaiveCudaKernel<T, binary_func>), ctx, num_cols, y.ptr(),
-                    x.ptr(), num_rows, num_cols);
+    int32_t num_rows = y.shape().ElemNum();
+    int32_t num_cols = x.shape().ElemNum() / y.shape().ElemNum();
+
+    RowOffsetFunctor get_row_offset(num_cols);
+    cub::CountingInputIterator<int32_t> counting_intput_it(0);
+    cub::TransformInputIterator<int32_t, RowOffsetFunctor, cub::CountingInputIterator<int32_t>>
+        transform_input_iter(counting_intput_it, get_row_offset);
+
+    XY2YXFunctor xy2yx(x.shape().At(0), x.shape().At(1));
+    using XY2YxIndexIter =
+        cub::TransformInputIterator<int32_t, XY2YXFunctor, cub::CountingInputIterator<int32_t>>;
+    XY2YxIndexIter xy2yx_iter(counting_intput_it, xy2yx);
+    PermutationIterator<const T, const T*, XY2YxIndexIter> x_iter(x.ptr(), xy2yx_iter);
+    size_t tmp_storage_bytes = 0;
+    auto DoReduce = [&](T* tmp_storage_ptr) {
+      int retcode = cub::DeviceSegmentedReduce::Reduce(
+          tmp_storage_ptr, tmp_storage_bytes, x_iter, y.ptr(), num_rows, transform_input_iter,
+          transform_input_iter + 1, typename CubFunctor4BianryFunc<T, binary_func>::type(),
+          UnitOfBinaryFunc<T, binary_func>::Val(), ctx->cuda_stream());
+      CHECK_EQ(retcode, 0) << "cub::DeviceSegmentedReduce::Reduce error";
+    };
+    DoReduce(nullptr);
+    CHECK_GE(tmp_storage.shape().ElemNum() * sizeof(T), tmp_storage_bytes);
+    DoReduce(tmp_storage.ptr());
   }
 };
 

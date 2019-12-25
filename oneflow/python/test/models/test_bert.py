@@ -128,9 +128,9 @@ func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
 func_config.train.primary_lr(FLAGS.lr)
 func_config.train.model_update_conf(_BERT_MODEL_UPDATE_CONF)
 func_config.train.weight_l2(FLAGS.weight_l2)
-func_config.enable_inplace(False)
 
 def test_1n1c(test_case):
+    flow.config.enable_debug_mode(True)
     flow.config.gpu_device_num(1)
     pretrain_job = flow.function(func_config)(PretrainJob)
     check_point = flow.train.CheckPoint()

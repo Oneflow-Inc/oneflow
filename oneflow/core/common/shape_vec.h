@@ -5,7 +5,7 @@
 
 namespace oneflow {
 
-#define DISABLE_FIXED_SHAPE_VEC
+//#define DISABLE_FIXED_SHAPE_VEC
 
 #if defined(DISABLE_FIXED_SHAPE_VEC)
 

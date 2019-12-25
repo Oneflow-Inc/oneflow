@@ -3,6 +3,7 @@ from __future__ import absolute_import
 import oneflow.core.common.error_pb2 as error_util
 import oneflow.core.common.data_type_pb2 as dtype_util
 from oneflow.core.job.inter_user_job_info_pb2 import InterUserJobInfo
+from oneflow.core.framework.config_def_pb2 import ConfigDef
 import oneflow.core.job.job_set_pb2 as job_set_pb
 import oneflow.core.job.env_pb2 as env_pb2
 import oneflow.core.job.placement_pb2 as placment_util
@@ -170,8 +171,8 @@ def JobBuildAndInferCtx_MirroredBlobGetSubLbi(job_name, lbn, index):
 def JobBuildAndInferCtx_MirroredBlobGetStaticShape(job_name, lbn):
     job_name = str(job_name)
     lbn = str(lbn)
-    axis_str, error_str = \
-        oneflow_internal.JobBuildAndInferCtx_MirroredBlobGetSerializedIdListAsStaticShape(job_name, lbn)
+    get_shape = oneflow_internal.JobBuildAndInferCtx_MirroredBlobGetSerializedIdListAsStaticShape
+    axis_str, error_str = get_shape(job_name, lbn)
     error = text_format.Parse(error_str, error_util.ErrorProto())
     if error.HasField("error_type"): raise JobBuildAndInferError(error)
     int_list = text_format.Parse(axis_str, record_util.Int64List())
@@ -325,3 +326,9 @@ def DeviceType4DeviceTag(device_tag):
     error = text_format.Parse(error_str, error_util.ErrorProto())
     if error.HasField("error_type"): raise JobBuildAndInferError(error)
     return device_type
+
+def GetFunctionConfigDef():
+    func_config_def, error_str = oneflow_internal.GetFunctionConfigDef()
+    error = text_format.Parse(error_str, error_util.ErrorProto())
+    if error.HasField("error_type"): raise JobBuildAndInferError(error)
+    return text_format.Parse(func_config_def, ConfigDef())
