@@ -60,9 +60,23 @@ void Kernel::CheckSameDim0ValidNum(
 
 void Kernel::Forward(const KernelCtx& ctx,
                      std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  const std::string mark1("ForwardHeader " + this->kernel_conf().op_attribute().op_conf().name());
+  nvtxRangePush(mark1.c_str());
   ForwardHeader(ctx, BnInOp2Blob);
-  if (IsAllBlobEmpty(op_attribute().output_bns(), BnInOp2Blob) && IsStateless()) { return; }
+  nvtxRangePop();
+
+  const std::string mark2("IsEmptyOrStateless "
+                          + this->kernel_conf().op_attribute().op_conf().name());
+  nvtxRangePush(mark2.c_str());
+  bool will_return = (IsAllBlobEmpty(op_attribute().output_bns(), BnInOp2Blob) && IsStateless());
+  nvtxRangePop();
+  if (will_return) { return; }
+
+  const std::string mark3("ForwardDataContent "
+                          + this->kernel_conf().op_attribute().op_conf().name());
+  nvtxRangePush(mark3.c_str());
   ForwardDataContent(ctx, BnInOp2Blob);
+  nvtxRangePop();
 }
 
 void Kernel::ForwardHeader(const KernelCtx& ctx,
