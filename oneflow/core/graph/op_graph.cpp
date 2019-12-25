@@ -364,7 +364,6 @@ void OpNode::InitLbi2SbpParallel() {
         CHECK(it->second == sbp_parallel);
       }
     }
-
   };
   Update(op().input_bns());
   Update(op().output_bns());
