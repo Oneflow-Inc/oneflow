@@ -78,7 +78,7 @@ class CpuSliceVarNdarray : public CpuNdarray<typename XT::dtype, XT::ndims> {
     return std::move(slices);
   }
   static Shape BoundedSlices2Shape(const std::array<Slice, XT::ndims>& bounded_slices) {
-    std::vector<int64_t> dim_vec;
+    DimVector dim_vec;
     for (const Slice& slice : bounded_slices) {
       CHECK_GT(slice.Size(), 0);
       dim_vec.push_back(slice.Size());

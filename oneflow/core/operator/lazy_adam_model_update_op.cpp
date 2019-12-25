@@ -20,7 +20,6 @@ Maybe<void> LazyAdamModelUpdateOp::MdUpdtVirtualInferBlobDescs(
     const ParallelContext* parallel_ctx) const {
   const BlobDesc* model_blob_desc = GetBlobDesc4BnInOp("model");
   CHECK_EQ_OR_RETURN(model_blob_desc->data_type(), job_desc().DefaultDataType());
-  CHECK_EQ_OR_RETURN(model_blob_desc->has_data_id_field(), false);
   CHECK_OR_RETURN(*GetBlobDesc4BnInOp("m") == *model_blob_desc);
   CHECK_OR_RETURN(*GetBlobDesc4BnInOp("v") == *model_blob_desc);
 

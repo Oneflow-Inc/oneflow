@@ -4,7 +4,7 @@ namespace oneflow {
 
 namespace {
 
-void GenerateBackwardOpConf(
+void GenerateBackwardOpConfDeprecated(
     const Operator& op, std::vector<OperatorConf>* op_confs,
     const std::function<LogicalBlobId*(const std::string&)>& DiffLbi4BnInOp) {
   CHECK(op.op_conf().has_sigmoid_cross_entropy_loss_conf());
@@ -29,6 +29,6 @@ void GenerateBackwardOpConf(
 
 }  // namespace
 
-REGISTER_OP_GRAD(OperatorConf::kSigmoidCrossEntropyLossConf, &GenerateBackwardOpConf);
+REGISTER_OP_GRAD(OperatorConf::kSigmoidCrossEntropyLossConf, &GenerateBackwardOpConfDeprecated);
 
 }  // namespace oneflow

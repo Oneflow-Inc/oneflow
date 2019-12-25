@@ -33,11 +33,7 @@ void PackForwardCompTaskNode::BuildExecGphAndRegst() {
   auto GetBlobDescFromRegst = [&](std::shared_ptr<RegstDesc> regst) -> const BlobDesc* {
     const BlobDesc* ret_blob = nullptr;
     regst->ForEachLbi([&](const LogicalBlobId& lbi) {
-      if (ret_blob == nullptr) {
-        ret_blob = regst->GetBlobDesc(lbi);
-      } else {
-        CHECK_EQ(ret_blob->dim0_inner_shape(), regst->GetBlobDesc(lbi)->dim0_inner_shape());
-      }
+      if (ret_blob == nullptr) { ret_blob = regst->GetBlobDesc(lbi); }
     });
     return ret_blob;
   };
@@ -50,15 +46,12 @@ void PackForwardCompTaskNode::BuildExecGphAndRegst() {
   CHECK_NOTNULL(pack_op);
   CHECK_EQ(pack_op->GetPackNum(), related_unpack_in_blob->shape().At(0) / in_blob->shape().At(0));
   out_blob->mut_shape().Set(0, related_unpack_in_blob->shape().At(0));
-  if (out_blob->has_dim0_valid_num_field()) {
-    out_blob->mut_dim0_inner_shape() = related_unpack_in_blob->dim0_inner_shape();
-  }
 }
 
 void PackForwardCompTaskNode::InferProducedDataRegstTimeShape() {
   std::shared_ptr<RegstDesc> in_regst = GetSoleConsumedRegst("in");
   std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out");
-  std::vector<int64_t> time_shape_dim_vec(in_regst->data_regst_time_shape()->dim_vec());
+  DimVector time_shape_dim_vec(in_regst->data_regst_time_shape()->dim_vec());
 
   const PackOp* pack_op = dynamic_cast<const PackOp*>(logical_node()->SoleOp().get());
   CHECK_NOTNULL(pack_op);

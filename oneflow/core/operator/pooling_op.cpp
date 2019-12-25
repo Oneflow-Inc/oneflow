@@ -31,14 +31,14 @@ Maybe<void> PoolingOp::InferBlobDescs(
   CHECK_LE_OR_RETURN(in_blob_desc->shape().NumAxes(), 5);
   // out
   std::string data_format = GetValFromCustomizedConf<std::string>("data_format");
-  std::vector<int64_t> in = {GetInDim(in_shape, data_format, 0, GetDim()),
-                             GetInDim(in_shape, data_format, 1, GetDim()),
-                             GetInDim(in_shape, data_format, 2, GetDim())};
+  DimVector in = {GetInDim(in_shape, data_format, 0, GetDim()),
+                  GetInDim(in_shape, data_format, 1, GetDim()),
+                  GetInDim(in_shape, data_format, 2, GetDim())};
   std::vector<int32_t> pool_size =
       Get3DVecInOpConf(GetPbRfFromCustomizedConf<int32_t>("pool_size"), GetDim());
   std::vector<int32_t> strides =
       Get3DVecInOpConf(GetPbRfFromCustomizedConf<int32_t>("strides"), GetDim());
-  std::vector<int64_t> out;
+  DimVector out;
   Get3DOutputSize(in, pool_size, strides, GetValFromCustomizedConf<std::string>("padding"), &out,
                   nullptr);
 
@@ -65,8 +65,8 @@ void PoolingOp::CheckPoolSizeAndStrides() const {
   for (int32_t stride_dim : strides) { CHECK_GT(stride_dim, 0); }
 }
 
-Shape PoolingOp::GetOutShape(int64_t in_n, int64_t in_c, const std::vector<int64_t>& out) const {
-  std::vector<int64_t> out_shape;
+Shape PoolingOp::GetOutShape(int64_t in_n, int64_t in_c, const DimVector& out) const {
+  DimVector out_shape;
   if (GetDim() == 1) {
     out_shape = {out.at(2)};
   } else if (GetDim() == 2) {
@@ -93,14 +93,14 @@ void PoolingOp::VirtualGenKernelConf(
     const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
   const Shape& in_shape = GetBlobDesc4BnInOp("in")->shape();
   std::string data_format = GetValFromCustomizedConf<std::string>("data_format");
-  std::vector<int64_t> in = {GetInDim(in_shape, data_format, 0, GetDim()),
-                             GetInDim(in_shape, data_format, 1, GetDim()),
-                             GetInDim(in_shape, data_format, 2, GetDim())};
+  DimVector in = {GetInDim(in_shape, data_format, 0, GetDim()),
+                  GetInDim(in_shape, data_format, 1, GetDim()),
+                  GetInDim(in_shape, data_format, 2, GetDim())};
   std::vector<int32_t> pool_size =
       Get3DVecInOpConf(GetPbRfFromCustomizedConf<int32_t>("pool_size"), GetDim());
   std::vector<int32_t> strides =
       Get3DVecInOpConf(GetPbRfFromCustomizedConf<int32_t>("strides"), GetDim());
-  std::vector<int64_t> out;
+  DimVector out;
   std::vector<int32_t> padding_before;
   std::vector<int32_t> padding_after;
   Get3DOutputSize(in, pool_size, strides, GetValFromCustomizedConf<std::string>("padding"), &out,
@@ -129,6 +129,7 @@ void PoolingOp::VirtualGenKernelConf(
     UNIMPLEMENTED();
   }
   pooling_conf->set_data_format(GetValFromCustomizedConf<std::string>("data_format"));
+  pooling_conf->set_need_infer_cudnn_desc_each_forward(GetBlobDesc4BnInOp("out")->is_dynamic());
 }
 
 Maybe<void> PoolingOp::GetSbpSignatures(

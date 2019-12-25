@@ -6,3 +6,4 @@ log/
 *plan
 core.*
 *.pyc
+*.ipynb

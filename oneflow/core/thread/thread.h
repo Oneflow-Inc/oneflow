@@ -18,6 +18,7 @@ class Thread {
   void AddTask(const TaskProto&);
 
   Channel<ActorMsg>* GetMsgChannelPtr() { return &msg_channel_; }
+  void EnqueueActorMsg(const ActorMsg& msg);
 
   void JoinAllActor() { actor_thread_.join(); }
 
@@ -36,6 +37,7 @@ class Thread {
   std::thread actor_thread_;
   Channel<ActorMsg> msg_channel_;
   HashMap<int64_t, std::unique_ptr<Actor>> id2actor_ptr_;
+  std::queue<ActorMsg> local_msg_queue_;
 
   int64_t thrd_id_;
 };
