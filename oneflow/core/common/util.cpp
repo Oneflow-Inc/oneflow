@@ -3,6 +3,7 @@
 #include <cfenv>
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/common/platform.h"
+#include <csignal>
 
 #ifdef PLATFORM_POSIX
 #include <sys/sysinfo.h>
@@ -49,12 +50,12 @@ double oneflow_cast(const std::string& s) {
 }
 
 #ifdef PLATFORM_POSIX
-#ifdef WITH_TENSORRT
-COMMAND(feenableexcept(FE_ALL_EXCEPT & ~FE_INEXACT & ~FE_UNDERFLOW & ~FE_OVERFLOW));
-#else
-COMMAND(feenableexcept(FE_ALL_EXCEPT & ~FE_INEXACT & ~FE_UNDERFLOW));
-#endif  // WITH_TENSORRT
-#endif  // PLATFORM_POSIX
+// COMMAND(feenableexcept(FE_ALL_EXCEPT & ~FE_INEXACT & ~FE_UNDERFLOW));
+#endif
+
+void AbortSignalHandler(int signal) { LOG(FATAL) << "aborted!"; }
+
+COMMAND(std::signal(SIGINT, AbortSignalHandler));
 
 size_t GetAvailableCpuMemSize() {
 #ifdef PLATFORM_POSIX

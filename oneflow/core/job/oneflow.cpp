@@ -138,8 +138,10 @@ void CompileCurJobOnMaster(Job* job, Plan* improved_plan, bool need_job_complete
     LOG(INFO) << "compile time: " << GetCurTime() - start;
     complete_plan =
         Improver().GenAndInferMemBlockIdOnly(*Global<AvailableMemDesc>::Get(), naive_plan);
-    TeePersistentLogStream::Create("naive_plan")->Write(naive_plan);
-    TeePersistentLogStream::Create("complete_plan")->Write(complete_plan);
+    if (Global<ResourceDesc>::Get()->enable_debug_mode()) {
+      TeePersistentLogStream::Create("naive_plan")->Write(naive_plan);
+      TeePersistentLogStream::Create("complete_plan")->Write(complete_plan);
+    }
     LOG(INFO) << "push_pull_plan:" << GetCurTime() - start;
   }
   if (job_desc.enable_experiment_run()) {
@@ -699,9 +701,6 @@ void MakeArgPassJob(const std::string& job_name, const ParallelBlobConf& paralle
     auto* blob_conf = foreign_input_conf->mutable_blob_conf();
     blob_conf->mutable_shape()->add_dim(1);
     blob_conf->set_data_type(DataType::kInt32);
-    blob_conf->set_has_dim0_valid_num(false);
-    blob_conf->set_has_dim1_valid_num(false);
-    blob_conf->set_has_dim2_valid_num(false);
     blob_conf->mutable_split_axis()->clear_value();
     blob_conf->mutable_batch_axis()->clear_value();
     ParallelConf parallel_conf;
@@ -804,12 +803,16 @@ void CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan) {
     }
     LinkMainPlan(plan, main_plan, identity_tick_op_names);
     PlanUtil::CleanUselessMemBlockAndCheckValid(plan);
-    TeePersistentLogStream::Create("merged_plan")->Write(*plan);
-    PlanUtil::ToDotFile(*plan, "/dot/merged_plan.dot");
+    if (Global<ResourceDesc>::Get()->enable_debug_mode()) {
+      TeePersistentLogStream::Create("merged_plan")->Write(*plan);
+      PlanUtil::ToDotFile(*plan, "/dot/merged_plan.dot");
+    }
     PushPlan("merged_plan", *plan);
   } else {
     PullPlan("merged_plan", plan);
-    TeePersistentLogStream::Create("merged_plan")->Write(*plan);
+    if (Global<ResourceDesc>::Get()->enable_debug_mode()) {
+      TeePersistentLogStream::Create("merged_plan")->Write(*plan);
+    }
   }
   OF_BARRIER();
 }

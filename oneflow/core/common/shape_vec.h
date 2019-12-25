@@ -5,7 +5,9 @@
 
 namespace oneflow {
 
-#if !defined(USE_FIXED_SHAPE_VEC)
+//#define DISABLE_FIXED_SHAPE_VEC
+
+#if defined(DISABLE_FIXED_SHAPE_VEC)
 
 typedef std::vector<int64_t> DimVector;
 typedef std::vector<int64_t> AxisVector;

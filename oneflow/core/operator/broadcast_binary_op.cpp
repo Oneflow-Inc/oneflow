@@ -1,5 +1,6 @@
 #include "oneflow/core/operator/broadcast_binary_op.h"
 #include "oneflow/core/job/sbp_signature_builder.h"
+#include "oneflow/core/common/shape_view.h"
 
 namespace oneflow {
 
@@ -14,7 +15,7 @@ bool IsScalarBlob(const BlobDesc* blob) {
 void BroadcastBinaryOp::InitFromOpConf() {
   EnrollInputBn("a");
   EnrollInputBn("b");
-  EnrollOutputBn("out");
+  EnrollOutputBn("out")->set_mutable_inplace_ibn("a");
 }
 
 Maybe<void> BroadcastBinaryOp::InferBlobDescs(
@@ -30,8 +31,8 @@ Maybe<void> BroadcastBinaryOp::InferBlobDescs(
   } else if (IsScalarBlob(b_blob_desc)) {
     *out_blob_desc = *a_blob_desc;
   } else {
-    const auto& a_shape = a_blob_desc->shape().CreateLeftExtendedShape(output_num_axes);
-    const auto& b_shape = b_blob_desc->shape().CreateLeftExtendedShape(output_num_axes);
+    const auto& a_shape = CreateLeftExtendedShape(ShapeView(a_blob_desc->shape()), output_num_axes);
+    const auto& b_shape = CreateLeftExtendedShape(ShapeView(b_blob_desc->shape()), output_num_axes);
     *out_blob_desc = *a_blob_desc;
     Shape out_shape(a_shape);
     FOR_RANGE(int64_t, i, 0, a_shape.NumAxes()) {
@@ -40,6 +41,8 @@ Maybe<void> BroadcastBinaryOp::InferBlobDescs(
     }
     out_blob_desc->mut_shape() = out_shape;
   }
+  out_blob_desc->set_is_dynamic(a_blob_desc->is_dynamic() || b_blob_desc->is_dynamic());
+  JUST(VirtualInferBlobDescs(GetBlobDesc4BnInOp));
   return Maybe<void>::Ok();
 }
 

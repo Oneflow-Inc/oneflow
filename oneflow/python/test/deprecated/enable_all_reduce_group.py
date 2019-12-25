@@ -15,8 +15,8 @@ def UpdateVariable(x, scope_name):
         flow.losses.add_loss(loss)
         return loss
 
-input_blob_def = flow.input_blob_def((2, 10), dtype=flow.float)
-func_config = flow.function_config()
+input_blob_def = flow.FixedTensorDef((2, 10), dtype=flow.float)
+func_config = flow.FunctionConfig()
 func_config.train.primary_lr(0.01)
 func_config.train.model_update_conf(dict(naive_conf={}))
 func_config.enable_all_reduce_group(True)

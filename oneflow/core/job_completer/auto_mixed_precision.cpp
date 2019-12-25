@@ -1,6 +1,7 @@
 #include <algorithm>
 #include "oneflow/core/job_completer/auto_mixed_precision.h"
 #include "oneflow/core/job/job_desc.h"
+#include "oneflow/core/device/cuda_util.h"
 
 namespace oneflow {
 
@@ -177,6 +178,7 @@ void InsertCastOpImpl(bool f2h, const OpGraph& op_graph, const HashSet<OpNode*>&
 }  // namespace
 
 void AutoMixedPrecision::Apply(const OpGraph& op_graph, JobBuilder* job_builder) {
+  CHECK_GE(CUDA_VERSION, 10000);
   CHECK(GlobalJobDesc().DefaultDataType() == DataType::kFloat);
 
   std::function<std::string(OpNode* const&)> OpName4Node = [](OpNode* const& node) {

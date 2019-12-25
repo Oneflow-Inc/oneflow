@@ -25,16 +25,6 @@ void LocalResponseNormalizationKernel<DeviceType::kGPU, T>::ForwardDataContent(
       batch_desc_->Get(), BnInOp2Blob("out")->mut_dptr()));
 }
 
-template<typename T>
-void LocalResponseNormalizationKernel<DeviceType::kGPU, T>::BackwardDataContent(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  CudaCheck(cudnnLRNCrossChannelBackward(
-      ctx.device_ctx->cudnn_handle(), normalize_desc_->Get(), CUDNN_LRN_CROSS_CHANNEL_DIM1,
-      CudnnSPOnePtr<T>(), batch_desc_->Get(), BnInOp2Blob("out")->dptr(), batch_desc_->Get(),
-      BnInOp2Blob("out_diff")->dptr(), batch_desc_->Get(), BnInOp2Blob("in")->dptr(),
-      CudnnSPZeroPtr<T>(), batch_desc_->Get(), BnInOp2Blob("in_diff")->mut_dptr()));
-}
-
 #define INSTANTIATE_LOCAL_RESPONSE_NORMALIZATION_KERNEL(type_cpp, type_proto) \
   template class LocalResponseNormalizationKernel<DeviceType::kGPU, type_cpp>;
 OF_PP_FOR_EACH_TUPLE(INSTANTIATE_LOCAL_RESPONSE_NORMALIZATION_KERNEL, FLOATING_DATA_TYPE_SEQ)

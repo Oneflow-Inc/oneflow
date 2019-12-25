@@ -6,12 +6,13 @@
 namespace oneflow {
 
 namespace {
+
 void InferPoolingParams(const int32_t num_spatial_dims, const PoolingConf& pooling_conf,
-                        const std::vector<int64_t> x_shape_vec, std::vector<int32_t>* pool_size,
+                        const DimVector& x_shape_vec, std::vector<int32_t>* pool_size,
                         std::vector<int32_t>* padding, std::vector<int32_t>* strides) {
   std::vector<int32_t> pool_size_3d = Get3DVecInOpConf(pooling_conf.pool_size(), num_spatial_dims);
   std::vector<int32_t> strides_3d = Get3DVecInOpConf(pooling_conf.strides(), num_spatial_dims);
-  std::vector<int64_t> y_shape_vec;
+  DimVector y_shape_vec;
   std::vector<int32_t> padding_before;
   std::vector<int32_t> padding_after;
   Get3DOutputSize(x_shape_vec, pool_size_3d, strides_3d, pooling_conf.padding(), &y_shape_vec,
@@ -23,6 +24,7 @@ void InferPoolingParams(const int32_t num_spatial_dims, const PoolingConf& pooli
     strides->at(i) = strides_3d.at(index_in_3d);
   }
 }
+
 }  // namespace
 
 template<typename T>
@@ -42,10 +44,10 @@ struct PoolingGradKernelUtil<DeviceType::kGPU, T> final {
     std::vector<int> pool_size(num_spatial_dims);
     std::vector<int> padding(num_spatial_dims);
     std::vector<int> strides(num_spatial_dims);
-    const Shape& x_shape = x_blob->shape();
-    const std::vector<int64_t> x_shape_vec = {GetInDim(x_shape, data_format, 0, num_spatial_dims),
-                                              GetInDim(x_shape, data_format, 1, num_spatial_dims),
-                                              GetInDim(x_shape, data_format, 2, num_spatial_dims)};
+    const ShapeView& x_shape = x_blob->shape();
+    const DimVector x_shape_vec = {GetInDim(x_shape, data_format, 0, num_spatial_dims),
+                                   GetInDim(x_shape, data_format, 1, num_spatial_dims),
+                                   GetInDim(x_shape, data_format, 2, num_spatial_dims)};
     InferPoolingParams(num_spatial_dims, pooling_conf, x_shape_vec, &pool_size, &padding, &strides);
     std::unique_ptr<CudnnPoolingDesc> pooling_desc;
     pooling_desc.reset(new CudnnPoolingDesc(pooling_mode, num_spatial_dims, pool_size.data(),

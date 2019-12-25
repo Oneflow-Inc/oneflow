@@ -10,7 +10,7 @@ void ShapeElemCntKernel<device_type, T>::ForwardDataContent(
 }
 
 template<DeviceType device_type, typename T>
-int32_t ShapeElemCntKernel<device_type, T>::GetShapePartialElemCnt(const Shape& shape) const {
+int32_t ShapeElemCntKernel<device_type, T>::GetShapePartialElemCnt(const ShapeView& shape) const {
   int32_t ret = 1;
   for (int32_t axis : this->kernel_conf().shape_elem_cnt_conf().axis()) { ret *= shape.At(axis); }
   return ret;
