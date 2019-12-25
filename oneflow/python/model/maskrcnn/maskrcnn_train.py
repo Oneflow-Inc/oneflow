@@ -338,7 +338,7 @@ def make_lr(train_step_name, model_update_conf, primary_lr, secondary_lr=None):
             name=train_step_name,
             shape=(1,),
             dtype=flow.int64,
-            initializer=flow.constant_initializer(0),
+            initializer=flow.constant_initializer(0, dtype=flow.int64),
             trainable=False
         )
         train_step_id = flow.identity(train_step, name=train_step_name + "-Identity")
