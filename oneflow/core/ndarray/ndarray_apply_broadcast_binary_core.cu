@@ -78,6 +78,7 @@ struct NdarrayApplyBroadcastBinaryCoreWrapper<DeviceType::kGPU, T, NDIMS, binary
     if (!IsKernelSafeInt32(n) && PartialBroadcast<int64_t>(ctx, y, a, b)) { return; }
     RUN_CUDA_KERNEL((GpuBroadcastBinaryFunc<T, NDIMS, binary_func>), ctx, n, y, a, b);
   }
+
   template<typename K>
   static bool PartialBroadcast(
       DeviceCtx* ctx, const XpuVarNdarray<typename BinaryFuncTrait<binary_func, T>::return_type>& y,
@@ -125,10 +126,18 @@ struct NdarrayApplyBroadcastBinaryCoreWrapper<DeviceType::kGPU, T, NDIMS, binary
     }
     return false;
   }
+};
 
+template<typename T, int NDIMS, template<typename> class binary_func>
+struct NdarrayApplyBroadcastInplaceBinaryCoreWrapper<DeviceType::kGPU, T, NDIMS, binary_func>
+    final {
   static void InplaceApply(DeviceCtx* ctx, const XpuVarNdarray<T>& y,
                            const XpuVarNdarray<const T>& x) {
     size_t n = y.host_shape().HostElemNum();
+    XpuVarNdarray<const T> a(y.host_shape(), y.host_ptr());
+    using NBB = NdarrayApplyBroadcastBinaryCoreWrapper<DeviceType::kGPU, T, NDIMS, binary_func>;
+    if (IsKernelSafeInt32(n) && NBB::template PartialBroadcast<int32_t>(ctx, y, a, x)) { return; }
+    if (!IsKernelSafeInt32(n) && NBB::template PartialBroadcast<int64_t>(ctx, y, a, x)) { return; }
     RUN_CUDA_KERNEL((GpuInplaceBroadcastBinaryFunc<T, NDIMS, binary_func>), ctx, n, y, x);
   }
 };
@@ -138,5 +147,15 @@ struct NdarrayApplyBroadcastBinaryCoreWrapper<DeviceType::kGPU, T, NDIMS, binary
       DeviceType::kGPU, OF_PP_PAIR_FIRST(dtype_pair), NDIMS, binary_func>;
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_BROADCAST_BINARY_FUNC,
                                  ARITHMETIC_DATA_TYPE_SEQ HALF_DATA_TYPE_SEQ, DIM_SEQ,
-                                 BINARY_FUNC_SEQ)
+                                 BINARY_FUNC_SEQ);
+
+#define INSTANTIATE_BROADCAST_INPLACE_BINARY_FUNC(dtype_pair, NDIMS, binary_func) \
+  template struct NdarrayApplyBroadcastInplaceBinaryCoreWrapper<                  \
+      DeviceType::kGPU, OF_PP_PAIR_FIRST(dtype_pair), NDIMS, binary_func>;
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_BROADCAST_INPLACE_BINARY_FUNC,
+                                 ARITHMETIC_DATA_TYPE_SEQ HALF_DATA_TYPE_SEQ, DIM_SEQ,
+                                 ARITHMETIC_BINARY_FUNC_SEQ);
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_BROADCAST_INPLACE_BINARY_FUNC,
+                                 ((int8_t, DataType::kInt8)), DIM_SEQ, LOGICAL_BINARY_FUNC_SEQ);
+
 }  // namespace oneflow
