@@ -26,13 +26,17 @@ def test_broadcast(test_case):
     z = AddJob(x, y).get().ndarray()
     test_case.assertTrue(np.array_equal(z, x + y))
 
-def test_xy_add_x1(test_case): GenerateTest(test_case, (64, 64), (64, 1))
+def test_xy_add_x1(test_case):
+    GenerateTest(test_case, (64, 64), (64, 1))
 
-def test_xy_add_1y(test_case): GenerateTest(test_case, (64, 64), (1, 64))
+def test_xy_add_1y(test_case):
+    GenerateTest(test_case, (64, 64), (1, 64))
 
-def test_xyz_add_x1z(test_case): GenerateTest(test_case, (64, 64, 64), (64, 1, 64))
+def test_xyz_add_x1z(test_case):
+    GenerateTest(test_case, (64, 64, 64), (64, 1, 64))
 
-def test_xyz_add_1y1(test_case): GenerateTest(test_case, (64, 64, 64), (1, 64, 1))
+def test_xyz_add_1y1(test_case):
+    GenerateTest(test_case, (64, 64, 64), (1, 64, 1))
 
 def GenerateTest(test_case, a_shape, b_shape):
     @flow.function(func_config)
