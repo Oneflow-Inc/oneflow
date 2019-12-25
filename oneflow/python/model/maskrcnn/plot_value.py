@@ -111,22 +111,22 @@ def make_loss_frame5(losses_hisogram, source):
     )
 
 
-def latest_wildcard(path):
+def wildcard_at(path, index):
     result = glob.glob(path)
     assert len(result) > 0, "there is no files in {}".format(path)
     result.sort(key=os.path.getmtime)
-    return result[-1]
+    return result[index]
 
 
-def get_df(path, wildcard):
+def get_df(path, wildcard, index=-1):
     if os.path.isdir(path):
-        path = latest_wildcard(os.path.join(path, wildcard))
+        path = wildcard_at(os.path.join(path, wildcard), index)
 
     return pd.read_csv(path)
 
 
 def get_metrics_sr(df1, df2):
-    limit = min(df1["iter"].max(), df2["iter"].max())
+    limit = min(df1["iter"].max(), df2["iter"].max(), df1.size, df2.size)
     rate = 1 if limit <= 2500 else limit // 2500 + 1
     return limit, rate
 
