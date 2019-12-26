@@ -31,7 +31,6 @@ __global__ void SetOutProbs(const int32_t probs_num, const T* probs_ptr,
     if (probs_index == 0) {
       out_probs_ptr[select_index * probs_num + probs_index] =
           probs_ptr[box_index * probs_num + probs_index];
-      printf("%d out_probs_ptr: %f\n", i, out_probs_ptr[select_index * probs_num + probs_index]);
     } else {
       T cls_prob =
           probs_ptr[box_index * probs_num + probs_index] * probs_ptr[box_index * probs_num + 0];
@@ -65,8 +64,6 @@ __global__ void SetOutBoxes(const T* bbox_ptr, const int32_t* select_inds_ptr,
         (box_y - (image_height - new_h) / 2.0 / image_height) / ((float)new_h / image_height);
     out_bbox_ptr[i * 4 + 2] = box_w * (float)image_width / new_w;
     out_bbox_ptr[i * 4 + 3] = box_h * (float)image_height / new_h;
-    printf("%d out_bbox_ptr: %f %f %f %f\n", i, out_bbox_ptr[i * 4 + 0], out_bbox_ptr[i * 4 + 1],
-           out_bbox_ptr[i * 4 + 2], out_bbox_ptr[i * 4 + 3]);
   }
 }
 
