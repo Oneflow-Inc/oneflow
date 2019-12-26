@@ -280,18 +280,6 @@ def softmax_grad(y, dy, axis=None, name=None):
         dy = oneflow.transpose(dy, perm=permute)
     setattr(op_conf.softmax_grad_conf, "y", y.logical_blob_name)
     setattr(op_conf.softmax_grad_conf, "dy", dy.logical_blob_name)
-    # if axis > 0 and axis != len(y.shape) - 1:
-    #   shape = [y.shape[i] for i in range(len(y.shape)) if i != axis]
-    #   for var_name in ["transpose_x", "transpose_y"]:
-    #     t = oneflow.get_variable(
-    #         name="{}-{}".format(name_prefix, var_name),
-    #         shape=shape + [y.shape[axis]],
-    #         dtype=y.dtype,
-    #         trainable=False,
-    #         initializer=oneflow.constant_initializer(0.),
-    #         model_name=var_name,
-    #     )
-    #     setattr(op_conf.softmax_grad_conf, var_name, t.logical_blob_name)
 
     op_conf.softmax_grad_conf.axis = -1
     op_conf.softmax_grad_conf.dx = "dx"
