@@ -56,7 +56,6 @@ class JobBuilder final {
 
   const OptInt64& BatchAxis4Lbn(const std::string& lbn) const;
   void AddBatchAxis4Lbn(const std::string& lbn, const OptInt64& axis);
-  bool HasBatchAxis4Lbn(const std::string& lbn) const { return lbn2batch_axis_.count(lbn) > 0; }
 
  private:
   PlacementGroup* FindPlacementGroup(const std::string& op_name) const;
