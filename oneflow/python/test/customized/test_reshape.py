@@ -5,7 +5,7 @@ flow.config.gpu_device_num(1)
 flow.config.default_data_type(flow.float)
 
 def test_reshape(x, shape, name):
-    return flow.user_op_builder(name).Op("TestReshape").Input("in",[x]) \
+    return flow.user_op_builder(name).Op("TestReshape").Input("in",[x]).Output("out") \
             .SetAttr("shape", shape, "AttrTypeShape") \
             .Build().RemoteBlobList()
 

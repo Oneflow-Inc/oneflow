@@ -104,7 +104,7 @@ def _data_load_layer(args, data_dir):
 
 
 def ccrelu(x, name):
-  return flow.user_op_builder(name).Op("ccrelu").Input("in",[x]).Build().RemoteBlobList()[0]
+  return flow.user_op_builder(name).Op("ccrelu").Input("in",[x]).Output("out")..Build().RemoteBlobList()[0]
 
 def alexnet(args, images, labels, trainable=True):
   transposed = flow.transpose(images, name="transpose", perm=[0, 3, 1, 2])
