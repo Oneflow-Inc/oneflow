@@ -13,5 +13,6 @@
 #include "oneflow/core/framework/tensor_desc.h"
 #include "oneflow/core/framework/op_kernel.h"
 #include "oneflow/core/framework/user_op_def.h"
+#include "oneflow/core/framework/multi_thread.h"
 
 #endif  // ONEFLOW_CORE_FRAMEWORK_FRAMEWORK_H_
