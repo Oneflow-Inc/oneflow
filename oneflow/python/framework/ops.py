@@ -53,6 +53,48 @@ def acc(
     return remote_blob_util.RemoteBlob(lbi)
 
 
+@oneflow_export('unpack')
+def unpack(
+        input,
+        unpack_num,
+        name=None):
+    op_conf = op_conf_util.OperatorConf()
+    setattr(
+        op_conf,
+        "name",
+        name if name is not None else id_util.UniqueStr("Unpack_"),
+    )
+    setattr(op_conf.unpack_conf, "in", input.logical_blob_name)
+    op_conf.unpack_conf.out = "out"
+    op_conf.unpack_conf.unpack_num = unpack_num
+    compile_context.CurJobAddOp(op_conf)
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = "out"
+    return remote_blob_util.RemoteBlob(lbi)
+
+
+@oneflow_export('pack')
+def pack(
+        input,
+        pack_num,
+        name=None):
+    op_conf = op_conf_util.OperatorConf()
+    setattr(
+        op_conf,
+        "name",
+        name if name is not None else id_util.UniqueStr("Pack_"),
+    )
+    setattr(op_conf.pack_conf, "in", input.logical_blob_name)
+    op_conf.pack_conf.out = "out"
+    op_conf.pack_conf.unpack_num = pack_num
+    compile_context.CurJobAddOp(op_conf)
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = "out"
+    return remote_blob_util.RemoteBlob(lbi)
+
+
 @oneflow_export('parallel_cast')
 def parallel_cast(
         input,
