@@ -31,8 +31,9 @@ def repeat(
     lbi.blob_name = "out"
     return remote_blob_util.RemoteBlob(lbi)
 
+
 @oneflow_export('acc')
-def repeat(
+def acc(
         one,
         max_acc_num,
         name=None):
@@ -43,13 +44,14 @@ def repeat(
         name if name is not None else id_util.UniqueStr("Acc_"),
     )
     op_conf.acc_conf.one = one.logical_blob_name
-    op_conf.acc_conf.out = "out"
+    op_conf.acc_conf.acc = "acc"
     op_conf.acc_conf.max_acc_num = max_acc_num
     compile_context.CurJobAddOp(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
     lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
+    lbi.blob_name = "acc"
     return remote_blob_util.RemoteBlob(lbi)
+
 
 @oneflow_export('parallel_cast')
 def parallel_cast(
