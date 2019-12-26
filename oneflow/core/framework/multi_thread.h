@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_CORE_FRAMEWORK_INFER_UTIL_H_
-#define ONEFLOW_CORE_FRAMEWORK_INFER_UTIL_H_
+#ifndef ONEFLOW_CORE_FRAMEWORK_MULTI_THREAD_H_
+#define ONEFLOW_CORE_FRAMEWORK_MULTI_THREAD_H_
 
 #include "oneflow/core/common/util.h"
 
@@ -13,4 +13,4 @@ void MultiThreadLoopInOpKernel(size_t num, std::function<void(size_t i)> Callbac
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_FRAMEWORK_INFER_UTIL_H_
+#endif  // ONEFLOW_CORE_FRAMEWORK_MULTI_THREAD_H_
