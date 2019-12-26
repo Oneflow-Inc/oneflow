@@ -14,14 +14,18 @@ namespace oneflow {
 inline void RebuildXrtCompiledJob(const OpGraph& op_graph, Job* job) {
 #ifdef OF_WITH_XRT
   const auto& job_desc = GlobalJobDesc();
-  TeePersistentLogStream::Create("job_without_xrt_" + std::to_string(job_desc.job_id()))
-      ->Write(*job);
-
+  if (Global<ResourceDesc>::Get()->enable_debug_mode()) {
+    TeePersistentLogStream::Create("job_without_xrt_" + std::to_string(job_desc.job_id()))
+        ->Write(*job);
+  }
   // Run compilation time passes currently include `MarkClusterId`, `BuildSubGraph`
   // and `RebuildCompiledJob`.
   xrt::RunCompilationTimeXrtPasses(op_graph, job, job_desc.IsTrain());
 
-  TeePersistentLogStream::Create("job_with_xrt_" + std::to_string(job_desc.job_id()))->Write(*job);
+  if (Global<ResourceDesc>::Get()->enable_debug_mode()) {
+    TeePersistentLogStream::Create("job_with_xrt_" + std::to_string(job_desc.job_id()))
+        ->Write(*job);
+  }
 #endif  // OF_WITH_XRT
 }
 
