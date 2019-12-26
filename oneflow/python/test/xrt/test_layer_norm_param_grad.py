@@ -10,9 +10,9 @@ def make_job(shape, gamma_shape, params_axis, dtype=flow.float32):
     config.use_tensorrt(False)
 
     @flow.function(config)
-    def layer_norm_param_grad_job(dy = flow.input_blob_def(shape, dtype=dtype),
-                                  norm = flow.input_blob_def(shape, dtype=dtype),
-                                  gamma = flow.input_blob_def(gamma_shape, dtype=dtype)):
+    def layer_norm_param_grad_job(dy = flow.FixedTensorDef(shape, dtype=dtype),
+                                  norm = flow.FixedTensorDef(shape, dtype=dtype),
+                                  gamma = flow.FixedTensorDef(gamma_shape, dtype=dtype)):
         return flow.layers.layer_norm_param_grad(
             dy, norm, gamma, begin_params_axis=params_axis)
     return layer_norm_param_grad_job
@@ -22,9 +22,9 @@ def make_xla_job(shape, gamma_shape, params_axis, dtype=flow.float32):
     config.use_tensorrt(False)
 
     @flow.function(config)
-    def xla_layer_norm_param_grad_job(dy = flow.input_blob_def(shape, dtype=dtype),
-                                      norm = flow.input_blob_def(shape, dtype=dtype),
-                                      gamma = flow.input_blob_def(gamma_shape, dtype=dtype)):
+    def xla_layer_norm_param_grad_job(dy = flow.FixedTensorDef(shape, dtype=dtype),
+                                      norm = flow.FixedTensorDef(shape, dtype=dtype),
+                                      gamma = flow.FixedTensorDef(gamma_shape, dtype=dtype)):
         return flow.layers.layer_norm_param_grad(
             dy, norm, gamma, begin_params_axis=params_axis)
     return xla_layer_norm_param_grad_job
@@ -51,9 +51,9 @@ class TestLayerNormParamGrad(unittest.TestCase):
         self.assertTrue(d_beta1.shape, d_beta2.shape)
         self.assertTrue(d_gamma1.shape, d_gamma2.shape)
 
-        self.assertTrue(np.allclose(d_norm1, d_norm2, rtol=1e-03, atol=1e-05))
-        self.assertTrue(np.allclose(d_beta1, d_beta2, rtol=1e-03, atol=1e-05))
-        self.assertTrue(np.allclose(d_gamma1, d_gamma2, rtol=1e-03, atol=1e-05))
+        self.assertTrue(np.allclose(d_norm1.ndarray(), d_norm2.ndarray(), rtol=1e-03, atol=1e-05))
+        self.assertTrue(np.allclose(d_beta1.ndarray(), d_beta2.ndarray(), rtol=1e-03, atol=1e-05))
+        self.assertTrue(np.allclose(d_gamma1.ndarray(), d_gamma2.ndarray(), rtol=1e-03, atol=1e-05))
 
         flow.clear_default_session()
 

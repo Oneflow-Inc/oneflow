@@ -10,8 +10,8 @@ def make_job(shape, dtype=flow.float32):
     config.use_tensorrt(False)
 
     @flow.function(config)
-    def gelu_grad_job(x = flow.input_blob_def(shape, dtype=dtype),
-                      dy = flow.input_blob_def(shape, dtype=dtype)):
+    def gelu_grad_job(x = flow.FixedTensorDef(shape, dtype=dtype),
+                      dy = flow.FixedTensorDef(shape, dtype=dtype)):
         return flow.keras.activations.gelu_grad(x, dy)
     return gelu_grad_job
 
@@ -20,8 +20,8 @@ def make_xla_job(shape, dtype=flow.float32):
     config.use_tensorrt(False)
 
     @flow.function(config)
-    def xla_gelu_grad_job(x = flow.input_blob_def(shape, dtype=dtype),
-                          dy = flow.input_blob_def(shape, dtype=dtype)):
+    def xla_gelu_grad_job(x = flow.FixedTensorDef(shape, dtype=dtype),
+                          dy = flow.FixedTensorDef(shape, dtype=dtype)):
         return flow.keras.activations.gelu_grad(x, dy)
     return xla_gelu_grad_job
 
@@ -34,7 +34,7 @@ class TestGeluGrad(unittest.TestCase):
         b = f2(x, dy).get()
         print("without xla: ", a)
         print("with xla", b)
-        self.assertTrue(np.allclose(a, b , rtol=1e-03, atol=1e-05))
+        self.assertTrue(np.allclose(a.ndarray(), b.ndarray(), rtol=1e-03, atol=1e-05))
 
         flow.clear_default_session()
 

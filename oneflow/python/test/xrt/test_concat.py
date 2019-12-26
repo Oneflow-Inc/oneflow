@@ -10,8 +10,8 @@ def make_job(a_shape, b_shape, axis, dtype=flow.float32):
     config.use_tensorrt(False)
 
     @flow.function(config)
-    def concat_job(x=flow.input_blob_def(a_shape, dtype=dtype),
-            y=flow.input_blob_def(b_shape, dtype=dtype)):
+    def concat_job(x=flow.FixedTensorDef(a_shape, dtype=dtype),
+            y=flow.FixedTensorDef(b_shape, dtype=dtype)):
         return flow.concat([x, y], axis=axis)
     return concat_job
 
@@ -20,8 +20,8 @@ def make_trt_job(a_shape, b_shape, axis, dtype=flow.float32):
     config.use_tensorrt(True)
 
     @flow.function(config)
-    def trt_concat_job(x=flow.input_blob_def(a_shape, dtype=dtype),
-            y=flow.input_blob_def(b_shape, dtype=dtype)):
+    def trt_concat_job(x=flow.FixedTensorDef(a_shape, dtype=dtype),
+            y=flow.FixedTensorDef(b_shape, dtype=dtype)):
         return flow.concat([x, y], axis=axis)
     return trt_concat_job
 
@@ -33,7 +33,7 @@ class Testconcat(unittest.TestCase):
         b = f2(x, y).get()
         print("without xla: ", a)
         print("with tensorrt: ", b)
-        self.assertTrue(np.allclose(a, b , rtol=1e-03, atol=1e-05))
+        self.assertTrue(np.allclose(a.ndarray(), b.ndarray(), rtol=1e-03, atol=1e-05))
         flow.clear_default_session()
 
     def _test_ones_body(self, a_shape, b_shape, axis, dtype=np.float32):

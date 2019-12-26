@@ -10,8 +10,8 @@ def make_job(shape, axis, dtype=flow.float32):
     config.use_tensorrt(False)
 
     @flow.function(config)
-    def softmax_grad_job(y=flow.input_blob_def(shape, dtype=dtype),
-                         dy=flow.input_blob_def(shape, dtype=dtype)):
+    def softmax_grad_job(y=flow.FixedTensorDef(shape, dtype=dtype),
+                         dy=flow.FixedTensorDef(shape, dtype=dtype)):
         return flow.nn.softmax_grad(y, dy, axis=axis)
     return softmax_grad_job
 
@@ -20,8 +20,8 @@ def make_xla_job(shape, axis, dtype=flow.float32):
     config.use_tensorrt(False)
 
     @flow.function(config)
-    def xla_softmax_grad_job(y=flow.input_blob_def(shape, dtype=dtype),
-                             dy=flow.input_blob_def(shape, dtype=dtype)):
+    def xla_softmax_grad_job(y=flow.FixedTensorDef(shape, dtype=dtype),
+                             dy=flow.FixedTensorDef(shape, dtype=dtype)):
         return flow.nn.softmax_grad(y, dy, axis=axis)
     return xla_softmax_grad_job
 
@@ -34,7 +34,7 @@ class TestSoftmaxGrad(unittest.TestCase):
         print("without xla: ", a)
         print("with xla", b)
         self.assertTrue(a.shape == b.shape)
-        self.assertTrue(np.allclose(a, b , rtol=1e-03, atol=1e-05))
+        self.assertTrue(np.allclose(a.ndarray(), b.ndarray(), rtol=1e-03, atol=1e-05))
         flow.clear_default_session()
 
     def _test_ones_body(self, shape, axis, dtype=np.float32):

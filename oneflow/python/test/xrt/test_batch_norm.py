@@ -10,7 +10,7 @@ def make_job(input_shape, axis, dtype=flow.float32):
     config.use_tensorrt(False)
 
     @flow.function(config)
-    def batch_norm_job(x=flow.input_blob_def(input_shape, dtype=dtype)):
+    def batch_norm_job(x=flow.FixedTensorDef(input_shape, dtype=dtype)):
         return flow.layers.batch_normalization(x, axis=axis)
     return batch_norm_job
 
@@ -19,7 +19,7 @@ def make_xla_job(input_shape, axis, dtype=flow.float32):
     config.use_tensorrt(False)
 
     @flow.function(config)
-    def xla_batch_norm_job(x=flow.input_blob_def(input_shape, dtype=dtype)):
+    def xla_batch_norm_job(x=flow.FixedTensorDef(input_shape, dtype=dtype)):
         return flow.layers.batch_normalization(x, axis=axis)
     return xla_batch_norm_job
 
@@ -28,7 +28,7 @@ def make_trt_job(input_shape, axis, dtype=flow.float32):
     config.use_tensorrt(True)
 
     @flow.function(config)
-    def trt_batch_norm_job(x=flow.input_blob_def(input_shape, dtype=dtype)):
+    def trt_batch_norm_job(x=flow.FixedTensorDef(input_shape, dtype=dtype)):
         return flow.layers.batch_normalization(x, axis=axis)
     return trt_batch_norm_job
 
@@ -40,12 +40,12 @@ class TestRelu(unittest.TestCase):
         b = f2(x).get()
         print("without xla: ", a)
         print("with xla: ", b)
-        self.assertTrue(np.allclose(a, b , rtol=1e-03, atol=1e-05))
+        self.assertTrue(np.allclose(a.ndarray(), b.ndarray(), rtol=1e-03, atol=1e-05))
         flow.clear_default_session()
         f3 = make_trt_job(x.shape, axis, dtype=flow.float32)
         c = f3(x).get()
         print("with tensorrt: ", c)
-        self.assertTrue(np.allclose(a, c , rtol=1e-03, atol=1e-05))
+        self.assertTrue(np.allclose(a.ndarray(), c.ndarray(), rtol=1e-03, atol=1e-05))
         flow.clear_default_session()
 
     def _test_ones_body(self, shape, axis, dtype=np.float32):

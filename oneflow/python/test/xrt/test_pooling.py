@@ -19,7 +19,7 @@ class TestPooling(unittest.TestCase):
         print("without trt: ", a)
         print("with tensorrt", b)
         self.assertTrue(a.shape == b.shape)
-        self.assertTrue(np.allclose(a, b , rtol=1e-03, atol=1e-05))
+        self.assertTrue(np.allclose(a.ndarray(), b.ndarray(), rtol=1e-03, atol=1e-05))
         flow.clear_default_session()
 
     def _test_ones_body(self, shape, ksize, strides, padding, data_format,
@@ -73,7 +73,7 @@ class TestMaxPooling(TestPooling):
         config.use_tensorrt(False)
 
         @flow.function(config)
-        def max_pooling_job(x = flow.input_blob_def(x_shape, dtype=dtype)):
+        def max_pooling_job(x = flow.FixedTensorDef(x_shape, dtype=dtype)):
             return flow.nn.max_pool2d(x, ksize=ksize, strides=strides,
                                       padding=padding, data_format=data_format)
         return max_pooling_job
@@ -83,7 +83,7 @@ class TestMaxPooling(TestPooling):
         config.use_tensorrt(True)
 
         @flow.function(config)
-        def trt_max_pooling_job(x = flow.input_blob_def(x_shape, dtype=dtype)):
+        def trt_max_pooling_job(x = flow.FixedTensorDef(x_shape, dtype=dtype)):
             return flow.nn.max_pool2d(x, ksize=ksize, strides=strides,
                                       padding=padding, data_format=data_format)
         return trt_max_pooling_job
@@ -96,7 +96,7 @@ class TestAveragePooling(TestPooling):
         config.use_tensorrt(False)
 
         @flow.function(config)
-        def avg_pooling_job(x = flow.input_blob_def(x_shape, dtype=dtype)):
+        def avg_pooling_job(x = flow.FixedTensorDef(x_shape, dtype=dtype)):
             return flow.nn.avg_pool2d(x, ksize=ksize, strides=strides,
                                       padding=padding, data_format=data_format)
         return avg_pooling_job
@@ -106,7 +106,7 @@ class TestAveragePooling(TestPooling):
         config.use_tensorrt(True)
 
         @flow.function(config)
-        def trt_avg_pooling_job(x = flow.input_blob_def(x_shape, dtype=dtype)):
+        def trt_avg_pooling_job(x = flow.FixedTensorDef(x_shape, dtype=dtype)):
             return flow.nn.avg_pool2d(x, ksize=ksize, strides=strides,
                                       padding=padding, data_format=data_format)
         return trt_avg_pooling_job

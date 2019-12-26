@@ -10,8 +10,8 @@ def make_job(a_shape, b_shape, trans_a=False, trans_b=False, dtype=flow.float32)
     config.use_tensorrt(False)
 
     @flow.function(config)
-    def matmul_job(a=flow.input_blob_def(a_shape, dtype=dtype),
-                   b=flow.input_blob_def(b_shape, dtype=dtype)):
+    def matmul_job(a=flow.FixedTensorDef(a_shape, dtype=dtype),
+                   b=flow.FixedTensorDef(b_shape, dtype=dtype)):
         return flow.matmul(a, b, transpose_a=trans_a, transpose_b=trans_b)
     return matmul_job
 
@@ -20,8 +20,8 @@ def make_xla_job(a_shape, b_shape, trans_a=False, trans_b=False, dtype=flow.floa
     config.use_tensorrt(False)
 
     @flow.function(config)
-    def xla_matmul_job(a=flow.input_blob_def(a_shape, dtype=dtype),
-                       b=flow.input_blob_def(b_shape, dtype=dtype)):
+    def xla_matmul_job(a=flow.FixedTensorDef(a_shape, dtype=dtype),
+                       b=flow.FixedTensorDef(b_shape, dtype=dtype)):
         return flow.matmul(a, b, transpose_a=trans_a, transpose_b=trans_b)
     return xla_matmul_job
 
@@ -39,7 +39,7 @@ class TestMatmul(unittest.TestCase):
         y = f2(a, b).get()
         print("without xla: ", x)
         print("with xla: ", y)
-        self.assertTrue(np.allclose(x, y, rtol=1e-03, atol=1e-05))
+        self.assertTrue(np.allclose(x.ndarray(), y.ndarray(), rtol=1e-03, atol=1e-05))
         flow.clear_default_session()
 
     def _test_ones_body(self, m, k, n, trans_a, trans_b, dtype=np.float32):

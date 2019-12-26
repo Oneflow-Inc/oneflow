@@ -10,7 +10,7 @@ def make_job(input_shape, norm_axis, params_axis, dtype=flow.float32):
     config.use_tensorrt(False)
 
     @flow.function(config)
-    def layer_norm_job(x = flow.input_blob_def(input_shape, dtype=dtype)):
+    def layer_norm_job(x = flow.FixedTensorDef(input_shape, dtype=dtype)):
         return flow.layers.layer_norm(x, begin_norm_axis=norm_axis,
                                       begin_params_axis=params_axis)
     return layer_norm_job
@@ -20,7 +20,7 @@ def make_xla_job(input_shape, norm_axis, params_axis, dtype=flow.float32):
     config.use_tensorrt(False)
 
     @flow.function(config)
-    def xla_layer_norm_job(x = flow.input_blob_def(input_shape, dtype=dtype)):
+    def xla_layer_norm_job(x = flow.FixedTensorDef(input_shape, dtype=dtype)):
         return flow.layers.layer_norm(x, begin_norm_axis=norm_axis,
                                       begin_params_axis=params_axis)
     return xla_layer_norm_job
@@ -33,7 +33,7 @@ class TestLayerNorm(unittest.TestCase):
         b = f2(x).get()
         print("without xla: ", a)
         print("with xla", b)
-        self.assertTrue(np.allclose(a, b , rtol=1e-03, atol=1e-05))
+        self.assertTrue(np.allclose(a.ndarray(), b.ndarray(), rtol=1e-03, atol=1e-05))
         flow.clear_default_session()
 
     def _test_ones_body(self, shape,

@@ -11,8 +11,8 @@ def make_job(x_shape, w_shape, kernel_size=None, strides=None,
     config.use_tensorrt(False)
 
     @flow.function(config)
-    def conv2d_job(x=flow.input_blob_def(x_shape, dtype=dtype),
-                   weight=flow.input_blob_def(w_shape, dtype=dtype)):
+    def conv2d_job(x=flow.FixedTensorDef(x_shape, dtype=dtype),
+                   weight=flow.FixedTensorDef(w_shape, dtype=dtype)):
         return flow.nn.conv2d(x, weight, strides, padding, data_format, dilation_rate)
     return conv2d_job
 
@@ -22,8 +22,8 @@ def make_trt_job(x_shape, w_shape, kernel_size=None, strides=None,
     config.use_tensorrt(True)
 
     @flow.function(config)
-    def trt_conv2d_job(x=flow.input_blob_def(x_shape, dtype=dtype),
-                       weight=flow.input_blob_def(w_shape, dtype=dtype)):
+    def trt_conv2d_job(x=flow.FixedTensorDef(x_shape, dtype=dtype),
+                       weight=flow.FixedTensorDef(w_shape, dtype=dtype)):
         return flow.nn.conv2d(x, weight, strides, padding, data_format, dilation_rate)
     return trt_conv2d_job
 
@@ -47,7 +47,7 @@ class TestConv2d(unittest.TestCase):
         print("without xla: ", a)
         print("with tensorrt: ", b)
         self.assertTrue(a.shape == b.shape)
-        self.assertTrue(np.allclose(a, b, rtol=1e-03, atol=1e-05))
+        self.assertTrue(np.allclose(a.ndarray(), b.ndarray(), rtol=1e-03, atol=1e-05))
         flow.clear_default_session()
 
     def _test_ones_body(self, shape, filters, kernel_size, strides,

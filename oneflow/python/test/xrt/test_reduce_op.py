@@ -17,14 +17,14 @@ class TestReduce(unittest.TestCase):
         print("without xla: ", a)
         print("with xla: ", b)
         self.assertTrue(a.shape == b.shape)
-        self.assertTrue(np.allclose(a, b , rtol=1e-03, atol=1e-05))
+        self.assertTrue(np.allclose(a.ndarray(), b.ndarray(), rtol=1e-03, atol=1e-05))
         flow.clear_default_session()
 
         f3 = self.make_trt_job(x.shape, axis, keepdims, dtype=flow.float32)
         c = f3(x).get()
         print("with tensorrt: ", c)
         self.assertTrue(a.shape == c.shape)
-        self.assertTrue(np.allclose(a, c , rtol=1e-03, atol=1e-05))
+        self.assertTrue(np.allclose(a.ndarray(), c.ndarray(), rtol=1e-03, atol=1e-05))
         flow.clear_default_session()
 
     def _test_ones_body(self, shape, axis, keepdims, dtype=np.float32):
@@ -62,7 +62,7 @@ class TestReduceSum(TestReduce):
         config.use_tensorrt(False)
 
         @flow.function(config)
-        def reduce_sum_job(x = flow.input_blob_def(x_shape, dtype=dtype)):
+        def reduce_sum_job(x = flow.FixedTensorDef(x_shape, dtype=dtype)):
             return flow.math.reduce_sum(x, axis=axis, keepdims=keepdims)
         return reduce_sum_job
     
@@ -71,7 +71,7 @@ class TestReduceSum(TestReduce):
         config.use_tensorrt(False)
 
         @flow.function(config)
-        def xla_reduce_sum_job(x = flow.input_blob_def(x_shape, dtype=dtype)):
+        def xla_reduce_sum_job(x = flow.FixedTensorDef(x_shape, dtype=dtype)):
             return flow.math.reduce_sum(x, axis=axis, keepdims=keepdims)
         return xla_reduce_sum_job
 
@@ -80,7 +80,7 @@ class TestReduceSum(TestReduce):
         config.use_tensorrt(True)
 
         @flow.function(config)
-        def trt_reduce_sum_job(x = flow.input_blob_def(x_shape, dtype=dtype)):
+        def trt_reduce_sum_job(x = flow.FixedTensorDef(x_shape, dtype=dtype)):
            return flow.math.reduce_sum(x, axis=axis, keepdims=keepdims)
         return trt_reduce_sum_job
 
@@ -92,7 +92,7 @@ class TestReduceMean(TestReduce):
         config.use_tensorrt(False)
 
         @flow.function(config)
-        def reduce_mean_job(x = flow.input_blob_def(x_shape, dtype=dtype)):
+        def reduce_mean_job(x = flow.FixedTensorDef(x_shape, dtype=dtype)):
             return flow.math.reduce_mean(x, axis=axis, keepdims=keepdims)
         return reduce_mean_job
 
@@ -101,7 +101,7 @@ class TestReduceMean(TestReduce):
         config.use_tensorrt(False)
 
         @flow.function(config)
-        def xla_reduce_mean_job(x = flow.input_blob_def(x_shape, dtype=dtype)):
+        def xla_reduce_mean_job(x = flow.FixedTensorDef(x_shape, dtype=dtype)):
             return flow.math.reduce_mean(x, axis=axis, keepdims=keepdims)
         return xla_reduce_mean_job
 
@@ -110,7 +110,7 @@ class TestReduceMean(TestReduce):
         config.use_tensorrt(True)
 
         @flow.function(config)
-        def trt_reduce_mean_job(x = flow.input_blob_def(x_shape, dtype=dtype)):
+        def trt_reduce_mean_job(x = flow.FixedTensorDef(x_shape, dtype=dtype)):
            return flow.math.reduce_mean(x, axis=axis, keepdims=keepdims)
         return trt_reduce_mean_job
 

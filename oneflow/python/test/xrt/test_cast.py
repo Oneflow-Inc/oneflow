@@ -10,7 +10,7 @@ def make_job(input_shape, dtype=flow.float32, target_dtype=flow.float32):
     config.use_tensorrt(False)
 
     @flow.function(config)
-    def cast_job(x = flow.input_blob_def(input_shape, dtype=dtype)):
+    def cast_job(x = flow.FixedTensorDef(input_shape, dtype=dtype)):
         return flow.cast(x, dtype=target_dtype)
     return cast_job
 
@@ -19,7 +19,7 @@ def make_xla_job(input_shape, dtype=flow.float32, target_dtype=flow.float32):
     config.use_tensorrt(False)
 
     @flow.function(config)
-    def xla_cast_job(x = flow.input_blob_def(input_shape, dtype=dtype)):
+    def xla_cast_job(x = flow.FixedTensorDef(input_shape, dtype=dtype)):
         return flow.cast(x, dtype=target_dtype)
     return xla_cast_job
 
@@ -31,10 +31,10 @@ class TestCast(unittest.TestCase):
         b = f2(x).get()
         print("without xla: ", a)
         print("with xla", b)
-        self.assertTrue(np.allclose(a, b , rtol=1e-03, atol=1e-05))
+        self.assertTrue(np.allclose(a.ndarray(), b.ndarray(), rtol=1e-03, atol=1e-05))
         # b = trt_cast_job(x).get()
         # print("with tensorrt", b)
-        # self.assertTrue(np.allclose(a, b , rtol=1e-03, atol=1e-05))
+        # self.assertTrue(np.allclose(a.ndarray(), b.ndarray(), rtol=1e-03, atol=1e-05))
         flow.clear_default_session()
 
     def _test_ones_body(self, shape, dtype=flow.float32, target_dtype=flow.float32):

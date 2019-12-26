@@ -14,7 +14,7 @@ class TestGather(unittest.TestCase):
         b = f2(x, indices).get()
         print("without xla: ", a)
         print("with xla", b)
-        self.assertTrue(np.allclose(a, b, rtol=1e-03, atol=1e-05))
+        self.assertTrue(np.allclose(a.ndarray(), b.ndarray(), rtol=1e-03, atol=1e-05))
         flow.clear_default_session()
 
     def make_job(self, input_shape, indices_shape, axis, dtype=flow.float32):
@@ -22,8 +22,8 @@ class TestGather(unittest.TestCase):
         config.use_tensorrt(False)
 
         @flow.function(config)
-        def gather_job(x = flow.input_blob_def(input_shape, dtype=dtype),
-                       indices = flow.input_blob_def(indices_shape, dtype=flow.int32)):
+        def gather_job(x = flow.FixedTensorDef(input_shape, dtype=dtype),
+                       indices = flow.FixedTensorDef(indices_shape, dtype=flow.int32)):
             return flow.gather(x, indices, axis=axis)
         return gather_job
 
@@ -32,8 +32,8 @@ class TestGather(unittest.TestCase):
         config.use_tensorrt(False)
 
         @flow.function(config)
-        def xla_gather_job(x = flow.input_blob_def(input_shape, dtype=dtype),
-                           indices = flow.input_blob_def(indices_shape, dtype=flow.int32)):
+        def xla_gather_job(x = flow.FixedTensorDef(input_shape, dtype=dtype),
+                           indices = flow.FixedTensorDef(indices_shape, dtype=flow.int32)):
             return flow.gather(x, indices, axis=axis)
         return xla_gather_job
 
@@ -69,8 +69,8 @@ class TestBatchGather(TestGather):
         config.use_tensorrt(False)
 
         @flow.function(config)
-        def batch_gather_job(x = flow.input_blob_def(input_shape, dtype=dtype),
-                             indices = flow.input_blob_def(indices_shape,
+        def batch_gather_job(x = flow.FixedTensorDef(input_shape, dtype=dtype),
+                             indices = flow.FixedTensorDef(indices_shape,
                              dtype=flow.int32)):
             return flow.gather(x, indices, batch_dims=axis)
         return batch_gather_job
@@ -80,8 +80,8 @@ class TestBatchGather(TestGather):
         config.use_tensorrt(False)
 
         @flow.function(config)
-        def xla_batch_gather_job(x = flow.input_blob_def(input_shape, dtype=dtype),
-                                 indices = flow.input_blob_def(indices_shape, dtype=flow.int32)):
+        def xla_batch_gather_job(x = flow.FixedTensorDef(input_shape, dtype=dtype),
+                                 indices = flow.FixedTensorDef(indices_shape, dtype=flow.int32)):
             return flow.gather(x, indices, batch_dims=axis)
         return xla_batch_gather_job
 
