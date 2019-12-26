@@ -24,6 +24,7 @@ template<typename T>
 __global__ void CalcSuppressionBitmaskMatrix(size_t num_boxes, const float nms_iou_threshold,
                                              const T* boxes, int64_t* suppression_bmask_matrix,
                                              const T* probs) {
+  if (probs[0] == 0) { return; }
   const size_t row = blockIdx.y;
   const size_t col = blockIdx.x;
 
@@ -57,6 +58,7 @@ __global__ void CalcSuppressionBitmaskMatrix(size_t num_boxes, const float nms_i
 template<typename T>
 __global__ void ScanSuppression(const size_t num_boxes, const size_t num_blocks, size_t num_keep,
                                 int64_t* suppression_bmask, int8_t* keep_mask, const T* probs) {
+  if (probs[0] == 0) { return; }
   extern __shared__ int64_t remv[];
   remv[threadIdx.x] = 0;
   __syncthreads();
