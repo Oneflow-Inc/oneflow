@@ -5,7 +5,7 @@ flow.config.gpu_device_num(1)
 flow.config.default_data_type(flow.float)
 
 def ccrelu(x, name):
-    return flow.user_op_builder(name).Op("ccrelu").Input("in",[x]).Build().RemoteBlobList()[0]
+    return flow.user_op_builder(name).Op("ccrelu").Input("in",[x]).Output("out").Build().RemoteBlobList()[0]
 
 @flow.function
 def ReluJob(x = flow.input_blob_def((10, 2))):
