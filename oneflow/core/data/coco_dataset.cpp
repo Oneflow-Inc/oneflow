@@ -21,7 +21,7 @@ COCODataset::COCODataset(const DatasetProto& proto) : Dataset(proto) {
   std::istringstream in_str_stream(json_str);
   in_str_stream >> annotation_json_;
 
-  // initialize image_ids_, image_id2image_ and image_id2anno_id_ 
+  // initialize image_ids_, image_id2image_ and image_id2anno_id_
   for (const auto& image : annotation_json_["images"]) {
     int64_t id = image["id"].get<int64_t>();
     image_ids_.push_back(id);
@@ -59,9 +59,7 @@ COCODataset::COCODataset(const DatasetProto& proto) : Dataset(proto) {
   if (coco_dataset.remove_images_without_annotations()) {
     HashSet<int64_t> to_remove_image_ids;
     for (int64_t image_id : image_ids_) {
-      if (!ImageHasValidAnnotations(image_id)) {
-        to_remove_image_ids.insert(image_id);
-      }
+      if (!ImageHasValidAnnotations(image_id)) { to_remove_image_ids.insert(image_id); }
     }
     image_ids_.erase(std::remove_if(image_ids_.begin(), image_ids_.end(),
                                     [&to_remove_image_ids](int64_t image_id) {

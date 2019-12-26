@@ -15,7 +15,7 @@
  * In some situations it is desirable to declare a variable without initializing
  * it, refer to it in code or other variables' initializers, and then initialize
  * it later.  Similarly, functions can be prototyped, have their address taken,
- * and then have their body defined later.  In such cases, use the FWDDECL macros 
+ * and then have their body defined later.  In such cases, use the FWDDECL macros
  * when forward-declaring LINKONCE global variables without initializers and
  * function prototypes, and then use the DEFINE macros when later defining them.
  * Although in many cases the FWDDECL macro is equivalent to the DEFINE macro,
@@ -23,53 +23,53 @@
  */
 
 #if defined(__MINGW32__) /* MinGW */
-    #define NVTX_LINKONCE_WEAK __attribute__((section(".gnu.linkonce.0.")))
-    #if defined(__cplusplus)
-        #define NVTX_LINKONCE_DEFINE_GLOBAL   __declspec(selectany)
-        #define NVTX_LINKONCE_DEFINE_FUNCTION extern "C" inline NVTX_LINKONCE_WEAK
-    #else
-        #define NVTX_LINKONCE_DEFINE_GLOBAL   __declspec(selectany)
-        #define NVTX_LINKONCE_DEFINE_FUNCTION NVTX_LINKONCE_WEAK
-    #endif
+#define NVTX_LINKONCE_WEAK __attribute__((section(".gnu.linkonce.0.")))
+#if defined(__cplusplus)
+#define NVTX_LINKONCE_DEFINE_GLOBAL __declspec(selectany)
+#define NVTX_LINKONCE_DEFINE_FUNCTION extern "C" inline NVTX_LINKONCE_WEAK
+#else
+#define NVTX_LINKONCE_DEFINE_GLOBAL __declspec(selectany)
+#define NVTX_LINKONCE_DEFINE_FUNCTION NVTX_LINKONCE_WEAK
+#endif
 #elif defined(_MSC_VER) /* MSVC */
-    #if defined(__cplusplus)
-        #define NVTX_LINKONCE_DEFINE_GLOBAL   extern "C" __declspec(selectany)
-        #define NVTX_LINKONCE_DEFINE_FUNCTION extern "C" inline
-    #else
-        #define NVTX_LINKONCE_DEFINE_GLOBAL   __declspec(selectany)
-        #define NVTX_LINKONCE_DEFINE_FUNCTION __inline
-    #endif
+#if defined(__cplusplus)
+#define NVTX_LINKONCE_DEFINE_GLOBAL extern "C" __declspec(selectany)
+#define NVTX_LINKONCE_DEFINE_FUNCTION extern "C" inline
+#else
+#define NVTX_LINKONCE_DEFINE_GLOBAL __declspec(selectany)
+#define NVTX_LINKONCE_DEFINE_FUNCTION __inline
+#endif
 #elif defined(__CYGWIN__) && defined(__clang__) /* Clang on Cygwin */
-    #define NVTX_LINKONCE_WEAK __attribute__((section(".gnu.linkonce.0.")))
-    #if defined(__cplusplus)
-        #define NVTX_LINKONCE_DEFINE_GLOBAL   NVTX_LINKONCE_WEAK
-        #define NVTX_LINKONCE_DEFINE_FUNCTION extern "C" NVTX_LINKONCE_WEAK
-    #else
-        #define NVTX_LINKONCE_DEFINE_GLOBAL   NVTX_LINKONCE_WEAK
-        #define NVTX_LINKONCE_DEFINE_FUNCTION NVTX_LINKONCE_WEAK
-    #endif
+#define NVTX_LINKONCE_WEAK __attribute__((section(".gnu.linkonce.0.")))
+#if defined(__cplusplus)
+#define NVTX_LINKONCE_DEFINE_GLOBAL NVTX_LINKONCE_WEAK
+#define NVTX_LINKONCE_DEFINE_FUNCTION extern "C" NVTX_LINKONCE_WEAK
+#else
+#define NVTX_LINKONCE_DEFINE_GLOBAL NVTX_LINKONCE_WEAK
+#define NVTX_LINKONCE_DEFINE_FUNCTION NVTX_LINKONCE_WEAK
+#endif
 #elif defined(__CYGWIN__) /* Assume GCC or compatible */
-    #define NVTX_LINKONCE_WEAK __attribute__((weak))
-    #if defined(__cplusplus)
-        #define NVTX_LINKONCE_DEFINE_GLOBAL   __declspec(selectany)
-        #define NVTX_LINKONCE_DEFINE_FUNCTION extern "C" inline
-    #else
-        #define NVTX_LINKONCE_DEFINE_GLOBAL   NVTX_LINKONCE_WEAK
-        #define NVTX_LINKONCE_DEFINE_FUNCTION NVTX_LINKONCE_WEAK
-    #endif
+#define NVTX_LINKONCE_WEAK __attribute__((weak))
+#if defined(__cplusplus)
+#define NVTX_LINKONCE_DEFINE_GLOBAL __declspec(selectany)
+#define NVTX_LINKONCE_DEFINE_FUNCTION extern "C" inline
+#else
+#define NVTX_LINKONCE_DEFINE_GLOBAL NVTX_LINKONCE_WEAK
+#define NVTX_LINKONCE_DEFINE_FUNCTION NVTX_LINKONCE_WEAK
+#endif
 #else /* All others: Assume GCC, clang, or compatible */
-    #define NVTX_LINKONCE_WEAK   __attribute__((weak))
-    #define NVTX_LINKONCE_HIDDEN __attribute__((visibility("hidden")))
-    #if defined(__cplusplus)
-        #define NVTX_LINKONCE_DEFINE_GLOBAL   NVTX_LINKONCE_HIDDEN NVTX_LINKONCE_WEAK
-        #define NVTX_LINKONCE_DEFINE_FUNCTION extern "C" NVTX_LINKONCE_HIDDEN inline
-    #else
-        #define NVTX_LINKONCE_DEFINE_GLOBAL   NVTX_LINKONCE_HIDDEN NVTX_LINKONCE_WEAK
-        #define NVTX_LINKONCE_DEFINE_FUNCTION NVTX_LINKONCE_HIDDEN NVTX_LINKONCE_WEAK
-    #endif
+#define NVTX_LINKONCE_WEAK __attribute__((weak))
+#define NVTX_LINKONCE_HIDDEN __attribute__((visibility("hidden")))
+#if defined(__cplusplus)
+#define NVTX_LINKONCE_DEFINE_GLOBAL NVTX_LINKONCE_HIDDEN NVTX_LINKONCE_WEAK
+#define NVTX_LINKONCE_DEFINE_FUNCTION extern "C" NVTX_LINKONCE_HIDDEN inline
+#else
+#define NVTX_LINKONCE_DEFINE_GLOBAL NVTX_LINKONCE_HIDDEN NVTX_LINKONCE_WEAK
+#define NVTX_LINKONCE_DEFINE_FUNCTION NVTX_LINKONCE_HIDDEN NVTX_LINKONCE_WEAK
+#endif
 #endif
 
-#define NVTX_LINKONCE_FWDDECL_GLOBAL   NVTX_LINKONCE_DEFINE_GLOBAL   extern
+#define NVTX_LINKONCE_FWDDECL_GLOBAL NVTX_LINKONCE_DEFINE_GLOBAL extern
 #define NVTX_LINKONCE_FWDDECL_FUNCTION NVTX_LINKONCE_DEFINE_FUNCTION
 
 #endif /* __NVTX_LINKONCE_H__ */
