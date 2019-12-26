@@ -15,16 +15,9 @@ Maybe<void> RepeatOp::InferOutputBlobTimeShape(
     std::function<const Shape*(const std::string&)> GetTimeShape4BnInOp,
     const ParallelContext* parallel_ctx, Shape* time_shape) const {
   DimVector dim_vec(GetTimeShape4BnInOp("in")->dim_vec());
-  int32_t repeat_num = GetRepeatNum();
-  dim_vec.push_back(repeat_num);
+  dim_vec.push_back(op_conf().repeat_conf().repeat_num());
   *time_shape = Shape(dim_vec);
   return Maybe<void>::Ok();
-}
-
-int32_t RepeatOp::GetRepeatNum() const {
-  CHECK(op_conf().has_repeat_conf());
-  const RepeatOpConf& conf = op_conf().repeat_conf();
-  return conf.repeat_num();
 }
 
 const PbMessage& RepeatOp::GetCustomizedConf() const { return op_conf().repeat_conf(); }
