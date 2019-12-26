@@ -6,8 +6,9 @@ namespace oneflow {
 template<DeviceType device_type, typename T>
 void ConcatKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const int32_t axis = this->op_conf().concat_conf().axis();
   Blob* out_blob = BnInOp2Blob("out");
+  int32_t axis = this->op_conf().concat_conf().axis();
+  if (axis < 0) { axis += out_blob->shape().NumAxes(); }
   const int64_t row_num = out_blob->shape().elem_cnt() / out_blob->shape().Count(axis);
   const int64_t out_col_num = out_blob->shape().Count(axis);
   int64_t out_col_offset = 0;
