@@ -160,6 +160,10 @@ message NcclTupleBroadcastConf {
   required ParallelContext parallel_ctx = 1;
 }
 
+message XrtLaunchKernelConf {
+  required ParallelContext parallel_ctx = 1;
+}
+
 message KernelConf {
   required OpAttribute op_attribute = 1;
   required DataType data_type = 2;
@@ -182,6 +186,8 @@ message KernelConf {
     MaxPoolingKernelConf max_pooling_conf = 205;
     LocalResponseNormalizationKernelConf local_response_normalization_conf = 300;
     ReduceGatherKernelConf reduce_gather_conf = 350;
+    XrtLaunchKernelConf xrt_launch_conf = 353;
+
     AccuracyKernelConf accuracy_conf = 401;
     SliceKernelConf slice_conf = 402;
     ConstantKernelConf constant_conf = 403;

@@ -16,6 +16,8 @@
 #include "oneflow/core/job_completer/add_lbi_diff_watcher.h"
 #include "oneflow/core/framework/config_def.h"
 
+#include "oneflow/core/job_completer/xrt_compilation.h"
+
 namespace oneflow {
 
 namespace {
@@ -356,6 +358,15 @@ void JobCompleter::Complete(Job* job) const {
   WithOpGraphAndMutJobBuilder(job, &AddGlobalOutputCriticalSections);
   WithOpGraphAndMutJobBuilder(job, &DumpLogicalBlobDescAndSbpSignature);
   WithOpGraphAndMutJobBuilder(job, &SetOpTimeShape7BatchAxisLbis);
+
+  if (XrtCompilationEnabled(GlobalJobDesc())) {
+#ifdef OF_WITH_XRT
+    WithOpGraphAndMutJob(job, &RebuildXrtCompiledJob);
+#else
+    LOG(WARNING) << "It will not use XLA or TensorRT since WITH_XLA or "
+                    "WITH_TENSORRT was not enabled when compiling the project.";
+#endif  // OF_WITH_XRT
+  }
   CheckOpGraph(OpGraph(*job));
 }
 
