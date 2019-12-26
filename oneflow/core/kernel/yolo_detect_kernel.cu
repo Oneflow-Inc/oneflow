@@ -9,12 +9,14 @@ namespace {
 template<typename T>
 __global__ void SelectOutIndexes(const int32_t box_num, const T* probs_ptr,
                                  int32_t* select_inds_ptr, int32_t* valid_num_ptr,
-                                 const int32_t probs_num, const float prob_thresh) {
+                                 const int32_t probs_num, const float prob_thresh,
+                                 const int32_t max_out_boxes) {
   int32_t index_num;
   FOR_RANGE(int32_t, i, 0, box_num) {
     if (probs_ptr[i * probs_num + 0] > prob_thresh) { select_inds_ptr[index_num++] = i; }
   }
   valid_num_ptr[0] = index_num;
+  assert(valid_num_ptr[0] <= max_out_boxes);
 }
 
 template<typename T>
@@ -110,12 +112,15 @@ class YoloDetectGpuKernel final : public KernelIf<DeviceType::kGPU> {
       new_h = conf.image_height();
       new_w = (conf.image_origin_width() * conf.image_height()) / conf.image_origin_height();
     }
+    int32_t max_out_boxes = box_num;
+    if (conf.has_max_out_boxes()) { max_out_boxes = conf.max_out_boxes(); }
 
     FOR_RANGE(int32_t, im_index, 0, bbox_blob->shape().At(0)) {
       SelectOutIndexes<<<1, 1, 0, ctx.device_ctx->cuda_stream()>>>(
           box_num, BnInOp2Blob("probs")->dptr<T>(im_index),
           BnInOp2Blob("select_inds")->mut_dptr<int32_t>(),
-          BnInOp2Blob("valid_num")->mut_dptr<int32_t>(im_index), probs_num, conf.prob_thresh());
+          BnInOp2Blob("valid_num")->mut_dptr<int32_t>(im_index), probs_num, conf.prob_thresh(),
+          max_out_boxes);
       SetOutProbs<<<BlocksNum4ThreadsNum(box_num * probs_num), kCudaThreadsNumPerBlock, 0,
                     ctx.device_ctx->cuda_stream()>>>(
           probs_num, BnInOp2Blob("probs")->dptr<T>(im_index),

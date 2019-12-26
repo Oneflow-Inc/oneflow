@@ -33,7 +33,7 @@ def upsample_nearest(inputs, scale, data_format, name=None):
 
 @oneflow_export("detection.nms")
 def non_maximum_suppression(
-    inputs, nms_iou_threshold=0.7, post_nms_top_n=1000, name=None
+    inputs, probs, nms_iou_threshold=0.7, post_nms_top_n=1000, name=None
 ):
     op_conf = op_conf_util.OperatorConf()
     setattr(
@@ -45,6 +45,9 @@ def non_maximum_suppression(
     )
     setattr(
         op_conf.non_maximum_suppression_conf, "in", inputs.logical_blob_name
+    )
+    setattr(
+        op_conf.non_maximum_suppression_conf, "probs", probs.logical_blob_name
     )
     op_conf.non_maximum_suppression_conf.nms_iou_threshold = nms_iou_threshold
     op_conf.non_maximum_suppression_conf.post_nms_top_n = post_nms_top_n
@@ -72,7 +75,7 @@ class AnchorBoxesSize(object):
 
 
 @oneflow_export("detection.yolo_detect")
-def yolo_detect(bbox, probs, image_height, image_width, image_origin_height, image_origin_width, layer_height, layer_width, prob_thresh, num_classes, anchor_boxes_size, name=None):
+def yolo_detect(bbox, probs, image_height, image_width, image_origin_height, image_origin_width, layer_height, layer_width, prob_thresh, num_classes, anchor_boxes_size, max_out_boxes=None, name=None):
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf,
@@ -89,6 +92,8 @@ def yolo_detect(bbox, probs, image_height, image_width, image_origin_height, ima
     op_conf.yolo_detect_conf.layer_width = layer_width
     op_conf.yolo_detect_conf.prob_thresh = prob_thresh
     op_conf.yolo_detect_conf.num_classes = num_classes
+    if max_out_boxes is not None:
+        op_conf.yolo_detect_conf.max_out_boxes = max_out_boxes
     assert isinstance(anchor_boxes_size, (list, tuple))
     op_conf.yolo_detect_conf.anchor_boxes_size.extend([anchor_box.to_proto() for anchor_box in anchor_boxes_size]) 
     op_conf.yolo_detect_conf.out_bbox = ("out_bbox")

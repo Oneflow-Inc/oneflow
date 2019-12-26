@@ -29,10 +29,23 @@ class YoloDetectOp final : public Operator {
     // select_inds : (h*w*3)
     // valid_num : (n)
     const BlobDesc* bbox_blob_desc = GetBlobDesc4BnInOp("bbox");
+    const BlobDesc* probs_blob_desc = GetBlobDesc4BnInOp("probs");
     const int32_t num_images = bbox_blob_desc->shape().At(0);
     const int32_t num_boxes = bbox_blob_desc->shape().At(1);
-    *GetBlobDesc4BnInOp("out_bbox") = *bbox_blob_desc;
-    *GetBlobDesc4BnInOp("out_probs") = *GetBlobDesc4BnInOp("probs");
+    int32_t max_out_boxes = num_boxes;
+    if (op_conf().yolo_detect_conf().has_max_out_boxes()) {
+      max_out_boxes = op_conf().yolo_detect_conf().max_out_boxes();
+    }
+
+    BlobDesc* out_bbox_blob_desc = GetBlobDesc4BnInOp("out_bbox");
+    out_bbox_blob_desc->mut_shape() =
+        Shape({num_images, max_out_boxes, bbox_blob_desc->shape().At(2)});
+    out_bbox_blob_desc->set_data_type(bbox_blob_desc->data_type());
+
+    BlobDesc* out_probs_blob_desc = GetBlobDesc4BnInOp("out_probs");
+    out_probs_blob_desc->mut_shape() =
+        Shape({num_images, max_out_boxes, probs_blob_desc->shape().At(2)});
+    out_probs_blob_desc->set_data_type(probs_blob_desc->data_type());
 
     // data_tmp: select_inds (h*w*3) kInt32
     BlobDesc* valid_num_blob_desc = GetBlobDesc4BnInOp("valid_num");
