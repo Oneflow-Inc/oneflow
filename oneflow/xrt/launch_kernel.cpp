@@ -20,7 +20,8 @@ namespace oneflow {
 namespace xrt {
 static Parameter BuildParameter(const Blob &blob, const std::string &name) {
   const auto &desc = blob.blob_desc();
-  return Parameter(name, const_cast<void *>(blob.dptr<void>()), desc.body_shape(), desc.data_type());
+  return Parameter(name, const_cast<void *>(blob.dptr<void>()), desc.body_shape(),
+                   desc.data_type());
 }
 }  // namespace xrt
 

@@ -26,7 +26,7 @@ std::string BlobIdToName(const LogicalBlobId &lbi);
 
 LogicalBlobId BlobNameToId(const std::string &blob_name);
 
-template <typename T>
+template<typename T>
 inline Shape AsShape(const std::vector<T> &dim_vec) {
   return Shape(DimVector(dim_vec.begin(), dim_vec.end()));
 }

@@ -11,9 +11,7 @@ bool operator==(const Signature &lhs, const Signature &rhs) {
 size_t SignatureHash::operator()(const Signature &signature) const {
   size_t hash_val =
       std::hash<std::string>()(signature.builder_name) ^ std::hash<int>()(signature.device_ordinal);
-  for (const auto &shape : signature.entry_shapes) {
-    hash_val ^= std::hash<Shape>()(shape);
-  }
+  for (const auto &shape : signature.entry_shapes) { hash_val ^= std::hash<Shape>()(shape); }
   return hash_val;
 }
 
