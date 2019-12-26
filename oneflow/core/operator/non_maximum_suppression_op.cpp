@@ -29,6 +29,7 @@ class NonMaximumSuppressionOp final : public Operator {
 void NonMaximumSuppressionOp::InitFromOpConf() {
   CHECK(op_conf().has_non_maximum_suppression_conf());
   EnrollInputBn("in");
+  EnrollInputBn("probs");
   EnrollOutputBn("out");
   EnrollTmpBn("fw_tmp");
 }
@@ -38,16 +39,16 @@ Maybe<void> NonMaximumSuppressionOp::InferBlobDescs(
     const ParallelContext* parallel_ctx) const {
   // in
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
-  int64_t num_boxes = in_blob_desc->shape().At(0);
+  int64_t num_boxes = in_blob_desc->shape().At(1);  //(b, num_box, 4)
   int64_t blocks =
       static_cast<int64_t>(std::ceil(num_boxes * 1.0f / GetSizeOfDataType(DataType::kInt64) * 8));
   // fw_tmp
   BlobDesc* fw_tmp_blob_desc = GetBlobDesc4BnInOp("fw_tmp");
-  fw_tmp_blob_desc->mut_shape() = Shape({num_boxes * blocks});
+  fw_tmp_blob_desc->mut_shape() = Shape({in_blob_desc->shape().At(0), num_boxes * blocks});
   fw_tmp_blob_desc->set_data_type(DataType::kInt64);
   // out
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
-  out_blob_desc->mut_shape() = Shape({num_boxes});
+  out_blob_desc->mut_shape() = Shape({in_blob_desc->shape().At(0), num_boxes});
   out_blob_desc->set_data_type(DataType::kInt8);
   return Maybe<void>::Ok();
 }
@@ -59,8 +60,12 @@ void NonMaximumSuppressionOp::VirtualGenKernelConf(
 }
 
 Maybe<void> NonMaximumSuppressionOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
-  SbpSignatureBuilder().Split("in", 0).Split("out", 0).Build(
-      sbp_sig_list->mutable_sbp_signature()->Add());
+  // error!
+  SbpSignatureBuilder()
+      .Split("in", 0)
+      .Split("probs", 0)
+      .Split("out", 0)
+      .Build(sbp_sig_list->mutable_sbp_signature()->Add());
   return Maybe<void>::Ok();
 }
 
