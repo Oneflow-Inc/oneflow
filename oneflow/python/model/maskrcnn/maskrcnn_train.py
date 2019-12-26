@@ -30,37 +30,22 @@ def str2bool(v):
 
 
 parser = argparse.ArgumentParser(argument_default=argparse.SUPPRESS)
-parser.add_argument(
-    "-c", "--config_file", help="yaml config file", type=str, required=False
-)
-parser.add_argument(
-    "-cp", "--ctrl_port", type=int, default=19765, required=False
-)
+parser.add_argument("-c", "--config_file", help="yaml config file", type=str, required=False)
+parser.add_argument("-cp", "--ctrl_port", type=int, default=19765, required=False)
 parser.add_argument("-fake", "--fake_image_path", type=str, required=False)
 parser.add_argument(
     "-save",
     "--model_save_dir",
     type=str,
-    default="./model_save-{}".format(
-        str(datetime.now().strftime("%Y-%m-%d--%H-%M-%S"))
-    ),
+    default="./model_save-{}".format(str(datetime.now().strftime("%Y-%m-%d--%H-%M-%S"))),
     required=False,
 )
 parser.add_argument(
-    "-pr",
-    "--print_loss_each_rank",
-    default=False,
-    action="store_true",
-    required=False,
+    "-pr", "--print_loss_each_rank", default=False, action="store_true", required=False
 )
+parser.add_argument("-v", "--verbose", default=False, action="store_true", required=False)
 parser.add_argument(
-    "-v", "--verbose", default=False, action="store_true", required=False
-)
-parser.add_argument(
-    "opts",
-    help="yaml config given in terminal command",
-    default=None,
-    nargs=argparse.REMAINDER,
+    "opts", help="yaml config given in terminal command", default=None, nargs=argparse.REMAINDER
 )
 terminal_args = parser.parse_args()
 
@@ -107,23 +92,14 @@ def maskrcnn_train(cfg, image, image_size, gt_bbox, gt_segm, gt_label):
         for i in range(image_size.shape[0])
     ]
 
-    gt_bbox_list = flow.piece_slice(
-        gt_bbox, gt_bbox.shape[0], name="gt_bbox_per_img"
-    )
+    gt_bbox_list = flow.piece_slice(gt_bbox, gt_bbox.shape[0], name="gt_bbox_per_img")
 
-    gt_label_list = flow.piece_slice(
-        gt_label, gt_label.shape[0], name="gt_label_per_img"
-    )
+    gt_label_list = flow.piece_slice(gt_label, gt_label.shape[0], name="gt_label_per_img")
 
-    gt_segm_list = flow.piece_slice(
-        gt_segm, gt_segm.shape[0], name="gt_segm_per_img"
-    )
+    gt_segm_list = flow.piece_slice(gt_segm, gt_segm.shape[0], name="gt_segm_per_img")
 
     anchors = gen_anchors(
-        image,
-        cfg.MODEL.RPN.ANCHOR_STRIDE,
-        cfg.MODEL.RPN.ANCHOR_SIZES,
-        cfg.MODEL.RPN.ASPECT_RATIOS,
+        image, cfg.MODEL.RPN.ANCHOR_STRIDE, cfg.MODEL.RPN.ANCHOR_SIZES, cfg.MODEL.RPN.ASPECT_RATIOS
     )
 
     # Backbone
@@ -154,17 +130,13 @@ def maskrcnn_train(cfg, image, image_size, gt_bbox, gt_segm, gt_label):
     #     diff_blob_watcher=MakeWatcherCallback("backward"),
     # ):
     # Box Head
-    box_loss, cls_loss, pos_proposal_list, pos_gt_indices_list, total_pos_inds_elem_cnt = box_head.build_train(
+    (box_loss, cls_loss, pos_proposal_list, pos_gt_indices_list) = box_head.build_train(
         proposals, gt_bbox_list, gt_label_list, features
     )
 
     # Mask Head
     mask_loss = mask_head.build_train(
-        pos_proposal_list,
-        pos_gt_indices_list,
-        gt_segm_list,
-        gt_label_list,
-        features,
+        pos_proposal_list, pos_gt_indices_list, gt_segm_list, gt_label_list, features
     )
 
     return {
@@ -173,7 +145,6 @@ def maskrcnn_train(cfg, image, image_size, gt_bbox, gt_segm, gt_label):
         "loss_box_reg": box_loss,
         "loss_classifier": cls_loss,
         "loss_mask": mask_loss,
-        "total_pos_inds_elem_cnt": total_pos_inds_elem_cnt,
     }
 
 
@@ -201,18 +172,14 @@ def merge_and_compare_config(args):
 
 def set_train_config(cfg):
     flow.config.cudnn_buf_limit_mbyte(cfg.ENV.CUDNN_BUFFER_SIZE_LIMIT)
-    flow.config.cudnn_conv_heuristic_search_algo(
-        cfg.ENV.CUDNN_CONV_HEURISTIC_SEARCH_ALGO
-    )
+    flow.config.cudnn_conv_heuristic_search_algo(cfg.ENV.CUDNN_CONV_HEURISTIC_SEARCH_ALGO)
     flow.config.cudnn_conv_use_deterministic_algo_only(
         cfg.ENV.CUDNN_CONV_USE_DETERMINISTIC_ALGO_ONLY
     )
     assert cfg.MODEL.WEIGHT
     flow.config.default_initialize_with_snapshot_path(cfg.MODEL.WEIGHT)
     flow.config.train.primary_lr(cfg.SOLVER.BASE_LR)
-    flow.config.train.secondary_lr(
-        cfg.SOLVER.BASE_LR * cfg.SOLVER.BIAS_LR_FACTOR
-    )
+    flow.config.train.secondary_lr(cfg.SOLVER.BASE_LR * cfg.SOLVER.BIAS_LR_FACTOR)
     flow.config.train.weight_l2(cfg.SOLVER.WEIGHT_DECAY)
     flow.config.train.bias_l2(cfg.SOLVER.WEIGHT_DECAY_BIAS)
 
@@ -287,9 +254,9 @@ def train_net(config, image=None):
     )
 
     if config.ENV.NUM_GPUS > 1:
-        distribute_train_func = flow.experimental.mirror_execute(
-            config.ENV.NUM_GPUS, 1
-        )(maskrcnn_train)
+        distribute_train_func = flow.experimental.mirror_execute(config.ENV.NUM_GPUS, 1)(
+            maskrcnn_train
+        )
         outputs = distribute_train_func(
             config,
             flow.identity(image) if image else data_loader("image"),
@@ -325,13 +292,17 @@ def get_flow_dtype(dtype_str):
     else:
         raise NotImplementedError
 
+
 def make_lr(train_step_name, model_update_conf, primary_lr, secondary_lr=None):
     # usually, train_step_name is "System-Train-TrainStep-" + train job name
     flow.config.train.train_step_lbn(train_step_name + "-Identity" + "/out")
     secondary_lr_lbn = "System-Train-SecondaryLearningRate-Scheduler/out"
     if secondary_lr is None:
         secondary_lr_lbn = "System-Train-PrimaryLearningRate-Scheduler/out"
-    flow.config.train.lr_lbn("System-Train-PrimaryLearningRate-Scheduler/out", "System-Train-SecondaryLearningRate-Scheduler/out")
+    flow.config.train.lr_lbn(
+        "System-Train-PrimaryLearningRate-Scheduler/out",
+        "System-Train-SecondaryLearningRate-Scheduler/out",
+    )
     # these two lines above must be called before creating any op
     with flow.device_prior_placement("cpu", "0:0"):
         train_step = flow.get_variable(
@@ -339,25 +310,32 @@ def make_lr(train_step_name, model_update_conf, primary_lr, secondary_lr=None):
             shape=(1,),
             dtype=flow.int64,
             initializer=flow.constant_initializer(0, dtype=flow.int64),
-            trainable=False
+            trainable=False,
         )
         train_step_id = flow.identity(train_step, name=train_step_name + "-Identity")
         flow.assign(train_step, train_step_id + 1, name=train_step_name + "-Assign")
-        
-        primary_lr_blob = flow.schedule(train_step_id, model_update_conf, primary_lr, name="System-Train-PrimaryLearningRate-Scheduler")
+
+        primary_lr_blob = flow.schedule(
+            train_step_id,
+            model_update_conf,
+            primary_lr,
+            name="System-Train-PrimaryLearningRate-Scheduler",
+        )
         secondary_lr_blob = None
         if secondary_lr is None:
             secondary_lr_blob = primary_lr_blob
         else:
-            secondary_lr_blob = flow.schedule(train_step_id, model_update_conf, secondary_lr, name="System-Train-SecondaryLearningRate-Scheduler")
+            secondary_lr_blob = flow.schedule(
+                train_step_id,
+                model_update_conf,
+                secondary_lr,
+                name="System-Train-SecondaryLearningRate-Scheduler",
+            )
         assert secondary_lr_blob is not None
-        
-        return {
-            "train_step": train_step_id,
-            "lr": primary_lr_blob,
-            "lr2": secondary_lr_blob
-        }
-        
+
+        return {"train_step": train_step_id, "lr": primary_lr_blob, "lr2": secondary_lr_blob}
+
+
 def init_train_func(config, input_fake_image):
     flow.env.ctrl_port(terminal_args.ctrl_port)
     flow.config.enable_inplace(config.ENV.ENABLE_INPLACE)
@@ -381,16 +359,18 @@ def init_train_func(config, input_fake_image):
 
         @flow.function
         def train():
-            model_update_conf = set_train_config(config)
-            step_lr = make_lr("System-Train-TrainStep-train", model_update_conf, flow.config.train.get_primary_lr(), flow.config.train.get_secondary_lr())
+            set_train_config(config)
+            # model_update_conf = set_train_config(config)
+            # step_lr = make_lr("System-Train-TrainStep-train", model_update_conf, flow.config.train.get_primary_lr(), flow.config.train.get_secondary_lr())
             outputs = train_net(config)
-            if isinstance(outputs, (list, tuple)):
-                outputs[0].update(step_lr)
-            else:
-                outputs.update(step_lr)
+            # if isinstance(outputs, (list, tuple)):
+            #     outputs[0].update(step_lr)
+            # else:
+            #     outputs.update(step_lr)
             return outputs
 
         return train
+
 
 def transpose_metrics(metrics):
     legends = metrics["legend"].unique()
@@ -400,6 +380,7 @@ def transpose_metrics(metrics):
     assert metrics["iter"].unique().size == 1, "can only transpose metrics in one iter"
     transposed["iter"] = metrics["iter"].unique()
     return transposed
+
 
 def print_metrics(m):
     to_print_with_order = [
@@ -414,10 +395,11 @@ def print_metrics(m):
         "train_step",
         "lr",
         "lr2",
-        "elapsed_time"
+        "elapsed_time",
     ]
     to_print_with_order = [l for l in to_print_with_order if l in m]
     print(m[to_print_with_order].to_string(index=False))
+
 
 def add_metrics(metrics_df, iter=None, **kwargs):
     assert iter is not None
@@ -427,25 +409,104 @@ def add_metrics(metrics_df, iter=None, **kwargs):
                 dfs = []
                 for rank, v in enumerate(v, 0):
                     for legend, value in v.items():
-                        dfs.append(pd.DataFrame({"iter": iter, "rank": rank, "legend": legend, "value": value.item()}, index=[0]))
+                        dfs.append(
+                            pd.DataFrame(
+                                {
+                                    "iter": iter,
+                                    "rank": rank,
+                                    "legend": legend,
+                                    "value": value.item(),
+                                },
+                                index=[0],
+                            )
+                        )
             elif isinstance(v, dict):
-                dfs = [pd.DataFrame(
-                    {"iter": iter, "legend": legend, "value": value.item()}, index=[0]
-                ) for legend, value in v.items()]
+                dfs = [
+                    pd.DataFrame({"iter": iter, "legend": legend, "value": value.item()}, index=[0])
+                    for legend, value in v.items()
+                ]
             else:
                 raise ValueError("not supported")
             metrics_df = pd.concat([metrics_df] + dfs, axis=0, sort=False)
         elif k is "elapsed_time":
-            metrics_df = pd.concat([metrics_df, pd.DataFrame(
-                    {"iter": iter, "legend": k, "value": v, "rank": 0}, index=[0]
-                )], axis=0, sort=False)
+            metrics_df = pd.concat(
+                [
+                    metrics_df,
+                    pd.DataFrame({"iter": iter, "legend": k, "value": v, "rank": 0}, index=[0]),
+                ],
+                axis=0,
+                sort=False,
+            )
         elif k is not "outputs":
-            metrics_df = pd.concat([metrics_df, pd.DataFrame(
-                    {"iter": iter, "legend": k, "value": v}, index=[0]
-                )], axis=0, sort=False)
+            metrics_df = pd.concat(
+                [metrics_df, pd.DataFrame({"iter": iter, "legend": k, "value": v}, index=[0])],
+                axis=0,
+                sort=False,
+            )
         else:
             raise ValueError("not supported")
     return metrics_df
+
+
+class IterationProcessor(object):
+    def __init__(self, start_iter, check_point, cfg):
+        self.start_time = time.perf_counter()
+        self.elapsed_times = []
+        self.checkpoint_period = cfg.SOLVER.CHECKPOINT_PERIOD
+        self.save_metrics_period = cfg.SOLVER.METRICS_PERIOD
+        self.max_iter = cfg.SOLVER.MAX_ITER
+        self.img_per_batch = cfg.SOLVER.IMS_PER_BATCH
+        self.ngpus = cfg.ENV.NUM_GPUS
+        self.image_dir = (cfg.DATASETS.IMAGE_DIR_TRAIN,)
+        self.metrics = pd.DataFrame(
+            {"iter": start_iter, "legend": "cfg", "note": str(cfg)}, index=[0]
+        )
+        self.check_point = check_point
+
+    def step(self, iter, outputs):
+        now_time = time.perf_counter()
+        elapsed_time = now_time - self.start_time
+        self.elapsed_times.append(elapsed_time)
+        self.start_time = now_time
+
+        if self.checkpoint_period > 0 and (
+            iter % self.checkpoint_period == 0 or iter == self.max_iter
+        ):
+            save_model(self.check_point, iter)
+
+        metrics_df = pd.DataFrame()
+        metrics_df = add_metrics(metrics_df, iter=iter, elapsed_time=elapsed_time)
+        metrics_df = add_metrics(metrics_df, iter=iter, outputs=outputs)
+        rank_size = metrics_df["rank"].dropna().unique().size if "rank" in metrics_df else 0
+        if terminal_args.print_loss_each_rank and rank_size > 1:
+            for rank_i in range(rank_size):
+                tansposed = transpose_metrics(metrics_df[metrics_df["rank"] == rank_i])
+                tansposed["rank"] = rank_i
+                print_metrics(tansposed)
+        else:
+            tansposed = transpose_metrics(metrics_df)
+            print_metrics(tansposed)
+
+        self.metrics = pd.concat([self.metrics, metrics_df], axis=0, sort=False)
+
+        if self.save_metrics_period > 0 and (
+            iter % self.save_metrics_period == 0 or iter == self.max_iter
+        ):
+            npy_file_name = "loss-{}-batch_size-{}-gpu-{}-image_dir-{}-{}.csv".format(
+                iter,
+                self.img_per_batch,
+                self.ngpus,
+                self.image_dir,
+                str(datetime.now().strftime("%Y-%m-%d--%H-%M-%S")),
+            )
+            self.metrics.to_csv(npy_file_name, index=False)
+            print("saved: {}".format(npy_file_name))
+
+        save_blob_watched(iter)
+
+        if iter == self.max_iter:
+            print("median of elapsed time per batch:", statistics.median(self.elapsed_times))
+
 
 def run():
     use_fake_images = False
@@ -453,8 +514,7 @@ def run():
         use_fake_images = True
         file_list = os.listdir(terminal_args.fake_image_path)
         fake_image_list = [
-            np.load(os.path.join(terminal_args.fake_image_path, f))
-            for f in file_list
+            np.load(os.path.join(terminal_args.fake_image_path, f)) for f in file_list
         ]
 
     # Get mrcn train function
@@ -468,13 +528,8 @@ def run():
     if config.SOLVER.CHECKPOINT_PERIOD > 0:
         save_model(check_point, 0)
 
-    start_time = time.time()
-    elapsed_times = []
-
     iter_file = os.path.join(
-        config.MODEL.WEIGHT,
-        "System-Train-TrainStep-{}".format(train_func.__name__),
-        "out",
+        config.MODEL.WEIGHT, "System-Train-TrainStep-{}".format(train_func.__name__), "out"
     )
     loaded_iter = load_iter_num_from_file(iter_file)
 
@@ -488,62 +543,23 @@ def run():
         start_iter, config.SOLVER.MAX_ITER
     )
 
-    metrics = pd.DataFrame(
-        {"iter": start_iter, "legend": "cfg", "note": str(config)}, index=[0]
-    )
-
     if use_fake_images:
         assert len(fake_image_list) >= config.SOLVER.MAX_ITER - start_iter + 1
 
+    p = IterationProcessor(start_iter, check_point, config)
     for i in range(start_iter, config.SOLVER.MAX_ITER + 1):
         if use_fake_images:
-            outputs = train_func(fake_image_list[i - start_iter]).get()
+            if config.ASYNC_GET:
+                train_func(fake_image_list[i - start_iter]).async_get(lambda x: p.step(i, x))
+            else:
+                outputs = train_func(fake_image_list[i - start_iter]).get()
+                p.step(i, outputs)
         else:
-            outputs = train_func().get()
-
-        now_time = time.time()
-        elapsed_time = now_time - start_time
-        elapsed_times.append(elapsed_time)
-        start_time = now_time
-
-        save_blob_watched(i)
-
-        if config.SOLVER.CHECKPOINT_PERIOD > 0:
-            if (
-                i % config.SOLVER.CHECKPOINT_PERIOD == 0
-                or i == config.SOLVER.MAX_ITER
-            ):
-                save_model(check_point, i)
-
-        metrics_df = pd.DataFrame()
-        metrics_df = add_metrics(metrics_df, iter=i, elapsed_time=elapsed_time)
-        metrics_df = add_metrics(metrics_df, iter=i, outputs=outputs)
-        rank_size = metrics_df["rank"].dropna().unique().size if "rank" in metrics_df else 0
-        if terminal_args.print_loss_each_rank and rank_size > 1:
-            for rank_i in range(rank_size):
-                tansposed = transpose_metrics(metrics_df[metrics_df["rank"] == rank_i])
-                tansposed["rank"] = rank_i
-                print_metrics(tansposed)
-        else:
-            tansposed = transpose_metrics(metrics_df)
-            print_metrics(tansposed)
-        metrics = pd.concat([metrics, metrics_df], axis=0, sort=False)
-        if config.SOLVER.METRICS_PERIOD > 0:
-            if (
-                i % config.SOLVER.METRICS_PERIOD == 0
-                or i == config.SOLVER.MAX_ITER
-            ):
-                npy_file_name = "loss-{}-batch_size-{}-gpu-{}-image_dir-{}-{}.csv".format(
-                    i,
-                    config.SOLVER.IMS_PER_BATCH,
-                    config.ENV.NUM_GPUS,
-                    config.DATASETS.IMAGE_DIR_TRAIN,
-                    str(datetime.now().strftime("%Y-%m-%d--%H-%M-%S")),
-                )
-                metrics.to_csv(npy_file_name, index=False)
-                print("saved: {}".format(npy_file_name))
-
-    print("median of elapsed time per batch:", statistics.median(elapsed_times))
+            if config.ASYNC_GET:
+                train_func().async_get(lambda x: p.step(i, x))
+            else:
+                outputs = train_func().get()
+                p.step(i, outputs)
 
 
 if __name__ == "__main__":
