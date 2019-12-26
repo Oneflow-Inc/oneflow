@@ -20,6 +20,13 @@ class RepeatOp final : public Operator {
   Maybe<void> InferOutputBlobTimeShape(
       std::function<const Shape*(const std::string&)> GetTimeShape4BnInOp,
       const ParallelContext* parallel_ctx, Shape* time_shape) const override;
+  Maybe<void> InferBatchAxis(
+      std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override;
+  Maybe<void> InferSbpSignature(
+      SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
+      const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
+      std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
+      const ParallelDesc& parallel_desc) const override;
 
   void InitFromOpConf() override;
   LogicalNode* NewProperLogicalNode() const override;

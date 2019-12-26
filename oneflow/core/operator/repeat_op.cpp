@@ -32,9 +32,26 @@ const PbMessage& RepeatOp::GetCustomizedConf() const { return op_conf().repeat_c
 Maybe<void> RepeatOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
-  BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
+  const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   *out_blob_desc = *in_blob_desc;
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> RepeatOp::InferBatchAxis(
+    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
+  return NaiveInferBatchAxis(BatchAxis4BnInOp);
+}
+
+Maybe<void> RepeatOp::InferSbpSignature(
+    SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
+    const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
+    std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
+    const ParallelDesc& parallel_desc) const {
+  auto* bn2sbp = sbp_signature->mutable_bn_in_op2sbp_parallel();
+  const SbpParallel sbp_parallel = JUST(SbpInferHint4Ibn("in"))->sbp_parallel();
+  (*bn2sbp)["in"] = sbp_parallel;
+  (*bn2sbp)["out"] = sbp_parallel;
   return Maybe<void>::Ok();
 }
 
