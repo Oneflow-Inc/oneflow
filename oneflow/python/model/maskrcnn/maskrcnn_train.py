@@ -550,13 +550,13 @@ def run():
     for i in range(start_iter, config.SOLVER.MAX_ITER + 1):
         if use_fake_images:
             if config.ASYNC_GET:
-                train_func(fake_image_list[i - start_iter]).async_get(lambda x: p.step(i, x))
+                train_func(fake_image_list[i - start_iter]).async_get(lambda x, i=i: p.step(i, x))
             else:
                 outputs = train_func(fake_image_list[i - start_iter]).get()
                 p.step(i, outputs)
         else:
             if config.ASYNC_GET:
-                train_func().async_get(lambda x: p.step(i, x))
+                train_func().async_get(lambda x, i=i: p.step(i, x))
             else:
                 outputs = train_func().get()
                 p.step(i, outputs)
