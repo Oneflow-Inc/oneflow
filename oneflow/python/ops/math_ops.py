@@ -344,3 +344,17 @@ def top_k(input, k=1, sorted=True, name=None):
     setattr(out_lbi, "op_name", op_conf.name)
     setattr(out_lbi, "blob_name", "out")
     return remote_blob_util.RemoteBlob(out_lbi)
+
+
+@oneflow_export('math.logistic')
+def logistic(x, name=None):
+    op_conf = op_conf_util.OperatorConf()
+    setattr(op_conf, "name", name if name is not None else id_util.UniqueStr('Logistic_'))
+    setattr(op_conf.logistic_conf, "in", x.logical_blob_name)
+    setattr(op_conf.logistic_conf, "out", "out")
+    compile_context.CurJobAddOp(op_conf)
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = "out"
+    return remote_blob_util.RemoteBlob(lbi)
+
