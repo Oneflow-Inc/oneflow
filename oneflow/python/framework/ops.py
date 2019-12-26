@@ -87,7 +87,7 @@ def pack(
     )
     setattr(op_conf.pack_conf, "in", input.logical_blob_name)
     op_conf.pack_conf.out = "out"
-    op_conf.pack_conf.unpack_num = pack_num
+    op_conf.pack_conf.pack_num = pack_num
     compile_context.CurJobAddOp(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
     lbi.op_name = op_conf.name
