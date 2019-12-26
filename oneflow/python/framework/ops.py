@@ -11,6 +11,46 @@ import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 from oneflow.python.oneflow_export import oneflow_export
 
 
+@oneflow_export('repeat')
+def repeat(
+        input,
+        repeat_num,
+        name=None):
+    op_conf = op_conf_util.OperatorConf()
+    setattr(
+        op_conf,
+        "name",
+        name if name is not None else id_util.UniqueStr("Repeat_"),
+    )
+    setattr(op_conf.repeat_conf, "in", input.logical_blob_name)
+    op_conf.repeat_conf.out = "out"
+    op_conf.repeat_conf.repeat_num = repeat_num
+    compile_context.CurJobAddOp(op_conf)
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = "out"
+    return remote_blob_util.RemoteBlob(lbi)
+
+@oneflow_export('acc')
+def repeat(
+        one,
+        max_acc_num,
+        name=None):
+    op_conf = op_conf_util.OperatorConf()
+    setattr(
+        op_conf,
+        "name",
+        name if name is not None else id_util.UniqueStr("Acc_"),
+    )
+    op_conf.acc_conf.one = one.logical_blob_name
+    op_conf.acc_conf.out = "out"
+    op_conf.acc_conf.max_acc_num = max_acc_num
+    compile_context.CurJobAddOp(op_conf)
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = "out"
+    return remote_blob_util.RemoteBlob(lbi)
+
 @oneflow_export('parallel_cast')
 def parallel_cast(
         input,
