@@ -4,6 +4,7 @@
 #include "tensorflow/compiler/xla/client/lib/slicing.h"
 #include "tensorflow/compiler/xla/client/xla_builder.h"
 
+#include "oneflow/xrt/api.h"
 #include "oneflow/xrt/xla/xla_helpers.h"
 
 namespace oneflow {
@@ -23,7 +24,7 @@ class ReduceOp : public XlaOpKernel {
     if (axis.size() == 0) {
       std::vector<int64_t> dim_vec{1};
       dim_vec.insert(dim_vec.end(), in_shape.dim_vec().begin(), in_shape.dim_vec().end());
-      input = Reshape(input, Shape(dim_vec));
+      input = Reshape(input, AsShape(dim_vec));
       axis.resize(in_shape.NumAxes());
       std::iota(axis.begin(), axis.end(), 1);
     }

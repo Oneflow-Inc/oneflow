@@ -20,7 +20,7 @@ namespace oneflow {
 namespace xrt {
 static Parameter BuildParameter(const Blob &blob, const std::string &name) {
   const auto &desc = blob.blob_desc();
-  return Parameter(name, const_cast<void *>(blob.dptr<void>()), desc.shape(), desc.data_type());
+  return Parameter(name, const_cast<void *>(blob.dptr<void>()), desc.body_shape(), desc.data_type());
 }
 }  // namespace xrt
 
@@ -33,11 +33,9 @@ void BlobDescGetter<device_type>::DumpEntryBlobDescTo(
   for (const auto &bn : kernel_->op_attribute().input_bns()) {
     const RtBlobDesc &runtime_desc = get_blob_fn_(bn)->blob_desc();
     BlobDesc blob_desc(kernel_->job_desc().DefaultDataType());
-    blob_desc.mut_shape() = runtime_desc.shape();
+    blob_desc.mut_shape() = runtime_desc.body_shape();
     blob_desc.set_data_type(runtime_desc.data_type());
-    blob_desc.set_has_data_id_field(runtime_desc.has_data_id_field());
-    blob_desc.set_has_col_num_field(runtime_desc.has_col_num_field());
-    blob_desc.set_max_col_num(runtime_desc.max_col_num());
+    blob_desc.set_is_dynamic(runtime_desc.is_dynamic());
     // Map blob_name to function's input name.
     std::string blob_name = xrt::BlobIdToName(kernel_->BnInOp2Lbi(bn));
     // CHECK_GT(io_mapping.count(blob_name), 0);

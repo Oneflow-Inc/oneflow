@@ -1,11 +1,13 @@
+#include "oneflow/xrt/api.h"
 #include "oneflow/xrt/xla/xla_shape.h"
-#include <vector>
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/shape.h"
 #include "oneflow/xrt/xla/xla_data_type.h"
 #include "tensorflow/compiler/xla/layout_util.h"
 #include "tensorflow/compiler/xla/shape.h"
 #include "tensorflow/compiler/xla/shape_util.h"
+
+#include <vector>
 
 namespace oneflow {
 namespace xrt {
@@ -16,7 +18,7 @@ Shape XlaShapeToOfShape(const xla::Shape &xla_shape) {
   int rank = xla_shape.rank();
   std::vector<int64_t> dimensions(rank);
   for (int i = 0; i < rank; ++i) { dimensions[i] = xla_shape.dimensions(i); }
-  return Shape(dimensions);
+  return AsShape(dimensions);
 }
 
 xla::Shape OfShapeToXlaShape(const Shape &shape, DataType dtype) {
@@ -40,7 +42,7 @@ Shape SliceShape(const Shape &shape, size_t start_dim, size_t end_dim) {
 
   std::vector<int64_t> slice_shape(end_dim - start_dim);
   for (size_t i = start_dim; i < end_dim; ++i) { slice_shape[i] = shape.At(i); }
-  return Shape(slice_shape);
+  return AsShape(slice_shape);
 }
 
 }  // namespace mola

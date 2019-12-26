@@ -1,6 +1,7 @@
 #ifndef ONEFLOW_XRT_API_H_
 #define ONEFLOW_XRT_API_H_
 
+#include "oneflow/core/common/shape.h"
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/operator/op_conf.pb.h"
@@ -24,6 +25,11 @@ XrtEngine StringToXrtEngine(const std::string &engine);
 std::string BlobIdToName(const LogicalBlobId &lbi);
 
 LogicalBlobId BlobNameToId(const std::string &blob_name);
+
+template <typename T>
+inline Shape AsShape(const std::vector<T> &dim_vec) {
+  return Shape(DimVector(dim_vec.begin(), dim_vec.end()));
+}
 
 // Build an xrt graph from launch conf.
 std::shared_ptr<XrtGraph> BuildXrtGraph(const XrtLaunchOpConf::Function &function,

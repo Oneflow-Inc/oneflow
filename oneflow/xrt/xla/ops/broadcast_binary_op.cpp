@@ -1,6 +1,6 @@
+#include "oneflow/core/common/shape_view.h"
 #include "oneflow/xrt/xla/ops/op_context.h"
 #include "oneflow/xrt/xla/ops/op_kernel.h"
-#include "tensorflow/compiler/xla/client/xla_builder.h"
 
 #include "oneflow/xrt/xla/ops/binary_op.h"
 #include "oneflow/xrt/xla/xla_helpers.h"
@@ -17,8 +17,8 @@ class BcastBinaryOp : public XlaOpKernel {
     Shape shape_b = ctx->InputShape("b");
 
     int axes = std::max(shape_a.NumAxes(), shape_b.NumAxes());
-    shape_a = shape_a.CreateLeftExtendedShape(axes);
-    shape_b = shape_b.CreateLeftExtendedShape(axes);
+    shape_a = CreateLeftExtendedShape(ShapeView(shape_a), axes);
+    shape_b = CreateLeftExtendedShape(ShapeView(shape_b), axes);
 
     xla::XlaOp a = Reshape(ctx->Input("a"), shape_a);
     xla::XlaOp b = Reshape(ctx->Input("b"), shape_b);

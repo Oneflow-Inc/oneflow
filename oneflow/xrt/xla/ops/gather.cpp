@@ -4,6 +4,7 @@
 #include "tensorflow/compiler/xla/client/lib/slicing.h"
 #include "tensorflow/compiler/xla/client/xla_builder.h"
 
+#include "oneflow/xrt/api.h"
 #include "oneflow/xrt/xla/xla_helpers.h"
 
 namespace oneflow {
@@ -162,8 +163,8 @@ class GatherGradOp : public XlaOpKernel {
     Shape indices_shape = ctx->InputShape("indices");
     DataType updates_data_type = ctx->InputType("out_diff");
 
-    const std::vector<int64_t> &indices_dim_vec = indices_shape.dim_vec();
-    const std::vector<int64_t> &updates_dim_vec = updates_shape.dim_vec();
+    const auto &indices_dim_vec = indices_shape.dim_vec();
+    const auto &updates_dim_vec = updates_shape.dim_vec();
     CHECK_LT(axis, updates_dim_vec.size());
     std::vector<int64_t> buffer_dim_vec;
 
@@ -173,7 +174,7 @@ class GatherGradOp : public XlaOpKernel {
       buffer_dim_vec.push_back(updates_dim_vec[i]);
     }
 
-    xla::XlaOp buffer = Zeros(ctx->builder(), Shape(buffer_dim_vec), updates_data_type);
+    xla::XlaOp buffer = Zeros(ctx->builder(), AsShape(buffer_dim_vec), updates_data_type);
     auto combiner = [](xla::XlaOp x, xla::XlaOp y, xla::XlaBuilder *) { return xla::Add(x, y); };
     ctx->SetOutput("in_diff", GenericGatherGrad(buffer, updates, indices, true, combiner, builder));
   }
@@ -201,7 +202,7 @@ class UnsortedSegmentSumOp : public XlaOpKernel {
 
     if (data_shape.NumAxes() == 0 && num_elems != 1) { data = xla::Broadcast(data, {num_elems}); }
 
-    xla::XlaOp default_value = Zeros(ctx->builder(), Shape(buffer_dim_vec), data_type);
+    xla::XlaOp default_value = Zeros(ctx->builder(), AsShape(buffer_dim_vec), data_type);
     xla::XlaBuilder *builder = ctx->builder();
     std::vector<long long> buffer_dim_vecs(buffer_dim_vec.size());
 
@@ -214,7 +215,7 @@ class UnsortedSegmentSumOp : public XlaOpKernel {
 
   virtual std::vector<int64_t> InitBufferDimVec(XlaOpContext *ctx) const {
     std::vector<int64_t> buffer_dim_vec;
-    const std::vector<int64_t> data_dim_vec = ctx->InputShape("data").dim_vec();
+    const auto data_dim_vec = ctx->InputShape("data").dim_vec();
     for (int i = 0; i < ctx->GetAttr<int64_t>("axis"); ++i) {
       buffer_dim_vec.push_back(data_dim_vec[i]);
     }
