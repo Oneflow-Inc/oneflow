@@ -27,7 +27,6 @@ void LogicalGraph::BuildFwStruct() {
   HashMap<std::string, std::vector<LogicalNode*>> op_name2nodes;
   NaiveBuildFwStruct(&op_name2nodes);
   ReplaceAllReduceFacades();
-  LinkUnpackFw2PackFw(op_name2nodes);
 }
 
 void LogicalGraph::NaiveBuildFwStruct(
@@ -87,20 +86,6 @@ void LogicalGraph::NaiveBuildFwStruct(
       UpdateEdge2Obn(edge, lbi2obn.at(lbi));
       Connect(pred_node, edge, cur_node);
     }
-  });
-}
-
-void LogicalGraph::LinkUnpackFw2PackFw(
-    const HashMap<std::string, std::vector<LogicalNode*>>& op_name2nodes) {
-  ForEachLogicalNode<PackForwardLogicalNode>([&](PackForwardLogicalNode* pack_fw) {
-    const std::string& unpack_name = pack_fw->SoleOp()->op_conf().pack_conf().related_unpack();
-    auto it = op_name2nodes.find(unpack_name);
-    CHECK(it != op_name2nodes.end());
-    CHECK_EQ(1, it->second.size());
-    UnpackForwardLogicalNode* unpack_fw =
-        dynamic_cast<UnpackForwardLogicalNode*>(it->second.front());
-    CHECK(unpack_fw);
-    pack_fw->set_related_unpack(unpack_fw);
   });
 }
 

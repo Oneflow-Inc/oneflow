@@ -1112,7 +1112,6 @@ message PackOpConf {
   required string in = 1;
   required string out = 2;
   required int32 pack_num = 3;
-  required string related_unpack = 4;
 }
 
 message UnpackOpConf {
