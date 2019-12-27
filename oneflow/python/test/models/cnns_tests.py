@@ -73,15 +73,6 @@ class TestAlexNetMixin(TestNetMixin):
     self.tf_loss_dir = os.path.join("/dataset/PNGS/cnns_model_for_test/tf_loss", self.net)
     self.of_loss_dir = os.path.join("./of_loss", self.net)
 
-class TestAlexNetWithUnpackMixin(TestNetMixin):
-  """
-    AlexNet Tester
-  """
-  def set_params(self):
-    self.net = 'alexnet_with_unpack'
-    self.tf_loss_dir = os.path.join("/dataset/PNGS/cnns_model_for_test/tf_loss", self.net)
-    self.of_loss_dir = os.path.join("./of_loss", self.net)
-
 class TestResNet50Mixin(TestNetMixin):
   """
     AlexNet Tester
