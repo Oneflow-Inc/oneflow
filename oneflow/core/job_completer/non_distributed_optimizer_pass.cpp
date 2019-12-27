@@ -162,7 +162,8 @@ void NonDistributedOptimizerPass::Apply(const OpGraph& op_graph, JobBuilder* bui
             if (dst->op().BnInOp2Lbi(ibn) == lbi) {
               PbMessage* dst_op_type_conf = MutableMessageInPbMessage(
                   &op_node2op_conf.at(dst), op_node2op_conf.at(dst).op_type_case());
-              ReplaceStrValInPbFdOrPbRpf(dst_op_type_conf, ibn, GenLogicalBlobName(lbi), new_lbn);
+              ReplaceInputLbnInOpCustomizedConf(dst_op_type_conf, ibn, GenLogicalBlobName(lbi),
+                                                new_lbn);
             }
           }
         });
