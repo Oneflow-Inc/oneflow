@@ -10,7 +10,6 @@
 #include "oneflow/core/register/pod_ptr.h"
 #include "oneflow/core/record/record.pb.h"
 #include "oneflow/core/common/symbol.h"
-#include "oneflow/core/common/shape_view.h"
 
 namespace oneflow {
 
