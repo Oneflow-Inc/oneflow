@@ -467,8 +467,8 @@ Symbol<OperatorConf> Operator::GetOpConfWithoutOpNameAndLbn() const {
   PbMessage* op_type_conf = MutableMessageInPbMessage(&op_conf, op_conf.op_type_case());
   for (const auto& ibn : input_bns()) {
     if (!HasStrFieldInPbFdOrPbRpf(*op_type_conf, ibn)) { continue; }
-    const std::string& lbn = GetStrValInPbFdOrPbRpf(*op_type_conf, ibn);
-    ReplaceStrValInPbFdOrPbRpf(op_type_conf, ibn, lbn, "");
+    const std::string& lbn = GetInputLbnInOpCustomizedConf(*op_type_conf, ibn);
+    ReplaceInputLbnInOpCustomizedConf(op_type_conf, ibn, lbn, "");
   }
   return SymbolOf(op_conf);
 }

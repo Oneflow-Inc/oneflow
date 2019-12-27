@@ -10,8 +10,8 @@ namespace {
 
 void ResetOpConfIbn(OperatorConf* op_conf, const std::string& ibn, const std::string lbn) {
   PbMessage* op_type_conf = MutableMessageInPbMessage(op_conf, op_conf->op_type_case());
-  std::string lbn_may_with_hint = GetStrValInPbFdOrPbRpf(*op_type_conf, ibn);
-  ReplaceStrValInPbFdOrPbRpf(op_type_conf, ibn, lbn_may_with_hint, lbn);
+  std::string lbn_may_with_hint = GetInputLbnInOpCustomizedConf(*op_type_conf, ibn);
+  ReplaceInputLbnInOpCustomizedConf(op_type_conf, ibn, lbn_may_with_hint, lbn);
 }
 
 }  // namespace
