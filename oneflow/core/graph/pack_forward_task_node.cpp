@@ -34,7 +34,7 @@ void PackForwardCompTaskNode::InferProducedDataRegstTimeShape() {
 
   const PackOp* pack_op = dynamic_cast<const PackOp*>(logical_node()->SoleOp().get());
   CHECK_NOTNULL(pack_op);
-  int64_t pack_num = pack_op->GetPackNum();
+  int64_t pack_num = pack_op->op_conf().pack_conf().pack_num();
   CHECK_GT(time_shape_dim_vec.size(), 0);
   CHECK_EQ(pack_num, time_shape_dim_vec.back());
   time_shape_dim_vec.pop_back();
