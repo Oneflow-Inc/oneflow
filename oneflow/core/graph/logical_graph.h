@@ -44,8 +44,6 @@ class LogicalGraph final : public Graph<LogicalNode, LogicalEdge> {
   void UpdateEdge2Ibn(const LogicalEdge* edge, const std::string& ibn);
   void UpdateEdge2Obn(const LogicalEdge* edge, const std::string& obn);
 
-  bool MustHaveModelDiffAcc();
-
   Job job_;
 
   HashMap<const LogicalEdge*, std::string> edge2ibn_;

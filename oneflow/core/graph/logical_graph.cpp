@@ -115,20 +115,6 @@ void LogicalGraph::SetNodeDataLbi() {
   });
 }
 
-bool LogicalGraph::MustHaveModelDiffAcc() {
-  bool must_have_model_diff_acc = false;
-  ForEachLogicalNode<ForwardLogicalNode>(
-      [&must_have_model_diff_acc](ForwardLogicalNode* fw_logical) {
-        if (must_have_model_diff_acc) { return; }
-        if (fw_logical->TypeName() == "PackForward" || fw_logical->TypeName() == "UnpackForward"
-            || fw_logical->TypeName() == "RepeatForward") {
-          must_have_model_diff_acc = true;
-          return;
-        }
-      });
-  return must_have_model_diff_acc;
-}
-
 void LogicalGraph::AddAllReduce(LogicalNode* src, LogicalNode* dst) {
   std::shared_ptr<const ParallelDesc> src_pd = src->parallel_desc();
   std::shared_ptr<const ParallelDesc> dst_pd = dst->parallel_desc();
