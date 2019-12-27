@@ -50,6 +50,10 @@ void RepeatForwardCompActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
   cur_piece_id_ += 1;
 }
 
+bool RepeatForwardCompActor::ConsumedCtrlRegstValid(int64_t regst_desc_id) const {
+  return repeat_count_ == repeat_num_;
+}
+
 REGISTER_ACTOR(kRepeatForward, RepeatForwardCompActor);
 
 }  // namespace oneflow
