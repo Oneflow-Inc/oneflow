@@ -103,10 +103,11 @@ def _data_load_layer(args, data_dir):
 
   node_num = args.num_nodes
   total_batch_size = args.batch_size * args.gpu_num_per_node * node_num
-  return flow.data.decode_ofrecord(
-      data_dir, (label_blob_conf, image_blob_conf),
-      batch_size=total_batch_size, data_part_num=args.data_part_num, name="decode",
+  (labels, images) = flow.data.decode_ofrecord(
+    data_dir, (label_blob_conf, image_blob_conf),
+    batch_size=total_batch_size, data_part_num=args.data_part_num, name="decode",
   )
+  return flow.unpack(labels, args.num_piece_in_batch), flow.unpack(images, args.num_piece_in_batch)
 
 def _dense_layer(
         inputs,
