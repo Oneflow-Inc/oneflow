@@ -30,12 +30,6 @@ Maybe<void> PackOp::InferOutputBlobTimeShape(
   return Maybe<void>::Ok();
 }
 
-int32_t PackOp::GetPackNum() const {
-  CHECK(op_conf().has_pack_conf());
-  const PackOpConf& conf = op_conf().pack_conf();
-  return conf.pack_num();
-}
-
 Maybe<void> PackOp::InferBatchAxis(
     std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
   return NaiveInferBatchAxis(BatchAxis4BnInOp);

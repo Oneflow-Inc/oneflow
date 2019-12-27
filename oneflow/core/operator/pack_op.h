@@ -20,7 +20,6 @@ class PackOp final : public Operator {
       const ParallelContext* parallel_ctx, Shape* time_shape) const override;
   Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                              const ParallelContext* parallel_ctx) const override;
-  int32_t GetPackNum() const;
 
  private:
   Maybe<void> InferBatchAxis(
