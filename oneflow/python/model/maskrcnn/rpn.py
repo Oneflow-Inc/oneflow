@@ -312,11 +312,11 @@ class RPNProposal(object):
                 proposal_list = []
                 score_list = []
                 for layer_i in range(len(cls_logit_list)):
-                    # cls_probs = flow.keras.activations.sigmoid(
-                    #     cls_logit_list[layer_i][img_idx],
-                    #     name="img{}_layer{}_cls_probs".format(img_idx, layer_i),
-                    # )
-                    cls_probs = cls_logit_list[layer_i][img_idx]
+                    cls_probs = flow.keras.activations.sigmoid(
+                        cls_logit_list[layer_i][img_idx],
+                        name="img{}_layer{}_cls_probs".format(img_idx, layer_i),
+                    )
+                    # cls_probs = cls_logit_list[layer_i][img_idx]
                     pre_nms_top_k_inds = flow.math.top_k(
                         cls_probs,
                         k=self.top_n_per_fm,
