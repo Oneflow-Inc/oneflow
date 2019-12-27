@@ -12,6 +12,7 @@ class YoloDetectOp final : public Operator {
     CHECK(op_conf().has_yolo_detect_conf());
     EnrollInputBn("bbox");
     EnrollInputBn("probs");
+    EnrollInputBn("origin_image_info");
     EnrollOutputBn("out_bbox");
     EnrollOutputBn("out_probs");
     EnrollOutputBn("valid_num");
@@ -72,6 +73,7 @@ class YoloDetectOp final : public Operator {
     SbpSignatureBuilder()
         .Split("bbox", 0)
         .Split("probs", 0)
+        .Split("origin_image_info", 0)
         .Split("out_bbox", 0)
         .Split("out_probs", 0)
         .Split("valid_num", 0)

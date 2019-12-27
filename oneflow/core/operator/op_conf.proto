@@ -1562,10 +1562,11 @@ message YoloDetectOpConf {
   required string out_bbox = 3;
   required string out_probs = 4;
   required string valid_num = 5;
+  required string origin_image_info = 8;
   required int32 image_height = 6;
   required int32 image_width = 7;
-  required int32 image_origin_height = 8;
-  required int32 image_origin_width = 9;
+  //required int32 image_origin_height = 8;
+  //required int32 image_origin_width = 9;
   required int32 layer_height = 10;
   required int32 layer_width = 11;
   optional float prob_thresh = 12 [default = 0.5];

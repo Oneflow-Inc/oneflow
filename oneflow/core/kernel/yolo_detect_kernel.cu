@@ -40,12 +40,22 @@ __global__ void SetOutProbs(const int32_t probs_num, const T* probs_ptr,
 }
 
 template<typename T>
-__global__ void SetOutBoxes(const T* bbox_ptr, const int32_t* select_inds_ptr,
-                            const int32_t* valid_num_ptr, const int32_t* anchor_boxes_size_ptr,
-                            T* out_bbox_ptr, const int32_t new_w, const int32_t new_h,
+__global__ void SetOutBoxes(const T* bbox_ptr, const int32_t* origin_image_info_ptr,
+                            const int32_t* select_inds_ptr, const int32_t* valid_num_ptr,
+                            const int32_t* anchor_boxes_size_ptr, T* out_bbox_ptr,
                             const int32_t layer_height, const int32_t layer_width,
                             const int32_t layer_nbox, const int32_t image_height,
                             const int32_t image_width) {
+  int32_t new_w = 0;
+  int32_t new_h = 0;
+  if (((float)image_width / origin_image_info_ptr[1])
+      < ((float)image_height / origin_image_info_ptr[0])) {
+    new_w = image_width;
+    new_h = (origin_image_info_ptr[0] * image_width) / origin_image_info_ptr[1];
+  } else {
+    new_h = image_height;
+    new_w = (origin_image_info_ptr[1] * image_height) / origin_image_info_ptr[0];
+  }
   const int index_num = valid_num_ptr[0];
   CUDA_1D_KERNEL_LOOP(i, index_num) {
     const int32_t box_index = select_inds_ptr[i];
@@ -94,21 +104,9 @@ class YoloDetectGpuKernel final : public KernelIf<DeviceType::kGPU> {
     }
 
     const Blob* bbox_blob = BnInOp2Blob("bbox");
-
-    int32_t* select_inds_ptr = BnInOp2Blob("select_inds")->mut_dptr<int32_t>();
     const int32_t box_num = bbox_blob->shape().At(1);
     const int32_t probs_num = conf.num_classes() + 1;
 
-    int new_w = 0;
-    int new_h = 0;
-    if (((float)conf.image_width() / conf.image_origin_width())
-        < ((float)conf.image_height() / conf.image_origin_height())) {
-      new_w = conf.image_width();
-      new_h = (conf.image_origin_height() * conf.image_width()) / conf.image_origin_width();
-    } else {
-      new_h = conf.image_height();
-      new_w = (conf.image_origin_width() * conf.image_height()) / conf.image_origin_height();
-    }
     int32_t max_out_boxes = box_num;
     if (conf.has_max_out_boxes()) { max_out_boxes = conf.max_out_boxes(); }
 
@@ -126,10 +124,12 @@ class YoloDetectGpuKernel final : public KernelIf<DeviceType::kGPU> {
           BnInOp2Blob("out_probs")->mut_dptr<T>(im_index), conf.prob_thresh());
       SetOutBoxes<<<BlocksNum4ThreadsNum(box_num), kCudaThreadsNumPerBlock, 0,
                     ctx.device_ctx->cuda_stream()>>>(
-          BnInOp2Blob("bbox")->dptr<T>(im_index), BnInOp2Blob("select_inds")->dptr<int32_t>(),
+          BnInOp2Blob("bbox")->dptr<T>(im_index),
+          BnInOp2Blob("origin_image_info")->dptr<int32_t>(im_index),
+          BnInOp2Blob("select_inds")->dptr<int32_t>(),
           BnInOp2Blob("valid_num")->dptr<int32_t>(im_index), anchor_boxes_size_ptr,
-          BnInOp2Blob("out_bbox")->mut_dptr<T>(im_index), new_w, new_h, conf.layer_height(),
-          conf.layer_width(), layer_nbox, conf.image_height(), conf.image_width());
+          BnInOp2Blob("out_bbox")->mut_dptr<T>(im_index), conf.layer_height(), conf.layer_width(),
+          layer_nbox, conf.image_height(), conf.image_width());
     }
   }
 };

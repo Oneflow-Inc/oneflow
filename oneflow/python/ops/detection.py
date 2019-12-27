@@ -75,7 +75,7 @@ class AnchorBoxesSize(object):
 
 
 @oneflow_export("detection.yolo_detect")
-def yolo_detect(bbox, probs, image_height, image_width, image_origin_height, image_origin_width, layer_height, layer_width, prob_thresh, num_classes, anchor_boxes_size, max_out_boxes=None, name=None):
+def yolo_detect(bbox, probs, origin_image_info, image_height, image_width, layer_height, layer_width, prob_thresh, num_classes, anchor_boxes_size, max_out_boxes=None, name=None):
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf,
@@ -84,10 +84,9 @@ def yolo_detect(bbox, probs, image_height, image_width, image_origin_height, ima
     )
     setattr(op_conf.yolo_detect_conf, "bbox", bbox.logical_blob_name)
     setattr(op_conf.yolo_detect_conf, "probs", probs.logical_blob_name)
+    setattr(op_conf.yolo_detect_conf, "origin_image_info", origin_image_info.logical_blob_name)
     op_conf.yolo_detect_conf.image_height = image_height
     op_conf.yolo_detect_conf.image_width = image_width
-    op_conf.yolo_detect_conf.image_origin_height = image_origin_height
-    op_conf.yolo_detect_conf.image_origin_width = image_origin_width
     op_conf.yolo_detect_conf.layer_height = layer_height
     op_conf.yolo_detect_conf.layer_width = layer_width
     op_conf.yolo_detect_conf.prob_thresh = prob_thresh
