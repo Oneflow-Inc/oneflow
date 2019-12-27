@@ -21,7 +21,6 @@ class UnpackOp final : public Operator {
   Maybe<void> InferOutputBlobTimeShape(
       std::function<const Shape*(const std::string&)> GetTimeShape4BnInOp,
       const ParallelContext* parallel_ctx, Shape* time_shape) const override;
-  int32_t GetUnpackNum() const;
 
  private:
   Maybe<void> InferBatchAxis(
