@@ -1,4 +1,5 @@
 #include "oneflow/core/job/job_build_and_infer_ctx.h"
+#include "oneflow/core/framework/user_op_conf.h"
 
 namespace oneflow {
 
@@ -9,8 +10,8 @@ namespace {
 
 void ResetOpConfIbn(OperatorConf* op_conf, const std::string& ibn, const std::string lbn) {
   PbMessage* op_type_conf = MutableMessageInPbMessage(op_conf, op_conf->op_type_case());
-  std::string lbn_may_with_hint = GetStrValInPbFdOrPbRpf(*op_type_conf, ibn);
-  ReplaceStrValInPbFdOrPbRpf(op_type_conf, ibn, lbn_may_with_hint, lbn);
+  std::string lbn_may_with_hint = GetInputLbnInOpCustomizedConf(*op_type_conf, ibn);
+  ReplaceInputLbnInOpCustomizedConf(op_type_conf, ibn, lbn_may_with_hint, lbn);
 }
 
 }  // namespace
@@ -18,6 +19,10 @@ void ResetOpConfIbn(OperatorConf* op_conf, const std::string& ibn, const std::st
 JobBuildAndInferCtx::JobBuildAndInferCtx(Job* job, int64_t job_id) : job_(job), job_id_(job_id) {
   is_job_conf_frozen_ = false;
   has_job_conf_ = false;
+}
+
+Maybe<OperatorConf> JobBuildAndInferCtx::CheckAndCompleteUserOpConf(const OperatorConf& op_conf) {
+  return CheckAndCompleteUserOpConfImpl(op_conf);
 }
 
 Maybe<void> JobBuildAndInferCtx::SetJobConf(const JobConfigProto& job_conf) {
@@ -73,7 +78,7 @@ Maybe<OperatorConf> JobBuildAndInferCtx::DecodeLbiHintAndReturnNewOpConf(
   PbMessage* op_type_conf = MutableMessageInPbMessage(op_conf_without_split_hint.get(),
                                                       op_conf_without_split_hint->op_type_case());
   for (const std::string& ibn : op.input_bns()) {
-    std::string lbn_may_with_hint = GetStrValInPbFdOrPbRpf(op.GetCustomizedConf(), ibn);
+    std::string lbn_may_with_hint = GetInputLbnInOpCustomizedConf(op.GetCustomizedConf(), ibn);
     SbpParallel sbp_parallel;
     bool has_sbp_hint = JUST(GetSbpParallelInLbnOrNothing(lbn_may_with_hint, &sbp_parallel));
     bool has_disable_boxing_hint =
@@ -82,7 +87,7 @@ Maybe<OperatorConf> JobBuildAndInferCtx::DecodeLbiHintAndReturnNewOpConf(
       (*(sbp_sig_conf->mutable_bn_in_op2sbp_parallel()))[ibn] = sbp_parallel;
       const LogicalBlobId& lbi = op.BnInOp2Lbi(ibn);
       std::string lbn = GenLogicalBlobName(lbi);
-      ReplaceStrValInPbFdOrPbRpf(op_type_conf, ibn, lbn_may_with_hint, lbn);
+      ReplaceInputLbnInOpCustomizedConf(op_type_conf, ibn, lbn_may_with_hint, lbn);
     }
   }
   return op_conf_without_split_hint;

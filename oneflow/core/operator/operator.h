@@ -380,6 +380,11 @@ Maybe<void> InferOpSbpSignature(
     std::function<const OptInt64&(const LogicalBlobId&)> GetBatchAxis4Lbi,
     SbpSignature* sbp_sig_to_infer);
 
+std::string GetInputLbnInOpCustomizedConf(const PbMessage& msg,
+                                          const std::string& fd_name_may_have_idx);
+void ReplaceInputLbnInOpCustomizedConf(PbMessage* msg, const std::string& fd_name_may_have_idx,
+                                       const std::string& old_val, const std::string& new_val);
+
 bool operator==(const OperatorConf& lhs, const OperatorConf& rhs);
 
 }  // namespace oneflow
