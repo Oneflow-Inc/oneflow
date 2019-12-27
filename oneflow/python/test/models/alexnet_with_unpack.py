@@ -265,7 +265,7 @@ def main(args):
     (labels, images) = _data_load_layer(args, args.train_dir)
     loss = alexnet(args, images, labels)
     flow.losses.add_loss(loss)
-    return loss
+    return flow.pack(loss, args.num_piece_in_batch)
 
   func_config = flow.FunctionConfig()
   func_config.default_data_type(flow.float)
