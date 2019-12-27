@@ -7,9 +7,9 @@ namespace oneflow {
 namespace {
 
 void ComputeOffset(const int32_t num_axes, const int64_t* shape, const int32_t* permutation,
-                   std::vector<int64_t>& offset) {
+                   DimVector& offset) {
   offset.resize(num_axes);
-  std::vector<int64_t> buff(num_axes);
+  DimVector buff(num_axes);
   int64_t cur_offset = 1;
   for (int32_t i = num_axes - 1; i >= 0; --i) {
     buff[i] = cur_offset;
@@ -18,7 +18,7 @@ void ComputeOffset(const int32_t num_axes, const int64_t* shape, const int32_t* 
   for (int32_t i = 0; i < num_axes; ++i) { offset[permutation[i]] = buff[i]; }
 }
 
-void IncreaseIndex(const int64_t* shape, std::vector<int64_t>& index) {
+void IncreaseIndex(const int64_t* shape, DimVector& index) {
   for (int32_t i = index.size() - 1; i >= 0; --i) {
     ++index[i];
     if (index[i] >= shape[i]) {
@@ -30,9 +30,9 @@ void IncreaseIndex(const int64_t* shape, std::vector<int64_t>& index) {
 }
 
 template<typename T>
-void TransposeImpl(DeviceCtx* ctx, const int32_t num_axis, const Shape& x_shape,
-                   const Shape& y_shape, const PbRf<int32_t>& permutation, const int64_t elem_cnt,
-                   const T* x, T* y) {
+void TransposeImpl(DeviceCtx* ctx, const int32_t num_axis, const ShapeView& x_shape,
+                   const ShapeView& y_shape, const PbRf<int32_t>& permutation,
+                   const int64_t elem_cnt, const T* x, T* y) {
   int64_t block_size = 1;
   int32_t shared_idxs_num = 0;
   for (int32_t i = num_axis - 1; i >= 0 && permutation[i] == i; --i) {
@@ -44,9 +44,9 @@ void TransposeImpl(DeviceCtx* ctx, const int32_t num_axis, const Shape& x_shape,
     return;
   }
   int32_t trans_axis = num_axis - shared_idxs_num;
-  std::vector<int64_t> x_to_y_offset;
-  ComputeOffset(trans_axis, y_shape.dim_vec().data(), permutation.data(), x_to_y_offset);
-  std::vector<int64_t> x_index_digits(trans_axis, 0);
+  DimVector x_to_y_offset;
+  ComputeOffset(trans_axis, y_shape.ptr(), permutation.data(), x_to_y_offset);
+  DimVector x_index_digits(trans_axis, 0);
   int64_t num_blocks = elem_cnt / block_size;
   FOR_RANGE(int64_t, x_idx, 0, num_blocks) {
     int64_t y_idx = std::inner_product(x_to_y_offset.cbegin(), x_to_y_offset.cend(),
@@ -56,7 +56,7 @@ void TransposeImpl(DeviceCtx* ctx, const int32_t num_axis, const Shape& x_shape,
     } else {
       memcpy(y + block_size * y_idx, x + block_size * x_idx, block_size * sizeof(T));
     }
-    IncreaseIndex(x_shape.dim_vec().data(), x_index_digits);
+    IncreaseIndex(x_shape.ptr(), x_index_digits);
   }
 }
 
@@ -71,14 +71,14 @@ void ConstantInitializer(const T& value, Blob* blob) {
 }  // namespace
 
 void ArithemeticIf<DeviceType::kCPU>::Transpose(DeviceCtx* ctx, const int32_t num_axis,
-                                                const Shape& x_shape, const Shape& y_shape,
+                                                const ShapeView& x_shape, const ShapeView& y_shape,
                                                 const PbRf<int32_t>& permutation,
                                                 const int64_t elem_cnt, const float* x, float* y) {
   TransposeImpl<float>(ctx, num_axis, x_shape, y_shape, permutation, elem_cnt, x, y);
 }
 
 void ArithemeticIf<DeviceType::kCPU>::Transpose(DeviceCtx* ctx, const int32_t num_axis,
-                                                const Shape& x_shape, const Shape& y_shape,
+                                                const ShapeView& x_shape, const ShapeView& y_shape,
                                                 const PbRf<int32_t>& permutation,
                                                 const int64_t elem_cnt, const double* x,
                                                 double* y) {

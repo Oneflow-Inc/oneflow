@@ -15,7 +15,7 @@ class ReduceMemSharingCtx final {
   ~ReduceMemSharingCtx() = default;
 
   void EnableMemSharing4Regst(RegstDesc* regst, int64_t offset) const {
-    regst->set_enable_reuse_mem(true);
+    regst->set_enable_reuse_mem(false);
     regst->set_mem_block_id(static_cast<int32_t>(mem_block_id_));
     regst->set_mem_block_offset(offset);
   }

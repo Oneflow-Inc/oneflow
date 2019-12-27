@@ -16,6 +16,7 @@ class Channel final {
 
   ChannelStatus Send(const T& item);
   ChannelStatus Receive(T* item);
+  ChannelStatus ReceiveMany(std::queue<T>* items);
   void Close();
 
  private:
@@ -41,6 +42,18 @@ ChannelStatus Channel<T>::Receive(T* item) {
   if (queue_.empty()) { return kChannelStatusErrorClosed; }
   *item = queue_.front();
   queue_.pop();
+  return kChannelStatusSuccess;
+}
+
+template<typename T>
+ChannelStatus Channel<T>::ReceiveMany(std::queue<T>* items) {
+  std::unique_lock<std::mutex> lock(mutex_);
+  cond_.wait(lock, [this]() { return (!queue_.empty()) || is_closed_; });
+  if (queue_.empty()) { return kChannelStatusErrorClosed; }
+  while (!queue_.empty()) {
+    items->push(std::move(queue_.front()));
+    queue_.pop();
+  }
   return kChannelStatusSuccess;
 }
 

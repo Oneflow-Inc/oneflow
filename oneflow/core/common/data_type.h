@@ -234,6 +234,13 @@ inline bool operator==(const OptInt64& lhs, const OptInt64& rhs) {
          || (!lhs.has_value() && !rhs.has_value());
 }
 
+template<typename T>
+void CheckDataType(DataType data_type) {
+  LOG_IF(FATAL, (std::is_same<T, void>::value == false && std::is_same<T, char>::value == false
+                 && data_type != DataType::kChar && data_type != GetDataType<T>::value))
+      << data_type << " " << GetDataType<T>::value;
+}
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_COMMON_DATA_TYPE_H_

@@ -13,6 +13,18 @@ include(opencv)
 include(eigen)
 include(cocoapi)
 include(half)
+include(json)
+
+if (WITH_XLA)
+  include(tensorflow)
+endif()
+
+if (WITH_TENSORRT)
+  if (NOT WITH_XLA)
+    include(absl)
+  endif()
+  include(tensorrt)
+endif()
 
 if (BUILD_CUDA)
   set(CUDA_SEPARABLE_COMPILATION ON)
@@ -90,6 +102,7 @@ set(oneflow_third_party_dependencies
   cocoapi_copy_headers_to_destination
   cocoapi_copy_libs_to_destination
   half_copy_headers_to_destination
+  json_copy_headers_to_destination
 )
 
 include_directories(
@@ -105,12 +118,18 @@ include_directories(
     ${EIGEN_INCLUDE_DIR}
     ${COCOAPI_INCLUDE_DIR}
     ${HALF_INCLUDE_DIR}
+    ${JSON_INCLUDE_DIR}
 )
 
 if (BUILD_CUDA)
   include(cub)
   include(nccl)
 
+  if (WITH_XLA)
+    # Fix conflicts between tensorflow cublas dso and oneflow static cublas.
+    # TODO(hjchen2) Should commit a issue about this fix.
+    list(APPEND oneflow_third_party_libs -Wl,--whole-archive ${cuda_lib_dir}/libcublas_static.a -Wl,--no-whole-archive)
+  endif()
   list(APPEND oneflow_third_party_libs ${CUDA_LIBRARIES})
   list(APPEND oneflow_third_party_libs ${CUDNN_LIBRARIES})
   list(APPEND oneflow_third_party_libs ${NCCL_STATIC_LIBRARIES})
@@ -145,6 +164,17 @@ if(BUILD_RDMA)
   else()
     message(FATAL_ERROR "UNIMPLEMENTED")
   endif()
+endif()
+
+if(WITH_XLA)
+  list(APPEND oneflow_third_party_libs ${TENSORFLOW_XLA_LIBRARIES})
+endif()
+
+if(WITH_TENSORRT)
+  if (NOT WITH_XLA)
+    list(APPEND oneflow_third_party_libs ${ABSL_LIBRARIES})
+  endif()
+  list(APPEND oneflow_third_party_libs ${TENSORRT_LIBRARIES})
 endif()
 
 message(STATUS "oneflow_third_party_libs: " ${oneflow_third_party_libs})

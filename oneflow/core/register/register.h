@@ -9,7 +9,6 @@ namespace oneflow {
 struct RegstStatus {
   int64_t regst_desc_id;
   int64_t piece_id;
-  int64_t model_version_id;
   int64_t act_id;
   int32_t col_id;
   int32_t max_col_id;
@@ -23,7 +22,6 @@ class Regst final {
   // Getters
   const RegstStatus& status() const { return status_; }
   int64_t piece_id() const { return status_.piece_id; }
-  int64_t model_version_id() const { return status_.model_version_id; }
   int64_t act_id() const { return status_.act_id; }
   int32_t col_id() const { return status_.col_id; }
   int32_t max_col_id() const { return status_.max_col_id; }
@@ -43,7 +41,6 @@ class Regst final {
 
   // Setters
   void set_piece_id(int64_t val) { status_.piece_id = val; }
-  void set_model_version_id(int64_t val) { status_.model_version_id = val; }
   void set_act_id(int64_t val) { status_.act_id = val; }
   void set_col_id(int32_t val) { status_.col_id = val; }
   void set_max_col_id(int32_t val) { status_.max_col_id = val; }

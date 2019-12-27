@@ -29,7 +29,7 @@ Maybe<void> SparseSoftmaxCrossEntropyLossOp::VirtualInferBlobDescs(
   // temp storage for RowMax etc.
   BlobDesc* fw_buf_blob_desc = GetBlobDesc4BnInOp("fw_buf");
   fw_buf_blob_desc->mut_shape() =
-      Shape({static_cast<int64_t>(RtBlobDesc(*pred_blob_desc).ByteSizeOfDataContentField())});
+      Shape({static_cast<int64_t>(RtBlobDesc(*pred_blob_desc).ByteSizeOfBlobBody())});
   fw_buf_blob_desc->set_data_type(DataType::kChar);
   return Maybe<void>::Ok();
 }

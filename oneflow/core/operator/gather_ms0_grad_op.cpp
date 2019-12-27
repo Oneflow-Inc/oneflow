@@ -49,7 +49,7 @@ Maybe<void> GatherMs0GradOp::InferBlobDescs(
   const BlobDesc* indices = GetBlobDesc4BnInOp("indices");
   CHECK_OR_RETURN(IsIndexDataType(indices->data_type()));
   const BlobDesc* out_diff = GetBlobDesc4BnInOp("out_diff");
-  std::vector<int64_t> in_diff_dim_vec;
+  DimVector in_diff_dim_vec;
   BalancedSplitter bs(conf.gather_dim_size(), parallel_ctx->parallel_num());
   in_diff_dim_vec.push_back(bs.At(parallel_ctx->parallel_id()).size());
   in_diff_dim_vec.insert(in_diff_dim_vec.end(),

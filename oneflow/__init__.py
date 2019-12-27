@@ -26,5 +26,6 @@ atexit.register(oneflow.python.framework.session_context.TryCloseDefaultSession)
 del atexit
 
 del absolute_import
+del oneflow
 del python
 #del core

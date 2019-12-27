@@ -13,7 +13,7 @@ void Backward(DeviceCtx* ctx, const Blob* prediction, const Blob* label, const B
   CHECK_EQ(prediction->shape().elem_cnt() % num_instances, 0);
   const int64_t num_classes = prediction->shape().elem_cnt() / num_instances;
   Memset<device_type>(ctx, prediction_diff->mut_dptr<T>(), 0,
-                      prediction_diff->ByteSizeOfDataContentField());
+                      prediction_diff->ByteSizeOfBlobBody());
   SparseCrossEntropyKernelUtil<device_type, T, K>::ComputeDiff(
       ctx, num_instances, num_classes, prediction->dptr<T>(), label->dptr<K>(), dy->dptr<T>(),
       prediction_diff->mut_dptr<T>());

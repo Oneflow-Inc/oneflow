@@ -23,7 +23,7 @@ void AddLbiDiffWatcherOpConfs(Job* job) {
     auto* foreign_watcher_conf = foreign_watcher_op.mutable_foreign_watch_conf();
     foreign_watcher_conf->set_in(GenLogicalBlobName(lbi2diff_lbi.at(pair.lbi())));
     foreign_watcher_conf->set_handler_uuid(pair.watcher_uuid());
-    job_builder.AddOps(job_builder.ParallelConf4OpName(pair.lbi().op_name()), {foreign_watcher_op});
+    job_builder.AddOps(job_builder.ParallelConf4Lbi(pair.lbi()), {foreign_watcher_op});
   }
 }
 

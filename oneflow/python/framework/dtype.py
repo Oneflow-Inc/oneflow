@@ -7,6 +7,7 @@ float = data_type_pb2.kFloat
 float32 = float
 double = data_type_pb2.kDouble
 float64 = double
+float16 = data_type_pb2.kFloat16
 int8 = data_type_pb2.kInt8
 int32 = data_type_pb2.kInt32
 int64 = data_type_pb2.kInt64
@@ -19,6 +20,7 @@ _OF_BLOB_DTYPE2NUMPY_DTYPE = {
         data_type_pb2.kUInt8: np.uint8,
         data_type_pb2.kFloat: np.float32,
         data_type_pb2.kDouble: np.double,
+        data_type_pb2.kFloat16: np.float16,
         # could be np.ubyte on some platform
         data_type_pb2.kChar: np.byte, 
     }

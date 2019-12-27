@@ -1,3 +1,4 @@
+#include <iostream>
 #include <google/protobuf/text_format.h>
 #include "oneflow/core/common/buffer_manager.h"
 #include "oneflow/core/common/protobuf.h"
@@ -17,6 +18,7 @@
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 #include "oneflow/core/job/foreign_watcher.h"
 #include "oneflow/core/job/cluster.h"
+#include "oneflow/core/framework/config_def.h"
 
 namespace oneflow {
 
@@ -114,6 +116,12 @@ Maybe<std::string> GetSerializedInterUserJobInfo() {
   return ret;
 }
 
+Maybe<std::string> GetFunctionConfigDef() {
+  std::string ret;
+  google::protobuf::TextFormat::PrintToString(GlobalFunctionConfigDef(), &ret);
+  return ret;
+}
+
 Maybe<void> LaunchJob(const std::shared_ptr<oneflow::ForeignJobInstance>& cb) {
   OF_CHECK(Global<MachineCtx>::Get()->IsThisMachineMaster());
   OF_CHECK_NOTNULL(Global<Oneflow>::Get());
@@ -147,9 +155,11 @@ namespace {
 struct GlobalChecker final {
   GlobalChecker() = default;
   ~GlobalChecker() {
-    if (Global<Oneflow>::Get() != nullptr) { LOG(FATAL) << "global oneflow is not destroyed yet"; }
+    if (Global<Oneflow>::Get() != nullptr) {
+      std::cerr << "global session is not closed yet" << std::endl;
+    }
     if (Global<SessionGlobalObjectsScope>::Get() != nullptr) {
-      LOG(FATAL) << "Session is not destroyed yet";
+      std::cerr << "global session is not destroyed yet" << std::endl;
     }
   }
 };
