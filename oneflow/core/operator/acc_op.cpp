@@ -38,9 +38,9 @@ Maybe<void> AccOp::InferSbpSignature(
     std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
     const ParallelDesc& parallel_desc) const {
   auto* bn2sbp = sbp_signature->mutable_bn_in_op2sbp_parallel();
-  const SbpParallel sbp_parallel = JUST(SbpInferHint4Ibn("in"))->sbp_parallel();
-  (*bn2sbp)["in"] = sbp_parallel;
-  (*bn2sbp)["out"] = sbp_parallel;
+  const SbpParallel sbp_parallel = JUST(SbpInferHint4Ibn("one"))->sbp_parallel();
+  (*bn2sbp)["one"] = sbp_parallel;
+  (*bn2sbp)["acc"] = sbp_parallel;
   return Maybe<void>::Ok();
 }
 
