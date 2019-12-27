@@ -100,6 +100,18 @@ def reshape(x, shape, name=None):
     lbi.blob_name = "out"
     return remote_blob_util.RemoteBlob(lbi)
 
+@oneflow_export("reshape_like")
+def reshape_like(x, like, name=None):
+    op_conf = op_conf_util.OperatorConf()
+    op_conf.name = id_util.UniqueStr("ReshapeLike_")
+    setattr(op_conf.reshape_like_conf, "x", x.logical_blob_name)
+    setattr(op_conf.reshape_like_conf, "like", like.logical_blob_name)
+    op_conf.reshape_like_conf.y = "y"
+    compile_context.CurJobAddOp(op_conf)
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = "y"
+    return remote_blob_util.RemoteBlob(lbi)
 
 @oneflow_export("dynamic_reshape")
 def dynamic_reshape(x, shape, name=None):
