@@ -31,6 +31,7 @@ void CudaCheck(T error);
 
 const int32_t kCudaThreadsNumPerBlock = 1024;
 const int32_t kCudaMaxBlocksNum = 4096;
+const int32_t kCudaWarpSize = 32;
 
 // 48KB, max byte size of shared memroy per thread block
 const int32_t kCudaMaxSharedMemoryByteSize = 48 << 10;
