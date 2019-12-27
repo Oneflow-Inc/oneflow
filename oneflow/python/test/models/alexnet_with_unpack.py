@@ -274,7 +274,8 @@ def main(args):
   def alexnet_eval_job():
     with flow.distribute.consistent_strategy():
       (labels, images) = _data_load_layer(args, args.eval_dir)
-      return alexnet(args, images, labels, False)
+      loss = alexnet(args, images, labels)
+      return flow.pack(loss, args.num_piece_in_batch)
 
 
   check_point = flow.train.CheckPoint()
