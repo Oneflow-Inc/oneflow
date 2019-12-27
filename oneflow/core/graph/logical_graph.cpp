@@ -27,7 +27,6 @@ void LogicalGraph::BuildFwStruct() {
   HashMap<std::string, std::vector<LogicalNode*>> op_name2nodes;
   NaiveBuildFwStruct(&op_name2nodes);
   ReplaceAllReduceFacades();
-  LinkUnpackFw2PackFw(op_name2nodes);
 }
 
 void LogicalGraph::NaiveBuildFwStruct(
@@ -90,20 +89,6 @@ void LogicalGraph::NaiveBuildFwStruct(
   });
 }
 
-void LogicalGraph::LinkUnpackFw2PackFw(
-    const HashMap<std::string, std::vector<LogicalNode*>>& op_name2nodes) {
-  ForEachLogicalNode<PackForwardLogicalNode>([&](PackForwardLogicalNode* pack_fw) {
-    const std::string& unpack_name = pack_fw->SoleOp()->op_conf().pack_conf().related_unpack();
-    auto it = op_name2nodes.find(unpack_name);
-    CHECK(it != op_name2nodes.end());
-    CHECK_EQ(1, it->second.size());
-    UnpackForwardLogicalNode* unpack_fw =
-        dynamic_cast<UnpackForwardLogicalNode*>(it->second.front());
-    CHECK(unpack_fw);
-    pack_fw->set_related_unpack(unpack_fw);
-  });
-}
-
 void LogicalGraph::MergeEdge() {
   ForEachNode([](LogicalNode* node) {
     HashMap<LogicalNode*, std::vector<LogicalEdge*>> dst2edges;
@@ -128,20 +113,6 @@ void LogicalGraph::SetNodeDataLbi() {
       node->SetDataLbisTo(out_edge->dst_node(), out_edge->lbis());
     }
   });
-}
-
-bool LogicalGraph::MustHaveModelDiffAcc() {
-  bool must_have_model_diff_acc = false;
-  ForEachLogicalNode<ForwardLogicalNode>(
-      [&must_have_model_diff_acc](ForwardLogicalNode* fw_logical) {
-        if (must_have_model_diff_acc) { return; }
-        if (fw_logical->TypeName() == "PackForward" || fw_logical->TypeName() == "UnpackForward"
-            || fw_logical->TypeName() == "RepeatForward") {
-          must_have_model_diff_acc = true;
-          return;
-        }
-      });
-  return must_have_model_diff_acc;
 }
 
 void LogicalGraph::AddAllReduce(LogicalNode* src, LogicalNode* dst) {

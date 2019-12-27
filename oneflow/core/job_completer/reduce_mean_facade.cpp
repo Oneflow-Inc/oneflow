@@ -29,6 +29,7 @@ void GenerateFacadeImplOpConf(const OpNode& op_node, JobBuilder* job_builder) {
   *reduce_sum_conf->mutable_axis() = reduce_mean_conf.axis();
   reduce_sum_conf->set_keep_dims(reduce_mean_conf.keep_dims());
   reduce_sum_conf->set_out("out");
+  if (reduce_mean_conf.keep_dims()) { reduce_sum_conf->set_keep_dims(true); }
   job_builder->MutOpsOnlyOnce({reduce_sum_op_conf});
 
   const auto& in_blob = op_node.LogicalBlobDesc4Lbi(GenLogicalBlobId(reduce_mean_conf.in()));

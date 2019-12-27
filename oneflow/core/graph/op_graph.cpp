@@ -214,8 +214,8 @@ void OpNode::ForEachSplitOrBroadcastBlobDesc(
     CHECK_LT(axis, blob_desc.shape().NumAxes());
     CHECK_GE(blob_desc.shape().At(axis), parallel_desc().parallel_num());
     BalancedSplitter bs(blob_desc.shape().At(axis), parallel_desc().parallel_num());
+    BlobDesc sub_blob_desc(blob_desc);
     FOR_RANGE(int64_t, axis_parallel_id, 0, parallel_desc().parallel_num()) {
-      BlobDesc sub_blob_desc(blob_desc);
       sub_blob_desc.mut_shape().Set(axis, bs.At(axis_parallel_id).size());
       Handler(sub_blob_desc);
     }
@@ -248,11 +248,13 @@ void OpNode::ConcatBlobDesc(const ParallelDesc& blob_parallel_desc,
       same_blob_descs.at(axis_parallel_id).reset(new BlobDesc(*blob_descs.at(axis_parallel_id)));
       same_blob_descs.at(axis_parallel_id)->mut_shape().Set(axis, logical_blob_axis_dim);
     }
-    for (const auto& blob_desc : same_blob_descs) { CHECK(*blob_desc == *same_blob_descs.at(0)); }
+    FOR_RANGE(int64_t, i, 1, same_blob_descs.size()) {
+      CHECK(*same_blob_descs.at(i) == *same_blob_descs.at(0));
+    }
     concatenated_blob_desc->CopyAllFrom(*same_blob_descs.at(0));
   } else {
+    FOR_RANGE(int64_t, i, 1, blob_descs.size()) { CHECK(*blob_descs.at(i) == *blob_descs.at(0)); }
     // select first BlobDesc
-    for (const auto& blob_desc : blob_descs) { CHECK(*blob_desc == *blob_descs.at(0)); }
     concatenated_blob_desc->CopyAllFrom(*blob_descs.at(0));
   }
 }

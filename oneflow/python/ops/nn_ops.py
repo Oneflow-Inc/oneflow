@@ -258,6 +258,40 @@ def softmax(logits, axis=None, name=None):
     lbi.blob_name = "out"
     return remote_blob_util.RemoteBlob(lbi)
 
+@oneflow_export("nn.softmax_grad")
+def softmax_grad(y, dy, axis=None, name=None):
+    if axis is None:
+        axis = -1
+    assert type(axis) is int
+    op_conf = op_conf_util.OperatorConf()
+
+    name_prefix = name if name is not None else id_util.UniqueStr("SoftmaxGrad_")
+    setattr(op_conf, "name", name_prefix)
+
+    need_transpose = False
+    permute = [i for i in range(len(y.shape))]
+    if axis > 0 and axis != len(y.shape) - 1:
+        need_transpose = True
+        permute[axis] = permute[-1]
+        permute[-1] = axis
+
+    if need_transpose:
+        y = oneflow.transpose(y, perm=permute)
+        dy = oneflow.transpose(dy, perm=permute)
+    setattr(op_conf.softmax_grad_conf, "y", y.logical_blob_name)
+    setattr(op_conf.softmax_grad_conf, "dy", dy.logical_blob_name)
+
+    op_conf.softmax_grad_conf.axis = -1
+    op_conf.softmax_grad_conf.dx = "dx"
+    compile_context.CurJobAddOp(op_conf)
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = "dx"
+    dx = remote_blob_util.RemoteBlob(lbi)
+
+    if need_transpose:
+        dx = oneflow.transpose(dx, perm=permute)
+    return dx
 
 @oneflow_export("nn.sparse_softmax_cross_entropy_with_logits")
 def sparse_softmax_cross_entropy_with_logits(
