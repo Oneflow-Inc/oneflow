@@ -9,7 +9,7 @@ class UnpackCompActor final : public CompActor {
  public:
   OF_DISALLOW_COPY_AND_MOVE(UnpackCompActor);
   UnpackCompActor() = default;
-  ~UnpackCompActor() = default;
+  ~UnpackCompActor() override = default;
 
  private:
   void VirtualCompActorInit(const TaskProto& proto) override;
