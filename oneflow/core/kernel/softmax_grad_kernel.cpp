@@ -20,10 +20,9 @@ void SoftmaxComputeDiff(DeviceCtx* ctx, const int64_t n, const int64_t w, const 
   NdarrayUtil<device_type, T>::ReduceSum(ctx, Var({n, 1}, sum_vec), Val({n, w}, tmp),
                                          Var({static_cast<int64_t>(temp_storage_bytes / sizeof(T))},
                                              reinterpret_cast<T*>(temp_storage)));
-  // copy dy to dx
-  NdarrayUtil<device_type, T>::Assign(ctx, Var({n * w}, dx), Val({n * w}, dy));
-  // sub | dx[i][j] -= sum_vec[i]
-  NdarrayUtil<device_type, T>::InplaceBroadcastSub(ctx, Var({n, w}, dx), Val({n, 1}, sum_vec));
+  // sub | dx[i][j] = dy[i][j] - sum_vec[i]
+  NdarrayUtil<device_type, T>::BroadcastSub(ctx, Var({n, w}, dx), Val({n, w}, dy),
+                                            Val({n, 1}, sum_vec));
   // elementwise multiplication | dx[i][j] *= out[i][j]
   NdarrayUtil<device_type, T>::InplaceMul(ctx, Var({n * w}, dx), Val({n * w}, out));
 }
