@@ -300,7 +300,7 @@ foreach(of_proto_hdr_file ${PROTO_HDRS})
 endforeach()
 
 set(OF_CORE_HDRS)
-list(APPEND of_core_dir_name_list "common" "device" "framework" "kernel/util" "persistence" "thread")
+list(APPEND of_core_dir_name_list "common" "device" "framework" "kernel/util" "persistence")
 foreach(of_core_dir_name ${of_core_dir_name_list})
   file(GLOB_RECURSE h_files "${PROJECT_SOURCE_DIR}/oneflow/core/${of_core_dir_name}/*.h")
   list(APPEND OF_CORE_HDRS ${h_files})
