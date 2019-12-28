@@ -39,11 +39,44 @@ def CurCtxAddLbiAndDiffWatcherUuidPair(lbi_and_uuid):
 def CurCtxHasJobConf():
     return c_api_util.CurJobBuildAndInferCtx_HasJobConf()
 
+def MirroredBlobGetStaticShape(job_name, lbn):
+    return c_api_util.JobBuildAndInferCtx_MirroredBlobGetStaticShape(job_name, lbn)
+
+def MirroredBlobGetDataType(job_name, lbn):
+    return c_api_util.JobBuildAndInferCtx_MirroredBlobGetDataType(job_name, lbn)
+
+def MirroredBlobIsDynamic(job_name, lbn):
+    return c_api_util.JobBuildAndInferCtx_MirroredBlobIsDynamic(job_name, lbn)
+
+def MirroredBlobDisableBoxing(job_name, lbn):
+    return c_api_util.JobBuildAndInferCtx_MirroredBlobDisableBoxing(job_name, lbn)
+
+def MirroredBlobIsTensorList(job_name, lbn):
+    return c_api_util.JobBuildAndInferCtx_MirroredBlobIsTensorList(job_name, lbn)
+
+def MirroredBlobGetBatchAxis(job_name, lbn):
+    return c_api_util.JobBuildAndInferCtx_MirroredBlobGetBatchAxis(job_name, lbn)
+
+def MirroredBlobGetSplitAxisFromProducerView(job_name, lbn):
+    return c_api_util.JobBuildAndInferCtx_MirroredBlobGetSplitAxisFromProducerView(job_name, lbn)
+
+def MirroredBlobGetParallelConfFromProducerView(job_name, lbn):
+    return c_api_util.JobBuildAndInferCtx_MirroredBlobGetParallelConfFromProducerView(job_name, lbn)
+
 def GetStaticShape(job_name, lbn):
     return c_api_util.JobBuildAndInferCtx_GetStaticShape(job_name, lbn)
 
 def GetDataType(job_name, lbn):
     return c_api_util.JobBuildAndInferCtx_GetDataType(job_name, lbn)
+
+def IsDynamic(job_name, lbn):
+    return c_api_util.JobBuildAndInferCtx_IsDynamic(job_name, lbn)
+
+def DisableBoxing(job_name, lbn):
+    return c_api_util.JobBuildAndInferCtx_DisableBoxing(job_name, lbn)
+
+def IsTensorList(job_name, lbn):
+    return c_api_util.JobBuildAndInferCtx_IsTensorList(job_name, lbn)
 
 def GetBatchAxis(job_name, lbn):
     return c_api_util.JobBuildAndInferCtx_GetBatchAxis(job_name, lbn)

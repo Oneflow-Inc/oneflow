@@ -1,30 +1,53 @@
-#include "oneflow/core/kernel/conv_filter_grad_kernel.h"
-#include "oneflow/core/operator/conv_op.h"
+#include "oneflow/core/kernel/kernel.h"
+#include "oneflow/core/device/cudnn_conv_util.h"
 
 namespace oneflow {
 
 template<typename T>
-struct ConvFilterGradKernelUtil<DeviceType::kGPU, T> final {
-  static void Compute(DeviceCtx *ctx, const ConvFilterGradKernelConf &kernel_conf,
-                      const ConvConf &conf, const Blob *x, const Blob *dy, Blob *filter_diff,
-                      Blob *buf) {
-    CudnnTensorDesc x_desc(x->data_type(), x->shape(), conf.data_format());
-    CudnnTensorDesc dy_desc(dy->data_type(), dy->shape(), conf.data_format());
-    CudnnFilterDesc filter_diff_desc(filter_diff->data_type(), filter_diff->shape(),
-                                     conf.data_format());
-    CudnnConvDesc conv_desc(GetConvDescDataType(x->data_type()), x->shape(), conf);
+class ConvFilterGradGpuKernel final : public KernelIf<DeviceType::kGPU> {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(ConvFilterGradGpuKernel);
+  ConvFilterGradGpuKernel() = default;
+  ~ConvFilterGradGpuKernel() = default;
+
+ private:
+  const PbMessage &GetCustomizedOpConf() const override {
+    return this->op_conf().conv_filter_grad_conf();
+  }
+
+  void ForwardDataContent(const KernelCtx &ctx,
+                          std::function<Blob *(const std::string &)> BnInOp2Blob) const override {
+    CudnnConvArgs args(this->op_conf().conv_filter_grad_conf().conv_conf(),
+                       ctx.device_ctx->cudnn_handle(), BnInOp2Blob("x"), BnInOp2Blob("dy"),
+                       BnInOp2Blob("filter_diff"), BnInOp2Blob("buf"),
+                       this->job_desc().job_conf().cudnn_conv_use_deterministic_algo_only(),
+                       this->job_desc().job_conf().cudnn_conv_heuristic_search_algo(),
+                       this->job_desc().cudnn_conv_enable_true_half());
+    cudnnConvolutionBwdFilterAlgo_t algo;
+    size_t work_space_size = 0;
+    if (this->job_desc().job_conf().has_cudnn_conv_force_bwd_filter_algo()) {
+      algo = static_cast<cudnnConvolutionBwdFilterAlgo_t>(
+          this->job_desc().job_conf().cudnn_conv_force_bwd_filter_algo());
+      CudaCheck(GetConvWorkspaceSize(args, algo, &work_space_size));
+    } else {
+      auto algo_perf = FindCudnnConvAlgorithm<cudnnConvolutionBwdFilterAlgoPerf_t>(args);
+      algo = algo_perf->algo;
+      work_space_size = algo_perf->memory;
+    }
+    CHECK_LE(work_space_size, BnInOp2Blob("buf")->ByteSizeOfBlobBody());
     CudaCheck(cudnnConvolutionBackwardFilter(
-        ctx->cudnn_handle(), CudnnSPOnePtr<T>(), x_desc.Get(), x->dptr<T>(), dy_desc.Get(),
-        dy->dptr<T>(), conv_desc.Get(),
-        static_cast<cudnnConvolutionBwdFilterAlgo_t>(kernel_conf.cudnn_bwd_filter_algo()),
-        buf->mut_dptr(), buf->ByteSizeOfDataContentField(), CudnnSPZeroPtr<T>(),
-        filter_diff_desc.Get(), filter_diff->mut_dptr<T>()));
+        args.handle, CudnnSPOnePtr<T>(), args.xdesc.Get(), args.x_dptr, args.ydesc.Get(),
+        args.y_dptr, args.cdesc.Get(), algo, args.work_space, work_space_size, CudnnSPZeroPtr<T>(),
+        args.wdesc.Get(), args.w_dptr));
   }
 };
 
-#define INSTANTIATE_CONV_FILTER_GRAD_KERNEL_UTIL(type_cpp, type_proto) \
-  template struct ConvFilterGradKernelUtil<DeviceType::kGPU, type_cpp>;
-OF_PP_FOR_EACH_TUPLE(INSTANTIATE_CONV_FILTER_GRAD_KERNEL_UTIL,
-                     FLOATING_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ)
+#define REGISTER_CONV_FILTER_GRAD_GPU_KERNEL(dtype)                                          \
+  REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kConvFilterGradConf, DeviceType::kGPU, \
+                                        dtype, ConvFilterGradGpuKernel<dtype>);
+
+REGISTER_CONV_FILTER_GRAD_GPU_KERNEL(float);
+REGISTER_CONV_FILTER_GRAD_GPU_KERNEL(double);
+REGISTER_CONV_FILTER_GRAD_GPU_KERNEL(float16);
 
 }  // namespace oneflow

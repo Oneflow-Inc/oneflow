@@ -3,7 +3,7 @@
 namespace oneflow {
 
 Slice::Slice(const std::initializer_list<int64_t>& l) {
-  std::vector<int64_t> vec(l);
+  DimVector vec(l);
   value_capacity_ = 0;
   if (vec.size() == 0) {
     start_ = kStart;

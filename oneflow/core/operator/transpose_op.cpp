@@ -33,15 +33,7 @@ Maybe<void> TransposeOp::InferBlobDescs(
   const PbRf<int32_t>& perm = op_conf().transpose_conf().perm();
   CHECK_EQ_OR_RETURN(perm.size(), in_blob_shape.NumAxes());
   CheckIsPerm(perm);
-  if (perm.Get(0) != 0) {
-    CHECK_OR_RETURN(!in_blob_desc->has_dim0_valid_num_field());
-  } else if (perm.size() >= 2 && perm.Get(1) != 1) {
-    CHECK_OR_RETURN(!in_blob_desc->has_dim1_valid_num_field());
-  } else if (perm.size() >= 3 && perm.Get(2) != 2) {
-    CHECK_OR_RETURN(!in_blob_desc->has_dim2_valid_num_field());
-  } else {
-    // do nothing
-  }
+  if (perm.Get(0) != 0) { CHECK_OR_RETURN(!in_blob_desc->is_dynamic()); }
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   *out_blob_desc = *in_blob_desc;
   FOR_RANGE(size_t, i, 0, perm.size()) {

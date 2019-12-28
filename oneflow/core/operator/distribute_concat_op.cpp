@@ -65,7 +65,7 @@ Maybe<void> DistributeConcatOp::InferBlobDescs(
     }
   }
   CHECK_NOTNULL(first_blob_desc);
-  std::vector<int64_t> out_dim_vec = first_blob_desc->shape().dim_vec();
+  DimVector out_dim_vec = first_blob_desc->shape().dim_vec();
   int32_t concat_axis = FixAxis(conf.axis(), out_dim_vec.size());
   for (size_t i = 0; i < input_bns().size(); ++i) {
     const BlobDesc* in_i_blob_desc = GetBlobDesc4BnInOp(input_bns().Get(i));

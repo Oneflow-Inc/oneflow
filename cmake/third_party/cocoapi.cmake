@@ -24,7 +24,7 @@ ExternalProject_Add(cocoapi
     UPDATE_COMMAND ""
     CONFIGURE_COMMAND ""
     BUILD_IN_SOURCE 1
-    BUILD_COMMAND gcc -c common/maskApi.c -o maskApi.o && ar rcs ${COCOAPI_LIBRARY_NAME} maskApi.o
+    BUILD_COMMAND gcc -fPIC -O3 -c common/maskApi.c -o maskApi.o && ar rcs ${COCOAPI_LIBRARY_NAME} maskApi.o
     INSTALL_COMMAND ""
 )
 

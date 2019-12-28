@@ -28,8 +28,7 @@ void GatherMs0GradKernel<device_type, T>::ForwardDataContent(
   const Blob* out_diff = BnInOp2Blob("out_diff");
   Blob* in_diff = BnInOp2Blob("in_diff");
   const int64_t offset = this->kernel_conf().gather_ms0_grad_conf().offset();
-  Memset<device_type>(ctx.device_ctx, in_diff->mut_dptr<T>(), 0,
-                      in_diff->ByteSizeOfDataContentField());
+  Memset<device_type>(ctx.device_ctx, in_diff->mut_dptr<T>(), 0, in_diff->ByteSizeOfBlobBody());
   GatherKernelUtil<device_type, T>::Backward(ctx.device_ctx, indices, out_diff, 0, in_diff, offset);
 }
 

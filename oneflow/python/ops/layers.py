@@ -27,14 +27,20 @@ def dense(
     assert in_num_axes >= 2
 
     name_prefix = name if name is not None else id_util.UniqueStr("Dense_")
-    inputs = flow.reshape(inputs, (-1, in_shape[-1])) if in_num_axes > 2 else inputs
+    inputs = (
+        flow.reshape(inputs, (-1, in_shape[-1])) if in_num_axes > 2 else inputs
+    )
 
-    assert model_distribute is distribute_util.auto() or \
-        model_distribute is distribute_util.broadcast() or \
-        model_distribute is distribute_util.split(0)
+    assert (
+        model_distribute is distribute_util.auto()
+        or model_distribute is distribute_util.broadcast()
+        or model_distribute is distribute_util.split(0)
+    )
 
     if model_distribute is distribute_util.split(0):
-        assert in_num_axes is 2 # model distribute is hard for reshape split dim 1
+        assert (
+            in_num_axes is 2
+        )  # model distribute is hard for reshape split dim 1
 
     weight = flow.get_variable(
         name="{}-weight".format(name_prefix),
@@ -47,11 +53,15 @@ def dense(
         ),
         trainable=trainable,
         model_name="weight",
-        distribute=model_distribute)
+        distribute=model_distribute,
+    )
     weight = weight.with_distribute(model_distribute)
 
     out = flow.matmul(
-        a=inputs, b=weight, transpose_b=True, name="{}_matmul".format(name_prefix)
+        a=inputs,
+        b=weight,
+        transpose_b=True,
+        name="{}_matmul".format(name_prefix),
     )
     if use_bias:
         bias = flow.get_variable(
@@ -65,13 +75,80 @@ def dense(
             ),
             trainable=trainable,
             model_name="bias",
-            distribute=model_distribute)
+            distribute=model_distribute,
+        )
         bias = bias.with_distribute(model_distribute)
-        out = flow.nn.bias_add(out, bias, name="{}_bias_add".format(name_prefix))
-    out = activation(out) if activation is not None else out
-    out = flow.reshape(out, in_shape[:-1] + (units,)) if in_num_axes > 2 else out
+        out = flow.nn.bias_add(
+            out, bias, name="{}_bias_add".format(name_prefix)
+        )
+    out = (
+        activation(out, name="{}_activation".format(name_prefix))
+        if activation is not None
+        else out
+    )
+    out = (
+        flow.reshape(out, in_shape[:-1] + (units,)) if in_num_axes > 2 else out
+    )
 
     return out
+
+
+@oneflow_export("layers.conv2d")
+def conv2d(
+    inputs,
+    filters,
+    kernel_size=1,
+    strides=1,
+    padding="VALID",
+    data_format="NCHW",
+    dilation_rate=1,
+    activation=None,
+    use_bias=True,
+    kernel_initializer=None,
+    bias_initializer=None,
+    trainable=True,
+    name=None,
+    weight_name=None,
+    bias_name=None,
+):
+    name_prefix = name if name is not None else id_util.UniqueStr("Conv2D_")
+    if isinstance(kernel_size, int):
+        kernel_size = (kernel_size, kernel_size)
+    else:
+        assert isinstance(kernel_size, (list, tuple))
+        kernel_size = tuple(kernel_size)
+    weight_shape = (filters, inputs.static_shape[1]) + kernel_size
+    weight = flow.get_variable(
+        weight_name if weight_name else name_prefix + "-weight",
+        shape=weight_shape,
+        dtype=inputs.dtype,
+        initializer=kernel_initializer
+        if kernel_initializer is not None
+        else flow.constant_initializer(0),
+        trainable=trainable,
+        model_name="weight",
+    )
+    output = flow.nn.conv2d(
+        inputs, weight, strides, padding, data_format, dilation_rate, name
+    )
+    if use_bias:
+        bias = flow.get_variable(
+            bias_name if bias_name else name_prefix + "-bias",
+            shape=(filters,),
+            dtype=inputs.dtype,
+            initializer=bias_initializer
+            if bias_initializer is not None
+            else flow.constant_initializer(0),
+            trainable=trainable,
+            model_name="bias",
+        )
+        output = flow.nn.bias_add(
+            output, bias, data_format, name=name_prefix + "-bias_add"
+        )
+    if activation is not None:
+        output = activation(output, name=name_prefix + "-activation")
+
+    return output
 
 
 @oneflow_export("layers.layer_norm")
@@ -85,10 +162,12 @@ def layer_norm(
     name=None,
 ):
     op_conf = op_conf_util.OperatorConf()
-    name = name if name is not None else id_util.UniqueStr(
-        "LayerNorm_")
-    begin_params_axis = begin_params_axis if begin_params_axis >= 0 else len(
-        inputs.shape) + begin_params_axis
+    name = name if name is not None else id_util.UniqueStr("LayerNorm_")
+    begin_params_axis = (
+        begin_params_axis
+        if begin_params_axis >= 0
+        else len(inputs.shape) + begin_params_axis
+    )
     param_shape = inputs.shape[begin_params_axis:]
     if len(param_shape) is 0:
         param_shape = (1,)
@@ -128,6 +207,66 @@ def layer_norm(
     setattr(out_lbi, "blob_name", "out")
     return remote_blob_util.RemoteBlob(out_lbi)
 
+@oneflow_export("layers.layer_norm_grad")
+def layer_norm_grad(
+    dy,
+    x,
+    mean,
+    inv_variance,
+    begin_norm_axis=1,
+    name=None,
+):
+    op_conf = op_conf_util.OperatorConf()
+    name = name if name is not None else id_util.UniqueStr(
+        "LayerNormGrad_")
+    setattr(op_conf, "name", name)
+    setattr(op_conf.layer_norm_grad_conf, "dy", dy.logical_blob_name)
+    setattr(op_conf.layer_norm_grad_conf, "x", x.logical_blob_name)
+    setattr(op_conf.layer_norm_grad_conf, "mean", mean.logical_blob_name)
+    setattr(op_conf.layer_norm_grad_conf, "inv_variance", inv_variance.logical_blob_name)
+    setattr(op_conf.layer_norm_grad_conf, "dx", "dx")
+    setattr(op_conf.layer_norm_grad_conf, "begin_norm_axis", begin_norm_axis)
+    setattr(op_conf.layer_norm_grad_conf, "epsilon", 1e-5)
+    compile_context.CurJobAddOp(op_conf)
+    out_lbi = logical_blob_id_util.LogicalBlobId()
+    setattr(out_lbi, "op_name", op_conf.name)
+    setattr(out_lbi, "blob_name", "dx")
+    return remote_blob_util.RemoteBlob(out_lbi)
+
+@oneflow_export("layers.layer_norm_param_grad")
+def layer_norm_param_grad(
+    dy,
+    norm,
+    gamma,
+    begin_params_axis=-1,
+    name=None,
+):
+    op_conf = op_conf_util.OperatorConf()
+    name = name if name is not None else id_util.UniqueStr(
+        "LayerNormParamGrad_")
+    setattr(op_conf, "name", name)
+    setattr(op_conf.layer_norm_param_grad_conf, "dy", dy.logical_blob_name)
+    setattr(op_conf.layer_norm_param_grad_conf, "normalized", norm.logical_blob_name)
+    setattr(op_conf.layer_norm_param_grad_conf, "gamma", gamma.logical_blob_name)
+    setattr(op_conf.layer_norm_param_grad_conf, "begin_params_axis", begin_params_axis)
+    setattr(op_conf.layer_norm_param_grad_conf, "normalized_diff", "normalized_diff")
+    setattr(op_conf.layer_norm_param_grad_conf, "beta_diff", "beta_diff")
+    setattr(op_conf.layer_norm_param_grad_conf, "gamma_diff", "gamma_diff")
+    compile_context.CurJobAddOp(op_conf)
+
+    normalized_diff_lbi = logical_blob_id_util.LogicalBlobId()
+    beta_diff_lbi = logical_blob_id_util.LogicalBlobId()
+    gamma_diff_lbi = logical_blob_id_util.LogicalBlobId()
+    setattr(normalized_diff_lbi, "op_name", op_conf.name)
+    setattr(beta_diff_lbi, "op_name", op_conf.name)
+    setattr(gamma_diff_lbi, "op_name", op_conf.name)
+    setattr(normalized_diff_lbi, "blob_name", "normalized_diff")
+    setattr(beta_diff_lbi, "blob_name", "beta_diff")
+    setattr(gamma_diff_lbi, "blob_name", "gamma_diff")
+
+    return (remote_blob_util.RemoteBlob(normalized_diff_lbi),
+            remote_blob_util.RemoteBlob(beta_diff_lbi),
+            remote_blob_util.RemoteBlob(gamma_diff_lbi))
 
 @oneflow_export("layers.batch_normalization")
 def batch_normalization(

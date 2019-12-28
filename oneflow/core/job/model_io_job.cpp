@@ -27,9 +27,8 @@ OperatorConf GenForeignInputOpConf(const std::string& job_name, const int64_t in
   foreign_input_conf->set_ofblob_buffer_name(GetForeignInputBufferName(job_name));
   InterfaceBlobConf* blob_conf = foreign_input_conf->mutable_blob_conf();
   *blob_conf->mutable_shape()->mutable_dim()->Add() = input_size;
-  blob_conf->set_has_dim0_valid_num(true);
-  Shape({1, input_size}).ToProto(blob_conf->mutable_dim0_inner_shape());
   blob_conf->set_data_type(DataType::kInt8);
+  blob_conf->set_is_dynamic(true);
   blob_conf->mutable_split_axis()->clear_value();
   blob_conf->mutable_batch_axis()->Clear();
   return foreign_input_op_conf;

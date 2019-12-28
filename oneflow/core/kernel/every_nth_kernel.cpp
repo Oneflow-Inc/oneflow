@@ -10,12 +10,6 @@ void EveryNthKernel<device_type>::ForwardDataContent(
   out_blob->CopyDataContentFrom(ctx.device_ctx, in_blob);
 }
 
-template<DeviceType device_type>
-void EveryNthKernel<device_type>::BackwardDataContent(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  UNIMPLEMENTED();
-}
-
 ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kEveryNthConf, EveryNthKernel)
 
 }  // namespace oneflow

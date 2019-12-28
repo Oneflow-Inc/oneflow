@@ -1,3 +1,4 @@
+#include <stdint.h>
 #include "oneflow/python/oneflow_internal_helper.h"
 
 void RegisterWatcherOnlyOnce(oneflow::ForeignWatcher* watcher, std::string* error_str) {
@@ -48,14 +49,18 @@ std::string GetSerializedInterUserJobInfo(std::string* error_str) {
   return oneflow::GetSerializedInterUserJobInfo().GetDataAndSerializedErrorProto(error_str, "");
 }
 
+std::string GetFunctionConfigDef(std::string* error_str) {
+  return oneflow::GetFunctionConfigDef().GetDataAndSerializedErrorProto(error_str, "");
+}
+
 void LaunchJob(const std::shared_ptr<oneflow::ForeignJobInstance>& cb, std::string* error_str) {
   return oneflow::LaunchJob(cb).GetDataAndSerializedErrorProto(error_str);
 }
 
-long long DeviceType4DeviceTag(const std::string& device_tag, std::string* error_str) {
+long DeviceType4DeviceTag(const std::string& device_tag, std::string* error_str) {
   return oneflow::GetDeviceType4DeviceTag(device_tag)
       .GetDataAndSerializedErrorProto(error_str,
-                                      static_cast<long long>(oneflow::DeviceType::kInvalidDevice));
+                                      static_cast<long>(oneflow::DeviceType::kInvalidDevice));
 }
 
 std::string GetMachine2DeviceIdListOFRecordFromParallelConf(const std::string& parallel_conf,
@@ -76,8 +81,98 @@ size_t OfBlob_NumAxes(uint64_t of_blob_ptr) {
   return of_blob->NumAxes();
 }
 
-void OfBlob_CopyShapeToNumpy(uint64_t of_blob_ptr, int64_t* array, int size) {
+void OfBlob_CopyShapeFromNumpy(uint64_t of_blob_ptr, long* array, int size) {
+  using namespace oneflow;
+  auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
+  return of_blob->CopyShapeFrom(array, size);
+}
+
+void OfBlob_CopyShapeToNumpy(uint64_t of_blob_ptr, long* array, int size) {
   using namespace oneflow;
   auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
   return of_blob->CopyShapeTo(array, size);
+}
+
+bool OfBlob_IsDynamic(uint64_t of_blob_ptr) {
+  using namespace oneflow;
+  auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
+  return of_blob->is_dynamic();
+}
+
+bool OfBlob_IsTensorList(uint64_t of_blob_ptr) {
+  using namespace oneflow;
+  auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
+  return of_blob->is_tensor_list();
+}
+
+long OfBlob_TotalNumOfTensors(uint64_t of_blob_ptr) {
+  using namespace oneflow;
+  auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
+  return of_blob->TotalNumOfTensors();
+}
+
+long OfBlob_NumOfTensorListSlices(uint64_t of_blob_ptr) {
+  using namespace oneflow;
+  auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
+  return of_blob->NumOfTensorListSlices();
+}
+
+long OfBlob_TensorIndex4SliceId(uint64_t of_blob_ptr, int32_t slice_id) {
+  using namespace oneflow;
+  auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
+  return of_blob->TensorIndex4SliceId(slice_id);
+}
+
+void OfBlob_AddTensorListSlice(uint64_t of_blob_ptr) {
+  using namespace oneflow;
+  auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
+  return of_blob->AddTensorListSlice();
+}
+
+void OfBlob_ResetTensorIterator(uint64_t of_blob_ptr) {
+  using namespace oneflow;
+  auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
+  return of_blob->ResetTensorIterator();
+}
+
+void OfBlob_IncTensorIterator(uint64_t of_blob_ptr) {
+  using namespace oneflow;
+  auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
+  return of_blob->IncTensorIterator();
+}
+
+bool OfBlob_CurTensorIteratorEqEnd(uint64_t of_blob_ptr) {
+  using namespace oneflow;
+  auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
+  return of_blob->CurTensorIteratorEqEnd();
+}
+
+void OfBlob_CurTensorCopyShapeTo(uint64_t of_blob_ptr, long* array, int size) {
+  using namespace oneflow;
+  auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
+  return of_blob->CurTensorCopyShapeTo(array, size);
+}
+
+void OfBlob_ClearTensorLists(uint64_t of_blob_ptr) {
+  using namespace oneflow;
+  auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
+  return of_blob->ClearTensorLists();
+}
+
+void OfBlob_AddTensor(uint64_t of_blob_ptr) {
+  using namespace oneflow;
+  auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
+  return of_blob->AddTensor();
+}
+
+bool OfBlob_CurMutTensorAvailable(uint64_t of_blob_ptr) {
+  using namespace oneflow;
+  auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
+  return of_blob->CurMutTensorAvailable();
+}
+
+void OfBlob_CurMutTensorCopyShapeFrom(uint64_t of_blob_ptr, long* array, int size) {
+  using namespace oneflow;
+  auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
+  return of_blob->CurMutTensorCopyShapeFrom(array, size);
 }

@@ -4,6 +4,10 @@ import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.common.data_type_pb2 as data_type_conf_util
 from oneflow.python.oneflow_export import oneflow_export
 
+import oneflow as flow
+import math
+import functools
+
 
 @oneflow_export("constant_initializer")
 def constant_initializer(value=0, dtype=data_type_conf_util.kFloat):
@@ -33,7 +37,9 @@ def ones_initializer(dtype=data_type_conf_util.kFloat):
 
 
 @oneflow_export("random_uniform_initializer")
-def random_uniform_initializer(minval=0, maxval=1, dtype=data_type_conf_util.kFloat):
+def random_uniform_initializer(
+    minval=0, maxval=1, dtype=data_type_conf_util.kFloat
+):
     initializer = op_conf_util.InitializerConf()
     if dtype in [data_type_conf_util.kFloat, data_type_conf_util.kDouble]:
         setattr(initializer.random_uniform_conf, "min", float(minval))
@@ -83,19 +89,16 @@ def glorot_uniform_initializer(data_format=""):
 
 @oneflow_export("variance_scaling_initializer")
 def variance_scaling_initializer(
-    scale=1.0,
-    mode="fan_in",
-    distribution="truncated_normal",
-    data_format="",
+    scale=1.0, mode="fan_in", distribution="truncated_normal", data_format=""
 ):
-    r"""Initializer that generates a truncated normal distribution 
-    or a random normal distribution or a random uniform distribution 
+    r"""Initializer that generates a truncated normal distribution
+    or a random normal distribution or a random uniform distribution
     with a scale adapting to it.
 
     Args:
         scale: Scaling factor (positive float).
         mode: One of "fan_in", "fan_out", "fan_avg".
-        distribution: Random distribution to use. One of "truncated_normal", 
+        distribution: Random distribution to use. One of "truncated_normal",
             "random_normal", "random_uniform".
         data_format: A string be one of "N...C" or "NC..."
     """
@@ -117,6 +120,50 @@ def variance_scaling_initializer(
         _get_data_format(data_format),
     )
     return initializer
+
+
+@oneflow_export("kaiming_initializer")
+def kaiming_initializer(
+    shape,
+    distribution="random_normal",
+    mode="fan_in",
+    nonlinearity="leaky_relu",
+    negative_slope=0.0,
+    data_format="channels_first",
+):
+    r"""Initialize weight according to the method described in `Delving deep into
+    rectifiers: Surpassing human-level performance on ImageNet classification`
+    - He, K. et al. (2015), using a normal or uniform distribution.
+
+    Args:
+        distribution: 'random_normal' or 'random_uniform'
+        mode: 'fan_in', 'fan_out' or 'fan_avg'
+        nonlinearity: None, 'tanh', 'sigmoid', 'relu' or 'leaky_relu'
+        negative_slope: the negative slope of leaky_relu
+        data_format: 'channels_first', 'channels_last'
+    """
+    assert isinstance(shape, tuple)
+    # Kaiming Initialization only deals with FC, Conv and Deconv's weight
+    assert len(shape) >= 2
+    elem_cnt = functools.reduce(lambda a, b: a * b, shape, 1)
+    assert elem_cnt > 0
+    assert distribution in ["random_normal", "random_uniform"]
+    assert mode in ["fan_in", "fan_out", "fan_avg"]
+    assert nonlinearity in [None, "tanh", "sigmoid", "relu", "leaky_relu"]
+    assert data_format in ["channels_first", "channels_last"]
+
+    fan = _CalcFan(shape, mode, data_format)
+    gain = _CalcGain(nonlinearity, negative_slope)
+    std = gain / math.sqrt(fan)
+    if distribution == "random_normal":
+        return flow.random_normal_initializer(0.0, std)
+    elif distribution == "random_uniform":
+        bound = math.sqrt(3.0) * std
+        return flow.random_uniform_initializer(-bound, bound)
+    else:
+        raise NotImplementedError(
+            "Only support normal and uniform distribution"
+        )
 
 
 def _get_variance_norm(mode):
@@ -150,3 +197,50 @@ def _get_data_format(data_format):
         return "channels_last"
     else:
         return ""
+
+
+def _CalcFan(shape, mode, data_format):
+    if len(shape) == 2:  # Linear
+        fan_in = shape[1]
+        fan_out = shape[0]
+    else:  # Conv and Deconv
+        fan_in = 1.0
+        for dim in shape[1:]:
+            fan_in *= dim
+        fan_out = shape[0]
+        if data_format == "channels_first":
+            for dim in shape[2:]:
+                fan_out *= dim
+        elif data_format == "channels_last":
+            for dim in shape[1:-1]:
+                fan_out *= dim
+        else:
+            raise NotImplementedError(
+                "Only support 'channels_first' and 'channels_last' data format"
+            )
+
+    if mode == "fan_avg":
+        return (float(fan_in) + float(fan_out)) / 2
+    elif mode == "fan_in":
+        return float(fan_in)
+    elif mode == "fan_out":
+        return float(fan_out)
+    else:
+        raise NotImplementedError(
+            "Only support 'fan_in', 'fan_out' and 'fan_avg' mode"
+        )
+
+
+def _CalcGain(nonlinearity, negative_slope):
+    if nonlinearity is None or nonlinearity == "sigmoid":
+        return 1.0
+    elif nonlinearity == "tanh":
+        return 5.0 / 3
+    elif nonlinearity == "relu":
+        return math.sqrt(2.0)
+    elif nonlinearity == "leaky_relu":
+        return math.sqrt(2.0 / (1 + negative_slope ** 2))
+    else:
+        raise NotImplementedError(
+            "Only support None, 'tanh', 'sigmoid', 'relu' and 'leaky_relu' nonlinearity"
+        )

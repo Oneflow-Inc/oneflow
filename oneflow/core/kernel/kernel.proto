@@ -3,6 +3,7 @@ package oneflow;
 
 import "oneflow/core/common/shape.proto";
 import "oneflow/core/common/data_type.proto";
+import "oneflow/core/common/dtype_signature.proto";
 import "oneflow/core/operator/op_attribute.proto";
 import "oneflow/core/operator/op_conf.proto";
 import "oneflow/core/job/placement.proto";
@@ -59,6 +60,7 @@ message PoolingKernelConf {
   repeated int32 pool_size = 6;
   repeated int32 strides = 7;
   required string data_format = 8;
+  optional bool need_infer_cudnn_desc_each_forward = 9 [default = false];
 }
 
 message AveragePoolingKernelConf {
@@ -102,14 +104,6 @@ message ReduceGatherKernelConf {
   repeated int64 data_offset = 1;
 }
 
-message ReduceConcatKernelConf {
-  repeated int64 data_offset = 1;
-}
-
-message ReduceSplitKernelConf {
-  repeated int64 data_offset = 1;
-}
-
 message AccuracyKernelConf {
   required DataType prediction_type = 1;
   required DataType label_type = 2;
@@ -147,14 +141,6 @@ message PReluAlphaGradKernelConf {
   repeated int32 perm = 1;
 }
 
-message ConvFilterGradKernelConf {
-  optional int32 cudnn_bwd_filter_algo = 1 [default = -1];
-}
-
-message ConvDataGradKernelConf {
-  optional int32 cudnn_bwd_data_algo = 1 [default = -1];
-}
-
 message ShapeElemCntKernelConf {
   repeated int32 axis = 1;
 }
@@ -180,19 +166,17 @@ message UserKernelConf {
   required ParallelContext parallel_ctx = 2;
 }
 
+message XrtLaunchKernelConf {
+  required ParallelContext parallel_ctx = 1;
+}
+
 message KernelConf {
   required OpAttribute op_attribute = 1;
-  required bool is_forward = 2;
-  required DataType data_type = 3;
-  optional bool need_do_data_id = 6 [default = false];
-  optional bool need_do_col_num = 7 [default = false];
-  optional bool need_do_opaque_header = 8 [default = false];
-  optional bool need_do_dim0_valid_num = 9 [default = false];
-  optional bool need_do_dim1_valid_num = 10 [default = false];
-  optional bool need_do_dim2_valid_num = 11 [default = false];
-  optional bool need_do_record_id_in_device_piece = 12 [default = false];
-  optional bool can_naive_do_dim0_valid_num = 13 [default = false];
-  optional bool can_naive_do_record_id_in_device_piece = 14 [default = false];
+  required DataType data_type = 2;
+  optional bool need_do_opaque_header = 4 [default = false];
+  optional bool need_do_tensor_list = 5 [default = false];
+  optional bool need_do_shape = 6 [default = false];
+  required DTypeSignature dtype_signature = 7;
 
   oneof kernel_type {
     UserKernelConf user_conf = 100;
@@ -209,8 +193,8 @@ message KernelConf {
     MaxPoolingKernelConf max_pooling_conf = 205;
     LocalResponseNormalizationKernelConf local_response_normalization_conf = 300;
     ReduceGatherKernelConf reduce_gather_conf = 350;
-    ReduceConcatKernelConf reduce_concat_conf = 351;
-    ReduceSplitKernelConf reduce_split_conf = 352;
+    XrtLaunchKernelConf xrt_launch_conf = 353;
+
     AccuracyKernelConf accuracy_conf = 401;
     SliceKernelConf slice_conf = 402;
     ConstantKernelConf constant_conf = 403;
@@ -220,13 +204,11 @@ message KernelConf {
     VariableKernelConf variable_conf = 407;
     RecordLoadKernelConf record_load_conf = 408;
     PReluAlphaGradKernelConf prelu_alpha_grad_conf = 409;
-    ConvFilterGradKernelConf conv_filter_grad_conf = 410;
-    ConvDataGradKernelConf conv_data_grad_conf = 411;
     ShapeElemCntKernelConf shape_elem_cnt_conf = 412;
     SigmoidCrossEntropyLossGradKernelConf sigmoid_cross_entropy_loss_grad_conf = 413;
     GatherMs0KernelConf gather_ms0_conf = 414;
     GatherMs0GradKernelConf gather_ms0_grad_conf = 415;
-    NcclTupleReduceConf nccl_tuple_reduce_conf = 416;
-    NcclTupleBroadcastConf nccl_tuple_broadcast_conf = 417;
+    NcclTupleReduceConf nccl_tuple_reduce_conf = 426;
+    NcclTupleBroadcastConf nccl_tuple_broadcast_conf = 427;
   }
 }

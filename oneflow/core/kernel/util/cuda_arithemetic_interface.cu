@@ -45,7 +45,7 @@ __global__ void TransposeGpu(const Int32Array<NDIMS> y_shape, const Int32Array<N
 }
 
 template<int32_t NDIMS, typename T>
-void TransposeImpl(DeviceCtx* ctx, const Shape& x_shape, const Shape& y_shape,
+void TransposeImpl(DeviceCtx* ctx, const ShapeView& x_shape, const ShapeView& y_shape,
                    const PbRf<int32_t>& permutation, const int64_t elem_cnt, const T* x, T* y) {
   CHECK_LE(y_shape.elem_cnt(), GetMaxVal<int32_t>());
   Int32Array<NDIMS> y_shape_struct;
@@ -78,7 +78,7 @@ struct TransposeUtil final {
   CHECK_EQ(num_axis, x_shape.NumAxes())
 
 void ArithemeticIf<DeviceType::kGPU>::Transpose(DeviceCtx* ctx, const int32_t num_axis,
-                                                const Shape& x_shape, const Shape& y_shape,
+                                                const ShapeView& x_shape, const ShapeView& y_shape,
                                                 const PbRf<int32_t>& permutation,
                                                 const int64_t elem_cnt, const float* x, float* y) {
   TRANSPOSE_CHECK;
@@ -87,7 +87,7 @@ void ArithemeticIf<DeviceType::kGPU>::Transpose(DeviceCtx* ctx, const int32_t nu
 }
 
 void ArithemeticIf<DeviceType::kGPU>::Transpose(DeviceCtx* ctx, const int32_t num_axis,
-                                                const Shape& x_shape, const Shape& y_shape,
+                                                const ShapeView& x_shape, const ShapeView& y_shape,
                                                 const PbRf<int32_t>& permutation,
                                                 const int64_t elem_cnt, const double* x,
                                                 double* y) {
@@ -97,7 +97,7 @@ void ArithemeticIf<DeviceType::kGPU>::Transpose(DeviceCtx* ctx, const int32_t nu
 }
 
 void ArithemeticIf<DeviceType::kGPU>::Transpose(DeviceCtx* ctx, const int32_t num_axis,
-                                                const Shape& x_shape, const Shape& y_shape,
+                                                const ShapeView& x_shape, const ShapeView& y_shape,
                                                 const PbRf<int32_t>& permutation,
                                                 const int64_t elem_cnt, const float16* x,
                                                 float16* y) {
@@ -109,31 +109,11 @@ void ArithemeticIf<DeviceType::kGPU>::Transpose(DeviceCtx* ctx, const int32_t nu
 
 #undef TRANSPOSE_CHECK
 
-// create temporary host blob store initializer result
-#define BEFORE_CPU_INITIALIZE()                                     \
-  RtBlobDesc blob_desc(blob->blob_desc().blob_desc_proto());        \
-  char* host_raw_dptr = nullptr;                                    \
-  CudaCheck(cudaMallocHost(&host_raw_dptr, blob->TotalByteSize())); \
-  std::unique_ptr<Blob> host_blob;                                  \
-  host_blob.reset(new Blob(nullptr, &blob_desc, host_raw_dptr));
-
-// asynchronous copy to device
-#define AFTER_CPU_INITIALIZE()                                                          \
-  Memcpy<DeviceType::kGPU>(ctx, blob->mut_dptr(), host_blob->dptr(),                    \
-                           blob->ByteSizeOfDataContentField(), cudaMemcpyHostToDevice); \
-  CudaCheck(cudaStreamSynchronize(ctx->cuda_stream()));                                 \
-  CudaCheck(cudaFreeHost(host_raw_dptr));
-
 void ArithemeticIf<DeviceType::kGPU>::InitializeWithConstConf(
     DeviceCtx* ctx, const ConstantInitializerConf& initializer_conf, Blob* blob) {
-  BEFORE_CPU_INITIALIZE();
-  // synchronous initialize the host blob
-  ArithemeticIf<DeviceType::kCPU>::InitializeWithConstConf(nullptr, initializer_conf,
-                                                           host_blob.get());
-  AFTER_CPU_INITIALIZE();
+  WithHostBlobAndStreamSynchronizeEnv(ctx, blob, [&](Blob* host_blob) {
+    ArithemeticIf<DeviceType::kCPU>::InitializeWithConstConf(nullptr, initializer_conf, host_blob);
+  });
 }
-
-#undef BEFORE_CPU_INITIALIZE
-#undef AFTER_CPU_INITIALIZE
 
 }  // namespace oneflow
