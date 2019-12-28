@@ -103,6 +103,7 @@ set(oneflow_third_party_dependencies
   cocoapi_copy_libs_to_destination
   half_copy_headers_to_destination
   json_copy_headers_to_destination
+  tensorflow_copy_libs_to_destination
 )
 
 include_directories(
