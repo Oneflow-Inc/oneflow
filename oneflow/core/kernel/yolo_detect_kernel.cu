@@ -111,24 +111,28 @@ class YoloDetectGpuKernel final : public KernelIf<DeviceType::kGPU> {
     if (conf.has_max_out_boxes()) { max_out_boxes = conf.max_out_boxes(); }
 
     FOR_RANGE(int32_t, im_index, 0, bbox_blob->shape().At(0)) {
+      const T* probs_ptr = BnInOp2Blob("probs")->dptr<T>() + im_index * BnInOp2Blob("probs")->shape().Count(1);
+      const T* bbox_ptr = BnInOp2Blob("bbox")->dptr<T>() + im_index * BnInOp2Blob("bbox")->shape().Count(1);
+      T* out_bbox_ptr = BnInOp2Blob("out_bbox")->mut_dptr<T>() + im_index * BnInOp2Blob("out_bbox")->shape().Count(1);
+      T* out_probs_ptr = BnInOp2Blob("out_probs")->mut_dptr<T>() + im_index * BnInOp2Blob("out_probs")->shape().Count(1);
       SelectOutIndexes<<<1, 1, 0, ctx.device_ctx->cuda_stream()>>>(
-          box_num, BnInOp2Blob("probs")->dptr<T>(im_index),
+          box_num, probs_ptr,
           BnInOp2Blob("select_inds")->mut_dptr<int32_t>(),
-          BnInOp2Blob("valid_num")->mut_dptr<int32_t>(im_index), probs_num, conf.prob_thresh(),
+          BnInOp2Blob("valid_num")->mut_dptr<int32_t>() + im_index * BnInOp2Blob("valid_num")->shape().Count(1), probs_num, conf.prob_thresh(),
           max_out_boxes);
       SetOutProbs<<<BlocksNum4ThreadsNum(box_num * probs_num), kCudaThreadsNumPerBlock, 0,
                     ctx.device_ctx->cuda_stream()>>>(
-          probs_num, BnInOp2Blob("probs")->dptr<T>(im_index),
+          probs_num, probs_ptr,
           BnInOp2Blob("select_inds")->dptr<int32_t>(),
-          BnInOp2Blob("valid_num")->dptr<int32_t>(im_index),
-          BnInOp2Blob("out_probs")->mut_dptr<T>(im_index), conf.prob_thresh());
+          BnInOp2Blob("valid_num")->dptr<int32_t>() + im_index * BnInOp2Blob("valid_num")->shape().Count(1),
+          out_probs_ptr, conf.prob_thresh());
       SetOutBoxes<<<BlocksNum4ThreadsNum(box_num), kCudaThreadsNumPerBlock, 0,
                     ctx.device_ctx->cuda_stream()>>>(
-          BnInOp2Blob("bbox")->dptr<T>(im_index),
-          BnInOp2Blob("origin_image_info")->dptr<int32_t>(im_index),
+          bbox_ptr,
+          BnInOp2Blob("origin_image_info")->dptr<int32_t>() + im_index * BnInOp2Blob("origin_image_info")->shape().Count(1),
           BnInOp2Blob("select_inds")->dptr<int32_t>(),
-          BnInOp2Blob("valid_num")->dptr<int32_t>(im_index), anchor_boxes_size_ptr,
-          BnInOp2Blob("out_bbox")->mut_dptr<T>(im_index), conf.layer_height(), conf.layer_width(),
+          BnInOp2Blob("valid_num")->dptr<int32_t>() + im_index * BnInOp2Blob("valid_num")->shape().Count(1), anchor_boxes_size_ptr,
+          out_bbox_ptr, conf.layer_height(), conf.layer_width(),
           layer_nbox, conf.image_height(), conf.image_width());
     }
   }

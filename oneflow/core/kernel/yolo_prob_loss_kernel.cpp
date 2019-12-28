@@ -11,23 +11,23 @@ void YoloProbLossKernel<device_type, T>::ForwardDataContent(
                       BnInOp2Blob("bbox_clsprob_out")->shape().elem_cnt() * sizeof(T));
   const size_t pos_num = 50;
   const size_t neg_num = 20000;
-  FOR_RANGE(int32_t, im_index, 0, BnInOp2Blob("bbox_objness")->shape().At(0)) {
-    // const size_t pos_num = BnInOp2Blob("pos_inds")->dim1_valid_num(im_index);
-    // const size_t neg_num = BnInOp2Blob("neg_inds")->dim1_valid_num(im_index);
-    YoloProbLossKernelUtil<device_type, T>::CalcObjnessDiff(
-        ctx.device_ctx, pos_num, neg_num, BnInOp2Blob("valid_num")->dptr<int32_t>(im_index),
-        BnInOp2Blob("pos_inds")->dptr<int32_t>(im_index),
-        BnInOp2Blob("neg_inds")->dptr<int32_t>(im_index),
-        BnInOp2Blob("bbox_objness")->dptr<T>(im_index),
-        BnInOp2Blob("bbox_objness_out")->mut_dptr<T>(im_index));
-    YoloProbLossKernelUtil<device_type, T>::CalcClsProbDiff(
-        ctx.device_ctx, pos_num, this->op_conf().yolo_prob_loss_conf().num_classes(),
-        BnInOp2Blob("valid_num")->dptr<int32_t>(im_index),
-        BnInOp2Blob("pos_inds")->dptr<int32_t>(im_index),
-        BnInOp2Blob("pos_cls_label")->dptr<int32_t>(im_index),
-        BnInOp2Blob("bbox_clsprob")->dptr<T>(im_index),
-        BnInOp2Blob("bbox_clsprob_out")->mut_dptr<T>(im_index));
-  }
+  //FOR_RANGE(int32_t, im_index, 0, BnInOp2Blob("bbox_objness")->shape().At(0)) {
+  //  // const size_t pos_num = BnInOp2Blob("pos_inds")->dim1_valid_num(im_index);
+  //  // const size_t neg_num = BnInOp2Blob("neg_inds")->dim1_valid_num(im_index);
+  //  YoloProbLossKernelUtil<device_type, T>::CalcObjnessDiff(
+  //      ctx.device_ctx, pos_num, neg_num, BnInOp2Blob("valid_num")->dptr<int32_t>(im_index),
+  //      BnInOp2Blob("pos_inds")->dptr<int32_t>(im_index),
+  //      BnInOp2Blob("neg_inds")->dptr<int32_t>(im_index),
+  //      BnInOp2Blob("bbox_objness")->dptr<T>(im_index),
+  //      BnInOp2Blob("bbox_objness_out")->mut_dptr<T>(im_index));
+  //  YoloProbLossKernelUtil<device_type, T>::CalcClsProbDiff(
+  //      ctx.device_ctx, pos_num, this->op_conf().yolo_prob_loss_conf().num_classes(),
+  //      BnInOp2Blob("valid_num")->dptr<int32_t>(im_index),
+  //      BnInOp2Blob("pos_inds")->dptr<int32_t>(im_index),
+  //      BnInOp2Blob("pos_cls_label")->dptr<int32_t>(im_index),
+  //      BnInOp2Blob("bbox_clsprob")->dptr<T>(im_index),
+  //      BnInOp2Blob("bbox_clsprob_out")->mut_dptr<T>(im_index));
+  //}
 }
 
 template<typename T>

@@ -36,9 +36,6 @@ const int32_t kCudaWarpSize = 32;
 // 48KB, max byte size of shared memroy per thread block
 const int32_t kCudaMaxSharedMemoryByteSize = 48 << 10;
 
-// 48KB, max byte size of shared memroy per thread block
-const int32_t kCudaMaxSharedMemoryByteSize = 48 << 10;
-
 int32_t GetSMCudaMaxBlocksNum();
 void InitGlobalCudaDeviceProp();
 bool IsCuda9OnTuringDevice();

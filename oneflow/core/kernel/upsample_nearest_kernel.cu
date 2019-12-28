@@ -94,7 +94,7 @@ class UpsampleNearestGradGPUKernel final : public KernelIf<DeviceType::kGPU> {
     Blob* dx_blob = BnInOp2Blob("dx");
     if (dx_blob == nullptr) { return; }
     Memset<DeviceType::kGPU>(ctx.device_ctx, dx_blob->mut_dptr<T>(), 0,
-                             dx_blob->ByteSizeOfDataContentField());
+                             dx_blob->ByteSizeOfBlobBody());
     const Blob* dy_blob = BnInOp2Blob("dy");
     const int32_t scale = this->op_conf().upsample_nearest_grad_conf().scale();
 
