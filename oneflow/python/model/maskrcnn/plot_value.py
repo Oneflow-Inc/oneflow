@@ -126,8 +126,8 @@ def wildcard_at(path, index):
 def get_df(path, wildcard, index=-1, post_process=None):
     if os.path.isdir(path):
         path = wildcard_at(os.path.join(path, wildcard), index)
-
-    df =  pd.read_csv(path)
+    print(path)
+    df = pd.read_csv(path)
     if callable(post_process):
         df = post_process(df)
     return df
@@ -155,9 +155,12 @@ def post_process_flow(df):
     df = df.groupby(["iter", "legend"], as_index=False).mean()
     return df
 
-def post_process_touch(df):
+
+def post_process_torch(df):
     if df[df["value"].notnull()]["iter"].min() == 0:
         df["iter"] += 1
+    return df
+
 
 if __name__ == "__main__":
     import argparse
@@ -186,11 +189,15 @@ if __name__ == "__main__":
     )
 
     limit, rate = (520, 1)
-    
+
     plot_many_by_legend(
         {
-            "flow": get_df(flow_metrics_path, "loss*.csv", -1, post_process_flow),
-            "torch": get_df(torch_metrics_path, "torch*.csv", -1, post_process_torch),
+            "flow": get_df(
+                flow_metrics_path, "loss*.csv", -1, post_process_flow
+            ),
+            "torch": get_df(
+                torch_metrics_path, "torch*.csv", -1, post_process_torch
+            ),
         }
     )
     # plot_many_by_legend(
