@@ -7,6 +7,8 @@ import glob
 
 
 def plot_value(df):
+    if df.empty:
+        return
     legends = df["legend"].unique()
     poly_data = pd.DataFrame(
         {"iter": np.linspace(df["iter"].min(), df["iter"].max(), 1000)}
@@ -22,7 +24,7 @@ def plot_value(df):
 
     base = alt.Chart(df).interactive()
 
-    chart = base.mark_circle().encode(x="iter", y="value", color="legend:N")
+    chart = base.mark_line().encode(x="iter", y="value", color="legend:N")
 
     polynomial_fit = (
         alt.Chart(poly_data)
@@ -63,6 +65,8 @@ def plot_many_by_legend(df_dict):
                 and df[df["legend"] == legend]["note"].size is 0
             ):
                 legend_set_unsored.append(legend)
+
+    limit, rate = get_limit_and_rate(list(df_dict.values()))
     for legend in legend_set_sorted + legend_set_unsored:
         df_by_legend = pd.concat(
             [
@@ -72,6 +76,7 @@ def plot_many_by_legend(df_dict):
             axis=0,
             sort=False,
         )
+        df_by_legend = subset_and_mod(df_by_legend, limit, rate)
         plot_value(df_by_legend)
 
 
@@ -118,16 +123,23 @@ def wildcard_at(path, index):
     return result[index]
 
 
-def get_df(path, wildcard, index=-1):
+def get_df(path, wildcard, index=-1, post_process=None):
     if os.path.isdir(path):
         path = wildcard_at(os.path.join(path, wildcard), index)
 
-    return pd.read_csv(path)
+    df =  pd.read_csv(path)
+    if callable(post_process):
+        df = post_process(df)
+    return df
 
 
-def get_metrics_sr(df1, df2):
-    limit = min(df1["iter"].max(), df2["iter"].max(), df1.size, df2.size)
-    rate = 1 if limit <= 2500 else limit // 2500 + 1
+def get_limit_and_rate(dfs):
+    maxs = [df["iter"].max() for df in dfs] + [df.size for df in dfs]
+
+    limit = min(maxs)
+    rate = 1
+    if limit * len(dfs) > 5000:
+        rate = limit / (5000 // len(dfs)) + 1
     return limit, rate
 
 
@@ -135,6 +147,17 @@ def subset_and_mod(df, limit, take_every_n):
     df_limited = df[df["iter"] < limit]
     return df_limited[df_limited["iter"] % take_every_n == 0]
 
+
+def post_process_flow(df):
+    df.drop(["rank", "note"], axis=1)
+    if "primary_lr" in df["legend"].unique():
+        df["legend"].replace("primary_lr", "lr", inplace=True)
+    df = df.groupby(["iter", "legend"], as_index=False).mean()
+    return df
+
+def post_process_touch(df):
+    if df[df["value"].notnull()]["iter"].min() == 0:
+        df["iter"] += 1
 
 if __name__ == "__main__":
     import argparse
@@ -162,20 +185,19 @@ if __name__ == "__main__":
         torch_metrics_path
     )
 
-    flow_df = get_df(flow_metrics_path, "loss*.csv")
-    flow_df.drop(["rank", "note"], axis=1)
-    if "primary_lr" in flow_df["legend"].unique():
-        flow_df["legend"].replace("primary_lr", "lr", inplace=True)
-    flow_df = flow_df.groupby(["iter", "legend"], as_index=False).mean()
-    torch_df = get_df(torch_metrics_path, "torch*.csv")
-    if torch_df[torch_df["value"].notnull()]["iter"].min() == 0:
-        torch_df["iter"] += 1
-    limit, rate = get_metrics_sr(flow_df, torch_df)
+    limit, rate = (520, 1)
+    
     plot_many_by_legend(
         {
-            "flow": subset_and_mod(flow_df, limit, rate),
-            "torch": subset_and_mod(torch_df, limit, rate),
+            "flow": get_df(flow_metrics_path, "loss*.csv", -1, post_process_flow),
+            "torch": get_df(flow_metrics_path, "torch*.csv", -1, post_process_flow),
         }
     )
+    # plot_many_by_legend(
+    #     {
+    #         "flow1": get_df(flow_metrics_path, "loss*.csv", -1, post_process_flow),
+    #         "flow2": get_df(flow_metrics_path, "loss*.csv", -2, post_process_flow),
+    #     }
+    # )
 
     # plot_by_legend(flow_df)
