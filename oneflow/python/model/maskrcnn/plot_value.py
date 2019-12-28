@@ -190,7 +190,7 @@ if __name__ == "__main__":
     plot_many_by_legend(
         {
             "flow": get_df(flow_metrics_path, "loss*.csv", -1, post_process_flow),
-            "torch": get_df(flow_metrics_path, "torch*.csv", -1, post_process_flow),
+            "torch": get_df(torch_metrics_path, "torch*.csv", -1, post_process_torch),
         }
     )
     # plot_many_by_legend(
