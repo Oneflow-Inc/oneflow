@@ -28,9 +28,11 @@ set(TENSORFLOW_PROJECT  tensorflow)
 set(TENSORFLOW_GIT_URL  https://github.com/tensorflow/tensorflow.git)
 #set(TENSORFLOW_GIT_TAG  master)
 set(TENSORFLOW_GIT_TAG  80c04b80ad66bf95aa3f41d72a6bba5e84a99622)
-set(TENSORFLOW_SOURCES_DIR ${THIRD_PARTY_DIR}/tensorflow)
+set(TENSORFLOW_SOURCES_DIR ${CMAKE_CURRENT_BINARY_DIR}/third_party/tensorflow)
 set(TENSORFLOW_SRCS_DIR ${TENSORFLOW_SOURCES_DIR}/src/tensorflow)
 set(TENSORFLOW_INC_DIR  ${TENSORFLOW_SOURCES_DIR}/src/tensorflow)
+
+set(TENSORFLOW_INSTALL_DIR ${THIRD_PARTY_DIR}/tensorflow)
 
 set(PATCHES_DIR  ${PROJECT_SOURCE_DIR}/oneflow/xrt/patches)
 set(TENSORFLOW_JIT_DIR ${TENSORFLOW_SRCS_DIR}/tensorflow/compiler/jit)
@@ -51,13 +53,9 @@ list(APPEND TENSORFLOW_XLA_INCLUDE_DIR
   ${THIRD_SNAPPY_DIR}
 )
 include_directories(${TENSORFLOW_XLA_INCLUDE_DIR})
-
 list(APPEND TENSORFLOW_XLA_LIBRARIES libtensorflow_framework.so.1)
 list(APPEND TENSORFLOW_XLA_LIBRARIES libxla_core.so)
-link_directories(
-  ${TENSORFLOW_SRCS_DIR}/bazel-bin/tensorflow
-  ${TENSORFLOW_SRCS_DIR}/bazel-bin/tensorflow/compiler/jit/xla_lib
-)
+link_directories(${TENSORFLOW_INSTALL_DIR}/lib)
 
 if (THIRD_PARTY)
   ExternalProject_Add(${TENSORFLOW_PROJECT}
@@ -70,9 +68,21 @@ if (THIRD_PARTY)
                   bazel build ${TENSORFLOW_BUILD_CMD} -j 20 //tensorflow/compiler/jit/xla_lib:libxla_core.so
     INSTALL_COMMAND ""
   )
-endif(THIRD_PARTY)
 
 set(TENSORFLOW_XLA_FRAMEWORK_LIB ${TENSORFLOW_SRCS_DIR}/bazel-bin/tensorflow/libtensorflow_framework.so.1)
 set(TENSORFLOW_XLA_CORE_LIB ${TENSORFLOW_SRCS_DIR}/bazel-bin/tensorflow/compiler/jit/xla_lib/libxla_core.so)
+
+add_custom_target(tensorflow_create_library_dir
+  COMMAND ${CMAKE_COMMAND} -E make_directory ${TENSORFLOW_INSTALL_DIR}/lib
+  DEPENDS ${TENSORFLOW_PROJECT})
+
+add_custom_target(tensorflow_copy_libs_to_destination
+  COMMAND ${CMAKE_COMMAND} -E copy_if_different
+      ${TENSORFLOW_XLA_FRAMEWORK_LIB} ${TENSORFLOW_XLA_CORE_LIB} ${TENSORFLOW_INSTALL_DIR}/lib
+  COMMAND ${CMAKE_COMMAND} -E create_symlink
+      ${TENSORFLOW_INSTALL_DIR}/lib/libtensorflow_framework.so.1
+      ${TENSORFLOW_INSTALL_DIR}/lib/libtensorflow_framework.so
+  DEPENDS tensorflow_create_library_dir)
+endif(THIRD_PARTY)
 
 endif(WITH_XLA)
