@@ -59,6 +59,10 @@ def get_variable(
 
     op_conf.variable_conf.out = "out"
 
+    op_conf, parallel_conf = compile_context.GetOpConfAndParallelConf(op_conf)
+    return CreateVariableBlob(op_conf, parallel_conf)
+
+def CreateVariableBlob(op_conf, parallel_conf):
     compile_context.CurJobAddConsistentOp(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
     lbi.op_name = op_conf.name
