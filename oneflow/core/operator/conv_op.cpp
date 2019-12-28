@@ -1,6 +1,7 @@
 #include "oneflow/core/operator/conv_op.h"
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/device/cuda_stream_handle.h"
+#include "oneflow/core/device/cudnn_conv_ctx_cache.h"
 #include "oneflow/core/register/runtime_blob_desc.h"
 #include "oneflow/core/job/sbp_signature_builder.h"
 
@@ -8,7 +9,7 @@ namespace oneflow {
 
 namespace {
 
-void GetOutAndPad(const Shape& in_blob_shape, const PbMessage& conv_conf, std::vector<int64_t>* out,
+void GetOutAndPad(const ShapeView& in_blob_shape, const PbMessage& conv_conf, DimVector* out,
                   std::vector<int32_t>* pad_small_side, std::vector<int32_t>* pad_large_side) {
   int32_t opkernel_dim = in_blob_shape.NumAxes() - 2;
   if (out) { out->assign(opkernel_dim, 0); }
@@ -33,7 +34,7 @@ void GetOutAndPad(const Shape& in_blob_shape, const PbMessage& conv_conf, std::v
 #ifdef WITH_CUDA
 CudnnConvDesc::~CudnnConvDesc() { CudaCheck(cudnnDestroyConvolutionDescriptor(val_)); }
 
-CudnnConvDesc::CudnnConvDesc(const DataType& data_type, const Shape& in_blob_shape,
+CudnnConvDesc::CudnnConvDesc(const DataType& data_type, const ShapeView& in_blob_shape,
                              const PbMessage& conv_conf) {
   int32_t opkernel_dim = in_blob_shape.NumAxes() - 2;
   CudaCheck(cudnnCreateConvolutionDescriptor(&val_));
@@ -94,9 +95,9 @@ Maybe<void> ConvOp<NDims>::InferOutBlobDescs(
   CHECK_OR_RETURN(parallel_ctx->parallel_num() == 1
                   || sbp_signature->bn_in_op2sbp_parallel().at("weight").has_broadcast_parallel());
 
-  std::vector<int64_t> out;
+  DimVector out;
   GetOutAndPad(in_blob_desc->shape(), GetCustomizedConf(), &out, nullptr, nullptr);
-  std::vector<int64_t> out_shape = {data_num, filters};
+  DimVector out_shape = {data_num, filters};
   size_t dhw_offset = DhwOffset(data_format);
   for (size_t i = 0; i < NDims; ++i) {
     out_shape.insert(out_shape.begin() + dhw_offset + i, out[i]);
@@ -127,9 +128,9 @@ Maybe<void> ConvOp<NDims>::InferBlobDescs(
   CHECK_OR_RETURN(parallel_ctx->parallel_num() == 1
                   || sbp_signature->bn_in_op2sbp_parallel().at("weight").has_broadcast_parallel());
 
-  std::vector<int64_t> out;
+  DimVector out;
   GetOutAndPad(in_blob_desc->shape(), GetCustomizedConf(), &out, nullptr, nullptr);
-  std::vector<int64_t> out_shape = {data_num, filters};
+  DimVector out_shape = {data_num, filters};
   size_t dhw_offset = DhwOffset(data_format);
   for (size_t i = 0; i < NDims; ++i) {
     out_shape.insert(out_shape.begin() + dhw_offset + i, out[i]);
@@ -139,18 +140,19 @@ Maybe<void> ConvOp<NDims>::InferBlobDescs(
   out_blob_desc->mut_shape() = Shape(out_shape);
 
   // weight
-  std::vector<int64_t> weight_shape(in_blob_desc->shape().dim_vec());
+  const BlobDesc* weight_blob_desc = GetBlobDesc4BnInOp("weight");
+  DimVector weight_shape(in_blob_desc->shape().dim_vec());
   weight_shape[0] = filters;
   for (size_t i = 0; i < NDims; ++i) {
     weight_shape[dhw_offset + i] = GetPbRfFromCustomizedConf<int32_t>("kernel_size").Get(i);
   }
-  CHECK_EQ_OR_RETURN(GetBlobDesc4BnInOp("weight")->shape(), Shape(weight_shape));
+  CHECK_EQ_OR_RETURN(weight_blob_desc->shape(), Shape(weight_shape));
 
   if (GetValFromCustomizedConf<bool>("use_bias")) {
     // bias and bias_multiplier
     CHECK_EQ_OR_RETURN(GetBlobDesc4BnInOp("bias")->shape(), Shape({filters}));
     if (DevIsGpuAndEnableCudnn() == false) {
-      std::vector<int64_t> bias_mul_shape(NDims + 1, 1);
+      DimVector bias_mul_shape(NDims + 1, 1);
       for (size_t i = 0; i != NDims; ++i) { bias_mul_shape[i + 1] = out_shape[dhw_offset + i]; }
       GetBlobDesc4BnInOp("bias_multiplier")->mut_shape() = Shape(bias_mul_shape);
     }
@@ -173,10 +175,21 @@ Maybe<void> ConvOp<NDims>::InferBlobDescs(
 #ifdef WITH_CUDA
   if (DevIsGpuAndEnableCudnn()) {
     // cudnn_buf
-    InferCudnnAlgo(GetBlobDesc4BnInOp, &(conv_op_ctx->cudnn_conv_algo_ctx));
+    size_t fw_cudnn_buf_size = cudnn_buf_limit_byte();
+    if (!out_blob_desc->is_dynamic()) {
+      CHECK(Global<CudnnConvCtxCache>::Get()->FindCudnnConvAlgoCtxWithConfig(
+          *in_blob_desc, *out_blob_desc, *weight_blob_desc, GetCustomizedConf(),
+          static_cast<size_t>(cudnn_buf_limit_byte()),
+          this->job_desc().cudnn_conv_enable_true_half(), &conv_op_ctx->cudnn_conv_algo_ctx));
+      CHECK(conv_op_ctx->cudnn_conv_algo_ctx.fwd_algo_found)
+          << "cudnn fwd algo: " << conv_op_ctx->cudnn_conv_algo_ctx.fwd_algo
+          << " algo_workspace_size: " << conv_op_ctx->cudnn_conv_algo_ctx.fwd_ws_size
+          << " max_workspace_size: " << fw_cudnn_buf_size;
+      fw_cudnn_buf_size = conv_op_ctx->cudnn_conv_algo_ctx.fwd_ws_size;
+    }
+    fw_cudnn_buf_size = std::max(size_t(1), fw_cudnn_buf_size);
     BlobDesc* fw_cudnn_buf = GetBlobDesc4BnInOp("fw_cudnn_buf");
-    fw_cudnn_buf->mut_shape() =
-        Shape({static_cast<int64_t>(conv_op_ctx->cudnn_conv_algo_ctx.fwd_ws_size)});
+    fw_cudnn_buf->mut_shape() = Shape({static_cast<int64_t>(fw_cudnn_buf_size)});
     fw_cudnn_buf->set_data_type(DataType::kChar);
   }
 #endif  // WITH_CUDA
@@ -190,10 +203,10 @@ void ConvOp<NDims>::GenKernelConfWithoutCudnn(
   const Shape& in_shape = GetBlobDesc4BnInOp("in")->shape();
   const Shape& weight_shape = GetBlobDesc4BnInOp("weight")->shape();
   std::string data_format = GetValFromCustomizedConf<std::string>("data_format");
-  std::vector<int64_t> in = {GetInDim(in_shape, data_format, 0, NDims),
-                             GetInDim(in_shape, data_format, 1, NDims),
-                             GetInDim(in_shape, data_format, 2, NDims)};
-  std::vector<int64_t> out;
+  DimVector in = {GetInDim(in_shape, data_format, 0, NDims),
+                  GetInDim(in_shape, data_format, 1, NDims),
+                  GetInDim(in_shape, data_format, 2, NDims)};
+  DimVector out;
   std::vector<int32_t> weight =
       Get3DVecInOpConf(this->GetPbRfFromCustomizedConf<int32_t>("kernel_size"), NDims);
   std::vector<int32_t> strides =
@@ -251,19 +264,6 @@ void ConvOp<NDims>::GenKernelConfWithCudnn(
     AddValToPbRfInCustomizedKernelConf(kernel_conf, "pad_small_side", pad_small_side[i]);
     AddValToPbRfInCustomizedKernelConf(kernel_conf, "pad_large_side", pad_large_side[i]);
   }
-#ifdef WITH_CUDA
-  if (device_type() == DeviceType::kGPU) {
-    const ConvOpCtx* conv_op_ctx = static_cast<const ConvOpCtx*>(op_ctx);
-    SetValInCustomizedKernelConf(kernel_conf, "cudnn_fwd_algo",
-                                 static_cast<int32_t>(conv_op_ctx->cudnn_conv_algo_ctx.fwd_algo));
-    SetValInCustomizedKernelConf(
-        kernel_conf, "cudnn_bwd_filter_algo",
-        static_cast<int32_t>(conv_op_ctx->cudnn_conv_algo_ctx.bwd_filter_algo));
-    SetValInCustomizedKernelConf(
-        kernel_conf, "cudnn_bwd_data_algo",
-        static_cast<int32_t>(conv_op_ctx->cudnn_conv_algo_ctx.bwd_data_algo));
-  }
-#endif  // WITH_CUDA
 }
 
 template<int32_t NDims>
@@ -284,18 +284,6 @@ PbMessage* ConvOp<NDims>::MutableCustomizedKernelConf(KernelConf* kernel_conf) c
   return kernel_conf->mutable_conv_conf();
 }
 
-#ifdef WITH_CUDA
-template<int32_t NDims>
-void ConvOp<NDims>::InferCudnnAlgo(
-    std::function<const BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-    CudnnConvAlgoCtx* conv_ctx) const {
-  CHECK(Global<CudnnConvCtxCache>::Get()->FindCudnnConvAlgoCtxWithConfig(
-      *GetBlobDesc4BnInOp("in"), *GetBlobDesc4BnInOp("out"), *GetBlobDesc4BnInOp("weight"),
-      GetCustomizedConf(), static_cast<size_t>(cudnn_buf_limit_byte()), conv_ctx));
-  CHECK(conv_ctx->fwd_algo_found) << "algo: " << conv_ctx->fwd_algo;
-}
-#endif  // WITH_CUDA
-
 template<int32_t NDims>
 Maybe<void> ConvOp<NDims>::InferBatchAxis(
     std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
@@ -307,11 +295,16 @@ template<int32_t NDims>
 Maybe<void> ConvOp<NDims>::GetSbpSignatures(
     const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
     SbpSignatureList* sbp_sig_list) const {
-  SbpSignatureBuilder()
-      .Split("in", 0)
-      .Broadcast({"weight", "bias"})
-      .Split("out", 0)
-      .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+  if (GetValFromCustomizedConf<bool>("use_bias")) {
+    SbpSignatureBuilder()
+        .Split("in", 0)
+        .Broadcast({"weight", "bias"})
+        .Split("out", 0)
+        .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+  } else {
+    SbpSignatureBuilder().Split("in", 0).Broadcast("weight").Split("out", 0).Build(
+        sbp_sig_list->mutable_sbp_signature()->Add());
+  }
   return Maybe<void>::Ok();
 }
 

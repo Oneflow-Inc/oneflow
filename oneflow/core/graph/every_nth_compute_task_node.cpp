@@ -29,11 +29,11 @@ void EveryNthCompTaskNode::InferProducedDataRegstTimeShape() {
   CHECK_NOTNULL(op);
   const int64_t n = op->op_conf().every_nth_conf().n();
   const Shape* in_shape = GetSoleConsumedRegst("in")->data_regst_time_shape().get();
-  std::vector<int64_t> dim_vec;
+  DimVector dim_vec;
   CHECK_GE(in_shape->NumAxes(), 1);
   CHECK_GE(n, 1);
   if (in_shape->dim_vec().back() % n == 0) {
-    dim_vec.insert(dim_vec.end(), in_shape->dim_vec().begin(), in_shape->dim_vec().cend() - 1);
+    dim_vec.insert(dim_vec.end(), in_shape->dim_vec().cbegin(), in_shape->dim_vec().cend() - 1);
     if (in_shape->dim_vec().back() != n) { dim_vec.push_back(in_shape->dim_vec().back() / n); }
   } else {
     dim_vec.push_back(in_shape->elem_cnt() / n);

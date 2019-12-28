@@ -10,7 +10,6 @@ const std::vector<int64_t>& Regst::consumers_actor_id() const {
 Regst::Regst() {
   status_.regst_desc_id = -1;
   status_.piece_id = -1;
-  status_.model_version_id = -1;
   status_.act_id = -1;
   status_.col_id = 0;
   status_.max_col_id = 0;

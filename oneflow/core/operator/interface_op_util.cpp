@@ -50,11 +50,8 @@ Maybe<void> InterfaceOpUtil::InferOutBlobDesc(const InterfaceBlobConf& blob_conf
   CheckShape(out_blob_desc->shape());
   CHECK_GT(out_blob_desc->mut_shape().At(0), 0);
   out_blob_desc->set_data_type(blob_conf.data_type());
-  out_blob_desc->set_has_dim0_valid_num_field(blob_conf.has_dim0_valid_num());
-  if (blob_conf.has_dim0_inner_shape()) {
-    CHECK(blob_conf.has_dim0_valid_num());
-    out_blob_desc->mut_dim0_inner_shape() = Shape(blob_conf.dim0_inner_shape());
-  }
+  out_blob_desc->set_is_dynamic(blob_conf.is_dynamic());
+  out_blob_desc->set_is_tensor_list(blob_conf.is_tensor_list());
   const auto& opt_split_axis = GetSplitAxis(blob_conf);
   if (opt_split_axis.has_value()) {
     int64_t split_axis = opt_split_axis.value();
@@ -91,12 +88,8 @@ Maybe<void> InterfaceOpUtil::InitBlobConf(InterfaceBlobConf* blob_conf,
   BlobDesc blob_desc(parallel_blob_conf.logical_blob_desc_conf());
   blob_desc.shape().ToProto(blob_conf->mutable_shape());
   blob_conf->set_data_type(blob_desc.data_type());
-  if (blob_desc.has_dim0_inner_shape()) {
-    blob_desc.dim0_inner_shape().ToProto(blob_conf->mutable_dim0_inner_shape());
-  }
-  blob_conf->set_has_dim0_valid_num(blob_desc.has_dim0_valid_num_field());
-  blob_conf->set_has_dim1_valid_num(blob_desc.has_dim1_valid_num_field());
-  blob_conf->set_has_dim2_valid_num(blob_desc.has_dim2_valid_num_field());
+  blob_conf->set_is_dynamic(blob_desc.is_dynamic());
+  blob_conf->set_is_tensor_list(blob_desc.is_tensor_list());
   if (parallel_blob_conf.sbp_conf().has_split_parallel()) {
     int64_t axis = parallel_blob_conf.sbp_conf().split_parallel().axis();
     blob_conf->mutable_split_axis()->set_value(axis);

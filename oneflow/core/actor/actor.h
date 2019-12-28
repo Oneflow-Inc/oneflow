@@ -19,7 +19,6 @@ enum class ColIdOrder { kUnCertain = 0, kAscending, kDescending };
 
 bool IsFirstRegstInPieceWithOrder(const Regst*, ColIdOrder);
 bool IsLastRegstInPieceWithOrder(const Regst*, ColIdOrder);
-inline bool NeedModelSave(const JobDesc& job_desc, int64_t model_version_id) { return false; }
 
 class Actor {
  public:
@@ -233,6 +232,7 @@ class Actor {
 
   std::deque<ActorMsg> async_msg_queue_;
   bool is_kernel_launch_synchronized_;
+  std::vector<int64_t> tmp_regst_desc_id_vec_;
 };
 
 std::unique_ptr<Actor> NewActor(const TaskProto&, const ThreadCtx&);

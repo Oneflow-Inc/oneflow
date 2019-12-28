@@ -4,6 +4,7 @@
 #include "oneflow/core/graph/normal_forward_compute_task_node.h"
 #include "oneflow/core/thread/thread_pool.h"
 #include "oneflow/core/common/blocking_counter.h"
+#include "oneflow/core/framework/config_def.h"
 
 namespace oneflow {
 
@@ -146,20 +147,6 @@ bool NoOutRegstConsumedByBwNode(TaskNode* node) {
   return true;
 };
 
-size_t IsAllProducedBlobHasNoBatchAxis(TaskNode* task_node) {
-  const auto* comp_task_node = dynamic_cast<CompTaskNode*>(task_node);
-  CHECK_NOTNULL(comp_task_node);
-  const LogicalNode* logical_node = comp_task_node->logical_node();
-  return logical_node->produced_batch_dim_lbis_cnt() == 0;
-}
-
-bool IsAllConsumedBlobHasNoBatchAxis(TaskNode* task_node) {
-  const auto* comp_task_node = dynamic_cast<CompTaskNode*>(task_node);
-  CHECK_NOTNULL(comp_task_node);
-  const LogicalNode* logical_node = comp_task_node->logical_node();
-  return logical_node->consumed_batch_dim_lbis_cnt() == 0;
-}
-
 bool IsNonSoleKeepHeaderOnlyEdge(TaskNode* src_task, TaskNode* dst_task) {
   if (dst_task->in_edges().size() <= 1) { return false; }
   const auto* src_comp_task = dynamic_cast<CompTaskNode*>(src_task);
@@ -189,7 +176,9 @@ ChainGraph::ChainGraph(const TaskGraph& task_gph) : task_gph_(task_gph) {
   InitChainEdge(chains);
   CheckNoCycle();
   SetChainId4ChainNode();
-  ToDotWithAutoFilePath();
+  if (Global<ResourceDesc>::Get()->enable_debug_mode()) {
+    ToDotWithFilePath(JoinPath("dot", TypeName(), GlobalJobDesc().job_name() + ".dot"));
+  }
 }
 
 void ChainGraph::CheckNoCycle() const {
@@ -224,11 +213,6 @@ void ChainGraph::GroupTaskNodesByMachineAndCollectAncestors(
     node->ForEachNodeOnInEdge([&](TaskNode* in_node) {
       if (in_node->GetTaskType() == TaskType::kTick) { return; }
       if (IsNonSoleKeepHeaderOnlyEdge(in_node, node)) { return; }
-      if (dynamic_cast<CompTaskNode*>(in_node) != nullptr
-          && dynamic_cast<CompTaskNode*>(node) != nullptr
-          && IsAllProducedBlobHasNoBatchAxis(in_node) && !IsAllConsumedBlobHasNoBatchAxis(node)) {
-        return;
-      }
       (*node2ancestors)[node].insert(in_node);
       (*node2ancestors)[node].insert((*node2ancestors)[in_node].begin(),
                                      (*node2ancestors)[in_node].end());
