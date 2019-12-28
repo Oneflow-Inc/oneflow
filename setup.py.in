@@ -24,7 +24,7 @@ packages = find_packages("build/python_scripts")
 package_dir = {
     '':'build/python_scripts',
 }
-package_data['oneflow'] = ['_oneflow_internal.so']
+package_data = {'oneflow': '_oneflow_internal.so'}
 
 if '${WITH_XLA}' == 'ON':
   packages += ['oneflow.libs']

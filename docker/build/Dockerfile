@@ -58,7 +58,7 @@ RUN if [ "${USE_PYTHON_3_OR_2}" -eq 3 ] ; then cmake -DTHIRD_PARTY=OFF -DPY3=ON 
 ## BUILD WHEEL
 WORKDIR /workspace
 RUN pip${USE_PYTHON_3_OR_2} install wheel
-COPY setup.py /workspace/setup.py
+COPY build/setup.py /workspace/setup.py
 RUN python${USE_PYTHON_3_OR_2} setup.py bdist_wheel
 RUN pip${USE_PYTHON_3_OR_2} install /workspace/dist/*.whl
 
