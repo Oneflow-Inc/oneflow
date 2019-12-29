@@ -24,7 +24,8 @@ def plot_value(df):
 
     base = alt.Chart(df).interactive()
 
-    chart = base.mark_line().encode(x="iter", y="value", color="legend:N")
+    # chart = base.mark_line()
+    chart = base.mark_circle()
 
     polynomial_fit = (
         alt.Chart(poly_data)
@@ -32,10 +33,14 @@ def plot_value(df):
             [legend + "-fit" for legend in legends], as_=["legend", "value"]
         )
         .mark_line()
-        .encode(x="iter:Q", y="value:Q", color="legend:N")
     )
     chart += polynomial_fit
+    chart = chart.encode(alt.X("iter:Q", scale=alt.Scale(zero=False))).encode(
+        alt.Y("value:Q")
+    )
+    chart = chart.encode(color="legend:N")
     chart.display()
+    # chart.save("{}.png".format("".join(legends)))
 
 
 def plot_by_legend(df):
@@ -67,6 +72,7 @@ def plot_many_by_legend(df_dict):
                 legend_set_unsored.append(legend)
 
     limit, rate = get_limit_and_rate(list(df_dict.values()))
+    limit, rate = 506, 1
     for legend in legend_set_sorted + legend_set_unsored:
         df_by_legend = pd.concat(
             [
@@ -192,18 +198,48 @@ if __name__ == "__main__":
 
     plot_many_by_legend(
         {
+            # "flow1": get_df(
+            #     os.path.join(
+            #         args.metrics_dir,
+            #         "loss-520-batch_size-8-gpu-4-image_dir-('val2017',)-2019-12-29--15-55-19.csv",
+            #     ),
+            #     -1,
+            #     post_process_flow,
+            # ),
             "flow": get_df(
                 flow_metrics_path, "loss*.csv", -1, post_process_flow
             ),
             "torch": get_df(
                 torch_metrics_path, "torch*.csv", -1, post_process_torch
             ),
+            # "torch1": get_df(
+            #     os.path.join(
+            #         args.metrics_dir,
+            #         "torch-520-batch_size-8-image_dir-coco_instances_val2017_subsample_8_repeated-2019-12-29--06-25-23.csv",
+            #     ),
+            #     -1,
+            #     post_process_torch,
+            # ),
         }
     )
     # plot_many_by_legend(
     #     {
-    #         "flow1": get_df(flow_metrics_path, "loss*.csv", -1, post_process_flow),
-    #         "flow2": get_df(flow_metrics_path, "loss*.csv", -2, post_process_flow),
+    #         "flow1": get_df(
+    #             flow_metrics_path, "loss*.csv", -1, post_process_flow
+    #         ),
+    #         "flow2": get_df(
+    #             flow_metrics_path, "loss*.csv", -2, post_process_flow
+    #         ),
+    #     }
+    # )
+    # plot_many_by_legend(
+    #     {
+    #         "torch1": get_df(
+    #             flow_metrics_path, "torch*.csv", -1, post_process_torch
+    #         ),
+    #         "torch2": get_df(
+    #             flow_metrics_path, "torch*.csv", -2, post_process_torch
+    #         ),
     #     }
     # )
 
