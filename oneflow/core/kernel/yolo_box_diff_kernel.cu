@@ -222,46 +222,51 @@ class YoloBoxDiffKernel final : public KernelIf<DeviceType::kGPU> {
       KernelUtil<DeviceType::kGPU, int32_t>::Set(ctx.device_ctx, conf.anchor_boxes_size(i).height(),
                                                  anchor_boxes_size_ptr + 2 * i + 1);
     }
-   // FOR_RANGE(int32_t, im_index, 0, bbox_blob->shape().At(0)) {
-   //   // const size_t gt_valid_num = gt_boxes_blob->dim1_valid_num(im_index);
-   //   const int32_t* gt_valid_num_ptr = gt_valid_num_blob->dptr<int32_t>(im_index);
-   //   const T* gt_boxes_ptr = gt_boxes_blob->dptr<T>(im_index);
-   //   CoordinateTransformGpu<<<BlocksNum4ThreadsNum(box_num), kCudaThreadsNumPerBlock, 0,
-   //                            ctx.device_ctx->cuda_stream()>>>(
-   //       box_num, bbox_blob->dptr<T>(im_index), anchor_boxes_size_ptr, box_mask_ptr,
-   //       BnInOp2Blob("pred_bbox")->mut_dptr<T>(), conf.layer_height(), conf.layer_width(),
-   //       conf.image_height(), conf.image_width(), layer_nbox);
-   //   CalcIouGpu<<<BlocksNum4ThreadsNum(box_num * gt_max_num), kCudaThreadsNumPerBlock, 0,
-   //                ctx.device_ctx->cuda_stream()>>>(
-   //       box_num, BnInOp2Blob("pred_bbox")->dptr<T>(), gt_boxes_ptr,
-   //       BnInOp2Blob("overlaps")->mut_dptr<float>(), gt_max_num, gt_valid_num_ptr);
-   //   SetMaxOverlapsAndGtIndex<<<BlocksNum4ThreadsNum(box_num), kCudaThreadsNumPerBlock, 0,
-   //                              ctx.device_ctx->cuda_stream()>>>(
-   //       box_num, gt_valid_num_ptr, gt_max_num, BnInOp2Blob("overlaps")->dptr<float>(),
-   //       BnInOp2Blob("max_overlaps")->mut_dptr<float>(),
-   //       BnInOp2Blob("max_overlaps_gt_indices")->mut_dptr<int32_t>(), conf.ignore_thresh(),
-   //       conf.truth_thresh());
-   //   CalcGtNearestAnchorSize<<<BlocksNum4ThreadsNum(gt_max_num), kCudaThreadsNumPerBlock, 0,
-   //                             ctx.device_ctx->cuda_stream()>>>(
-   //       gt_valid_num_ptr, gt_boxes_ptr, anchor_boxes_size_ptr, box_mask_ptr,
-   //       BnInOp2Blob("max_overlaps_gt_indices")->mut_dptr<int32_t>(), anchor_boxes_size_num,
-   //       layer_nbox, conf.layer_height(), conf.layer_width(), layer_nbox, conf.image_height(),
-   //       conf.image_width());
-   //   int32_t* pos_inds_ptr = BnInOp2Blob("pos_inds")->mut_dptr<int32_t>(im_index);
-   //   SelectSamples<<<1, 1, 0, ctx.device_ctx->cuda_stream()>>>(
-   //       BnInOp2Blob("max_overlaps_gt_indices")->dptr<int32_t>(), pos_inds_ptr,
-   //       BnInOp2Blob("neg_inds")->mut_dptr<int32_t>(im_index),
-   //       BnInOp2Blob("valid_num")->mut_dptr<int32_t>(im_index), box_num);
-   //   CalcBboxLoss<<<BlocksNum4ThreadsNum(gt_max_num), kCudaThreadsNumPerBlock, 0,
-   //                  ctx.device_ctx->cuda_stream()>>>(
-   //       box_num, bbox_blob->dptr<T>(im_index), gt_boxes_ptr,
-   //       BnInOp2Blob("gt_labels")->dptr<int32_t>(im_index), pos_inds_ptr,
-   //       BnInOp2Blob("valid_num")->dptr<int32_t>(im_index),
-   //       BnInOp2Blob("max_overlaps_gt_indices")->dptr<int32_t>(), anchor_boxes_size_ptr,
-   //       box_mask_ptr, BnInOp2Blob("bbox_loc_diff")->mut_dptr<T>(im_index),
-   //       BnInOp2Blob("pos_cls_label")->mut_dptr<int32_t>(im_index), layer_nbox,
-   //       conf.layer_height(), conf.layer_width(), conf.image_height(), conf.image_width());
-   // }
+    FOR_RANGE(int32_t, im_index, 0, bbox_blob->shape().At(0)) {
+      // const size_t gt_valid_num = gt_boxes_blob->dim1_valid_num(im_index);
+      const int32_t* gt_valid_num_ptr = gt_valid_num_blob->dptr<int32_t>() + im_index * gt_valid_num_blob->shape().Count(1);
+      const T* gt_boxes_ptr = gt_boxes_blob->dptr<T>() + im_index * gt_boxes_blob->shape().Count(1);
+      const T* bbox_blob_ptr = bbox_blob->dptr<T>() + im_index * bbox_blob->shape().Count(1);
+
+      CoordinateTransformGpu<<<BlocksNum4ThreadsNum(box_num), kCudaThreadsNumPerBlock, 0,
+                               ctx.device_ctx->cuda_stream()>>>(
+          box_num, bbox_blob_ptr, anchor_boxes_size_ptr, box_mask_ptr,
+          BnInOp2Blob("pred_bbox")->mut_dptr<T>(), conf.layer_height(), conf.layer_width(),
+          conf.image_height(), conf.image_width(), layer_nbox);
+      CalcIouGpu<<<BlocksNum4ThreadsNum(box_num * gt_max_num), kCudaThreadsNumPerBlock, 0,
+                   ctx.device_ctx->cuda_stream()>>>(
+          box_num, BnInOp2Blob("pred_bbox")->dptr<T>(), gt_boxes_ptr,
+          BnInOp2Blob("overlaps")->mut_dptr<float>(), gt_max_num, gt_valid_num_ptr);
+      SetMaxOverlapsAndGtIndex<<<BlocksNum4ThreadsNum(box_num), kCudaThreadsNumPerBlock, 0,
+                                 ctx.device_ctx->cuda_stream()>>>(
+          box_num, gt_valid_num_ptr, gt_max_num, BnInOp2Blob("overlaps")->dptr<float>(),
+          BnInOp2Blob("max_overlaps")->mut_dptr<float>(),
+          BnInOp2Blob("max_overlaps_gt_indices")->mut_dptr<int32_t>(), conf.ignore_thresh(),
+          conf.truth_thresh());
+      CalcGtNearestAnchorSize<<<BlocksNum4ThreadsNum(gt_max_num), kCudaThreadsNumPerBlock, 0,
+                                ctx.device_ctx->cuda_stream()>>>(
+          gt_valid_num_ptr, gt_boxes_ptr, anchor_boxes_size_ptr, box_mask_ptr,
+          BnInOp2Blob("max_overlaps_gt_indices")->mut_dptr<int32_t>(), anchor_boxes_size_num,
+          layer_nbox, conf.layer_height(), conf.layer_width(), layer_nbox, conf.image_height(),
+          conf.image_width());
+      int32_t* pos_inds_ptr = BnInOp2Blob("pos_inds")->mut_dptr<int32_t>() + im_index *  BnInOp2Blob("pos_inds")->shape().Count(1);
+      int32_t* neg_inds_ptr = BnInOp2Blob("neg_inds")->mut_dptr<int32_t>() + im_index *  BnInOp2Blob("neg_inds")->shape().Count(1);
+      int32_t* valid_num_ptr = BnInOp2Blob("valid_num")->mut_dptr<int32_t>() + im_index *  BnInOp2Blob("valid_num")->shape().Count(1);
+      
+      SelectSamples<<<1, 1, 0, ctx.device_ctx->cuda_stream()>>>(
+          BnInOp2Blob("max_overlaps_gt_indices")->dptr<int32_t>(), pos_inds_ptr,
+          neg_inds_ptr,
+          valid_num_ptr, box_num);
+      CalcBboxLoss<<<BlocksNum4ThreadsNum(gt_max_num), kCudaThreadsNumPerBlock, 0,
+                     ctx.device_ctx->cuda_stream()>>>(
+          box_num, bbox_blob_ptr, gt_boxes_ptr,
+          BnInOp2Blob("gt_labels")->dptr<int32_t>()+ im_index * BnInOp2Blob("gt_labels")->shape().Count(1), pos_inds_ptr,
+          valid_num_ptr,
+          BnInOp2Blob("max_overlaps_gt_indices")->dptr<int32_t>(), anchor_boxes_size_ptr,
+          box_mask_ptr, BnInOp2Blob("bbox_loc_diff")->mut_dptr<T>() + im_index * BnInOp2Blob("bbox_loc_diff")->shape().Count(1),
+          BnInOp2Blob("pos_cls_label")->mut_dptr<int32_t>() + im_index * BnInOp2Blob("pos_cls_label")->shape().Count(1), layer_nbox,
+          conf.layer_height(), conf.layer_width(), conf.image_height(), conf.image_width());
+    }
   }
 };
 
