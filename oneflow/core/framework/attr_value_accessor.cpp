@@ -43,6 +43,6 @@ void AttrValAccessor<Shape>::SetAttr(const Shape& cpp_val, UserOpAttrVal* attr_v
 OF_PP_FOR_EACH_TUPLE(LIST_ATTR_SEQ_ENTRY, LIST_ATTR_SEQ)
 
 #undef LIST_ATTR_SEQ_ENTRY
-}
+}  // namespace user_op
 
 }  // namespace oneflow
