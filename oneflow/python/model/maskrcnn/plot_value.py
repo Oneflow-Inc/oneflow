@@ -67,9 +67,12 @@ def plot_many_by_legend(df_dict):
             if (
                 legend not in legend_set_sorted
                 and "note" in df
-                and df[df["legend"] == legend]["note"].size is 0
+                and df[df["legend"] == legend]["note"].isnull().all()
             ):
                 legend_set_unsored.append(legend)
+            else:
+                if legend not in legend_set_sorted:
+                    print("skipping legend: {}".format(legend))
 
     limit, rate = get_limit_and_rate(list(df_dict.values()))
     limit, rate = 506, 1
