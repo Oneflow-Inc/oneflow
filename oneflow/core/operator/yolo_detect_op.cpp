@@ -1,4 +1,5 @@
 #include "oneflow/core/operator/operator.h"
+#include "oneflow/core/kernel/yolo_kernel_util.cuh"
 
 namespace oneflow {
 
@@ -18,6 +19,7 @@ class YoloDetectOp final : public Operator {
     EnrollOutputBn("valid_num");
     EnrollTmpBn("select_inds");
     EnrollTmpBn("anchor_boxes_size_tmp");
+    EnrollTmpBn("temp_storage");
   }
   const PbMessage& GetCustomizedConf() const override { return op_conf().yolo_detect_conf(); }
 
@@ -63,6 +65,18 @@ class YoloDetectOp final : public Operator {
     anchor_boxes_size_tmp_blob_desc->set_data_type(DataType::kInt32);
     anchor_boxes_size_tmp_blob_desc->mut_shape() =
         Shape({op_conf().yolo_detect_conf().anchor_boxes_size_size() * 2});
+
+    // fw_buf: temp_storage
+    BlobDesc* temp_storage = GetBlobDesc4BnInOp("temp_storage");
+    int32_t box_num = num_boxes;
+    int32_t probs_num = probs_blob_desc->shape().At(2);
+    float prob_thresh = op_conf().yolo_detect_conf().prob_thresh();
+
+    temp_storage->mut_shape() = Shape(
+        {static_cast<int64_t>(InferTempStorageForCUBYoloDetect(box_num, probs_num, prob_thresh))});
+    // temp_storage->mut_shape() = Shape({1000});
+    temp_storage->set_data_type(DataType::kChar);
+
     return Maybe<void>::Ok();
   }
 

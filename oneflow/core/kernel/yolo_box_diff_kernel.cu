@@ -1,5 +1,6 @@
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/kernel/kernel_util.h"
+#include "oneflow/core/kernel/yolo_kernel_util.cuh"
 
 namespace oneflow {
 
@@ -135,22 +136,22 @@ __global__ void CalcGtNearestAnchorSize(const int32_t* gt_valid_num_ptr, const T
   }
 }
 
-__global__ void SelectSamples(const int32_t* max_overlaps_gt_indices_ptr, int32_t* pos_inds_ptr,
-                              int32_t* neg_inds_ptr, int32_t* valid_num_ptr,
-                              const int32_t box_num) {
-  int32_t pos = 0;
-  int32_t neg = 0;
-  FOR_RANGE(int32_t, j, 0, box_num) {
-    if (max_overlaps_gt_indices_ptr[j] >= 0) {
-      pos_inds_ptr[pos++] = j;
-    } else if (max_overlaps_gt_indices_ptr[j] == -1) {
-      neg_inds_ptr[neg++] = j;
-    }
-  }
-  // valid num
-  valid_num_ptr[0] = pos;
-  valid_num_ptr[1] = neg;
-}
+//__global__ void SelectSamples(const int32_t* max_overlaps_gt_indices_ptr, int32_t* pos_inds_ptr,
+//                              int32_t* neg_inds_ptr, int32_t* valid_num_ptr,
+//                              const int32_t box_num) {
+//  int32_t pos = 0;
+//  int32_t neg = 0;
+//  FOR_RANGE(int32_t, j, 0, box_num) {
+//    if (max_overlaps_gt_indices_ptr[j] >= 0) {
+//      pos_inds_ptr[pos++] = j;
+//    } else if (max_overlaps_gt_indices_ptr[j] == -1) {
+//      neg_inds_ptr[neg++] = j;
+//    }
+//  }
+//  // valid num
+//  valid_num_ptr[0] = pos;
+//  valid_num_ptr[1] = neg;
+//}
 
 template<typename T>
 __global__ void CalcBboxLoss(const int32_t box_num, const T* bbox_ptr, const T* gt_boxes_ptr,
@@ -224,7 +225,8 @@ class YoloBoxDiffKernel final : public KernelIf<DeviceType::kGPU> {
     }
     FOR_RANGE(int32_t, im_index, 0, bbox_blob->shape().At(0)) {
       // const size_t gt_valid_num = gt_boxes_blob->dim1_valid_num(im_index);
-      const int32_t* gt_valid_num_ptr = gt_valid_num_blob->dptr<int32_t>() + im_index * gt_valid_num_blob->shape().Count(1);
+      const int32_t* gt_valid_num_ptr =
+          gt_valid_num_blob->dptr<int32_t>() + im_index * gt_valid_num_blob->shape().Count(1);
       const T* gt_boxes_ptr = gt_boxes_blob->dptr<T>() + im_index * gt_boxes_blob->shape().Count(1);
       const T* bbox_blob_ptr = bbox_blob->dptr<T>() + im_index * bbox_blob->shape().Count(1);
 
@@ -249,23 +251,37 @@ class YoloBoxDiffKernel final : public KernelIf<DeviceType::kGPU> {
           BnInOp2Blob("max_overlaps_gt_indices")->mut_dptr<int32_t>(), anchor_boxes_size_num,
           layer_nbox, conf.layer_height(), conf.layer_width(), layer_nbox, conf.image_height(),
           conf.image_width());
-      int32_t* pos_inds_ptr = BnInOp2Blob("pos_inds")->mut_dptr<int32_t>() + im_index *  BnInOp2Blob("pos_inds")->shape().Count(1);
-      int32_t* neg_inds_ptr = BnInOp2Blob("neg_inds")->mut_dptr<int32_t>() + im_index *  BnInOp2Blob("neg_inds")->shape().Count(1);
-      int32_t* valid_num_ptr = BnInOp2Blob("valid_num")->mut_dptr<int32_t>() + im_index *  BnInOp2Blob("valid_num")->shape().Count(1);
-      
-      SelectSamples<<<1, 1, 0, ctx.device_ctx->cuda_stream()>>>(
-          BnInOp2Blob("max_overlaps_gt_indices")->dptr<int32_t>(), pos_inds_ptr,
-          neg_inds_ptr,
-          valid_num_ptr, box_num);
+      int32_t* pos_inds_ptr = BnInOp2Blob("pos_inds")->mut_dptr<int32_t>()
+                              + im_index * BnInOp2Blob("pos_inds")->shape().Count(1);
+      int32_t* neg_inds_ptr = BnInOp2Blob("neg_inds")->mut_dptr<int32_t>()
+                              + im_index * BnInOp2Blob("neg_inds")->shape().Count(1);
+      int32_t* valid_num_ptr = BnInOp2Blob("valid_num")->mut_dptr<int32_t>()
+                               + im_index * BnInOp2Blob("valid_num")->shape().Count(1);
+
+      // SelectSamples<<<1, 1, 0, ctx.device_ctx->cuda_stream()>>>(
+      //    BnInOp2Blob("max_overlaps_gt_indices")->dptr<int32_t>(), pos_inds_ptr,
+      //    neg_inds_ptr,
+      //    valid_num_ptr, box_num);
+      Blob* temp_storage_blob = BnInOp2Blob("temp_storage");
+      size_t temp_storage_bytes = temp_storage_blob->shape().elem_cnt();
+      SelectSamples(ctx.device_ctx->cuda_stream(),
+                    BnInOp2Blob("max_overlaps_gt_indices")->dptr<int32_t>(),
+                    temp_storage_blob->mut_dptr<char>(), pos_inds_ptr, neg_inds_ptr, valid_num_ptr,
+                    temp_storage_bytes, box_num);
+
       CalcBboxLoss<<<BlocksNum4ThreadsNum(gt_max_num), kCudaThreadsNumPerBlock, 0,
                      ctx.device_ctx->cuda_stream()>>>(
           box_num, bbox_blob_ptr, gt_boxes_ptr,
-          BnInOp2Blob("gt_labels")->dptr<int32_t>()+ im_index * BnInOp2Blob("gt_labels")->shape().Count(1), pos_inds_ptr,
-          valid_num_ptr,
-          BnInOp2Blob("max_overlaps_gt_indices")->dptr<int32_t>(), anchor_boxes_size_ptr,
-          box_mask_ptr, BnInOp2Blob("bbox_loc_diff")->mut_dptr<T>() + im_index * BnInOp2Blob("bbox_loc_diff")->shape().Count(1),
-          BnInOp2Blob("pos_cls_label")->mut_dptr<int32_t>() + im_index * BnInOp2Blob("pos_cls_label")->shape().Count(1), layer_nbox,
-          conf.layer_height(), conf.layer_width(), conf.image_height(), conf.image_width());
+          BnInOp2Blob("gt_labels")->dptr<int32_t>()
+              + im_index * BnInOp2Blob("gt_labels")->shape().Count(1),
+          pos_inds_ptr, valid_num_ptr, BnInOp2Blob("max_overlaps_gt_indices")->dptr<int32_t>(),
+          anchor_boxes_size_ptr, box_mask_ptr,
+          BnInOp2Blob("bbox_loc_diff")->mut_dptr<T>()
+              + im_index * BnInOp2Blob("bbox_loc_diff")->shape().Count(1),
+          BnInOp2Blob("pos_cls_label")->mut_dptr<int32_t>()
+              + im_index * BnInOp2Blob("pos_cls_label")->shape().Count(1),
+          layer_nbox, conf.layer_height(), conf.layer_width(), conf.image_height(),
+          conf.image_width());
     }
   }
 };

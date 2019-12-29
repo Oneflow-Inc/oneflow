@@ -1,5 +1,5 @@
 #include "oneflow/core/operator/operator.h"
-
+#include "oneflow/core/kernel/yolo_kernel_util.cuh"
 namespace oneflow {
 
 class YoloBoxDiffOp final : public Operator {
@@ -28,6 +28,7 @@ class YoloBoxDiffOp final : public Operator {
     EnrollTmpBn("overlaps");
     EnrollTmpBn("max_overlaps");
     EnrollTmpBn("max_overlaps_gt_indices");
+    EnrollTmpBn("temp_storage");
   }
   const PbMessage& GetCustomizedConf() const override { return op_conf().yolo_box_diff_conf(); }
 
@@ -105,6 +106,14 @@ class YoloBoxDiffOp final : public Operator {
     BlobDesc* max_overlaps_gt_indices_blob_desc = GetBlobDesc4BnInOp("max_overlaps_gt_indices");
     max_overlaps_gt_indices_blob_desc->mut_shape() = Shape({num_boxes});
     max_overlaps_gt_indices_blob_desc->set_data_type(DataType::kInt32);
+
+    // fw_buf: temp_storage
+    BlobDesc* temp_storage = GetBlobDesc4BnInOp("temp_storage");
+    int32_t box_num = num_boxes;
+    temp_storage->mut_shape() =
+        Shape({static_cast<int64_t>(InferTempStorageForCUBYoloBoxDiff(box_num))});
+    temp_storage->set_data_type(DataType::kChar);
+
     return Maybe<void>::Ok();
   }
 

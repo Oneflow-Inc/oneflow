@@ -1,23 +1,24 @@
 
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/kernel/kernel_util.h"
+#include "oneflow/core/kernel/yolo_kernel_util.cuh"
 
 namespace oneflow {
 
 namespace {
 
-template<typename T>
-__global__ void SelectOutIndexes(const int32_t box_num, const T* probs_ptr,
-                                 int32_t* select_inds_ptr, int32_t* valid_num_ptr,
-                                 const int32_t probs_num, const float prob_thresh,
-                                 const int32_t max_out_boxes) {
-  int32_t index_num;
-  FOR_RANGE(int32_t, i, 0, box_num) {
-    if (probs_ptr[i * probs_num + 0] > prob_thresh) { select_inds_ptr[index_num++] = i; }
-  }
-  valid_num_ptr[0] = index_num;
-  assert(valid_num_ptr[0] <= max_out_boxes);
-}
+// template<typename T>
+//__global__ void SelectOutIndexes(const int32_t box_num, const T* probs_ptr,
+//                                 int32_t* select_inds_ptr, int32_t* valid_num_ptr,
+//                                 const int32_t probs_num, const float prob_thresh,
+//                                 const int32_t max_out_boxes) {
+//  int32_t index_num;
+//  FOR_RANGE(int32_t, i, 0, box_num) {
+//    if (probs_ptr[i * probs_num + 0] > prob_thresh) { select_inds_ptr[index_num++] = i; }
+//  }
+//  valid_num_ptr[0] = index_num;
+//  assert(valid_num_ptr[0] <= max_out_boxes);
+//}
 
 template<typename T>
 __global__ void SetOutProbs(const int32_t probs_num, const T* probs_ptr,
@@ -107,40 +108,56 @@ class YoloDetectGpuKernel final : public KernelIf<DeviceType::kGPU> {
     const int32_t box_num = bbox_blob->shape().At(1);
     const int32_t probs_num = conf.num_classes() + 1;
 
+    Blob* temp_storage_blob = BnInOp2Blob("temp_storage");
+    size_t temp_storage_bytes = temp_storage_blob->shape().elem_cnt();
+
     int32_t max_out_boxes = box_num;
     if (conf.has_max_out_boxes()) { max_out_boxes = conf.max_out_boxes(); }
 
     FOR_RANGE(int32_t, im_index, 0, bbox_blob->shape().At(0)) {
-      const T* probs_ptr = BnInOp2Blob("probs")->dptr<T>() + im_index * BnInOp2Blob("probs")->shape().Count(1);
-      const T* bbox_ptr = BnInOp2Blob("bbox")->dptr<T>() + im_index * BnInOp2Blob("bbox")->shape().Count(1);
-      T* out_bbox_ptr = BnInOp2Blob("out_bbox")->mut_dptr<T>() + im_index * BnInOp2Blob("out_bbox")->shape().Count(1);
-      T* out_probs_ptr = BnInOp2Blob("out_probs")->mut_dptr<T>() + im_index * BnInOp2Blob("out_probs")->shape().Count(1);
-      SelectOutIndexes<<<1, 1, 0, ctx.device_ctx->cuda_stream()>>>(
-          box_num, probs_ptr,
-          BnInOp2Blob("select_inds")->mut_dptr<int32_t>(),
-          BnInOp2Blob("valid_num")->mut_dptr<int32_t>() + im_index * BnInOp2Blob("valid_num")->shape().Count(1), probs_num, conf.prob_thresh(),
-          max_out_boxes);
+      const T* probs_ptr =
+          BnInOp2Blob("probs")->dptr<T>() + im_index * BnInOp2Blob("probs")->shape().Count(1);
+      const T* bbox_ptr =
+          BnInOp2Blob("bbox")->dptr<T>() + im_index * BnInOp2Blob("bbox")->shape().Count(1);
+      T* out_bbox_ptr = BnInOp2Blob("out_bbox")->mut_dptr<T>()
+                        + im_index * BnInOp2Blob("out_bbox")->shape().Count(1);
+      T* out_probs_ptr = BnInOp2Blob("out_probs")->mut_dptr<T>()
+                         + im_index * BnInOp2Blob("out_probs")->shape().Count(1);
+      // SelectOutIndexes<<<1, 1, 0, ctx.device_ctx->cuda_stream()>>>(
+      //    box_num, probs_ptr,
+      //    BnInOp2Blob("select_inds")->mut_dptr<int32_t>(),
+      //    BnInOp2Blob("valid_num")->mut_dptr<int32_t>() + im_index *
+      //    BnInOp2Blob("valid_num")->shape().Count(1), probs_num, conf.prob_thresh(),
+      //    max_out_boxes);
+      CudaCheck(SelectOutIndexes(ctx.device_ctx->cuda_stream(), probs_ptr,
+                                 temp_storage_blob->mut_dptr<char>(),
+                                 BnInOp2Blob("select_inds")->mut_dptr<int32_t>(),
+                                 BnInOp2Blob("valid_num")->mut_dptr<int32_t>()
+                                     + im_index * BnInOp2Blob("valid_num")->shape().Count(1),
+                                 temp_storage_bytes, box_num, probs_num, conf.prob_thresh()));
       SetOutProbs<<<BlocksNum4ThreadsNum(box_num * probs_num), kCudaThreadsNumPerBlock, 0,
                     ctx.device_ctx->cuda_stream()>>>(
-          probs_num, probs_ptr,
-          BnInOp2Blob("select_inds")->dptr<int32_t>(),
-          BnInOp2Blob("valid_num")->dptr<int32_t>() + im_index * BnInOp2Blob("valid_num")->shape().Count(1),
+          probs_num, probs_ptr, BnInOp2Blob("select_inds")->dptr<int32_t>(),
+          BnInOp2Blob("valid_num")->dptr<int32_t>()
+              + im_index * BnInOp2Blob("valid_num")->shape().Count(1),
           out_probs_ptr, conf.prob_thresh());
       SetOutBoxes<<<BlocksNum4ThreadsNum(box_num), kCudaThreadsNumPerBlock, 0,
                     ctx.device_ctx->cuda_stream()>>>(
           bbox_ptr,
-          BnInOp2Blob("origin_image_info")->dptr<int32_t>() + im_index * BnInOp2Blob("origin_image_info")->shape().Count(1),
+          BnInOp2Blob("origin_image_info")->dptr<int32_t>()
+              + im_index * BnInOp2Blob("origin_image_info")->shape().Count(1),
           BnInOp2Blob("select_inds")->dptr<int32_t>(),
-          BnInOp2Blob("valid_num")->dptr<int32_t>() + im_index * BnInOp2Blob("valid_num")->shape().Count(1), anchor_boxes_size_ptr,
-          out_bbox_ptr, conf.layer_height(), conf.layer_width(),
-          layer_nbox, conf.image_height(), conf.image_width());
+          BnInOp2Blob("valid_num")->dptr<int32_t>()
+              + im_index * BnInOp2Blob("valid_num")->shape().Count(1),
+          anchor_boxes_size_ptr, out_bbox_ptr, conf.layer_height(), conf.layer_width(), layer_nbox,
+          conf.image_height(), conf.image_width());
     }
   }
 };
 
 REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kYoloDetectConf, DeviceType::kGPU, float,
                                       YoloDetectGpuKernel<float>)
-REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kYoloDetectConf, DeviceType::kGPU, double,
-                                      YoloDetectGpuKernel<double>)
+// REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kYoloDetectConf, DeviceType::kGPU, double,
+//                                      YoloDetectGpuKernel<double>)
 
 }  // namespace oneflow
