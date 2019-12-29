@@ -81,7 +81,7 @@ def _batch_normalization(
         trainable=trainable,
         tick=inputs,
     )
-    return flow.batch_normalization2(inputs,
+    return flow.layers.batch_normalization2(inputs,
                                     moving_mean,
                                     moving_variance,
                                     beta=beta,
