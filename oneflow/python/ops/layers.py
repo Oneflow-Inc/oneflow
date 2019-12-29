@@ -360,3 +360,59 @@ def batch_normalization(
     setattr(out_lbi, "op_name", op_conf.name)
     setattr(out_lbi, "blob_name", "out")
     return remote_blob_util.RemoteBlob(out_lbi)
+
+
+@oneflow_export("layers.batch_normalization2")
+def batch_normalization2(
+        inputs,
+        moving_mean,
+        moving_variance,
+        beta=None,
+        gamma=None,
+        axis=-1,
+        momentum=0.99,
+        epsilon=0.001,
+        trainable=False,
+        name=None,
+):
+    assert axis >= -len(inputs.shape) and axis < len(inputs.shape)
+    params_shape = [inputs.shape[axis]]
+
+    if name is None:
+        name = id_util.UniqueStr("BatchNorm_")
+
+    center = beta is not None
+    scale = gamma is not None
+    op_conf = op_conf_util.OperatorConf()
+    setattr(op_conf, "name", name)
+    setattr(op_conf.normalization_conf, "in", inputs.logical_blob_name)
+    setattr(op_conf.normalization_conf, "out", "out")
+    setattr(op_conf.normalization_conf, "axis", axis)
+    setattr(op_conf.normalization_conf, "momentum", momentum)
+    setattr(op_conf.normalization_conf, "epsilon", epsilon)
+    setattr(op_conf.normalization_conf, "center", center)
+    setattr(op_conf.normalization_conf, "scale", scale)
+    setattr(
+        op_conf.normalization_conf, "moving_mean", moving_mean.logical_blob_name
+    )
+    setattr(
+        op_conf.normalization_conf,
+        "moving_variance",
+        moving_variance.logical_blob_name,
+    )
+    if beta:
+        setattr(op_conf.normalization_conf, "beta", beta.logical_blob_name)
+    if gamma:
+        setattr(op_conf.normalization_conf, "gamma", gamma.logical_blob_name)
+    if trainable:
+        setattr(op_conf.normalization_conf, "mean", "mean")
+        setattr(op_conf.normalization_conf, "inv_variance", "inv_variance")
+        setattr(op_conf.normalization_conf, "is_training", True)
+    else:
+        setattr(op_conf.normalization_conf, "is_training", False)
+
+    compile_context.CurJobAddOp(op_conf)
+    out_lbi = logical_blob_id_util.LogicalBlobId()
+    setattr(out_lbi, "op_name", op_conf.name)
+    setattr(out_lbi, "blob_name", "out")
+    return remote_blob_util.RemoteBlob(out_lbi)

@@ -39,9 +39,6 @@ def _batch_normalization(
     assert axis >= -len(inputs.shape) and axis < len(inputs.shape)
     params_shape = [inputs.shape[axis]]
 
-    if name is None:
-        name = id_util.UniqueStr("BatchNorm_")
-
     if center:
         beta = flow.get_variable(
             name=name + "-beta",
@@ -49,7 +46,6 @@ def _batch_normalization(
             dtype=inputs.dtype,
             initializer=beta_initializer or flow.zeros_initializer(),
             trainable=trainable,
-            distribute=distribute_util.broadcast(),
         )
 
         beta = flow.identity(beta)
@@ -63,7 +59,6 @@ def _batch_normalization(
             dtype=inputs.dtype,
             initializer=gamma_initializer or flow.ones_initializer(),
             trainable=trainable,
-            distribute=distribute_util.broadcast(),
         )
         gamma = flow.identity(gamma)
         num_piece_in_batch = 2
@@ -75,7 +70,6 @@ def _batch_normalization(
         dtype=inputs.dtype,
         initializer=moving_mean_initializer or flow.zeros_initializer(),
         trainable=trainable,
-        distribute=distribute_util.broadcast(),
         tick=inputs,
     )
 
@@ -85,43 +79,17 @@ def _batch_normalization(
         dtype=inputs.dtype,
         initializer=moving_variance_initializer or flow.ones_initializer(),
         trainable=trainable,
-        distribute=distribute_util.broadcast(),
         tick=inputs,
     )
-
-    op_conf = op_conf_util.OperatorConf()
-    setattr(op_conf, "name", name)
-    setattr(op_conf.normalization_conf, "in", inputs.logical_blob_name)
-    setattr(op_conf.normalization_conf, "out", "out")
-    setattr(op_conf.normalization_conf, "axis", axis)
-    setattr(op_conf.normalization_conf, "momentum", momentum)
-    setattr(op_conf.normalization_conf, "epsilon", epsilon)
-    setattr(op_conf.normalization_conf, "center", center)
-    setattr(op_conf.normalization_conf, "scale", scale)
-    setattr(
-        op_conf.normalization_conf, "moving_mean", moving_mean.logical_blob_name
-    )
-    setattr(
-        op_conf.normalization_conf,
-        "moving_variance",
-        moving_variance.logical_blob_name,
-    )
-    if beta:
-        setattr(op_conf.normalization_conf, "beta", beta.logical_blob_name)
-    if gamma:
-        setattr(op_conf.normalization_conf, "gamma", gamma.logical_blob_name)
-    if trainable:
-        setattr(op_conf.normalization_conf, "mean", "mean")
-        setattr(op_conf.normalization_conf, "inv_variance", "inv_variance")
-        setattr(op_conf.normalization_conf, "is_training", True)
-    else:
-        setattr(op_conf.normalization_conf, "is_training", False)
-
-    compile_context.CurJobAddOp(op_conf)
-    out_lbi = logical_blob_id_util.LogicalBlobId()
-    setattr(out_lbi, "op_name", op_conf.name)
-    setattr(out_lbi, "blob_name", "out")
-    return remote_blob_util.RemoteBlob(out_lbi)
+    return flow.batch_normalization2(inputs,
+                                    moving_mean,
+                                    moving_variance,
+                                    beta=beta,
+                                    gamma=gamma,
+                                    axis=axis,
+                                    momentum=momentum,
+                                    epsilon=epsilon,
+                                    trainable=trainable)
 
 
 def _conv2d_layer(
