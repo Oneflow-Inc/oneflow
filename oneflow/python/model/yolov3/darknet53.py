@@ -52,6 +52,10 @@ def _batch_normalization(
             distribute=distribute_util.broadcast(),
         )
 
+        beta = flow.identity(beta)
+        num_piece_in_batch = 2
+        beta = flow.repeat(beta, num_piece_in_batch)
+
     if scale:
         gamma = flow.get_variable(
             name=name + "-gamma",
@@ -61,6 +65,9 @@ def _batch_normalization(
             trainable=trainable,
             distribute=distribute_util.broadcast(),
         )
+        gamma = flow.identity(gamma)
+        num_piece_in_batch = 2
+        gamma = flow.repeat(gamma, num_piece_in_batch)
 
     moving_mean = flow.get_variable(
         name=name + "-moving_mean",
@@ -69,6 +76,7 @@ def _batch_normalization(
         initializer=moving_mean_initializer or flow.zeros_initializer(),
         trainable=trainable,
         distribute=distribute_util.broadcast(),
+        tick=inputs,
     )
 
     moving_variance = flow.get_variable(
@@ -78,6 +86,7 @@ def _batch_normalization(
         initializer=moving_variance_initializer or flow.ones_initializer(),
         trainable=trainable,
         distribute=distribute_util.broadcast(),
+        tick=inputs,
     )
 
     op_conf = op_conf_util.OperatorConf()
@@ -193,8 +202,7 @@ def _upsample(input, name=None):
 
 def conv_unit(data, num_filter=1, kernel=(1, 1), stride=(1, 1), pad="same", data_format="NCHW", use_bias=False, trainable=True, prefix=''):
     conv = _conv2d_layer(name=prefix + '-conv', input=data, filters=num_filter, kernel_size=kernel, strides=stride, padding='same', data_format=data_format, dilation_rate=1, activation=None, use_bias=use_bias, trainable=trainable)
-    #bn = _batch_norm(conv, axis=1, momentum=0.99, epsilon = 1.01e-5, trainable=trainable, name=prefix + '-bn')
-    bn = conv
+    bn = _batch_norm(conv, axis=1, momentum=0.99, epsilon = 1.01e-5, trainable=trainable, name=prefix + '-bn')
     leaky_relu = _leaky_relu(bn, alpha=0.1, name = prefix + '-leakyRelu')
     return leaky_relu
 

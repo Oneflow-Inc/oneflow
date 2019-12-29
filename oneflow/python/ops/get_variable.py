@@ -18,6 +18,7 @@ def get_variable(
     trainable=None,
     model_name=None,
     random_seed=None,
+    tick=None,
     distribute=distribute_util.broadcast(),
 ):
     assert isinstance(name, str)
@@ -42,6 +43,9 @@ def get_variable(
             print("{} not found, will be initialized".format(file_path))
         if initializer is not None:
             op_conf.variable_conf.initializer.CopyFrom(initializer)
+
+    if tick is not None:
+        op_conf.variable_conf.tick = tick.logical_blob_name
 
     if trainable is not None:
         op_conf.trainable = trainable
