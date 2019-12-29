@@ -103,7 +103,6 @@ set(oneflow_third_party_dependencies
   cocoapi_copy_libs_to_destination
   half_copy_headers_to_destination
   json_copy_headers_to_destination
-  tensorflow_copy_libs_to_destination
 )
 
 include_directories(
@@ -168,6 +167,7 @@ if(BUILD_RDMA)
 endif()
 
 if(WITH_XLA)
+  list(APPEND oneflow_third_party_dependencies tensorflow_copy_libs_to_destination)
   list(APPEND oneflow_third_party_libs ${TENSORFLOW_XLA_LIBRARIES})
 endif()
 
