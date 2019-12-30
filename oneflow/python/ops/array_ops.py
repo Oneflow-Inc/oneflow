@@ -444,12 +444,27 @@ def random_like(like, seed=None, name=None):
     return remote_blob_util.RemoteBlob(out_lbi)
 
 @oneflow_export("identity")
-def identity(x, name=None):
+def identity(x, skip_grad=False, name=None):
     if name is None: name = id_util.UniqueStr("Identity_")
     op_conf = op_conf_util.OperatorConf()
     op_conf.name = name
     setattr(op_conf.identity_conf, "in", x.logical_blob_name)
+    op_conf.identity_conf.skip_grad = skip_grad
     op_conf.identity_conf.out = "out"
+    compile_context.CurJobAddOp(op_conf)
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = "out"
+    return remote_blob_util.RemoteBlob(lbi)
+
+
+@oneflow_export("identity1")
+def identity1(x, name=None):
+    if name is None: name = id_util.UniqueStr("Identity1_")
+    op_conf = op_conf_util.OperatorConf()
+    op_conf.name = name
+    setattr(op_conf.identity1_conf, "in", x.logical_blob_name)
+    op_conf.identity1_conf.out = "out"
     compile_context.CurJobAddOp(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
     lbi.op_name = op_conf.name
