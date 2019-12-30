@@ -176,17 +176,7 @@ int64_t NewAreaId();
   }
 
 DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(UnpackForward);
-
-class PackForwardLogicalNode final : public ForwardLogicalNode {
-  LOGICAL_NODE_WITH_NEW_AREA_ID_BOILERPLATE(PackForward)
-
- public:
-  const UnpackForwardLogicalNode* related_unpack() const { return related_unpack_; }
-  void set_related_unpack(UnpackForwardLogicalNode* val) { related_unpack_ = val; }
-
- private:
-  UnpackForwardLogicalNode* related_unpack_;
-};
+DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(PackForward);
 
 #define DECLARE_NAIVE_LOGICAL_NODE(name)  \
   class name final : public LogicalNode { \

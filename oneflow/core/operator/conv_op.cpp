@@ -295,11 +295,16 @@ template<int32_t NDims>
 Maybe<void> ConvOp<NDims>::GetSbpSignatures(
     const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
     SbpSignatureList* sbp_sig_list) const {
-  SbpSignatureBuilder()
-      .Split("in", 0)
-      .Broadcast({"weight", "bias"})
-      .Split("out", 0)
-      .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+  if (GetValFromCustomizedConf<bool>("use_bias")) {
+    SbpSignatureBuilder()
+        .Split("in", 0)
+        .Broadcast({"weight", "bias"})
+        .Split("out", 0)
+        .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+  } else {
+    SbpSignatureBuilder().Split("in", 0).Broadcast("weight").Split("out", 0).Build(
+        sbp_sig_list->mutable_sbp_signature()->Add());
+  }
   return Maybe<void>::Ok();
 }
 

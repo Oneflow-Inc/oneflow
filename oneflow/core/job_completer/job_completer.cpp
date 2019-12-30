@@ -16,6 +16,8 @@
 #include "oneflow/core/job_completer/add_lbi_diff_watcher.h"
 #include "oneflow/core/framework/config_def.h"
 
+#include "oneflow/core/job_completer/xrt_compilation.h"
+
 namespace oneflow {
 
 namespace {
@@ -202,7 +204,7 @@ void AddIdentityOpAndReconnect(
       std::string lbn_check = GenLogicalBlobName(lbi);
       std::string identity_out_lbn = GenLogicalBlobName(old_lbi2new_lbi.at(lbi));
       for (const std::string& ibn : edge->lbi2ibns().at(lbi)) {
-        ReplaceStrValInPbFdOrPbRpf(op_type_conf, ibn, lbn_check, identity_out_lbn);
+        ReplaceInputLbnInOpCustomizedConf(op_type_conf, ibn, lbn_check, identity_out_lbn);
         const auto& sbp_parallel = edge->dst_node()->SbpParallel4BnInOp(ibn);
         const auto& sbp_iter = old_lbi2sbp_parallel.find(lbi);
         if (sbp_iter == old_lbi2sbp_parallel.end()) {
@@ -356,6 +358,15 @@ void JobCompleter::Complete(Job* job) const {
   WithOpGraphAndMutJobBuilder(job, &AddGlobalOutputCriticalSections);
   WithOpGraphAndMutJobBuilder(job, &DumpLogicalBlobDescAndSbpSignature);
   WithOpGraphAndMutJobBuilder(job, &SetOpTimeShape7BatchAxisLbis);
+
+  if (XrtCompilationEnabled(GlobalJobDesc())) {
+#ifdef OF_WITH_XRT
+    WithOpGraphAndMutJob(job, &RebuildXrtCompiledJob);
+#else
+    LOG(WARNING) << "It will not use XLA or TensorRT since WITH_XLA or "
+                    "WITH_TENSORRT was not enabled when compiling the project.";
+#endif  // OF_WITH_XRT
+  }
   CheckOpGraph(OpGraph(*job));
 }
 

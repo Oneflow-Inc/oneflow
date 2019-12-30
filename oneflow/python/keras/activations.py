@@ -43,6 +43,20 @@ def gelu(x, name=None):
     return remote_blob_util.RemoteBlob(lbi)
 
 
+@oneflow_export('keras.activations.gelu_grad')
+def gelu_grad(x, dy):
+    op_conf = op_conf_util.OperatorConf()
+    op_conf.name = id_util.UniqueStr('GeluGrad_')
+    setattr(op_conf.gelu_grad_conf, 'x', x.logical_blob_name)
+    setattr(op_conf.gelu_grad_conf, 'dy', dy.logical_blob_name)
+    op_conf.gelu_grad_conf.dx = "dx"
+    compile_context.CurJobAddOp(op_conf)
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = "dx"
+    return remote_blob_util.RemoteBlob(lbi)
+
+
 @oneflow_export("keras.activations.tanh")
 def tanh(x, name=None):
     op_conf = op_conf_util.OperatorConf()
@@ -54,6 +68,20 @@ def tanh(x, name=None):
     lbi = logical_blob_id_util.LogicalBlobId()
     lbi.op_name = op_conf.name
     lbi.blob_name = "out"
+    return remote_blob_util.RemoteBlob(lbi)
+
+
+@oneflow_export('keras.activations.tanh_grad')
+def tanh_grad(y, dy):
+    op_conf = op_conf_util.OperatorConf()
+    op_conf.name = id_util.UniqueStr('TanhGrad_')
+    setattr(op_conf.tanh_grad_conf, 'y', y.logical_blob_name)
+    setattr(op_conf.tanh_grad_conf, 'dy', dy.logical_blob_name)
+    op_conf.tanh_grad_conf.dx = "dx"
+    compile_context.CurJobAddOp(op_conf)
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = "dx"
     return remote_blob_util.RemoteBlob(lbi)
 
 

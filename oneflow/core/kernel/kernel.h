@@ -62,7 +62,7 @@ class Kernel {
                                    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
     UNIMPLEMENTED();
   }
-  virtual bool IsStateless() const { return true; }
+  virtual bool IsStateless() const { return IsKernelLaunchSynchronized(); }
   virtual const PbMessage& GetCustomizedOpConf() const { UNIMPLEMENTED(); }
   virtual const PbMessage& GetCustomizedKernelConf() const { UNIMPLEMENTED(); }
   void CheckSameDim0ValidNum(const PbRpf<std::string>& bns,

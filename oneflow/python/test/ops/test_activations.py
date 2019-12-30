@@ -70,7 +70,6 @@ def compare_with_tensorflow(device_type, activation_type, shape):
         np.load(os.path.join(GetSavePath(), "x_diff.npy")), tf_x_diff.numpy(), rtol, atol
     )
 
-
 def test_activations(test_case):
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["gpu"]
