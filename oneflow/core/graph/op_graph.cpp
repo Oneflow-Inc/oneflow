@@ -453,8 +453,8 @@ void OpGraph::InferTimeShape() const {
       return op_node->GetInputBlobTimeShape(bn_in_op);
     };
     op_node->InitInputBlobFastestTimeShape();
-    op_node->op().InferOutputBlobTimeShapeIf(GetInputBlobTimeShape, &parallel_ctx,
-                                             op_node->mut_out_blob_time_shape());
+    CHECK_JUST(op_node->op().InferOutputBlobTimeShapeIf(GetInputBlobTimeShape, &parallel_ctx,
+                                                        op_node->mut_out_blob_time_shape()));
   });
 }
 

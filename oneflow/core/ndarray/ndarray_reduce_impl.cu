@@ -21,6 +21,14 @@ __global__ void MatrixColReduceBy1ThreadPerColumn(K num_elems, K num_cols, const
   }
 }
 
+template<typename T>
+struct WithAlign2 {
+  union {
+    T value;
+    int32_t padding;
+  };
+};
+
 template<template<typename> class R, typename T, typename K>
 __global__ void MatrixColReduceByWarpBlock(K num_elems, K num_cols, const T* in, T* out) {
   const K thread_col = threadIdx.x % kCudaWarpSize;
@@ -28,21 +36,21 @@ __global__ void MatrixColReduceByWarpBlock(K num_elems, K num_cols, const T* in,
   const K thread_dim_row = blockDim.x / kCudaWarpSize;
   const K num_valid_threads = thread_dim_row * num_cols;  // ASSERT: always <= num_elems
   const K col = blockIdx.x * kCudaWarpSize + thread_col;
-  __shared__ T partial_values[kCudaWarpSize * kCudaWarpSize];
+  __shared__ WithAlign2<T> partial_values[kCudaWarpSize * kCudaWarpSize];
   if (col < num_cols) {
     K index = thread_row * num_cols + col;
     T val = in[index];
     for (index += num_valid_threads; index < num_elems; index += num_valid_threads) {
       val = R<T>::Invoke(val, in[index]);
     }
-    partial_values[threadIdx.x] = val;
+    partial_values[threadIdx.x].value = val;
   }
   __syncthreads();
   if (col < num_cols && thread_row == 0) {
     int index = thread_col;
-    T val = partial_values[index];
+    T val = partial_values[index].value;
     for (index += kCudaWarpSize; index < blockDim.x; index += kCudaWarpSize) {
-      val = R<T>::Invoke(val, partial_values[index]);
+      val = R<T>::Invoke(val, partial_values[index].value);
     }
     out[col] = val;
   }
