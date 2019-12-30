@@ -125,6 +125,7 @@ class YoloBoxDiffOp final : public Operator {
         .Split("bbox", 0)
         .Split("gt_boxes", 0)
         .Split("gt_labels", 0)
+        .Split("gt_valid_num", 0)
         .Split("bbox_loc_diff", 0)
         .Split("pos_inds", 0)
         .Split("pos_cls_label", 0)
