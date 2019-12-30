@@ -114,7 +114,7 @@ def maskrcnn_train(cfg, image, image_size, gt_bbox, gt_segm, gt_label):
     #     blob_watcher=blob_watched, diff_blob_watcher=diff_blob_watched
     # ):
     cls_logit_list, bbox_pred_list = rpn_head.build(features)
-    rpn_bbox_loss, rpn_objectness_loss = rpn_loss.build(
+    rpn_bbox_loss, rpn_objectness_loss, total_sample_cnt = rpn_loss.build(
         anchors, image_size_list, gt_bbox_list, bbox_pred_list, cls_logit_list
     )
 
@@ -130,12 +130,12 @@ def maskrcnn_train(cfg, image, image_size, gt_bbox, gt_segm, gt_label):
     #     diff_blob_watcher=MakeWatcherCallback("backward"),
     # ):
     # Box Head
-    (box_loss, cls_loss, pos_proposal_list, pos_gt_indices_list) = box_head.build_train(
+    (box_loss, cls_loss, pos_proposal_list, pos_gt_indices_list, labels, total_pos_inds, bbox_targets, bbox_target, ) = box_head.build_train(
         proposals, gt_bbox_list, gt_label_list, features
     )
 
     # Mask Head
-    mask_loss = mask_head.build_train(
+    mask_loss, mask_pred, gt_segms = mask_head.build_train(
         pos_proposal_list, pos_gt_indices_list, gt_segm_list, gt_label_list, features
     )
 
@@ -145,6 +145,13 @@ def maskrcnn_train(cfg, image, image_size, gt_bbox, gt_segm, gt_label):
         "loss_box_reg": box_loss,
         "loss_classifier": cls_loss,
         "loss_mask": mask_loss,
+        "total_sample_cnt": total_sample_cnt,
+        "mask_pred": mask_pred,
+        "gt_segms": gt_segms,
+        "total_pos_inds": total_pos_inds,
+        "bbox_target": bbox_target,
+        "bbox_targets": bbox_targets,
+        "labels": labels,
     }
 
 
@@ -266,8 +273,10 @@ def train_net(config, image=None):
             data_loader("gt_labels"),
         )
         for outputs_per_rank in outputs:
+            # flow.losses.add_loss(outputs_per_rank["loss_rpn_box_reg"] + outputs_per_rank["loss_objectness"])
+            # flow.losses.add_loss(outputs_per_rank["loss_box_reg"] + outputs_per_rank["loss_classifier"] + outputs_per_rank["loss_mask"])
             for k, v in outputs_per_rank.items():
-                if k in loss_name_tup:
+                if k in loss_name_tup:# and k not in ["loss_mask"]:
                     flow.losses.add_loss(v)
 
     else:
@@ -347,7 +356,7 @@ def init_train_func(config, input_fake_image):
         @flow.function
         def train(
             image_blob=flow.input_blob_def(
-                shape=(2, 800, 1344, 3), dtype=flow.float32, is_dynamic=True
+                shape=(8, 800, 1344, 3), dtype=flow.float32, is_dynamic=True
             )
         ):
             set_train_config(config)
@@ -359,14 +368,14 @@ def init_train_func(config, input_fake_image):
 
         @flow.function
         def train():
-            set_train_config(config)
-            # model_update_conf = set_train_config(config)
-            # step_lr = make_lr("System-Train-TrainStep-train", model_update_conf, flow.config.train.get_primary_lr(), flow.config.train.get_secondary_lr())
+            # set_train_config(config)
+            model_update_conf = set_train_config(config)
+            step_lr = make_lr("System-Train-TrainStep-train", model_update_conf, flow.config.train.get_primary_lr(), flow.config.train.get_secondary_lr())
             outputs = train_net(config)
-            # if isinstance(outputs, (list, tuple)):
-            #     outputs[0].update(step_lr)
-            # else:
-            #     outputs.update(step_lr)
+            if isinstance(outputs, (list, tuple)):
+                outputs[0].update(step_lr)
+            else:
+                outputs.update(step_lr)
             return outputs
 
         return train
@@ -392,6 +401,7 @@ def print_metrics(m):
         "loss_classifier",
         "loss_mask",
         "total_pos_inds_elem_cnt",
+        "total_sample_cnt",
         "train_step",
         "lr",
         "lr2",
@@ -447,6 +457,38 @@ def add_metrics(metrics_df, iter=None, **kwargs):
             raise ValueError("not supported")
     return metrics_df
 
+def excerpt_ndarray(ndarray):
+    return "max: {} min: {} median: {} anynan: {} anyinf: {}".format(np.max(ndarray), np.min(ndarray), np.median(ndarray), np.any(np.isnan(ndarray)), np.any(np.isinf(ndarray)))
+
+def sigmoid(z):
+    return(1/(1+np.exp(-z)))
+def cross_entropy_loss(y_pred,target):
+    return -np.mean((target*np.log(y_pred)+(1-target)*np.log(1-y_pred)))
+
+def preprocess_outputs(outputs):
+    if isinstance(outputs, (list)):
+        for i, o in enumerate(outputs):
+            mask_pred = o.pop("mask_pred").ndarray()
+            gt_segms = o.pop("gt_segms").ndarray()
+
+            labels = o.pop("labels").ndarray()
+            total_pos_inds = o.pop("total_pos_inds").ndarray()
+            bbox_targets = o.pop("bbox_targets").ndarray()
+            bbox_target = o.pop("bbox_target").ndarray()
+            if i is not 0:
+                continue
+            # Y_output = sigmoid(mask_pred)
+            # E = cross_entropy_loss(Y_output,gt_segms)
+            # print(i, "E", E)
+            # print(i, "mask_pred", excerpt_ndarray(mask_pred))
+            print(i, "labels", labels.shape. labels)
+            print(i, "labels argwhere", np.argwhere(x!=0))
+            print(i, "total_pos_inds", total_pos_inds.shape, total_pos_inds)
+            print(i, "bbox_targets", bbox_targets.shape, excerpt_ndarray(bbox_targets))
+            print(i, "bbox_target", bbox_target.shape, excerpt_ndarray(bbox_target))
+        return outputs
+    else:
+        return outputs
 
 class IterationProcessor(object):
     def __init__(self, start_iter, check_point, cfg):
@@ -469,12 +511,8 @@ class IterationProcessor(object):
         self.elapsed_times.append(elapsed_time)
         self.start_time = now_time
 
-        if self.checkpoint_period > 0 and (
-            iter % self.checkpoint_period == 0 or iter == self.max_iter
-        ):
-            save_model(self.check_point, iter)
-
         metrics_df = pd.DataFrame()
+        outputs = preprocess_outputs(outputs)
         metrics_df = add_metrics(metrics_df, iter=iter, elapsed_time=elapsed_time)
         metrics_df = add_metrics(metrics_df, iter=iter, outputs=outputs)
         rank_size = metrics_df["rank"].dropna().unique().size if "rank" in metrics_df else 0
@@ -561,6 +599,10 @@ def run():
                 outputs = train_func().get()
                 p.step(i, outputs)
 
+        if p.checkpoint_period > 0 and (
+            i % p.checkpoint_period == 0 or i == p.max_iter
+        ):
+            save_model(p.check_point, i)
 
 if __name__ == "__main__":
     run()

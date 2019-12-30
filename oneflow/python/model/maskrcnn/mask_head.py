@@ -76,7 +76,7 @@ class MaskHead(object):
                 gt_segms = flow.cast(
                     gt_segms, dtype=flow.int32, name="int_targets"
                 )
-
+            # mask_pred = mask_pred * 0.0
             mask_loss = flow.math.reduce_sum(
                 flow.nn.sigmoid_cross_entropy_with_logits(gt_segms, mask_pred)
             )
@@ -84,9 +84,11 @@ class MaskHead(object):
             elem_cnt = flow.elem_cnt(gt_labels, dtype=mask_loss.dtype) * (
                 gt_segms.shape[1] * gt_segms.shape[2]
             )
-
             mask_loss = mask_loss / elem_cnt
-            return mask_loss
+            # def excerpt_ndarray(ndarray):
+            #     return "max: {} min: {} median: {} anynan: {} anyinf: {}".format(np.max(ndarray), np.min(ndarray), np.median(ndarray), np.any(np.isnan(ndarray)), np.any(np.isinf(ndarray)))
+            # flow.watch(mask_pred, lambda x: print("mask_pred diff", excerpt_ndarray(x.ndarray())))
+            return mask_loss, mask_pred, gt_segms
 
     def build_eval(self, proposals, features):
         with flow.deprecated.variable_scope("mask"):

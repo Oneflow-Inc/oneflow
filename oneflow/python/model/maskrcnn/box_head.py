@@ -112,6 +112,8 @@ class BoxHead(object):
             total_elem_cnt = flow.elem_cnt(labels, dtype=box_head_cls_loss.dtype)
             box_head_cls_loss = box_head_cls_loss / total_elem_cnt
             # construct bbox loss
+            # TODO by tsai:
+            # gather labels in numpy
             total_pos_inds = flow.squeeze(
                 flow.local_nonzero(labels != flow.constant_scalar(int(0), flow.int32)), axis=[1]
             )
@@ -123,9 +125,9 @@ class BoxHead(object):
             bbox_pred = flow.squeeze(
                 flow.gather(params=pos_bbox_reg, indices=indices, batch_dims=1), axis=[1]
             )
-            bbox_target = flow.local_gather(bbox_targets, total_pos_inds)
+            bbox_target = flow.gather(bbox_targets, total_pos_inds)
             box_head_box_loss = (
-                flow.math.reduce_sum(flow.detection.smooth_l1(bbox_pred, bbox_target))
+                flow.math.reduce_sum(flow.detection.smooth_l1(bbox_pred * 0.0, bbox_target))
                 / total_elem_cnt
             )
 
@@ -134,6 +136,10 @@ class BoxHead(object):
                 box_head_cls_loss,
                 pos_proposal_list,
                 pos_gt_indices_list,
+                labels,
+                total_pos_inds,
+                bbox_targets,
+                bbox_target,
             )
 
     # Input:
