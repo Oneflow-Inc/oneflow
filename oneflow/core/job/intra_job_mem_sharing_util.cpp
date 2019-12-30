@@ -77,7 +77,8 @@ void InitMemoryChains(Plan* plan,
           && regst_desc->enable_reuse_mem() && regst_desc->register_num() == 1
           && regst_desc->mem_block_id() == -1 && regst_desc->mem_block_offset() == -1
           && regst_desc->regst_desc_type().has_data_regst_desc()
-          && Shape(regst_desc->regst_desc_type().data_regst_desc().time_shape()) == meta_shape) {
+          // && Shape(regst_desc->regst_desc_type().data_regst_desc().time_shape()) == meta_shape
+      ) {
         CHECK(mem_chain->mem_reused_regsts.insert(regst_desc).second);
       }
     }
@@ -106,6 +107,13 @@ bool TryMergeMemChain2MergedChains(
     std::vector<MemoryChain*>* merged_chains, MemoryChain* mem_chain,
     const std::function<bool(const MemoryChain*, const MemoryChain*)>& IsStrictOrderL2R) {
   for (MemoryChain* merged_chain : *merged_chains) {
+    Shape merged_chain_time_shape((*merged_chain->mem_reused_regsts.begin())
+                                      ->regst_desc_type()
+                                      .data_regst_desc()
+                                      .time_shape());
+    Shape mem_chain_time_shape(
+        (*mem_chain->mem_reused_regsts.begin())->regst_desc_type().data_regst_desc().time_shape());
+    if (!(merged_chain_time_shape == mem_chain_time_shape)) { continue; }
     if (IsStrictOrderL2R(merged_chain, mem_chain)) {
       merged_chain->sorted_tasks.insert(merged_chain->sorted_tasks.end(),
                                         mem_chain->sorted_tasks.begin(),
