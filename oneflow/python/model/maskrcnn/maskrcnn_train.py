@@ -114,7 +114,7 @@ def maskrcnn_train(cfg, image, image_size, gt_bbox, gt_segm, gt_label):
     #     blob_watcher=blob_watched, diff_blob_watcher=diff_blob_watched
     # ):
     cls_logit_list, bbox_pred_list = rpn_head.build(features)
-    rpn_bbox_loss, rpn_objectness_loss, total_sample_cnt = rpn_loss.build(
+    rpn_bbox_loss, rpn_objectness_loss, total_sample_cnt, sampled_bbox_target_concat = rpn_loss.build(
         anchors, image_size_list, gt_bbox_list, bbox_pred_list, cls_logit_list
     )
 
@@ -152,6 +152,7 @@ def maskrcnn_train(cfg, image, image_size, gt_bbox, gt_segm, gt_label):
         "bbox_target": bbox_target,
         "bbox_targets": bbox_targets,
         "labels": labels,
+        "sampled_bbox_target_concat": sampled_bbox_target_concat,
     }
 
 
@@ -457,8 +458,8 @@ def add_metrics(metrics_df, iter=None, **kwargs):
             raise ValueError("not supported")
     return metrics_df
 
-def excerpt_ndarray(ndarray):
-    return "max: {} min: {} median: {} anynan: {} anyinf: {}".format(np.max(ndarray), np.min(ndarray), np.median(ndarray), np.any(np.isnan(ndarray)), np.any(np.isinf(ndarray)))
+def excerpt_ndarray(arr):
+    return "max: {} min: {} median: {} anynan: {} anyinf: {} zero: {}".format(np.max(arr), np.min(arr), np.median(arr), np.any(np.isnan(arr)), np.any(np.isinf(arr)), np.count_nonzero(arr==0))
 
 def sigmoid(z):
     return(1/(1+np.exp(-z)))
@@ -471,6 +472,7 @@ def preprocess_outputs(outputs):
             mask_pred = o.pop("mask_pred").ndarray()
             gt_segms = o.pop("gt_segms").ndarray()
 
+            sampled_bbox_target_concat = o.pop("sampled_bbox_target_concat").ndarray()
             labels = o.pop("labels").ndarray()
             total_pos_inds = o.pop("total_pos_inds").ndarray()
             bbox_targets = o.pop("bbox_targets").ndarray()
@@ -481,10 +483,15 @@ def preprocess_outputs(outputs):
             # E = cross_entropy_loss(Y_output,gt_segms)
             # print(i, "E", E)
             # print(i, "mask_pred", excerpt_ndarray(mask_pred))
-            print(i, "labels", labels.shape. labels)
-            print(i, "labels argwhere", np.argwhere(x!=0))
+            print(i, "sampled_bbox_target_concat", sampled_bbox_target_concat.shape, excerpt_ndarray(sampled_bbox_target_concat))
+            print(i, "labels", labels.shape, excerpt_ndarray(labels))
+            labels_argwhere = np.argwhere(labels!=0)
+            print(i, "labels_argwhere", labels_argwhere.shape, labels_argwhere.reshape(-1))
             print(i, "total_pos_inds", total_pos_inds.shape, total_pos_inds)
             print(i, "bbox_targets", bbox_targets.shape, excerpt_ndarray(bbox_targets))
+            bbox_targets_reduce_at_1 = np.sum(bbox_targets, axis=1)
+            print(i, "bbox_targets_reduce_at_1", bbox_targets_reduce_at_1.shape, excerpt_ndarray(bbox_targets_reduce_at_1))
+            print(i , "bbox_targets[labels_argwhere]", excerpt_ndarray(bbox_targets[labels_argwhere]))
             print(i, "bbox_target", bbox_target.shape, excerpt_ndarray(bbox_target))
         return outputs
     else:
@@ -540,7 +547,7 @@ class IterationProcessor(object):
             self.metrics.to_csv(npy_file_name, index=False)
             print("saved: {}".format(npy_file_name))
 
-        save_blob_watched(iter)
+        # save_blob_watched(iter)
 
         if iter == self.max_iter:
             print("median of elapsed time per batch:", statistics.median(self.elapsed_times))
@@ -563,8 +570,6 @@ def run():
     check_point = flow.train.CheckPoint()
     check_point.init()
     # check_point.load(terminal_args.model_load_dir)
-    if config.SOLVER.CHECKPOINT_PERIOD > 0:
-        save_model(check_point, 0)
 
     iter_file = os.path.join(
         config.MODEL.WEIGHT, "System-Train-TrainStep-{}".format(train_func.__name__), "out"
@@ -586,6 +591,9 @@ def run():
 
     p = IterationProcessor(start_iter, check_point, config)
     for i in range(start_iter, config.SOLVER.MAX_ITER + 1):
+        # save original model
+        if p.checkpoint_period > 0 and i == start_iter:
+            save_model(p.check_point, loaded_iter)
         if use_fake_images:
             if config.ASYNC_GET:
                 train_func(fake_image_list[i - start_iter]).async_get(lambda x, i=i: p.step(i, x))

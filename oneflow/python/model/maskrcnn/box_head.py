@@ -127,7 +127,7 @@ class BoxHead(object):
             )
             bbox_target = flow.gather(bbox_targets, total_pos_inds)
             box_head_box_loss = (
-                flow.math.reduce_sum(flow.detection.smooth_l1(bbox_pred * 0.0, bbox_target))
+                flow.math.reduce_sum(flow.detection.smooth_l1(bbox_pred, bbox_target))
                 / total_elem_cnt
             )
 
