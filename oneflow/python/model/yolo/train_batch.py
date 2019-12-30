@@ -24,67 +24,37 @@ parser.add_argument("-weight_l2", "--weight_l2", type=float, default=0, required
 parser.add_argument("-loss_print_steps", "--loss_print_steps", type=int, default=1, required=False)
 parser.add_argument("-gt_max", "--gt_max_len", type=int, default=90, required=False)
 parser.add_argument("-s", "--shuffle", type=int, default=1, required=False)
-parser.add_argument("-r", "--raw_data", type=int, default=0, required=False)
 args = parser.parse_args()
-
-#input_blob_def_dict = {
-#    "images" : flow.input_blob_def((args.batch_size, 3, 608, 608), dtype=flow.float),
-#    "gt_boxes" : flow.input_blob_def((args.batch_size, args.gt_max_len, 4), dtype=flow.float),
-#    "gt_labels" : flow.input_blob_def((args.batch_size, args.gt_max_len, 1),dtype=flow.int32),
-#    "gt_valid_num": flow.input_blob_def((args.batch_size, 1),dtype=flow.int32),
-#}
-flow.config.load_library("train_decoder_op.so")
-flow.config.enable_debug_mode(True)
-func_config = flow.FunctionConfig()
-func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
-func_config.default_data_type(flow.float)
-func_config.train.primary_lr(0.1)
-func_config.train.model_update_conf(dict(naive_conf={}))
 
 def yolo_decode(name):
     with flow.fixed_placement("cpu", "0:0"):
         return flow.user_op_builder(name).Op("yolo_train_decoder")\
             .Output("data").Output("ground_truth").Output("gt_valid_num")\
-            .SetAttr("batch_size", 2, "AttrTypeInt32").Build().RemoteBlobList()
-        #return flow.user_op_builder(name).Op("yolo_train_decoder").Build().RemoteBlobList()
-        
+            .SetAttr("batch_size", args.batch_size, "AttrTypeInt32").Build().RemoteBlobList()
 
-#@flow.function
-#def YoloJob():
-#    (images, ground_truth) = yolo_decode("my_yolo")
-#    return images, ground_truth
-#
-#def preprocess_data(images, ground_truth):
-#    print("images.shape", images.shape)
-#    print("ground_truth.shape", ground_truth.shape)
-#    #images = np.ascontiguousarray(images.transpose(0, 2, 3, 1), dtype=np.float32)
-#    images = images
-#    gt_boxes = np.ascontiguousarray(ground_truth[:, :, 0:4], dtype=np.float32)
-#    gt_labels = np.ascontiguousarray(ground_truth[:, :, 4].reshape(ground_truth.shape[0], ground_truth.shape[1], 1), dtype=np.int32)
-#    gt_valid_num = np.ones((gt_labels.shape[0], 1), dtype=np.int32)
-#    for i in range(ground_truth.shape[0]):
-#        for j in range(ground_truth.shape[1]):
-#            if gt_labels[i][j] == 0 and gt_boxes[i][j][2] == 0 and gt_boxes[i][j][3] == 0:
-#                gt_valid_num[i] = j
-#                break
-#
-#    return images, gt_boxes, gt_labels, gt_valid_num
-#
-#@flow.function
-#def yolo_train_job(images=input_blob_def_dict["images"], gt_boxes=input_blob_def_dict["gt_boxes"], gt_labels=input_blob_def_dict["gt_labels"], gt_valid_num=input_blob_def_dict["gt_valid_num"]):
-#    flow.config.train.primary_lr(args.base_lr)
-#    flow.config.train.weight_l2(args.weight_l2)
-#    flow.config.enable_inplace(False)
-#    flow.config.default_data_type(flow.float)
-#    #flow.config.train.model_update_conf(ParameterUpdateStrategy())
-#    flow.config.train.model_update_conf(dict(naive_conf={}))
-#
-#    yolo0_loss, yolo1_loss, yolo2_loss = YoloTrainNet(images, gt_boxes, gt_labels, gt_valid_num, True)
-#    flow.losses.add_loss(yolo0_loss)
-#    flow.losses.add_loss(yolo1_loss)
-#    flow.losses.add_loss(yolo2_loss)
-#    return yolo0_loss, yolo1_loss, yolo2_loss
-num_piece_in_batch=2#16
+def ParameterUpdateStrategy():
+    return {
+        'learning_rate_decay': {
+             'piecewise_scaling_conf' : {
+             'boundaries': [400000, 450000],
+             'scales': [1.0, 0.1, 0.01]
+             }
+        },
+        'momentum_conf': {
+            'beta': 0.9
+        }
+    }
+
+
+flow.config.load_library("train_decoder_op.so")
+#flow.config.enable_debug_mode(True)
+func_config = flow.FunctionConfig()
+func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
+func_config.default_data_type(flow.float)
+func_config.train.primary_lr(args.base_lr)
+func_config.train.weight_l2(args.weight_l2)
+func_config.train.model_update_conf(ParameterUpdateStrategy())
+
 
 @flow.function(func_config)
 def yolo_train_job():
@@ -117,13 +87,10 @@ if __name__ == "__main__":
         def nop(ret):
             pass
         def callback(ret):
-            #yolo0_loss, yolo1_loss, yolo2_loss = ret
             yolo0_loss, yolo1_loss, yolo2_loss = ret
             print(yolo0_loss.mean(), yolo1_loss.mean(), yolo2_loss.mean())
             global cur_time
-            #print(time.time()-cur_time)
-            #print(yolo_pos.shape, yolo_pos)
-            #print(fmt_str.format(step, yolo_pos.mean(), yolo_prob.mean(), time.time()-cur_time))
+            print(time.time()-cur_time)
             cur_time = time.time()
 
         if step % args.loss_print_steps == 0:
@@ -133,7 +100,4 @@ if __name__ == "__main__":
 
 
     for step in range(args.total_batch_num):
-        #images, ground_truth = YoloJob().get()
-        #images, gt_boxes, gt_labels, gt_valid_num = preprocess_data(images, ground_truth)
-        #yolo_train_job(images, gt_boxes, gt_labels, gt_valid_num).async_get(create_callback(step))
         yolo_train_job().async_get(create_callback(step))

@@ -7,13 +7,15 @@ REGISTER_USER_OP("yolo_train_decoder")
     .Output("data")
     .Output("ground_truth")
     .Output("gt_valid_num")
+    .Attr("batch_size", UserOpAttrType::kAtInt32)
     .SetShapeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       Shape* data_shape = ctx->Shape4ArgNameAndIndex("data", 0);
       Shape* ground_truth_shape = ctx->Shape4ArgNameAndIndex("ground_truth", 0);
       Shape* gt_valid_num_shape = ctx->Shape4ArgNameAndIndex("gt_valid_num", 0);
-      *data_shape = Shape({4, 3, 608, 608});
-      *ground_truth_shape = Shape({4, 90, 5});
-      *gt_valid_num_shape = Shape({4, 1});
+      int32_t batch_size = ctx->GetAttr<int32_t>("batch_size");
+      *data_shape = Shape({batch_size, 3, 608, 608});
+      *ground_truth_shape = Shape({batch_size, 90, 5});
+      *gt_valid_num_shape = Shape({batch_size, 1});
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
@@ -55,10 +57,10 @@ class YoloTrainDecoderKernel final : public oneflow::user_op::OpKernel {
     int width=608;
     int height=608;
     float exposure=1.5;
-    int batch_size=4;
     user_op::Tensor* out_blob = ctx->Tensor4ArgNameAndIndex("data", 0);
     user_op::Tensor* ground_truth_blob = ctx->Tensor4ArgNameAndIndex("ground_truth", 0);
     user_op::Tensor* gt_valid_num_blob = ctx->Tensor4ArgNameAndIndex("gt_valid_num", 0);
+    int32_t batch_size = ctx->GetAttr<int32_t>("batch_size");
 
     user_op::MultiThreadLoopInOpKernel(batch_size, [&out_blob, &ground_truth_blob, &gt_valid_num_blob, imgs, classes, hue, jitter, num_boxes, saturation, width, height, exposure, this](size_t i){
       data dt = load_data_detection(imgs, this->paths, this->N, width, height, num_boxes, classes, jitter, hue, saturation, exposure);
@@ -70,7 +72,7 @@ class YoloTrainDecoderKernel final : public oneflow::user_op::OpKernel {
           break;
         }
       }
-      printf("gt_valid_num: %d\n", *(gt_valid_num_blob->mut_dptr<int32_t>() + i));
+      //printf("gt_valid_num: %d\n", *(gt_valid_num_blob->mut_dptr<int32_t>() + i));
     });
   }
 };

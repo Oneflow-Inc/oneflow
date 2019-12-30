@@ -33,6 +33,19 @@ args = parser.parse_args()
 #    "gt_labels" : flow.input_blob_def((args.batch_size, args.gt_max_len, 1),dtype=flow.int32),
 #    "gt_valid_num": flow.input_blob_def((args.batch_size, 1),dtype=flow.int32),
 #}
+def ParameterUpdateStrategy():
+    return {
+        'learning_rate_decay': {
+             'piecewise_scaling_conf' : {
+             'boundaries': [400000, 450000],
+             'scales': [1.0, 0.1, 0.01]
+             }
+        },
+        'momentum_conf': {
+            'beta': 0.9
+        }
+    }
+
 flow.config.load_library("train_decoder_op.so")
 flow.config.enable_debug_mode(True)
 func_config = flow.FunctionConfig()
@@ -45,7 +58,7 @@ def yolo_decode(name):
     with flow.fixed_placement("cpu", "0:0"):
         return flow.user_op_builder(name).Op("yolo_train_decoder")\
             .Output("data").Output("ground_truth").Output("gt_valid_num")\
-            .SetAttr("batch_size", 64, "AttrTypeInt32").Build().RemoteBlobList()
+            .SetAttr("batch_size", args.batch_size, "AttrTypeInt32").Build().RemoteBlobList()
         #return flow.user_op_builder(name).Op("yolo_train_decoder").Build().RemoteBlobList()
         
 
@@ -84,7 +97,7 @@ def yolo_decode(name):
 #    flow.losses.add_loss(yolo1_loss)
 #    flow.losses.add_loss(yolo2_loss)
 #    return yolo0_loss, yolo1_loss, yolo2_loss
-num_piece_in_batch=32#16
+num_piece_in_batch=16#16
 
 @flow.function(func_config)
 def yolo_train_job():
@@ -126,9 +139,9 @@ if __name__ == "__main__":
         def callback(ret):
             #yolo0_loss, yolo1_loss, yolo2_loss = ret
             yolo0_loss, yolo1_loss, yolo2_loss = ret
-            print(yolo0_loss.mean(), yolo1_loss.mean(), yolo2_loss.mean())
+            #print(yolo0_loss.mean(), yolo1_loss.mean(), yolo2_loss.mean())
             global cur_time
-            #print(time.time()-cur_time)
+            print(time.time()-cur_time)
             #print(yolo_pos.shape, yolo_pos)
             #print(fmt_str.format(step, yolo_pos.mean(), yolo_prob.mean(), time.time()-cur_time))
             cur_time = time.time()
