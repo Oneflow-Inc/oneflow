@@ -529,6 +529,11 @@ message PiecewiseConstantConf {
   repeated double values = 2;
 }
 
+message PiecewiseScalingConf {
+  repeated int64 boundaries = 1;
+  repeated double scales = 2; 
+}
+
 message PolynomialDecayConf {
   required int64 decay_batches = 1;
   optional double end_learning_rate = 2 [default = 0.0001];
@@ -557,6 +562,7 @@ message LearningRateDecayConf {
     PolynomialDecayConf polynomial_conf = 2004;
     CosineDecayConf cosine_conf = 2005;
     LinearCosineDecayConf linear_cosine_conf = 2006;
+    PiecewiseScalingConf piecewise_scaling_conf = 2007;
   }
 }
 
@@ -1481,6 +1487,12 @@ message AllReduceFacadeOpConf {
 message IdentityOpConf {
   required string in = 1;
   required string out = 2;
+  optional bool skip_grad = 3 [default=false];
+}
+
+message Identity1OpConf {
+  required string in = 1;
+  required string out = 2;
 }
 
 message CaseOpConf {
@@ -1826,6 +1838,7 @@ message OperatorConf {
     NonMaximumSuppressionOpConf non_maximum_suppression_conf = 315;
     LogisticOpConf logistic_conf = 316;
     XrtLaunchOpConf xrt_launch_conf = 410;
+    Identity1OpConf identity1_conf = 411;
 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;

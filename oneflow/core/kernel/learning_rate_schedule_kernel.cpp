@@ -98,6 +98,18 @@ double PiecewiseConstantLearningRate(const PiecewiseConstantConf& conf, double l
   return values[i];
 }
 
+double PiecewiseScalingLearningRate(const PiecewiseScalingConf& conf, double lr,
+                                    int64_t cur_batch_num) {
+  const PbRf<int64_t>& boundaries = conf.boundaries();
+  const PbRf<double>& scales = conf.scales();
+  CHECK_EQ(boundaries.size() + 1, scales.size());
+  size_t i = 0;
+  for (; i < boundaries.size(); ++i) {
+    if (cur_batch_num <= boundaries[i]) { break; }
+  }
+  return scales[i] * lr;
+}
+
 double PolynomialDecayedLearningRate(const PolynomialDecayConf& conf, double lr,
                                      int64_t cur_batch_num) {
   CHECK_GT(conf.decay_batches(), 0);
@@ -153,6 +165,8 @@ double GetDecayedLearningRate(const LearningRateDecayConf& conf, double lr, int6
     return CosineDecayedLearningRate(conf.cosine_conf(), lr, cur_batch_num);
   } else if (conf.has_linear_cosine_conf()) {
     return LinearCosineDecayedLearningRate(conf.linear_cosine_conf(), lr, cur_batch_num);
+  } else if (conf.has_piecewise_scaling_conf()) {
+    return PiecewiseScalingLearningRate(conf.piecewise_scaling_conf(), lr, cur_batch_num);
   } else {
     UNIMPLEMENTED();
   }
