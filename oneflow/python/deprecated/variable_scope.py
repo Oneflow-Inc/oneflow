@@ -25,3 +25,25 @@ def variable_scope_stack_pop():
     compile_context.cur_job_variable_scope_stack = compile_context.cur_job_variable_scope_stack[
         0:-1
     ]
+
+
+@oneflow_export("experimental.distribution_name_scope")
+@contextmanager
+def distribution_name_scope(machine, device, exclude_variables=True):
+    assert isinstance(machine, int)
+    assert isinstance(device, int)
+    assert compile_context.cur_job_distribution_name_scope == ""
+    compile_context.cur_job_distribution_name_scope = "m{machine}d{device}-"
+    origin_exclude_variables_flag = (
+        compile_context.cur_job_distribution_name_scope_exclude_variable
+    )
+    compile_context.cur_job_distribution_name_scope_exclude_variable = (
+        exclude_variables
+    )
+    try:
+        yield compile_context.cur_job_distribution_name_scope
+    finally:
+        compile_context.cur_job_distribution_name_scope = ""
+        compile_context.cur_job_distribution_name_scope_exclude_variable = (
+            origin_exclude_variables_flag
+        )

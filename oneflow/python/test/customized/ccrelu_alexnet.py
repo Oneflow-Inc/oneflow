@@ -102,9 +102,8 @@ def _data_load_layer(args, data_dir):
       batch_size=total_batch_size, data_part_num=args.data_part_num, name="decode",
   )
 
-
 def ccrelu(x, name):
-  return flow.user_op_builder(name).Op("ccrelu").Input("in",[x]).Build().RemoteBlobList()[0]
+  return flow.user_op_builder(name).Op("ccrelu").Input("in",[x]).Output("out").Build().RemoteBlobList()[0]
 
 def alexnet(args, images, labels, trainable=True):
   transposed = flow.transpose(images, name="transpose", perm=[0, 3, 1, 2])
@@ -143,7 +142,7 @@ def alexnet(args, images, labels, trainable=True):
     name="fc1",
   )
 
-  # dropout1 = fc1
+  #dropout1 = fc1
   dropout1 = ccrelu(fc1, "ccrelu_Fc1ToDropout1")
 
   fc2 = flow.layers.dense(
@@ -175,29 +174,33 @@ def alexnet(args, images, labels, trainable=True):
   return loss
 
 def main(args):
-  @flow.function
+  flow.config.machine_num(args.num_nodes)
+  flow.config.gpu_device_num(args.gpu_num_per_node)
+
+  func_config = flow.FunctionConfig()
+  func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
+  func_config.default_data_type(flow.float)
+  func_config.train.primary_lr(0.00001)
+  func_config.train.model_update_conf(dict(naive_conf={}))
+  func_config.cudnn_conv_force_fwd_algo(0)
+  func_config.cudnn_conv_force_bwd_data_algo(1)
+  func_config.cudnn_conv_force_bwd_filter_algo(1)
+  @flow.function(func_config)
   def alexnet_train_job():
-    flow.config.train.primary_lr(0.00001)
-    flow.config.train.model_update_conf(dict(naive_conf={}))
-
-    flow.config.cudnn_conv_force_fwd_algo(0)
-    flow.config.cudnn_conv_force_bwd_data_algo(1)
-    flow.config.cudnn_conv_force_bwd_filter_algo(1)
-
     (labels, images) = _data_load_layer(args, args.train_dir)
     loss = alexnet(args, images, labels)
     flow.losses.add_loss(loss)
     return loss
 
-  @flow.function
+  func_config = flow.FunctionConfig()
+  func_config.default_data_type(flow.float)
+#  print(func_config.function_desc.job_config_proto)
+  @flow.function(func_config)
   def alexnet_eval_job():
-    (labels, images) = _data_load_layer(args, args.eval_dir)
-    return alexnet(args, images, labels, False)
+    with flow.distribute.consistent_strategy():
+      (labels, images) = _data_load_layer(args, args.eval_dir)
+      return alexnet(args, images, labels, False)
 
-  flow.config.machine_num(args.num_nodes)
-  flow.config.gpu_device_num(args.gpu_num_per_node)
-
-  flow.config.default_data_type(flow.float)
 
   check_point = flow.train.CheckPoint()
   if not args.model_load_dir:

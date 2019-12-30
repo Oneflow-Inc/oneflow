@@ -2,13 +2,16 @@ import oneflow as flow
 import numpy as np
 
 flow.config.gpu_device_num(1)
-flow.config.default_data_type(flow.float)
+
+func_config = flow.FunctionConfig()
+func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
+func_config.default_data_type(flow.float)
 
 def ccrelu(x, name):
-    return flow.user_op_builder(name).Op("ccrelu").Input("in",[x]).Build().RemoteBlobList()[0]
+    return flow.user_op_builder(name).Op("ccrelu").Input("in",[x]).Output("out").Build().RemoteBlobList()[0]
 
-@flow.function
-def ReluJob(x = flow.input_blob_def((10, 2))):
+@flow.function(func_config)
+def ReluJob(x = flow.FixedTensorDef((10, 2))):
     return ccrelu(x, "my_cc_relu_op")
 
 index = [-2, -1, 0, 1, 2]

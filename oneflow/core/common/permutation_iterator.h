@@ -102,6 +102,7 @@ class PermutationIterator {
 };
 
 #undef ITER_DEVICE_FUNC
-}
+
+}  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_COMMON_PERMUTATION_ITERATOR_H_

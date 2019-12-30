@@ -11,6 +11,19 @@
 
 namespace oneflow {
 
+namespace {
+
+void CheckFunctionConfig(const JobConfigProto& job_conf) {
+  const auto& flag_name2flag_def = GlobalFunctionConfigDef().flag_name2flag_def();
+  for (const auto& pair : job_conf.flag_name2flag_value()) {
+    const auto& iter = flag_name2flag_def.find(pair.first);
+    CHECK(iter != flag_name2flag_def.end());
+    CHECK_EQ(iter->second.default_val().value_case(), pair.second.value_case());
+  }
+}
+
+}  // namespace
+
 int64_t JobDesc::all_reduce_group_min_byte() const {
   int64_t ret = job_conf_.all_reduce_group_min_mbyte() * 1024 * 1024;
   CHECK_GT(ret, 0);
@@ -83,6 +96,16 @@ void JobDesc::Init() {
 #ifndef WITH_CUDA
   CHECK_EQ(Global<ResourceDesc>::Get()->GpuDeviceNum(), 0);
 #endif
+  CheckFunctionConfig(job_conf_);
+}
+
+const UserOpAttrVal& JobDesc::GetFunctionFlagVal(const std::string& field_name) const {
+  const auto& iter = job_conf_.flag_name2flag_value().find(field_name);
+  if (iter != job_conf_.flag_name2flag_value().end()) { return iter->second; }
+  const auto& flag_name2flag_def = GlobalFunctionConfigDef().flag_name2flag_def();
+  const auto& def_iter = flag_name2flag_def.find(field_name);
+  CHECK(def_iter != flag_name2flag_def.end());
+  return def_iter->second.default_val();
 }
 
 bool IsInterfaceOpConf(const OperatorConf& op_conf) {

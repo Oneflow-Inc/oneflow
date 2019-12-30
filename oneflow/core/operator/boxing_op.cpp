@@ -37,6 +37,16 @@ LogicalBlobId BoxingOp::obn2lbi(const std::string& output_bn) const {
   return GetMsgFromCustomizedConf<LogicalBlobId>("lbi");
 }
 
+Symbol<OperatorConf> BoxingOp::GetOpConfWithoutOpNameAndLbn() const {
+  OperatorConf op_conf(this->op_conf());
+  op_conf.set_name("");
+  CHECK(op_conf.has_boxing_conf());
+  auto* boxing_conf = op_conf.mutable_boxing_conf();
+  LogicalBlobId empty_logical_blob_id;
+  *boxing_conf->mutable_lbi() = empty_logical_blob_id;
+  return SymbolOf(op_conf);
+}
+
 Maybe<void> BoxingOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
@@ -49,15 +59,8 @@ Maybe<void> BoxingOp::InferBlobDescs(
     }
   }
 
-  std::vector<int64_t> data_tmp_blob_dim0_inner_shape_vec;
-  if (GetBlobDesc4BnInOp(input_bns().Get(0))->has_dim0_inner_shape()) {
-    data_tmp_blob_dim0_inner_shape_vec =
-        GetBlobDesc4BnInOp(input_bns().Get(0))->dim0_inner_shape().dim_vec();
-  }
-  std::vector<int64_t> data_tmp_blob_shape_vec =
-      GetBlobDesc4BnInOp(input_bns().Get(0))->shape().dim_vec();
-  InferTmpBlobDesc(GetBlobDesc4BnInOp, &data_tmp_blob_shape_vec,
-                   &data_tmp_blob_dim0_inner_shape_vec);
+  DimVector data_tmp_blob_shape_vec = GetBlobDesc4BnInOp(input_bns().Get(0))->shape().dim_vec();
+  InferTmpBlobDesc(GetBlobDesc4BnInOp, &data_tmp_blob_shape_vec);
 
   if (conf.out_box_case() == BoxingOpConf::kSplitBox) {
     const BoxSplitConf& split_conf = conf.split_box();
@@ -69,21 +72,12 @@ Maybe<void> BoxingOp::InferBlobDescs(
       OF_CHECK_GT(split_conf.part_num(i), 0);
       data_tmp_blob_shape_vec[split_conf.axis()] = split_conf.part_num(i);
       out_blob_desc->mut_shape() = Shape(data_tmp_blob_shape_vec);
-      if (split_conf.axis() == 0 && data_tmp_blob_dim0_inner_shape_vec.size() > 0) {
-        size_t inner_shape_count_1 = Shape(data_tmp_blob_dim0_inner_shape_vec).Count(1);
-        CHECK_EQ_OR_RETURN(split_conf.part_num(i) % inner_shape_count_1, 0);
-        data_tmp_blob_dim0_inner_shape_vec[0] = split_conf.part_num(i) / inner_shape_count_1;
-        out_blob_desc->mut_dim0_inner_shape() = Shape(data_tmp_blob_dim0_inner_shape_vec);
-      }
     }
   } else if (conf.out_box_case() == BoxingOpConf::kCloneBox) {
     for (const std::string& obn : output_bns()) {
       BlobDesc* out_blob_desc = GetBlobDesc4BnInOp(obn);
       *out_blob_desc = *first_in_blob;
       out_blob_desc->mut_shape() = Shape(data_tmp_blob_shape_vec);
-      if (data_tmp_blob_dim0_inner_shape_vec.size() > 0) {
-        out_blob_desc->mut_dim0_inner_shape() = Shape(data_tmp_blob_dim0_inner_shape_vec);
-      }
     }
   } else {
     UNIMPLEMENTED_THEN_RETURN();
@@ -93,31 +87,20 @@ Maybe<void> BoxingOp::InferBlobDescs(
 
 Maybe<void> BoxingOp::InferTmpBlobDesc(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    std::vector<int64_t>* data_tmp_vec_ptr,
-    std::vector<int64_t>* data_tmp_dim0_inner_shape_vec_ptr) const {
+    DimVector* data_tmp_vec_ptr) const {
   const BoxingOpConf& conf = op_conf().boxing_conf();
   if (conf.in_box_case() == BoxingOpConf::kConcatBox) {
     int32_t concat_axis = conf.concat_box().axis();
     CHECK_GE_OR_RETURN(concat_axis, 0);
     FOR_RANGE(size_t, ib_idx, 1, input_bns().size()) {
       const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp(input_bns().Get(ib_idx));
-      const std::vector<int64_t>& in_blob_shape_vec = in_blob_desc->shape().dim_vec();
-      const std::vector<int64_t>* in_blob_dim0_inner_shape_vec = nullptr;
-      if (in_blob_desc->has_dim0_inner_shape()) {
-        in_blob_dim0_inner_shape_vec = &in_blob_desc->dim0_inner_shape().dim_vec();
-      }
+      const DimVector& in_blob_shape_vec = in_blob_desc->shape().dim_vec();
       CHECK_LT_OR_RETURN(concat_axis, in_blob_shape_vec.size());
       FOR_RANGE(size_t, i, 0, in_blob_shape_vec.size()) {
         if (i == concat_axis) {
           (*data_tmp_vec_ptr)[i] += in_blob_shape_vec[i];
-          if (i == 0 && in_blob_dim0_inner_shape_vec) {
-            (*data_tmp_dim0_inner_shape_vec_ptr)[0] += (*in_blob_dim0_inner_shape_vec)[0];
-          }
         } else {
           CHECK_EQ_OR_RETURN((*data_tmp_vec_ptr)[i], in_blob_shape_vec[i]);
-          if (i == 0 && in_blob_dim0_inner_shape_vec) {
-            CHECK_OR_RETURN(*data_tmp_dim0_inner_shape_vec_ptr == *in_blob_dim0_inner_shape_vec);
-          }
         }
       }
     }
@@ -129,9 +112,6 @@ Maybe<void> BoxingOp::InferTmpBlobDesc(
     BlobDesc* data_tmp_blob_desc = GetBlobDesc4BnInOp(SoleTbn());
     data_tmp_blob_desc->mut_shape() = Shape(*data_tmp_vec_ptr);
     data_tmp_blob_desc->set_data_type(GetBlobDesc4BnInOp(input_bns().Get(0))->data_type());
-    if (data_tmp_dim0_inner_shape_vec_ptr->size() > 0) {
-      data_tmp_blob_desc->mut_dim0_inner_shape() = Shape(*data_tmp_dim0_inner_shape_vec_ptr);
-    }
   }
   return Maybe<void>::Ok();
 }

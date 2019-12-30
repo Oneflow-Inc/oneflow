@@ -138,8 +138,10 @@ void CompileCurJobOnMaster(Job* job, Plan* improved_plan, bool need_job_complete
     LOG(INFO) << "compile time: " << GetCurTime() - start;
     complete_plan =
         Improver().GenAndInferMemBlockIdOnly(*Global<AvailableMemDesc>::Get(), naive_plan);
-    TeePersistentLogStream::Create("naive_plan")->Write(naive_plan);
-    TeePersistentLogStream::Create("complete_plan")->Write(complete_plan);
+    if (Global<ResourceDesc>::Get()->enable_debug_mode()) {
+      TeePersistentLogStream::Create("naive_plan")->Write(naive_plan);
+      TeePersistentLogStream::Create("complete_plan")->Write(complete_plan);
+    }
     LOG(INFO) << "push_pull_plan:" << GetCurTime() - start;
   }
   if (job_desc.enable_experiment_run()) {
@@ -357,40 +359,6 @@ void FilterOpName2ParallelBlobConf(
         ParallelBlobConf parallel_blob_conf;
         GetMemSharingOpBlobInfo(job_builder, op_conf.name(), &parallel_blob_conf);
         CHECK(parallel_blob_conf == iter->second);
-      }
-    }
-  }
-}
-
-void FilterArgPassJobGroupInfo(
-    std::vector<Job>* jobs,
-    HashMap<ParallelBlobConf, HashMap<std::string, std::vector<std::string>>>*
-        parallel_blob_conf2input_op_name2output_op_names) {
-  HashMap<ParallelBlobConf, HashSet<std::string>> parallel_blob_conf2input_op_names;
-  HashMap<ParallelBlobConf, HashSet<std::string>> parallel_blob_conf2output_op_names;
-  FOR_RANGE(int64_t, job_id, 0, jobs->size()) {
-    JobBuilder job_builder(&jobs->at(job_id));
-    for (const OperatorConf& op_conf : jobs->at(job_id).net().op()) {
-      if (IsInterfaceOpConf(op_conf) == false) { continue; }
-      ParallelBlobConf parallel_blob_conf;
-      GetMemSharingOpBlobInfo(job_builder, op_conf.name(), &parallel_blob_conf);
-      if (op_conf.has_input_conf()) {
-        parallel_blob_conf2input_op_names[parallel_blob_conf].insert(op_conf.name());
-      }
-      if (op_conf.has_return_conf()) {
-        parallel_blob_conf2output_op_names[parallel_blob_conf].insert(op_conf.name());
-      }
-    }
-  }
-  for (const auto& pair : parallel_blob_conf2input_op_names) {
-    const auto& parallel_blob_conf = pair.first;
-    for (const auto& input_op_name : pair.second) {
-      const auto& output_op_names = parallel_blob_conf2output_op_names[parallel_blob_conf];
-      if (output_op_names.empty()) { continue; }
-      for (const auto& output_op_name : output_op_names) {
-        if (input_op_name == output_op_name) { continue; }
-        auto* in2outs = &(*parallel_blob_conf2input_op_name2output_op_names)[parallel_blob_conf];
-        (*in2outs)[input_op_name].push_back(output_op_name);
       }
     }
   }
@@ -733,9 +701,6 @@ void MakeArgPassJob(const std::string& job_name, const ParallelBlobConf& paralle
     auto* blob_conf = foreign_input_conf->mutable_blob_conf();
     blob_conf->mutable_shape()->add_dim(1);
     blob_conf->set_data_type(DataType::kInt32);
-    blob_conf->set_has_dim0_valid_num(false);
-    blob_conf->set_has_dim1_valid_num(false);
-    blob_conf->set_has_dim2_valid_num(false);
     blob_conf->mutable_split_axis()->clear_value();
     blob_conf->mutable_batch_axis()->clear_value();
     ParallelConf parallel_conf;
@@ -793,17 +758,10 @@ void CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan) {
     HashMap<std::string, ParallelBlobConf> var_op_name2parallel_blob_conf;
     FilterOpName2ParallelBlobConf({OperatorConf::kVariableConf}, &jobs,
                                   &var_op_name2parallel_blob_conf);
-    HashMap<ParallelBlobConf, HashMap<std::string, std::vector<std::string>>>
-        parallel_blob_conf2input_op_name2output_op_names;
-    FilterArgPassJobGroupInfo(&jobs, &parallel_blob_conf2input_op_name2output_op_names);
     int64_t job_id = -1;
     {
       size_t helper_job_size =
           push_op_name2parallel_blob_conf.size() + pull_op_name2parallel_blob_conf.size();
-
-      for (const auto& pair : parallel_blob_conf2input_op_name2output_op_names) {
-        helper_job_size += pair.second.size();
-      }
       // + 3 for model init job, model load job and model save job
       helper_job_size += 3;
       jobs.resize(user_job_size + helper_job_size);
@@ -829,15 +787,6 @@ void CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan) {
       MakePullJob(std::string("System-Pull-") + pair.first, pair.first, pair.second, &pull_job);
       CompileHelperJob(&pull_job);
     }
-    for (const auto& outer_pair : parallel_blob_conf2input_op_name2output_op_names) {
-      const auto parallel_blob_conf = outer_pair.first;
-      for (const auto& pair : outer_pair.second) {
-        Job arg_pass_job;
-        MakeArgPassJob("System-ArgPass-" + pair.first, parallel_blob_conf, pair.first, pair.second,
-                       &arg_pass_job);
-        CompileHelperJob(&arg_pass_job);
-      }
-    }
     MakeModelIoJobs(jobs, var_op_name2parallel_blob_conf, [&](Job* job) { CompileHelperJob(job); });
     MergeSubPlanWithoutGenNetTopo(plan, sub_plans);
     InterJobMemSharingUtil::MergeMemReusedChunkBetweenUserJobs(jobs, plan, user_job_size);
@@ -854,12 +803,16 @@ void CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan) {
     }
     LinkMainPlan(plan, main_plan, identity_tick_op_names);
     PlanUtil::CleanUselessMemBlockAndCheckValid(plan);
-    TeePersistentLogStream::Create("merged_plan")->Write(*plan);
-    PlanUtil::ToDotFile(*plan, "/dot/merged_plan.dot");
+    if (Global<ResourceDesc>::Get()->enable_debug_mode()) {
+      TeePersistentLogStream::Create("merged_plan")->Write(*plan);
+      PlanUtil::ToDotFile(*plan, "/dot/merged_plan.dot");
+    }
     PushPlan("merged_plan", *plan);
   } else {
     PullPlan("merged_plan", plan);
-    TeePersistentLogStream::Create("merged_plan")->Write(*plan);
+    if (Global<ResourceDesc>::Get()->enable_debug_mode()) {
+      TeePersistentLogStream::Create("merged_plan")->Write(*plan);
+    }
   }
   OF_BARRIER();
 }

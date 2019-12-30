@@ -3,29 +3,63 @@ from __future__ import absolute_import
 import threading
 from oneflow.core.job.job_set_pb2 import ConfigProto
 import oneflow.core.job.job_pb2 as job_util
+import oneflow.core.job.job_set_pb2 as job_set_util
 import oneflow.python.framework.session_context as session_ctx
 from oneflow.python.framework.session_context import SessionStatus
 import oneflow.python.framework.compiler as compiler
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.config_util as config_util
 import oneflow.python.framework.env_util as env_util
+import oneflow.python.framework.push_util as push_util
 import oneflow.python.framework.job_instance as job_instance_util
-from oneflow.python.framework.out_remote_blobs_status import OutRemoteBlobsStatus
+from oneflow.python.framework.pull_util import FutureRemoteBlobs
 from oneflow.python.oneflow_export import oneflow_export
+from oneflow.python.framework.function_desc import FunctionDesc
 
 class Session(object):
     def __init__(self):
-        self.job_name2job_func_ = {}
+        self.job_name2function_desc_ = {}
         self.status_ = SessionStatus.OPEN
         self.cond_var_ = threading.Condition()
         self.running_job_cnt_ = 0
         self.inter_user_job_info_ = None
+        self.uuid2watch_handler_ = {}
+        self.config_proto_ = _GetDefaultConfigProto()
+        self.placement_scope_stack_ = []
+        self.is_mirrored_strategy_enabled_stack_ = []
+        self.function_flag_name2default_val_ = {}
+        self.UpdateFunctionFlagName2DefaultVal()
+
+    @property
+    def status(self): return self.status_
+
+    @property
+    def is_running(self): return self.status_ is SessionStatus.RUNNING
+
+    @property
+    def config_proto(self): return self.config_proto_
+
+    @property
+    def uuid2watch_handler(self): return self.uuid2watch_handler_
+
+    @property
+    def placement_scope_stack(self): return self.placement_scope_stack_
+
+    @property
+    def is_mirrored_strategy_enabled_stack(self): return self.is_mirrored_strategy_enabled_stack_
+
+    @property
+    def function_flag_name2default_val(self): return self.function_flag_name2default_val_
 
     @property
     def inter_user_job_info(self): return self.inter_user_job_info_
 
-    @property
-    def status(self): return self.status_
+    def GetJobConfigProto(self, job_name):
+      return self.job_name2function_desc_[job_name].job_config_proto
+
+    def UpdateFunctionFlagName2DefaultVal(self):
+        items = c_api_util.GetFunctionConfigDef().flag_name2flag_def.items()
+        self.function_flag_name2default_val_ = {k : v.default_val for k, v in items}
 
     def TryInit(self):
         if self.status_ is SessionStatus.OPEN: self.Init()
@@ -34,8 +68,9 @@ class Session(object):
     def Init(self):
         assert self.status_ is SessionStatus.OPEN
         _TryInitEnv()
-        c_api_util.InitGlobalSession(_GetConfigProto())
-        for job_name, job_func in self.job_name2job_func_.items(): compiler.Compile(job_func)
+        c_api_util.InitGlobalSession(self.config_proto_)
+        for job_name, func_desc in self.job_name2function_desc_.items():
+            compiler.Compile(func_desc, self.config_proto_)
         c_api_util.StartGlobalSession()
         self.inter_user_job_info_ = c_api_util.GetInterUserJobInfo()
         self.status_ = SessionStatus.RUNNING
@@ -51,9 +86,10 @@ class Session(object):
         c_api_util.DestroyGlobalSession()
         self.status_ = SessionStatus.CLOSED
 
-    def AddJob(self, job_func):
+    def AddJob(self, function_desc):
         assert self.status_ is SessionStatus.OPEN
-        self.job_name2job_func_[job_func.__name__] = job_func
+        assert isinstance(function_desc, FunctionDesc)
+        self.job_name2function_desc_[function_desc.job_func.__name__] = function_desc
 
     def Sync(self):
         assert self.status_ is SessionStatus.RUNNING
@@ -67,16 +103,12 @@ class Session(object):
         assert self.status_ is SessionStatus.RUNNING
         remote_blobs = self.LaunchUserJob(job_func, *arg)
         if remote_blobs is None: return
-        return OutRemoteBlobsStatus(self).SetResult(remote_blobs).Inited()
+        return FutureRemoteBlobs(self).SetResult(remote_blobs).Inited()
     
     def LaunchUserJob(self, job_func, *arg):
         assert self.status_ is SessionStatus.RUNNING
         job_name = job_func.__name__
-        assert len(arg) == len(job_func.__oneflow_input_blob_defs__)
-        for i in range(len(arg)):
-            arg_blob = job_func.__oneflow_input_blob_defs__[i]
-            arg_blob.CheckInputNdarray(arg[i])
-            self.AsyncPush(arg_blob.op_name, _MakePushCallback(arg[i]))
+        push_util.AsyncPush(self, job_func, *arg)
         self.LaunchJob(job_instance_util.MakeUserJobInstance(job_name))
         return job_func.__oneflow_output_remote_blobs__
 
@@ -95,6 +127,9 @@ class Session(object):
         assert self.status_ is SessionStatus.RUNNING
         pull_job_name = self.inter_user_job_info.output_or_var_op_name2pull_job_name[op_name]
         self.LaunchJob(job_instance_util.MakePullJobInstance(pull_job_name, op_name, pull_data_cb))
+
+    def HasAnyCallbackAfterFunctionReturn(self):
+        return len(self.uuid2watch_handler) > 0
     
     def _IncRunningJobCnt(self):
         assert self.status_ is SessionStatus.RUNNING
@@ -113,14 +148,16 @@ def clear_default_session():
     session_ctx.TryCloseDefaultSession()
     session_ctx.OpenDefaultSession(Session())
 
-def _MakePushCallback(ndarray):
-    return lambda ofblob: ofblob.CopyFromNdarray(ndarray)
+@oneflow_export("sync_default_session")
+def sync_default_session():
+    session_ctx.GetDefaultSession().Sync()
 
-def _GetConfigProto():
-    config_proto = config_util.default_config_proto
-    if config_proto.resource.machine_num <= 0:
-      config_proto.resource.machine_num = \
-          len(env_util.default_env_proto.machine)
+def _GetDefaultConfigProto():
+    config_proto = job_set_util.ConfigProto()
+    config_proto.resource.machine_num = len(env_util.default_env_proto.machine)
+    config_proto.resource.gpu_device_num = 1
+    config_proto.io_conf.data_fs_conf.localfs_conf.SetInParent()
+    config_proto.io_conf.snapshot_fs_conf.localfs_conf.SetInParent()
     return config_proto
 
 def _TryInitEnv():
