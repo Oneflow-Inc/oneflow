@@ -16,7 +16,7 @@ max_out_boxes=90
 nms=True
 #nms=False
 nms_threshold=0.45
-num_piece_in_batch=32
+num_piece_in_batch=16
 
 anchor_boxes_size_list=[flow.detection.anchor_boxes_size(10, 13), flow.detection.anchor_boxes_size(16, 30), flow.detection.anchor_boxes_size(33, 23), flow.detection.anchor_boxes_size(30,61), flow.detection.anchor_boxes_size(62, 45), flow.detection.anchor_boxes_size(59, 119), flow.detection.anchor_boxes_size(116,90), flow.detection.anchor_boxes_size(156, 198), flow.detection.anchor_boxes_size(373, 326)]
 yolo_box_diff_conf=[{'image_height': image_height, 'image_width': image_width, 'layer_height': 19, 'layer_width': 19, 'ignore_thresh': ignore_thresh, 'truth_thresh': truth_thresh, 'anchor_boxes_size': anchor_boxes_size_list, 'box_mask': [6,7,8]},
@@ -50,7 +50,7 @@ def _batch_normalization(
         )
 
         beta = flow.identity(beta, skip_grad=True)
-        num_piece_in_batch=32
+        num_piece_in_batch=16
         beta = flow.repeat(beta, num_piece_in_batch)
 
     if scale:
@@ -62,7 +62,7 @@ def _batch_normalization(
             trainable=trainable,
         )
         gamma = flow.identity(gamma, skip_grad=True)
-        num_piece_in_batch=32
+        num_piece_in_batch=16
         gamma = flow.repeat(gamma, num_piece_in_batch)
 
     moving_mean = flow.get_variable(
@@ -71,7 +71,7 @@ def _batch_normalization(
         dtype=inputs.dtype,
         initializer=moving_mean_initializer or flow.zeros_initializer(),
         trainable=trainable,
-        tick=inputs,
+        tick=flow.identity1(inputs),
     )
 
     moving_variance = flow.get_variable(
@@ -80,7 +80,7 @@ def _batch_normalization(
         dtype=inputs.dtype,
         initializer=moving_variance_initializer or flow.ones_initializer(),
         trainable=trainable,
-        tick=inputs,
+        tick=flow.identity1(inputs),
     )
     return flow.layers.batch_normalization2(inputs,
                                     moving_mean,
@@ -124,7 +124,7 @@ def _conv2d_layer(
       trainable=trainable,
   )
   weight = flow.identity(weight, skip_grad=True)
-  num_piece_in_batch=32
+  num_piece_in_batch=16
   weight = flow.repeat(weight, num_piece_in_batch)
   output = flow.nn.conv2d(
       input, weight, strides, padding, data_format, dilation_rate, name=name
@@ -139,7 +139,7 @@ def _conv2d_layer(
           trainable=trainable,
       )
       bias = flow.identity(bias, skip_grad=True)
-      num_piece_in_batch=32
+      num_piece_in_batch=16
       bias = flow.repeat(bias, num_piece_in_batch)
       output = flow.nn.bias_add(output, bias, data_format)
 
@@ -173,6 +173,7 @@ def _upsample(input, name=None):
 def conv_unit(data, num_filter=1, kernel=(1, 1), stride=(1, 1), pad="same", data_format="NCHW", use_bias=False, trainable=True, prefix=''):
     conv = _conv2d_layer(name=prefix + '-conv', input=data, filters=num_filter, kernel_size=kernel, strides=stride, padding='same', data_format=data_format, dilation_rate=1, activation=None, use_bias=use_bias, trainable=trainable)
     bn = _batch_norm(conv, axis=1, momentum=0.99, epsilon = 1.0001e-5, trainable=trainable, name=prefix + '-bn')
+    #bn = conv
     leaky_relu = _leaky_relu(bn, alpha=0.1, name = prefix + '-leakyRelu')
     return leaky_relu
 

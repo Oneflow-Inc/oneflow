@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.5)
 
 option(THIRD_PARTY "Build third party or oneflow" OFF)
 
-option(USE_CLANG_FORMAT "" OFF)
+option(USE_CLANG_FORMAT "" ON)
 option(BUILD_RDMA "" OFF)
 option(BUILD_CUDA "" ON)
 option(RELEASE_VERSION "" ON)
