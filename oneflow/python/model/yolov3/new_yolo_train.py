@@ -59,7 +59,6 @@ input_blob_def_dict = {
     "gt_valid_num": flow.FixedTensorDef((args.batch_size, 1),dtype=flow.int32),
 }
 flow.config.enable_debug_mode(True)
-flow.config.load_library("new_yolo_train_decoder_multithread_op.so")
 func_config = flow.FunctionConfig()
 func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
 func_config.default_data_type(flow.float)
