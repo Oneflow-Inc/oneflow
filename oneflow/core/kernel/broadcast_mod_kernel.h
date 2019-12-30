@@ -1,16 +1,16 @@
-#ifndef ONEFLOW_CORE_KERNEL_BROADCAST_DIV_KERNEL_H_
-#define ONEFLOW_CORE_KERNEL_BROADCAST_DIV_KERNEL_H_
+#ifndef ONEFLOW_CORE_KERNEL_BROADCAST_MOD_KERNEL_H_
+#define ONEFLOW_CORE_KERNEL_BROADCAST_MOD_KERNEL_H_
 
 #include "oneflow/core/kernel/kernel.h"
 
 namespace oneflow {
 
 template<DeviceType device_type, typename T>
-class BroadcastDivKernel final : public KernelIf<device_type> {
+class BroadcastModKernel final : public KernelIf<device_type> {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(BroadcastDivKernel);
-  BroadcastDivKernel() = default;
-  ~BroadcastDivKernel() = default;
+  OF_DISALLOW_COPY_AND_MOVE(BroadcastModKernel);
+  BroadcastModKernel() = default;
+  ~BroadcastModKernel() = default;
 
  private:
   void ForwardDataContent(const KernelCtx&,
@@ -19,4 +19,4 @@ class BroadcastDivKernel final : public KernelIf<device_type> {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_KERNEL_BROADCAST_DIV_KERNEL_H_
+#endif  // ONEFLOW_CORE_KERNEL_BROADCAST_MOD_KERNEL_H_

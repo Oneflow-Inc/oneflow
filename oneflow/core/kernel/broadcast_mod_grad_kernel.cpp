@@ -1,10 +1,10 @@
-#include "oneflow/core/kernel/broadcast_div_grad_kernel.h"
+#include "oneflow/core/kernel/broadcast_mod_grad_kernel.h"
 #include "oneflow/core/ndarray/ndarray_util.h"
 
 namespace oneflow {
 
 template<DeviceType device_type, typename T>
-void BroadcastDivGradKernel<device_type, T>::ForwardDataContent(
+void BroadcastModGradKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* b_blob = BnInOp2Blob("b");
   const Blob* y_blob = BnInOp2Blob("y");
@@ -17,7 +17,7 @@ void BroadcastDivGradKernel<device_type, T>::ForwardDataContent(
   XpuVarNdarray<const T> const_tmp(dy.shape(), tmp_blob->dptr<T>());
   XpuVarNdarray<T> tmp(dy.shape(), tmp_blob->mut_dptr<T>());
 
-  NdarrayUtil<device_type, T>::BroadcastDiv(ctx.device_ctx, tmp,
+  NdarrayUtil<device_type, T>::BroadcastMod(ctx.device_ctx, tmp,
                                             XpuVarNdarray<const T>(y_blob, num_axes),
                                             XpuVarNdarray<const T>(b_blob, num_axes));
   NdarrayUtil<device_type, T>::BroadcastMul(ctx.device_ctx, tmp, dy, const_tmp);
@@ -26,6 +26,6 @@ void BroadcastDivGradKernel<device_type, T>::ForwardDataContent(
   NdarrayUtil<device_type, T>::InplaceNegative(ctx.device_ctx, XpuVarNdarray<T>(db_blob, num_axes));
 }
 
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kBroadcastDivGradConf, BroadcastDivGradKernel,
+ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kBroadcastModGradConf, BroadcastModGradKernel,
                            FLOATING_DATA_TYPE_SEQ);
 }  // namespace oneflow

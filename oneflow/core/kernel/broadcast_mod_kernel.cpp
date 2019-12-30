@@ -1,10 +1,10 @@
-#include "oneflow/core/kernel/broadcast_div_kernel.h"
+#include "oneflow/core/kernel/broadcast_mod_kernel.h"
 #include "oneflow/core/ndarray/ndarray_util.h"
 
 namespace oneflow {
 
 template<DeviceType device_type, typename T>
-void BroadcastDivKernel<device_type, T>::ForwardDataContent(
+void BroadcastModKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* a = BnInOp2Blob("a");
   const Blob* b = BnInOp2Blob("b");
@@ -22,12 +22,12 @@ void BroadcastDivKernel<device_type, T>::ForwardDataContent(
                                     out->mut_dptr<T>());
   } else {
     size_t num_axes = out->shape().NumAxes();
-    NdarrayUtil<device_type, T>::BroadcastDiv(ctx.device_ctx, XpuVarNdarray<T>(out, num_axes),
+    NdarrayUtil<device_type, T>::BroadcastMod(ctx.device_ctx, XpuVarNdarray<T>(out, num_axes),
                                               XpuVarNdarray<const T>(a, num_axes),
                                               XpuVarNdarray<const T>(b, num_axes));
   }
 }
 
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kBroadcastDivConf, BroadcastDivKernel,
+ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kBroadcastModConf, BroadcastModKernel,
                            FLOATING_DATA_TYPE_SEQ);
 }  // namespace oneflow
