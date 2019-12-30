@@ -13,10 +13,12 @@ __host__ __device__ __forceinline__ T CeilDiv(T a, T b) {
 
 template<typename T>
 __host__ __device__ __forceinline__ T IoU(T const* const a, T const* const b) {
-  T interS = max(min(a[2], b[2]) - max(a[0], b[0]) + 1, 0.f)
-             * max(min(a[3], b[3]) - max(a[1], b[1]) + 1, 0.f);
-  T Sa = (a[2] - a[0] + 1) * (a[3] - a[1] + 1);
-  T Sb = (b[2] - b[0] + 1) * (b[3] - b[1] + 1);
+  // T interS = max(min(a[2], b[2]) - max(a[0], b[0]) + 1, 0.f)
+  //           * max(min(a[3], b[3]) - max(a[1], b[1]) + 1, 0.f);
+  T interS = (min(a[0] + a[2] / 2, b[0] + b[2] / 2) - max(a[0] - a[2] / 2, b[0] - b[2] / 2))
+             * (min(a[1] + a[3] / 2, b[1] + b[3] / 2) - max(a[1] - a[3] / 2, b[1] - b[3] / 2));
+  T Sa = (a[2] * a[3]);
+  T Sb = (b[2] * b[3]);
   return interS / (Sa + Sb - interS);
 }
 
