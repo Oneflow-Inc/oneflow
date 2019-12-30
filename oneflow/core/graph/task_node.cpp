@@ -371,6 +371,14 @@ void TaskNode::FixRegisterNumRange() {
         && GetTaskType() == TaskType::kCopyHd) {  // TODO: delete this hack
       if (produced_regst->max_register_num() >= 2) { produced_regst->UpdtMinRegstNumIfNeed(2); }
     }
+    if (GetTaskType() == TaskType::kNormalForward && device_type() == DeviceType::kCPU) {
+      if (exec_gph().SoleNode()->op()->op_conf().has_user_conf()) {
+        const auto& conf = exec_gph().SoleNode()->op()->op_conf().user_conf();
+        if (conf.op_type_name() == "yolo_decoder" || conf.op_type_name() == "yolo_train_decoder") {
+          if (produced_regst->max_register_num() >= 2) { produced_regst->UpdtMinRegstNumIfNeed(2); }
+        }
+      }
+    }
   }
 }
 
