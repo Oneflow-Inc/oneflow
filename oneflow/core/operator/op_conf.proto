@@ -1206,6 +1206,13 @@ message BroadcastDivOpConf {
   optional bool is_const = 4 [default = false];
 }
 
+message BroadcastModOpConf {
+  required string a = 1;
+  required string b = 2;
+  required string out = 3;
+  optional bool is_const = 4 [default = false];
+}
+
 message BroadcastLikeOpConf {
   required string x = 1;
   required string like = 2;
@@ -1214,6 +1221,16 @@ message BroadcastLikeOpConf {
 }
 
 message BroadcastDivGradOpConf {
+  //  input
+  required string b = 1; // denominator in fw
+  required string y = 2;
+  required string dy = 3;
+  //  output
+  required string db = 4;
+  optional string temp_storage = 5 [default = "temp_storage"];
+}
+
+message BroadcastModGradOpConf {
   //  input
   required string b = 1; // denominator in fw
   required string y = 2;
@@ -1717,6 +1734,7 @@ message OperatorConf {
     GatherMs0GradOpConf gather_ms0_grad_conf = 303;
     SigmoidCrossEntropyLossGradOpConf sigmoid_cross_entropy_loss_grad_conf = 317;
     ParallelCastOpConf parallel_cast_conf = 336;
+    BroadcastModGradOpConf broadcast_mod_grad_conf= 337;
 
     XrtLaunchOpConf xrt_launch_conf = 410;
 
@@ -1725,6 +1743,7 @@ message OperatorConf {
     BroadcastSubOpConf broadcast_sub_conf = 501;
     BroadcastMulOpConf broadcast_mul_conf = 502;
     BroadcastDivOpConf broadcast_div_conf = 503;
+    BroadcastModOpConf broadcast_Mod_conf = 504;
     SquareOpConf square_conf = 513;
     SqrtOpConf sqrt_conf = 514;
     RsqrtOpConf rsqrt_conf = 515;
