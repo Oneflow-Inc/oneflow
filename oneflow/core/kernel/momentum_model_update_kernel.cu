@@ -13,8 +13,8 @@ __global__ void UpdateModelGpu(int64_t n, const T* batch_instance_num_ptr, T bet
   T cur_beta = *train_step == 0 ? 0 : beta;
   CUDA_1D_KERNEL_LOOP(i, n) {
     T reg_diff = RegularizeDiff(model_diff[i], *batch_instance_num_ptr, l1, l2, model[i]);
-    momentum[i] = cur_beta * momentum[i] + reg_diff;
-    model[i] = model[i] - *learning_rate * momentum[i];
+    momentum[i] = -*learning_rate * (cur_beta * momentum[i] + reg_diff);
+    model[i] = model[i] + momentum[i];
   }
 }
 
