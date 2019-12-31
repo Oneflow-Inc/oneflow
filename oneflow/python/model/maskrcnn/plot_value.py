@@ -4,9 +4,14 @@ import pandas as pd
 import numpy as np
 import os
 import glob
+import yaml
+import operator
+from functools import reduce
 
 
 def plot_value(df):
+    if df.empty:
+        return
     legends = df["legend"].unique()
     poly_data = pd.DataFrame(
         {"iter": np.linspace(df["iter"].min(), df["iter"].max(), 1000)}
@@ -22,7 +27,8 @@ def plot_value(df):
 
     base = alt.Chart(df).interactive()
 
-    chart = base.mark_circle().encode(x="iter", y="value", color="legend:N")
+    chart = base.mark_line()
+    # chart = base.mark_circle()
 
     polynomial_fit = (
         alt.Chart(poly_data)
@@ -30,10 +36,14 @@ def plot_value(df):
             [legend + "-fit" for legend in legends], as_=["legend", "value"]
         )
         .mark_line()
-        .encode(x="iter:Q", y="value:Q", color="legend:N")
     )
     chart += polynomial_fit
+    chart = chart.encode(alt.X("iter:Q", scale=alt.Scale(zero=False))).encode(
+        alt.Y("value:Q")
+    )
+    chart = chart.encode(color="legend:N")
     chart.display()
+    # chart.save("{}.svg".format("".join(legends)))
 
 
 def plot_by_legend(df):
@@ -48,11 +58,11 @@ def plot_many_by_legend(df_dict):
     legend_set_sorted = [
         "loss_rpn_box_reg",
         "loss_objectness",
-        "lr",
         "loss_box_reg",
         "total_pos_inds_elem_cnt",
         "loss_classifier",
         "loss_mask",
+        "lr",
         "elapsed_time",
     ]
     for _, df in df_dict.items():
@@ -60,9 +70,15 @@ def plot_many_by_legend(df_dict):
             if (
                 legend not in legend_set_sorted
                 and "note" in df
-                and df[df["legend"] == legend]["note"].size is 0
+                and df[df["legend"] == legend]["note"].isnull().all()
             ):
                 legend_set_unsored.append(legend)
+            else:
+                if legend not in legend_set_sorted:
+                    print("skipping legend: {}".format(legend))
+
+    limit, rate = get_limit_and_rate(list(df_dict.values()))
+    # limit, rate = 520, 1
     for legend in legend_set_sorted + legend_set_unsored:
         df_by_legend = pd.concat(
             [
@@ -72,6 +88,7 @@ def plot_many_by_legend(df_dict):
             axis=0,
             sort=False,
         )
+        df_by_legend = subset_and_mod(df_by_legend, limit, rate)
         plot_value(df_by_legend)
 
 
@@ -83,34 +100,6 @@ def update_legend(df, prefix):
     return df
 
 
-COLUMNS = [
-    "loss_rpn_box_reg",
-    "loss_objectness",
-    "loss_box_reg",
-    "loss_classifier",
-    "loss_mask",
-]
-
-
-def make_loss_frame(hisogram, column_index, legend="undefined"):
-    assert column_index < len(COLUMNS)
-    ndarray = np.array(hisogram)[:, [column_index, len(COLUMNS)]]
-    return pd.DataFrame(
-        {"iter": ndarray[:, 1], "legend": legend, "value": ndarray[:, 0]}
-    )
-
-
-def make_loss_frame5(losses_hisogram, source):
-    return pd.concat(
-        [
-            make_loss_frame(losses_hisogram, column_index, legend=column_name)
-            for column_index, column_name in enumerate(COLUMNS)
-        ],
-        axis=0,
-        ignore_index=True,
-    )
-
-
 def wildcard_at(path, index):
     result = glob.glob(path)
     assert len(result) > 0, "there is no files in {}".format(path)
@@ -118,22 +107,61 @@ def wildcard_at(path, index):
     return result[index]
 
 
-def get_df(path, wildcard, index=-1):
-    if os.path.isdir(path):
+def get_df(path, wildcard=None, index=-1, post_process=None):
+    if os.path.isdir(path) and wildcard is not None:
         path = wildcard_at(os.path.join(path, wildcard), index)
+    df = pd.read_csv(path)
+    if callable(post_process):
+        df = post_process(df)
+    return df
 
-    return pd.read_csv(path)
 
+def get_limit_and_rate(dfs):
+    maxs = [df["iter"].max() for df in dfs] + [df.size for df in dfs]
 
-def get_metrics_sr(df1, df2):
-    limit = min(df1["iter"].max(), df2["iter"].max(), df1.size, df2.size)
-    rate = 1 if limit <= 2500 else limit // 2500 + 1
+    limit = min(maxs)
+    rate = 1
+    if limit * len(dfs) > 5000:
+        rate = limit / (5000 // len(dfs)) + 1
     return limit, rate
 
 
 def subset_and_mod(df, limit, take_every_n):
     df_limited = df[df["iter"] < limit]
     return df_limited[df_limited["iter"] % take_every_n == 0]
+
+
+def parse_cfg(df):
+    yaml_string = df[df["legend"] == "cfg"]["note"][0]
+    return yaml.safe_load(yaml_string)
+
+
+def get_with_path(dict, path):
+    return reduce(operator.getitem, path.split("."), dict)
+
+
+def get_with_path_print(dict, path):
+    print("{}: {}".format(path, get_with_path(dict, path)))
+
+
+def post_process_flow(df):
+    cfg = parse_cfg(df)
+    get_with_path_print(cfg, "INPUT.MIRROR_PROB")
+    get_with_path_print(cfg, "MODEL.RPN.RANDOM_SAMPLE")
+    get_with_path_print(cfg, "MODEL.ROI_HEADS.RANDOM_SAMPLE")
+    df.drop(["rank", "note"], axis=1)
+    print("min iter: {}".format(df["iter"].min()))
+    print("max iter: {}".format(df["iter"].max()))
+    if "primary_lr" in df["legend"].unique():
+        df["legend"].replace("primary_lr", "lr", inplace=True)
+    df = df.groupby(["iter", "legend"], as_index=False).mean()
+    return df
+
+
+def post_process_torch(df):
+    if df[df["value"].notnull()]["iter"].min() == 0:
+        df["iter"] += 1
+    return df
 
 
 if __name__ == "__main__":
@@ -162,20 +190,62 @@ if __name__ == "__main__":
         torch_metrics_path
     )
 
-    flow_df = get_df(flow_metrics_path, "loss*.csv")
-    flow_df.drop(["rank", "note"], axis=1)
-    if "primary_lr" in flow_df["legend"].unique():
-        flow_df["legend"].replace("primary_lr", "lr", inplace=True)
-    flow_df = flow_df.groupby(["iter", "legend"], as_index=False).mean()
-    torch_df = get_df(torch_metrics_path, "torch*.csv")
-    if torch_df[torch_df["value"].notnull()]["iter"].min() == 0:
-        torch_df["iter"] += 1
-    limit, rate = get_metrics_sr(flow_df, torch_df)
+    limit, rate = (520, 1)
+
     plot_many_by_legend(
         {
-            "flow": subset_and_mod(flow_df, limit, rate),
-            "torch": subset_and_mod(torch_df, limit, rate),
+            "flow": get_df(
+                flow_metrics_path, "loss*.csv", -1, post_process_flow
+            ),
+            # "flow2": get_df(
+            #     flow_metrics_path, "loss*.csv", -2, post_process_flow
+            # ),
+            # "flow1": get_df(
+            #     os.path.join(
+            #         args.metrics_dir,
+            #         "loss-520-batch_size-8-gpu-4-image_dir-('val2017',)-2019-12-29--15-55-19.csv",
+            #     ),
+            #     post_process=post_process_flow,
+            # ),
+            # "flow2": get_df(
+            #     os.path.join(
+            #         args.metrics_dir,
+            #         "loss-520-batch_size-8-gpu-4-image_dir-('val2017',)-2019-12-31--10-37-45-500-520.csv",
+            #     ),
+            #     post_process=post_process_flow,
+            # ),
+            "torch": get_df(
+                torch_metrics_path, "torch*.csv", -1, post_process_torch
+            ),
+            # "torch1": get_df(
+            #     os.path.join(
+            #         args.metrics_dir,
+            #         "torch-520-batch_size-8-image_dir-coco_instances_val2017_subsample_8_repeated-2019-12-29--06-25-23.csv",
+            #     ),
+            #     -1,
+            #     post_process_torch,
+            # ),
         }
     )
+    # plot_many_by_legend(
+    #     {
+    #         "flow1": get_df(
+    #             flow_metrics_path, "loss*.csv", -1, post_process_flow
+    #         ),
+    #         "flow2": get_df(
+    #             flow_metrics_path, "loss*.csv", -2, post_process_flow
+    #         ),
+    #     }
+    # )
+    # plot_many_by_legend(
+    #     {
+    #         "torch1": get_df(
+    #             flow_metrics_path, "torch*.csv", -1, post_process_torch
+    #         ),
+    #         "torch2": get_df(
+    #             flow_metrics_path, "torch*.csv", -2, post_process_torch
+    #         ),
+    #     }
+    # )
 
     # plot_by_legend(flow_df)

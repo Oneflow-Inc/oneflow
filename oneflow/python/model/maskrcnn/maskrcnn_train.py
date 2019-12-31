@@ -593,7 +593,6 @@ def run():
 
     p = IterationProcessor(start_iter, check_point, config)
     for i in range(start_iter, config.SOLVER.MAX_ITER + 1):
-        # save original model
         if p.checkpoint_period > 0 and i == start_iter:
             save_model(p.check_point, loaded_iter)
         if use_fake_images:
@@ -608,7 +607,6 @@ def run():
             else:
                 outputs = train_func().get()
                 p.step(i, outputs)
-
         if p.checkpoint_period > 0 and (
             i % p.checkpoint_period == 0 or i == p.max_iter
         ):
