@@ -299,3 +299,7 @@ def set_tensorrt_use_int8(func_desc, value = True):
 def set_default_distribute_strategy(func_desc, value):
     assert isinstance(value, distribute_ctx.DistributeStrategy)
     func_desc.function_attribute.default_distribute_strategy = value
+
+@oneflow_function_config('allow_cpu_return_op')
+def allow_cpu_return_op(func_desc, value):
+    func_desc.function_attribute.allow_cpu_return_op = value
