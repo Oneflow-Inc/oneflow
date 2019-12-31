@@ -107,10 +107,9 @@ def wildcard_at(path, index):
     return result[index]
 
 
-def get_df(path, wildcard, index=-1, post_process=None):
-    if os.path.isdir(path):
+def get_df(path, wildcard=None, index=-1, post_process=None):
+    if os.path.isdir(path) and wildcard is not None:
         path = wildcard_at(os.path.join(path, wildcard), index)
-    print(path)
     df = pd.read_csv(path)
     if callable(post_process):
         df = post_process(df)
@@ -206,8 +205,14 @@ if __name__ == "__main__":
             #         args.metrics_dir,
             #         "loss-520-batch_size-8-gpu-4-image_dir-('val2017',)-2019-12-29--15-55-19.csv",
             #     ),
-            #     -1,
-            #     post_process_flow,
+            #     post_process=post_process_flow,
+            # ),
+            # "flow2": get_df(
+            #     os.path.join(
+            #         args.metrics_dir,
+            #         "loss-520-batch_size-8-gpu-4-image_dir-('val2017',)-2019-12-31--10-37-45-500-520.csv",
+            #     ),
+            #     post_process=post_process_flow,
             # ),
             "torch": get_df(
                 torch_metrics_path, "torch*.csv", -1, post_process_torch
