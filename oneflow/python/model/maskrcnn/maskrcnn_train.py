@@ -511,6 +511,7 @@ class IterationProcessor(object):
             {"iter": start_iter, "legend": "cfg", "note": str(cfg)}, index=[0]
         )
         self.check_point = check_point
+        self.start_iter = start_iter
 
     def step(self, iter, outputs):
         now_time = time.perf_counter()
@@ -537,7 +538,8 @@ class IterationProcessor(object):
         if self.save_metrics_period > 0 and (
             iter % self.save_metrics_period == 0 or iter == self.max_iter
         ):
-            npy_file_name = "loss-{}-batch_size-{}-gpu-{}-image_dir-{}-{}.csv".format(
+            npy_file_name = "loss-{}-{}-batch_size-{}-gpu-{}-image_dir-{}-{}.csv".format(
+                self.start_iter,
                 iter,
                 self.img_per_batch,
                 self.ngpus,
