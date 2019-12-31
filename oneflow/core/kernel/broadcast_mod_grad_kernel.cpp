@@ -17,7 +17,7 @@ void BroadcastModGradKernel<device_type, T>::ForwardDataContent(
   XpuVarNdarray<const T> const_tmp(dy.shape(), tmp_blob->dptr<T>());
   XpuVarNdarray<T> tmp(dy.shape(), tmp_blob->mut_dptr<T>());
 
-  NdarrayUtil<device_type, T>::BroadcastMod(ctx.device_ctx, tmp,
+  NdarrayUtil<device_type, T>::BroadcastDiv(ctx.device_ctx, tmp,
                                             XpuVarNdarray<const T>(y_blob, num_axes),
                                             XpuVarNdarray<const T>(b_blob, num_axes));
   NdarrayUtil<device_type, T>::BroadcastMul(ctx.device_ctx, tmp, dy, const_tmp);

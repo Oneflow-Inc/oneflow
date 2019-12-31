@@ -22,7 +22,7 @@ void BroadcastModKernel<device_type, T>::ForwardDataContent(
                                     out->mut_dptr<T>());
   } else {
     size_t num_axes = out->shape().NumAxes();
-    NdarrayUtil<device_type, T>::BroadcastMod(ctx.device_ctx, XpuVarNdarray<T>(out, num_axes),
+    NdarrayUtil<device_type, T>::BroadcastDiv(ctx.device_ctx, XpuVarNdarray<T>(out, num_axes),
                                               XpuVarNdarray<const T>(a, num_axes),
                                               XpuVarNdarray<const T>(b, num_axes));
   }
