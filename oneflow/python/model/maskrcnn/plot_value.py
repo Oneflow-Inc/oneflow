@@ -4,6 +4,9 @@ import pandas as pd
 import numpy as np
 import os
 import glob
+import yaml
+import operator
+from functools import reduce
 
 
 def plot_value(df):
@@ -24,8 +27,8 @@ def plot_value(df):
 
     base = alt.Chart(df).interactive()
 
-    # chart = base.mark_line()
-    chart = base.mark_circle()
+    chart = base.mark_line()
+    # chart = base.mark_circle()
 
     polynomial_fit = (
         alt.Chart(poly_data)
@@ -40,7 +43,7 @@ def plot_value(df):
     )
     chart = chart.encode(color="legend:N")
     chart.display()
-    # chart.save("{}.png".format("".join(legends)))
+    # chart.save("{}.svg".format("".join(legends)))
 
 
 def plot_by_legend(df):
@@ -55,11 +58,11 @@ def plot_many_by_legend(df_dict):
     legend_set_sorted = [
         "loss_rpn_box_reg",
         "loss_objectness",
-        "lr",
         "loss_box_reg",
         "total_pos_inds_elem_cnt",
         "loss_classifier",
         "loss_mask",
+        "lr",
         "elapsed_time",
     ]
     for _, df in df_dict.items():
@@ -75,7 +78,7 @@ def plot_many_by_legend(df_dict):
                     print("skipping legend: {}".format(legend))
 
     limit, rate = get_limit_and_rate(list(df_dict.values()))
-    limit, rate = 506, 1
+    # limit, rate = 520, 1
     for legend in legend_set_sorted + legend_set_unsored:
         df_by_legend = pd.concat(
             [
@@ -95,34 +98,6 @@ def update_legend(df, prefix):
             lambda row: "{}-{}".format(prefix, row["legend"]), axis=1
         )
     return df
-
-
-COLUMNS = [
-    "loss_rpn_box_reg",
-    "loss_objectness",
-    "loss_box_reg",
-    "loss_classifier",
-    "loss_mask",
-]
-
-
-def make_loss_frame(hisogram, column_index, legend="undefined"):
-    assert column_index < len(COLUMNS)
-    ndarray = np.array(hisogram)[:, [column_index, len(COLUMNS)]]
-    return pd.DataFrame(
-        {"iter": ndarray[:, 1], "legend": legend, "value": ndarray[:, 0]}
-    )
-
-
-def make_loss_frame5(losses_hisogram, source):
-    return pd.concat(
-        [
-            make_loss_frame(losses_hisogram, column_index, legend=column_name)
-            for column_index, column_name in enumerate(COLUMNS)
-        ],
-        axis=0,
-        ignore_index=True,
-    )
 
 
 def wildcard_at(path, index):
@@ -157,8 +132,27 @@ def subset_and_mod(df, limit, take_every_n):
     return df_limited[df_limited["iter"] % take_every_n == 0]
 
 
+def parse_cfg(df):
+    yaml_string = df[df["legend"] == "cfg"]["note"][0]
+    return yaml.safe_load(yaml_string)
+
+
+def get_with_path(dict, path):
+    return reduce(operator.getitem, path.split("."), dict)
+
+
+def get_with_path_print(dict, path):
+    print("{}: {}".format(path, get_with_path(dict, path)))
+
+
 def post_process_flow(df):
+    cfg = parse_cfg(df)
+    get_with_path_print(cfg, "INPUT.MIRROR_PROB")
+    get_with_path_print(cfg, "MODEL.RPN.RANDOM_SAMPLE")
+    get_with_path_print(cfg, "MODEL.ROI_HEADS.RANDOM_SAMPLE")
     df.drop(["rank", "note"], axis=1)
+    print("min iter: {}".format(df["iter"].min()))
+    print("max iter: {}".format(df["iter"].max()))
     if "primary_lr" in df["legend"].unique():
         df["legend"].replace("primary_lr", "lr", inplace=True)
     df = df.groupby(["iter", "legend"], as_index=False).mean()
@@ -201,6 +195,12 @@ if __name__ == "__main__":
 
     plot_many_by_legend(
         {
+            "flow": get_df(
+                flow_metrics_path, "loss*.csv", -1, post_process_flow
+            ),
+            # "flow2": get_df(
+            #     flow_metrics_path, "loss*.csv", -2, post_process_flow
+            # ),
             # "flow1": get_df(
             #     os.path.join(
             #         args.metrics_dir,
@@ -209,9 +209,6 @@ if __name__ == "__main__":
             #     -1,
             #     post_process_flow,
             # ),
-            "flow": get_df(
-                flow_metrics_path, "loss*.csv", -1, post_process_flow
-            ),
             "torch": get_df(
                 torch_metrics_path, "torch*.csv", -1, post_process_torch
             ),
