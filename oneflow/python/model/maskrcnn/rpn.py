@@ -248,7 +248,7 @@ class RPNLoss(object):
                 flow.detection.smooth_l1(
                     flow.concat(
                         sampled_bbox_pred_list, axis=0, name="bbox_pred"
-                    ) * 0.0,  # CHECK_POINT: bbox_pred
+                    ),  # CHECK_POINT: bbox_pred
                     sampled_bbox_target_concat,  # CHECK_POINT: bbox_target
                     beta=1.0 / 9.0,
                 ),
