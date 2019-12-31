@@ -462,17 +462,13 @@ class IterationProcessor(object):
             {"iter": start_iter, "legend": "cfg", "note": str(cfg)}, index=[0]
         )
         self.check_point = check_point
+        self.start_iter = start_iter
 
     def step(self, iter, outputs):
         now_time = time.perf_counter()
         elapsed_time = now_time - self.start_time
         self.elapsed_times.append(elapsed_time)
         self.start_time = now_time
-
-        if self.checkpoint_period > 0 and (
-            iter % self.checkpoint_period == 0 or iter == self.max_iter
-        ):
-            save_model(self.check_point, iter)
 
         metrics_df = pd.DataFrame()
         metrics_df = add_metrics(metrics_df, iter=iter, elapsed_time=elapsed_time)
@@ -492,7 +488,8 @@ class IterationProcessor(object):
         if self.save_metrics_period > 0 and (
             iter % self.save_metrics_period == 0 or iter == self.max_iter
         ):
-            npy_file_name = "loss-{}-batch_size-{}-gpu-{}-image_dir-{}-{}.csv".format(
+            npy_file_name = "loss-{}-{}-batch_size-{}-gpu-{}-image_dir-{}-{}.csv".format(
+                self.start_iter,
                 iter,
                 self.img_per_batch,
                 self.ngpus,
@@ -502,7 +499,7 @@ class IterationProcessor(object):
             self.metrics.to_csv(npy_file_name, index=False)
             print("saved: {}".format(npy_file_name))
 
-        save_blob_watched(iter)
+        # save_blob_watched(iter)
 
         if iter == self.max_iter:
             print("median of elapsed time per batch:", statistics.median(self.elapsed_times))
@@ -525,8 +522,6 @@ def run():
     check_point = flow.train.CheckPoint()
     check_point.init()
     # check_point.load(terminal_args.model_load_dir)
-    if config.SOLVER.CHECKPOINT_PERIOD > 0:
-        save_model(check_point, 0)
 
     iter_file = os.path.join(
         config.MODEL.WEIGHT, "System-Train-TrainStep-{}".format(train_func.__name__), "out"
@@ -548,6 +543,8 @@ def run():
 
     p = IterationProcessor(start_iter, check_point, config)
     for i in range(start_iter, config.SOLVER.MAX_ITER + 1):
+        if p.checkpoint_period > 0 and i == start_iter:
+            save_model(p.check_point, loaded_iter)
         if use_fake_images:
             if config.ASYNC_GET:
                 train_func(fake_image_list[i - start_iter]).async_get(lambda x, i=i: p.step(i, x))
@@ -560,7 +557,10 @@ def run():
             else:
                 outputs = train_func().get()
                 p.step(i, outputs)
-
+        if p.checkpoint_period > 0 and (
+            i % p.checkpoint_period == 0 or i == p.max_iter
+        ):
+            save_model(p.check_point, i)
 
 if __name__ == "__main__":
     run()
