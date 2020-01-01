@@ -19,9 +19,8 @@ jobs:
     - name: Checkout submodules
       shell: bash
       run: |
-        echo "${{ secrets.GITHUB_TOKEN }}"
-        auth_header="authorization: Bearer ${{ secrets.GITHUB_TOKEN }}"
+        auth_header="$(git config --local --get http.https://github.com/.extraheader)"
         git submodule sync --recursive
-        git -c "http.extraheader=$auth_header" -c protocol.version=2 submodule update --init --force --recursive --depth=1
+        git -c "http.extraheader=$auth_header" -c protocol.version=2 submodule update --init --force --recursive
     - name: Build the Docker image
       run: bash docker/build/build.sh
