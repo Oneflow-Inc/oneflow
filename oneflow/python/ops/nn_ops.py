@@ -82,6 +82,7 @@ def conv2d(
 
 @oneflow_export("nn.bias_add")
 def bias_add(value, bias, data_format=None, name=None):
+    # TODO: name unused, fix it
     if name is None:
         name = id_util.UniqueStr("BiasAdd_")
 
@@ -108,8 +109,6 @@ def bias_add(value, bias, data_format=None, name=None):
     lbi.op_name = op_conf.name
     lbi.blob_name = "out"
     return remote_blob_util.RemoteBlob(lbi)
-
-
 
 @oneflow_export("nn.max_pool1d")
 def max_pool1d(input, ksize, strides, padding, data_format="NWC", name=None):
@@ -259,6 +258,40 @@ def softmax(logits, axis=None, name=None):
     lbi.blob_name = "out"
     return remote_blob_util.RemoteBlob(lbi)
 
+@oneflow_export("nn.softmax_grad")
+def softmax_grad(y, dy, axis=None, name=None):
+    if axis is None:
+        axis = -1
+    assert type(axis) is int
+    op_conf = op_conf_util.OperatorConf()
+
+    name_prefix = name if name is not None else id_util.UniqueStr("SoftmaxGrad_")
+    setattr(op_conf, "name", name_prefix)
+
+    need_transpose = False
+    permute = [i for i in range(len(y.shape))]
+    if axis > 0 and axis != len(y.shape) - 1:
+        need_transpose = True
+        permute[axis] = permute[-1]
+        permute[-1] = axis
+
+    if need_transpose:
+        y = oneflow.transpose(y, perm=permute)
+        dy = oneflow.transpose(dy, perm=permute)
+    setattr(op_conf.softmax_grad_conf, "y", y.logical_blob_name)
+    setattr(op_conf.softmax_grad_conf, "dy", dy.logical_blob_name)
+
+    op_conf.softmax_grad_conf.axis = -1
+    op_conf.softmax_grad_conf.dx = "dx"
+    compile_context.CurJobAddOp(op_conf)
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = "dx"
+    dx = remote_blob_util.RemoteBlob(lbi)
+
+    if need_transpose:
+        dx = oneflow.transpose(dx, perm=permute)
+    return dx
 
 @oneflow_export("nn.sparse_softmax_cross_entropy_with_logits")
 def sparse_softmax_cross_entropy_with_logits(
@@ -287,8 +320,8 @@ def sparse_softmax_cross_entropy_with_logits(
     lbi.blob_name = "out"
     return remote_blob_util.RemoteBlob(lbi)
 
-@oneflow_export("nn.sigmoid_cross_entropy_with_logits")
-def sigmoid_cross_entropy_with_logits(
+@oneflow_export("deprecated.nn.sigmoid_cross_entropy_with_logits")
+def sigmoid_cross_entropy_with_logits_deprecated(
     labels=None, logits=None, name=None
 ):
     assert labels is not None
@@ -314,6 +347,27 @@ def sigmoid_cross_entropy_with_logits(
     lbi.blob_name = "loss"
     return remote_blob_util.RemoteBlob(lbi)
 
+@oneflow_export("nn.sigmoid_cross_entropy_with_logits")
+def sigmoid_cross_entropy_with_logits(
+    labels=None, logits=None, name=None
+):
+    assert labels is not None
+    assert logits is not None
+    op_conf = op_conf_util.OperatorConf()
+    setattr(
+        op_conf,
+        "name",
+        name if name is not None else id_util.UniqueStr("SigmoidCrossEntropy_"),
+    )
+    op_conf.sigmoid_cross_entropy_conf.prediction = logits.logical_blob_name
+    op_conf.sigmoid_cross_entropy_conf.label = labels.logical_blob_name
+    op_conf.sigmoid_cross_entropy_conf.loss = "loss"
+    op_conf.sigmoid_cross_entropy_conf.label_type = labels.dtype
+    compile_context.CurJobAddOp(op_conf)
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = "loss"
+    return remote_blob_util.RemoteBlob(lbi)
 
 def _GetSequence(value, n, name):
     """Formats value from input"""
@@ -366,6 +420,108 @@ def dropout(x, noise_shape=None, seed=None, name=None, rate=None):
     setattr(op_conf.dropout_conf, "mask", mask_blob.logical_blob_name)
     setattr(op_conf.dropout_conf, "scale", 1.0 / (1.0 - rate))
 
+    compile_context.CurJobAddOp(op_conf)
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = "out"
+    return remote_blob_util.RemoteBlob(lbi)
+
+
+@oneflow_export("nn.conv2d_transpose")
+def deconv2d(
+    value=None,
+    filter=None,
+    output_shape=None,
+    strides=None,
+    padding='SAME',
+    data_format='NHWC',
+    name=None,
+    input=None,
+    filters=None,
+    dilations=None
+):
+    r"""2d transposed convolution
+    Args:
+    value: 4-d `Blob`
+    filter: filter of transposed convolution, usually a variable
+    output_shape: Not supported yet
+    strides: `int` or `int list`
+    padding: `'VALID'` or `'SAME'`
+    data_format: `'NHWC'` or `'NCHW'`
+    name: This operator's name
+    input: Alias for value
+    filters: Alias for filter
+    dilations: Not supported yet
+    Returns:
+    A `Blob` with the same type as `value`.
+    Raises:
+    ValueError: shapes of `filter` and `input` must match.
+    """
+    assert (value is not None) ^ (
+        input is not None), "only one of `input` and `value` could be not None"
+    assert (filter is not None) ^ (
+        filters is not None), "only one of `filter` and `filters` could be not None"
+    filters = filters or filter
+    input = input or value
+    assert output_shape is None, "output_shape not supported yet"
+    assert dilations is None, "dilations not supported yet"
+    assert len(input.static_shape) == 4
+    assert len(filters.static_shape) == 4
+
+    if isinstance(strides, (list, tuple)):
+        assert len(strides) == 2, ValueError(
+            "strides length must be 2 when passed as a list."
+        )
+    elif isinstance(strides, int):
+        strides = [strides, strides]
+    else:
+        raise ValueError("strides must be an int or a list.")
+
+    if padding.upper() != "SAME" and padding.upper() != "VALID":
+        raise ValueError('padding must be "SAME" or "VALID".')
+
+    if data_format.upper() != "NCHW" and data_format.upper() != "NHWC":
+        raise ValueError('data_format must be "NHWC" or "NCHW".')
+
+    channel_pos = (
+        "channels_first" if data_format.startswith("NC") else "channels_last"
+    )
+
+    op_conf = op_conf_util.OperatorConf()
+    setattr(op_conf, "name",
+            name if name is not None else id_util.UniqueStr("Deconv2d_"))
+    op_conf.deconv_conf.x = input.logical_blob_name
+    op_conf.deconv_conf.y = "out"
+    op_conf.deconv_conf.filter = filters.logical_blob_name
+    op_conf.deconv_conf.conv_conf.padding = padding.lower()
+    op_conf.deconv_conf.conv_conf.data_format = channel_pos
+    if channel_pos == "channels_first":
+        op_conf.deconv_conf.filters = filters.static_shape[1]
+        op_conf.deconv_conf.conv_conf.kernel_size.extend(
+            filters.static_shape[2:4])
+    elif channel_pos == "channels_last":
+        op_conf.deconv_conf.filters = filters.static_shape[3]
+        op_conf.deconv_conf.conv_conf.kernel_size.extend(
+            filters.static_shape[-3:-1])
+    else:
+        raise ValueError("invalid data_format")
+
+    if dilations is None:
+        dilations = [1, 1]
+    else:
+        if isinstance(dilations, (list, tuple)):
+            assert len(dilations) == 2, ValueError(
+                "dilations length must be 2 when passed as a list."
+            )
+        elif isinstance(dilations, int):
+            dilations = [dilations, dilations]
+        else:
+            raise ValueError("dilations must be an int or a list.")
+
+    op_conf.deconv_conf.conv_conf.strides.extend(strides)
+    op_conf.deconv_conf.conv_conf.dilation_rate.extend(dilations)
+    op_conf.deconv_conf.use_bias = False
+    op_conf.deconv_conf.conv_conf.num_spatial_dims = 2
     compile_context.CurJobAddOp(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
     lbi.op_name = op_conf.name

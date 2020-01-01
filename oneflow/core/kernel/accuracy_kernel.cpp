@@ -23,18 +23,6 @@ void AccuracyKernel<device_type, PredType, LabelType>::ForwardDataContent(
       weight ? weight->dptr<PredType>() : nullptr, accuracy->mut_dptr<PredType>());
 }
 
-template<DeviceType device_type, typename PredType, typename LabelType>
-void AccuracyKernel<device_type, PredType, LabelType>::ForwardDim0ValidNum(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  BnInOp2Blob("accuracy")->CopyDim0ValidNumFrom(ctx.device_ctx, BnInOp2Blob("prediction"));
-}
-
-template<DeviceType device_type, typename PredType, typename LabelType>
-void AccuracyKernel<device_type, PredType, LabelType>::ForwardRecordIdInDevicePiece(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  // do nothing
-}
-
 template<typename PredType, typename LabelType>
 struct AccuracyKernelUtil<DeviceType::kCPU, PredType, LabelType> {
   static void Forward(DeviceCtx* ctx, const int32_t N, const int32_t D, int32_t top_k,

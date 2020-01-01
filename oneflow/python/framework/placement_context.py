@@ -14,8 +14,8 @@ class PlacementScope(object):
             machine_device_ids = [machine_device_ids]
         self.machine_device_ids_ = machine_device_ids
         self.default_parallel_conf_ = _MakeParallelConf(self.device_tag_, self.machine_device_ids_)
-        self.machine_id2device_id_list_ = _MakeMachineId2DeviceIdList(self.default_parallel_conf_)
-        self.parallel_size_ = _GetParallelSize(self.machine_id2device_id_list_)
+        self.machine_id2device_id_list_ = MakeMachineId2DeviceIdList(self.default_parallel_conf_)
+        self.parallel_size_ = GetParallelSize(self.machine_id2device_id_list_)
 
     @property
     def default_device_tag(self): return self.device_tag_
@@ -77,7 +77,7 @@ def _MakeParallelConf(device_tag, machine_device_ids):
     parallel_conf.device_name.extend(device_names)
     return parallel_conf
 
-def _MakeMachineId2DeviceIdList(parallel_conf):
+def MakeMachineId2DeviceIdList(parallel_conf):
     parallel_conf_str = str(parallel_conf)
     if parallel_conf_str not in _parallel_conf_str2ofrecord:
         ofrecord = c_api_util.GetMachine2DeviceIdListOFRecordFromParallelConf(parallel_conf)
@@ -85,7 +85,7 @@ def _MakeMachineId2DeviceIdList(parallel_conf):
                 {int(k) : list(v.int32_list.value) for k, v in ofrecord.feature.items()}
     return _parallel_conf_str2ofrecord[parallel_conf_str]
 
-def _GetParallelSize(key2list):
+def GetParallelSize(key2list):
     size = 0
     for k, v in key2list.items(): size += len(v)
     return size

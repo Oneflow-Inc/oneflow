@@ -1,4 +1,5 @@
 #include "oneflow/core/job_completer/job_completer.h"
+#include "oneflow/core/common/shape_view.h"
 
 namespace oneflow {
 
@@ -13,7 +14,7 @@ void UpdateConsumerOpConf(const std::string& new_lbn, const OpNode& op_node,
     OperatorConf mut_op_conf(out_node->op().op_conf());
     PbMessage* mut_conf = MutableMessageInPbMessage(&mut_op_conf, mut_op_conf.op_type_case());
     for (const std::string& ibn : edge->lbi2ibns().at(old_lbi)) {
-      ReplaceStrValInPbFdOrPbRpf(mut_conf, ibn, old_lbn, new_lbn);
+      ReplaceInputLbnInOpCustomizedConf(mut_conf, ibn, old_lbn, new_lbn);
     }
     job_builder->MutOpsOnlyOnce({mut_op_conf});
   }
@@ -28,13 +29,13 @@ void GenerateFacadeImplOpConf(const OpNode& op_node, JobBuilder* job_builder) {
   *reduce_sum_conf->mutable_axis() = reduce_mean_conf.axis();
   reduce_sum_conf->set_keep_dims(reduce_mean_conf.keep_dims());
   reduce_sum_conf->set_out("out");
+  if (reduce_mean_conf.keep_dims()) { reduce_sum_conf->set_keep_dims(true); }
   job_builder->MutOpsOnlyOnce({reduce_sum_op_conf});
 
   const auto& in_blob = op_node.LogicalBlobDesc4Lbi(GenLogicalBlobId(reduce_mean_conf.in()));
-  CHECK_EQ(in_blob.has_dim1_valid_num_field(), false);
-  CHECK_EQ(in_blob.has_dim2_valid_num_field(), false);
+  CHECK_EQ(in_blob.is_tensor_list(), false);
   std::string out_lbi;
-  if (in_blob.has_dim0_valid_num_field()) {  // TODO: && in_blob.has_instance_shape()
+  if (in_blob.is_dynamic()) {  // TODO: && in_blob.has_instance_shape()
     OperatorConf partial_elem_cnt_op_conf;
     partial_elem_cnt_op_conf.set_name("System-Facade-" + op_node.op().op_name()
                                       + "_partial_elem_cnt");

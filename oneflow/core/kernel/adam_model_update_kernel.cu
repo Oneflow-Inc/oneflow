@@ -36,29 +36,35 @@ __device__ typename std::enable_if<!do_bias_correction>::type ScaleMomentum(cons
                                                                             T* moment) {}
 
 template<int32_t power, bool do_bias_correction, typename T>
-__device__ void UpdateMomentEstimate(T beta, const T* model_diff, const T* beta_t, T* moment) {
+__device__ void UpdateMomentEstimate(T beta, const T model_diff, const T* beta_t, T* moment) {
   // Update biased moment estimate
-  *moment = beta * (*moment) + (1 - beta) * PowUtil<power>::pow(*model_diff);
+  *moment = beta * (*moment) + (1 - beta) * PowUtil<power>::pow(model_diff);
   // Correct deviation of moment estimate
   ScaleMomentum<do_bias_correction>(*beta_t, moment);
 }
 
 template<typename T>
-__device__ void UpdateModel(const float* learning_rate, T l1, T l2, T epsilon, T* model_diff,
-                            T* model, T* m, T* v) {
-  *model_diff = *m / (sqrt(*v) + epsilon);
-  T reg_diff = RegDiff(*model_diff, l1, l2, *model);
-  *model = *model - *learning_rate * reg_diff;
+__device__ void UpdateModel(const float* learning_rate, T l1, T l2, T epsilon, T* model, const T m,
+                            const T v) {
+  T model_val = *model;
+  T model_diff = m / (sqrt(v) + epsilon);
+  T reg_diff = RegDiff(model_diff, l1, l2, model_val);
+  *model = model_val - *learning_rate * reg_diff;
 }
 
 template<bool do_bias_correction, typename T>
 __global__ void UpdateModelGpu(int64_t n, const float* learning_rate, T l1, T l2, T beta1, T beta2,
-                               T epsilon, const T* beta1_t, const T* beta2_t, T* model_diff,
+                               T epsilon, const T* beta1_t, const T* beta2_t, const T* model_diff,
                                T* model, T* m, T* v) {
   CUDA_1D_KERNEL_LOOP(i, n) {
-    UpdateMomentEstimate<1, do_bias_correction>(beta1, model_diff + i, beta1_t, m + i);
-    UpdateMomentEstimate<2, do_bias_correction>(beta2, model_diff + i, beta2_t, v + i);
-    UpdateModel(learning_rate, l1, l2, epsilon, model_diff + i, model + i, m + i, v + i);
+    const T model_diff_val = model_diff[i];
+    T m_val = m[i];
+    UpdateMomentEstimate<1, do_bias_correction>(beta1, model_diff_val, beta1_t, &m_val);
+    m[i] = m_val;
+    T v_val = v[i];
+    UpdateMomentEstimate<2, do_bias_correction>(beta2, model_diff_val, beta2_t, &v_val);
+    v[i] = v_val;
+    UpdateModel(learning_rate, l1, l2, epsilon, model + i, m_val, v_val);
   }
 }
 

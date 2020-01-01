@@ -129,6 +129,7 @@ void PoolingOp::VirtualGenKernelConf(
     UNIMPLEMENTED();
   }
   pooling_conf->set_data_format(GetValFromCustomizedConf<std::string>("data_format"));
+  pooling_conf->set_need_infer_cudnn_desc_each_forward(GetBlobDesc4BnInOp("out")->is_dynamic());
 }
 
 Maybe<void> PoolingOp::GetSbpSignatures(

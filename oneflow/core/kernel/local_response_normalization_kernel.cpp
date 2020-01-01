@@ -27,19 +27,6 @@ void LocalResponseNormalizationKernel<DeviceType::kCPU, T>::ForwardDataContent(
 }
 
 template<typename T>
-void LocalResponseNormalizationKernel<DeviceType::kCPU, T>::BackwardDataContent(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const auto& conf = kernel_conf().op_attribute().op_conf().local_response_normalization_conf();
-  if (conf.data_format() == "channels_first") {
-    NCHWBackward(ctx, BnInOp2Blob);
-  } else if (conf.data_format() == "channels_last") {
-    NHWCBackward(ctx, BnInOp2Blob);
-  } else {
-    UNIMPLEMENTED();
-  }
-}
-
-template<typename T>
 void LocalResponseNormalizationKernel<DeviceType::kCPU, T>::NCHWForward(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const LocalResponseNormalizationOpConf& lrn_conf =
@@ -49,8 +36,7 @@ void LocalResponseNormalizationKernel<DeviceType::kCPU, T>::NCHWForward(
   Blob* out_blob = BnInOp2Blob("out");
   Blob* ps_blob = BnInOp2Blob("padded_square");
   Blob* nc_blob = BnInOp2Blob("normalize_coef");
-  Memset<DeviceType::kCPU>(ctx.device_ctx, ps_blob->mut_dptr(), 0,
-                           ps_blob->ByteSizeOfDataContentField());
+  Memset<DeviceType::kCPU>(ctx.device_ctx, ps_blob->mut_dptr(), 0, ps_blob->ByteSizeOfBlobBody());
 
   T* ps_dptr = ps_blob->mut_dptr<T>();
   T* nc_dptr = nc_blob->mut_dptr<T>();
@@ -96,8 +82,7 @@ void LocalResponseNormalizationKernel<DeviceType::kCPU, T>::NCHWBackward(
   const ShapeView& in_shape = in_blob->shape();
   const Blob* out_blob = BnInOp2Blob("out");
   Blob* ps_blob = BnInOp2Blob("padded_square");
-  Memset<DeviceType::kCPU>(ctx.device_ctx, ps_blob->mut_dptr(), 0,
-                           ps_blob->ByteSizeOfDataContentField());
+  Memset<DeviceType::kCPU>(ctx.device_ctx, ps_blob->mut_dptr(), 0, ps_blob->ByteSizeOfBlobBody());
 
   const T* out_diff_dptr = BnInOp2Blob("out_diff")->dptr<T>();
   T* in_diff_dptr = BnInOp2Blob("in_diff")->mut_dptr<T>();
@@ -152,12 +137,11 @@ void LocalResponseNormalizationKernel<DeviceType::kCPU, T>::NHWCForward(
   Blob* out_blob = BnInOp2Blob("out");
   Blob* padded_square_blob = BnInOp2Blob("padded_square");
   Blob* normalize_coef_blob = BnInOp2Blob("normalize_coef");
-  Memset<DeviceType::kCPU>(ctx.device_ctx, out_blob->mut_dptr(), 0,
-                           out_blob->ByteSizeOfDataContentField());
+  Memset<DeviceType::kCPU>(ctx.device_ctx, out_blob->mut_dptr(), 0, out_blob->ByteSizeOfBlobBody());
   Memset<DeviceType::kCPU>(ctx.device_ctx, padded_square_blob->mut_dptr(), 0,
-                           padded_square_blob->ByteSizeOfDataContentField());
+                           padded_square_blob->ByteSizeOfBlobBody());
   Memset<DeviceType::kCPU>(ctx.device_ctx, normalize_coef_blob->mut_dptr(), 0,
-                           normalize_coef_blob->ByteSizeOfDataContentField());
+                           normalize_coef_blob->ByteSizeOfBlobBody());
   ConstEigenMatrixMap<T> in_mat(in_blob->dptr<T>(), in_shape.At(3),
                                 in_shape.elem_cnt() / in_shape.At(3));
   EigenMatrixMap<T> out_mat(out_blob->mut_dptr<T>(), in_shape.At(3),
@@ -203,7 +187,7 @@ void LocalResponseNormalizationKernel<DeviceType::kCPU, T>::NHWCBackward(
   Blob* in_diff_blob = BnInOp2Blob("in_diff");
   if (in_diff_blob == nullptr) { return; }
   Memset<DeviceType::kCPU>(ctx.device_ctx, in_diff_blob->mut_dptr(), 0,
-                           in_diff_blob->ByteSizeOfDataContentField());
+                           in_diff_blob->ByteSizeOfBlobBody());
   ConstEigenMatrixMap<T> in_mat(in_blob->dptr<T>(), in_shape.At(3),
                                 in_shape.elem_cnt() / in_shape.At(3));
   ConstEigenMatrixMap<T> out_mat(out_blob->dptr<T>(), in_shape.At(3),

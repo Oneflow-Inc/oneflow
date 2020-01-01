@@ -13,7 +13,7 @@ void ReduceMeanGradKernel<device_type, T>::ForwardDataContent(
   Blob* tmp_blob = BnInOp2Blob("temp_storage");
   int64_t count = dx_blob->shape().elem_cnt() / dy_blob->shape().elem_cnt();
   Memcpy<device_type>(ctx.device_ctx, tmp_blob->mut_dptr(), dy_blob->dptr(),
-                      dy_blob->ByteSizeOfDataContentField());
+                      dy_blob->ByteSizeOfBlobBody());
   KernelUtil<device_type, T>::Div(ctx.device_ctx, tmp_blob->shape().elem_cnt(),
                                   tmp_blob->mut_dptr<T>(), static_cast<T>(count));
   const int64_t num_axes = dx_blob->shape().NumAxes();
@@ -23,12 +23,6 @@ void ReduceMeanGradKernel<device_type, T>::ForwardDataContent(
   NdarrayUtil<device_type, T>::BroadcastTo(
       ctx.device_ctx, XpuVarNdarray<T>(dx_blob, num_axes),
       XpuVarNdarray<const T>(reduced_shape, tmp_blob->dptr<T>()));
-}
-
-template<DeviceType device_type, typename T>
-void ReduceMeanGradKernel<device_type, T>::ForwardDim0ValidNum(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  BnInOp2Blob("dx")->CopyDim0ValidNumFrom(ctx.device_ctx, BnInOp2Blob("x"));
 }
 
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kReduceMeanGradConf, ReduceMeanGradKernel,

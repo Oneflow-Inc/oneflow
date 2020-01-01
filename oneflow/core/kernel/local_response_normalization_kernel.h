@@ -37,8 +37,6 @@ class LocalResponseNormalizationKernel<DeviceType::kCPU, T> final
  private:
   void ForwardDataContent(const KernelCtx&,
                           std::function<Blob*(const std::string&)>) const override;
-  void BackwardDataContent(const KernelCtx&,
-                           std::function<Blob*(const std::string&)>) const override;
   void NCHWForward(const KernelCtx&, std::function<Blob*(const std::string&)>) const;
   void NHWCForward(const KernelCtx&, std::function<Blob*(const std::string&)>) const;
   void NCHWBackward(const KernelCtx&, std::function<Blob*(const std::string&)>) const;
@@ -57,8 +55,6 @@ class LocalResponseNormalizationKernel<DeviceType::kGPU, T> final
   void VirtualKernelInit() override;
   void ForwardDataContent(const KernelCtx&,
                           std::function<Blob*(const std::string&)>) const override;
-  void BackwardDataContent(const KernelCtx&,
-                           std::function<Blob*(const std::string&)>) const override;
 #ifdef WITH_CUDA
   std::unique_ptr<CudnnTensorDesc> batch_desc_;
   std::unique_ptr<CudnnLRNDesc> normalize_desc_;

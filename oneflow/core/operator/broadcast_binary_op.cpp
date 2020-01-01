@@ -15,7 +15,7 @@ bool IsScalarBlob(const BlobDesc* blob) {
 void BroadcastBinaryOp::InitFromOpConf() {
   EnrollInputBn("a");
   EnrollInputBn("b");
-  EnrollOutputBn("out");
+  EnrollOutputBn("out")->set_mutable_inplace_ibn("a");
 }
 
 Maybe<void> BroadcastBinaryOp::InferBlobDescs(
@@ -41,6 +41,8 @@ Maybe<void> BroadcastBinaryOp::InferBlobDescs(
     }
     out_blob_desc->mut_shape() = out_shape;
   }
+  out_blob_desc->set_is_dynamic(a_blob_desc->is_dynamic() || b_blob_desc->is_dynamic());
+  JUST(VirtualInferBlobDescs(GetBlobDesc4BnInOp));
   return Maybe<void>::Ok();
 }
 

@@ -31,7 +31,10 @@ class ResourceDesc final {
   bool thread_enable_local_message_queue() const {
     return resource_.thread_enable_local_message_queue();
   }
+  bool enable_thread_local_cache() const { return resource_.enable_thread_local_cache(); }
+  size_t thread_local_cache_max_size() const { return resource_.thread_local_cache_max_size(); }
   int32_t ComputeThreadPoolSize() const;
+  bool enable_debug_mode() const;
 
   void SetMachineNum(int32_t val) { resource_.set_machine_num(val); }
   void SetCpuDeviceNum(int32_t val) { resource_.set_cpu_device_num(val); }

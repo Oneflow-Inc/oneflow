@@ -1,7 +1,6 @@
 syntax = "proto2";
 package oneflow;
 
-
 message ArgPassJobInfo {
   map<string, int64> output_or_var_op_name2in_index = 1;
   required string intput_or_var_op_name = 2;

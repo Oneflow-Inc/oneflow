@@ -6,6 +6,7 @@
 #include "oneflow/core/common/preprocessor.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/common/auto_registration_factory.h"
+#include "oneflow/core/common/symbol.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/operator/op_conf_util.h"
@@ -46,7 +47,10 @@ class Operator {
   bool EnableCudnn() const { return op_conf().enable_cudnn(); }
   bool DevIsGpuAndEnableCudnn() const { return device_type() == DeviceType::kGPU && EnableCudnn(); }
   const OperatorConf& op_conf() const { return op_attribute_.op_conf(); }
-  virtual const PbMessage& GetCustomizedConf() const { UNIMPLEMENTED(); }
+  virtual const PbMessage& GetCustomizedConf() const {
+    UNIMPLEMENTED();
+    return *static_cast<const PbMessage*>(nullptr);
+  }
 
   bool HasFieldInCustomizedConf(const std::string& field_name) const {
     return HasFieldInPbMessage(GetCustomizedConf(), field_name);
@@ -144,8 +148,8 @@ class Operator {
       std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
       const ParallelDesc& parallel_desc) const;
   void GenKernelConf(
-      std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, bool is_forward,
-      const ParallelContext*, KernelConf*, const OpContext*,
+      std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*,
+      KernelConf*, const OpContext*,
       std::function<const BlobDesc&(const std::string&)> LogicalBlobDesc4BnInOp) const;
   const InputBlobModifier& InputBlobModifier4Ibn(const std::string& ibn) const;
   const OutputBlobModifier& OutputBlobModifier4Obn(const std::string& obn) const;
@@ -157,6 +161,8 @@ class Operator {
   const JobDesc& job_desc() const { return *job_desc_; }
 
   void ForEachBnInOp(std::function<void(const std::string&)>) const;
+
+  virtual Symbol<OperatorConf> GetOpConfWithoutOpNameAndLbn() const;
 
  protected:
   virtual Maybe<void> GetSbpSignatures(
@@ -176,6 +182,7 @@ class Operator {
       const ParallelDesc& parallel_desc) const;
   virtual Maybe<void> GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
     UNIMPLEMENTED() << " GetSbpSignatures unimplemented, op name: " << op_name();
+    return Maybe<void>::Ok();
   }
 
   int64_t cudnn_buf_limit_byte() const;
@@ -372,6 +379,11 @@ Maybe<void> InferOpSbpSignature(
     const HashMap<std::string, SbpInferHint>& ibn2sbp_infer_hint,
     std::function<const OptInt64&(const LogicalBlobId&)> GetBatchAxis4Lbi,
     SbpSignature* sbp_sig_to_infer);
+
+std::string GetInputLbnInOpCustomizedConf(const PbMessage& msg,
+                                          const std::string& fd_name_may_have_idx);
+void ReplaceInputLbnInOpCustomizedConf(PbMessage* msg, const std::string& fd_name_may_have_idx,
+                                       const std::string& old_val, const std::string& new_val);
 
 bool operator==(const OperatorConf& lhs, const OperatorConf& rhs);
 

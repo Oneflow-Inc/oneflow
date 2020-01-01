@@ -5,6 +5,7 @@
 #include "oneflow/core/operator/operator_util.h"
 #include "oneflow/core/device/cudnn_util.h"
 #include "oneflow/core/device/cudnn_conv_ctx_cache.h"
+#include "oneflow/core/common/shape_view.h"
 
 namespace oneflow {
 
@@ -63,10 +64,6 @@ class ConvOp : public Operator {
   void GenKernelConfWithCudnn(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                               KernelConf* kernel_conf, ConvKernelConf* conv_conf,
                               const OpContext*) const;
-#ifdef WITH_CUDA
-  void InferCudnnAlgo(std::function<const BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-                      CudnnConvAlgoCtx* conv_ctx) const;
-#endif  // WITH_CUDA
 };
 
 }  // namespace oneflow

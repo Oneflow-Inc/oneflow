@@ -109,31 +109,11 @@ void ArithemeticIf<DeviceType::kGPU>::Transpose(DeviceCtx* ctx, const int32_t nu
 
 #undef TRANSPOSE_CHECK
 
-// create temporary host blob store initializer result
-#define BEFORE_CPU_INITIALIZE()                                     \
-  RtBlobDesc blob_desc(blob->blob_desc().blob_desc_proto());        \
-  char* host_raw_dptr = nullptr;                                    \
-  CudaCheck(cudaMallocHost(&host_raw_dptr, blob->TotalByteSize())); \
-  std::unique_ptr<Blob> host_blob;                                  \
-  host_blob.reset(new Blob(nullptr, &blob_desc, host_raw_dptr));
-
-// asynchronous copy to device
-#define AFTER_CPU_INITIALIZE()                                                          \
-  Memcpy<DeviceType::kGPU>(ctx, blob->mut_dptr(), host_blob->dptr(),                    \
-                           blob->ByteSizeOfDataContentField(), cudaMemcpyHostToDevice); \
-  CudaCheck(cudaStreamSynchronize(ctx->cuda_stream()));                                 \
-  CudaCheck(cudaFreeHost(host_raw_dptr));
-
 void ArithemeticIf<DeviceType::kGPU>::InitializeWithConstConf(
     DeviceCtx* ctx, const ConstantInitializerConf& initializer_conf, Blob* blob) {
-  BEFORE_CPU_INITIALIZE();
-  // synchronous initialize the host blob
-  ArithemeticIf<DeviceType::kCPU>::InitializeWithConstConf(nullptr, initializer_conf,
-                                                           host_blob.get());
-  AFTER_CPU_INITIALIZE();
+  WithHostBlobAndStreamSynchronizeEnv(ctx, blob, [&](Blob* host_blob) {
+    ArithemeticIf<DeviceType::kCPU>::InitializeWithConstConf(nullptr, initializer_conf, host_blob);
+  });
 }
-
-#undef BEFORE_CPU_INITIALIZE
-#undef AFTER_CPU_INITIALIZE
 
 }  // namespace oneflow
