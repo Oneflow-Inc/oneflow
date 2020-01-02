@@ -1743,7 +1743,7 @@ message OperatorConf {
     BroadcastSubOpConf broadcast_sub_conf = 501;
     BroadcastMulOpConf broadcast_mul_conf = 502;
     BroadcastDivOpConf broadcast_div_conf = 503;
-    BroadcastModOpConf broadcast_Mod_conf = 504;
+    BroadcastModOpConf broadcast_mod_conf = 504;
     SquareOpConf square_conf = 513;
     SqrtOpConf sqrt_conf = 514;
     RsqrtOpConf rsqrt_conf = 515;
