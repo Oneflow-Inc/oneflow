@@ -51,8 +51,10 @@ flow.config.enable_debug_mode(True)
 func_config = flow.FunctionConfig()
 func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
 func_config.default_data_type(flow.float)
-func_config.train.primary_lr(0.1)
-func_config.train.model_update_conf(dict(naive_conf={}))
+func_config.train.primary_lr(args.base_lr)
+func_config.train.weight_l2(args.weight_l2)
+#func_config.train.model_update_conf(dict(naive_conf={}))
+func_config.train.model_update_conf(ParameterUpdateStrategy())
 
 def yolo_decode(name):
     with flow.fixed_placement("cpu", "0:0"):
@@ -139,10 +141,10 @@ if __name__ == "__main__":
         def callback(ret):
             #yolo0_loss, yolo1_loss, yolo2_loss = ret
             yolo0_loss, yolo1_loss, yolo2_loss = ret
-            #print(yolo0_loss.mean(), yolo1_loss.mean(), yolo2_loss.mean())
+            print(yolo0_loss.mean(), yolo1_loss.mean(), yolo2_loss.mean())
             global cur_time
-            print(time.time()-cur_time)
-            #print(yolo_pos.shape, yolo_pos)
+            #print(time.time()-cur_time, yolo0_loss.mean())
+            print(yolo0_loss.shape, yolo1_loss.shape, yolo2_loss.shape)
             #print(fmt_str.format(step, yolo_pos.mean(), yolo_prob.mean(), time.time()-cur_time))
             cur_time = time.time()
 
