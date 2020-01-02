@@ -42,11 +42,9 @@ class BlobDef(blob_desc.BlobDesc):
     @property
     def is_dynamic(self):
         raise NotImplementedError
-
     @property
     def disable_boxing(self):
         raise NotImplementedError
-
     @property
     def is_tensor_list(self):
         raise NotImplementedError
@@ -54,7 +52,6 @@ class BlobDef(blob_desc.BlobDesc):
     @property
     def disable_boxing(self):
         raise NotImplementedError
-
     @property
     def parallel_conf(self):
         raise NotImplementedError
@@ -148,11 +145,9 @@ class ConsistentBlob(BlobDef):
     @property
     def is_dynamic(self):
         return c_api_util.JobBuildAndInferCtx_IsDynamic(self.job_name_, self.lbn_)
-
     @property
     def disable_boxing(self):
         return c_api_util.JobBuildAndInferCtx_DisableBoxing(self.job_name_, self.lbn_)
-
     @property
     def is_tensor_list(self):
         return c_api_util.JobBuildAndInferCtx_IsTensorList(self.job_name_, self.lbn_)
@@ -160,7 +155,6 @@ class ConsistentBlob(BlobDef):
     @property
     def disable_boxing(self):
         return c_api_util.JobBuildAndInferCtx_DisableBoxing(self.job_name_, self.lbn_)
-
     @property
     def parallel_conf(self):
         return c_api_util.JobBuildAndInferCtx_GetParallelConfFromProducerView(self.job_name_,
@@ -178,10 +172,8 @@ class MirroredBlob(BlobDef):
             consistent_blob = ConsistentBlob(sub_lbi, auto_watched_within_scope=False)
             self.sub_consistent_blob_list_.append(consistent_blob)
         watch_scope_util.TryWatchOnce(self)
-
     @property
     def sub_consistent_blob_list(self): return self.sub_consistent_blob_list_
-
     @property
     def static_shape(self):
         return c_api_util.JobBuildAndInferCtx_MirroredBlobGetStaticShape(self.job_name_, self.lbn_)
@@ -202,7 +194,6 @@ class MirroredBlob(BlobDef):
     @property
     def is_dynamic(self):
         return c_api_util.JobBuildAndInferCtx_MirroredBlobIsDynamic(self.job_name_, self.lbn_)
-
     @property
     def disable_boxing(self):
         return c_api_util.JobBuildAndInferCtx_MirroredBlobDisableBoxing(self.job_name_, self.lbn_)
@@ -214,7 +205,6 @@ class MirroredBlob(BlobDef):
     @property
     def disable_boxing(self):
         return c_api_util.JobBuildAndInferCtx_MirroredBlobDisableBoxing(self.job_name_, self.lbn_)
-
     @property
     def parallel_conf(self):
         return c_api_util.JobBuildAndInferCtx_MirroredBlobGetParallelConfFromProducerView(
