@@ -151,22 +151,12 @@ void FixInputOpParallelConf(Job* job) {
   });
 }
 
-void FixReturnOpParallelConf(Job* job) {
-  JobBuilder job_builder(job);
-  for (const auto& op_conf : job->net().op()) {
-    if (op_conf.has_return_conf() == false) { continue; }
-    LogicalBlobId lbi = GenLogicalBlobId(op_conf.return_conf().in());
-    job_builder.MutParallelConfOnlyOnce(op_conf.name(), job_builder.ParallelConf4Lbi(lbi));
-  }
-}
-
 }  // namespace
 
 void UserJobCompleter::Complete(Job* job) const {
   SplitDecodeOps(job);
   AddRecordLoadOps(job);
   FixInputOpParallelConf(job);
-  FixReturnOpParallelConf(job);
 }
 
 }  // namespace oneflow
