@@ -106,27 +106,5 @@ class TestBroadcastDivOp(TestBroadcastOp):
             return flow.math.divide(x, y)
         return xla_broadcast_div_job
 
-class TestBroadcastModOp(TestBroadcastOp):
-    run_test = True
-    def make_job(self, x_shape, y_shape, dtype=flow.float32):
-        config.use_xla_jit(False)
-        config.use_tensorrt(False)
-
-        @flow.function(config)
-        def broadcast_mod_job(x = flow.FixedTensorDef(x_shape, dtype=dtype),
-                              y = flow.FixedTensorDef(y_shape, dtype=dtype)):
-            return flow.math.modide(x, y)
-        return broadcast_mod_job
-
-    def make_xla_job(self, x_shape, y_shape, dtype=flow.float32):
-        config.use_xla_jit(True)
-        config.use_tensorrt(False)
-
-        @flow.function(config)
-        def xla_broadcast_mod_job(x = flow.FixedTensorDef(x_shape, dtype=dtype),
-                                  y = flow.FixedTensorDef(y_shape, dtype=dtype)):
-            return flow.math.modide(x, y)
-        return xla_broadcast_mod_job
-
 if __name__ == '__main__':
     unittest.main()
