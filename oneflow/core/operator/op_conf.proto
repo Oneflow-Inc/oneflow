@@ -1453,12 +1453,6 @@ message AccTickOpConf {
   optional int32 max_acc_num = 3 [default = 1];   
 }
 
-message EveryNthOpConf {
-  required string in = 1;
-  required string out = 2;
-  required int64 n = 3;
-}
-
 message ModelInitOpConf {
   required string tick = 1;
   repeated string out = 2;
@@ -1698,7 +1692,6 @@ message OperatorConf {
     ConvBiasGradOpConf conv_bias_grad_conf = 283;
     ConvFilterGradOpConf conv_filter_grad_conf = 284;
     ConvDataGradOpConf conv_data_grad_conf = 285;
-    EveryNthOpConf every_nth_conf = 286;
     TanHGradOpConf tanh_grad_conf = 288;
     PoolingGradOpConf pooling_grad_conf = 289;
     IdentityOpConf identity_conf = 290;

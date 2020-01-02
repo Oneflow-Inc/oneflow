@@ -18,7 +18,6 @@
 #include "oneflow/core/graph/acc_tick_compute_task_node.h"
 #include "oneflow/core/graph/repeat_forward_compute_task_node.h"
 #include "oneflow/core/graph/acc_compute_task_node.h"
-#include "oneflow/core/graph/every_nth_compute_task_node.h"
 #include "oneflow/core/graph/case_compute_task_node.h"
 #include "oneflow/core/graph/esac_compute_task_node.h"
 
@@ -248,7 +247,6 @@ DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(Tick);
 DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(DeviceTick);
 DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(RepeatForward);
 DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(Acc);
-DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(EveryNth);
 DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(Case);
 DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(Esac);
 
