@@ -656,6 +656,16 @@ __device__ int32_t gpu_atomic_add(int32_t* address, const int32_t val) {
 }
 
 template<>
+__device__ int64_t gpu_atomic_add(int64_t* address, const int64_t val) {
+  return 0;
+}
+
+template<>
+__device__ int8_t gpu_atomic_add(int8_t* address, const int8_t val) {
+  return 0;
+}
+
+template<>
 __device__ float gpu_atomic_add(float* address, float val) {
   return atomicAdd(address, val);
 }

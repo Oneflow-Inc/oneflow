@@ -127,15 +127,14 @@ void GatherKernelUtilImpl<DeviceType::kCPU, T, K>::Backward(DeviceCtx* ctx, cons
 #define INITIATE_GATHER_KERNEL_UTIL_CPU_IMPL(in_type_pair, index_type_pair)              \
   template struct GatherKernelUtilImpl<DeviceType::kCPU, OF_PP_PAIR_FIRST(in_type_pair), \
                                        OF_PP_PAIR_FIRST(index_type_pair)>;
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INITIATE_GATHER_KERNEL_UTIL_CPU_IMPL, FLOATING_DATA_TYPE_SEQ,
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INITIATE_GATHER_KERNEL_UTIL_CPU_IMPL, ARITHMETIC_DATA_TYPE_SEQ,
                                  INDEX_DATA_TYPE_SEQ);
 #undef INITIATE_GATHER_KERNEL_UTIL_CPU_IMPL
 
 #define INITIATE_GATHER_KERNEL_UTIL(device_type, in_type_pair) \
   template struct GatherKernelUtil<device_type, OF_PP_PAIR_FIRST(in_type_pair)>;
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INITIATE_GATHER_KERNEL_UTIL, DEVICE_TYPE_SEQ,
-                                 FLOATING_DATA_TYPE_SEQ);
-template struct GatherKernelUtil<DeviceType::kGPU, int32_t>;
+                                 ARITHMETIC_DATA_TYPE_SEQ);
 #undef INITIATE_GATHER_KERNEL_UTIL
 #if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 700 && CUDA_VERSION >= 10000
 template struct GatherKernelUtil<DeviceType::kGPU, float16>;
