@@ -209,14 +209,14 @@ struct BinaryFuncMin<half> final {
 template<>
 struct BinaryFuncFloorMod<float> final {
   static __device__ __forceinline__ const float Invoke(const float x, const float y) {
-    return fmodf(x,y);
+    return fmodf(x, y);
   }
 };
 
 template<>
 struct BinaryFuncFloorMod<double> final {
   static __device__ __forceinline__ const double Invoke(const double x, const double y) {
-    return fmod(x,y);
+    return fmod(x, y);
   }
 };
 
@@ -236,14 +236,14 @@ struct BinaryFuncFloorMod<half> final {
 template<>
 struct BinaryFuncFloorMod<float> final {
   static __device__ __forceinline__ const float Invoke(const float x, const float y) {
-    return std::fmod(x,y);
+    return std::fmod(x, y);
   }
 };
 
 template<>
 struct BinaryFuncFloorMod<double> final {
   static __device__ __forceinline__ const double Invoke(const double x, const double y) {
-    return std::fmod(x,y);
+    return std::fmod(x, y);
   }
 };
 
