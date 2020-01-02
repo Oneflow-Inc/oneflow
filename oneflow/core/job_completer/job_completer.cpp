@@ -274,6 +274,7 @@ void SetCtrlInOpName4VariableOp(const OpGraph& op_graph, JobBuilder* job_builder
     }
     return false;
   };
+  HashMap<const OperatorConf*, HashSet<std::string>> op_conf2ctrl_in_op_names;
   op_graph.ForEachNode([&](OpNode* op_node) {
     if (op_node->op().op_conf().has_variable_conf() == false) { return; }
     if (op_node->out_edges().size() <= 1) { return; }
@@ -291,12 +292,17 @@ void SetCtrlInOpName4VariableOp(const OpGraph& op_graph, JobBuilder* job_builder
       }
     }
     if (mutable_consumer == nullptr) { return; }
-    OperatorConf mut_mutable_consumer_op_conf(*mutable_consumer);
     for (const auto* fw_bw_op : naive_consumers) {
-      mut_mutable_consumer_op_conf.add_ctrl_in_op_name(fw_bw_op->name());
+      op_conf2ctrl_in_op_names[mutable_consumer].insert(fw_bw_op->name());
+    }
+  });
+  for (const auto& pair : op_conf2ctrl_in_op_names) {
+    OperatorConf mut_mutable_consumer_op_conf(*pair.first);
+    for (const auto& fw_bw_op_name : pair.second) {
+      mut_mutable_consumer_op_conf.add_ctrl_in_op_name(fw_bw_op_name);
     }
     job_builder->MutOpsOnlyOnce({mut_mutable_consumer_op_conf});
-  });
+  }
 }
 
 void SetOpTimeShape7BatchAxisLbis(const OpGraph& op_graph, JobBuilder* job_builder) {
