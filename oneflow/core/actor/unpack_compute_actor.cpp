@@ -35,6 +35,10 @@ void UnpackCompActor::VirtualAsyncSendNaiveConsumedRegstMsgToProducer() {
   }
 }
 
+bool UnpackCompActor::ConsumedCtrlRegstValid(int64_t regst_desc_id) const {
+  return act_num_cnt_ == 0;
+}
+
 REGISTER_ACTOR(TaskType::kUnpackForward, UnpackCompActor);
 
 }  // namespace oneflow

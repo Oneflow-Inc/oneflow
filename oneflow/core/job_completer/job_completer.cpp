@@ -274,25 +274,18 @@ void SetCtrlInOpName4VariableOp(const OpGraph& op_graph, JobBuilder* job_builder
     }
     return false;
   };
-  auto IsMdSaveEveryNthOp = [](const OperatorConf& op_conf) -> bool {
-    return op_conf.has_every_nth_conf();
-  };
   op_graph.ForEachNode([&](OpNode* op_node) {
     if (op_node->op().op_conf().has_variable_conf() == false) { return; }
     if (op_node->out_edges().size() <= 1) { return; }
     const Operator& variable_op = op_node->op();
     const LogicalBlobId& variable_lbi = variable_op.BnInOp2Lbi(variable_op.SoleObn());
     const OperatorConf* mutable_consumer = nullptr;
-    const OperatorConf* model_save_every_nth_op_conf = nullptr;
     std::vector<const OperatorConf*> naive_consumers;
     for (OpEdge* edge : op_node->out_edges()) {
       const auto& op_conf = edge->dst_node()->op().op_conf();
       if (IsMutableConsumedLbi(edge->dst_node()->op(), variable_lbi)) {
         CHECK(mutable_consumer == nullptr);
         mutable_consumer = &op_conf;
-      } else if (IsMdSaveEveryNthOp(op_conf)) {
-        CHECK(model_save_every_nth_op_conf == nullptr);
-        model_save_every_nth_op_conf = &op_conf;
       } else {
         naive_consumers.push_back(&op_conf);
       }
@@ -303,11 +296,6 @@ void SetCtrlInOpName4VariableOp(const OpGraph& op_graph, JobBuilder* job_builder
       mut_mutable_consumer_op_conf.add_ctrl_in_op_name(fw_bw_op->name());
     }
     job_builder->MutOpsOnlyOnce({mut_mutable_consumer_op_conf});
-    if (model_save_every_nth_op_conf != nullptr) {
-      OperatorConf mut_model_save_every_nth_op_conf(*model_save_every_nth_op_conf);
-      mut_model_save_every_nth_op_conf.add_ctrl_in_op_name(mutable_consumer->name());
-      job_builder->MutOpsOnlyOnce({mut_model_save_every_nth_op_conf});
-    }
   });
 }
 
