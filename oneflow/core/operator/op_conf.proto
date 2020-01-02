@@ -1206,7 +1206,7 @@ message BroadcastDivOpConf {
   optional bool is_const = 4 [default = false];
 }
 
-message BroadcastModOpConf {
+message BroadcastFloorModOpConf {
   required string a = 1;
   required string b = 2;
   required string out = 3;
@@ -1732,7 +1732,7 @@ message OperatorConf {
     BroadcastSubOpConf broadcast_sub_conf = 501;
     BroadcastMulOpConf broadcast_mul_conf = 502;
     BroadcastDivOpConf broadcast_div_conf = 503;
-    BroadcastModOpConf broadcast_mod_conf = 504;
+    BroadcastFloorModOpConf broadcast_floor_mod_conf = 504;
     SquareOpConf square_conf = 513;
     SqrtOpConf sqrt_conf = 514;
     RsqrtOpConf rsqrt_conf = 515;
