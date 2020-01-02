@@ -43,7 +43,7 @@ def TODO_test_train(test_case):
         flow.losses.add_loss(flow.math.reduce_sum(y))
     Foo(np.ones((2, 8, 32, 32), dtype=np.float32))
 
-def TODO_test_watch_scope(test_case): 
+def test_watch_scope(test_case): 
     func_config = flow.FunctionConfig()
     func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
     func_config.default_data_type(flow.float32)

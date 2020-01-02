@@ -73,7 +73,8 @@ def compare_with_tensorflow(device_type, activation_type, shape):
 def test_activations(test_case):
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["gpu"]
-    arg_dict["activation_type"] = ["relu", "sigmoid", "tanh", "gelu"]
+#    arg_dict["activation_type"] = ["relu", "sigmoid", "tanh", "gelu"]
+    arg_dict["activation_type"] = ["relu", "sigmoid", "tanh"]
     arg_dict["shape"] = [(1024, 1024)]
     for arg in GenArgList(arg_dict):
         compare_with_tensorflow(*arg)
