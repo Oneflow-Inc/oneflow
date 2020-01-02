@@ -59,6 +59,19 @@ def divide(x, y, name=None):
         return broadcast_div(x, y, name)
 
 
+@oneflow_export("math.mod")
+def floor_mod(x, y, name=None):
+    if isinstance(x, (int, float)):
+        raise NotImplementedError
+    elif isinstance(y, (int, float)):
+        raise NotImplementedError
+    elif x.static_shape == y.static_shape:
+        # TODO: add element-wise op
+        return broadcast_floor_mod(x, y, name)
+    else:
+        return broadcast_floor_mod(x, y, name)
+
+
 def scalar_add(x, operand, name=None):
     op_conf = op_conf_util.OperatorConf()
     setattr(
@@ -190,6 +203,23 @@ def broadcast_div(x, y, name=None):
     op_conf.broadcast_div_conf.a = x.logical_blob_name
     op_conf.broadcast_div_conf.b = y.logical_blob_name
     op_conf.broadcast_div_conf.out = "out"
+    compile_context.CurJobAddOp(op_conf)
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = "out"
+    return remote_blob_util.RemoteBlob(lbi)
+
+
+def broadcast_floor_mod(x, y, name=None):
+    op_conf = op_conf_util.OperatorConf()
+    setattr(
+        op_conf,
+        "name",
+        name if name is not None else id_util.UniqueStr("BroadcastMod_"),
+    )
+    op_conf.broadcast_floor_mod_conf.a = x.logical_blob_name
+    op_conf.broadcast_floor_mod_conf.b = y.logical_blob_name
+    op_conf.broadcast_floor_mod_conf.out = "out"
     compile_context.CurJobAddOp(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
     lbi.op_name = op_conf.name
