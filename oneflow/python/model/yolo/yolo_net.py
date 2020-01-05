@@ -13,8 +13,8 @@ truth_thresh=1.0
 image_height=608
 image_width=608
 max_out_boxes=90
-nms=True
-#nms=False
+#nms=True
+nms=False
 nms_threshold=0.45
 
 anchor_boxes_size_list=[flow.detection.anchor_boxes_size(10, 13), flow.detection.anchor_boxes_size(16, 30), flow.detection.anchor_boxes_size(33, 23), flow.detection.anchor_boxes_size(30,61), flow.detection.anchor_boxes_size(62, 45), flow.detection.anchor_boxes_size(59, 119), flow.detection.anchor_boxes_size(116,90), flow.detection.anchor_boxes_size(156, 198), flow.detection.anchor_boxes_size(373, 326)]
@@ -288,6 +288,7 @@ def YoloNetBody(in_blob, gt_bbox_blob=None, gt_label_blob=None,gt_valid_num_blob
     return yolo_loss_result
 
 def YoloPredictNet(data, origin_image_info, trainable=False):
+  print("nms:", nms)
   global layer_number
   #data = flow.transpose(data, perm=[0, 3, 1, 2])
   blob = conv_unit(data, num_filter=32, kernel=[3,3], stride=[1,1], pad="same", data_format="NCHW", use_bias=False, trainable=trainable, prefix='yolo-layer' + str(layer_number))
