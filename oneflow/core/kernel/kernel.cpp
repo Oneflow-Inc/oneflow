@@ -54,9 +54,24 @@ void Kernel::CheckSameDim0ValidNum(
 
 void Kernel::Forward(const KernelCtx& ctx,
                      std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  if(this->op_conf().name()=="yolo-layer1-conv"){
+   ctx.device_ctx->AddCallBack([](){ 
+    printf("yolo-layer1-conv %.3f\n", GetCurTime()/1e6);   
+   });
+  }
   ForwardHeader(ctx, BnInOp2Blob);
   if (IsAllBlobEmpty(op_attribute().output_bns(), BnInOp2Blob) && IsStateless()) { return; }
   ForwardDataContent(ctx, BnInOp2Blob);
+  if(this->op_conf().name()=="yolo_pos_result_end"){
+   ctx.device_ctx->AddCallBack([](){ 
+    printf("yolo_pos_result_end %.3f\n", GetCurTime()/1e6);   
+   });
+  }
+  if(this->op_conf().name()=="yolo_prob_result_end"){
+   ctx.device_ctx->AddCallBack([](){ 
+    printf("yolo_prob_result_end %.3f\n", GetCurTime()/1e6);   
+   });
+  }
 }
 
 void Kernel::ForwardHeader(const KernelCtx& ctx,

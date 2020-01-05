@@ -44,12 +44,14 @@ def print_detect_box(positions, probs):
         for i in range(1, 80):
             for j in range(positions.shape[1]):
                 if positions[i][j][1]!=0 and positions[i][j][2]!=0 and probs[i][j]!=0:
-                    print(label_2_name[i-1], positions[i][j][0], " ", positions[i][j][1], " ", positions[i][j][2], " ", positions[i][j][3], " ", probs[i][j]*100,"%")
+                    pass
+                    #print(label_2_name[i-1], positions[i][j][0], " ", positions[i][j][1], " ", positions[i][j][2], " ", positions[i][j][3], " ", probs[i][j]*100,"%")
     else:
         for j in range(positions.shape[1]):
             for i in range(1, 80):
                 if positions[0][j][1]!=0 and positions[0][j][2]!=0 and probs[0][j][i]!=0:
-                    print(label_2_name[i-1], positions[0][j][0], " ", positions[0][j][1], " ", positions[0][j][2], " ", positions[0][j][3], " ", probs[0][j][i]*100,"%")
+                    pass
+                    #print(label_2_name[i-1], positions[0][j][0], " ", positions[0][j][1], " ", positions[0][j][2], " ", positions[0][j][3], " ", probs[0][j][i]*100,"%")
 
 
 @flow.function(func_config)
@@ -80,7 +82,13 @@ if __name__ == "__main__":
             #print(yolo_pos.shape, yolo_pos)
             #print(yolo_prob.shape, yolo_prob)
             #print_detect_box(yolo_pos, yolo_prob)
+            np.save("tmp/pos-step"+str(step), yolo_pos.ndarray())
+            np.save("tmp/prob-step"+str(step), yolo_prob.ndarray())
             global cur_time
+            if step==0:
+                print("start_time:", time.time())
+            elif step==args.total_batch_num-1:
+                print("end time:", time.time())
             print(time.time()-cur_time)
 
             cur_time = time.time()

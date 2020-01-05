@@ -37,6 +37,8 @@ func_config.default_data_type(flow.float)
 def yolo_user_op_eval_job():
     images, origin_image_info = yolo_decode("yolo")
     yolo_pos_result, yolo_prob_result = YoloPredictNet(images, origin_image_info, trainable=False)
+    yolo_pos_result = flow.identity(yolo_pos_result, name="yolo_pos_result_end")
+    yolo_prob_result = flow.identity(yolo_prob_result, name="yolo_prob_result_end")
     return yolo_pos_result, yolo_prob_result
 
 if __name__ == "__main__":
@@ -58,10 +60,13 @@ if __name__ == "__main__":
             pass
         def callback(ret):
             yolo_pos, yolo_prob = ret
-            #print(yolo_pos.shape, yolo_pos)
             #print(yolo_prob.shape, yolo_prob)
+            if step == 0:
+                print("start time:", time.time())
+            elif step == args.total_batch_num-1:
+                print("end time:", time.time())
             global cur_time
-            print(time.time()-cur_time)
+            #print(time.time()-cur_time)
             cur_time = time.time()
 
         if step % args.loss_print_steps == 0:
