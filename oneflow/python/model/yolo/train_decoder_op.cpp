@@ -72,6 +72,7 @@ class YoloTrainDecoderKernel final : public oneflow::user_op::OpKernel {
           break;
         }
       }
+      free_data(dt);
       //printf("gt_valid_num: %d\n", *(gt_valid_num_blob->mut_dptr<int32_t>() + i));
     });
   }
