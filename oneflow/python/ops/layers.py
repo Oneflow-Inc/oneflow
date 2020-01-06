@@ -280,10 +280,11 @@ def batch_normalization(
     gamma_initializer=None,
     moving_mean_initializer=None,
     moving_variance_initializer=None,
-    trainable=False,
+    trainable=True,
     name=None,
 ):
     assert axis >= -len(inputs.shape) and axis < len(inputs.shape)
+    if axis < 0: axis += len(inputs.shape)
     params_shape = [inputs.shape[axis]]
 
     if name is None:
