@@ -207,6 +207,66 @@ def layer_norm(
     setattr(out_lbi, "blob_name", "out")
     return remote_blob_util.RemoteBlob(out_lbi)
 
+@oneflow_export("layers.layer_norm_grad")
+def layer_norm_grad(
+    dy,
+    x,
+    mean,
+    inv_variance,
+    begin_norm_axis=1,
+    name=None,
+):
+    op_conf = op_conf_util.OperatorConf()
+    name = name if name is not None else id_util.UniqueStr(
+        "LayerNormGrad_")
+    setattr(op_conf, "name", name)
+    setattr(op_conf.layer_norm_grad_conf, "dy", dy.logical_blob_name)
+    setattr(op_conf.layer_norm_grad_conf, "x", x.logical_blob_name)
+    setattr(op_conf.layer_norm_grad_conf, "mean", mean.logical_blob_name)
+    setattr(op_conf.layer_norm_grad_conf, "inv_variance", inv_variance.logical_blob_name)
+    setattr(op_conf.layer_norm_grad_conf, "dx", "dx")
+    setattr(op_conf.layer_norm_grad_conf, "begin_norm_axis", begin_norm_axis)
+    setattr(op_conf.layer_norm_grad_conf, "epsilon", 1e-5)
+    compile_context.CurJobAddOp(op_conf)
+    out_lbi = logical_blob_id_util.LogicalBlobId()
+    setattr(out_lbi, "op_name", op_conf.name)
+    setattr(out_lbi, "blob_name", "dx")
+    return remote_blob_util.RemoteBlob(out_lbi)
+
+@oneflow_export("layers.layer_norm_param_grad")
+def layer_norm_param_grad(
+    dy,
+    norm,
+    gamma,
+    begin_params_axis=-1,
+    name=None,
+):
+    op_conf = op_conf_util.OperatorConf()
+    name = name if name is not None else id_util.UniqueStr(
+        "LayerNormParamGrad_")
+    setattr(op_conf, "name", name)
+    setattr(op_conf.layer_norm_param_grad_conf, "dy", dy.logical_blob_name)
+    setattr(op_conf.layer_norm_param_grad_conf, "normalized", norm.logical_blob_name)
+    setattr(op_conf.layer_norm_param_grad_conf, "gamma", gamma.logical_blob_name)
+    setattr(op_conf.layer_norm_param_grad_conf, "begin_params_axis", begin_params_axis)
+    setattr(op_conf.layer_norm_param_grad_conf, "normalized_diff", "normalized_diff")
+    setattr(op_conf.layer_norm_param_grad_conf, "beta_diff", "beta_diff")
+    setattr(op_conf.layer_norm_param_grad_conf, "gamma_diff", "gamma_diff")
+    compile_context.CurJobAddOp(op_conf)
+
+    normalized_diff_lbi = logical_blob_id_util.LogicalBlobId()
+    beta_diff_lbi = logical_blob_id_util.LogicalBlobId()
+    gamma_diff_lbi = logical_blob_id_util.LogicalBlobId()
+    setattr(normalized_diff_lbi, "op_name", op_conf.name)
+    setattr(beta_diff_lbi, "op_name", op_conf.name)
+    setattr(gamma_diff_lbi, "op_name", op_conf.name)
+    setattr(normalized_diff_lbi, "blob_name", "normalized_diff")
+    setattr(beta_diff_lbi, "blob_name", "beta_diff")
+    setattr(gamma_diff_lbi, "blob_name", "gamma_diff")
+
+    return (remote_blob_util.RemoteBlob(normalized_diff_lbi),
+            remote_blob_util.RemoteBlob(beta_diff_lbi),
+            remote_blob_util.RemoteBlob(gamma_diff_lbi))
 
 @oneflow_export("layers.batch_normalization")
 def batch_normalization(
@@ -220,10 +280,11 @@ def batch_normalization(
     gamma_initializer=None,
     moving_mean_initializer=None,
     moving_variance_initializer=None,
-    trainable=False,
+    trainable=True,
     name=None,
 ):
     assert axis >= -len(inputs.shape) and axis < len(inputs.shape)
+    if axis < 0: axis += len(inputs.shape)
     params_shape = [inputs.shape[axis]]
 
     if name is None:

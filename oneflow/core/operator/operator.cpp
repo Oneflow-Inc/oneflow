@@ -119,9 +119,13 @@ Maybe<void> Operator::InferOutParallelDesc(
 Maybe<void> Operator::InferOutputBlobTimeShapeIf(
     std::function<const Shape*(const std::string&)> GetTimeShape4BnInOp,
     const ParallelContext* parallel_ctx, Shape* time_shape) const {
-  for (const std::string& ibn : input_bns()) {
-    CHECK_EQ_OR_RETURN(GetTimeShape4BnInOp(ibn)->elem_cnt(),
-                       GetTimeShape4BnInOp(input_bns().Get(0))->elem_cnt());
+  if (!input_bns().empty()) {
+    const int64_t first_input_time_shape_elem_cnt =
+        GetTimeShape4BnInOp(input_bns().Get(0))->elem_cnt();
+    FOR_RANGE(int64_t, i, 1, input_bns().size()) {
+      CHECK_EQ_OR_RETURN(GetTimeShape4BnInOp(input_bns().Get(i))->elem_cnt(),
+                         first_input_time_shape_elem_cnt);
+    }
   }
   return InferOutputBlobTimeShape(GetTimeShape4BnInOp, parallel_ctx, time_shape);
 }
@@ -463,8 +467,8 @@ Symbol<OperatorConf> Operator::GetOpConfWithoutOpNameAndLbn() const {
   PbMessage* op_type_conf = MutableMessageInPbMessage(&op_conf, op_conf.op_type_case());
   for (const auto& ibn : input_bns()) {
     if (!HasStrFieldInPbFdOrPbRpf(*op_type_conf, ibn)) { continue; }
-    const std::string& lbn = GetStrValInPbFdOrPbRpf(*op_type_conf, ibn);
-    ReplaceStrValInPbFdOrPbRpf(op_type_conf, ibn, lbn, "");
+    const std::string& lbn = GetInputLbnInOpCustomizedConf(*op_type_conf, ibn);
+    ReplaceInputLbnInOpCustomizedConf(op_type_conf, ibn, lbn, "");
   }
   return SymbolOf(op_conf);
 }
@@ -566,6 +570,40 @@ Maybe<void> InferOpSbpSignature(
   JUST(op.InferSbpSignatureIf(sbp_sig_to_infer, sbp_sig_conf, CalcOrderValue4SbpSig,
                               SbpInferHint4Ibn, parallel_desc));
   return Maybe<void>::Ok();
+}
+
+std::string GetInputLbnInOpCustomizedConf(const PbMessage& msg,
+                                          const std::string& fd_name_may_have_idx) {
+  const PbMessage* msg_ptr = &msg;
+  const UserOpConf* user_conf = dynamic_cast<const UserOpConf*>(msg_ptr);
+  if (user_conf) {
+    std::pair<std::string, int32_t> pair = GetFieldNameAndIndex4StrVal(fd_name_may_have_idx);
+    if (user_conf->input().find(pair.first) != user_conf->input().end()) {
+      return user_conf->input().at(pair.first).s(pair.second);
+    } else {
+      LOG(WARNING) << "cannot find input arg val in user op conf. (arg_name = " << pair.first
+                   << ", id = " << std::to_string(pair.second) << ")";
+      return "";
+    }
+  } else {
+    return GetStrValInPbFdOrPbRpf(msg, fd_name_may_have_idx);
+  }
+}
+
+void ReplaceInputLbnInOpCustomizedConf(PbMessage* msg, const std::string& fd_name_may_have_idx,
+                                       const std::string& old_val, const std::string& new_val) {
+  UserOpConf* user_conf = dynamic_cast<UserOpConf*>(msg);
+  if (user_conf) {
+    std::pair<std::string, int32_t> pair = GetFieldNameAndIndex4StrVal(fd_name_may_have_idx);
+    CHECK(user_conf->input().find(pair.first) != user_conf->input().end())
+        << "cannot find input arg val in user op conf. (arg_name = " << pair.first
+        << ", id = " << std::to_string(pair.second) << ")\n"
+        << "old lbn = " << old_val << " new lbn = " << new_val;
+    CHECK_EQ(user_conf->input().at(pair.first).s(pair.second), old_val);
+    (*(user_conf->mutable_input()))[pair.first].set_s(pair.second, new_val);
+  } else {
+    ReplaceStrValInPbFdOrPbRpf(msg, fd_name_may_have_idx, old_val, new_val);
+  }
 }
 
 bool operator==(const OperatorConf& lhs, const OperatorConf& rhs) {

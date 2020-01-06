@@ -55,8 +55,8 @@ Maybe<void> ConcatOp::GetSbpSignatures(
 int32_t ConcatOp::FixAxis(const int32_t axis, const int64_t num_axes) const {
   int32_t ret = axis;
   if (axis < 0) { ret += num_axes; }
-  CHECK_GE(axis, 0);
-  CHECK_LT(axis, num_axes);
+  CHECK_GE(ret, 0);
+  CHECK_LT(ret, num_axes);
   return ret;
 }
 

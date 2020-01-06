@@ -32,7 +32,7 @@ class SliceV2Op final : public Operator {
     const SliceV2OpConf& conf = op_conf().slice_v2_conf();
     const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
     CHECK_EQ_OR_RETURN(conf.dim_slice_conf_size(), in_blob_desc->shape().NumAxes());
-    std::vector<int64_t> shape_vec(in_blob_desc->shape().NumAxes());
+    DimVector shape_vec(in_blob_desc->shape().NumAxes());
     FOR_RANGE(size_t, i, 0, conf.dim_slice_conf_size()) {
       const int64_t dim_len = in_blob_desc->shape().At(i);
       if (dim_len > 0) {

@@ -3,10 +3,12 @@ from __future__ import absolute_import
 import oneflow.core.common.error_pb2 as error_util
 import oneflow.core.common.data_type_pb2 as dtype_util
 from oneflow.core.job.inter_user_job_info_pb2 import InterUserJobInfo
+from oneflow.core.framework.config_def_pb2 import ConfigDef
 import oneflow.core.job.job_set_pb2 as job_set_pb
 import oneflow.core.job.env_pb2 as env_pb2
 import oneflow.core.job.placement_pb2 as placment_util
 import oneflow.core.record.record_pb2 as record_util
+import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 from google.protobuf import text_format
 import oneflow.oneflow_internal as oneflow_internal
@@ -95,6 +97,14 @@ def CurJobBuildAndInferCtx_SetJobConf(job_config_proto):
     error = text_format.Parse(error_str, error_util.ErrorProto())
     if error.HasField("error_type"): raise JobBuildAndInferError(error)
 
+def CurJobBuildAndInferCtx_CheckAndCompleteUserOpConf(op_conf_proto):
+    serialized_op_conf = str(text_format.MessageToString(op_conf_proto))
+    AddDefaultVal = oneflow_internal.CurJobBuildAndInferCtx_CheckAndCompleteUserOpConf
+    new_op_conf, error_str = AddDefaultVal(serialized_op_conf)
+    error = text_format.Parse(error_str, error_util.ErrorProto())
+    if error.HasField("error_type"): raise JobBuildAndInferError(error)
+    return text_format.Parse(new_op_conf, op_conf_util.OperatorConf())
+
 def CurJobBuildAndInferCtx_AddAndInferOp(op_conf_proto, parallel_conf_proto):
     serialized_op_conf = str(text_format.MessageToString(op_conf_proto))
     serialized_parallel_conf = str(text_format.MessageToString(parallel_conf_proto))
@@ -124,7 +134,7 @@ def CurJobBuildAndInferCtx_AddLossLogicalBlobName(lbn):
     error_str = oneflow_internal.CurJobBuildAndInferCtx_AddLossLogicalBlobName(lbn)
     error = text_format.Parse(error_str, error_util.ErrorProto())
     if error.HasField("error_type"): raise JobBuildAndInferError(error)
-    
+
 def CurJobBuildAndInferCtx_AddLbiAndDiffWatcherUuidPair(lbi_and_uuid):
     serialized = str(text_format.MessageToString(lbi_and_uuid))
     error_str = oneflow_internal.CurJobBuildAndInferCtx_AddLbiAndDiffWatcherUuidPair(serialized)
@@ -170,8 +180,8 @@ def JobBuildAndInferCtx_MirroredBlobGetSubLbi(job_name, lbn, index):
 def JobBuildAndInferCtx_MirroredBlobGetStaticShape(job_name, lbn):
     job_name = str(job_name)
     lbn = str(lbn)
-    axis_str, error_str = \
-        oneflow_internal.JobBuildAndInferCtx_MirroredBlobGetSerializedIdListAsStaticShape(job_name, lbn)
+    get_shape = oneflow_internal.JobBuildAndInferCtx_MirroredBlobGetSerializedIdListAsStaticShape
+    axis_str, error_str = get_shape(job_name, lbn)
     error = text_format.Parse(error_str, error_util.ErrorProto())
     if error.HasField("error_type"): raise JobBuildAndInferError(error)
     int_list = text_format.Parse(axis_str, record_util.Int64List())
@@ -325,3 +335,9 @@ def DeviceType4DeviceTag(device_tag):
     error = text_format.Parse(error_str, error_util.ErrorProto())
     if error.HasField("error_type"): raise JobBuildAndInferError(error)
     return device_type
+
+def GetFunctionConfigDef():
+    func_config_def, error_str = oneflow_internal.GetFunctionConfigDef()
+    error = text_format.Parse(error_str, error_util.ErrorProto())
+    if error.HasField("error_type"): raise JobBuildAndInferError(error)
+    return text_format.Parse(func_config_def, ConfigDef())

@@ -27,6 +27,8 @@ class Session(object):
         self.config_proto_ = _GetDefaultConfigProto()
         self.placement_scope_stack_ = []
         self.is_mirrored_strategy_enabled_stack_ = []
+        self.function_flag_name2default_val_ = {}
+        self.UpdateFunctionFlagName2DefaultVal()
 
     @property
     def status(self): return self.status_
@@ -47,10 +49,17 @@ class Session(object):
     def is_mirrored_strategy_enabled_stack(self): return self.is_mirrored_strategy_enabled_stack_
 
     @property
+    def function_flag_name2default_val(self): return self.function_flag_name2default_val_
+
+    @property
     def inter_user_job_info(self): return self.inter_user_job_info_
 
     def GetJobConfigProto(self, job_name):
       return self.job_name2function_desc_[job_name].job_config_proto
+
+    def UpdateFunctionFlagName2DefaultVal(self):
+        items = c_api_util.GetFunctionConfigDef().flag_name2flag_def.items()
+        self.function_flag_name2default_val_ = {k : v.default_val for k, v in items}
 
     def TryInit(self):
         if self.status_ is SessionStatus.OPEN: self.Init()

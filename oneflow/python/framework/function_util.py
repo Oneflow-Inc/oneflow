@@ -15,6 +15,29 @@ import oneflow.python.lib.core.pb_util as pb_util
 class FunctionConfig(object):
     def __init__(self):
         self.function_desc = FunctionDesc()
+        
+    def __getattr__(self, attr_name):
+        name2default = session_ctx.GetDefaultSession().function_flag_name2default_val
+        assert attr_name in name2default
+        flag_name2flag_value = self.function_desc.job_config_proto.flag_name2flag_value
+        default_val = name2default[attr_name]
+        def FunctionConfigSetter(attr_value):
+            if default_val.HasField('at_bool'):
+                assert type(attr_value) is bool
+                flag_name2flag_value[attr_name].at_bool = attr_value
+            elif default_val.HasField('at_int64'):
+                assert type(attr_value) is int
+                flag_name2flag_value[attr_name].at_int64 = attr_value
+            elif default_val.HasField('at_double'):
+                assert type(attr_value) is float
+                flag_name2flag_value[attr_name].at_double = attr_value
+            elif default_val.HasField('at_string'):
+                assert type(attr_value) is str
+                flag_name2flag_value[attr_name].at_string = attr_value
+            else:
+                raise NotImplementedError("config_flag `%s' with type %s is not supported"
+                                          % (attr_name, type(attr_value)))
+        return FunctionConfigSetter
 
 @oneflow_export('function')
 def oneflow_function(function_config = FunctionConfig()):
@@ -254,7 +277,29 @@ def set_default_placement(func_desc, value):
     assert isinstance(value, placement_ctx.PlacementScope)
     func_desc.function_attribute.default_placement_scope = value
 
+@oneflow_function_config('use_xla_jit')
+def set_use_xla_jit(func_desc, value = True):
+    func_desc.job_config_proto.xrt_config.use_xla_jit = value
+
+@oneflow_function_config('use_tensorrt')
+def set_use_tensorrt(func_desc, value = True):
+    func_desc.job_config_proto.xrt_config.use_tensorrt = value
+
+@oneflow_function_config('tensorrt.use_fp16')
+def set_tensorrt_use_fp16(func_desc, value = True):
+    set_use_tensorrt(func_desc, True)
+    func_desc.job_config_proto.xrt_config.tensorrt_config.use_fp16 = value
+
+@oneflow_function_config('tensorrt.use_int8')
+def set_tensorrt_use_int8(func_desc, value = True):
+    set_use_tensorrt(func_desc, True)
+    func_desc.job_config_proto.xrt_config.tensorrt_config.use_int8 = value
+
 @oneflow_function_config('default_distribute_strategy')
 def set_default_distribute_strategy(func_desc, value):
     assert isinstance(value, distribute_ctx.DistributeStrategy)
     func_desc.function_attribute.default_distribute_strategy = value
+
+@oneflow_function_config('allow_cpu_return_op')
+def allow_cpu_return_op(func_desc, value):
+    func_desc.function_attribute.allow_cpu_return_op = value

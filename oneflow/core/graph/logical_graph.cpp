@@ -10,7 +10,7 @@ LogicalGraph::LogicalGraph(const Job& job) : job_(job) {
   BuildFwStruct();
   MergeEdge();
   SetNodeDataLbi();
-  ToDotWithAutoFilePath();
+  if (Global<ResourceDesc>::Get()->enable_debug_mode()) { ToDotWithAutoFilePath(); }
 }
 
 template<typename LogicalNodeType>
@@ -27,7 +27,6 @@ void LogicalGraph::BuildFwStruct() {
   HashMap<std::string, std::vector<LogicalNode*>> op_name2nodes;
   NaiveBuildFwStruct(&op_name2nodes);
   ReplaceAllReduceFacades();
-  LinkUnpackFw2PackFw(op_name2nodes);
 }
 
 void LogicalGraph::NaiveBuildFwStruct(
@@ -88,42 +87,6 @@ void LogicalGraph::NaiveBuildFwStruct(
       Connect(pred_node, edge, cur_node);
     }
   });
-  // set batch_dim_lbis_cnt
-  HashSet<LogicalBlobId> batch_dim_lbis;
-  for (const auto& pair : job_.helper().lbn2batch_axis()) {
-    if (pair.second.has_value() == false) { continue; }
-    CHECK(batch_dim_lbis.emplace(GenLogicalBlobId(pair.first)).second);
-  }
-  ForEachNode([&](LogicalNode* cur_node) {
-    size_t consumed_batch_dim_lbis_cnt = 0;
-    size_t produced_batch_dim_lbis_cnt = 0;
-    for (const auto& op : cur_node->op_vec()) {
-      for (const std::string& ibn : op->input_bns()) {
-        consumed_batch_dim_lbis_cnt +=
-            batch_dim_lbis.find(op->BnInOp2Lbi(ibn)) != batch_dim_lbis.end();
-      }
-      for (const std::string& obn : op->output_bns()) {
-        produced_batch_dim_lbis_cnt +=
-            batch_dim_lbis.find(op->BnInOp2Lbi(obn)) != batch_dim_lbis.end();
-      }
-    }
-    cur_node->set_consumed_batch_dim_lbis_cnt(consumed_batch_dim_lbis_cnt);
-    cur_node->set_produced_batch_dim_lbis_cnt(produced_batch_dim_lbis_cnt);
-  });
-}
-
-void LogicalGraph::LinkUnpackFw2PackFw(
-    const HashMap<std::string, std::vector<LogicalNode*>>& op_name2nodes) {
-  ForEachLogicalNode<PackForwardLogicalNode>([&](PackForwardLogicalNode* pack_fw) {
-    const std::string& unpack_name = pack_fw->SoleOp()->op_conf().pack_conf().related_unpack();
-    auto it = op_name2nodes.find(unpack_name);
-    CHECK(it != op_name2nodes.end());
-    CHECK_EQ(1, it->second.size());
-    UnpackForwardLogicalNode* unpack_fw =
-        dynamic_cast<UnpackForwardLogicalNode*>(it->second.front());
-    CHECK(unpack_fw);
-    pack_fw->set_related_unpack(unpack_fw);
-  });
 }
 
 void LogicalGraph::MergeEdge() {
@@ -150,20 +113,6 @@ void LogicalGraph::SetNodeDataLbi() {
       node->SetDataLbisTo(out_edge->dst_node(), out_edge->lbis());
     }
   });
-}
-
-bool LogicalGraph::MustHaveModelDiffAcc() {
-  bool must_have_model_diff_acc = false;
-  ForEachLogicalNode<ForwardLogicalNode>(
-      [&must_have_model_diff_acc](ForwardLogicalNode* fw_logical) {
-        if (must_have_model_diff_acc) { return; }
-        if (fw_logical->TypeName() == "PackForward" || fw_logical->TypeName() == "UnpackForward"
-            || fw_logical->TypeName() == "RepeatForward") {
-          must_have_model_diff_acc = true;
-          return;
-        }
-      });
-  return must_have_model_diff_acc;
 }
 
 void LogicalGraph::AddAllReduce(LogicalNode* src, LogicalNode* dst) {

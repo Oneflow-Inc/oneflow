@@ -52,6 +52,8 @@ class XpuShape final {
     }
   }
 
+  std::string ToString() const { return ShapeView(dim_, num_axes_).ToString(); }
+
  private:
   size_t num_axes_;
   size_t elem_num_;
@@ -97,6 +99,12 @@ SPECIALIZE_XPU_SHAPE_UTIL(3);
 #undef EXTRACT_COORD
 #undef COORD_MUL_STRIDE
 
+void SimplifyBroadcastShapes(const XpuShape& y, const XpuShape& b, DimVector* simplified_y,
+                             DimVector* simplified_b);
+
+void SimplifyBroadcastShapes(const XpuShape& y, const XpuShape& a, const XpuShape& b,
+                             DimVector* simplified_y, DimVector* simplified_a,
+                             DimVector* simplified_b);
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_NDARRAY_XPU_SHAPE_H_

@@ -8,6 +8,7 @@ import "oneflow/core/operator/op_attribute.proto";
 import "oneflow/core/operator/op_conf.proto";
 import "oneflow/core/job/placement.proto";
 import "oneflow/core/data/data.proto";
+import "oneflow/core/register/blob_desc.proto";
 
 message ConvKernelConf {
   required ShapeProto in = 1;
@@ -101,14 +102,6 @@ message DecodeOFRecordKernelConf {
 }
 
 message ReduceGatherKernelConf {
-  repeated int64 data_offset = 1;
-}
-
-message ReduceConcatKernelConf {
-  repeated int64 data_offset = 1;
-}
-
-message ReduceSplitKernelConf {
   repeated int64 data_offset = 1;
 }
 
@@ -216,6 +209,15 @@ message NonzeroGpuKernelConf {
   required int32 num_axes = 1;
 }
 
+message UserKernelConf {
+  map<string, BlobDescProto> bn_in_op2blob_desc = 1;
+  required ParallelContext parallel_ctx = 2;
+}
+
+message XrtLaunchKernelConf {
+  required ParallelContext parallel_ctx = 1;
+}
+
 message KernelConf {
   required OpAttribute op_attribute = 1;
   required DataType data_type = 2;
@@ -225,6 +227,7 @@ message KernelConf {
   required DTypeSignature dtype_signature = 7;
 
   oneof kernel_type {
+    UserKernelConf user_conf = 100;
     SparseSoftmaxCrossEntropyLossKernelConf sparse_softmax_cross_entropy_loss_conf = 101;
     SparseCrossEntropyLossKernelConf sparse_cross_entropy_loss_conf = 102;
     DecodeRandomKernelConf decode_random_conf = 103;
@@ -238,8 +241,8 @@ message KernelConf {
     MaxPoolingKernelConf max_pooling_conf = 205;
     LocalResponseNormalizationKernelConf local_response_normalization_conf = 300;
     ReduceGatherKernelConf reduce_gather_conf = 350;
-    ReduceConcatKernelConf reduce_concat_conf = 351;
-    ReduceSplitKernelConf reduce_split_conf = 352;
+    XrtLaunchKernelConf xrt_launch_conf = 353;
+
     AccuracyKernelConf accuracy_conf = 401;
     SliceKernelConf slice_conf = 402;
     ConstantKernelConf constant_conf = 403;

@@ -10,6 +10,7 @@ import "oneflow/core/register/blob_desc.proto";
 import "oneflow/core/operator/op_conf.proto";
 import "oneflow/core/common/shape.proto";
 import "oneflow/core/job/sbp_parallel.proto";
+import "oneflow/core/framework/user_op_attr.proto";
 
 message TrainConf {
   required NormalModelUpdateOpUserConf model_update_conf = 3;
@@ -45,6 +46,20 @@ message MemoryAllocationAlgorithmConf {
   optional bool use_time_line_algo = 3 [default = false];
 }
 
+message XrtConfig {
+  message XlaConfig {
+    // TODO
+  }
+  message TensorRTConfig {
+    optional bool use_fp16 = 1 [default = false];
+    optional bool use_int8 = 2 [default = false];
+  }
+  optional bool use_xla_jit = 1 [default = false];
+  optional bool use_tensorrt = 2 [default = false];
+  optional XlaConfig xla_config = 3;
+  optional TensorRTConfig tensorrt_config = 4;
+}
+
 message JobConfigProto {
   required string job_name = 1;
 
@@ -63,6 +78,8 @@ message JobConfigProto {
   optional ExperimentalRunConf exp_run_conf = 100;
   optional bool use_memory_allocation_algorithm_v2 = 101 [default = true];
   optional MemoryAllocationAlgorithmConf memory_allocation_algorithm_conf = 102;
+
+  optional XrtConfig xrt_config = 103;
 
   optional bool enable_cudnn = 200 [default = true];
   optional int64 cudnn_buf_limit_mbyte = 201 [default = 1024];  // 1GByte
@@ -105,6 +122,8 @@ message JobConfigProto {
   optional bool enable_auto_mixed_precision = 602 [default = false];
 
   optional int64 concurrency_width = 1000 [default = 128];
+
+  map<string, UserOpAttrVal> flag_name2flag_value = 2000;
 }
 
 message OpTimeShape {

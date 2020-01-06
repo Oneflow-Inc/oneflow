@@ -13,11 +13,14 @@ void OutputOp::InitFromOpConf() {
 Maybe<void> OutputOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
-  *GetBlobDesc4BnInOp("out") = *GetBlobDesc4BnInOp("in");
-  if (GetBlobDesc4BnInOp("out")->is_dynamic() == false) {
-    InterfaceOpUtil::InferOutBlobDesc(op_conf().output_conf().blob_conf(),
-                                      GetBlobDesc4BnInOp("out"), parallel_ctx);
-    CHECK_OR_RETURN(*GetBlobDesc4BnInOp("out") == *GetBlobDesc4BnInOp("in"));
+  const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
+  BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
+  if (in_blob_desc->is_dynamic()) {
+    *out_blob_desc = *in_blob_desc;
+  } else {
+    InterfaceOpUtil::InferOutBlobDesc(op_conf().output_conf().blob_conf(), out_blob_desc,
+                                      parallel_ctx);
+    CHECK_OR_RETURN(*out_blob_desc == *in_blob_desc);
   }
   return Maybe<void>::Ok();
 }
@@ -26,8 +29,9 @@ const PbMessage& OutputOp::GetCustomizedConf() const { return op_conf().output_c
 
 Maybe<void> OutputOp::InferBatchAxis(
     std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
-  InterfaceOpUtil::InferBatchAxis(op_conf().output_conf().blob_conf(), BatchAxis4BnInOp("out"));
-  CHECK_OR_RETURN(*BatchAxis4BnInOp("out") == *BatchAxis4BnInOp("in"));
+  OptInt64* out_batch_axis = BatchAxis4BnInOp("out");
+  InterfaceOpUtil::InferBatchAxis(op_conf().output_conf().blob_conf(), out_batch_axis);
+  CHECK_OR_RETURN(*out_batch_axis == *BatchAxis4BnInOp("in"));
   return Maybe<void>::Ok();
 }
 

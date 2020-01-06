@@ -2,6 +2,7 @@ import oneflow as flow
 import numpy as np
 from absl import flags
 import sys
+import copy
 from pretrain import PreTrain
 
 FLAGS = flags.FLAGS
@@ -128,16 +129,15 @@ func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
 func_config.train.primary_lr(FLAGS.lr)
 func_config.train.model_update_conf(_BERT_MODEL_UPDATE_CONF)
 func_config.train.weight_l2(FLAGS.weight_l2)
-func_config.enable_inplace(False)
 
 def test_1n1c(test_case):
+    flow.config.enable_debug_mode(True)
     flow.config.gpu_device_num(1)
     pretrain_job = flow.function(func_config)(PretrainJob)
     check_point = flow.train.CheckPoint()
     check_point.load(FLAGS.model_load_dir)
     of_loss = [pretrain_job().get().mean() for _ in range(10)]
     print(of_loss)
-
 
 def test_1n4c(test_case):
     flow.config.gpu_device_num(4)
@@ -155,3 +155,39 @@ def test_2n8c(test_case):
     check_point.load(FLAGS.model_load_dir)
     of_loss = [pretrain_job().get().mean() for _ in range(10)]
     print(of_loss)
+
+def test_inplace(test_case):
+    test_case.assertTrue(np.allclose(GetSeveralLossesAsNumpy(True), GetSeveralLossesAsNumpy(False)))
+
+def GetSeveralLossesAsNumpy(enable_inplace, num_iters=10):
+    flow.config.enable_debug_mode(True)
+    flow.config.gpu_device_num(1)
+    train_config = flow.FunctionConfig()
+    train_config.default_distribute_strategy(flow.distribute.consistent_strategy())
+    train_config.train.primary_lr(FLAGS.lr)
+    train_config.train.model_update_conf(_BERT_MODEL_UPDATE_CONF)
+    train_config.train.weight_l2(FLAGS.weight_l2)
+    train_config.enable_inplace(enable_inplace)
+    @flow.function(train_config)
+    def PretrainJob():
+        loss = BuildPreTrainNet(
+            batch_size=FLAGS.batch_size,
+            data_part_num=FLAGS.data_part_num,
+            seq_length=FLAGS.seq_length,
+            max_position_embeddings=FLAGS.max_position_embeddings,
+            num_hidden_layers=1,
+            num_attention_heads=FLAGS.num_attention_heads,
+            hidden_dropout_prob=FLAGS.hidden_dropout_prob,
+            attention_probs_dropout_prob=FLAGS.attention_probs_dropout_prob,
+            vocab_size=FLAGS.vocab_size,
+            type_vocab_size=FLAGS.type_vocab_size,
+            max_predictions_per_seq=FLAGS.max_predictions_per_seq,
+        )
+        flow.losses.add_loss(loss)
+        return loss
+
+    check_point = flow.train.CheckPoint()
+    check_point.load(FLAGS.model_load_dir)
+    ret = [PretrainJob().get().mean() for _ in range(num_iters)]
+    flow.clear_default_session()
+    return np.array(ret)
