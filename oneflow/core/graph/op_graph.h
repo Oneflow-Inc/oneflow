@@ -36,6 +36,7 @@ class OpNode final : public Node<OpNode, OpEdge> {
   const OpNode& ProducerOpNode4Lbi(const LogicalBlobId& lbi) const;
   const OpNode& SrcNode4InputBnInOp(const std::string& bn_in_op) const;
   const OpNode& ProducerOpNode4BnInOp(const std::string& bn_in_op) const;
+  const ParallelDesc& BlobParallelDesc4Obn(const std::string& obn) const;
 
   std::string VisualStr() const override;
 
@@ -49,7 +50,7 @@ class OpNode final : public Node<OpNode, OpEdge> {
   ParallelDesc* mut_parallel_desc() { return &parallel_desc_; }
   SbpSignature* mut_sbp_signature() { return &sbp_signature_; }
   Shape* mut_out_blob_time_shape();
-  HashMap<std::string, std::vector<std::unique_ptr<BlobDesc>>>* mut_bn2parallel_id2blob_desc() {
+  HashMap<std::string, std::vector<std::shared_ptr<BlobDesc>>>* mut_bn2parallel_id2blob_desc() {
     return &bn2parallel_id2blob_desc_;
   }
   OptInt64* MutBatchAxis4Lbi(const LogicalBlobId& lbi);
@@ -63,38 +64,47 @@ class OpNode final : public Node<OpNode, OpEdge> {
 
   int64_t GetAxisParallelNum(
       const std::function<void(bool*, int32_t*, int64_t*)>& GetAxisParallelInfo) const;
-  void ConcatBlobDesc(const std::vector<std::unique_ptr<BlobDesc>>& blob_descs,
+  void ConcatBlobDesc(const ParallelDesc& blob_parallel_desc,
+                      const std::vector<std::shared_ptr<BlobDesc>>& blob_descs,
                       const SbpParallel& sbp_parallel, BlobDesc* concatenated_blob_desc) const;
   void SplitLogicalInputBlobDesc();
   void ConcatLogicalOutputBlobDesc();
   void CheckBlobDescs(const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
                       const ParallelContext* parallel_ctx) const;
+  void InferBlobParallelDesc();
+  void InitLbi2SourceNode();
+  void InitInputBlobFastestTimeShape();
+  void InitLbi2SbpParallel();
 
   ParallelDesc parallel_desc_;
+  HashMap<std::string, ParallelDesc> obn2blob_parallel_desc_;
   std::shared_ptr<Operator> op_;
   HashSet<std::string> ibns_;
   std::unique_ptr<Shape> out_blob_time_shape_;
   SbpSignature sbp_signature_;
   HashMap<LogicalBlobId, OptInt64> lbi2batch_axis_;
-  HashMap<std::string, std::vector<std::unique_ptr<BlobDesc>>> bn2parallel_id2blob_desc_;
+  HashMap<std::string, std::vector<std::shared_ptr<BlobDesc>>> bn2parallel_id2blob_desc_;
   HashMap<LogicalBlobId, std::unique_ptr<BlobDesc>> lbi2logical_blob_desc_;
+  HashMap<LogicalBlobId, OpNode*> lbi2source_node_;
+  std::unique_ptr<Shape> input_blob_fastest_time_shape_;
+  HashMap<LogicalBlobId, SbpParallel> lbi2sbp_parallel_;
 };
 
 class OpEdge final : public Edge<OpNode, OpEdge> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(OpEdge);
-  explicit OpEdge(const std::vector<LogicalBlobId>& lbis,
-                  const HashMap<LogicalBlobId, std::string>& lbi2obn,
-                  const HashMap<LogicalBlobId, std::vector<std::string>>& lbi2ibns)
-      : lbis_(lbis), lbi2obn_(lbi2obn), lbi2ibns_(lbi2ibns) {}
-  ~OpEdge() = default;
+  explicit OpEdge(std::shared_ptr<std::vector<LogicalBlobId>> lbis,
+                  std::shared_ptr<HashMap<LogicalBlobId, std::string>> lbi2obn,
+                  std::shared_ptr<HashMap<LogicalBlobId, std::vector<std::string>>> lbi2ibns)
+      : lbis_(std::move(lbis)), lbi2obn_(std::move(lbi2obn)), lbi2ibns_(std::move(lbi2ibns)) {}
+  ~OpEdge() override = default;
 
   void InitDistributeHierarchyInfo();
 
   // Getters
-  const std::vector<LogicalBlobId>& lbis() const { return lbis_; }
-  const HashMap<LogicalBlobId, std::string>& lbi2obn() const { return lbi2obn_; }
-  const HashMap<LogicalBlobId, std::vector<std::string>>& lbi2ibns() const { return lbi2ibns_; }
+  const std::vector<LogicalBlobId>& lbis() const { return *lbis_; }
+  const HashMap<LogicalBlobId, std::string>& lbi2obn() const { return *lbi2obn_; }
+  const HashMap<LogicalBlobId, std::vector<std::string>>& lbi2ibns() const { return *lbi2ibns_; }
   std::string VisualStr() const override;
   bool is_strict_121() const { return is_strict_121_; }
 
@@ -102,9 +112,9 @@ class OpEdge final : public Edge<OpNode, OpEdge> {
   void InitIsStrict121();
   bool CalcIsStrict121Connected() const;
 
-  std::vector<LogicalBlobId> lbis_;
-  HashMap<LogicalBlobId, std::string> lbi2obn_;
-  HashMap<LogicalBlobId, std::vector<std::string>> lbi2ibns_;
+  std::shared_ptr<std::vector<LogicalBlobId>> lbis_;
+  std::shared_ptr<HashMap<LogicalBlobId, std::string>> lbi2obn_;
+  std::shared_ptr<HashMap<LogicalBlobId, std::vector<std::string>>> lbi2ibns_;
 
   bool is_strict_121_;
 };
@@ -113,7 +123,7 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(OpGraph);
   explicit OpGraph(const Job& job) { Init(job); }
-  ~OpGraph() = default;
+  ~OpGraph() override = default;
 
   const OpNode* OpNode4OpName(const std::string& name) const;
 
@@ -133,8 +143,8 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
   // a set of nodes is called a chain family if they can divided into several connected chains
   void ForEachChainFamily(const std::function<void(const HashSet<OpNode*>&)>& Handler) const;
 
-  std::function<bool(const LogicalBlobId&, const std::string&)>
-  MakePredicatorIsLbiAllConsumersReachableToOpName() const;
+  std::function<bool(const std::string&, const std::string&)>
+  MakePredicatorIsOpNameDataOrCtrlReachable() const;
 
   void ForEachDataAndCtrlInNode(OpNode* node, const std::function<void(OpNode*)>& Handler) const;
   void ForEachDataAndCtrlOutNode(OpNode* node, const std::function<void(OpNode*)>& Handler) const;

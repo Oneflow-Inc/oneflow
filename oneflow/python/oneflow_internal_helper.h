@@ -1,21 +1,25 @@
+#include <iostream>
 #include <google/protobuf/text_format.h>
 #include "oneflow/core/common/buffer_manager.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/register/ofblob.h"
 #include "oneflow/core/job/job_set.pb.h"
+#include "oneflow/core/job/env.pb.h"
 #include "oneflow/core/job/oneflow.h"
 #include "oneflow/core/job/foreign_job_instance.h"
-#include "oneflow/core/job/environment_objects_scope.h"
+#include "oneflow/core/job/env_global_objects_scope.h"
+#include "oneflow/core/job/session_global_objects_scope.h"
 #include "oneflow/core/job/machine_context.h"
 #include "oneflow/core/job/oneflow.h"
 #include "oneflow/core/job/runtime_job_descs.h"
 #include "oneflow/core/control/cluster_control.pb.h"
 #include "oneflow/core/control/ctrl_client.h"
-#include "oneflow/core/job/runtime_buffer_managers_scope.h"
 #include "oneflow/core/control/cluster_control.h"
-#include "oneflow/core/job/job_set_compile_ctx.h"
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 #include "oneflow/core/job/foreign_watcher.h"
+#include "oneflow/core/job/cluster.h"
+#include "oneflow/core/framework/config_def.h"
+#include "oneflow/core/persistence/tee_persistent_log_stream.h"
 
 namespace oneflow {
 
@@ -27,60 +31,87 @@ Maybe<void> RegisterWatcherOnlyOnce(ForeignWatcher* watcher) {
 }
 
 Maybe<bool> IsOpTypeCaseCpuSupportOnly(int64_t op_type_case) {
-  using namespace oneflow;
   using OnlyCpuSupport = OnlyCpuSupportPredicator;
   OF_CHECK(IsClassRegistered<OnlyCpuSupport>(op_type_case)) << ": op_type_case = " << op_type_case;
   return static_cast<bool>(*std::unique_ptr<OnlyCpuSupport>(NewObj<OnlyCpuSupport>(op_type_case)));
 }
 
-Maybe<void> InitEnvironmentBySerializedConfigProto(const std::string& config_proto_str) {
-  using namespace oneflow;
-  ConfigProto config_proto;
-  OF_CHECK(google::protobuf::TextFormat::ParseFromString(config_proto_str, &config_proto))
-      << "InitEnvironmentBySerializedConfigProto(): failed to parse config_proto: "
-      << config_proto_str;
-  OF_CHECK_ISNULL(Global<EnvironmentObjectsScope>::Get());
+Maybe<void> InitEnv(const std::string& env_proto_str) {
+  EnvProto env_proto;
+  OF_CHECK(TxtString2PbMessage(env_proto_str, &env_proto))
+      << "failed to parse env_proto" << env_proto_str;
+  OF_CHECK_ISNULL(Global<EnvGlobalObjectsScope>::Get());
   // Global<T>::New is not allowed to be called here
   // because glog is not constructed yet and LOG(INFO) has bad bahavior
-  Global<EnvironmentObjectsScope>::SetAllocated(new EnvironmentObjectsScope());
-  Global<EnvironmentObjectsScope>::Get()->Init(config_proto);
-  LOG(INFO) << "NewGlobal " << typeid(EnvironmentObjectsScope).name();
-  if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
-    Global<CtrlClient>::Get()->PushKV("master_config_proto", config_proto);
-  } else {
-    ConfigProto master_config_proto;
-    Global<CtrlClient>::Get()->PullKV("master_config_proto", &master_config_proto);
-    OF_CHECK(PbMd().Equals(config_proto, master_config_proto))
-        << "InitEnvironmentBySerializedConfigProto(): config_proto not equals master_config_proto";
-
-    while (ClusterControl::WorkerReceiveHalt() == false) {
-      JobSet job_set;
-      Global<CtrlClient>::Get()->PullKV("session_job_set", &job_set);
-      { Oneflow oneflow(job_set); }
-    }
-    ClusterControl::WorkerSendHaltAck();
-    Global<EnvironmentObjectsScope>::Delete();
-    exit(0);
-  }
+  Global<EnvGlobalObjectsScope>::SetAllocated(new EnvGlobalObjectsScope());
+  JUST(Global<EnvGlobalObjectsScope>::Get()->Init(env_proto));
+  if (!Global<MachineCtx>::Get()->IsThisMachineMaster()) { CHECK_JUST(Cluster::WorkerLoop()); }
   return Maybe<void>::Ok();
 }
 
-Maybe<void> InitGlobalOneflow() {
-  using namespace oneflow;
+Maybe<void> DestroyEnv() {
+  if (Global<EnvGlobalObjectsScope>::Get() == nullptr) { return Maybe<void>::Ok(); }
   OF_CHECK(Global<MachineCtx>::Get()->IsThisMachineMaster());
+  ClusterControl::MasterSendHalt();
+  return Maybe<void>::Ok();
+}
+
+void FixCpuDeviceNum(ConfigProto* config_proto) {
+  if (config_proto->resource().cpu_device_num() > 0) { return; }
+  config_proto->mutable_resource()->set_cpu_device_num(std::thread::hardware_concurrency());
+}
+
+Maybe<void> InitGlobalSession(const std::string& config_proto_str) {
+  OF_CHECK_NOTNULL(Global<EnvDesc>::Get()) << "env not found";
+  OF_CHECK(Global<MachineCtx>::Get()->IsThisMachineMaster());
+
   ClusterControl::MasterSendSessionStart();
+
+  ConfigProto config_proto;
+  OF_CHECK(TxtString2PbMessage(config_proto_str, &config_proto))
+      << "failed to parse config_proto: " << config_proto_str;
+  FixCpuDeviceNum(&config_proto);
+  Global<CtrlClient>::Get()->PushKV("config_proto", config_proto);
+
+  OF_CHECK_ISNULL(Global<SessionGlobalObjectsScope>::Get());
+  Global<SessionGlobalObjectsScope>::SetAllocated(new SessionGlobalObjectsScope());
+  JUST(Global<SessionGlobalObjectsScope>::Get()->Init(config_proto));
+  LOG(INFO) << "NewGlobal " << typeid(SessionGlobalObjectsScope).name();
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> DestroyGlobalSession() {
+  if (Global<SessionGlobalObjectsScope>::Get() == nullptr) { return Maybe<void>::Ok(); }
+  OF_CHECK(Global<MachineCtx>::Get()->IsThisMachineMaster());
+  Global<SessionGlobalObjectsScope>::Delete();
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> StartGlobalSession() {
+  OF_CHECK_NOTNULL(Global<SessionGlobalObjectsScope>::Get()) << "session not found";
+  OF_CHECK(Global<MachineCtx>::Get()->IsThisMachineMaster());
   const JobSet& job_set = Global<JobBuildAndInferCtxMgr>::Get()->job_set();
+  if (Global<ResourceDesc>::Get()->enable_debug_mode()) {
+    TeePersistentLogStream::Create("job_set.prototxt")->Write(job_set);
+  }
   if (job_set.job().empty()) { return Error::JobSetEmpty() << "no function defined"; }
   OF_CHECK_ISNULL(Global<Oneflow>::Get());
   Global<CtrlClient>::Get()->PushKV("session_job_set", job_set);
-  Global<RuntimeBufferManagersScope>::New();
-  Global<JobSetCompileCtx>::New();
+  Global<const InterJobReuseMemStrategy>::New(job_set.inter_job_reuse_mem_strategy());
   Global<Oneflow>::New(job_set);
   return Maybe<void>::Ok();
 }
 
+Maybe<void> StopGlobalSession() {
+  if (Global<Oneflow>::Get() == nullptr) { return Maybe<void>::Ok(); }
+  OF_CHECK(Global<MachineCtx>::Get()->IsThisMachineMaster());
+  OF_CHECK_NOTNULL(Global<Oneflow>::Get());
+  Global<Oneflow>::Delete();
+  Global<const InterJobReuseMemStrategy>::Delete();
+  return Maybe<void>::Ok();
+}
+
 Maybe<std::string> GetSerializedInterUserJobInfo() {
-  using namespace oneflow;
   OF_CHECK(Global<MachineCtx>::Get()->IsThisMachineMaster());
   OF_CHECK_NOTNULL(Global<Oneflow>::Get());
   OF_CHECK_NOTNULL(Global<InterUserJobInfo>::Get());
@@ -89,8 +120,13 @@ Maybe<std::string> GetSerializedInterUserJobInfo() {
   return ret;
 }
 
+Maybe<std::string> GetFunctionConfigDef() {
+  std::string ret;
+  google::protobuf::TextFormat::PrintToString(GlobalFunctionConfigDef(), &ret);
+  return ret;
+}
+
 Maybe<void> LaunchJob(const std::shared_ptr<oneflow::ForeignJobInstance>& cb) {
-  using namespace oneflow;
   OF_CHECK(Global<MachineCtx>::Get()->IsThisMachineMaster());
   OF_CHECK_NOTNULL(Global<Oneflow>::Get());
   const auto& job_name = cb->job_name();
@@ -107,28 +143,15 @@ Maybe<void> LaunchJob(const std::shared_ptr<oneflow::ForeignJobInstance>& cb) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> DestroyGlobalOneflow() {
-  using namespace oneflow;
-  if (Global<Oneflow>::Get() == nullptr) { return Maybe<void>::Ok(); }
-  OF_CHECK(Global<MachineCtx>::Get()->IsThisMachineMaster());
-  OF_CHECK_NOTNULL(Global<Oneflow>::Get());
-  Global<Oneflow>::Delete();
-  Global<JobSetCompileCtx>::Delete();
-  Global<RuntimeBufferManagersScope>::Delete();
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> DestroyGlobalEnvironment() {
-  using namespace oneflow;
-  if (Global<EnvironmentObjectsScope>::Get() == nullptr) { return Maybe<void>::Ok(); }
-  OF_CHECK(Global<MachineCtx>::Get()->IsThisMachineMaster());
-  ClusterControl::MasterSendHaltAndWaitAck();
-  Global<EnvironmentObjectsScope>::Delete();
-  return Maybe<void>::Ok();
-}
-
 Maybe<long long> GetDeviceType4DeviceTag(const std::string& device_tag) {
   return *JUST(DeviceType4DeviceTag(device_tag));
+}
+
+Maybe<std::string> GetSerializedMachineId2DeviceIdListOFRecord(
+    const std::string& parallel_conf_str) {
+  ParallelConf parallel_conf;
+  OF_CHECK(TxtString2PbMessage(parallel_conf_str, &parallel_conf)) << "parallel conf parse failed";
+  return PbMessage2TxtString(*JUST(ParseMachineAndDeviceIdList(parallel_conf)));
 }
 
 namespace {
@@ -136,9 +159,11 @@ namespace {
 struct GlobalChecker final {
   GlobalChecker() = default;
   ~GlobalChecker() {
-    if (Global<Oneflow>::Get() != nullptr) { LOG(FATAL) << "global oneflow is not destroyed yet"; }
-    if (Global<EnvironmentObjectsScope>::Get() != nullptr) {
-      LOG(FATAL) << "global environment is not destroyed yet";
+    if (Global<Oneflow>::Get() != nullptr) {
+      std::cerr << "global session is not closed yet" << std::endl;
+    }
+    if (Global<SessionGlobalObjectsScope>::Get() != nullptr) {
+      std::cerr << "global session is not destroyed yet" << std::endl;
     }
   }
 };

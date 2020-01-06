@@ -1,19 +1,17 @@
 #include "oneflow/core/job/resource_desc.h"
+#include "oneflow/core/common/util.h"
 
 namespace oneflow {
 
-int64_t ResourceDesc::GetMachineId(const std::string& addr) const {
-  int64_t machine_id = -1;
-  int64_t machine_num = resource_.machine_size();
-  FOR_RANGE(int64_t, i, 0, machine_num) {
-    if (addr == resource_.machine(i).addr()) {
-      machine_id = i;
-      break;
-    }
-  }
-  CHECK_GE(machine_id, 0);
-  CHECK_LT(machine_id, machine_num);
-  return machine_id;
+size_t ResourceDesc::TotalMachineNum() const {
+  CHECK_GT(resource_.machine_num(), 0);
+  CHECK_LE(resource_.machine_num(), Global<EnvDesc>::Get()->TotalMachineNum());
+  return resource_.machine_num();
+}
+
+const Machine& ResourceDesc::machine(int32_t idx) const {
+  CHECK_LT(idx, TotalMachineNum());
+  return Global<EnvDesc>::Get()->machine(idx);
 }
 
 int32_t ResourceDesc::ComputeThreadPoolSize() const {
@@ -23,6 +21,10 @@ int32_t ResourceDesc::ComputeThreadPoolSize() const {
   } else {
     return CpuDeviceNum();
   }
+}
+
+bool ResourceDesc::enable_debug_mode() const {
+  return std::getenv("ONEFLOW_DEBUG_MODE") != nullptr || resource_.enable_debug_mode();
 }
 
 }  // namespace oneflow

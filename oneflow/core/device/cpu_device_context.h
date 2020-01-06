@@ -13,6 +13,7 @@ class CpuDeviceCtx final : public DeviceCtx {
 
   std::unique_ptr<DeviceCtx> Copy() const { return std::unique_ptr<DeviceCtx>(new CpuDeviceCtx()); }
 
+  void SyncDevice() override {}
   void AddCallBack(std::function<void()> callback) const override { callback(); }
 
  private:

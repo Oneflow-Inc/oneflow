@@ -1,8 +1,20 @@
 #include "oneflow/core/job_completer/all_reduce_add_pass.h"
+#include "oneflow/core/register/runtime_blob_desc.h"
 
 namespace oneflow {
 
 namespace {
+
+std::function<std::string(const std::string&)> MakeGetterArg4ThisFuncPrevCall(int64_t limits) {
+  auto count = std::make_shared<int64_t>(limits);
+  auto arg4this_func_prev_call = std::make_shared<std::string>("");
+  return [count, arg4this_func_prev_call](const std::string& arg) -> std::string {
+    if (--(*count) < 0) { return ""; }
+    std::string ret = *arg4this_func_prev_call;
+    *arg4this_func_prev_call = arg;
+    return ret;
+  };
+}
 
 std::function<const OpNode*(const LogicalBlobId&)> MakeGetterProducerOpNode4Lbi(
     const OpGraph& op_graph) {
@@ -79,8 +91,10 @@ void FindAllReducedLbis(
     CHECK(key_check.emplace(pair.first()).second);
     const auto* producer = ProducerOpNode4Lbi(pair.first());
     if (producer->parallel_desc().parallel_num() == 1) { continue; }
-    if (producer->op().op_conf().has_variable_conf() == false) { continue; }
-    if (producer->SbpParallel4Lbi(pair.first()).has_broadcast_parallel() == false) { continue; }
+    if (!producer->op().op_conf().has_variable_conf()) { continue; }
+    if (!producer->SbpParallel4Lbi(pair.first()).has_broadcast_parallel()) { continue; }
+    const auto* diff_producer = ProducerOpNode4Lbi(pair.second());
+    if (!diff_producer->SbpParallel4Lbi(pair.second()).has_partial_sum_parallel()) { continue; }
     const auto& diff_lbi =
         FindP2BLbiWithSoleConsumer(pair.second(), ProducerOpNode4Lbi, SoleConsumerOpNode4Lbi);
     diff_lbis.insert(diff_lbi);
@@ -120,50 +134,27 @@ void ForEachLbisGroupByDataTypeAndParallelDesc(
   }
 }
 
-void GroupAllReducedLbisByStrategy(
+void AddReduceConcatAndReduceIdentityOpConf(
+    JobBuilder* job_builder, std::vector<int64_t>* offsets,
     const std::function<const OpNode*(const LogicalBlobId&)>& ProducerOpNode4Lbi,
-    const std::vector<LogicalBlobId>& sorted_lbis,
-    std::vector<std::vector<LogicalBlobId>>* lbi_groups) {
-  auto MemSize4Lbi = [&](const LogicalBlobId& lbi) -> size_t {
-    const OpNode* producer = ProducerOpNode4Lbi(lbi);
-    const BlobDesc& logical_blob_desc = producer->LogicalBlobDesc4Lbi(lbi);
-    int64_t elem_cnt = logical_blob_desc.shape().elem_cnt();
-    size_t model_size = elem_cnt * GetSizeOfDataType(logical_blob_desc.data_type());
-    return RoundUp(model_size, kCudaAlignSize);
-  };
-  ForEachLbisGroupByDataTypeAndParallelDesc(
-      ProducerOpNode4Lbi, sorted_lbis, [&](const std::vector<LogicalBlobId>& lbis) {
-        size_t model_total_size = 0;
-        for (const auto& lbi : lbis) { model_total_size += MemSize4Lbi(lbi); }
-        size_t avg_size = model_total_size / GlobalJobDesc().all_reduce_group_num();
-        const size_t group_min_size = GlobalJobDesc().all_reduce_group_min_byte();
-        const float group_size_warmup = GlobalJobDesc().all_reduce_group_size_warmup();
-        size_t cur_group_capacity = group_min_size / group_size_warmup;
-        size_t cur_group_model_size = GetMaxVal<size_t>();
-        for (const LogicalBlobId& lbi : lbis) {
-          if (cur_group_model_size >= cur_group_capacity) {
-            lbi_groups->emplace_back(std::vector<LogicalBlobId>{});
-            cur_group_model_size = 0;
-            if (cur_group_capacity < avg_size) { cur_group_capacity *= group_size_warmup; }
-          }
-          lbi_groups->back().emplace_back(lbi);
-          cur_group_model_size += MemSize4Lbi(lbi);
-        }
-      });
-}
-
-void AddReduceConcatAndReduceIdentityOpConf(JobBuilder* job_builder,
-                                            const ParallelConf& parallel_conf,
-                                            const std::vector<LogicalBlobId>& lbi_groups,
-                                            int32_t order_in_graph, LogicalBlobId* grouped_lbi) {
+    const ParallelConf& parallel_conf, const std::vector<LogicalBlobId>& lbi_group,
+    int32_t order_in_graph, LogicalBlobId* grouped_lbi) {
   OperatorConf reduce_concat_op_conf;
   reduce_concat_op_conf.set_name("System-Boxing-AllReduce-ReduceConcat_" + NewUniqueId());
   auto* reduce_concat_conf = reduce_concat_op_conf.mutable_reduce_concat_conf();
-  reduce_concat_conf->set_in_num(lbi_groups.size());
-  for (const LogicalBlobId& lbi : lbi_groups) {
+  for (const LogicalBlobId& lbi : lbi_group) {
     reduce_concat_conf->add_in(GenLogicalBlobName(lbi));
   }
   reduce_concat_conf->set_out("out");
+  // compute data offset
+  int64_t offset = 0;
+  for (int32_t i = 0; i < lbi_group.size(); ++i) {
+    offsets->at(i) = offset;
+    offset += RtBlobDesc(ProducerOpNode4Lbi(lbi_group.at(i))->LogicalBlobDesc4Lbi(lbi_group.at(i)))
+                  .AlignedByteSizeOfBlobBody();
+  }
+  *reduce_concat_conf->mutable_data_offset() = StdVec2PbRf<int64_t>(*offsets);
+  reduce_concat_conf->set_out_size(offset);
 
   OperatorConf reduce_identity_op_conf;
   reduce_identity_op_conf.set_name("System-Boxing-AllReduce-ReduceIdentity_" + NewUniqueId());
@@ -189,14 +180,17 @@ void AddAllReduceOpConf(JobBuilder* job_builder, const ParallelConf& parallel_co
 }
 
 void AddReduceSplitOpConf(
-    JobBuilder* job_builder,
+    JobBuilder* job_builder, const std::vector<int64_t>& offsets,
     const std::function<const OpNode*(const LogicalBlobId&)>& ProducerOpNode4Lbi,
-    const std::vector<LogicalBlobId>& lbi_groups, int32_t order_in_graph,
-    const LogicalBlobId& all_reduced_lbi) {
+    const std::vector<LogicalBlobId>& lbi_group, int32_t order_in_graph,
+    const LogicalBlobId& all_reduced_lbi,
+    std::function<std::string(const std::string&)> GetLastTouchedOpName) {
   auto SoleConsumerOpNode4Lbi = MakeGetterSoleConsumerOpNode4Lbi(ProducerOpNode4Lbi);
   auto MutModelUpdateOpConf = [&](const LogicalBlobId& lbi, const LogicalBlobId& new_lbi) {
     const auto* op_node = SoleConsumerOpNode4Lbi(lbi);
     OperatorConf md_updt_op_conf(op_node->op().op_conf());
+    const std::string& prev_op_name = GetLastTouchedOpName(op_node->op().op_name());
+    if (prev_op_name != "") { md_updt_op_conf.add_ctrl_in_op_name(prev_op_name); }
     std::string ibn = "";
     for (const auto& bn : op_node->op().input_bns()) {
       if (op_node->op().BnInOp2Lbi(bn) == lbi) {
@@ -216,52 +210,80 @@ void AddReduceSplitOpConf(
   reduce_split_op_conf.set_name("System-Boxing-AllReduce-ReduceSplit_" + NewUniqueId());
   auto* reduce_split_conf = reduce_split_op_conf.mutable_reduce_split_conf();
   reduce_split_conf->set_in(GenLogicalBlobName(all_reduced_lbi));
-  reduce_split_conf->set_out_num(lbi_groups.size());
+  *reduce_split_conf->mutable_data_offset() = StdVec2PbRf<int64_t>(offsets);
   reduce_split_conf->set_order_in_graph(order_in_graph);
-  FOR_RANGE(int32_t, i, 0, lbi_groups.size()) {
-    const LogicalBlobId& lbi = lbi_groups.at(i);
+  FOR_RANGE(int32_t, i, 0, lbi_group.size()) {
+    const LogicalBlobId& lbi = lbi_group.at(i);
     const std::string& out_blob_name = std::string("out_") + std::to_string(i);
     reduce_split_conf->add_out(out_blob_name);
     ProducerOpNode4Lbi(lbi)->LogicalBlobDesc4Lbi(lbi).shape().ToProto(
         reduce_split_conf->add_out_shape());
     MutModelUpdateOpConf(lbi, GenLogicalBlobId(reduce_split_op_conf.name() + "/" + out_blob_name));
   }
-  job_builder->AddOps(ProducerOpNode4Lbi(lbi_groups.at(0))->parallel_desc().parallel_conf(),
+  job_builder->AddOps(ProducerOpNode4Lbi(lbi_group.at(0))->parallel_desc().parallel_conf(),
                       {reduce_split_op_conf});
 }
 
 void BuildAllReduceStruct(
     JobBuilder* job_builder,
     const std::function<const OpNode*(const LogicalBlobId&)>& ProducerOpNode4Lbi,
-    const std::vector<LogicalBlobId>& lbi_groups, int32_t order_in_graph) {
-  const auto& parallel_conf = ProducerOpNode4Lbi(lbi_groups.at(0))->parallel_desc().parallel_conf();
+    const std::vector<LogicalBlobId>& lbi_group, int32_t order_in_graph,
+    std::function<std::string(const std::string&)> GetLastTouchedOpName) {
+  std::vector<int64_t> offsets(lbi_group.size(), -1);
+  const auto& parallel_conf = ProducerOpNode4Lbi(lbi_group.at(0))->parallel_desc().parallel_conf();
   LogicalBlobId grouped_lbi;
-  AddReduceConcatAndReduceIdentityOpConf(job_builder, parallel_conf, lbi_groups, order_in_graph,
-                                         &grouped_lbi);
+  AddReduceConcatAndReduceIdentityOpConf(job_builder, &offsets, ProducerOpNode4Lbi, parallel_conf,
+                                         lbi_group, order_in_graph, &grouped_lbi);
   LogicalBlobId all_reduced_lbi;
   AddAllReduceOpConf(job_builder, parallel_conf, grouped_lbi, &all_reduced_lbi);
-  AddReduceSplitOpConf(job_builder, ProducerOpNode4Lbi, lbi_groups, order_in_graph,
-                       all_reduced_lbi);
+  AddReduceSplitOpConf(job_builder, offsets, ProducerOpNode4Lbi, lbi_group, order_in_graph,
+                       all_reduced_lbi, GetLastTouchedOpName);
 }
 
 }  // namespace
 
-void AllReduceAddPass::Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
+void AllReduceAddPass::Apply(const OpGraph& op_graph, JobBuilder* job_builder) {
   auto ProducerOpNode4Lbi = MakeGetterProducerOpNode4Lbi(op_graph);
-
   std::vector<LogicalBlobId> lbis;
   FindAllReducedLbis(job_builder->job(), op_graph, ProducerOpNode4Lbi, &lbis);
   SortAllReducedLbis(op_graph, ProducerOpNode4Lbi, &lbis);
   HashMap<LogicalBlobId, int32_t> lbi2order_in_graph;
   FOR_RANGE(int32_t, i, 0, lbis.size()) { CHECK(lbi2order_in_graph.emplace(lbis.at(i), i).second); }
-
-  std::vector<std::vector<LogicalBlobId>> lbi_groups;
-  GroupAllReducedLbisByStrategy(ProducerOpNode4Lbi, lbis, &lbi_groups);
-  FOR_RANGE(int32_t, i, 0, lbi_groups.size()) {
-    const auto& lbi_group = lbi_groups.at(i);
-    BuildAllReduceStruct(job_builder, ProducerOpNode4Lbi, lbi_group,
-                         lbi2order_in_graph.at(lbi_group.at(0)));
-  }
+  auto MemSize4Lbi = [&](const LogicalBlobId& lbi) -> size_t {
+    const OpNode* producer = ProducerOpNode4Lbi(lbi);
+    const BlobDesc& logical_blob_desc = producer->LogicalBlobDesc4Lbi(lbi);
+    int64_t elem_cnt = logical_blob_desc.shape().elem_cnt();
+    size_t model_size = elem_cnt * GetSizeOfDataType(logical_blob_desc.data_type());
+    return RoundUp(model_size, kCudaAlignSize);
+  };
+  ForEachLbisGroupByDataTypeAndParallelDesc(
+      ProducerOpNode4Lbi, lbis, [&](const std::vector<LogicalBlobId>& lbis) {
+        size_t model_total_size = 0;
+        for (const auto& lbi : lbis) { model_total_size += MemSize4Lbi(lbi); }
+        size_t avg_size = model_total_size / GlobalJobDesc().all_reduce_group_num();
+        const size_t group_min_size = GlobalJobDesc().all_reduce_group_min_byte();
+        const float group_size_warmup = GlobalJobDesc().all_reduce_group_size_warmup();
+        size_t cur_group_capacity = group_min_size / group_size_warmup;
+        size_t cur_group_model_size = GetMaxVal<size_t>();
+        std::vector<std::vector<LogicalBlobId>> lbi_groups;
+        for (const LogicalBlobId& lbi : lbis) {
+          if (cur_group_model_size >= cur_group_capacity) {
+            lbi_groups.emplace_back(std::vector<LogicalBlobId>{});
+            cur_group_model_size = 0;
+            if (cur_group_capacity < avg_size) { cur_group_capacity *= group_size_warmup; }
+          }
+          lbi_groups.back().emplace_back(lbi);
+          cur_group_model_size += MemSize4Lbi(lbi);
+        }
+        float sequantial_ratio = GlobalJobDesc().Double("ratio_sequantial_optimizers");
+        int64_t num_sequantial_optimizer = sequantial_ratio * lbis.size();
+        auto GetLastTouchedOpName = MakeGetterArg4ThisFuncPrevCall(num_sequantial_optimizer);
+        FOR_RANGE(int32_t, i, 0, lbi_groups.size()) {
+          const auto& lbi_group = lbi_groups.at(i);
+          BuildAllReduceStruct(job_builder, ProducerOpNode4Lbi, lbi_group,
+                               lbi2order_in_graph.at(lbi_group.at(0)), GetLastTouchedOpName);
+        }
+      });
 }
 
 }  // namespace oneflow

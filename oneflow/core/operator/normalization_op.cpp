@@ -47,7 +47,10 @@ Maybe<void> NormalizationOp::InferBlobDescs(
   const BlobDesc* in = GetBlobDesc4BnInOp("in");
   const DataType data_type = in->data_type();
   *GetBlobDesc4BnInOp("out") = *in;
-  const Shape param_shape({in->shape().At(conf.axis())});
+  int32_t axis = conf.axis();
+  OF_CHECK_GE(axis, 0);
+  OF_CHECK_LT(axis, in->shape().NumAxes());
+  const Shape param_shape({in->shape().At(axis)});
   const std::function<void(const std::string&)> CheckParamBlobDesc =
       [&](const std::string& bn) -> Maybe<void> {
     const BlobDesc* blob_desc = GetBlobDesc4BnInOp(bn);
@@ -66,10 +69,18 @@ Maybe<void> NormalizationOp::InferBlobDescs(
     }
     return Maybe<void>::Ok();
   };
-  (conf.has_moving_mean() ? CheckParamBlobDesc : SetParamBlobDesc)("moving_mean");
-  (conf.has_moving_variance() ? CheckParamBlobDesc : SetParamBlobDesc)("moving_variance");
-  if (conf.center()) { CheckParamBlobDesc("beta"); }
-  if (conf.scale()) { CheckParamBlobDesc("gamma"); }
+  CheckParamBlobDesc("moving_mean");
+  CheckParamBlobDesc("moving_variance");
+  if (conf.center()) {
+    CheckParamBlobDesc("beta");
+  } else {
+    SetParamBlobDesc("beta");
+  }
+  if (conf.scale()) {
+    CheckParamBlobDesc("gamma");
+  } else {
+    SetParamBlobDesc("gamma");
+  }
   if (conf.is_training()) {
     SetParamBlobDesc("mean");
     SetParamBlobDesc("inv_variance");

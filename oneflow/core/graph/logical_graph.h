@@ -31,7 +31,6 @@ class LogicalGraph final : public Graph<LogicalNode, LogicalEdge> {
 
   void BuildFwStruct();
   void NaiveBuildFwStruct(HashMap<std::string, std::vector<LogicalNode*>>* op_name2nodes);
-  void LinkUnpackFw2PackFw(const HashMap<std::string, std::vector<LogicalNode*>>& op_name2nodes);
 
   void MergeEdge();
   void SetNodeDataLbi();
@@ -44,8 +43,6 @@ class LogicalGraph final : public Graph<LogicalNode, LogicalEdge> {
 
   void UpdateEdge2Ibn(const LogicalEdge* edge, const std::string& ibn);
   void UpdateEdge2Obn(const LogicalEdge* edge, const std::string& obn);
-
-  bool MustHaveModelDiffAcc();
 
   Job job_;
 

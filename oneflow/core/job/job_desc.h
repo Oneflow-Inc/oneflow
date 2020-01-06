@@ -4,9 +4,11 @@
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/job/dlnet_conf.pb.h"
 #include "oneflow/core/job/job.pb.h"
+#include "oneflow/core/framework/user_op_attr.pb.h"
 #include "oneflow/core/job/placement.pb.h"
 #include "oneflow/core/job/inter_user_job_info.pb.h"
 #include "oneflow/core/register/logical_blob_id.pb.h"
+#include "oneflow/core/framework/config_def.h"
 
 namespace oneflow {
 
@@ -37,9 +39,7 @@ class JobDesc final {
   bool enable_inplace_in_reduce_struct() const {
     return job_conf_.enable_inplace_in_reduce_struct();
   }
-  bool enable_true_half_config_when_conv() const {
-    return job_conf_.enable_true_half_config_when_conv();
-  }
+  bool cudnn_conv_enable_true_half() const { return job_conf_.cudnn_conv_enable_true_half(); }
   bool enable_float_compute_for_half_gemm() const {
     return job_conf_.enable_float_compute_for_half_gemm();
   }
@@ -64,6 +64,20 @@ class JobDesc final {
   bool all_reduce_fp16() const;
   int64_t cudnn_buf_limit_mbyte() const { return job_conf_.cudnn_buf_limit_mbyte(); }
 
+  bool has_xrt_config() const { return job_conf_.has_xrt_config(); }
+  const XrtConfig& xrt_config() const { return job_conf_.xrt_config(); }
+
+#define DEFINE_FUNCTION_CONFIG_GETTER(T, func_name, field_name)     \
+  T func_name(const std::string& field_name) const {                \
+    const UserOpAttrVal& attr_val = GetFunctionFlagVal(field_name); \
+    CHECK(attr_val.has_##field_name());                             \
+    return attr_val.field_name();                                   \
+  }
+  DEFINE_FUNCTION_CONFIG_GETTER(bool, Bool, at_bool);
+  DEFINE_FUNCTION_CONFIG_GETTER(int64_t, Int64, at_int64);
+  DEFINE_FUNCTION_CONFIG_GETTER(double, Double, at_double);
+  DEFINE_FUNCTION_CONFIG_GETTER(const std::string&, String, at_string);
+
   // Train conf
   int64_t TotalBatchNum() const;
   int64_t NumOfPiecesInBatch() const;
@@ -75,6 +89,7 @@ class JobDesc final {
 
  private:
   void Init();
+  const UserOpAttrVal& GetFunctionFlagVal(const std::string& field_name) const;
 
   JobConfigProto job_conf_;
   int64_t job_id_;

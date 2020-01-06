@@ -54,7 +54,7 @@ void ReOrderAllReduceGroups(std::vector<AllReduceGroup>* all_reduce_groups) {
 
 }  // namespace
 
-void AllReduceSequencePass::Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
+void AllReduceSequencePass::Apply(const OpGraph& op_graph, JobBuilder* job_builder) {
   std::vector<AllReduceGroup> all_reduce_groups;
   FindAllReduceGroups(op_graph, &all_reduce_groups);
   ReOrderAllReduceGroups(&all_reduce_groups);

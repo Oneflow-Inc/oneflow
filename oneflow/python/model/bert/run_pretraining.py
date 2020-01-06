@@ -77,8 +77,8 @@ def BuildPreTrainNet(batch_size, data_part_num, seq_length=128, max_position_emb
 
   input_ids = decoders[0]
   next_sentence_labels = decoders[1]
-  token_type_ids = decoders[2]
-  input_mask = decoders[3]
+  input_mask = decoders[2]
+  token_type_ids = decoders[3]
   masked_lm_ids = decoders[4]
   masked_lm_positions = decoders[5]
   masked_lm_weights = decoders[6]
@@ -160,13 +160,12 @@ if __name__ == '__main__':
 
   start_time = time.time()
   flow.config.gpu_device_num(args.gpu_num_per_node)
-  flow.config.ctrl_port(9788)
-  flow.config.data_port(9789)
+  flow.env.ctrl_port(9788)
+  flow.env.data_port(9789)
   flow.config.default_data_type(flow.float)
-  flow.config.enable_inplace(False)
 
   if args.node_num > 1:
-    flow.config.ctrl_port(12138)
+    flow.env.ctrl_port(12138)
     nodes = []
     for n in args.node_list.strip().split(","):
       addr_dict = {}

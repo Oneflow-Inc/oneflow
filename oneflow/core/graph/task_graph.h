@@ -20,12 +20,11 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   const char* TypeName() const override { return "TaskGraph"; }
   void RemoveEmptyRegsts();
   void AddOrderingCtrlEdgeInSameChain();
-  void AddMdUpdtCtrlEdgesWithinReduceSplitNode();
   void AddReduceNoBwForwardNodeOverlapingCtrlEdges();
 
   void EnableInplaceMemSharingInReduceStruct();
-  void EnableInplaceMemSharing(const std::function<bool(const LogicalBlobId&, const std::string&)>&
-                                   IsLbiAllConsumersReachableToOpName);
+  void EnableInplaceMemSharing(const std::function<bool(const std::string&, const std::string&)>&
+                                   IsOpNameDataOrCtrlReachable);
 
   void AddOrderCtrlEdgeBetweenCopyAndMdUpdt();
   void AcyclicTopoForEachNode(std::function<void(TaskNode* node)> Handler) const;
@@ -37,13 +36,14 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxingV1);
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxingV2);
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByOneToOne);
-  DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByRecordLoadToTick);
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBroadcastToBroadcast);
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphBySelectOneSourceToSoleSink);
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceScatter2ReduceAdd);
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceAdd2ReduceGather);
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceGather2ReduceGather);
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByConnectNodeOnSameGpuDevice);
+  DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByPartialInLbiConnect);
+  DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByPartialOutLbiConnect);
 
  private:
   void AcyclicTopoForEachNode(std::function<bool(TaskNode* node)> IsAllowedStartNode,
@@ -87,10 +87,9 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   void GetInplaceOpBlobArgList(
       OpBlobArgList* inplace_obas, const HashSet<TaskNode*>& dev_nodes,
       const std::function<const TaskNode*(const std::string&)>& TaskNode4OpName) const;
-  void GetSafeInplaceOpBlobArgList(
-      OpBlobArgList* obas, const HashSet<TaskNode*>& dev_nodes,
-      const std::function<bool(const LogicalBlobId&, const std::string&)>&
-          IsLbiConsumersReachableToOpName) const;
+  void GetSafeInplaceOpBlobArgList(OpBlobArgList* obas, const HashSet<TaskNode*>& dev_nodes,
+                                   std::function<bool(const std::string&, const std::string&)>
+                                       IsOpNameDataOrCtrlReachable) const;
   void SetTaskRegstInplaceInfo(const OpBlobArgList& obas,
                                const HashSet<TaskNode*>& dev_nodes) const;
   void ForEachGpuDeviceNodes(

@@ -1,4 +1,3 @@
-#include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/job_completer/job_completer.h"
 #include "oneflow/core/job_completer/autograd.h"
 #include "oneflow/core/job_completer/autotick.h"
@@ -14,6 +13,10 @@
 #include "oneflow/core/job_completer/nccl_tuple_broadcast_reduce_sequence_pass.h"
 #include "oneflow/core/job_completer/auto_train_step.h"
 #include "oneflow/core/job_completer/auto_learning_rate.h"
+#include "oneflow/core/job_completer/add_lbi_diff_watcher.h"
+#include "oneflow/core/framework/config_def.h"
+
+#include "oneflow/core/job_completer/xrt_compilation.h"
 
 namespace oneflow {
 
@@ -201,7 +204,7 @@ void AddIdentityOpAndReconnect(
       std::string lbn_check = GenLogicalBlobName(lbi);
       std::string identity_out_lbn = GenLogicalBlobName(old_lbi2new_lbi.at(lbi));
       for (const std::string& ibn : edge->lbi2ibns().at(lbi)) {
-        ReplaceStrValInPbFdOrPbRpf(op_type_conf, ibn, lbn_check, identity_out_lbn);
+        ReplaceInputLbnInOpCustomizedConf(op_type_conf, ibn, lbn_check, identity_out_lbn);
         const auto& sbp_parallel = edge->dst_node()->SbpParallel4BnInOp(ibn);
         const auto& sbp_iter = old_lbi2sbp_parallel.find(lbi);
         if (sbp_iter == old_lbi2sbp_parallel.end()) {
@@ -229,35 +232,40 @@ std::function<bool(OpNode*)> MakePredicatorIsReachableFromAnyVariableOps(const O
   };
 }
 
-void TieUpChainHeadersUnReachableFromAnyVariableOps(const OpGraph& op_graph, Job* job) {
-  auto IsReachableFromAnyVariableOps = MakePredicatorIsReachableFromAnyVariableOps(op_graph);
-  auto GetSourceNodesAndEdges = [&](const HashSet<OpNode*>& chain_nodes,
-                                    std::vector<OpNode*>* source_nodes,
-                                    std::vector<OpEdge*>* source_edges) {
-    for (OpNode* node : chain_nodes) {
-      for (OpEdge* edge : node->in_edges()) {
-        if (chain_nodes.find(edge->src_node()) == chain_nodes.end()
-            && IsReachableFromAnyVariableOps(edge->src_node()) == false) {
-          source_edges->push_back(edge);
-          source_nodes->push_back(node);
+REGISTER_FUNCTION_CONFIG_DEF().Bool("enable_pseudo_chain_merge", false,
+                                    "ties up chain headers unreachable from any variable ops");
+class TieUpChainHeadersUnReachableFromAnyVariableOps final : public OpGraphPass {
+  bool IsEnabled() const override { return GlobalJobDesc().Bool("enable_pseudo_chain_merge"); }
+  void Apply(const OpGraph& op_graph, Job* job) override {
+    auto IsReachableFromAnyVariableOps = MakePredicatorIsReachableFromAnyVariableOps(op_graph);
+    auto GetSourceNodesAndEdges = [&](const HashSet<OpNode*>& chain_nodes,
+                                      std::vector<OpNode*>* source_nodes,
+                                      std::vector<OpEdge*>* source_edges) {
+      for (OpNode* node : chain_nodes) {
+        for (OpEdge* edge : node->in_edges()) {
+          if (chain_nodes.find(edge->src_node()) == chain_nodes.end()
+              && IsReachableFromAnyVariableOps(edge->src_node()) == false) {
+            source_edges->push_back(edge);
+            source_nodes->push_back(node);
+          }
         }
       }
-    }
-  };
-  auto MutOperatorConf4OpName = MakeMutableOperatorConf4OpName(job);
-  auto ParallelConf4OpName = MakeGetterParallelConf4OpName(job->placement());
-  op_graph.ForEachChainFamily([&](const HashSet<OpNode*>& chain_nodes) {
-    std::vector<OpNode*> source_nodes;
-    std::vector<OpEdge*> source_edges;
-    GetSourceNodesAndEdges(chain_nodes, &source_nodes, &source_edges);
-    if (source_edges.size() <= 1) { return; }
-    if (source_nodes.size() <= 1) { return; }
-    // ignore small chain
-    if (chain_nodes.size() - source_nodes.size() <= 2) { return; }
-    AddIdentityOpAndReconnect("pseudo_chain_header_", job, source_edges, MutOperatorConf4OpName,
-                              *ParallelConf4OpName(source_nodes.at(0)->op().op_name()));
-  });
-}
+    };
+    auto MutOperatorConf4OpName = MakeMutableOperatorConf4OpName(job);
+    auto ParallelConf4OpName = MakeGetterParallelConf4OpName(job->placement());
+    op_graph.ForEachChainFamily([&](const HashSet<OpNode*>& chain_nodes) {
+      std::vector<OpNode*> source_nodes;
+      std::vector<OpEdge*> source_edges;
+      GetSourceNodesAndEdges(chain_nodes, &source_nodes, &source_edges);
+      if (source_edges.size() <= 1) { return; }
+      if (source_nodes.size() <= 1) { return; }
+      // ignore small chain
+      if (chain_nodes.size() - source_nodes.size() <= 2) { return; }
+      AddIdentityOpAndReconnect("pseudo_chain_header_", job, source_edges, MutOperatorConf4OpName,
+                                *ParallelConf4OpName(source_nodes.at(0)->op().op_name()));
+    });
+  }
+};
 
 void SetCtrlInOpName4VariableOp(const OpGraph& op_graph, JobBuilder* job_builder) {
   auto IsMutableConsumedLbi = [](const Operator& op, const LogicalBlobId& lbi) -> bool {
@@ -266,41 +274,35 @@ void SetCtrlInOpName4VariableOp(const OpGraph& op_graph, JobBuilder* job_builder
     }
     return false;
   };
-  auto IsMdSaveEveryNthOp = [](const OperatorConf& op_conf) -> bool {
-    return op_conf.has_every_nth_conf();
-  };
+  HashMap<const OperatorConf*, HashSet<std::string>> op_conf2ctrl_in_op_names;
   op_graph.ForEachNode([&](OpNode* op_node) {
     if (op_node->op().op_conf().has_variable_conf() == false) { return; }
     if (op_node->out_edges().size() <= 1) { return; }
     const Operator& variable_op = op_node->op();
     const LogicalBlobId& variable_lbi = variable_op.BnInOp2Lbi(variable_op.SoleObn());
     const OperatorConf* mutable_consumer = nullptr;
-    const OperatorConf* model_save_every_nth_op_conf = nullptr;
     std::vector<const OperatorConf*> naive_consumers;
     for (OpEdge* edge : op_node->out_edges()) {
       const auto& op_conf = edge->dst_node()->op().op_conf();
       if (IsMutableConsumedLbi(edge->dst_node()->op(), variable_lbi)) {
         CHECK(mutable_consumer == nullptr);
         mutable_consumer = &op_conf;
-      } else if (IsMdSaveEveryNthOp(op_conf)) {
-        CHECK(model_save_every_nth_op_conf == nullptr);
-        model_save_every_nth_op_conf = &op_conf;
       } else {
         naive_consumers.push_back(&op_conf);
       }
     }
     if (mutable_consumer == nullptr) { return; }
-    OperatorConf mut_mutable_consumer_op_conf(*mutable_consumer);
     for (const auto* fw_bw_op : naive_consumers) {
-      mut_mutable_consumer_op_conf.add_ctrl_in_op_name(fw_bw_op->name());
-    }
-    job_builder->MutOpsOnlyOnce({mut_mutable_consumer_op_conf});
-    if (model_save_every_nth_op_conf != nullptr) {
-      OperatorConf mut_model_save_every_nth_op_conf(*model_save_every_nth_op_conf);
-      mut_model_save_every_nth_op_conf.add_ctrl_in_op_name(mutable_consumer->name());
-      job_builder->MutOpsOnlyOnce({mut_model_save_every_nth_op_conf});
+      op_conf2ctrl_in_op_names[mutable_consumer].insert(fw_bw_op->name());
     }
   });
+  for (const auto& pair : op_conf2ctrl_in_op_names) {
+    OperatorConf mut_mutable_consumer_op_conf(*pair.first);
+    for (const auto& fw_bw_op_name : pair.second) {
+      mut_mutable_consumer_op_conf.add_ctrl_in_op_name(fw_bw_op_name);
+    }
+    job_builder->MutOpsOnlyOnce({mut_mutable_consumer_op_conf});
+  }
 }
 
 void SetOpTimeShape7BatchAxisLbis(const OpGraph& op_graph, JobBuilder* job_builder) {
@@ -308,35 +310,9 @@ void SetOpTimeShape7BatchAxisLbis(const OpGraph& op_graph, JobBuilder* job_build
   op_graph.DumpBatchAxisLbi(job_builder);
 }
 
-void RewriteBoxingWithAllReduce(const OpGraph& op_graph, JobBuilder* job_builder) {
-  if (!GlobalJobDesc().enable_non_distributed_optimizer()
-      && GlobalJobDesc().enable_all_reduce_group()) {
-    AllReduceAddPass().Apply(op_graph, job_builder);
-  }
-}
-
 void DumpLogicalBlobDescAndSbpSignature(const OpGraph& op_graph, JobBuilder* job_builder) {
   op_graph.DumpLogicalBlobDesc(job_builder);
   op_graph.DumpSbpSignature(job_builder);
-}
-
-void MakeAllReduceSequence(const OpGraph& op_graph, JobBuilder* job_builder) {
-  if (GlobalJobDesc().disable_all_reduce_sequence()) { return; }
-  AllReduceSequencePass().Apply(op_graph, job_builder);
-}
-
-void EnableAutoMixedPrecision(const OpGraph& op_graph, JobBuilder* job_builder) {
-  if (!GlobalJobDesc().enable_auto_mixed_precision()) { return; }
-  CHECK_GE(CUDA_VERSION, 10000);
-  AutoMixedPrecision(AutoMixedPrecisionLists::WhiteList(), AutoMixedPrecisionLists::BlackList(),
-                     AutoMixedPrecisionLists::GrayList(), AutoMixedPrecisionLists::ClearList())
-      .Apply(op_graph, job_builder);
-}
-
-void EnableNonDistributedOptimizer(const OpGraph& op_graph, JobBuilder* job_builder) {
-  if (!GlobalJobDesc().enable_non_distributed_optimizer()) { return; }
-  CHECK(GlobalJobDesc().enable_nccl());
-  NonDistributedOptimizerPass().Apply(op_graph, job_builder);
 }
 
 void MakeNcclTupleBroadcastReduceSequence(const OpGraph& op_graph, JobBuilder* job_builder) {
@@ -350,17 +326,18 @@ void JobCompleter::Complete(Job* job) const {
   WithOpGraphAndMutJobBuilder(job, &ReplaceFacade);
   // complete variable ops
   WithOpGraphAndMutJobBuilder(job, &SetDefaultVariableConf);
+  AutoMixedPrecision()(job);
   if (GlobalJobDesc().IsTrain()) {
-    WithOpGraphAndMutJob(job, &TieUpChainHeadersUnReachableFromAnyVariableOps);
-    WithOpGraphAndMutJobBuilder(job, &EnableAutoMixedPrecision);
-    WithOpGraphAndMutJobBuilder(job, &EnableNonDistributedOptimizer);
+    TieUpChainHeadersUnReachableFromAnyVariableOps()(job);
+    NonDistributedOptimizerPass()(job);
     WithOpGraphAndMutJob(job, &AutoTrainStep);
     WithOpGraphAndMutJob(job, &AutoLearningRate);
     // complete ops for trainning
     WithOpGraphAndMutJobBuilder(job, &GenerateOpConf4Trainning);
     WithOpGraphAndMutJobBuilder(job, &MakeNcclTupleBroadcastReduceSequence);
-    WithOpGraphAndMutJobBuilder(job, &RewriteBoxingWithAllReduce);
-    WithOpGraphAndMutJobBuilder(job, &MakeAllReduceSequence);
+    AllReduceAddPass()(job);
+    AddLbiDiffWatcherOpConfs(job);
+    AllReduceSequencePass()(job);
   }
   WithOpGraphAndMutJobBuilder(job, &DumpLogicalBlobDescAndSbpSignature);
   WithOpGraphAndMutJobBuilder(job, &GroupBoxingByDstParallel);
@@ -375,6 +352,15 @@ void JobCompleter::Complete(Job* job) const {
   WithOpGraphAndMutJobBuilder(job, &AddGlobalOutputCriticalSections);
   WithOpGraphAndMutJobBuilder(job, &DumpLogicalBlobDescAndSbpSignature);
   WithOpGraphAndMutJobBuilder(job, &SetOpTimeShape7BatchAxisLbis);
+
+  if (XrtCompilationEnabled(GlobalJobDesc())) {
+#ifdef OF_WITH_XRT
+    WithOpGraphAndMutJob(job, &RebuildXrtCompiledJob);
+#else
+    LOG(WARNING) << "It will not use XLA or TensorRT since WITH_XLA or "
+                    "WITH_TENSORRT was not enabled when compiling the project.";
+#endif  // OF_WITH_XRT
+  }
   CheckOpGraph(OpGraph(*job));
 }
 

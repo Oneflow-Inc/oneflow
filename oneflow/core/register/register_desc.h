@@ -9,6 +9,7 @@ namespace oneflow {
 const int32_t kMaxRegisterNum = std::numeric_limits<int32_t>::max();
 
 void InitCtrlRegstDesc(int64_t producer_task_id, RegstDescProto* ctrl_regst_proto);
+MemoryCase MakeHostMemCase();
 
 class TaskNode;
 
@@ -77,7 +78,6 @@ class RegstDesc final {
   bool HasSameMemSize(const RegstDesc*);
 
   // util
-  int32_t MaxColNum() const { return packed_blob_desc_->max_col_num(); }
   void EraseZeroSizeBlob();
   void ToProto(RegstDescProto*) const;
   bool HasSameBlobDescs(const RegstDesc*);

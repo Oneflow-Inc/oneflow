@@ -463,15 +463,15 @@ void AutoGrad(const OpGraph& op_graph, JobBuilder* job_builder,
         if (out_diff_lbi_it == out_oba2out_diff_lbi.end()) { return nullptr; }
         return &out_diff_lbi_it->second;
       } else {
-        UNIMPLEMENTED();
+        LOG(FATAL) << "diff lbi for bn in op not found, bn: " << op_name << "/" << bn;
       }
     };
     auto LogicalBlobDesc4BnInOp = [&](const std::string& bn) -> const BlobDesc& {
       return op_graph.GetLogicalBlobDesc(op_node->op().BnInOp2Lbi(bn));
     };
-    std::vector<OperatorConf> ops;
-    GenerateCloneGradOpIfNeed(*op_node, &ops, in_oba2in_diff_lbi, &out_oba2out_diff_lbi,
+    GenerateCloneGradOpIfNeed(*op_node, job_builder, in_oba2in_diff_lbi, &out_oba2out_diff_lbi,
                               &out_oba2clone_bw_add_out_lbi);
+    std::vector<OperatorConf> ops;
     GenerateBackwardOpConfIf(op_node->op(), &ops, DiffLbi4BnInOp, LogicalBlobDesc4BnInOp);
     job_builder->AddOps(op_node->parallel_desc().parallel_conf(), ops);
   });
@@ -493,19 +493,53 @@ void AddTotalLossInstanceNumOpConf(
     const auto& lbi = GenLogicalBlobId(loss_lbn);
     CHECK(loss_lbi2op_node.emplace(lbi, LossOpNode4OpName(lbi.op_name())).second);
   }
-  const BlobDesc* blob_desc = nullptr;
+  const Shape src_time_shape(
+      {GlobalJobDesc().TotalBatchNum(), GlobalJobDesc().NumOfPiecesInBatch()});
+  const int64_t source_time_shape_elem_cnt = src_time_shape.elem_cnt();
+  bool all_loss_time_shape_eq_src = true;
   for (const auto& pair : loss_lbi2op_node) {
-    const BlobDesc* cur_blob_desc = &pair.second->LogicalBlobDesc4Lbi(pair.first);
-    if (blob_desc != nullptr) { CHECK(*blob_desc == *cur_blob_desc); }
-    blob_desc = cur_blob_desc;
+    const Shape* time_shape = pair.second->out_blob_time_shape();
+    const int64_t time_shape_elem_cnt = time_shape->elem_cnt();
+    if (time_shape_elem_cnt != source_time_shape_elem_cnt) {
+      CHECK_EQ(time_shape_elem_cnt % source_time_shape_elem_cnt, 0);
+      all_loss_time_shape_eq_src = false;
+    }
   }
-  CHECK_EQ(blob_desc->shape().NumAxes(), 1);
   HashMap<ParallelDesc, int32_t> parallel_desc2optimizer_node_cnt;
   CalcParallelDesc2OptimizerNodeCnt(op_graph, lbi2diff_lbi, &parallel_desc2optimizer_node_cnt);
-  if (blob_desc->has_dim0_valid_num_field()) {
-    AddTotalLossInstanceNumOpConfForDynamicDim0(parallel_desc2optimizer_node_cnt, loss_lbi2op_node,
-                                                job_builder, LossInstanceNum4ParallelDesc);
+  if (all_loss_time_shape_eq_src) {
+    const BlobDesc* blob_desc = nullptr;
+    for (const auto& pair : loss_lbi2op_node) {
+      const BlobDesc* cur_blob_desc = &pair.second->LogicalBlobDesc4Lbi(pair.first);
+      if (blob_desc != nullptr) { CHECK(*blob_desc == *cur_blob_desc); }
+      blob_desc = cur_blob_desc;
+    }
+    if (blob_desc->is_dynamic()) {
+      AddTotalLossInstanceNumOpConfForDynamicDim0(parallel_desc2optimizer_node_cnt,
+                                                  loss_lbi2op_node, job_builder,
+                                                  LossInstanceNum4ParallelDesc);
+    } else {
+      BuildConstantOpAsTotalLossInstanceNum(parallel_desc2optimizer_node_cnt, *blob_desc,
+                                            job_builder, LossInstanceNum4ParallelDesc);
+    }
   } else {
+    std::unique_ptr<BlobDesc> blob_desc;
+    for (const auto& pair : loss_lbi2op_node) {
+      const BlobDesc* cur_blob_desc = &pair.second->LogicalBlobDesc4Lbi(pair.first);
+      // TODO: support dynamic
+      CHECK(!cur_blob_desc->is_dynamic());
+      const DataType loss_data_type = cur_blob_desc->data_type();
+      const int64_t time_shape_elem_cnt = pair.second->out_blob_time_shape()->elem_cnt();
+      // TODO: consider batch_axis or sbp
+      const int64_t loss_elem_cnt =
+          cur_blob_desc->shape().elem_cnt() * time_shape_elem_cnt / source_time_shape_elem_cnt;
+      if (blob_desc) {
+        CHECK_EQ(blob_desc->data_type(), loss_data_type);
+        CHECK_EQ(blob_desc->shape().elem_cnt(), loss_elem_cnt);
+      } else {
+        blob_desc.reset(new BlobDesc(Shape({loss_elem_cnt}), loss_data_type));
+      }
+    }
     BuildConstantOpAsTotalLossInstanceNum(parallel_desc2optimizer_node_cnt, *blob_desc, job_builder,
                                           LossInstanceNum4ParallelDesc);
   }

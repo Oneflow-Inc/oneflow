@@ -1,6 +1,7 @@
 #include <algorithm>
 #include "oneflow/core/job_completer/auto_mixed_precision.h"
 #include "oneflow/core/job/job_desc.h"
+#include "oneflow/core/device/cuda_util.h"
 
 namespace oneflow {
 
@@ -163,7 +164,7 @@ void InsertCastOpImpl(bool f2h, const OpGraph& op_graph, const HashSet<OpNode*>&
       std::string new_lbn = cast_op_conf.name() + "/out";
       if (!TryUpdtBnVal4SepcialOpConf(dst_op_conf.op_type_case(), dst_op_type_conf, lbn, new_lbn,
                                       dst_ibn)) {
-        ReplaceStrValInPbFdOrPbRpf(dst_op_type_conf, dst_ibn, lbn, new_lbn);
+        ReplaceInputLbnInOpCustomizedConf(dst_op_type_conf, dst_ibn, lbn, new_lbn);
       }
     }
   }
@@ -177,6 +178,7 @@ void InsertCastOpImpl(bool f2h, const OpGraph& op_graph, const HashSet<OpNode*>&
 }  // namespace
 
 void AutoMixedPrecision::Apply(const OpGraph& op_graph, JobBuilder* job_builder) {
+  CHECK_GE(CUDA_VERSION, 10000);
   CHECK(GlobalJobDesc().DefaultDataType() == DataType::kFloat);
 
   std::function<std::string(OpNode* const&)> OpName4Node = [](OpNode* const& node) {

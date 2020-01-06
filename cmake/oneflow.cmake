@@ -44,7 +44,26 @@ foreach(oneflow_hdr_to_be_expanded ${oneflow_all_hdr_to_be_expanded})
   set_source_files_properties(${oneflow_all_hdr_expanded} PROPERTIES GENERATED TRUE)
 endforeach()
 
-file(GLOB_RECURSE oneflow_all_src "${PROJECT_SOURCE_DIR}/oneflow/core/*.*" "${PROJECT_SOURCE_DIR}/oneflow/python/*.*")
+file(GLOB_RECURSE oneflow_all_src "${PROJECT_SOURCE_DIR}/oneflow/core/*.*" "${PROJECT_SOURCE_DIR}/oneflow/python/*.*"
+ "${PROJECT_SOURCE_DIR}/oneflow/customized/*.*")
+if (WITH_XLA OR WITH_TENSORRT)
+  file(GLOB_RECURSE oneflow_xrt_src "${PROJECT_SOURCE_DIR}/oneflow/xrt/*.*")
+  if (NOT WITH_XLA)
+    file(GLOB_RECURSE xla_removing_src "${PROJECT_SOURCE_DIR}/oneflow/xrt/xla/*.*")
+  endif ()
+  if (NOT WITH_TENSORRT)
+    file(GLOB_RECURSE trt_removing_src "${PROJECT_SOURCE_DIR}/oneflow/xrt/tensorrt/*.*")
+  endif ()
+
+  list(APPEND xrt_removing_srcs ${xla_removing_src})
+  list(APPEND xrt_removing_srcs ${trt_removing_src})
+  # message(STATUS "removing_srcs: ${xrt_removing_srcs}")
+  foreach (removing_file ${xrt_removing_srcs})
+    list(REMOVE_ITEM oneflow_xrt_src ${removing_file})
+  endforeach ()
+  list(APPEND oneflow_all_src ${oneflow_xrt_src})
+endif()
+
 foreach(oneflow_single_file ${oneflow_all_src})
   # Verify whether this file is for other platforms
   set(exclude_this OFF)
@@ -70,35 +89,35 @@ foreach(oneflow_single_file ${oneflow_all_src})
     set(group_this ON)
   endif()
 
-  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/core/.*\\.h$")
+  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|customized|xrt)/.*\\.h$")
     list(APPEND of_all_obj_cc ${oneflow_single_file})
     set(group_this ON)
   endif()
 
-  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/core/.*\\.cuh$")
+  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|customized|xrt)/.*\\.cuh$")
     if(BUILD_CUDA) 
       list(APPEND of_all_obj_cc ${oneflow_single_file})
     endif()
     set(group_this ON)
   endif()
 
-  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/core/.*\\.cu$")
+  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|customized|xrt)/.*\\.cu$")
     if(BUILD_CUDA)
       list(APPEND of_all_obj_cc ${oneflow_single_file})
     endif()
     set(group_this ON)
   endif()
 
-  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/core/.*\\.proto$")
+  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|customized|xrt)/.*\\.proto$")
     list(APPEND of_all_proto ${oneflow_single_file})
     #list(APPEND of_all_obj_cc ${oneflow_single_file})   # include the proto file in the project
     set(group_this ON)
   endif()
   
-  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/core/.*\\.cpp$")
-    if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/core/.*_test\\.cpp$")
+  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|customized|xrt)/.*\\.cpp$")
+    if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|customized|xrt)/.*_test\\.cpp$")
       # test file
-      list(APPEND of_all_test_cc ${oneflow_single_file})
+      # list(APPEND of_all_test_cc ${oneflow_single_file})
     else()
       # not test file
       list(FIND of_main_cc ${oneflow_single_file} main_found)
@@ -126,7 +145,11 @@ endforeach()
 
 # proto obj lib
 add_custom_target(make_pyproto_dir ALL
-  COMMAND ${CMAKE_COMMAND} -E make_directory ${PROJECT_BINARY_DIR}/python_scripts/oneflow/core)
+  COMMAND ${CMAKE_COMMAND} -E make_directory ${PROJECT_BINARY_DIR}/python_scripts/oneflow/core
+  COMMAND ${CMAKE_COMMAND} -E make_directory ${PROJECT_BINARY_DIR}/python_scripts/oneflow_pyproto
+  COMMAND ${CMAKE_COMMAND} -E make_directory ${PROJECT_BINARY_DIR}/python_scripts/oneflow_pyproto/oneflow
+  COMMAND ${CMAKE_COMMAND} -E make_directory ${PROJECT_BINARY_DIR}/python_scripts/oneflow_pyproto/oneflow/core
+	)
 foreach(proto_name ${of_all_proto})
   file(RELATIVE_PATH proto_rel_name ${PROJECT_SOURCE_DIR} ${proto_name})
   list(APPEND of_all_rel_protos ${proto_rel_name})
@@ -199,6 +222,9 @@ add_custom_target(of_pyscript_copy ALL
     COMMAND "${CMAKE_COMMAND}" -E copy
         "${PROJECT_SOURCE_DIR}/oneflow/__init__.py" "${of_pyscript_dir}/oneflow/__init__.py"
     COMMAND ${CMAKE_COMMAND} -E touch "${of_pyscript_dir}/oneflow/core/__init__.py"
+    COMMAND ${CMAKE_COMMAND} -E touch "${of_pyscript_dir}/oneflow_pyproto/__init__.py"
+    COMMAND ${CMAKE_COMMAND} -E touch "${of_pyscript_dir}/oneflow_pyproto/oneflow/__init__.py"
+    COMMAND ${CMAKE_COMMAND} -E touch "${of_pyscript_dir}/oneflow_pyproto/oneflow/core/__init__.py"
     COMMAND ${CMAKE_COMMAND} -E make_directory "${of_pyscript_dir}/oneflow/python"
     COMMAND python "${PROJECT_SOURCE_DIR}/tools/generate_oneflow_symbols_export_file.py"
         "${PROJECT_SOURCE_DIR}" "${of_pyscript_dir}/oneflow/python/__export_symbols__.py")
@@ -230,13 +256,16 @@ if(BUILD_TESTING)
   if(NOT BUILD_CUDA)
     message(FATAL_ERROR "BUILD_TESTING without BUILD_CUDA")
   endif()
-  oneflow_add_executable(oneflow_testexe ${of_all_test_cc})
-  target_link_libraries(oneflow_testexe ${of_libs} ${oneflow_third_party_libs})
-  add_test(NAME oneflow_test COMMAND oneflow_testexe)
-  foreach(cc ${of_all_test_cc})
-    get_filename_component(test_name ${cc} NAME_WE)
-    string(CONCAT test_exe_name ${test_name} exe)
-    oneflow_add_executable(${test_exe_name} ${cc})
-    target_link_libraries(${test_exe_name} ${of_libs} ${oneflow_third_party_libs})
-  endforeach()
+  if (of_all_test_cc)
+    oneflow_add_executable(oneflow_testexe ${of_all_test_cc})
+    target_link_libraries(oneflow_testexe ${of_libs} ${oneflow_third_party_libs})
+    set_target_properties(oneflow_testexe PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin")
+    add_test(NAME oneflow_test COMMAND oneflow_testexe)
+    #  foreach(cc ${of_all_test_cc})
+    #    get_filename_component(test_name ${cc} NAME_WE)
+    #    string(CONCAT test_exe_name ${test_name} exe)
+    #    oneflow_add_executable(${test_exe_name} ${cc})
+    #    target_link_libraries(${test_exe_name} ${of_libs} ${oneflow_third_party_libs})
+    #  endforeach()
+  endif()
 endif()

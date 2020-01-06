@@ -1,35 +1,32 @@
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/common/gdb.h"
+#include "oneflow/core/common/cached_caller.h"
+#include "oneflow/core/kernel/runtime_blob_shape_infer_helper.h"
 
 namespace oneflow {
 
 namespace {
 
-void CheckSameRecordIdInDevicePiece(const PbRpf<std::string>& bns,
-                                    const std::function<Blob*(const std::string&)>& BnInOp2Blob) {
-  const void* mem_ptr = BnInOp2Blob(bns.Get(0))->record_id_in_device_piece_ptr();
-  size_t len = BnInOp2Blob(bns.Get(0))->ByteSizeOfRecordIdInDevicePieceField();
-  FOR_RANGE(int, i, 1, bns.size()) {
-    CHECK_EQ(std::memcmp(BnInOp2Blob(bns.Get(i))->record_id_in_device_piece_ptr(), mem_ptr, len),
-             0);
-  }
-}
-
-void ClearBlobDim0ValidNumIfNeed(const PbRpf<std::string>& bns,
-                                 const std::function<Blob*(const std::string&)>& BnInOp2Blob) {
+bool IsAllBlobEmpty(const PbRpf<std::string>& bns,
+                    const std::function<Blob*(const std::string&)>& BnInOp2Blob) {
   for (const auto& bn : bns) {
     Blob* blob = BnInOp2Blob(bn);
-    if (blob != nullptr && blob->has_dim0_valid_num_field()) {
-      std::memset(blob->mut_dim0_valid_num_ptr(), 0, blob->ByteSizeOfDim0ValidNumField());
-    }
+    if (blob && !blob->IsBodyEmpty()) { return false; }
   }
+  return true;
 }
 
 }  // namespace
 
+Kernel::~Kernel() {
+  if (shape_infer_helper_ != nullptr) { delete shape_infer_helper_; }
+}
+
 void Kernel::Init(const JobDesc* job_desc, const KernelConf& kernel_conf, DeviceCtx* device_ctx) {
   job_desc_ = job_desc;
   kernel_conf_ = kernel_conf;
+  shape_infer_helper_ =
+      new RuntimeBlobShapeInferHelper(this->op_conf(), this->kernel_conf(), &this->job_desc());
   VirtualKernelInit(device_ctx);
 }
 
@@ -40,99 +37,40 @@ void Kernel::InitModelAndConstBuf(const KernelCtx& ctx,
 
 void Kernel::Launch(const KernelCtx& ctx,
                     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  if (kernel_conf_.is_forward()) {
-    gdb::ForwardEnterBreakPoint(op_attribute(), BnInOp2Blob);
-    Forward(ctx, BnInOp2Blob);
-    gdb::ForwardLeaveBreakPoint(op_attribute(), BnInOp2Blob);
-  } else {
-    UNIMPLEMENTED();
-  }
+  gdb::ForwardEnterBreakPoint(op_attribute(), BnInOp2Blob);
+  Forward(ctx, BnInOp2Blob);
+  gdb::ForwardLeaveBreakPoint(op_attribute(), BnInOp2Blob);
 }
 
 const LogicalBlobId& Kernel::BnInOp2Lbi(const std::string& bn_in_op) const {
   return op_attribute().bn_in_op2lbi().at(bn_in_op);
 }
 
-bool Kernel::HasEmptyShapeBlob(const PbRpf<std::string>& bns,
-                               const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
-  for (const auto& bn : bns) {
-    Blob* blob = BnInOp2Blob(bn);
-    if (blob && blob->IsShapeEmpty()) { return true; }
-  }
-  return false;
-}
-
 void Kernel::CheckSameDim0ValidNum(
     const PbRpf<std::string>& bns,
     const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
-  const void* mem_ptr = BnInOp2Blob(bns.Get(0))->dim0_valid_num_ptr();
-  size_t len = BnInOp2Blob(bns.Get(0))->ByteSizeOfDim0ValidNumField();
-  FOR_RANGE(int, i, 1, bns.size()) {
-    CHECK_EQ(std::memcmp(BnInOp2Blob(bns.Get(i))->dim0_valid_num_ptr(), mem_ptr, len), 0);
-  }
+  UNIMPLEMENTED();
 }
 
 void Kernel::Forward(const KernelCtx& ctx,
                      std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  if (kernel_conf_.need_do_dim0_valid_num()) {
-    CHECK(!kernel_conf_.need_do_opaque_header());
-    ForwardDim0ValidNum(ctx, BnInOp2Blob);
-  }
-  if (HasEmptyShapeBlob(op_attribute().input_bns(), BnInOp2Blob) && !NeedForwardIfBlobEmpty()) {
-    ClearBlobDim0ValidNumIfNeed(op_attribute().output_bns(), BnInOp2Blob);
-    return;
-  }
-  if (kernel_conf_.need_do_dim1_valid_num()) {
-    CHECK(!kernel_conf_.need_do_opaque_header());
-    ForwardDim1ValidNum(ctx, BnInOp2Blob);
-  }
-  if (kernel_conf_.need_do_dim2_valid_num()) {
-    CHECK(!kernel_conf_.need_do_opaque_header());
-    ForwardDim2ValidNum(ctx, BnInOp2Blob);
-  }
-  if (kernel_conf_.need_do_record_id_in_device_piece()) {
-    CHECK(!kernel_conf_.need_do_opaque_header());
-    ForwardRecordIdInDevicePiece(ctx, BnInOp2Blob);
-  }
+  ForwardHeader(ctx, BnInOp2Blob);
+  if (IsAllBlobEmpty(op_attribute().output_bns(), BnInOp2Blob) && IsStateless()) { return; }
   ForwardDataContent(ctx, BnInOp2Blob);
+}
+
+void Kernel::ForwardHeader(const KernelCtx& ctx,
+                           std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   if (kernel_conf_.need_do_opaque_header()) {
     ForwardPackedHeader(ctx, BnInOp2Blob);
   } else {
-    if (kernel_conf_.need_do_data_id()) { ForwardDataId(ctx, BnInOp2Blob); }
-    if (kernel_conf_.need_do_col_num()) { ForwardColNum(ctx, BnInOp2Blob); }
+    if (kernel_conf_.need_do_shape()) { ForwardShape(ctx, BnInOp2Blob); }
   }
 }
 
-template<DeviceType device_type>
-void KernelIf<device_type>::ForwardDataId(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  CopyField(ctx.device_ctx, BnInOp2Blob, op_attribute().input_bns(), op_attribute().output_bns(),
-            &Blob::CopyDataIdFrom);
-}
-
-template<DeviceType device_type>
-void KernelIf<device_type>::ForwardColNum(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  CopyField(ctx.device_ctx, BnInOp2Blob, op_attribute().input_bns(), op_attribute().output_bns(),
-            &Blob::CopyColNumFrom);
-}
-
-template<DeviceType device_type>
-void KernelIf<device_type>::ForwardDim0ValidNum(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  CHECK(kernel_conf().can_naive_do_dim0_valid_num());
-  CheckSameDim0ValidNum(op_attribute().input_bns(), BnInOp2Blob);
-  CopyField(ctx.device_ctx, BnInOp2Blob, BnInOp2Blob(op_attribute().input_bns(0)),
-            op_attribute().output_bns(), &Blob::CopyDim0ValidNumFrom);
-}
-
-template<DeviceType device_type>
-void KernelIf<device_type>::ForwardRecordIdInDevicePiece(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  CHECK(kernel_conf().can_naive_do_record_id_in_device_piece());
-  CheckSameRecordIdInDevicePiece(op_attribute().input_bns(), BnInOp2Blob);
-  CopyField(ctx.device_ctx, BnInOp2Blob, BnInOp2Blob(op_attribute().input_bns(0)),
-            op_attribute().output_bns(), &Blob::CopyRecordIdInDevicePieceFrom);
+void Kernel::ForwardShape(const KernelCtx& ctx,
+                          std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  return shape_infer_helper_->InferShape(BnInOp2Blob);
 }
 
 template<DeviceType device_type>
